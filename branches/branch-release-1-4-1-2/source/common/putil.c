@@ -41,7 +41,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include <langinfo.h>
 #include <locale.h>
 
 /* include ICU headers */
@@ -119,6 +118,9 @@ static char* u_bottomNBytesOfDouble(double* d, int n);
 #   define POSIX
 #endif
 
+#ifdef POSIX
+#include <langinfo.h>
+#endif
 /*---------------------------------------------------------------------------
   Universal Implementations
   These are designed to work on all platforms.  Try these, and if they don't
