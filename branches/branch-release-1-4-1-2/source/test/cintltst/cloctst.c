@@ -64,6 +64,8 @@ enum {
 
 void addLocaleTest(TestNode** root)
 {
+  static void TestCPforLocale();
+
     setUpDataTable();
     
     addTest(root, &TestBasicGetters, "tsutil/cloctst/TestBasicGetters");
@@ -71,6 +73,7 @@ void addLocaleTest(TestNode** root)
     addTest(root, &TestGetAvailableLocales, "tsutil/cloctst/TestGetAvailableLocales");
     addTest(root, &TestDataDirectory, "tsutil/cloctst/TestDataDirectory");
     addTest(root, &TestISOFunctions, "tsutil/cloctst/TestISOFunctions");
+    addTest(root, &TestCPforLocale, "tsutil/cloctst/TestCPforLocale");
 }
         
 
@@ -591,6 +594,7 @@ void TestISOFunctions()
     count--;
     if(count!=239)
         log_err("There is an error in getISOCountries %d \n", count);
+
     
   
 }
@@ -680,4 +684,73 @@ void setUpDataTable()
         dataTable[DNAME_EL][GREEKS]=(UChar*)realloc(dataTable[DNAME_EL][GREEKS],sizeof(UChar)*(u_strlen(greekDisplayName)+1));        
     u_strncpy(dataTable[DNAME_EL][GREEKS],greekDisplayName,17);
     
+}
+
+void TestCPforLocale()
+{
+  int32_t i;
+  const char *c;
+
+  /* not API */
+  U_CAPI const char *uprv_defaultCodePageForLocale(const char *locale);
+
+
+  struct
+  {
+    const char *l;
+    const char *c;
+  }
+  data[] = 
+  {
+    { "zh", "gb2312"   },
+    { "zh_TW", "Big5"   },
+    { "zh_TW_Taipei", "Big5" }, /* variant even */
+    { "zh_CN_Beijing", "gb2312" },
+    { "z", NULL },               /* nothing */
+    { "es", "iso-8859-1" },
+    { "mt_MT_QORMI", "iso-8859-3" }, /* variant, of a language w/ no variant */
+    { "ja_JP", "Shift_JIS" },       /* Specific tests: */
+    { "ko_KR", "euc-kr" },          /* " */
+    { ""  , NULL    },
+    { NULL, NULL }
+    
+  };
+
+  log_info("Testing uprv_defaultCodePageForLocale()\n");
+
+  for(i=0; data[i].l != NULL; i++)
+  {
+    c = uprv_defaultCodePageForLocale(data[i].l);
+
+    if((c == NULL) && (data[i].c != NULL))
+      {
+        log_err("uprv_defaultCodePageForLocale(\"%s\") == NULL, expected \"%s\" **ERR**\n",
+                data[i].l,
+                data[i].c);
+      }
+    else if((data[i].c == NULL) && (c != NULL))
+      {
+        log_err("uprv_defaultCodePageForLocale(\"%s\") == \"%s\", expected NULL **ERR**\n",
+                data[i].l,
+                c);
+      }
+    else if(c == NULL)
+      {
+        log_verbose("uprv_defaultCodePageForLocale(\"%s\") == NULL\n",
+                data[i].l);
+      }
+    else if(0 != strcmp(c, data[i].c))
+      {
+        log_err("uprv_defaultCodePageForLocale(\"%s\") == \"%s\", expected \"%s\" **ERR**\n",
+                data[i].l,
+                c,
+                data[i].c);
+      }
+    else
+      {
+        log_verbose("uprv_defaultCodePageForLocale(\"%s\") == \"%s\"\n",
+                 data[i].l,
+                 (c!=NULL) ? c:"NULL" );
+      }
+  }
 }
