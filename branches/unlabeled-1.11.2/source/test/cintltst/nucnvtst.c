@@ -31,6 +31,7 @@ void TestConverterTypesAndStarters(void);
 void TestAmbiguous(void);
 void TestUTF8(void);
 void TestJitterbug255(void);
+void TestEBCDICUS4XML(void);
 
 #define NEW_MAX_BUFFER 999
 
@@ -106,6 +107,7 @@ void addTestNewConvert(TestNode** root)
    addTest(root, &TestAmbiguous, "tsconv/nucnvtst/TestAmbiguous");
    addTest(root, &TestUTF8, "tsconv/nucnvtst/TestUTF8");
    addTest(root, &TestJitterbug255, "tsconv/nucnvtst/TestJitterbug255");
+   addTest(root, &TestEBCDICUS4XML, "tsconv/nucnvtst/TestEBCDICUS4XML");
 }
 
 
@@ -762,6 +764,36 @@ void TestJitterbug255()
             log_err("Failed to convert the next UChar for SJIS.\n");
             break;
         }
+    }
+    ucnv_close(cnv);
+}
+
+void TestEBCDICUS4XML()
+{
+    UChar unicodes_x[] = {0x0000, 0x0000, 0x0000, 0x0000};
+    const UChar toUnicodeMaps_x[] = {0x000A, 0x000A, 0x000D, 0x0000};
+    const char fromUnicodeMaps_x[] = {0x25, 0x25, 0x0D, 0x00};
+    const char newLines_x[] = {0x25, 0x15, 0x0D, 0x00};
+    char target_x[] = {0x00, 0x00, 0x00, 0x00};
+    UChar *unicodes = unicodes_x;
+    const UChar *toUnicodeMaps = toUnicodeMaps_x;
+    char *target = target_x;
+    const char* fromUnicodeMaps = fromUnicodeMaps_x, *newLines = newLines_x;
+    UErrorCode status = U_ZERO_ERROR;
+    UConverter *cnv = 0;
+
+    cnv = ucnv_open("ebcdic-xml-us", &status);
+    if (U_FAILURE(status) || cnv == 0) {
+        log_err("Failed to open the converter for EBCDIC-XML-US.\n");
+                return;
+    }
+    ucnv_toUnicode(cnv, &unicodes, unicodes+3, (const char**)&newLines, newLines+3, NULL, TRUE, &status);
+    if (U_FAILURE(status) || memcmp(unicodes_x, toUnicodeMaps, sizeof(UChar)*3) != 0) {
+        log_err("To Unicode conversion failed in EBCDICUS4XML test.\n");
+    }
+    ucnv_fromUnicode(cnv, &target, target+3, (const UChar**)&toUnicodeMaps, toUnicodeMaps+3, NULL, TRUE, &status);
+    if (U_FAILURE(status) || memcmp(target_x, fromUnicodeMaps, sizeof(char)*3) != 0) {
+        log_err("From Unicode conversion failed in EBCDICUS4XML test.\n");
     }
     ucnv_close(cnv);
 }
