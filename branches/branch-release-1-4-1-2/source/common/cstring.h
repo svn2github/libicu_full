@@ -60,6 +60,7 @@
 #define uprv_wcslen(src) wcslen(src)
 #define uprv_wcstombs(mbstr, wcstr, count) wcstombs(mbstr, wcstr, count)
 #define uprv_mbstowcs(wcstr, mbstr, count) mbstowcs(wcstr, mbstr, count)
+#define uprv_strdup(s) strdup(s)
 
 U_CAPI char* U_EXPORT2
 T_CString_toLowerCase(char* str);

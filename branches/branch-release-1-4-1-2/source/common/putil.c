@@ -41,6 +41,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <langinfo.h>
 #include <locale.h>
 
 /* include ICU headers */
@@ -1359,8 +1360,10 @@ static char* u_bottomNBytesOfDouble(double* d, int n)
 {
   return U_IS_BIG_ENDIAN ? (char*)(d + 1) - n : (char*)d;
 }
+U_CAPI const char *
+uprv_defaultCodePageForLocale(const char *locale);
 
-const char* uprv_getDefaultCodepage()
+char* uprv_getDefaultCodepage()
 {
 #if defined(OS400)
   return "ibm-37";
@@ -1372,8 +1375,58 @@ const char* uprv_getDefaultCodepage()
   static char codepage[12]={ "cp" };
   uprv_strcpy(codepage+2, _itoa(GetACP(), tempString, 10));
   return codepage;
-#elif defined(POSIX)
-  return "LATIN_1";
+#elif defined(POSIX) 
+
+    char *name = NULL;
+    char *euro = NULL;
+    char *localeName = NULL;
+    char *codesetName = NULL; 
+
+    localeName = setlocale(LC_CTYPE, "");
+    if (localeName != NULL) 
+    {
+        codesetName = uprv_strdup(localeName);
+        if  ((name = (uprv_strchr(codesetName, (int) '.'))) != NULL) 
+        {
+            /* strip the locale name and look at the suffix only */
+            name++;
+            if ((euro  = (uprv_strchr(name, (int)'@'))) != NULL)
+            {
+               *euro  = 0;
+            }
+            /* if we can find the codset name from setlocale, return that. */
+            if (uprv_strlen(name) != 0) 
+            {
+                return name;
+            }
+        } 
+    }
+    if (codesetName != NULL) 
+    {
+        uprv_free(codesetName);
+        codesetName = NULL;
+    }
+#ifdef LINUX
+    codesetName = nl_langinfo(_NL_CTYPE_CODESET_NAME);     
+#else
+    codesetName = nl_langinfo(CODESET);    
+#endif  
+    if (codesetName == NULL) 
+    {
+         /* look up in srl's table */
+         codesetName = (char*)uprv_defaultCodePageForLocale(localeName);
+     }
+    /* if the table lookup failed, return latin1. */
+    if (codesetName == NULL)
+    {
+        codesetName = uprv_strdup("LATIN_1");
+    } 
+    else 
+    {
+        codesetName = uprv_strdup(codesetName);
+    }
+    return codesetName;
+
 #else
   return "LATIN_1";
 #endif
@@ -1620,6 +1673,10 @@ uprv_defaultCodePageForLocale(const char *locale)
   int32_t i;
   int32_t locale_len;
 
+  if (locale == NULL) 
+  {
+    return NULL;
+  }
   locale_len = uprv_strlen(locale);
 
   if(locale_len < 2)
@@ -1642,3 +1699,4 @@ uprv_defaultCodePageForLocale(const char *locale)
 
   return NULL;
 }
+
