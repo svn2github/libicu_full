@@ -79,7 +79,9 @@ int main(int argc, const char* const argv[])
     int i, j;
     TestNode *root;
     const char *warnOrErr = "Failure"; 
+#if !UCONFIG_NO_FORMATTING
     const char *zone = "America/Los_Angeles";
+#endif
     const char** argv2;
 
     /* initial check for the default converter */
@@ -103,7 +105,9 @@ int main(int argc, const char* const argv[])
         if(!strcmp(argv[i],"-w")) {
             warnOnMissingData = 1;
             warnOrErr = "Warning";
-        } else if (strcmp( argv[i], "-tz") == 0) {
+        }
+#if !UCONFIG_NO_FORMATTING
+        else if (strcmp( argv[i], "-tz") == 0) {
           zone = 0;
           if ((i+1) < argc) {
             switch (argv[i+1][0]) {
@@ -125,6 +129,7 @@ int main(int argc, const char* const argv[])
            * common nor i18n, by design. */
           --j;
         }
+#endif
     }
     argc = j;
 
@@ -201,6 +206,7 @@ int main(int argc, const char* const argv[])
         }
 
         fprintf(stdout, "Default locale for this run is %s\n", uloc_getDefault());
+#if !UCONFIG_NO_FORMATTING
         /* Set the default time zone */
         if (zone != 0) {
           UErrorCode ec = U_ZERO_ERROR;
@@ -217,6 +223,7 @@ int main(int argc, const char* const argv[])
         }
         fprintf(stdout, "Default time zone for this run is %s\n",
                   (zone!=0) ? zone : "UNSET");
+#endif
  
         root = NULL;
         addAllTests(&root);
