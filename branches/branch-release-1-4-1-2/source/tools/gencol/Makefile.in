@@ -81,7 +81,7 @@ all-local: $(TARGET) build-data
 
 build-data: .sentinel
 
-.sentinel: $(top_srcdir)/../data/*
+.sentinel: $(top_srcdir)/../data/*.res
 	@echo "Creating binary collation files (may take a while)"
 	@ICU_DATA=$(top_builddir)/../data/ ./$(TARGET) > /dev/null 2>&1	
 	@touch .sentinel

@@ -138,18 +138,35 @@ COMMONDLL=$(SRCDATADIR)/libicudata.$(SO)
 UDATA_FILES=icudata.dat
 UDATA_DLLS=libicudata.$(SO)
 
-### use the "--enable-mapped=" option to configure, to get mapped file behavior.
+
+####### Conditional part ########################
 # the case where '--enable-mapped=yes'
 @USE_MAPPED_TRUE@build-local: build-data build-cmnfile
 
+   # --enable-mapped-dll=no -
+
+    # Install normal files, build an icudata.dat
+      @MAPPED_DLL_FALSE@@USE_MAPPED_TRUE@install-udata:  install-files
+      @MAPPED_DLL_FALSE@build-cmnfile: $(COMMONFILE)
+
+    # Enable mapped dll = true - do install DLL's
+      @MAPPED_DLL_TRUE@install-udata: install-dlls
+      @MAPPED_DLL_TRUE@COMMONOBJFILES=$(SRCDATADIR)/icudata_dat.o
+
+ # else..
+
 # the case where '--enable-mapped=no'  (DEFAULT)
 @USE_MAPPED_FALSE@build-local: build-data build-dll
+@USE_MAPPED_FALSE@install-udata: install-dlls
+@MAPPED_DLL_FALSE@COMMONOBJFILES=$(OBJDATAFILES)
 ###
+
+# 
+@MAPPED_DLL_TRUE@build-cmnfile: $(COMMONDLL)
+
 
 # check for any other generated data here
 install-data: $(DATAFILES)
-
-build-cmnfile:  $(COMMONFILE)
 
 # the -Wpath [etc] has relative DLL paths in it
 # so we have to cd into the other dir..
@@ -188,31 +205,17 @@ hpux_junk_obj.cpp:
 hpux_junk_obj.o: hpux_junk_obj.cpp
 	$(COMPILE.cc) -o $@ $<
 
-
-# strip is optional 
-#	-$(STRIP) $@
-
-
 # HPUX_JUNK_OBJ is usually unset except by mh-hpux-cc
 
-$(COMMONDLL): $(OBJDATAFILES) $(HPUX_JUNK_OBJ)
+# See the Conditional section for COMMONOBJFILES
+$(COMMONDLL): $(COMMONOBJFILES) $(HPUX_JUNK_OBJ)
 	$(SHLIB.c) -o $@ $^
 	-ls -l $@
 
 srcs: $(SRCDATAFILES)
 
-
 ## Files to remove for 'make clean'
 CLEANFILES = *~ $(BRK_FILES)
-
-
-### use the "--enable-mapped=" option to configure, to get mapped file behavior.
-# the case where '--enable-mapped=yes' - raw files [which can be mapped]
-@USE_MAPPED_TRUE@install-udata:  install-files
-
-# the case where '--enable-mapped=no'  (DEFAULT) - DLL's [so's to you]
-@USE_MAPPED_FALSE@install-udata: install-dlls
-###
 
 install-local: build-local install-udata
 
