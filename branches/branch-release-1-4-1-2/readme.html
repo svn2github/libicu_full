@@ -294,9 +294,13 @@ ul
 
 <div class=Section1>
 
+<UL><UL>
+<H1><FONT SIZE=+1 COLOR=RED><A HREF="#LotsOfSwap">Click here</A> for an important warning about swap space with certain build options.</FONT></H1>
+</UL></UL>
+
 <h2>ReadMe: International Components for Unicode</h2>
 
-<p>Version: February 1, 2000</p>
+<p>Version: April 28, 2000</p>
 
 
 <div class=MsoNormal align=center style='text-align:center'>
@@ -430,7 +434,7 @@ Contain</u></h3>
      code.&nbsp; These versions are tested more thoroughly than day-to-day
      development builds of the system, and they are packaged in zip and tar
      files for convenient download.&nbsp; These packaged files can be found at <a
-     href="http://oss.software.ibm.com/developerworks/opensource/icu/project/download/index.html">http://oss.software.ibm.com/developerworks/opensource/icu/project/download/index.html</a>.<br>
+     href="http://oss.software.ibm.com/icu/download/">http://oss.software.ibm.com/icu/download/</a>.<br>
      If packaged snapshot is named <b>ICUXXXXXX.zip </b>, XXXXXX is the release
      version number.<br>
      Please unzip this file.&nbsp; It will re-construct the source directory. </li>
@@ -1058,6 +1062,13 @@ href="docs/intltest.html">docs/intltest.html</a> and <a
 href="docs/cintltst.html">docs/cintltst.html</a> </p>
 
 <h3>How to Install/Build on Unix</h3>
+
+<UL>
+<A NAME="LotsOfSwap">
+   <B><FONT COLOR=RED>Note:</FONT> In release 1.4.1.2, using 
+runConfigureICU or directly calling <U><TT>configure&nbsp;--enable-mapped=yes&nbsp;--enable-mapped-dll=yes</TT></U> attempts to compile a 16 Megabyte source file.  If you run out of virtual memory, you may need to increase your swap space.  On a test Linux machine, 500mb of swap was required for the compile. </B>
+</A>
+</UL>
 
 <p>There is a set of Makefiles for Unix that supports Linux w/gcc, Solaris
 w/gcc and Workshop CC, AIX w/xlc and OS/390 with C++.</p>
