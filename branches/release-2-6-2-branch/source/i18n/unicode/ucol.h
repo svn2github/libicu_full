@@ -229,6 +229,12 @@ typedef enum {
       * This is a sneaky way to produce JIS
       * sort order */     
      UCOL_HIRAGANA_QUATERNARY_MODE, 
+     /** when turned on, this attribute 
+      * generates a collation key
+      * for the numeric value of substrings
+      * of digits. This is a way to get '100' 
+      * to sort AFTER '2'.*/          
+     UCOL_NUMERIC_COLLATION, 
      UCOL_ATTRIBUTE_COUNT
 } UColAttribute;
 
@@ -605,6 +611,15 @@ ucol_getBound(const uint8_t       *source,
 U_CAPI void U_EXPORT2
 ucol_getVersion(const UCollator* coll, UVersionInfo info);
 
+/**
+ * Gets the UCA version information for a Collator. Version is the
+ * UCA version number (3.1.1, 4.0).
+ * @param coll The UCollator to query.
+ * @param info the version # information, the result will be filled in
+ * @draft ICU 2.8
+ */
+U_CAPI void U_EXPORT2
+ucol_getUCAVersion(const UCollator* coll, UVersionInfo info);
 
 /** 
  * Merge two sort keys. The levels are merged with their corresponding counterparts
