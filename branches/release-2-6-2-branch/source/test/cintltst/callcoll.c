@@ -154,7 +154,7 @@ UBool hasCollationElements(const char *locName) {
 
   if(U_SUCCESS(status)) {
     status = U_ZERO_ERROR;
-    ColEl = ures_getByKey(loc, "collations", ColEl, &status);
+    ColEl = ures_getByKey(loc, "CollationElements", ColEl, &status);
     if(status == U_ZERO_ERROR) { /* do the test - there are real elements */
       ures_close(ColEl);
       ures_close(loc);
