@@ -169,6 +169,9 @@ UnicodeStringTest::TestExtract()
     test1.extract(11, 12, test4);
     test1.extractBetween(11, 23, test5);
 
+    // convert test4 back to Unicode for comparison
+    UnicodeString test4b(test4, 12);
+
     for (UTextOffset i = 0; i < 12; i++) {
         if (test1[(UTextOffset)(11 + i)] != test2[i]) {
             errln(UnicodeString("extracting into a UnicodeString failed at position ") + i);
@@ -178,7 +181,7 @@ UnicodeStringTest::TestExtract()
             errln(UnicodeString("extracting into an array of UChar failed at position ") + i);
             break;
         }
-        if ((((char)test1[(UTextOffset)(11 + i)]) & 0xff) != test4[i]) {
+        if (((char)test1[(UTextOffset)(11 + i)]) != test4b[i]) {
             errln(UnicodeString("extracting into an array of char failed at position ") + i);
             break;
         }
