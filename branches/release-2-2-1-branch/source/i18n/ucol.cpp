@@ -568,14 +568,14 @@ void ucol_setOptionsFromHeader(UCollator* result, UColOptionSet * opts, UErrorCo
   if(U_FAILURE(*status)) {
     return;
   }
-    result->caseFirst = opts->caseFirst;
-    result->caseLevel = opts->caseLevel;
-    result->frenchCollation = opts->frenchCollation;
-    result->normalizationMode = opts->normalizationMode;
-    result->strength = opts->strength;
+    result->caseFirst = (UColAttributeValue)opts->caseFirst;
+    result->caseLevel = (UColAttributeValue)opts->caseLevel;
+    result->frenchCollation = (UColAttributeValue)opts->frenchCollation;
+    result->normalizationMode = (UColAttributeValue)opts->normalizationMode;
+    result->strength = (UColAttributeValue)opts->strength;
     result->variableTopValue = opts->variableTopValue;
-    result->alternateHandling = opts->alternateHandling;
-    result->hiraganaQ = opts->hiraganaQ;
+    result->alternateHandling = (UColAttributeValue)opts->alternateHandling;
+    result->hiraganaQ = (UColAttributeValue)opts->hiraganaQ;
 
     result->caseFirstisDefault = TRUE;
     result->caseLevelisDefault = TRUE;
@@ -707,14 +707,14 @@ UCollator* ucol_initCollator(const UCATableHeader *image, UCollator *fillIn, UEr
     result->freeOptionsOnClose = FALSE;
 
     /* set attributes */
-    result->caseFirst = result->options->caseFirst;
-    result->caseLevel = result->options->caseLevel;
-    result->frenchCollation = result->options->frenchCollation;
-    result->normalizationMode = result->options->normalizationMode;
-    result->strength = result->options->strength;
+    result->caseFirst = (UColAttributeValue)result->options->caseFirst;
+    result->caseLevel = (UColAttributeValue)result->options->caseLevel;
+    result->frenchCollation = (UColAttributeValue)result->options->frenchCollation;
+    result->normalizationMode = (UColAttributeValue)result->options->normalizationMode;
+    result->strength = (UColAttributeValue)result->options->strength;
     result->variableTopValue = result->options->variableTopValue;
-    result->alternateHandling = result->options->alternateHandling;
-    result->hiraganaQ = result->options->hiraganaQ;
+    result->alternateHandling = (UColAttributeValue)result->options->alternateHandling;
+    result->hiraganaQ = (UColAttributeValue)result->options->hiraganaQ;
 
     result->caseFirstisDefault = TRUE;
     result->caseLevelisDefault = TRUE;
@@ -4898,7 +4898,7 @@ ucol_setAttribute(UCollator *coll, UColAttribute attr, UColAttributeValue value,
         coll->hiraganaQisDefault = FALSE;
       } else if (value == UCOL_DEFAULT) {
         coll->hiraganaQisDefault = TRUE;
-        coll->hiraganaQ = coll->options->hiraganaQ;
+        coll->hiraganaQ = (UColAttributeValue)coll->options->hiraganaQ;
       } else {
         *status = U_ILLEGAL_ARGUMENT_ERROR;
       }
@@ -4912,7 +4912,7 @@ ucol_setAttribute(UCollator *coll, UColAttribute attr, UColAttributeValue value,
             coll->frenchCollationisDefault = FALSE;
         } else if (value == UCOL_DEFAULT) {
             coll->frenchCollationisDefault = TRUE;
-            coll->frenchCollation = coll->options->frenchCollation;
+            coll->frenchCollation = (UColAttributeValue)coll->options->frenchCollation;
         } else {
             *status = U_ILLEGAL_ARGUMENT_ERROR  ;
         }
@@ -4926,7 +4926,7 @@ ucol_setAttribute(UCollator *coll, UColAttribute attr, UColAttributeValue value,
             coll->alternateHandlingisDefault = FALSE;
         } else if (value == UCOL_DEFAULT) {
             coll->alternateHandlingisDefault = TRUE;
-            coll->alternateHandling = coll->options->alternateHandling ;
+            coll->alternateHandling = (UColAttributeValue)coll->options->alternateHandling ;
         } else {
             *status = U_ILLEGAL_ARGUMENT_ERROR  ;
         }
@@ -4942,7 +4942,7 @@ ucol_setAttribute(UCollator *coll, UColAttribute attr, UColAttributeValue value,
           coll->caseFirst = UCOL_OFF;
           coll->caseFirstisDefault = FALSE;
         } else if (value == UCOL_DEFAULT) {
-            coll->caseFirst = coll->options->caseFirst;
+            coll->caseFirst = (UColAttributeValue)coll->options->caseFirst;
             coll->caseFirstisDefault = TRUE;
         } else {
             *status = U_ILLEGAL_ARGUMENT_ERROR  ;
@@ -4956,7 +4956,7 @@ ucol_setAttribute(UCollator *coll, UColAttribute attr, UColAttributeValue value,
             coll->caseLevel = UCOL_OFF;
             coll->caseLevelisDefault = FALSE;
         } else if (value == UCOL_DEFAULT) {
-            coll->caseLevel = coll->options->caseLevel;
+            coll->caseLevel = (UColAttributeValue)coll->options->caseLevel;
             coll->caseLevelisDefault = TRUE;
         } else {
             *status = U_ILLEGAL_ARGUMENT_ERROR  ;
@@ -4971,7 +4971,7 @@ ucol_setAttribute(UCollator *coll, UColAttribute attr, UColAttributeValue value,
             coll->normalizationModeisDefault = FALSE;
         } else if (value == UCOL_DEFAULT) {
             coll->normalizationModeisDefault = TRUE;
-            coll->normalizationMode = coll->options->normalizationMode;
+            coll->normalizationMode = (UColAttributeValue)coll->options->normalizationMode;
         } else {
             *status = U_ILLEGAL_ARGUMENT_ERROR  ;
         }
@@ -4979,7 +4979,7 @@ ucol_setAttribute(UCollator *coll, UColAttribute attr, UColAttributeValue value,
     case UCOL_STRENGTH:         /* attribute for strength */
         if (value == UCOL_DEFAULT) {
             coll->strengthisDefault = TRUE;
-            coll->strength = coll->options->strength;
+            coll->strength = (UColAttributeValue)coll->options->strength;
         } else if (value <= UCOL_IDENTICAL) {
             coll->strengthisDefault = FALSE;
             coll->strength = value;
