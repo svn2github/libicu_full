@@ -3,7 +3,7 @@
 ## Copyright (c) 1999-2000, International Business Machines Corporation and
 ## others. All Rights Reserved.
 ##
-## $Id: mh-aix-va,v 1.17.2.1 2002/02/22 01:34:09 srl Exp $
+## $Id: mh-aix-va,v 1.17.2.2 2002/05/14 18:38:36 srl Exp $
 
 ## Commands to generate dependency files
 GEN_DEPS.c=	$(CC) -E -M $(DEFS) $(CPPFLAGS)
@@ -34,8 +34,8 @@ LD_RPATH_PRE=
 LDLIBRARYPATH_ENVVAR = LIBPATH
 
 ## Override Versioned target for a shared library.
-FINAL_SO_TARGET=  $(basename $(SO_TARGET))$(SO_TARGET_VERSION)$(ICULIBSUFFIX).$(SO)
-MIDDLE_SO_TARGET= $(basename $(SO_TARGET))$(SO_TARGET_VERSION_MAJOR)$(ICULIBSUFFIX).$(SO)
+FINAL_SO_TARGET=  $(basename $(SO_TARGET))$(SO_TARGET_VERSION).$(SO)
+MIDDLE_SO_TARGET= $(basename $(SO_TARGET))$(SO_TARGET_VERSION_MAJOR).$(SO)
 
 ## Special AIX rules
 ## Override the library calls because  AIX doesn't have library versioning. 
@@ -93,9 +93,9 @@ STATIC_O = o
 	@$(SHELL) -ec '$(GEN_DEPS.cc) $< > /dev/null'
 
 ## Versioned libraries rules
-%$(SO_TARGET_VERSION_MAJOR).$(SO): %$(SO_TARGET_VERSION)$(ICULIBSUFFIX).$(SO)
-	$(RM) $@ && ln -s $*$(SO_TARGET_VERSION)$(ICULIBSUFFIX).$(SO) $@
-%.$(SO): %$(SO_TARGET_VERSION)$(ICULIBSUFFIX).$(SO)
-	$(RM) $@ && ln -s $*$(SO_TARGET_VERSION)$(ICULIBSUFFIX).$(SO) $@
+%$(SO_TARGET_VERSION_MAJOR).$(SO): %$(SO_TARGET_VERSION).$(SO)
+	$(RM) $@ && ln -s $*$(SO_TARGET_VERSION).$(SO) $@
+%.$(SO): %$(SO_TARGET_VERSION).$(SO)
+	$(RM) $@ && ln -s $*$(SO_TARGET_VERSION).$(SO) $@
 
 ## End Aix-specific setup

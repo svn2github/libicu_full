@@ -47,8 +47,8 @@ endif
 #         the stub data and the real data at the same time.
 #
 ifneq ($(ENABLE_SHARED),)
-SO_TARGET = libicudata.$(SO)
-MIDDLE_SO_TARGET = lib$(ICUDATA_NAME)$(BATCH_STUB_SUFFIX).$(SO)
+SO_TARGET = libicudata$(ICULIBSUFFIX).$(SO)
+MIDDLE_SO_TARGET = lib$(ICUDATA_NAME)$(ICULIBSUFFIX)$(BATCH_STUB_SUFFIX).$(SO)
 ALL_SO_TARGETS = $(SO_TARGET) $(MIDDLE_SO_TARGET) $(BATCH_STUB_TARGET)
 endif
 
