@@ -67,7 +67,7 @@
  *  This value will change in the subsequent releases of ICU
  *  @draft ICU 2.4
  */
-#define U_ICU_VERSION_PATCHLEVEL_NUM 1
+#define U_ICU_VERSION_PATCHLEVEL_NUM 2
 
 /** Glued version suffix for renamers 
  *  This value will change in the subsequent releases of ICU
@@ -80,7 +80,7 @@
  *  This value will change in the subsequent releases of ICU
  *  @draft ICU 2.4
  */
-#define U_ICU_VERSION "2.6.1"
+#define U_ICU_VERSION "2.6.2"
 
 /** The current ICU library major/minor version as a string without dots, for library name suffixes. 
  *  This value will change in the subsequent releases of ICU
@@ -174,21 +174,23 @@ u_getVersion(UVersionInfo versionArray);
  * compression, generating quad level always when strength is quad or more 
  * version 4 - ICU 2.2 - tracking UCA changes, ignore completely ignorables 
  * in contractions, ignore primary ignorables after shifted 
+ * version 5 - ICU 2.8 - changed implicit generation code
  * This value may change in the subsequent releases of ICU
  * @draft ICU 2.4
  */
-#define UCOL_RUNTIME_VERSION 4
+#define UCOL_RUNTIME_VERSION 5
 
 /** Builder code version. When this is different, same tailoring might result
  * in assigning different collation elements to code points                  
  * version 2 was in ICU 1.8.1. added support for prefixes, tweaked canonical 
  * closure. However, the tailorings should probably get same CEs assigned    
  * version 5 - ICU 2.2 - fixed some bugs, renamed some indirect values.      
+ * version 6 - ICU 2.8 - fixed bug in builder that allowed 0xFF in primary values
  * Backward compatible with the old rules. 
  * This value may change in the subsequent releases of ICU
  * @draft ICU 2.4
  */
-#define UCOL_BUILDER_VERSION 5
+#define UCOL_BUILDER_VERSION 6
 
 /** *** Removed *** Instead we use the data we read from FractionalUCA.txt
  * This is the version of FractionalUCA.txt tailoring rules
