@@ -1720,7 +1720,7 @@ UChar *RBBITest::ReadAndConvertFile(const char *fileName, int &ulen, UErrorCode 
 
 cleanUpAndReturn:
     fclose(f);
-    delete fileBuf;
+    delete[] fileBuf;
     ucnv_close(conv);
     if (U_FAILURE(status)) {
         errln("ucnv_toUChars: ICU Error \"%s\"\n", u_errorName(status));
