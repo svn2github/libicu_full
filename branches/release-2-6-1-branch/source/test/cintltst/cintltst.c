@@ -92,7 +92,7 @@ int main(int argc, const char* const argv[])
     /* This must be tested before using anything! */
     gMutexInitialized = umtx_isInitialized(NULL);
 
-    argv2 = (const char**) ctst_malloc(sizeof(char*) * argc);
+    argv2 = (const char**) malloc(sizeof(char*) * argc);
     if (argv2 == NULL) {
       printf("*** Error: Out of memory (too many cmd line args?)\n");
       return 1;
@@ -232,6 +232,7 @@ int main(int argc, const char* const argv[])
             printf("Repeating tests %d more time(s)\n", REPEAT_TESTS);
         }
         cleanUpTestTree(root);
+	free(argv2);
 #ifdef CTST_LEAK_CHECK
         ctst_freeAll();
 
