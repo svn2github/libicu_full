@@ -116,7 +116,7 @@ extern void
 init() {
 
     /* initialize the two tries */
-    if(NULL==utrie_open(&idnTrie, NULL, MAX_DATA_LENGTH, 0, FALSE)) {
+    if(NULL==utrie_open(&idnTrie, NULL, MAX_DATA_LENGTH, 0, 0, FALSE)) {
         fprintf(stderr, "error: failed to initialize tries\n");
         exit(U_MEMORY_ALLOCATION_ERROR);
     }
