@@ -1378,9 +1378,9 @@ const char* uprv_getDefaultCodepage()
   uprv_strcpy(codepage+2, _itoa(GetACP(), tempString, 10));
   return codepage;
 #elif defined(POSIX) 
-#ifdef (HPUX)
+#if defined(HPUX)
   return "LATIN_1";
-#endif
+#else
     static char codesetName[100];
     char *name = NULL;
     char *euro = NULL;
@@ -1428,7 +1428,7 @@ const char* uprv_getDefaultCodepage()
         uprv_strcpy(codesetName, "LATIN_1");
     } 
     return codesetName;
-
+#endif
 #else
   return "LATIN_1";
 #endif
