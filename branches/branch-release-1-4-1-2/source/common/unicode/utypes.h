@@ -147,7 +147,7 @@ typedef uint16_t UChar;
 /*===========================================================================*/
 /* Related version information                                               */
 /*===========================================================================*/
-#define U_ICU_VERSION "1.4.0"
+#define U_ICU_VERSION "1.4.1.2"
 
 #define U_MAX_VERSION_LENGTH 4
 #define U_VERSION_DELIMITER '.'

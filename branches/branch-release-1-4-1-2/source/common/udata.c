@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 /*
 *******************************************************************************
 *
@@ -130,6 +132,16 @@ struct UDataMemory {
 };
 
 typedef UDataMemory *Library;
+
+UDataMemory *udata_createCommonData( MappedData* data)
+{
+  static UDataMemory myMemory;
+
+  myMemory.p = data;
+  
+  return &myMemory;
+}
+
 
 static MappedData *
 getChoice(Library lib, const char *entry,
@@ -365,6 +377,15 @@ struct UDataMemory {
 };
 
 typedef UDataMemory *Library;
+
+/* Set a static data memory and use it */
+UDataMemory *udata_createCommonData( MappedData* data)
+{
+  static UDataMemory myMemory;
+  myMemory.p = data;
+  return &myMemory;
+}
+
 
 static MappedData *
 getChoice(Library lib, const char *entry,
@@ -660,6 +681,54 @@ udata_getInfo(UDataMemory *pData, UDataInfo *pInfo) {
 /* function implementations for all platforms ------------------------------- */
 
 static Library commonLib=NO_LIBRARY;
+
+
+void
+udata_setCommonData(const void *data, UErrorCode *err)
+{
+#ifndef UDATA_MAP
+  *err = U_UNSUPPORTED_ERROR;
+  return;
+
+#else
+  MappedData *p;
+
+  if(U_FAILURE(*err))
+  {
+    return;
+  }
+
+  if(IS_LIBRARY(commonLib)) /* ... already got one */
+  {
+    *err = U_USING_DEFAULT_ERROR;
+    return;
+  }
+
+  if(data == NULL)
+  {
+    *err = U_ILLEGAL_ARGUMENT_ERROR;
+    return;
+  }
+  
+  /* try it direct */
+  p = (MappedData*)data;
+  if(p->magic1!=0xda || p->magic2!=0x27)
+  {
+    /* Didn't work, offset it */
+    p = (MappedData*) (((double *)data)+1);
+
+    if(p->magic1!=0xda || p->magic2!=0x27)
+    {
+      *err = U_INVALID_FORMAT_ERROR;  /* Didn't find the magic. */
+      return;
+    }
+  }
+
+  commonLib = udata_createCommonData(p); 
+
+#endif
+}
+
 
 static const char *strcpy_dllentry(char *target, const char *src)
 {
