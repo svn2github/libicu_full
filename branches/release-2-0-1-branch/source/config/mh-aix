@@ -3,7 +3,7 @@
 ## Copyright (c) 1999-2002, International Business Machines Corporation and
 ## others. All Rights Reserved.
 ##
-## $Id: mh-aix,v 1.24.2.2 2002/05/14 18:38:35 srl Exp $
+## $Id: mh-aix,v 1.24.2.3 2002/05/15 01:20:52 srl Exp $
 ##
 ## Please note: AIX does NOT have library versioning per se (there is no 'SONAME' capability). 
 ## So, we are using 'windows' style library names, that is, libicuuc20.1.so instead of libicuuc.so.20.1
@@ -37,15 +37,8 @@ LDLIBRARYPATH_ENVVAR = LIBPATH
 FINAL_SO_TARGET=  $(basename $(SO_TARGET))$(SO_TARGET_VERSION).$(SO)
 MIDDLE_SO_TARGET= $(basename $(SO_TARGET))$(SO_TARGET_VERSION_MAJOR).$(SO)
 
-## Override the library calls because  AIX doesn't have library versioning. 
-LIBICUDT=       -L$(top_builddir)/data -L$(top_builddir)/stubdata -l$(ICUDATA_NAME)$(ICULIBSUFFIX)
-LIBICUUC=       -L$(top_builddir)/common -l$(ICUPREFIX)uc$(ICULIBSUFFIX)$(SO_TARGET_VERSION_MAJOR) $(LIBICUDT)
-LIBICUI18N=     -L$(top_builddir)/i18n -l$(ICUPREFIX)i18n$(ICULIBSUFFIX)$(SO_TARGET_VERSION_MAJOR)
-LIBICULE=       -L$(top_builddir)/layout -l$(ICUPREFIX)le$(ICULIBSUFFIX)$(SO_TARGET_VERSION_MAJOR)
-LIBCTESTFW=     -L$(top_builddir)/tools/ctestfw -l$(ICUPREFIX)ctestfw$(ICULIBSUFFIX)$(SO_TARGET_VERSION_MAJOR)
-LIBICUTOOLUTIL= -L$(top_builddir)/tools/toolutil -l$(ICUPREFIX)toolutil$(ICULIBSUFFIX)$(SO_TARGET_VERSION_MAJOR)
-LIBUSTDIO=      -L$(top_builddir)/extra/ustdio -lustdio$(ICULIBSUFFIX)$(SO_TARGET_VERSION_MAJOR)
-ICULIBSUFFIX_VERSION = $(SO_TARGET_VERSION_MAJOR)
+## for Makefile.inc and icudefs.mk to calculate library names.
+ICULIBSUFFIX_VERSION = $(LIB_VERSION_MAJOR)
 
 ## Compiler switch to embed a library name. Not present on AIX.
 LD_SONAME = 

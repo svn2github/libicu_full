@@ -50,14 +50,14 @@
 #define U_ICU_VERSION_MINOR_NUM 0
 
 /** The current ICU patchlevel version as an integer. */
-#define U_ICU_VERSION_PATCHLEVEL_NUM 2
+#define U_ICU_VERSION_PATCHLEVEL_NUM 3
 
 /** Glued version suffix for renamers */
 #define U_ICU_VERSION_SUFFIX _2_0
 
 /** The current ICU library version as a dotted-decimal string. The patchlevel
     only appears in this string if it non-zero. */
-#define U_ICU_VERSION "2.0.2"
+#define U_ICU_VERSION "2.0.3"
 
 /** The current ICU library major/minor version as a string without dots, for library name suffixes. */
 #define U_ICU_VERSION_SHORT "20"

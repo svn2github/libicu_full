@@ -28,9 +28,9 @@
 
   <body lang="en-US">
     <h1>International Components for Unicode<br>
-    ICU 2.0.2 ReadMe</h1>
+    ICU 2.0.3 ReadMe</h1>
 
-    <p>Version: 2002-Mar-5<br>
+    <p>Version: 2002-May-14<br>
      Copyright &copy; 1995-2002 International Business Machines Corporation and
      others. All Rights Reserved.</p>
     <hr>
@@ -188,7 +188,28 @@
 
     <p>The following list concentrates on changes that affect existing
     applications migrating from previous ICU releases. For more news about this release, see the <a href="http://oss.software.ibm.com/icu/download/2.0/">ICU
-    2.0 download page</a>.</p>
+    2.0.3 download page</a></p>
+
+    <h3>2.0.3 changes</h3>
+      <ul>
+         <li> <B>Library suffix (--with-library-suffix) fixes</b> for data library name, and for all libraries under AIX. (Jitterbug #1898).   For users of the library suffix option, the name will now be calculated properly on AIX.  As well, the data library name (libicudt*) will reflect the library suffix for all platforms. </li>
+         <li><B>Note:</B> Makefile.inc's name will change depending on the library suffix.  If the suffix is ABC, then the makefile's name will be <b>MakefileABC.inc</b></li>
+
+         <li> <B>Makefile.inc reflects proper library versioning for AIX. </b>  Users of Makefile.inc will find that $(ICULIBS) will now calculate the correct library names with version compatibility, for example "-licuuc20".  </li>
+      </ul>
+
+     For more details and late breaking changes, see <a href="http://oss.software.ibm.com/icu/download/2.0.3/">ICU 2.0.3 download page</a>
+
+    <h3>2.0.2 changes</h3>
+      See the  <a href="http://oss.software.ibm.com/icu/download/2.0.2/">ICU
+    2.0.2 download page</a>
+
+    <h3>2.0.1 changes</h3>
+      See the <a href="http://oss.software.ibm.com/icu/download/2.0.1/">ICU
+    2.0.1 download page</a>
+
+    <h3>2.0 changes</h3>
+      Following are the major 2.0 changes. For further details, see the <a href="http://oss.software.ibm.com/icu/download/2.0/">ICU 2.0 download page</a>
 
     <h3>Support for Unicode 3.1.1</h3>
 

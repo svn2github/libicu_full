@@ -2,7 +2,7 @@
 #******************************************************************************
 #   Copyright (C) 1999-2001, International Business Machines
 #   Corporation and others.  All Rights Reserved.
-# $Revision: 1.23 $
+# $Revision: 1.23.2.1 $
 #******************************************************************************
 # This Makefile is designed to be included into projects which make use
 # of the ICU.
@@ -21,14 +21,17 @@ LDFLAGS = @LDFLAGS@ $(RPATHLDFLAGS)
 LIBS = @LIBS@ 
 ICUPREFIX = icu
 ICULIBSUFFIX = @ICULIBSUFFIX@
-ICULIBS = $(LIBS) -L$(libdir)                      \
-			-l$(ICUPREFIX)data                     \
-			-l$(ICUPREFIX)i18n$(ICULIBSUFFIX)      \
-			-l$(ICUPREFIX)uc$(ICULIBSUFFIX)        \
-			-l$(ICUPREFIX)toolutil$(ICULIBSUFFIX)  \
-			-lustdio$(ICULIBSUFFIX)
-#TODO layout library probably wants to be added to ICULIBS.
-#			-l$(ICUPREFIX)le$(ICULIBSSUFFIX)      
+ICULIBS = $(LIBS) -L$(libdir) $(ICULIBS_DATA) $(ICULIBS_I18N) $(ICULIBS_COMMON)
+
+# following 3 are included in $(ICULIBS)
+ICULIBS_DATA=  		-l$(ICUDATA_NAME)$(ICULIBSUFFIX)
+ICULIBS_I18N=		-l$(ICUPREFIX)i18n$(ICULIBSUFFIX)$(ICULIBSUFFIX_VERSION)
+ICULIBS_COMMON=		-l$(ICUPREFIX)uc$(ICULIBSUFFIX)$(ICULIBSUFFIX_VERSION)
+
+# optiona libraries, add to your LDFLAGS separately
+ICULIBS_USTDIO= -lustdio$(ICULIBSUFFIX_VERSION)$(ICULIBSUFFIX)
+ICULIBS_TOOLUTIL= -l$(ICUPREFIX)toolutil$(ICULIBSUFFIX)$(ICULIBSUFFIX_VERSION)
+ICULIBS_LAYOUT= -l$(ICUPREFIX)le$(ICULIBSSUFFIX)$(ICULIBSUFFIX_VERSION)
 
 ## Environment variable to set a runtime search path
 #   (Overridden when necessary in -mh files)
