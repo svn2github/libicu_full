@@ -30,7 +30,7 @@ ICUTOOLS=$(ICUP)\icu\source\tools
 !ENDIF
 
 LINK32 = link.exe
-LINK32_FLAGS = /out:"$(ICUDATA)/icudata.dll" /DLL /NOENTRY /base:"0x4ad00000" /comment:" Copyright (C) 1999 International Business Machines Corporation and others.  All Rights Reserved. "
+LINK32_FLAGS = /out:"$(ICUDATA)/icudata.dll" /DLL /NOENTRY /base:"0x4ad00000" /comment:" Copyright (C) 1999-2000 International Business Machines Corporation and others.  All Rights Reserved. "
 CPP_FLAGS = /I$(ICUP)\icu\include /GD /c
 
 #Here we test if configuration is given
@@ -120,12 +120,30 @@ CPP_SOURCES = $(C_CNV_FILES) unames_dat.c cnvalias_dat.c tz_dat.c $(BRK_CSOURCES
 LINK32_OBJS = $(CPP_SOURCES:.c=.obj)
 
 # target for DLL
+# This is a modification for ICU 1.4.1.2:
+# We are building the icudata.dll not from individual data files
+# but from the common icudata.dat
+
+!IF "a"=="b"
+
+# 1.4.0 build
 icudata.dll : $(LINK32_OBJS) $(CNV_FILES)
 	@echo Creating DLL file
 	@cd $(ICUDATA)
 	@$(LINK32) @<<
 $(LINK32_FLAGS) $(LINK32_OBJS)
 <<
+
+!ELSE
+
+# 1.4.1.2 build
+icudata.dll: icudata.dat
+	@echo Creating ICU 1.4.1.2 Data DLL file from icudata.dat
+	@cd $(ICUDATA)
+	@$(ICUTOOLS)\genccode\$(CFG)\genccode -o $(ICUDATA)\$?
+	@$(LINK32) $(LINK32_FLAGS) icudata_dat.obj
+
+!ENDIF
 
 $(ICUDATA)\sent.brk : $(ICUDATA)\sentLE.brk
     copy $(ICUDATA)\sentLE.brk $(ICUDATA)\sent.brk
@@ -146,8 +164,11 @@ $(ICUDATA)\word_th.brk : $(ICUDATA)\word_thLE.brk
     copy $(ICUDATA)\word_thLE.brk $(ICUDATA)\word_th.brk
 
 # target for memory mapped file
-icudata.dat : $(CNV_FILES) unames.dat cnvalias.dat tz.dat
+icudata.dat : $(CNV_FILES) unames.dat cnvalias.dat tz.dat \
+                $(ICUDATA)\sent.brk $(ICUDATA)\char.brk $(ICUDATA)\line.brk $(ICUDATA)\word.brk \
+                $(ICUDATA)\line_th.brk $(ICUDATA)\word_th.brk
 	@echo Creating memory-mapped file
+	@set ICU_DATA=$(ICUDATA)
 	@cd $(ICUDATA)
  	@$(ICUTOOLS)\gencmn\$(CFG)\gencmn 1000000 <<
 $(ICUDATA)\unames.dat
