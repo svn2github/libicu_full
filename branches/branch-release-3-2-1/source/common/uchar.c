@@ -1,6 +1,6 @@
 /*
 ********************************************************************************
-*   Copyright (C) 1996-2004, International Business Machines
+*   Copyright (C) 1996-2005, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 ********************************************************************************
 *
@@ -693,6 +693,79 @@ u_isJavaIDPart(UChar32 c) {
            u_isIDIgnorable(c));
 }
 
+/* Transforms the Unicode character to its lower case equivalent.*/
+U_CAPI UChar32 U_EXPORT2
+u_tolower(UChar32 c) {
+    uint32_t props;
+    GET_PROPS(c, props);
+    if(!PROPS_VALUE_IS_EXCEPTION(props)) {
+        if(CAT_MASK(props)&(U_GC_LU_MASK|U_GC_LT_MASK)) {
+            return c+GET_SIGNED_VALUE(props);
+        }
+    } else {
+        const uint32_t *pe=GET_EXCEPTIONS(props);
+        uint32_t firstExceptionValue=*pe;
+        if(HAVE_EXCEPTION_VALUE(firstExceptionValue, EXC_LOWERCASE)) {
+            int i=EXC_LOWERCASE;
+            ++pe;
+            ADD_EXCEPTION_OFFSET(firstExceptionValue, i, pe);
+            return (UChar32)*pe;
+        }
+    }
+    return c; /* no mapping - return c itself */
+}
+    
+/* Transforms the Unicode character to its upper case equivalent.*/
+U_CAPI UChar32 U_EXPORT2
+u_toupper(UChar32 c) {
+    uint32_t props;
+    GET_PROPS(c, props);
+    if(!PROPS_VALUE_IS_EXCEPTION(props)) {
+        if(GET_CATEGORY(props)==U_LOWERCASE_LETTER) {
+            return c-GET_SIGNED_VALUE(props);
+        }
+    } else {
+        const uint32_t *pe=GET_EXCEPTIONS(props);
+        uint32_t firstExceptionValue=*pe;
+        if(HAVE_EXCEPTION_VALUE(firstExceptionValue, EXC_UPPERCASE)) {
+            int i=EXC_UPPERCASE;
+            ++pe;
+            ADD_EXCEPTION_OFFSET(firstExceptionValue, i, pe);
+            return (UChar32)*pe;
+        }
+    }
+    return c; /* no mapping - return c itself */
+}
+
+/* Transforms the Unicode character to its title case equivalent.*/
+U_CAPI UChar32 U_EXPORT2
+u_totitle(UChar32 c) {
+    uint32_t props;
+    GET_PROPS(c, props);
+    if(!PROPS_VALUE_IS_EXCEPTION(props)) {
+        if(GET_CATEGORY(props)==U_LOWERCASE_LETTER) {
+            /* here, titlecase is same as uppercase */
+            return c-GET_SIGNED_VALUE(props);
+        }
+    } else {
+        const uint32_t *pe=GET_EXCEPTIONS(props);
+        uint32_t firstExceptionValue=*pe;
+        if(HAVE_EXCEPTION_VALUE(firstExceptionValue, EXC_TITLECASE)) {
+            int i=EXC_TITLECASE;
+            ++pe;
+            ADD_EXCEPTION_OFFSET(firstExceptionValue, i, pe);
+            return (UChar32)*pe;
+        } else if(HAVE_EXCEPTION_VALUE(firstExceptionValue, EXC_UPPERCASE)) {
+            /* here, titlecase is same as uppercase */
+            int i=EXC_UPPERCASE;
+            ++pe;
+            ADD_EXCEPTION_OFFSET(firstExceptionValue, i, pe);
+            return (UChar32)*pe;
+        }
+    }
+    return c; /* no mapping - return c itself */
+}
+
 U_CAPI int32_t U_EXPORT2
 u_charDigitValue(UChar32 c) {
     uint32_t props, numericType;
@@ -1136,4 +1209,79 @@ uchar_addPropertyStarts(USetAdder *sa, UErrorCode *pErrorCode) {
     /* add for UCHAR_JOINING_TYPE */
     sa->add(sa->set, ZWNJ); /* range ZWNJ..ZWJ */
     sa->add(sa->set, ZWJ+1);
+}
+
+/* return the simple case folding mapping for c */
+U_CAPI UChar32 U_EXPORT2
+u_foldCase(UChar32 c, uint32_t options) {
+    uint32_t props;
+    GET_PROPS(c, props);
+    if(!PROPS_VALUE_IS_EXCEPTION(props)) {
+        if(CAT_MASK(props)&(U_GC_LU_MASK|U_GC_LT_MASK)) {
+            return c+GET_SIGNED_VALUE(props);
+        }
+    } else {
+        const uint32_t *pe=GET_EXCEPTIONS(props);
+        uint32_t firstExceptionValue=*pe;
+        if(HAVE_EXCEPTION_VALUE(firstExceptionValue, EXC_CASE_FOLDING)) {
+            const uint32_t *oldPE=pe;
+            int i=EXC_CASE_FOLDING;
+            ++pe;
+            ADD_EXCEPTION_OFFSET(firstExceptionValue, i, pe);
+            props=*pe;
+            if(props!=0) {
+                /* return the simple mapping, if there is one */
+                const UChar *uchars=ucharsTable+(props&0xffff);
+                UChar32 simple;
+                i=0;
+                UTF_NEXT_CHAR_UNSAFE(uchars, i, simple);
+                if(simple!=0) {
+                    return simple;
+                }
+                /* fall through to use the lowercase exception value if there is no simple mapping */
+                pe=oldPE;
+            } else {
+                /* special case folding mappings, hardcoded */
+                if((options&_FOLD_CASE_OPTIONS_MASK)==U_FOLD_CASE_DEFAULT) {
+                    /* default mappings */
+                    if(c==0x49) {
+                        /* 0049; C; 0069; # LATIN CAPITAL LETTER I */
+                        return 0x69;
+                    } else if(c==0x130) {
+                        /* no simple default mapping for U+0130, use UnicodeData.txt */
+                        return 0x69;
+                    }
+                } else {
+                    /* Turkic mappings */
+                    if(c==0x49) {
+                        /* 0049; T; 0131; # LATIN CAPITAL LETTER I */
+                        return 0x131;
+                    } else if(c==0x130) {
+                        /* 0130; T; 0069; # LATIN CAPITAL LETTER I WITH DOT ABOVE */
+                        return 0x69;
+                    }
+                }
+                /* return c itself because there is no special mapping for it */
+                return c;
+            }
+        }
+        /* not else! - allow to fall through from above */
+        if(HAVE_EXCEPTION_VALUE(firstExceptionValue, EXC_LOWERCASE)) {
+            int i=EXC_LOWERCASE;
+            ++pe;
+            ADD_EXCEPTION_OFFSET(firstExceptionValue, i, pe);
+            return (UChar32)*pe;
+        }
+    }
+    return c; /* no mapping - return c itself */
+}
+
+U_CAPI UBool U_EXPORT2
+u_isULowercase(UChar32 c) {
+    return u_hasBinaryProperty(c, UCHAR_LOWERCASE);
+}
+
+U_CAPI UBool U_EXPORT2
+u_isUUppercase(UChar32 c) {
+    return u_hasBinaryProperty(c, UCHAR_UPPERCASE);
 }
