@@ -176,22 +176,35 @@ Normalizer::normalize(const UnicodeString& source,
             status=U_ILLEGAL_ARGUMENT_ERROR;
         }
     } else {
-        UChar *buffer=result.getBuffer(source.length());
-        int32_t length=unorm_internalNormalize(buffer, result.getCapacity(),
+        UnicodeString localDest;
+        UnicodeString *dest;
+
+        if(&source!=&result) {
+            dest=&result;
+        } else {
+            // the source and result strings are the same object, use a temporary one
+            dest=&localDest;
+        }
+
+        UChar *buffer=dest->getBuffer(source.length());
+        int32_t length=unorm_internalNormalize(buffer, dest->getCapacity(),
                                                source.getBuffer(), source.length(),
                                                mode, (options&IGNORE_HANGUL)!=0,
                                                &status);
-        result.releaseBuffer(length);
+        dest->releaseBuffer(length);
         if(status==U_BUFFER_OVERFLOW_ERROR) {
             status=U_ZERO_ERROR;
-            buffer=result.getBuffer(length);
-            length=unorm_internalNormalize(buffer, result.getCapacity(),
+            buffer=dest->getBuffer(length);
+            length=unorm_internalNormalize(buffer, dest->getCapacity(),
                                            source.getBuffer(), source.length(),
                                            mode, (options&IGNORE_HANGUL)!=0,
                                            &status);
-            result.releaseBuffer(length);
+            dest->releaseBuffer(length);
         }
 
+        if(dest==&localDest) {
+            result=*dest;
+        }
         if(U_FAILURE(status)) {
             result.setToBogus();
         }
@@ -209,22 +222,35 @@ Normalizer::compose(const UnicodeString& source,
             status=U_ILLEGAL_ARGUMENT_ERROR;
         }
     } else {
-        UChar *buffer=result.getBuffer(source.length());
-        int32_t length=unorm_compose(buffer, result.getCapacity(),
+        UnicodeString localDest;
+        UnicodeString *dest;
+
+        if(&source!=&result) {
+            dest=&result;
+        } else {
+            // the source and result strings are the same object, use a temporary one
+            dest=&localDest;
+        }
+
+        UChar *buffer=dest->getBuffer(source.length());
+        int32_t length=unorm_compose(buffer, dest->getCapacity(),
                                      source.getBuffer(), source.length(),
                                      compat, (options&IGNORE_HANGUL)!=0,
                                      &status);
-        result.releaseBuffer(length);
+        dest->releaseBuffer(length);
         if(status==U_BUFFER_OVERFLOW_ERROR) {
             status=U_ZERO_ERROR;
-            buffer=result.getBuffer(length);
-            length=unorm_compose(buffer, result.getCapacity(),
+            buffer=dest->getBuffer(length);
+            length=unorm_compose(buffer, dest->getCapacity(),
                                  source.getBuffer(), source.length(),
                                  compat, (options&IGNORE_HANGUL)!=0,
                                  &status);
-            result.releaseBuffer(length);
+            dest->releaseBuffer(length);
         }
 
+        if(dest==&localDest) {
+            result=*dest;
+        }
         if(U_FAILURE(status)) {
             result.setToBogus();
         }
@@ -242,22 +268,35 @@ Normalizer::decompose(const UnicodeString& source,
             status=U_ILLEGAL_ARGUMENT_ERROR;
         }
     } else {
-        UChar *buffer=result.getBuffer(source.length());
-        int32_t length=unorm_decompose(buffer, result.getCapacity(),
+        UnicodeString localDest;
+        UnicodeString *dest;
+
+        if(&source!=&result) {
+            dest=&result;
+        } else {
+            // the source and result strings are the same object, use a temporary one
+            dest=&localDest;
+        }
+
+        UChar *buffer=dest->getBuffer(source.length());
+        int32_t length=unorm_decompose(buffer, dest->getCapacity(),
                                      source.getBuffer(), source.length(),
                                      compat, (options&IGNORE_HANGUL)!=0,
                                      &status);
-        result.releaseBuffer(length);
+        dest->releaseBuffer(length);
         if(status==U_BUFFER_OVERFLOW_ERROR) {
             status=U_ZERO_ERROR;
-            buffer=result.getBuffer(length);
-            length=unorm_decompose(buffer, result.getCapacity(),
+            buffer=dest->getBuffer(length);
+            length=unorm_decompose(buffer, dest->getCapacity(),
                                    source.getBuffer(), source.length(),
                                    compat, (options&IGNORE_HANGUL)!=0,
                                    &status);
-            result.releaseBuffer(length);
+            dest->releaseBuffer(length);
         }
 
+        if(dest==&localDest) {
+            result=*dest;
+        }
         if(U_FAILURE(status)) {
             result.setToBogus();
         }
@@ -275,24 +314,37 @@ Normalizer::concatenate(UnicodeString &left, UnicodeString &right,
             errorCode=U_ILLEGAL_ARGUMENT_ERROR;
         }
     } else {
-        UChar *buffer=result.getBuffer(left.length()+right.length());
-        int32_t length=unorm_concatenate(left.getBuffer(), left.length(),
-                                         right.getBuffer(), right.length(),
-                                         buffer, result.getCapacity(),
-                                         mode, options,
-                                         &errorCode);
-        result.releaseBuffer(length);
-        if(errorCode==U_BUFFER_OVERFLOW_ERROR) {
-            errorCode=U_ZERO_ERROR;
-            buffer=result.getBuffer(length);
-            int32_t length=unorm_concatenate(left.getBuffer(), left.length(),
-                                             right.getBuffer(), right.length(),
-                                             buffer, result.getCapacity(),
-                                             mode, options,
-                                             &errorCode);
-            result.releaseBuffer(length);
+        UnicodeString localDest;
+        UnicodeString *dest;
+
+        if(&left!=&result && &right!=&result) {
+            dest=&result;
+        } else {
+            // the source and result strings are the same object, use a temporary one
+            dest=&localDest;
         }
 
+        UChar *buffer=dest->getBuffer(left.length()+right.length());
+        int32_t length=unorm_concatenate(left.getBuffer(), left.length(),
+                                         right.getBuffer(), right.length(),
+                                         buffer, dest->getCapacity(),
+                                         mode, options,
+                                         &errorCode);
+        dest->releaseBuffer(length);
+        if(errorCode==U_BUFFER_OVERFLOW_ERROR) {
+            errorCode=U_ZERO_ERROR;
+            buffer=dest->getBuffer(length);
+            int32_t length=unorm_concatenate(left.getBuffer(), left.length(),
+                                             right.getBuffer(), right.length(),
+                                             buffer, dest->getCapacity(),
+                                             mode, options,
+                                             &errorCode);
+            dest->releaseBuffer(length);
+        }
+
+        if(dest==&localDest) {
+            result=*dest;
+        }
         if(U_FAILURE(errorCode)) {
             result.setToBogus();
         }
