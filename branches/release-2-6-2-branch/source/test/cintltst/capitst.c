@@ -275,8 +275,10 @@ void TestProperty()
       ICU 2.4 currVersionArray = {0x21, 0x40, 0x04, 0x04};
       ICU 2.6 currVersionArray = {0x21, 0x40, 0x03, 0x03};
     */
-    UVersionInfo currVersionArray = {0x21, 0x40, 0x04, 0x04};
-    UVersionInfo versionArray;
+    UVersionInfo currVersionArray = {0x29, 0x80, 0x01, 0x04};
+    UVersionInfo currUCAVersionArray = {4, 0, 0, 0};
+    UVersionInfo versionArray = {0, 0, 0, 0};
+    UVersionInfo versionUCAArray = {0, 0, 0, 0};
     
     log_verbose("The property tests begin : \n");
     log_verbose("Test ucol_strcoll : \n");
@@ -291,6 +293,15 @@ void TestProperty()
       if (versionArray[i] != currVersionArray[i]) {
         log_err("Testing ucol_getVersion() - unexpected result: %hu.%hu.%hu.%hu\n", 
             versionArray[0], versionArray[1], versionArray[2], versionArray[3]);
+        break;
+      }
+    }
+
+    ucol_getUCAVersion(col, versionUCAArray);
+    for (i=0; i<4; ++i) {
+      if (versionUCAArray[i] != currUCAVersionArray[i]) {
+        log_err("Testing ucol_getUCAVersion() - unexpected result: %hu.%hu.%hu.%hu\n", 
+            versionUCAArray[0], versionUCAArray[1], versionUCAArray[2], versionUCAArray[3]);
         break;
       }
     }
