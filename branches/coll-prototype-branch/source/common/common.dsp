@@ -459,6 +459,10 @@ SOURCE=.\unorm.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\unorm_it.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\uobject.cpp
 # End Source File
 # Begin Source File
@@ -2545,6 +2549,10 @@ InputPath=.\unicode\unorm.h
 
 !ENDIF 
 
+# End Source File
+# Begin Source File
+
+SOURCE=.\unorm_it.h
 # End Source File
 # Begin Source File
 
