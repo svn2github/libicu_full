@@ -2541,6 +2541,7 @@ case "${host}" in
 	*-*-hpux*) 	platform=HPUX ;;
 	*-*-irix*)      platform=IRIX ;;
 	*-*-os390*)	platform=OS390 ;;
+	*-*-os400*)	platform=OS400 ;;
 	*) 		platform=UNKNOWN ;;
 esac
 
@@ -2555,6 +2556,7 @@ case "${host}" in
 	*-*-hpux*) 	ld_rpath_suf=":" ;;
 	*-*-irix*)      ld_rpath_suf=" " ;;
 	*-*-os390*)	ld_rpath_suf="" ;;
+	*-*-os400*)	ld_rpath_suf=" " ;;
 	*) 		ld_rpath_suf="" ;;
 esac
 
