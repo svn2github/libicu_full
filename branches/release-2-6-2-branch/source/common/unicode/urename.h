@@ -653,6 +653,7 @@
 #define ucol_getSortKeyWithAllocation ucol_getSortKeyWithAllocation_2_6
 #define ucol_getStrength ucol_getStrength_2_6
 #define ucol_getTailoredSet ucol_getTailoredSet_2_6
+#define ucol_getUCAVersion ucol_getUCAVersion_2_6
 #define ucol_getVariableTop ucol_getVariableTop_2_6
 #define ucol_getVersion ucol_getVersion_2_6
 #define ucol_greater ucol_greater_2_6
@@ -925,6 +926,7 @@
 #define uprv_getUTCtime uprv_getUTCtime_2_6
 #define uprv_haveProperties uprv_haveProperties_2_6
 #define uprv_init_collIterate uprv_init_collIterate_2_6
+#define uprv_int32Comparator uprv_int32Comparator_2_6
 #define uprv_isInfinite uprv_isInfinite_2_6
 #define uprv_isNaN uprv_isNaN_2_6
 #define uprv_isNegativeInfinity uprv_isNegativeInfinity_2_6
@@ -963,6 +965,7 @@
 #define uprv_pow10 uprv_pow10_2_6
 #define uprv_realloc uprv_realloc_2_6
 #define uprv_round uprv_round_2_6
+#define uprv_sortArray uprv_sortArray_2_6
 #define uprv_strCompare uprv_strCompare_2_6
 #define uprv_strdup uprv_strdup_2_6
 #define uprv_strtod uprv_strtod_2_6
@@ -977,8 +980,15 @@
 #define uprv_uca_canonicalClosure uprv_uca_canonicalClosure_2_6
 #define uprv_uca_cloneTempTable uprv_uca_cloneTempTable_2_6
 #define uprv_uca_closeTempTable uprv_uca_closeTempTable_2_6
+#define uprv_uca_getCodePointFromRaw uprv_uca_getCodePointFromRaw_2_6
+#define uprv_uca_getImplicitFromRaw uprv_uca_getImplicitFromRaw_2_6
+#define uprv_uca_getImplicitPrimary uprv_uca_getImplicitPrimary_2_6
+#define uprv_uca_getRawFromCodePoint uprv_uca_getRawFromCodePoint_2_6
+#define uprv_uca_getRawFromImplicit uprv_uca_getRawFromImplicit_2_6
 #define uprv_uca_initImplicitConstants uprv_uca_initImplicitConstants_2_6
 #define uprv_uca_initTempTable uprv_uca_initTempTable_2_6
+#define uprv_uint16Comparator uprv_uint16Comparator_2_6
+#define uprv_uint32Comparator uprv_uint32Comparator_2_6
 #define uprv_unmapFile uprv_unmapFile_2_6
 #define ures_appendResPath ures_appendResPath_2_6
 #define ures_cleanup ures_cleanup_2_6
@@ -1369,13 +1379,6 @@
 #define ValueRuns ValueRuns_2_6
 #define _UF _UF_2_6
 #define locale_set_default_internal locale_set_default_internal_2_6
-#define uprv_cnttab_cloneContraction uprv_cnttab_cloneContraction_2_6
-#define uprv_growTable uprv_growTable_2_6
-#define uprv_uca_addContraction uprv_uca_addContraction_2_6
-#define uprv_uca_addPrefix uprv_uca_addPrefix_2_6
-#define uprv_uca_getMaxExpansionJamo uprv_uca_getMaxExpansionJamo_2_6
-#define uprv_uca_setMaxExpansion uprv_uca_setMaxExpansion_2_6
-#define uprv_uca_setMaxJamoExpansion uprv_uca_setMaxJamoExpansion_2_6
 #define util64_fromDouble util64_fromDouble_2_6
 #define util64_pow util64_pow_2_6
 #define util64_tou util64_tou_2_6
