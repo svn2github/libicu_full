@@ -676,9 +676,9 @@ static void testCollator(UCollator *coll, UErrorCode *status) {
       startOfRules = FALSE;
       varT = (UBool)((specs & UCOL_TOK_VARIABLE_TOP) != 0);
       top_ = (UBool)((specs & UCOL_TOK_TOP) != 0);
-      if(top_) { /* if reset is on top, we should just continue */
-        continue;
-      }
+      if(top_) { /* if reset is on top, the sequence is broken. We should have an empty string */
+        second[0] = 0;
+      } else {
       u_strncpy(second,rulesCopy+chOffset, chLen);
       second[chLen] = 0;
 
@@ -707,7 +707,7 @@ static void testCollator(UCollator *coll, UErrorCode *status) {
         firstEx = exLen;
         exLen = tempLen;
       }
-
+      }
       lastReset = FALSE;
 
       switch(strength){
@@ -1114,6 +1114,44 @@ static int32_t compareCEs(uint32_t s1, uint32_t s2,
   }
 }
 
+typedef struct {
+  uint32_t startCE;
+  uint32_t startContCE;
+  uint32_t limitCE;
+  uint32_t limitContCE;
+} indirectBoundaries;
+
+/* these values are used for finding CE values for indirect positioning. */
+/* Indirect positioning is a mechanism for allowing resets on symbolic   */
+/* values. It only works for resets and you cannot tailor indirect names */
+/* An indirect name can define either an anchor point or a range. An     */
+/* anchor point behaves in exactly the same way as a code point in reset */
+/* would, except that it cannot be tailored. A range (we currently only  */
+/* know for the [top] range will explicitly set the upper bound for      */
+/* generated CEs, thus allowing for better control over how many CEs can */
+/* be squeezed between in the range without performance penalty.         */
+/* In that respect, we use [top] for tailoring of locales that use CJK   */
+/* characters. Other indirect values are currently a pure convenience,   */
+/* they can be used to assure that the CEs will be always positioned in  */
+/* the same place relative to a point with known properties (e.g. first  */
+/* primary ignorable). */
+static indirectBoundaries ucolIndirectBoundaries[15];
+static UBool indirectBoundariesSet = FALSE;
+static void setIndirectBoundaries(uint32_t indexR, uint32_t *start, uint32_t *end) { 
+  
+  // Set values for the top - TODO: once we have values for all the indirects, we are going
+  // to initalize here.
+  ucolIndirectBoundaries[indexR].startCE = start[0];
+  ucolIndirectBoundaries[indexR].startContCE = start[1];
+  if(end) {
+    ucolIndirectBoundaries[indexR].limitCE = end[0];
+    ucolIndirectBoundaries[indexR].limitContCE = end[1];
+  } else {
+    ucolIndirectBoundaries[indexR].limitCE = 0;
+    ucolIndirectBoundaries[indexR].limitContCE = 0;
+  }
+}
+
 static void testCEs(UCollator *coll, UErrorCode *status) {
 
   const UChar *rules = NULL, *current = NULL;
@@ -1136,6 +1174,7 @@ static void testCEs(UCollator *coll, UErrorCode *status) {
   uint16_t specs = 0;
   UBool varT = FALSE; UBool top_ = TRUE;
   UBool startOfRules = TRUE;
+  UBool before = FALSE;
   UColTokenParser src;
   UColOptionSet opts;
   UParseError parseError;
@@ -1153,6 +1192,42 @@ static void testCEs(UCollator *coll, UErrorCode *status) {
   rules = ucol_getRules(coll, &ruleLen);
 
   ucol_initInverseUCA(status);
+
+  if(indirectBoundariesSet == FALSE) {
+    // UCOL_RESET_TOP_VALUE
+    setIndirectBoundaries(0, consts->UCA_LAST_NON_VARIABLE, consts->UCA_FIRST_IMPLICIT); 
+    // UCOL_FIRST_PRIMARY_IGNORABLE
+    setIndirectBoundaries(1, consts->UCA_FIRST_PRIMARY_IGNORABLE, 0);
+    // UCOL_LAST_PRIMARY_IGNORABLE
+    setIndirectBoundaries(2, consts->UCA_LAST_PRIMARY_IGNORABLE, 0);
+    // UCOL_FIRST_SECONDARY_IGNORABLE
+    setIndirectBoundaries(3, consts->UCA_FIRST_SECONDARY_IGNORABLE, 0);
+    // UCOL_LAST_SECONDARY_IGNORABLE
+    setIndirectBoundaries(4, consts->UCA_LAST_SECONDARY_IGNORABLE, 0);
+    // UCOL_FIRST_TERTIARY_IGNORABLE
+    setIndirectBoundaries(5, consts->UCA_FIRST_TERTIARY_IGNORABLE, 0);
+    // UCOL_LAST_TERTIARY_IGNORABLE
+    setIndirectBoundaries(6, consts->UCA_LAST_TERTIARY_IGNORABLE, 0);
+    // UCOL_FIRST_VARIABLE
+    setIndirectBoundaries(7, consts->UCA_FIRST_VARIABLE, 0);
+    // UCOL_LAST_VARIABLE
+    setIndirectBoundaries(8, consts->UCA_LAST_VARIABLE, 0);
+    // UCOL_FIRST_NON_VARIABLE
+    setIndirectBoundaries(9, consts->UCA_FIRST_NON_VARIABLE, 0);
+    // UCOL_LAST_NON_VARIABLE
+    setIndirectBoundaries(10, consts->UCA_LAST_NON_VARIABLE, consts->UCA_FIRST_IMPLICIT);
+    // UCOL_FIRST_IMPLICIT
+    setIndirectBoundaries(11, consts->UCA_FIRST_IMPLICIT, 0);
+    // UCOL_LAST_IMPLICIT
+    setIndirectBoundaries(12, consts->UCA_LAST_IMPLICIT, consts->UCA_FIRST_TRAILING);
+    // UCOL_FIRST_TRAILING
+    setIndirectBoundaries(13, consts->UCA_FIRST_TRAILING, 0);
+    // UCOL_LAST_TRAILING
+    setIndirectBoundaries(14, consts->UCA_LAST_TRAILING, 0);
+    ucolIndirectBoundaries[14].limitCE = (consts->UCA_PRIMARY_SPECIAL_MIN<<24);
+    indirectBoundariesSet = TRUE;
+  }
+
 
   if(U_SUCCESS(*status) && ruleLen > 0) {
     rulesCopy = (UChar *)malloc((ruleLen+UCOL_TOK_EXTRA_RULE_SPACE_SIZE)*sizeof(UChar));
@@ -1192,10 +1267,12 @@ static void testCEs(UCollator *coll, UErrorCode *status) {
       /* we need to repack CEs here */
 
       if(strength == UCOL_TOK_RESET) {
+        before = (UBool)((specs & UCOL_TOK_BEFORE) != 0);
         if(top_ == TRUE) {
+          int32_t index = src.parsedToken.indirectIndex;
           
-          nextCE = baseCE = currCE = UCOL_RESET_TOP_VALUE;
-          nextContCE = baseContCE = currContCE = UCOL_RESET_TOP_CONT;
+          nextCE = baseCE = currCE = ucolIndirectBoundaries[index].startCE;
+          nextContCE = baseContCE = currContCE = ucolIndirectBoundaries[index].startContCE;
         } else {
           nextCE = baseCE = currCE;
           nextContCE = baseContCE = currContCE;
@@ -1239,9 +1316,17 @@ static void testCEs(UCollator *coll, UErrorCode *status) {
             /*if(currCE > nextCE || (currCE == nextCE && currContCE >= nextContCE)) {*/
               log_err("current CE is not less than base CE\n");
             }
+            if(!before) {
             if(compareCEs(currCE, currContCE, lastCE, lastContCE) < 0) {
             /*if(currCE < lastCE || (currCE == lastCE && currContCE <= lastContCE)) {*/
               log_err("sequence of generated CEs is broken\n");
+            }
+            } else {
+              before = FALSE;
+              if(compareCEs(currCE, currContCE, lastCE, lastContCE) > 0) {
+              /*if(currCE < lastCE || (currCE == lastCE && currContCE <= lastContCE)) {*/
+                log_err("sequence of generated CEs is broken\n");
+              }
             }
           }
         }
