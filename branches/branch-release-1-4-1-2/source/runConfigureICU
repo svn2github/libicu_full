@@ -82,22 +82,22 @@ case $platform in
                 echo Running configure for HP10.2 using native CC compiler ...
 				CC=cc; export CC
 				CXX=CC; export CXX
-			    ./configure $mapped $mapdll ;;
+			    ./configure  ;;
         HP/UX10.2ACC)
                 echo Running configure for HP10.2 using aCC compiler ...
 				CC=cc; export CC
 				CXX=aCC; export CXX
-                ./configure $mapped $mapdll;;
+                ./configure ;;
         HP/UX11CC)
                 echo Running configure for HP11 using native CC compiler ...
                 CC=cc; export CC
 				CXX=/opt/CC/bin/CC; export CXX
-                ./configure $mapped $mapdll ;;
+                ./configure  ;;
         HP/UX11ACC)
                 echo Running configure for HP11 using aCC compiler ...
                 CC=cc; export CC
 				CXX=/opt/aCC/bin/aCC; export CXX
-			    ./configure $mapped $mapdll ;;
+			    ./configure  ;;
         *)
                 echo I do not recognize the option \"$platform\". Please type ${0} -h for help.
                 exit 0;;
