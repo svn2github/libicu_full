@@ -232,7 +232,7 @@ int main(int argc, const char* const argv[])
             printf("Repeating tests %d more time(s)\n", REPEAT_TESTS);
         }
         cleanUpTestTree(root);
-	free(argv2);
+	free((char **)argv2); /* cast away const to silence the compiler */
 #ifdef CTST_LEAK_CHECK
         ctst_freeAll();
 
