@@ -22,6 +22,7 @@
 #include "unicode/smpdtfmt.h"
 #include "unicode/ucnv.h"
 #include "unicode/uclean.h"
+#include "unicode/timezone.h"
 
 #include "intltest.h"
 #include "caltztst.h"
@@ -959,7 +960,7 @@ int
 main(int argc, char* argv[])
 {
     UBool syntax = FALSE;
-    UBool all = TRUE;
+    UBool all = FALSE;
     UBool verbose = FALSE;
     UBool no_err_msg = FALSE;
     UBool quick = TRUE;
@@ -969,6 +970,8 @@ main(int argc, char* argv[])
     UErrorCode errorCode = U_ZERO_ERROR;
     UConverter *cnv = NULL;
     const char *warnOrErr = "Failure"; 
+    const char* zone = "America/Los_Angeles";
+    int argzone = -1;
 
     /* This must be tested before using anything! */
     MutexTest::gMutexInitialized = umtx_isInitialized(NULL);
@@ -1018,24 +1021,44 @@ main(int argc, char* argv[])
             else if (strcmp("w", str) == 0) {
               warnOnMissingData = TRUE;
               warnOrErr = "WARNING";
+            } else if (strcmp("tz", str) == 0) {
+                zone = 0;
+                if ((i+1) < argc) {
+                    switch (argv[i+1][0]) {
+                    case 0:
+                        argzone = ++i; /* consume empty string in {-tz ""} */
+                        break;
+                    case '-':
+                        break; /* don't process next arg if it is -x */
+                    default:
+                        argzone = ++i;
+                        zone = argv[argzone]; /* next arg is zone */
+                        break;
+                    }
+                }
             } else {
                 syntax = TRUE;
             }
         }else{
             name = TRUE;
-            all = FALSE;
         }
     }
 
-    if (all && name) syntax = TRUE;
-    if (!all && !name) syntax = TRUE;
+    if (!all && !name) {
+        all = TRUE;
+    } else if (all && name) {
+        syntax = TRUE;
+    }
 
     if (syntax) {
         fprintf(stdout,
                 "### Syntax:\n"
                 "### IntlTest [-option1 -option2 ...] [testname1 testname2 ...] \n"
                 "### where options are: verbose (v), all (a), noerrormsg (n), \n"
-                "### exhaustive (e) and leaks (l). \n"
+                "### exhaustive (e), leaks (l), and default time zone (tz). \n"
+                "### -tz takes an optional zone argument.  If absent, \n"
+                "### or if the empty string, then the default time zone \n"
+                "### is not set (host time zone is used). \n"
                 "### (Specify either -all (shortcut -a) or a test name). \n"
                 "### -all will run all of the tests.\n"
                 "### \n"
@@ -1067,6 +1090,7 @@ main(int argc, char* argv[])
     fprintf(stdout, "   No error messages (n) : %s\n", (no_err_msg? "On" : "Off"));
     fprintf(stdout, "   Exhaustive (e)        : %s\n", (!quick?     "On" : "Off"));
     fprintf(stdout, "   Leaks (l)             : %s\n", (leaks?      "On" : "Off"));
+    fprintf(stdout, "   Time zone (tz)        : %s\n", (zone?       zone : "UNSET"));
     fprintf(stdout, "-----------------------------------------------\n");
 
     // Check that u_init() works
@@ -1079,7 +1103,7 @@ main(int argc, char* argv[])
                 "*** check that the data files are present.\n",
                 u_errorName(errorCode));
         if(!warnOnMissingData) {
-          fprintf(stdout, "*** Exitting.  Use the '-w' option if data files were\n*** purposely removed, to continue test anyway.\n");
+          fprintf(stdout, "*** Exiting.  Use the '-w' option if data files were\n*** purposely removed, to continue test anyway.\n");
           return 1;
         }
     }
@@ -1098,7 +1122,7 @@ main(int argc, char* argv[])
                 "*** check that the data files are present.\n",
                 warnOrErr, ucnv_getDefaultName());
         if(!warnOnMissingData) {
-          fprintf(stdout, "*** Exitting.  Use the '-w' option if data files were\n*** purposely removed, to continue test anyway.\n");
+          fprintf(stdout, "*** Exiting.  Use the '-w' option if data files were\n*** purposely removed, to continue test anyway.\n");
           return 1;
         }
     }
@@ -1114,7 +1138,7 @@ main(int argc, char* argv[])
                 "*** Check the ICU_DATA environment variable and \n"
                 "*** check that the data files are present.\n", warnOrErr);
         if(!warnOnMissingData) {
-          fprintf(stdout, "*** Exitting.  Use the '-w' option if data files were\n*** purposely removed, to continue test anyway.\n");
+          fprintf(stdout, "*** Exiting.  Use the '-w' option if data files were\n*** purposely removed, to continue test anyway.\n");
           return 1;
         }
     }
@@ -1127,9 +1151,34 @@ main(int argc, char* argv[])
                 "*** Check the ICU_DATA environment variable and \n"
                 "*** check that the data files are present.\n", warnOrErr);
         if(!warnOnMissingData) {
-          fprintf(stdout, "*** Exitting.  Use the '-w' option if data files were\n*** purposely removed, to continue test anyway.\n");
+          fprintf(stdout, "*** Exiting.  Use the '-w' option if data files were\n*** purposely removed, to continue test anyway.\n");
           return 1;
         }
+    }
+
+    /* Set the default time zone */
+    if (zone != 0) {
+        UErrorCode ec = U_ZERO_ERROR;
+        UnicodeString id(zone, ""), s;
+        TimeZone *z = TimeZone::createTimeZone(id);
+        if (z == 0) {
+            fprintf(stdout,
+                    "*** Error: TimeZone::createTimeZone(\"%s\") returned 0.\n",
+                    zone);
+        } else if (z->getID(s) != id) {
+            fprintf(stdout,
+                    "*** Error: \"%s\" is not a valid time zone.\n",
+                    zone);
+            delete z;
+            z = 0;
+        }
+        if (z == 0) {
+            fprintf(stdout,
+                    "*** Exiting.  Use the '-tz' option with no argument to\n"
+                    "*** bypass the setting of the default time zone.\n");
+            return 1;
+        }
+        TimeZone::adoptDefault(z);
     }
 
     /* TODO: Add option to call u_cleanup and rerun tests. */
@@ -1140,6 +1189,9 @@ main(int argc, char* argv[])
         }
     }else{
         for (int i = 1; i < argc; ++i) {
+            if (i == argzone) {
+                continue;
+            }
             if (argv[i][0] != '-') {
                 char* name = argv[i];
                 fprintf(stdout, "\n=== Handling test: %s: ===\n", name);
