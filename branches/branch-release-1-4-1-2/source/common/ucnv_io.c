@@ -338,17 +338,15 @@ ucnv_io_getDefaultConverterName() {
     /* local variable to be thread-safe */
     const char *name=defaultConverterName;
     if(name==NULL) {
-        char *codepage=uprv_getDefaultCodepage();
+        const char *codepage=uprv_getDefaultCodepage();
         if(codepage!=NULL) {
             UErrorCode errorCode=U_ZERO_ERROR;
             name=ucnv_io_getConverterName(codepage, &errorCode);
             if(U_FAILURE(errorCode) || name==NULL) {
                 name=codepage;
             }
-            uprv_strcpy(defaultConverterNameBuffer, name);
-            defaultConverterName = defaultConverterNameBuffer;
+            defaultConverterName=name;
         }
-        uprv_free(codepage);
     }
     return name;
 }

@@ -1365,7 +1365,7 @@ static char* u_bottomNBytesOfDouble(double* d, int n)
 U_CAPI const char *
 uprv_defaultCodePageForLocale(const char *locale);
 
-char* uprv_getDefaultCodepage()
+const char* uprv_getDefaultCodepage()
 {
 #if defined(OS400)
   return "ibm-37";
@@ -1378,16 +1378,16 @@ char* uprv_getDefaultCodepage()
   uprv_strcpy(codepage+2, _itoa(GetACP(), tempString, 10));
   return codepage;
 #elif defined(POSIX) 
-
+    static char codesetName[100];
     char *name = NULL;
     char *euro = NULL;
     char *localeName = NULL;
-    char *codesetName = NULL; 
-
+ 
+    uprv_memset(codesetName, 0, 100);
     localeName = setlocale(LC_CTYPE, "");
     if (localeName != NULL) 
     {
-        codesetName = uprv_strdup(localeName);
+        uprv_strcpy(codesetName, localeName);
         if  ((name = (uprv_strchr(codesetName, (int) '.'))) != NULL) 
         {
             /* strip the locale name and look at the suffix only */
@@ -1403,30 +1403,27 @@ char* uprv_getDefaultCodepage()
             }
         } 
     }
-    if (codesetName != NULL) 
+    if (strlen(codesetName) != 0) 
     {
-        uprv_free(codesetName);
-        codesetName = NULL;
+        uprv_memset(codesetName, 0, 100);
     }
 #ifdef LINUX
-    codesetName = nl_langinfo(_NL_CTYPE_CODESET_NAME);     
+    if (nl_langinfo(_NL_CTYPE_CODESET_NAME) != NULL)
+        uprv_strcpy(codesetName, nl_langinfo(_NL_CTYPE_CODESET_NAME));     
 #else
-    codesetName = nl_langinfo(CODESET);    
+    if (nl_langinfo(CODESET) != NULL)
+        uprv_strcpy(codesetName, nl_langinfo(CODESET));    
 #endif  
-    if (codesetName == NULL) 
+    if (uprv_strlen(codesetName) == 0) 
     {
          /* look up in srl's table */
-         codesetName = (char*)uprv_defaultCodePageForLocale(localeName);
+         uprv_strcpy(codesetName, uprv_defaultCodePageForLocale(localeName));
      }
     /* if the table lookup failed, return latin1. */
-    if (codesetName == NULL)
+    if (uprv_strlen(codesetName) == 0)
     {
-        codesetName = uprv_strdup("LATIN_1");
+        uprv_strcpy(codesetName, "LATIN_1");
     } 
-    else 
-    {
-        codesetName = uprv_strdup(codesetName);
-    }
     return codesetName;
 
 #else
