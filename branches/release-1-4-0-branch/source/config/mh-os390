@@ -29,15 +29,15 @@ endif
 CFLAGS390=      -Wc,"langlvl(extended),spill(2000)"  $(ICU_IEEE) -Wc,dll,expo
 ## OS390BATCH
 ifeq (${OS390BATCH},1)
-DEFS390=        -D_OPEN_THREADS -D_XOPEN_SOURCE_EXTENDED -DOS390BATCH
+DEFS390=        -D_OPEN_THREADS -D_XOPEN_SOURCE_EXTENDED -DOS390BATCH -D_SHARE_EXT_VARS
 else
-DEFS390=        -D_OPEN_THREADS -D_XOPEN_SOURCE_EXTENDED
+DEFS390=        -D_OPEN_THREADS -D_XOPEN_SOURCE_EXTENDED -D_SHARE_EXT_VARS
 endif
 ARFLAGS=        -cr
 
 
 ## Commands to generate dependency files
-GEN_DEPS.c=	makedep                        
+GEN_DEPS.c=	makedep                         
 GEN_DEPS.cc=	makedep
 
 ## Commands to compile
