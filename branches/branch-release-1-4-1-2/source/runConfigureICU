@@ -87,7 +87,7 @@ case $platform in
                 echo Running configure for HP10.2 using aCC compiler ...
 				CC=cc; export CC
 				CXX=aCC; export CXX
-                ./configure;;
+                ./configure $mapped $mapdll;;
         HP/UX11CC)
                 echo Running configure for HP11 using native CC compiler ...
                 CC=cc; export CC
