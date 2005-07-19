@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (c) 1996-2004, International Business Machines Corporation and others.
+* Copyright (c) 1996-2005, International Business Machines Corporation and others.
 * All Rights Reserved.
 *******************************************************************************
 */
@@ -29,11 +29,11 @@
  * <em>Important: </em>The ICU collation service has been reimplemented 
  * in order to achieve better performance and UCA compliance. 
  * For details, see the 
- * <a href="http://oss.software.ibm.com/cvs/icu/~checkout~/icuhtml/design/collation/ICU_collation_design.htm">
+ * <a href="http://icu.sourceforge.net/cvs/icu/~checkout~/icuhtml/design/collation/ICU_collation_design.htm">
  * collation design document</a>.
  * <p>
  * For more information about the collation service see 
- * <a href="http://oss.software.ibm.com/icu/userguide/Collate_Intro.html">the users guide</a>.
+ * <a href="http://icu.sourceforge.net/icu/userguide/Collate_Intro.html">the users guide</a>.
  * <p>
  * Collation service provides correct sorting orders for most locales supported in ICU. 
  * If specific data for a locale is not available, the orders eventually falls back
@@ -41,7 +41,7 @@
  * <p>
  * Sort ordering may be customized by providing your own set of rules. For more on
  * this subject see the 
- * <a href="http://oss.software.ibm.com/icu/userguide/Collate_Customization.html">
+ * <a href="http://icu.sourceforge.net/icu/userguide/Collate_Customization.html">
  * Collation customization</a> section of the users guide.
  * <p>
  * @see         UCollationResult
@@ -305,7 +305,7 @@ ucol_openRules( const UChar        *rules,
  * Open a collator defined by a short form string.
  * The structure and the syntax of the string is defined in the "Naming collators"
  * section of the users guide: 
- * http://oss.software.ibm.com/icu/userguide/Collate_Concepts.html#Naming_Collators
+ * http://icu.sourceforge.net/icu/userguide/Collate_Concepts.html#Naming_Collators
  * Attributes are overriden by the subsequent attributes. So, for "S2_S3", final
  * strength will be 3. 3066bis locale overrides individual locale parts.
  * The call to this function is equivalent to a call to ucol_open, followed by a 
@@ -589,7 +589,7 @@ ucol_getKeywordValues(const char *keyword, UErrorCode *status);
  * applications who wish to cache collators, or otherwise reuse
  * collators when possible.  The functional equivalent may change
  * over time.  For more information, please see the <a
- * href="http://oss.software.ibm.com/icu/userguide/locale.html#services">
+ * href="http://icu.sourceforge.net/icu/userguide/locale.html#services">
  * Locales and Services</a> section of the ICU User Guide.
  * @param result fillin for the functionally equivalent locale
  * @param resultCapacity capacity of the fillin buffer
@@ -629,7 +629,7 @@ ucol_getRules(    const    UCollator    *coll,
  *  This string will be normalized.
  *  The structure and the syntax of the string is defined in the "Naming collators"
  *  section of the users guide: 
- *  http://oss.software.ibm.com/icu/userguide/Collate_Concepts.html#Naming_Collators
+ *  http://icu.sourceforge.net/icu/userguide/Collate_Concepts.html#Naming_Collators
  *  This API supports preflighting.
  *  @param coll a collator
  *  @param locale a locale that will appear as a collators locale in the resulting
@@ -1127,6 +1127,10 @@ U_INTERNAL UBool U_EXPORT2
 ucol_equals(const UCollator *source, const UCollator *target);
 
 /** Calculates the set of unsafe code points, given a collator.
+ *   A character is unsafe if you could append any character and cause the ordering to alter significantly.
+ *   Collation sorts in normalized order, so anything that rearranges in normalization can cause this.
+ *   Thus if you have a character like a_umlaut, and you add a lower_dot to it,
+ *   then it normalizes to a_lower_dot + umlaut, and sorts differently.
  *  @param coll Collator
  *  @param unsafe a fill-in set to receive the unsafe points
  *  @param status for catching errors
@@ -1137,6 +1141,38 @@ U_INTERNAL int32_t U_EXPORT2
 ucol_getUnsafeSet( const UCollator *coll,
                   USet *unsafe,
                   UErrorCode *status);
+
+/** Reset UCA's static pointers. You don't want to use this, unless your static memory can go away.
+ * @internal ICU 3.2.1
+ */
+U_INTERNAL void U_EXPORT2
+ucol_forgetUCA(void);
+
+/** Touches all resources needed for instantiating a collator from a short string definition,
+ *  thus filling up the cache.
+ * @param definition A short string containing a locale and a set of attributes. 
+ *                   Attributes not explicitly mentioned are left at the default
+ *                   state for a locale.
+ * @param parseError if not NULL, structure that will get filled with error's pre
+ *                   and post context in case of error.
+ * @param forceDefaults if FALSE, the settings that are the same as the collator 
+ *                   default settings will not be applied (for example, setting
+ *                   French secondary on a French collator would not be executed). 
+ *                   If TRUE, all the settings will be applied regardless of the 
+ *                   collator default value. If the definition
+ *                   strings are to be cached, should be set to FALSE.
+ * @param status     Error code. Apart from regular error conditions connected to 
+ *                   instantiating collators (like out of memory or similar), this
+ *                   API will return an error if an invalid attribute or attribute/value
+ *                   combination is specified.
+ * @see ucol_openFromShortString
+ * @internal ICU 3.2.1
+ */
+U_INTERNAL void U_EXPORT2
+ucol_prepareShortStringOpen( const char *definition,
+                          UBool forceDefaults,
+                          UParseError *parseError,
+                          UErrorCode *status);
 
 /** Creates a binary image of a collator. This binary image can be stored and 
  *  later used to instantiate a collator using ucol_openBinary.
