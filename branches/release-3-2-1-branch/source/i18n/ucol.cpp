@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-*   Copyright (C) 1996-2004, International Business Machines
+*   Copyright (C) 1996-2005, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *******************************************************************************
 *   file name:  ucol.cpp
@@ -9384,6 +9384,13 @@ ucol_openBinary(const uint8_t *bin, int32_t length,
         result->rb = NULL;
         result->elements = NULL;
         return result;
+}
+
+U_CAPI void U_EXPORT2
+ucol_forgetUCA(void)
+{
+  _staticUCA = NULL;
+  UCA_DATA_MEM = NULL;
 }
 
 #endif /* #if !UCONFIG_NO_COLLATION */
