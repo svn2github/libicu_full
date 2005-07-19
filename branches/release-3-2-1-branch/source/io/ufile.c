@@ -1,7 +1,7 @@
 /*
 ******************************************************************************
 *
-*   Copyright (C) 1998-2004, International Business Machines
+*   Copyright (C) 1998-2005, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 ******************************************************************************
@@ -54,7 +54,11 @@ u_finit(FILE        *f,
 #ifdef WIN32
     if (0 <= result->fFileno && result->fFileno <= 2) {
         /* stdin, stdout and stderr need to be special cased for Windows 98 */
-        result->fFile = &_iob[_fileno(f)];
+#if _MSC_VER >= 1400
+        result->fFile = &__iob_func()[_fileno(f)];
+#else
+	result->fFile = &_iob[_fileno(f)];
+#endif
     }
     else
 #endif
