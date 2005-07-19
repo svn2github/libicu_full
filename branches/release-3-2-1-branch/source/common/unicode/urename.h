@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-*   Copyright (C) 2002-2004, International Business Machines
+*   Copyright (C) 2002-2005, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *******************************************************************************
 *
@@ -557,6 +557,7 @@
 #define ucol_doCE ucol_doCE_3_2
 #define ucol_equal ucol_equal_3_2
 #define ucol_equals ucol_equals_3_2
+#define ucol_forgetUCA ucol_forgetUCA_3_2
 #define ucol_getAttribute ucol_getAttribute_3_2
 #define ucol_getAttributeOrDefault ucol_getAttributeOrDefault_3_2
 #define ucol_getAvailable ucol_getAvailable_3_2
@@ -614,6 +615,7 @@
 #define ucol_openFromShortString ucol_openFromShortString_3_2
 #define ucol_openRules ucol_openRules_3_2
 #define ucol_open_internal ucol_open_internal_3_2
+#define ucol_prepareShortStringOpen ucol_prepareShortStringOpen_3_2
 #define ucol_previous ucol_previous_3_2
 #define ucol_primaryOrder ucol_primaryOrder_3_2
 #define ucol_prv_getSpecialCE ucol_prv_getSpecialCE_3_2
@@ -1436,6 +1438,7 @@
 #define UCharCharacterIterator UCharCharacterIterator_3_2
 #define UMemory UMemory_3_2
 #define UObject UObject_3_2
+#define URegularExpression URegularExpression_3_2
 #define UStack UStack_3_2
 #define UStringEnumeration UStringEnumeration_3_2
 #define UVector UVector_3_2
