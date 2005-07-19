@@ -1,6 +1,6 @@
 dnl -*-m4-*-
 dnl configure.in for ICU
-dnl Copyright (c) 1999-2004, International Business Machines Corporation and
+dnl Copyright (c) 1999-2005, International Business Machines Corporation and
 dnl others. All Rights Reserved.
 dnl Stephen F. Booth, heavily modified by Yves and others
 
@@ -65,7 +65,18 @@ AC_PATH_PROG(DOXYGEN,doxygen,,$PATH:/usr/local/bin:/usr/bin)
 
 dnl Determine the host system and Makefile fragment
 AC_CANONICAL_HOST
-AC_EXEEXT
+
+dnl Determine the executable suffix
+dnl We don't use AC_EXEEXT because some compilers output separate debugging
+dnl files, which confuses the AC_EXEEXT macro.
+AC_MSG_CHECKING(checking for executable suffix)
+case "${host}" in
+    *-*-cygwin*|*-*-mingw*)  EXEEXT=.exe ;;
+    *)      EXEEXT="" ;;
+esac
+ac_exeext=$EXEEXT
+AC_MSG_RESULT($EXEEXT)
+AC_SUBST(EXEEXT)
 
 dnl Determine how strict we want to be when compiling
 AC_CHECK_STRICT_COMPILE
@@ -884,9 +895,13 @@ case "${host}" in
 	*-apple-darwin*|*-apple-rhapsody*)	platform=U_DARWIN ;;
 	*-*-cygwin*|*-*-mingw*)	platform=U_CYGWIN ;;
 	*-*ibm-openedition*|*-*-os390*)	platform=OS390
-			ICUDATA_CHAR="e" ;;
+			if test "${ICU_ENABLE_ASCII_STRINGS}" != "1"; then
+				ICUDATA_CHAR="e"
+			fi ;;
 	*-*-os400*)	platform=OS400
-			ICUDATA_CHAR="e" ;;
+			if test "${ICU_ENABLE_ASCII_STRINGS}" != "1"; then
+				ICUDATA_CHAR="e"
+			fi ;;
 	*-*-nto*)	platform=U_QNX ;;
 	*-dec-osf*) 	platform=U_OSF ;;
 	*-*-beos)		platform=U_BEOS ;;

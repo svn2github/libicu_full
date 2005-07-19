@@ -1186,105 +1186,20 @@ host_vendor=`echo $host | sed 's/^\([^-]*\)-\([^-]*\)-\(.*\)$/\2/'`
 host_os=`echo $host | sed 's/^\([^-]*\)-\([^-]*\)-\(.*\)$/\3/'`
 echo "$ac_t""$host" 1>&6
 
-echo $ac_n "checking for Cygwin environment""... $ac_c" 1>&6
-echo "configure:1191: checking for Cygwin environment" >&5
-if eval "test \"`echo '$''{'ac_cv_cygwin'+set}'`\" = set"; then
-  echo $ac_n "(cached) $ac_c" 1>&6
-else
-  cat > conftest.$ac_ext <<EOF
-#line 1196 "configure"
-#include "confdefs.h"
 
-int main() {
-
-#ifndef __CYGWIN__
-#define __CYGWIN__ __CYGWIN32__
-#endif
-return __CYGWIN__;
-; return 0; }
-EOF
-if { (eval echo configure:1207: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
-  rm -rf conftest*
-  ac_cv_cygwin=yes
-else
-  echo "configure: failed program was:" >&5
-  cat conftest.$ac_ext >&5
-  rm -rf conftest*
-  ac_cv_cygwin=no
-fi
-rm -f conftest*
-rm -f conftest*
-fi
-
-echo "$ac_t""$ac_cv_cygwin" 1>&6
-CYGWIN=
-test "$ac_cv_cygwin" = yes && CYGWIN=yes
-echo $ac_n "checking for mingw32 environment""... $ac_c" 1>&6
-echo "configure:1224: checking for mingw32 environment" >&5
-if eval "test \"`echo '$''{'ac_cv_mingw32'+set}'`\" = set"; then
-  echo $ac_n "(cached) $ac_c" 1>&6
-else
-  cat > conftest.$ac_ext <<EOF
-#line 1229 "configure"
-#include "confdefs.h"
-
-int main() {
-return __MINGW32__;
-; return 0; }
-EOF
-if { (eval echo configure:1236: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
-  rm -rf conftest*
-  ac_cv_mingw32=yes
-else
-  echo "configure: failed program was:" >&5
-  cat conftest.$ac_ext >&5
-  rm -rf conftest*
-  ac_cv_mingw32=no
-fi
-rm -f conftest*
-rm -f conftest*
-fi
-
-echo "$ac_t""$ac_cv_mingw32" 1>&6
-MINGW32=
-test "$ac_cv_mingw32" = yes && MINGW32=yes
-
-
-echo $ac_n "checking for executable suffix""... $ac_c" 1>&6
-echo "configure:1255: checking for executable suffix" >&5
-if eval "test \"`echo '$''{'ac_cv_exeext'+set}'`\" = set"; then
-  echo $ac_n "(cached) $ac_c" 1>&6
-else
-  if test "$CYGWIN" = yes || test "$MINGW32" = yes; then
-  ac_cv_exeext=.exe
-else
-  rm -f conftest*
-  echo 'int main () { return 0; }' > conftest.$ac_ext
-  ac_cv_exeext=
-  if { (eval echo configure:1265: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; }; then
-    for file in conftest.*; do
-      case $file in
-      *.c | *.o | *.obj) ;;
-      *) ac_cv_exeext=`echo $file | sed -e s/conftest//` ;;
+echo $ac_n "checking checking for executable suffix""... $ac_c" 1>&6
+echo "configure:1243: checking checking for executable suffix" >&5
+case "${host}" in
+    *-*-cygwin*|*-*-mingw*)  EXEEXT=.exe ;;
+    *)      EXEEXT="" ;;
       esac
-    done
-  else
-    { echo "configure: error: installation or configuration problem: compiler cannot create executables." 1>&2; exit 1; }
-  fi
-  rm -f conftest*
-  test x"${ac_cv_exeext}" = x && ac_cv_exeext=no
-fi
-fi
-
-EXEEXT=""
-test x"${ac_cv_exeext}" != xno && EXEEXT=${ac_cv_exeext}
-echo "$ac_t""${ac_cv_exeext}" 1>&6
 ac_exeext=$EXEEXT
+echo "$ac_t""$EXEEXT" 1>&6
 
 
 
     echo $ac_n "checking whether strict compiling is on""... $ac_c" 1>&6
-echo "configure:1288: checking whether strict compiling is on" >&5
+echo "configure:1202: checking whether strict compiling is on" >&5
     # Check whether --enable-strict or --disable-strict was given.
 if test "${enable_strict+set}" = set; then
   enableval="$enable_strict"
@@ -1350,7 +1265,7 @@ else
 fi
 
         echo $ac_n "checking for 64-bit executable support""... $ac_c" 1>&6
-echo "configure:1354: checking for 64-bit executable support" >&5
+echo "configure:1268: checking for 64-bit executable support" >&5
     if test "$ENABLE_64BIT_LIBS" != no; then
         case "${host}" in
         *-*-solaris*)
@@ -1418,11 +1333,11 @@ echo "configure:1354: checking for 64-bit executable support" >&5
   ENABLE_64BIT_LIBS=no
 else
   cat > conftest.$ac_ext <<EOF
-#line 1422 "configure"
+#line 1337 "configure"
 #include "confdefs.h"
 int main(void) {return 0;}
 EOF
-if { (eval echo configure:1426: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
+if { (eval echo configure:1341: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
 then
   ENABLE_64BIT_LIBS=yes
 else
@@ -4031,9 +3946,13 @@ case "${host}" in
 	*-apple-darwin*|*-apple-rhapsody*)	platform=U_DARWIN ;;
 	*-*-cygwin*|*-*-mingw*)	platform=U_CYGWIN ;;
 	*-*ibm-openedition*|*-*-os390*)	platform=OS390
-			ICUDATA_CHAR="e" ;;
+			if test "${ICU_ENABLE_ASCII_STRINGS}" != "1"; then
+				ICUDATA_CHAR="e"
+			fi ;;
 	*-*-os400*)	platform=OS400
-			ICUDATA_CHAR="e" ;;
+			if test "${ICU_ENABLE_ASCII_STRINGS}" != "1"; then
+				ICUDATA_CHAR="e"
+			fi ;;
 	*-*-nto*)	platform=U_QNX ;;
 	*-dec-osf*) 	platform=U_OSF ;;
 	*-*-beos)		platform=U_BEOS ;;
