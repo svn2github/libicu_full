@@ -2187,7 +2187,7 @@ static void TestGetLocale(void) {
         }
         /* We want the valid to be strictly > the bogus requested locale,
            and the valid to be >= the actual. */
-            (_loccmp(req, valid) >= 0) :
+        test = (_loccmp(req, valid) >= 0);
 
         if (test &&
             _loccmp(valid, actual) >= 0) {
