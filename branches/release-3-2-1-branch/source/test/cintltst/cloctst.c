@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT:
- * Copyright (c) 1997-2004, International Business Machines Corporation and
+ * Copyright (c) 1997-2005, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 /********************************************************************************
@@ -2187,14 +2187,7 @@ static void TestGetLocale(void) {
         }
         /* We want the valid to be strictly > the bogus requested locale,
            and the valid to be >= the actual. */
-        /* TODO MessageFormat is currently just storing the locale it is given.
-           As a result, it will return whatever it was given, even if the
-           locale is invalid. */
-        test = (_cmpversion("3.2") <= 0) ?
-            /* Here is the weakened test for 3.0: */
             (_loccmp(req, valid) >= 0) :
-            /* Here is what the test line SHOULD be: */
-            (_loccmp(req, valid) > 0);
 
         if (test &&
             _loccmp(valid, actual) >= 0) {
