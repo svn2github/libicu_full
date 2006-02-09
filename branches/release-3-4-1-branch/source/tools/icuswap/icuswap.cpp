@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 2003-2005, International Business Machines
+*   Copyright (C) 2003-2006, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
@@ -304,6 +304,8 @@ static const struct {
     { { 0x52, 0x65, 0x73, 0x42 }, ures_swap },          /* dataFormat="ResB" */
 #if !UCONFIG_NO_LEGACY_CONVERSION
     { { 0x63, 0x6e, 0x76, 0x74 }, ucnv_swap },          /* dataFormat="cnvt" */
+#endif
+#if !UCONFIG_NO_CONVERSION
     { { 0x43, 0x76, 0x41, 0x6c }, ucnv_swapAliases },   /* dataFormat="CvAl" */
 #endif
     { { 0x43, 0x6d, 0x6e, 0x44 }, udata_swapPackage },  /* dataFormat="CmnD" */
