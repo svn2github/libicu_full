@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT:
- * Copyright (c) 1997-2005, International Business Machines Corporation and
+ * Copyright (c) 1997-2006, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 /********************************************************************************
@@ -64,7 +64,7 @@ static const char* rawData2[LOCALE_INFO_SIZE][LOCALE_SIZE] = {
     /* ISO-3 country */
     {   "USA",  "FRA",  "ESP",  "GRC",  "NOR",  "CHN", "DEU", "", "JPN"   },
     /* LCID */
-    {   "409", "40c", "403", "408", "814",  "804", "407", "a", "411"     },
+    {   "409", "40c", "403", "408", "814",  "804", "10407", "40a", "411"     },
 
     /* display language (English) */
     {   "English",  "French",   "Catalan", "Greek",    "Norwegian", "Chinese", "German", "Spanish", "Japanese"    },
@@ -1737,8 +1737,9 @@ static void TestCanonicalization(void)
         { "en-BOONT", "en_BOONT", "en__BOONT" }, /* registered name */
         { "de-1901", "de_1901", "de__1901" }, /* registered name */
         { "de-1906", "de_1906", "de__1906" }, /* registered name */
-        { "sr-SP-Cyrl", "sr_SP_CYRL", "sr_Cyrl_SP" }, /* .NET name */
-        { "sr-SP-Latn", "sr_SP_LATN", "sr_Latn_SP" }, /* .NET name */
+        { "sr-SP-Cyrl", "sr_SP_CYRL", "sr_Cyrl_CS" }, /* .NET name */
+        { "sr-SP-Latn", "sr_SP_LATN", "sr_Latn_CS" }, /* .NET name */
+        { "sr_YU_CYRILLIC", "sr_YU_CYRILLIC", "sr_Cyrl_CS" }, /* Linux name */
         { "uz-UZ-Cyrl", "uz_UZ_CYRL", "uz_Cyrl_UZ" }, /* .NET name */
         { "uz-UZ-Latn", "uz_UZ_LATN", "uz_Latn_UZ" }, /* .NET name */
         { "zh-CHS", "zh_CHS", "zh_Hans" }, /* .NET name */
