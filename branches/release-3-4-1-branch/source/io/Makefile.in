@@ -1,6 +1,6 @@
 #******************************************************************************
 #
-#   Copyright (C) 1999-2004, International Business Machines
+#   Copyright (C) 1999-2006, International Business Machines
 #   Corporation and others.  All Rights Reserved.
 #
 #******************************************************************************
@@ -39,7 +39,7 @@ SO_VERSION_DATA = io.res
 endif
 
 ifeq ($(OS390BATCH),1)
-BATCH_TARGET = $(BATCH_ICUIO_TARGET)
+BATCH_TARGET = $(BATCH_IO_TARGET)
 BATCH_LIBS = $(BATCH_LIBICUUC) $(BATCH_LIBICUI18N) -lm
 endif   # OS390BATCH
 
