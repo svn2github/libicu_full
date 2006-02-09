@@ -1,6 +1,6 @@
 /*
 **********************************************************************
-*   Copyright (C) 1997-2005, International Business Machines
+*   Copyright (C) 1997-2006, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 **********************************************************************
 *
@@ -465,6 +465,7 @@ typedef struct CanonicalizationMap {
 static const CanonicalizationMap CANONICALIZE_MAP[] = {
     { "",               "en_US_POSIX", NULL, NULL }, /* .NET name */
     { "C",              "en_US_POSIX", NULL, NULL }, /* POSIX name */
+    { "posix",          "en_US_POSIX", NULL, NULL }, /* POSIX name (alias of C) */
     { "art_LOJBAN",     "jbo", NULL, NULL }, /* registered name */
     { "az_AZ_CYRL",     "az_Cyrl_AZ", NULL, NULL }, /* .NET name */
     { "az_AZ_LATN",     "az_Latn_AZ", NULL, NULL }, /* .NET name */
@@ -498,8 +499,10 @@ static const CanonicalizationMap CANONICALIZE_MAP[] = {
     { "nl_NL_PREEURO",  "nl_NL", "currency", "NLG" },
     { "pt_PT_PREEURO",  "pt_PT", "currency", "PTE" },
     { "sl_ROZAJ",       "sl__ROZAJ", NULL, NULL }, /* registered name */
-    { "sr_SP_CYRL",     "sr_Cyrl_SP", NULL, NULL }, /* .NET name */
-    { "sr_SP_LATN",     "sr_Latn_SP", NULL, NULL }, /* .NET name */
+    { "sr_SP_CYRL",     "sr_Cyrl_CS", NULL, NULL }, /* .NET name */
+    { "sr_SP_LATN",     "sr_Latn_CS", NULL, NULL }, /* .NET name */
+    { "sr_YU_CYRILLIC", "sr_Cyrl_CS", NULL, NULL }, /* Linux name */
+    { "uz_UZ_CYRILLIC", "uz_Cyrl_UZ", NULL, NULL }, /* Linux name */
     { "uz_UZ_CYRL",     "uz_Cyrl_UZ", NULL, NULL }, /* .NET name */
     { "uz_UZ_LATN",     "uz_Latn_UZ", NULL, NULL }, /* .NET name */
     { "zh_CHS",         "zh_Hans", NULL, NULL }, /* .NET name */
