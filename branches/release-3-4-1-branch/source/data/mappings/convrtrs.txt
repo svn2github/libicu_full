@@ -1,6 +1,6 @@
 # ******************************************************************************
 # *
-# *   Copyright (C) 1995-2005, International Business Machines
+# *   Copyright (C) 1995-2006, International Business Machines
 # *   Corporation and others.  All Rights Reserved.
 # *
 # ******************************************************************************
@@ -520,7 +520,7 @@ ibm-33722_P12A-1999 { UTR22* }
                         X-EUC-JP { WINDOWS JAVA }   # Japan EUC. x-euc-jp is a MIME name
                         eucjis { JAVA }
                         windows-51932 { WINDOWS* }
-                        ujis # Linux sometimes uses this name. This is an unfortunate generic and rarely used name. It's use is discouraged.
+                        ujis # Linux sometimes uses this name. This is an unfortunate generic and rarely used name. Its use is discouraged.
                         ibm-33722_VPUA
                         IBM-eucJP
 ibm-33722_P120-1999 { UTR22* }  # Japan EUC with \ <-> Yen mapping
@@ -761,7 +761,7 @@ ibm-1258_P100-1997 { UTR22* }   ibm-1258 { IBM* } windows-1258  # Old Windows Vi
 
 macos-0_2-10.2 { UTR22* }       macintosh { IANA* MIME* WINDOWS } mac { IANA } csMacintosh { IANA } windows-10000 { WINDOWS* } # Apple latin 1
 macos-6-10.2 { UTR22* }         x-mac-greek { MIME* WINDOWS } windows-10006 { WINDOWS* } macgr           # Apple Greek
-macos-7_3-10.2 { UTR22* }       x-mac-cyrillic { MIME* WINDOWS } windows-10007 { WINDOWS* } maccy        # Apple Cyrillic
+macos-7_3-10.2 { UTR22* }       x-mac-cyrillic { MIME* WINDOWS } windows-10007 { WINDOWS* } mac-cyrillic maccy # Apple Cyrillic
 macos-29-10.2 { UTR22* }        x-mac-centraleurroman { MIME* } windows-10029 { WINDOWS* } x-mac-ce { WINDOWS } macce   # Apple Central Europe
 macos-35-10.2 { UTR22* }        x-mac-turkish { MIME* WINDOWS } windows-10081 { WINDOWS* } mactr         # Apple Turkish
 
@@ -884,6 +884,7 @@ ibm-1123_P100-1995 { UTR22* }   ibm-1123 { IBM* JAVA } cp1123 { JAVA* } 1123 { J
 ibm-1130_P100-1997 { UTR22* }   ibm-1130 { IBM* }       # EBCDIC Vietnamese
 ibm-1132_P100-1998 { UTR22* }   ibm-1132 { IBM* }       # EBCDIC Lao
 ibm-1137_P100-1999 { UTR22* }   ibm-1137 { IBM* }       # Devanagari EBCDIC (based on Unicode character set)
+ibm-4517_P100-2005 { UTR22* }   ibm-4517 { IBM* }       # EBCDIC Arabic. Update of ibm-421
 
 # with Euro
 ibm-1140_P100-1997 { UTR22* }   ibm-1140 { IBM* } IBM01140 { IANA* JAVA } CCSID01140 { IANA JAVA } CP01140 { IANA JAVA } cp1140 { JAVA* } ebcdic-us-37+euro { IANA } # EBCDIC US
@@ -912,10 +913,10 @@ ibm-1399_P110-2003 { UTR22* }   ibm-1399 { IBM* }                   # Host MBCS 
 ibm-5123_P100-1999 { UTR22* }   ibm-5123 { IBM* }                   # Host Roman Jis. Euro update of ibm-1027. SBCS portion of ibm-1390.
 ibm-8482_P100-1999 { UTR22* }   ibm-8482 { IBM* }                   # host SBCS (Katakana). Euro update of ibm-290. SBCS portion of ibm-1399.
 ibm-16684_P110-2003 { UTR22* }  ibm-16684 { IBM* }                  # DBCS Jis + Roman Jis Host. This is the DBCS portion of ibm-1390 and ibm-1399 (JIS X 0213)
-ibm-4899_P100-1998 { UTR22* }   ibm-4899 { IBM* }                   # Old EBCDIC Hebrew
-ibm-4971_P100-1999 { UTR22* }   ibm-4971 { IBM* }                   # EBCDIC Greek
-ibm-12712_P100-1998 { UTR22* }  ibm-12712 { IBM* } ebcdic-he        # EBCDIC Hebrew (new sheqel, control charaters update)
-ibm-16804_X110-1999 { UTR22* }  ibm-16804 { IBM* } ebcdic-ar        # EBCDIC Arabic
+ibm-4899_P100-1998 { UTR22* }   ibm-4899 { IBM* }                   # Old EBCDIC Hebrew. Update of ibm-803
+ibm-4971_P100-1999 { UTR22* }   ibm-4971 { IBM* }                   # EBCDIC Greek. Update of ibm-875
+ibm-12712_P100-1998 { UTR22* }  ibm-12712 { IBM* } ebcdic-he        # EBCDIC Hebrew (new sheqel, control charaters update). Update of ibm-424
+ibm-16804_X110-1999 { UTR22* }  ibm-16804 { IBM* } ebcdic-ar        # EBCDIC Arabic. Update of ibm-420
 
 
 # EBCDIC codepages for S/390, with LF and NL codes swapped
