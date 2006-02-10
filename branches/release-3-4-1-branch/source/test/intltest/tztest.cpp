@@ -1,6 +1,6 @@
 /***********************************************************************
  * COPYRIGHT: 
- * Copyright (c) 1997-2005, International Business Machines Corporation
+ * Copyright (c) 1997-2006, International Business Machines Corporation
  * and others. All Rights Reserved.
  ***********************************************************************/
 
@@ -579,7 +579,7 @@ void TimeZoneTest::TestShortZoneIDs()
         {"PNT", -420, FALSE},
         {"MST", -420, FALSE}, // updated Aug 2003 aliu
         {"CST", -360, TRUE},
-        {"IET", -300, FALSE},
+        {"IET", -300, TRUE},  // updated Jan 2006 srl
         {"EST", -300, FALSE}, // updated Aug 2003 aliu
         {"PRT", -240, FALSE},
         {"CNT", -210, TRUE},
