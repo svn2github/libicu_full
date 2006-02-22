@@ -2,15 +2,16 @@
 
 <html lang="en-US">
   <head>
+    <meta name="generator" content="HTML Tidy, see www.w3.org">
     <title>ReadMe for ICU</title>
     <meta name="COPYRIGHT" content=
-    "Copyright (c) 1997-2005 IBM Corporation and others. All Rights Reserved.">
+    "Copyright (c) 1997-2006 IBM Corporation and others. All Rights Reserved.">
     <meta name="KEYWORDS" content=
     "ICU; International Components for Unicode; what's new; readme; read me; introduction; downloads; downloading; building; installation;">
     <meta name="DESCRIPTION" content=
     "The introduction to the International Components for Unicode with instructions on building, installation, usage and other information about ICU.">
     <meta http-equiv="Content-Type" content="text/html; charset=us-ascii">
-    <style type="text/css">
+<style type="text/css">
     h1 {border-width: 2px; border-style: solid; text-align: center; width: 100%; font-size: 200%; font-weight: bold}
     h2 {margin-top: 3em; text-decoration: underline; page-break-before: always}
     h2.TOC {page-break-before: auto}
@@ -26,11 +27,11 @@
 
   <body>
     <h1>International Components for Unicode<br>
-     <abbr title="International Components for Unicode">ICU</abbr> 3.4
+     <abbr title="International Components for Unicode">ICU</abbr> 3.4.1
     ReadMe</h1>
 
     <p>Version: 2005-July-26<br>
-     Copyright &copy; 1997-2005 International Business Machines Corporation and
+     Copyright &copy; 1997-2006 International Business Machines Corporation and
     others. All Rights Reserved.</p>
     <!-- Remember that there is a copyright at the end too -->
     <hr>
@@ -72,8 +73,8 @@
         <a href="#ImportantNotes">Important Notes About Using ICU</a> 
 
         <ul class="TOC">
-          <li><a href="#ImportantNotesMultithreaded">Using ICU in a Multithreaded
-          Environment</a></li>
+          <li><a href="#ImportantNotesMultithreaded">Using ICU in a
+          Multithreaded Environment</a></li>
 
           <li><a href="#ImportantNotesWindows">Windows Platform</a></li>
 
@@ -219,26 +220,71 @@
     <p>The following list concentrates on <em>changes that affect existing
     applications migrating from previous ICU releases</em>. For more news about
     this release, see the <a href=
-    "http://www.ibm.com/software/globalization/icu/downloads.jsp">ICU 3.4
+    "http://www.ibm.com/software/globalization/icu/downloads.jsp">ICU 3.4.1
     download page</a>.</p>
+
+    <h3><a name="News_3_4_1" id="News_3_4_1">Updates in ICU4C 3.4.1</a></h3>
+
+    <p>The following is a summary of changes made in ICU4C 3.4.1.</p>
+
+    <ul>
+      <li>The timezone data has been updated to Olson 2006a. This contains the
+      latest daylight savings timezone changes required in the United
+      States.</li>
+
+      <li>The detection of the default codepage name is now more accurate on
+      various platforms.</li>
+
+      <li>The detection of the default locale is now more accurate on various
+      platforms.</li>
+
+      <li>Several bugs with collation have been fixed.</li>
+
+      <li>The u_*scanf* functions in the icuio library now correctly handles
+      %n.</li>
+
+      <li>
+        Various configuration problems has been fixed on the following
+        operating systems and compilers: 
+
+        <ul>
+          <li>Microsoft Visual Studio .NET 2005 (both x86 and x64
+          configurations)</li>
+
+          <li>z/OS</li>
+
+          <li>Solaris 10</li>
+
+          <li>Mac OS X</li>
+
+          <li>Linux PowerPC with the Visual Age 7 compiler</li>
+
+          <li>Windows (when sharing a .dat package between multiple users in
+          memory)</li>
+
+          <li>DragonFly BSD</li>
+        </ul>
+      </li>
+    </ul>
 
     <h3><a name="News_u_init" id="News_u_init">Changes to thread safety
     initialization and data loading</a></h3>
 
     <p>Previously, in order to ensure that ICU was thread safe, applications
     had to use u_init() before using ICU in multiple threads. This requirement
-    is no longer needed. Please refer to the readme section called <a
-    href="#ImportantNotesMultithreaded">Using ICU in a Multithreaded
-    Environment</a> for details.</p>
+    is no longer needed. Please refer to the readme section called <a href=
+    "#ImportantNotesMultithreaded">Using ICU in a Multithreaded Environment</a>
+    for details.</p>
 
-    <h3><a name="News_data_package" id="News_data_package">Source download contains .dat package for
-    ICU data</a></h3>
+    <h3><a name="News_data_package" id="News_data_package">Source download
+    contains .dat package for ICU data</a></h3>
 
     <p>The ICU4C 3.4 source downloads contain a pre-built .dat package with
     ICU's data rather than the data source files. This is to simplify the build
     process for the majority of users and to reduce platform porting issues. If
     you need the data source files for customization, then please download the
-    ICU source code from <a href="http://www.ibm.com/software/globalization/icu/repository.jsp">CVS</a>.</p>
+    ICU source code from <a href=
+    "http://www.ibm.com/software/globalization/icu/repository.jsp">CVS</a>.</p>
 
     <h2><a name="Download" href="#Download" id="Download">How To Download the
     Source Code</a></h2>
@@ -1264,7 +1310,8 @@ ADDENVVAR ENVVAR(OUTPUTDIR) VALUE('<i>libraryname</i>')</samp>
       <li>Run gunzip on the ICU source code compressed tar archive
       (icu-<i>X</i>.<i>Y</i>.tgz).</li>
 
-      <li>Run unpax-icu.sh on the tar file generated from the previous step.</li>
+      <li>Run unpax-icu.sh on the tar file generated from the previous
+      step.</li>
 
       <li>Change your current directory to icu/source.</li>
 
@@ -1297,9 +1344,9 @@ ADDENVVAR ENVVAR(OUTPUTDIR) VALUE('<i>libraryname</i>')</samp>
     products. Usually only the libraries need to be considered for
     packaging.</p>
 
-    <p>On UNIX, you should use "<tt>gmake install</tt>" to make it easier
-    to develop and package ICU. The bin, lib and include directories are needed
-    to develop applications that use ICU. These directories will be created
+    <p>On UNIX, you should use "<tt>gmake install</tt>" to make it easier to
+    develop and package ICU. The bin, lib and include directories are needed to
+    develop applications that use ICU. These directories will be created
     relative to the "<tt>--prefix=</tt><i>dir</i>" configure option (See the <a
     href="#HowToBuildUNIX">UNIX build instructions</a>). When ICU is built on
     Windows, a similar directory structure is built.</p>
@@ -1431,8 +1478,9 @@ ADDENVVAR ENVVAR(OUTPUTDIR) VALUE('<i>libraryname</i>')</samp>
     <h2><a name="ImportantNotes" href="#ImportantNotes" id=
     "ImportantNotes">Important Notes About Using ICU</a></h2>
 
-    <h3><a name="ImportantNotesMultithreaded" href="#ImportantNotesMultithreaded" id=
-    "ImportantNotesMultithreaded">Using ICU in a Multithreaded Environment</a></h3>
+    <h3><a name="ImportantNotesMultithreaded" href=
+    "#ImportantNotesMultithreaded" id="ImportantNotesMultithreaded">Using ICU
+    in a Multithreaded Environment</a></h3>
 
     <p>Some versions of ICU require calling the <code>u_init()</code> function
     from <code>uclean.h</code> to ensure that ICU is initialized properly. In
@@ -1799,7 +1847,7 @@ ADDENVVAR ENVVAR(OUTPUTDIR) VALUE('<i>libraryname</i>')</samp>
     </ul>
     <hr>
 
-    <p>Copyright &copy; 1997-2005 International Business Machines Corporation
+    <p>Copyright &copy; 1997-2006 International Business Machines Corporation
     and others. All Rights Reserved.<br>
      IBM Globalization Center of Competency - San Jos&eacute;<br>
      5600 Cottle Road<br>
