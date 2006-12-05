@@ -23,6 +23,9 @@
 #
 
 
+<word>
+<data>•กงเกวียน<200></data>
+
 #   Temp debugging tests 
 <line>
 #     to test for bug #4097920

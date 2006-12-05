@@ -214,14 +214,18 @@ MutableTrieDictionary::addWords( UEnumeration *words,
 }
 #endif
 
+// TODO: Is this method ever called?
+// Looks like not, as of 2006-nov-17. (Markus Scherer)
 int32_t
 MutableTrieDictionary::matches( UText *text,
-                                int32_t maxLength,
+                                int32_t rangeStart,
+                                int32_t rangeEnd,
                                 int32_t *lengths,
                                 int &count,
                                 int limit ) const {
     TernaryNode *parent;
     UBool pMatched;
+    int32_t maxLength = rangeEnd - rangeStart;
     return search(text, maxLength, lengths, count, limit, parent, pMatched);
 }
 
@@ -462,29 +466,97 @@ getCompactNode(const CompactTrieHeader *header, uint16_t node) {
     return (const CompactTrieNode *)((const uint8_t *)header + header->offsets[node]);
 }
 
+/*
+ * Optimized check for (utext_getNativeIndex(text) >= nativeLimit).
+ * Assumes pure forward iteration and caches the chunk limit corresponding
+ * to the nativeLimit as soon as the nativeLimit is in the current chunk.
+ * The caller must initialize chunkLimit = -1.
+ * TODO: It would be nice if UText had comparable functionality.
+ * As a UText method or macro, the chunkLimit cache could be in the UText object,
+ * and it could be invalidated automatically when access() is called,
+ * not having to rely on monotonic iteration.
+ */
+static inline UBool
+reachedUTextNativeLimit(const UText *text, int32_t &chunkLimit, int64_t nativeLimit) {
+    // return (UBool)(utext_getNativeIndex(text) >= nativeLimit);
+    if (text->chunkNativeLimit < nativeLimit) {
+        return FALSE;  // The entire current chunk precedes the native limit.
+    } else {
+        if (chunkLimit < 0) {
+            // Need to get chunkLimit. See the implementation of utext_setNativeIndex().
+            int32_t offset = (int32_t)(nativeLimit - text->chunkNativeStart);
+            if (offset <= text->nativeIndexingLimit) {
+                chunkLimit = offset;
+            } else {
+                chunkLimit = text->pFuncs->mapNativeIndexToUTF16(text, nativeLimit);
+            }
+        }
+        return (UBool)(text->chunkOffset >= chunkLimit);
+    }
+}
+
 int32_t
 CompactTrieDictionary::matches( UText *text,
-                                int32_t maxLength,
+                                int32_t rangeStart,
+                                int32_t rangeEnd,
                                 int32_t *lengths,
                                 int &count,
                                 int limit ) const {
-    // TODO: current implementation works in UTF-16 space
     const CompactTrieNode *node = getCompactNode(fData, fData->root);
-    int mycount = 0;
+    count = 0;
 
-    UChar uc = utext_current32(text);
-    int i = 0;
+    UChar32 uc32 = utext_current32(text);
+    UChar uc = (UChar)uc32;
+
+    int32_t chunkLimit = -1;  // Cache for reachedUTextNativeLimit().
 
     while (node != NULL) {
         // Check if the node we just exited ends a word
         if (limit > 0 && (node->flagscount & kParentEndsWord)) {
-            lengths[mycount++] = i;
+            lengths[count++] = (int32_t)UTEXT_GETNATIVEINDEX(text) - rangeStart;
             --limit;
         }
+
         // Check that we haven't exceeded the maximum number of input characters.
         // We have to do that here rather than in the while condition so that
         // we can check for ending a word, above.
-        if (i >= maxLength) {
+        if (reachedUTextNativeLimit(text, chunkLimit, rangeEnd)) {
+            // break;
+            // Slight optimization: Avoid UTEXT_GETNATIVEINDEX(text)
+            // because we know we reached rangeEnd.
+            return rangeEnd - rangeStart;
+        }
+        /*
+         * Note: When testing
+         *   if (reachedUTextNativeLimit(text, chunkLimit, rangeEnd))
+         * we could first test (uc32 < 0) to avoid the function call.
+         * However, in most cases (uc32 < 0) will not be true and we have to call
+         * the function anyway, so this should not save anything.
+         * (uc32 is negative when we hit the end of the UText, which must then also
+         * be the end of our range. Usually the range ends before the UText though.)
+         */
+
+        if (uc32 > 0xffff) {
+            /*
+             * TODO: Add support for supplementary code points.
+             *
+             * This implementation only supports BMP code points,
+             * which is sufficient for all Unicode 5.0 characters with lb=SA (Complex_Context).
+             * Therefore, we break immediately when the text contains a
+             * supplementary code point.
+             * (In other words, the current implementation does not support supplementary
+             * code points, but also does not choke on them.)
+             * For BMP code points, we cast to a UChar
+             * for comparison with the UChars in the trie.
+             *
+             * For supplementary code point support, the most efficient way is
+             * probably to iterate over the UChars in the UText chunk
+             * and move the chunk forward (with a partial copy of code from utext_current32())
+             * rather than calling utext_current32() itself, which assembles a full code point,
+             * and then taking it apart right away and complicating the loops.
+             *
+             * Markus Scherer 2006-nov-17
+             */
             break;
         }
 
@@ -496,14 +568,24 @@ CompactTrieDictionary::matches( UText *text,
         if (node->flagscount & kVerticalNode) {
             // Vertical node; check all the characters in it
             const CompactTrieVerticalNode *vnode = (const CompactTrieVerticalNode *)node;
-            for (int j = 0; j < nodeCount && i < maxLength; ++j) {
+            for (int j = 0; j < nodeCount; ++j) {
+                if (reachedUTextNativeLimit(text, chunkLimit, rangeEnd)) {
+                    // goto exit;
+                    // Slight optimization: Avoid UTEXT_GETNATIVEINDEX(text)
+                    // because we know we reached rangeEnd.
+                    return rangeEnd - rangeStart;
+                }
+                if (uc32 > 0xffff) {
+                    // See TODO: Add support for supplementary code points.
+                    goto exit;
+                }
                 if (uc != vnode->chars[j]) {
                     // We hit a non-equal character; return
                     goto exit;
                 }
                 utext_next32(text);
-                uc = utext_current32(text);
-                ++i;
+                uc32 = utext_current32(text);
+                uc = (UChar)uc32;
             }
             // To get here we must have come through the whole list successfully;
             // go on to the next node. Note that a word cannot end in the middle
@@ -523,8 +605,8 @@ CompactTrieDictionary::matches( UText *text,
                     // We hit a match; get the next node and next character
                     node = getCompactNode(fData, hnode->entries[middle].equal);
                     utext_next32(text);
-                    uc = utext_current32(text);
-                    ++i;
+                    uc32 = utext_current32(text);
+                    uc = (UChar)uc32;
                     break;
                 }
                 else if (uc < hnode->entries[middle].ch) {
@@ -537,8 +619,7 @@ CompactTrieDictionary::matches( UText *text,
         }
     }
 exit:
-    count = mycount;
-    return i;
+    return (int32_t)UTEXT_GETNATIVEINDEX(text) - rangeStart;
 }
 
 // Implementation of iteration for CompactTrieDictionary

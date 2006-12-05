@@ -77,15 +77,17 @@ class U_COMMON_API TrieWordDictionary : public UMemory {
   *
   * @param text A UText representing the text. The
   * iterator is left after the longest prefix match in the dictionary.
-  * @param start The current position in text.
-  * @param maxLength The maximum number of code units to match.
+  * @param rangeStart The start native index of the UText range to match.
+  *                   The UText position must already be rangeStart.
+  * @param rangeEnd The limit native index of the UText range to match.
   * @param lengths An array that is filled with the lengths of words that matched.
   * @param count Filled with the number of elements output in lengths.
   * @param limit The size of the lengths array; this limits the number of words output.
   * @return The number of characters in text that were matched.
   */
   virtual int32_t matches( UText *text,
-                              int32_t maxLength,
+                              int32_t rangeStart,
+                              int32_t rangeEnd,
                               int32_t *lengths,
                               int &count,
                               int limit ) const = 0;
@@ -151,14 +153,17 @@ class U_COMMON_API MutableTrieDictionary : public TrieWordDictionary {
   *
   * @param text A UText representing the text. The
   * iterator is left after the longest prefix match in the dictionary.
-  * @param maxLength The maximum number of code units to match.
+  * @param rangeStart The start native index of the UText range to match.
+  *                   The UText position must already be rangeStart.
+  * @param rangeEnd The limit native index of the UText range to match.
   * @param lengths An array that is filled with the lengths of words that matched.
   * @param count Filled with the number of elements output in lengths.
   * @param limit The size of the lengths array; this limits the number of words output.
   * @return The number of characters in text that were matched.
   */
   virtual int32_t matches( UText *text,
-                              int32_t maxLength,
+                              int32_t rangeStart,
+                              int32_t rangeEnd,
                               int32_t *lengths,
                               int &count,
                               int limit ) const;
@@ -282,13 +287,16 @@ class U_COMMON_API CompactTrieDictionary : public TrieWordDictionary {
   *
   * @param text A UText representing the text. The
   * iterator is left after the longest prefix match in the dictionary.
-  * @param maxLength The maximum number of code units to match.
+  * @param rangeStart The start native index of the UText range to match.
+  *                   The UText position must already be rangeStart.
+  * @param rangeEnd The limit native index of the UText range to match.
   * @param lengths An array that is filled with the lengths of words that matched.
   * @param count Filled with the number of elements output in lengths.
   * @param limit The size of the lengths array; this limits the number of words output.
   * @return The number of characters in text that were matched.
   */
   virtual int32_t matches( UText *text,
+                              int32_t rangeStart,
                               int32_t rangeEnd,
                               int32_t *lengths,
                               int &count,

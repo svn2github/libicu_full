@@ -150,7 +150,7 @@ PossibleWord::candidates( UText *text, const TrieWordDictionary *dict, int32_t r
     int32_t start = (int32_t)utext_getNativeIndex(text);
     if (start != offset) {
         offset = start;
-        prefix = dict->matches(text, rangeEnd-start, lengths, count, sizeof(lengths)/sizeof(lengths[0]));
+        prefix = dict->matches(text, start, rangeEnd, lengths, count, sizeof(lengths)/sizeof(lengths[0]));
         // Dictionary leaves text after longest prefix, not longest word. Back up.
         if (count <= 0) {
             utext_setNativeIndex(text, start);
@@ -244,13 +244,26 @@ ThaiBreakEngine::divideUpDictionaryRange( UText *text,
                                                 int32_t rangeStart,
                                                 int32_t rangeEnd,
                                                 UStack &foundBreaks ) const {
+    /*
+     * This test compares a number of native-index units (rangeEnd - rangeStart)
+     * with a number of UChars (right?) (THAI_MIN_WORD_SPAN)
+     * which for UTF-8 and other such encodings (with >1 bytes/UChar) means that
+     * too few characters may look like enough characters, the test fails,
+     * does not bail out right away, and the subsequent code makes a futile attempt
+     * at segmentation.
+     * Alternatives:
+     * - Iterate through and count the code points in the range. Defeats the purpose
+     *   of the shortcut.
+     * - Get the UTF-16 indexes for the range boundaries from the UText.
+     *   This would require accessing each boundary via a chunk which may also be expensive.
+     */
     if ((rangeEnd - rangeStart) < THAI_MIN_WORD_SPAN) {
         return 0;       // Not enough characters for two words
     }
 
     uint32_t wordsFound = 0;
     int32_t wordLength;
-    int32_t current;
+    int32_t current;        // Native index of start of current code point.
     UErrorCode status = U_ZERO_ERROR;
     PossibleWord words[THAI_LOOKAHEAD];
     UChar32 uc;

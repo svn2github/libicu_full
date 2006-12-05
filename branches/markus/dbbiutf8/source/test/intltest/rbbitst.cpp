@@ -1240,53 +1240,71 @@ void RBBITest::TestJapaneseLineBreak()
 //
 //------------------------------------------------------------------------------
 
+
 struct TestParams {
     BreakIterator   *bi;
+    const char      *textType;
     UnicodeString    dataToBreak;
+    UText           *utextDataToBreak;
     UVector32       *expectedBreaks;
     UVector32       *srcLine;
     UVector32       *srcCol;
+
+    // Map a text index to a UTF-16 text index.
+    virtual int32_t mapTo16(int32_t index) const { return index; }
 };
 
 void RBBITest::executeTest(TestParams *t) {
-    int32_t    bp;
+    int32_t    bp, bp16;
     int32_t    prevBP;
-    int32_t    i;
+    int32_t    i, i16;
 
     if (t->bi == NULL) {
         return;
     }
 
-    t->bi->setText(t->dataToBreak);
+    if (t->utextDataToBreak != NULL) {
+        UErrorCode status = U_ZERO_ERROR;
+        t->bi->setText(t->utextDataToBreak, status);
+        if (U_FAILURE(status)) {
+            errln("unable to bi->setText(UText): %s", u_errorName(status));
+            return;
+        }
+    } else {
+        t->bi->setText(t->dataToBreak);
+    }
+
     //
     //  Run the iterator forward
     //
     prevBP = -1;
     for (bp = t->bi->first(); bp != BreakIterator::DONE; bp = t->bi->next()) {
+        bp16 = t->mapTo16(bp);
         if (prevBP ==  bp) {
             // Fail for lack of forward progress.
-            errln("Forward Iteration, no forward progress.  Break Pos=%4d  File line,col=%4d,%4d",
-                bp, t->srcLine->elementAti(bp), t->srcCol->elementAti(bp));
+            errln("Forward Iteration, no forward progress.  Text=%s  Break Pos=%4d  File line,col=%4d,%4d",
+                  t->textType, bp, t->srcLine->elementAti(bp16), t->srcCol->elementAti(bp16));
             break;
         }
 
-        // Check that there were we didn't miss an expected break between the last one
+        // Check that we didn't miss an expected break between the last one
         //  and this one.
         for (i=prevBP+1; i<bp; i++) {
             if (t->expectedBreaks->elementAti(i) != 0) {
-                int expected[] = {0, i};
+                i16 = t->mapTo16(i);
+                int expected[] = {0, i16};
                 printStringBreaks(t->dataToBreak, expected, 2);
-                errln("Forward Iteration, break expected, but not found.  Pos=%4d  File line,col= %4d,%4d",
-                      i, t->srcLine->elementAti(i), t->srcCol->elementAti(i));
+                errln("Forward Iteration, break expected, but not found.  Text=%s  Pos=%4d  File line,col= %4d,%4d",
+                      t->textType, i, t->srcLine->elementAti(i16), t->srcCol->elementAti(i16));
             }
         }
 
         // Check that the break we did find was expected
         if (t->expectedBreaks->elementAti(bp) == 0) {
-            int expected[] = {0, bp};
+            int expected[] = {0, bp16};
             printStringBreaks(t->dataToBreak, expected, 2);
-            errln("Forward Iteration, break found, but not expected.  Pos=%4d  File line,col= %4d,%4d",
-                bp, t->srcLine->elementAti(bp), t->srcCol->elementAti(bp));
+            errln("Forward Iteration, break found, but not expected.  Text=%s  Pos=%4d  File line,col= %4d,%4d",
+                  t->textType, bp, t->srcLine->elementAti(bp16), t->srcCol->elementAti(bp16));
         } else {
             // The break was expected.
             //   Check that the {nnn} tag value is correct.
@@ -1294,12 +1312,12 @@ void RBBITest::executeTest(TestParams *t) {
             if (expectedTagVal == -1) {
                 expectedTagVal = 0;
             }
-            int32_t line = t->srcLine->elementAti(bp);
+            int32_t line = t->srcLine->elementAti(bp16);
             int32_t rs = ((RuleBasedBreakIterator *)t->bi)->getRuleStatus();
             if (rs != expectedTagVal) {
-                errln("Incorrect status for forward break.  Pos=%4d  File line,col= %4d,%4d.\n"
+                errln("Incorrect status for forward break.  Text=%s  Pos=%4d  File line,col= %4d,%4d.\n"
                       "          Actual, Expected status = %4d, %4d",
-                    bp, line, t->srcCol->elementAti(bp), rs, expectedTagVal);
+                      t->textType, bp, line, t->srcCol->elementAti(bp16), rs, expectedTagVal);
             }
         }
 
@@ -1310,8 +1328,9 @@ void RBBITest::executeTest(TestParams *t) {
     // Verify that there were no missed expected breaks after the last one found
     for (i=prevBP+1; i<t->expectedBreaks->size(); i++) {
         if (t->expectedBreaks->elementAti(i) != 0) {
-            errln("Forward Iteration, break expected, but not found.  Pos=%4d  File line,col= %4d,%4d",
-                      i, t->srcLine->elementAti(i), t->srcCol->elementAti(i));
+            i16 = t->mapTo16(i);
+            errln("Forward Iteration, break expected, but not found.  Text=%s  Pos=%4d  File line,col= %4d,%4d",
+                  t->textType, i, t->srcLine->elementAti(i16), t->srcCol->elementAti(i16));
         }
     }
 
@@ -1320,26 +1339,28 @@ void RBBITest::executeTest(TestParams *t) {
     //
     prevBP = t->dataToBreak.length()+2;  // start with a phony value for the last break pos seen.
     for (bp = t->bi->last(); bp != BreakIterator::DONE; bp = t->bi->previous()) {
+        bp16 = t->mapTo16(bp);
         if (prevBP ==  bp) {
             // Fail for lack of progress.
-            errln("Reverse Iteration, no progress.  Break Pos=%4d  File line,col=%4d,%4d",
-                bp, t->srcLine->elementAti(bp), t->srcCol->elementAti(bp));
+            errln("Reverse Iteration, no progress.  Text=%s  Break Pos=%4d  File line,col=%4d,%4d",
+                  t->textType, bp, t->srcLine->elementAti(bp16), t->srcCol->elementAti(bp16));
             break;
         }
 
-        // Check that there were we didn't miss an expected break between the last one
+        // Check that we didn't miss an expected break between the last one
         //  and this one.  (UVector returns zeros for index out of bounds.)
         for (i=prevBP-1; i>bp; i--) {
             if (t->expectedBreaks->elementAti(i) != 0) {
-                errln("Reverse Itertion, break expected, but not found.  Pos=%4d  File line,col= %4d,%4d",
-                      i, t->srcLine->elementAti(i), t->srcCol->elementAti(i));
+                i16 = t->mapTo16(i);
+                errln("Reverse Itertion, break expected, but not found.  Text=%s  Pos=%4d  File line,col= %4d,%4d",
+                      t->textType, i, t->srcLine->elementAti(i16), t->srcCol->elementAti(i16));
             }
         }
 
         // Check that the break we did find was expected
         if (t->expectedBreaks->elementAti(bp) == 0) {
-            errln("Reverse Itertion, break found, but not expected.  Pos=%4d  File line,col= %4d,%4d",
-                   bp, t->srcLine->elementAti(bp), t->srcCol->elementAti(bp));
+            errln("Reverse Itertion, break found, but not expected.  Text=%s  Pos=%4d  File line,col= %4d,%4d",
+                   t->textType, bp, t->srcLine->elementAti(bp16), t->srcCol->elementAti(bp16));
         } else {
             // The break was expected.
             //   Check that the {nnn} tag value is correct.
@@ -1347,12 +1368,12 @@ void RBBITest::executeTest(TestParams *t) {
             if (expectedTagVal == -1) {
                 expectedTagVal = 0;
             }
-            int line = t->srcLine->elementAti(bp);
+            int line = t->srcLine->elementAti(bp16);
             int32_t rs = ((RuleBasedBreakIterator *)t->bi)->getRuleStatus();
             if (rs != expectedTagVal) {
-                errln("Incorrect status for reverse break.  Pos=%4d  File line,col= %4d,%4d.\n"
+                errln("Incorrect status for reverse break.  Text=%s  Pos=%4d  File line,col= %4d,%4d.\n"
                       "          Actual, Expected status = %4d, %4d",
-                    bp, line, t->srcCol->elementAti(bp), rs, expectedTagVal);
+                      t->textType, bp, line, t->srcCol->elementAti(bp16), rs, expectedTagVal);
             }
         }
 
@@ -1362,10 +1383,87 @@ void RBBITest::executeTest(TestParams *t) {
     // Verify that there were no missed breaks prior to the last one found
     for (i=prevBP-1; i>=0; i--) {
         if (t->expectedBreaks->elementAti(i) != 0) {
-            errln("Forward Itertion, break expected, but not found.  Pos=%4d  File line,col= %4d,%4d",
-                      i, t->srcLine->elementAti(i), t->srcCol->elementAti(i));
+            i16 = t->mapTo16(i);
+            errln("Forward Itertion, break expected, but not found.  Text=%s  Pos=%4d  File line,col= %4d,%4d",
+                  t->textType, i, t->srcLine->elementAti(i16), t->srcCol->elementAti(i16));
         }
     }
+}
+
+struct TestParamsUTF8 : public TestParams {
+    const char *utf8;
+
+    TestParamsUTF8(const TestParams &tp) : TestParams(tp) {}
+
+    virtual int32_t mapTo16(int32_t index) const {
+        UErrorCode status = U_ZERO_ERROR;
+        int32_t utf16Index;
+        u_strFromUTF8(NULL, 0, &utf16Index, utf8, index, &status);
+        return utf16Index;
+    }
+};
+
+void RBBITest::executeTestUTF8(TestParams *t) {
+    // Create a variant of the TestParams with a UTF-8 UText and with
+    // recalculated break offsets.
+    const UChar *utf16 = t->dataToBreak.getBuffer();
+    int32_t utf16Length = t->dataToBreak.length();
+
+    char utf8[1024];
+    int32_t utf8Length;
+    UErrorCode status = U_ZERO_ERROR;
+    u_strToUTF8(utf8, (int32_t)sizeof(utf8), &utf8Length,
+                utf16, utf16Length, &status);
+    if (U_FAILURE(status)) {
+        // Silently return if the string cannot be converted to UTF-8
+        // (because it contains unpaired surrogates) or is too long
+        // (too lazy to allocate a dynamic buffer).
+        return;
+    }
+
+    // Copy the TestParams and only change a few fields.
+    TestParamsUTF8 tp(*t);
+    tp.utf8 = utf8;
+
+    // Allocate and convert the expected break offsets.
+    // The expectedBreaks vector essentially contains values
+    // at indexes corresponding to text indexes.
+    // The values are
+    //   0 - no break at this text index
+    //  -1 - break at this index, don't check getRuleStatus()
+    //  >0 - break at this index, check getRuleStatus()==value
+    tp.expectedBreaks = new UVector32(utf8Length + 1, status);
+    if (U_FAILURE(status)) {
+        return;
+    }
+
+    // The following two calls together set all elements to 0.
+    tp.expectedBreaks->removeAllElements();
+    tp.expectedBreaks->setSize(utf8Length);
+
+    // Iterate through both versions of the text and copy the expected break point values.
+    // Another way to do this would be to use a UConverter, convert with offsets,
+    // and use the offsets for this mapping.
+    int32_t i16, i8;
+    for (i16 = i8 = 0; i16 < utf16Length;) {
+        tp.expectedBreaks->setElementAt(t->expectedBreaks->elementAti(i16), i8);
+        U16_FWD_1(utf16, i16, utf16Length);
+        U8_FWD_1(utf8, i8, utf8Length);
+    }
+    tp.expectedBreaks->setElementAt(t->expectedBreaks->elementAti(utf16Length), utf8Length);
+
+    tp.utextDataToBreak = utext_openUTF8(NULL, utf8, utf8Length, &status);
+    if (U_FAILURE(status)) {
+        errln("Creation of UTF-8 UText failed: %s", u_errorName(status));
+        delete tp.expectedBreaks;
+        return;
+    }
+    tp.textType = "UTF-8";
+
+    executeTest(&tp);
+
+    delete tp.expectedBreaks;
+    utext_close(tp.utextDataToBreak);
 }
 
 
@@ -1377,6 +1475,8 @@ void RBBITest::TestExtended() {
     UnicodeString       rules;
     TestParams          tp;
     tp.bi             = NULL;
+    tp.textType       = "UniStr";
+    tp.utextDataToBreak = NULL;
     tp.expectedBreaks = new UVector32(status);
     tp.srcLine        = new UVector32(status);
     tp.srcCol         = new UVector32(status);
@@ -1550,6 +1650,7 @@ void RBBITest::TestExtended() {
                 charIdx += 6;
 
                 // RUN THE TEST!
+                executeTestUTF8(&tp);
                 executeTest(&tp);
                 break;
             }

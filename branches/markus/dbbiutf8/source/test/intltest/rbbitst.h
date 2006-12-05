@@ -65,6 +65,7 @@ public:
     void TestExtended();
     UChar *ReadAndConvertFile(const char *fileName, int &ulen, UErrorCode &status);
     void executeTest(TestParams *);
+    void executeTestUTF8(TestParams *);
 
     void TestWordBreaks();
     void TestWordBoundary();
@@ -74,7 +75,6 @@ public:
     void TestJapaneseWordBreak();
     void TestTrieDict();
     void TestDebug();
-
 
 /***********************/
 private:
