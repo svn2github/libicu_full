@@ -1,12 +1,11 @@
 /*
 **********************************************************************
-*   Copyright (C) 1999-2004, International Business Machines
+*   Copyright (C) 1999-2006, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 **********************************************************************
 *
-*   uconv_cnv.h:
-*   defines all the low level conversion functions
-*   T_UnicodeConverter_{to,from}Unicode_$ConversionType
+*   ucnv_cnv.h:
+*   Definitions for converter implementations.
 *
 * Modification History:
 *
@@ -103,6 +102,13 @@ typedef void (*UConverterToUnicode) (UConverterToUnicodeArgs *, UErrorCode *);
  * as well.
  */
 typedef void (*UConverterFromUnicode) (UConverterFromUnicodeArgs *, UErrorCode *);
+
+/*
+ * TODO: Document!
+ */
+typedef void (*UConverterConvert) (UConverterFromUnicodeArgs *pFromUArgs,
+                                   UConverterToUnicodeArgs *pToUArgs,
+                                   UErrorCode *pErrorCode);
 
 /*
  * Converter implementation function for ucnv_getNextUChar().
@@ -214,6 +220,9 @@ struct UConverterImpl {
     UConverterWriteSub writeSub;
     UConverterSafeClone safeClone;
     UConverterGetUnicodeSet getUnicodeSet;
+
+    UConverterConvert toUTF8;
+    UConverterConvert fromUTF8;
 };
 
 extern const UConverterSharedData

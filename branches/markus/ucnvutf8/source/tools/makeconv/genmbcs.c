@@ -25,6 +25,15 @@
 #include "makeconv.h"
 #include "genmbcs.h"
 
+/*
+ * TODO: Split this file into toUnicode, SBCSFromUnicode and MBCSFromUnicode files.
+ * Reduce tests for maxCharLength.
+ */
+
+#define UTF8_FRIENDLY 1
+
+/* TODO: remove */
+static int countFallbacks=0;
 
 typedef struct MBCSData {
     NewConverter newConverter;
@@ -42,6 +51,16 @@ typedef struct MBCSData {
     uint32_t stage2[MBCS_STAGE_2_SIZE]; /* stage 2 for MBCS */
     uint8_t *fromUBytes;
     uint32_t stage2Top, stage3Top;
+
+    /* fromUTF8 */
+    uint16_t stageUTF8[MBCS_UTF8_STAGE_SIZE];
+#if 0
+    uint16_t stage1UTF8[MBCS_UTF8_STAGE_1_SIZE];
+    uint16_t stage2UTF8[MBCS_UTF8_STAGE_2_SIZE];
+    uint32_t stage2UTF8Top;
+#endif
+
+    UBool utf8Friendly;
 } MBCSData;
 
 /* prototypes */
@@ -108,11 +127,7 @@ printBytes(char *buffer, const uint8_t *bytes, int32_t length) {
 
 static void
 MBCSInit(MBCSData *mbcsData, UCMFile *ucm) {
-    int32_t i, maxCharLength;
-
     uprv_memset(mbcsData, 0, sizeof(MBCSData));
-
-    maxCharLength=ucm->states.maxCharLength;
 
     mbcsData->ucm=ucm; /* aliased, not owned */
 
@@ -120,14 +135,6 @@ MBCSInit(MBCSData *mbcsData, UCMFile *ucm) {
     mbcsData->newConverter.isValid=MBCSIsValid;
     mbcsData->newConverter.addTable=MBCSAddTable;
     mbcsData->newConverter.write=MBCSWrite;
-
-    mbcsData->stage2Top=MBCS_STAGE_2_FIRST_ASSIGNED; /* after stage 1 and one all-unassigned stage 2 block */
-    mbcsData->stage3Top=16*maxCharLength; /* after one all-unassigned stage 3 block */
-
-    /* point all entries in stage 1 to the "all-unassigned" first block in stage 2 */
-    for(i=0; i<MBCS_STAGE_1_SIZE; ++i) {
-        mbcsData->stage1[i]=MBCS_STAGE_2_ALL_UNASSIGNED_INDEX;
-    }
 }
 
 NewConverter *
@@ -140,18 +147,27 @@ MBCSOpen(UCMFile *ucm) {
 }
 
 static void
+MBCSDestruct(MBCSData *mbcsData) {
+    uprv_free(mbcsData->unicodeCodeUnits);
+    uprv_free(mbcsData->fromUBytes);
+}
+
+static void
 MBCSClose(NewConverter *cnvData) {
     MBCSData *mbcsData=(MBCSData *)cnvData;
     if(mbcsData!=NULL) {
-        uprv_free(mbcsData->unicodeCodeUnits);
-        uprv_free(mbcsData->fromUBytes);
+        MBCSDestruct(mbcsData);
         uprv_free(mbcsData);
     }
 }
 
 static UBool
 MBCSStartMappings(MBCSData *mbcsData) {
-    int32_t i, sum;
+    int32_t i, sum, maxCharLength,
+            stage2NullLength, stage2AllocLength,
+            stage3NullLength, stage3AllocLength;
+
+    /* toUnicode */
 
     /* allocate the code unit array and prefill it with "unassigned" values */
     sum=mbcsData->ucm->states.countToUCodeUnits;
@@ -171,21 +187,109 @@ MBCSStartMappings(MBCSData *mbcsData) {
         }
     }
 
+    /* fromUnicode */
+    maxCharLength=mbcsData->ucm->states.maxCharLength;
+
     /* allocate the codepage mappings and preset the first 16 characters to 0 */
-    if(mbcsData->ucm->states.maxCharLength==1) {
+    if(maxCharLength==1) {
         /* allocate 64k 16-bit results for single-byte codepages */
         sum=0x20000;
     } else {
         /* allocate 1M * maxCharLength bytes for at most 1M mappings */
-        sum=0x100000*mbcsData->ucm->states.maxCharLength;
+        sum=0x100000*maxCharLength;
     }
     mbcsData->fromUBytes=(uint8_t *)uprv_malloc(sum);
     if(mbcsData->fromUBytes==NULL) {
         fprintf(stderr, "error: out of memory allocating %ld B for target mappings\n", (long)sum);
         return FALSE;
     }
-    /* initialize the all-unassigned first stage 3 block */
-    uprv_memset(mbcsData->fromUBytes, 0, 64);
+    uprv_memset(mbcsData->fromUBytes, 0, sum);
+
+    /*
+     * UTF-8-friendly fromUnicode tries: allocate multiple blocks at a time.
+     * See ucnvmbcs.h for details.
+     * TODO: Document that there is code, for example in
+     * ucnv_MBCSGetUnicodeSetForUnicode(), which assumes that the initial
+     * stage 2/3 blocks are the all-unassigned ones.
+     *
+     * UTF-8-friendly fromUnicode tries work from sorted tables and are built
+     * pre-compacted, overlapping adjacent stage 2/3 blocks.
+     * Non-UTF-8-friendly fromUnicode tries work from unsorted tables
+     * (because implicit precision is used), and are compacted
+     * in post-processing.
+     *
+     * Preallocation for UTF-8-friendly fromUnicode tries:
+     *
+     * Stage 3:
+     * 64-entry all-unassigned first block followed by ASCII (128 entries).
+     *
+     * Stage 2:
+     * 64-entry all-unassigned first block followed by preallocated
+     * 64-block for ASCII.
+     *
+     * TODO: remove comment from 2006-jul
+     * Stage 2:
+     * SBCS: Regular 64-entry all-unassigned first block followed by preallocated
+     *   128-block for fast two-byte UTF-8 lookup of U+0000..U+07ff.
+     * MBCS: 256-entry all-unassigned first block followed by preallocated
+     *   256-block for fast UTF-8 lookup of U+0000..U+0fff.
+     */
+    /*
+     * New 20060712:
+     * Preallocate ASCII as a linear 128-entry stage 3 block.
+     */
+    stage2NullLength=MBCS_STAGE_2_BLOCK_SIZE;
+    stage2AllocLength=MBCS_STAGE_2_BLOCK_SIZE;
+
+    stage3NullLength=MBCS_UTF8_STAGE_3_BLOCK_SIZE;
+    stage3AllocLength=128; /* ASCII U+0000..U+007f */
+
+    /* Initialize stage 1 for the preallocated blocks. */
+    sum=stage2NullLength;
+    for(i=0; i<(stage2AllocLength>>MBCS_STAGE_2_BLOCK_SIZE_SHIFT); ++i) {
+        mbcsData->stage1[i]=sum;
+#if 0
+        mbcsData->stage1UTF8[i]=sum;
+#endif
+        sum+=MBCS_STAGE_2_BLOCK_SIZE;
+    }
+    mbcsData->stage2Top=/* TODO: remove mbcsData->stage2UTF8Top=*/stage2NullLength+stage2AllocLength; /* ==sum */
+
+    /*
+     * Stage 2 indexes count 16-blocks in stage 3 as follows:
+     * SBCS: directly, indexes increment by 16
+     * MBCS: indexes need to be multiplied by 16*maxCharLength, indexes increment by 1
+     * MBCS UTF-8: directly, indexes increment by 16
+     */
+    if(maxCharLength==1) {
+        sum=stage3NullLength;
+        for(i=0; i<(stage3AllocLength/MBCS_STAGE_3_BLOCK_SIZE); ++i) {
+            mbcsData->stage2Single[mbcsData->stage1[0]+i]=sum;
+            sum+=MBCS_STAGE_3_BLOCK_SIZE;
+        }
+    } else {
+        sum=stage3NullLength/MBCS_STAGE_3_GRANULARITY;
+        for(i=0; i<(stage3AllocLength/MBCS_STAGE_3_BLOCK_SIZE); ++i) {
+            mbcsData->stage2[mbcsData->stage1[0]+i]=sum;
+            sum+=MBCS_STAGE_3_BLOCK_SIZE/MBCS_STAGE_3_GRANULARITY;
+        }
+    }
+
+    sum=stage3NullLength;
+    for(i=0; i<(stage3AllocLength/MBCS_UTF8_STAGE_3_BLOCK_SIZE); ++i) {
+        mbcsData->stageUTF8[i]=sum;
+#if 0
+        mbcsData->stage2UTF8[mbcsData->stage1UTF8[0]+i]=sum;
+#endif
+        sum+=MBCS_UTF8_STAGE_3_BLOCK_SIZE;
+    }
+
+    /*
+     * Allocate a 64-entry all-unassigned first stage 3 block,
+     * for UTF-8-friendly lookup with a trail byte,
+     * plus 128 entries for ASCII.
+     */
+    mbcsData->stage3Top=(stage3NullLength+stage3AllocLength)*maxCharLength; /* ==sum*maxCharLength */
 
     return TRUE;
 }
@@ -437,10 +541,12 @@ MBCSSingleAddFromUnicode(MBCSData *mbcsData,
                          const uint8_t *bytes, int32_t length,
                          UChar32 c,
                          int8_t flag) {
-    uint16_t *p;
+    uint16_t *stage3, *p;
     uint32_t index;
     uint16_t old;
     uint8_t b;
+
+    uint32_t blockSize, newTop, i, nextOffset, newBlock, min;
 
     /* ignore |2 SUB mappings */
     if(flag==2) {
@@ -453,13 +559,28 @@ MBCSSingleAddFromUnicode(MBCSData *mbcsData,
      * Note that the first stage 2 and 3 blocks are reserved for all-unassigned mappings.
      * We assume that length<=maxCharLength and that c<=0x10ffff.
      */
+    stage3=(uint16_t *)mbcsData->fromUBytes;
     b=*bytes;
 
     /* inspect stage 1 */
-    index=c>>10;
+    index=c>>MBCS_STAGE_1_SHIFT;
+    if(mbcsData->utf8Friendly && c<=SBCS_UTF8_MAX) {
+        nextOffset=(c>>MBCS_STAGE_2_SHIFT)&MBCS_STAGE_2_BLOCK_MASK&~(MBCS_UTF8_STAGE_3_BLOCKS-1);
+    } else {
+        nextOffset=(c>>MBCS_STAGE_2_SHIFT)&MBCS_STAGE_2_BLOCK_MASK;
+    }
     if(mbcsData->stage1[index]==MBCS_STAGE_2_ALL_UNASSIGNED_INDEX) {
         /* allocate another block in stage 2 */
-        if(mbcsData->stage2Top>=MBCS_MAX_STAGE_2_TOP) {
+        newBlock=mbcsData->stage2Top;
+        if(mbcsData->utf8Friendly) {
+            min=newBlock-nextOffset; /* minimum block start with overlap */
+            while(min<newBlock && mbcsData->stage2Single[newBlock-1]==0) {
+                --newBlock;
+            }
+        }
+        newTop=newBlock+MBCS_STAGE_2_BLOCK_SIZE;
+
+        if(newTop>MBCS_MAX_STAGE_2_TOP) {
             fprintf(stderr, "error: too many stage 2 entries at U+%04x<->0x%02x\n", (int)c, b);
             return FALSE;
         }
@@ -468,26 +589,46 @@ MBCSSingleAddFromUnicode(MBCSData *mbcsData,
          * each stage 2 block contains 64 16-bit words:
          * 6 code point bits 9..4 with 1 stage 3 index
          */
-        mbcsData->stage1[index]=(uint16_t)mbcsData->stage2Top;
-        mbcsData->stage2Top+=MBCS_STAGE_2_BLOCK_SIZE;
+        mbcsData->stage1[index]=(uint16_t)newBlock;
+        mbcsData->stage2Top=newTop;
     }
 
     /* inspect stage 2 */
-    index=(uint32_t)mbcsData->stage1[index]+((c>>4)&0x3f);
+    index=mbcsData->stage1[index]+nextOffset;
+    if(mbcsData->utf8Friendly && c<=SBCS_UTF8_MAX) {
+        /* allocate 64-entry blocks for UTF-8-friendly lookup */
+        blockSize=MBCS_UTF8_STAGE_3_BLOCK_SIZE;
+        nextOffset=c&MBCS_UTF8_STAGE_3_BLOCK_MASK;
+    } else {
+        blockSize=MBCS_STAGE_3_BLOCK_SIZE;
+        nextOffset=c&MBCS_STAGE_3_BLOCK_MASK;
+    }
     if(mbcsData->stage2Single[index]==0) {
         /* allocate another block in stage 3 */
-        if(mbcsData->stage3Top>=0x10000) {
+        newBlock=mbcsData->stage3Top;
+        if(mbcsData->utf8Friendly) {
+            min=newBlock-nextOffset; /* minimum block start with overlap */
+            while(min<newBlock && stage3[newBlock-1]==0) {
+                --newBlock;
+            }
+        }
+        newTop=newBlock+blockSize;
+
+        if(newTop>MBCS_STAGE_3_SBCS_SIZE) {
             fprintf(stderr, "error: too many code points at U+%04x<->0x%02x\n", (int)c, b);
             return FALSE;
         }
         /* each block has 16 uint16_t entries */
-        mbcsData->stage2Single[index]=(uint16_t)mbcsData->stage3Top;
-        uprv_memset(mbcsData->fromUBytes+2*mbcsData->stage3Top, 0, 32);
-        mbcsData->stage3Top+=16;
+        i=index;
+        while(newBlock<newTop) {
+            mbcsData->stage2Single[i++]=(uint16_t)newBlock;
+            newBlock+=MBCS_STAGE_3_BLOCK_SIZE;
+        }
+        mbcsData->stage3Top=newTop; /* ==newBlock */
     }
 
     /* write the codepage entry into stage 3 and get the previous entry */
-    p=(uint16_t *)mbcsData->fromUBytes+mbcsData->stage2Single[index]+(c&0xf);
+    p=stage3+mbcsData->stage2Single[index]+nextOffset;
     old=*p;
     if(flag<=0) {
         *p=(uint16_t)(0xf00|b);
@@ -520,20 +661,13 @@ MBCSAddFromUnicode(MBCSData *mbcsData,
                    int8_t flag) {
     char buffer[10];
     const uint8_t *pb;
-    uint8_t *p;
-    uint32_t index, b, old;
+    uint8_t *stage3, *p;
+    uint32_t index, b, old, stage3Index;
     int32_t maxCharLength;
 
-    /* ignore |2 SUB mappings */
-    if(flag==2) {
-        return TRUE;
-    }
+    uint32_t blockSize, newTop, i, nextOffset, newBlock, min, overlap, maxOverlap;
 
     maxCharLength=mbcsData->ucm->states.maxCharLength;
-
-    if(maxCharLength==1) {
-        return MBCSSingleAddFromUnicode(mbcsData, bytes, length, c, flag);
-    }
 
     if( mbcsData->ucm->states.outputType==MBCS_OUTPUT_2_SISO &&
         (*bytes==0xe || *bytes==0xf)
@@ -556,12 +690,27 @@ MBCSAddFromUnicode(MBCSData *mbcsData,
      * all-unassigned mappings.
      * We assume that length<=maxCharLength and that c<=0x10ffff.
      */
+    stage3=mbcsData->fromUBytes;
 
     /* inspect stage 1 */
-    index=c>>10;
+    index=c>>MBCS_STAGE_1_SHIFT;
+    if(mbcsData->utf8Friendly && c<=MBCS_UTF8_MAX) {
+        nextOffset=(c>>MBCS_STAGE_2_SHIFT)&MBCS_STAGE_2_BLOCK_MASK&~(MBCS_UTF8_STAGE_3_BLOCKS-1);
+    } else {
+        nextOffset=(c>>MBCS_STAGE_2_SHIFT)&MBCS_STAGE_2_BLOCK_MASK;
+    }
     if(mbcsData->stage1[index]==MBCS_STAGE_2_ALL_UNASSIGNED_INDEX) {
         /* allocate another block in stage 2 */
-        if(mbcsData->stage2Top>=MBCS_MAX_STAGE_2_TOP) {
+        newBlock=mbcsData->stage2Top;
+        if(mbcsData->utf8Friendly) {
+            min=newBlock-nextOffset; /* minimum block start with overlap */
+            while(min<newBlock && mbcsData->stage2[newBlock-1]==0) {
+                --newBlock;
+            }
+        }
+        newTop=newBlock+MBCS_STAGE_2_BLOCK_SIZE;
+
+        if(newTop>MBCS_MAX_STAGE_2_TOP) {
             fprintf(stderr, "error: too many stage 2 entries at U+%04x<->0x%s\n",
                 (int)c, printBytes(buffer, bytes, length));
             return FALSE;
@@ -571,24 +720,138 @@ MBCSAddFromUnicode(MBCSData *mbcsData,
          * each stage 2 block contains 64 32-bit words:
          * 6 code point bits 9..4 with value with bits 31..16 "assigned" flags and bits 15..0 stage 3 index
          */
-        mbcsData->stage1[index]=(uint16_t)mbcsData->stage2Top;
-        mbcsData->stage2Top+=MBCS_STAGE_2_BLOCK_SIZE;
+        i=index;
+        while(newBlock<newTop) {
+            mbcsData->stage1[i++]=(uint16_t)newBlock;
+            newBlock+=MBCS_STAGE_2_BLOCK_SIZE;
+        }
+        mbcsData->stage2Top=newTop; /* ==newBlock */
     }
 
     /* inspect stage 2 */
-    index=mbcsData->stage1[index]+((c>>4)&0x3f);
+    index=mbcsData->stage1[index]+nextOffset;
+    if(mbcsData->utf8Friendly && c<=MBCS_UTF8_MAX) {
+        /* allocate 64-entry blocks for UTF-8-friendly lookup */
+        blockSize=MBCS_UTF8_STAGE_3_BLOCK_SIZE*maxCharLength;
+        nextOffset=c&MBCS_UTF8_STAGE_3_BLOCK_MASK;
+    } else {
+        blockSize=MBCS_STAGE_3_BLOCK_SIZE*maxCharLength;
+        nextOffset=c&MBCS_STAGE_3_BLOCK_MASK;
+    }
     if(mbcsData->stage2[index]==0) {
         /* allocate another block in stage 3 */
-        if(mbcsData->stage3Top>=0x100000*(uint32_t)maxCharLength) {
+        newBlock=mbcsData->stage3Top;
+        if(mbcsData->utf8Friendly && nextOffset>=MBCS_STAGE_3_GRANULARITY) {
+            /*
+             * Overlap stage 3 blocks only in multiples of 16-entry blocks
+             * because of the indexing granularity in stage 2.
+             */
+            maxOverlap=(nextOffset&~(MBCS_STAGE_3_GRANULARITY-1))*maxCharLength;
+            for(overlap=0;
+                overlap<maxOverlap && stage3[newBlock-overlap-1]==0;
+                ++overlap) {}
+
+            overlap=(overlap/MBCS_STAGE_3_GRANULARITY)/maxCharLength;
+            overlap=(overlap*MBCS_STAGE_3_GRANULARITY)*maxCharLength;
+
+            newBlock-=overlap;
+        }
+        newTop=newBlock+blockSize;
+
+        if(newTop>MBCS_STAGE_3_MBCS_SIZE*(uint32_t)maxCharLength) {
             fprintf(stderr, "error: too many code points at U+%04x<->0x%s\n",
                 (int)c, printBytes(buffer, bytes, length));
             return FALSE;
         }
         /* each block has 16*maxCharLength bytes */
-        mbcsData->stage2[index]=(mbcsData->stage3Top/16)/maxCharLength;
-        uprv_memset(mbcsData->fromUBytes+mbcsData->stage3Top, 0, 16*maxCharLength);
-        mbcsData->stage3Top+=16*maxCharLength;
+        i=index;
+        while(newBlock<newTop) {
+            mbcsData->stage2[i++]=(newBlock/MBCS_STAGE_3_GRANULARITY)/maxCharLength;
+            newBlock+=MBCS_STAGE_3_BLOCK_SIZE*maxCharLength;
+        }
+        mbcsData->stage3Top=newTop; /* ==newBlock */
     }
+
+    stage3Index=MBCS_STAGE_3_GRANULARITY*(uint32_t)(uint16_t)mbcsData->stage2[index];
+
+    /* Build an alternate, UTF-8-friendly stage table as well. */
+    if(mbcsData->utf8Friendly && c<=MBCS_UTF8_MAX) {
+        /* Overflow for uint16_t entries in stageUTF8? */
+        if(stage3Index>0xffff) {
+            /*
+             * TODO: The following comments are all wrong. Remove them and restructure the code!
+             * See comment after this if().
+             *
+             * This can occur only if the mapping table is nearly perfectly filled.
+             * stage3Index can reach exactly MBCS_UTF8_LIMIT because of the pre-allocated
+             * initial all-unassigned block.
+             *
+             * TODO: Think about whether to just return FALSE in this case (with stderr output)
+             * and break MBCSAddTable() rather than looping for another round without
+             * utf8Friendly.
+             * If so, remove MBCSAddTable()'s loop and just hardcode UTF-8-friendliness.
+             */
+            printf("too many stage 3 entries for UTF-8-friendly format, processing U+%04x<->0x%s\n",
+                   (int)c, printBytes(buffer, bytes, length));
+            mbcsData->utf8Friendly=FALSE;
+            return FALSE;
+        }
+
+        /*
+         * The stage 3 block has been assigned for the regular trie.
+         * Just copy its index into stageUTF8[], without the granularity.
+         *
+         * It is safe to cast stage3Index to uint16_t because
+         * stage3Index<=MBCS_UTF8_LIMIT<0xffff
+         * because we have a sorted table and there are at most MBCS_UTF8_LIMIT
+         * mappings with 0<=c<MBCS_UTF8_LIMIT, and there is only also
+         * the initial all-unassigned block in stage3.
+         */
+        if(mbcsData->stageUTF8[c>>MBCS_UTF8_STAGE_SHIFT]==0) { /* TODO: remove if() */
+        mbcsData->stageUTF8[c>>MBCS_UTF8_STAGE_SHIFT]=(uint16_t)stage3Index;
+        }
+    }
+#if 0
+    /* Build alternate, UTF-8-friendly stages 1 and 2 as well. */
+    if(mbcsData->utf8Friendly && c<=0xffff) {
+        uint32_t index8, nextOffset8;
+
+        if(stage3Index>0xffff) {
+            printf("too many stage 3 entries for UTF-8-friendly format, processing U+%04x<->0x%s\n",
+                   (int)c, printBytes(buffer, bytes, length));
+            mbcsData->utf8Friendly=FALSE;
+        }
+
+        /* inspect stage 1 */
+        index8=c>>MBCS_UTF8_STAGE_1_SHIFT;
+        nextOffset8=(c>>MBCS_UTF8_STAGE_2_SHIFT)&MBCS_STAGE_2_BLOCK_MASK;
+        if(mbcsData->stage1UTF8[index8]==0) {
+            /* allocate another block in stage 2 */
+            newBlock=mbcsData->stage2UTF8Top;
+            min=newBlock-nextOffset8; /* minimum block start with overlap */
+            while(min<newBlock && mbcsData->stage2UTF8[newBlock-1]==0) {
+                --newBlock;
+            }
+            newTop=newBlock+MBCS_STAGE_2_BLOCK_SIZE;
+
+            if(newTop>MBCS_UTF8_STAGE_2_SIZE) {
+                printf("too many stage 2 entries for UTF-8-friendly format, processing U+%04x<->0x%s\n",
+                       (int)c, printBytes(buffer, bytes, length));
+                mbcsData->utf8Friendly=FALSE;
+                index8=0; /* avoid array overflows */
+            }
+
+            mbcsData->stage1UTF8[index8]=(uint16_t)newBlock;
+            mbcsData->stage2UTF8Top=newTop;
+        }
+
+        /*
+         * The stage 3 block has been assigned for the regular trie.
+         * Just copy its index into stage2UTF8[], without the granularity.
+         */
+        mbcsData->stage2UTF8[mbcsData->stage1UTF8[index8]+nextOffset8]=(uint16_t)stage3Index;
+    }
+#endif
 
     /* write the codepage bytes into stage 3 and get the previous bytes */
 
@@ -609,7 +872,7 @@ MBCSAddFromUnicode(MBCSData *mbcsData,
     }
 
     old=0;
-    p=mbcsData->fromUBytes+(16*(uint32_t)(uint16_t)mbcsData->stage2[index]+(c&0xf))*maxCharLength;
+    p=stage3+(stage3Index+nextOffset)*maxCharLength;
     switch(maxCharLength) {
     case 2:
         old=*(uint16_t *)p;
@@ -633,7 +896,7 @@ MBCSAddFromUnicode(MBCSData *mbcsData,
     }
 
     /* check that this Unicode code point was still unassigned */
-    if((mbcsData->stage2[index]&(1UL<<(16+(c&0xf))))!=0 || old!=0) {
+    if((mbcsData->stage2[index+(nextOffset>>MBCS_STAGE_2_SHIFT)]&(1UL<<(16+(c&0xf))))!=0 || old!=0) {
         if(flag>=0) {
             fprintf(stderr, "error: duplicate Unicode code point at U+%04x<->0x%s see 0x%02x\n",
                 (int)c, printBytes(buffer, bytes, length), (int)old);
@@ -647,9 +910,45 @@ MBCSAddFromUnicode(MBCSData *mbcsData,
     }
     if(flag<=0) {
         /* set the roundtrip flag */
-        mbcsData->stage2[index]|=(1UL<<(16+(c&0xf)));
+        mbcsData->stage2[index+(nextOffset>>4)]|=(1UL<<(16+(c&0xf)));
     }
 
+    return TRUE;
+}
+
+U_CFUNC UBool
+MBCSOkForBaseFromUnicode(UBool utf8Friendly,
+                         const uint8_t *bytes, int32_t length,
+                         UChar32 c, int8_t flag) {
+    /*
+     * A 1:1 mapping does not fit into the MBCS base table's fromUnicode table under
+     * the following conditions:
+     *
+     * - a |2 SUB mapping for <subchar1> (no base table data structure for them)
+     * - a |1 fallback to 0x00 (result value 0, indistinguishable from unmappable entry)
+     * - a multi-byte mapping with leading 0x00 bytes (no explicit length field)
+     *
+     * Some of these tests are redundant with ucm_mappingType().
+     */
+    if( (flag==2 && length==1) ||
+        (flag==1 && bytes[0]==0) || /* testing length==1 would be redundant with the next test */
+        (flag<=1 && length>1 && bytes[0]==0)
+    ) {
+        return FALSE;
+    }
+
+    /*
+     * Additional restrictions for UTF-8-friendly fromUnicode tables,
+     * for code points up to the maximum optimized one:
+     *
+     * - any mapping to 0x00 (result value 0, indistinguishable from unmappable entry)
+     * - any |1 fallback (no roundtrip flags in the optimized table)
+     */
+    if(utf8Friendly && flag<=1 && c<=MBCS_UTF8_MAX && (bytes[0]==0 || flag==1)) {
+        return FALSE;
+    }
+
+    /* All other mappings do fit into the base table. */
     return TRUE;
 }
 
@@ -659,8 +958,9 @@ MBCSAddTable(NewConverter *cnvData, UCMTable *table, UConverterStaticData *stati
     MBCSData *mbcsData;
     UCMapping *m;
     UChar32 c;
-    int32_t i;
-    UBool isOK;
+    int32_t i, maxCharLength;
+    int8_t f;
+    UBool isOK, utf8Friendly;
 
     staticData->unicodeMask=table->unicodeMask;
     if(staticData->unicodeMask==3) {
@@ -671,45 +971,110 @@ MBCSAddTable(NewConverter *cnvData, UCMTable *table, UConverterStaticData *stati
     staticData->conversionType=UCNV_MBCS;
 
     mbcsData=(MBCSData *)cnvData;
+    maxCharLength=mbcsData->ucm->states.maxCharLength;
 
-    if(!MBCSStartMappings(mbcsData)) {
-        return FALSE;
-    }
+    /*
+     * Generation of UTF-8-friendly data requires
+     * a sorted table, which makeconv generates when explicit precision
+     * indicators are used.
+     */
+    mbcsData->utf8Friendly=utf8Friendly=(UBool)(
+        UTF8_FRIENDLY &&
+        (table->flagsType&UCM_FLAGS_EXPLICIT)!=0);
 
-    isOK=TRUE;
-
-    m=table->mappings;
-    for(i=0; i<table->mappingsLength; ++m, ++i) {
-        c=m->u;
-
-        switch(m->f) {
-        case -1:
-            /* there was no precision/fallback indicator */
-            /* fall through to set the mappings */
-        case 0:
-            /* set roundtrip mappings */
-            isOK&=MBCSAddToUnicode(mbcsData, m->b.bytes, m->bLen, c, m->f) &&
-                  MBCSAddFromUnicode(mbcsData, m->b.bytes, m->bLen, c, m->f);
-            break;
-        case 1:
-            /* set only a fallback mapping from Unicode to codepage */
-            staticData->hasFromUnicodeFallback=TRUE;
-            isOK&=MBCSAddFromUnicode(mbcsData, m->b.bytes, m->bLen, c, m->f);
-            break;
-        case 2:
-            /* ignore |2 SUB mappings */
-            break;
-        case 3:
-            /* set only a fallback mapping from codepage to Unicode */
-            staticData->hasToUnicodeFallback=TRUE;
-            isOK&=MBCSAddToUnicode(mbcsData, m->b.bytes, m->bLen, c, m->f);
-            break;
-        default:
-            /* will not occur because the parser checked it already */
-            fprintf(stderr, "error: illegal fallback indicator %d\n", m->f);
+    do {
+        if(!MBCSStartMappings(mbcsData)) {
             return FALSE;
         }
-    }
+
+countFallbacks=0;
+        staticData->hasFromUnicodeFallback=FALSE;
+        staticData->hasToUnicodeFallback=FALSE;
+
+        isOK=TRUE;
+
+        m=table->mappings;
+        for(i=0; i<table->mappingsLength; ++m, ++i) {
+            c=m->u;
+            f=m->f;
+            if(f>=0) {
+                f&=MBCS_FROM_U_EXT_MASK;
+            }
+
+            switch(f) {
+            case -1:
+                /* there was no precision/fallback indicator */
+                /* fall through to set the mappings */
+            case 0:
+                /* set roundtrip mappings */
+                isOK&=MBCSAddToUnicode(mbcsData, m->b.bytes, m->bLen, c, f);
+
+                if(maxCharLength==1) {
+                    isOK&=MBCSSingleAddFromUnicode(mbcsData, m->b.bytes, m->bLen, c, f);
+                    m->f=f;
+                    m->moveFlag=0;
+                } else if(MBCSOkForBaseFromUnicode(utf8Friendly, m->b.bytes, m->bLen, c, f)) {
+                    isOK&=MBCSAddFromUnicode(mbcsData, m->b.bytes, m->bLen, c, f);
+                    m->f=f;
+                    m->moveFlag=0;
+                } else {
+                    m->f|=MBCS_FROM_U_EXT_FLAG;
+                    m->moveFlag=UCM_MOVE_TO_EXT;
+                }
+                break;
+            case 1:
+                /* set only a fallback mapping from Unicode to codepage */
+                if(maxCharLength==1) {
+++countFallbacks;
+                    staticData->hasFromUnicodeFallback=TRUE;
+                    isOK&=MBCSSingleAddFromUnicode(mbcsData, m->b.bytes, m->bLen, c, f);
+                    m->f=f;
+                    m->moveFlag=0;
+                } else if(MBCSOkForBaseFromUnicode(utf8Friendly, m->b.bytes, m->bLen, c, f)) {
+++countFallbacks;
+                    staticData->hasFromUnicodeFallback=TRUE;
+                    isOK&=MBCSAddFromUnicode(mbcsData, m->b.bytes, m->bLen, c, f);
+                    m->f=f;
+                    m->moveFlag=0;
+                } else {
+                    m->f|=MBCS_FROM_U_EXT_FLAG;
+                    m->moveFlag=UCM_MOVE_TO_EXT;
+                }
+                break;
+            case 2:
+                /* ignore |2 SUB mappings, except to move <subchar1> mappings to the extension table */
+                if(maxCharLength==1 || MBCSOkForBaseFromUnicode(utf8Friendly, m->b.bytes, m->bLen, c, f)) {
+                    m->f=f;
+                    m->moveFlag=0;
+                } else {
+                    m->f|=MBCS_FROM_U_EXT_FLAG;
+                    m->moveFlag=UCM_MOVE_TO_EXT;
+                }
+                break;
+            case 3:
+                /* set only a fallback mapping from codepage to Unicode */
+                staticData->hasToUnicodeFallback=TRUE;
+                isOK&=MBCSAddToUnicode(mbcsData, m->b.bytes, m->bLen, c, f);
+                break;
+            default:
+                /* will not occur because the parser checked it already */
+                fprintf(stderr, "error: illegal fallback indicator %d\n", f);
+                return FALSE;
+            }
+        }
+
+        if(isOK && utf8Friendly && !mbcsData->utf8Friendly) {
+            /* something overflowed; build the data not UTF-8-friendly after all */
+            UCMFile *ucm;
+
+            printf("second pass generating conversion data, not UTF-8-friendly due to a data structure limitation\n");
+            utf8Friendly=FALSE;
+            ucm=mbcsData->ucm;
+            MBCSDestruct(mbcsData);
+            MBCSInit(mbcsData, ucm);
+            continue;
+        }
+    } while(FALSE);
 
     MBCSPostprocess(mbcsData, staticData);
 
@@ -979,17 +1344,11 @@ compactStage2(MBCSData *mbcsData) {
 static void
 MBCSPostprocess(MBCSData *mbcsData, const UConverterStaticData *staticData) {
     UCMStates *states;
-    int32_t maxCharLength;
+    int32_t maxCharLength, stage3Width;
 
     states=&mbcsData->ucm->states;
-    maxCharLength=states->maxCharLength;
-
-    /* this needs to be printed before the EUC transformation because later maxCharLength might not be correct */
-    if(VERBOSE) {
-        printf("number of codepage characters in 16-blocks: 0x%lx=%lu\n",
-               (unsigned long)mbcsData->stage3Top/maxCharLength,
-               (unsigned long)mbcsData->stage3Top/maxCharLength);
-    }
+    stage3Width=maxCharLength=states->maxCharLength;
+if(maxCharLength>1) { printf("maxCharLength=%d number of fallbacks: %d\n", maxCharLength, countFallbacks); }
 
     ucm_optimizeStates(states,
                        &mbcsData->unicodeCodeUnits,
@@ -997,20 +1356,92 @@ MBCSPostprocess(MBCSData *mbcsData, const UConverterStaticData *staticData) {
                        VERBOSE);
 
     /* try to compact the fromUnicode tables */
-    transformEUC(mbcsData);
-    if(maxCharLength==1) {
-        singleCompactStage3(mbcsData);
-        singleCompactStage2(mbcsData);
-    } else {
-        compactStage2(mbcsData);
+    if(transformEUC(mbcsData)) {
+        --stage3Width;
     }
+
+    /*
+     * UTF-8-friendly tries are built precompacted, to cope with variable
+     * stage 3 allocation block sizes.
+     *
+     * Tables without precision indicators cannot be built that way,
+     * because if a block was overlapped with a previous one, then a smaller
+     * code point for the same block would not fit.
+     * Therefore, such tables are not marked UTF-8-friendly and must be
+     * compacted after all mappings are entered.
+     */
+    if(!mbcsData->utf8Friendly) {
+        if(maxCharLength==1) {
+            singleCompactStage3(mbcsData);
+            singleCompactStage2(mbcsData);
+        } else {
+            compactStage2(mbcsData);
+        }
+    }
+
+    /* TODO: remove printf */
+#if 0
+    if(maxCharLength>1 && mbcsData->utf8Friendly) {
+        unsigned long stageUTF8Length=MBCS_UTF8_STAGE_1_SIZE+mbcsData->stage2UTF8Top;
+        printf("fromUnicode number of uint16_t in the UTF-8 stage 1/2 array: 0x%lx=%lu\n", stageUTF8Length, stageUTF8Length);
+    }
+#endif
+
+    if(VERBOSE) {
+        /*uint32_t c, i1, i2, i2Limit, i3;*/
+
+        printf("fromUnicode number of uint%s_t in stage 2: 0x%lx=%lu\n",
+               maxCharLength==1 ? "16" : "32",
+               (unsigned long)mbcsData->stage2Top,
+               (unsigned long)mbcsData->stage2Top);
+#if 0
+        if(maxCharLength>1 && mbcsData->utf8Friendly) {
+            printf("fromUnicode number of uint16_t in the UTF-8 stage 1/2 array: 0x%lx=%lu\n",
+                   (unsigned long)(MBCS_UTF8_STAGE_1_SIZE+mbcsData->stage2UTF8Top),
+                   (unsigned long)(MBCS_UTF8_STAGE_1_SIZE+mbcsData->stage2UTF8Top));
+        }
+#endif
+        printf("fromUnicode number of %d-byte stage 3 mapping entries: 0x%lx=%lu\n",
+               (int)stage3Width,
+               (unsigned long)mbcsData->stage3Top/stage3Width,
+               (unsigned long)mbcsData->stage3Top/stage3Width);
+#if 0
+        c=0;
+        for(i1=0; i1<MBCS_STAGE_1_SIZE; ++i1) {
+            i2=mbcsData->stage1[i1];
+            if(i2==0) {
+                c+=MBCS_STAGE_2_BLOCK_SIZE*MBCS_STAGE_3_BLOCK_SIZE;
+                continue;
+            }
+            for(i2Limit=i2+MBCS_STAGE_2_BLOCK_SIZE; i2<i2Limit; ++i2) {
+                if(maxCharLength==1) {
+                    i3=mbcsData->stage2Single[i2];
+                } else {
+                    i3=(uint16_t)mbcsData->stage2[i2];
+                }
+                if(i3==0) {
+                    c+=MBCS_STAGE_3_BLOCK_SIZE;
+                    continue;
+                }
+                printf("U+%04lx i1=0x%02lx i2=0x%04lx i3=0x%04lx\n",
+                       (unsigned long)c,
+                       (unsigned long)i1,
+                       (unsigned long)i2,
+                       (unsigned long)i3);
+                c+=MBCS_STAGE_3_BLOCK_SIZE;
+            }
+        }
+#endif
+    }
+
+    /* TODO: print info if not utf8Friendly */
 }
 
 static uint32_t
 MBCSWrite(NewConverter *cnvData, const UConverterStaticData *staticData,
           UNewDataMemory *pData, int32_t tableType) {
     MBCSData *mbcsData=(MBCSData *)cnvData;
-    uint32_t top;
+    uint32_t top, stageUTF8Length=0;
     int32_t i, stage1Top;
 
     _MBCSHeader header={ { 0, 0, 0, 0 }, 0, 0, 0, 0, 0, 0, 0 };
@@ -1031,6 +1462,10 @@ MBCSWrite(NewConverter *cnvData, const UConverterStaticData *staticData,
 
         /* stage3Top has counted 16-bit results, now we need to count bytes */
         mbcsData->stage3Top*=2;
+
+        if(mbcsData->utf8Friendly) {
+            header.version[2]=(uint8_t)(SBCS_UTF8_MAX>>8); /* store 0x1f for max==0x1fff */
+        }
     } else {
         if(staticData->unicodeMask&UCNV_HAS_SUPPLEMENTARY) {
             stage1Top=MBCS_STAGE_1_SIZE; /* 0x440==1088 */
@@ -1040,9 +1475,32 @@ MBCSWrite(NewConverter *cnvData, const UConverterStaticData *staticData,
         for(i=0; i<stage1Top; ++i) {
             mbcsData->stage1[i]+=(uint16_t)stage1Top/2; /* stage 2 contains 32-bit entries, stage 1 16-bit entries */
         }
+#if 0
+        for(i=0; i<MBCS_UTF8_STAGE_1_SIZE; ++i) {
+            mbcsData->stage1UTF8[i]+=(uint16_t)MBCS_UTF8_STAGE_1_SIZE;
+        }
+#endif
 
+/* TODO: remove printf */
+printf("bytes in MBCS roundtrip flags: %d\n", mbcsData->stage2Top*2);
         /* stage2Top has counted 32-bit results, now we need to count bytes */
         mbcsData->stage2Top*=4;
+
+        if(mbcsData->utf8Friendly) {
+            stageUTF8Length=MBCS_UTF8_STAGE_SIZE;
+            header.version[2]=(uint8_t)(MBCS_UTF8_MAX>>8); /* store 0xd7 for max==0xd7ff */
+        }
+#if 0
+        if(mbcsData->utf8Friendly) {
+            /* round up stage2UTF8Top to a multiple of 16 because stageUTF8Length>>4 will be stored */
+            mbcsData->stage2UTF8Top=(mbcsData->stage2UTF8Top+15)&~15;
+            stageUTF8Length=MBCS_UTF8_STAGE_1_SIZE+mbcsData->stage2UTF8Top;
+            header.version[2]=(uint8_t)(stageUTF8Length>>4);
+
+            /* stage2UTF8Top has counted 16-bit results, now we need to count bytes */
+            mbcsData->stage2UTF8Top*=2;
+        }
+#endif
 
         /* stage3Top has already counted bytes */
     }
@@ -1053,7 +1511,14 @@ MBCSWrite(NewConverter *cnvData, const UConverterStaticData *staticData,
 
     /* fill the header */
     header.version[0]=4;
-    header.version[1]=2;
+    header.version[1]=3;
+    /* header.version[2] set above for utf8Friendly data */
+
+    /*
+     *        TODO: further documentation
+     *        TODO: doc in ucnvmbcs.h
+     */
+
     header.countStates=mbcsData->ucm->states.countStates;
     header.countToUFallbacks=mbcsData->countToUFallbacks;
 
@@ -1070,7 +1535,7 @@ MBCSWrite(NewConverter *cnvData, const UConverterStaticData *staticData,
         mbcsData->stage2Top;
     header.fromUBytesLength=mbcsData->stage3Top;
 
-    top=header.offsetFromUBytes+header.fromUBytesLength;
+    top=header.offsetFromUBytes+header.fromUBytesLength+stageUTF8Length*2;
 
     header.flags=(uint8_t)(mbcsData->ucm->states.outputType);
 
@@ -1096,7 +1561,14 @@ MBCSWrite(NewConverter *cnvData, const UConverterStaticData *staticData,
     }
     udata_writeBlock(pData, mbcsData->fromUBytes, mbcsData->stage3Top);
 
-    /* return the number of bytes that should have been written */
-    return header.offsetFromUBytes+header.fromUBytesLength;
-}
+    if(stageUTF8Length>0) {
+        udata_writeBlock(pData, mbcsData->stageUTF8, stageUTF8Length*2);
+#if 0
+        udata_writeBlock(pData, mbcsData->stage1UTF8, MBCS_UTF8_STAGE_1_SIZE*2);
+        udata_writeBlock(pData, mbcsData->stage2UTF8, mbcsData->stage2UTF8Top);
+#endif
+    }
 
+    /* return the number of bytes that should have been written */
+    return top;
+}
