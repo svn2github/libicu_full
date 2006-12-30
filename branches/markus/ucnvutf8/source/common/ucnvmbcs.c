@@ -1103,41 +1103,43 @@ ucnv_MBCSLoad(UConverterSharedData *sharedData,
             mbcsTable->unicodeMask=UCNV_HAS_SUPPLEMENTARY|UCNV_HAS_SURROGATES;
         }
 
+        /*
+         * _MBCSHeader.version 4.3 adds utf8Friendly data structures.
+         * Check for the header version, SBCS vs. MBCS, and for whether the
+         * data structures are optimized for code points as high as what the
+         * runtime code is designed for.
+         * The implementation does not handle mapping tables with entries for
+         * unpaired surrogates.
+         */
         if( header->version[1]>=3 &&
             (mbcsTable->unicodeMask&UCNV_HAS_SURROGATES)==0 &&
             (mbcsTable->countStates==1 ?
-                (header->version[2]>=7) :   /* SBCS: verify that the maximum optimized code point is >=0x7ff */
-                (header->version[2]>=0xd7)  /* MBCS: verify that the maximum optimized code point is >=0xd7ff */
+                (header->version[2]>=(SBCS_FAST_MAX>>8)) :
+                (header->version[2]>=(MBCS_FAST_MAX>>8))
             )
         ) {
-            /*
-             * _MBCSHeader.version 4.3 adds UTF-8-friendly data structures.
-             * The implementation does not handle mapping tables with entries for
-             * unpaired surrogates.
-             */
             mbcsTable->utf8Friendly=TRUE;
 
             if(mbcsTable->countStates==1) {
                 /*
-                 * SBCS: Stage 3 is allocated in 64-entry blocks for U+0000..U+07ff or higher.
+                 * SBCS: Stage 3 is allocated in 64-entry blocks for U+0000..SBCS_FAST_MAX or higher.
                  * Build a table with indexes to each block, to be used instead of
                  * the regular stage 1/2 table.
-                 * Iteration limit: 32*64=2048=0x800
                  */
                 int32_t i;
-                for(i=0; i<32; ++i) {
-                    mbcsTable->from7ffTable[i]=mbcsTable->fromUnicodeTable[mbcsTable->fromUnicodeTable[i>>4]+((i<<2)&0x3c)];
+                for(i=0; i<(SBCS_FAST_LIMIT>>6); ++i) {
+                    mbcsTable->sbcsIndex[i]=mbcsTable->fromUnicodeTable[mbcsTable->fromUnicodeTable[i>>4]+((i<<2)&0x3c)];
                 }
-                /* set 0x7ff to reflect the reach of from7ffTable[] even if header->version[2]>7 */
-                mbcsTable->maxFastUChar=0x7ff;
+                /* set SBCS_FAST_MAX to reflect the reach of sbcsIndex[] even if header->version[2]>(SBCS_FAST_MAX>>8) */
+                mbcsTable->maxFastUChar=SBCS_FAST_MAX;
                 sharedData->impl=&_SBCSUTF8Impl;
             } else {
                 /*
-                 * MBCS: Stage 3 is allocated in 64-entry blocks for U+0000..U+d7ff or higher.
+                 * MBCS: Stage 3 is allocated in 64-entry blocks for U+0000..MBCS_FAST_MAX or higher.
                  * The .cnv file is prebuilt with an additional stage table with indexes
                  * to each block.
                  */
-                mbcsTable->fromD7ffTable=(const uint16_t *)(mbcsTable->fromUnicodeBytes+mbcsTable->fromUBytesLength);
+                mbcsTable->mbcsIndex=(const uint16_t *)(mbcsTable->fromUnicodeBytes+mbcsTable->fromUBytesLength);
                 mbcsTable->maxFastUChar=(((UChar)header->version[2])<<8)|0xff;
                 /* TODO: sharedData->impl=_MBCSUTF8Impl; */
             }
@@ -2672,11 +2674,13 @@ getTrail:
             /* MBCS_OUTPUT_2 */
             value=MBCS_VALUE_2_FROM_STAGE_2(bytes, stage2Entry, c);
             /* TODO: begin */
+#if 0
             if(c<=0xd7ff && cnv->sharedData->mbcs.utf8Friendly) {
-                if(value!=((const uint16_t *)bytes)[cnv->sharedData->mbcs.fromD7ffTable[c>>6]+(c&0x3f)]) {
+                if(value!=((const uint16_t *)bytes)[cnv->sharedData->mbcs.mbcsIndex[c>>6]+(c&0x3f)]) {
                     length=0;
                 }
             }
+#endif
             /* TODO: end */
             if(value<=0xff) {
                 length=1;
@@ -3071,11 +3075,13 @@ unrolled:
         /* convert the Unicode code point in c into codepage bytes */
         value=MBCS_SINGLE_RESULT_FROM_U(table, results, c);
 /* TODO: begin */
+#if 0
         if(c<=0x7ff && cnv->sharedData->mbcs.utf8Friendly) {
-            if(value!=results[cnv->sharedData->mbcs.from7ffTable[c>>6]+(c&0x3f)]) {
+            if(value!=results[cnv->sharedData->mbcs.sbcsIndex[c>>6]+(c&0x3f)]) {
                 lastSource=source;
             }
         }
+#endif
 /* TODO: end */
         /* is this code point assigned, or do we use fallbacks? */
         if(value>=minValue) {
@@ -3919,13 +3925,13 @@ ucnv_SBCSFromUTF8(UConverterFromUnicodeArgs *pFromUArgs,
     uint8_t *target;
     int32_t targetCapacity;
 
-    const uint16_t *table, *from7ffTable;
+    const uint16_t *table, *sbcsIndex;
     const uint16_t *results;
 
     int8_t oldToULength, toULength, toULimit;
 
     UChar32 c;
-    uint8_t b, t1;
+    uint8_t b, t1, t2;
 
     uint32_t asciiRoundtrips;
     uint16_t value, minValue;
@@ -3945,7 +3951,7 @@ ucnv_SBCSFromUTF8(UConverterFromUnicodeArgs *pFromUArgs,
     } else {
         results=(uint16_t *)cnv->sharedData->mbcs.fromUnicodeBytes;
     }
-    from7ffTable=cnv->sharedData->mbcs.from7ffTable;
+    sbcsIndex=cnv->sharedData->mbcs.sbcsIndex;
 
     asciiRoundtrips=cnv->sharedData->mbcs.asciiRoundtrips;
 
@@ -4000,7 +4006,7 @@ ucnv_SBCSFromUTF8(UConverterFromUnicodeArgs *pFromUArgs,
                     continue;
                 } else {
                     c=b;
-                    value=SBCS_RESULT_FROM_UTF8_7FF(from7ffTable, results, 0, c);
+                    value=SBCS_RESULT_FROM_UTF8(sbcsIndex, results, 0, c);
                 }
             } else {
                 if(b<0xe0) {
@@ -4011,13 +4017,32 @@ ucnv_SBCSFromUTF8(UConverterFromUnicodeArgs *pFromUArgs,
                     ) {
                         c=b&0x1f;
                         ++source;
-                        value=SBCS_RESULT_FROM_UTF8_7FF(from7ffTable, results, c, t1);
+                        value=SBCS_RESULT_FROM_UTF8(sbcsIndex, results, c, t1);
                         if(value>=minValue) {
                             *target++=(uint8_t)value;
                             --targetCapacity;
                             continue;
                         } else {
                             c=(c<<6)|t1;
+                        }
+                    } else {
+                        c=-1;
+                    }
+                } else if(b==0xe0) {
+                    if( /* handle U+0800..U+0FFF inline */
+                        ((sourceLimit-source)>=2) &&
+                        (t1=(uint8_t)(source[0]-0x80)) <= 0x3f && t1 >= 0x20 &&
+                        (t2=(uint8_t)(source[1]-0x80)) <= 0x3f
+                    ) {
+                        c=t1;
+                        source+=2;
+                        value=SBCS_RESULT_FROM_UTF8(sbcsIndex, results, c, t2);
+                        if(value>=minValue) {
+                            *target++=(uint8_t)value;
+                            --targetCapacity;
+                            continue;
+                        } else {
+                            c=(c<<6)|t2;
                         }
                     } else {
                         c=-1;

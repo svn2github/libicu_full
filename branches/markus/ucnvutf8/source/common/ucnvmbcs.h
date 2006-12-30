@@ -187,11 +187,11 @@ enum {
 /* single-byte fromUnicode: get the 16-bit result word */
 #define MBCS_SINGLE_RESULT_FROM_U(table, results, c) (results)[ (table)[ (table)[(c)>>10] +(((c)>>4)&0x3f) ] +((c)&0xf) ]
 
-/* single-byte fromUnicode using the from7ffTable */
-#define SBCS_RESULT_FROM_U_7FF(table, results, c) (results)[ (table)[(c)>>6] +((c)&0x3f) ]
+/* single-byte fromUnicode using the sbcsIndex */
+#define SBCS_RESULT_FROM_LOW_BMP(table, results, c) (results)[ (table)[(c)>>6] +((c)&0x3f) ]
 
-/* single-byte fromUTF8 using the from7ffTable; l and t must be masked externally; can be l=0 and t<=0x7f */
-#define SBCS_RESULT_FROM_UTF8_7FF(table, results, l, t) (results)[ (table)[l] +(t) ]
+/* single-byte fromUTF8 using the sbcsIndex; l and t must be masked externally; can be l=0 and t<=0x7f */
+#define SBCS_RESULT_FROM_UTF8(table, results, l, t) (results)[ (table)[l] +(t) ]
 
 /* multi-byte fromUnicode: get the 32-bit stage 2 entry */
 #define MBCS_STAGE_2_FROM_U(table, c) ((const uint32_t *)(table))[ (table)[(c)>>10] +(((c)>>4)&0x3f) ]
@@ -202,11 +202,11 @@ enum {
 
 #define MBCS_POINTER_3_FROM_STAGE_2(bytes, stage2Entry, c) ((bytes)+(16*(uint32_t)(uint16_t)(stage2Entry)+((c)&0xf))*3)
 
-/* double-byte fromUnicode using the fromD7ffTable */
-#define DBCS_RESULT_FROM_U_D7FF(table, results, c) (results)[ (table)[(c)>>6] +((c)&0x3f) ]
+/* double-byte fromUnicode using the mbcsIndex */
+#define DBCS_RESULT_FROM_MOST_BMP(table, results, c) (results)[ (table)[(c)>>6] +((c)&0x3f) ]
 
-/* double-byte fromUTF8 using the fromD7ffTable; l and t1 combined into lt1; lt1 and t2 must be masked externally */
-#define DBCS_RESULT_FROM_UTF8_D7FF(table, results, lt1, t2) (results)[ (table)[lt1] +(t2) ]
+/* double-byte fromUTF8 using the mbcsIndex; l and t1 combined into lt1; lt1 and t2 must be masked externally */
+#define DBCS_RESULT_FROM_UTF8(table, results, lt1, t2) (results)[ (table)[lt1] +(t2) ]
 
 
 /**
@@ -242,9 +242,19 @@ typedef struct {
     UChar32 codePoint;
 } _MBCSToUFallback;
 
+/** Constants for fast and UTF-8-friendly conversion. */
+enum {
+    SBCS_FAST_MAX=0x0fff,               /* maximum code point with UTF-8-friendly SBCS runtime code, see makeconv SBCS_UTF8_MAX */
+    SBCS_FAST_LIMIT=SBCS_FAST_MAX+1,    /* =0x1000 */
+    MBCS_FAST_MAX=0xd7ff,               /* maximum code point with UTF-8-friendly MBCS runtime code, see makeconv MBCS_UTF8_MAX */
+    MBCS_FAST_LIMIT=MBCS_FAST_MAX+1     /* =0xd800 */
+};
+
 /**
  * This is the MBCS part of the UConverterTable union (a runtime data structure).
  * It keeps all the per-converter data and points into the loaded mapping tables.
+ *
+ * utf8Friendly data structures added with _MBCSHeader.version 4.3
  */
 typedef struct UConverterMBCSTable {
     /* toUnicode */
@@ -258,14 +268,14 @@ typedef struct UConverterMBCSTable {
 
     /* fromUnicode */
     const uint16_t *fromUnicodeTable;
-    const uint16_t *fromD7ffTable;      /* new for utf8Friendly data (_MBCSHeader.version 4.3) */
-    uint16_t from7ffTable[32];          /* new for utf8Friendly data (_MBCSHeader.version 4.3) */
+    const uint16_t *mbcsIndex;              /* for fast conversion from most of BMP to MBCS (utf8Friendly data) */
+    uint16_t sbcsIndex[SBCS_FAST_LIMIT>>6]; /* for fast conversion from low BMP to SBCS (utf8Friendly data) */
     const uint8_t *fromUnicodeBytes;
-    uint8_t *swapLFNLFromUnicodeBytes;  /* for swaplfnl */
+    uint8_t *swapLFNLFromUnicodeBytes;      /* for swaplfnl */
     uint32_t fromUBytesLength;
     uint8_t outputType, unicodeMask;
-    UBool utf8Friendly;                 /* new for utf8Friendly data (_MBCSHeader.version 4.3) */
-    UChar maxFastUChar;                 /* new for utf8Friendly data (_MBCSHeader.version 4.3) */
+    UBool utf8Friendly;                     /* for utf8Friendly data */
+    UChar maxFastUChar;                     /* for utf8Friendly data */
 
     /* roundtrips */
     uint32_t asciiRoundtrips;
