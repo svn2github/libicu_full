@@ -2558,7 +2558,7 @@ ucnv_MBCSSimpleGetNextUChar(UConverterSharedData *sharedData,
 
 /* MBCS-from-Unicode conversion functions ----------------------------------- */
 
-#define FASTMBCS 1
+#define FASTMBCS 2
 
 /* This version of ucnv_MBCSFromUnicodeWithOffsets() is optimized for double-byte codepages. */
 static void
@@ -2581,6 +2581,9 @@ ucnv_MBCSDoubleFromUnicodeWithOffsets(UConverterFromUnicodeArgs *pArgs,
     int32_t sourceIndex, nextSourceIndex;
 
     uint32_t stage2Entry;
+#if FASTMBCS>=2
+    uint32_t asciiRoundtrips;
+#endif
     uint32_t value;
     uint8_t unicodeMask;
 
@@ -2604,6 +2607,9 @@ ucnv_MBCSDoubleFromUnicodeWithOffsets(UConverterFromUnicodeArgs *pArgs,
     } else {
         bytes=cnv->sharedData->mbcs.fromUnicodeBytes;
     }
+#if FASTMBCS>=2
+    asciiRoundtrips=cnv->sharedData->mbcs.asciiRoundtrips;
+#endif
 
     /* get the converter state from UConverter */
     c=cnv->fromUChar32;
@@ -2634,6 +2640,18 @@ ucnv_MBCSDoubleFromUnicodeWithOffsets(UConverterFromUnicodeArgs *pArgs,
              */
             c=*source++;
             ++nextSourceIndex;
+#if FASTMBCS>=2
+            if(c<=0x7f && IS_ASCII_ROUNDTRIP(c, asciiRoundtrips)) {
+                *target++=(uint8_t)c;
+                if(offsets!=NULL) {
+                    *offsets++=sourceIndex;
+                }
+                --targetCapacity;
+                c=0;
+                sourceIndex=nextSourceIndex;
+                continue;
+            }
+#endif
 #if FASTMBCS
             /*
              * utf8Friendly table: Test for <=0xd7ff rather than <=MBCS_FAST_MAX
@@ -3952,13 +3970,12 @@ ucnv_SBCSFromUTF8(UConverterFromUnicodeArgs *pFromUArgs,
     targetCapacity=(int32_t)(pFromUArgs->targetLimit-pFromUArgs->target);
 
     table=cnv->sharedData->mbcs.fromUnicodeTable;
+    sbcsIndex=cnv->sharedData->mbcs.sbcsIndex;
     if((cnv->options&UCNV_OPTION_SWAP_LFNL)!=0) {
         results=(uint16_t *)cnv->sharedData->mbcs.swapLFNLFromUnicodeBytes;
     } else {
         results=(uint16_t *)cnv->sharedData->mbcs.fromUnicodeBytes;
     }
-    sbcsIndex=cnv->sharedData->mbcs.sbcsIndex;
-
     asciiRoundtrips=cnv->sharedData->mbcs.asciiRoundtrips;
 
     if(cnv->useFallback) {
