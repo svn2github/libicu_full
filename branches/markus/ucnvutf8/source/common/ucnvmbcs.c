@@ -2558,6 +2558,8 @@ ucnv_MBCSSimpleGetNextUChar(UConverterSharedData *sharedData,
 
 /* MBCS-from-Unicode conversion functions ----------------------------------- */
 
+#define FASTMBCS 1
+
 /* This version of ucnv_MBCSFromUnicodeWithOffsets() is optimized for double-byte codepages. */
 static void
 ucnv_MBCSDoubleFromUnicodeWithOffsets(UConverterFromUnicodeArgs *pArgs,
@@ -2569,6 +2571,9 @@ ucnv_MBCSDoubleFromUnicodeWithOffsets(UConverterFromUnicodeArgs *pArgs,
     int32_t *offsets;
 
     const uint16_t *table;
+#if FASTMBCS
+    const uint16_t *mbcsIndex;
+#endif
     const uint8_t *bytes;
 
     UChar32 c;
@@ -2577,7 +2582,6 @@ ucnv_MBCSDoubleFromUnicodeWithOffsets(UConverterFromUnicodeArgs *pArgs,
 
     uint32_t stage2Entry;
     uint32_t value;
-    int32_t length;
     uint8_t unicodeMask;
 
     /* use optimized function if possible */
@@ -2592,6 +2596,9 @@ ucnv_MBCSDoubleFromUnicodeWithOffsets(UConverterFromUnicodeArgs *pArgs,
     offsets=pArgs->offsets;
 
     table=cnv->sharedData->mbcs.fromUnicodeTable;
+#if FASTMBCS
+    mbcsIndex=cnv->sharedData->mbcs.mbcsIndex;
+#endif
     if((cnv->options&UCNV_OPTION_SWAP_LFNL)!=0) {
         bytes=cnv->sharedData->mbcs.swapLFNLFromUnicodeBytes;
     } else {
@@ -2627,6 +2634,21 @@ ucnv_MBCSDoubleFromUnicodeWithOffsets(UConverterFromUnicodeArgs *pArgs,
              */
             c=*source++;
             ++nextSourceIndex;
+#if FASTMBCS
+            /*
+             * utf8Friendly table: Test for <=0xd7ff rather than <=MBCS_FAST_MAX
+             * to avoid dealing with surrogates.
+             * MBCS_FAST_MAX must be >=0xd7ff.
+             */
+            if(c<=0xd7ff) {
+                value=DBCS_RESULT_FROM_MOST_BMP(mbcsIndex, (const uint16_t *)bytes, c);
+                /* There are only roundtrips (!=0) and no-mapping (==0) entries. */
+                if(value==0) {
+                    goto unassigned;
+                }
+                /* output the value */
+            } else {
+#endif
             /*
              * This also tests if the codepage maps single surrogates.
              * If it does, then surrogates are not paired but mapped separately.
@@ -2673,20 +2695,6 @@ getTrail:
             /* get the bytes and the length for the output */
             /* MBCS_OUTPUT_2 */
             value=MBCS_VALUE_2_FROM_STAGE_2(bytes, stage2Entry, c);
-            /* TODO: begin */
-#if 0
-            if(c<=0xd7ff && cnv->sharedData->mbcs.utf8Friendly) {
-                if(value!=((const uint16_t *)bytes)[cnv->sharedData->mbcs.mbcsIndex[c>>6]+(c&0x3f)]) {
-                    length=0;
-                }
-            }
-#endif
-            /* TODO: end */
-            if(value<=0xff) {
-                length=1;
-            } else {
-                length=2;
-            }
 
             /* is this code point assigned, or do we use fallbacks? */
             if(!(MBCS_FROM_U_IS_ROUNDTRIP(stage2Entry, c) ||
@@ -2723,10 +2731,13 @@ unassigned:
                     continue;
                 }
             }
+#if FASTMBCS
+            }
+#endif
 
             /* write the output character bytes from value and length */
             /* from the first if in the loop we know that targetCapacity>0 */
-            if(length==1) {
+            if(value<=0xff) {
                 /* this is easy because we know that there is enough space */
                 *target++=(uint8_t)value;
                 if(offsets!=NULL) {
@@ -3074,15 +3085,6 @@ unrolled:
          */
         /* convert the Unicode code point in c into codepage bytes */
         value=MBCS_SINGLE_RESULT_FROM_U(table, results, c);
-/* TODO: begin */
-#if 0
-        if(c<=0x7ff && cnv->sharedData->mbcs.utf8Friendly) {
-            if(value!=results[cnv->sharedData->mbcs.sbcsIndex[c>>6]+(c&0x3f)]) {
-                lastSource=source;
-            }
-        }
-#endif
-/* TODO: end */
         /* is this code point assigned, or do we use fallbacks? */
         if(value>=minValue) {
             /* assigned, write the output character bytes from value and length */
@@ -3242,7 +3244,11 @@ ucnv_MBCSFromUnicodeWithOffsets(UConverterFromUnicodeArgs *pArgs,
             ucnv_MBCSSingleFromUnicodeWithOffsets(pArgs, pErrorCode);
         }
         return;
-    } else if(outputType==MBCS_OUTPUT_2) {
+    } else if(outputType==MBCS_OUTPUT_2
+#if FASTMBCS
+              && cnv->sharedData->mbcs.utf8Friendly
+#endif
+    ) {
         ucnv_MBCSDoubleFromUnicodeWithOffsets(pArgs, pErrorCode);
         return;
     }
