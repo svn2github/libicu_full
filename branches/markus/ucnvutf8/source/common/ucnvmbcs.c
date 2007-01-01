@@ -1,7 +1,7 @@
 /*
 ******************************************************************************
 *
-*   Copyright (C) 2000-2006, International Business Machines
+*   Copyright (C) 2000-2007, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 ******************************************************************************
@@ -2645,10 +2645,10 @@ ucnv_MBCSDoubleFromUnicodeWithOffsets(UConverterFromUnicodeArgs *pArgs,
                 *target++=(uint8_t)c;
                 if(offsets!=NULL) {
                     *offsets++=sourceIndex;
+                    sourceIndex=nextSourceIndex;
                 }
                 --targetCapacity;
                 c=0;
-                sourceIndex=nextSourceIndex;
                 continue;
             }
 #endif
@@ -3226,6 +3226,9 @@ ucnv_MBCSFromUnicodeWithOffsets(UConverterFromUnicodeArgs *pArgs,
     int32_t *offsets;
 
     const uint16_t *table;
+#if FASTMBCS
+    const uint16_t *mbcsIndex;
+#endif
     const uint8_t *p, *bytes;
     uint8_t outputType;
 
@@ -3234,6 +3237,9 @@ ucnv_MBCSFromUnicodeWithOffsets(UConverterFromUnicodeArgs *pArgs,
     int32_t prevSourceIndex, sourceIndex, nextSourceIndex;
 
     uint32_t stage2Entry;
+#if FASTMBCS>=2
+    uint32_t asciiRoundtrips;
+#endif
     uint32_t value;
     int32_t length, prevLength;
     uint8_t unicodeMask;
@@ -3279,12 +3285,30 @@ ucnv_MBCSFromUnicodeWithOffsets(UConverterFromUnicodeArgs *pArgs,
     offsets=pArgs->offsets;
 
     table=cnv->sharedData->mbcs.fromUnicodeTable;
-
+#if FASTMBCS
+    if(cnv->sharedData->mbcs.utf8Friendly) {
+        mbcsIndex=cnv->sharedData->mbcs.mbcsIndex;
+    } else {
+        mbcsIndex=NULL;
+    }
+#endif
     if((cnv->options&UCNV_OPTION_SWAP_LFNL)!=0) {
         bytes=cnv->sharedData->mbcs.swapLFNLFromUnicodeBytes;
     } else {
         bytes=cnv->sharedData->mbcs.fromUnicodeBytes;
     }
+#if FASTMBCS>=2
+    if(outputType==MBCS_OUTPUT_DBCS_ONLY || outputType==MBCS_OUTPUT_2_SISO) {
+        /*
+         * MBCS_OUTPUT_DBCS_ONLY: No SBCS mappings, therefore ASCII does not roundtrip.
+         *                        TODO: Move asciiRoundtrips==0 for these converters to ucnv_MBCSLoad()?
+         * MBCS_OUTPUT_2_SISO: Bypass the ASCII fastpath to handle prevLength correctly.
+         */
+        asciiRoundtrips=0;
+    } else {
+        asciiRoundtrips=cnv->sharedData->mbcs.asciiRoundtrips;
+    }
+#endif
 
     /* get the converter state from UConverter */
     c=cnv->fromUChar32;
@@ -3340,6 +3364,176 @@ ucnv_MBCSFromUnicodeWithOffsets(UConverterFromUnicodeArgs *pArgs,
              */
             c=*source++;
             ++nextSourceIndex;
+#if FASTMBCS>=2
+            if(c<=0x7f && IS_ASCII_ROUNDTRIP(c, asciiRoundtrips)) {
+                *target++=(uint8_t)c;
+                if(offsets!=NULL) {
+                    *offsets++=sourceIndex;
+                    prevSourceIndex=sourceIndex;
+                    sourceIndex=nextSourceIndex;
+                }
+                --targetCapacity;
+                c=0;
+                continue;
+            }
+#endif
+#if FASTMBCS
+            /*
+             * utf8Friendly table: Test for <=0xd7ff rather than <=MBCS_FAST_MAX
+             * to avoid dealing with surrogates.
+             * MBCS_FAST_MAX must be >=0xd7ff.
+             */
+            if(c<=0xd7ff && mbcsIndex!=NULL) {
+                value=mbcsIndex[c>>6];
+
+                /* get the bytes and the length for the output (copied from below and adapted for utf8Friendly data) */
+                /* There are only roundtrips (!=0) and no-mapping (==0) entries. */
+                switch(outputType) {
+                case MBCS_OUTPUT_2:
+                    value=((const uint16_t *)bytes)[value +(c&0x3f)];
+                    if(value<=0xff) {
+                        if(value==0) {
+                            goto unassigned;
+                        } else {
+                            length=1;
+                        }
+                    } else {
+                        length=2;
+                    }
+                    break;
+                case MBCS_OUTPUT_2_SISO:
+                    /* 1/2-byte stateful with Shift-In/Shift-Out */
+                    /*
+                     * Save the old state in the converter object
+                     * right here, then change the local prevLength state variable if necessary.
+                     * Then, if this character turns out to be unassigned or a fallback that
+                     * is not taken, the callback code must not save the new state in the converter
+                     * because the new state is for a character that is not output.
+                     * However, the callback must still restore the state from the converter
+                     * in case the callback function changed it for its output.
+                     */
+                    cnv->fromUnicodeStatus=prevLength; /* save the old state */
+                    value=((const uint16_t *)bytes)[value +(c&0x3f)];
+                    if(value<=0xff) {
+                        if(value==0) {
+                            goto unassigned;
+                        } else if(prevLength<=1) {
+                            length=1;
+                        } else {
+                            /* change from double-byte mode to single-byte */
+                            value|=(uint32_t)UCNV_SI<<8;
+                            length=2;
+                            prevLength=1;
+                        }
+                    } else {
+                        if(prevLength==2) {
+                            length=2;
+                        } else {
+                            /* change from single-byte mode to double-byte */
+                            value|=(uint32_t)UCNV_SO<<16;
+                            length=3;
+                            prevLength=2;
+                        }
+                    }
+                    break;
+                case MBCS_OUTPUT_DBCS_ONLY:
+                    /* table with single-byte results, but only DBCS mappings used */
+                    value=((const uint16_t *)bytes)[value +(c&0x3f)];
+                    if(value<=0xff) {
+                        /* no mapping or SBCS result, not taken for DBCS-only */
+                        goto unassigned;
+                    } else {
+                        length=2;
+                    }
+                    break;
+                case MBCS_OUTPUT_3:
+                    p=bytes+(value+(c&0x3f))*3;
+                    value=((uint32_t)*p<<16)|((uint32_t)p[1]<<8)|p[2];
+                    if(value<=0xff) {
+                        if(value==0) {
+                            goto unassigned;
+                        } else {
+                            length=1;
+                        }
+                    } else if(value<=0xffff) {
+                        length=2;
+                    } else {
+                        length=3;
+                    }
+                    break;
+                case MBCS_OUTPUT_4:
+                    value=((const uint32_t *)bytes)[value +(c&0x3f)];
+                    if(value<=0xff) {
+                        if(value==0) {
+                            goto unassigned;
+                        } else {
+                            length=1;
+                        }
+                    } else if(value<=0xffff) {
+                        length=2;
+                    } else if(value<=0xffffff) {
+                        length=3;
+                    } else {
+                        length=4;
+                    }
+                    break;
+                case MBCS_OUTPUT_3_EUC:
+                    value=((const uint16_t *)bytes)[value +(c&0x3f)];
+                    /* EUC 16-bit fixed-length representation */
+                    if(value<=0xff) {
+                        if(value==0) {
+                            goto unassigned;
+                        } else {
+                            length=1;
+                        }
+                    } else if((value&0x8000)==0) {
+                        value|=0x8e8000;
+                        length=3;
+                    } else if((value&0x80)==0) {
+                        value|=0x8f0080;
+                        length=3;
+                    } else {
+                        length=2;
+                    }
+                    break;
+                case MBCS_OUTPUT_4_EUC:
+                    p=bytes+(value+(c&0x3f))*3;
+                    value=((uint32_t)*p<<16)|((uint32_t)p[1]<<8)|p[2];
+                    /* EUC 16-bit fixed-length representation applied to the first two bytes */
+                    if(value<=0xff) {
+                        if(value==0) {
+                            goto unassigned;
+                        } else {
+                            length=1;
+                        }
+                    } else if(value<=0xffff) {
+                        length=2;
+                    } else if((value&0x800000)==0) {
+                        value|=0x8e800000;
+                        length=4;
+                    } else if((value&0x8000)==0) {
+                        value|=0x8f008000;
+                        length=4;
+                    } else {
+                        length=3;
+                    }
+                    break;
+                default:
+                    /* must not occur */
+                    /*
+                     * To avoid compiler warnings that value & length may be
+                     * used without having been initialized, we set them here.
+                     * In reality, this is unreachable code.
+                     * Not having a default branch also causes warnings with
+                     * some compilers.
+                     */
+                    value=0;
+                    length=0;
+                    break;
+                }
+                /* output the value */
+            } else {
+#endif
             /*
              * This also tests if the codepage maps single surrogates.
              * If it does, then surrogates are not paired but mapped separately.
@@ -3583,6 +3777,9 @@ unassigned:
                     continue;
                 }
             }
+#if FASTMBCS
+            }
+#endif
 
             /* write the output character bytes from value and length */
             /* from the first if in the loop we know that targetCapacity>0 */
