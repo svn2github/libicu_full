@@ -2558,7 +2558,31 @@ ucnv_MBCSSimpleGetNextUChar(UConverterSharedData *sharedData,
 
 /* MBCS-from-Unicode conversion functions ----------------------------------- */
 
+/*
+ * UTF-16-to-MBCS optimizations:
+ * 0 Original code.
+ * 1 Use mbcsIndex and utf8Friendly data.
+ * 2 Also use asciiRoundtrips.
+ *
+ * Measurements have shown that 2 (both optimizations) gives the best results.
+ */
 #define FASTMBCS 2
+
+/*
+ * UTF-16-to-SBCS optimizations:
+ * 0            Original code.
+ * SBCS_ASCII   Use asciiRoundtrips.
+ * SBCS_INDEX   Use sbcsIndex and utf8Friendly data.
+ * Both         Use both optimizations.
+ *
+ * Measurements have shown that only the ASCII optimization broadly
+ * yields improvements,
+ * although for some combinations of charsets and text data each optimization
+ * diminishes performance.
+ */
+#define SBCS_ASCII 1
+#define SBCS_INDEX 2
+#define FASTSBCS SBCS_ASCII
 
 /* This version of ucnv_MBCSFromUnicodeWithOffsets() is optimized for double-byte codepages. */
 static void
@@ -2988,12 +3012,18 @@ ucnv_MBCSSingleFromBMPWithOffsets(UConverterFromUnicodeArgs *pArgs,
     int32_t *offsets;
 
     const uint16_t *table;
+#if FASTSBCS&SBCS_INDEX
+    const uint16_t *sbcsIndex;
+#endif
     const uint16_t *results;
 
     UChar32 c;
 
     int32_t sourceIndex;
 
+#if FASTSBCS&SBCS_ASCII
+    uint32_t asciiRoundtrips;
+#endif
     uint16_t value, minValue;
 
     /* set up the local pointers */
@@ -3005,11 +3035,17 @@ ucnv_MBCSSingleFromBMPWithOffsets(UConverterFromUnicodeArgs *pArgs,
     offsets=pArgs->offsets;
 
     table=cnv->sharedData->mbcs.fromUnicodeTable;
+#if FASTSBCS&SBCS_INDEX
+    sbcsIndex=cnv->sharedData->mbcs.sbcsIndex;
+#endif
     if((cnv->options&UCNV_OPTION_SWAP_LFNL)!=0) {
         results=(uint16_t *)cnv->sharedData->mbcs.swapLFNLFromUnicodeBytes;
     } else {
         results=(uint16_t *)cnv->sharedData->mbcs.fromUnicodeBytes;
     }
+#if FASTSBCS&SBCS_ASCII
+    asciiRoundtrips=cnv->sharedData->mbcs.asciiRoundtrips;
+#endif
 
     if(cnv->useFallback) {
         /* use all roundtrip and fallback results */
@@ -3102,6 +3138,19 @@ unrolled:
          * This speeds up the conversion of assigned characters.
          */
         /* convert the Unicode code point in c into codepage bytes */
+#if FASTSBCS&SBCS_ASCII
+        if(c<=0x7f && IS_ASCII_ROUNDTRIP(c, asciiRoundtrips)) {
+            *target++=(uint8_t)c;
+            --targetCapacity;
+            c=0;
+            continue;
+        }
+#endif
+#if FASTSBCS&SBCS_INDEX
+        if(c<=SBCS_FAST_MAX) {
+            value=SBCS_RESULT_FROM_LOW_BMP(sbcsIndex, results, c);
+        } else
+#endif
         value=MBCS_SINGLE_RESULT_FROM_U(table, results, c);
         /* is this code point assigned, or do we use fallbacks? */
         if(value>=minValue) {
@@ -3262,7 +3311,11 @@ ucnv_MBCSFromUnicodeWithOffsets(UConverterFromUnicodeArgs *pArgs,
     outputType=cnv->sharedData->mbcs.outputType;
     unicodeMask=cnv->sharedData->mbcs.unicodeMask;
     if(outputType==MBCS_OUTPUT_1 && !(unicodeMask&UCNV_HAS_SURROGATES)) {
-        if(!(unicodeMask&UCNV_HAS_SUPPLEMENTARY)) {
+        if(!(unicodeMask&UCNV_HAS_SUPPLEMENTARY)
+#if FASTSBCS&SBCS_INDEX
+            && cnv->sharedData->mbcs.utf8Friendly
+#endif
+        ) {
             ucnv_MBCSSingleFromBMPWithOffsets(pArgs, pErrorCode);
         } else {
             ucnv_MBCSSingleFromUnicodeWithOffsets(pArgs, pErrorCode);
