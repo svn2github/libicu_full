@@ -301,6 +301,7 @@
  */
 
 static const UConverterImpl _SBCSUTF8Impl;
+static const UConverterImpl _DBCSUTF8Impl;
 
 /* GB 18030 data ------------------------------------------------------------ */
 
@@ -1132,7 +1133,6 @@ ucnv_MBCSLoad(UConverterSharedData *sharedData,
                 }
                 /* set SBCS_FAST_MAX to reflect the reach of sbcsIndex[] even if header->version[2]>(SBCS_FAST_MAX>>8) */
                 mbcsTable->maxFastUChar=SBCS_FAST_MAX;
-                sharedData->impl=&_SBCSUTF8Impl;
             } else {
                 /*
                  * MBCS: Stage 3 is allocated in 64-entry blocks for U+0000..MBCS_FAST_MAX or higher.
@@ -1141,7 +1141,6 @@ ucnv_MBCSLoad(UConverterSharedData *sharedData,
                  */
                 mbcsTable->mbcsIndex=(const uint16_t *)(mbcsTable->fromUnicodeBytes+mbcsTable->fromUBytesLength);
                 mbcsTable->maxFastUChar=(((UChar)header->version[2])<<8)|0xff;
-                /* TODO: sharedData->impl=_MBCSUTF8Impl; */
             }
         }
 
@@ -1156,6 +1155,17 @@ ucnv_MBCSLoad(UConverterSharedData *sharedData,
                 }
             }
             mbcsTable->asciiRoundtrips=asciiRoundtrips;
+        }
+    }
+
+    /* Set the impl pointer here so that it is set for both extension-only and base tables. */
+    if(mbcsTable->utf8Friendly) {
+        if(mbcsTable->countStates==1) {
+            sharedData->impl=&_SBCSUTF8Impl;
+        } else {
+            if(mbcsTable->outputType==MBCS_OUTPUT_2) {
+                sharedData->impl=&_DBCSUTF8Impl;
+            }
         }
     }
 }
@@ -4386,47 +4396,307 @@ moreBytes:
                         return;
                     }
                 }
+            }
 
-                if(value>=minValue) {
-                    /* output the mapping for c */
-                    *target++=(uint8_t)value;
-                    --targetCapacity;
-                    c=0;
-                } else {
-                    /* value<minValue means c is unassigned (unmappable) */
+            if(value>=minValue) {
+                /* output the mapping for c */
+                *target++=(uint8_t)value;
+                --targetCapacity;
+            } else {
+                /* value<minValue means c is unassigned (unmappable) */
+                /*
+                 * Try an extension mapping.
+                 * Pass in no source because we don't have UTF-16 input.
+                 * If we have a partial match on c, we will return and revert
+                 * to UTF-8->UTF-16->charset conversion.
+                 */
+                static const UChar nul=0;
+                const UChar *noSource=&nul;
+                c=_extFromU(cnv, cnv->sharedData,
+                            c, &noSource, noSource,
+                            &target, target+targetCapacity,
+                            NULL, -1,
+                            pFromUArgs->flush,
+                            pErrorCode);
+
+                if(U_FAILURE(*pErrorCode)) {
+                    /* not mappable or buffer overflow */
+                    cnv->fromUChar32=c;
+                    break;
+                } else if(cnv->preFromUFirstCP>=0) {
                     /*
-                     * Try an extension mapping.
-                     * Pass in no source because we don't have UTF-16 input.
-                     * If we have a partial match on c, we will return and revert
-                     * to UTF-8->UTF-16->charset conversion.
+                     * Partial match, return and revert to pivoting.
+                     * In normal from-UTF-16 conversion, we would just continue
+                     * but then exit the loop because the extension match would
+                     * have consumed the source.
                      */
-                    static const UChar nul=0;
-                    const UChar *noSource=&nul;
-                    c=_extFromU(cnv, cnv->sharedData,
-                                c, &noSource, noSource,
-                                &target, target+targetCapacity,
-                                NULL, -1,
-                                pFromUArgs->flush,
-                                pErrorCode);
+                    break;
+                } else {
+                    /* a mapping was written to the target, continue */
 
-                    if(U_FAILURE(*pErrorCode)) {
-                        /* not mappable or buffer overflow */
-                        cnv->fromUChar32=c;
-                        break;
-                    } else if(cnv->preFromUFirstCP>=0) {
-                        /*
-                         * Partial match, return and revert to pivoting.
-                         * In normal from-UTF-16 conversion, we would just continue
-                         * but then exit the loop because the extension match would
-                         * have consumed the source.
-                         */
-                        break;
-                    } else {
-                        /* a mapping was written to the target, continue */
+                    /* recalculate the targetCapacity after an extension mapping */
+                    targetCapacity=(int32_t)(pFromUArgs->targetLimit-(char *)target);
+                }
+            }
+        } else {
+            /* target is full */
+            *pErrorCode=U_BUFFER_OVERFLOW_ERROR;
+            break;
+        }
+    }
 
-                        /* recalculate the targetCapacity after an extension mapping */
-                        targetCapacity=(int32_t)(pFromUArgs->targetLimit-(char *)target);
+    /* write back the updated pointers */
+    pToUArgs->source=(char *)source;
+    pFromUArgs->target=(char *)target;
+}
+
+static void
+ucnv_DBCSFromUTF8(UConverterFromUnicodeArgs *pFromUArgs,
+                  UConverterToUnicodeArgs *pToUArgs,
+                  UErrorCode *pErrorCode) {
+    UConverter *utf8, *cnv;
+    const uint8_t *source, *sourceLimit;
+    uint8_t *target;
+    int32_t targetCapacity;
+
+    const uint16_t *table, *mbcsIndex;
+    const uint16_t *results;
+
+    int8_t oldToULength, toULength, toULimit;
+
+    UChar32 c;
+    uint8_t b, t1, t2;
+
+    uint32_t stage2Entry;
+    uint32_t asciiRoundtrips;
+    uint16_t value, minValue;
+    UBool hasSupplementary;
+
+    /* set up the local pointers */
+    utf8=pToUArgs->converter;
+    cnv=pFromUArgs->converter;
+    source=(uint8_t *)pToUArgs->source;
+    sourceLimit=(uint8_t *)pToUArgs->sourceLimit;
+    target=(uint8_t *)pFromUArgs->target;
+    targetCapacity=(int32_t)(pFromUArgs->targetLimit-pFromUArgs->target);
+
+    table=cnv->sharedData->mbcs.fromUnicodeTable;
+    mbcsIndex=cnv->sharedData->mbcs.mbcsIndex;
+    if((cnv->options&UCNV_OPTION_SWAP_LFNL)!=0) {
+        results=(uint16_t *)cnv->sharedData->mbcs.swapLFNLFromUnicodeBytes;
+    } else {
+        results=(uint16_t *)cnv->sharedData->mbcs.fromUnicodeBytes;
+    }
+    asciiRoundtrips=cnv->sharedData->mbcs.asciiRoundtrips;
+
+    if(cnv->useFallback) {
+        /* use all roundtrip and fallback results */
+        minValue=0x800;
+    } else {
+        /* use only roundtrips and fallbacks from private-use characters */
+        minValue=0xc00;
+    }
+    hasSupplementary=(UBool)(cnv->sharedData->mbcs.unicodeMask&UCNV_HAS_SUPPLEMENTARY);
+
+    /* get the converter state from the UTF-8 UConverter */
+    c=(UChar32)utf8->toUnicodeStatus;
+    if(c!=0 && targetCapacity>0) {
+        toULength=oldToULength=utf8->toULength;
+        toULimit=(int8_t)utf8->mode;
+
+        utf8->toUnicodeStatus=0;
+        utf8->toULength=0;
+        goto moreBytes;
+        /* See note in ucnv_SBCSFromUTF8() about this goto. */
+    }
+
+    /* conversion loop */
+    while(source<sourceLimit) {
+        if(targetCapacity>0) {
+            b=*source++;
+            if((int8_t)b>=0) {
+                /* convert ASCII */
+                if(IS_ASCII_ROUNDTRIP(b, asciiRoundtrips)) {
+                    *target++=(uint8_t)b;
+                    --targetCapacity;
+                    continue;
+                } else {
+                    value=DBCS_RESULT_FROM_UTF8(mbcsIndex, results, 0, b);
+                    if(value==0) {
+                        c=b;
+                        goto unassigned;
                     }
+                }
+            } else {
+                if(b>0xe0) {
+                    if( /* handle U+1000..U+D7FF inline */
+                        ((sourceLimit-source)>=2) &&
+                        (((t1=(uint8_t)(source[0]-0x80), b<0xed) && (t1 <= 0x3f)) ||
+                                                        (b==0xed && (t1 <= 0x1f))) &&
+                        (t2=(uint8_t)(source[1]-0x80)) <= 0x3f
+                    ) {
+                        c=((b&0xf)<<6)|t1;
+                        source+=2;
+                        value=DBCS_RESULT_FROM_UTF8(mbcsIndex, results, c, t2);
+                        if(value==0) {
+                            c=(c<<6)|t2;
+                            goto unassigned;
+                        }
+                    } else {
+                        c=-1;
+                    }
+                } else if(b<0xe0) {
+                    if( /* handle U+0080..U+07FF inline */
+                        b>=0xc2 &&
+                        (source<sourceLimit) &&
+                        (t1=(uint8_t)(*source-0x80)) <= 0x3f
+                    ) {
+                        c=b&0x1f;
+                        ++source;
+                        value=DBCS_RESULT_FROM_UTF8(mbcsIndex, results, c, t1);
+                        if(value==0) {
+                            c=(c<<6)|t1;
+                            goto unassigned;
+                        }
+                    } else {
+                        c=-1;
+                    }
+                } else {
+                    c=-1;
+                }
+
+                if(c<0) {
+                    /* handle "complicated" and error cases, and continuing partial characters */
+                    oldToULength=0;
+                    toULength=1;
+                    toULimit=utf8_countTrailBytes[b]+1;
+                    c=b;
+moreBytes:
+                    while(toULength<toULimit) {
+                        if(source<sourceLimit) {
+                            b=*source;
+                            if(U8_IS_TRAIL(b)) {
+                                ++source;
+                                ++toULength;
+                                c=(c<<6)+b;
+                            } else {
+                                break; /* sequence too short, stop with toULength<toULimit */
+                            }
+                        } else {
+                            /* store the partial UTF-8 character, compatible with the regular UTF-8 converter */
+                            source-=(toULength-oldToULength);
+                            while(oldToULength<toULength) {
+                                utf8->toUBytes[oldToULength++]=*source++;
+                            }
+                            utf8->toUnicodeStatus=c;
+                            utf8->toULength=toULength;
+                            utf8->mode=toULimit;
+                            pToUArgs->source=(char *)source;
+                            pFromUArgs->target=(char *)target;
+                            return;
+                        }
+                    }
+
+                    if( toULength==toULimit &&      /* consumed all trail bytes */
+                        (toULength==3 || toULength==2) &&             /* BMP */
+                        (c-=utf8_offsets[toULength])>=utf8_minLegal[toULength] &&
+                        (c<=0xd7ff || 0xe000<=c)    /* not a surrogate */
+                    ) {
+                        stage2Entry=MBCS_STAGE_2_FROM_U(table, c);
+                    } else if(
+                        toULength==toULimit && toULength==4 &&
+                        (0x10000<=(c-=utf8_offsets[4]) && c<=0x10ffff)
+                    ) {
+                        /* supplementary code point */
+                        if(!hasSupplementary) {
+                            /* BMP-only codepages are stored without stage 1 entries for supplementary code points */
+                            stage2Entry=0;
+                        } else {
+                            stage2Entry=MBCS_STAGE_2_FROM_U(table, c);
+                        }
+                    } else {
+                        /* error handling: illegal UTF-8 byte sequence */
+                        source-=(toULength-oldToULength);
+                        while(oldToULength<toULength) {
+                            utf8->toUBytes[oldToULength++]=*source++;
+                        }
+                        utf8->toULength=toULength;
+                        pToUArgs->source=(char *)source;
+                        pFromUArgs->target=(char *)target;
+                        *pErrorCode=U_ILLEGAL_CHAR_FOUND;
+                        return;
+                    }
+
+                    /* get the bytes and the length for the output */
+                    /* MBCS_OUTPUT_2 */
+                    value=MBCS_VALUE_2_FROM_STAGE_2(results, stage2Entry, c);
+
+                    /* is this code point assigned, or do we use fallbacks? */
+                    if(!(MBCS_FROM_U_IS_ROUNDTRIP(stage2Entry, c) ||
+                         (UCNV_FROM_U_USE_FALLBACK(cnv, c) && value!=0))
+                    ) {
+                        goto unassigned;
+                    }
+                }
+            }
+
+            /* write the output character bytes from value and length */
+            /* from the first if in the loop we know that targetCapacity>0 */
+            if(value<=0xff) {
+                /* this is easy because we know that there is enough space */
+                *target++=(uint8_t)value;
+                --targetCapacity;
+            } else /* length==2 */ {
+                *target++=(uint8_t)(value>>8);
+                if(2<=targetCapacity) {
+                    *target++=(uint8_t)value;
+                    targetCapacity-=2;
+                } else {
+                    cnv->charErrorBuffer[0]=(char)value;
+                    cnv->charErrorBufferLength=1;
+
+                    /* target overflow */
+                    *pErrorCode=U_BUFFER_OVERFLOW_ERROR;
+                    break;
+                }
+            }
+            continue;
+
+unassigned:
+            {
+                /*
+                 * Try an extension mapping.
+                 * Pass in no source because we don't have UTF-16 input.
+                 * If we have a partial match on c, we will return and revert
+                 * to UTF-8->UTF-16->charset conversion.
+                 */
+                static const UChar nul=0;
+                const UChar *noSource=&nul;
+                c=_extFromU(cnv, cnv->sharedData,
+                            c, &noSource, noSource,
+                            &target, target+targetCapacity,
+                            NULL, -1,
+                            pFromUArgs->flush,
+                            pErrorCode);
+
+                if(U_FAILURE(*pErrorCode)) {
+                    /* not mappable or buffer overflow */
+                    cnv->fromUChar32=c;
+                    break;
+                } else if(cnv->preFromUFirstCP>=0) {
+                    /*
+                     * Partial match, return and revert to pivoting.
+                     * In normal from-UTF-16 conversion, we would just continue
+                     * but then exit the loop because the extension match would
+                     * have consumed the source.
+                     */
+                    break;
+                } else {
+                    /* a mapping was written to the target, continue */
+
+                    /* recalculate the targetCapacity after an extension mapping */
+                    targetCapacity=(int32_t)(pFromUArgs->targetLimit-(char *)target);
+                    continue;
                 }
             }
         } else {
@@ -4569,6 +4839,32 @@ static const UConverterImpl _SBCSUTF8Impl={
 
     NULL,
     ucnv_SBCSFromUTF8
+};
+
+static const UConverterImpl _DBCSUTF8Impl={
+    UCNV_MBCS,
+
+    ucnv_MBCSLoad,
+    ucnv_MBCSUnload,
+
+    ucnv_MBCSOpen,
+    NULL,
+    NULL,
+
+    ucnv_MBCSToUnicodeWithOffsets,
+    ucnv_MBCSToUnicodeWithOffsets,
+    ucnv_MBCSFromUnicodeWithOffsets,
+    ucnv_MBCSFromUnicodeWithOffsets,
+    ucnv_MBCSGetNextUChar,
+
+    ucnv_MBCSGetStarters,
+    ucnv_MBCSGetName,
+    ucnv_MBCSWriteSub,
+    NULL,
+    ucnv_MBCSGetUnicodeSet,
+
+    NULL,
+    ucnv_DBCSFromUTF8
 };
 
 static const UConverterImpl _MBCSImpl={
