@@ -1,6 +1,6 @@
 /* 
 **********************************************************************
-*   Copyright (C) 2000-2004, International Business Machines
+*   Copyright (C) 2000-2007, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 **********************************************************************
 *   file name:  ucnvlat1.cpp
@@ -532,6 +532,95 @@ _ASCIIGetNextUChar(UConverterToUnicodeArgs *pArgs,
     return 0xffff;
 }
 
+/* "Convert" UTF-8 to US-ASCII: Validate and copy. */
+static void
+ucnv_ASCIIFromUTF8(UConverterFromUnicodeArgs *pFromUArgs,
+                   UConverterToUnicodeArgs *pToUArgs,
+                   UErrorCode *pErrorCode) {
+    const uint8_t *source, *sourceLimit;
+    uint8_t *target;
+    int32_t targetCapacity, length;
+
+    uint8_t c;
+
+    if(pToUArgs->converter->toUnicodeStatus!=0) {
+        /* no handling of partial UTF-8 characters here, fall back to pivoting */
+        *pErrorCode=U_USING_DEFAULT_WARNING;
+        return;
+    }
+
+    /* set up the local pointers */
+    source=(const uint8_t *)pToUArgs->source;
+    sourceLimit=(const uint8_t *)pToUArgs->sourceLimit;
+    target=(uint8_t *)pFromUArgs->target;
+    targetCapacity=(int32_t)(pFromUArgs->targetLimit-pFromUArgs->target);
+
+    /*
+     * since the conversion here is 1:1 uint8_t:uint8_t, we need only one counter
+     * for the minimum of the sourceLength and targetCapacity
+     */
+    length=(int32_t)(sourceLimit-source);
+    if(length<targetCapacity) {
+        targetCapacity=length;
+    }
+
+    /* unroll the loop with the most common case */
+    if(targetCapacity>=16) {
+        int32_t count, loops;
+        uint8_t oredChars;
+
+        loops=count=targetCapacity>>4;
+        do {
+            oredChars=*target++=*source++;
+            oredChars|=*target++=*source++;
+            oredChars|=*target++=*source++;
+            oredChars|=*target++=*source++;
+            oredChars|=*target++=*source++;
+            oredChars|=*target++=*source++;
+            oredChars|=*target++=*source++;
+            oredChars|=*target++=*source++;
+            oredChars|=*target++=*source++;
+            oredChars|=*target++=*source++;
+            oredChars|=*target++=*source++;
+            oredChars|=*target++=*source++;
+            oredChars|=*target++=*source++;
+            oredChars|=*target++=*source++;
+            oredChars|=*target++=*source++;
+            oredChars|=*target++=*source++;
+
+            /* were all 16 entries really valid? */
+            if(oredChars>0x7f) {
+                /* no, return to the first of these 16 */
+                source-=16;
+                target-=16;
+                break;
+            }
+        } while(--count>0);
+        count=loops-count;
+        targetCapacity-=16*count;
+    }
+
+    /* conversion loop */
+    c=0;
+    while(targetCapacity>0 && (c=*source)<=0x7f) {
+        ++source;
+        *target++=c;
+        --targetCapacity;
+    }
+
+    if(c>0x7f) {
+        /* non-ASCII character, handle in standard converter */
+        *pErrorCode=U_USING_DEFAULT_WARNING;
+    } else if(source<sourceLimit && target>=(const uint8_t *)pFromUArgs->targetLimit) {
+        /* target is full */
+        *pErrorCode=U_BUFFER_OVERFLOW_ERROR;
+    }
+
+    /* write back the updated pointers */
+    pToUArgs->source=(const char *)source;
+    pFromUArgs->target=(char *)target;
+}
+
 static void
 _ASCIIGetUnicodeSet(const UConverter *cnv,
                     const USetAdder *sa,
@@ -560,7 +649,10 @@ static const UConverterImpl _ASCIIImpl={
     NULL,
     NULL,
     NULL,
-    _ASCIIGetUnicodeSet
+    _ASCIIGetUnicodeSet,
+
+    NULL,
+    ucnv_ASCIIFromUTF8
 };
 
 static const UConverterStaticData _ASCIIStaticData={
