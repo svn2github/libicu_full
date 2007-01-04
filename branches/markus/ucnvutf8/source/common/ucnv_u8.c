@@ -787,8 +787,9 @@ ucnv_UTF8FromUTF8(UConverterFromUnicodeArgs *pFromUArgs,
          * As a result, the source length is checked only once per multi-byte
          * character instead of twice.
          *
-         * Do not count the last up to 3 trail bytes to make sure that the entire
-         * last legal byte sequence is contained in source and target.
+         * Make sure that the last byte sequence is complete, or else
+         * stop just before it.
+         * (The longest legal byte sequence has 3 trail bytes.)
          * Count oldToULength (number of source bytes from a previous buffer)
          * into the source length but reduce the source index by that much
          * while going back over trail bytes.
@@ -804,17 +805,15 @@ ucnv_UTF8FromUTF8(UConverterFromUnicodeArgs *pFromUArgs,
         while(i<3 && i<(count-oldToULength)) {
             b=source[count-oldToULength-i-1];
             if(U8_IS_TRAIL(b)) {
-                /* remove from the counter up to 3 trail bytes at the end */
                 ++i;
             } else {
                 if(i<utf8_countTrailBytes[b]) {
                     /* stop converting before the lead byte if there are not enough trail bytes for it */
-                    ++i;
+                    count-=i+1;
                 }
                 break;
             }
         }
-        count-=i;
     }
 
     if(c!=0) {
@@ -946,8 +945,32 @@ moreBytes:
         if(target==(const uint8_t *)pFromUArgs->targetLimit) {
             *pErrorCode=U_BUFFER_OVERFLOW_ERROR;
         } else {
-            /* fall back to the pivoting implementation for the rest of the buffer */
-            *pErrorCode=U_USING_DEFAULT_WARNING;
+            b=*source;
+            toULimit=utf8_countTrailBytes[b]+1;
+            if(toULimit>(sourceLimit-source)) {
+                /* collect a truncated byte sequence */
+                toULength=0;
+                c=b;
+                for(;;) {
+                    utf8->toUBytes[toULength++]=b;
+                    if(++source==sourceLimit) {
+                        /* partial byte sequence at end of source */
+                        utf8->toUnicodeStatus=c;
+                        utf8->toULength=toULength;
+                        utf8->mode=toULimit;
+                        break;
+                    } else if(!U8_IS_TRAIL(b=*source)) {
+                        /* lead byte in trail byte position */
+                        utf8->toULength=toULength;
+                        *pErrorCode=U_ILLEGAL_CHAR_FOUND;
+                        break;
+                    }
+                    c=(c<<6)+b;
+                }
+            } else {
+                /* partial-sequence target overflow: fall back to the pivoting implementation */
+                *pErrorCode=U_USING_DEFAULT_WARNING;
+            }
         }
     }
 
