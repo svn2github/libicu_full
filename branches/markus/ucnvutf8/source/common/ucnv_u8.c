@@ -791,8 +791,10 @@ ucnv_UTF8FromUTF8(UConverterFromUnicodeArgs *pFromUArgs,
          * stop just before it.
          * (The longest legal byte sequence has 3 trail bytes.)
          * Count oldToULength (number of source bytes from a previous buffer)
-         * into the source length but reduce the source index by that much
-         * while going back over trail bytes.
+         * into the source length but reduce the source index by toULimit
+         * while going back over trail bytes in order to not go back into
+         * the bytes that will be read for finishing a partial
+         * sequence from the previous buffer.
          * Let the standard converter handle edge cases.
          */
         int32_t i;
@@ -802,7 +804,7 @@ ucnv_UTF8FromUTF8(UConverterFromUnicodeArgs *pFromUArgs,
         }
 
         i=0;
-        while(i<3 && i<(count-oldToULength)) {
+        while(i<3 && i<(count-toULimit)) {
             b=source[count-oldToULength-i-1];
             if(U8_IS_TRAIL(b)) {
                 ++i;
