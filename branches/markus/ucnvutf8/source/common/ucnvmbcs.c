@@ -4249,10 +4249,40 @@ ucnv_SBCSFromUTF8(UConverterFromUnicodeArgs *pFromUArgs,
 
     /* get the converter state from the UTF-8 UConverter */
     c=(UChar32)utf8->toUnicodeStatus;
-    if(c!=0 && targetCapacity>0) {
+    if(c!=0) {
         toULength=oldToULength=utf8->toULength;
         toULimit=(int8_t)utf8->mode;
+    } else {
+        toULength=oldToULength=toULimit=0;
+    }
 
+    /*
+     * Make sure that the last byte sequence before sourceLimit is complete
+     * or runs into a lead byte.
+     * Do not go back into the bytes that will be read for finishing a partial
+     * sequence from the previous buffer.
+     * In the conversion loop compare source with sourceLimit only once
+     * per multi-byte character.
+     */
+    {
+        int32_t i, length;
+
+        length=(int32_t)(sourceLimit-source) - (toULimit-oldToULength);
+        for(i=0; i<3 && i<length;) {
+            b=*(sourceLimit-i-1);
+            if(U8_IS_TRAIL(b)) {
+                ++i;
+            } else {
+                if(i<utf8_countTrailBytes[b]) {
+                    /* exit the conversion loop before the lead byte if there are not enough trail bytes for it */
+                    sourceLimit-=i+1;
+                }
+                break;
+            }
+        }
+    }
+
+    if(c!=0 && targetCapacity>0) {
         utf8->toUnicodeStatus=0;
         utf8->toULength=0;
         goto moreBytes;
@@ -4277,8 +4307,6 @@ ucnv_SBCSFromUTF8(UConverterFromUnicodeArgs *pFromUArgs,
          */
     }
 
-    /* TODO: Try adjusting sourceLimit for single test per multi-byte character, similar to count in ucnv_UTF8FromUTF8(). */
-
     /* conversion loop */
     while(source<sourceLimit) {
         if(targetCapacity>0) {
@@ -4297,7 +4325,6 @@ ucnv_SBCSFromUTF8(UConverterFromUnicodeArgs *pFromUArgs,
                 if(b<0xe0) {
                     if( /* handle U+0080..U+07FF inline */
                         b>=0xc2 &&
-                        (source<sourceLimit) &&
                         (t1=(uint8_t)(*source-0x80)) <= 0x3f
                     ) {
                         c=b&0x1f;
@@ -4315,7 +4342,6 @@ ucnv_SBCSFromUTF8(UConverterFromUnicodeArgs *pFromUArgs,
                     }
                 } else if(b==0xe0) {
                     if( /* handle U+0800..U+0FFF inline */
-                        ((sourceLimit-source)>=2) &&
                         (t1=(uint8_t)(source[0]-0x80)) <= 0x3f && t1 >= 0x20 &&
                         (t2=(uint8_t)(source[1]-0x80)) <= 0x3f
                     ) {
@@ -4447,6 +4473,24 @@ moreBytes:
         }
     }
 
+    /*
+     * The sourceLimit may have been adjusted before the conversion loop
+     * to stop before a truncated sequence.
+     * If so, then collect the truncated sequence now.
+     */
+    if(U_SUCCESS(*pErrorCode) && source<(sourceLimit=(uint8_t *)pToUArgs->sourceLimit)) {
+        c=utf8->toUBytes[0]=b=*source++;
+        toULength=1;
+        toULimit=utf8_countTrailBytes[b]+1;
+        while(source<sourceLimit) {
+            utf8->toUBytes[toULength++]=b=*source++;
+            c=(c<<6)+b;
+        }
+        utf8->toUnicodeStatus=c;
+        utf8->toULength=toULength;
+        utf8->mode=toULimit;
+    }
+
     /* write back the updated pointers */
     pToUArgs->source=(char *)source;
     pFromUArgs->target=(char *)target;
@@ -4502,10 +4546,40 @@ ucnv_DBCSFromUTF8(UConverterFromUnicodeArgs *pFromUArgs,
 
     /* get the converter state from the UTF-8 UConverter */
     c=(UChar32)utf8->toUnicodeStatus;
-    if(c!=0 && targetCapacity>0) {
+    if(c!=0) {
         toULength=oldToULength=utf8->toULength;
         toULimit=(int8_t)utf8->mode;
+    } else {
+        toULength=oldToULength=toULimit=0;
+    }
 
+    /*
+     * Make sure that the last byte sequence before sourceLimit is complete
+     * or runs into a lead byte.
+     * Do not go back into the bytes that will be read for finishing a partial
+     * sequence from the previous buffer.
+     * In the conversion loop compare source with sourceLimit only once
+     * per multi-byte character.
+     */
+    {
+        int32_t i, length;
+
+        length=(int32_t)(sourceLimit-source) - (toULimit-oldToULength);
+        for(i=0; i<3 && i<length;) {
+            b=*(sourceLimit-i-1);
+            if(U8_IS_TRAIL(b)) {
+                ++i;
+            } else {
+                if(i<utf8_countTrailBytes[b]) {
+                    /* exit the conversion loop before the lead byte if there are not enough trail bytes for it */
+                    sourceLimit-=i+1;
+                }
+                break;
+            }
+        }
+    }
+
+    if(c!=0 && targetCapacity>0) {
         utf8->toUnicodeStatus=0;
         utf8->toULength=0;
         goto moreBytes;
@@ -4532,7 +4606,6 @@ ucnv_DBCSFromUTF8(UConverterFromUnicodeArgs *pFromUArgs,
             } else {
                 if(b>0xe0) {
                     if( /* handle U+1000..U+D7FF inline */
-                        ((sourceLimit-source)>=2) &&
                         (((t1=(uint8_t)(source[0]-0x80), b<0xed) && (t1 <= 0x3f)) ||
                                                         (b==0xed && (t1 <= 0x1f))) &&
                         (t2=(uint8_t)(source[1]-0x80)) <= 0x3f
@@ -4550,7 +4623,6 @@ ucnv_DBCSFromUTF8(UConverterFromUnicodeArgs *pFromUArgs,
                 } else if(b<0xe0) {
                     if( /* handle U+0080..U+07FF inline */
                         b>=0xc2 &&
-                        (source<sourceLimit) &&
                         (t1=(uint8_t)(*source-0x80)) <= 0x3f
                     ) {
                         c=b&0x1f;
@@ -4706,6 +4778,24 @@ unassigned:
             *pErrorCode=U_BUFFER_OVERFLOW_ERROR;
             break;
         }
+    }
+
+    /*
+     * The sourceLimit may have been adjusted before the conversion loop
+     * to stop before a truncated sequence.
+     * If so, then collect the truncated sequence now.
+     */
+    if(U_SUCCESS(*pErrorCode) && source<(sourceLimit=(uint8_t *)pToUArgs->sourceLimit)) {
+        c=utf8->toUBytes[0]=b=*source++;
+        toULength=1;
+        toULimit=utf8_countTrailBytes[b]+1;
+        while(source<sourceLimit) {
+            utf8->toUBytes[toULength++]=b=*source++;
+            c=(c<<6)+b;
+        }
+        utf8->toUnicodeStatus=c;
+        utf8->toULength=toULength;
+        utf8->mode=toULimit;
     }
 
     /* write back the updated pointers */
