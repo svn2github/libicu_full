@@ -4277,6 +4277,8 @@ ucnv_SBCSFromUTF8(UConverterFromUnicodeArgs *pFromUArgs,
          */
     }
 
+    /* TODO: Try adjusting sourceLimit for single test per multi-byte character, similar to count in ucnv_UTF8FromUTF8(). */
+
     /* conversion loop */
     while(source<sourceLimit) {
         if(targetCapacity>0) {
@@ -4517,7 +4519,7 @@ ucnv_DBCSFromUTF8(UConverterFromUnicodeArgs *pFromUArgs,
             if((int8_t)b>=0) {
                 /* convert ASCII */
                 if(IS_ASCII_ROUNDTRIP(b, asciiRoundtrips)) {
-                    *target++=(uint8_t)b;
+                    *target++=b;
                     --targetCapacity;
                     continue;
                 } else {

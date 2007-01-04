@@ -1,7 +1,7 @@
 /*
 ******************************************************************************
 *
-*   Copyright (C) 1998-2006, International Business Machines
+*   Copyright (C) 1998-2007, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 ******************************************************************************
@@ -2109,7 +2109,6 @@ ucnv_convertEx(UConverter *targetCnv, UConverter *sourceCnv,
     }
 
     /* Is direct-UTF-8 conversion available? */
-    /* TODO: check UCNV_UTF8 vs. CESU-8 */
     if( sourceCnv->sharedData->staticData->conversionType==UCNV_UTF8 &&
         targetCnv->sharedData->impl->fromUTF8!=NULL
     ) {
@@ -2249,6 +2248,10 @@ ucnv_convertEx(UConverter *targetCnv, UConverter *sourceCnv,
          * or flushing the toUnicode replay buffer
          */
         if(convert!=NULL && targetCnv->preFromUFirstCP<0 && sourceCnv->preToULength==0) {
+            if(*pErrorCode==U_USING_DEFAULT_WARNING) {
+                /* remove a warning that may be set by this function */
+                *pErrorCode=U_ZERO_ERROR;
+            }
             convert(&fromUArgs, &toUArgs, pErrorCode);
             if(*pErrorCode==U_BUFFER_OVERFLOW_ERROR) {
                 break;
@@ -2275,6 +2278,12 @@ ucnv_convertEx(UConverter *targetCnv, UConverter *sourceCnv,
                      */
                     continue;
                 }
+            } else if(*pErrorCode==U_USING_DEFAULT_WARNING) {
+                /*
+                 * No error, but the implementation requested to temporarily
+                 * fall back to pivoting.
+                 */
+                *pErrorCode=U_ZERO_ERROR;
             /*
              * The following else branches are almost identical to the end-of-input
              * handling in _toUnicodeWithCallback().
