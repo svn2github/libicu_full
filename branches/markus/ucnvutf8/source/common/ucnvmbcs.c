@@ -61,9 +61,16 @@
 #define MBCS_UNROLL_SINGLE_FROM_BMP 0
 
 /*
- * TODO: 4.3
- * _MBCSHeader versions 4.2
+ * _MBCSHeader version 4.3
  * (Note that the _MBCSHeader version is in addition to the converter formatVersion.)
+ *
+ * Change from version 4.2:
+ * - Optional utf8Friendly data structures, with 64-entry stage 3 block
+ *   allocation for parts of the BMP, and an additional mbcsIndex in non-SBCS
+ *   files which can be used instead of stages 1 & 2.
+ *   Faster lookups for roundtrips from most commonly used characters,
+ *   and lookups from UTF-8 byte sequences with a natural bit distribution.
+ *   See ucnvmbcs.h for more details.
  *
  * Change from version 4.1:
  * - Added an optional extension table structure at the end of the .cnv file.
@@ -233,7 +240,7 @@
  * One trail byte state that results in code points, and one that only
  * has "unassigned" and "illegal" terminal states.
  *
- * Note: partly by accident, this data structure supports simple stateless
+ * Note: partly by accident, this data structure supports simple stateful
  * encodings without any additional logic.
  * Currently, only simple Shift-In/Shift-Out schemes are handled with
  * appropriate state tables (especially EBCDIC_STATEFUL!).
@@ -270,6 +277,12 @@
  *    0  unassigned
  * Bits 7..0 contain the codepage byte. A zero byte is always possible.
  *
+ * In version 4.3, the runtime code can build an sbcsIndex for a utf8Friendly
+ * file. For 2-byte UTF-8 byte sequences and some 3-byte sequences the lookup
+ * becomes a 2-stage (single-index) trie lookup with 6 bits for stage 3.
+ * ASCII code points can be looked up with a linear array access into stage 3.
+ * See maxFastUChar and other details in ucnvmbcs.h.
+ *
  * Multi-byte lookup:
  *
  * Stage 2 contains a 32-bit word for each 16-block in stage 3:
@@ -289,6 +302,12 @@
  *
  * Note that stage 1 always contains 0x440=1088 entries (0x440==0x110000>>10),
  * or (version 3 and up) for BMP-only codepages, it contains 64 entries.
+ *
+ * In version 4.3, a utf8Friendly file contains an mbcsIndex table.
+ * For 2-byte UTF-8 byte sequences and most 3-byte sequences the lookup
+ * becomes a 2-stage (single-index) trie lookup with 6 bits for stage 3.
+ * ASCII code points can be looked up with a linear array access into stage 3.
+ * See maxFastUChar, mbcsIndex and other details in ucnvmbcs.h.
  *
  * In version 3, stage 2 blocks may overlap by multiples of the multiplier
  * for compaction.
