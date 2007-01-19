@@ -36,4 +36,9 @@ struct TestResult
     le_int32  *indices;
     float     *positions;
 };
+
+#ifndef XP_CPLUSPLUS
+typedef struct TestResult TestResult;
+#endif
+
 #endif
