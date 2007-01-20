@@ -28,7 +28,7 @@
 
 #include "sfnt.h"
 #include "xmlreader.h"
-#include "putilimp.h" // for uprv_getUTCtime()
+#include "putilimp.h" /* for uprv_getUTCtime() */
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -49,9 +49,9 @@ static void U_CALLCONV ParamTest(void)
 
     float x = 0.0, y = 0.0;
 	LEUnicode chars[] = {
-        0x0045, 0x006E, 0x0067, 0x006C, 0x0069, 0x0073, 0x0068, 0x0020, // "English "
-        0x0645, 0x0627, 0x0646, 0x062A, 0x0648, 0x0634,                 // MEM ALIF KAF NOON TEH WAW SHEEN
-        0x0020, 0x0074, 0x0065, 0x0078, 0x0074, 0x02E                   // " text."
+	  0x0045, 0x006E, 0x0067, 0x006C, 0x0069, 0x0073, 0x0068, 0x0020, /* "English "                      */
+	  0x0645, 0x0627, 0x0646, 0x062A, 0x0648, 0x0634,                 /* MEM ALIF KAF NOON TEH WAW SHEEN */
+	  0x0020, 0x0074, 0x0065, 0x0078, 0x0074, 0x02E                   /* " text."                        */
     };
 
 
@@ -219,9 +219,9 @@ static void U_CALLCONV AccessTest(void)
     le_int32 biasedIndices[6], indices[6], glyph;
     float positions[6 * 2 + 2];
     LEUnicode chars[] = {
-        0x0045, 0x006E, 0x0067, 0x006C, 0x0069, 0x0073, 0x0068, 0x0020, // "English "
-        0x0645, 0x0627, 0x0646, 0x062A, 0x0648, 0x0634,                 // MEM ALIF KAF NOON TEH WAW SHEEN
-        0x0020, 0x0074, 0x0065, 0x0078, 0x0074, 0x02E                   // " text."
+      0x0045, 0x006E, 0x0067, 0x006C, 0x0069, 0x0073, 0x0068, 0x0020, /* "English "                      */
+      0x0645, 0x0627, 0x0646, 0x062A, 0x0648, 0x0634,                 /* MEM ALIF KAF NOON TEH WAW SHEEN */
+      0x0020, 0x0074, 0x0065, 0x0078, 0x0074, 0x02E                   /* " text."                        */
     };
 
     if (LE_FAILURE(status)) {
@@ -502,14 +502,15 @@ static const char *ctest_dataOutDir()
         return dataOutDir;
     }
 
-    /* U_TOPBUILDDIR is set by the makefiles on UNIXes when building cintltst and intltst
-    //              to point to the top of the build hierarchy, which may or
-    //              may not be the same as the source directory, depending on
-    //              the configure options used.  At any rate,
-    //              set the data path to the built data from this directory.
-    //              The value is complete with quotes, so it can be used
-    //              as-is as a string constant.
-    */
+    /*
+     *  U_TOPBUILDDIR is set by the makefiles on UNIXes when building cintltst and intltst
+     *              to point to the top of the build hierarchy, which may or
+     *              may not be the same as the source directory, depending on
+     *              the configure options used.  At any rate,
+     *              set the data path to the built data from this directory.
+     *              The value is complete with quotes, so it can be used
+     *              as-is as a string constant.
+     */
 #if defined (U_TOPBUILDDIR)
     {
         dataOutDir = U_TOPBUILDDIR "data"U_FILE_SEP_STRING"out"U_FILE_SEP_STRING;

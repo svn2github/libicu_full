@@ -129,11 +129,13 @@ struct CMAPFormat4Encoding : CMAPEncodingSubtable
     le_uint16   entrySelector;
     le_uint16   rangeShift;
     le_uint16   endCodes[ANY_NUMBER];
-//  le_uint16   reservedPad;
-//  le_uint16   startCodes[ANY_NUMBER];
-//  le_uint16   idDelta[ANY_NUMBER];
-//  le_uint16   idRangeOffset[ANY_NUMBER];
-//  le_uint16   glyphIndexArray[ANY_NUMBER];
+/*
+    le_uint16   reservedPad;
+    le_uint16   startCodes[ANY_NUMBER];
+    le_uint16   idDelta[ANY_NUMBER];
+    le_uint16   idRangeOffset[ANY_NUMBER];
+    le_uint16   glyphIndexArray[ANY_NUMBER];
+*/
 };
 #else
 struct CMAPFormat4Encoding
@@ -145,11 +147,13 @@ struct CMAPFormat4Encoding
     le_uint16   entrySelector;
     le_uint16   rangeShift;
     le_uint16   endCodes[ANY_NUMBER];
+/*
 //  le_uint16   reservedPad;
 //  le_uint16   startCodes[ANY_NUMBER];
 //  le_uint16   idDelta[ANY_NUMBER];
 //  le_uint16   idRangeOffset[ANY_NUMBER];
 //  le_uint16   glyphIndexArray[ANY_NUMBER];
+*/
 };
 
 typedef struct CMAPFormat4Encoding CMAPFormat4Encoding;
@@ -351,8 +355,8 @@ typedef struct LongHorMetric LongHorMetric;
 
 struct HMTXTable
 {
-    LongHorMetric hMetrics[ANY_NUMBER];        // ANY_NUMBER = numOfLongHorMetrics from hhea table
-//  le_int16        leftSideBearing[ANY_NUMBER]; // ANY_NUMBER = numGlyphs - numOfLongHorMetrics
+    LongHorMetric hMetrics[ANY_NUMBER];       /* ANY_NUMBER = numOfLongHorMetrics from hhea table *
+/* le_int16        leftSideBearing[ANY_NUMBER];  ANY_NUMBER = numGlyphs - numOfLongHorMetrics */
 };
 
 #ifndef XP_CPLUSPLUS
