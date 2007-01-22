@@ -72,7 +72,7 @@ dist-local:
 
 clean-local:
 	test -z "$(CLEANFILES)" || $(RMV) $(CLEANFILES)
-	$(RMV) $(OBJECTS) $(TARGET)
+	$(RMV) $(COMMONOBJECTS) $(TESTOBJECTS) $(CTESTOBJECTS) $(GENOBJECTS) $(TARGET)
 
 distclean-local: clean-local
 	$(RMV) Makefile
