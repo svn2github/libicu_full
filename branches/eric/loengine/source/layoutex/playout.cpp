@@ -138,7 +138,7 @@ pl_closeLine(pl_line *line)
 {
     ParagraphLayout::Line *ll = (ParagraphLayout::Line *) line;
 
-    delete line;
+    delete ll;
 }
 
 U_CAPI le_int32 U_EXPORT2
