@@ -9,14 +9,11 @@
 #include "unicode/ubidi.h"
 #include "unicode/ustring.h"
 
-#include "LETypes.h"
-#include "plruns.h"
+#include "layout/LETypes.h"
 
-//#include "unicode/locid.h"
-
-#include "loengine.h"
-#include "playout.h"
-#include "plruns.h"
+#include "layout/loengine.h"
+#include "layout/playout.h"
+#include "layout/plruns.h"
 
 #include "pflow.h"
 
@@ -175,7 +172,7 @@ pf_flow *pf_create(const LEUnicode chars[], le_int32 charCount, const pl_fontRun
             paragraphLayout = pl_create(pStart, pEnd - pStart, fr, NULL, NULL, locales, flow->fParagraphLevel, FALSE, status);
 
             if (LE_FAILURE(*status)) {
-                break; // return? something else?
+                break; /* return? something else? */
             }
 
             if (flow->fParagraphLevel == UBIDI_DEFAULT_LTR) {
@@ -285,7 +282,7 @@ void pf_breakLines(pf_flow *flow, le_int32 width, le_int32 height)
 
     obj->fHeight = height;
 
-    // don't re-break if the width hasn't changed
+    /* don't re-break if the width hasn't changed */
     if (obj->fWidth == width) {
         return;
     }
@@ -294,7 +291,7 @@ void pf_breakLines(pf_flow *flow, le_int32 width, le_int32 height)
 
     lineWidth = (float) (width - 2 * MARGIN);
 
-    // Free the old Lines...
+    /* Free the old Lines... */
     for (li = 0; li < obj->fLineCount; li += 1) {
         pl_closeLine(obj->fLines[li]);
     }

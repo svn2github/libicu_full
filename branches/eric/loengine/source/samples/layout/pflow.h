@@ -8,10 +8,10 @@
 #define __PFLOW_H
 
 #include "unicode/utypes.h"
-#include "LETypes.h"
+#include "layout/LETypes.h"
 
-#include "plruns.h"
-#include "playout.h"
+#include "layout/plruns.h"
+#include "layout/playout.h"
 
 #include "gsupport.h"
 #include "rsurface.h"

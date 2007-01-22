@@ -355,8 +355,8 @@ typedef struct LongHorMetric LongHorMetric;
 
 struct HMTXTable
 {
-    LongHorMetric hMetrics[ANY_NUMBER];       /* ANY_NUMBER = numOfLongHorMetrics from hhea table *
-/* le_int16        leftSideBearing[ANY_NUMBER];  ANY_NUMBER = numGlyphs - numOfLongHorMetrics */
+    LongHorMetric hMetrics[ANY_NUMBER];       /* ANY_NUMBER = numOfLongHorMetrics from hhea table */
+/* le_int16        leftSideBearing[ANY_NUMBER];  ANY_NUMBER = numGlyphs - numOfLongHorMetrics     */
 };
 
 #ifndef XP_CPLUSPLUS
