@@ -49,8 +49,12 @@ clean: clean-local
 distclean : distclean-local
 dist: dist-local
 check: all check-local
+c-all: c-all-local
+c-check: c-all c-check-local
 
 all-local: $(TARGET)
+
+c-all-local: $(CTARGET)
 
 install-local:
 
@@ -65,6 +69,9 @@ distclean-local: clean-local
 
 check-local: all-local
 	$(INVOKE) ./$(TARGET)
+
+c-check-local: c-all-local
+	$(INVOKE) ./$(CTARGET)
 
 Makefile: $(srcdir)/Makefile.in  $(top_builddir)/config.status
 	cd $(top_builddir) \
