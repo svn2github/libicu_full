@@ -20,8 +20,6 @@
 #include "ScriptCompositeFontInstance.h"
 
 
-typedef void rs_surface;
-
 U_CDECL_BEGIN
 
 gs_guiSupport *gs_gdiGuiSupportOpen()

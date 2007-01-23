@@ -5,14 +5,13 @@
  */
 
 #include "layout/LETypes.h"
+#include "layout/loengine.h"
 #include "layout/plruns.h"
 
 #include "unicode/locid.h"
 
 #include "layout/LayoutEngine.h"
 #include "layout/RunArrays.h"
-
-typedef void le_font;
 
 U_NAMESPACE_USE
 

@@ -11,9 +11,6 @@
 #include "LEFontInstance.h"
 #include "RenderingSurface.h"
 
-
-typedef void rs_surface;
-
 U_CDECL_BEGIN
 
 void rs_drawGlyphs(rs_surface *surface, const le_font *font, const LEGlyphID *glyphs, le_int32 count,
