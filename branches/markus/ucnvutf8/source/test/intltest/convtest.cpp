@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 2003-2006, International Business Machines
+*   Copyright (C) 2003-2007, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
@@ -59,7 +59,9 @@ ConversionTest::ConversionTest() {
     }
 }
 
-ConversionTest::~ConversionTest() {}
+ConversionTest::~ConversionTest() {
+    ucnv_close(utf8Cnv);
+}
 
 void
 ConversionTest::runIndexedTest(int32_t index, UBool exec, const char *&name, char * /*par*/) {

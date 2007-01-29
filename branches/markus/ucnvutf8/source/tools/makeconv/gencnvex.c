@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 2003-2006, International Business Machines
+*   Copyright (C) 2003-2007, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
@@ -600,7 +600,7 @@ prepareFromUMappings(UCMTable *table) {
     for(i=j=0; i<count; ++m, ++i) {
         flag=m->f;
         if(flag>=0) {
-            flag&=~MBCS_FROM_U_EXT_FLAG;
+            flag&=MBCS_FROM_U_EXT_MASK;
             m->f=flag;
         }
         if(flag==0 || flag==1 || (flag==2 && m->bLen==1)) {

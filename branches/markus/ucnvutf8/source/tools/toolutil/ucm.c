@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 2003-2005, International Business Machines
+*   Copyright (C) 2003-2007, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
@@ -1080,37 +1080,6 @@ ucm_mappingType(UCMStates *baseStates,
     } else {
         return 1; /* needs to go into an extension table */
     }
-#if 0
-    /*
-     * TODO: remove; this made more assumptions about MBCS 4.3 fromUnicode and
-     * moved more stuff directly to the extension table
-     */
-    /*
-     * Suitable for an ICU conversion base table means:
-     * - a 1:1 mapping (1 Unicode code point : 1 byte sequence)
-     * - SBCS: any 1:1 mapping
-     *         (the table stores additional bits to distinguish mapping types)
-     * - MBCS: not a |2 SUB mapping for <subchar1>
-     * - MBCS: not a |1 fallback from BMP           (new in MBCS header format 4.3)
-     *         for better performance for roundtrips from BMP
-     * - MBCS explicit: not a mapping _to_ 0x00     (new in MBCS header format 4.3)
-     *       (explicit means there are explicit precision indicators)
-     *        for better performance, roundtrip flags are ignored and
-     *        a mapping to 0x00 is indistinguishable from no mapping
-     * - MBCS: no leading 0x00 bytes
-     */
-    if( m->uLen==1 && count==1 &&
-        (baseStates->maxCharLength==1 ||
-            !((m->f==2 && m->bLen==1) ||
-              (m->f==1 && codePoints[0]<=0xffff) ||
-              ((m->f==0 || m->f==1) && bytes[0]==0) ||
-              (m->f<0 && m->bLen>1 && bytes[0]==0)))
-    ) {
-        return 0; /* suitable for a base table */
-    } else {
-        return 1; /* needs to go into an extension table */
-    }
-#endif
 }
 
 U_CAPI UBool U_EXPORT2

@@ -1,6 +1,6 @@
 /*
 **********************************************************************
-*   Copyright (C) 1999-2006, International Business Machines
+*   Copyright (C) 1999-2007, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 **********************************************************************
 *
@@ -104,7 +104,17 @@ typedef void (*UConverterToUnicode) (UConverterToUnicodeArgs *, UErrorCode *);
 typedef void (*UConverterFromUnicode) (UConverterFromUnicodeArgs *, UErrorCode *);
 
 /*
- * TODO: Document!
+ * Converter implementation function for ucnv_convertEx(), for direct conversion
+ * between two charsets without pivoting through UTF-16.
+ * The rules are the same as for UConverterToUnicode and UConverterFromUnicode.
+ * In addition,
+ * - The toUnicode side must behave and keep state exactly like the
+ *   UConverterToUnicode implementation for the same source charset.
+ * - A U_USING_DEFAULT_WARNING can be set to request to temporarily fall back
+ *   to pivoting. When this function is called, the conversion framework makes
+ *   sure that this warning is not set on input.
+ * - Continuing a partial match and flushing the toUnicode replay buffer
+ *   are handled by pivoting, using the toUnicode and fromUnicode functions.
  */
 typedef void (*UConverterConvert) (UConverterFromUnicodeArgs *pFromUArgs,
                                    UConverterToUnicodeArgs *pToUArgs,
