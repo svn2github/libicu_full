@@ -438,7 +438,7 @@ void doTestCase (const char *testID,
 	le_int32 typoFlags = 3; /* kerning + ligatures */
 	TestResult actual;
 
-	if (LE_FAILURE(status)) {
+	if (font == NULL) {
 		/* error message already printed. */
 		return;
 	}
