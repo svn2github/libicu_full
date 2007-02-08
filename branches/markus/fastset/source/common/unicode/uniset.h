@@ -259,10 +259,12 @@ class RuleCharacterIterator;
  * @stable ICU 2.0
  */
 class U_COMMON_API UnicodeSet : public UnicodeFilter {
+    friend class BMPSet;
 
     int32_t len; // length of list used; 0 <= len <= capacity
     int32_t capacity; // capacity of list
     UChar32* list; // MUST be terminated with HIGH
+    BMPSet *bmpSet; // Not NULL iff the set is frozen.
     UChar32* buffer; // internal buffer, may be NULL
     int32_t bufferCapacity; // capacity of buffer
     int32_t patLen;
@@ -280,6 +282,14 @@ class U_COMMON_API UnicodeSet : public UnicodeFilter {
     UVector* strings; // maintained in sorted order
 
 public:
+    // TODO: clone() vs. cloneAsThawed() construct, copy, etc.
+    // TODO: prevent modification if(isFrozen())
+    void freeze(const char *type);
+    inline UBool isFrozen() const {
+        return (UBool)(bmpSet!=NULL);
+    }
+    int32_t span(const UChar *s, int32_t length, int32_t start, UBool tf) const;
+    int32_t spanUTF8(const char *s, int32_t length, int32_t start, UBool tf) const;
 
     enum {
         /**
@@ -746,7 +756,26 @@ private:
      * @return the smallest integer i in the range 0..len-1,
      * inclusive, such that c < list[i]
      */
-    int32_t findCodePoint(UChar32 c) const;
+    inline int32_t findCodePoint(UChar32 c) const;
+
+    /**
+     * Same as findCodePoint(UChar32 c) const except that the binary search
+     * is restricted for finding code points in a certain range.
+     *
+     * For restricting the search for finding in the range start..end,
+     * pass in
+     *   lo=findCodePoint(start) and
+     *   hi=findCodePoint(end)
+     * with 0<=lo<=hi<len.
+     * findCodePoint(c) defaults to lo=0 and hi=len-1.
+     *
+     * @param c a character in a subrange of MIN_VALUE..MAX_VALUE
+     * @param lo The lowest index to be returned.
+     * @param hi The highest index to be returned.
+     * @return the smallest integer i in the range lo..hi,
+     *         inclusive, such that c < list[i]
+     */
+    int32_t findCodePoint(UChar32 c, int32_t lo, int32_t hi) const;
 
 public:
 
@@ -1334,6 +1363,10 @@ inline UBool UnicodeSet::containsSome(const UnicodeSet& s) const {
 
 inline UBool UnicodeSet::containsSome(const UnicodeString& s) const {
     return !containsNone(s);
+}
+
+inline int32_t UnicodeSet::findCodePoint(UChar32 c) const {
+    return findCodePoint(c, 0, len-1);
 }
 
 U_NAMESPACE_END

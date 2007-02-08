@@ -1773,6 +1773,14 @@
 			Name="properties &amp; sets"
 			>
 			<File
+				RelativePath=".\bmpset.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\bmpset.h"
+				>
+			</File>
+			<File
 				RelativePath=".\propname.cpp"
 				>
 			</File>

@@ -14,6 +14,7 @@
 #include "unicode/symtable.h"
 #include "ruleiter.h"
 #include "cmemory.h"
+#include "cstring.h"
 #include "uhash.h"
 #include "util.h"
 #include "uvector.h"
@@ -21,6 +22,7 @@
 #include "ustrfmt.h"
 #include "uassert.h"
 #include "hash.h"
+#include "bmpset.h"
 
 // Define UChar constants using hex for EBCDIC compatibility
 // Used #define to reduce private static exports and memory access time.
@@ -138,7 +140,7 @@ static int8_t U_CALLCONV compareUnicodeString(UHashTok t1, UHashTok t2) {
  * Constructs an empty set.
  */
 UnicodeSet::UnicodeSet() :
-    len(1), capacity(1 + START_EXTRA), list(0), buffer(0),
+    len(1), capacity(1 + START_EXTRA), list(0), bmpSet(0), buffer(0),
     bufferCapacity(0), patLen(0), pat(NULL), strings(NULL)
 {
     list = (UChar32*) uprv_malloc(sizeof(UChar32) * capacity);
@@ -158,7 +160,7 @@ UnicodeSet::UnicodeSet() :
  * @param end last character, inclusive, of range
  */
 UnicodeSet::UnicodeSet(UChar32 start, UChar32 end) :
-    len(1), capacity(1 + START_EXTRA), list(0), buffer(0),
+    len(1), capacity(1 + START_EXTRA), list(0), bmpSet(0), buffer(0),
     bufferCapacity(0), patLen(0), pat(NULL), strings(NULL)
 {
     list = (UChar32*) uprv_malloc(sizeof(UChar32) * capacity);
@@ -177,7 +179,7 @@ UnicodeSet::UnicodeSet(UChar32 start, UChar32 end) :
  */
 UnicodeSet::UnicodeSet(const UnicodeSet& o) :
     UnicodeFilter(o),
-    len(0), capacity(o.len + GROW_EXTRA), list(0), buffer(0),
+    len(0), capacity(o.len + GROW_EXTRA), list(0), bmpSet(0), buffer(0),
     bufferCapacity(0), patLen(0), pat(NULL), strings(NULL)
 {
     list = (UChar32*) uprv_malloc(sizeof(UChar32) * capacity);
@@ -317,8 +319,8 @@ UBool UnicodeSet::contains(UChar32 c) const {
     //for (;;) {
     //    if (c < list[++i]) break;
     //}
-    if (c >= UNICODESET_HIGH) { // Don't need to check LOW bound
-        return FALSE;
+    if (bmpSet != NULL) {
+        return bmpSet->contains(c);
     }
     int32_t i = findCodePoint(c);
     return ((i & 1) != 0); // return true if odd
@@ -328,12 +330,18 @@ UBool UnicodeSet::contains(UChar32 c) const {
  * Returns the smallest value i such that c < list[i].  Caller
  * must ensure that c is a legal value or this method will enter
  * an infinite loop.  This method performs a binary search.
+ *
+ * For a description of the lo and hi input arguments see uniset.h.
+ * Default values are lo=0 and hi=len-1.
+ *
  * @param c a character in the range MIN_VALUE..MAX_VALUE
  * inclusive
- * @return the smallest integer i in the range 0..len-1,
+ * @param lo The lowest index to be returned.
+ * @param hi The highest index to be returned.
+ * @return the smallest integer i in the range lo..hi,
  * inclusive, such that c < list[i]
  */
-int32_t UnicodeSet::findCodePoint(UChar32 c) const {
+int32_t UnicodeSet::findCodePoint(UChar32 c, int32_t lo, int32_t hi) const {
     /* Examples:
                                        findCodePoint(c)
        set              list[]         c=0 1 3 4 7 8
@@ -346,14 +354,12 @@ int32_t UnicodeSet::findCodePoint(UChar32 c) const {
 
     // Return the smallest i such that c < list[i].  Assume
     // list[len - 1] == HIGH and that c is legal (0..HIGH-1).
-    if (c < list[0])
-        return 0;
+    if (c < list[lo])
+        return lo;
     // High runner test.  c is often after the last range, so an
     // initial check for this condition pays off.
-    if (len >= 2 && c >= list[len-2])
-        return len-1;
-    int32_t lo = 0;
-    int32_t hi = len - 1;
+    if (lo >= hi || c >= list[hi-1])
+        return hi;
     // invariant: c >= list[lo]
     // invariant: c < list[hi]
     for (;;) {
@@ -1861,6 +1867,87 @@ void UnicodeSet::setPattern(const UnicodeString& newPat) {
     }
     // else we don't care if malloc failed. This was just a nice cache.
     // We can regenerate an equivalent pattern later when requested.
+}
+
+void UnicodeSet::freeze(const char *type) {
+    // TODO: if(isFrozen()) { return; }
+    delete bmpSet;
+    if(0==uprv_strcmp(type, "Bh")) {
+        bmpSet=new BMPSetASCIIBytes2BHorizontal(*this);
+    } else if(0==uprv_strcmp(type, "bh")) {
+        bmpSet=new BMPSetASCIIBits2BHorizontal(*this);
+    } else if(0==uprv_strcmp(type, "Bv")) {
+        bmpSet=new BMPSetASCIIBytes2BVertical(*this);
+    } else if(0==uprv_strcmp(type, "Bvp")) {
+        bmpSet=new BMPSetASCIIBytes2BVerticalPrecheck(*this);
+    } else if(0==uprv_strcmp(type, "BvpF")) {
+        bmpSet=new BMPSetASCIIBytes2BVerticalPrecheckFull(*this);
+    } else if(0==uprv_strcmp(type, "L")) {
+        bmpSet=new BMPSetLeadValues(*this);
+    } else if(0==uprv_strcmp(type, "Bvl")) {
+        bmpSet=new BMPSetASCIIBytes2BVerticalLenient(*this);
+    } else if(0==uprv_strcmp(type, "BvL")) {
+        bmpSet=new BMPSetASCIIBytes2BVerticalLenient2(*this);
+    } else {
+        // Slow, don't freeze.
+        bmpSet=NULL;
+    }
+}
+
+int32_t UnicodeSet::span(const UChar *s, int32_t length, int32_t start, UBool tf) const {
+    // Pin arguments.
+    if(s==NULL || length==0 || (length<0 && (length=u_strlen(s))==0)) {
+        return 0;
+    }
+    if(start<0) {
+        start=0;
+    }
+    if(start>=length) {
+        return length;
+    }
+    tf=(UBool)(tf!=0);  // Pin tf to precisely 0 or 1.
+
+    if(bmpSet!=NULL) {
+        return bmpSet->span(s, length, start, tf);
+    }
+
+    UChar32 c;
+    int32_t prev;
+    while((prev=start)<length) {
+        U16_NEXT(s, start, length, c);
+        if(tf!=contains(c)) {
+            break;
+        }
+    }
+    return prev;
+}
+
+int32_t UnicodeSet::spanUTF8(const char *s, int32_t length, int32_t start, UBool tf) const {
+    // Pin arguments.
+    if(s==NULL || length==0 || (length<0 && (length=uprv_strlen(s))==0)) {
+        return 0;
+    }
+    if(start<0) {
+        start=0;
+    }
+    if(start>=length) {
+        return length;
+    }
+    tf=(UBool)(tf!=0);  // Pin tf to precisely 0 or 1.
+
+    if(bmpSet!=NULL) {
+        return bmpSet->spanUTF8(s, length, start, tf);
+    }
+
+    UChar32 c;
+    int32_t prev;
+    while((prev=start)<length) {
+        U8_NEXT(s, start, length, c);
+        if(tf!=(c>=0 && contains(c))) {
+            break;
+        }
+    }
+    return prev;
 }
 
 U_NAMESPACE_END

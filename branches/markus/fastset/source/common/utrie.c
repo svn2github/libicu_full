@@ -770,12 +770,14 @@ utrie_serialize(UNewTrie *trie, void *dt, int32_t capacity,
     }
 
     /* is dataLength within limits? */
-    if( (reduceTo16Bits ? (trie->dataLength+trie->indexLength) : trie->dataLength) >= UTRIE_MAX_DATA_LENGTH) {
+    if( (reduceTo16Bits==TRUE ? (trie->dataLength+trie->indexLength) : trie->dataLength) >= UTRIE_MAX_DATA_LENGTH) {
         *pErrorCode=U_INDEX_OUTOFBOUNDS_ERROR;
     }
 
     length=sizeof(UTrieHeader)+2*trie->indexLength;
-    if(reduceTo16Bits) {
+    if(reduceTo16Bits==8) {
+        length+=trie->dataLength;
+    } else if(reduceTo16Bits) {
         length+=2*trie->dataLength;
     } else {
         length+=4*trie->dataLength;
@@ -792,7 +794,9 @@ utrie_serialize(UNewTrie *trie, void *dt, int32_t capacity,
     header->signature=0x54726965; /* "Trie" */
     header->options=UTRIE_SHIFT | (UTRIE_INDEX_SHIFT<<UTRIE_OPTIONS_INDEX_SHIFT);
 
-    if(!reduceTo16Bits) {
+    if(reduceTo16Bits==8) {
+        header->options|=UTRIE_OPTIONS_DATA_IS_8_BIT;
+    } else if(!reduceTo16Bits) {
         header->options|=UTRIE_OPTIONS_DATA_IS_32_BIT;
     }
     if(trie->isLatin1Linear) {
@@ -803,7 +807,23 @@ utrie_serialize(UNewTrie *trie, void *dt, int32_t capacity,
     header->dataLength=trie->dataLength;
 
     /* write the index (stage 1) array and the 16/32-bit data (stage 2) array */
-    if(reduceTo16Bits) {
+    if(reduceTo16Bits==8) {
+        uint8_t *dest8;
+
+        /* write 16-bit index values shifted right by UTRIE_INDEX_SHIFT */
+        p=(uint32_t *)trie->index;
+        dest16=(uint16_t *)data;
+        for(i=trie->indexLength; i>0; --i) {
+            *dest16++=(uint16_t)(*p++ >> UTRIE_INDEX_SHIFT);
+        }
+
+        /* write 8-bit data values */
+        p=trie->data;
+        dest8=(uint8_t *)dest16;
+        for(i=trie->dataLength; i>0; --i) {
+            *dest8++=(uint8_t)*p++;
+        }
+    } else if(reduceTo16Bits) {
         /* write 16-bit index values shifted right by UTRIE_INDEX_SHIFT, after adding indexLength */
         p=(uint32_t *)trie->index;
         dest16=(uint16_t *)data;

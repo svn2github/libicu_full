@@ -752,8 +752,8 @@ typedef struct UTrieHeader {
 
     /**
      * options bit field:
+     *  10&8    1.0=8-bit data, 0.0=16-bit data, 0.1=32-bit data
      *     9    1=Latin-1 data is stored linearly at data+UTRIE_DATA_BLOCK_LENGTH
-     *     8    0=16-bit data, 1=32-bit data
      *  7..4    UTRIE_INDEX_SHIFT   // 0..UTRIE_SHIFT
      *  3..0    UTRIE_SHIFT         // 1..9
      */
@@ -779,6 +779,9 @@ enum {
 
     /** If set, then the data (stage 2) array is 32 bits wide. */
     UTRIE_OPTIONS_DATA_IS_32_BIT=0x100,
+
+    /** If set, then the data (stage 2) array is 8 bits wide. */
+    UTRIE_OPTIONS_DATA_IS_8_BIT=0x400,
 
     /**
      * If set, then Latin-1 data (for U+0000..U+00ff) is stored in the data (stage 2) array

@@ -246,7 +246,7 @@ isPOSIXClose(const UnicodeString &pattern, int32_t pos) {
  */
 UnicodeSet::UnicodeSet(const UnicodeString& pattern,
                        UErrorCode& status) :
-    len(0), capacity(START_EXTRA), list(0), buffer(0),
+    len(0), capacity(START_EXTRA), list(0), bmpSet(0), buffer(0),
     bufferCapacity(0), patLen(0), pat(NULL), strings(NULL)
 {   
     if(U_SUCCESS(status)){
@@ -274,7 +274,7 @@ UnicodeSet::UnicodeSet(const UnicodeString& pattern,
                        uint32_t options,
                        const SymbolTable* symbols,
                        UErrorCode& status) :
-    len(0), capacity(START_EXTRA), list(0), buffer(0),
+    len(0), capacity(START_EXTRA), list(0), bmpSet(0), buffer(0),
     bufferCapacity(0), patLen(0), pat(NULL), strings(NULL)
 {   
     if(U_SUCCESS(status)){
@@ -294,7 +294,7 @@ UnicodeSet::UnicodeSet(const UnicodeString& pattern, ParsePosition& pos,
                        uint32_t options,
                        const SymbolTable* symbols,
                        UErrorCode& status) :
-    len(0), capacity(START_EXTRA), list(0), buffer(0),
+    len(0), capacity(START_EXTRA), list(0), bmpSet(0), buffer(0),
     bufferCapacity(0), patLen(0), pat(NULL), strings(NULL)
 {
     if(U_SUCCESS(status)){
