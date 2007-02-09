@@ -22,9 +22,6 @@
 U_NAMESPACE_BEGIN
 
 enum {
-    LV_FALSE=0,
-    LV_TRUE=1,
-
     LV_BAD_SINGLE=0x80,
     LV_MULTI_2=0x90,
     LV_MULTI_3=0xa0,
@@ -39,10 +36,9 @@ enum {
     LV_2B_MIXED=1,
     LV_3B_TF=2,
     LV_3B_MIXED=3,
-    LV_3B_E0=4,
-    LV_3B_ED=5,
-    LV_4B=6,
-    LV_ILLEGAL=7,
+    LV_4B=4,
+    LV_ILLEGAL=5,
+    // Types 6 & 7 are not used.
     LV_TYPE_MASK=7,
 
     LV_TF_SHIFT=3,
@@ -147,18 +143,19 @@ void BMPSet::initBits() {
     }
 
     /*
-     * Override some bmpBlockBits to mixed for 3-byte lookup of
+     * Override some bmpBlockBits to all-zeroes for 3-byte lookup of
      * U+0000..U+07FF (from non-shortest forms)
      * and U+D800..U+DFFF (surrogate code points)
-     * to enable non-mixed fastpath for the entire BMP.
+     * to enable non-mixed UTF-8 fastpath for the entire BMP.
+     * Treat an illegal sequence as part of the FALSE span.
      */
-    bits=0x10001;           // Lead byte 0xE0.
+    bits=~0x10001;          // Lead byte 0xE0.
     for(i=0; i<32; ++i) {   // First half of 4k block.
-        bmpBlockBits[i]|=bits;
+        bmpBlockBits[i]&=bits;
     }
-    bits<<=0xd;             // Lead byte 0xED.
+    bits=~(0x10001<<0xd);   // Lead byte 0xED.
     for(i=32; i<64; ++i) {
-        bmpBlockBits[i]|=bits;
+        bmpBlockBits[i]&=bits;
     }
 }
 
@@ -372,11 +369,7 @@ void BMPSet::setLeadValues() {
             leadValues[i]=(int8_t)(LV_MULTI_2 | LV_2B_MIXED);
         }
     }
-    leadValues[0xe0]=(int8_t)(LV_MULTI_3 | LV_3B_E0);
-    for(i=0xe1; i<0xf0; ++i) {
-        if(i==0xed) {
-            continue;  // Set below.
-        }
+    for(; i<0xf0; ++i) {
         uint32_t mask=0x10001<<(i&0xf);
         uint32_t bits=bmpBlockBits[0]&mask;
         j=1;
@@ -389,8 +382,7 @@ void BMPSet::setLeadValues() {
             leadValues[i]=(int8_t)(LV_MULTI_3 | LV_3B_MIXED);
         }
     }
-    leadValues[0xed]=(int8_t)(LV_MULTI_3 | LV_3B_ED);
-    for(i=0xf0; i<0xf5; ++i) {
+    for(; i<0xf5; ++i) {
         leadValues[i]=(int8_t)(LV_MULTI_4 | LV_4B);
     }
     for(; i<0xf8; ++i) {
@@ -415,7 +407,7 @@ BMPSet::contains(UChar32 c) const {
         return (UBool)asciiBytes[c];
     } else if((uint32_t)c<=0x7ff) {
         return (UBool)((table7FFa[c&0x3f]&((uint32_t)1<<(c>>6)))!=0);
-    } else if((uint32_t)c<=0xffff) {
+    } else if((uint32_t)c<0xd800 || (c>=0xe000 && c<=0xffff)) {
         int lead=c>>12;
         uint32_t twoBits=(bmpBlockBits[(c>>6)&0x3f]>>lead)&0x10001;
         if(twoBits<=1) {
@@ -427,8 +419,8 @@ BMPSet::contains(UChar32 c) const {
             return containsSlow(c, list4kStarts[lead], list4kStarts[lead+1]);
         }
     } else if((uint32_t)c<=0x10ffff) {
-        // surrogate pair
-        return containsSlow(c, list4kStarts[0x10], list4kStarts[0x11]);
+        // surrogate or supplementary code point
+        return containsSlow(c, list4kStarts[0xd], list4kStarts[0x11]);
     } else {
         return FALSE;
     }
@@ -456,7 +448,7 @@ BMPSet::span(const UChar *s, const UChar *limit, UBool tf) const {
             if(((table7FFa[c&0x3f]&((uint32_t)1<<(c>>6)))!=0) != tf) {
                 break;
             }
-        } else if(c<0xd800 || c>=0xe000 || (s+1)==limit || (c2=s[1])<0xd800 || c2>=0xe000) {
+        } else if(c<0xd800 || c>=0xe000) {
             int lead=c>>12;
             uint32_t twoBits=(bmpBlockBits[(c>>6)&0x3f]>>lead)&0x10001;
             if(twoBits<=1) {
@@ -470,6 +462,11 @@ BMPSet::span(const UChar *s, const UChar *limit, UBool tf) const {
                 if(containsSlow(c, list4kStarts[lead], list4kStarts[lead+1]) != tf) {
                     break;
                 }
+            }
+        } else if(c>=0xdc00 || (s+1)==limit || (c2=s[1])<0xdc00 || c2>=0xe000) {
+            // surrogate code point
+            if(containsSlow(c, list4kStarts[0xd], list4kStarts[0xe]) != tf) {
+                break;
             }
         } else {
             // surrogate pair
@@ -486,7 +483,7 @@ BMPSet::span(const UChar *s, const UChar *limit, UBool tf) const {
 /*
  * ASCII: Look up bytes.
  * 2-byte characters: Bits organized horizontally.
- * 3-byte characters: Use zero/one/mixed data per 64-block in U+1000..U+D7FF.
+ * 3-byte characters: Use zero/one/mixed data per 64-block in U+0000..U+FFFF.
  * Check for sufficient trail bytes for each multi-byte character.
  * Check validity.
  */
@@ -503,11 +500,11 @@ BMPSetASCIIBytes2BHorizontal::spanUTF8(const uint8_t *s, int32_t length, const u
                 return s-1;
             }
         } else {
-            if(b>0xe0) {
-                if( /* handle U+1000..U+D7FF inline */
+            if(b>=0xe0) {
+                if( /* handle U+0000..U+FFFF inline */
+                    b<0xf0 &&
                     (limit-s)>=2 &&
-                    (((t1=(uint8_t)(s[0]-0x80), b<0xed) && (t1 <= 0x3f)) ||
-                                               (b==0xed && (t1 <= 0x1f))) &&
+                    (t1=(uint8_t)(s[0]-0x80)) <= 0x3f &&
                     (t2=(uint8_t)(s[1]-0x80)) <= 0x3f
                 ) {
                     b&=0xf;
@@ -528,7 +525,7 @@ BMPSetASCIIBytes2BHorizontal::spanUTF8(const uint8_t *s, int32_t length, const u
                     s+=2;
                     continue;
                 }
-            } else if(b<0xe0) {
+            } else /* b<0xe0 */ {
                 if( /* handle U+0080..U+07FF inline */
                     b>=0xc2 &&
                     s<limit &&
@@ -551,14 +548,14 @@ BMPSetASCIIBytes2BHorizontal::spanUTF8(const uint8_t *s, int32_t length, const u
                 c=-1;
             }
             if(c<0) {
-                // Treat a broken sequence as part of the FALSE span.
+                // Treat an illegal sequence as part of the FALSE span.
                 if(tf) {
                     return s-1;
                 }
             } else {
                 // Handle correct but "complicated" 3- or 4-byte sequences for U+0800 and up.
                 // Set b to the correct list4kStarts[] pair.
-                if(b<=0xef) {
+                if(b<0xf0) {
                     b&=0xf;  // BMP code point U+0800<=c<=U+FFFF.
                 } else {
                     b=0x10;  // Supplementary code point U+10000<=c<=U+10FFFF.
@@ -576,7 +573,7 @@ BMPSetASCIIBytes2BHorizontal::spanUTF8(const uint8_t *s, int32_t length, const u
 /*
  * ASCII: Look up bits.
  * 2-byte characters: Bits organized horizontally.
- * 3-byte characters: Use zero/one/mixed data per 64-block in U+1000..U+D7FF.
+ * 3-byte characters: Use zero/one/mixed data per 64-block in U+0000..U+FFFF.
  * Check for sufficient trail bytes for each multi-byte character.
  * Check validity.
  */
@@ -593,11 +590,11 @@ BMPSetASCIIBits2BHorizontal::spanUTF8(const uint8_t *s, int32_t length, const ui
                 return s-1;
             }
         } else {
-            if(b>0xe0) {
-                if( /* handle U+1000..U+D7FF inline */
+            if(b>=0xe0) {
+                if( /* handle U+0000..U+FFFF inline */
+                    b<0xf0 &&
                     (limit-s)>=2 &&
-                    (((t1=(uint8_t)(s[0]-0x80), b<0xed) && (t1 <= 0x3f)) ||
-                                               (b==0xed && (t1 <= 0x1f))) &&
+                    (t1=(uint8_t)(s[0]-0x80)) <= 0x3f &&
                     (t2=(uint8_t)(s[1]-0x80)) <= 0x3f
                 ) {
                     b&=0xf;
@@ -618,7 +615,7 @@ BMPSetASCIIBits2BHorizontal::spanUTF8(const uint8_t *s, int32_t length, const ui
                     s+=2;
                     continue;
                 }
-            } else if(b<0xe0) {
+            } else /* b<0xe0 */ {
                 if( /* handle U+0080..U+07FF inline */
                     b>=0xc2 &&
                     s<limit &&
@@ -641,14 +638,14 @@ BMPSetASCIIBits2BHorizontal::spanUTF8(const uint8_t *s, int32_t length, const ui
                 c=-1;
             }
             if(c<0) {
-                // Treat a broken sequence as part of the FALSE span.
+                // Treat an illegal sequence as part of the FALSE span.
                 if(tf) {
                     return s-1;
                 }
             } else {
                 // Handle correct but "complicated" 3- or 4-byte sequences for U+0800 and up.
                 // Set b to the correct list4kStarts[] pair.
-                if(b<=0xef) {
+                if(b<0xf0) {
                     b&=0xf;  // BMP code point U+0800<=c<=U+FFFF.
                 } else {
                     b=0x10;  // Supplementary code point U+10000<=c<=U+10FFFF.
@@ -666,7 +663,7 @@ BMPSetASCIIBits2BHorizontal::spanUTF8(const uint8_t *s, int32_t length, const ui
 /*
  * ASCII: Look up bytes.
  * 2-byte characters: Bits organized vertically.
- * 3-byte characters: Use zero/one/mixed data per 64-block in U+1000..U+D7FF.
+ * 3-byte characters: Use zero/one/mixed data per 64-block in U+0000..U+FFFF.
  * Check for sufficient trail bytes for each multi-byte character.
  * Check validity.
  */
@@ -683,11 +680,11 @@ BMPSetASCIIBytes2BVertical::spanUTF8(const uint8_t *s, int32_t length, const uin
                 return s-1;
             }
         } else {
-            if(b>0xe0) {
-                if( /* handle U+1000..U+D7FF inline */
+            if(b>=0xe0) {
+                if( /* handle U+0000..U+FFFF inline */
+                    b<0xf0 &&
                     (limit-s)>=2 &&
-                    (((t1=(uint8_t)(s[0]-0x80), b<0xed) && (t1 <= 0x3f)) ||
-                                               (b==0xed && (t1 <= 0x1f))) &&
+                    (t1=(uint8_t)(s[0]-0x80)) <= 0x3f &&
                     (t2=(uint8_t)(s[1]-0x80)) <= 0x3f
                 ) {
                     b&=0xf;
@@ -708,7 +705,7 @@ BMPSetASCIIBytes2BVertical::spanUTF8(const uint8_t *s, int32_t length, const uin
                     s+=2;
                     continue;
                 }
-            } else if(b<0xe0) {
+            } else /* b<0xe0 */ {
                 if( /* handle U+0080..U+07FF inline */
                     b>=0xc2 &&
                     s<limit &&
@@ -731,14 +728,14 @@ BMPSetASCIIBytes2BVertical::spanUTF8(const uint8_t *s, int32_t length, const uin
                 c=-1;
             }
             if(c<0) {
-                // Treat a broken sequence as part of the FALSE span.
+                // Treat an illegal sequence as part of the FALSE span.
                 if(tf) {
                     return s-1;
                 }
             } else {
                 // Handle correct but "complicated" 3- or 4-byte sequences for U+0800 and up.
                 // Set b to the correct list4kStarts[] pair.
-                if(b<=0xef) {
+                if(b<0xf0) {
                     b&=0xf;  // BMP code point U+0800<=c<=U+FFFF.
                 } else {
                     b=0x10;  // Supplementary code point U+10000<=c<=U+10FFFF.
@@ -775,8 +772,8 @@ BMPSetASCIIBytes2BVerticalFull::spanUTF8(const uint8_t *s, int32_t length, const
             }
         } else {
             if(b>=0xe0) {
-                if(b>0xe0 && b<0xed) {
-                    if( /* handle U+1000..U+CFFF inline */
+                if(b<0xf0) {
+                    if( /* handle U+0000..U+FFFF inline */
                         (limit-s)>=2 &&
                         (t1=(uint8_t)(s[0]-0x80)) <= 0x3f &&
                         (t2=(uint8_t)(s[1]-0x80)) <= 0x3f
@@ -793,34 +790,6 @@ BMPSetASCIIBytes2BVerticalFull::spanUTF8(const uint8_t *s, int32_t length, const
                             // Look up the code point in its 4k block of code points.
                             UChar32 c=(b<<12)|(t1<<6)|t2;
                             if(containsSlow(c, list4kStarts[b], list4kStarts[b+1]) != tf) {
-                                return s-1;
-                            }
-                        }
-                        s+=2;
-                        continue;
-                    }
-                } else if(b<0xf0) {
-                    if( /* handle U+0800..U+0FFF, U+D000..U+D7FF and U+E000..U+FFFF inline */
-                        (limit-s)>=2 &&
-                        (t1=(uint8_t)(s[0]-0x80)) <= 0x3f &&
-                        (t2=(uint8_t)(s[1]-0x80)) <= 0x3f
-                    ) {
-                        b&=0xf;
-                        uint32_t twoBits=(bmpBlockBits[t1]>>b)&0x10001;
-                        if(twoBits<=1) {
-                            // All 64 code points with this lead byte and middle trail byte
-                            // are either in the set or not.
-                            if(twoBits!=tf) {
-                                return s-1;
-                            }
-                        } else {
-                            // Look up the code point in its 4k block of code points.
-                            // Treat an illegal sequence as part of the FALSE span.
-                            UChar32 c=(b<<12)|(t1<<6)|t2;
-                            if( (   (b==0 ? c>=0x800 : (b>0xd || c<=0xd7ff)) &&
-                                    containsSlow(c, list4kStarts[b], list4kStarts[b+1])
-                                ) != tf
-                            ) {
                                 return s-1;
                             }
                         }
@@ -844,7 +813,7 @@ BMPSetASCIIBytes2BVerticalFull::spanUTF8(const uint8_t *s, int32_t length, const
                     s+=3;
                     continue;
                 }
-            } else if(b<0xe0) {
+            } else /* b<0xe0 */ {
                 if( /* handle U+0080..U+07FF inline */
                     b>=0xc2 &&
                     s<limit &&
@@ -859,13 +828,10 @@ BMPSetASCIIBytes2BVerticalFull::spanUTF8(const uint8_t *s, int32_t length, const
             }
 
             // Treat an illegal sequence as part of the FALSE span.
+            // Handle each byte of an illegal sequence separately to simplify the code;
+            // no need to optimize error handling.
             if(tf) {
                 return s-1;
-            }
-            int32_t count=utf8_countTrailBytes[b];
-            while(count>0 && s<limit && U8_IS_TRAIL(*s)) {
-                ++s;
-                --count;
             }
         }
     } while(s<limit);
@@ -890,7 +856,12 @@ BMPSetASCIIBytes2BVerticalOnly::contains(UChar32 c) const {
     } else if((uint32_t)c<=0xffff) {
         int lead=c>>12;
         // Look up the code point in its 4k block of code points.
+#if 1
+        int32_t lo=list4kStarts[lead], hi=list4kStarts[lead+1];
+        return (lo==hi) ? (UBool)(lo&1) : containsSlow(c, lo, hi);
+#else
         return containsSlow(c, list4kStarts[lead], list4kStarts[lead+1]);
+#endif
     } else if((uint32_t)c<=0x10ffff) {
         // surrogate pair
         return containsSlow(c, list4kStarts[0x10], list4kStarts[0x11]);
@@ -913,12 +884,19 @@ BMPSetASCIIBytes2BVerticalOnly::span(const UChar *s, const UChar *limit, UBool t
             if(((table7FFa[c&0x3f]&((uint32_t)1<<(c>>6)))!=0) != tf) {
                 break;
             }
-        } else if(c<0xd800 || c>=0xe000 || (s+1)==limit || (c2=s[1])<0xd800 || c2>=0xe000) {
+        } else if(c<0xd800 || c>=0xdc00 || (s+1)==limit || (c2=s[1])<0xdc00 || c2>=0xe000) {
             int lead=c>>12;
             // Look up the code point in its 4k block of code points.
+#if 1
+            int32_t lo=list4kStarts[lead], hi=list4kStarts[lead+1];
+            if(((lo==hi) ? (UBool)(lo&1) : containsSlow(c, lo, hi)) != tf) {
+                break;
+            }
+#else
             if(containsSlow(c, list4kStarts[lead], list4kStarts[lead+1]) != tf) {
                 break;
             }
+#endif
         } else {
             // surrogate pair
             if(containsSlow(U16_GET_SUPPLEMENTARY(c, c2), list4kStarts[0x10], list4kStarts[0x11]) != tf) {
@@ -1002,7 +980,7 @@ BMPSetASCIIBytes2BVerticalOnly::spanUTF8(const uint8_t *s, int32_t length, const
                     s+=3;
                     continue;
                 }
-            } else if(b<0xe0) {
+            } else /* b<0xe0 */ {
                 if( /* handle U+0080..U+07FF inline */
                     b>=0xc2 &&
                     s<limit &&
@@ -1017,13 +995,10 @@ BMPSetASCIIBytes2BVerticalOnly::spanUTF8(const uint8_t *s, int32_t length, const
             }
 
             // Treat an illegal sequence as part of the FALSE span.
+            // Handle each byte of an illegal sequence separately to simplify the code;
+            // no need to optimize error handling.
             if(tf) {
                 return s-1;
-            }
-            int32_t count=utf8_countTrailBytes[b];
-            while(count>0 && s<limit && U8_IS_TRAIL(*s)) {
-                ++s;
-                --count;
             }
         }
     } while(s<limit);
@@ -1071,7 +1046,7 @@ BMPSetASCIIBytesOnly::span(const UChar *s, const UChar *limit, UBool tf) const {
             if(containsSlow(c, 0, list4kStarts[0]) != tf) {
                 break;
             }
-        } else if(c<0xd800 || c>=0xe000 || (s+1)==limit || (c2=s[1])<0xd800 || c2>=0xe000) {
+        } else if(c<0xd800 || c>=0xdc00 || (s+1)==limit || (c2=s[1])<0xdc00 || c2>=0xe000) {
             int lead=c>>12;
             // Look up the code point in its 4k block of code points.
             if(containsSlow(c, list4kStarts[lead], list4kStarts[lead+1]) != tf) {
@@ -1152,7 +1127,7 @@ BMPSetASCIIBytesOnly::spanUTF8(const uint8_t *s, int32_t length, const uint8_t *
                     s+=3;
                     continue;
                 }
-            } else if(b<0xe0) {
+            } else /* b<0xe0 */ {
                 if( /* handle U+0080..U+07FF inline */
                     b>=0xc2 &&
                     s<limit &&
@@ -1168,13 +1143,10 @@ BMPSetASCIIBytesOnly::spanUTF8(const uint8_t *s, int32_t length, const uint8_t *
             }
 
             // Treat an illegal sequence as part of the FALSE span.
+            // Handle each byte of an illegal sequence separately to simplify the code;
+            // no need to optimize error handling.
             if(tf) {
                 return s-1;
-            }
-            int32_t count=utf8_countTrailBytes[b];
-            while(count>0 && s<limit && U8_IS_TRAIL(*s)) {
-                ++s;
-                --count;
             }
         }
     } while(s<limit);
@@ -1184,7 +1156,7 @@ BMPSetASCIIBytesOnly::spanUTF8(const uint8_t *s, int32_t length, const uint8_t *
 /*
  * ASCII: Look up bytes.
  * 2-byte characters: Bits organized vertically.
- * 3-byte characters: Use zero/one/mixed data per 64-block in U+1000..U+D7FF.
+ * 3-byte characters: Use zero/one/mixed data per 64-block in U+0000..U+FFFF.
  * Precheck for sufficient trail bytes at end of string only once per span.
  * Check validity.
  */
@@ -1224,10 +1196,10 @@ BMPSetASCIIBytes2BVerticalPrecheck::spanUTF8(const uint8_t *s, int32_t length, c
                 return s-1;
             }
         } else {
-            if(b>0xe0) {
-                if( /* handle U+1000..U+D7FF inline */
-                    (((t1=(uint8_t)(s[0]-0x80), b<0xed) && (t1 <= 0x3f)) ||
-                                               (b==0xed && (t1 <= 0x1f))) &&
+            if(b>=0xe0) {
+                if( /* handle U+0000..U+FFFF inline */
+                    b<0xf0 &&
+                    (t1=(uint8_t)(s[0]-0x80)) <= 0x3f &&
                     (t2=(uint8_t)(s[1]-0x80)) <= 0x3f
                 ) {
                     b&=0xf;
@@ -1248,7 +1220,7 @@ BMPSetASCIIBytes2BVerticalPrecheck::spanUTF8(const uint8_t *s, int32_t length, c
                     s+=2;
                     continue;
                 }
-            } else if(b<0xe0) {
+            } else /* b<0xe0 */ {
                 if( /* handle U+0080..U+07FF inline */
                     b>=0xc2 &&
                     (t1=(uint8_t)(*s-0x80)) <= 0x3f
@@ -1270,14 +1242,14 @@ BMPSetASCIIBytes2BVerticalPrecheck::spanUTF8(const uint8_t *s, int32_t length, c
                 c=-1;
             }
             if(c<0) {
-                // Treat a broken sequence as part of the FALSE span.
+                // Treat an illegal sequence as part of the FALSE span.
                 if(tf) {
                     return s-1;
                 }
             } else {
                 // Handle correct but "complicated" 3- or 4-byte sequences for U+0800 and up.
                 // Set b to the correct list4kStarts[] pair.
-                if(b<=0xef) {
+                if(b<0xf0) {
                     b&=0xf;  // BMP code point U+0800<=c<=U+FFFF.
                 } else {
                     b=0x10;  // Supplementary code point U+10000<=c<=U+10FFFF.
@@ -1291,7 +1263,7 @@ BMPSetASCIIBytes2BVerticalPrecheck::spanUTF8(const uint8_t *s, int32_t length, c
     }
 
     if(!tf) {
-        // Treat the trailing broken sequence as part of the FALSE span.
+        // Treat the trailing illegal sequence as part of the FALSE span.
         return s0+length;
     } else {
         return limit;
@@ -1345,8 +1317,8 @@ BMPSetASCIIBytes2BVerticalPrecheckFull::spanUTF8(const uint8_t *s, int32_t lengt
             }
         } else {
             if(b>=0xe0) {
-                if(b>0xe0 && b<0xed) {
-                    if( /* handle U+1000..U+CFFF inline */
+                if(b<0xf0) {
+                    if( /* handle U+0000..U+FFFF inline */
                         (t1=(uint8_t)(s[0]-0x80)) <= 0x3f &&
                         (t2=(uint8_t)(s[1]-0x80)) <= 0x3f
                     ) {
@@ -1362,33 +1334,6 @@ BMPSetASCIIBytes2BVerticalPrecheckFull::spanUTF8(const uint8_t *s, int32_t lengt
                             // Look up the code point in its 4k block of code points.
                             UChar32 c=(b<<12)|(t1<<6)|t2;
                             if(containsSlow(c, list4kStarts[b], list4kStarts[b+1]) != tf) {
-                                return s-1;
-                            }
-                        }
-                        s+=2;
-                        continue;
-                    }
-                } else if(b<0xf0) {
-                    if( /* handle U+0800..U+0FFF, U+D000..U+D7FF and U+E000..U+FFFF inline */
-                        (t1=(uint8_t)(s[0]-0x80)) <= 0x3f &&
-                        (t2=(uint8_t)(s[1]-0x80)) <= 0x3f
-                    ) {
-                        b&=0xf;
-                        uint32_t twoBits=(bmpBlockBits[t1]>>b)&0x10001;
-                        if(twoBits<=1) {
-                            // All 64 code points with this lead byte and middle trail byte
-                            // are either in the set or not.
-                            if(twoBits!=tf) {
-                                return s-1;
-                            }
-                        } else {
-                            // Look up the code point in its 4k block of code points.
-                            // Treat an illegal sequence as part of the FALSE span.
-                            UChar32 c=(b<<12)|(t1<<6)|t2;
-                            if( (   (b==0 ? c>=0x800 : (b>0xd || c<=0xd7ff)) &&
-                                    containsSlow(c, list4kStarts[b], list4kStarts[b+1])
-                                ) != tf
-                            ) {
                                 return s-1;
                             }
                         }
@@ -1411,7 +1356,7 @@ BMPSetASCIIBytes2BVerticalPrecheckFull::spanUTF8(const uint8_t *s, int32_t lengt
                     s+=3;
                     continue;
                 }
-            } else if(b<0xe0) {
+            } else /* b<0xe0 */ {
                 if( /* handle U+0080..U+07FF inline */
                     b>=0xc2 &&
                     (t1=(uint8_t)(*s-0x80)) <= 0x3f
@@ -1425,19 +1370,16 @@ BMPSetASCIIBytes2BVerticalPrecheckFull::spanUTF8(const uint8_t *s, int32_t lengt
             }
 
             // Treat an illegal sequence as part of the FALSE span.
+            // Handle each byte of an illegal sequence separately to simplify the code;
+            // no need to optimize error handling.
             if(tf) {
                 return s-1;
-            }
-            int32_t count=utf8_countTrailBytes[b];
-            while(count>0 && s<limit && U8_IS_TRAIL(*s)) {
-                ++s;
-                --count;
             }
         }
     }
 
     if(!tf) {
-        // Treat the trailing broken sequence as part of the FALSE span.
+        // Treat the trailing illegal sequence as part of the FALSE span.
         return s0+length;
     } else {
         return limit;
@@ -1523,16 +1465,6 @@ BMPSetLeadValues::spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limi
                     continue;
                 }
                 break;
-            case LV_3B_E0:
-            case LV_3B_ED:
-                // E0: The first half of the range is illegal.
-                // ED: The second half of the range is illegal.
-                if( (lv==LV_3B_E0 && s[0]<0xa0) ||
-                    (lv==LV_3B_ED && s[0]>=0xa0)
-                ) {
-                    break;
-                }
-                // Fall through to LV_3B_MIXED.
             case LV_3B_MIXED:
                 if((t1=(uint8_t)(s[0]-0x80)) <= 0x3f && (t2=(uint8_t)(s[1]-0x80)) <= 0x3f) {
                     b&=0xf;
@@ -1572,17 +1504,15 @@ BMPSetLeadValues::spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limi
                     s+=3;
                     continue;
                 }
+                break;
             case LV_ILLEGAL:
             default:
                 break;
             }
 
             // Treat an illegal sequence as part of the FALSE span.
-            lv=(lv>>LV_COUNT_SHIFT)&LV_COUNT_MASK;
-            while(lv>0 && s<limit && U8_IS_TRAIL(*s)) {
-                ++s;
-                --lv;
-            }
+            // Handle each byte of an illegal sequence separately to simplify the code;
+            // no need to optimize error handling.
             if(tf) {
                 return s-1;
             }
@@ -1590,7 +1520,7 @@ BMPSetLeadValues::spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limi
     }
 
     if(!tf) {
-        // Treat the trailing broken sequence as part of the FALSE span.
+        // Treat the trailing illegal sequence as part of the FALSE span.
         return s0+length;
     } else {
         return limit;
@@ -1648,7 +1578,7 @@ BMPSetASCIIBytes2BVerticalLenient::spanUTF8(const uint8_t *s, int32_t length, co
             }
         } else {
             if(b>=0xe0) {
-                if(b<=0xef) {
+                if(b<0xf0) {
                     /* U+0800..U+FFFF */
                     b&=0xf;
                     t1=(uint8_t)(s[0]&0x3f);
@@ -1691,7 +1621,7 @@ BMPSetASCIIBytes2BVerticalLenient::spanUTF8(const uint8_t *s, int32_t length, co
         }
     }
 
-    // Treat the trailing broken sequence as part of the span.
+    // Treat the trailing illegal sequence as part of the span.
     return s0+length;
 }
 
@@ -1735,7 +1665,7 @@ BMPSetASCIIBytes2BVerticalLenient2::spanUTF8(const uint8_t *s, int32_t length, c
             }
         } else {
             if(b>=0xe0) {
-                if(b<=0xef) {
+                if(b<0xf0) {
                     /* U+0800..U+FFFF */
                     b&=0xf;
                     t1=(uint8_t)(s[0]&0x3f);
