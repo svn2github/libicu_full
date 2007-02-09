@@ -41,6 +41,8 @@ public:
 
     // TODO: clone()
 
+    virtual UBool contains(UChar32 c) const;
+
     /*
      * Span the substring for which each character c has tf==contains(c).
      * It must be length>0, limit=s+length and tf==0 or 1.
@@ -49,8 +51,6 @@ public:
      */
     virtual const UChar *span(const UChar *s, const UChar *limit, UBool tf) const;
     virtual const uint8_t *spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const = 0;
-
-    virtual UBool contains(UChar32 c) const;
 
 // TODO: Make private in final implementation.
 protected:
@@ -142,6 +142,31 @@ class BMPSetASCIIBytes2BVertical : public BMPSet {
 public:
     BMPSetASCIIBytes2BVertical(const UnicodeSet &parent);
 
+    virtual const uint8_t *spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const;
+};
+
+class BMPSetASCIIBytes2BVerticalFull : public BMPSet {
+public:
+    BMPSetASCIIBytes2BVerticalFull(const UnicodeSet &parent);
+
+    virtual const uint8_t *spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const;
+};
+
+class BMPSetASCIIBytes2BVerticalOnly : public BMPSet {
+public:
+    BMPSetASCIIBytes2BVerticalOnly(const UnicodeSet &parent);
+
+    virtual UBool contains(UChar32 c) const;
+    virtual const UChar *span(const UChar *s, const UChar *limit, UBool tf) const;
+    virtual const uint8_t *spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const;
+};
+
+class BMPSetASCIIBytesOnly : public BMPSet {
+public:
+    BMPSetASCIIBytesOnly(const UnicodeSet &parent);
+
+    virtual UBool contains(UChar32 c) const;
+    virtual const UChar *span(const UChar *s, const UChar *limit, UBool tf) const;
     virtual const uint8_t *spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const;
 };
 

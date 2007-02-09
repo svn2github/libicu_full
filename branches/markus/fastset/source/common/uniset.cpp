@@ -323,7 +323,7 @@ UBool UnicodeSet::contains(UChar32 c) const {
         return bmpSet->contains(c);
     }
     int32_t i = findCodePoint(c);
-    return ((i & 1) != 0); // return true if odd
+    return (UBool)(i & 1); // return true if odd
 }
 
 /**
@@ -1878,6 +1878,12 @@ void UnicodeSet::freeze(const char *type) {
         bmpSet=new BMPSetASCIIBits2BHorizontal(*this);
     } else if(0==uprv_strcmp(type, "Bv")) {
         bmpSet=new BMPSetASCIIBytes2BVertical(*this);
+    } else if(0==uprv_strcmp(type, "BvF")) {
+        bmpSet=new BMPSetASCIIBytes2BVerticalFull(*this);
+    } else if(0==uprv_strcmp(type, "Bv0")) {
+        bmpSet=new BMPSetASCIIBytes2BVerticalOnly(*this);
+    } else if(0==uprv_strcmp(type, "B0")) {
+        bmpSet=new BMPSetASCIIBytesOnly(*this);
     } else if(0==uprv_strcmp(type, "Bvp")) {
         bmpSet=new BMPSetASCIIBytes2BVerticalPrecheck(*this);
     } else if(0==uprv_strcmp(type, "BvpF")) {

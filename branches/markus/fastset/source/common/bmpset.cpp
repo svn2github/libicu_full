@@ -756,6 +756,434 @@ BMPSetASCIIBytes2BVertical::spanUTF8(const uint8_t *s, int32_t length, const uin
 /*
  * ASCII: Look up bytes.
  * 2-byte characters: Bits organized vertically.
+ * 3-byte characters: Use zero/one/mixed data per 64-block in U+0000..U+FFFF,
+ *                    with mixed for illegal ranges.
+ * Check for sufficient trail bytes for each multi-byte character.
+ * Check validity.
+ */
+BMPSetASCIIBytes2BVerticalFull::BMPSetASCIIBytes2BVerticalFull(const UnicodeSet &parent) : BMPSet(parent) {}
+
+const uint8_t *
+BMPSetASCIIBytes2BVerticalFull::spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const {
+    uint8_t b, t1, t2, t3;
+
+    do {
+        b=*s++;
+        if((int8_t)b>=0) {
+            if(asciiBytes[b]!=tf) {
+                return s-1;
+            }
+        } else {
+            if(b>=0xe0) {
+                if(b>0xe0 && b<0xed) {
+                    if( /* handle U+1000..U+CFFF inline */
+                        (limit-s)>=2 &&
+                        (t1=(uint8_t)(s[0]-0x80)) <= 0x3f &&
+                        (t2=(uint8_t)(s[1]-0x80)) <= 0x3f
+                    ) {
+                        b&=0xf;
+                        uint32_t twoBits=(bmpBlockBits[t1]>>b)&0x10001;
+                        if(twoBits<=1) {
+                            // All 64 code points with this lead byte and middle trail byte
+                            // are either in the set or not.
+                            if(twoBits!=tf) {
+                                return s-1;
+                            }
+                        } else {
+                            // Look up the code point in its 4k block of code points.
+                            UChar32 c=(b<<12)|(t1<<6)|t2;
+                            if(containsSlow(c, list4kStarts[b], list4kStarts[b+1]) != tf) {
+                                return s-1;
+                            }
+                        }
+                        s+=2;
+                        continue;
+                    }
+                } else if(b<0xf0) {
+                    if( /* handle U+0800..U+0FFF, U+D000..U+D7FF and U+E000..U+FFFF inline */
+                        (limit-s)>=2 &&
+                        (t1=(uint8_t)(s[0]-0x80)) <= 0x3f &&
+                        (t2=(uint8_t)(s[1]-0x80)) <= 0x3f
+                    ) {
+                        b&=0xf;
+                        uint32_t twoBits=(bmpBlockBits[t1]>>b)&0x10001;
+                        if(twoBits<=1) {
+                            // All 64 code points with this lead byte and middle trail byte
+                            // are either in the set or not.
+                            if(twoBits!=tf) {
+                                return s-1;
+                            }
+                        } else {
+                            // Look up the code point in its 4k block of code points.
+                            // Treat an illegal sequence as part of the FALSE span.
+                            UChar32 c=(b<<12)|(t1<<6)|t2;
+                            if( (   (b==0 ? c>=0x800 : (b>0xd || c<=0xd7ff)) &&
+                                    containsSlow(c, list4kStarts[b], list4kStarts[b+1])
+                                ) != tf
+                            ) {
+                                return s-1;
+                            }
+                        }
+                        s+=2;
+                        continue;
+                    }
+                } else if( /* handle U+10000..U+10FFFF inline */
+                    (limit-s)>=3 &&
+                    (t1=(uint8_t)(s[0]-0x80)) <= 0x3f &&
+                    (t2=(uint8_t)(s[1]-0x80)) <= 0x3f &&
+                    (t3=(uint8_t)(s[2]-0x80)) <= 0x3f
+                ) {
+                    // Treat an illegal sequence as part of the FALSE span.
+                    UChar32 c=((UChar32)(b-0xf0)<<18)|((UChar32)t1<<12)|(t2<<6)|t3;
+                    if( (   0x10000<=c && c<=0x10ffff &&
+                            containsSlow(c, list4kStarts[0x10], list4kStarts[0x11])
+                        ) != tf
+                    ) {
+                        return s-1;
+                    }
+                    s+=3;
+                    continue;
+                }
+            } else if(b<0xe0) {
+                if( /* handle U+0080..U+07FF inline */
+                    b>=0xc2 &&
+                    s<limit &&
+                    (t1=(uint8_t)(*s-0x80)) <= 0x3f
+                ) {
+                    if(((table7FFa[t1]&((uint32_t)1<<(b&0x1f)))!=0) != tf) {
+                        return s-1;
+                    }
+                    ++s;
+                    continue;
+                }
+            }
+
+            // Treat an illegal sequence as part of the FALSE span.
+            if(tf) {
+                return s-1;
+            }
+            int32_t count=utf8_countTrailBytes[b];
+            while(count>0 && s<limit && U8_IS_TRAIL(*s)) {
+                ++s;
+                --count;
+            }
+        }
+    } while(s<limit);
+    return limit;
+}
+
+/*
+ * ASCII: Look up bytes.
+ * 2-byte characters: Bits organized vertically.
+ * 3-byte characters: Use binary search for U+0800..U+D7FF and U+E000..U+FFFF.
+ * Check for sufficient trail bytes for each multi-byte character.
+ * Check validity.
+ */
+BMPSetASCIIBytes2BVerticalOnly::BMPSetASCIIBytes2BVerticalOnly(const UnicodeSet &parent) : BMPSet(parent) {}
+
+UBool
+BMPSetASCIIBytes2BVerticalOnly::contains(UChar32 c) const {
+    if((uint32_t)c<=0x7f) {
+        return (UBool)asciiBytes[c];
+    } else if((uint32_t)c<=0x7ff) {
+        return (UBool)((table7FFa[c&0x3f]&((uint32_t)1<<(c>>6)))!=0);
+    } else if((uint32_t)c<=0xffff) {
+        int lead=c>>12;
+        // Look up the code point in its 4k block of code points.
+        return containsSlow(c, list4kStarts[lead], list4kStarts[lead+1]);
+    } else if((uint32_t)c<=0x10ffff) {
+        // surrogate pair
+        return containsSlow(c, list4kStarts[0x10], list4kStarts[0x11]);
+    } else {
+        return FALSE;
+    }
+}
+
+const UChar *
+BMPSetASCIIBytes2BVerticalOnly::span(const UChar *s, const UChar *limit, UBool tf) const {
+    UChar c, c2;
+
+    do {
+        c=*s;
+        if(c<=0x7f) {
+            if(asciiBytes[c]!=tf) {
+                break;
+            }
+        } else if(c<=0x7ff) {
+            if(((table7FFa[c&0x3f]&((uint32_t)1<<(c>>6)))!=0) != tf) {
+                break;
+            }
+        } else if(c<0xd800 || c>=0xe000 || (s+1)==limit || (c2=s[1])<0xd800 || c2>=0xe000) {
+            int lead=c>>12;
+            // Look up the code point in its 4k block of code points.
+            if(containsSlow(c, list4kStarts[lead], list4kStarts[lead+1]) != tf) {
+                break;
+            }
+        } else {
+            // surrogate pair
+            if(containsSlow(U16_GET_SUPPLEMENTARY(c, c2), list4kStarts[0x10], list4kStarts[0x11]) != tf) {
+                break;
+            }
+            ++s;
+        }
+    } while(++s<limit);
+
+    return s;
+}
+
+const uint8_t *
+BMPSetASCIIBytes2BVerticalOnly::spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const {
+    uint8_t b, t1, t2, t3;
+
+    do {
+        b=*s++;
+        if((int8_t)b>=0) {
+            if(asciiBytes[b]!=tf) {
+                return s-1;
+            }
+        } else {
+            if(b>=0xe0) {
+                if(b>0xe0 && b<0xed) {
+                    if( /* handle U+1000..U+CFFF inline */
+                        (limit-s)>=2 &&
+                        (t1=(uint8_t)(s[0]-0x80)) <= 0x3f &&
+                        (t2=(uint8_t)(s[1]-0x80)) <= 0x3f
+                    ) {
+                        b&=0xf;
+                        // Look up the code point in its 4k block of code points.
+#if 1
+                        int32_t lo=list4kStarts[b], hi=list4kStarts[b+1];
+                        UChar32 c=(b<<12)|(t1<<6)|t2;
+                        if(((lo==hi) ? (UBool)(lo&1) : containsSlow(c, lo, hi)) != tf) {
+                            return s-1;
+                        }
+#else
+                        UChar32 c=(b<<12)|(t1<<6)|t2;
+                        if(containsSlow(c, list4kStarts[b], list4kStarts[b+1]) != tf) {
+                            return s-1;
+                        }
+#endif
+                        s+=2;
+                        continue;
+                    }
+                } else if(b<0xf0) {
+                    if( /* handle U+0800..U+0FFF, U+D000..U+D7FF and U+E000..U+FFFF inline */
+                        (limit-s)>=2 &&
+                        (t1=(uint8_t)(s[0]-0x80)) <= 0x3f &&
+                        (t2=(uint8_t)(s[1]-0x80)) <= 0x3f
+                    ) {
+                        b&=0xf;
+                        // Look up the code point in its 4k block of code points.
+                        // Treat an illegal sequence as part of the FALSE span.
+                        UChar32 c=(b<<12)|(t1<<6)|t2;
+                        if( (   (b==0 ? c>=0x800 : (b>0xd || c<=0xd7ff)) &&
+                                containsSlow(c, list4kStarts[b], list4kStarts[b+1])
+                            ) != tf
+                        ) {
+                            return s-1;
+                        }
+                        s+=2;
+                        continue;
+                    }
+                } else if( /* handle U+10000..U+10FFFF inline */
+                    (limit-s)>=3 &&
+                    (t1=(uint8_t)(s[0]-0x80)) <= 0x3f &&
+                    (t2=(uint8_t)(s[1]-0x80)) <= 0x3f &&
+                    (t3=(uint8_t)(s[2]-0x80)) <= 0x3f
+                ) {
+                    // Treat an illegal sequence as part of the FALSE span.
+                    UChar32 c=((UChar32)(b-0xf0)<<18)|((UChar32)t1<<12)|(t2<<6)|t3;
+                    if( (   0x10000<=c && c<=0x10ffff &&
+                            containsSlow(c, list4kStarts[0x10], list4kStarts[0x11])
+                        ) != tf
+                    ) {
+                        return s-1;
+                    }
+                    s+=3;
+                    continue;
+                }
+            } else if(b<0xe0) {
+                if( /* handle U+0080..U+07FF inline */
+                    b>=0xc2 &&
+                    s<limit &&
+                    (t1=(uint8_t)(*s-0x80)) <= 0x3f
+                ) {
+                    if(((table7FFa[t1]&((uint32_t)1<<(b&0x1f)))!=0) != tf) {
+                        return s-1;
+                    }
+                    ++s;
+                    continue;
+                }
+            }
+
+            // Treat an illegal sequence as part of the FALSE span.
+            if(tf) {
+                return s-1;
+            }
+            int32_t count=utf8_countTrailBytes[b];
+            while(count>0 && s<limit && U8_IS_TRAIL(*s)) {
+                ++s;
+                --count;
+            }
+        }
+    } while(s<limit);
+    return limit;
+}
+
+/*
+ * ASCII: Look up bytes.
+ * 2-byte characters: Use binary search.
+ * 3-byte characters: Use binary search for U+0800..U+D7FF and U+E000..U+FFFF.
+ * Check for sufficient trail bytes for each multi-byte character.
+ * Check validity.
+ */
+BMPSetASCIIBytesOnly::BMPSetASCIIBytesOnly(const UnicodeSet &parent) : BMPSet(parent) {}
+
+UBool
+BMPSetASCIIBytesOnly::contains(UChar32 c) const {
+    if((uint32_t)c<=0x7f) {
+        return (UBool)asciiBytes[c];
+    } else if((uint32_t)c<=0x7ff) {
+        return containsSlow(c, 0, list4kStarts[0]);
+    } else if((uint32_t)c<=0xffff) {
+        int lead=c>>12;
+        // Look up the code point in its 4k block of code points.
+        return containsSlow(c, list4kStarts[lead], list4kStarts[lead+1]);
+    } else if((uint32_t)c<=0x10ffff) {
+        // surrogate pair
+        return containsSlow(c, list4kStarts[0x10], list4kStarts[0x11]);
+    } else {
+        return FALSE;
+    }
+}
+
+const UChar *
+BMPSetASCIIBytesOnly::span(const UChar *s, const UChar *limit, UBool tf) const {
+    UChar c, c2;
+
+    do {
+        c=*s;
+        if(c<=0x7f) {
+            if(asciiBytes[c]!=tf) {
+                break;
+            }
+        } else if(c<=0x7ff) {
+            if(containsSlow(c, 0, list4kStarts[0]) != tf) {
+                break;
+            }
+        } else if(c<0xd800 || c>=0xe000 || (s+1)==limit || (c2=s[1])<0xd800 || c2>=0xe000) {
+            int lead=c>>12;
+            // Look up the code point in its 4k block of code points.
+            if(containsSlow(c, list4kStarts[lead], list4kStarts[lead+1]) != tf) {
+                break;
+            }
+        } else {
+            // surrogate pair
+            if(containsSlow(U16_GET_SUPPLEMENTARY(c, c2), list4kStarts[0x10], list4kStarts[0x11]) != tf) {
+                break;
+            }
+            ++s;
+        }
+    } while(++s<limit);
+
+    return s;
+}
+
+const uint8_t *
+BMPSetASCIIBytesOnly::spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const {
+    uint8_t b, t1, t2, t3;
+
+    do {
+        b=*s++;
+        if((int8_t)b>=0) {
+            if(asciiBytes[b]!=tf) {
+                return s-1;
+            }
+        } else {
+            if(b>=0xe0) {
+                if(b>0xe0 && b<0xed) {
+                    if( /* handle U+1000..U+CFFF inline */
+                        (limit-s)>=2 &&
+                        (t1=(uint8_t)(s[0]-0x80)) <= 0x3f &&
+                        (t2=(uint8_t)(s[1]-0x80)) <= 0x3f
+                    ) {
+                        b&=0xf;
+                        // Look up the code point in its 4k block of code points.
+                        UChar32 c=(b<<12)|(t1<<6)|t2;
+                        if(containsSlow(c, list4kStarts[b], list4kStarts[b+1]) != tf) {
+                            return s-1;
+                        }
+                        s+=2;
+                        continue;
+                    }
+                } else if(b<0xf0) {
+                    if( /* handle U+0800..U+0FFF, U+D000..U+D7FF and U+E000..U+FFFF inline */
+                        (limit-s)>=2 &&
+                        (t1=(uint8_t)(s[0]-0x80)) <= 0x3f &&
+                        (t2=(uint8_t)(s[1]-0x80)) <= 0x3f
+                    ) {
+                        b&=0xf;
+                        // Look up the code point in its 4k block of code points.
+                        // Treat an illegal sequence as part of the FALSE span.
+                        UChar32 c=(b<<12)|(t1<<6)|t2;
+                        if( (   (b==0 ? c>=0x800 : (b>0xd || c<=0xd7ff)) &&
+                                containsSlow(c, list4kStarts[b], list4kStarts[b+1])
+                            ) != tf
+                        ) {
+                            return s-1;
+                        }
+                        s+=2;
+                        continue;
+                    }
+                } else if( /* handle U+10000..U+10FFFF inline */
+                    (limit-s)>=3 &&
+                    (t1=(uint8_t)(s[0]-0x80)) <= 0x3f &&
+                    (t2=(uint8_t)(s[1]-0x80)) <= 0x3f &&
+                    (t3=(uint8_t)(s[2]-0x80)) <= 0x3f
+                ) {
+                    // Treat an illegal sequence as part of the FALSE span.
+                    UChar32 c=((UChar32)(b-0xf0)<<18)|((UChar32)t1<<12)|(t2<<6)|t3;
+                    if( (   0x10000<=c && c<=0x10ffff &&
+                            containsSlow(c, list4kStarts[0x10], list4kStarts[0x11])
+                        ) != tf
+                    ) {
+                        return s-1;
+                    }
+                    s+=3;
+                    continue;
+                }
+            } else if(b<0xe0) {
+                if( /* handle U+0080..U+07FF inline */
+                    b>=0xc2 &&
+                    s<limit &&
+                    (t1=(uint8_t)(*s-0x80)) <= 0x3f
+                ) {
+                    UChar32 c=((UChar32)(b&0x1f)<<6)|t1;
+                    if(containsSlow(c, 0, list4kStarts[0]) != tf) {
+                        return s-1;
+                    }
+                    ++s;
+                    continue;
+                }
+            }
+
+            // Treat an illegal sequence as part of the FALSE span.
+            if(tf) {
+                return s-1;
+            }
+            int32_t count=utf8_countTrailBytes[b];
+            while(count>0 && s<limit && U8_IS_TRAIL(*s)) {
+                ++s;
+                --count;
+            }
+        }
+    } while(s<limit);
+    return limit;
+}
+
+/*
+ * ASCII: Look up bytes.
+ * 2-byte characters: Bits organized vertically.
  * 3-byte characters: Use zero/one/mixed data per 64-block in U+1000..U+D7FF.
  * Precheck for sufficient trail bytes at end of string only once per span.
  * Check validity.
@@ -917,8 +1345,31 @@ BMPSetASCIIBytes2BVerticalPrecheckFull::spanUTF8(const uint8_t *s, int32_t lengt
             }
         } else {
             if(b>=0xe0) {
-                if(b<0xf0) {
-                    if( /* handle U+0000..U+FFFF inline */
+                if(b>0xe0 && b<0xed) {
+                    if( /* handle U+1000..U+CFFF inline */
+                        (t1=(uint8_t)(s[0]-0x80)) <= 0x3f &&
+                        (t2=(uint8_t)(s[1]-0x80)) <= 0x3f
+                    ) {
+                        b&=0xf;
+                        uint32_t twoBits=(bmpBlockBits[t1]>>b)&0x10001;
+                        if(twoBits<=1) {
+                            // All 64 code points with this lead byte and middle trail byte
+                            // are either in the set or not.
+                            if(twoBits!=tf) {
+                                return s-1;
+                            }
+                        } else {
+                            // Look up the code point in its 4k block of code points.
+                            UChar32 c=(b<<12)|(t1<<6)|t2;
+                            if(containsSlow(c, list4kStarts[b], list4kStarts[b+1]) != tf) {
+                                return s-1;
+                            }
+                        }
+                        s+=2;
+                        continue;
+                    }
+                } else if(b<0xf0) {
+                    if( /* handle U+0800..U+0FFF, U+D000..U+D7FF and U+E000..U+FFFF inline */
                         (t1=(uint8_t)(s[0]-0x80)) <= 0x3f &&
                         (t2=(uint8_t)(s[1]-0x80)) <= 0x3f
                     ) {
@@ -934,7 +1385,7 @@ BMPSetASCIIBytes2BVerticalPrecheckFull::spanUTF8(const uint8_t *s, int32_t lengt
                             // Look up the code point in its 4k block of code points.
                             // Treat an illegal sequence as part of the FALSE span.
                             UChar32 c=(b<<12)|(t1<<6)|t2;
-                            if( (   (c<0xd800 ? c>=0x800 : c>=0xe000) &&
+                            if( (   (b==0 ? c>=0x800 : (b>0xd || c<=0xd7ff)) &&
                                     containsSlow(c, list4kStarts[b], list4kStarts[b+1])
                                 ) != tf
                             ) {
@@ -974,13 +1425,13 @@ BMPSetASCIIBytes2BVerticalPrecheckFull::spanUTF8(const uint8_t *s, int32_t lengt
             }
 
             // Treat an illegal sequence as part of the FALSE span.
+            if(tf) {
+                return s-1;
+            }
             int32_t count=utf8_countTrailBytes[b];
             while(count>0 && s<limit && U8_IS_TRAIL(*s)) {
                 ++s;
                 --count;
-            }
-            if(tf) {
-                return s-1;
             }
         }
     }
