@@ -174,7 +174,7 @@ public:
         int32_t i=0;
         UBool tf=FALSE;
         while(i<length) {
-            i=span(set, s, length, i, tf);
+            i+=span(set, s+i, length-i, tf);
             tf=(UBool)(!tf);
             ++count;
         }
@@ -183,9 +183,9 @@ public:
                     (long)count, (long)testcase.spanCount);
         }
     }
-    static int32_t span(const UnicodeSet &set, const UChar *s, int32_t length, int32_t start, UBool tf) {
+    static int32_t span(const UnicodeSet &set, const UChar *s, int32_t length, UBool tf) {
         UChar32 c;
-        int32_t prev;
+        int32_t start=0, prev;
         while((prev=start)<length) {
             U16_NEXT(s, start, length, c);
             if(tf!=set.contains(c)) {
@@ -206,7 +206,7 @@ protected:
 
         for(c=0; c<=0xffff; ++c) {
             utf16[0]=(UChar)c;
-            if(testcase.set.span(utf16, 1, 0, TRUE)>0) {
+            if(testcase.set.span(utf16, 1, TRUE)>0) {
                 set.add(c);
             }
         }
@@ -214,7 +214,7 @@ protected:
             utf16[0]=(UChar)c;
             for(c2=0xdc00; c2<=0xdfff; ++c2) {
                 utf16[1]=(UChar)c2;
-                if(testcase.set.span(utf16, 2, 0, TRUE)>0) {
+                if(testcase.set.span(utf16, 2, TRUE)>0) {
                     set.add(U16_GET_SUPPLEMENTARY(c, c2));
                 }
             }
@@ -236,7 +236,7 @@ public:
         int32_t i=0;
         UBool tf=FALSE;
         while(i<length) {
-            i=set.span(s, length, i, tf);
+            i+=set.span(s+i, length-i, tf);
             tf=(UBool)(!tf);
             ++count;
         }
@@ -262,7 +262,7 @@ protected:
             }
             length=0;
             U8_APPEND_UNSAFE(utf8, length, c);
-            if(testcase.set.spanUTF8(utf8, length, 0, TRUE)>0) {
+            if(testcase.set.spanUTF8(utf8, length, TRUE)>0) {
                 set.add(c);
             }
         }
@@ -282,7 +282,7 @@ public:
         int32_t i=0;
         UBool tf=FALSE;
         while(i<length) {
-            i=set.spanUTF8(s, length, i, tf);
+            i+=set.spanUTF8(s+i, length-i, tf);
             tf=(UBool)(!tf);
             ++count;
         }

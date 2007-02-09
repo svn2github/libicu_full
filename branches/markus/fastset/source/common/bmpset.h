@@ -41,25 +41,14 @@ public:
 
     // TODO: clone()
 
-#if 0
     /*
      * Span the substring for which each character c has tf==contains(c).
-     * The last byte sequence before limit must be complete or run into a lead byte.
-     * In the span loop compare s with limit only once per multi-byte character.
+     * It must be length>0, limit=s+length and tf==0 or 1.
      * @return The string pointer which limits the span.
      * TODO: Un-virtual in final implementation.
      */
-    virtual const uint8_t *spanUTF8(const uint8_t *s, const uint8_t *limit, UBool tf) const = 0;
-#endif
-
-    /*
-     * Span the substring for which each character c has tf==contains(c).
-     * The parameters must be pinned to 0<=start<length, 0<length and tf==0 or 1.
-     * @return The index into the string which limits the span.
-     * TODO: Un-virtual in final implementation.
-     */
-    virtual int32_t span(const UChar *s, int32_t length, int32_t start, UBool tf) const;
-    virtual int32_t spanUTF8(const char *s, int32_t length, int32_t start, UBool tf) const = 0;
+    virtual const UChar *span(const UChar *s, const UChar *limit, UBool tf) const;
+    virtual const uint8_t *spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const = 0;
 
     virtual UBool contains(UChar32 c) const;
 
@@ -72,8 +61,6 @@ protected:
 
     inline UBool containsSlow(UChar32 c, int32_t lo, int32_t hi) const;
     inline UBool containsSlow(UChar32 c) const;
-
-    const UChar *BMPSet::span(const UChar *s, const UChar *limit, UBool tf) const;
 
     UBool asciiBytes[128];
     uint32_t asciiBits[4];
@@ -141,64 +128,56 @@ class BMPSetASCIIBytes2BHorizontal : public BMPSet {
 public:
     BMPSetASCIIBytes2BHorizontal(const UnicodeSet &parent);
 
-    const uint8_t *spanUTF8(const uint8_t *s, const uint8_t *limit, UBool tf) const;
-    virtual int32_t spanUTF8(const char *s, int32_t length, int32_t start, UBool tf) const;
+    virtual const uint8_t *spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const;
 };
 
 class BMPSetASCIIBits2BHorizontal : public BMPSet {
 public:
     BMPSetASCIIBits2BHorizontal(const UnicodeSet &parent);
 
-    const uint8_t *spanUTF8(const uint8_t *s, const uint8_t *limit, UBool tf) const;
-    virtual int32_t spanUTF8(const char *s, int32_t length, int32_t start, UBool tf) const;
+    virtual const uint8_t *spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const;
 };
 
 class BMPSetASCIIBytes2BVertical : public BMPSet {
 public:
     BMPSetASCIIBytes2BVertical(const UnicodeSet &parent);
 
-    const uint8_t *spanUTF8(const uint8_t *s, const uint8_t *limit, UBool tf) const;
-    virtual int32_t spanUTF8(const char *s, int32_t length, int32_t start, UBool tf) const;
+    virtual const uint8_t *spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const;
 };
 
 class BMPSetASCIIBytes2BVerticalPrecheck : public BMPSet {
 public:
     BMPSetASCIIBytes2BVerticalPrecheck(const UnicodeSet &parent);
 
-    const uint8_t *spanUTF8(const uint8_t *s, const uint8_t *limit, UBool tf) const;
-    virtual int32_t spanUTF8(const char *s, int32_t length, int32_t start, UBool tf) const;
+    virtual const uint8_t *spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const;
 };
 
 class BMPSetASCIIBytes2BVerticalPrecheckFull : public BMPSet {
 public:
     BMPSetASCIIBytes2BVerticalPrecheckFull(const UnicodeSet &parent);
 
-    const uint8_t *spanUTF8(const uint8_t *s, const uint8_t *limit, UBool tf) const;
-    virtual int32_t spanUTF8(const char *s, int32_t length, int32_t start, UBool tf) const;
+    virtual const uint8_t *spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const;
 };
 
 class BMPSetLeadValues : public BMPSet {
 public:
     BMPSetLeadValues(const UnicodeSet &parent);
 
-    const uint8_t *spanUTF8(const uint8_t *s, const uint8_t *limit, UBool tf) const;
-    virtual int32_t spanUTF8(const char *s, int32_t length, int32_t start, UBool tf) const;
+    virtual const uint8_t *spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const;
 };
 
 class BMPSetASCIIBytes2BVerticalLenient : public BMPSet {
 public:
     BMPSetASCIIBytes2BVerticalLenient(const UnicodeSet &parent);
 
-    const uint8_t *spanUTF8(const uint8_t *s, const uint8_t *limit, UBool tf) const;
-    virtual int32_t spanUTF8(const char *s, int32_t length, int32_t start, UBool tf) const;
+    virtual const uint8_t *spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const;
 };
 
 class BMPSetASCIIBytes2BVerticalLenient2 : public BMPSet {
 public:
     BMPSetASCIIBytes2BVerticalLenient2(const UnicodeSet &parent);
 
-    const uint8_t *spanUTF8(const uint8_t *s, const uint8_t *limit, UBool tf) const;
-    virtual int32_t spanUTF8(const char *s, int32_t length, int32_t start, UBool tf) const;
+    virtual const uint8_t *spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const;
 };
 
 U_NAMESPACE_END

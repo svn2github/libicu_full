@@ -450,11 +450,11 @@ BMPSet::span(const UChar *s, const UChar *limit, UBool tf) const {
         c=*s;
         if(c<=0x7f) {
             if(asciiBytes[c]!=tf) {
-                return s;
+                break;
             }
         } else if(c<=0x7ff) {
             if(((table7FFa[c&0x3f]&((uint32_t)1<<(c>>6)))!=0) != tf) {
-                return s;
+                break;
             }
         } else if(c<0xd800 || c>=0xe000 || (s+1)==limit || (c2=s[1])<0xd800 || c2>=0xe000) {
             int lead=c>>12;
@@ -463,28 +463,24 @@ BMPSet::span(const UChar *s, const UChar *limit, UBool tf) const {
                 // All 64 code points with the same bits 15..6
                 // are either in the set or not.
                 if(twoBits!=tf) {
-                    return s;
+                    break;
                 }
             } else {
                 // Look up the code point in its 4k block of code points.
                 if(containsSlow(c, list4kStarts[lead], list4kStarts[lead+1]) != tf) {
-                    return s;
+                    break;
                 }
             }
         } else {
             // surrogate pair
             if(containsSlow(U16_GET_SUPPLEMENTARY(c, c2), list4kStarts[0x10], list4kStarts[0x11]) != tf) {
-                return s;
+                break;
             }
             ++s;
         }
     } while(++s<limit);
-    return limit;
-}
 
-int32_t
-BMPSet::span(const UChar *s, int32_t length, int32_t start, UBool tf) const {
-    return (int32_t)(span(s+start, s+length, tf)-s);
+    return s;
 }
 
 /*
@@ -497,10 +493,10 @@ BMPSet::span(const UChar *s, int32_t length, int32_t start, UBool tf) const {
 BMPSetASCIIBytes2BHorizontal::BMPSetASCIIBytes2BHorizontal(const UnicodeSet &parent) : BMPSet(parent) {}
 
 const uint8_t *
-BMPSetASCIIBytes2BHorizontal::spanUTF8(const uint8_t *s, const uint8_t *limit, UBool tf) const {
+BMPSetASCIIBytes2BHorizontal::spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const {
     uint8_t b, t1, t2;
 
-    while(s<limit) {
+    do {
         b=*s++;
         if((int8_t)b>=0) {
             if(asciiBytes[b]!=tf) {
@@ -573,16 +569,8 @@ BMPSetASCIIBytes2BHorizontal::spanUTF8(const uint8_t *s, const uint8_t *limit, U
             }
             s+=i;
         }
-    }
+    } while(s<limit);
     return limit;
-}
-
-int32_t
-BMPSetASCIIBytes2BHorizontal::spanUTF8(const char *s, int32_t length,
-                                       int32_t start, UBool tf) const {
-    const uint8_t *s0=(const uint8_t *)s;
-    const uint8_t *limit=s0+length;
-    return (int32_t)(spanUTF8(s0+start, limit, tf)-s0);
 }
 
 /*
@@ -595,10 +583,10 @@ BMPSetASCIIBytes2BHorizontal::spanUTF8(const char *s, int32_t length,
 BMPSetASCIIBits2BHorizontal::BMPSetASCIIBits2BHorizontal(const UnicodeSet &parent) : BMPSet(parent) {}
 
 const uint8_t *
-BMPSetASCIIBits2BHorizontal::spanUTF8(const uint8_t *s, const uint8_t *limit, UBool tf) const {
+BMPSetASCIIBits2BHorizontal::spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const {
     uint8_t b, t1, t2;
 
-    while(s<limit) {
+    do {
         b=*s++;
         if((int8_t)b>=0) {
             if(((asciiBits[b>>5]&((uint32_t)1<<(b&0x1f)))!=0) != tf) {
@@ -671,16 +659,8 @@ BMPSetASCIIBits2BHorizontal::spanUTF8(const uint8_t *s, const uint8_t *limit, UB
             }
             s+=i;
         }
-    }
+    } while(s<limit);
     return limit;
-}
-
-int32_t
-BMPSetASCIIBits2BHorizontal::spanUTF8(const char *s, int32_t length,
-                                      int32_t start, UBool tf) const {
-    const uint8_t *s0=(const uint8_t *)s;
-    const uint8_t *limit=s0+length;
-    return (int32_t)(spanUTF8(s0+start, limit, tf)-s0);
 }
 
 /*
@@ -693,10 +673,10 @@ BMPSetASCIIBits2BHorizontal::spanUTF8(const char *s, int32_t length,
 BMPSetASCIIBytes2BVertical::BMPSetASCIIBytes2BVertical(const UnicodeSet &parent) : BMPSet(parent) {}
 
 const uint8_t *
-BMPSetASCIIBytes2BVertical::spanUTF8(const uint8_t *s, const uint8_t *limit, UBool tf) const {
+BMPSetASCIIBytes2BVertical::spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const {
     uint8_t b, t1, t2;
 
-    while(s<limit) {
+    do {
         b=*s++;
         if((int8_t)b>=0) {
             if(asciiBytes[b]!=tf) {
@@ -769,16 +749,8 @@ BMPSetASCIIBytes2BVertical::spanUTF8(const uint8_t *s, const uint8_t *limit, UBo
             }
             s+=i;
         }
-    }
+    } while(s<limit);
     return limit;
-}
-
-int32_t
-BMPSetASCIIBytes2BVertical::spanUTF8(const char *s, int32_t length,
-                                     int32_t start, UBool tf) const {
-    const uint8_t *s0=(const uint8_t *)s;
-    const uint8_t *limit=s0+length;
-    return (int32_t)(spanUTF8(s0+start, limit, tf)-s0);
 }
 
 /*
@@ -791,8 +763,31 @@ BMPSetASCIIBytes2BVertical::spanUTF8(const char *s, int32_t length,
 BMPSetASCIIBytes2BVerticalPrecheck::BMPSetASCIIBytes2BVerticalPrecheck(const UnicodeSet &parent) : BMPSet(parent) {}
 
 const uint8_t *
-BMPSetASCIIBytes2BVerticalPrecheck::spanUTF8(const uint8_t *s, const uint8_t *limit, UBool tf) const {
-    uint8_t b, t1, t2;
+BMPSetASCIIBytes2BVerticalPrecheck::spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const {
+    const uint8_t *s0=s;
+
+    /*
+     * Make sure that the last 1/2/3-byte sequence before limit is complete
+     * or runs into a lead byte.
+     * In the span loop compare s with limit only once
+     * per multi-byte character.
+     * (4-byte sequences are always fully validity-checked.)
+     */
+    uint8_t b=*(limit-1);
+    if((int8_t)b<0) {
+        // b>=0x80: lead or trail byte
+        if(b<0xc0) {
+            // single trail byte, check for preceding 3- or 4-byte lead byte
+            if(length>=2 && (b=*(limit-2))>=0xe0) {
+                limit-=2;
+            }
+        } else {
+            // lead byte with no trail bytes
+            --limit;
+        }
+    }
+
+    uint8_t t1, t2;
 
     while(s<limit) {
         b=*s++;
@@ -866,45 +861,12 @@ BMPSetASCIIBytes2BVerticalPrecheck::spanUTF8(const uint8_t *s, const uint8_t *li
             s+=i;
         }
     }
-    return limit;
-}
 
-int32_t
-BMPSetASCIIBytes2BVerticalPrecheck::spanUTF8(const char *s, int32_t length,
-                                             int32_t start, UBool tf) const {
-    const uint8_t *s0=(const uint8_t *)s;
-    const uint8_t *limit=s0+length;
-
-    /*
-     * Make sure that the last 1/2/3-byte sequence before limit is complete
-     * or runs into a lead byte.
-     * In the span loop compare s with limit only once
-     * per multi-byte character.
-     * (4-byte sequences are always fully validity-checked.)
-     */
-    uint8_t b=*(limit-1);
-    if((int8_t)b>=0) {
-        // fast path for text ending with ASCII
-        return (int32_t)(spanUTF8(s0+start, limit, tf)-s0);
-    } else {
-        // b>=0x80: lead or trail byte
-        if(b<0xc0) {
-            // single trail byte, check for preceding 3- or 4-byte lead byte
-            if(length>=2 && (b=*(limit-2))>=0xe0) {
-                limit-=2;
-            }
-        } else {
-            // lead byte with no trail bytes
-            --limit;
-        }
-    }
-
-    s0=spanUTF8(s0+start, limit, tf);
-    if(s0==limit && !tf) {
+    if(!tf) {
         // Treat the trailing broken sequence as part of the FALSE span.
-        return length;
+        return s0+length;
     } else {
-        return (int32_t)((const char *)s0-s);
+        return limit;
     }
 }
 
@@ -919,8 +881,33 @@ BMPSetASCIIBytes2BVerticalPrecheck::spanUTF8(const char *s, int32_t length,
 BMPSetASCIIBytes2BVerticalPrecheckFull::BMPSetASCIIBytes2BVerticalPrecheckFull(const UnicodeSet &parent) : BMPSet(parent) {}
 
 const uint8_t *
-BMPSetASCIIBytes2BVerticalPrecheckFull::spanUTF8(const uint8_t *s, const uint8_t *limit, UBool tf) const {
-    uint8_t b, t1, t2, t3;
+BMPSetASCIIBytes2BVerticalPrecheckFull::spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const {
+    const uint8_t *s0=s;
+
+    /*
+     * Make sure that the last 1/2/3/4-byte sequence before limit is complete
+     * or runs into a lead byte.
+     * In the span loop compare s with limit only once
+     * per multi-byte character.
+     */
+    uint8_t b=*(limit-1);
+    if((int8_t)b<0) {
+        // b>=0x80: lead or trail byte
+        if(b<0xc0) {
+            // single trail byte, check for preceding 3- or 4-byte lead byte
+            if(length>=2 && (b=*(limit-2))>=0xe0) {
+                limit-=2;
+            } else if(b<0xc0 && b>=0x80 && length>=3 && (b=*(limit-3))>=0xf0) {
+                // 4-byte lead byte with only two trail bytes
+                limit-=3;
+            }
+        } else {
+            // lead byte with no trail bytes
+            --limit;
+        }
+    }
+
+    uint8_t t1, t2, t3;
 
     while(s<limit) {
         b=*s++;
@@ -997,47 +984,12 @@ BMPSetASCIIBytes2BVerticalPrecheckFull::spanUTF8(const uint8_t *s, const uint8_t
             }
         }
     }
-    return limit;
-}
 
-int32_t
-BMPSetASCIIBytes2BVerticalPrecheckFull::spanUTF8(const char *s, int32_t length,
-                                                 int32_t start, UBool tf) const {
-    const uint8_t *s0=(const uint8_t *)s;
-    const uint8_t *limit=s0+length;
-
-    /*
-     * Make sure that the last 1/2/3/4-byte sequence before limit is complete
-     * or runs into a lead byte.
-     * In the span loop compare s with limit only once
-     * per multi-byte character.
-     */
-    uint8_t b=*(limit-1);
-    if((int8_t)b>=0) {
-        // fast path for text ending with ASCII
-        return (int32_t)(spanUTF8(s0+start, limit, tf)-s0);
-    } else {
-        // b>=0x80: lead or trail byte
-        if(b<0xc0) {
-            // single trail byte, check for preceding 3- or 4-byte lead byte
-            if(length>=2 && (b=*(limit-2))>=0xe0) {
-                limit-=2;
-            } else if(b<0xc0 && b>=0x80 && length>=3 && (b=*(limit-3))>=0xf0) {
-                // 4-byte lead byte with only two trail bytes
-                limit-=3;
-            }
-        } else {
-            // lead byte with no trail bytes
-            --limit;
-        }
-    }
-
-    s0=spanUTF8(s0+start, limit, tf);
-    if(s0==limit && !tf) {
+    if(!tf) {
         // Treat the trailing broken sequence as part of the FALSE span.
-        return length;
+        return s0+length;
     } else {
-        return (int32_t)((const char *)s0-s);
+        return limit;
     }
 }
 
@@ -1055,8 +1007,33 @@ BMPSetASCIIBytes2BVerticalPrecheckFull::spanUTF8(const char *s, int32_t length,
 BMPSetLeadValues::BMPSetLeadValues(const UnicodeSet &parent) : BMPSet(parent) {}
 
 const uint8_t *
-BMPSetLeadValues::spanUTF8(const uint8_t *s, const uint8_t *limit, UBool tf) const {
-    uint8_t b, t1, t2, t3;
+BMPSetLeadValues::spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const {
+    const uint8_t *s0=s;
+
+    /*
+     * Make sure that the last 1/2/3/4-byte sequence before limit is complete
+     * or runs into a lead byte.
+     * In the span loop compare s with limit only once
+     * per multi-byte character.
+     */
+    uint8_t b=*(limit-1);
+    if((int8_t)b<0) {
+        // b>=0x80: lead or trail byte
+        if(b<0xc0) {
+            // single trail byte, check for preceding 3- or 4-byte lead byte
+            if(length>=2 && (b=*(limit-2))>=0xe0) {
+                limit-=2;
+            } else if(b<0xc0 && b>=0x80 && length>=3 && (b=*(limit-3))>=0xf0) {
+                // 4-byte lead byte with only two trail bytes
+                limit-=3;
+            }
+        } else {
+            // lead byte with no trail bytes
+            --limit;
+        }
+    }
+
+    uint8_t t1, t2, t3;
     int8_t lv;
 
     while(s<limit) {
@@ -1160,47 +1137,12 @@ BMPSetLeadValues::spanUTF8(const uint8_t *s, const uint8_t *limit, UBool tf) con
             }
         }
     }
-    return limit;
-}
 
-int32_t
-BMPSetLeadValues::spanUTF8(const char *s, int32_t length,
-                           int32_t start, UBool tf) const {
-    const uint8_t *s0=(const uint8_t *)s;
-    const uint8_t *limit=s0+length;
-
-    /*
-     * Make sure that the last 1/2/3/4-byte sequence before limit is complete
-     * or runs into a lead byte.
-     * In the span loop compare s with limit only once
-     * per multi-byte character.
-     */
-    uint8_t b=*(limit-1);
-    if((int8_t)b>=0) {
-        // fast path for text ending with ASCII
-        return (int32_t)(spanUTF8(s0+start, limit, tf)-s0);
-    } else {
-        // b>=0x80: lead or trail byte
-        if(b<0xc0) {
-            // single trail byte, check for preceding 3- or 4-byte lead byte
-            if(length>=2 && (b=*(limit-2))>=0xe0) {
-                limit-=2;
-            } else if(b<0xc0 && b>=0x80 && length>=3 && (b=*(limit-3))>=0xf0) {
-                // 4-byte lead byte with only two trail bytes
-                limit-=3;
-            }
-        } else {
-            // lead byte with no trail bytes
-            --limit;
-        }
-    }
-
-    s0=spanUTF8(s0+start, limit, tf);
-    if(s0==limit && !tf) {
+    if(!tf) {
         // Treat the trailing broken sequence as part of the FALSE span.
-        return length;
+        return s0+length;
     } else {
-        return (int32_t)((const char *)s0-s);
+        return limit;
     }
 }
 
@@ -1214,67 +1156,8 @@ BMPSetLeadValues::spanUTF8(const char *s, int32_t length,
 BMPSetASCIIBytes2BVerticalLenient::BMPSetASCIIBytes2BVerticalLenient(const UnicodeSet &parent) : BMPSet(parent) {}
 
 const uint8_t *
-BMPSetASCIIBytes2BVerticalLenient::spanUTF8(const uint8_t *s, const uint8_t *limit, UBool tf) const {
-    uint8_t b, t1, t2;
-
-    while(s<limit) {
-        b=*s++;
-        if((int8_t)b>=0) {
-            if(asciiBytes[b]!=tf) {
-                return s-1;
-            }
-        } else {
-            if(b>=0xe0) {
-                if(b<=0xef) {
-                    /* U+0800..U+FFFF */
-                    b&=0xf;
-                    t1=(uint8_t)(s[0]&0x3f);
-                    uint32_t twoBits=(bmpBlockBits[t1]>>b)&0x10001;
-                    if(twoBits<=1) {
-                        // All 64 code points with this lead byte and middle trail byte
-                        // are either in the set or not.
-                        if(twoBits!=tf) {
-                            return s-1;
-                        }
-                    } else {
-                        // Look up the code point in its 4k block of code points.
-                        t2=(uint8_t)(s[1]&0x3f);
-                        UChar32 c=(b<<12)|(t1<<6)|t2;
-                        if(containsSlow(c, list4kStarts[b], list4kStarts[b+1]) != tf) {
-                            return s-1;
-                        }
-                    }
-                    s+=2;
-                } else /* b>=0xf0 */ {
-                    /* supplementary code points U+10000..U+10FFFF */
-                    b&=0xf;
-                    UChar32 c=((UChar32)b<<18)|((UChar32)(s[0]&0x3f)<<12)|((s[1]&0x3f)<<6)|(s[2]&0x3f);
-                    // Broken sequence: c<0x10000 or c>0x10ffff is harmless for containsSlow()
-                    // (it returns its lo or hi parameter)
-                    // and we don't care about the result.
-                    if(containsSlow(c, list4kStarts[0x10], list4kStarts[0x11]) != tf) {
-                        return s-1;
-                    }
-                    s+=3;
-                }
-                // else count b as part of the span and continue
-            } else /* b<0xe0 */ {
-                /* U+0080..U+07FF */
-                if(((table7FFa[*s&0x3f]&((uint32_t)1<<(b&0x1f)))!=0) != tf) {
-                    return s-1;
-                }
-                ++s;
-            }
-        }
-    }
-    return limit;
-}
-
-int32_t
-BMPSetASCIIBytes2BVerticalLenient::spanUTF8(const char *s, int32_t length,
-                                            int32_t start, UBool tf) const {
-    const uint8_t *s0=(const uint8_t *)s;
-    const uint8_t *limit=s0+length;
+BMPSetASCIIBytes2BVerticalLenient::spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const {
+    const uint8_t *s0=s;
 
     /*
      * Make sure that the last 1/2/3/4-byte sequence before limit is complete.
@@ -1301,30 +1184,9 @@ BMPSetASCIIBytes2BVerticalLenient::spanUTF8(const char *s, int32_t length,
             break;
         }
     }
-    // spanUTF8() may go beyond the reduced limit but
-    // will not exceed the original limit and returns at most limit.
+    // The span loop may go beyond the reduced limit but
+    // will not exceed the original limit.
 
-    s0=spanUTF8(s0+start, limit, tf);
-    if(s0==limit) {
-        // Treat the trailing broken sequence as part of the span.
-        return length;
-    } else {
-        return (int32_t)((const char *)s0-s);
-    }
-}
-
-/*
- * ASCII: Look up bytes.
- * 2-byte characters: Bits organized vertically.
- * 3-byte characters: Use zero/one/mixed data per 64-block in U+0000..U+FFFF.
- * Precheck for sufficient trail bytes at end of string only once per span.
- * (Different precheck from previous version.)
- * Lenient, only prevent buffer overrun.
- */
-BMPSetASCIIBytes2BVerticalLenient2::BMPSetASCIIBytes2BVerticalLenient2(const UnicodeSet &parent) : BMPSet(parent) {}
-
-const uint8_t *
-BMPSetASCIIBytes2BVerticalLenient2::spanUTF8(const uint8_t *s, const uint8_t *limit, UBool tf) const {
     uint8_t b, t1, t2;
 
     while(s<limit) {
@@ -1377,14 +1239,24 @@ BMPSetASCIIBytes2BVerticalLenient2::spanUTF8(const uint8_t *s, const uint8_t *li
             }
         }
     }
-    return s;
+
+    // Treat the trailing broken sequence as part of the span.
+    return s0+length;
 }
 
-int32_t
-BMPSetASCIIBytes2BVerticalLenient2::spanUTF8(const char *s, int32_t length,
-                                             int32_t start, UBool tf) const {
-    const uint8_t *s0=(const uint8_t *)s;
-    const uint8_t *limit;
+/*
+ * ASCII: Look up bytes.
+ * 2-byte characters: Bits organized vertically.
+ * 3-byte characters: Use zero/one/mixed data per 64-block in U+0000..U+FFFF.
+ * Precheck for sufficient trail bytes at end of string only once per span.
+ * (Different precheck from previous version.)
+ * Lenient, only prevent buffer overrun.
+ */
+BMPSetASCIIBytes2BVerticalLenient2::BMPSetASCIIBytes2BVerticalLenient2(const UnicodeSet &parent) : BMPSet(parent) {}
+
+const uint8_t *
+BMPSetASCIIBytes2BVerticalLenient2::spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const {
+    const uint8_t *s0=s;
 
     /*
      * Reduce the limit by 3 so that the span loop can compare s with limit
@@ -1393,34 +1265,82 @@ BMPSetASCIIBytes2BVerticalLenient2::spanUTF8(const char *s, int32_t length,
      * A more sophisticated loop is possible but reduces performance for
      * short spans by increasing per-span overhead.
      *
-     * spanUTF8() may go beyond the reduced limit but
+     * The span loop may go beyond the reduced limit but
      * will not exceed the original limit.
      */
     if(length>3) {
-        limit=s0+length-3;
+        limit=s+length-3;
     } else {
-        limit=s0;
+        limit=s;
     }
 
-    s0=spanUTF8(s0+start, limit, tf);
-    start=(int32_t)((const char *)s0-s);
-    if(s0<limit) {
-        return start;
-    } else {
-        // Slow loop for the last 3 bytes of the string.
-        UChar32 c;
-        int32_t prev;
-        while((prev=start)<length) {
-            U8_NEXT(s, start, length, c);
-            // Broken sequence: c<0 or c>0x10ffff is harmless for containsSlow()
-            // (it returns its lo or hi parameter)
-            // and we don't care about the result.
-            if(tf!=containsSlow(c)) {
-                break;
+    uint8_t b, t1, t2;
+
+    while(s<limit) {
+        b=*s++;
+        if((int8_t)b>=0) {
+            if(asciiBytes[b]!=tf) {
+                return s-1;
+            }
+        } else {
+            if(b>=0xe0) {
+                if(b<=0xef) {
+                    /* U+0800..U+FFFF */
+                    b&=0xf;
+                    t1=(uint8_t)(s[0]&0x3f);
+                    uint32_t twoBits=(bmpBlockBits[t1]>>b)&0x10001;
+                    if(twoBits<=1) {
+                        // All 64 code points with this lead byte and middle trail byte
+                        // are either in the set or not.
+                        if(twoBits!=tf) {
+                            return s-1;
+                        }
+                    } else {
+                        // Look up the code point in its 4k block of code points.
+                        t2=(uint8_t)(s[1]&0x3f);
+                        UChar32 c=(b<<12)|(t1<<6)|t2;
+                        if(containsSlow(c, list4kStarts[b], list4kStarts[b+1]) != tf) {
+                            return s-1;
+                        }
+                    }
+                    s+=2;
+                } else /* b>=0xf0 */ {
+                    /* supplementary code points U+10000..U+10FFFF */
+                    b&=0xf;
+                    UChar32 c=((UChar32)b<<18)|((UChar32)(s[0]&0x3f)<<12)|((s[1]&0x3f)<<6)|(s[2]&0x3f);
+                    // Broken sequence: c<0x10000 or c>0x10ffff is harmless for containsSlow()
+                    // (it returns its lo or hi parameter)
+                    // and we don't care about the result.
+                    if(containsSlow(c, list4kStarts[0x10], list4kStarts[0x11]) != tf) {
+                        return s-1;
+                    }
+                    s+=3;
+                }
+                // else count b as part of the span and continue
+            } else /* b<0xe0 */ {
+                /* U+0080..U+07FF */
+                if(((table7FFa[*s&0x3f]&((uint32_t)1<<(b&0x1f)))!=0) != tf) {
+                    return s-1;
+                }
+                ++s;
             }
         }
-        return prev;
     }
+
+    // Slow loop for the last 3 bytes of the string.
+    UChar32 c;
+    int32_t start=(int32_t)(s-s0);
+    int32_t prev;
+    while((prev=start)<length) {
+        U8_NEXT(s0, start, length, c);
+        // Broken sequence: c<0 or c>0x10ffff is harmless for containsSlow()
+        // (it returns its lo or hi parameter)
+        // and we don't care about the result.
+        if(tf!=containsSlow(c)) {
+            break;
+        }
+    }
+    return s0+prev;
 }
 
 U_NAMESPACE_END

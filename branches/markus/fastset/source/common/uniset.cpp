@@ -1894,25 +1894,17 @@ void UnicodeSet::freeze(const char *type) {
     }
 }
 
-int32_t UnicodeSet::span(const UChar *s, int32_t length, int32_t start, UBool tf) const {
-    // Pin arguments.
-    if(s==NULL || length==0 || (length<0 && (length=u_strlen(s))==0)) {
-        return 0;
-    }
-    if(start<0) {
-        start=0;
-    }
-    if(start>=length) {
-        return length;
-    }
+int32_t UnicodeSet::span(const UChar *s, int32_t length, UBool tf) const {
     tf=(UBool)(tf!=0);  // Pin tf to precisely 0 or 1.
-
-    if(bmpSet!=NULL) {
-        return bmpSet->span(s, length, start, tf);
+    if(length>0 && bmpSet!=NULL) {
+        return (int32_t)(bmpSet->span(s, s+length, tf)-s);
+    }
+    if(length<0) {
+        length=u_strlen(s);
     }
 
     UChar32 c;
-    int32_t prev;
+    int32_t start=0, prev;
     while((prev=start)<length) {
         U16_NEXT(s, start, length, c);
         if(tf!=contains(c)) {
@@ -1922,25 +1914,18 @@ int32_t UnicodeSet::span(const UChar *s, int32_t length, int32_t start, UBool tf
     return prev;
 }
 
-int32_t UnicodeSet::spanUTF8(const char *s, int32_t length, int32_t start, UBool tf) const {
-    // Pin arguments.
-    if(s==NULL || length==0 || (length<0 && (length=uprv_strlen(s))==0)) {
-        return 0;
-    }
-    if(start<0) {
-        start=0;
-    }
-    if(start>=length) {
-        return length;
-    }
+int32_t UnicodeSet::spanUTF8(const char *s, int32_t length, UBool tf) const {
     tf=(UBool)(tf!=0);  // Pin tf to precisely 0 or 1.
-
-    if(bmpSet!=NULL) {
-        return bmpSet->spanUTF8(s, length, start, tf);
+    if(length>0 && bmpSet!=NULL) {
+        const uint8_t *s0=(const uint8_t *)s;
+        return (int32_t)(bmpSet->spanUTF8(s0, length, s0+length, tf)-s0);
+    }
+    if(length<0) {
+        length=uprv_strlen(s);
     }
 
     UChar32 c;
-    int32_t prev;
+    int32_t start=0, prev;
     while((prev=start)<length) {
         U8_NEXT(s, start, length, c);
         if(tf!=(c>=0 && contains(c))) {

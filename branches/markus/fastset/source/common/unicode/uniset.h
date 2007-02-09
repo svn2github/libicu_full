@@ -288,8 +288,8 @@ public:
     inline UBool isFrozen() const {
         return (UBool)(bmpSet!=NULL);
     }
-    int32_t span(const UChar *s, int32_t length, int32_t start, UBool tf) const;
-    int32_t spanUTF8(const char *s, int32_t length, int32_t start, UBool tf) const;
+    int32_t span(const UChar *s, int32_t length, UBool tf) const;
+    int32_t spanUTF8(const char *s, int32_t length, UBool tf) const;
 
     enum {
         /**
