@@ -1,6 +1,6 @@
 /*
 ***************************************************************************
-* Copyright (C) 1999-2006, International Business Machines Corporation
+* Copyright (C) 1999-2007, International Business Machines Corporation
 * and others. All Rights Reserved.
 ***************************************************************************
 *   Date        Name        Description
@@ -22,6 +22,7 @@
  
 U_NAMESPACE_BEGIN
 
+class BMPSet;
 class ParsePosition;
 class SymbolTable;
 class UVector;
