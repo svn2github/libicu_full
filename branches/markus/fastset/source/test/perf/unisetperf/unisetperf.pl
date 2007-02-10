@@ -6,17 +6,14 @@
 #  ********************************************************************
 
 use strict;
-
 use lib '../perldriver';
-
 use PerfFramework;
-
 
 my $options = {
 	       "title"=>"UnicodeSet span()/contains() performance",
-	       "headers"=>"ICU",
-	       "operationIs"=>"Unicode string",
-	       "passes"=>"1",
+	       "headers"=>"Bv Bv0",
+	       "operationIs"=>"tested Unicode code point",
+	       "passes"=>"3",
 	       "time"=>"2",
 	       #"outputType"=>"HTML",
 	       "dataDir"=>"/temp/udhr",
@@ -25,15 +22,18 @@ my $options = {
 
 # programs
 # tests will be done for all the programs. Results will be stored and connected
-my $p = "Release/unisetperf.exe -e gb18030";
+my $p =   "Release/unisetperf.exe -e UTF-8";
+my $pc =  "$p Contains";
+my $p16 = "$p SpanUTF16";
+my $p8 =  "$p SpanUTF8";
 
-my $tests = { 
-	     "SpanUTF8  Bv",    ["$p SpanUTF8  --type Bv   -e UTF-8 "],
-	     "SpanUTF8  BvF",   ["$p SpanUTF8  --type BvF  -e UTF-8 "],
-	     "SpanUTF8  Bvp",   ["$p SpanUTF8  --type Bvp  -e UTF-8 "],
-	     "SpanUTF8  BvpF",  ["$p SpanUTF8  --type BvpF -e UTF-8 "],
-	     "SpanUTF8  L",     ["$p SpanUTF8  --type L    -e UTF-8 "],
-	     "SpanUTF8  Bvl",   ["$p SpanUTF8  --type Bvl  -e UTF-8 "],
+my $tests = {
+	     "Contains",  ["$pc  --type Bv",
+	                   "$pc  --type Bv0"
+	                   ],
+	     "SpanUTF16", ["$p16 --type Bv",
+	                   "$p16 --type Bv0"
+	                   ]
 	    };
 
 my $dataFiles = {
@@ -49,5 +49,28 @@ my $dataFiles = {
           "udhr_jpn.html"
 		 ]
 		};
+
+runTests($options, $tests, $dataFiles);
+
+$options = {
+	       "title"=>"UnicodeSet span()/contains() performance",
+	       "headers"=>"Bv BvF Bvp BvpF L Bvl",
+	       "operationIs"=>"tested Unicode code point",
+	       "passes"=>"3",
+	       "time"=>"2",
+	       #"outputType"=>"HTML",
+	       "dataDir"=>"/temp/udhr",
+	       "outputDir"=>"../results"
+	      };
+
+$tests = {
+	     "SpanUTF8",  ["$p8  --type Bv",
+	                   "$p8  --type BvF",
+	                   "$p8  --type Bvp",
+	                   "$p8  --type BvpF",
+	                   "$p8  --type L",
+	                   "$p8  --type Bvl"
+	                   ]
+	    };
 
 runTests($options, $tests, $dataFiles);
