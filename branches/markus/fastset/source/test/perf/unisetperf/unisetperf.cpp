@@ -143,6 +143,10 @@ public:
         return testcase.countInputCodePoints+testcase.spanCount-1;
     }
 
+    virtual long getEventsPerIteration() {
+        return testcase.spanCount;
+    }
+
     const UnicodeSetPerformanceTest &testcase;
 };
 
