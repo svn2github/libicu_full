@@ -1,7 +1,7 @@
 /*
  ********************************************************************
  * COPYRIGHT:
- * Copyright (c) 1996-2006, International Business Machines Corporation and
+ * Copyright (c) 1996-2007, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************
  *
@@ -1237,6 +1237,8 @@ ucnv_swap(const UDataSwapper *ds,
     _MBCSHeader mbcsHeader;
     uint8_t outputType;
 
+    int32_t maxFastUChar, mbcsIndexLength;
+
     const int32_t *inExtIndexes;
     int32_t extOffset;
 
@@ -1361,8 +1363,24 @@ ucnv_swap(const UDataSwapper *ds,
         }
 
         /* calculate the length of the MBCS data */
+
+        /*
+         * utf8Friendly MBCS files (mbcsHeader.version 4.3)
+         * contain an additional mbcsIndex table:
+         *   uint16_t[(maxFastUChar+1)>>6];
+         * where maxFastUChar=((mbcsHeader.version[2]<<8)|0xff).
+         */
+        maxFastUChar=0;
+        mbcsIndexLength=0;
+        if( outputType!=MBCS_OUTPUT_EXT_ONLY && outputType!=MBCS_OUTPUT_1 &&
+            mbcsHeader.version[1]>=3 && (maxFastUChar=mbcsHeader.version[2])!=0
+        ) {
+            maxFastUChar=(maxFastUChar<<8)|0xff;
+            mbcsIndexLength=((maxFastUChar+1)>>6)*2;  /* number of bytes */
+        }
+
         if(extOffset==0) {
-            size=(int32_t)(mbcsHeader.offsetFromUBytes+mbcsHeader.fromUBytesLength);
+            size=(int32_t)(mbcsHeader.offsetFromUBytes+mbcsHeader.fromUBytesLength+mbcsIndexLength);
 
             /* avoid compiler warnings - not otherwise necessary, and the value does not matter */
             inExtIndexes=NULL;
@@ -1466,6 +1484,13 @@ ucnv_swap(const UDataSwapper *ds,
                     default:
                         /* just uint8_t[], nothing to swap */
                         break;
+                    }
+
+                    if(mbcsIndexLength!=0) {
+                        offset+=count;
+                        count=mbcsIndexLength;
+                        ds->swapArray16(ds, inBytes+offset, (int32_t)count,
+                                           outBytes+offset, pErrorCode);
                     }
                 }
             }
