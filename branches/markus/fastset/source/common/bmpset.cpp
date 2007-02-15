@@ -438,45 +438,87 @@ const UChar *
 BMPSet::span(const UChar *s, const UChar *limit, UBool tf) const {
     UChar c, c2;
 
-    do {
-        c=*s;
-        if(c<=0x7f) {
-            if(asciiBytes[c]!=tf) {
-                break;
-            }
-        } else if(c<=0x7ff) {
-            if(((table7FFa[c&0x3f]&((uint32_t)1<<(c>>6)))!=0) != tf) {
-                break;
-            }
-        } else if(c<0xd800 || c>=0xe000) {
-            int lead=c>>12;
-            uint32_t twoBits=(bmpBlockBits[(c>>6)&0x3f]>>lead)&0x10001;
-            if(twoBits<=1) {
-                // All 64 code points with the same bits 15..6
-                // are either in the set or not.
-                if(twoBits!=tf) {
+    if(tf) {
+        // span
+        do {
+            c=*s;
+            if(c<=0x7f) {
+                if(!asciiBytes[c]) {
+                    break;
+                }
+            } else if(c<=0x7ff) {
+                if((table7FFa[c&0x3f]&((uint32_t)1<<(c>>6)))==0) {
+                    break;
+                }
+            } else if(c<0xd800 || c>=0xe000) {
+                int lead=c>>12;
+                uint32_t twoBits=(bmpBlockBits[(c>>6)&0x3f]>>lead)&0x10001;
+                if(twoBits<=1) {
+                    // All 64 code points with the same bits 15..6
+                    // are either in the set or not.
+                    if(twoBits==0) {
+                        break;
+                    }
+                } else {
+                    // Look up the code point in its 4k block of code points.
+                    if(!containsSlow(c, list4kStarts[lead], list4kStarts[lead+1])) {
+                        break;
+                    }
+                }
+            } else if(c>=0xdc00 || (s+1)==limit || (c2=s[1])<0xdc00 || c2>=0xe000) {
+                // surrogate code point
+                if(!containsSlow(c, list4kStarts[0xd], list4kStarts[0xe])) {
                     break;
                 }
             } else {
-                // Look up the code point in its 4k block of code points.
-                if(containsSlow(c, list4kStarts[lead], list4kStarts[lead+1]) != tf) {
+                // surrogate pair
+                if(!containsSlow(U16_GET_SUPPLEMENTARY(c, c2), list4kStarts[0x10], list4kStarts[0x11])) {
                     break;
                 }
+                ++s;
             }
-        } else if(c>=0xdc00 || (s+1)==limit || (c2=s[1])<0xdc00 || c2>=0xe000) {
-            // surrogate code point
-            if(containsSlow(c, list4kStarts[0xd], list4kStarts[0xe]) != tf) {
-                break;
+        } while(++s<limit);
+    } else {
+        // span not
+        do {
+            c=*s;
+            if(c<=0x7f) {
+                if(asciiBytes[c]) {
+                    break;
+                }
+            } else if(c<=0x7ff) {
+                if((table7FFa[c&0x3f]&((uint32_t)1<<(c>>6)))!=0) {
+                    break;
+                }
+            } else if(c<0xd800 || c>=0xe000) {
+                int lead=c>>12;
+                uint32_t twoBits=(bmpBlockBits[(c>>6)&0x3f]>>lead)&0x10001;
+                if(twoBits<=1) {
+                    // All 64 code points with the same bits 15..6
+                    // are either in the set or not.
+                    if(twoBits!=0) {
+                        break;
+                    }
+                } else {
+                    // Look up the code point in its 4k block of code points.
+                    if(containsSlow(c, list4kStarts[lead], list4kStarts[lead+1])) {
+                        break;
+                    }
+                }
+            } else if(c>=0xdc00 || (s+1)==limit || (c2=s[1])<0xdc00 || c2>=0xe000) {
+                // surrogate code point
+                if(containsSlow(c, list4kStarts[0xd], list4kStarts[0xe])) {
+                    break;
+                }
+            } else {
+                // surrogate pair
+                if(containsSlow(U16_GET_SUPPLEMENTARY(c, c2), list4kStarts[0x10], list4kStarts[0x11])) {
+                    break;
+                }
+                ++s;
             }
-        } else {
-            // surrogate pair
-            if(containsSlow(U16_GET_SUPPLEMENTARY(c, c2), list4kStarts[0x10], list4kStarts[0x11]) != tf) {
-                break;
-            }
-            ++s;
-        }
-    } while(++s<limit);
-
+        } while(++s<limit);
+    }
     return s;
 }
 
@@ -765,12 +807,36 @@ BMPSetASCIIBytes2BVerticalFull::spanUTF8(const uint8_t *s, int32_t length, const
     uint8_t b, t1, t2, t3;
 
     do {
+#if 1
+        b=*s;
+        if((int8_t)b>=0) {
+            // ASCII
+            if(tf) {
+                do {
+                    if(!asciiBytes[b] || ++s==limit) {
+                        return s;
+                    }
+                    b=*s;
+                } while((int8_t)b>=0);
+            } else {
+                do {
+                    if(asciiBytes[b] || ++s==limit) {
+                        return s;
+                    }
+                    b=*s;
+                } while((int8_t)b>=0);
+            }
+        }
+        ++s;  // Advance past the lead byte.
+#else
         b=*s++;
         if((int8_t)b>=0) {
             if(asciiBytes[b]!=tf) {
                 return s-1;
             }
-        } else {
+        } else
+#endif
+        {
             if(b>=0xe0) {
                 if(b<0xf0) {
                     if( /* handle U+0000..U+FFFF inline */
@@ -1164,7 +1230,7 @@ BMPSetASCIIBytes2BVerticalPrecheck::BMPSetASCIIBytes2BVerticalPrecheck(const Uni
 
 const uint8_t *
 BMPSetASCIIBytes2BVerticalPrecheck::spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const {
-    const uint8_t *s0=s;
+    const uint8_t *limit0=limit;
 
     /*
      * Make sure that the last 1/2/3-byte sequence before limit is complete
@@ -1264,7 +1330,7 @@ BMPSetASCIIBytes2BVerticalPrecheck::spanUTF8(const uint8_t *s, int32_t length, c
 
     if(!tf) {
         // Treat the trailing illegal sequence as part of the FALSE span.
-        return s0+length;
+        return limit0;
     } else {
         return limit;
     }
@@ -1282,7 +1348,28 @@ BMPSetASCIIBytes2BVerticalPrecheckFull::BMPSetASCIIBytes2BVerticalPrecheckFull(c
 
 const uint8_t *
 BMPSetASCIIBytes2BVerticalPrecheckFull::spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const {
-    const uint8_t *s0=s;
+    uint8_t b=*s;
+    if((int8_t)b>=0) {
+        // Initial all-ASCII span.
+        if(tf) {
+            do {
+                if(!asciiBytes[b] || ++s==limit) {
+                    return s;
+                }
+                b=*s;
+            } while((int8_t)b>=0);
+        } else {
+            do {
+                if(asciiBytes[b] || ++s==limit) {
+                    return s;
+                }
+                b=*s;
+            } while((int8_t)b>=0);
+        }
+        length=(int32_t)(limit-s);
+    }
+
+    const uint8_t *limit0=limit;
 
     /*
      * Make sure that the last 1/2/3/4-byte sequence before limit is complete
@@ -1290,7 +1377,7 @@ BMPSetASCIIBytes2BVerticalPrecheckFull::spanUTF8(const uint8_t *s, int32_t lengt
      * In the span loop compare s with limit only once
      * per multi-byte character.
      */
-    uint8_t b=*(limit-1);
+    b=*(limit-1);
     if((int8_t)b<0) {
         // b>=0x80: lead or trail byte
         if(b<0xc0) {
@@ -1310,12 +1397,39 @@ BMPSetASCIIBytes2BVerticalPrecheckFull::spanUTF8(const uint8_t *s, int32_t lengt
     uint8_t t1, t2, t3;
 
     while(s<limit) {
+#if 1
+        b=*s;
+        if((int8_t)b>=0) {
+            // ASCII
+            if(tf) {
+                do {
+                    if(!asciiBytes[b] || ++s==limit) {
+                        return s;
+                    }
+                    b=*s;
+                } while((int8_t)b>=0);
+            } else {
+                do {
+                    if(asciiBytes[b]) {
+                        return s;
+                    } else if(++s==limit) {
+                        // Treat the trailing illegal sequence as part of the FALSE span.
+                        return limit0;
+                    }
+                    b=*s;
+                } while((int8_t)b>=0);
+            }
+        }
+        ++s;  // Advance past the lead byte.
+#else
         b=*s++;
         if((int8_t)b>=0) {
             if(asciiBytes[b]!=tf) {
                 return s-1;
             }
-        } else {
+        } else
+#endif
+        {
             if(b>=0xe0) {
                 if(b<0xf0) {
                     if( /* handle U+0000..U+FFFF inline */
@@ -1380,7 +1494,7 @@ BMPSetASCIIBytes2BVerticalPrecheckFull::spanUTF8(const uint8_t *s, int32_t lengt
 
     if(!tf) {
         // Treat the trailing illegal sequence as part of the FALSE span.
-        return s0+length;
+        return limit0;
     } else {
         return limit;
     }
@@ -1401,7 +1515,7 @@ BMPSetLeadValues::BMPSetLeadValues(const UnicodeSet &parent) : BMPSet(parent) {}
 
 const uint8_t *
 BMPSetLeadValues::spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const {
-    const uint8_t *s0=s;
+    const uint8_t *limit0=limit;
 
     /*
      * Make sure that the last 1/2/3/4-byte sequence before limit is complete
@@ -1521,7 +1635,7 @@ BMPSetLeadValues::spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limi
 
     if(!tf) {
         // Treat the trailing illegal sequence as part of the FALSE span.
-        return s0+length;
+        return limit0;
     } else {
         return limit;
     }
@@ -1538,7 +1652,28 @@ BMPSetASCIIBytes2BVerticalLenient::BMPSetASCIIBytes2BVerticalLenient(const Unico
 
 const uint8_t *
 BMPSetASCIIBytes2BVerticalLenient::spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const {
-    const uint8_t *s0=s;
+    uint8_t b=*s;
+    if((int8_t)b>=0) {
+        // Initial all-ASCII span.
+        if(tf) {
+            do {
+                if(!asciiBytes[b] || ++s==limit) {
+                    return s;
+                }
+                b=*s;
+            } while((int8_t)b>=0);
+        } else {
+            do {
+                if(asciiBytes[b] || ++s==limit) {
+                    return s;
+                }
+                b=*s;
+            } while((int8_t)b>=0);
+        }
+        length=(int32_t)(limit-s);
+    }
+
+    const uint8_t *limit0=limit;
 
     /*
      * Make sure that the last 1/2/3/4-byte sequence before limit is complete.
@@ -1568,15 +1703,45 @@ BMPSetASCIIBytes2BVerticalLenient::spanUTF8(const uint8_t *s, int32_t length, co
     // The span loop may go beyond the reduced limit but
     // will not exceed the original limit.
 
-    uint8_t b, t1, t2;
+    uint8_t t1, t2;
 
     while(s<limit) {
+#if 1
+        b=*s;
+        if((int8_t)b>=0) {
+            // ASCII
+            if(tf) {
+                do {
+                    if(!asciiBytes[b]) {
+                        return s;
+                    } else if(++s==limit) {
+                        // Treat the trailing illegal sequence as part of the span.
+                        return limit0;
+                    }
+                    b=*s;
+                } while((int8_t)b>=0);
+            } else {
+                do {
+                    if(asciiBytes[b]) {
+                        return s;
+                    } else if(++s==limit) {
+                        // Treat the trailing illegal sequence as part of the span.
+                        return limit0;
+                    }
+                    b=*s;
+                } while((int8_t)b>=0);
+            }
+        }
+        ++s;  // Advance past the lead byte.
+#else
         b=*s++;
         if((int8_t)b>=0) {
             if(asciiBytes[b]!=tf) {
                 return s-1;
             }
-        } else {
+        } else
+#endif
+        {
             if(b>=0xe0) {
                 if(b<0xf0) {
                     /* U+0800..U+FFFF */
@@ -1622,7 +1787,7 @@ BMPSetASCIIBytes2BVerticalLenient::spanUTF8(const uint8_t *s, int32_t length, co
     }
 
     // Treat the trailing illegal sequence as part of the span.
-    return s0+length;
+    return limit0;
 }
 
 /*
@@ -1637,7 +1802,26 @@ BMPSetASCIIBytes2BVerticalLenient2::BMPSetASCIIBytes2BVerticalLenient2(const Uni
 
 const uint8_t *
 BMPSetASCIIBytes2BVerticalLenient2::spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const {
-    const uint8_t *s0=s;
+    uint8_t b=*s;
+    if((int8_t)b>=0) {
+        // Initial all-ASCII span.
+        if(tf) {
+            do {
+                if(!asciiBytes[b] || ++s==limit) {
+                    return s;
+                }
+                b=*s;
+            } while((int8_t)b>=0);
+        } else {
+            do {
+                if(asciiBytes[b] || ++s==limit) {
+                    return s;
+                }
+                b=*s;
+            } while((int8_t)b>=0);
+        }
+        length=(int32_t)(limit-s);
+    }
 
     /*
      * Reduce the limit by 3 so that the span loop can compare s with limit
@@ -1650,70 +1834,97 @@ BMPSetASCIIBytes2BVerticalLenient2::spanUTF8(const uint8_t *s, int32_t length, c
      * will not exceed the original limit.
      */
     if(length>3) {
-        limit=s+length-3;
-    } else {
-        limit=s;
-    }
+        limit-=3;
 
-    uint8_t b, t1, t2;
+        uint8_t t1, t2;
 
-    while(s<limit) {
-        b=*s++;
-        if((int8_t)b>=0) {
-            if(asciiBytes[b]!=tf) {
-                return s-1;
-            }
-        } else {
-            if(b>=0xe0) {
-                if(b<0xf0) {
-                    /* U+0800..U+FFFF */
-                    b&=0xf;
-                    t1=(uint8_t)(s[0]&0x3f);
-                    uint32_t twoBits=(bmpBlockBits[t1]>>b)&0x10001;
-                    if(twoBits<=1) {
-                        // All 64 code points with this lead byte and middle trail byte
-                        // are either in the set or not.
-                        if(twoBits!=tf) {
-                            return s-1;
+        while(s<limit) {
+#if 1
+            b=*s;
+            if((int8_t)b>=0) {
+                // ASCII
+                if(tf) {
+                    do {
+                        if(!asciiBytes[b]) {
+                            return s;
+                        } else if(++s==limit) {
+                            goto endloop;
                         }
-                    } else {
-                        // Look up the code point in its 4k block of code points.
-                        t2=(uint8_t)(s[1]&0x3f);
-                        UChar32 c=(b<<12)|(t1<<6)|t2;
-                        if(containsSlow(c, list4kStarts[b], list4kStarts[b+1]) != tf) {
-                            return s-1;
+                        b=*s;
+                    } while((int8_t)b>=0);
+                } else {
+                    do {
+                        if(asciiBytes[b]) {
+                            return s;
+                        } else if(++s==limit) {
+                            goto endloop;
                         }
-                    }
-                    s+=2;
-                } else /* b>=0xf0 */ {
-                    /* supplementary code points U+10000..U+10FFFF */
-                    b&=0xf;
-                    UChar32 c=((UChar32)b<<18)|((UChar32)(s[0]&0x3f)<<12)|((s[1]&0x3f)<<6)|(s[2]&0x3f);
-                    // Broken sequence: c<0x10000 or c>0x10ffff is harmless for containsSlow()
-                    // (it returns its lo or hi parameter)
-                    // and we don't care about the result.
-                    if(containsSlow(c, list4kStarts[0x10], list4kStarts[0x11]) != tf) {
-                        return s-1;
-                    }
-                    s+=3;
+                        b=*s;
+                    } while((int8_t)b>=0);
                 }
-                // else count b as part of the span and continue
-            } else /* b<0xe0 */ {
-                /* U+0080..U+07FF */
-                if(((table7FFa[*s&0x3f]&((uint32_t)1<<(b&0x1f)))!=0) != tf) {
+            }
+            ++s;  // Advance past the lead byte.
+#else
+            b=*s++;
+            if((int8_t)b>=0) {
+                if(asciiBytes[b]!=tf) {
                     return s-1;
                 }
-                ++s;
+            } else
+#endif
+            {
+                if(b>=0xe0) {
+                    if(b<0xf0) {
+                        /* U+0800..U+FFFF */
+                        b&=0xf;
+                        t1=(uint8_t)(s[0]&0x3f);
+                        uint32_t twoBits=(bmpBlockBits[t1]>>b)&0x10001;
+                        if(twoBits<=1) {
+                            // All 64 code points with this lead byte and middle trail byte
+                            // are either in the set or not.
+                            if(twoBits!=tf) {
+                                return s-1;
+                            }
+                        } else {
+                            // Look up the code point in its 4k block of code points.
+                            t2=(uint8_t)(s[1]&0x3f);
+                            UChar32 c=(b<<12)|(t1<<6)|t2;
+                            if(containsSlow(c, list4kStarts[b], list4kStarts[b+1]) != tf) {
+                                return s-1;
+                            }
+                        }
+                        s+=2;
+                    } else /* b>=0xf0 */ {
+                        /* supplementary code points U+10000..U+10FFFF */
+                        b&=0xf;
+                        UChar32 c=((UChar32)b<<18)|((UChar32)(s[0]&0x3f)<<12)|((s[1]&0x3f)<<6)|(s[2]&0x3f);
+                        // Broken sequence: c<0x10000 or c>0x10ffff is harmless for containsSlow()
+                        // (it returns its lo or hi parameter)
+                        // and we don't care about the result.
+                        if(containsSlow(c, list4kStarts[0x10], list4kStarts[0x11]) != tf) {
+                            return s-1;
+                        }
+                        s+=3;
+                    }
+                    // else count b as part of the span and continue
+                } else /* b<0xe0 */ {
+                    /* U+0080..U+07FF */
+                    if(((table7FFa[*s&0x3f]&((uint32_t)1<<(b&0x1f)))!=0) != tf) {
+                        return s-1;
+                    }
+                    ++s;
+                }
             }
         }
     }
+endloop:
 
     // Slow loop for the last 3 bytes of the string.
     UChar32 c;
-    int32_t start=(int32_t)(s-s0);
+    int32_t start=0;
     int32_t prev;
     while((prev=start)<length) {
-        U8_NEXT(s0, start, length, c);
+        U8_NEXT(s, start, length, c);
         // Broken sequence: c<0 or c>0x10ffff is harmless for containsSlow()
         // (it returns its lo or hi parameter)
         // and we don't care about the result.
@@ -1721,7 +1932,7 @@ BMPSetASCIIBytes2BVerticalLenient2::spanUTF8(const uint8_t *s, int32_t length, c
             break;
         }
     }
-    return s0+prev;
+    return s+prev;
 }
 
 U_NAMESPACE_END
