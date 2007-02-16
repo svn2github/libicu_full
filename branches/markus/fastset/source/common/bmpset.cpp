@@ -149,12 +149,13 @@ void BMPSet::initBits() {
      * to enable non-mixed UTF-8 fastpath for the entire BMP.
      * Treat an illegal sequence as part of the FALSE span.
      */
+    // TODO: Leave bits 0 rather than setting and later resetting them.
     bits=~0x10001;          // Lead byte 0xE0.
     for(i=0; i<32; ++i) {   // First half of 4k block.
         bmpBlockBits[i]&=bits;
     }
     bits=~(0x10001<<0xd);   // Lead byte 0xED.
-    for(i=32; i<64; ++i) {
+    for(i=32; i<64; ++i) {  // Second half of 4k block.
         bmpBlockBits[i]&=bits;
     }
 }
@@ -180,8 +181,10 @@ void BMPSet::setBits(int32_t blockIndex, uint32_t bits) {
         }
     }
 
-    if(blockIndex<(0x800>>5)) {
-        // Set flags for 0..07FF.
+    // Leave table7FF[] bits 0 for 0..7F for faster validity checking at runtime.
+    // Treat an illegal sequence as part of the FALSE span.
+    if((0x80>>5)<=blockIndex && blockIndex<(0x800>>5)) {
+        // Set flags for 80..07FF.
         if((blockIndex&1)==0) {
             table7FFb[blockIndex>>1]=bits;
         } else {
@@ -206,6 +209,9 @@ void BMPSet::setBits(int32_t blockIndex, uint32_t bits) {
             b>>=1;
         }
     }
+
+    // TODO: Leave bmpBlockBits[] 0 for 0..7FF and D800..DFFF for faster validity checking at runtime.
+    // Treat an illegal sequence as part of the FALSE span.
 
     // Set flags for 64-blocks in the BMP.
 
@@ -286,8 +292,17 @@ void BMPSet::setOnes(int32_t startIndex, int32_t limitIndex) {
     startIndex>>=1;
     limitIndex>>=1;
 
+    // Leave table7FF[] bits 0 for 0..7F for faster validity checking at runtime.
+    // Treat an illegal sequence as part of the FALSE span.
+    if(startIndex<(0x80>>6)) {
+        startIndex=(0x80>>6);
+        if(startIndex>=limitIndex) {
+            return;
+        }
+    }
+
     if(startIndex<(0x800>>6)) {
-        // Set flags for 0..07FF.
+        // Set flags for 80..07FF.
         i=startIndex;
         if(limitIndex<(0x800>>6)) {
             limit=limitIndex;
@@ -306,6 +321,9 @@ void BMPSet::setOnes(int32_t startIndex, int32_t limitIndex) {
             table7FFa[i]|=bits;
         }
     }
+
+    // TODO: Leave bmpBlockBits[] 0 for 0..7FF and D800..DFFF for faster validity checking at runtime.
+    // Treat an illegal sequence as part of the FALSE span.
 
     // Set flags for 64-blocks in the BMP.
 
@@ -809,22 +827,22 @@ BMPSetASCIIBytes2BVerticalFull::spanUTF8(const uint8_t *s, int32_t length, const
     do {
 #if 1
         b=*s;
-        if((int8_t)b>=0) {
-            // ASCII
+        if(b<0xc0) {
+            // ASCII; or trail bytes treated as part of the FALSE span.
             if(tf) {
                 do {
                     if(!asciiBytes[b] || ++s==limit) {
                         return s;
                     }
                     b=*s;
-                } while((int8_t)b>=0);
+                } while(b<0xc0);
             } else {
                 do {
                     if(asciiBytes[b] || ++s==limit) {
                         return s;
                     }
                     b=*s;
-                } while((int8_t)b>=0);
+                } while(b<0xc0);
             }
         }
         ++s;  // Advance past the lead byte.
@@ -879,9 +897,8 @@ BMPSetASCIIBytes2BVerticalFull::spanUTF8(const uint8_t *s, int32_t length, const
                     s+=3;
                     continue;
                 }
-            } else /* b<0xe0 */ {
+            } else /* 0xc0<=b<0xe0 */ {
                 if( /* handle U+0080..U+07FF inline */
-                    b>=0xc2 &&
                     s<limit &&
                     (t1=(uint8_t)(*s-0x80)) <= 0x3f
                 ) {
@@ -1399,15 +1416,15 @@ BMPSetASCIIBytes2BVerticalPrecheckFull::spanUTF8(const uint8_t *s, int32_t lengt
     while(s<limit) {
 #if 1
         b=*s;
-        if((int8_t)b>=0) {
-            // ASCII
+        if(b<0xc0) {
+            // ASCII; or trail bytes treated as part of the FALSE span.
             if(tf) {
                 do {
                     if(!asciiBytes[b] || ++s==limit) {
                         return s;
                     }
                     b=*s;
-                } while((int8_t)b>=0);
+                } while(b<0xc0);
             } else {
                 do {
                     if(asciiBytes[b]) {
@@ -1417,7 +1434,7 @@ BMPSetASCIIBytes2BVerticalPrecheckFull::spanUTF8(const uint8_t *s, int32_t lengt
                         return limit0;
                     }
                     b=*s;
-                } while((int8_t)b>=0);
+                } while(b<0xc0);
             }
         }
         ++s;  // Advance past the lead byte.
@@ -1470,9 +1487,8 @@ BMPSetASCIIBytes2BVerticalPrecheckFull::spanUTF8(const uint8_t *s, int32_t lengt
                     s+=3;
                     continue;
                 }
-            } else /* b<0xe0 */ {
+            } else /* 0xc0<=b<0xe0 */ {
                 if( /* handle U+0080..U+07FF inline */
-                    b>=0xc2 &&
                     (t1=(uint8_t)(*s-0x80)) <= 0x3f
                 ) {
                     if(((table7FFa[t1]&((uint32_t)1<<(b&0x1f)))!=0) != tf) {

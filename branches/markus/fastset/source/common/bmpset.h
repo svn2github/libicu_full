@@ -62,7 +62,7 @@ protected:
     inline UBool containsSlow(UChar32 c, int32_t lo, int32_t hi) const;
     inline UBool containsSlow(UChar32 c) const;
 
-    UBool asciiBytes[128];
+    UBool asciiBytes[0xc0];
     uint32_t asciiBits[4];
 
     int8_t leadValues[256];
