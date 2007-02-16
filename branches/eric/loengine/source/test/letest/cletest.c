@@ -284,7 +284,7 @@ bail:
 }
 U_CDECL_END
 
-le_bool compareResults(const char *testID, TestResult *expected, TestResult *actual)
+static le_bool compareResults(const char *testID, TestResult *expected, TestResult *actual)
 {
     le_int32 i;
 
@@ -354,7 +354,7 @@ static void checkFontVersion(le_font *font, const char *testVersionString,
 }
 
 /* Returns the path to icu/source/test/testdata/ */
-const char *getSourceTestData() {
+static const char *getSourceTestData() {
 #ifdef U_TOPSRCDIR
     const char *srcDataDir = U_TOPSRCDIR U_FILE_SEP_STRING"test"U_FILE_SEP_STRING"testdata"U_FILE_SEP_STRING;
 #else
@@ -373,7 +373,7 @@ const char *getSourceTestData() {
     return srcDataDir;
 }
 
-const char *getPath(char buffer[2048], const char *filename) {
+static const char *getPath(char buffer[2048], const char *filename) {
     const char *testDataDirectory = getSourceTestData();
 
     strcpy(buffer, testDataDirectory);
@@ -382,7 +382,7 @@ const char *getPath(char buffer[2048], const char *filename) {
     return buffer;
 }
 
-le_font *openFont(const char *fontName, const char *checksum, const char *version, const char *testID)
+static le_font *openFont(const char *fontName, const char *checksum, const char *version, const char *testID)
 {
     char path[2048];
     le_font *font;
@@ -409,7 +409,7 @@ le_font *openFont(const char *fontName, const char *checksum, const char *versio
     return font;
 }
 
-le_bool getRTL(const LEUnicode *text, le_int32 charCount)
+static le_bool getRTL(const LEUnicode *text, le_int32 charCount)
 {
     UBiDiLevel paraLevel;
     UErrorCode status = U_ZERO_ERROR;
@@ -422,7 +422,7 @@ le_bool getRTL(const LEUnicode *text, le_int32 charCount)
     return paraLevel & 1;
 }
 
-void doTestCase (const char *testID,
+static void doTestCase (const char *testID,
 				 const char *fontName,
 				 const char *fontVersion,
 				 const char *fontChecksum,
@@ -478,7 +478,6 @@ free_expected:
 
 static void U_CALLCONV DataDrivenTest(void)
 {
-    UErrorCode status = U_ZERO_ERROR;
     char path[2048];
     const char *testFilePath = getPath(path, "letest.xml");
 
