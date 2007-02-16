@@ -620,7 +620,7 @@ int main(int argc, char* argv[])
     }
 
     addAllTests(&root);
-    nerrors = processArgs(root, argc, argv);
+    nerrors = processArgs(root, argc, (const char ** const) argv);
 
     cleanUpTestTree(root);
     u_cleanup();
