@@ -39,7 +39,7 @@ static UOption options[UNISETPERF_OPTIONS_COUNT]={
 static const char *const unisetperf_usage =
     "\t--pattern   UnicodeSet pattern for instantiation.\n"
     "\t            Default: [:ID_Continue:]\n"
-    "\t--type      Type of fast UnicodeSet: slow Bh bh Bv Bvp BvpF Bvl BvL\n"
+    "\t--type      Type of UnicodeSet: slow fast\n"
     "\t            Default: slow\n";
 
 // Test object with setup data.
@@ -52,7 +52,9 @@ public:
             UnicodeString pattern=UnicodeString(options[SET_PATTERN].value, -1, US_INV).unescape();
             set.applyPattern(pattern, status);
             prefrozen=set;
-            set.freeze(options[FAST_TYPE].value);
+            if(0==strcmp(options[FAST_TYPE].value, "fast")) {
+                set.freeze();
+            }
 
             int32_t inputLength;
             UPerfTest::getBuffer(inputLength, status);

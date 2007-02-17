@@ -285,7 +285,7 @@ class U_COMMON_API UnicodeSet : public UnicodeFilter {
 public:
     // TODO: clone() vs. cloneAsThawed() construct, copy, etc.
     // TODO: prevent modification if(isFrozen())
-    void freeze(const char *type);
+    void freeze();
     inline UBool isFrozen() const {
         return (UBool)(bmpSet!=NULL);
     }

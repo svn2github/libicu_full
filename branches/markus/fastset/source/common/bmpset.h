@@ -32,13 +32,6 @@ class BMPSet : public UMemory {
 public:
     BMPSet(const UnicodeSet &parent);
 
-    /*
-     * Virtual destructor. Not necessary because subclasses do not create
-     * additional objects, but keeps compilers happy.
-     * TODO: Remove in final, unsubclassed implementation.
-     */
-    virtual ~BMPSet() {}
-
     // TODO: clone()
 
     virtual UBool contains(UChar32 c) const;
@@ -47,25 +40,19 @@ public:
      * Span the substring for which each character c has tf==contains(c).
      * It must be length>0, limit=s+length and tf==0 or 1.
      * @return The string pointer which limits the span.
-     * TODO: Un-virtual in final implementation.
      */
-    virtual const UChar *span(const UChar *s, const UChar *limit, UBool tf) const;
-    virtual const uint8_t *spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const = 0;
+    const UChar *span(const UChar *s, const UChar *limit, UBool tf) const;
+    const uint8_t *spanUTF8(const uint8_t *s, int32_t length, UBool tf) const;
 
-// TODO: Make private in final implementation.
-protected:
+private:
     void initBits();
     void setBits(int32_t blockIndex, uint32_t bits);
     void setOnes(int32_t startIndex, int32_t limitIndex);
-    void setLeadValues();
 
     inline UBool containsSlow(UChar32 c, int32_t lo, int32_t hi) const;
     inline UBool containsSlow(UChar32 c) const;
 
     UBool asciiBytes[0xc0];
-    uint32_t asciiBits[4];
-
-    int8_t leadValues[256];
 
     /*
      * One bit per code point from U+0000..U+07FF.
@@ -74,19 +61,9 @@ protected:
      * With code point parts
      *   lead=c{10..6}
      *   trail=c{5..0}
-     * it is set.contains(c)==(table7FFa[lead] bit trail)
+     * it is set.contains(c)==(table7FF[trail] bit lead)
      */
-    uint32_t table7FFa[64];
-    /*
-     * One bit per code point from U+0000..U+07FF.
-     * The bits are organized horizontally; consecutive code points
-     * correspond to consecutive bits.
-     * With code point parts
-     *   lead=c{10..6}
-     *   trail=c{5..0}
-     * it is set.contains(c)==(table7FFb[trail] bit lead)
-     */
-    int64_t table7FFb[32];
+    uint32_t table7FF[64];
 
     /*
      * One bit per 64 BMP code points.
@@ -113,6 +90,10 @@ protected:
      */
     int32_t list4kStarts[18];
 
+    /*
+     * The parent set, for the slower contains() implementation
+     * for mixed BMP blocks and for supplementary code points.
+     */
     const UnicodeSet &set;
 };
 
@@ -123,87 +104,6 @@ inline UBool BMPSet::containsSlow(UChar32 c, int32_t lo, int32_t hi) const {
 inline UBool BMPSet::containsSlow(UChar32 c) const {
     return (UBool)(set.findCodePoint(c) & 1);
 }
-
-class BMPSetASCIIBytes2BHorizontal : public BMPSet {
-public:
-    BMPSetASCIIBytes2BHorizontal(const UnicodeSet &parent);
-
-    virtual const uint8_t *spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const;
-};
-
-class BMPSetASCIIBits2BHorizontal : public BMPSet {
-public:
-    BMPSetASCIIBits2BHorizontal(const UnicodeSet &parent);
-
-    virtual const uint8_t *spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const;
-};
-
-class BMPSetASCIIBytes2BVertical : public BMPSet {
-public:
-    BMPSetASCIIBytes2BVertical(const UnicodeSet &parent);
-
-    virtual const uint8_t *spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const;
-};
-
-class BMPSetASCIIBytes2BVerticalFull : public BMPSet {
-public:
-    BMPSetASCIIBytes2BVerticalFull(const UnicodeSet &parent);
-
-    virtual const uint8_t *spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const;
-};
-
-class BMPSetASCIIBytes2BVerticalOnly : public BMPSet {
-public:
-    BMPSetASCIIBytes2BVerticalOnly(const UnicodeSet &parent);
-
-    virtual UBool contains(UChar32 c) const;
-    virtual const UChar *span(const UChar *s, const UChar *limit, UBool tf) const;
-    virtual const uint8_t *spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const;
-};
-
-class BMPSetASCIIBytesOnly : public BMPSet {
-public:
-    BMPSetASCIIBytesOnly(const UnicodeSet &parent);
-
-    virtual UBool contains(UChar32 c) const;
-    virtual const UChar *span(const UChar *s, const UChar *limit, UBool tf) const;
-    virtual const uint8_t *spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const;
-};
-
-class BMPSetASCIIBytes2BVerticalPrecheck : public BMPSet {
-public:
-    BMPSetASCIIBytes2BVerticalPrecheck(const UnicodeSet &parent);
-
-    virtual const uint8_t *spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const;
-};
-
-class BMPSetASCIIBytes2BVerticalPrecheckFull : public BMPSet {
-public:
-    BMPSetASCIIBytes2BVerticalPrecheckFull(const UnicodeSet &parent);
-
-    virtual const uint8_t *spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const;
-};
-
-class BMPSetLeadValues : public BMPSet {
-public:
-    BMPSetLeadValues(const UnicodeSet &parent);
-
-    virtual const uint8_t *spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const;
-};
-
-class BMPSetASCIIBytes2BVerticalLenient : public BMPSet {
-public:
-    BMPSetASCIIBytes2BVerticalLenient(const UnicodeSet &parent);
-
-    virtual const uint8_t *spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const;
-};
-
-class BMPSetASCIIBytes2BVerticalLenient2 : public BMPSet {
-public:
-    BMPSetASCIIBytes2BVerticalLenient2(const UnicodeSet &parent);
-
-    virtual const uint8_t *spanUTF8(const uint8_t *s, int32_t length, const uint8_t *limit, UBool tf) const;
-};
 
 U_NAMESPACE_END
 

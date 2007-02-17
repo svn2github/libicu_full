@@ -1869,34 +1869,9 @@ void UnicodeSet::setPattern(const UnicodeString& newPat) {
     // We can regenerate an equivalent pattern later when requested.
 }
 
-void UnicodeSet::freeze(const char *type) {
-    // TODO: if(isFrozen()) { return; }
-    delete bmpSet;
-    if(0==uprv_strcmp(type, "Bh")) {
-        bmpSet=new BMPSetASCIIBytes2BHorizontal(*this);
-    } else if(0==uprv_strcmp(type, "bh")) {
-        bmpSet=new BMPSetASCIIBits2BHorizontal(*this);
-    } else if(0==uprv_strcmp(type, "Bv")) {
-        bmpSet=new BMPSetASCIIBytes2BVertical(*this);
-    } else if(0==uprv_strcmp(type, "BvF")) {
-        bmpSet=new BMPSetASCIIBytes2BVerticalFull(*this);
-    } else if(0==uprv_strcmp(type, "Bv0")) {
-        bmpSet=new BMPSetASCIIBytes2BVerticalOnly(*this);
-    } else if(0==uprv_strcmp(type, "B0")) {
-        bmpSet=new BMPSetASCIIBytesOnly(*this);
-    } else if(0==uprv_strcmp(type, "Bvp")) {
-        bmpSet=new BMPSetASCIIBytes2BVerticalPrecheck(*this);
-    } else if(0==uprv_strcmp(type, "BvpF")) {
-        bmpSet=new BMPSetASCIIBytes2BVerticalPrecheckFull(*this);
-    } else if(0==uprv_strcmp(type, "L")) {
-        bmpSet=new BMPSetLeadValues(*this);
-    } else if(0==uprv_strcmp(type, "Bvl")) {
-        bmpSet=new BMPSetASCIIBytes2BVerticalLenient(*this);
-    } else if(0==uprv_strcmp(type, "BvL")) {
-        bmpSet=new BMPSetASCIIBytes2BVerticalLenient2(*this);
-    } else {
-        // Slow, don't freeze.
-        bmpSet=NULL;
+void UnicodeSet::freeze() {
+    if(!isFrozen()) {
+        bmpSet=new BMPSet(*this);
     }
 }
 
@@ -1924,7 +1899,7 @@ int32_t UnicodeSet::spanUTF8(const char *s, int32_t length, UBool tf) const {
     tf=(UBool)(tf!=0);  // Pin tf to precisely 0 or 1.
     if(length>0 && bmpSet!=NULL) {
         const uint8_t *s0=(const uint8_t *)s;
-        return (int32_t)(bmpSet->spanUTF8(s0, length, s0+length, tf)-s0);
+        return (int32_t)(bmpSet->spanUTF8(s0, length, tf)-s0);
     }
     if(length<0) {
         length=uprv_strlen(s);
