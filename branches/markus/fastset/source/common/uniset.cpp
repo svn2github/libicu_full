@@ -322,6 +322,9 @@ UBool UnicodeSet::contains(UChar32 c) const {
     if (bmpSet != NULL) {
         return bmpSet->contains(c);
     }
+    if (c >= UNICODESET_HIGH) { // Don't need to check LOW bound
+        return FALSE;
+    }
     int32_t i = findCodePoint(c);
     return (UBool)(i & 1); // return true if odd
 }
@@ -1909,7 +1912,10 @@ int32_t UnicodeSet::spanUTF8(const char *s, int32_t length, UBool tf) const {
     int32_t start=0, prev;
     while((prev=start)<length) {
         U8_NEXT(s, start, length, c);
-        if(tf!=(c>=0 && contains(c))) {
+        if(c<0) {
+            c=0xfffd;
+        }
+        if(tf!=contains(c)) {
             break;
         }
     }

@@ -26,7 +26,11 @@ U_NAMESPACE_BEGIN
  * Helper class for frozen UnicodeSets, implements contains() and span()
  * optimized for BMP code points. Structured to be UTF-8-friendly.
  *
- * TODO: Briefly describe final data structures.
+ * ASCII: Look up bytes.
+ * 2-byte characters: Bits organized vertically.
+ * 3-byte characters: Use zero/one/mixed data per 64-block in U+0000..U+FFFF,
+ *                    with mixed for illegal ranges.
+ * Supplementary characters: Call contains() on the parent set.
  */
 class BMPSet : public UMemory {
 public:
@@ -38,20 +42,33 @@ public:
 
     /*
      * Span the substring for which each character c has tf==contains(c).
-     * It must be length>0, limit=s+length and tf==0 or 1.
+     * It must be s<limit and tf==0 or 1.
      * @return The string pointer which limits the span.
      */
     const UChar *span(const UChar *s, const UChar *limit, UBool tf) const;
+
+    /*
+     * Span the substring for which each character c has tf==contains(c).
+     * It must be length>0 and tf==0 or 1.
+     * @return The string pointer which limits the span.
+     */
     const uint8_t *spanUTF8(const uint8_t *s, int32_t length, UBool tf) const;
 
 private:
     void initBits();
     void setBits(int32_t blockIndex, uint32_t bits);
     void setOnes(int32_t startIndex, int32_t limitIndex);
+    void overrideIllegal();
 
     inline UBool containsSlow(UChar32 c, int32_t lo, int32_t hi) const;
     inline UBool containsSlow(UChar32 c) const;
 
+    /*
+     * One byte per ASCII character, or trail byte in lead position.
+     * 0 or 1 for ASCII characters.
+     * The value for trail bytes is the result of contains(FFFD)
+     * for faster validity checking at runtime.
+     */
     UBool asciiBytes[0xc0];
 
     /*
@@ -62,6 +79,9 @@ private:
      *   lead=c{10..6}
      *   trail=c{5..0}
      * it is set.contains(c)==(table7FF[trail] bit lead)
+     *
+     * Bits for 0..7F (non-shortest forms) are set to the result of contains(FFFD)
+     * for faster validity checking at runtime.
      */
     uint32_t table7FF[64];
 
@@ -77,6 +97,9 @@ private:
      * for all code points in the 64-block.
      * If the upper bit is 1, then the block is mixed and set.contains(c)
      * must be called.
+     *
+     * Bits for 0..7FF (non-shortest forms) and D800..DFFF are set to
+     * the result of contains(FFFD) for faster validity checking at runtime.
      */
     uint32_t bmpBlockBits[64];
 
