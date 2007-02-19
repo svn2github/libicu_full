@@ -40,18 +40,18 @@ public:
     virtual UBool contains(UChar32 c) const;
 
     /*
-     * Span the substring for which each character c has tf==contains(c).
-     * It must be s<limit and tf==0 or 1.
+     * Span the substring for which each character c has spanCondition==contains(c).
+     * It must be s<limit and spanCondition==0 or 1.
      * @return The string pointer which limits the span.
      */
-    const UChar *span(const UChar *s, const UChar *limit, UBool tf) const;
+    const UChar *span(const UChar *s, const UChar *limit, USetSpanCondition spanCondition) const;
 
     /*
-     * Span the substring for which each character c has tf==contains(c).
-     * It must be length>0 and tf==0 or 1.
+     * Span the substring for which each character c has spanCondition==contains(c).
+     * It must be length>0 and spanCondition==0 or 1.
      * @return The string pointer which limits the span.
      */
-    const uint8_t *spanUTF8(const uint8_t *s, int32_t length, UBool tf) const;
+    const uint8_t *spanUTF8(const uint8_t *s, int32_t length, USetSpanCondition spanCondition) const;
 
 private:
     void initBits();

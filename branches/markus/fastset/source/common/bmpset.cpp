@@ -378,10 +378,10 @@ BMPSet::contains(UChar32 c) const {
  * Handle single surrogates as surrogate code points as usual in ICU.
  */
 const UChar *
-BMPSet::span(const UChar *s, const UChar *limit, UBool tf) const {
+BMPSet::span(const UChar *s, const UChar *limit, USetSpanCondition spanCondition) const {
     UChar c, c2;
 
-    if(tf) {
+    if(spanCondition) {
         // span
         do {
             c=*s;
@@ -470,12 +470,12 @@ BMPSet::span(const UChar *s, const UChar *limit, UBool tf) const {
  * Check validity.
  */
 const uint8_t *
-BMPSet::spanUTF8(const uint8_t *s, int32_t length, UBool tf) const {
+BMPSet::spanUTF8(const uint8_t *s, int32_t length, USetSpanCondition spanCondition) const {
     const uint8_t *limit=s+length;
     uint8_t b=*s;
     if((int8_t)b>=0) {
         // Initial all-ASCII span.
-        if(tf) {
+        if(spanCondition) {
             do {
                 if(!asciiBytes[b] || ++s==limit) {
                     return s;
@@ -512,20 +512,20 @@ BMPSet::spanUTF8(const uint8_t *s, int32_t length, UBool tf) const {
             // single trail byte, check for preceding 3- or 4-byte lead byte
             if(length>=2 && (b=*(limit-2))>=0xe0) {
                 limit-=2;
-                if(asciiBytes[0x80]!=tf) {
+                if(asciiBytes[0x80]!=spanCondition) {
                     limit0=limit;
                 }
             } else if(b<0xc0 && b>=0x80 && length>=3 && (b=*(limit-3))>=0xf0) {
                 // 4-byte lead byte with only two trail bytes
                 limit-=3;
-                if(asciiBytes[0x80]!=tf) {
+                if(asciiBytes[0x80]!=spanCondition) {
                     limit0=limit;
                 }
             }
         } else {
             // lead byte with no trail bytes
             --limit;
-            if(asciiBytes[0x80]!=tf) {
+            if(asciiBytes[0x80]!=spanCondition) {
                 limit0=limit;
             }
         }
@@ -537,7 +537,7 @@ BMPSet::spanUTF8(const uint8_t *s, int32_t length, UBool tf) const {
         b=*s;
         if(b<0xc0) {
             // ASCII; or trail bytes with the result of contains(FFFD).
-            if(tf) {
+            if(spanCondition) {
                 do {
                     if(!asciiBytes[b]) {
                         return s;
@@ -569,13 +569,13 @@ BMPSet::spanUTF8(const uint8_t *s, int32_t length, UBool tf) const {
                     if(twoBits<=1) {
                         // All 64 code points with this lead byte and middle trail byte
                         // are either in the set or not.
-                        if(twoBits!=tf) {
+                        if(twoBits!=spanCondition) {
                             return s-1;
                         }
                     } else {
                         // Look up the code point in its 4k block of code points.
                         UChar32 c=(b<<12)|(t1<<6)|t2;
-                        if(containsSlow(c, list4kStarts[b], list4kStarts[b+1]) != tf) {
+                        if(containsSlow(c, list4kStarts[b], list4kStarts[b+1]) != spanCondition) {
                             return s-1;
                         }
                     }
@@ -592,7 +592,7 @@ BMPSet::spanUTF8(const uint8_t *s, int32_t length, UBool tf) const {
                 if( (   (0x10000<=c && c<=0x10ffff) ?
                             containsSlow(c, list4kStarts[0x10], list4kStarts[0x11]) :
                             asciiBytes[0x80]
-                    ) != tf
+                    ) != spanCondition
                 ) {
                     return s-1;
                 }
@@ -603,7 +603,7 @@ BMPSet::spanUTF8(const uint8_t *s, int32_t length, UBool tf) const {
             if( /* handle U+0000..U+07FF inline */
                 (t1=(uint8_t)(*s-0x80)) <= 0x3f
             ) {
-                if(((table7FF[t1]&((uint32_t)1<<(b&0x1f)))!=0) != tf) {
+                if(((table7FF[t1]&((uint32_t)1<<(b&0x1f)))!=0) != spanCondition) {
                     return s-1;
                 }
                 ++s;
@@ -614,7 +614,7 @@ BMPSet::spanUTF8(const uint8_t *s, int32_t length, UBool tf) const {
         // Give an illegal sequence the same value as the result of contains(FFFD).
         // Handle each byte of an illegal sequence separately to simplify the code;
         // no need to optimize error handling.
-        if(asciiBytes[0x80]!=tf) {
+        if(asciiBytes[0x80]!=spanCondition) {
             return s-1;
         }
     }

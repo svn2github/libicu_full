@@ -283,8 +283,6 @@ class U_COMMON_API UnicodeSet : public UnicodeFilter {
     UVector* strings; // maintained in sorted order
 
 public:
-    int32_t span(const UChar *s, int32_t length, UBool tf) const;
-    int32_t spanUTF8(const char *s, int32_t length, UBool tf) const;
 
     enum {
         /**
@@ -444,6 +442,8 @@ public:
      * Once frozen, it cannot be unfrozen and is therefore thread-safe
      * until it is deleted.
      * See the ICU4J Freezable interface for details.
+     * Freezing the set may also make some operations faster, for example
+     * contains() and span().
      * @return this set.
      * @see isFrozen
      * @see cloneAsThawed
@@ -743,6 +743,32 @@ public:
      * @stable ICU 2.4
      */
     inline UBool containsSome(const UnicodeString& s) const;
+
+    /*
+     * Returns the length of the initial substring of the input string which
+     * consists only of characters that are contained in this set (USET_SPAN_WHILE_CONTAINED),
+     * or only of characters that are not contained in this set (USET_SPAN_WHILE_NOT_CONTAINED).
+     * Similar to the strspn() C library function.
+     * @param s start of the string
+     * @param length of the string; can be -1 for NUL-terminated
+     * @spanCondition specifies the containment condition for characters in the initial substring
+     * @return the length of the initial substring according to the spanCondition
+     * @draft ICU 3.8
+     */
+    int32_t span(const UChar *s, int32_t length, USetSpanCondition spanCondition) const;
+
+    /*
+     * Returns the length of the initial substring of the input string which
+     * consists only of characters that are contained in this set (USET_SPAN_WHILE_CONTAINED),
+     * or only of characters that are not contained in this set (USET_SPAN_WHILE_NOT_CONTAINED).
+     * Similar to the strspn() C library function.
+     * @param s start of the string (UTF-8)
+     * @param length of the string; can be -1 for NUL-terminated
+     * @spanCondition specifies the containment condition for characters in the initial substring
+     * @return the length of the initial substring according to the spanCondition
+     * @draft ICU 3.8
+     */
+    int32_t spanUTF8(const char *s, int32_t length, USetSpanCondition spanCondition) const;
 
     /**
      * Implement UnicodeMatcher::matches()

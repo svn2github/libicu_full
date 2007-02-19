@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 2002-2006, International Business Machines
+*   Copyright (C) 2002-2007, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
@@ -95,6 +95,32 @@ enum {
      * @internal
      */
     USET_SERIALIZED_STATIC_ARRAY_CAPACITY=8
+};
+
+/**
+ * The two values for whether span() and similar functions continue while
+ * the current character is contained vs. not contained in the set.
+ * More readable than using TRUE and FALSE, but the numeric values are the same
+ * as TRUE and FALSE which are returned from contains().
+ * @draft ICU 3.8
+ */
+enum USetSpanCondition {
+    /**
+     * Continue a span() while the current character is not contained in the set
+     * (while contains(current)==FALSE).
+     * When span() returns, the substring between where it started and the position
+     * it returned consists only of characters that are not in the set.
+     * @draft ICU 3.8
+     */
+    USET_SPAN_WHILE_NOT_CONTAINED = 0,
+    /**
+     * Continue a span() while the current character is contained in the set
+     * (while contains(current)==TRUE).
+     * When span() returns, the substring between where it started and the position
+     * it returned consists only of characters that are in the set.
+     * @draft ICU 3.8
+     */
+    USET_SPAN_WHILE_CONTAINED = 1
 };
 
 /**

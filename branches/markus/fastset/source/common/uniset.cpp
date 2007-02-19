@@ -1944,10 +1944,9 @@ UnicodeFunctor *UnicodeSet::freeze() {
     return this;
 }
 
-int32_t UnicodeSet::span(const UChar *s, int32_t length, UBool tf) const {
-    tf=(UBool)(tf!=0);  // Pin tf to precisely 0 or 1.
+int32_t UnicodeSet::span(const UChar *s, int32_t length, USetSpanCondition spanCondition) const {
     if(length>0 && bmpSet!=NULL) {
-        return (int32_t)(bmpSet->span(s, s+length, tf)-s);
+        return (int32_t)(bmpSet->span(s, s+length, spanCondition)-s);
     }
     if(length<0) {
         length=u_strlen(s);
@@ -1957,18 +1956,17 @@ int32_t UnicodeSet::span(const UChar *s, int32_t length, UBool tf) const {
     int32_t start=0, prev;
     while((prev=start)<length) {
         U16_NEXT(s, start, length, c);
-        if(tf!=contains(c)) {
+        if(spanCondition!=contains(c)) {
             break;
         }
     }
     return prev;
 }
 
-int32_t UnicodeSet::spanUTF8(const char *s, int32_t length, UBool tf) const {
-    tf=(UBool)(tf!=0);  // Pin tf to precisely 0 or 1.
+int32_t UnicodeSet::spanUTF8(const char *s, int32_t length, USetSpanCondition spanCondition) const {
     if(length>0 && bmpSet!=NULL) {
         const uint8_t *s0=(const uint8_t *)s;
-        return (int32_t)(bmpSet->spanUTF8(s0, length, tf)-s0);
+        return (int32_t)(bmpSet->spanUTF8(s0, length, spanCondition)-s0);
     }
     if(length<0) {
         length=uprv_strlen(s);
@@ -1981,7 +1979,7 @@ int32_t UnicodeSet::spanUTF8(const char *s, int32_t length, UBool tf) const {
         if(c<0) {
             c=0xfffd;
         }
-        if(tf!=contains(c)) {
+        if(spanCondition!=contains(c)) {
             break;
         }
     }
