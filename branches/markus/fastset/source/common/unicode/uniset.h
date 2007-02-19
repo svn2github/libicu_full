@@ -758,6 +758,18 @@ public:
     int32_t span(const UChar *s, int32_t length, USetSpanCondition spanCondition) const;
 
     /*
+     * Returns the start of the trailing substring of the input string which
+     * consists only of characters that are contained in this set (USET_SPAN_WHILE_CONTAINED),
+     * or only of characters that are not contained in this set (USET_SPAN_WHILE_NOT_CONTAINED).
+     * @param s start of the string
+     * @param length of the string; can be -1 for NUL-terminated
+     * @spanCondition specifies the containment condition for characters in the trailing substring
+     * @return the start of the trailing substring according to the spanCondition
+     * @draft ICU 3.8
+     */
+    int32_t spanBack(const UChar *s, int32_t length, USetSpanCondition spanCondition) const;
+
+    /*
      * Returns the length of the initial substring of the input string which
      * consists only of characters that are contained in this set (USET_SPAN_WHILE_CONTAINED),
      * or only of characters that are not contained in this set (USET_SPAN_WHILE_NOT_CONTAINED).
@@ -769,6 +781,18 @@ public:
      * @draft ICU 3.8
      */
     int32_t spanUTF8(const char *s, int32_t length, USetSpanCondition spanCondition) const;
+
+    /*
+     * Returns the start of the trailing substring of the input string which
+     * consists only of characters that are contained in this set (USET_SPAN_WHILE_CONTAINED),
+     * or only of characters that are not contained in this set (USET_SPAN_WHILE_NOT_CONTAINED).
+     * @param s start of the string (UTF-8)
+     * @param length of the string; can be -1 for NUL-terminated
+     * @spanCondition specifies the containment condition for characters in the trailing substring
+     * @return the start of the trailing substring according to the spanCondition
+     * @draft ICU 3.8
+     */
+    int32_t spanBackUTF8(const char *s, int32_t length, USetSpanCondition spanCondition) const;
 
     /**
      * Implement UnicodeMatcher::matches()

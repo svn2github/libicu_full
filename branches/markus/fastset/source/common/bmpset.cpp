@@ -465,6 +465,101 @@ BMPSet::span(const UChar *s, const UChar *limit, USetSpanCondition spanCondition
     return s;
 }
 
+/* Symmetrical with span(). */
+const UChar *
+BMPSet::spanBack(const UChar *s, const UChar *limit, USetSpanCondition spanCondition) const {
+    UChar c, c2;
+
+    if(spanCondition) {
+        // span
+        for(;;) {
+            c=*(--limit);
+            if(c<=0x7f) {
+                if(!asciiBytes[c]) {
+                    break;
+                }
+            } else if(c<=0x7ff) {
+                if((table7FF[c&0x3f]&((uint32_t)1<<(c>>6)))==0) {
+                    break;
+                }
+            } else if(c<0xd800 || c>=0xe000) {
+                int lead=c>>12;
+                uint32_t twoBits=(bmpBlockBits[(c>>6)&0x3f]>>lead)&0x10001;
+                if(twoBits<=1) {
+                    // All 64 code points with the same bits 15..6
+                    // are either in the set or not.
+                    if(twoBits==0) {
+                        break;
+                    }
+                } else {
+                    // Look up the code point in its 4k block of code points.
+                    if(!containsSlow(c, list4kStarts[lead], list4kStarts[lead+1])) {
+                        break;
+                    }
+                }
+            } else if(c<0xdc00 || s==limit || (c2=*(limit-1))<0xd800 || c2>=0xdc00) {
+                // surrogate code point
+                if(!containsSlow(c, list4kStarts[0xd], list4kStarts[0xe])) {
+                    break;
+                }
+            } else {
+                // surrogate pair
+                if(!containsSlow(U16_GET_SUPPLEMENTARY(c2, c), list4kStarts[0x10], list4kStarts[0x11])) {
+                    break;
+                }
+                --limit;
+            }
+            if(s==limit) {
+                return s;
+            }
+        }
+    } else {
+        // span not
+        for(;;) {
+            c=*(--limit);
+            if(c<=0x7f) {
+                if(asciiBytes[c]) {
+                    break;
+                }
+            } else if(c<=0x7ff) {
+                if((table7FF[c&0x3f]&((uint32_t)1<<(c>>6)))!=0) {
+                    break;
+                }
+            } else if(c<0xd800 || c>=0xe000) {
+                int lead=c>>12;
+                uint32_t twoBits=(bmpBlockBits[(c>>6)&0x3f]>>lead)&0x10001;
+                if(twoBits<=1) {
+                    // All 64 code points with the same bits 15..6
+                    // are either in the set or not.
+                    if(twoBits!=0) {
+                        break;
+                    }
+                } else {
+                    // Look up the code point in its 4k block of code points.
+                    if(containsSlow(c, list4kStarts[lead], list4kStarts[lead+1])) {
+                        break;
+                    }
+                }
+            } else if(c<0xdc00 || s==limit || (c2=*(limit-1))<0xd800 || c2>=0xdc00) {
+                // surrogate code point
+                if(containsSlow(c, list4kStarts[0xd], list4kStarts[0xe])) {
+                    break;
+                }
+            } else {
+                // surrogate pair
+                if(containsSlow(U16_GET_SUPPLEMENTARY(c2, c), list4kStarts[0x10], list4kStarts[0x11])) {
+                    break;
+                }
+                --limit;
+            }
+            if(s==limit) {
+                return s;
+            }
+        }
+    }
+    return limit+1;
+}
+
 /*
  * Precheck for sufficient trail bytes at end of string only once per span.
  * Check validity.
@@ -620,6 +715,83 @@ BMPSet::spanUTF8(const uint8_t *s, int32_t length, USetSpanCondition spanConditi
     }
 
     return limit0;
+}
+
+/*
+ * While going backwards through UTF-8 optimize only for ASCII.
+ * Unlike UTF-16, UTF-8 is not forward-backward symmetrical, that is, it is not
+ * possible to tell from the last byte in a multi-byte sequence how many
+ * preceding bytes there should be. Therefore, going backwards through UTF-8
+ * is much harder than going forward.
+ */
+int32_t
+BMPSet::spanBackUTF8(const uint8_t *s, int32_t length, USetSpanCondition spanCondition) const {
+    uint8_t b;
+
+    do {
+        b=s[--length];
+        if((int8_t)b>=0) {
+            // ASCII sub-span
+            if(spanCondition) {
+                do {
+                    if(!asciiBytes[b]) {
+                        return length+1;
+                    } else if(length==0) {
+                        return 0;
+                    }
+                    b=s[--length];
+                } while((int8_t)b>=0);
+            } else {
+                do {
+                    if(asciiBytes[b]) {
+                        return length+1;
+                    } else if(length==0) {
+                        return 0;
+                    }
+                    b=s[--length];
+                } while((int8_t)b>=0);
+            }
+        }
+
+        int32_t prev=length;
+        UChar32 c;
+        if(b<0xc0) {
+            // trail byte: collect a multi-byte character
+            c=utf8_prevCharSafeBody(s, 0, &length, b, -1);
+            if(c<0) {
+                c=0xfffd;
+            }
+        } else {
+            // lead byte in last-trail position
+            c=0xfffd;
+        }
+        // c is a valid code point, not ASCII, not a surrogate
+        if(c<=0x7ff) {
+            if(((table7FF[c&0x3f]&((uint32_t)1<<(c>>6)))!=0) != spanCondition) {
+                return prev+1;
+            }
+        } else if(c<=0xffff) {
+            int lead=c>>12;
+            uint32_t twoBits=(bmpBlockBits[(c>>6)&0x3f]>>lead)&0x10001;
+            if(twoBits<=1) {
+                // All 64 code points with the same bits 15..6
+                // are either in the set or not.
+                if(twoBits!=spanCondition) {
+                    return prev+1;
+                }
+            } else {
+                // Look up the code point in its 4k block of code points.
+                if(containsSlow(c, list4kStarts[lead], list4kStarts[lead+1]) != spanCondition) {
+                    return prev+1;
+                }
+            }
+        } else {
+            if(containsSlow(c, list4kStarts[0x10], list4kStarts[0x11]) != spanCondition) {
+                return prev+1;
+            }
+        }
+    } while(length>0);
+    return 0;
 }
 
 U_NAMESPACE_END

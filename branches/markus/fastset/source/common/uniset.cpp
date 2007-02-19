@@ -1963,6 +1963,25 @@ int32_t UnicodeSet::span(const UChar *s, int32_t length, USetSpanCondition spanC
     return prev;
 }
 
+int32_t UnicodeSet::spanBack(const UChar *s, int32_t length, USetSpanCondition spanCondition) const {
+    if(length>0 && bmpSet!=NULL) {
+        return (int32_t)(bmpSet->spanBack(s, s+length, spanCondition)-s);
+    }
+    if(length<0) {
+        length=u_strlen(s);
+    }
+
+    UChar32 c;
+    int32_t prev;
+    while((prev=length)>0) {
+        U16_PREV(s, 0, length, c);
+        if(spanCondition!=contains(c)) {
+            break;
+        }
+    }
+    return prev;
+}
+
 int32_t UnicodeSet::spanUTF8(const char *s, int32_t length, USetSpanCondition spanCondition) const {
     if(length>0 && bmpSet!=NULL) {
         const uint8_t *s0=(const uint8_t *)s;
@@ -1976,6 +1995,29 @@ int32_t UnicodeSet::spanUTF8(const char *s, int32_t length, USetSpanCondition sp
     int32_t start=0, prev;
     while((prev=start)<length) {
         U8_NEXT(s, start, length, c);
+        if(c<0) {
+            c=0xfffd;
+        }
+        if(spanCondition!=contains(c)) {
+            break;
+        }
+    }
+    return prev;
+}
+
+int32_t UnicodeSet::spanBackUTF8(const char *s, int32_t length, USetSpanCondition spanCondition) const {
+    if(length>0 && bmpSet!=NULL) {
+        const uint8_t *s0=(const uint8_t *)s;
+        return bmpSet->spanBackUTF8(s0, length, spanCondition);
+    }
+    if(length<0) {
+        length=uprv_strlen(s);
+    }
+
+    UChar32 c;
+    int32_t prev;
+    while((prev=length)>0) {
+        U8_PREV(s, 0, length, c);
         if(c<0) {
             c=0xfffd;
         }

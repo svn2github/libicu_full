@@ -253,6 +253,61 @@ public:
     }
 };
 
+class SpanBackUTF16 : public Command {
+protected:
+    SpanBackUTF16(const UnicodeSetPerformanceTest &testcase) : Command(testcase) {
+        // Verify that the frozen set is equal to the unfrozen one.
+        UnicodeSet set;
+        UChar utf16[2];
+        UChar32 c, c2;
+
+        for(c=0; c<=0xffff; ++c) {
+            utf16[0]=(UChar)c;
+            if(testcase.set.spanBack(utf16, 1, USET_SPAN_WHILE_CONTAINED)==0) {
+                set.add(c);
+            }
+        }
+        for(c=0xd800; c<=0xdbff; ++c) {
+            utf16[0]=(UChar)c;
+            for(c2=0xdc00; c2<=0xdfff; ++c2) {
+                utf16[1]=(UChar)c2;
+                if(testcase.set.spanBack(utf16, 2, USET_SPAN_WHILE_CONTAINED)==0) {
+                    set.add(U16_GET_SUPPLEMENTARY(c, c2));
+                }
+            }
+        }
+
+        if(set!=testcase.set) {
+            fprintf(stderr, "error: frozen set != original!\n");
+        }
+    }
+public:
+    static UPerfFunction* get(const UnicodeSetPerformanceTest &testcase) {
+        return new SpanBackUTF16(testcase);
+    }
+    virtual void call(UErrorCode* pErrorCode) {
+        const UnicodeSet &set=testcase.set;
+        const UChar *s=testcase.getBuffer();
+        int32_t length=testcase.getBufferLen();
+        int32_t count=0;
+        /*
+         * Get the same spans as with span() where we always start with a not-contained span.
+         * If testcase.spanCount is an odd number, then the last span() was not-contained.
+         * The last spanBack() must be not-contained to match the first span().
+         */
+        UBool tf=(UBool)((testcase.spanCount&1)==0);
+        while(length>0 || !tf) {
+            length=set.spanBack(s, length, (USetSpanCondition)tf);
+            tf=(UBool)(!tf);
+            ++count;
+        }
+        if(count!=testcase.spanCount) {
+            fprintf(stderr, "error: SpanBackUTF16() count=%ld != %ld=UnicodeSetPerformanceTest.spanCount\n",
+                    (long)count, (long)testcase.spanCount);
+        }
+    }
+};
+
 class SpanUTF8 : public Command {
 protected:
     SpanUTF8(const UnicodeSetPerformanceTest &testcase) : Command(testcase) {
@@ -299,11 +354,63 @@ public:
     }
 };
 
+class SpanBackUTF8 : public Command {
+protected:
+    SpanBackUTF8(const UnicodeSetPerformanceTest &testcase) : Command(testcase) {
+        // Verify that the frozen set is equal to the unfrozen one.
+        UnicodeSet set;
+        char utf8[4];
+        UChar32 c;
+        int32_t length;
+
+        for(c=0; c<=0x10ffff; ++c) {
+            if(c==0xd800) {
+                c=0xe000;
+            }
+            length=0;
+            U8_APPEND_UNSAFE(utf8, length, c);
+            if(testcase.set.spanBackUTF8(utf8, length, USET_SPAN_WHILE_CONTAINED)==0) {
+                set.add(c);
+            }
+        }
+        if(set!=testcase.set) {
+            fprintf(stderr, "error: frozen set != original!\n");
+        }
+    }
+public:
+    static UPerfFunction* get(const UnicodeSetPerformanceTest &testcase) {
+        return new SpanBackUTF8(testcase);
+    }
+    virtual void call(UErrorCode* pErrorCode) {
+        const UnicodeSet &set=testcase.set;
+        const char *s=testcase.utf8;
+        int32_t length=testcase.utf8Length;
+        int32_t count=0;
+        /*
+         * Get the same spans as with span() where we always start with a not-contained span.
+         * If testcase.spanCount is an odd number, then the last span() was not-contained.
+         * The last spanBack() must be not-contained to match the first span().
+         */
+        UBool tf=(UBool)((testcase.spanCount&1)==0);
+        while(length>0 || !tf) {
+            length=set.spanBackUTF8(s, length, (USetSpanCondition)tf);
+            tf=(UBool)(!tf);
+            ++count;
+        }
+        if(count!=testcase.spanCount) {
+            fprintf(stderr, "error: SpanBackUTF8() count=%ld != %ld=UnicodeSetPerformanceTest.spanCount\n",
+                    (long)count, (long)testcase.spanCount);
+        }
+    }
+};
+
 UPerfFunction* UnicodeSetPerformanceTest::runIndexedTest(int32_t index, UBool exec, const char* &name, char* par) {
     switch (index) {
         case 0: name = "Contains";     if (exec) return Contains::get(*this); break;
         case 1: name = "SpanUTF16";    if (exec) return SpanUTF16::get(*this); break;
-        case 2: name = "SpanUTF8";     if (exec) return SpanUTF8::get(*this); break;
+        case 2: name = "SpanBackUTF16";if (exec) return SpanBackUTF16::get(*this); break;
+        case 3: name = "SpanUTF8";     if (exec) return SpanUTF8::get(*this); break;
+        case 4: name = "SpanBackUTF8"; if (exec) return SpanBackUTF8::get(*this); break;
         default: name = ""; break;
     }
     return NULL;
