@@ -44,6 +44,13 @@ BMPSet::BMPSet(const UnicodeSet &parent) : set(parent) {
     overrideIllegal();
 }
 
+BMPSet::BMPSet(const BMPSet &otherBMPSet, const UnicodeSet &newParent) : set(newParent) {
+    uprv_memcpy(asciiBytes, otherBMPSet.asciiBytes, sizeof(asciiBytes));
+    uprv_memcpy(table7FF, otherBMPSet.table7FF, sizeof(table7FF));
+    uprv_memcpy(bmpBlockBits, otherBMPSet.bmpBlockBits, sizeof(bmpBlockBits));
+    uprv_memcpy(list4kStarts, otherBMPSet.list4kStarts, sizeof(list4kStarts));
+}
+
 void BMPSet::initBits() {
     const UChar32 *list=set.list;
     int32_t listLength=set.len;

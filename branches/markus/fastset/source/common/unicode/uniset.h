@@ -283,12 +283,6 @@ class U_COMMON_API UnicodeSet : public UnicodeFilter {
     UVector* strings; // maintained in sorted order
 
 public:
-    // TODO: clone() vs. cloneAsThawed() construct, copy, etc.
-    // TODO: prevent modification if(isFrozen())
-    void freeze();
-    inline UBool isFrozen() const {
-        return (UBool)(bmpSet!=NULL);
-    }
     int32_t span(const UChar *s, int32_t length, UBool tf) const;
     int32_t spanUTF8(const char *s, int32_t length, UBool tf) const;
 
@@ -416,6 +410,9 @@ public:
      * Returns a copy of this object.  All UnicodeFunctor objects have
      * to support cloning in order to allow classes using
      * UnicodeFunctors, such as Transliterator, to implement cloning.
+     * If this set is frozen, then the clone will be frozen as well.
+     * Use cloneAsThawed() for a mutable clone of a frozen set.
+     * @see cloneAsThawed
      * @stable ICU 2.0
      */
     virtual UnicodeFunctor* clone() const;
@@ -428,6 +425,40 @@ public:
      * @stable ICU 2.0
      */
     virtual int32_t hashCode(void) const;
+
+    //----------------------------------------------------------------
+    // Freezable API
+    //----------------------------------------------------------------
+
+    /**
+     * Determines whether the set has been frozen (made immutable) or not.
+     * See the ICU4J Freezable interface for details.
+     * @see freeze
+     * @see cloneAsThawed
+     * @draft ICU 3.8
+     */
+    inline UBool isFrozen() const;
+
+    /**
+     * Freeze the set (make it immutable).
+     * Once frozen, it cannot be unfrozen and is therefore thread-safe
+     * until it is deleted.
+     * See the ICU4J Freezable interface for details.
+     * @return this set.
+     * @see isFrozen
+     * @see cloneAsThawed
+     * @draft ICU 3.8
+     */
+    UnicodeFunctor *freeze();
+
+    /**
+     * Clone the set and make the clone mutable.
+     * See the ICU4J Freezable interface for details.
+     * @see freeze
+     * @see isFrozen
+     * @draft ICU 3.8
+     */
+    UnicodeFunctor *cloneAsThawed() const;
 
     //----------------------------------------------------------------
     // Public API
@@ -1220,6 +1251,12 @@ private:
 private:
 
     //----------------------------------------------------------------
+    // Implementation: Clone as thawed (see ICU4J Freezable)
+    //----------------------------------------------------------------
+
+    UnicodeSet::UnicodeSet(const UnicodeSet& o, UBool /* asThawed */);
+
+    //----------------------------------------------------------------
     // Implementation: Pattern parsing
     //----------------------------------------------------------------
 
@@ -1352,6 +1389,10 @@ private:
 
 inline UBool UnicodeSet::operator!=(const UnicodeSet& o) const {
     return !operator==(o);
+}
+
+inline UBool UnicodeSet::isFrozen() const {
+    return (UBool)(bmpSet!=NULL);
 }
 
 inline UBool UnicodeSet::containsSome(UChar32 start, UChar32 end) const {

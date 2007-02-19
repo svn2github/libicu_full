@@ -35,8 +35,7 @@ U_NAMESPACE_BEGIN
 class BMPSet : public UMemory {
 public:
     BMPSet(const UnicodeSet &parent);
-
-    // TODO: clone()
+    BMPSet(const BMPSet &otherBMPSet, const UnicodeSet &newParent);
 
     virtual UBool contains(UChar32 c) const;
 
