@@ -1342,9 +1342,11 @@ const UnicodeString* UnicodeSet::getString(int32_t index) const {
  */
 UnicodeSet& UnicodeSet::compact() {
     // Delete buffer first to defragment memory less.
-    uprv_free(buffer);
-    buffer = NULL;
-    if (len < capacity) {
+    if (buffer != NULL) {
+        uprv_free(buffer);
+        buffer = NULL;
+    }
+    if (capacity > (len + GROW_EXTRA)) {  // Don't shrink if the savings would be tiny.
         // Make the capacity equal to len or 1.
         // We don't want to realloc of 0 size.
         capacity = len + (len == 0);

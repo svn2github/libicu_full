@@ -1,6 +1,6 @@
 /*
 ********************************************************************************
-*   Copyright (C) 1999-2006 International Business Machines Corporation and
+*   Copyright (C) 1999-2007 International Business Machines Corporation and
 *   others. All Rights Reserved.
 ********************************************************************************
 *   Date        Name        Description
@@ -9,6 +9,7 @@
 ********************************************************************************
 */
 
+#include <string.h>
 #include "unicode/utypes.h"
 #include "usettest.h"
 #include "unicode/uniset.h"
@@ -20,6 +21,7 @@
 #include "unicode/uversion.h"
 #include "hash.h"
 
+#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 
 #define TEST_ASSERT_SUCCESS(status) {if (U_FAILURE(status)) { \
     errln("fail in file \"%s\", line %d: \"%s\"", __FILE__, __LINE__, \
@@ -38,7 +40,7 @@ UnicodeString operator+(const UnicodeString& left, const UnicodeSet& set) {
                           name = #test;                 \
                           if (exec) {                   \
                               logln(#test "---");       \
-                              logln((UnicodeString)""); \
+                              logln();                  \
                               test();                   \
                           }                             \
                           break
@@ -69,6 +71,8 @@ UnicodeSetTest::runIndexedTest(int32_t index, UBool exec,
         CASE(18,TestSurrogate);
         CASE(19,TestPosixClasses);
         CASE(20,TestIteration);
+        CASE(21,TestFreezable);
+        CASE(22,TestSpan);
         default: name = ""; break;
     }
 }
@@ -2061,4 +2065,429 @@ UnicodeSetTest::escape(const UnicodeString& s) {
         i += U16_LENGTH(c);
     }
     return buf;
+}
+
+void UnicodeSetTest::TestFreezable() {
+    // TODO
+}
+
+// Test span() etc. -------------------------------------------------------- ***
+
+/*
+ * Verify that we get the same results whether we look at text with contains(),
+ * span() or spanBack(), using unfrozen or frozen versions of the set,
+ * and using the set or its complement (switching the spanConditions accordingly).
+ * The latter verifies that set.span(spanCondition) == set.complement().span(!spanCondition).
+ */
+
+// Implement span() with contains() for comparison.
+static int32_t containsSpanUTF16(const UnicodeSet &set, const UChar *s, int32_t length, USetSpanCondition spanCondition) {
+    UChar32 c;
+    int32_t start=0, prev;
+    while((prev=start)<length) {
+        U16_NEXT(s, start, length, c);
+        if(set.contains(c)!=spanCondition) {
+            break;
+        }
+    }
+    return prev;
+}
+
+static int32_t containsSpanUTF8(const UnicodeSet &set, const char *s, int32_t length, USetSpanCondition spanCondition) {
+    UChar32 c;
+    int32_t start=0, prev;
+    while((prev=start)<length) {
+        U8_NEXT(s, start, length, c);
+        if(c<0) {
+            c=0xfffd;
+        }
+        if(set.contains(c)!=spanCondition) {
+            break;
+        }
+    }
+    return prev;
+}
+
+static inline USetSpanCondition invertSpanCondition(USetSpanCondition spanCondition) {
+    return spanCondition == USET_SPAN_WHILE_NOT_CONTAINED ? USET_SPAN_WHILE_CONTAINED : USET_SPAN_WHILE_NOT_CONTAINED;
+}
+
+/*
+ * Count spans on a string with the method according to type and set the span limits.
+ * The set may be the complement of the original.
+ * When using spanBack(), use lastSpanCondition for the first spanBack().
+ * Type==0 and !isComplement sets the lastSpanCondition.
+ * Returns -1 if there is no such type.
+ */
+static int32_t getSpans(const UnicodeSet &set, UBool isComplement,
+                        const void *s, int32_t length, UBool isUTF16,
+                        int type, const char *&typeName,
+                        USetSpanCondition &lastSpanCondition,
+                        int32_t limits[], int32_t limitsCapacity) {
+    int32_t start, count;
+    USetSpanCondition spanCondition;
+
+    count=0;
+    switch(type) {
+    case 0:
+        typeName= isUTF16 ? "contains" : "containsUTF8";
+        start=0;
+        if(length<0) {
+            length= isUTF16 ? u_strlen((const UChar *)s) : strlen((const char *)s);
+        }
+        spanCondition= isComplement ? USET_SPAN_WHILE_CONTAINED : USET_SPAN_WHILE_NOT_CONTAINED;
+        for(;;) {
+            start+= isUTF16 ? containsSpanUTF16(set, (const UChar *)s+start, length-start, spanCondition) :
+                              containsSpanUTF8(set, (const char *)s+start, length-start, spanCondition);
+            if(count<limitsCapacity) {
+                limits[count]=start;
+            }
+            ++count;
+            if(start>=length) {
+                if(!isComplement) {
+                    lastSpanCondition=spanCondition;
+                }
+                break;
+            }
+            spanCondition=invertSpanCondition(spanCondition);
+        }
+        break;
+    case 1:
+        typeName= isUTF16 ? "span" : "spanUTF8";
+        start=0;
+        spanCondition= isComplement ? USET_SPAN_WHILE_CONTAINED : USET_SPAN_WHILE_NOT_CONTAINED;
+        for(;;) {
+            start+= isUTF16 ? set.span((const UChar *)s+start, length>=0 ? length-start : length, spanCondition) :
+                              set.spanUTF8((const char *)s+start, length>=0 ? length-start : length, spanCondition);
+            if(count<limitsCapacity) {
+                limits[count]=start;
+            }
+            ++count;
+            if(length>=0 ? start>=length :
+                           isUTF16 ? ((const UChar *)s)[start]==0 :
+                                     ((const char *)s)[start]==0
+            ) {
+                break;
+            }
+            spanCondition=invertSpanCondition(spanCondition);
+        }
+        break;
+    case 2:
+        typeName= isUTF16 ? "spanBack" : "spanBackUTF8";
+        spanCondition= isComplement ? invertSpanCondition(lastSpanCondition) : lastSpanCondition;
+        for(;;) {
+            ++count;
+            if(count<=limitsCapacity) {
+                limits[limitsCapacity-count]= length >=0 ? length :
+                                                           isUTF16 ? u_strlen((const UChar *)s) : strlen((const char *)s);
+            }
+            length= isUTF16 ? set.spanBack((const UChar *)s, length, spanCondition) :
+                              set.spanBackUTF8((const char *)s, length, spanCondition);
+            if( length==0 &&
+                spanCondition == (isComplement ? USET_SPAN_WHILE_CONTAINED : USET_SPAN_WHILE_NOT_CONTAINED)
+            ) {
+                break;
+            }
+            spanCondition=invertSpanCondition(spanCondition);
+        }
+        if(count<limitsCapacity) {
+            memmove(limits, limits+(limitsCapacity-count), count*4);
+        }
+        break;
+    default:
+        typeName="";
+        return -1;
+    }
+
+    return count;
+}
+
+// sets to be tested; odd index=isComplement
+enum {
+    SLOW,
+    SLOW_NOT,
+    FAST,
+    FAST_NOT,
+    SET_COUNT
+};
+
+static const char *const setNames[SET_COUNT]={
+    "slow",
+    "slow.not",
+    "fast",
+    "fast.not"
+};
+
+void UnicodeSetTest::testSpan(const UnicodeSet *sets[4],
+                              const void *s, int32_t length, UBool isUTF16,
+                              const char *testName, int32_t index) {
+    int32_t limits[500], expectLimits[500];
+    int32_t limitsCount, expectCount;
+    int i;
+
+    const char *typeName;
+    int type;
+
+    // Initialize to an arbitrary value for happy compilers.
+    USetSpanCondition lastSpanCondition=USET_SPAN_WHILE_NOT_CONTAINED;
+
+    for(i=0; i<SET_COUNT; ++i) {
+        for(type=0;; ++type) {
+            limitsCount=getSpans(*sets[i], (UBool)(i&1),
+                                 s, length, isUTF16,
+                                 type, typeName,
+                                 lastSpanCondition,
+                                 limits, LENGTHOF(limits));
+            if(limitsCount<0) {
+                break;
+            }
+            if(i==0 && type==0) {
+                expectCount=limitsCount;
+                if(limitsCount>LENGTHOF(limits)) {
+                    errln("FAIL: %s[0x%lx].%s.%s span count=%ld > %ld capacity - too many spans",
+                          testName, (long)index, setNames[i], typeName, (long)limitsCount, (long)LENGTHOF(limits));
+                    return;
+                }
+                memcpy(expectLimits, limits, limitsCount*4);
+            } else if(limitsCount!=expectCount) {
+                errln("FAIL: %s[%lx].%s.%s span count=%ld != %ld",
+                      testName, (long)index, setNames[i], typeName, (long)limitsCount, (long)expectCount);
+            } else {
+                int j;
+                for(j=0; j<limitsCount; ++j) {
+                    if(limits[j]!=expectLimits[j]) {
+                        errln("FAIL: %s[%lx].%s.%s span count=%ld limits[%d]=%ld != %ld",
+                              testName, (long)index, setNames[i], typeName, (long)limitsCount,
+                              j, (long)limits[j], (long)expectLimits[j]);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+}
+
+static UChar32 nextCodePoint(UChar32 c) {
+    // Skip some large and boring ranges.
+    switch(c) {
+    case 0x3441:
+        return 0x4d7f;
+    case 0x5100:
+        return 0x9f00;
+    case 0xb040:
+        return 0xd780;
+    case 0xe041:
+        return 0xf8fe;
+    case 0x10100:
+        return 0x20000;
+    case 0x20041:
+        return 0xe0000;
+    case 0xe0101:
+        return 0x10fffd;
+    default:
+        return c+1;
+    }
+}
+
+// Verify that all implementations represent the same set.
+void UnicodeSetTest::testSpanUTF16Contents(const UnicodeSet *sets[4], const char *pattern) {
+    char testName[64];
+
+    strcpy(testName, pattern);
+    strcat(testName, ".contents");
+
+    UChar s[1000];
+    int32_t length=0;
+
+    UChar32 c, first;
+    for(first=c=0;; c=nextCodePoint(c)) {
+        if(c>0x10ffff || length>(LENGTHOF(s)-U16_MAX_LENGTH)) {
+            testSpan(sets, s, length, TRUE, testName, first);
+            if(c>0x10ffff) {
+                break;
+            }
+            length=0;
+            first=c;
+        }
+        U16_APPEND_UNSAFE(s, length, c);
+    }
+}
+
+void UnicodeSetTest::testSpanUTF8Contents(const UnicodeSet *sets[4], const char *pattern) {
+    char testName[64];
+
+    strcpy(testName, pattern);
+    strcat(testName, ".contents");
+
+    uint8_t s[3000];
+    int32_t length=0;
+
+    UChar32 c, first;
+    for(first=c=0;; c=nextCodePoint(c)) {
+        if(c>0x10ffff || length>(LENGTHOF(s)-U8_MAX_LENGTH)) {
+            testSpan(sets, s, length, FALSE, testName, first);
+            if(c>0x10ffff) {
+                break;
+            }
+            length=0;
+            first=c;
+        }
+        U8_APPEND_UNSAFE(s, length, c);
+    }
+}
+
+// Test with a particular, interesting string.
+// Specify length and try NUL-termination.
+void UnicodeSetTest::testSpanUTF16String(const UnicodeSet *sets[4], const char *pattern) {
+    char testName[64];
+
+    strcpy(testName, pattern);
+    strcat(testName, ".string");
+
+    static const UChar s[]={
+        0x61, 0x62, 0x20,                       // Latin, space
+        0x3b1, 0x3b2, 0x3b3,                    // Greek
+        0xd900,                                 // lead surrogate
+        0x3000, 0x30ab, 0x30ad,                 // wide space, Katakana
+        0xdc05,                                 // trail surrogate
+        0xa0, 0xac00, 0xd7a3,                   // nbsp, Hangul
+        0xd900, 0xdc05,                         // unassigned supplementary
+        0xd840, 0xdfff, 0xd860, 0xdffe,         // Han supplementary
+        0xd7a4, 0xdc05, 0xd900, 0x2028,         // unassigned, surrogates in wrong order, LS
+        0                                       // NUL
+    };
+
+    testSpan(sets, s, -1, TRUE, testName, 0);
+    testSpan(sets, s, LENGTHOF(s)-1, TRUE, testName, 1);
+}
+
+void UnicodeSetTest::testSpanUTF8String(const UnicodeSet *sets[4], const char *pattern) {
+    char testName[64];
+
+    strcpy(testName, pattern);
+    strcat(testName, ".string");
+
+    static const char s[]={
+        "abc"                                   // Latin
+
+        /* trail byte in lead position */
+        "\x80"
+
+        " "                                     // space
+
+        /* truncated multi-byte sequences */
+        "\xd0"
+        "\xe0"
+        "\xe1"
+        "\xed"
+        "\xee"
+        "\xf0"
+        "\xf1"
+        "\xf4"
+        "\xf8"
+        "\xfc"
+
+        "\xCE\xB1\xCE\xB2\xCE\xB3"              // Greek
+
+        /* trail byte in lead position */
+        "\x80"
+
+        "\xe0\x80"
+        "\xe0\xa0"
+        "\xe1\x80"
+        "\xed\x80"
+        "\xed\xa0"
+        "\xee\x80"
+        "\xf0\x80"
+        "\xf0\x90"
+        "\xf1\x80"
+        "\xf4\x80"
+        "\xf4\x90"
+        "\xf8\x80"
+        "\xfc\x80"
+
+        "\xE3\x80\x80\xE3\x82\xAB\xE3\x82\xAD"  // wide space, Katakana
+
+        /* trail byte in lead position */
+        "\x80"
+
+        "\xf0\x80\x80"
+        "\xf0\x90\x80"
+        "\xf1\x80\x80"
+        "\xf4\x80\x80"
+        "\xf4\x90\x80"
+        "\xf8\x80\x80"
+        "\xfc\x80\x80"
+
+        "\xC2\xA0\xEA\xB0\x80\xED\x9E\xA3"      // nbsp, Hangul
+
+        /* trail byte in lead position */
+        "\x80"
+
+        "\xf8\x80\x80\x80"
+        "\xfc\x80\x80\x80"
+
+        "\xF1\x90\x80\x85"                      // unassigned supplementary
+
+        /* trail byte in lead position */
+        "\x80"
+
+        "\xfc\x80\x80\x80\x80"
+
+        "\xF0\xA0\x8F\xBF\xF0\xA8\x8F\xBE"      // Han supplementary
+
+        /* trail byte in lead position */
+        "\x80"
+
+        /* complete sequences but non-shortest forms or out of range etc. */
+        "\xc0\x80"
+        "\xe0\x80\x80"
+        "\xed\xa0\x80"
+        "\xf0\x80\x80\x80"
+        "\xf4\x90\x80\x80"
+        "\xf8\x80\x80\x80\x80"
+        "\xfc\x80\x80\x80\x80\x80"
+        "\xfe"
+        "\xff"
+
+        /* trail byte in lead position */
+        "\x80"
+
+        "\xED\x9E\xA4\xE2\x80\xA8"              // unassigned, LS, NUL-terminated
+    };
+
+    testSpan(sets, s, -1, FALSE, testName, 0);
+    testSpan(sets, s, LENGTHOF(s)-1, FALSE, testName, 1);
+}
+
+void UnicodeSetTest::TestSpan() {
+    static const char *const patterns[]={
+        "[:ID_Continue:]",
+        "[:White_Space:]"
+    };
+    int32_t i;
+    for(i=0; i<LENGTHOF(patterns); ++i) {
+        UErrorCode errorCode=U_ZERO_ERROR;
+        UnicodeString pattern16=UnicodeString(patterns[i], -1, US_INV).unescape();
+        UnicodeSet set(pattern16, errorCode);
+        if(U_FAILURE(errorCode)) {
+            errln("FAIL: Unable to create UnicodeSet(%s) - %s", patterns[i], u_errorName(errorCode));
+            return;
+        }
+        UnicodeSet set_not(set);
+        set_not.complement();
+        UnicodeSet set_fast(set);
+        set_fast.freeze();
+        UnicodeSet set_fast_not(set_not);
+        set_fast_not.freeze();
+
+        const UnicodeSet *sets[4]={
+            &set, &set_not, &set_fast, &set_fast_not
+        };
+        testSpanUTF16Contents(sets, patterns[i]);
+        testSpanUTF16String(sets, patterns[i]);
+
+        testSpanUTF8Contents(sets, patterns[i]);
+        testSpanUTF8String(sets, patterns[i]);
+    }
 }

@@ -1,7 +1,7 @@
 
 /********************************************************************
  * COPYRIGHT: 
- * Copyright (c) 1997-2006, International Business Machines Corporation and
+ * Copyright (c) 1997-2007, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************
 **********************************************************************
@@ -75,6 +75,10 @@ private:
     void TestSurrogate();
 
     void TestPosixClasses();
+
+    void TestFreezable();
+
+    void TestSpan();
 
 private:
 
@@ -152,6 +156,13 @@ private:
                      const UnicodeSet& set,
                      UChar32 start, UChar32 end);
     void doAssert(UBool, const char*);
+
+    void testSpan(const UnicodeSet *sets[4], const void *s, int32_t length, UBool isUTF16, const char *testName, int32_t index);
+    void testSpanUTF16Contents(const UnicodeSet *sets[4], const char *pattern);
+    void testSpanUTF16String(const UnicodeSet *sets[4], const char *pattern);
+    void testSpanUTF8Contents(const UnicodeSet *sets[4], const char *pattern);
+    void testSpanUTF8String(const UnicodeSet *sets[4], const char *pattern);
+
 public:
     static UnicodeString escape(const UnicodeString& s);
 };

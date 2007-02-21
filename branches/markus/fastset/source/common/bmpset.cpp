@@ -71,7 +71,10 @@ void BMPSet::initBits() {
         i=start>>5;
         // Not necessary to actually set all-zero bits because the
         // constructor reset all bits already.
-        if(prevIndex<i && bits!=0) {
+        // Except: If bmpBlockBits[] (set above U+0800) were all-ones for
+        // an even prevIndex-1 but are all-zero for an odd prevIndex
+        // then we need to setBits() so the bmpBlockBits[] get the mixed value.
+        if(prevIndex<i && (bits!=0 || (prevIndex>=(0x800>>5) && (prevIndex&1)!=0))) {
             // Finish the end of the previous range.
             setBits(prevIndex++, bits);
 
