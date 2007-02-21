@@ -51,232 +51,28 @@ BMPSet::BMPSet(const BMPSet &otherBMPSet, const UnicodeSet &newParent) : set(new
     uprv_memcpy(list4kStarts, otherBMPSet.list4kStarts, sizeof(list4kStarts));
 }
 
-void BMPSet::initBits() {
-    const UChar32 *list=set.list;
-    int32_t listLength=set.len;
-
-    uint32_t bits;
-    UChar32 start, limit;
-    int32_t listIndex, prevIndex, i, j;
-
-    bits=0;
-    start=0;
-    listIndex=prevIndex=0;
-    for(;;) {
-        if(listIndex<listLength) {
-            start=list[listIndex++];
-        } else {
-            start=0x10000;
-        }
-        i=start>>5;
-        // Not necessary to actually set all-zero bits because the
-        // constructor reset all bits already.
-        // Except: If bmpBlockBits[] (set above U+0800) were all-ones for
-        // an even prevIndex-1 but are all-zero for an odd prevIndex
-        // then we need to setBits() so the bmpBlockBits[] get the mixed value.
-        if(prevIndex<i && (bits!=0 || (prevIndex>=(0x800>>5) && (prevIndex&1)!=0))) {
-            // Finish the end of the previous range.
-            setBits(prevIndex++, bits);
-
-            // Fill all-zero entries between ranges.
-            bits=0;
-            // while(prevIndex<i) {
-            //     setBits(prevIndex++, bits);
-            // }
-        }
-        if(start>0xffff) {
-            // Stop when the current range is beyond the BMP.
-            break;
-        }
-
-        // Set the upper block bits from the start code point.
-        // They will be intersected below with the bits up to
-        // before the limit code point.
-        bits|=~(((uint32_t)1<<(start&0x1f))-1);
-
-        if(listIndex<listLength) {
-            limit=list[listIndex++];
-            if(limit>0x10000) {
-                limit=0x10000;
-            }
-        } else {
-            limit=0x10000;
-        }
-        j=limit>>5;
-        if(i<j) {
-            // Set bits for the start of the range.
-            setBits(i++, bits);
-
-            // Fill all-one entries inside the range.
-            bits=0xffffffff;
-            if(i<j) {
-                setOnes(i, j);
-                i=j;
-            }
-            // while(i<j) {
-            //     setBits(i++, bits);
-            // }
-        }
-        /* i==j */
-
-        // Intersect the lower block bits up to the end code point.
-        bits&=((uint32_t)1<<(limit&0x1f))-1;
-
-        prevIndex=j;
-    }
-}
-
 /*
- * Set the bits for the 32 consecutive code points from
- * start=(blockIndex<<5).
- * For each odd block index, the even sibling must be set first.
+ * Set bits in a bit rectangle in "vertical" bit organization.
+ * start<limit<=0x800
  */
-void BMPSet::setBits(int32_t blockIndex, uint32_t bits) {
-    int32_t i, limit;
-
-    if(blockIndex<(0x80>>5)) {
-        // Set ASCII flags.
-        uint32_t b=bits;
-        i=blockIndex<<5;
-        limit=i+32;
-        while(i<limit && b!=0) {
-            asciiBytes[i++]=(UBool)(b&1);
-            b>>=1;
-        }
-        return;
-    }
-
-    if(blockIndex<(0x800>>5)) {
-        // Set flags for 80..7FF.
-        if((blockIndex&1)==0) {
-            i=0;
-            limit=32;
-        } else {
-            i=32;
-            limit=64;
-        }
-
-        uint32_t b=bits;
-        uint32_t bit=(uint32_t)1<<(blockIndex>>1);
-        while(i<limit && b!=0) {
-            if(b&1) {
-                table7FF[i]|=bit;
-            }
-            ++i;
-            b>>=1;
-        }
-        return;
-    }
-
-    // Set flags for 64-blocks in the BMP.
-
-    // Fields from the code point block corresponding to
-    // lead and trail bytes from UTF-8 three-byte sequences.
-    int32_t lead=blockIndex>>7;
-    int32_t trail=(blockIndex>>1)&0x3f;
-
-    if(bits==0) {
-        // Leave all bits 0 indicating an all-zero block.
-    } else if(bits==0xffffffff) {
-        bits=1;  // Set one bit indicating an all-one block.
-    } else {
-        bits=0x10001;  // Set two bits indicating a mixed block.
-    }
-    bits<<=lead;
-
-    if((blockIndex&1)==0) {
-        bmpBlockBits[trail]|=bits;
-    } else {
-        uint32_t mask=0x10001<<lead;
-        if((bmpBlockBits[trail]&mask)!=bits) {
-            bmpBlockBits[trail]|=mask;
-        }
-    }
-}
-
-/*
- * Set all-one bits for code points from
- * start=(startIndex<<5) to just before
- * limit=(limitIndex<<5).
- * Faster than
- *   while(i<j) { setBits(i++, 0xffffffff); }
- * For each odd block index, the even sibling must be set first.
- */
-void BMPSet::setOnes(int32_t startIndex, int32_t limitIndex) {
-    int32_t i, limit;
-
-    if(startIndex==limitIndex) {
-        return;
-    }
-
-    // Handle halves of 64-blocks via setBits().
-    if(startIndex&1) {
-        setBits(startIndex++, 0xffffffff);
-    }
-    if(limitIndex&1) {
-        setBits(--limitIndex, 0xffffffff);
-    }
-    if(startIndex==limitIndex) {
-        return;
-    }
-
-    if(startIndex<(0x80>>5)) {
-        // Set ASCII flags.
-        i=startIndex<<5;
-        if(limitIndex<(128>>5)) {
-            limit=limitIndex<<5;
-        } else {
-            limit=0x80;
-        }
-        while(i<limit) {
-            asciiBytes[i++]=1;
-        }
-
-        startIndex=(0x80>>5);
-        if(startIndex>=limitIndex) {
-            return;
-        }
-    }
-
-    // Now work with 64-blocks.
-    startIndex>>=1;
-    limitIndex>>=1;
-
-    if(startIndex<(0x800>>6)) {
-        // Set flags for 80..7FF.
-        uint32_t bits=~(((uint32_t)1<<startIndex)-1);
-        if(limitIndex<(0x800>>6)) {
-            bits&=((uint32_t)1<<limitIndex)-1;
-        }
-        for(i=0; i<64; ++i) {
-            table7FF[i]|=bits;
-        }
-
-        startIndex=(0x800>>6);
-        if(startIndex>=limitIndex) {
-            return;
-        }
-    }
-
-    // Set flags for 64-blocks in the BMP.
-
-    // Fields from the code point block corresponding to
-    // lead and trail bytes from UTF-8 three-byte sequences.
-    int32_t lead=startIndex>>6;
-    int32_t trail=startIndex&0x3f;
-    int32_t limitLead=limitIndex>>6;
-    int32_t limitTrail=limitIndex&0x3f;
-
-    i=startIndex;
-    limit=limitIndex;
+static void set32x64Bits(uint32_t table[64], int32_t start, int32_t limit) {
+    int32_t lead=start>>6;
+    int32_t trail=start&0x3f;
 
     // Set one bit indicating an all-one block.
     uint32_t bits=(uint32_t)1<<lead;
+    if((start+1)==limit) {  // Single-character shortcut.
+        table[trail]|=bits;
+        return;
+    }
+
+    int32_t limitLead=limit>>6;
+    int32_t limitTrail=limit&0x3f;
 
     if(lead==limitLead) {
         // Partial vertical bit column.
         while(trail<limitTrail) {
-            bmpBlockBits[trail++]|=bits;
+            table[trail++]|=bits;
         }
     } else {
         // Partial vertical bit column,
@@ -284,20 +80,102 @@ void BMPSet::setOnes(int32_t startIndex, int32_t limitIndex) {
         // followed by another partial vertical bit column.
         if(trail>0) {
             do {
-                bmpBlockBits[trail++]|=bits;
+                table[trail++]|=bits;
             } while(trail<64);
             ++lead;
         }
         if(lead<limitLead) {
             bits=~((1<<lead)-1);
-            bits&=(1<<limitLead)-1;
+            if(limitLead<0x20) {
+                bits&=(1<<limitLead)-1;
+            }
             for(trail=0; trail<64; ++trail) {
-                bmpBlockBits[trail]|=bits;
+                table[trail]|=bits;
             }
         }
         bits=1<<limitLead;
         for(trail=0; trail<limitTrail; ++trail) {
-            bmpBlockBits[trail]|=bits;
+            table[trail]|=bits;
+        }
+    }
+}
+
+void BMPSet::initBits() {
+    const UChar32 *list=set.list;  // Terminated with 0x110000.
+    int32_t listLength=set.len;
+
+    UChar32 start, limit;
+    int32_t listIndex=0;
+
+    // Set asciiBytes[].
+    do {
+        start=list[listIndex++];
+        if(listIndex<listLength) {
+            limit=list[listIndex++];
+        }
+        if(start>=0x80) {
+            break;
+        }
+        do {
+            asciiBytes[start++]=1;
+        } while(start<limit && start<0x80);
+    } while(limit<=0x80);
+
+    // Set table7FF[].
+    while(start<0x800) {
+        set32x64Bits(table7FF, start, limit<=0x800 ? limit : 0x800);
+        if(limit>0x800) {
+            start=0x800;
+            break;
+        }
+
+        start=list[listIndex++];
+        if(listIndex<listLength) {
+            limit=list[listIndex++];
+        }
+    }
+
+    // Set bmpBlockBits[].
+    int32_t minStart=0x800;
+    while(start<0x10000) {
+        if(limit>0x10000) {
+            limit=0x10000;
+        }
+
+        if(start<minStart) {
+            start=minStart;
+        }
+        if(start<limit) {  // Else: Another range entirely in a known mixed-value block.
+            if(start&0x3f) {
+                // Mixed-value block of 64 code points.
+                start>>=6;
+                bmpBlockBits[start&0x3f]|=0x10001<<(start>>6);
+                start=(start+1)<<6;  // Round up to the next block boundary.
+                minStart=start;      // Ignore further ranges in this block.
+            }
+            if(start<limit) {
+                if(start<(limit&~0x3f)) {
+                    // Multiple all-ones blocks of 64 code points each.
+                    set32x64Bits(bmpBlockBits, start>>6, limit>>6);
+                }
+
+                if(limit&0x3f) {
+                    // Mixed-value block of 64 code points.
+                    limit>>=6;
+                    bmpBlockBits[limit&0x3f]|=0x10001<<(limit>>6);
+                    limit=(limit+1)<<6;  // Round up to the next block boundary.
+                    minStart=limit;      // Ignore further ranges in this block.
+                }
+            }
+        }
+
+        if(limit==0x10000) {
+            break;
+        }
+
+        start=list[listIndex++];
+        if(listIndex<listLength) {
+            limit=list[listIndex++];
         }
     }
 }
@@ -306,7 +184,7 @@ void BMPSet::setOnes(int32_t startIndex, int32_t limitIndex) {
  * Override some bits and bytes to the result of contains(FFFD)
  * for faster validity checking at runtime.
  * No need to set 0 values where they were reset to 0 in the constructor
- * and not modified by setBits() and setOnes().
+ * and not modified by initBits().
  * (asciiBytes[] trail bytes, table7FF[] 0..7F, bmpBlockBits[] 0..7FF)
  * Need to set 0 values for surrogates D800..DFFF.
  */
@@ -337,11 +215,6 @@ void BMPSet::overrideIllegal() {
         }
     } else {
         // contains(FFFD)==FALSE
-        mask=~0x10001;          // Lead byte 0xE0.
-        for(i=0; i<32; ++i) {   // First half of 4k block.
-            bmpBlockBits[i]&=mask;
-        }
-
         mask=~(0x10001<<0xd);   // Lead byte 0xED.
         for(i=32; i<64; ++i) {  // Second half of 4k block.
             bmpBlockBits[i]&=mask;

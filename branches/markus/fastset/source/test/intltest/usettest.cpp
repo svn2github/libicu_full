@@ -2484,10 +2484,10 @@ void UnicodeSetTest::TestSpan() {
         const UnicodeSet *sets[4]={
             &set, &set_not, &set_fast, &set_fast_not
         };
-        testSpanUTF16Contents(sets, patterns[i]);
         testSpanUTF16String(sets, patterns[i]);
+        testSpanUTF16Contents(sets, patterns[i]);
 
-        testSpanUTF8Contents(sets, patterns[i]);
         testSpanUTF8String(sets, patterns[i]);
+        testSpanUTF8Contents(sets, patterns[i]);
     }
 }

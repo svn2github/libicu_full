@@ -69,8 +69,6 @@ public:
 
 private:
     void initBits();
-    void setBits(int32_t blockIndex, uint32_t bits);
-    void setOnes(int32_t startIndex, int32_t limitIndex);
     void overrideIllegal();
 
     inline UBool containsSlow(UChar32 c, int32_t lo, int32_t hi) const;
