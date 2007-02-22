@@ -1,5 +1,5 @@
-## Makefile.in for ICU - test/perf/utfperf
-## Copyright (c) 2001-2006, International Business Machines Corporation and
+## Makefile.in for ICU - test/perf/unisetperf
+## Copyright (c) 2001-2007, International Business Machines Corporation and
 ## others. All Rights Reserved.
 
 ## Source directory information
@@ -11,18 +11,18 @@ top_builddir = ../../..
 include $(top_builddir)/icudefs.mk
 
 ## Build directory information
-subdir = test/perf/utfperf
+subdir = test/perf/unisetperf
 
 ## Extra files to remove for 'make clean'
 CLEANFILES = *~ $(DEPS)
 
 ## Target information
-TARGET = utfperf
+TARGET = unisetperf
 
 CPPFLAGS += -I$(top_builddir)/common -I$(top_srcdir)/common -I$(top_srcdir)/tools/toolutil -I$(top_srcdir)/tools/ctestfw
 LIBS = $(LIBCTESTFW) $(LIBICUI18N) $(LIBICUUC) $(LIBICUTOOLUTIL) $(DEFAULT_LIBS) $(LIB_M)
 
-OBJECTS = utfperf.o
+OBJECTS = unisetperf.o
 
 DEPS = $(OBJECTS:.o=.d)
 
