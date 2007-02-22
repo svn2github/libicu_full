@@ -97,6 +97,8 @@ enum {
     USET_SERIALIZED_STATIC_ARRAY_CAPACITY=8
 };
 
+#ifndef U_HIDE_DRAFT_API
+
 /**
  * The two values for whether span() and similar functions continue while
  * the current character is contained vs. not contained in the set.
@@ -122,6 +124,9 @@ enum USetSpanCondition {
      */
     USET_SPAN_WHILE_CONTAINED = 1
 };
+typedef enum USetSpanCondition USetSpanCondition;
+
+#endif /* U_HIDE_DRAFT_API */
 
 /**
  * A serialized form of a Unicode set.  Limited manipulations are
@@ -204,6 +209,67 @@ uset_openPatternOptions(const UChar* pattern, int32_t patternLength,
  */
 U_STABLE void U_EXPORT2
 uset_close(USet* set);
+
+#ifndef U_HIDE_DRAFT_API
+
+/**
+ * Returns a copy of this object.
+ * If this set is frozen, then the clone will be frozen as well.
+ * Use uset_cloneAsThawed() for a mutable clone of a frozen set.
+ * @param set the original set
+ * @return the newly allocated copy of the set
+ * @see uset_cloneAsThawed
+ * @draft ICU 3.8
+ */
+U_DRAFT USet * U_EXPORT2
+uset_clone(const USet *set);
+
+//----------------------------------------------------------------
+// Freezable API
+//----------------------------------------------------------------
+
+/**
+ * Determines whether the set has been frozen (made immutable) or not.
+ * See the ICU4J Freezable interface for details.
+ * @param set the set
+ * @return TRUE/FALSE for whether the set has been frozen
+ * @see uset_freeze
+ * @see uset_cloneAsThawed
+ * @draft ICU 3.8
+ */
+U_DRAFT UBool U_EXPORT2
+uset_isFrozen(const USet *set);
+
+/**
+ * Freeze the set (make it immutable).
+ * Once frozen, it cannot be unfrozen and is therefore thread-safe
+ * until it is deleted.
+ * See the ICU4J Freezable interface for details.
+ * Freezing the set may also make some operations faster, for example
+ * uset_contains() and uset_span().
+ * @param set the set
+ * @return the same set, now frozen
+ * @see uset_isFrozen
+ * @see uset_cloneAsThawed
+ * @draft ICU 3.8
+ */
+U_DRAFT void U_EXPORT2
+uset_freeze(USet *set);
+
+/**
+ * Clone the set and make the clone mutable.
+ * See the ICU4J Freezable interface for details.
+ * @param set the set
+ * @return the mutable clone
+ * @see uset_freeze
+ * @see uset_isFrozen
+ * @see uset_clone
+ * @draft ICU 3.8
+ */
+U_DRAFT USet * U_EXPORT2
+uset_cloneAsThawed(const USet *set);
+
+#endif /* U_HIDE_DRAFT_API */
 
 /**
  * Causes the USet object to represent the range <code>start - end</code>.
@@ -676,6 +742,72 @@ uset_containsNone(const USet* set1, const USet* set2);
  */
 U_STABLE UBool U_EXPORT2
 uset_containsSome(const USet* set1, const USet* set2);
+
+#ifndef U_HIDE_DRAFT_API
+
+/*
+ * Returns the length of the initial substring of the input string which
+ * consists only of characters that are contained in this set (USET_SPAN_WHILE_CONTAINED),
+ * or only of characters that are not contained in this set (USET_SPAN_WHILE_NOT_CONTAINED).
+ * Similar to the strspn() C library function.
+ * Unpaired surrogates are treated according to contains() of their surrogate code points.
+ * @param set the set
+ * @param s start of the string
+ * @param length of the string; can be -1 for NUL-terminated
+ * @spanCondition specifies the containment condition for characters in the initial substring
+ * @return the length of the initial substring according to the spanCondition
+ * @draft ICU 3.8
+ */
+U_DRAFT int32_t U_EXPORT2
+uset_span(const USet *set, const UChar *s, int32_t length, USetSpanCondition spanCondition);
+
+/*
+ * Returns the start of the trailing substring of the input string which
+ * consists only of characters that are contained in this set (USET_SPAN_WHILE_CONTAINED),
+ * or only of characters that are not contained in this set (USET_SPAN_WHILE_NOT_CONTAINED).
+ * Unpaired surrogates are treated according to contains() of their surrogate code points.
+ * @param set the set
+ * @param s start of the string
+ * @param length of the string; can be -1 for NUL-terminated
+ * @spanCondition specifies the containment condition for characters in the trailing substring
+ * @return the start of the trailing substring according to the spanCondition
+ * @draft ICU 3.8
+ */
+U_DRAFT int32_t U_EXPORT2
+uset_spanBack(const USet *set, const UChar *s, int32_t length, USetSpanCondition spanCondition);
+
+/*
+ * Returns the length of the initial substring of the input string which
+ * consists only of characters that are contained in this set (USET_SPAN_WHILE_CONTAINED),
+ * or only of characters that are not contained in this set (USET_SPAN_WHILE_NOT_CONTAINED).
+ * Similar to the strspn() C library function.
+ * Malformed byte sequences are treated according to contains(0xfffd).
+ * @param set the set
+ * @param s start of the string (UTF-8)
+ * @param length of the string; can be -1 for NUL-terminated
+ * @spanCondition specifies the containment condition for characters in the initial substring
+ * @return the length of the initial substring according to the spanCondition
+ * @draft ICU 3.8
+ */
+U_DRAFT int32_t U_EXPORT2
+uset_spanUTF8(const USet *set, const char *s, int32_t length, USetSpanCondition spanCondition);
+
+/*
+ * Returns the start of the trailing substring of the input string which
+ * consists only of characters that are contained in this set (USET_SPAN_WHILE_CONTAINED),
+ * or only of characters that are not contained in this set (USET_SPAN_WHILE_NOT_CONTAINED).
+ * Malformed byte sequences are treated according to contains(0xfffd).
+ * @param set the set
+ * @param s start of the string (UTF-8)
+ * @param length of the string; can be -1 for NUL-terminated
+ * @spanCondition specifies the containment condition for characters in the trailing substring
+ * @return the start of the trailing substring according to the spanCondition
+ * @draft ICU 3.8
+ */
+U_DRAFT int32_t U_EXPORT2
+uset_spanBackUTF8(const USet *set, const char *s, int32_t length, USetSpanCondition spanCondition);
+
+#endif /* U_HIDE_DRAFT_API */
 
 /**
  * Returns true if set1 contains all of the characters and strings
