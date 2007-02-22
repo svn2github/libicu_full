@@ -247,6 +247,7 @@ uset_isFrozen(const USet *set);
  * See the ICU4J Freezable interface for details.
  * Freezing the set may also make some operations faster, for example
  * uset_contains() and uset_span().
+ * A frozen set will not be modified. (It remains frozen.)
  * @param set the set
  * @return the same set, now frozen
  * @see uset_isFrozen
@@ -274,6 +275,7 @@ uset_cloneAsThawed(const USet *set);
 /**
  * Causes the USet object to represent the range <code>start - end</code>.
  * If <code>start > end</code> then this USet is set to an empty range.
+ * A frozen set will not be modified.
  * @param set the object to set to the given range
  * @param start first character in the set, inclusive
  * @param end last character in the set, inclusive
@@ -288,6 +290,7 @@ uset_set(USet* set,
  * pattern. See the UnicodeSet class description for the syntax of 
  * the pattern language. See also the User Guide chapter about UnicodeSet.
  * <em>Empties the set passed before applying the pattern.</em>
+ * A frozen set will not be modified.
  * @param set               The set to which the pattern is to be applied. 
  * @param pattern           A pointer to UChar string specifying what characters are in the set.
  *                          The character at pattern[0] must be a '['.
@@ -313,6 +316,7 @@ uset_applyPattern(USet *set,
  * Modifies the set to contain those code points which have the given value
  * for the given binary or enumerated property, as returned by
  * u_getIntPropertyValue.  Prior contents of this set are lost.
+ * A frozen set will not be modified.
  *
  * @param set the object to contain the code points defined by the property
  *
@@ -338,6 +342,7 @@ uset_applyIntPropertyValue(USet* set,
  * Modifies the set to contain those code points which have the
  * given value for the given property.  Prior contents of this
  * set are lost.
+ * A frozen set will not be modified.
  *
  * @param set the object to contain the code points defined by the given
  * property and value alias
@@ -411,6 +416,7 @@ uset_toPattern(const USet* set,
 /**
  * Adds the given character to the given USet.  After this call,
  * uset_contains(set, c) will return TRUE.
+ * A frozen set will not be modified.
  * @param set the object to which to add the character
  * @param c the character to add
  * @stable ICU 2.4
@@ -424,6 +430,7 @@ uset_add(USet* set, UChar32 c);
  * modifies this set so that its value is the <i>union</i> of the two
  * sets.  The behavior of this operation is unspecified if the specified
  * collection is modified while the operation is in progress.
+ * A frozen set will not be modified.
  *
  * @param set the object to which to add the set
  * @param additionalSet the source set whose elements are to be added to this set.
@@ -435,6 +442,7 @@ uset_addAll(USet* set, const USet *additionalSet);
 /**
  * Adds the given range of characters to the given USet.  After this call,
  * uset_contains(set, start, end) will return TRUE.
+ * A frozen set will not be modified.
  * @param set the object to which to add the character
  * @param start the first character of the range to add, inclusive
  * @param end the last character of the range to add, inclusive
@@ -446,6 +454,7 @@ uset_addRange(USet* set, UChar32 start, UChar32 end);
 /**
  * Adds the given string to the given USet.  After this call,
  * uset_containsString(set, str, strLen) will return TRUE.
+ * A frozen set will not be modified.
  * @param set the object to which to add the character
  * @param str the string to add
  * @param strLen the length of the string or -1 if null terminated.
@@ -457,6 +466,7 @@ uset_addString(USet* set, const UChar* str, int32_t strLen);
 /**
  * Adds each of the characters in this string to the set. Thus "ch" => {"c", "h"}
  * If this set already any particular character, it has no effect on that character.
+ * A frozen set will not be modified.
  * @param set the object to which to add the character
  * @param str the source string
  * @param strLen the length of the string or -1 if null terminated.
@@ -468,6 +478,7 @@ uset_addAllCodePoints(USet* set, const UChar *str, int32_t strLen);
 /**
  * Removes the given character from the given USet.  After this call,
  * uset_contains(set, c) will return FALSE.
+ * A frozen set will not be modified.
  * @param set the object from which to remove the character
  * @param c the character to remove
  * @stable ICU 2.4
@@ -478,6 +489,7 @@ uset_remove(USet* set, UChar32 c);
 /**
  * Removes the given range of characters from the given USet.  After this call,
  * uset_contains(set, start, end) will return FALSE.
+ * A frozen set will not be modified.
  * @param set the object to which to add the character
  * @param start the first character of the range to remove, inclusive
  * @param end the last character of the range to remove, inclusive
@@ -489,6 +501,7 @@ uset_removeRange(USet* set, UChar32 start, UChar32 end);
 /**
  * Removes the given string to the given USet.  After this call,
  * uset_containsString(set, str, strLen) will return FALSE.
+ * A frozen set will not be modified.
  * @param set the object to which to add the character
  * @param str the string to remove
  * @param strLen the length of the string or -1 if null terminated.
@@ -502,6 +515,7 @@ uset_removeString(USet* set, const UChar* str, int32_t strLen);
  * specified set.  This operation effectively modifies this
  * set so that its value is the <i>asymmetric set difference</i> of
  * the two sets.
+ * A frozen set will not be modified.
  * @param set the object from which the elements are to be removed
  * @param removeSet the object that defines which elements will be
  * removed from this set
@@ -515,6 +529,7 @@ uset_removeAll(USet* set, const USet* removeSet);
  * specified range.  If <code>start > end</code> then an empty range is
  * retained, leaving the set empty.  This is equivalent to
  * a boolean logic AND, or a set INTERSECTION.
+ * A frozen set will not be modified.
  *
  * @param set the object for which to retain only the specified range
  * @param start first character, inclusive, of range to be retained
@@ -532,6 +547,7 @@ uset_retain(USet* set, UChar32 start, UChar32 end);
  * its elements that are not contained in the specified set.  This
  * operation effectively modifies this set so that its value is
  * the <i>intersection</i> of the two sets.
+ * A frozen set will not be modified.
  *
  * @param set the object on which to perform the retain
  * @param retain set that defines which elements this set will retain
@@ -543,6 +559,7 @@ uset_retainAll(USet* set, const USet* retain);
 /**
  * Reallocate this objects internal structures to take up the least
  * possible space, without changing this object's value.
+ * A frozen set will not be modified.
  *
  * @param set the object on which to perfrom the compact
  * @stable ICU 3.2
@@ -554,6 +571,7 @@ uset_compact(USet* set);
  * Inverts this set.  This operation modifies this set so that
  * its value is its complement.  This operation does not affect
  * the multicharacter strings, if any.
+ * A frozen set will not be modified.
  * @param set the set
  * @stable ICU 2.4
  */
@@ -564,6 +582,7 @@ uset_complement(USet* set);
  * Complements in this set all elements contained in the specified
  * set.  Any character in the other set will be removed if it is
  * in this set, or will be added if it is not in this set.
+ * A frozen set will not be modified.
  *
  * @param set the set with which to complement
  * @param complement set that defines which elements will be xor'ed
@@ -576,6 +595,7 @@ uset_complementAll(USet* set, const USet* complement);
 /**
  * Removes all of the elements from this set.  This set will be
  * empty after this call returns.
+ * A frozen set will not be modified.
  * @param set the set
  * @stable ICU 2.4
  */
@@ -594,6 +614,7 @@ uset_isEmpty(const USet* set);
 
 /**
  * Returns TRUE if the given USet contains the given character.
+ * This function works faster with a frozen set.
  * @param set the set
  * @param c The codepoint to check for within the set
  * @return true if set contains c
@@ -751,6 +772,7 @@ uset_containsSome(const USet* set1, const USet* set2);
  * or only of characters that are not contained in this set (USET_SPAN_WHILE_NOT_CONTAINED).
  * Similar to the strspn() C library function.
  * Unpaired surrogates are treated according to contains() of their surrogate code points.
+ * This function works faster with a frozen set and with a non-negative string length argument.
  * @param set the set
  * @param s start of the string
  * @param length of the string; can be -1 for NUL-terminated
@@ -766,6 +788,7 @@ uset_span(const USet *set, const UChar *s, int32_t length, USetSpanCondition spa
  * consists only of characters that are contained in this set (USET_SPAN_WHILE_CONTAINED),
  * or only of characters that are not contained in this set (USET_SPAN_WHILE_NOT_CONTAINED).
  * Unpaired surrogates are treated according to contains() of their surrogate code points.
+ * This function works faster with a frozen set and with a non-negative string length argument.
  * @param set the set
  * @param s start of the string
  * @param length of the string; can be -1 for NUL-terminated
@@ -782,6 +805,7 @@ uset_spanBack(const USet *set, const UChar *s, int32_t length, USetSpanCondition
  * or only of characters that are not contained in this set (USET_SPAN_WHILE_NOT_CONTAINED).
  * Similar to the strspn() C library function.
  * Malformed byte sequences are treated according to contains(0xfffd).
+ * This function works faster with a frozen set and with a non-negative string length argument.
  * @param set the set
  * @param s start of the string (UTF-8)
  * @param length of the string; can be -1 for NUL-terminated
@@ -797,6 +821,7 @@ uset_spanUTF8(const USet *set, const char *s, int32_t length, USetSpanCondition 
  * consists only of characters that are contained in this set (USET_SPAN_WHILE_CONTAINED),
  * or only of characters that are not contained in this set (USET_SPAN_WHILE_NOT_CONTAINED).
  * Malformed byte sequences are treated according to contains(0xfffd).
+ * This function works faster with a frozen set and with a non-negative string length argument.
  * @param set the set
  * @param s start of the string (UTF-8)
  * @param length of the string; can be -1 for NUL-terminated
