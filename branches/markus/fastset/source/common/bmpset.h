@@ -34,8 +34,8 @@ U_NAMESPACE_BEGIN
  */
 class BMPSet : public UMemory {
 public:
-    BMPSet(const UnicodeSet &parent);
-    BMPSet(const BMPSet &otherBMPSet, const UnicodeSet &newParent);
+    BMPSet(const int32_t *parentList, int32_t parentListLength);
+    BMPSet(const BMPSet &otherBMPSet, const int32_t *newParentList, int32_t newParentListLength);
 
     virtual UBool contains(UChar32 c) const;
 
@@ -71,8 +71,26 @@ private:
     void initBits();
     void overrideIllegal();
 
+    /**
+     * Same as UnicodeSet::findCodePoint(UChar32 c) const except that the
+     * binary search is restricted for finding code points in a certain range.
+     *
+     * For restricting the search for finding in the range start..end,
+     * pass in
+     *   lo=findCodePoint(start) and
+     *   hi=findCodePoint(end)
+     * with 0<=lo<=hi<len.
+     * findCodePoint(c) defaults to lo=0 and hi=len-1.
+     *
+     * @param c a character in a subrange of MIN_VALUE..MAX_VALUE
+     * @param lo The lowest index to be returned.
+     * @param hi The highest index to be returned.
+     * @return the smallest integer i in the range lo..hi,
+     *         inclusive, such that c < list[i]
+     */
+    int32_t findCodePoint(UChar32 c, int32_t lo, int32_t hi) const;
+
     inline UBool containsSlow(UChar32 c, int32_t lo, int32_t hi) const;
-    inline UBool containsSlow(UChar32 c) const;
 
     /*
      * One byte per ASCII character, or trail byte in lead position.
@@ -116,8 +134,8 @@ private:
 
     /*
      * Inversion list indexes for restricted binary searches in
-     * set.findCodePoint(), from
-     * set.findCodePoint(U+0800, U+1000, U+2000, .., U+F000, U+10000).
+     * findCodePoint(), from
+     * findCodePoint(U+0800, U+1000, U+2000, .., U+F000, U+10000).
      * U+0800 is the first 3-byte-UTF-8 code point. Code points below U+0800 are
      * always looked up in the bit tables.
      * The last pair of indexes is for finding supplementary code points.
@@ -125,18 +143,16 @@ private:
     int32_t list4kStarts[18];
 
     /*
-     * The parent set, for the slower contains() implementation
+     * The inversion list of the parent set, for the slower contains() implementation
      * for mixed BMP blocks and for supplementary code points.
+     * The list is terminated with list[listLength-1]=0x110000.
      */
-    const UnicodeSet &set;
+    const int32_t *list;
+    int32_t listLength;
 };
 
 inline UBool BMPSet::containsSlow(UChar32 c, int32_t lo, int32_t hi) const {
-    return (UBool)(set.findCodePoint(c, lo, hi) & 1);
-}
-
-inline UBool BMPSet::containsSlow(UChar32 c) const {
-    return (UBool)(set.findCodePoint(c) & 1);
+    return (UBool)(findCodePoint(c, lo, hi) & 1);
 }
 
 U_NAMESPACE_END

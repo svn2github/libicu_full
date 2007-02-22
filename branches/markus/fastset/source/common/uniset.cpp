@@ -179,8 +179,8 @@ UnicodeSet::UnicodeSet(UChar32 start, UChar32 end) :
  */
 UnicodeSet::UnicodeSet(const UnicodeSet& o) :
     UnicodeFilter(o),
-    len(0), capacity(o.bmpSet == NULL ? o.len + GROW_EXTRA : o.len), list(0),
-    bmpSet(o.bmpSet == NULL ? NULL : new BMPSet(*o.bmpSet, *this)),
+    len(0), capacity(o.isFrozen() ? o.len : o.len + GROW_EXTRA), list(0),
+    bmpSet(0),
     buffer(0), bufferCapacity(0),
     patLen(0), pat(NULL), strings(NULL)
 {
@@ -189,6 +189,9 @@ UnicodeSet::UnicodeSet(const UnicodeSet& o) :
         UErrorCode status = U_ZERO_ERROR;
         allocateStrings(status);
         *this = o;
+        if (o.bmpSet != NULL) {
+            bmpSet = new BMPSet(*o.bmpSet, list, len);
+        }
     }
     _dbgct(this);
 }
@@ -240,7 +243,7 @@ UnicodeSet& UnicodeSet::operator=(const UnicodeSet& o) {
     if (o.bmpSet == NULL) {
         bmpSet = NULL;
     } else {
-        bmpSet = new BMPSet(*o.bmpSet, *this);
+        bmpSet = new BMPSet(*o.bmpSet, list, len);
     }
     UErrorCode ec = U_ZERO_ERROR;
     strings->assign(*o.strings, cloneUnicodeString, ec);
@@ -354,18 +357,12 @@ UBool UnicodeSet::contains(UChar32 c) const {
  * Returns the smallest value i such that c < list[i].  Caller
  * must ensure that c is a legal value or this method will enter
  * an infinite loop.  This method performs a binary search.
- *
- * For a description of the lo and hi input arguments see uniset.h.
- * Default values are lo=0 and hi=len-1.
- *
  * @param c a character in the range MIN_VALUE..MAX_VALUE
  * inclusive
- * @param lo The lowest index to be returned.
- * @param hi The highest index to be returned.
- * @return the smallest integer i in the range lo..hi,
+ * @return the smallest integer i in the range 0..len-1,
  * inclusive, such that c < list[i]
  */
-int32_t UnicodeSet::findCodePoint(UChar32 c, int32_t lo, int32_t hi) const {
+int32_t UnicodeSet::findCodePoint(UChar32 c) const {
     /* Examples:
                                        findCodePoint(c)
        set              list[]         c=0 1 3 4 7 8
@@ -378,10 +375,12 @@ int32_t UnicodeSet::findCodePoint(UChar32 c, int32_t lo, int32_t hi) const {
 
     // Return the smallest i such that c < list[i].  Assume
     // list[len - 1] == HIGH and that c is legal (0..HIGH-1).
-    if (c < list[lo])
-        return lo;
+    if (c < list[0])
+        return 0;
     // High runner test.  c is often after the last range, so an
     // initial check for this condition pays off.
+    int32_t lo = 0;
+    int32_t hi = len - 1;
     if (lo >= hi || c >= list[hi-1])
         return hi;
     // invariant: c >= list[lo]
@@ -1941,7 +1940,8 @@ void UnicodeSet::setPattern(const UnicodeString& newPat) {
 
 UnicodeFunctor *UnicodeSet::freeze() {
     if(!isFrozen()) {
-        bmpSet=new BMPSet(compact());
+        compact();
+        bmpSet=new BMPSet(list, len);
     }
     return this;
 }

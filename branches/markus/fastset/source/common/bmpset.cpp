@@ -21,7 +21,8 @@
 
 U_NAMESPACE_BEGIN
 
-BMPSet::BMPSet(const UnicodeSet &parent) : set(parent) {
+BMPSet::BMPSet(const int32_t *parentList, int32_t parentListLength) :
+        list(parentList), listLength(parentListLength) {
     uprv_memset(asciiBytes, 0, sizeof(asciiBytes));
     uprv_memset(table7FF, 0, sizeof(table7FF));
     uprv_memset(bmpBlockBits, 0, sizeof(bmpBlockBits));
@@ -33,18 +34,19 @@ BMPSet::BMPSet(const UnicodeSet &parent) : set(parent) {
      * looked up in the bit tables.
      * The last pair of indexes is for finding supplementary code points.
      */
-    list4kStarts[0]=set.findCodePoint(0x800);
+    list4kStarts[0]=findCodePoint(0x800, 0, listLength-1);
     int32_t i;
     for(i=1; i<=0x10; ++i) {
-        list4kStarts[i]=set.findCodePoint(i<<12);
+        list4kStarts[i]=findCodePoint(i<<12, list4kStarts[i-1], listLength-1);
     }
-    list4kStarts[0x11]=set.len-1;
+    list4kStarts[0x11]=listLength-1;
 
     initBits();
     overrideIllegal();
 }
 
-BMPSet::BMPSet(const BMPSet &otherBMPSet, const UnicodeSet &newParent) : set(newParent) {
+BMPSet::BMPSet(const BMPSet &otherBMPSet, const int32_t *newParentList, int32_t newParentListLength) :
+        list(newParentList), listLength(newParentListLength) {
     uprv_memcpy(asciiBytes, otherBMPSet.asciiBytes, sizeof(asciiBytes));
     uprv_memcpy(table7FF, otherBMPSet.table7FF, sizeof(table7FF));
     uprv_memcpy(bmpBlockBits, otherBMPSet.bmpBlockBits, sizeof(bmpBlockBits));
@@ -101,9 +103,6 @@ static void set32x64Bits(uint32_t table[64], int32_t start, int32_t limit) {
 }
 
 void BMPSet::initBits() {
-    const UChar32 *list=set.list;  // Terminated with 0x110000.
-    int32_t listLength=set.len;
-
     UChar32 start, limit;
     int32_t listIndex=0;
 
@@ -220,6 +219,40 @@ void BMPSet::overrideIllegal() {
             bmpBlockBits[i]&=mask;
         }
     }
+}
+
+int32_t BMPSet::findCodePoint(UChar32 c, int32_t lo, int32_t hi) const {
+    /* Examples:
+                                       findCodePoint(c)
+       set              list[]         c=0 1 3 4 7 8
+       ===              ==============   ===========
+       []               [110000]         0 0 0 0 0 0
+       [\u0000-\u0003]  [0, 4, 110000]   1 1 1 2 2 2
+       [\u0004-\u0007]  [4, 8, 110000]   0 0 0 1 1 2
+       [:Any:]          [0, 110000]      1 1 1 1 1 1
+     */
+
+    // Return the smallest i such that c < list[i].  Assume
+    // list[len - 1] == HIGH and that c is legal (0..HIGH-1).
+    if (c < list[lo])
+        return lo;
+    // High runner test.  c is often after the last range, so an
+    // initial check for this condition pays off.
+    if (lo >= hi || c >= list[hi-1])
+        return hi;
+    // invariant: c >= list[lo]
+    // invariant: c < list[hi]
+    for (;;) {
+        int32_t i = (lo + hi) >> 1;
+        if (i == lo) {
+            break; // Found!
+        } else if (c < list[i]) {
+            hi = i;
+        } else {
+            lo = i;
+        }
+    }
+    return hi;
 }
 
 UBool

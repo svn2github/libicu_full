@@ -260,7 +260,6 @@ class RuleCharacterIterator;
  * @stable ICU 2.0
  */
 class U_COMMON_API UnicodeSet : public UnicodeFilter {
-    friend class BMPSet;
 
     int32_t len; // length of list used; 0 <= len <= capacity
     int32_t capacity; // capacity of list
@@ -838,26 +837,7 @@ private:
      * @return the smallest integer i in the range 0..len-1,
      * inclusive, such that c < list[i]
      */
-    inline int32_t findCodePoint(UChar32 c) const;
-
-    /**
-     * Same as findCodePoint(UChar32 c) const except that the binary search
-     * is restricted for finding code points in a certain range.
-     *
-     * For restricting the search for finding in the range start..end,
-     * pass in
-     *   lo=findCodePoint(start) and
-     *   hi=findCodePoint(end)
-     * with 0<=lo<=hi<len.
-     * findCodePoint(c) defaults to lo=0 and hi=len-1.
-     *
-     * @param c a character in a subrange of MIN_VALUE..MAX_VALUE
-     * @param lo The lowest index to be returned.
-     * @param hi The highest index to be returned.
-     * @return the smallest integer i in the range lo..hi,
-     *         inclusive, such that c < list[i]
-     */
-    int32_t findCodePoint(UChar32 c, int32_t lo, int32_t hi) const;
+    int32_t findCodePoint(UChar32 c) const;
 
 public:
 
@@ -1455,10 +1435,6 @@ inline UBool UnicodeSet::containsSome(const UnicodeSet& s) const {
 
 inline UBool UnicodeSet::containsSome(const UnicodeString& s) const {
     return !containsNone(s);
-}
-
-inline int32_t UnicodeSet::findCodePoint(UChar32 c) const {
-    return findCodePoint(c, 0, len-1);
 }
 
 U_NAMESPACE_END
