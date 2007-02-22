@@ -1340,12 +1340,15 @@ const UnicodeString* UnicodeSet::getString(int32_t index) const {
  * possible space, without changing this object's value.
  */
 UnicodeSet& UnicodeSet::compact() {
+    if (isFrozen()) {
+        return *this;
+    }
     // Delete buffer first to defragment memory less.
     if (buffer != NULL) {
         uprv_free(buffer);
         buffer = NULL;
     }
-    if (capacity > (len + GROW_EXTRA)) {  // Don't shrink if the savings would be tiny.
+    if (len < capacity) {
         // Make the capacity equal to len or 1.
         // We don't want to realloc of 0 size.
         capacity = len + (len == 0);
@@ -1940,7 +1943,22 @@ void UnicodeSet::setPattern(const UnicodeString& newPat) {
 
 UnicodeFunctor *UnicodeSet::freeze() {
     if(!isFrozen()) {
-        compact();
+        // Do most of what compact() does before freezing because
+        // compact() will not work when the set is frozen.
+        // Small modification: Don't shrink if the savings would be tiny (<=GROW_EXTRA).
+
+        // Delete buffer first to defragment memory less.
+        if (buffer != NULL) {
+            uprv_free(buffer);
+            buffer = NULL;
+        }
+        if (capacity > (len + GROW_EXTRA)) {
+            // Make the capacity equal to len or 1.
+            // We don't want to realloc of 0 size.
+            capacity = len + (len == 0);
+            list = (UChar32*) uprv_realloc(list, sizeof(UChar32) * capacity);
+        }
+
         bmpSet=new BMPSet(list, len);
     }
     return this;
