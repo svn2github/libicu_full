@@ -430,6 +430,7 @@ public:
     /**
      * Determines whether the set has been frozen (made immutable) or not.
      * See the ICU4J Freezable interface for details.
+     * @return TRUE/FALSE for whether the set has been frozen
      * @see freeze
      * @see cloneAsThawed
      * @draft ICU 3.8
@@ -453,6 +454,7 @@ public:
     /**
      * Clone the set and make the clone mutable.
      * See the ICU4J Freezable interface for details.
+     * @return the mutable clone
      * @see freeze
      * @see isFrozen
      * @draft ICU 3.8
@@ -748,6 +750,7 @@ public:
      * consists only of characters that are contained in this set (USET_SPAN_WHILE_CONTAINED),
      * or only of characters that are not contained in this set (USET_SPAN_WHILE_NOT_CONTAINED).
      * Similar to the strspn() C library function.
+     * Unpaired surrogates are treated according to contains() of their surrogate code points.
      * @param s start of the string
      * @param length of the string; can be -1 for NUL-terminated
      * @spanCondition specifies the containment condition for characters in the initial substring
@@ -760,6 +763,7 @@ public:
      * Returns the start of the trailing substring of the input string which
      * consists only of characters that are contained in this set (USET_SPAN_WHILE_CONTAINED),
      * or only of characters that are not contained in this set (USET_SPAN_WHILE_NOT_CONTAINED).
+     * Unpaired surrogates are treated according to contains() of their surrogate code points.
      * @param s start of the string
      * @param length of the string; can be -1 for NUL-terminated
      * @spanCondition specifies the containment condition for characters in the trailing substring
@@ -773,6 +777,7 @@ public:
      * consists only of characters that are contained in this set (USET_SPAN_WHILE_CONTAINED),
      * or only of characters that are not contained in this set (USET_SPAN_WHILE_NOT_CONTAINED).
      * Similar to the strspn() C library function.
+     * Malformed byte sequences are treated according to contains(0xfffd).
      * @param s start of the string (UTF-8)
      * @param length of the string; can be -1 for NUL-terminated
      * @spanCondition specifies the containment condition for characters in the initial substring
@@ -785,6 +790,7 @@ public:
      * Returns the start of the trailing substring of the input string which
      * consists only of characters that are contained in this set (USET_SPAN_WHILE_CONTAINED),
      * or only of characters that are not contained in this set (USET_SPAN_WHILE_NOT_CONTAINED).
+     * Malformed byte sequences are treated according to contains(0xfffd).
      * @param s start of the string (UTF-8)
      * @param length of the string; can be -1 for NUL-terminated
      * @spanCondition specifies the containment condition for characters in the trailing substring
