@@ -234,6 +234,9 @@ UnicodeSet::~UnicodeSet() {
  * Assigns this object to be a copy of another.
  */
 UnicodeSet& UnicodeSet::operator=(const UnicodeSet& o) {
+    if (isFrozen()) {
+        return *this;
+    }
     ensureCapacity(o.len);
     len = o.len;
     uprv_memcpy(list, o.list, len*sizeof(UChar32));

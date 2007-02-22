@@ -2093,6 +2093,12 @@ void UnicodeSetTest::TestFreezable() {
     if(frozen!=idSet || !(frozen==idSet)) {
         errln("FAIL: a copy-constructed frozen set differs from its original");
     }
+
+    frozen=wsSet;
+    if(frozen!=idSet || !(frozen==idSet)) {
+        errln("FAIL: a frozen set was modified by operator=");
+    }
+
     UnicodeSet frozen2(frozen);
     if(frozen2!=frozen || frozen2!=idSet) {
         errln("FAIL: a copied frozen set differs from its frozen original");
