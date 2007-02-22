@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 1999-2006, International Business Machines
+*   Copyright (C) 1999-2007, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
@@ -346,7 +346,7 @@ UnicodeSet& UnicodeSet::applyPattern(const UnicodeString& pattern,
                                      uint32_t options,
                                      const SymbolTable* symbols,
                                      UErrorCode& status) {
-    if (U_FAILURE(status)) {
+    if (U_FAILURE(status) || isFrozen()) {
         return *this;
     }
 
@@ -372,7 +372,7 @@ UnicodeSet& UnicodeSet::applyPattern(const UnicodeString& pattern,
                               uint32_t options,
                               const SymbolTable* symbols,
                               UErrorCode& status) {
-    if (U_FAILURE(status)) {
+    if (U_FAILURE(status) || isFrozen()) {
         return *this;
     }
     // Need to build the pattern in a temporary string because
@@ -936,7 +936,7 @@ static UBool mungeCharName(char* dst, const char* src, int32_t dstCapacity) {
 
 UnicodeSet&
 UnicodeSet::applyIntPropertyValue(UProperty prop, int32_t value, UErrorCode& ec) {
-    if (U_FAILURE(ec)) return *this;
+    if (U_FAILURE(ec) || isFrozen()) return *this;
 
     if (prop == UCHAR_GENERAL_CATEGORY_MASK) {
         applyFilter(generalCategoryMaskFilter, &value, UPROPS_SRC_CHAR, ec);
@@ -951,7 +951,7 @@ UnicodeSet&
 UnicodeSet::applyPropertyAlias(const UnicodeString& prop,
                                const UnicodeString& value,
                                UErrorCode& ec) {
-    if (U_FAILURE(ec)) return *this;
+    if (U_FAILURE(ec) || isFrozen()) return *this;
 
     // prop and value used to be converted to char * using the default
     // converter instead of the invariant conversion.
@@ -1291,6 +1291,9 @@ addCaseMapping(UnicodeSet &set, int32_t result, const UChar *full, UnicodeString
 }
 
 UnicodeSet& UnicodeSet::closeOver(int32_t attribute) {
+    if (isFrozen()) {
+        return *this;
+    }
     if (attribute & (USET_CASE_INSENSITIVE | USET_ADD_CASE_MAPPINGS)) {
         UErrorCode status = U_ZERO_ERROR;
         const UCaseProps *csp = ucase_getSingleton(&status);

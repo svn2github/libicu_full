@@ -2068,7 +2068,137 @@ UnicodeSetTest::escape(const UnicodeString& s) {
 }
 
 void UnicodeSetTest::TestFreezable() {
-    // TODO
+    UErrorCode errorCode=U_ZERO_ERROR;
+    UnicodeString idPattern=UNICODE_STRING("[:ID_Continue:]", 15);
+    UnicodeSet idSet(idPattern, errorCode);
+    if(U_FAILURE(errorCode)) {
+        errln("FAIL: unable to create UnicodeSet([:ID_Continue:]) - %s", u_errorName(errorCode));
+        return;
+    }
+
+    UnicodeString wsPattern=UNICODE_STRING("[:White_Space:]", 15);
+    UnicodeSet wsSet(wsPattern, errorCode);
+    if(U_FAILURE(errorCode)) {
+        errln("FAIL: unable to create UnicodeSet([:White_Space:]) - %s", u_errorName(errorCode));
+        return;
+    }
+
+    idSet.add(idPattern);
+    UnicodeSet frozen(idSet);
+    frozen.freeze();
+
+    if(idSet.isFrozen() || !frozen.isFrozen()) {
+        errln("FAIL: isFrozen() is wrong");
+    }
+    if(frozen!=idSet || !(frozen==idSet)) {
+        errln("FAIL: a copy-constructed frozen set differs from its original");
+    }
+    UnicodeSet frozen2(frozen);
+    if(frozen2!=frozen || frozen2!=idSet) {
+        errln("FAIL: a copied frozen set differs from its frozen original");
+    }
+    if(!frozen2.isFrozen()) {
+        errln("FAIL: copy-constructing a frozen set results in a thawed one");
+    }
+    UnicodeSet frozen3(5, 55);  // Set to some values to really test assignment below, not copy construction.
+    if(frozen3.contains(0, 4) || !frozen3.contains(5, 55) || frozen3.contains(56, 0x10ffff)) {
+        errln("FAIL: UnicodeSet(5, 55) failed");
+    }
+    frozen3=frozen;
+    if(!frozen3.isFrozen()) {
+        errln("FAIL: copying a frozen set results in a thawed one");
+    }
+
+    UnicodeSet *cloned=(UnicodeSet *)frozen.clone();
+    if(!cloned->isFrozen() || *cloned!=frozen || cloned->containsSome(0xd802, 0xd805)) {
+        errln("FAIL: clone() failed");
+    }
+    cloned->add(0xd802, 0xd805);
+    if(cloned->containsSome(0xd802, 0xd805)) {
+        errln("FAIL: unable to modify clone");
+    }
+    delete cloned;
+
+    UnicodeSet *thawed=(UnicodeSet *)frozen.cloneAsThawed();
+    if(thawed->isFrozen() || *thawed!=frozen || thawed->containsSome(0xd802, 0xd805)) {
+        errln("FAIL: cloneAsThawed() failed");
+    }
+    thawed->add(0xd802, 0xd805);
+    if(!thawed->contains(0xd802, 0xd805)) {
+        errln("FAIL: unable to modify thawed clone");
+    }
+    delete thawed;
+
+    frozen.set(5, 55);
+    if(frozen!=idSet || !(frozen==idSet)) {
+        errln("FAIL: UnicodeSet::set() modified a frozen set");
+    }
+
+    frozen.clear();
+    if(frozen!=idSet || !(frozen==idSet)) {
+        errln("FAIL: UnicodeSet::clear() modified a frozen set");
+    }
+
+    frozen.closeOver(USET_CASE_INSENSITIVE);
+    if(frozen!=idSet || !(frozen==idSet)) {
+        errln("FAIL: UnicodeSet::closeOver() modified a frozen set");
+    }
+
+    frozen.compact();
+    if(frozen!=idSet || !(frozen==idSet)) {
+        errln("FAIL: UnicodeSet::compact() modified a frozen set");
+    }
+
+    ParsePosition pos;
+    frozen.
+        applyPattern(wsPattern, errorCode).
+        applyPattern(wsPattern, USET_IGNORE_SPACE, NULL, errorCode).
+        applyPattern(wsPattern, pos, USET_IGNORE_SPACE, NULL, errorCode).
+        applyIntPropertyValue(UCHAR_CANONICAL_COMBINING_CLASS, 230, errorCode).
+        applyPropertyAlias(UNICODE_STRING_SIMPLE("Assigned"), UnicodeString(), errorCode);
+    if(frozen!=idSet || !(frozen==idSet)) {
+        errln("FAIL: UnicodeSet::applyXYZ() modified a frozen set");
+    }
+
+    frozen.
+        add(0xd800).
+        add(0xd802, 0xd805).
+        add(wsPattern).
+        addAll(idPattern).
+        addAll(wsSet);
+    if(frozen!=idSet || !(frozen==idSet)) {
+        errln("FAIL: UnicodeSet::addXYZ() modified a frozen set");
+    }
+
+    frozen.
+        retain(0x62).
+        retain(0x64, 0x69).
+        retainAll(wsPattern).
+        retainAll(wsSet);
+    if(frozen!=idSet || !(frozen==idSet)) {
+        errln("FAIL: UnicodeSet::retainXYZ() modified a frozen set");
+    }
+
+    frozen.
+        remove(0x62).
+        remove(0x64, 0x69).
+        remove(idPattern).
+        removeAll(idPattern).
+        removeAll(idSet);
+    if(frozen!=idSet || !(frozen==idSet)) {
+        errln("FAIL: UnicodeSet::removeXYZ() modified a frozen set");
+    }
+
+    frozen.
+        complement().
+        complement(0x62).
+        complement(0x64, 0x69).
+        complement(idPattern).
+        complementAll(idPattern).
+        complementAll(idSet);
+    if(frozen!=idSet || !(frozen==idSet)) {
+        errln("FAIL: UnicodeSet::complementXYZ() modified a frozen set");
+    }
 }
 
 // Test span() etc. -------------------------------------------------------- ***

@@ -1,6 +1,6 @@
 /*
 **********************************************************************
-*   Copyright (C) 1999-2006, International Business Machines
+*   Copyright (C) 1999-2007, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 **********************************************************************
 *   Date        Name        Description
@@ -189,9 +189,6 @@ UnicodeSet::UnicodeSet(const UnicodeSet& o) :
         UErrorCode status = U_ZERO_ERROR;
         allocateStrings(status);
         *this = o;
-        if (o.bmpSet != NULL) {
-            bmpSet = new BMPSet(*o.bmpSet, list, len);
-        }
     }
     _dbgct(this);
 }
