@@ -25,6 +25,7 @@ U_NAMESPACE_BEGIN
 class BMPSet;
 class ParsePosition;
 class SymbolTable;
+class UnicodeSetStringSpan;
 class UVector;
 class RuleCharacterIterator;
 
@@ -264,7 +265,7 @@ class U_COMMON_API UnicodeSet : public UnicodeFilter {
     int32_t len; // length of list used; 0 <= len <= capacity
     int32_t capacity; // capacity of list
     UChar32* list; // MUST be terminated with HIGH
-    BMPSet *bmpSet; // Not NULL iff the set is frozen.
+    BMPSet *bmpSet; // The set is frozen iff either bmpSet or stringSpan is not NULL.
     UChar32* buffer; // internal buffer, may be NULL
     int32_t bufferCapacity; // capacity of buffer
     int32_t patLen;
@@ -280,6 +281,7 @@ class U_COMMON_API UnicodeSet : public UnicodeFilter {
      */
     UChar *pat;
     UVector* strings; // maintained in sorted order
+    UnicodeSetStringSpan *stringSpan;
 
 public:
 
@@ -1466,7 +1468,7 @@ inline UBool UnicodeSet::operator!=(const UnicodeSet& o) const {
 }
 
 inline UBool UnicodeSet::isFrozen() const {
-    return (UBool)(bmpSet!=NULL);
+    return (UBool)(bmpSet!=NULL || stringSpan!=NULL);
 }
 
 inline UBool UnicodeSet::containsSome(UChar32 start, UChar32 end) const {

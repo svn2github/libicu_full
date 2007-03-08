@@ -1961,6 +1961,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\unisetspan.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\unisetspan.h"
+				>
+			</File>
+			<File
 				RelativePath=".\uprops.c"
 				>
 			</File>

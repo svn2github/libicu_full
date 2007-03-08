@@ -73,6 +73,7 @@ UnicodeSetTest::runIndexedTest(int32_t index, UBool exec,
         CASE(20,TestIteration);
         CASE(21,TestFreezable);
         CASE(22,TestSpan);
+        CASE(23,TestStringSpan);
         default: name = ""; break;
     }
 }
@@ -2505,6 +2506,9 @@ void UnicodeSetTest::testSpanUTF8Contents(const UnicodeSet *sets[4], const char 
         }
         U8_APPEND_UNSAFE(s, length, c);
     }
+
+    // TODO: Verify that a spanUTF8() and spanBackUTF8() yield equivalent
+    // results as span()/spanBack().
 }
 
 // Test with a particular, interesting string.
@@ -2665,5 +2669,51 @@ void UnicodeSetTest::TestSpan() {
 
         testSpanUTF8String(sets, patterns[i]);
         testSpanUTF8Contents(sets, patterns[i]);
+    }
+}
+
+void UnicodeSetTest::TestStringSpan() {
+    // TODO: Beef up to real test.
+    static const char *const pattern="[x{xy}{xya}{axy}{ax}]";
+    static const char *const string=
+        "xx"
+        "xyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxya"
+        "xx"
+        "xyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxya"
+        "xx"
+        "xyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxy"
+        "aaaa";
+
+    UErrorCode errorCode=U_ZERO_ERROR;
+    UnicodeString pattern16=UnicodeString(pattern, -1, US_INV);
+    UnicodeSet set(pattern16, errorCode);
+    if(U_FAILURE(errorCode)) {
+        errln("FAIL: Unable to create UnicodeSet(%s) - %s", pattern, u_errorName(errorCode));
+        return;
+    }
+
+    UnicodeString string16=UnicodeString(string, -1, US_INV).unescape();
+
+    if(set.containsAll(string16)) {
+        errln("FAIL: UnicodeSet(%s).containsAll(%s) should be FALSE", pattern, string);
+    }
+
+    // Remove trailing "aaaa".
+    string16.truncate(string16.length()-4);
+    if(!set.containsAll(string16)) {
+        errln("FAIL: UnicodeSet(%s).containsAll(%s[:-4]) should be TRUE", pattern, string);
+    }
+
+    string16=UNICODE_STRING_SIMPLE("byayaxya");
+    const UChar *s16=string16.getBuffer();
+    int32_t length16=string16.length();
+    if( set.span(s16, 8, USET_SPAN_WHILE_NOT_CONTAINED)!=4 ||
+        set.span(s16, 7, USET_SPAN_WHILE_NOT_CONTAINED)!=4 ||
+        set.span(s16, 6, USET_SPAN_WHILE_NOT_CONTAINED)!=4 ||
+        set.span(s16, 5, USET_SPAN_WHILE_NOT_CONTAINED)!=5 ||
+        set.span(s16, 4, USET_SPAN_WHILE_NOT_CONTAINED)!=4 ||
+        set.span(s16, 3, USET_SPAN_WHILE_NOT_CONTAINED)!=3
+    ) {
+        errln("FAIL: UnicodeSet(%s).span(while not) returns the wrong value", pattern);
     }
 }

@@ -23,6 +23,7 @@
 #include "uassert.h"
 #include "hash.h"
 #include "bmpset.h"
+#include "unisetspan.h"
 
 // Define UChar constants using hex for EBCDIC compatibility
 // Used #define to reduce private static exports and memory access time.
@@ -141,7 +142,7 @@ static int8_t U_CALLCONV compareUnicodeString(UHashTok t1, UHashTok t2) {
  */
 UnicodeSet::UnicodeSet() :
     len(1), capacity(1 + START_EXTRA), list(0), bmpSet(0), buffer(0),
-    bufferCapacity(0), patLen(0), pat(NULL), strings(NULL)
+    bufferCapacity(0), patLen(0), pat(NULL), strings(NULL), stringSpan(NULL)
 {
     list = (UChar32*) uprv_malloc(sizeof(UChar32) * capacity);
     if(list!=NULL){
@@ -161,7 +162,7 @@ UnicodeSet::UnicodeSet() :
  */
 UnicodeSet::UnicodeSet(UChar32 start, UChar32 end) :
     len(1), capacity(1 + START_EXTRA), list(0), bmpSet(0), buffer(0),
-    bufferCapacity(0), patLen(0), pat(NULL), strings(NULL)
+    bufferCapacity(0), patLen(0), pat(NULL), strings(NULL), stringSpan(NULL)
 {
     list = (UChar32*) uprv_malloc(sizeof(UChar32) * capacity);
     if(list!=NULL){
@@ -182,7 +183,7 @@ UnicodeSet::UnicodeSet(const UnicodeSet& o) :
     len(0), capacity(o.isFrozen() ? o.len : o.len + GROW_EXTRA), list(0),
     bmpSet(0),
     buffer(0), bufferCapacity(0),
-    patLen(0), pat(NULL), strings(NULL)
+    patLen(0), pat(NULL), strings(NULL), stringSpan(NULL)
 {
     list = (UChar32*) uprv_malloc(sizeof(UChar32) * capacity);
     if(list!=NULL){
@@ -199,7 +200,7 @@ UnicodeSet::UnicodeSet(const UnicodeSet& o, UBool /* asThawed */) :
     len(0), capacity(o.len + GROW_EXTRA), list(0),
     bmpSet(0),
     buffer(0), bufferCapacity(0),
-    patLen(0), pat(NULL), strings(NULL)
+    patLen(0), pat(NULL), strings(NULL), stringSpan(NULL)
 {
     list = (UChar32*) uprv_malloc(sizeof(UChar32) * capacity);
     if(list!=NULL){
@@ -457,12 +458,8 @@ UBool UnicodeSet::containsAll(const UnicodeSet& c) const {
  * @return true if the test condition is met
  */
 UBool UnicodeSet::containsAll(const UnicodeString& s) const {
-    UChar32 cp;
-    for (int32_t i = 0; i < s.length(); i += UTF_CHAR_LENGTH(cp)) {
-        cp = s.char32At(i);
-        if (!contains(cp)) return FALSE;
-    }
-    return TRUE;
+    return (UBool)(span(s.getBuffer(), s.length(), USET_SPAN_WHILE_CONTAINED) ==
+                   s.length());
 }
 
 /**
@@ -508,12 +505,8 @@ UBool UnicodeSet::containsNone(const UnicodeSet& c) const {
  * @return true if the test condition is met
  */
 UBool UnicodeSet::containsNone(const UnicodeString& s) const {
-    UChar32 cp;
-    for (int32_t i = 0; i < s.length(); i += UTF_CHAR_LENGTH(cp)) {
-        cp = s.char32At(i);
-        if (contains(cp)) return FALSE;
-    }
-    return TRUE;
+    return (UBool)(span(s.getBuffer(), s.length(), USET_SPAN_WHILE_NOT_CONTAINED) ==
+                   s.length());
 }
 
 /**
@@ -1959,7 +1952,20 @@ UnicodeFunctor *UnicodeSet::freeze() {
             list = (UChar32*) uprv_realloc(list, sizeof(UChar32) * capacity);
         }
 
-        bmpSet=new BMPSet(list, len);
+        // Optimize contains() and span() and similar functions.
+        if (!strings->isEmpty()) {
+            stringSpan = new UnicodeSetStringSpan(*this, *strings, UnicodeSetStringSpan::ALL);
+            if (stringSpan != NULL && !stringSpan->needsStringSpanUTF16()) {
+                // All strings are irrelevant for span() etc. because
+                // all of each string's code points are contained in this set.
+                delete stringSpan;
+                stringSpan = NULL;
+            }
+        }
+        if (stringSpan == NULL) {
+            // No span-relevant strings: Optimize for code-point spans.
+            bmpSet=new BMPSet(list, len);
+        }
     }
     return this;
 }
@@ -1971,15 +1977,30 @@ int32_t UnicodeSet::span(const UChar *s, int32_t length, USetSpanCondition spanC
     if(length<0) {
         length=u_strlen(s);
     }
+    if(length==0) {
+        return 0;
+    }
+    if(stringSpan!=NULL) {
+        return stringSpan->span(s, length, spanCondition);
+    } else if(!strings->isEmpty()) {
+        uint32_t which= spanCondition==USET_SPAN_WHILE_NOT_CONTAINED ?
+                            UnicodeSetStringSpan::FWD_UTF16_NOT_CONTAINED :
+                            UnicodeSetStringSpan::FWD_UTF16_CONTAINED;
+        UnicodeSetStringSpan strSpan(*this, *strings, which);
+        if(strSpan.needsStringSpanUTF16()) {
+            return strSpan.span(s, length, spanCondition);
+        }
+    }
 
     UChar32 c;
     int32_t start=0, prev;
-    while((prev=start)<length) {
+    do {
+        prev=start;
         U16_NEXT(s, start, length, c);
         if(spanCondition!=contains(c)) {
             break;
         }
-    }
+    } while(start<length);
     return prev;
 }
 

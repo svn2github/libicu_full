@@ -80,6 +80,8 @@ private:
 
     void TestSpan();
 
+    void TestStringSpan();
+
 private:
 
     UBool toPatternAux(UChar32 start, UChar32 end);
