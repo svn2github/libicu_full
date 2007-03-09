@@ -1958,12 +1958,15 @@ UnicodeFunctor *UnicodeSet::freeze() {
             if (stringSpan != NULL && !stringSpan->needsStringSpanUTF16()) {
                 // All strings are irrelevant for span() etc. because
                 // all of each string's code points are contained in this set.
+                // Do not check needsStringSpanUTF8() because UTF-8 has at most as
+                // many relevant strings as UTF-16.
+                // (Thus needsStringSpanUTF8() implies needsStringSpanUTF16().)
                 delete stringSpan;
                 stringSpan = NULL;
             }
         }
         if (stringSpan == NULL) {
-            // No span-relevant strings: Optimize for code-point spans.
+            // No span-relevant strings: Optimize for code point spans.
             bmpSet=new BMPSet(list, len);
         }
     }
@@ -2011,15 +2014,30 @@ int32_t UnicodeSet::spanBack(const UChar *s, int32_t length, USetSpanCondition s
     if(length<0) {
         length=u_strlen(s);
     }
+    if(length==0) {
+        return 0;
+    }
+    if(stringSpan!=NULL) {
+        return stringSpan->spanBack(s, length, spanCondition);
+    } else if(!strings->isEmpty()) {
+        uint32_t which= spanCondition==USET_SPAN_WHILE_NOT_CONTAINED ?
+                            UnicodeSetStringSpan::BACK_UTF16_NOT_CONTAINED :
+                            UnicodeSetStringSpan::BACK_UTF16_CONTAINED;
+        UnicodeSetStringSpan strSpan(*this, *strings, which);
+        if(strSpan.needsStringSpanUTF16()) {
+            return strSpan.spanBack(s, length, spanCondition);
+        }
+    }
 
     UChar32 c;
     int32_t prev;
-    while((prev=length)>0) {
+    do {
+        prev=length;
         U16_PREV(s, 0, length, c);
         if(spanCondition!=contains(c)) {
             break;
         }
-    }
+    } while(length>0);
     return prev;
 }
 
@@ -2031,10 +2049,25 @@ int32_t UnicodeSet::spanUTF8(const char *s, int32_t length, USetSpanCondition sp
     if(length<0) {
         length=uprv_strlen(s);
     }
+    if(length==0) {
+        return 0;
+    }
+    if(stringSpan!=NULL) {
+        return stringSpan->spanUTF8((const uint8_t *)s, length, spanCondition);
+    } else if(!strings->isEmpty()) {
+        uint32_t which= spanCondition==USET_SPAN_WHILE_NOT_CONTAINED ?
+                            UnicodeSetStringSpan::FWD_UTF8_NOT_CONTAINED :
+                            UnicodeSetStringSpan::FWD_UTF8_CONTAINED;
+        UnicodeSetStringSpan strSpan(*this, *strings, which);
+        if(strSpan.needsStringSpanUTF8()) {
+            return strSpan.spanUTF8((const uint8_t *)s, length, spanCondition);
+        }
+    }
 
     UChar32 c;
     int32_t start=0, prev;
-    while((prev=start)<length) {
+    do {
+        prev=start;
         U8_NEXT(s, start, length, c);
         if(c<0) {
             c=0xfffd;
@@ -2042,7 +2075,7 @@ int32_t UnicodeSet::spanUTF8(const char *s, int32_t length, USetSpanCondition sp
         if(spanCondition!=contains(c)) {
             break;
         }
-    }
+    } while(start<length);
     return prev;
 }
 
@@ -2054,10 +2087,25 @@ int32_t UnicodeSet::spanBackUTF8(const char *s, int32_t length, USetSpanConditio
     if(length<0) {
         length=uprv_strlen(s);
     }
+    if(length==0) {
+        return 0;
+    }
+    if(stringSpan!=NULL) {
+        return stringSpan->spanBackUTF8((const uint8_t *)s, length, spanCondition);
+    } else if(!strings->isEmpty()) {
+        uint32_t which= spanCondition==USET_SPAN_WHILE_NOT_CONTAINED ?
+                            UnicodeSetStringSpan::BACK_UTF8_NOT_CONTAINED :
+                            UnicodeSetStringSpan::BACK_UTF8_CONTAINED;
+        UnicodeSetStringSpan strSpan(*this, *strings, which);
+        if(strSpan.needsStringSpanUTF8()) {
+            return strSpan.spanBackUTF8((const uint8_t *)s, length, spanCondition);
+        }
+    }
 
     UChar32 c;
     int32_t prev;
-    while((prev=length)>0) {
+    do {
+        prev=length;
         U8_PREV(s, 0, length, c);
         if(c<0) {
             c=0xfffd;
@@ -2065,7 +2113,7 @@ int32_t UnicodeSet::spanBackUTF8(const char *s, int32_t length, USetSpanConditio
         if(spanCondition!=contains(c)) {
             break;
         }
-    }
+    } while(length>0);
     return prev;
 }
 
