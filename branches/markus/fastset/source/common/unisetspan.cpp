@@ -713,15 +713,128 @@ int32_t UnicodeSetStringSpan::spanNot(const UChar *s, int32_t length) const {
 }
 
 int32_t UnicodeSetStringSpan::spanNotBack(const UChar *s, int32_t length) const {
-    return 0;  // TODO
+    int32_t pos=length;
+    int32_t i, stringsLength=strings.size();
+    do {
+        // Span until we find a code point from the set,
+        // or a code point that starts or ends some string.
+        pos=pSpanNotSet->spanBack(s, pos, USET_SPAN_WHILE_NOT_CONTAINED);
+        if(pos==0) {
+            return 0;  // Reached the start of the string.
+        }
+
+        // Try to match the strings at pos.
+        for(i=0; i<stringsLength; ++i) {
+            // Use spanLengths rather than a spanBackLengths pointer because
+            // it is easier and we only need to know whether the string is irrelevant
+            // which is the same in either array.
+            if(spanLengths[i]==ALL_CP_CONTAINED) {
+                continue;  // Irrelevant string.
+            }
+            const UnicodeString &string=*(const UnicodeString *)strings.elementAt(i);
+            const UChar *s16=string.getBuffer();
+            int32_t length16=string.length();
+            if(length16<=pos && matches16(s+pos-length16, s16, length16)) {
+                return pos;  // There is a set element at pos.
+            }
+        }
+
+        // Check whether the current code point is in the original set,
+        // without the string starts and ends.
+        i=spanOneBack(spanSet, s, pos);
+        if(i>0) {
+            return pos;  // There is a set element at pos.
+        } else /* i<0 */ {
+            // The span(while not contained) ended on a string start/end which is
+            // not in the original set. Skip this code point and continue.
+            pos+=i;
+        }
+    } while(pos!=0);
+    return length;  // Reached the start of the string.
 }
 
 int32_t UnicodeSetStringSpan::spanNotUTF8(const uint8_t *s, int32_t length) const {
-    return 0;  // TODO
+    int32_t pos=0, rest=length;
+    int32_t i, stringsLength=strings.size();
+    do {
+        // Span until we find a code point from the set,
+        // or a code point that starts or ends some string.
+        i=pSpanNotSet->spanUTF8((const char *)s+pos, rest, USET_SPAN_WHILE_NOT_CONTAINED);
+        if(i==rest) {
+            return length;  // Reached the end of the string.
+        }
+        pos+=i;
+        rest-=i;
+
+        // Try to match the strings at pos.
+        const uint8_t *s8=utf8;
+        int32_t length8;
+        for(i=0; i<stringsLength; ++i) {
+            if(spanLengths[i]==ALL_CP_CONTAINED) {
+                continue;  // Irrelevant string.
+            }
+            length8=utf8Lengths[i];
+            if(length8<=rest && matches8(s+pos, s8, length8)) {
+                return pos;  // There is a set element at pos.
+            }
+            s8+=length8;
+        }
+
+        // Check whether the current code point is in the original set,
+        // without the string starts and ends.
+        i=spanOneUTF8(spanSet, s+pos, rest);
+        if(i>0) {
+            return pos;  // There is a set element at pos.
+        } else /* i<0 */ {
+            // The span(while not contained) ended on a string start/end which is
+            // not in the original set. Skip this code point and continue.
+            pos-=i;
+            rest+=i;
+        }
+    } while(rest!=0);
+    return length;  // Reached the end of the string.
 }
 
 int32_t UnicodeSetStringSpan::spanNotBackUTF8(const uint8_t *s, int32_t length) const {
-    return 0;  // TODO
+    int32_t pos=length;
+    int32_t i, stringsLength=strings.size();
+    do {
+        // Span until we find a code point from the set,
+        // or a code point that starts or ends some string.
+        pos=pSpanNotSet->spanBackUTF8((const char *)s, pos, USET_SPAN_WHILE_NOT_CONTAINED);
+        if(pos==0) {
+            return 0;  // Reached the start of the string.
+        }
+
+        // Try to match the strings at pos.
+        const uint8_t *s8=utf8;
+        int32_t length8;
+        for(i=0; i<stringsLength; ++i) {
+            // Use spanLengths rather than a spanBackLengths pointer because
+            // it is easier and we only need to know whether the string is irrelevant
+            // which is the same in either array.
+            if(spanLengths[i]==ALL_CP_CONTAINED) {
+                continue;  // Irrelevant string.
+            }
+            length8=utf8Lengths[i];
+            if(length8<=pos && matches8(s+pos-length8, s8, length8)) {
+                return pos;  // There is a set element at pos.
+            }
+            s8+=length8;
+        }
+
+        // Check whether the current code point is in the original set,
+        // without the string starts and ends.
+        i=spanOneBackUTF8(spanSet, s, pos);
+        if(i>0) {
+            return pos;  // There is a set element at pos.
+        } else /* i<0 */ {
+            // The span(while not contained) ended on a string start/end which is
+            // not in the original set. Skip this code point and continue.
+            pos+=i;
+        }
+    } while(pos!=0);
+    return length;  // Reached the start of the string.
 }
 
 U_NAMESPACE_END
