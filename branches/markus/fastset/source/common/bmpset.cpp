@@ -497,6 +497,10 @@ BMPSet::spanUTF8(const uint8_t *s, int32_t length, USetSpanCondition spanConditi
         length=(int32_t)(limit-s);
     }
 
+    if(spanCondition!=USET_SPAN_WHILE_NOT_CONTAINED) {
+        spanCondition=USET_SPAN_WHILE_CONTAINED;  // Pin to 0/1 values.
+    }
+
     const uint8_t *limit0=limit;
 
     /*
@@ -635,6 +639,10 @@ BMPSet::spanUTF8(const uint8_t *s, int32_t length, USetSpanCondition spanConditi
  */
 int32_t
 BMPSet::spanBackUTF8(const uint8_t *s, int32_t length, USetSpanCondition spanCondition) const {
+    if(spanCondition!=USET_SPAN_WHILE_NOT_CONTAINED) {
+        spanCondition=USET_SPAN_WHILE_CONTAINED;  // Pin to 0/1 values.
+    }
+
     uint8_t b;
 
     do {

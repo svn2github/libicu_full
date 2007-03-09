@@ -1995,6 +1995,10 @@ int32_t UnicodeSet::span(const UChar *s, int32_t length, USetSpanCondition spanC
         }
     }
 
+    if(spanCondition!=USET_SPAN_WHILE_NOT_CONTAINED) {
+        spanCondition=USET_SPAN_WHILE_CONTAINED;  // Pin to 0/1 values.
+    }
+
     UChar32 c;
     int32_t start=0, prev;
     do {
@@ -2027,6 +2031,10 @@ int32_t UnicodeSet::spanBack(const UChar *s, int32_t length, USetSpanCondition s
         if(strSpan.needsStringSpanUTF16()) {
             return strSpan.spanBack(s, length, spanCondition);
         }
+    }
+
+    if(spanCondition!=USET_SPAN_WHILE_NOT_CONTAINED) {
+        spanCondition=USET_SPAN_WHILE_CONTAINED;  // Pin to 0/1 values.
     }
 
     UChar32 c;
@@ -2062,6 +2070,10 @@ int32_t UnicodeSet::spanUTF8(const char *s, int32_t length, USetSpanCondition sp
         if(strSpan.needsStringSpanUTF8()) {
             return strSpan.spanUTF8((const uint8_t *)s, length, spanCondition);
         }
+    }
+
+    if(spanCondition!=USET_SPAN_WHILE_NOT_CONTAINED) {
+        spanCondition=USET_SPAN_WHILE_CONTAINED;  // Pin to 0/1 values.
     }
 
     UChar32 c;
@@ -2100,6 +2112,10 @@ int32_t UnicodeSet::spanBackUTF8(const char *s, int32_t length, USetSpanConditio
         if(strSpan.needsStringSpanUTF8()) {
             return strSpan.spanBackUTF8((const uint8_t *)s, length, spanCondition);
         }
+    }
+
+    if(spanCondition!=USET_SPAN_WHILE_NOT_CONTAINED) {
+        spanCondition=USET_SPAN_WHILE_CONTAINED;  // Pin to 0/1 values.
     }
 
     UChar32 c;

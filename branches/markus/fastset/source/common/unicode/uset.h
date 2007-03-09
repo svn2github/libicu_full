@@ -108,21 +108,55 @@ enum {
  */
 enum USetSpanCondition {
     /**
-     * Continue a span() while the current character is not contained in the set
-     * (while contains(current)==FALSE).
+     * Continue a span() while there is no set element at the current position.
+     * Stops before the first set element (character or string).
+     * (For code points only, this is like while contains(current)==FALSE).
+     *
      * When span() returns, the substring between where it started and the position
-     * it returned consists only of characters that are not in the set.
+     * it returned consists only of characters that are not in the set,
+     * and none of its strings overlap with the span.
+     *
      * @draft ICU 3.8
      */
     USET_SPAN_WHILE_NOT_CONTAINED = 0,
     /**
-     * Continue a span() while the current character is contained in the set
-     * (while contains(current)==TRUE).
+     * Continue a span() while there is a set element at the current position.
+     * (For characters only, this is like while contains(current)==TRUE).
+     *
      * When span() returns, the substring between where it started and the position
-     * it returned consists only of characters that are in the set.
+     * it returned consists only of set elements (characters or strings) that are in the set.
+     *
+     * If a set contains strings, then the span will be the longest substring
+     * matching any of the possible concatenations of set elements (characters or strings).
+     * This is equivalent to a regular expression for (OR of each set element)*.
+     *
      * @draft ICU 3.8
      */
-    USET_SPAN_WHILE_CONTAINED = 1
+    USET_SPAN_WHILE_CONTAINED = 1,
+    /**
+     * Continue a span() while there is a set element at the current position.
+     * (For characters only, this is like while contains(current)==TRUE).
+     *
+     * When span() returns, the substring between where it started and the position
+     * it returned consists only of set elements (characters or strings) that are in the set.
+     *
+     * If a set only contains single characters, then this is the same
+     * as USET_SPAN_WHILE_CONTAINED.
+     *
+     * If a set contains strings, then the span will be the longest substring
+     * with a match at each position with the longest single set element(character or string).
+     *
+     * Use this span condition together with other longest-match algorithms,
+     * such as ICU converters (ucnv_getUnicodeSet()).
+     *
+     * @draft ICU 3.8
+     */
+    USET_SPAN_WHILE_LONGEST_MATCH = 2,
+    /**
+     * One more than the last span condition.
+     * @draft ICU 3.8
+     */
+    USET_SPAN_CONDITION_COUNT
 };
 typedef enum USetSpanCondition USetSpanCondition;
 

@@ -36,6 +36,12 @@ U_NAMESPACE_BEGIN
  * This avoids inserting into a sorted list of actual indexes and
  * physically moving part of the list.
  *
+ * Note: In principle, the caller should setMaxLength() to the maximum of the
+ * max string length and U16_LENGTH/U8_LENGTH to account for
+ * "long" single code points.
+ * However, this implementation uses at least a staticList with more than
+ * U8_LENGTH entries anyway.
+ *
  * Note: If maxLength were guaranteed to be no more than 32 or 64,
  * the list could be stored as bit flags in a single integer.
  * Rather than handling a circular buffer with a start list index,
@@ -45,21 +51,28 @@ U_NAMESPACE_BEGIN
  */
 class IndexList : public UMemory {
 public:
-    IndexList(int32_t maxLength) : length(0), reference(0), start(0) {
-        if(maxLength<=sizeof(staticList)) {
-            list=staticList;
-            capacity=(int32_t)sizeof(staticList);
-        } else {
-            capacity=maxLength;
-            list=(UBool *)uprv_malloc(capacity);
-        }
-        uprv_memset(list, 0, capacity);
+    IndexList() : list(staticList), capacity(0),
+                  length(0), reference(0), start(0) {
     }
 
     ~IndexList() {
         if(list!=staticList) {
             uprv_free(list);
         }
+    }
+
+    // Call exactly once if the list is to be used.
+    void setMaxLength(int32_t maxLength) {
+        if(maxLength<=sizeof(staticList)) {
+            capacity=(int32_t)sizeof(staticList);
+        } else {
+            UBool *l=(UBool *)uprv_malloc(maxLength);
+            if(l!=NULL) {
+                list=l;
+                capacity=maxLength;
+            }
+        }
+        uprv_memset(list, 0, capacity);
     }
 
     void clear() {
@@ -277,9 +290,6 @@ UnicodeSetStringSpan::UnicodeSetStringSpan(const UnicodeSet &set,
           maxLength16(0), maxLength8(0),
           all((UBool)(which==ALL)) {
     spanSet.retainAll(set);
-    if(all) {
-        spanSet.freeze();
-    }
     if(which&NOT_CONTAINED) {
         // Default to the same sets.
         // addToSpanNotSet() will create a separate set if necessary.
@@ -313,6 +323,12 @@ UnicodeSetStringSpan::UnicodeSetStringSpan(const UnicodeSet &set,
     }
     if((maxLength16|maxLength8)==0) {
         return;
+    }
+
+    // Freeze after checking for the need to use strings at all because freezing
+    // a set takes some time and memory which are wasted if there are no relevant strings.
+    if(all) {
+        spanSet.freeze();
     }
 
     uint8_t *spanBackLengths;
@@ -450,6 +466,9 @@ UnicodeSetStringSpan::~UnicodeSetStringSpan() {
 
 void UnicodeSetStringSpan::addToSpanNotSet(UChar32 c) {
     if(pSpanNotSet==NULL || pSpanNotSet==&spanSet) {
+        if(spanSet.contains(c)) {
+            return;  // Nothing to do.
+        }
         UnicodeSet *newSet=(UnicodeSet *)spanSet.cloneAsThawed();
         if(newSet==NULL) {
             return;  // Out of memory.
@@ -526,6 +545,20 @@ spanOneBackUTF8(const UnicodeSet &set, const uint8_t *s, int32_t length) {
 }
 
 /*
+ * Note: In span() when spanLength==0 (after a string match, or at the beginning
+ * after an empty code point span) and in spanNot() and spanNotUTF8(),
+ * string matching could use a binary search
+ * because all string matches are done from the same start index.
+ *
+ * For UTF-8, this would require a comparison function that returns UTF-16 order.
+ * This should not be necessary for normal UnicodeSets because
+ * most sets have no strings, and most sets with strings have
+ * very few very short strings.
+ * For cases with many strings, it might be better to use a different API
+ * and implementation with a DFA (state machine).
+ */
+
+/*
  * TODO: span algorithm
  */
 
@@ -539,11 +572,21 @@ int32_t UnicodeSetStringSpan::span(const UChar *s, int32_t length, USetSpanCondi
     }
 
     // Consider strings; they may overlap with the span.
-    IndexList indexes(maxLength16);
-    indexes.setStart(spanLength);
+    IndexList indexes;
+    int32_t maxInc, maxIncReset;
+    if(spanCondition==USET_SPAN_WHILE_CONTAINED) {
+        // Use index list to try all possibilities.
+        indexes.setMaxLength(maxLength16);
+        indexes.setStart(spanLength);
+        maxIncReset=-1;
+    } else /* USET_SPAN_WHILE_LONGEST_MATCH */ {
+        // Use longest match.
+        maxIncReset=0;
+    }
     int32_t pos=spanLength, rest=length-pos;
     int32_t i, stringsLength=strings.size();
     for(;;) {
+        maxInc=maxIncReset;
         for(i=0; i<stringsLength; ++i) {
             int32_t overlap=spanLengths[i];
             if(overlap==ALL_CP_CONTAINED) {
@@ -569,13 +612,17 @@ int32_t UnicodeSetStringSpan::span(const UChar *s, int32_t length, USetSpanCondi
                 // Match at code point boundaries if the increment is not listed already.
                 if( !(overlap>0 && U16_IS_TRAIL(s[pos-overlap]) &&
                       overlap<spanLength && U16_IS_LEAD(s[pos-overlap-1])) &&
-                    !indexes.containsIncrement(inc) &&
+                    (maxInc>=0 ? inc>maxInc : !indexes.containsIncrement(inc)) &&
                     matches16(s+pos-overlap, s16, length16)
                 ) {
                     if(inc==rest) {
                         return length;  // Reached the end of the string.
                     }
-                    indexes.addIncrement(inc);
+                    if(maxInc>=0) {
+                        maxInc=inc;  // Longest match.
+                    } else {
+                        indexes.addIncrement(inc);
+                    }
                 }
                 if(overlap==0) {
                     break;
@@ -585,6 +632,17 @@ int32_t UnicodeSetStringSpan::span(const UChar *s, int32_t length, USetSpanCondi
             }
         }
         // Finished trying to match all strings at pos.
+
+        if(maxInc>0) {
+            // Longest-match algorithm, and there was a string match.
+            // Simply continue after it.
+            pos+=maxInc;
+            rest-=maxInc;
+            spanLength=0;  // Match strings from after a string match.
+            continue;
+        }
+        // if(maxInc==0) then indexes is unused and empty. (No string match.)
+        // if(maxInc<0) then indexes is used, and checked for string matches.
 
         if(spanLength!=0 || pos==0) {
             // The position is after an unlimited code point span (spanLength!=0),
@@ -660,15 +718,6 @@ int32_t UnicodeSetStringSpan::spanBackUTF8(const uint8_t *s, int32_t length, USe
 
 /*
  * TODO: spanNot algorithm
- */
-
-/*
- * Note: In spanNot() and spanNotUTF8(), string matching could use a binary search
- * because all string matches are done from the same start index.
- * For UTF-8, this would require a comparison function that returns UTF-16 order.
- * This should not be necessary for normal UnicodeSets because
- * most sets have no strings, and most sets with strings have
- * very few very short strings.
  */
 
 int32_t UnicodeSetStringSpan::spanNot(const UChar *s, int32_t length) const {

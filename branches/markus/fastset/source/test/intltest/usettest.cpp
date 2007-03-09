@@ -2674,7 +2674,7 @@ void UnicodeSetTest::TestSpan() {
 
 void UnicodeSetTest::TestStringSpan() {
     // TODO: Beef up to real test.
-    static const char *const pattern="[x{xy}{xya}{axy}{ax}]";
+    static const char *pattern="[x{xy}{xya}{axy}{ax}]";
     static const char *const string=
         "xx"
         "xyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxyaxya"
@@ -2715,5 +2715,22 @@ void UnicodeSetTest::TestStringSpan() {
         set.span(s16, 3, USET_SPAN_WHILE_NOT_CONTAINED)!=3
     ) {
         errln("FAIL: UnicodeSet(%s).span(while not) returns the wrong value", pattern);
+    }
+
+    pattern="[a{ab}{abc}{cd}]";
+    pattern16=UnicodeString(pattern, -1, US_INV);
+    set.applyPattern(pattern16, errorCode).freeze();
+    if(U_FAILURE(errorCode)) {
+        errln("FAIL: Unable to create UnicodeSet(%s) - %s", pattern, u_errorName(errorCode));
+        return;
+    }
+    string16=UNICODE_STRING_SIMPLE("acdabcdabccd");
+    s16=string16.getBuffer();
+    length16=string16.length();
+    if( set.span(s16, 12, USET_SPAN_WHILE_CONTAINED)!=12 ||
+        set.span(s16, 12, USET_SPAN_WHILE_LONGEST_MATCH)!=6 ||
+        set.span(s16+7, 5, USET_SPAN_WHILE_LONGEST_MATCH)!=5
+    ) {
+        errln("FAIL: UnicodeSet(%s).span(while longest match) returns the wrong value", pattern);
     }
 }
