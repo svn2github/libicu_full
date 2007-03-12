@@ -2719,7 +2719,7 @@ void UnicodeSetTest::TestStringSpan() {
 
     pattern="[a{ab}{abc}{cd}]";
     pattern16=UnicodeString(pattern, -1, US_INV);
-    set.applyPattern(pattern16, errorCode).freeze();
+    set.applyPattern(pattern16, errorCode);
     if(U_FAILURE(errorCode)) {
         errln("FAIL: Unable to create UnicodeSet(%s) - %s", pattern, u_errorName(errorCode));
         return;
@@ -2732,5 +2732,22 @@ void UnicodeSetTest::TestStringSpan() {
         set.span(s16+7, 5, USET_SPAN_WHILE_LONGEST_MATCH)!=5
     ) {
         errln("FAIL: UnicodeSet(%s).span(while longest match) returns the wrong value", pattern);
+    }
+
+    pattern="[d{cd}{bcd}{ab}]";
+    pattern16=UnicodeString(pattern, -1, US_INV);
+    set.applyPattern(pattern16, errorCode).freeze();
+    if(U_FAILURE(errorCode)) {
+        errln("FAIL: Unable to create UnicodeSet(%s) - %s", pattern, u_errorName(errorCode));
+        return;
+    }
+    string16=UNICODE_STRING_SIMPLE("abbcdabcdabd");
+    s16=string16.getBuffer();
+    length16=string16.length();
+    if( set.spanBack(s16, 12, USET_SPAN_WHILE_CONTAINED)!=0 ||
+        set.spanBack(s16, 12, USET_SPAN_WHILE_LONGEST_MATCH)!=6 ||
+        set.spanBack(s16, 5, USET_SPAN_WHILE_LONGEST_MATCH)!=0
+    ) {
+        errln("FAIL: UnicodeSet(%s).spanBack(while longest match) returns the wrong value", pattern);
     }
 }

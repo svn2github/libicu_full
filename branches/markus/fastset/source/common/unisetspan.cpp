@@ -24,16 +24,18 @@
 U_NAMESPACE_BEGIN
 
 /*
- * List of next indexes from where to try matching a code point or a string.
- * Indexes are set as deltas from a reference point.
+ * List of offsets from the current position from where to try matching
+ * a code point or a string.
+ * Store offsets rather than indexes to simplify the code and use the same list
+ * for both increments (in span()) and decrements (in spanBack()).
  *
- * Assumption: The maximum delta is limited, and the indexes that are stored
+ * Assumption: The maximum offset is limited, and the offsets that are stored
  * at any one time are relatively dense, that is, there are normally no gaps of
- * hundreds or thousands of index values.
+ * hundreds or thousands of offset values.
  *
- * The implementation uses a circular buffer of bit flags,
- * each indicating whether the corresponding index is in the list.
- * This avoids inserting into a sorted list of actual indexes and
+ * The implementation uses a circular buffer of byte flags,
+ * each indicating whether the corresponding offset is in the list.
+ * This avoids inserting into a sorted list of offsets (or absolute indexes) and
  * physically moving part of the list.
  *
  * Note: In principle, the caller should setMaxLength() to the maximum of the
@@ -45,17 +47,14 @@ U_NAMESPACE_BEGIN
  * Note: If maxLength were guaranteed to be no more than 32 or 64,
  * the list could be stored as bit flags in a single integer.
  * Rather than handling a circular buffer with a start list index,
- * popMinimum() and popMaximum() would shift the integer such that
- * the lowest/highest bit corresponded to the reference text index.
+ * the integer would simply be shifted when lower offsets are removed.
  * UnicodeSet does not have a limit on the lengths of strings.
  */
-class IndexList : public UMemory {
+class OffsetList {  // Only ever stack-allocated, does not need to inherit UMemory.
 public:
-    IndexList() : list(staticList), capacity(0),
-                  length(0), reference(0), start(0) {
-    }
+    OffsetList() : list(staticList), capacity(0), length(0), start(0) {}
 
-    ~IndexList() {
+    ~OffsetList() {
         if(list!=staticList) {
             uprv_free(list);
         }
@@ -77,28 +76,20 @@ public:
 
     void clear() {
         uprv_memset(list, 0, capacity);
-        reference=start=length=0;
+        start=length=0;
     }
 
     UBool isEmpty() const {
         return (UBool)(length==0);
     }
 
-    // Set the starting reference point on an empty list,
-    // for adding increments 1..maxLength from there.
-    // Normally the last span limit.
-    void setStart(int32_t index) {
-        reference=index;
-    }
-
-    // Increment the starting reference point, for adding increments 1..maxLength
-    // from there. Equivalent to addIncrement(inc) and popMinimum().
-    // If the list is not empty, then there must not be any stored indexes
-    // with a lower increment.
-    // inc=[1..maxLength]
-    void incrementStart(int32_t inc) {
-        reference+=inc;
-        int32_t i=start+inc;
+    // Reduce all stored offsets by delta, used when the current position
+    // moves by delta.
+    // There must not be any offsets lower than delta.
+    // If there is an offset equal to delta, it is removed.
+    // delta=[1..maxLength]
+    void shift(int32_t delta) {
+        int32_t i=start+delta;
         if(i>=capacity) {
             i-=capacity;
         }
@@ -109,46 +100,46 @@ public:
         start=i;
     }
 
-    // inc=[1..maxLength]
-    void addIncrement(int32_t inc) {
-        int32_t i=start+inc;
+    // Add an offset. The list must not contain it yet.
+    // offset=[1..maxLength]
+    void addOffset(int32_t offset) {
+        int32_t i=start+offset;
         if(i>=capacity) {
             i-=capacity;
         }
-        if(!list[i]) {
-            list[i]=TRUE;
-            ++length;
-        }
+        list[i]=TRUE;
+        ++length;
     }
 
-    // inc=[1..maxLength]
-    UBool containsIncrement(int32_t inc) const {
-        int32_t i=start+inc;
+    // offset=[1..maxLength]
+    UBool containsOffset(int32_t offset) const {
+        int32_t i=start+offset;
         if(i>=capacity) {
             i-=capacity;
         }
         return list[i];
     }
 
-    // Get the lowest stored index from a non-empty list which has been
-    // filled with setStart() and addIncrement().
+    // Find the lowest stored offset from a non-empty list, remove it,
+    // and reduce all other offsets by this minimum.
+    // Returns [1..maxLength].
     int32_t popMinimum() {
-        // Look for the next index in list[start+1..capacity-1].
-        int32_t i=start;
+        // Look for the next offset in list[start+1..capacity-1].
+        int32_t i=start, result;
         while(++i<capacity) {
             if(list[i]) {
                 list[i]=FALSE;
                 --length;
-                reference+=(i-start);
+                result=i-start;
                 start=i;
-                return reference;
+                return result;
             }
         }
         // i==capacity
 
-        // Wrap around and look for the next index in list[0..].
+        // Wrap around and look for the next offset in list[0..start].
         // Since the list is not empty, there will be one.
-        reference+=(capacity-start);
+        result=capacity-start;
         i=0;
         while(!list[i]) {
             ++i;
@@ -156,89 +147,13 @@ public:
         list[i]=FALSE;
         --length;
         start=i;
-        return reference+=i;
-    }
-
-    // Set the limit reference point on an empty list,
-    // for adding decrements 1..maxLength from there.
-    // Normally the last spanBack limit.
-    void setLimit(int32_t index) {
-        reference=index;
-    }
-
-    // Decrement the limit reference point, for adding decrements 1..maxLength
-    // from there. Equivalent to addDecrement(dec) and popMaximum().
-    // If the list is not empty, then there must not be any stored indexes
-    // with a lower decrement.
-    // dec=[1..maxLength]
-    void decrementLimit(int32_t dec) {
-        reference-=dec;
-        int32_t i=start-dec;
-        if(i<0) {
-            i+=capacity;
-        }
-        if(list[i]) {
-            list[i]=FALSE;
-            --length;
-        }
-        start=i;
-    }
-
-    // dec=[1..maxLength]
-    void addDecrement(int32_t dec) {
-        int32_t i=start-dec;
-        if(i<0) {
-            i+=capacity;
-        }
-        if(!list[i]) {
-            list[i]=TRUE;
-            ++length;
-        }
-    }
-
-    // dec=[1..maxLength]
-    UBool containsDecrement(int32_t dec) const {
-        int32_t i=start-dec;
-        if(i<0) {
-            i+=capacity;
-        }
-        return list[i];
-    }
-
-    // Get the highest stored index from a non-empty list which has been
-    // filled with setLimit() and addDecrement().
-    int32_t popMaximum() {
-        // Look for the next index in list[0..start-1].
-        int32_t i=start;
-        while(--i>=0) {
-            if(list[i]) {
-                list[i]=FALSE;
-                --length;
-                reference-=(start-i);
-                start=i;
-                return reference;
-            }
-        }
-        // i==-1
-
-        // Wrap around and look for the next index in list[..capacity-1].
-        // Since the list is not empty, there will be one.
-        reference-=start+1;
-        i=capacity-1;
-        while(!list[i]) {
-            --i;
-        }
-        list[i]=FALSE;
-        --length;
-        start=i;
-        return reference+=i;
+        return result+=i;
     }
 
 private:
     UBool *list;
     int32_t capacity;
     int32_t length;
-    int32_t reference;
     int32_t start;
 
     UBool staticList[16];
@@ -572,12 +487,11 @@ int32_t UnicodeSetStringSpan::span(const UChar *s, int32_t length, USetSpanCondi
     }
 
     // Consider strings; they may overlap with the span.
-    IndexList indexes;
+    OffsetList offsets;
     int32_t maxInc, maxIncReset;
     if(spanCondition==USET_SPAN_WHILE_CONTAINED) {
         // Use index list to try all possibilities.
-        indexes.setMaxLength(maxLength16);
-        indexes.setStart(spanLength);
+        offsets.setMaxLength(maxLength16);
         maxIncReset=-1;
     } else /* USET_SPAN_WHILE_LONGEST_MATCH */ {
         // Use longest match.
@@ -609,11 +523,13 @@ int32_t UnicodeSetStringSpan::span(const UChar *s, int32_t length, USetSpanCondi
                 if(inc>rest) {
                     break;
                 }
-                // Match at code point boundaries if the increment is not listed already.
-                if( !(overlap>0 && U16_IS_TRAIL(s[pos-overlap]) &&
-                      overlap<spanLength && U16_IS_LEAD(s[pos-overlap-1])) &&
-                    (maxInc>=0 ? inc>maxInc : !indexes.containsIncrement(inc)) &&
-                    matches16(s+pos-overlap, s16, length16)
+                // Try to match if the increment is not listed already.
+                // (The string might start with a trail surrogate. Make sure to not overlap
+                // into a surrogate pair.)
+                if( (maxInc>=0 ? inc>maxInc : !offsets.containsOffset(inc)) &&
+                    matches16(s+pos-overlap, s16, length16) &&
+                    !(overlap>0 && U16_IS_TRAIL(s[pos-overlap]) &&
+                      overlap<pos && U16_IS_LEAD(s[pos-overlap-1]))
                 ) {
                     if(inc==rest) {
                         return length;  // Reached the end of the string.
@@ -621,7 +537,7 @@ int32_t UnicodeSetStringSpan::span(const UChar *s, int32_t length, USetSpanCondi
                     if(maxInc>=0) {
                         maxInc=inc;  // Longest match.
                     } else {
-                        indexes.addIncrement(inc);
+                        offsets.addOffset(inc);
                     }
                 }
                 if(overlap==0) {
@@ -648,15 +564,15 @@ int32_t UnicodeSetStringSpan::span(const UChar *s, int32_t length, USetSpanCondi
             // The position is after an unlimited code point span (spanLength!=0),
             // not after a string match.
             // The only position where spanLength==0 after a span is pos==0.
-            // Otherwise, an unlimited code point span is only tried again after no
+            // Otherwise, an unlimited code point span is only tried again when no
             // strings match, and if such a non-initial span fails we stop.
-            if(indexes.isEmpty()) {
+            if(offsets.isEmpty()) {
                 return pos;  // No strings matched after a span.
             }
             // Match strings from after the next string match.
         } else {
             // The position is after a string match (or a single code point).
-            if(indexes.isEmpty()) {
+            if(offsets.isEmpty()) {
                 // No more strings matched after a previous string match.
                 // Try another code point span from after the last string match.
                 spanLength=spanSet.span(s+pos, rest, USET_SPAN_WHILE_CONTAINED);
@@ -666,7 +582,6 @@ int32_t UnicodeSetStringSpan::span(const UChar *s, int32_t length, USetSpanCondi
                 ) {
                     return pos;
                 }
-                indexes.setStart(pos);
                 continue;  // spanLength>0: Match strings from after a span.
             } else {
                 // Try to match only one code point from after a string match if some
@@ -681,25 +596,154 @@ int32_t UnicodeSetStringSpan::span(const UChar *s, int32_t length, USetSpanCondi
                     // There cannot be any increments below it because UnicodeSet strings
                     // contain multiple code points.
                     pos+=spanLength;
-                    indexes.incrementStart(spanLength);
+                    offsets.shift(spanLength);
                     spanLength=0;
                     continue;  // Match strings from after a single code point.
                 }
                 // Match strings from after the next string match.
             }
         }
-        pos=indexes.popMinimum();
+        pos+=offsets.popMinimum();
         rest=length-pos;
         spanLength=0;  // Match strings from after a string match.
     }
-    return 0;  // TODO
 }
 
 int32_t UnicodeSetStringSpan::spanBack(const UChar *s, int32_t length, USetSpanCondition spanCondition) const {
     if(spanCondition==USET_SPAN_WHILE_NOT_CONTAINED) {
         return spanNotBack(s, length);
     }
-    return 0;  // TODO
+    int32_t pos=spanSet.spanBack(s, length, USET_SPAN_WHILE_CONTAINED);
+    if(pos==0) {
+        return 0;
+    }
+    int32_t spanLength=length-pos;
+
+    // Consider strings; they may overlap with the span.
+    OffsetList offsets;
+    int32_t maxDec, maxDecReset;
+    if(spanCondition==USET_SPAN_WHILE_CONTAINED) {
+        // Use index list to try all possibilities.
+        offsets.setMaxLength(maxLength16);
+        maxDecReset=-1;
+    } else /* USET_SPAN_WHILE_LONGEST_MATCH */ {
+        // Use longest match.
+        maxDecReset=0;
+    }
+    int32_t i, stringsLength=strings.size();
+    uint8_t *spanBackLengths=spanLengths;
+    if(all) {
+        spanBackLengths+=stringsLength;
+    }
+    for(;;) {
+        maxDec=maxDecReset;
+        for(i=0; i<stringsLength; ++i) {
+            int32_t overlap=spanBackLengths[i];
+            if(overlap==ALL_CP_CONTAINED) {
+                continue;  // Irrelevant string.
+            }
+            const UnicodeString &string=*(const UnicodeString *)strings.elementAt(i);
+            const UChar *s16=string.getBuffer();
+            int32_t length16=string.length();
+
+            // Try to match this string at pos-(length16-overlap)..pos-length16.
+            int32_t dec;
+            if(overlap==LONG_SPAN) {
+                dec=0;
+                U16_FWD_1(s16, dec, length16);
+                overlap=(length16-dec);  // Length of the string minus the first code point.
+            }
+            if(overlap>spanLength) {
+                overlap=spanLength;
+            }
+            dec=length16-overlap;  // Keep dec+overlap==length16.
+            for(;;) {
+                if(dec>pos) {
+                    break;
+                }
+                // Try to match if the decrement is not listed already.
+                // (The string might end with a lead surrogate. Make sure to not overlap
+                // into a surrogate pair.)
+                if( (maxDec>=0 ? dec>maxDec : !offsets.containsOffset(dec)) &&
+                    matches16(s+pos-dec, s16, length16) &&
+                    !(overlap>0 && U16_IS_LEAD(s[pos+overlap-1]) &&
+                      (pos+overlap)<length && U16_IS_TRAIL(s[pos+overlap]))
+                ) {
+                    if(dec==pos) {
+                        return 0;  // Reached the start of the string.
+                    }
+                    if(maxDec>=0) {
+                        maxDec=dec;  // Longest match.
+                    } else {
+                        offsets.addOffset(dec);
+                    }
+                }
+                if(overlap==0) {
+                    break;
+                }
+                --overlap;
+                ++dec;
+            }
+        }
+        // Finished trying to match all strings at pos.
+
+        if(maxDec>0) {
+            // Longest-match algorithm, and there was a string match.
+            // Simply continue after it.
+            pos-=maxDec;
+            spanLength=0;  // Match strings from after a string match.
+            continue;
+        }
+        // if(maxDec==0) then indexes is unused and empty. (No string match.)
+        // if(maxDec<0) then indexes is used, and checked for string matches.
+
+        if(spanLength!=0 || pos==length) {
+            // The position is before an unlimited code point span (spanLength!=0),
+            // not before a string match.
+            // The only position where spanLength==0 before a span is pos==length.
+            // Otherwise, an unlimited code point span is only tried again when no
+            // strings match, and if such a non-initial span fails we stop.
+            if(offsets.isEmpty()) {
+                return pos;  // No strings matched before a span.
+            }
+            // Match strings from before the next string match.
+        } else {
+            // The position is before a string match (or a single code point).
+            if(offsets.isEmpty()) {
+                // No more strings matched before a previous string match.
+                // Try another code point span from before the last string match.
+                int32_t oldPos=pos;
+                pos=spanSet.spanBack(s, oldPos, USET_SPAN_WHILE_CONTAINED);
+                spanLength=oldPos-pos;
+                if( pos==0 ||           // Reached the start of the string, or
+                    spanLength==0       // neither strings nor span progressed.
+                ) {
+                    return pos;
+                }
+                continue;  // spanLength>0: Match strings from before a span.
+            } else {
+                // Try to match only one code point from before a string match if some
+                // string matched beyond it, so that we try all possible positions
+                // and don't overshoot.
+                spanLength=spanOneBack(spanSet, s, pos);
+                if(spanLength>0) {
+                    if(spanLength==pos) {
+                        return 0;  // Reached the start of the string.
+                    }
+                    // Match strings before this code point.
+                    // There cannot be any decrements below it because UnicodeSet strings
+                    // contain multiple code points.
+                    pos-=spanLength;
+                    offsets.shift(spanLength);
+                    spanLength=0;
+                    continue;  // Match strings from before a single code point.
+                }
+                // Match strings from before the next string match.
+            }
+        }
+        pos-=offsets.popMinimum();
+        spanLength=0;  // Match strings from before a string match.
+    }
 }
 
 int32_t UnicodeSetStringSpan::spanUTF8(const uint8_t *s, int32_t length, USetSpanCondition spanCondition) const {

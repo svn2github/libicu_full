@@ -100,10 +100,24 @@ enum {
 #ifndef U_HIDE_DRAFT_API
 
 /**
- * The two values for whether span() and similar functions continue while
+ * Argument values for whether span() and similar functions continue while
  * the current character is contained vs. not contained in the set.
- * More readable than using TRUE and FALSE, but the numeric values are the same
- * as TRUE and FALSE which are returned from contains().
+ *
+ * span(USET_SPAN_WHILE_NOT_CONTAINED) and span(USET_SPAN_WHILE_CONTAINED)
+ * partition a string precisely: Each one covers exactly segments of a string
+ * that the other one does not.
+ *
+ * span(USET_SPAN_WHILE_LONGEST_MATCH) is "greedy"; if the set contains
+ * any strings whose code points are not all contained in the set
+ * then a longest-match span may stop earlier than span(USET_SPAN_WHILE_CONTAINED).
+ * Therefore, span(USET_SPAN_WHILE_LONGEST_MATCH) may not partition
+ * a string precisely with span(USET_SPAN_WHILE_NOT_CONTAINED).
+ *
+ * span() and spanBack() partition a string the same way when
+ * USET_SPAN_WHILE_NOT_CONTAINED is alternated with USET_SPAN_WHILE_CONTAINED.
+ * They may partition a string in different ways when
+ * USET_SPAN_WHILE_NOT_CONTAINED is alternated with USET_SPAN_WHILE_LONGEST_MATCH.
+ *
  * @draft ICU 3.8
  */
 enum USetSpanCondition {
