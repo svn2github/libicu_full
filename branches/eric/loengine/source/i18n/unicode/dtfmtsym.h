@@ -22,6 +22,7 @@
 
 #if !UCONFIG_NO_FORMATTING
 
+#include "unicode/calendar.h"
 #include "unicode/uobject.h"
 #include "unicode/locid.h"
 #include "unicode/ures.h"
@@ -478,9 +479,23 @@ public:
      * @param status   Input/output parameter, set to success or
      *                 failure code upon return.
      * @return the input UnicodeString parameter for chaining
-     * @internal ICU 3.6
+     * @internal ICU 3.8
      */
     UnicodeString& getZoneString(const UnicodeString &ID, const TimeZoneTranslationType type, UnicodeString &result, UErrorCode &status);
+
+    /**
+     * Gets metazone string given the key and translation type and calendar
+     * @param ID       The ID of zone strings,  e.g: "America/Los_Angeles".
+     *                 The time zone ID is  for programmatic lookup.
+     * @param type     The translation type requested
+     * @param cal      The calendar
+     * @param result   Output parameter to recieve the translation string
+     * @param status   Input/output parameter, set to success or
+     *                 failure code upon return.
+     * @return the input UnicodeString parameter for chaining
+     * @internal ICU 3.8
+     */
+    UnicodeString& getMetazoneString(const UnicodeString &ID, const TimeZoneTranslationType type, Calendar &cal, UnicodeString &result, UErrorCode &status);
 
     /**
      * Sets timezone string for the given the ID and translation type
@@ -711,6 +726,7 @@ private:
      * Delete just the zone strings.
      */
     void disposeZoneStrings(void);
+
     /**
      * Initializes the zoneStrings hash and keys StringEnumeration after reading the zoneStrings resource
      */
@@ -766,6 +782,7 @@ private:
      */
     void findZoneIDTypeValue(UnicodeString& zid, const UnicodeString& text, int32_t start, TimeZoneTranslationType& type, UnicodeString& value, UErrorCode& status);
 
+    UnicodeString resolveParsedMetazone(const UnicodeString& zid);
 };
 
 U_NAMESPACE_END

@@ -1,6 +1,6 @@
 /*
 **********************************************************************
-* Copyright (c) 2002-2006, International Business Machines
+* Copyright (c) 2002-2007, International Business Machines
 * Corporation and others.  All Rights Reserved.
 **********************************************************************
 */
@@ -22,6 +22,7 @@
 #include "umutex.h"
 #include "ucln_in.h"
 #include "uenumimp.h"
+#include "uresimp.h"
 
 //------------------------------------------------------------
 // Constants
@@ -479,28 +480,23 @@ ucurr_getName(const UChar* currency,
     myUCharsToChars(buf, currency);
 
     const UChar* s = NULL;
+    ec2 = U_ZERO_ERROR;
+    UResourceBundle* rb = ures_open(NULL, loc, &ec2);
 
-    // Multi-level resource inheritance fallback loop
-    for (;;) {
-        ec2 = U_ZERO_ERROR;
-        UResourceBundle* rb = ures_open(NULL, loc, &ec2);
-        rb = ures_getByKey(rb, CURRENCIES, rb, &ec2);
-        rb = ures_getByKey(rb, buf, rb, &ec2);
-        s = ures_getStringByIndex(rb, choice, len, &ec2);
-        ures_close(rb);
+    rb = ures_getByKey(rb, CURRENCIES, rb, &ec2);
 
-        // If we've succeeded we're done.  Otherwise, try to fallback.
-        // If that fails (because we are already at root) then exit.
-        if (U_SUCCESS(ec2) || !fallback(loc)) {
-            if (ec2 == U_USING_DEFAULT_WARNING
-                || (ec2 == U_USING_FALLBACK_WARNING && *ec != U_USING_DEFAULT_WARNING)) {
-                *ec = ec2;
-            }
-            break;
-        } else if (strlen(loc) == 0) {
-            *ec = U_USING_DEFAULT_WARNING;
-        } else if (*ec != U_USING_DEFAULT_WARNING) {
-            *ec = U_USING_FALLBACK_WARNING;
+    // Fetch resource with multi-level resource inheritance fallback
+    rb = ures_getByKeyWithFallback(rb, buf, rb, &ec2);
+
+    s = ures_getStringByIndex(rb, choice, len, &ec2);
+    ures_close(rb);
+
+    // If we've succeeded we're done.  Otherwise, try to fallback.
+    // If that fails (because we are already at root) then exit.
+    if (U_SUCCESS(ec2)) {
+        if (ec2 == U_USING_DEFAULT_WARNING
+            || (ec2 == U_USING_FALLBACK_WARNING && *ec != U_USING_DEFAULT_WARNING)) {
+            *ec = ec2;
         }
     }
 
@@ -799,7 +795,7 @@ static const struct CurrencyList {
     {"COP", UCURR_COMMON|UCURR_NON_DEPRECATED},
     {"COU", UCURR_UNCOMMON|UCURR_NON_DEPRECATED},
     {"CRC", UCURR_COMMON|UCURR_NON_DEPRECATED},
-    {"CSD", UCURR_COMMON|UCURR_NON_DEPRECATED},
+    {"CSD", UCURR_COMMON|UCURR_DEPRECATED},
     {"CSK", UCURR_COMMON|UCURR_DEPRECATED},
     {"CUP", UCURR_COMMON|UCURR_NON_DEPRECATED},
     {"CVE", UCURR_COMMON|UCURR_NON_DEPRECATED},
@@ -928,6 +924,7 @@ static const struct CurrencyList {
     {"RHD", UCURR_COMMON|UCURR_DEPRECATED},
     {"ROL", UCURR_COMMON|UCURR_DEPRECATED},
     {"RON", UCURR_COMMON|UCURR_NON_DEPRECATED},
+    {"RSD", UCURR_COMMON|UCURR_NON_DEPRECATED},
     {"RUB", UCURR_COMMON|UCURR_NON_DEPRECATED},
     {"RUR", UCURR_COMMON|UCURR_DEPRECATED},
     {"RWF", UCURR_COMMON|UCURR_NON_DEPRECATED},

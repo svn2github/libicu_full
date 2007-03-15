@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 1997-2006, International Business Machines Corporation and    *
+* Copyright (C) 1997-2007, International Business Machines Corporation and    *
 * others. All Rights Reserved.                                                *
 *******************************************************************************
 *
@@ -781,21 +781,33 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
             if (patternCharIndex == UDAT_TIMEZONE_GENERIC_FIELD) {
                 if(count < 4){
                     fSymbols->getZoneString(zid, DateFormatSymbols::TIMEZONE_SHORT_GENERIC, displayString, status);
+                    if(displayString.length()==0)
+                       fSymbols->getMetazoneString(zid, DateFormatSymbols::TIMEZONE_SHORT_GENERIC, cal, displayString, status);
                 }else{
                     fSymbols->getZoneString(zid, DateFormatSymbols::TIMEZONE_LONG_GENERIC, displayString, status);
+                    if(displayString.length()==0)
+                       fSymbols->getMetazoneString(zid, DateFormatSymbols::TIMEZONE_LONG_GENERIC, cal, displayString, status);
                 }
             } else {
                 if (cal.get(UCAL_DST_OFFSET, status) != 0) {
                     if(count < 4){
                         fSymbols->getZoneString(zid, DateFormatSymbols::TIMEZONE_SHORT_DAYLIGHT, displayString, status);
+                        if(displayString.length()==0)
+                           fSymbols->getMetazoneString(zid, DateFormatSymbols::TIMEZONE_SHORT_DAYLIGHT, cal, displayString, status);
                     }else{
                         fSymbols->getZoneString(zid, DateFormatSymbols::TIMEZONE_LONG_DAYLIGHT, displayString, status);
+                        if(displayString.length()==0)
+                           fSymbols->getMetazoneString(zid, DateFormatSymbols::TIMEZONE_LONG_DAYLIGHT, cal, displayString, status);
                     }
                 }else{
                     if(count < 4){
                         fSymbols->getZoneString(zid, DateFormatSymbols::TIMEZONE_SHORT_STANDARD, displayString, status);
+                        if(displayString.length()==0)
+                           fSymbols->getMetazoneString(zid, DateFormatSymbols::TIMEZONE_SHORT_STANDARD, cal, displayString, status);
                     }else{
                         fSymbols->getZoneString(zid, DateFormatSymbols::TIMEZONE_LONG_STANDARD, displayString, status);
+                        if(displayString.length()==0)
+                           fSymbols->getMetazoneString(zid, DateFormatSymbols::TIMEZONE_LONG_STANDARD, cal, displayString, status);
                     }
                 }
             }
@@ -1766,34 +1778,15 @@ SimpleDateFormat::subParseZoneString(const UnicodeString& text, int32_t start, C
   TimeZone *tz = NULL;
   UnicodeString id;  
   UnicodeString zid, value;
-  DateFormatSymbols::TimeZoneTranslationType type;
+  DateFormatSymbols::TimeZoneTranslationType type = DateFormatSymbols::TIMEZONE_COUNT;
   fSymbols->getZoneID(getTimeZone().getID(id), zid, status);
   if(zid.length() > 0){
-      fSymbols->getZoneType(zid, text, start, type, value, status);
-      tz = getTimeZone().clone();
-  }
-  
-  // optimize for default time zone, assume different from caller
-  if (tz == NULL) {
-      TimeZone* defaultZone = TimeZone::createDefault(); 
-      fSymbols->getZoneID(defaultZone->getID(id), zid, status);
-      if(zid.length() > 0){
-          fSymbols->getZoneType(zid, text, start, type, value, status);
-          tz = defaultZone;
-      }
-      if (tz == NULL) {
-          delete defaultZone;
-      }
-  }
-
-  // still no luck, check all time zone strings
-  if(tz == NULL){
       fSymbols->findZoneIDTypeValue(zid, text, start, type, value, status);
-      if(zid.length() > 0){
+      if(type != DateFormatSymbols::TIMEZONE_COUNT) {
           tz = TimeZone::createTimeZone(zid);
       }
   }
-
+  
   if(U_FAILURE(status)){
       return 0;
   }
