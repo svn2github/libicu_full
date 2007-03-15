@@ -13,6 +13,11 @@
 #include "unicode/dtfmtsym.h"
 
 
+//--------------------------------------------------------------------
+// Time bomb - allows temporary behavior that expires at a given
+//             release
+//--------------------------------------------------------------------
+
 void IntlTestDateFormatSymbols::runIndexedTest( int32_t index, UBool exec, const char* &name, char* /*par*/ )
 {
     if (exec) logln("TestSuite DateFormatSymbols");
@@ -311,11 +316,10 @@ void IntlTestDateFormatSymbols::TestSymbols(/* char *par */)
     fr.setZoneStrings(strings, rowCount, columnCount);
     const UnicodeString **strings1 = fr.getZoneStrings(rowCount, columnCount);
     for(int32_t i = 0; i < rowCount; i++) {
-        for(int32_t j = 0; j < columnCount; j++) {
+       for(int32_t j = 0; j < columnCount; j++) {
             if( strings[i][j] != strings1[i][j] ) {
                 errln("ERROR: setZoneStrings() failed");
             }
-
         }
     }
 
