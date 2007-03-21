@@ -429,7 +429,7 @@ spanOne(const UnicodeSet &set, const UChar *s, int32_t length) {
 static inline int32_t
 spanOneBack(const UnicodeSet &set, const UChar *s, int32_t length) {
     UChar c=s[length-1], c2;
-    if(c>=0xdc00 && c<=0xdfff && length>=2 && U16_IS_TRAIL(c2=s[length-2])) {
+    if(c>=0xdc00 && c<=0xdfff && length>=2 && U16_IS_LEAD(c2=s[length-2])) {
         return set.contains(U16_GET_SUPPLEMENTARY(c2, c)) ? 2 : -2;
     }
     return set.contains(c) ? 1 : -1;
@@ -1037,6 +1037,13 @@ int32_t UnicodeSetStringSpan::spanNot(const UChar *s, int32_t length) const {
         pos+=i;
         rest-=i;
 
+        // Check whether the current code point is in the original set,
+        // without the string starts and ends.
+        int32_t cpLength=spanOne(spanSet, s+pos, rest);
+        if(cpLength>0) {
+            return pos;  // There is a set element at pos.
+        }
+
         // Try to match the strings at pos.
         for(i=0; i<stringsLength; ++i) {
             if(spanLengths[i]==ALL_CP_CONTAINED) {
@@ -1050,17 +1057,11 @@ int32_t UnicodeSetStringSpan::spanNot(const UChar *s, int32_t length) const {
             }
         }
 
-        // Check whether the current code point is in the original set,
-        // without the string starts and ends.
-        i=spanOne(spanSet, s+pos, rest);
-        if(i>0) {
-            return pos;  // There is a set element at pos.
-        } else /* i<0 */ {
-            // The span(while not contained) ended on a string start/end which is
-            // not in the original set. Skip this code point and continue.
-            pos-=i;
-            rest+=i;
-        }
+        // The span(while not contained) ended on a string start/end which is
+        // not in the original set. Skip this code point and continue.
+        // cpLength<0
+        pos-=cpLength;
+        rest+=cpLength;
     } while(rest!=0);
     return length;  // Reached the end of the string.
 }
@@ -1074,6 +1075,13 @@ int32_t UnicodeSetStringSpan::spanNotBack(const UChar *s, int32_t length) const 
         pos=pSpanNotSet->spanBack(s, pos, USET_SPAN_WHILE_NOT_CONTAINED);
         if(pos==0) {
             return 0;  // Reached the start of the string.
+        }
+
+        // Check whether the current code point is in the original set,
+        // without the string starts and ends.
+        int32_t cpLength=spanOneBack(spanSet, s, pos);
+        if(cpLength>0) {
+            return pos;  // There is a set element at pos.
         }
 
         // Try to match the strings at pos.
@@ -1092,16 +1100,10 @@ int32_t UnicodeSetStringSpan::spanNotBack(const UChar *s, int32_t length) const 
             }
         }
 
-        // Check whether the current code point is in the original set,
-        // without the string starts and ends.
-        i=spanOneBack(spanSet, s, pos);
-        if(i>0) {
-            return pos;  // There is a set element at pos.
-        } else /* i<0 */ {
-            // The span(while not contained) ended on a string start/end which is
-            // not in the original set. Skip this code point and continue.
-            pos+=i;
-        }
+        // The span(while not contained) ended on a string start/end which is
+        // not in the original set. Skip this code point and continue.
+        // cpLength<0
+        pos+=cpLength;
     } while(pos!=0);
     return length;  // Reached the start of the string.
 }
@@ -1123,6 +1125,13 @@ int32_t UnicodeSetStringSpan::spanNotUTF8(const uint8_t *s, int32_t length) cons
         pos+=i;
         rest-=i;
 
+        // Check whether the current code point is in the original set,
+        // without the string starts and ends.
+        int32_t cpLength=spanOneUTF8(spanSet, s+pos, rest);
+        if(cpLength>0) {
+            return pos;  // There is a set element at pos.
+        }
+
         // Try to match the strings at pos.
         const uint8_t *s8=utf8;
         int32_t length8;
@@ -1137,17 +1146,11 @@ int32_t UnicodeSetStringSpan::spanNotUTF8(const uint8_t *s, int32_t length) cons
             s8+=length8;
         }
 
-        // Check whether the current code point is in the original set,
-        // without the string starts and ends.
-        i=spanOneUTF8(spanSet, s+pos, rest);
-        if(i>0) {
-            return pos;  // There is a set element at pos.
-        } else /* i<0 */ {
-            // The span(while not contained) ended on a string start/end which is
-            // not in the original set. Skip this code point and continue.
-            pos-=i;
-            rest+=i;
-        }
+        // The span(while not contained) ended on a string start/end which is
+        // not in the original set. Skip this code point and continue.
+        // cpLength<0
+        pos-=cpLength;
+        rest+=cpLength;
     } while(rest!=0);
     return length;  // Reached the end of the string.
 }
@@ -1167,6 +1170,13 @@ int32_t UnicodeSetStringSpan::spanNotBackUTF8(const uint8_t *s, int32_t length) 
             return 0;  // Reached the start of the string.
         }
 
+        // Check whether the current code point is in the original set,
+        // without the string starts and ends.
+        int32_t cpLength=spanOneBackUTF8(spanSet, s, pos);
+        if(cpLength>0) {
+            return pos;  // There is a set element at pos.
+        }
+
         // Try to match the strings at pos.
         const uint8_t *s8=utf8;
         int32_t length8;
@@ -1181,16 +1191,10 @@ int32_t UnicodeSetStringSpan::spanNotBackUTF8(const uint8_t *s, int32_t length) 
             s8+=length8;
         }
 
-        // Check whether the current code point is in the original set,
-        // without the string starts and ends.
-        i=spanOneBackUTF8(spanSet, s, pos);
-        if(i>0) {
-            return pos;  // There is a set element at pos.
-        } else /* i<0 */ {
-            // The span(while not contained) ended on a string start/end which is
-            // not in the original set. Skip this code point and continue.
-            pos+=i;
-        }
+        // The span(while not contained) ended on a string start/end which is
+        // not in the original set. Skip this code point and continue.
+        // cpLength<0
+        pos+=cpLength;
     } while(pos!=0);
     return length;  // Reached the start of the string.
 }

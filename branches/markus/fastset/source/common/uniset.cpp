@@ -2000,14 +2000,13 @@ int32_t UnicodeSet::span(const UChar *s, int32_t length, USetSpanCondition spanC
     }
 
     UChar32 c;
-    int32_t start=0, prev;
+    int32_t start=0, prev=0;
     do {
-        prev=start;
         U16_NEXT(s, start, length, c);
         if(spanCondition!=contains(c)) {
             break;
         }
-    } while(start<length);
+    } while((prev=start)<length);
     return prev;
 }
 
@@ -2038,14 +2037,13 @@ int32_t UnicodeSet::spanBack(const UChar *s, int32_t length, USetSpanCondition s
     }
 
     UChar32 c;
-    int32_t prev;
+    int32_t prev=length;
     do {
-        prev=length;
         U16_PREV(s, 0, length, c);
         if(spanCondition!=contains(c)) {
             break;
         }
-    } while(length>0);
+    } while((prev=length)>0);
     return prev;
 }
 
@@ -2077,9 +2075,8 @@ int32_t UnicodeSet::spanUTF8(const char *s, int32_t length, USetSpanCondition sp
     }
 
     UChar32 c;
-    int32_t start=0, prev;
+    int32_t start=0, prev=0;
     do {
-        prev=start;
         U8_NEXT(s, start, length, c);
         if(c<0) {
             c=0xfffd;
@@ -2087,7 +2084,7 @@ int32_t UnicodeSet::spanUTF8(const char *s, int32_t length, USetSpanCondition sp
         if(spanCondition!=contains(c)) {
             break;
         }
-    } while(start<length);
+    } while((prev=start)<length);
     return prev;
 }
 
@@ -2119,9 +2116,8 @@ int32_t UnicodeSet::spanBackUTF8(const char *s, int32_t length, USetSpanConditio
     }
 
     UChar32 c;
-    int32_t prev;
+    int32_t prev=length;
     do {
-        prev=length;
         U8_PREV(s, 0, length, c);
         if(c<0) {
             c=0xfffd;
@@ -2129,7 +2125,7 @@ int32_t UnicodeSet::spanBackUTF8(const char *s, int32_t length, USetSpanConditio
         if(spanCondition!=contains(c)) {
             break;
         }
-    } while(length>0);
+    } while((prev=length)>0);
     return prev;
 }
 

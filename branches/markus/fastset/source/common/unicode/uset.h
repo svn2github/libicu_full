@@ -118,6 +118,11 @@ enum {
  * They may partition a string in different ways when
  * USET_SPAN_WHILE_NOT_CONTAINED is alternated with USET_SPAN_WHILE_LONGEST_MATCH.
  *
+ * When strings are present, USET_SPAN_WHILE_NOT_CONTAINED is computationally
+ * cheaper than the other options because it needs to find only
+ * the first occurrence of a set element, rather than trying multiple paths
+ * to span as much of the string as possible.
+ *
  * @draft ICU 3.8
  */
 enum USetSpanCondition {
@@ -142,7 +147,7 @@ enum USetSpanCondition {
      *
      * If a set contains strings, then the span will be the longest substring
      * matching any of the possible concatenations of set elements (characters or strings).
-     * This is equivalent to a regular expression for (OR of each set element)*.
+     * This is equivalent to a POSIX regular expression for (OR of each set element)*.
      *
      * @draft ICU 3.8
      */
