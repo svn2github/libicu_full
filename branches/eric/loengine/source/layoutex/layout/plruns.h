@@ -241,7 +241,7 @@ pl_getValueRunLastLimit(const pl_valueRuns *valueRuns);
  * @draft ICU 3.8
  */
 U_DRAFT le_int32 U_EXPORT2
-pl_getValuueRunLimit(const pl_valueRuns *valueRuns,
+pl_getValueRunLimit(const pl_valueRuns *valueRuns,
                      le_int32 run);
 
 /**

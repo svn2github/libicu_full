@@ -156,7 +156,7 @@ pl_resetValueRuns(pl_valueRuns *valueRuns)
 }
 
 U_CAPI le_int32 U_EXPORT2
-pl_getValueeRunLastLimit(const pl_valueRuns *valueRuns)
+pl_getValueRunLastLimit(const pl_valueRuns *valueRuns)
 {
     const ValueRuns *vr = (const ValueRuns *) valueRuns;
 
@@ -181,7 +181,7 @@ pl_getValueRunLimit(const pl_valueRuns *valueRuns,
 }
 
 U_CAPI le_int32 U_EXPORT2
-pl_getValueeRunValue(const pl_valueRuns *valueRuns,
+pl_getValueRunValue(const pl_valueRuns *valueRuns,
                      le_int32 run)
 {
     const ValueRuns *vr = (const ValueRuns *) valueRuns;
