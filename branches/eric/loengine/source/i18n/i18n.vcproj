@@ -884,6 +884,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\persncal.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\persncal.h"
+				>
+			</File>
+			<File
 				RelativePath=".\japancal.cpp"
 				>
 			</File>
@@ -1130,6 +1138,14 @@
 						Outputs="..\..\include\unicode\$(InputFileName)"
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\reldtfmt.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\reldtfmt.h"
+				>
 			</File>
 			<File
 				RelativePath=".\timezone.cpp"

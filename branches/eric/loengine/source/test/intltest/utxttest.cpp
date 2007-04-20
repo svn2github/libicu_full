@@ -564,10 +564,12 @@ void UTextTest::TestAccess(const UnicodeString &us, UText *ut, int cpCount, m *c
     status = U_ZERO_ERROR;
     utext_setNativeIndex(shallowClone, 0);
     UText *deepClone = utext_clone(NULL, shallowClone, TRUE, FALSE, &status);
+    utext_close(shallowClone);
     if (status != U_UNSUPPORTED_ERROR) {
         TEST_SUCCESS(status);
         TestAccessNoClone(us, deepClone, cpCount, cpMap);
     }
+    utext_close(deepClone);
 }
     
 
@@ -1364,8 +1366,9 @@ openFragmentedUnicodeString(UText *ut, UnicodeString *s, UErrorCode *status) {
 //     4.  Check that clone contents did not change.  
 //
 void UTextTest::Ticket5560() {
-	const char *s1 = "ABCDEF";
-	const char *s2 = "123456";
+    /* The following two strings are in UTF-8 even on EBCDIC platforms. */
+    static const char s1[] = {0x41,0x42,0x43,0x44,0x45,0x46,0}; /* "ABCDEF" */
+    static const char s2[] = {0x31,0x32,0x33,0x34,0x35,0x36,0}; /* "123456" */
 	UErrorCode status = U_ZERO_ERROR;
 
 	UText ut1 = UTEXT_INITIALIZER;
@@ -1388,4 +1391,7 @@ void UTextTest::Ticket5560() {
     c = utext_next32(&ut2);
 	TEST_ASSERT(c == 0x43);  // c == 'C'
 
+    utext_close(&ut1);
+    utext_close(&ut2);
 }
+

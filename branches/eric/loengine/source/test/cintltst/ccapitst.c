@@ -2412,6 +2412,9 @@ static void TestConvertEx() {
 
 /* Test illegal UTF-8 input: Data and functions for TestConvertExFromUTF8(). */
 static const char *const badUTF8[]={
+    /* trail byte */
+    "\x80",
+
     /* truncated multi-byte sequences */
     "\xd0",
     "\xe0",
@@ -2525,7 +2528,7 @@ static void testFromTruncatedUTF8(UConverter *utf8Cnv, UConverter *cnv, const ch
     char invalidChars[8];
     int8_t invalidLength;
 
-    char *source;
+    const char *source;
     char *target;
 
     UChar pivotBuffer[8];

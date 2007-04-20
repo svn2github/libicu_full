@@ -34,6 +34,7 @@
 #include "japancal.h"
 #include "islamcal.h"
 #include "hebrwcal.h"
+#include "persncal.h"
 //#include "chnsecal.h"
 #include "unicode/calendar.h"
 #include "cpputils.h"
@@ -155,6 +156,7 @@ static const char * const gCalendarKeywords[] = {
     "gregorian",
         "japanese",
         "buddhist",
+        "persian",
         "islamic-civil",
         "islamic",
         "hebrew",
@@ -209,6 +211,8 @@ static Calendar *createStandardCalendar(char *calType, const Locale &canLoc, UEr
         return new IslamicCalendar(canLoc, status, IslamicCalendar::ASTRONOMICAL);
     } else if(!uprv_strcmp(calType, "hebrew")) {
         return new HebrewCalendar(canLoc, status);
+    } else if(!uprv_strcmp(calType, "persian")) {
+        return new PersianCalendar(canLoc, status);
         //} else if(!uprv_strcmp(calType, "chinese")) {
         //return new ChineseCalendar(canLoc, status);
     } else { 
@@ -2486,12 +2490,12 @@ int32_t Calendar::handleComputeJulianDay(UCalendarDateFields bestField)  {
     // If useMonth is true, get the day before the start of the month.
 
     // give calendar subclass a chance to have a default 'first' month
-    int8_t month;
+    int32_t month;
 
     if(isSet(UCAL_MONTH)) {
-        month = (int8_t)internalGet(UCAL_MONTH);
+        month = internalGet(UCAL_MONTH);
     } else {
-        month = (int8_t)getDefaultMonthInYear();
+        month = getDefaultMonthInYear();
     }
 
     int32_t julianDay = handleComputeMonthStart(year, useMonth ? month : 0, useMonth);
