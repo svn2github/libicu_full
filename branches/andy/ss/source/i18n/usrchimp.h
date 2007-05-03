@@ -30,8 +30,8 @@ struct USearch {
     // value USEARCH_DONE is the default value
     // if we are not at the start of the text or the end of the text, 
     // depending on the iteration direction and matchedIndex is USEARCH_DONE 
-    // it means that we can find any more matches in that particular direction
-          int32_t         matchedIndex; 
+    // it means that we can't find any more matches in that particular direction
+          int32_t             matchedIndex; 
           int32_t             matchedLength;
           UBool               isForwardSearching;
           UBool               reset;

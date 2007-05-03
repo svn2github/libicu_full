@@ -641,6 +641,37 @@ U_STABLE int32_t U_EXPORT2 usearch_previous(UStringSearch *strsrch,
 */
 U_STABLE void U_EXPORT2 usearch_reset(UStringSearch *strsrch);
 
+/**
+  *  Search the text for the pattern, with a default search behavior, and
+  *    ignoring options set on the USearch object.
+  *
+  *  @param strsrch    the search iterator data struct, which references both
+  *                    the text to be searched  and the pattern being sought.
+  *  @param startIdx   The index into the text to begin the search.  This starting
+  *                    position should not refer to the interior of a multi-character
+  *                    sequence that, under collation, is to be treated as a 
+  *                    single character (ch for some slavic languages, for example).
+  *  @param matchStart An out parameter, the starting index of the matched text.
+  *                    This parameter may be NULL.
+  *                    A value of -1 will be returned if no match was found.
+  *  @param matchLimit Out parameter, the index of the first position following the matched text.
+  *                    The matchLimit will be at a suitable position for beginning a subsequent search
+  *                    in the input text.
+  *                    This parameter may be NULL.
+  *                    A value of -1 will be returned if no match was found.
+  *          
+  *  @param status     Report any errors.  Note that no match found is not an error.
+  *  @return           TRUE if a match was found, FALSE otherwise.
+  *
+  * 
+  */
+U_DRAFT UBool U_EXPORT2 usearch_search(UStringSearch *strsrch,
+                                       int32_t        startIdx,
+                                       int32_t        *matchStart,
+                                       int32_t        *matchLimit,
+                                       UErrorCode     *status);
+
+
 #endif /* #if !UCONFIG_NO_COLLATION */
 
 #endif

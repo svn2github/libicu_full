@@ -74,6 +74,9 @@ static const SearchData BREAKITERATOREXACT[] = {
     {"testing that string ab\\u00e9cd does not match e", "e", NULL, 
      UCOL_TERTIARY, "characterbreaker", {1, 28, 41, -1}, {1, 1, 1}},
     {"\\u00c9", "e", "fr", UCOL_PRIMARY,  "characterbreaker", {0, -1}, {1}},
+    /* Problem reported by Dave Bertoni, same as ticket 4279? */
+    {"\\u0043\\u004F\\u0302\\u0054\\u00C9", "\\u004F", NULL, UCOL_TERTIARY,  "characterbreaker", {1, -1}, {2}},
+
     {NULL, NULL, NULL, UCOL_TERTIARY, NULL, {-1}, {0}}
 };
 
@@ -92,6 +95,10 @@ static const SearchData STRENGTH[] = {
     {7, 7, 7, 7}},
     {"\\u00c0 should match but not A", "A\\u0300", "en", UCOL_IDENTICAL, 
     NULL, {0, -1}, {1, 0}},
+
+    /* Ticket 5382 */
+    {"12//u0171", "//u0170", NULL, UCOL_SECONDARY, NULL, {2, -1}, {2}},
+
     {NULL, NULL, NULL, UCOL_TERTIARY, NULL, {-1}, {0}}
 };
 
@@ -193,6 +200,14 @@ static const SearchData COMPOSITEBOUNDARIES[] = {
     {"\\u0F73", "\\u0F71\\u0F72", NULL, UCOL_TERTIARY, NULL, {0, -1}, {1}},
     {"A\\u0F73", "A\\u0F71", NULL, UCOL_TERTIARY, NULL, {-1}, {0}},
     {"\\u0F73A", "\\u0F72A", NULL, UCOL_TERTIARY, NULL, {-1}, {0}},
+
+    /* Ticket 5024  */
+    {"a\\u00e1", "a\\u00e1", NULL, UCOL_SECONDARY, NULL, {0, -1}, {2}},
+
+    /* Ticket 5420  */
+    {"fu\\u00dfball", "fu\u00df", NULL, UCOL_TERTIARY, NULL, {0, -1}, {3}},
+    {"fu\\u00dfball", "fuss", NULL, UCOL_TERTIARY, NULL, {0, -1}, {3}},
+    {"fu\\u00dfball", "uss", NULL, UCOL_TERTIARY, NULL, {1, -1}, {2}},
     {NULL, NULL, NULL, UCOL_TERTIARY, NULL, {-1}, {0}}
 };
 
