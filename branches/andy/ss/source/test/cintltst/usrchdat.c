@@ -205,7 +205,7 @@ static const SearchData COMPOSITEBOUNDARIES[] = {
     {"a\\u00e1", "a\\u00e1", NULL, UCOL_SECONDARY, NULL, {0, -1}, {2}},
 
     /* Ticket 5420  */
-    {"fu\\u00dfball", "fu\u00df", NULL, UCOL_TERTIARY, NULL, {0, -1}, {3}},
+    {"fu\\u00dfball", "fu\\u00df", NULL, UCOL_TERTIARY, NULL, {0, -1}, {3}},
     {"fu\\u00dfball", "fuss", NULL, UCOL_TERTIARY, NULL, {0, -1}, {3}},
     {"fu\\u00dfball", "uss", NULL, UCOL_TERTIARY, NULL, {1, -1}, {2}},
     {NULL, NULL, NULL, UCOL_TERTIARY, NULL, {-1}, {0}}
@@ -304,6 +304,7 @@ static const SearchData BASICCANONICAL[] = {
     {"\\u0308\\u0323", "\\u0323\\u0308", NULL, UCOL_TERTIARY, NULL, {0, -1}, {2}},
     {NULL, NULL, NULL, UCOL_TERTIARY, NULL, {-1}, {0}}
 };
+
 
 static const SearchData NORMCANONICAL[] = {
     {"\\u0300\\u0325", "\\u0300", NULL, UCOL_TERTIARY, NULL, {0, -1}, {2}},

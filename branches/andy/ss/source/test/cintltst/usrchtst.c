@@ -314,7 +314,7 @@ static void TestInitialization(void)
     close();
 }
 
-static UBool UStringSearch *strsrch,
+static UBool assertEqualWithUStringSearch(      UStringSearch *strsrch,
                                           const SearchData     search)
 {
     int         count       = 0;
