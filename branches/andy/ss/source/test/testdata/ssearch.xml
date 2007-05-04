@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- Copyright (c) 2005-2007 IBM Corporation and others. All rights reserved -->
+
+<stringsearch-tests>
+    <test-case id="test01" >
+       <pattern>abc</pattern>
+       <pre>xxx</pre><m>abc</m><post>yyy</post>
+    </test-case>
+    
+    <test-case id="test02" >
+       <pattern>abc</pattern>
+       <pre>xxx</pre><post>yyy</post>
+    </test-case>
+    
+
+  </stringsearch-tests>

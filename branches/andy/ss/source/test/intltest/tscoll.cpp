@@ -42,6 +42,7 @@
 #include "normconf.h"
 #include "thcoll.h"
 #include "srchtest.h"
+#include "ssearch.h"
 #include "cntabcol.h"
 #include "lcukocol.h"
 #include "ucaconf.h"
@@ -89,6 +90,7 @@ void IntlTestCollator::runIndexedTest( int32_t index, UBool exec, const char* &n
       TESTCLASS(19, CollationServiceTest);
       TESTCLASS(20, CollationFinnishTest); // removed by weiv - we have changed Finnish collation
       TESTCLASS(21, RandomCollatorTest);
+      TESTCLASS(22, SSearchTest);
 
       default: name = ""; break;
     }

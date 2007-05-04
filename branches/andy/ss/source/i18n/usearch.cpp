@@ -3206,6 +3206,7 @@ CEBuffer::CEBuffer(UStringSearch *ss, UErrorCode *status) {
     buf = defBuf;
     strSearch = ss;
     bufSize = ss->pattern.CELength+1;
+    ceIter    = ss->textIter;
     firstIx = 0;
     limitIx = 0;
     if (bufSize>DEFAULT_CEBUFFER_SIZE) {
@@ -3253,13 +3254,13 @@ CEI *CEBuffer::get(int32_t index) {
     int srcIx;
     UErrorCode status = U_ZERO_ERROR;
     do {
+        srcIx = ucol_getOffset(ceIter);
         ce = ucol_next(ceIter, &status);
         if (U_FAILURE(status)) {
             ce = UCOL_NULLORDER;
         }
         ce = getCE(strSearch, ce);
     } while (ce == UCOL_IGNORABLE);
-    srcIx = ucol_getOffset(ceIter);
 
     // Stuff the new CE into the buffer.
     buf[i].ce       = ce;
@@ -3267,9 +3268,6 @@ CEI *CEBuffer::get(int32_t index) {
     
     return &buf[i];
 }
-
-
-
 
 
     
@@ -3311,7 +3309,7 @@ U_CAPI UBool U_EXPORT2 usearch_search(UStringSearch  *strsrch,
         //  Inner loop checks for a match beginning at each
         //  position from the outer loop.
         for (patIx=0; patIx<strsrch->pattern.CELength; patIx++) {
-            targetCEI = ceb.get(targetIx);
+            targetCEI = ceb.get(targetIx+patIx);
             if (targetCEI->ce != strsrch->pattern.CE[patIx]) {
                 found = FALSE;
                 break;
@@ -3326,22 +3324,29 @@ U_CAPI UBool U_EXPORT2 usearch_search(UStringSearch  *strsrch,
         }
     }
 
-    if (found == FALSE) {
-        return FALSE;
-    }
 
     // TODO:  add checks to make sure that the match didn't leave
     //        us in the middle of a combining sequence.
 
     // Get the source text indicies from the 
-    int32_t  mStart, mLimit;
-    targetCEI = ceb.get(targetIx);
-    mStart = targetCEI->srcIndex;
+    
+    int32_t  mStart = -1;
+    int32_t  mLimit = -1;
+    if (found) {
+        targetCEI = ceb.get(targetIx);
+        mStart = targetCEI->srcIndex;
 
-    targetCEI = ceb.get(targetIx+strsrch->pattern.CELength);
-    mLimit = targetCEI->srcIndex;
+        targetCEI = ceb.get(targetIx+strsrch->pattern.CELength);
+        mLimit = targetCEI->srcIndex;
+    }
 
-
+    if (matchStart != NULL) {
+        *matchStart= mStart;
+    }
+    if (matchLimit != NULL) {
+        *matchLimit = mLimit;
+    }
+    return found;
 }
 
 
@@ -3354,86 +3359,87 @@ UBool usearch_handleNextExact(UStringSearch *strsrch, UErrorCode *status)
         return FALSE;
     }
 
-    //  On Input:  strsrch->textIter is the position to begin the search.
-    //  On Return:  strsrch->textIter has the position of the start of match.
-
-    UCollationElements *startIter       = strsrch->textIter;
+    UCollationElements *coleiter        = strsrch->textIter;
     int32_t             textlength      = strsrch->search->textLength;
     int32_t            *patternce       = strsrch->pattern.CE;
     int32_t             patterncelength = strsrch->pattern.CELength;
-    int32_t             patternCEIndex;
-    int32_t             textoffset      = ucol_getOffset(startIter);
-
-    UCollationElements *matchIter       = strsrch->utilIter;
-    ucol_setText(matchIter, strsrch->search->text, strsrch->search->textLength, status);
+    int32_t             textoffset      = ucol_getOffset(coleiter);
 
     // status used in setting coleiter offset, since offset is checked in
     // shiftForward before setting the coleiter offset, status never 
-    // a failure. (part of the old Boyer-Moore positioning.)
-    // textoffset = shiftForward(strsrch, textoffset, UCOL_NULLORDER, 
-    //                          patterncelength);
-
-    // Really simple search.
-    //   startIter  points to the start of the potential match.  It iterates over the text,
-    //                checking for a match on the first CE of the pattern.
-    //   matchIter  comes into play after startIter finds an initial match, and is used to
-    //                check the remainder of the pattern.
-    //   
-
-    //  Outer loop runs once per CE in the string being searched.
-    //     StartIter increments through the string.
-    for(;;) 
+    // a failure
+    textoffset = shiftForward(strsrch, textoffset, UCOL_NULLORDER, 
+                              patterncelength);
+    while (textoffset <= textlength)
     {
-        int32_t    targetce;
-        UBool      found           = FALSE;
+        uint32_t    patternceindex = patterncelength - 1;
+        int32_t     targetce;
+        UBool       found          = FALSE;
         int32_t    lastce          = UCOL_NULLORDER;
 
-        int32_t currentPos = ucol_getOffset(startIter);
-        targetce = ucol_next(startIter, status);
-        if (U_FAILURE(*status) || targetce == UCOL_NULLORDER) {
-            break;
+        setColEIterOffset(coleiter, textoffset);
+
+        for (;;) {
+            // finding the last pattern ce match, imagine composite characters
+            // for example: search for pattern A in text \u00C0
+            // we'll have to skip \u0300 the grave first before we get to A
+            targetce = ucol_previous(coleiter, status);
+            if (U_FAILURE(*status) || targetce == UCOL_NULLORDER) {
+                found = FALSE;
+                break;
+            }
+            targetce = getCE(strsrch, targetce);
+            if (targetce == UCOL_IGNORABLE && inNormBuf(coleiter)) { 
+                // this is for the text \u0315\u0300 that requires 
+                // normalization and pattern \u0300, where \u0315 is ignorable
+                continue;
+            }
+            if (lastce == UCOL_NULLORDER || lastce == UCOL_IGNORABLE) {
+                lastce = targetce;
+            }
+            if (targetce == patternce[patternceindex]) {
+                // the first ce can be a contraction
+                found = TRUE;
+                break;
+            }
+            if (!hasExpansion(coleiter)) {
+                found = FALSE;
+                break;
+            }
         }
 
-        // Mask/adjust the just-fetched CE based on the collator strength & properites.
-        targetce = getCE(strsrch, targetce);
-        if (targetce == UCOL_IGNORABLE /* && inNormBuf(startIter) */) { 
-            // this is for the text \u0315\u0300 that requires 
-            // normalization and pattern \u0300, where \u0315 is ignorable
-            //  TODO:  what is this all about?
+        targetce = lastce;
+        
+        while (found && patternceindex > 0) {
+            targetce    = ucol_previous(coleiter, status);
+            if (U_FAILURE(*status) || targetce == UCOL_NULLORDER) {
+                found = FALSE;
+                break;
+            }
+            targetce    = getCE(strsrch, targetce);
+            if (targetce == UCOL_IGNORABLE) {
+                continue;
+            }
+
+            patternceindex --;
+            found = found && targetce == patternce[patternceindex]; 
+        }
+
+        if (!found) {
+            if (U_FAILURE(*status)) {
+                break;
+            }
+            textoffset = shiftForward(strsrch, textoffset, lastce, 
+                                      patternceindex);
+            // status checked at loop.
+            patternceindex = patterncelength;
             continue;
         }
 
-        if (targetce == patternce[0]) {
-            // Match on the first CE of the pattern.
-            //   Check the rest of the pattern.
-            int32_t  secondPos = ucol_getOffset(startIter);
-            ucol_setOffset(matchIter, secondPos, status);
-            found = TRUE;
-
-            for (patternCEIndex=1; patternCEIndex<patterncelength; patternCEIndex++) {
-                targetce    = ucol_next(matchIter, status);
-                if (U_FAILURE(*status) || targetce == UCOL_NULLORDER) {
-                    found = FALSE;
-                    break;
-                }
-                targetce    = getCE(strsrch, targetce);
-                if (targetce == UCOL_IGNORABLE) {
-                    continue;
-                }
-                if (targetce != patternce[patternCEIndex]) {
-                    found = FALSE;
-                    break;
-                }
-            }
-        }
-
-        if (found) {
-            textoffset = ucol_getOffset(matchIter);  // The end of the matched region
-            setColEIterOffset(startIter, currentPos);
-            if (checkNextExactMatch(strsrch, &textoffset, status)) {
-                strsrch->search->matchedIndex = currentPos;
-                return TRUE;
-            }
+        if (checkNextExactMatch(strsrch, &textoffset, status)) {
+            // status checked in ucol_setOffset
+            setColEIterOffset(coleiter, strsrch->search->matchedIndex);
+            return TRUE;
         }
     }
     setMatchNotFound(strsrch);
