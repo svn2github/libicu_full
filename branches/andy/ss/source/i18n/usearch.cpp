@@ -3235,7 +3235,7 @@ CEI *CEBuffer::get(int32_t index) {
     }
 
     // Caller is requesting a new, never accessed before, CE.
-    //   Verify that it the next one in sequence, which is all
+    //   Verify that it is the next one in sequence, which is all
     //   that is allowed.
     if (index != limitIx) {
         U_ASSERT(FALSE);
@@ -3249,7 +3249,7 @@ CEI *CEBuffer::get(int32_t index) {
         firstIx++;
     }
 
-    // Fetch the new CE
+    // Fetch the new CE from the collation element iterator
     int ce;
     int srcIx;
     UErrorCode status = U_ZERO_ERROR;
