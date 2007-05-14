@@ -110,8 +110,26 @@ void SSearchTest::searchTest()
             id->extract(0, id->length(), testId,  sizeof(testId), US_INV);
         }
 
+        //
+        //  Get the requested collation strength.
+        //    Default is tertiary if the XML attribute is missing from the test case.
+        //
         const UnicodeString *strength = testCase->getAttribute("strength");
-
+        UColAttributeValue collatorStrength;
+        if      (strength==NULL)         { collatorStrength = UCOL_TERTIARY;}
+        else if (*strength=="PRIMARY")   { collatorStrength = UCOL_PRIMARY;}
+        else if (*strength=="SECONDARY") { collatorStrength = UCOL_SECONDARY;}
+        else if (*strength=="TERTIARY")  { collatorStrength = UCOL_TERTIARY;}
+        else if (*strength=="QUATERNARY") { collatorStrength = UCOL_QUATERNARY;}
+        else {
+            // Bogus value supplied for strength.  Shouldn't happen, even from
+            //  typos, if the  XML source has been validated.
+            //  This assert is a little deceiving in that strength can be
+            //   any of the allowed values, not just TERTIARY, but it will
+            //   do the job of getting the error output.
+            TEST_ASSERT(*strength=="TERTIARY")
+        }
+        
         const UnicodeString defLocale("en");
         char  clocale[100];
         const UnicodeString *locale   = testCase->getAttribute("locale");
@@ -168,30 +186,41 @@ void SSearchTest::searchTest()
         //  Check that there weren't extra things in the XML
         TEST_ASSERT(nodeCount == testCase->countChildren());
 
-        status = U_ZERO_ERROR;
-        UStringSearch *uss = usearch_open(pattern.getBuffer(), pattern.length(),
+        // Open a collotor and StringSearch based on the parameters
+        //   obtained from the XML.
+        //   TODO:  perhaps reuse existing ones, cut down on open/close thrash.
+        //
+        status = U_ZERO_ERROR;       
+        UCollator *collator = ucol_open(clocale, &status);
+        ucol_setStrength(collator, collatorStrength);
+        UStringSearch *uss = usearch_openFromCollator(pattern.getBuffer(), pattern.length(),
                                          target.getBuffer(), target.length(),
-                                         clocale,
+                                         collator,
                                          NULL,     // the break iterator
                                          &status);
+                                         
         TEST_ASSERT_SUCCESS(status);
         if (U_FAILURE(status)) {
+            usearch_close(uss);
+            ucol_close(collator);
             continue;
         }
-
-        // TODO:  get strength in here somehow.
 
         int32_t foundStart = 0;
         int32_t foundLimit = 0;
         UBool   foundMatch;
 
+        //
+        // Do the search, check the match result against the expected results.
+        //
         foundMatch= usearch_search(uss, 0, &foundStart, &foundLimit, &status);
         TEST_ASSERT_SUCCESS(status);
         TEST_ASSERT(foundStart == expectedMatchStart);
         TEST_ASSERT(foundLimit == expectedMatchLimit);
-        TEST_ASSERT (foundMatch == (expectedMatchStart >= 0));
+        TEST_ASSERT(foundMatch == (expectedMatchStart >= 0));
 
         usearch_close(uss);
+        ucol_close(collator);
     }
 
     delete root;
