@@ -3226,6 +3226,13 @@ CEBuffer::~CEBuffer() {
     }
 }
 
+
+// Get the CE with the specified index.
+//   Index must be in the range
+//          n-history_size < index < n+1
+//   where n is the largest index to have been fetched by some previous call to this function.
+//   The CE value will be UCOL_NULLORDER at end of input.
+//
 CEI *CEBuffer::get(int32_t index) {
     int i = index % bufSize;
     if (index>=firstIx && index<limitIx) {
@@ -3259,17 +3266,24 @@ CEI *CEBuffer::get(int32_t index) {
         if (U_FAILURE(status)) {
             ce = UCOL_NULLORDER;
         }
+        if (ce == UCOL_NULLORDER) {
+            // End of input reached.
+            break;
+        }
         ce = getCE(strSearch, ce);
     } while (ce == UCOL_IGNORABLE);
 
     // Stuff the new CE into the buffer.
     buf[i].ce       = ce;
     buf[i].srcIndex = srcIx;
-    
     return &buf[i];
 }
 
+#define USEARCH_DEBUG
 
+#ifdef USEARCH_DEBUG
+#include <stdio.h>
+#endif
     
 U_CAPI UBool U_EXPORT2 usearch_search(UStringSearch  *strsrch,
                                        int32_t        startIdx,
@@ -3281,6 +3295,14 @@ U_CAPI UBool U_EXPORT2 usearch_search(UStringSearch  *strsrch,
         return FALSE;
     }
 
+#ifdef USEARCH_DEBUG
+    printf("Pattern CEs\n");
+    for (int ii=0; ii<strsrch->pattern.CELength; ii++) {
+        printf(" %8x", strsrch->pattern.CE[ii]);
+    }
+    printf("\n");
+    
+#endif
     // Input parameter sanity check.
     //  TODO:  should input indicies clip to the text length
     //         in the same way that UTExt does.
@@ -3296,10 +3318,10 @@ U_CAPI UBool U_EXPORT2 usearch_search(UStringSearch  *strsrch,
     CEBuffer ceb(strsrch, status);
     
 
-    int    targetIx;   
-    CEI    *targetCEI;
-    int    patIx;
-    UBool  found;
+    int32_t    targetIx;   
+    CEI       *targetCEI;
+    int32_t    patIx;
+    UBool      found;
 
     // Outer loop moves over match starting positions in the
     //      target CE space.
@@ -3309,8 +3331,18 @@ U_CAPI UBool U_EXPORT2 usearch_search(UStringSearch  *strsrch,
         //  Inner loop checks for a match beginning at each
         //  position from the outer loop.
         for (patIx=0; patIx<strsrch->pattern.CELength; patIx++) {
+            int32_t patCE = strsrch->pattern.CE[patIx];
+            // TODO:  the pattern CEs should be pre-filtered to get rid of ignorables,
+            //        so that it doesn't need to be done again here.
+            patCE = getCE(strsrch, patCE);
+            if (patCE==UCOL_IGNORABLE) {
+                 continue;
+             }
             targetCEI = ceb.get(targetIx+patIx);
-            if (targetCEI->ce != strsrch->pattern.CE[patIx]) {
+            //  Compare CE from target string with CE from the pattern.
+            //    Note that the target CE will be UCOL_NULLORDER if we reach the end of input,
+            //    which will fail the compare, below.
+            if (targetCEI->ce != patCE) {
                 found = FALSE;
                 break;
             }
@@ -3323,6 +3355,14 @@ U_CAPI UBool U_EXPORT2 usearch_search(UStringSearch  *strsrch,
             break;
         }
     }
+
+#ifdef USEARCH_DEBUG
+    printf("Target CEs [%d .. %d]\n", ceb.firstIx, ceb.limitIx);
+    for (int ii=ceb.firstIx; ii<ceb.limitIx; ii++) {
+        printf("%8x ", ceb.get(ii)->ce);
+    }
+    printf("\n");
+#endif
 
 
     // TODO:  add checks to make sure that the match didn't leave

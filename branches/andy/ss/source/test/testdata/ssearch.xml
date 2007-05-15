@@ -18,6 +18,11 @@
 ]>
 
 <stringsearch-tests>
+  <test-case id="test06" strength="SECONDARY" >
+      <pattern>fuß</pattern>
+       <pre></pre><m>fuss</m><post></post>
+    </test-case>
+    <!--
     <test-case id="test01" >
        <pattern>abc</pattern>
        <pre>xxx</pre><m>abc</m><post>yyy</post>
@@ -42,12 +47,7 @@
        <pattern>FUSS</pattern>
        <pre>abc</pre><m>fuß</m><post>sss</post>
     </test-case>
-    
-    <test-case id="test06" strength="SECONDARY" >
-       <pattern>fußx</pattern>
-       <pre>abc</pre><m>fuss</m><post>sss</post>
-    </test-case>
-    
+    -->
    
   </stringsearch-tests>
   
