@@ -55,7 +55,7 @@
     
     <test-case id="test08" strength="PRIMARY" >
       <pattern>fus</pattern>
-      <pre>abc</pre><m>fuß</m><post>xyz</post>
+      <pre>abcfuß</pre><post>xyz</post>
     </test-case>
     
    
