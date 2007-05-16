@@ -3279,7 +3279,7 @@ CEI *CEBuffer::get(int32_t index) {
     return &buf[i];
 }
 
-#define USEARCH_DEBUG
+// #define USEARCH_DEBUG
 
 #ifdef USEARCH_DEBUG
 #include <stdio.h>
@@ -3348,6 +3348,8 @@ U_CAPI UBool U_EXPORT2 usearch_search(UStringSearch  *strsrch,
             }
         }
         if (found) {
+            targetCEI = ceb.get(targetIx+strsrch->pattern.CELength)
+            int32_t maxLimit = targetCEI->srcIndex;
             break;
         }
         if (targetCEI->ce == UCOL_NULLORDER)  {
@@ -3376,8 +3378,17 @@ U_CAPI UBool U_EXPORT2 usearch_search(UStringSearch  *strsrch,
         targetCEI = ceb.get(targetIx);
         mStart = targetCEI->srcIndex;
 
-        targetCEI = ceb.get(targetIx+strsrch->pattern.CELength);
-        mLimit = targetCEI->srcIndex;
+        targetCEI = ceb.get(targetIx+strsrch->pattern.CELength-1);
+        int32_t minLimit = targetCEI->srcIndex;
+
+        targetCEI = ceb.get(targetIx+strsrch->pattern.CELength)
+        int32_t maxLimit = targetCEI->srcIndex;
+ 
+        int32_t gcBoundary = minLimit;
+        do {
+            UChar32  c;
+            U16_GET(s, start, i length c);
+        <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     }
 
     if (matchStart != NULL) {

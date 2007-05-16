@@ -22,7 +22,7 @@
 char testId[100];
 
 #define TEST_ASSERT(x) {if (!(x)) { \
-    errln("Failure in file %s, line %d, test ID \"%s\"", __FILE__, __LINE__, testId);}}
+    errln("Failure in file %s, line %d, test ID = \"%s\"", __FILE__, __LINE__, testId);}}
 
 #define TEST_ASSERT_SUCCESS(errcode) {if (U_FAILURE(errcode)) { \
     errln("Failure in file %s, line %d, test ID \"%s\", status = \"%s\"", \
@@ -188,7 +188,6 @@ void SSearchTest::searchTest()
 
         // Open a collotor and StringSearch based on the parameters
         //   obtained from the XML.
-        //   TODO:  perhaps reuse existing ones, cut down on open/close thrash.
         //
         status = U_ZERO_ERROR;       
         UCollator *collator = ucol_open(clocale, &status);
@@ -215,9 +214,14 @@ void SSearchTest::searchTest()
         //
         foundMatch= usearch_search(uss, 0, &foundStart, &foundLimit, &status);
         TEST_ASSERT_SUCCESS(status);
-        TEST_ASSERT(foundStart == expectedMatchStart);
-        TEST_ASSERT(foundLimit == expectedMatchLimit);
-        TEST_ASSERT(foundMatch == (expectedMatchStart >= 0));
+        if (foundMatch && expectedMatchStart<0 ||
+            foundStart != expectedMatchStart   ||
+            foundLimit != expectedMatchLimit) {
+                TEST_ASSERT(FALSE);   //  ouput generic error position
+                errln("Found, expected match start = %d, %d \n"
+                      "Found, expected match limit = %d, %d",
+                foundStart, expectedMatchStart, foundLimit, expectedMatchLimit);
+        }
 
         usearch_close(uss);
         ucol_close(collator);
