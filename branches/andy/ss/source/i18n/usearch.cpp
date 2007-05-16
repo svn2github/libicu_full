@@ -3205,7 +3205,7 @@ struct CEBuffer {
 CEBuffer::CEBuffer(UStringSearch *ss, UErrorCode *status) {
     buf = defBuf;
     strSearch = ss;
-    bufSize = ss->pattern.CELength+1;
+    bufSize = ss->pattern.CELength+10;
     ceIter    = ss->textIter;
     firstIx = 0;
     limitIx = 0;
@@ -3279,11 +3279,62 @@ CEI *CEBuffer::get(int32_t index) {
     return &buf[i];
 }
 
-// #define USEARCH_DEBUG
+#define USEARCH_DEBUG
 
 #ifdef USEARCH_DEBUG
 #include <stdio.h>
 #endif
+
+//
+//  Find the next acceptable boundary following the specified starting index
+//     in the target text being searched.
+//      TODO:  refine what is an acceptable boundary.  For the moment,
+//             choose the next position not within a combining sequence.
+//
+static int32_t nextBoundaryAfter(UStringSearch *strsrch, int32_t startIndex) {
+    const UChar *text = strsrch->search->text;
+    int32_t textLen   = strsrch->search->textLength;
+    
+    U_ASSERT(startIndex>=0);
+    U_ASSERT(startIndex<=textLen);
+    
+    if (startIndex >= textLen) {
+        return startIndex;
+    }
+
+    UChar32  c;
+    int32_t  i = startIndex;
+    U16_NEXT(text, i, textLen, c);
+    
+    // If we are on a control character, stop without looking for combining marks.
+    //    Control characters do not combine.
+    int32_t gcProperty = u_getIntPropertyValue(c, UCHAR_GRAPHEME_CLUSTER_BREAK);
+    if (gcProperty==U_GCB_CONTROL || gcProperty==U_GCB_LF || gcProperty==U_GCB_CR) {
+        return i;
+    }
+    
+    // The initial character was not a control, and can thus accept trailing
+    //   combining characters.  Advance over however many of them there are.
+    int32_t  indexOfLastCharChecked;
+    for (;;) {
+        indexOfLastCharChecked = i;
+        if (i>=textLen) {
+            break;
+        }
+        U16_NEXT(text, i, textLen, c);
+        gcProperty = u_getIntPropertyValue(c, UCHAR_GRAPHEME_CLUSTER_BREAK);
+        if (gcProperty != U_GCB_EXTEND) {
+            break;
+        }
+    }
+    return indexOfLastCharChecked;
+}
+        
+    
+    
+    
+        
+    
     
 U_CAPI UBool U_EXPORT2 usearch_search(UStringSearch  *strsrch,
                                        int32_t        startIdx,
@@ -3348,7 +3399,7 @@ U_CAPI UBool U_EXPORT2 usearch_search(UStringSearch  *strsrch,
             }
         }
         if (found) {
-            targetCEI = ceb.get(targetIx+strsrch->pattern.CELength)
+            targetCEI = ceb.get(targetIx+strsrch->pattern.CELength);
             int32_t maxLimit = targetCEI->srcIndex;
             break;
         }
@@ -3381,14 +3432,19 @@ U_CAPI UBool U_EXPORT2 usearch_search(UStringSearch  *strsrch,
         targetCEI = ceb.get(targetIx+strsrch->pattern.CELength-1);
         int32_t minLimit = targetCEI->srcIndex;
 
-        targetCEI = ceb.get(targetIx+strsrch->pattern.CELength)
+        targetCEI = ceb.get(targetIx+strsrch->pattern.CELength);
         int32_t maxLimit = targetCEI->srcIndex;
  
-        int32_t gcBoundary = minLimit;
-        do {
-            UChar32  c;
-            U16_GET(s, start, i length c);
-        <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        mLimit = nextBoundaryAfter(strsrch, minLimit);
+#ifdef USEARCH_DEBUG
+        printf("minLimit, maxLimit, mLimit = %d, %d, %d\n", minLimit, maxLimit, mLimit);
+#endif
+        if (mLimit > maxLimit) {
+            mLimit = -1;
+            mStart = -1;
+            found = FALSE;
+        }
+            
     }
 
     if (matchStart != NULL) {
@@ -3399,6 +3455,8 @@ U_CAPI UBool U_EXPORT2 usearch_search(UStringSearch  *strsrch,
     }
     return found;
 }
+
+
 
 
 // internal use methods declared in usrchimp.h -----------------------------
