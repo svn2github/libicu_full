@@ -3279,7 +3279,7 @@ CEI *CEBuffer::get(int32_t index) {
     return &buf[i];
 }
 
-#define USEARCH_DEBUG
+//#define USEARCH_DEBUG
 
 #ifdef USEARCH_DEBUG
 #include <stdio.h>
@@ -3369,112 +3369,122 @@ U_CAPI UBool U_EXPORT2 usearch_search(UStringSearch  *strsrch,
     CEBuffer ceb(strsrch, status);
     
 
-    int32_t    targetIx;   
+    int32_t    targetIx = 0;   
     CEI       *targetCEI;
     int32_t    patIx;
     UBool      found;
 
-    // Outer loop moves over match starting positions in the
-    //      target CE space.
-    for(targetIx=0; ; targetIx++) 
-    {
-        found = TRUE;
-        //  Inner loop checks for a match beginning at each
-        //  position from the outer loop.
-        for (patIx=0; patIx<strsrch->pattern.CELength; patIx++) {
-            int32_t patCE = strsrch->pattern.CE[patIx];
-            // TODO:  the pattern CEs should be pre-filtered to get rid of ignorables,
-            //        so that it doesn't need to be done again here.
-            patCE = getCE(strsrch, patCE);
-            if (patCE==UCOL_IGNORABLE) {
-                 continue;
-             }
-            targetCEI = ceb.get(targetIx+patIx);
-            //  Compare CE from target string with CE from the pattern.
-            //    Note that the target CE will be UCOL_NULLORDER if we reach the end of input,
-            //    which will fail the compare, below.
-            if (targetCEI->ce != patCE) {
-                found = FALSE;
-                break;
-            }
-        }
-        if (found) {
-            targetCEI = ceb.get(targetIx+strsrch->pattern.CELength);
-            int32_t maxLimit = targetCEI->srcIndex;
-            break;
-        }
-        if (targetCEI->ce == UCOL_NULLORDER)  {
-            // We ran off the end of the target text.  No match.
-            break;
-        }
-    }
-
-#ifdef USEARCH_DEBUG
-    printf("Target CEs [%d .. %d]\n", ceb.firstIx, ceb.limitIx);
-    int32_t  lastToPrint = ceb.limitIx+2;
-    for (int ii=ceb.firstIx; ii<lastToPrint; ii++) {
-        printf("%8x@%d ", ceb.get(ii)->ce, ceb.get(ii)->srcIndex);
-    }
-    printf("\n");
-#endif
-
-
-    //    Checks to make sure that the match didn't leave
-    //        us in the middle of a combining sequence or an expansion.
-
-    // Get the source text indicies from the 
-    
     int32_t  mStart = -1;
     int32_t  mLimit = -1;
     int32_t  minLimit;
     int32_t  maxLimit;
     
-    do  {   // not a loop, just a block we can break out of.
-        if (found==FALSE) {
+    
+    // Outer loop continues match attempts when a match is rejected because
+    //   its boundaries include partial expansions or partial combining sequences.
+    //   This is uncommon; this loop usually only runs once.
+    //
+    do {
+    
+        // Middle  loop moves over match starting positions in the
+        //      target CE space.
+        for(; ; targetIx++) 
+        {
+            found = TRUE;
+            //  Inner loop checks for a match beginning at each
+            //  position from the outer loop.
+            for (patIx=0; patIx<strsrch->pattern.CELength; patIx++) {
+                int32_t patCE = strsrch->pattern.CE[patIx];
+                // TODO:  the pattern CEs should be pre-filtered to get rid of ignorables,
+                //        so that it doesn't need to be done again here.
+                patCE = getCE(strsrch, patCE);
+                if (patCE==UCOL_IGNORABLE) {
+                     continue;
+                 }
+                targetCEI = ceb.get(targetIx+patIx);
+                //  Compare CE from target string with CE from the pattern.
+                //    Note that the target CE will be UCOL_NULLORDER if we reach the end of input,
+                //    which will fail the compare, below.
+                if (targetCEI->ce != patCE) {
+                    found = FALSE;
+                    break;
+                }
+            }
+            if (found) {
+                targetCEI = ceb.get(targetIx+strsrch->pattern.CELength);
+                int32_t maxLimit = targetCEI->srcIndex;
+                break;
+            }
+            if (targetCEI->ce == UCOL_NULLORDER)  {
+                // We ran off the end of the target text.  No match.
+                break;
+            }
+        }
+        
+        if (found == FALSE) {
             break;
         }
-        targetCEI = ceb.get(targetIx);
-        mStart = targetCEI->srcIndex;
-
-        targetCEI = ceb.get(targetIx+strsrch->pattern.CELength-1);
-        minLimit = targetCEI->srcIndex;
-
-        // Look at the CE following the match.  If it is UCOL_NULLORDER the match
-        //   extended to the end of input, and the match is good.
-        targetCEI = ceb.get(targetIx+strsrch->pattern.CELength);
-        maxLimit = targetCEI->srcIndex;
-        if (targetCEI->ce == UCOL_NULLORDER) {
-            mLimit = nextBoundaryAfter(strsrch, minLimit);
-            break;
+    
+    #ifdef USEARCH_DEBUG
+        printf("Target CEs [%d .. %d]\n", ceb.firstIx, ceb.limitIx);
+        int32_t  lastToPrint = ceb.limitIx+2;
+        for (int ii=ceb.firstIx; ii<lastToPrint; ii++) {
+            printf("%8x@%d ", ceb.get(ii)->ce, ceb.get(ii)->srcIndex);
         }
-
-        // Compare the character indicies of the two CEs following the match.
-        //   If they are the same, it means that the last CE that was part of the
-        //   match was the first part of an expansion.  (CE to character index mapping
-        //   in exansions is funny; all but the first get the index of the following char.)
-        CEI   *secondCEAfter = ceb.get(targetIx+strsrch->pattern.CELength+1);
-        if (maxLimit == secondCEAfter->srcIndex) {
-            // The match stopped in the middle of an expansion
+        printf("\n");
+    #endif
+    
+    
+        //    Checks to make sure that the match didn't leave
+        //        us in the middle of a combining sequence or an expansion.
+        do  {   // not a loop, just a block we can break out of.
+            targetCEI = ceb.get(targetIx);
+            mStart = targetCEI->srcIndex;
+    
+            targetCEI = ceb.get(targetIx+strsrch->pattern.CELength-1);
+            minLimit = targetCEI->srcIndex;
+    
+            // Look at the CE following the match.  If it is UCOL_NULLORDER the match
+            //   extended to the end of input, and the match is good.
+            targetCEI = ceb.get(targetIx+strsrch->pattern.CELength);
+            maxLimit = targetCEI->srcIndex;
+            if (targetCEI->ce == UCOL_NULLORDER) {
+                mLimit = nextBoundaryAfter(strsrch, minLimit);
+                break;
+            }
+    
+            // Compare the character indicies of the two CEs following the match.
+            //   If they are the same, it means that the last CE that was part of the
+            //   match was the first part of an expansion.  (CE to character index mapping
+            //   in exansions is funny; all but the first get the index of the following char.)
+            CEI   *secondCEAfter = ceb.get(targetIx+strsrch->pattern.CELength+1);
+            if (maxLimit == secondCEAfter->srcIndex) {
+                // The match stopped in the middle of an expansion
+                found = FALSE;
+                break;
+            }
+    
+            //  A non-exceptional match.
+            //  Advance to the first acceptable match boundary.
+            mLimit = minLimit;
+            if (minLimit<maxLimit) {
+                mLimit = nextBoundaryAfter(strsrch, minLimit);
+            }
+        } while (FALSE);
+    
+    
+    #ifdef USEARCH_DEBUG
+        printf("minLimit, maxLimit, mLimit = %d, %d, %d\n", minLimit, maxLimit, mLimit);
+    #endif
+        if (mLimit>maxLimit) {
             found = FALSE;
-            break;
         }
+    } while (found==FALSE);
+    // There will be a break out of this loop if the search goes off the end with no match. 
 
-        //  A non-exceptional match.
-        //  Advance to the first acceptable match boundary.
-        mLimit = minLimit;
-        if (minLimit<maxLimit) {
-            mLimit = nextBoundaryAfter(strsrch, minLimit);
-        }
-    } while (FALSE);
-
-
-#ifdef USEARCH_DEBUG
-    printf("minLimit, maxLimit, mLimit = %d, %d, %d\n", minLimit, maxLimit, mLimit);
-#endif
-    if (found==FALSE || mLimit>maxLimit) {
+    if (found==FALSE) {
         mLimit = -1;
         mStart = -1;
-        found = FALSE;
     }
 
     if (matchStart != NULL) {

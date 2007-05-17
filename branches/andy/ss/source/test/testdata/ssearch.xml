@@ -18,19 +18,22 @@
 ]>
 
 <stringsearch-tests>
+    <!-- Very simple match  -->
     <test-case id="test01" >
        <pattern>abc</pattern>
        <pre>xxx</pre><m>abc</m><post>yyy</post>
     </test-case>
     
+    <!-- Very simple no-match  -->
     <test-case id="test02" >
        <pattern>abc</pattern>
        <pre>xxx</pre><post>yyy</post>
     </test-case>
 
+    <!-- Match after several near-misses. -->
     <test-case id="test03" >
        <pattern>string</pattern>
-       <pre>silly spring </pre><m>string</m><post> fling</post>
+       <pre>silly spring stling strxng strilg strinx stri</pre><m>string</m><post> fling</post>
     </test-case>
     
     <test-case id="test04" strength="PRIMARY" >
@@ -57,6 +60,14 @@
       <pattern>fus</pattern>
       <pre>abcfuß</pre><post>xyz</post>
     </test-case>
+    
+    <!-- A match good match following an initial match that failed because
+         of not ending on a character boundary -->
+    <test-case id="test09" strength="PRIMARY">
+      <pattern>fus</pattern>
+      <pre>fuß  </pre><m>fus</m><post>sss</post>
+    </test-case>
+    
     
    
   </stringsearch-tests>
