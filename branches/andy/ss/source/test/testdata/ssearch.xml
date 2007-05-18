@@ -18,7 +18,9 @@
 <!ELEMENT post (#PCDATA)>
 ]>
 
-<stringsearch-tests debug="test12">
+<stringsearch-tests >
+    <!-- debug="test13"     (for copying into the above element)  -->
+    
     <!-- Very simple match  -->
     <test-case id="test01" >
        <pattern>abc</pattern>
@@ -77,15 +79,17 @@
       <m>fox</m><post>y fox</post>
     </test-case>
 
-    <!-- TODO:  Ask about this one  -->
+    <!-- TODO:  Ask about this one  "ö" is producing just a single CE -->
+    <!--
     <test-case id="test11" strength="PRIMARY" locale="de">
       <pattern>toe</pattern>
       <pre>This is a </pre><m>Tö</m><post>ne</post>
     </test-case>
+    -->
     
     <test-case id="test12" strength="TERTIARY">
       <pattern>e</pattern>
-      <pre>tésting that é does not match </pre><m>e</m><post></post>
+      <pre>tésting that é doés not match </pre><m>e</m><post></post>
     </test-case>
     
     <test-case id="test13" strength="PRIMARY" locale="fr">
@@ -95,33 +99,78 @@
     
     <test-case id="test14" strength="PRIMARY" locale="fr">
       <pattern>O</pattern>
-      <pre>C</pre><m>O\\u0302</m><post>TÉ</post>
+      <pre>C</pre><m>O\u0302</m><post>TÉ</post>
     </test-case>
 
 
-  <!--
-    <test-case id="test09" strength="PRIMARY">
-      <pattern></pattern>
-      <pre></pre><m></m><post></post>
+    <!-- Test cases from usrchdat.c  STRENGTH -->
+
+
+    <test-case id="test15" strength="PRIMARY" locale="en">
+      <pattern>fox</pattern>
+      <pre>The quick brown </pre><m>fox</m><post> jumps over the lazy foxes</post>
     </test-case>
     
-    <test-case id="test09" strength="PRIMARY">
-      <pattern></pattern>
-      <pre></pre><m></m><post></post>
+    <test-case id="test16" strength="PRIMARY" locale="fr">
+      <pattern>peche</pattern>
+      <pre>blackbirds pat </pre><m>p\u00E9ch\u00E9</m><post> </post>
     </test-case>
     
-    <test-case id="test09" strength="PRIMARY">
-      <pattern></pattern>
-      <pre></pre><m></m><post></post>
+    <test-case id="test17" strength="PRIMARY" locale="fr">
+      <pattern>peche</pattern>
+      <pre>blackbirds pat </pre><m>p\u00EAche</m><post> </post>
     </test-case>
     
-    <test-case id="test09" strength="PRIMARY">
-      <pattern></pattern>
-      <pre></pre><m></m><post></post>
+    <test-case id="test18" strength="PRIMARY" locale="fr">
+      <pattern>peche</pattern>
+      <pre>blackbirds pat </pre><m>p\u00E9che</m><post>r </post>
     </test-case>
     
--->
+    <test-case id="test19" strength="PRIMARY" locale="fr">
+      <pattern>peche</pattern>
+      <pre>blackbirds pat </pre><m>p\u00EAche</m><post>r </post>
+    </test-case>
     
+    <test-case id="test20" strength="PRIMARY" locale="es">
+      <pattern>channel</pattern>
+      <pre>A </pre><m>channel</m><post>, </post>
+    </test-case>
+    
+    <test-case id="test21" strength="PRIMARY" locale="es">
+      <pattern>channel</pattern>
+      <pre>A </pre><m>CHANNEL</m><post>, </post>
+    </test-case>
+    
+    <test-case id="test22" strength="PRIMARY" locale="es">
+      <pattern>channel</pattern>
+      <pre>A </pre><m>Channel</m><post>s, </post>
+    </test-case>
+    
+    <test-case id="test23" strength="PRIMARY" locale="es">
+      <pattern>channel</pattern>
+      <pre>A </pre><m>channel</m><post>... </post>
+    </test-case>
+    
+    <!-- TODO:  should this IDENTICAL strength match actually match?
+                the raw characters are different -->
+    <test-case id="test24" strength="IDENTICAL" locale="en">
+      <pattern>A\u0300</pattern>
+      <pre>A miss, and then </pre><m>\u00c0</m><post> should match but not A"</post>
+    </test-case>
+    
+    <!-- TODO:  WHy does this fail?  -->
+
+    <test-case id="test25" strength="SECONDARY" locale="en">
+      <pattern>Ű</pattern>
+      <pre>12</pre><m>ű</m><post> Ű</post>
+    </test-case>
+    
+    <test-case id="test26" strength="SECONDARY" locale="en">
+      <pattern>A</pattern>
+      <pre>12</pre><m>a</m><post>...</post>
+    </test-case>
+  
+   
     
    
   </stringsearch-tests>

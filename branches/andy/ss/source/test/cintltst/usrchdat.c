@@ -96,7 +96,7 @@ static const SearchData STRENGTH[] = {
     {"\\u00c0 should match but not A", "A\\u0300", "en", UCOL_IDENTICAL, 
     NULL, {0, -1}, {1, 0}},
 
-    /* Ticket 5382 */
+    /* Ticket 5382 */   /* TODO:  HOW CAN THIS PASS?  forward slashes, not back slashes!  */
     {"12//u0171", "//u0170", NULL, UCOL_SECONDARY, NULL, {2, -1}, {2}},
 
     {NULL, NULL, NULL, UCOL_TERTIARY, NULL, {-1}, {0}}

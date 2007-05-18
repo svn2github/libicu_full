@@ -124,11 +124,12 @@ void SSearchTest::searchTest()
         //
         const UnicodeString *strength = testCase->getAttribute("strength");
         UColAttributeValue collatorStrength;
-        if      (strength==NULL)         { collatorStrength = UCOL_TERTIARY;}
-        else if (*strength=="PRIMARY")   { collatorStrength = UCOL_PRIMARY;}
-        else if (*strength=="SECONDARY") { collatorStrength = UCOL_SECONDARY;}
-        else if (*strength=="TERTIARY")  { collatorStrength = UCOL_TERTIARY;}
+        if      (strength==NULL)          { collatorStrength = UCOL_TERTIARY;}
+        else if (*strength=="PRIMARY")    { collatorStrength = UCOL_PRIMARY;}
+        else if (*strength=="SECONDARY")  { collatorStrength = UCOL_SECONDARY;}
+        else if (*strength=="TERTIARY")   { collatorStrength = UCOL_TERTIARY;}
         else if (*strength=="QUATERNARY") { collatorStrength = UCOL_QUATERNARY;}
+        else if (*strength=="IDENTICAL")  { collatorStrength = UCOL_IDENTICAL;}
         else {
             // Bogus value supplied for strength.  Shouldn't happen, even from
             //  typos, if the  XML source has been validated.
