@@ -18,6 +18,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 char testId[100];
 
@@ -95,6 +96,9 @@ void SSearchTest::searchTest()
         return;
     }
 
+    const UnicodeString *debugTestCase = root->getAttribute("debug");
+    
+
     const UXMLElement *testCase;
     int32_t tc = 0;
 
@@ -110,6 +114,10 @@ void SSearchTest::searchTest()
             id->extract(0, id->length(), testId,  sizeof(testId), US_INV);
         }
 
+        // If debugging test case has been specified and this is not it, skip to next.
+        if (id!=NULL && debugTestCase!=NULL && *id != *debugTestCase) {
+            continue;
+        }
         //
         //  Get the requested collation strength.
         //    Default is tertiary if the XML attribute is missing from the test case.
@@ -189,7 +197,7 @@ void SSearchTest::searchTest()
         // Open a collotor and StringSearch based on the parameters
         //   obtained from the XML.
         //
-        status = U_ZERO_ERROR;       
+        status = U_ZERO_ERROR;
         UCollator *collator = ucol_open(clocale, &status);
         ucol_setStrength(collator, collatorStrength);
         UStringSearch *uss = usearch_openFromCollator(pattern.getBuffer(), pattern.length(),
