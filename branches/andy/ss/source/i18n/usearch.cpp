@@ -3283,6 +3283,7 @@ CEI *CEBuffer::get(int32_t index) {
 
 #ifdef USEARCH_DEBUG
 #include <stdio.h>
+#include <stdlib.h>
 #endif
 
 //
@@ -3334,7 +3335,7 @@ static int32_t nextBoundaryAfter(UStringSearch *strsrch, int32_t startIndex) {
     
     
         
-    
+
     
 U_CAPI UBool U_EXPORT2 usearch_search(UStringSearch  *strsrch,
                                        int32_t        startIdx,
@@ -3346,12 +3347,16 @@ U_CAPI UBool U_EXPORT2 usearch_search(UStringSearch  *strsrch,
         return FALSE;
     }
 
+    // TODO:  reject search patterns beginning with a combining char.
+
 #ifdef USEARCH_DEBUG
-    printf("Pattern CEs\n");
-    for (int ii=0; ii<strsrch->pattern.CELength; ii++) {
-        printf(" %8x", strsrch->pattern.CE[ii]);
+    if (getenv("USEARCH_DEBUG") != NULL) {
+        printf("Pattern CEs\n");
+        for (int ii=0; ii<strsrch->pattern.CELength; ii++) {
+            printf(" %8x", strsrch->pattern.CE[ii]);
+        }
+        printf("\n");
     }
-    printf("\n");
     
 #endif
     // Input parameter sanity check.
@@ -3423,15 +3428,7 @@ U_CAPI UBool U_EXPORT2 usearch_search(UStringSearch  *strsrch,
         //     an acceptable character range.
         //
 
-    #ifdef USEARCH_DEBUG
-        printf("Target CEs [%d .. %d]\n", ceb.firstIx, ceb.limitIx);
-        int32_t  lastToPrint = ceb.limitIx+2;
-        for (int ii=ceb.firstIx; ii<lastToPrint; ii++) {
-            printf("%8x@%d ", ceb.get(ii)->ce, ceb.get(ii)->srcIndex);
-        }
-        printf("\n");
-    #endif
-    
+
         targetCEI = ceb.get(targetIx+strsrch->pattern.CELength);
         maxLimit = targetCEI->srcIndex;
         targetCEI = ceb.get(targetIx);
@@ -3468,16 +3465,29 @@ U_CAPI UBool U_EXPORT2 usearch_search(UStringSearch  *strsrch,
     
     
     #ifdef USEARCH_DEBUG
-        printf("minLimit, maxLimit, mLimit = %d, %d, %d\n", minLimit, maxLimit, mLimit);
+        if (getenv("USEARCH_DEBUG") != NULL) {
+            printf("minLimit, maxLimit, mLimit = %d, %d, %d\n", minLimit, maxLimit, mLimit);
+        }
     #endif
         if (mLimit>maxLimit) {
             found = FALSE;
+            //;<<<<<<<<<<<<<<<<<<<<<<<<<<<
         }
         if (found) {
             break;
         }
     }
 
+    #ifdef USEARCH_DEBUG
+    if (getenv("USEARCH_DEBUG") != NULL) {
+        printf("Target CEs [%d .. %d]\n", ceb.firstIx, ceb.limitIx);
+        int32_t  lastToPrint = ceb.limitIx+2;
+        for (int ii=ceb.firstIx; ii<lastToPrint; ii++) {
+            printf("%8x@%d ", ceb.get(ii)->ce, ceb.get(ii)->srcIndex);
+        }
+        printf("\n%s\n", found? "match found" : "no match");
+    }
+    #endif
 
     // All Done.  Store back the match bounds to the caller.
     //

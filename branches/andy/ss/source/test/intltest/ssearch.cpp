@@ -97,7 +97,10 @@ void SSearchTest::searchTest()
     }
 
     const UnicodeString *debugTestCase = root->getAttribute("debug");
-    
+    if (debugTestCase != NULL) {
+        setenv("USEARCH_DEBUG", "1", 1);
+    }
+
 
     const UXMLElement *testCase;
     int32_t tc = 0;
@@ -138,14 +141,24 @@ void SSearchTest::searchTest()
             //   do the job of getting the error output.
             TEST_ASSERT(*strength=="TERTIARY")
         }
-        
+
+        //
+        // Get the collator normalization flag.  Default is UCOL_OFF.
+        //
+        UColAttributeValue normalize = UCOL_OFF;
+        const UnicodeString *norm = testCase->getAttribute("norm");
+        TEST_ASSERT (norm==NULL || *norm=="ON" || *norm=="OFF");
+        if (norm!=NULL && *norm=="ON") {
+            normalize = UCOL_ON;
+        }
+
         const UnicodeString defLocale("en");
         char  clocale[100];
         const UnicodeString *locale   = testCase->getAttribute("locale");
         if (locale == NULL || locale->length()==0) {
             locale = &defLocale;
         };
-        locale->extract(0, locale->length(), clocale, sizeof(clocale), US_INV);
+        locale->extract(0, locale->length(), clocale, sizeof(clocale), NULL);
 
 
         UnicodeString  text;
@@ -201,6 +214,7 @@ void SSearchTest::searchTest()
         status = U_ZERO_ERROR;
         UCollator *collator = ucol_open(clocale, &status);
         ucol_setStrength(collator, collatorStrength);
+        ucol_setAttribute(collator, UCOL_NORMALIZATION_MODE, normalize, &status);
         UStringSearch *uss = usearch_openFromCollator(pattern.getBuffer(), pattern.length(),
                                          target.getBuffer(), target.length(),
                                          collator,
