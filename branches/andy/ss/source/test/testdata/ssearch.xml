@@ -301,8 +301,32 @@
     
     <test-case id="test64" strength="TERTIARY">
       <pattern>\u0301</pattern>
-      <m>\u0301</m><post>\u0301\u0301\u0301</post>
+      <post>\u0301\u0301\u0301</post>
     </test-case>
+ 
+    <!-- stand-alone combining mark does match an un-attached combining mark -->
+    <test-case id="test65" strength="TERTIARY">
+      <pattern>\u0301</pattern>
+      <m>\u0301</m><post>A\u0301\u0301</post>
+    </test-case>
+    
+     <test-case id="test66" strength="TERTIARY">
+      <pattern>\u0301</pattern>
+      <m>\u0301</m>
+    </test-case>
+    
+    <!-- stand-alone combining marks at end of the target text -->
+     <test-case id="test67" strength="TERTIARY">
+      <pattern>\u0301</pattern>
+      <pre>abcd\r</pre><m>\u0301</m>
+    </test-case>
+   
+    <!-- attached combining marks at end of the target text, no match -->
+     <test-case id="test67" strength="TERTIARY">
+      <pattern>\u0301</pattern>
+      <pre>abcd\u0301</pre>
+    </test-case>
+   
  
 
     

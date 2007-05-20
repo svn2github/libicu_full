@@ -25,6 +25,9 @@ char testId[100];
 #define TEST_ASSERT(x) {if (!(x)) { \
     errln("Failure in file %s, line %d, test ID = \"%s\"", __FILE__, __LINE__, testId);}}
 
+#define TEST_ASSERT_M(x, m) {if (!(x)) { \
+    errln("Failure in file %s, line %d.   \"%s\"", __FILE__, __LINE__, m);return;}}
+
 #define TEST_ASSERT_SUCCESS(errcode) {if (U_FAILURE(errcode)) { \
     errln("Failure in file %s, line %d, test ID \"%s\", status = \"%s\"", \
           __FILE__, __LINE__, testId, u_errorName(errcode));}}
@@ -52,6 +55,10 @@ void SSearchTest::runIndexedTest( int32_t index, UBool exec, const char* &name, 
     switch (index) {
        case 0: name = "searchTest";
             if (exec) searchTest();
+            break;
+            
+        case 1: name = "searchTime";
+            if (exec) searchTime();
             break;
 
         default: name = "";
@@ -255,4 +262,138 @@ void SSearchTest::searchTest()
 #endif
 }
 
+void SSearchTest::searchTime() {
+    static const char *longishText =
+"Whylom, as olde stories tellen us,\n"
+"Ther was a duk that highte Theseus:\n"
+"Of Athenes he was lord and governour,\n"
+"And in his tyme swich a conquerour,\n"
+"That gretter was ther noon under the sonne.\n"
+"Ful many a riche contree hadde he wonne;\n"
+"What with his wisdom and his chivalrye,\n"
+"He conquered al the regne of Femenye,\n"
+"That whylom was y-cleped Scithia;\n"
+"And weddede the quene Ipolita,\n"
+"And broghte hir hoom with him in his contree\n"
+"With muchel glorie and greet solempnitee,\n"
+"And eek hir yonge suster Emelye.\n"
+"And thus with victorie and with melodye\n"
+"Lete I this noble duk to Athenes ryde,\n"
+"And al his hoost, in armes, him bisyde.\n"
+"And certes, if it nere to long to here,\n"
+"I wolde han told yow fully the manere,\n"
+"How wonnen was the regne of Femenye\n"
+"By Theseus, and by his chivalrye; (20)\n"
+"And of the grete bataille for the nones\n"
+"Bitwixen Athenës and Amazones;\n"
+"And how asseged was Ipolita,\n"
+"The faire hardy quene of Scithia;\n"
+"And of the feste that was at hir weddinge,\n"
+"And of the tempest at hir hoom-cominge;\n"
+"But al that thing I moot as now forbere.\n"
+"I have, God woot, a large feeld to ere,\n"
+"And wayke been the oxen in my plough.\n"
+"The remenant of the tale is long y-nough.\n"
+"I wol nat letten eek noon of this route;\n"
+"Lat every felawe telle his tale aboute,\n"
+"And lat see now who shal the soper winne;\n"
+"And ther I lefte, I wol ageyn biginne.\n"
+"This duk, of whom I make mencioun,\n"
+"When he was come almost unto the toun,\n"
+"In al his wele and in his moste pryde,\n"
+"He was war, as he caste his eye asyde,\n"
+"Wher that ther kneled in the hye weye\n"
+"A companye of ladies, tweye and tweye,\n"
+"Ech after other, clad in clothes blake; \n"
+"But swich a cry and swich a wo they make,\n"
+"That in this world nis creature livinge,\n"
+"That herde swich another weymentinge;\n"
+"And of this cry they nolde never stenten,\n"
+"Til they the reynes of his brydel henten.\n"
+"?What folk ben ye, that at myn hoomcominge\n"
+"Perturben so my feste with cryinge??\n"
+"Quod Theseus, ?have ye so greet envye\n"
+"Of myn honour, that thus compleyne and crye? \n"
+"Or who hath yow misboden, or offended?\n"
+"And telleth me if it may been amended;\n"
+"And why that ye ben clothed thus in blak??\n"
+"The eldest lady of hem alle spak,\n"
+"When she hadde swowned with a deedly chere,\n"
+"That it was routhe for to seen and here,\n"
+"And seyde: ?Lord, to whom Fortune hath yiven\n"
+"Victorie, and as a conquerour to liven,\n"
+"Noght greveth us your glorie and your honour;\n"
+"But we biseken mercy and socour.\n"
+"Have mercy on our wo and our distresse.\n"
+"Som drope of pitee, thurgh thy gentilesse,\n"
+"Up-on us wrecched wommen lat thou falle.\n"
+"For certes, lord, ther nis noon of us alle,\n"
+"That she nath been a duchesse or a quene;\n"
+"Now be we caitifs, as it is wel sene:\n"
+"Thanked be Fortune, and hir false wheel,\n"
+"That noon estat assureth to be weel.\n"
+"And certes, lord, t?abyden your presence,\n"
+"Here in the temple of the goddesse Clemence\n"
+"We han ben waytinge al this fourtenight;\n"
+"Now help us, lord, sith it is in thy might.\n"
+"I wrecche, which that wepe and waille thus,\n"
+"Was whylom wyf to king Capaneus,\n"
+"That starf at Thebes, cursed be that day!\n"
+"And alle we, that been in this array,\n"
+"And maken al this lamentacioun,\n"
+"We losten alle our housbondes at that toun,\n"
+"Whyl that the sege ther-aboute lay.\n"
+"And yet now th?olde Creon, weylaway!\n"
+"The lord is now of Thebes the citee, \n"
+"Fulfild of ire and of iniquitee,\n"
+"He, for despyt, and for his tirannye,\n"
+"To do the dede bodyes vileinye,\n"
+"Of alle our lordes, whiche that ben slawe,\n"
+"Hath alle the bodyes on an heep y-drawe,\n"
+"And wol nat suffren hem, by noon assent,\n"
+"Neither to been y-buried nor y-brent,\n"
+"But maketh houndes ete hem in despyt.?\n";
 
+const char *cPattern = "maketh houndes ete hem";
+    const char *testId = "searchTime()";   // for error macros.
+    UnicodeString target = longishText;
+    UErrorCode status = U_ZERO_ERROR;
+
+
+    UCollator *collator = ucol_open("en", &status);
+    TEST_ASSERT_SUCCESS(status);
+    //ucol_setStrength(collator, collatorStrength);
+    //ucol_setAttribute(collator, UCOL_NORMALIZATION_MODE, normalize, &status);
+    UnicodeString pattern = cPattern;
+    UStringSearch *uss = usearch_openFromCollator(pattern.getBuffer(), pattern.length(),
+                                        target.getBuffer(), target.length(),
+                                        collator,
+                                        NULL,     // the break iterator
+                                        &status);
+    TEST_ASSERT_SUCCESS(status);
+    
+    int32_t foundStart;
+    int32_t foundEnd;
+    UBool   found;
+    
+    // Find the match position usgin strstr
+    const char *pm = strstr(longishText, cPattern);
+    TEST_ASSERT_M(pm!=NULL, "No pattern match with strstr");
+    int  refMatchPos = (int)(pm - longishText);
+    int  icuMatchPos;
+    int  icuMatchEnd;
+    usearch_search(uss, 0, &icuMatchPos, &icuMatchEnd, &status);
+    TEST_ASSERT_SUCCESS(status);
+    TEST_ASSERT_M(refMatchPos == icuMatchPos, "strstr and icu give different match positions.");
+
+    int i;
+    for (i=0; i<10; i++) {
+        found = usearch_search(uss, 0, &icuMatchPos, &icuMatchEnd, &status);
+        TEST_ASSERT_SUCCESS(status);
+        TEST_ASSERT(found);
+    }
+    usearch_close(uss);
+    ucol_close(collator);
+}
+        
+        

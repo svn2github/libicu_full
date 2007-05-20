@@ -27,6 +27,7 @@ public:
     virtual void runIndexedTest(int32_t index, UBool exec, const char* &name, char* par = NULL );
 
     virtual void searchTest();
+    virtual void searchTime();
 
 private:
     virtual const char *getPath(char buffer[2048], const char *filename);

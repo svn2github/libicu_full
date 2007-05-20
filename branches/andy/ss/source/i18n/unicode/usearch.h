@@ -642,15 +642,30 @@ U_STABLE int32_t U_EXPORT2 usearch_previous(UStringSearch *strsrch,
 U_STABLE void U_EXPORT2 usearch_reset(UStringSearch *strsrch);
 
 /**
-  *  Search the text for the pattern, with a default search behavior, and
-  *    ignoring options set on the USearch object.
+  *  Simple forward search the text for the pattern, ignoring the canonical
+  *      and breakiterator options set on the USearch object.
+  *
+  *  This is an experimental function, and is not an official part of the
+  *      ICU API.
+  *
+  *  Matches obey the following constraints:
+  *      A match will not include part of a combining sequence.  Combining
+  *      character sequences are considered as inseperable units, and
+  *      either match the pattern completely, or are considered to not match
+  *      at all.  Thus, for example, an A followed a combining accent mark will 
+  *      not be found when search for a plain (unaccented) A.   (unless
+  *      the collation strength has been set to ignore all accents)
+  *
+  *      Characters in the text that logically expand to sequences of other 
+  *      characters(German sharp-S becoming 'ss', for example) also
+  *      must match completely.  
+  *      Searching for a single 's' in a string containing only a sharp-s will 
+  *      find no match.
+  *
   *
   *  @param strsrch    the search iterator data struct, which references both
   *                    the text to be searched  and the pattern being sought.
-  *  @param startIdx   The index into the text to begin the search.  This starting
-  *                    position should not refer to the interior of a multi-character
-  *                    sequence that, under collation, is to be treated as a 
-  *                    single character (ch for some slavic languages, for example).
+  *  @param startIdx   The index into the text to begin the search.  
   *  @param matchStart An out parameter, the starting index of the matched text.
   *                    This parameter may be NULL.
   *                    A value of -1 will be returned if no match was found.

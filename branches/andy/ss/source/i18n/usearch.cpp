@@ -3332,9 +3332,33 @@ static int32_t nextBoundaryAfter(UStringSearch *strsrch, int32_t startIndex) {
 }
         
     
+static UBool isInCombiningSequence(UStringSearch *strsrch, int32_t index) {
+    const UChar *text = strsrch->search->text;
+    int32_t textLen   = strsrch->search->textLength;
     
+    U_ASSERT(index>=0);
+    U_ASSERT(index<=textLen);
     
-        
+    if (index>=textLen || index<=0) {
+        return FALSE;
+    }
+  
+    // If the character at the current index is not a GRAPHEME_EXTEND
+    //    then we can not be within a combining sequence.
+    UChar32  c;
+    U16_GET(text, 0, index, textLen, c);
+    int32_t gcProperty = u_getIntPropertyValue(c, UCHAR_GRAPHEME_CLUSTER_BREAK);
+    if (gcProperty != U_GCB_EXTEND) {
+        return FALSE;
+    }
+    
+    // We are at a combining mark.  If the preceding character is anything
+    //   except a CONTROL, CR or LF, we are in a combining sequence.
+    U16_PREV(text, 0, index, c);    
+    gcProperty = u_getIntPropertyValue(c, UCHAR_GRAPHEME_CLUSTER_BREAK);
+    UBool combining =  !(gcProperty==U_GCB_CONTROL || gcProperty==U_GCB_LF || gcProperty==U_GCB_CR);  
+    return combining;
+}      
 
     
 U_CAPI UBool U_EXPORT2 usearch_search(UStringSearch  *strsrch,
@@ -3457,11 +3481,22 @@ U_CAPI UBool U_EXPORT2 usearch_search(UStringSearch  *strsrch,
             }
         }
 
-        //  Advance to the first acceptable match boundary.
+        //  Advance match end position to the first acceptable match boundary.
         mLimit = minLimit;
         if (minLimit<maxLimit) {
             mLimit = nextBoundaryAfter(strsrch, minLimit);
         }
+        
+        // Check for the start of the match being within a combining sequence.
+        //   This can happen if the pattern itself begins with a combining char, and
+        //   the match found combining marks in the target text that were attached
+        //    to something else.
+        //   This type of match should be rejected for not completely consuming a
+        //   combining sequence.
+        if (isInCombiningSequence(strsrch, mStart)) {
+            found = FALSE;
+        }
+        
     
     
     #ifdef USEARCH_DEBUG
@@ -3471,7 +3506,6 @@ U_CAPI UBool U_EXPORT2 usearch_search(UStringSearch  *strsrch,
     #endif
         if (mLimit>maxLimit) {
             found = FALSE;
-            //;<<<<<<<<<<<<<<<<<<<<<<<<<<<
         }
         if (found) {
             break;
