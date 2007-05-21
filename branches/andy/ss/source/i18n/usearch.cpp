@@ -3184,7 +3184,7 @@ struct  CEI {
 //
 //  CEBuffer   A circular buffer of CEs from the text being searched.
 //
-#define   DEFAULT_CEBUFFER_SIZE 30
+#define   DEFAULT_CEBUFFER_SIZE 50
 struct CEBuffer {
     CEI                 defBuf[DEFAULT_CEBUFFER_SIZE];
     CEI                 *buf;
@@ -3210,7 +3210,7 @@ CEBuffer::CEBuffer(UStringSearch *ss, UErrorCode *status) {
     firstIx = 0;
     limitIx = 0;
     if (bufSize>DEFAULT_CEBUFFER_SIZE) {
-        buf = (CEI *)uprv_malloc(DEFAULT_CEBUFFER_SIZE * sizeof(CEI));
+        buf = (CEI *)uprv_malloc(bufSize * sizeof(CEI));
         if (buf == NULL) {
             *status = U_MEMORY_ALLOCATION_ERROR;
         }
@@ -3279,7 +3279,7 @@ CEI *CEBuffer::get(int32_t index) {
     return &buf[i];
 }
 
-#define USEARCH_DEBUG
+// #define USEARCH_DEBUG
 
 #ifdef USEARCH_DEBUG
 #include <stdio.h>
@@ -3419,12 +3419,6 @@ U_CAPI UBool U_EXPORT2 usearch_search(UStringSearch  *strsrch,
         //  position from the outer loop.
         for (patIx=0; patIx<strsrch->pattern.CELength; patIx++) {
             int32_t patCE = strsrch->pattern.CE[patIx];
-            // TODO:  the pattern CEs should be pre-filtered to get rid of ignorables,
-            //        so that it doesn't need to be done again here.
-            patCE = getCE(strsrch, patCE);
-            if (patCE==UCOL_IGNORABLE) {
-                  continue;
-              }
             targetCEI = ceb.get(targetIx+patIx);
             //  Compare CE from target string with CE from the pattern.
             //    Note that the target CE will be UCOL_NULLORDER if we reach the end of input,

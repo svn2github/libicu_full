@@ -283,9 +283,9 @@ void SSearchTest::searchTime() {
 "And certes, if it nere to long to here,\n"
 "I wolde han told yow fully the manere,\n"
 "How wonnen was the regne of Femenye\n"
-"By Theseus, and by his chivalrye; (20)\n"
+"By Theseus, and by his chivalrye;\n"
 "And of the grete bataille for the nones\n"
-"Bitwixen Athenës and Amazones;\n"
+"Bitwixen Athen's and Amazones;\n"
 "And how asseged was Ipolita,\n"
 "The faire hardy quene of Scithia;\n"
 "And of the feste that was at hir weddinge,\n"
@@ -310,17 +310,17 @@ void SSearchTest::searchTime() {
 "That herde swich another weymentinge;\n"
 "And of this cry they nolde never stenten,\n"
 "Til they the reynes of his brydel henten.\n"
-"?What folk ben ye, that at myn hoomcominge\n"
-"Perturben so my feste with cryinge??\n"
-"Quod Theseus, ?have ye so greet envye\n"
+"'What folk ben ye, that at myn hoomcominge\n"
+"Perturben so my feste with cryinge'?\n"
+"Quod Theseus, 'have ye so greet envye\n"
 "Of myn honour, that thus compleyne and crye? \n"
 "Or who hath yow misboden, or offended?\n"
 "And telleth me if it may been amended;\n"
-"And why that ye ben clothed thus in blak??\n"
+"And why that ye ben clothed thus in blak'?\n"
 "The eldest lady of hem alle spak,\n"
 "When she hadde swowned with a deedly chere,\n"
 "That it was routhe for to seen and here,\n"
-"And seyde: ?Lord, to whom Fortune hath yiven\n"
+"And seyde: 'Lord, to whom Fortune hath yiven\n"
 "Victorie, and as a conquerour to liven,\n"
 "Noght greveth us your glorie and your honour;\n"
 "But we biseken mercy and socour.\n"
@@ -332,7 +332,7 @@ void SSearchTest::searchTime() {
 "Now be we caitifs, as it is wel sene:\n"
 "Thanked be Fortune, and hir false wheel,\n"
 "That noon estat assureth to be weel.\n"
-"And certes, lord, t?abyden your presence,\n"
+"And certes, lord, t'abyden your presence,\n"
 "Here in the temple of the goddesse Clemence\n"
 "We han ben waytinge al this fourtenight;\n"
 "Now help us, lord, sith it is in thy might.\n"
@@ -343,7 +343,7 @@ void SSearchTest::searchTime() {
 "And maken al this lamentacioun,\n"
 "We losten alle our housbondes at that toun,\n"
 "Whyl that the sege ther-aboute lay.\n"
-"And yet now th?olde Creon, weylaway!\n"
+"And yet now th'olde Creon, weylaway!\n"
 "The lord is now of Thebes the citee, \n"
 "Fulfild of ire and of iniquitee,\n"
 "He, for despyt, and for his tirannye,\n"
@@ -352,9 +352,11 @@ void SSearchTest::searchTime() {
 "Hath alle the bodyes on an heep y-drawe,\n"
 "And wol nat suffren hem, by noon assent,\n"
 "Neither to been y-buried nor y-brent,\n"
-"But maketh houndes ete hem in despyt.?\n";
+"But maketh houndes ete hem in despyt. zet'\n";
 
 const char *cPattern = "maketh houndes ete hem";
+//const char *cPattern = "Whylom";
+//const char *cPattern = "zet";
     const char *testId = "searchTime()";   // for error macros.
     UnicodeString target = longishText;
     UErrorCode status = U_ZERO_ERROR;
@@ -387,11 +389,21 @@ const char *cPattern = "maketh houndes ete hem";
     TEST_ASSERT_M(refMatchPos == icuMatchPos, "strstr and icu give different match positions.");
 
     int i;
-    for (i=0; i<10; i++) {
-        found = usearch_search(uss, 0, &icuMatchPos, &icuMatchEnd, &status);
-        TEST_ASSERT_SUCCESS(status);
-        TEST_ASSERT(found);
+    int j=0;
+    for (i=0; i<1000000; i++) {
+        //found = usearch_search(uss, 0, &icuMatchPos, &icuMatchEnd, &status);
+        //TEST_ASSERT_SUCCESS(status);
+        //TEST_ASSERT(found);
+
+        // usearch_setOffset(uss, 0, &status);
+        // icuMatchPos = usearch_next(uss, &status);
+
+         // The i+j stuff is to confuse the optimizer and get it to actually leave the
+         //   call to strstr in place.
+         pm = strstr(longishText+j, cPattern);
+         j = (j + i)%5;
     }
+    printf("%d\n", pm-longishText, j);
     usearch_close(uss);
     ucol_close(collator);
 }
