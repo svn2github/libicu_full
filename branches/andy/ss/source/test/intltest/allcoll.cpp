@@ -3,7 +3,7 @@
  * Copyright (c) 1997-2004, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
-copyright check test
+
 #include "unicode/utypes.h"
 
 #if !UCONFIG_NO_COLLATION
