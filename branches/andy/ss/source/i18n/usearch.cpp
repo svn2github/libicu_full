@@ -3490,6 +3490,10 @@ U_CAPI UBool U_EXPORT2 usearch_search(UStringSearch  *strsrch,
         if (isInCombiningSequence(strsrch, mStart)) {
             found = FALSE;
         }
+
+        // Check for the start of the match being within an Collation Element Expansion,
+        //   meaning that the first char of the match is only partially matched.
+        targetCEI = ceb.get(
         
     
     

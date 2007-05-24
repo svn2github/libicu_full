@@ -391,7 +391,7 @@ const char *cPattern = "maketh houndes ete hem";
     int i;
     int j=0;
     for (i=0; i<1000000; i++) {
-        //found = usearch_search(uss, 0, &icuMatchPos, &icuMatchEnd, &status);
+        found = usearch_search(uss, 0, &icuMatchPos, &icuMatchEnd, &status);
         //TEST_ASSERT_SUCCESS(status);
         //TEST_ASSERT(found);
 
@@ -400,8 +400,8 @@ const char *cPattern = "maketh houndes ete hem";
 
          // The i+j stuff is to confuse the optimizer and get it to actually leave the
          //   call to strstr in place.
-         pm = strstr(longishText+j, cPattern);
-         j = (j + i)%5;
+         //pm = strstr(longishText+j, cPattern);
+         //j = (j + i)%5;
     }
     printf("%d\n", pm-longishText, j);
     usearch_close(uss);
