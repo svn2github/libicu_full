@@ -340,6 +340,23 @@
       <m>Æligature</m>
     </test-case>
 
+    <test-case id="test72" strength="PRIMARY">
+        <pattern>AEligature</pattern>
+        <m>Æligature</m>
+    </test-case>
+    
+    <!-- unattached combining Tilde will not match a Tilde that is
+         part of a composed Ñ  (\u00D1)  -->
+    <test-case id="test73" strength="SECONDARY">
+        <pattern>\u0303</pattern>  <!-- combining tilde -->
+        <pre>Ñ&#x0d;</pre><m>\u0303</m>
+    </test-case>
+    
+    <test-case id="test74" strength="SECONDARY">
+        <pattern>\u0303</pattern>  <!-- combining tilde -->
+        <pre>Ñ &#x0d;</pre><m>\u0303</m><post>a</post>
+    </test-case>
+    
     
   </stringsearch-tests>
   

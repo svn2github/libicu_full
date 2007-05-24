@@ -3475,12 +3475,6 @@ U_CAPI UBool U_EXPORT2 usearch_search(UStringSearch  *strsrch,
             }
         }
 
-        //  Advance match end position to the first acceptable match boundary.
-        mLimit = minLimit;
-        if (minLimit<maxLimit) {
-            mLimit = nextBoundaryAfter(strsrch, minLimit);
-        }
-        
         // Check for the start of the match being within a combining sequence.
         //   This can happen if the pattern itself begins with a combining char, and
         //   the match found combining marks in the target text that were attached
@@ -3493,15 +3487,29 @@ U_CAPI UBool U_EXPORT2 usearch_search(UStringSearch  *strsrch,
 
         // Check for the start of the match being within an Collation Element Expansion,
         //   meaning that the first char of the match is only partially matched.
-        targetCEI = ceb.get(
+        //   With exapnsions, the first CE will report the index of the source 
+        //   character, and all subsequent (expansions) CEs will report the source index of the
+        //    _following_ character.  
+        int32_t secondIx = ceb.get(targetIx+1)->srcIndex;
+        if (mStart == secondIx) {
+            found = FALSE;
+        }
+    
+        //  Advance the match end position to the first acceptable match boundary.
+        //    This advances the index over any combining charcters.
+        mLimit = minLimit;
+        if (minLimit<maxLimit) {
+            mLimit = nextBoundaryAfter(strsrch, minLimit);
+        }
         
-    
-    
     #ifdef USEARCH_DEBUG
         if (getenv("USEARCH_DEBUG") != NULL) {
             printf("minLimit, maxLimit, mLimit = %d, %d, %d\n", minLimit, maxLimit, mLimit);
         }
     #endif
+        
+        // If advancing to the end of a combining sequence in character indexing space
+        //   advanced us beyond the end of the match in CE space, reject this match. 
         if (mLimit>maxLimit) {
             found = FALSE;
         }
