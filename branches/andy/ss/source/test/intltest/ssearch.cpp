@@ -262,6 +262,18 @@ void SSearchTest::searchTest()
 #endif
 }
 
+//
+//  searchTime()    A quick and dirty performance test for string search.
+//                  Probably  doesn't really belong as part of intltest, but it
+//                  does check that the search succeeds, and gets the right result,
+//                  so it serves as a functionality test also.
+//
+//                  To run as a perf test, up the loop count, select by commenting
+//                  and uncommenting in the code the operation to be measured,
+//                  rebuild, and measure the running time of this test alone.
+//
+//                     time LD_LIBRARY_PATH=whatever  ./intltest  collate/SSearchTest/searchTime
+//
 void SSearchTest::searchTime() {
     static const char *longishText =
 "Whylom, as olde stories tellen us,\n"
@@ -390,7 +402,10 @@ const char *cPattern = "maketh houndes ete hem";
 
     int i;
     int j=0;
-    for (i=0; i<1000000; i++) {
+
+    // Try loopcounts around 100000 to some millions, depending on the operation,
+    //   to get runtimes of at least several seconds.
+    for (i=0; i<1; i++) {
         found = usearch_search(uss, 0, &icuMatchPos, &icuMatchEnd, &status);
         //TEST_ASSERT_SUCCESS(status);
         //TEST_ASSERT(found);
