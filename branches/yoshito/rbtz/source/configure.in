@@ -180,6 +180,36 @@ if test "$U_DEFAULT_SHOW_DRAFT" = 0; then
 fi
 AC_SUBST(U_DEFAULT_SHOW_DRAFT)
 
+dnl Check if we can hide variables from 
+AC_MSG_CHECKING([for library API export])
+SHAREDLIBEXPORT=no
+U_USE_GCC_VISIBILITY_ATTRIBUTE=0
+if test "$ac_cv_c_compiler_gnu" = yes; then
+    OLD_CFLAGS="${CFLAGS}"
+    OLD_CXXFLAGS="${CXXFLAGS}"
+    LIBCFLAGS="-fvisibility=hidden"
+    LIBCXXFLAGS="-fvisibility=hidden"
+    CFLAGS="${CFLAGS} ${LIBCFLAGS}"
+    CXXFLAGS="${CXXFLAGS} ${LIBCXXFLAGS}"
+    AC_TRY_COMPILE([__attribute__ ((visibility ("default"))) void f(void);],[],
+        [SHAREDLIBEXPORT=yes],[SHAREDLIBEXPORT=no])
+    # Restore to their original state because the Intel compiler chokes
+    # on this option when checking for the wchar_t size, but the
+    # option otherwise works.
+    CFLAGS="${OLD_CFLAGS}"
+    CXXFLAGS="${OLD_CXXFLAGS}"
+    if test "$SHAREDLIBEXPORT" = no; then
+        LIBCFLAGS=
+        LIBCXXFLAGS=
+    else
+        U_USE_GCC_VISIBILITY_ATTRIBUTE=1
+    fi
+fi
+AC_MSG_RESULT($SHAREDLIBEXPORT)
+AC_SUBST(U_USE_GCC_VISIBILITY_ATTRIBUTE)
+AC_SUBST(LIBCFLAGS)
+AC_SUBST(LIBCXXFLAGS)
+
 AC_PROG_RANLIB
 AC_PATH_PROG(AR,ar,[echo archiver ar not found re-run configure ; false],$PATH:/bin:/usr/bin:/usr/ccs/bin)
 
@@ -636,22 +666,14 @@ if test $ac_cv_var_timezone = yes; then
   U_HAVE_TIMEZONE=1
 else
   AC_CACHE_CHECK(for __timezone,ac_cv_var___timezone,
-  [AC_TRY_LINK(
-  changequote(<<, >>)dnl
-  <<#include <time.h>
-  >>,
-  changequote([, ])dnl
+  [AC_TRY_LINK([#include <time.h>], 
   [__timezone = 1;], ac_cv_var___timezone=yes, ac_cv_var___timezone=no)])
   if test $ac_cv_var___timezone = yes; then
     U_TIMEZONE=__timezone
     U_HAVE_TIMEZONE=1
   else
     AC_CACHE_CHECK(for _timezone,ac_cv_var__timezone,
-    [AC_TRY_LINK(
-    changequote(<<, >>)dnl
-    <<#include <time.h>
-    >>,
-    changequote([, ])dnl
+    [AC_TRY_LINK([#include <time.h>],
     [_timezone = 1;], ac_cv_var__timezone=yes, ac_cv_var__timezone=no)])
     if test $ac_cv_var__timezone = yes; then
       U_TIMEZONE=_timezone
@@ -682,11 +704,7 @@ if test $ac_cv_var_daylight = yes; then
   U_HAVE_DAYLIGHT=1
 else
   AC_CACHE_CHECK(for __daylight,ac_cv_var___daylight,
-  [AC_TRY_LINK(
-  changequote(<<, >>)dnl
-  <<#include <time.h>
-  >>,
-  changequote([, ])dnl
+  [AC_TRY_LINK([#include <time.h>],
   [__daylight = 1;], ac_cv_var___daylight=yes, ac_cv_var___daylight=no)])
   if test $ac_cv_var___daylight = yes; then
     U_DAYLIGHT=__daylight
@@ -782,8 +800,7 @@ fi
 AC_SUBST(U_HAVE_WCHAR_H)
 AC_SUBST(U_HAVE_WCSCPY)
 
-ac_default_sizeof_wchar_t=4
-AC_DO_CHECK_SIZEOF(wchar_t,$ac_default_sizeof_wchar_t,[
+AC_CHECK_SIZEOF([wchar_t], 0, [
 #if STDC_HEADERS
 #include <stddef.h>
 #endif
@@ -792,22 +809,74 @@ AC_DO_CHECK_SIZEOF(wchar_t,$ac_default_sizeof_wchar_t,[
 #include <string.h>
 #include <wchar.h>
 #endif])
-dnl We could set ac_cv_sizeof_wchar_t to the default if the check returned
-dnl 0 (unknown) but we'd rather do it in the headers, so we know we had no
-dnl clue at configure time.
 U_SIZEOF_WCHAR_T=$ac_cv_sizeof_wchar_t
+# We do this check to verify that everything is okay.
 if test $U_SIZEOF_WCHAR_T = 0; then
-	if test $U_HAVE_WCHAR_H=1; then
-	   AC_MSG_ERROR(There is wchar.h but the size of wchar_t is 0)
-	fi
+    if test $U_HAVE_WCHAR_H=1; then
+       AC_MSG_ERROR(There is wchar.h but the size of wchar_t is 0)
+    fi
 fi
 AC_SUBST(U_SIZEOF_WCHAR_T)
 
-#dnl Echo
-#ECHO_N=$ac_n
-#ECHO_C=$ac_c
-#AC_SUBST(ECHO_N)
-#AC_SUBST(ECHO_C)
+AC_MSG_CHECKING([for UTF-16 string literal support])
+U_CHECK_UTF16_STRING=1
+CHECK_UTF16_STRING_RESULT="unknown"
+case "${host}" in
+*-*-aix*|powerpc64-*-linux*)
+    if test "$ac_cv_prog_gcc" = no; then
+        OLD_CFLAGS="${CFLAGS}"
+        OLD_CXXFLAGS="${CXXFLAGS}"
+        CFLAGS="${CFLAGS} -qutf"
+        CXXFLAGS="${CXXFLAGS} -qutf"
+        AC_TRY_COMPILE([const unsigned short hello[] = u"hello";],[],
+            [U_CHECK_UTF16_STRING=1],[U_CHECK_UTF16_STRING=0])
+        if test "$U_CHECK_UTF16_STRING" = 0; then
+            CFLAGS="${OLD_CFLAGS}"
+            CXXFLAGS="${OLD_CXXFLAGS}"
+        else
+            CHECK_UTF16_STRING_RESULT="-qutf"
+        fi
+    fi
+    ;;
+*-*-solaris*)
+    if test "$ac_cv_prog_gcc" = no; then
+        OLD_CFLAGS="${CFLAGS}"
+        OLD_CXXFLAGS="${CXXFLAGS}"
+        CFLAGS="${CFLAGS} -xustr=ascii_utf16_ushort"
+        CXXFLAGS="${CXXFLAGS} -xustr=ascii_utf16_ushort"
+        AC_TRY_COMPILE([const unsigned short hello[] = U"hello";],[],
+            [U_CHECK_UTF16_STRING=1],[U_CHECK_UTF16_STRING=0])
+        if test "$U_CHECK_UTF16_STRING" = 0; then
+            CFLAGS="${OLD_CFLAGS}"
+            CXXFLAGS="${OLD_CXXFLAGS}"
+        else
+            CHECK_UTF16_STRING_RESULT="-xustr=ascii_utf16_ushort"
+
+            # Since we can't detect the availability of this UTF-16 syntax at compile time,
+            # we depend on configure telling us that we can use it.
+            # Since we can't ensure ICU users use -xustr=ascii_utf16_ushort,
+            # we only use this macro within ICU.
+            # If an ICU user uses icu-config, this feature will be enabled.
+            CPPFLAGS="${CPPFLAGS} -DU_CHECK_UTF16_STRING=1"
+            U_CHECK_UTF16_STRING=0
+        fi
+    fi
+    ;;
+*-*-hpux*)
+    if test "$ac_cv_prog_gcc" = no; then
+        dnl The option will be detected at compile time without additional compiler options.
+        CHECK_UTF16_STRING_RESULT="available"
+    fi
+    ;;
+*-*-cygwin)
+    dnl wchar_t can be used
+    CHECK_UTF16_STRING_RESULT="available"
+    ;;
+*)
+    ;;
+esac
+AC_MSG_RESULT($CHECK_UTF16_STRING_RESULT)
+AC_SUBST(U_CHECK_UTF16_STRING)
 
 dnl Enable/disable extras
 AC_ARG_ENABLE(extras,

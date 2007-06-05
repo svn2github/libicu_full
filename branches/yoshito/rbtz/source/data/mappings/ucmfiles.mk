@@ -27,6 +27,7 @@
 
 UCM_SOURCE_FILES = ibm-437_P100-1995.ucm\
 ibm-737_P100-1997.ucm\
+ibm-720_P100-1997.ucm\
 ibm-775_P100-1996.ucm\
 ibm-813_P100-1995.ucm\
 ibm-850_P100-1995.ucm\
@@ -50,6 +51,7 @@ ibm-874_P100-1995.ucm\
 ibm-878_P100-1996.ucm\
 ibm-901_P100-1999.ucm\
 ibm-902_P100-1999.ucm\
+ibm-916_P100-1995.ucm\
 ibm-921_P100-1995.ucm\
 ibm-922_P100-1999.ucm\
 ibm-1006_P100-1995.ucm\
@@ -82,8 +84,8 @@ ibm-954_P101-2007.ucm\
 ibm-964_P110-1999.ucm\
 ibm-971_P100-1995.ucm\
 ibm-1363_P110-1997.ucm\
-ibm-1375_P100-2006.ucm\
-ibm-5471_P100-2007.ucm\
+ibm-1375_P100-2007.ucm\
+ibm-5471_P100-2006.ucm\
 ibm-9005_X110-2007.ucm\
 ibm-9448_X100-2005.ucm\
 ibm-33722_P120-1999.ucm\
