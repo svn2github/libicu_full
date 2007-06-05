@@ -1,0 +1,135 @@
+﻿// ***************************************************************************
+// *
+// * Copyright (C) 2007 International Business Machines
+// * Corporation and others.  All Rights Reserved.
+// * Tool: com.ibm.icu.dev.tool.cldr.LDML2ICUConverter.java
+// * Source File:<path>/common/main/tig.xml
+// *
+// ***************************************************************************
+/**
+ *  ICU <specials> source: <path>/xml/main/tig.xml
+ */
+tig{
+    LocaleScript{
+        "Ethi",
+    }
+    NumberPatterns{
+        "#,##0.###",
+        "¤ #,##0.00",
+        "#,##0%",
+        "#E0",
+    }
+    Version{"1.90"}
+    calendar{
+        gregorian{
+            DateTimePatterns{
+                "HH:mm:ss v",
+                "HH:mm:ss z",
+                "HH:mm:ss",
+                "HH:mm",
+                "EEEE, yyyy MMMM dd",
+                "yyyy MMMM d",
+                "yyyy MMM d",
+                "yyyy-MM-dd",
+                "{1} {0}",
+            }
+            dayNames{
+                format{
+                    abbreviated{
+                        "ሰንበት ዓባይ",
+                        "2",
+                        "3",
+                        "ኣረር",
+                        "5",
+                        "ጅምዓት",
+                        "7",
+                    }
+                    wide{
+                        "ሰንበት ዓባይ",
+                        "ሰኖ",
+                        "ታላሸኖ",
+                        "ኣረርባዓ",
+                        "ከሚሽ",
+                        "ጅምዓት",
+                        "ሰንበት ንኢሽ",
+                    }
+                }
+                stand-alone{
+                    narrow{
+                        "ሰ",
+                        "ሰ",
+                        "ታ",
+                        "ኣ",
+                        "ከ",
+                        "ጅ",
+                        "ሰ",
+                    }
+                }
+            }
+            monthNames{
+                format{
+                    abbreviated{
+                        "ጃንዩ",
+                        "ፌብሩወሪ",
+                        "ማርች",
+                        "ኤፕረል",
+                        "ሜይ",
+                        "6",
+                        "ጁላይ",
+                        "8",
+                        "9",
+                        "10",
+                        "ኖቬም",
+                        "12",
+                    }
+                    wide{
+                        "ጃንዩወሪ",
+                        "ፌብሩወሪ",
+                        "ማርች",
+                        "ኤፕረል",
+                        "ሜይ",
+                        "ጁን",
+                        "ጁላይ",
+                        "ኦገስት",
+                        "ሴፕቴምበር",
+                        "ኦክተውበር",
+                        "ኖቬምበር",
+                        "ዲሴምበር",
+                    }
+                }
+                stand-alone{
+                    narrow{
+                        "ጃ",
+                        "ፌ",
+                        "ማ",
+                        "ኤ",
+                        "ሜ",
+                        "ጁ",
+                        "ጁ",
+                        "ኦ",
+                        "ሴ",
+                        "ኦ",
+                        "ኖ",
+                        "ዲ",
+                    }
+                }
+            }
+            quarters{
+                format{
+                    abbreviated{
+                        "Q1",
+                        "Q2",
+                        "Q3",
+                        "Q4",
+                    }
+                    wide{
+                        "Q1",
+                        "Q2",
+                        "Q3",
+                        "Q4",
+                    }
+                }
+            }
+        }
+    }
+}

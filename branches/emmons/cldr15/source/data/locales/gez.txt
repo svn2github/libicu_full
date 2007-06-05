@@ -1,0 +1,153 @@
+﻿// ***************************************************************************
+// *
+// * Copyright (C) 2007 International Business Machines
+// * Corporation and others.  All Rights Reserved.
+// * Tool: com.ibm.icu.dev.tool.cldr.LDML2ICUConverter.java
+// * Source File:<path>/common/main/gez.xml
+// *
+// ***************************************************************************
+/**
+ *  ICU <specials> source: <path>/xml/main/gez.xml
+ */
+gez{
+    ExemplarCharacters{
+        "[፟ ᎐-᎙ ሀ-ሆ ለ-ሎ ሐ-ሖ መ-ሞ ሠ-ሦ ረ-ሮ ሰ-ሶ ቀ-ቆ ቈ ቊ-ቍ በ-ቦ ተ-ቶ ኀ-ኆ ኈ ኊ-ኍ ነ-ኖ አ-ኦ ከ-ኮ ኰ"
+        " ኲ-ኵ ወ-ዎ ዐ-ዖ ዘ-ዞ የ-ዮ ደ-ዶ ገ-ጎ ጐ ጒ-ጕ ጠ-ጦ ጰ-ጶ ጸ-ጾ ፀ-ፆ ፈ-ፎ ፐ-ፖ]"
+    }
+    LocaleScript{
+        "Ethi",
+    }
+    NumberElements{
+        ".",
+        ",",
+        ";",
+        "%",
+        "0",
+        "#",
+        "-",
+        "E",
+        "‰",
+        "∞",
+        "NaN",
+        "+",
+    }
+    NumberPatterns{
+        "#,##0.###",
+        "¤ #,##0.00",
+        "#,##0%",
+        "#E0",
+    }
+    Version{"1.90"}
+    calendar{
+        gregorian{
+            DateTimePatterns{
+                "HH:mm:ss v",
+                "HH:mm:ss z",
+                "HH:mm:ss",
+                "HH:mm",
+                "EEEE, yyyy MMMM dd",
+                "yyyy MMMM d",
+                "yyyy MMM d",
+                "yyyy-MM-dd",
+                "{1} {0}",
+            }
+            dayNames{
+                format{
+                    abbreviated{
+                        "እኁድ",
+                        "2",
+                        "3",
+                        "ራብዕ",
+                        "5",
+                        "ዓርበ",
+                        "7",
+                    }
+                    wide{
+                        "እኁድ",
+                        "ሰኑይ",
+                        "ሠሉስ",
+                        "ራብዕ",
+                        "ሐሙስ",
+                        "ዓርበ",
+                        "ቀዳሚት",
+                    }
+                }
+                stand-alone{
+                    narrow{
+                        "እ",
+                        "ሰ",
+                        "ሠ",
+                        "ራ",
+                        "ሐ",
+                        "ዓ",
+                        "ቀ",
+                    }
+                }
+            }
+            monthNames{
+                format{
+                    abbreviated{
+                        "ጠሐረ",
+                        "ከተተ",
+                        "መገበ",
+                        "አኀዘ",
+                        "ግንባት",
+                        "6",
+                        "ሐመለ",
+                        "8",
+                        "9",
+                        "10",
+                        "ኀደረ",
+                        "12",
+                    }
+                    wide{
+                        "ጠሐረ",
+                        "ከተተ",
+                        "መገበ",
+                        "አኀዘ",
+                        "ግንባት",
+                        "ሠንየ",
+                        "ሐመለ",
+                        "ነሐሰ",
+                        "ከረመ",
+                        "ጠቀመ",
+                        "ኀደረ",
+                        "ኀሠሠ",
+                    }
+                }
+                stand-alone{
+                    narrow{
+                        "ጠ",
+                        "ከ",
+                        "መ",
+                        "አ",
+                        "ግ",
+                        "ሠ",
+                        "ሐ",
+                        "ነ",
+                        "ከ",
+                        "ጠ",
+                        "ኀ",
+                        "ኀ",
+                    }
+                }
+            }
+            quarters{
+                format{
+                    abbreviated{
+                        "Q1",
+                        "Q2",
+                        "Q3",
+                        "Q4",
+                    }
+                    wide{
+                        "Q1",
+                        "Q2",
+                        "Q3",
+                        "Q4",
+                    }
+                }
+            }
+        }
+    }
+}

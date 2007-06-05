@@ -1,0 +1,119 @@
+﻿// ***************************************************************************
+// *
+// * Copyright (C) 2007 International Business Machines
+// * Corporation and others.  All Rights Reserved.
+// * Tool: com.ibm.icu.dev.tool.cldr.LDML2ICUConverter.java
+// * Source File:<path>/common/main/ts.xml
+// *
+// ***************************************************************************
+/**
+ *  ICU <specials> source: <path>/xml/main/ts.xml
+ */
+ts{
+    ExemplarCharacters{"[a-z]"}
+    LocaleScript{
+        "Latn",
+    }
+    Version{"1.90"}
+    calendar{
+        gregorian{
+            dayNames{
+                format{
+                    abbreviated{
+                        "Sonto",
+                        "2",
+                        "3",
+                        "Har",
+                        "5",
+                        "Ravuntlhanu",
+                        "7",
+                    }
+                    wide{
+                        "Sonto",
+                        "Musumbhunuku",
+                        "Ravumbirhi",
+                        "Ravunharhu",
+                        "Ravumune",
+                        "Ravuntlhanu",
+                        "Mugqivela",
+                    }
+                }
+                stand-alone{
+                    narrow{
+                        "1",
+                        "2",
+                        "3",
+                        "4",
+                        "5",
+                        "6",
+                        "7",
+                    }
+                }
+            }
+            monthNames{
+                format{
+                    abbreviated{
+                        "Sun",
+                        "Nyenyenyani",
+                        "Nyenyankulu",
+                        "Dzivamisoko",
+                        "Mudyaxihi",
+                        "6",
+                        "Mawuwani",
+                        "8",
+                        "9",
+                        "10",
+                        "Huk",
+                        "12",
+                    }
+                    wide{
+                        "Sunguti",
+                        "Nyenyenyani",
+                        "Nyenyankulu",
+                        "Dzivamisoko",
+                        "Mudyaxihi",
+                        "Khotavuxika",
+                        "Mawuwani",
+                        "Mhawuri",
+                        "Ndzhati",
+                        "Nhlangula",
+                        "Hukuri",
+                        "N'wendzamhala",
+                    }
+                }
+                stand-alone{
+                    narrow{
+                        "1",
+                        "2",
+                        "3",
+                        "4",
+                        "5",
+                        "6",
+                        "7",
+                        "8",
+                        "9",
+                        "10",
+                        "11",
+                        "12",
+                    }
+                }
+            }
+            quarters{
+                format{
+                    abbreviated{
+                        "Kotara yo sungula",
+                        "Q2",
+                        "Kotara ya vunharhu",
+                        "Kotara ya vumune",
+                    }
+                    wide{
+                        "Kotara yo sungula",
+                        "Kotara ya vumbirhi",
+                        "Kotara ya vunharhu",
+                        "Kotara ya vumune",
+                    }
+                }
+            }
+        }
+    }
+}

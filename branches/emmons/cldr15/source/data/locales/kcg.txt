@@ -1,0 +1,118 @@
+﻿// ***************************************************************************
+// *
+// * Copyright (C) 2007 International Business Machines
+// * Corporation and others.  All Rights Reserved.
+// * Tool: com.ibm.icu.dev.tool.cldr.LDML2ICUConverter.java
+// * Source File:<path>/common/main/kcg.xml
+// *
+// ***************************************************************************
+/**
+ *  ICU <specials> source: <path>/xml/main/kcg.xml
+ */
+kcg{
+    LocaleScript{
+        "Latn",
+    }
+    Version{"1.90"}
+    calendar{
+        gregorian{
+            dayNames{
+                format{
+                    abbreviated{
+                        "Ladi",
+                        "2",
+                        "3",
+                        "Lar",
+                        "5",
+                        "Juma",
+                        "7",
+                    }
+                    wide{
+                        "Ladi",
+                        "Tanii",
+                        "Talata",
+                        "Larba",
+                        "Lamit",
+                        "Juma",
+                        "Asabat",
+                    }
+                }
+                stand-alone{
+                    narrow{
+                        "1",
+                        "2",
+                        "3",
+                        "4",
+                        "5",
+                        "6",
+                        "7",
+                    }
+                }
+            }
+            monthNames{
+                format{
+                    abbreviated{
+                        "Juw",
+                        "Zwat Swiyang",
+                        "Zwat Tsat",
+                        "Zwat Nyai",
+                        "Zwat Tswon",
+                        "6",
+                        "Zwat Anatat",
+                        "8",
+                        "9",
+                        "10",
+                        "Man",
+                        "12",
+                    }
+                    wide{
+                        "Zwat Juwung",
+                        "Zwat Swiyang",
+                        "Zwat Tsat",
+                        "Zwat Nyai",
+                        "Zwat Tswon",
+                        "Zwat Ataah",
+                        "Zwat Anatat",
+                        "Zwat Arinai",
+                        "Zwat Akubunyung",
+                        "Zwat Swag",
+                        "Zwat Mangjuwang",
+                        "Zwat Swag-Ma-Suyang",
+                    }
+                }
+                stand-alone{
+                    narrow{
+                        "1",
+                        "2",
+                        "3",
+                        "4",
+                        "5",
+                        "6",
+                        "7",
+                        "8",
+                        "9",
+                        "10",
+                        "11",
+                        "12",
+                    }
+                }
+            }
+            quarters{
+                format{
+                    abbreviated{
+                        "Q1",
+                        "Q2",
+                        "Q3",
+                        "Q4",
+                    }
+                    wide{
+                        "Q1",
+                        "Q2",
+                        "Q3",
+                        "Q4",
+                    }
+                }
+            }
+        }
+    }
+}

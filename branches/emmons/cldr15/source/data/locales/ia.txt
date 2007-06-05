@@ -1,0 +1,133 @@
+﻿// ***************************************************************************
+// *
+// * Copyright (C) 2007 International Business Machines
+// * Corporation and others.  All Rights Reserved.
+// * Tool: com.ibm.icu.dev.tool.cldr.LDML2ICUConverter.java
+// * Source File:<path>/common/main/ia.xml
+// *
+// ***************************************************************************
+/**
+ *  ICU <specials> source: <path>/xml/main/ia.xml
+ */
+ia{
+    ExemplarCharacters{"[a-c {ch} d-p {ph} q-z]"}
+    LocaleScript{
+        "Latn",
+    }
+    NumberElements{
+        ".",
+        ",",
+        ";",
+        "%",
+        "0",
+        "#",
+        "-",
+        "E",
+        "‰",
+        "∞",
+        "NaN",
+        "+",
+    }
+    Version{"1.90"}
+    calendar{
+        gregorian{
+            dayNames{
+                format{
+                    abbreviated{
+                        "dominica",
+                        "2",
+                        "3",
+                        "mer",
+                        "5",
+                        "venerdi",
+                        "7",
+                    }
+                    wide{
+                        "dominica",
+                        "lunedi",
+                        "martedi",
+                        "mercuridi",
+                        "jovedi",
+                        "venerdi",
+                        "sabbato",
+                    }
+                }
+                stand-alone{
+                    narrow{
+                        "1",
+                        "2",
+                        "3",
+                        "4",
+                        "5",
+                        "6",
+                        "7",
+                    }
+                }
+            }
+            monthNames{
+                format{
+                    abbreviated{
+                        "jan",
+                        "februario",
+                        "martio",
+                        "april",
+                        "maio",
+                        "6",
+                        "julio",
+                        "8",
+                        "9",
+                        "10",
+                        "nov",
+                        "12",
+                    }
+                    wide{
+                        "januario",
+                        "februario",
+                        "martio",
+                        "april",
+                        "maio",
+                        "junio",
+                        "julio",
+                        "augusto",
+                        "septembre",
+                        "octobre",
+                        "novembre",
+                        "decembre",
+                    }
+                }
+                stand-alone{
+                    narrow{
+                        "1",
+                        "2",
+                        "3",
+                        "4",
+                        "5",
+                        "6",
+                        "7",
+                        "8",
+                        "9",
+                        "10",
+                        "11",
+                        "12",
+                    }
+                }
+            }
+            quarters{
+                format{
+                    abbreviated{
+                        "1-me trimestre",
+                        "Q2",
+                        "3-tie trimestre",
+                        "4-te trimestre",
+                    }
+                    wide{
+                        "1-me trimestre",
+                        "2-nde trimestre",
+                        "3-tie trimestre",
+                        "4-te trimestre",
+                    }
+                }
+            }
+        }
+    }
+}

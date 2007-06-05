@@ -1,0 +1,118 @@
+﻿// ***************************************************************************
+// *
+// * Copyright (C) 2007 International Business Machines
+// * Corporation and others.  All Rights Reserved.
+// * Tool: com.ibm.icu.dev.tool.cldr.LDML2ICUConverter.java
+// * Source File:<path>/common/main/cch.xml
+// *
+// ***************************************************************************
+/**
+ *  ICU <specials> source: <path>/xml/main/cch.xml
+ */
+cch{
+    LocaleScript{
+        "Latn",
+    }
+    Version{"1.90"}
+    calendar{
+        gregorian{
+            dayNames{
+                format{
+                    abbreviated{
+                        "Wai Yoka Bawai",
+                        "2",
+                        "3",
+                        "Tsan",
+                        "5",
+                        "Wai Na Tiyon",
+                        "7",
+                    }
+                    wide{
+                        "Wai Yoka Bawai",
+                        "Wai Tunga",
+                        "Toki Gitung",
+                        "Tsam Kasuwa",
+                        "Wai Na Nas",
+                        "Wai Na Tiyon",
+                        "Wai Na Chirim",
+                    }
+                }
+                stand-alone{
+                    narrow{
+                        "1",
+                        "2",
+                        "3",
+                        "4",
+                        "5",
+                        "6",
+                        "7",
+                    }
+                }
+            }
+            monthNames{
+                format{
+                    abbreviated{
+                        "Dyon",
+                        "Pen Ba'a",
+                        "Pen Atat",
+                        "Pen Anas",
+                        "Pen Atyon",
+                        "6",
+                        "Pen Atariba",
+                        "8",
+                        "9",
+                        "10",
+                        "Naba",
+                        "12",
+                    }
+                    wide{
+                        "Pen Dyon",
+                        "Pen Ba'a",
+                        "Pen Atat",
+                        "Pen Anas",
+                        "Pen Atyon",
+                        "Pen Achirim",
+                        "Pen Atariba",
+                        "Pen Awurr",
+                        "Pen Shadon",
+                        "Pen Shakur",
+                        "Pen Kur Naba",
+                        "Pen Kur Natat",
+                    }
+                }
+                stand-alone{
+                    narrow{
+                        "1",
+                        "2",
+                        "3",
+                        "4",
+                        "5",
+                        "6",
+                        "7",
+                        "8",
+                        "9",
+                        "10",
+                        "11",
+                        "12",
+                    }
+                }
+            }
+            quarters{
+                format{
+                    abbreviated{
+                        "Q1",
+                        "Q2",
+                        "Q3",
+                        "Q4",
+                    }
+                    wide{
+                        "Q1",
+                        "Q2",
+                        "Q3",
+                        "Q4",
+                    }
+                }
+            }
+        }
+    }
+}

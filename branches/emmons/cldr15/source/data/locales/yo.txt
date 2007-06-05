@@ -1,0 +1,123 @@
+﻿// ***************************************************************************
+// *
+// * Copyright (C) 2007 International Business Machines
+// * Corporation and others.  All Rights Reserved.
+// * Tool: com.ibm.icu.dev.tool.cldr.LDML2ICUConverter.java
+// * Source File:<path>/common/main/yo.xml
+// *
+// ***************************************************************************
+/**
+ *  ICU <specials> source: <path>/xml/main/yo.xml
+ */
+yo{
+    AuxExemplarCharacters{"[c q v x z]"}
+    ExemplarCharacters{
+        "[a á à b d e é è ẹ {ẹ́} {ẹ̀} f g {gb} h i í ì j-o ó ò ọ {ọ́} {ọ̀} p r s ṣ t "
+        "u ú ù w y]"
+    }
+    LocaleScript{
+        "Latn",
+    }
+    Version{"1.90"}
+    calendar{
+        gregorian{
+            dayNames{
+                format{
+                    abbreviated{
+                        "Ojoaiku",
+                        "2",
+                        "3",
+                        "Ojoru",
+                        "5",
+                        "Ojoeti",
+                        "7",
+                    }
+                    wide{
+                        "Ojoaiku",
+                        "Ojoaje",
+                        "Ojoisegun",
+                        "Ojoru",
+                        "Ojobo",
+                        "Ojoeti",
+                        "Ojoabameta",
+                    }
+                }
+                stand-alone{
+                    narrow{
+                        "1",
+                        "2",
+                        "3",
+                        "4",
+                        "5",
+                        "6",
+                        "7",
+                    }
+                }
+            }
+            monthNames{
+                format{
+                    abbreviated{
+                        "Sere",
+                        "Osukeji",
+                        "Osuketa",
+                        "Osukerin",
+                        "Osukarun",
+                        "6",
+                        "Osukeje",
+                        "8",
+                        "9",
+                        "10",
+                        "Belu",
+                        "12",
+                    }
+                    wide{
+                        "Osukini",
+                        "Osukeji",
+                        "Osuketa",
+                        "Osukerin",
+                        "Osukarun",
+                        "Osukefa",
+                        "Osukeje",
+                        "Osukejo",
+                        "Osukesan",
+                        "Osukewa",
+                        "Osukokanla",
+                        "Osukejila",
+                    }
+                }
+                stand-alone{
+                    narrow{
+                        "1",
+                        "2",
+                        "3",
+                        "4",
+                        "5",
+                        "6",
+                        "7",
+                        "8",
+                        "9",
+                        "10",
+                        "11",
+                        "12",
+                    }
+                }
+            }
+            quarters{
+                format{
+                    abbreviated{
+                        "Q1",
+                        "Q2",
+                        "Q3",
+                        "Q4",
+                    }
+                    wide{
+                        "Q1",
+                        "Q2",
+                        "Q3",
+                        "Q4",
+                    }
+                }
+            }
+        }
+    }
+}
