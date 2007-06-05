@@ -97,9 +97,9 @@ zh_Hant_HK{
     Scripts{
         Geok{"Geok"}
         Hano{"哈努努文"}
-        Hans{"簡體漢語"}
+        Hans{"簡體中文"}
     }
-    Version{"1.49"}
+    Version{"1.90"}
     calendar{
         gregorian{
             DateTimeElements:intvector{
@@ -108,7 +108,7 @@ zh_Hant_HK{
             }
             DateTimePatterns{
                 "ahh時mm分ss秒 v",
-                "ahh'時'mm'分'ss'秒'",
+                "HH:mm:ss z",
                 "ahh:mm:ss",
                 "ah:mm",
                 "yyyy'年'M'月'd'日' EEEE",
@@ -120,49 +120,49 @@ zh_Hant_HK{
             dayNames{
                 format{
                     abbreviated{
-                        "周日",
-                        "週一",
-                        "周二",
-                        "周三",
-                        "周四",
-                        "星期五",
-                        "星期六",
+                        "週日",
+                        "星期一",
+                        "星期二",
+                        "週三",
+                        "週四",
+                        "週五",
+                        "週六",
                     }
                 }
             }
             fields{
                 day{
-                    dn{"Day"}
+                    dn{"日"}
                 }
                 dayperiod{
                     dn{"Dayperiod"}
                 }
                 era{
-                    dn{"Era"}
+                    dn{"年代"}
                 }
                 hour{
                     dn{"Hour"}
                 }
                 minute{
-                    dn{"Minute"}
+                    dn{"分鐘"}
                 }
                 month{
                     dn{"Month"}
                 }
                 second{
-                    dn{"Second"}
+                    dn{"秒"}
                 }
                 week{
-                    dn{"Week"}
+                    dn{"週"}
                 }
                 weekday{
-                    dn{"Day of the Week"}
+                    dn{"週天"}
                 }
                 year{
                     dn{"Year"}
                 }
                 zone{
-                    dn{"Zone"}
+                    dn{"區域"}
                 }
             }
             monthNames{

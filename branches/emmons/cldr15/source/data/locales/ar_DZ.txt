@@ -24,7 +24,7 @@ ar_DZ{
     Scripts{
         Ital{"اللأيطالية القديمة"}
     }
-    Version{"1.43"}
+    Version{"1.90"}
     calendar{
         gregorian{
             DateTimeElements:intvector{

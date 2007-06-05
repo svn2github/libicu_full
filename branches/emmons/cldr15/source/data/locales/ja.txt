@@ -1552,6 +1552,7 @@ ja{
         it{"イタリア語"}
         iu{"イヌクウティトット語"}
         ja{"日本語"}
+        jbo{"ロジバン語"}
         jpr{"ユダヤ・ペルシア語"}
         jrb{"ユダヤ・アラビア語"}
         jv{"ジャワ語"}
@@ -1639,6 +1640,7 @@ ja{
         mr{"マラーティー語"}
         ms{"マレー語"}
         mt{"マルタ語"}
+        mul{"複数言語"}
         mun{"ムンダ語族"}
         mus{"クリーク語"}
         mwl{"ミランダ語"}
@@ -1703,11 +1705,12 @@ ja{
         raj{"ラージャスターン語"}
         rap{"ラパヌイ語"}
         rar{"ラロトガ語"}
-        rm{"レト＝ロマン語"}
+        rm{"レト・ロマン語"}
         rn{"ルンディ語"}
         ro{"ルーマニア語"}
         roa{"ロマンス諸語"}
         rom{"ロマーニー語"}
+        root{"ルート"}
         ru{"ロシア語"}
         rup{"アルーマニア語"}
         rw{"ルワンダ語"}
@@ -1729,7 +1732,7 @@ ja{
         sg{"サンゴ語"}
         sga{"古期アイルランド語"}
         sgn{"手まね言語"}
-        sh{"セルボ＝クロアチア語"}
+        sh{"セルボ・クロアチア語"}
         shn{"シャン語"}
         si{"シンハラ語"}
         sid{"シダモ語"}
@@ -1773,6 +1776,7 @@ ja{
         th{"タイ語"}
         ti{"ティグリニア語"}
         tig{"ティグレ語"}
+        tiv{"ティブ語"}
         tk{"トルクメン語"}
         tkl{"トケラウ語"}
         tl{"タガログ語"}
@@ -1799,6 +1803,7 @@ ja{
         uga{"ウガリト語"}
         uk{"ウクライナ語"}
         umb{"ウンブンドゥ語"}
+        und{"非確定"}
         ur{"ウルドゥー語"}
         uz{"ウズベク語"}
         vai{"ヴァイ語"}
@@ -1956,7 +1961,7 @@ ja{
         POSIX{"コンピュータ"}
         REVISED{"改訂版"}
     }
-    Version{"1.97"}
+    Version{"1.90"}
     calendar{
         gregorian{
             AmPmMarkers{
@@ -1978,8 +1983,6 @@ ja{
                 GGGGyMd{"GGGGy'年'M'月'd'日'"}
                 MMdd{"MM/dd"}
                 mmss{"mm:ss"}
-                yyQ{"Q yy"}
-                yyyyMM{"yyyy/MM"}
             }
             dayNames{
                 format{
@@ -2076,7 +2079,7 @@ ja{
                 format{
                     abbreviated{
                         "Q1",
-                        "第 2 四半期",
+                        "Q2",
                         "Q3",
                         "Q4",
                     }
@@ -2742,10 +2745,6 @@ ja{
         }
         "Asia:Tokyo"{
             ec{"東京"}
-            ld{"日本夏時間"}
-            ls{"日本標準時"}
-            sd{"JDT"}
-            ss{"JST"}
         }
         "Asia:Ulaanbaatar"{
             ec{"アジア/ウランバートル"}
@@ -2975,13 +2974,18 @@ ja{
             sd{"IDT"}
             ss{"IST"}
         }
+        "meta:Japan"{
+            ld{"日本夏時間"}
+            ls{"日本標準時"}
+            sd{"JDT"}
+            ss{"JST"}
+        }
         "meta:Newfoundland"{
             ld{"ニューファンドランド島夏時間"}
             ls{"ニューファンドランド島標準時"}
             sd{"NDT"}
             ss{"NST"}
         }
-        fallbackFormat{"{0} ({1})時間"}
         hourFormat{"+HHmm;-HHmm"}
         regionFormat{"{0}時間"}
     }

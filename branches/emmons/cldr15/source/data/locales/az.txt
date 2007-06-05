@@ -45,8 +45,8 @@ az{
         "Latn",
     }
     NumberElements{
+        ".",
         ",",
-        " ",
         ";",
         "%",
         "0",
@@ -58,37 +58,19 @@ az{
         "NaN",
         "+",
     }
-    Version{"1.44"}
+    Version{"1.90"}
     calendar{
         gregorian{
-            AmPmMarkers{
-                "AM",
-                "PM",
-            }
-            DateTimePatterns{
-                "HH:mm:ss v",
-                "HH:mm:ss z",
-                "HH:mm:ss",
-                "HH:mm",
-                "EEEE, yyyy MMMM dd",
-                "yyyy MMMM d",
-                "yyyy MMM d",
-                "yy/MM/dd",
-                "{1} {0}",
-            }
-            availableFormats{
-                yyQ{"Q yy"}
-            }
             dayNames{
                 format{
                     abbreviated{
-                        "B.",
-                        "B.e.",
-                        "Ç.a.",
+                        "bazar",
+                        "2",
+                        "3",
                         "Ç.",
-                        "C.a.",
-                        "C.",
-                        "Ş.",
+                        "5",
+                        "cümə axşamı",
+                        "7",
                     }
                     wide{
                         "bazar",
@@ -112,31 +94,21 @@ az{
                     }
                 }
             }
-            eras{
-                abbreviated{
-                    "e.ə.",
-                    "b.e.",
-                }
-                wide{
-                    "eramızdan əvvəl",
-                    "bizim eramızın",
-                }
-            }
             monthNames{
                 format{
                     abbreviated{
                         "yan",
-                        "fev",
-                        "mar",
-                        "apr",
-                        "may",
-                        "iyn",
-                        "iyl",
-                        "avq",
-                        "sen",
-                        "okt",
+                        "Fevral",
+                        "Mart",
+                        "Aprel",
+                        "May",
+                        "6",
+                        "İyul",
+                        "8",
+                        "9",
+                        "10",
                         "noy",
-                        "dek",
+                        "12",
                     }
                     wide{
                         "Yanvar",
@@ -173,10 +145,10 @@ az{
             quarters{
                 format{
                     abbreviated{
-                        "1-ci kv.",
-                        "2-ci kv.",
-                        "3-cü kv.",
-                        "4-cü kv.",
+                        "1-ci kvartal",
+                        "Q2",
+                        "3-cü kvartal",
+                        "4-cü kvartal",
                     }
                     wide{
                         "1-ci kvartal",
@@ -187,16 +159,5 @@ az{
                 }
             }
         }
-    }
-    delimiters{
-        alternateQuotationEnd{"”"}
-        alternateQuotationStart{"“"}
-        quotationEnd{"’"}
-        quotationStart{"‘"}
-    }
-    zoneStrings{
-        gmtFormat{"GMT{0}"}
-        hourFormat{"+HH:mm;-HH:mm"}
-        regionFormat{"{0}"}
     }
 }

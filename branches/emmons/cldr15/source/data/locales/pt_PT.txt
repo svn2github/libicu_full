@@ -8,7 +8,7 @@
 // ***************************************************************************
 pt_PT{
     Countries{
-        172{"172"}
+        172{"Comunidade dos Estados Independentes"}
         AE{"Emiratos Árabes Unidos"}
         AM{"Arménia"}
         AQ{"Antárctica"}
@@ -16,18 +16,19 @@ pt_PT{
         BH{"Bareine"}
         BJ{"Benim"}
         BY{"Bielorrússia"}
-        CM{"Camarões"}
+        CM{"República dos Camarões"}
         CX{"Ilha do Natal"}
         CZ{"República Checa"}
         EE{"Estónia"}
         EG{"Egipto"}
-        EH{"Sahara Ocidental"}
+        EH{"Saara Ocidental"}
         ER{"Eritreia"}
-        FK{"Ilhas Falkland"}
+        FK{"Ilhas Malvinas"}
         GL{"Gronelândia"}
-        GS{"Ilhas South Georgia e South Sandwich"}
+        GS{"Geórgia do Sul e Ilhas Sandwich do Sul"}
         GW{"Guiné-Bissau"}
         HK{"Hong Kong - Região Administrativa Especial da China"}
+        IR{"Irão"}
         KE{"Quénia"}
         KG{"Quirguizistão"}
         KN{"Saint Kitts e Nevis"}
@@ -49,22 +50,23 @@ pt_PT{
         PG{"Papua Nova Guiné"}
         PL{"Polónia"}
         PS{"Território Palestiniano"}
-        RE{"Reunion"}
+        QO{"Oceania Insular"}
+        RE{"Reunião"}
         RO{"Roménia"}
         SC{"Seicheles"}
         SG{"Singapura"}
         SI{"Eslovénia"}
         SM{"São Marino"}
         TC{"Ilhas Turcas e Caicos"}
-        TD{"Tchade"}
-        TF{"Territórios Franceses a Sul"}
+        TD{"Chade"}
+        TF{"Territórios Franceses do Sul"}
         TJ{"Tajiquistão"}
         TM{"Turquemenistão"}
         UM{"Ilhas Minor Outlying (E.U.A)"}
         UZ{"Uzbaquistão"}
-        VA{"Santa Sé (Estado da Cidade do Vaticano)"}
-        VC{"Saint Vincent e Grenadines"}
-        VG{"Ilhas Virgin Britânicas"}
+        VA{"Vaticano"}
+        VC{"São Vicente e Granadinas"}
+        VG{"Ilhas Virgens Britânicas"}
         VI{"Ilhas Virgin E.U.A."}
         VN{"Vietname"}
         YE{"Iémen"}
@@ -152,10 +154,10 @@ pt_PT{
         jv{"jv"}
         mga{"irlandês, medieval (900-1200)"}
         mkh{"mon-khmer (other)"}
-        nd{"ndebele, north"}
+        nd{"ndebele do norte"}
         non{"norse, old"}
         nso{"soto, setentrional"}
-        ota{"turco, otomano (1500-1928)"}
+        ota{"turco otomano"}
         peo{"persa arcaico (aprox. 600-400 a.C.)"}
         pl{"polaco"}
         pro{"provençal, arcaico (até 1500)"}
@@ -171,9 +173,33 @@ pt_PT{
         "#E0",
     }
     Scripts{
-        Osma{"osmanya"}
+        Armn{"arménio"}
+        Bali{"balinês"}
+        Batk{"bataque"}
+        Bugi{"buginês"}
+        Egyp{"hieróglifos egípcios"}
+        Glag{"glagolítico"}
+        Hmng{"pahawh hmong"}
+        Hrkt{"katakana ou hiragana"}
+        Hung{"húngaro antigo"}
+        Inds{"indus"}
+        Java{"javanês"}
+        Lepc{"lepcha"}
+        Lina{"linear A"}
+        Linb{"linear B"}
+        Maya{"hieróglifos maias"}
+        Osma{"osmania"}
+        Phnx{"fenício"}
+        Sylo{"siloti nagri"}
+        Taml{"tamil"}
     }
-    Version{"1.59"}
+    Types{
+        collation{
+            direct{"Ordem Directa"}
+            phonebook{"Ordem da Lista Telefónica"}
+        }
+    }
+    Version{"1.90"}
     calendar{
         buddhist{
             DateTimePatterns{
@@ -200,18 +226,12 @@ pt_PT{
                 "yy/MM/dd",
                 "{1} {0}",
             }
-            availableFormats{
-                MMdd{"MM/dd"}
-                yyMMMEEEd{"EEE, d 'de' MMM 'de' yy"}
-                yyMMMd{"d 'de' MMM 'de' yy"}
-                yyyyMM{"yyyy/MM"}
-            }
             fields{
                 second{
-                    dn{"Second"}
+                    dn{"Segundo"}
                 }
                 zone{
-                    dn{"Zona"}
+                    dn{"Fuso"}
                 }
             }
         }
@@ -273,16 +293,16 @@ pt_PT{
             ec{"Moscovo"}
         }
         "meta:America_Mountain"{
-            ld{"Horário de Verão Montanha"}
-            ls{"Horário Padrão Montanha"}
+            ld{"Horário de Verão da Montanha"}
+            ls{"Horário Padrão da Montanha"}
         }
         "meta:Atlantic"{
-            ld{"Horário de Verão Atlântico"}
-            ls{"Horário Padrão Atlântico"}
+            ld{"Horário de Verão do Atlântico"}
+            ls{"Horário Padrão do Atlântico"}
         }
         "meta:Europe_Central"{
-            ld{"Horário de Verão Europa Central"}
-            ls{"Horário Padrão Europa Central"}
+            ld{"Horário de Verão da Europa Central"}
+            ls{"Horário Padrão da Europa Central"}
         }
     }
 }

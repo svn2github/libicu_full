@@ -1806,20 +1806,6 @@ es{
     LocaleScript{
         "Latn",
     }
-    NumberElements{
-        ".",
-        ",",
-        ";",
-        "%",
-        "0",
-        "#",
-        "-",
-        "E",
-        "‰",
-        "∞",
-        "NaN",
-        "+",
-    }
     NumberPatterns{
         "#,##0.###",
         "¤#,##0.00;(¤#,##0.00)",
@@ -1923,7 +1909,7 @@ es{
     Variants{
         REVISED{"Ortografía revisada"}
     }
-    Version{"1.87"}
+    Version{"1.90"}
     calendar{
         gregorian{
             AmPmMarkers{
@@ -1940,19 +1926,6 @@ es{
                 "dd/MM/yyyy",
                 "dd/MM/yy",
                 "{1} {0}",
-            }
-            availableFormats{
-                HHmm{"HH:mm"}
-                HHmmss{"HH:mm:ss"}
-                MMMdd{"dd-MMM"}
-                MMd{"d/MM"}
-                hhmm{"hh:mm a"}
-                hhmmss{"hh:mm:ss a"}
-                yyMM{"MM/yy"}
-                yyMMM{"MMM-yy"}
-                yyQ{"Q yy"}
-                yyQQQQ{"QQQQ yy"}
-                yyyyMM{"MM/yyyy"}
             }
             dayNames{
                 format{
@@ -2146,10 +2119,6 @@ es{
         }
         "Asia:Tokyo"{
             ec{"Tokio"}
-            ld{"Hora de verano de Japón"}
-            ls{"Hora estándar de Japón"}
-            sd{"JDT"}
-            ss{"JST"}
         }
         "Asia:Yekaterinburg"{
             ec{"Yekaterinburgo"}
@@ -2252,6 +2221,12 @@ es{
             ls{"Hora estándar de Israel"}
             sd{"IDT"}
             ss{"IST"}
+        }
+        "meta:Japan"{
+            ld{"Hora de verano de Japón"}
+            ls{"Hora estándar de Japón"}
+            sd{"JDT"}
+            ss{"JST"}
         }
         "meta:Newfoundland"{
             ld{"Hora de verano de Newfoundland"}

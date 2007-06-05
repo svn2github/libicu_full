@@ -403,7 +403,7 @@ sl{
             traditional{"Tradicionano zlaganje"}
         }
     }
-    Version{"1.76"}
+    Version{"1.90"}
     calendar{
         gregorian{
             DateTimePatterns{
@@ -416,14 +416,6 @@ sl{
                 "d.M.yyyy",
                 "d.M.yy",
                 "{1} {0}",
-            }
-            availableFormats{
-                MMMMdd{"dd. MMMM"}
-                Md{"d.M"}
-                mmss{"mm:ss"}
-                yyQ{"Q yy"}
-                yyyyM{"M.yyyy"}
-                yyyyMMMM{"MMMM yyyy"}
             }
             dayNames{
                 format{
@@ -461,11 +453,6 @@ sl{
             eras{
                 abbreviated{
                     "pr.n.š.",
-                    "po Kr.",
-                }
-                wide{
-                    "pred našim štetjem",
-                    "naše štetje",
                 }
             }
             monthNames{
@@ -520,9 +507,9 @@ sl{
                 format{
                     abbreviated{
                         "Prvo četrtletje",
-                        "Q2",
+                        "Drugo četrtletje",
                         "Tretje četrtletje",
-                        "Četrto četrtletje",
+                        "Q4",
                     }
                     wide{
                         "Prvo četrtletje",

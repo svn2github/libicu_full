@@ -23,7 +23,7 @@ fi{
         017{"Keski-Afrikka"}
         018{"eteläinen Afrikka"}
         019{"Amerikka"}
-        021{"Pohjois-Amerikka"}
+        021{"pohjoinen Amerikka"}
         029{"Karibia"}
         030{"Itä-Aasia"}
         034{"Etelä-Aasia"}
@@ -81,9 +81,9 @@ fi{
         BZ{"Belize"}
         CA{"Kanada"}
         CC{"Kookossaaret"}
-        CD{"Kongo (Kinshasa)"}
+        CD{"Kongo – Kinshasa"}
         CF{"Keski-Afrikan tasavalta"}
-        CG{"Kongo (Brazzaville)"}
+        CG{"Kongo – Brazzaville"}
         CH{"Sveitsi"}
         CI{"Norsunluurannikko"}
         CK{"Cookinsaaret"}
@@ -135,7 +135,7 @@ fi{
         GU{"Guam"}
         GW{"Guinea-Bissau"}
         GY{"Guyana"}
-        HK{"Hongkong, Kiinan erityishallintoalue"}
+        HK{"Hongkong – Kiinan erityishallintoalue"}
         HM{"Heard- ja McDonaldinsaaret"}
         HN{"Honduras"}
         HR{"Kroatia"}
@@ -185,7 +185,7 @@ fi{
         ML{"Mali"}
         MM{"Myanmar"}
         MN{"Mongolia"}
-        MO{"Macao, Kiinan erityishallintoalue"}
+        MO{"Macao – Kiinan erityishallintoalue"}
         MP{"Pohjois-Mariaanit"}
         MQ{"Martinique"}
         MR{"Mauritania"}
@@ -297,7 +297,7 @@ fi{
         }
         AFA{
             "AFA",
-            "Afganistanin afgaani (1927-2002)",
+            "Afganistanin afgaani (1927–2002)",
         }
         AFN{
             "AFN",
@@ -321,15 +321,15 @@ fi{
         }
         AOK{
             "AOK",
-            "Angolan kwanza (1977-1990)",
+            "Angolan kwanza (1977–1990)",
         }
         AON{
             "AON",
-            "Angolan uusi kwanza (1990-2000)",
+            "Angolan uusi kwanza (1990–2000)",
         }
         AOR{
             "AOR",
-            "Angolan kwanza reajustado (1995-1999)",
+            "Angolan kwanza reajustado (1995–1999)",
         }
         ARA{
             "ARA",
@@ -337,7 +337,7 @@ fi{
         }
         ARP{
             "ARP",
-            "Argentiinan peso (1983-1985)",
+            "Argentiinan peso (1983–1985)",
         }
         ARS{
             "ARS",
@@ -357,7 +357,7 @@ fi{
         }
         AZM{
             "AZM",
-            "Azerbaidžanin manat",
+            "Azerbaidžanin manat (1993–2006)",
         }
         BAD{
             "BAD",
@@ -425,7 +425,7 @@ fi{
         }
         BRB{
             "BRB",
-            "Brasilian uusi cruzeiro (1967-1986)",
+            "Brasilian uusi cruzeiro (1967–1986)",
         }
         BRC{
             "BRC",
@@ -433,7 +433,7 @@ fi{
         }
         BRE{
             "BRE",
-            "Brasilian cruzeiro (1990-1993)",
+            "Brasilian cruzeiro (1990–1993)",
         }
         BRL{
             "R$",
@@ -465,7 +465,7 @@ fi{
         }
         BYB{
             "BYB",
-            "Valko-Venäjän uusi rupla (1994-1999)",
+            "Valko-Venäjän uusi rupla (1994–1999)",
         }
         BYR{
             "BYR",
@@ -585,7 +585,7 @@ fi{
         }
         EQE{
             "EQE",
-            "Päiväntasaajan Guinean ekwele (1986-1989)",
+            "Päiväntasaajan Guinean ekwele (1986–1989)",
         }
         ERN{
             "ERN",
@@ -661,7 +661,7 @@ fi{
         }
         GQE{
             "GQE",
-            "Päiväntasaajan Guinean ekwele (-1986)",
+            "Päiväntasaajan Guinean ekwele (–1986)",
         }
         GRD{
             "GRD",
@@ -917,7 +917,7 @@ fi{
         }
         MXP{
             "MXP",
-            "Meksikon hopeapeso (1861-1992)",
+            "Meksikon hopeapeso (1861–1992)",
         }
         MXV{
             "MXV",
@@ -933,7 +933,7 @@ fi{
         }
         MZM{
             "MZM",
-            "Mosambikin metical",
+            "Mosambikin metical (1980–2006)",
         }
         NAD{
             "NAD",
@@ -1005,7 +1005,7 @@ fi{
         }
         PLZ{
             "PLZ",
-            "Puolan zloty (1950-1995)",
+            "Puolan zloty (1950–1995)",
         }
         PTE{
             "PTE",
@@ -1037,7 +1037,7 @@ fi{
         }
         RUR{
             "RUR",
-            "Venäjän rupla (1991-1998)",
+            "Venäjän rupla (1991–1998)",
         }
         RWF{
             "RWF",
@@ -1177,7 +1177,7 @@ fi{
         }
         UGS{
             "UGS",
-            "Ugandan šillinki (1966-1987)",
+            "Ugandan šillinki (1966–1987)",
         }
         UGX{
             "UGX",
@@ -1197,7 +1197,7 @@ fi{
         }
         UYP{
             "UYP",
-            "Uruguayn peso (1975-1993)",
+            "Uruguayn peso (1975–1993)",
         }
         UYU{
             "UYU",
@@ -1440,7 +1440,7 @@ fi{
         cpf{"muut ranskaan perustuvat kreolit ja pidginit"}
         cpp{"muut portugaliin perustuvat kreolit ja pidginit"}
         cr{"cree"}
-        crh{"krimintataari; kriminturkki"}
+        crh{"krimintataari"}
         crp{"muut kreolit ja pidginit"}
         cs{"tšekki"}
         csb{"kašubi"}
@@ -1478,7 +1478,7 @@ fi{
         et{"viro"}
         eu{"baski"}
         ewo{"ewondo"}
-        fa{"farsi; persia"}
+        fa{"farsi"}
         fan{"fang"}
         fat{"fanti"}
         ff{"fulani"}
@@ -1592,7 +1592,7 @@ fi{
         kw{"korni"}
         ky{"kirgiisi"}
         la{"latina"}
-        lad{"ladino; juutalaisespanja"}
+        lad{"ladino"}
         lah{"lahnda"}
         lam{"lamba"}
         lb{"luxemburg"}
@@ -1604,8 +1604,8 @@ fi{
         lol{"mongo"}
         loz{"lozi"}
         lt{"liettua"}
-        lu{"luba (Katanga)"}
-        lua{"luba (Lulua)"}
+        lu{"Katangan luba"}
+        lua{"Luluan luba"}
         lui{"luiseño"}
         lun{"lunda"}
         luo{"luo"}
@@ -1653,8 +1653,8 @@ fi{
         nah{"nahuatl"}
         nai{"muut Pohjois-Amerikan intiaanikielet"}
         nap{"napoli"}
-        nb{"norja (bokmål)"}
-        nd{"ndebele, pohjois-"}
+        nb{"norjan bokmål"}
+        nd{"pohjois-ndebele"}
         nds{"alasaksa"}
         ne{"nepali"}
         new{"newari"}
@@ -1663,12 +1663,12 @@ fi{
         nic{"muut nigeriläis-kongolaiset kielet"}
         niu{"niue"}
         nl{"hollanti"}
-        nn{"norja (nynorsk)"}
+        nn{"norjan nynorsk"}
         no{"norja"}
         nog{"nogai"}
         non{"muinaisnorja"}
-        nr{"ndebele, etelä-"}
-        nso{"sotho, pohjois-"}
+        nr{"etelä-ndebele"}
+        nso{"pohjoissotho"}
         nub{"nubialaiset kielet"}
         nv{"navajo"}
         nwc{"klassinen newari"}
@@ -1727,7 +1727,7 @@ fi{
         scn{"sisilia"}
         sco{"skotti"}
         sd{"sindhi"}
-        se{"saame, pohjois-"}
+        se{"pohjoissaame"}
         sel{"selkuppi"}
         sem{"muut seemiläiset kielet"}
         sg{"sango"}
@@ -1742,11 +1742,11 @@ fi{
         sl{"sloveeni"}
         sla{"muut slaavilaiset kielet"}
         sm{"samoa"}
-        sma{"saame, etelä-"}
+        sma{"eteläsaame"}
         smi{"muut saamelaiskielet"}
-        smj{"saame, luulajan-"}
-        smn{"saame, inarin-"}
-        sms{"saame, koltan-"}
+        smj{"luulajansaame"}
+        smn{"inarinsaame"}
+        sms{"koltansaame"}
         sn{"šona"}
         snk{"soninke"}
         so{"somali"}
@@ -1758,7 +1758,7 @@ fi{
         srr{"serer"}
         ss{"swazi"}
         ssa{"muut niililäis-saharalaiset kielet"}
-        st{"sotho, etelä-"}
+        st{"eteläsotho"}
         su{"sunda"}
         suk{"sukuma"}
         sus{"susu"}
@@ -1784,8 +1784,8 @@ fi{
         tli{"tlingit"}
         tmh{"tamašek"}
         tn{"tswana"}
-        to{"tonga (Tonga)"}
-        tog{"tonga (Malawi)"}
+        to{"Tongan tonga"}
+        tog{"Malawin tonga"}
         tpi{"tok-pisin"}
         tr{"turkki"}
         ts{"tsonga"}
@@ -1876,26 +1876,26 @@ fi{
         Copt{"koptilainen"}
         Cprt{"muinaiskyproslainen"}
         Cyrl{"kyrillinen"}
-        Cyrs{"kyrillinen (muinaiskirkkoslaavimuunnelma)"}
+        Cyrs{"kyrillinen muinaiskirkkoslaavimuunnelma"}
         Deva{"devanagari"}
         Dsrt{"deseret"}
         Egyd{"egyptiläinen demoottinen"}
         Egyh{"egyptiläinen hieraattinen"}
         Egyp{"egyptiläiset hieroglyfit"}
-        Ethi{"etiopialainen (ge’ez)"}
-        Geok{"muinaisgeorgialainen (khutsuri)"}
-        Geor{"georgialainen (mkhedruli)"}
+        Ethi{"etiopialainen"}
+        Geok{"muinaisgeorgialainen"}
+        Geor{"georgialainen"}
         Glag{"glagoliittinen"}
         Goth{"goottilainen"}
         Grek{"kreikkalainen"}
         Gujr{"gudžaratilainen"}
         Guru{"gurmukhi"}
         Hang{"hangul"}
-        Hani{"kiinalainen (han)"}
+        Hani{"kiinalainen han"}
         Hano{"hanunoolainen"}
-        Hans{"kiinalainen (han), yksinkertaistettu"}
-        Hant{"kiinalainen (han), perinteinen"}
-        Hebr{"heprealainen"}
+        Hans{"kiinalainen yksinkertaistettu han"}
+        Hant{"kiinalainen perinteinen han"}
+        Hebr{"heprea"}
         Hira{"hiragana"}
         Hmng{"pahawh hmong"}
         Hrkt{"hiragana+katakana"}
@@ -1905,12 +1905,12 @@ fi{
         Java{"jaavalainen"}
         Kali{"kayah li"}
         Kana{"katakana"}
-        Khar{"kharoshthi"}
+        Khar{"kharosthi"}
         Khmr{"khmeriläinen"}
         Knda{"kannadalainen"}
         Laoo{"laolainen"}
-        Latf{"latinalainen (fraktuuramuunnelma)"}
-        Latg{"latinalainen (gaelimuunnelma)"}
+        Latf{"latinalainen fraktuuramuunnelma"}
+        Latg{"latinalainen gaelimuunnelma"}
         Latn{"latinalainen"}
         Lepc{"lepchalainen"}
         Limb{"limbulainen"}
@@ -1939,9 +1939,9 @@ fi{
         Sinh{"sinhalilainen"}
         Sylo{"syloti nagri"}
         Syrc{"syyrialainen"}
-        Syre{"syyrialainen (estrangelo-muunnelma)"}
-        Syrj{"syyrialainen (läntinen muunnelma)"}
-        Syrn{"syyrialainen (itäinen muunnelma)"}
+        Syre{"syyrialainen estrangelo-muunnelma"}
+        Syrj{"syyrialainen läntinen muunnelma"}
+        Syrn{"syyrialainen itäinen muunnelma"}
         Tagb{"tagbanwalainen"}
         Tale{"tailelainen"}
         Talu{"uusi tailuelainen"}
@@ -1955,13 +1955,13 @@ fi{
         Tibt{"tiibetiläinen"}
         Ugar{"ugaritilainen"}
         Vaii{"vailainen"}
-        Visp{"näkyvä puhe (Visible Speech)"}
+        Visp{"näkyvä puhe"}
         Xpeo{"muinaispersialainen"}
-        Xsux{"nuolenpääkirjoitus, sumerilais-akkadilainen"}
+        Xsux{"sumerilais-akkadilainen nuolenpääkirjoitus"}
         Yiii{"yiläinen"}
         Zxxx{"kirjoittamaton"}
         Zyyy{"määrittämätön"}
-        Zzzz{"määrittelemätön"}
+        Zzzz{"tuntematon tai virheellinen kirjoitusjärjestelmä"}
     }
     Types{
         calendar{
@@ -1974,9 +1974,9 @@ fi{
             japanese{"japanilainen kalenteri"}
         }
         collation{
-            big5han{"perinteinen kiinalainen (Big5)"}
+            big5han{"perinteinen kiinalainen Big5"}
             direct{"suora järjestys"}
-            gb2312han{"yksinkertaistettu kiinalainen (GB2312)"}
+            gb2312han{"yksinkertaistettu kiinalainen GB2312"}
             phonebook{"puhelinluettelojärjestys"}
             pinyin{"pinyin-järjestys"}
             stroke{"piirtojärjestys"}
@@ -1992,7 +1992,7 @@ fi{
         ROZAJ{"sloveenin resia-murre"}
         SAAHO{"afarin saho-murre"}
     }
-    Version{"1.82"}
+    Version{"1.90"}
     calendar{
         gregorian{
             AmPmMarkers{
@@ -2001,7 +2001,7 @@ fi{
             }
             DateTimePatterns{
                 "H.mm.ss v",
-                "'klo 'H.mm.ss",
+                "HH:mm:ss z",
                 "H.mm.ss",
                 "H.mm",
                 "EEEE'na 'd. MMMM'ta 'yyyy",
@@ -2009,16 +2009,6 @@ fi{
                 "d.M.yyyy",
                 "d.M.yyyy",
                 "{1} {0}",
-            }
-            availableFormats{
-                MMMMd{"d. MMMM'ta'"}
-                Md{"d.M"}
-                mmss{"mm.ss"}
-                yyQ{"Q yy"}
-                yyyyM{"M.yyyy"}
-                yyyyMEEEd{"EEE d.M.yyyy"}
-                yyyyMMMM{"MMMM'ta 'yyyy"}
-                yyyyQQQQ{"QQQQ yyyy"}
             }
             dayNames{
                 format{
@@ -2068,7 +2058,7 @@ fi{
                     dn{"päivä"}
                 }
                 dayperiod{
-                    dn{"ap/ip-valinta"}
+                    dn{"ap/ip"}
                 }
                 era{
                     dn{"aikakausi"}
@@ -2228,6 +2218,7 @@ fi{
         quotationStart{"”"}
     }
     measurementSystemNames{
+        US{"amerikkalainen"}
         metric{"metrinen"}
     }
     zoneStrings{
@@ -2272,10 +2263,6 @@ fi{
         }
         "Asia:Tokyo"{
             ec{"Tokio"}
-            ld{"Japanin kesäaika"}
-            ls{"Japanin normaaliaika"}
-            sd{"JDT"}
-            ss{"JST"}
         }
         "Asia:Ulaanbaatar"{
             ec{"Ulan Bator"}
@@ -2355,14 +2342,14 @@ fi{
         "meta:China"{
             ld{"Kiinan kesäaika"}
             ls{"Kiinan normaaliaika"}
-            sd{"CTT"}
-            ss{"CTT"}
+            sd{"CDT (Kiina)"}
+            ss{"CST (Kiina)"}
         }
         "meta:Europe_Central"{
             ld{"Keski-Euroopan kesäaika"}
             ls{"Keski-Euroopan normaaliaika"}
-            sd{"CEDT"}
-            ss{"CEST"}
+            sd{"CEST"}
+            ss{"CET"}
         }
         "meta:Europe_Eastern"{
             ld{"Itä-Euroopan kesäaika"}
@@ -2371,7 +2358,7 @@ fi{
             ss{"EET"}
         }
         "meta:GMT"{
-            ls{"Greenwichin normaaliaika"}
+            ls{"Greenwichin keskiaika"}
             ss{"GMT"}
         }
         "meta:Hawaii"{
@@ -2386,10 +2373,17 @@ fi{
             sd{"IDT"}
             ss{"IST"}
         }
+        "meta:Japan"{
+            ld{"Japanin kesäaika"}
+            ls{"Japanin normaaliaika"}
+            sd{"JDT"}
+            ss{"JST"}
+        }
         "meta:Newfoundland"{
             ld{"Newfoundlandin kesäaika"}
             ls{"Newfoundlandin normaaliaika"}
-            ss{"CNT"}
+            ss{"NST"}
         }
+        regionFormat{"{0}'-aikaa'"}
     }
 }

@@ -134,7 +134,7 @@ so{
         "#,##0%",
         "#E0",
     }
-    Version{"1.46"}
+    Version{"1.90"}
     calendar{
         gregorian{
             AmPmMarkers{
@@ -142,8 +142,8 @@ so{
                 "gn",
             }
             DateTimePatterns{
-                "h:mm:ss a",
-                "h:mm:ss a",
+                "HH:mm:ss v",
+                "HH:mm:ss z",
                 "h:mm:ss a",
                 "h:mm a",
                 "EEEE, MMMM dd, yyyy",
@@ -151,13 +151,6 @@ so{
                 "dd-MMM-yyyy",
                 "dd/MM/yy",
                 "{1} {0}",
-            }
-            availableFormats{
-                MMMMdd{"dd MMMM"}
-                MMdd{"dd/MM"}
-                yyMM{"MM/yy"}
-                yyQ{"Q yy"}
-                yyyyMMMM{"MMMM yyyy"}
             }
             dayNames{
                 format{

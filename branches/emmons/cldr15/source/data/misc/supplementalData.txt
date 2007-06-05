@@ -3029,8 +3029,19 @@ supplementalData:table(nofallback){
             {
                 id{"SDD"}
                 from:intvector{
+                    271,
+                    -599484512,
+                }
+            }
+            {
+                id{"SDD"}
+                from:intvector{
                     161,
-                    -1539101952,
+                    -1539041952,
+                }
+                to:intvector{
+                    271,
+                    -599484512,
                 }
             }
             {
@@ -10701,6 +10712,37 @@ supplementalData:table(nofallback){
         }
         "Pacific:Wallis"{
             territory{"WF"}
+        }
+        multizone{
+            "001",
+            "AQ",
+            "AR",
+            "AU",
+            "BR",
+            "CA",
+            "CD",
+            "CL",
+            "CN",
+            "EC",
+            "ES",
+            "FM",
+            "GL",
+            "ID",
+            "KI",
+            "KZ",
+            "MH",
+            "MN",
+            "MX",
+            "MY",
+            "NZ",
+            "PF",
+            "PT",
+            "RU",
+            "SJ",
+            "UA",
+            "UM",
+            "US",
+            "UZ",
         }
     }
 }

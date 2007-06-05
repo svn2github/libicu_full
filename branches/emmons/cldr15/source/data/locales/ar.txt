@@ -1790,7 +1790,7 @@ ar{
     Variants{
         NEDIS{"لهجة ناتيسون"}
     }
-    Version{"1.74"}
+    Version{"1.90"}
     calendar{
         buddhist{
             eras{
@@ -1803,28 +1803,28 @@ ar{
             monthNames{
                 format{
                     abbreviated{
-                        "Tout",
+                        "توت",
                         "بابه",
-                        "Hator",
-                        "كياهك",
+                        "هاتور",
+                        "كيهك",
                         "طوبة",
                         "أمشير",
-                        "برامهات",
+                        "برمهات",
                         "Baramouda",
                         "Bashans",
-                        "بؤونة",
-                        "Epep",
-                        "مسرى",
+                        "Paona",
+                        "أبيب",
+                        "Mesra",
                         "نسيئ",
                     }
                     wide{
                         "توت",
                         "بابه",
                         "هاتور",
-                        "كياهك",
+                        "كيهك",
                         "طوبة",
                         "أمشير",
-                        "برامهات",
+                        "برمهات",
                         "برمودة",
                         "بشنس",
                         "بؤونة",
@@ -1839,18 +1839,18 @@ ar{
             monthNames{
                 format{
                     abbreviated{
-                        "Meskerem",
+                        "مسكريم",
                         "تكمت",
-                        "Hedar",
+                        "هدار",
                         "تهساس",
                         "تر",
                         "يكتت",
                         "مجابيت",
                         "Miazia",
                         "Genbot",
-                        "سين",
-                        "Hamle",
-                        "نهاس",
+                        "Sene",
+                        "هامل",
+                        "Nehasse",
                         "باجمن",
                     }
                     wide{
@@ -1878,21 +1878,18 @@ ar{
             }
             DateTimePatterns{
                 "v h:mm:ss a",
-                "h:mm:ss a",
+                "HH:mm:ss z",
                 "h:mm:ss a",
                 "h:mm a",
                 "EEEE, d MMMM, yyyy",
                 "d MMMM, yyyy",
-                "dd/MM/yyyy",
-                "d/M/yyyy",
+                "dd‏‏/MM‏/yyyy",
+                "d‏/M‏/yyyy",
                 "{1} {0}",
             }
             availableFormats{
-                MMMMd{"d MMMM"}
-                MMdd{"dd/MM"}
-                yyQ{"Q yy"}
-                yyyyMM{"MM/yyyy"}
-                yyyyMMMM{"MMMM, yyyy"}
+                MMdd{"dd‏/MM"}
+                yyyyMM{"MM‏/yyyy"}
             }
             dayNames{
                 format{
@@ -1935,7 +1932,7 @@ ar{
             }
             fields{
                 day{
-                    dn{"اليوم"}
+                    dn{"يوم"}
                 }
                 era{
                     dn{"العصر"}
@@ -2034,31 +2031,31 @@ ar{
             monthNames{
                 format{
                     abbreviated{
-                        "Tishri",
+                        "تشري",
                         "مرحشوان",
-                        "Kislev",
-                        "طيست",
+                        "كيسلو",
+                        "طيفت",
                         "شباط",
                         "آذار الأول",
                         "آذار الثاني",
                         "Nisan",
                         "Iyar",
-                        "سيوان",
-                        "Tamuz",
-                        "آب",
-                        "أيلول",
+                        "Sivan",
+                        "تموز",
+                        "Av",
+                        "Elul",
                     }
                     wide{
                         "تشري",
                         "مرحشوان",
                         "كيسلو",
-                        "طيست",
+                        "طيفت",
                         "شباط",
                         "آذار الأول",
                         "آذار الثاني",
                         "نيسان",
                         "أيار",
-                        "سيوان",
+                        "سيفان",
                         "تموز",
                         "آب",
                         "Elul",
@@ -2099,18 +2096,18 @@ ar{
             monthNames{
                 format{
                     abbreviated{
-                        "Farvardin",
+                        "فروردین",
                         "أذربيهشت",
-                        "Khordad",
+                        "خرداد",
                         "تیر",
                         "مرداد",
                         "شهریار",
                         "مهر",
                         "Aban",
                         "Azar",
-                        "دي",
-                        "Bahman",
-                        "اسفندار",
+                        "Dey",
+                        "بهمن",
+                        "Esfand",
                     }
                     wide{
                         "فروردین",
@@ -2133,6 +2130,10 @@ ar{
     layout{
         characters{"right-to-left"}
         lines{"top-to-bottom"}
+    }
+    measurementSystemNames{
+        US{"النظام الأمريكي"}
+        metric{"النظام المتري"}
     }
     zoneStrings{
         "America:Indiana:Petersburg"{

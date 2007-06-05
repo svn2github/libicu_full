@@ -26,21 +26,23 @@ kw{
         "#,##0%",
         "#E0",
     }
-    Version{"1.42"}
+    Version{"1.90"}
     calendar{
         gregorian{
             AmPmMarkers{
                 "a.m.",
                 "p.m.",
             }
-            availableFormats{
-                HHmm{"HH:mm"}
-                MMMMd{"d MMMM"}
-                MMdd{"dd/MM"}
-                mmss{"mm:ss"}
-                yyQ{"Q yy"}
-                yyyyMM{"MM/yyyy"}
-                yyyyMMMM{"MMMM yyyy"}
+            DateTimePatterns{
+                "HH:mm:ss v",
+                "HH:mm:ss z",
+                "HH:mm:ss",
+                "HH:mm",
+                "EEEE, yyyy MMMM dd",
+                "yyyy MMMM d",
+                "yyyy MMM d",
+                "yyyy-MM-dd",
+                "{1} {0}",
             }
             dayNames{
                 format{

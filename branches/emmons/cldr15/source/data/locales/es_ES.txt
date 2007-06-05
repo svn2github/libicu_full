@@ -49,7 +49,7 @@ es_ES{
     Scripts{
         Ethi{"etíope"}
     }
-    Version{"1.47"}
+    Version{"1.90"}
     calendar{
         gregorian{
             DateTimePatterns{
@@ -62,9 +62,6 @@ es_ES{
                 "dd/MM/yyyy",
                 "dd/MM/yy",
                 "{1} {0}",
-            }
-            availableFormats{
-                MMdd{"dd/MM"}
             }
         }
     }

@@ -108,19 +108,12 @@ te{
         1996{"1996 ఙర్మన వర్ణక్రమం"}
         REVISED{"సవరించబడిన వర్ణక్రమం"}
     }
-    Version{"1.58"}
+    Version{"1.90"}
     calendar{
         gregorian{
             AmPmMarkers{
                 "పూర్వాహ్నం",
                 "అపరాహ్నం",
-            }
-            availableFormats{
-                MMMMd{"d MMMM"}
-                MMdd{"dd-MM"}
-                yyQ{"Q yy"}
-                yyyyMM{"MM-yyyy"}
-                yyyyMMMM{"MMMM yyyy"}
             }
             dayNames{
                 format{
@@ -209,7 +202,7 @@ te{
                         "Q1",
                         "రెండు  2",
                         "Q3",
-                        "Q4",
+                        "నాలుగు 4",
                     }
                     wide{
                         "ఒకటి  1",

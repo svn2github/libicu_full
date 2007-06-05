@@ -279,6 +279,7 @@ lv{
         ko{"korejiešu"}
         lt{"lietuviešu"}
         lv{"latviešu"}
+        mt{"maltiešu"}
         nl{"holandiešu"}
         no{"norvēģu"}
         pl{"poļu"}
@@ -314,7 +315,7 @@ lv{
         "#,##0%",
         "#E0",
     }
-    Version{"1.63"}
+    Version{"1.90"}
     calendar{
         gregorian{
             DateTimePatterns{
@@ -327,10 +328,6 @@ lv{
                 "yyyy.d.M",
                 "yy.d.M",
                 "{1} {0}",
-            }
-            availableFormats{
-                Md{"d.M"}
-                yyQ{"Q yy"}
             }
             dayNames{
                 format{
@@ -369,6 +366,10 @@ lv{
                 abbreviated{
                     "pmē",
                     "mē",
+                }
+                wide{
+                    "pirms mūsu ēras",
+                    "mūsu ērā",
                 }
             }
             monthNames{
@@ -436,5 +437,12 @@ lv{
                 }
             }
         }
+    }
+    delimiters{
+        quotationEnd{"”"}
+        quotationStart{"“"}
+    }
+    messages{
+        nostr{"nē:ne:n"}
     }
 }

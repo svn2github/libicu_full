@@ -303,7 +303,7 @@ am{
         "#,##0%",
         "#E0",
     }
-    Version{"1.62"}
+    Version{"1.90"}
     calendar{
         ethiopic{
             monthNames{
@@ -314,13 +314,13 @@ am{
                         "ኅዳር",
                         "ታኅሣሥ",
                         "ጥር",
-                        "የካቲ",
+                        "Yekatit",
                         "መጋቢት",
-                        "ሚያዝያ",
-                        "ግንቦት",
-                        "ሰኔ",
+                        "Miazia",
+                        "Genbot",
+                        "Sene",
                         "ሐምሌ",
-                        "ነሐሴ",
+                        "Nehasse",
                         "ጳጉሜን",
                     }
                     wide{
@@ -342,13 +342,16 @@ am{
             }
         }
         gregorian{
-            availableFormats{
-                MMMMd{"MMMM d"}
-                MMMMdd{"dd MMMM"}
-                MMdd{"dd/MM"}
-                yyMM{"MM/yy"}
-                yyQ{"Q yy"}
-                yyyyMMMM{"MMMM yyyy"}
+            DateTimePatterns{
+                "HH:mm:ss v",
+                "HH:mm:ss z",
+                "HH:mm:ss",
+                "HH:mm",
+                "EEEE, yyyy MMMM dd",
+                "yyyy MMMM d",
+                "yyyy MMM d",
+                "yyyy-MM-dd",
+                "{1} {0}",
             }
             dayNames{
                 format{

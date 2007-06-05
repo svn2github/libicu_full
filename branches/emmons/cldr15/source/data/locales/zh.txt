@@ -11,7 +11,11 @@
  */
 zh{
     Countries{
+        001{"世界"}
         002{"非洲"}
+        005{"南美洲"}
+        009{"大洋洲"}
+        011{"西非"}
         013{"中美洲"}
         014{"东非"}
         015{"北非"}
@@ -21,14 +25,19 @@ zh{
         029{"加勒比海"}
         030{"东亚"}
         034{"南亚"}
+        035{"东南亚"}
+        039{"南欧"}
         053{"澳大利亚和新西兰"}
         054{"美拉尼西亚"}
         057{"密克罗尼西亚"}
+        062{"中南亚"}
         142{"亚洲"}
         143{"中亚"}
+        145{"西亚"}
         150{"欧洲"}
         151{"东欧"}
         154{"北欧"}
+        155{"西欧"}
         172{"独联体"}
         419{"拉丁美洲和加勒比海"}
         830{"海峡群岛"}
@@ -81,6 +90,7 @@ zh{
         CN{"中国"}
         CO{"哥伦比亚"}
         CR{"哥斯达黎加"}
+        CS{"塞尔维亚和黑山"}
         CU{"古巴"}
         CV{"佛得角"}
         CX{"圣诞岛"}
@@ -213,6 +223,7 @@ zh{
         PW{"帕劳"}
         PY{"巴拉圭"}
         QA{"卡塔尔"}
+        QO{"大洋洲边远群岛"}
         RE{"留尼汪"}
         RO{"罗马尼亚"}
         RU{"俄罗斯"}
@@ -1965,7 +1976,9 @@ zh{
             japanese{"日本日历"}
         }
         collation{
+            big5han{"繁体中文(Big5)"}
             direct{"顺序"}
+            gb2312han{"简体中文(GB2312)"}
             phonebook{"电话簿顺序"}
             pinyin{"拼音顺序"}
             stroke{"笔划顺序"}
@@ -1979,7 +1992,7 @@ zh{
         REVISED{"已修订的拼字学"}
         SAAHO{"萨霍"}
     }
-    Version{"1.88"}
+    Version{"1.90"}
     calendar{
         gregorian{
             AmPmMarkers{
@@ -1988,7 +2001,7 @@ zh{
             }
             DateTimePatterns{
                 "ahh时mm分ss秒 v",
-                "ahh'时'mm'分'ss'秒'",
+                "HH:mm:ss z",
                 "ahh:mm:ss",
                 "ah:mm",
                 "yyyy'年'M'月'd'日'EEEE",
@@ -1999,8 +2012,6 @@ zh{
             }
             availableFormats{
                 Md{"M-d"}
-                yyQ{"Q yy"}
-                yyyyM{"yyyy-M"}
             }
             dayNames{
                 format{
@@ -2141,10 +2152,10 @@ zh{
             quarters{
                 format{
                     abbreviated{
-                        "第1季度",
-                        "Q2",
+                        "第一季度",
+                        "第2季度",
                         "第3季度",
-                        "第4季度",
+                        "Q4",
                     }
                     wide{
                         "第1季度",
@@ -2155,6 +2166,12 @@ zh{
                 }
             }
         }
+    }
+    delimiters{
+        alternateQuotationEnd{"’"}
+        alternateQuotationStart{"‘"}
+        quotationEnd{"”"}
+        quotationStart{"“"}
     }
     zoneStrings{
         "Africa:Bamako"{
@@ -2519,10 +2536,6 @@ zh{
         }
         "Asia:Tokyo"{
             ec{"东京"}
-            ld{"日本夏令时间"}
-            ls{"日本标准时间"}
-            sd{"JDT"}
-            ss{"JST"}
         }
         "Asia:Ulaanbaatar"{
             ec{"乌兰巴托"}
@@ -2662,13 +2675,13 @@ zh{
         "meta:America_Central"{
             ld{"中部夏令时间"}
             ls{"中部标准时间"}
-            ss{"中部标准时间"}
+            ss{"CST"}
         }
         "meta:America_Eastern"{
             ld{"东部夏令时间"}
             ls{"东部标准时间"}
-            sd{"东部夏令时间"}
-            ss{"东部标准时间"}
+            sd{"EDT"}
+            ss{"EST"}
         }
         "meta:America_Mountain"{
             ld{"山区夏令时间"}
@@ -2679,14 +2692,14 @@ zh{
         "meta:America_Pacific"{
             ld{"太平洋夏令时间"}
             ls{"太平洋标准时间"}
-            sd{"太平洋夏令时间"}
-            ss{"太平洋标准时间"}
+            sd{"PDT"}
+            ss{"PST"}
         }
         "meta:Atlantic"{
             ld{"大西洋夏令时间"}
             ls{"大西洋标准时间"}
-            sd{"大西洋夏令时间"}
-            ss{"大西洋标准时间"}
+            sd{"ADT"}
+            ss{"AST"}
         }
         "meta:China"{
             ld{"中国夏令时间"}
@@ -2706,7 +2719,7 @@ zh{
         }
         "meta:GMT"{
             ls{"格林尼治标准时间"}
-            ss{"格林尼治标准时间"}
+            ss{"GMT"}
         }
         "meta:Hawaii"{
             ld{"夏威夷夏令时间"}
@@ -2720,12 +2733,20 @@ zh{
             sd{"IDT"}
             ss{"IST"}
         }
+        "meta:Japan"{
+            ld{"日本夏令时间"}
+            ls{"日本标准时间"}
+            sd{"JDT"}
+            ss{"JST"}
+        }
         "meta:Newfoundland"{
             ld{"纽芬兰夏令时间"}
             ls{"纽芬兰标准时间"}
             sd{"纽芬兰夏令时间"}
             ss{"纽芬兰标准时间"}
         }
+        gmtFormat{"GMT{0}"}
         hourFormat{"+HHmm;-HHmm"}
+        regionFormat{"{0}"}
     }
 }

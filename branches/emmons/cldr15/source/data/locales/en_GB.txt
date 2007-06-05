@@ -13,7 +13,7 @@ en_GB{
         "#,##0%",
         "#E0",
     }
-    Version{"1.52"}
+    Version{"1.90"}
     calendar{
         gregorian{
             DateTimePatterns{
@@ -26,12 +26,6 @@ en_GB{
                 "d MMM yyyy",
                 "dd/MM/yyyy",
                 "{1} {0}",
-            }
-            availableFormats{
-                MMMMd{"d MMMM"}
-                MMdd{"dd/MM"}
-                yyyyMM{"MM/yyyy"}
-                yyyyMMMM{"MMMM yyyy"}
             }
         }
     }

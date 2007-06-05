@@ -334,7 +334,7 @@ ro{
         "#,##0%",
         "#E0",
     }
-    Version{"1.74"}
+    Version{"1.90"}
     calendar{
         gregorian{
             DateTimePatterns{
@@ -347,13 +347,6 @@ ro{
                 "dd.MM.yyyy",
                 "dd.MM.yyyy",
                 "{1} {0}",
-            }
-            availableFormats{
-                MMMMd{"d MMMM"}
-                MMdd{"dd.MM"}
-                yyQ{"Q yy"}
-                yyyyMM{"MM.yyyy"}
-                yyyyMMMM{"MMMM yyyy"}
             }
             dayNames{
                 format{
@@ -445,16 +438,16 @@ ro{
             quarters{
                 format{
                     abbreviated{
-                        "trimestrul 1",
+                        "trimestrul I",
                         "Q2",
-                        "trimestrul 3",
-                        "trimestrul 4",
+                        "trimestrul al III-lea",
+                        "trimestrul al IV-lea",
                     }
                     wide{
-                        "trimestrul 1",
-                        "trimestrul 2",
-                        "trimestrul 3",
-                        "trimestrul 4",
+                        "trimestrul I",
+                        "trimestrul al II-lea",
+                        "trimestrul al III-lea",
+                        "trimestrul al IV-lea",
                     }
                 }
             }

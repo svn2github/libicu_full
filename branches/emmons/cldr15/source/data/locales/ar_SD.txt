@@ -10,7 +10,7 @@ ar_SD{
     Scripts{
         Ital{"اللأيطالية القديمة"}
     }
-    Version{"1.39"}
+    Version{"1.90"}
     calendar{
         gregorian{
             DateTimeElements:intvector{

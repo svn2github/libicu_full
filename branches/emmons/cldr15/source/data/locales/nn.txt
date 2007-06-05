@@ -12,6 +12,7 @@
 nn{
     AuxExemplarCharacters{"[á ǎ č ç đ è ê ń ñ ŋ š ŧ ü ž ä ö]"}
     Countries{
+        001{"verda"}
         002{"Afrika"}
         005{"Sør-Amerika"}
         009{"Oseania"}
@@ -937,7 +938,7 @@ nn{
         POLYTONI{"polytonisk"}
         REVISED{"revidert ortografi"}
     }
-    Version{"1.68"}
+    Version{"1.90"}
     calendar{
         gregorian{
             DateTimePatterns{
@@ -950,14 +951,6 @@ nn{
                 "d. MMM. yyyy",
                 "dd.MM.yy",
                 "{1} {0}",
-            }
-            availableFormats{
-                MMMMd{"d. MMMM"}
-                MMdd{"dd.MM"}
-                mmss{"mm.ss"}
-                yyMM{"MM.yy"}
-                yyQ{"Q yy"}
-                yyyyMMMM{"MMMM yyyy"}
             }
             dayNames{
                 format{
@@ -1118,6 +1111,12 @@ nn{
         }
         "Asia:Ulaanbaatar"{
             ec{"Ulan Bator"}
+        }
+        "Atlantic:Azores"{
+            ec{"Azorane"}
+        }
+        "Atlantic:Canary"{
+            ec{"Kanariøyane"}
         }
         "Europe:Lisbon"{
             ec{"Lisboa"}

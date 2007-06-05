@@ -1437,7 +1437,7 @@ cs{
             japanese{"Japonský kalendář"}
         }
     }
-    Version{"1.94"}
+    Version{"1.90"}
     calendar{
         gregorian{
             AmPmMarkers{
@@ -1454,14 +1454,6 @@ cs{
                 "d.M.yyyy",
                 "d.M.yy",
                 "{1} {0}",
-            }
-            availableFormats{
-                MMMMd{"d. MMMM"}
-                Md{"d.M"}
-                mmss{"mm:ss"}
-                yyQ{"Q yy"}
-                yyyyM{"M.yyyy"}
-                yyyyMMMM{"MMMM yyyy"}
             }
             dayNames{
                 format{
@@ -1505,17 +1497,17 @@ cs{
             monthNames{
                 format{
                     abbreviated{
-                        "led",
-                        "úno",
-                        "března",
-                        "dub",
-                        "kvě",
+                        "ledna",
+                        "2",
+                        "3",
+                        "4",
+                        "května",
                         "června",
-                        "črc",
-                        "srpna",
+                        "7",
+                        "8",
                         "září",
-                        "října",
-                        "listopadu",
+                        "10",
+                        "11",
                         "prosince",
                     }
                     narrow{
@@ -1598,7 +1590,7 @@ cs{
                         "Q1",
                         "2. čtvrtletí",
                         "Q3",
-                        "Q4",
+                        "4. čtvrtletí",
                     }
                     wide{
                         "1. čtvrtletí",
@@ -1615,12 +1607,6 @@ cs{
         alternateQuotationStart{"‚"}
         quotationEnd{"“"}
         quotationStart{"„"}
-    }
-    layout{
-        /**
-         * Used for figuring out the casing of characters in a list.
-         */
-        casing{"titlecase-firstword"}
     }
     zoneStrings{
         "Africa:Casablanca"{
@@ -1661,10 +1647,6 @@ cs{
         }
         "Asia:Tokyo"{
             ec{"Tokio"}
-            ld{"Japonský letní čas"}
-            ls{"Japonský standardní čas"}
-            sd{"JDT"}
-            ss{"JST"}
         }
         "Asia:Ulaanbaatar"{
             ec{"Ulánbátar"}
@@ -1711,8 +1693,6 @@ cs{
         "meta:Alaska"{
             ld{"Aljašský letní čas"}
             ls{"Aljašský standardní čas"}
-            sd{"AKDT"}
-            ss{"AKST"}
         }
         "meta:America_Central"{
             ld{"Centrální letní čas"}
@@ -1721,8 +1701,6 @@ cs{
             ss{"CST"}
         }
         "meta:America_Eastern"{
-            ld{"Východní letní čas"}
-            ls{"Východní standardní čas"}
             sd{"EDT"}
             ss{"EST"}
         }
@@ -1775,6 +1753,12 @@ cs{
             ls{"Izraelský standardní čas"}
             sd{"IDT"}
             ss{"IST"}
+        }
+        "meta:Japan"{
+            ld{"Japonský letní čas"}
+            ls{"Japonský standardní čas"}
+            sd{"JDT"}
+            ss{"JST"}
         }
         "meta:Newfoundland"{
             ld{"Newfoundlandský letní čas"}

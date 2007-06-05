@@ -168,7 +168,6 @@ sr{
         MA{"Мароко"}
         MC{"Монако"}
         MD{"Молдавија"}
-        ME{"Црна Гора"}
         MG{"Мадагаскар"}
         MH{"Маршалска Острва"}
         MK{"Македонија"}
@@ -218,7 +217,6 @@ sr{
         QO{"Остала океанија"}
         RE{"Реинион"}
         RO{"Румунија"}
-        RS{"Србија"}
         RU{"Русија"}
         RW{"Руанда"}
         SA{"Саудијска Арабија"}
@@ -539,7 +537,7 @@ sr{
             traditional{"Традиционално сортирање"}
         }
     }
-    Version{"1.77"}
+    Version{"1.90"}
     calendar{
         gregorian{
             DateTimePatterns{
@@ -552,17 +550,6 @@ sr{
                 "dd.MM.yyyy.",
                 "d.M.yy.",
                 "{1} {0}",
-            }
-            availableFormats{
-                MMMdd{"dd.MMM"}
-                MMdd{"MM-dd"}
-                hhmm{"hh:mm a"}
-                hhmmss{"hh:mm:ss a"}
-                mmss{"mm.ss"}
-                yyMM{"MM.yy"}
-                yyMMMd{"d. MMM yy"}
-                yyQ{"Q yy"}
-                yyQQQQ{"QQQQ yy"}
             }
             dayNames{
                 format{
@@ -601,6 +588,9 @@ sr{
                 abbreviated{
                     "п. н. е.",
                     "н. е",
+                }
+                wide{
+                    "Пре нове ере",
                 }
             }
             monthNames{
@@ -662,7 +652,7 @@ sr{
                     wide{
                         "Први квартал",
                         "Други квартал",
-                        "Трећи квартал",
+                        "Треће тромесечје",
                         "Четврти квартал",
                     }
                 }

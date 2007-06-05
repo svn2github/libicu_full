@@ -11,79 +11,13 @@
  */
 uz{
     AuxExemplarCharacters{"[ц щ ы ь]"}
-    Countries{
-        AF{"Афғонистон"}
-        BR{"Бразилия"}
-        CN{"Хитой"}
-        DE{"Олмония"}
-        FR{"Франция"}
-        GB{"Бирлашган Қироллик"}
-        IN{"Ҳиндистон"}
-        IT{"Италия"}
-        JP{"Япония"}
-        RU{"Россия"}
-        US{"Қўшма Штатлар"}
-        UZ{"Ўзбекистон"}
-    }
-    Currencies{
-        BRL{
-            "R$",
-            "Бразил реали",
-        }
-        CNY{
-            "CNY",
-            "Хитой юани",
-        }
-        EUR{
-            "€",
-            "Евро",
-        }
-        GBP{
-            "UK£",
-            "Инглиз фунт стерлинги",
-        }
-        INR{
-            "=0#Rs.|1#Re.|1<Rs.",
-            "Ҳинд рупияси",
-        }
-        JPY{
-            "JP¥",
-            "Япон йенаси",
-        }
-        RUB{
-            "RUB",
-            "Рус рубли",
-        }
-        USD{
-            "US$",
-            "АҚШ доллари",
-        }
-        UZS{
-            "сўм",
-            "Ўзбекистон сўм",
-        }
-    }
     ExemplarCharacters{"[а-г ғ д е ё ж-к қ л-у ў ф х ҳ ч ш ъ э-я]"}
-    Languages{
-        ar{"Арабча"}
-        de{"Олмонча"}
-        en{"Инглизча"}
-        es{"Испанча"}
-        fr{"Французча"}
-        hi{"Ҳиндча"}
-        it{"Италянча"}
-        ja{"Японча"}
-        pt{"Португалча"}
-        ru{"Русча"}
-        uz{"Ўзбек"}
-        zh{"Хитойча"}
-    }
     LocaleScript{
         "Cyrl",
     }
     NumberElements{
+        ".",
         ",",
-        " ",
         ";",
         "%",
         "0",
@@ -95,42 +29,19 @@ uz{
         "NaN",
         "+",
     }
-    Scripts{
-        Arab{"Араб"}
-        Cyrl{"Кирил"}
-        Latn{"Лотин"}
-    }
-    Version{"1.37"}
+    Version{"1.90"}
     calendar{
         gregorian{
-            AmPmMarkers{
-                "AM",
-                "PM",
-            }
-            DateTimePatterns{
-                "HH:mm:ss v",
-                "HH:mm:ss z",
-                "HH:mm:ss",
-                "HH:mm",
-                "EEEE, yyyy MMMM dd",
-                "yyyy MMMM d",
-                "yyyy MMM d",
-                "yy/MM/dd",
-                "{1} {0}",
-            }
-            availableFormats{
-                yyQ{"Q yy"}
-            }
             dayNames{
                 format{
                     abbreviated{
-                        "Якш",
-                        "Душ",
-                        "Сеш",
+                        "якшанба",
+                        "2",
+                        "3",
                         "Чор",
-                        "Пай",
-                        "Жум",
-                        "Шан",
+                        "5",
+                        "жума",
+                        "7",
                     }
                     wide{
                         "якшанба",
@@ -154,31 +65,21 @@ uz{
                     }
                 }
             }
-            eras{
-                abbreviated{
-                    "BCE",
-                    "CE",
-                }
-                wide{
-                    "BCE",
-                    "CE",
-                }
-            }
             monthNames{
                 format{
                     abbreviated{
                         "Янв",
-                        "Фев",
-                        "Мар",
-                        "Апр",
-                        "Май",
-                        "Июн",
-                        "Июл",
-                        "Авг",
-                        "Сен",
-                        "Окт",
+                        "Сафар",
+                        "Рабиул-аввал",
+                        "Рабиул-охир",
+                        "Жумодиул-уло",
+                        "6",
+                        "Ражаб",
+                        "8",
+                        "9",
+                        "10",
                         "Ноя",
-                        "Дек",
+                        "12",
                     }
                     wide{
                         "Муҳаррам",
@@ -233,11 +134,10 @@ uz{
     zoneStrings{
         "Asia:Kabul"{
             ec{"کابل"}
+        }
+        "meta:Afghanistan"{
             ls{"افغانستان وقتی"}
             ss{"AFT"}
         }
-        gmtFormat{"GMT{0}"}
-        hourFormat{"+HH:mm;-HH:mm"}
-        regionFormat{"{0}"}
     }
 }

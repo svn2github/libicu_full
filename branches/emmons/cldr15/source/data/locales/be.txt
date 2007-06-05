@@ -107,7 +107,7 @@ be{
         Cyrl{"кірылічны"}
         Latn{"лацінскі"}
     }
-    Version{"1.57"}
+    Version{"1.90"}
     calendar{
         gregorian{
             DateTimePatterns{
@@ -120,14 +120,6 @@ be{
                 "d.M.yyyy",
                 "d.M.yy",
                 "{1} {0}",
-            }
-            availableFormats{
-                MMMMd{"d MMMM"}
-                Md{"d.M"}
-                mmss{"mm.ss"}
-                yyQ{"Q yy"}
-                yyyyM{"M.yyyy"}
-                yyyyMMMM{"MMMM yyyy"}
             }
             dayNames{
                 format{

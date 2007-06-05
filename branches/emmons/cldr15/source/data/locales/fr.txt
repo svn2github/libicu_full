@@ -44,7 +44,7 @@ fr{
         155{"Europe occidentale"}
         172{"Communauté des États indépendants"}
         419{"Amérique latine et Caraïbes"}
-        830{"anglo-normandes, îles"}
+        830{"Îles Anglo-normandes"}
         AD{"Andorre"}
         AE{"Émirats arabes unis"}
         AF{"Afghanistan"}
@@ -60,7 +60,7 @@ fr{
         AT{"Autriche"}
         AU{"Australie"}
         AW{"Aruba"}
-        AX{"Åland, îles"}
+        AX{"Îles Åland"}
         AZ{"Azerbaïdjan"}
         BA{"Bosnie-Herzégovine"}
         BB{"Barbade"}
@@ -77,16 +77,18 @@ fr{
         BR{"Brésil"}
         BS{"Bahamas"}
         BT{"Bhoutan"}
-        BV{"Bouvet, île"}
+        BV{"Île  Bouvet"}
         BW{"Botswana"}
         BY{"Bélarus"}
         BZ{"Belize"}
         CA{"Canada"}
-        CC{"Cocos (Keeling), îles"}
+        CC{"Îles des Cocos (Keeling)"}
+        CD{"République démocratique du Congo"}
+        CF{"République centrafricaine"}
         CG{"Congo"}
         CH{"Suisse"}
         CI{"Côte d’Ivoire"}
-        CK{"Cook, îles"}
+        CK{"Îles Cook"}
         CL{"Chili"}
         CM{"Cameroun"}
         CN{"Chine"}
@@ -95,13 +97,14 @@ fr{
         CS{"Serbie-et-Monténégro"}
         CU{"Cuba"}
         CV{"Cap Vert"}
-        CX{"Christmas, île"}
+        CX{"Île Christmas"}
         CY{"Chypre"}
+        CZ{"République tchèque"}
         DE{"Allemagne"}
         DJ{"Djibouti"}
         DK{"Danemark"}
         DM{"Dominique"}
-        DO{"Dominicaine, république"}
+        DO{"Republique dominicaine"}
         DZ{"Algérie"}
         EC{"Équateur"}
         EE{"Estonie"}
@@ -112,9 +115,9 @@ fr{
         ET{"Éthiopie"}
         FI{"Finlande"}
         FJ{"Fidji"}
-        FK{"Falkland, îles (Malvinas)"}
-        FM{"Micronésie, états fédérés de"}
-        FO{"Féroé, îles"}
+        FK{"Îles Falkland (Malouines)"}
+        FM{"États fédérés de Micronésie"}
+        FO{"Îles Féroé"}
         FR{"France"}
         GA{"Gabon"}
         GB{"Royaume-Uni"}
@@ -134,7 +137,8 @@ fr{
         GU{"Guam"}
         GW{"Guinée-Bissau"}
         GY{"Guyana"}
-        HM{"Heard, île et McDonald, îles"}
+        HK{"R.A.S. de Hong Kong (Chine)"}
+        HM{"Îles Heard et MacDonald"}
         HN{"Honduras"}
         HR{"Croatie"}
         HT{"Haïti"}
@@ -144,6 +148,7 @@ fr{
         IL{"Israël"}
         IM{"Île de Man"}
         IN{"Inde"}
+        IO{"Territoire britannique de l'océan Indien"}
         IQ{"Iraq"}
         IR{"Iran"}
         IS{"Islande"}
@@ -160,7 +165,7 @@ fr{
         KP{"Corée du Nord"}
         KR{"Corée du Sud"}
         KW{"Koweït"}
-        KY{"Caïmanes, îles"}
+        KY{"Îles Caïmanes"}
         KZ{"Kazakhstan"}
         LA{"Laos"}
         LB{"Liban"}
@@ -177,12 +182,13 @@ fr{
         MC{"Monaco"}
         MD{"Moldavie"}
         MG{"Madagascar"}
-        MH{"Marshall, îles"}
+        MH{"Îles Marshall"}
         MK{"Macédoine"}
         ML{"Mali"}
         MM{"Myanmar"}
         MN{"Mongolie"}
-        MP{"Mariannes du Nord, îles"}
+        MO{"R.A.S de Macao (Chine)"}
+        MP{"Îles Mariannes du Nord"}
         MQ{"Martinique"}
         MR{"Mauritanie"}
         MS{"Montserrat"}
@@ -196,7 +202,7 @@ fr{
         NA{"Namibie"}
         NC{"Nouvelle-Calédonie"}
         NE{"Niger"}
-        NF{"Norfolk, île"}
+        NF{"Île Norfolk"}
         NG{"Nigéria"}
         NI{"Nicaragua"}
         NL{"Pays-Bas"}
@@ -226,7 +232,7 @@ fr{
         RU{"Russie"}
         RW{"Rwanda"}
         SA{"Arabie saoudite"}
-        SB{"Salomon, îles"}
+        SB{"Îles Salomon"}
         SC{"Seychelles"}
         SD{"Soudan"}
         SE{"Suède"}
@@ -244,7 +250,7 @@ fr{
         SV{"El Salvador"}
         SY{"Syrie"}
         SZ{"Swaziland"}
-        TC{"Turks et Caïques, îles"}
+        TC{"Îles Turks et Caïques"}
         TD{"Tchad"}
         TF{"Terres australes françaises"}
         TG{"Togo"}
@@ -266,7 +272,7 @@ fr{
         US{"États-Unis"}
         UY{"Uruguay"}
         UZ{"Ouzbékistan"}
-        VA{"Saint-Siège (Etat de la Cité du Vatican)"}
+        VA{"État de la Cité du Vatican"}
         VC{"Saint-Vincent-et-les Grenadines"}
         VG{"Îles Vierges britanniques"}
         VI{"Îles Vierges des États-Unis"}
@@ -505,6 +511,10 @@ fr{
             "COP",
             "peso colombien",
         }
+        COU{
+            "COU",
+            "Unité de valeur réelle colombienne",
+        }
         CRC{
             "CRC",
             "colon de Costa Rica",
@@ -705,9 +715,17 @@ fr{
             "ILP",
             "livre israélienne",
         }
+        ILS{
+            "ILS",
+            "shekel",
+        }
         INR{
             "=0#Rs.|1#Re.|1<Rs.",
             "roupie indienne",
+        }
+        IQD{
+            "IQD",
+            "dinar irakien",
         }
         IRR{
             "IRR",
@@ -757,6 +775,10 @@ fr{
             "KRW",
             "won sud-coréen",
         }
+        KWD{
+            "KWD",
+            "dinar koweïtien",
+        }
         KYD{
             "KYD",
             "dollar des îles Caïmanes",
@@ -784,6 +806,10 @@ fr{
         LSL{
             "M",
             "loti",
+        }
+        LSM{
+            "LSM",
+            "maloti",
         }
         LTL{
             "LTL",
@@ -1327,11 +1353,11 @@ fr{
         ak{"akan"}
         akk{"akkadien"}
         ale{"aléoute"}
-        alg{"algonquines, langues"}
+        alg{"langues algonquines"}
         alt{"altaï du Sud"}
         am{"amharique"}
         an{"aragonais"}
-        ang{"anglo-saxon (vers 450-1100)"}
+        ang{"anglo-saxon"}
         ar{"arabe"}
         arc{"araméen"}
         arn{"araukan"}
@@ -1422,7 +1448,7 @@ fr{
         dz{"dzongkha"}
         ee{"éwé"}
         efi{"efik"}
-        egy{"égyptien (ancien)"}
+        egy{"égyptien ancien"}
         eka{"ekajuk"}
         el{"grec"}
         elx{"élamite"}
@@ -1432,6 +1458,7 @@ fr{
         es{"espagnol"}
         et{"estonien"}
         eu{"basque"}
+        ewo{"éwondo"}
         fa{"persan"}
         fan{"fang"}
         fat{"fanti"}
@@ -1443,7 +1470,7 @@ fr{
         fo{"féroïen"}
         fr{"français"}
         frm{"français moyen (ca.1400-1600)"}
-        fro{"français ancien (842-vers 1400)"}
+        fro{"français ancien"}
         fur{"frioulan"}
         fy{"frison"}
         ga{"irlandais"}
@@ -1579,6 +1606,7 @@ fr{
         mno{"langues manobo"}
         mo{"moldave"}
         moh{"mohawk"}
+        mos{"moré ; mossi"}
         mr{"marathe"}
         ms{"malais"}
         mt{"maltais"}
@@ -1714,6 +1742,7 @@ fr{
         ti{"tigrigna"}
         tig{"tigré"}
         tk{"turkmène"}
+        tkl{"tokelau"}
         tl{"tagalog"}
         tlh{"klingon"}
         tli{"tlingit"}
@@ -1729,6 +1758,7 @@ fr{
         tum{"tumbuka"}
         tup{"langues tupi"}
         tut{"altaïques, autres langues"}
+        tvl{"tuvalu"}
         tw{"twi"}
         ty{"tahitien"}
         tyv{"touva"}
@@ -1885,31 +1915,19 @@ fr{
         REVISED{"orthographe révisée"}
         ROZAJ{"dialecte de Resia"}
     }
-    Version{"1.91"}
+    Version{"1.90"}
     calendar{
         gregorian{
             DateTimePatterns{
-                "HH' h 'mm v",
+                "HH:mm:ss v",
                 "HH:mm:ss z",
                 "HH:mm:ss",
                 "HH:mm",
                 "EEEE d MMMM yyyy",
                 "d MMMM yyyy",
-                "d MMM yy",
+                "d MMM yyyy",
                 "dd/MM/yy",
                 "{1} {0}",
-            }
-            availableFormats{
-                HHmm{"HH:mm"}
-                HHmmss{"HH:mm:ss"}
-                MMMMd{"d MMMM"}
-                MMdd{"dd/MM"}
-                hhmm{"hh:mm a"}
-                hhmmss{"hh:mm:ss a"}
-                yyMM{"MM/yy"}
-                yyQ{"Q yy"}
-                yyQQQQ{"QQQQ yy"}
-                yyyyMMMM{"MMMM yyyy"}
             }
             dayNames{
                 format{
@@ -2143,10 +2161,6 @@ fr{
         }
         "Asia:Tokyo"{
             ec{"Tokyo"}
-            ld{"Heure avancée du Japon"}
-            ls{"Heure normale du Japon"}
-            sd{"HAJ"}
-            ss{"HNJ"}
         }
         "Asia:Ulaanbaatar"{
             ec{"Oulan-Bator"}
@@ -2277,6 +2291,12 @@ fr{
             sd{"HAI"}
             ss{"HNI"}
         }
+        "meta:Japan"{
+            ld{"Heure avancée du Japon"}
+            ls{"Heure normale du Japon"}
+            sd{"HAJ"}
+            ss{"HNJ"}
+        }
         "meta:Newfoundland"{
             ld{"Heure avancée de Terre-Neuve"}
             lg{"Heure de Terre-Neuve"}
@@ -2285,5 +2305,7 @@ fr{
             sg{"HT"}
             ss{"HNT"}
         }
+        gmtFormat{"HMG{0}"}
+        hourFormat{"+HH:mm;-HH:mm"}
     }
 }

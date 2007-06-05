@@ -7,7 +7,7 @@
 // *
 // ***************************************************************************
 ko_KR{
-    Version{"1.51"}
+    Version{"1.90"}
     calendar{
         gregorian{
             DateTimeElements:intvector{

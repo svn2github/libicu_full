@@ -428,7 +428,7 @@ hu{
             "Brazil cruzeiro (1990-1993)",
         }
         BRL{
-            "BRL",
+            "R$",
             "Brazil real",
         }
         BRN{
@@ -1112,7 +1112,7 @@ hu{
             "Ugandai shilling",
         }
         USD{
-            "USD",
+            "US$",
             "USA dollár",
         }
         USN{
@@ -1474,7 +1474,7 @@ hu{
             traditional{"Hagyományos"}
         }
     }
-    Version{"1.78"}
+    Version{"1.90"}
     calendar{
         buddhist{
             eras{
@@ -1498,14 +1498,6 @@ hu{
                 "yyyy.MM.dd.",
                 "yyyy.MM.dd.",
                 "{1} {0}",
-            }
-            availableFormats{
-                MMMMd{"MMMM d."}
-                MMdd{"MM.dd."}
-                mmss{"mm:ss"}
-                yyQ{"Q yy"}
-                yyyyMM{"yyyy.MM"}
-                yyyyMMMM{"yyyy. MMMM"}
             }
             dayNames{
                 format{
@@ -1701,6 +1693,8 @@ hu{
     delimiters{
         alternateQuotationEnd{"”"}
         alternateQuotationStart{"„"}
+        quotationEnd{"”"}
+        quotationStart{"„"}
     }
     zoneStrings{
         "America:Araguaina"{

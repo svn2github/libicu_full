@@ -23,7 +23,7 @@ nl{
         017{"Centraal-Afrika"}
         018{"Zuidelijk Afrika"}
         019{"Amerika"}
-        021{"Noord-Amerika"}
+        021{"Noordelijk Amerika"}
         029{"Caribisch gebied"}
         030{"Oost-Azië"}
         034{"Zuid-Azië"}
@@ -348,7 +348,7 @@ nl{
             "Oostenrijkse schilling",
         }
         AUD{
-            "$A",
+            "AUD",
             "Australische dollar",
         }
         AWG{
@@ -956,7 +956,7 @@ nl{
             "Nepalese rupee",
         }
         NZD{
-            "$NZ",
+            "NZD",
             "Nieuw-Zeelandse dollar",
         }
         OMR{
@@ -1072,7 +1072,7 @@ nl{
             "Sierraleoonse leone",
         }
         SOS{
-            "So. Sh.",
+            "SOS",
             "Somalische shilling",
         }
         SRD{
@@ -1346,6 +1346,7 @@ nl{
         akk{"Akkadisch"}
         ale{"Aleut"}
         alg{"Algonkium-talen"}
+        alt{"Zuid-Altaïsch"}
         am{"Amhaars"}
         an{"Aragonees"}
         ang{"Engels, oud (ca. 450-1100)"}
@@ -1384,12 +1385,12 @@ nl{
         bla{"Siksika"}
         bm{"Bambara"}
         bn{"Bengalees"}
-        bnt{"Bantoe (overige)"}
+        bnt{"Bantoe"}
         bo{"Tibetaans"}
         br{"Bretons"}
         bra{"Braj"}
         bs{"Bosnisch"}
-        btk{"Bataks (Indonesië)"}
+        btk{"Batak"}
         bua{"Buriat"}
         bug{"Buginees"}
         byn{"Blin"}
@@ -1439,7 +1440,7 @@ nl{
         dra{"Dravidisch (overige)"}
         dsb{"Nedersorbisch"}
         dua{"Duala"}
-        dum{"Nederlands, middel- (ca. 1050-1350)"}
+        dum{"Middelnederlands"}
         dv{"Divehi"}
         dyu{"Dyula"}
         dz{"Dzongkha"}
@@ -1450,7 +1451,7 @@ nl{
         el{"Grieks"}
         elx{"Elamitisch"}
         en{"Engels"}
-        enm{"Engels, middel- (1100-1500)"}
+        enm{"Middelengels"}
         eo{"Esperanto"}
         es{"Spaans"}
         et{"Estlands"}
@@ -1467,7 +1468,7 @@ nl{
         fo{"Faeröers"}
         fon{"Fon"}
         fr{"Frans"}
-        frm{"Frans, middel- (ca. 1400-1800)"}
+        frm{"Middelfrans"}
         fro{"Frans, oud- (ca. 842-1400)"}
         fur{"Friulisch"}
         fy{"Fries"}
@@ -1480,7 +1481,7 @@ nl{
         gez{"Geez"}
         gil{"Gilbertees"}
         gl{"Galicisch"}
-        gmh{"Duits, middelhoog- (ca. 1050-1500)"}
+        gmh{"Middelhoogduits"}
         gn{"Guarani"}
         goh{"Duits, oudhoog- (ca. 750-1050)"}
         gon{"Gondi"}
@@ -1582,7 +1583,7 @@ nl{
         lua{"Luba-Lulua"}
         lui{"Luiseno"}
         lun{"Lunda"}
-        luo{"Luo (Kenia en Tanzania)"}
+        luo{"Luo"}
         lus{"Lushai"}
         lv{"Letlands"}
         mad{"Madurees"}
@@ -1590,13 +1591,13 @@ nl{
         mai{"Maithili"}
         mak{"Makassaars"}
         man{"Mandingo"}
-        map{"Austronesisch (overige)"}
+        map{"Austronesisch"}
         mas{"Masai"}
         mdf{"Moksha"}
         mdr{"Mandar"}
         men{"Mende"}
         mg{"Malagasisch"}
-        mga{"Iers, middel- (900-1200)"}
+        mga{"Middeliers"}
         mh{"Marshallees"}
         mi{"Maori"}
         mic{"Mi'kmaq"}
@@ -1628,7 +1629,7 @@ nl{
         nai{"Noord-Amerikaans Indiaans"}
         nap{"Napolitaans"}
         nb{"Noors - Bokmål"}
-        nd{"Ndebele, noord-"}
+        nd{"Noord-Ndbele"}
         nds{"Laagduits"}
         ne{"Nepalees"}
         new{"Newari"}
@@ -1641,7 +1642,7 @@ nl{
         no{"Noors"}
         nog{"Nogai"}
         non{"Noors, oud-"}
-        nr{"Ndebele, zuid-"}
+        nr{"Zuid-Ndbele"}
         nso{"Noord-Sotho"}
         nub{"Nubische talen"}
         nv{"Navajo"}
@@ -1651,13 +1652,13 @@ nl{
         nyn{"Nyankole"}
         nyo{"Nyoro"}
         nzi{"Nzima"}
-        oc{"Langue d’Oc (na 1500)"}
+        oc{"Occitaans"}
         oj{"Ojibwa"}
         om{"Oromo"}
         or{"Oriya"}
         os{"Ossetisch"}
         osa{"Osage"}
-        ota{"Turks, Ottomaans (1500-1928)"}
+        ota{"Ottomaans-Turks"}
         oto{"Otomi-talen"}
         pa{"Punjabi"}
         paa{"Papoeaas (overige)"}
@@ -1732,7 +1733,7 @@ nl{
         srn{"Sranantongo"}
         srr{"Serer"}
         ss{"Swati"}
-        st{"Sotho, zuid"}
+        st{"Zuid-Sotho"}
         su{"Sundanees"}
         suk{"Sukuma"}
         sus{"Soesoe"}
@@ -1758,8 +1759,8 @@ nl{
         tli{"Tlingit"}
         tmh{"Tamashek"}
         tn{"Tswana"}
-        to{"Tonga (Tonga-eilanden)"}
-        tog{"Tonga (Nyasa)"}
+        to{"Tonga"}
+        tog{"Nyasa Tonga"}
         tpi{"Tok Pisin"}
         tr{"Turks"}
         ts{"Tsonga"}
@@ -1851,10 +1852,11 @@ nl{
         Cyrs{"Cyrillisch (Oudkerkslavische variant)"}
         Deva{"Devanagari"}
         Dsrt{"Deseret"}
-        Egyd{"Egyptisch (demotisch)"}
-        Egyh{"Egyptisch (hiëratisch)"}
+        Egyd{"Egyptisch demotisch"}
+        Egyh{"Egyptisch hiëratisch"}
+        Egyp{"Egyptische hiërogliefen"}
         Ethi{"Ethiopisch"}
-        Geok{"Khutsuri (Asomtavruli en Nuskhuri)"}
+        Geok{"Georgisch Khutsuri"}
         Geor{"Georgisch"}
         Glag{"Glagolitisch"}
         Goth{"Gothisch"}
@@ -1871,7 +1873,7 @@ nl{
         Hmng{"Pahawh Hmong"}
         Hrkt{"Katakana of Hiragana"}
         Hung{"Oudhongaars"}
-        Inds{"Indus (Harappan)"}
+        Inds{"Indus"}
         Ital{"Oud-italisch"}
         Java{"Javaans"}
         Kali{"Kayah Li"}
@@ -1883,7 +1885,7 @@ nl{
         Latf{"Latijn (Fraktur-variant)"}
         Latg{"Latijn (Gaelic variant)"}
         Latn{"Latijn"}
-        Lepc{"Lepcha (Róng)"}
+        Lepc{"Lepcha"}
         Limb{"Limbu"}
         Lina{"Lineair A"}
         Linb{"Lineair B"}
@@ -1910,13 +1912,15 @@ nl{
         Sinh{"Sinhala"}
         Sylo{"Syloti Nagri"}
         Syrc{"Syriac"}
+        Syre{"Estrangelo Aramees"}
+        Syrn{"Oost-Aramees"}
         Tagb{"Tagbanwa"}
         Tale{"Tai Le"}
-        Talu{"Tai Lue (nieuw)"}
+        Talu{"Nieuw Tai Lue"}
         Taml{"Tamil"}
         Telu{"Telugu"}
         Teng{"Tengwar"}
-        Tfng{"Tifinagh (Berber)"}
+        Tfng{"Tifinagh"}
         Tglg{"Tagalog"}
         Thaa{"Thaana"}
         Tibt{"Tibetaans"}
@@ -1942,24 +1946,24 @@ nl{
         }
         collation{
             big5han{"Traditioneel Chinees"}
-            direct{"Directe volgorde"}
+            direct{"Directe sorteervolgorde"}
             gb2312han{"Vereenvoudigd Chinees"}
-            phonebook{"Telefoonboekvolgorde"}
+            phonebook{"Telefoonboeksorteervolgorde"}
             pinyin{"Pinyinvolgorde"}
             stroke{"Streekvolgorde"}
-            traditional{"Traditionele volgorde"}
+            traditional{"Traditionele sorteervolgorde"}
         }
     }
     Variants{
         1901{"Traditionele Duitse ortografie"}
         1996{"Duitse ortografie van 1996"}
-        NEDIS{"Natisone (dialect)"}
+        NEDIS{"Natisone-dialect"}
         POLYTONI{"Polytonaal"}
         REVISED{"Gewijzigde ortografie"}
         ROZAJ{"Resiaans"}
         SAAHO{"Saho"}
     }
-    Version{"1.80"}
+    Version{"1.90"}
     calendar{
         gregorian{
             DateTimePatterns{
@@ -1972,15 +1976,6 @@ nl{
                 "d MMM yyyy",
                 "dd-MM-yy",
                 "{1} {0}",
-            }
-            availableFormats{
-                MMMMd{"d MMMM"}
-                MMdd{"dd-MM"}
-                mmss{"mm:ss"}
-                yyMM{"MM-yy"}
-                yyQ{"Q yy"}
-                yyQQQQ{"QQQQ yy"}
-                yyyyMMMM{"MMMM yyyy"}
             }
             dayNames{
                 format{
@@ -2206,7 +2201,7 @@ nl{
             ec{"Mérida"}
         }
         "America:Mexico_City"{
-            ec{"Mexico Stad"}
+            ec{"Mexico-stad"}
         }
         "America:Montreal"{
             ec{"Montréal"}
@@ -2226,21 +2221,38 @@ nl{
         "Antarctica:South_Pole"{
             ec{"Zuidpool"}
         }
+        "Asia:Irkutsk"{
+            ec{"Irkoetsk"}
+        }
         "Asia:Jerusalem"{
             ec{"Jeruzalem"}
+        }
+        "Asia:Kamchatka"{
+            ec{"Kamtsjatka"}
+        }
+        "Asia:Krasnoyarsk"{
+            ec{"Krasnojarsk"}
+        }
+        "Asia:Sakhalin"{
+            ec{"Sachalin"}
+        }
+        "Asia:Shanghai"{
+            ec{"Sjanghai"}
         }
         "Asia:Tashkent"{
             ec{"Tasjkent"}
         }
         "Asia:Tokyo"{
-            ec{"Tokyo"}
-            ld{"Japanse zomertijd"}
-            ls{"Japanse standaardtijd"}
-            sd{"JDT"}
-            ss{"JST"}
+            ec{"Tokio"}
         }
         "Asia:Ulaanbaatar"{
             ec{"Ulaanbaator"}
+        }
+        "Asia:Yakutsk"{
+            ec{"Jakoetsk"}
+        }
+        "Asia:Yekaterinburg"{
+            ec{"Jekaterinenburg"}
         }
         "Atlantic:Azores"{
             ec{"Azoren"}
@@ -2263,12 +2275,18 @@ nl{
         "Europe:Paris"{
             ec{"Parijs"}
         }
+        "Europe:Uzhgorod"{
+            ec{"Oezjhorod"}
+        }
+        "Europe:Zaporozhye"{
+            ec{"Zaporizja"}
+        }
         "Pacific:Easter"{
             ec{"Paaseiland"}
         }
         "meta:Alaska"{
-            ld{"Alaska-zomertijd"}
-            ls{"Alaska-standaardtijd"}
+            ld{"Alaska - zomertijd"}
+            ls{"Alaska - standaardtijd"}
         }
         "meta:America_Central"{
             ld{"Central-zomertijd"}
@@ -2295,8 +2313,8 @@ nl{
             ss{"PST"}
         }
         "meta:Atlantic"{
-            ld{"Atlantic-zomertijd"}
-            ls{"Atlantic-standaardtijd"}
+            ld{"Atlantic - zomertijd"}
+            ls{"Atlantic - standaardtijd"}
         }
         "meta:China"{
             ld{"Chinese zomertijd"}
@@ -2329,6 +2347,12 @@ nl{
             ls{"Israëlische standaardtijd"}
             sd{"IDT"}
             ss{"IST"}
+        }
+        "meta:Japan"{
+            ld{"Japanse zomertijd"}
+            ls{"Japanse standaardtijd"}
+            sd{"JDT"}
+            ss{"JST"}
         }
         "meta:Newfoundland"{
             ld{"Newfoundland-zomertijd"}

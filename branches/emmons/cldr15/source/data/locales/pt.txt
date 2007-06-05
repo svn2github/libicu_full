@@ -170,6 +170,7 @@ pt{
         NF{"Ilha Norfolk"}
         NG{"Nigéria"}
         NI{"Nicarágua"}
+        NL{"Países Baixos"}
         NO{"Noruega"}
         NP{"Nepal"}
         NR{"Nauru"}
@@ -564,6 +565,14 @@ pt{
             "GNF",
             "Franco de Guiné",
         }
+        GNS{
+            "GNS",
+            "Syli da Guiné",
+        }
+        GQE{
+            "GQE",
+            "Ekwele da Guiné Equatorial",
+        }
         GRD{
             "GRD",
             "Dracma grego",
@@ -660,6 +669,10 @@ pt{
             "KES",
             "Xelim queniano",
         }
+        KGS{
+            "KGS",
+            "Som do Quirguistão",
+        }
         KHR{
             "KHR",
             "Riel cambojano",
@@ -692,9 +705,17 @@ pt{
             "LBP",
             "Libra libanesa",
         }
+        LKR{
+            "LKR",
+            "Rupia do Sri Lanka",
+        }
         LRD{
             "LRD",
             "Dólar liberiano",
+        }
+        LSL{
+            "LSL",
+            "Loti do Lesoto",
         }
         LTL{
             "LTL",
@@ -727,6 +748,10 @@ pt{
         MAF{
             "MAF",
             "Franco marroquino",
+        }
+        MDL{
+            "MDL",
+            "Leu da Moldávia",
         }
         MGA{
             "MGA",
@@ -784,6 +809,14 @@ pt{
             "MXN",
             "Peso mexicano",
         }
+        MXP{
+            "MXP",
+            "Peso Prata mexicano (1861-1992)",
+        }
+        MXV{
+            "MXV",
+            "Unidade de Investimento (UDI) mexicana",
+        }
         MYR{
             "MYR",
             "Ringgit malaio",
@@ -803,6 +836,14 @@ pt{
         NGN{
             "NGN",
             "Naira nigeriana",
+        }
+        NIO{
+            "NIO",
+            "Córdoba Ouro nicaraguense",
+        }
+        NLG{
+            "NLG",
+            "Florim holandês",
         }
         NOK{
             "NOK",
@@ -932,6 +973,10 @@ pt{
             "SOS",
             "Xelim somali",
         }
+        SRG{
+            "SRG",
+            "Florim do Suriname",
+        }
         STD{
             "STD",
             "Dobra de São Tomé e Príncipe",
@@ -992,6 +1037,10 @@ pt{
             "TWD",
             "Dólar Novo de Taiwan",
         }
+        TZS{
+            "TZS",
+            "Xelim da Tanzânia",
+        }
         UAH{
             "UAH",
             "Hryvnia ucraniano",
@@ -1043,6 +1092,10 @@ pt{
         VUV{
             "VUV",
             "Vatu de Vanuatu",
+        }
+        WST{
+            "WST",
+            "Tala da Samoa Ocidental",
         }
         XAF{
             "XAF",
@@ -1223,6 +1276,7 @@ pt{
         chp{"chipewyan"}
         chr{"cheroqui"}
         chy{"cheiene"}
+        cmc{"idiomas chamic"}
         co{"córsico"}
         cop{"copta"}
         cpe{"crioulos e pídgin, inglês (outros)"}
@@ -1300,6 +1354,7 @@ pt{
         grc{"grego arcaico"}
         gu{"guzerate"}
         gv{"manx"}
+        gwi{"gwich'in"}
         ha{"hauçá"}
         hai{"haida"}
         haw{"havaiano"}
@@ -1404,6 +1459,7 @@ pt{
         men{"mende"}
         mg{"malgaxe"}
         mga{"irlandês medieval"}
+        mh{"marshalês"}
         mi{"maori"}
         mic{"miquemaque"}
         min{"minangkabau"}
@@ -1414,6 +1470,7 @@ pt{
         mn{"mongol"}
         mnc{"manchu"}
         mni{"manipuri"}
+        mno{"idiomas manobo"}
         mo{"moldávio"}
         moh{"mohawk"}
         mos{"mossi"}
@@ -1614,6 +1671,8 @@ pt{
     Scripts{
         Arab{"árabe"}
         Armn{"armênio"}
+        Bali{"balinês"}
+        Batk{"bataque"}
         Beng{"bengali"}
         Bopo{"bopomofo"}
         Brai{"braile"}
@@ -1651,6 +1710,7 @@ pt{
         Mymr{"myanmar"}
         Ogam{"ogâmico"}
         Orya{"oriya"}
+        Osma{"osmania"}
         Qaai{"herdado"}
         Runr{"rúnico"}
         Shaw{"shaviano"}
@@ -1689,7 +1749,7 @@ pt{
     Variants{
         REVISED{"Revisado"}
     }
-    Version{"1.72"}
+    Version{"1.90"}
     calendar{
         buddhist{
             DateTimePatterns{
@@ -1697,10 +1757,10 @@ pt{
                 "HH:mm:ss z",
                 "HH:mm:ss",
                 "HH:mm",
-                "EEEE, MMMM d, yyyy G",
-                "MMMM d, yyyy G",
-                "MMM d, yyyy G",
-                "M/d/yyyy",
+                "EEEE, d 'de' MMMM 'de' yyyy G",
+                "d 'de' MMMM 'de' yyyy G",
+                "d 'de' MMMM 'de' yyyy G",
+                "d/M/yyyy",
                 "{1} {0}",
             }
         }
@@ -1720,7 +1780,6 @@ pt{
                 HHmm{"HH:mm"}
                 HHmmss{"HH:mm:ss"}
                 yyQ{"Q yy"}
-                yyyyMM{"MM-yyyy"}
                 yyyyMMM{"MMM/yyyy"}
             }
             dayNames{
@@ -1873,6 +1932,17 @@ pt{
             }
         }
     }
+    delimiters{
+        quotationEnd{"“"}
+        quotationStart{"”"}
+    }
+    measurementSystemNames{
+        US{"americano"}
+        metric{"métrico"}
+    }
+    messages{
+        nostr{"não:nao:n"}
+    }
     zoneStrings{
         "Africa:Casablanca"{
             ec{"Casablanca"}
@@ -1933,10 +2003,6 @@ pt{
         }
         "Asia:Tokyo"{
             ec{"Tóquio"}
-            ld{"Horário de Verão do Japão"}
-            ls{"Horário Padrão do Japão"}
-            sd{"JDT"}
-            ss{"JST"}
         }
         "Atlantic:Azores"{
             ec{"Açores"}
@@ -2002,7 +2068,7 @@ pt{
         }
         "meta:Europe_Central"{
             ld{"Horário de Verão da Europa Central"}
-            ls{"Horário Padrão da Europa Central"}
+            ls{"Horário da Europa Central"}
             sd{"CEST"}
             ss{"CET"}
         }
@@ -2028,11 +2094,19 @@ pt{
             sd{"IDT"}
             ss{"IST"}
         }
+        "meta:Japan"{
+            ld{"Horário de Verão do Japão"}
+            ls{"Horário Padrão do Japão"}
+            sd{"JDT"}
+            ss{"JST"}
+        }
         "meta:Newfoundland"{
             ld{"Horário de Verão de Terra Nova"}
             ls{"Horário Padrão de Terra Nova"}
             sd{"NDT"}
             ss{"NST"}
         }
+        gmtFormat{"GMT{0}"}
+        hourFormat{"+HH:mm;-HH:mm"}
     }
 }

@@ -101,7 +101,7 @@ zh_Hant_MO{
         Hano{"哈努努文"}
         Hans{"簡體漢語"}
     }
-    Version{"1.45"}
+    Version{"1.90"}
     calendar{
         gregorian{
             DateTimeElements:intvector{
@@ -110,7 +110,7 @@ zh_Hant_MO{
             }
             DateTimePatterns{
                 "ahh時mm分ss秒 v",
-                "ahh'時'mm'分'ss'秒'",
+                "HH:mm:ss z",
                 "ahh:mm:ss",
                 "ah:mm",
                 "yyyy'年'MM'月'dd'日' EEEE",
@@ -122,13 +122,13 @@ zh_Hant_MO{
             dayNames{
                 format{
                     abbreviated{
-                        "周日",
-                        "週一",
-                        "周二",
-                        "周三",
-                        "周四",
-                        "星期五",
-                        "星期六",
+                        "週日",
+                        "星期一",
+                        "星期二",
+                        "週三",
+                        "週四",
+                        "週五",
+                        "週六",
                     }
                 }
             }

@@ -17,7 +17,7 @@ ti_ER{
             "የኢትዮጵያ ብር",
         }
     }
-    Version{"1.44"}
+    Version{"1.90"}
     calendar{
         gregorian{
             DateTimeElements:intvector{

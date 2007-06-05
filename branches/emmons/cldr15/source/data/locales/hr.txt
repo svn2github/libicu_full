@@ -1105,7 +1105,7 @@ hr{
             traditional{"Tradicionano poredavanje"}
         }
     }
-    Version{"1.73"}
+    Version{"1.90"}
     calendar{
         gregorian{
             DateTimePatterns{
@@ -1113,24 +1113,11 @@ hr{
                 "HH:mm:ss z",
                 "HH:mm:ss",
                 "HH:mm",
-                "yyyy. MMMM dd",
-                "yyyy. MMMM dd",
+                "EEEE, dd MMMM yyyy.",
+                "dd. MMMM yyyy.",
                 "yyyy.MM.dd",
                 "yyyy.MM.dd",
                 "{1} {0}",
-            }
-            availableFormats{
-                HHmm{"HH:mm"}
-                HHmmss{"HH:mm:ss"}
-                MMMMdd{"MMMM dd"}
-                MMdd{"MM.dd"}
-                hhmm{"hh:mm a"}
-                hhmmss{"hh:mm:ss a"}
-                yyMMMEEEd{"EEE yy.MMM d"}
-                yyQ{"Q yy"}
-                yyQQQQ{"QQQQ yy"}
-                yyyyMM{"yyyy.MM"}
-                yyyyMMMM{"yyyy. MMMM"}
             }
             dayNames{
                 format{

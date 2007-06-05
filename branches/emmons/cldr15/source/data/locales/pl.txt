@@ -23,6 +23,7 @@ pl{
         017{"Afryka Środkowa"}
         019{"Ameryka"}
         021{"Ameryka Północna"}
+        029{"Karaiby"}
         030{"Azja Wschodnia"}
         034{"Azja Południowa"}
         035{"Azja Południowo-Wschodnia"}
@@ -1710,7 +1711,7 @@ pl{
         1901{"Tradycyjna ortografia niemiecka"}
         1996{"Ortografia niemiecka z 1996 r."}
     }
-    Version{"1.78"}
+    Version{"1.90"}
     calendar{
         gregorian{
             DateTimePatterns{
@@ -1723,17 +1724,6 @@ pl{
                 "yyyy-MM-dd",
                 "yy-MM-dd",
                 "{1} {0}",
-            }
-            availableFormats{
-                HHmm{"HH:mm"}
-                HHmmss{"HH:mm:ss"}
-                MMMMd{"d MMMM"}
-                MMdd{"MM-dd"}
-                hhmm{"hh:mm a"}
-                hhmmss{"hh:mm:ss a"}
-                yyQ{"Q yy"}
-                yyyyMM{"yyyy-MM"}
-                yyyyMMMM{"MMMM yyyy"}
             }
             dayNames{
                 format{

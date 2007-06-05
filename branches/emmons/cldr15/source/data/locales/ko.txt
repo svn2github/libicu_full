@@ -1722,7 +1722,7 @@ ko{
     Variants{
         REVISED{"개정"}
     }
-    Version{"1.79"}
+    Version{"1.90"}
     calendar{
         gregorian{
             AmPmMarkers{
@@ -1731,7 +1731,7 @@ ko{
             }
             DateTimePatterns{
                 "a hh시 mm분 ss초 v",
-                "a hh'시' mm'분' ss'초'",
+                "HH:mm:ss z",
                 "a h:mm:ss",
                 "a h:mm",
                 "yyyy'년' M'월' d'일' EEEE",
@@ -1739,12 +1739,6 @@ ko{
                 "yyyy. MM. dd",
                 "yy. MM. dd",
                 "{1} {0}",
-            }
-            availableFormats{
-                Hms{"H'시' m'분' s'초'"}
-                MMdd{"MM. dd"}
-                yyQ{"yy'년도 제'Q'사분기'"}
-                yyyyMM{"yyyy. MM"}
             }
             dayNames{
                 format{
@@ -1840,16 +1834,16 @@ ko{
             quarters{
                 format{
                     abbreviated{
-                        "1",
-                        "Q2",
-                        "3",
-                        "4",
+                        "Q1",
+                        "제 2사분기",
+                        "제 3사분기",
+                        "제 4사분기",
                     }
                     wide{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
+                        "제 1사분기",
+                        "제 2사분기",
+                        "제 3사분기",
+                        "제 4사분기",
                     }
                 }
             }
@@ -1903,10 +1897,6 @@ ko{
         }
         "Asia:Tokyo"{
             ec{"도쿄"}
-            ld{"일본 서머타임"}
-            ls{"일본 표준시"}
-            sd{"JDT"}
-            ss{"JST"}
         }
         "Europe:Bucharest"{
             ec{"부쿠레슈티"}
@@ -1924,7 +1914,7 @@ ko{
             ss{"AKST"}
         }
         "meta:America_Central"{
-            ld{"중부 서머타임"}
+            ld{"미 중부 하계 표준시"}
             ls{"중부 표준시"}
             sd{"CDT"}
             ss{"CST"}
@@ -1936,13 +1926,13 @@ ko{
             ss{"EST"}
         }
         "meta:America_Mountain"{
-            ld{"산악 서머타임"}
+            ld{"미 산지 하계 표준시"}
             ls{"산악 표준시"}
             sd{"MDT"}
             ss{"MST"}
         }
         "meta:America_Pacific"{
-            ld{"태평양 서머타임"}
+            ld{"미 태평양 하계 표준시"}
             ls{"태평양 표준시"}
             sd{"PDT"}
             ss{"PST"}
@@ -1985,6 +1975,12 @@ ko{
             ls{"이스라엘 표준시"}
             sd{"IDT"}
             ss{"IST"}
+        }
+        "meta:Japan"{
+            ld{"일본 서머타임"}
+            ls{"일본 표준시"}
+            sd{"JDT"}
+            ss{"JST"}
         }
         "meta:Korea"{
             ld{"한국 서머타임"}
