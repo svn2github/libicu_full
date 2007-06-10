@@ -543,7 +543,7 @@ sr_Latn{
             traditional{"Tradicionalno sortiranje"}
         }
     }
-    Version{"1.90"}
+    Version{"1.91"}
     calendar{
         gregorian{
             DateTimePatterns{
@@ -594,6 +594,16 @@ sr_Latn{
                 abbreviated{
                     "p. n. e.",
                     "n. e.",
+                }
+            }
+            fields{
+                day{
+                    relative{
+                        "-2"{"juče"}
+                        "-3"{"pre tri dana"}
+                        "2"{"prekosutra"}
+                        "3"{"za tri dana"}
+                    }
                 }
             }
             monthNames{

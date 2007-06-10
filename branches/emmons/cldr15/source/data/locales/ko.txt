@@ -519,7 +519,7 @@ ko{
             "이디오피아 비르",
         }
         EUR{
-            "€",
+            "EUR",
             "유로화",
         }
         FIM{
@@ -539,7 +539,7 @@ ko{
             "프랑스 프랑",
         }
         GBP{
-            "UK£",
+            "GBP",
             "영국령 파운드 스털링",
         }
         GEK{
@@ -631,7 +631,7 @@ ko{
             "이스라엘 신권 세켈",
         }
         INR{
-            "=0#Rs.|1#Re.|1<Rs.",
+            "INR",
             "인도 루피",
         }
         IQD{
@@ -1051,7 +1051,7 @@ ko{
             "우간다 실링",
         }
         USD{
-            "US$",
+            "USD",
             "미국 달러",
         }
         UYP{
@@ -1644,6 +1644,20 @@ ko{
         "Hang",
         "Hani",
     }
+    NumberElements{
+        ".",
+        ",",
+        ";",
+        "%",
+        "0",
+        "#",
+        "-",
+        "E",
+        "‰",
+        "∞",
+        "NaN",
+        "+",
+    }
     NumberPatterns{
         "#,##0.###",
         "¤#,##0.00",
@@ -1722,7 +1736,7 @@ ko{
     Variants{
         REVISED{"개정"}
     }
-    Version{"1.90"}
+    Version{"1.91"}
     calendar{
         gregorian{
             AmPmMarkers{
@@ -1783,6 +1797,41 @@ ko{
                     "서력기원",
                 }
             }
+            fields{
+                day{
+                    dn{"일"}
+                }
+                dayperiod{
+                    dn{"오전/오후"}
+                }
+                era{
+                    dn{"연대"}
+                }
+                hour{
+                    dn{"시"}
+                }
+                minute{
+                    dn{"분"}
+                }
+                month{
+                    dn{"달"}
+                }
+                second{
+                    dn{"초"}
+                }
+                week{
+                    dn{"주"}
+                }
+                weekday{
+                    dn{"요일"}
+                }
+                year{
+                    dn{"년"}
+                }
+                zone{
+                    dn{"지역"}
+                }
+            }
             monthNames{
                 format{
                     abbreviated{
@@ -1839,11 +1888,25 @@ ko{
                         "제 3사분기",
                         "제 4사분기",
                     }
+                    narrow{
+                        "1",
+                        "2",
+                        "3",
+                        "4",
+                    }
                     wide{
                         "제 1사분기",
                         "제 2사분기",
                         "제 3사분기",
                         "제 4사분기",
+                    }
+                }
+                stand-alone{
+                    narrow{
+                        "1",
+                        "2",
+                        "3",
+                        "4",
                     }
                 }
             }

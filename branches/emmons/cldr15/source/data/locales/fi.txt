@@ -14,6 +14,7 @@ fi{
     Countries{
         001{"maailma"}
         002{"Afrikka"}
+        003{"Pohjois-Amerikka"}
         005{"Etelä-Amerikka"}
         009{"Oseania"}
         011{"Länsi-Afrikka"}
@@ -33,6 +34,7 @@ fi{
         054{"Melanesia"}
         057{"Mikronesia"}
         061{"Polynesia"}
+        062{"Etelä- ja Keski-Aasia"}
         142{"Aasia"}
         143{"Keski-Aasia"}
         145{"Länsi-Aasia"}
@@ -81,9 +83,9 @@ fi{
         BZ{"Belize"}
         CA{"Kanada"}
         CC{"Kookossaaret"}
-        CD{"Kongo – Kinshasa"}
+        CD{"Kongo-Kinshasa"}
         CF{"Keski-Afrikan tasavalta"}
-        CG{"Kongo – Brazzaville"}
+        CG{"Kongo-Brazzaville"}
         CH{"Sveitsi"}
         CI{"Norsunluurannikko"}
         CK{"Cookinsaaret"}
@@ -122,6 +124,7 @@ fi{
         GD{"Grenada"}
         GE{"Georgia"}
         GF{"Ranskan Guayana"}
+        GG{"Guernsey"}
         GH{"Ghana"}
         GI{"Gibraltar"}
         GL{"Grönlanti"}
@@ -151,6 +154,7 @@ fi{
         IR{"Iran"}
         IS{"Islanti"}
         IT{"Italia"}
+        JE{"Jersey"}
         JM{"Jamaika"}
         JO{"Jordania"}
         JP{"Japani"}
@@ -179,6 +183,7 @@ fi{
         MA{"Marokko"}
         MC{"Monaco"}
         MD{"Moldova"}
+        ME{"Montenegro"}
         MG{"Madagaskar"}
         MH{"Marshallinsaaret"}
         MK{"Makedonia"}
@@ -226,8 +231,10 @@ fi{
         PY{"Paraguay"}
         QA{"Qatar"}
         QO{"ulkomeri"}
+        QU{"Euroopan unioni"}
         RE{"Réunion"}
         RO{"Romania"}
+        RS{"Serbia"}
         RU{"Venäjä"}
         RW{"Ruanda"}
         SA{"Saudi-Arabia"}
@@ -359,6 +366,10 @@ fi{
             "AZM",
             "Azerbaidžanin manat (1993–2006)",
         }
+        AZN{
+            "AZN",
+            "Azerbaidžanin manat",
+        }
         BAD{
             "BAD",
             "Bosnia-Hertsegovinan dinaari",
@@ -436,7 +447,7 @@ fi{
             "Brasilian cruzeiro (1990–1993)",
         }
         BRL{
-            "R$",
+            "BRL",
             "Brasilian real",
         }
         BRN{
@@ -628,7 +639,7 @@ fi{
             "Ranskan frangi",
         }
         GBP{
-            "UK£",
+            "£",
             "Englannin punta",
         }
         GEK{
@@ -752,7 +763,7 @@ fi{
             "Jordanian dinaari",
         }
         JPY{
-            "JP¥",
+            "¥",
             "Japanin jeni",
         }
         KES{
@@ -934,6 +945,10 @@ fi{
         MZM{
             "MZM",
             "Mosambikin metical (1980–2006)",
+        }
+        MZN{
+            "MZN",
+            "Mosambikin metical",
         }
         NAD{
             "NAD",
@@ -1184,7 +1199,7 @@ fi{
             "Ugandan šillinki",
         }
         USD{
-            "US$",
+            "$",
             "Yhdysvaltain dollari",
         }
         USN{
@@ -1420,6 +1435,7 @@ fi{
         cai{"muut Keski-Amerikan intiaanikielet"}
         car{"karibi"}
         cau{"muut kaukasialaiset kielet"}
+        cch{"atsam"}
         ce{"tšetšeeni"}
         ceb{"cebuano"}
         cel{"muut kelttiläiset kielet"}
@@ -1453,6 +1469,8 @@ fi{
         dar{"dargi"}
         day{"dajakki"}
         de{"saksa"}
+        de_AT{"itävallansaksa"}
+        de_CH{"sveitsinyläsaksa"}
         del{"delaware"}
         den{"slevi"}
         dgr{"dogrib"}
@@ -1472,9 +1490,15 @@ fi{
         el{"kreikka"}
         elx{"elami"}
         en{"englanti"}
+        en_AU{"australianenglanti"}
+        en_CA{"kanadanenglanti"}
+        en_GB{"britannianenglanti"}
+        en_US{"amerikanenglanti"}
         enm{"keskienglanti"}
         eo{"esperanto"}
         es{"espanja"}
+        es_419{"amerikanespanja"}
+        es_ES{"espanjanespanja"}
         et{"viro"}
         eu{"baski"}
         ewo{"ewondo"}
@@ -1489,6 +1513,8 @@ fi{
         fo{"fääri"}
         fon{"fon"}
         fr{"ranska"}
+        fr_CA{"kanadanranska"}
+        fr_CH{"sveitsinranska"}
         frm{"keskiranska"}
         fro{"muinaisranska"}
         frr{"pohjoisfriisi"}
@@ -1560,10 +1586,12 @@ fi{
         kaa{"karakalpakki"}
         kab{"kabyyli"}
         kac{"kachin"}
+        kaj{"jju"}
         kam{"kamba"}
         kar{"karen"}
         kaw{"kavi"}
         kbd{"kabardi"}
+        kcg{"tyap"}
         kg{"kongo"}
         kha{"khasi"}
         khi{"muut khoisan-kielet"}
@@ -1571,7 +1599,7 @@ fi{
         ki{"kikuju"}
         kj{"kuanjama"}
         kk{"kazakki"}
-        kl{"kalaallisut; grönlanti"}
+        kl{"kalaallisut"}
         km{"khmer"}
         kmb{"kimbundu"}
         kn{"kannada"}
@@ -1663,10 +1691,12 @@ fi{
         nic{"muut nigeriläis-kongolaiset kielet"}
         niu{"niue"}
         nl{"hollanti"}
+        nl_BE{"flaami"}
         nn{"norjan nynorsk"}
         no{"norja"}
         nog{"nogai"}
         non{"muinaisnorja"}
+        nqo{"n’ko"}
         nr{"etelä-ndebele"}
         nso{"pohjoissotho"}
         nub{"nubialaiset kielet"}
@@ -1702,6 +1732,7 @@ fi{
         pro{"muinaisprovensaali"}
         ps{"paštu"}
         pt{"portugali"}
+        pt_BR{"brasilianportugali"}
         qu{"ketšua"}
         raj{"radžastani"}
         rap{"rapanui"}
@@ -1829,10 +1860,13 @@ fi{
         zap{"sapoteekki"}
         zen{"zenaga"}
         zh{"kiina"}
+        zh_Hans{"yksinkertaistettu kiina"}
+        zh_Hant{"perinteinen kiina"}
         znd{"zande"}
         zu{"zulu"}
         zun{"zuni"}
         zxx{"ei kielellistä sisältöä"}
+        zza{"zaza"}
     }
     LocaleScript{
         "Latn",
@@ -1848,7 +1882,7 @@ fi{
         "E",
         "‰",
         "∞",
-        "NaN",
+        "epäluku",
         "+",
     }
     NumberPatterns{
@@ -1870,6 +1904,7 @@ fi{
         Bugi{"bugilainen"}
         Buhd{"buhidilainen"}
         Cans{"Kanadan alkuperäiskansojen yhtenäistetty tavukirjoitus"}
+        Cari{"kaarialainen"}
         Cham{"tšamilainen"}
         Cher{"cherokeelainen"}
         Cirt{"cirth"}
@@ -1903,11 +1938,13 @@ fi{
         Inds{"induslainen"}
         Ital{"muinaisitalialainen"}
         Java{"jaavalainen"}
+        Jpan{"japanilainen"}
         Kali{"kayah li"}
         Kana{"katakana"}
         Khar{"kharosthi"}
         Khmr{"khmeriläinen"}
         Knda{"kannadalainen"}
+        Lana{"lanna"}
         Laoo{"laolainen"}
         Latf{"latinalainen fraktuuramuunnelma"}
         Latg{"latinalainen gaelimuunnelma"}
@@ -1916,14 +1953,19 @@ fi{
         Limb{"limbulainen"}
         Lina{"lineaari-A"}
         Linb{"lineaari-B"}
+        Lyci{"lyykialainen"}
+        Lydi{"lyydialainen"}
         Mand{"mandealainen"}
         Maya{"maya-hieroglyfit"}
         Mero{"meroiittinen"}
         Mlym{"malajalamilainen"}
         Mong{"mongolilainen"}
+        Moon{"Moon-kohokirjoitus"}
+        Mtei{"meitei"}
         Mymr{"burmalainen"}
         Nkoo{"n'ko"}
         Ogam{"ogam"}
+        Olck{"ol chiki"}
         Orkh{"orkhon"}
         Orya{"orijalainen"}
         Osma{"osmanjalainen"}
@@ -1932,11 +1974,15 @@ fi{
         Phnx{"foinikialainen"}
         Plrd{"Pollardin foneettinen"}
         Qaai{"peritty"}
+        Rjng{"rejang"}
         Roro{"rongorongo"}
         Runr{"riimukirjoitus"}
         Sara{"sarati"}
+        Saur{"saurashtra"}
+        Sgnw{"SignWriting"}
         Shaw{"shaw’lainen"}
         Sinh{"sinhalilainen"}
+        Sund{"sundalainen"}
         Sylo{"syloti nagri"}
         Syrc{"syyrialainen"}
         Syre{"syyrialainen estrangelo-muunnelma"}
@@ -1984,15 +2030,25 @@ fi{
         }
     }
     Variants{
+        1606NICT{"myöhäiskeskiranska"}
+        1694ACAD{"varhaisnykyranska"}
         1901{"saksan perinteinen oikeinkirjoitus"}
         1996{"saksan uusi oikeinkirjoitus"}
+        AREVELA{"itäarmenialainen"}
+        AREVMDA{"länsiarmenialainen"}
+        BOONT{"englannin boontling-murre"}
+        MONOTON{"monotoninen kreikka"}
         NEDIS{"sloveenin natisone-murre"}
+        POLYTON{"polytoninen kreikka"}
         POLYTONI{"polytoninen kreikka"}
+        POSIX{"tietokonemäärittely POSIX"}
         REVISED{"uudistettu oikeinkirjoitus"}
         ROZAJ{"sloveenin resia-murre"}
         SAAHO{"afarin saho-murre"}
+        SCOUSE{"englannin scouse-murre"}
+        VALENCIA{"katalaanin valencia-murre"}
     }
-    Version{"1.90"}
+    Version{"1.91"}
     calendar{
         gregorian{
             AmPmMarkers{
@@ -2056,6 +2112,13 @@ fi{
             fields{
                 day{
                     dn{"päivä"}
+                    relative{
+                        "-1"{"eilen"}
+                        "-2"{"toissapäivänä"}
+                        "0"{"tänään"}
+                        "1"{"huomenna"}
+                        "2"{"ylihuomenna"}
+                    }
                 }
                 dayperiod{
                     dn{"ap/ip"}
@@ -2085,7 +2148,7 @@ fi{
                     dn{"vuosi"}
                 }
                 zone{
-                    dn{"aikavyöhyke"}
+                    dn{"vyöhyke"}
                 }
             }
             monthNames{
@@ -2144,11 +2207,25 @@ fi{
                         "3. nelj.",
                         "4.nelj.",
                     }
+                    narrow{
+                        "1",
+                        "2",
+                        "3",
+                        "4",
+                    }
                     wide{
                         "1. neljännes",
                         "2. neljännes",
                         "3. neljännes",
                         "4. neljännes",
+                    }
+                }
+                stand-alone{
+                    narrow{
+                        "1",
+                        "2",
+                        "3",
+                        "4",
                     }
                 }
             }
@@ -2214,7 +2291,9 @@ fi{
         }
     }
     delimiters{
+        alternateQuotationEnd{"’"}
         alternateQuotationStart{"’"}
+        quotationEnd{"”"}
         quotationStart{"”"}
     }
     measurementSystemNames{
@@ -2225,20 +2304,80 @@ fi{
         "Africa:Casablanca"{
             ec{"Casablanca"}
         }
+        "America:Anchorage"{
+            ec{"Anchorage"}
+        }
         "America:Argentina:ComodRivadavia"{
             ec{"Comodoro Rivadavia"}
+        }
+        "America:Buenos_Aires"{
+            ec{"Buenos Aires"}
+        }
+        "America:Campo_Grande"{
+            ec{"Campo Grande"}
         }
         "America:Cancun"{
             ec{"Cancún"}
         }
+        "America:Chicago"{
+            ec{"Chicago"}
+        }
+        "America:Chihuahua"{
+            ec{"Chihuahua"}
+        }
+        "America:Denver"{
+            ec{"Denver"}
+        }
+        "America:Edmonton"{
+            ec{"Edmonton"}
+        }
+        "America:Halifax"{
+            ec{"Halifax"}
+        }
+        "America:Hermosillo"{
+            ec{"Hermosillo"}
+        }
+        "America:Indianapolis"{
+            ec{"Indianapolis"}
+        }
+        "America:Los_Angeles"{
+            ec{"Los Angeles"}
+        }
+        "America:Mexico_City"{
+            ec{"Mexico City"}
+        }
+        "America:New_York"{
+            ec{"New York"}
+        }
         "America:North_Dakota:Center"{
             ec{"keskinen North Dakota"}
+        }
+        "America:Phoenix"{
+            ec{"Phoenix"}
+        }
+        "America:Regina"{
+            ec{"Regina"}
+        }
+        "America:Rio_Branco"{
+            ec{"Rio Branco"}
         }
         "America:Sao_Paulo"{
             ec{"São Paulo"}
         }
         "America:St_Johns"{
             ec{"St. Johns"}
+        }
+        "America:Tijuana"{
+            ec{"Tijuana"}
+        }
+        "America:Toronto"{
+            ec{"Toronto"}
+        }
+        "America:Vancouver"{
+            ec{"Vancouver"}
+        }
+        "America:Winnipeg"{
+            ec{"Winnipeg"}
         }
         "Antarctica:DumontDUrville"{
             ec{"Dumont d'Urville"}
@@ -2279,6 +2418,24 @@ fi{
         "Atlantic:Canary"{
             ec{"Kanariansaaret"}
         }
+        "Australia:Adelaide"{
+            ec{"Adelaide"}
+        }
+        "Australia:Brisbane"{
+            ec{"Brisbane"}
+        }
+        "Australia:Darwin"{
+            ec{"Darwin"}
+        }
+        "Australia:Hobart"{
+            ec{"Hobart"}
+        }
+        "Australia:Perth"{
+            ec{"Perth"}
+        }
+        "Australia:Sydney"{
+            ec{"Sydney"}
+        }
         "Europe:Bucharest"{
             ec{"Bukarest"}
         }
@@ -2302,6 +2459,9 @@ fi{
         }
         "Pacific:Easter"{
             ec{"Pääsiäissaari"}
+        }
+        "Pacific:Honolulu"{
+            ec{"Honolulu"}
         }
         "meta:Alaska"{
             ld{"Alaskan kesäaika"}

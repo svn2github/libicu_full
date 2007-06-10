@@ -223,6 +223,7 @@ ar{
         PW{"بالاو"}
         PY{"باراجواي"}
         QA{"قطر"}
+        QU{"الاتحاد الاوروبي"}
         RE{"روينيون"}
         RO{"رومانيا"}
         RU{"روسيا"}
@@ -1790,9 +1791,20 @@ ar{
     Variants{
         NEDIS{"لهجة ناتيسون"}
     }
-    Version{"1.90"}
+    Version{"1.91"}
     calendar{
         buddhist{
+            DateTimePatterns{
+                "v h:mm:ss a",
+                "HH:mm:ss z",
+                "h:mm:ss a",
+                "h:mm a",
+                "EEEE, MMMM d, yyyy G",
+                "MMMM d, yyyy G",
+                "MMM d, yyyy G",
+                "M‏/d‏‏/yyyy",
+                "{1} {0}",
+            }
             eras{
                 abbreviated{
                     "التقويم البوذي",
@@ -1913,6 +1925,15 @@ ar{
                     }
                 }
                 stand-alone{
+                    abbreviated{
+                        "أحد",
+                        "الاثنين",
+                        "الثلاثاء",
+                        "أربعاء",
+                        "خميس",
+                        "جمعة",
+                        "سبت",
+                    }
                     narrow{
                         "ح",
                         "ن",
@@ -1933,6 +1954,15 @@ ar{
             fields{
                 day{
                     dn{"يوم"}
+                    relative{
+                        "-1"{"امس"}
+                        "0"{"اليوم"}
+                        "1"{"غدا"}
+                        "2"{"بعد الغد"}
+                    }
+                }
+                dayperiod{
+                    dn{"النهار"}
                 }
                 era{
                     dn{"العصر"}
@@ -2023,6 +2053,14 @@ ar{
                         "الربع الثاني",
                         "الربع الثالث",
                         "الربع الرابع",
+                    }
+                }
+                stand-alone{
+                    narrow{
+                        "1",
+                        "2",
+                        "3",
+                        "4",
                     }
                 }
             }

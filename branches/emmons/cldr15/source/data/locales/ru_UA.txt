@@ -34,7 +34,7 @@ ru_UA{
     NumberPatterns{
         "#,##0.###",
         "#,##0.00 ¤",
-        "#,##0%",
+        "#,##0 %",
         "#E0",
     }
     Scripts{
@@ -45,7 +45,7 @@ ru_UA{
             buddhist{"Буддийский календарь"}
         }
     }
-    Version{"1.90"}
+    Version{"1.91"}
     calendar{
         gregorian{
             DateTimePatterns{

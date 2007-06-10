@@ -1391,40 +1391,40 @@ en{
         ady{"Adyghe"}
         ae{"Avestan"}
         af{"Afrikaans"}
-        afa{"Other Afro-Asiatic"}
+        afa{"Afro-Asiatic Language"}
         afh{"Afrihili"}
         ain{"Ainu"}
         ak{"Akan"}
         akk{"Akkadian"}
         ale{"Aleut"}
-        alg{"Algonquian Languages"}
+        alg{"Algonquian Language"}
         alt{"Southern Altai"}
         am{"Amharic"}
         an{"Aragonese"}
         ang{"Old English"}
         anp{"Angika"}
-        apa{"Apache Languages"}
+        apa{"Apache Language"}
         ar{"Arabic"}
         arc{"Aramaic"}
         arn{"Araucanian"}
         arp{"Arapaho"}
-        art{"Other Artificial"}
+        art{"Artificial Language"}
         arw{"Arawak"}
         as{"Assamese"}
         ast{"Asturian"}
-        ath{"Athapascan Languages"}
-        aus{"Australian Languages"}
+        ath{"Athapascan Language"}
+        aus{"Australian Language"}
         av{"Avaric"}
         awa{"Awadhi"}
         ay{"Aymara"}
         az{"Azerbaijani"}
         ba{"Bashkir"}
         bad{"Banda"}
-        bai{"Bamileke Languages"}
+        bai{"Bamileke Language"}
         bal{"Baluchi"}
         ban{"Balinese"}
         bas{"Basa"}
-        bat{"Other Baltic"}
+        bat{"Baltic Language"}
         be{"Belarusian"}
         bej{"Beja"}
         bem{"Bemba"}
@@ -1449,13 +1449,13 @@ en{
         byn{"Blin"}
         ca{"Catalan"}
         cad{"Caddo"}
-        cai{"Other Central American Indian"}
+        cai{"Central American Indian Language"}
         car{"Carib"}
-        cau{"Other Caucasian"}
+        cau{"Caucasian Language"}
         cch{"Atsam"}
         ce{"Chechen"}
         ceb{"Cebuano"}
-        cel{"Other Celtic"}
+        cel{"Celtic Language"}
         ch{"Chamorro"}
         chb{"Chibcha"}
         chg{"Chagatai"}
@@ -1466,19 +1466,19 @@ en{
         chp{"Chipewyan"}
         chr{"Cherokee"}
         chy{"Cheyenne"}
-        cmc{"Chamic Languages"}
+        cmc{"Chamic Language"}
         co{"Corsican"}
         cop{"Coptic"}
-        cpe{"Other English-based Creoles and Pidgins"}
-        cpf{"Other French-based Creoles and Pidgins"}
-        cpp{"Other Portuguese-based Creoles and Pidgins"}
+        cpe{"English-based Creole or Pidgin"}
+        cpf{"French-based Creole or Pidgin"}
+        cpp{"Portuguese-based Creole or Pidgin"}
         cr{"Cree"}
         crh{"Crimean Turkish"}
-        crp{"Other Creoles and Pidgins"}
+        crp{"Creole or Pidgin"}
         cs{"Czech"}
         csb{"Kashubian"}
         cu{"Church Slavic"}
-        cus{"Other Cushitic"}
+        cus{"Cushitic Language"}
         cv{"Chuvash"}
         cy{"Welsh"}
         da{"Danish"}
@@ -1493,7 +1493,7 @@ en{
         dgr{"Dogrib"}
         din{"Dinka"}
         doi{"Dogri"}
-        dra{"Other Dravidian"}
+        dra{"Dravidian Language"}
         dsb{"Lower Sorbian"}
         dua{"Duala"}
         dum{"Middle Dutch"}
@@ -1525,7 +1525,7 @@ en{
         ff{"Fulah"}
         fi{"Finnish"}
         fil{"Filipino"}
-        fiu{"Other Finno - Ugrian"}
+        fiu{"Finno-Ugrian Language"}
         fj{"Fijian"}
         fo{"Faroese"}
         fon{"Fon"}
@@ -1543,7 +1543,7 @@ en{
         gay{"Gayo"}
         gba{"Gbaya"}
         gd{"Scottish Gaelic"}
-        gem{"Other Germanic"}
+        gem{"Germanic Language"}
         gez{"Geez"}
         gil{"Gilbertese"}
         gl{"Galician"}
@@ -1585,12 +1585,12 @@ en{
         ijo{"Ijo"}
         ik{"Inupiaq"}
         ilo{"Iloko"}
-        inc{"Other Indic"}
-        ine{"Other Indo-European"}
+        inc{"Indic Language"}
+        ine{"Indo-European Language"}
         inh{"Ingush"}
         io{"Ido"}
-        ira{"Other Iranian"}
-        iro{"Iroquoian languages"}
+        ira{"Iranian Language"}
+        iro{"Iroquoian Language"}
         is{"Icelandic"}
         it{"Italian"}
         iu{"Inuktitut"}
@@ -1612,7 +1612,7 @@ en{
         kfo{"Koro"}
         kg{"Kongo"}
         kha{"Khasi"}
-        khi{"Other Khoisan"}
+        khi{"Khoisan Language"}
         kho{"Khotanese"}
         ki{"Kikuyu"}
         kj{"Kuanyama"}
@@ -1673,31 +1673,31 @@ en{
         mi{"Maori"}
         mic{"Micmac"}
         min{"Minangkabau"}
-        mis{"Miscellaneous Languages"}
+        mis{"Miscellaneous Language"}
         mk{"Macedonian"}
-        mkh{"Other Mon-Khmer"}
+        mkh{"Mon-Khmer Language"}
         ml{"Malayalam"}
         mn{"Mongolian"}
         mnc{"Manchu"}
         mni{"Manipuri"}
-        mno{"Manobo Languages"}
+        mno{"Manobo Language"}
         mo{"Moldavian"}
         moh{"Mohawk"}
         mos{"Mossi"}
         mr{"Marathi"}
         ms{"Malay"}
         mt{"Maltese"}
-        mul{"Multiple Languages"}
-        mun{"Munda Languages"}
+        mul{"Multiple Language"}
+        mun{"Munda Language"}
         mus{"Creek"}
         mwl{"Mirandese"}
         mwr{"Marwari"}
         my{"Burmese"}
-        myn{"Mayan languages"}
+        myn{"Mayan Language"}
         myv{"Erzya"}
         na{"Nauru"}
         nah{"Nahuatl"}
-        nai{"Other North American Indian"}
+        nai{"North American Indian Language"}
         nap{"Neapolitan"}
         nb{"Norwegian Bokmål"}
         nd{"North Ndebele"}
@@ -1706,7 +1706,7 @@ en{
         new{"Newari"}
         ng{"Ndonga"}
         nia{"Nias"}
-        nic{"Other Niger - Kordofanian"}
+        nic{"Niger-Kordofanian Language"}
         niu{"Niuean"}
         nl{"Dutch"}
         nl_BE{"Flemish"}
@@ -1717,7 +1717,7 @@ en{
         nqo{"N’Ko"}
         nr{"South Ndebele"}
         nso{"Northern Sotho"}
-        nub{"Nubian Languages"}
+        nub{"Nubian Language"}
         nv{"Navajo"}
         nwc{"Classical Newari"}
         ny{"Nyanja"}
@@ -1732,21 +1732,21 @@ en{
         os{"Ossetic"}
         osa{"Osage"}
         ota{"Ottoman Turkish"}
-        oto{"Otomian Languages"}
+        oto{"Otomian Language"}
         pa{"Punjabi"}
-        paa{"Other Papuan"}
+        paa{"Papuan Language"}
         pag{"Pangasinan"}
         pal{"Pahlavi"}
         pam{"Pampanga"}
         pap{"Papiamento"}
         pau{"Palauan"}
         peo{"Old Persian"}
-        phi{"Other Philippine"}
+        phi{"Philippine Language"}
         phn{"Phoenician"}
         pi{"Pali"}
         pl{"Polish"}
         pon{"Pohnpeian"}
-        pra{"Prakrit Languages"}
+        pra{"Prakrit Language"}
         pro{"Old Provençal"}
         ps{"Pashto"}
         pt{"Portuguese"}
@@ -1759,7 +1759,7 @@ en{
         rm{"Rhaeto-Romance"}
         rn{"Rundi"}
         ro{"Romanian"}
-        roa{"Other Romance"}
+        roa{"Romance Language"}
         rom{"Romany"}
         root{"Root"}
         ru{"Russian"}
@@ -1768,8 +1768,8 @@ en{
         sa{"Sanskrit"}
         sad{"Sandawe"}
         sah{"Yakut"}
-        sai{"Other South American Indian"}
-        sal{"Salishan languages"}
+        sai{"South American Indian Language"}
+        sal{"Salishan Language"}
         sam{"Samaritan Aramaic"}
         sas{"Sasak"}
         sat{"Santali"}
@@ -1779,22 +1779,22 @@ en{
         sd{"Sindhi"}
         se{"Northern Sami"}
         sel{"Selkup"}
-        sem{"Other Semitic"}
+        sem{"Semitic Language"}
         sg{"Sango"}
         sga{"Old Irish"}
-        sgn{"Sign Languages"}
+        sgn{"Sign Language"}
         sh{"Serbo-Croatian"}
         shn{"Shan"}
         si{"Sinhalese"}
         sid{"Sidamo"}
-        sio{"Siouan Languages"}
-        sit{"Other Sino-Tibetan"}
+        sio{"Siouan Language"}
+        sit{"Sino-Tibetan Language"}
         sk{"Slovak"}
         sl{"Slovenian"}
-        sla{"Other Slavic"}
+        sla{"Slavic Language"}
         sm{"Samoan"}
         sma{"Southern Sami"}
-        smi{"Other Sami languages"}
+        smi{"Sami Language"}
         smj{"Lule Sami"}
         smn{"Inari Sami"}
         sms{"Skolt Sami"}
@@ -1808,7 +1808,7 @@ en{
         srn{"Sranan Tongo"}
         srr{"Serer"}
         ss{"Swati"}
-        ssa{"Other Nilo-Saharan"}
+        ssa{"Nilo-Saharan Language"}
         st{"Southern Sotho"}
         su{"Sundanese"}
         suk{"Sukuma"}
@@ -1818,7 +1818,7 @@ en{
         sw{"Swahili"}
         syr{"Syriac"}
         ta{"Tamil"}
-        tai{"Other Tai"}
+        tai{"Tai Language"}
         te{"Telugu"}
         tem{"Timne"}
         ter{"Tereno"}
@@ -1843,8 +1843,8 @@ en{
         tsi{"Tsimshian"}
         tt{"Tatar"}
         tum{"Tumbuka"}
-        tup{"Tupi languages"}
-        tut{"Other Altaic"}
+        tup{"Tupi Language"}
+        tut{"Altaic Language"}
         tvl{"Tuvalu"}
         tw{"Twi"}
         ty{"Tahitian"}
@@ -1863,11 +1863,11 @@ en{
         vo{"Volapük"}
         vot{"Votic"}
         wa{"Walloon"}
-        wak{"Wakashan Languages"}
+        wak{"Wakashan Language"}
         wal{"Walamo"}
         war{"Waray"}
         was{"Washo"}
-        wen{"Sorbian Languages"}
+        wen{"Sorbian Language"}
         wo{"Wolof"}
         xal{"Kalmyk"}
         xh{"Xhosa"}
@@ -1875,7 +1875,7 @@ en{
         yap{"Yapese"}
         yi{"Yiddish"}
         yo{"Yoruba"}
-        ypk{"Yupik Languages"}
+        ypk{"Yupik Language"}
         za{"Zhuang"}
         zap{"Zapotec"}
         zen{"Zenaga"}
@@ -2057,7 +2057,7 @@ en{
         SCOUSE{"Scouse"}
         XIANG{"Xiang or Hunanese"}
     }
-    Version{"1.90"}
+    Version{"1.91"}
     calendar{
         gregorian{
             DateTimePatterns{
@@ -2206,6 +2206,9 @@ en{
         "America:St_Johns"{
             ec{"St. John’s"}
         }
+        "Antarctica:DumontDUrville"{
+            ec{"Dumont-d'Urville"}
+        }
         "Europe:Dublin"{
             ec{"Dublin"}
             ld{"Irish Summer Time"}
@@ -2235,7 +2238,9 @@ en{
             ss{"EAT"}
         }
         "meta:Africa_Southern"{
+            lg{"South Africa Time"}
             ls{"South Africa Standard Time"}
+            sg{"SAT"}
             ss{"SAST"}
         }
         "meta:Africa_Western"{
@@ -2260,9 +2265,17 @@ en{
         }
         "meta:Alaska_Hawaii"{
             ld{"Alaska-Hawaii Daylight Time"}
+            lg{"Alaska-Hawaii Time"}
             ls{"Alaska-Hawaii Standard Time"}
             sd{"AHDT"}
+            sg{"AHT"}
             ss{"AHST"}
+        }
+        "meta:Almaty"{
+            ld{"Almaty Summer Time"}
+            ls{"Almaty Time"}
+            sd{"ALMST"}
+            ss{"ALMT"}
         }
         "meta:Amazon"{
             ld{"Amazon Summer Time"}
@@ -2325,6 +2338,7 @@ en{
             lg{"Arabian Time"}
             ls{"Arabian Standard Time"}
             sd{"ADT (Arabian)"}
+            sg{"AT (Arabian)"}
             ss{"AST (Arabian)"}
         }
         "meta:Argentina"{
@@ -2362,11 +2376,14 @@ en{
             lg{"Central Australia Time"}
             ls{"Australian Central Standard Time"}
             sd{"ACDT"}
+            sg{"ACT"}
             ss{"ACST"}
         }
         "meta:Australia_CentralWestern"{
+            ld{"Australian Central Western Daylight Time"}
             lg{"Australian Central Western Time"}
             ls{"Australian Central Western Standard Time"}
+            sd{"ACWDT"}
             sg{"ACWT"}
             ss{"ACWST"}
         }
@@ -2375,6 +2392,7 @@ en{
             lg{"Eastern Australia Time"}
             ls{"Australian Eastern Standard Time"}
             sd{"AEDT"}
+            sg{"AET"}
             ss{"AEST"}
         }
         "meta:Australia_Western"{
@@ -2382,7 +2400,14 @@ en{
             lg{"Western Australia Time"}
             ls{"Australian Western Standard Time"}
             sd{"AWDT"}
+            sg{"AWT"}
             ss{"AWST"}
+        }
+        "meta:Azerbaijan"{
+            ld{"Azerbaijan Summer Time"}
+            ls{"Azerbaijan Time"}
+            sd{"AZST"}
+            ss{"AZT"}
         }
         "meta:Azores"{
             ld{"Azores Summer Time"}
@@ -2405,6 +2430,7 @@ en{
             lg{"Bering Time"}
             ls{"Bering Standard Time"}
             sd{"BDT (Bering)"}
+            sg{"BT (Bering)"}
             ss{"BST (Bering)"}
         }
         "meta:Bhutan"{
@@ -2438,7 +2464,9 @@ en{
             ss{"CVT"}
         }
         "meta:Chamorro"{
+            lg{"Chamorro Time"}
             ls{"Chamorro Standard Time"}
+            sg{"ChT"}
             ss{"ChST"}
         }
         "meta:Changbai"{
@@ -2459,8 +2487,10 @@ en{
         }
         "meta:China"{
             ld{"China Daylight Time"}
+            lg{"China Time"}
             ls{"China Standard Time"}
             sd{"CDT (China)"}
+            sg{"CT (China)"}
             ss{"CST (China)"}
         }
         "meta:Choibalsan"{
@@ -2621,7 +2651,9 @@ en{
             ss{"GST (Guam)"}
         }
         "meta:Gulf"{
+            lg{"Gulf Time"}
             ls{"Gulf Standard Time"}
+            sg{"GT"}
             ss{"GST"}
         }
         "meta:Guyana"{
@@ -2664,6 +2696,10 @@ en{
             ls{"Indian Ocean Time"}
             ss{"IOT"}
         }
+        "meta:Indochina"{
+            ls{"Indochina Time"}
+            ss{"ICT"}
+        }
         "meta:Indonesia_Central"{
             ls{"Central Indonesia Time"}
             ss{"CIT"}
@@ -2690,14 +2726,17 @@ en{
         }
         "meta:Israel"{
             ld{"Israel Daylight Time"}
+            lg{"Israel Time"}
             ls{"Israel Standard Time"}
             sd{"IDT"}
             ss{"IST (Israel)"}
         }
         "meta:Japan"{
             ld{"Japan Daylight Time"}
+            lg{"Japan Time"}
             ls{"Japan Standard Time"}
             sd{"JDT"}
+            sg{"JT"}
             ss{"JST"}
         }
         "meta:Kamchatka"{
@@ -2715,10 +2754,12 @@ en{
             ss{"KAST"}
         }
         "meta:Kazakhstan_Eastern"{
+            lg{"East Kazakhstan Time"}
             ls{"East Kazakhstan Standard Time"}
             ss{"EKST"}
         }
         "meta:Kazakhstan_Western"{
+            lg{"West Kazakhstan Time"}
             ls{"West Kazakhstan Standard Time"}
             ss{"WKST"}
         }
@@ -2733,6 +2774,7 @@ en{
             lg{"Korean Time"}
             ls{"Korean Standard Time"}
             sd{"KDT"}
+            sg{"KT"}
             ss{"KST"}
         }
         "meta:Kosrae"{
@@ -2775,6 +2817,8 @@ en{
             ld{"Lord Howe Daylight Time"}
             lg{"Lord Howe Time"}
             ls{"Lord Howe Standard Time"}
+            sd{"LHDT"}
+            sg{"LHT"}
             ss{"LHST"}
         }
         "meta:Macau"{
@@ -2823,6 +2867,13 @@ en{
             sd{"ULAST"}
             ss{"ULAT"}
         }
+        "meta:Moscow"{
+            ld{"Moscow Summer Time"}
+            lg{"Moscow Time"}
+            ls{"Moscow Standard Time"}
+            sd{"MSKS"}
+            ss{"MSK"}
+        }
         "meta:Myanmar"{
             ls{"Myanmar Time"}
             ss{"MMT"}
@@ -2846,6 +2897,7 @@ en{
             lg{"New Zealand Time"}
             ls{"New Zealand Standard Time"}
             sd{"NZDT"}
+            sg{"NZT"}
             ss{"NZST"}
         }
         "meta:Newfoundland"{
@@ -2927,6 +2979,7 @@ en{
             lg{"Pierre and Miquelon Time"}
             ls{"Pierre and Miquelon Standard Time"}
             sd{"PMDT"}
+            sg{"PMT"}
             ss{"PMST"}
         }
         "meta:Pitcairn"{

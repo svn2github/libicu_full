@@ -376,12 +376,6 @@ sl{
         "NaN",
         "+",
     }
-    NumberPatterns{
-        "#,##0.###",
-        "¤ #,##0.00",
-        "#,##0%",
-        "#E0",
-    }
     Scripts{
         Latn{"Latinski"}
     }
@@ -403,7 +397,7 @@ sl{
             traditional{"Tradicionano zlaganje"}
         }
     }
-    Version{"1.90"}
+    Version{"1.91"}
     calendar{
         gregorian{
             DateTimePatterns{
@@ -453,6 +447,50 @@ sl{
             eras{
                 abbreviated{
                     "pr.n.š.",
+                }
+            }
+            fields{
+                day{
+                    dn{"Dan"}
+                    relative{
+                        "-1"{"Včeraj"}
+                        "-2"{"predvčerajšnjim"}
+                        "-3"{"pred tremi dnevi"}
+                        "0"{"Danes"}
+                        "1"{"Jutri"}
+                        "2"{"pojutrišnjem"}
+                        "3"{"čez tri dni"}
+                    }
+                }
+                dayperiod{
+                    dn{"Čas dneva"}
+                }
+                era{
+                    dn{"Doba"}
+                }
+                hour{
+                    dn{"Ura"}
+                }
+                minute{
+                    dn{"Minuta"}
+                }
+                month{
+                    dn{"Mesec"}
+                }
+                second{
+                    dn{"Sekunda"}
+                }
+                week{
+                    dn{"Teden"}
+                }
+                weekday{
+                    dn{"Dan v tednu"}
+                }
+                year{
+                    dn{"Leto"}
+                }
+                zone{
+                    dn{"Območje"}
                 }
             }
             monthNames{

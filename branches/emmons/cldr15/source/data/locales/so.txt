@@ -134,7 +134,7 @@ so{
         "#,##0%",
         "#E0",
     }
-    Version{"1.90"}
+    Version{"1.91"}
     calendar{
         gregorian{
             AmPmMarkers{

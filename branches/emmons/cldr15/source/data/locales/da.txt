@@ -14,6 +14,7 @@ da{
     Countries{
         001{"Verden"}
         002{"Afrika"}
+        003{"Nordamerika"}
         005{"Sydamerika"}
         009{"Oceanien"}
         011{"Vestafrika"}
@@ -139,6 +140,7 @@ da{
         ID{"Indonesien"}
         IE{"Irland"}
         IL{"Israel"}
+        IM{"Isle of Man"}
         IN{"Indien"}
         IO{"Det Britiske Territorium i Det Indiske Ocean"}
         IQ{"Irak"}
@@ -173,6 +175,7 @@ da{
         MA{"Marokko"}
         MC{"Monaco"}
         MD{"Republikken Moldova"}
+        ME{"Montenegro"}
         MG{"Madagaskar"}
         MH{"Marshalløerne"}
         MK{"Republikken Makedonien"}
@@ -220,8 +223,10 @@ da{
         PY{"Paraguay"}
         QA{"Qatar"}
         QO{"Ydre Oceanien"}
+        QU{"EU"}
         RE{"Reunion"}
         RO{"Rumænien"}
+        RS{"Serbien"}
         RU{"Rusland"}
         RW{"Rwanda"}
         SA{"Saudi-Arabien"}
@@ -418,7 +423,7 @@ da{
             "Brasiliansk cruzeiro (1990-1993)",
         }
         BRL{
-            "R$",
+            "BRL",
             "Brasiliansk real",
         }
         BRN{
@@ -558,7 +563,7 @@ da{
             "Etiopisk birr",
         }
         EUR{
-            "€",
+            "EUR",
             "Euro",
         }
         FIM{
@@ -578,7 +583,7 @@ da{
             "Fransk franc",
         }
         GBP{
-            "UK£",
+            "GBP",
             "Britisk pund",
         }
         GEK{
@@ -698,7 +703,7 @@ da{
             "Jordansk dinar",
         }
         JPY{
-            "JP¥",
+            "JPY",
             "Japansk yen",
         }
         KES{
@@ -1102,7 +1107,7 @@ da{
             "Ugandisk shilling",
         }
         USD{
-            "US$",
+            "USD",
             "Amerikanske dollar",
         }
         USN{
@@ -1280,6 +1285,7 @@ da{
         ca{"katalansk"}
         cad{"caddo"}
         car{"caribisk"}
+        cch{"atsam"}
         ce{"tjetjensk"}
         ceb{"cebuano"}
         ch{"chamorro"}
@@ -1339,8 +1345,11 @@ da{
         fo{"færøsk"}
         fon{"fon"}
         fr{"fransk"}
+        fr_CA{"canadisk fransk"}
         frm{"middelfransk"}
         fro{"oldfransk"}
+        frr{"nordfrisisk"}
+        frs{"østfrisisk"}
         fur{"friulian"}
         fy{"frisisk"}
         ga{"irsk"}
@@ -1359,6 +1368,7 @@ da{
         got{"gotisk"}
         grb{"grebo"}
         grc{"oldgræsk"}
+        gsw{"schweizertysk"}
         gu{"gujaratisk"}
         gv{"manx"}
         ha{"hausa"}
@@ -1405,10 +1415,13 @@ da{
         kaa{"karakalpakisk"}
         kab{"kabyle"}
         kac{"kachin"}
+        kaj{"jju"}
         kam{"kamba"}
         kar{"karen"}
         kaw{"kawi"}
         kbd{"kabardian"}
+        kcg{"tyap"}
+        kfo{"koro"}
         kg{"kongo"}
         kha{"khasi"}
         khi{"khoisan (øvrige)"}
@@ -1426,6 +1439,7 @@ da{
         kpe{"kpelle"}
         kr{"kanuri"}
         krc{"Karachay-Balkar"}
+        krl{"karelsk"}
         kro{"kru"}
         kru{"kurukh"}
         ks{"kashmiri"}
@@ -1502,6 +1516,7 @@ da{
         nic{"Niger-Congo sprog (øvrige)"}
         niu{"niuean"}
         nl{"hollandsk"}
+        nl_BE{"flamsk"}
         nn{"nynorsk"}
         no{"norsk"}
         nog{"nogai"}
@@ -1663,6 +1678,7 @@ da{
         znd{"zande"}
         zu{"zulu"}
         zun{"zuni"}
+        zxx{"intet sprogligt indhold"}
     }
     LocaleScript{
         "Latn",
@@ -1696,6 +1712,7 @@ da{
         Blis{"blissymboler"}
         Brai{"blindskrift"}
         Cans{"oprindelige canadiske symboler"}
+        Cari{"kariansk"}
         Cher{"cherokee"}
         Copt{"koptisk"}
         Cprt{"cypriotisk"}
@@ -1719,6 +1736,7 @@ da{
         Hung{"oldungarsk"}
         Ital{"Olditalisk"}
         Java{"javanesisk"}
+        Jpan{"japansk"}
         Kana{"katakana"}
         Khmr{"khmerisk"}
         Knda{"kannada"}
@@ -1728,6 +1746,8 @@ da{
         Lepc{"lepcha"}
         Lina{"lineær A"}
         Linb{"lineær B"}
+        Lyci{"lykisk"}
+        Lydi{"lydisk"}
         Mand{"mandaisk"}
         Mero{"meroitisk"}
         Mong{"mongolsk"}
@@ -1737,8 +1757,10 @@ da{
         Plrd{"pollard-tegn"}
         Qaai{"arvet"}
         Runr{"Runer"}
+        Sgnw{"tegnskrift"}
         Shaw{"shavisk"}
         Sinh{"Singalesisk"}
+        Sund{"sundanesisk"}
         Syrc{"Syrisk"}
         Syre{"syriakisk, estrangelovariant"}
         Syrn{"østsyriakisk"}
@@ -1769,8 +1791,21 @@ da{
             traditional{"Traditionel sorteringsrækkefølge"}
         }
     }
-    Version{"1.90"}
+    Version{"1.91"}
     calendar{
+        buddhist{
+            DateTimePatterns{
+                "HH.mm.ss v",
+                "HH:mm:ss z",
+                "HH.mm.ss",
+                "HH.mm",
+                "EEEE, MMMM d, yyyy G",
+                "MMMM d, yyyy G",
+                "MMM d, yyyy G",
+                "M/d/yyyy",
+                "{1} {0}",
+            }
+        }
         gregorian{
             DateTimePatterns{
                 "HH.mm.ss v",
@@ -1784,6 +1819,7 @@ da{
                 "{1} {0}",
             }
             availableFormats{
+                MMMMd{"d. MMMM"}
                 MMdd{"dd/MM"}
                 mmss{"mm.ss"}
             }
@@ -1832,9 +1868,18 @@ da{
             fields{
                 day{
                     dn{"dag"}
+                    relative{
+                        "-1"{"i går"}
+                        "-2"{"i forgårs"}
+                        "-3"{"for tre dage siden"}
+                        "0"{"i dag"}
+                        "1"{"i morgen"}
+                        "2"{"i overmorgen"}
+                        "3"{"om tre dage"}
+                    }
                 }
                 dayperiod{
-                    dn{"dagtid"}
+                    dn{"n/a"}
                 }
                 era{
                     dn{"æra"}
@@ -1896,6 +1941,20 @@ da{
                     }
                 }
                 stand-alone{
+                    abbreviated{
+                        "jan",
+                        "februar",
+                        "mar.",
+                        "apr.",
+                        "maj",
+                        "jun",
+                        "jul.",
+                        "aug.",
+                        "september",
+                        "oktober",
+                        "nov.",
+                        "december",
+                    }
                     narrow{
                         "J",
                         "F",
@@ -1925,6 +1984,20 @@ da{
                         "2. kvartal",
                         "3. kvartal",
                         "4. kvartal",
+                    }
+                }
+                stand-alone{
+                    abbreviated{
+                        "1. kvt. ",
+                        "2. kvartal",
+                        "3. kvt.",
+                        "4. kvartal",
+                    }
+                    narrow{
+                        "1",
+                        "2",
+                        "3",
+                        "4",
                     }
                 }
             }
@@ -2017,18 +2090,32 @@ da{
         }
         "meta:Europe_Central"{
             ld{"mellemeuropæisk sommertid"}
+            lg{"mellemeuropæisk tid"}
             ls{"mellemeuropæisk normaltid"}
             sd{"CEST"}
+            sg{"CET"}
             ss{"CET"}
         }
         "meta:Europe_Eastern"{
             ld{"østeuropæisk sommertid"}
+            lg{"østeuropæisk tid"}
             ls{"østeuropæisk normaltid"}
             sd{"EEST"}
+            sg{"EET"}
             ss{"EET"}
         }
+        "meta:Europe_Western"{
+            ld{"vesteuropæisk sommertid"}
+            lg{"vesteuropæisk tid"}
+            ls{"vesteuropæisk normaltid"}
+            sg{"WET"}
+        }
         "meta:GMT"{
+            ld{"GMT-sommertid"}
+            lg{"verdenstid"}
             ls{"Verdenstid"}
+            sd{"GMT"}
+            sg{"GMT"}
             ss{"GMT"}
         }
         "meta:Hawaii"{

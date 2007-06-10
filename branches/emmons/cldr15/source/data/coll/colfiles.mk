@@ -69,17 +69,17 @@ COLLATION_EMPTY_SOURCE = ar_AE.txt ar_BH.txt ar_DZ.txt ar_EG.txt\
 
 # Ordinary resources
 COLLATION_SOURCE = $(COLLATION_EMPTY_SOURCE) ar.txt as.txt be.txt bg.txt\
- bn.txt bo.txt ca.txt cs.txt da.txt\
- de.txt dz.txt el.txt en.txt en_BE.txt\
- eo.txt es.txt et.txt fa.txt fa_AF.txt\
- fi.txt fo.txt fr.txt gu.txt haw.txt\
- he.txt hi.txt hr.txt hu.txt is.txt\
- it.txt ja.txt kk.txt kl.txt km.txt\
- kn.txt ko.txt kok.txt lt.txt lv.txt\
- mk.txt ml.txt mr.txt mt.txt nb.txt\
- nn.txt om.txt or.txt pa.txt pl.txt\
- ps.txt ro.txt ru.txt sa.txt sk.txt\
- sl.txt sq.txt sr.txt sv.txt ta.txt\
- te.txt th.txt tr.txt uk.txt vi.txt\
- zh.txt zh_Hant.txt
+ bn.txt ca.txt cs.txt da.txt de.txt\
+ dz.txt el.txt en.txt en_BE.txt eo.txt\
+ es.txt et.txt fa.txt fa_AF.txt fi.txt\
+ fo.txt fr.txt gu.txt haw.txt he.txt\
+ hi.txt hr.txt hu.txt is.txt it.txt\
+ ja.txt kk.txt kl.txt km.txt kn.txt\
+ ko.txt kok.txt lt.txt lv.txt mk.txt\
+ ml.txt mr.txt mt.txt nb.txt nn.txt\
+ om.txt or.txt pa.txt pl.txt ps.txt\
+ ro.txt ru.txt sa.txt sk.txt sl.txt\
+ sq.txt sr.txt sv.txt ta.txt te.txt\
+ th.txt tr.txt uk.txt vi.txt zh.txt\
+ zh_Hant.txt
 

@@ -1398,7 +1398,7 @@ is{
             traditional{"Hefðbundin"}
         }
     }
-    Version{"1.90"}
+    Version{"1.91"}
     calendar{
         gregorian{
             DateTimePatterns{
@@ -1443,6 +1443,11 @@ is{
                         "f",
                         "l",
                     }
+                }
+            }
+            fields{
+                day{
+                    dn{"dagur"}
                 }
             }
             monthNames{
@@ -1509,6 +1514,18 @@ is{
                     }
                 }
             }
+        }
+    }
+    zoneStrings{
+        "meta:Europe_Central"{
+            sd{"CEST"}
+            sg{"CET"}
+            ss{"CET"}
+        }
+        "meta:Europe_Western"{
+            sd{"WEST"}
+            sg{"WET"}
+            ss{"WET"}
         }
     }
 }

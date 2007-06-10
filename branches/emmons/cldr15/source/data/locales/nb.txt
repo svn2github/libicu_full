@@ -14,6 +14,7 @@ nb{
     Countries{
         001{"verden"}
         002{"Afrika"}
+        003{"Nord-Amerika"}
         005{"Sør-Amerika"}
         009{"Oseania"}
         011{"Vest-Afrika"}
@@ -121,6 +122,7 @@ nb{
         GD{"Grenada"}
         GE{"Georgia"}
         GF{"Fransk Guyana"}
+        GG{"Guernsey"}
         GH{"Ghana"}
         GI{"Gibraltar"}
         GL{"Grønland"}
@@ -143,12 +145,14 @@ nb{
         ID{"Indonesia"}
         IE{"Irland"}
         IL{"Israel"}
+        IM{"Man"}
         IN{"India"}
         IO{"Britiske områder i det indiske hav"}
         IQ{"Irak"}
         IR{"Iran"}
         IS{"Island"}
         IT{"Italia"}
+        JE{"Jersey"}
         JM{"Jamaica"}
         JO{"Jordan"}
         JP{"Japan"}
@@ -177,6 +181,7 @@ nb{
         MA{"Marokko"}
         MC{"Monaco"}
         MD{"Moldova"}
+        ME{"Montenegro"}
         MG{"Madagaskar"}
         MH{"Marshalløyene"}
         MK{"Makedonia"}
@@ -224,6 +229,7 @@ nb{
         PY{"Paraguay"}
         QA{"Qatar"}
         QO{"avsidesliggende Oceania"}
+        QU{"Europeiske union"}
         RE{"Reunion"}
         RO{"Romania"}
         RU{"Den russiske føderasjon"}
@@ -357,6 +363,10 @@ nb{
             "AZM",
             "aserbajdsjanske manat (1993-2006)",
         }
+        AZN{
+            "AZN",
+            "AZN",
+        }
         BAD{
             "BAD",
             "bosnisk-hercegovinske dinarer",
@@ -434,7 +444,7 @@ nb{
             "brasilianske cruzeiro (1990-1993)",
         }
         BRL{
-            "R$",
+            "BRL",
             "brasilianske realer",
         }
         BRN{
@@ -581,9 +591,17 @@ nb{
             "EGP",
             "egyptiske pund",
         }
+        EQE{
+            "EQE",
+            "ekwele",
+        }
         ERN{
             "ERN",
             "eritreiske nakfa",
+        }
+        ESA{
+            "ESA",
+            "ESA",
         }
         ESB{
             "ESB",
@@ -598,7 +616,7 @@ nb{
             "etiopiske birr",
         }
         EUR{
-            "€",
+            "EUR",
             "euro",
         }
         FIM{
@@ -618,7 +636,7 @@ nb{
             "franske franc",
         }
         GBP{
-            "UK£",
+            "GBP",
             "britiske pund sterling",
         }
         GEK{
@@ -714,7 +732,7 @@ nb{
             "israelske nye shekler",
         }
         INR{
-            "=0#Rs.|1#Re.|1<Rs.",
+            "INR",
             "indiske rupier",
         }
         IQD{
@@ -730,7 +748,7 @@ nb{
             "islandske kronar",
         }
         ITL{
-            "IT₤",
+            "ITL",
             "italienske lire",
         }
         JMD{
@@ -742,7 +760,7 @@ nb{
             "jordanske dinarer",
         }
         JPY{
-            "JP¥",
+            "JPY",
             "japanske yen",
         }
         KES{
@@ -925,6 +943,10 @@ nb{
             "MZM",
             "gamle mosambikiske metical",
         }
+        MZN{
+            "MZN",
+            "mosambikiske metical",
+        }
         NAD{
             "NAD",
             "namibiske dollar",
@@ -1015,6 +1037,10 @@ nb{
         }
         ROL{
             "ROL",
+            "rumenske leu",
+        }
+        RON{
+            "RON",
             "rumenske leu",
         }
         RUB{
@@ -1170,7 +1196,7 @@ nb{
             "ugandiske shilling",
         }
         USD{
-            "US$",
+            "USD",
             "amerikanske dollar",
         }
         USN{
@@ -1434,6 +1460,8 @@ nb{
         dar{"dargwa"}
         day{"dayak"}
         de{"tysk"}
+        de_AT{"østerriksk tysk"}
+        de_CH{"sveitsisk høytysk"}
         del{"delaware"}
         den{"slavisk"}
         dgr{"dogrib"}
@@ -1453,9 +1481,15 @@ nb{
         el{"gresk"}
         elx{"elamittisk"}
         en{"engelsk"}
+        en_AU{"australsk engelsk"}
+        en_CA{"canadisk engelsk"}
+        en_GB{"britisk engelsk"}
+        en_US{"amerikank engelsk"}
         enm{"mellomengelsk"}
         eo{"esperanto"}
         es{"spansk"}
+        es_419{"latinamerikansk spansk"}
+        es_ES{"iberisk spansk"}
         et{"estisk"}
         eu{"baskisk"}
         ewo{"ewondo"}
@@ -1470,6 +1504,8 @@ nb{
         fo{"færøysk"}
         fon{"fon"}
         fr{"fransk"}
+        fr_CA{"canadisk fransk"}
+        fr_CH{"sveitsisk fransk"}
         frm{"mellomfransk"}
         fro{"gammelfransk"}
         frr{"nordfrisisk"}
@@ -1541,10 +1577,12 @@ nb{
         kaa{"karakalpakisk"}
         kab{"kabylsk"}
         kac{"kachin"}
+        kaj{"jju"}
         kam{"kamba"}
         kar{"karensk"}
         kaw{"kawi"}
         kbd{"kabardisk"}
+        kfo{"koro"}
         kg{"kikongo"}
         kha{"khasi"}
         khi{"annet khoisanspråk"}
@@ -1643,6 +1681,7 @@ nb{
         nic{"annet niger-kordofiansk språk"}
         niu{"niueansk"}
         nl{"nederlandsk"}
+        nl_BE{"flamsk"}
         nn{"norsk nynorsk"}
         no{"norsk"}
         nog{"nogai"}
@@ -1682,6 +1721,8 @@ nb{
         pro{"gammelprovençalsk"}
         ps{"pashto"}
         pt{"portugisisk"}
+        pt_BR{"brasiliansk portugisisk"}
+        pt_PT{"iberisk portugisisk"}
         qu{"quechua"}
         raj{"rajasthani"}
         rap{"rapanui"}
@@ -1810,10 +1851,13 @@ nb{
         zap{"zapotec"}
         zen{"zenaga"}
         zh{"kinesisk"}
+        zh_Hans{"forenklet kinesisk"}
+        zh_Hant{"tradisjonell kinesisk"}
         znd{"zande"}
         zu{"zulu"}
         zun{"zuni"}
         zxx{"uten språklig innhold"}
+        zza{"zaza"}
     }
     LocaleScript{
         "Latn",
@@ -1851,6 +1895,7 @@ nb{
         Bugi{"buginesisk"}
         Buhd{"buhid"}
         Cans{"felles kanadiske urspråksstavelser"}
+        Cari{"karisk"}
         Cham{"cham"}
         Cher{"cherokee"}
         Cirt{"cirth"}
@@ -1884,11 +1929,13 @@ nb{
         Inds{"indus"}
         Ital{"gammelitalisk"}
         Java{"javanesisk"}
+        Jpan{"japansk"}
         Kali{"kayah li"}
         Kana{"katakana"}
         Khar{"kharoshthi"}
         Khmr{"khmer"}
         Knda{"kannada"}
+        Lana{"lanna"}
         Laoo{"laotisk"}
         Latf{"latinsk (frakturvariant)"}
         Latg{"gælisk latinsk"}
@@ -1897,14 +1944,19 @@ nb{
         Limb{"limbu"}
         Lina{"lineær A"}
         Linb{"lineær B"}
+        Lyci{"lykisk"}
+        Lydi{"lydisk"}
         Mand{"mandaisk"}
         Maya{"maya-hieroglyfer"}
         Mero{"meroitisk"}
         Mlym{"malayalam"}
         Mong{"mongolsk"}
+        Moon{"moon"}
+        Mtei{"meitei-mayek"}
         Mymr{"myanmar"}
         Nkoo{"n'ko"}
         Ogam{"ogham"}
+        Olck{"ol-chiki"}
         Orkh{"orkhon"}
         Orya{"oriya"}
         Osma{"osmanya"}
@@ -1913,11 +1965,15 @@ nb{
         Phnx{"fønikisk"}
         Plrd{"pollard-fonetisk"}
         Qaai{"nedarvet"}
+        Rjng{"rejang"}
         Roro{"rongorongo"}
         Runr{"runer"}
         Sara{"sarati"}
+        Saur{"saurashtra"}
+        Sgnw{"tegnskrift"}
         Shaw{"shavisk"}
         Sinh{"sinhala"}
+        Sund{"sundanesisk"}
         Sylo{"syloti nagri"}
         Syrc{"syrisk"}
         Syre{"syriakisk (estrangelo-variant)"}
@@ -1967,11 +2023,49 @@ nb{
     Variants{
         1901{"tradisjonell tysk ortografi"}
         1996{"tysk ortografi fra 1996"}
+        AREVELA{"øst-armensk"}
+        AREVMDA{"vest-armensk"}
+        BOONT{"boontling"}
+        FONIPA{"det internasjonale fonetiske alfabet (IPA)"}
         POLYTONI{"polytonisk"}
+        POSIX{"POSIX"}
         REVISED{"revidert ortografi"}
+        ROZAJ{"resisk dialekt"}
+        SAAHO{"saaho dialekt"}
+        SCOUSE{"scouse dialekt"}
     }
-    Version{"1.90"}
+    Version{"1.91"}
     calendar{
+        buddhist{
+            AmPmMarkers{
+                "AM",
+                "PM",
+            }
+            DateTimePatterns{
+                "'kl'. HH.mm.ss v",
+                "HH.mm.ss z",
+                "HH.mm.ss",
+                "HH.mm",
+                "EEEE d. MMMM yyyy G",
+                "d. MMMM yyyy G",
+                "d. MMM yyyy G",
+                "d.M yyyy",
+                "{1} {0}",
+            }
+            dayNames{
+                stand-alone{
+                    abbreviated{
+                        "Søn.",
+                        "Man.",
+                        "Tir.",
+                        "Ons.",
+                        "Tor.",
+                        "Fre.",
+                        "Lør.",
+                    }
+                }
+            }
+        }
         gregorian{
             AmPmMarkers{
                 "formiddag",
@@ -1993,8 +2087,10 @@ nb{
                 HHmmss{"HH.mm.ss"}
                 MMMMd{"d. MMMM"}
                 MMdd{"dd.MM"}
+                Md{"d.M."}
                 mmss{"mm.ss"}
                 yyMM{"MM.yy"}
+                yyMMM{"MMM yy"}
                 yyQ{"Q yy"}
                 yyQQQQ{"QQQQ yy"}
                 yyyyMMMM{"MMMM yyyy"}
@@ -2021,6 +2117,15 @@ nb{
                     }
                 }
                 stand-alone{
+                    abbreviated{
+                        "søn.",
+                        "man.",
+                        "tir.",
+                        "ons.",
+                        "tor.",
+                        "fre.",
+                        "lør.",
+                    }
                     narrow{
                         "S",
                         "M",
@@ -2045,6 +2150,15 @@ nb{
             fields{
                 day{
                     dn{"dag"}
+                    relative{
+                        "-1"{"i går"}
+                        "-2"{"i forgårs"}
+                        "-3"{"for tre dager siden"}
+                        "0"{"i dag"}
+                        "1"{"i morgen"}
+                        "2"{"i overmorgen"}
+                        "3"{"om tre dager"}
+                    }
                 }
                 dayperiod{
                     dn{"AM/PM"}

@@ -1086,6 +1086,10 @@ structLocale:table(nofallback){
             "",
             "",
         }
+        SDG{
+            "",
+            "",
+        }
         SDP{
             "",
             "",
@@ -1219,6 +1223,10 @@ structLocale:table(nofallback){
             "",
         }
         USS{
+            "",
+            "",
+        }
+        UYI{
             "",
             "",
         }
@@ -1489,6 +1497,7 @@ structLocale:table(nofallback){
         day{""}
         de{""}
         de_AT{""}
+        de_CH{""}
         del{""}
         den{""}
         dgr{""}
@@ -1516,6 +1525,7 @@ structLocale:table(nofallback){
         eo{""}
         es{""}
         es_419{""}
+        es_ES{""}
         et{""}
         eu{""}
         ewo{""}
@@ -1751,6 +1761,7 @@ structLocale:table(nofallback){
         ps{""}
         pt{""}
         pt_BR{""}
+        pt_PT{""}
         qu{""}
         raj{""}
         rap{""}
@@ -2319,9 +2330,13 @@ structLocale:table(nofallback){
                 day{
                     dn{"Day"}
                     relative{
+                        "-3"{""}
+                        "-2"{""}
                         "-1"{""}
                         "0"{""}
                         "1"{""}
+                        "2"{""}
+                        "3"{""}
                     }
                 }
                 dayperiod{
@@ -2507,6 +2522,32 @@ structLocale:table(nofallback){
                         "",
                     }
                     wide{
+                        "",
+                        "",
+                        "",
+                        "",
+                    }
+                    narrow{
+                        "",
+                        "",
+                        "",
+                        "",
+                    }
+                }
+                stand-alone{
+                    abbreviated{
+                        "",
+                        "",
+                        "",
+                        "",
+                    }
+                    wide{
+                        "",
+                        "",
+                        "",
+                        "",
+                    }
+                    narrow{
                         "",
                         "",
                         "",
@@ -9393,6 +9434,15 @@ structLocale:table(nofallback){
             //ec{""} // Metazones have no exemplar city
         }
         "meta:Newfoundland"{
+            ld{""}
+            lg{""}
+            ls{""}
+            sd{""}
+            sg{""}
+            ss{""}
+            //ec{""} // Metazones have no exemplar city
+        }
+        "meta:Nepal"{
             ld{""}
             lg{""}
             ls{""}

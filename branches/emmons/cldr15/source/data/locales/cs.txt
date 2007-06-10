@@ -1437,7 +1437,7 @@ cs{
             japanese{"Japonský kalendář"}
         }
     }
-    Version{"1.90"}
+    Version{"1.91"}
     calendar{
         gregorian{
             AmPmMarkers{
@@ -1494,20 +1494,62 @@ cs{
                     "po Kr.",
                 }
             }
+            fields{
+                day{
+                    dn{"Den"}
+                    relative{
+                        "-1"{"Včera"}
+                        "-2"{"Předevčírem"}
+                        "0"{"Dnes"}
+                        "1"{"Zítra"}
+                        "2"{"Pozítří"}
+                    }
+                }
+                dayperiod{
+                    dn{"Část dne"}
+                }
+                era{
+                    dn{"Epocha"}
+                }
+                hour{
+                    dn{"Hodina"}
+                }
+                minute{
+                    dn{"Minuta"}
+                }
+                month{
+                    dn{"Měsíc"}
+                }
+                second{
+                    dn{"Sekunda"}
+                }
+                week{
+                    dn{"Týden"}
+                }
+                weekday{
+                    dn{"Den v týdnu"}
+                }
+                year{
+                    dn{"Rok"}
+                }
+                zone{
+                    dn{"Pásmo"}
+                }
+            }
             monthNames{
                 format{
                     abbreviated{
-                        "ledna",
+                        "1",
                         "2",
-                        "3",
+                        "březen",
                         "4",
-                        "května",
-                        "června",
-                        "7",
-                        "8",
+                        "květen",
+                        "čer",
+                        "čec",
+                        "srpna",
                         "září",
-                        "10",
-                        "11",
+                        "října",
+                        "listopad",
                         "prosince",
                     }
                     narrow{
@@ -1597,6 +1639,14 @@ cs{
                         "2. čtvrtletí",
                         "3. čtvrtletí",
                         "4. čtvrtletí",
+                    }
+                }
+                stand-alone{
+                    narrow{
+                        "1",
+                        "2",
+                        "3",
+                        "4",
                     }
                 }
             }
@@ -1693,6 +1743,8 @@ cs{
         "meta:Alaska"{
             ld{"Aljašský letní čas"}
             ls{"Aljašský standardní čas"}
+            sd{"AKDT"}
+            ss{"AKST"}
         }
         "meta:America_Central"{
             ld{"Centrální letní čas"}
@@ -1701,6 +1753,8 @@ cs{
             ss{"CST"}
         }
         "meta:America_Eastern"{
+            ld{"Východní letní čas"}
+            ls{"Východní standardní čas"}
             sd{"EDT"}
             ss{"EST"}
         }

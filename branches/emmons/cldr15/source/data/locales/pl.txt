@@ -14,6 +14,7 @@ pl{
     Countries{
         001{"świat"}
         002{"Afryka"}
+        003{"Ameryka Północna"}
         005{"Ameryka Południowa"}
         009{"Oceania"}
         011{"Afryka Zachodnia"}
@@ -21,6 +22,7 @@ pl{
         014{"Afryka Wschodnia"}
         015{"Afryka Północna"}
         017{"Afryka Środkowa"}
+        018{"Afryka Południowa"}
         019{"Ameryka"}
         021{"Ameryka Północna"}
         029{"Karaiby"}
@@ -225,8 +227,10 @@ pl{
         PY{"Paragwaj"}
         QA{"Katar"}
         QO{"Oceania inne"}
+        QU{"Unia Europejska"}
         RE{"Reunion"}
         RO{"Rumunia"}
+        RS{"Serbia"}
         RU{"Federacja Rosyjska"}
         RW{"Rwanda"}
         SA{"Arabia Saudyjska"}
@@ -435,7 +439,7 @@ pl{
             "cruzeiro brazylijskie (1990-1993)",
         }
         BRL{
-            "R$",
+            "BRL",
             "real brazylijski",
         }
         BRN{
@@ -579,7 +583,7 @@ pl{
             "birr etiopski",
         }
         EUR{
-            "€",
+            "EUR",
             "euro",
         }
         FIM{
@@ -599,7 +603,7 @@ pl{
             "frank francuski ",
         }
         GBP{
-            "UK£",
+            "GBP",
             "funt szterling",
         }
         GEK{
@@ -711,7 +715,7 @@ pl{
             "korona islandzka",
         }
         ITL{
-            "IT₤",
+            "ITL",
             "lir włoski",
         }
         JMD{
@@ -723,7 +727,7 @@ pl{
             "dinar jordański",
         }
         JPY{
-            "JP¥",
+            "JPY",
             "jen japoński",
         }
         KES{
@@ -1127,7 +1131,7 @@ pl{
             "szyling ugandyjski",
         }
         USD{
-            "US$",
+            "USD",
             "dolar amerykański ",
         }
         UYP{
@@ -1711,7 +1715,7 @@ pl{
         1901{"Tradycyjna ortografia niemiecka"}
         1996{"Ortografia niemiecka z 1996 r."}
     }
-    Version{"1.90"}
+    Version{"1.91"}
     calendar{
         gregorian{
             DateTimePatterns{
@@ -1767,6 +1771,18 @@ pl{
             fields{
                 day{
                     dn{"Dzień"}
+                    relative{
+                        "-1"{"Wczoraj"}
+                        "-2"{"Przedwczoraj"}
+                        "-3"{"Trzy dni temu"}
+                        "0"{"Dzisiaj"}
+                        "1"{"Jutro"}
+                        "2"{"Pojutrze"}
+                        "3"{"Za trzy dni"}
+                    }
+                }
+                era{
+                    dn{"Era"}
                 }
                 hour{
                     dn{"Godzina"}
@@ -1891,11 +1907,31 @@ pl{
                         "K3",
                         "K4",
                     }
+                    narrow{
+                        "1",
+                        "2",
+                        "3",
+                        "4",
+                    }
                     wide{
                         "I kwartał",
                         "II kwartał",
                         "III kwartał",
                         "IV kwartał",
+                    }
+                }
+                stand-alone{
+                    abbreviated{
+                        "1 kw.",
+                        "II kwartał",
+                        "3 kw.",
+                        "4 kw.",
+                    }
+                    narrow{
+                        "1",
+                        "2",
+                        "3",
+                        "4",
                     }
                 }
             }
@@ -2064,6 +2100,24 @@ pl{
         }
         "Pacific:Easter"{
             ec{"Wyspy Wielkanocne"}
+        }
+        "meta:Europe_Central"{
+            ld{"Czas środkowoeuropejski letni"}
+            ls{"Czas środkowoeuropejski"}
+            sd{"CEST"}
+            ss{"CET"}
+        }
+        "meta:Europe_Eastern"{
+            ld{"Czas wschodnioeuropejski letni"}
+            ls{"Czas wschodnioeuropejski"}
+            sd{"EEST"}
+            ss{"EET"}
+        }
+        "meta:Europe_Western"{
+            ld{"Czas zachodnioeuropejski letni"}
+            ls{"Czas zachodnioeuropejski"}
+            sd{"WEST"}
+            ss{"WET"}
         }
     }
 }

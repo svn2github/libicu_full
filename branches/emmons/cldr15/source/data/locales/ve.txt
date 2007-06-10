@@ -6,8 +6,14 @@
 // * Source File:<path>/common/main/ve.xml
 // *
 // ***************************************************************************
+/**
+ *  ICU <specials> source: <path>/xml/main/ve.xml
+ */
 ve{
-    Version{"1.90"}
+    LocaleScript{
+        "Latn",
+    }
+    Version{"1.91"}
     calendar{
         gregorian{
             dayNames{

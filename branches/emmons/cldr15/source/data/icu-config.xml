@@ -10,24 +10,13 @@
     <locales>
 <!-- Not in 3.6 -->
         <include locales="af_NA"/>
-        <include locales="ak"/>
-        <include locales="ak_GH"/>
         <include locales="bn_BD"/>
-        <include locales="bo"/>
-        <include locales="bo_CN"/>
-        <include locales="bo_IN"/>
         <include locales="bs"/>
         <include locales="bs_BA"/>
         <include locales="byn"/>
         <include locales="byn_ER"/>
         <include locales="cch"/>
         <include locales="cch_NG"/>
-        <include locales="cop"/>
-        <include locales="cop_Arab"/>
-        <include locales="cop_Arab_EG"/>
-        <include locales="cop_Arab_US"/>
-        <include locales="cop_EG"/>
-        <include locales="cop_US"/>
         <include locales="de_LI"/>
         <include locales="dv"/>
         <include locales="dv_MV"/>
@@ -37,7 +26,6 @@
         <include locales="ee_GH"/>
         <include locales="ee_TG"/>
         <include locales="el_CY"/> 
-        <include locales="el_POLYTON"/> 
         <include locales="en_AS"/> 
         <include locales="en_BZ"/> 
         <include locales="en_GU"/> 
@@ -49,8 +37,6 @@
         <include locales="en_UM"/> 
         <include locales="eo"/>
         <include locales="fr_MC"/> 
-        <include locales="fur"/> 
-        <include locales="fur_IT"/> 
         <include locales="gaa"/> 
         <include locales="gaa_GH"/> 
         <include locales="gez"/> 
