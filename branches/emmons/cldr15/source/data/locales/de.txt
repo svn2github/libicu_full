@@ -589,7 +589,7 @@ de{
             "Birr",
         }
         EUR{
-            "EUR",
+            "€",
             "Euro",
         }
         FIM{

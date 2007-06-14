@@ -614,7 +614,7 @@ nl{
             "Ethiopische birr",
         }
         EUR{
-            "EUR",
+            "€",
             "euro",
         }
         FIM{

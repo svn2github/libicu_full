@@ -15,8 +15,6 @@
         <include locales="bs_BA"/>
         <include locales="byn"/>
         <include locales="byn_ER"/>
-        <include locales="cch"/>
-        <include locales="cch_NG"/>
         <include locales="de_LI"/>
         <include locales="dv"/>
         <include locales="dv_MV"/>
@@ -37,21 +35,9 @@
         <include locales="en_UM"/> 
         <include locales="eo"/>
         <include locales="fr_MC"/> 
-        <include locales="gaa"/> 
-        <include locales="gaa_GH"/> 
         <include locales="gez"/> 
         <include locales="gez_ER"/> 
         <include locales="gez_ET"/> 
-        <include locales="ha"/>
-        <include locales="ha_Arab"/>
-        <include locales="ha_Latn"/>
-        <include locales="ha_Arab_NG"/>
-        <include locales="ha_Latn_GH"/>
-        <include locales="ha_Latn_NE"/>
-        <include locales="ha_Latn_NG"/>
-        <include locales="ha_GH"/>
-        <include locales="ha_NE"/>
-        <include locales="ha_NG"/>
         <include locales="ia"/>
         <include locales="ig"/>
         <include locales="ig_NG"/>
@@ -71,17 +57,6 @@
         <include locales="kpe"/>
         <include locales="kpe_GN"/>
         <include locales="kpe_LR"/>
-        <include locales="ku"/>
-        <include locales="ku_Arab"/>
-        <include locales="ku_Latn"/>
-        <include locales="ku_Latn_IQ"/>
-        <include locales="ku_Latn_IR"/>
-        <include locales="ku_Latn_SY"/>
-        <include locales="ku_Latn_TR"/>
-        <include locales="ku_IQ"/>
-        <include locales="ku_IR"/>
-        <include locales="ku_SY"/>
-        <include locales="ku_TR"/>
         <include locales="ky"/>
         <include locales="ky_KG"/>
         <include locales="lo"/>
@@ -381,9 +356,9 @@
         <include locales="ur_PK"/>
         <include locales="uz"/> 
         <include locales="uz_Cyrl"/>
-        <include locales="uz_Latn"/>
+        <include locales="uz_Latn" draft=".*"/>
         <include locales="uz_Cyrl_UZ"/>
-        <include locales="uz_Latn_UZ"/>
+        <include locales="uz_Latn_UZ" draft=".*"/>
         <include locales="uz_UZ"/>
         <include locales="vi"/> 
         <include locales="vi_VN"/>
@@ -409,6 +384,8 @@
         <include xpath="//supplementalMetaData/.*"/>
         <!-- Exclude unusable data -->
         <exclude xpath="//ldml/.*" alt=".*"/>
+        <exclude xpath="//ldml/.*" draft="provisional"/>
+        <exclude xpath="//ldml/.*" draft="unconfirmed"/>
         <exclude xpath="//ldml/dates/localizedPatternChars.*"/>
         <exclude xpath="//ldml/posix/messages/.*"/>
     </paths>

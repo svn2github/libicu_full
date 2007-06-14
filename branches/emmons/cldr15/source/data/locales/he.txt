@@ -1240,17 +1240,6 @@ he{
             }
         }
         hebrew{
-            DateTimePatterns{
-                "HH:mm:ss v",
-                "HH:mm:ss z",
-                "HH:mm:ss",
-                "HH:mm",
-                "EEEE d MMMM yyyy",
-                "d MMMM yyyy",
-                "dd/MM/yyyy",
-                "dd/MM/yy",
-                "{0} {1}",
-            }
             eras{
                 abbreviated{
                     "לבה\"ע",

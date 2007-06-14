@@ -2037,10 +2037,6 @@ nb{
     Version{"1.91"}
     calendar{
         buddhist{
-            AmPmMarkers{
-                "AM",
-                "PM",
-            }
             DateTimePatterns{
                 "'kl'. HH.mm.ss v",
                 "HH.mm.ss z",
@@ -2051,19 +2047,6 @@ nb{
                 "d. MMM yyyy G",
                 "d.M yyyy",
                 "{1} {0}",
-            }
-            dayNames{
-                stand-alone{
-                    abbreviated{
-                        "Søn.",
-                        "Man.",
-                        "Tir.",
-                        "Ons.",
-                        "Tor.",
-                        "Fre.",
-                        "Lør.",
-                    }
-                }
             }
         }
         gregorian{

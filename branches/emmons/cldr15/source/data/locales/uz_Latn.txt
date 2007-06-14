@@ -10,8 +10,79 @@
  *  ICU <specials> source: <path>/xml/main/uz_Latn.xml
  */
 uz_Latn{
+    Countries{
+        AF{"Afgʿoniston"}
+        BR{"Braziliya"}
+        CN{"Xitoy"}
+        DE{"Olmoniya"}
+        FR{"Frantsiya"}
+        GB{"Birlashgan Qirollik"}
+        IN{"Hindiston"}
+        IT{"Italiya"}
+        JP{"Yaponiya"}
+        RU{"Rossiya"}
+        US{"Qo'shma Shtatlar"}
+        UZ{"Oʿzbekiston"}
+    }
+    Currencies{
+        BRL{
+            "R$",
+            "Brazil reali",
+        }
+        CNY{
+            "CNY",
+            "Xitoy yuani",
+        }
+        EUR{
+            "€",
+            "Evro",
+        }
+        GBP{
+            "UK£",
+            "Ingliz funt sterlingi",
+        }
+        INR{
+            "=0#Rs.|1#Re.|1<Rs.",
+            "Hind rupiyasi",
+        }
+        JPY{
+            "JP¥",
+            "Yapon yenasi",
+        }
+        RUB{
+            "RUB",
+            "Rus rubli",
+        }
+        USD{
+            "US$",
+            "AQSH dollari",
+        }
+        UZS{
+            "soʿm",
+            "Oʿzbekiston soʿm",
+        }
+    }
+    ExemplarCharacters{"[a-v x-z ʿ]"}
+    Languages{
+        ar{"Arabcha"}
+        de{"Olmoncha"}
+        en{"Inglizcha"}
+        es{"Ispancha"}
+        fr{"Frantsuzcha"}
+        hi{"Hindcha"}
+        it{"Italyancha"}
+        ja{"Yaponcha"}
+        pt{"Portugalcha"}
+        ru{"Ruscha"}
+        uz{"oʿzbek"}
+        zh{"Xitoycha"}
+    }
     LocaleScript{
         "Latn",
+    }
+    Scripts{
+        Cyrl{"Kiril"}
+        Latn{"Lotin"}
     }
     Version{"1.91"}
     calendar{
@@ -19,13 +90,13 @@ uz_Latn{
             dayNames{
                 format{
                     abbreviated{
-                        "yakshanba",
-                        "2",
-                        "3",
+                        "Yaksh",
+                        "Dush",
+                        "Sesh",
                         "Chor",
-                        "5",
-                        "juma",
-                        "7",
+                        "Pay",
+                        "Jum",
+                        "Shan",
                     }
                     wide{
                         "yakshanba",
@@ -53,17 +124,17 @@ uz_Latn{
                 format{
                     abbreviated{
                         "Yanv",
-                        "Safar",
-                        "Rabiul-avval",
-                        "Rabiul-oxir",
-                        "Jumodiul-ulo",
-                        "6",
-                        "Rajab",
-                        "8",
-                        "9",
-                        "10",
+                        "Fev",
+                        "Mar",
+                        "Apr",
+                        "May",
+                        "Iyun",
+                        "Iyul",
+                        "Avg",
+                        "Sen",
+                        "Okt",
                         "Noya",
-                        "12",
+                        "Dek",
                     }
                     wide{
                         "Muharram",

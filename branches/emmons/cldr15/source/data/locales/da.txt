@@ -1863,6 +1863,7 @@ da{
                 }
                 wide{
                     "f.Kr.",
+                    "e.Kr.",
                 }
             }
             fields{
@@ -1988,10 +1989,10 @@ da{
                 }
                 stand-alone{
                     abbreviated{
-                        "1. kvt. ",
-                        "2. kvartal",
-                        "3. kvt.",
-                        "4. kvartal",
+                        "K1",
+                        "K2",
+                        "K3",
+                        "K4",
                     }
                     narrow{
                         "1",
@@ -2005,6 +2006,10 @@ da{
     }
     delimiters{
         quotationEnd{"”"}
+    }
+    messages{
+        nostr{"nej:n"}
+        yesstr{"ja:j"}
     }
     zoneStrings{
         "Africa:Casablanca"{

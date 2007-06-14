@@ -447,6 +447,7 @@ sl{
             eras{
                 abbreviated{
                     "pr.n.š.",
+                    "AD",
                 }
             }
             fields{

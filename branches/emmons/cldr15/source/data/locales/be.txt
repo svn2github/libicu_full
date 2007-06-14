@@ -109,132 +109,6 @@ be{
     }
     Version{"1.91"}
     calendar{
-        buddhist{
-            DateTimePatterns{
-                "HH.mm.ss v",
-                "HH.mm.ss z",
-                "HH.mm.ss",
-                "HH.mm",
-                "EEEE, MMMM d, yyyy G",
-                "MMMM d, yyyy G",
-                "MMM d, yyyy G",
-                "M/d/yyyy",
-                "{1} {0}",
-            }
-            dayNames{
-                stand-alone{
-                    narrow{
-                        "нд",
-                        "пн",
-                        "аў",
-                        "ср",
-                        "чц",
-                        "пт",
-                        "сб",
-                    }
-                }
-            }
-            quarters{
-                format{
-                    abbreviated{
-                        "1-шы кв.",
-                        "2-гі кв.",
-                        "3-ці кв.",
-                        "4-ты кв.",
-                    }
-                    wide{
-                        "1-шы квартал",
-                        "2-гі квартал",
-                        "3-ці квартал",
-                        "4-ты квартал",
-                    }
-                }
-            }
-        }
-        chinese{
-            DateTimePatterns{
-                "HH.mm.ss v",
-                "HH.mm.ss z",
-                "HH.mm.ss",
-                "HH.mm",
-                "EEEE y'x'G-Ml-d",
-                "y'x'G-Ml-d",
-                "y'x'G-Ml-d",
-                "y'x'G-Ml-d",
-                "{1} {0}",
-            }
-            dayNames{
-                stand-alone{
-                    narrow{
-                        "нд",
-                        "пн",
-                        "аў",
-                        "ср",
-                        "чц",
-                        "пт",
-                        "сб",
-                    }
-                }
-            }
-            quarters{
-                format{
-                    abbreviated{
-                        "1-шы кв.",
-                        "2-гі кв.",
-                        "3-ці кв.",
-                        "4-ты кв.",
-                    }
-                    wide{
-                        "1-шы квартал",
-                        "2-гі квартал",
-                        "3-ці квартал",
-                        "4-ты квартал",
-                    }
-                }
-            }
-        }
-        coptic{
-            DateTimePatterns{
-                "HH.mm.ss v",
-                "HH.mm.ss z",
-                "HH.mm.ss",
-                "HH.mm",
-                "EEEE, d MMMM yyyy",
-                "d MMMM yyyy",
-                "d.M.yyyy",
-                "dd.MM.yy",
-                "{1} {0}",
-            }
-            dayNames{
-                stand-alone{
-                    narrow{
-                        "нд",
-                        "пн",
-                        "аў",
-                        "ср",
-                        "чц",
-                        "пт",
-                        "сб",
-                    }
-                }
-            }
-            quarters{
-                format{
-                    abbreviated{
-                        "1-шы кв.",
-                        "2-гі кв.",
-                        "3-ці кв.",
-                        "4-ты кв.",
-                    }
-                    wide{
-                        "1-шы квартал",
-                        "2-гі квартал",
-                        "3-ці квартал",
-                        "4-ты квартал",
-                    }
-                }
-            }
-        }
         gregorian{
             DateTimePatterns{
                 "HH.mm.ss v",
@@ -455,5 +329,9 @@ be{
                 }
             }
         }
+    }
+    messages{
+        nostr{"не:н"}
+        yesstr{"так:т"}
     }
 }

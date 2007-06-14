@@ -2066,6 +2066,8 @@ structLocale:table(nofallback){
         }
     }
     Variants{
+        1606NICT{""}
+        1694ACAD{""}
         1901{""}
         1996{""}
         AREVELA{""}
@@ -2086,6 +2088,7 @@ structLocale:table(nofallback){
         SAAHO{""}
         ROZAJ{""}
         SCOUSE{""}
+        VALENCIA{""}
         XIANG{""}
     }
     Version{""}
@@ -2320,6 +2323,10 @@ structLocale:table(nofallback){
                 abbreviated{
                     "",
                     "",
+                }
+                narrow{
+                    "",
+                    ""
                 }
                 wide{
                     "",
@@ -3835,6 +3842,15 @@ structLocale:table(nofallback){
             ss{""}
             ec{""}
         }
+        "America:Blanc-Sablon"{
+            ld{""}
+            lg{""}
+            ls{""}
+            sd{""}
+            sg{""}
+            ss{""}
+            ec{""}
+        }
         "America:Boa_Vista"{
             ld{""}
             lg{""}
@@ -4267,6 +4283,15 @@ structLocale:table(nofallback){
             ss{""}
             ec{""}
         }
+        "America:Indiana:Winamac"{
+            ld{""}
+            lg{""}
+            ls{""}
+            sd{""}
+            sg{""}
+            ss{""}
+            ec{""}
+        }
         "America:Indianapolis"{
             ld{""}
             lg{""}
@@ -4565,6 +4590,15 @@ structLocale:table(nofallback){
             ec{""}
         }
         "America:North_Dakota:Center"{
+            ld{""}
+            lg{""}
+            ls{""}
+            sd{""}
+            sg{""}
+            ss{""}
+            ec{""}
+        }
+        "America:North_Dakota:New_Salem"{
             ld{""}
             lg{""}
             ls{""}
@@ -6976,6 +7010,15 @@ structLocale:table(nofallback){
             ss{""}
             ec{""}
         }
+        "Europe:Podgorica"{
+            ld{""}
+            lg{""}
+            ls{""}
+            sd{""}
+            sg{""}
+            ss{""}
+            ec{""}
+        }
         "Europe:Prague"{
             ld{""}
             lg{""}
@@ -8407,6 +8450,15 @@ structLocale:table(nofallback){
             ss{""}
             //ec{""} // Metazones have no exemplar city
         }
+        "meta:Africa_FarWestern"{
+            ld{""}
+            lg{""}
+            ls{""}
+            sd{""}
+            sg{""}
+            ss{""}
+            //ec{""} // Metazones have no exemplar city
+        }
         "meta:Africa_Southern"{
             ld{""}
             lg{""}
@@ -8444,6 +8496,15 @@ structLocale:table(nofallback){
             //ec{""} // Metazones have no exemplar city
         }
         "meta:Alaska_Hawaii"{
+            ld{""}
+            lg{""}
+            ls{""}
+            sd{""}
+            sg{""}
+            ss{""}
+            //ec{""} // Metazones have no exemplar city
+        }
+        "meta:Almaty"{
             ld{""}
             lg{""}
             ls{""}
@@ -8606,6 +8667,15 @@ structLocale:table(nofallback){
             //ec{""} // Metazones have no exemplar city
         }
         "meta:Australia_Western"{
+            ld{""}
+            lg{""}
+            ls{""}
+            sd{""}
+            sg{""}
+            ss{""}
+            //ec{""} // Metazones have no exemplar city
+        }
+        "meta:Azerbaijan"{
             ld{""}
             lg{""}
             ls{""}
@@ -9100,6 +9170,15 @@ structLocale:table(nofallback){
             ss{""}
             //ec{""} // Metazones have no exemplar city
         }
+        "meta:Indochina"{
+            ld{""}
+            lg{""}
+            ls{""}
+            sd{""}
+            sg{""}
+            ss{""}
+            //ec{""} // Metazones have no exemplar city
+        }
         "meta:Indonesia_Central"{
             ld{""}
             lg{""}
@@ -9380,6 +9459,15 @@ structLocale:table(nofallback){
             //ec{""} // Metazones have no exemplar city
         }
         "meta:Mongolia"{
+            ld{""}
+            lg{""}
+            ls{""}
+            sd{""}
+            sg{""}
+            ss{""}
+            //ec{""} // Metazones have no exemplar city
+        }
+        "meta:Moscow"{
             ld{""}
             lg{""}
             ls{""}
