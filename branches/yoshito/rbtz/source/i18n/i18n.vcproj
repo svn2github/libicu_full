@@ -1395,6 +1395,14 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\vtzone.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\unicode\vtzone.h"
+				>
+			</File>
+			<File
 				RelativePath=".\windtfmt.cpp"
 				>
 				<FileConfiguration
