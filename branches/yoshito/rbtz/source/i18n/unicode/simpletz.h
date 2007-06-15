@@ -32,9 +32,14 @@
  
 #if !UCONFIG_NO_FORMATTING
 
-#include "unicode/timezone.h"
+#include "unicode/basictz.h"
 
 U_NAMESPACE_BEGIN
+
+// forward declaration
+class InitialTimeZoneRule;
+class TimeZoneTransition;
+class AnnualTimeZoneRule;
 
 /**
  * <code>SimpleTimeZone</code> is a concrete subclass of <code>TimeZone</code>
@@ -52,7 +57,7 @@ U_NAMESPACE_BEGIN
  * @see      TimeZone
  * @author   D. Goldsmith, Mark Davis, Chen-Lieh Huang, Alan Liu
  */
-class U_I18N_API SimpleTimeZone: public TimeZone {
+class U_I18N_API SimpleTimeZone: public BasicTimeZone {
 public:
 
     /**
@@ -688,6 +693,58 @@ public:
      */
     virtual TimeZone* clone(void) const;
 
+    /**
+     * Gets the first time zone transition after the base time.
+     * @param base      The base time.
+     * @param inclusive Whether the base time is inclusive or not.
+     * @param result    Receives the first transition after the base time.
+     * @return  TRUE if the transition is found.
+     * @draft ICU 3.8
+     */
+    virtual UBool getNextTransition(UDate base, UBool inclusive, TimeZoneTransition& result) /*const*/;
+
+    /**
+     * Gets the most recent time zone transition before the base time.
+     * @param base      The base time.
+     * @param inclusive Whether the base time is inclusive or not.
+     * @param result    Receives the most recent transition before the base time.
+     * @return  TRUE if the transition is found.
+     * @draft ICU 3.8
+     */
+    virtual UBool getPreviousTransition(UDate base, UBool inclusive, TimeZoneTransition& result) /*const*/;
+
+    /**
+     * Gets the <code>InitialTimeZoneRule</code> which represents the initial time name
+     * and offsets information of the time zone.  This method always returns non-NULL
+     * value.  The <code>InitialTimeZoneRule</code> is owned by the caller and must be
+     * deleted.
+     * @param status    Receives error status code.
+     * @retrun The <code>InitialTimeZoneRule</code> for the time zone.
+     * @draft ICU 3.8
+     **/
+    virtual InitialTimeZoneRule* getInitialRule(UErrorCode& status) /*const*/;
+
+    /**
+     * Returns the number of <code>TimeZoneRule</code>s which represents time transitions,
+     * for this time zone, that is, all <code>TimeZoneRule</code>s for this time zone except
+     * <code>InitialTimeZoneRule</code>.  The return value range is 0 or any positive value.
+     * @param status    Receives error status code.
+     * @return The number of <code>TimeZoneRule</code>s representing time transitions.
+     * @draft ICU 3.8
+     */
+    virtual int16_t countTransitionRules(UErrorCode& status) /*const*/;
+
+    /**
+     * Returns the <code>TimeZoneRule</code> which represents time transitions for this time zone
+     * at the index.  Valid index range is 0 to <code>countTransitionRules</code> - 1.  The caller
+     * owns <code>TimeZoneRule</code> object returned by this method and must be deleted.
+     * @param index The index.
+     * @param status    Receives error status code.
+     * @return The <code>TimeZoneRule</code> at the index.
+     * @draft ICU 3.8
+     */
+    virtual TimeZoneRule* getTransitionRule(int16_t index, UErrorCode& status) /*const*/;
+
 public:
 
     /**
@@ -805,6 +862,16 @@ private:
      * Typically one hour; sometimes 30 minutes.
      */
     int32_t dstSavings;
+
+    /* Private for BasicTimeZone implementation */
+    void initTransitionRules(UErrorCode& status);
+    void clearTransitionRules(void);
+    void deleteTransitionRules(void);
+    UBool   transitionRulesInitialized;
+    InitialTimeZoneRule*    initialRule;
+    TimeZoneTransition*     firstTransition;
+    AnnualTimeZoneRule*     stdRule;
+    AnnualTimeZoneRule*     dstRule;
 };
 
 inline void SimpleTimeZone::setStartRule(int32_t month, int32_t dayOfWeekInMonth,

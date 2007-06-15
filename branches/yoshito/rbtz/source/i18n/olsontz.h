@@ -15,13 +15,17 @@
 
 #if !UCONFIG_NO_FORMATTING
 
-#include "unicode/timezone.h"
+#include "unicode/basictz.h"
 
 struct UResourceBundle;
 
 U_NAMESPACE_BEGIN
 
 class SimpleTimeZone;
+class TimeZoneRule;
+class InitialTimeZoneRule;
+class TimeArrayTimeZoneRule;
+class TimeZoneTransition;
 
 /**
  * A time zone based on the Olson database.  Olson time zones change
@@ -113,7 +117,7 @@ class SimpleTimeZone;
  * count, the metadata entry itself is considered a rule resource,
  * since its key begins with an underscore.
  */
-class OlsonTimeZone: public TimeZone {
+class OlsonTimeZone: public BasicTimeZone {
  public:
     /**
      * Construct from a resource bundle.
@@ -209,9 +213,69 @@ class OlsonTimeZone: public TimeZone {
      */
     virtual UBool inDaylightTime(UDate date, UErrorCode& ec) const;
 
+    /**
+     * TimeZone API.
+     */
     virtual int32_t getDSTSavings() const;
 
- protected:
+    /**
+     * TimeZone API.  Also comare historic transitions.
+     */
+    virtual UBool hasSameRules(const TimeZone& other) const;
+
+    /**
+     * BasicTimeZone API.
+     * Gets the first time zone transition after the base time.
+     * @param base      The base time.
+     * @param inclusive Whether the base time is inclusive or not.
+     * @param result    Receives the first transition after the base time.
+     * @return  TRUE if the transition is found.
+     */
+    virtual UBool getNextTransition(UDate base, UBool inclusive, TimeZoneTransition& result) /*const*/;
+
+    /**
+     * BasicTimeZone API.
+     * Gets the most recent time zone transition before the base time.
+     * @param base      The base time.
+     * @param inclusive Whether the base time is inclusive or not.
+     * @param result    Receives the most recent transition before the base time.
+     * @return  TRUE if the transition is found.
+     */
+    virtual UBool getPreviousTransition(UDate base, UBool inclusive, TimeZoneTransition& result) /*const*/;
+
+    /**
+     * BasicTimeZone API.
+     * Gets the <code>InitialTimeZoneRule</code> which represents the initial time name
+     * and offsets information of the time zone.  This method always returns non-NULL
+     * value.  The <code>InitialTimeZoneRule</code> is owned by the caller and must be
+     * deleted.
+     * @param status    Receives error status code.
+     * @retrun The <code>InitialTimeZoneRule</code> for the time zone.
+     */
+    virtual InitialTimeZoneRule* getInitialRule(UErrorCode& status) /*const*/;
+
+    /**
+     * BasicTimeZone API.
+     * Returns the number of <code>TimeZoneRule</code>s which represents time transitions,
+     * for this time zone, that is, all <code>TimeZoneRule</code>s for this time zone except
+     * <code>InitialTimeZoneRule</code>.  The return value range is 0 or any positive value.
+     * @param status    Receives error status code.
+     * @return The number of <code>TimeZoneRule</code>s representing time transitions.
+     */
+    virtual int16_t countTransitionRules(UErrorCode& status) /*const*/;
+
+    /**
+     * BasicTimeZone API.
+     * Returns the <code>TimeZoneRule</code> which represents time transitions for this time zone
+     * at the index.  Valid index range is 0 to <code>countTransitionRules</code> - 1.  The caller
+     * owns <code>TimeZoneRule</code> object returned by this method and must be deleted.
+     * @param index The index.
+     * @param status    Receives error status code.
+     * @return The <code>TimeZoneRule</code> at the index.
+     */
+    virtual TimeZoneRule* getTransitionRule(int16_t index, UErrorCode& status) /*const*/;
+
+protected:
     /**
      * Default constructor.  Creates a time zone with an empty ID and
      * a fixed GMT offset of zero.
@@ -278,6 +342,19 @@ class OlsonTimeZone: public TimeZone {
      */
     SimpleTimeZone *finalZone; // owned, may be NULL
 
+    /* BasicTimeZone support */
+    void clearTransitionRules(void);
+    void deleteTransitionRules(void);
+    void initTransitionRules(UErrorCode& status);
+
+    InitialTimeZoneRule *initialRule;
+    TimeZoneTransition  *firstTZTransition;
+    int16_t             firstTZTransitionIdx;
+    TimeZoneTransition  *firstFinalTZTransition;
+    TimeArrayTimeZoneRule   **historicRules;
+    int16_t             historicRuleCount;
+    SimpleTimeZone      *finalZoneWithStartYear; // hack
+    UBool               transitionRulesInitialized;
 };
 
 inline int32_t
