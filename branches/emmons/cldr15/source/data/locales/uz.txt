@@ -11,7 +11,13 @@
  */
 uz{
     AuxExemplarCharacters{"[ц щ ы ь]"}
+    Countries{
+        UZ{"Ўзбекистон"}
+    }
     ExemplarCharacters{"[а-г ғ д е ё ж-к қ л-у ў ф х ҳ ч ш ъ э-я]"}
+    Languages{
+        uz{"Ўзбек"}
+    }
     LocaleScript{
         "Cyrl",
     }

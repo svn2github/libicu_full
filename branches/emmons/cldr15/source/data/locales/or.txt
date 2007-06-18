@@ -11,7 +11,13 @@
  */
 or{
     AuxExemplarCharacters{"[\u200C \u200D]"}
+    Countries{
+        IN{"ଭାରତ"}
+    }
     ExemplarCharacters{"[ଅ-ଋ ଏ ଐ ଓ-ନ ପ-ର ଲ ଳ ଶ-ହ ୟ ୱ ଵ ଂ ଃ ଁ ୍ ଼ ା-ୃ େ ୈ ୋ ୌ]"}
+    Languages{
+        or{"ଓଡ଼ିଆ"}
+    }
     LocaleScript{
         "Orya",
     }

@@ -14,6 +14,9 @@ ml{
         IN{"ഇന്ത്യ"}
     }
     ExemplarCharacters{"[അ-ഋ ൠ ഌ ൡ എ-ഐ ഒ-ന പ-ര ല വ ള ഴ റ ശ-ഹ ഃ ം ാ-ൃ െ-ൈ ൊ-് ൗ]"}
+    Languages{
+        ml{"മലയാളം"}
+    }
     LocaleScript{
         "Mlym",
     }

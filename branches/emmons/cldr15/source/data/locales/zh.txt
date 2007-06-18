@@ -2008,18 +2008,6 @@ zh{
     }
     Version{"1.91"}
     calendar{
-        chinese{
-            quarters{
-                format{
-                    abbreviated{
-                        "Q1",
-                        "Q2",
-                        "Q3",
-                        "Q4",
-                    }
-                }
-            }
-        }
         gregorian{
             AmPmMarkers{
                 "上午",

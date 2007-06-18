@@ -35,44 +35,6 @@ zh_Hans_SG{
     }
     Version{"1.91"}
     calendar{
-        chinese{
-            quarters{
-                format{
-                    abbreviated{
-                        "Q1",
-                        "Q2",
-                        "Q3",
-                        "Q4",
-                    }
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                    }
-                    wide{
-                        "第1季度",
-                        "第2季度",
-                        "第3季度",
-                        "第4季度",
-                    }
-                }
-                stand-alone{
-                    abbreviated{
-                        "Q1",
-                        "Q2",
-                        "Q3",
-                        "Q4",
-                    }
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                    }
-                }
-            }
-        }
         gregorian{
             DateTimeElements:intvector{
                 1,

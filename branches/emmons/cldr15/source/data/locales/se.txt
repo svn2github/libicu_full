@@ -10,6 +10,7 @@
  *  ICU <specials> source: <path>/xml/main/se.xml
  */
 se{
+    ExemplarCharacters{"[a á à å ä æ b c č d đ e é è f-n ń ŋ o ó ò ö ø p-s š t ŧ u ú v x-z ž]"}
     LocaleScript{
         "Latn",
     }

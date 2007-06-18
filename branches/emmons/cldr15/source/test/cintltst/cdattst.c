@@ -56,6 +56,7 @@ static void TestDateFormat()
     UDateFormat *copy;
     UErrorCode status = U_ZERO_ERROR;
     UChar* result = NULL;
+    char* result_out[30];
     const UCalendar *cal;
     const UNumberFormat *numformat1, *numformat2;
     UChar temp[30];
@@ -172,7 +173,7 @@ static void TestDateFormat()
         log_err("FAIL: Date Format for US locale failed using udat_format()\n");
     /*format using fr */
     
-    u_unescape("10 juil. 96 16 h 05 HP", temp, 30);
+    u_unescape("10 juil. 1996 16:05:28 HP", temp, 30);
     if(result != NULL) {
         free(result);
         result = NULL;
@@ -180,15 +181,20 @@ static void TestDateFormat()
     result=myDateFormat(fr, d);
     if(u_strcmp(result, temp)==0)
         log_verbose("PASS: Date Format for french locale successful using udat_format()\n");
-    else
-        log_data_err("FAIL: Date Format for french locale failed using udat_format(). Expected:\n");
+    else {
+        u_austrcpy(result_out, result);
+        log_data_err("FAIL: Date Format for french locale failed using udat_format(). Received %s\n",result_out);
+    }
+
     /*format using it */
-    u_uastrcpy(temp, "10/lug/96 16:05:28");
+    u_uastrcpy(temp, "1996 lug 10 16:05:28");
     
     if(u_strcmp(myDateFormat(it,d), temp)==0)
         log_verbose("PASS: Date Format for italian locale successful uisng udat_format()\n");
-    else
-        log_data_err("FAIL: Date Format for italian locale failed using udat_format()\n");
+    else {
+        u_austrcpy(result_out, myDateFormat(it,d));
+        log_data_err("FAIL: Date Format for italian locale failed using udat_format() got %s\n",result_out);
+    }
 
     
     /*Testing parsing using udat_parse()*/

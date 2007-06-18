@@ -12,7 +12,8 @@
 	<identity>
 		<version number="$Revision: 1.5 $"/>
 		<generation date="$Date: 2007/06/04 01:05:48 $"/>
-		<language type="sh"/> 
+		<language type="sr"/> 
+		<script type="Latn"/> 
 	</identity>
 	
 </ldml>

@@ -12,6 +12,7 @@
 az_Cyrl{
     AuxExemplarCharacters{"[ц щ ъ ь-я]"}
     Countries{
+        AZ{"Азәрбајҹан"}
         BR{"Бразилија"}
         CN{"Чин"}
         DE{"Алманија"}
@@ -30,6 +31,7 @@ az_Cyrl{
     }
     ExemplarCharacters{"[а ә б-г ғ д-й ј к ҝ л-о ө п-у ү ф х һ ч ҹ ш ы]"}
     Languages{
+        az{"Азәрбајҹан"}
         de{"алманҹа"}
         en{"инҝилисҹә"}
         es{"испанҹа"}
