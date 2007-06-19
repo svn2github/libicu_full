@@ -401,7 +401,7 @@ TimeArrayTimeZoneRule::TimeArrayTimeZoneRule(const UnicodeString& name,
   fStartTimes(NULL) {
     UErrorCode status = U_ZERO_ERROR;
     initStartTimes(startTimes, numStartTimes, status);
-    // TODO - error handling?
+    //TODO - status?
 }
 
 
@@ -409,7 +409,7 @@ TimeArrayTimeZoneRule::TimeArrayTimeZoneRule(const TimeArrayTimeZoneRule& source
 : TimeZoneRule(source), fTimeRuleType(source.fTimeRuleType), fStartTimes(NULL) {
     UErrorCode status = U_ZERO_ERROR;
     initStartTimes(source.fStartTimes, source.fNumStartTimes, status);
-    // TODO - error handling?
+    //TODO - status?
 }
 
 
@@ -431,7 +431,7 @@ TimeArrayTimeZoneRule::operator=(const TimeArrayTimeZoneRule& right) {
         TimeZoneRule::operator=(right);
         UErrorCode status = U_ZERO_ERROR;
         initStartTimes(right.fStartTimes, right.fNumStartTimes, status);
-        // TODO - error handling?
+        //TODO - status?
         fTimeRuleType = right.fTimeRuleType;        
     }
     return *this;

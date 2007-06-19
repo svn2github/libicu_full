@@ -25,6 +25,7 @@ class TimeZoneRule;
 class InitialTimeZoneRule;
 class AnnualTimeZoneRule;
 class TimeZoneTransition;
+class UVector;
 
 /**
  * <code>BasicTimeZone</code> is an abstract class extending <code>TimeZone</code>.
@@ -164,6 +165,16 @@ protected:
      * @draft ICU 3.8
      */
     BasicTimeZone(const BasicTimeZone& source);
+
+    /**
+     * Gets the set of TimeZoneRule instances applicable to the specified time and after.
+     * @param start     The start date used for extracting time zone rules
+     * @param initial   Receives the InitialTimeZone, always not NULL
+     * @param transitionRules   Receives the transition rules, could be NULL
+     * @param status    Receives error status code
+     */
+    void getTimeZoneRules(UDate start, InitialTimeZoneRule*& initial, UVector*& transitionRules,
+        UErrorCode& status) /*const*/;
 
 public:
     /**

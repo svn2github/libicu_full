@@ -13,6 +13,8 @@
 #include "unicode/tzrule.h"
 #include "unicode/tztrans.h"
 #include "gregoimp.h"
+#include "uvector.h"
+#include "cmemory.h"
 
 U_NAMESPACE_BEGIN
 
@@ -243,7 +245,13 @@ BasicTimeZone::getSimpleRules(UDate date, InitialTimeZoneRule*& initial,
             // No transitions in the past.  Just use the current offsets
             getOffset(date, FALSE, initialRaw, initialDst, status);
             if (U_FAILURE(status)) {
-                //TODO
+                if (ar1 != NULL) {
+                    delete ar1;
+                }
+                if (ar2 != NULL) {
+                    delete ar2;
+                }
+                return;
             }
         }
     }
@@ -260,6 +268,239 @@ BasicTimeZone::getSimpleRules(UDate date, InitialTimeZoneRule*& initial,
             dst = ar2;
         }
     }
+}
+
+void
+BasicTimeZone::getTimeZoneRules(UDate start, InitialTimeZoneRule*& initial, UVector*& transitionRules,
+                                UErrorCode& status) /*const*/ {
+    if (U_FAILURE(status)) {
+        return;
+    }
+
+    TimeZoneTransition tzt;
+    UBool avail;
+    UVector *orgRules = NULL;
+    int32_t ruleCount;
+    TimeZoneRule *r = NULL;
+    UBool *done = NULL;
+    InitialTimeZoneRule *res_initial = NULL;
+    UVector *filteredRules = NULL;
+    UnicodeString name;
+    int32_t i;
+    UDate time, t;
+    UDate *newTimes = NULL;
+    UDate firstStart;
+    UBool bFinalStd = FALSE, bFinalDst = FALSE;
+
+    // Original transition rules
+    ruleCount = countTransitionRules(status);
+    if (U_FAILURE(status)) {
+        return;
+    }
+    orgRules = new UVector(ruleCount, status);
+    if (U_FAILURE(status)) {
+        return;
+    }
+    for (i = 0; i < ruleCount; i++) {
+        r = getTransitionRule(i, status);
+        orgRules->addElement(r, status);
+        if (U_FAILURE(status)) {
+            goto error;
+        }
+    }
+
+    avail = getPreviousTransition(start, TRUE, tzt);
+    if (!avail) {
+        // No need to filter out rules only applicable to time before the start
+        initial = getInitialRule(status);
+        if (U_FAILURE(status)) {
+            goto error;
+        }
+        transitionRules = orgRules;
+        return;
+    }
+
+    done = (UBool*)uprv_malloc(sizeof(UBool)*ruleCount);
+    if (done == NULL) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        goto error;
+    }
+    filteredRules = new UVector(status);
+    if (U_FAILURE(status)) {
+        goto error;
+    }
+
+    // Create initial rule
+    tzt.getTo()->getName(name);
+    res_initial = new InitialTimeZoneRule(name, tzt.getTo()->getRawOffset(),
+        tzt.getTo()->getDSTSavings());
+
+    // Mark rules which does not need to be processed
+    for (i = 0; i < ruleCount; i++) {
+        r = (TimeZoneRule*)orgRules->elementAt(i);
+        avail = r->getNextStart(start, res_initial->getRawOffset(), res_initial->getDSTSavings(), FALSE, time);
+        done[i] = !avail;
+    }
+
+    time = start;
+    while (!bFinalStd || !bFinalDst) {
+        avail = getNextTransition(time, FALSE, tzt);
+        if (!avail) {
+            break;
+        }
+        time = tzt.getTime();
+ 
+        const TimeZoneRule *toRule = tzt.getTo();
+        for (i = 0; i < ruleCount; i++) {
+            r = (TimeZoneRule*)orgRules->elementAt(i);
+            if (*r == *toRule) {
+                break;
+            }
+        }
+        if (i >= ruleCount) {
+            // This case should never happen
+            status = U_INVALID_STATE_ERROR;
+            goto error;
+        }
+        if (done[i]) {
+            continue;
+        }
+        if (toRule->getDynamicClassID() == TimeArrayTimeZoneRule::getStaticClassID()) {
+            TimeArrayTimeZoneRule *tar = (TimeArrayTimeZoneRule*)toRule;
+
+            // Getthe previous raw offset and DST savings before the very first start time
+            t = start;
+            while (TRUE) {
+                avail = getNextTransition(t, FALSE, tzt);
+                if (!avail) {
+                    break;
+                }
+                if (*(tzt.getTo()) == *tar) {
+                    break;
+                }
+                t = tzt.getTime();
+            }
+            if (avail) {
+                // Check if the entire start times to be added
+                tar->getFirstStart(tzt.getFrom()->getRawOffset(), tzt.getFrom()->getDSTSavings(), firstStart);
+                if (firstStart > start) {
+                    // Just add the rule as is
+                    filteredRules->addElement(tar, status);
+                    if (U_FAILURE(status)) {
+                        goto error;
+                    }
+                } else {
+                    // Colllect transitions after the start time
+                    int32_t startTimes;
+                    DateTimeRule::TimeRuleType timeType;
+                    int32_t idx;
+
+                    startTimes = tar->countStartTimes();
+                    timeType = tar->getTimeType();
+                    for (idx = 0; idx < startTimes; idx++) {
+                        tar->getStartTimeAt(idx, t);
+                        if (timeType == DateTimeRule::STANDARD_TIME) {
+                            t -= tzt.getFrom()->getRawOffset();
+                        }
+                        if (timeType == DateTimeRule::WALL_TIME) {
+                            t -= tzt.getFrom()->getDSTSavings();
+                        }
+                        if (t > start) {
+                            break;
+                        }
+                    }
+                    int32_t asize = startTimes - idx;
+                    if (asize > 0) {
+                        newTimes = (UDate*)uprv_malloc(sizeof(UDate) * asize);
+                        if (newTimes == NULL) {
+                            status = U_MEMORY_ALLOCATION_ERROR;
+                            goto error;
+                        }
+                        for (int32_t newidx = 0; newidx < asize; newidx++) {
+                            tar->getStartTimeAt(idx + newidx, newTimes[newidx]);
+                            if (U_FAILURE(status)) {
+                                uprv_free(newTimes);
+                                newTimes = NULL;
+                                goto error;
+                            }
+                        }
+                        tar->getName(name);
+                        TimeArrayTimeZoneRule *newTar = new TimeArrayTimeZoneRule(name,
+                            tar->getRawOffset(), tar->getDSTSavings(), newTimes, asize, timeType);
+                        uprv_free(newTimes);
+                        filteredRules->addElement(newTar, status);
+                        if (U_FAILURE(status)) {
+                            goto error;
+                        }
+                    }
+                }
+            }
+        } else if (toRule->getDynamicClassID() == AnnualTimeZoneRule::getStaticClassID()) {
+            AnnualTimeZoneRule *ar = (AnnualTimeZoneRule*)toRule;
+            ar->getFirstStart(tzt.getFrom()->getRawOffset(), tzt.getFrom()->getDSTSavings(), firstStart);
+            if (firstStart == tzt.getTime()) {
+                // Just add the rule as is
+                filteredRules->addElement(ar, status);
+                if (U_FAILURE(status)) {
+                    goto error;
+                }
+            } else {
+                // Calculate the transition year
+                int32_t year, month, dom, dow, doy, mid;
+                Grego::timeToFields(tzt.getTime(), year, month, dom, dow, doy, mid);
+                // Re-create the rule
+                ar->getName(name);
+                AnnualTimeZoneRule *newAr = new AnnualTimeZoneRule(name, ar->getRawOffset(), ar->getDSTSavings(),
+                    *(ar->getRule()), year, ar->getEndYear());
+                filteredRules->addElement(newAr, status);
+                if (U_FAILURE(status)) {
+                    goto error;
+                }
+            }
+            // check if this is a final rule
+            if (ar->getEndYear() == AnnualTimeZoneRule::MAX_YEAR) {
+                // After bot final standard and dst rules are processed,
+                // exit this while loop.
+                if (ar->getDSTSavings() == 0) {
+                    bFinalStd = TRUE;
+                } else {
+                    bFinalDst = TRUE;
+                }
+            }
+        }
+        done[i] = TRUE;
+    }
+
+    // Set the results
+    if (orgRules != NULL) {
+        while (orgRules->isEmpty()) {
+            r = (TimeZoneRule*)orgRules->orphanElementAt(0);
+            delete r;
+        }
+        delete orgRules;
+    }
+    if (done != NULL) {
+        uprv_free(done);
+    }
+
+    initial = res_initial;
+    transitionRules = filteredRules;
+    return;
+
+error:
+    if (orgRules != NULL) {
+        while (orgRules->isEmpty()) {
+            r = (TimeZoneRule*)orgRules->orphanElementAt(0);
+            delete r;
+        }
+        delete orgRules;
+    }
+    if (done != NULL) {
+        uprv_free(done);
+    }
+
+    initial = NULL;
+    transitionRules = NULL;
 }
 
 U_NAMESPACE_END

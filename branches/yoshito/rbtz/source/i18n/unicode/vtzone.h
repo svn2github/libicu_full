@@ -20,6 +20,10 @@
 
 U_NAMESPACE_BEGIN
 
+class VTZWriter;
+class VTZReader;
+class UVector;
+
 class U_I18N_API VTimeZone : public BasicTimeZone {
 public:
     /**
@@ -103,18 +107,18 @@ public:
      * Gets the RFC2445 LAST-MODIFIED property value.  When a <code>VTimeZone</code> instance
      * was created from VTIMEZONE data, the initial value is set by the LAST-MODIFIED property
      * value in the data.  Otherwise, the initial value is not set.
-     * @param lastModified Receives the RFC2445 LAST-MODIFIED property value.
+     * @param lastModified Receives the last modified date.
      * @return TRUE if lastModified attribute is available and value is set.
      * @draft ICU 3.8
      */
-    UBool getLastModified(UnicodeString& lastModified) const;
+    UBool getLastModified(UDate& lastModified) const;
 
     /**
      * Sets the RFC2445 LAST-MODIFIED property value.
-     * @param lastModified The LAST-MODIFIED property value.
+     * @param lastModified The LAST-MODIFIED date.
      * @draft ICU 3.8
      */
-    void setLastModified(const UnicodeString& lastModified);
+    void setLastModified(UDate lastModified);
 
     /**
      * Writes RFC2445 VTIMEZONE data for this time zone
@@ -132,7 +136,7 @@ public:
      * @param status Output param to filled in with a success or an error.
      * @draft ICU 3.8
      */
-    void write(UDate cutover, UnicodeString& result, UErrorCode& status) const;
+    void write(UDate cutover, UnicodeString& result, UErrorCode& status) /*const*/;
 
     /**
      * Writes RFC2445 VTIMEZONE data applicalbe for the specified date.
@@ -147,7 +151,7 @@ public:
      * @param status Output param to filled in with a success or an error.
      * @draft ICU 3.8
      */
-    void writeSimple(UDate time, UnicodeString& result, UErrorCode& status) const;
+    void writeSimple(UDate time, UnicodeString& result, UErrorCode& status) /*const*/;
 
     /**
      * Clones TimeZone objects polymorphically. Clients are responsible for deleting
@@ -336,7 +340,60 @@ public:
     virtual TimeZoneRule* getTransitionRule(int16_t index, UErrorCode& status) /*const*/;
 
 private:
+    /**
+     * Default constructor.
+     */
+    VTimeZone();
+    static VTimeZone* createVTimeZone(VTZReader* reader);
+    void write(VTZWriter& writer, UErrorCode& status) const;
+    void write(UDate cutover, VTZWriter& writer, UErrorCode& status) /*const*/;
+    void writeSimple(UDate time, VTZWriter& writer, UErrorCode& status) /*const*/;
+    void load(VTZReader& reader, UErrorCode& status);
+    void parse(UErrorCode& status);
+
+    void writeZone(VTZWriter& w, BasicTimeZone& basictz, UVector* customProps,
+        UErrorCode& status) const;
+
+    void writeHeaders(VTZWriter& w, UErrorCode& status) const;
+    void writeFooter(VTZWriter& writer, UErrorCode& status) const;
+
+    void writeZonePropsByTime(VTZWriter& writer, UBool isDst, const UnicodeString& tzname,
+                              int32_t fromOffset, int32_t toOffset, UDate time, UErrorCode& status) const;
+    void writeZonePropsByDOM(VTZWriter& writer, UBool isDst, const UnicodeString& tzname,
+                             int32_t fromOffset, int32_t toOffset,
+                             int32_t month, int32_t dayOfMonth, UDate startTime, UDate untilTime,
+                             UErrorCode& status) const;
+    void writeZonePropsByDOW(VTZWriter& writer, UBool isDst, const UnicodeString& tzname,
+                             int32_t fromOffset, int32_t toOffset,
+                             int32_t month, int32_t weekInMonth, int32_t dayOfWeek,
+                             UDate startTime, UDate untilTime, UErrorCode& status) const;
+    void writeZonePropsByDOW_GEQ_DOM(VTZWriter& writer, UBool isDst, const UnicodeString& tzname,
+                                     int32_t fromOffset, int32_t toOffset,
+                                     int32_t month, int32_t dayOfMonth, int32_t dayOfWeek,
+                                     UDate startTime, UDate untilTime, UErrorCode& status) const;
+    void writeZonePropsByDOW_GEQ_DOM_sub(VTZWriter& writer, int32_t month, int32_t dayOfMonth,
+                                         int32_t dayOfWeek, int32_t numDays,
+                                         UDate untilTime, int32_t fromOffset, UErrorCode& status) const;
+    void writeZonePropsByDOW_LEQ_DOM(VTZWriter& writer, UBool isDst, const UnicodeString& tzname,
+                                     int32_t fromOffset, int32_t toOffset,
+                                     int32_t month, int32_t dayOfMonth, int32_t dayOfWeek,
+                                     UDate startTime, UDate untilTime, UErrorCode& status) const;
+    void writeFinalRule(VTZWriter& writer, UBool isDst, const AnnualTimeZoneRule* rule,
+                        int32_t fromRawOffset, int32_t fromDSTSavings,
+                        UDate startTime, UErrorCode& status) const;
+
+    void beginZoneProps(VTZWriter& writer, UBool isDst, const UnicodeString& tzname,
+                        int32_t fromOffset, int32_t toOffset, UDate startTime, UErrorCode& status) const;
+    void endZoneProps(VTZWriter& writer, UBool isDst, UErrorCode& status) const;
+    void beginRRULE(VTZWriter& writer, int32_t month, UErrorCode& status) const;
+    void appendUNTIL(VTZWriter& writer, const UnicodeString& until, UErrorCode& status) const;
+
     BasicTimeZone   *tz;
+    UVector         *vtzlines;
+    UnicodeString   tzurl;
+    UDate           lastmod;
+    UnicodeString   olsonzid;
+    UnicodeString   icutzver;
 
 public:
     /**
