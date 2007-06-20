@@ -451,7 +451,7 @@ RuleBasedTimeZone::useDaylightTime(void) const {
     // after the next transition.
     UErrorCode status = U_ZERO_ERROR;
     UDate now = uprv_getUTCtime() * U_MILLIS_PER_SECOND;
-    int raw, dst;
+    int32_t raw, dst;
     getOffset(now, FALSE, raw, dst, status);
     if (dst != 0) {
         return TRUE;
@@ -471,7 +471,7 @@ RuleBasedTimeZone::inDaylightTime(UDate date, UErrorCode& status) const {
     if (U_FAILURE(status)) {
         return FALSE;
     }
-    int raw, dst;
+    int32_t raw, dst;
     getOffset(date, FALSE, raw, dst, status);
     if (dst != 0) {
         return TRUE;

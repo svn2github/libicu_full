@@ -23,10 +23,12 @@
 U_NAMESPACE_BEGIN
 
 // Smybol characters used by RFC2445 VTIMEZONE
-static const UChar COLON = 0x3A; /* ":" */
-static const UChar SEMICOLON = 0x3B; /* ";" */
-static const UChar EQUALS_SIGN = 0x3D; /* "=" */
-static const UChar COMMA = 0x2C; /* ","; */
+static const UChar COLON = 0x3A; /* : */
+static const UChar SEMICOLON = 0x3B; /* ; */
+static const UChar EQUALS_SIGN = 0x3D; /* = */
+static const UChar COMMA = 0x2C; /* , */
+static const UChar PLUS = 0x2B; /* + */
+static const UChar MINUS = 0x2D; /* - */
 
 // RFC2445 VTIMEZONE tokens
 static const UChar ICAL_BEGIN_VTIMEZONE[] = {0x42, 0x45, 0x47, 0x49, 0x4E, 0x3A, 0x56, 0x54, 0x49, 0x4D, 0x45, 0x5A, 0x4F, 0x4E, 0x45, 0}; /* "BEGIN:VTIMEZONE" */
@@ -85,10 +87,10 @@ static int32_t parseAsciiDigits(const UnicodeString& str, int32_t start, int32_t
         return 0;
     }
     int32_t sign = 1;
-    if (str.charAt(start) == 0x002B /*'+'*/) {
+    if (str.charAt(start) == PLUS) {
         start++;
         length--;
-    } else if (str.charAt(start) == 0x002D /*'-'*/) {
+    } else if (str.charAt(start) == MINUS) {
         sign = -1;
         start++;
         length--;
@@ -132,10 +134,10 @@ static UnicodeString& appendAsciiDigits(int32_t number, uint8_t length, UnicodeS
         }
     }
     if (negative) {
-        str.append(0x002D /*'-'*/);
+        str.append(MINUS);
     }
     for (i = length - 1; i >= 0; i--) {
-        str.append((UChar)digits[i] + 0x0030);
+        str.append((UChar)(digits[i] + 0x0030));
     }
     return str;
 }
@@ -164,11 +166,11 @@ static UnicodeString& appendMillis(UDate date, UnicodeString& str) {
     } while (number != 0);
 
     if (negative) {
-        str.append(0x002D /*'-'*/);
+        str.append(MINUS);
     }
     i--;
     while (i >= 0) {
-        str.append((UChar)digits[i--] + 0x0030);
+        str.append((UChar)(digits[i--] + 0x0030));
     }
     return str;
 }
@@ -184,7 +186,7 @@ static UnicodeString& getDateTimeString(UDate time, UnicodeString& str) {
     appendAsciiDigits(year, 4, str);
     appendAsciiDigits(month + 1, 2, str);
     appendAsciiDigits(dom, 2, str);
-    str.append(0x0054 /*'T'*/);
+    str.append((UChar)0x0054 /*'T'*/);
 
     int32_t t = mid;
     int32_t hour = t / U_MILLIS_PER_HOUR;
@@ -204,7 +206,7 @@ static UnicodeString& getDateTimeString(UDate time, UnicodeString& str) {
  */
 static UnicodeString& getUTCDateTimeString(UDate time, UnicodeString& str) {
     getDateTimeString(time, str);
-    str.append(0x005A /*'Z'*/);
+    str.append((UChar)0x005A /*'Z'*/);
     return str;
 }
 
@@ -292,9 +294,9 @@ static int32_t offsetStrToMillis(const UnicodeString& str, UErrorCode& status) {
         }
         // sign
         UChar s = str.charAt(0);
-        if (s == 0x002B /*'+'*/) {
+        if (s == PLUS) {
             sign = 1;
-        } else if (s == 0x002D /*'-'*/) {
+        } else if (s == MINUS) {
             sign = -1;
         } else {
             // utf-offset must start with "+" or "-"
@@ -323,9 +325,9 @@ static int32_t offsetStrToMillis(const UnicodeString& str, UErrorCode& status) {
 static void millisToOffset(int32_t millis, UnicodeString& str) {
     str.remove();
     if (millis >= 0) {
-        str.append(0x002B /*'+'*/);
+        str.append(PLUS);
     } else {
-        str.append(0x002D /*'-'*/);
+        str.append(MINUS);
         millis = -millis;
     }
     int32_t hour, min, sec;
@@ -438,9 +440,9 @@ static void parseRRULE(const UnicodeString& rrule, int32_t& month, int32_t& dow,
             if (length > 2) {
                 // Nth day of week
                 int32_t sign = 1;
-                if (value.charAt(0) == 0x002B /*'+'*/) {
+                if (value.charAt(0) == PLUS) {
                     sign = 1;
-                } else if (value.charAt(0) == 0x002D /*'-'*/) {
+                } else if (value.charAt(0) == MINUS) {
                     sign = -1;
                 } else if (length == 4) {
                     goto rruleParseError;
@@ -1577,9 +1579,9 @@ VTimeZone::write(VTZWriter& writer, UErrorCode& status) const {
             }
             UnicodeString *icutzprop = new UnicodeString(ICU_TZINFO_PROP);
             icutzprop->append(olsonzid);
-            icutzprop->append(0x005B/*'['*/);
+            icutzprop->append((UChar)0x005B/*'['*/);
             icutzprop->append(icutzver);
-            icutzprop->append(0x005D/*']'*/);
+            icutzprop->append((UChar)0x005D/*']'*/);
             customProps->addElement(icutzprop, status);
             if (U_FAILURE(status)) {
                 delete icutzprop;
@@ -1635,11 +1637,11 @@ VTimeZone::write(UDate cutover, VTZWriter& writer, UErrorCode& status) /*const*/
         }
         UnicodeString *icutzprop = new UnicodeString(ICU_TZINFO_PROP);
         icutzprop->append(olsonzid);
-        icutzprop->append(0x005B/*'['*/);
+        icutzprop->append((UChar)0x005B/*'['*/);
         icutzprop->append(icutzver);
         icutzprop->append(ICU_TZINFO_PARTIAL);
         appendMillis(cutover, *icutzprop);
-        icutzprop->append(0x005D/*']'*/);
+        icutzprop->append((UChar)0x005D/*']'*/);
         customProps->addElement(icutzprop, status);
         if (U_FAILURE(status)) {
             delete icutzprop;
@@ -1705,11 +1707,11 @@ VTimeZone::writeSimple(UDate time, VTZWriter& writer, UErrorCode& status) /*cons
         }
         UnicodeString *icutzprop = new UnicodeString(ICU_TZINFO_PROP);
         icutzprop->append(olsonzid);
-        icutzprop->append(0x005B/*'['*/);
+        icutzprop->append((UChar)0x005B/*'['*/);
         icutzprop->append(icutzver);
         icutzprop->append(ICU_TZINFO_SIMPLE);
         appendMillis(time, *icutzprop);
-        icutzprop->append(0x005D/*']'*/);
+        icutzprop->append((UChar)0x005D/*']'*/);
         customProps->addElement(icutzprop, status);
         if (U_FAILURE(status)) {
             delete icutzprop;
