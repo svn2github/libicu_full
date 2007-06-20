@@ -26,6 +26,7 @@
 #include "cpdtrans.h"
 #include "nultrans.h"
 #include "rbt.h"
+#include "rbt_pars.h"
 #include "anytrans.h"
 #include "esctrn.h"
 #include "name2uni.h"
@@ -186,6 +187,7 @@ TransliteratorTest::runIndexedTest(int32_t index, UBool exec,
         TESTCASE(78,TestBeginEnd);
         TESTCASE(79,TestBeginEndToRules);
         TESTCASE(80,TestRegisterAlias);
+        TESTCASE(81,TestRuleStripping);
         default: name = ""; break;
     }
 }
@@ -325,7 +327,8 @@ void TransliteratorTest::TestSimpleRules(void) {
     /* Test categories
      */
     UErrorCode status = U_ZERO_ERROR;
-    RuleBasedTransliterator t(
+    UParseError parseError;
+    Transliterator *t = Transliterator::createFromRules(
         "<ID>",
         UnicodeString("$dummy=").append((UChar)0xE100) +
         UnicodeString(";"
@@ -336,12 +339,14 @@ void TransliteratorTest::TestSimpleRules(void) {
                       "'!' { $lu > '^';"
                       "$lu > '*';"
                       "a > ERROR", ""),
+        UTRANS_FORWARD, parseError,
         status);
     if (U_FAILURE(status)) {
         errln("FAIL: RBT constructor failed");
         return;
     }
-    expect(t, "abcdefgABCDEFGU", "&bcd&fg!^**!^*&");
+    expect(*t, "abcdefgABCDEFGU", "&bcd&fg!^**!^*&");
+    delete t;
 }
 
 /**
@@ -402,29 +407,35 @@ void TransliteratorTest::TestRuleBasedInverse(void) {
     int32_t DATA_length = (int32_t)(sizeof(DATA) / sizeof(DATA[0]));
 
     UErrorCode status = U_ZERO_ERROR;
-    RuleBasedTransliterator fwd("<ID>", RULES, status);
-    RuleBasedTransliterator rev("<ID>", RULES,
-                                UTRANS_REVERSE, status);
+    UParseError parseError;
+    Transliterator *fwd = Transliterator::createFromRules("<ID>", RULES,
+                                UTRANS_FORWARD, parseError, status);
+    Transliterator *rev = Transliterator::createFromRules("<ID>", RULES,
+                                UTRANS_REVERSE, parseError, status);
     if (U_FAILURE(status)) {
         errln("FAIL: RBT constructor failed");
         return;
     }
     for (int32_t i=0; i<DATA_length; i+=2) {
-        expect(fwd, DATA[i], DATA[i+1]);
-        expect(rev, DATA[i+1], DATA[i]);
+        expect(*fwd, DATA[i], DATA[i+1]);
+        expect(*rev, DATA[i+1], DATA[i]);
     }
+    delete fwd;
+    delete rev;
 }
 
 /**
  * Basic test of keyboard.
  */
 void TransliteratorTest::TestKeyboard(void) {
+    UParseError parseError;
     UErrorCode status = U_ZERO_ERROR;
-    RuleBasedTransliterator t("<ID>",
+    Transliterator *t = Transliterator::createFromRules("<ID>",
                               UnicodeString("psch>Y;")
                               +"ps>y;"
                               +"ch>x;"
                               +"a>A;",
+                              UTRANS_FORWARD, parseError,
                               status);
     if (U_FAILURE(status)) {
         errln("FAIL: RBT constructor failed");
@@ -441,19 +452,22 @@ void TransliteratorTest::TestKeyboard(void) {
         0, "AycAY", // null means finishKeyboardTransliteration
     };
 
-    keyboardAux(t, DATA, (int32_t)(sizeof(DATA)/sizeof(DATA[0])));
+    keyboardAux(*t, DATA, (int32_t)(sizeof(DATA)/sizeof(DATA[0])));
+    delete t;
 }
 
 /**
  * Basic test of keyboard with cursor.
  */
 void TransliteratorTest::TestKeyboard2(void) {
+    UParseError parseError;
     UErrorCode status = U_ZERO_ERROR;
-    RuleBasedTransliterator t("<ID>",
+    Transliterator *t = Transliterator::createFromRules("<ID>",
                               UnicodeString("ych>Y;")
                               +"ps>|y;"
                               +"ch>x;"
                               +"a>A;",
+                              UTRANS_FORWARD, parseError,
                               status);
     if (U_FAILURE(status)) {
         errln("FAIL: RBT constructor failed");
@@ -473,7 +487,8 @@ void TransliteratorTest::TestKeyboard2(void) {
         0, "AycAY", // null means finishKeyboardTransliteration
     };
 
-    keyboardAux(t, DATA, (int32_t)(sizeof(DATA)/sizeof(DATA[0])));
+    keyboardAux(*t, DATA, (int32_t)(sizeof(DATA)/sizeof(DATA[0])));
+    delete t;
 }
 
 /**
@@ -499,13 +514,15 @@ void TransliteratorTest::TestKeyboard3(void) {
         0, "abycz", // null means finishKeyboardTransliteration
     };
 
+    UParseError parseError;
     UErrorCode status = U_ZERO_ERROR;
-    RuleBasedTransliterator t("<ID>", RULES, status);
+    Transliterator *t = Transliterator::createFromRules("<ID>", RULES, UTRANS_FORWARD, parseError, status);
     if (U_FAILURE(status)) {
         errln("FAIL: RBT constructor failed");
         return;
     }
-    keyboardAux(t, DATA, (int32_t)(sizeof(DATA)/sizeof(DATA[0])));
+    keyboardAux(*t, DATA, (int32_t)(sizeof(DATA)/sizeof(DATA[0])));
+    delete t;
 }
 
 void TransliteratorTest::keyboardAux(const Transliterator& t,
@@ -725,13 +742,15 @@ void TransliteratorTest::TestPatternQuoting(void) {
 
     for (int32_t i=0; i<3; i+=3) {
         logln(UnicodeString("Pattern: ") + prettify(DATA[i]));
+        UParseError parseError;
         UErrorCode status = U_ZERO_ERROR;
-        RuleBasedTransliterator t("<ID>", DATA[i], status);
+        Transliterator *t = Transliterator::createFromRules("<ID>", DATA[i], UTRANS_FORWARD, parseError, status);
         if (U_FAILURE(status)) {
             errln("RBT constructor failed");
         } else {
-            expect(t, DATA[i+1], DATA[i+2]);
+            expect(*t, DATA[i+1], DATA[i+2]);
         }
+        delete t;
     }
 }
 
@@ -779,10 +798,12 @@ void TransliteratorTest::TestJ277(void) {
                 "y <>           $ypsilon;"
                 "n <>           $nu;",
                 "");
-    RuleBasedTransliterator mini("mini", rules, UTRANS_REVERSE, status);
+    Transliterator *mini = Transliterator::createFromRules("mini", rules, UTRANS_REVERSE, parseError, status);
     if (U_FAILURE(status)) { errln("FAIL: Transliterator constructor failed"); return; }
-    expect(mini, syn, "syn");
-    expect(mini, sayn, "saun");
+    expect(*mini, syn, "syn");
+    expect(*mini, sayn, "saun");
+    delete mini;
+    mini = NULL;
 
 #if !UCONFIG_NO_FORMATTING
     // Transliterate the Greek locale data
@@ -856,10 +877,9 @@ void TransliteratorTest::TestJ329(void) {
     for (int32_t i=0; i<DATA_length; ++i) {
         UErrorCode status = U_ZERO_ERROR;
         UParseError parseError;
-        RuleBasedTransliterator rbt("<ID>",
+        Transliterator *rbt = Transliterator::createFromRules("<ID>",
                                     DATA[i].rule,
                                     UTRANS_FORWARD,
-                                    0,
                                     parseError,
                                     status);
         UBool gotError = U_FAILURE(status);
@@ -876,6 +896,7 @@ void TransliteratorTest::TestJ329(void) {
         } else {
             errln(UnicodeString("FAIL: ") + desc);
         }
+        delete rbt;
     }
 }
 
@@ -899,13 +920,15 @@ void TransliteratorTest::TestSegments(void) {
 
     for (int32_t i=0; i<DATA_length; i+=3) {
         logln("Pattern: " + prettify(DATA[i]));
+        UParseError parseError;
         UErrorCode status = U_ZERO_ERROR;
-        RuleBasedTransliterator t("ID", DATA[i], status);
+        Transliterator *t = Transliterator::createFromRules("ID", DATA[i], UTRANS_FORWARD, parseError, status);
         if (U_FAILURE(status)) {
             errln("FAIL: RBT constructor");
         } else {
-            expect(t, DATA[i+1], DATA[i+2]);
+            expect(*t, DATA[i+1], DATA[i+2]);
         }
+        delete t;
     }
 }
 
@@ -929,13 +952,15 @@ void TransliteratorTest::TestCursorOffset(void) {
 
     for (int32_t i=0; i<DATA_length; i+=3) {
         logln("Pattern: " + prettify(DATA[i]));
+        UParseError parseError;
         UErrorCode status = U_ZERO_ERROR;
-        RuleBasedTransliterator t("<ID>", DATA[i], status);
+        Transliterator *t = Transliterator::createFromRules("<ID>", DATA[i], UTRANS_FORWARD, parseError, status);
         if (U_FAILURE(status)) {
             errln("FAIL: RBT constructor");
         } else {
-            expect(t, DATA[i+1], DATA[i+2]);
+            expect(*t, DATA[i+1], DATA[i+2]);
         }
+        delete t;
     }
 }
 
@@ -968,13 +993,15 @@ void TransliteratorTest::TestArbitraryVariableValues(void) {
 
     for (int32_t i=0; i<DATA_length; i+=3) {
         logln("Pattern: " + prettify(DATA[i]));
+        UParseError parseError;
         UErrorCode status = U_ZERO_ERROR;
-        RuleBasedTransliterator t("<ID>", DATA[i], status);
+        Transliterator *t = Transliterator::createFromRules("<ID>", DATA[i], UTRANS_FORWARD, parseError, status);
         if (U_FAILURE(status)) {
             errln("FAIL: RBT constructor");
         } else {
-            expect(t, DATA[i+1], DATA[i+2]);
+            expect(*t, DATA[i+1], DATA[i+2]);
         }
+        delete t;
     }
 }
 
@@ -1010,8 +1037,9 @@ void TransliteratorTest::TestPositionHandling(void) {
     int32_t n = (int32_t)(sizeof(DATA) / sizeof(DATA[0])) / 3;
     for (int32_t i=0; i<n; i++) {
         UErrorCode status = U_ZERO_ERROR;
-        Transliterator *t = new RuleBasedTransliterator("<ID>",
-                                                        DATA[3*i], status);
+        UParseError parseError;
+        Transliterator *t = Transliterator::createFromRules("<ID>",
+                                DATA[3*i], UTRANS_FORWARD, parseError, status);
         if (U_FAILURE(status)) {
             delete t;
             errln("FAIL: RBT constructor");
@@ -1093,18 +1121,21 @@ void TransliteratorTest::TestCopyJ476(void) {
     // The real test here is what happens when the destructors are
     // called.  So we let one object get destructed, and check to
     // see that its copy still works.
-    RuleBasedTransliterator *t2 = 0;
+    Transliterator *t2 = 0;
     {
+        UParseError parseError;
         UErrorCode status = U_ZERO_ERROR;
-        RuleBasedTransliterator t1("t1", "a>A;b>B;", status);
+        Transliterator *t1 = Transliterator::createFromRules("t1",
+            "a>A;b>B;'foo'+>'bar'", UTRANS_FORWARD, parseError, status);
         if (U_FAILURE(status)) {
             errln("FAIL: RBT constructor");
             return;
         }
-        t2 = new RuleBasedTransliterator(t1);
-        expect(t1, "abc", "ABc");
+        t2 = t1->clone(); // Call copy constructor under the covers.
+        expect(*t1, "abcfoofoo", "ABcbar");
+        delete t1;
     }
-    expect(*t2, "abc", "ABc");
+    expect(*t2, "abcfoofoo", "ABcbar");
     delete t2;
 }
 
@@ -1904,12 +1935,22 @@ void TransliteratorTest::TestQuantifier() {
            "bb x xb");
 }
 
-class TestTrans : public NullTransliterator {
+class TestTrans : public Transliterator {
 public:
-    TestTrans(const UnicodeString& id) {
-        setID(id);
+    TestTrans(const UnicodeString& id) : Transliterator(id, 0) {
     }
+    virtual Transliterator* clone(void) const {
+        return new TestTrans(getID());
+    }
+    virtual void handleTransliterate(Replaceable& text, UTransPosition& offsets,
+        UBool isIncremental) const
+    {
+        offsets.start = offsets.limit;
+    }
+    virtual UClassID getDynamicClassID() const;
+    static UClassID U_EXPORT2 getStaticClassID();
 };
+UOBJECT_DEFINE_RTTI_IMPLEMENTATION(TestTrans)
 
 /**
  * Test Source-Target/Variant.
@@ -2240,7 +2281,7 @@ void TransliteratorTest::TestUndefinedVariable() {
     UnicodeString rule = "$initial } a <> \\u1161;";
     UParseError pe;
     UErrorCode ec = U_ZERO_ERROR;
-    Transliterator *t = new RuleBasedTransliterator("<ID>", rule, UTRANS_FORWARD, 0, pe, ec);
+    Transliterator *t = Transliterator::createFromRules("<ID>", rule, UTRANS_FORWARD, pe, ec);
     delete t;
     if (U_FAILURE(ec)) {
         logln((UnicodeString)"OK: Got exception for " + rule + ", as expected: " +
@@ -2906,7 +2947,7 @@ void TransliteratorTest::TestLocaleResource() {
  * Make sure parse errors reference the right line.
  */
 void TransliteratorTest::TestParseError() {
-    const char* rule =
+    static const char* rule =
         "a > b;\n"
         "# more stuff\n"
         "d << b;";
@@ -2922,9 +2963,25 @@ void TransliteratorTest::TestParseError() {
         } else {
             errln("FAIL: " + err);
         }
-        return;
     }
-    errln("FAIL: no syntax error");
+    else {
+        errln("FAIL: no syntax error");
+    }
+    static const char* maskingRule =
+        "a>x;\n"
+        "# more stuff\n"
+        "ab>y;";
+    ec = U_ZERO_ERROR;
+    delete Transliterator::createFromRules("ID", maskingRule, UTRANS_FORWARD, pe, ec);
+    if (ec != U_RULE_MASK_ERROR) {
+        errln("FAIL: returned %s instead of U_RULE_MASK_ERROR", u_errorName(ec));
+    }
+    else if (UnicodeString("a > x;") != UnicodeString(pe.preContext)) {
+        errln("FAIL: did not get expected precontext");
+    }
+    else if (UnicodeString("ab > y;") != UnicodeString(pe.postContext)) {
+        errln("FAIL: did not get expected postcontext");
+    }
 }
 
 /**
@@ -4392,6 +4449,29 @@ void TransliteratorTest::TestRegisterAlias() {
     delete t1;
     delete t2;
     Transliterator::unregister(fakeID);
+}
+
+void TransliteratorTest::TestRuleStripping() {
+    /*
+#
+\uE001>\u0C01; # SIGN
+    */
+    static const UChar rule[] = {
+        0x0023,0x0020,0x000D,0x000A,
+        0xE001,0x003E,0x0C01,0x003B,0x0020,0x0023,0x0020,0x0053,0x0049,0x0047,0x004E,0
+    };
+    static const UChar expectedRule[] = {
+        0xE001,0x003E,0x0C01,0x003B,0
+    };
+    UChar result[sizeof(rule)/sizeof(rule[0])];
+    UErrorCode status = U_ZERO_ERROR;
+    int32_t len = utrans_stripRules(rule, (int32_t)(sizeof(rule)/sizeof(rule[0])), result, &status);
+    if (len != u_strlen(expectedRule)) {
+        errln("utrans_stripRules return len = %d", len);
+    }
+    if (u_strncmp(expectedRule, result, len) != 0) {
+        errln("utrans_stripRules did not return expected string");
+    }
 }
 
 //======================================================================

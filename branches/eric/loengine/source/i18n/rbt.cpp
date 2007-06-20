@@ -1,6 +1,6 @@
 /*
 **********************************************************************
-*   Copyright (C) 1999-2006, International Business Machines
+*   Copyright (C) 1999-2007, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 **********************************************************************
 *   Date        Name        Description
@@ -87,7 +87,7 @@ RuleBasedTransliterator::RuleBasedTransliterator(
  * @exception IllegalArgumentException if rules are malformed
  * or direction is invalid.
  */
-RuleBasedTransliterator::RuleBasedTransliterator(
+/*RuleBasedTransliterator::RuleBasedTransliterator(
                             const UnicodeString& id,
                             const UnicodeString& rules,
                             UTransDirection direction,
@@ -96,12 +96,12 @@ RuleBasedTransliterator::RuleBasedTransliterator(
     Transliterator(id, adoptedFilter) {
     UParseError parseError;
     _construct(rules, direction,parseError, status);
-}
+}*/
 
 /**
  * Covenience constructor with no filter.
  */
-RuleBasedTransliterator::RuleBasedTransliterator(
+/*RuleBasedTransliterator::RuleBasedTransliterator(
                             const UnicodeString& id,
                             const UnicodeString& rules,
                             UTransDirection direction,
@@ -109,24 +109,24 @@ RuleBasedTransliterator::RuleBasedTransliterator(
     Transliterator(id, 0) {
     UParseError parseError;
     _construct(rules, direction,parseError, status);
-}
+}*/
 
 /**
  * Covenience constructor with no filter and FORWARD direction.
  */
-RuleBasedTransliterator::RuleBasedTransliterator(
+/*RuleBasedTransliterator::RuleBasedTransliterator(
                             const UnicodeString& id,
                             const UnicodeString& rules,
                             UErrorCode& status) :
     Transliterator(id, 0) {
     UParseError parseError;
     _construct(rules, UTRANS_FORWARD, parseError, status);
-}
+}*/
 
 /**
  * Covenience constructor with FORWARD direction.
  */
-RuleBasedTransliterator::RuleBasedTransliterator(
+/*RuleBasedTransliterator::RuleBasedTransliterator(
                             const UnicodeString& id,
                             const UnicodeString& rules,
                             UnicodeFilter* adoptedFilter,
@@ -134,7 +134,7 @@ RuleBasedTransliterator::RuleBasedTransliterator(
     Transliterator(id, adoptedFilter) {
     UParseError parseError;
     _construct(rules, UTRANS_FORWARD,parseError, status);
-}
+}*/
 
 RuleBasedTransliterator::RuleBasedTransliterator(const UnicodeString& id,
                                  const TransliterationRuleData* theData,

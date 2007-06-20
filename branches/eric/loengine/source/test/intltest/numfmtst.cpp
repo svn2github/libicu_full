@@ -82,7 +82,8 @@ void NumberFormatTest::runIndexedTest( int32_t index, UBool exec, const char* &n
         CASE(31,TestCoverage);
         CASE(32,TestJB3832);
         CASE(33,TestHost);
-        CASE(34,TestCurrencyFormat);
+        CASE(34,TestHostClone);
+        CASE(35,TestCurrencyFormat);
         default: name = ""; break;
     }
 }
@@ -2245,6 +2246,38 @@ void NumberFormatTest::TestHost()
 #endif
 }
 
+void NumberFormatTest::TestHostClone()
+{
+    /*
+    Verify that a cloned formatter gives the same results
+    and is useable after the original has been deleted.
+    */
+    // This is mainly important on Windows.
+    UErrorCode status = U_ZERO_ERROR;
+    Locale loc("en_US@compat=host");
+    UDate now = Calendar::getNow();
+    NumberFormat *full = NumberFormat::createInstance(loc, status);
+    if (full == NULL || U_FAILURE(status)) {
+        errln("FAIL: Can't create Relative date instance");
+        return;
+    }
+    UnicodeString result1;
+    full->format(now, result1, status);
+    Format *fullClone = full->clone();
+    delete full;
+    full = NULL;
+
+    UnicodeString result2;
+    fullClone->format(now, result2, status);
+    if (U_FAILURE(status)) {
+        errln("FAIL: format failure.");
+    }
+    if (result1 != result2) {
+        errln("FAIL: Clone returned different result from non-clone.");
+    }
+    delete fullClone;
+}
+
 void NumberFormatTest::TestCurrencyFormat()
 {
     // This test is here to increase code coverage.
@@ -2291,9 +2324,16 @@ void NumberFormatTest::TestCurrencyFormat()
     if (result != toFormat) {
         errln("Clone does not round trip. Formatted string was \"" + str + "\" Got: " + toString(result) + " Expected: " + toString(toFormat));
     }
+    if (*measureObj != *cloneObj) {
+        errln("Cloned object is not equal to the original object");
+    }
     delete measureObj;
     delete cloneObj;
 
+    status = U_USELESS_COLLATOR_ERROR;
+    if (MeasureFormat::createCurrencyFormat(status) != NULL) {
+        errln("createCurrencyFormat should have returned NULL.");
+    }
 }
 
 #endif /* #if !UCONFIG_NO_FORMATTING */

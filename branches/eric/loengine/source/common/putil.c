@@ -1,7 +1,7 @@
 /*
 ******************************************************************************
 *
-*   Copyright (C) 1997-2006, International Business Machines
+*   Copyright (C) 1997-2007, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 ******************************************************************************
@@ -597,8 +597,13 @@ extern U_IMPORT char *U_TZNAME[];
 #if !UCONFIG_NO_FILE_IO && (defined(U_DARWIN) || defined(U_LINUX) || defined(U_BSD))
 /* These platforms are likely to use Olson timezone IDs. */
 #define CHECK_LOCALTIME_LINK 1
-#define TZZONELINK      "/etc/localtime"
+#if defined(U_LINUX)
+#define TZDEFAULT       "/etc/localtime"
 #define TZZONEINFO      "/usr/share/zoneinfo/"
+#else
+#include <tzfile.h>
+#define TZZONEINFO      (TZDIR "/")
+#endif
 static char gTimeZoneBuffer[PATH_MAX];
 static char *gTimeZoneBufferPtr = NULL;
 #endif
@@ -757,7 +762,7 @@ uprv_tzname(int n)
         because the tzfile contents is underspecified.
         This isn't guaranteed to work because it may not be a symlink.
         */
-        int32_t ret = (int32_t)readlink(TZZONELINK, gTimeZoneBuffer, sizeof(gTimeZoneBuffer));
+        int32_t ret = (int32_t)readlink(TZDEFAULT, gTimeZoneBuffer, sizeof(gTimeZoneBuffer));
         if (0 < ret) {
             int32_t tzZoneInfoLen = uprv_strlen(TZZONEINFO);
             gTimeZoneBuffer[ret] = 0;
@@ -1386,6 +1391,13 @@ remapPlatformDependentCodepage(const char *locale, const char *name) {
             name = "EUC-KR";
         }
     }
+    else if (uprv_strcmp(name, "eucJP") == 0) {
+        /*
+        ibm-954 is the best match.
+        ibm-33722 is the default for eucJP (similar to Windows).
+        */
+        name = "eucjis";
+    }
 #elif defined(U_DARWIN)
     if (locale == NULL && *name == 0) {
         /*
@@ -1394,6 +1406,24 @@ remapPlatformDependentCodepage(const char *locale, const char *name) {
         Mac OS X uses UTF-8 by default (especially the locale data and console).
         */
         name = "UTF-8";
+    }
+#elif defined(U_HPUX)
+    if (uprv_strcmp(name, "eucJP") == 0) {
+        /*
+        ibm-1350 is the best match, but unavailable.
+        ibm-954 is mostly a superset of ibm-1350.
+        ibm-33722 is the default for eucJP (similar to Windows).
+        */
+        name = "eucjis";
+    }
+#elif defined(U_LINUX)
+    if (uprv_strcmp(name, "eucjp") == 0) {
+        /*
+        ibm-1350 is the best match, but unavailable.
+        ibm-954 is mostly a superset of ibm-1350.
+        ibm-33722 is the default for eucJP (similar to Windows).
+        */
+        name = "eucjis";
     }
 #endif
     /* return NULL when "" is passed in */
@@ -1502,7 +1532,7 @@ int_getDefaultCodepage()
     if (*codesetName == 0)
     {
         /* Everything failed. Return US ASCII (ISO 646). */
-        uprv_strcpy(codesetName, "US-ASCII");
+        (void)uprv_strcpy(codesetName, "US-ASCII");
     }
     return codesetName;
 #else

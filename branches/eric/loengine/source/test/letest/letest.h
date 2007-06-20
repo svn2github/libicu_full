@@ -19,6 +19,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+U_NAMESPACE_USE
+
 #define ARRAY_SIZE(array) (sizeof array / sizeof array[0])
 
 #define ARRAY_COPY(dst, src, count) memcpy((void *) (dst), (void *) (src), (count) * sizeof (src)[0])

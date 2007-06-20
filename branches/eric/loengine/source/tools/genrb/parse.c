@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 1998-2006, International Business Machines
+*   Copyright (C) 1998-2007, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
@@ -465,6 +465,7 @@ parseTransliterator(char *tag, uint32_t startline, const struct UString* comment
 #if !UCONFIG_NO_TRANSLITERATION
     size = utrans_stripRules(pSource, size, pTarget, status);
 #else
+    size = 0;
     fprintf(stderr, " Warning: writing empty transliteration data ( UCONFIG_NO_TRANSLITERATION ) \n");
 #endif
     result = string_open(bundle, tag, pTarget, size, NULL, status);
@@ -1376,6 +1377,17 @@ parseImport(char *tag, uint32_t startline, const struct UString* comment, UError
     /* Open the input file for reading */
     if (inputdir == NULL)
     {
+#if 1
+        /* 
+         * Always save file file name, even if there's
+         * no input directory specified. MIGHT BREAK SOMETHING
+         */
+        int32_t filenameLength = uprv_strlen(filename);
+
+        fullname = (char *) uprv_malloc(filenameLength + 1);
+        uprv_strcpy(fullname, filename);
+#endif
+
         file = T_FileStream_open(filename, "rb");
     }
     else

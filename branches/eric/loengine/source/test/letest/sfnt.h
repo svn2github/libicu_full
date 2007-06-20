@@ -10,6 +10,7 @@
 
 #include "LETypes.h"
 
+U_NAMESPACE_USE
 
 #ifndef ANY_NUMBER
 #define ANY_NUMBER 1

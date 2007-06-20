@@ -97,14 +97,10 @@ isAcceptableUCA(void * /*context*/,
         ) {
         UVersionInfo UCDVersion;
         u_getUnicodeVersion(UCDVersion);
-        if(pInfo->dataVersion[0]==UCDVersion[0] &&
-          pInfo->dataVersion[1]==UCDVersion[1]) { // &&
-        //pInfo->dataVersion[2]==ucaDataInfo.dataVersion[2] &&
-        //pInfo->dataVersion[3]==ucaDataInfo.dataVersion[3]) {
-          return TRUE;
-        } else {
-          return FALSE;
-        }
+        return (UBool)(pInfo->dataVersion[0]==UCDVersion[0]
+            && pInfo->dataVersion[1]==UCDVersion[1]);
+            //&& pInfo->dataVersion[2]==ucaDataInfo.dataVersion[2]
+            //&& pInfo->dataVersion[3]==ucaDataInfo.dataVersion[3]);
     } else {
         return FALSE;
     }
@@ -556,7 +552,7 @@ ucol_close(UCollator *coll)
 
 /* This one is currently used by genrb & tests. After constructing from rules (tailoring),*/
 /* you should be able to get the binary chunk to write out...  Doesn't look very full now */
-U_CAPI uint8_t* U_EXPORT2
+U_CFUNC uint8_t* U_EXPORT2
 ucol_cloneRuleData(const UCollator *coll, int32_t *length, UErrorCode *status)
 {
   uint8_t *result = NULL;
@@ -793,6 +789,13 @@ UCollator* ucol_initCollator(const UCATableHeader *image, UCollator *fillIn, con
 
     ucol_updateInternalState(result, status);
 
+    /* Normally these will be set correctly later. This is the default if you use UCA or the default. */
+    result->rb = NULL;
+    result->elements = NULL;
+    result->validLocale = NULL;
+    result->requestedLocale = NULL;
+    result->hasRealData = FALSE; // real data lives in .dat file...
+    result->freeImageOnClose = FALSE;
 
     return result;
 }
@@ -975,7 +978,7 @@ uprv_uca_getImplicitFromRaw(UChar32 cp) {
     }
 }
 
-U_CAPI uint32_t U_EXPORT2
+static uint32_t U_EXPORT2
 uprv_uca_getImplicitPrimary(UChar32 cp) {
     //if (DEBUG) System.out.println("Incoming: " + Utility.hex(cp));
 
@@ -1182,12 +1185,6 @@ ucol_initUCA(UErrorCode *status) {
         if(result != NULL) { /* It looks like sometimes we can fail to find the data file */
             newUCA = ucol_initCollator((const UCATableHeader *)udata_getMemory(result), newUCA, newUCA, status);
             if(U_SUCCESS(*status)){
-                newUCA->rb = NULL;
-                newUCA->elements = NULL;
-                newUCA->validLocale = NULL;
-                newUCA->requestedLocale = NULL;
-                newUCA->hasRealData = FALSE; // real data lives in .dat file...
-                newUCA->freeImageOnClose = FALSE;
                 umtx_lock(NULL);
                 if(_staticUCA == NULL) {
                     _staticUCA = newUCA;
@@ -1947,7 +1944,7 @@ inline uint32_t ucol_IGetPrevCE(const UCollator *coll, collIterate *data,
 
 
 /*   ucol_getPrevCE, out-of-line version for use from other files.  */
-U_CAPI uint32_t  U_EXPORT2
+U_CFUNC uint32_t  U_EXPORT2
 ucol_getPrevCE(const UCollator *coll, collIterate *data,
                         UErrorCode *status) {
     return ucol_IGetPrevCE(coll, data, status);
@@ -1955,7 +1952,7 @@ ucol_getPrevCE(const UCollator *coll, collIterate *data,
 
 
 /* this should be connected to special Jamo handling */
-U_CAPI uint32_t  U_EXPORT2
+U_CFUNC uint32_t  U_EXPORT2
 ucol_getFirstCE(const UCollator *coll, UChar u, UErrorCode *status) {
   collIterate colIt;
   uint32_t order;
@@ -4036,11 +4033,8 @@ ucol_getSortKey(const    UCollator    *coll,
 {
   UTRACE_ENTRY(UTRACE_UCOL_GET_SORTKEY);
   if (UTRACE_LEVEL(UTRACE_VERBOSE)) {
-      int32_t actualSrcLen = sourceLength;
-      if (actualSrcLen==-1 && source!=NULL) {
-          actualSrcLen = u_strlen(source);
-      }
-      UTRACE_DATA3(UTRACE_VERBOSE, "coll=%p, source string = %vh ", coll, source, actualSrcLen);
+      UTRACE_DATA3(UTRACE_VERBOSE, "coll=%p, source string = %vh ", coll, source, 
+          ((sourceLength==-1 && source!=NULL) ? u_strlen(source) : sourceLength));
   }
 
   UErrorCode status = U_ZERO_ERROR;
@@ -6872,33 +6866,27 @@ ucol_getVersion(const UCollator* coll,
 /* This internal API checks whether a character is tailored or not */
 U_CAPI UBool  U_EXPORT2
 ucol_isTailored(const UCollator *coll, const UChar u, UErrorCode *status) {
-  uint32_t CE = UCOL_NOT_FOUND;
-  const UChar *ContractionStart = NULL;
-  if(U_SUCCESS(*status) && coll != NULL) {
-    if(coll == coll->UCA) {
-      return FALSE;
-    } else if(u < 0x100) { /* latin-1 */
-      CE = coll->latinOneMapping[u];
-      if(coll->UCA && CE == coll->UCA->latinOneMapping[u]) {
+    if(U_FAILURE(*status) || coll == NULL || coll == coll->UCA) {
         return FALSE;
-      }
+    }
+
+    uint32_t CE = UCOL_NOT_FOUND;
+    const UChar *ContractionStart = NULL;
+    if(u < 0x100) { /* latin-1 */
+        CE = coll->latinOneMapping[u];
+        if(coll->UCA && CE == coll->UCA->latinOneMapping[u]) {
+            return FALSE;
+        }
     } else { /* regular */
-      CE = UTRIE_GET32_FROM_LEAD(&coll->mapping, u);
+        CE = UTRIE_GET32_FROM_LEAD(&coll->mapping, u);
     }
 
     if(isContraction(CE)) {
-      ContractionStart = (UChar *)coll->image+getContractOffset(CE);
-      CE = *(coll->contractionCEs + (ContractionStart- coll->contractionIndex));
+        ContractionStart = (UChar *)coll->image+getContractOffset(CE);
+        CE = *(coll->contractionCEs + (ContractionStart- coll->contractionIndex));
     }
 
-    if(CE == UCOL_NOT_FOUND) {
-      return FALSE;
-    } else {
-      return TRUE;
-    }
-  } else {
-    return FALSE;
-  }
+    return (UBool)(CE != UCOL_NOT_FOUND);
 }
 
 

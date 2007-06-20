@@ -5,7 +5,17 @@
 # Fonts are specified by font name, as shown
 # in the "Fonts" folder.
 
- DEVANAGARI: Raghindi
+#    ARABIC: Noori Nastaliq MT
+     ARABIC: GIST-UROTNabeel
+#DEVANAGARI: Raghindi
+ DEVANAGARI: Devanagari MT for IBM
+ DEVANAGARI: Mangal
+ DEVANAGARI: WT Serif IN
+       HANI: Arial Unicode MS
+#    HEBREW: Arial Hebrew
+#    HEBREW: Ezra SIL
+     HEBREW: Arial Unicode MS
        THAI: AngsanaDSE
-    DEFAULT: Code2000
+#   DEFAULT: Code2000
+    DEFAULT: Arial Unicode MS
 

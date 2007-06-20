@@ -78,9 +78,11 @@ void DateFormatTest::runIndexedTest( int32_t index, UBool exec, const char* &nam
         TESTCASE(32,TestQuarters);
         TESTCASE(33,TestZTimeZoneParsing);
         TESTCASE(34,TestRelative);
+        TESTCASE(35,TestRelativeClone);
+        TESTCASE(36,TestHostClone);
         /*
-        TESTCASE(35,TestRelativeError);
-        TESTCASE(36,TestRelativeOther);
+        TESTCASE(37,TestRelativeError);
+        TESTCASE(38,TestRelativeOther);
         */
         default: name = ""; break;
     }
@@ -2038,15 +2040,13 @@ void DateFormatTest::TestRelative(int daysdelta,
         logln("PASS: Relative Parse ["+bannerStr+"] of "+result+" passed, got "+parseFormat);
     }
 
-    
     delete full;
     delete fullrelative;
     delete en_fulltime;
     delete en_full;
     delete c;
-    
 }
-                            
+
 
 void DateFormatTest::TestRelative(void)
 {
@@ -2060,6 +2060,65 @@ void DateFormatTest::TestRelative(void)
     TestRelative( -3, en, NULL);
     TestRelative( 300, en, NULL);
     TestRelative( -300, en, NULL);
+}
+
+void DateFormatTest::TestRelativeClone(void)
+{
+    /*
+    Verify that a cloned formatter gives the same results
+    and is useable after the original has been deleted.
+    */
+    UErrorCode status = U_ZERO_ERROR;
+    Locale loc("en");
+    UDate now = Calendar::getNow();
+    DateFormat *full = DateFormat::createDateInstance(DateFormat::kFullRelative, loc);
+    if (full == NULL) {
+        errln("FAIL: Can't create Relative date instance");
+        return;
+    }
+    UnicodeString result1;
+    full->format(now, result1, status);
+    Format *fullClone = full->clone();
+    delete full;
+    full = NULL;
+
+    UnicodeString result2;
+    fullClone->format(now, result2, status);
+    ASSERT_OK(status);
+    if (result1 != result2) {
+        errln("FAIL: Clone returned different result from non-clone.");
+    }
+    delete fullClone;
+}
+
+void DateFormatTest::TestHostClone(void)
+{
+    /*
+    Verify that a cloned formatter gives the same results
+    and is useable after the original has been deleted.
+    */
+    // This is mainly important on Windows.
+    UErrorCode status = U_ZERO_ERROR;
+    Locale loc("en_US@compat=host");
+    UDate now = Calendar::getNow();
+    DateFormat *full = DateFormat::createDateInstance(DateFormat::kFull, loc);
+    if (full == NULL) {
+        errln("FAIL: Can't create Relative date instance");
+        return;
+    }
+    UnicodeString result1;
+    full->format(now, result1, status);
+    Format *fullClone = full->clone();
+    delete full;
+    full = NULL;
+
+    UnicodeString result2;
+    fullClone->format(now, result2, status);
+    ASSERT_OK(status);
+    if (result1 != result2) {
+        errln("FAIL: Clone returned different result from non-clone.");
+    }
+    delete fullClone;
 }
 
 /*

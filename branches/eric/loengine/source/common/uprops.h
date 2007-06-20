@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 2002-2006, International Business Machines
+*   Copyright (C) 2002-2007, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
@@ -367,7 +367,7 @@ typedef enum UPropertySource UPropertySource;
  * @see UPropertySource
  * @internal
  */
-U_CAPI UPropertySource U_EXPORT2
+U_CFUNC UPropertySource U_EXPORT2
 uprops_getSource(UProperty which);
 
 /**
@@ -375,7 +375,7 @@ uprops_getSource(UProperty which);
  * start of each range of same properties to the set.
  * @internal
  */
-U_CAPI void U_EXPORT2
+U_CFUNC void U_EXPORT2
 uchar_addPropertyStarts(const USetAdder *sa, UErrorCode *pErrorCode);
 
 /**
@@ -383,14 +383,14 @@ uchar_addPropertyStarts(const USetAdder *sa, UErrorCode *pErrorCode);
  * start of each range of same properties to the set.
  * @internal
  */
-U_CAPI void U_EXPORT2
+U_CFUNC void U_EXPORT2
 upropsvec_addPropertyStarts(const USetAdder *sa, UErrorCode *pErrorCode);
 
 /**
  * Same as uchar_addPropertyStarts() but only for Hangul_Syllable_Type.
  * @internal
  */
-U_CAPI void U_EXPORT2
+U_CFUNC void U_EXPORT2
 uhst_addPropertyStarts(const USetAdder *sa, UErrorCode *pErrorCode);
 
 /**
@@ -401,8 +401,9 @@ uhst_addPropertyStarts(const USetAdder *sa, UErrorCode *pErrorCode);
  * @param sa USetAdder to receive result. Existing contents are lost.
  * @internal
  */
-U_CAPI void U_EXPORT2
+/*U_CFUNC void U_EXPORT2
 uprv_getInclusions(const USetAdder *sa, UErrorCode *pErrorCode);
+*/
 
 /**
  * Swap the ICU Unicode properties file. See uchar.c.

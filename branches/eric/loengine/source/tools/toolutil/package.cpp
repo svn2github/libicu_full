@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 1999-2006, International Business Machines
+*   Copyright (C) 1999-2007, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
@@ -826,7 +826,7 @@ Package::writePackage(const char *filename, char outType, const char *comment) {
 }
 
 int32_t
-Package::findItem(const char *name, int32_t length) {
+Package::findItem(const char *name, int32_t length) const {
     int32_t i, start, limit;
     int result;
 
@@ -1140,12 +1140,12 @@ Package::extractItems(const char *filesPath, const Package &listPkg, char outTyp
 }
 
 int32_t
-Package::getItemCount() {
+Package::getItemCount() const {
     return itemCount;
 }
 
 const Item *
-Package::getItem(int32_t idx) {
+Package::getItem(int32_t idx) const {
     if (0 <= idx && idx < itemCount) {
         return &items[idx];
     }
@@ -1164,13 +1164,18 @@ Package::checkDependency(void *context, const char *itemName, const char *target
 
 UBool
 Package::checkDependencies() {
+    isMissingItems=FALSE;
+    enumDependencies(this, checkDependency);
+    return (UBool)!isMissingItems;
+}
+
+void
+Package::enumDependencies(void *context, CheckDependency check) {
     int32_t i;
 
-    isMissingItems=FALSE;
     for(i=0; i<itemCount; ++i) {
-        enumDependencies(items+i);
+        enumDependencies(items+i, context, check);
     }
-    return (UBool)!isMissingItems;
 }
 
 char *

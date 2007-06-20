@@ -56,7 +56,6 @@
 				AssemblerListingLocation=".\Release/"
 				ObjectFile=".\Release/"
 				ProgramDataBaseFileName=".\Release/"
-				BrowseInformation="1"
 				WarningLevel="3"
 				SuppressStartupBanner="true"
 				CompileAs="0"
@@ -884,14 +883,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\persncal.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\persncal.h"
-				>
-			</File>
-			<File
 				RelativePath=".\japancal.cpp"
 				>
 			</File>
@@ -1062,6 +1053,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\persncal.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\persncal.h"
+				>
+			</File>
+			<File
 				RelativePath=".\rbnf.cpp"
 				>
 			</File>
@@ -1086,6 +1085,14 @@
 						Outputs="..\..\include\unicode\$(InputFileName)"
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\reldtfmt.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\reldtfmt.h"
+				>
 			</File>
 			<File
 				RelativePath=".\simpletz.cpp"
@@ -1138,14 +1145,6 @@
 						Outputs="..\..\include\unicode\$(InputFileName)"
 					/>
 				</FileConfiguration>
-			</File>
-			<File
-				RelativePath=".\reldtfmt.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\reldtfmt.h"
-				>
 			</File>
 			<File
 				RelativePath=".\timezone.cpp"

@@ -5,10 +5,10 @@
 # *
 # ***************************************************************************
 #
-# File created by rptp2ucm (compiled on Jan 23 2007)
+# File created by rptp2ucm (compiled on May  9 2007)
 # from source files 44B0056A.RPMAP100 and 056A44B0.TPMAP100
 #
-<code_set_name>               "ibm-1386_P100_P100-2001"
+<code_set_name>               "ibm-1386_P100-2001"
 <char_name_mask>              "AXXXX"
 <mb_cur_max>                  2
 <mb_cur_min>                  1

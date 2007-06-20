@@ -829,7 +829,7 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
                 value = -value;
                 sign = 45/*'-'*/;
             }
-            value = (value / 3) * 5 + (value % 60); // minutes => KKmm
+            value = (value / 60) * 100 + (value % 60); // minutes => KKmm
             appendTo += sign;
             zeroPaddingNumber(appendTo, value, 4, 4);
         }
@@ -1060,7 +1060,7 @@ SimpleDateFormat::parse(const UnicodeString& text, Calendar& cal, ParsePosition&
                 // Advance over run in input text
                 int32_t s = pos;
                 while (pos<text.length() &&
-                       u_isUWhiteSpace(text.charAt(pos))) {
+                       ( u_isUWhiteSpace(text.charAt(pos)) || uprv_isRuleWhiteSpace(text.charAt(pos)))) {
                     ++pos;
                 }
 

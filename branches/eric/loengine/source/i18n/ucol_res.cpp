@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-*   Copyright (C) 1996-2006, International Business Machines
+*   Copyright (C) 1996-2007, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *******************************************************************************
 *   file name:  ucol_res.cpp
@@ -42,6 +42,8 @@
 #include "putilimp.h"
 #include "utracimp.h"
 #include "cmemory.h"
+
+U_NAMESPACE_USE
 
 U_CDECL_BEGIN
 static void U_CALLCONV
@@ -601,14 +603,17 @@ ucol_getKeywords(UErrorCode *status) {
 
 U_CAPI UEnumeration* U_EXPORT2
 ucol_getKeywordValues(const char *keyword, UErrorCode *status) {
+    if (U_FAILURE(*status)) {
+        return NULL;
+    }
     // hard-coded to accept exactly one collation keyword
     // modify if additional collation keyword is added later
-    if (U_SUCCESS(*status) &&
-        keyword==NULL || uprv_strcmp(keyword, KEYWORDS[0])!=0) {
-            *status = U_ILLEGAL_ARGUMENT_ERROR;
-            return NULL;
-        }
-        return ures_getKeywordValues(U_ICUDATA_COLL, RESOURCE_NAME, status);
+    if (keyword==NULL || uprv_strcmp(keyword, KEYWORDS[0])!=0)
+    {
+        *status = U_ILLEGAL_ARGUMENT_ERROR;
+        return NULL;
+    }
+    return ures_getKeywordValues(U_ICUDATA_COLL, RESOURCE_NAME, status);
 }
 
 U_CAPI int32_t U_EXPORT2
@@ -666,7 +671,7 @@ ucol_getLocaleByType(const UCollator *coll, ULocDataLocaleType type, UErrorCode 
     return result;
 }
 
-U_CAPI void U_EXPORT2
+U_CFUNC void U_EXPORT2
 ucol_setReqValidLocales(UCollator *coll, char *requestedLocaleToAdopt, char *validLocaleToAdopt)
 {
     if (coll) {
