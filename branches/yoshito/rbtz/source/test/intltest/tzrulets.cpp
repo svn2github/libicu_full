@@ -17,10 +17,91 @@
 #include "unicode/calendar.h"
 #include "unicode/ucal.h"
 #include "unicode/unistr.h"
+#include "unicode/tztrans.h"
+#include "unicode/vtzone.h"
 #include "tzrulets.h"
 
 #define CASE(id,test) case id: name = #test; if (exec) { logln(#test "---"); logln((UnicodeString)""); test(); } break
 #define HOUR (60*60*1000)
+
+static const char *const TESTZIDS[] = {
+        "AGT",
+        "America/New_York",
+        "America/Los_Angeles",
+        "America/Indiana/Indianapolis",
+        "America/Havana",
+        "Europe/Lisbon",
+        "Europe/Paris",
+        "Asia/Tokyo",
+        "Asia/Sakhalin",
+        "Africa/Cairo",
+        "Africa/Windhoek",
+        "Australia/Sydney",
+        "Etc/GMT+8"
+};
+
+class TestZIDEnumeration : public StringEnumeration {
+public:
+    TestZIDEnumeration(UBool all = FALSE);
+    ~TestZIDEnumeration();
+
+    virtual int32_t count(UErrorCode& status) const {
+        return len;
+    }
+    virtual const UnicodeString *snext(UErrorCode& status);
+    virtual void reset(UErrorCode& status);
+    static inline UClassID getStaticClassID() {
+        return (UClassID)&fgClassID;
+    }
+    virtual UClassID getDynamicClassID() const {
+        return getStaticClassID();
+    }
+private:
+    static const char fgClassID;
+    int32_t idx;
+    int32_t len;
+    StringEnumeration   *tzenum;
+};
+
+const char TestZIDEnumeration::fgClassID = 0;
+
+TestZIDEnumeration::TestZIDEnumeration(UBool all)
+: tzenum(NULL), idx(0) {
+    UErrorCode status = U_ZERO_ERROR;
+    if (all) {
+        tzenum = TimeZone::createEnumeration();
+        len = tzenum->count(status);
+    } else {
+        len = (int32_t)sizeof(TESTZIDS)/sizeof(TESTZIDS[0]);
+    }
+}
+
+TestZIDEnumeration::~TestZIDEnumeration() {
+    if (tzenum != NULL) {
+        delete tzenum;
+    }
+}
+
+const UnicodeString*
+TestZIDEnumeration::snext(UErrorCode& status) {
+    if (tzenum != NULL) {
+        return tzenum->snext(status);
+    } else if (U_SUCCESS(status) && idx < len) {
+        unistr = UnicodeString(TESTZIDS[idx++], "");
+        return &unistr;
+    }
+    return NULL;
+}
+
+void
+TestZIDEnumeration::reset(UErrorCode& status) {
+    if (tzenum != NULL) {
+        tzenum->reset(status);
+    } else {
+        idx = 0;
+    }
+}
+
 
 void TimeZoneRuleTest::runIndexedTest( int32_t index, UBool exec, const char* &name, char* /*par*/ )
 {
@@ -271,36 +352,341 @@ TimeZoneRuleTest::TestHistoricalRuleBasedTimeZone(void) {
     delete rbtz;
 }
 
+/*
+ * Check if transitions returned by getNextTransition/getPreviousTransition
+ * are actual time transitions.
+ */
 void
 TimeZoneRuleTest::TestOlsonTransition(void) {
-    //TODO
+
+    const int32_t TESTYEARS[][2] = {
+        {1895, 1905}, // including int32 minimum second
+        {1965, 1975}, // including the epoch
+        {1995, 2015}, // practical year range
+        {0,0}
+    };
+
+    UErrorCode status = U_ZERO_ERROR;
+    TestZIDEnumeration tzenum(verbose);
+    while (TRUE) {
+        const UnicodeString *tzid = tzenum.snext(status);
+        if (tzid == NULL) {
+            break;
+        }
+        if (U_FAILURE(status)) {
+            errln("FAIL: error returned while enumerating timezone IDs.");
+            break;
+        }
+        BasicTimeZone *tz = (BasicTimeZone*)TimeZone::createTimeZone(*tzid);
+        for (int32_t i = 0; TESTYEARS[i][0] != 0 || TESTYEARS[i][1] != 0; i++) {
+            UDate lo = getUTCMillis(TESTYEARS[i][0], UCAL_JANUARY, 1);
+            UDate hi = getUTCMillis(TESTYEARS[i][1], UCAL_JANUARY, 1);
+            verifyTransitions(*tz, lo, hi);
+        }
+        delete tz;
+    }
 }
 
+/*
+ * Check if an OlsonTimeZone and its equivalent RBTZ have the exact same
+ * transitions.
+ */
 void
 TimeZoneRuleTest::TestRBTZTransition(void) {
-    //TODO
+    const int32_t STARTYEARS[] = {
+        1900,
+        1960,
+        1990,
+        2010,
+        0
+    };
+
+    UErrorCode status = U_ZERO_ERROR;
+    TestZIDEnumeration tzenum(verbose);
+    while (TRUE) {
+        const UnicodeString *tzid = tzenum.snext(status);
+        if (tzid == NULL) {
+            break;
+        }
+        if (U_FAILURE(status)) {
+            errln("FAIL: error returned while enumerating timezone IDs.");
+            break;
+        }
+        BasicTimeZone *tz = (BasicTimeZone*)TimeZone::createTimeZone(*tzid);
+        InitialTimeZoneRule *initial = tz->getInitialRule(status);
+        if (U_FAILURE(status)) {
+            errln((UnicodeString)"FAIL: failed to get the InitialTimeZoneRule from time zone " + *tzid);
+        }
+        RuleBasedTimeZone *rbtz = new RuleBasedTimeZone(*tzid, initial);
+        int32_t ruleCount = tz->countTransitionRules(status);
+        if (U_FAILURE(status)) {
+            errln((UnicodeString)"FAIL: failed to get the transition rule count from time zone " + *tzid);
+        }
+        for (int16_t i = 0; i < ruleCount; i++) {
+            TimeZoneRule *r = tz->getTransitionRule(i, status);
+            if (U_FAILURE(status)) {
+                errln((UnicodeString)"FAIL: failed to get a transition rule at index " + i + " from time zone " + *tzid);
+            }
+            rbtz->addTransitionRule(r, status);
+            if (U_FAILURE(status)) {
+                errln((UnicodeString)"FAIL: failed to add a transition rule at index " + i + " to the RBTZ for " + *tzid);
+            }
+        }
+        rbtz->complete(status);
+        if (U_FAILURE(status)) {
+            errln((UnicodeString)"FAIL: complete() failed for the RBTZ for " + *tzid);
+        }
+
+        for (int32_t idx = 0; STARTYEARS[idx] != 0; idx++) {
+            UDate start = getUTCMillis(STARTYEARS[idx], UCAL_JANUARY, 1);
+            UDate until = getUTCMillis(STARTYEARS[idx] + 20, UCAL_JANUARY, 1);
+            // Compare the original OlsonTimeZone with the RBTZ starting the startTime for 20 years
+
+            // Ascending
+            compareTransitionsAscending(*tz, *rbtz, start, until, FALSE);
+            // Ascending/inclusive
+            compareTransitionsAscending(*tz, *rbtz, start + 1, until, TRUE);
+            // Descending
+            compareTransitionsDescending(*tz, *rbtz, start, until, FALSE);
+            // Descending/inclusive
+            compareTransitionsDescending(*tz, *rbtz, start + 1, until, TRUE);
+        }
+        delete rbtz;
+        delete tz;
+    }
 }
 
 void
 TimeZoneRuleTest::TestHasEquivalentTransitions(void) {
-    //TODO
+    // America/New_York and America/Indiana/Indianapolis are equivalent
+    // since 2006
+    UErrorCode status = U_ZERO_ERROR;
+    BasicTimeZone *newyork = (BasicTimeZone*)TimeZone::createTimeZone("America/New_York");
+    BasicTimeZone *indianapolis = (BasicTimeZone*)TimeZone::createTimeZone("America/Indiana/Indianapolis");
+    BasicTimeZone *gmt_5 = (BasicTimeZone*)TimeZone::createTimeZone("Etc/GMT+5");
+
+    UDate jan1_1971 = getUTCMillis(1971, UCAL_JANUARY, 1);
+    UDate jan1_2005 = getUTCMillis(2005, UCAL_JANUARY, 1);
+    UDate jan1_2006 = getUTCMillis(2006, UCAL_JANUARY, 1);
+    UDate jan1_2007 = getUTCMillis(2007, UCAL_JANUARY, 1);
+    UDate jan1_2011 = getUTCMillis(2010, UCAL_JANUARY, 1);
+
+    if (newyork->hasEquivalentTransitions(*indianapolis, jan1_2005, jan1_2011, TRUE, status)) {
+        errln("FAIL: New_York is not equivalent to Indianapolis between 2005 and 2010");
+    }
+    if (U_FAILURE(status)) {
+        errln("FAIL: error status is returned from hasEquivalentTransition");
+    }
+    if (!newyork->hasEquivalentTransitions(*indianapolis, jan1_2006, jan1_2011, TRUE, status)) {
+        errln("FAIL: New_York is equivalent to Indianapolis between 2006 and 2010");
+    }
+    if (U_FAILURE(status)) {
+        errln("FAIL: error status is returned from hasEquivalentTransition");
+    }
+
+    if (!indianapolis->hasEquivalentTransitions(*gmt_5, jan1_1971, jan1_2006, TRUE, status)) {
+        errln("FAIL: Indianapolis is equivalent to GMT+5 between 1971 and 2005");
+    }
+    if (U_FAILURE(status)) {
+        errln("FAIL: error status is returned from hasEquivalentTransition");
+    }
+    if (indianapolis->hasEquivalentTransitions(*gmt_5, jan1_1971, jan1_2007, TRUE, status)) {
+        errln("FAIL: Indianapolis is not equivalent to GMT+5 between 1971 and 2006");
+    }
+    if (U_FAILURE(status)) {
+        errln("FAIL: error status is returned from hasEquivalentTransition");
+    }
+
+    delete newyork;
+    delete indianapolis;
+    delete gmt_5;
 }
 
+/*
+ * Write out time zone rules of OlsonTimeZone into VTIMEZONE format, create a new
+ * VTimeZone from the VTIMEZONE data, then compare transitions
+ */
 void
 TimeZoneRuleTest::TestVTimeZoneRoundTrip(void) {
-    //TODO
+    UDate startTime = getUTCMillis(1850, UCAL_JANUARY, 1);
+    UDate endTime = getUTCMillis(2050, UCAL_JANUARY, 1);
+
+    UErrorCode status = U_ZERO_ERROR;
+    TestZIDEnumeration tzenum(verbose);
+    while (TRUE) {
+        const UnicodeString *tzid = tzenum.snext(status);
+        if (tzid == NULL) {
+            break;
+        }
+        if (U_FAILURE(status)) {
+            errln("FAIL: error returned while enumerating timezone IDs.");
+            break;
+        }
+        BasicTimeZone *tz = (BasicTimeZone*)TimeZone::createTimeZone(*tzid);
+        VTimeZone *vtz_org = VTimeZone::createVTimeZoneByID(*tzid);
+        VTimeZone *vtz_new = NULL;
+        UnicodeString vtzdata;
+        // Write out VTIMEZONE data
+        vtz_org->write(vtzdata, status);
+        if (U_FAILURE(status)) {
+            errln((UnicodeString)"FAIL: error returned while writing time zone rules for " +
+                *tzid + " into VTIMEZONE format.");
+        } else {
+            // Read VTIMEZONE data
+            vtz_new = VTimeZone::createVTimeZone(vtzdata, status);
+            if (U_FAILURE(status)) {
+                errln((UnicodeString)"FAIL: error returned while reading VTIMEZONE data for " + *tzid);
+            } else {
+                // Check equivalency
+                if (!vtz_new->hasEquivalentTransitions(*tz, startTime, endTime, TRUE, status)) {
+                    errln("FAIL: VTimeZone for " + *tzid + " is not equivalent to its OlsonTimeZone corresponding.");
+                }
+                if (U_FAILURE(status)) {
+                    errln("FAIL: error status is returned from hasEquivalentTransition");
+                }
+            }
+        }
+        delete tz;
+        delete vtz_org;
+        delete vtz_new;
+    }
 }
 
+/*
+ * Write out time zone rules of OlsonTimeZone after a cutover date into VTIMEZONE format,
+ * create a new VTimeZone from the VTIMEZONE data, then compare transitions
+ */
 void
 TimeZoneRuleTest::TestVTimeZoneRoundTripPartial(void) {
-    //TODO
+    const int32_t CUTOVERYEARS[] = {
+        1900,
+        1950,
+        2020,
+        0
+    };
+    UDate endTime = getUTCMillis(2050, UCAL_JANUARY, 1);
+
+    UErrorCode status = U_ZERO_ERROR;
+    TestZIDEnumeration tzenum(verbose);
+    while (TRUE) {
+        const UnicodeString *tzid = tzenum.snext(status);
+        if (tzid == NULL) {
+            break;
+        }
+        if (U_FAILURE(status)) {
+            errln("FAIL: error returned while enumerating timezone IDs.");
+            break;
+        }
+        BasicTimeZone *tz = (BasicTimeZone*)TimeZone::createTimeZone(*tzid);
+        VTimeZone *vtz_org = VTimeZone::createVTimeZoneByID(*tzid);
+        VTimeZone *vtz_new = NULL;
+        UnicodeString vtzdata;
+
+        for (int32_t i = 0; CUTOVERYEARS[i] != 0; i++) {
+            UDate startTime = getUTCMillis(CUTOVERYEARS[i], UCAL_JANUARY, 1);
+            vtz_org->write(startTime, vtzdata, status);
+            if (U_FAILURE(status)) {
+                errln((UnicodeString)"FAIL: error returned while writing time zone rules for " +
+                    *tzid + " into VTIMEZONE format since " + dateToString(startTime));
+            } else {
+                // Read VTIMEZONE data
+                vtz_new = VTimeZone::createVTimeZone(vtzdata, status);
+                if (U_FAILURE(status)) {
+                    errln((UnicodeString)"FAIL: error returned while reading VTIMEZONE data for " + *tzid
+                        + " since " + dateToString(startTime));
+                } else {
+                    // Check equivalency
+                    if (!vtz_new->hasEquivalentTransitions(*tz, startTime, endTime, TRUE, status)) {
+                        errln("FAIL: VTimeZone for " + *tzid + " is not equivalent to its OlsonTimeZone corresponding.");
+                    }
+                    if (U_FAILURE(status)) {
+                        errln("FAIL: error status is returned from hasEquivalentTransition");
+                    }
+                }
+            }
+            if (vtz_new != NULL) {
+                delete vtz_new;
+                vtz_new = NULL;
+            }
+        }
+        delete tz;
+        delete vtz_org;
+    }
 }
 
+/*
+ * Write out simple time zone rules from an OlsonTimeZone at various time into VTIMEZONE
+ * format and create a new VTimeZone from the VTIMEZONE data, then make sure the raw offset
+ * and DST savings are same in these two time zones.
+ */
 void
 TimeZoneRuleTest::TestVTimeZoneSimpleWrite(void) {
-    //TODO
+    const int32_t TESTDATES[][3] = {
+        {2006,  UCAL_JANUARY,   1},
+        {2006,  UCAL_MARCH,     15},
+        {2006,  UCAL_MARCH,     31},
+        {2006,  UCAL_OCTOBER,   25},
+        {2006,  UCAL_NOVEMBER,  1},
+        {2006,  UCAL_NOVEMBER,  5},
+        {2007,  UCAL_JANUARY,   1},
+        {0,     0,              0}
+    };
+
+    UErrorCode status = U_ZERO_ERROR;
+    TestZIDEnumeration tzenum(verbose);
+    while (TRUE) {
+        const UnicodeString *tzid = tzenum.snext(status);
+        if (tzid == NULL) {
+            break;
+        }
+        if (U_FAILURE(status)) {
+            errln("FAIL: error returned while enumerating timezone IDs.");
+            break;
+        }
+        VTimeZone *vtz_org = VTimeZone::createVTimeZoneByID(*tzid);
+        VTimeZone *vtz_new = NULL;
+        UnicodeString vtzdata;
+
+        for (int32_t i = 0; TESTDATES[i][0] != 0; i++) {
+            UDate time = getUTCMillis(TESTDATES[i][0], TESTDATES[i][1], TESTDATES[i][2]);
+            vtz_org->writeSimple(time, vtzdata, status);
+            if (U_FAILURE(status)) {
+                errln((UnicodeString)"FAIL: error returned while writing simple time zone rules for " +
+                    *tzid + " into VTIMEZONE format at " + dateToString(time));
+            } else {
+                // Read VTIMEZONE data
+                vtz_new = VTimeZone::createVTimeZone(vtzdata, status);
+                if (U_FAILURE(status)) {
+                    errln((UnicodeString)"FAIL: error returned while reading simple VTIMEZONE data for " + *tzid
+                        + " at " + dateToString(time));
+                } else {
+                    int32_t raw0, dst0;
+                    int32_t raw1, dst1;
+                    vtz_org->getOffset(time, FALSE, raw0, dst0, status);
+                    vtz_new->getOffset(time, FALSE, raw1, dst1, status);
+                    if (U_SUCCESS(status)) {
+                        if (raw0 != raw1 || dst0 != dst1) {
+                            errln("FAIL: VTimeZone writeSimple for " + *tzid + " at "
+                                + dateToString(time) + " failed to the round trip.");
+                        }
+                    } else {
+                        errln("FAIL: getOffset returns error status");
+                    }
+                }
+            }
+            if (vtz_new != NULL) {
+                delete vtz_new;
+                vtz_new = NULL;
+            }
+        }
+        delete vtz_org;
+    }
 }
 
+/*
+ * Write out time zone rules of OlsonTimeZone into VTIMEZONE format with RFC2445 header TZURL and
+ * LAST-MODIFIED, create a new VTimeZone from the VTIMEZONE data to see if the headers are preserved.
+ */
 void
 TimeZoneRuleTest::TestVTimeZoneHeaderProps(void) {
     //TODO
@@ -316,12 +702,12 @@ TimeZoneRuleTest::TestGetSimpleRules(void) {
     };
     int32_t numTimes = sizeof(testTimes)/sizeof(UDate);
     UErrorCode status = U_ZERO_ERROR;
-    StringEnumeration *tzenum = TimeZone::createEnumeration();
+    TestZIDEnumeration tzenum(verbose);
     InitialTimeZoneRule *initial;
     AnnualTimeZoneRule *std, *dst;
     for (int32_t i = 0; i < numTimes ; i++) {
         while (TRUE) {
-            const UnicodeString *tzid = tzenum->snext(status);
+            const UnicodeString *tzid = tzenum.snext(status);
             if (tzid == NULL) {
                 break;
             }
@@ -397,7 +783,6 @@ TimeZoneRuleTest::TestGetSimpleRules(void) {
             delete tz;
         }
     }
-    delete tzenum;
 }
 
 
@@ -423,4 +808,202 @@ TimeZoneRuleTest::getUTCMillis(int32_t y, int32_t m, int32_t d,
     delete cal;
     return utc;
 }
+
+/*
+ * Check if a time shift really happens on each transition returned by getNextTransition or
+ * getPreviousTransition in the specified time range
+ */
+void
+TimeZoneRuleTest::verifyTransitions(BasicTimeZone& icutz, UDate start, UDate end) {
+    UErrorCode status = U_ZERO_ERROR;
+    UDate time;
+    int32_t raw, dst, raw0, dst0;
+    TimeZoneTransition tzt, tzt0;
+    UBool avail;
+    UBool first = TRUE;
+    UnicodeString tzid;
+
+    // Ascending
+    time = start;
+    while (TRUE) {
+        avail = icutz.getNextTransition(time, FALSE, tzt);
+        if (!avail) {
+            break;
+        }
+        time = tzt.getTime();
+        if (time >= end) {
+            break;
+        }
+        icutz.getOffset(time, FALSE, raw, dst, status);
+        icutz.getOffset(time - 1, FALSE, raw0, dst0, status);
+        if (U_FAILURE(status)) {
+            errln("FAIL: Error in getOffset");
+            break;
+        }
+
+        if (raw == raw0 && dst == dst0) {
+            errln((UnicodeString)"FAIL: False transition returned by getNextTransition for "
+                + icutz.getID(tzid) + " at " + dateToString(time));
+        }
+        if (!first &&
+                (tzt0.getTo()->getRawOffset() != tzt.getFrom()->getRawOffset()
+                || tzt0.getTo()->getDSTSavings() != tzt.getFrom()->getDSTSavings())) {
+            errln((UnicodeString)"FAIL: TO rule of the previous transition does not match FROM rule of this transtion at "
+                    + dateToString(time) + " for " + icutz.getID(tzid));                
+        }
+        tzt0 = tzt;
+        first = FALSE;
+    }
+
+    // Descending
+    first = TRUE;
+    time = end;
+    while(true) {
+        avail = icutz.getPreviousTransition(time, FALSE, tzt);
+        if (!avail) {
+            break;
+        }
+        time = tzt.getTime();
+        if (time <= start) {
+            break;
+        }
+        icutz.getOffset(time, FALSE, raw, dst, status);
+        icutz.getOffset(time - 1, FALSE, raw0, dst0, status);
+        if (U_FAILURE(status)) {
+            errln("FAIL: Error in getOffset");
+            break;
+        }
+
+        if (raw == raw0 && dst == dst0) {
+            errln((UnicodeString)"FAIL: False transition returned by getPreviousTransition for "
+                + icutz.getID(tzid) + " at " + dateToString(time));
+        }
+
+        if (!first &&
+                (tzt0.getFrom()->getRawOffset() != tzt.getTo()->getRawOffset()
+                || tzt0.getFrom()->getDSTSavings() != tzt.getTo()->getDSTSavings())) {
+            errln((UnicodeString)"FAIL: TO rule of the next transition does not match FROM rule in this transtion at "
+                    + dateToString(time) + " for " + icutz.getID(tzid));                
+        }
+        tzt0 = tzt;
+        first = FALSE;
+    }
+}
+
+/*
+ * Compare all time transitions in 2 time zones in the specified time range in ascending order
+ */
+void
+TimeZoneRuleTest::compareTransitionsAscending(BasicTimeZone& z1, BasicTimeZone& z2,
+                                              UDate start, UDate end, UBool inclusive) {
+    UnicodeString zid1, zid2;
+    TimeZoneTransition tzt1, tzt2;
+    UBool avail1, avail2;
+    UBool inRange1, inRange2;
+
+    z1.getID(zid1);
+    z2.getID(zid2);
+
+    UDate time = start;
+    while (TRUE) {
+        avail1 = z1.getNextTransition(time, inclusive, tzt1);
+        avail2 = z2.getNextTransition(time, inclusive, tzt2);
+
+        inRange1 = inRange2 = FALSE;
+        if (avail1) {
+            if (tzt1.getTime() < end || (inclusive && tzt1.getTime() == end)) {
+                inRange1 = TRUE;
+            }
+        }
+        if (avail2) {
+            if (tzt2.getTime() < end || (inclusive && tzt2.getTime() == end)) {
+                inRange2 = TRUE;
+            }
+        }
+        if (!inRange1 && !inRange2) {
+            // No more transition in the range
+            break;
+        }
+        if (!inRange1) {
+            errln((UnicodeString)"FAIL: " + zid1 + " does not have any transitions after "
+                + dateToString(time) + " before " + dateToString(end));
+            break;
+        }
+        if (!inRange2) {
+            errln((UnicodeString)"FAIL: " + zid2 + " does not have any transitions after "
+                + dateToString(time) + " before " + dateToString(end));
+            break;
+        }
+        if (tzt1.getTime() != tzt2.getTime()) {
+            errln((UnicodeString)"FAIL: First transition after " + dateToString(time) + " "
+                    + zid1 + "[" + dateToString(tzt1.getTime()) + "] "
+                    + zid2 + "[" + dateToString(tzt2.getTime()) + "]");
+            break;
+        }
+        time = tzt1.getTime();
+        if (inclusive) {
+            time += 1;
+        }
+    }
+}
+
+/*
+ * Compare all time transitions in 2 time zones in the specified time range in descending order
+ */
+void
+TimeZoneRuleTest::compareTransitionsDescending(BasicTimeZone& z1, BasicTimeZone& z2,
+                                               UDate start, UDate end, UBool inclusive) {
+    UnicodeString zid1, zid2;
+    TimeZoneTransition tzt1, tzt2;
+    UBool avail1, avail2;
+    UBool inRange1, inRange2;
+
+    z1.getID(zid1);
+    z2.getID(zid2);
+
+    UDate time = end;
+    while (TRUE) {
+        avail1 = z1.getPreviousTransition(time, inclusive, tzt1);
+        avail2 = z2.getPreviousTransition(time, inclusive, tzt2);
+
+        inRange1 = inRange2 = FALSE;
+        if (avail1) {
+            if (tzt1.getTime() > start || (inclusive && tzt1.getTime() == start)) {
+                inRange1 = TRUE;
+            }
+        }
+        if (avail2) {
+            if (tzt2.getTime() > start || (inclusive && tzt2.getTime() == start)) {
+                inRange2 = TRUE;
+            }
+        }
+        if (!inRange1 && !inRange2) {
+            // No more transition in the range
+            break;
+        }
+        if (!inRange1) {
+            errln((UnicodeString)"FAIL: " + zid1 + " does not have any transitions before "
+                + dateToString(time) + " after " + dateToString(start));
+            break;
+        }
+        if (!inRange2) {
+            errln((UnicodeString)"FAIL: " + zid2 + " does not have any transitions before "
+                + dateToString(time) + " after " + dateToString(start));
+            break;
+        }
+        if (tzt1.getTime() != tzt2.getTime()) {
+            errln((UnicodeString)"FAIL: Last transition before " + dateToString(time) + " "
+                    + zid1 + "[" + dateToString(tzt1.getTime()) + "] "
+                    + zid2 + "[" + dateToString(tzt2.getTime()) + "]");
+            break;
+        }
+        time = tzt1.getTime();
+        if (inclusive) {
+            time -= 1;
+        }
+    }
+}
+
 #endif /* #if !UCONFIG_NO_FORMATTING */
+
+//eof

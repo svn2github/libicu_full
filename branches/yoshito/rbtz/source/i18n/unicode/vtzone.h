@@ -73,7 +73,7 @@ public:
      * or NULL when the ID is unknown.
      * @draft ICU 3.8
      */
-    static VTimeZone* createVTimeZone(const UnicodeString& ID);
+    static VTimeZone* createVTimeZoneByID(const UnicodeString& ID);
 
     /**
      * Create a <code>VTimeZone</code> instance by RFC2445 VTIMEZONE data

@@ -778,12 +778,14 @@ RuleBasedTimeZone::findPrev(UDate base, UBool inclusive, UDate& transitionTime,
                     result.from = r0;
                     result.to = r1;
                 }
-                found = TRUE;
+            } else {
+                result = *tzt;
             }
+            found = TRUE;
         } else {
             // Find a transition within the historic transitions
             idx--;
-            while (idx > 0) {
+            while (idx >= 0) {
                 tzt = (Transition*)fHistoricTransitions->elementAt(idx);
                 tt = getTransitionTime(tzt, FALSE);
                 if (tt < base || (inclusive && tt == base)) {

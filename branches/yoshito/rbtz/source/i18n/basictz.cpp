@@ -368,24 +368,25 @@ BasicTimeZone::getTimeZoneRules(UDate start, InitialTimeZoneRule*& initial, UVec
         if (toRule->getDynamicClassID() == TimeArrayTimeZoneRule::getStaticClassID()) {
             TimeArrayTimeZoneRule *tar = (TimeArrayTimeZoneRule*)toRule;
 
-            // Getthe previous raw offset and DST savings before the very first start time
+            // Get the previous raw offset and DST savings before the very first start time
+            TimeZoneTransition tzt0;
             t = start;
             while (TRUE) {
-                avail = getNextTransition(t, FALSE, tzt);
+                avail = getNextTransition(t, FALSE, tzt0);
                 if (!avail) {
                     break;
                 }
-                if (*(tzt.getTo()) == *tar) {
+                if (*(tzt0.getTo()) == *tar) {
                     break;
                 }
-                t = tzt.getTime();
+                t = tzt0.getTime();
             }
             if (avail) {
                 // Check if the entire start times to be added
                 tar->getFirstStart(tzt.getFrom()->getRawOffset(), tzt.getFrom()->getDSTSavings(), firstStart);
                 if (firstStart > start) {
                     // Just add the rule as is
-                    filteredRules->addElement(tar, status);
+                    filteredRules->addElement(tar->clone(), status);
                     if (U_FAILURE(status)) {
                         goto error;
                     }
@@ -440,7 +441,7 @@ BasicTimeZone::getTimeZoneRules(UDate start, InitialTimeZoneRule*& initial, UVec
             ar->getFirstStart(tzt.getFrom()->getRawOffset(), tzt.getFrom()->getDSTSavings(), firstStart);
             if (firstStart == tzt.getTime()) {
                 // Just add the rule as is
-                filteredRules->addElement(ar, status);
+                filteredRules->addElement(ar->clone(), status);
                 if (U_FAILURE(status)) {
                     goto error;
                 }
@@ -473,7 +474,7 @@ BasicTimeZone::getTimeZoneRules(UDate start, InitialTimeZoneRule*& initial, UVec
 
     // Set the results
     if (orgRules != NULL) {
-        while (orgRules->isEmpty()) {
+        while (!orgRules->isEmpty()) {
             r = (TimeZoneRule*)orgRules->orphanElementAt(0);
             delete r;
         }
@@ -489,7 +490,7 @@ BasicTimeZone::getTimeZoneRules(UDate start, InitialTimeZoneRule*& initial, UVec
 
 error:
     if (orgRules != NULL) {
-        while (orgRules->isEmpty()) {
+        while (!orgRules->isEmpty()) {
             r = (TimeZoneRule*)orgRules->orphanElementAt(0);
             delete r;
         }

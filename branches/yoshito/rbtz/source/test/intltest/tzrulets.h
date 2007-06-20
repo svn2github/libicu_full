@@ -32,6 +32,11 @@ public:
     void TestGetSimpleRules(void);
 
 private:
+    void verifyTransitions(BasicTimeZone& icutz, UDate start, UDate end);
+    void compareTransitionsAscending(BasicTimeZone& z1, BasicTimeZone& z2,
+        UDate start, UDate end, UBool inclusive);
+    void compareTransitionsDescending(BasicTimeZone& z1, BasicTimeZone& z2,
+        UDate start, UDate end, UBool inclusive);
     UDate getUTCMillis(int32_t year, int32_t month, int32_t dom,
         int32_t hour=0, int32_t min=0, int32_t sec=0, int32_t msec=0);
 };
