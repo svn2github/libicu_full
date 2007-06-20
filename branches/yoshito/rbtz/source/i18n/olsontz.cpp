@@ -696,7 +696,7 @@ OlsonTimeZone::initTransitionRules(UErrorCode& status) {
     if (initialRule == NULL) {
         // No historic transitions
         raw = rawOffset(0) * U_MILLIS_PER_SECOND;
-        dst = dstOffset(1) * U_MILLIS_PER_SECOND;
+        dst = dstOffset(0) * U_MILLIS_PER_SECOND;
         initialRule = new InitialTimeZoneRule((dst == 0 ? stdName : dstName), raw, dst);
     }
     if (finalZone != NULL) {

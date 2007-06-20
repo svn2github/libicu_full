@@ -388,7 +388,10 @@ UOBJECT_DEFINE_RTTI_IMPLEMENTATION(TimeArrayTimeZoneRule)
 // UComparator function for sorting start times
 U_CFUNC int32_t
 compareDates(const void * /*context*/, const void *left, const void *right) {
-    return (int32_t)(*((UDate*)left) - *((UDate*)right));
+    UDate l = *((UDate*)left);
+    UDate r = *((UDate*)right);
+    int32_t res = l < r ? -1 : (l == r ? 0 : 1);
+    return res;
 }
 
 TimeArrayTimeZoneRule::TimeArrayTimeZoneRule(const UnicodeString& name,

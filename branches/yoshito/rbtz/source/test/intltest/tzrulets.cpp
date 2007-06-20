@@ -537,12 +537,33 @@ TimeZoneRuleTest::TestVTimeZoneRoundTrip(void) {
             if (U_FAILURE(status)) {
                 errln((UnicodeString)"FAIL: error returned while reading VTIMEZONE data for " + *tzid);
             } else {
-                // Check equivalency
-                if (!vtz_new->hasEquivalentTransitions(*tz, startTime, endTime, TRUE, status)) {
-                    errln("FAIL: VTimeZone for " + *tzid + " is not equivalent to its OlsonTimeZone corresponding.");
-                }
+                // Check equivalency after the first transition.
+                // The DST information before the first transition might be lost
+                // because there is no good way to represent the initial time with
+                // VTIMEZONE.
+                int32_t raw1, raw2, dst1, dst2;
+                tz->getOffset(startTime, FALSE, raw1, dst1, status);
+                vtz_new->getOffset(startTime, FALSE, raw2, dst2, status);
                 if (U_FAILURE(status)) {
-                    errln("FAIL: error status is returned from hasEquivalentTransition");
+                    errln("FAIL: error status is returned from getOffset");
+                } else {
+                    if (raw1 + dst1 != raw2 + dst2) {
+                        errln("FAIL: VTimeZone for " + *tzid +
+                            " is not equivalent to its OlsonTimeZone corresponding at "
+                            + dateToString(startTime));
+                    }
+                    TimeZoneTransition trans;
+                    UBool avail = tz->getNextTransition(startTime, FALSE, trans);
+                    if (avail) {
+                        if (!vtz_new->hasEquivalentTransitions(*tz, trans.getTime(),
+                                endTime, TRUE, status)) {
+                            errln("FAIL: VTimeZone for " + *tzid +
+                                " is not equivalent to its OlsonTimeZone corresponding.");
+                        }
+                        if (U_FAILURE(status)) {
+                            errln("FAIL: error status is returned from hasEquivalentTransition");
+                        }
+                    }
                 }
             }
         }
@@ -595,12 +616,33 @@ TimeZoneRuleTest::TestVTimeZoneRoundTripPartial(void) {
                     errln((UnicodeString)"FAIL: error returned while reading VTIMEZONE data for " + *tzid
                         + " since " + dateToString(startTime));
                 } else {
-                    // Check equivalency
-                    if (!vtz_new->hasEquivalentTransitions(*tz, startTime, endTime, TRUE, status)) {
-                        errln("FAIL: VTimeZone for " + *tzid + " is not equivalent to its OlsonTimeZone corresponding.");
-                    }
+                    // Check equivalency after the first transition.
+                    // The DST information before the first transition might be lost
+                    // because there is no good way to represent the initial time with
+                    // VTIMEZONE.
+                    int32_t raw1, raw2, dst1, dst2;
+                    tz->getOffset(startTime, FALSE, raw1, dst1, status);
+                    vtz_new->getOffset(startTime, FALSE, raw2, dst2, status);
                     if (U_FAILURE(status)) {
-                        errln("FAIL: error status is returned from hasEquivalentTransition");
+                        errln("FAIL: error status is returned from getOffset");
+                    } else {
+                        if (raw1 + dst1 != raw2 + dst2) {
+                            errln("FAIL: VTimeZone for " + *tzid +
+                                " is not equivalent to its OlsonTimeZone corresponding at "
+                                + dateToString(startTime));
+                        }
+                        TimeZoneTransition trans;
+                        UBool avail = tz->getNextTransition(startTime, FALSE, trans);
+                        if (avail) {
+                            if (!vtz_new->hasEquivalentTransitions(*tz, trans.getTime(),
+                                    endTime, TRUE, status)) {
+                                errln("FAIL: VTimeZone for " + *tzid +
+                                    " is not equivalent to its OlsonTimeZone corresponding.");
+                            }
+                            if (U_FAILURE(status)) {
+                                errln("FAIL: error status is returned from hasEquivalentTransition");
+                            }
+                        }
                     }
                 }
             }
@@ -689,7 +731,66 @@ TimeZoneRuleTest::TestVTimeZoneSimpleWrite(void) {
  */
 void
 TimeZoneRuleTest::TestVTimeZoneHeaderProps(void) {
-    //TODO
+    const UnicodeString TESTURL1("http://source.icu-project.org");
+    const UnicodeString TESTURL2("http://www.ibm.com");
+
+    UErrorCode status = U_ZERO_ERROR;
+    UnicodeString tzurl;
+    UDate lmod;
+    UDate lastmod = getUTCMillis(2007, UCAL_JUNE, 1);
+    VTimeZone *vtz = VTimeZone::createVTimeZoneByID("America/Chicago");
+    vtz->setTZURL(TESTURL1);
+    vtz->setLastModified(lastmod);
+
+    // Roundtrip conversion
+    UnicodeString vtzdata;
+    vtz->write(vtzdata, status);
+    VTimeZone *newvtz1;
+    if (U_FAILURE(status)) {
+        errln("FAIL: error returned while writing VTIMEZONE data 1");
+    } else {
+        // Create a new one
+        newvtz1 = VTimeZone::createVTimeZone(vtzdata, status);
+        if (U_FAILURE(status)) {
+            errln("FAIL: error returned while loading VTIMEZONE data 1");
+        } else {
+            // Check if TZURL and LAST-MODIFIED properties are preserved
+            newvtz1->getTZURL(tzurl);
+            if (tzurl.compare(TESTURL1) != 0) {
+                errln("FAIL: TZURL 1 was not preserved");
+            }
+            vtz->getLastModified(lmod);
+            if (lastmod != lmod) {
+                errln("FAIL: LAST-MODIFIED was not preserved");
+            }
+        }
+    }
+
+    if (U_SUCCESS(status)) {
+        // Set different tzurl
+        newvtz1->setTZURL(TESTURL2);
+
+        // Second roundtrip, with a cutover
+        newvtz1->write(vtzdata, status);
+        if (U_FAILURE(status)) {
+            errln("FAIL: error returned while writing VTIMEZONE data 2");
+        } else {
+            VTimeZone *newvtz2 = VTimeZone::createVTimeZone(vtzdata, status);
+            if (U_FAILURE(status)) {
+                errln("FAIL: error returned while loading VTIMEZONE data 2");
+            } else {
+                // Check if TZURL and LAST-MODIFIED properties are preserved
+                newvtz2->getTZURL(tzurl);
+                if (tzurl.compare(TESTURL2) != 0) {
+                    errln("FAIL: TZURL was not preserved in the second roundtrip");
+                }
+                vtz->getLastModified(lmod);
+                if (lastmod != lmod) {
+                    errln("FAIL: LAST-MODIFIED was not preserved in the second roundtrip");
+                }
+            }
+        }
+    }
 }
 
 void
