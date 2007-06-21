@@ -164,17 +164,20 @@ private:
                      UChar32 start, UChar32 end);
     void doAssert(UBool, const char*);
 
-    void testSpan(UnicodeSetWithStrings *sets[4], const void *s, int32_t length, UBool isUTF16,
+    void testSpan(const UnicodeSetWithStrings *sets[4], const void *s, int32_t length, UBool isUTF16,
+                  uint32_t whichSpans,
                   int32_t expectLimits[], int32_t &expectCount,
                   const char *testName, int32_t index);
-    void testSpan(UnicodeSetWithStrings *sets[4], const void *s, int32_t length, UBool isUTF16,
+    void testSpan(const UnicodeSetWithStrings *sets[4], const void *s, int32_t length, UBool isUTF16,
+                  uint32_t whichSpans,
                   const char *testName, int32_t index);
-    void testSpanBothUTFs(UnicodeSetWithStrings *sets[4],
+    void testSpanBothUTFs(const UnicodeSetWithStrings *sets[4],
                           const UChar *s16, int32_t length16,
+                          uint32_t whichSpans,
                           const char *testName, int32_t index);
-    void testSpanContents(UnicodeSetWithStrings *sets[4], const char *testName);
-    void testSpanUTF16String(UnicodeSetWithStrings *sets[4], const char *testName);
-    void testSpanUTF8String(UnicodeSetWithStrings *sets[4], const char *testName);
+    void testSpanContents(const UnicodeSetWithStrings *sets[4], const char *testName);
+    void testSpanUTF16String(const UnicodeSetWithStrings *sets[4], const char *testName);
+    void testSpanUTF8String(const UnicodeSetWithStrings *sets[4], const char *testName);
 
     UConverter *openUTF8Converter();
 
