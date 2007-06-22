@@ -2135,10 +2135,10 @@ nl{
                         "K4",
                     }
                     wide{
-                        "1e kwartaal",
-                        "2e kwartaal",
-                        "3e kwartaal",
-                        "4e kwartaal",
+                        "Q1",
+                        "Q2",
+                        "Q3",
+                        "Q4",
                     }
                 }
             }

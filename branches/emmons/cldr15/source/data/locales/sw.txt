@@ -129,7 +129,7 @@ sw{
             dayNames{
                 format{
                     abbreviated{
-                        "Jpi",
+                        "Jumapili",
                         "Jumatatu",
                         "Jumanne",
                         "Jtn",
@@ -170,7 +170,7 @@ sw{
                     abbreviated{
                         "Januari",
                         "Feb",
-                        "Mar",
+                        "Machi",
                         "Aprili",
                         "Mei",
                         "Juni",
@@ -216,16 +216,16 @@ sw{
             quarters{
                 format{
                     abbreviated{
-                        "robo ya kwanza",
+                        "Q1",
                         "Q2",
-                        "robo ya tatu",
-                        "robo ya nne",
+                        "Q3",
+                        "Q4",
                     }
                     wide{
-                        "robo ya kwanza",
-                        "robo ya pili",
-                        "robo ya tatu",
-                        "robo ya nne",
+                        "Q1",
+                        "Q2",
+                        "Q3",
+                        "Q4",
                     }
                 }
             }

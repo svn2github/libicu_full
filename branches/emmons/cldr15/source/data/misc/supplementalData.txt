@@ -959,10 +959,21 @@ supplementalData:table(nofallback){
         }
         CY{
             {
+                id{"EUR"}
+                from:intvector{
+                    279,
+                    871384416,
+                }
+            }
+            {
                 id{"CYP"}
                 from:intvector{
                     -412,
                     -1194301344,
+                }
+                to:intvector{
+                    279,
+                    871444416,
                 }
             }
         }
@@ -2355,10 +2366,21 @@ supplementalData:table(nofallback){
         }
         MT{
             {
+                id{"EUR"}
+                from:intvector{
+                    279,
+                    871384416,
+                }
+            }
+            {
                 id{"MTL"}
                 from:intvector{
                     -15,
                     1806469440,
+                }
+                to:intvector{
+                    279,
+                    871444416,
                 }
             }
             {
@@ -9144,6 +9166,9 @@ supplementalData:table(nofallback){
         }
         "Africa:Addis_Ababa"{
             territory{"ET"}
+            aliases{
+                "EAT",
+            }
         }
         "Africa:Algiers"{
             territory{"DZ"}
@@ -9182,6 +9207,7 @@ supplementalData:table(nofallback){
             territory{"EG"}
             aliases{
                 "Egypt",
+                "ART",
             }
         }
         "Africa:Casablanca"{
@@ -9216,6 +9242,9 @@ supplementalData:table(nofallback){
         }
         "Africa:Harare"{
             territory{"ZW"}
+            aliases{
+                "CAT",
+            }
         }
         "Africa:Johannesburg"{
             territory{"ZA"}
@@ -9313,6 +9342,7 @@ supplementalData:table(nofallback){
             aliases{
                 "SystemV/YST9YDT",
                 "US/Alaska",
+                "AST",
             }
         }
         "America:Anguilla"{
@@ -9406,6 +9436,7 @@ supplementalData:table(nofallback){
                 "CST6CDT",
                 "SystemV/CST6CDT",
                 "US/Central",
+                "CST",
             }
         }
         "America:Chihuahua"{
@@ -9547,6 +9578,7 @@ supplementalData:table(nofallback){
                 "EST",
                 "SystemV/EST5",
                 "US/East-Indiana",
+                "IET",
             }
         }
         "America:Inuvik"{
@@ -9586,6 +9618,7 @@ supplementalData:table(nofallback){
                 "SystemV/PST8PDT",
                 "US/Pacific",
                 "US/Pacific-New",
+                "PST",
             }
         }
         "America:Louisville"{
@@ -9695,6 +9728,7 @@ supplementalData:table(nofallback){
                 "MST",
                 "SystemV/MST7",
                 "US/Arizona",
+                "PNT",
             }
         }
         "America:Port_of_Spain"{
@@ -9710,6 +9744,7 @@ supplementalData:table(nofallback){
             territory{"PR"}
             aliases{
                 "SystemV/AST4",
+                "PRT",
             }
         }
         "America:Rainy_River"{
@@ -9749,6 +9784,7 @@ supplementalData:table(nofallback){
             territory{"BR"}
             aliases{
                 "Brazil/East",
+                "BET",
             }
         }
         "America:Scoresbysund"{
@@ -9764,6 +9800,7 @@ supplementalData:table(nofallback){
             territory{"CA"}
             aliases{
                 "Canada/Newfoundland",
+                "CNT",
             }
         }
         "America:St_Kitts"{
@@ -9913,6 +9950,9 @@ supplementalData:table(nofallback){
         }
         "Asia:Calcutta"{
             territory{"IN"}
+            aliases{
+                "IST",
+            }
         }
         "Asia:Choibalsan"{
             territory{"MN"}
@@ -9933,6 +9973,7 @@ supplementalData:table(nofallback){
             territory{"BD"}
             aliases{
                 "Asia/Dacca",
+                "BST",
             }
         }
         "Asia:Dili"{
@@ -9983,6 +10024,9 @@ supplementalData:table(nofallback){
         }
         "Asia:Karachi"{
             territory{"PK"}
+            aliases{
+                "PLT",
+            }
         }
         "Asia:Kashgar"{
             territory{"CN"}
@@ -10061,6 +10105,9 @@ supplementalData:table(nofallback){
         }
         "Asia:Saigon"{
             territory{"VN"}
+            aliases{
+                "VST",
+            }
         }
         "Asia:Sakhalin"{
             territory{"RU"}
@@ -10078,6 +10125,7 @@ supplementalData:table(nofallback){
             territory{"CN"}
             aliases{
                 "PRC",
+                "CTT",
             }
         }
         "Asia:Singapore"{
@@ -10114,6 +10162,7 @@ supplementalData:table(nofallback){
             territory{"JP"}
             aliases{
                 "Japan",
+                "JST",
             }
         }
         "Asia:Ulaanbaatar"{
@@ -10139,6 +10188,9 @@ supplementalData:table(nofallback){
         }
         "Asia:Yerevan"{
             territory{"AM"}
+            aliases{
+                "NET",
+            }
         }
         "Atlantic:Azores"{
             territory{"PT"}
@@ -10204,6 +10256,7 @@ supplementalData:table(nofallback){
             territory{"AU"}
             aliases{
                 "Australia/North",
+                "ACT",
             }
         }
         "Australia:Eucla"{
@@ -10242,6 +10295,7 @@ supplementalData:table(nofallback){
                 "Australia/ACT",
                 "Australia/Canberra",
                 "Australia/NSW",
+                "AET",
             }
         }
         "Etc:GMT"{
@@ -10463,6 +10517,9 @@ supplementalData:table(nofallback){
         }
         "Europe:Paris"{
             territory{"FR"}
+            aliases{
+                "ECT",
+            }
         }
         "Europe:Podgorica"{
             territory{"ME"}
@@ -10571,11 +10628,15 @@ supplementalData:table(nofallback){
         }
         "Pacific:Apia"{
             territory{"WS"}
+            aliases{
+                "MIT",
+            }
         }
         "Pacific:Auckland"{
             territory{"NZ"}
             aliases{
                 "NZ",
+                "NST",
             }
         }
         "Pacific:Chatham"{
@@ -10616,6 +10677,9 @@ supplementalData:table(nofallback){
         }
         "Pacific:Guadalcanal"{
             territory{"SB"}
+            aliases{
+                "SST",
+            }
         }
         "Pacific:Guam"{
             territory{"GU"}

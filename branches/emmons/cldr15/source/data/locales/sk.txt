@@ -1420,12 +1420,6 @@ sk{
             }
             quarters{
                 format{
-                    abbreviated{
-                        "Q1",
-                        "2. štvrťrok",
-                        "Q3",
-                        "4. štvrťrok",
-                    }
                     wide{
                         "1. štvrťrok",
                         "2. štvrťrok",

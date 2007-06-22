@@ -2207,25 +2207,11 @@ fi{
                         "3. nelj.",
                         "4.nelj.",
                     }
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                    }
                     wide{
                         "1. neljännes",
                         "2. neljännes",
                         "3. neljännes",
                         "4. neljännes",
-                    }
-                }
-                stand-alone{
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
                     }
                 }
             }

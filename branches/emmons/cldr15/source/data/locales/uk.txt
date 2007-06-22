@@ -1837,42 +1837,6 @@ uk{
     }
     Version{"1.91"}
     calendar{
-        coptic{
-            monthNames{
-                format{
-                    abbreviated{
-                        "Тот",
-                        "Бабе",
-                        "Хатур",
-                        "Кіхак",
-                        "Тобе",
-                        "Амшир",
-                        "Барамхат",
-                        "Baramouda",
-                        "Bashans",
-                        "Paona",
-                        "Абіб",
-                        "Mesra",
-                        "Насі",
-                    }
-                    wide{
-                        "Тот",
-                        "Бабе",
-                        "Хатур",
-                        "Кіхак",
-                        "Тобе",
-                        "Амшир",
-                        "Барамхат",
-                        "Бармуда",
-                        "Башнас",
-                        "Бауна",
-                        "Абіб",
-                        "Мисра",
-                        "Насі",
-                    }
-                }
-            }
-        }
         gregorian{
             DateTimePatterns{
                 "HH:mm:ss v",
@@ -2066,33 +2030,27 @@ uk{
             quarters{
                 format{
                     abbreviated{
-                        "I кв.",
-                        "II квартал",
-                        "III квартал",
+                        "Q1",
+                        "Q2",
+                        "Q3",
                         "Q4",
                     }
                     narrow{
-                        "I",
+                        "1",
                         "2",
                         "3",
                         "4",
                     }
                     wide{
-                        "I квартал",
-                        "II квартал",
-                        "III квартал",
-                        "IV квартал",
+                        "Q1",
+                        "Q2",
+                        "Q3",
+                        "Q4",
                     }
                 }
                 stand-alone{
-                    abbreviated{
-                        "I кв.",
-                        "II квартал",
-                        "III квартал",
-                        "Q4",
-                    }
                     narrow{
-                        "I",
+                        "1",
                         "2",
                         "3",
                         "4",
@@ -2104,34 +2062,34 @@ uk{
             monthNames{
                 format{
                     abbreviated{
-                        "Тішри",
-                        "Марчешван",
-                        "Числьов",
-                        "Тебет",
-                        "Шеват",
-                        "Адар Ⅰ",
-                        "Адар",
+                        "Tishri",
+                        "Heshvan",
+                        "Kislev",
+                        "Tevet",
+                        "Shevat",
+                        "Adar I",
+                        "Adar",
                         "Nisan",
                         "Iyar",
                         "Sivan",
-                        "Таммуз",
+                        "Tamuz",
                         "Av",
-                        "Елул",
+                        "Elul",
                     }
                     wide{
-                        "Тішри",
-                        "Марчешван",
-                        "Числьов",
-                        "Тебет",
-                        "Шеват",
-                        "Адар Ⅰ",
-                        "Адар",
-                        "Нісан",
-                        "Іар",
-                        "Сиван",
-                        "Таммуз",
-                        "Аб",
-                        "Елул",
+                        "Tishri",
+                        "Heshvan",
+                        "Kislev",
+                        "Tevet",
+                        "Shevat",
+                        "Adar I",
+                        "Adar",
+                        "Nisan",
+                        "Iyar",
+                        "Sivan",
+                        "Tamuz",
+                        "Av",
+                        "Elul",
                     }
                 }
             }
@@ -2140,38 +2098,18 @@ uk{
             monthNames{
                 format{
                     wide{
-                        "Мухаррам",
-                        "Сафар",
-                        "Рабі I",
-                        "Рабі II",
-                        "Джумада I",
-                        "Джумада II",
-                        "Раджаб",
-                        "Шаабан",
-                        "Рамадан",
-                        "Даввал",
-                        "Зу-ль-каада",
-                        "Зу-ль-хіджа",
-                    }
-                }
-            }
-        }
-        persian{
-            monthNames{
-                format{
-                    wide{
-                        "Фарвардін",
-                        "Ордібехешт",
-                        "Хордад",
-                        "Тір",
-                        "Мордад",
-                        "Шахрівер",
-                        "Мехр",
-                        "Абан",
-                        "Азер",
-                        "Дей",
-                        "Бахман",
-                        "Есфанд",
+                        "Muharram",
+                        "Safar",
+                        "Rabiʻ I",
+                        "Rabiʻ II",
+                        "Jumada I",
+                        "Jumada II",
+                        "Rajab",
+                        "Shaʻban",
+                        "Ramadan",
+                        "Shawwal",
+                        "Dhuʻl-Qiʻdah",
+                        "Dhuʻl-Hijjah",
                     }
                 }
             }

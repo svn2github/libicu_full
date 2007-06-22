@@ -223,17 +223,6 @@ af{
                         "Saterdag",
                     }
                 }
-                stand-alone{
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                        "5",
-                        "6",
-                        "7",
-                    }
-                }
             }
             eras{
                 abbreviated{
@@ -302,38 +291,6 @@ af{
                         "Oktober",
                         "November",
                         "Desember",
-                    }
-                }
-                stand-alone{
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                        "5",
-                        "6",
-                        "7",
-                        "8",
-                        "9",
-                        "10",
-                        "11",
-                        "12",
-                    }
-                }
-            }
-            quarters{
-                format{
-                    abbreviated{
-                        "1ste kwartaal",
-                        "Q2",
-                        "3de kwartaal",
-                        "4de kwartaal",
-                    }
-                    wide{
-                        "1ste kwartaal",
-                        "2de kwartaal",
-                        "3de kwartaal",
-                        "4de kwartaal",
                     }
                 }
             }

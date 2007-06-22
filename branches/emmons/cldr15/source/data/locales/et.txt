@@ -428,16 +428,16 @@ et{
             quarters{
                 format{
                     abbreviated{
-                        "1. kvartal",
+                        "Q1",
                         "Q2",
-                        "3. kvartal",
-                        "4. kvartal",
+                        "Q3",
+                        "Q4",
                     }
                     wide{
-                        "1. kvartal",
-                        "2. kvartal",
-                        "3. kvartal",
-                        "4. kvartal",
+                        "Q1",
+                        "Q2",
+                        "Q3",
+                        "Q4",
                     }
                 }
             }

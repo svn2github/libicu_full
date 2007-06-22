@@ -1005,12 +1005,12 @@ nn{
                 }
                 stand-alone{
                     abbreviated{
-                        "søn",
+                        "su",
                         "måndag",
                         "tysdag",
                         "on",
-                        "tors",
-                        "fre",
+                        "torsdag",
+                        "fr",
                         "laurdag",
                     }
                     narrow{
@@ -1103,18 +1103,18 @@ nn{
                 }
                 stand-alone{
                     narrow{
-                        "J",
-                        "F",
-                        "M",
-                        "A",
-                        "M",
-                        "J",
-                        "J",
-                        "A",
-                        "S",
-                        "O",
-                        "N",
-                        "D",
+                        "1",
+                        "2",
+                        "3",
+                        "4",
+                        "5",
+                        "6",
+                        "7",
+                        "8",
+                        "9",
+                        "10",
+                        "11",
+                        "12",
                     }
                 }
             }

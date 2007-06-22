@@ -544,17 +544,11 @@ sl{
             }
             quarters{
                 format{
-                    abbreviated{
-                        "Prvo četrtletje",
-                        "Drugo četrtletje",
-                        "Tretje četrtletje",
-                        "Q4",
-                    }
                     wide{
-                        "Prvo četrtletje",
-                        "Drugo četrtletje",
-                        "Tretje četrtletje",
-                        "Četrto četrtletje",
+                        "Q1",
+                        "Q2",
+                        "Q3",
+                        "Q4",
                     }
                 }
             }

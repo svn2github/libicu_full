@@ -665,10 +665,10 @@ sr_Latn{
                         "K4",
                     }
                     wide{
-                        "Prvi kvartal",
-                        "Drugi kvartal",
-                        "Treći kvartal",
-                        "Četvrti kvartal",
+                        "Q1",
+                        "Q2",
+                        "Q3",
+                        "Q4",
                     }
                 }
             }

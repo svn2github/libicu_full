@@ -1907,31 +1907,11 @@ pl{
                         "K3",
                         "K4",
                     }
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                    }
                     wide{
                         "I kwartał",
                         "II kwartał",
                         "III kwartał",
                         "IV kwartał",
-                    }
-                }
-                stand-alone{
-                    abbreviated{
-                        "1 kw.",
-                        "II kwartał",
-                        "3 kw.",
-                        "4 kw.",
-                    }
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
                     }
                 }
             }

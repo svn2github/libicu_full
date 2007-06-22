@@ -48,16 +48,16 @@ de_BE{
                 format{
                     abbreviated{
                         "Jan",
-                        "Feb.",
-                        "Mrz.",
+                        "Februar",
+                        "Mär",
                         "Apr",
                         "Mai",
                         "Jun",
                         "Jul",
                         "August",
                         "September",
-                        "Okt.",
-                        "Nov.",
+                        "Oktober",
+                        "November",
                         "Dezember",
                     }
                 }

@@ -40,33 +40,33 @@ se{
             dayNames{
                 format{
                     abbreviated{
-                        "sotnabeaivi",
+                        "1",
                         "2",
                         "3",
-                        "gask",
+                        "4",
                         "5",
-                        "bearjadat",
+                        "6",
                         "7",
                     }
                     wide{
-                        "sotnabeaivi",
-                        "vuossárga",
-                        "maŋŋebárga",
-                        "gaskavahkku",
-                        "duorasdat",
-                        "bearjadat",
-                        "lávvardat",
+                        "1",
+                        "2",
+                        "3",
+                        "4",
+                        "5",
+                        "6",
+                        "7",
                     }
                 }
                 stand-alone{
                     narrow{
-                        "s",
-                        "v",
-                        "m",
-                        "g",
-                        "d",
-                        "b",
-                        "l",
+                        "1",
+                        "2",
+                        "3",
+                        "4",
+                        "5",
+                        "6",
+                        "7",
                     }
                 }
             }
@@ -102,64 +102,48 @@ se{
             monthNames{
                 format{
                     abbreviated{
-                        "ođđj",
-                        "guovvamánnu",
-                        "njukčamánnu",
-                        "cuoŋománnu",
-                        "miessemánnu",
+                        "1",
+                        "2",
+                        "3",
+                        "4",
+                        "5",
                         "6",
-                        "suoidnemánnu",
+                        "7",
                         "8",
                         "9",
                         "10",
-                        "skáb",
+                        "11",
                         "12",
                     }
                     wide{
-                        "ođđajagemánnu",
-                        "guovvamánnu",
-                        "njukčamánnu",
-                        "cuoŋománnu",
-                        "miessemánnu",
-                        "geassemánnu",
-                        "suoidnemánnu",
-                        "borgemánnu",
-                        "čakčamánnu",
-                        "golggotmánnu",
-                        "skábmamánnu",
-                        "juovlamánnu",
+                        "1",
+                        "2",
+                        "3",
+                        "4",
+                        "5",
+                        "6",
+                        "7",
+                        "8",
+                        "9",
+                        "10",
+                        "11",
+                        "12",
                     }
                 }
                 stand-alone{
                     narrow{
-                        "O",
-                        "G",
-                        "N",
-                        "C",
-                        "M",
-                        "G",
-                        "S",
-                        "B",
-                        "Č",
-                        "G",
-                        "S",
-                        "J",
-                    }
-                }
-            }
-            quarters{
-                format{
-                    abbreviated{
-                        "Q1",
-                        "Q2",
-                        "Q3",
-                        "Q4",
-                    }
-                    wide{
-                        "Q1",
-                        "Q2",
-                        "Q3",
-                        "Q4",
+                        "1",
+                        "2",
+                        "3",
+                        "4",
+                        "5",
+                        "6",
+                        "7",
+                        "8",
+                        "9",
+                        "10",
+                        "11",
+                        "12",
                     }
                 }
             }

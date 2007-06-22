@@ -602,16 +602,16 @@ id{
             quarters{
                 format{
                     abbreviated{
-                        "kuartal pertama",
+                        "Q1",
                         "Q2",
-                        "kuartal ketiga",
-                        "kuartal keempat",
+                        "Q3",
+                        "Q4",
                     }
                     wide{
-                        "kuartal pertama",
-                        "kuartal kedua",
-                        "kuartal ketiga",
-                        "kuartal keempat",
+                        "Q1",
+                        "Q2",
+                        "Q3",
+                        "Q4",
                     }
                 }
             }

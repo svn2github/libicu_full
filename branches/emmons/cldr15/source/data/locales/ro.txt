@@ -464,15 +464,6 @@ ro{
                         "V",
                         "S",
                     }
-                    wide{
-                        "duminică",
-                        "luni",
-                        "marți",
-                        "miercuri",
-                        "joi",
-                        "vineri",
-                        "sâmbătă",
-                    }
                 }
             }
             eras{
@@ -557,20 +548,6 @@ ro{
                     }
                 }
                 stand-alone{
-                    abbreviated{
-                        "Ian",
-                        "februarie",
-                        "Mar",
-                        "Apr",
-                        "mai",
-                        "Iun",
-                        "Iul",
-                        "august",
-                        "septembrie",
-                        "octombrie",
-                        "Noi",
-                        "decembrie",
-                    }
                     narrow{
                         "I",
                         "F",
@@ -584,42 +561,6 @@ ro{
                         "O",
                         "N",
                         "D",
-                    }
-                }
-            }
-            quarters{
-                format{
-                    abbreviated{
-                        "trimestrul I",
-                        "Q2",
-                        "trimestrul al III-lea",
-                        "trimestrul al IV-lea",
-                    }
-                    narrow{
-                        "I",
-                        "2",
-                        "3",
-                        "4",
-                    }
-                    wide{
-                        "trimestrul I",
-                        "trimestrul al II-lea",
-                        "trimestrul al III-lea",
-                        "trimestrul al IV-lea",
-                    }
-                }
-                stand-alone{
-                    narrow{
-                        "I",
-                        "2",
-                        "3",
-                        "4",
-                    }
-                    wide{
-                        "trimestrul I",
-                        "Q2",
-                        "trimestrul al III-lea",
-                        "trimestrul al IV-lea",
                     }
                 }
             }

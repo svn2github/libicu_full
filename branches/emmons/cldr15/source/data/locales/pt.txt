@@ -2137,14 +2137,6 @@ pt{
                         "4º trimestre",
                     }
                 }
-                stand-alone{
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                    }
-                }
             }
         }
         japanese{

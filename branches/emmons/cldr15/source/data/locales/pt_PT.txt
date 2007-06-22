@@ -322,66 +322,6 @@ pt_PT{
                 "yy/MM/dd",
                 "{1} {0}",
             }
-            dayNames{
-                format{
-                    abbreviated{
-                        "dom",
-                        "segunda-feira",
-                        "terça-feira",
-                        "qua",
-                        "quinta-feira",
-                        "sex",
-                        "sáb",
-                    }
-                    narrow{
-                        "D",
-                        "S",
-                        "T",
-                        "Q",
-                        "Q",
-                        "S",
-                        "S",
-                    }
-                    wide{
-                        "domingo",
-                        "segunda-feira",
-                        "terça-feira",
-                        "quarta-feira",
-                        "quinta-feira",
-                        "sexta-feira",
-                        "sábado",
-                    }
-                }
-                stand-alone{
-                    abbreviated{
-                        "dom",
-                        "segunda-feira",
-                        "terça-feira",
-                        "quarta-feira",
-                        "quinta-feira",
-                        "sexta-feira",
-                        "sáb",
-                    }
-                    narrow{
-                        "D",
-                        "S",
-                        "T",
-                        "Q",
-                        "Q",
-                        "S",
-                        "S",
-                    }
-                    wide{
-                        "domingo",
-                        "segunda-feira",
-                        "terça-feira",
-                        "quarta-feira",
-                        "quinta-feira",
-                        "sexta-feira",
-                        "sábado",
-                    }
-                }
-            }
             eras{
                 wide{
                     "a.C.",
@@ -448,20 +388,6 @@ pt_PT{
                         "Nov",
                         "Dez",
                     }
-                    narrow{
-                        "J",
-                        "F",
-                        "M",
-                        "A",
-                        "M",
-                        "J",
-                        "J",
-                        "A",
-                        "S",
-                        "O",
-                        "N",
-                        "D",
-                    }
                     wide{
                         "Janeiro",
                         "Fevereiro",
@@ -492,20 +418,6 @@ pt_PT{
                         "Nov",
                         "Dez",
                     }
-                    narrow{
-                        "J",
-                        "F",
-                        "M",
-                        "A",
-                        "M",
-                        "J",
-                        "J",
-                        "A",
-                        "S",
-                        "O",
-                        "N",
-                        "D",
-                    }
                     wide{
                         "Janeiro",
                         "Fevereiro",
@@ -519,30 +431,6 @@ pt_PT{
                         "Outubro",
                         "Novembro",
                         "Dezembro",
-                    }
-                }
-            }
-            quarters{
-                format{
-                    abbreviated{
-                        "T1",
-                        "2.º trimestre",
-                        "T3",
-                        "T4",
-                    }
-                    wide{
-                        "1.º trimestre",
-                        "2.º trimestre",
-                        "3.º trimestre",
-                        "4.º trimestre",
-                    }
-                }
-                stand-alone{
-                    wide{
-                        "1.º trimestre",
-                        "2.º trimestre",
-                        "3.º trimestre",
-                        "4º trimestre",
                     }
                 }
             }

@@ -1508,9 +1508,9 @@ is{
                     }
                     wide{
                         "1st fjórðungur",
-                        "2nd fjórðungur",
-                        "3rd fjórðungur",
-                        "4th fjórðungur",
+                        "Q2",
+                        "Q3",
+                        "Q4",
                     }
                 }
             }

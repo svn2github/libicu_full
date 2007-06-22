@@ -64,22 +64,22 @@ az{
             dayNames{
                 format{
                     abbreviated{
-                        "bazar",
+                        "1",
                         "2",
                         "3",
-                        "Ç.",
+                        "4",
                         "5",
-                        "cümə axşamı",
+                        "6",
                         "7",
                     }
                     wide{
-                        "bazar",
-                        "bazar ertəsi",
-                        "çərşənbə axşam",
-                        "çərşənbə",
-                        "cümə axşamı",
-                        "cümə axşamı",
-                        "şənbə",
+                        "1",
+                        "2",
+                        "3",
+                        "4",
+                        "5",
+                        "6",
+                        "7",
                     }
                 }
                 stand-alone{
@@ -97,32 +97,32 @@ az{
             monthNames{
                 format{
                     abbreviated{
-                        "yan",
-                        "Fevral",
-                        "Mart",
-                        "Aprel",
-                        "May",
+                        "1",
+                        "2",
+                        "3",
+                        "4",
+                        "5",
                         "6",
-                        "İyul",
+                        "7",
                         "8",
                         "9",
                         "10",
-                        "noy",
+                        "11",
                         "12",
                     }
                     wide{
-                        "Yanvar",
-                        "Fevral",
-                        "Mart",
-                        "Aprel",
-                        "May",
-                        "İyun",
-                        "İyul",
-                        "Avqust",
-                        "Sentyabr",
-                        "Oktyabr",
-                        "Noyabr",
-                        "Dekabr",
+                        "1",
+                        "2",
+                        "3",
+                        "4",
+                        "5",
+                        "6",
+                        "7",
+                        "8",
+                        "9",
+                        "10",
+                        "11",
+                        "12",
                     }
                 }
                 stand-alone{
@@ -145,16 +145,16 @@ az{
             quarters{
                 format{
                     abbreviated{
-                        "1-ci kvartal",
+                        "Q1",
                         "Q2",
-                        "3-cü kvartal",
-                        "4-cü kvartal",
+                        "Q3",
+                        "Q4",
                     }
                     wide{
-                        "1-ci kvartal",
-                        "2-ci kvartal",
-                        "3-cü kvartal",
-                        "4-cü kvartal",
+                        "Q1",
+                        "Q2",
+                        "Q3",
+                        "Q4",
                     }
                 }
             }

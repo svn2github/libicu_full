@@ -267,16 +267,16 @@ eu{
             quarters{
                 format{
                     abbreviated{
-                        "1. hiruhilekoa",
+                        "Q1",
                         "Q2",
-                        "3. hiruhilekoa",
-                        "4. hiruhilekoa",
+                        "Q3",
+                        "Q4",
                     }
                     wide{
-                        "1. hiruhilekoa",
-                        "2. hiruhilekoa",
-                        "3. hiruhilekoa",
-                        "4. hiruhilekoa",
+                        "Q1",
+                        "Q2",
+                        "Q3",
+                        "Q4",
                     }
                 }
             }

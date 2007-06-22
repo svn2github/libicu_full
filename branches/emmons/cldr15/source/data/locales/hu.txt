@@ -1548,6 +1548,7 @@ hu{
                         "0"{"ma"}
                         "1"{"holnap"}
                         "2"{"holnapután"}
+                        "3"{"három nap múlva"}
                     }
                 }
                 dayperiod{
@@ -1637,25 +1638,11 @@ hu{
                         "N3",
                         "N4",
                     }
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                    }
                     wide{
                         "I. negyedév",
                         "II. negyedév",
                         "III. negyedév",
                         "IV. negyedév",
-                    }
-                }
-                stand-alone{
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
                     }
                 }
             }

@@ -1945,15 +1945,15 @@ da{
                     abbreviated{
                         "jan",
                         "februar",
-                        "mar.",
-                        "apr.",
+                        "mar",
+                        "apr",
                         "maj",
                         "jun",
-                        "jul.",
-                        "aug.",
+                        "jul",
+                        "august",
                         "september",
                         "oktober",
-                        "nov.",
+                        "november",
                         "december",
                     }
                     narrow{
@@ -1994,22 +1994,12 @@ da{
                         "K3",
                         "K4",
                     }
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                    }
                 }
             }
         }
     }
     delimiters{
         quotationEnd{"”"}
-    }
-    messages{
-        nostr{"nej:n"}
-        yesstr{"ja:j"}
     }
     zoneStrings{
         "Africa:Casablanca"{

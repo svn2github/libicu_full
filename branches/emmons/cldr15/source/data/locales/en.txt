@@ -2188,9 +2188,9 @@ en{
                 format{
                     abbreviated{
                         "Q1",
-                        "2nd quarter",
+                        "Q2",
                         "Q3",
-                        "4th quarter",
+                        "Q4",
                     }
                     wide{
                         "1st quarter",

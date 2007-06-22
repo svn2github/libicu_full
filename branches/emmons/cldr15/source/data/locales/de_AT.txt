@@ -35,16 +35,16 @@ de_AT{
                 format{
                     abbreviated{
                         "Jän",
-                        "Feb.",
-                        "Mrz",
+                        "Februar",
+                        "Mär",
                         "Apr",
                         "Mai",
                         "Jun",
                         "Jul",
                         "August",
                         "September",
-                        "Okt.",
-                        "Nov.",
+                        "Oktober",
+                        "November",
                         "Dezember",
                     }
                     wide{

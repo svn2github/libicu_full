@@ -366,15 +366,6 @@ lv{
                     }
                 }
                 stand-alone{
-                    abbreviated{
-                        "Sv",
-                        "pirmdiena",
-                        "otrdiena",
-                        "Tr",
-                        "Ce",
-                        "Pk",
-                        "Se",
-                    }
                     narrow{
                         "1",
                         "2",
@@ -496,10 +487,10 @@ lv{
                         "C4",
                     }
                     wide{
-                        "1. ceturksnis",
-                        "2. ceturksnis",
-                        "3. ceturksnis",
-                        "4. ceturksnis",
+                        "Q1",
+                        "Q2",
+                        "Q3",
+                        "Q4",
                     }
                 }
             }

@@ -1539,17 +1539,17 @@ cs{
             monthNames{
                 format{
                     abbreviated{
-                        "1",
-                        "2",
-                        "březen",
-                        "4",
-                        "květen",
-                        "čer",
-                        "čec",
+                        "ledna",
+                        "února",
+                        "března",
+                        "dubna",
+                        "května",
+                        "června",
+                        "července",
                         "srpna",
                         "září",
                         "října",
-                        "listopad",
+                        "listopadu",
                         "prosince",
                     }
                     narrow{
@@ -1629,9 +1629,9 @@ cs{
             quarters{
                 format{
                     abbreviated{
-                        "Q1",
+                        "1. čtvrtletí",
                         "2. čtvrtletí",
-                        "Q3",
+                        "3. čtvrtletí",
                         "4. čtvrtletí",
                     }
                     wide{
@@ -1639,14 +1639,6 @@ cs{
                         "2. čtvrtletí",
                         "3. čtvrtletí",
                         "4. čtvrtletí",
-                    }
-                }
-                stand-alone{
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
                     }
                 }
             }

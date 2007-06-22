@@ -153,33 +153,33 @@ se_FI{
             dayNames{
                 format{
                     abbreviated{
-                        "aejlege",
+                        "1",
                         "2",
                         "3",
                         "4",
                         "5",
-                        "bearjadahke",
+                        "6",
                         "7",
                     }
                     wide{
-                        "aejlege",
-                        "måanta",
-                        "däjsta",
-                        "gaskevahkoe",
-                        "dåarsta",
-                        "bearjadahke",
-                        "laavadahke",
+                        "1",
+                        "2",
+                        "3",
+                        "4",
+                        "5",
+                        "6",
+                        "7",
                     }
                 }
                 stand-alone{
                     narrow{
-                        "S",
-                        "M",
-                        "D",
-                        "G",
-                        "D",
-                        "B",
-                        "L",
+                        "1",
+                        "2",
+                        "3",
+                        "4",
+                        "5",
+                        "6",
+                        "7",
                     }
                 }
             }
@@ -215,17 +215,17 @@ se_FI{
             monthNames{
                 format{
                     abbreviated{
-                        "ođđajage",
-                        "guovvamánnu",
-                        "njukčamánnu",
-                        "cuoŋománnu",
-                        "miessemánnu",
+                        "1",
+                        "2",
+                        "3",
+                        "4",
+                        "5",
                         "6",
-                        "suoidnemánnu",
+                        "7",
                         "8",
                         "9",
                         "10",
-                        "skábma",
+                        "11",
                         "12",
                     }
                 }
