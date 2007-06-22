@@ -12,19 +12,24 @@
 /**
  * \file 
  * \brief C API for complex text layout.
+ * \internal
+ *
+ * This is a technology preview. The API may
+ * change significantly.
+ *
  */
 
 /**
  * The opaque type for a LayoutEngine.
  *
- * @draft ICU 3.8
+ * @internal
  */
 typedef void le_engine;
 
 /**
  * The opaque type for a font instance.
  *
- * @draft ICU 3.8
+ * @internal
  */
 typedef void le_font;
 
@@ -41,7 +46,7 @@ typedef void le_font;
  *
  * @return an le_engine which can layout text in the given font.
  *
- * @draft ICU 3.8
+ * @internal
  */
 U_DRAFT le_engine * U_EXPORT2
 le_create(const le_font *font,
@@ -56,7 +61,7 @@ le_create(const le_font *font,
  *
  * @param engine - the LayoutEngine to close.
  *
- * @draft ICU 3.8
+ * @internal
  */
 U_DRAFT void U_EXPORT2
 le_close(le_engine *engine);
@@ -83,7 +88,7 @@ le_close(le_engine *engine);
  * function first to free the glyph, character index and position arrays
  * allocated by the previous call.
  *
- * @draft ICU 3.8
+ * @internal
  */
 U_DRAFT le_int32 U_EXPORT2
 le_layoutChars(le_engine *engine,
@@ -106,7 +111,7 @@ le_layoutChars(le_engine *engine,
  *
  * @return the number of glyphs in the glyph array
  *
- * @draft ICU 3.8
+ * @internal
  */
 U_DRAFT le_int32 U_EXPORT2
 le_getGlyphCount(le_engine *engine,
@@ -121,7 +126,7 @@ le_getGlyphCount(le_engine *engine,
  * @param glyphs - the destiniation glyph array
  * @param success - set to an error code if the operation fails
  *
- * @draft ICU 3.8
+ * @internal
  */
 U_DRAFT void U_EXPORT2
 le_getGlyphs(le_engine *engine,
@@ -137,7 +142,7 @@ le_getGlyphs(le_engine *engine,
  * @param charIndices - the destiniation character index array
  * @param success - set to an error code if the operation fails
  *
- * @draft ICU 3.8
+ * @internal
  */
 U_DRAFT void U_EXPORT2
 le_getCharIndices(le_engine *engine,
@@ -154,7 +159,7 @@ le_getCharIndices(le_engine *engine,
  * @param indexBase - an offset that will be added to each index.
  * @param success - set to an error code if the operation fails
  *
- * @draft ICU 3.8
+ * @internal
  */
 U_DRAFT void U_EXPORT2
 le_getCharIndicesWithBase(le_engine *engine,
@@ -172,7 +177,7 @@ le_getCharIndicesWithBase(le_engine *engine,
  * @param positions - the destiniation position array
  * @param success - set to an error code if the operation fails
  *
- * @draft ICU 3.8
+ * @internal
  */
 U_DRAFT void U_EXPORT2
 le_getGlyphPositions(le_engine *engine,
@@ -192,7 +197,7 @@ le_getGlyphPositions(le_engine *engine,
  * @param y - the glyph's Y position
  * @param success - set to an error code if the operation fails
  *
- * @draft ICU 3.8
+ * @internal
  */
 U_DRAFT void U_EXPORT2
 le_getGlyphPosition(le_engine *engine,
@@ -209,7 +214,7 @@ le_getGlyphPosition(le_engine *engine,
  * @param engine - the LayoutEngine
  * @param success - set to an error code if the operation fails
  *
- * @draft ICU 3.8
+ * @internal
  */
 U_DRAFT void U_EXPORT2
 le_reset(le_engine *engine,

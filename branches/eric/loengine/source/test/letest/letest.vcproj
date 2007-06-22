@@ -202,6 +202,14 @@
 			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 			>
 			<File
+				RelativePath=".\cfonts.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\cletest.c"
+				>
+			</File>
+			<File
 				RelativePath=".\cmaps.cpp"
 				>
 			</File>
@@ -225,11 +233,19 @@
 				RelativePath=".\SimpleFontInstance.cpp"
 				>
 			</File>
+			<File
+				RelativePath=".\xmlreader.cpp"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl"
 			>
+			<File
+				RelativePath=".\cfonts.h"
+				>
+			</File>
 			<File
 				RelativePath=".\cmaps.h"
 				>
@@ -256,6 +272,10 @@
 			</File>
 			<File
 				RelativePath=".\SimpleFontInstance.h"
+				>
+			</File>
+			<File
+				RelativePath=".\xmlreader.h"
 				>
 			</File>
 		</Filter>

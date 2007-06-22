@@ -18,6 +18,16 @@ typedef void pl_valueRuns;
 typedef void pl_localeRuns;
 
 /**
+ * \file 
+ * \brief C API for run arrays.
+ * \internal
+ *
+ * This is a technology preview. The API may
+ * change significantly.
+ *
+ */
+
+/**
  * Construct a <code>pl_fontRuns</code> object from pre-existing arrays of fonts
  * and limit indices.
  *
@@ -30,7 +40,7 @@ typedef void pl_localeRuns;
  *
  * @param count is the number of entries in the two arrays.
  *
- * @draft ICU 3.8
+ * @internal
  */
 U_DRAFT pl_fontRuns * U_EXPORT2
 pl_openFontRuns(const le_font **fonts,
@@ -46,7 +56,7 @@ pl_openFontRuns(const le_font **fonts,
  *
  * @see pl_addFontRun
  *
- * @draft ICU 3.8
+ * @internal
  */
 U_DRAFT pl_fontRuns * U_EXPORT2
 pl_openEmptyFontRuns(le_int32 initialCapacity);
@@ -57,7 +67,7 @@ pl_openEmptyFontRuns(le_int32 initialCapacity);
  *
  * @param fontRuns is the <code>pl_fontRuns</code> object.
  *
- * @draft ICU 3.8
+ * @internal
  */
 U_DRAFT void U_EXPORT2
 pl_closeFontRuns(pl_fontRuns *fontRuns);
@@ -69,7 +79,7 @@ pl_closeFontRuns(pl_fontRuns *fontRuns);
  *
  * @return the number of entries in the limit indices array.
  *
- * @draft ICU 3.8
+ * @internal
  */
 U_DRAFT le_int32 U_EXPORT2
 pl_getFontRunCount(const pl_fontRuns *fontRuns);
@@ -79,7 +89,7 @@ pl_getFontRunCount(const pl_fontRuns *fontRuns);
  *
  * @param fontRuns is the <code>pl_fontRuns</code> object.
  *
- * @draft ICU 3.8
+ * @internal
  */
 U_DRAFT void U_EXPORT2
 pl_resetFontRuns(pl_fontRuns *fontRuns);
@@ -92,7 +102,7 @@ pl_resetFontRuns(pl_fontRuns *fontRuns);
  *
  * @return the last limit index.
  *
- * @draft ICU 3.8
+ * @internal
  */
 U_DRAFT le_int32 U_EXPORT2
 pl_getFontRunLastLimit(const pl_fontRuns *fontRuns);
@@ -105,7 +115,7 @@ pl_getFontRunLastLimit(const pl_fontRuns *fontRuns);
  *
  * @return the limit index for the run, or -1 if <code>run</code> is out of bounds.
  *
- * @draft ICU 3.8
+ * @internal
  */
 U_DRAFT le_int32 U_EXPORT2
 pl_getFontRunLimit(const pl_fontRuns *fontRuns,
@@ -121,7 +131,7 @@ pl_getFontRunLimit(const pl_fontRuns *fontRuns,
  *
  * @return the <code>le_font</code> associated with the given text run.
  *
- * @draft ICU 3.8
+ * @internal
  */
 U_DRAFT const le_font * U_EXPORT2
 pl_getFontRunFont(const pl_fontRuns *fontRuns,
@@ -144,7 +154,7 @@ pl_getFontRunFont(const pl_fontRuns *fontRuns,
  * @return the run index where the font and limit index were stored, or -1 if 
  *         the run cannot be added.
  *
- * @draft ICU 3.8
+ * @internal
  */
 U_DRAFT le_int32 U_EXPORT2
 pl_addFontRun(pl_fontRuns *fontRuns,
@@ -163,7 +173,7 @@ pl_addFontRun(pl_fontRuns *fontRuns,
  *
  * @param count is the number of entries in the two arrays.
  *
- * @draft ICU 3.8
+ * @internal
  */
 U_DRAFT pl_valueRuns * U_EXPORT2
 pl_openValueRuns(const le_int32 *values,
@@ -179,7 +189,7 @@ pl_openValueRuns(const le_int32 *values,
  *
  * @see pl_addValueRun
  *
- * @draft ICU 3.8
+ * @internal
  */
 U_DRAFT pl_valueRuns * U_EXPORT2
 pl_openEmptyValueRuns(le_int32 initialCapacity);
@@ -190,7 +200,7 @@ pl_openEmptyValueRuns(le_int32 initialCapacity);
  *
  * @param valueRuns is the <code>pl_valueRuns</code> object.
  *
- * @draft ICU 3.8
+ * @internal
  */
 U_DRAFT void U_EXPORT2
 pl_closeValueRuns(pl_valueRuns *valueRuns);
@@ -202,7 +212,7 @@ pl_closeValueRuns(pl_valueRuns *valueRuns);
  *
  * @return the number of value runs.
  *
- * @draft ICU 3.8
+ * @internal
  */
 U_DRAFT le_int32 U_EXPORT2
 pl_getValueRunCount(const pl_valueRuns *valueRuns);
@@ -212,7 +222,7 @@ pl_getValueRunCount(const pl_valueRuns *valueRuns);
  *
  * @param valueRuns is the <code>pl_valueRuns</code> object.
  *
- * @draft ICU 3.8
+ * @internal
  */
 U_DRAFT void U_EXPORT2
 pl_resetValueRuns(pl_valueRuns *valueRuns);
@@ -225,7 +235,7 @@ pl_resetValueRuns(pl_valueRuns *valueRuns);
  *
  * @return the last limit index.
  *
- * @draft ICU 3.8
+ * @internal
  */
 U_DRAFT le_int32 U_EXPORT2
 pl_getValueRunLastLimit(const pl_valueRuns *valueRuns);
@@ -238,7 +248,7 @@ pl_getValueRunLastLimit(const pl_valueRuns *valueRuns);
  *
  * @return the limit index for the run, or -1 if <code>run</code> is out of bounds.
  *
- * @draft ICU 3.8
+ * @internal
  */
 U_DRAFT le_int32 U_EXPORT2
 pl_getValueRunLimit(const pl_valueRuns *valueRuns,
@@ -254,7 +264,7 @@ pl_getValueRunLimit(const pl_valueRuns *valueRuns,
  *
  * @return the value associated with the given text run.
  *
- * @draft ICU 3.8
+ * @internal
  */
 U_DRAFT le_int32 U_EXPORT2
 pl_getValueRunValue(const pl_valueRuns *valueRuns,
@@ -276,7 +286,7 @@ pl_getValueRunValue(const pl_valueRuns *valueRuns,
  * @return the run index where the font and limit index were stored, or -1 if 
  *         the run cannot be added.
  *
- * @draft ICU 3.8
+ * @internal
  */
 U_DRAFT le_int32 U_EXPORT2
 pl_addValueRun(pl_valueRuns *valueRuns,
@@ -295,7 +305,7 @@ pl_addValueRun(pl_valueRuns *valueRuns,
  *
  * @param count is the number of entries in the two arrays.
  *
- * @draft ICU 3.8
+ * @internal
  */
 U_DRAFT pl_localeRuns * U_EXPORT2
 pl_openLocaleRuns(const char **locales,
@@ -311,7 +321,7 @@ pl_openLocaleRuns(const char **locales,
  *
  * @see pl_addLocaleRun
  *
- * @draft ICU 3.8
+ * @internal
  */
 U_DRAFT pl_localeRuns * U_EXPORT2
 pl_openEmptyLocaleRuns(le_int32 initialCapacity);
@@ -322,7 +332,7 @@ pl_openEmptyLocaleRuns(le_int32 initialCapacity);
  *
  * @param localeRuns is the <code>pl_localeRuns</code> object.
  *
- * @draft ICU 3.8
+ * @internal
  */
 U_DRAFT void U_EXPORT2
 pl_closeLocaleRuns(pl_localeRuns *localeRuns);
@@ -334,7 +344,7 @@ pl_closeLocaleRuns(pl_localeRuns *localeRuns);
  *
  * @return the number of entries in the limit indices array.
  *
- * @draft ICU 3.8
+ * @internal
  */
 U_DRAFT le_int32 U_EXPORT2
 pl_getLocaleRunCount(const pl_localeRuns *localeRuns);
@@ -344,7 +354,7 @@ pl_getLocaleRunCount(const pl_localeRuns *localeRuns);
  *
  * @param localeRuns is the <code>pl_localeRuns</code> object.
  *
- * @draft ICU 3.8
+ * @internal
  */
 U_DRAFT void U_EXPORT2
 pl_resetLocaleRuns(pl_localeRuns *localeRuns);
@@ -357,7 +367,7 @@ pl_resetLocaleRuns(pl_localeRuns *localeRuns);
  *
  * @return the last limit index.
  *
- * @draft ICU 3.8
+ * @internal
  */
 U_DRAFT le_int32 U_EXPORT2
 pl_getLocaleRunLastLimit(const pl_localeRuns *localeRuns);
@@ -370,7 +380,7 @@ pl_getLocaleRunLastLimit(const pl_localeRuns *localeRuns);
  *
  * @return the limit index for the run, or -1 if <code>run</code> is out of bounds.
  *
- * @draft ICU 3.8
+ * @internal
  */
 U_DRAFT le_int32 U_EXPORT2
 pl_getLocaleRunLimit(const pl_localeRuns *localeRuns,
@@ -386,7 +396,7 @@ pl_getLocaleRunLimit(const pl_localeRuns *localeRuns,
  *
  * @return the <code>le_font</code> associated with the given text run.
  *
- * @draft ICU 3.8
+ * @internal
  */
 U_DRAFT const char * U_EXPORT2
 pl_getLocaleRunLocale(const pl_localeRuns *localeRuns,
@@ -409,7 +419,7 @@ pl_getLocaleRunLocale(const pl_localeRuns *localeRuns,
  * @return the run index where the font and limit index were stored, or -1 if 
  *         the run cannot be added.
  *
- * @draft ICU 3.8
+ * @internal
  */
 U_DRAFT le_int32 U_EXPORT2
 pl_addLocaleRun(pl_localeRuns *localeRuns,

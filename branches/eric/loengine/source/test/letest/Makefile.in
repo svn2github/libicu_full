@@ -21,7 +21,6 @@ CLEANFILES = *~ $(DEPS)
 
 ## Target information
 TESTTARGET  = letest
-CTESTTARGET = cletest
 GENTARGET   = gendata
 
 BUILDDIR := $(CURR_SRCCODE_FULL_DIR)/../../
@@ -63,12 +62,8 @@ clean: clean-local
 distclean : distclean-local
 dist: dist-local
 check: all check-local
-c-all: c-all-local
-c-check: c-all c-check-local
 
 all-local: $(TESTTARGET)
-
-c-all-local: $(CTESTTARGET)
 
 install-local:
 
@@ -84,18 +79,11 @@ distclean-local: clean-local
 check-local: all-local
 	$(INVOKE) ./$(TESTTARGET)
 
-c-check-local: c-all-local
-	$(INVOKE) ./$(CTESTTARGET)
-
 Makefile: $(srcdir)/Makefile.in  $(top_builddir)/config.status
 	cd $(top_builddir) \
 	 && CONFIG_FILES=$(subdir)/$@ CONFIG_HEADERS= $(SHELL) ./config.status
 
-$(TESTTARGET) : $(COMMONOBJECTS) $(TESTOBJECTS)
-	$(LINK.cc) -o $@ $^ $(LIBS)
-	$(POST_BUILD_STEP)
-
-$(CTESTTARGET) : $(COMMONOBJECTS) $(CTESTOBJECTS)
+$(TESTTARGET) : $(COMMONOBJECTS) $(TESTOBJECTS) $(CTESTOBJECTS)
 	$(LINK.cc) -o $@ $^ $(LIBS)
 	$(POST_BUILD_STEP)
 
