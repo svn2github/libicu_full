@@ -576,12 +576,13 @@ int32_t UnicodeSetStringSpan::span(const UChar *s, int32_t length, USetSpanCondi
                 // No more strings matched after a previous string match.
                 // Try another code point span from after the last string match.
                 spanLength=spanSet.span(s+pos, rest, USET_SPAN_WHILE_CONTAINED);
-                pos+=spanLength;
-                if( pos==length ||      // Reached the end of the string, or
+                if( spanLength==rest || // Reached the end of the string, or
                     spanLength==0       // neither strings nor span progressed.
                 ) {
-                    return pos;
+                    return pos+spanLength;
                 }
+                pos+=spanLength;
+                rest-=spanLength;
                 continue;  // spanLength>0: Match strings from after a span.
             } else {
                 // Try to match only one code point from after a string match if some
@@ -596,6 +597,7 @@ int32_t UnicodeSetStringSpan::span(const UChar *s, int32_t length, USetSpanCondi
                     // There cannot be any increments below it because UnicodeSet strings
                     // contain multiple code points.
                     pos+=spanLength;
+                    rest-=spanLength;
                     offsets.shift(spanLength);
                     spanLength=0;
                     continue;  // Match strings from after a single code point.
@@ -603,8 +605,9 @@ int32_t UnicodeSetStringSpan::span(const UChar *s, int32_t length, USetSpanCondi
                 // Match strings from after the next string match.
             }
         }
-        pos+=offsets.popMinimum();
-        rest=length-pos;
+        int32_t minOffset=offsets.popMinimum();
+        pos+=minOffset;
+        rest-=minOffset;
         spanLength=0;  // Match strings from after a string match.
     }
 }
@@ -850,12 +853,13 @@ int32_t UnicodeSetStringSpan::spanUTF8(const uint8_t *s, int32_t length, USetSpa
                 // No more strings matched after a previous string match.
                 // Try another code point span from after the last string match.
                 spanLength=spanSet.spanUTF8((const char *)s+pos, rest, USET_SPAN_WHILE_CONTAINED);
-                pos+=spanLength;
-                if( pos==length ||      // Reached the end of the string, or
+                if( spanLength==rest || // Reached the end of the string, or
                     spanLength==0       // neither strings nor span progressed.
                 ) {
-                    return pos;
+                    return pos+spanLength;
                 }
+                pos+=spanLength;
+                rest-=spanLength;
                 continue;  // spanLength>0: Match strings from after a span.
             } else {
                 // Try to match only one code point from after a string match if some
@@ -870,6 +874,7 @@ int32_t UnicodeSetStringSpan::spanUTF8(const uint8_t *s, int32_t length, USetSpa
                     // There cannot be any increments below it because UnicodeSet strings
                     // contain multiple code points.
                     pos+=spanLength;
+                    rest-=spanLength;
                     offsets.shift(spanLength);
                     spanLength=0;
                     continue;  // Match strings from after a single code point.
@@ -877,8 +882,9 @@ int32_t UnicodeSetStringSpan::spanUTF8(const uint8_t *s, int32_t length, USetSpa
                 // Match strings from after the next string match.
             }
         }
-        pos+=offsets.popMinimum();
-        rest=length-pos;
+        int32_t minOffset=offsets.popMinimum();
+        pos+=minOffset;
+        rest-=minOffset;
         spanLength=0;  // Match strings from after a string match.
     }
 }
@@ -1105,7 +1111,7 @@ int32_t UnicodeSetStringSpan::spanNotBack(const UChar *s, int32_t length) const 
         // cpLength<0
         pos+=cpLength;
     } while(pos!=0);
-    return length;  // Reached the start of the string.
+    return 0;  // Reached the start of the string.
 }
 
 int32_t UnicodeSetStringSpan::spanNotUTF8(const uint8_t *s, int32_t length) const {
@@ -1196,7 +1202,7 @@ int32_t UnicodeSetStringSpan::spanNotBackUTF8(const uint8_t *s, int32_t length) 
         // cpLength<0
         pos+=cpLength;
     } while(pos!=0);
-    return length;  // Reached the start of the string.
+    return 0;  // Reached the start of the string.
 }
 
 U_NAMESPACE_END
