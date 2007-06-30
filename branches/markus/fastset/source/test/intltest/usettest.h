@@ -175,9 +175,9 @@ private:
                           const UChar *s16, int32_t length16,
                           uint32_t whichSpans,
                           const char *testName, int32_t index);
-    void testSpanContents(const UnicodeSetWithStrings *sets[4], const char *testName);
-    void testSpanUTF16String(const UnicodeSetWithStrings *sets[4], const char *testName);
-    void testSpanUTF8String(const UnicodeSetWithStrings *sets[4], const char *testName);
+    void testSpanContents(const UnicodeSetWithStrings *sets[4], uint32_t whichSpans, const char *testName);
+    void testSpanUTF16String(const UnicodeSetWithStrings *sets[4], uint32_t whichSpans, const char *testName);
+    void testSpanUTF8String(const UnicodeSetWithStrings *sets[4], uint32_t whichSpans, const char *testName);
 
     UConverter *openUTF8Converter();
 
