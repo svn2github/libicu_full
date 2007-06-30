@@ -3386,7 +3386,8 @@ addAlternative(uint32_t whichSpans[], int32_t whichSpansCount,
 
 void UnicodeSetTest::TestSpan() {
     // "[...]" is a UnicodeSet pattern.
-    // "*" performs basic tests.
+    // "*" performs tests on all Unicode code points and on a selection of
+    //   malformed UTF-8/16 strings.
     // "-options" limits the scope of testing for the current set.
     //   By default, the test verifies that equivalent boundaries are found
     //   for UTF-16 and UTF-8, going forward and backward,
@@ -3394,14 +3395,26 @@ void UnicodeSetTest::TestSpan() {
     //   either USET_SPAN_WHILE_CONTAINED or USET_SPAN_WHILE_LONGEST_MATCH.
     //   Single-character options:
     //     8 -- UTF-16 and UTF-8 boundaries may differ.
-    //          contains(U+FFFD) is inconsistent with contains(some surrogates),
+    //          Cause: contains(U+FFFD) is inconsistent with contains(some surrogates),
     //          or the set contains strings with unpaired surrogates
     //          which do not translate to valid UTF-8.
     //     c -- set.span() and set.complement().span() boundaries may differ.
-    //          Set strings are not complemented.
-    //     o -- USET_SPAN_WHILE_CONTAINED and USET_SPAN_WHILE_LONGEST_MATCH boundaries may differ,
-    //          and span() and spanBack() boundaries may differ for USET_SPAN_WHILE_LONGEST_MATCH.
-    //          Strings in the set overlap, resulting in different longest matches depending on direction.
+    //          Cause: Set strings are not complemented.
+    //     b -- span() and spanBack() boundaries may differ.
+    //          Cause: Strings in the set overlap, and spanBack(USET_SPAN_WHILE_CONTAINED)
+    //          and spanBack(USET_SPAN_WHILE_LONGEST_MATCH) are defined to
+    //          match with non-overlapping substrings.
+    //          For example, with a set containing "ab" and "ba",
+    //          span() of "aba" yields boundaries { 0, 2, 3 }
+    //          because the initial "ab" matches from 0 to 2,
+    //          while spanBack() yields boundaries { 0, 1, 3 }
+    //          because the final "ba" matches from 1 to 3.
+    //     l -- USET_SPAN_WHILE_CONTAINED and USET_SPAN_WHILE_LONGEST_MATCH boundaries may differ.
+    //          Cause: Strings in the set overlap, and a longer match may
+    //          require a sequence including non-longest substrings.
+    //          For example, with a set containing "ab", "abc" and "cd",
+    //          span(contained) of "abcd" spans the entire string
+    //          but span(longest match) only spans the first 3 characters.
     //   Each "-options" first resets all options and then applies the specified options.
     //   A "-" without options resets the options.
     //   The options are also reset for each new set.
@@ -3428,11 +3441,12 @@ void UnicodeSetTest::TestSpan() {
 
         // Overlapping strings cause overlapping attempts to match.
         "[x{xy}{xya}{axy}{ax}]",
-        "-co",
+        "-cl",
 
         // More repetitions of "xya" would take too long with the recursive
         // reference implementation.
         // containsAll()=FALSE
+        // test_string 0x14
         "xx"
         "xyaxyaxyaxya"  // set.complement().span(longest match) will stop here.
         "xx"            // set.complement().span(contained) will stop between the two 'x'es.
@@ -3442,6 +3456,7 @@ void UnicodeSetTest::TestSpan() {
         "aaa",
 
         // containsAll()=TRUE
+        // test_string 0x15
         "xx"
         "xyaxyaxyaxya"
         "xx"
@@ -3449,19 +3464,34 @@ void UnicodeSetTest::TestSpan() {
         "xx"
         "xyaxyaxyaxy",
 
-        "byayaxya",  // span(not contained)=4
-        "byayaxy",   // span(not contained)=4
-        "byayax",    // span(not contained)=4
-        "byaya",     // span(not contained)=5
-        "byay",      // span(not contained)=4
-        "bya",       // span(not contained)=3
+        "-bc",
+        // test_string 0x17
+        "byayaxya",  // span() -> { 4, 7, 8 }  spanBack() -> { 5, 8 }
+        "-c",
+        "byayaxy",   // span() -> { 4, 7 }     complement.span() -> { 7 }
+        "byayax",    // span() -> { 4, 6 }     complement.span() -> { 6 }
+        "-",
+        "byaya",     // span() -> { 5 }
+        "byay",      // span() -> { 4 }
+        "bya",       // span() -> { 3 }
 
         // span(longest match) will not span the whole string.
+        "[a{ab}{bc}]",
+        "-cl",
+        // test_string 0x21
+        "abc",
+
         "[a{ab}{abc}{cd}]",
+        "-cl",
         "acdabcdabccd",
 
         // spanBack(longest match) will not span the whole string.
+        "[c{ab}{bc}]",
+        "-cl",
+        "abc",
+
         "[d{cd}{bcd}{ab}]",
+        "-cl",
         "abbcdabcdabd",
 
         // Stress bookkeeping and recursion.
@@ -3472,7 +3502,7 @@ void UnicodeSetTest::TestSpan() {
         "bbbbbbbbbbbbbbbbbbbbbbbb-",
         "bbbbbbbbbbbbbbbbbbbbbbbbb-"
     };
-    uint32_t whichSpans[12]={ SPAN_ALL };
+    uint32_t whichSpans[96]={ SPAN_ALL };
     int32_t whichSpansCount=1;
 
     UnicodeSet *sets[SET_COUNT]={ NULL };
@@ -3529,7 +3559,14 @@ void UnicodeSetTest::TestSpan() {
                                                    SPAN_COMPLEMENT,
                                                    0);
                     break;
-                case 'o':
+                case 'b':
+                    whichSpansCount=addAlternative(whichSpans, whichSpansCount,
+                                                   ~SPAN_DIRS,
+                                                   SPAN_FWD,
+                                                   SPAN_BACK,
+                                                   0);
+                    break;
+                case 'l':
                     // test USET_SPAN_WHILE_CONTAINED FWD & BACK, and separately
                     // USET_SPAN_WHILE_LONGEST_MATCH only FWD, and separately
                     // USET_SPAN_WHILE_LONGEST_MATCH only BACK
