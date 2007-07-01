@@ -212,31 +212,42 @@ UnicodeSetStringSpan::UnicodeSetStringSpan(const UnicodeSet &set,
     }
 
     // Determine if the strings even need to be taken into account at all for span() etc.
+    // If any string is relevant, then all strings need to be used for
+    // span(longest match) but only the relevant ones for span(while contained).
+    // TODO: Possible optimization: Distinguish CONTAINED vs. LONGEST_MATCH
+    //   and do not store UTF-8 strings if !thisRelevant and CONTAINED.
+    //   (Only store irrelevant UTF-8 strings for LONGEST_MATCH where they are relevant after all.)
     // Also count the lengths of the UTF-8 versions of the strings for memory allocation.
     int32_t stringsLength=strings.size();
 
     int32_t utf8Length=0;  // Length of all UTF-8 versions of relevant strings.
 
     int32_t i, spanLength;
+    UBool someRelevant=FALSE;
     for(i=0; i<stringsLength; ++i) {
         const UnicodeString &string=*(const UnicodeString *)strings.elementAt(i);
         const UChar *s16=string.getBuffer();
         int32_t length16=string.length();
+        UBool thisRelevant;
         spanLength=spanSet.span(s16, length16, USET_SPAN_WHILE_CONTAINED);
         if(spanLength<length16) {  // Relevant string.
-            if((which&UTF16) && length16>maxLength16) {
-                maxLength16=length16;
-            }
-            if(which&UTF8) {
-                int32_t length8=getUTF8Length(s16, length16);
-                utf8Length+=length8;
-                if(length8>maxLength8) {
-                    maxLength8=length8;
-                }
+            someRelevant=thisRelevant=TRUE;
+        } else {
+            thisRelevant=FALSE;
+        }
+        if((which&UTF16) && length16>maxLength16) {
+            maxLength16=length16;
+        }
+        if((which&UTF8) && (thisRelevant || (which&CONTAINED))) {
+            int32_t length8=getUTF8Length(s16, length16);
+            utf8Length+=length8;
+            if(length8>maxLength8) {
+                maxLength8=length8;
             }
         }
     }
-    if((maxLength16|maxLength8)==0) {
+    if(!someRelevant) {
+        maxLength16=maxLength8=0;
         return;
     }
 
@@ -349,15 +360,20 @@ UnicodeSetStringSpan::UnicodeSetStringSpan(const UnicodeSet &set,
                 }
             }
         } else {  // Irrelevant string.
+            if(which&UTF8) {
+                if(which&CONTAINED) {  // Only necessary for LONGEST_MATCH.
+                    uint8_t *s8=utf8+utf8Count;
+                    int32_t length8=appendUTF8(s16, length16, s8, utf8Length-utf8Count);
+                    utf8Count+=utf8Lengths[i]=length8;
+                } else {
+                    utf8Lengths[i]=0;
+                }
+            }
             if(all) {
-                utf8Lengths[i]=0;
                 spanLengths[i]=spanBackLengths[i]=
                     spanUTF8Lengths[i]=spanBackUTF8Lengths[i]=
                         (uint8_t)ALL_CP_CONTAINED;
             } else {
-                if(which&UTF8) {
-                    utf8Lengths[i]=0;
-                }
                 // All spanXYZLengths pointers contain the same address.
                 spanLengths[i]=(uint8_t)ALL_CP_CONTAINED;
             }
@@ -490,7 +506,7 @@ int32_t UnicodeSetStringSpan::span(const UChar *s, int32_t length, USetSpanCondi
     OffsetList offsets;
     int32_t maxInc, maxIncReset, maxOverlap;
     if(spanCondition==USET_SPAN_WHILE_CONTAINED) {
-        // Use index list to try all possibilities.
+        // Use offset list to try all possibilities.
         offsets.setMaxLength(maxLength16);
         maxIncReset=-1;
     } else /* USET_SPAN_WHILE_LONGEST_MATCH */ {
@@ -559,8 +575,8 @@ int32_t UnicodeSetStringSpan::span(const UChar *s, int32_t length, USetSpanCondi
             spanLength=0;  // Match strings from after a string match.
             continue;
         }
-        // if(maxInc==0) then indexes is unused and empty. (No string match.)
-        // if(maxInc<0) then indexes is used, and checked for string matches.
+        // if(maxInc==0) then offsets is unused and empty. (No string match.)
+        // if(maxInc<0) then offsets is used, and checked for string matches.
 
         if(spanLength!=0 || pos==0) {
             // The position is after an unlimited code point span (spanLength!=0),
@@ -626,14 +642,9 @@ int32_t UnicodeSetStringSpan::spanBack(const UChar *s, int32_t length, USetSpanC
 
     // Consider strings; they may overlap with the span.
     OffsetList offsets;
-    int32_t maxDec, maxDecReset, maxOverlap;
     if(spanCondition==USET_SPAN_WHILE_CONTAINED) {
-        // Use index list to try all possibilities.
+        // Use offset list to try all possibilities.
         offsets.setMaxLength(maxLength16);
-        maxDecReset=-1;
-    } else /* USET_SPAN_WHILE_LONGEST_MATCH */ {
-        // Use longest match.
-        maxDecReset=0;
     }
     int32_t i, stringsLength=strings.size();
     uint8_t *spanBackLengths=spanLengths;
@@ -641,68 +652,106 @@ int32_t UnicodeSetStringSpan::spanBack(const UChar *s, int32_t length, USetSpanC
         spanBackLengths+=stringsLength;
     }
     for(;;) {
-        maxDec=maxDecReset;
-        maxOverlap=0;
-        for(i=0; i<stringsLength; ++i) {
-            int32_t overlap=spanBackLengths[i];
-            if(overlap==ALL_CP_CONTAINED) {
-                continue;  // Irrelevant string.
-            }
-            const UnicodeString &string=*(const UnicodeString *)strings.elementAt(i);
-            const UChar *s16=string.getBuffer();
-            int32_t length16=string.length();
-
-            // Try to match this string at pos-(length16-overlap)..pos-length16.
-            int32_t dec;
-            if(overlap==LONG_SPAN) {
-                dec=0;
-                U16_FWD_1(s16, dec, length16);
-                overlap=(length16-dec);  // Length of the string minus the first code point.
-            }
-            if(overlap>spanLength) {
-                overlap=spanLength;
-            }
-            dec=length16-overlap;  // Keep dec+overlap==length16.
-            for(;;) {
-                if(dec>pos || overlap<maxOverlap) {
-                    break;
+        if(spanCondition==USET_SPAN_WHILE_CONTAINED) {
+            for(i=0; i<stringsLength; ++i) {
+                int32_t overlap=spanBackLengths[i];
+                if(overlap==ALL_CP_CONTAINED) {
+                    continue;  // Irrelevant string.
                 }
-                // Try to match if the decrement is not listed already.
-                // (The string might end with a lead surrogate. Make sure to not overlap
-                // into a surrogate pair.)
-                if( (maxDec>=0 ?
-                        (overlap>maxOverlap || /* redundant overlap==maxOverlap && */ dec>maxDec) :
-                        !offsets.containsOffset(dec)) &&
-                    matches16(s+pos-dec, s16, length16) &&
-                    !(overlap>0 && U16_IS_LEAD(s[pos+overlap-1]) &&
-                      (pos+overlap)<length && U16_IS_TRAIL(s[pos+overlap]))
-                ) {
-                    if(dec==pos) {
-                        return 0;  // Reached the start of the string.
+                const UnicodeString &string=*(const UnicodeString *)strings.elementAt(i);
+                const UChar *s16=string.getBuffer();
+                int32_t length16=string.length();
+
+                // Try to match this string at pos-(length16-overlap)..pos-length16.
+                if(overlap>=LONG_SPAN) {
+                    overlap=length16;
+                    // While contained: No point matching fully inside the code point span.
+                    int32_t len1=0;
+                    U16_FWD_1(s16, len1, overlap);
+                    overlap-=len1;  // Length of the string minus the first code point.
+                }
+                if(overlap>spanLength) {
+                    overlap=spanLength;
+                }
+                int32_t dec=length16-overlap;  // Keep dec+overlap==length16.
+                for(;;) {
+                    if(dec>pos) {
+                        break;
                     }
-                    if(maxDec>=0) {
+                    // Try to match if the decrement is not listed already.
+                    // (The string might end with a lead surrogate. Make sure to not overlap
+                    // into a surrogate pair.)
+                    if( !offsets.containsOffset(dec) &&
+                        matches16(s+pos-dec, s16, length16) &&
+                        !(overlap>0 && U16_IS_LEAD(s[pos+overlap-1]) &&
+                          (pos+overlap)<length && U16_IS_TRAIL(s[pos+overlap]))
+                    ) {
+                        if(dec==pos) {
+                            return 0;  // Reached the start of the string.
+                        }
+                        offsets.addOffset(dec);
+                    }
+                    if(overlap==0) {
+                        break;
+                    }
+                    --overlap;
+                    ++dec;
+                }
+            }
+        } else /* USET_SPAN_WHILE_LONGEST_MATCH */ {
+            int32_t maxDec=0, maxOverlap=0;
+            for(i=0; i<stringsLength; ++i) {
+                int32_t overlap=spanBackLengths[i];
+                // For longest match, we do need to try to match even an all-contained string
+                // to find the match from the latest end.
+
+                const UnicodeString &string=*(const UnicodeString *)strings.elementAt(i);
+                const UChar *s16=string.getBuffer();
+                int32_t length16=string.length();
+
+                // Try to match this string at pos-(length16-overlap)..pos-length16.
+                if(overlap>=LONG_SPAN) {
+                    overlap=length16;
+                    // Longest match: Need to match fully inside the code point span
+                    // to find the match from the latest end.
+                }
+                if(overlap>spanLength) {
+                    overlap=spanLength;
+                }
+                int32_t dec=length16-overlap;  // Keep dec+overlap==length16.
+                for(;;) {
+                    if(dec>pos || overlap<maxOverlap) {
+                        break;
+                    }
+                    // Try to match if the string is longer or ends later.
+                    // (The string might end with a lead surrogate. Make sure to not overlap
+                    // into a surrogate pair.)
+                    if( (overlap>maxOverlap || /* redundant overlap==maxOverlap && */ dec>maxDec) &&
+                        matches16(s+pos-dec, s16, length16) &&
+                        !(overlap>0 && U16_IS_LEAD(s[pos+overlap-1]) &&
+                          (pos+overlap)<length && U16_IS_TRAIL(s[pos+overlap]))
+                    ) {
                         maxDec=dec;  // Longest match from latest end.
                         maxOverlap=overlap;
                         break;
-                    } else {
-                        offsets.addOffset(dec);
                     }
+                    --overlap;
+                    ++dec;
                 }
-                --overlap;
-                ++dec;
+            }
+
+            if(maxDec!=0 || maxOverlap!=0) {
+                // Longest-match algorithm, and there was a string match.
+                // Simply continue before it.
+                pos-=maxDec;
+                if(pos==0) {
+                    return 0;  // Reached the start of the string.
+                }
+                spanLength=0;  // Match strings from before a string match.
+                continue;
             }
         }
         // Finished trying to match all strings at pos.
-
-        if(maxDec>0) {
-            // Longest-match algorithm, and there was a string match.
-            // Simply continue after it.
-            pos-=maxDec;
-            spanLength=0;  // Match strings from after a string match.
-            continue;
-        }
-        // if(maxDec==0) then indexes is unused and empty. (No string match.)
-        // if(maxDec<0) then indexes is used, and checked for string matches.
 
         if(spanLength!=0 || pos==length) {
             // The position is before an unlimited code point span (spanLength!=0),
@@ -766,7 +815,7 @@ int32_t UnicodeSetStringSpan::spanUTF8(const uint8_t *s, int32_t length, USetSpa
     OffsetList offsets;
     int32_t maxInc, maxIncReset, maxOverlap;
     if(spanCondition==USET_SPAN_WHILE_CONTAINED) {
-        // Use index list to try all possibilities.
+        // Use offset list to try all possibilities.
         offsets.setMaxLength(maxLength8);
         maxIncReset=-1;
     } else /* USET_SPAN_WHILE_LONGEST_MATCH */ {
@@ -790,6 +839,9 @@ int32_t UnicodeSetStringSpan::spanUTF8(const uint8_t *s, int32_t length, USetSpa
                 continue;  // Irrelevant string.
             }
             length8=utf8Lengths[i];
+            if(length8==0) {
+                continue;  // String not representable in UTF-8.
+            }
 
             // Try to match this string at pos-overlap..pos.
             if(overlap==LONG_SPAN) {
@@ -840,8 +892,8 @@ int32_t UnicodeSetStringSpan::spanUTF8(const uint8_t *s, int32_t length, USetSpa
             spanLength=0;  // Match strings from after a string match.
             continue;
         }
-        // if(maxInc==0) then indexes is unused and empty. (No string match.)
-        // if(maxInc<0) then indexes is used, and checked for string matches.
+        // if(maxInc==0) then offsets is unused and empty. (No string match.)
+        // if(maxInc<0) then offsets is used, and checked for string matches.
 
         if(spanLength!=0 || pos==0) {
             // The position is after an unlimited code point span (spanLength!=0),
@@ -907,14 +959,9 @@ int32_t UnicodeSetStringSpan::spanBackUTF8(const uint8_t *s, int32_t length, USe
 
     // Consider strings; they may overlap with the span.
     OffsetList offsets;
-    int32_t maxDec, maxDecReset, maxOverlap;
     if(spanCondition==USET_SPAN_WHILE_CONTAINED) {
-        // Use index list to try all possibilities.
+        // Use offset list to try all possibilities.
         offsets.setMaxLength(maxLength8);
-        maxDecReset=-1;
-    } else /* USET_SPAN_WHILE_LONGEST_MATCH */ {
-        // Use longest match.
-        maxDecReset=0;
     }
     int32_t i, stringsLength=strings.size();
     uint8_t *spanBackUTF8Lengths=spanLengths;
@@ -924,66 +971,105 @@ int32_t UnicodeSetStringSpan::spanBackUTF8(const uint8_t *s, int32_t length, USe
     for(;;) {
         const uint8_t *s8=utf8;
         int32_t length8;
-        maxDec=maxDecReset;
-        maxOverlap=0;
-        for(i=0; i<stringsLength; ++i) {
-            int32_t overlap=spanBackUTF8Lengths[i];
-            if(overlap==ALL_CP_CONTAINED) {
-                continue;  // Irrelevant string.
-            }
-            length8=utf8Lengths[i];
-
-            // Try to match this string at pos-(length8-overlap)..pos-length8.
-            int32_t dec;
-            if(overlap==LONG_SPAN) {
-                dec=0;
-                U8_FWD_1(s8, dec, length8);
-                overlap=(length8-dec);  // Length of the string minus the first code point.
-            }
-            if(overlap>spanLength) {
-                overlap=spanLength;
-            }
-            dec=length8-overlap;  // Keep dec+overlap==length8.
-            for(;;) {
-                if(dec>pos || overlap<maxOverlap) {
-                    break;
+        if(spanCondition==USET_SPAN_WHILE_CONTAINED) {
+            for(i=0; i<stringsLength; ++i) {
+                int32_t overlap=spanBackUTF8Lengths[i];
+                if(overlap==ALL_CP_CONTAINED) {
+                    continue;  // Irrelevant string.
                 }
-                // Try to match if the decrement is not listed already.
-                // Match at code point boundaries. (The UTF-8 strings were converted
-                // from UTF-16 and are guaranteed to be well-formed.)
-                if( !U8_IS_TRAIL(s[pos-dec]) &&
-                    (maxDec>=0 ?
-                        (overlap>maxOverlap || /* redundant overlap==maxOverlap && */ dec>maxDec) :
-                        !offsets.containsOffset(dec)) &&
-                    matches8(s+pos-dec, s8, length8)
-                ) {
-                    if(dec==pos) {
-                        return 0;  // Reached the start of the string.
+                length8=utf8Lengths[i];
+
+                // Try to match this string at pos-(length8-overlap)..pos-length8.
+                if(overlap>=LONG_SPAN) {
+                    overlap=length8;
+                    // While contained: No point matching fully inside the code point span.
+                    int32_t len1=0;
+                    U8_FWD_1(s8, len1, overlap);
+                    overlap-=len1;  // Length of the string minus the first code point.
+                }
+                if(overlap>spanLength) {
+                    overlap=spanLength;
+                }
+                int32_t dec=length8-overlap;  // Keep dec+overlap==length8.
+                for(;;) {
+                    if(dec>pos) {
+                        break;
                     }
-                    if(maxDec>=0) {
+                    // Try to match if the decrement is not listed already.
+                    // Match at code point boundaries. (The UTF-8 strings were converted
+                    // from UTF-16 and are guaranteed to be well-formed.)
+                    if( !U8_IS_TRAIL(s[pos-dec]) &&
+                        !offsets.containsOffset(dec) &&
+                        matches8(s+pos-dec, s8, length8)
+                    ) {
+                        if(dec==pos) {
+                            return 0;  // Reached the start of the string.
+                        }
+                        offsets.addOffset(dec);
+                    }
+                    if(overlap==0) {
+                        break;
+                    }
+                    --overlap;
+                    ++dec;
+                }
+                s8+=length8;
+            }
+        } else /* USET_SPAN_WHILE_LONGEST_MATCH */ {
+            int32_t maxDec=0, maxOverlap=0;
+            for(i=0; i<stringsLength; ++i) {
+                int32_t overlap=spanBackUTF8Lengths[i];
+                // For longest match, we do need to try to match even an all-contained string
+                // to find the match from the latest end.
+
+                length8=utf8Lengths[i];
+                if(length8==0) {
+                    continue;  // String not representable in UTF-8.
+                }
+
+                // Try to match this string at pos-(length8-overlap)..pos-length8.
+                if(overlap>=LONG_SPAN) {
+                    overlap=length8;
+                    // Longest match: Need to match fully inside the code point span
+                    // to find the match from the latest end.
+                }
+                if(overlap>spanLength) {
+                    overlap=spanLength;
+                }
+                int32_t dec=length8-overlap;  // Keep dec+overlap==length8.
+                for(;;) {
+                    if(dec>pos || overlap<maxOverlap) {
+                        break;
+                    }
+                    // Try to match if the string is longer or ends later.
+                    // Match at code point boundaries. (The UTF-8 strings were converted
+                    // from UTF-16 and are guaranteed to be well-formed.)
+                    if( !U8_IS_TRAIL(s[pos-dec]) &&
+                        (overlap>maxOverlap || /* redundant overlap==maxOverlap && */ dec>maxDec) &&
+                        matches8(s+pos-dec, s8, length8)
+                    ) {
                         maxDec=dec;  // Longest match from latest end.
                         maxOverlap=overlap;
                         break;
-                    } else {
-                        offsets.addOffset(dec);
                     }
+                    --overlap;
+                    ++dec;
                 }
-                --overlap;
-                ++dec;
+                s8+=length8;
             }
-            s8+=length8;
+
+            if(maxDec!=0 || maxOverlap!=0) {
+                // Longest-match algorithm, and there was a string match.
+                // Simply continue before it.
+                pos-=maxDec;
+                if(pos==0) {
+                    return 0;  // Reached the start of the string.
+                }
+                spanLength=0;  // Match strings from before a string match.
+                continue;
+            }
         }
         // Finished trying to match all strings at pos.
-
-        if(maxDec>0) {
-            // Longest-match algorithm, and there was a string match.
-            // Simply continue after it.
-            pos-=maxDec;
-            spanLength=0;  // Match strings from after a string match.
-            continue;
-        }
-        // if(maxDec==0) then indexes is unused and empty. (No string match.)
-        // if(maxDec<0) then indexes is used, and checked for string matches.
 
         if(spanLength!=0 || pos==length) {
             // The position is before an unlimited code point span (spanLength!=0),
