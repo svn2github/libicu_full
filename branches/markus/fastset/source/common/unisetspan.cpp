@@ -431,6 +431,18 @@ matches8(const uint8_t *s, const uint8_t *t, int32_t length) {
     return TRUE;
 }
 
+// Compare 16-bit Unicode strings (which may be malformed UTF-16)
+// at code point boundaries.
+// That is, each edge of a match must not be in the middle of a surrogate pair.
+static inline UBool
+matches16CPB(const UChar *s, int32_t start, int32_t limit, const UChar *t, int32_t length) {
+    s+=start;
+    limit-=start;
+    return matches16(s, t, length) &&
+           !(0<start && U16_IS_LEAD(s[-1]) && U16_IS_TRAIL(s[0])) &&
+           !(length<limit && U16_IS_LEAD(s[length-1]) && U16_IS_TRAIL(s[length]));
+}
+
 // Does the set contain the next code point?
 // If so, return its length; otherwise return its negative length.
 static inline int32_t
@@ -536,13 +548,7 @@ int32_t UnicodeSetStringSpan::span(const UChar *s, int32_t length, USetSpanCondi
                         break;
                     }
                     // Try to match if the increment is not listed already.
-                    // (The string might start with a trail surrogate. Make sure to not overlap
-                    // into a surrogate pair.)
-                    if( !offsets.containsOffset(inc) &&
-                        matches16(s+pos-overlap, s16, length16) &&
-                        !(overlap>0 && U16_IS_TRAIL(s[pos-overlap]) &&
-                          overlap<pos && U16_IS_LEAD(s[pos-overlap-1]))
-                    ) {
+                    if(!offsets.containsOffset(inc) && matches16CPB(s, pos-overlap, length, s16, length16)) {
                         if(inc==rest) {
                             return length;  // Reached the end of the string.
                         }
@@ -581,12 +587,8 @@ int32_t UnicodeSetStringSpan::span(const UChar *s, int32_t length, USetSpanCondi
                         break;
                     }
                     // Try to match if the string is longer or starts earlier.
-                    // (The string might start with a trail surrogate. Make sure to not overlap
-                    // into a surrogate pair.)
                     if( (overlap>maxOverlap || /* redundant overlap==maxOverlap && */ inc>maxInc) &&
-                        matches16(s+pos-overlap, s16, length16) &&
-                        !(overlap>0 && U16_IS_TRAIL(s[pos-overlap]) &&
-                          overlap<pos && U16_IS_LEAD(s[pos-overlap-1]))
+                        matches16CPB(s, pos-overlap, length, s16, length16)
                     ) {
                         maxInc=inc;  // Longest match from earliest start.
                         maxOverlap=overlap;
@@ -712,13 +714,7 @@ int32_t UnicodeSetStringSpan::spanBack(const UChar *s, int32_t length, USetSpanC
                         break;
                     }
                     // Try to match if the decrement is not listed already.
-                    // (The string might end with a lead surrogate. Make sure to not overlap
-                    // into a surrogate pair.)
-                    if( !offsets.containsOffset(dec) &&
-                        matches16(s+pos-dec, s16, length16) &&
-                        !(overlap>0 && U16_IS_LEAD(s[pos+overlap-1]) &&
-                          (pos+overlap)<length && U16_IS_TRAIL(s[pos+overlap]))
-                    ) {
+                    if(!offsets.containsOffset(dec) && matches16CPB(s, pos-dec, length, s16, length16)) {
                         if(dec==pos) {
                             return 0;  // Reached the start of the string.
                         }
@@ -757,12 +753,8 @@ int32_t UnicodeSetStringSpan::spanBack(const UChar *s, int32_t length, USetSpanC
                         break;
                     }
                     // Try to match if the string is longer or ends later.
-                    // (The string might end with a lead surrogate. Make sure to not overlap
-                    // into a surrogate pair.)
                     if( (overlap>maxOverlap || /* redundant overlap==maxOverlap && */ dec>maxDec) &&
-                        matches16(s+pos-dec, s16, length16) &&
-                        !(overlap>0 && U16_IS_LEAD(s[pos+overlap-1]) &&
-                          (pos+overlap)<length && U16_IS_TRAIL(s[pos+overlap]))
+                        matches16CPB(s, pos-dec, length, s16, length16)
                     ) {
                         maxDec=dec;  // Longest match from latest end.
                         maxOverlap=overlap;
@@ -1223,7 +1215,7 @@ int32_t UnicodeSetStringSpan::spanNot(const UChar *s, int32_t length) const {
             const UnicodeString &string=*(const UnicodeString *)strings.elementAt(i);
             const UChar *s16=string.getBuffer();
             int32_t length16=string.length();
-            if(length16<=rest && matches16(s+pos, s16, length16)) {
+            if(length16<=rest && matches16CPB(s, pos, length, s16, length16)) {
                 return pos;  // There is a set element at pos.
             }
         }
@@ -1266,7 +1258,7 @@ int32_t UnicodeSetStringSpan::spanNotBack(const UChar *s, int32_t length) const 
             const UnicodeString &string=*(const UnicodeString *)strings.elementAt(i);
             const UChar *s16=string.getBuffer();
             int32_t length16=string.length();
-            if(length16<=pos && matches16(s+pos-length16, s16, length16)) {
+            if(length16<=pos && matches16CPB(s, pos-length16, length, s16, length16)) {
                 return pos;  // There is a set element at pos.
             }
         }
