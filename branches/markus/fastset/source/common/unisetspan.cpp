@@ -202,6 +202,7 @@ UnicodeSetStringSpan::UnicodeSetStringSpan(const UnicodeSet &set,
                                            uint32_t which)
         : spanSet(0, 0x10ffff), pSpanNotSet(NULL), strings(setStrings),
           utf8Lengths(NULL), spanLengths(NULL), utf8(NULL),
+          utf8Length(0),
           maxLength16(0), maxLength8(0),
           all((UBool)(which==ALL)) {
     spanSet.retainAll(set);
@@ -219,8 +220,6 @@ UnicodeSetStringSpan::UnicodeSetStringSpan(const UnicodeSet &set,
     //   (Only store irrelevant UTF-8 strings for LONGEST_MATCH where they are relevant after all.)
     // Also count the lengths of the UTF-8 versions of the strings for memory allocation.
     int32_t stringsLength=strings.size();
-
-    int32_t utf8Length=0;  // Length of all UTF-8 versions of relevant strings.
 
     int32_t i, spanLength;
     UBool someRelevant=FALSE;
@@ -384,6 +383,39 @@ UnicodeSetStringSpan::UnicodeSetStringSpan(const UnicodeSet &set,
     if(all) {
         pSpanNotSet->freeze();
     }
+}
+
+// Copy constructor. Assumes which==ALL for a frozen set.
+UnicodeSetStringSpan::UnicodeSetStringSpan(const UnicodeSetStringSpan &otherStringSpan,
+                                           const UVector &newParentSetStrings)
+        : spanSet(otherStringSpan.spanSet), pSpanNotSet(NULL), strings(newParentSetStrings),
+          utf8Lengths(NULL), spanLengths(NULL), utf8(NULL),
+          utf8Length(otherStringSpan.utf8Length),
+          maxLength16(otherStringSpan.maxLength16), maxLength8(otherStringSpan.maxLength8),
+          all(TRUE) {
+    if(otherStringSpan.pSpanNotSet==&otherStringSpan.spanSet) {
+        pSpanNotSet=&spanSet;
+    } else {
+        pSpanNotSet=(UnicodeSet *)otherStringSpan.pSpanNotSet->clone();
+    }
+
+    // Allocate a block of meta data.
+    // UTF-8 lengths, 4 sets of span lengths, UTF-8 strings.
+    int32_t stringsLength=strings.size();
+    int32_t allocSize=stringsLength*(4+1+1+1+1)+utf8Length;
+    if(allocSize<=sizeof(staticLengths)) {
+        utf8Lengths=staticLengths;
+    } else {
+        utf8Lengths=(int32_t *)uprv_malloc(allocSize);
+        if(utf8Lengths==NULL) {
+            maxLength16=maxLength8=0;  // Prevent usage by making needsStringSpanUTF16/8() return FALSE.
+            return;  // Out of memory.
+        }
+    }
+
+    spanLengths=(uint8_t *)(utf8Lengths+stringsLength);
+    utf8=spanLengths+stringsLength*4;
+    uprv_memcpy(utf8Lengths, otherStringSpan.utf8Lengths, allocSize);
 }
 
 UnicodeSetStringSpan::~UnicodeSetStringSpan() {

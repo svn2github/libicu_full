@@ -3589,10 +3589,15 @@ void UnicodeSetTest::TestSpan() {
             }
             sets[SLOW_NOT]=new UnicodeSet(*sets[SLOW]);
             sets[SLOW_NOT]->complement();
-            sets[FAST]=new UnicodeSet(*sets[SLOW]);
-            sets[FAST]->freeze();
-            sets[FAST_NOT]=new UnicodeSet(*sets[SLOW_NOT]);
-            sets[FAST_NOT]->freeze();
+            // Intermediate set: Test cloning of a frozen set.
+            UnicodeSet *fast=new UnicodeSet(*sets[SLOW]);
+            fast->freeze();
+            sets[FAST]=(UnicodeSet *)fast->clone();
+            delete fast;
+            UnicodeSet *fastNot=new UnicodeSet(*sets[SLOW_NOT]);
+            fastNot->freeze();
+            sets[FAST_NOT]=(UnicodeSet *)fastNot->clone();
+            delete fastNot;
 
             for(j=0; j<SET_COUNT; ++j) {
                 sets_with_str[j]=new UnicodeSetWithStrings(*sets[j]);

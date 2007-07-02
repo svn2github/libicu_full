@@ -56,6 +56,9 @@ public:
 
     UnicodeSetStringSpan(const UnicodeSet &set, const UVector &setStrings, uint32_t which);
 
+    // Copy constructor. Assumes which==ALL for a frozen set.
+    UnicodeSetStringSpan(const UnicodeSetStringSpan &otherStringSpan, const UVector &newParentSetStrings);
+
     ~UnicodeSetStringSpan();
 
     /*
@@ -65,6 +68,9 @@ public:
      */
     inline UBool needsStringSpanUTF16();
     inline UBool needsStringSpanUTF8();
+
+    // For fast UnicodeSet::contains(c).
+    inline UBool contains(UChar32 c) const;
 
     int32_t span(const UChar *s, int32_t length, USetSpanCondition spanCondition) const;
 
@@ -96,7 +102,7 @@ private:
     UnicodeSet spanSet;
 
     // Set for span(not contained).
-    // Same as spanSet, minus characters that start or end strings.
+    // Same as spanSet, plus characters that start or end strings.
     UnicodeSet *pSpanNotSet;
 
     // The strings of the parent set.
@@ -114,6 +120,9 @@ private:
     // Pointer to the part of the (utf8Lengths) memory block that stores
     // the UTF-8 versions of the parent set's strings.
     uint8_t *utf8;
+
+    // Number of bytes for all UTF-8 versions of strings together.
+    int32_t utf8Length;
 
     // Maximum lengths of relevant strings.
     int32_t maxLength16;
@@ -135,6 +144,10 @@ UBool UnicodeSetStringSpan::needsStringSpanUTF16() {
 
 UBool UnicodeSetStringSpan::needsStringSpanUTF8() {
     return (UBool)(maxLength8!=0);
+}
+
+UBool UnicodeSetStringSpan::contains(UChar32 c) const {
+    return spanSet.contains(c);
 }
 
 U_NAMESPACE_END

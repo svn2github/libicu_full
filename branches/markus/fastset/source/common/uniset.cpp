@@ -206,7 +206,7 @@ UnicodeSet::UnicodeSet(const UnicodeSet& o, UBool /* asThawed */) :
     if(list!=NULL){
         UErrorCode status = U_ZERO_ERROR;
         allocateStrings(status);
-        // *this = o except for bmpSet
+        // *this = o except for bmpSet and stringSpan
         len = o.len;
         uprv_memcpy(list, o.list, len*sizeof(UChar32));
         strings->assign(*o.strings, cloneUnicodeString, status);
@@ -228,6 +228,7 @@ UnicodeSet::~UnicodeSet() {
         uprv_free(buffer);
     }
     delete strings;
+    delete stringSpan;
     releasePattern();
 }
 
@@ -248,6 +249,11 @@ UnicodeSet& UnicodeSet::operator=(const UnicodeSet& o) {
     }
     UErrorCode ec = U_ZERO_ERROR;
     strings->assign(*o.strings, cloneUnicodeString, ec);
+    if (o.stringSpan == NULL) {
+        stringSpan = NULL;
+    } else {
+        stringSpan = new UnicodeSetStringSpan(*o.stringSpan, *strings);
+    }
     releasePattern();
     if (o.pat) {
         setPattern(UnicodeString(o.pat, o.patLen));
@@ -346,6 +352,9 @@ UBool UnicodeSet::contains(UChar32 c) const {
     //}
     if (bmpSet != NULL) {
         return bmpSet->contains(c);
+    }
+    if (stringSpan != NULL) {
+        return stringSpan->contains(c);
     }
     if (c >= UNICODESET_HIGH) { // Don't need to check LOW bound
         return FALSE;
