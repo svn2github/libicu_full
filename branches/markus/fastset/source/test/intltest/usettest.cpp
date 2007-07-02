@@ -3512,13 +3512,29 @@ void UnicodeSetTest::TestSpan() {
         "-cl",
         "abbcdabcdabd",
 
+        // Test with non-ASCII set strings - test proper handling of surrogate pairs
+        // and UTF-8 trail bytes.
+        // Copies of above test sets and strings, but transliterated to have
+        // different code points with similar trail units.
+        // Previous: a      b         c            d
+        // Unicode:  042B   30AB      200AB        204AB
+        // UTF-16:   042B   30AB      D840 DCAB    D841 DCAB
+        // UTF-8:    D0 AB  E3 82 AB  F0 A0 82 AB  F0 A0 92 AB
+        "[\\u042B{\\u042B\\u30AB}{\\u042B\\u30AB\\U000200AB}{\\U000200AB\\U000204AB}]",
+        "-cl",
+        "\\u042B\\U000200AB\\U000204AB\\u042B\\u30AB\\U000200AB\\U000204AB\\u042B\\u30AB\\U000200AB\\U000200AB\\U000204AB",
+
+        "[\\U000204AB{\\U000200AB\\U000204AB}{\\u30AB\\U000200AB\\U000204AB}{\\u042B\\u30AB}]",
+        "-cl",
+        "\\u042B\\u30AB\\u30AB\\U000200AB\\U000204AB\\u042B\\u30AB\\U000200AB\\U000204AB\\u042B\\u30AB\\U000204AB",
+
         // Stress bookkeeping and recursion.
         // The following strings are barely doable with the recursive
         // reference implementation.
         // The not-contained character at the end prevents an early exit from the span().
         "[b{bb}]",
         "-c",
-        // test_string 0x2d
+        // test_string 0x33
         "bbbbbbbbbbbbbbbbbbbbbbbb-",
         // On complement sets, span() and spanBack() get different results
         // because b is not in the complement set and there is an odd number of b's
