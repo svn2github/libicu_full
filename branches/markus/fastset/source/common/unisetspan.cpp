@@ -526,7 +526,8 @@ spanOneBackUTF8(const UnicodeSet &set, const uint8_t *s, int32_t length) {
  * because all string matches are done from the same start index.
  *
  * For UTF-8, this would require a comparison function that returns UTF-16 order.
- * This should not be necessary for normal UnicodeSets because
+ *
+ * This optimization should not be necessary for normal UnicodeSets because
  * most sets have no strings, and most sets with strings have
  * very few very short strings.
  * For cases with many strings, it might be better to use a different API
@@ -534,7 +535,96 @@ spanOneBackUTF8(const UnicodeSet &set, const uint8_t *s, int32_t length) {
  */
 
 /*
- * TODO: span algorithm
+ * Algorithm for span(USET_SPAN_WHILE_CONTAINED)
+ *
+ * Theoretical algorithm:
+ * - Iterate through the string, and at each code point boundary:
+ *   + If the code point there is in the set, then remember to continue after it.
+ *   + If a set string matches at the current position, then remember to continue after it.
+ *   + Either recursively span for each code point or string match,
+ *     or recursively span for all but the shortest one and
+ *     iteratively continue the span with the shortest local match.
+ *   + Remember the longest recursive span (the farthest end point).
+ *   + If there is no match at the current position, neither for the code point there
+ *     nor for any set string, then stop and return the longest recursive span length.
+ *
+ * Optimized implementation:
+ *
+ * (We assume that most sets will have very few very short strings.
+ * A span using a string-less set is extremely fast.)
+ *
+ * Create and cache a spanSet which contains all of the single code points
+ * of the original set but none of its strings.
+ *
+ * - Start with spanLength=spanSet.span(USET_SPAN_WHILE_CONTAINED).
+ * - Loop:
+ *   + Try to match each set string at the end of the spanLength.
+ *     ~ Set strings that start with set-contained code points must be matched
+ *       with a partial overlap because the recursive algorithm would have tried
+ *       to match them at every position.
+ *     ~ Set strings that entirely consist of set-contained code points
+ *       are irrelevant for span(USET_SPAN_WHILE_CONTAINED) because the
+ *       recursive algorithm would continue after them anyway
+ *       and find the longest recursive match from their end.
+ *     ~ Rather than recursing, note each end point of a set string match.
+ *   + If no set string matched after spanSet.span(), then return
+ *     with where the spanSet.span() ended.
+ *   + If at least one set string matched after spanSet.span(), then
+ *     pop the shortest string match end point and continue
+ *     the loop, trying to match all set strings from there.
+ *   + If at least one more set string matched after a previous string match,
+ *     then test if the code point after the previous string match is also
+ *     contained in the set.
+ *     Continue the loop with the shortest end point of either this code point
+ *     or a matching set string.
+ *   + If no more set string matched after a previous string match,
+ *     then try another spanLength=spanSet.span(USET_SPAN_WHILE_CONTAINED).
+ *     Stop if spanLength==0, otherwise continue the loop.
+ *
+ * By noting each end point of a set string match,
+ * the function visits each string position at most once and finishes
+ * in linear time.
+ *
+ * The recursive algorithm may visit the same string position many times
+ * if multiple paths lead to it and finishes in exponential time.
+ */
+
+/*
+ * Algorithm for span(USET_SPAN_WHILE_LONGEST_MATCH)
+ *
+ * Theoretical algorithm:
+ * - Iterate through the string, and at each code point boundary:
+ *   + If the code point there is in the set, then remember to continue after it.
+ *   + If a set string matches at the current position, then remember to continue after it.
+ *   + Continue from the farthest match position and ignore all others.
+ *   + If there is no match at the current position,
+ *     then stop and return the current position.
+ *
+ * Optimized implementation:
+ *
+ * (Same assumption and spanSet as above.)
+ *
+ * - Start with spanLength=spanSet.span(USET_SPAN_WHILE_CONTAINED).
+ * - Loop:
+ *   + Try to match each set string at the end of the spanLength.
+ *     ~ Set strings that start with set-contained code points must be matched
+ *       with a partial overlap because the standard algorithm would have tried
+ *       to match them earlier.
+ *     ~ Set strings that entirely consist of set-contained code points
+ *       must be matched with a full overlap because the longest-match algorithm
+ *       would hide set string matches that end earlier.
+ *       Such set strings need not be matched earlier inside the code point span
+ *       because the standard algorithm would then have continued after
+ *       the set string match anyway.
+ *     ~ Remember the longest set string match (farthest end point) from the earliest
+ *       starting point.
+ *   + If no set string matched after spanSet.span(), then return
+ *     with where the spanSet.span() ended.
+ *   + If at least one set string matched, then continue the loop after the
+ *     longest match from the earliest position.
+ *   + If no more set string matched after a previous string match,
+ *     then try another spanLength=spanSet.span(USET_SPAN_WHILE_CONTAINED).
+ *     Stop if spanLength==0, otherwise continue the loop.
  */
 
 int32_t UnicodeSetStringSpan::span(const UChar *s, int32_t length, USetSpanCondition spanCondition) const {
@@ -1216,7 +1306,32 @@ int32_t UnicodeSetStringSpan::spanBackUTF8(const uint8_t *s, int32_t length, USe
 }
 
 /*
- * TODO: spanNot algorithm
+ * Algorithm for spanNot()==span(USET_SPAN_WHILE_NOT_CONTAINED)
+ *
+ * Theoretical algorithm:
+ * - Iterate through the string, and at each code point boundary:
+ *   + If the code point there is in the set, then return with the current position.
+ *   + If a set string matches at the current position, then return with the current position.
+ *
+ * Optimized implementation:
+ *
+ * (Same assumption as for span() above.)
+ *
+ * Create and cache a spanNotSet which contains all of the single code points
+ * of the original set but none of its strings.
+ * For each set string add its initial code point to the spanNotSet.
+ * (Also add its final code point for spanNotBack().)
+ *
+ * - Loop:
+ *   + Do spanLength=spanNotSet.span(USET_SPAN_WHILE_NOT_CONTAINED).
+ *   + If the current code point is in the original set, then
+ *     return the current position.
+ *   + If any set string matches at the current position, then
+ *     return the current position.
+ *   + If there is no match at the current position, neither for the code point there
+ *     nor for any set string, then skip this code point and continue the loop.
+ *     This happens for set-string-initial code points that were added to spanNotSet
+ *     when there is not actually a match for such a set string.
  */
 
 int32_t UnicodeSetStringSpan::spanNot(const UChar *s, int32_t length) const {
