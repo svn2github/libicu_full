@@ -103,25 +103,48 @@ enum {
  * Argument values for whether span() and similar functions continue while
  * the current character is contained vs. not contained in the set.
  *
- * span(USET_SPAN_WHILE_NOT_CONTAINED) and span(USET_SPAN_WHILE_CONTAINED)
- * partition a string precisely: Each one covers exactly segments of a string
- * that the other one does not.
+ * The functionality is straightforward for sets with only single code points,
+ * without strings (which is the common case):
+ * - USET_SPAN_WHILE_CONTAINED and USET_SPAN_WHILE_LONGEST_MATCH
+ *   work the same.
+ * - span() and spanBack() partition any string the same way when
+ *   alternating between span(USET_SPAN_WHILE_NOT_CONTAINED) and
+ *   span(either "contained" condition).
+ * - Using a complemented (inverted) set and the opposite span conditions
+ *   yields the same results.
  *
- * span(USET_SPAN_WHILE_LONGEST_MATCH) is "greedy"; if the set contains
- * any strings whose code points are not all contained in the set
- * then a longest-match span may stop earlier than span(USET_SPAN_WHILE_CONTAINED).
- * Therefore, span(USET_SPAN_WHILE_LONGEST_MATCH) may not partition
- * a string precisely with span(USET_SPAN_WHILE_NOT_CONTAINED).
+ * When a set contains multi-code point strings, then these statements may not
+ * be true, depending on the strings in the set (for example, whether they
+ * overlap with each other) and the string that is processed.
+ * For a set with strings:
+ * - The complement of the set contains the opposite set of code points,
+ *   but the same set of strings.
+ *   Therefore, complementing both the set and the span conditions
+ *   may yield different results.
+ * - span(USET_SPAN_WHILE_LONGEST_MATCH) may be shorter than
+ *   span(USET_SPAN_WHILE_CONTAINED) because it will not recursively try
+ *   all possible paths.
+ *   For example, with a set which contains the three strings "xy", "xya" and "ax",
+ *   span("xyax", USET_SPAN_WHILE_CONTAINED) will return 4 but
+ *   span("xyax", USET_SPAN_WHILE_LONGEST_MATCH) will return 3.
+ * - With either "contained" condition, span() and spanBack() may partition
+ *   a string in different ways.
+ *   For example, with a set which contains the two strings "ab" and "ba",
+ *   and when processing the string "aba",
+ *   span() will yield contained/not-contained boundaries of { 0, 2, 3 }
+ *   while spanBack() will yield boundaries of { 0, 1, 3 }.
  *
- * span() and spanBack() partition a string the same way when
- * USET_SPAN_WHILE_NOT_CONTAINED is alternated with USET_SPAN_WHILE_CONTAINED.
- * They may partition a string in different ways when
- * USET_SPAN_WHILE_NOT_CONTAINED is alternated with USET_SPAN_WHILE_LONGEST_MATCH.
+ * Note: If it is important to get the same boundaries whether iterating forward
+ * or backward through a string, then either only span() should be used and
+ * the boundaries cached for backward operation, or an ICU BreakIterator
+ * could be used.
  *
- * When strings are present, USET_SPAN_WHILE_NOT_CONTAINED is computationally
- * cheaper than the other options because it needs to find only
- * the first occurrence of a set element, rather than trying multiple paths
- * to span as much of the string as possible.
+ * Note: Unpaired surrogates are treated like surrogate code points.
+ * Similarly, set strings match only on code point boundaries,
+ * never in the middle of a surrogate pair.
+ * Illegal UTF-8 sequences are treated like U+FFFD.
+ * When processing UTF-8 strings, malformed set strings (which cannot be
+ * converted to UTF-8) are ignored.
  *
  * @draft ICU 3.8
  */
@@ -147,6 +170,7 @@ enum USetSpanCondition {
      *
      * If a set contains strings, then the span will be the longest substring
      * matching any of the possible concatenations of set elements (characters or strings).
+     * (There must be a single, non-overlapping concatenation of characters or strings.)
      * This is equivalent to a POSIX regular expression for (OR of each set element)*.
      *
      * @draft ICU 3.8
@@ -163,7 +187,7 @@ enum USetSpanCondition {
      * as USET_SPAN_WHILE_CONTAINED.
      *
      * If a set contains strings, then the span will be the longest substring
-     * with a match at each position with the longest single set element(character or string).
+     * with a match at each position with the longest single set element (character or string).
      *
      * Use this span condition together with other longest-match algorithms,
      * such as ICU converters (ucnv_getUnicodeSet()).
