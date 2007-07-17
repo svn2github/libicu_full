@@ -569,19 +569,19 @@ static void TestSpan() {
     USet *idSet=openIDSet();
 
     if(
-        1!=uset_span(idSet, s16, 2, USET_SPAN_WHILE_CONTAINED) ||
-        0!=uset_span(idSet, s16, 2, USET_SPAN_WHILE_NOT_CONTAINED) ||
-        2!=uset_spanBack(idSet, s16, 2, USET_SPAN_WHILE_CONTAINED) ||
-        1!=uset_spanBack(idSet, s16, 2, USET_SPAN_WHILE_NOT_CONTAINED)
+        1!=uset_span(idSet, s16, 2, USET_SPAN_CONTAINED) ||
+        0!=uset_span(idSet, s16, 2, USET_SPAN_NOT_CONTAINED) ||
+        2!=uset_spanBack(idSet, s16, 2, USET_SPAN_CONTAINED) ||
+        1!=uset_spanBack(idSet, s16, 2, USET_SPAN_NOT_CONTAINED)
     ) {
         log_err("uset_span() or uset_spanBack() does not work\n");
     }
 
     if(
-        3!=uset_spanUTF8(idSet, s8, 6, USET_SPAN_WHILE_CONTAINED) ||
-        0!=uset_spanUTF8(idSet, s8, 6, USET_SPAN_WHILE_NOT_CONTAINED) ||
-        6!=uset_spanBackUTF8(idSet, s8, 6, USET_SPAN_WHILE_CONTAINED) ||
-        3!=uset_spanBackUTF8(idSet, s8, 6, USET_SPAN_WHILE_NOT_CONTAINED)
+        3!=uset_spanUTF8(idSet, s8, 6, USET_SPAN_CONTAINED) ||
+        0!=uset_spanUTF8(idSet, s8, 6, USET_SPAN_NOT_CONTAINED) ||
+        6!=uset_spanBackUTF8(idSet, s8, 6, USET_SPAN_CONTAINED) ||
+        3!=uset_spanBackUTF8(idSet, s8, 6, USET_SPAN_NOT_CONTAINED)
     ) {
         log_err("uset_spanUTF8() or uset_spanBackUTF8() does not work\n");
     }
@@ -589,19 +589,19 @@ static void TestSpan() {
     uset_freeze(idSet);
 
     if(
-        1!=uset_span(idSet, s16, 2, USET_SPAN_WHILE_CONTAINED) ||
-        0!=uset_span(idSet, s16, 2, USET_SPAN_WHILE_NOT_CONTAINED) ||
-        2!=uset_spanBack(idSet, s16, 2, USET_SPAN_WHILE_CONTAINED) ||
-        1!=uset_spanBack(idSet, s16, 2, USET_SPAN_WHILE_NOT_CONTAINED)
+        1!=uset_span(idSet, s16, 2, USET_SPAN_CONTAINED) ||
+        0!=uset_span(idSet, s16, 2, USET_SPAN_NOT_CONTAINED) ||
+        2!=uset_spanBack(idSet, s16, 2, USET_SPAN_CONTAINED) ||
+        1!=uset_spanBack(idSet, s16, 2, USET_SPAN_NOT_CONTAINED)
     ) {
         log_err("uset_span(frozen) or uset_spanBack(frozen) does not work\n");
     }
 
     if(
-        3!=uset_spanUTF8(idSet, s8, 6, USET_SPAN_WHILE_CONTAINED) ||
-        0!=uset_spanUTF8(idSet, s8, 6, USET_SPAN_WHILE_NOT_CONTAINED) ||
-        6!=uset_spanBackUTF8(idSet, s8, 6, USET_SPAN_WHILE_CONTAINED) ||
-        3!=uset_spanBackUTF8(idSet, s8, 6, USET_SPAN_WHILE_NOT_CONTAINED)
+        3!=uset_spanUTF8(idSet, s8, 6, USET_SPAN_CONTAINED) ||
+        0!=uset_spanUTF8(idSet, s8, 6, USET_SPAN_NOT_CONTAINED) ||
+        6!=uset_spanBackUTF8(idSet, s8, 6, USET_SPAN_CONTAINED) ||
+        3!=uset_spanBackUTF8(idSet, s8, 6, USET_SPAN_NOT_CONTAINED)
     ) {
         log_err("uset_spanUTF8(frozen) or uset_spanBackUTF8(frozen) does not work\n");
     }

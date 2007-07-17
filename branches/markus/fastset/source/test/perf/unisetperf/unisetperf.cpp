@@ -212,7 +212,7 @@ protected:
 
         for(c=0; c<=0xffff; ++c) {
             utf16[0]=(UChar)c;
-            if(testcase.set.span(utf16, 1, USET_SPAN_WHILE_CONTAINED)>0) {
+            if(testcase.set.span(utf16, 1, USET_SPAN_CONTAINED)>0) {
                 set.add(c);
             }
         }
@@ -220,7 +220,7 @@ protected:
             utf16[0]=(UChar)c;
             for(c2=0xdc00; c2<=0xdfff; ++c2) {
                 utf16[1]=(UChar)c2;
-                if(testcase.set.span(utf16, 2, USET_SPAN_WHILE_CONTAINED)>0) {
+                if(testcase.set.span(utf16, 2, USET_SPAN_CONTAINED)>0) {
                     set.add(U16_GET_SUPPLEMENTARY(c, c2));
                 }
             }
@@ -263,7 +263,7 @@ protected:
 
         for(c=0; c<=0xffff; ++c) {
             utf16[0]=(UChar)c;
-            if(testcase.set.spanBack(utf16, 1, USET_SPAN_WHILE_CONTAINED)==0) {
+            if(testcase.set.spanBack(utf16, 1, USET_SPAN_CONTAINED)==0) {
                 set.add(c);
             }
         }
@@ -271,7 +271,7 @@ protected:
             utf16[0]=(UChar)c;
             for(c2=0xdc00; c2<=0xdfff; ++c2) {
                 utf16[1]=(UChar)c2;
-                if(testcase.set.spanBack(utf16, 2, USET_SPAN_WHILE_CONTAINED)==0) {
+                if(testcase.set.spanBack(utf16, 2, USET_SPAN_CONTAINED)==0) {
                     set.add(U16_GET_SUPPLEMENTARY(c, c2));
                 }
             }
@@ -323,7 +323,7 @@ protected:
             }
             length=0;
             U8_APPEND_UNSAFE(utf8, length, c);
-            if(testcase.set.spanUTF8(utf8, length, USET_SPAN_WHILE_CONTAINED)>0) {
+            if(testcase.set.spanUTF8(utf8, length, USET_SPAN_CONTAINED)>0) {
                 set.add(c);
             }
         }
@@ -369,7 +369,7 @@ protected:
             }
             length=0;
             U8_APPEND_UNSAFE(utf8, length, c);
-            if(testcase.set.spanBackUTF8(utf8, length, USET_SPAN_WHILE_CONTAINED)==0) {
+            if(testcase.set.spanBackUTF8(utf8, length, USET_SPAN_CONTAINED)==0) {
                 set.add(c);
             }
         }

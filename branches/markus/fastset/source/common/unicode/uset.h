@@ -105,10 +105,10 @@ enum {
  *
  * The functionality is straightforward for sets with only single code points,
  * without strings (which is the common case):
- * - USET_SPAN_WHILE_CONTAINED and USET_SPAN_WHILE_LONGEST_MATCH
+ * - USET_SPAN_CONTAINED and USET_SPAN_SIMPLE
  *   work the same.
  * - span() and spanBack() partition any string the same way when
- *   alternating between span(USET_SPAN_WHILE_NOT_CONTAINED) and
+ *   alternating between span(USET_SPAN_NOT_CONTAINED) and
  *   span(either "contained" condition).
  * - Using a complemented (inverted) set and the opposite span conditions
  *   yields the same results.
@@ -121,12 +121,12 @@ enum {
  *   but the same set of strings.
  *   Therefore, complementing both the set and the span conditions
  *   may yield different results.
- * - span(USET_SPAN_WHILE_LONGEST_MATCH) may be shorter than
- *   span(USET_SPAN_WHILE_CONTAINED) because it will not recursively try
+ * - span(USET_SPAN_SIMPLE) may be shorter than
+ *   span(USET_SPAN_CONTAINED) because it will not recursively try
  *   all possible paths.
  *   For example, with a set which contains the three strings "xy", "xya" and "ax",
- *   span("xyax", USET_SPAN_WHILE_CONTAINED) will return 4 but
- *   span("xyax", USET_SPAN_WHILE_LONGEST_MATCH) will return 3.
+ *   span("xyax", USET_SPAN_CONTAINED) will return 4 but
+ *   span("xyax", USET_SPAN_SIMPLE) will return 3.
  * - With either "contained" condition, span() and spanBack() may partition
  *   a string in different ways.
  *   For example, with a set which contains the two strings "ab" and "ba",
@@ -143,8 +143,9 @@ enum {
  * Similarly, set strings match only on code point boundaries,
  * never in the middle of a surrogate pair.
  * Illegal UTF-8 sequences are treated like U+FFFD.
- * When processing UTF-8 strings, malformed set strings (which cannot be
- * converted to UTF-8) are ignored.
+ * When processing UTF-8 strings, malformed set strings
+ * (strings with unpaired surrogates which cannot be converted to UTF-8)
+ * are ignored.
  *
  * @draft ICU 3.8
  */
@@ -160,7 +161,7 @@ enum USetSpanCondition {
      *
      * @draft ICU 3.8
      */
-    USET_SPAN_WHILE_NOT_CONTAINED = 0,
+    USET_SPAN_NOT_CONTAINED = 0,
     /**
      * Continue a span() while there is a set element at the current position.
      * (For characters only, this is like while contains(current)==TRUE).
@@ -175,7 +176,7 @@ enum USetSpanCondition {
      *
      * @draft ICU 3.8
      */
-    USET_SPAN_WHILE_CONTAINED = 1,
+    USET_SPAN_CONTAINED = 1,
     /**
      * Continue a span() while there is a set element at the current position.
      * (For characters only, this is like while contains(current)==TRUE).
@@ -184,7 +185,7 @@ enum USetSpanCondition {
      * it returned consists only of set elements (characters or strings) that are in the set.
      *
      * If a set only contains single characters, then this is the same
-     * as USET_SPAN_WHILE_CONTAINED.
+     * as USET_SPAN_CONTAINED.
      *
      * If a set contains strings, then the span will be the longest substring
      * with a match at each position with the longest single set element (character or string).
@@ -194,7 +195,7 @@ enum USetSpanCondition {
      *
      * @draft ICU 3.8
      */
-    USET_SPAN_WHILE_LONGEST_MATCH = 2,
+    USET_SPAN_SIMPLE = 2,
     /**
      * One more than the last span condition.
      * @draft ICU 3.8
@@ -843,68 +844,88 @@ uset_containsSome(const USet* set1, const USet* set2);
 
 #ifndef U_HIDE_DRAFT_API
 
-/*
+/**
  * Returns the length of the initial substring of the input string which
- * consists only of characters that are contained in this set (USET_SPAN_WHILE_CONTAINED),
- * or only of characters that are not contained in this set (USET_SPAN_WHILE_NOT_CONTAINED).
+ * consists only of characters and strings that are contained in this set
+ * (USET_SPAN_CONTAINED, USET_SPAN_SIMPLE),
+ * or only of characters and strings that are not contained
+ * in this set (USET_SPAN_NOT_CONTAINED).
+ * See USetSpanCondition for details.
  * Similar to the strspn() C library function.
  * Unpaired surrogates are treated according to contains() of their surrogate code points.
  * This function works faster with a frozen set and with a non-negative string length argument.
  * @param set the set
  * @param s start of the string
  * @param length of the string; can be -1 for NUL-terminated
- * @spanCondition specifies the containment condition for characters in the initial substring
- * @return the length of the initial substring according to the spanCondition
+ * @spanCondition specifies the containment condition
+ * @return the length of the initial substring according to the spanCondition;
+ *         0 if the start of the string does not fit the spanCondition
  * @draft ICU 3.8
+ * @see USetSpanCondition
  */
 U_DRAFT int32_t U_EXPORT2
 uset_span(const USet *set, const UChar *s, int32_t length, USetSpanCondition spanCondition);
 
-/*
+/**
  * Returns the start of the trailing substring of the input string which
- * consists only of characters that are contained in this set (USET_SPAN_WHILE_CONTAINED),
- * or only of characters that are not contained in this set (USET_SPAN_WHILE_NOT_CONTAINED).
+ * consists only of characters and strings that are contained in this set
+ * (USET_SPAN_CONTAINED, USET_SPAN_SIMPLE),
+ * or only of characters and strings that are not contained
+ * in this set (USET_SPAN_NOT_CONTAINED).
+ * See USetSpanCondition for details.
  * Unpaired surrogates are treated according to contains() of their surrogate code points.
  * This function works faster with a frozen set and with a non-negative string length argument.
  * @param set the set
  * @param s start of the string
  * @param length of the string; can be -1 for NUL-terminated
- * @spanCondition specifies the containment condition for characters in the trailing substring
- * @return the start of the trailing substring according to the spanCondition
+ * @spanCondition specifies the containment condition
+ * @return the start of the trailing substring according to the spanCondition;
+ *         the string length if the end of the string does not fit the spanCondition
  * @draft ICU 3.8
+ * @see USetSpanCondition
  */
 U_DRAFT int32_t U_EXPORT2
 uset_spanBack(const USet *set, const UChar *s, int32_t length, USetSpanCondition spanCondition);
 
-/*
+/**
  * Returns the length of the initial substring of the input string which
- * consists only of characters that are contained in this set (USET_SPAN_WHILE_CONTAINED),
- * or only of characters that are not contained in this set (USET_SPAN_WHILE_NOT_CONTAINED).
+ * consists only of characters and strings that are contained in this set
+ * (USET_SPAN_CONTAINED, USET_SPAN_SIMPLE),
+ * or only of characters and strings that are not contained
+ * in this set (USET_SPAN_NOT_CONTAINED).
+ * See USetSpanCondition for details.
  * Similar to the strspn() C library function.
  * Malformed byte sequences are treated according to contains(0xfffd).
  * This function works faster with a frozen set and with a non-negative string length argument.
  * @param set the set
  * @param s start of the string (UTF-8)
  * @param length of the string; can be -1 for NUL-terminated
- * @spanCondition specifies the containment condition for characters in the initial substring
- * @return the length of the initial substring according to the spanCondition
+ * @spanCondition specifies the containment condition
+ * @return the length of the initial substring according to the spanCondition;
+ *         0 if the start of the string does not fit the spanCondition
  * @draft ICU 3.8
+ * @see USetSpanCondition
  */
 U_DRAFT int32_t U_EXPORT2
 uset_spanUTF8(const USet *set, const char *s, int32_t length, USetSpanCondition spanCondition);
 
-/*
+/**
  * Returns the start of the trailing substring of the input string which
- * consists only of characters that are contained in this set (USET_SPAN_WHILE_CONTAINED),
- * or only of characters that are not contained in this set (USET_SPAN_WHILE_NOT_CONTAINED).
+ * consists only of characters and strings that are contained in this set
+ * (USET_SPAN_CONTAINED, USET_SPAN_SIMPLE),
+ * or only of characters and strings that are not contained
+ * in this set (USET_SPAN_NOT_CONTAINED).
+ * See USetSpanCondition for details.
  * Malformed byte sequences are treated according to contains(0xfffd).
  * This function works faster with a frozen set and with a non-negative string length argument.
  * @param set the set
  * @param s start of the string (UTF-8)
  * @param length of the string; can be -1 for NUL-terminated
- * @spanCondition specifies the containment condition for characters in the trailing substring
- * @return the start of the trailing substring according to the spanCondition
+ * @spanCondition specifies the containment condition
+ * @return the start of the trailing substring according to the spanCondition;
+ *         the string length if the end of the string does not fit the spanCondition
  * @draft ICU 3.8
+ * @see USetSpanCondition
  */
 U_DRAFT int32_t U_EXPORT2
 uset_spanBackUTF8(const USet *set, const char *s, int32_t length, USetSpanCondition spanCondition);

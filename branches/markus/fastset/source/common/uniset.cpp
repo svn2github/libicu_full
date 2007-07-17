@@ -467,7 +467,7 @@ UBool UnicodeSet::containsAll(const UnicodeSet& c) const {
  * @return true if the test condition is met
  */
 UBool UnicodeSet::containsAll(const UnicodeString& s) const {
-    return (UBool)(span(s.getBuffer(), s.length(), USET_SPAN_WHILE_CONTAINED) ==
+    return (UBool)(span(s.getBuffer(), s.length(), USET_SPAN_CONTAINED) ==
                    s.length());
 }
 
@@ -514,7 +514,7 @@ UBool UnicodeSet::containsNone(const UnicodeSet& c) const {
  * @return true if the test condition is met
  */
 UBool UnicodeSet::containsNone(const UnicodeString& s) const {
-    return (UBool)(span(s.getBuffer(), s.length(), USET_SPAN_WHILE_NOT_CONTAINED) ==
+    return (UBool)(span(s.getBuffer(), s.length(), USET_SPAN_NOT_CONTAINED) ==
                    s.length());
 }
 
@@ -1995,7 +1995,7 @@ int32_t UnicodeSet::span(const UChar *s, int32_t length, USetSpanCondition spanC
     if(stringSpan!=NULL) {
         return stringSpan->span(s, length, spanCondition);
     } else if(!strings->isEmpty()) {
-        uint32_t which= spanCondition==USET_SPAN_WHILE_NOT_CONTAINED ?
+        uint32_t which= spanCondition==USET_SPAN_NOT_CONTAINED ?
                             UnicodeSetStringSpan::FWD_UTF16_NOT_CONTAINED :
                             UnicodeSetStringSpan::FWD_UTF16_CONTAINED;
         UnicodeSetStringSpan strSpan(*this, *strings, which);
@@ -2004,8 +2004,8 @@ int32_t UnicodeSet::span(const UChar *s, int32_t length, USetSpanCondition spanC
         }
     }
 
-    if(spanCondition!=USET_SPAN_WHILE_NOT_CONTAINED) {
-        spanCondition=USET_SPAN_WHILE_CONTAINED;  // Pin to 0/1 values.
+    if(spanCondition!=USET_SPAN_NOT_CONTAINED) {
+        spanCondition=USET_SPAN_CONTAINED;  // Pin to 0/1 values.
     }
 
     UChar32 c;
@@ -2032,7 +2032,7 @@ int32_t UnicodeSet::spanBack(const UChar *s, int32_t length, USetSpanCondition s
     if(stringSpan!=NULL) {
         return stringSpan->spanBack(s, length, spanCondition);
     } else if(!strings->isEmpty()) {
-        uint32_t which= spanCondition==USET_SPAN_WHILE_NOT_CONTAINED ?
+        uint32_t which= spanCondition==USET_SPAN_NOT_CONTAINED ?
                             UnicodeSetStringSpan::BACK_UTF16_NOT_CONTAINED :
                             UnicodeSetStringSpan::BACK_UTF16_CONTAINED;
         UnicodeSetStringSpan strSpan(*this, *strings, which);
@@ -2041,8 +2041,8 @@ int32_t UnicodeSet::spanBack(const UChar *s, int32_t length, USetSpanCondition s
         }
     }
 
-    if(spanCondition!=USET_SPAN_WHILE_NOT_CONTAINED) {
-        spanCondition=USET_SPAN_WHILE_CONTAINED;  // Pin to 0/1 values.
+    if(spanCondition!=USET_SPAN_NOT_CONTAINED) {
+        spanCondition=USET_SPAN_CONTAINED;  // Pin to 0/1 values.
     }
 
     UChar32 c;
@@ -2070,7 +2070,7 @@ int32_t UnicodeSet::spanUTF8(const char *s, int32_t length, USetSpanCondition sp
     if(stringSpan!=NULL) {
         return stringSpan->spanUTF8((const uint8_t *)s, length, spanCondition);
     } else if(!strings->isEmpty()) {
-        uint32_t which= spanCondition==USET_SPAN_WHILE_NOT_CONTAINED ?
+        uint32_t which= spanCondition==USET_SPAN_NOT_CONTAINED ?
                             UnicodeSetStringSpan::FWD_UTF8_NOT_CONTAINED :
                             UnicodeSetStringSpan::FWD_UTF8_CONTAINED;
         UnicodeSetStringSpan strSpan(*this, *strings, which);
@@ -2079,8 +2079,8 @@ int32_t UnicodeSet::spanUTF8(const char *s, int32_t length, USetSpanCondition sp
         }
     }
 
-    if(spanCondition!=USET_SPAN_WHILE_NOT_CONTAINED) {
-        spanCondition=USET_SPAN_WHILE_CONTAINED;  // Pin to 0/1 values.
+    if(spanCondition!=USET_SPAN_NOT_CONTAINED) {
+        spanCondition=USET_SPAN_CONTAINED;  // Pin to 0/1 values.
     }
 
     UChar32 c;
@@ -2111,7 +2111,7 @@ int32_t UnicodeSet::spanBackUTF8(const char *s, int32_t length, USetSpanConditio
     if(stringSpan!=NULL) {
         return stringSpan->spanBackUTF8((const uint8_t *)s, length, spanCondition);
     } else if(!strings->isEmpty()) {
-        uint32_t which= spanCondition==USET_SPAN_WHILE_NOT_CONTAINED ?
+        uint32_t which= spanCondition==USET_SPAN_NOT_CONTAINED ?
                             UnicodeSetStringSpan::BACK_UTF8_NOT_CONTAINED :
                             UnicodeSetStringSpan::BACK_UTF8_CONTAINED;
         UnicodeSetStringSpan strSpan(*this, *strings, which);
@@ -2120,8 +2120,8 @@ int32_t UnicodeSet::spanBackUTF8(const char *s, int32_t length, USetSpanConditio
         }
     }
 
-    if(spanCondition!=USET_SPAN_WHILE_NOT_CONTAINED) {
-        spanCondition=USET_SPAN_WHILE_CONTAINED;  // Pin to 0/1 values.
+    if(spanCondition!=USET_SPAN_NOT_CONTAINED) {
+        spanCondition=USET_SPAN_CONTAINED;  // Pin to 0/1 values.
     }
 
     UChar32 c;
