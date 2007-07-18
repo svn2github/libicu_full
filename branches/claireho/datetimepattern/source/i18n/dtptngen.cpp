@@ -1,10 +1,11 @@
 /*
 *******************************************************************************
-* Copyright (C) 2006-, 
-* others. All Rights Reserved.                                                *
+* Copyright (C) 2007-, International Business Machines Corporation and
+* others. All Rights Reserved.
+* others. All Rights Reserved.                                                
 *******************************************************************************
 *
-* File DTFMTPTN.CPP
+* File DTPTNGEN.CPP
 *
 * Modification History:
 *
@@ -36,17 +37,16 @@
 #include "unicode/ures.h"
 #include "unicode/rep.h"
 
-// TODO remove comment
-//#if defined( U_DEBUG_CALSVC ) || defined (U_DEBUG_CAL)
+
+#if defined U_DEBUG_DTPTN
 #include <stdio.h>
-//#endif
+#endif
 
 U_NAMESPACE_BEGIN
 
 // *****************************************************************************
 // class DateTimePatternGenerator
 // *****************************************************************************
-// TODO : move to header file as a privae data
 static const UChar Canonical_Items[] = {
     // GyQMwWedDFHmsSv
     CAP_G, LOW_Y, CAP_Q, CAP_M, LOW_W, CAP_W, LOW_E, LOW_D, CAP_D, CAP_F,
@@ -257,18 +257,11 @@ DateTimePatternGenerator::addICUPatterns(const Locale& locale) {
     for (DateFormat::EStyle i=DateFormat::kFull; i<=DateFormat::kShort; i=static_cast<DateFormat::EStyle>(i+1)) {
         SimpleDateFormat* df = (SimpleDateFormat*)DateFormat::createDateInstance(i, locale);
         UnicodeString newPattern=df->toPattern(dfPattern);
-    printf("\n ICU Date format:");
-    for (int32_t j=0; j < newPattern.length(); ++j) {
-        printf("%c", newPattern.charAt(j));
-    }
         add(df->toPattern(dfPattern), FALSE, returnInfo);
         df = (SimpleDateFormat*)DateFormat::createTimeInstance(i, locale);
         add(df->toPattern(dfPattern), FALSE, returnInfo);
         newPattern=df->toPattern(dfPattern);
-    printf("\n ICU Time format:");
-    for (int32_t j=0; j < newPattern.length(); ++j) {
-        printf("%c", newPattern.charAt(j));
-    }
+        
         // HACK for hh:ss 
         if ( i==DateFormat::kMedium ) {
             hackPattern = df->toPattern(hackPattern);
@@ -323,9 +316,6 @@ DateTimePatternGenerator::hackTimes(PatternInfo &returnInfo, UnicodeString& hack
 
 void
 DateTimePatternGenerator::addCLDRData(const Locale& locale) {
-    // Load with Resource Bundle
-    //UResourceBundle *rb = ures_open(DateTimePatternsTag, locale.getName(), &err);
-    //TODO make sure the package is NULL
     UErrorCode err = U_ZERO_ERROR;
     UResourceBundle *rb = ures_open(NULL, locale.getName(), &err);
     UResourceBundle *gregorianBundle=NULL;
@@ -361,10 +351,6 @@ DateTimePatternGenerator::addCLDRData(const Locale& locale) {
             break;  // no more pattern
         }
         else {
-            //printf("\n ResourceBundle - AppendItems:  key:%s", key);
-            printf("\n ResourceBundle - AppendItems:  key:%s", key);
-            for (int32_t i=0; i<rbPattern.length(); ++i)
-               printf("%c", rbPattern.charAt(i));
             setAppendItemFormats(getAppendFormatNumber(key), rbPattern);
         }
     }
@@ -397,9 +383,6 @@ DateTimePatternGenerator::addCLDRData(const Locale& locale) {
             continue;  // no more pattern
         }
         else {
-            printf("\n ResourceBundle - Fields:");
-            for (int32_t j=0; j<rbPattern.length(); ++j)
-                printf("%c", rbPattern.charAt(j));
             setAppendItemNames(getAppendNameNumber(Resource_Fields[i]), rbPattern);
         }
     }
@@ -414,7 +397,7 @@ DateTimePatternGenerator::addCLDRData(const Locale& locale) {
     patBundle = ures_getByKeyWithFallback(rb, "availableFormats", patBundle, &err);
     if (U_SUCCESS(err)) {
         int32_t numberKeys = ures_getSize(patBundle);  
-        printf ("\n available formats from current locale:%s", locale.getName());
+        //printf ("\n available formats from current locale:%s", locale.getName());
         int32_t len;
         const UChar *retPattern;
         key=NULL;
@@ -424,12 +407,6 @@ DateTimePatternGenerator::addCLDRData(const Locale& locale) {
             UnicodeString retKey=UnicodeString(key);
             setAvailableFormat(key, err);
             add(format, FALSE, returnInfo);
-            printf("\n Available Format: Key=>");
-            for (int32_t j=0; j<retKey.length(); ++j)
-                printf("%c", retKey.charAt(j));
-            printf("   format=>");
-            for (int32_t j=0; j<format.length(); ++j)
-                printf("%c", format.charAt(j));
         }
     }
     ures_close(rb); 
@@ -449,7 +426,7 @@ DateTimePatternGenerator::addCLDRData(const Locale& locale) {
             const UChar *retPattern;
             key=NULL;
             
-            printf ("\n available formats from parent locale:%s", parentLocale);
+            //printf ("\n available formats from parent locale:%s", parentLocale);
             for(int32_t i=0; i<numberKeys; ++i) {
                 retPattern=ures_getNextString(patBundle, &len, &key, &err);
                 UnicodeString format=UnicodeString(retPattern);
@@ -457,12 +434,6 @@ DateTimePatternGenerator::addCLDRData(const Locale& locale) {
                 if ( !isAvailableFormatSet(key) ) {
                     setAvailableFormat(key, err);
                     add(format, FALSE, returnInfo);
-                    printf("\n Available Format: Key=>");
-                    for (int32_t j=0; j<retKey.length(); ++j)
-                        printf("%c", retKey.charAt(j));
-                    printf("   format=>");
-                    for (int32_t j=0; j<format.length(); ++j)
-                        printf("%c", format.charAt(j));
                 }
             }
         }
@@ -523,33 +494,22 @@ DateTimePatternGenerator::getAppendName(int32_t field, UnicodeString& value) {
     value += SINGLE_QUOTE;
 }
 
-UnicodeString
-DateTimePatternGenerator::getBestPattern(const UnicodeString& patternForm) {
+void
+DateTimePatternGenerator::getBestPattern(const UnicodeString& patternForm, UnicodeString& resultPattern) {
     UnicodeString *bestPattern=NULL;
-    UnicodeString resultPattern, dtFormat;
+    UnicodeString dtFormat;
     UErrorCode err = U_ZERO_ERROR;
     
     int32_t dateMask=(1<<DT_DAYPERIOD) - 1;
     int32_t timeMask=(1<<TYPE_LIMIT) - 1 - dateMask;
-    
-    printf("\n\n TestPattern:");
-    for (int32_t i=0; i < patternForm.length(); ++i) {
-        printf("%c", patternForm.charAt(i));
-    }
+
+    resultPattern="";
     dtMatcher.set(patternForm, fp);
     bestPattern=getBestRaw(dtMatcher, -1, distanceInfo);
-    printf("\n 1st BestPattern:");
-    for (int32_t i=0; i < bestPattern->length(); ++i) {
-        printf("%c", bestPattern->charAt(i));
-    }
     if ( distanceInfo.missingFieldMask==0 && distanceInfo.extraFieldMask==0 ) {
         resultPattern = adjustFieldTypes(*bestPattern, FALSE);
-        
-    printf("\n resultPattern:");
-    for (int32_t i=0; i < resultPattern.length(); ++i) {
-        printf("%c", resultPattern.charAt(i));
-    }
-        return resultPattern;
+ 
+        return;
     }
     int32_t neededFields = dtMatcher.getFieldMask();
     UnicodeString datePattern=getBestAppending(neededFields & dateMask);
@@ -558,22 +518,22 @@ DateTimePatternGenerator::getBestPattern(const UnicodeString& patternForm) {
     if (datePattern.length()==0) {
         if (timePattern.length()==0) {
             resultPattern="";
-            return resultPattern;
+            return;
         }
         else {
             resultPattern=timePattern;
-            return resultPattern;
+            return;
         }
     }
     if (timePattern.length()==0) {
         resultPattern=datePattern;
-        return resultPattern;
+        return;
     }
     resultPattern="";
     getDateTimeFormat(dtFormat);
     Formattable dateTimeObject[] = { datePattern, timePattern };
     resultPattern = MessageFormat::format(dtFormat, dateTimeObject, 2, resultPattern, err );
-    return resultPattern;
+    return;
 }
 
 void 
@@ -611,7 +571,6 @@ DateTimePatternGenerator::setDateTimeFormat(UnicodeString& dtFormat) {
         dateTimeFormat = dtFormat;
     }
 }
-
 
 void
 DateTimePatternGenerator::getDateTimeFormat(UnicodeString& dtFormat) {
@@ -660,8 +619,7 @@ DateTimePatternGenerator::add(
     UErrorCode err;      
     UnicodeString basePattern;
     PtnSkeleton   skeleton;
-    
-    //TODO: lock the tree
+
     if (pattern.indexOf(oldFormat, 3, 0) > 0 ) {
         UnicodeString oldPattern(pattern);
     }
@@ -722,23 +680,11 @@ DateTimePatternGenerator::getBestRaw(DateTimeMatcher source,
         }
         int32_t distance=source.getDistance(trial, includeMask, tempInfo);
         UnicodeString* tempPattern=patternMap.getPatternFromSkeleton(*trial.getSkeleton());
-        /*
-            printf("\n Distance:%d  tempPattern: ", distance);
-            for (int32_t i=0; i<tempPattern->length(); ++i) {
-                printf("%c", tempPattern->charAt(i));
-            }
-         */
         
         if (distance<bestDistance) {
             bestDistance=distance;
             bestPattern=patternMap.getPatternFromSkeleton(*trial.getSkeleton());
             missingFields.setTo(tempInfo);
-            /*
-            printf("\n Distance:%d  bestPattern: ", distance);
-            for (int32_t i=0; i<bestPattern->length(); ++i) {
-                printf("%c", bestPattern->charAt(i));
-            }
-            */
             if (distance==0) {
                 break;
             }
@@ -797,10 +743,6 @@ DateTimePatternGenerator::adjustFieldTypes(UnicodeString& pattern,
             }
         }
     }
-    printf("\n test return:");
-    for (int32_t i=0; i<newPattern.length(); ++i) {
-        printf("%c", newPattern.charAt(i));
-    }
     return newPattern;
 }
 
@@ -813,10 +755,6 @@ DateTimePatternGenerator::getBestAppending(int32_t missingFields) {
         resultPattern=UnicodeString("");
         tempPattern = *getBestRaw(dtMatcher, missingFields, distanceInfo);
         resultPattern = adjustFieldTypes(tempPattern, FALSE);
-        printf("\n Adjust Field Types length:%d  field:", resultPattern.length());
-        for (int32_t k=0; k<resultPattern.length(); ++k ) {
-            printf("%c", resultPattern.charAt(k));
-        }
         
         while (distanceInfo.missingFieldMask!=0) { // precondition: EVERY single field must work!
             if ( lastMissingFieldMask == distanceInfo.missingFieldMask ) {
@@ -836,38 +774,13 @@ DateTimePatternGenerator::getBestAppending(int32_t missingFields) {
             int32_t topField=getTopBitNumber(foundMask);
             UnicodeString appendName;
             getAppendName(topField, appendName);
-        printf("\n after getAppendName: topField:%d len:%d name:", topField, appendName.length());
-        for (int32_t k=0; k<appendName.length(); ++k ) {
-            printf("%c", appendName.charAt(k));
-        }
             const Formattable formatPattern[] = {
                 resultPattern,
                 tempPattern,
                 appendName
             };
-        printf("\n Item Format:");
-        for (int32_t k=0; k<appendItemFormats[topField].length(); ++k ) {
-            printf("%c", appendItemFormats[topField].charAt(k));
-        }
-        printf("\n Adjust field:");
-        for (int32_t k=0; k<resultPattern.length(); ++k ) {
-            printf("%c", resultPattern.charAt(k));
-        }
-        printf("\n Best raw :");
-        for (int32_t k=0; k<tempPattern.length(); ++k ) {
-            printf("%c", tempPattern.charAt(k));
-        }
-        printf("\n Append  name: len:%d  name:", appendName.length());
-        for (int32_t k=0; k<appendName.length(); ++k ) {
-            printf("%c", appendName.charAt(k));
-        }
-            
            
             formattedPattern = MessageFormat::format(appendItemFormats[topField], formatPattern, 3, resultPattern, err);
-            printf("\n Message format result: len:%d  newPattern:", resultPattern.length());
-        for (int32_t k=0; k<resultPattern.length(); ++k ) {
-            printf("%c", resultPattern.charAt(k));
-        }
             lastMissingFieldMask = distanceInfo.missingFieldMask;
         }
     } 
@@ -927,6 +840,56 @@ DateTimePatternGenerator::copyHashtable(Hashtable *other) {
     } 
 }
 
+void
+DateTimePatternGenerator::getSkeletons(Hashtable* fPatternHash, UErrorCode& status) {
+    if ( fPatternHash == NULL ) {
+        if ( (fPatternHash = new Hashtable(FALSE, status)) == NULL ) {
+            // out of memory
+            status = U_MEMORY_ALLOCATION_ERROR;
+            return;
+        }
+    }
+    for (int32_t bootIndex=0; bootIndex<MAX_PATTERN_ENTRIES; ++bootIndex ) {
+        PtnElem *newElem, *curElem;
+        curElem = patternMap.boot[bootIndex];
+        PtnSkeleton * newSkeleton;
+        UnicodeString *newPattern;
+        while (curElem!=NULL) {
+            newPattern = new UnicodeString(*(curElem->pattern));
+            
+            if ((newSkeleton=new PtnSkeleton(*(curElem->skeleton))) == NULL ) {
+                // out of memory
+                status = U_MEMORY_ALLOCATION_ERROR;
+                return;
+            }
+            fPatternHash->put(*newPattern, newSkeleton, status);
+            curElem = curElem->next;
+        }
+    }
+}  
+
+void
+DateTimePatternGenerator::getBaseSkeletons(int32_t maxArraySize, UnicodeString* resultArray, 
+                                           int32_t *numberSkeleton, UErrorCode& status) {
+    int32_t bootIndex, count=0;
+    PtnElem  *curElem;
+    
+    for (bootIndex=0; bootIndex<MAX_PATTERN_ENTRIES; ++bootIndex ) {
+        curElem = patternMap.boot[bootIndex];
+        while (curElem!=NULL && (count<maxArraySize)) {
+            resultArray[count++]= *(curElem->basePattern);
+            curElem = curElem->next;
+        }
+    }
+    *numberSkeleton = count;
+    if ((count==maxArraySize)&&((curElem!=NULL)||(bootIndex<MAX_PATTERN_ENTRIES))) {
+        status = U_BUFFER_OVERFLOW_ERROR;
+    }
+    else {
+        status = U_ZERO_ERROR;
+    }
+}
+
 
 DateTimePatternGenerator*
 DateTimePatternGenerator::clone(UErrorCode& status) {
@@ -974,14 +937,12 @@ PatternMap::copyFrom(const PatternMap& other, UErrorCode& status) {
 
 
 PatternMap::~PatternMap() {
-   printf("\n Begining ....~PatternMap(): %p", this);
    for (int32_t i=0; i < MAX_PATTERN_ENTRIES; ++i ) {
        if (boot[i]!=NULL ) {
            delete boot[i];
            boot[i]=NULL;
        }
    }
-   printf("\nEnd ... ~PatternMap(): %p", this);
 }  // PatternMap destructor 
 
 void
@@ -990,7 +951,8 @@ PatternMap::add( UnicodeString& basePattern,
                  UnicodeString& value,// mapped pattern value 
                  UErrorCode &status) { 
     UChar baseChar = basePattern.charAt(0);
-    PtnElem *curElem, *nextElem, *baseElem;
+    PtnElem *curElem, *baseElem;
+    status = U_ZERO_ERROR;
 
     // the baseChar must be A-Z or a-z 
     if ((baseChar >= CAP_A) && (baseChar <= CAP_Z)) {
@@ -1001,7 +963,7 @@ PatternMap::add( UnicodeString& basePattern,
             baseElem = boot[26+baseChar-LOW_A];
          }
          else {
-             // TODO return syntax error
+             status = U_ILLEGAL_CHARACTER;
              return;
          }
     }
@@ -1257,7 +1219,6 @@ DateTimeMatcher::set(const UnicodeString& patternForm, FormatParser& fp, PtnSkel
     const UChar repeatedPatterns[6]={CAP_G, CAP_E, LOW_Z, LOW_V, CAP_Q, 0}; // "GEzvQ"
     UnicodeString repeatedPattern=UnicodeString(repeatedPatterns);
         
-    //TODO: lock the tree, how about oldPattern
     if (patternForm.indexOf(oldFormat, 3, 0) > 0 ) {
         UnicodeString oldPattern(patternForm);
     }
@@ -1277,8 +1238,6 @@ DateTimeMatcher::set(const UnicodeString& patternForm, FormatParser& fp, PtnSkel
         int32_t canonicalIndex = fp.getCanonicalIndex(field);
         if (canonicalIndex < 0 ) {
             continue;
-            // Error
-            // TODO set UErrorCode
         }
         const dtTypeElem *row = &dtTypes[canonicalIndex];
         int32_t typeValue = row->field;
@@ -1290,7 +1249,7 @@ DateTimeMatcher::set(const UnicodeString& patternForm, FormatParser& fp, PtnSkel
         }
         int16_t subTypeValue = row->type;
         if ( row->type > 0) {
-            subTypeValue += field.length();  // why?
+            subTypeValue += field.length();  
         }
         skeleton.type[typeValue] = (char)subTypeValue;
     }
@@ -1339,7 +1298,6 @@ DateTimeMatcher::getDistance(DateTimeMatcher& other, int32_t includeMask, Distan
             }
             else {
                 result += abs(myType - otherType); 
-                //printf("\n myType:%d  otherType:%d r=%d", myType, otherType, result);
             }
         }
         
@@ -1393,7 +1351,6 @@ DateTimeMatcher::getFieldMask() {
     return result;
 }
 
-//TODO : remove this API if the DateTimePatternGenerator() is a subclass of DateTimeMatcher
 PtnSkeleton*
 DateTimeMatcher::getSkeleton() {
     return &skeleton;
@@ -1402,12 +1359,10 @@ DateTimeMatcher::getSkeleton() {
 FormatParser::FormatParser () {
     status = START;
     itemNumber=0;
-    printf("\nFormatParser():%p", this);
 }
 
 
 FormatParser::~FormatParser () {
-    printf("\n~FormatParser():%p", this);
 }
 
 

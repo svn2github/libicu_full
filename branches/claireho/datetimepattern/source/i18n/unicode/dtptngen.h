@@ -1,10 +1,11 @@
 /*
 *******************************************************************************
-* Copyright (C) 2006-, 
+* Copyright (C) 2007-, International Business Machines Corporation and
+* others. All Rights Reserved.
 * others. All Rights Reserved.                                                *
 *******************************************************************************
 *
-* File DTFMTPTN.H
+* File DTPTNGEN.H
 *
 * Modification History:
 *
@@ -131,8 +132,8 @@ typedef struct dtTypeElem {
 }dtTypeElem;
 
 typedef struct PatternInfo {
-  int32_t  status;
-  UnicodeString conflictingPattern;
+    int32_t  status;
+    UnicodeString conflictingPattern;
 }PatternInfo; 
 
 
@@ -244,19 +245,16 @@ public:
 
 private:
    typedef enum TokenStatus {
-          // Add new token
-          START,
-          ADD_TOKEN,
-          SYNTAX_ERROR,
-          DONE
+       START,
+       ADD_TOKEN,
+       SYNTAX_ERROR,
+       DONE
    } ToeknStatus;
    
  
    TokenStatus status;
    
    virtual TokenStatus setTokens(UnicodeString &pattern, int32_t startPos, int32_t *len);
-   //int32_t getCanonicalIndex(UnicodeString &field);
-   
 };
 
 
@@ -392,11 +390,11 @@ private:
 class U_I18N_API DateTimePatternGenerator : public UObject {
 public:
    /**
-     * Construct a flexible generator according to data for a given locale.
+     * Construct a flexible generator according to default locale.
      * @draft ICU 3.8
      * @provisional This API might change or be removed in a future release.
      */
-   static DateTimePatternGenerator* U_EXPORT2 createInstance(UErrorCode& err);
+    static DateTimePatternGenerator* U_EXPORT2 createInstance(UErrorCode& err);
     
    /**
      * Construct a flexible generator according to data for a given locale.
@@ -407,15 +405,17 @@ public:
     static DateTimePatternGenerator* U_EXPORT2 createInstance(const Locale& other, UErrorCode& err );
 
      /**
+      * Clones DateTimePatternGenerator object.  Clients are responsible for deleting 
+      * the DateTimePatternGenerator object cloned.
       * @draft ICU 3.8
       * @provisional This API might change or be removed in a future release.
       */
-     DateTimePatternGenerator* clone(UErrorCode & status);
+    DateTimePatternGenerator* clone(UErrorCode & status);
 
      /**
       * Return true if another object is semantically equal to this one.
       *
-      * @param other    the DateFormatSymbols object to be compared with.
+      * @param other    the DateTimePatternGenerator object to be compared with.
       * @return         true if other is semantically equal to this. 
       * @draft ICU 3.8
       * @provisional This API might change or be removed in a future release.
@@ -426,9 +426,8 @@ public:
      * Utility to return a unique skeleton from a given pattern. For example,
      * both "MMM-dd" and "dd/MMM" produce the skeleton "MMMdd".
      * 
-     * @param pattern
-     *            Input pattern, such as "dd/MMM"
-     * @return skeleton, such as "MMMdd"
+     * @param pattern     Input pattern, such as "dd/MMM"
+     * @param retSkeleton return skeleton, such as "MMMdd"
      * @draft ICU 3.8
      * @provisional This API might change or be removed in a future release.
      */
@@ -441,9 +440,8 @@ public:
      * for example, both "MMM-dd" and "d/MMM" produce the skeleton "MMMd"
      * (notice the single d).
      * 
-     * @param pattern
-     *            Input pattern, such as "dd/MMM"
-     * @return skeleton, such as "Md"
+     * @param pattern  Input pattern, such as "dd/MMM"
+     * @param result   return skeleton, such as "Md"
      * @draft ICU 3.8
      * @provisional This API might change or be removed in a future release.
      */
@@ -458,9 +456,10 @@ public:
      * Note that single-field patterns (like "MMM") are automatically added, and
      * don't need to be added explicitly!
      * 
-     * @param override
-     *            when existing values are to be overridden use true, otherwise
-     *            use false.
+     * @param pattern    Input pattern, such as "dd/MMM"
+     * @param override   when existing values are to be overridden use true, otherwise use false.
+     * @param returnInfo return conflicting information in PatternInfo.  The value of status is 
+     *                   CONFLICT, BASE_CONFLICT or NO_CONFLICT.
      * @draft ICU 3.8
      * @provisional This API might change or be removed in a future release.
      */
@@ -480,10 +479,8 @@ public:
      * <p>
      * This reflects the way that the CLDR data is organized.
      * 
-     * @param field
-     *            such as ERA
-     * @param value
-     *            pattern, such as "{0}, {1}"
+     * @param field  such as ERA
+     * @param value  pattern, such as "{0}, {1}"
      * @draft ICU 3.8
      * @provisional This API might change or be removed in a future release.
      */
@@ -494,8 +491,7 @@ public:
      * above TYPE_LIMIT are illegal arguments.
      * 
      * @param field
-     * @param result
-     *        append pattern for field
+     * @param appendItemFormat return append pattern for field
      * @draft ICU 3.8
      * @provisional This API might change or be removed in a future release.
      */
@@ -520,8 +516,7 @@ public:
      * TYPE_LIMIT are illegal arguments.
      * 
      * @param field
-     * @param appendItemName
-     *        return name for field
+     * @param appendItemName return name for field
      * @draft ICU 3.8
      * @provisional This API might change or be removed in a future release.
      */
@@ -564,12 +559,12 @@ public:
      * @param patternForm
      *            The patternForm is a pattern containing only the variable fields.
      *            For example, "MMMdd" and "mmhh" are patternForms.
-     * @param result
+     * @param bestPattern
      *            The best pattern found from the given patternForm.
      * @draft ICU 3.8
      * @provisional This API might change or be removed in a future release.
      */
-     UnicodeString getBestPattern(const UnicodeString& patternForm);
+     void getBestPattern(const UnicodeString& patternForm, UnicodeString& bestPattern);
     
         
     /**
@@ -582,13 +577,47 @@ public:
      * @param pattern
      *        input pattern
      * @param skeleton
-     * @param return 
+     * @param result
      *        pattern adjusted to match the skeleton fields widths and subtypes.
      * @draft ICU 3.8
      * @provisional This API might change or be removed in a future release.
      */
      void replaceFieldTypes(UnicodeString pattern, UnicodeString skeleton, UnicodeString& result);
-    
+     
+     /**
+      * Return a list of all the skeletons (in canonical form) from this class,
+      * and the patterns that they map to.
+      * 
+      * @param result
+      *            an output PatternMap in which to place the mapping from skeleton to
+      *            pattern. If the input value is null, then a PatternMap is allocated.
+      *            <p>
+      *            <i>Issue: an alternate API would be to just return a list of
+      *            the skeletons, and then have a separate routine to get from
+      *            skeleton to pattern.</i>
+      * @param status
+      *            return U_ZERO_ERROR or U_MEMORY_ALLOCATION_ERROR
+      *            
+      * @draft ICU 3.8
+      * @provisional This API might change or be removed in a future release.
+      */
+     void getSkeletons(Hashtable* result, UErrorCode& status);
+     
+     /**
+      * Return a list of all the base skeletons (in canonical form) from this class
+      * @param arraySize
+      *          The resultArray size.
+      * @param resultArray
+      *          The result array to store the base skeletons.
+      * @param numberSkeleton
+      *          Number of skeletons returned.   
+      * @param status
+      *          U_ZERO_ERROR or U_BUFFER_OVERFLOW_ERROR.
+      * @draft ICU 3.6
+      * @provisional This API might change or be removed in a future release.
+      */
+     void getBaseSkeletons(int32_t maxArraySize, UnicodeString* resultArray, int32_t *numberSkeleton, UErrorCode& status);
+     
     /**
      * The decimal value is used in formatting fractions of seconds. If the
      * skeleton contains fractional seconds, then this is used with the
@@ -659,7 +688,7 @@ protected :
     /**
       * Default assignment operator.
       */
-     DateTimePatternGenerator& operator=(const DateTimePatternGenerator& other);
+    DateTimePatternGenerator& operator=(const DateTimePatternGenerator& other);
      
 private :    
 
@@ -677,7 +706,6 @@ private :
     UnicodeString hackPattern;
     UErrorCode status;
     
-    //TODO: What is fractional_second for?  Is enum DT_FRACTIONAL_SECOND OK?
     static const int32_t FRACTIONAL_MASK = 1<<DT_FRACTIONAL_SECOND;
     static const int32_t SECOND_AND_FRACTIONAL_MASK = (1<<DT_SECOND) | (1<<DT_FRACTIONAL_SECOND);
     

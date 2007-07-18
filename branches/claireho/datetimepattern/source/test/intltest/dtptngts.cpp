@@ -1,27 +1,22 @@
 /********************************************************************
  * COPYRIGHT: 
- * Copyright (c) 1997-2006, International Business Machines Corporation and
+ * Copyright (c) 2007, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 
-#include "unicode/utypes.h"
-
 #if !UCONFIG_NO_FORMATTING
 
+#include <stdio.h>
+#include <stdlib.h>
 #include "dtptngts.h" 
 
 #include "unicode/calendar.h"
 #include "unicode/smpdtfmt.h"
 #include "unicode/dtfmtsym.h"
 #include "unicode/dtptngen.h"
+#include "unicode/utypes.h"
 
 #include "loctest.h"
-
-// TODO remove comment
-//#if defined( U_DEBUG_CALSVC ) || defined (U_DEBUG_CAL)
-#include <stdio.h>
-#include <stdlib.h>
-//#endif
 
 static const UnicodeString patternData[] = {
     UnicodeString("yM"),
@@ -60,31 +55,31 @@ static const UnicodeString patternResults[] = {
     UnicodeString("58:59"),
     UnicodeString("1999-1"),  // zh_Hans_CN
     UnicodeString("1999 1"),
-    UnicodeString("1999-1-13"),
-    UnicodeString("1999 1 13"),
+    CharsToUnicodeString("1999\\u5E741\\u670813\\u65E5"),
+    CharsToUnicodeString("1999\\u5E741\\u670813\\u65E5"),
     UnicodeString("1-13"),
     UnicodeString("1 13"),
-    UnicodeString("1999 \u7B2C1\u5B63\u5EA6"),
-    UnicodeString("23:58"),
+    UnicodeString("1999 Q1"),
+    CharsToUnicodeString("\\u4E0B\\u534811:58"),
     UnicodeString("23:58"),
     UnicodeString("58:59"),
-    UnicodeString("1999-1"),  // de_DE
-    UnicodeString("1999 Jan"),
+    UnicodeString("1.1999"),  // de_DE
+    UnicodeString("Jan 1999"),
     UnicodeString("13.1.1999"),
     UnicodeString("13. Jan 1999"),
-    UnicodeString("1-13"),
-    UnicodeString("Jan 13"),
-    UnicodeString("1999 Q1"),
+    UnicodeString("13.1."),
+    UnicodeString("13. Jan"),
+    UnicodeString("Q1 1999"),
     UnicodeString("23:58"),
     UnicodeString("23:58"),
     UnicodeString("58:59"),
-    UnicodeString("1999-1"),  // fi
-    UnicodeString("1999 tammi"),
+    UnicodeString("1/1999"),  // fi
+    UnicodeString("tammi 1999"),
     UnicodeString("13.1.1999"),
     UnicodeString("13. tammita 1999"),
-    UnicodeString("1-13"),
-    UnicodeString("tammi 13"),
-    UnicodeString("1999 1. nelj."),
+    UnicodeString("13.1."),
+    UnicodeString("13. tammita"),
+    UnicodeString("1. nelj./1999"),
     UnicodeString("23.58"),
     UnicodeString("23.58"),
     UnicodeString("58.59"),
@@ -179,18 +174,19 @@ void IntlTestDateTimePatternGeneratorAPI::testAPI(/*char *par*/)
         UnicodeString bestPattern;
         
         Locale loc(testLocale[localeIndex][0], testLocale[localeIndex][1], testLocale[localeIndex][2], "");
-        printf("\n\n Locale: %s_%s_%s", testLocale[localeIndex][0], testLocale[localeIndex][1], testLocale[localeIndex][2]);
-        printf("\n    Status:%d", status);
+        //printf("\n\n Locale: %s_%s_%s", testLocale[localeIndex][0], testLocale[localeIndex][1], testLocale[localeIndex][2]);
+        //printf("\n    Status:%d", status);
         DateTimePatternGenerator *patGen=DateTimePatternGenerator::createInstance(loc, status);
         if(U_FAILURE(status)) {
             errln("ERROR: Could not create DateTimePatternGenerator with locale index:%d .\n", localeIndex);
         }
         while (patternData[dataIndex].length() > 0) {
-            bestPattern = patGen->getBestPattern(patternData[dataIndex++]);
+            patGen->getBestPattern(patternData[dataIndex++], bestPattern);
             
             SimpleDateFormat* sdf = new SimpleDateFormat(bestPattern, loc, status);
             resultDate = "";
             resultDate = sdf->format(testDate, resultDate);
+            /*
             if ( resultDate != patternResults[resultIndex] ) {
                 printf("\n\nUnmatched result!\n TestPattern:");
                 for (int32_t i=0; i < patternData[dataIndex-1].length(); ++i) {
@@ -218,6 +214,7 @@ void IntlTestDateTimePatternGeneratorAPI::testAPI(/*char *par*/)
                      printf("%x", resultDate.charAt(i));
                 }
             }
+            */
             resultIndex++;
             delete sdf;
         }
@@ -245,7 +242,8 @@ void IntlTestDateTimePatternGeneratorAPI::testAPI(/*char *par*/)
         for (int32_t j=0; j<len; ++j ) {
            randomSkeleton += rand()%80;
         }
-        UnicodeString bestPattern = randDTGen->getBestPattern(randomSkeleton);
+        UnicodeString bestPattern;
+        randDTGen->getBestPattern(randomSkeleton, bestPattern);
     }
     delete randDTGen;
     
