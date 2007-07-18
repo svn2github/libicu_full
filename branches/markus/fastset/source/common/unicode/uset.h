@@ -121,12 +121,17 @@ enum {
  *   but the same set of strings.
  *   Therefore, complementing both the set and the span conditions
  *   may yield different results.
+ * - When starting spans at different positions in a string
+ *   (span(s, ...) vs. span(s+1, ...)) the ends of the spans may be different
+ *   because a set string may start before the later position.
  * - span(USET_SPAN_SIMPLE) may be shorter than
  *   span(USET_SPAN_CONTAINED) because it will not recursively try
  *   all possible paths.
  *   For example, with a set which contains the three strings "xy", "xya" and "ax",
  *   span("xyax", USET_SPAN_CONTAINED) will return 4 but
  *   span("xyax", USET_SPAN_SIMPLE) will return 3.
+ *   span(USET_SPAN_SIMPLE) will never be longer than
+ *   span(USET_SPAN_CONTAINED).
  * - With either "contained" condition, span() and spanBack() may partition
  *   a string in different ways.
  *   For example, with a set which contains the two strings "ab" and "ba",
