@@ -59,9 +59,9 @@ static const UnicodeString patternResults[] = {
     CharsToUnicodeString("1999\\u5E741\\u670813\\u65E5"),
     UnicodeString("1-13"),
     UnicodeString("1 13"),
-    UnicodeString("1999 Q1"),
+    CharsToUnicodeString("1999 Q1"),
     CharsToUnicodeString("\\u4E0B\\u534811:58"),
-    UnicodeString("23:58"),
+    CharsToUnicodeString("23:58"),
     UnicodeString("58:59"),
     UnicodeString("1.1999"),  // de_DE
     UnicodeString("Jan 1999"),
@@ -159,8 +159,111 @@ void IntlTestDateTimePatternGeneratorAPI::testAPI(/*char *par*/)
            delete cloneDTPatternGen;
      }
    
+    // ======= Test simple use cases    
+    logln("Testing simple use cases");
+    status = U_ZERO_ERROR;
+    Locale deLocale=Locale::getGermany();
+    UDate sampleDate=LocaleTest::date(99, 9, 13, 23, 58, 59);
+    DateTimePatternGenerator *gen = DateTimePatternGenerator::createInstance(deLocale, status);
+    UnicodeString findPattern = gen->getBestPattern(UnicodeString("MMMddHmm"));
+    SimpleDateFormat *format = new SimpleDateFormat(findPattern, deLocale, status);
+    //TimeZone *zone = TimeZone::createTimeZone(UnicodeString("Europe/Paris"));
+    TimeZone *zone = TimeZone::createTimeZone(UnicodeString("ECT"));
+    format->setTimeZone(*zone);
+    UnicodeString dateReturned, expectedResult;
+    dateReturned="";
+    dateReturned = format->format(sampleDate, dateReturned, status);
+    expectedResult=UnicodeString("8:58 14. Okt");
+    if ( dateReturned != expectedResult ) {
+        if ( format != NULL )  delete format;
+        if ( zone != NULL )  delete zone;
+        if ( gen != NULL )  delete gen;
+        dataerrln("ERROR: Simple test in  Locale::getGermany()) - exitting");
+        return;
+    }
+    // add new pattern
+    struct PatternInfo returnInfo;
+    gen->add(UnicodeString("d'. von' MMMM"), true, returnInfo); 
+    status = U_ZERO_ERROR;
+    UnicodeString testPattern=gen->getBestPattern(UnicodeString("MMMMdd"));
+    testPattern=gen->getBestPattern(UnicodeString("MMMddHmm"));
+    format->applyPattern(gen->getBestPattern(UnicodeString("MMMMddHmm")));
+    dateReturned="";
+    dateReturned = format->format(sampleDate, dateReturned, status);
+    expectedResult=UnicodeString("8:58 14. von Oktober");
+    if ( dateReturned != expectedResult ) {
+        if ( format != NULL )  delete format;
+        if ( zone != NULL )  delete zone;
+        if ( gen != NULL )  delete gen;
+        dataerrln("ERROR: Simple test add pattern d\'. von\' MMMM   - exitting");
+        return;
+    }
+    if ( format != NULL )  delete format;
     
-    // ======= Test various skeleton
+    // get a pattern and modify it
+    format = (SimpleDateFormat *)DateFormat::createDateTimeInstance(DateFormat::kFull, DateFormat::kFull, 
+                                                                  deLocale);
+    format->setTimeZone(*zone);
+    UnicodeString pattern;
+    pattern = format->toPattern(pattern);
+    dateReturned="";
+    dateReturned = format->format(sampleDate, dateReturned, status);
+    //expectedResult=UnicodeString("Donnerstag, 14. Oktober 1999 08:58:59 Frankreich");
+    //The mismatch is caused by the setup of Timezone. The output pattern is same as in Java.
+    expectedResult=UnicodeString("Donnerstag, 14. Oktober 1999 08:58:59 GMT+02:00");
+    if ( dateReturned != expectedResult ) {
+        if ( format != NULL )  delete format;
+        if ( zone != NULL )  delete zone;
+        if ( gen != NULL )  delete gen;
+        dataerrln("ERROR: Simple test uses full date format.- exitting");
+        return;
+    }
+     
+    // modify it to change the zone.  
+    UnicodeString newPattern = gen->replaceFieldTypes(pattern, UnicodeString("vvvv"));
+    format->applyPattern(newPattern);
+    dateReturned="";
+    dateReturned = format->format(sampleDate, dateReturned, status);
+    expectedResult=UnicodeString("Donnerstag, 14. Oktober 1999 08:58:59 GMT+02:00");
+    // expectedResult=UnicodeString("Donnerstag, 14. Oktober 1999 08:58:59 Frankreich:);
+    // The mismatch is caused by the setup of Timezone. The output pattern is same as in Java.
+    if ( dateReturned != expectedResult ) {
+        if ( format != NULL )  delete format;
+        if ( zone != NULL )  delete zone;
+        if ( gen != NULL )  delete gen;
+        dataerrln("ERROR: Simple test modify the timezone - exitting");
+        return;
+    }
+    /*
+    printf("\n replace pattern:");
+    for (int32_t i=0; i<pattern.length(); ++i) {
+        printf("%c", pattern.charAt(i));
+    }  
+    printf(" with pattern:");
+    for (int32_t i=0; i<newPattern.length(); ++i) {
+        printf("%c", newPattern.charAt(i));
+    }
+    printf(" returnedDate:");
+    for (int32_t i=0; i<dateReturned.length(); ++i) {
+         printf("%c", dateReturned.charAt(i));
+    }
+     */
+    if ( format != NULL ) delete format;
+    if ( zone != NULL )  delete zone;
+    
+    // ======== Test getSkeletons and getBaseSkeletons
+    UnicodeString patterns[40];
+    UnicodeString skeletons[40];
+    UnicodeString baseSkeletons[40];
+    int32_t cntSkeletons=0;
+    int32_t cntBaseSktns=0;
+    cntSkeletons = gen->getSkeletons(40, skeletons, patterns, status);
+    cntBaseSktns = gen->getBaseSkeletons(40, baseSkeletons, status);
+    
+    
+    if ( gen != NULL )  delete gen;
+    
+    // ======= Test various skeletons.
     logln("Testing DateTimePatternGenerator with various skeleton");
    
     status = U_ZERO_ERROR;
@@ -181,13 +284,15 @@ void IntlTestDateTimePatternGeneratorAPI::testAPI(/*char *par*/)
             errln("ERROR: Could not create DateTimePatternGenerator with locale index:%d .\n", localeIndex);
         }
         while (patternData[dataIndex].length() > 0) {
-            patGen->getBestPattern(patternData[dataIndex++], bestPattern);
+            bestPattern = patGen->getBestPattern(patternData[dataIndex++]);
             
             SimpleDateFormat* sdf = new SimpleDateFormat(bestPattern, loc, status);
             resultDate = "";
             resultDate = sdf->format(testDate, resultDate);
-            /*
             if ( resultDate != patternResults[resultIndex] ) {
+                errln("ERROR: Test various skeletons[%d] .\n", dataIndex-1);
+                // TODO Remove printf once ICU pick up CLDR 1.5
+                /*
                 printf("\n\nUnmatched result!\n TestPattern:");
                 for (int32_t i=0; i < patternData[dataIndex-1].length(); ++i) {
                      printf("%c", patternData[dataIndex-1].charAt(i));
@@ -213,8 +318,10 @@ void IntlTestDateTimePatternGeneratorAPI::testAPI(/*char *par*/)
                 for (int32_t i=0; i < resultDate.length(); ++i) {
                      printf("%x", resultDate.charAt(i));
                 }
+                */
+                
             }
-            */
+            
             resultIndex++;
             delete sdf;
         }
@@ -242,8 +349,7 @@ void IntlTestDateTimePatternGeneratorAPI::testAPI(/*char *par*/)
         for (int32_t j=0; j<len; ++j ) {
            randomSkeleton += rand()%80;
         }
-        UnicodeString bestPattern;
-        randDTGen->getBestPattern(randomSkeleton, bestPattern);
+        UnicodeString bestPattern = randDTGen->getBestPattern(randomSkeleton);
     }
     delete randDTGen;
     
