@@ -8,6 +8,7 @@
 #define NONE          0
 #define EXTRA_FIELD   0x10000
 #define MISSING_FIELD  0x1000
+#define MAX_STRING_ENUMERATION  200
 #define SINGLE_QUOTE      ((UChar)0x0027)
 #define FORWARDSLASH      ((UChar)0x002F)
 #define BACKSLASH         ((UChar)0x005C)
@@ -87,7 +88,11 @@ typedef enum DtField {
     DT_ZONE,
 } DtField;
 
-
+typedef enum dtStrEnum {
+    DT_BASESKELETON,
+    DT_SKELETON,
+    DT_PATTERN,
+}dtStrEnum ;
 
 typedef struct dtTypeElem {
     UChar             patternChar;
@@ -96,6 +101,7 @@ typedef struct dtTypeElem {
     int32_t           minLen;
     int32_t           weight;
 }dtTypeElem;
+
 
 
 class U_I18N_API PtnSkeleton : public UObject {
@@ -337,4 +343,21 @@ private:
     PatternMap *patternMap;
 };
 
+class U_I18N_API DTStringEnumeration : public StringEnumeration {
+public:
+    DTStringEnumeration(PatternMap &patternMap, dtStrEnum type, UErrorCode& status);
+    virtual ~DTStringEnumeration();
+    static UClassID U_EXPORT2 getStaticClassID(void);
+    virtual UClassID getDynamicClassID(void) const;
+    virtual const UnicodeString* snext(UErrorCode& status);
+    virtual void reset(UErrorCode& status);
+    virtual int32_t count(UErrorCode& status) const;
+private:
+    int32_t total;
+    int32_t pos;
+    UnicodeString* stringArray[MAX_STRING_ENUMERATION]; 
+    UBool isCanonicalItem(const UnicodeString item);
+    // what if the size > MAX_STRING_ENUMERATION, though the chance is very low.
+
+};
 

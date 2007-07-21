@@ -257,9 +257,29 @@ void IntlTestDateTimePatternGeneratorAPI::testAPI(/*char *par*/)
     UnicodeString baseSkeletons[40];
     int32_t cntSkeletons=0;
     int32_t cntBaseSktns=0;
-    cntSkeletons = gen->getSkeletons(40, skeletons, patterns, status);
-    cntBaseSktns = gen->getBaseSkeletons(40, baseSkeletons, status);
-    
+    //cntSkeletons = gen->getSkeletons(40, skeletons, patterns, status);
+    //cntBaseSktns = gen->getBaseSkeletons(40, baseSkeletons, status);
+    StringEnumeration* ptrPatternEnum;
+    StringEnumeration* ptrSkeletonEnum;
+    StringEnumeration* ptrBaseSkeletonEnum;
+    gen->getSkeletons(&ptrSkeletonEnum, &ptrPatternEnum, status);
+    if(U_FAILURE(status)) {
+         errln("ERROR: Fail to get skeletons !\n");
+    }
+    UnicodeString *ptrSkeleton;
+    ptrSkeletonEnum->reset(status);
+    int32_t count=ptrSkeletonEnum->count(status);
+    for (int32_t i=0; i<count; ++i) {
+        ptrSkeleton = (UnicodeString *)ptrSkeletonEnum->snext(status);
+    }
+    gen->getBaseSkeletons(&ptrBaseSkeletonEnum, status);
+    if(U_FAILURE(status)) {
+         errln("ERROR: Fail to get base skeletons !\n");
+     }   
+    count=ptrBaseSkeletonEnum->count(status);
+    for (int32_t i=0; i<count; ++i) {
+        ptrSkeleton = (UnicodeString *)ptrBaseSkeletonEnum->snext(status);
+    }
     
     if ( gen != NULL )  delete gen;
     

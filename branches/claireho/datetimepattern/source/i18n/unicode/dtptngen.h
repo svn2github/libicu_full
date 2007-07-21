@@ -250,8 +250,8 @@ public:
       *        Number of skeletons and patterns returned.   
       * @draft ICU 3.8
       */
-     int32_t getSkeletons(int32_t arrayCapacity, UnicodeString *skeletonBuffer, UnicodeString* patternBuffer, UErrorCode& status);
-     
+     //int32_t getSkeletons(int32_t arrayCapacity, UnicodeString *skeletonBuffer, UnicodeString* patternBuffer, UErrorCode& status);
+     void getSkeletons(StringEnumeration** skeletonEnumerator, StringEnumeration** patternEnumerator, UErrorCode& status);
      /**
       * Return a list of all the base skeletons (in canonical form) from this class
       * @param arrayCapacity
@@ -264,7 +264,8 @@ public:
       *        Number of skeletons returned.   
       * @draft ICU 3.8
       */
-     int32_t getBaseSkeletons(const int32_t arrayCapacity, UnicodeString* baseSkeletonArray, UErrorCode& status);
+     // int32_t getBaseSkeletons(const int32_t arrayCapacity, UnicodeString* baseSkeletonArray, UErrorCode& status);
+     void getBaseSkeletons(StringEnumeration** baseSkeletonEnumerator, UErrorCode& status);
      
     /**
      * The decimal value is used in formatting fractions of seconds. If the

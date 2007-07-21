@@ -135,6 +135,7 @@ UOBJECT_DEFINE_RTTI_IMPLEMENTATION(PatternMap)
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(PatternMapIterator)
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(FormatParser)
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(DistanceInfo)
+UOBJECT_DEFINE_RTTI_IMPLEMENTATION(DTStringEnumeration)
 
 DateTimePatternGenerator*  U_EXPORT2
 DateTimePatternGenerator::createInstance(UErrorCode& status) {
@@ -863,7 +864,7 @@ DateTimePatternGenerator::copyHashtable(Hashtable *other) {
     } 
 }
 
-
+/*
 int32_t
 DateTimePatternGenerator::getSkeletons(int32_t maxArraySize, UnicodeString* skeletonArray, 
                                        UnicodeString* patternArray, UErrorCode& status) {
@@ -894,7 +895,8 @@ DateTimePatternGenerator::getSkeletons(int32_t maxArraySize, UnicodeString* skel
     }
     return count;
 }  
-
+*/
+/*
 int32_t
 DateTimePatternGenerator::getBaseSkeletons(int32_t maxArraySize, UnicodeString* resultArray, UErrorCode& status) {
     int32_t bootIndex, count=0;
@@ -919,8 +921,18 @@ DateTimePatternGenerator::getBaseSkeletons(int32_t maxArraySize, UnicodeString* 
     }
     return count;
 }
+*/
+void 
+DateTimePatternGenerator::getSkeletons(StringEnumeration** skeletonEnumerator, StringEnumeration** patternEnumerator, UErrorCode& status) {
+    *skeletonEnumerator = new DTStringEnumeration(patternMap, DT_SKELETON, status);
+    *patternEnumerator = new DTStringEnumeration(patternMap, DT_PATTERN, status);
+}
 
-
+void
+DateTimePatternGenerator::getBaseSkeletons(StringEnumeration** skeletonEnumerator, UErrorCode& status) {
+     
+     *skeletonEnumerator = new DTStringEnumeration(patternMap, DT_BASESKELETON, status);
+}
 
 UBool
 DateTimePatternGenerator::isCanonicalItem(const UnicodeString item) {
@@ -934,6 +946,7 @@ DateTimePatternGenerator::isCanonicalItem(const UnicodeString item) {
     }
     return FALSE;
 }
+
 
 DateTimePatternGenerator*
 DateTimePatternGenerator::clone(UErrorCode& status) {
@@ -1700,6 +1713,85 @@ PtnElem::~PtnElem() {
     delete skeleton;
 }
 
+DTStringEnumeration::DTStringEnumeration(PatternMap &patternMap, dtStrEnum type, UErrorCode& status) {
+    PtnElem  *curElem;
+    PtnSkeleton *curSkeleton;
+    UnicodeString s;
+    int32_t bootIndex;
+    
+    total=0;
+    pos=0;
+    for (bootIndex=0; bootIndex<MAX_PATTERN_ENTRIES; ++bootIndex ) {
+        curElem = patternMap.boot[bootIndex];
+        while (curElem!=NULL) {
+            switch(type) {
+                case DT_BASESKELETON:
+                    s=*(curElem->basePattern);
+                    break;
+                case DT_PATTERN:
+                    s=*(curElem->pattern);
+                    break;
+                case DT_SKELETON:
+                    curSkeleton=curElem->skeleton;
+                    s=curSkeleton->getSkeleton();
+                    break;
+            }
+            if ( !isCanonicalItem(s) ) {  
+                if ((stringArray[total++]= new UnicodeString(s))==NULL) {
+                    // out of memory
+                    status = U_MEMORY_ALLOCATION_ERROR;
+                    return;
+                }
+            }
+            curElem = curElem->next;
+        }
+    }
+    if ((bootIndex==MAX_PATTERN_ENTRIES) && (curElem!=NULL) ) {
+        status = U_BUFFER_OVERFLOW_ERROR;
+    }
+    else {
+        if ( total < MAX_PATTERN_ENTRIES ) {  // not the last entry
+            stringArray[total]=NULL;
+        }
+    }
+}
+
+const UnicodeString*
+DTStringEnumeration::snext(UErrorCode& status) {
+    if (U_SUCCESS(status) && pos < total) {
+        return stringArray[pos++];
+    }
+    
+    return NULL;
+}
+
+void 
+DTStringEnumeration::reset(UErrorCode& status) {
+    pos=0;
+}
+
+int32_t
+DTStringEnumeration::count(UErrorCode& status) const {
+       return U_FAILURE(status) ? 0 : total;
+   }
+UBool
+DTStringEnumeration::isCanonicalItem(const UnicodeString item) {
+    if ( item.length() != 1 ) {
+        return FALSE;
+    }
+    for (int32_t i=0; i<TYPE_LIMIT; ++i) {
+        if (item.charAt(0)==Canonical_Items[i]) {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+DTStringEnumeration::~DTStringEnumeration() {
+    for (int32_t i=0; i<total; ++i) {
+        delete stringArray[i];
+    }
+}
 
 U_NAMESPACE_END
 
