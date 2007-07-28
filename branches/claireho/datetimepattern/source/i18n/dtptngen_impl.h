@@ -1,10 +1,23 @@
+/*
+*******************************************************************************
+* Copyright (C) 2007, International Business Machines Corporation and
+* others. All Rights Reserved.                                                *
+*******************************************************************************
+*
+* File DTPTNGEN.H
+*
+*******************************************************************************
+*/
+
+#ifndef __DTPTNGEN_IMPL_H__
+#define __DTPTNGEN_IMPL_H__
 
 #define MAX_PATTERN_ENTRIES 52
 #define MAX_CLDR_FIELD_LEN  60
 #define MAX_DT_TOKEN        50
 #define MAX_RESOURCE_FIELD  11
 #define MAX_AVAILABLE_FORMATS  12
-#define TYPE_LIMIT    16
+#define TYPE_LIMIT    16  // TODO(markus): Is this the same as the number of DtField constants?
 #define NONE          0
 #define EXTRA_FIELD   0x10000
 #define MISSING_FIELD  0x1000
@@ -67,8 +80,10 @@
 #define DT_NARROW         -0x100
 #define DT_DELTA           0x10
 
+U_NAMESPACE_BEGIN
 
-
+// TODO(markus): Needs to be public for get/setAppendItemFormats/Names().
+// See if we can use udat.h's enum UDateFormatField instead.
 typedef enum DtField {
     DT_ERA,
     DT_YEAR,
@@ -77,7 +92,7 @@ typedef enum DtField {
     DT_WEEK_OF_YEAR,
     DT_WEEK_OF_MONTH,
     DT_WEEKDAY,
-    DT_DAY_OF_YEAR, 
+    DT_DAY_OF_YEAR,
     DT_DAY_OF_WEEK_IN_MONTH,
     DT_DAY,
     DT_DAYPERIOD,
@@ -109,7 +124,7 @@ public:
     int32_t type[TYPE_LIMIT];
     UnicodeString original[TYPE_LIMIT];
     UnicodeString baseOriginal[TYPE_LIMIT];
-    
+
     PtnSkeleton();
     PtnSkeleton(PtnSkeleton& other);
     UBool equals(PtnSkeleton& other);
@@ -140,10 +155,10 @@ public:
     PtnSkeleton   *skeleton;
     UnicodeString *pattern;
     PtnElem       *next;
-    
+
     PtnElem();
     virtual ~PtnElem();
-    
+
     /**
      * ICU "poor man's RTTI", returns a UClassID for this class.
      *
@@ -158,14 +173,14 @@ public:
      * @draft ICU 3.8
      */
     virtual UClassID getDynamicClassID() const;
-    
-}; 
+
+};
 
 class U_I18N_API FormatParser : public UObject{
 public:
     UnicodeString items[MAX_DT_TOKEN];
     int32_t  itemNumber;
-    
+
     FormatParser();
     virtual ~FormatParser();
     /**
@@ -175,7 +190,7 @@ public:
      * @deprecated
      * @internal
      */
-    void set(const UnicodeString patternString);
+    void set(const UnicodeString& patternString);
     /**
      * Check string 's' is a quoted literal
      * @param string with quoted literals
@@ -183,7 +198,7 @@ public:
      * @return TRUE if s is a quote literal, FALSE if s is not a quote literal.
      * @deprecated
      * @internal
-     */    
+     */
     UBool isQuoteLiteral(UnicodeString s);
     /**
      *  produce a quoted literal
@@ -192,7 +207,7 @@ public:
      * @return none
      * @deprecated
      * @internal
-     */    
+     */
     void getQuoteLiteral(UnicodeString& quote, int32_t *itemIndex);
     /**
      * ICU "poor man's RTTI", returns a UClassID for this class.
@@ -208,7 +223,7 @@ public:
      * @draft ICU 3.8
      */
     virtual UClassID getDynamicClassID() const;
-    int32_t getCanonicalIndex(const UnicodeString s);
+    int32_t getCanonicalIndex(const UnicodeString& s);
     UBool isPatternSeparator(UnicodeString& field);
 
 private:
@@ -218,19 +233,19 @@ private:
        SYNTAX_ERROR,
        DONE
    } ToeknStatus;
-   
- 
+
+
    TokenStatus status;
-   
-   virtual TokenStatus setTokens(const UnicodeString pattern, int32_t startPos, int32_t *len);
+
+   virtual TokenStatus setTokens(const UnicodeString& pattern, int32_t startPos, int32_t *len);
 };
 
 
-class DistanceInfo : public UObject {
+class U_I18N_API DistanceInfo : public UObject {
 public:
     int32_t missingFieldMask;
     int32_t extraFieldMask;
-    
+
     DistanceInfo() {};
     virtual ~DistanceInfo() {};
     void clear() { missingFieldMask = extraFieldMask = 0; };
@@ -256,7 +271,7 @@ public:
 class U_I18N_API DateTimeMatcher: public UObject {
 public:
     PtnSkeleton skeleton;
-    
+
     void getBasePattern(UnicodeString &basePattern);
     void set(const UnicodeString& pattern, FormatParser& fp);
     void set(const UnicodeString& pattern, FormatParser& fp, PtnSkeleton& skeleton);
@@ -265,7 +280,7 @@ public:
     PtnSkeleton* getSkeleton();
     UBool equals(DateTimeMatcher* other);
     int32_t getDistance(DateTimeMatcher& other, int32_t includeMask, DistanceInfo& distanceInfo);
-    DateTimeMatcher(); 
+    DateTimeMatcher();
     virtual ~DateTimeMatcher() {};
     int32_t getFieldMask();
    /**
@@ -281,15 +296,15 @@ public:
      * @draft ICU 3.8
      */
     virtual UClassID getDynamicClassID() const;
-    
+
 };
 
 class U_I18N_API PatternMap : public UObject{
 public:
     PtnElem *boot[MAX_PATTERN_ENTRIES];
-    PatternMap(); 
+    PatternMap();
     virtual  ~PatternMap();
-    void  add(UnicodeString& basePattern, PtnSkeleton& skeleton, UnicodeString& value, UErrorCode& status);
+    void  add(const UnicodeString& basePattern, const PtnSkeleton& skeleton, const UnicodeString& value, UErrorCode& status);
     UErrorCode status;
     UnicodeString* getPatternFromBasePattern(UnicodeString& basePattern);
     UnicodeString* getPatternFromSkeleton(PtnSkeleton& skeleton);
@@ -309,15 +324,15 @@ public:
      * @draft ICU 3.8
      */
     virtual UClassID getDynamicClassID() const;
-    
+
 private:
     UBool isDupAllowed;
-    PtnElem*  getDuplicateElem(UnicodeString &basePattern, PtnSkeleton& skeleton, PtnElem *baseElem);
-}; // end  PatternMap 
+    PtnElem*  getDuplicateElem(const UnicodeString &basePattern, const PtnSkeleton& skeleton, PtnElem *baseElem);
+}; // end  PatternMap
 
 class U_I18N_API PatternMapIterator : public UObject {
 public:
-    PatternMapIterator();  
+    PatternMapIterator();
     virtual ~PatternMapIterator();
     void set(PatternMap& patternMap);
     UBool hasNext();
@@ -355,9 +370,11 @@ public:
 private:
     int32_t total;
     int32_t pos;
-    UnicodeString* stringArray[MAX_STRING_ENUMERATION]; 
-    UBool isCanonicalItem(const UnicodeString item);
-    // what if the size > MAX_STRING_ENUMERATION, though the chance is very low.
-
+    UnicodeString* stringArray[MAX_STRING_ENUMERATION];
+    UBool isCanonicalItem(const UnicodeString& item);
+    // TODO(claireho): What if the size > MAX_STRING_ENUMERATION, though the chance is very low.
 };
 
+U_NAMESPACE_END
+
+#endif

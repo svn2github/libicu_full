@@ -763,6 +763,18 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\dtptngen.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\unicode\dtptngen.h"
+				>
+			</File>
+			<File
+				RelativePath=".\dtptngen_impl.h"
+				>
+			</File>
+			<File
 				RelativePath=".\dtrule.cpp"
 				>
 			</File>
