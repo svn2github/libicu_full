@@ -18,6 +18,7 @@
 #define __UDATPG_H__
 
 #include "unicode/utypes.h"
+#include "unicode/uenum.h"
 
 /**
  * \file
@@ -182,40 +183,40 @@ udatpg_addPattern(UDateTimePatternGenerator *dtpg,
  * @draft ICU 3.8
  */
 U_DRAFT void U_EXPORT2
-udatpg_setAppendItemFormats(UDateTimePatternGenerator *dtpg,
-                            UDateTimePatternField field,
-                            const UChar *value, int32_t length,
-                            UErrorCode *pErrorCode);
+udatpg_setAppendItemFormat(UDateTimePatternGenerator *dtpg,
+                           UDateTimePatternField field,
+                           const UChar *value, int32_t length,
+                           UErrorCode *pErrorCode);
 
 /**
  * TODO(markus): Copy Java or C++ API doc.
  * @draft ICU 3.8
  */
 U_DRAFT const UChar * U_EXPORT2
-udatpg_getAppendItemFormats(const UDateTimePatternGenerator *dtpg,
-                            UDateTimePatternField field,
-                            int32_t *pLength,
-                            UErrorCode *pErrorCode);
+udatpg_getAppendItemFormat(const UDateTimePatternGenerator *dtpg,
+                           UDateTimePatternField field,
+                           int32_t *pLength,
+                           UErrorCode *pErrorCode);
 
 /**
  * TODO(markus): Copy Java or C++ API doc.
  * @draft ICU 3.8
  */
 U_DRAFT void U_EXPORT2
-udatpg_setAppendItemNames(UDateTimePatternGenerator *dtpg,
-                          UDateTimePatternField field,
-                          const UChar *value, int32_t length,
-                          UErrorCode *pErrorCode);
+udatpg_setAppendItemName(UDateTimePatternGenerator *dtpg,
+                         UDateTimePatternField field,
+                         const UChar *value, int32_t length,
+                         UErrorCode *pErrorCode);
 
 /**
  * TODO(markus): Copy Java or C++ API doc.
  * @draft ICU 3.8
  */
 U_DRAFT const UChar * U_EXPORT2
-udatpg_getAppendItemNames(const UDateTimePatternGenerator *dtpg,
-                          UDateTimePatternField field,
-                          int32_t *pLength,
-                          UErrorCode *pErrorCode);
+udatpg_getAppendItemName(const UDateTimePatternGenerator *dtpg,
+                         UDateTimePatternField field,
+                         int32_t *pLength,
+                         UErrorCode *pErrorCode);
 
 /**
  * TODO(markus): Copy Java or C++ API doc.
@@ -232,7 +233,7 @@ udatpg_setDateTimeFormat(const UDateTimePatternGenerator *dtpg,
  */
 U_DRAFT const UChar * U_EXPORT2
 udatpg_getDateTimeFormat(const UDateTimePatternGenerator *dtpg,
-                         int32_t *pLength
+                         int32_t *pLength,
                          UErrorCode *pErrorCode);
 
 /**
