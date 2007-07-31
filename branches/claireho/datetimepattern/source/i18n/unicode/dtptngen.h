@@ -19,27 +19,17 @@
 #include "unicode/ustring.h"
 #include "unicode/locid.h"
 #include "unicode/udat.h"
-
-// TODO(markus): Make this header work without including implementation classes!!
-#include "hash.h"
-#include "dtptngen_impl.h"
+#include "unicode/udatpg.h"
 
 U_NAMESPACE_BEGIN
 
 class DateFormatSymbols;
 class DateFormat;
 class Hashtable;
-
-// TODO(markus): Move to C API, add prefix, document the values.
-#define NO_CONFLICT   0
-#define BASE_CONFLICT 1
-#define CONFLICT      2
-
-// TODO(markus): Change add() to return status and set output string; remove struct.
-typedef struct PatternInfo {
-    int32_t  status;
-    UnicodeString conflictingPattern;
-} PatternInfo;
+class FormatParser;
+class DateTimeMatcher;
+class DistanceInfo;
+class PatternMap;
 
 /**
  * This class provides flexible generation of date format patterns, like "yy-MM-dd". The user can build up the generator
@@ -74,6 +64,14 @@ public:
     static DateTimePatternGenerator* U_EXPORT2 createInstance(const Locale& uLocale, UErrorCode& status);
 
     /**
+     * Create empty generator, to be constructed with add(...) etc.
+     * @param status Must be a reference to an error code value,
+     *               which must not indicate a failure before the function call.
+     * @draft ICU 3.8
+     */
+     static DateTimePatternGenerator* U_EXPORT2 createEmptyInstance(UErrorCode& status);
+     
+    /**
      * Destructor.
      */
     virtual ~DateTimePatternGenerator();
@@ -85,7 +83,7 @@ public:
      *               which must not indicate a failure before the function call.
      * @draft ICU 3.8
      */
-    DateTimePatternGenerator* clone(UErrorCode& status);
+    DateTimePatternGenerator* clone();
 
      /**
       * Return true if another object is semantically equal to this one.
@@ -94,7 +92,7 @@ public:
       * @return         true if other is semantically equal to this.
       * @draft ICU 3.8
       */
-    UBool operator==(const DateTimePatternGenerator& other);
+    UBool operator==(const DateTimePatternGenerator& other) const;
 
     /**
      * Utility to return a unique skeleton from a given pattern. For example,
@@ -105,7 +103,7 @@ public:
      * @draft ICU 3.8
      */
     // TODO(markus): Can this be static?
-    UnicodeString getSkeleton(const UnicodeString& pattern);
+    UnicodeString getSkeleton(const UnicodeString& pattern, UErrorCode& status) const;
 
     /**
      * Utility to return a unique base skeleton from a given pattern. This is
@@ -119,24 +117,31 @@ public:
      * @draft ICU 3.8
      */
     // TODO(markus): Can this be static?
-    UnicodeString getBaseSkeleton(const UnicodeString& pattern);
+    UnicodeString getBaseSkeleton(const UnicodeString& pattern, UErrorCode& status) const;
 
     /**
      * Adds a pattern to the generator. If the pattern has the same skeleton as
      * an existing pattern, and the override parameter is set, then the previous
      * value is overriden. Otherwise, the previous value is retained. In either
-     * case, the conflicting information is returned in PatternInfo.
+     * case, the conflicting status is set and conflicting pattern is 
+     * return.
      * <p>
      * Note that single-field patterns (like "MMM") are automatically added, and
      * don't need to be added explicitly!
      *
      * @param pattern    Input pattern, such as "dd/MMM"
-     * @param override   when existing values are to be overridden use true, otherwise use false.
-     * @param returnInfo return conflicting information in PatternInfo.  The value of status is
-     *                   CONFLICT, BASE_CONFLICT or NO_CONFLICT.
+     * @param override   when existing values are to be overridden use true, 
+     *                   otherwise use false.
+     * @param conflicting pattern 
+     *                   previous pattern with the same skeleton.
+     * @return conflicting status    
+     *                   UDATPG_NO_CONFLICT, UDATPG_BASE_CONFLICT or UDATPG_CONFLICT.
      * @draft ICU 3.8
      */
-     void add(const UnicodeString& pattern, UBool override, PatternInfo& returnInfo);
+    UDateTimePatternConflict addPattern(const UnicodeString& pattern, 
+                                        UBool override, 
+                                        UnicodeString& conflictingPattern,
+                                        UErrorCode& status);
 
     /**
      * An AppendItem format is a pattern used to append a field if there is no
@@ -156,7 +161,7 @@ public:
      * @param value  pattern, such as "{0}, {1}"
      * @draft ICU 3.8
      */
-    void setAppendItemFormats(const int32_t field, const UnicodeString& value);
+    void setAppendItemFormat(UDateTimePatternField field, const UnicodeString& value);
 
     /**
      * Getter corresponding to setAppendItemFormats. Values below 0 or at or
@@ -166,7 +171,7 @@ public:
      * @return append pattern for field
      * @draft ICU 3.8
      */
-    UnicodeString getAppendItemFormats(const int32_t field);
+    const UnicodeString& getAppendItemFormat(UDateTimePatternField field) const;
 
     /**
      * Sets the names of fields, eg "era" in English for ERA. These are only
@@ -179,7 +184,7 @@ public:
      * @param value
      * @draft ICU 3.8
      */
-    void setAppendItemNames(const int32_t field, const UnicodeString& value);
+    void setAppendItemName(UDateTimePatternField field, const UnicodeString& value);
 
     /**
      * Getter corresponding to setAppendItemNames. Values below 0 or at or above
@@ -189,7 +194,7 @@ public:
      * @return name for field
      * @draft ICU 3.8
      */
-    UnicodeString getAppendItemNames(const int32_t field);
+    const UnicodeString& getAppendItemName(UDateTimePatternField field) const;
 
     /**
      * The date time format is a message format pattern used to compose date and
@@ -217,7 +222,7 @@ public:
      * @return pattern
      * @draft ICU 3.8
      */
-    UnicodeString getDateTimeFormat();
+    const UnicodeString& getDateTimeFormat() const;
 
     /**
      * Return the best pattern matching the input skeleton. It is guaranteed to
@@ -230,7 +235,7 @@ public:
      *            The best pattern found from the given patternForm.
      * @draft ICU 3.8
      */
-     UnicodeString getBestPattern(const UnicodeString& patternForm);
+     UnicodeString getBestPattern(const UnicodeString& patternForm, UErrorCode& status);
 
 
     /**
@@ -247,7 +252,7 @@ public:
      *        pattern adjusted to match the skeleton fields widths and subtypes.
      * @draft ICU 3.8
      */
-     UnicodeString replaceFieldTypes(const UnicodeString& pattern, const UnicodeString& skeleton);
+     UnicodeString replaceFieldTypes(const UnicodeString& pattern, const UnicodeString& skeleton, UErrorCode& status);
 
     /**
      * Return a list of all the skeletons (in canonical form) from this class,
@@ -266,7 +271,8 @@ public:
      *               which must not indicate a failure before the function call.
      * @draft ICU 3.8
      */
-    void getSkeletons(StringEnumeration** skeletons, StringEnumeration** patterns, UErrorCode& status);
+    void getSkeletons(StringEnumeration** skeletons, StringEnumeration** patterns, UErrorCode& status) const;
+
     /**
      * Return a list of all the base skeletons (in canonical form) from this class.
      *
@@ -277,8 +283,27 @@ public:
      *               which must not indicate a failure before the function call.
      * @draft ICU 3.8
      */
-     void getBaseSkeletons(StringEnumeration** baseSkeletons, UErrorCode& status);
-
+    void getBaseSkeletons(StringEnumeration** baseSkeletons, UErrorCode& status) const;
+     
+     /**
+      * Redundant patterns are those which if removed, make no difference in the
+      * resulting getBestPattern values. This method returns a list of them, to
+      * help check the consistency of the patterns used to build this generator.
+      * 
+      * @param output
+      *            stores the redundant patterns that are removed. If dereference to
+      *            null and redundant patterns are found, a StringEnumeration is 
+      *            allocated.
+      * @param status Must be a reference to an error code value,
+      *               which must not indicate a failure before the function call.
+      * @return the StringEnumeration with added elements.
+      * @draft ICU 3.8
+      * @deprecated
+      * @internal
+      */
+     // TODO(claireho):Confirm the status is draft or deprecated.
+     StringEnumeration* getRedundants(StringEnumeration** output, UErrorCode& status);
+      
     /**
      * The decimal value is used in formatting fractions of seconds. If the
      * skeleton contains fractional seconds, then this is used with the
@@ -298,7 +323,7 @@ public:
      *        string corresponding to the decimal point
      * @draft ICU 3.8
      */
-    UnicodeString getDecimal();
+    const UnicodeString& getDecimal() const;
 
     /**
      * ICU "poor man's RTTI", returns a UClassID for the actual class.
@@ -314,7 +339,7 @@ public:
      */
     static UClassID U_EXPORT2 getStaticClassID(void);
 
-protected :
+private:
     /**
      * Constructor.
      * @draft ICU 3.8
@@ -348,14 +373,13 @@ protected :
      */
     DateTimePatternGenerator& operator=(const DateTimePatternGenerator& other);
 
-private :
     Locale pLocale;  // pattern locale
-    FormatParser fp;
-    DateTimeMatcher dtMatcher;
-    DistanceInfo distanceInfo;
-    PatternMap patternMap;
-    UnicodeString appendItemFormats[TYPE_LIMIT];
-    UnicodeString appendItemNames[TYPE_LIMIT];
+    FormatParser *fp;
+    DateTimeMatcher* dtMatcher;
+    DistanceInfo *distanceInfo;
+    PatternMap *patternMap;
+    UnicodeString appendItemFormats[UDATPG_FIELD_COUNT];
+    UnicodeString appendItemNames[UDATPG_FIELD_COUNT];
     UnicodeString dateTimeFormat;
     UnicodeString decimal;
     DateTimeMatcher *skipMatcher;
@@ -363,26 +387,26 @@ private :
     UnicodeString hackPattern;
     UErrorCode status;
 
-    static const int32_t FRACTIONAL_MASK = 1<<DT_FRACTIONAL_SECOND;
-    static const int32_t SECOND_AND_FRACTIONAL_MASK = (1<<DT_SECOND) | (1<<DT_FRACTIONAL_SECOND);
+    static const int32_t FRACTIONAL_MASK = 1<<UDATPG_FRACTIONAL_SECOND_FIELD;
+    static const int32_t SECOND_AND_FRACTIONAL_MASK = (1<<UDATPG_SECOND_FIELD) | (1<<UDATPG_FRACTIONAL_SECOND_FIELD);
 
     void initData(const Locale &locale);
     void addCanonicalItems();
     void addICUPatterns(const Locale& locale);
-    void hackTimes(PatternInfo& returnInfo, UnicodeString& hackPattern);
+    void hackTimes(UnicodeString& hackPattern, UErrorCode& status);
     void addCLDRData(const Locale& locale);
-    void initHashtable(UErrorCode& err);
+    void initHashtable(UErrorCode& status);
     void setDateTimeFromCalendar(const Locale& locale);
-    void setDecimalSymbols(const Locale& locale);
-    int32_t getAppendFormatNumber(const char* field);
-    int32_t getAppendNameNumber(const char* field);
-    void getAppendName(const int32_t field, UnicodeString& value);
+    void setDecimalSymbols(const Locale& locale, UErrorCode& status);
+    UDateTimePatternField getAppendFormatNumber(const char* field);
+    UDateTimePatternField getAppendNameNumber(const char* field);
+    void getAppendName(UDateTimePatternField field, UnicodeString& value);
     int32_t getCanonicalIndex(const UnicodeString& field);
-    UnicodeString* getBestRaw(DateTimeMatcher source, int32_t includeMask, DistanceInfo& missingFields);
+    UnicodeString* getBestRaw(DateTimeMatcher& source, int32_t includeMask, DistanceInfo* missingFields);
     UnicodeString adjustFieldTypes(const UnicodeString& pattern, UBool fixFractionalSeconds);
     UnicodeString getBestAppending(const int32_t missingFields);
     int32_t getTopBitNumber(int32_t foundMask);
-    void setAvailableFormat(const char* key, UErrorCode& err);
+    void setAvailableFormat(const char* key, UErrorCode& status);
     UBool isAvailableFormatSet(const char* key);
     void copyHashtable(Hashtable *other);
     UBool isCanonicalItem(const UnicodeString& item);

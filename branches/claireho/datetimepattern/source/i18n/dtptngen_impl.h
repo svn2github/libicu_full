@@ -17,7 +17,6 @@
 #define MAX_DT_TOKEN        50
 #define MAX_RESOURCE_FIELD  11
 #define MAX_AVAILABLE_FORMATS  12
-#define TYPE_LIMIT    16  // TODO(markus): Is this the same as the number of DtField constants?
 #define NONE          0
 #define EXTRA_FIELD   0x10000
 #define MISSING_FIELD  0x1000
@@ -82,27 +81,6 @@
 
 U_NAMESPACE_BEGIN
 
-// TODO(markus): Needs to be public for get/setAppendItemFormats/Names().
-// See if we can use udat.h's enum UDateFormatField instead.
-typedef enum DtField {
-    DT_ERA,
-    DT_YEAR,
-    DT_QUARTER,
-    DT_MONTH,
-    DT_WEEK_OF_YEAR,
-    DT_WEEK_OF_MONTH,
-    DT_WEEKDAY,
-    DT_DAY_OF_YEAR,
-    DT_DAY_OF_WEEK_IN_MONTH,
-    DT_DAY,
-    DT_DAYPERIOD,
-    DT_HOUR,
-    DT_MINUTE,
-    DT_SECOND,
-    DT_FRACTIONAL_SECOND,
-    DT_ZONE,
-} DtField;
-
 typedef enum dtStrEnum {
     DT_BASESKELETON,
     DT_SKELETON,
@@ -110,20 +88,18 @@ typedef enum dtStrEnum {
 }dtStrEnum ;
 
 typedef struct dtTypeElem {
-    UChar             patternChar;
-    DtField           field;
-    int32_t           type;
-    int32_t           minLen;
-    int32_t           weight;
+    UChar                  patternChar;
+    UDateTimePatternField  field;
+    int32_t                type;
+    int32_t                minLen;
+    int32_t                weight;
 }dtTypeElem;
-
-
 
 class U_I18N_API PtnSkeleton : public UObject {
 public:
-    int32_t type[TYPE_LIMIT];
-    UnicodeString original[TYPE_LIMIT];
-    UnicodeString baseOriginal[TYPE_LIMIT];
+    int32_t type[UDATPG_FIELD_COUNT];
+    UnicodeString original[UDATPG_FIELD_COUNT];
+    UnicodeString baseOriginal[UDATPG_FIELD_COUNT];
 
     PtnSkeleton();
     PtnSkeleton(PtnSkeleton& other);
@@ -273,8 +249,9 @@ public:
     PtnSkeleton skeleton;
 
     void getBasePattern(UnicodeString &basePattern);
-    void set(const UnicodeString& pattern, FormatParser& fp);
-    void set(const UnicodeString& pattern, FormatParser& fp, PtnSkeleton& skeleton);
+    UnicodeString getPattern();
+    void set(const UnicodeString& pattern, FormatParser* fp);
+    void set(const UnicodeString& pattern, FormatParser* fp, PtnSkeleton& skeleton);
     void copyFrom(PtnSkeleton& skeleton);
     void copyFrom();
     PtnSkeleton* getSkeleton();
@@ -335,6 +312,7 @@ public:
     PatternMapIterator();
     virtual ~PatternMapIterator();
     void set(PatternMap& patternMap);
+    PtnSkeleton* getSkeleton();
     UBool hasNext();
     DateTimeMatcher& next();
     /**
@@ -358,15 +336,33 @@ private:
     PatternMap *patternMap;
 };
 
-class U_I18N_API DTStringEnumeration : public StringEnumeration {
+class U_I18N_API DTSkeletonEnumeration : public StringEnumeration {
 public:
-    DTStringEnumeration(PatternMap &patternMap, dtStrEnum type, UErrorCode& status);
-    virtual ~DTStringEnumeration();
+    DTSkeletonEnumeration(PatternMap &patternMap, dtStrEnum type, UErrorCode& status);
+    virtual ~DTSkeletonEnumeration();
     static UClassID U_EXPORT2 getStaticClassID(void);
     virtual UClassID getDynamicClassID(void) const;
     virtual const UnicodeString* snext(UErrorCode& status);
     virtual void reset(UErrorCode& status);
     virtual int32_t count(UErrorCode& status) const;
+private:
+    int32_t total;
+    int32_t pos;
+    UnicodeString* stringArray[MAX_STRING_ENUMERATION];
+    UBool isCanonicalItem(const UnicodeString& item);
+    // TODO(claireho): What if the size > MAX_STRING_ENUMERATION, though the chance is very low.
+};
+
+class U_I18N_API DTRedundantEnumeration : public StringEnumeration {
+public:
+    DTRedundantEnumeration();
+    virtual ~DTRedundantEnumeration();
+    static UClassID U_EXPORT2 getStaticClassID(void);
+    virtual UClassID getDynamicClassID(void) const;
+    virtual const UnicodeString* snext(UErrorCode& status);
+    virtual void reset(UErrorCode& status);
+    virtual int32_t count(UErrorCode& status) const;
+    void add(const UnicodeString &pattern, UErrorCode& status);
 private:
     int32_t total;
     int32_t pos;
