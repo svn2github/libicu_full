@@ -39,6 +39,8 @@
 #include <stdio.h>
 #endif
 
+#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
+
 U_NAMESPACE_BEGIN
 
 // *****************************************************************************
@@ -151,7 +153,7 @@ DateTimePatternGenerator::createEmptyInstance(UErrorCode& status) {
 }
 
 DateTimePatternGenerator::DateTimePatternGenerator(UErrorCode &status) : UObject() {
-    status = U_ZERO_ERROR;
+    fStatus = U_ZERO_ERROR;
     skipMatcher = NULL;
     fAvailableFormatKeyHash=NULL;
     fp = new FormatParser();
@@ -169,9 +171,8 @@ DateTimePatternGenerator::DateTimePatternGenerator(const Locale& locale, UErrorC
     status = getStatus();
 }
 
-DateTimePatternGenerator::DateTimePatternGenerator(const DateTimePatternGenerator& other, UErrorCode &status)
-: UObject() {
-    status = U_ZERO_ERROR;
+DateTimePatternGenerator::DateTimePatternGenerator(const DateTimePatternGenerator& other) : UObject() {
+    fStatus = U_ZERO_ERROR;
     skipMatcher = NULL;
     fAvailableFormatKeyHash=NULL;
     fp = new FormatParser();
@@ -179,28 +180,29 @@ DateTimePatternGenerator::DateTimePatternGenerator(const DateTimePatternGenerato
     distanceInfo = new DistanceInfo();
     patternMap = new PatternMap();
     *this=other;
-    status = getStatus();
-}
-
-DateTimePatternGenerator::DateTimePatternGenerator(const DateTimePatternGenerator& other)
-: UObject() {
-    *this=other;
 }
 
 DateTimePatternGenerator&
 DateTimePatternGenerator::operator=(const DateTimePatternGenerator& other) {
+    fStatus = U_ZERO_ERROR;
     pLocale = other.pLocale;
     *fp = *(other.fp);
     dtMatcher->copyFrom(other.dtMatcher->skeleton);
     *distanceInfo = *(other.distanceInfo);
     dateTimeFormat = other.dateTimeFormat;
     decimal = other.decimal;
+    // NUL-terminate for the C API.
+    dateTimeFormat.getTerminatedBuffer();
+    decimal.getTerminatedBuffer();
     skipMatcher = other.skipMatcher;
     for (int32_t i=0; i< UDATPG_FIELD_COUNT; ++i ) {
         appendItemFormats[i] = other.appendItemFormats[i];
         appendItemNames[i] = other.appendItemNames[i];
+        // NUL-terminate for the C API.
+        appendItemFormats[i].getTerminatedBuffer();
+        appendItemNames[i].getTerminatedBuffer();
     }
-    patternMap->copyFrom(*other.patternMap, status);
+    patternMap->copyFrom(*other.patternMap, fStatus);
     fAvailableFormatKeyHash=NULL;
     copyHashtable(other.fAvailableFormatKeyHash);
     return *this;
@@ -235,22 +237,19 @@ DateTimePatternGenerator::~DateTimePatternGenerator() {
 
 void
 DateTimePatternGenerator::initData(const Locale& locale) {
-    status = U_ZERO_ERROR;
+    fStatus = U_ZERO_ERROR;
     skipMatcher = NULL;
     fAvailableFormatKeyHash=NULL;
 
-    // TODO(markus): Revisit unescaping.
-    // fromHex=Transliterator::createInstance(UNICODE_STRING_SIMPLE("Hex-Any"), UTRANS_FORWARD, status);
-    // DateTimePatternGenerator* result = new DateTimePatternGenerator();
     addCanonicalItems();
     addICUPatterns(locale);
     addCLDRData(locale);
     setDateTimeFromCalendar(locale);
-    setDecimalSymbols(locale, status);
+    setDecimalSymbols(locale, fStatus);
 } // DateTimePatternGenerator::initData
 
 UnicodeString
-DateTimePatternGenerator::getSkeleton(const UnicodeString& pattern, UErrorCode& status) const {
+DateTimePatternGenerator::getSkeleton(const UnicodeString& pattern, UErrorCode& status) {
     PtnSkeleton *ptrSkeleton;
     dtMatcher->set(pattern, fp);
     ptrSkeleton=dtMatcher->getSkeleton();
@@ -265,7 +264,7 @@ DateTimePatternGenerator::getSkeleton(const UnicodeString& pattern, UErrorCode& 
 }
 
 UnicodeString
-DateTimePatternGenerator::getBaseSkeleton(const UnicodeString& pattern, UErrorCode& status) const{
+DateTimePatternGenerator::getBaseSkeleton(const UnicodeString& pattern, UErrorCode& status) {
     PtnSkeleton *ptrSkeleton;
     dtMatcher->set(pattern, fp);
     ptrSkeleton=dtMatcher->getSkeleton();
@@ -293,6 +292,9 @@ DateTimePatternGenerator::addICUPatterns(const Locale& locale) {
         df = (SimpleDateFormat*)DateFormat::createTimeInstance(i, locale);
         conflictingStatus = addPattern(df->toPattern(dfPattern), FALSE, conflictingString, status);
         newPattern=df->toPattern(dfPattern);
+        if (U_FAILURE(status)) {
+            // TODO(claireho): ?
+        }
 
         // HACK for hh:ss
         if ( i==DateFormat::kMedium ) {
@@ -362,15 +364,17 @@ DateTimePatternGenerator::addCLDRData(const Locale& locale) {
     const char *key=NULL;
 
     // Initialize appendItems
-    UChar itemFormat[]= {0x7B, 0x30, 0x7D, 0x20, 0x251C, 0x7B, 0x32, 0x7D, 0x3A,
+    static const UChar itemFormat[]= {0x7B, 0x30, 0x7D, 0x20, 0x251C, 0x7B, 0x32, 0x7D, 0x3A,
         0x20, 0x7B, 0x31, 0x7D, 0x2524, 0};  // {0} \u251C{2}: {1}\u2524
-    UnicodeString defaultItemFormat = UnicodeString(itemFormat);
+    UnicodeString defaultItemFormat(TRUE, itemFormat, LENGTHOF(itemFormat));  // Read-only alias.
 
     for (int32_t i=0; i<UDATPG_FIELD_COUNT; ++i ) {
-        appendItemFormats[i] = defaultItemFormat;
+        appendItemFormats[i].fastCopyFrom(defaultItemFormat);  // Copy is also read-only alias.
         appendItemNames[i]=CAP_F;
-        appendItemNames[i]+=(i+0x30);
+        appendItemNames[i]+=(i+0x30);  // TODO(claireho): TODO(markus): What does this do?
         appendItemNames[i]+="";
+        // NUL-terminate for the C API.
+        appendItemNames[i].getTerminatedBuffer();
     }
 
 
@@ -521,8 +525,9 @@ DateTimePatternGenerator::initHashtable(UErrorCode& err) {
 
 void
 DateTimePatternGenerator::setAppendItemFormat(UDateTimePatternField field, const UnicodeString& value) {
-    Mutex mutex;
     appendItemFormats[field] = value;
+    // NUL-terminate for the C API.
+    appendItemFormats[field].getTerminatedBuffer();
 }
 
 const UnicodeString&
@@ -532,10 +537,9 @@ DateTimePatternGenerator::getAppendItemFormat(UDateTimePatternField field) const
 
 void
 DateTimePatternGenerator::setAppendItemName(UDateTimePatternField field, const UnicodeString& value) {
-    Mutex mutex;
-    if ((field >=0)&&(field<=UDATPG_FIELD_COUNT)) {
-        appendItemNames[field] = value;
-    }
+    appendItemNames[field] = value;
+    // NUL-terminate for the C API.
+    appendItemNames[field].getTerminatedBuffer();
 }
 
 const UnicodeString&
@@ -605,6 +609,8 @@ DateTimePatternGenerator::replaceFieldTypes(const UnicodeString& pattern,
 void
 DateTimePatternGenerator::setDecimal(const UnicodeString& decimal) {
     this->decimal = decimal;
+    // NUL-terminate for the C API.
+    this->decimal.getTerminatedBuffer();
 }
 
 const UnicodeString&
@@ -626,6 +632,8 @@ DateTimePatternGenerator::addCanonicalItems() {
 void
 DateTimePatternGenerator::setDateTimeFormat(const UnicodeString& dtFormat) {
     dateTimeFormat = dtFormat;
+    // NUL-terminate for the C API.
+    dateTimeFormat.getTerminatedBuffer();
 }
 
 const UnicodeString&
@@ -658,11 +666,12 @@ DateTimePatternGenerator::setDateTimeFromCalendar(const Locale& locale) {
 
 void
 DateTimePatternGenerator::setDecimalSymbols(const Locale& locale, UErrorCode& status) {
-    UErrorCode err;
-
     DecimalFormatSymbols dfs = DecimalFormatSymbols(locale, status);
-    decimal = dfs.getSymbol(DecimalFormatSymbols::kDecimalSeparatorSymbol);
-    return;
+    if(U_SUCCESS(status)) {
+        decimal = dfs.getSymbol(DecimalFormatSymbols::kDecimalSeparatorSymbol);
+        // NUL-terminate for the C API.
+        decimal.getTerminatedBuffer();
+    }
 }
 
 UDateTimePatternConflict
@@ -672,23 +681,10 @@ DateTimePatternGenerator::addPattern(
     UnicodeString &conflictingPattern,
     UErrorCode& status) {
 
-    const UChar oldFormat[2]={ 0x5C, LOW_U }; // "\\u"
     UnicodeString basePattern;
     PtnSkeleton   skeleton;
     UDateTimePatternConflict conflictingStatus = UDATPG_NO_CONFLICT;
 
-    // TODO(markus): This code, up to the transliterate() call, seems to simply
-    // want to support \uhhhh in patterns.
-    // Usually, ICU APIs accept just straight strings.
-    // Even if we did unescape, we should just call UnicodeString::unescape() instead of the transliterator.
-    // Discuss!
-    // TODO(markus): Why do we have oldFormat?
-    // TODO(markus): The oldPattern is discarded at the end of the if() scope. What is intended with it?
-    if (pattern.indexOf(oldFormat, 2, 0) > 0 ) {
-        UnicodeString oldPattern(pattern);
-    }
-    //static Transliterator *fromHex=Transliterator::createInstance(fHex, UTRANS_FORWARD, err);
-    //fromHex->transliterate(pattern);
     DateTimeMatcher matcher;
     matcher.set(pattern, fp, skeleton);
     matcher.getBasePattern(basePattern);
@@ -889,8 +885,8 @@ DateTimePatternGenerator::copyHashtable(Hashtable *other) {
     if (fAvailableFormatKeyHash !=NULL) {
         delete fAvailableFormatKeyHash;
     }
-    initHashtable(status);
-    if(U_FAILURE(status)){
+    initHashtable(fStatus);
+    if(U_FAILURE(fStatus)){
         return;
     }
     int32_t pos = -1;
@@ -900,8 +896,8 @@ DateTimePatternGenerator::copyHashtable(Hashtable *other) {
         const UHashTok otherKeyTok = elem->key;
         UnicodeString* otherKey = (UnicodeString*)otherKeyTok.pointer;
         UnicodeString *key = new UnicodeString(*otherKey);
-        fAvailableFormatKeyHash->puti(*key, 1, status);
-        if(U_FAILURE(status)){
+        fAvailableFormatKeyHash->puti(*key, 1, fStatus);
+        if(U_FAILURE(fStatus)){
             return;
         }
     }
@@ -921,7 +917,11 @@ DateTimePatternGenerator::getPatternForSkeleton(const UnicodeString& skeleton) c
     if (skeleton.length() ==0) {
         return emptyString;
     }  
-    
+
+    // TODO(claireho): Set baseChar to something!
+    // Markus is just guessing here.
+    baseChar = skeleton.charAt(0);
+
     // the baseChar must be A-Z or a-z
     if ( (baseChar >= CAP_A) && (baseChar <= CAP_Z) ) {
         curElem = patternMap->boot[26 + (baseChar-CAP_A)];
@@ -988,17 +988,8 @@ DateTimePatternGenerator::isCanonicalItem(const UnicodeString& item) {
 
 
 DateTimePatternGenerator*
-DateTimePatternGenerator::clone() {
-    DateTimePatternGenerator* dtGen = new DateTimePatternGenerator(*this, status);
-    if (U_FAILURE(status)) {
-        if (dtGen!=NULL) {
-            delete dtGen;
-        }
-        return NULL;
-    }
-    else {
-        return dtGen;
-    }
+DateTimePatternGenerator::clone() const {
+    return new DateTimePatternGenerator(*this);
 }
 
 PatternMap::PatternMap() {

@@ -79,11 +79,9 @@ public:
     /**
      * Clones DateTimePatternGenerator object.  Clients are responsible for deleting
      * the DateTimePatternGenerator object cloned.
-     * @param status Must be a reference to an error code value,
-     *               which must not indicate a failure before the function call.
      * @draft ICU 3.8
      */
-    DateTimePatternGenerator* clone();
+    DateTimePatternGenerator* clone() const;
 
      /**
       * Return true if another object is semantically equal to this one.
@@ -102,7 +100,7 @@ public:
      * @return skeleton   such as "MMMdd"
      * @draft ICU 3.8
      */
-    UnicodeString getSkeleton(const UnicodeString& pattern, UErrorCode& status) const;
+    UnicodeString getSkeleton(const UnicodeString& pattern, UErrorCode& status);
 
     /**
      * Utility to return a unique base skeleton from a given pattern. This is
@@ -115,7 +113,7 @@ public:
      * @return base skeleton, such as "Md"
      * @draft ICU 3.8
      */
-    UnicodeString getBaseSkeleton(const UnicodeString& pattern, UErrorCode& status) const;
+    UnicodeString getBaseSkeleton(const UnicodeString& pattern, UErrorCode& status);
 
     /**
      * Adds a pattern to the generator. If the pattern has the same skeleton as
@@ -128,9 +126,9 @@ public:
      * don't need to be added explicitly!
      *
      * @param pattern    Input pattern, such as "dd/MMM"
-     * @param override   when existing values are to be overridden use true, 
-     *                   otherwise use false.
-     * @param conflicting pattern 
+     * @param override   when existing values are to be overridden use TRUE, 
+     *                   otherwise use FALSE.
+     * @param conflictingPattern 
      *                   previous pattern with the same skeleton.
      * @return conflicting status    
      *                   UDATPG_NO_CONFLICT, UDATPG_BASE_CONFLICT or UDATPG_CONFLICT.
@@ -226,14 +224,14 @@ public:
      * Return the best pattern matching the input skeleton. It is guaranteed to
      * have all of the fields in the skeleton.
      *
-     * @param patternForm
-     *            The patternForm is a pattern containing only the variable fields.
-     *            For example, "MMMdd" and "mmhh" are patternForms.
+     * @param skeleton
+     *            The skeleton is a pattern containing only the variable fields.
+     *            For example, "MMMdd" and "mmhh" are skeletons.
      * @return bestPattern
-     *            The best pattern found from the given patternForm.
+     *            The best pattern found from the given skeleton.
      * @draft ICU 3.8
      */
-     UnicodeString getBestPattern(const UnicodeString& patternForm, UErrorCode& status);
+     UnicodeString getBestPattern(const UnicodeString& skeleton, UErrorCode& status);
 
 
     /**
@@ -364,13 +362,6 @@ private:
     DateTimePatternGenerator(const DateTimePatternGenerator& other);
 
     /**
-     * Copy constructor.
-     * @param other DateTimePatternGenerator to copy
-     * @draft ICU 3.8
-     */
-    DateTimePatternGenerator(const DateTimePatternGenerator& other, UErrorCode & status);
-
-    /**
      * Default assignment operator.
      * @param other DateTimePatternGenerator to copy
      * @draft ICU 3.8
@@ -389,7 +380,7 @@ private:
     DateTimeMatcher *skipMatcher;
     Hashtable *fAvailableFormatKeyHash;
     UnicodeString hackPattern;
-    UErrorCode status;
+    UErrorCode fStatus;
     UnicodeString emptyString;
 
     static const int32_t FRACTIONAL_MASK = 1<<UDATPG_FRACTIONAL_SECOND_FIELD;
@@ -415,7 +406,7 @@ private:
     UBool isAvailableFormatSet(const char* key);
     void copyHashtable(Hashtable *other);
     UBool isCanonicalItem(const UnicodeString& item);
-    UErrorCode getStatus() {  return status; } ;
+    UErrorCode getStatus() {  return fStatus; } ;
 } ;// end class DateTimePatternGenerator
 
 U_NAMESPACE_END

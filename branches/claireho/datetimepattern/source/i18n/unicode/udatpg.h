@@ -125,10 +125,17 @@ udatpg_clone(const UDateTimePatternGenerator *dtpg, UErrorCode *pErrorCode);
 
 /**
  * TODO(markus): Copy Java or C++ API doc.
+ *
+ * Note that this function uses a non-const UDateTimePatternGenerator:
+ * It uses a stateful pattern parser which is set up for each generator object,
+ * rather than creating one for each function call.
+ * Consecutive calls to this function do not affect each other,
+ * but this function cannot be used concurrently on a single generator object.
+ *
  * @draft ICU 3.8
  */
 U_DRAFT int32_t U_EXPORT2
-udatpg_getBestPattern(const UDateTimePatternGenerator *dtpg,
+udatpg_getBestPattern(UDateTimePatternGenerator *dtpg,
                       const UChar *skeleton, int32_t length,
                       UChar *bestPattern, int32_t capacity,
                       UErrorCode *pErrorCode);
@@ -173,7 +180,7 @@ udatpg_getBaseSkeleton(UDateTimePatternGenerator *dtpg,
  */
 U_DRAFT UDateTimePatternConflict U_EXPORT2
 udatpg_addPattern(UDateTimePatternGenerator *dtpg,
-                  const UChar *pattern, int32_t length,
+                  const UChar *pattern, int32_t patternLength,
                   UBool override,
                   UChar *conflictingPattern, int32_t capacity, int32_t *pLength,
                   UErrorCode *pErrorCode);
@@ -185,8 +192,7 @@ udatpg_addPattern(UDateTimePatternGenerator *dtpg,
 U_DRAFT void U_EXPORT2
 udatpg_setAppendItemFormat(UDateTimePatternGenerator *dtpg,
                            UDateTimePatternField field,
-                           const UChar *value, int32_t length,
-                           UErrorCode *pErrorCode);
+                           const UChar *value, int32_t length);
 
 /**
  * TODO(markus): Copy Java or C++ API doc.
@@ -195,8 +201,7 @@ udatpg_setAppendItemFormat(UDateTimePatternGenerator *dtpg,
 U_DRAFT const UChar * U_EXPORT2
 udatpg_getAppendItemFormat(const UDateTimePatternGenerator *dtpg,
                            UDateTimePatternField field,
-                           int32_t *pLength,
-                           UErrorCode *pErrorCode);
+                           int32_t *pLength);
 
 /**
  * TODO(markus): Copy Java or C++ API doc.
@@ -205,8 +210,7 @@ udatpg_getAppendItemFormat(const UDateTimePatternGenerator *dtpg,
 U_DRAFT void U_EXPORT2
 udatpg_setAppendItemName(UDateTimePatternGenerator *dtpg,
                          UDateTimePatternField field,
-                         const UChar *value, int32_t length,
-                         UErrorCode *pErrorCode);
+                         const UChar *value, int32_t length);
 
 /**
  * TODO(markus): Copy Java or C++ API doc.
@@ -215,8 +219,7 @@ udatpg_setAppendItemName(UDateTimePatternGenerator *dtpg,
 U_DRAFT const UChar * U_EXPORT2
 udatpg_getAppendItemName(const UDateTimePatternGenerator *dtpg,
                          UDateTimePatternField field,
-                         int32_t *pLength,
-                         UErrorCode *pErrorCode);
+                         int32_t *pLength);
 
 /**
  * TODO(markus): Copy Java or C++ API doc.
@@ -224,8 +227,7 @@ udatpg_getAppendItemName(const UDateTimePatternGenerator *dtpg,
  */
 U_DRAFT void U_EXPORT2
 udatpg_setDateTimeFormat(const UDateTimePatternGenerator *dtpg,
-                         const UChar *dtFormat, int32_t length,
-                         UErrorCode *pErrorCode);
+                         const UChar *dtFormat, int32_t length);
 
 /**
  * TODO(markus): Copy Java or C++ API doc.
@@ -233,8 +235,7 @@ udatpg_setDateTimeFormat(const UDateTimePatternGenerator *dtpg,
  */
 U_DRAFT const UChar * U_EXPORT2
 udatpg_getDateTimeFormat(const UDateTimePatternGenerator *dtpg,
-                         int32_t *pLength,
-                         UErrorCode *pErrorCode);
+                         int32_t *pLength);
 
 /**
  * TODO(markus): Copy Java or C++ API doc.
@@ -242,8 +243,7 @@ udatpg_getDateTimeFormat(const UDateTimePatternGenerator *dtpg,
  */
 U_DRAFT void U_EXPORT2
 udatpg_setDecimal(UDateTimePatternGenerator *dtpg,
-                  const UChar *decimal, int32_t length,
-                  UErrorCode *pErrorCode);
+                  const UChar *decimal, int32_t length);
 
 /**
  * TODO(markus): Copy Java or C++ API doc.
@@ -251,15 +251,21 @@ udatpg_setDecimal(UDateTimePatternGenerator *dtpg,
  */
 U_DRAFT const UChar * U_EXPORT2
 udatpg_getDecimal(const UDateTimePatternGenerator *dtpg,
-                  int32_t *pLength,
-                  UErrorCode *pErrorCode);
+                  int32_t *pLength);
 
 /**
  * TODO(markus): Copy Java or C++ API doc.
+ *
+ * Note that this function uses a non-const UDateTimePatternGenerator:
+ * It uses a stateful pattern parser which is set up for each generator object,
+ * rather than creating one for each function call.
+ * Consecutive calls to this function do not affect each other,
+ * but this function cannot be used concurrently on a single generator object.
+ *
  * @draft ICU 3.8
  */
 U_DRAFT int32_t U_EXPORT2
-udatpg_replaceFieldTypes(const UDateTimePatternGenerator *dtpg,
+udatpg_replaceFieldTypes(UDateTimePatternGenerator *dtpg,
                          const UChar *pattern, int32_t patternLength,
                          const UChar *skeleton, int32_t skeletonLength,
                          UChar *dest, int32_t destCapacity,
@@ -283,10 +289,9 @@ udatpg_openBaseSkeletons(const UDateTimePatternGenerator *dtpg, UErrorCode *pErr
  * TODO(markus): Copy Java or C++ API doc.
  * @draft ICU 3.8
  */
-U_DRAFT int32_t U_EXPORT2
+U_DRAFT const UChar * U_EXPORT2
 udatpg_getPatternForSkeleton(const UDateTimePatternGenerator *dtpg,
-                             const UChar *skeleton, int32_t length,
-                             UChar *pattern, int32_t capacity,
-                             UErrorCode *pErrorCode);
+                             const UChar *skeleton, int32_t skeletonLength,
+                             int32_t *pLength);
 
 #endif
