@@ -43,8 +43,8 @@ class PatternMap;
 **/
 class U_I18N_API DateTimePatternGenerator : public UObject {
 public:
-    // TODO(markus): Add createEmtpyInstance() and/or split off Builder class.
-    // TODO(markus): If splitting off Builder class: As subclass or independent?
+    // TODO(claireho): Split off Builder class.
+    // TODO(claireho): If splitting off Builder class: As subclass or independent?
 
     /**
      * Construct a flexible generator according to default locale.
@@ -102,7 +102,6 @@ public:
      * @return skeleton   such as "MMMdd"
      * @draft ICU 3.8
      */
-    // TODO(markus): Can this be static?
     UnicodeString getSkeleton(const UnicodeString& pattern, UErrorCode& status) const;
 
     /**
@@ -116,7 +115,6 @@ public:
      * @return base skeleton, such as "Md"
      * @draft ICU 3.8
      */
-    // TODO(markus): Can this be static?
     UnicodeString getBaseSkeleton(const UnicodeString& pattern, UErrorCode& status) const;
 
     /**
@@ -271,8 +269,17 @@ public:
      *               which must not indicate a failure before the function call.
      * @draft ICU 3.8
      */
-    void getSkeletons(StringEnumeration** skeletons, StringEnumeration** patterns, UErrorCode& status) const;
+     StringEnumeration* getSkeletons(UErrorCode& status) const;
 
+     /**
+      * Return a pattern corresponding to a given skeleton.
+      * @param skeleton 
+      * @param status Must be a reference to an error code value,
+      *               which must not indicate a failure before the function call.
+      * @draft ICU 3.8
+      */
+     const UnicodeString& getPatternForSkeleton(const UnicodeString& skeleton, UErrorCode& status) const;
+     
     /**
      * Return a list of all the base skeletons (in canonical form) from this class.
      *
@@ -283,7 +290,7 @@ public:
      *               which must not indicate a failure before the function call.
      * @draft ICU 3.8
      */
-    void getBaseSkeletons(StringEnumeration** baseSkeletons, UErrorCode& status) const;
+     StringEnumeration* getBaseSkeletons(UErrorCode& status) const;
      
      /**
       * Redundant patterns are those which if removed, make no difference in the
@@ -298,11 +305,10 @@ public:
       *               which must not indicate a failure before the function call.
       * @return the StringEnumeration with added elements.
       * @draft ICU 3.8
-      * @deprecated
       * @internal
       */
      // TODO(claireho):Confirm the status is draft or deprecated.
-     StringEnumeration* getRedundants(StringEnumeration** output, UErrorCode& status);
+     StringEnumeration* getRedundants(UErrorCode& status);
       
     /**
      * The decimal value is used in formatting fractions of seconds. If the
@@ -386,6 +392,7 @@ private:
     Hashtable *fAvailableFormatKeyHash;
     UnicodeString hackPattern;
     UErrorCode status;
+    UnicodeString emptyString;
 
     static const int32_t FRACTIONAL_MASK = 1<<UDATPG_FRACTIONAL_SECOND_FIELD;
     static const int32_t SECOND_AND_FRACTIONAL_MASK = (1<<UDATPG_SECOND_FIELD) | (1<<UDATPG_FRACTIONAL_SECOND_FIELD);

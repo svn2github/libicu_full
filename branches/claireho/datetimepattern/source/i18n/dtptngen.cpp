@@ -255,6 +255,7 @@ DateTimePatternGenerator::getSkeleton(const UnicodeString& pattern, UErrorCode& 
     dtMatcher->set(pattern, fp);
     ptrSkeleton=dtMatcher->getSkeleton();
     UnicodeString result;
+    // TODO call getSkeleton() instead
     for (int32_t i=0; i<UDATPG_FIELD_COUNT; ++i ) {
         if (ptrSkeleton->original[i].length()!=0) {
             result += ptrSkeleton->original[i];
@@ -846,7 +847,6 @@ DateTimePatternGenerator::getBestAppending(int32_t missingFields) {
                 tempPattern,
                 appendName
             };
-
             formattedPattern = MessageFormat::format(appendItemFormats[topField], formatPattern, 3, resultPattern, err);
             lastMissingFieldMask = distanceInfo->missingFieldMask;
         }
@@ -907,19 +907,44 @@ DateTimePatternGenerator::copyHashtable(Hashtable *other) {
     }
 }
 
-void
-DateTimePatternGenerator::getSkeletons(StringEnumeration** skeletonEnumerator, StringEnumeration** patternEnumerator, UErrorCode& status) const {
-    *skeletonEnumerator = new DTSkeletonEnumeration(*patternMap, DT_SKELETON, status);
-    *patternEnumerator = new DTSkeletonEnumeration(*patternMap, DT_PATTERN, status);
+StringEnumeration*
+DateTimePatternGenerator::getSkeletons(UErrorCode& status) const {
+    StringEnumeration* skeletonEnumerator = new DTSkeletonEnumeration(*patternMap, DT_SKELETON, status);
+    return skeletonEnumerator;
 }
 
-void
-DateTimePatternGenerator::getBaseSkeletons(StringEnumeration** skeletonEnumerator, UErrorCode& status) const {
-     *skeletonEnumerator = new DTSkeletonEnumeration(*patternMap, DT_BASESKELETON, status);
+const UnicodeString&
+DateTimePatternGenerator::getPatternForSkeleton(const UnicodeString& skeleton, UErrorCode& status) const {
+    UChar baseChar;
+    PtnElem *curElem;
+    
+    if (skeleton.length() ==0) {
+        return emptyString;
+    }  
+    
+    // the baseChar must be A-Z or a-z
+    if ( (baseChar >= CAP_A) && (baseChar <= CAP_Z) ) {
+      curElem = patternMap->boot[26 + (baseChar-CAP_A)];
+    }
+    else {
+       if ( (baseChar >=LOW_A) && (baseChar <= LOW_Z) ) {
+         curElem = patternMap->boot[baseChar-LOW_A];
+       }
+       else
+          return emptyString;
+    }
+
 }
 
 StringEnumeration*
-DateTimePatternGenerator::getRedundants(StringEnumeration** output, UErrorCode& status) {
+DateTimePatternGenerator::getBaseSkeletons(UErrorCode& status) const {
+    StringEnumeration* baseSkeletonEnumerator = new DTSkeletonEnumeration(*patternMap, DT_BASESKELETON, status);
+    return baseSkeletonEnumerator;
+}
+
+StringEnumeration*
+DateTimePatternGenerator::getRedundants(UErrorCode& status) {
+    StringEnumeration* output = new DTRedundantEnumeration();
     UnicodeString *pattern;
 
     PatternMapIterator it;
@@ -931,17 +956,14 @@ DateTimePatternGenerator::getRedundants(StringEnumeration** output, UErrorCode& 
         }
         skipMatcher = &current;
         UnicodeString trial = getBestPattern(current.getPattern(), status);
-        if (trial == *pattern) {    
-            if (*output==NULL) {
-                *output = new DTRedundantEnumeration();
-            }
-            ((DTRedundantEnumeration *)(*output))->add(*pattern, status);
+        if (trial == *pattern) {   
+            ((DTRedundantEnumeration *)output)->add(*pattern, status);
         }
         if (current.equals(skipMatcher)) {
             continue;
         }
     }
-    return *output;
+    return output;
 }
 
 UBool
