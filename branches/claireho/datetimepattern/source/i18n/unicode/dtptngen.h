@@ -32,12 +32,16 @@ class DistanceInfo;
 class PatternMap;
 
 /**
- * This class provides flexible generation of date format patterns, like "yy-MM-dd". The user can build up the generator
- * by adding successive patterns. Once that is done, a query can be made using a "skeleton", which is a pattern which just
- * includes the desired fields and lengths. The generator will return the "best fit" pattern corresponding to that skeleton.
+ * This class provides flexible generation of date format patterns, like "yy-MM-dd". 
+ * The user can build up the generator by adding successive patterns. Once that 
+ * is done, a query can be made using a "skeleton", which is a pattern which just
+ * includes the desired fields and lengths. The generator will return the "best fit" 
+ * pattern corresponding to that skeleton.
  * <p>The main method people will use is getBestPattern(String skeleton),
- * since normally this class is pre-built with data from a particular locale. However, generators can be built directly from other data as well.
- * <p><i>Issue: may be useful to also have a function that returns the list of fields in a pattern, in order, since we have that internally.
+ * since normally this class is pre-built with data from a particular locale. 
+ * However, generators can be built directly from other data as well.
+ * <p><i>Issue: may be useful to also have a function that returns the list of 
+ * fields in a pattern, in order, since we have that internally.
  * That would be useful for getting the UI order of field elements.</i>
  * @draft ICU 3.8
 **/
