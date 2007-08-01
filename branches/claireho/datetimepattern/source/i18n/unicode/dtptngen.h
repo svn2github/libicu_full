@@ -278,7 +278,7 @@ public:
       *               which must not indicate a failure before the function call.
       * @draft ICU 3.8
       */
-     const UnicodeString& getPatternForSkeleton(const UnicodeString& skeleton, UErrorCode& status) const;
+     const UnicodeString& getPatternForSkeleton(const UnicodeString& skeleton) const;
      
     /**
      * Return a list of all the base skeletons (in canonical form) from this class.
@@ -304,10 +304,8 @@ public:
       * @param status Must be a reference to an error code value,
       *               which must not indicate a failure before the function call.
       * @return the StringEnumeration with added elements.
-      * @draft ICU 3.8
-      * @internal
+      * @internal ICU 3.8
       */
-     // TODO(claireho):Confirm the status is draft or deprecated.
      StringEnumeration* getRedundants(UErrorCode& status);
       
     /**

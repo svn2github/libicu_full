@@ -914,7 +914,7 @@ DateTimePatternGenerator::getSkeletons(UErrorCode& status) const {
 }
 
 const UnicodeString&
-DateTimePatternGenerator::getPatternForSkeleton(const UnicodeString& skeleton, UErrorCode& status) const {
+DateTimePatternGenerator::getPatternForSkeleton(const UnicodeString& skeleton) const {
     UChar baseChar;
     PtnElem *curElem;
     
@@ -924,16 +924,23 @@ DateTimePatternGenerator::getPatternForSkeleton(const UnicodeString& skeleton, U
     
     // the baseChar must be A-Z or a-z
     if ( (baseChar >= CAP_A) && (baseChar <= CAP_Z) ) {
-      curElem = patternMap->boot[26 + (baseChar-CAP_A)];
+        curElem = patternMap->boot[26 + (baseChar-CAP_A)];
     }
     else {
-       if ( (baseChar >=LOW_A) && (baseChar <= LOW_Z) ) {
-         curElem = patternMap->boot[baseChar-LOW_A];
-       }
-       else
-          return emptyString;
+        if ( (baseChar >=LOW_A) && (baseChar <= LOW_Z) ) {
+            curElem = patternMap->boot[baseChar-LOW_A];
+        }
+        else {
+            return emptyString;
+        }
     }
-
+    while ( curElem != NULL ) {
+        if ( curElem->skeleton->getSkeleton()==skeleton ) {
+            return *(curElem->pattern);
+        }
+        curElem=curElem->next;
+    }
+    return emptyString;
 }
 
 StringEnumeration*
@@ -982,7 +989,16 @@ DateTimePatternGenerator::isCanonicalItem(const UnicodeString& item) {
 
 DateTimePatternGenerator*
 DateTimePatternGenerator::clone() {
-    return new DateTimePatternGenerator(*this, status);
+    DateTimePatternGenerator* dtGen = new DateTimePatternGenerator(*this, status);
+    if (U_FAILURE(status)) {
+        if (dtGen!=NULL) {
+            delete dtGen;
+        }
+        return NULL;
+    }
+    else {
+        return dtGen;
+    }
 }
 
 PatternMap::PatternMap() {

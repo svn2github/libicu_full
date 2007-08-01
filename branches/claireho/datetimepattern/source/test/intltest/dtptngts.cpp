@@ -148,7 +148,7 @@ void IntlTestDateTimePatternGeneratorAPI::testAPI(/*char *par*/)
     logln("Testing DateTimePatternGenerator::clone()");
     status = U_ZERO_ERROR;
     
-    DateTimePatternGenerator *cloneDTPatternGen=instFromLocale->clone(status);
+    DateTimePatternGenerator *cloneDTPatternGen=instFromLocale->clone();
   
     if (U_FAILURE(status)) {
         delete instFromLocale;
@@ -157,8 +157,7 @@ void IntlTestDateTimePatternGeneratorAPI::testAPI(/*char *par*/)
     }
     else {
            delete instFromLocale;
-           //TODO(claireho) temp comment out the delete clone object which caused the GPF.
-           //delete cloneDTPatternGen;
+           delete cloneDTPatternGen;
      }
    
     // ======= Test simple use cases    
@@ -167,7 +166,7 @@ void IntlTestDateTimePatternGeneratorAPI::testAPI(/*char *par*/)
     Locale deLocale=Locale::getGermany();
     UDate sampleDate=LocaleTest::date(99, 9, 13, 23, 58, 59);
     DateTimePatternGenerator *gen = DateTimePatternGenerator::createInstance(deLocale, status);
-    UnicodeString findPattern = gen->getBestPattern(UnicodeString("MMMddHmm"));
+    UnicodeString findPattern = gen->getBestPattern(UnicodeString("MMMddHmm"), status);
     SimpleDateFormat *format = new SimpleDateFormat(findPattern, deLocale, status);
     //TimeZone *zone = TimeZone::createTimeZone(UnicodeString("Europe/Paris"));
     TimeZone *zone = TimeZone::createTimeZone(UnicodeString("ECT"));
@@ -186,9 +185,9 @@ void IntlTestDateTimePatternGeneratorAPI::testAPI(/*char *par*/)
     // add new pattern
     conflictingStatus = gen->addPattern(UnicodeString("d'. von' MMMM"), true, conflictingPattern, status); 
     status = U_ZERO_ERROR;
-    UnicodeString testPattern=gen->getBestPattern(UnicodeString("MMMMdd"));
-    testPattern=gen->getBestPattern(UnicodeString("MMMddHmm"));
-    format->applyPattern(gen->getBestPattern(UnicodeString("MMMMddHmm")));
+    UnicodeString testPattern=gen->getBestPattern(UnicodeString("MMMMdd"), status);
+    testPattern=gen->getBestPattern(UnicodeString("MMMddHmm"), status);
+    format->applyPattern(gen->getBestPattern(UnicodeString("MMMMddHmm"), status));
     dateReturned="";
     dateReturned = format->format(sampleDate, dateReturned, status);
     expectedResult=UnicodeString("8:58 14. von Oktober");
@@ -221,7 +220,7 @@ void IntlTestDateTimePatternGeneratorAPI::testAPI(/*char *par*/)
     }
      
     // modify it to change the zone.  
-    UnicodeString newPattern = gen->replaceFieldTypes(pattern, UnicodeString("vvvv"));
+    UnicodeString newPattern = gen->replaceFieldTypes(pattern, UnicodeString("vvvv"), status);
     format->applyPattern(newPattern);
     dateReturned="";
     dateReturned = format->format(sampleDate, dateReturned, status);
@@ -258,22 +257,19 @@ void IntlTestDateTimePatternGeneratorAPI::testAPI(/*char *par*/)
     UnicodeString baseSkeletons[40];
     int32_t cntSkeletons=0;
     int32_t cntBaseSktns=0;
-    //cntSkeletons = gen->getSkeletons(40, skeletons, patterns, status);
-    //cntBaseSktns = gen->getBaseSkeletons(40, baseSkeletons, status);
-    StringEnumeration* ptrPatternEnum;
-    StringEnumeration* ptrSkeletonEnum;
-    StringEnumeration* ptrBaseSkeletonEnum;
-    gen->getSkeletons(&ptrSkeletonEnum, &ptrPatternEnum, status);
+    
+    StringEnumeration* ptrSkeletonEnum = gen->getSkeletons(status);
     if(U_FAILURE(status)) {
          errln("ERROR: Fail to get skeletons !\n");
     }
-    UnicodeString *ptrSkeleton;
+    UnicodeString returnPattern, *ptrSkeleton;
     ptrSkeletonEnum->reset(status);
     int32_t count=ptrSkeletonEnum->count(status);
     for (int32_t i=0; i<count; ++i) {
         ptrSkeleton = (UnicodeString *)ptrSkeletonEnum->snext(status);
+        returnPattern = gen->getPatternForSkeleton(*ptrSkeleton);
     }
-    gen->getBaseSkeletons(&ptrBaseSkeletonEnum, status);
+    StringEnumeration* ptrBaseSkeletonEnum = gen->getBaseSkeletons(status);
     if(U_FAILURE(status)) {
          errln("ERROR: Fail to get base skeletons !\n");
      }   
@@ -305,7 +301,7 @@ void IntlTestDateTimePatternGeneratorAPI::testAPI(/*char *par*/)
             errln("ERROR: Could not create DateTimePatternGenerator with locale index:%d .\n", localeIndex);
         }
         while (patternData[dataIndex].length() > 0) {
-            bestPattern = patGen->getBestPattern(patternData[dataIndex++]);
+            bestPattern = patGen->getBestPattern(patternData[dataIndex++], status);
             
             SimpleDateFormat* sdf = new SimpleDateFormat(bestPattern, loc, status);
             resultDate = "";
@@ -370,7 +366,7 @@ void IntlTestDateTimePatternGeneratorAPI::testAPI(/*char *par*/)
         for (int32_t j=0; j<len; ++j ) {
            randomSkeleton += rand()%80;
         }
-        UnicodeString bestPattern = randDTGen->getBestPattern(randomSkeleton);
+        UnicodeString bestPattern = randDTGen->getBestPattern(randomSkeleton, status);
     }
     delete randDTGen;
     
@@ -391,6 +387,7 @@ void IntlTestDateTimePatternGeneratorAPI::testAPI(/*char *par*/)
     
     
     // ====== Test createEmptyInstance()
+    
     logln("Testing createEmptyInstance()");
     status = U_ZERO_ERROR;
     
@@ -398,13 +395,14 @@ void IntlTestDateTimePatternGeneratorAPI::testAPI(/*char *par*/)
     if(U_FAILURE(status)) {
          errln("ERROR: Fail to create an empty instance !\n");
     }
+    
     conflictingStatus = test->addPattern(UnicodeString("MMMMd"), true, conflictingPattern, status); 
     status = U_ZERO_ERROR;
-    testPattern=test->getBestPattern(UnicodeString("MMMMdd"));
+    testPattern=test->getBestPattern(UnicodeString("MMMMdd"), status);
     conflictingStatus = test->addPattern(UnicodeString("HH:mm"), true, conflictingPattern, status); 
     conflictingStatus = test->addPattern(UnicodeString("MMMMMd"), true, conflictingPattern, status); //duplicate pattern
     StringEnumeration *output=NULL;
-    output = test->getRedundants(&output, status);
+    //output = test->getRedundants(status);
     expectedResult=UnicodeString("MMMMd");
     if (output != NULL) {
         output->reset(status);
@@ -412,6 +410,10 @@ void IntlTestDateTimePatternGeneratorAPI::testAPI(/*char *par*/)
         if ( (dupPattern==NULL) || (*dupPattern != expectedResult) ) {
                 errln("ERROR: Fail in getRedundants !\n");
         }
+    }
+    
+    if (test!=NULL) {
+        delete test;
     }
 }
 
