@@ -309,7 +309,7 @@ void IntlTestDateTimePatternGeneratorAPI::testAPI(/*char *par*/)
             if ( resultDate != patternResults[resultIndex] ) {
                 errln("ERROR: Test various skeletons[%d] .\n", dataIndex-1);
                 // TODO Remove printf once ICU pick up CLDR 1.5
-                /*
+                
                 printf("\n\nUnmatched result!\n TestPattern:");
                 for (int32_t i=0; i < patternData[dataIndex-1].length(); ++i) {
                      printf("%c", patternData[dataIndex-1].charAt(i));
@@ -335,7 +335,7 @@ void IntlTestDateTimePatternGeneratorAPI::testAPI(/*char *par*/)
                 for (int32_t i=0; i < resultDate.length(); ++i) {
                      printf("%x", resultDate.charAt(i));
                 }
-                */
+                
                 
             }
             

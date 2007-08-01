@@ -19,7 +19,6 @@
 #include "unicode/dtptngen.h"
 #include "unicode/msgfmt.h"
 #include "unicode/smpdtfmt.h"
-#include "unicode/translit.h"
 #include "unicode/udat.h"
 #include "unicode/udatpg.h"
 #include "unicode/ures.h"
@@ -124,7 +123,6 @@ static const char* CLDR_AVAILABLE_FORMAT[MAX_AVAILABLE_FORMATS] = {
         "mmss", "yyMMM", "yyyy",
 };  // binary ascending order
 
-static Transliterator *fromHex=NULL;
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(DateTimePatternGenerator)
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(PtnSkeleton)
@@ -251,14 +249,12 @@ DateTimePatternGenerator::initData(const Locale& locale) {
 UnicodeString
 DateTimePatternGenerator::getSkeleton(const UnicodeString& pattern, UErrorCode& status) {
     PtnSkeleton *ptrSkeleton;
-    dtMatcher->set(pattern, fp);
-    ptrSkeleton=dtMatcher->getSkeleton();
     UnicodeString result;
-    // TODO call getSkeleton() instead
-    for (int32_t i=0; i<UDATPG_FIELD_COUNT; ++i ) {
-        if (ptrSkeleton->original[i].length()!=0) {
-            result += ptrSkeleton->original[i];
-        }
+    {
+        Mutex mutex;
+        dtMatcher->set(pattern, fp);
+        ptrSkeleton=dtMatcher->getSkeletonPtr();
+        result = ptrSkeleton->getSkeleton();
     }
     return result;
 }
@@ -266,12 +262,15 @@ DateTimePatternGenerator::getSkeleton(const UnicodeString& pattern, UErrorCode& 
 UnicodeString
 DateTimePatternGenerator::getBaseSkeleton(const UnicodeString& pattern, UErrorCode& status) {
     PtnSkeleton *ptrSkeleton;
-    dtMatcher->set(pattern, fp);
-    ptrSkeleton=dtMatcher->getSkeleton();
     UnicodeString result;
-    for (int32_t i=0; i<UDATPG_FIELD_COUNT; ++i ) {
-        if (ptrSkeleton->baseOriginal[i].length()!=0) {
-            result += ptrSkeleton->baseOriginal[i];
+    {
+        Mutex mutex;
+        dtMatcher->set(pattern, fp);
+        ptrSkeleton=dtMatcher->getSkeletonPtr();
+        for (int32_t i=0; i<UDATPG_FIELD_COUNT; ++i ) {
+            if (ptrSkeleton->baseOriginal[i].length()!=0) {
+                result += ptrSkeleton->baseOriginal[i];
+            }
         }
     }
     return result;
@@ -293,7 +292,7 @@ DateTimePatternGenerator::addICUPatterns(const Locale& locale) {
         conflictingStatus = addPattern(df->toPattern(dfPattern), FALSE, conflictingString, status);
         newPattern=df->toPattern(dfPattern);
         if (U_FAILURE(status)) {
-            // TODO(claireho): ?
+            return;
         }
 
         // HACK for hh:ss
@@ -600,8 +599,10 @@ UnicodeString
 DateTimePatternGenerator::replaceFieldTypes(const UnicodeString& pattern, 
                                             const UnicodeString& skeleton, 
                                             UErrorCode& status) {
-
-    dtMatcher->set(skeleton, fp);
+    {
+        Mutex mutex;
+        dtMatcher->set(skeleton, fp);
+    }
     UnicodeString result = adjustFieldTypes(pattern, FALSE);
     return result;
 }
@@ -688,7 +689,7 @@ DateTimePatternGenerator::addPattern(
     DateTimeMatcher matcher;
     matcher.set(pattern, fp, skeleton);
     matcher.getBasePattern(basePattern);
-    UnicodeString *duplicatePattern = patternMap->getPatternFromSkeleton(skeleton);
+    UnicodeString *duplicatePattern = patternMap->getPatternFromBasePattern(basePattern);
     if (duplicatePattern != NULL ) {
         conflictingStatus = UDATPG_BASE_CONFLICT;
         conflictingPattern = *duplicatePattern;
@@ -696,10 +697,17 @@ DateTimePatternGenerator::addPattern(
             return conflictingStatus;
         }
     }
-    // TODO(claireho) how to set UDATPG_CONFLICT value ?
+    duplicatePattern = patternMap->getPatternFromSkeleton(skeleton);
+    if (duplicatePattern != NULL ) {
+        conflictingStatus = UDATPG_CONFLICT;
+        conflictingPattern = *duplicatePattern;
+        if (!override) {
+            return conflictingStatus;
+        }
+    }
     patternMap->add(basePattern, skeleton, pattern, status);
     if(U_FAILURE(status)) {
-        // TODO(markus): Now what?
+        return conflictingStatus;
     }
     
     return UDATPG_NO_CONFLICT;
@@ -742,11 +750,9 @@ DateTimePatternGenerator::getBestRaw(DateTimeMatcher& source,
             continue;
         }
         int32_t distance=source.getDistance(trial, includeMask, tempInfo);
-        UnicodeString* tempPattern=patternMap->getPatternFromSkeleton(*trial.getSkeleton());
-
         if (distance<bestDistance) {
             bestDistance=distance;
-            bestPattern=patternMap->getPatternFromSkeleton(*trial.getSkeleton());
+            bestPattern=patternMap->getPatternFromSkeleton(*trial.getSkeletonPtr());
             missingFields->setTo(tempInfo);
             if (distance==0) {
                 break;
@@ -824,11 +830,11 @@ DateTimePatternGenerator::getBestAppending(int32_t missingFields) {
             if ( lastMissingFieldMask == distanceInfo->missingFieldMask ) {
                 break;  // cannot find the proper missing field
             }
-            if (((distanceInfo->missingFieldMask & SECOND_AND_FRACTIONAL_MASK)==FRACTIONAL_MASK) &&
-                ((missingFields & SECOND_AND_FRACTIONAL_MASK) == SECOND_AND_FRACTIONAL_MASK)) {
+            if (((distanceInfo->missingFieldMask & UDATPG_SECOND_AND_FRACTIONAL_MASK)==UDATPG_FRACTIONAL_MASK) &&
+                ((missingFields & UDATPG_SECOND_AND_FRACTIONAL_MASK) == UDATPG_SECOND_AND_FRACTIONAL_MASK)) {
                 resultPattern = adjustFieldTypes(resultPattern, FALSE);
                 resultPattern = tempPattern;
-                distanceInfo->missingFieldMask &= ~FRACTIONAL_MASK;
+                distanceInfo->missingFieldMask &= ~UDATPG_FRACTIONAL_MASK;
                 continue;
             }
             int32_t startingMask = distanceInfo->missingFieldMask;
@@ -1031,7 +1037,6 @@ PatternMap::copyFrom(const PatternMap& other, UErrorCode& status) {
     }
 }
 
-
 PatternMap::~PatternMap() {
    for (int32_t i=0; i < MAX_PATTERN_ENTRIES; ++i ) {
        if (boot[i]!=NULL ) {
@@ -1223,8 +1228,7 @@ PatternMap::getPatternFromSkeleton(PtnSkeleton& skeleton) { // key to search for
    }while (curElem != NULL);
 
    return NULL;
-}  // PatternMap::getFromBasePattern
-
+}  
 
 UBool
 PatternMap::equals(const PatternMap& other) {
@@ -1309,18 +1313,11 @@ DateTimeMatcher::set(const UnicodeString& pattern, FormatParser* fp) {
 }
 
 void
-DateTimeMatcher::set(const UnicodeString& patternForm, FormatParser* fp, PtnSkeleton& skeleton) {
+DateTimeMatcher::set(const UnicodeString& pattern, FormatParser* fp, PtnSkeleton& skeleton) {
 
-    const UChar oldFormat[3]={0x5C, 0x75, 0}; // "\\u"
     const UChar repeatedPatterns[6]={CAP_G, CAP_E, LOW_Z, LOW_V, CAP_Q, 0}; // "GEzvQ"
     UnicodeString repeatedPattern=UnicodeString(repeatedPatterns);
 
-    if (patternForm.indexOf(oldFormat, 3, 0) > 0 ) {
-        UnicodeString oldPattern(patternForm);
-    }
-    UnicodeString pattern(patternForm);
-
-    //fromHex->transliterate(pattern);
     for (int32_t i=0; i<UDATPG_FIELD_COUNT; ++i) {
         skeleton.type[i]=NONE;
     }
@@ -1355,13 +1352,10 @@ DateTimeMatcher::set(const UnicodeString& patternForm, FormatParser* fp, PtnSkel
         skeleton.type[typeValue] = (char)subTypeValue;
     }
 
-    {
-        Mutex mutex;
-        for (int32_t i=0; i<UDATPG_FIELD_COUNT; ++i) {
-            this->skeleton.type[i] = skeleton.type[i];
-            this->skeleton.baseOriginal[i] =  skeleton.baseOriginal[i];
-            this->skeleton.original[i] = skeleton.original[i];
-        }
+    for (int32_t i=0; i<UDATPG_FIELD_COUNT; ++i) {
+        this->skeleton.type[i] = skeleton.type[i];
+        this->skeleton.baseOriginal[i] =  skeleton.baseOriginal[i];
+        this->skeleton.original[i] = skeleton.original[i];
     }
 
     return;
@@ -1465,7 +1459,7 @@ DateTimeMatcher::getFieldMask() {
 }
 
 PtnSkeleton*
-DateTimeMatcher::getSkeleton() {
+DateTimeMatcher::getSkeletonPtr() {
     return &skeleton;
 }
 

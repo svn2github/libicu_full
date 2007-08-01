@@ -12,6 +12,9 @@
 #ifndef __DTPTNGEN_IMPL_H__
 #define __DTPTNGEN_IMPL_H__
 
+// TODO(claireho): Split off Builder class.
+// TODO(claireho): If splitting off Builder class: As subclass or independent?
+
 #define MAX_PATTERN_ENTRIES 52
 #define MAX_CLDR_FIELD_LEN  60
 #define MAX_DT_TOKEN        50
@@ -80,6 +83,9 @@
 #define DT_DELTA           0x10
 
 U_NAMESPACE_BEGIN
+
+const int32_t UDATPG_FRACTIONAL_MASK = 1<<UDATPG_FRACTIONAL_SECOND_FIELD;
+const int32_t UDATPG_SECOND_AND_FRACTIONAL_MASK = (1<<UDATPG_SECOND_FIELD) | (1<<UDATPG_FRACTIONAL_SECOND_FIELD);
 
 typedef enum dtStrEnum {
     DT_BASESKELETON,
@@ -254,7 +260,7 @@ public:
     void set(const UnicodeString& pattern, FormatParser* fp, PtnSkeleton& skeleton);
     void copyFrom(PtnSkeleton& skeleton);
     void copyFrom();
-    PtnSkeleton* getSkeleton();
+    PtnSkeleton* getSkeletonPtr();
     UBool equals(DateTimeMatcher* other);
     int32_t getDistance(DateTimeMatcher& other, int32_t includeMask, DistanceInfo& distanceInfo);
     DateTimeMatcher();

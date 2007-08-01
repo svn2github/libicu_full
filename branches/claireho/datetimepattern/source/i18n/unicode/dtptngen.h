@@ -43,9 +43,6 @@ class PatternMap;
 **/
 class U_I18N_API DateTimePatternGenerator : public UObject {
 public:
-    // TODO(claireho): Split off Builder class.
-    // TODO(claireho): If splitting off Builder class: As subclass or independent?
-
     /**
      * Construct a flexible generator according to default locale.
      * @param status Must be a reference to an error code value,
@@ -77,8 +74,9 @@ public:
     virtual ~DateTimePatternGenerator();
 
     /**
-     * Clones DateTimePatternGenerator object.  Clients are responsible for deleting
-     * the DateTimePatternGenerator object cloned.
+     * Clone DateTimePatternGenerator object. Return NULL if there is an error 
+     * clones the object. Clients are responsible for deleting the 
+     * DateTimePatternGenerator object cloned.
      * @draft ICU 3.8
      */
     DateTimePatternGenerator* clone() const;
@@ -96,8 +94,10 @@ public:
      * Utility to return a unique skeleton from a given pattern. For example,
      * both "MMM-dd" and "dd/MMM" produce the skeleton "MMMdd".
      *
-     * @param pattern     Input pattern, such as "dd/MMM"
-     * @return skeleton   such as "MMMdd"
+     * @param pattern   Input pattern, such as "dd/MMM"
+     * @param status    Must be a reference to an error code value,
+     *                  which must not indicate a failure before the function call.
+     * @return skeleton such as "MMMdd"
      * @draft ICU 3.8
      */
     UnicodeString getSkeleton(const UnicodeString& pattern, UErrorCode& status);
@@ -110,6 +110,8 @@ public:
      * (notice the single d).
      *
      * @param pattern  Input pattern, such as "dd/MMM"
+     * @param status Must be a reference to an error code value,
+     *               which must not indicate a failure before the function call.
      * @return base skeleton, such as "Md"
      * @draft ICU 3.8
      */
@@ -119,19 +121,20 @@ public:
      * Adds a pattern to the generator. If the pattern has the same skeleton as
      * an existing pattern, and the override parameter is set, then the previous
      * value is overriden. Otherwise, the previous value is retained. In either
-     * case, the conflicting status is set and conflicting pattern is 
-     * return.
+     * case, the conflicting status is set and previous vale is stored in 
+     * conflicting pattern.
      * <p>
      * Note that single-field patterns (like "MMM") are automatically added, and
      * don't need to be added explicitly!
      *
-     * @param pattern    Input pattern, such as "dd/MMM"
-     * @param override   when existing values are to be overridden use TRUE, 
-     *                   otherwise use FALSE.
-     * @param conflictingPattern 
-     *                   previous pattern with the same skeleton.
-     * @return conflicting status    
-     *                   UDATPG_NO_CONFLICT, UDATPG_BASE_CONFLICT or UDATPG_CONFLICT.
+     * @param pattern   Input pattern, such as "dd/MMM"
+     * @param override  When existing values are to be overridden use true, 
+     *                   otherwise use false.
+     * @param conflicting pattern  Previous pattern with the same skeleton.
+     * @param status Must be a reference to an error code value,
+     *               which must not indicate a failure before the function call.
+     * @return conflicting status.  The value could be UDATPG_NO_CONFLICT, 
+     *                             UDATPG_BASE_CONFLICT or UDATPG_CONFLICT.
      * @draft ICU 3.8
      */
     UDateTimePatternConflict addPattern(const UnicodeString& pattern, 
@@ -241,39 +244,37 @@ public:
      * "dd-MMMM hh:mm". This is used internally to get the best match for the
      * input skeleton, but can also be used externally.
      *
-     * @param pattern
-     *        input pattern
+     * @param pattern Input pattern
      * @param skeleton
-     * @return
-     *        pattern adjusted to match the skeleton fields widths and subtypes.
+     * @param status Must be a reference to an error code value,
+     *               which must not indicate a failure before the function call.
+     * @return pattern adjusted to match the skeleton fields widths and subtypes.
      * @draft ICU 3.8
      */
-     UnicodeString replaceFieldTypes(const UnicodeString& pattern, const UnicodeString& skeleton, UErrorCode& status);
+     UnicodeString replaceFieldTypes(const UnicodeString& pattern, 
+                                     const UnicodeString& skeleton, 
+                                     UErrorCode& status);
 
     /**
-     * Return a list of all the skeletons (in canonical form) from this class,
-     * and a list of all the patterns that they map to.
+     * Return a list of all the skeletons (in canonical form) from this class.
      *
      * The two lists are returned as a pair of same-length StringEnumeration objects.
      * Enumerate in parallel for corresponding skeletons and patterns.
      *
-     * @param skeletons Output parameter, receives a StringEnumeration with the skeletons.
-     *        Any previous value will be overwritten.
-     *        The caller must delete the object.
-     * @param patterns Output parameter, receives a StringEnumeration with the patterns.
-     *        Any previous value will be overwritten.
-     *        The caller must delete the object.
      * @param status Must be a reference to an error code value,
      *               which must not indicate a failure before the function call.
+     * @return StringEnumeration with the skeletons.
+     *         The caller must delete the object.
      * @draft ICU 3.8
      */
      StringEnumeration* getSkeletons(UErrorCode& status) const;
 
      /**
-      * Return a pattern corresponding to a given skeleton.
+      * Get the pattern corresponding to a given skeleton.
       * @param skeleton 
       * @param status Must be a reference to an error code value,
       *               which must not indicate a failure before the function call.
+      * @return pattern corresponding to a given skeleton.
       * @draft ICU 3.8
       */
      const UnicodeString& getPatternForSkeleton(const UnicodeString& skeleton) const;
@@ -281,27 +282,24 @@ public:
     /**
      * Return a list of all the base skeletons (in canonical form) from this class.
      *
-     * @param baseSkeletons Output parameter, receives a StringEnumeration with the base skeletons.
-     *        Any previous value will be overwritten.
-     *        The caller must delete the object.
      * @param status Must be a reference to an error code value,
      *               which must not indicate a failure before the function call.
+     * @return a StringEnumeration with the base skeletons.
+     *         The caller must delete the object.
      * @draft ICU 3.8
      */
      StringEnumeration* getBaseSkeletons(UErrorCode& status) const;
      
      /**
-      * Redundant patterns are those which if removed, make no difference in the
-      * resulting getBestPattern values. This method returns a list of them, to
-      * help check the consistency of the patterns used to build this generator.
+      * Return a list of redundant patterns are those which if removed, make no 
+      * difference in the resulting getBestPattern values. This method returns a 
+      * list of them, to help check the consistency of the patterns used to build 
+      * this generator.
       * 
-      * @param output
-      *            stores the redundant patterns that are removed. If dereference to
-      *            null and redundant patterns are found, a StringEnumeration is 
-      *            allocated.
       * @param status Must be a reference to an error code value,
       *               which must not indicate a failure before the function call.
-      * @return the StringEnumeration with added elements.
+      * @return a StringEnumeration with the redundant pattern.
+      *         The caller must delete the object.
       * @internal ICU 3.8
       */
      StringEnumeration* getRedundants(UErrorCode& status);
@@ -321,8 +319,7 @@ public:
 
     /**
      * Getter corresponding to setDecimal.
-     * @return
-     *        string corresponding to the decimal point
+     * @return UnicodeString corresponding to the decimal point
      * @draft ICU 3.8
      */
     const UnicodeString& getDecimal() const;
@@ -382,9 +379,6 @@ private:
     UnicodeString hackPattern;
     UErrorCode fStatus;
     UnicodeString emptyString;
-
-    static const int32_t FRACTIONAL_MASK = 1<<UDATPG_FRACTIONAL_SECOND_FIELD;
-    static const int32_t SECOND_AND_FRACTIONAL_MASK = (1<<UDATPG_SECOND_FIELD) | (1<<UDATPG_FRACTIONAL_SECOND_FIELD);
 
     void initData(const Locale &locale);
     void addCanonicalItems();
