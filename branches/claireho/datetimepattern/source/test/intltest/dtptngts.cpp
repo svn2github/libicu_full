@@ -148,8 +148,17 @@ void IntlTestDateTimePatternGeneratorAPI::testAPI(/*char *par*/)
     logln("Testing DateTimePatternGenerator::clone()");
     status = U_ZERO_ERROR;
     
+
+    UnicodeString decimalSymbol = instFromLocale->getDecimal();
+    UnicodeString newDecimalSymbol = UnicodeString("*");
+    decimalSymbol = instFromLocale->getDecimal();
+    instFromLocale->setDecimal(newDecimalSymbol);
     DateTimePatternGenerator *cloneDTPatternGen=instFromLocale->clone();
-  
+    decimalSymbol = cloneDTPatternGen->getDecimal();
+    if (decimalSymbol != newDecimalSymbol) {
+        dataerrln("ERROR: inconsistency is found in cloned object- exitting");
+        return;
+    }
     if (U_FAILURE(status)) {
         delete instFromLocale;
         dataerrln("ERROR: Could not create DateTimePatternGenerator (Locale::getFrench()) - exitting");
@@ -247,7 +256,7 @@ void IntlTestDateTimePatternGeneratorAPI::testAPI(/*char *par*/)
     for (int32_t i=0; i<dateReturned.length(); ++i) {
          printf("%c", dateReturned.charAt(i));
     }
-     */
+    */
     if ( format != NULL ) delete format;
     if ( zone != NULL )  delete zone;
     

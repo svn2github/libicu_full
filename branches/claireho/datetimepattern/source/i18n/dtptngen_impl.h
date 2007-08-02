@@ -9,6 +9,8 @@
 *******************************************************************************
 */
 
+#include "uvector.h"
+
 #ifndef __DTPTNGEN_IMPL_H__
 #define __DTPTNGEN_IMPL_H__
 
@@ -207,6 +209,7 @@ public:
     virtual UClassID getDynamicClassID() const;
     int32_t getCanonicalIndex(const UnicodeString& s);
     UBool isPatternSeparator(UnicodeString& field);
+    void setFilter(UErrorCode &status);
 
 private:
    typedef enum TokenStatus {
@@ -216,8 +219,8 @@ private:
        DONE
    } ToeknStatus;
 
-
    TokenStatus status;
+   UnicodeSet *quoteFilter;
 
    virtual TokenStatus setTokens(const UnicodeString& pattern, int32_t startPos, int32_t *len);
 };
@@ -352,11 +355,9 @@ public:
     virtual void reset(UErrorCode& status);
     virtual int32_t count(UErrorCode& status) const;
 private:
-    int32_t total;
     int32_t pos;
-    UnicodeString* stringArray[MAX_STRING_ENUMERATION];
     UBool isCanonicalItem(const UnicodeString& item);
-    // TODO(claireho): What if the size > MAX_STRING_ENUMERATION, though the chance is very low.
+    UVector *fSkeletons;
 };
 
 class U_I18N_API DTRedundantEnumeration : public StringEnumeration {
@@ -370,11 +371,9 @@ public:
     virtual int32_t count(UErrorCode& status) const;
     void add(const UnicodeString &pattern, UErrorCode& status);
 private:
-    int32_t total;
     int32_t pos;
-    UnicodeString* stringArray[MAX_STRING_ENUMERATION];
     UBool isCanonicalItem(const UnicodeString& item);
-    // TODO(claireho): What if the size > MAX_STRING_ENUMERATION, though the chance is very low.
+    UVector *fPatterns;
 };
 
 U_NAMESPACE_END

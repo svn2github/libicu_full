@@ -20,6 +20,7 @@
 #include "unicode/locid.h"
 #include "unicode/udat.h"
 #include "unicode/udatpg.h"
+#include "unicode/uniset.h"
 
 U_NAMESPACE_BEGIN
 
@@ -65,7 +66,7 @@ public:
     static DateTimePatternGenerator* U_EXPORT2 createInstance(const Locale& uLocale, UErrorCode& status);
 
     /**
-     * Create empty generator, to be constructed with add(...) etc.
+     * Create an empty generator, to be constructed with add(...) etc.
      * @param status Must be a reference to an error code value,
      *               which must not indicate a failure before the function call.
      * @draft ICU 3.8
@@ -78,9 +79,8 @@ public:
     virtual ~DateTimePatternGenerator();
 
     /**
-     * Clone DateTimePatternGenerator object. Return NULL if there is an error 
-     * clones the object. Clients are responsible for deleting the 
-     * DateTimePatternGenerator object cloned.
+     * Clone DateTimePatternGenerator object. Clients are responsible for 
+     * deleting the DateTimePatternGenerator object cloned.
      * @draft ICU 3.8
      */
     DateTimePatternGenerator* clone() const;
@@ -160,40 +160,40 @@ public:
      * <p>
      * This reflects the way that the CLDR data is organized.
      *
-     * @param field  such as ERA
+     * @param field  such as UDATPG_ERA_FIELD.
      * @param value  pattern, such as "{0}, {1}"
      * @draft ICU 3.8
      */
     void setAppendItemFormat(UDateTimePatternField field, const UnicodeString& value);
 
     /**
-     * Getter corresponding to setAppendItemFormats. Values below 0 or at or
-     * above TYPE_LIMIT are illegal arguments.
+     * Getter corresponding to setAppendItemFormat. Values below 0 or at or
+     * above UDATPG_FIELD_COUNT are illegal arguments.
      *
-     * @param  field
+     * @param  field  such as UDATPG_ERA_FIELD.
      * @return append pattern for field
      * @draft ICU 3.8
      */
     const UnicodeString& getAppendItemFormat(UDateTimePatternField field) const;
 
     /**
-     * Sets the names of fields, eg "era" in English for ERA. These are only
+     * Sets the names of field, eg "era" in English for ERA. These are only
      * used if the corresponding AppendItemFormat is used, and if it contains a
      * {2} variable.
      * <p>
      * This reflects the way that the CLDR data is organized.
      *
-     * @param field
-     * @param value
+     * @param field   such as UDATPG_ERA_FIELD.
+     * @param value   name of the field
      * @draft ICU 3.8
      */
     void setAppendItemName(UDateTimePatternField field, const UnicodeString& value);
 
     /**
      * Getter corresponding to setAppendItemNames. Values below 0 or at or above
-     * TYPE_LIMIT are illegal arguments.
+     * UDATPG_FIELD_COUNT are illegal arguments.
      *
-     * @param field
+     * @param field  such as UDATPG_ERA_FIELD.
      * @return name for field
      * @draft ICU 3.8
      */
@@ -222,7 +222,7 @@ public:
 
     /**
      * Getter corresponding to setDateTimeFormat.
-     * @return pattern
+     * @return DateTimeFormat.
      * @draft ICU 3.8
      */
     const UnicodeString& getDateTimeFormat() const;
@@ -250,6 +250,8 @@ public:
      *
      * @param pattern Input pattern
      * @param skeleton
+     *            The skeleton is a pattern containing only the variable fields.
+     *            For example, "MMMdd" and "mmhh" are skeletons.
      * @param status Must be a reference to an error code value,
      *               which must not indicate a failure before the function call.
      * @return pattern adjusted to match the skeleton fields widths and subtypes.
@@ -262,8 +264,7 @@ public:
     /**
      * Return a list of all the skeletons (in canonical form) from this class.
      *
-     * The two lists are returned as a pair of same-length StringEnumeration objects.
-     * Enumerate in parallel for corresponding skeletons and patterns.
+     * Call getPatternForSkeleton() to get the corresponding pattern.
      *
      * @param status Must be a reference to an error code value,
      *               which must not indicate a failure before the function call.
@@ -316,7 +317,7 @@ public:
      * the decimal string is ",". Then the resulting pattern is modified to be
      * "H:mm:ss,SSSS"
      *
-     * @param decimal
+     * @param decimal 
      * @draft ICU 3.8
      */
     void setDecimal(const UnicodeString& decimal);

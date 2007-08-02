@@ -187,7 +187,7 @@ U_DRAFT void U_EXPORT2
 udatpg_setDecimal(UDateTimePatternGenerator *dtpg,
                   const UChar *decimal, int32_t length) {
     UnicodeString decimalString((UBool)(length<0), decimal, length);
-    ((DateTimePatternGenerator *)dtpg)->setDateTimeFormat(decimalString);
+    ((DateTimePatternGenerator *)dtpg)->setDecimal(decimalString);
 }
 
 U_DRAFT const UChar * U_EXPORT2

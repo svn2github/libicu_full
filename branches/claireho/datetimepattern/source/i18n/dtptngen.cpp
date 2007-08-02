@@ -21,6 +21,7 @@
 #include "unicode/smpdtfmt.h"
 #include "unicode/udat.h"
 #include "unicode/udatpg.h"
+#include "unicode/uniset.h"
 #include "unicode/ures.h"
 #include "unicode/rep.h"
 #include "cpputils.h"
@@ -123,6 +124,7 @@ static const char* CLDR_AVAILABLE_FORMAT[MAX_AVAILABLE_FORMATS] = {
         "mmss", "yyMMM", "yyyy",
 };  // binary ascending order
 
+static const UnicodeString quotingPattern= UNICODE_STRING_SIMPLE("[[[:script=Latin:][:script=Cyrl:]]&[[:L:][:M:]]]");
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(DateTimePatternGenerator)
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(PtnSkeleton)
@@ -185,6 +187,7 @@ DateTimePatternGenerator::operator=(const DateTimePatternGenerator& other) {
     fStatus = U_ZERO_ERROR;
     pLocale = other.pLocale;
     *fp = *(other.fp);
+    fp->setFilter(fStatus);
     dtMatcher->copyFrom(other.dtMatcher->skeleton);
     *distanceInfo = *(other.distanceInfo);
     dateTimeFormat = other.dateTimeFormat;
@@ -250,12 +253,10 @@ UnicodeString
 DateTimePatternGenerator::getSkeleton(const UnicodeString& pattern, UErrorCode& status) {
     PtnSkeleton *ptrSkeleton;
     UnicodeString result;
-    {
-        Mutex mutex;
-        dtMatcher->set(pattern, fp);
-        ptrSkeleton=dtMatcher->getSkeletonPtr();
-        result = ptrSkeleton->getSkeleton();
-    }
+    
+    dtMatcher->set(pattern, fp);
+    ptrSkeleton=dtMatcher->getSkeletonPtr();
+    result = ptrSkeleton->getSkeleton();
     return result;
 }
 
@@ -263,14 +264,12 @@ UnicodeString
 DateTimePatternGenerator::getBaseSkeleton(const UnicodeString& pattern, UErrorCode& status) {
     PtnSkeleton *ptrSkeleton;
     UnicodeString result;
-    {
-        Mutex mutex;
-        dtMatcher->set(pattern, fp);
-        ptrSkeleton=dtMatcher->getSkeletonPtr();
-        for (int32_t i=0; i<UDATPG_FIELD_COUNT; ++i ) {
-            if (ptrSkeleton->baseOriginal[i].length()!=0) {
-                result += ptrSkeleton->baseOriginal[i];
-            }
+    
+    dtMatcher->set(pattern, fp);
+    ptrSkeleton=dtMatcher->getSkeletonPtr();
+    for (int32_t i=0; i<UDATPG_FIELD_COUNT; ++i ) {
+        if (ptrSkeleton->baseOriginal[i].length()!=0) {
+            result += ptrSkeleton->baseOriginal[i];
         }
     }
     return result;
@@ -365,13 +364,17 @@ DateTimePatternGenerator::addCLDRData(const Locale& locale) {
     // Initialize appendItems
     static const UChar itemFormat[]= {0x7B, 0x30, 0x7D, 0x20, 0x251C, 0x7B, 0x32, 0x7D, 0x3A,
         0x20, 0x7B, 0x31, 0x7D, 0x2524, 0};  // {0} \u251C{2}: {1}\u2524
-    UnicodeString defaultItemFormat(TRUE, itemFormat, LENGTHOF(itemFormat));  // Read-only alias.
+    UnicodeString defaultItemFormat(TRUE, itemFormat, LENGTHOF(itemFormat)-1);  // Read-only alias.
 
     for (int32_t i=0; i<UDATPG_FIELD_COUNT; ++i ) {
-        appendItemFormats[i].fastCopyFrom(defaultItemFormat);  // Copy is also read-only alias.
         appendItemNames[i]=CAP_F;
-        appendItemNames[i]+=(i+0x30);  // TODO(claireho): TODO(markus): What does this do?
-        appendItemNames[i]+="";
+        if (i<10) {
+            appendItemNames[i]+=(i+0x30); 
+        }
+        else {
+            appendItemNames[i]+=0x31;
+            appendItemNames[i]+=(i-10 + 0x30);
+        }
         // NUL-terminate for the C API.
         appendItemNames[i].getTerminatedBuffer();
     }
@@ -599,10 +602,7 @@ UnicodeString
 DateTimePatternGenerator::replaceFieldTypes(const UnicodeString& pattern, 
                                             const UnicodeString& skeleton, 
                                             UErrorCode& status) {
-    {
-        Mutex mutex;
-        dtMatcher->set(skeleton, fp);
-    }
+    dtMatcher->set(skeleton, fp);
     UnicodeString result = adjustFieldTypes(pattern, FALSE);
     return result;
 }
@@ -924,8 +924,6 @@ DateTimePatternGenerator::getPatternForSkeleton(const UnicodeString& skeleton) c
         return emptyString;
     }  
 
-    // TODO(claireho): Set baseChar to something!
-    // Markus is just guessing here.
     baseChar = skeleton.charAt(0);
 
     // the baseChar must be A-Z or a-z
@@ -1351,11 +1349,13 @@ DateTimeMatcher::set(const UnicodeString& pattern, FormatParser* fp, PtnSkeleton
         }
         skeleton.type[typeValue] = (char)subTypeValue;
     }
-
-    for (int32_t i=0; i<UDATPG_FIELD_COUNT; ++i) {
-        this->skeleton.type[i] = skeleton.type[i];
-        this->skeleton.baseOriginal[i] =  skeleton.baseOriginal[i];
-        this->skeleton.original[i] = skeleton.original[i];
+    {
+        Mutex mutex;
+        for (int32_t i=0; i<UDATPG_FIELD_COUNT; ++i) {
+            this->skeleton.type[i] = skeleton.type[i];
+            this->skeleton.baseOriginal[i] =  skeleton.baseOriginal[i];
+            this->skeleton.original[i] = skeleton.original[i];
+        }
     }
 
     return;
@@ -1466,10 +1466,12 @@ DateTimeMatcher::getSkeletonPtr() {
 FormatParser::FormatParser () {
     status = START;
     itemNumber=0;
+    quoteFilter = NULL;
 }
 
 
 FormatParser::~FormatParser () {
+    delete quoteFilter;
 }
 
 
@@ -1559,7 +1561,12 @@ FormatParser::isQuoteLiteral(UnicodeString s) {
 // Please call isQuoteLiteral prior to this function.
 void
 FormatParser::getQuoteLiteral(UnicodeString& quote, int32_t *itemIndex) {
+    UErrorCode status = U_ZERO_ERROR;
     int32_t i=*itemIndex;
+    
+    if ( quoteFilter == NULL ) {
+        setFilter(status);
+    }
     if ((items[i].charAt(0)==FORWARDSLASH) || (items[i].charAt(0)==BACKSLASH) || (items[i].charAt(0)==SPACE) ||
         (items[i].charAt(0)==COMMA) ||(items[i].charAt(0)==HYPHEN) ||(items[i].charAt(0)==DOT)) {
         quote += items[i];
@@ -1577,7 +1584,11 @@ FormatParser::getQuoteLiteral(UnicodeString& quote, int32_t *itemIndex) {
                 continue;
             }
             else {
-                quote += items[i];
+                // TODO turn off the filter 
+                //if ( quoteFilter->contains(items[i].charAt(0)) ) {
+                    // TODO add error checking here
+                    quote += items[i];
+                //}
                 break;
             }
 
@@ -1604,6 +1615,11 @@ FormatParser::isPatternSeparator(UnicodeString& field) {
         }
     }
     return TRUE;
+}
+
+void
+FormatParser::setFilter(UErrorCode &status) { 
+    quoteFilter = new UnicodeSet(quotingPattern, status);
 }
 
 void
@@ -1774,8 +1790,12 @@ DTSkeletonEnumeration::DTSkeletonEnumeration(PatternMap &patternMap, dtStrEnum t
     UnicodeString s;
     int32_t bootIndex;
 
-    total=0;
     pos=0;
+    fSkeletons = new UVector(status);
+    if (U_FAILURE(status)) {
+        delete fSkeletons;
+        return;
+    }
     for (bootIndex=0; bootIndex<MAX_PATTERN_ENTRIES; ++bootIndex ) {
         curElem = patternMap.boot[bootIndex];
         while (curElem!=NULL) {
@@ -1792,9 +1812,10 @@ DTSkeletonEnumeration::DTSkeletonEnumeration(PatternMap &patternMap, dtStrEnum t
                     break;
             }
             if ( !isCanonicalItem(s) ) {
-                if ((stringArray[total++]= new UnicodeString(s))==NULL) {
-                    // out of memory
-                    status = U_MEMORY_ALLOCATION_ERROR;
+                fSkeletons->addElement(new UnicodeString(s), status);
+                if (U_FAILURE(status)) {
+                    delete fSkeletons;
+                    fSkeletons = NULL;
                     return;
                 }
             }
@@ -1804,19 +1825,13 @@ DTSkeletonEnumeration::DTSkeletonEnumeration(PatternMap &patternMap, dtStrEnum t
     if ((bootIndex==MAX_PATTERN_ENTRIES) && (curElem!=NULL) ) {
         status = U_BUFFER_OVERFLOW_ERROR;
     }
-    else {
-        if ( total < MAX_PATTERN_ENTRIES ) {  // not the last entry
-            stringArray[total]=NULL;
-        }
-    }
 }
 
 const UnicodeString*
 DTSkeletonEnumeration::snext(UErrorCode& status) {
-    if (U_SUCCESS(status) && pos < total) {
-        return stringArray[pos++];
+    if (U_SUCCESS(status) && pos < fSkeletons->size()) {
+        return (const UnicodeString*)fSkeletons->elementAt(pos++);
     }
-
     return NULL;
 }
 
@@ -1827,7 +1842,7 @@ DTSkeletonEnumeration::reset(UErrorCode& status) {
 
 int32_t
 DTSkeletonEnumeration::count(UErrorCode& status) const {
-       return U_FAILURE(status) ? 0 : total;
+       return (fSkeletons==NULL) ? 0 : fSkeletons->size();
    }
 UBool
 DTSkeletonEnumeration::isCanonicalItem(const UnicodeString& item) {
@@ -1843,35 +1858,43 @@ DTSkeletonEnumeration::isCanonicalItem(const UnicodeString& item) {
 }
 
 DTSkeletonEnumeration::~DTSkeletonEnumeration() {
-    for (int32_t i=0; i<total; ++i) {
-        delete stringArray[i];
+    UnicodeString *s;
+    for (int32_t i=0; i<fSkeletons->size(); ++i) {
+        if ((s=(UnicodeString *)fSkeletons->elementAt(i))!=NULL) {
+            delete s;
+        }
     }
+    delete fSkeletons;
 }
 
 DTRedundantEnumeration::DTRedundantEnumeration() {
-    total=0;
     pos=0;
+    fPatterns = NULL;
 }
 
 void
 DTRedundantEnumeration::add(const UnicodeString& pattern, UErrorCode& status) {
-    if (total >= MAX_PATTERN_ENTRIES ) {
-        status = U_BUFFER_OVERFLOW_ERROR;
-        return;
+    if ( (fPatterns == NULL) && U_SUCCESS(status) ) {
+        fPatterns = new UVector(status);
+        if (U_FAILURE(status)) {
+            delete fPatterns;
+            fPatterns = NULL;
+            return;
+       }
     }
-    if ((stringArray[total++]= new UnicodeString(pattern))==NULL) {
-        // out of memory
-        status = U_MEMORY_ALLOCATION_ERROR;
+    fPatterns->addElement(new UnicodeString(pattern), status);
+    if (U_FAILURE(status)) {
+        delete fPatterns;
+        fPatterns = NULL;
         return;
     }
 }
 
 const UnicodeString*
 DTRedundantEnumeration::snext(UErrorCode& status) {
-    if (U_SUCCESS(status) && pos < total) {
-        return stringArray[pos++];
+    if (U_SUCCESS(status) && pos < fPatterns->size()) {
+        return (const UnicodeString*)fPatterns->elementAt(pos++);
     }
-
     return NULL;
 }
 
@@ -1882,8 +1905,9 @@ DTRedundantEnumeration::reset(UErrorCode& status) {
 
 int32_t
 DTRedundantEnumeration::count(UErrorCode& status) const {
-       return U_FAILURE(status) ? 0 : total;
-   }
+       return (fPatterns==NULL) ? 0 : fPatterns->size();
+}
+
 UBool
 DTRedundantEnumeration::isCanonicalItem(const UnicodeString& item) {
     if ( item.length() != 1 ) {
@@ -1898,9 +1922,13 @@ DTRedundantEnumeration::isCanonicalItem(const UnicodeString& item) {
 }
 
 DTRedundantEnumeration::~DTRedundantEnumeration() {
-    for (int32_t i=0; i<total; ++i) {
-        delete stringArray[i];
+    UnicodeString *s;
+    for (int32_t i=0; i<fPatterns->size(); ++i) {
+        if ((s=(UnicodeString *)fPatterns->elementAt(i))!=NULL) {
+            delete s;
+        }
     }
+    delete fPatterns;
 }
 
 U_NAMESPACE_END
