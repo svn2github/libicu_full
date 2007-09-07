@@ -58,6 +58,49 @@ class DateFormat;
  * formats it into a string.  The resultant strings are then assembled
  * within the string template of the MessageFormat to produce the
  * final output string.
+ * <p>
+ * <strong>Note:</strong>
+ * In ICU 4.0 MessageFormat supports named arguments.  If a named argument
+ * is used, all arguments must be named.  Names start with a character in 
+ * <code>:ID_START:</code> and continue with characters in <code>:ID_CONTINUE:</code>, 
+ * in particular they do not start with a digit.  If named arguments
+ * are used, {@link #usesNamedArguments()} will return true.
+ * <p>
+ * The other new APIs supporting named arguments are 
+ * {@link #getFormatNames(UErrorCode& status)},
+ * {@link #getFormat(const UnicodeString& formatName, UErrorCode& status)}
+ * {@link #setFormat(const UnicodeString& formatName, const Format& format, UErrorCode& status)},
+ * {@link #adoptFormat(const UnicodeString& formatName, Format* formatToAdopt, UErrorCode& status)},
+ * {@link #format(const Formattable* arguments, const UnicodeString *argumentNames,
+ *                int32_t cnt, UnicodeString& appendTo, FieldPosition& status,
+ *                int32_t recursionProtection, UErrorCode& success)},
+ * {@link #format(const UnicodeString* argumentNames, const Formattable* arguments,
+ *                int32_t count,UnicodeString& appendTo,UErrorCode& status)}.
+ * These APIs are all compatible with patterns that do not used named arguments-- 
+ * in these cases the keys in the input or output <code>Map</code>s use 
+ * <code>String</code>s that name the argument indices, e.g. "0", 
+ * "1", "2"... etc.
+ * <p>
+ * When named arguments are used, certain APIs on Message that take or
+ * return arrays will throw an exception, since it is not possible to
+ * identify positions in an array using a name.  These APIs are 
+ * {@link #adoptFormats(Format** newFormats, int32_t count)},
+ * {@link #setFormats(const Format** newFormats,int32_t count)},
+ * {@link #adoptFormat(int32_t n, Format *newFormat)},
+ * {@link #getFormats(int32_t& cnt)},
+ * {@link #format(const Formattable* source,int32_t cnt,UnicodeString& appendTo, 
+ *                FieldPosition& ignore, UErrorCode& success)},
+ * {@link #format(const UnicodeString& pattern,const Formattable* arguments,int32_t cnt,
+ *                UnicodeString& appendTo,UErrorCode& success)},
+ * {@link #format(const Formattable& source, UnicodeString& appendTo,
+ *                FieldPosition& ignore, UErrorCode& success)},
+ * {@link #format(const Formattable* arguments, int32_t cnt, UnicodeString& appendTo, 
+ *                FieldPosition& status, int32_t recursionProtection,UErrorCode& success)},
+ * {@link #parse(const UnicodeString& source, ParsePosition& pos,int32_t& count)},
+ * {@link #parse(const UnicodeString& source, int32_t& cnt, UErrorCode& success)}
+ * These APIs all have corresponding new versions as listed above.
+ * <p>
+ *
  * <P>
  * During parsing, an input string is matched against the string
  * template of the MessageFormat to produce an array of Formattable
@@ -147,7 +190,7 @@ class DateFormat;
  *  \code
  *       messageFormatPattern := string ( "{" messageFormatElement "}" string )*
  *
- *       messageFormatElement := argumentIndex { "," elementFormat }
+ *       messageFormatElement := argumentIndex | argumentName { "," elementFormat }
  *
  *       elementFormat := "time" { "," datetimeStyle }
  *                      | "date" { "," datetimeStyle }
@@ -166,6 +209,8 @@ class DateFormat;
  *                      | numberFormatPattern
  *
  *       choiceStyle :=   choiceFormatPattern
+ * 
+ *       pluralStyle := pluralFormatPattern
  * \endcode
  * </pre>
  * If there is no elementFormat, then the argument must be a string,
@@ -427,7 +472,7 @@ public:
      * @param newFormats the new format to be set.
      * @param cnt        the size of the array.
      */
-    virtual void setFormats(const Format** newFormats,int32_t cnt);
+    virtual void setFormats(const Format** newFormats, int32_t cnt);
 
 
     /**
@@ -452,6 +497,55 @@ public:
      * @stable ICU 2.0
      */
     virtual void setFormat(int32_t formatNumber, const Format& format);
+    
+    // TODO (claireho) add description for format name.
+
+    /**
+     * Gets format names. This function returns formatNames in StringEnumerations
+     * which can be used with getFormat() and setFormat() to export formattable 
+     * array from current MessageFormat to another.  It is caller's resposibility 
+     * to delete the returned formatNames.
+     * @param status  U_ARGUMENT_TYPE_MISMATCH if the numberic arguments are used.
+     * @draft ICU 4.0
+     */
+    virtual StringEnumeration* getFormatNames(UErrorCode& status);
+    
+    /**
+     * Gets subformat pointer from given format name.  The returned Format object 
+     * should not be deleted by the caller, nor should the ponter of other 
+     * object .  The pointer and its contents remain valid only
+     * until the next call to any method of this class is made with
+     * this object. 
+     * @param status  U_ARGUMENT_TYPE_MISMATCH if the numberic arguments are used.
+     * @draft ICU 4.0
+     */
+    virtual Format* getFormat(const UnicodeString& formatName, UErrorCode& status);
+    
+    /**
+     * Sets one subformat from given format name.
+     * See the class description about format name.
+     * If there is no matched formatName or wrong type,
+     * the item will be ignored.
+     * @param formatName  Name of the subformat.
+     * @param format      the format to be set.
+     * @param status  U_ARGUMENT_TYPE_MISMATCH if the numberic arguments are used.
+     * @draft ICU 4.0
+     */
+    virtual void setFormat(const UnicodeString& formatName, const Format& format, UErrorCode& status);
+    
+    /**
+     * Sets one subformat from given format name.
+     * See the class description about format name.
+     * If there is no matched formatName or wrong type,
+     * the item will be ignored.
+     * The caller should not delete the Format object after this call.
+     * @param formatName  Name of the subformat.
+     * @param format      Format to be adopted.
+     * @param status      U_ARGUMENT_TYPE_MISMATCH if the numberic arguments are used.
+     * @draft ICU 4.0
+     */
+    virtual void adoptFormat(const UnicodeString& formatName, Format* formatToAdopt, UErrorCode& status);
+
 
     /**
      * Gets an array of subformats of this object.  The returned array
@@ -500,11 +594,11 @@ public:
      * @return          Reference to 'appendTo' parameter.
      * @stable ICU 2.0
      */
-    static UnicodeString& format(   const UnicodeString& pattern,
-                                    const Formattable* arguments,
-                                    int32_t count,
-                                    UnicodeString& appendTo,
-                                    UErrorCode& status);
+    static UnicodeString& format(const UnicodeString& pattern,
+                                 const Formattable* arguments,
+                                 int32_t count,
+                                 UnicodeString& appendTo,
+                                 UErrorCode& status);
 
     /**
      * Formats the given array of arguments into a user-readable
@@ -545,7 +639,29 @@ public:
     UnicodeString& format(const Formattable& obj,
                           UnicodeString& appendTo,
                           UErrorCode& status) const;
+    
 
+    /**
+     * Formats the given array of arguments into a user-defined argument name
+     * array.
+     *
+     * @param argumentNames argument name array
+     * @param arguments An array of objects to be formatted.
+     * @param count     The number of elements of 'argumentNames' and 
+     *                  arguments.  The number of argumentNames and arguments
+     *                  must be the same.
+     * @param appendTo  Output parameter to receive result.
+     *                  Result is appended to existing contents.
+     * @param status    Input/output error code.  If the
+     *                  pattern cannot be parsed, set to failure code.
+     * @return          Reference to 'appendTo' parameter.
+     * @stable ICU 4.0
+     */
+    UnicodeString& format(const UnicodeString* argumentNames,
+                          const Formattable* arguments,
+                          int32_t count,
+                          UnicodeString& appendTo,
+                          UErrorCode& status) const;
     /**
      * Parses the given string into an array of output arguments.
      *
@@ -671,8 +787,14 @@ private:
         /**
          * @internal 
          */
-        int32_t arg;    // 0-based argument number
-
+        // TODO (claireho) or save the number to argName and use itos to convert to number.=> we need this number
+        int32_t argNum;    // 0-based argument number
+        /**
+         * @internal 
+         */
+        // TODO (claireho) Verify any backward compatibility issue - the subformat is not stored in files.
+        UnicodeString* argName; // argument name or number
+         
         /**
          * Clone that.format and assign it to this.format
          * Do NOT delete this.format
@@ -681,7 +803,8 @@ private:
         Subformat& operator=(const Subformat& that) {
             format = that.format ? that.format->clone() : NULL;
             offset = that.offset;
-            arg = that.arg;
+            argNum = that.argNum;
+            argName = (that.argNum==-1) ? new UnicodeString(*that.argName): NULL;
             return *this;
         }
 
@@ -691,7 +814,9 @@ private:
         UBool operator==(const Subformat& that) const {
             // Do cheap comparisons first
             return offset == that.offset &&
-                   arg == that.arg &&
+                   argNum == that.argNum &&
+                   ((argName == that.argName) ||
+                    (*argName == *that.argName)) &&
                    ((format == that.format) || // handles NULL
                     (*format == *that.format));
         }
@@ -723,6 +848,12 @@ private:
     Formattable::Type* argTypes;
     int32_t            argTypeCount;
     int32_t            argTypeCapacity;
+
+    /**
+      * Is true iff all argument names are non-negative numbers.
+      * 
+      */
+    UBool isArgNumeric;
 
     // Variable-size array management
     UBool allocateSubformats(int32_t capacity);
@@ -776,6 +907,14 @@ private:
                             FieldPosition& status,
                             int32_t recursionProtection,
                             UErrorCode& success) const;
+    
+    UnicodeString&  format( const Formattable* arguments, 
+                            const UnicodeString *argumentNames,
+                            int32_t cnt,
+                            UnicodeString& appendTo,
+                            FieldPosition& status,
+                            int32_t recursionProtection,
+                            UErrorCode& success) const;
 
     void             makeFormat(int32_t offsetNumber,
                                 UnicodeString* segments,
@@ -811,6 +950,13 @@ private:
         return argTypes; 
     }
 
+    /**
+     * Returns FALSE if the argument name is not legal.
+     * @param  argName   argument name.
+     * @return TRUE if the argument name is legal, otherwise return FALSE.
+     */
+    UBool isLegalArgName(const UnicodeString& argName) const;
+    
     friend class MessageFormatAdapter; // getFormatTypeList() access
 };
 

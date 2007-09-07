@@ -350,6 +350,18 @@
 				>
 			</File>
 			<File
+				RelativePath=".\plurfmts.cpp">
+			</File>
+			<File
+				RelativePath=".\plurfmts.h">
+			</File>
+			<File
+				RelativePath=".\plurults.cpp">
+			</File>
+			<File
+				RelativePath=".\plurults.h">
+			</File>
+			<File
 				RelativePath=".\regcoll.cpp"
 				>
 			</File>
