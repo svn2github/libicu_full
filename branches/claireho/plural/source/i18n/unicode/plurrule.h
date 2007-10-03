@@ -18,30 +18,15 @@
 
 /**
  * \file
- * \brief C++ API: Defines rules for mapping positive long values onto a small set of keywords.
+ * \brief C++ API: PluralRules object
  */
  
 #if !UCONFIG_NO_FORMATTING
 
-#include "hash.h"
-
 #include "unicode/format.h"
-#include "unicode/locid.h"
-#include "unicode/parseerr.h"
 #include "unicode/utypes.h"
 
 U_NAMESPACE_BEGIN
-
-
-static const UnicodeString   PLURAL_KEYWORD_ZERO=UNICODE_STRING_SIMPLE("zero");
-static const UnicodeString   PLURAL_KEYWORD_ONE=UNICODE_STRING_SIMPLE("one");
-static const UnicodeString   PLURAL_KEYWORD_TWO=UNICODE_STRING_SIMPLE("two");
-static const UnicodeString   PLURAL_KEYWORD_FEW=UNICODE_STRING_SIMPLE("few");
-static const UnicodeString   PLURAL_KEYWORD_MANY=UNICODE_STRING_SIMPLE("many");
-static const UnicodeString   PLURAL_KEYWORD_OTHER=UNICODE_STRING_SIMPLE("other");
-
-#define MAX_PLURAL_KEY  6
-
 
 class Hashtable;
 class RuleChain;
@@ -53,8 +38,8 @@ class RuleParser;
     * of a series of keywords and conditions.  The {@link #select} method
     * examines each condition in order and returns the keyword for the
     * first condition that matches the number.  If none match,
-    *  {@link PLURAL_KEYWORD_OTHER} is returned.
-    * <p/>
+    * default rule(other) is returned.
+    * 
     * Examples:<pre>
     *   "one: n is 1; few: n in 2..4"</pre>
     *  This defines two rules, for 'one' and 'few'.  The condition for
@@ -106,7 +91,7 @@ public:
      * Clone
      * @draft ICU 4.0
      */
-    PluralRules* clone();
+    PluralRules* clone() const;
 
     /**
       * Assignment operator.
@@ -128,8 +113,7 @@ public:
                                               UErrorCode& status);
     
     /**
-     * The default rules that accept any number and return
-     * {@link #PLURAL_KEYWORD_OTHER}.
+     * The default rules that accept any number.
      * 
      * @param status  Output param set to success/failure code on exit, which
      *                must not indicate a failure before the function call.
@@ -157,7 +141,8 @@ public:
     
     /**
      * Given a number, returns the keyword of the first rule that applies to
-     * the number.
+     * the number.  This function can be used with isKeyword* functions to
+     * determine the keyword for default plural rules.
      * 
      * @param number  The number for which the rule has to be determined.
      * @return        The keyword of the selected rule.
@@ -167,7 +152,7 @@ public:
 
      /**
       * Returns a list of all rule keywords used in this <code>PluralRules</code>
-      * object.  The rule "other" is always present by default.
+      * object.  The rule 'other' is always present by default.
       * 
       * @param status Output param set to success/failure code on exit, which
       *               must not indicate a failure before the function call.
@@ -187,6 +172,83 @@ public:
        * @draft ICU 4.0
        */    
       UBool isKeyword(const UnicodeString& keyword) const;
+      
+      /**
+       * Returns TRUE if the given keyword is common name for 'zero' plural form.
+       * 
+       * @param keyword  the input keyword.
+       * @return         TRUE if the input keyword is common name for 'zero'
+       *                 plural form.
+       *                 Otherwise, return FALSE.
+       * @draft ICU 4.0
+       */    
+      UBool isKeywordZero(const UnicodeString& keyword) const;
+        
+      /**
+       * Returns TRUE if the given keyword is common name for 'singular' plural form.
+       * 
+       * @param keyword  the input keyword.
+       * @return         TRUE if the input keyword is for 'singular' plural form.
+       *                 Otherwise, return FALSE.
+       * @draft ICU 4.0
+       */    
+      UBool isKeywordOne(const UnicodeString& keyword) const;
+      
+      /**
+       * Returns TRUE if the given keyword is common name for 'dual' plural form.
+       * 
+       * @param keyword  the input keyword.
+       * @return         TRUE if the input keyword is for 'dual' plural form.
+       *                 Otherwise, return FALSE.
+       * @draft ICU 4.0
+       */    
+      UBool isKeywordTwo(const UnicodeString& keyword) const;
+      
+      /**
+       * Returns TRUE if the given keyword is common name for 'paucal' or other
+       * special plural form.
+       * 
+       * @param keyword  the input keyword.
+       * @return         TRUE if the input keyword is for 'paucal' or other
+       *                 special plural form.
+       *                 Otherwise, return FALSE.
+       * @draft ICU 4.0
+       */    
+      UBool isKeywordFew(const UnicodeString& keyword) const;
+      
+      
+      /**
+       * Returns TRUE if the given keyword is common name for arabic (11 to 99)
+       * plural form.
+       * 
+       * @param keyword  the input keyword.
+       * @return         TRUE if the input keyword is for arabic (11 to 99)
+       *                 plural form.
+       *                 Otherwise, return FALSE.
+       * @draft ICU 4.0
+       */    
+      UBool isKeywordMany(const UnicodeString& keyword) const;
+      
+      
+      /**
+       * Returns TRUE if the given keyword is default plural form.  The default
+       * rule is applied if there is no other form in the rule applies.  It 
+       * can additionally be assigned rules of its own.
+       * 
+       * @param keyword  the input keyword.
+       * @return         TRUE if the input keyword is for default plural form.
+       *                 Otherwise, return FALSE.
+       * @draft ICU 4.0
+       */    
+      UBool isKeywordOther(const UnicodeString& keyword) const;
+      
+      /**
+       * Returns keyword for default plural form.
+       * 
+       * @return         keyword for default plural form.
+       * @draft ICU 4.0
+       */    
+      UnicodeString getKeywordOther() const;
       
       /**
        * Compares the equality of two PluralRules objects.
@@ -224,6 +286,7 @@ public:
        */
       virtual UClassID getDynamicClassID() const;
       
+
 private: 
     Hashtable       *fLocaleStringsHash;
     UnicodeString   localeName;
@@ -239,6 +302,7 @@ private:
     void addRules(const UnicodeString& localeName, RuleChain& rules, UBool addToHash, UErrorCode& err);
     void initHashtable(UErrorCode& err);
     int32_t getNumberValue(const UnicodeString& token) const;
+   
 };
 
 U_NAMESPACE_END

@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
-* Copyright (C) 2006-,
-* others. All Rights Reserved.                                                *
+* Copyright (C) 2007, International Business Machines Corporation and
+* others. All Rights Reserved.
 *******************************************************************************
 *
 * File PLURFMT.CPP
@@ -13,13 +13,8 @@
 */
 
 
-#include "cmemory.h"
-#include "cstring.h"
-#include "hash.h"
 #include "mutex.h"
 #include "plurrule_impl.h"
-#include "putilimp.h"
-#include "unicode/uniset.h"
 #include "unicode/utypes.h"
 #include "unicode/plurfmt.h"
 #include "unicode/plurrule.h"
@@ -42,11 +37,11 @@ PluralFormat::PluralFormat(const Locale& locale, UErrorCode& status) {
     init(NULL, locale, status);
 }
 
-PluralFormat::PluralFormat(PluralRules& rules, UErrorCode& status) {
+PluralFormat::PluralFormat(const PluralRules& rules, UErrorCode& status) {
     init(&rules, Locale::getDefault(), status);
 }
 
-PluralFormat::PluralFormat(const Locale& locale, PluralRules& rules, UErrorCode& status) {
+PluralFormat::PluralFormat(const Locale& locale, const PluralRules& rules, UErrorCode& status) {
     init(&rules, Locale::getDefault(), status);
 }
 
@@ -60,12 +55,12 @@ PluralFormat::PluralFormat(const Locale& locale, const UnicodeString& pattern, U
     applyPattern(pattern, status);
 }
 
-PluralFormat::PluralFormat(PluralRules& rules, const UnicodeString& pattern, UErrorCode& status) {
+PluralFormat::PluralFormat(const PluralRules& rules, const UnicodeString& pattern, UErrorCode& status) {
     init(NULL, locale, status);
     applyPattern(pattern, status);
 }
 
-PluralFormat::PluralFormat(const Locale& locale, PluralRules& rules, const UnicodeString& pattern, UErrorCode& status) {
+PluralFormat::PluralFormat(const Locale& locale, const PluralRules& rules, const UnicodeString& pattern, UErrorCode& status) {
     init(NULL, locale, status);
     applyPattern(pattern, status);
 }
@@ -86,7 +81,7 @@ PluralFormat::~PluralFormat() {
 }
 
 void
-PluralFormat::init(PluralRules* rules, const Locale& curLocale, UErrorCode& status) {
+PluralFormat::init(const PluralRules* rules, const Locale& curLocale, UErrorCode& status) {
     status = U_ZERO_ERROR;
     locale = curLocale;
     if ( rules==NULL) {
@@ -155,7 +150,7 @@ PluralFormat::applyPattern(const UnicodeString& pattern, UErrorCode& status) {
                         return;
                     }
                     // TODO make sure 'other' keyword always in PluralRules?
-                    if (!pluralRules->isKeyword(token) && (token != PLURAL_KEYWORD_OTHER)) {
+                    if (!pluralRules->isKeyword(token) && (!pluralRules->isKeywordOther(token)) ) {
                         status = U_UNDEFINED_KEYWORD;
                         return;
                     }
@@ -262,7 +257,7 @@ PluralFormat::format(int32_t number,
     UnicodeString selectedRule = pluralRules->select(number);
     UnicodeString *selectedPattern = (UnicodeString *)fParsedValuesHash->get(selectedRule);
     if (selectedPattern==NULL) {
-        selectedPattern = (UnicodeString *)fParsedValuesHash->get(PLURAL_KEYWORD_OTHER);
+        selectedPattern = (UnicodeString *)fParsedValuesHash->get(pluralRules->getKeywordOther());
     }
     appendTo = insertFormattedNumber(number, *selectedPattern, appendTo, pos);
     
@@ -308,7 +303,7 @@ UBool
 PluralFormat::checkSufficientDefinition() {
     // Check that at least the default rule is defined.
     if (fParsedValuesHash==NULL)  return FALSE;
-    if (fParsedValuesHash->get(PLURAL_KEYWORD_OTHER) == NULL) {
+    if (fParsedValuesHash->get(pluralRules->getKeywordOther()) == NULL) {
         return FALSE;
     }
     else {

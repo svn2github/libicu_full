@@ -1,9 +1,13 @@
+/*
+*******************************************************************************
+* Copyright (C) 2007, International Business Machines Corporation and
+* others. All Rights Reserved.
+********************************************************************************
 
-/********************************************************************
- * COPYRIGHT: 
- * Copyright (c) 1997-2006, International Business Machines Corporation and
- * others. All Rights Reserved.
- ********************************************************************/
+* File PLURRULTS.cpp
+*
+********************************************************************************
+*/
 
 #include "unicode/utypes.h"
 

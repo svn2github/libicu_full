@@ -23,7 +23,6 @@
 #include "plurrule_impl.h"
 #include "putilimp.h"
 #include "ustrfmt.h"
-#include "uvector.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -50,8 +49,25 @@ static const UnicodeString PLURAL_RULE_DATA[] = {
     ""
 };
 
-static const UnicodeString PLURAL_DEFAULT_RULE = UNICODE_STRING_SIMPLE("other: n");
 static Hashtable *fPluralRuleLocaleHash=NULL;
+
+static const UnicodeString PLURAL_KEYWORD_ZERO = UNICODE_STRING_SIMPLE("zero");
+static const UnicodeString PLURAL_KEYWORD_ONE = UNICODE_STRING_SIMPLE("one");
+static const UnicodeString PLURAL_KEYWORD_TWO = UNICODE_STRING_SIMPLE("two");
+static const UnicodeString PLURAL_KEYWORD_FEW = UNICODE_STRING_SIMPLE("few");
+static const UnicodeString PLURAL_KEYWORD_MANY = UNICODE_STRING_SIMPLE("many");
+static const UnicodeString PLURAL_KEYWORD_OTHER = UNICODE_STRING_SIMPLE("other");
+static const UnicodeString PLURAL_DEFAULT_RULE = UNICODE_STRING_SIMPLE("other: n");
+
+static const UnicodeString   PK_IN=UNICODE_STRING_SIMPLE("in");
+static const UnicodeString   PK_NOT=UNICODE_STRING_SIMPLE("not");
+static const UnicodeString   PK_IS=UNICODE_STRING_SIMPLE("is");
+static const UnicodeString   PK_MOD=UNICODE_STRING_SIMPLE("mod");
+static const UnicodeString   PK_AND=UNICODE_STRING_SIMPLE("and");
+static const UnicodeString   PK_OR=UNICODE_STRING_SIMPLE("or");
+static const UnicodeString   PK_VAR_N=UNICODE_STRING_SIMPLE("n");
+
+
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(PluralRules);
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(PluralKeywordEnumeration)
@@ -77,7 +93,7 @@ PluralRules::~PluralRules() {
 
 
 PluralRules*
-PluralRules::clone() {
+PluralRules::clone() const {
     return new PluralRules(*this);
 }
 
@@ -173,6 +189,43 @@ PluralRules::isKeyword(const UnicodeString& keyword) const {
     else {
         return rules->isKeyword(keyword);
     }
+}
+
+UBool
+PluralRules::isKeywordZero(const UnicodeString& keyword) const {
+    return (keyword==PLURAL_KEYWORD_ZERO);
+}
+
+UBool
+PluralRules::isKeywordOne(const UnicodeString& keyword) const {
+    return (keyword==PLURAL_KEYWORD_ONE);
+}
+
+UBool
+PluralRules::isKeywordTwo(const UnicodeString& keyword) const {
+    return (keyword==PLURAL_KEYWORD_TWO);
+}
+
+
+UBool
+PluralRules::isKeywordFew(const UnicodeString& keyword) const {
+    return (keyword==PLURAL_KEYWORD_FEW);
+}
+
+UBool
+PluralRules::isKeywordMany(const UnicodeString& keyword) const {
+    return (keyword==PLURAL_KEYWORD_MANY);
+}
+
+UBool
+PluralRules::isKeywordOther(const UnicodeString& keyword) const {
+    return (keyword==PLURAL_KEYWORD_OTHER);
+}
+
+UnicodeString
+PluralRules::getKeywordOther() const {
+    return PLURAL_KEYWORD_OTHER;
+    
 }
 
 UBool
@@ -410,8 +463,6 @@ PluralRules::addRules(const UnicodeString& localeName, RuleChain& rules, UBool a
                 this->rules=newRule;
             }
             else {
-                // TODO (claireho) should we check the locale exist before parse the rule?
-                // If the hashtable != NULL, can we assume it is OK not parsing the default rules?
                 delete newRule;
                 return;
             }

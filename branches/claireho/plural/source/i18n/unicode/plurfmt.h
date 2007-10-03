@@ -1,6 +1,8 @@
 /*
-* Copyright (C) 1997-2006, International Business Machines Corporation and others. All Rights Reserved.
-********************************************************************************
+*******************************************************************************
+* Copyright (C) 2007, International Business Machines Corporation and
+* others. All Rights Reserved.
+*******************************************************************************
 *
 
 * File PLURFMT.H
@@ -16,19 +18,15 @@
 
 /**
  * \file
- * \brief C++ API: Defines rules for mapping positive long values onto a small set of keywords.
+ * \brief C++ API: PluralFormat object
  */
  
 #if !UCONFIG_NO_FORMATTING
 
-#include "unicode/format.h"
-#include "unicode/locid.h"
 #include "unicode/numfmt.h"
-#include "unicode/parseerr.h"
 #include "unicode/plurfmt.h"
 #include "unicode/plurrule.h"
 #include "unicode/utypes.h"
-#include "hash.h"
 
 U_NAMESPACE_BEGIN
 
@@ -126,7 +124,7 @@ class NumberFormat;
  * <pre>
  * UErrorCode status = U_ZERO_ERROR;
  * MessageFormat* msgFmt = new MessageFormat(UnicodeString("{0, plural, 
- *   one{{0, number, C''''est #,##0.0#  fichier}} other {Ce sont # fichiers}} dans la liste."),
+ *   one{0, number, C''est #,##0.0#  fichier} other {Ce sont # fichiers}} dans la liste."),
  *   Locale("fr"), status);
  * if (U_FAILURE(status)) {
  *     return;
@@ -141,11 +139,11 @@ class NumberFormat;
  * msgFmt->format(args2, 1, result, ignore, status);
  * cout << result << endl;
  * </pre>
- * Produces the output:<br />
- * <code>C'est 0,0 fichier dans la liste.</code><br />
+ * Produces the output:<br/>
+ * <code>C'est 0,0 fichier dans la liste.</code><br/>
  * <code>Ce sont 3 fichiers dans la liste."</code>
  * <p>
- * <strong>Note:</strong><br />
+ * <strong>Note:</strong><br/>
  *   Currently <code>PluralFormat</code>
  *   does not make use of quotes like <code>MessageFormat</code>.
  *   If you use plural format strings with <code>MessageFormat</code> and want
@@ -170,7 +168,7 @@ class NumberFormat;
  * {@link PluralRules}.
  * </p>
  * 
- * @ported from Java
+ * ported from Java
  * @draft ICU 4.0
  */
 
@@ -207,7 +205,7 @@ public:
      *                must not indicate a failure before the function call.
      * @draft ICU 4.0
      */  
-    PluralFormat(PluralRules& rules, UErrorCode& status);
+    PluralFormat(const PluralRules& rules, UErrorCode& status);
     
     /**
      * Creates a new <code>PluralFormat</code> for a given set of rules.
@@ -220,14 +218,14 @@ public:
      *                must not indicate a failure before the function call.
      * @draft ICU 4.0
      */   
-    PluralFormat(const Locale& locale, PluralRules& rules, UErrorCode& status);
+    PluralFormat(const Locale& locale, const PluralRules& rules, UErrorCode& status);
     
     /**
      * Creates a new <code>PluralFormat</code> for a given pattern string.
      * The default locale will be used to get the set of plural rules and for
      * standard number formatting.
      * @param  pattern the pattern for this <code>PluralFormat</code>.
-     * @               errors are returned to status if the pattern is invalid.
+     *                 errors are returned to status if the pattern is invalid.
      * @param status   output param set to success/failure code on exit, which
      *                 must not indicate a failure before the function call.
      * @draft ICU 4.0
@@ -243,7 +241,7 @@ public:
      *                 rules for this locale. This locale will also be used for
      *                 standard number formatting.
      * @param pattern  the pattern for this <code>PluralFormat</code>.
-     * @               errors are returned to status if the pattern is invalid.
+     *                 errors are returned to status if the pattern is invalid.
      * @param status   output param set to success/failure code on exit, which
      *                 must not indicate a failure before the function call.
      * @draft ICU 4.0
@@ -256,12 +254,12 @@ public:
      * @param rules    defines the behavior of the <code>PluralFormat</code>
      *                 object.
      * @param pattern  the pattern for this <code>PluralFormat</code>.
-     * @               errors are returned to status if the pattern is invalid.
+     *                 errors are returned to status if the pattern is invalid.
      * @param status   output param set to success/failure code on exit, which
      *                 must not indicate a failure before the function call.
      * @draft ICU 4.0
      */    
-    PluralFormat(PluralRules& rules,
+    PluralFormat(const PluralRules& rules,
                  const UnicodeString& pattern,
                  UErrorCode& status);
     
@@ -274,13 +272,13 @@ public:
      * @param rules   defines the behavior of the <code>PluralFormat</code>
      *                object.
      * @param pattern the pattern for this <code>PluralFormat</code>.
-     * @              errors are returned to status if the pattern is invalid.
+     *                errors are returned to status if the pattern is invalid.
      * @param status  output param set to success/failure code on exit, which
      *                must not indicate a failure before the function call.
      * @draft ICU 4.0
      */   
     PluralFormat(const Locale& locale, 
-                 PluralRules& rules,
+                 const PluralRules& rules,
                  const UnicodeString& pattern,
                  UErrorCode& status);
 
@@ -303,7 +301,7 @@ public:
      * Patterns and their interpretation are specified in the class description.
      * 
      * @param pattern the pattern for this plural format
-     * @              errors are returned to status if the pattern is invalid.
+     *                errors are returned to status if the pattern is invalid.
      * @param status  output param set to success/failure code on exit, which
      *                must not indicate a failure before the function call.
      * @draft ICU 4.0
@@ -489,7 +487,7 @@ typedef enum fmtToken {
     NumberFormat*  numberFormat;
     
     PluralFormat();   // default constructor not implemented
-    void init(PluralRules* rules, const Locale& curlocale, UErrorCode& status);
+    void init(const PluralRules* rules, const Locale& curlocale, UErrorCode& status);
     UBool inRange(UChar ch, fmtToken& type);
     UBool checkSufficientDefinition();
     void parsingFailure();

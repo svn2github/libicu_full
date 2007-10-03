@@ -61,13 +61,6 @@ U_NAMESPACE_BEGIN
 
 #define PLURAL_RANGE_HIGH  0x7fffffff;
 
-static const UnicodeString   PK_IN=UNICODE_STRING_SIMPLE("in");
-static const UnicodeString   PK_NOT=UNICODE_STRING_SIMPLE("not");
-static const UnicodeString   PK_IS=UNICODE_STRING_SIMPLE("is");
-static const UnicodeString   PK_MOD=UNICODE_STRING_SIMPLE("mod");
-static const UnicodeString   PK_AND=UNICODE_STRING_SIMPLE("and");
-static const UnicodeString   PK_OR=UNICODE_STRING_SIMPLE("or");
-static const UnicodeString   PK_VAR_N=UNICODE_STRING_SIMPLE("n");
 
 class UnicodeSet;
 
@@ -158,7 +151,6 @@ public:
     UBool isFulfilled(int32_t number);
 };
 
-//TODO all public data?
 class RuleChain : public UMemory  {
 public:
     OrConstraint *ruleHeader;
