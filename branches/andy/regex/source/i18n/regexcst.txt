@@ -25,8 +25,8 @@
 #
 #
 #StateName:
-#   input-char           n next-state           ^push-state     action    
-#   input-char           n next-state           ^push-state     action    
+#   input-char           n next-state           ^push-state     action
+#   input-char           n next-state           ^push-state     action
 #       |                |   |                      |             |
 #       |                |   |                      |             |--- action to be performed by state machine
 #       |                |   |                      |                  See function RBBIRuleScanner::doParseActions()
@@ -46,7 +46,7 @@
 #            matches, peform the actions and go to the state specified on this line.
 #            The input character is tested sequentally, in the order written.  The characters and
 #            character classes tested for do not need to be mutually exclusive.  The first match wins.
-#            
+#
 
 
 
@@ -56,10 +56,10 @@
 #
 start:
    default                 term                                     doPatStart
-    
 
-    
-    
+
+
+
 #
 #  term.  At a position where we can accept the start most items in a pattern.
 #
@@ -67,16 +67,16 @@ term:
     quoted               n expr-quant                               doLiteralChar
     rule_char            n expr-quant                               doLiteralChar
     '['                  n expr-quant                               doScanUnicodeSet
-    '('                  n open-paren                     
+    '('                  n open-paren
     '.'                  n expr-quant                               doDotAny
-    '^'                  n term                                     doCaret
-    '$'                  n term                                     doDollar
+    '^'                  n expr-quant                               doCaret
+    '$'                  n expr-quant                               doDollar
     '\'                  n backslash
     '|'                  n  term                                    doOrOperator
     ')'                  n  pop                                     doCloseParen
     eof	                   term                                     doPatFinish
     default                errorDeath                               doRuleError
-    
+
 
 
 #
@@ -84,14 +84,14 @@ term:
 #                 trailing quantifier - *, +, ?, *?,  etc.
 #
 expr-quant:
-    '*'                  n  quant-star                       
-    '+'                  n  quant-plus                              
-    '?'                  n  quant-opt     
+    '*'                  n  quant-star
+    '+'                  n  quant-plus
+    '?'                  n  quant-opt
     '{'                  n  interval-open                          doIntervalInit
     '('                  n  open-paren-quant
-    default                 expr-cont 
-    
-    
+    default                 expr-cont
+
+
 #
 #  expr-cont      Expression, continuation.  At a point where additional terms are
 #                                            allowed, but not required.  No Quantifiers
@@ -99,8 +99,8 @@ expr-quant:
 expr-cont:
     '|'                  n  term                                    doOrOperator
     ')'                  n  pop                                     doCloseParen
-    default                 term                                    
-    
+    default                 term
+
 
 #
 #   open-paren-quant   Special case handling for comments appearing before a quantifier,
@@ -111,12 +111,12 @@ expr-cont:
 open-paren-quant:
     '?'                  n  open-paren-quant2                      doSuppressComments
     default                 open-paren
-    
+
 open-paren-quant2:
     '#'                  n  paren-comment   ^expr-quant
     default                 open-paren-extended
-    
- 
+
+
 #
 #   open-paren    We've got an open paren.  We need to scan further to
 #                 determine what kind of quantifier it is - plain (, (?:, (?>, or whatever.
@@ -124,7 +124,7 @@ open-paren-quant2:
 open-paren:
     '?'                  n  open-paren-extended                     doSuppressComments
     default                 term            ^expr-quant             doOpenCaptureParen
-    
+
 open-paren-extended:
     ':'                  n  term            ^expr-quant             doOpenNonCaptureParen  #  (?:
     '>'                  n  term            ^expr-quant             doOpenAtomicParen      #  (?>
@@ -141,12 +141,12 @@ open-paren-extended:
     '('                  n  errorDeath                              doConditionalExpr
     '{'                  n  errorDeath                              doPerlInline
     default                 errorDeath                              doBadOpenParenType
-    
+
 open-paren-lookbehind:
     '='                  n  term            ^expr-cont              doOpenLookBehind       #  (?<=
     '!'                  n  term            ^expr-cont              doOpenLookBehindNeg    #  (?<!
     default                 errorDeath                              doBadOpenParenType
-    
+
 
 #
 #   paren-comment    We've got a (?# ... )  style comment.  Eat pattern text till we get to the ')'
@@ -158,8 +158,8 @@ paren-comment:
     default              n  paren-comment
 
 #
-#  paren-flag    Scanned a (?ismx-ismx  flag setting 
-#                 
+#  paren-flag    Scanned a (?ismx-ismx  flag setting
+#
 paren-flag:
     'i'                  n  paren-flag                              doMatchMode
     'm'                  n  paren-flag                              doMatchMode
@@ -170,8 +170,8 @@ paren-flag:
     ')'                  n  term                                    doSetMatchMode
     ':'                  n  term              ^expr-quant           doMatchModeParen
     default                 errorDeath                              doBadModeFlag
-    
-    
+
+
 #
 #  quant-star     Scanning a '*' quantifier.  Need to look ahead to decide
 #                 between plain '*', '*?', '*+'
@@ -208,9 +208,9 @@ quant-opt:
 #
 interval-open:
     white_space          n  interval-open                                  # TODO:  is white space allowed here in non-free mode?
-    digit_char              interval-lower                          
+    digit_char              interval-lower
     default                 errorDeath                              doIntervalError
-    
+
 interval-lower:
     digit_char           n  interval-lower                          doIntevalLowerDigit
     ','			         n  interval-upper
@@ -221,13 +221,13 @@ interval-upper:
     digit_char           n  interval-upper                          doIntervalUpperDigit
     '}'                  n  interval-type
     default                 errorDeath                              doIntervalError
-    
+
 interval-type:
     '?'                  n  expr-cont                               doNGInterval                # {n,m}?
     '+'                  n  expr-cont                               doPossessiveInterval        # {n,m}+
     default                 expr-cont                               doInterval                  # {m,n}
-    
-    
+
+
 #
 #  backslash        #  Backslash.  Figure out which of the \thingies we have encountered.
 #                                  The low level next-char function will have preprocessed
@@ -250,11 +250,29 @@ backslash:
    'X'                   n  expr-quant                              doBackslashX
    'Z'                   n  term                                    doBackslashZ
    'z'                   n  term                                    doBackslashz
-   digit_char	         n  expr-quant                              doBackRef         #  Will scan multiple digits
+   '0'                   n  octal-1                                 doOctalStart
+   digit_char            n  expr-quant                              doBackRef         #  Will scan multiple digits
    eof                      errorDeath                              doEscapeError
-   default               n  expr-quant		                    doLiteralChar     #  Escaped literal char.		       
+   default               n  expr-quant                              doLiteralChar     #  Escaped literal char.
 
-    
+#
+#  Octal constants.  Syntax is \0[0-7]{0:3}
+#     The mandatory leading \0 is a convention that comes from Java, and
+#     removes the ambiguity with back references.
+#
+octal-1:
+   octal_digit           n  octal-2                                 doOctalDigit
+   default                  expr-quant                              doOctalFinish
+octal-2:
+   octal_digit           n  octal-3                                 doOctalDigit
+   default                  expr-quant                              doOctalFinish
+octal-3:
+   octal_digit           n  octal-end                               doOctalDigit
+   default                  expr-quant                              doOctalFinish
+octal-end:
+   default                  expr-quant                              doOctalFinish
+
+
 #
 # errorDeath.   This state is specified as the next state whenever a syntax error
 #               in the source rules is detected.  Barring bugs, the state machine will never

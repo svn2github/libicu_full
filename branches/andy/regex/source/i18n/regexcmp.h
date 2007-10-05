@@ -51,7 +51,7 @@ public:
     };
 
     RegexCompile(RegexPattern *rp, UErrorCode &e);
-    
+
     void       compile(const UnicodeString &pat, UParseError &pp, UErrorCode &e);
 
 
@@ -68,7 +68,7 @@ public:
     //   determines the code to be generated when the matching close ) is encountered.
     enum EParenClass {
         plain        = -1,               // No special handling
-        capturing    = -2, 
+        capturing    = -2,
         atomic       = -3,
         lookAhead    = -4,
         negLookAhead = -5,
@@ -125,7 +125,7 @@ private:
                                                      //   is the first character not yet scanned.
     UBool                         fQuoteMode;        // Scan is in a \Q...\E quoted region
     UBool                         fInBackslashQuote; // Scan is between a '\' and the following char.
-    UBool                         fEOLComments;      // When scan is just after '(?',  inhibit #... to 
+    UBool                         fEOLComments;      // When scan is just after '(?',  inhibit #... to
                                                      //   end of line comments, in favor of (?#...) comments.
     int32_t                       fLineNum;          // Line number in input file.
     int32_t                       fCharNum;          // Char position within the line.
@@ -136,6 +136,7 @@ private:
 
     RegexPatternChar              fC;                // Current char for parse state machine
                                                      //   processing.
+    UChar32                       fOctalChar;        // Octal Char Constant.
 
     //
     //   Data for the state machine that parses the regular expression.
@@ -167,7 +168,7 @@ private:
 
     UVector32                     fParenStack;       // parentheses stack.  Each frame consists of
                                                      //   the positions of compiled pattern operations
-                                                     //   needing fixup, followed by negative value.  The  
+                                                     //   needing fixup, followed by negative value.  The
                                                      //   first entry in each frame is the position of the
                                                      //   spot reserved for use when a quantifier
                                                      //   needs to add a SAVE at the start of a (block)

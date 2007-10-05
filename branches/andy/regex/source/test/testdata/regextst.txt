@@ -1,7 +1,7 @@
-﻿# Copyright (c) 2001-2007 International Business Machines
+# Copyright (c) 2001-2007 International Business Machines
 # Corporation and others. All Rights Reserved.
 #
-#  file:  
+#  file:
 #
 #   ICU regular expression test cases.
 #
@@ -10,10 +10,10 @@
 #               <pattern>      =  "<regular expression pattern>"
 #               <match string> =  "<tagged string>"
 #                                 the quotes on the pattern and match string can be " or ' or /
-#               <tagged string> = text, with the start and end of each 
+#               <tagged string> = text, with the start and end of each
 #                                 capture group tagged with <n>...</n>.  The overall match,
 #                                 if any, is group 0, as in <0>matched text</0>
-#               <flags>         = any combination of 
+#               <flags>         = any combination of
 #                                   i      case insensitive match
 #                                   x      free spacing and comments
 #                                   s      dot-matches-all mode
@@ -22,7 +22,7 @@
 #                                          regex test pattern should not compile.
 #                                   d      dump the compiled pattern
 #                                   t      trace operation of match engine.
-#                                   2-9    a digit between 2 and 9, specifies the number of 
+#                                   2-9    a digit between 2 and 9, specifies the number of
 #                                          times to execute find().  The expected results are
 #                                          for the last find() in the sequence.
 #                                 White space must be present between the flags and the match string.
@@ -247,8 +247,8 @@
 "ab(?:c|(d?))(\1)"             "<0>ab<1></1><2></2></0>"
 
 # Case Insensitive
-"aBc"                    i      "<0>ABC</0>"      
-"a[^bc]d"                i      "ABD"   
+"aBc"                    i      "<0>ABC</0>"
+"a[^bc]d"                i      "ABD"
 '((((((((((a))))))))))\10' i    "<0><1><2><3><4><5><6><7><8><9><10>A</10></9></8></7></6></5></4></3></2></1>A</0>"
 
 "(?:(?i)a)b"                    "<0>Ab</0>"
@@ -259,7 +259,7 @@
 "a b"                           "ab"
 "abc "                          "abc"
 "abc "                          "<0>abc </0>"
-"ab[cd e]z"                     "<0>ab z</0>" 
+"ab[cd e]z"                     "<0>ab z</0>"
 "ab\ c"                         "<0>ab c</0> "
 "ab c"                          "<0>ab c</0> "
 "ab c"                        x "ab c "
@@ -316,8 +316,8 @@
 "abc.*$"                         "<0>abcdef</0>"
 "abc(.*)"                        "<0>abc<1>def</1></0>"
 "abc(.*)"                        "<0>abc<1></1></0>"
-"abc.*"                          "<0>abc</0>\ndef"     
-"abc.*"                     s    "<0>abc\ndef</0>"     
+"abc.*"                          "<0>abc</0>\ndef"
+"abc.*"                     s    "<0>abc\ndef</0>"
 "abc.*$"                    s    "<0>abc\ndef</0>"
 "abc.*$"                         "abc\ndef"
 "abc.*$"                    m    "<0>abc</0>\ndef"
@@ -485,7 +485,7 @@
 "A*"                           3  ""
 "A*"                           4  ""
 "A*"                           5  ""
-				  
+
 #
 # Bug 4046
 #
@@ -538,9 +538,30 @@
 ".+?\b"                       3   " \u0935\u0915\u094D\u200D\u0924\u0947 "
 
 #
+# bug 5386  "^.*$" should match empty input
+#
+"^.*$"                            "<0></0>"
+"^.*$"                            "<0></0>\n"
+"(?s)^.*$"                        "<0>\n</0>"
+
+#
+# bug 5386  Empty pattern and empty input should match.
+#
+""                                "<0></0>abc"
+
+"$*"                              "<0></0>abc"
+
+#
+# bug 5386  Empty left alternation should produce a zero length match.
+#
+"|a"                              "<0></0>a"
+"$|ab"                            "<0>ab</0>"
+"$|ba"                            "ab<0></0>"
+
+#
 #  Random debugging, Temporary
 #
-#"^(?:a?b?)*$"	                  "a--"	
+#"^(?:a?b?)*$"	                  "a--"
 "^(?:a?b?)*$"	                  "a--"
 
 "This is a string with (?:one |two |three )endings"   "<0>This is a string with two endings</0>"
@@ -681,7 +702,7 @@
 "^(http|https|ftp)\://[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,3}(:[a-zA-Z0-9]*)?/?([a-zA-Z0-9\-\._\?\,\'/\\\+\&%\$#\=~])*$"   G "<0>ftp://ftp.blah.co.uk:2828/blah%20blah.gif</0>"
 "^(http|https|ftp)\://[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,3}(:[a-zA-Z0-9]*)?/?([a-zA-Z0-9\-\._\?\,\'/\\\+\&%\$#\=~])*$"   G "<0>https://blah.gov/blah-blah.as</0>"
 "^(http|https|ftp)\://[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,3}(:[a-zA-Z0-9]*)?/?([a-zA-Z0-9\-\._\?\,\'/\\\+\&%\$#\=~])*$"     "www.blah.com"
-"^(http|https|ftp)\://[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,3}(:[a-zA-Z0-9]*)?/?([a-zA-Z0-9\-\._\?\,\'/\\\+\&%\$#\=~])*$"     "http://www.blah.com/I have spaces!" 
+"^(http|https|ftp)\://[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,3}(:[a-zA-Z0-9]*)?/?([a-zA-Z0-9\-\._\?\,\'/\\\+\&%\$#\=~])*$"     "http://www.blah.com/I have spaces!"
 "^(http|https|ftp)\://[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,3}(:[a-zA-Z0-9]*)?/?([a-zA-Z0-9\-\._\?\,\'/\\\+\&%\$#\=~])*$"     "ftp://blah_underscore/[nope]"
 "^(([0-2]\d|[3][0-1])\/([0]\d|[1][0-2])\/[2][0]\d{2})$|^(([0-2]\d|[3][0-1])\/([0]\d|[1][0-2])\/[2][0]\d{2}\s([0-1]\d|[2][0-3])\:[0-5]\d\:[0-5]\d)$"   G "<0>12/01/2002</0>"
 "^(([0-2]\d|[3][0-1])\/([0]\d|[1][0-2])\/[2][0]\d{2})$|^(([0-2]\d|[3][0-1])\/([0]\d|[1][0-2])\/[2][0]\d{2}\s([0-1]\d|[2][0-3])\:[0-5]\d\:[0-5]\d)$"   G "<0>12/01/2002 12:32:10</0>"
@@ -1059,7 +1080,7 @@
 #"^\w+[\w-\.]*\@\w+((-\w+)|(\w*))\.[a-z]{2,3}$"   G "<0>bob-smith@foo.com</0>"   # TODO:  \w in pattern
 #"^\w+[\w-\.]*\@\w+((-\w+)|(\w*))\.[a-z]{2,3}$"   G "<0>bob.smith@foo.com</0>"   # TODO:  \w in pattern
 #"^\w+[\w-\.]*\@\w+((-\w+)|(\w*))\.[a-z]{2,3}$"   G "<0>bob_smith@foo.com</0>"   # TODO:  \w in pattern
-#"^\w+[\w-\.]*\@\w+((-\w+)|(\w*))\.[a-z]{2,3}$"     "-smith@foo.com"   # TODO:  \w in pattern 
+#"^\w+[\w-\.]*\@\w+((-\w+)|(\w*))\.[a-z]{2,3}$"     "-smith@foo.com"   # TODO:  \w in pattern
 #"^\w+[\w-\.]*\@\w+((-\w+)|(\w*))\.[a-z]{2,3}$"     ".smith@foo.com"   # TODO:  \w in pattern
 #"^\w+[\w-\.]*\@\w+((-\w+)|(\w*))\.[a-z]{2,3}$"     "smith@foo_com"   # TODO:  \w in pattern
 "^(?=.*\d).{4,8}$"   G "<0>1234</0>"
@@ -1175,7 +1196,7 @@
 "^\$(\d{1,3}(\,\d{3})*|(\d+))(\.\d{2})?$"     "$12,3456.01"
 "^\$(\d{1,3}(\,\d{3})*|(\d+))(\.\d{2})?$"     "12345"
 "^\$(\d{1,3}(\,\d{3})*|(\d+))(\.\d{2})?$"     "$1.234"
-"([A-Z]:\\[^/:\*\?<>\|]+\.\w{2,6})|(\\{2}[^/:\*\?<>\|]+\.\w{2,6})"   G "<0>C:\\temp\\this allows spaces\\web.config</0>" 
+"([A-Z]:\\[^/:\*\?<>\|]+\.\w{2,6})|(\\{2}[^/:\*\?<>\|]+\.\w{2,6})"   G "<0>C:\\temp\\this allows spaces\\web.config</0>"
 "([A-Z]:\\[^/:\*\?<>\|]+\.\w{2,6})|(\\{2}[^/:\*\?<>\|]+\.\w{2,6})"   G "<0>\\\\Andromeda\\share\\file name.123</0>"
 "([A-Z]:\\[^/:\*\?<>\|]+\.\w{2,6})|(\\{2}[^/:\*\?<>\|]+\.\w{2,6})"     "tz:\temp\ fi*le?na:m<e>.doc"
 "([A-Z]:\\[^/:\*\?<>\|]+\.\w{2,6})|(\\{2}[^/:\*\?<>\|]+\.\w{2,6})"     "\\Andromeda\share\filename.a"
@@ -1589,7 +1610,7 @@
 #"<[^>\s]*\bauthor\b[^>]*>"   G "<0></sch:author></0>"
 #"<[^>\s]*\bauthor\b[^>]*>"   G '<0><pp:author name="Daniel"</0>'
 "<[^> ]*\bauthor\b[^>]*>"   G "<0></sch:author></0>"
-"<[^> ]*\bauthor\b[^>]*>"   G '<0><pp:author name="Daniel"></0>' 
+"<[^> ]*\bauthor\b[^>]*>"   G '<0><pp:author name="Daniel"></0>'
 "<[^>\s]*\bauthor\b[^>]*>"     "<other>"
 "<[^>\s]*\bauthor\b[^>]*>"     "</authors>"
 "<[^>\s]*\bauthor\b[^>]*>"     "<work>author</work>"

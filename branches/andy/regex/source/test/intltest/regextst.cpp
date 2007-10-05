@@ -1470,7 +1470,7 @@ void RegexTest::Extended() {
     }
 
     int32_t    len;
-    UChar *testData = ReadAndConvertFile(srcPath, len, status);
+    UChar *testData = ReadAndConvertFile(srcPath, len, "utf-8", status);
     if (U_FAILURE(status)) {
         return; /* something went wrong, error already output */
     }
@@ -1649,7 +1649,8 @@ void RegexTest::Errors() {
 //    in one big UChar * buffer, which the caller must delete.
 //
 //--------------------------------------------------------------------------------
-UChar *RegexTest::ReadAndConvertFile(const char *fileName, int32_t &ulen, UErrorCode &status) {
+UChar *RegexTest::ReadAndConvertFile(const char *fileName, int32_t &ulen,
+                                     const char *defEncoding, UErrorCode &status) {
     UChar       *retPtr  = NULL;
     char        *fileBuf = NULL;
     UConverter* conv     = NULL;
@@ -1698,6 +1699,11 @@ UChar *RegexTest::ReadAndConvertFile(const char *fileName, int32_t &ulen, UError
     if(encoding!=NULL ){
         fileBufC  += signatureLength;
         fileSize  -= signatureLength;
+    } else {
+        encoding = defEncoding;
+        if (strcmp(encoding, "utf-8") == 0) {
+            errln("file %s is missing its BOM", fileName);
+        }
     }
 
     //
@@ -1804,7 +1810,7 @@ void RegexTest::PerlTests() {
     }
 
     int32_t    len;
-    UChar *testData = ReadAndConvertFile(srcPath, len, status);
+    UChar *testData = ReadAndConvertFile(srcPath, len, "iso-8859-1", status);
     if (U_FAILURE(status)) {
         return; /* something went wrong, error already output */
     }
