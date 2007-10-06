@@ -191,37 +191,6 @@ PluralRules::isKeyword(const UnicodeString& keyword) const {
     }
 }
 
-UBool
-PluralRules::isKeywordZero(const UnicodeString& keyword) const {
-    return (keyword==PLURAL_KEYWORD_ZERO);
-}
-
-UBool
-PluralRules::isKeywordOne(const UnicodeString& keyword) const {
-    return (keyword==PLURAL_KEYWORD_ONE);
-}
-
-UBool
-PluralRules::isKeywordTwo(const UnicodeString& keyword) const {
-    return (keyword==PLURAL_KEYWORD_TWO);
-}
-
-
-UBool
-PluralRules::isKeywordFew(const UnicodeString& keyword) const {
-    return (keyword==PLURAL_KEYWORD_FEW);
-}
-
-UBool
-PluralRules::isKeywordMany(const UnicodeString& keyword) const {
-    return (keyword==PLURAL_KEYWORD_MANY);
-}
-
-UBool
-PluralRules::isKeywordOther(const UnicodeString& keyword) const {
-    return (keyword==PLURAL_KEYWORD_OTHER);
-}
-
 UnicodeString
 PluralRules::getKeywordOther() const {
     return PLURAL_KEYWORD_OTHER;

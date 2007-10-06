@@ -150,7 +150,8 @@ PluralFormat::applyPattern(const UnicodeString& pattern, UErrorCode& status) {
                         return;
                     }
                     // TODO make sure 'other' keyword always in PluralRules?
-                    if (!pluralRules->isKeyword(token) && (!pluralRules->isKeywordOther(token)) ) {
+                    if (!pluralRules->isKeyword(token) && 
+                        pluralRules->getKeywordOther()!=token) {
                         status = U_UNDEFINED_KEYWORD;
                         return;
                     }

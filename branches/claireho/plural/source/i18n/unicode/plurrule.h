@@ -62,6 +62,22 @@ class RuleParser;
     *  before the test as in the previous example.  The second part applies
     *  a different modulus and also uses negation, thus it matches all
     *  numbers _not_ in 12, 13, 14, 112, 113, 114, 212, 213, 214...
+    *  </p><pre>
+    * 
+    *  Keywords
+    *  could be defined by users or from ICU locale data. There are 6
+    *  predefined values in ICU - 'zero', 'one', 'two', 'few', 'many' and
+    *  'other'. Callers need to check the value of keyword returned by
+    *  {@link #select} method.
+    *  </p><pre>
+    * 
+    * Examples:<pre>
+    * UnicodeString keyword = pl->select(number);
+    * if (keyword== UnicodeString("one") {
+    *     ...
+    * } 
+    * else if ( ... ) 
+    * 
     */
 class U_I18N_API PluralRules : public UObject {
 public:
@@ -173,83 +189,16 @@ public:
        */    
       UBool isKeyword(const UnicodeString& keyword) const;
       
-      /**
-       * Returns TRUE if the given keyword is common name for 'zero' plural form.
-       * 
-       * @param keyword  the input keyword.
-       * @return         TRUE if the input keyword is common name for 'zero'
-       *                 plural form.
-       *                 Otherwise, return FALSE.
-       * @draft ICU 4.0
-       */    
-      UBool isKeywordZero(const UnicodeString& keyword) const;
-        
-      /**
-       * Returns TRUE if the given keyword is common name for 'singular' plural form.
-       * 
-       * @param keyword  the input keyword.
-       * @return         TRUE if the input keyword is for 'singular' plural form.
-       *                 Otherwise, return FALSE.
-       * @draft ICU 4.0
-       */    
-      UBool isKeywordOne(const UnicodeString& keyword) const;
-      
-      /**
-       * Returns TRUE if the given keyword is common name for 'dual' plural form.
-       * 
-       * @param keyword  the input keyword.
-       * @return         TRUE if the input keyword is for 'dual' plural form.
-       *                 Otherwise, return FALSE.
-       * @draft ICU 4.0
-       */    
-      UBool isKeywordTwo(const UnicodeString& keyword) const;
-      
-      /**
-       * Returns TRUE if the given keyword is common name for 'paucal' or other
-       * special plural form.
-       * 
-       * @param keyword  the input keyword.
-       * @return         TRUE if the input keyword is for 'paucal' or other
-       *                 special plural form.
-       *                 Otherwise, return FALSE.
-       * @draft ICU 4.0
-       */    
-      UBool isKeywordFew(const UnicodeString& keyword) const;
-      
-      
-      /**
-       * Returns TRUE if the given keyword is common name for arabic (11 to 99)
-       * plural form.
-       * 
-       * @param keyword  the input keyword.
-       * @return         TRUE if the input keyword is for arabic (11 to 99)
-       *                 plural form.
-       *                 Otherwise, return FALSE.
-       * @draft ICU 4.0
-       */    
-      UBool isKeywordMany(const UnicodeString& keyword) const;
-      
-      
-      /**
-       * Returns TRUE if the given keyword is default plural form.  The default
-       * rule is applied if there is no other form in the rule applies.  It 
-       * can additionally be assigned rules of its own.
-       * 
-       * @param keyword  the input keyword.
-       * @return         TRUE if the input keyword is for default plural form.
-       *                 Otherwise, return FALSE.
-       * @draft ICU 4.0
-       */    
-      UBool isKeywordOther(const UnicodeString& keyword) const;
-      
+
       /**
        * Returns keyword for default plural form.
        * 
        * @return         keyword for default plural form.
+       * @internal 4.0
        * @draft ICU 4.0
        */    
       UnicodeString getKeywordOther() const;
-      
+
       /**
        * Compares the equality of two PluralRules objects.
        *
