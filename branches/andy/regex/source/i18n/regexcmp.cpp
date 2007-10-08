@@ -1026,11 +1026,14 @@ UBool RegexCompile::doParseActions(int32_t action)
         literalChar(fC.fChar);
         break;
 
+        // Octal chars.  We parse these all the way rather than using ICU's unescape
+        //    because they follow Java's regexp conventions, which require a leading \0.
+        //    ICU unuescape accepts \<any octal digit>
     case doOctalStart:
         fOctalChar = 0;
         break;
     case doOctalDigit:
-        fOctalChar << 3;
+        fOctalChar <<= 3;
         fOctalChar += fC.fChar & 7;
         break;
     case doOctalFinish:

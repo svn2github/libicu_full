@@ -357,9 +357,13 @@
 "ab\x09w"                        "<0>ab\u0009w</0>"
 "ab\xabcdc"                      "<0>ab\u00abcdc</0>"
 "ab\x{abcd}c"                    "<0>ab\uabcdc</0>"
-"ab\x{101234}c"                    "<0>ab\U00101234c</0>"
+"ab\x{101234}c"                  "<0>ab\U00101234c</0>"
 "abα"                            "<0>abα</0>"
 
+#
+#  Octal Escaping.   This conforms to Java conventions, not Perl.
+#
+"\031"              d         "<0>aAb</0>"
 
 #
 #  \u Surrogate Pairs
