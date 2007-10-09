@@ -66,7 +66,7 @@ start:
 term:
     quoted               n expr-quant                               doLiteralChar
     rule_char            n expr-quant                               doLiteralChar
-    '['                  n expr-quant                               doScanUnicodeSet
+    '['                  n set-open       ^expr-quant               doSetBegin
     '('                  n open-paren
     '.'                  n expr-quant                               doDotAny
     '^'                  n expr-quant                               doCaret
@@ -274,8 +274,43 @@ octal-end:
 
 
 #
+# [set expression] parsing
+#
+
+set-open:
+   '^'                   n  set-open2                               doSetNegate
+   default                  set-open2
+
+set-open2:
+   ']'                   n  set-after-lit                           doSetLiteral
+   default                  set-start
+
+#
+#   set-start   after the [ and special case leading junk (^ and/or [) but before
+#               everything else.   A '-' is literal at this point.
+#
+set-start:
+    quoted               n  set-after-lit                           doSetLiteral
+    ']'                  n  pop                                     doSetEnd
+    '['                  n  set-open      ^set-after-set            doSetBegin
+    default                 set-after-lit                           doSetLiteral
+
+set-after-lit:
+    quoted               n  set-after-lit                           doSetLiteral
+    ']'                  n  pop                                     doSetEnd
+    '['                  n  set-open      ^set-after-set            doSetBegin
+    default                 set-after-lit                           doSetLiteral
+
+set-after-set:
+    quoted               n  set-after-lit                           doSetLiteral
+    ']'                  n  pop                                     doSetEnd
+    '['                  n  set-open      ^set-after-set            doSetBegin
+    default                 set-after-lit                           doSetLiteral
+
+
+#
 # errorDeath.   This state is specified as the next state whenever a syntax error
-#               in the source rules is detected.  Barring bugs, the state machine will never
+#               in the source rules is detected.  Baring bugs, the state machine will never
 #               actually get here, but will stop because of the action associated with the error.
 #               But, just in case, this state asks the state machine to exit.
 errorDeath:

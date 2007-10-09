@@ -47,7 +47,8 @@ U_NAMESPACE_BEGIN
 //  Constructor.
 //
 //------------------------------------------------------------------------------
-RegexCompile::RegexCompile(RegexPattern *rxp, UErrorCode &status) : fParenStack(status)
+RegexCompile::RegexCompile(RegexPattern *rxp, UErrorCode &status) :
+   fParenStack(status), fSetStack(status), fSetOpStack(status)
 {
     fStatus           = &status;
 
@@ -1161,12 +1162,14 @@ UBool RegexCompile::doParseActions(int32_t action)
         break;
 
 
+/*
     case doScanUnicodeSet:
         {
             UnicodeSet *theSet = scanSet();
             compileSet(theSet);
         }
         break;
+*/
 
     case doEnterQuoteMode:
         // Just scanned a \Q.  Put character scanner into quote mode.
@@ -1394,6 +1397,65 @@ UBool RegexCompile::doParseActions(int32_t action)
         fEOLComments = FALSE;
         break;
 
+
+    case doSetBegin:
+        fSetStack.push(new UnicodeSet(), *fStatus);
+        fSetOpStack.push(setStart, *fStatus);
+        break;
+
+    case doSetEnd:
+      {
+        UnicodeSet *set = (UnicodeSet *)fSetStack.peek();
+        UnicodeSet *rightOperand = NULL;
+        while (fSetOpStack.peeki() != setStart) {
+           int32_t pendingSetOperation = fSetOpStack.popi();
+           switch (pendingSetOperation) {
+              case setNegation:
+                 set->complement();
+                 break;
+              case setDifference:
+                 rightOperand = (UnicodeSet *)fSetStack.pop();
+                 set = (UnicodeSet *)fSetStack.peek();
+                 set->removeAll(*rightOperand);
+                 delete rightOperand;
+                 break;
+              case setIntersection:
+                 rightOperand = (UnicodeSet *)fSetStack.pop();
+                 set = (UnicodeSet *)fSetStack.peek();
+                 set->retainAll(*rightOperand);
+                 delete rightOperand;
+                 break;
+              default:
+                 U_ASSERT(FALSE);
+                 break;
+             }
+        }
+        // The newly completed set is at the top of the set stack.
+        //   If it is just going to be ORed with a preceding set expression, do it now.
+        if (fSetOpStack.peeki() == setUnion) {
+            rightOperand = (UnicodeSet *)fSetStack.pop();
+            set = (UnicodeSet *)fSetStack.peek();
+            set->addAll(*rightOperand);
+            delete rightOperand;
+            fSetOpStack.pop();
+        }
+        break;
+      }
+
+    case doSetLiteral:
+        // Union the just-scanned literal character into the set being built.
+        //    This operation is the highest precedence set operation, so we can always do
+        //    it immediately, without waiting to see what follows.
+        { UnicodeSet *s = (UnicodeSet *)fSetStack.peek();
+          s->add(fC.fChar);
+        }
+        break;
+
+    case  doSetNegate:
+        { UnicodeSet *s = (UnicodeSet *)fSetStack.peek();
+          s->complement();
+        }
+        break;
 
 
     default:
@@ -3425,7 +3487,7 @@ void RegexCompile::nextChar(RegexPatternChar &c) {
 }
 
 
-
+#if 0
 //------------------------------------------------------------------------------
 //
 //  scanSet    Construct a UnicodeSet from the text at the current scan
@@ -3480,7 +3542,7 @@ UnicodeSet *RegexCompile::scanSet() {
 
     return uset;
 }
-
+#endif
 
 //------------------------------------------------------------------------------
 //

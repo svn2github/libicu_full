@@ -85,7 +85,6 @@ private:
 
     UChar32     nextCharLL();
     UChar32     peekCharLL();
-    UnicodeSet  *scanSet();
     UnicodeSet  *scanProp();
     void        handleCloseParen();
     int32_t     blockTopLoc(UBool reserve);          // Locate a position in the compiled pattern
@@ -195,7 +194,24 @@ private:
     int32_t                       fNameStartPos;     // Starting position of a \N{NAME} name in a
                                                      //   pattern, valid while remainder of name is
                                                      //   scanned.
+
+    UStack                        fSetStack;         // Stack of UnicodeSets, used while evaluating
+                                                     //   (at compile time) set expressions within
+                                                     //   the pattern.
+    UStack                        fSetOpStack;       // Stack of pending set operators (&&, --, union)
+
 };
+
+// Constant values to be pushed onto fSetOpStack while scanning & evalueating [set expressions]
+//   The high 16 bits are the operator precedence, and the low 16 are a code for the operation itself.
+
+enum SetOperations {
+    setStart        = 0 << 16 | 1,
+    setNegation     = 1 << 16 | 2,
+    setDifference   = 2 << 16 | 3,
+    setIntersection = 2 << 16 | 4,
+    setUnion        = 3 << 16 | 5
+    };
 
 U_NAMESPACE_END
 #endif   // !UCONFIG_NO_REGULAR_EXPRESSIONS
