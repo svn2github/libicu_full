@@ -66,7 +66,7 @@ start:
 term:
     quoted               n expr-quant                               doLiteralChar
     rule_char            n expr-quant                               doLiteralChar
-    '['                  n set-open       ^expr-quant               doSetBegin
+    '['                  n set-open       ^set-finish               doSetBegin
     '('                  n open-paren
     '.'                  n expr-quant                               doDotAny
     '^'                  n expr-quant                               doCaret
@@ -293,19 +293,42 @@ set-start:
     quoted               n  set-after-lit                           doSetLiteral
     ']'                  n  pop                                     doSetEnd
     '['                  n  set-open      ^set-after-set            doSetBegin
-    default                 set-after-lit                           doSetLiteral
+    default              n  set-after-lit                           doSetLiteral
 
 set-after-lit:
     quoted               n  set-after-lit                           doSetLiteral
     ']'                  n  pop                                     doSetEnd
-    '['                  n  set-open      ^set-after-set            doSetBegin
-    default                 set-after-lit                           doSetLiteral
+    '['                  n  set-open      ^set-after-set            doSetBeginUnion
+    '-'                  n  set-dash-L-1
+    default              n  set-after-lit                           doSetLiteral
 
 set-after-set:
     quoted               n  set-after-lit                           doSetLiteral
     ']'                  n  pop                                     doSetEnd
-    '['                  n  set-open      ^set-after-set            doSetBegin
-    default                 set-after-lit                           doSetLiteral
+    '['                  n  set-open      ^set-after-set            doSetBeginUnion
+    default              n  set-after-lit                           doSetLiteral
+
+# We have a single dash following a literal. Could be a range or a -- operator or a literal
+#     In [abc-[def]], the '-' is a literal (confirmed with a Java test)
+#        [abc-]       the '-' is a literal
+#        [ab-xy]      the '-' is a range
+set-dash-L-1:
+    quoted               n  set-after-lit                           doSetRange
+    '-'                  n  set-after-op                            doSetBeginDifference
+    '['                     set-after-lit                           doSetLiteral
+    ']'                     set-after-lit                           doSetLiteral
+    default              n  set-after-lit                           doSetRange
+
+# After a --  or &&
+#   It is an error to close a set at this point.
+set-after-op:
+    quoted               n  set-after-lit                           doSetLiteral
+    '['                  n  set-open         ^set-after-set         doSetBeginUnion  #inefficient
+    ']'                     errorDeath                              doSetOpError
+    default              n  set-after-lit                           doSetLiteral
+
+set-finish:
+    default                 expr-quant                              doSetFinish
 
 
 #

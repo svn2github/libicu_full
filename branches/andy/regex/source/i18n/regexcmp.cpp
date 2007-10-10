@@ -1403,12 +1403,34 @@ UBool RegexCompile::doParseActions(int32_t action)
         fSetOpStack.push(setStart, *fStatus);
         break;
 
+    case doSetBeginUnion:
+        //  We have scanned something like  [[abc][
+        //  Set up a new UnicodeSet for the set beginning with the just-scanned '['
+        //  Push a Union operator, which will cause the new set to be Unioned with what
+        //    went before once it is created.
+        fSetStack.push(new UnicodeSet(), *fStatus);
+        fSetOpStack.push(setUnion, *fStatus);
+        fSetOpStack.push(setStart, *fStatus);
+        break;
+
+    case doSetBeginDifference:
+        // We have scanned something like [abc--
+        //   Consider this to unambiguously be a set difference operator.
+        fSetStack.push(new UnicodeSet(), *fStatus);
+        fSetOpStack.push(setDifference, *fStatus);
+        break;
+
     case doSetEnd:
+      // Have encountered the ']' that closes a set.
+      //    This could be a nested set.
       {
         UnicodeSet *set = (UnicodeSet *)fSetStack.peek();
         UnicodeSet *rightOperand = NULL;
-        while (fSetOpStack.peeki() != setStart) {
+        for (;;) {
            int32_t pendingSetOperation = fSetOpStack.popi();
+           if (pendingSetOperation == setStart) {
+               break;
+           }
            switch (pendingSetOperation) {
               case setNegation:
                  set->complement();
@@ -1442,20 +1464,50 @@ UBool RegexCompile::doParseActions(int32_t action)
         break;
       }
 
+    case doSetFinish:
+        {
+        // Finished a complete set expression, including all nested sets.
+        UnicodeSet *theSet = (UnicodeSet *)fSetStack.pop();
+        compileSet(theSet);
+        break;
+        }
+
     case doSetLiteral:
         // Union the just-scanned literal character into the set being built.
         //    This operation is the highest precedence set operation, so we can always do
         //    it immediately, without waiting to see what follows.
         { UnicodeSet *s = (UnicodeSet *)fSetStack.peek();
           s->add(fC.fChar);
+          fLastSetLiteral = fC.fChar;
         }
         break;
 
     case  doSetNegate:
-        { UnicodeSet *s = (UnicodeSet *)fSetStack.peek();
-          s->complement();
-        }
+        // Scanned a '^' at the start of a set.
+        // Push the negation operator onto the set op stack, which will force the negation after
+        //   this set is otherwise built.
+        fSetOpStack.push(setNegation, *fStatus);
         break;
+
+    case doSetOpError:
+        error(U_REGEX_RULE_SYNTAX);   // TODO:  -- or && at the end of a set.  Illegal.
+        break;
+
+
+    case doSetRange:
+        // We have scanned literal-literal.  Add the range to the set.
+        // The left character is already in the set, and is saved in fLastSetLiteral.
+        // The right side is the current character.
+        // Lower Limit > Upper limit being an error matches both Java
+        //        and ICU UnicodeSet behavior.
+        {
+        if (fLastSetLiteral > fC.fChar) {
+            error(U_REGEX_RULE_SYNTAX);   // TODO: make a specific error code for bad ranges.
+        }
+        UnicodeSet *s = (UnicodeSet *)fSetStack.peek();
+        s->add(fLastSetLiteral, fC.fChar);
+        break;
+        }
 
 
     default:

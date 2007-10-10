@@ -200,6 +200,10 @@ private:
                                                      //   the pattern.
     UStack                        fSetOpStack;       // Stack of pending set operators (&&, --, union)
 
+    UChar32                       fLastSetLiteral;   // The last single code point added to a set.
+                                                     //   needed when "-y" is scanned, and we need
+                                                     //   to turn "x-y" into a range.
+
 };
 
 // Constant values to be pushed onto fSetOpStack while scanning & evalueating [set expressions]
