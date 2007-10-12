@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 1997-2006, International Business Machines Corporation and    *
+* Copyright (C) 2007, International Business Machines Corporation and         *
 * others. All Rights Reserved.                                                *
 *******************************************************************************
 *
@@ -206,7 +206,9 @@ MessageFormat::MessageFormat(const UnicodeString& pattern,
   argTypeCapacity(0),
   defaultNumberFormat(NULL),
   defaultDateFormat(NULL),
-  isArgNumeric(TRUE)
+  isArgNumeric(TRUE),
+  idStart(UCHAR_ID_START),
+  idContinue(UCHAR_ID_CONTINUE)
 {
     if (!allocateSubformats(DEFAULT_INITIAL_CAPACITY) ||
         !allocateArgTypes(DEFAULT_INITIAL_CAPACITY)) {
@@ -231,7 +233,9 @@ MessageFormat::MessageFormat(const UnicodeString& pattern,
   argTypeCapacity(0),
   defaultNumberFormat(NULL),
   defaultDateFormat(NULL),
-  isArgNumeric(TRUE)
+  isArgNumeric(TRUE),
+  idStart(UCHAR_ID_START),
+  idContinue(UCHAR_ID_CONTINUE)
 {
     if (!allocateSubformats(DEFAULT_INITIAL_CAPACITY) ||
         !allocateArgTypes(DEFAULT_INITIAL_CAPACITY)) {
@@ -257,7 +261,9 @@ MessageFormat::MessageFormat(const UnicodeString& pattern,
   argTypeCapacity(0),
   defaultNumberFormat(NULL),
   defaultDateFormat(NULL),
-  isArgNumeric(TRUE)
+  isArgNumeric(TRUE),
+  idStart(UCHAR_ID_START),
+  idContinue(UCHAR_ID_CONTINUE)
 {
     if (!allocateSubformats(DEFAULT_INITIAL_CAPACITY) ||
         !allocateArgTypes(DEFAULT_INITIAL_CAPACITY)) {
@@ -280,7 +286,8 @@ MessageFormat::MessageFormat(const MessageFormat& that)
   argTypeCapacity(0),
   defaultNumberFormat(NULL),
   defaultDateFormat(NULL),
-  isArgNumeric(TRUE)
+  isArgNumeric(TRUE),
+  idStart(UCHAR_ID_START)
 {
     *this = that;
 }
@@ -856,8 +863,13 @@ MessageFormat::adoptFormat(const UnicodeString& formatName,
                            Format* formatToAdopt,
                            UErrorCode& status) {
     if (isArgNumeric ) {
-        status = U_ARGUMENT_TYPE_MISMATCH;
-        return;   
+        int32_t argumentNumber = stou(formatName);
+        if (argumentNumber<0) {
+            status = U_ARGUMENT_TYPE_MISMATCH;
+            return; 
+        }
+        adoptFormat(argumentNumber, formatToAdopt);
+        return;
     }
     for (int32_t i=0; i<subformatCount; ++i) {
         if (formatName==*subformats[i].argName) {
@@ -895,7 +907,21 @@ MessageFormat::setFormat(int32_t n, const Format& newFormat) {
 Format *
 MessageFormat::getFormat(const UnicodeString& formatName, UErrorCode& status) {
 
-    if (U_FAILURE(status) || isArgNumeric ) return NULL;
+    if (U_FAILURE(status)) return NULL;
+    
+    if (isArgNumeric ) {
+        int32_t argumentNumber = stou(formatName);
+        if (argumentNumber<0) {
+            status = U_ARGUMENT_TYPE_MISMATCH;
+            return NULL; 
+        }
+        if (argumentNumber < 0 || argumentNumber >= subformatCount) {
+            return subformats[argumentNumber].format;
+        }
+        else {
+            return NULL;
+        }
+    }
     
     for (int32_t i=0; i<subformatCount; ++i) {
         if (formatName==*subformats[i].argName)
@@ -1084,27 +1110,19 @@ MessageFormat::format(const Formattable* arguments,
                       FieldPosition& status, 
                       int32_t recursionProtection,
                       UErrorCode& success) const 
-{
-    // Allow NULL array only if cnt == 0
+{   
+    int32_t lastOffset = 0;
+    int32_t argumentNumber=0;
     if (cnt < 0 || (cnt && arguments == NULL)) {
         success = U_ILLEGAL_ARGUMENT_ERROR;
         return appendTo;
     }
-    if ( isArgNumeric ) {
-        if (argumentNames!=NULL) {
-            success = U_ARGUMENT_TYPE_MISMATCH;
-            return appendTo;
-        }
+ 
+    if ( !isArgNumeric && argumentNames== NULL ) {
+        success = U_ILLEGAL_ARGUMENT_ERROR;
+        return appendTo;
     }
-    else {
-        if ( cnt && argumentNames== NULL ) {
-            success = U_ILLEGAL_ARGUMENT_ERROR;
-            return appendTo;
-        }
-    }
-    
-    int32_t lastOffset = 0;
-    int32_t argumentNumber=0;
+ 
     const Formattable *obj=NULL;
     for (int32_t i=0; i<subformatCount; ++i) {
         // Append the prefix of current format element.
@@ -1322,6 +1340,10 @@ MessageFormat::parse(const UnicodeString& source,
                      int32_t& cnt,
                      UErrorCode& success) const
 {
+    if (!isArgNumeric ) {
+        success = U_ARGUMENT_TYPE_MISMATCH;
+        return NULL;   
+    }
     ParsePosition status(0);
     // Calls the actual implementation method and starts
     // from zero offset of the source text.
@@ -1410,7 +1432,6 @@ MessageFormat::makeFormat(int32_t formatNumber,
         argumentNumber=formatNumber;
     }
     if (!isArgNumeric) {
-        // TODO (claireho) - discuss with Markus for idStart and idContinue
         if ( !isLegalArgName(segments[1]) ) {
             ec = U_INVALID_FORMAT_ERROR;
             return;
@@ -1676,12 +1697,17 @@ const DateFormat* MessageFormat::getDefaultDateFormat(UErrorCode& ec) const {
 }
 
 UBool
-MessageFormat::isLegalArgName(const UnicodeString& argName) const{
-    UChar ch;
-    // TODO (claireho) : check with Markus for the idStart and idContinue as Java
-    for (int32_t i=0; i<argName.length(); ++i) {
-        ch = argName.charAt(i);
-        if (ch<0x41 || (ch >0x5A && ch<0x60) || ch>0x7A) {
+MessageFormat::usesNamedArguments() const {
+    return !isArgNumeric;
+}
+
+UBool
+MessageFormat::isLegalArgName(const UnicodeString& argName) const {
+    if(!u_hasBinaryProperty(argName.charAt(0), idStart)) {
+        return FALSE;
+    }
+    for (int32_t i=1; i<argName.length(); ++i) {
+        if(!u_hasBinaryProperty(argName.charAt(i), idContinue)) {
             return FALSE;
         }
     }
