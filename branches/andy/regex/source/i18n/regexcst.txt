@@ -1,7 +1,7 @@
 
 #*****************************************************************************
 #
-#   Copyright (C) 2002-2003, International Business Machines Corporation and others.
+#   Copyright (C) 2002-2007, International Business Machines Corporation and others.
 #   All Rights Reserved.
 #
 #*****************************************************************************
@@ -293,6 +293,7 @@ set-start:
     quoted               n  set-after-lit                           doSetLiteral
     ']'                  n  pop                                     doSetEnd
     '['                  n  set-open      ^set-after-set            doSetBegin
+    '\'                  n  set-escape
     default              n  set-after-lit                           doSetLiteral
 
 set-after-lit:
@@ -326,6 +327,15 @@ set-after-op:
     '['                  n  set-open         ^set-after-set         doSetBeginUnion  #inefficient
     ']'                     errorDeath                              doSetOpError
     default              n  set-after-lit                           doSetLiteral
+
+#
+#  \ processing
+#
+set-escape:
+   'p'                      set-after-set                           doSetProp
+   'P'                      set-after-set                           doSetProp
+   'N'                      set-after-set                           doSetProp
+   default:                 set-after-lit                           doSetLiteral    #TODO: needs warning!
 
 set-finish:
     default                 expr-quant                              doSetFinish
