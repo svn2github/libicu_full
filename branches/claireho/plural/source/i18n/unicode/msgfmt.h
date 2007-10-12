@@ -63,8 +63,8 @@ class DateFormat;
  * <strong>Note:</strong>
  * In ICU 4.0 MessageFormat supports named arguments.  If a named argument
  * is used, all arguments must be named.  Names start with a character in 
- * <code>:UCHAR_ID_START:</code> and continue with characters in 
- * <code>:UCHARID_CONTINUE:</code>, in particular they do not start with a digit.
+ * <code>UCHAR_ID_START</code> and continue with characters in 
+ * <code>UCHARID_CONTINUE</code>, in particular they do not start with a digit.
  * If named arguments are used, {@link #usesNamedArguments()} will return true.
  * <p>
  * The other new methods supporting named arguments are 
@@ -503,19 +503,25 @@ public:
     virtual StringEnumeration* getFormatNames(UErrorCode& status);
     
     /**
-     * Gets subformat pointer from given format name.  The returned Format object 
-     * should not be deleted by the caller, nor should the ponter of other 
-     * object .  The pointer and its contents remain valid only
-     * until the next call to any method of this class is made with
-     * this object. 
+     * Gets subformat pointer for given format name.   
+     * This function supports both named and numbered
+     * arguments-- if numbered, the formatName is the
+     * corresponding UnicodeStrings (e.g. "0", "1", "2"...).
+     * The returned Format object should not be deleted by the caller,
+     * nor should the ponter of other object .  The pointer and its 
+     * contents remain valid only until the next call to any method
+     * of this class is made with this object. 
      * @param status  output param set to success/failure code.
      * @draft ICU 4.0
      */
     virtual Format* getFormat(const UnicodeString& formatName, UErrorCode& status);
     
     /**
-     * Sets one subformat from given format name.
-     * See the class description about format name.
+     * Sets one subformat for given format name.
+     * See the class description about format name. 
+     * This function supports both named and numbered
+     * arguments-- if numbered, the formatName is the
+     * corresponding UnicodeStrings (e.g. "0", "1", "2"...).
      * If there is no matched formatName or wrong type,
      * the item will be ignored.
      * @param formatName  Name of the subformat.
@@ -526,8 +532,11 @@ public:
     virtual void setFormat(const UnicodeString& formatName, const Format& format, UErrorCode& status);
     
     /**
-     * Sets one subformat from given format name.
-     * See the class description about format name.
+     * Sets one subformat for given format name.
+     * See the class description about format name. 
+     * This function supports both named and numbered
+     * arguments-- if numbered, the formatName is the
+     * corresponding UnicodeStrings (e.g. "0", "1", "2"...).
      * If there is no matched formatName or wrong type,
      * the item will be ignored.
      * The caller should not delete the Format object after this call.
@@ -635,7 +644,9 @@ public:
 
     /**
      * Formats the given array of arguments into a user-defined argument name
-     * array.
+     * array. This function supports both named and numbered
+     * arguments-- if numbered, the formatName is the
+     * corresponding UnicodeStrings (e.g. "0", "1", "2"...).
      *
      * @param argumentNames argument name array
      * @param arguments An array of objects to be formatted.
