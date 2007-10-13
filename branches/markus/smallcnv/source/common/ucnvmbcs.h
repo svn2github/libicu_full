@@ -50,7 +50,8 @@
  *   (Reader code must reject the file if it does not recognize them all.)
  * - In particular, one of these flags indicates that most of the fromUnicode
  *   data is missing and must be reconstituted from the toUnicode data
- *   at load time.
+ *   and from the utf8Friendly mbcsIndex at load time.
+ *   (This only works with a utf8Friendly table.)
  *   In this case, makeconv may increase maxFastUChar automatically to U+FFFF.
  *
  * When possible, makeconv continues to generate version 4.m files.
@@ -381,6 +382,9 @@ typedef struct UConverterMBCSTable {
     /* roundtrips */
     uint32_t asciiRoundtrips;
 
+    /* reconstituted data that was omitted from the .cnv file */
+    uint8_t *reconstitutedData;
+
     /* converter name for swaplfnl */
     char *swapLFNLName;
 
@@ -426,7 +430,7 @@ typedef struct {
     uint32_t options;
 
     /* new and optional in version 5; used if options&MBCS_OPT_NO_FROM_U */
-    uint32_t fullStage2Length;
+    uint32_t fullStage2Length;  /* number of 32-bit units */
 } _MBCSHeader;
 
 /*

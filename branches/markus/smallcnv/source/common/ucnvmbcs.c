@@ -954,6 +954,77 @@ _EBCDICSwapLFNL(UConverterSharedData *sharedData, UErrorCode *pErrorCode) {
     return TRUE;
 }
 
+/* reconstitute omitted fromUnicode data ------------------------------------ */
+
+static void
+reconstituteData(UConverterMBCSTable *mbcsTable,
+                 uint32_t stage1Length, uint32_t stage2Length,
+                 uint32_t fullStage2Length,  /* lengths are numbers of units, not bytes */
+                 UErrorCode *pErrorCode) {
+    uint16_t *stage1;
+    uint32_t *stage2;
+    uint8_t *bytes;
+    uint32_t dataLength=stage1Length*2+fullStage2Length*4+mbcsTable->fromUBytesLength;
+    mbcsTable->reconstitutedData=(uint8_t *)uprv_malloc(dataLength);
+    if(mbcsTable->reconstitutedData==NULL) {
+        *pErrorCode=U_MEMORY_ALLOCATION_ERROR;
+        return;
+    }
+    uprv_memset(mbcsTable->reconstitutedData, 0, dataLength);
+
+    /* copy existing data and reroute the pointers */
+    stage1=(uint16_t *)mbcsTable->reconstitutedData;
+    uprv_memcpy(stage1, mbcsTable->fromUnicodeTable, stage1Length*2);
+
+    stage2=(uint32_t *)(stage1+stage1Length);
+    uprv_memcpy(stage2+(fullStage2Length-stage2Length),
+                mbcsTable->fromUnicodeTable+stage1Length,
+                stage2Length*4);
+
+    mbcsTable->fromUnicodeTable=stage1;
+    mbcsTable->fromUnicodeBytes=bytes=(uint8_t *)(stage2+fullStage2Length);
+
+    /* indexes into stage 2 count from the bottom of the fromUnicodeTable */
+    stage2=(uint32_t *)stage1;
+
+    /* reconstitute the initial part of stage 2 from the mbcsIndex */
+    {
+        int32_t stageUTF8Length=((int32_t)mbcsTable->maxFastUChar+1)>>6;
+        int32_t stageUTF8Index=0;
+        int32_t st1, st2, st3, i;
+
+        for(st1=0; stageUTF8Index<stageUTF8Length; ++st1) {
+            st2=stage1[st1];
+            if(st2!=stage1Length/2) {
+                /* each stage 2 block has 64 entries corresponding to 16 entries in the mbcsIndex */
+                for(i=0; i<16; ++i) {
+                    st3=mbcsTable->mbcsIndex[stageUTF8Index++];
+                    if(st3!=0) {
+                        /* an stage 2 entry's index is per stage 3 16-block, not per stage 3 entry */
+                        st3>>=4;
+                        /*
+                         * 4 stage 2 entries point to 4 consecutive stage 3 16-blocks which are
+                         * allocated together as a single 64-block for access from the mbcsIndex
+                         */
+                        stage2[st2++]=st3++;
+                        stage2[st2++]=st3++;
+                        stage2[st2++]=st3++;
+                        stage2[st2++]=st3;
+                    } else {
+                        /* no stage 3 block, skip */
+                        st2+=4;
+                    }
+                }
+            } else {
+                /* no stage 2 block, skip */
+                stageUTF8Index+=16;
+            }
+        }
+    }
+
+    /* reconstitute fromUnicodeBytes with roundtrips from toUnicode data */
+}
+
 /* MBCS setup functions ----------------------------------------------------- */
 
 static void
@@ -965,8 +1036,15 @@ ucnv_MBCSLoad(UConverterSharedData *sharedData,
     UConverterMBCSTable *mbcsTable=&sharedData->mbcs;
     _MBCSHeader *header=(_MBCSHeader *)raw;
     uint32_t offset;
+    uint32_t headerLength;
+    UBool noFromU=FALSE;
 
-    if(header->version[0]!=4) {
+    if(header->version[0]==4) {
+        headerLength=MBCS_HEADER_V4_LENGTH;
+    } else if(header->version[0]==5) {
+        headerLength=header->options&MBCS_OPT_LENGTH_MASK;
+        noFromU=(UBool)((header->options&MBCS_OPT_NO_FROM_U)!=0);
+    } else {
         *pErrorCode=U_INVALID_TABLE_FORMAT;
         return;
     }
@@ -1135,7 +1213,7 @@ ucnv_MBCSLoad(UConverterSharedData *sharedData,
 
         mbcsTable->countStates=(uint8_t)header->countStates;
         mbcsTable->countToUFallbacks=header->countToUFallbacks;
-        mbcsTable->stateTable=(const int32_t (*)[256])(raw+sizeof(_MBCSHeader));
+        mbcsTable->stateTable=(const int32_t (*)[256])(raw+headerLength*4);
         mbcsTable->toUFallbacks=(const _MBCSToUFallback *)(mbcsTable->stateTable+header->countStates);
         mbcsTable->unicodeCodeUnits=(const uint16_t *)(raw+header->offsetToUCodeUnits);
 
@@ -1192,7 +1270,9 @@ ucnv_MBCSLoad(UConverterSharedData *sharedData,
                  * The .cnv file is prebuilt with an additional stage table with indexes
                  * to each block.
                  */
-                mbcsTable->mbcsIndex=(const uint16_t *)(mbcsTable->fromUnicodeBytes+mbcsTable->fromUBytesLength);
+                mbcsTable->mbcsIndex=(const uint16_t *)
+                    (mbcsTable->fromUnicodeBytes+
+                     (noFromU ? 0 : mbcsTable->fromUBytesLength));
                 mbcsTable->maxFastUChar=(((UChar)header->version[2])<<8)|0xff;
             }
         }
@@ -1208,6 +1288,16 @@ ucnv_MBCSLoad(UConverterSharedData *sharedData,
                 }
             }
             mbcsTable->asciiRoundtrips=asciiRoundtrips;
+        }
+
+        if(noFromU) {
+            uint32_t stage1Length=
+                mbcsTable->unicodeMask&UCNV_HAS_SUPPLEMENTARY ?
+                    0x440 : 0x40;
+            uint32_t stage2Length=
+                (header->offsetFromUBytes-header->offsetFromUTable)/4-
+                stage1Length/2;
+            reconstituteData(mbcsTable, stage1Length, stage2Length, header->fullStage2Length, pErrorCode);
         }
     }
 
