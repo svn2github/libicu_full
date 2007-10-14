@@ -61,6 +61,7 @@
 #define MBCS_UNROLL_SINGLE_FROM_BMP 0
 
 /*
+ * TODO: describe _MBCSHeader version 5.3
  * _MBCSHeader version 4.3
  * (Note that the _MBCSHeader version is in addition to the converter formatVersion.)
  *
@@ -362,101 +363,200 @@ gb18030Ranges[13][4]={
 
 /* Miscellaneous ------------------------------------------------------------ */
 
-#if 0  /* Replaced by ucnv_MBCSGetFilteredUnicodeSetForUnicode() until we implement ucnv_getUnicodeSet() with reverse fallbacks. */
-
 /* similar to ucnv_MBCSGetNextUChar() but recursive */
-static void
-_getUnicodeSetForBytes(const UConverterSharedData *sharedData,
-                       const int32_t (*stateTable)[256], const uint16_t *unicodeCodeUnits,
-                       const USetAdder *sa,
-                       UConverterUnicodeSet which,
-                       uint8_t state, uint32_t offset, int32_t lowByte, int32_t highByte,
-                      
-                       UErrorCode *pErrorCode) {
-    int32_t b, entry;
+static UBool
+enumToU(UConverterMBCSTable *mbcsTable, int8_t stateProps[],
+        int32_t state, uint32_t offset,
+        uint8_t bytes[], int32_t length,
+        UConverterEnumToUCallback *callback, const void *context,
+        UErrorCode *pErrorCode) {
+    const int32_t *row;
+    const uint16_t *unicodeCodeUnits;
+    int32_t b, highByte, entry;
 
-    for(b=lowByte; b<=highByte; ++b) {
-        entry=stateTable[state][b];
+    row=mbcsTable->stateTable[state];
+    unicodeCodeUnits=mbcsTable->unicodeCodeUnits;
+
+    highByte=((stateProps[state]&7)<<5)|0x1f;
+    for(b=(stateProps[state]&0x38)<<2; b<=highByte; ++b) {
+        entry=row[b];
         if(MBCS_ENTRY_IS_TRANSITION(entry)) {
-            _getUnicodeSetForBytes(
-                sharedData, stateTable, unicodeCodeUnits,
-                sa, which,
-                (uint8_t)MBCS_ENTRY_TRANSITION_STATE(entry),
-                offset+MBCS_ENTRY_TRANSITION_OFFSET(entry),
-                0, 0xff,
-                pErrorCode);
+            int32_t nextState=MBCS_ENTRY_TRANSITION_STATE(entry);
+            if(stateProps[nextState]>=0) {
+                /* recurse to a state with non-ignorable actions */
+                bytes[length]=(uint8_t)b;
+                if(!enumToU(
+                        mbcsTable, stateProps, nextState,
+                        offset+MBCS_ENTRY_TRANSITION_OFFSET(entry),
+                        bytes, length+1,
+                        callback, context,
+                        pErrorCode)) {
+                    return FALSE;
+                }
+            }
         } else {
             UChar32 c;
-            int32_t rowOffset=offset;
-            uint8_t action;
-
-            c=U_SENTINEL;
+            int32_t action;
 
             /*
              * An if-else-if chain provides more reliable performance for
              * the most common cases compared to a switch.
              */
-            action=(uint8_t)(MBCS_ENTRY_FINAL_ACTION(entry));
+            action=MBCS_ENTRY_FINAL_ACTION(entry);
             if(action==MBCS_STATE_VALID_DIRECT_16) {
                 /* output BMP code point */
                 c=(UChar)MBCS_ENTRY_FINAL_VALUE_16(entry);
             } else if(action==MBCS_STATE_VALID_16) {
-                offset+=MBCS_ENTRY_FINAL_VALUE_16(entry);
-                c=unicodeCodeUnits[offset];
+                int32_t finalOffset=offset+MBCS_ENTRY_FINAL_VALUE_16(entry);
+                c=unicodeCodeUnits[finalOffset];
                 if(c<0xfffe) {
                     /* output BMP code point */
                 } else {
                     c=U_SENTINEL;
                 }
             } else if(action==MBCS_STATE_VALID_16_PAIR) {
-                offset+=MBCS_ENTRY_FINAL_VALUE_16(entry);
-                c=unicodeCodeUnits[offset++];
+                int32_t finalOffset=offset+MBCS_ENTRY_FINAL_VALUE_16(entry);
+                c=unicodeCodeUnits[finalOffset++];
                 if(c<0xd800) {
                     /* output BMP code point below 0xd800 */
                 } else if(c<=0xdbff) {
                     /* output roundtrip or fallback supplementary code point */
-                    c=((c&0x3ff)<<10)+unicodeCodeUnits[offset]+(0x10000-0xdc00);
+                    c=((c&0x3ff)<<10)+unicodeCodeUnits[finalOffset]+(0x10000-0xdc00);
                 } else if(c==0xe000) {
                     /* output roundtrip BMP code point above 0xd800 or fallback BMP code point */
-                    c=unicodeCodeUnits[offset];
+                    c=unicodeCodeUnits[finalOffset];
                 } else {
                     c=U_SENTINEL;
                 }
             } else if(action==MBCS_STATE_VALID_DIRECT_20) {
                 /* output supplementary code point */
                 c=(UChar32)(MBCS_ENTRY_FINAL_VALUE(entry)+0x10000);
+            } else {
+                c=U_SENTINEL;
             }
 
             if(c>=0) {
-                sa->add(sa->set, c);
+                bytes[length]=(uint8_t)b;
+                if(!callback(context, bytes, length+1, c, NULL, FALSE)) {
+                    return FALSE;
+                }
             }
-            offset=rowOffset;
         }
     }
+    return TRUE;
 }
 
-/*
- * Internal function returning a UnicodeSet for toUnicode() conversion.
- * Currently only used for ISO-2022-CN, and only handles roundtrip mappings.
- * In the future, if we add support for reverse-fallback sets, this function
- * needs to be updated, and called for each initial state.
- * Does not currently handle extensions.
- * Does not empty the set first.
- */
 U_CFUNC void
-ucnv_MBCSGetUnicodeSetForBytes(const UConverterSharedData *sharedData,
-                           const USetAdder *sa,
-                           UConverterUnicodeSet which,
-                           uint8_t state, int32_t lowByte, int32_t highByte,
-                           UErrorCode *pErrorCode) {
-    _getUnicodeSetForBytes(
-        sharedData, sharedData->mbcs.stateTable, sharedData->mbcs.unicodeCodeUnits,
-        sa, which,
-        state, 0, lowByte, highByte,
-        pErrorCode);
-}
+ucnv_MBCSEnumToUnicode(UConverterMBCSTable *mbcsTable,
+                       UConverterEnumToUCallback *callback, const void *context,
+                       UErrorCode *pErrorCode) {
+    /*
+     * Properties for each state, to speed up the enumeration.
+     * Ignorable actions are unassigned/illegal/state-change-only:
+     * They do not lead to mappings.
+     *
+     * Bits 7..6:
+     * 1 direct/initial state (stateful converters have multiple)
+     * 0 non-initial state with transitions or with non-ignorable result actions
+     * -1 final state with only ignorable actions
+     *
+     * Bits 5..3:
+     * The lowest byte value with non-ignorable actions is
+     * value<<5 (rounded down).
+     *
+     * Bits 2..0:
+     * The highest byte value with non-ignorable actions is
+     * (value<<5)&0x1f (rounded up).
+     */
+    int8_t stateProps[MBCS_MAX_STATE_COUNT];
+    uint8_t bytes[UCNV_EXT_MAX_BYTES];
+    const int32_t *row;
+    int32_t state, min, max;
 
-#endif
+    /*
+     * No need to analyze state 0:
+     * We know it is a direct state, and it is almost as expensive to analyze it as
+     * it is to enumerate it, so we set its properties for enumeration
+     * over 00..ff.
+     */
+    stateProps[0]=0x47;
+
+    /* analyze the other states */
+    row=mbcsTable->stateTable[0];
+    for(state=1; state<mbcsTable->countStates; ++state) {
+        int32_t entry, action;
+        UBool sawFinalAction=FALSE;
+
+        row+=256;
+
+        /* find first non-illegal/unassigned state */
+        for(min=0;; ++min) {
+            entry=row[min];
+            if(MBCS_ENTRY_IS_TRANSITION(entry)) {
+                stateProps[state]=0;
+                break;
+            }
+            action=MBCS_ENTRY_FINAL_ACTION(entry);
+            if(action<MBCS_STATE_UNASSIGNED) {
+                stateProps[state]= action<=MBCS_STATE_FALLBACK_DIRECT_20 ? 0x40 : 0;
+                sawFinalAction=TRUE;
+                break;
+            }
+            if(min==0xff) {
+                stateProps[state]=(int8_t)0xc0;
+                break;
+            }
+        }
+        if(stateProps[state]>=0) {
+            stateProps[state]|=(int8_t)((min>>5)<<3);
+        } else {
+            continue;
+        }
+
+        /* find last non-illegal/unassigned state */
+        for(max=0xff; min<max; --max) {
+            entry=row[max];
+            if(MBCS_ENTRY_IS_TRANSITION(entry)) {
+                break;
+            }
+            action=MBCS_ENTRY_FINAL_ACTION(entry);
+            if(action<MBCS_STATE_UNASSIGNED) {
+                if(action<=MBCS_STATE_FALLBACK_DIRECT_20) {
+                    stateProps[state]|=0x40;
+                }
+                sawFinalAction=TRUE;
+                break;
+            }
+        }
+        stateProps[state]|=(int8_t)(max>>5);
+
+        /* is this a direct state? */
+        if(!sawFinalAction) {
+            while(++min<max) {
+                entry=row[min];
+                if(MBCS_ENTRY_IS_FINAL(entry)) {
+                    action=MBCS_ENTRY_FINAL_ACTION(entry);
+                    if(action<=MBCS_STATE_FALLBACK_DIRECT_20) {
+                        stateProps[state]|=0x40;
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    for(state=0; state<mbcsTable->countStates; ++state) {
+        if(stateProps[state]>=0x40) {
+            /* start from each direct state */
+            enumToU(
+                mbcsTable, stateProps, state, 0,
+                bytes, 0,
+                callback, context,
+                pErrorCode);
+        }
+    }
+    /* TODO(markus): need to use dbcsOnlyState? ever need to exclude SBCS? */
+}
 
 U_CFUNC void
 ucnv_MBCSGetFilteredUnicodeSetForUnicode(const UConverterSharedData *sharedData,
@@ -956,6 +1056,43 @@ _EBCDICSwapLFNL(UConverterSharedData *sharedData, UErrorCode *pErrorCode) {
 
 /* reconstitute omitted fromUnicode data ------------------------------------ */
 
+static UBool U_CALLCONV
+writeStage3Roundtrip(const void *context,
+                     const uint8_t *b, int32_t length,
+                     UChar32 c, const UChar *u,
+                     UBool fb) {
+    UConverterMBCSTable *mbcsTable=(UConverterMBCSTable *)context;
+    uint8_t *fromUnicodeBytes=(uint8_t *)mbcsTable->fromUnicodeBytes;
+
+    if(b[0]==0 || c<0) {
+        /*
+         * fromUnicodeBytes cannot store a 0 lead byte, nor a multi-character mapping;
+         * such a mapping must have been moved to the extension table
+         */
+        return TRUE;
+    }
+
+    /* TODO: write stage 3 entry according to outputType */
+    switch(length) {
+    case 1:
+        printf("  %02X          -> U+%04X\n", b[0], c);
+        break;
+    case 2:
+        printf("  %02X %02X       -> U+%04X\n", b[0], b[1], c);
+        break;
+    case 3:
+        printf("  %02X %02X %02X    -> U+%04X\n", b[0], b[1], b[2], c);
+        break;
+    case 4:
+        printf("  %02X %02X %02X %02X -> U+%04X\n", b[0], b[1], b[2], b[3], c);
+        break;
+    default:
+        break;
+    }
+
+    return TRUE;
+ }
+
 static void
 reconstituteData(UConverterMBCSTable *mbcsTable,
                  uint32_t stage1Length, uint32_t stage2Length,
@@ -1023,6 +1160,7 @@ reconstituteData(UConverterMBCSTable *mbcsTable,
     }
 
     /* reconstitute fromUnicodeBytes with roundtrips from toUnicode data */
+    ucnv_MBCSEnumToUnicode(mbcsTable, writeStage3Roundtrip, mbcsTable, pErrorCode);
 }
 
 /* MBCS setup functions ----------------------------------------------------- */
@@ -1333,6 +1471,9 @@ ucnv_MBCSUnload(UConverterSharedData *sharedData) {
     }
     if(mbcsTable->baseSharedData!=NULL) {
         ucnv_unload(mbcsTable->baseSharedData);
+    }
+    if(mbcsTable->reconstitutedData!=NULL) {
+        uprv_free(mbcsTable->reconstitutedData);
     }
 }
 
