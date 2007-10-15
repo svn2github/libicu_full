@@ -528,38 +528,6 @@ U_CFUNC void
 ucnv_MBCSToUnicodeWithOffsets(UConverterToUnicodeArgs *pArgs,
                           UErrorCode *pErrorCode);
 
-/**
- * Callback from ucnv_MBCSEnumToUnicode(), takes a mapping from a sequence of bytes
- * to a Unicode code point.
- *
- * @param context an opaque pointer, as passed into ucnv_MBCSEnumToUnicode()
- * @param b pointer to the bytes
- * @param length number of bytes (1..UCNV_EXT_MAX_BYTES)
- * @param c resulting Unicode code point (0..0x10ffff)
- *        or negative length of a multi-code point result string (negative 1..UCNV_EXT_MAX_UCHARS)
- * @param u result string if c is negative; else undefined
- * @param fb TRUE if this is a reverse fallback
- * @return TRUE to continue enumeration, FALSE to stop
- */
-typedef UBool U_CALLCONV
-UConverterEnumToUCallback(const void *context,
-                          const uint8_t *b, int32_t length,
-                          UChar32 c, const UChar *u,
-                          UBool fb);
-
-/*
- * Internal function enumerating the toUnicode data of an MBCS converter.
- * Currently only used for reconstituting data for a MBCS_OPT_NO_FROM_U
- * table, but could also be used for a future ucnv_getUnicodeSet() option
- * that includes reverse fallbacks (after updating this function's implementation).
- * Currently only handles roundtrip mappings.
- * Does not currently handle extensions.
- */
-U_CFUNC void
-ucnv_MBCSEnumToUnicode(UConverterMBCSTable *mbcsTable,
-                       UConverterEnumToUCallback *callback, const void *context,
-                       UErrorCode *pErrorCode);
-
 /*
  * Internal function returning a UnicodeSet for toUnicode() conversion.
  * Currently only used for ISO-2022-CN, and only handles roundtrip mappings.

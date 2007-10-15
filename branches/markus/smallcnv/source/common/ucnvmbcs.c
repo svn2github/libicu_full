@@ -363,32 +363,58 @@ gb18030Ranges[13][4]={
 
 /* Miscellaneous ------------------------------------------------------------ */
 
+/**
+ * Callback from ucnv_MBCSEnumToUnicode(), takes 32 mappings from
+ * consecutive sequences of bytes, starting from the one encoded in value,
+ * to Unicode code points. (Multiple mappings to reduce per-function call overhead.)
+ * Does not currently support m:n mappings or reverse fallbacks.
+ * This function will not be called for sequences of bytes with leading zeros.
+ *
+ * @param context an opaque pointer, as passed into ucnv_MBCSEnumToUnicode()
+ * @param value contains 1..4 bytes of the first byte sequence, right-aligned
+ * @param codePoints resulting Unicode code points, or negative if a byte sequence does
+ *        not map to anything
+ * @return TRUE to continue enumeration, FALSE to stop
+ */
+typedef UBool U_CALLCONV
+UConverterEnumToUCallback(const void *context, uint32_t value, UChar32 codePoints[32]);
+
 /* similar to ucnv_MBCSGetNextUChar() but recursive */
 static UBool
 enumToU(UConverterMBCSTable *mbcsTable, int8_t stateProps[],
         int32_t state, uint32_t offset,
-        uint8_t bytes[], int32_t length,
+        uint32_t value,
         UConverterEnumToUCallback *callback, const void *context,
         UErrorCode *pErrorCode) {
+    UChar32 codePoints[32];
     const int32_t *row;
     const uint16_t *unicodeCodeUnits;
-    int32_t b, highByte, entry;
+    UChar32 anyCodePoints;
+    int32_t b, limit;
 
     row=mbcsTable->stateTable[state];
     unicodeCodeUnits=mbcsTable->unicodeCodeUnits;
 
-    highByte=((stateProps[state]&7)<<5)|0x1f;
-    for(b=(stateProps[state]&0x38)<<2; b<=highByte; ++b) {
-        entry=row[b];
+    value<<=8;
+    anyCodePoints=-1;  /* becomes non-negative if there is a mapping */
+
+    b=(stateProps[state]&0x38)<<2;
+    if(b==0 && stateProps[state]>=0x40) {
+        /* skip byte sequences with leading zeros because they are not stored in the fromUnicode table */
+        codePoints[0]=U_SENTINEL;
+        b=1;
+    }
+    limit=((stateProps[state]&7)+1)<<5;
+    while(b<limit) {
+        int32_t entry=row[b];
         if(MBCS_ENTRY_IS_TRANSITION(entry)) {
             int32_t nextState=MBCS_ENTRY_TRANSITION_STATE(entry);
             if(stateProps[nextState]>=0) {
                 /* recurse to a state with non-ignorable actions */
-                bytes[length]=(uint8_t)b;
                 if(!enumToU(
                         mbcsTable, stateProps, nextState,
                         offset+MBCS_ENTRY_TRANSITION_OFFSET(entry),
-                        bytes, length+1,
+                        value|(uint32_t)b,
                         callback, context,
                         pErrorCode)) {
                     return FALSE;
@@ -435,18 +461,27 @@ enumToU(UConverterMBCSTable *mbcsTable, int8_t stateProps[],
                 c=U_SENTINEL;
             }
 
-            if(c>=0) {
-                bytes[length]=(uint8_t)b;
-                if(!callback(context, bytes, length+1, c, NULL, FALSE)) {
-                    return FALSE;
-                }
+            codePoints[b&0x1f]=c;
+            anyCodePoints&=c;
+        }
+        if(((++b)&0x1f)==0) {
+            if(anyCodePoints>=0 && !callback(context, value|(uint32_t)(b-0x20), codePoints)) {
+                return FALSE;
             }
         }
     }
     return TRUE;
 }
 
-U_CFUNC void
+/*
+ * Internal function enumerating the toUnicode data of an MBCS converter.
+ * Currently only used for reconstituting data for a MBCS_OPT_NO_FROM_U
+ * table, but could also be used for a future ucnv_getUnicodeSet() option
+ * that includes reverse fallbacks (after updating this function's implementation).
+ * Currently only handles roundtrip mappings.
+ * Does not currently handle extensions.
+ */
+static void
 ucnv_MBCSEnumToUnicode(UConverterMBCSTable *mbcsTable,
                        UConverterEnumToUCallback *callback, const void *context,
                        UErrorCode *pErrorCode) {
@@ -469,7 +504,6 @@ ucnv_MBCSEnumToUnicode(UConverterMBCSTable *mbcsTable,
      * (value<<5)&0x1f (rounded up).
      */
     int8_t stateProps[MBCS_MAX_STATE_COUNT];
-    uint8_t bytes[UCNV_EXT_MAX_BYTES];
     const int32_t *row;
     int32_t state, min, max;
 
@@ -549,8 +583,7 @@ ucnv_MBCSEnumToUnicode(UConverterMBCSTable *mbcsTable,
         if(stateProps[state]>=0x40) {
             /* start from each direct state */
             enumToU(
-                mbcsTable, stateProps, state, 0,
-                bytes, 0,
+                mbcsTable, stateProps, state, 0, 0,
                 callback, context,
                 pErrorCode);
         }
@@ -1056,40 +1089,85 @@ _EBCDICSwapLFNL(UConverterSharedData *sharedData, UErrorCode *pErrorCode) {
 
 /* reconstitute omitted fromUnicode data ------------------------------------ */
 
+/* for details, compare with genmbcs.c MBCSAddFromUnicode() and transformEUC() */
 static UBool U_CALLCONV
-writeStage3Roundtrip(const void *context,
-                     const uint8_t *b, int32_t length,
-                     UChar32 c, const UChar *u,
-                     UBool fb) {
+writeStage3Roundtrip(const void *context, uint32_t value, UChar32 codePoints[32]) {
     UConverterMBCSTable *mbcsTable=(UConverterMBCSTable *)context;
-    uint8_t *fromUnicodeBytes=(uint8_t *)mbcsTable->fromUnicodeBytes;
+    const uint16_t *table;
+    uint32_t *stage2;
+    uint8_t *bytes, *p;
+    UChar32 c;
+    int32_t i, st3;
 
-    if(b[0]==0 || c<0) {
-        /*
-         * fromUnicodeBytes cannot store a 0 lead byte, nor a multi-character mapping;
-         * such a mapping must have been moved to the extension table
-         */
-        return TRUE;
-    }
+    table=mbcsTable->fromUnicodeTable;
+    bytes=(uint8_t *)mbcsTable->fromUnicodeBytes;
 
-    /* TODO: write stage 3 entry according to outputType */
-    switch(length) {
-    case 1:
-        printf("  %02X          -> U+%04X\n", b[0], c);
+    /* for EUC outputTypes, modify the value like genmbcs.c's transformEUC() */
+    switch(mbcsTable->outputType) {
+    case MBCS_OUTPUT_3_EUC:
+        if(value<=0xffff) {
+            /* short sequences are stored directly */
+            /* code set 0 or 1 */
+        } else if(value<=0x8effff) {
+            /* code set 2 */
+            value&=0x7fff;
+        } else /* first byte is 0x8f */ {
+            /* code set 3 */
+            value&=0xff7f;
+        }
         break;
-    case 2:
-        printf("  %02X %02X       -> U+%04X\n", b[0], b[1], c);
-        break;
-    case 3:
-        printf("  %02X %02X %02X    -> U+%04X\n", b[0], b[1], b[2], c);
-        break;
-    case 4:
-        printf("  %02X %02X %02X %02X -> U+%04X\n", b[0], b[1], b[2], b[3], c);
+    case MBCS_OUTPUT_4_EUC:
+        if(value<=0xffffff) {
+            /* short sequences are stored directly */
+            /* code set 0 or 1 */
+        } else if(value<=0x8effffff) {
+            /* code set 2 */
+            value&=0x7fffff;
+        } else /* first byte is 0x8f */ {
+            /* code set 3 */
+            value&=0xff7fff;
+        }
         break;
     default:
         break;
     }
 
+    for(i=0; i<=0x1f; ++value, ++i) {
+        c=codePoints[i];
+        if(c<0) {
+            continue;
+        }
+        /* printf("  %.8X -> U+%04X\n", value, c); -- TODO: remove debug code */
+
+        /* locate the stage 2 & 3 data */
+        stage2=((uint32_t *)table)+table[c>>10]+((c>>4)&0x3f);
+        p=bytes;
+        st3=(int32_t)(uint16_t)*stage2*16+(c&0xf);
+        if(st3>=mbcsTable->fromUBytesLength) {
+            continue; /* TODO: remove debug code */
+        }
+
+        /* write the codepage bytes into stage 3 */
+        switch(mbcsTable->outputType) {
+        case MBCS_OUTPUT_3:
+        case MBCS_OUTPUT_4_EUC:
+            p+=st3*3;
+            p[0]=(uint8_t)(value>>16);
+            p[1]=(uint8_t)(value>>8);
+            p[2]=(uint8_t)value;
+            break;
+        case MBCS_OUTPUT_4:
+            ((uint32_t *)p)[st3]=value;
+            break;
+        default:
+            /* 2 bytes per character */
+            ((uint16_t *)p)[st3]=(uint16_t)value;
+            break;
+        }
+
+        /* set the roundtrip flag */
+        *stage2|=(1UL<<(16+(c&0xf)));
+    }
     return TRUE;
  }
 
@@ -1135,6 +1213,9 @@ reconstituteData(UConverterMBCSTable *mbcsTable,
             if(st2!=stage1Length/2) {
                 /* each stage 2 block has 64 entries corresponding to 16 entries in the mbcsIndex */
                 for(i=0; i<16; ++i) {
+                    if(st2>=(stage1Length/2+(fullStage2Length-stage2Length))) {
+                        break; /* TODO: remove debug code */
+                    }
                     st3=mbcsTable->mbcsIndex[stageUTF8Index++];
                     if(st3!=0) {
                         /* an stage 2 entry's index is per stage 3 16-block, not per stage 3 entry */
@@ -1179,7 +1260,7 @@ ucnv_MBCSLoad(UConverterSharedData *sharedData,
 
     if(header->version[0]==4) {
         headerLength=MBCS_HEADER_V4_LENGTH;
-    } else if(header->version[0]==5) {
+    } else if(header->version[0]==5 && (header->options&MBCS_OPT_UNKNOWN_INCOMPATIBLE_MASK)==0) {
         headerLength=header->options&MBCS_OPT_LENGTH_MASK;
         noFromU=(UBool)((header->options&MBCS_OPT_NO_FROM_U)!=0);
     } else {
@@ -1258,6 +1339,12 @@ ucnv_MBCSLoad(UConverterSharedData *sharedData,
         mbcsTable->swapLFNLStateTable=NULL;
         mbcsTable->swapLFNLFromUnicodeBytes=NULL;
         mbcsTable->swapLFNLName=NULL;
+
+        /*
+         * The reconstitutedData must be deleted only when the base converter
+         * is unloaded.
+         */
+        mbcsTable->reconstitutedData=NULL;
 
         /*
          * Set a special, runtime-only outputType if the extension converter
