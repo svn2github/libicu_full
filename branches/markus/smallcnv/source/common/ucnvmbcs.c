@@ -1269,6 +1269,10 @@ ucnv_MBCSLoad(UConverterSharedData *sharedData,
     }
 
     mbcsTable->outputType=(uint8_t)header->flags;
+    if(noFromU && mbcsTable->outputType==MBCS_OUTPUT_1) {
+        *pErrorCode=U_INVALID_TABLE_FORMAT;
+        return;
+    }
 
     /* extension data, header version 4.2 and higher */
     offset=header->flags>>8;
