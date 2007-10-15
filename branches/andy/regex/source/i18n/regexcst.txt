@@ -279,11 +279,21 @@ octal-end:
 
 set-open:
    '^'                   n  set-open2                               doSetNegate
-   default                  set-open2
+   ':'                      set-posix                               doSetPosixProp
+   default                  set-open2 
 
 set-open2:
    ']'                   n  set-after-lit                           doSetLiteral
    default                  set-start
+   
+#  scanned a '[:'  If it really is a [:property:], doSetPosixProp will have
+#                  moved the scan to the closing ']'.  If it wasn't a property
+#                  expression, the scan will still be at the opening ':', which should
+#                  be interpreted as a normal set expression.
+set-posix:
+    ']'                  n   set-after-set
+    ':'                      set-start
+    default                  errorDeath                             doRuleError
 
 #
 #   set-start   after the [ and special case leading junk (^ and/or [) but before
@@ -301,12 +311,14 @@ set-after-lit:
     ']'                  n  pop                                     doSetEnd
     '['                  n  set-open      ^set-after-set            doSetBeginUnion
     '-'                  n  set-dash-L-1
+    '\'                  n  set-escape
     default              n  set-after-lit                           doSetLiteral
 
 set-after-set:
     quoted               n  set-after-lit                           doSetLiteral
     ']'                  n  pop                                     doSetEnd
     '['                  n  set-open      ^set-after-set            doSetBeginUnion
+    '\'                  n  set-escape
     default              n  set-after-lit                           doSetLiteral
 
 # We have a single dash following a literal. Could be a range or a -- operator or a literal
@@ -324,8 +336,9 @@ set-dash-L-1:
 #   It is an error to close a set at this point.
 set-after-op:
     quoted               n  set-after-lit                           doSetLiteral
-    '['                  n  set-open         ^set-after-set         doSetBeginUnion  #inefficient
+    '['                  n  set-open         ^set-after-set         doSetBeginUnion
     ']'                     errorDeath                              doSetOpError
+    '\'                  n  set-escape
     default              n  set-after-lit                           doSetLiteral
 
 #
@@ -335,7 +348,7 @@ set-escape:
    'p'                      set-after-set                           doSetProp
    'P'                      set-after-set                           doSetProp
    'N'                      set-after-set                           doSetProp
-   default:                 set-after-lit                           doSetLiteral    #TODO: needs warning!
+   default                n set-after-lit                           doSetLiteral    #TODO: needs warning!
 
 set-finish:
     default                 expr-quant                              doSetFinish

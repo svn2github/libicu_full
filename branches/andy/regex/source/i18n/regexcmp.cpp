@@ -1492,6 +1492,28 @@ UBool RegexCompile::doParseActions(int32_t action)
     case doSetOpError:
         error(U_REGEX_RULE_SYNTAX);   // TODO:  -- or && at the end of a set.  Illegal.
         break;
+        
+    case doSetPosixProp:
+        {
+            UnicodeSet *s = scanPosixProp();
+            if (s != NULL) {
+                UnicodeSet *tos = (UnicodeSet *)fSetStack.peek();
+                tos->addAll(*s);
+                delete s;
+            }  // else error.  scanProp() reported the error status already.
+        }
+        break;
+    case doSetProp:
+        //  Scanned a \p \P or \N within [brackets].
+        {
+            UnicodeSet *s = scanProp();
+            if (s != NULL) {
+                UnicodeSet *tos = (UnicodeSet *)fSetStack.peek();
+                tos->addAll(*s);
+                delete s;
+            }  // else error.  scanProp() reported the error status already.
+        }
+        break;
 
 
     case doSetRange:
@@ -3368,13 +3390,14 @@ static const UChar      chLF        = 0x0a;
 static const UChar      chNEL       = 0x85;      //    NEL newline variant
 static const UChar      chLS        = 0x2028;    //    Unicode Line Separator
 static const UChar      chPound     = 0x23;      // '#', introduces a comment.
+static const UChar      chColon     = 0x3A;      // ':'
 static const UChar      chE         = 0x45;      // 'E'
 static const UChar      chUpperN    = 0x4E;
 static const UChar      chLowerP    = 0x70;
 static const UChar      chUpperP    = 0x50;
 static const UChar      chBackSlash = 0x5c;      // '\'  introduces a char escape
-static const UChar      chLBracket  = 0x5b;
-static const UChar      chRBracket  = 0x5d;
+static const UChar      chLBracket  = 0x5b;      // '['
+static const UChar      chRBracket  = 0x5d;      // ']'
 static const UChar      chRBrace    = 0x7d;
 
 
@@ -3651,6 +3674,106 @@ UnicodeSet *RegexCompile::scanProp() {
     }
 
     nextChar(fC);      // Continue overall regex pattern processing with char after the '}'
+    return uset;
+}
+
+//------------------------------------------------------------------------------
+//
+//  scanPosixProp   Construct a UnicodeSet from the text at the current scan
+//             position, which is expected be of the form [:property expression:]
+//
+//             The scan position will be at the opening ':'.  On return
+//             the scan position must be on the closing ']'
+//
+//             Return a UnicodeSet constructed from the pattern,
+//             or NULL if this is not a valid POSIX-style set expression.
+//             If not a property expression, restore the initial scan position
+//                (to the opening ':')
+//
+//               Note:  the opening '[:' is not sufficient to guarantee that
+//                      this is a [:property:] expression.
+//                      [:'+=,] is a perfectly good ordinary set expression that
+//                              happens to include ':' as one of its characters.
+//
+//------------------------------------------------------------------------------
+UnicodeSet *RegexCompile::scanPosixProp() {
+    UnicodeSet    *uset = NULL;
+
+    if (U_FAILURE(*fStatus)) {
+        return NULL;
+    }
+
+    U_ASSERT(fC.fChar == chColon);
+
+    // Save the scanner state.
+    // TODO:  move this into the scanner, with the state encapsulated in some way
+    int32_t     savedScanIndex        = fScanIndex;
+    int32_t     savedNextIndex        = fNextIndex;
+    UBool       savedQuoteMode        = fQuoteMode;
+    UBool       savedInBackslashQuote = fInBackslashQuote;
+    UBool       savedEOLComments      = fEOLComments;
+    int32_t     savedLineNum          = fLineNum;
+    int32_t     savedCharNum          = fCharNum;
+    UChar32     savedLastChar         = fLastChar;
+    UChar32     savedPeekChar         = fPeekChar;
+    RegexPatternChar savedfC          = fC;
+
+    // Scan for a closing ].   A little tricky because there are some perverse
+    //   edge cases possible.  "[:abc\Qdef;] \E]"  is a valid non-property expression,
+    //   ending on the second closing ].
+
+    UnicodeString setPattern;
+    setPattern.append(chLBracket);
+
+    UChar32 prevChar = 0;
+    UBool sawPropSetTerminator = FALSE;
+    for (;;) {
+        setPattern.append(fC.fChar);
+        nextChar(fC);
+        if (fC.fQuoted || fC.fChar == -1) {
+            // Escaped characters or end of input - either says this isn't a [:Property:]
+            break;
+        }
+        if (fC.fChar == chRBracket && prevChar == chColon) {
+            sawPropSetTerminator = TRUE;
+            break;
+        }
+        prevChar = fC.fChar;    // Retain the char to check for ':' next time through the loop.
+                                //   This is at the bottom of the loop so that we won't see
+                                //    the opening ':' on the first pass through.
+                                //       [:] is not a POSIX style property pattern.
+    }
+    if (sawPropSetTerminator) {
+        uint32_t   usetFlags = 0;
+        if (fModeFlags & UREGEX_CASE_INSENSITIVE) {
+            usetFlags |= USET_CASE_INSENSITIVE;
+        }
+
+        // Build the UnicodeSet from the set pattern we just built up in a string.
+        uset = new UnicodeSet(setPattern, usetFlags, NULL, *fStatus);
+        if (U_FAILURE(*fStatus)) {
+            delete uset;
+            uset =  NULL;
+            //  TODO:  check that the error propagates out cleanly.
+        }
+    }
+    else
+    {
+        // No closing ":]".
+        //  Restore the original scan position.
+        //  The main scanner will retry the input as a normal set expression,
+        //    not a [:Property:] expression.
+        fScanIndex        = savedScanIndex;
+        fNextIndex        = savedNextIndex;
+        fQuoteMode        = savedQuoteMode;
+        fInBackslashQuote = savedInBackslashQuote;
+        fEOLComments      = savedEOLComments;
+        fLineNum          = savedLineNum;
+        fCharNum          = savedCharNum;
+        fLastChar         = savedLastChar;
+        fPeekChar         = savedPeekChar;
+        fC                = savedfC;
+    }
     return uset;
 }
 

@@ -86,6 +86,7 @@ private:
     UChar32     nextCharLL();
     UChar32     peekCharLL();
     UnicodeSet  *scanProp();
+    UnicodeSet  *scanPosixProp();
     void        handleCloseParen();
     int32_t     blockTopLoc(UBool reserve);          // Locate a position in the compiled pattern
                                                      //  at the top of the just completed block
