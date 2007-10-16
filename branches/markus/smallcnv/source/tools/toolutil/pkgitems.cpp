@@ -510,7 +510,7 @@ ucnv_enumDependencies(const UDataSwapper *ds,
         }
         if(inMBCSHeader->version[0]==4 && inMBCSHeader->version[1]>=1) {
             mbcsHeaderLength=MBCS_HEADER_V4_LENGTH;
-        } else if(inMBCSHeader->version[0]==5 &&
+        } else if(inMBCSHeader->version[0]==5 && inMBCSHeader->version[1]>=3 &&
                   ((mbcsHeaderOptions=ds->readUInt32(inMBCSHeader->options))&
                    MBCS_OPT_UNKNOWN_INCOMPATIBLE_MASK)==0
         ) {

@@ -420,6 +420,7 @@ enumToU(UConverterMBCSTable *mbcsTable, int8_t stateProps[],
                     return FALSE;
                 }
             }
+            codePoints[b&0x1f]=U_SENTINEL;
         } else {
             UChar32 c;
             int32_t action;
@@ -465,12 +466,84 @@ enumToU(UConverterMBCSTable *mbcsTable, int8_t stateProps[],
             anyCodePoints&=c;
         }
         if(((++b)&0x1f)==0) {
-            if(anyCodePoints>=0 && !callback(context, value|(uint32_t)(b-0x20), codePoints)) {
-                return FALSE;
+            if(anyCodePoints>=0) {
+                if(!callback(context, value|(uint32_t)(b-0x20), codePoints)) {
+                    return FALSE;
+                }
+                anyCodePoints=-1;
             }
         }
     }
     return TRUE;
+}
+
+/*
+ * Only called if stateProps[state]==-1.
+ * A recursive call may do stateProps[state]|=0x40 if this state is the target of an
+ * MBCS_STATE_CHANGE_ONLY.
+ */
+static int8_t
+getStateProp(const int32_t (*stateTable)[256], int8_t stateProps[], int state) {
+    const int32_t *row;
+    int32_t min, max, entry, nextState;
+
+    row=stateTable[state];
+    stateProps[state]=0;
+
+    /* find first non-ignorable state */
+    for(min=0;; ++min) {
+        entry=row[min];
+        nextState=MBCS_ENTRY_STATE(entry);
+        if(stateProps[nextState]==-1) {
+            getStateProp(stateTable, stateProps, nextState);
+        }
+        if(MBCS_ENTRY_IS_TRANSITION(entry)) {
+            if(stateProps[nextState]>=0) {
+                break;
+            }
+        } else if(MBCS_ENTRY_FINAL_ACTION(entry)<MBCS_STATE_UNASSIGNED) {
+            break;
+        }
+        if(min==0xff) {
+            stateProps[state]=-0x40;  /* (int8_t)0xc0 */
+            return stateProps[state];
+        }
+    }
+    stateProps[state]|=(int8_t)((min>>5)<<3);
+
+    /* find last non-ignorable state */
+    for(max=0xff; min<max; --max) {
+        entry=row[max];
+        nextState=MBCS_ENTRY_STATE(entry);
+        if(stateProps[nextState]==-1) {
+            getStateProp(stateTable, stateProps, nextState);
+        }
+        if(MBCS_ENTRY_IS_TRANSITION(entry)) {
+            if(stateProps[nextState]>=0) {
+                break;
+            }
+        } else if(MBCS_ENTRY_FINAL_ACTION(entry)<MBCS_STATE_UNASSIGNED) {
+            break;
+        }
+    }
+    stateProps[state]|=(int8_t)(max>>5);
+
+    /* recurse further and collect direct-state information */
+    while(min<=max) {
+        entry=row[min];
+        nextState=MBCS_ENTRY_STATE(entry);
+        if(stateProps[nextState]==-1) {
+            getStateProp(stateTable, stateProps, nextState);
+        }
+        if(MBCS_ENTRY_IS_FINAL(entry)) {
+            stateProps[nextState]|=0x40;
+            if(MBCS_ENTRY_FINAL_ACTION(entry)<=MBCS_STATE_FALLBACK_DIRECT_20) {
+                stateProps[state]|=0x40;
+            }
+        }
+        ++min;
+    }
+    return stateProps[state];
 }
 
 /*
@@ -504,82 +577,17 @@ ucnv_MBCSEnumToUnicode(UConverterMBCSTable *mbcsTable,
      * (value<<5)&0x1f (rounded up).
      */
     int8_t stateProps[MBCS_MAX_STATE_COUNT];
-    const int32_t *row;
-    int32_t state, min, max;
+    int32_t state;
 
-    /*
-     * No need to analyze state 0:
-     * We know it is a direct state, and it is almost as expensive to analyze it as
-     * it is to enumerate it, so we set its properties for enumeration
-     * over 00..ff.
-     */
-    stateProps[0]=0x47;
+    uprv_memset(stateProps, -1, sizeof(stateProps));
 
-    /* analyze the other states */
-    row=mbcsTable->stateTable[0];
-    for(state=1; state<mbcsTable->countStates; ++state) {
-        int32_t entry, action;
-        UBool sawFinalAction=FALSE;
-
-        row+=256;
-
-        /* find first non-illegal/unassigned state */
-        for(min=0;; ++min) {
-            entry=row[min];
-            if(MBCS_ENTRY_IS_TRANSITION(entry)) {
-                stateProps[state]=0;
-                break;
-            }
-            action=MBCS_ENTRY_FINAL_ACTION(entry);
-            if(action<MBCS_STATE_UNASSIGNED) {
-                stateProps[state]= action<=MBCS_STATE_FALLBACK_DIRECT_20 ? 0x40 : 0;
-                sawFinalAction=TRUE;
-                break;
-            }
-            if(min==0xff) {
-                stateProps[state]=(int8_t)0xc0;
-                break;
-            }
-        }
-        if(stateProps[state]>=0) {
-            stateProps[state]|=(int8_t)((min>>5)<<3);
-        } else {
-            continue;
-        }
-
-        /* find last non-illegal/unassigned state */
-        for(max=0xff; min<max; --max) {
-            entry=row[max];
-            if(MBCS_ENTRY_IS_TRANSITION(entry)) {
-                break;
-            }
-            action=MBCS_ENTRY_FINAL_ACTION(entry);
-            if(action<MBCS_STATE_UNASSIGNED) {
-                if(action<=MBCS_STATE_FALLBACK_DIRECT_20) {
-                    stateProps[state]|=0x40;
-                }
-                sawFinalAction=TRUE;
-                break;
-            }
-        }
-        stateProps[state]|=(int8_t)(max>>5);
-
-        /* is this a direct state? */
-        if(!sawFinalAction) {
-            while(++min<max) {
-                entry=row[min];
-                if(MBCS_ENTRY_IS_FINAL(entry)) {
-                    action=MBCS_ENTRY_FINAL_ACTION(entry);
-                    if(action<=MBCS_STATE_FALLBACK_DIRECT_20) {
-                        stateProps[state]|=0x40;
-                    }
-                    break;
-                }
-            }
-        }
-    }
+    /* recurse from state 0 and set all stateProps */
+    getStateProp(mbcsTable->stateTable, stateProps, 0);
 
     for(state=0; state<mbcsTable->countStates; ++state) {
+        /*if(stateProps[state]==-1) {
+            printf("unused/unreachable <icu:state> %d\n", state);
+        }*/
         if(stateProps[state]>=0x40) {
             /* start from each direct state */
             enumToU(
@@ -588,7 +596,6 @@ ucnv_MBCSEnumToUnicode(UConverterMBCSTable *mbcsTable,
                 pErrorCode);
         }
     }
-    /* TODO(markus): need to use dbcsOnlyState? ever need to exclude SBCS? */
 }
 
 U_CFUNC void
@@ -1137,15 +1144,11 @@ writeStage3Roundtrip(const void *context, uint32_t value, UChar32 codePoints[32]
         if(c<0) {
             continue;
         }
-        /* printf("  %.8X -> U+%04X\n", value, c); -- TODO: remove debug code */
 
         /* locate the stage 2 & 3 data */
         stage2=((uint32_t *)table)+table[c>>10]+((c>>4)&0x3f);
         p=bytes;
         st3=(int32_t)(uint16_t)*stage2*16+(c&0xf);
-        if(st3>=mbcsTable->fromUBytesLength) {
-            continue; /* TODO: remove debug code */
-        }
 
         /* write the codepage bytes into stage 3 */
         switch(mbcsTable->outputType) {
@@ -1213,9 +1216,6 @@ reconstituteData(UConverterMBCSTable *mbcsTable,
             if(st2!=stage1Length/2) {
                 /* each stage 2 block has 64 entries corresponding to 16 entries in the mbcsIndex */
                 for(i=0; i<16; ++i) {
-                    if(st2>=(stage1Length/2+(fullStage2Length-stage2Length))) {
-                        break; /* TODO: remove debug code */
-                    }
                     st3=mbcsTable->mbcsIndex[stageUTF8Index++];
                     if(st3!=0) {
                         /* an stage 2 entry's index is per stage 3 16-block, not per stage 3 entry */
@@ -1260,7 +1260,8 @@ ucnv_MBCSLoad(UConverterSharedData *sharedData,
 
     if(header->version[0]==4) {
         headerLength=MBCS_HEADER_V4_LENGTH;
-    } else if(header->version[0]==5 && (header->options&MBCS_OPT_UNKNOWN_INCOMPATIBLE_MASK)==0) {
+    } else if(header->version[0]==5 && header->version[1]>=3 &&
+              (header->options&MBCS_OPT_UNKNOWN_INCOMPATIBLE_MASK)==0) {
         headerLength=header->options&MBCS_OPT_LENGTH_MASK;
         noFromU=(UBool)((header->options&MBCS_OPT_NO_FROM_U)!=0);
     } else {
@@ -1300,7 +1301,7 @@ ucnv_MBCSLoad(UConverterSharedData *sharedData,
         }
 
         /* load the base table */
-        baseName=(const char *)(header+1);
+        baseName=(const char *)header+headerLength*4;
         if(0==uprv_strcmp(baseName, sharedData->staticData->name)) {
             /* forbid loading this same extension-only file */
             *pErrorCode=U_INVALID_TABLE_FORMAT;
