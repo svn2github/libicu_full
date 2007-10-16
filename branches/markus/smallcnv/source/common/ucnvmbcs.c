@@ -61,9 +61,46 @@
 #define MBCS_UNROLL_SINGLE_FROM_BMP 0
 
 /*
- * TODO: describe _MBCSHeader version 5.3
- * _MBCSHeader version 4.3
+ * _MBCSHeader versions 5.3 & 4.3
  * (Note that the _MBCSHeader version is in addition to the converter formatVersion.)
+ *
+ * This version is optional. Version 5 is used for incompatible data format changes.
+ * makeconv will continue to generate version 4 files if possible.
+ *
+ * Changes from version 4:
+ *
+ * The main difference is an additional _MBCSHeader field with
+ * - the length (number of uint32_t) of the _MBCSHeader
+ * - flags for further incompatible data format changes
+ * - flags for further, backward compatible data format changes
+ *
+ * The MBCS_OPT_FROM_U flag indicates that most of the fromUnicode data is omitted from
+ * the file and needs to be reconstituted at load time.
+ * This requires a utf8Friendly format with an additional mbcsIndex table for fast
+ * (and UTF-8-friendly) fromUnicode conversion for Unicode code points up to maxFastUChar.
+ * (For details about these structures see below, and see ucnvmbcs.h.)
+ *
+ *   utf8Friendly also implies that the fromUnicode mappings are stored in ascending order
+ *   of the Unicode code points. (This requires that the .ucm file has the |0 etc.
+ *   precision markers for all mappings.)
+ *
+ *   All fallbacks have been moved to the extension table, leaving only roundtrips in the
+ *   omitted data that can be reconstituted from the toUnicode data.
+ *
+ *   Of the stage 2 table, the part corresponding to maxFastUChar and below is omitted.
+ *   With only roundtrip mappings in the base fromUnicode data, this part is fully
+ *   redundant with the mbcsIndex and will be reconstituted from that (also using the
+ *   stage 1 table which contains the information about how stage 2 was compacted).
+ *
+ *   The rest of the stage 2 table, the part for code points above maxFastUChar,
+ *   is stored in the file and will be appended to the reconstituted part.
+ *
+ *   The entire fromUBytes array is omitted from the file and will be reconstitued.
+ *   This is done by enumerating all toUnicode roundtrip mappings, performing
+ *   each mapping (using the stage 1 and reconstituted stage 2 tables) and
+ *   writing instead of reading the byte values.
+ *
+ * _MBCSHeader version 4.3
  *
  * Change from version 4.2:
  * - Optional utf8Friendly data structures, with 64-entry stage 3 block

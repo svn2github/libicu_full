@@ -47,6 +47,7 @@
  *
  * Versions 5.m work like versions 4.m except:
  * - The _MBCSHeader has variable length (and is always longer than in version 4).
+ *   See the struct _MBCSHeader further description below.
  * - There is a set of flags which indicate further incompatible changes.
  *   (Reader code must reject the file if it does not recognize them all.)
  * - In particular, one of these flags indicates that most of the fromUnicode
@@ -54,6 +55,8 @@
  *   and from the utf8Friendly mbcsIndex at load time.
  *   (This only works with a utf8Friendly table.)
  *   In this case, makeconv may increase maxFastUChar automatically to U+FFFF.
+ *
+ * The first of these versions is 5.3, which is like 4.3 except for the differences above.
  *
  * When possible, makeconv continues to generate version 4.m files.
  *

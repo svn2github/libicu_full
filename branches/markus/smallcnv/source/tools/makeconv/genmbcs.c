@@ -1429,9 +1429,11 @@ MBCSWrite(NewConverter *cnvData, const UConverterStaticData *staticData,
         header.options|=MBCS_OPT_NO_FROM_U;
         header.fullStage2Length=stage2Length;
         stage2Length-=stage2Start;
-        printf("+ omitting %lu out of %lu stage2 entries and %lu fromUBytes\n",
-               stage2Start, mbcsData->stage2Top, mbcsData->stage3Top);
-        printf("+ total size savings: %lu bytes\n", stage2Start*4+mbcsData->stage3Top);
+        if(VERBOSE) {
+            printf("+ omitting %lu out of %lu stage2 entries and %lu fromUBytes\n",
+                   stage2Start, mbcsData->stage2Top, mbcsData->stage3Top);
+            printf("+ total size savings: %lu bytes\n", stage2Start*4+mbcsData->stage3Top);
+        }
     } else {
         stage2Start=0;
     }
