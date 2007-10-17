@@ -322,6 +322,7 @@ set-after-set:
     '-'                  n  set-dash-S-1
     '\'                  n  set-escape
     '&'                  n  set-amp-S-1
+    eof                     errorDeath                              doSetNoCloseError
     default              n  set-after-lit                           doSetLiteral
 
 #

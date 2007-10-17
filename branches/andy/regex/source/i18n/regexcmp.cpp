@@ -237,6 +237,12 @@ void    RegexCompile::compile(
 
     }
 
+    if (U_FAILURE(*fStatus)) {
+        // Bail out if the pattern had errors.
+        // TODO:  CHeck for memory leaks with compilation failure.
+        return;
+    }
+
     //
     // The pattern has now been read and processed, and the compiled code generated.
     //
@@ -1462,11 +1468,10 @@ UBool RegexCompile::doParseActions(int32_t action)
     case doSetFinish:
         {
         // Finished a complete set expression, including all nested sets.
-        setEval(setEnd);
-        int32_t t = fSetOpStack.popi();
-        U_ASSERT(t==setStart);
+        //   The close bracket has already triggered clearing out pending set operators,
+        //    the operator stack should be empty and the operand stack should have just
+        //    one entry, the result set.
         U_ASSERT(fSetOpStack.empty());
-
         UnicodeSet *theSet = (UnicodeSet *)fSetStack.pop();
         U_ASSERT(fSetStack.empty());
         compileSet(theSet);
@@ -3790,7 +3795,7 @@ UnicodeSet *RegexCompile::scanPosixProp() {
 //            equal or greater to that of the supplied operator.
 //
 void RegexCompile::setEval(int32_t op) {
-    UnicodeSet *rightOperand = (UnicodeSet *)fSetStack.peek();
+    UnicodeSet *rightOperand = NULL;
     UnicodeSet *leftOperand  = NULL;
     for (;;) {
         U_ASSERT(fSetOpStack.empty()==FALSE);
@@ -3799,6 +3804,8 @@ void RegexCompile::setEval(int32_t op) {
             break;
         }
         fSetOpStack.popi();
+        U_ASSERT(fSetStack.empty() == FALSE);
+        rightOperand = (UnicodeSet *)fSetStack.peek();
         switch (pendingSetOperation) {
             case setNegation:
                 rightOperand->complement();
