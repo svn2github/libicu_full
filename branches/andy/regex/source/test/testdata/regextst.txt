@@ -25,6 +25,7 @@
 #                                   2-9    a digit between 2 and 9, specifies the number of
 #                                          times to execute find().  The expected results are
 #                                          for the last find() in the sequence.
+#                                   G      Only check match / no match.  Do not check capture groups.
 #                                 White space must be present between the flags and the match string.
 #
 
@@ -363,7 +364,7 @@
 #
 #  Octal Escaping.   This conforms to Java conventions, not Perl.
 #
-"\031"              d         "<0>aAb</0>"
+"\0101"                          "<0>A</0>"
 
 #
 #  \u Surrogate Pairs
@@ -516,11 +517,10 @@
 # Bug 4058    ICU Unicode Set patterns have an odd feature -
 #             A $ as the last character before the close bracket means match
 #             a \uffff, which means off the end of the string in transliterators.
-#             Doesn't make much sense for regex, but works that way anyhow.
+#             Didn't make sense for regular expressions, and is now fixed.
 #
 "[\$](P|C|D);"                    "<0>$<1>P</1>;</0>"
-"[$](P|C|D);"                     "<0>\uffff<1>P</1>;</0>"
-"[$](P|C|D);"                     "$P;"
+"[$](P|C|D);"                     "<0>$<1>P</1>;</0>"
 "[$$](P|C|D);"                    "<0>$<1>P</1>;</0>"
 
 #
@@ -905,7 +905,7 @@
 "(\[[Ii][Mm][Gg]\])(\S+?)(\[\/[Ii][Mm][Gg]\])"   G "<0>[img]ftp://login:pass@bleh.gif[/img]</0>"
 "(\[[Ii][Mm][Gg]\])(\S+?)(\[\/[Ii][Mm][Gg]\])"     '<img src="bleh.jpg">'
 "^([0-9]{1,2})[./-]+([0-9]{1,2})[./-]+([0-9]{2}|[0-9]{4})$"   G "<0>10/03/1979</0>"
-"^([0-9]{1,2})[./-]+([0-9]{1,2})[./-]+([0-9]{2}|[0-9]{4})$"   G "<0>1-1-02</0>"
+"^([0-9]{1,2})[./-]+([0-9]{1,2})[./-]+([0-9]{2}|[0-9]{4})$"   dG "<0>1-1-02</0>"
 "^([0-9]{1,2})[./-]+([0-9]{1,2})[./-]+([0-9]{2}|[0-9]{4})$"   G "<0>01.1.2003</0>"
 "^([0-9]{1,2})[./-]+([0-9]{1,2})[./-]+([0-9]{2}|[0-9]{4})$"     "10/03/197"
 "^([0-9]{1,2})[./-]+([0-9]{1,2})[./-]+([0-9]{2}|[0-9]{4})$"     "01-02-003"

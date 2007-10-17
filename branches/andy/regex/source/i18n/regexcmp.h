@@ -217,6 +217,7 @@ enum SetOperations {
     setStart         = 0 << 16 | 1,
     setEnd           = 1 << 16 | 2,
     setNegation      = 2 << 16 | 3,
+    setCaseClose     = 2 << 16 | 9,
     setDifference2   = 3 << 16 | 4,    // '--' set difference operator
     setIntersection2 = 3 << 16 | 5,    // '&&' set intersection operator
     setUnion         = 4 << 16 | 6,    // implicit union of adjacent items

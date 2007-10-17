@@ -21,7 +21,7 @@ U_NAMESPACE_BEGIN
 //  debugging options.  Enable one or more of the three #defines immediately following
 //
 
-#define REGEX_SCAN_DEBUG
+//#define REGEX_SCAN_DEBUG
 #define REGEX_DUMP_DEBUG
 #define REGEX_RUN_DEBUG
 

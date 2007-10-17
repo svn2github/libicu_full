@@ -1423,6 +1423,9 @@ UBool RegexCompile::doParseActions(int32_t action)
      case doSetBegin:
         fSetStack.push(new UnicodeSet(), *fStatus);
         fSetOpStack.push(setStart, *fStatus);
+        if ((fModeFlags & UREGEX_CASE_INSENSITIVE) != 0) {
+            fSetOpStack.push(setCaseClose, *fStatus);
+        }
         break;
 
     case doSetBeginDifference1:
@@ -1432,6 +1435,9 @@ UBool RegexCompile::doParseActions(int32_t action)
         //    went before once it is created.
         setPushOp(setDifference1);
         fSetOpStack.push(setStart, *fStatus);
+        if ((fModeFlags & UREGEX_CASE_INSENSITIVE) != 0) {
+            fSetOpStack.push(setCaseClose, *fStatus);
+        }
         break;
 
     case doSetBeginIntersection1:
@@ -1439,6 +1445,9 @@ UBool RegexCompile::doParseActions(int32_t action)
         //   Need both the '&' operator and the open '[' operator.
         setPushOp(setUnion);
         fSetOpStack.push(setStart, *fStatus);
+        if ((fModeFlags & UREGEX_CASE_INSENSITIVE) != 0) {
+            fSetOpStack.push(setCaseClose, *fStatus);
+        }
         break;
 
     case doSetBeginUnion:
@@ -1446,6 +1455,9 @@ UBool RegexCompile::doParseActions(int32_t action)
         //     Need to handle the union operation explicitly [[abc] | [
         setPushOp(setUnion);
         fSetOpStack.push(setStart, *fStatus);
+        if ((fModeFlags & UREGEX_CASE_INSENSITIVE) != 0) {
+            fSetOpStack.push(setCaseClose, *fStatus);
+        }
         break;
 
     case doSetDifference2:
@@ -1490,9 +1502,22 @@ UBool RegexCompile::doParseActions(int32_t action)
 
     case  doSetNegate:
         // Scanned a '^' at the start of a set.
-        // Push the negation operator onto the set op stack, which will force the negation after
-        //   this set is otherwise built.
-        fSetOpStack.push(setNegation, *fStatus);
+        // Push the negation operator onto the set op stack.
+        // A twist for case-insensitive matching:
+        //   the case closure operation must happen _before_ negation.
+        //   But the case closure operation will already be on the stack if it's required.
+        //   This requires checking for case closure, and swapping the stack order
+        //    if it is present.
+        {
+            int32_t  tosOp = fSetOpStack.peeki();
+            if (tosOp == setCaseClose) {
+                fSetOpStack.popi();
+                fSetOpStack.push(setNegation, *fStatus);
+                fSetOpStack.push(setCaseClose, *fStatus);
+            } else {
+                fSetOpStack.push(setNegation, *fStatus);
+            }
+        }
         break;
 
     case doSetNoCloseError:
@@ -3809,6 +3834,11 @@ void RegexCompile::setEval(int32_t op) {
         switch (pendingSetOperation) {
             case setNegation:
                 rightOperand->complement();
+                break;
+            case setCaseClose:
+                // TODO: need a simple close function.
+                rightOperand->closeOver(USET_CASE_INSENSITIVE);
+                rightOperand->removeAllStrings();
                 break;
             case setDifference1:
             case setDifference2:
