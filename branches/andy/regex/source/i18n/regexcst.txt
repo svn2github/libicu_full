@@ -280,29 +280,29 @@ octal-end:
 set-open:
    '^'                   n  set-open2                               doSetNegate
    ':'                      set-posix                               doSetPosixProp
-   default                  set-open2 
+   default                  set-open2
 
 set-open2:
    ']'                   n  set-after-lit                           doSetLiteral
    default                  set-start
-   
+
 #  scanned a '[:'  If it really is a [:property:], doSetPosixProp will have
 #                  moved the scan to the closing ']'.  If it wasn't a property
 #                  expression, the scan will still be at the opening ':', which should
 #                  be interpreted as a normal set expression.
 set-posix:
-    ']'                  n   set-after-set
+    ']'                  n   pop                                    doSetEnd
     ':'                      set-start
     default                  errorDeath                             doRuleError
 
 #
-#   set-start   after the [ and special case leading junk (^ and/or [) but before
+#   set-start   after the [ and special case leading junk (^ and/or ]) but before
 #               everything else.   A '-' is literal at this point.
 #
 set-start:
     quoted               n  set-after-lit                           doSetLiteral
     ']'                  n  pop                                     doSetEnd
-    '['                  n  set-open      ^set-after-set            doSetBegin
+    '['                  n  set-open      ^set-after-set            doSetBeginUnion
     '\'                  n  set-escape
     default              n  set-after-lit                           doSetLiteral
 
@@ -312,14 +312,54 @@ set-after-lit:
     '['                  n  set-open      ^set-after-set            doSetBeginUnion
     '-'                  n  set-dash-L-1
     '\'                  n  set-escape
+    eof                     errorDeath                              doSetNoCloseError
     default              n  set-after-lit                           doSetLiteral
 
 set-after-set:
     quoted               n  set-after-lit                           doSetLiteral
     ']'                  n  pop                                     doSetEnd
     '['                  n  set-open      ^set-after-set            doSetBeginUnion
+    '-'                  n  set-dash-S-1
     '\'                  n  set-escape
+    '&'                  n  set-amp-S-1
     default              n  set-after-lit                           doSetLiteral
+
+#
+# Have scanned [set]&
+#      Could be a '&' intersection operator, if a set follows.
+#      Could be the start of a '&&' operator.
+#      Otherewise is a literal.
+set-amp-S-1:
+    quoted                  set-amp-lit                            doSetAddAmp
+    '['                  n  set-open      ^set-after-set           doSetBeginIntersection1
+    '&'                  n  set-after-op                           doSetIntersection2
+    #TODO:  handle &&, \w, etc.
+    default                 set-amp-lit                            doSetAddAmp
+
+set-amp-lit:
+    quoted               n  set-after-lit                          doSetLiteral
+    ']'                  n  pop                                    doSetEnd
+    default              n  set-after-lit                          doSetLiteral
+
+#
+# Have scanned [set]-
+#      Could be a '-' difference operator, if a set follows.
+#      Could be the start of a '--' operator.
+#      Otherewise is a literal.
+set-dash-S-1:
+    quoted                  set-dash-lit                           doSetAddDash
+    '['                  n  set-open      ^set-after-set           doSetBeginDifference1
+    '-'                  n  set-after-op                           doSetDifference2
+    #TODO:  handle \p, \w, etc.
+    default                 set-dash-lit                           doSetAddDash
+
+set-dash-lit:
+    quoted               n  set-after-lit                          doSetLiteral
+    ']'                  n  pop                                    doSetEnd
+    default              n  set-after-lit                          doSetLiteral
+
+
+
 
 # We have a single dash following a literal. Could be a range or a -- operator or a literal
 #     In [abc-[def]], the '-' is a literal (confirmed with a Java test)
@@ -327,7 +367,7 @@ set-after-set:
 #        [ab-xy]      the '-' is a range
 set-dash-L-1:
     quoted               n  set-after-lit                           doSetRange
-    '-'                  n  set-after-op                            doSetBeginDifference
+    '-'                  n  set-after-op                            doSetDifference2
     '['                     set-after-lit                           doSetLiteral
     ']'                     set-after-lit                           doSetLiteral
     default              n  set-after-lit                           doSetRange

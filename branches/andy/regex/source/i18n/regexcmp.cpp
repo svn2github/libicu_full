@@ -72,6 +72,8 @@ RegexCompile::RegexCompile(RegexPattern *rxp, UErrorCode &status) :
     }
 }
 
+static const UChar      chAmp       = 0x26;      // '&'
+static const UChar      chDash      = 0x2d;      // '-'
 
 
 //------------------------------------------------------------------------------
@@ -1398,76 +1400,75 @@ UBool RegexCompile::doParseActions(int32_t action)
         break;
 
 
-    case doSetBegin:
+    case doSetAddAmp:
+        {
+          UnicodeSet *set = (UnicodeSet *)fSetStack.peek();
+          set->add(chAmp);
+        }
+        break;
+
+    case doSetAddDash:
+        {
+          UnicodeSet *set = (UnicodeSet *)fSetStack.peek();
+          set->add(chDash);
+        }
+        break;
+
+     case doSetBegin:
         fSetStack.push(new UnicodeSet(), *fStatus);
+        fSetOpStack.push(setStart, *fStatus);
+        break;
+
+    case doSetBeginDifference1:
+        //  We have scanned something like [[abc]-[
+        //  Set up a new UnicodeSet for the set beginning with the just-scanned '['
+        //  Push a Difference operator, which will cause the new set to be subtracted from what
+        //    went before once it is created.
+        setPushOp(setDifference1);
+        fSetOpStack.push(setStart, *fStatus);
+        break;
+
+    case doSetBeginIntersection1:
+        //  We have scanned something like  [[abc]&[
+        //   Need both the '&' operator and the open '[' operator.
+        setPushOp(setUnion);
         fSetOpStack.push(setStart, *fStatus);
         break;
 
     case doSetBeginUnion:
         //  We have scanned something like  [[abc][
-        //  Set up a new UnicodeSet for the set beginning with the just-scanned '['
-        //  Push a Union operator, which will cause the new set to be Unioned with what
-        //    went before once it is created.
-        fSetStack.push(new UnicodeSet(), *fStatus);
-        fSetOpStack.push(setUnion, *fStatus);
+        //     Need to handle the union operation explicitly [[abc] | [
+        setPushOp(setUnion);
         fSetOpStack.push(setStart, *fStatus);
         break;
 
-    case doSetBeginDifference:
+    case doSetDifference2:
         // We have scanned something like [abc--
         //   Consider this to unambiguously be a set difference operator.
-        fSetStack.push(new UnicodeSet(), *fStatus);
-        fSetOpStack.push(setDifference, *fStatus);
+        setPushOp(setDifference2);
         break;
 
     case doSetEnd:
-      // Have encountered the ']' that closes a set.
-      //    This could be a nested set.
-      {
-        UnicodeSet *set = (UnicodeSet *)fSetStack.peek();
-        UnicodeSet *rightOperand = NULL;
-        for (;;) {
-           int32_t pendingSetOperation = fSetOpStack.popi();
-           if (pendingSetOperation == setStart) {
-               break;
-           }
-           switch (pendingSetOperation) {
-              case setNegation:
-                 set->complement();
-                 break;
-              case setDifference:
-                 rightOperand = (UnicodeSet *)fSetStack.pop();
-                 set = (UnicodeSet *)fSetStack.peek();
-                 set->removeAll(*rightOperand);
-                 delete rightOperand;
-                 break;
-              case setIntersection:
-                 rightOperand = (UnicodeSet *)fSetStack.pop();
-                 set = (UnicodeSet *)fSetStack.peek();
-                 set->retainAll(*rightOperand);
-                 delete rightOperand;
-                 break;
-              default:
-                 U_ASSERT(FALSE);
-                 break;
-             }
-        }
-        // The newly completed set is at the top of the set stack.
-        //   If it is just going to be ORed with a preceding set expression, do it now.
-        if (fSetOpStack.peeki() == setUnion) {
-            rightOperand = (UnicodeSet *)fSetStack.pop();
-            set = (UnicodeSet *)fSetStack.peek();
-            set->addAll(*rightOperand);
-            delete rightOperand;
-            fSetOpStack.pop();
-        }
+        // Have encountered the ']' that closes a set.
+        //    Force the evaluation of any pending operations within this set,
+        //    leave the completed set on the top of the set stack.
+        {
+        setEval(setEnd);
+        int32_t setOp = fSetOpStack.popi();
+        U_ASSERT(setOp==setStart);
         break;
       }
 
     case doSetFinish:
         {
         // Finished a complete set expression, including all nested sets.
+        setEval(setEnd);
+        int32_t t = fSetOpStack.popi();
+        U_ASSERT(t==setStart);
+        U_ASSERT(fSetOpStack.empty());
+
         UnicodeSet *theSet = (UnicodeSet *)fSetStack.pop();
+        U_ASSERT(fSetStack.empty());
         compileSet(theSet);
         break;
         }
@@ -1489,10 +1490,14 @@ UBool RegexCompile::doParseActions(int32_t action)
         fSetOpStack.push(setNegation, *fStatus);
         break;
 
+    case doSetNoCloseError:
+        error(U_REGEX_MISSING_CLOSE_BRACKET);
+        break;
+
     case doSetOpError:
         error(U_REGEX_RULE_SYNTAX);   // TODO:  -- or && at the end of a set.  Illegal.
         break;
-        
+
     case doSetPosixProp:
         {
             UnicodeSet *s = scanPosixProp();
@@ -3387,18 +3392,18 @@ void RegexCompile::error(UErrorCode e) {
 //
 static const UChar      chCR        = 0x0d;      // New lines, for terminating comments.
 static const UChar      chLF        = 0x0a;
-static const UChar      chNEL       = 0x85;      //    NEL newline variant
-static const UChar      chLS        = 0x2028;    //    Unicode Line Separator
 static const UChar      chPound     = 0x23;      // '#', introduces a comment.
 static const UChar      chColon     = 0x3A;      // ':'
 static const UChar      chE         = 0x45;      // 'E'
 static const UChar      chUpperN    = 0x4E;
-static const UChar      chLowerP    = 0x70;
 static const UChar      chUpperP    = 0x50;
 static const UChar      chBackSlash = 0x5c;      // '\'  introduces a char escape
 static const UChar      chLBracket  = 0x5b;      // '['
 static const UChar      chRBracket  = 0x5d;      // ']'
+static const UChar      chLowerP    = 0x70;
 static const UChar      chRBrace    = 0x7d;
+static const UChar      chNEL       = 0x85;      //    NEL newline variant
+static const UChar      chLS        = 0x2028;    //    Unicode Line Separator
 
 
 //------------------------------------------------------------------------------
@@ -3735,6 +3740,7 @@ UnicodeSet *RegexCompile::scanPosixProp() {
             break;
         }
         if (fC.fChar == chRBracket && prevChar == chColon) {
+            setPattern.append(chRBracket);
             sawPropSetTerminator = TRUE;
             break;
         }
@@ -3754,6 +3760,7 @@ UnicodeSet *RegexCompile::scanPosixProp() {
         if (U_FAILURE(*fStatus)) {
             delete uset;
             uset =  NULL;
+            error(*fStatus);
             //  TODO:  check that the error propagates out cleanly.
         }
     }
@@ -3775,6 +3782,58 @@ UnicodeSet *RegexCompile::scanPosixProp() {
         fC                = savedfC;
     }
     return uset;
+}
+
+//
+//  SetEval   Part of the evaluation of [set expressions].
+//            Perform any pending (stacked) operations with precedence
+//            equal or greater to that of the supplied operator.
+//
+void RegexCompile::setEval(int32_t op) {
+    UnicodeSet *rightOperand = (UnicodeSet *)fSetStack.peek();
+    UnicodeSet *leftOperand  = NULL;
+    for (;;) {
+        U_ASSERT(fSetOpStack.empty()==FALSE);
+        int32_t pendingSetOperation = fSetOpStack.peeki();
+        if ((pendingSetOperation&0xffff0000) < (op&0xffff0000)) {
+            break;
+        }
+        fSetOpStack.popi();
+        switch (pendingSetOperation) {
+            case setNegation:
+                rightOperand->complement();
+                break;
+            case setDifference1:
+            case setDifference2:
+                fSetStack.pop();
+                leftOperand = (UnicodeSet *)fSetStack.peek();
+                leftOperand->removeAll(*rightOperand);
+                delete rightOperand;
+                break;
+            case setIntersection1:
+            case setIntersection2:
+                fSetStack.pop();
+                leftOperand = (UnicodeSet *)fSetStack.peek();
+                leftOperand->retainAll(*rightOperand);
+                delete rightOperand;
+                break;
+            case setUnion:
+                fSetStack.pop();
+                leftOperand = (UnicodeSet *)fSetStack.peek();
+                leftOperand->addAll(*rightOperand);
+                delete rightOperand;
+                break;
+            default:
+                U_ASSERT(FALSE);
+                break;
+            }
+        }
+    }
+
+void RegexCompile::setPushOp(int32_t op) {
+    setEval(op);
+    fSetOpStack.push(op, *fStatus);
+    fSetStack.push(new UnicodeSet(), *fStatus);
 }
 
 U_NAMESPACE_END
