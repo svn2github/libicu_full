@@ -1420,7 +1420,55 @@ UBool RegexCompile::doParseActions(int32_t action)
         }
         break;
 
-     case doSetBegin:
+     case doSetBackslash_s:
+        {
+         UnicodeSet *set = (UnicodeSet *)fSetStack.peek();
+         set->addAll(*RegexStaticSets::gStaticSets->fPropSets[URX_ISSPACE_SET]);
+         break;
+        }
+
+     case doSetBackslash_S:
+        {
+            UnicodeSet *set = (UnicodeSet *)fSetStack.peek();
+            UnicodeSet SSet(*RegexStaticSets::gStaticSets->fPropSets[URX_ISSPACE_SET]);
+            SSet.complement();
+            set->addAll(SSet);
+            break;
+        }
+
+    case doSetBackslash_d:
+        {
+            UnicodeSet *set = (UnicodeSet *)fSetStack.peek();
+            UnicodeSet digits(UnicodeString("\\p{Nd}"), *fStatus);    // TODO - make a static set, 
+            set->addAll(digits);
+            break;
+        }
+
+    case doSetBackslash_D:
+        {
+            UnicodeSet *set = (UnicodeSet *)fSetStack.peek();
+            UnicodeSet digits(UnicodeString("\\P{Nd}"), *fStatus);    // TODO - make a static set,
+            set->addAll(digits);
+            break;
+        }
+
+    case doSetBackslash_w:
+        {
+            UnicodeSet *set = (UnicodeSet *)fSetStack.peek();
+            set->addAll(*RegexStaticSets::gStaticSets->fPropSets[URX_ISWORD_SET]);
+            break;
+        }
+
+    case doSetBackslash_W:
+        {
+            UnicodeSet *set = (UnicodeSet *)fSetStack.peek();
+            UnicodeSet SSet(*RegexStaticSets::gStaticSets->fPropSets[URX_ISWORD_SET]);
+            SSet.complement();
+            set->addAll(SSet);
+            break;
+        }
+
+    case doSetBegin:
         fSetStack.push(new UnicodeSet(), *fStatus);
         fSetOpStack.push(setStart, *fStatus);
         if ((fModeFlags & UREGEX_CASE_INSENSITIVE) != 0) {

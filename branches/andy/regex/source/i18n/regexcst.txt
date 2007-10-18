@@ -369,9 +369,10 @@ set-dash-lit:
 set-dash-L-1:
     quoted               n  set-after-lit                           doSetRange
     '-'                  n  set-after-op                            doSetDifference2
-    '['                     set-after-lit                           doSetLiteral
-    ']'                     set-after-lit                           doSetLiteral
+    '['                     set-after-lit                           doSetAddDash
+    ']'                     set-after-lit                           doSetAddDash
     default              n  set-after-lit                           doSetRange
+
 
 # After a --  or &&
 #   It is an error to close a set at this point.
@@ -389,7 +390,13 @@ set-escape:
    'p'                      set-after-set                           doSetProp
    'P'                      set-after-set                           doSetProp
    'N'                      set-after-set                           doSetProp
-   default                n set-after-lit                           doSetLiteral    #TODO: needs warning!
+   's'                   n  set-after-set                           doSetBackslash_s
+   'S'                   n  set-after-set                           doSetBackslash_S
+   'w'                   n  set-after-set                           doSetBackslash_w
+   'W'                   n  set-after-set                           doSetBackslash_W
+   'd'                   n  set-after-set                           doSetBackslash_d
+   'D'                   n  set-after-set                           doSetBackslash_D
+   default               n  set-after-lit                           doSetLiteral    #TODO: needs warning!
 
 set-finish:
     default                 expr-quant                              doSetFinish
