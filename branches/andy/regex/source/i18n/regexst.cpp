@@ -60,10 +60,6 @@ static const UChar gRuleSet_digit_char_pattern[] = {
 //    [    0      -    9     ]
     0x5b, 0x30, 0x2d, 0x39, 0x5d, 0};
 
-static const UChar gRuleSet_octal_digit_pattern[] = {
-//    [    0      -    7     ]
-    0x5b, 0x30, 0x2d, 0x37, 0x5d, 0};
-
 //
 //   Here are the backslash escape characters that ICU's unescape() function
 //    will handle.
@@ -218,7 +214,6 @@ fRuleDigitsAlias(NULL)
     fRuleSets[kRuleSet_rule_char-128]   = new UnicodeSet(UnicodeString(TRUE, gRuleSet_rule_char_pattern, -1),   *status);
     fRuleSets[kRuleSet_white_space-128] = new UnicodeSet(UnicodeString(TRUE, gRuleWhiteSpacePattern, -1),       *status);
     fRuleSets[kRuleSet_digit_char-128]  = new UnicodeSet(UnicodeString(TRUE, gRuleSet_digit_char_pattern, -1),  *status);
-    fRuleSets[kRuleSet_octal_digit-128] = new UnicodeSet(UnicodeString(TRUE, gRuleSet_octal_digit_pattern, -1), *status);
     fRuleDigitsAlias = fRuleSets[kRuleSet_digit_char-128];
     for (i=0; i<(int32_t)(sizeof(fRuleSets)/sizeof(fRuleSets[0])); i++) {
         if (fRuleSets[i]) {

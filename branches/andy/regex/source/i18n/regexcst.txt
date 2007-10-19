@@ -250,27 +250,10 @@ backslash:
    'X'                   n  expr-quant                              doBackslashX
    'Z'                   n  term                                    doBackslashZ
    'z'                   n  term                                    doBackslashz
-   '0'                   n  octal-1                                 doOctalStart
    digit_char            n  expr-quant                              doBackRef         #  Will scan multiple digits
    eof                      errorDeath                              doEscapeError
    default               n  expr-quant                              doLiteralChar     #  Escaped literal char.
 
-#
-#  Octal constants.  Syntax is \0[0-7]{0:3}
-#     The mandatory leading \0 is a convention that comes from Java, and
-#     removes the ambiguity with back references.
-#
-octal-1:
-   octal_digit           n  octal-2                                 doOctalDigit
-   default                  expr-quant                              doOctalFinish
-octal-2:
-   octal_digit           n  octal-3                                 doOctalDigit
-   default                  expr-quant                              doOctalFinish
-octal-3:
-   octal_digit           n  octal-end                               doOctalDigit
-   default                  expr-quant                              doOctalFinish
-octal-end:
-   default                  expr-quant                              doOctalFinish
 
 
 #
@@ -362,8 +345,9 @@ set-dash-lit:
 
 
 
-# We have a single dash following a literal. Could be a range or a -- operator or a literal
+# Have scanned "[literals-" Could be a range or a -- operator or a literal
 #     In [abc-[def]], the '-' is a literal (confirmed with a Java test)
+#        [abc-\p{xx}  the '-' is a literal
 #        [abc-]       the '-' is a literal
 #        [ab-xy]      the '-' is a range
 set-dash-L-1:
@@ -371,6 +355,7 @@ set-dash-L-1:
     '-'                  n  set-after-op                            doSetDifference2
     '['                     set-after-lit                           doSetAddDash
     ']'                     set-after-lit                           doSetAddDash
+    '\'                  n  set-escape                              doSetAddDash
     default              n  set-after-lit                           doSetRange
 
 

@@ -139,7 +139,6 @@ private:
 
     RegexPatternChar              fC;                // Current char for parse state machine
                                                      //   processing.
-    UChar32                       fOctalChar;        // Octal Char Constant.
 
     //
     //   Data for the state machine that parses the regular expression.

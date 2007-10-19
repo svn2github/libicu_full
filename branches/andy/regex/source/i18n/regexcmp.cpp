@@ -1035,23 +1035,6 @@ UBool RegexCompile::doParseActions(int32_t action)
         literalChar(fC.fChar);
         break;
 
-        // Octal chars.  We parse these all the way rather than using ICU's unescape
-        //    because they follow Java's regexp conventions, which require a leading \0.
-        //    ICU unuescape accepts \<any octal digit>
-    case doOctalStart:
-        fOctalChar = 0;
-        break;
-    case doOctalDigit:
-        fOctalChar <<= 3;
-        fOctalChar += fC.fChar & 7;
-        break;
-    case doOctalFinish:
-        literalChar(fOctalChar);
-        if (fOctalChar > 255) {
-            error(U_REGEX_OCTAL_TOO_BIG);
-        }
-        break;
-
 
     case doDotAny:
         // scanned a ".",  match any single character.
@@ -1439,7 +1422,7 @@ UBool RegexCompile::doParseActions(int32_t action)
     case doSetBackslash_d:
         {
             UnicodeSet *set = (UnicodeSet *)fSetStack.peek();
-            UnicodeSet digits(UnicodeString("\\p{Nd}"), *fStatus);    // TODO - make a static set, 
+            UnicodeSet digits(UnicodeString("\\p{Nd}"), *fStatus);    // TODO - make a static set,
             set->addAll(digits);
             break;
         }
@@ -3471,6 +3454,8 @@ void RegexCompile::error(UErrorCode e) {
 static const UChar      chCR        = 0x0d;      // New lines, for terminating comments.
 static const UChar      chLF        = 0x0a;
 static const UChar      chPound     = 0x23;      // '#', introduces a comment.
+static const UChar      chDigit0    = 0x30;      // '0'
+static const UChar      chDigit7    = 0x37;      // '9'
 static const UChar      chColon     = 0x3A;      // ':'
 static const UChar      chE         = 0x45;      // 'E'
 static const UChar      chUpperN    = 0x4E;
@@ -3608,9 +3593,9 @@ void RegexCompile::nextChar(RegexPatternChar &c) {
         //
         //  check for backslash escaped characters.
         //
-                int32_t startX = fNextIndex;  // start and end positions of the
-                int32_t endX   = fNextIndex;  //   sequence following the '\'
         if (c.fChar == chBackSlash) {
+            int32_t startX = fNextIndex;  // start and end positions of the
+            int32_t endX   = fNextIndex;  //   sequence following the '\'
             if (RegexStaticSets::gStaticSets->fUnescapeCharSet.contains(peekCharLL())) {
                 //
                 // A '\' sequence that is handled by ICU's standard unescapeAt function.
@@ -3626,6 +3611,28 @@ void RegexCompile::nextChar(RegexPatternChar &c) {
                 fCharNum += endX - startX;
                 fNextIndex = endX;
             }
+            else if (peekCharLL() == chDigit0) {
+                //  Octal Escape, using Java Regexp Conventions
+                //    which are \0 followed by 1-3 octal digits.
+                //    Different from ICU Unescape handling of Octal, which does not
+                //    require the leading 0.
+                c.fChar = 0;
+                nextCharLL();    // Consume the initial 0.
+                int index;
+                for (index=0; index<3; index++) {
+                    int32_t ch = peekCharLL();
+                    if (ch<chDigit0 || ch>chDigit7) {
+                        break;
+                    }
+                    nextCharLL();
+                    c.fChar <<= 3;
+                    c.fChar += ch&7;
+                }
+                if (c.fChar>255) {
+                    error(U_REGEX_OCTAL_TOO_BIG);
+                }
+                c.fQuoted = TRUE; 
+            } 
             else
             {
                 // We are in a '\' escape that will be handled by the state table scanner.

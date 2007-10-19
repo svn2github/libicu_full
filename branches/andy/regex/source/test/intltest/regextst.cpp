@@ -1983,6 +1983,12 @@ void RegexTest::PerlTests() {
                 lineNum, expected?"":"no ", found?"":"no " );
             continue;
         }
+        
+        // Don't try to check expected results if there is no match.
+        //   (Some have stuff in the expected fields)
+        if (!found) {
+            continue;
+        }
 
         //
         // Interpret the Perl expression from the fourth field of the data file,
