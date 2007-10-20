@@ -181,6 +181,12 @@
 "(x?)*xyz"                     "<0>xx<1></1>xyz</0>"    # Sligthly wierd, but correct.  The "last" time through (x?),
                                                         #   it matches the empty string.
 
+#
+#  [set expressions], check the precedence of '-', '&', '--', '&&'
+#
+"[[a-m]-[f-w]p]+"               "<0>depxyz</0>fgw"
+
+
 # {min,max} iteration qualifier
 "A{3}BC"                       "<0>AAABC</0>"
 
@@ -268,7 +274,15 @@
 
 
 #Multi-line mode
-'b\s^'                        m  "a\nb\n"
+'b\s^'                        m "a\nb\n"
+"(?m)^abc$"                     "abc \n abc\n<0>abc</0>\nabc"
+"(?m)^abc$"                   2 "abc \n abc\nabc\n<0>abc</0>"
+"^abc$"                       2 "abc \n abc\nabc\nabc"
+
+# Empty and full range
+"[\u0000-\U0010ffff]+"          "<0>abc\u0000\uffff\U00010000\U0010ffffzz</0>"
+"[^\u0000-\U0010ffff]"          "abc\u0000\uffff\U00010000\U0010ffffzz"
+"[^a--a]+"                      "<0>abc\u0000\uffff\U00010000\U0010ffffzz</0>"
 
 # Free-spacing mode
 "a b c  # this is a comment"  x "<0>abc</0> "
@@ -552,8 +566,28 @@
 # bug 5386  Empty pattern and empty input should match.
 #
 ""                                "<0></0>abc"
+""                                "<0></0>"
 
+#
+# bug 5386   Range upper and lower bounds can be equal
+#
+"[a-a]"                           "<0>a</0>"
+
+#
+# bug 5386  $* should not fail, should match empty string.
+#
 "$*"                              "<0></0>abc"
+
+#
+# bug 5386  \Q ... \E escaping problem
+#
+"[a-z\Q-$\E]+"                    "QE<0>abc-def$</0>."
+
+# More reported 5386 Java comaptibility failures
+#
+"[^]*abb]*"                       "<0>kkkk</0>"
+"\xa"                             "huh"              # Java would like to be warned.
+"^.*$"                            "<0></0>"
 
 #
 # bug 5386  Empty left alternation should produce a zero length match.
@@ -561,6 +595,11 @@
 "|a"                              "<0></0>a"
 "$|ab"                            "<0>ab</0>"
 "$|ba"                            "ab<0></0>"
+
+#
+# bug 5386  Java compatibility for set expressions
+#
+"[a-z&&[cde]]+"                   "ab<0>cde</0>fg"
 
 #
 #  Random debugging, Temporary

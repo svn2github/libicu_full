@@ -294,6 +294,7 @@ set-after-lit:
     ']'                  n  pop                                     doSetEnd
     '['                  n  set-open      ^set-after-set            doSetBeginUnion
     '-'                  n  set-dash-L-1
+    '&'                  n  set-amp-L-1
     '\'                  n  set-escape
     eof                     errorDeath                              doSetNoCloseError
     default              n  set-after-lit                           doSetLiteral
@@ -324,6 +325,17 @@ set-amp-lit:
     quoted               n  set-after-lit                          doSetLiteral
     ']'                  n  pop                                    doSetEnd
     default              n  set-after-lit                          doSetLiteral
+
+
+# set-amp-L-1   Have scanned "[literals&" 
+#               Could be a start of "&&" operator or a literal
+#               In [abc&[def]],   the '&' is a literal
+#
+set-amp-L-1:
+    quoted                  set-after-lit                           doSetAddAmp
+    '&'                  n  set-after-op                            doSetIntersection2
+    default                 set-after-lit                           doSetAddAmp
+
 
 #
 # Have scanned [set]-

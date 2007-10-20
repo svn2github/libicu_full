@@ -239,7 +239,11 @@ void    RegexCompile::compile(
 
     if (U_FAILURE(*fStatus)) {
         // Bail out if the pattern had errors.
-        // TODO:  CHeck for memory leaks with compilation failure.
+        //   Set stack cleanup:  a successful compile would have left it empty,
+        //   but errors can leave temporary sets hanging around.
+        while (!fSetStack.empty()) {
+            delete (UnicodeSet *)fSetStack.pop();
+        }
         return;
     }
 
@@ -1152,21 +1156,6 @@ UBool RegexCompile::doParseActions(int32_t action)
         }
         break;
 
-
-/*
-    case doScanUnicodeSet:
-        {
-            UnicodeSet *theSet = scanSet();
-            compileSet(theSet);
-        }
-        break;
-*/
-
-    case doEnterQuoteMode:
-        // Just scanned a \Q.  Put character scanner into quote mode.
-        fQuoteMode = TRUE;
-        break;
-
     case doBackRef:
         // BackReference.  Somewhat unusual in that the front-end can not completely parse
         //                 the regular expression, because the number of digits to be consumed
@@ -1520,6 +1509,11 @@ UBool RegexCompile::doParseActions(int32_t action)
         compileSet(theSet);
         break;
         }
+        
+    case doSetIntersection2:
+        // Have scanned something like [abc&&
+        setPushOp(setIntersection2);
+        break;
 
     case doSetLiteral:
         // Union the just-scanned literal character into the set being built.
@@ -2108,14 +2102,13 @@ void        RegexCompile::compileSet(UnicodeSet *theSet)
     if (theSet == NULL) {
         return;
     }
+    //  Remove any strings from the set.
+    //  There shoudn't be any, but just in case.
+    //     (Case Closure can add them; if we had a simple case closure avaialble that
+    //      ignored strings, that would be better.)
+    theSet->removeAllStrings();
     int32_t  setSize = theSet->size();
     UChar32  firstSetChar = theSet->charAt(0);
-    if (firstSetChar == -1) {
-        // Sets that contain only strings, but no individual chars,
-        // will end up here.
-        error(U_REGEX_SET_CONTAINS_STRING);
-        setSize = 0;
-    }
 
     switch (setSize) {
     case 0:
@@ -3452,14 +3445,15 @@ void RegexCompile::error(UErrorCode e) {
 //     (Think EBCDIC).
 //
 static const UChar      chCR        = 0x0d;      // New lines, for terminating comments.
-static const UChar      chLF        = 0x0a;
+static const UChar      chLF        = 0x0a;      // Line Feed
 static const UChar      chPound     = 0x23;      // '#', introduces a comment.
 static const UChar      chDigit0    = 0x30;      // '0'
 static const UChar      chDigit7    = 0x37;      // '9'
 static const UChar      chColon     = 0x3A;      // ':'
 static const UChar      chE         = 0x45;      // 'E'
-static const UChar      chUpperN    = 0x4E;
-static const UChar      chUpperP    = 0x50;
+static const UChar      chQ         = 0x51;      // 'Q'
+static const UChar      chN         = 0x4E;      // 'N'
+static const UChar      chP         = 0x50;      // 'P'
 static const UChar      chBackSlash = 0x5c;      // '\'  introduces a char escape
 static const UChar      chLBracket  = 0x5b;      // '['
 static const UChar      chRBracket  = 0x5d;      // ']'
@@ -3499,10 +3493,6 @@ UChar32  RegexCompile::nextCharLL() {
         //  reset the column to 0.
         fLineNum++;
         fCharNum=0;
-        if (fQuoteMode) {
-            error(U_REGEX_RULE_SYNTAX);
-            fQuoteMode = FALSE;
-        }
     }
     else {
         // Character is not starting a new line.  Except in the case of a
@@ -3633,11 +3623,17 @@ void RegexCompile::nextChar(RegexPatternChar &c) {
                 }
                 c.fQuoted = TRUE; 
             } 
+            else if (peekCharLL() == chQ) {
+                //  "\Q"  enter quote mode, which will continue until "\E"
+                fQuoteMode = TRUE;
+                nextCharLL();       // discard the 'Q'.
+                nextChar(c);        // recurse to get the real next char.
+            }
             else
             {
                 // We are in a '\' escape that will be handled by the state table scanner.
                 // Just return the backslash, but remember that the following char is to
-                //  be taken literally.  TODO:  this is awkward, think about alternatives.
+                //  be taken literally.
                 fInBackslashQuote = TRUE;
             }
         }
@@ -3652,62 +3648,6 @@ void RegexCompile::nextChar(RegexPatternChar &c) {
 }
 
 
-#if 0
-//------------------------------------------------------------------------------
-//
-//  scanSet    Construct a UnicodeSet from the text at the current scan
-//             position.  Advance the scan position to the first character
-//             after the set.
-//
-//             The scan position is normally under the control of the state machine
-//             that controls pattern parsing.  UnicodeSets, however, are parsed by
-//             the UnicodeSet constructor, not by the Regex pattern parser.
-//
-//------------------------------------------------------------------------------
-UnicodeSet *RegexCompile::scanSet() {
-    UnicodeSet    *uset = NULL;
-    ParsePosition  pos;
-    int            i;
-
-    if (U_FAILURE(*fStatus)) {
-        return NULL;
-    }
-
-    pos.setIndex(fScanIndex);
-    UErrorCode localStatus = U_ZERO_ERROR;
-    uint32_t   usetFlags = 0;
-    if (fModeFlags & UREGEX_CASE_INSENSITIVE) {
-        usetFlags |= USET_CASE_INSENSITIVE;
-    }
-    if (fModeFlags & UREGEX_COMMENTS) {
-        usetFlags |= USET_IGNORE_SPACE;
-    }
-
-    uset = new UnicodeSet(fRXPat->fPattern, pos,
-                         usetFlags, NULL, localStatus);
-    if (U_FAILURE(localStatus)) {
-        //  TODO:  Get more accurate position of the error from UnicodeSet's return info.
-        //         UnicodeSet appears to not be reporting correctly at this time.
-        REGEX_SCAN_DEBUG_PRINTF(("UnicodeSet parse postion.ErrorIndex = %d\n", pos.getIndex()));
-        error(localStatus);
-        delete uset;
-        return NULL;
-    }
-
-    // Advance the current scan postion over the UnicodeSet.
-    //   Don't just set fScanIndex because the line/char positions maintained
-    //   for error reporting would be thrown off.
-    i = pos.getIndex();
-    for (;;) {
-        if (fNextIndex >= i) {
-            break;
-        }
-        nextCharLL();
-    }
-
-    return uset;
-}
-#endif
 
 //------------------------------------------------------------------------------
 //
@@ -3728,7 +3668,7 @@ UnicodeSet *RegexCompile::scanProp() {
         return NULL;
     }
 
-    U_ASSERT(fC.fChar == chLowerP || fC.fChar == chUpperP || fC.fChar == chUpperN);
+    U_ASSERT(fC.fChar == chLowerP || fC.fChar == chP || fC.fChar == chN);
 
     // enclose the \p{property} from the regex pattern source in  [brackets]
     UnicodeString setPattern;
@@ -3845,8 +3785,11 @@ UnicodeSet *RegexCompile::scanPosixProp() {
         if (U_FAILURE(*fStatus)) {
             delete uset;
             uset =  NULL;
+            if (*fStatus==U_ILLEGAL_ARGUMENT_ERROR) {
+                // Give a more specific error for a bad property expression.
+                *fStatus = U_REGEX_PROPERTY_SYNTAX;
+            }
             error(*fStatus);
-            //  TODO:  check that the error propagates out cleanly.
         }
     }
     else

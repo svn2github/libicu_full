@@ -1987,6 +1987,8 @@ void RegexTest::PerlTests() {
         // Don't try to check expected results if there is no match.
         //   (Some have stuff in the expected fields)
         if (!found) {
+            delete testMat;
+            delete testPat;
             continue;
         }
 

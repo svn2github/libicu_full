@@ -269,6 +269,11 @@ RegexPattern::compile(const UnicodeString &regex,
 
     RegexCompile     compiler(This, status);
     compiler.compile(regex, pe, status);
+    
+    if (U_FAILURE(status)) {
+        delete This;
+        This = NULL;
+    }
 
     return This;
 }
