@@ -1463,7 +1463,7 @@ UBool RegexCompile::doParseActions(int32_t action)
     case doSetBeginIntersection1:
         //  We have scanned something like  [[abc]&[
         //   Need both the '&' operator and the open '[' operator.
-        setPushOp(setUnion);
+        setPushOp(setIntersection1);
         fSetOpStack.push(setStart, *fStatus);
         if ((fModeFlags & UREGEX_CASE_INSENSITIVE) != 0) {
             fSetOpStack.push(setCaseClose, *fStatus);
@@ -1518,12 +1518,16 @@ UBool RegexCompile::doParseActions(int32_t action)
     case doSetLiteral:
         // Union the just-scanned literal character into the set being built.
         //    This operation is the highest precedence set operation, so we can always do
-        //    it immediately, without waiting to see what follows.
-        { UnicodeSet *s = (UnicodeSet *)fSetStack.peek();
-          s->add(fC.fChar);
-          fLastSetLiteral = fC.fChar;
+        //    it immediately, without waiting to see what follows.  It is necessary to perform
+        //    any pending '-' or '&' operation first, because these have the same precedence
+        //    as union-ing in a literal' 
+        {
+            setEval(setUnion);
+            UnicodeSet *s = (UnicodeSet *)fSetStack.peek();
+            s->add(fC.fChar);
+            fLastSetLiteral = fC.fChar;
+            break;
         }
-        break;
 
     case  doSetNegate:
         // Scanned a '^' at the start of a set.
@@ -3815,15 +3819,16 @@ UnicodeSet *RegexCompile::scanPosixProp() {
 //
 //  SetEval   Part of the evaluation of [set expressions].
 //            Perform any pending (stacked) operations with precedence
-//            equal or greater to that of the supplied operator.
+//            equal or greater to that of the next operator encountered
+//            in the expression.
 //
-void RegexCompile::setEval(int32_t op) {
+void RegexCompile::setEval(int32_t nextOp) {
     UnicodeSet *rightOperand = NULL;
     UnicodeSet *leftOperand  = NULL;
     for (;;) {
         U_ASSERT(fSetOpStack.empty()==FALSE);
         int32_t pendingSetOperation = fSetOpStack.peeki();
-        if ((pendingSetOperation&0xffff0000) < (op&0xffff0000)) {
+        if ((pendingSetOperation&0xffff0000) < (nextOp&0xffff0000)) {
             break;
         }
         fSetOpStack.popi();
