@@ -88,7 +88,8 @@ class U_COMMON_API TrieWordDictionary : public UMemory {
                               int32_t maxLength,
                               int32_t *lengths,
                               int &count,
-                              int limit ) const = 0;
+                              int limit,
+                              uint16_t *logprobs = NULL) const = 0;
 
   /**
    * <p>Return a StringEnumeration for iterating all the words in the dictionary.</p>
@@ -127,6 +128,8 @@ class U_COMMON_API MutableTrieDictionary : public TrieWordDictionary {
      */
 
   UText    *fIter;
+  
+  UBool hasValue;
 
   friend class CompactTrieDictionary;   // For fast conversion
 
@@ -139,7 +142,7 @@ class U_COMMON_API MutableTrieDictionary : public TrieWordDictionary {
   * begin at least one word that is near the median of the set in the dictionary
   * @param status A status code recording the success of the call.
   */
-  MutableTrieDictionary( UChar median, UErrorCode &status );
+  MutableTrieDictionary( UChar median, UErrorCode &status, UBool containsValue = FALSE );
 
   /**
    * <p>Virtual destructor.</p>
@@ -161,7 +164,8 @@ class U_COMMON_API MutableTrieDictionary : public TrieWordDictionary {
                               int32_t maxLength,
                               int32_t *lengths,
                               int &count,
-                              int limit ) const;
+                              int limit,
+                              uint16_t *logprobs = NULL) const;
 
   /**
    * <p>Return a StringEnumeration for iterating all the words in the dictionary.</p>
@@ -181,7 +185,8 @@ class U_COMMON_API MutableTrieDictionary : public TrieWordDictionary {
   */
   virtual void addWord( const UChar *word,
                         int32_t length,
-                        UErrorCode &status);
+                        UErrorCode &status,
+                        uint16_t logprob = 0);
 
 #if 0
  /**
@@ -213,7 +218,8 @@ protected:
                               int &count,
                               int limit,
                               TernaryNode *&parent,
-                              UBool &pMatched ) const;
+                              UBool &pMatched,
+                              uint16_t *values = NULL) const;
 
 private:
  /**
@@ -221,12 +227,14 @@ private:
   *
   * @param status A status code recording the success of the call.
   */
-  MutableTrieDictionary( UErrorCode &status );
+  MutableTrieDictionary( UErrorCode &status, UBool containsValues = false );
 };
 
 /*******************************************************************
  * CompactTrieDictionary
  */
+
+struct CompactTrieHorizontalEntry; //forward declaration
 
 /**
  * <p>CompactTrieDictionary is a TrieWordDictionary that has been compacted
@@ -292,7 +300,8 @@ class U_COMMON_API CompactTrieDictionary : public TrieWordDictionary {
                               int32_t rangeEnd,
                               int32_t *lengths,
                               int &count,
-                              int limit ) const;
+                              int limit,
+                              uint16_t *values = NULL) const;
 
   /**
    * <p>Return a StringEnumeration for iterating all the words in the dictionary.</p>
@@ -338,6 +347,12 @@ class U_COMMON_API CompactTrieDictionary : public TrieWordDictionary {
   static CompactTrieHeader *compactMutableTrieDictionary( const MutableTrieDictionary &dict,
                                                         UErrorCode &status );
 
+  /**
+   * <p>Return the index of a char in a CompactTrieHorizontalEntry array.</p>
+   * 
+   */
+  int16_t searchHorizontalEntries(const CompactTrieHorizontalEntry *entries, 
+                           UChar uc, uint16_t nodeCount) const;
 };
 
 U_NAMESPACE_END
