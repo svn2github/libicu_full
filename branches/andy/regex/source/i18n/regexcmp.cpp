@@ -3757,7 +3757,7 @@ UnicodeSet *RegexCompile::scanPosixProp() {
     //   edge cases possible.  "[:abc\Qdef;] \E]"  is a valid non-property expression,
     //   ending on the second closing ].
 
-    UnicodeString propName();
+    UnicodeString propName;
     UBool         negated  = FALSE;
 
     nextChar(fC);
@@ -3766,6 +3766,7 @@ UnicodeSet *RegexCompile::scanPosixProp() {
        nextChar(fC);
     }
     
+    UBool  sawPropSetTerminator;
     for (;;) {
         propName.append(fC.fChar);
         nextChar(fC);
@@ -3829,15 +3830,15 @@ UnicodeSet *RegexCompile::scanPosixProp() {
 //     Includes trying the Java "properties" that aren't supported as
 //     normal ICU UnicodeSet properties 
 //
-static const UChar[] posSetPrefix = {0x5b, 0x2f, 0x70, 0x7b, 00}; // "[\p{"
-static const UChar[] negSetPrefix = {0x5b, 0x2f, 0x50, 0x7b, 00}; // "[\p{"
-USet *createSetForProperty(const UnicodeString &propName, UBool negated) {
+static const UChar posSetPrefix[] = {0x5b, 0x2f, 0x70, 0x7b, 00}; // "[\p{"
+static const UChar negSetPrefix[] = {0x5b, 0x2f, 0x50, 0x7b, 00}; // "[\p{"
+UnicodeSet *RegexCompile::createSetForProperty(const UnicodeString &propName, UBool negated) {
     UnicodeString   setExpr;
-    UnicodeSet      set;
+    UnicodeSet      *set;
     uint32_t        usetFlags = 0;
     
     if (U_FAILURE(*fStatus)) {
-        return;
+        return NULL;
     }
 
     //
@@ -3853,9 +3854,9 @@ USet *createSetForProperty(const UnicodeString &propName, UBool negated) {
     if (fModeFlags & UREGEX_CASE_INSENSITIVE) {
         usetFlags |= USET_CASE_INSENSITIVE;
     }
-    uset = new UnicodeSet(setPattern, usetFlags, NULL, *fStatus);
+    set = new UnicodeSet(setExpr, usetFlags, NULL, *fStatus);
     if (U_SUCCESS(*fStatus)) {
-       return uset;
+       return set;
     }
     *fStatus = U_ZERO_ERROR;
     
@@ -3864,22 +3865,23 @@ USet *createSetForProperty(const UnicodeString &propName, UBool negated) {
     //    See if it looks like a Java "InBlockName", which
     //    we will recast as "Block=BlockName"
     //
-    UnicodeString In("In", 2, kInvariant);
+    UnicodeString In("In", 2, UnicodeString::kInvariant);
     if (propName.startsWith(In) && propName.length()>=3) {
         setExpr.truncate(4);   // Leaves "[\p{", or "[\P{"
-        setExpr.append("Block=", -1, kInvariant);
-        setExpr.append(UniocdeString(propName, 2));  // Property with the leading "In" removed.
+        setExpr.append("Block=", -1, UnicodeString::kInvariant);
+        setExpr.append(UnicodeString(propName, 2));  // Property with the leading "In" removed.
         setExpr.append(chRBrace);
-        uset = new UnicodeSet(setPattern, usetFlags, NULL, *fStatus);
+        set = new UnicodeSet(setExpr, usetFlags, NULL, *fStatus);
         if (U_SUCCESS(*fStatus)) {
-            return uset;
+            return set;
+        }
     }
     
     //
     //  Try the various Java specific properties.
     //   These all begin with "java"
     //
-    static const char *javaProps[][] = {
+    static const char *javaProps[][2] = {
         {"javaDefined",                ""},
         {"javaDigit",                  "\\p{Nd}"},
         {"javaIdentifierIgnorable",    "[\\u0000-\\u0008\\u0000e-\\u001b\\u007f-\\u009f\\p{Cf}]"},
@@ -3897,33 +3899,21 @@ USet *createSetForProperty(const UnicodeString &propName, UBool negated) {
         {"javaUnicodeIdentifierPart",  ""},
         {"javaUpperCase",              "[\\p{Lu}]"},
         {"javaValidCodePoint",         "[\\u0000-\\u10ffff]"},
-        {"javaWhitespace",             "[[\\p{Z}--[\\u00a0\\u2007\\u202f]]\u0009-\u000d\u001c-\\u001f]"},
-        {"",                           ""}
-    }
+        {"javaWhitespace",             "[[\\p{Z}--[\\u00a0\\u2007\\u202f]]\\u0009-\\u000d\\u001c-\\u001f]"},
+        {NULL,                         NULL}
+    };
     
 
-    UnicodeString Java("Java", 2, kInvariant);
+    UnicodeString Java("Java", 2, UnicodeString::kInvariant);
     if (propName.startsWith(Java)) {
         int i;
         for (i=0; javaProps[i][0][0] !=0; i++) {
+        }
     }
     return NULL;  //TODO:
 }
-//
-//  JavaSetNameTransform
-//
-//     Java (JDK) regular expressions support a bunch of relatively non-standard
-//                character properties.  This function transforms one of these
-//                into a standard form that can be handled to ICU UnicodeSet
-//
-//                The input string is transformed in place.
-//
-//                Return true if the input string has what appears to be a Java
-//                 property, false if the input definetly was not a Java property.
 
-UBool RegexCompile::JavaSetNameTransform(UnicodeString str, int32_t start, int32_t length) {
-    
-}
+
 
 //
 //  SetEval   Part of the evaluation of [set expressions].
