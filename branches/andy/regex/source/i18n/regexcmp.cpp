@@ -3879,30 +3879,35 @@ USet *createSetForProperty(const UnicodeString &propName, UBool negated) {
     //  Try the various Java specific properties.
     //   These all begin with "java"
     //
-    static const char[][] = {
+    static const char *javaProps[][] = {
         {"javaDefined",                ""},
-        {"javaDigit",                  "Nd"},
-        {"javaIdentifierIgnorable",    "\\u0000-\\u0008\\u0000e-\\u001b\\u007f-\\u009f\\p{Cf}"},
-        {"javaISOControl",             "\\u0000-\\u001f\\u007f-\\u009f"},
+        {"javaDigit",                  "\\p{Nd}"},
+        {"javaIdentifierIgnorable",    "[\\u0000-\\u0008\\u0000e-\\u001b\\u007f-\\u009f\\p{Cf}]"},
+        {"javaISOControl",             "[\\u0000-\\u001f\\u007f-\\u009f]"},
         {"javaJavaIdentifierPart",     ""},
         {"javaJavaIdentifierStart",    ""},
-        {"javaLetter",                 "L"},
-        {"javaLetterOrDigit",          ""},
-        {"javaLowerCase",              ""},
+        {"javaLetter",                 "\\p{L}"},
+        {"javaLetterOrDigit",          "[\\p{L}\\p{Nd}]"},
+        {"javaLowerCase",              "\\p{Ll}"},
         {"javaMirrored",               ""},
         {"javaSpaceChar",              ""},
-        {"javaSupplementaryCodePoint", ""},
-        {"javaTitleCase",              ""},
+        {"javaSupplementaryCodePoint", "[\\U00010000-\\u0010ffff]"},
+        {"javaTitleCase",              "\\p{Lt}"},
         {"javaUnicodeIdentifierStart", ""},
         {"javaUnicodeIdentifierPart",  ""},
-        {"javaUpperCase",              ""},
-        {"javaValidCodePoint",         ""},
-        {"javaWhitespace",             ""},
-
+        {"javaUpperCase",              "[\\p{Lu}]"},
+        {"javaValidCodePoint",         "[\\u0000-\\u10ffff]"},
+        {"javaWhitespace",             "[[\\p{Z}--[\\u00a0\\u2007\\u202f]]\u0009-\u000d\u001c-\\u001f]"},
+        {"",                           ""}
+    }
     
 
-        
-        
+    UnicodeString Java("Java", 2, kInvariant);
+    if (propName.startsWith(Java)) {
+        int i;
+        for (i=0; javaProps[i][0][0] !=0; i++) {
+    }
+    return NULL;  //TODO:
 }
 //
 //  JavaSetNameTransform
