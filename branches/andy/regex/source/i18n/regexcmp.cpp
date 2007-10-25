@@ -38,7 +38,15 @@
 
 U_NAMESPACE_BEGIN
 
-
+// TODO: remove
+#include <stdio.h>
+static void printstring(const UnicodeString &s) {
+   for (int i=0; i<s.length(); i++) {
+      printf("%c", s[i]);
+   }
+      printf("\n");
+}
+      
 
 
 
@@ -3783,25 +3791,6 @@ UnicodeSet *RegexCompile::scanPosixProp() {
         }
     }
     if (sawPropSetTerminator) {
-    #if 0
-        uint32_t   usetFlags = 0;
-        if (fModeFlags & UREGEX_CASE_INSENSITIVE) {
-            usetFlags |= USET_CASE_INSENSITIVE;
-        }
-
-        // Build the UnicodeSet from the set pattern we just built up in a string.
-        uset = new UnicodeSet(setPattern, usetFlags, NULL, *fStatus);
-        if (U_FAILURE(*fStatus)) {
-            delete uset;
-            uset = createJavaSet(
-            uset =  NULL;
-            if (*fStatus==U_ILLEGAL_ARGUMENT_ERROR) {
-                // Give a more specific error for a bad property expression.
-                *fStatus = U_REGEX_PROPERTY_SYNTAX;
-            }
-            error(*fStatus);
-        }
-        #endif
         uset = createSetForProperty(propName, negated);
     }
     else
@@ -3830,8 +3819,8 @@ UnicodeSet *RegexCompile::scanPosixProp() {
 //     Includes trying the Java "properties" that aren't supported as
 //     normal ICU UnicodeSet properties 
 //
-static const UChar posSetPrefix[] = {0x5b, 0x2f, 0x70, 0x7b, 00}; // "[\p{"
-static const UChar negSetPrefix[] = {0x5b, 0x2f, 0x50, 0x7b, 00}; // "[\p{"
+static const UChar posSetPrefix[] = {0x5b, 0x5c, 0x70, 0x7b, 00}; // "[\p{"
+static const UChar negSetPrefix[] = {0x5b, 0x5c, 0x50, 0x7b, 00}; // "[\p{"
 UnicodeSet *RegexCompile::createSetForProperty(const UnicodeString &propName, UBool negated) {
     UnicodeString   setExpr;
     UnicodeSet      *set;
@@ -3845,12 +3834,13 @@ UnicodeSet *RegexCompile::createSetForProperty(const UnicodeString &propName, UB
     //  First try the property as we received it
     //
     if (negated) {
-        setExpr.append(posSetPrefix, -1);
-    } else {
         setExpr.append(negSetPrefix, -1);
+    } else {
+        setExpr.append(posSetPrefix, -1);
     }
     setExpr.append(propName);
     setExpr.append(chRBrace);
+    setExpr.append(chRBracket);
     if (fModeFlags & UREGEX_CASE_INSENSITIVE) {
         usetFlags |= USET_CASE_INSENSITIVE;
     }
@@ -3858,7 +3848,6 @@ UnicodeSet *RegexCompile::createSetForProperty(const UnicodeString &propName, UB
     if (U_SUCCESS(*fStatus)) {
        return set;
     }
-    *fStatus = U_ZERO_ERROR;
     
     //
     //  The property as it was didn't work.
@@ -3871,6 +3860,8 @@ UnicodeSet *RegexCompile::createSetForProperty(const UnicodeString &propName, UB
         setExpr.append("Block=", -1, UnicodeString::kInvariant);
         setExpr.append(UnicodeString(propName, 2));  // Property with the leading "In" removed.
         setExpr.append(chRBrace);
+        setExpr.append(chRBracket);
+        *fStatus = U_ZERO_ERROR;
         set = new UnicodeSet(setExpr, usetFlags, NULL, *fStatus);
         if (U_SUCCESS(*fStatus)) {
             return set;
@@ -3881,22 +3872,23 @@ UnicodeSet *RegexCompile::createSetForProperty(const UnicodeString &propName, UB
     //  Try the various Java specific properties.
     //   These all begin with "java"
     //
+    #define IDENTIFIER_IGNORABLE "[\\u0000-\\u0008\\u000e-\\u001b\\u007f-\\u009f\\p{Cf}]"
     static const char *javaProps[][2] = {
-        {"javaDefined",                ""},
+        {"javaDefined",                "\\P{Cn}"},
         {"javaDigit",                  "\\p{Nd}"},
-        {"javaIdentifierIgnorable",    "[\\u0000-\\u0008\\u0000e-\\u001b\\u007f-\\u009f\\p{Cf}]"},
+        {"javaIdentifierIgnorable",    IDENTIFIER_IGNORABLE},
         {"javaISOControl",             "[\\u0000-\\u001f\\u007f-\\u009f]"},
-        {"javaJavaIdentifierPart",     ""},
-        {"javaJavaIdentifierStart",    ""},
+        {"javaJavaIdentifierPart",     "[[\\p{L}\\p{Sc}\\p{Pc}\\p{Nd}\\p{Nl}\\p{Mc}\\p{Mn}]" IDENTIFIER_IGNORABLE "]"},
+        {"javaJavaIdentifierStart",    "[\\p{L}\\p{Nl}\\p{Sc}\\p{Pc}"},
         {"javaLetter",                 "\\p{L}"},
         {"javaLetterOrDigit",          "[\\p{L}\\p{Nd}]"},
         {"javaLowerCase",              "\\p{Ll}"},
-        {"javaMirrored",               ""},
-        {"javaSpaceChar",              ""},
+        {"javaMirrored",               "\\p{Bidi_Mirrored}"},
+        {"javaSpaceChar",              "\\p{Z}"},
         {"javaSupplementaryCodePoint", "[\\U00010000-\\u0010ffff]"},
         {"javaTitleCase",              "\\p{Lt}"},
-        {"javaUnicodeIdentifierStart", ""},
-        {"javaUnicodeIdentifierPart",  ""},
+        {"javaUnicodeIdentifierStart", "[\\p{L}\\p{Nl}]"},
+        {"javaUnicodeIdentifierPart",  "[[\\p{L}\\p{Pc}\\p{Nd}\\p{Nl}\\p{Mc}\\p{Mn}]" IDENTIFIER_IGNORABLE "]"},
         {"javaUpperCase",              "[\\p{Lu}]"},
         {"javaValidCodePoint",         "[\\u0000-\\u10ffff]"},
         {"javaWhitespace",             "[[\\p{Z}--[\\u00a0\\u2007\\u202f]]\\u0009-\\u000d\\u001c-\\u001f]"},
@@ -3904,13 +3896,27 @@ UnicodeSet *RegexCompile::createSetForProperty(const UnicodeString &propName, UB
     };
     
 
-    UnicodeString Java("Java", 2, UnicodeString::kInvariant);
+    UnicodeString Java("java", -1, UnicodeString::kInvariant);
     if (propName.startsWith(Java)) {
         int i;
-        for (i=0; javaProps[i][0][0] !=0; i++) {
+        setExpr.remove();
+        for (i=0; javaProps[i][0] != NULL; i++) {
+            if (propName.compare(UnicodeString(javaProps[i][0], -1, UnicodeString::kInvariant))==0) {
+                UnicodeString t(javaProps[i][1], 0);
+                setExpr = UnicodeString(javaProps[i][1]);  // Default code page conversion here.
+                break;                                        //   Somewhat Inefficient.
+            }
+        }
+        if (setExpr.length()>0) {
+            *fStatus = U_ZERO_ERROR;
+            set = new UnicodeSet(setExpr, usetFlags, NULL, *fStatus);
+            if (U_SUCCESS(*fStatus)) {
+                return set;
+            }
         }
     }
-    return NULL;  //TODO:
+    error(*fStatus);
+    return NULL; 
 }
 
 
