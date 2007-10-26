@@ -186,6 +186,56 @@ class ThaiBreakEngine : public DictionaryBreakEngine {
 
 };
 
+/*******************************************************************
+ * CjkBreakEngine
+ */
+
+/**
+ * <p>CjkBreakEngine is a kind of DictionaryBreakEngine that uses a
+ * TrieWordDictionary with log-probabilities for each word and Viterbi decoding
+ * to determine CJK-specific breaks.</p>
+ */
+class CjkBreakEngine : public DictionaryBreakEngine {
+ private:
+    /**
+     * The set of characters handled by this engine
+     * @internal
+     */
+
+  UnicodeSet                fCjkWordSet;
+  const TrieWordDictionary  *fDictionary;
+
+ public:
+
+  /**
+   * <p>Default constructor.</p>
+   *
+   * @param adoptDictionary A TrieWordDictionary to adopt. Deleted when the
+   * engine is deleted.
+   */
+  CjkBreakEngine(const TrieWordDictionary *adoptDictionary, UErrorCode &status);
+
+  /**
+   * <p>Virtual destructor.</p>
+   */
+  virtual ~CjkBreakEngine();
+
+ protected:
+ /**
+  * <p>Divide up a range of known dictionary characters.</p>
+  *
+  * @param text A UText representing the text
+  * @param rangeStart The start of the range of dictionary characters
+  * @param rangeEnd The end of the range of dictionary characters
+  * @param foundBreaks Output of C array of int32_t break positions, or 0
+  * @return The number of breaks found
+  */
+  virtual int32_t divideUpDictionaryRange( UText *text,
+                                           int32_t rangeStart,
+                                           int32_t rangeEnd,
+                                           UStack &foundBreaks ) const;
+
+};
 
 U_NAMESPACE_END
 

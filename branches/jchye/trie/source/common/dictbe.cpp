@@ -421,6 +421,200 @@ foundBest:
     return wordsFound;
 }
 
+/*
+ ******************************************************************
+ * CjkBreakEngine
+ */
+
+static const uint32_t kuint32max = 0xFFFFFFFF;
+
+CjkBreakEngine::CjkBreakEngine(const TrieWordDictionary *adoptDictionary, UErrorCode &status)
+    : DictionaryBreakEngine((1<<UBRK_WORD) | (1<<UBRK_LINE)), fDictionary(adoptDictionary){
+      //TODO: any significance to params passed into DictionaryBreakEngine?
+    //TODO: is there any need for a UnicodeSet containing CJK characters?
+}
+
+CjkBreakEngine::~CjkBreakEngine(){
+    delete fDictionary;
+}
+
+/*
+* @param text A UText representing the text
+* @param rangeStart The start of the range of dictionary characters
+* @param rangeEnd The end of the range of dictionary characters
+* @param foundBreaks Output of C array of int32_t break positions, or 0
+* @return The number of breaks found
+*/
+int32_t CjkBreakEngine::divideUpDictionaryRange( UText *text,
+                                         int32_t rangeStart,
+                                         int32_t rangeEnd,
+                                         UStack &foundBreaks ) const {
+    UErrorCode      status  = U_ZERO_ERROR;
+/*    
+    WumSegmenterWorkspace *workspace =
+        static_cast<WumSegmenterWorkspace*>(ws);
+    if (ws == NULL || workspace == NULL)  // casting failure
+        return false;
+*/
+    const int maxWordSize = 5;
+//        5 + (properties & AbstractCjkSegmenter::HAS_NON_KANJI_JAPANESE ? 5 : 0);
+/*
+    if (len == 0) {
+        *num_words = 0;
+        return true;
+    }
+*/
+    // Implicitly, we imagine there is an array unicode_chars, where
+    // unicode_chars[i] refers to the (i+1)st CJK character in text.
+    const int numChars = rangeEnd - rangeStart;
+
+    // We usually use the fixed size array if the input isn't too long.
+    // For rare long strings we'll dynamically allocation space for them.
+//    bool not_use_workspace =
+//        numChars > AbstractCjkSegmenter::kStaticBufferSize + 1;
+
+    // bestSnlp[i] is the snlp of the best any segmention of unicode_chars[1..i].
+//    uint32* bestSnlp = workspace->bestSnlp_;
+//    if (not_use_workspace) {
+        uint32_t *bestSnlp = new uint32_t[numChars];
+//    }
+        for(int i=1; i<numChars; i++){
+            bestSnlp[i] = kuint32max;
+        }
+//    fill(bestSnlp, bestSnlp + numChars, kuint32max);
+    bestSnlp[0] = 0;
+
+    // prev[i] is the index of the last CJK character in the best segmention of
+    // unicode_chars[1..i].
+//    int* prev = workspace->prev_;
+//    if (not_use_workspace) {
+        int *prev = new int[numChars];
+//    }
+//    fill(prev, prev + numChars, -1);
+    for(int i=0; i<numChars; i++){
+        prev[i] = -1;
+    }
+    const uint32_t maxSnlp = 255;
+    
+    // Dynamic programming to find the best segmentation.
+//    uint32 current_snlp;
+//    bool is_prev_katakana = false;
+    for (int i = 0; i < numChars; ++i) {
+        //how to set text such that matches() starts from pos i in text? 
+        utext_setNativeIndex(text, rangeStart + i);
+        if (bestSnlp[i] == kuint32max)
+            continue;
+        
+        int count;
+        uint16_t values[maxWordSize];
+        int32_t lengths[maxWordSize];
+        uint16_t index = 0;
+        fDictionary->matches(text, maxWordSize, lengths, count, maxWordSize, values);
+        if(count == 0 || lengths[0] != 1){ //no single character match
+            uint32_t newSnlp = bestSnlp[i] + maxSnlp;
+            if (newSnlp < bestSnlp[i + 1]) {
+                bestSnlp[i + 1] = newSnlp;
+                prev[i + 1] = i;
+            }
+           
+        }
+        
+        for (int j = 0; j < count; j++){
+            //assert(value >= 0 && values[j] <= maxSnlp);
+            uint32_t newSnlp = bestSnlp[i] + values[j];
+            if (newSnlp < bestSnlp[lengths[j] + i]) {
+                bestSnlp[lengths[j] + i] = newSnlp;
+                prev[lengths[j] + i] = i;
+            }
+        }
+        /* TODO: should Japanese katakana be handled?
+        for (int j = i + 1; j <= numChars; ++j) {
+            int numChars_2 = j-i;
+            if(numChars_2 == lengths[index]){
+                index++;
+                current_snlp = values[j];
+                assert(value >= 0 && value <= maxSnlp);
+            } else {
+                // key not found
+                if (numChars_2 > 1) //continue if cannot find a substring of length numChars_2 
+                    continue;
+                current_snlp = maxSnlp; //word length is 1, set to maxSnlp
+            }
+            if (bestSnlp[i] >= kuint32max - current_snlp) //no possible segmentation ending with i
+                continue;
+            uint32 newSnlp = bestSnlp[i] + current_snlp;
+            if (newSnlp < bestSnlp[j]) {
+                bestSnlp[j] = newSnlp;
+                prev[j] = i;
+            }
+        }
+        
+
+        // If no word can be found from the dictionary, single utf8 character is
+        // segmented as a word. It works well for Chinese, but in Japanese,
+        // Katakana word in single character is pretty rare. So we apply
+        // the following heuristic to Katakana: any continuous run of Katakana
+        // characters is considered a candidate word with a default cost
+        // specified in the katakana_cost table according to its length.
+        bool is_katakana = IsKatakana(text[i]);
+        if (!is_prev_katakana && is_katakana) {
+            int j = i + 1;
+            // Find the end of the continuous run of Katakana characters
+            while (j < numChars &&
+                    (j - i) < kMaxKatakanaGroupLength &&
+                    IsKatakana(text[j]))
+                ++j;
+            if ((j - i) < kMaxKatakanaGroupLength) {
+                uint32 newSnlp = bestSnlp[i] + GetKatakanaCost(j - i);
+                if (newSnlp < bestSnlp[j]) {
+                    bestSnlp[j] = newSnlp;
+                    prev[j] = i;
+                }
+            }
+        }
+        is_prev_katakana = is_katakana;
+        */
+    }
+/*
+    // No segmentation found.
+    if (bestSnlp[numChars] == kuint32max) {
+        // free memory if necessary
+        if (not_use_workspace) {
+            delete[] bestSnlp;
+            delete[] prev;
+        }
+        *num_words = 1;
+        // We have implict boundary[-1] == 0.
+        boundary[0] = len;
+        return true;
+    }
+*/
+    // Start push the optimal offset index into t_boundary (t for tentative).
+    // prev[numChars] is guaranteed to be meaningful.
+    // We'll first push in the reverse order, i.e.,
+    // t_boundary[0] = numChars, and afterwards do a swap.
+    int t_boundary[numChars];
+
+    int numWords = 0;
+    for (int i = numChars; i > 0; i = prev[i]){
+        t_boundary[numWords++] = i;
+    }
+//    assert(prev[t_boundary[numWords-1]] == 0);
+
+    // Reverse offset index in t_boundary.
+    for (int i = numWords-1; i >= 0; ++i) {
+        foundBreaks.push(t_boundary[i], status);
+    }
+/*
+    // free memory if necessary
+    if (not_use_workspace) {
+        delete[] bestSnlp;
+        delete[] prev;
+    }
+    */
+    return numWords;
+}
+
 U_NAMESPACE_END
 
 #endif /* #if !UCONFIG_NO_BREAK_ITERATION */

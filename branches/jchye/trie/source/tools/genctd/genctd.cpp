@@ -34,6 +34,8 @@
 #include "unicode/udata.h"
 #include "unicode/putil.h"
 
+#include "unicode/ustdio.h"
+
 #include "uoptions.h"
 #include "unewdata.h"
 #include "ucmndata.h"
@@ -298,6 +300,7 @@ int  main(int argc, char **argv) {
     }
     while (uc && (breaks.contains(uc) || u_isspace(uc)));
 
+    //TODO: add hasValue = TRUE if logprobs in file!!!
     MutableTrieDictionary *mtd = new MutableTrieDictionary(uc, status);
     
     if (U_FAILURE(status)) {
@@ -306,29 +309,52 @@ int  main(int argc, char **argv) {
     }
     
     // Now add the words. Words are non-space characters at the beginning of
-    // lines, and must be at least one UChar.
+    // lines, and must be at least one UChar. If a word has an associated value,
+    // the value should follow the word on the same line after a tab character.
     current = wordSourceU;
     UChar *candidate = current;
     uc = *current++;
     int32_t length = 0;
-
+            
     while (uc) {
         while (uc && !u_isspace(uc)) {
             ++length;
             uc = *current++;
         }
+        
+        UnicodeString valueString;
+        if(uc == 0x0009){ //separator is a tab char, read in number after tab
+            uc = *current++;
+            while (uc && !breaks.contains(uc)) {
+                valueString.append(uc);
+                uc = *current++;
+            }
+        }
+        
         if (length > 0) {
-            mtd->addWord(candidate, length, status);
+            mtd->storeValues(TRUE);
+            if(valueString.length() > 0){
+                int value = 0;
+                u_sscanf(valueString.getBuffer(), "%d", &value);
+                if(value > 0xFFFF) //16-bit overflow
+                    value = 0xFFFF;
+                mtd->addWord(candidate, length, status, (uint16_t)value);
+            } else {
+                mtd->addWord(candidate, length, status);
+            }
+
             if (U_FAILURE(status)) {
                 fprintf(stderr, "MutableTrieDictionary::addWord: ICU Error \"%s\"\n",
                         u_errorName(status));
                 exit(status);
             }
         }
+
         // Find beginning of next line
         while (uc && !breaks.contains(uc)) {
             uc = *current++;
         }
+        // Find next non-line-breaking character
         while (uc && breaks.contains(uc)) {
             uc = *current++;
         }

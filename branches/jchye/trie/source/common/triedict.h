@@ -47,7 +47,6 @@ triedict_swap(const UDataSwapper *ds,
 U_NAMESPACE_BEGIN
 
 class StringEnumeration;
-struct CompactTrieHeader;
 
 /*******************************************************************
  * TrieWordDictionary
@@ -141,6 +140,7 @@ class U_COMMON_API MutableTrieDictionary : public TrieWordDictionary {
   * @param median A UChar around which to balance the trie. Ideally, it should
   * begin at least one word that is near the median of the set in the dictionary
   * @param status A status code recording the success of the call.
+  * @param containsValue True if the dictionary stores values associated with each word.
   */
   MutableTrieDictionary( UChar median, UErrorCode &status, UBool containsValue = FALSE );
 
@@ -149,6 +149,13 @@ class U_COMMON_API MutableTrieDictionary : public TrieWordDictionary {
    */
   virtual ~MutableTrieDictionary();
 
+  /**
+   * Indicate whether the MutableTrieDictionary should store values associated with each word
+   */
+  void storeValues(UBool containsValue){
+      hasValue = containsValue;
+  }
+  
  /**
   * <p>Find dictionary words that match the text.</p>
   *
@@ -158,6 +165,7 @@ class U_COMMON_API MutableTrieDictionary : public TrieWordDictionary {
   * @param lengths An array that is filled with the lengths of words that matched.
   * @param count Filled with the number of elements output in lengths.
   * @param limit The size of the lengths array; this limits the number of words output.
+  * @param values The values associated with the matched words.
   * @return The number of characters in text that were matched.
   */
   virtual int32_t matches( UText *text,
@@ -165,7 +173,7 @@ class U_COMMON_API MutableTrieDictionary : public TrieWordDictionary {
                               int32_t *lengths,
                               int &count,
                               int limit,
-                              uint16_t *logprobs = NULL) const;
+                              uint16_t *values = NULL) const;
 
   /**
    * <p>Return a StringEnumeration for iterating all the words in the dictionary.</p>
@@ -177,16 +185,17 @@ class U_COMMON_API MutableTrieDictionary : public TrieWordDictionary {
   virtual StringEnumeration *openWords( UErrorCode &status ) const;
 
  /**
-  * <p>Add one word to the dictionary.</p>
+  * <p>Add one word to the dictionary with an optional associated value.</p>
   *
   * @param word A UChar buffer containing the word.
   * @param length The length of the word.
-  * @param status The resultant status
+  * @param status The resultant status.
+  * @param value The nonzero value associated with this word.
   */
   virtual void addWord( const UChar *word,
                         int32_t length,
                         UErrorCode &status,
-                        uint16_t logprob = 0);
+                        uint16_t value = 0);
 
 #if 0
  /**
@@ -208,8 +217,9 @@ protected:
   * @param lengths An array that is filled with the lengths of words that matched.
   * @param count Filled with the number of elements output in lengths.
   * @param limit The size of the lengths array; this limits the number of words output.
-  * @param parent The parent of the current node
-  * @param pMatched The returned parent node matched the input
+  * @param parent The parent of the current node.
+  * @param pMatched The returned parent node matched the input/
+  * @param values The values associated with the matched words.
   * @return The number of characters in text that were matched.
   */
   virtual int32_t search( UText *text,
@@ -226,6 +236,8 @@ private:
   * <p>Private constructor. The root node it not allocated.</p>
   *
   * @param status A status code recording the success of the call.
+  * @param containsValues True if the dictionary will store a value associated 
+  * with each word added.
   */
   MutableTrieDictionary( UErrorCode &status, UBool containsValues = false );
 };
@@ -234,7 +246,10 @@ private:
  * CompactTrieDictionary
  */
 
-struct CompactTrieHorizontalEntry; //forward declaration
+//forward declarations
+struct CompactTrieHorizontalEntry; 
+struct CompactTrieHeader;
+struct ManageCompactTrieHeader;
 
 /**
  * <p>CompactTrieDictionary is a TrieWordDictionary that has been compacted
@@ -246,13 +261,13 @@ class U_COMMON_API CompactTrieDictionary : public TrieWordDictionary {
      * The root node of the trie
      */
 
-  const CompactTrieHeader   *fData;
+     const ManageCompactTrieHeader   *fData;
 
     /**
      * A UBool indicating whether or not we own the fData.
      */
 
-  UBool                     fOwnData;
+    UBool                     fOwnData;
 
     UDataMemory              *fUData;
  public:
@@ -294,10 +309,11 @@ class U_COMMON_API CompactTrieDictionary : public TrieWordDictionary {
   * @param lengths An array that is filled with the lengths of words that matched.
   * @param count Filled with the number of elements output in lengths.
   * @param limit The size of the lengths array; this limits the number of words output.
+  * @param values The values associated with the matched words.
   * @return The number of characters in text that were matched.
   */
   virtual int32_t matches( UText *text,
-                              int32_t rangeEnd,
+                              int32_t maxLength,
                               int32_t *lengths,
                               int &count,
                               int limit,
@@ -320,7 +336,7 @@ class U_COMMON_API CompactTrieDictionary : public TrieWordDictionary {
   virtual uint32_t dataSize() const;
   
  /**
-  * <p>Return a void * pointer to the compact data, platform-endian.</p>
+  * <p>Return a void * pointer to the (unmanaged) compact data, platform-endian.</p>
   *
   * @return The data for the compact dictionary, suitable for passing to the
   * constructor.
@@ -349,7 +365,9 @@ class U_COMMON_API CompactTrieDictionary : public TrieWordDictionary {
 
   /**
    * <p>Return the index of a char in a CompactTrieHorizontalEntry array.</p>
-   * 
+   * @param entries The array of CompactTrieHorizontalEntrys to be searched.
+   * @param uc The char being searched for.
+   * @param nodeCount The length of the array.
    */
   int16_t searchHorizontalEntries(const CompactTrieHorizontalEntry *entries, 
                            UChar uc, uint16_t nodeCount) const;

@@ -68,6 +68,7 @@ public:
     void TestTrieDict();
     void TestUnicodeFiles();
     void TestBug5775();
+    void TestTrieDictWithValue();
 
     void TestDebug();
 

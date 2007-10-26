@@ -26,6 +26,7 @@
 #include "umutex.h"
 #include "ucln_cmn.h"
 #include "brkeng.h"
+#include <stdio.h>
 
 #include "uassert.h"
 #include "uvector.h"
@@ -1738,6 +1739,7 @@ getLanguageBreakEngineFromFactory(UChar32 c, int32_t breakType)
         return NULL;
     }
     
+    printf("before looking for language break engine\n");
     int32_t i = gLanguageBreakFactories->size();
     const LanguageBreakEngine *lbe = NULL;
     while (--i >= 0) {
@@ -1747,6 +1749,7 @@ getLanguageBreakEngineFromFactory(UChar32 c, int32_t breakType)
             break;
         }
     }
+    printf("found language break engine");
     return lbe;
 }
 

@@ -24,6 +24,7 @@
 #include "umutex.h"
 #include "uresimp.h"
 #include "ubrkimpl.h"
+#include <stdio.h> //TODO: DELETE
 
 U_NAMESPACE_BEGIN
 
@@ -137,16 +138,18 @@ U_NAMESPACE_BEGIN
 
 const LanguageBreakEngine *
 ICULanguageBreakFactory::getEngineFor(UChar32 c, int32_t breakType) {
+    printf("in getEngineFor\n");
     UBool       needsInit;
     int32_t     i;
     const LanguageBreakEngine *lbe = NULL;
     UErrorCode  status = U_ZERO_ERROR;
-
+        
     // TODO: The global mutex should not be used.
     // The global mutex should only be used for short periods.
     // A ICULanguageBreakFactory specific mutex should be used.
     umtx_lock(NULL);
     needsInit = (UBool)(fEngines == NULL);
+    printf("needsInit? %x", needsInit);
     if (!needsInit) {
         i = fEngines->size();
         while (--i >= 0) {
@@ -158,7 +161,8 @@ ICULanguageBreakFactory::getEngineFor(UChar32 c, int32_t breakType) {
         }
     }
     umtx_unlock(NULL);
-    
+    printf("after lock");
+
     if (lbe != NULL) {
         return lbe;
     }
@@ -182,7 +186,7 @@ ICULanguageBreakFactory::getEngineFor(UChar32 c, int32_t breakType) {
             delete engines;
         }
     }
-    
+
     if (fEngines == NULL) {
         return NULL;
     }
@@ -226,6 +230,16 @@ ICULanguageBreakFactory::loadEngineFor(UChar32 c, int32_t breakType) {
             case USCRIPT_THAI:
                 engine = new ThaiBreakEngine(dict, status);
                 break;
+                /*
+            case USCRIPT_HANGUL:
+                engine = new CjkBreakEngine(dict, status);
+                break;
+            case USCRIPT_HIRAGANA:
+            case USCRIPT_KATAKANA:
+            case USCRIPT_HAN:
+                engine = new CjkBreakEngine(dict, status);
+                break;
+*/
             default:
                 break;
             }
