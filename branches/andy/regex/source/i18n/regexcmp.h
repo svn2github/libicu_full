@@ -113,6 +113,7 @@ private:
 
     void        setEval(int32_t op);
     void        setPushOp(int32_t op);
+    UChar32     scanNamedChar();
     UnicodeSet *createSetForProperty(const UnicodeString &propName, UBool negated);
 
 

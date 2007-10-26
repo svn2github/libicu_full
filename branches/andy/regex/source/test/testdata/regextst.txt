@@ -210,6 +210,9 @@
 #"[\x6z]+"                      "\x06"                  #TODO:  single hex digits should fail
 "[\x{9}\x{75}\x{6d6}\x{6ba6}\x{6146B}\x{10ffe3}]+"  "<0>\u0009\u0075\u06d6\u6ba6\U0006146B\U0010ffe3</0>abc"
 
+"[\N{LATIN CAPITAL LETTER TONE SIX}ab\N{VARIATION SELECTOR-70} ]+"       "x<0> \u0184\U000E0135 ab</0>c"
+"[\N{LATIN SMALL LETTER C}-\N{LATIN SMALL LETTER F}]+"    "ab<0>cdef</0>ghi"
+
 
 
 #
@@ -230,6 +233,8 @@
 "[^[a-m]&[e-s]w]+"             "efmw<0>adnst</0>"
 
 "[[a-m]&[e-s]]+"              "<0>efm</0>adnst"
+
+
 
 # {min,max} iteration qualifier
 "A{3}BC"                       "<0>AAABC</0>"

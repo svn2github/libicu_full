@@ -27,6 +27,7 @@
 #include "uvectr32.h"
 #include "uassert.h"
 #include "ucln_in.h"
+#include "uinvchar.h"
 
 #include "regeximp.h"
 #include "regexcst.h"   // Contains state table for the regex pattern parser.
@@ -1164,6 +1165,14 @@ UBool RegexCompile::doParseActions(int32_t action)
         }
         break;
 
+    case doNamedChar:
+        {
+            UChar32 c = scanNamedChar();
+            literalChar(c);
+        }
+        break;
+        
+
     case doBackRef:
         // BackReference.  Somewhat unusual in that the front-end can not completely parse
         //                 the regular expression, because the number of digits to be consumed
@@ -1537,7 +1546,38 @@ UBool RegexCompile::doParseActions(int32_t action)
             break;
         }
 
-    case  doSetNegate:
+    case doSetNamedChar:
+        // Scanning a \N{UNICODE CHARACTER NAME}
+        //  Aside from the source of the character, the processing is identical to doSetLiteral,
+        //    above.
+        {
+            UChar32  c = scanNamedChar();
+            setEval(setUnion);
+            UnicodeSet *s = (UnicodeSet *)fSetStack.peek();
+            s->add(c);
+            fLastSetLiteral = c;
+            break;
+        }
+
+    case doSetNamedRange:
+        // We have scanned literal-\N{CHAR NAME}.  Add the range to the set.
+        // The left character is already in the set, and is saved in fLastSetLiteral.
+        // The right side needs to be picked up, the scan is at the 'N'.
+        // Lower Limit > Upper limit being an error matches both Java
+        //        and ICU UnicodeSet behavior.
+        {
+            UChar32  c = scanNamedChar();
+            if (U_SUCCESS(*fStatus) && fLastSetLiteral > c) {
+                error(U_REGEX_RULE_SYNTAX);   // TODO: make a specific error code for bad ranges.
+            }
+            UnicodeSet *s = (UnicodeSet *)fSetStack.peek();
+            s->add(fLastSetLiteral, c);
+            fLastSetLiteral = c;
+            break;
+        }
+
+
+        case  doSetNegate:
         // Scanned a '^' at the start of a set.
         // Push the negation operator onto the set op stack.
         // A twist for case-insensitive matching:
@@ -1575,8 +1615,9 @@ UBool RegexCompile::doParseActions(int32_t action)
             }  // else error.  scanProp() reported the error status already.
         }
         break;
+        
     case doSetProp:
-        //  Scanned a \p \P or \N within [brackets].
+        //  Scanned a \p \P within [brackets].
         {
             UnicodeSet *s = scanProp();
             if (s != NULL) {
@@ -3471,7 +3512,8 @@ static const UChar      chLBracket  = 0x5b;      // '['
 static const UChar      chRBracket  = 0x5d;      // ']'
 static const UChar      chUp        = 0x5e;      // '^'
 static const UChar      chLowerP    = 0x70;
-static const UChar      chRBrace    = 0x7d;
+static const UChar      chLBrace    = 0x7b;      // '{'
+static const UChar      chRBrace    = 0x7d;      // '}'
 static const UChar      chNEL       = 0x85;      //    NEL newline variant
 static const UChar      chLS        = 0x2028;    //    Unicode Line Separator
 
@@ -3661,6 +3703,63 @@ void RegexCompile::nextChar(RegexPatternChar &c) {
 }
 
 
+
+//------------------------------------------------------------------------------
+//
+//  scanNamedChar
+ //            Get a UChar32 from a \N{UNICODE CHARACTER NAME} in the pattern.
+//
+//             The scan position will be at the 'N'.  On return
+//             the scan position should be just after the '}'
+//
+//             Return the UChar32
+//
+//------------------------------------------------------------------------------
+UChar32  RegexCompile::scanNamedChar() {
+    UnicodeSet    *uset = NULL;
+
+    if (U_FAILURE(*fStatus)) {
+        return 0;
+    }
+
+    nextChar(fC);
+    if (fC.fChar != chLBrace) {
+        error(U_REGEX_PROPERTY_SYNTAX);
+        return 0;
+    }
+    
+    UnicodeString  charName;
+    for (;;) {
+        nextChar(fC);
+        if (fC.fChar == chRBrace) {
+            break;
+        }
+        if (fC.fChar == -1) {
+            error(U_REGEX_PROPERTY_SYNTAX);
+            return 0;
+        }
+        charName.append(fC.fChar);
+    }
+    
+    char name[100];
+    if (!uprv_isInvariantUString(charName.getBuffer(), charName.length()) ||
+         charName.length()>=sizeof(name)) {
+        // All Unicode character names have only invariant characters.
+        // The API to get a character, given a name, accepts only char *, forcing us to convert,
+        //   which requires this error check
+        error(U_REGEX_PROPERTY_SYNTAX);
+        return 0;
+    }
+    charName.extract(0, charName.length(), name, sizeof(name), US_INV);
+
+    UChar32  theChar = u_charFromName(U_UNICODE_CHAR_NAME, name, fStatus);
+    if (U_FAILURE(*fStatus)) {
+        error(U_REGEX_PROPERTY_SYNTAX);
+    }
+
+    nextChar(fC);      // Continue overall regex pattern processing with char after the '}'
+    return theChar;
+}
 
 //------------------------------------------------------------------------------
 //

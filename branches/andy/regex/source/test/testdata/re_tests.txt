@@ -824,7 +824,7 @@ foo.bart	foo.bart	y	-	-
 tt+$	xxxtt	y	-	-
 ([a-\d]+)	za-9z	y	$1	a-9
 ([\d-z]+)	a0-za	y	$1	0-z
-([\d-\s]+)	a0- z	y	$1	0-
+([\d-\s]+)	a0- z	y	$1	0- 
 ([a-[:digit:]]+)	za-9z	y	$1	a-9
 ([[:digit:]-z]+)	=0-z=	y	$1	0-z
 ([[:digit:]-[:alpha:]]+)	=0-z=	iy	$1	0-z	 Set difference in ICU

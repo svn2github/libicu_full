@@ -239,7 +239,7 @@ backslash:
    'd'                   n  expr-quant                              doBackslashd
    'D'                   n  expr-quant                              doBackslashD
    'G'                   n  term                                    doBackslashG
-   'N'                      expr-quant                              doProperty       #   \N{NAME}  named char
+   'N'                      expr-quant                              doNamedChar      #   \N{NAME}  named char
    'p'                      expr-quant                              doProperty       #   \p{Lu}  style property
    'P'                      expr-quant                              doProperty
    'Q'                   n  term                                    doEnterQuoteMode
@@ -257,7 +257,8 @@ backslash:
 
 
 #
-# [set expression] parsing
+# [set expression] parsing,
+#    All states involved in parsing set expressions have names beginning with "set-"
 #
 
 set-open:
@@ -269,17 +270,18 @@ set-open2:
    ']'                   n  set-after-lit                           doSetLiteral
    default                  set-start
 
-#  scanned a '[:'  If it really is a [:property:], doSetPosixProp will have
+#  set-posix:
+#                  scanned a '[:'  If it really is a [:property:], doSetPosixProp will have
 #                  moved the scan to the closing ']'.  If it wasn't a property
 #                  expression, the scan will still be at the opening ':', which should
 #                  be interpreted as a normal set expression.
 set-posix:
     ']'                  n   pop                                    doSetEnd
     ':'                      set-start
-    default                  errorDeath                             doRuleError
+    default                  errorDeath                             doRuleError  # should not be possible.
 
 #
-#   set-start   after the [ and special case leading junk (^ and/or ]) but before
+#   set-start   after the [ and special case leading characters (^ and/or ]) but before
 #               everything else.   A '-' is literal at this point.
 #
 set-start:
@@ -293,8 +295,8 @@ set-after-lit:
     quoted               n  set-after-lit                           doSetLiteral
     ']'                  n  pop                                     doSetEnd
     '['                  n  set-open      ^set-after-set            doSetBeginUnion
-    '-'                  n  set-dash-L-1
-    '&'                  n  set-amp-L-1
+    '-'                  n  set-lit-dash
+    '&'                  n  set-lit-amp
     '\'                  n  set-escape
     eof                     errorDeath                              doSetNoCloseError
     default              n  set-after-lit                           doSetLiteral
@@ -303,76 +305,27 @@ set-after-set:
     quoted               n  set-after-lit                           doSetLiteral
     ']'                  n  pop                                     doSetEnd
     '['                  n  set-open      ^set-after-set            doSetBeginUnion
-    '-'                  n  set-dash-S-1
+    '-'                  n  set-set-dash
     '\'                  n  set-escape
-    '&'                  n  set-amp-S-1
+    '&'                  n  set-set-amp
     eof                     errorDeath                              doSetNoCloseError
     default              n  set-after-lit                           doSetLiteral
 
+set-after-range:
+    quoted               n set-after-lit                            doSetLiteral
+    ']'                  n  pop                                     doSetEnd
+    '['                  n  set-open      ^set-after-set            doSetBeginUnion
+    '-'                  n  set-range-dash
+    '\'                  n  set-escape
+    '&'                  n  set-range-amp
+    eof                     errorDeath                              doSetNoCloseError
+    default              n  set-after-lit                           doSetLiteral
+    
+
+# set-after-op
+#     After a --  or &&
+#     It is an error to close a set at this point.
 #
-# Have scanned [set]&
-#      Could be a '&' intersection operator, if a set follows.
-#      Could be the start of a '&&' operator.
-#      Otherewise is a literal.
-set-amp-S-1:
-    quoted                  set-amp-lit                            doSetAddAmp
-    '['                  n  set-open      ^set-after-set           doSetBeginIntersection1
-    '&'                  n  set-after-op                           doSetIntersection2
-    #TODO:  handle &&, \w, etc.
-    default                 set-amp-lit                            doSetAddAmp
-
-set-amp-lit:
-    quoted               n  set-after-lit                          doSetLiteral
-    ']'                  n  pop                                    doSetEnd
-    default              n  set-after-lit                          doSetLiteral
-
-
-# set-amp-L-1   Have scanned "[literals&" 
-#               Could be a start of "&&" operator or a literal
-#               In [abc&[def]],   the '&' is a literal
-#
-set-amp-L-1:
-    quoted                  set-after-lit                           doSetAddAmp
-    '&'                  n  set-after-op                            doSetIntersection2
-    default                 set-after-lit                           doSetAddAmp
-
-
-#
-# Have scanned [set]-
-#      Could be a '-' difference operator, if a set follows.
-#      Could be the start of a '--' operator.
-#      Otherewise is a literal.
-set-dash-S-1:
-    quoted                  set-dash-lit                           doSetAddDash
-    '['                  n  set-open      ^set-after-set           doSetBeginDifference1
-    '-'                  n  set-after-op                           doSetDifference2
-    #TODO:  handle \p, \w, etc.
-    default                 set-dash-lit                           doSetAddDash
-
-set-dash-lit:
-    quoted               n  set-after-lit                          doSetLiteral
-    ']'                  n  pop                                    doSetEnd
-    default              n  set-after-lit                          doSetLiteral
-
-
-
-
-# Have scanned "[literals-" Could be a range or a -- operator or a literal
-#     In [abc-[def]], the '-' is a literal (confirmed with a Java test)
-#        [abc-\p{xx}  the '-' is a literal
-#        [abc-]       the '-' is a literal
-#        [ab-xy]      the '-' is a range
-set-dash-L-1:
-    quoted               n  set-after-lit                           doSetRange
-    '-'                  n  set-after-op                            doSetDifference2
-    '['                     set-after-lit                           doSetAddDash
-    ']'                     set-after-lit                           doSetAddDash
-    '\'                  n  set-escape                              doSetAddDash
-    default              n  set-after-lit                           doSetRange
-
-
-# After a --  or &&
-#   It is an error to close a set at this point.
 set-after-op:
     quoted               n  set-after-lit                           doSetLiteral
     '['                  n  set-open         ^set-after-set         doSetBeginUnion
@@ -381,20 +334,124 @@ set-after-op:
     default              n  set-after-lit                           doSetLiteral
 
 #
-#  \ processing
+#   set-set-amp
+#      Have scanned [[set]&
+#      Could be a '&' intersection operator, if a set follows.
+#      Could be the start of a '&&' operator.
+#      Otherewise is a literal.
+set-set-amp:
+    quoted                  set-set-amp-lit                        doSetAddAmp
+    '['                  n  set-open      ^set-after-set           doSetBeginIntersection1
+    '&'                  n  set-after-op                           doSetIntersection2
+    #TODO:  handle &&, \w, etc.
+    default                 set-set-amp-lit                        doSetAddAmp
+
+set-set-amp-lit:
+    quoted               n  set-after-lit                          doSetLiteral
+    ']'                  n  pop                                    doSetEnd
+    default              n  set-after-lit                          doSetLiteral
+
+
+# set-lit-amp   Have scanned "[literals&"
+#               Could be a start of "&&" operator or a literal
+#               In [abc&[def]],   the '&' is a literal
+#
+set-lit-amp:
+    quoted                  set-after-lit                           doSetAddAmp
+    '&'                  n  set-after-op                            doSetIntersection2
+    default                 set-after-lit                           doSetAddAmp
+
+
+#
+#  set-set-dash
+#      Have scanned [set]-
+#      Could be a '-' difference operator, if a [set] follows.
+#      Could be the start of a '--' operator.
+#      Otherewise is a literal.
+set-set-dash:
+    quoted                  set-set-dash-lit                       doSetAddDash
+    '['                  n  set-open      ^set-after-set           doSetBeginDifference1
+    '-'                  n  set-after-op                           doSetDifference2
+    '\'                  n  set-escape                             doSetAddDash
+    default                 set-set-dash-lit                       doSetAddDash
+
+set-set-dash-lit:
+    quoted               n  set-after-lit                          doSetLiteral
+    ']'                  n  pop                                    doSetEnd
+    default              n  set-after-lit                          doSetLiteral
+
+#
+#  set-range-dash
+#      scanned  a-b-  or \w-
+#         any set or range like item that does not accept a single '-' diffference op.
+#      These are otherwise similar to [set]-
+set-range-dash:
+    quoted                  set-set-dash-lit                       doSetAddDash
+    '['                  n  set-open      ^set-after-set           doSetAddDash
+    default                 set-set-dash
+
+
+set-range-amp:
+    quoted                  set-set-amp-lit                        doSetAddAmp
+    '['                  n  set-open      ^set-after-set           doSetAddAmp
+    default                 set-set-amp
+
+
+
+#  set-lit-dash
+#     Have scanned "[literals-" Could be a range or a -- operator or a literal
+#     In [abc-[def]], the '-' is a literal (confirmed with a Java test)
+#        [abc-\p{xx}  the '-' is a literal
+#        [abc-]       the '-' is a literal
+#        [ab-xy]      the '-' is a range
+#
+set-lit-dash:
+    quoted               n  set-after-range                         doSetRange
+    '-'                  n  set-after-op                            doSetDifference2
+    '['                     set-after-lit                           doSetAddDash
+    ']'                     set-after-lit                           doSetAddDash
+    '\'                  n  set-lit-dash-escape
+    default              n  set-after-range                         doSetRange
+
+# set-lit-dash-escape
+#
+#    scanned "[literal-\"
+#    Could be a range, if the \ introduces an escaped literal char or a named char.
+#    Could be a literal '-', if the \ introduces a set like construct e.g. \s aut \p{...}
+#
+set-lit-dash-escape:
+   's'                      set-escape                             doSetAddDash
+   'S'                      set-escape                             doSetAddDash
+   'w'                      set-escape                             doSetAddDash
+   'W'                      set-escape                             doSetAddDash
+   'd'                      set-escape                             doSetAddDash
+   'D'                      set-escape                             doSetAddDash
+   'N'                      set-after-range                        doSetNamedRange
+   default               n  set-after-range                        doSetRange
+
+   
+#
+#  set-escape
+#       Common \ escape processing
 #
 set-escape:
    'p'                      set-after-set                           doSetProp
    'P'                      set-after-set                           doSetProp
-   'N'                      set-after-set                           doSetProp
-   's'                   n  set-after-set                           doSetBackslash_s
-   'S'                   n  set-after-set                           doSetBackslash_S
-   'w'                   n  set-after-set                           doSetBackslash_w
-   'W'                   n  set-after-set                           doSetBackslash_W
-   'd'                   n  set-after-set                           doSetBackslash_d
-   'D'                   n  set-after-set                           doSetBackslash_D
-   default               n  set-after-lit                           doSetLiteral    #TODO: needs warning!
+   'N'                      set-after-lit                           doSetNamedChar
+   's'                   n  set-after-range                         doSetBackslash_s
+   'S'                   n  set-after-range                         doSetBackslash_S
+   'w'                   n  set-after-range                         doSetBackslash_w
+   'W'                   n  set-after-range                         doSetBackslash_W
+   'd'                   n  set-after-range                         doSetBackslash_d
+   'D'                   n  set-after-range                         doSetBackslash_D
+   default               n  set-after-lit                           doSetLiteral 
 
+#
+# set-finish
+#     Have just encountered the final ']' that completes a [set], and
+#     arrived here via a pop.  From here, we exit the set parsing world, and go
+#     back to generic regular expression parsing.
+#
 set-finish:
     default                 expr-quant                              doSetFinish
 
