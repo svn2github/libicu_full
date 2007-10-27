@@ -177,9 +177,9 @@ UBool RegexTest::doRegexLMTest(const char *pat, const char *text, UBool looking,
 
 //---------------------------------------------------------------------------
 //
-//    regex_find(pattern, inputString, lineNumber)
+//    regex_find(pattern, flags, inputString, lineNumber)
 //
-//         function to simplify writing tests regex tests.
+//         function to simplify writing regex tests.
 //
 //          The input text is unescaped.  The pattern is not.
 //          The input text is marked with the expected match positions
@@ -253,13 +253,28 @@ void RegexTest::regex_find(const UnicodeString &pattern,
             goto cleanupAndReturn;
         }
         #endif
-        errln("Line %d: error %s compiling pattern.", line, u_errorName(status));
+        if (flags.indexOf((UChar)0x45) >= 0) {  //  flags contain 'E'
+            // Expected pattern compilation error.
+            if (flags.indexOf((UChar)0x64) >= 0) {   // flags contain 'd'
+                logln("Pattern Compile returns \"%s\"", u_errorName(status));
+            }
+            goto cleanupAndReturn;
+        } else {
+            // Unexpected pattern compilation error.
+            errln("Line %d: error %s compiling pattern.", line, u_errorName(status));
+            goto cleanupAndReturn;
+        }
+    }
+
+    if (flags.indexOf((UChar)0x64) >= 0) {  // 'd' flag
+        RegexPatternDump(callerPattern);
+    }
+
+    if (flags.indexOf((UChar)0x45) >= 0) {  // 'E' flag
+        errln("Expected, but did not get, a pattern compilation error.");
         goto cleanupAndReturn;
     }
 
-    if (flags.indexOf((UChar)'d') >= 0) {
-        RegexPatternDump(callerPattern);
-    }
 
     //
     // Number of times find() should be called on the test string, default to 1
@@ -1482,7 +1497,7 @@ void RegexTest::Extended() {
 
     RegexMatcher    quotedStuffMat("\\s*([\\'\\\"/])(.*?)\\1", 0, status);
     RegexMatcher    commentMat    ("\\s*(#.*)?$", 0, status);
-    RegexMatcher    flagsMat      ("\\s*([ixsmdtGv2-9]*)([:letter:]*)", 0, status);
+    RegexMatcher    flagsMat      ("\\s*([ixsmdtEGv2-9]*)([:letter:]*)", 0, status);
 
     RegexMatcher    lineMat("(.*?)\\r?\\n", testString, 0, status);
     UnicodeString   testPattern;   // The pattern for test from the test file.

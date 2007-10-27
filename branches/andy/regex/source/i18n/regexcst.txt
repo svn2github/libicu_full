@@ -150,7 +150,6 @@ open-paren-lookbehind:
 
 #
 #   paren-comment    We've got a (?# ... )  style comment.  Eat pattern text till we get to the ')'
-#                    TODO:  should parens nest here?  Check what perl does.
 #
 paren-comment:
     ')'                  n  pop
@@ -204,10 +203,9 @@ quant-opt:
 
 #
 #   Interval         scanning a '{', the opening delimiter for an interval specification
-#                                   {number} or {min, max} or {min, }
+#                                   {number} or {min, max} or {min,}
 #
 interval-open:
-    white_space          n  interval-open                                  # TODO:  is white space allowed here in non-free mode?
     digit_char              interval-lower
     default                 errorDeath                              doIntervalError
 
@@ -285,14 +283,32 @@ set-posix:
 #               everything else.   A '-' is literal at this point.
 #
 set-start:
-    quoted               n  set-after-lit                           doSetLiteral
     ']'                  n  pop                                     doSetEnd
     '['                  n  set-open      ^set-after-set            doSetBeginUnion
     '\'                  n  set-escape
+    '-'                  n  set-start-dash
+    '&'                  n  set-start-amp
     default              n  set-after-lit                           doSetLiteral
 
+#    set-start-dash    Turn "[--" into a syntax error.
+#                           "[-x" is good, - and x are literals.
+#
+set-start-dash:
+    '-'                     errorDeath                              doRuleError
+    default                 set-after-lit                           doSetAddDash
+
+#    set-start-amp     Turn "[&&" into a syntax error.
+#                           "[&x" is good, & and x are literals.
+#
+set-start-amp:
+    '&'                     errorDeath                              doRuleError
+    default                 set-after-lit                           doSetAddAmp
+
+#
+#   set-after-lit    The last thing scanned was a literal character within a set.
+#                    Can be followed by anything.  Single '-' or '&' are
+#                    literals in this context, not operators.
 set-after-lit:
-    quoted               n  set-after-lit                           doSetLiteral
     ']'                  n  pop                                     doSetEnd
     '['                  n  set-open      ^set-after-set            doSetBeginUnion
     '-'                  n  set-lit-dash
@@ -302,22 +318,20 @@ set-after-lit:
     default              n  set-after-lit                           doSetLiteral
 
 set-after-set:
-    quoted               n  set-after-lit                           doSetLiteral
     ']'                  n  pop                                     doSetEnd
     '['                  n  set-open      ^set-after-set            doSetBeginUnion
     '-'                  n  set-set-dash
-    '\'                  n  set-escape
     '&'                  n  set-set-amp
+    '\'                  n  set-escape
     eof                     errorDeath                              doSetNoCloseError
     default              n  set-after-lit                           doSetLiteral
 
 set-after-range:
-    quoted               n set-after-lit                            doSetLiteral
     ']'                  n  pop                                     doSetEnd
     '['                  n  set-open      ^set-after-set            doSetBeginUnion
     '-'                  n  set-range-dash
-    '\'                  n  set-escape
     '&'                  n  set-range-amp
+    '\'                  n  set-escape
     eof                     errorDeath                              doSetNoCloseError
     default              n  set-after-lit                           doSetLiteral
     
@@ -327,7 +341,6 @@ set-after-range:
 #     It is an error to close a set at this point.
 #
 set-after-op:
-    quoted               n  set-after-lit                           doSetLiteral
     '['                  n  set-open         ^set-after-set         doSetBeginUnion
     ']'                     errorDeath                              doSetOpError
     '\'                  n  set-escape
@@ -340,16 +353,9 @@ set-after-op:
 #      Could be the start of a '&&' operator.
 #      Otherewise is a literal.
 set-set-amp:
-    quoted                  set-set-amp-lit                        doSetAddAmp
     '['                  n  set-open      ^set-after-set           doSetBeginIntersection1
     '&'                  n  set-after-op                           doSetIntersection2
-    #TODO:  handle &&, \w, etc.
-    default                 set-set-amp-lit                        doSetAddAmp
-
-set-set-amp-lit:
-    quoted               n  set-after-lit                          doSetLiteral
-    ']'                  n  pop                                    doSetEnd
-    default              n  set-after-lit                          doSetLiteral
+    default                 set-after-lit                          doSetAddAmp
 
 
 # set-lit-amp   Have scanned "[literals&"
@@ -357,7 +363,6 @@ set-set-amp-lit:
 #               In [abc&[def]],   the '&' is a literal
 #
 set-lit-amp:
-    quoted                  set-after-lit                           doSetAddAmp
     '&'                  n  set-after-op                            doSetIntersection2
     default                 set-after-lit                           doSetAddAmp
 
@@ -369,33 +374,25 @@ set-lit-amp:
 #      Could be the start of a '--' operator.
 #      Otherewise is a literal.
 set-set-dash:
-    quoted                  set-set-dash-lit                       doSetAddDash
     '['                  n  set-open      ^set-after-set           doSetBeginDifference1
     '-'                  n  set-after-op                           doSetDifference2
-    '\'                  n  set-escape                             doSetAddDash
-    default                 set-set-dash-lit                       doSetAddDash
+    default                 set-after-lit                          doSetAddDash
 
-set-set-dash-lit:
-    quoted               n  set-after-lit                          doSetLiteral
-    ']'                  n  pop                                    doSetEnd
-    default              n  set-after-lit                          doSetLiteral
 
 #
 #  set-range-dash
 #      scanned  a-b-  or \w-
-#         any set or range like item that does not accept a single '-' diffference op.
-#      These are otherwise similar to [set]-
+#         any set or range like item where the trailing single '-' should
+#         be literal, not a set difference operation.
+#         A trailing "--" is still a difference operator.
 set-range-dash:
-    quoted                  set-set-dash-lit                       doSetAddDash
-    '['                  n  set-open      ^set-after-set           doSetAddDash
-    default                 set-set-dash
+    '-'                  n  set-after-op                           doSetDifference2
+    default                 set-after-lit                          doSetAddDash
 
 
 set-range-amp:
-    quoted                  set-set-amp-lit                        doSetAddAmp
-    '['                  n  set-open      ^set-after-set           doSetAddAmp
-    default                 set-set-amp
-
+    '&'                  n  set-after-op                           doSetIntersection2
+    default                 set-after-lit                          doSetAddAmp
 
 
 #  set-lit-dash
@@ -406,7 +403,6 @@ set-range-amp:
 #        [ab-xy]      the '-' is a range
 #
 set-lit-dash:
-    quoted               n  set-after-range                         doSetRange
     '-'                  n  set-after-op                            doSetDifference2
     '['                     set-after-lit                           doSetAddDash
     ']'                     set-after-lit                           doSetAddDash
@@ -417,7 +413,7 @@ set-lit-dash:
 #
 #    scanned "[literal-\"
 #    Could be a range, if the \ introduces an escaped literal char or a named char.
-#    Could be a literal '-', if the \ introduces a set like construct e.g. \s aut \p{...}
+#    Could be a literal '-', if the '\' introduces a set-like construct e.g. \s aut \p{...}
 #
 set-lit-dash-escape:
    's'                      set-escape                             doSetAddDash
@@ -458,7 +454,7 @@ set-finish:
 
 #
 # errorDeath.   This state is specified as the next state whenever a syntax error
-#               in the source rules is detected.  Baring bugs, the state machine will never
+#               in the source rules is detected.  Barring bugs, the state machine will never
 #               actually get here, but will stop because of the action associated with the error.
 #               But, just in case, this state asks the state machine to exit.
 errorDeath:

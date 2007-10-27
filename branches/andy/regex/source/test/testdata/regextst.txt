@@ -26,6 +26,7 @@
 #                                          times to execute find().  The expected results are
 #                                          for the last find() in the sequence.
 #                                   G      Only check match / no match.  Do not check capture groups.
+#                                   E      Pattern compilation error expected
 #                                 White space must be present between the flags and the match string.
 #
 
@@ -538,6 +539,86 @@
 "."                           4s  "123<0>\u2029</0>XYZ"
 ".{6}"                            "123\u000a\u000dXYZ"
 ".{6}"                         s  "<0>123\u000a\u000dX</0>Y"
+
+#
+# [set] parsing, systematically run through all of the parser states.
+#
+"[def]+"                          "abc<0>ddeeff</0>ghi"       # set-open
+"[^def]+"                         "<0>abc</0>defghi"
+"[:digit:]+"                      "abc<0>123</0>def"
+"[:^digit:]+"                     "<0>abc</0>123def"
+"[\u005edef]+"                    "abc<0>de^f</0>ghi"
+
+"[]]+"                            "abc<0>]]]</0>[def"         # set-open2
+"[^]]+"                           "<0>abc</0>]]][def"
+
+"[:Lu:]+"                         "abc<0>ABC</0>def"          # set-posix
+"[:Lu]+"                          "abc<0>uL::Lu</0>"
+"[:^Lu]+"                         "abc<0>uL:^:Lu</0>"
+"[:]+"                            "abc<0>:::</0>def"
+"[:whats this:]"               E  " "
+"[--]+"                       dE  "-------"
+
+"[[nested]]+"                      "xyz[<0>nnetsteed</0>]abc"   #set-start
+"[\x{41}]+"                        "CB<0>AA</0>ZYX"
+"[\[\]\\]+"                        "&*<0>[]\\</0>..."
+"[*({<]+"                          "^&<0>{{(<<*</0>)))"
+
+
+"[-def]+"                          "abc<0>def-ef-d</0>xyz"     # set-start-dash
+"[abc[--def]]"                 E   " "
+
+"[x[&def]]+"                        "abc<0>def&</0>ghi"        # set-start-amp
+"[&& is bad at start]"         E   " "
+
+"[abc"                         E   " "                         # set-after-lit
+"[def]]"                           "abcdef"
+"[def]]"                           "abcde<0>f]</0>]"
+
+"[[def][ghi]]+"                    "abc]<0>defghi</0>[xyz"     # set-after-set
+"[[def]ghi]+"                      "abc]<0>defghi</0>[xyz" 
+"[[[[[[[[[[[abc]"              E   " "
+"[[abc]\p{Lu}]+"                   "def<0>abcABC</0>xyz"
+
+"[d-f]+"                           "abc<0>def</0>ghi"          # set-after-range
+"[d-f[x-z]]+"                      "abc<0>defxyzzz</0>gw"
+"[\s\d]+"                          "abc<0>  123</0>def"
+"[d-f\d]+"                         "abc<0>def123</0>ghi"
+"[d-fr-t]+"                        "abc<0>defrst</0>uvw"
+
+"[abc--]"                      E   " "                         # set-after-op
+"[[def]&&]"                    E   " "
+"[-abcd---]+"                     "<0>abc</0>--"                 #[-abcd]--[-]
+"[&abcd&&&ac]+"                   "b<0>ac&&ca</0>d"              #[&abcd]&&[&ac]
+
+"[[abcd]&[ac]]+"                  "b<0>acac</0>d"              # set-set-amp
+"[[abcd]&&[ac]]+"                 "b<0>acac</0>d"
+"[[abcd]&&ac]+"                   "b<0>acac</0>d"
+"[[abcd]&ac]+"                    "<0>bacacd&&&</0>"
+
+"[abcd&[ac]]+"                    "<0>bacacd&&&</0>"           #set-lit-amp
+"[abcd&&[ac]]+"                   "b<0>acac</0>d"
+"[abcd&&ac]+"                     "b<0>acac</0>d"
+
+"[[abcd]-[ac]]+"                  "a<0>bdbd</0>c"              # set-set-dash
+"[[abcd]--[ac]]+"                 "a<0>bdbd</0>c"
+"[[abcd]--ac]+"                   "a<0>bdbd</0>c"
+"[[abcd]-ac]+"                    "<0>bacacd---</0>"
+
+"[a-d--[b-c]]+"                   "b<0>adad</0>c"              # set-range-dash
+"[a-d--b-c]+"                     "b<0>adad</0>c"   
+"[a-d-[b-c]]+"                    "<0>bad-adc</0>"
+"[a-d-b-c]+"                      "<0>bad-adc</0>"
+"[\w--[b-c]]+"                    "b<0>adad</0>c"  
+"[\w--b-c]+"                      "b<0>adad</0>c"   
+"[\w-[b-c]]+"                     "<0>bad-adc</0>"
+"[\w-b-c]+"                       "<0>bad-adc</0>"
+
+"[a-d&&[b-c]]+"                   "a<0>bcbc</0>d"              # set-range-amp
+"[a-d&&b-c]+"                     "a<0>bcbc</0>d"
+"[a-d&[b-c]]+"                    "<0>abc&bcd</0>"
+"[a-d&b-c]+"                      "<0>abc&bcd</0>"
+
 
 #
 # Bug 4045

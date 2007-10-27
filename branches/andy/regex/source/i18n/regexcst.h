@@ -16,9 +16,8 @@ U_NAMESPACE_BEGIN
 //
 // Character classes for regex pattern scanning.
 //
-    static const uint8_t kRuleSet_white_space = 128;
-    static const uint8_t kRuleSet_digit_char = 129;
-    static const uint8_t kRuleSet_rule_char = 130;
+    static const uint8_t kRuleSet_digit_char = 128;
+    static const uint8_t kRuleSet_rule_char = 129;
 
 
 enum Regex_PatternParseAction {
@@ -131,17 +130,17 @@ static const struct RegexTableEl gRuleParseStateTable[] = {
     {doNOP, 0, 0, 0, TRUE}
     , {doPatStart, 255, 2,0,  FALSE}     //  1      start
     , {doLiteralChar, 254, 14,0,  TRUE}     //  2      term
-    , {doLiteralChar, 130, 14,0,  TRUE}     //  3 
-    , {doSetBegin, 91 /* [ */, 101, 191, TRUE}     //  4 
+    , {doLiteralChar, 129, 14,0,  TRUE}     //  3 
+    , {doSetBegin, 91 /* [ */, 100, 178, TRUE}     //  4 
     , {doNOP, 40 /* ( */, 27,0,  TRUE}     //  5 
     , {doDotAny, 46 /* . */, 14,0,  TRUE}     //  6 
     , {doCaret, 94 /* ^ */, 14,0,  TRUE}     //  7 
     , {doDollar, 36 /* $ */, 14,0,  TRUE}     //  8 
-    , {doNOP, 92 /* \ */, 81,0,  TRUE}     //  9 
+    , {doNOP, 92 /* \ */, 80,0,  TRUE}     //  9 
     , {doOrOperator, 124 /* | */, 2,0,  TRUE}     //  10 
     , {doCloseParen, 41 /* ) */, 255,0,  TRUE}     //  11 
     , {doPatFinish, 253, 2,0,  FALSE}     //  12 
-    , {doRuleError, 255, 192,0,  FALSE}     //  13 
+    , {doRuleError, 255, 179,0,  FALSE}     //  13 
     , {doNOP, 42 /* * */, 59,0,  TRUE}     //  14      expr-quant
     , {doNOP, 43 /* + */, 62,0,  TRUE}     //  15 
     , {doNOP, 63 /* ? */, 65,0,  TRUE}     //  16 
@@ -169,14 +168,14 @@ static const struct RegexTableEl gRuleParseStateTable[] = {
     , {doBeginMatchMode, 119 /* w */, 50,0,  FALSE}     //  38 
     , {doBeginMatchMode, 120 /* x */, 50,0,  FALSE}     //  39 
     , {doBeginMatchMode, 45 /* - */, 50,0,  FALSE}     //  40 
-    , {doConditionalExpr, 40 /* ( */, 192,0,  TRUE}     //  41 
-    , {doPerlInline, 123 /* { */, 192,0,  TRUE}     //  42 
-    , {doBadOpenParenType, 255, 192,0,  FALSE}     //  43 
+    , {doConditionalExpr, 40 /* ( */, 179,0,  TRUE}     //  41 
+    , {doPerlInline, 123 /* { */, 179,0,  TRUE}     //  42 
+    , {doBadOpenParenType, 255, 179,0,  FALSE}     //  43 
     , {doOpenLookBehind, 61 /* = */, 2, 20, TRUE}     //  44      open-paren-lookbehind
     , {doOpenLookBehindNeg, 33 /* ! */, 2, 20, TRUE}     //  45 
-    , {doBadOpenParenType, 255, 192,0,  FALSE}     //  46 
+    , {doBadOpenParenType, 255, 179,0,  FALSE}     //  46 
     , {doNOP, 41 /* ) */, 255,0,  TRUE}     //  47      paren-comment
-    , {doMismatchedParenErr, 253, 192,0,  FALSE}     //  48 
+    , {doMismatchedParenErr, 253, 179,0,  FALSE}     //  48 
     , {doNOP, 255, 47,0,  TRUE}     //  49 
     , {doMatchMode, 105 /* i */, 50,0,  TRUE}     //  50      paren-flag
     , {doMatchMode, 109 /* m */, 50,0,  TRUE}     //  51 
@@ -186,7 +185,7 @@ static const struct RegexTableEl gRuleParseStateTable[] = {
     , {doMatchMode, 45 /* - */, 50,0,  TRUE}     //  55 
     , {doSetMatchMode, 41 /* ) */, 2,0,  TRUE}     //  56 
     , {doMatchModeParen, 58 /* : */, 2, 14, TRUE}     //  57 
-    , {doBadModeFlag, 255, 192,0,  FALSE}     //  58 
+    , {doBadModeFlag, 255, 179,0,  FALSE}     //  58 
     , {doNGStar, 63 /* ? */, 20,0,  TRUE}     //  59      quant-star
     , {doPossessiveStar, 43 /* + */, 20,0,  TRUE}     //  60 
     , {doStar, 255, 20,0,  FALSE}     //  61 
@@ -196,131 +195,118 @@ static const struct RegexTableEl gRuleParseStateTable[] = {
     , {doNGOpt, 63 /* ? */, 20,0,  TRUE}     //  65      quant-opt
     , {doPossessiveOpt, 43 /* + */, 20,0,  TRUE}     //  66 
     , {doOpt, 255, 20,0,  FALSE}     //  67 
-    , {doNOP, 128, 68,0,  TRUE}     //  68      interval-open
-    , {doNOP, 129, 71,0,  FALSE}     //  69 
-    , {doIntervalError, 255, 192,0,  FALSE}     //  70 
-    , {doIntevalLowerDigit, 129, 71,0,  TRUE}     //  71      interval-lower
-    , {doNOP, 44 /* , */, 75,0,  TRUE}     //  72 
-    , {doIntervalSame, 125 /* } */, 78,0,  TRUE}     //  73 
-    , {doIntervalError, 255, 192,0,  FALSE}     //  74 
-    , {doIntervalUpperDigit, 129, 75,0,  TRUE}     //  75      interval-upper
-    , {doNOP, 125 /* } */, 78,0,  TRUE}     //  76 
-    , {doIntervalError, 255, 192,0,  FALSE}     //  77 
-    , {doNGInterval, 63 /* ? */, 20,0,  TRUE}     //  78      interval-type
-    , {doPossessiveInterval, 43 /* + */, 20,0,  TRUE}     //  79 
-    , {doInterval, 255, 20,0,  FALSE}     //  80 
-    , {doBackslashA, 65 /* A */, 2,0,  TRUE}     //  81      backslash
-    , {doBackslashB, 66 /* B */, 2,0,  TRUE}     //  82 
-    , {doBackslashb, 98 /* b */, 2,0,  TRUE}     //  83 
-    , {doBackslashd, 100 /* d */, 14,0,  TRUE}     //  84 
-    , {doBackslashD, 68 /* D */, 14,0,  TRUE}     //  85 
-    , {doBackslashG, 71 /* G */, 2,0,  TRUE}     //  86 
-    , {doNamedChar, 78 /* N */, 14,0,  FALSE}     //  87 
-    , {doProperty, 112 /* p */, 14,0,  FALSE}     //  88 
-    , {doProperty, 80 /* P */, 14,0,  FALSE}     //  89 
-    , {doEnterQuoteMode, 81 /* Q */, 2,0,  TRUE}     //  90 
-    , {doBackslashS, 83 /* S */, 14,0,  TRUE}     //  91 
-    , {doBackslashs, 115 /* s */, 14,0,  TRUE}     //  92 
-    , {doBackslashW, 87 /* W */, 14,0,  TRUE}     //  93 
-    , {doBackslashw, 119 /* w */, 14,0,  TRUE}     //  94 
-    , {doBackslashX, 88 /* X */, 14,0,  TRUE}     //  95 
-    , {doBackslashZ, 90 /* Z */, 2,0,  TRUE}     //  96 
-    , {doBackslashz, 122 /* z */, 2,0,  TRUE}     //  97 
-    , {doBackRef, 129, 14,0,  TRUE}     //  98 
-    , {doEscapeError, 253, 192,0,  FALSE}     //  99 
-    , {doLiteralChar, 255, 14,0,  TRUE}     //  100 
-    , {doSetNegate, 94 /* ^ */, 104,0,  TRUE}     //  101      set-open
-    , {doSetPosixProp, 58 /* : */, 106,0,  FALSE}     //  102 
-    , {doNOP, 255, 104,0,  FALSE}     //  103 
-    , {doSetLiteral, 93 /* ] */, 114,0,  TRUE}     //  104      set-open2
-    , {doNOP, 255, 109,0,  FALSE}     //  105 
-    , {doSetEnd, 93 /* ] */, 255,0,  TRUE}     //  106      set-posix
-    , {doNOP, 58 /* : */, 109,0,  FALSE}     //  107 
-    , {doRuleError, 255, 192,0,  FALSE}     //  108 
-    , {doSetLiteral, 254, 114,0,  TRUE}     //  109      set-start
-    , {doSetEnd, 93 /* ] */, 255,0,  TRUE}     //  110 
-    , {doSetBeginUnion, 91 /* [ */, 101, 122, TRUE}     //  111 
-    , {doNOP, 92 /* \ */, 181,0,  TRUE}     //  112 
-    , {doSetLiteral, 255, 114,0,  TRUE}     //  113 
-    , {doSetLiteral, 254, 114,0,  TRUE}     //  114      set-after-lit
-    , {doSetEnd, 93 /* ] */, 255,0,  TRUE}     //  115 
-    , {doSetBeginUnion, 91 /* [ */, 101, 122, TRUE}     //  116 
-    , {doNOP, 45 /* - */, 167,0,  TRUE}     //  117 
-    , {doNOP, 38 /* & */, 150,0,  TRUE}     //  118 
-    , {doNOP, 92 /* \ */, 181,0,  TRUE}     //  119 
-    , {doSetNoCloseError, 253, 192,0,  FALSE}     //  120 
-    , {doSetLiteral, 255, 114,0,  TRUE}     //  121 
-    , {doSetLiteral, 254, 114,0,  TRUE}     //  122      set-after-set
-    , {doSetEnd, 93 /* ] */, 255,0,  TRUE}     //  123 
-    , {doSetBeginUnion, 91 /* [ */, 101, 122, TRUE}     //  124 
-    , {doNOP, 45 /* - */, 153,0,  TRUE}     //  125 
-    , {doNOP, 92 /* \ */, 181,0,  TRUE}     //  126 
-    , {doNOP, 38 /* & */, 143,0,  TRUE}     //  127 
-    , {doSetNoCloseError, 253, 192,0,  FALSE}     //  128 
-    , {doSetLiteral, 255, 114,0,  TRUE}     //  129 
-    , {doSetLiteral, 254, 114,0,  TRUE}     //  130      set-after-range
-    , {doSetEnd, 93 /* ] */, 255,0,  TRUE}     //  131 
-    , {doSetBeginUnion, 91 /* [ */, 101, 122, TRUE}     //  132 
-    , {doNOP, 45 /* - */, 161,0,  TRUE}     //  133 
-    , {doNOP, 92 /* \ */, 181,0,  TRUE}     //  134 
-    , {doNOP, 38 /* & */, 164,0,  TRUE}     //  135 
-    , {doSetNoCloseError, 253, 192,0,  FALSE}     //  136 
-    , {doSetLiteral, 255, 114,0,  TRUE}     //  137 
-    , {doSetLiteral, 254, 114,0,  TRUE}     //  138      set-after-op
-    , {doSetBeginUnion, 91 /* [ */, 101, 122, TRUE}     //  139 
-    , {doSetOpError, 93 /* ] */, 192,0,  FALSE}     //  140 
-    , {doNOP, 92 /* \ */, 181,0,  TRUE}     //  141 
-    , {doSetLiteral, 255, 114,0,  TRUE}     //  142 
-    , {doSetAddAmp, 254, 147,0,  FALSE}     //  143      set-set-amp
-    , {doSetBeginIntersection1, 91 /* [ */, 101, 122, TRUE}     //  144 
-    , {doSetIntersection2, 38 /* & */, 138,0,  TRUE}     //  145 
-    , {doSetAddAmp, 255, 147,0,  FALSE}     //  146 
-    , {doSetLiteral, 254, 114,0,  TRUE}     //  147      set-set-amp-lit
-    , {doSetEnd, 93 /* ] */, 255,0,  TRUE}     //  148 
-    , {doSetLiteral, 255, 114,0,  TRUE}     //  149 
-    , {doSetAddAmp, 254, 114,0,  FALSE}     //  150      set-lit-amp
-    , {doSetIntersection2, 38 /* & */, 138,0,  TRUE}     //  151 
-    , {doSetAddAmp, 255, 114,0,  FALSE}     //  152 
-    , {doSetAddDash, 254, 158,0,  FALSE}     //  153      set-set-dash
-    , {doSetBeginDifference1, 91 /* [ */, 101, 122, TRUE}     //  154 
-    , {doSetDifference2, 45 /* - */, 138,0,  TRUE}     //  155 
-    , {doSetAddDash, 92 /* \ */, 181,0,  TRUE}     //  156 
-    , {doSetAddDash, 255, 158,0,  FALSE}     //  157 
-    , {doSetLiteral, 254, 114,0,  TRUE}     //  158      set-set-dash-lit
-    , {doSetEnd, 93 /* ] */, 255,0,  TRUE}     //  159 
-    , {doSetLiteral, 255, 114,0,  TRUE}     //  160 
-    , {doSetAddDash, 254, 158,0,  FALSE}     //  161      set-range-dash
-    , {doSetAddDash, 91 /* [ */, 101, 122, TRUE}     //  162 
-    , {doNOP, 255, 153,0,  FALSE}     //  163 
-    , {doSetAddAmp, 254, 147,0,  FALSE}     //  164      set-range-amp
-    , {doSetAddAmp, 91 /* [ */, 101, 122, TRUE}     //  165 
-    , {doNOP, 255, 143,0,  FALSE}     //  166 
-    , {doSetRange, 254, 130,0,  TRUE}     //  167      set-lit-dash
-    , {doSetDifference2, 45 /* - */, 138,0,  TRUE}     //  168 
-    , {doSetAddDash, 91 /* [ */, 114,0,  FALSE}     //  169 
-    , {doSetAddDash, 93 /* ] */, 114,0,  FALSE}     //  170 
-    , {doNOP, 92 /* \ */, 173,0,  TRUE}     //  171 
-    , {doSetRange, 255, 130,0,  TRUE}     //  172 
-    , {doSetAddDash, 115 /* s */, 181,0,  FALSE}     //  173      set-lit-dash-escape
-    , {doSetAddDash, 83 /* S */, 181,0,  FALSE}     //  174 
-    , {doSetAddDash, 119 /* w */, 181,0,  FALSE}     //  175 
-    , {doSetAddDash, 87 /* W */, 181,0,  FALSE}     //  176 
-    , {doSetAddDash, 100 /* d */, 181,0,  FALSE}     //  177 
-    , {doSetAddDash, 68 /* D */, 181,0,  FALSE}     //  178 
-    , {doSetNamedRange, 78 /* N */, 130,0,  FALSE}     //  179 
-    , {doSetRange, 255, 130,0,  TRUE}     //  180 
-    , {doSetProp, 112 /* p */, 122,0,  FALSE}     //  181      set-escape
-    , {doSetProp, 80 /* P */, 122,0,  FALSE}     //  182 
-    , {doSetNamedChar, 78 /* N */, 114,0,  FALSE}     //  183 
-    , {doSetBackslash_s, 115 /* s */, 130,0,  TRUE}     //  184 
-    , {doSetBackslash_S, 83 /* S */, 130,0,  TRUE}     //  185 
-    , {doSetBackslash_w, 119 /* w */, 130,0,  TRUE}     //  186 
-    , {doSetBackslash_W, 87 /* W */, 130,0,  TRUE}     //  187 
-    , {doSetBackslash_d, 100 /* d */, 130,0,  TRUE}     //  188 
-    , {doSetBackslash_D, 68 /* D */, 130,0,  TRUE}     //  189 
-    , {doSetLiteral, 255, 114,0,  TRUE}     //  190 
-    , {doSetFinish, 255, 14,0,  FALSE}     //  191      set-finish
-    , {doExit, 255, 192,0,  TRUE}     //  192      errorDeath
+    , {doNOP, 128, 70,0,  FALSE}     //  68      interval-open
+    , {doIntervalError, 255, 179,0,  FALSE}     //  69 
+    , {doIntevalLowerDigit, 128, 70,0,  TRUE}     //  70      interval-lower
+    , {doNOP, 44 /* , */, 74,0,  TRUE}     //  71 
+    , {doIntervalSame, 125 /* } */, 77,0,  TRUE}     //  72 
+    , {doIntervalError, 255, 179,0,  FALSE}     //  73 
+    , {doIntervalUpperDigit, 128, 74,0,  TRUE}     //  74      interval-upper
+    , {doNOP, 125 /* } */, 77,0,  TRUE}     //  75 
+    , {doIntervalError, 255, 179,0,  FALSE}     //  76 
+    , {doNGInterval, 63 /* ? */, 20,0,  TRUE}     //  77      interval-type
+    , {doPossessiveInterval, 43 /* + */, 20,0,  TRUE}     //  78 
+    , {doInterval, 255, 20,0,  FALSE}     //  79 
+    , {doBackslashA, 65 /* A */, 2,0,  TRUE}     //  80      backslash
+    , {doBackslashB, 66 /* B */, 2,0,  TRUE}     //  81 
+    , {doBackslashb, 98 /* b */, 2,0,  TRUE}     //  82 
+    , {doBackslashd, 100 /* d */, 14,0,  TRUE}     //  83 
+    , {doBackslashD, 68 /* D */, 14,0,  TRUE}     //  84 
+    , {doBackslashG, 71 /* G */, 2,0,  TRUE}     //  85 
+    , {doNamedChar, 78 /* N */, 14,0,  FALSE}     //  86 
+    , {doProperty, 112 /* p */, 14,0,  FALSE}     //  87 
+    , {doProperty, 80 /* P */, 14,0,  FALSE}     //  88 
+    , {doEnterQuoteMode, 81 /* Q */, 2,0,  TRUE}     //  89 
+    , {doBackslashS, 83 /* S */, 14,0,  TRUE}     //  90 
+    , {doBackslashs, 115 /* s */, 14,0,  TRUE}     //  91 
+    , {doBackslashW, 87 /* W */, 14,0,  TRUE}     //  92 
+    , {doBackslashw, 119 /* w */, 14,0,  TRUE}     //  93 
+    , {doBackslashX, 88 /* X */, 14,0,  TRUE}     //  94 
+    , {doBackslashZ, 90 /* Z */, 2,0,  TRUE}     //  95 
+    , {doBackslashz, 122 /* z */, 2,0,  TRUE}     //  96 
+    , {doBackRef, 128, 14,0,  TRUE}     //  97 
+    , {doEscapeError, 253, 179,0,  FALSE}     //  98 
+    , {doLiteralChar, 255, 14,0,  TRUE}     //  99 
+    , {doSetNegate, 94 /* ^ */, 103,0,  TRUE}     //  100      set-open
+    , {doSetPosixProp, 58 /* : */, 105,0,  FALSE}     //  101 
+    , {doNOP, 255, 103,0,  FALSE}     //  102 
+    , {doSetLiteral, 93 /* ] */, 118,0,  TRUE}     //  103      set-open2
+    , {doNOP, 255, 108,0,  FALSE}     //  104 
+    , {doSetEnd, 93 /* ] */, 255,0,  TRUE}     //  105      set-posix
+    , {doNOP, 58 /* : */, 108,0,  FALSE}     //  106 
+    , {doRuleError, 255, 179,0,  FALSE}     //  107 
+    , {doSetEnd, 93 /* ] */, 255,0,  TRUE}     //  108      set-start
+    , {doSetBeginUnion, 91 /* [ */, 100, 125, TRUE}     //  109 
+    , {doNOP, 92 /* \ */, 168,0,  TRUE}     //  110 
+    , {doNOP, 45 /* - */, 114,0,  TRUE}     //  111 
+    , {doNOP, 38 /* & */, 116,0,  TRUE}     //  112 
+    , {doSetLiteral, 255, 118,0,  TRUE}     //  113 
+    , {doRuleError, 45 /* - */, 179,0,  FALSE}     //  114      set-start-dash
+    , {doSetAddDash, 255, 118,0,  FALSE}     //  115 
+    , {doRuleError, 38 /* & */, 179,0,  FALSE}     //  116      set-start-amp
+    , {doSetAddAmp, 255, 118,0,  FALSE}     //  117 
+    , {doSetEnd, 93 /* ] */, 255,0,  TRUE}     //  118      set-after-lit
+    , {doSetBeginUnion, 91 /* [ */, 100, 125, TRUE}     //  119 
+    , {doNOP, 45 /* - */, 155,0,  TRUE}     //  120 
+    , {doNOP, 38 /* & */, 146,0,  TRUE}     //  121 
+    , {doNOP, 92 /* \ */, 168,0,  TRUE}     //  122 
+    , {doSetNoCloseError, 253, 179,0,  FALSE}     //  123 
+    , {doSetLiteral, 255, 118,0,  TRUE}     //  124 
+    , {doSetEnd, 93 /* ] */, 255,0,  TRUE}     //  125      set-after-set
+    , {doSetBeginUnion, 91 /* [ */, 100, 125, TRUE}     //  126 
+    , {doNOP, 45 /* - */, 148,0,  TRUE}     //  127 
+    , {doNOP, 38 /* & */, 143,0,  TRUE}     //  128 
+    , {doNOP, 92 /* \ */, 168,0,  TRUE}     //  129 
+    , {doSetNoCloseError, 253, 179,0,  FALSE}     //  130 
+    , {doSetLiteral, 255, 118,0,  TRUE}     //  131 
+    , {doSetEnd, 93 /* ] */, 255,0,  TRUE}     //  132      set-after-range
+    , {doSetBeginUnion, 91 /* [ */, 100, 125, TRUE}     //  133 
+    , {doNOP, 45 /* - */, 151,0,  TRUE}     //  134 
+    , {doNOP, 38 /* & */, 153,0,  TRUE}     //  135 
+    , {doNOP, 92 /* \ */, 168,0,  TRUE}     //  136 
+    , {doSetNoCloseError, 253, 179,0,  FALSE}     //  137 
+    , {doSetLiteral, 255, 118,0,  TRUE}     //  138 
+    , {doSetBeginUnion, 91 /* [ */, 100, 125, TRUE}     //  139      set-after-op
+    , {doSetOpError, 93 /* ] */, 179,0,  FALSE}     //  140 
+    , {doNOP, 92 /* \ */, 168,0,  TRUE}     //  141 
+    , {doSetLiteral, 255, 118,0,  TRUE}     //  142 
+    , {doSetBeginIntersection1, 91 /* [ */, 100, 125, TRUE}     //  143      set-set-amp
+    , {doSetIntersection2, 38 /* & */, 139,0,  TRUE}     //  144 
+    , {doSetAddAmp, 255, 118,0,  FALSE}     //  145 
+    , {doSetIntersection2, 38 /* & */, 139,0,  TRUE}     //  146      set-lit-amp
+    , {doSetAddAmp, 255, 118,0,  FALSE}     //  147 
+    , {doSetBeginDifference1, 91 /* [ */, 100, 125, TRUE}     //  148      set-set-dash
+    , {doSetDifference2, 45 /* - */, 139,0,  TRUE}     //  149 
+    , {doSetAddDash, 255, 118,0,  FALSE}     //  150 
+    , {doSetDifference2, 45 /* - */, 139,0,  TRUE}     //  151      set-range-dash
+    , {doSetAddDash, 255, 118,0,  FALSE}     //  152 
+    , {doSetIntersection2, 38 /* & */, 139,0,  TRUE}     //  153      set-range-amp
+    , {doSetAddAmp, 255, 118,0,  FALSE}     //  154 
+    , {doSetDifference2, 45 /* - */, 139,0,  TRUE}     //  155      set-lit-dash
+    , {doSetAddDash, 91 /* [ */, 118,0,  FALSE}     //  156 
+    , {doSetAddDash, 93 /* ] */, 118,0,  FALSE}     //  157 
+    , {doNOP, 92 /* \ */, 160,0,  TRUE}     //  158 
+    , {doSetRange, 255, 132,0,  TRUE}     //  159 
+    , {doSetAddDash, 115 /* s */, 168,0,  FALSE}     //  160      set-lit-dash-escape
+    , {doSetAddDash, 83 /* S */, 168,0,  FALSE}     //  161 
+    , {doSetAddDash, 119 /* w */, 168,0,  FALSE}     //  162 
+    , {doSetAddDash, 87 /* W */, 168,0,  FALSE}     //  163 
+    , {doSetAddDash, 100 /* d */, 168,0,  FALSE}     //  164 
+    , {doSetAddDash, 68 /* D */, 168,0,  FALSE}     //  165 
+    , {doSetNamedRange, 78 /* N */, 132,0,  FALSE}     //  166 
+    , {doSetRange, 255, 132,0,  TRUE}     //  167 
+    , {doSetProp, 112 /* p */, 125,0,  FALSE}     //  168      set-escape
+    , {doSetProp, 80 /* P */, 125,0,  FALSE}     //  169 
+    , {doSetNamedChar, 78 /* N */, 118,0,  FALSE}     //  170 
+    , {doSetBackslash_s, 115 /* s */, 132,0,  TRUE}     //  171 
+    , {doSetBackslash_S, 83 /* S */, 132,0,  TRUE}     //  172 
+    , {doSetBackslash_w, 119 /* w */, 132,0,  TRUE}     //  173 
+    , {doSetBackslash_W, 87 /* W */, 132,0,  TRUE}     //  174 
+    , {doSetBackslash_d, 100 /* d */, 132,0,  TRUE}     //  175 
+    , {doSetBackslash_D, 68 /* D */, 132,0,  TRUE}     //  176 
+    , {doSetLiteral, 255, 118,0,  TRUE}     //  177 
+    , {doSetFinish, 255, 14,0,  FALSE}     //  178      set-finish
+    , {doExit, 255, 179,0,  TRUE}     //  179      errorDeath
  };
 static const char * const RegexStateNames[] = {    0,
      "start",
@@ -392,7 +378,6 @@ static const char * const RegexStateNames[] = {    0,
     0,
      "interval-open",
     0,
-    0,
      "interval-lower",
     0,
     0,
@@ -436,8 +421,12 @@ static const char * const RegexStateNames[] = {    0,
     0,
     0,
     0,
-     "set-after-lit",
     0,
+     "set-start-dash",
+    0,
+     "set-start-amp",
+    0,
+     "set-after-lit",
     0,
     0,
     0,
@@ -451,9 +440,7 @@ static const char * const RegexStateNames[] = {    0,
     0,
     0,
     0,
-    0,
      "set-after-range",
-    0,
     0,
     0,
     0,
@@ -464,33 +451,19 @@ static const char * const RegexStateNames[] = {    0,
     0,
     0,
     0,
-    0,
      "set-set-amp",
-    0,
-    0,
-    0,
-     "set-set-amp-lit",
     0,
     0,
      "set-lit-amp",
     0,
-    0,
      "set-set-dash",
-    0,
-    0,
-    0,
-    0,
-     "set-set-dash-lit",
     0,
     0,
      "set-range-dash",
     0,
-    0,
      "set-range-amp",
     0,
-    0,
      "set-lit-dash",
-    0,
     0,
     0,
     0,

@@ -720,6 +720,7 @@ typedef enum UErrorCode {
     U_REGEX_SET_CONTAINS_STRING,          /**< Regexps cannot have UnicodeSets containing strings.*/
     U_REGEX_OCTAL_TOO_BIG,                /**< Octal character constants must be <= 0377.         */
     U_REGEX_MISSING_CLOSE_BRACKET,        /**< Missing closing bracket on a bracket expression.   */
+    U_REGEX_INVALID_RANGE,                /**< In a character range [x-y], x is greater than y.   */
     U_REGEX_ERROR_LIMIT,                  /**< This must always be the last value to indicate the limit for regexp errors */
 
     /*

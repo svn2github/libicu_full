@@ -70,16 +70,6 @@ static const UChar gUnescapeCharPattern[] = {
 
 
 //
-//  White space characters that may appear within a pattern in free-form mode
-//
-static const UChar gRuleWhiteSpacePattern[] = {
-    /* "[[:Cf:][:WSpace:]]" */
-    91, 91, 58, 67, 102, 58, 93, 91, 58, 87,
-        83, 112, 97, 99, 101, 58, 93, 93, 0 };
-
-
-
-//
 //  Unicode Set Definitions for Regular Expression  \w
 //
 static const UChar gIsWordPattern[] = {
@@ -212,7 +202,6 @@ fRuleDigitsAlias(NULL)
 
     // Sets used while parsing rules, but not referenced from the parse state table
     fRuleSets[kRuleSet_rule_char-128]   = new UnicodeSet(UnicodeString(TRUE, gRuleSet_rule_char_pattern, -1),   *status);
-    fRuleSets[kRuleSet_white_space-128] = new UnicodeSet(UnicodeString(TRUE, gRuleWhiteSpacePattern, -1),       *status);
     fRuleSets[kRuleSet_digit_char-128]  = new UnicodeSet(UnicodeString(TRUE, gRuleSet_digit_char_pattern, -1),  *status);
     fRuleDigitsAlias = fRuleSets[kRuleSet_digit_char-128];
     for (i=0; i<(int32_t)(sizeof(fRuleSets)/sizeof(fRuleSets[0])); i++) {

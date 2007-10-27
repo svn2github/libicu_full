@@ -40,6 +40,7 @@
 U_NAMESPACE_BEGIN
 
 // TODO: remove
+#if 0
 #include <stdio.h>
 static void printstring(const UnicodeString &s) {
    for (int i=0; i<s.length(); i++) {
@@ -47,7 +48,7 @@ static void printstring(const UnicodeString &s) {
    }
       printf("\n");
 }
-      
+#endif
 
 
 
@@ -1568,7 +1569,7 @@ UBool RegexCompile::doParseActions(int32_t action)
         {
             UChar32  c = scanNamedChar();
             if (U_SUCCESS(*fStatus) && fLastSetLiteral > c) {
-                error(U_REGEX_RULE_SYNTAX);   // TODO: make a specific error code for bad ranges.
+                error(U_REGEX_INVALID_RANGE);
             }
             UnicodeSet *s = (UnicodeSet *)fSetStack.peek();
             s->add(fLastSetLiteral, c);
@@ -1637,7 +1638,7 @@ UBool RegexCompile::doParseActions(int32_t action)
         //        and ICU UnicodeSet behavior.
         {
         if (fLastSetLiteral > fC.fChar) {
-            error(U_REGEX_RULE_SYNTAX);   // TODO: make a specific error code for bad ranges.
+            error(U_REGEX_INVALID_RANGE);  
         }
         UnicodeSet *s = (UnicodeSet *)fSetStack.peek();
         s->add(fLastSetLiteral, fC.fChar);
@@ -3628,6 +3629,7 @@ void RegexCompile::nextChar(RegexPatternChar &c) {
                         }
                     }
                 }
+                // TODO:  check what Java & Perl do with non-ASCII white spaces.
                 if (uprv_isRuleWhiteSpace(c.fChar) == FALSE) {
                     break;
                 }
@@ -3867,13 +3869,15 @@ UnicodeSet *RegexCompile::scanPosixProp() {
     UnicodeString propName;
     UBool         negated  = FALSE;
 
+    // Check for and consume the '^' in a negated POSIX property, e.g.  [:^Letter:]
     nextChar(fC);
     if (fC.fChar == chUp) {
        negated = TRUE;
        nextChar(fC);
     }
     
-    UBool  sawPropSetTerminator;
+    // Scan for the closing ":]", collecting the property name along the way.
+    UBool  sawPropSetTerminator = FALSE;
     for (;;) {
         propName.append(fC.fChar);
         nextChar(fC);
@@ -3889,6 +3893,7 @@ UnicodeSet *RegexCompile::scanPosixProp() {
             break;
         }
     }
+    
     if (sawPropSetTerminator) {
         uset = createSetForProperty(propName, negated);
     }
