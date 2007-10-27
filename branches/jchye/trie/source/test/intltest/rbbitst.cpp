@@ -34,6 +34,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "unicode/numfmt.h"
+#include "unicode/uscript.h"
 
 #define TEST_ASSERT(x) {if (!(x)) { \
     errln("Failure in file %s, line %d", __FILE__, __LINE__);}}
@@ -51,6 +52,7 @@ void RBBITest::runIndexedTest( int32_t index, UBool exec, const char* &name, cha
     if (exec) logln("TestSuite RuleBasedBreakIterator: ");
 
     switch (index) {
+/*
         case 0: name = "TestBug4153072";
             if(exec) TestBug4153072();                         break;
         case 1: name = "TestJapaneseLineBreak";
@@ -105,8 +107,11 @@ void RBBITest::runIndexedTest( int32_t index, UBool exec, const char* &name, cha
             if(exec) TestTrieDict();                           break;
         case 21: name = "TestBug5775";
             if (exec) TestBug5775();                           break;
-        case 22: name = "TestTrieDictWithValue";
-        if(exec) TestTrieDictWithValue();                      break;
+ //       case 22: name = "TestTrieDictWithValue";
+ //           if(exec) TestTrieDictWithValue();                      break;
+*/
+        case 0: name = "TestKoreanWordBreak";
+            if(exec) TestKoreanWordBreak();                  break;
 
         default: name = ""; break; //needed to end loop
     }
@@ -534,8 +539,6 @@ void RBBITest::TestMaiyamok()
     delete e;
 }
 
-
-
 void RBBITest::TestBug3818() {
     UErrorCode  status = U_ZERO_ERROR;
 
@@ -587,6 +590,31 @@ void RBBITest::TestJapaneseWordBreak() {
     }
 
     generalIteratorTest(*e, japaneseWordSelection);
+    delete e;
+}
+
+void RBBITest::TestKoreanWordBreak() {
+    UErrorCode status = U_ZERO_ERROR;
+    BITestData   koreanWordSelection(status);
+
+    ADD_DATACHUNK(koreanWordSelection, NULL, 0, status);           // Break at start of data
+    ADD_DATACHUNK(koreanWordSelection, "\\uc0c1\\ud56d", 0, status); 
+    ADD_DATACHUNK(koreanWordSelection, "\\ud55c\\uc778", 0, status);
+ /*
+    ADD_DATACHUNK(koreanWordSelection, "\\u5929\\u6C17", 0, status);
+    ADD_DATACHUNK(koreanWordSelection, "\\u3067\\u3059\\u306D", 0, status);
+    ADD_DATACHUNK(koreanWordSelection, "\\u3002", 0, status);
+    ADD_DATACHUNK(koreanWordSelection, "\\u000D\\u000A", 0, status);
+*/
+    RuleBasedBreakIterator* e = (RuleBasedBreakIterator *)BreakIterator::createWordInstance(
+            Locale("ko"), status);
+    if (U_FAILURE(status))
+    {
+        errln("Failed to create the BreakIterator for Korean locale in TestKoreanWordBreak.\n");
+        return;
+    }
+    printf("%s\n",uscript_getShortName(uscript_getScript(UChar(0xd55c), &status)));
+    generalIteratorTest(*e, koreanWordSelection);
     delete e;
 }
 
@@ -834,7 +862,8 @@ inline void writeEnumerationToFile(StringEnumeration *enumer, char *filename){
 
 //----------------------------------------------------------------------------
 //
-// TestTrieDictWithValue    Test trie dictionaries with logprob values.
+// TestTrieDictWithValue    Test trie dictionaries with logprob values and 
+// more than 2^16 nodes after compaction.
 //
 //----------------------------------------------------------------------------
 void RBBITest::TestTrieDictWithValue() {
@@ -844,10 +873,7 @@ void RBBITest::TestTrieDictWithValue() {
     //  Open and read the test data file.
     //
     const char *testDataDirectory = IntlTest::getSourceTestData(status);
-//    testDataDirectory = "/home/jchye/japanese/edict/"; //TODO:remove later!
-    //char *filename = "edict-logprob.txt";
-    char *filename = "chinesedict.txt";
-//    testDataDirectory = "/home/jchye/"; //TODO:remove later!
+    char *filename = "japdict.txt";
     char testFileName[1000];
     if (testDataDirectory == NULL || strlen(testDataDirectory) + strlen(filename) + 10 >= sizeof(testFileName)) {
         errln("Can't open test data.  Path too long.");
@@ -934,7 +960,6 @@ void RBBITest::TestTrieDictWithValue() {
             nf->parse(ucharValue, value, status);
             
             if(U_FAILURE(status)){
-//                printf("%x\t", intValue);
                 errln("parsing of value failed when reading in dictionary\n");
                 goto cleanup;
             }
@@ -986,7 +1011,6 @@ void RBBITest::TestTrieDictWithValue() {
         goto cleanup;
     }
 
-    //  errln("before comparing wordcount\n");
 
     //delete later
 //    writeEnumerationToFile(enumer1, "/home/jchye/mutable.txt");
@@ -1157,9 +1181,7 @@ void RBBITest::generalIteratorTest(RuleBasedBreakIterator& bi, BITestData &td)
 {
 
     bi.setText(td.fDataToBreak);
-errln("before first and next");
     testFirstAndNext(bi, td);
-    errln("before last and previous");
 
     testLastAndPrevious(bi, td);
 
@@ -1187,14 +1209,10 @@ void RBBITest::testFirstAndNext(RuleBasedBreakIterator& bi, BITestData &td)
 
     for (p=bi.first(); p!=RuleBasedBreakIterator::DONE; p=bi.next()) {
         td.fActualBreakPositions.addElement(p, status);  // Save result.
-        errln("before RuleStatus");
         tag = bi.getRuleStatus();
-        errln("after RuleStatus %d",bi.getRuleStatus());
-
+ 
         td.fActualTags.addElement(tag, status);
-        errln("after adding element");
         if (p <= lastP) {
-            errln("about to break");
             // If the iterator is not making forward progress, stop.
             //  No need to raise an error here, it'll be detected in the normal check of results.
             break;
