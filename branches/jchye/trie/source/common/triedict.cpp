@@ -408,7 +408,7 @@ struct CompactTrieHeaderV1 {
 };
 
 // Helper class for managing CompactTrieHeader and CompactTrieHeaderV1
-struct ManageCompactTrieHeader {
+struct CompactTrieInfo {
     uint32_t        size;           // Size of the data in bytes
     uint32_t        magic;          // Magic number (including version)
     uint32_t        nodeCount;      // Number of entries in offsets[]
@@ -416,21 +416,45 @@ struct ManageCompactTrieHeader {
     uint32_t        *offsets;       // Offsets to nodes from start of data
     uint8_t         *address;       // pointer to header bytes in memory
 
-    ManageCompactTrieHeader(CompactTrieHeader *header)
+    /*
+    CompactTrieInfo(CompactTrieHeader *header)
         : size(header->size), magic(header->magic), nodeCount(header->nodeCount), 
           root(header->root), offsets(&header->offsets[0]),
           address((uint8_t *)header) {
     }
-    
-    ManageCompactTrieHeader(CompactTrieHeaderV1 *header)
+    CompactTrieInfo(CompactTrieHeaderV1 *header)
         : size(header->size), magic(header->magic), nodeCount(header->nodeCount), 
           root(header->root), offsets(&header->offsets[0]), 
           address((uint8_t *)header){
         
     }
+    */
     
-    ~ManageCompactTrieHeader(){
+    CompactTrieInfo(const void *data, UErrorCode &status){
+        CompactTrieHeader *header = (CompactTrieHeader *) data;
+        if (header->magic != COMPACT_TRIE_MAGIC_1 && 
+                header->magic != COMPACT_TRIE_MAGIC_2 &&
+                header->magic != COMPACT_TRIE_MAGIC_3) {
+            status = U_ILLEGAL_ARGUMENT_ERROR;
+        } else if(header->magic == COMPACT_TRIE_MAGIC_1) {
+            CompactTrieHeaderV1 *headerV1 = (CompactTrieHeaderV1 *) header;
+            size = headerV1->size;
+            magic = headerV1->magic;
+            nodeCount = headerV1->nodeCount;
+            root = headerV1->root;
+            offsets = &(headerV1->offsets[0]);
+            address = (uint8_t *)headerV1;
+        } else {
+            size = header->size;
+            magic = header->magic;
+            nodeCount = header->nodeCount;
+            root = header->root;
+            offsets = &(header->offsets[0]);
+            address = (uint8_t *)header;
+        }
     }
+    
+    ~CompactTrieInfo(){}
 };
 
 // Note that to avoid platform-specific alignment issues, all members of the node
@@ -487,9 +511,12 @@ CompactTrieDictionary::CompactTrieDictionary(UDataMemory *dataObj,
                                                 UErrorCode &status )
 : fUData(dataObj)
 {
-    CompactTrieHeader *header = (CompactTrieHeader *) udata_getMemory(dataObj);
+    //CompactTrieHeader *header = (CompactTrieHeader *) udata_getMemory(dataObj);
+    fInfo = (CompactTrieInfo *)uprv_malloc(sizeof(CompactTrieInfo));
+    *fInfo = CompactTrieInfo(udata_getMemory(dataObj), status);
     fOwnData = FALSE;
     
+    /*
     if (header->magic != COMPACT_TRIE_MAGIC_1 && 
             header->magic != COMPACT_TRIE_MAGIC_2 &&
             header->magic != COMPACT_TRIE_MAGIC_3) {
@@ -500,13 +527,18 @@ CompactTrieDictionary::CompactTrieDictionary(UDataMemory *dataObj,
     } else {
         fData = new ManageCompactTrieHeader(header);
     }
+    */
 }
+
 CompactTrieDictionary::CompactTrieDictionary( const void *data,
                                                 UErrorCode &status )
 : fUData(NULL)
 {
-    CompactTrieHeader *header = (CompactTrieHeader *) data;
+    //CompactTrieHeader *header = (CompactTrieHeader *) data;
+    fInfo = (CompactTrieInfo *)uprv_malloc(sizeof(CompactTrieInfo));
+    *fInfo = CompactTrieInfo(data, status);
     fOwnData = FALSE;
+    /*
     if (header->magic != COMPACT_TRIE_MAGIC_1 && header->magic != COMPACT_TRIE_MAGIC_2
             && header->magic != COMPACT_TRIE_MAGIC_3) {
         status = U_ILLEGAL_ARGUMENT_ERROR;
@@ -516,21 +548,28 @@ CompactTrieDictionary::CompactTrieDictionary( const void *data,
     } else {
         fData = new ManageCompactTrieHeader(header);
     }
+    */
 }
 
 CompactTrieDictionary::CompactTrieDictionary( const MutableTrieDictionary &dict,
                                                 UErrorCode &status )
 : fUData(NULL)
 {
-    fData = new ManageCompactTrieHeader(compactMutableTrieDictionary(dict, status));
+    const CompactTrieHeader* header = compactMutableTrieDictionary(dict, status);
+    if (U_SUCCESS(status)) {
+       fInfo = (CompactTrieInfo *)uprv_malloc(sizeof(CompactTrieInfo));
+       *fInfo = CompactTrieInfo(header, status);
+    }
+    //fData = new ManageCompactTrieHeader(compactMutableTrieDictionary(dict, status));
  
     fOwnData = !U_FAILURE(status);
 }
 
 CompactTrieDictionary::~CompactTrieDictionary() {
     if (fOwnData) {
-        uprv_free((void *)fData);
+        uprv_free((void *)(fInfo->address));
     }
+    uprv_free((void *)fInfo);
     if (fUData) {
         udata_close(fUData);
     }
@@ -538,18 +577,20 @@ CompactTrieDictionary::~CompactTrieDictionary() {
 
 uint32_t
 CompactTrieDictionary::dataSize() const {
-    return fData->size;
+ //   return fData->size;
+    return fInfo->size;
 }
 
 const void *
 CompactTrieDictionary::data() const {
-    return fData->address;
+    //return fData->address;
+    return fInfo->address;
 }
 
 // This function finds the address of a node for us, given its node ID
 static inline const CompactTrieNode *
-getCompactNode(const ManageCompactTrieHeader *header, uint32_t node) {
-    return (const CompactTrieNode *)(header->address + header->offsets[node]);
+getCompactNode(const CompactTrieInfo *info, uint32_t node) {
+    return (const CompactTrieNode *)(info->address + info->offsets[node]);
 }
 
 static inline const CompactTrieNode *
@@ -628,11 +669,11 @@ CompactTrieDictionary::matches( UText *text,
                                 int &count,
                                 int limit,
                                 uint16_t *values /*= NULL*/) const {
-    if (fData->magic == COMPACT_TRIE_MAGIC_2)
+    if (fInfo->magic == COMPACT_TRIE_MAGIC_2)
         values = NULL;
     
     // TODO: current implementation works in UTF-16 space
-    const CompactTrieNode *node = getCompactNode(fData, fData->root);
+    const CompactTrieNode *node = getCompactNode(fInfo, fInfo->root);
     int mycount = 0;
 
     UChar uc = utext_current32(text);
@@ -643,7 +684,7 @@ CompactTrieDictionary::matches( UText *text,
         const CompactTrieHorizontalNode *root = (const CompactTrieHorizontalNode *) node;
         int index = searchHorizontalEntries(root->entries, uc, root->flagscount & kRootCountMask);
         if(index > -1){
-            node = getCompactNode(fData, calcEqualLink(root, index, root->flagscount & kRootCountMask));
+            node = getCompactNode(fInfo, calcEqualLink(root, index, root->flagscount & kRootCountMask));
             utext_next32(text);
             uc = utext_current32(text);
             ++i;
@@ -655,7 +696,9 @@ CompactTrieDictionary::matches( UText *text,
     while (node != NULL) {
         // Check if the node we just exited ends a word
         if (limit > 0 && (node->flagscount & kParentEndsWord)) {
-            values[mycount] = getValue(node);
+            if(values != NULL){
+                values[mycount] = getValue(node);
+            }
             lengths[mycount++] = i;
             --limit;
         }
@@ -686,7 +729,7 @@ CompactTrieDictionary::matches( UText *text,
             // To get here we must have come through the whole list successfully;
             // go on to the next node. Note that a word cannot end in the middle
             // of a vertical node.
-            node = getCompactNode(fData, calcEqualLink(vnode));
+            node = getCompactNode(fInfo, calcEqualLink(vnode));
         }
         else {
             // Horizontal node; do binary search
@@ -698,7 +741,7 @@ CompactTrieDictionary::matches( UText *text,
             if(index > -1){  //
                 // We hit a match; get the next node and next character
 //              node = getCompactNode(fData, entries[index].equal);
-                node = getCompactNode(fData, calcEqualLink(hnode, index, nodeCount));
+                node = getCompactNode(fInfo, calcEqualLink(hnode, index, nodeCount));
                 utext_next32(text);
                 uc = utext_current32(text);
                 ++i;
@@ -740,16 +783,18 @@ class CompactTrieEnumeration : public StringEnumeration {
 private:
     UVector32                     fNodeStack;     // Stack of nodes to process
     UVector32                     fIndexStack;    // Stack of where in node we are
-    const ManageCompactTrieHeader *fHeader;       // Trie data
+    //const CompactTrieHeader *fHeader;       // Trie data
+    const CompactTrieInfo *fInfo;       // Trie data
 
 public:
     static UClassID U_EXPORT2 getStaticClassID(void);
     virtual UClassID getDynamicClassID(void) const;
 public:
-    CompactTrieEnumeration(const ManageCompactTrieHeader *header, UErrorCode &status) 
+    CompactTrieEnumeration(const CompactTrieInfo *info, UErrorCode &status) 
         : fNodeStack(status), fIndexStack(status) {
-        fHeader = header;
-        fNodeStack.push(header->root, status);
+        //fHeader = header;
+        fInfo = info;
+        fNodeStack.push(info->root, status);
         fIndexStack.push(0, status);
         unistr.remove();
     }
@@ -759,14 +804,14 @@ public:
     
     virtual StringEnumeration *clone() const {
         UErrorCode status = U_ZERO_ERROR;
-        return new CompactTrieEnumeration(fHeader, status);
+        return new CompactTrieEnumeration(fInfo, status);
     }
     
     virtual const UnicodeString * snext(UErrorCode &status);
 
     // Very expensive, but this should never be used.
     virtual int32_t count(UErrorCode &status) const {
-        CompactTrieEnumeration counter(fHeader, status);
+        CompactTrieEnumeration counter(fInfo, status);
         int32_t result = 0;
         while (counter.snext(status) != NULL && U_SUCCESS(status)) {
             ++result;
@@ -777,7 +822,7 @@ public:
     virtual void reset(UErrorCode &status) {
         fNodeStack.removeAllElements();
         fIndexStack.removeAllElements();
-        fNodeStack.push(fHeader->root, status);
+        fNodeStack.push(fInfo->root, status);
         fIndexStack.push(0, status);
         unistr.remove();
     }
@@ -790,7 +835,7 @@ CompactTrieEnumeration::snext(UErrorCode &status) {
     if (fNodeStack.empty() || U_FAILURE(status)) {
         return NULL;
     }
-    const CompactTrieNode *node = getCompactNode(fHeader, fNodeStack.peeki());
+    const CompactTrieNode *node = getCompactNode(fInfo, fNodeStack.peeki());
     int where = fIndexStack.peeki();
     while (!fNodeStack.empty() && U_SUCCESS(status)) {
         int nodeCount;
@@ -807,7 +852,7 @@ CompactTrieEnumeration::snext(UErrorCode &status) {
             // Terminal node; go up immediately
             fNodeStack.popi();
             fIndexStack.popi();
-            node = getCompactNode(fHeader, fNodeStack.peeki());
+            node = getCompactNode(fInfo, fNodeStack.peeki());
             where = fIndexStack.peeki();
         }
         else if ((node->flagscount & kVerticalNode) && !isRoot) {
@@ -817,7 +862,7 @@ CompactTrieEnumeration::snext(UErrorCode &status) {
                 // Going down
                 unistr.append((const UChar *)vnode->chars, nodeCount);
                 fIndexStack.setElementAt(1, fIndexStack.size()-1);
-                node = getCompactNode(fHeader, fNodeStack.push(calcEqualLink(vnode), status));
+                node = getCompactNode(fInfo, fNodeStack.push(calcEqualLink(vnode), status));
                 where = fIndexStack.push(0, status);
                 goingDown = TRUE;
             }
@@ -826,7 +871,7 @@ CompactTrieEnumeration::snext(UErrorCode &status) {
                 unistr.truncate(unistr.length()-nodeCount);
                 fNodeStack.popi();
                 fIndexStack.popi();
-                node = getCompactNode(fHeader, fNodeStack.peeki());
+                node = getCompactNode(fInfo, fNodeStack.peeki());
                 where = fIndexStack.peeki();
             }
         }
@@ -841,7 +886,7 @@ CompactTrieEnumeration::snext(UErrorCode &status) {
                 // Push on next node
                 unistr.append((UChar)hnode->entries[where].ch);
                 fIndexStack.setElementAt(where+1, fIndexStack.size()-1);
-                node = getCompactNode(fHeader, fNodeStack.push(calcEqualLink(hnode, where, nodeCount), status));
+                node = getCompactNode(fInfo, fNodeStack.push(calcEqualLink(hnode, where, nodeCount), status));
                 where = fIndexStack.push(0, status);
                 goingDown = TRUE;
             }
@@ -849,7 +894,7 @@ CompactTrieEnumeration::snext(UErrorCode &status) {
                 // Going up
                 fNodeStack.popi();
                 fIndexStack.popi();
-                node = getCompactNode(fHeader, fNodeStack.peeki());
+                node = getCompactNode(fInfo, fNodeStack.peeki());
                 where = fIndexStack.peeki();
             }
         }
@@ -869,7 +914,7 @@ CompactTrieDictionary::openWords( UErrorCode &status ) const {
     if (U_FAILURE(status)) {
         return NULL;
     }
-    return new CompactTrieEnumeration(fData, status);
+    return new CompactTrieEnumeration(fInfo, status);
 }
 
 //
@@ -1586,11 +1631,11 @@ CompactTrieDictionary::compactMutableTrieDictionary( const MutableTrieDictionary
 
 // Forward declaration
 static TernaryNode *
-unpackOneNode( const ManageCompactTrieHeader *header, const CompactTrieNode *node, UErrorCode &status );
+unpackOneNode( const CompactTrieInfo *info, const CompactTrieNode *node, UErrorCode &status );
 
 // Convert a horizontal node (or subarray thereof) into a ternary subtrie
 static TernaryNode *
-unpackHorizontalArray( const ManageCompactTrieHeader *header, const CompactTrieHorizontalNode *hnode,
+unpackHorizontalArray( const CompactTrieInfo *info, const CompactTrieHorizontalNode *hnode,
                             int low, int high, int nodeCount, UErrorCode &status) {
     if (U_FAILURE(status) || low > high) {
         return NULL;
@@ -1601,23 +1646,23 @@ unpackHorizontalArray( const ManageCompactTrieHeader *header, const CompactTrieH
         status = U_MEMORY_ALLOCATION_ERROR;
         return NULL;
     }
-    const CompactTrieNode *equal = getCompactNode(header, calcEqualLink(hnode, middle, nodeCount));
+    const CompactTrieNode *equal = getCompactNode(info, calcEqualLink(hnode, middle, nodeCount));
     if (equal->flagscount & kParentEndsWord) {
-        if(header->magic == COMPACT_TRIE_MAGIC_3){
+        if(info->magic == COMPACT_TRIE_MAGIC_3){
             result->flags = getValue(equal);
         }else{
             result->flags |= kEndsWord;
         }
     }
-    result->low = unpackHorizontalArray(header, hnode, low, middle-1, nodeCount, status);
-    result->high = unpackHorizontalArray(header, hnode, middle+1, high, nodeCount, status);
-    result->equal = unpackOneNode(header, equal, status);
+    result->low = unpackHorizontalArray(info, hnode, low, middle-1, nodeCount, status);
+    result->high = unpackHorizontalArray(info, hnode, middle+1, high, nodeCount, status);
+    result->equal = unpackOneNode(info, equal, status);
     return result;
 }                            
 
 // Convert one compact trie node into a ternary subtrie
 static TernaryNode *
-unpackOneNode( const ManageCompactTrieHeader *header, const CompactTrieNode *node, UErrorCode &status ) {
+unpackOneNode( const CompactTrieInfo *info, const CompactTrieNode *node, UErrorCode &status ) {
     int nodeCount = getCount(node);
     if (nodeCount == 0 || U_FAILURE(status)) {
         // Failure, or terminal node
@@ -1643,28 +1688,28 @@ unpackOneNode( const ManageCompactTrieHeader *header, const CompactTrieNode *nod
             previous = latest;
         }
         if (latest != NULL) {
-            const CompactTrieNode *equal = getCompactNode(header, calcEqualLink(vnode));
+            const CompactTrieNode *equal = getCompactNode(info, calcEqualLink(vnode));
             if (equal->flagscount & kParentEndsWord) {
-                if(header->magic == COMPACT_TRIE_MAGIC_3){
+                if(info->magic == COMPACT_TRIE_MAGIC_3){
                     latest->flags = getValue(equal);
                 } else {
                     latest->flags |= kEndsWord;
                 }
             }
-            latest->equal = unpackOneNode(header, equal, status);
+            latest->equal = unpackOneNode(info, equal, status);
         }
         return head;
     }
     else {
         // Horizontal node
         const CompactTrieHorizontalNode *hnode = (const CompactTrieHorizontalNode *)node;
-        return unpackHorizontalArray(header, hnode, 0, nodeCount-1, nodeCount, status);
+        return unpackHorizontalArray(info, hnode, 0, nodeCount-1, nodeCount, status);
     }
 }
 
 MutableTrieDictionary *
 CompactTrieDictionary::cloneMutable( UErrorCode &status ) const {
-    MutableTrieDictionary *result = new MutableTrieDictionary( status, fData->magic == COMPACT_TRIE_MAGIC_3 );
+    MutableTrieDictionary *result = new MutableTrieDictionary( status, fInfo->magic == COMPACT_TRIE_MAGIC_3 );
     if (result == NULL) {
         status = U_MEMORY_ALLOCATION_ERROR;
         return NULL;
@@ -1672,9 +1717,9 @@ CompactTrieDictionary::cloneMutable( UErrorCode &status ) const {
     // treat root node as special case: don't call unpackOneNode() or unpackHorizontalArray() directly
     // because only kEqualOverflows flag should be checked
     const CompactTrieHorizontalNode *hnode = (const CompactTrieHorizontalNode *) 
-                                             getCompactNode(fData, fData->root);
+                                             getCompactNode(fInfo, fInfo->root);
     uint16_t nodeCount = hnode->flagscount & kRootCountMask;
-    TernaryNode *root = unpackHorizontalArray(fData, hnode, 0, nodeCount-1, 
+    TernaryNode *root = unpackHorizontalArray(fInfo, hnode, 0, nodeCount-1, 
                                               nodeCount, status);
 
     if (U_FAILURE(status)) {

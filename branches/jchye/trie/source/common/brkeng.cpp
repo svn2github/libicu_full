@@ -24,7 +24,7 @@
 #include "umutex.h"
 #include "uresimp.h"
 #include "ubrkimpl.h"
-#include <stdio.h> //TODO: DELETE
+#include <stdio.h>
 
 U_NAMESPACE_BEGIN
 
@@ -138,7 +138,6 @@ U_NAMESPACE_BEGIN
 
 const LanguageBreakEngine *
 ICULanguageBreakFactory::getEngineFor(UChar32 c, int32_t breakType) {
-    printf("in getEngineFor\n");
     UBool       needsInit;
     int32_t     i;
     const LanguageBreakEngine *lbe = NULL;
@@ -149,7 +148,6 @@ ICULanguageBreakFactory::getEngineFor(UChar32 c, int32_t breakType) {
     // A ICULanguageBreakFactory specific mutex should be used.
     umtx_lock(NULL);
     needsInit = (UBool)(fEngines == NULL);
-    printf("needsInit? %x", needsInit);
     if (!needsInit) {
         i = fEngines->size();
         while (--i >= 0) {
@@ -161,7 +159,6 @@ ICULanguageBreakFactory::getEngineFor(UChar32 c, int32_t breakType) {
         }
     }
     umtx_unlock(NULL);
-    printf("after lock");
 
     if (lbe != NULL) {
         return lbe;
@@ -224,17 +221,19 @@ ICULanguageBreakFactory::loadEngineFor(UChar32 c, int32_t breakType) {
     UScriptCode code = uscript_getScript(c, &status);
     if (U_SUCCESS(status)) {
         const CompactTrieDictionary *dict = loadDictionaryFor(code, breakType);
+//        printf("%s\n",uscript_getShortName(code));
         if (dict != NULL) {
             const LanguageBreakEngine *engine = NULL;
             switch(code) {
             case USCRIPT_THAI:
                 engine = new ThaiBreakEngine(dict, status);
                 break;
-                /*
+                
             case USCRIPT_HANGUL:
                 engine = new CjkBreakEngine(dict, status);
+                printf("Korean!\n");
                 break;
-            case USCRIPT_HIRAGANA:
+/*            case USCRIPT_HIRAGANA:
             case USCRIPT_KATAKANA:
             case USCRIPT_HAN:
                 engine = new CjkBreakEngine(dict, status);

@@ -125,7 +125,6 @@ class U_COMMON_API MutableTrieDictionary : public TrieWordDictionary {
      * A UText for internal use
      * @internal
      */
-
   UText    *fIter;
   
   UBool hasValue;
@@ -249,7 +248,7 @@ private:
 //forward declarations
 struct CompactTrieHorizontalEntry; 
 struct CompactTrieHeader;
-struct ManageCompactTrieHeader;
+struct CompactTrieInfo;
 
 /**
  * <p>CompactTrieDictionary is a TrieWordDictionary that has been compacted
@@ -261,12 +260,12 @@ class U_COMMON_API CompactTrieDictionary : public TrieWordDictionary {
      * The root node of the trie
      */
 
-     const ManageCompactTrieHeader   *fData;
+    //const ManageCompactTrieHeader   *fData;
+    CompactTrieInfo                 *fInfo; 
 
     /**
      * A UBool indicating whether or not we own the fData.
      */
-
     UBool                     fOwnData;
 
     UDataMemory              *fUData;

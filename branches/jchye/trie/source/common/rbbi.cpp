@@ -26,10 +26,10 @@
 #include "umutex.h"
 #include "ucln_cmn.h"
 #include "brkeng.h"
-#include <stdio.h>
 
 #include "uassert.h"
 #include "uvector.h"
+#include <stdio.h>
 
 // if U_LOCAL_SERVICE_HOOK is defined, then localsvc.cpp is expected to be included.
 #if U_LOCAL_SERVICE_HOOK
@@ -509,6 +509,7 @@ int32_t RuleBasedBreakIterator::next(void) {
 
     int32_t startPos = current();
     int32_t result = handleNext(fData->fForwardTable);
+//    printf("dictionary count %d\n",fDictionaryCharCount);
     if (fDictionaryCharCount > 0) {
         result = checkDictionary(startPos, result, FALSE);
     }
@@ -1739,7 +1740,6 @@ getLanguageBreakEngineFromFactory(UChar32 c, int32_t breakType)
         return NULL;
     }
     
-    printf("before looking for language break engine\n");
     int32_t i = gLanguageBreakFactories->size();
     const LanguageBreakEngine *lbe = NULL;
     while (--i >= 0) {
@@ -1749,7 +1749,6 @@ getLanguageBreakEngineFromFactory(UChar32 c, int32_t breakType)
             break;
         }
     }
-    printf("found language break engine");
     return lbe;
 }
 
