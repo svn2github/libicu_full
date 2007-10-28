@@ -40,7 +40,7 @@
 U_NAMESPACE_BEGIN
 
 // TODO: remove
-#if 0
+#if 1
 #include <stdio.h>
 static void printstring(const UnicodeString &s) {
    for (int i=0; i<s.length(); i++) {
@@ -3781,43 +3781,29 @@ UnicodeSet *RegexCompile::scanProp() {
     if (U_FAILURE(*fStatus)) {
         return NULL;
     }
+    U_ASSERT(fC.fChar == chLowerP || fC.fChar == chP);
+    UBool negated = (fC.fChar == chP);
 
-    U_ASSERT(fC.fChar == chLowerP || fC.fChar == chP || fC.fChar == chN);
-
-    // enclose the \p{property} from the regex pattern source in  [brackets]
-    UnicodeString setPattern;
-    setPattern.append(chLBracket);
-    setPattern.append(chBackSlash);
+    UnicodeString propertyName;
+    nextChar(fC);
+    if (fC.fChar != chLBrace) {
+        error(U_REGEX_PROPERTY_SYNTAX);
+        return NULL;
+    }
     for (;;) {
-        setPattern.append(fC.fChar);
+        nextChar(fC);
         if (fC.fChar == chRBrace) {
             break;
         }
-        nextChar(fC);
         if (fC.fChar == -1) {
             // Hit the end of the input string without finding the closing '}'
             error(U_REGEX_PROPERTY_SYNTAX);
             return NULL;
         }
+        propertyName.append(fC.fChar);
     }
-    setPattern.append(chRBracket);
-
-    uint32_t   usetFlags = 0;
-    if (fModeFlags & UREGEX_CASE_INSENSITIVE) {
-        usetFlags |= USET_CASE_INSENSITIVE;
-    }
-    if (fModeFlags & UREGEX_COMMENTS) {
-        usetFlags |= USET_IGNORE_SPACE;
-    }
-
-    // Build the UnicodeSet from the set pattern we just built up in a string.
-    uset = new UnicodeSet(setPattern, usetFlags, NULL, *fStatus);
-    if (U_FAILURE(*fStatus)) {
-        delete uset;
-        uset =  NULL;
-    }
-
-    nextChar(fC);      // Continue overall regex pattern processing with char after the '}'
+    uset = createSetForProperty(propertyName, negated);
+    nextChar(fC);    // Move input scan to position following the closing '}'
     return uset;
 }
 
@@ -3958,10 +3944,11 @@ UnicodeSet *RegexCompile::createSetForProperty(const UnicodeString &propName, UB
     //    See if it looks like a Java "InBlockName", which
     //    we will recast as "Block=BlockName"
     //
-    UnicodeString In("In", 2, UnicodeString::kInvariant);
-    if (propName.startsWith(In) && propName.length()>=3) {
+    static const UChar IN[] = {0x49, 0x6E, 0};  // "In"
+    static const UChar BLOCK[] = {0x42, 0x6C, 0x6f, 0x63, 0x6b, 0x3d, 00};  // "Block="
+    if (propName.startsWith(IN, 2) && propName.length()>=3) {
         setExpr.truncate(4);   // Leaves "[\p{", or "[\P{"
-        setExpr.append("Block=", -1, UnicodeString::kInvariant);
+        setExpr.append(BLOCK, -1);
         setExpr.append(UnicodeString(propName, 2));  // Property with the leading "In" removed.
         setExpr.append(chRBrace);
         setExpr.append(chRBracket);
@@ -3983,7 +3970,7 @@ UnicodeSet *RegexCompile::createSetForProperty(const UnicodeString &propName, UB
         {"javaIdentifierIgnorable",    IDENTIFIER_IGNORABLE},
         {"javaISOControl",             "[\\u0000-\\u001f\\u007f-\\u009f]"},
         {"javaJavaIdentifierPart",     "[[\\p{L}\\p{Sc}\\p{Pc}\\p{Nd}\\p{Nl}\\p{Mc}\\p{Mn}]" IDENTIFIER_IGNORABLE "]"},
-        {"javaJavaIdentifierStart",    "[\\p{L}\\p{Nl}\\p{Sc}\\p{Pc}"},
+        {"javaJavaIdentifierStart",    "[\\p{L}\\p{Nl}\\p{Sc}\\p{Pc}]"},
         {"javaLetter",                 "\\p{L}"},
         {"javaLetterOrDigit",          "[\\p{L}\\p{Nd}]"},
         {"javaLowerCase",              "\\p{Ll}"},

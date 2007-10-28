@@ -540,8 +540,11 @@
 ".{6}"                            "123\u000a\u000dXYZ"
 ".{6}"                         s  "<0>123\u000a\u000dX</0>Y"
 
+
+
 #
 # [set] parsing, systematically run through all of the parser states.
+#
 #
 "[def]+"                          "abc<0>ddeeff</0>ghi"       # set-open
 "[^def]+"                         "<0>abc</0>defghi"
@@ -618,6 +621,45 @@
 "[a-d&&b-c]+"                     "a<0>bcbc</0>d"
 "[a-d&[b-c]]+"                    "<0>abc&bcd</0>"
 "[a-d&b-c]+"                      "<0>abc&bcd</0>"
+
+"[abcd--bc]+"                     "b<0>adda</0>c"              # set-lit-dash
+"[abcd--[bc]]+"                   "b<0>adda</0>c"
+"[abcd-[bc]]+"                    "<0>bad--dac</0>xyz"
+"[abcd-]+"                        "<0>bad--dac</0>xyz"
+
+"[abcd-\s]+"                      "xyz<0>abcd  --</0>xyz"      # set-lit-dash-esc
+"[abcd-\N{LATIN SMALL LETTER G}]+"  "xyz-<0>abcdefg</0>hij-"
+"[bcd-\{]+"                       "a<0>bcdefyz{</0>|}"
+
+"[\p{Ll}]+"                       "ABC<0>abc</0>^&*&"          # set-escape
+"[\P{Ll}]+"                       "abc<0>ABC^&*&</0>xyz"
+"[\N{LATIN SMALL LETTER Q}]+"     "mnop<0>qqq</0>rst"
+"[\sa]+"                          "cb<0>a  a  </0>(*&"
+"[\S]+"                           "   <0>hello</0>  "
+"[\w]+"                           "   <0>hello_world</0>!  "
+"[\W]+"                           "a<0>   *$%#,</0>hello "
+"[\d]+"                           "abc<0>123</0>def"
+"[\D]+"                           "123<0>abc</0>567"
+"[\$\#]+"                         "123<0>$#$#</0>\\"
+
+#
+#  Try each of the Java compatibility properties.
+#    These are checked here, while normal Unicode properties aren't, because
+#    these Java compatibility properties are implemented directly by regexp, while other
+#    properties are handled by ICU's Property and UnicodeSet APIs.
+#
+"[:InBasic Latin:]+"               "ΓΔΕΖΗΘ<0>hello, world.</0>ニヌネノハバパ"
+"[:^InBasic Latin:]+"              "<0>ΓΔΕΖΗΘ</0>hello, world.ニヌネノハバパ"
+"\p{InBasicLatin}+"                "ΓΔΕΖΗΘ<0>hello, world.</0>ニヌネノハバパ"
+"\P{InBasicLatin}+"                "<0>ΓΔΕΖΗΘ</0>hello, world.ニヌネノハバパ"
+
+"\p{javaDefined}+"                 "\uffff<0>abcd</0>\U00045678"
+"\p{javaDigit}+"                   "abc<0>1234</0>xyz"
+"\p{javaIdentifierIgnorable}+"     "abc<0>\u0000\u000e\u009f</0>xyz"
+"\p{javaISOControl}+"              "abc<0>\u0000\u000d\u0083</0>xyz"
+"\p{javaJavaIdentifierPart}+"      "#@!<0>abc123_$</0>;"
+"\p{javaJavaIdentifierStart}+"     "123\u0301<0>abc$_</0>%^&"
+
 
 
 #
