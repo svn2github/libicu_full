@@ -16,7 +16,7 @@
 #ifndef REGEX_H
 #define REGEX_H
 
-#define REGEX_DEBUG
+// #define REGEX_DEBUG
 
 /**
  * \file

@@ -428,8 +428,7 @@
 
 #
 #  Octal Escaping.   This conforms to Java conventions, not Perl.
-#
-"\0101"                          "<0>A</0>"
+"\0101\0\03\073\0154\01442"      "<0>A\u0000\u0003\u003b\u006c\u0064\u0032</0>"
 
 #
 #  \u Surrogate Pairs

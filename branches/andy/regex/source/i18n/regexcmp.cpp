@@ -40,7 +40,7 @@
 U_NAMESPACE_BEGIN
 
 // TODO: remove
-#if 1
+#if 0
 #include <stdio.h>
 static void printstring(const UnicodeString &s) {
    for (int i=0; i<s.length(); i++) {
