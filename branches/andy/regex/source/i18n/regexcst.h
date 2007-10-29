@@ -35,6 +35,7 @@ enum Regex_PatternParseAction {
     doProperty,
     doBackslashX,
     doOpenAtomicParen,
+    doSetLiteralEscaped,
     doPatFinish,
     doSetBackslash_D,
     doSetDifference2,
@@ -78,8 +79,8 @@ enum Regex_PatternParseAction {
     doBackslashB,
     doBackslashw,
     doPossessiveOpt,
-    doRuleError,
     doSetNegate,
+    doRuleError,
     doBackslashb,
     doConditionalExpr,
     doPossessivePlus,
@@ -106,6 +107,7 @@ enum Regex_PatternParseAction {
     doPatStart,
     doSetNamedRange,
     doPossessiveStar,
+    doEscapedLiteralChar,
     doSetBackslash_s,
     doBackslashz,
     doDotAny,
@@ -226,7 +228,7 @@ static const struct RegexTableEl gRuleParseStateTable[] = {
     , {doBackslashz, 122 /* z */, 2,0,  TRUE}     //  96 
     , {doBackRef, 128, 14,0,  TRUE}     //  97 
     , {doEscapeError, 253, 179,0,  FALSE}     //  98 
-    , {doLiteralChar, 255, 14,0,  TRUE}     //  99 
+    , {doEscapedLiteralChar, 255, 14,0,  TRUE}     //  99 
     , {doSetNegate, 94 /* ^ */, 103,0,  TRUE}     //  100      set-open
     , {doSetPosixProp, 58 /* : */, 105,0,  FALSE}     //  101 
     , {doNOP, 255, 103,0,  FALSE}     //  102 
@@ -304,7 +306,7 @@ static const struct RegexTableEl gRuleParseStateTable[] = {
     , {doSetBackslash_W, 87 /* W */, 132,0,  TRUE}     //  174 
     , {doSetBackslash_d, 100 /* d */, 132,0,  TRUE}     //  175 
     , {doSetBackslash_D, 68 /* D */, 132,0,  TRUE}     //  176 
-    , {doSetLiteral, 255, 118,0,  TRUE}     //  177 
+    , {doSetLiteralEscaped, 255, 118,0,  TRUE}     //  177 
     , {doSetFinish, 255, 14,0,  FALSE}     //  178      set-finish
     , {doExit, 255, 179,0,  TRUE}     //  179      errorDeath
  };

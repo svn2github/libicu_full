@@ -20,6 +20,7 @@
 #                                   m      multi-line mode.  $ and ^ match at embedded new-lines
 #                                   v      If icu configured without break iteration, this
 #                                          regex test pattern should not compile.
+#                                   e      set the UREGEX_ERROR_ON_UNKNOWN_ESCAPES flag
 #                                   d      dump the compiled pattern
 #                                   t      trace operation of match engine.
 #                                   2-9    a digit between 2 and 9, specifies the number of
@@ -648,6 +649,10 @@
 #    these Java compatibility properties are implemented directly by regexp, while other
 #    properties are handled by ICU's Property and UnicodeSet APIs.
 #
+#    These tests are only to verify that the names are recognized and the
+#    implementation isn't dead.  They are not intended to verify that the
+#    function defintions are 100% correct.
+#
 "[:InBasic Latin:]+"               "ΓΔΕΖΗΘ<0>hello, world.</0>ニヌネノハバパ"
 "[:^InBasic Latin:]+"              "<0>ΓΔΕΖΗΘ</0>hello, world.ニヌネノハバパ"
 "\p{InBasicLatin}+"                "ΓΔΕΖΗΘ<0>hello, world.</0>ニヌネノハバパ"
@@ -659,8 +664,29 @@
 "\p{javaISOControl}+"              "abc<0>\u0000\u000d\u0083</0>xyz"
 "\p{javaJavaIdentifierPart}+"      "#@!<0>abc123_$</0>;"
 "\p{javaJavaIdentifierStart}+"     "123\u0301<0>abc$_</0>%^&"
+"\p{javaLetter}+"                  "123<0>abcDEF</0>&*()("
+"\p{javaLetterOrDigit}+"           "$%^&*<0>123abcகஙசஜஞ</0>☺♘♚☔☎♬⚄⚡"
+"\p{javaLowerCase}+"               "ABC<0>def</0>&^%#:="
+"\p{javaMirrored}+"                "ab$%<0>(){}[]</0>xyz"
+"\p{javaSpaceChar}+"               "abc<0> \u00ao\u2028</0>!@#"
+"\p{javaSupplementaryCodePoint}+"  "abc\uffff<0>\U00010000\U0010ffff</0>\u0000"
+"\p{javaTitleCase}+"               "abCE<0>ǅῌᾨ</0>123"
+"\p{javaUnicodeIdentifierStart}+"  "123<0>abcⅣ</0>%^&&*"
+"\p{javaUnicodeIdentifierPart}+"   "%&&^<0>abc123\u0301\u0002</0>..."
+"\p{javaUpperCase}+"               "abc<0>ABC</0>123"
+"\p{javaValidCodePoint}+"          "<0>\u0000abc\ud800 unpaired \udfff |\U0010ffff</0>"
+"\p{javaWhitespace}+"              "abc\u00a0\u2007\u202f<0> \u0009\u001c\u001f\u2028</0>42"
 
+#
+#  Errors on unrecognized ASCII letter escape sequences.
+#
+"[abc\Y]+"                         "<0>abcY</0>"
+"[abc\Y]+"                     eE  "<0>abcY</0>"
 
+"(?:a|b|c|\Y)+"                    "<0>abcY</0>"
+"(?:a|b|c|\Y)+"                eE  "<0>abcY</0>"
+
+"\Q\Y\E"                       e   "<0>\\Y</0>"
 
 #
 # Bug 4045

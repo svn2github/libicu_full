@@ -250,7 +250,7 @@ backslash:
    'z'                   n  term                                    doBackslashz
    digit_char            n  expr-quant                              doBackRef         #  Will scan multiple digits
    eof                      errorDeath                              doEscapeError
-   default               n  expr-quant                              doLiteralChar     #  Escaped literal char.
+   default               n  expr-quant                              doEscapedLiteralChar
 
 
 
@@ -440,7 +440,7 @@ set-escape:
    'W'                   n  set-after-range                         doSetBackslash_W
    'd'                   n  set-after-range                         doSetBackslash_d
    'D'                   n  set-after-range                         doSetBackslash_D
-   default               n  set-after-lit                           doSetLiteral 
+   default               n  set-after-lit                           doSetLiteralEscaped 
 
 #
 # set-finish

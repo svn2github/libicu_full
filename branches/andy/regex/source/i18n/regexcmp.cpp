@@ -1050,6 +1050,18 @@ UBool RegexCompile::doParseActions(int32_t action)
         break;
 
 
+    case doEscapedLiteralChar:
+        // We've just scanned an backslashed escaped character with  no
+        //   special meaning.  It represents itself.
+        if ((fModeFlags & UREGEX_ERROR_ON_UNKNOWN_ESCAPES) != 0 &&
+            ((fC.fChar >= 0x41 && fC.fChar<= 0x5A) ||     // in [A-Z]
+            (fC.fChar >= 0x61 && fC.fChar <= 0x7a))) {   // in [a-z]
+               error(U_REGEX_BAD_ESCAPE_SEQUENCE);
+             }
+        literalChar(fC.fChar);
+        break;
+
+
     case doDotAny:
         // scanned a ".",  match any single character.
         {
@@ -1547,7 +1559,24 @@ UBool RegexCompile::doParseActions(int32_t action)
             break;
         }
 
-    case doSetNamedChar:
+    case doSetLiteralEscaped:
+        // A back-slash escaped literal character was encountered.
+        // Processing is the same as with setLiteral, above, with the addition of
+        //  the optional check for errors on escaped ASCII letters.
+        {
+            if ((fModeFlags & UREGEX_ERROR_ON_UNKNOWN_ESCAPES) != 0 &&
+                ((fC.fChar >= 0x41 && fC.fChar<= 0x5A) ||     // in [A-Z]
+                 (fC.fChar >= 0x61 && fC.fChar <= 0x7a))) {   // in [a-z]
+                error(U_REGEX_BAD_ESCAPE_SEQUENCE);
+            }
+            setEval(setUnion);
+            UnicodeSet *s = (UnicodeSet *)fSetStack.peek();
+            s->add(fC.fChar);
+            fLastSetLiteral = fC.fChar;
+            break;
+        }
+
+        case doSetNamedChar:
         // Scanning a \N{UNICODE CHARACTER NAME}
         //  Aside from the source of the character, the processing is identical to doSetLiteral,
         //    above.
@@ -3976,13 +4005,13 @@ UnicodeSet *RegexCompile::createSetForProperty(const UnicodeString &propName, UB
         {"javaLowerCase",              "\\p{Ll}"},
         {"javaMirrored",               "\\p{Bidi_Mirrored}"},
         {"javaSpaceChar",              "\\p{Z}"},
-        {"javaSupplementaryCodePoint", "[\\U00010000-\\u0010ffff]"},
+        {"javaSupplementaryCodePoint", "[\\U00010000-\\U0010ffff]"},
         {"javaTitleCase",              "\\p{Lt}"},
         {"javaUnicodeIdentifierStart", "[\\p{L}\\p{Nl}]"},
         {"javaUnicodeIdentifierPart",  "[[\\p{L}\\p{Pc}\\p{Nd}\\p{Nl}\\p{Mc}\\p{Mn}]" IDENTIFIER_IGNORABLE "]"},
         {"javaUpperCase",              "[\\p{Lu}]"},
-        {"javaValidCodePoint",         "[\\u0000-\\u10ffff]"},
-        {"javaWhitespace",             "[[\\p{Z}--[\\u00a0\\u2007\\u202f]]\\u0009-\\u000d\\u001c-\\u001f]"},
+        {"javaValidCodePoint",         "[\\u0000-\\U0010ffff]"},
+        {"javaWhitespace",             "[[\\p{Z}-[\\u00a0\\u2007\\u202f]]\\u0009-\\u000d\\u001c-\\u001f]"},
         {NULL,                         NULL}
     };
     
@@ -3993,7 +4022,6 @@ UnicodeSet *RegexCompile::createSetForProperty(const UnicodeString &propName, UB
         setExpr.remove();
         for (i=0; javaProps[i][0] != NULL; i++) {
             if (propName.compare(UnicodeString(javaProps[i][0], -1, UnicodeString::kInvariant))==0) {
-                UnicodeString t(javaProps[i][1], 0);
                 setExpr = UnicodeString(javaProps[i][1]);  // Default code page conversion here.
                 break;                                        //   Somewhat Inefficient.
             }
