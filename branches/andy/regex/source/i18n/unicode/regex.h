@@ -743,6 +743,130 @@ public:
     *   @stable ICU 2.4
     */
     virtual const UnicodeString &input() const;
+    
+    
+
+   /** Sets the limits of this matcher's region.
+     * The region is the part of the input string that will be searched to find a match.
+     * Invoking this method resets the matcher, and then sets the region to start
+     * at the index specified by the start parameter and end at the index specified
+     * by the end parameter.
+     *
+     * Depending on the transparency and anchoring being used (see useTransparentBounds
+     * and useAnchoringBounds), certain constructs such as anchors may behave differently
+     * at or around the boundaries of the region
+     *
+     * The function will fail if start is greater than limit, or if either index
+     *  is less than zero or greater than the length of the string being matched.
+     *
+     * @param start  The index to begin searches at.
+     * @param limit  The index to end searches at (exclusive).
+     * @param status A reference to a UErrorCode to receive any errors.
+     * @draft ICU 4.0
+     */
+     virtual RegexMatcher &region(int32_t start, int32_t limit, UErrorCode &status);
+
+
+   /**
+     * Reports the start index of this matcher's region. The searches this matcher
+     * conducts are limited to finding matches within regionStart (inclusive) and
+     * regionEnd (exclusive).
+     *
+     * @return The starting index of this matcher's region.
+     * @draft ICU 4.0
+     */
+     virtual int regionStart() const;
+
+
+    /**
+      * Reports the end (limit) index (exclusive) of this matcher's region. The searches
+      * this matcher conducts are limited to finding matches within regionStart
+      * (inclusive) and regionEnd (exclusive).
+      *
+      * @return The ending point of this matcher's region.
+      * @draft ICU 4.0
+      */
+      virtual int regionEnd() const;
+
+    /**
+      * Queries the transparency of region bounds for this matcher.
+      * See useTransparentBounds for a description of transparent and opaque bounds.
+      * By default, a matcher uses opaque region boundaries.
+      *
+      * @return TRUE if this matcher is using opaque bounds, false if it is not.
+      * @draft ICU 4.0
+      */
+      virtual UBool hasTransparentBounds() const;
+
+    /**
+      * Sets the transparency of region bounds for this matcher.
+      * Invoking this function with an argument of true will set this matcher to use transparent bounds.
+      * If the boolean argument is false, then opaque bounds will be used.
+      *
+      * Using transparent bounds, the boundaries of this matcher's region are transparent
+      * to lookahead, lookbehind, and boundary matching constructs. Those constructs can
+      * see text beyond the boundaries of the region while checking for a match.
+      *
+      * With opaque bounds, no text outside of the matcher's region is visible to lookahead,
+      * lookbehind, and boundary matching constructs.
+      *
+      * By default, a matcher uses opaque bounds.
+      *
+      * @param   b TRUE for transparent bounds; FALSE for opaque bounds
+      * @return  This Matcher;
+      * @draft   ICU 4.0
+      **/
+      virtual RegexMatcher &useTransparentBounds(UBool b);
+
+     
+    /**
+      * Return true if this matcher is using anchoring bounds.
+      * By default, matchers use anchoring region boounds.
+      *
+      * @return TRUE if this matcher is using anchoring bounds.
+      * @draft  ICU 4.0
+      */    
+      virtual UBool hasAnchoringBounds() const;
+
+    /**
+      * Set whether this matcher is using Anchoring Bounds for its region.
+      * With anchoring bounds, pattern anchors such as ^ and $ will match at the start
+      * and end of the region.  Without Anchoring Bounds, anchors will only match at
+      * the positions they would in the complete text.
+      *
+      * Anchoring Bounds are the default for regions.
+      *
+      * @param b TRUE if to enable anchoring bounds; FALSE to disable them.
+      * @return  This Matcher
+      * @draft   ICU 4.0
+      */
+      virtual RegexMatcher &useAnchoringBounds(UBool b);
+
+    /**
+      * Return TRUE if the most recent matching operation touched the end of the
+      *  end of the text being processed.  In this case, additional input text could
+      *  change the results of that match.
+      *
+      *   (TODO:  how does this interact with transparent bounds and look-ahead?)
+      *
+      *  @return  TRUE if the most recent match hit the end of input
+      *  @draft   ICU 4.0
+      */
+      virtual UBool hitEnd() const;
+
+    /**
+      * Return TRUE the most recent match succeeded and additional input could cause
+      * it to fail. If this method returns false and a match was found, then more input
+      * might change the match but the match won't be lost. If a match was not found,
+      * then requireEnd has no meaning.
+      *
+      * @return TRUE if more input could cause the most recent match to no longer match.
+      * @draft  ICU 4.0
+      */
+      virtual UBool requireEnd() const;
+
+
+
 
 
    /**
@@ -918,7 +1042,20 @@ private:
     const RegexPattern  *fPattern;
     RegexPattern        *fPatternOwned;    // Non-NULL if this matcher owns the pattern, and
                                            //   should delete it when through.
-    const UnicodeString *fInput;
+
+    const UnicodeString *fInput;           // The text being matched. Is never NULL.
+    
+    int32_t              fRegionStart;     // Start of the input region, default = 0.
+    int32_t              fRegionLimit;     // End of input region, default to input.length.
+    
+    int32_t              fAnchorStart;     // Region bounds for anchoring operations (^ or $).
+    int32_t              fAnchorLimit;     //   See useAnchoringBounds
+    
+    int32_t              fLookStart;       // Region bounds for look-ahead/behind and
+    int32_t              fLookLimit;       //   and other boundary tests.  See
+                                           //   useTransparentBounds
+    UBool                fTransparentBounds;  // True if using transparent bounds.
+    UBool                fAnchoringBounds; // True if using anchoring bounds.
 
     UBool                fMatch;           // True if the last match was successful.
     int32_t              fMatchStart;      // Position of the start of the most recent match
@@ -926,6 +1063,9 @@ private:
     int32_t              fLastMatchEnd;    // First position after the end of the previous match,
                                            //   or -1 if there was no previous match.
     int32_t              fLastReplaceEnd;  // First position after the end of the previous appendReplacement();
+    UBool                fHitEnd;          // True if the last match touched the end of input.
+    UBool                fRequireEnd;      // True if the last match required end-of-input
+                                           //    (matched $ or Z)
 
     UVector32           *fStack;
     REStackFrame        *fFrame;           // After finding a match, the last active stack

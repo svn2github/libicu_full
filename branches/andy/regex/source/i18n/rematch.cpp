@@ -44,6 +44,8 @@ RegexMatcher::RegexMatcher(const RegexPattern *pat)  {
     fStack             = new UVector32(fDeferredStatus); 
     fData              = fSmallData;
     fWordBreakItr      = NULL;
+    fTransparentBounds = FALSE;
+    fAnchoringBounds   = TRUE;
     if (pat==NULL) {
         fDeferredStatus = U_ILLEGAL_ARGUMENT_ERROR;
         return;
@@ -70,6 +72,8 @@ RegexMatcher::RegexMatcher(const UnicodeString &regexp, const UnicodeString &inp
     fStack             = new UVector32(status); 
     fData              = fSmallData;
     fWordBreakItr      = NULL;
+    fTransparentBounds = FALSE;
+    fAnchoringBounds   = TRUE;
     if (U_FAILURE(status)) {
         return;
     }
@@ -93,6 +97,8 @@ RegexMatcher::RegexMatcher(const UnicodeString &regexp,
     fPatternOwned      = RegexPattern::compile(regexp, flags, pe, status);
     fPattern           = fPatternOwned;
     fWordBreakItr      = NULL;
+    fTransparentBounds = FALSE;
+    fAnchoringBounds   = TRUE;
     if (U_FAILURE(status)) {
         return;
     }
@@ -554,7 +560,35 @@ const UnicodeString &RegexMatcher::input() const {
 }
 
 
+//--------------------------------------------------------------------------------
+//
+//  hasAnchoringBounds()
+//
+//--------------------------------------------------------------------------------
+UBool RegexMatcher::hasAnchoringBounds() const {
+    return fAnchoringBounds;
+}
 
+
+//--------------------------------------------------------------------------------
+//
+//  hasTransparentBounds()
+//
+//--------------------------------------------------------------------------------
+UBool RegexMatcher::hasTransparentBounds() const {
+    return fTransparentBounds;
+}
+
+
+
+//--------------------------------------------------------------------------------
+//
+//  hitEnd()
+//
+//--------------------------------------------------------------------------------
+UBool RegexMatcher::hitEnd() const {
+    return fHitEnd;
+}
 
 //--------------------------------------------------------------------------------
 //
@@ -634,10 +668,62 @@ UBool RegexMatcher::matches(int32_t start, UErrorCode &status) {
 
 
 
+//--------------------------------------------------------------------------------
+//
+//    pattern
+//
+//--------------------------------------------------------------------------------
 const RegexPattern &RegexMatcher::pattern() const {
     return *fPattern;
 }
 
+
+
+//--------------------------------------------------------------------------------
+//
+//    region
+//
+//--------------------------------------------------------------------------------
+RegexMatcher &RegexMatcher::region(int32_t start, int32_t limit, UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return *this;
+    }
+    this->reset();
+    if (start>limit || start<0 || limit<0 || limit>fInput->length()) {
+        status = U_ILLEGAL_ARGUMENT_ERROR;
+    }
+    fRegionStart = start;
+    fRegionLimit = limit;
+    if (!fTransparentBounds) {
+        fLookStart = start;
+        fLookLimit = limit;
+    }
+    if (fAnchoringBounds) {
+        fAnchorStart = start;
+        fAnchorLimit = limit;
+    }
+}
+
+
+
+//--------------------------------------------------------------------------------
+//
+//    regionEnd
+//
+//--------------------------------------------------------------------------------
+int RegexMatcher::regionEnd() const {
+    return fRegionLimit;
+}
+
+
+//--------------------------------------------------------------------------------
+//
+//    regionStart
+//
+//--------------------------------------------------------------------------------
+int RegexMatcher::regionStart() const {
+    return fRegionStart;
+}
 
 
 //--------------------------------------------------------------------------------
@@ -693,6 +779,15 @@ UnicodeString RegexMatcher::replaceFirst(const UnicodeString &replacement, UErro
 }
 
 
+//--------------------------------------------------------------------------------
+//
+//     requireEnd
+//
+//--------------------------------------------------------------------------------
+UBool RegexMatcher::requireEnd() const {
+    return fRequireEnd;
+}
+
 
 //--------------------------------------------------------------------------------
 //
@@ -700,11 +795,19 @@ UnicodeString RegexMatcher::replaceFirst(const UnicodeString &replacement, UErro
 //
 //--------------------------------------------------------------------------------
 RegexMatcher &RegexMatcher::reset() {
+    fRegionStart    = 0;
+    fRegionLimit    = fInput->length();
+    fAnchorStart    = 0;
+    fAnchorLimit    = fRegionLimit;
+    fLookStart      = 0;
+    fLookLimit      = fRegionLimit;
     fMatchStart     = 0;
     fMatchEnd       = 0;
     fLastMatchEnd   = -1;
     fLastReplaceEnd = 0;
     fMatch          = FALSE;
+    fHitEnd         = FALSE;
+    fRequireEnd     = FALSE;
     resetStack();
     return *this;
 }
@@ -733,7 +836,7 @@ RegexMatcher &RegexMatcher::reset(int32_t position, UErrorCode &status) {
         return *this;
     }
     reset();
-    if (position < 0 || position >= fInput->length()) {
+    if (position < 0 || position >= fRegionLimit) {
         status = U_INDEX_OUTOFBOUNDS_ERROR;
         return *this;
     }
@@ -859,6 +962,11 @@ int32_t RegexMatcher::start(UErrorCode &status) const {
 
 
 
+//--------------------------------------------------------------------------------
+//
+//     start(int32_t group, UErrorCode &status)
+//
+//--------------------------------------------------------------------------------
 int32_t RegexMatcher::start(int32_t group, UErrorCode &status) const {
     if (U_FAILURE(status)) {
         return -1;
@@ -887,6 +995,34 @@ int32_t RegexMatcher::start(int32_t group, UErrorCode &status) const {
     return s;
 }
 
+
+
+//--------------------------------------------------------------------------------
+//
+//     useAnchoringBounds
+//
+//--------------------------------------------------------------------------------
+RegexMatcher &RegexMatcher::useAnchoringBounds(UBool b) {
+    fAnchoringBounds = b;
+    UErrorCode status = U_ZERO_ERROR;
+    region(fRegionStart, fRegionLimit, status); 
+    U_ASSERT(U_SUCCESS(status));
+    return *this;
+    }
+
+
+//--------------------------------------------------------------------------------
+//
+//     useTransparentBounds
+//
+//--------------------------------------------------------------------------------
+RegexMatcher &RegexMatcher::useTransparentBounds(UBool b) {
+    fTransparentBounds = b;
+    UErrorCode status = U_ZERO_ERROR;
+    region(fRegionStart, fRegionLimit, status); 
+    U_ASSERT(U_SUCCESS(status));
+    return *this;
+    }
 
 
 //================================================================================
