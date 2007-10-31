@@ -1,4 +1,4 @@
-﻿# Copyright (c) 2001-2007 International Business Machines
+# Copyright (c) 2001-2007 International Business Machines
 # Corporation and others. All Rights Reserved.
 #
 #  file:
@@ -429,6 +429,8 @@
 #
 #  Octal Escaping.   This conforms to Java conventions, not Perl.
 "\0101\0\03\073\0154\01442"      "<0>A\u0000\u0003\u003b\u006c\u0064\u0032</0>"
+"\0776"                          "<0>\u003f\u0036</0>"  # overflow, the 6 is literal.
+"\0376xyz"                       "<0>\u00fexyz</0>"
 
 #
 #  \u Surrogate Pairs
@@ -656,6 +658,8 @@
 "[:^InBasic Latin:]+"              "<0>ΓΔΕΖΗΘ</0>hello, world.ニヌネノハバパ"
 "\p{InBasicLatin}+"                "ΓΔΕΖΗΘ<0>hello, world.</0>ニヌネノハバパ"
 "\P{InBasicLatin}+"                "<0>ΓΔΕΖΗΘ</0>hello, world.ニヌネノハバパ"
+"\p{InGreek}+"                     "<0>ΓΔΕΖΗΘ</0>hello, world.ニヌネノハバパ"
+
 
 "\p{javaDefined}+"                 "\uffff<0>abcd</0>\U00045678"
 "\p{javaDigit}+"                   "abc<0>1234</0>xyz"
@@ -675,6 +679,8 @@
 "\p{javaUpperCase}+"               "abc<0>ABC</0>123"
 "\p{javaValidCodePoint}+"          "<0>\u0000abc\ud800 unpaired \udfff |\U0010ffff</0>"
 "\p{javaWhitespace}+"              "abc\u00a0\u2007\u202f<0> \u0009\u001c\u001f\u2028</0>42"
+"\p{all}+"                         "<0>123\u0000\U0010ffff</0>"
+"\P{all}+"                         "123\u0000\U0010ffff"
 
 #
 #  Errors on unrecognized ASCII letter escape sequences.

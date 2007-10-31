@@ -3666,7 +3666,8 @@ void RegexCompile::nextChar(RegexPatternChar &c) {
             }
         }
 
-        //
+        //  7 Seek_Error_Rate         0x000f   070   060   030    Pre-fail  Always       -       12282058
+
         //  check for backslash escaped characters.
         //
         if (c.fChar == chBackSlash) {
@@ -3692,6 +3693,9 @@ void RegexCompile::nextChar(RegexPatternChar &c) {
                 //    which are \0 followed by 1-3 octal digits.
                 //    Different from ICU Unescape handling of Octal, which does not
                 //    require the leading 0.
+                //  Java also has the convention of only consuning 2 octal digits if
+                //    the three digit number would be > 0xff
+                //
                 c.fChar = 0;
                 nextCharLL();    // Consume the initial 0.
                 int index;
@@ -3700,12 +3704,14 @@ void RegexCompile::nextChar(RegexPatternChar &c) {
                     if (ch<chDigit0 || ch>chDigit7) {
                         break;
                     }
-                    nextCharLL();
                     c.fChar <<= 3;
                     c.fChar += ch&7;
-                }
-                if (c.fChar>255) {
-                    error(U_REGEX_OCTAL_TOO_BIG);
+                    if (c.fChar <= 255) {
+                        nextCharLL();
+                    } else {
+                        // The last digit made the number too big.  Forget we saw it.
+                        c.fChar >>= 3;
+                    }
                 }
                 c.fQuoted = TRUE; 
             } 
@@ -3970,15 +3976,26 @@ UnicodeSet *RegexCompile::createSetForProperty(const UnicodeString &propName, UB
     
     //
     //  The property as it was didn't work.
-    //    See if it looks like a Java "InBlockName", which
+    //    Do an emergency fixe -  
+    //       InGreek -> InGreek or Coptic, that being the official Unicode name for that block.
+    //
+    UnicodeString mPropName = propName;
+    if (mPropName.caseCompare(UnicodeString("InGreek", -1, UnicodeString::kInvariant), 0) == 0) {
+        mPropName = UnicodeString("InGreek and Coptic", -1 ,UnicodeString::kInvariant);
+    }
+    else if (mPropName.compare(UnicodeString("all", -1, UnicodeString::kInvariant)) == 0) {
+        mPropName = UnicodeString("javaValidCodePoint", -1 ,UnicodeString::kInvariant);
+    }
+    
+    //    See if the property looks like a Java "InBlockName", which
     //    we will recast as "Block=BlockName"
     //
     static const UChar IN[] = {0x49, 0x6E, 0};  // "In"
     static const UChar BLOCK[] = {0x42, 0x6C, 0x6f, 0x63, 0x6b, 0x3d, 00};  // "Block="
-    if (propName.startsWith(IN, 2) && propName.length()>=3) {
+    if (mPropName.startsWith(IN, 2) && propName.length()>=3) {
         setExpr.truncate(4);   // Leaves "[\p{", or "[\P{"
         setExpr.append(BLOCK, -1);
-        setExpr.append(UnicodeString(propName, 2));  // Property with the leading "In" removed.
+        setExpr.append(UnicodeString(mPropName, 2));  // Property with the leading "In" removed.
         setExpr.append(chRBrace);
         setExpr.append(chRBracket);
         *fStatus = U_ZERO_ERROR;
@@ -4012,16 +4029,18 @@ UnicodeSet *RegexCompile::createSetForProperty(const UnicodeString &propName, UB
         {"javaUpperCase",              "[\\p{Lu}]"},
         {"javaValidCodePoint",         "[\\u0000-\\U0010ffff]"},
         {"javaWhitespace",             "[[\\p{Z}-[\\u00a0\\u2007\\u202f]]\\u0009-\\u000d\\u001c-\\u001f]"},
+        {"all",                        "[\\u0000-\\U0010ffff]"},
         {NULL,                         NULL}
     };
     
 
     UnicodeString Java("java", -1, UnicodeString::kInvariant);
-    if (propName.startsWith(Java)) {
+    if (propName.startsWith(Java) ||
+        propName.compare(UnicodeString("all", -1, UnicodeString::kInvariant)) == 0) {
         int i;
         setExpr.remove();
         for (i=0; javaProps[i][0] != NULL; i++) {
-            if (propName.compare(UnicodeString(javaProps[i][0], -1, UnicodeString::kInvariant))==0) {
+            if (mPropName.compare(UnicodeString(javaProps[i][0], -1, UnicodeString::kInvariant))==0) {
                 setExpr = UnicodeString(javaProps[i][1]);  // Default code page conversion here.
                 break;                                        //   Somewhat Inefficient.
             }
@@ -4030,6 +4049,9 @@ UnicodeSet *RegexCompile::createSetForProperty(const UnicodeString &propName, UB
             *fStatus = U_ZERO_ERROR;
             set = new UnicodeSet(setExpr, usetFlags, NULL, *fStatus);
             if (U_SUCCESS(*fStatus)) {
+                if (negated) {
+                    set->complement();
+                }
                 return set;
             }
         }
