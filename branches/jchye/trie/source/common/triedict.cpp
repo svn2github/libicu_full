@@ -642,7 +642,7 @@ static inline uint32_t calcEqualLink(const CompactTrieHorizontalNode *hnode, uin
 
 static inline uint16_t getValue(const CompactTrieHorizontalNode *hnode){
     uint16_t count = getCount((CompactTrieNode *)hnode);
-    uint16_t overflowSize = 0;
+    uint16_t overflowSize = 0; //size of node ID overflow storage in bytes
     if(hnode->flagscount & kEqualOverflows)
         overflowSize = (count + 3) / 4 * sizeof(uint16_t);
 //    fprintf(stderr,"horizontal %x, overflowSize %x, pointer %p \n", hnode->flagscount,overflowSize, hnode);
@@ -957,21 +957,15 @@ class BuildCompactTrieNode: public UMemory {
     
     virtual void write(uint8_t *bytes, uint32_t &offset, const UVector32 &/*translate*/) {
         // Write flag/count
-/*
-          *((uint16_t *)(bytes+offset)) = (fEqualOverflows? kEqualOverflows : 0) | 
-            ((fNodeID == 2)? (fChars.length() & kRootCountMask): 
-                (
-                    (fChars.length() & kCountMask) | 
-                    ((fChars.length() << 2) & kExceedsCount) |
-                    (fVertical ? kVerticalNode : 0) | 
-                    (fParentEndsWord ? kParentEndsWord : 0 )
-                )
-            );
-*/
+
+        // if this ever fails, a flag bit will need to be used as a 5th MSB.
+        U_ASSERT(fChars.length() < 4096 || fNodeID == 2);
+            
         *((uint16_t *)(bytes+offset)) = (fEqualOverflows? kEqualOverflows : 0) | 
             ((fNodeID == 2)? (fChars.length() & kRootCountMask): 
                 (
                     (fChars.length() & kCountMask) | 
+                    //((fChars.length() << 2) & kExceedsCount) |
                     (fVertical ? kVerticalNode : 0) | 
                     (fParentEndsWord ? kParentEndsWord : 0 )
                 )

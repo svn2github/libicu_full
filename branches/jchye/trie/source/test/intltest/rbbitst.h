@@ -69,7 +69,6 @@ public:
     void TestUnicodeFiles();
     void TestBug5775();
     void TestTrieDictWithValue();
-    void TestKoreanWordBreak();
 
     void TestDebug();
 

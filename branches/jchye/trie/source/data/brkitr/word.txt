@@ -28,13 +28,14 @@
 
 $VoiceMarks   = [\uff9e\uff9f];
 $Format       = [\p{Word_Break = Format}];
+$Hiragana     = [:Hiragana:];
 $Katakana     = [\p{Word_Break = Katakana}-$VoiceMarks];
+$Han          = [:Han:];
 $ALetter      = [\p{Word_Break = ALetter}];
 $MidLetter    = [\p{Word_Break = MidLetter}];
 $MidNum       = [\p{Word_Break = MidNum}];
 $Numeric      = [\p{Word_Break = Numeric}];
 $ExtendNumLet = [\p{Word_Break = ExtendNumLet}];
-
 
 $CR             = \u000d;
 $LF             = \u000a;
@@ -42,13 +43,16 @@ $Extend         = [\p{Grapheme_Cluster_Break = Extend}$VoiceMarks];
 $Control        = [\p{Grapheme_Cluster_Break = Control}];
 
 #   Dictionary character set, for triggering language-based break engines. Currently
-#   limited to LineBreak=Complex_Context. Note that this set only works in Unicode
-#   5.0 or later as the definition of Complex_Context was corrected to include all
-#   characters requiring dictionary break.
+#   limited to LineBreak=Complex_Context and CJK. Note that this set only works
+#   in Unicode 5.0 or later as the definition of Complex_Context was corrected
+#   to include all characters requiring dictionary break.
 
-$dictionary   = [:LineBreak = Complex_Context:];
-$ALetterPlus  = [$ALetter [$dictionary-$Extend-$Control]];
+$HangulSyllable = [\uac00-\ud7a3];
+$ComplexContext = [:LineBreak = Complex_Context:];
+$dictionary = [$ComplexContext $HangulSyllable $Han $Hiragana $Katakana];
 
+# leave katakana script out of ALetterPlus because it has its own rules
+$ALetterPlus  = [$ALetter [$dictionary-$Katakana-$Extend-$Control]];
 
 #
 #  Rules 3    Grapheme Clusters behave like their first char.
@@ -61,7 +65,6 @@ $MidNumEx       = $MidNum       ($Extend |  $Format)*;
 $NumericEx      = $Numeric      ($Extend |  $Format)*;
 $ExtendNumLetEx = $ExtendNumLet ($Extend |  $Format)*;
 
-$Hiragana       = [:Hiragana:];
 $Ideographic    = [:IDEOGRAPHIC:];
 $HiraganaEx     = $Hiragana     ($Extend |  $Format)*;
 $IdeographicEx  = $Ideographic  ($Extend |  $Format)*;
@@ -122,7 +125,7 @@ $KatakanaEx  $KatakanaEx {300};
 $ALetterEx      $ExtendNumLetEx {200};    #  (13a)
 $NumericEx      $ExtendNumLetEx {100};    #  (13a)
 $KatakanaEx     $ExtendNumLetEx {300};    #  (13a)
-$ExtendNumLetEx $ExtendNumLetEx{200}; #  (13a)
+$ExtendNumLetEx $ExtendNumLetEx {200};    #  (13a)
 
 $ExtendNumLetEx $ALetterEx  {200};    #  (13b)
 $ExtendNumLetEx $NumericEx  {100};    #  (13b)

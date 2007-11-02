@@ -221,7 +221,6 @@ ICULanguageBreakFactory::loadEngineFor(UChar32 c, int32_t breakType) {
     UScriptCode code = uscript_getScript(c, &status);
     if (U_SUCCESS(status)) {
         const CompactTrieDictionary *dict = loadDictionaryFor(code, breakType);
-//        printf("%s\n",uscript_getShortName(code));
         if (dict != NULL) {
             const LanguageBreakEngine *engine = NULL;
             switch(code) {
@@ -230,15 +229,15 @@ ICULanguageBreakFactory::loadEngineFor(UChar32 c, int32_t breakType) {
                 break;
                 
             case USCRIPT_HANGUL:
-                engine = new CjkBreakEngine(dict, status);
-                printf("Korean!\n");
+                engine = new CjkBreakEngine(dict, kKorean, status);
                 break;
-/*            case USCRIPT_HIRAGANA:
+
+            // use same BreakEngine and dictionary for both Chinese and Japanese
+            case USCRIPT_HIRAGANA:
             case USCRIPT_KATAKANA:
             case USCRIPT_HAN:
-                engine = new CjkBreakEngine(dict, status);
+                engine = new CjkBreakEngine(dict, kChineseJapanese, status);
                 break;
-*/
             default:
                 break;
             }
@@ -267,6 +266,7 @@ ICULanguageBreakFactory::loadDictionaryFor(UScriptCode script, int32_t /*breakTy
     b = ures_getByKeyWithFallback(b, uscript_getShortName(script), b, &status);
     int32_t dictnlength = 0;
     const UChar *dictfname = ures_getString(b, &dictnlength, &status);
+
     if (U_SUCCESS(status) && (size_t)dictnlength >= sizeof(dictnbuff)) {
         dictnlength = 0;
         status = U_BUFFER_OVERFLOW_ERROR;

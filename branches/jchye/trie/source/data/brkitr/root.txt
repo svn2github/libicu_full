@@ -17,5 +17,9 @@ root{
     }
     dictionaries{
         Thai:process(dependency){"thaidict.ctd"}
+        Hang:process(dependency){"koreandict.ctd"}
+        Hani:process(dependency){"cjdict.ctd"}
+        Hira:process(dependency){"cjdict.ctd"}
+        Kata:process(dependency){"cjdict.ctd"}
     }
 }

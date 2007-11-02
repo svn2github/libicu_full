@@ -1537,9 +1537,16 @@ int32_t RuleBasedBreakIterator::checkDictionary(int32_t startPos,
     uint32_t dictionaryCount = fDictionaryCharCount;
     reset();
 
-    if (dictionaryCount <= 1 || (endPos - startPos) <= 1) {
+    // note: code segment below assumes that dictionary chars are in the 
+    // startPos-endPos range
+    // value returned should be next character in sequence
+//    if (dictionaryCount <= 1 || (endPos - startPos) <= 1) {
+//        return (reverse ? startPos : endPos);
+//    }
+    if ((endPos - startPos) <= 1) {
         return (reverse ? startPos : endPos);
     }
+
     
     // Starting from the starting point, scan towards the proposed result,
     // looking for the first dictionary character (which may be the one
@@ -1623,7 +1630,6 @@ int32_t RuleBasedBreakIterator::checkDictionary(int32_t startPos,
         if (current >= rangeEnd) {
             break;
         }
-        
         // We now have a dictionary character. Get the appropriate language object
         // to deal with it.
         const LanguageBreakEngine *lbe = getLanguageBreakEngine(c);
@@ -1666,7 +1672,7 @@ int32_t RuleBasedBreakIterator::checkDictionary(int32_t startPos,
             // proposed break by one of the breaks we found. Use following() and
             // preceding() to do the work. They should never recurse in this case.
             if (reverse) {
-                return preceding(endPos - 1);
+                return preceding(endPos);
             }
             else {
                 return following(startPos);

@@ -34,7 +34,7 @@
 #include "unicode/udata.h"
 #include "unicode/putil.h"
 
-#include "unicode/ustdio.h"
+//#include "unicode/ustdio.h"
 
 #include "uoptions.h"
 #include "unewdata.h"
@@ -42,6 +42,7 @@
 #include "rbbidata.h"
 #include "triedict.h"
 #include "cmemory.h"
+#include "uassert.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -300,7 +301,6 @@ int  main(int argc, char **argv) {
     }
     while (uc && (breaks.contains(uc) || u_isspace(uc)));
 
-    //TODO: add hasValue = TRUE if logprobs in file!!!
     MutableTrieDictionary *mtd = new MutableTrieDictionary(uc, status);
     
     if (U_FAILURE(status)) {
@@ -324,20 +324,28 @@ int  main(int argc, char **argv) {
         
         UnicodeString valueString;
         if(uc == 0x0009){ //separator is a tab char, read in number after tab
-            uc = *current++;
-            while (uc && !breaks.contains(uc)) {
+        	while (uc && u_isspace(uc)) {
+        		uc = *current++;
+        	}
+            while (uc && !u_isspace(uc)) {
                 valueString.append(uc);
                 uc = *current++;
             }
         }
         
         if (length > 0) {
-            mtd->storeValues(TRUE);
             if(valueString.length() > 0){
-                int value = 0;
-                u_sscanf(valueString.getBuffer(), "%d", &value);
-                if(value > 0xFFFF) //16-bit overflow
-                    value = 0xFFFF;
+                mtd->storeValues(TRUE);
+
+                uint32_t value = 0;
+                char s[20];
+                valueString.extract(0,valueString.length(), s, 20);
+                //fprintf(stderr, "valueString=%s\n", s);
+                int n = sscanf(s, "%ud", &value);
+                //fprintf(stderr, "value=%d n=%d\n", value, n);
+                //restrict values to 8 bits for now
+                U_ASSERT(n == 1);
+                U_ASSERT(value >= 0 && value < 256); 
                 mtd->addWord(candidate, length, status, (uint16_t)value);
             } else {
                 mtd->addWord(candidate, length, status);

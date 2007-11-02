@@ -119,7 +119,7 @@ class DictionaryBreakEngine : public LanguageBreakEngine {
   * @param text A UText representing the text
   * @param rangeStart The start of the range of dictionary characters
   * @param rangeEnd The end of the range of dictionary characters
-  * @param foundBreaks Output of C array of int32_t break positions, or 0
+  * @param foundBreaks Output of C array of int32_t break positions, or 0. 
   * @return The number of breaks found
   */
   virtual int32_t divideUpDictionaryRange( UText *text,
@@ -190,19 +190,28 @@ class ThaiBreakEngine : public DictionaryBreakEngine {
  * CjkBreakEngine
  */
 
+//indicates language/script that the CjkBreakEngine handles
+enum LanguageType {
+    kKorean,
+    kChineseJapanese
+};
+
 /**
  * <p>CjkBreakEngine is a kind of DictionaryBreakEngine that uses a
- * TrieWordDictionary with log-probabilities for each word and Viterbi decoding
- * to determine CJK-specific breaks.</p>
+ * TrieWordDictionary with log-probabilities associated with each word and
+ * Viterbi decoding to determine CJK-specific breaks.</p>
  */
 class CjkBreakEngine : public DictionaryBreakEngine {
- private:
+ protected:
     /**
      * The set of characters handled by this engine
      * @internal
      */
+     UnicodeSet                fHangulWordSet;
+     UnicodeSet                fHanWordSet;
+     UnicodeSet                fKatakanaWordSet;
+     UnicodeSet                fHiraganaWordSet;
 
-  UnicodeSet                fCjkWordSet;
   const TrieWordDictionary  *fDictionary;
 
  public:
@@ -213,7 +222,7 @@ class CjkBreakEngine : public DictionaryBreakEngine {
    * @param adoptDictionary A TrieWordDictionary to adopt. Deleted when the
    * engine is deleted.
    */
-  CjkBreakEngine(const TrieWordDictionary *adoptDictionary, UErrorCode &status);
+  CjkBreakEngine(const TrieWordDictionary *adoptDictionary, LanguageType type, UErrorCode &status);
 
   /**
    * <p>Virtual destructor.</p>
@@ -236,6 +245,74 @@ class CjkBreakEngine : public DictionaryBreakEngine {
                                            UStack &foundBreaks ) const;
 
 };
+#if 0
+/*******************************************************************
+ * KoreanBreakEngine
+ */
+
+/**
+ * <p>KoreanBreakEngine carries out word breaking for Hangul characters by
+ * calculating the costs for each word break.</p>
+ */
+class KoreanBreakEngine : public CjkBreakEngine {
+ private:
+    /**
+     * The set of characters handled by this engine
+     * @internal
+     */
+
+  UnicodeSet                fKoreanWordSet;
+  
+ public:
+
+  /**
+   * <p>Default constructor.</p>
+   *
+   * @param adoptDictionary A TrieWordDictionary to adopt. Deleted when the
+   * engine is deleted.
+   */
+  KoreanBreakEngine(const TrieWordDictionary *adoptDictionary, UErrorCode &status);
+
+  /**
+   * <p>Virtual destructor.</p>
+   */
+  virtual ~KoreanBreakEngine();
+};
+
+
+/*******************************************************************
+ * CJBreakEngine
+ */
+
+/**
+ * <p>CJBreakEngine carries out word breaking for Chinese and Japanese
+ * characters by calculating the costs for each word break.</p>
+ */
+class CJBreakEngine : public CjkBreakEngine {
+ private:
+    /**
+     * The set of characters handled by this engine
+     * @internal
+     */
+
+  UnicodeSet                fCJWordSet;
+
+ public:
+
+  /**
+   * <p>Default constructor.</p>
+   *
+   * @param adoptDictionary A TrieWordDictionary to adopt. Deleted when the
+   * engine is deleted.
+   */
+ CJBreakEngine(const TrieWordDictionary *adoptDictionary, UErrorCode &status);
+
+  /**
+   * <p>Virtual destructor.</p>
+   */
+  virtual ~CJBreakEngine();
+};
+#endif
 
 U_NAMESPACE_END
 

@@ -162,7 +162,16 @@
 <data>•abc<200>\U0001D800•def<200>\U0001D3FF• •</data>
 
 # Hiragana & Katakana stay together, but separates from each other and Latin.
-<data>•abc<200>\N{HIRAGANA LETTER SMALL A}<300>\N{HIRAGANA LETTER VU}\N{COMBINING ACUTE ACCENT}<300>\N{HIRAGANA ITERATION MARK}<300>\N{KATAKANA LETTER SMALL A}\N{KATAKANA ITERATION MARK}\N{HALFWIDTH KATAKANA LETTER WO}\N{HALFWIDTH KATAKANA LETTER N}<300>def<200>#•</data>
+# *** what to do about theoretical combos of chars? i.e. hiragana + accent
+#<data>•abc<200>\N{HIRAGANA LETTER SMALL A}<300>\N{HIRAGANA LETTER VU}\N{COMBINING ACUTE ACCENT}<300>\N{HIRAGANA ITERATION MARK}<300>\N{KATAKANA LETTER SMALL A}\N{KATAKANA ITERATION MARK}\N{HALFWIDTH KATAKANA LETTER WO}\N{HALFWIDTH KATAKANA LETTER N}<300>def<200>#•</data>
+
+# more Japanese tests
+# resolve: which Jap and Chinese dictionaries to use?
+#<data>•ど<300>ー<300>せ<300>日本語<300>を<300>勉強<300>する<300>理由<300>について<300>　•て<300>こと<300>は<300>我<300>でも<300>知<300>ら<300>も<300>い<300>こと<300>なんだ<300>。•</data>
+
+# Testing of Chinese segmentation
+<data>•400<400>余名<400>中央<400>委员<400>和<400>中央<400>候补<400>委员<400>都<400>领<400>到了<400>“•推荐<400>票<400>”•，•有<100>资格<100>在<100>200<100></data>
+#多名符合条件的<400>63•岁以下中共正部级干部中<400>，•选出他们属意的中央政治局委员以向政治局常委会举荐<400>。•</data>
 
 # Words with interior formatting characters
 <data>•def\N{COMBINING ACUTE ACCENT}\N{SYRIAC ABBREVIATION MARK}ghi<200> •</data>
@@ -177,11 +186,16 @@
 #      it correctly), first as precomposed syllables, and then as conjoining jamo.
 #      Both sequences should be semantically identical and break the same way.
 #      precomposed syllables...
-<data>•\uc0c1\ud56d<200> •\ud55c\uc778<200> •\uc5f0\ud569<200> •\uc7a5\ub85c\uad50\ud68c<200> •\u1109\u1161\u11bc\u1112\u1161\u11bc<200> •\u1112\u1161\u11ab\u110b\u1175\u11ab<200> •\u110b\u1167\u11ab\u1112\u1161\u11b8<200> •\u110c\u1161\u11bc\u1105\u1169\u1100\u116d\u1112\u116c<200> •</data>
+<data>•\uc0c1\ud56d<200> •\ud55c<200>\uc778<200> •\uc5f0\ud569<200> •\uc7a5\ub85c\uad50\ud68c<200> •\u1109\u1161\u11bc\u1112\u1161\u11bc<200> •\u1112\u1161\u11ab\u110b\u1175\u11ab<200> •\u110b\u1167\u11ab\u1112\u1161\u11b8<200> •\u110c\u1161\u11bc\u1105\u1169\u1100\u116d\u1112\u116c<200> •</data>
 
-<data>•abc<200>\u4e01<400>\u4e02<400>\u3005<200>\u4e03<400>\u4e03<400>abc<200> •</data>
+# more Korean tests
+<data>•\ud55c\uad6d<200>\ub300\ud559\uad50<200>\uc790\uc5f0<200>\uacfc\ud559<200>\ub300\ud559<200>\ubb3c\ub9ac\ud559\uacfc<200></data>
+<data>•\ud604\uc7ac<200>\ub294<200> •\uac80\ucc30<200>\uc774<200> •\ubd84\uc2dd<200>\ud68c\uacc4<200>\ubb38\uc81c<200>\ub97c<200> •\uc870\uc0ac<200>\ud560<200> •\uac00\ub2a5\uc131<200>\uc740<200> •\uc5c6\ub2e4<200>\u002e•</data>
 
-<data>•\u06c9\uc799\ufffa<200></data>
+<data>•abc<200>\u4e01<200>\u4e02<200>\u3005<200>\u4e03\u4e03<200>abc<200> •</data>
+
+<data>•\u06c9<200>\uc799<200>\ufffa<200></data> #issue: rule status for FFFA is 200 forward, 0 reverse. delete rule?
+
 
 #      
 #      Try some words from other scripts.
@@ -208,7 +222,7 @@
 #
 #  Failures from monkey tests
 #
-<data>•\u8527<400>\u02ba<200>\u0027\u0d42•\u00b7•\u09ea<100></data>
+<data>•\u8527<200>\u02ba<200>\u0027\u0d42•\u00b7•\u09ea<100></data>
 
 #
 # Jitterbug 5276 - treat Japanese half width voicing marks as Grapheme Extend
