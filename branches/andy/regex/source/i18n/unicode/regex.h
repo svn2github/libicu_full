@@ -517,7 +517,7 @@ public:
 
 
    /**
-    *   Attempts to match the entire input string against the pattern.
+    *   Attempts to match the entire input region against the pattern.
     *    @param   status     A reference to a UErrorCode to receive any errors.
     *    @return TRUE if there is a match
     *    @stable ICU 2.4
@@ -525,8 +525,10 @@ public:
     virtual UBool matches(UErrorCode &status);
 
    /**
-    *   Attempts to match the input string, beginning at startIndex, against the pattern.
-    *   The match must extend to the end of the input string.
+    *   Resets the matcher, then attempts to match the input beginning 
+    *   at the specified startIndex, and extending to the end of the input.
+    *   The input region is reset to include the entire input string.
+    *   A successful match must extend to the end of the input.
     *    @param   startIndex The input string index at which to begin matching.
     *    @param   status     A reference to a UErrorCode to receive any errors.
     *    @return TRUE if there is a match
@@ -538,9 +540,10 @@ public:
 
 
    /**
-    *   Attempts to match the input string, starting from the beginning, against the pattern.
-    *   Like the matches() method, this function always starts at the beginning of the input string;
-    *   unlike that function, it does not require that the entire input string be matched.
+    *   Attempts to match the input string, starting from the beginning of the region,
+    *   against the pattern.  Like the matches() method, this function 
+    *   always starts at the beginning of the input region;
+    *   unlike that function, it does not require that the entire region be matched.
     *
     *   <p>If the match succeeds then more information can be obtained via the <code>start()</code>,
     *     <code>end()</code>, and <code>group()</code> functions.</p>
@@ -699,6 +702,12 @@ public:
     *   The effect is to remove any memory of previous matches,
     *       and to cause subsequent find() operations to begin at
     *       the specified position in the input string.
+    * <p>
+    *   The matcher's region is reset to its default, wich is the entire
+    *   input string.
+    * <p>
+    *   An alternative to this function is to set a match region
+    *   beginning at the desired beginning at the desired index.
     *
     *   @return this RegexMatcher.
     *   @stable ICU 2.8
@@ -1025,6 +1034,8 @@ private:
     RegexMatcher &operator =(const RegexMatcher &rhs);
     friend class RegexPattern;
     friend class RegexCImpl;
+    
+    void resetPreserveRegion();  // Reset matcher state, but preserve any region.
 
     //
     //  MatchAt   This is the internal interface to the match engine itself.
