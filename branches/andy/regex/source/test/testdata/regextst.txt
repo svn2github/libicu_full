@@ -28,6 +28,8 @@
 #                                          for the last find() in the sequence.
 #                                   G      Only check match / no match.  Do not check capture groups.
 #                                   E      Pattern compilation error expected
+#                                   M      Use matches() rather than find().
+#
 #                                 White space must be present between the flags and the match string.
 #
 
@@ -803,6 +805,17 @@
 # bug 5386  Java compatibility for set expressions
 #
 "[a-z&&[cde]]+"                   "ab<0>cde</0>fg"
+
+#
+# bug 6019  matches() needs to backtrack and check for a longer match if the
+#                     first match(es) found don't match the entire input.
+#
+"a?|b"                            "<0></0>b"
+"a?|b"                         M  "<0>b</0>"
+"a?|.*?u|stuff|d"              M  "<0>stuff</0>"
+"a?|.*?(u)|stuff|d"            M  "<0>stuff<1>u</1></0>"
+"a+?"                             "<0>a</0>aaaaaaaaaaaa"
+"a+?"                          M  "<0>aaaaaaaaaaaaa</0>"
 
 #
 #  Random debugging, Temporary

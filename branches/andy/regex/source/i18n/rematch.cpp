@@ -362,7 +362,7 @@ UBool RegexMatcher::find() {
         // No optimization was found. 
         //  Try a match at each input position.
         for (;;) {
-            MatchAt(startPos, fDeferredStatus);
+            MatchAt(startPos, FALSE, fDeferredStatus);
             if (U_FAILURE(fDeferredStatus)) {
                 return FALSE;
             }
@@ -386,7 +386,7 @@ UBool RegexMatcher::find() {
             fMatch = FALSE;
             return FALSE;
         }
-        MatchAt(startPos, fDeferredStatus);
+        MatchAt(startPos, FALSE, fDeferredStatus);
         if (U_FAILURE(fDeferredStatus)) {
             return FALSE;
         }
@@ -402,7 +402,7 @@ UBool RegexMatcher::find() {
                 U16_NEXT(inputBuf, startPos, fRegionLimit, c);  // like c = inputBuf[startPos++];
                 if (c<256 && fPattern->fInitialChars8->contains(c) ||
                     c>=256 && fPattern->fInitialChars->contains(c)) {
-                    MatchAt(pos, fDeferredStatus);
+                    MatchAt(pos, FALSE, fDeferredStatus);
                     if (U_FAILURE(fDeferredStatus)) {
                         return FALSE;
                     }
@@ -428,7 +428,7 @@ UBool RegexMatcher::find() {
                 int32_t pos = startPos;
                 U16_NEXT(inputBuf, startPos, fRegionLimit, c);  // like c = inputBuf[startPos++];
                 if (c == theChar) {
-                    MatchAt(pos, fDeferredStatus);
+                    MatchAt(pos, FALSE, fDeferredStatus);
                     if (U_FAILURE(fDeferredStatus)) {
                         return FALSE;
                     }
@@ -448,7 +448,7 @@ UBool RegexMatcher::find() {
         {
             UChar32  c;
             if (startPos == 0) {
-                MatchAt(startPos, fDeferredStatus);
+                MatchAt(startPos, FALSE, fDeferredStatus);
                 if (U_FAILURE(fDeferredStatus)) {
                     return FALSE;
                 }
@@ -465,7 +465,7 @@ UBool RegexMatcher::find() {
                         if (c == 0x0d && startPos < fRegionLimit && inputBuf[startPos] == 0x0a) {
                             startPos++;
                         }
-                        MatchAt(startPos, fDeferredStatus);
+                        MatchAt(startPos, FALSE, fDeferredStatus);
                         if (U_FAILURE(fDeferredStatus)) {
                             return FALSE;
                         }
@@ -605,7 +605,7 @@ UBool RegexMatcher::lookingAt(UErrorCode &status) {
         return FALSE;
     }
     reset();
-    MatchAt(0, status);
+    MatchAt(0, FALSE, status);
     return fMatch;
 }
 
@@ -623,7 +623,7 @@ UBool RegexMatcher::lookingAt(int32_t start, UErrorCode &status) {
         status = U_INDEX_OUTOFBOUNDS_ERROR;
         return FALSE;
     }
-    MatchAt(start, status);
+    MatchAt(start, FALSE, status);
     return fMatch;
 }
 
@@ -643,7 +643,7 @@ UBool RegexMatcher::matches(UErrorCode &status) {
         return FALSE;
     }
     resetPreserveRegion();
-    MatchAt(fRegionStart, status);
+    MatchAt(fRegionStart, TRUE, status);
     UBool   success  = (fMatch && fMatchEnd==fRegionLimit);
     return success;
 }
@@ -662,7 +662,7 @@ UBool RegexMatcher::matches(int32_t start, UErrorCode &status) {
         status = U_INDEX_OUTOFBOUNDS_ERROR;
         return FALSE;
     }
-    MatchAt(start, status);
+    MatchAt(start, TRUE, status);
     UBool   success  = (fMatch && fMatchEnd==fRegionLimit);
     return success;
 }
@@ -1171,14 +1171,17 @@ inline REStackFrame *RegexMatcher::StateSave(REStackFrame *fp, int32_t savePatId
     fp->fPatIdx = savePatIdx;
     return (REStackFrame *)newFP;
 }
-    
-            
+
+
 //--------------------------------------------------------------------------------
 //
 //   MatchAt      This is the actual matching engine.
 //
+//                  startIdx:    begin matching a this index.
+//                  toEnd:       if true, match must extend to end of the input region
+//
 //--------------------------------------------------------------------------------
-void RegexMatcher::MatchAt(int32_t startIdx, UErrorCode &status) {
+void RegexMatcher::MatchAt(int32_t startIdx, UBool toEnd, UErrorCode &status) {
     UBool       isMatch  = FALSE;      // True if the we have a match.
 
     int32_t     op;                    // Operation from the compiled pattern, split into
@@ -1335,6 +1338,11 @@ void RegexMatcher::MatchAt(int32_t startIdx, UErrorCode &status) {
         case URX_END:
             // The match loop will exit via this path on a successful match,
             //   when we reach the end of the pattern.
+            if (toEnd && fp->fInputIdx != fRegionLimit) {
+                // The pattern matched, but not to the end of input.  Try some more.
+                fp = (REStackFrame *)fStack->popFrame(frameSize);
+                break;
+            }
             isMatch = TRUE;
             goto  breakFromLoop;
 

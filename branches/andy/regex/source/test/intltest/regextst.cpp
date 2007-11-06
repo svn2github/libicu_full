@@ -223,8 +223,9 @@ void RegexTest::regex_find(const UnicodeString &pattern,
     UVector             groupEnds(status);
     UBool               isMatch        = FALSE;
     UBool               failed         = FALSE;
-    int32_t                 numFinds;
-    int32_t                 i;
+    int32_t             numFinds;
+    int32_t             i;
+    UBool               useMatchesFunc   = FALSE;
 
     //
     //  Compile the caller's pattern
@@ -293,6 +294,11 @@ void RegexTest::regex_find(const UnicodeString &pattern,
             numFinds = i;
         }
     }
+    
+    // 'M' flag.  Use matches() instead of find()
+    if (flags.indexOf((UChar)0x4d) >= 0) {
+        useMatchesFunc = TRUE;
+    }
 
     //
     //  Find the tags in the input data, remove them, and record the group boundary
@@ -329,7 +335,11 @@ void RegexTest::regex_find(const UnicodeString &pattern,
     }
 
     for (i=0; i<numFinds; i++) {
-        isMatch = matcher->find();
+        if (useMatchesFunc) {
+            isMatch = matcher->matches(status);
+        } else {
+            isMatch = matcher->find();
+        }
     }
     matcher->setTrace(FALSE);
 
@@ -1501,7 +1511,7 @@ void RegexTest::Extended() {
 
     RegexMatcher    quotedStuffMat("\\s*([\\'\\\"/])(.*?)\\1", 0, status);
     RegexMatcher    commentMat    ("\\s*(#.*)?$", 0, status);
-    RegexMatcher    flagsMat      ("\\s*([ixsmdteEGv2-9]*)([:letter:]*)", 0, status);
+    RegexMatcher    flagsMat      ("\\s*([ixsmdteEGMv2-9]*)([:letter:]*)", 0, status);
 
     RegexMatcher    lineMat("(.*?)\\r?\\n", testString, 0, status);
     UnicodeString   testPattern;   // The pattern for test from the test file.

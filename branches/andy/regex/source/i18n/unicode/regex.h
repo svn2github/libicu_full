@@ -1041,7 +1041,7 @@ private:
     //  MatchAt   This is the internal interface to the match engine itself.
     //            Match status comes back in matcher member variables.
     //
-    void                 MatchAt(int32_t startIdx, UErrorCode &status);
+    void                 MatchAt(int32_t startIdx, UBool toEnd, UErrorCode &status);
     inline void          backTrack(int32_t &inputIdx, int32_t &patIdx);
     UBool                isWordBoundary(int32_t pos);         // perform Perl-like  \b test
     UBool                isUWordBoundary(int32_t pos);        // perform RBBI based \b test
