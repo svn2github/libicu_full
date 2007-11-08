@@ -852,7 +852,7 @@ public:
       virtual RegexMatcher &useAnchoringBounds(UBool b);
 
     /**
-      * Return TRUE if the most recent matching operation touched the end of the
+      * Return TRUE if the most recent matching operation touched the
       *  end of the text being processed.  In this case, additional input text could
       *  change the results of that match.
       *
