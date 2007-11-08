@@ -91,7 +91,7 @@ void RBBITest::runIndexedTest( int32_t index, UBool exec, const char* &name, cha
         case 16: name = "TestMonkey";
              if(exec) {
  #if !UCONFIG_NO_REGULAR_EXPRESSIONS
-//               TestMonkey(params);
+               TestMonkey(params);
  #else
                logln("skipping TestMonkey (UCONFIG_NO_REGULAR_EXPRESSIONS)");
  #endif
@@ -2606,6 +2606,7 @@ private:
     UnicodeSet  *fOtherSet;
     UnicodeSet  *fExtendSet;
     UnicodeSet  *fExtendNumLetSet;
+    UnicodeSet  *fDictionaryCjkSet;
 
     RegexMatcher  *fMatcher;
 
@@ -2620,12 +2621,13 @@ RBBIWordMonkey::RBBIWordMonkey()
 
     fSets            = new UVector(status);
 
+    // exclude Hangul syllables from ALetterSet during testing
+    // leave CJK dictionary characters out from the monkey tests!
     fALetterSet  = new UnicodeSet("[\\p{Word_Break = ALetter}"
-            "[\\p{Line_Break = Complex_Context}"
+             "[\\p{Line_Break = Complex_Context}"
             "-\\p{Grapheme_Cluster_Break = Extend}"
             "-\\p{Grapheme_Cluster_Break = Control}"
-            "-\\p{Script = Han}"
-            "-[\\uac00-\\ud7a3]]]",
+            "]]",
             status);
     //fALetterSet      = new UnicodeSet("[\\p{Word_Break = ALetter}]",      status);
     fKatakanaSet     = new UnicodeSet("[\\p{Word_Break = Katakana}-[\\uff9e\\uff9f]]",     status);
@@ -2636,6 +2638,8 @@ RBBIWordMonkey::RBBIWordMonkey()
     fExtendNumLetSet = new UnicodeSet("[\\p{Word_Break = ExtendNumLet}]", status);
     //fExtendSet       = new UnicodeSet("[\\p{Word_Break = Extend}]", status);
     fExtendSet       = new UnicodeSet("[\\p{Grapheme_Cluster_Break = Extend}\\uff9e\\uff9f]", status);
+    fDictionaryCjkSet= new UnicodeSet("[[\\uac00-\\ud7a3][:Han:][:Hiragana:]]", status);
+    fALetterSet->removeAll(*fDictionaryCjkSet);
 
     fOtherSet        = new UnicodeSet();
     if(U_FAILURE(status)) {
@@ -2652,9 +2656,10 @@ RBBIWordMonkey::RBBIWordMonkey()
     fOtherSet->removeAll(*fExtendNumLetSet);
     fOtherSet->removeAll(*fFormatSet);
     fOtherSet->removeAll(*fExtendSet);
+    fOtherSet->removeAll(*fDictionaryCjkSet);
 
     fSets->addElement(fALetterSet,   status);
-    fSets->addElement(fKatakanaSet,  status);
+    //fSets->addElement(fKatakanaSet,  status); //TODO: work out how to test katakana
     fSets->addElement(fMidLetterSet, status);
     fSets->addElement(fMidNumSet,    status);
     fSets->addElement(fNumericSet,   status);
@@ -3893,6 +3898,7 @@ void RBBITest::TestWordBreaks(void)
     // note: Hangul characters taken out
     static const char *strlist[] =
     {
+//            "\\ufe4f\\u09ef\\U0001245c\\u2044\\U000e0059\\ufa4a\\ufe33\\u203f\\u00b7\\u05f4\\u1818",
             "\\U000e0032\\u0097\\u0f94\\uc2d8\\u05f4\\U000e0031\\u060d",
             "\\U000e0037\\u1202\\u003a\\U000e0031\\u064d\\u0bea\\U000e0040\\u003b",
             "\\u0589\\U0001d7f3\\U000e0074\\u1810\\u200e\\U000e004b\\u179c\\u0027\\U000e0061\\u003a",

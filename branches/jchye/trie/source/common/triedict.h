@@ -71,6 +71,11 @@ class U_COMMON_API TrieWordDictionary : public UMemory {
    */
   virtual ~TrieWordDictionary();
 
+  /**
+   * <p>Returns true if the dictionary contains values associated with each word.</p>
+   */
+  virtual UBool getValued() const = 0;
+
  /**
   * <p>Find dictionary words that match the text.</p>
   *
@@ -88,7 +93,7 @@ class U_COMMON_API TrieWordDictionary : public UMemory {
                               int32_t *lengths,
                               int &count,
                               int limit,
-                              uint16_t *logprobs = NULL) const = 0;
+                              uint16_t *values = NULL) const = 0;
 
   /**
    * <p>Return a StringEnumeration for iterating all the words in the dictionary.</p>
@@ -98,7 +103,7 @@ class U_COMMON_API TrieWordDictionary : public UMemory {
    * The caller is responsible for closing it. The order is unspecified.
    */
   virtual StringEnumeration *openWords( UErrorCode &status ) const = 0;
-
+  
 };
 
 /*******************************************************************
@@ -127,7 +132,7 @@ class U_COMMON_API MutableTrieDictionary : public TrieWordDictionary {
      */
   UText    *fIter;
   
-  UBool hasValue;
+  UBool fValued;
 
   friend class CompactTrieDictionary;   // For fast conversion
 
@@ -149,12 +154,19 @@ class U_COMMON_API MutableTrieDictionary : public TrieWordDictionary {
   virtual ~MutableTrieDictionary();
 
   /**
-   * Indicate whether the MutableTrieDictionary should store values associated with each word
+   * Indicate whether the MutableTrieDictionary stores values associated with each word
    */
-  void storeValues(UBool containsValue){
-      hasValue = containsValue;
+  void setValued(UBool valued){
+      fValued = valued;
   }
-  
+
+  /**
+   * <p>Returns true if the dictionary contains values associated with each word.</p>
+   */
+  virtual UBool getValued() const {
+      return fValued;
+  }
+
  /**
   * <p>Find dictionary words that match the text.</p>
   *
@@ -260,7 +272,6 @@ class U_COMMON_API CompactTrieDictionary : public TrieWordDictionary {
      * The root node of the trie
      */
 
-    //const ManageCompactTrieHeader   *fData;
     CompactTrieInfo                 *fInfo; 
 
     /**
@@ -298,6 +309,11 @@ class U_COMMON_API CompactTrieDictionary : public TrieWordDictionary {
    * <p>Virtual destructor.</p>
    */
   virtual ~CompactTrieDictionary();
+
+  /**
+   * <p>Returns true if the dictionary contains values associated with each word.</p>
+   */
+  virtual UBool getValued() const;
 
  /**
   * <p>Find dictionary words that match the text.</p>

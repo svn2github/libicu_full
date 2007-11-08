@@ -49,15 +49,18 @@ $Control        = [\p{Grapheme_Cluster_Break = Control}];
 
 $HangulSyllable = [\uac00-\ud7a3];
 $ComplexContext = [:LineBreak = Complex_Context:];
-$dictionary = [$ComplexContext $HangulSyllable $Han $Hiragana $Katakana];
+$KanaKanji      = [$Han $Hiragana $Katakana];
+$dictionaryCJK  = [$KanaKanji $HangulSyllable];
+$dictionary     = [$ComplexContext $dictionaryCJK];
 
-# leave katakana script out of ALetterPlus because it has its own rules
-$ALetterPlus  = [$ALetter [$dictionary-$Katakana-$Extend-$Control]];
+# leave CJK scripts out of ALetterPlus
+$ALetterPlus  = [$ALetter-$dictionaryCJK [$ComplexContext-$Extend-$Control]];
 
 #
 #  Rules 3    Grapheme Clusters behave like their first char.
 #  Rule  4    Ignore trailing Format characters  (Also see note in TR 29)
 #
+# TODO: check if handling of katakana in dictionary makes rules incorrect/void.
 $KatakanaEx     = $Katakana     ($Extend |  $Format)*;
 $ALetterEx      = $ALetterPlus  ($Extend |  $Format)*;
 $MidLetterEx    = $MidLetter    ($Extend |  $Format)*;
@@ -83,8 +86,8 @@ $CR $LF  ($Extend | $Format)*;
 #          of a region of Text.   The rule here comes into play when the start of text
 #          begins with a group of Format chars, or with a "word" consisting of a single
 #          char that is not in any of the listed word break categories followed by
-#          format char(s).
-.? ($Extend |  $Format)+;
+#          format char(s), or is not a CJK dictionary character.
+[^$dictionaryCJK]? ($Extend |  $Format)+;
 
 
 $NumericEx {100};
@@ -131,7 +134,11 @@ $ExtendNumLetEx $ALetterEx  {200};    #  (13b)
 $ExtendNumLetEx $NumericEx  {100};    #  (13b)
 $ExtendNumLetEx $KatakanaEx {300};    #  (13b)
  
-
+# special handling for CJK characters: chain for later dictionary segmentation
+$HangulSyllable {200};
+$HangulSyllable $HangulSyllable {200};
+$KanaKanji $KanaKanji {300}; 
+#TODO: what about dictionary matches with both Han and kana characters? what should status value be?
 
 ## -------------------------------------------------
 
@@ -148,7 +155,7 @@ $BackExtendNumLetEx= ($Format | $Extend)* $ExtendNumLet;
 ($Format | $Extend)* $LF $CR;
 
 # rule 4
-($Format | $Extend)*  .?;
+($Format | $Extend)*  [^$dictionaryCJK]?;
 
 # rule 5
 
@@ -183,6 +190,12 @@ $BackKatakanaEx $BackKatakanaEx;
 #
 ($BackALetterEx | $BackNumericEx | $BackKatakanaEx | $BackExtendNumLetEx) $BackExtendNumLetEx; 
 $BackExtendNumLetEx ($BackALetterEx | $BackNumericEx | $BackKatakanaEx);
+
+# special handling for CJK characters: chain for later dictionary segmentation
+$HangulSyllable {200};
+$HangulSyllable $HangulSyllable {200};
+$KanaKanji $KanaKanji {300}; 
+#TODO: what about dictionary matches with both Han and kana characters? what should status value be?
 
 ## -------------------------------------------------
 

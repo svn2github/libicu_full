@@ -60,7 +60,7 @@
 
 #include "umutex.h"
 #include "cmemory.h"
-#include <stdio.h>
+
 /*
  * A note on ICU Mutex Initialization and ICU startup:
  *
@@ -199,13 +199,12 @@ U_CAPI void  U_EXPORT2
 umtx_lock(UMTX *mutex)
 {
     if (mutex == NULL) {
-//        printf("mutex is null\n");
         mutex = &gGlobalMutex;
     }
 
     if (*mutex == NULL) {
         /* Lock of an uninitialized mutex.  Initialize it before proceeding.   */
-        umtx_init(mutex);
+        umtx_init(mutex);    
     }
 
     if (pMutexLockFn != NULL) {

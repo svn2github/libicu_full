@@ -1,8 +1,8 @@
 /**
- *******************************************************************************
- * Copyright (C) 2006, International Business Machines Corporation and others. *
- * All Rights Reserved.                                                        *
- *******************************************************************************
+ **********************************************************************************
+ * Copyright (C) 2006,2007, International Business Machines Corporation and others.
+ * All Rights Reserved.                                                       
+ **********************************************************************************
  */
 
 #ifndef DICTBE_H
@@ -190,7 +190,7 @@ class ThaiBreakEngine : public DictionaryBreakEngine {
  * CjkBreakEngine
  */
 
-//indicates language/script that the CjkBreakEngine handles
+//indicates language/script that the CjkBreakEngine will handle
 enum LanguageType {
     kKorean,
     kChineseJapanese
@@ -198,7 +198,7 @@ enum LanguageType {
 
 /**
  * <p>CjkBreakEngine is a kind of DictionaryBreakEngine that uses a
- * TrieWordDictionary with log-probabilities associated with each word and
+ * TrieWordDictionary with costs associated with each word and
  * Viterbi decoding to determine CJK-specific breaks.</p>
  */
 class CjkBreakEngine : public DictionaryBreakEngine {
@@ -220,7 +220,8 @@ class CjkBreakEngine : public DictionaryBreakEngine {
    * <p>Default constructor.</p>
    *
    * @param adoptDictionary A TrieWordDictionary to adopt. Deleted when the
-   * engine is deleted.
+   * engine is deleted. The TrieWordDictionary must contain costs for each word
+   * in order for the dictionary to work properly.
    */
   CjkBreakEngine(const TrieWordDictionary *adoptDictionary, LanguageType type, UErrorCode &status);
 
@@ -229,6 +230,28 @@ class CjkBreakEngine : public DictionaryBreakEngine {
    */
   virtual ~CjkBreakEngine();
 
+#if 0
+  /**
+   * <p>Find any breaks within a run in the supplied text.</p>
+   *
+   * @param text A UText representing the text. The
+   * iterator is left at the end of the run of characters which the engine
+   * is capable of handling.
+   * @param startPos The start of the run within the supplied text.
+   * @param endPos The end of the run within the supplied text.
+   * @param reverse Whether the caller is looking for breaks in a reverse
+   * direction.
+   * @param breakType The type of break desired, or -1.
+   * @param foundBreaks An allocated C array of the breaks found, if any
+   * @return The number of breaks found.
+   */
+   virtual int32_t findBreaks( UText *text,
+                               int32_t startPos,
+                               int32_t endPos,
+                               UBool reverse,
+                               int32_t breakType,
+                               UStack &foundBreaks ) const;
+#endif 
  protected:
  /**
   * <p>Divide up a range of known dictionary characters.</p>

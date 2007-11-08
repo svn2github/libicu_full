@@ -323,7 +323,8 @@ int  main(int argc, char **argv) {
         }
         
         UnicodeString valueString;
-        if(uc == 0x0009){ //separator is a tab char, read in number after tab
+        UChar candidateValue;
+        if(uc == 0x0009){ //separator is a tab char, read in number after space
         	while (uc && u_isspace(uc)) {
         		uc = *current++;
         	}
@@ -335,16 +336,16 @@ int  main(int argc, char **argv) {
         
         if (length > 0) {
             if(valueString.length() > 0){
-                mtd->storeValues(TRUE);
+                mtd->setValued(TRUE);
 
                 uint32_t value = 0;
-                char s[20];
-                valueString.extract(0,valueString.length(), s, 20);
+                char s[valueString.length()];
+                valueString.extract(0,valueString.length(), s, valueString.length());
                 //fprintf(stderr, "valueString=%s\n", s);
                 int n = sscanf(s, "%ud", &value);
                 //fprintf(stderr, "value=%d n=%d\n", value, n);
-                //restrict values to 8 bits for now
                 U_ASSERT(n == 1);
+                //restrict values to 8 bits for now
                 U_ASSERT(value >= 0 && value < 256); 
                 mtd->addWord(candidate, length, status, (uint16_t)value);
             } else {
