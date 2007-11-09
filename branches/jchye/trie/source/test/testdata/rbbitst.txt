@@ -166,11 +166,16 @@
 #<data>•abc<200>\N{HIRAGANA LETTER SMALL A}<300>\N{HIRAGANA LETTER VU}\N{COMBINING ACUTE ACCENT}<300>\N{HIRAGANA ITERATION MARK}<300>\N{KATAKANA LETTER SMALL A}\N{KATAKANA ITERATION MARK}\N{HALFWIDTH KATAKANA LETTER WO}\N{HALFWIDTH KATAKANA LETTER N}<300>def<200>#•</data>
 
 #test normalization/dictionary handling of halfwidth katakana: same dictionary phrase in fullwidth and halfwidth
-<data>•イスラマバード<300>イスラマﾊﾞーﾄﾞ<300></data>
+<data>•イスラマバード<400>イスラマﾊﾞーﾄﾞ<400></data>
 
 # more Japanese tests
 # resolve: which Jap and Chinese dictionaries to use?
-<data>•どー<300>せ<300>日本語<300>を<300>勉強<300>す<300>る<300>理由<300>に<300>つい<300>て<300>　•て<300>こと<300>は<300>我<300>でも<300>知<300>ら<300>も<300>い<300>こと<300>なん<300>だ<300>。•</data>
+<data>•どー<400>せ<400>日本語<400>を<400>勉強<400>す<400>る<400>理由<400>に<400>つい<400>て<400>　•て<400>こと<400>は<400>我<400>でも<400>知<400>ら<400>も<400>い<400>こと<400>なん<400>だ<400>。•</data>
+#<data>•どー<500>せ<500>日本語<500>を<500>勉強<500></data>
+#す<500>る<500>理由<500>に<500>つい<500>て<500>　•て<500>こと<500>は<500>我<500>でも<500>知<500>ら<500>も<500>い<500>こと<500>なん<500>だ<500>。•</data>
+
+# Testing of word boundary for dictionary word containing both kanji and kana
+<data>•中だるみ<400>蔵王の森<400>ウ離島<400></data>
 
 # Testing of Chinese segmentation (taken from a Chinese news article)
 <data>•400<100>余名<400>中央<400>委员<400>和<400>中央<400>候补<400>委员<400>都<400>领<400>到了<400>“•推荐<400>票<400>”•，•有<400>资格<400>在<400>200<100>多名<400>符合<400>条件<400>的<400>63<100>岁<400>以下<400>中共<400>正<400>部级<400>干部<400>中<400>，•选出<400>他们<400>属<400>意<400>的<400>中央<400>政治<400>局<400>委员<400>以<400>向<400>政治<400>局<400>常委<400>会<400>举荐<400>。•</data>

@@ -30,6 +30,7 @@ $VoiceMarks   = [\uff9e\uff9f];
 $Format       = [\p{Word_Break = Format}];
 $Hiragana     = [:Hiragana:];
 $Katakana     = [\p{Word_Break = Katakana}-$VoiceMarks];
+#$Kana         = [$Hiragana $Katakana];
 $Han          = [:Han:];
 $ALetter      = [\p{Word_Break = ALetter}];
 $MidLetter    = [\p{Word_Break = MidLetter}];
@@ -89,11 +90,12 @@ $CR $LF  ($Extend | $Format)*;
 #          format char(s), or is not a CJK dictionary character.
 [^$dictionaryCJK]? ($Extend |  $Format)+;
 
-
+# 11 nov 07: changed statuses for kana to 400: more general for dictionary purposes
 $NumericEx {100};
 $ALetterEx {200};
-$KatakanaEx {300};
-$HiraganaEx {300};
+$HangulSyllable {200};
+$KatakanaEx {400}; #originally 300
+$HiraganaEx {400}; #originally 300
 $IdeographicEx {400};
 
 # rule 5
@@ -121,24 +123,23 @@ $NumericEx $MidNumEx $NumericEx {100};
 
 # rule 13
 
-$KatakanaEx  $KatakanaEx {300};
+#($KatakanaEx|$HiraganaEx) ($KatakanaEx|$HiraganaEx) {300};
+$KatakanaEx $KatakanaEx {400};
 
 # rule 13a/b
 
 $ALetterEx      $ExtendNumLetEx {200};    #  (13a)
 $NumericEx      $ExtendNumLetEx {100};    #  (13a)
-$KatakanaEx     $ExtendNumLetEx {300};    #  (13a)
+$KatakanaEx     $ExtendNumLetEx {400};    #  (13a)
 $ExtendNumLetEx $ExtendNumLetEx {200};    #  (13a)
 
 $ExtendNumLetEx $ALetterEx  {200};    #  (13b)
 $ExtendNumLetEx $NumericEx  {100};    #  (13b)
-$ExtendNumLetEx $KatakanaEx {300};    #  (13b)
+$ExtendNumLetEx $KatakanaEx {400};    #  (13b)
  
 # special handling for CJK characters: chain for later dictionary segmentation
-$HangulSyllable {200};
 $HangulSyllable $HangulSyllable {200};
-$KanaKanji $KanaKanji {300}; 
-#TODO: what about dictionary matches with both Han and kana characters? what should status value be?
+$KanaKanji $KanaKanji {400}; #different rule status if both kanji and kana found
 
 ## -------------------------------------------------
 
@@ -150,6 +151,7 @@ $BackMidNumEx      = ($Format | $Extend)* $MidNum;
 $BackMidLetterEx   = ($Format | $Extend)* $MidLetter;
 $BackKatakanaEx    = ($Format | $Extend)* $Katakana;
 $BackExtendNumLetEx= ($Format | $Extend)* $ExtendNumLet;
+$BackHiraganaEx    = ($Extend | $Format)* $Hiragana;
 
 # rule 3
 ($Format | $Extend)* $LF $CR;
@@ -184,7 +186,10 @@ $BackNumericEx $BackMidNumEx $BackNumericEx;
 
 # rule 13
 
+#($BackKatakanaEx|$Hiragana) ($BackKatakanaEx|$Hiragana)+;
 $BackKatakanaEx $BackKatakanaEx;
+#$BackHiraganaEx $BackHiraganaEx;
+#$Kana {500};
 
 # rules 13 a/b
 #
@@ -192,10 +197,8 @@ $BackKatakanaEx $BackKatakanaEx;
 $BackExtendNumLetEx ($BackALetterEx | $BackNumericEx | $BackKatakanaEx);
 
 # special handling for CJK characters: chain for later dictionary segmentation
-$HangulSyllable {200};
-$HangulSyllable $HangulSyllable {200};
-$KanaKanji $KanaKanji {300}; 
-#TODO: what about dictionary matches with both Han and kana characters? what should status value be?
+$HangulSyllable $HangulSyllable;
+$KanaKanji $KanaKanji; #different rule status if both kanji and kana found
 
 ## -------------------------------------------------
 

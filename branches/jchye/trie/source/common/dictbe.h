@@ -230,28 +230,6 @@ class CjkBreakEngine : public DictionaryBreakEngine {
    */
   virtual ~CjkBreakEngine();
 
-#if 0
-  /**
-   * <p>Find any breaks within a run in the supplied text.</p>
-   *
-   * @param text A UText representing the text. The
-   * iterator is left at the end of the run of characters which the engine
-   * is capable of handling.
-   * @param startPos The start of the run within the supplied text.
-   * @param endPos The end of the run within the supplied text.
-   * @param reverse Whether the caller is looking for breaks in a reverse
-   * direction.
-   * @param breakType The type of break desired, or -1.
-   * @param foundBreaks An allocated C array of the breaks found, if any
-   * @return The number of breaks found.
-   */
-   virtual int32_t findBreaks( UText *text,
-                               int32_t startPos,
-                               int32_t endPos,
-                               UBool reverse,
-                               int32_t breakType,
-                               UStack &foundBreaks ) const;
-#endif 
  protected:
  /**
   * <p>Divide up a range of known dictionary characters.</p>

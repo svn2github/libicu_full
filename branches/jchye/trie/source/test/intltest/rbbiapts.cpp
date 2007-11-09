@@ -643,6 +643,7 @@ void RBBIAPITest::TestQuoteGrouping() {
 void RBBIAPITest::TestRuleStatus() {
      UChar str[30];
      //no longer test Han or hiragana breaking here: ruleStatusVec would return nothing
+     // changed UBRK_WORD_KANA to UBRK_WORD_IDEO
      u_unescape("plain word 123.45 \\u30a1\\u30a2 ",
               // 012345678901234567  8      9    0      
               //                     Katakana      
@@ -651,11 +652,11 @@ void RBBIAPITest::TestRuleStatus() {
      int32_t bounds1[] = {0, 5, 6, 10, 11, 17, 18, 20, 21};
      int32_t tag_lo[]  = {UBRK_WORD_NONE,     UBRK_WORD_LETTER, UBRK_WORD_NONE,    UBRK_WORD_LETTER,
                           UBRK_WORD_NONE,     UBRK_WORD_NUMBER, UBRK_WORD_NONE,
-                          UBRK_WORD_KANA,     UBRK_WORD_NONE};
+                          UBRK_WORD_IDEO,     UBRK_WORD_NONE};
 
      int32_t tag_hi[]  = {UBRK_WORD_NONE_LIMIT, UBRK_WORD_LETTER_LIMIT, UBRK_WORD_NONE_LIMIT, UBRK_WORD_LETTER_LIMIT,
                           UBRK_WORD_NONE_LIMIT, UBRK_WORD_NUMBER_LIMIT, UBRK_WORD_NONE_LIMIT,
-                          UBRK_WORD_KANA_LIMIT, UBRK_WORD_NONE_LIMIT};
+                          UBRK_WORD_IDEO_LIMIT, UBRK_WORD_NONE_LIMIT};
 
      UErrorCode status=U_ZERO_ERROR;
 
