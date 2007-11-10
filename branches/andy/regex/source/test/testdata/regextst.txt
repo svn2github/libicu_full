@@ -1,4 +1,4 @@
-﻿# Copyright (c) 2001-2007 International Business Machines
+# Copyright (c) 2001-2007 International Business Machines
 # Corporation and others. All Rights Reserved.
 #
 #  file:
@@ -13,11 +13,15 @@
 #               <tagged string> = text, with the start and end of each
 #                                 capture group tagged with <n>...</n>.  The overall match,
 #                                 if any, is group 0, as in <0>matched text</0>
+#
+#                                  A region can be specified with <r>...</r> tags.
+#
 #               <flags>         = any combination of
 #                                   i      case insensitive match
 #                                   x      free spacing and comments
 #                                   s      dot-matches-all mode
-#                                   m      multi-line mode.  $ and ^ match at embedded new-lines
+#                                   m      multi-line mode.  
+#                                            ($ and ^ match at embedded new-lines)
 #                                   v      If icu configured without break iteration, this
 #                                          regex test pattern should not compile.
 #                                   e      set the UREGEX_ERROR_ON_UNKNOWN_ESCAPES flag
@@ -29,6 +33,14 @@
 #                                   G      Only check match / no match.  Do not check capture groups.
 #                                   E      Pattern compilation error expected
 #                                   M      Use matches() rather than find().
+#
+#                                   a      Use non-Anchoring Bounds.
+#                                   b      Use Transparent Bounds.
+#                                          The a and t options only make a difference if
+#                                          a <r>region</r> has been specified in the string.
+#                                   z|Z    hitEnd was expected(z) or not expected (Z).
+#                                          With neither, hitEnd is not checked.
+#                                   y|Y    Require End expeted(y) or not expected (Y).
 #
 #                                 White space must be present between the flags and the match string.
 #
@@ -545,6 +557,10 @@
 ".{6}"                         s  "<0>123\u000a\u000dX</0>Y"
 
 
+#
+# Ranges
+#
+".*"                              "abc<r><0>def</0></r>ghi"
 
 #
 # [set] parsing, systematically run through all of the parser states.

@@ -320,6 +320,8 @@ UBool RegexMatcher::find() {
         return FALSE;
     }
 
+    // TODO:  FAILURE HERE WITH REGIONS, fMatchEnd resets to 0, not regionStart.
+    //          Watch for interactions with replace operations when fixing.
     int32_t startPos = fMatchEnd;
 
     if (fMatch) {
@@ -506,7 +508,7 @@ UBool RegexMatcher::find(int32_t start, UErrorCode &status) {
     }
     this->reset();                        // Note:  Reset() is specified by Java Matcher documentation.
                                           //        This will reset the region to be the full input length.
-    if (start < 0 || start > fRegionLimit) {
+    if (start < fRegionStart || start > fRegionLimit) {
         status = U_INDEX_OUTOFBOUNDS_ERROR;
         return FALSE;
     }
