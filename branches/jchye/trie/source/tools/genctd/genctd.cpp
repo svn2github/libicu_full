@@ -315,6 +315,7 @@ int  main(int argc, char **argv) {
     UChar *candidate = current;
     uc = *current++;
     int32_t length = 0;
+    int count = 0;
             
     while (uc) {
         while (uc && !u_isspace(uc)) {
@@ -335,6 +336,7 @@ int  main(int argc, char **argv) {
         }
         
         if (length > 0) {
+            count++;
             if(valueString.length() > 0){
                 mtd->setValued(TRUE);
 
@@ -353,8 +355,8 @@ int  main(int argc, char **argv) {
             }
 
             if (U_FAILURE(status)) {
-                fprintf(stderr, "MutableTrieDictionary::addWord: ICU Error \"%s\"\n",
-                        u_errorName(status));
+                fprintf(stderr, "MutableTrieDictionary::addWord: ICU Error \"%s\" at line %d in input file\n",
+                        u_errorName(status), count);
                 exit(status);
             }
         }
