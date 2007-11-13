@@ -668,36 +668,40 @@ void TimeZone::getOffset(UDate date, UBool local, int32_t& rawOffset,
     }
 
     rawOffset = getRawOffset();
-
-    // Convert to local wall millis if necessary
     if (!local) {
         date += rawOffset; // now in local standard millis
     }
 
-    // When local==FALSE, we might have to recompute. This loop is
-    // executed once, unless a recomputation is required; then it is
-    // executed twice.
+    // When local == TRUE, date might not be in local standard
+    // millis.  getOffset taking 7 parameters used here assume
+    // the given time in day is local standard time.
+    // At STD->DST transition, there is a range of time which
+    // does not exist.  When 'date' is in this time range
+    // (and local == TRUE), this method interprets the specified
+    // local time as DST.  At DST->STD transition, there is a
+    // range of time which occurs twice.  In this case, this
+    // method interprets the specified local time as STD.
+    // To support the behavior above, we need to call getOffset
+    // (with 7 args) twice when local == true and DST is
+    // detected in the initial call.
     for (int32_t pass=0; ; ++pass) {
         int32_t year, month, dom, dow;
         double day = uprv_floor(date / U_MILLIS_PER_DAY);
         int32_t millis = (int32_t) (date - day * U_MILLIS_PER_DAY);
-        
+
         Grego::dayToFields(day, year, month, dom, dow);
-        
+
         dstOffset = getOffset(GregorianCalendar::AD, year, month, dom,
                               (uint8_t) dow, millis,
                               Grego::monthLength(year, month),
                               ec) - rawOffset;
 
-        // Recompute if local==FALSE, dstOffset!=0, and addition of
-        // the dstOffset puts us in a different day.
-        if (pass!=0 || local || dstOffset==0) {
+        // Recompute if local==TRUE, dstOffset!=0.
+        if (pass!=0 || !local || dstOffset == 0) {
             break;
         }
-        date += dstOffset;
-        if (uprv_floor(date / U_MILLIS_PER_DAY) == day) {
-            break;
-        }
+        // adjust to local standard millis
+        date -= dstOffset;
     }
 }
 
