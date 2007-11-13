@@ -8939,7 +8939,7 @@ supplementalData:table(nofallback){
             "meta:Africa_Western_CM"{"Africa/Douala"}
             "meta:Africa_Western_GA"{"Africa/Libreville"}
             "meta:Africa_Western_GQ"{"Africa/Malabo"}
-            "meta:Africa_Western_NA"{"Africa/Windhoek"}
+            /* "meta:Africa_Western_NA"{"Africa/Windhoek"} YOSHITO */
             "meta:Africa_Western_NE"{"Africa/Niamey"}
             "meta:Africa_Western_TD"{"Africa/Ndjamena"}
             "meta:Aktyubinsk_001"{"Asia/Aqtobe"}
@@ -8954,7 +8954,7 @@ supplementalData:table(nofallback){
             "meta:America_Central_GT"{"America/Guatemala"}
             "meta:America_Central_HN"{"America/Tegucigalpa"}
             "meta:America_Central_MX"{"America/Mexico_City"}
-            "meta:America_Central_NI"{"America/Managua"}
+            /* "meta:America_Central_NI"{"America/Managua"} YOSHITO */
             "meta:America_Central_SV"{"America/El_Salvador"}
             "meta:America_Eastern_001"{"America/New_York"}
             "meta:America_Eastern_BS"{"America/Nassau"}
@@ -8991,7 +8991,7 @@ supplementalData:table(nofallback){
             "meta:Atlantic_BB"{"America/Barbados"}
             "meta:Atlantic_BM"{"America/Bermuda"}
             "meta:Atlantic_DM"{"America/Dominica"}
-            "meta:Atlantic_DO"{"America/Santo_Domingo"}
+            /* "meta:Atlantic_DO"{"America/Santo_Domingo"} YOSHITO */
             "meta:Atlantic_GD"{"America/Grenada"}
             "meta:Atlantic_GL"{"America/Thule"}
             "meta:Atlantic_GP"{"America/Guadaloupe"}
@@ -9091,13 +9091,13 @@ supplementalData:table(nofallback){
             "meta:Europe_Eastern_PS"{"Asia/Gaza"}
             "meta:Europe_Eastern_RU"{"Europe/Kaliningrad"}
             "meta:Europe_Eastern_SY"{"Asia/Damascus"}
-            "meta:Europe_Eastern_TR"{"Europe/Istanbul"}
+            /* "meta:Europe_Eastern_TR"{"Europe/Istanbul"} YOSHITO */
             "meta:Europe_Eastern_UA"{"Europe/Kiev"}
             "meta:Europe_Western_001"{"Atlantic/Canary"}
             "meta:Europe_Western_EH"{"Africa/El_Aaiun"}
             "meta:Europe_Western_FO"{"Atlantic/Faeroe"}
             "meta:Europe_Western_MA"{"Africa/Casablanca"}
-            "meta:Europe_Western_PT"{"Europe/Lisbon"}
+            /* "meta:Europe_Western_PT"{"Europe/Lisbon"} YOSHITO */
             "meta:Falkland_001"{"Atlantic/Stanley"}
             "meta:Fiji_001"{"Pacific/Fiji"}
             "meta:French_Guiana_001"{"America/Cayenne"}

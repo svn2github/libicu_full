@@ -2311,7 +2311,8 @@ pt{
             cu:int{1}
             ld{"Horário de Verão do Acre"}
             ls{"Horário do Acre"}
-            sd{"ACST"}
+            /* sd{"ACST"} YOSHITO */
+            sd{"ACST (Acre)"}
             ss{"ACT"}
         }
         "meta:Africa_Central"{
@@ -2647,7 +2648,8 @@ pt{
             ld{"Horário de Verão de Israel"}
             ls{"Horário Padrão de Israel"}
             sd{"IDT"}
-            ss{"IST"}
+            /* ss{"IST"} YOSHITO */
+            ss{"IST (Israel)"}
         }
         "meta:Japan"{
             ld{"Horário de Verão do Japão"}
@@ -2668,7 +2670,7 @@ pt{
             ss{"EKST"}
         }
         "meta:Kazakhstan_Western"{
-            ls{"Horário da Argentina Ocidental"}
+            /* ls{"Horário da Argentina Ocidental"} YOSHITO */
             ss{"WKST"}
         }
         "meta:Kizilorda"{

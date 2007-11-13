@@ -2435,7 +2435,8 @@ tr{
         "meta:Acre"{
             ld{"Acre Yaz Saati"}
             ls{"Acre Saati"}
-            sd{"ACST"}
+            /* sd{"ACST"} YOSHITO */
+            sd{"ACST (Acre)"}
             ss{"ACT"}
         }
         "meta:Afghanistan"{

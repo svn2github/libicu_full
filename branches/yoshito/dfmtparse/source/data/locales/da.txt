@@ -2292,10 +2292,10 @@ da{
         "meta:GMT"{
             cu:int{1}
             ld{"GMT-sommertid"}
-            lg{"verdenstid"}
+            /* lg{"verdenstid"} YOSHITO */
             ls{"Verdenstid"}
-            sd{"GMT"}
-            sg{"GMT"}
+            /* sd{"GMT"} YOSHITO */
+            /* sg{"GMT"} YOSHITO */
             ss{"GMT"}
         }
         "meta:Hawaii"{

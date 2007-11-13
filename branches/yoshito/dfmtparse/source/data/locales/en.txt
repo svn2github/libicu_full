@@ -2253,7 +2253,8 @@ en{
         "meta:Acre"{
             ld{"Acre Summer Time"}
             ls{"Acre Time"}
-            sd{"ACST"}
+            /* sd{"ACST"} YOSHITO */
+            sd{"ACST (Acre)"}
             ss{"ACT"}
         }
         "meta:Afghanistan"{

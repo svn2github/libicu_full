@@ -2568,8 +2568,8 @@ sv{
             ld{"saudiarabisk sommartid"}
             lg{"saudiarabisk tid"}
             ls{"saudiarabisk normaltid"}
-            sg{"AT"}
-            ss{"AST"}
+            /* sg{"AT"} YOSHITO */
+            /* ss{"AST"} YOSHITO */
         }
         "meta:Argentina"{
             lg{"östargentinsk tid"}
@@ -2683,11 +2683,11 @@ sv{
         }
         "meta:GMT"{
             cu:int{1}
-            ld{"greenwichtid"}
-            lg{"greenwichtid"}
+            /* ld{"greenwichtid"} YOSHITO */
+            /* lg{"greenwichtid"} YOSHITO */
             ls{"Greenwichtid"}
-            sd{"GMT"}
-            sg{"GMT"}
+            /* sd{"GMT"} YOSHITO */
+            /* sg{"GMT"} YOSHITO */
             ss{"GMT"}
         }
         "meta:Galapagos"{
@@ -2776,7 +2776,7 @@ sv{
             ld{"Newfoundland, sommartid"}
             lg{"New Foundland-tid"}
             ls{"Newfoundland, normaltid"}
-            sd{"CDT"}
+            /* sd{"CDT"} YOSHITO */
             ss{"CNT"}
         }
         "meta:Pakistan"{
