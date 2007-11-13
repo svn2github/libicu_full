@@ -399,9 +399,9 @@ MutableTrieDictionary::openWords( UErrorCode &status ) const {
 // {'Dic', 1}, version 1: uses old header, no values
 #define COMPACT_TRIE_MAGIC_1 0x44696301
 // version 2: uses new header (more than 2^16 nodes), no values
-#define COMPACT_TRIE_MAGIC_2 0x44706301
+#define COMPACT_TRIE_MAGIC_2 0x44696302
 // version 3: uses new header, includes values
-#define COMPACT_TRIE_MAGIC_3 0x44716301
+#define COMPACT_TRIE_MAGIC_3 0x44696303
 
 struct CompactTrieHeader {
     uint32_t        size;           // Size of the data in bytes
