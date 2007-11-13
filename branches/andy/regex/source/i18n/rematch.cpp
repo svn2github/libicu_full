@@ -155,11 +155,11 @@ RegexMatcher &RegexMatcher::appendReplacement(UnicodeString &dest,
     }
 
     // Copy input string from the end of previous match to start of current match
-    int32_t  len = fMatchStart-fLastReplaceEnd;
+    int32_t  len = fMatchStart-fAppendPosition;
     if (len > 0) {
-        dest.append(*fInput, fLastReplaceEnd, len);
+        dest.append(*fInput, fAppendPosition, len);
     }
-    fLastReplaceEnd = fMatchEnd;
+    fAppendPosition = fMatchEnd;
     
 
     // scan the replacement text, looking for substitutions ($n) and \escapes.
@@ -259,9 +259,9 @@ RegexMatcher &RegexMatcher::appendReplacement(UnicodeString &dest,
 //
 //--------------------------------------------------------------------------------
 UnicodeString &RegexMatcher::appendTail(UnicodeString &dest) {
-    int32_t  len = fInput->length()-fMatchEnd;
+    int32_t  len = fInput->length() - fAppendPosition;
     if (len > 0) {
-        dest.append(*fInput, fMatchEnd, len);
+        dest.append(*fInput, fAppendPosition, len);
     }
     return dest;
 }
@@ -323,6 +323,9 @@ UBool RegexMatcher::find() {
     // TODO:  FAILURE HERE WITH REGIONS, fMatchEnd resets to 0, not regionStart.
     //          Watch for interactions with replace operations when fixing.
     int32_t startPos = fMatchEnd;
+    if (startPos==0) {
+        startPos = fRegionStart;
+    }
 
     if (fMatch) {
         // Save the position of any previous successful match.
@@ -512,7 +515,8 @@ UBool RegexMatcher::find(int32_t start, UErrorCode &status) {
         status = U_INDEX_OUTOFBOUNDS_ERROR;
         return FALSE;
     }
-    fMatchEnd = start;
+    fMatchEnd = start;    // TODO:  restructure so start position goes as a parameter to an internal find()
+                          //        that is used both here and by the public API find()?
     return find();
 }
 
@@ -648,8 +652,7 @@ UBool RegexMatcher::matches(UErrorCode &status) {
     }
     resetPreserveRegion();
     MatchAt(fRegionStart, TRUE, status);
-    UBool   success  = (fMatch && fMatchEnd==fRegionLimit);
-    return success;
+    return fMatch;
 }
 
 
@@ -667,8 +670,7 @@ UBool RegexMatcher::matches(int32_t start, UErrorCode &status) {
         return FALSE;
     }
     MatchAt(start, TRUE, status);
-    UBool   success  = (fMatch && fMatchEnd==fRegionLimit);
-    return success;
+    return fMatch;
 }
 
 
@@ -817,7 +819,7 @@ void RegexMatcher::resetPreserveRegion() {
     fMatchStart     = 0;
     fMatchEnd       = 0;
     fLastMatchEnd   = -1;
-    fLastReplaceEnd = 0;
+    fAppendPosition = 0;
     fMatch          = FALSE;
     fHitEnd         = FALSE;
     fRequireEnd     = FALSE;

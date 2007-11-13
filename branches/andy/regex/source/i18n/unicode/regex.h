@@ -707,7 +707,7 @@ public:
     *   input string.
     * <p>
     *   An alternative to this function is to set a match region
-    *   beginning at the desired beginning at the desired index.
+    *   beginning at the desired index.
     *
     *   @return this RegexMatcher.
     *   @stable ICU 2.8
@@ -1068,19 +1068,23 @@ private:
     UBool                fTransparentBounds;  // True if using transparent bounds.
     UBool                fAnchoringBounds; // True if using anchoring bounds.
 
-    UBool                fMatch;           // True if the last match was successful.
+    UBool                fMatch;           // True if the last attempted match was successful.
     int32_t              fMatchStart;      // Position of the start of the most recent match
     int32_t              fMatchEnd;        // First position after the end of the most recent match
+                                           //   Zero if no previous match, even when a region
+                                           //   is active.
     int32_t              fLastMatchEnd;    // First position after the end of the previous match,
                                            //   or -1 if there was no previous match.
-    int32_t              fLastReplaceEnd;  // First position after the end of the previous appendReplacement();
+    int32_t              fAppendPosition;  // First position after the end of the previous
+                                           //   appendReplacement().  As described JavaDoc for  
+                                           //   Java Matcher, where it is called "append position"
     UBool                fHitEnd;          // True if the last match touched the end of input.
     UBool                fRequireEnd;      // True if the last match required end-of-input
                                            //    (matched $ or Z)
 
     UVector32           *fStack;
-    REStackFrame        *fFrame;           // After finding a match, the last active stack
-                                           //   frame, which will contain the capture group results.
+    REStackFrame        *fFrame;           // After finding a match, the last active stack frame,
+                                           //   which will contain the capture group results.
                                            //   NOT valid while match engine is running.
 
     int32_t             *fData;            // Data area for use by the compiled pattern.
