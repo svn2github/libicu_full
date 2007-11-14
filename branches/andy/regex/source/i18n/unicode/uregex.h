@@ -420,7 +420,7 @@ uregex_reset(URegularExpression    *regexp,
              UErrorCode            *status);
              
              
-/** Sets the limits of the matching region.
+/** Sets the limits of the matching region for this URegularExpression.
   * The region is the part of the input string that will be considered when matching.
   * Invoking this method resets any saved state from the previous match, 
   * then sets the region to start at the index specified by the start parameter
@@ -459,7 +459,7 @@ uregex_regionStart(const  URegularExpression   *regexp,
 
 
 /**
-  * Reports the end (limit) index (exclusive) of the matching region for this URegularExpression.
+  * Reports the end index (exclusive) of the matching region for this URegularExpression.
   * Any matches found are limited to to the region bounded by regionStart (inclusive)
   * and regionEnd (exclusive).
   *
@@ -520,7 +520,7 @@ uregex_hasAnchoringBounds(const  URegularExpression   *regexp,
 
 
 /**
-  * Set whether this matcher is using Anchoring Bounds for its region.
+  * Set whether this URegularExpression is using Anchoring Bounds for its region.
   * With anchoring bounds, pattern anchors such as ^ and $ will match at the start
   * and end of the region.  Without Anchoring Bounds, anchors will only match at
   * the positions they would in the complete text.

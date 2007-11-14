@@ -535,7 +535,7 @@ U_CAPI UBool U_EXPORT2
 uregex_hasTransparentBounds(const  URegularExpression   *regexp,
                                    UErrorCode           *status)  {
     if (validateRE(regexp, status) == FALSE) {
-        return 0;
+        return FALSE;
     }
     return regexp->fMatcher->hasTransparentBounds();
 }
@@ -566,7 +566,7 @@ U_CAPI UBool U_EXPORT2
 uregex_hasAnchoringBounds(const  URegularExpression   *regexp,
                                    UErrorCode           *status)  {
     if (validateRE(regexp, status) == FALSE) {
-        return 0;
+        return FALSE;
     }
     return regexp->fMatcher->hasAnchoringBounds();
 }
@@ -585,6 +585,36 @@ uregex_useAnchoringBounds(URegularExpression    *regexp,
         return;
     }
     regexp->fMatcher->useAnchoringBounds(b);
+}
+
+
+//------------------------------------------------------------------------------
+//
+//    uregex_hitEnd
+//
+//------------------------------------------------------------------------------
+U_CAPI UBool U_EXPORT2 
+uregex_hitEnd(const  URegularExpression   *regexp,
+                     UErrorCode           *status)  {
+    if (validateRE(regexp, status) == FALSE) {
+        return FALSE;
+    }
+    return regexp->fMatcher->hitEnd();
+}
+
+
+//------------------------------------------------------------------------------
+//
+//    uregex_requireEnd
+//
+//------------------------------------------------------------------------------
+U_CAPI UBool U_EXPORT2 
+uregex_requireEnd(const  URegularExpression   *regexp,
+                         UErrorCode           *status)  {
+    if (validateRE(regexp, status) == FALSE) {
+        return FALSE;
+    }
+    return regexp->fMatcher->requireEnd();
 }
 
 
