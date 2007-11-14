@@ -1,6 +1,6 @@
 /*
 **********************************************************************
-*   Copyright (C) 2004-2006, International Business Machines
+*   Copyright (C) 2004-2007, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 **********************************************************************
 *   file name:  regex.h
@@ -313,10 +313,10 @@ uregex_find(URegularExpression *regexp,
             UErrorCode         *status);
 
 /**
-  *  Find the next pattern match in the input string.
-  *  Begin searching the input at the location following the end of
-  *  the previous match, or at the start of the string if there is no previous match.
-  *  If a match is found, <code>uregex_start(), uregex_end()</code>, and
+  *  Find the next pattern match in the input string.  Begin searching 
+  *  the input at the location following the end of he previous match, 
+  *  or at the start of the string (or region) if there is no 
+  *  previous match.  If a match is found, <code>uregex_start(), uregex_end()</code>, and
   *  <code>uregex_group()</code> will provide more information regarding the match.
   *
   *  @param   regexp      The compiled regular expression.
@@ -405,7 +405,8 @@ uregex_end(URegularExpression   *regexp,
   *  Reset any saved state from the previous match.  Has the effect of
   *  causing uregex_findNext to begin at the specified index, and causing
   *  uregex_start(), uregex_end() and uregex_group() to return an error 
-  *  indicating that there is no match information available.
+  *  indicating that there is no match information available.  Clears any
+  *  match region that may have been set.
   *
   *    @param   regexp      The compiled regular expression.
   *    @param   index       The position in the text at which a
@@ -421,7 +422,7 @@ uregex_reset(URegularExpression    *regexp,
              
 /** Sets the limits of the matching region.
   * The region is the part of the input string that will be considered when matching.
-  * Invoking this method resets any saved state from the previoous mathc, 
+  * Invoking this method resets any saved state from the previous match, 
   * then sets the region to start at the index specified by the start parameter
   * and end at the index specified by the end parameter.
   *
@@ -440,7 +441,7 @@ uregex_reset(URegularExpression    *regexp,
   */
 U_DRAFT void U_EXPORT2
 uregex_setRegion(URegularExpression   *regexp,
-                 int32_t               RegionStart,
+                 int32_t               regionStart,
                  int32_t               regionLimit,
                  UErrorCode           *status);
                  
