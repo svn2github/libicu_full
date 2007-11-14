@@ -417,6 +417,152 @@ U_STABLE void U_EXPORT2
 uregex_reset(URegularExpression    *regexp,
              int32_t               index,
              UErrorCode            *status);
+             
+             
+/** Sets the limits of the matching region.
+  * The region is the part of the input string that will be considered when matching.
+  * Invoking this method resets any saved state from the previoous mathc, 
+  * then sets the region to start at the index specified by the start parameter
+  * and end at the index specified by the end parameter.
+  *
+  * Depending on the transparency and anchoring being used (see useTransparentBounds
+  * and useAnchoringBounds), certain constructs such as anchors may behave differently
+  * at or around the boundaries of the region
+  *
+  * The function will fail if start is greater than limit, or if either index
+  *  is less than zero or greater than the length of the string being matched.
+  *
+  * @param regexp The compiled regular expression.
+  * @param start  The index to begin searches at.
+  * @param limit  The index to end searches at (exclusive).
+  * @param status A reference to a UErrorCode to receive any errors.
+  * @draft ICU 4.0
+  */
+U_DRAFT void U_EXPORT2
+uregex_setRegion(URegularExpression   *regexp,
+                 int32_t               RegionStart,
+                 int32_t               regionLimit,
+                 UErrorCode           *status);
+                 
+/**
+  * Reports the start index of the matching region. Any matches found are limited to
+  * to the region bounded by regionStart (inclusive) and regionEnd (exclusive).
+  *
+  * @return The starting index of this matcher's region.
+  * @draft ICU 4.0
+  */
+U_DRAFT int32_t U_EXPORT2
+uregex_regionStart(const  URegularExpression   *regexp,
+                          UErrorCode           *status);
+
+
+
+/**
+  * Reports the end (limit) index (exclusive) of the matching region for this URegularExpression.
+  * Any matches found are limited to to the region bounded by regionStart (inclusive)
+  * and regionEnd (exclusive).
+  *
+  * @return The ending point of this matcher's region.
+  * @draft ICU 4.0
+  */
+U_DRAFT int32_t U_EXPORT2
+uregex_regionEnd(const  URegularExpression   *regexp,
+                        UErrorCode           *status);
+
+/**
+  * Queries the transparency of region bounds for this URegularExpression.
+  * See useTransparentBounds for a description of transparent and opaque bounds.
+  * By default, matching boundaries are opaque.
+  *
+  * @return TRUE if this matcher is using opaque bounds, false if it is not.
+  * @draft ICU 4.0
+  */
+U_DRAFT UBool U_EXPORT2
+uregex_hasTransparentBounds(const  URegularExpression   *regexp,
+                                   UErrorCode           *status);
+
+
+/**
+  * Sets the transparency of region bounds for this URegularExpression.
+  * Invoking this function with an argument of TRUE will set matches to use transparent bounds.
+  * If the boolean argument is FALSE, then opaque bounds will be used.
+  *
+  * Using transparent bounds, the boundaries of the matching region are transparent
+  * to lookahead, lookbehind, and boundary matching constructs. Those constructs can
+  * see text beyond the boundaries of the region while checking for a match.
+  *
+  * With opaque bounds, no text outside of the matching region is visible to lookahead,
+  * lookbehind, and boundary matching constructs.
+  *
+  * By default, a matcher uses opaque bounds.
+  *
+  * @param   b TRUE for transparent bounds; FALSE for opaque bounds
+  * @return  This Matcher;
+  * @draft   ICU 4.0
+  **/
+U_DRAFT void U_EXPORT2  
+uregex_useTransparentBounds(URegularExpression   *regexp, 
+                            UBool                b,
+                            UErrorCode           *status);
+
+  
+/**
+  * Return true if this matcher is using anchoring bounds.
+  * By default, matchers use anchoring region boounds.
+  *
+  * @return TRUE if this matcher is using anchoring bounds.
+  * @draft  ICU 4.0
+  */    
+U_DRAFT UBool U_EXPORT2
+uregex_hasAnchoringBounds(const  URegularExpression   *regexp,
+                                 UErrorCode           *status);
+
+
+/**
+  * Set whether this matcher is using Anchoring Bounds for its region.
+  * With anchoring bounds, pattern anchors such as ^ and $ will match at the start
+  * and end of the region.  Without Anchoring Bounds, anchors will only match at
+  * the positions they would in the complete text.
+  *
+  * Anchoring Bounds are the default for regions.
+  *
+  * @param b TRUE if to enable anchoring bounds; FALSE to disable them.
+  * @return  This Matcher
+  * @draft   ICU 4.0
+  */
+U_DRAFT void U_EXPORT2
+uregex_useAnchoringBounds(URegularExpression   *regexp,
+                          UBool                 b,
+                          UErrorCode           *status);
+
+/**
+  * Return TRUE if the most recent matching operation touched the
+  *  end of the text being processed.  In this case, additional input text could
+  *  change the results of that match.
+  *
+  *  @return  TRUE if the most recent match hit the end of input
+  *  @draft   ICU 4.0
+  */
+U_DRAFT UBool U_EXPORT2
+uregex_hitEnd(const  URegularExpression   *regexp,
+                     UErrorCode           *status);
+
+/**
+  * Return TRUE the most recent match succeeded and additional input could cause
+  * it to fail. If this function returns false and a match was found, then more input
+  * might change the match but the match won't be lost. If a match was not found,
+  * then requireEnd has no meaning.
+  *
+  * @return TRUE if more input could cause the most recent match to no longer match.
+  * @draft  ICU 4.0
+  */
+U_DRAFT UBool U_EXPORT2   
+uregex_requireEnd(const  URegularExpression   *regexp,
+                         UErrorCode           *status);
+
+
+
+
 
 /**
   *    Replaces every substring of the input that matches the pattern

@@ -784,7 +784,7 @@ public:
      * @return The starting index of this matcher's region.
      * @draft ICU 4.0
      */
-     virtual int regionStart() const;
+     virtual int32_t regionStart() const;
 
 
     /**
@@ -795,7 +795,7 @@ public:
       * @return The ending point of this matcher's region.
       * @draft ICU 4.0
       */
-      virtual int regionEnd() const;
+      virtual int32_t regionEnd() const;
 
     /**
       * Queries the transparency of region bounds for this matcher.

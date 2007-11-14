@@ -561,6 +561,11 @@
 # Ranges
 #
 ".*"                              "abc<r><0>def</0></r>ghi"
+"a"                               "aaa<r><0>a</0>aa</r>aaa"
+"a"                           2   "aaa<r>a<0>a</0>a</r>aaa"
+"a"                           3   "aaa<r>aa<0>a</0></r>aaa"
+"a"                           4   "aaa<r>aaa</r>aaa"
+"a"                               "aaa<r><0>a</0>aa</r>aaa"
 
 #
 # [set] parsing, systematically run through all of the parser states.
