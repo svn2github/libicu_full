@@ -3666,8 +3666,7 @@ void RegexCompile::nextChar(RegexPatternChar &c) {
             }
         }
 
-        //  7 Seek_Error_Rate         0x000f   070   060   030    Pre-fail  Always       -       12282058
-
+        //
         //  check for backslash escaped characters.
         //
         if (c.fChar == chBackSlash) {
