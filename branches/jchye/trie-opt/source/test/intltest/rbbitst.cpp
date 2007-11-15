@@ -1012,7 +1012,7 @@ void RBBITest::TestTrieDictWithValue() {
 //        fprintf(stdout,"node %d, values %x and %x\n", 
 //              counter, values1[count1-1], values2[count2-1]);
         if(values1[count1-1] != values2[count2-1]){
-            errln("Values of word %d in MutableTrieDictionary and CompactTrieDictionary do not match, with values %x and %x\n", 
+            errln("Values of word %d in MutableTrieDictionary and CompactTrieDictionary do not match, with values %d and %d\n", 
                   counter, values1[count1-1], values2[count2-1]);
             goto cleanup;
         }
@@ -1080,7 +1080,7 @@ void RBBITest::TestTrieDictWithValue() {
 //        fprintf(stdout,"node %d, values %x and %x, lengths %d and %d\n", 
 //              counter, values1[count1-1], values2[count2-1], originalLength, cloneLength);
         if(values1[count1-1] != values2[count2-1]){
-            errln("Values of word %d in original and cloned MutableTrieDictionary do not match, with values %x and %x\n", 
+            errln("Values of word %d in original and cloned MutableTrieDictionary do not match, with values %d and %d\n", 
                   counter, values1[count1-1], values2[count2-1]);
             goto cleanup;
         }
