@@ -4861,29 +4861,6 @@ TestVI5913(void)
     }
     ucol_close(coll);
 
-    log_verbose("\n\nTailoring test for &z< ae with circumflex:");
-     ruleLen = u_strlen(rule3);
-     coll = ucol_openRules(rule3, ruleLen, UCOL_OFF, UCOL_TERTIARY, NULL,&status);
-     tLen = u_strlen(tailorData3[0]);
-     kLen=ucol_getSortKey(coll, tailorData3[0], tLen, expColl, 100);
-     for (j=0; j<5; j++) {
-         tLen = u_strlen(tailorData3[j]);
-         rLen = ucol_getSortKey(coll, tailorData3[j], tLen, resColl, 100);
-         /*
-         if ( kLen!=rLen || uprv_memcmp(expColl, resColl, rLen*sizeof(uint8_t))!=0 ) {
-             log_err("\n After tailoring Data[%d] :%s  \tlen: %d key: ", j, tailorData[j], tLen);
-             for(i = 0; i<rLen; i++) {
-                 log_err(" %02X", resColl[i]);
-             }
-         }
-         */
-         log_verbose("\n After tailoring Data[%d] :%s  \tlen: %d key: ", j, tailorData[j], tLen);
-          for(i = 0; i<rLen; i++) {
-              log_verbose(" %02X", resColl[i]);
-          }
-     }
-     ucol_close(coll);
-
     /* Test the precomposed Greek character with 3 combining marks. */
     log_verbose("\n\nTailoring test: Greek character with 3 combining marks");
     ruleLen = u_strlen(rule);

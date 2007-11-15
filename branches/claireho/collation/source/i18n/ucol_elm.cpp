@@ -1840,13 +1840,19 @@ uprv_uca_addTailCanonicalClosures(tempUCATable *t,
         return;
     }
     index = cccLookup->index;
-    int32_t test=unorm_getFCD16(fcdTrieData, cMark);
-    maxIndex = (int32_t)index[unorm_getFCD16(fcdTrieData, cMark) & 0xff];
+    int32_t cClass=(unorm_getFCD16(fcdTrieData, cMark) & 0xff);
+    maxIndex = (int32_t)index[(unorm_getFCD16(fcdTrieData, cMark) & 0xff)-1];
     c.comp = comp;
     c.decomp = decomp;
     c.precomp = precomp;
     c.tailoringCC =  cMark;
 
+    if (cClass>0) {
+        maxIndex = (int32_t)index[cClass-1];
+    }
+    else {
+        maxIndex=0;
+    }
     decomp[0]=baseCh;
     for ( i=0; i<maxIndex ; i++ ) {
         decomp[1] = cccLookup->cPoints[i];
