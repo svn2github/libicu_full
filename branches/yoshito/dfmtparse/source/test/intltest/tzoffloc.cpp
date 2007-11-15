@@ -28,7 +28,7 @@ TimeZoneOffsetLocalTest::runIndexedTest( int32_t index, UBool exec, const char* 
         logln("TestSuite TimeZoneOffsetLocalTest");
     }
     switch (index) {
-        CASE(0, TestGetOffsetAroundTransition);
+        TESTCASE(0, TestGetOffsetAroundTransition);
         default: name = ""; break;
     }
 }

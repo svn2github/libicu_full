@@ -14,13 +14,10 @@
 
 #include "intltest.h"
 
-#define CASE(id,test) case id: name = #test; if (exec) { logln(#test "---"); logln((UnicodeString)""); test(); } break
-
 class TimeZoneOffsetLocalTest : public IntlTest {
     // IntlTest override
     void runIndexedTest(int32_t index, UBool exec, const char*& name, char* par);
 
-public:
     void TestGetOffsetAroundTransition(void);
 };
 
