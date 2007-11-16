@@ -544,6 +544,31 @@ static void TestRegexCAPI(void) {
         uregex_close(re);
 
     }
+    
+    /*
+     *  Regions
+     */
+    {
+        UChar   srcString[100];
+        UChar   resultString[100];
+        
+        re = uregex_openC(".*?", 0, 0, &status);
+        TEST_ASSERT_SUCCESS(status);
+        
+        u_uastrncpy(srcString, "0123456789abcdef", sizeof(srcString)/2);
+        uregex_setText(re, srcString, -1, &status);
+        TEST_ASSERT_SUCCESS(status);
+        
+        TEST_ASSERT(uregex_findNext(re, &status));
+        TEST_ASSERT(uregex_group(re, 0, resultString, sizeof(resultString)/2, &status) == 0)
+        TEST_ASSERT_STRING("", resultString, TRUE);
+        
+        status = U_ZERO_ERROR;
+        uregex_reset(re, 0, &status);
+        TEST_ASSERT(uregex_matches(re, 0, &status));
+        TEST_ASSERT(uregex_group(re, 0, resultString, sizeof(resultString)/2, &status) == 16)
+        TEST_ASSERT_STRING("0123456789abcdef", resultString, TRUE);
+     }
 
     /*
      *  replaceFirst()
