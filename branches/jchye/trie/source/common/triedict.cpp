@@ -1285,12 +1285,6 @@ _sortBuildNodes(const void * /*context*/, const void *voidl, const void *voidr) 
         return 0;
     }
 
-    // If the node value differs, we should not coalesce.
-    // If values aren't stored, all fValues should be 0.
-    if (left->fValue != right->fValue){
-        return left->fValue - right->fValue;
-    }
-
     // Most significant is type of node. Can never coalesce.
     if (left->fVertical != right->fVertical) {
         return left->fVertical - right->fVertical;
@@ -1303,6 +1297,12 @@ _sortBuildNodes(const void * /*context*/, const void *voidl, const void *voidr) 
     int32_t result = left->fChars.compare(right->fChars);
     if (result != 0) {
         return result;
+    }
+
+    // If the node value differs, we should not coalesce.
+    // If values aren't stored, all fValues should be 0.
+    if (left->fValue != right->fValue){
+        return left->fValue - right->fValue;
     }
 
     // We know they're both the same node type, so branch for the two cases.
