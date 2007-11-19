@@ -1524,7 +1524,6 @@ ures_getByKeyWithFallback(const UResourceBundle *resB,
         *status = U_ILLEGAL_ARGUMENT_ERROR;
         return fillIn;
     }
-
     if(RES_GET_TYPE(resB->fRes) == URES_TABLE || RES_GET_TYPE(resB->fRes) == URES_TABLE32) {
         int32_t t;
         res = res_getTableItemByKey(&(resB->fResData), resB->fRes, &t, &key);
@@ -1578,7 +1577,7 @@ ures_getByKeyWithFallback(const UResourceBundle *resB,
         } else {
             fillIn = init_resb_result(&(resB->fResData), res, key, -1, resB->fData, resB, 0, fillIn, status);
         }
-    } 
+    }
     else {
         *status = U_RESOURCE_TYPE_MISMATCH;
     }

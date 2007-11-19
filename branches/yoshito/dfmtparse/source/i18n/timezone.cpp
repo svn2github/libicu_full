@@ -88,6 +88,7 @@ static char gStrBuf[256];
 #define kDEFAULT  "Default"
 #define kMAX_CUSTOM_HOUR    23
 #define kMAX_CUSTOM_MIN     59
+#define kMAX_CUSTOM_SEC     59
 #define MINUS 0x002D
 #define PLUS 0x002B
 #define ZERO_DIGIT 0x0030
@@ -1177,11 +1178,12 @@ TimeZone::createCustomTimeZone(const UnicodeString& id)
         UBool negative = FALSE;
         int32_t hour = 0;
         int32_t min = 0;
+        int32_t sec = 0;
 
         if (id[pos.getIndex()] == MINUS /*'-'*/)
             negative = TRUE;
         else if (id[pos.getIndex()] != PLUS /*'+'*/)
-            return 0;
+            return NULL;
         pos.setIndex(pos.getIndex() + 1);
 
         UErrorCode success = U_ZERO_ERROR;
@@ -1200,75 +1202,125 @@ TimeZone::createCustomTimeZone(const UnicodeString& id)
         numberFormat->parse(id, n, pos);
         if (pos.getIndex() == start) {
             delete numberFormat;
-            return 0;
+            return NULL;
         }
         hour = n.getLong();
 
-        if (pos.getIndex() < id.length() &&
-            id[pos.getIndex()] == 0x003A /*':'*/)
-        {
+        if (pos.getIndex() < id.length()) {
+            if (pos.getIndex() - start > 2
+                || id[pos.getIndex()] != 0x003A /*':'*/) {
+                delete numberFormat;
+                return NULL;
+            }
             // hh:mm
             pos.setIndex(pos.getIndex() + 1);
             int32_t oldPos = pos.getIndex();
             n.setLong(kParseFailed);
             numberFormat->parse(id, n, pos);
-            if (pos.getIndex() == oldPos) {
+            if ((pos.getIndex() - oldPos) != 2) {
+                // must be 2 digits
                 delete numberFormat;
-                return 0;
+                return NULL;
             }
             min = n.getLong();
-        }
-        else 
-        {
-            // hhmm or hh
+            if (pos.getIndex() < id.length()) {
+                if (id[pos.getIndex()] != 0x003A /*':'*/) {
+                    delete numberFormat;
+                    return NULL;
+                }
+                // [:ss]
+                pos.setIndex(pos.getIndex() + 1);
+                oldPos = pos.getIndex();
+                n.setLong(kParseFailed);
+                numberFormat->parse(id, n, pos);
+                if (pos.getIndex() != id.length()
+                        || (pos.getIndex() - oldPos) != 2) {
+                    delete numberFormat;
+                    return NULL;
+                }
+                sec = n.getLong();
+            }
+        } else {
+            // Supported formats are below -
+            //
+            // HHmmss
+            // Hmmss
+            // HHmm
+            // Hmm
+            // HH
+            // H
 
-            // Be strict about interpreting something as hh; it must be
-            // an offset < 23, and it must be one or two digits. Thus
-            // 0010 is interpreted as 00:10, but 10 is interpreted as
-            // 10:00.
-            if (hour > kMAX_CUSTOM_HOUR || (pos.getIndex() - start) > 2) {
-                min = hour % 100;
-                hour /= 100;
+            int32_t length = pos.getIndex() - start;
+            if (length <= 0 || 6 < length) {
+                // invalid length
+                delete numberFormat;
+                return NULL;
+            }
+            switch (length) {
+                case 1:
+                case 2:
+                    // already set to hour
+                    break;
+                case 3:
+                case 4:
+                    min = hour % 100;
+                    hour /= 100;
+                    break;
+                case 5:
+                case 6:
+                    sec = hour % 100;
+                    min = (hour/100) % 100;
+                    hour /= 10000;
+                    break;
             }
         }
 
         delete numberFormat;
 
-        if (hour > kMAX_CUSTOM_HOUR || min > kMAX_CUSTOM_MIN) {
+        if (hour > kMAX_CUSTOM_HOUR || min > kMAX_CUSTOM_MIN || sec > kMAX_CUSTOM_SEC) {
             return 0;
         }
 
-        // Create time zone ID in RFC822 format - GMT[+|-]hhmm
-        UnicodeString tzRFC(GMT_ID);
-        if (hour|min) {
+        // Create time zone ID - GMT[+|-]hhmm[ss]
+        UnicodeString tzID(GMT_ID);
+        if (hour | min | sec) {
             if (negative) {
-                tzRFC += (UChar)MINUS;
+                tzID += (UChar)MINUS;
             } else {
-                tzRFC += (UChar)PLUS;
+                tzID += (UChar)PLUS;
             }
 
             if (hour < 10) {
-                tzRFC += (UChar)ZERO_DIGIT;
+                tzID += (UChar)ZERO_DIGIT;
             } else {
-                tzRFC += (UChar)(ZERO_DIGIT + hour/10);
+                tzID += (UChar)(ZERO_DIGIT + hour/10);
             }
-            tzRFC += (UChar)(ZERO_DIGIT + hour%10);
+            tzID += (UChar)(ZERO_DIGIT + hour%10);
 
             if (min < 10) {
-                tzRFC += (UChar)ZERO_DIGIT;
+                tzID += (UChar)ZERO_DIGIT;
             } else {
-                tzRFC += (UChar)(ZERO_DIGIT + min/10);
+                tzID += (UChar)(ZERO_DIGIT + min/10);
             }
-            tzRFC += (UChar)(ZERO_DIGIT + min%10);
+            tzID += (UChar)(ZERO_DIGIT + min%10);
+
+            if (sec) {
+                if (sec < 10) {
+                    tzID += (UChar)ZERO_DIGIT;
+                } else {
+                    tzID += (UChar)(ZERO_DIGIT + sec/10);
+                }
+                tzID += (UChar)(ZERO_DIGIT + sec%10);
+            }
         }
 
-        int32_t offset = (hour * 60 + min) * 60 * 1000;
-        if(negative) {
+        int32_t offset = ((hour * 60 + min) * 60 + sec) * 1000;
+        if (negative) {
             offset = -offset;
         }
-        return new SimpleTimeZone(offset, tzRFC);
+        return new SimpleTimeZone(offset, tzID);
     }
-    return 0;
+    return NULL;
 }
 
 

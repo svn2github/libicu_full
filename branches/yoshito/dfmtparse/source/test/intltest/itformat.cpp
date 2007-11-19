@@ -47,6 +47,7 @@
 #include "dadrfmt.h"        // DataDrivenFormatTest
 #include "dtptngts.h"       // IntlTestDateTimePatternGeneratorAPI
 #include "tzoffloc.h"       // TimeZoneOffsetLocalTest
+#include "tzfmttst.h"       // TimeZoneFormatTest
 
 
 #define TESTCLASS(id, TestClass)          \
@@ -112,6 +113,7 @@ void IntlTestFormat::runIndexedTest( int32_t index, UBool exec, const char* &nam
         TESTCLASS(31,DataDrivenFormatTest);
         TESTCLASS(32,IntlTestDateTimePatternGeneratorAPI);
         TESTCLASS(33,TimeZoneOffsetLocalTest);
+        TESTCLASS(34,TimeZoneFormatTest);
 
 
         default: name = ""; break; //needed to end loop

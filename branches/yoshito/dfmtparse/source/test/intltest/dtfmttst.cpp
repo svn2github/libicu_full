@@ -100,7 +100,7 @@ void DateFormatTest::TestWallyWedel()
     /*
      * Computational variables.
      */
-    int32_t offset, hours, minutes;
+    int32_t offset, hours, minutes, seconds;
     /*
      * Instantiate a SimpleDateFormat set up to produce a full time
      zone name.
@@ -141,8 +141,12 @@ void DateFormatTest::TestWallyWedel()
         }
         hours = offset/3600000;
         minutes = (offset%3600000)/60000;
+        seconds = (offset%60000)/1000;
         UnicodeString dstOffset = (UnicodeString)"" + sign + (hours < 10 ? "0" : "") +
             (int32_t)hours + ":" + (minutes < 10 ? "0" : "") + (int32_t)minutes;
+        if (seconds != 0) {
+            dstOffset = dstOffset + ":" + (seconds < 10 ? "0" : "") + seconds;
+        }
         /*
          * Instantiate a date so we can display the time zone name.
          */
@@ -382,7 +386,7 @@ void DateFormatTest::TestFieldPosition() {
         "Wed", "225", "2", "33", "3", "PM", "2", "2", "PDT", "1997", "4", "1997", "2450674", "52452513", "-0700", "PT",  "4", "8", "3", "3","PDT",
 
         "Anno Domini", "1997", "August", "0013", "0014", "0014", "0034", "0012", "5130",
-        "Wednesday", "0225", "0002", "0033", "0003", "PM", "0002", "0002", "Pacific Daylight Time", "1997", "0004", "1997", "2450674", "52452513", "-0700",
+        "Wednesday", "0225", "0002", "0033", "0003", "PM", "0002", "0002", "Pacific Daylight Time", "1997", "0004", "1997", "2450674", "52452513", "GMT-07:00",
         "Pacific Time",  "Wednesday", "August", "3rd quarter", "3rd quarter", "United States (Los Angeles)"
     };
 

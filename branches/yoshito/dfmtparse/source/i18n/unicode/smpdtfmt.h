@@ -767,6 +767,12 @@ private:
                   ParsePosition& pos,
                   UBool allowNegative) const;
 
+    void parseInt(const UnicodeString& text,
+                  Formattable& number,
+                  int32_t maxDigits,
+                  ParsePosition& pos,
+                  UBool allowNegative) const;
+
     /**
      * Translate a pattern, mapping each character in the from string to the
      * corresponding character in the to string. Return an error if the original
@@ -809,9 +815,15 @@ private:
     int32_t      subParseZoneString(const UnicodeString& text, int32_t start, Calendar& cal, UErrorCode& status) const;
     
     /**
-     * append the gmt string
+     * Private methods for formatting/parsing GMT string
      */
-    inline void appendGMT(UnicodeString &appendTo, Calendar& cal, UErrorCode& status) const;
+    void appendGMT(UnicodeString &appendTo, Calendar& cal, UErrorCode& status) const;
+    void formatGMTDefault(UnicodeString &appendTo, int32_t offset) const;
+    int32_t parseGMT(const UnicodeString &text, ParsePosition &pos) const;
+    int32_t parseGMTDefault(const UnicodeString &text, ParsePosition &pos) const;
+    UBool isDefaultGMTFormat() const;
+
+    void formatRFC822TZ(UnicodeString &appendTo, int32_t offset) const;
 
     /**
      * Used to map pattern characters to Calendar field identifiers.
@@ -855,6 +867,14 @@ private:
     /*transient*/ int32_t   fDefaultCenturyStartYear;
 
     /*transient*/ TimeZone* parsedTimeZone; // here to avoid api change
+
+    enum ParsedTZType {
+        TZTYPE_UNK,
+        TZTYPE_STD,
+        TZTYPE_DST
+    };
+
+    ParsedTZType tztype; // here to avoid api change
 
     UBool fHaveDefaultCentury;
 };

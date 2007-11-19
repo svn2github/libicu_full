@@ -130,6 +130,17 @@ static const UChar gLastResortZoneStrings[7][4] =
     {0x0047, 0x004D, 0x0054, 0x0000}  /* "GMT" */
 };
 
+static const UChar gLastResortGmtFormat[] =
+    {0x0047, 0x004D, 0x0054, 0x007B, 0x0030, 0x007D, 0x0000}; /* GMT{0} */
+
+static const UChar gLastResortGmtHourFormats[4][10] =
+{
+    {0x002D, 0x0048, 0x0048, 0x003A, 0x006D, 0x006D, 0x003A, 0x0073, 0x0073, 0x0000}, /* -HH:mm:ss */
+    {0x002D, 0x0048, 0x0048, 0x003A, 0x006D, 0x006D, 0x0000, 0x0000, 0x0000, 0x0000}, /* -HH:mm */
+    {0x002B, 0x0048, 0x0048, 0x003A, 0x006D, 0x006D, 0x003A, 0x0073, 0x0073, 0x0000}, /* +HH:mm:ss */
+    {0x002B, 0x0048, 0x0048, 0x003A, 0x006D, 0x006D, 0x0000, 0x0000, 0x0000, 0x0000}  /* +HH:mm */
+};
+
 /* Sizes for the last resort string arrays */
 typedef enum LastResortSize {
     kMonthNum = 13,
@@ -148,7 +159,10 @@ typedef enum LastResortSize {
     kEraLen = 3,
 
     kZoneNum = 5,
-    kZoneLen = 4
+    kZoneLen = 4,
+
+    kGmtHourNum = 4,
+    kGmtHourLen = 10
 } LastResortSize;
 
 U_NAMESPACE_BEGIN
@@ -177,14 +191,17 @@ static const char gTerritoryTag[]="territory";
 static const char gCountriesTag[]="Countries";
 static const char gZoneFormattingTag[]="zoneFormatting";
 static const char gMultizoneTag[]="multizone";
-static const char gRegionFormatTag[]="zoneStrings/regionFormat";
-static const char gFallbackFormatTag[]="zoneStrings/fallbackFormat";
 
 /**
  * These are the tags we expect to see in time zone data resource bundle files
  * associated with a locale.
  */
 static const char gZoneStringsTag[]="zoneStrings";
+static const char gRegionFormatTag[]="zoneStrings/regionFormat";
+static const char gFallbackFormatTag[]="zoneStrings/fallbackFormat";
+static const char gGmtFormatTag[]="zoneStrings/gmtFormat";
+static const char gHourFormatTag[]="zoneStrings/hourFormat";
+
 static const char gLocalPatternCharsTag[]="localPatternChars";
 
 static UMTX LOCK;
@@ -327,6 +344,8 @@ DateFormatSymbols::copyData(const DateFormatSymbols& other) {
     assignArray(fShortQuarters, fShortQuartersCount, other.fShortQuarters, other.fShortQuartersCount);
     assignArray(fStandaloneQuarters, fStandaloneQuartersCount, other.fStandaloneQuarters, other.fStandaloneQuartersCount);
     assignArray(fStandaloneShortQuarters, fStandaloneShortQuartersCount, other.fStandaloneShortQuarters, other.fStandaloneShortQuartersCount);
+    fGmtFormat = other.fGmtFormat;
+    assignArray(fGmtHourFormats, fGmtHourFormatsCount, other.fGmtHourFormats, other.fGmtHourFormatsCount);
     // the zoneStrings data is initialized on demand
     //fZoneStringsRowCount = other.fZoneStringsRowCount;
     //fZoneStringsColCount = other.fZoneStringsColCount;
@@ -389,6 +408,7 @@ void DateFormatSymbols::dispose()
     if (fShortQuarters)            delete[] fShortQuarters;
     if (fStandaloneQuarters)       delete[] fStandaloneQuarters;
     if (fStandaloneShortQuarters)  delete[] fStandaloneShortQuarters;
+    if (fGmtHourFormats)           delete[] fGmtHourFormats;
 
     disposeZoneStrings();
 }
@@ -454,7 +474,9 @@ DateFormatSymbols::operator==(const DateFormatSymbols& other) const
         fQuartersCount == other.fQuartersCount &&
         fShortQuartersCount == other.fShortQuartersCount &&
         fStandaloneQuartersCount == other.fStandaloneQuartersCount &&
-        fStandaloneShortQuartersCount == other.fStandaloneShortQuartersCount)
+        fStandaloneShortQuartersCount == other.fStandaloneShortQuartersCount &&
+        fGmtHourFormatsCount == other.fGmtHourFormatsCount &&
+        fGmtFormat == other.fGmtFormat)
     {
         // Now compare the arrays themselves
         if (arrayCompare(fEras, other.fEras, fErasCount) &&
@@ -475,9 +497,9 @@ DateFormatSymbols::operator==(const DateFormatSymbols& other) const
             arrayCompare(fQuarters, other.fQuarters, fQuartersCount) &&
             arrayCompare(fShortQuarters, other.fShortQuarters, fShortQuartersCount) &&
             arrayCompare(fStandaloneQuarters, other.fStandaloneQuarters, fStandaloneQuartersCount) &&
-            arrayCompare(fStandaloneShortQuarters, other.fStandaloneShortQuarters, fStandaloneShortQuartersCount))
+            arrayCompare(fStandaloneShortQuarters, other.fStandaloneShortQuarters, fStandaloneShortQuartersCount) &&
+            arrayCompare(fGmtHourFormats, other.fGmtHourFormats, fGmtHourFormatsCount))
         {
-            
             if(fZoneStringsHash == NULL || other.fZoneStringsHash == NULL){
                 // fZoneStringsHash is not initialized compare the resource bundles
                 if(ures_equal(fResourceBundle, other.fResourceBundle)== FALSE){
@@ -1144,6 +1166,8 @@ DateFormatSymbols::initializeData(const Locale& locale, const char *type, UError
     fStandaloneQuartersCount = 0;
     fStandaloneShortQuarters = NULL;
     fStandaloneShortQuartersCount = 0;
+    fGmtHourFormats = NULL;
+    fGmtHourFormatsCount = 0;
     fZoneStringsRowCount = 0;
     fZoneStringsColCount = 0;
     fZoneStrings = NULL;
@@ -1212,6 +1236,8 @@ DateFormatSymbols::initializeData(const Locale& locale, const char *type, UError
             initField(&fShortQuarters, fShortQuartersCount, (const UChar *)gLastResortQuarters, kQuarterNum, kQuarterLen, status);
             initField(&fStandaloneQuarters, fStandaloneQuartersCount, (const UChar *)gLastResortQuarters, kQuarterNum, kQuarterLen, status);
             initField(&fStandaloneShortQuarters, fStandaloneShortQuartersCount, (const UChar *)gLastResortQuarters, kQuarterNum, kQuarterLen, status);
+            initField(&fGmtHourFormats, fGmtHourFormatsCount, (const UChar *)gLastResortGmtHourFormats, kGmtHourNum, kGmtHourLen, status);
+            fGmtFormat.setTo(TRUE, gLastResortGmtFormat, -1);
             fLocalPatternChars.setTo(TRUE, gPatternChars, PATTERN_CHARS_LEN);
         }
         goto cleanup;
@@ -1274,6 +1300,41 @@ DateFormatSymbols::initializeData(const Locale& locale, const char *type, UError
         status = U_ZERO_ERROR;
         initField(&fStandaloneShortQuarters, fStandaloneShortQuartersCount, calData.getByKey2(gQuartersTag, gNamesAbbrTag, status), status);
     }
+
+    // GMT format patterns
+    resStr = ures_getStringByKeyWithFallback(fResourceBundle, gGmtFormatTag, &len, &status);
+    if (len > 0) {
+        fGmtFormat.setTo(TRUE, resStr, len);
+    }
+
+    resStr = ures_getStringByKeyWithFallback(fResourceBundle, gHourFormatTag, &len, &status);
+    if (len > 0) {
+        UChar *sep = u_strchr(resStr, (UChar)0x003B /* ';' */);
+        if (sep != NULL) {
+            fGmtHourFormats = newUnicodeStringArray(GMT_HOUR_COUNT);
+            if (fGmtHourFormats == NULL) {
+                status = U_MEMORY_ALLOCATION_ERROR;
+            } else {
+                fGmtHourFormatsCount = GMT_HOUR_COUNT;
+                fGmtHourFormats[GMT_NEGATIVE_HM].setTo(TRUE, sep + 1, -1);
+                fGmtHourFormats[GMT_POSITIVE_HM].setTo(FALSE, resStr, sep - resStr);
+
+                // CLDR 1.5 does not have GMT offset pattern including second field.
+                // For now, append "ss" to the end.
+                if (fGmtHourFormats[GMT_NEGATIVE_HM].indexOf((UChar)0x003A /* ':' */) != -1) {
+                    fGmtHourFormats[GMT_NEGATIVE_HMS] = fGmtHourFormats[GMT_NEGATIVE_HM] + ":ss";
+                } else {
+                    fGmtHourFormats[GMT_NEGATIVE_HMS] = fGmtHourFormats[GMT_NEGATIVE_HM] + "ss";
+                }
+                if (fGmtHourFormats[GMT_POSITIVE_HM].indexOf((UChar)0x003A /* ':' */) != -1) {
+                    fGmtHourFormats[GMT_POSITIVE_HMS] = fGmtHourFormats[GMT_POSITIVE_HM] + ":ss";
+                } else {
+                    fGmtHourFormats[GMT_POSITIVE_HMS] = fGmtHourFormats[GMT_POSITIVE_HM] + "ss";
+                }
+            }
+        }
+    }
+
     // ICU 3.8 or later version no longer uses localized date-time pattern characters by default (ticket#5597)
     /*
     // fastCopyFrom()/setTo() - see assignArray comments

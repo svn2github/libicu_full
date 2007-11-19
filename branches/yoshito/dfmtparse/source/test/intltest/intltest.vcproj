@@ -790,6 +790,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\tzfmttst.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\tzfmttst.h"
+				>
+			</File>
+			<File
 				RelativePath=".\tzoffloc.cpp"
 				>
 			</File>
