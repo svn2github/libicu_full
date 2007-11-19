@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT: 
- * Copyright (c) 2004-2006, International Business Machines Corporation and
+ * Copyright (c) 2004-2007, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 /********************************************************************************
@@ -629,18 +629,39 @@ static void TestRegexCAPI(void) {
         TEST_ASSERT(uregex_lookingAt(re, -1, &status) == TRUE);
         TEST_ASSERT(uregex_start(re, 0, &status) == 4);
         TEST_ASSERT(uregex_end(re, 0, &status) == 4);
-        printf("start = %d\n", uregex_start(re, 0, &status));
         TEST_TEARDOWN;
         
-        // matches (start >=0) does not use regions
+        // lookingAt (start >=0) does not use regions
         TEST_SETUP(".*?", "0123456789ABCDEF", 0);
         uregex_setRegion(re, 4, 6, &status);
         TEST_ASSERT(uregex_lookingAt(re, 0, &status) == TRUE);
         TEST_ASSERT(uregex_start(re, 0, &status) == 0);
         TEST_ASSERT(uregex_end(re, 0, &status) == 0);
         TEST_TEARDOWN;
-        
-        
+
+        // hitEnd()
+        TEST_SETUP("[a-f]*", "abcdefghij", 0);
+        TEST_ASSERT(uregex_find(re, 0, &status) == TRUE);
+        TEST_ASSERT(uregex_hitEnd(re, &status) == FALSE);
+        TEST_TEARDOWN;
+
+        TEST_SETUP("[a-f]*", "abcdef", 0);
+        TEST_ASSERT(uregex_find(re, 0, &status) == TRUE);
+        TEST_ASSERT(uregex_hitEnd(re, &status) == TRUE);
+        TEST_TEARDOWN;
+
+        // requireEnd
+        TEST_SETUP("abcd", "abcd", 0);
+        TEST_ASSERT(uregex_find(re, 0, &status) == TRUE);
+        TEST_ASSERT(uregex_requireEnd(re, &status) == FALSE);
+        TEST_TEARDOWN;
+
+        // requireEnd
+        TEST_SETUP("abcd$", "abcd", 0);
+        TEST_ASSERT(uregex_find(re, 0, &status) == TRUE);
+        TEST_ASSERT(uregex_requireEnd(re, &status) == TRUE);
+        TEST_TEARDOWN;
+
          
         
 #if 0
