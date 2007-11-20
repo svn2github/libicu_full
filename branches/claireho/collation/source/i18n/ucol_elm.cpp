@@ -205,7 +205,7 @@ uprv_uca_initTempTable(UCATableHeader *image, UColOptionSet *opts, const UCollat
     }
     uprv_memset(t->unsafeCP, 0, UCOL_UNSAFECP_TABLE_SIZE);
     uprv_memset(t->contrEndCP, 0, UCOL_UNSAFECP_TABLE_SIZE);
-    t->cccLookup = NULL;
+    t->cmLookup = NULL;
     return t;
 
 allocation_failure:
@@ -395,9 +395,9 @@ uprv_uca_closeTempTable(tempUCATable *t) {
         uprv_free(t->unsafeCP);
         uprv_free(t->contrEndCP);
         
-        if (t->cccLookup != NULL) {
-            uprv_free(t->cccLookup->cPoints);
-            uprv_free(t->cccLookup);
+        if (t->cmLookup != NULL) {
+            uprv_free(t->cmLookup->cPoints);
+            uprv_free(t->cmLookup);
         }
 
         uprv_free(t);
@@ -684,51 +684,51 @@ static void unsafeCPSet(uint8_t *table, UChar c) {
 }
 
 static void
-uprv_uca_createCCCTable(tempUCATable *t, int32_t noOfCCC, UErrorCode *status) {
-    t->cccLookup = (CombinClassTable *)uprv_malloc(sizeof(CombinClassTable));
-    if (t->cccLookup==NULL) {
+uprv_uca_createCMTable(tempUCATable *t, int32_t noOfCM, UErrorCode *status) {
+    t->cmLookup = (CombinClassTable *)uprv_malloc(sizeof(CombinClassTable));
+    if (t->cmLookup==NULL) {
         *status = U_MEMORY_ALLOCATION_ERROR;
         return;
     }
-    t->cccLookup->cPoints=(UChar *)uprv_malloc(noOfCCC*sizeof(UChar));
-    if (t->cccLookup->cPoints ==NULL) {
-        uprv_free(t->cccLookup);
-        t->cccLookup = NULL;
+    t->cmLookup->cPoints=(UChar *)uprv_malloc(noOfCM*sizeof(UChar));
+    if (t->cmLookup->cPoints ==NULL) {
+        uprv_free(t->cmLookup);
+        t->cmLookup = NULL;
         *status = U_MEMORY_ALLOCATION_ERROR;
         return;
     }
 
-    t->cccLookup->size=noOfCCC;
-    uprv_memset(t->cccLookup->index, 0, sizeof(t->cccLookup->index));
+    t->cmLookup->size=noOfCM;
+    uprv_memset(t->cmLookup->index, 0, sizeof(t->cmLookup->index));
 
     return;
 }
 
 static void
-uprv_uca_copyCCCTable(tempUCATable *t, UChar *ccc, uint16_t *index) {
+uprv_uca_copyCMTable(tempUCATable *t, UChar *cm, uint16_t *index) {
     int32_t count=0;
 
     for (int32_t i=0; i<256; ++i) {
         if (index[i]>0) {
             // cPoints is ordered by combining class value.
-            uprv_memcpy(t->cccLookup->cPoints+count, ccc+(i<<8), index[i]*sizeof(UChar));
+            uprv_memcpy(t->cmLookup->cPoints+count, cm+(i<<8), index[i]*sizeof(UChar));
             count += index[i];
         }
-        t->cccLookup->index[i]=count;
+        t->cmLookup->index[i]=count;
     }
     return;
 }
 
 /* 1. to the UnsafeCP hash table, add all chars with combining class != 0     */
-/* 2. build combining class table for all chars with combining class != 0     */
+/* 2. build combining marks table for all chars with combining class != 0     */
 static void uprv_uca_unsafeCPAddCCNZ(tempUCATable *t, UErrorCode *status) {
 
     UChar              c;
     uint16_t           fcd;     // Hi byte is lead combining class.
     // lo byte is trailing combing class.
     const uint16_t    *fcdTrieData;
-    UBool buildCCCTable = (t->cccLookup==NULL); // flag for building combining class table
-    UChar *ccc=NULL;
+    UBool buildCMTable = (t->cmLookup==NULL); // flag for building combining class table
+    UChar *cm=NULL;
     uint16_t index[256];
     int32_t count=0;
     fcdTrieData = unorm_getFCDTrie(status);
@@ -736,10 +736,10 @@ static void uprv_uca_unsafeCPAddCCNZ(tempUCATable *t, UErrorCode *status) {
         return;
     }
 
-    if (buildCCCTable) {
-        if (ccc==NULL) {
-            ccc = (UChar *)uprv_malloc(sizeof(UChar)*UCOL_MAX_CC_TAB);
-            if (ccc==NULL) {
+    if (buildCMTable) {
+        if (cm==NULL) {
+            cm = (UChar *)uprv_malloc(sizeof(UChar)*UCOL_MAX_CM_TAB);
+            if (cm==NULL) {
                 *status = U_MEMORY_ALLOCATION_ERROR;
                 return;
             }
@@ -750,10 +750,10 @@ static void uprv_uca_unsafeCPAddCCNZ(tempUCATable *t, UErrorCode *status) {
         fcd = unorm_getFCD16(fcdTrieData, c);
         if (fcd >= 0x100 ||               // if the leading combining class(c) > 0 ||
             (UTF_IS_LEAD(c) && fcd != 0)) {//    c is a leading surrogate with some FCD data
-            if (buildCCCTable) {
+            if (buildCMTable) {
                 uint32_t cClass = fcd & 0xff;
                 uint32_t temp=(cClass<<8)+index[cClass];
-                ccc[(cClass<<8)+index[cClass]] = c; //
+                cm[(cClass<<8)+index[cClass]] = c; //
                 index[cClass]++;
                 count++;
             }
@@ -761,16 +761,16 @@ static void uprv_uca_unsafeCPAddCCNZ(tempUCATable *t, UErrorCode *status) {
         }
     }
 
-    // copy to ccc table
-    if (buildCCCTable) {
-        uprv_uca_createCCCTable(t, count, status);
+    // copy to cm table
+    if (buildCMTable) {
+        uprv_uca_createCMTable(t, count, status);
         if(U_FAILURE(*status)) {
-            if (ccc!=NULL) {
-                uprv_free(ccc);
+            if (cm!=NULL) {
+                uprv_free(cm);
             }
             return;
         }
-        uprv_uca_copyCCCTable(t, ccc, index);
+        uprv_uca_copyCMTable(t, cm, index);
     }
 
     if(t->prefixLookup != NULL) {
@@ -790,8 +790,8 @@ static void uprv_uca_unsafeCPAddCCNZ(tempUCATable *t, UErrorCode *status) {
         }
     }
 
-    if (ccc!=NULL) {
-        uprv_free(ccc);
+    if (cm!=NULL) {
+        uprv_free(cm);
     }
 }
 
@@ -1685,9 +1685,9 @@ uprv_uca_canonicalClosure(tempUCATable *t, UErrorCode *status)
 
         UCATableHeader *tempData = uprv_uca_assembleTable(tempTable, status);
         tempColl = ucol_initCollator(tempData, 0, t->UCA, status);
-        if ( tempTable->cccLookup != NULL ) {
-            t->cccLookup = tempTable->cccLookup;  // copy over to t .
-            tempTable->cccLookup = NULL;
+        if ( tempTable->cmLookup != NULL ) {
+            t->cmLookup = tempTable->cmLookup;  // copy over to t .
+            tempTable->cmLookup = NULL;
         }
         uprv_uca_closeTempTable(tempTable);    
 
@@ -1718,7 +1718,7 @@ uprv_uca_canonicalClosure(tempUCATable *t, UErrorCode *status)
 }
 
 static void
-uprv_uca_addFCD4AcctendedContractions(tempUCATable *t,
+uprv_uca_addFCD4AccentedContractions(tempUCATable *t,
                                       UCollationElements* colEl,
                                       UChar *data,
                                       int32_t len,
@@ -1754,15 +1754,16 @@ uprv_uca_addFCD4AcctendedContractions(tempUCATable *t,
 }
 
 static void
-uprv_uca_addMultiCCContractions(tempUCATable *t,
+uprv_uca_addMultiCMontractions(tempUCATable *t,
                                 UCollationElements* colEl,
                                 tempTailorContext *c,
                                 UCAElements *el,
                                 UErrorCode *status) {
-    CombinClassTable *cccLookup = t->cccLookup;
+    CombinClassTable *cmLookup = t->cmLookup;
     UChar  newDecomp[256];
     int32_t maxComp, newDecLen;
-    int16_t curClass = c->tailoringCC;
+    const uint16_t  *fcdTrieData = unorm_getFCDTrie(status);
+    int16_t curClass = (unorm_getFCD16(fcdTrieData, c->tailoringCM) & 0xff);
     CompData *precomp = c->precomp;
     int32_t  compLen = c->compLen;
     UChar *comp = c->comp;
@@ -1775,7 +1776,7 @@ uprv_uca_addMultiCCContractions(tempUCATable *t,
             if ( count == 0 ) {  // Decompose the saved precomposed char.
                 newDecLen = unorm_normalize(&(precomp[j].cp), 1, UNORM_NFD, 0,
                             newDecomp, sizeof(newDecomp), status);
-                newDecomp[newDecLen++] = cccLookup->cPoints[c->cccPos];
+                newDecomp[newDecLen++] = cmLookup->cPoints[c->cmPos];
             }
             else {  // swap 2 combining marks when they are equal.
                 uprv_memcpy(newDecomp, c->decomp, sizeof(UChar)*(c->decompLen));
@@ -1786,7 +1787,7 @@ uprv_uca_addMultiCCContractions(tempUCATable *t,
             compLen = unorm_normalize(newDecomp, newDecLen, UNORM_NFC, 0,
                               comp, 256, status);
             if (compLen==1) {
-                comp[compLen++] = newDecomp[newDecLen++] = c->tailoringCC;
+                comp[compLen++] = newDecomp[newDecLen++] = c->tailoringCM;
                 comp[compLen] = newDecomp[newDecLen] = 0;
                 el->cPoints = newDecomp;
                 el->cSize = newDecLen;
@@ -1824,7 +1825,7 @@ uprv_uca_addTailCanonicalClosures(tempUCATable *t,
                                   UChar cMark,
                                   UCAElements *el,
                                   UErrorCode *status) {
-    CombinClassTable *cccLookup = t->cccLookup;
+    CombinClassTable *cmLookup = t->cmLookup;
     const uint16_t  *fcdTrieData = unorm_getFCDTrie(status);
     int16_t maxIndex = (unorm_getFCD16(fcdTrieData, cMark) & 0xff );
     UCAElements element;
@@ -1836,16 +1837,16 @@ uprv_uca_addTailCanonicalClosures(tempUCATable *t,
     int32_t i, len, decompLen, curClass, replacedPos;
     tempTailorContext c;
 
-    if ( cccLookup == NULL ) {
+    if ( cmLookup == NULL ) {
         return;
     }
-    index = cccLookup->index;
+    index = cmLookup->index;
     int32_t cClass=(unorm_getFCD16(fcdTrieData, cMark) & 0xff);
     maxIndex = (int32_t)index[(unorm_getFCD16(fcdTrieData, cMark) & 0xff)-1];
     c.comp = comp;
     c.decomp = decomp;
     c.precomp = precomp;
-    c.tailoringCC =  cMark;
+    c.tailoringCM =  cMark;
 
     if (cClass>0) {
         maxIndex = (int32_t)index[cClass-1];
@@ -1855,7 +1856,7 @@ uprv_uca_addTailCanonicalClosures(tempUCATable *t,
     }
     decomp[0]=baseCh;
     for ( i=0; i<maxIndex ; i++ ) {
-        decomp[1] = cccLookup->cPoints[i];
+        decomp[1] = cmLookup->cPoints[i];
         decomp[2]=0;
         decompLen=2;
         len = unorm_normalize(decomp, decompLen, UNORM_NFC, 0, comp, 256, status);
@@ -1874,7 +1875,7 @@ uprv_uca_addTailCanonicalClosures(tempUCATable *t,
                 }
             }
             if ( replacedPos != 0 ) {
-                decomp[replacedPos]=cccLookup->cPoints[i];
+                decomp[replacedPos]=cmLookup->cPoints[i];
             }
             decomp[decompLen] = 0;
             len = unorm_normalize(decomp, decompLen, UNORM_NFC, 0, comp, 256, status);
@@ -1902,18 +1903,18 @@ uprv_uca_addTailCanonicalClosures(tempUCATable *t,
                 //uprv_uca_addAnElement(t, &element, status);
             }
 
-            // Tihs is a fix for tailoring contractions with accented
+            // This is a fix for tailoring contractions with accented
             // character at the end of contraction string.
             if (len>2) {
-                uprv_uca_addFCD4AcctendedContractions(t, colEl, comp, len, &element, status);
+                uprv_uca_addFCD4AccentedContractions(t, colEl, comp, len, &element, status);
             }
 
             if (precompLen >1) {
                 c.compLen = len;
                 c.decompLen = decompLen;
                 c.precompLen = precompLen;
-                c.cccPos = i;
-                uprv_uca_addMultiCCContractions(t, colEl, &c, &element, status);
+                c.cmPos = i;
+                uprv_uca_addMultiCMontractions(t, colEl, &c, &element, status);
                 precompLen = c.precompLen;
             }
         }
@@ -1931,7 +1932,7 @@ uprv_uca_tailCanonicalClosure(tempUCATable *t,
     UColToken *tok;
     UColToken *expt = NULL;
     uint32_t i = 0, j = 0;
-    UChar  baseChar, firstCC;
+    UChar  baseChar, firstCM;
     const uint16_t  *fcdTrieData = unorm_getFCDTrie(status);
 
     if(!U_SUCCESS(*status)) {
@@ -1943,9 +1944,9 @@ uprv_uca_tailCanonicalClosure(tempUCATable *t,
 
     UCATableHeader *tempData = uprv_uca_assembleTable(tempTable, status);
     tempColl = ucol_initCollator(tempData, 0, t->UCA, status);
-    if ( tempTable->cccLookup != NULL ) {
-        t->cccLookup = tempTable->cccLookup;  // copy over to t
-        tempTable->cccLookup = NULL;
+    if ( tempTable->cmLookup != NULL ) {
+        t->cmLookup = tempTable->cmLookup;  // copy over to t
+        tempTable->cmLookup = NULL;
     }
     uprv_uca_closeTempTable(tempTable);
 
@@ -1976,7 +1977,7 @@ uprv_uca_tailCanonicalClosure(tempUCATable *t,
     }
 
     for (i=0; i < src->resultLen; i++) {
-        baseChar = firstCC= (UChar)0;
+        baseChar = firstCM= (UChar)0;
         tok = src->lh[i].first;
         while (tok != NULL && U_SUCCESS(*status)) {
             el.prefix = el.prefixChars;
@@ -1999,18 +2000,18 @@ uprv_uca_tailCanonicalClosure(tempUCATable *t,
                     int16_t fcd = unorm_getFCD16(fcdTrieData, el.cPoints[j]);
                     if ( (fcd & 0xff) == 0 ) {
                         baseChar = el.cPoints[j];  // last base character
-                        firstCC=0;  // reset combining mark value
+                        firstCM=0;  // reset combining mark value
                     }
                     else {
-                        if ( (baseChar!=0) && (firstCC==0) ) {
-                            firstCC = el.cPoints[j];  // first combining mark
+                        if ( (baseChar!=0) && (firstCM==0) ) {
+                            firstCM = el.cPoints[j];  // first combining mark
                         }
                     }
                 }
             }
-            if ( (baseChar!= (UChar)0) && (firstCC != (UChar)0) ) {
+            if ( (baseChar!= (UChar)0) && (firstCM != (UChar)0) ) {
                 // find all the canonical rules
-                uprv_uca_addTailCanonicalClosures(t, colEl, baseChar, firstCC, &el, status);
+                uprv_uca_addTailCanonicalClosures(t, colEl, baseChar, firstCM, &el, status);
             }
             tok = tok->next;
         }

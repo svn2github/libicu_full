@@ -48,7 +48,7 @@ a problem. Normally, less than 32K are tailored.
  * table.  The table will be compacted after scanning all the
  * Unicode codepoints.
 */
-#define UCOL_MAX_CC_TAB  0x10000
+#define UCOL_MAX_CM_TAB  0x10000
 
 
 typedef struct {
@@ -111,7 +111,7 @@ typedef struct {
   uint8_t               *contrEndCP;
   const UCollator       *UCA;
   UHashtable      *prefixLookup;
-  CombinClassTable      *cccLookup;  /* combining class lookup for tailoring. */
+  CombinClassTable      *cmLookup;  /* combining class lookup for tailoring. */
 } tempUCATable; 
 
 typedef struct {
@@ -127,8 +127,8 @@ typedef struct {
     UChar *comp;
     int32_t compLen;
     uint16_t curClass;
-    uint16_t tailoringCC;
-    int32_t  cccPos;
+    uint16_t tailoringCM;
+    int32_t  cmPos;
 }tempTailorContext;
 
 U_CAPI tempUCATable * U_EXPORT2 uprv_uca_initTempTable(UCATableHeader *image, UColOptionSet *opts, const UCollator *UCA, UColCETags initTag, UColCETags supplementaryInitTag, UErrorCode *status);
