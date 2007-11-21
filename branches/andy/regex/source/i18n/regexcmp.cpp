@@ -515,14 +515,29 @@ UBool RegexCompile::doParseActions(int32_t action)
 
     case doOpenLookAhead:
         // Positive Look-ahead   (?=  stuff  )
+        //
+        //   Note:   Addition of transparent input regions, with the need to
+        //           restore the original regions when failing out of a lookahead
+        //           block, complicated this sequence.  Some conbined opcodes
+        //           might make sense - or might not, lookahead aren't that common.
+        //
+        //      Caution:  min match length optimization knows about this
+        //               sequence; don't change without making updates there too.
+        //
         // Compiles to
-        //    1    START_LA     dataLoc
-        //    2.   NOP              reserved for use by quantifiers on the block.
+        //    1    START_LA     dataLoc     Saves SP, Input Pos
+        //    2.   STATE_SAVE   4            on failure of lookahead, goto 4
+        //    3    JMP          6           continue ...
+        //
+        //    4.   LA_END                   Look Ahead failed.  Restore regions.
+        //    5.   FAIL                     //    and back track again.
+        //
+        //    6.   NOP              reserved for use by quantifiers on the block.
         //                          Look-ahead can't have quantifiers, but paren stack
         //                             compile time conventions require the slot anyhow.
-        //    3.   NOP              may be replaced if there is are '|' ops in the block.
-        //    4.     code for parenthesized stuff.
-        //    5.   ENDLA
+        //    7.   NOP              may be replaced if there is are '|' ops in the block.
+        //    8.     code for parenthesized stuff.
+        //    9.   LA_END
         //
         //  Two data slots are reserved, for saving the stack ptr and the input position.
         {
@@ -531,6 +546,18 @@ UBool RegexCompile::doParseActions(int32_t action)
             int32_t op = URX_BUILD(URX_LA_START, dataLoc);
             fRXPat->fCompiledPat->addElement(op, *fStatus);
 
+            op = URX_BUILD(URX_STATE_SAVE, fRXPat->fCompiledPat->size()+ 2);
+            fRXPat->fCompiledPat->addElement(op, *fStatus);
+
+            op = URX_BUILD(URX_JMP, fRXPat->fCompiledPat->size()+ 3);
+            fRXPat->fCompiledPat->addElement(op, *fStatus);
+            
+            op = URX_BUILD(URX_LA_END, dataLoc);
+            fRXPat->fCompiledPat->addElement(op, *fStatus);
+
+            op = URX_BUILD(URX_FAIL, 0);
+            fRXPat->fCompiledPat->addElement(op, *fStatus);
+            
             op = URX_BUILD(URX_NOP, 0);
             fRXPat->fCompiledPat->addElement(op, *fStatus);
             fRXPat->fCompiledPat->addElement(op, *fStatus);
@@ -2062,7 +2089,7 @@ void  RegexCompile::handleCloseParen() {
 
     case lookAhead:
         {
-            int32_t  startOp = fRXPat->fCompiledPat->elementAti(fMatchOpenParen-1);
+            int32_t  startOp = fRXPat->fCompiledPat->elementAti(fMatchOpenParen-5);
             U_ASSERT(URX_TYPE(startOp) == URX_LA_START);
             int32_t dataLoc  = URX_VAL(startOp);
             int32_t op       = URX_BUILD(URX_LA_END, dataLoc);
@@ -3018,7 +3045,20 @@ int32_t   RegexCompile::minMatchLength(int32_t start, int32_t end) {
                     if (URX_TYPE(op) == URX_LA_START || URX_TYPE(op) == URX_LB_START) {
                         depth++;
                     }
-                    if (URX_TYPE(op) == URX_LA_END || URX_TYPE(op)==URX_LBN_END) {
+                    if (URX_TYPE(op) == URX_LA_END) {
+                        // If this is the URX_LA_END in the boiler plate at the
+                        //   top of a look-ahead block, ignore it, otherwise decrement
+                        //   the look-ahead block nesting depth.
+                        if (!(loc >= 4 && 
+                              URX_TYPE((fRXPat->fCompiledPat->elementAti(loc-3)) == URX_LA_START))) {
+                                
+                            if (depth == 0) {
+                                break;
+                            }
+                            depth--;
+                        }
+                    }
+                    if (URX_TYPE(op)==URX_LBN_END) {
                         if (depth == 0) {
                             break;
                         }
