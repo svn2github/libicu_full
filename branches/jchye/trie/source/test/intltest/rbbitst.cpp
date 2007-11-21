@@ -845,7 +845,7 @@ void RBBITest::TestTrieDictWithValue() {
     //  Open and read the test data file.
     //
     const char *testDataDirectory = IntlTest::getSourceTestData(status);
-    char *filename = "japdict.txt";
+    char *filename = "cjdict-truncated.txt";
     char testFileName[1000];
     if (testDataDirectory == NULL || strlen(testDataDirectory) + strlen(filename) + 10 >= sizeof(testFileName)) {
         errln("Can't open test data.  Path too long.");
@@ -1012,7 +1012,7 @@ void RBBITest::TestTrieDictWithValue() {
 //        fprintf(stdout,"node %d, values %x and %x\n", 
 //              counter, values1[count1-1], values2[count2-1]);
         if(values1[count1-1] != values2[count2-1]){
-            errln("Values of word %d in MutableTrieDictionary and CompactTrieDictionary do not match, with values %x and %x\n", 
+            errln("Values of word %d in MutableTrieDictionary and CompactTrieDictionary do not match, with values %d and %d\n", 
                   counter, values1[count1-1], values2[count2-1]);
             goto cleanup;
         }
@@ -1080,7 +1080,7 @@ void RBBITest::TestTrieDictWithValue() {
 //        fprintf(stdout,"node %d, values %x and %x, lengths %d and %d\n", 
 //              counter, values1[count1-1], values2[count2-1], originalLength, cloneLength);
         if(values1[count1-1] != values2[count2-1]){
-            errln("Values of word %d in original and cloned MutableTrieDictionary do not match, with values %x and %x\n", 
+            errln("Values of word %d in original and cloned MutableTrieDictionary do not match, with values %d and %d\n", 
                   counter, values1[count1-1], values2[count2-1]);
             goto cleanup;
         }
@@ -2633,7 +2633,7 @@ RBBIWordMonkey::RBBIWordMonkey()
     fKatakanaSet     = new UnicodeSet("[\\p{Word_Break = Katakana}-[\\uff9e\\uff9f]]",     status);
     fMidLetterSet    = new UnicodeSet("[\\p{Word_Break = MidLetter}]",    status);
     fMidNumSet       = new UnicodeSet("[\\p{Word_Break = MidNum}]",       status);
-    fNumericSet      = new UnicodeSet("[\\p{Word_Break = Numeric}]",      status);
+    fNumericSet      = new UnicodeSet("[\\p{Word_Break = Numeric}[\\uff10-\\uff19]]",      status);
     fFormatSet       = new UnicodeSet("[\\p{Word_Break = Format}]",       status);
     fExtendNumLetSet = new UnicodeSet("[\\p{Word_Break = ExtendNumLet}]", status);
     //fExtendSet       = new UnicodeSet("[\\p{Word_Break = Extend}]", status);

@@ -169,7 +169,7 @@
 <data>•芽キャベツ<400>芽キャﾍﾞツ<400></data>
 
 # more Japanese tests
-<data>•どー<400>せ<400>日本語<400>を<400>勉強<400>す<400>る<400>理由<400>に<400>つい<400>て<400>　•て<400>こと<400>は<400>我<400>でも<400>知<400>ら<400>も<400>い<400>こと<400>なん<400>だ<400>。•</data>
+<data>•どー<400>せ<400>日本語<400>を<400>勉強<400>する<400>理由<400>について<400>　•て<400>こと<400>は<400>我<400>でも<400>知<400>ら<400>も<400>い<400>こと<400>なん<400>だ<400>。•</data>
 
 # Testing of word boundary for dictionary word containing both kanji and kana
 <data>•中だるみ<400>蔵王の森<400>ウ離島<400></data>
@@ -183,6 +183,8 @@
 # to test for bug #4097779
 <data>•aa\N{COMBINING GRAVE ACCENT}a<200> •</data>
 
+# fullwidth numeric, midletter characters etc should be treated like their halfwidth counterparts
+<data>•ＩＳＮ'Ｔ<200> •１９<100>日<400></data>
 
 #      to test for bug #4098467
 #      What follows is a string of Korean characters (I found it in the Yellow Pages

@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2002-2006, International Business Machines Corporation 
+# Copyright (C) 2002-2007, International Business Machines Corporation 
 # and others. All Rights Reserved.
 #
 # file:  word.txt
@@ -30,12 +30,11 @@ $VoiceMarks   = [\uff9e\uff9f];
 $Format       = [\p{Word_Break = Format}];
 $Hiragana     = [:Hiragana:];
 $Katakana     = [\p{Word_Break = Katakana}-$VoiceMarks];
-#$Kana         = [$Hiragana $Katakana];
 $Han          = [:Han:];
 $ALetter      = [\p{Word_Break = ALetter}];
-$MidLetter    = [\p{Word_Break = MidLetter}];
+$MidLetter    = [\p{Word_Break = MidLetter}[\uff07]]; #includes fullwidth apostrophe
 $MidNum       = [\p{Word_Break = MidNum}];
-$Numeric      = [\p{Word_Break = Numeric}];
+$Numeric      = [\p{Word_Break = Numeric}[\uff10-\uff19]]; #includes fullwidth digits
 $ExtendNumLet = [\p{Word_Break = ExtendNumLet}];
 
 $CR             = \u000d;
@@ -123,7 +122,6 @@ $NumericEx $MidNumEx $NumericEx {100};
 
 # rule 13
 
-#($KatakanaEx|$HiraganaEx) ($KatakanaEx|$HiraganaEx) {300};
 $KatakanaEx $KatakanaEx {400};
 
 # rule 13a/b
@@ -186,13 +184,10 @@ $BackNumericEx $BackMidNumEx $BackNumericEx;
 
 # rule 13
 
-#($BackKatakanaEx|$Hiragana) ($BackKatakanaEx|$Hiragana)+;
 $BackKatakanaEx $BackKatakanaEx;
-#$BackHiraganaEx $BackHiraganaEx;
-#$Kana {500};
 
 # rules 13 a/b
-#
+
 ($BackALetterEx | $BackNumericEx | $BackKatakanaEx | $BackExtendNumLetEx) $BackExtendNumLetEx; 
 $BackExtendNumLetEx ($BackALetterEx | $BackNumericEx | $BackKatakanaEx);
 
