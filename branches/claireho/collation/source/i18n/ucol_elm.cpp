@@ -1754,7 +1754,7 @@ uprv_uca_addFCD4AccentedContractions(tempUCATable *t,
 }
 
 static void
-uprv_uca_addMultiCMontractions(tempUCATable *t,
+uprv_uca_addMultiCMContractions(tempUCATable *t,
                                 UCollationElements* colEl,
                                 tempTailorContext *c,
                                 UCAElements *el,
@@ -1774,8 +1774,11 @@ uprv_uca_addMultiCMontractions(tempUCATable *t,
         int32_t newClass=0;
         do {
             if ( count == 0 ) {  // Decompose the saved precomposed char.
-                newDecLen = unorm_normalize(&(precomp[j].cp), 1, UNORM_NFD, 0,
-                            newDecomp, sizeof(newDecomp), status);
+                UChar temp[2];
+                temp[0]=precomp[j].cp;
+                temp[1]=0;
+                newDecLen = unorm_normalize(temp, 1, UNORM_NFD, 0,
+                            newDecomp, sizeof(newDecomp)/sizeof(UChar), status);
                 newDecomp[newDecLen++] = cmLookup->cPoints[c->cmPos];
             }
             else {  // swap 2 combining marks when they are equal.
@@ -1914,7 +1917,7 @@ uprv_uca_addTailCanonicalClosures(tempUCATable *t,
                 c.decompLen = decompLen;
                 c.precompLen = precompLen;
                 c.cmPos = i;
-                uprv_uca_addMultiCMontractions(t, colEl, &c, &element, status);
+                uprv_uca_addMultiCMContractions(t, colEl, &c, &element, status);
                 precompLen = c.precompLen;
             }
         }
