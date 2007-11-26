@@ -1079,6 +1079,33 @@ TimeZone::getEquivalentID(const UnicodeString& id, int32_t index) {
 
 // ---------------------------------------
 
+UnicodeString&
+TimeZone::getOlsonCanonicalID(const UnicodeString &id, UnicodeString &canonical) {
+    UErrorCode ec = U_ZERO_ERROR;
+    canonical.remove();
+    UResourceBundle *top = ures_openDirect(0, kZONEINFO, &ec);
+    UResourceBundle *res = getZoneByName(top, id, NULL, ec);
+    if (U_SUCCESS(ec)) {
+        if (ures_getSize(res) == 1) {
+            int32_t deref = ures_getInt(res, &ec);
+            UResourceBundle *nres = ures_getByKey(top, kNAMES, NULL, &ec); // dereference Names section
+            int32_t len;
+            const UChar* tmp = ures_getStringByIndex(nres, deref, &len, &ec);
+            if (U_SUCCESS(ec)) {
+                canonical.setTo(tmp, len);
+            }
+            ures_close(nres);
+        } else {
+            canonical.setTo(id);
+        }
+    }
+    ures_close(res);
+    ures_close(top);
+    return canonical;
+}
+
+// ---------------------------------------
+
 
 UnicodeString&
 TimeZone::getDisplayName(UnicodeString& result) const
