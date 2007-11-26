@@ -26,6 +26,7 @@
 #include "zonemeta.h"
 #include "olsontz.h"
 
+
 U_CDECL_BEGIN
 /**
  * Deleter for ZoneStringInfo
@@ -325,7 +326,7 @@ ZoneStringSearchResultHandler::handleMatch(int32_t matchLength, const UVector *v
             }
             // Update the results
             UBool foundType = FALSE;
-            for (int32_t j = 0; fResults->size(); j++) {
+            for (int32_t j = 0; j < fResults->size(); j++) {
                 ZoneStringInfo *tmp = (ZoneStringInfo*)fResults->elementAt(j);
                 if (zsinfo->fType == tmp->fType) {
                     int32_t lenidx = getTimeZoneTranslationTypeIndex(tmp->fType);
@@ -378,15 +379,9 @@ ZoneStringSearchResultHandler::clear(void) {
 // ----------------------------------------------------------------------------
 ZoneStringFormat::ZoneStringFormat(const UnicodeString* const* strings,
                                    int32_t rowCount, int32_t columnCount, UErrorCode &status)
-: UMemory(), fTzidToStrings(NULL), fMzidToStrings(NULL), fZoneStringsTrie(NULL),
-  fByLocale(FALSE), fRowCount(rowCount), fColCount(columnCount) {
+: UMemory(), fTzidToStrings(NULL), fMzidToStrings(NULL), fZoneStringsTrie(NULL) {
     fLocale.setToBogus();
     if (strings == NULL || columnCount <= 0 || rowCount <= 0) {
-        return;
-    }
-    fStrings = (UnicodeString**)uprv_malloc(fRowCount * sizeof(UnicodeString*));
-    if (fStrings == NULL) {
-        status = U_MEMORY_ALLOCATION_ERROR;
         return;
     }
 
@@ -402,10 +397,8 @@ ZoneStringFormat::ZoneStringFormat(const UnicodeString* const* strings,
         if (strings[row][0].isEmpty()) {
             continue;
         }
-        fStrings[row] = new UnicodeString[fColCount];
         UnicodeString *names = new UnicodeString[ZSIDX_COUNT];
         for (int32_t col = 1; col < columnCount; col++) {
-            fStrings[row][col].setTo(strings[row][col]);
             if (!strings[row][col].isEmpty()) {
                 int32_t typeIdx = -1;
                 switch (col) {
@@ -464,7 +457,7 @@ error_cleanup:
 
 ZoneStringFormat::ZoneStringFormat(const Locale &locale, UErrorCode &status)
 : UMemory(), fLocale(locale), fTzidToStrings(NULL), fMzidToStrings(NULL),
-  fZoneStringsTrie(NULL), fStrings(NULL), fRowCount(0), fColCount(0), fByLocale(TRUE) {
+  fZoneStringsTrie(NULL) {
 
     fTzidToStrings = new Hashtable(uhash_compareUnicodeString, NULL, status);
     fMzidToStrings = new Hashtable(uhash_compareUnicodeString, NULL, status);
@@ -868,29 +861,11 @@ ZoneStringFormat::~ZoneStringFormat() {
     if (fZoneStringsTrie != NULL) {
         delete fZoneStringsTrie;
     }
-    if (fStrings != NULL) {
-        for (int32_t row = 0; row < fRowCount; row++) {
-            delete[] fStrings[row];
-        }
-        uprv_free(fStrings);
-    }
     return;
 }
 
-const UnicodeString**
-ZoneStringFormat::getZoneStrings(int32_t &rowCount, int32_t &columnCount) {
-    if (fStrings == NULL && fByLocale) {
-        // Create one for the current time
-        UErrorCode status = U_ZERO_ERROR;
-        fStrings = createZoneStrings(Calendar::getNow(), fRowCount, fColCount, status);
-    }
-    rowCount = fRowCount;
-    columnCount = fColCount;
-    return (const UnicodeString**)fStrings;
-}
-
 UnicodeString**
-ZoneStringFormat::createZoneStrings(UDate date, int32_t &rowCount, int32_t &colCount, UErrorCode &status) {
+ZoneStringFormat::createZoneStringsArray(UDate date, int32_t &rowCount, int32_t &colCount, UErrorCode &status) const {
     if (U_FAILURE(status)) {
         return NULL;
     }
@@ -949,7 +924,7 @@ ZoneStringFormat::createZoneStrings(UDate date, int32_t &rowCount, int32_t &colC
 
 UnicodeString&
 ZoneStringFormat::getSpecificLongString(const Calendar &cal, UnicodeString &result,
-                                        UErrorCode &status) {
+                                        UErrorCode &status) const {
     result.remove();
     if (U_FAILURE(status)) {
         return result;
@@ -966,7 +941,7 @@ ZoneStringFormat::getSpecificLongString(const Calendar &cal, UnicodeString &resu
 
 UnicodeString&
 ZoneStringFormat::getSpecificShortString(const Calendar &cal, UBool commonlyUsedOnly,
-                                         UnicodeString &result, UErrorCode &status) {
+                                         UnicodeString &result, UErrorCode &status) const {
     result.remove();
     if (U_FAILURE(status)) {
         return result;
@@ -983,19 +958,19 @@ ZoneStringFormat::getSpecificShortString(const Calendar &cal, UBool commonlyUsed
 
 UnicodeString&
 ZoneStringFormat::getGenericLongString(const Calendar &cal, UnicodeString &result,
-                                       UErrorCode &status) {
+                                       UErrorCode &status) const {
     return getGenericString(cal, FALSE /*long*/, FALSE /* not used */, result, status);
 }
 
 UnicodeString&
 ZoneStringFormat::getGenericShortString(const Calendar &cal, UBool commonlyUsedOnly,
-                                        UnicodeString &result, UErrorCode &status) {
+                                        UnicodeString &result, UErrorCode &status) const {
     return getGenericString(cal, TRUE /*short*/, commonlyUsedOnly, result, status);
 }
 
 UnicodeString&
 ZoneStringFormat::getGenericLocationString(const Calendar &cal, UnicodeString &result,
-                                           UErrorCode &status) {
+                                           UErrorCode &status) const {
     UnicodeString tzid;
     cal.getTimeZone().getID(tzid);
     UDate date = cal.getTime(status);
@@ -1004,37 +979,37 @@ ZoneStringFormat::getGenericLocationString(const Calendar &cal, UnicodeString &r
 
 const ZoneStringInfo*
 ZoneStringFormat::findSpecificLong(const UnicodeString &text, int32_t start,
-                                   int32_t &matchLength, UErrorCode &status) {
+                                   int32_t &matchLength, UErrorCode &status) const {
     return find(text, start, STANDARD_LONG | DAYLIGHT_LONG, matchLength, status);
 }
 
 const ZoneStringInfo*
 ZoneStringFormat::findSpecificShort(const UnicodeString &text, int32_t start,
-                                    int32_t &matchLength, UErrorCode &status) {
+                                    int32_t &matchLength, UErrorCode &status) const {
     return find(text, start, STANDARD_SHORT | DAYLIGHT_SHORT, matchLength, status);
 }
 
 const ZoneStringInfo*
 ZoneStringFormat::findGenericLong(const UnicodeString &text, int32_t start,
-                                  int32_t &matchLength, UErrorCode &status) {
+                                  int32_t &matchLength, UErrorCode &status) const {
     return find(text, start, GENERIC_LONG | STANDARD_LONG | LOCATION, matchLength, status);
 }
 
 const ZoneStringInfo*
 ZoneStringFormat::findGenericShort(const UnicodeString &text, int32_t start,
-                                   int32_t &matchLength, UErrorCode &status) {
+                                   int32_t &matchLength, UErrorCode &status) const {
     return find(text, start, GENERIC_SHORT | STANDARD_SHORT | LOCATION, matchLength, status);
 }
 
 const ZoneStringInfo*
 ZoneStringFormat::findGenericLocation(const UnicodeString &text, int32_t start,
-                                      int32_t &matchLength, UErrorCode &status) {
+                                      int32_t &matchLength, UErrorCode &status) const {
     return find(text, start, LOCATION, matchLength, status);
 }
 
 UnicodeString&
 ZoneStringFormat::getString(const UnicodeString &tzid, TimeZoneTranslationTypeIndex typeIdx, UDate date,
-                            UBool commonlyUsedOnly, UnicodeString& result) {
+                            UBool commonlyUsedOnly, UnicodeString& result) const {
     result.remove();
     if (fTzidToStrings != NULL) {
         ZoneStrings *zstrings = (ZoneStrings*)fTzidToStrings->get(tzid);
@@ -1092,7 +1067,7 @@ ZoneStringFormat::getString(const UnicodeString &tzid, TimeZoneTranslationTypeIn
 
 UnicodeString&
 ZoneStringFormat::getGenericString(const Calendar &cal, UBool isShort, UBool commonlyUsedOnly,
-                                   UnicodeString &result, UErrorCode &status) {
+                                   UnicodeString &result, UErrorCode &status) const {
     result.remove();
     UDate time = cal.getTime(status);
     if (U_FAILURE(status)) {
@@ -1253,7 +1228,7 @@ ZoneStringFormat::getGenericString(const Calendar &cal, UBool isShort, UBool com
 
 UnicodeString&
 ZoneStringFormat::getGenericPartialLocationString(const UnicodeString &tzid, UBool isShort,
-                                                  UDate date, UBool commonlyUsedOnly, UnicodeString &result) {
+                                                  UDate date, UBool commonlyUsedOnly, UnicodeString &result) const {
     result.remove();
     if (fTzidToStrings == NULL) {
         return result;
@@ -1276,7 +1251,7 @@ ZoneStringFormat::getGenericPartialLocationString(const UnicodeString &tzid, UBo
 
 const ZoneStringInfo*
 ZoneStringFormat::find(const UnicodeString &text, int32_t start, int32_t types,
-                       int32_t &matchLength, UErrorCode &status) {
+                       int32_t &matchLength, UErrorCode &status) const {
     matchLength = 0;
     if (U_FAILURE(status)) {
         return NULL;
@@ -1329,7 +1304,7 @@ ZoneStringFormat::find(const UnicodeString &text, int32_t start, int32_t types,
 
 
 UnicodeString&
-ZoneStringFormat::getRegion(UnicodeString &region) {
+ZoneStringFormat::getRegion(UnicodeString &region) const {
     const char* country = fLocale.getCountry();
     // TODO: Utilize addLikelySubtag in Locale to resolve default region
     // when the implementation is ready.

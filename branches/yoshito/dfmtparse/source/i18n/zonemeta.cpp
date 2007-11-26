@@ -294,7 +294,7 @@ ZoneMeta::createCanonicalMap(void) {
         if (territory  == NULL || u_strcmp(territory, gWorld) == 0) {
             entry->country = NULL;
         } else {
-            entry->country = (UChar*)uprv_malloc(territoryLen * sizeof(UChar));
+            entry->country = (UChar*)uprv_malloc((territoryLen + 1) * sizeof(UChar));
             if (entry->country == NULL) {
                 status = U_MEMORY_ALLOCATION_ERROR;
                 deleteCanonicalMapEntry(entry);
@@ -343,7 +343,7 @@ ZoneMeta::createCanonicalMap(void) {
             if (territory  == NULL || u_strcmp(territory, gWorld) == 0) {
                 entry->country = NULL;
             } else {
-                entry->country = (UChar*)uprv_malloc(territoryLen * sizeof(UChar));
+                entry->country = (UChar*)uprv_malloc((territoryLen + 1) * sizeof(UChar));
                 if (entry->country == NULL) {
                     status = U_MEMORY_ALLOCATION_ERROR;
                     deleteCanonicalMapEntry(entry);

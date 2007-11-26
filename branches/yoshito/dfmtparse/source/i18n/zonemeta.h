@@ -34,7 +34,7 @@ typedef struct MetaToOlsonMappingEntry {
 
 class UVector;
 
-class ZoneMeta {
+class U_I18N_API ZoneMeta {
 public:
     /**
      * Return the canonical id for this tzid, which might be the id itself.

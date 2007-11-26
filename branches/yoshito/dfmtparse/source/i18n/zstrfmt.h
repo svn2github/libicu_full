@@ -120,8 +120,8 @@ class ZoneStringInfo : public UMemory {
 public:
     virtual ~ZoneStringInfo();
 
-    inline UnicodeString& getID(UnicodeString &result);
-    inline UnicodeString& getString(UnicodeString &result);
+    inline UnicodeString& getID(UnicodeString &result) const;
+    inline UnicodeString& getString(UnicodeString &result) const;
     inline UBool isStandard(void) const;
     inline UBool isDaylight(void) const;
     inline UBool isGeneric(void) const;
@@ -137,11 +137,11 @@ private:
     TimeZoneTranslationType fType;
 };
 
-inline UnicodeString& ZoneStringInfo::getID(UnicodeString &result) {
+inline UnicodeString& ZoneStringInfo::getID(UnicodeString &result) const {
     return result.setTo(fId);
 }
 
-inline UnicodeString& ZoneStringInfo::getString(UnicodeString &result) {
+inline UnicodeString& ZoneStringInfo::getString(UnicodeString &result) const {
     return result.setTo(fStr);
 }
 
@@ -164,65 +164,69 @@ public:
 
     virtual ~ZoneStringFormat();
 
-    const UnicodeString** getZoneStrings(int32_t &rowCount, int32_t &columnCount);
+    /*
+     * Create a snapshot of old zone strings array for the given date
+     */
+    UnicodeString** createZoneStringsArray(UDate date, int32_t &rowCount, int32_t &colCount, UErrorCode &status) const;
+
+    const UnicodeString** getZoneStrings(int32_t &rowCount, int32_t &columnCount) const;
 
     UnicodeString& getSpecificLongString(const Calendar &cal,
-        UnicodeString &result, UErrorCode &status);
+        UnicodeString &result, UErrorCode &status) const;
 
     UnicodeString& getSpecificShortString(const Calendar &cal,
-        UBool commonlyUsedOnly, UnicodeString &result, UErrorCode &status);
+        UBool commonlyUsedOnly, UnicodeString &result, UErrorCode &status) const;
 
     UnicodeString& getGenericLongString(const Calendar &cal,
-        UnicodeString &result, UErrorCode &status);
+        UnicodeString &result, UErrorCode &status) const;
 
     UnicodeString& getGenericShortString(const Calendar &cal,
-        UBool commonlyUsedOnly, UnicodeString &result, UErrorCode &status);
+        UBool commonlyUsedOnly, UnicodeString &result, UErrorCode &status) const;
 
     UnicodeString& getGenericLocationString(const Calendar &cal,
-        UnicodeString &result, UErrorCode &status);
+        UnicodeString &result, UErrorCode &status) const;
 
     const ZoneStringInfo* findSpecificLong(const UnicodeString &text, int32_t start,
-        int32_t &matchLength, UErrorCode &status);
+        int32_t &matchLength, UErrorCode &status) const;
     const ZoneStringInfo* findSpecificShort(const UnicodeString &text, int32_t start,
-        int32_t &matchLength, UErrorCode &status);
+        int32_t &matchLength, UErrorCode &status) const;
     const ZoneStringInfo* findGenericLong(const UnicodeString &text, int32_t start,
-        int32_t &matchLength, UErrorCode &status);
+        int32_t &matchLength, UErrorCode &status) const;
     const ZoneStringInfo* findGenericShort(const UnicodeString &text, int32_t start,
-        int32_t &matchLength, UErrorCode &status);
+        int32_t &matchLength, UErrorCode &status) const;
     const ZoneStringInfo* findGenericLocation(const UnicodeString &text, int32_t start,
-        int32_t &matchLength, UErrorCode &status);
+        int32_t &matchLength, UErrorCode &status) const;
 
     // Following APIs are not used by SimpleDateFormat, but public for testing purpose
-    inline UnicodeString& getLongStandard(const UnicodeString &tzid, UDate date, UnicodeString &result);
-    inline UnicodeString& getLongDaylight(const UnicodeString &tzid, UDate date, UnicodeString &result);
-    inline UnicodeString& getLongGenericNonLocation(const UnicodeString &tzid, UDate date, UnicodeString &result);
-    inline UnicodeString& getLongGenericPartialLocation(const UnicodeString &tzid, UDate date, UnicodeString &result);
-    inline UnicodeString& getShortStandard(const UnicodeString &tzid, UDate date, UBool commonlyUsedOnly, UnicodeString &result);
-    inline UnicodeString& getShortDaylight(const UnicodeString &tzid, UDate date, UBool commonlyUsedOnly, UnicodeString &result);
-    inline UnicodeString& getShortGenericNonLocation(const UnicodeString &tzid, UDate date, UBool commonlyUsedOnly, UnicodeString &result);
-    inline UnicodeString& getShortGenericPartialLocation(const UnicodeString &tzid, UDate date, UBool commonlyUsedOnly, UnicodeString &result);
-    inline UnicodeString& getGenericLocation(const UnicodeString &tzid, UnicodeString &result);
+    inline UnicodeString& getLongStandard(const UnicodeString &tzid, UDate date,
+        UnicodeString &result) const;
+    inline UnicodeString& getLongDaylight(const UnicodeString &tzid, UDate date,
+        UnicodeString &result) const;
+    inline UnicodeString& getLongGenericNonLocation(const UnicodeString &tzid, UDate date,
+        UnicodeString &result) const;
+    inline UnicodeString& getLongGenericPartialLocation(const UnicodeString &tzid, UDate date,
+        UnicodeString &result) const;
+    inline UnicodeString& getShortStandard(const UnicodeString &tzid, UDate date, UBool commonlyUsedOnly,
+        UnicodeString &result) const;
+    inline UnicodeString& getShortDaylight(const UnicodeString &tzid, UDate date, UBool commonlyUsedOnly,
+        UnicodeString &result) const;
+    inline UnicodeString& getShortGenericNonLocation(const UnicodeString &tzid, UDate date, UBool commonlyUsedOnly,
+        UnicodeString &result) const;
+    inline UnicodeString& getShortGenericPartialLocation(const UnicodeString &tzid, UDate date, UBool commonlyUsedOnly,
+        UnicodeString &result) const;
+    inline UnicodeString& getGenericLocation(const UnicodeString &tzid, UnicodeString &result) const;
 
 private:
     Locale      fLocale;
     Hashtable   *fTzidToStrings;
     Hashtable   *fMzidToStrings;
     TextTrieMap *fZoneStringsTrie;
-    UnicodeString   **fStrings;
-    int32_t     fRowCount;
-    int32_t     fColCount;
-    UBool       fByLocale;
-
-    /*
-     * Create a snapshot of old zone strings array for the given date
-     */
-    UnicodeString** createZoneStrings(UDate date, int32_t &rowCount, int32_t &colCount, UErrorCode &status);
 
     /*
      * Private method to get a zone string except generic partial location types.
      */
     UnicodeString& getString(const UnicodeString &tzid, TimeZoneTranslationTypeIndex typeIdx, UDate date,
-        UBool commonlyUsedOnly, UnicodeString& result);
+        UBool commonlyUsedOnly, UnicodeString& result) const;
 
     /*
      * Private method to get a generic string, with fallback logic involved,
@@ -243,13 +247,13 @@ private:
      *    string.
      */
     UnicodeString& getGenericString(const Calendar &cal, UBool isShort, UBool commonlyUsedOnly,
-        UnicodeString &result, UErrorCode &status);
+        UnicodeString &result, UErrorCode &status) const;
 
     /*
      * Private method to get a generic partial location string
      */
     UnicodeString& getGenericPartialLocationString(const UnicodeString &tzid, UBool isShort,
-        UDate date, UBool commonlyUsedOnly, UnicodeString &result);
+        UDate date, UBool commonlyUsedOnly, UnicodeString &result) const;
 
     /*
      * Find a prefix matching time zone for the given zone string types.
@@ -264,59 +268,68 @@ private:
      * for any other types.  If nothing matches at all, returns null.
      */
     const ZoneStringInfo* find(const UnicodeString &text, int32_t start, int32_t types,
-        int32_t &matchLength, UErrorCode &status);
+        int32_t &matchLength, UErrorCode &status) const;
 
-    UnicodeString& getRegion(UnicodeString &region);
+    UnicodeString& getRegion(UnicodeString &region) const;
 
     static MessageFormat* getFallbackFormat(const Locale &locale, UErrorCode &status);
     static MessageFormat* getRegionFormat(const Locale &locale, UErrorCode &status);
     static const UChar* getZoneStringFromBundle(const UResourceBundle *zoneitem, const char *key);
     static UBool isCommonlyUsed(const UResourceBundle *zoneitem);
-    static UnicodeString& getLocalizedCountry(const UnicodeString &countryCode, const Locale &locale, UnicodeString &displayCountry);
+    static UnicodeString& getLocalizedCountry(const UnicodeString &countryCode, const Locale &locale,
+        UnicodeString &displayCountry);
 };
 
 inline UnicodeString&
-ZoneStringFormat::getLongStandard(const UnicodeString &tzid, UDate date, UnicodeString &result) {
+ZoneStringFormat::getLongStandard(const UnicodeString &tzid, UDate date,
+                                  UnicodeString &result) const {
     return getString(tzid, ZSIDX_LONG_STANDARD, date, FALSE /* not used */, result);
 }
 
 inline UnicodeString&
-ZoneStringFormat::getLongDaylight(const UnicodeString &tzid, UDate date, UnicodeString &result) {
+ZoneStringFormat::getLongDaylight(const UnicodeString &tzid, UDate date,
+                                  UnicodeString &result) const {
     return getString(tzid, ZSIDX_LONG_DAYLIGHT, date, FALSE /* not used */, result);
 }
 
 inline UnicodeString&
-ZoneStringFormat::getLongGenericNonLocation(const UnicodeString &tzid, UDate date, UnicodeString &result) {
+ZoneStringFormat::getLongGenericNonLocation(const UnicodeString &tzid, UDate date,
+                                            UnicodeString &result) const {
     return getString(tzid, ZSIDX_LONG_GENERIC, date, FALSE /* not used */, result);
 }
 
 inline UnicodeString&
-ZoneStringFormat::getLongGenericPartialLocation(const UnicodeString &tzid, UDate date, UnicodeString &result) {
+ZoneStringFormat::getLongGenericPartialLocation(const UnicodeString &tzid, UDate date,
+                                                UnicodeString &result) const {
     return getGenericPartialLocationString(tzid, FALSE, date, FALSE /* not used */, result);
 }
 
 inline UnicodeString&
-ZoneStringFormat::getShortStandard(const UnicodeString &tzid, UDate date, UBool commonlyUsedOnly, UnicodeString &result) {
+ZoneStringFormat::getShortStandard(const UnicodeString &tzid, UDate date, UBool commonlyUsedOnly,
+                                   UnicodeString &result) const {
     return getString(tzid, ZSIDX_SHORT_STANDARD, date, commonlyUsedOnly, result);
 }
 
 inline UnicodeString&
-ZoneStringFormat::getShortDaylight(const UnicodeString &tzid, UDate date, UBool commonlyUsedOnly, UnicodeString &result) {
+ZoneStringFormat::getShortDaylight(const UnicodeString &tzid, UDate date, UBool commonlyUsedOnly,
+                                   UnicodeString &result) const {
     return getString(tzid, ZSIDX_SHORT_DAYLIGHT, date, commonlyUsedOnly, result);
 }
 
 inline UnicodeString&
-ZoneStringFormat::getShortGenericNonLocation(const UnicodeString &tzid, UDate date, UBool commonlyUsedOnly, UnicodeString &result) {
+ZoneStringFormat::getShortGenericNonLocation(const UnicodeString &tzid, UDate date, UBool commonlyUsedOnly,
+                                             UnicodeString &result) const {
     return getString(tzid, ZSIDX_SHORT_GENERIC, date, commonlyUsedOnly, result);
 }
 
 inline UnicodeString&
-ZoneStringFormat::getShortGenericPartialLocation(const UnicodeString &tzid, UDate date, UBool commonlyUsedOnly, UnicodeString &result) {
+ZoneStringFormat::getShortGenericPartialLocation(const UnicodeString &tzid, UDate date, UBool commonlyUsedOnly,
+                                                 UnicodeString &result) const {
     return getGenericPartialLocationString(tzid, TRUE, date, commonlyUsedOnly, result);
 }
 
 inline UnicodeString&
-ZoneStringFormat::getGenericLocation(const UnicodeString &tzid, UnicodeString &result) {
+ZoneStringFormat::getGenericLocation(const UnicodeString &tzid, UnicodeString &result) const {
     return getString(tzid, ZSIDX_LOCATION, 0 /*not used*/, FALSE /*not used*/, result);
 }
 
