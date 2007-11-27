@@ -50,6 +50,13 @@
 "abc(?=def)"                   "<0>abc</0>def"
 "(.*)(?=c)"                    "<0><1>ab</1></0>cdef"
 
+"(?:.*)(?=c)"                  "<r>ab</r>cdef"
+"(?:.*)(?=c)"             b    "<r><0>ab</0></r>cdef"    # transparent bounds
+"(?:.*)(?=c)"             bM   "<r><0>ab</0></r>cdef"    # transparent bounds
+
+"(?:.*)(?=(c))"           b    "<0>ab</0><1>c</1>def"    # Capture in look-ahead
+"(?:.
+
 # Capturing parens
 ".(..)."                       "<0>a<1>bc</1>d</0>"
  ".*\A( +hello)"               "<0><1>      hello</1></0>"

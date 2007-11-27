@@ -2423,7 +2423,6 @@ void   RegexCompile::matchStartType() {
         // If the op we are now at was the destination of a branch in the pattern,
         // and that path has a shorter minimum length than the current accumulated value,
         // replace the current accumulated value.
-        U_ASSERT(currentLen>=0 && currentLen < INT32_MAX);
         if (forwardedLength.elementAti(loc) < currentLen) {
             currentLen = forwardedLength.elementAti(loc);
             U_ASSERT(currentLen>=0 && currentLen < INT32_MAX);
@@ -2901,7 +2900,8 @@ int32_t   RegexCompile::minMatchLength(int32_t start, int32_t end) {
         // If the op we are now at was the destination of a branch in the pattern,
         // and that path has a shorter minimum length than the current accumulated value,
         // replace the current accumulated value.
-        U_ASSERT(currentLen>=0 && currentLen < INT32_MAX);
+        // U_ASSERT(currentLen>=0 && currentLen < INT32_MAX);  // MinLength == INT32_MAX for some
+                                                               //   no-match-possible cases.
         if (forwardedLength.elementAti(loc) < currentLen) {
             currentLen = forwardedLength.elementAti(loc);
             U_ASSERT(currentLen>=0 && currentLen < INT32_MAX);

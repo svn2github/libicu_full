@@ -352,6 +352,8 @@ UBool RegexMatcher::find() {
 
     // Compute the position in the input string beyond which a match can not begin, because
     //   the minimum length match would extend past the end of the input.
+    //   Note:  some patterns that cannot match anything will have fMinMatchLength==Max Int.
+    //          Be aware of possible overflows if making changes here.
     int32_t testLen  = fActiveLimit - fPattern->fMinMatchLen;
     if (startPos > testLen) {
         fMatch = FALSE;
