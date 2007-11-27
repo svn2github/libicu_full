@@ -1674,49 +1674,6 @@ uprv_uca_setMapCE(tempUCATable *t, UCAElements *element, UErrorCode *status) {
         }
 }
 
-U_CAPI int32_t U_EXPORT2
-uprv_uca_canonicalClosure(tempUCATable *t, UErrorCode *status) 
-{
-    enumStruct context;
-    context.noOfClosures = 0;
-    if(U_SUCCESS(*status)) {
-        UCollator *tempColl = NULL;
-        tempUCATable *tempTable = uprv_uca_cloneTempTable(t, status);
-
-        UCATableHeader *tempData = uprv_uca_assembleTable(tempTable, status);
-        tempColl = ucol_initCollator(tempData, 0, t->UCA, status);
-        if ( tempTable->cmLookup != NULL ) {
-            t->cmLookup = tempTable->cmLookup;  // copy over to t .
-            tempTable->cmLookup = NULL;
-        }
-        uprv_uca_closeTempTable(tempTable);    
-
-        if(U_SUCCESS(*status)) {
-            tempColl->rb = NULL;
-            tempColl->elements = NULL;
-            tempColl->validLocale = NULL;
-            tempColl->requestedLocale = NULL;
-            tempColl->hasRealData = TRUE;
-            tempColl->freeImageOnClose = TRUE;
-        } else if(tempData != 0) {
-            uprv_free(tempData);
-        }
-
-        /* produce canonical closure */
-        UCollationElements* colEl = ucol_openElements(tempColl, NULL, 0, status);
-
-        context.t = t;
-        context.tempColl = tempColl;
-        context.colEl = colEl;
-        context.status = status;
-        u_enumCharTypes(_enumCategoryRangeClosureCategory, &context);
-
-        ucol_closeElements(colEl);
-        ucol_close(tempColl);
-    }
-    return context.noOfClosures;
-}
-
 static void
 uprv_uca_addFCD4AccentedContractions(tempUCATable *t,
                                       UCollationElements* colEl,
@@ -1924,10 +1881,10 @@ uprv_uca_addTailCanonicalClosures(tempUCATable *t,
     }
 }
 
-U_CAPI void U_EXPORT2
-uprv_uca_tailCanonicalClosure(tempUCATable *t,
-                              UColTokenParser *src,
-                              UErrorCode *status)
+U_CAPI int32_t U_EXPORT2
+uprv_uca_canonicalClosure(tempUCATable *t,
+                          UColTokenParser *src,
+                          UErrorCode *status)
 {
     enumStruct context;
     context.noOfClosures = 0;
@@ -1939,7 +1896,7 @@ uprv_uca_tailCanonicalClosure(tempUCATable *t,
     const uint16_t  *fcdTrieData = unorm_getFCDTrie(status);
 
     if(!U_SUCCESS(*status)) {
-        return;
+        return 0;
     }
 
     UCollator *tempColl = NULL;
@@ -1973,10 +1930,10 @@ uprv_uca_tailCanonicalClosure(tempUCATable *t,
     context.status = status;
     u_enumCharTypes(_enumCategoryRangeClosureCategory, &context);
 
-    if ( !src->buildCCTabFlag ) {
+    if ( (src==NULL) || !src->buildCCTabFlag ) {
         ucol_closeElements(colEl);
         ucol_close(tempColl);
-        return;  // no extra contraction needed to add
+        return context.noOfClosures;  // no extra contraction needed to add
     }
 
     for (i=0; i < src->resultLen; i++) {
@@ -2021,6 +1978,8 @@ uprv_uca_tailCanonicalClosure(tempUCATable *t,
     }
     ucol_closeElements(colEl);
     ucol_close(tempColl);
+    
+    return context.noOfClosures;
 }
 
 #endif /* #if !UCONFIG_NO_COLLATION */
