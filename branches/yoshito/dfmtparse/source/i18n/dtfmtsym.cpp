@@ -980,13 +980,16 @@ DateFormatSymbols::setAmPmStrings(const UnicodeString* amPmsArray, int32_t count
 //------------------------------------------------------
 const ZoneStringFormat*
 DateFormatSymbols::getZoneStringFormat(void) const {
-    ((DateFormatSymbols*)this)->initZoneStringFormat();
+    umtx_lock(&LOCK);
+    if (fZoneStringFormat == NULL) {
+        ((DateFormatSymbols*)this)->initZoneStringFormat();
+    }
+    umtx_unlock(&LOCK);
     return (const ZoneStringFormat*)fZoneStringFormat;
 }
 
 void
 DateFormatSymbols::initZoneStringFormat(void) {
-    umtx_lock(&LOCK);
     if (fZoneStringFormat == NULL) {
         UErrorCode status = U_ZERO_ERROR;
         if (fZoneStrings) {
@@ -1002,7 +1005,6 @@ DateFormatSymbols::initZoneStringFormat(void) {
             fZoneStringFormat = NULL;
         }
     }
-    umtx_unlock(&LOCK);
 }
 
 const UnicodeString**
@@ -1028,16 +1030,16 @@ DateFormatSymbols::getZoneStrings(int32_t& rowCount, int32_t& columnCount) const
 
 void
 DateFormatSymbols::initZoneStringsArray(void) {
-    umtx_lock(&LOCK);
     if (fZoneStrings == NULL && fLocaleZoneStrings == NULL) {
-        const ZoneStringFormat *zsf = getZoneStringFormat();
-        if (zsf) {
+        if (fZoneStringFormat == NULL) {
+            initZoneStringFormat();
+        }
+        if (fZoneStringFormat) {
             UErrorCode status = U_ZERO_ERROR;
-            fLocaleZoneStrings = zsf->createZoneStringsArray(uprv_getUTCtime() /* use current time */,
+            fLocaleZoneStrings = fZoneStringFormat->createZoneStringsArray(uprv_getUTCtime() /* use current time */,
                 fZoneStringsRowCount, fZoneStringsColCount, status);
         }
     }
-    umtx_unlock(&LOCK);
 }
 
 void
