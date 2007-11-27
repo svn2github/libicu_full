@@ -1860,12 +1860,12 @@ uprv_uca_addTailCanonicalClosures(tempUCATable *t,
                 }
                 uprv_uca_setMapCE(t, &element, status);
                 uprv_uca_finalizeAddition(t, &element, status);
-                //uprv_uca_addAnElement(t, &element, status);
             }
 
             // This is a fix for tailoring contractions with accented
             // character at the end of contraction string.
-            if (len>2) {
+            if ((len>2) && 
+                (unorm_getFCD16(fcdTrieData, comp[len-2]) & 0xff00)==0) {
                 uprv_uca_addFCD4AccentedContractions(t, colEl, comp, len, &element, status);
             }
 
