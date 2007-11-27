@@ -45,8 +45,10 @@
 #                                 White space must be present between the flags and the match string.
 #
 
-
-"abc(?=def)"           d       "<0>abc</0>def"
+# Look-ahead expressions
+#
+"abc(?=def)"                   "<0>abc</0>def"
+"(.*)(?=c)"                    "<0><1>ab</1></0>cdef"
 
 # Capturing parens
 ".(..)."                       "<0>a<1>bc</1>d</0>"

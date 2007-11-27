@@ -57,7 +57,7 @@ U_NAMESPACE_BEGIN
 enum {
      URX_RESERVED_OP   = 0,    // For multi-operand ops, most non-first words.
      URX_RESERVED_OP_N = 255,  // For multi-operand ops, negative operand values.
-     URX_BACKTRACK     = 1,
+     URX_BACKTRACK     = 1,    // Force a backtrack, as if a match test had failed.
      URX_END           = 2,
      URX_ONECHAR       = 3,    // Value field is the 21 bit unicode char to match
      URX_STRING        = 4,    // Value field is index of string start

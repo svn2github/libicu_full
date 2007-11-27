@@ -530,7 +530,7 @@ UBool RegexCompile::doParseActions(int32_t action)
         //    3    JMP          6           continue ...
         //
         //    4.   LA_END                   Look Ahead failed.  Restore regions.
-        //    5.   FAIL                     //    and back track again.
+        //    5.   BACKTRACK                and back track again.
         //
         //    6.   NOP              reserved for use by quantifiers on the block.
         //                          Look-ahead can't have quantifiers, but paren stack
@@ -555,7 +555,7 @@ UBool RegexCompile::doParseActions(int32_t action)
             op = URX_BUILD(URX_LA_END, dataLoc);
             fRXPat->fCompiledPat->addElement(op, *fStatus);
 
-            op = URX_BUILD(URX_FAIL, 0);
+            op = URX_BUILD(URX_BACKTRACK, 0);
             fRXPat->fCompiledPat->addElement(op, *fStatus);
             
             op = URX_BUILD(URX_NOP, 0);
@@ -581,7 +581,8 @@ UBool RegexCompile::doParseActions(int32_t action)
         //    4.       code for parenthesized stuff.
         //    5.    END_LA                // Cut back stack, remove saved state from step 2.
         //    6.    FAIL                  // code in block succeeded, so neg. lookahead fails.
-        //    7.    ...
+        //    7.    END_LA                // Restore match region, in case look-ahead was using
+        //                                        an alternate (transparent) region.
         {
             int32_t dataLoc = fRXPat->fDataSize;
             fRXPat->fDataSize += 2;
@@ -597,7 +598,7 @@ UBool RegexCompile::doParseActions(int32_t action)
             // On the Parentheses stack, start a new frame and add the postions
             //   of the StateSave and NOP.
             fParenStack.push(fModeFlags, *fStatus);                       // Match mode state
-            fParenStack.push( negLookAhead, *fStatus);                    // Frame type
+            fParenStack.push(negLookAhead, *fStatus);                    // Frame type
             fParenStack.push(fRXPat->fCompiledPat->size()-2, *fStatus);   // The STATE_SAVE location
             fParenStack.push(fRXPat->fCompiledPat->size()-1, *fStatus);   // The second NOP location
 
@@ -2105,13 +2106,16 @@ void  RegexCompile::handleCloseParen() {
             int32_t dataLoc  = URX_VAL(startOp);
             int32_t op       = URX_BUILD(URX_LA_END, dataLoc);
             fRXPat->fCompiledPat->addElement(op, *fStatus);
-             op              = URX_BUILD(URX_FAIL, 0);
+            op               = URX_BUILD(URX_BACKTRACK, 0);
+            fRXPat->fCompiledPat->addElement(op, *fStatus);
+            op               = URX_BUILD(URX_LA_END, 0);
             fRXPat->fCompiledPat->addElement(op, *fStatus);
 
             // Patch the URX_SAVE near the top of the block.
+            // The destination of the SAVE is the final LA_END that was just added.
             int32_t saveOp   = fRXPat->fCompiledPat->elementAti(fMatchOpenParen);
             U_ASSERT(URX_TYPE(saveOp) == URX_STATE_SAVE);
-            int32_t dest     = fRXPat->fCompiledPat->size();
+            int32_t dest     = fRXPat->fCompiledPat->size()-1;
             saveOp           = URX_BUILD(URX_STATE_SAVE, dest);
             fRXPat->fCompiledPat->setElementAt(saveOp, fMatchOpenParen);
         }
@@ -2429,6 +2433,7 @@ void   RegexCompile::matchStartType() {
             // Ops that don't change the total length matched
         case URX_RESERVED_OP:
         case URX_END:
+        case URX_FAIL:
         case URX_STRING_LEN:
         case URX_NOP:
         case URX_START_CAPTURE:
@@ -2441,7 +2446,6 @@ void   RegexCompile::matchStartType() {
         case URX_RELOC_OPRND:
         case URX_STO_INP_LOC:
         case URX_DOLLAR_M:
-        case URX_BACKTRACK:
         case URX_BACKREF:         // BackRef.  Must assume that it might be a zero length match
         case URX_BACKREF_I:
 
@@ -2622,7 +2626,7 @@ void   RegexCompile::matchStartType() {
             atStart = FALSE;
             break;
 
-        case URX_FAIL:
+        case URX_BACKTRACK:
             // Fails are kind of like a branch, except that the min length was
             //   propagated already, by the state save.
             currentLen = forwardedLength.elementAti(loc+1);
@@ -2745,18 +2749,25 @@ void   RegexCompile::matchStartType() {
             {
                 // Look-around.  Scan forward until the matching look-ahead end,
                 //   without processing the look-around block.  This is overly pessimistic.
-                int32_t  depth = 0;
+                
+                // Keep track of the nesting depth of look-around blocks.  Boilerplate code for
+                //   lookahead contains two LA_END instructions, so count goes up by two
+                //   for each LA_START.
+                int32_t  depth = (opType == URX_LA_START? 2: 1);
                 for (;;) {
                     loc++;
                     op = fRXPat->fCompiledPat->elementAti(loc);
-                    if (URX_TYPE(op) == URX_LA_START || URX_TYPE(op) == URX_LB_START) {
+                    if (URX_TYPE(op) == URX_LA_START) {
+                        depth+=2;
+                    }
+                    if (URX_TYPE(op) == URX_LB_START) {
                         depth++;
                     }
                     if (URX_TYPE(op) == URX_LA_END || URX_TYPE(op)==URX_LBN_END) {
+                        depth--;
                         if (depth == 0) {
                             break;
                         }
-                        depth--;
                     }
                     if (URX_TYPE(op) == URX_STATE_SAVE) {
                         // Need this because neg lookahead blocks will FAIL to outside
@@ -2914,7 +2925,6 @@ int32_t   RegexCompile::minMatchLength(int32_t start, int32_t end) {
         case URX_STO_INP_LOC:
         case URX_DOLLAR_M:
         case URX_CARET_M:
-        case URX_BACKTRACK:
         case URX_BACKREF:         // BackRef.  Must assume that it might be a zero length match
         case URX_BACKREF_I:
 
@@ -2963,12 +2973,11 @@ int32_t   RegexCompile::minMatchLength(int32_t start, int32_t end) {
             }
             break;
 
-        case URX_FAIL:
+        case URX_BACKTRACK:
             {
-                // Fails are kind of like a branch, except that the min length was
+                // Back-tracks are kind of like a branch, except that the min length was
                 //   propagated already, by the state save.
                 currentLen = forwardedLength.elementAti(loc+1);
-                U_ASSERT(currentLen>=0 && currentLen < INT32_MAX);
             }
             break;
 
@@ -3035,34 +3044,33 @@ int32_t   RegexCompile::minMatchLength(int32_t start, int32_t end) {
         case URX_LB_START:
             {
                 // Look-around.  Scan forward until the matching look-ahead end,
-                //   without processing the look-around block.  This is overly pessimistic.
+                //   without processing the look-around block.  This is overly pessimistic for look-ahead,
+                //   it assumes that the look-ahead match might be zero-length.
                 //   TODO:  Positive lookahead could recursively do the block, then continue
                 //          with the longer of the block or the value coming in.
-                int32_t  depth = 0;
+                int32_t  depth = (opType == URX_LA_START? 2: 1);;
                 for (;;) {
                     loc++;
                     op = fRXPat->fCompiledPat->elementAti(loc);
-                    if (URX_TYPE(op) == URX_LA_START || URX_TYPE(op) == URX_LB_START) {
+                    if (URX_TYPE(op) == URX_LA_START) {
+                        // The boilerplate for look-ahead includes two LA_END insturctions,
+                        //    Depth will be decremented by each one when it is seen.
+                        depth += 2;
+                    }
+                    if (URX_TYPE(op) == URX_LB_START) {
                         depth++;
                     }
                     if (URX_TYPE(op) == URX_LA_END) {
-                        // If this is the URX_LA_END in the boiler plate at the
-                        //   top of a look-ahead block, ignore it, otherwise decrement
-                        //   the look-ahead block nesting depth.
-                        if (!(loc >= 4 && 
-                              URX_TYPE((fRXPat->fCompiledPat->elementAti(loc-3)) == URX_LA_START))) {
-                                
-                            if (depth == 0) {
-                                break;
-                            }
-                            depth--;
-                        }
-                    }
-                    if (URX_TYPE(op)==URX_LBN_END) {
+                        depth--;
                         if (depth == 0) {
                             break;
                         }
+                    }
+                    if (URX_TYPE(op)==URX_LBN_END) {
                         depth--;
+                        if (depth == 0) {
+                            break;
+                        }
                     }
                     if (URX_TYPE(op) == URX_STATE_SAVE) {
                         // Need this because neg lookahead blocks will FAIL to outside
@@ -3074,7 +3082,9 @@ int32_t   RegexCompile::minMatchLength(int32_t start, int32_t end) {
                             }
                         }
                     }
-
+                    if (loc > end) {
+                        RegexPatternDump(fRXPat);
+                    }
                     U_ASSERT(loc <= end);
                 }
             }
@@ -3167,7 +3177,6 @@ int32_t   RegexCompile::maxMatchLength(int32_t start, int32_t end) {
         case URX_STO_INP_LOC:
         case URX_DOLLAR_M:
         case URX_CARET_M:
-        case URX_BACKTRACK:
 
         case URX_STO_SP:          // Setup for atomic or possessive blocks.  Doesn't change what can match.
         case URX_LD_SP:
@@ -3233,8 +3242,8 @@ int32_t   RegexCompile::maxMatchLength(int32_t start, int32_t end) {
             }
             break;
 
-        case URX_FAIL:
-            // Fails are kind of like a branch, except that the max length was
+        case URX_BACKTRACK:
+            // back-tracks are kind of like a branch, except that the max length was
             //   propagated already, by the state save.
             currentLen = forwardedLength.elementAti(loc+1);
             break;
