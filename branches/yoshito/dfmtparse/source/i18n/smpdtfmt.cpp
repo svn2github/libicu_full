@@ -2137,7 +2137,8 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
                 
                 UnicodeString tzID(gGmt);
                 formatRFC822TZ(tzID, offset);
-                TimeZone *customTZ = TimeZone::createTimeZone(tzID);
+                //TimeZone *customTZ = TimeZone::createTimeZone(tzID);
+                TimeZone *customTZ = new SimpleTimeZone(offset, tzID);    // faster than TimeZone::createTimeZone
                 cal.adoptTimeZone(customTZ);
 
                 return pos.getIndex();
@@ -2186,8 +2187,13 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
                     }
                     UnicodeString tzid;
                     zsinfo->getID(tzid);
-                    TimeZone *tz = TimeZone::createTimeZone(tzid);
-                    cal.adoptTimeZone(tz);
+
+                    UnicodeString current;
+                    cal.getTimeZone().getID(current);
+                    if (tzid != current) {
+                        TimeZone *tz = TimeZone::createTimeZone(tzid);
+                        cal.adoptTimeZone(tz);
+                    }
                     return start + matchLen;
                 }
             }
