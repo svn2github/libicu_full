@@ -41,6 +41,7 @@ typedef enum ECleanupI18NType {
     UCLN_I18N_UCOL_BLD,
     UCLN_I18N_CSDET,
     UCLN_I18N_ZONEMETA,
+    UCLN_I18N_ZSFORMAT,
     UCLN_I18N_COUNT /* This must be last */
 } ECleanupI18NType;
 

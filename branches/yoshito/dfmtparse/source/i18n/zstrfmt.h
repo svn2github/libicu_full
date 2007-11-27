@@ -157,12 +157,15 @@ inline UBool ZoneStringInfo::isGeneric(void) const {
     return (fType == LOCATION || fType == GENERIC_LONG || fType == GENERIC_SHORT);
 }
 
+class SafeZoneStringFormatPtr;
+
 class ZoneStringFormat : public UMemory {
 public:
     ZoneStringFormat(const UnicodeString* const* strings, int32_t rowCount, int32_t columnCount, UErrorCode &status);
     ZoneStringFormat(const Locale& locale, UErrorCode &status);
-
     virtual ~ZoneStringFormat();
+
+    static SafeZoneStringFormatPtr* getZoneStringFormat(const Locale& locale, UErrorCode &status);
 
     /*
      * Create a snapshot of old zone strings array for the given date
@@ -382,7 +385,55 @@ private:
     int32_t fMatchLen[ZSIDX_COUNT];
 };
 
+
+/*
+ * ZoneStringFormat cache implementation
+ */
+class ZSFCacheEntry : public UMemory {
+public:
+    ~ZSFCacheEntry();
+
+    void delRef(void);
+    const ZoneStringFormat* getZoneStringFormat(void);
+
+private:
+    friend class ZSFCache;
+
+    ZSFCacheEntry(const Locale &locale, ZoneStringFormat *zsf, ZSFCacheEntry *next);
+
+    Locale              fLocale;
+    ZoneStringFormat    *fZoneStringFormat;
+    ZSFCacheEntry       *fNext;
+    int32_t             fRefCount;
+};
+
+class SafeZoneStringFormatPtr : public UMemory {
+public:
+    ~SafeZoneStringFormatPtr();
+    const ZoneStringFormat* get() const;
+
+private:
+    friend class ZSFCache;
+
+    SafeZoneStringFormatPtr(ZSFCacheEntry *cacheEntry);
+
+    ZSFCacheEntry   *fCacheEntry;
+};
+
+class ZSFCache : public UMemory {
+public:
+    ZSFCache(int32_t capacity);
+    ~ZSFCache();
+
+    SafeZoneStringFormatPtr* get(const Locale &locale, UErrorCode &status);
+
+private:
+    int32_t         fCapacity;
+    ZSFCacheEntry   *fFirst;
+};
+
 U_NAMESPACE_END
 
 #endif /* #if !UCONFIG_NO_FORMATTING */
+
 #endif // ZSTRFMT_H

@@ -38,6 +38,7 @@ U_NAMESPACE_BEGIN
 class SimpleDateFormat;
 class Hashtable;
 class ZoneStringFormat;
+class SafeZoneStringFormatPtr;
 
 /**
  * DateFormatSymbols is a public class for encapsulating localizable date-time
@@ -573,8 +574,10 @@ private:
     int32_t         fZoneStringsRowCount;
     int32_t         fZoneStringsColCount;
 
-    Locale              fZoneStringFormatLocale;
-    ZoneStringFormat    *fZoneStringFormat;
+    const ZoneStringFormat  *fZoneStringFormat;
+    ZoneStringFormat        *fZSFLocal;         // Local ZoneStringFormat instance
+    SafeZoneStringFormatPtr *fZSFCachePtr;      // Cached ZoneStringFormat
+    Locale                  fZSFLocale;         // Locale used for getting ZoneStringFormat
 
     /**
      * Pattern string used for localized time zone GMT format.  For example, "GMT{0}"

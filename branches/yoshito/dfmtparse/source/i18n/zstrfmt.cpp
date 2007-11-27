@@ -25,9 +25,28 @@
 #include "uresimp.h"
 #include "zonemeta.h"
 #include "olsontz.h"
+#include "umutex.h"
+#include "ucln_in.h"
 
+/**
+ * global ZoneStringFormatCache stuffs
+ */
+static UMTX gZSFCacheLock = NULL;
+static U_NAMESPACE_QUALIFIER ZSFCache *gZoneStringFormatCache = NULL;
 
 U_CDECL_BEGIN
+/**
+ * ZoneStringFormatCache cleanup callback func
+ */
+static UBool U_CALLCONV zoneStringFormat_cleanup(void)
+{
+    umtx_destroy(&gZSFCacheLock);
+    if (gZoneStringFormatCache != NULL) {
+        delete (U_NAMESPACE_QUALIFIER ZSFCache*) gZoneStringFormatCache;
+    }
+    return TRUE;
+}
+
 /**
  * Deleter for ZoneStringInfo
  */
@@ -864,6 +883,19 @@ ZoneStringFormat::~ZoneStringFormat() {
     return;
 }
 
+SafeZoneStringFormatPtr*
+ZoneStringFormat::getZoneStringFormat(const Locale& locale, UErrorCode &status) {
+    umtx_lock(&gZSFCacheLock);
+    if (gZoneStringFormatCache == NULL) {
+        gZoneStringFormatCache = new ZSFCache(10 /* capacity */);
+        ucln_i18n_registerCleanup(UCLN_I18N_ZSFORMAT, zoneStringFormat_cleanup);
+    }
+    umtx_unlock(&gZSFCacheLock);
+
+    return gZoneStringFormatCache->get(locale, status);
+}
+
+
 UnicodeString**
 ZoneStringFormat::createZoneStringsArray(UDate date, int32_t &rowCount, int32_t &colCount, UErrorCode &status) const {
     if (U_FAILURE(status)) {
@@ -1480,6 +1512,144 @@ ZoneStrings::getGenericPartialLocationString(const UnicodeString &mzid, UBool is
     if (!isSet) {
         result.remove();
     }
+    return result;
+}
+
+// --------------------------------------------------------------
+SafeZoneStringFormatPtr::SafeZoneStringFormatPtr(ZSFCacheEntry *cacheEntry)
+: UMemory(), fCacheEntry(cacheEntry) {
+}
+
+SafeZoneStringFormatPtr::~SafeZoneStringFormatPtr() {
+    fCacheEntry->delRef();
+}
+
+const ZoneStringFormat*
+SafeZoneStringFormatPtr::get() const {
+    return fCacheEntry->getZoneStringFormat();
+}
+
+ZSFCacheEntry::ZSFCacheEntry(const Locale &locale, ZoneStringFormat *zsf, ZSFCacheEntry *next)
+: UMemory(), fRefCount(1), fLocale(locale),
+  fZoneStringFormat(zsf), fNext(next) {
+}
+
+ZSFCacheEntry::~ZSFCacheEntry () {
+    delete fZoneStringFormat;
+}
+
+const ZoneStringFormat*
+ZSFCacheEntry::getZoneStringFormat(void) {
+    return (const ZoneStringFormat*)fZoneStringFormat;
+}
+
+void
+ZSFCacheEntry::delRef(void) {
+    umtx_lock(&gZSFCacheLock);
+    --fRefCount;
+    umtx_unlock(&gZSFCacheLock);
+}
+
+ZSFCache::ZSFCache(int32_t capacity)
+: UMemory(), fCapacity(capacity), fFirst(NULL) {
+}
+
+ZSFCache::~ZSFCache() {
+    ZSFCacheEntry *entry = fFirst;
+    while (entry) {
+        ZSFCacheEntry *next = entry->fNext;
+        delete entry;
+        entry = next;
+    }
+}
+
+SafeZoneStringFormatPtr*
+ZSFCache::get(const Locale &locale, UErrorCode &status) {
+    SafeZoneStringFormatPtr *result = NULL;
+
+    // Search the cache entry list
+    ZSFCacheEntry *entry = NULL;
+    ZSFCacheEntry *next, *prev;
+
+    umtx_lock(&gZSFCacheLock);
+    entry = fFirst;
+    prev = NULL;
+    while (entry) {
+        next = entry->fNext;
+        if (entry->fLocale == locale) {
+            // Add reference count
+            entry->fRefCount++;
+
+            // move the entry to the top
+            if (prev != NULL) {
+                prev->fNext = next;
+            }
+            fFirst = entry;
+            break;
+        }
+        prev = entry;
+        entry = next;
+    }
+    umtx_unlock(&gZSFCacheLock);
+
+    // Create a new ZoneStringFormat
+    if (entry == NULL) {
+        ZoneStringFormat *zsf = new ZoneStringFormat(locale, status);
+        if (U_FAILURE(status)) {
+            return NULL;
+        }
+        // Now add the new entry
+        umtx_lock(&gZSFCacheLock);
+        // Make sure no other threads already creaded the one for the same locale
+        entry = fFirst;
+        prev = NULL;
+        while (entry) {
+            next = entry->fNext;
+            if (entry->fLocale == locale) {
+                // Add reference count
+                entry->fRefCount++;
+
+                // move the entry to the top
+                if (prev != NULL) {
+                    prev->fNext = next;
+                }
+                fFirst = entry;
+                break;
+            }
+            prev = entry;
+            entry = next;
+        }
+        if (entry == NULL) {
+            // Add the new one to the top
+            next = fFirst;
+            entry = new ZSFCacheEntry(locale, zsf, next);
+            fFirst = entry;
+        }
+        umtx_unlock(&gZSFCacheLock);
+    }
+
+    result = new SafeZoneStringFormatPtr(entry);
+
+    // Now, delete unused cache entries beyond the capacity
+    umtx_lock(&gZSFCacheLock);
+    entry = fFirst;
+    prev = NULL;
+    int32_t idx = 1;
+    while (entry) {
+        next = entry->fNext;
+        if (idx >= fCapacity && entry->fRefCount == 0) {
+            if (prev->fNext) {
+                prev->fNext = next;
+            }
+            delete entry;
+        } else {
+            prev = entry;
+        }
+        entry = next;
+        idx++;
+    }
+    umtx_unlock(&gZSFCacheLock);
+
     return result;
 }
 

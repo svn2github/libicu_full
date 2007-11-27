@@ -331,9 +331,12 @@ DateFormatSymbols::copyData(const DateFormatSymbols& other) {
         fZoneStringsColCount = 0;
         fZoneStringsRowCount = 0;
     }
+    fZSFLocale = other.fZSFLocale;
     // Other zone strings data is created on demand
-    fLocaleZoneStrings = NULL;
     fZoneStringFormat = NULL;
+    fLocaleZoneStrings = NULL;
+    fZSFCachePtr = NULL;
+    fZSFLocal = NULL;
 
     // fastCopyFrom() - see assignArray comments
     fLocalPatternChars.fastCopyFrom(other.fLocalPatternChars);
@@ -395,14 +398,21 @@ void DateFormatSymbols::disposeZoneStrings()
         }
         uprv_free(fLocaleZoneStrings);
     }
-    if (fZoneStringFormat) {
-        delete fZoneStringFormat;
+    if (fZSFLocal) {
+        delete fZSFLocal;
     }
+    if (fZSFCachePtr) {
+        delete fZSFCachePtr;
+    }
+
     fZoneStrings = NULL;
     fLocaleZoneStrings = NULL;
     fZoneStringsRowCount = 0;
     fZoneStringsColCount = 0;
+
     fZoneStringFormat = NULL;
+    fZSFLocal = NULL;
+    fZSFCachePtr = NULL;
 }
 
 UBool
@@ -470,9 +480,22 @@ DateFormatSymbols::operator==(const DateFormatSymbols& other) const
             arrayCompare(fStandaloneShortQuarters, other.fStandaloneShortQuarters, fStandaloneShortQuartersCount) &&
             arrayCompare(fGmtHourFormats, other.fGmtHourFormats, fGmtHourFormatsCount))
         {
-            //TODO
             // Compare the contents of fZoneStrings
-            return TRUE;
+            if (fZoneStrings == NULL && other.fZoneStrings == NULL) {
+                if (fZSFLocale == other.fZSFLocale) {
+                    return TRUE;
+                }
+            } else if (fZoneStrings != NULL && other.fZoneStrings != NULL) {
+                if (fZoneStringsRowCount == other.fZoneStringsRowCount
+                    && fZoneStringsColCount == other.fZoneStringsColCount) {
+                    UBool cmpres = TRUE;
+                    for (int32_t i = 0; (i < fZoneStringsRowCount) && cmpres; i++) {
+                        cmpres = arrayCompare(fZoneStrings[i], other.fZoneStrings[i], fZoneStringsColCount);
+                    }
+                    return cmpres;
+                }
+            }
+            return FALSE;
         }
     }
     return FALSE;
@@ -983,7 +1006,7 @@ DateFormatSymbols::getZoneStringFormat(void) const {
         ((DateFormatSymbols*)this)->initZoneStringFormat();
     }
     umtx_unlock(&LOCK);
-    return (const ZoneStringFormat*)fZoneStringFormat;
+    return fZoneStringFormat;
 }
 
 void
@@ -992,15 +1015,20 @@ DateFormatSymbols::initZoneStringFormat(void) {
         UErrorCode status = U_ZERO_ERROR;
         if (fZoneStrings) {
             // Create an istance of ZoneStringFormat by the custom zone strings array
-            fZoneStringFormat = new ZoneStringFormat(fZoneStrings, fZoneStringsRowCount,
+            fZSFLocal = new ZoneStringFormat(fZoneStrings, fZoneStringsRowCount,
                 fZoneStringsColCount, status);
+            if (U_FAILURE(status)) {
+                delete fZSFLocal;
+            } else {
+                fZoneStringFormat = (const ZoneStringFormat*)fZSFLocal;
+            }
         } else {
-            // Create an instance of ZoneStringFormat by the locale
-            fZoneStringFormat = new ZoneStringFormat(fZoneStringFormatLocale, status);
-        }
-        if (U_FAILURE(status)) {
-            delete fZoneStringFormat;
-            fZoneStringFormat = NULL;
+            fZSFCachePtr = ZoneStringFormat::getZoneStringFormat(fZSFLocale, status);
+            if (U_FAILURE(status)) {
+                delete fZSFCachePtr;
+            } else {
+                fZoneStringFormat = fZSFCachePtr->get();
+            }
         }
     }
 }
@@ -1171,12 +1199,16 @@ DateFormatSymbols::initializeData(const Locale& locale, const char *type, UError
     fZoneStringsColCount = 0;
     fZoneStrings = NULL;
     fLocaleZoneStrings = NULL;
+
     fZoneStringFormat = NULL;
+    fZSFLocal = NULL;
+    fZSFCachePtr = NULL;
+
     // We need to preserve the requested locale for
     // lazy ZoneStringFormat instantiation.  ZoneStringFormat
     // is region sensitive, thus, bundle locale bundle's locale
     // is not sufficient.
-    fZoneStringFormatLocale = locale;
+    fZSFLocale = locale;
       
     if (U_FAILURE(status)) return;
 
