@@ -188,10 +188,8 @@ static const char gAmPmMarkersTag[]="AmPmMarkers";
 static const char gQuartersTag[]="quarters";
 
 static const char gZoneStringsTag[]="zoneStrings";
-static const char gRegionFormatTag[]="zoneStrings/regionFormat";
-static const char gFallbackFormatTag[]="zoneStrings/fallbackFormat";
-static const char gGmtFormatTag[]="zoneStrings/gmtFormat";
-static const char gHourFormatTag[]="zoneStrings/hourFormat";
+static const char gGmtFormatTag[]="gmtFormat";
+static const char gHourFormatTag[]="hourFormat";
 
 static const char gLocalPatternCharsTag[]="localPatternChars";
 
@@ -1193,6 +1191,7 @@ DateFormatSymbols::initializeData(const Locale& locale, const char *type, UError
      * Use the localeBundle for getting zone GMT formatting patterns
      */
     UResourceBundle *localeBundle = ures_open(NULL, locale.getName(), &status);
+    UResourceBundle *zoneStringsArray = ures_getByKeyWithFallback(localeBundle, gZoneStringsTag, NULL, &status);
 
     // load the first data item
     UResourceBundle *erasMain = calData.getByKey(gErasTag, status);
@@ -1308,12 +1307,12 @@ DateFormatSymbols::initializeData(const Locale& locale, const char *type, UError
     }
 
     // GMT format patterns
-    resStr = ures_getStringByKeyWithFallback(localeBundle, gGmtFormatTag, &len, &status);
+    resStr = ures_getStringByKeyWithFallback(zoneStringsArray, gGmtFormatTag, &len, &status);
     if (len > 0) {
         fGmtFormat.setTo(TRUE, resStr, len);
     }
 
-    resStr = ures_getStringByKeyWithFallback(localeBundle, gHourFormatTag, &len, &status);
+    resStr = ures_getStringByKeyWithFallback(zoneStringsArray, gHourFormatTag, &len, &status);
     if (len > 0) {
         UChar *sep = u_strchr(resStr, (UChar)0x003B /* ';' */);
         if (sep != NULL) {
@@ -1478,6 +1477,7 @@ DateFormatSymbols::initializeData(const Locale& locale, const char *type, UError
 cleanup:
     ures_close(eras);
     ures_close(eraNames);
+    ures_close(zoneStringsArray);
     ures_close(localeBundle);
 }
 

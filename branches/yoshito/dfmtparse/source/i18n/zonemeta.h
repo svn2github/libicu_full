@@ -73,6 +73,7 @@ private:
     static const CanonicalMapEntry* getCanonicalInfo(const UnicodeString &tzid);
 
     static Hashtable* createCanonicalMap(void);
+    static Hashtable* createOlsonToMetaMapOld(void);
     static Hashtable* createOlsonToMetaMap(void);
     static Hashtable* createMetaToOlsonMap(void);
 };

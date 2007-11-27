@@ -115,6 +115,9 @@ static const char gTerritoryTag[]       = "territory";
 static const char gAliasesTag[]         = "aliases";
 static const char gMultizoneTag[]       = "multizone";
 
+static const char gMetazoneInfo[]       = "metazoneInfo";
+static const char gMetazoneMappings[]   = "metazoneMappings";
+
 #define MZID_PREFIX_LEN 5
 static const char gMetazoneIdPrefix[]   = "meta:";
 
@@ -202,6 +205,10 @@ ZoneMeta::initialize(void) {
     // Initialize hash tables
     Hashtable *tmpCanonicalMap = createCanonicalMap();
     Hashtable *tmpOlsonToMeta = createOlsonToMetaMap();
+    if (tmpOlsonToMeta == NULL) {
+        // With ICU 3.8 data
+        createOlsonToMetaMapOld();
+    }
     Hashtable *tmpMetaToOlson = createMetaToOlsonMap();
 
     umtx_lock(&gZoneMetaLock);
@@ -376,8 +383,160 @@ error_cleanup:
     return NULL;
 }
 
+/*
+ * Creating Olson tzid to metazone mappings from resource (3.8.1 and beyond)
+ */
 Hashtable*
 ZoneMeta::createOlsonToMetaMap(void) {
+    UErrorCode status = U_ZERO_ERROR;
+
+    Hashtable *olsonToMeta = NULL;
+    UResourceBundle *metazoneInfoBundle = NULL;
+    UResourceBundle *metazoneMappings = NULL;
+    StringEnumeration *tzids = NULL;
+
+    olsonToMeta = new Hashtable(uhash_compareUnicodeString, NULL, status);
+    if (U_FAILURE(status)) {
+        return NULL;
+    }
+    olsonToMeta->setValueDeleter(deleteUVector);
+
+    // Read metazone mappings from metazoneInfo bundle
+    metazoneInfoBundle = ures_openDirect(NULL, gMetazoneInfo, &status);
+    metazoneMappings = ures_getByKey(metazoneInfoBundle, gMetazoneMappings, NULL, &status);
+    if (U_FAILURE(status)) {
+        goto error_cleanup;
+    }
+
+    // Walk through all canonical tzids
+    char zidkey[ZID_KEY_MAX];
+
+    tzids = TimeZone::createEnumeration();
+    const char *tzid;
+    while ((tzid = tzids->next(NULL, status))) {
+        if (U_FAILURE(status)) {
+            goto error_cleanup;
+        }
+        // We may skip aliases, because the bundle
+        // contains only canonical IDs.  For now, try
+        // all of them.
+        uprv_strcpy(zidkey, tzid);
+
+        // Replace '/' with ':'
+        UBool foundSep = FALSE;
+        char *p = zidkey;
+        while (*p) {
+            if (*p == '/') {
+                *p = ':';
+                foundSep = TRUE;
+            }
+            p++;
+        }
+        if (!foundSep) {
+            // A valid time zone key has at least one separator
+            continue;
+        }
+
+        UResourceBundle *zoneItem = ures_getByKey(metazoneMappings, zidkey, NULL, &status);
+        if (U_FAILURE(status)) {
+            status = U_ZERO_ERROR;
+            ures_close(zoneItem);
+            continue;
+        }
+
+        UVector *mzMappings = NULL;
+        while (ures_hasNext(zoneItem)) {
+            UResourceBundle *mz = ures_getNextResource(zoneItem, NULL, &status);
+            int32_t len;
+            const UChar *mz_name = ures_getStringByIndex(mz, 0, &len, &status);
+            const UChar *mz_from = ures_getStringByIndex(mz, 1, &len, &status);
+            const UChar *mz_to   = ures_getStringByIndex(mz, 2, &len, &status);
+            ures_close(mz);
+
+            if(U_FAILURE(status)){
+                status = U_ZERO_ERROR;
+                continue;
+            }
+            // We do not want to use SimpleDateformat to parse boundary dates,
+            // because this code could be triggered by the initialization code
+            // used by SimpleDateFormat.
+            UDate from = parseDate(mz_from, status);
+            UDate to = parseDate(mz_to, status);
+            if (U_FAILURE(status)) {
+                status = U_ZERO_ERROR;
+                continue;
+            }
+
+            OlsonToMetaMappingEntry *entry = (OlsonToMetaMappingEntry*)uprv_malloc(sizeof(OlsonToMetaMappingEntry));
+            if (entry == NULL) {
+                status = U_MEMORY_ALLOCATION_ERROR;
+                break;
+            }
+            entry->mzid = (UChar*)uprv_malloc((u_strlen(mz_name) + 1) * sizeof(UChar));
+            if (entry->mzid == NULL) {
+                uprv_free(entry);
+                status = U_MEMORY_ALLOCATION_ERROR;
+                break;
+            }
+            u_strcpy(entry->mzid, mz_name);
+            entry->from = from;
+            entry->to = to;
+
+            if (mzMappings == NULL) {
+                mzMappings = new UVector(deleteOlsonToMetaMappingEntry, NULL, status);
+                if (U_FAILURE(status)) {
+                    delete mzMappings;
+                    deleteOlsonToMetaMappingEntry(entry);
+                    uprv_free(entry);
+                    break;
+                }
+            }
+
+            mzMappings->addElement(entry, status);
+            if (U_FAILURE(status)) {
+                break;
+            }
+        }
+
+        ures_close(zoneItem);
+
+        if (U_FAILURE(status)) {
+            if (mzMappings != NULL) {
+                delete mzMappings;
+            }
+            goto error_cleanup;
+        }
+        if (mzMappings != NULL) {
+            olsonToMeta->put(UnicodeString(tzid), mzMappings, status);
+            if (U_FAILURE(status)) {
+                delete mzMappings;
+                goto error_cleanup;
+            }
+        }
+    }
+
+    delete tzids;
+    ures_close(metazoneMappings);
+    ures_close(metazoneInfoBundle);
+    return olsonToMeta;
+
+error_cleanup:
+    if (tzids != NULL) {
+        delete tzids;
+    }
+    ures_close(metazoneMappings);
+    ures_close(metazoneInfoBundle);
+    if (olsonToMeta != NULL) {
+        delete olsonToMeta;
+    }
+    return NULL;
+}
+
+/*
+ * Creating Olson tzid to metazone mappings from ICU resource (3.8)
+ */
+Hashtable*
+ZoneMeta::createOlsonToMetaMapOld(void) {
     UErrorCode status = U_ZERO_ERROR;
 
     Hashtable *olsonToMeta = NULL;
@@ -393,9 +552,6 @@ ZoneMeta::createOlsonToMetaMap(void) {
 
     // Read metazone mappings from root bundle
     rootBundle = ures_openDirect(NULL, "", &status);
-    if (U_FAILURE(status)) {
-        goto error_cleanup;
-    }
     zoneStringsArray = ures_getByKey(rootBundle, gZoneStringsTag, NULL, &status);
     if (U_FAILURE(status)) {
         goto error_cleanup;
