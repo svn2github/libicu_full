@@ -1011,14 +1011,13 @@ UnicodeString&
 ZoneStringFormat::getString(const UnicodeString &tzid, TimeZoneTranslationTypeIndex typeIdx, UDate date,
                             UBool commonlyUsedOnly, UnicodeString& result) const {
     result.remove();
+
+    // ICU's own array does not have entries for aliases
+    UnicodeString canonicalID;
+    ZoneMeta::getCanonicalID(tzid, canonicalID);
+
     if (fTzidToStrings != NULL) {
-        ZoneStrings *zstrings = (ZoneStrings*)fTzidToStrings->get(tzid);
-        if (zstrings == NULL) {
-            // ICU's own array does not have entries for aliases
-            UnicodeString canonicalID;
-            ZoneMeta::getCanonicalID(tzid, canonicalID);
-            zstrings = (ZoneStrings*)fTzidToStrings->get(canonicalID);
-        }
+        ZoneStrings *zstrings = (ZoneStrings*)fTzidToStrings->get(canonicalID);
         if (zstrings != NULL) {
             switch (typeIdx) {
                 case ZSIDX_LONG_STANDARD:
@@ -1040,7 +1039,7 @@ ZoneStringFormat::getString(const UnicodeString &tzid, TimeZoneTranslationTypeIn
     if (result.isEmpty() && fMzidToStrings != NULL && typeIdx != ZSIDX_LOCATION) {
         // Try metazone
         UnicodeString mzid;
-        ZoneMeta::getMetazoneID(tzid, date, mzid);
+        ZoneMeta::getMetazoneID(canonicalID, date, mzid);
         if (!mzid.isEmpty()) {
             ZoneStrings *mzstrings = (ZoneStrings*)fMzidToStrings->get(mzid);
             if (mzstrings != NULL) {
@@ -1076,16 +1075,14 @@ ZoneStringFormat::getGenericString(const Calendar &cal, UBool isShort, UBool com
     const TimeZone &tz = cal.getTimeZone();
     UnicodeString tzid;
     tz.getID(tzid);
-    ZoneStrings *zstrings;
 
+    // ICU's own array does not have entries for aliases
+    UnicodeString canonicalID;
+    ZoneMeta::getCanonicalID(tzid, canonicalID);
+
+    ZoneStrings *zstrings;
     if (fTzidToStrings != NULL) {
-        zstrings = (ZoneStrings*)fTzidToStrings->get(tzid);
-        if (zstrings == NULL) {
-            // ICU's own array does not have entries for aliases
-            UnicodeString canonicalID;
-            ZoneMeta::getCanonicalID(tzid, canonicalID);
-            zstrings = (ZoneStrings*)fTzidToStrings->get(canonicalID);
-        }
+        zstrings = (ZoneStrings*)fTzidToStrings->get(canonicalID);
         if (zstrings != NULL) {
             if (isShort) {
                 if (!commonlyUsedOnly || zstrings->isShortFormatCommonlyUsed()) {
@@ -1100,7 +1097,7 @@ ZoneStringFormat::getGenericString(const Calendar &cal, UBool isShort, UBool com
         // try metazone
         int32_t raw, sav;
         UnicodeString mzid;
-        ZoneMeta::getMetazoneID(tzid, time, mzid);
+        ZoneMeta::getMetazoneID(canonicalID, time, mzid);
         if (!mzid.isEmpty()) {
             UBool useStandard = FALSE;
             sav = cal.get(UCAL_DST_OFFSET, status);
@@ -1156,7 +1153,7 @@ ZoneStringFormat::getGenericString(const Calendar &cal, UBool isShort, UBool com
                 delete tmptz;
             }
             if (useStandard) {
-                getString(tzid, (isShort ? ZSIDX_SHORT_STANDARD : ZSIDX_LONG_STANDARD),
+                getString(canonicalID, (isShort ? ZSIDX_SHORT_STANDARD : ZSIDX_LONG_STANDARD),
                     time, commonlyUsedOnly, result);
 
                 // Note:
@@ -1166,7 +1163,7 @@ ZoneStringFormat::getGenericString(const Calendar &cal, UBool isShort, UBool com
                 // name is different from its generic name below.
                 if (!result.isEmpty()) {
                     UnicodeString genericNonLocation;
-                    getString(tzid, (isShort ? ZSIDX_SHORT_GENERIC : ZSIDX_LONG_GENERIC),
+                    getString(canonicalID, (isShort ? ZSIDX_SHORT_GENERIC : ZSIDX_LONG_GENERIC),
                         time, commonlyUsedOnly, genericNonLocation);
                     if (!genericNonLocation.isEmpty() && result == genericNonLocation) {
                         result.remove();
@@ -1189,7 +1186,7 @@ ZoneStringFormat::getGenericString(const Calendar &cal, UBool isShort, UBool com
                     UnicodeString preferredId;
                     UnicodeString region;
                     ZoneMeta::getZoneIdByMetazone(mzid, getRegion(region), preferredId);
-                    if (tzid != preferredId) {
+                    if (canonicalID != preferredId) {
                         // Check if the offsets at the given time are identical with the preferred zone
                         raw = cal.get(UCAL_ZONE_OFFSET, status);
                         if (U_FAILURE(status)) {
@@ -1220,7 +1217,7 @@ ZoneStringFormat::getGenericString(const Calendar &cal, UBool isShort, UBool com
     }
     if (result.isEmpty()) {
         // Use location format as the final fallback
-        getString(tzid, ZSIDX_LOCATION, time, FALSE /*not used*/, result);
+        getString(canonicalID, ZSIDX_LOCATION, time, FALSE /*not used*/, result);
     }
 
     return result;

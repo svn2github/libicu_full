@@ -18,6 +18,7 @@
 #include "unicode/uchar.h"
 #include "unicode/basictz.h"
 #include "cstring.h"
+#include "zonemeta.h"
 
 
 static const char* PATTERNS[] = {"z", "zzzz", "Z", "ZZZZ", "v", "vvvv", "V", "VVVV"};
@@ -38,8 +39,6 @@ TimeZoneFormatTest::runIndexedTest( int32_t index, UBool exec, const char* &name
 
 void
 TimeZoneFormatTest::TestTimeZoneRoundTrip(void) {
-    if (1) return; // not quite ready
-
     UErrorCode status = U_ZERO_ERROR;
 
     SimpleTimeZone unknownZone(-31415, (UnicodeString)"Etc/Unknown");
@@ -115,7 +114,7 @@ TimeZoneFormatTest::TestTimeZoneRoundTrip(void) {
         for (int32_t patidx = 0; patidx < NUM_PATTERNS; patidx++) {
 
             //DEBUG static const char* PATTERNS[] = {"z", "zzzz", "Z", "ZZZZ", "v", "vvvv", "V", "VVVV"};
-            //if (patidx != 3) continue;
+            //if (patidx != 1) continue;
 
             SimpleDateFormat *sdf = new SimpleDateFormat((UnicodeString)PATTERNS[patidx], LOCALES[locidx], status);
             if (U_FAILURE(status)) {
@@ -200,7 +199,9 @@ TimeZoneFormatTest::TestTimeZoneRoundTrip(void) {
                         }
                     } else { // "VVVV"
                         // Location: time zone rule must be preserved.
-                        if (outtzid != *tzid) { //TODO
+                        UnicodeString canonical;
+                        ZoneMeta::getCanonicalID(*tzid, canonical);
+                        if (outtzid != canonical) {
                             // Canonical ID did not match - check the rules
                             if (!((BasicTimeZone*)&outtz)->hasEquivalentTransitions((BasicTimeZone&)*tz, low, high, TRUE, status)) {
                                 errln("Canonical round trip failed; tz=" + *tzid
@@ -226,8 +227,6 @@ TimeZoneFormatTest::TestTimeZoneRoundTrip(void) {
 
 void
 TimeZoneFormatTest::TestTimeRoundTrip(void) {
-    if (1) return; // not quite ready
-
     UErrorCode status = U_ZERO_ERROR;
 
     Calendar *cal = Calendar::createInstance(TimeZone::createTimeZone((UnicodeString)"UTC"), status);
@@ -312,7 +311,7 @@ TimeZoneFormatTest::TestTimeRoundTrip(void) {
             logln((UnicodeString)"    pattern: " + PATTERNS[patidx]);
 
             //DEBUG static const char* PATTERNS[] = {"z", "zzzz", "Z", "ZZZZ", "v", "vvvv", "V", "VVVV"};
-            //if (patidx != 3) continue;
+            //if (patidx != 1) continue;
 
             UnicodeString pattern(BASEPATTERN);
             pattern.append(" ").append(PATTERNS[patidx]);
@@ -331,12 +330,12 @@ TimeZoneFormatTest::TestTimeRoundTrip(void) {
             timer = Calendar::getNow();
 
             while ((tzid = tzids->snext(status))) {
-                /* TODO
-                if(ids[zidx].equals(ZoneMeta.getCanonicalID(ids[zidx]))) {
+                UnicodeString canonical;
+                ZoneMeta::getCanonicalID(*tzid, canonical);
+                if (*tzid != canonical) {
                     // Skip aliases
                     continue;
                 }
-                */
                 BasicTimeZone *tz = (BasicTimeZone*)TimeZone::createTimeZone(*tzid);
                 sdf->setTimeZone(*tz);
 

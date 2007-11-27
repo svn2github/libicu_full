@@ -1094,7 +1094,7 @@ void Calendar::computeFields(UErrorCode &ec)
     double localMillis = internalGetTime();
     int32_t rawOffset, dstOffset;
     getTimeZone().getOffset(localMillis, FALSE, rawOffset, dstOffset, ec);
-    localMillis += rawOffset; 
+    localMillis += (rawOffset + dstOffset); 
 
     // Mark fields as set.  Do this before calling handleComputeFields().
     uint32_t mask =   //fInternalSetMask;
@@ -1134,32 +1134,7 @@ void Calendar::computeFields(UErrorCode &ec)
     //__FILE__, __LINE__, fFields[UCAL_JULIAN_DAY], localMillis);
 #endif  
 
-    // In some cases we will have to call this method again below to
-    // adjust for DST pushing us into the next Julian day.
     computeGregorianAndDOWFields(fFields[UCAL_JULIAN_DAY], ec);
-
-    int32_t millisInDay =  (int32_t) (localMillis - (days * kOneDay));
-    if (millisInDay < 0) millisInDay += (int32_t)kOneDay;
-
-    // Adjust our millisInDay for DST.  dstOffset will be zero if DST
-    // is not in effect at this time of year, or if our zone does not
-    // use DST.
-    millisInDay += dstOffset;
-
-    // If DST has pushed us into the next day, we must call
-    // computeGregorianAndDOWFields() again.  This happens in DST between
-    // 12:00 am and 1:00 am every day.  The first call to
-    // computeGregorianAndDOWFields() will give the wrong day, since the
-    // Standard time is in the previous day.
-    if (millisInDay >= (int32_t)kOneDay) {
-        millisInDay -= (int32_t)kOneDay; // ASSUME dstOffset < 24:00
-
-        // We don't worry about overflow of JULIAN_DAY because the
-        // allowable range of JULIAN_DAY has slop at the ends (that is,
-        // the max is less that 0x7FFFFFFF and the min is greater than
-        // -0x80000000).
-        computeGregorianAndDOWFields(++fFields[UCAL_JULIAN_DAY], ec);
-    }
 
     // Call framework method to have subclass compute its fields.
     // These must include, at a minimum, MONTH, DAY_OF_MONTH,
@@ -1174,6 +1149,7 @@ void Calendar::computeFields(UErrorCode &ec)
     // Compute time-related fields.  These are indepent of the date and
     // of the subclass algorithm.  They depend only on the local zone
     // wall milliseconds in day.
+    int32_t millisInDay =  (int32_t) (localMillis - (days * kOneDay));
     fFields[UCAL_MILLISECONDS_IN_DAY] = millisInDay;
     fFields[UCAL_MILLISECOND] = millisInDay % 1000;
     millisInDay /= 1000;

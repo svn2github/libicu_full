@@ -38,6 +38,7 @@ U_NAMESPACE_BEGIN
 
 class DateFormatSymbols;
 class DateFormat;
+class MessageFormat;
 
 /**
  *
@@ -805,6 +806,11 @@ private:
     void formatRFC822TZ(UnicodeString &appendTo, int32_t offset) const;
 
     /**
+     * Initialize MessageFormat instances used for GMT formatting/parsing
+     */
+    void initGMTFormatters(UErrorCode &status);
+
+    /**
      * Used to map pattern characters to Calendar field identifiers.
      */
     static const UCalendarDateFields fgPatternIndexToCalendarField[];
@@ -852,6 +858,11 @@ private:
     };
 
     ParsedTZType tztype; // here to avoid api change
+
+    /*
+     * MessageFormat instances used for localized GMT format
+     */
+    MessageFormat   **fGMTFormatters;
 
     UBool fHaveDefaultCentury;
 };

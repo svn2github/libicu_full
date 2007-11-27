@@ -69,21 +69,20 @@ void DateFormatTest::runIndexedTest( int32_t index, UBool exec, const char* &nam
         TESTCASE(23,TestGreekMay);
         TESTCASE(24,TestGenericTime);
         TESTCASE(25,TestGenericTimeZoneOrder);
-        TESTCASE(26,TestTimeZoneStringsAPI);
-        TESTCASE(27,TestHost);
-        TESTCASE(28,TestEras);
-        TESTCASE(29,TestNarrowNames);
-        TESTCASE(30,TestStandAloneDays);
-        TESTCASE(31,TestStandAloneMonths);
-        TESTCASE(32,TestQuarters);
-        TESTCASE(33,TestZTimeZoneParsing);
-        TESTCASE(34,TestRelative);
-        TESTCASE(35,TestRelativeClone);
-        TESTCASE(36,TestHostClone);
-        TESTCASE(37,TestTimeZoneDisplayName);
+        TESTCASE(26,TestHost);
+        TESTCASE(27,TestEras);
+        TESTCASE(28,TestNarrowNames);
+        TESTCASE(29,TestStandAloneDays);
+        TESTCASE(30,TestStandAloneMonths);
+        TESTCASE(31,TestQuarters);
+        TESTCASE(32,TestZTimeZoneParsing);
+        TESTCASE(33,TestRelative);
+        TESTCASE(34,TestRelativeClone);
+        TESTCASE(35,TestHostClone);
+        TESTCASE(36,TestTimeZoneDisplayName);
         /*
-        TESTCASE(38,TestRelativeError);
-        TESTCASE(39,TestRelativeOther);
+        TESTCASE(37,TestRelativeError);
+        TESTCASE(38,TestRelativeOther);
         */
         default: name = ""; break;
     }
@@ -1870,66 +1869,6 @@ void DateFormatTest::TestGenericTimeZoneOrder() {
   const int32_t XDATA_length = sizeof(XDATA)/sizeof(XDATA[0]);
   Locale en("en");
   expect(XDATA, XDATA_length, en);
-}
-
-void DateFormatTest::TestTimeZoneStringsAPI() {
-    // Verify data
-    UErrorCode status  = U_ZERO_ERROR;
-    DateFormatSymbols symbols(Locale::getUS(), status);
-    StringEnumeration* keys = symbols.createZoneStringIDs(status);
-    if(U_FAILURE(status)){
-        errln("Could not create the StringEnumeration for Locale::getUS(). Error: %s", u_errorName(status)); 
-        return;
-    }
-    
-    StringEnumeration* keys2 = symbols.createZoneStringIDs(status);
-    ASSERT_OK(status);
-     if(*keys2!=*keys){
-        errln("operator!= failed for TimeZoneStringsEnum");
-    }
-    const UnicodeString* key = NULL;
-
-    while( (key = keys->snext(status))!=NULL){ 
-        logln(prettify(*key)); 
-    }
-    if(U_FAILURE(status)){
-        errln("Could not iterate over the StringEnumeration. Error: %s", u_errorName(status)); 
-        return;
-    }
-    UnicodeString expectedKey("meta/Alaska");
-    UnicodeString expectedStrs[DateFormatSymbols::TIMEZONE_COUNT];
-    expectedStrs[DateFormatSymbols::TIMEZONE_SHORT_GENERIC].setTo("AKT");
-    expectedStrs[DateFormatSymbols::TIMEZONE_SHORT_STANDARD].setTo("AKST");
-    expectedStrs[DateFormatSymbols::TIMEZONE_SHORT_DAYLIGHT].setTo("AKDT");
-    expectedStrs[DateFormatSymbols::TIMEZONE_LONG_GENERIC].setTo("Alaska Time");
-    expectedStrs[DateFormatSymbols::TIMEZONE_LONG_STANDARD].setTo("Alaska Standard Time");
-    expectedStrs[DateFormatSymbols::TIMEZONE_LONG_DAYLIGHT].setTo("Alaska Daylight Time");
-    expectedStrs[DateFormatSymbols::TIMEZONE_EXEMPLAR_CITY].setTo("");
-    for(int32_t i=0; i<DateFormatSymbols::TIMEZONE_COUNT; i++){
-        UnicodeString result;
-        result = symbols.getZoneString(expectedKey, (DateFormatSymbols::TimeZoneTranslationType)i, result,status);
-        if(U_FAILURE(status)){
-            errln("Could not retrieve display name. Error: %s", u_errorName(status)); 
-            return;
-        }
-        if(expectedStrs[i] != result){
-            errln("Did not get the expected string. Expected: "+expectedStrs[i]+ UnicodeString(" Got: ") + result ); 
-        }
-    }
-    expectedKey.setTo("America/Los_Angeles",0);
-    UnicodeString exemplarCity("Phoenix");
-    UnicodeString result;
-    symbols.setZoneString(expectedKey,DateFormatSymbols::TIMEZONE_EXEMPLAR_CITY, exemplarCity, status);
-    if(U_FAILURE(status)){
-        errln("setZoneString() did not succeed. Error: %s", u_errorName(status)); 
-        return;
-    }    
-    result = symbols.getZoneString(expectedKey, DateFormatSymbols::TIMEZONE_EXEMPLAR_CITY, result,status);
-    if(result != exemplarCity){ 
-        errln("setZoneString() did not succeed. Expected: " + exemplarCity + " Got: " + result); 
-    }
-    delete keys;
-    delete keys2;
 }
 
 void DateFormatTest::TestZTimeZoneParsing(void) {
