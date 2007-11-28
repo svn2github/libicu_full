@@ -20,6 +20,7 @@
 #include "cstring.h"
 #include "zonemeta.h"
 
+#define DEBUG_ALL 0
 
 static const char* PATTERNS[] = {"z", "zzzz", "Z", "ZZZZ", "v", "vvvv", "V", "VVVV"};
 static const int NUM_PATTERNS = sizeof(PATTERNS)/sizeof(const char*);
@@ -62,9 +63,9 @@ TimeZoneFormatTest::TestTimeZoneRoundTrip(void) {
 
     // Set up rule equivalency test range
     UDate low, high;
-    cal->set(1900, 0, 1);
+    cal->set(1900, UCAL_JANUARY, 1);
     low = cal->getTime(status);
-    cal->set(2040, 0, 1);
+    cal->set(2040, UCAL_JANUARY, 1);
     high = cal->getTime(status);
     if (U_FAILURE(status)) {
         errln("getTime failed");
@@ -85,19 +86,27 @@ TimeZoneFormatTest::TestTimeZoneRoundTrip(void) {
     }
 
     // Set up test locales
-    const Locale locales[] = {
+    const Locale locales1[] = {
+        Locale("en_US")
+    };
+    const Locale locales2[] = {
+        Locale("en_US"),
         Locale("en"),
         Locale("en_CA"),
         Locale("fr"),
         Locale("zh_Hant")
     };
+
     const Locale *LOCALES;
     int32_t nLocales;
-    if (quick) {
-        LOCALES = locales;
-        nLocales = sizeof(locales)/sizeof(Locale);
-    } else {
+    if (DEBUG_ALL) {
         LOCALES = Locale::getAvailableLocales(nLocales);
+    } else if (quick) {
+        LOCALES = locales1;
+        nLocales = sizeof(locales1)/sizeof(Locale);
+    } else {
+        LOCALES = locales2;
+        nLocales = sizeof(locales2)/sizeof(Locale);
     }
 
     StringEnumeration *tzids = TimeZone::createEnumeration();
@@ -237,10 +246,14 @@ TimeZoneFormatTest::TestTimeRoundTrip(void) {
 
     UDate START_TIME, END_TIME;
 
-    cal->set(1900, UCAL_JANUARY, 1);
+    if (DEBUG_ALL) {
+        cal->set(1900, UCAL_JANUARY, 1);
+    } else {
+        cal->set(1965, UCAL_JANUARY, 1);
+    }
     START_TIME = cal->getTime(status);
 
-    cal->set(2020, UCAL_JANUARY, 1);
+    cal->set(2015, UCAL_JANUARY, 1);
     END_TIME = cal->getTime(status);
     if (U_FAILURE(status)) {
         errln("getTime failed");
@@ -261,25 +274,24 @@ TimeZoneFormatTest::TestTimeRoundTrip(void) {
         times[i] = 0;
     }
 
-    UBool DEBUG_ALL = FALSE;
     UBool REALLY_VERBOSE = FALSE;
 
     // Set up test locales
     const Locale locales1[] = {
-        Locale("en"),
-        Locale("en_CA"),
-        Locale("fr")
+        Locale("en_US")
     };
     const Locale locales2[] = {
-         Locale("ar_EG"), Locale("bg_BG"), Locale("ca_ES"), Locale("da_DK"), Locale("de"),
-         Locale("de_DE"), Locale("el_GR"), Locale("en"), Locale("en_AU"), Locale("en_CA"),
-         Locale("en_US"), Locale("es"), Locale("es_ES"), Locale("es_MX"), Locale("fi_FI"),
-         Locale("fr"), Locale("fr_CA"), Locale("fr_FR"), Locale("he_IL"), Locale("hu_HU"),
-         Locale("it"), Locale("it_IT"), Locale("ja"), Locale("ja_JP"), Locale("ko"),
-         Locale("ko_KR"), Locale("nb_NO"), Locale("nl_NL"), Locale("nn_NO"), Locale("pl_PL"),
-         Locale("pt"), Locale("pt_BR"), Locale("pt_PT"), Locale("ru_RU"), Locale("sv_SE"),
-         Locale("th_TH"), Locale("tr_TR"), Locale("zh"), Locale("zh_Hans"), Locale("zh_Hans_CN"),
-         Locale("zh_Hant"), Locale("zh_Hant_HK"), Locale("zh_Hant_TW")
+        Locale("en_US"),
+        Locale("en"),
+        Locale("de_DE"),
+        Locale("es_ES"),
+        Locale("fr_FR"),
+        Locale("it_IT"),
+        Locale("ja_JP"),
+        Locale("ko_KR"),
+        Locale("pt_BR"),
+        Locale("zh_Hans_CN"),
+        Locale("zh_Hant_TW")
     };
 
     const Locale *LOCALES;
@@ -300,6 +312,7 @@ TimeZoneFormatTest::TestTimeRoundTrip(void) {
         return;
     }
 
+    int32_t testCounts = 0;
     UDate testTimes[4];
     UBool expectedRoundTrip[4];
     int32_t testLen = 0;
@@ -329,7 +342,13 @@ TimeZoneFormatTest::TestTimeRoundTrip(void) {
 
             timer = Calendar::getNow();
 
+            int32_t tzidx = 0;
             while ((tzid = tzids->snext(status))) {
+                tzidx++;
+                if (quick && (tzidx % 4) != 0) {
+                    // reduce the regular test time
+                    continue;
+                }
                 UnicodeString canonical;
                 ZoneMeta::getCanonicalID(*tzid, canonical);
                 if (*tzid != canonical) {
@@ -375,6 +394,14 @@ TimeZoneFormatTest::TestTimeRoundTrip(void) {
                         }
                     }
                     for (int32_t testidx = 0; testidx < testLen; testidx++) {
+                        if (quick) {
+                            // reduce regular test time
+                            if (!expectedRoundTrip[testidx]) {
+                                continue;
+                            }
+                        }
+                        testCounts++;
+
                         UnicodeString text;
                         FieldPosition fpos(0);
                         sdf->format(testTimes[testidx], text, fpos);
@@ -427,6 +454,7 @@ TimeZoneFormatTest::TestTimeRoundTrip(void) {
         total += times[i];
     }
     logln((UnicodeString)"Total: " + total + "ms");
+    logln((UnicodeString)"Iteration: " + testCounts);
 
     delete cal;
     delete tzids;
