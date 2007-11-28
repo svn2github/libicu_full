@@ -456,7 +456,7 @@ UBool RegexMatcher::find() {
     case START_LINE:
         {
             UChar32  c;
-            if (startPos == 0) {
+            if (startPos == fAnchorStart) {
                 MatchAt(startPos, FALSE, fDeferredStatus);
                 if (U_FAILURE(fDeferredStatus)) {
                     return FALSE;

@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2007 International Business Machines
+﻿# Copyright (c) 2001-2007 International Business Machines
 # Corporation and others. All Rights Reserved.
 #
 #  file:
@@ -73,16 +73,18 @@
 #
 #  Anchoring Bounds
 #
-"^def"                         "abc<r><0>def</0></r>ghi"
-"def$"                         "abc<r><0>def</0></r>ghi"
-"^def$"                        "abc<r><0>def</0></r>ghi"
+"^def$"                        "abc<r><0>def</0></r>ghi"           # anchoring (default) bounds
+"^def$"                  a     "abc<r>def</r>ghi"                  # non-anchoring bounds
+"^def"                   a     "<r><0>def</0></r>ghi"              # non-anchoring bounds
+"def$"                   a     "abc<r><0>def</0></r>"              # non-anchoring bounds
+
 "^.*$"                   m     "<0>line 1</0>\n line 2"
 "^.*$"                   m2    "line 1\n<0> line 2</0>"
 "^.*$"                   m3    "line 1\n line 2"
-".*"                   dm     "li<r><0>ne </0></r>1\n line 2"
-".*$"                    m     "li<r><0>ne </0></r>1\n line 2"
-"^.*$"                   m     "li<r><0>ne </0></r>1\n line 2"
-"^.*$"                   m2    "li<r>ne </r>1\n line 2"
+"^.*$"                   m     "li<r><0>ne </0></r>1\n line 2"     # anchoring bounds
+"^.*$"                   m2    "li<r>ne </r>1\n line 2"            # anchoring bounds
+"^.*$"                  am     "li<r>ne </r>1\n line 2"            # non-anchoring bounds
+"^.*$"                  am     "li\n<r><0>ne </0></r>\n1\n line 2" # non-anchoring bounds
 
 # Capturing parens
 ".(..)."                       "<0>a<1>bc</1>d</0>"
