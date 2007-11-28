@@ -51,11 +51,38 @@
 "(.*)(?=c)"                    "<0><1>ab</1></0>cdef"
 
 "(?:.*)(?=c)"                  "<r>ab</r>cdef"
-"(?:.*)(?=c)"             b    "<r><0>ab</0></r>cdef"    # transparent bounds
-"(?:.*)(?=c)"             bM   "<r><0>ab</0></r>cdef"    # transparent bounds
+"(?:.*)(?=c)"             b    "<r><0>ab</0></r>cdef"      # transparent bounds
+"(?:.*)(?=c)"             bM   "<r><0>ab</0></r>cdef"      # transparent bounds
 
-"(?:.*)(?=(c))"           b    "<0>ab</0><1>c</1>def"    # Capture in look-ahead
-"(?:.
+"(?:.*)(?=(c))"           b    "<0>ab</0><1>c</1>def"      # Capture in look-ahead
+"(?=(.)\1\1)\1"                "abcc<0><1>d</1></0>ddefg"  # Backrefs to look-ahead capture
+
+".(?!\p{L})"                   "abc<0>d</0> "              # Negated look-ahead
+".(?!(\p{L}))"                 "abc<0>d</0> "              # Negated look-ahead, no capture
+                                                           #   visible outside of look-ahead
+
+#
+# Negated Lookahead, various regions and region transparency
+#
+"abc(?!def)"                   "<0>abc</0>xyz"
+"abc(?!def)"                   "abcdef"
+"abc(?!def)"                   "<r><0>abc</0></r>def"
+"abc(?!def)"              b    "<r>abc</r>def"
+"abc(?!def)"              b    "<r><0>abc</0></r>xyz"
+
+#
+#  Anchoring Bounds
+#
+"^def"                         "abc<r><0>def</0></r>ghi"
+"def$"                         "abc<r><0>def</0></r>ghi"
+"^def$"                        "abc<r><0>def</0></r>ghi"
+"^.*$"                   m     "<0>line 1</0>\n line 2"
+"^.*$"                   m2    "line 1\n<0> line 2</0>"
+"^.*$"                   m3    "line 1\n line 2"
+".*"                   dm     "li<r><0>ne </0></r>1\n line 2"
+".*$"                    m     "li<r><0>ne </0></r>1\n line 2"
+"^.*$"                   m     "li<r><0>ne </0></r>1\n line 2"
+"^.*$"                   m2    "li<r>ne </r>1\n line 2"
 
 # Capturing parens
 ".(..)."                       "<0>a<1>bc</1>d</0>"
