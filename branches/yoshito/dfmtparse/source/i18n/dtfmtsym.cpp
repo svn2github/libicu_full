@@ -203,12 +203,6 @@ static inline UnicodeString* newUnicodeStringArray(size_t count) {
     return new UnicodeString[count ? count : 1];
 }
 
-U_CDECL_BEGIN
-static void deleteUnicodeStringArray(void* obj) {
-    delete[] (UnicodeString*)obj;
-}
-U_CDECL_END
-
 //------------------------------------------------------
 
 DateFormatSymbols::DateFormatSymbols(const Locale& locale,

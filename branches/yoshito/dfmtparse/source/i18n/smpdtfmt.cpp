@@ -85,7 +85,7 @@ typedef enum GmtPatSize {
     kNegHmsLen = 9,
     kNegHmLen = 6,
     kPosHmsLen = 9,
-    kPosHmLen = 6,
+    kPosHmLen = 6
 } GmtPatSize;
 
 // This is a pattern-of-last-resort used when we can't load a usable pattern out
@@ -667,7 +667,7 @@ SimpleDateFormat::parseGMT(const UnicodeString &text, ParsePosition &pos) const 
                 fGMTFormatters[kGMTNegativeHMS]->parseObject(text, parsed, pos);
                 if (pos.getErrorIndex() == -1 && pos.getIndex() > start) {
                     parsed.getArray(parsedCount);
-                    if (parsedCount == 1 && parsed[0].getType() == Formattable::kIsDate) {
+                    if (parsedCount == 1 && parsed[0].getType() == Formattable::kDate) {
                         return (int32_t)(-1 * parsed[0].getDate());
                     }
                 }
@@ -680,7 +680,7 @@ SimpleDateFormat::parseGMT(const UnicodeString &text, ParsePosition &pos) const 
                 fGMTFormatters[kGMTPositiveHMS]->parseObject(text, parsed, pos);
                 if (pos.getErrorIndex() == -1 && pos.getIndex() > start) {
                     parsed.getArray(parsedCount);
-                    if (parsedCount == 1 && parsed[0].getType() == Formattable::kIsDate) {
+                    if (parsedCount == 1 && parsed[0].getType() == Formattable::kDate) {
                         return (int32_t)parsed[0].getDate();
                     }
                 }
@@ -693,7 +693,7 @@ SimpleDateFormat::parseGMT(const UnicodeString &text, ParsePosition &pos) const 
                 fGMTFormatters[kGMTNegativeHM]->parseObject(text, parsed, pos);
                 if (pos.getErrorIndex() == -1 && pos.getIndex() > start) {
                     parsed.getArray(parsedCount);
-                    if (parsedCount == 1 && parsed[0].getType() == Formattable::kIsDate) {
+                    if (parsedCount == 1 && parsed[0].getType() == Formattable::kDate) {
                         return (int32_t)(-1 * parsed[0].getDate());
                     }
                 }
@@ -706,7 +706,7 @@ SimpleDateFormat::parseGMT(const UnicodeString &text, ParsePosition &pos) const 
                 fGMTFormatters[kGMTPositiveHM]->parseObject(text, parsed, pos);
                 if (pos.getErrorIndex() == -1 && pos.getIndex() > start) {
                     parsed.getArray(parsedCount);
-                    if (parsedCount == 1 && parsed[0].getType() == Formattable::kIsDate) {
+                    if (parsedCount == 1 && parsed[0].getType() == Formattable::kDate) {
                         return (int32_t)parsed[0].getDate();
                     }
                 }

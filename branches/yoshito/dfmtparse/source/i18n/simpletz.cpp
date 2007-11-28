@@ -504,22 +504,22 @@ SimpleTimeZone::getOffset(uint8_t era, int32_t year, int32_t month, int32_t day,
 
 void
 SimpleTimeZone::getOffsetFromLocal(UDate date, int32_t nonExistingTimeOpt, int32_t duplicatedTimeOpt,
-                                   int32_t& rawOffset, int32_t& dstOffset, UErrorCode& status) /*const*/ {
+                                   int32_t& rawOffsetGMT, int32_t& savingsDST, UErrorCode& status) /*const*/ {
     if (U_FAILURE(status)) {
         return;
     }
 
-    rawOffset = getRawOffset();
+    rawOffsetGMT = getRawOffset();
     int32_t year, month, dom, dow;
     double day = uprv_floor(date / U_MILLIS_PER_DAY);
     int32_t millis = (int32_t) (date - day * U_MILLIS_PER_DAY);
 
     Grego::dayToFields(day, year, month, dom, dow);
 
-    dstOffset = getOffset(GregorianCalendar::AD, year, month, dom,
+    savingsDST = getOffset(GregorianCalendar::AD, year, month, dom,
                           (uint8_t) dow, millis,
                           Grego::monthLength(year, month),
-                          status) - rawOffset;
+                          status) - rawOffsetGMT;
     if (U_FAILURE(status)) {
         return;
     }
@@ -527,7 +527,7 @@ SimpleTimeZone::getOffsetFromLocal(UDate date, int32_t nonExistingTimeOpt, int32
     UBool recalc = FALSE;
 
     // Now we need some adjustment
-    if (dstOffset > 0) {
+    if (savingsDST > 0) {
         if ((nonExistingTimeOpt & kStdDstMask) == kStandard
             || (nonExistingTimeOpt & kStdDstMask) != kDaylight && (nonExistingTimeOpt & kFormerLatterMask) != kLatter) {
             date -= getDSTSavings();
@@ -544,10 +544,10 @@ SimpleTimeZone::getOffsetFromLocal(UDate date, int32_t nonExistingTimeOpt, int32
         day = uprv_floor(date / U_MILLIS_PER_DAY);
         millis = (int32_t) (date - day * U_MILLIS_PER_DAY);
         Grego::dayToFields(day, year, month, dom, dow);
-        dstOffset = getOffset(GregorianCalendar::AD, year, month, dom,
+        savingsDST = getOffset(GregorianCalendar::AD, year, month, dom,
                           (uint8_t) dow, millis,
                           Grego::monthLength(year, month),
-                          status) - rawOffset;
+                          status) - rawOffsetGMT;
     }
 }
 
