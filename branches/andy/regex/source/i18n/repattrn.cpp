@@ -244,7 +244,8 @@ RegexPattern::compile(const UnicodeString &regex,
     }
 
     const uint32_t allFlags = UREGEX_CANON_EQ | UREGEX_CASE_INSENSITIVE | UREGEX_COMMENTS |
-            UREGEX_DOTALL   | UREGEX_MULTILINE | UREGEX_UWORD | UREGEX_ERROR_ON_UNKNOWN_ESCAPES;
+                              UREGEX_DOTALL   | UREGEX_MULTILINE        | UREGEX_UWORD |
+                              UREGEX_ERROR_ON_UNKNOWN_ESCAPES           | UREGEX_UNIX_LINES;
 
     if ((flags & ~allFlags) != 0) {
         status = U_REGEX_INVALID_FLAG;

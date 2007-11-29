@@ -467,7 +467,7 @@ UBool RegexMatcher::find() {
                 U16_NEXT(inputBuf, startPos, fActiveLimit, c);  // like c = inputBuf[startPos++];
             }
 
-            if (fPattern->fFlags & URGEGX_UNIX_LINES) {
+            if (fPattern->fFlags & UREGEX_UNIX_LINES) {
                for (;;) {
                     c = inputBuf[startPos-1];
                     if (c == 0x0a) {
@@ -1502,6 +1502,23 @@ void RegexMatcher::MatchAt(int32_t startIdx, UBool toEnd, UErrorCode &status) {
                  }
                  // not at a new line.  Fail.
                  fp = (REStackFrame *)fStack->popFrame(frameSize);
+             }
+             break;
+
+
+         case URX_DOLLAR_MD:                //  $, test for End of line in multi-line and UNIX_LINES mode
+             {
+                 if (fp->fInputIdx >= fAnchorLimit) {
+                     // We really are at the end of input.  Success.
+                     fHitEnd = TRUE;
+                     fRequireEnd = TRUE;  // TODO:  should require end be set in multi-line mode?
+                     break;
+                 }
+                 // If we are not positioned just before a new-line, the test fails; backtrack out.
+                 // It makes no difference where the new-line is within the input.
+                 if (inputBuf[fp->fInputIdx] != 0x0a) {
+                     fp = (REStackFrame *)fStack->popFrame(frameSize);
+                 }
              }
              break;
 

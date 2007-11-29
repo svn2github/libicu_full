@@ -1110,10 +1110,18 @@ UBool RegexCompile::doParseActions(int32_t action)
         }
         break;
 
-
     case doDollar:
         {
-            int32_t op = (fModeFlags & UREGEX_MULTILINE)? URX_DOLLAR_M : URX_DOLLAR;
+            int32_t op;
+            if (       (fModeFlags & UREGEX_MULTILINE) == 0 && (fModeFlags & UREGEX_UNIX_LINES) == 0) {
+                op = URX_DOLLAR;
+            } else if ((fModeFlags & UREGEX_MULTILINE) != 0 && (fModeFlags & UREGEX_UNIX_LINES) == 0) {
+                op = URX_DOLLAR_M;
+            } else if ((fModeFlags & UREGEX_MULTILINE) == 0 && (fModeFlags & UREGEX_UNIX_LINES) != 0) {
+                op = URX_DOLLAR_D;
+            } else if ((fModeFlags & UREGEX_MULTILINE) != 0 && (fModeFlags & UREGEX_UNIX_LINES) == 0) {
+                op = URX_DOLLAR_MD;
+            }
             fRXPat->fCompiledPat->addElement(URX_BUILD(op, 0), *fStatus);
         }
         break;
@@ -2442,9 +2450,11 @@ void   RegexCompile::matchStartType() {
         case URX_BACKSLASH_G:
         case URX_BACKSLASH_Z:
         case URX_DOLLAR:
+        case URX_DOLLAR_M:
+        case URX_DOLLAR_D:
+        case URX_DOLLAR_MD:
         case URX_RELOC_OPRND:
         case URX_STO_INP_LOC:
-        case URX_DOLLAR_M:
         case URX_BACKREF:         // BackRef.  Must assume that it might be a zero length match
         case URX_BACKREF_I:
 
@@ -2921,9 +2931,11 @@ int32_t   RegexCompile::minMatchLength(int32_t start, int32_t end) {
         case URX_BACKSLASH_Z:
         case URX_CARET:
         case URX_DOLLAR:
+        case URX_DOLLAR_M:
+        case URX_DOLLAR_D:
+        case URX_DOLLAR_MD:
         case URX_RELOC_OPRND:
         case URX_STO_INP_LOC:
-        case URX_DOLLAR_M:
         case URX_CARET_M:
         case URX_BACKREF:         // BackRef.  Must assume that it might be a zero length match
         case URX_BACKREF_I:
@@ -3173,9 +3185,11 @@ int32_t   RegexCompile::maxMatchLength(int32_t start, int32_t end) {
         case URX_BACKSLASH_Z:
         case URX_CARET:
         case URX_DOLLAR:
+        case URX_DOLLAR_M:
+        case URX_DOLLAR_D:
+        case URX_DOLLAR_MD:
         case URX_RELOC_OPRND:
         case URX_STO_INP_LOC:
-        case URX_DOLLAR_M:
         case URX_CARET_M:
 
         case URX_STO_SP:          // Setup for atomic or possessive blocks.  Doesn't change what can match.
@@ -3452,6 +3466,8 @@ void RegexCompile::stripNOPs() {
         case URX_LOOP_SR_I:
         case URX_LOOP_DOT_I:
         case URX_LOOP_C:
+        case URX_DOLLAR_D:
+        case URX_DOLLAR_MD:
             // These instructions are unaltered by the relocation.
             fRXPat->fCompiledPat->setElementAt(op, dst);
             dst++;
@@ -3505,6 +3521,8 @@ void RegexCompile::OptDotStar() {
         case URX_END_CAPTURE:
         case URX_DOLLAR_M:
         case URX_DOLLAR:
+        case URX_DOLLAR_D:
+        case URX_DOLLAR_MD:
         case URX_BACKSLASH_Z:
             // These ops may follow the JMP_SAV without preventing us from
             //   doing this optimization.

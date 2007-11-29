@@ -22,6 +22,7 @@
 #                                   s      dot-matches-all mode
 #                                   m      multi-line mode.  
 #                                            ($ and ^ match at embedded new-lines)
+#                                   D      Unix Lines mode (only recognize 0x0a as new-line)
 #                                   v      If icu configured without break iteration, this
 #                                          regex test pattern should not compile.
 #                                   e      set the UREGEX_ERROR_ON_UNKNOWN_ESCAPES flag
@@ -102,6 +103,14 @@
 "xyz$"                  yz     "<0>xyz</0>"
 "xyz$"                         "xyz\u000b"
 
+#
+#  UNIX_LINES mode
+#
+"abc$"                 D      "<0>abc</0>\n"
+"abc$"                 D      "abc\r"
+"abc$"                 D      "abc\u0085"
+"a.b"                  D      "a\rb"
+"(?s)a.b"             d          "a\nb"
 
 
 # Capturing parens

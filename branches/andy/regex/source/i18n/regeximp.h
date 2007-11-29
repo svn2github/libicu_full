@@ -170,7 +170,8 @@ enum {
                                //      1:  . matches new-line mode.
      URX_BACKSLASH_BU  = 53,   // \b or \B in UREGEX_UWORD mode, using Unicode style
                                //   word boundaries.
-     URX_DOLLAR_D      = 54    // $ end of input test, in UNIX_LINE mode.
+     URX_DOLLAR_D      = 54,   // $ end of input test, in UNIX_LINES mode.
+     URX_DOLLAR_MD     = 55    // $ end of input test, in MULTI_LINE and UNIX_LINES mode.
 
 };
 
@@ -230,8 +231,9 @@ enum {
         "LOOP_SR_I",           \
         "LOOP_C",              \
         "LOOP_DOT_I",          \
-        "BACKSLASH_BU"         \
-        "DOLLAR_D"
+        "BACKSLASH_BU",        \
+        "DOLLAR_D",            \
+        "DOLLAR_MD"
 
 
 //

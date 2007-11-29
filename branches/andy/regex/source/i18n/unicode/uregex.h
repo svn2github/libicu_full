@@ -84,7 +84,7 @@ typedef enum URegexpFlag{
       *    in the behavior of ., ^, and $.
       *   @draft ICU 4.0
       */
-    URGEGX_UNIX_LINES = 1,
+    UREGEX_UNIX_LINES = 1,
 
     /**  Unicode word boundaries.
       *     If set, \b uses the Unicode TR 29 definition of word boundaries.

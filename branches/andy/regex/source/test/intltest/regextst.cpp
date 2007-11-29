@@ -1360,7 +1360,7 @@ void RegexTest::Extended() {
 
     RegexMatcher    quotedStuffMat("\\s*([\\'\\\"/])(.*?)\\1", 0, status);
     RegexMatcher    commentMat    ("\\s*(#.*)?$", 0, status);
-    RegexMatcher    flagsMat      ("\\s*([ixsmdteEGMvabtyYzZ2-9]*)([:letter:]*)", 0, status);
+    RegexMatcher    flagsMat      ("\\s*([ixsmdteDEGMvabtyYzZ2-9]*)([:letter:]*)", 0, status);
 
     RegexMatcher    lineMat("(.*?)\\r?\\n", testString, 0, status);
     UnicodeString   testPattern;   // The pattern for test from the test file.
@@ -1528,6 +1528,9 @@ void RegexTest::regex_find(const UnicodeString &pattern,
     
     if (flags.indexOf((UChar)0x65) >= 0) { // 'e' flag
         bflags |= UREGEX_ERROR_ON_UNKNOWN_ESCAPES;
+    }
+    if (flags.indexOf((UChar)0x44) >= 0) { // 'D' flag
+        bflags |= UREGEGX_UNIX_LINES;
     }
 
 
