@@ -1,5 +1,5 @@
 //
-//   Copyright (C) 2002-2005 International Business Machines Corporation
+//   Copyright (C) 2002-2007 International Business Machines Corporation
 //   and others. All rights reserved.
 //
 //   file:  regeximp.h
@@ -168,8 +168,9 @@ enum {
                                //   Operand value:
                                //      0:  Normal (. doesn't match new-line) mode.
                                //      1:  . matches new-line mode.
-     URX_BACKSLASH_BU  = 53    // \b or \B in UREGEX_UWORD mode, using Unicode style
+     URX_BACKSLASH_BU  = 53,   // \b or \B in UREGEX_UWORD mode, using Unicode style
                                //   word boundaries.
+     URX_DOLLAR_D      = 54    // $ end of input test, in UNIX_LINE mode.
 
 };
 
@@ -229,7 +230,8 @@ enum {
         "LOOP_SR_I",           \
         "LOOP_C",              \
         "LOOP_DOT_I",          \
-        "BACKSLASH_BU"
+        "BACKSLASH_BU"         \
+        "DOLLAR_D"
 
 
 //

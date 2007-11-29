@@ -1702,22 +1702,22 @@ void RegexTest::regex_find(const UnicodeString &pattern,
 
     if ((flags.indexOf((UChar)0x59) >= 0) &&   //  'Y' flag:  RequireEnd() == false
         matcher->requireEnd() == TRUE) {
-        errln("requireEnd() returned TRUE.  Expected FALSE");
+        errln("Error at line %d: requireEnd() returned TRUE.  Expected FALSE", line);
         failed = TRUE;
     }
     if ((flags.indexOf((UChar)0x79) >= 0) &&   //  'y' flag:  RequireEnd() == true
         matcher->requireEnd() == FALSE) {
-        errln("requireEnd() returned FALSE.  Expected TRUE");
+        errln("Error at line %d: requireEnd() returned FALSE.  Expected TRUE", line);
         failed = TRUE;
     }
     if ((flags.indexOf((UChar)0x5A) >= 0) &&   //  'Z' flag:  hitEnd() == false
         matcher->hitEnd() == TRUE) {
-        errln("hitEnd() returned TRUE.  Expected FALSE");
+        errln("Error at line %d: hitEnd() returned TRUE.  Expected FALSE", line);
         failed = TRUE;
     }
     if ((flags.indexOf((UChar)0x7A) >= 0) &&   //  'z' flag:  hitEnd() == true
         matcher->hitEnd() == FALSE) {
-        errln("hitEnd() returned FALSE.  Expected TRUE");
+        errln("Error at line %d: hitEnd() returned FALSE.  Expected TRUE", line);
         failed = TRUE;
     }
 

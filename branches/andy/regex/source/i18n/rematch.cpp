@@ -467,29 +467,52 @@ UBool RegexMatcher::find() {
                 U16_NEXT(inputBuf, startPos, fActiveLimit, c);  // like c = inputBuf[startPos++];
             }
 
-            for (;;) {
-                c = inputBuf[startPos-1];
-                if (((c & 0x7f) <= 0x29) &&     // First quickly bypass as many chars as possible
-                    ((c<=0x0d && c>=0x0a) || c==0x85 ||c==0x2028 || c==0x2029 )) {
-                        if (c == 0x0d && startPos < fActiveLimit && inputBuf[startPos] == 0x0a) {
-                            startPos++;
-                        }
-                        MatchAt(startPos, FALSE, fDeferredStatus);
-                        if (U_FAILURE(fDeferredStatus)) {
-                            return FALSE;
-                        }
-                        if (fMatch) {
-                            return TRUE;
-                        }
+            if (fPattern->fFlags & URGEGX_UNIX_LINES) {
+               for (;;) {
+                    c = inputBuf[startPos-1];
+                    if (c == 0x0a) {
+                            MatchAt(startPos, FALSE, fDeferredStatus);
+                            if (U_FAILURE(fDeferredStatus)) {
+                                return FALSE;
+                            }
+                            if (fMatch) {
+                                return TRUE;
+                            }
+                    }
+                    if (startPos >= testLen) {
+                        fMatch = FALSE;
+                        return FALSE;
+                    }
+                    U16_NEXT(inputBuf, startPos, fActiveLimit, c);  // like c = inputBuf[startPos++];
+                    // Note that it's perfectly OK for a pattern to have a zero-length
+                    //   match at the end of a string, so we must make sure that the loop
+                    //   runs with startPos == testLen the last time through.
                 }
-                if (startPos >= testLen) {
-                    fMatch = FALSE;
-                    return FALSE;
+            } else {
+                for (;;) {
+                    c = inputBuf[startPos-1];
+                    if (((c & 0x7f) <= 0x29) &&     // First quickly bypass as many chars as possible
+                        ((c<=0x0d && c>=0x0a) || c==0x85 ||c==0x2028 || c==0x2029 )) {
+                            if (c == 0x0d && startPos < fActiveLimit && inputBuf[startPos] == 0x0a) {
+                                startPos++;
+                            }
+                            MatchAt(startPos, FALSE, fDeferredStatus);
+                            if (U_FAILURE(fDeferredStatus)) {
+                                return FALSE;
+                            }
+                            if (fMatch) {
+                                return TRUE;
+                            }
+                    }
+                    if (startPos >= testLen) {
+                        fMatch = FALSE;
+                        return FALSE;
+                    }
+                    U16_NEXT(inputBuf, startPos, fActiveLimit, c);  // like c = inputBuf[startPos++];
+                    // Note that it's perfectly OK for a pattern to have a zero-length
+                    //   match at the end of a string, so we must make sure that the loop
+                    //   runs with startPos == testLen the last time through.
                 }
-                U16_NEXT(inputBuf, startPos, fActiveLimit, c);  // like c = inputBuf[startPos++];
-                // Note that it's perfectly OK for a pattern to have a zero-length
-                //   match at the end of a string, so we must make sure that the loop
-                //   runs with startPos == testLen the last time through.
             }
         }
 
@@ -1398,6 +1421,7 @@ void RegexMatcher::MatchAt(int32_t startIdx, UBool toEnd, UErrorCode &status) {
                                            //     or for position before new line at end of input
             if (fp->fInputIdx < fAnchorLimit-2) {
                 // We are no where near the end of input.  Fail.
+                //   This is the common case.  Keep it first.
                 fp = (REStackFrame *)fStack->popFrame(frameSize);
                 break;
             }
@@ -1411,27 +1435,49 @@ void RegexMatcher::MatchAt(int32_t startIdx, UBool toEnd, UErrorCode &status) {
             //   end of input, succeed.
             if (fp->fInputIdx == fAnchorLimit-1) {
                 UChar32 c = fInput->char32At(fp->fInputIdx);
-                if ((c<=0x0d && c>=0x0a) || c==0x85 ||c==0x2028 || c==0x2029) {
+                if (c==0x0a || c==0x0d || c==0x85 || c==0x2028 || c==0x2029) {
                     // If not in the middle of a CR/LF sequence
                     if ( !(c==0x0a && fp->fInputIdx>fAnchorStart && inputBuf[fp->fInputIdx-1]==0x0d)) {
-                        break;
+                        // At new-line at end of input. Success
                         fHitEnd = TRUE;
                         fRequireEnd = TRUE;
-                        // At new-line at end of input. Success
+                        break;
                     }
                 }
             }
 
-            if (fp->fInputIdx == fAnchorLimit-2) {
-                if (fInput->char32At(fp->fInputIdx) == 0x0d && fInput->char32At(fp->fInputIdx+1) == 0x0a) {
+            if (fp->fInputIdx == fAnchorLimit-2 &&
+                 fInput->char32At(fp->fInputIdx) == 0x0d && fInput->char32At(fp->fInputIdx+1) == 0x0a) {
                     fHitEnd = TRUE;
                     fRequireEnd = TRUE;
                     break;                         // At CR/LF at end of input.  Success
-                }
             }
 
             fp = (REStackFrame *)fStack->popFrame(frameSize);
 
+            break;
+
+
+         case URX_DOLLAR_D:                   //  $, test for End of Line, in UNIX_LINES mode.
+            if (fp->fInputIdx >= fAnchorLimit-1) {
+                // Either at the last character of input, or off the end.
+                if (fp->fInputIdx == fAnchorLimit-1) {
+                    // At last char of input.  Success if it's a new line.
+                    if (fInput->char32At(fp->fInputIdx) == 0x0a) {
+                        fHitEnd = TRUE;
+                        fRequireEnd = TRUE;
+                        break;
+                    }
+                } else {
+                    // Off the end of input.  Success.
+                    fHitEnd = TRUE;
+                    fRequireEnd = TRUE;
+                    break;
+                }
+            }
+
+            // Not at end of input.  Back-track out.
+            fp = (REStackFrame *)fStack->popFrame(frameSize);
             break;
 
 
@@ -1446,7 +1492,7 @@ void RegexMatcher::MatchAt(int32_t startIdx, UBool toEnd, UErrorCode &status) {
                  // If we are positioned just before a new-line, succeed.
                  // It makes no difference where the new-line is within the input.
                  UChar32 c = inputBuf[fp->fInputIdx];
-                 if ((c<=0x0d && c>=0x0a) || c==0x85 ||c==0x2028 || c==0x2029) {
+                 if (c==0x0a || c==0x0d || c==0x85 ||c==0x2028 || c==0x2029) {
                      // At a line end, except for the odd chance of  being in the middle of a CR/LF sequence
                      //  In multi-line mode, hitting a new-line just before the end of input does not
                      //   set the hitEnd or requireEnd flags
