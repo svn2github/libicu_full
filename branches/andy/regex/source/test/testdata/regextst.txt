@@ -101,7 +101,33 @@
 "xyz$"                  YZ     "xyz\nx"
 "xyz$"                  YZ     "xyza"
 "xyz$"                  yz     "<0>xyz</0>"
-"xyz$"                         "xyz\u000b"
+
+#
+#  All Unicode line endings recognized.
+#     0a, 0b, 0c, 0d, 0x85, 0x2028, 0x2029
+#     Multi-line and non-multiline mode take different paths, so repeated tests.
+#
+"^def$"                 mYZ    "abc\x{a}<0>def</0>\x{a}ghi"
+"^def$"                 mYZ    "abc\x{b}<0>def</0>\x{b}ghi"
+"^def$"                 mYZ    "abc\x{c}<0>def</0>\x{c}ghi"
+"^def$"                 mYZ    "abc\x{d}<0>def</0>\x{d}ghi"
+"^def$"                 mYZ    "abc\x{85}<0>def</0>\x{85}ghi"
+"^def$"                 mYZ    "abc\x{2028}<0>def</0>\x{2028}ghi"
+"^def$"                 mYZ    "abc\x{2029}<0>def</0>\x{2029}ghi"
+"^def$"                 mYZ    "abc\r\n<0>def</0>\r\nghi"
+
+"^def$"                 yz     "<0>def</0>\x{a}"
+"^def$"                 yz     "<0>def</0>\x{b}"
+"^def$"                 yz     "<0>def</0>\x{c}"
+"^def$"                 yz     "<0>def</0>\x{d}"
+"^def$"                 yz     "<0>def</0>\x{85}"
+"^def$"                 yz     "<0>def</0>\x{2028}"
+"^def$"                 yz     "<0>def</0>\x{2029}"
+"^def$"                 yz     "<0>def</0>\r\n"
+"^def$"                 yz     "<0>def</0>"
+
+
+"^def$"                       "<0>def</0>\x{2028"    #TODO: should be an error of some sort.
 
 #
 #  UNIX_LINES mode
@@ -110,7 +136,12 @@
 "abc$"                 D      "abc\r"
 "abc$"                 D      "abc\u0085"
 "a.b"                  D      "a\rb"
-"(?s)a.b"             d          "a\nb"
+"(?d)abc$"                    "<0>abc</0>\n"
+"(?d)abc$"                    "abc\r"
+
+
+"(?d)a.b"                     "a\nb"
+"(?d)a.b"                     "<0>a\rb</0>"
 
 
 # Capturing parens

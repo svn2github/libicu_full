@@ -133,6 +133,7 @@ open-paren-extended:
     '<'                  n  open-paren-lookbehind
     '#'                  n  paren-comment   ^term
     'i'                     paren-flag                              doBeginMatchMode
+    'd'                     paren-flag                              doBeginMatchMode
     'm'                     paren-flag                              doBeginMatchMode
     's'                     paren-flag                              doBeginMatchMode
     'w'                     paren-flag                              doBeginMatchMode
@@ -161,6 +162,7 @@ paren-comment:
 #
 paren-flag:
     'i'                  n  paren-flag                              doMatchMode
+    'd'                  n  paren-flag                              doMatchMode
     'm'                  n  paren-flag                              doMatchMode
     's'                  n  paren-flag                              doMatchMode
     'w'                  n  paren-flag                              doMatchMode

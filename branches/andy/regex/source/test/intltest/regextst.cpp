@@ -1530,7 +1530,7 @@ void RegexTest::regex_find(const UnicodeString &pattern,
         bflags |= UREGEX_ERROR_ON_UNKNOWN_ESCAPES;
     }
     if (flags.indexOf((UChar)0x44) >= 0) { // 'D' flag
-        bflags |= UREGEGX_UNIX_LINES;
+        bflags |= UREGEX_UNIX_LINES;
     }
 
 

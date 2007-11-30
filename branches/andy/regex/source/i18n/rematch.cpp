@@ -1435,7 +1435,7 @@ void RegexMatcher::MatchAt(int32_t startIdx, UBool toEnd, UErrorCode &status) {
             //   end of input, succeed.
             if (fp->fInputIdx == fAnchorLimit-1) {
                 UChar32 c = fInput->char32At(fp->fInputIdx);
-                if (c==0x0a || c==0x0d || c==0x85 || c==0x2028 || c==0x2029) {
+                if ((c>=0x0a && c<=0x0d) || c==0x85 || c==0x2028 || c==0x2029) {
                     // If not in the middle of a CR/LF sequence
                     if ( !(c==0x0a && fp->fInputIdx>fAnchorStart && inputBuf[fp->fInputIdx-1]==0x0d)) {
                         // At new-line at end of input. Success
@@ -1492,7 +1492,7 @@ void RegexMatcher::MatchAt(int32_t startIdx, UBool toEnd, UErrorCode &status) {
                  // If we are positioned just before a new-line, succeed.
                  // It makes no difference where the new-line is within the input.
                  UChar32 c = inputBuf[fp->fInputIdx];
-                 if (c==0x0a || c==0x0d || c==0x85 ||c==0x2028 || c==0x2029) {
+                 if ((c>=0x0a && c<=0x0d) || c==0x85 ||c==0x2028 || c==0x2029) {
                      // At a line end, except for the odd chance of  being in the middle of a CR/LF sequence
                      //  In multi-line mode, hitting a new-line just before the end of input does not
                      //   set the hitEnd or requireEnd flags

@@ -1376,6 +1376,7 @@ UBool RegexCompile::doParseActions(int32_t action)
             int32_t  bit = 0;
             switch (fC.fChar) {
             case 0x69: /* 'i' */   bit = UREGEX_CASE_INSENSITIVE; break;
+            case 0x64: /* 'd' */   bit = UREGEX_UNIX_LINES;       break;
             case 0x6d: /* 'm' */   bit = UREGEX_MULTILINE;        break;
             case 0x73: /* 's' */   bit = UREGEX_DOTALL;           break;
             case 0x77: /* 'w' */   bit = UREGEX_UWORD;            break;
