@@ -1,4 +1,4 @@
-﻿# Copyright (c) 2001-2007 International Business Machines
+# Copyright (c) 2001-2007 International Business Machines
 # Corporation and others. All Rights Reserved.
 #
 #  file:
@@ -42,7 +42,7 @@
 #                                          a <r>region</r> has been specified in the string.
 #                                   z|Z    hitEnd was expected(z) or not expected (Z).
 #                                          With neither, hitEnd is not checked.
-#                                   y|Y    Require End expeted(y) or not expected (Y).
+#                                   y|Y    Require End expected(y) or not expected (Y).
 #
 #                                 White space must be present between the flags and the match string.
 #
@@ -62,6 +62,16 @@
 ".(?!\p{L})"                   "abc<0>d</0> "              # Negated look-ahead
 ".(?!(\p{L}))"                 "abc<0>d</0> "              # Negated look-ahead, no capture
                                                            #   visible outside of look-ahead
+"and(?=roid)"            L     "<0>and</0>roid"
+"and(?=roid)"            M     "<r>and</r>roid"
+"and(?=roid)"            bM    "<r><0>and</0></r>roid"
+
+"and(?!roid)"            L     "<0>and</0>roix"
+"and(?!roid)"            L     "android"
+
+"and(?!roid)"            M     "<r><0>and</0></r>roid"     # Opaque bounds
+"and(?!roid)"            bM    "<r>and</r>roid"
+"and(?!roid)"            bM    "<r><0>and</0></r>roix"
 
 #
 # Negated Lookahead, various regions and region transparency
@@ -255,20 +265,20 @@
 ".*^(Hello)"                   " Hello Hello Hello Hello Goodbye"# No Match
 
 # $ matches only at end of line, or before a newline preceding the end of line
-".*?(Goodbye)$"                "<0>Hello Goodbye Goodbye <1>Goodbye</1></0>"
-".*?(Goodbye)"                 "<0>Hello <1>Goodbye</1></0> Goodbye Goodbye"
-".*?(Goodbye)$"                "Hello Goodbye> Goodbye Goodbye "# No Match
+".*?(Goodbye)$"           zy   "<0>Hello Goodbye Goodbye <1>Goodbye</1></0>"
+".*?(Goodbye)"            ZY   "<0>Hello <1>Goodbye</1></0> Goodbye Goodbye"
+".*?(Goodbye)$"           z    "Hello Goodbye> Goodbye Goodbye "# No Match
 
-".*?(Goodbye)$"                "<0>Hello Goodbye Goodbye <1>Goodbye</1></0>\n"
-".*?(Goodbye)$"                "<0>Hello Goodbye Goodbye <1>Goodbye</1></0>\n"
-".*?(Goodbye)$"                "<0>Hello Goodbye Goodbye <1>Goodbye</1></0>\r\n"
-".*?(Goodbye)$"                "Hello Goodbye Goodbye Goodbye\n\n"# No Match
+".*?(Goodbye)$"           zy   "<0>Hello Goodbye Goodbye <1>Goodbye</1></0>\n"
+".*?(Goodbye)$"           zy   "<0>Hello Goodbye Goodbye <1>Goodbye</1></0>\n"
+".*?(Goodbye)$"           zy   "<0>Hello Goodbye Goodbye <1>Goodbye</1></0>\r\n"
+".*?(Goodbye)$"           z    "Hello Goodbye Goodbye Goodbye\n\n"# No Match
 
 # \Z matches at end of input, like $ with default flags.
-".*?(Goodbye)\Z"               "<0>Hello Goodbye Goodbye <1>Goodbye</1></0>"
-".*?(Goodbye)"                 "<0>Hello <1>Goodbye</1></0> Goodbye Goodbye"
-".*?(Goodbye)\Z"               "Hello Goodbye> Goodbye Goodbye "# No Match
-"here$"                        "here\nthe end"# No Match
+".*?(Goodbye)\Z"          zy   "<0>Hello Goodbye Goodbye <1>Goodbye</1></0>"
+".*?(Goodbye)"            ZY   "<0>Hello <1>Goodbye</1></0> Goodbye Goodbye"
+".*?(Goodbye)\Z"          z    "Hello Goodbye> Goodbye Goodbye "# No Match
+"here$"                   z    "here\nthe end"# No Match
 
 ".*?(Goodbye)\Z"               "<0>Hello Goodbye Goodbye <1>Goodbye</1></0>\n"
 ".*?(Goodbye)\Z"               "<0>Hello Goodbye Goodbye <1>Goodbye</1></0>\n"
@@ -278,12 +288,13 @@
 # \z matches only at the end of string.
 #    no special treatment of new lines.
 #    no dependencies on flag settings.
-".*?(Goodbye)\z"               "<0>Hello Goodbye Goodbye <1>Goodbye</1></0>"
-".*?(Goodbye)\z"               "Hello Goodbye Goodbye Goodbye "# No Match
-"here$"                        "here\nthe end"# No Match
+".*?(Goodbye)\z"          zy   "<0>Hello Goodbye Goodbye <1>Goodbye</1></0>"
+".*?(Goodbye)\z"          z    "Hello Goodbye Goodbye Goodbye "# No Match
+"here$"                   z    "here\nthe end"# No Match
 
-".*?(Goodbye)\z"               "Hello Goodbye Goodbye Goodbye\n"# No Match
-".*?(Goodbye)\n\z"             "<0>Hello Goodbye Goodbye <1>Goodbye</1>\n</0>"
+".*?(Goodbye)\z"          z    "Hello Goodbye Goodbye Goodbye\n"# No Match
+".*?(Goodbye)\n\z"        zy   "<0>Hello Goodbye Goodbye <1>Goodbye</1>\n</0>"
+"abc\z|def"               ZY   "abc<0>def</0>"
 
 # (?# comment) doesn't muck up pattern
 "Hello (?# this is a comment) world"  "  <0>Hello  world</0>..."
@@ -556,6 +567,7 @@
 "\0776"                          "<0>\u003f\u0036</0>"  # overflow, the 6 is literal.
 "\0376xyz"                       "<0>\u00fexyz</0>"
 "\08"                        E   "<0>\u00008</0>"
+"\0"                         E   "x"
 
 #
 #  \u Surrogate Pairs
@@ -571,6 +583,11 @@
 "abc"                        Z    "aa<0>abc</0>  abcab"
 "abc"                       2Z    "aaabc  <0>abc</0>ab"
 "abc"                       3z    "aa>abc  abcab"
+
+#
+# Bug xxxx
+#
+"(?:\-|(\-?\d+\d\d\d))?(?:\-|\-(\d\d))?(?:\-|\-(\d\d))?(T)?(?:(\d\d):(\d\d):(\d\d)(\.\d+)?)?(?:(?:((?:\+|\-)\d\d):(\d\d))|(Z))?"   MG  "<0>-1234-21-31T41:51:61.789+71:81</0>"
 
 #
 # Bug 3225
