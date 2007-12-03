@@ -313,7 +313,6 @@ void    RegexCompile::compile(
     // Optimization passes
     //
     matchStartType();
-    OptDotStar();
     stripNOPs();
 
     //
@@ -778,12 +777,16 @@ UBool RegexCompile::doParseActions(int32_t action)
                 }
 
                 if (URX_TYPE(repeatedOp) == URX_DOTANY ||
-                    URX_TYPE(repeatedOp) == URX_DOTANY_ALL) {
+                    URX_TYPE(repeatedOp) == URX_DOTANY_ALL ||
+                    URX_TYPE(repeatedOp) == URX_DOTANY_UNIX) {
                     // Emit Optimized code for .+ operations.
                     int32_t loopOpI = URX_BUILD(URX_LOOP_DOT_I, 0);
                     if (URX_TYPE(repeatedOp) == URX_DOTANY_ALL) {
-                        // URX_LOOP_DOT_I operand is a flag indicating . matches any mode.
+                        // URX_LOOP_DOT_I operand is a flag indicating ". matches any" mode.
                         loopOpI |= 1;
+                    }
+                    if (fModeFlags & UREGEX_UNIX_LINES) {
+                        loopOpI |= 2;
                     }
                     fRXPat->fCompiledPat->addElement(loopOpI, *fStatus);
                     frameLoc = fRXPat->fFrameSize;
@@ -917,12 +920,16 @@ UBool RegexCompile::doParseActions(int32_t action)
                 }
 
                 if (URX_TYPE(repeatedOp) == URX_DOTANY ||
-                    URX_TYPE(repeatedOp) == URX_DOTANY_ALL) {
+                    URX_TYPE(repeatedOp) == URX_DOTANY_ALL ||
+                    URX_TYPE(repeatedOp) == URX_DOTANY_UNIX) {
                     // Emit Optimized code for .* operations.
                     int32_t loopOpI = URX_BUILD(URX_LOOP_DOT_I, 0);
                     if (URX_TYPE(repeatedOp) == URX_DOTANY_ALL) {
                         // URX_LOOP_DOT_I operand is a flag indicating . matches any mode.
                         loopOpI |= 1;
+                    }
+                    if ((fModeFlags & UREGEX_UNIX_LINES) != 0) {
+                        loopOpI |= 2;
                     }
                     fRXPat->fCompiledPat->setElementAt(loopOpI, topLoc);
                     dataLoc = fRXPat->fFrameSize;
@@ -1096,6 +1103,8 @@ UBool RegexCompile::doParseActions(int32_t action)
             int32_t   op;
             if (fModeFlags & UREGEX_DOTALL) {
                 op = URX_BUILD(URX_DOTANY_ALL, 0);
+            } else if (fModeFlags & UREGEX_UNIX_LINES) {
+                op = URX_BUILD(URX_DOTANY_UNIX, 0);
             } else {
                 op = URX_BUILD(URX_DOTANY, 0);
             }
@@ -1105,7 +1114,19 @@ UBool RegexCompile::doParseActions(int32_t action)
 
     case doCaret:
         {
-            int32_t op = (fModeFlags & UREGEX_MULTILINE)? URX_CARET_M : URX_CARET;
+            int32_t op;
+            if (       (fModeFlags & UREGEX_MULTILINE) == 0 && (fModeFlags & UREGEX_UNIX_LINES) == 0) {
+                op = URX_CARET;
+            } else if ((fModeFlags & UREGEX_MULTILINE) != 0 && (fModeFlags & UREGEX_UNIX_LINES) == 0) {
+                op = URX_CARET_M;
+            } else if ((fModeFlags & UREGEX_MULTILINE) == 0 && (fModeFlags & UREGEX_UNIX_LINES) != 0) {
+                op = URX_CARET;   // Only testing true start of input. 
+            } else if ((fModeFlags & UREGEX_MULTILINE) != 0 && (fModeFlags & UREGEX_UNIX_LINES) != 0) {
+                op = URX_CARET_M_UNIX;
+            }
+            if (fModeFlags & UREGEX_MULTILINE) {
+                op = (fModeFlags & UREGEX_UNIX_LINES)? URX_CARET_M_UNIX : URX_CARET_M;
+            }
             fRXPat->fCompiledPat->addElement(URX_BUILD(op, 0), *fStatus);
         }
         break;
@@ -1119,7 +1140,7 @@ UBool RegexCompile::doParseActions(int32_t action)
                 op = URX_DOLLAR_M;
             } else if ((fModeFlags & UREGEX_MULTILINE) == 0 && (fModeFlags & UREGEX_UNIX_LINES) != 0) {
                 op = URX_DOLLAR_D;
-            } else if ((fModeFlags & UREGEX_MULTILINE) != 0 && (fModeFlags & UREGEX_UNIX_LINES) == 0) {
+            } else if ((fModeFlags & UREGEX_MULTILINE) != 0 && (fModeFlags & UREGEX_UNIX_LINES) != 0) {
                 op = URX_DOLLAR_MD;
             }
             fRXPat->fCompiledPat->addElement(URX_BUILD(op, 0), *fStatus);
@@ -2470,6 +2491,7 @@ void   RegexCompile::matchStartType() {
             break;
 
         case URX_CARET_M:
+        case URX_CARET_M_UNIX:
             if (atStart) {
                 fRXPat->fStartType = START_LINE;
             }
@@ -2594,8 +2616,7 @@ void   RegexCompile::matchStartType() {
         case URX_BACKSLASH_X:   // Grahpeme Cluster.  Minimum is 1, max unbounded.
         case URX_DOTANY_ALL:    // . matches one or two.
         case URX_DOTANY:
-        case URX_DOTANY_ALL_PL:
-        case URX_DOTANY_PL:
+        case URX_DOTANY_UNIX:
             if (currentLen == 0) {
                 // These constructs are all bad news when they appear at the start
                 //   of a match.  Any character can begin the match.
@@ -2938,6 +2959,7 @@ int32_t   RegexCompile::minMatchLength(int32_t start, int32_t end) {
         case URX_RELOC_OPRND:
         case URX_STO_INP_LOC:
         case URX_CARET_M:
+        case URX_CARET_M_UNIX:
         case URX_BACKREF:         // BackRef.  Must assume that it might be a zero length match
         case URX_BACKREF_I:
 
@@ -2960,8 +2982,7 @@ int32_t   RegexCompile::minMatchLength(int32_t start, int32_t end) {
         case URX_BACKSLASH_X:   // Grahpeme Cluster.  Minimum is 1, max unbounded.
         case URX_DOTANY_ALL:    // . matches one or two.
         case URX_DOTANY:
-        case URX_DOTANY_PL:
-        case URX_DOTANY_ALL_PL:
+        case URX_DOTANY_UNIX:
             currentLen++;
             break;
 
@@ -3192,6 +3213,7 @@ int32_t   RegexCompile::maxMatchLength(int32_t start, int32_t end) {
         case URX_RELOC_OPRND:
         case URX_STO_INP_LOC:
         case URX_CARET_M:
+        case URX_CARET_M_UNIX:
 
         case URX_STO_SP:          // Setup for atomic or possessive blocks.  Doesn't change what can match.
         case URX_LD_SP:
@@ -3209,8 +3231,6 @@ int32_t   RegexCompile::maxMatchLength(int32_t start, int32_t end) {
         case URX_BACKREF:         // BackRef.  Must assume that it might be a zero length match
         case URX_BACKREF_I:
         case URX_BACKSLASH_X:   // Grahpeme Cluster.  Minimum is 1, max unbounded.
-        case URX_DOTANY_PL:
-        case URX_DOTANY_ALL_PL:
             currentLen = INT32_MAX;
             break;
 
@@ -3224,6 +3244,7 @@ int32_t   RegexCompile::maxMatchLength(int32_t start, int32_t end) {
         case URX_ONECHAR_I:
         case URX_DOTANY_ALL:
         case URX_DOTANY:
+        case URX_DOTANY_UNIX:
             currentLen+=2;
             break;
 
@@ -3441,13 +3462,12 @@ void RegexCompile::stripNOPs() {
         case URX_BACKSLASH_X:
         case URX_BACKSLASH_Z:
         case URX_DOTANY_ALL:
-        case URX_DOTANY_ALL_PL:
-        case URX_DOTANY_PL:
         case URX_BACKSLASH_D:
         case URX_CARET:
         case URX_DOLLAR:
         case URX_CTR_INIT:
         case URX_CTR_INIT_NG:
+        case URX_DOTANY_UNIX:
         case URX_STO_SP:
         case URX_LD_SP:
         case URX_BACKREF:
@@ -3459,6 +3479,7 @@ void RegexCompile::stripNOPs() {
         case URX_BACKREF_I:
         case URX_DOLLAR_M:
         case URX_CARET_M:
+        case URX_CARET_M_UNIX:
         case URX_LB_START:
         case URX_LB_CONT:
         case URX_LB_END:
@@ -3485,85 +3506,6 @@ void RegexCompile::stripNOPs() {
 }
 
 
-
-
-//------------------------------------------------------------------------------
-//
-//   OptDotStar       Optimize patterns that end with a '.*' or '.+' to
-//                    just advance the input to the end.
-//
-//         Transform this compiled sequence
-//            [DOT_ANY | DOT_ANY_ALL]
-//            JMP_SAV  to previous instruction
-//            [NOP | END_CAPTURE | DOLLAR | BACKSLASH_Z]*
-//            END
-//
-//         To
-//            NOP
-//            [DOT_ANY_PL | DOT_ANY_ALL_PL]
-//            [NOP | END_CAPTURE | DOLLAR | BACKSLASH_Z]*
-//            END
-//
-//------------------------------------------------------------------------------
-void RegexCompile::OptDotStar() {
-    // Scan backwards in the pattern, looking for a JMP_SAV near the end.
-    int32_t  jmpLoc;
-    int32_t  op = 0;
-    int32_t  opType;
-    for (jmpLoc=fRXPat->fCompiledPat->size(); jmpLoc--;) {
-        U_ASSERT(jmpLoc>0);
-        op     = fRXPat->fCompiledPat->elementAti(jmpLoc);
-        opType = URX_TYPE(op);
-        switch(opType) {
-
-
-        case URX_END:
-        case URX_NOP:
-        case URX_END_CAPTURE:
-        case URX_DOLLAR_M:
-        case URX_DOLLAR:
-        case URX_DOLLAR_D:
-        case URX_DOLLAR_MD:
-        case URX_BACKSLASH_Z:
-            // These ops may follow the JMP_SAV without preventing us from
-            //   doing this optimization.
-            continue;
-
-        case URX_JMP_SAV:
-            // Got a trailing JMP_SAV that's a candidate for optimization.
-            break;
-
-        default:
-            // This optimization not possible.
-            return;
-        }
-        break;   // from the for loop.
-    }
-
-    // We found in URX_JMP_SAV near the end that is a candidate for optimizing.
-    // Is the target address the previous instruction?
-    // Is the previous instruction a flavor of URX_DOTANY
-    int32_t  loopTopLoc = URX_VAL(op);
-    if (loopTopLoc != jmpLoc-1) {
-        return;
-    }
-    int32_t newOp;
-    int32_t oldOp     = fRXPat->fCompiledPat->elementAti(loopTopLoc);
-    int32_t oldOpType = opType = URX_TYPE(oldOp);
-    if (oldOpType == URX_DOTANY) {
-        newOp = URX_BUILD(URX_DOTANY_PL, 0);
-    }
-    else if (oldOpType == URX_DOTANY_ALL) {
-        newOp = URX_BUILD(URX_DOTANY_ALL_PL, 0);
-    } else {
-        return;    // Sequence we were looking for isn't there.
-    }
-
-    // Substitute the new instructions into the pattern.
-    // The NOP will be removed in a later optimization step.
-    fRXPat->fCompiledPat->setElementAt(URX_BUILD(URX_NOP, 0), loopTopLoc);
-    fRXPat->fCompiledPat->setElementAt(newOp, jmpLoc);
-}
 
 
 //------------------------------------------------------------------------------
@@ -3769,6 +3711,10 @@ void RegexCompile::nextChar(RegexPatternChar &c) {
                 for (index=0; index<3; index++) {
                     int32_t ch = peekCharLL();
                     if (ch<chDigit0 || ch>chDigit7) {
+                        if (index==0) {
+                           // \0 is not followed by any octal digits.
+                           error(U_REGEX_BAD_ESCAPE_SEQUENCE);
+                        }
                         break;
                     }
                     c.fChar <<= 3;
@@ -4043,12 +3989,26 @@ UnicodeSet *RegexCompile::createSetForProperty(const UnicodeString &propName, UB
     
     //
     //  The property as it was didn't work.
-    //    Do an emergency fixe -  
+    //    Do emergency fixes -
     //       InGreek -> InGreek or Coptic, that being the official Unicode name for that block.
+    //       InCombiningMarksforSymbols -> InCombiningDiacriticalMarksforSymbols.
+    //
+    //       Note on Spaces:  either "InCombiningMarksForSymbols" or "InCombining Marks for Symbols"
+    //                        is accepted by Java.  The property part of the name is compared 
+    //                        case-insenstively.  The spaces must be exactly as shown, either
+    //                        all there, or all omitted, with exactly one at each position
+    //                        if they are present.  From checking against JDK 1.6
+    //
+    //       This code should be removed ICU properties support the Java  compatibility names
+    //          (ICU 4.0?)
     //
     UnicodeString mPropName = propName;
     if (mPropName.caseCompare(UnicodeString("InGreek", -1, UnicodeString::kInvariant), 0) == 0) {
         mPropName = UnicodeString("InGreek and Coptic", -1 ,UnicodeString::kInvariant);
+    }
+    if (mPropName.caseCompare(UnicodeString("InCombining Marks for Symbols", -1, UnicodeString::kInvariant), 0) == 0 ||
+        mPropName.caseCompare(UnicodeString("InCombiningMarksforSymbols", -1, UnicodeString::kInvariant), 0) == 0) {
+        mPropName = UnicodeString("InCombining Diacritical Marks for Symbols", -1 ,UnicodeString::kInvariant);
     }
     else if (mPropName.compare(UnicodeString("all", -1, UnicodeString::kInvariant)) == 0) {
         mPropName = UnicodeString("javaValidCodePoint", -1 ,UnicodeString::kInvariant);

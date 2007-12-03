@@ -452,8 +452,6 @@ void   RegexPattern::dumpOp(int32_t index) const {
     case URX_NOP:
     case URX_DOTANY:
     case URX_DOTANY_ALL:
-    case URX_DOTANY_PL:
-    case URX_DOTANY_ALL_PL:
     case URX_FAIL:
     case URX_CARET:
     case URX_DOLLAR:

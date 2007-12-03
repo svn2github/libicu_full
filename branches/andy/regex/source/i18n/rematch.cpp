@@ -336,6 +336,7 @@ UBool RegexMatcher::find() {
             //  to avoid sending find() into a loop on zero-length matches.
             if (startPos >= fActiveLimit) {
                 fMatch = FALSE;
+                fHitEnd = TRUE;
                 return FALSE;
             }
             startPos = fInput->moveIndex32(startPos, 1);
@@ -345,6 +346,7 @@ UBool RegexMatcher::find() {
             // A previous find() failed to match.  Don't try again.
             //   (without this test, a pattern with a zero-length match
             //    could match again at the end of an input string.)
+            fHitEnd = TRUE;
             return FALSE;
         }
     }
@@ -357,6 +359,7 @@ UBool RegexMatcher::find() {
     int32_t testLen  = fActiveLimit - fPattern->fMinMatchLen;
     if (startPos > testLen) {
         fMatch = FALSE;
+        fHitEnd = TRUE;
         return FALSE;
     }
 
@@ -421,6 +424,7 @@ UBool RegexMatcher::find() {
                 }
                 if (pos >= testLen) {
                     fMatch = FALSE;
+                    fHitEnd = TRUE;
                     return FALSE;
                 }
             }
@@ -447,6 +451,7 @@ UBool RegexMatcher::find() {
                 }
                 if (pos >= testLen) {
                     fMatch = FALSE;
+                    fHitEnd = TRUE;
                     return FALSE;
                 }
             }
@@ -481,6 +486,7 @@ UBool RegexMatcher::find() {
                     }
                     if (startPos >= testLen) {
                         fMatch = FALSE;
+                        fHitEnd = TRUE;
                         return FALSE;
                     }
                     U16_NEXT(inputBuf, startPos, fActiveLimit, c);  // like c = inputBuf[startPos++];
@@ -506,6 +512,7 @@ UBool RegexMatcher::find() {
                     }
                     if (startPos >= testLen) {
                         fMatch = FALSE;
+                        fHitEnd = TRUE;
                         return FALSE;
                     }
                     U16_NEXT(inputBuf, startPos, fActiveLimit, c);  // like c = inputBuf[startPos++];
@@ -1542,6 +1549,7 @@ void RegexMatcher::MatchAt(int32_t startIdx, UBool toEnd, UErrorCode &status) {
                if ((fp->fInputIdx < fAnchorLimit) && 
                    ((c<=0x0d && c>=0x0a) || c==0x85 ||c==0x2028 || c==0x2029)) {
                    //  It's a new-line.  ^ is true.  Success.
+                   //  TODO:  what should be done with positions between a CR and LF?
                    break;
                }
                // Not at the start of a line.  Fail.
@@ -1549,6 +1557,23 @@ void RegexMatcher::MatchAt(int32_t startIdx, UBool toEnd, UErrorCode &status) {
            }
            break;
 
+
+       case URX_CARET_M_UNIX:       //  ^, test for start of line in mulit-line + Unix-line mode
+           {
+               U_ASSERT(fp->fInputIdx >= fAnchorStart);
+               if (fp->fInputIdx <= fAnchorStart) {
+                   // We are at the start input.  Success.
+                   break;
+               }
+               // Check whether character just before the current pos is a new-line
+               U_ASSERT(fp->fInputIdx <= fAnchorLimit);
+               UChar  c = inputBuf[fp->fInputIdx - 1]; 
+               if (c != 0x0a) {
+                   // Not at the start of a line.  Back-track out.
+                   fp = (REStackFrame *)fStack->popFrame(frameSize);
+               }
+           }
+           break;
 
         case URX_BACKSLASH_B:          // Test for word boundaries
             {
@@ -1807,8 +1832,8 @@ GC_Done:
                 }
             }
             break;
-            
-            
+
+
         case URX_DOTANY_ALL:
             {
                 // ., in dot-matches-all (including new lines) mode
@@ -1832,51 +1857,24 @@ GC_Done:
             }
             break;
 
-        case URX_DOTANY_PL:
-            // Match all up to and end-of-line or end-of-input.
+
+        case URX_DOTANY_UNIX:
             {
-                //  Fail if input already exhausted.
+                // '.' operator, matches all, but stops at end-of-line.
+                //   UNIX_LINES mode, so 0x0a is the only recognized line ending.
                 if (fp->fInputIdx >= fActiveLimit) {
+                    // At end of input.  Match failed.  Backtrack out.
                     fHitEnd = TRUE;
                     fp = (REStackFrame *)fStack->popFrame(frameSize);
                     break;
                 }
-
-                // There is input left. Fail if we are  at the end of a line.
+                // There is input left.  Advance over one char, unless we've hit end-of-line
                 UChar32 c;
                 U16_NEXT(inputBuf, fp->fInputIdx, fActiveLimit, c);
-                if (((c & 0x7f) <= 0x29) &&     // First quickly bypass as many chars as possible
-                    ((c<=0x0d && c>=0x0a) || c==0x85 ||c==0x2028 || c==0x2029)) {
-                    // End of line in normal mode.   . does not match.
+                if (c == 0x0a) {
+                    // End of line in normal mode.   '.' does not match the \n
                     fp = (REStackFrame *)fStack->popFrame(frameSize);
-                    break;
                 }
-                
-                // There was input left.  Consume it until we hit the end of a line,
-                //   or until it's exhausted.
-                for (;;) {
-                    if (fp->fInputIdx >=  fActiveLimit) {
-                        fHitEnd = TRUE;
-                        break;
-                    }
-                    U16_NEXT(inputBuf, fp->fInputIdx, fActiveLimit, c);
-                    if (((c & 0x7f) <= 0x29) &&     // First quickly bypass as many chars as possible
-                        ((c<=0x0d && c>=0x0a) || c==0x85 ||c==0x2028 || c==0x2029)) {
-                        U16_BACK_1(inputBuf, 0, fp->fInputIdx)
-                            // Scan has reached a line-end.  We are done.
-                            break;
-                    }
-                }
-            }
-            break;
-
-        case URX_DOTANY_ALL_PL:
-            // Match up to end of input.  Fail if already at end of input.
-            fHitEnd = TRUE;
-            if (fp->fInputIdx >= fActiveLimit) {
-                fp = (REStackFrame *)fStack->popFrame(frameSize);
-            } else {
-                fp->fInputIdx = fActiveLimit;
             }
             break;
 
@@ -2454,7 +2452,7 @@ GC_Done:
                 // Loop through input until the input is exhausted (we reach an end-of-line)
                 // In multi-line mode, we can just go straight to the end of the input.
                 int32_t ix;
-                if (opValue == 1) {
+                if ((opValue & 1) == 1) {
                     // Multi-line mode.
                     ix = fActiveLimit;
                     fHitEnd = TRUE;
@@ -2470,16 +2468,19 @@ GC_Done:
                         }
                         UChar32   c;
                         U16_NEXT(inputBuf, ix, fActiveLimit, c);   // c = inputBuf[ix++]
-                        if (((c & 0x7f) <= 0x29) &&     
-                            ((c<=0x0d && c>=0x0a) || c==0x85 ||c==0x2028 || c==0x2029)) {
-                            //  char is a line ending.  Put the input pos back to the
-                            //    line ending char, and exit the scanning loop.
-                            U16_BACK_1(inputBuf, 0, ix);
-                            break;
+                        if ((c & 0x7f) <= 0x29) {        // Fast filter of non-new-line-s
+                            if ((c == 0x0a) ||            //  0x0a is newline in both modes.
+                               ((opValue & 2) == 0) &&    // IF not UNIX_LINES mode
+                                    (c<=0x0d && c>=0x0a) || c==0x85 ||c==0x2028 || c==0x2029) {
+                                //  char is a line ending.  Put the input pos back to the
+                                //    line ending char, and exit the scanning loop.
+                                U16_BACK_1(inputBuf, 0, ix);
+                                break;
+                            }
                         }
                     }
                 }
-                
+
                 // If there were no matching characters, skip over the loop altogether.
                 //   The loop doesn't run at all, a * op always succeeds.
                 if (ix == fp->fInputIdx) {
@@ -2489,7 +2490,7 @@ GC_Done:
 
                 // Peek ahead in the compiled pattern, to the URX_LOOP_C that
                 //   must follow.  It's operand is the stack location
-                //   that holds the starting input index for the match of this [set]*
+                //   that holds the starting input index for the match of this .*
                 int32_t loopcOp = pat[fp->fPatIdx];
                 U_ASSERT(URX_TYPE(loopcOp) == URX_LOOP_C);
                 int32_t stackLoc = URX_VAL(loopcOp);

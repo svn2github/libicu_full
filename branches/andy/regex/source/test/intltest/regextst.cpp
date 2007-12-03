@@ -1360,7 +1360,7 @@ void RegexTest::Extended() {
 
     RegexMatcher    quotedStuffMat("\\s*([\\'\\\"/])(.*?)\\1", 0, status);
     RegexMatcher    commentMat    ("\\s*(#.*)?$", 0, status);
-    RegexMatcher    flagsMat      ("\\s*([ixsmdteDEGMvabtyYzZ2-9]*)([:letter:]*)", 0, status);
+    RegexMatcher    flagsMat      ("\\s*([ixsmdteDEGLMvabtyYzZ2-9]*)([:letter:]*)", 0, status);
 
     RegexMatcher    lineMat("(.*?)\\r?\\n", testString, 0, status);
     UnicodeString   testPattern;   // The pattern for test from the test file.
@@ -1506,8 +1506,9 @@ void RegexTest::regex_find(const UnicodeString &pattern,
     int32_t             numFinds;
     int32_t             i;
     UBool               useMatchesFunc   = FALSE;
-    int32_t             regionStart    = -1;
-    int32_t             regionEnd      = -1;
+    UBool               useLookingAtFunc = FALSE;
+    int32_t             regionStart      = -1;
+    int32_t             regionEnd        = -1;
 
     //
     //  Compile the caller's pattern
@@ -1584,6 +1585,9 @@ void RegexTest::regex_find(const UnicodeString &pattern,
     if (flags.indexOf((UChar)0x4d) >= 0) {
         useMatchesFunc = TRUE;
     }
+    if (flags.indexOf((UChar)0x4c) >= 0) {
+        useLookingAtFunc = TRUE;
+    }
 
     //
     //  Find the tags in the input data, remove them, and record the group boundary
@@ -1647,10 +1651,14 @@ void RegexTest::regex_find(const UnicodeString &pattern,
 
     //
     // Do a find on the de-tagged input using the caller's pattern
+    //     TODO: error on count>1 and not find().
+    //           error on both matches() and lookingAt().
     //
     for (i=0; i<numFinds; i++) {
         if (useMatchesFunc) {
             isMatch = matcher->matches(status);
+        } else  if (useLookingAtFunc) {
+            isMatch = matcher->lookingAt(status);
         } else {
             isMatch = matcher->find();
         }

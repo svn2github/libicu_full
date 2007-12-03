@@ -291,12 +291,12 @@ static const struct RegexTableEl gRuleParseStateTable[] = {
     , {doSetAddDash, 93 /* ] */, 120,0,  FALSE}     //  159 
     , {doNOP, 92 /* \ */, 162,0,  TRUE}     //  160 
     , {doSetRange, 255, 134,0,  TRUE}     //  161 
-    , {doSetAddDash, 115 /* s */, 170,0,  FALSE}     //  162      set-lit-dash-escape
-    , {doSetAddDash, 83 /* S */, 170,0,  FALSE}     //  163 
-    , {doSetAddDash, 119 /* w */, 170,0,  FALSE}     //  164 
-    , {doSetAddDash, 87 /* W */, 170,0,  FALSE}     //  165 
-    , {doSetAddDash, 100 /* d */, 170,0,  FALSE}     //  166 
-    , {doSetAddDash, 68 /* D */, 170,0,  FALSE}     //  167 
+    , {doSetOpError, 115 /* s */, 181,0,  FALSE}     //  162      set-lit-dash-escape
+    , {doSetOpError, 83 /* S */, 181,0,  FALSE}     //  163 
+    , {doSetOpError, 119 /* w */, 181,0,  FALSE}     //  164 
+    , {doSetOpError, 87 /* W */, 181,0,  FALSE}     //  165 
+    , {doSetOpError, 100 /* d */, 181,0,  FALSE}     //  166 
+    , {doSetOpError, 68 /* D */, 181,0,  FALSE}     //  167 
     , {doSetNamedRange, 78 /* N */, 134,0,  FALSE}     //  168 
     , {doSetRange, 255, 134,0,  TRUE}     //  169 
     , {doSetProp, 112 /* p */, 127,0,  FALSE}     //  170      set-escape

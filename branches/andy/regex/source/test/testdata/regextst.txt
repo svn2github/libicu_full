@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2007 International Business Machines
+﻿# Copyright (c) 2001-2007 International Business Machines
 # Corporation and others. All Rights Reserved.
 #
 #  file:
@@ -33,6 +33,7 @@
 #                                          for the last find() in the sequence.
 #                                   G      Only check match / no match.  Do not check capture groups.
 #                                   E      Pattern compilation error expected
+#                                   L      Use LookingAt() rather than find()
 #                                   M      Use matches() rather than find().
 #
 #                                   a      Use non-Anchoring Bounds.
@@ -98,8 +99,8 @@
 "xyz$"                 mYZ     "<0>xyz</0>\r\n"
 "xyz$"                 mYZ     "<0>xyz</0>\x{85}abcd"
 
-"xyz$"                  YZ     "xyz\nx"
-"xyz$"                  YZ     "xyza"
+"xyz$"                  Yz     "xyz\nx"
+"xyz$"                  Yz     "xyza"
 "xyz$"                  yz     "<0>xyz</0>"
 
 #
@@ -135,13 +136,24 @@
 "abc$"                 D      "<0>abc</0>\n"
 "abc$"                 D      "abc\r"
 "abc$"                 D      "abc\u0085"
-"a.b"                  D      "a\rb"
+"a.b"                  D      "<0>a\rb</0>"
+"a.b"                  D      "a\nb"
 "(?d)abc$"                    "<0>abc</0>\n"
 "(?d)abc$"                    "abc\r"
+"abc$"                 mD     "<0>abc</0>\ndef"
+"abc$"                 mD     "abc\rdef"
 
+".*def"                L      "abc\r def xyz"          # Normal mode, LookingAt() stops at \r
+".*def"                DL     "<0>abc\r def</0> xyz"   # Unix Lines mode, \r not line end.
+".*def"                DL     "abc\n def xyz"   
 
 "(?d)a.b"                     "a\nb"
 "(?d)a.b"                     "<0>a\rb</0>"
+
+"^abc"                 m      "xyz\r<0>abc</0>"
+"^abc"                 Dm     "xyz\rabc"
+"^abc"                 Dm     "xyz\n<0>abc</0>"
+
 
 
 # Capturing parens
@@ -540,9 +552,10 @@
 
 #
 #  Octal Escaping.   This conforms to Java conventions, not Perl.
-"\0101\0\03\073\0154\01442"      "<0>A\u0000\u0003\u003b\u006c\u0064\u0032</0>"
+"\0101\00\03\073\0154\01442"      "<0>A\u0000\u0003\u003b\u006c\u0064\u0032</0>"
 "\0776"                          "<0>\u003f\u0036</0>"  # overflow, the 6 is literal.
 "\0376xyz"                       "<0>\u00fexyz</0>"
+"\08"                        E   "<0>\u00008</0>"
 
 #
 #  \u Surrogate Pairs
@@ -552,6 +565,12 @@
 "\ud800\ud800\udc00"              "<0>\ud800\U00010000</0>\U00010000\U00010000\U00010001"
 "(\ud800)(\udc00)"                "\U00010000"
 
+#
+# hitEnd with find()
+#
+"abc"                        Z    "aa<0>abc</0>  abcab"
+"abc"                       2Z    "aaabc  <0>abc</0>ab"
+"abc"                       3z    "aa>abc  abcab"
 
 #
 # Bug 3225
@@ -750,7 +769,7 @@
 "[abcd-[bc]]+"                    "<0>bad--dac</0>xyz"
 "[abcd-]+"                        "<0>bad--dac</0>xyz"
 
-"[abcd-\s]+"                      "xyz<0>abcd  --</0>xyz"      # set-lit-dash-esc
+"[abcd-\s]+"                 E    "xyz<0>abcd  --</0>xyz"      # set-lit-dash-esc
 "[abcd-\N{LATIN SMALL LETTER G}]+"  "xyz-<0>abcdefg</0>hij-"
 "[bcd-\{]+"                       "a<0>bcdefyz{</0>|}"
 
@@ -780,6 +799,8 @@
 "\p{InBasicLatin}+"                "ΓΔΕΖΗΘ<0>hello, world.</0>ニヌネノハバパ"
 "\P{InBasicLatin}+"                "<0>ΓΔΕΖΗΘ</0>hello, world.ニヌネノハバパ"
 "\p{InGreek}+"                     "<0>ΓΔΕΖΗΘ</0>hello, world.ニヌネノハバパ"
+"\p{InCombining Marks for Symbols}" "<0>\u20d0</0>"
+"\p{Incombiningmarksforsymbols}"    "<0>\u20d0</0>"
 
 
 "\p{javaDefined}+"                 "\uffff<0>abcd</0>\U00045678"
@@ -813,6 +834,11 @@
 "(?:a|b|c|\Y)+"                eE  "<0>abcY</0>"
 
 "\Q\Y\E"                       e   "<0>\\Y</0>"
+
+#
+# Reported problem
+#
+"[a-\w]"                       E  "x"
 
 #
 # Bug 4045
@@ -883,6 +909,7 @@
 # bug 5386  "^.*$" should match empty input
 #
 "^.*$"                            "<0></0>"
+"^.*$"                     m      "<0></0>"
 "^.*$"                            "<0></0>\n"
 "(?s)^.*$"                        "<0>\n</0>"
 
