@@ -1488,7 +1488,7 @@ UBool RegexCompile::doParseActions(int32_t action)
         {
             UnicodeSet *set = (UnicodeSet *)fSetStack.peek();
             UnicodeSet digits(UnicodeString("\\p{Nd}"), *fStatus);    // TODO - make a static set,
-            set->addAll(digits);
+            set->addAll(digits);                                      //        ticket 6058.
             break;
         }
 
@@ -1678,7 +1678,7 @@ UBool RegexCompile::doParseActions(int32_t action)
         break;
 
     case doSetOpError:
-        error(U_REGEX_RULE_SYNTAX);   // TODO:  -- or && at the end of a set.  Illegal.
+        error(U_REGEX_RULE_SYNTAX);   //  -- or && at the end of a set.  Illegal.
         break;
 
     case doSetPosixProp:
@@ -3069,7 +3069,7 @@ int32_t   RegexCompile::minMatchLength(int32_t start, int32_t end) {
                 //   without processing the look-around block.  This is overly pessimistic for look-ahead,
                 //   it assumes that the look-ahead match might be zero-length.
                 //   TODO:  Positive lookahead could recursively do the block, then continue
-                //          with the longer of the block or the value coming in.
+                //          with the longer of the block or the value coming in.  Ticket 6060
                 int32_t  depth = (opType == URX_LA_START? 2: 1);;
                 for (;;) {
                     loc++;
@@ -3656,7 +3656,7 @@ void RegexCompile::nextChar(RegexPatternChar &c) {
                         }
                     }
                 }
-                // TODO:  check what Java & Perl do with non-ASCII white spaces.
+                // TODO:  check what Java & Perl do with non-ASCII white spaces.  Ticket 6061.
                 if (uprv_isRuleWhiteSpace(c.fChar) == FALSE) {
                     break;
                 }
@@ -3886,7 +3886,7 @@ UnicodeSet *RegexCompile::scanPosixProp() {
 
     // Scan for a closing ].   A little tricky because there are some perverse
     //   edge cases possible.  "[:abc\Qdef;] \E]"  is a valid non-property expression,
-    //   ending on the second closing ].
+    //   ending on the second closing ].  Ticket 6062
 
     UnicodeString propName;
     UBool         negated  = FALSE;
