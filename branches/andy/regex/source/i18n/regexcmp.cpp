@@ -1282,7 +1282,7 @@ UBool RegexCompile::doParseActions(int32_t action)
         //       6.   ...
         //
         //  Note:  TODO:  This is pretty inefficient.  A mass of saved state is built up
-        //                then unconditionally discarded.  Perhaps introduce a new opcode
+        //                then unconditionally discarded.  Perhaps introduce a new opcode.  Ticket 6056
         //
         {
             // Emit the STO_SP
@@ -3872,7 +3872,7 @@ UnicodeSet *RegexCompile::scanPosixProp() {
     U_ASSERT(fC.fChar == chColon);
 
     // Save the scanner state.
-    // TODO:  move this into the scanner, with the state encapsulated in some way
+    // TODO:  move this into the scanner, with the state encapsulated in some way.  Ticket 6062
     int32_t     savedScanIndex        = fScanIndex;
     int32_t     savedNextIndex        = fNextIndex;
     UBool       savedQuoteMode        = fQuoteMode;
@@ -3886,7 +3886,7 @@ UnicodeSet *RegexCompile::scanPosixProp() {
 
     // Scan for a closing ].   A little tricky because there are some perverse
     //   edge cases possible.  "[:abc\Qdef;] \E]"  is a valid non-property expression,
-    //   ending on the second closing ].  Ticket 6062
+    //   ending on the second closing ]. 
 
     UnicodeString propName;
     UBool         negated  = FALSE;
@@ -4100,7 +4100,7 @@ void RegexCompile::setEval(int32_t nextOp) {
                 rightOperand->complement();
                 break;
             case setCaseClose:
-                // TODO: need a simple close function.
+                // TODO: need a simple close function.  Ticket 6065
                 rightOperand->closeOver(USET_CASE_INSENSITIVE);
                 rightOperand->removeAllStrings();
                 break;
