@@ -39,18 +39,6 @@
 
 U_NAMESPACE_BEGIN
 
-// TODO: remove
-#if 0
-#include <stdio.h>
-static void printstring(const UnicodeString &s) {
-   for (int i=0; i<s.length(); i++) {
-      printf("%c", s[i]);
-   }
-      printf("\n");
-}
-#endif
-
-
 
 //------------------------------------------------------------------------------
 //
@@ -120,7 +108,6 @@ void    RegexCompile::compile(
     U_ASSERT(fRXPat->fPattern.length() == 0);
 
     // Prepare the RegexPattern object to receive the compiled pattern.
-    //   TODO:  remove per-instance field, and just use globals directly.  (But check perf)
     fRXPat->fPattern        = pat;
     fRXPat->fStaticSets     = RegexStaticSets::gStaticSets->fPropSets;
     fRXPat->fStaticSets8    = RegexStaticSets::gStaticSets->fPropSets8;

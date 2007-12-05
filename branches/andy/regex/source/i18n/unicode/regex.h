@@ -856,7 +856,9 @@ public:
       *  end of the text being processed.  In this case, additional input text could
       *  change the results of that match.
       *
-      *   (TODO:  how does this interact with transparent bounds and look-ahead?)
+      *  hitEnd() is defined after both for successful and unsuccessful matches.
+      *  In either case hitEnd() will return TRUE if if the end of the text was
+      *  reached at any point during the matching process.
       *
       *  @return  TRUE if the most recent match hit the end of input
       *  @draft   ICU 4.0
