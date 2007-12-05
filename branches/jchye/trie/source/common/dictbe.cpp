@@ -476,7 +476,11 @@ static inline uint32_t getKatakanaCost(int wordLength){
 
 static inline bool isKatakana(uint16_t value) {
     return (value >= 0x30A1u && value <= 0x30FEu && value != 0x30FBu) ||
-    (value >= 0xFF66u && value <= 0xFF9fu);
+            (value >= 0xFF66u && value <= 0xFF9fu);
+}
+
+static inline bool isHangulSyllable(uint16_t value) {
+    return (value >= 0xAC00 && value <= 0xD7A3);
 }
 
 /*
@@ -558,8 +562,10 @@ int32_t CjkBreakEngine::divideUpDictionaryRange( UText *text,
 
         // if there are no single character matches found in the dictionary 
         // starting with this charcter, treat character as a 1-character word 
-        // with the highest value possible, i.e. the least likely to occur
-        if(count == 0 || lengths[0] != 1){ //no single character match
+        // with the highest value possible, i.e. the least likely to occur.
+        // Exclude Korean characters from this treatment.
+        if((count == 0 || lengths[0] != 1) &&
+                !isHangulSyllable(utext_current32(normalizedText))){
             values[count] = maxSnlp;
             lengths[count++] = 1;
         }
@@ -572,17 +578,15 @@ int32_t CjkBreakEngine::divideUpDictionaryRange( UText *text,
                 prev[lengths[j] + i] = i;
             }
         }
-        // TODO: handle Japanese katakana!
 
-        // If no word can be found from the dictionary, single utf8 character is
-        // segmented as a word. It works well for Chinese, but in Japanese,
+        // In Japanese,
         // Katakana word in single character is pretty rare. So we apply
         // the following heuristic to Katakana: any continuous run of Katakana
         // characters is considered a candidate word with a default cost
         // specified in the katakanaCost table according to its length.
         //utext_setNativeIndex(text, rangeStart + i);
         utext_setNativeIndex(normalizedText, i);
-        //        bool is_katakana = isKatakana(utext_current32(text));
+        //bool is_katakana = isKatakana(utext_current32(text));
         bool is_katakana = isKatakana(utext_current32(normalizedText));
         if (!is_prev_katakana && is_katakana) {
             int j = i + 1;
@@ -594,7 +598,7 @@ int32_t CjkBreakEngine::divideUpDictionaryRange( UText *text,
                 utext_next32(normalizedText);
                 ++j;
             }
-            if ((j - i) < kMaxKatakanaGroupLength) { //TODO: what does kMaxKatakanaGroupLength mean?
+            if ((j - i) < kMaxKatakanaGroupLength) {
                 uint32_t newSnlp = bestSnlp[i] + getKatakanaCost(j - i);
                 if (newSnlp < bestSnlp[j]) {
                     bestSnlp[j] = newSnlp;
@@ -615,16 +619,16 @@ int32_t CjkBreakEngine::divideUpDictionaryRange( UText *text,
     // No segmentation found, set boundary to end of range
     // TODO: find out if this will ever occur: doesn't seem likely!
     //TODO: if normalization is performed in this method, can remove use of this array.
-    //    if (bestSnlp[numChars] == kuint32max) {
-    //        t_boundary[numBreaks++] = numChars;
-    //    } else {
-    for (int i = numChars; i > 0; i = prev[i]){
-        //          t_boundary[numBreaks++] = i;
-        t_boundary[numBreaks++] = charPositions.elementAti(i);
-
+    if (bestSnlp[numChars] == kuint32max) {
+        t_boundary[numBreaks++] = numChars;
+    } else {
+        for (int i = numChars; i > 0; i = prev[i]){
+            //t_boundary[numBreaks++] = i;
+            t_boundary[numBreaks++] = charPositions.elementAti(i);
+    
+        }
+        U_ASSERT(prev[t_boundary[numBreaks-1]] == 0);
     }
-    U_ASSERT(prev[t_boundary[numBreaks-1]] == 0);
-    //    }
 
     // Reverse offset index in t_boundary.
     // Don't add a break for the start of the dictionary range if there is one

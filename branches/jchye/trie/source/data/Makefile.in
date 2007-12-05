@@ -430,8 +430,12 @@ $(BRKBLDDIR)/%.brk: $(BRKSRCDIR)/%.txt $(BINDIR)/genbrk$(EXEEXT) $(DAT_FILES)
 ####################################################    CTD
 # CTD FILES
 
-$(BRKBLDDIR)/%.ctd: $(BRKSRCDIR)/%.txt $(BINDIR)/genctd$(EXEEXT) $(DAT_FILES)
-	$(INVOKE) $(BINDIR)/genctd -c -i $(BUILDDIR) -o $@ $<
+#$(BRKBLDDIR)/%.ctd: $(BRKSRCDIR)/%.txt $(BINDIR)/genctd$(EXEEXT) $(DAT_FILES)
+#	$(INVOKE) $(BINDIR)/genctd -c -i $(BUILDDIR) -o $@ $<
+
+# .ctd file now generated regardless of whether dictionary file exists
+$(BRKBLDDIR)/%.ctd: $(BINDIR)/genctd$(EXEEXT) $(DAT_FILES)
+	$(INVOKE) $(BINDIR)/genctd -c -i $(BUILDDIR) -o $@ $(BRKSRCDIR)/$(*F).txt
 
 ####################################################    CNV
 # CNV FILES
