@@ -320,8 +320,6 @@ UBool RegexMatcher::find() {
         return FALSE;
     }
 
-    // TODO:  FAILURE HERE WITH REGIONS, fMatchEnd resets to 0, not regionStart.
-    //          Watch for interactions with replace operations when fixing.
     int32_t startPos = fMatchEnd;
     if (startPos==0) {
         startPos = fActiveStart;
@@ -407,7 +405,6 @@ UBool RegexMatcher::find() {
     case START_SET:
         {
             // Match may start on any char from a pre-computed set.
-            //  TODO:  left off on region changes at this point
             U_ASSERT(fPattern->fMinMatchLen > 0);
             for (;;) {
                 int32_t pos = startPos;
@@ -547,8 +544,7 @@ UBool RegexMatcher::find(int32_t start, UErrorCode &status) {
         status = U_INDEX_OUTOFBOUNDS_ERROR;
         return FALSE;
     }
-    fMatchEnd = start;    // TODO:  restructure so start position goes as a parameter to an internal find()
-                          //        that is used both here and by the public API find()?
+    fMatchEnd = start;  
     return find();
 }
 
@@ -1160,21 +1156,17 @@ UBool RegexMatcher::isWordBoundary(int32_t pos) {
 //         Test for a word boundary using RBBI word break.
 //
 //          parameters:   pos   - the current position in the input buffer
-//          TODO:  RBBI won't honor non-transparent region bounds.
-//                 Perhaps best to just document it.
 //
 //--------------------------------------------------------------------------------
 UBool RegexMatcher::isUWordBoundary(int32_t pos) {
     UBool       returnVal = FALSE;
 #if UCONFIG_NO_BREAK_ITERATION==0
-    UErrorCode  status    = U_ZERO_ERROR;  
     
     // If we haven't yet created a break iterator for this matcher, do it now.
     if (fWordBreakItr == NULL) {
         fWordBreakItr = 
-            (RuleBasedBreakIterator *)BreakIterator::createWordInstance(Locale::getEnglish(), status);
-        if (U_FAILURE(status)) {
-            // TODO:  reliable error reporting for BI failures.
+            (RuleBasedBreakIterator *)BreakIterator::createWordInstance(Locale::getEnglish(), fDeferredStatus);
+        if (U_FAILURE(fDeferredStatus)) {
             return FALSE;
         }
         fWordBreakItr->setText(*fInput);
@@ -1356,11 +1348,7 @@ void RegexMatcher::MatchAt(int32_t startIdx, UBool toEnd, UErrorCode &status) {
 
                 if (fp->fInputIdx + stringLen > fActiveLimit) {
                     // No match.  String is longer than the remaining input text.
-                    //   TODO:  Should fHitEnd only be set if the string matches for whatever amount
-                    //          of input is actually available?  Probably, although one could argue
-                    //          that it would be equally valid to begin the comparison at the end of
-                    //          the string.
-                    fHitEnd = TRUE;
+                    fHitEnd = TRUE;          //   TODO:  See ticket 6074
                     fp = (REStackFrame *)fStack->popFrame(frameSize);
                     break;
                 }
