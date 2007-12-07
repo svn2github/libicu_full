@@ -1506,8 +1506,8 @@ void RegexMatcher::MatchAt(int32_t startIdx, UBool toEnd, UErrorCode &status) {
                  if (fp->fInputIdx >= fAnchorLimit) {
                      // We really are at the end of input.  Success.
                      fHitEnd = TRUE;
-                     fRequireEnd = TRUE;  // TODO:  should require end be set in multi-line mode?
-                     break;
+                     fRequireEnd = TRUE;  // Java set requireEnd in this case, even though
+                     break;               //   adding a new-line would not lose the match.
                  }
                  // If we are not positioned just before a new-line, the test fails; backtrack out.
                  // It makes no difference where the new-line is within the input.
@@ -1958,6 +1958,7 @@ GC_Done:
 
         case URX_CTR_INIT_NG:
             {
+                // Initialize a non-greed loop
                 U_ASSERT(opValue >= 0 && opValue < frameSize-2);
                 fp->fExtra[opValue] = 0;       //  Set the loop counter variable to zero
 
@@ -1983,6 +1984,7 @@ GC_Done:
 
         case URX_CTR_LOOP_NG:
             {
+                // Non-greedy {min, max} loops
                 U_ASSERT(opValue>0 && opValue < fp->fPatIdx-2);
                 int32_t initOp = pat[opValue];
                 U_ASSERT(URX_TYPE(initOp) == URX_CTR_INIT_NG);
@@ -2016,8 +2018,6 @@ GC_Done:
                 }
             }
             break;
-
-            // TODO:  Possessive flavor of loop ops, or take them out if no longer needed.
 
         case URX_STO_SP:
             U_ASSERT(opValue >= 0 && opValue < fPattern->fDataSize);
@@ -2076,7 +2076,7 @@ GC_Done:
                     }
                 } else {
                     // TODO: probably need to do a partial string comparison, and only
-                    //       set HitEnd if the available input matched.
+                    //       set HitEnd if the available input matched.  Ticket #6074
                     fHitEnd = TRUE;
                 }
                 if (haveMatch) {
@@ -2146,7 +2146,7 @@ GC_Done:
 
                 // Restore the active region bounds in the input string; they may have
                 //    been changed because of transparent bounds on a Region.
-                fActiveStart = fRegionStart;        // TODO:  handle nested look-around blocks.
+                fActiveStart = fRegionStart;
                 fActiveLimit = fRegionLimit;
             }
             break;
@@ -2188,9 +2188,8 @@ GC_Done:
                         break;
                     }
                 } else {
-                    // TODO:  for HitEnd, probably need to check for match of
-                    //        however much input was available.
-                    fHitEnd = TRUE;
+                    // Insufficent input left for a match.
+                    fHitEnd = TRUE;    // See ticket 6074
                 }
                 // No match.  Back up matching to a saved state
                 fp = (REStackFrame *)fStack->popFrame(frameSize);
@@ -2201,7 +2200,7 @@ GC_Done:
             {
                 // Entering a look-behind block.
                 // Save Stack Ptr, Input Pos.
-                //   TODO:  implement transparent bounds.
+                //   TODO:  implement transparent bounds.  Ticket #6067
                 U_ASSERT(opValue>=0 && opValue+1<fPattern->fDataSize);
                 fData[opValue]   = fStack->size();
                 fData[opValue+1] = fp->fInputIdx;
