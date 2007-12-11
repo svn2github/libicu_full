@@ -3966,6 +3966,8 @@ UnicodeSet *RegexCompile::createSetForProperty(const UnicodeString &propName, UB
     if (U_SUCCESS(*fStatus)) {
        return set;
     }
+    delete set;
+    set = NULL;
     
     //
     //  The property as it was didn't work.
@@ -4010,6 +4012,8 @@ UnicodeSet *RegexCompile::createSetForProperty(const UnicodeString &propName, UB
         if (U_SUCCESS(*fStatus)) {
             return set;
         }
+        delete set;
+        set = NULL;
     }
     
     //
@@ -4062,6 +4066,8 @@ UnicodeSet *RegexCompile::createSetForProperty(const UnicodeString &propName, UB
                 }
                 return set;
             }
+            delete set;
+            set = NULL;
         }
     }
     error(*fStatus);
