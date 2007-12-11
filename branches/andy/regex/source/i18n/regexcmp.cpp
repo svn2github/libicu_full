@@ -566,7 +566,7 @@ UBool RegexCompile::doParseActions(int32_t action)
         //    3.    NOP                   // Std. Open Paren sequence, for possible '|'
         //    4.       code for parenthesized stuff.
         //    5.    END_LA                // Cut back stack, remove saved state from step 2.
-        //    6.    FAIL                  // code in block succeeded, so neg. lookahead fails.
+        //    6.    BACKTRACK             // code in block succeeded, so neg. lookahead fails.
         //    7.    END_LA                // Restore match region, in case look-ahead was using
         //                                        an alternate (transparent) region.
         {
@@ -1101,7 +1101,7 @@ UBool RegexCompile::doParseActions(int32_t action)
 
     case doCaret:
         {
-            int32_t op;
+            int32_t op = 0;
             if (       (fModeFlags & UREGEX_MULTILINE) == 0 && (fModeFlags & UREGEX_UNIX_LINES) == 0) {
                 op = URX_CARET;
             } else if ((fModeFlags & UREGEX_MULTILINE) != 0 && (fModeFlags & UREGEX_UNIX_LINES) == 0) {
@@ -1111,16 +1111,13 @@ UBool RegexCompile::doParseActions(int32_t action)
             } else if ((fModeFlags & UREGEX_MULTILINE) != 0 && (fModeFlags & UREGEX_UNIX_LINES) != 0) {
                 op = URX_CARET_M_UNIX;
             }
-            if (fModeFlags & UREGEX_MULTILINE) {
-                op = (fModeFlags & UREGEX_UNIX_LINES)? URX_CARET_M_UNIX : URX_CARET_M;
-            }
             fRXPat->fCompiledPat->addElement(URX_BUILD(op, 0), *fStatus);
         }
         break;
 
     case doDollar:
         {
-            int32_t op;
+            int32_t op = 0;
             if (       (fModeFlags & UREGEX_MULTILINE) == 0 && (fModeFlags & UREGEX_UNIX_LINES) == 0) {
                 op = URX_DOLLAR;
             } else if ((fModeFlags & UREGEX_MULTILINE) != 0 && (fModeFlags & UREGEX_UNIX_LINES) == 0) {
@@ -3104,9 +3101,6 @@ int32_t   RegexCompile::minMatchLength(int32_t start, int32_t end) {
                             }
                         }
                     }
-                    if (loc > end) {
-                        RegexPatternDump(fRXPat);
-                    }
                     U_ASSERT(loc <= end);
                 }
             }
@@ -3754,8 +3748,6 @@ void RegexCompile::nextChar(RegexPatternChar &c) {
 //
 //------------------------------------------------------------------------------
 UChar32  RegexCompile::scanNamedChar() {
-    UnicodeSet    *uset = NULL;
-
     if (U_FAILURE(*fStatus)) {
         return 0;
     }
@@ -3781,7 +3773,7 @@ UChar32  RegexCompile::scanNamedChar() {
     
     char name[100];
     if (!uprv_isInvariantUString(charName.getBuffer(), charName.length()) ||
-         charName.length()>=sizeof(name)) {
+         (uint32_t)charName.length()>=sizeof(name)) {
         // All Unicode character names have only invariant characters.
         // The API to get a character, given a name, accepts only char *, forcing us to convert,
         //   which requires this error check
@@ -3885,7 +3877,7 @@ UnicodeSet *RegexCompile::scanPosixProp() {
     RegexPatternChar savedfC          = fC;
 
     // Scan for a closing ].   A little tricky because there are some perverse
-    //   edge cases possible.  "[:abc\Qdef;] \E]"  is a valid non-property expression,
+    //   edge cases possible.  "[:abc\Qdef:] \E]"  is a valid non-property expression,
     //   ending on the second closing ]. 
 
     UnicodeString propName;
@@ -3946,7 +3938,7 @@ UnicodeSet *RegexCompile::scanPosixProp() {
 //     normal ICU UnicodeSet properties 
 //
 static const UChar posSetPrefix[] = {0x5b, 0x5c, 0x70, 0x7b, 00}; // "[\p{"
-static const UChar negSetPrefix[] = {0x5b, 0x5c, 0x50, 0x7b, 00}; // "[\p{"
+static const UChar negSetPrefix[] = {0x5b, 0x5c, 0x50, 0x7b, 00}; // "[\P{"
 UnicodeSet *RegexCompile::createSetForProperty(const UnicodeString &propName, UBool negated) {
     UnicodeString   setExpr;
     UnicodeSet      *set;
@@ -3987,7 +3979,7 @@ UnicodeSet *RegexCompile::createSetForProperty(const UnicodeString &propName, UB
     //                        all there, or all omitted, with exactly one at each position
     //                        if they are present.  From checking against JDK 1.6
     //
-    //       This code should be removed ICU properties support the Java  compatibility names
+    //       This code should be removed when ICU properties support the Java  compatibility names
     //          (ICU 4.0?)
     //
     UnicodeString mPropName = propName;
@@ -4023,6 +4015,7 @@ UnicodeSet *RegexCompile::createSetForProperty(const UnicodeString &propName, UB
     //
     //  Try the various Java specific properties.
     //   These all begin with "java"
+    //   TODO:  Redo to remove dependency on code page conversion of (char *) strings.
     //
     #define IDENTIFIER_IGNORABLE "[\\u0000-\\u0008\\u000e-\\u001b\\u007f-\\u009f\\p{Cf}]"
     static const char *javaProps[][2] = {

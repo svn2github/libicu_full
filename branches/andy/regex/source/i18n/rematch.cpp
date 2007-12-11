@@ -739,6 +739,7 @@ RegexMatcher &RegexMatcher::region(int32_t start, int32_t limit, UErrorCode &sta
         fAnchorStart = start;
         fAnchorLimit = limit;
     }
+    return *this;
 }
 
 
@@ -1110,6 +1111,8 @@ REStackFrame *RegexMatcher::resetStack() {
 //                               opposite in membership in \w set
 //
 //          parameters:   pos   - the current position in the input buffer
+//
+//              TODO:  double-check edge cases at region boundaries.
 //
 //--------------------------------------------------------------------------------
 UBool RegexMatcher::isWordBoundary(int32_t pos) {
@@ -1958,7 +1961,7 @@ GC_Done:
 
         case URX_CTR_INIT_NG:
             {
-                // Initialize a non-greed loop
+                // Initialize a non-greedy loop
                 U_ASSERT(opValue >= 0 && opValue < frameSize-2);
                 fp->fExtra[opValue] = 0;       //  Set the loop counter variable to zero
 
@@ -2439,14 +2442,14 @@ GC_Done:
             //   The following LOOP_C op emulates stack unwinding if the following pattern fails.
             {
                 // Loop through input until the input is exhausted (we reach an end-of-line)
-                // In multi-line mode, we can just go straight to the end of the input.
+                // In DOTALL mode, we can just go straight to the end of the input.
                 int32_t ix;
                 if ((opValue & 1) == 1) {
-                    // Multi-line mode.
+                    // Dot-matches-All mode.  Jump straight to the end of the string.
                     ix = fActiveLimit;
                     fHitEnd = TRUE;
                 } else {
-                    // NOT multi-line mode.  Line endings do not match '.'
+                    // NOT DOT ALL mode.  Line endings do not match '.'
                     // Scan forward until a line ending or end of input.
                     ix = fp->fInputIdx;
                     for (;;) {
