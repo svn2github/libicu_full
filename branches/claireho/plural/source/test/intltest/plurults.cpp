@@ -16,10 +16,9 @@
 #include "plurults.h"
 #include "unicode/plurrule.h"
 
-// TODO remove comment
-//#if defined( U_DEBUG_CALSVC ) || defined (U_DEBUG_CAL)
+#if defined( U_DEBUG_CALSVC ) || defined (U_DEBUG_CAL)
 #include <stdio.h>
-//#endif
+#endif
 
 #define PLURAL_TEST_NUM    13
 const UnicodeString pluralTestData[PLURAL_TEST_NUM] = {
@@ -110,13 +109,14 @@ void PluralRulesTest::testAPI(/*char *par*/)
     logln("Testing PluralRules constructors");
     
         
-    printf("\n start default locale test case ..\n");
+    logln("\n start default locale test case ..\n");
         
     PluralRules defRule(status); 
     PluralRules* test=new PluralRules(status);
     PluralRules* newEnPlural= test->forLocale(Locale::getEnglish(), status);
     if(U_FAILURE(status)) {
         dataerrln("ERROR: Could not create PluralRules (default) - exitting");
+        delete test;
         return;
     }
     delete newEnPlural;
@@ -147,6 +147,7 @@ void PluralRulesTest::testAPI(/*char *par*/)
        setupResult(pluralTestResult[i], result, &max);
        if ( !checkEqual(newRules, result, max) ) {
             errln("ERROR:  simple plural rules failed! - exitting");
+            delete test;
             return;
         }
        if (newRules!=NULL) {
@@ -157,8 +158,8 @@ void PluralRulesTest::testAPI(/*char *par*/)
 
     // ======= Test complex plural rules   
     logln("Testing Complex PluralRules");
-    // TODO the complex test data is hard coded. Need to implement the parser to 
-    // parse the test data.
+    // TODO: the complex test data is hard coded. It's better to implement 
+    // a parser to parse the test data.
     UnicodeString complexRule = UNICODE_STRING_SIMPLE("a: n in 2..5; b: n in 5..8; c: n mod 2 is 1"); 
     char cRuleResult[] = {
         'o','c','a','a','a','a','b','b','b','c',
@@ -166,6 +167,7 @@ void PluralRulesTest::testAPI(/*char *par*/)
     PluralRules *newRules = test->createRules(complexRule, status);
     if ( !checkEqual(newRules, cRuleResult, 12) ) {
          errln("ERROR:  complex plural rules failed! - exitting");
+         delete test;
          return;
      }
     if (newRules!=NULL) {
@@ -179,6 +181,7 @@ void PluralRulesTest::testAPI(/*char *par*/)
 
     if ( !testEquality(test) ) {
          errln("ERROR:  complex plural rules failed! - exitting");
+         delete test;
          return;
      }
 
@@ -209,15 +212,9 @@ void setupResult(const int32_t testSource[], char result[], int32_t* max) {
 
 UBool checkEqual(PluralRules *test, char *result, int32_t max) {
     UnicodeString key;
-    printf("\n Test range : 0 .. %d", max);
     for (int32_t i=0; i<max; ++i) {
         key= test->select(i);
         if ( key.charAt(0)!=result[i] ) {
-            printf("\n     i=%d   expecting:%c  running:", i, result[i]);
-            for(int32_t j=0; j<key.length(); ++j) {
-                printf("%c", key.charAt(j));
-            }
-            printf("\n");
             return FALSE;
         }
     }
@@ -246,8 +243,6 @@ UBool testEquality(PluralRules *test) {
             }
             for(int32_t j=0; j<totalRules-1;++j) {
                 if (key[j]!=key[j+1]) {
-                    printf("\n Failed in test[%d]  with number:%d while comapring rule%d v.s. rule%d",i, n, j, j+1);
-        
                     ret= FALSE;
                     break;
                 }

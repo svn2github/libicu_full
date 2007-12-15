@@ -24,6 +24,13 @@
 
 #if !UCONFIG_NO_FORMATTING
 
+U_CDECL_BEGIN
+static void U_CALLCONV
+deleteHashStrings(void *obj) {
+    delete (UnicodeString *)obj;
+}
+U_CDECL_END
+
 U_NAMESPACE_BEGIN
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(PluralFormat);
 
@@ -64,7 +71,7 @@ PluralFormat::PluralFormat(const Locale& locale, const PluralRules& rules, const
     init(NULL, locale, status);
     applyPattern(pattern, status);
 }
-// TODO add test cases.
+
 PluralFormat::PluralFormat(const PluralFormat& other) {
     UErrorCode status = U_ZERO_ERROR;
     locale = other.locale;
@@ -72,6 +79,7 @@ PluralFormat::PluralFormat(const PluralFormat& other) {
     pattern = other.pattern;
     copyHashtable(other.fParsedValuesHash, status);
     numberFormat=NumberFormat::createInstance(locale, status);
+    replacedNumberFormat=other.replacedNumberFormat;
 }
 
 PluralFormat::~PluralFormat() {
@@ -91,14 +99,14 @@ PluralFormat::init(const PluralRules* rules, const Locale& curLocale, UErrorCode
         pluralRules = rules->clone();
     }
     fParsedValuesHash=NULL;
-    pattern="";
+    pattern.remove();
     numberFormat= NumberFormat::createInstance(curLocale, status);
+    replacedNumberFormat=NULL;
 }
 
-// TODO : return error code -> check the decimfmt.cpp or choicefmt.cpp
 void
-PluralFormat::applyPattern(const UnicodeString& pattern, UErrorCode& status) {
-    this->pattern = pattern;
+PluralFormat::applyPattern(const UnicodeString& newPattern, UErrorCode& status) {
+    this->pattern = newPattern;
     UnicodeString token;
     int32_t braceCount=0;
     fmtToken type;
@@ -107,6 +115,10 @@ PluralFormat::applyPattern(const UnicodeString& pattern, UErrorCode& status) {
     if (fParsedValuesHash==NULL) {
         Mutex mutex;
         fParsedValuesHash = new Hashtable(TRUE, status);
+        if (U_FAILURE(status)) {
+            return;
+        }
+        fParsedValuesHash->setValueDeleter(deleteHashStrings);
     }
     
     UBool getKeyword=TRUE;
@@ -149,7 +161,6 @@ PluralFormat::applyPattern(const UnicodeString& pattern, UErrorCode& status) {
                         status = U_PATTERN_SYNTAX_ERROR;
                         return;
                     }
-                    // TODO make sure 'other' keyword always in PluralRules?
                     if (!pluralRules->isKeyword(token) && 
                         pluralRules->getKeywordOther()!=token) {
                         status = U_UNDEFINED_KEYWORD;
@@ -199,7 +210,7 @@ PluralFormat::applyPattern(const UnicodeString& pattern, UErrorCode& status) {
                     return;
                 }
             default:
-                token += ch;
+                token+=ch;
                 break;
         }
     }
@@ -253,7 +264,12 @@ PluralFormat::format(int32_t number,
                      UErrorCode& status) const{
 
     if (fParsedValuesHash==NULL) {
-        return numberFormat->format(number, appendTo, pos);
+        if ( replacedNumberFormat== NULL ) {
+            return numberFormat->format(number, appendTo, pos);
+        }
+        else {
+            replacedNumberFormat->format(number, appendTo, pos);
+        }
     }
     UnicodeString selectedRule = pluralRules->select(number);
     UnicodeString *selectedPattern = (UnicodeString *)fParsedValuesHash->get(selectedRule);
@@ -313,13 +329,6 @@ PluralFormat::checkSufficientDefinition() {
 }
 
 void
-PluralFormat::parsingFailure() {
-    UErrorCode status = U_ZERO_ERROR;
-    init(NULL, Locale::getDefault(), status);
-    // TODO cannot throw the exception like Java  => remove this APIs. 
-}
-
-void
 PluralFormat::setLocale(const Locale& locale, UErrorCode& status) {
     if (pluralRules!=NULL) {
         delete pluralRules;
@@ -332,16 +341,16 @@ PluralFormat::setLocale(const Locale& locale, UErrorCode& status) {
     if (numberFormat!=NULL) {
         delete numberFormat;
         numberFormat = NULL;
+        replacedNumberFormat=NULL;
     }
     init(NULL, locale, status);
 }
 
 void
 PluralFormat::setNumberFormat(const NumberFormat* format, UErrorCode& status) {
-    if (numberFormat!=NULL) {
-        delete numberFormat;  // TODO may delete the numberFormat from previous setNumberFormat()
-    }
-    numberFormat = (NumberFormat *)format;  // TODO copy constructor is protected?
+    // TODO: The copy constructor and assignment op of NumberFormat class are protected.
+    // create a pointer as the workaround.
+    replacedNumberFormat = (NumberFormat *)format;
     return;
 }
 
@@ -364,10 +373,8 @@ PluralFormat::operator==(const Format& other) const {
     // an instance of a sublcass of PluralFormat.  THIS IS IMPORTANT.
     // Format::operator== guarantees that this cast is safe
     PluralFormat* fmt = (PluralFormat*)&other;
-
     return ((*pluralRules == *(fmt->pluralRules)) && 
-            (*numberFormat == *(fmt->numberFormat)) &&
-            fParsedValuesHash->equals(*(fmt->fParsedValuesHash)));
+            (*numberFormat == *(fmt->numberFormat)));
 }
 
 UBool
@@ -380,10 +387,9 @@ PluralFormat::parseObject(const UnicodeString& source,
                         Formattable& result,
                         ParsePosition& pos) const
 {
-    // TODO not yet supported in icu4j and icu4c
+    // TODO: not yet supported in icu4j and icu4c
 }
 
-// TODO How to avoid the code duplication for int32_t, int64_t and double?
 UnicodeString
 PluralFormat::insertFormattedNumber(int32_t number, 
                                     UnicodeString& message,
@@ -415,7 +421,6 @@ PluralFormat::insertFormattedNumber(int32_t number,
         }
     }
     if ( startIndex < message.length() ) {
-        // TODO message.length()-startIndex or message.length()-java
         result += UnicodeString(message, startIndex, message.length()-startIndex);
     }
     appendTo = result;
@@ -432,6 +437,7 @@ PluralFormat::copyHashtable(Hashtable *other, UErrorCode& status) {
     if(U_FAILURE(status)){
         return;
     }
+    fParsedValuesHash->setValueDeleter(deleteHashStrings);
     int32_t pos = -1;
     const UHashElement* elem = NULL;
     // walk through the hash table and create a deep clone
@@ -446,6 +452,8 @@ PluralFormat::copyHashtable(Hashtable *other, UErrorCode& status) {
         }
     }
 }
+
+
 U_NAMESPACE_END
 
 

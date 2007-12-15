@@ -118,6 +118,7 @@ PluralRules::createRules(const UnicodeString& description, UErrorCode& status) {
         }
     }
     if (U_FAILURE(status)) {
+        delete newRules;
         return NULL;
     }
     else {
@@ -244,6 +245,7 @@ PluralRules::operator==(const PluralRules& other) const  {
             return FALSE;
         }
     }
+    return TRUE;
 }
 
 void 
@@ -252,7 +254,7 @@ PluralRules::getRuleData(UErrorCode& status) {
     UnicodeString localeData;
     UnicodeString localeName;
     int32_t i=0;
-    UChar cSlash = 0x002F;
+    UChar cSlash = (UChar)0x002F;
     status=U_ZERO_ERROR;
     
     
@@ -285,7 +287,6 @@ PluralRules::parseDescription(UnicodeString& data, RuleChain& rules) {
     RuleChain *ruleChain=NULL;
     AndConstraint *curAndConstraint=NULL;
     OrConstraint *orNode=NULL;
-    PluralKey  keyIndex;
     
     UnicodeString ruleData = data.toLower();
     while (ruleIndex< ruleData.length()) {
@@ -362,7 +363,7 @@ PluralRules::getNumberValue(const UnicodeString& token) const {
     char digits[128];
 
     for (i=0; i<token.length() && i<127; ++i) {
-        digits[i]=token.charAt(i);
+      digits[i]=(char)token.charAt(i);
     }
     digits[i]='\0';
     
@@ -374,7 +375,7 @@ void
 PluralRules::getNextLocale(const UnicodeString& localeData, int32_t* curIndex, UnicodeString& localeName) {
     int32_t i=*curIndex;
     
-    localeName = "";
+    localeName.remove();
     
     while (i< localeData.length()) {
        if ( (localeData.charAt(i)!= SPACE) && (localeData.charAt(i)!= COMMA) ) {
@@ -405,6 +406,7 @@ PluralRules::initHashtable(UErrorCode& status) {
     }
     if ( fPluralRuleLocaleHash == NULL ) {
         Mutex mutex;
+        // This static PluralRule hashtable residents in memory until end of application.
         if ((fPluralRuleLocaleHash = new Hashtable(TRUE, status))!=NULL) {
             fLocaleStringsHash = fPluralRuleLocaleHash;
             return;
@@ -1030,21 +1032,31 @@ RuleParser::getKeyType(const UnicodeString& token, tokenType& keyType) {
         keyType = tOr;
         return U_ZERO_ERROR;
     }
+    
     if ( isValidKeyword(token) ) {
         keyType = tKeyword;
         return U_ZERO_ERROR;
     }
+  
     return U_UNEXPECTED_TOKEN;
 }
 
 UBool
 RuleParser::isValidKeyword(const UnicodeString& token) {
-    if ( idStartFilter->contains(token.charAt(0) ) &&
-         idContinueFilter->contains(token) ) {
+    if ( token.length()==0 ) {
+        return FALSE;
+    }
+    if ( idStartFilter->contains(token.charAt(0) )==TRUE ) {
+        int32_t i;
+        for (i=1; i< token.length(); i++) {
+            if (idContinueFilter->contains(token.charAt(i))== FALSE) {
+                return FALSE;
+            }
+        }
         return TRUE;
     }
     else {
-        return TRUE;  // TODO fix the UnicodeSet return false
+        return FALSE;
     }
 }
 
@@ -1063,12 +1075,12 @@ PluralKeywordEnumeration::snext(UErrorCode& status) {
 }
 
 void
-PluralKeywordEnumeration::reset(UErrorCode& status) {
+PluralKeywordEnumeration::reset(UErrorCode& /*status*/) {
     pos=0;
 }
 
 int32_t
-PluralKeywordEnumeration::count(UErrorCode& status) const {
+PluralKeywordEnumeration::count(UErrorCode& /*status*/) const {
        return fKeywordNames.size();
 }
 

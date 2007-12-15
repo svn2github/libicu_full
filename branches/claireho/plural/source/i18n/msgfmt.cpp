@@ -1428,6 +1428,10 @@ MessageFormat::makeFormat(int32_t formatNumber,
     int32_t argumentNumber = stou(segments[1]); // always unlocalized!
     UnicodeString argumentName;
     if (argumentNumber < 0) {
+        if ( (isArgNumeric==TRUE) && (formatNumber !=0) ) {
+            ec = U_INVALID_FORMAT_ERROR;
+            return;
+        }
         isArgNumeric = FALSE;
         argumentNumber=formatNumber;
     }
@@ -1561,7 +1565,6 @@ MessageFormat::makeFormat(int32_t formatNumber,
     subformats[formatNumber].format = fmt;
     subformats[formatNumber].offset = segments[0].length();
     if (isArgNumeric) {
-        // TODO (claireho) what if the first 2 are argIndex and rest are arg name?
         subformats[formatNumber].argName = NULL;
         subformats[formatNumber].argNum = argumentNumber;
     }
@@ -1728,12 +1731,12 @@ FormatNameEnumeration::snext(UErrorCode& status) {
 }
 
 void
-FormatNameEnumeration::reset(UErrorCode& status) {
+FormatNameEnumeration::reset(UErrorCode& /*status*/) {
     pos=0;
 }
 
 int32_t
-FormatNameEnumeration::count(UErrorCode& status) const {
+FormatNameEnumeration::count(UErrorCode& /*status*/) const {
        return (fFormatNames==NULL) ? 0 : fFormatNames->size();
 }
 

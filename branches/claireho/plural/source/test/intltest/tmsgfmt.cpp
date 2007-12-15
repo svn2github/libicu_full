@@ -35,9 +35,7 @@ TestMessageFormat::runIndexedTest(int32_t index, UBool exec,
                                   const char* &name, char* /*par*/) {
     switch (index) {
         TESTCASE(0,testBug1);
-        TESTCASE(1,testMsgFormatPlural);
-        // TODO remove above - for temp test only.
-        // TESTCASE(1,testBug2);
+        TESTCASE(1,testBug2);
         TESTCASE(2,sample);
         TESTCASE(3,PatternTest);
         TESTCASE(4,testStaticFormat);

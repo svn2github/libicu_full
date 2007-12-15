@@ -15,10 +15,10 @@
 #include "unicode/plurrule.h"
 #include "unicode/plurfmt.h"
 
-// TODO remove comment
-//#if defined( U_DEBUG_PLURFMT ) 
+
+#if defined( U_DEBUG_PLURFMT ) 
 #include <stdio.h>
-//#endif
+#endif
 
 const UnicodeString oddAndEvenRule = UNICODE_STRING_SIMPLE("odd: n mod 2 is 1");
 #define PLURAL_PATTERN_DATA 4
@@ -56,7 +56,6 @@ const UnicodeString checkSyntaxtData[PLURAL_SYNTAX_DATA] = {
     UNICODE_STRING_SIMPLE("od d{foo} other{bar}"),
     UNICODE_STRING_SIMPLE("odd{foo}{foobar}other{foo}"),
 };
-
 
 const UnicodeString PLKeywordLookups[6] = {
     UNICODE_STRING_SIMPLE("zero"),
@@ -104,15 +103,16 @@ void PluralFormatTest::pluralFormatBasicTest(/*char *par*/)
     UnicodeString otherPattern = UnicodeString("other{#}");
     UnicodeString message=UnicodeString("ERROR: PluralFormat basic test");
 
+    // ========= Test constructors
+    logln(" Testing PluralFormat constructors ...");
     status[0] = U_ZERO_ERROR;
     PluralRules*  plRules = PluralRules::createDefaultRules(status[0]);
-    // ======= Test constructors
-    logln("Testing PluralFormat constructors");
+  
     status[0] = U_ZERO_ERROR;
     NumberFormat *numFmt = NumberFormat::createInstance(status[0]);
     if (U_FAILURE(status[0])) {
         dataerrln("ERROR: Could not create NumberFormat instance with default locale ");
-    }
+    }   
     
     for (int32_t i=0; i< 8; ++i) {
         status[i] = U_ZERO_ERROR;
@@ -176,7 +176,7 @@ void PluralFormatTest::pluralFormatUnitTest(/*char *par*/)
     UBool overwrite[PLURAL_PATTERN_DATA] = {FALSE, FALSE, TRUE, TRUE};
     
     NumberFormat *numFmt = NumberFormat::createInstance(status);
-    UnicodeString message=UnicodeString("ERROR: PluralFormat tests various pattern -");
+    UnicodeString message=UnicodeString("ERROR: PluralFormat tests various pattern ...");
     if (U_FAILURE(status)) {
         dataerrln("ERROR: Could not create NumberFormat instance with default locale ");
     }
@@ -217,7 +217,7 @@ void PluralFormatTest::pluralFormatUnitTest(/*char *par*/)
     message = UNICODE_STRING_SIMPLE("Error set locale: pattern is not reset!");
     
     // Check that pattern gets deleted.
-    printf("\n Test setLocale() ..\n");
+    logln("\n Test setLocale() ..\n");
     numFmt = NumberFormat::createInstance(Locale::getEnglish(), status);
     if (U_FAILURE(status)) {
         dataerrln("ERROR: Could not create NumberFormat instance with English locale ");
@@ -246,6 +246,13 @@ void PluralFormatTest::pluralFormatUnitTest(/*char *par*/)
         if ( numResult != plResult ) {
             errln("Wrong ruleset loaded by setLocale() - got:"+plResult+ UnicodeString("  expecting:")+numResult);
         }
+    }
+    
+    // =========== Test copy constructor
+    logln("Test copy constructor and == operator of PluralFormat");
+    PluralFormat dupPFmt = PluralFormat(pluralFmt);
+    if (pluralFmt != dupPFmt) {
+        errln("Failed in PluralFormat copy constructor or == operator");
     }
     
     delete plRules;

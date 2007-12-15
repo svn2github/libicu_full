@@ -485,6 +485,7 @@ typedef enum fmtToken {
     UnicodeString pattern;
     Hashtable  *fParsedValuesHash;
     NumberFormat*  numberFormat;
+    NumberFormat*  replacedNumberFormat;
     
     PluralFormat();   // default constructor not implemented
     void init(const PluralRules* rules, const Locale& curlocale, UErrorCode& status);
@@ -496,7 +497,6 @@ typedef enum fmtToken {
                                         UnicodeString& appendTo,
                                         FieldPosition& pos) const;
     void copyHashtable(Hashtable *other, UErrorCode& status);
-
 };
 
 U_NAMESPACE_END
