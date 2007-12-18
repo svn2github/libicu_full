@@ -509,7 +509,6 @@ int32_t RuleBasedBreakIterator::next(void) {
 
     int32_t startPos = current();
     int32_t result = handleNext(fData->fForwardTable);
-//    printf("dictionary count %d\n",fDictionaryCharCount);
     if (fDictionaryCharCount > 0) {
         result = checkDictionary(startPos, result, FALSE);
     }

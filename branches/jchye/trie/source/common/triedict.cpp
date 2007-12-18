@@ -20,8 +20,9 @@
 #include "uvector.h"
 #include "uvectr32.h"
 #include "uarrsort.h"
+#include "hash.h"
 
-#define DEBUG_TRIE_DICT 1
+//#define DEBUG_TRIE_DICT 1
 
 #ifdef DEBUG_TRIE_DICT
 #include <sys/times.h>
@@ -190,7 +191,6 @@ MutableTrieDictionary::addWord( const UChar *word,
         uint16_t value /* = 0 */ ) {
     // dictionary cannot store zero values, would interfere with flags
     if (length <= 0 || (!fValued && value > 0) || (fValued && value == 0)) {
-        //printf("fValued %d, value %d, string %x %x %x \n",fValued, value, *word, *(word+1), *(word+2));
         status = U_ILLEGAL_ARGUMENT_ERROR;
         return;
     }
@@ -386,11 +386,6 @@ MutableTrieDictionary::openWords( UErrorCode &status ) const {
  * CompactTrieDictionary
  */
 
-//done: allow root nodes to handle > 4096 entries! use entire 16 bits
-//done: allow > 4096 entries for child nodes (actually not needed)
-//done! how to allow node ids longer than 16 bits? bug-fixing needed
-//done: adjust CompactTrieHeader code for backward compatibility with 16bit nodeCount ,root
-//done: store logprobabilities in CompactTrieDictionary: need to write directly to memory without casting to structs.
 //TODO if time permits: minimise size of trie with logprobs by storing values for terminal nodes directly in offsets[]
 // --> calculating from next offset *might* be simpler, but would have to add one last offset for logprob of last node
 // --> if calculate from current offset, need to factor in possible overflow as well.
@@ -560,13 +555,21 @@ CompactTrieDictionary::data() const {
 //This function finds the address of a node for us, given its node ID
 static inline const CompactTrieNode *
 getCompactNode(const CompactTrieInfo *info, uint32_t node) {
-    return (const CompactTrieNode *)(info->address + info->offsets[node]);
+    if(node < info->root-1) {
+        return (const CompactTrieNode *)(&info->offsets[node]);
+    } else {
+        return (const CompactTrieNode *)(info->address + info->offsets[node]);
+    }
 }
 
 //this version of getCompactNode is currently only used in compactMutableTrieDictionary()
 static inline const CompactTrieNode *
 getCompactNode(const CompactTrieHeader *header, uint32_t node) {
-    return (const CompactTrieNode *)((const uint8_t *)header + header->offsets[node]);
+    if(node < header->root-1) {
+        return (const CompactTrieNode *)(&header->offsets[node]);
+    } else {
+        return (const CompactTrieNode *)((const uint8_t *)header + header->offsets[node]);
+    }
 }
 
 
@@ -618,6 +621,8 @@ static inline uint32_t calcEqualLink(const CompactTrieHorizontalNode *hnode, uin
 /**
  * Returns the value stored in the specified node which is associated with its
  * parent node.
+ * TODO: how to tell that value is stored in node or in offset? check whether
+ * node ID < fInfo->root!
  */
 static inline uint16_t getValue(const CompactTrieHorizontalNode *hnode){
     uint16_t count = getCount((CompactTrieNode *)hnode);
@@ -769,7 +774,6 @@ public:
 public:
     CompactTrieEnumeration(const CompactTrieInfo *info, UErrorCode &status) 
     : fNodeStack(status), fIndexStack(status) {
-        //fHeader = header;
         fInfo = info;
         fNodeStack.push(info->root, status);
         fIndexStack.push(0, status);
@@ -899,6 +903,12 @@ CompactTrieDictionary::openWords( UErrorCode &status ) const {
 // and back again
 //
 
+enum CompactTrieNodeType {
+    kHorizontalType = 0,
+    kVerticalType = 1,
+    kValueType = 2
+};
+
 /**
  * The following classes (i.e. BuildCompactTrie*Node) are helper classes to 
  * construct the compact trie by storing information for each node and later 
@@ -907,7 +917,7 @@ CompactTrieDictionary::openWords( UErrorCode &status ) const {
 class BuildCompactTrieNode: public UMemory {
 public:
     UBool           fParentEndsWord;
-    UBool           fVertical;
+    CompactTrieNodeType fNodeType;
     UBool           fHasDuplicate;
     UBool           fEqualOverflows;
     int32_t         fNodeID;
@@ -915,10 +925,11 @@ public:
     uint16_t        fValue;
 
 public:
-    BuildCompactTrieNode(UBool parentEndsWord, UBool vertical, UStack &nodes, UErrorCode &status, uint16_t value = 0) {
+    BuildCompactTrieNode(UBool parentEndsWord, CompactTrieNodeType nodeType, 
+            UStack &nodes, UErrorCode &status, uint16_t value = 0) {
         fParentEndsWord = parentEndsWord;
         fHasDuplicate = FALSE;
-        fVertical = vertical;
+        fNodeType = nodeType;
         fEqualOverflows = FALSE;
         fNodeID = nodes.size();
         fValue = parentEndsWord? value : 0;
@@ -941,7 +952,6 @@ public:
 
         // if this ever fails, a flag bit (i.e. kExceedsCount) will need to be
         // used as a 5th MSB.
-        //TODO: change fNodeID == 2 to root node ID! how to store?
         U_ASSERT(fChars.length() < 4096 || fNodeID == 2);
 
         *((uint16_t *)(bytes+offset)) = (fEqualOverflows? kEqualOverflows : 0) | 
@@ -949,7 +959,7 @@ public:
             (
                     (fChars.length() & kCountMask) | 
                     //((fChars.length() << 2) & kExceedsCount) |
-                    (fVertical ? kVerticalNode : 0) | 
+                    (fNodeType == kVerticalType ? kVerticalNode : 0) | 
                     (fParentEndsWord ? kParentEndsWord : 0 )
             )
         );
@@ -971,20 +981,19 @@ public:
 class BuildCompactTrieValueNode: public BuildCompactTrieNode {
 public:
     BuildCompactTrieValueNode(UStack &nodes, UErrorCode &status, uint16_t value)
-    : BuildCompactTrieNode(TRUE, FALSE, nodes, status, value){
+        : BuildCompactTrieNode(TRUE, kValueType, nodes, status, value){
     }
 
     virtual ~BuildCompactTrieValueNode(){
     }
 
     virtual uint32_t size() {
-        //TODO: all info about value to be stored directly in offset table
         return sizeof(uint16_t) * 2;
     }
 
     virtual void write(uint8_t *bytes, uint32_t &offset, const UVector32 &translate) {
         // don't write value directly to memory but store it in offset to be written later
-        //        offset = fValue & kOffsetContainsValue;
+        //offset = fValue & kOffsetContainsValue;
         BuildCompactTrieNode::write(bytes, offset, translate);
         BuildCompactTrieNode::writeValue(bytes, offset);
     }
@@ -997,7 +1006,7 @@ public:
 
 public:
     BuildCompactTrieHorizontalNode(UBool parentEndsWord, UStack &nodes, UErrorCode &status, uint16_t value = 0)
-    : BuildCompactTrieNode(parentEndsWord, FALSE, nodes, status, value), fLinks(status) {
+    : BuildCompactTrieNode(parentEndsWord, kHorizontalType, nodes, status, value), fLinks(status) {
         fMayOverflow = FALSE;
     }
 
@@ -1109,7 +1118,7 @@ public:
 
 public:
     BuildCompactTrieVerticalNode(UBool parentEndsWord, UStack &nodes, UErrorCode &status, uint16_t value = 0)
-    : BuildCompactTrieNode(parentEndsWord, TRUE, nodes, status, value) {
+    : BuildCompactTrieNode(parentEndsWord, kVerticalType, nodes, status, value) {
         fEqual = NULL;
     }
 
@@ -1169,13 +1178,13 @@ static void walkHorizontal(const TernaryNode *node,
         BuildCompactTrieHorizontalNode *building,
         UStack &nodes,
         UErrorCode &status,
-        UBool fValued);
+        Hashtable *values);
 
 // Convert one TernaryNode into a BuildCompactTrieNode. Uses recursion.
 
 static BuildCompactTrieNode *
 compactOneNode(const TernaryNode *node, UBool parentEndsWord, UStack &nodes, 
-        UErrorCode &status, UBool fValued = FALSE, uint16_t parentValue = 0) {
+        UErrorCode &status, Hashtable *values = NULL, uint16_t parentValue = 0) {
     if (U_FAILURE(status)) {
         return NULL;
     }
@@ -1183,7 +1192,7 @@ compactOneNode(const TernaryNode *node, UBool parentEndsWord, UStack &nodes,
     UBool horizontal = (node->low != NULL || node->high != NULL);
     if (horizontal) {
         BuildCompactTrieHorizontalNode *hResult;
-        if(fValued){
+        if(values != NULL){
             hResult = new BuildCompactTrieHorizontalNode(parentEndsWord, nodes, status, parentValue);
         } else {
             hResult = new BuildCompactTrieHorizontalNode(parentEndsWord, nodes, status);
@@ -1193,13 +1202,13 @@ compactOneNode(const TernaryNode *node, UBool parentEndsWord, UStack &nodes,
             status = U_MEMORY_ALLOCATION_ERROR;
         }
         if (U_SUCCESS(status)) {
-            walkHorizontal(node, hResult, nodes, status, fValued);
+            walkHorizontal(node, hResult, nodes, status, values);
             result = hResult;
         }
     }
     else {
         BuildCompactTrieVerticalNode *vResult;
-        if(fValued){
+        if(values != NULL){
             vResult = new BuildCompactTrieVerticalNode(parentEndsWord, nodes, status, parentValue);
         } else { 
             vResult = new BuildCompactTrieVerticalNode(parentEndsWord, nodes, status);
@@ -1224,14 +1233,20 @@ compactOneNode(const TernaryNode *node, UBool parentEndsWord, UStack &nodes,
                 if (!endsWord) {
                     status = U_ILLEGAL_ARGUMENT_ERROR;  // Corrupt input trie
                 }
-                else if(fValued){
-                    vResult->setLink(new BuildCompactTrieValueNode(nodes, status, value));
+                else if(values != NULL){
+                    UnicodeString key(value); //store value as a single-char UnicodeString
+                    BuildCompactTrieValueNode *link = (BuildCompactTrieValueNode *) values->get(key);
+                    if(link == NULL){
+                        link = new BuildCompactTrieValueNode(nodes, status, value); //take out nodes?
+                        values->put(key, link, status);
+                    }
+                    vResult->setLink(link);
                 } else {
                     vResult->setLink((BuildCompactTrieNode *)nodes[1]);
                 }
             }
             else {
-                vResult->setLink(compactOneNode(node, endsWord, nodes, status, fValued, value));
+                vResult->setLink(compactOneNode(node, endsWord, nodes, status, values, value));
             }
             result = vResult;
         }
@@ -1245,18 +1260,23 @@ compactOneNode(const TernaryNode *node, UBool parentEndsWord, UStack &nodes,
 static void walkHorizontal(const TernaryNode *node,
         BuildCompactTrieHorizontalNode *building,
         UStack &nodes,
-        UErrorCode &status, UBool fValued) {
+        UErrorCode &status, Hashtable *values = NULL) {
     while (U_SUCCESS(status) && node != NULL) {
         if (node->low != NULL) {
-            walkHorizontal(node->low, building, nodes, status, fValued);
+            walkHorizontal(node->low, building, nodes, status, values);
         }
         BuildCompactTrieNode *link = NULL;
         if (node->equal != NULL) {
-            link = compactOneNode(node->equal, node->flags > 0, nodes, status, fValued, node->flags);
+            link = compactOneNode(node->equal, node->flags > 0, nodes, status, values, node->flags);
         }
         else if (node->flags > 0) {
-            if(fValued) {
-                link = new BuildCompactTrieValueNode(nodes, status, node->flags);
+            if(values != NULL) {
+                UnicodeString key(node->flags); //store value as a single-char UnicodeString
+                link = (BuildCompactTrieValueNode *) values->get(key);
+                if(link == NULL) {
+                    link = new BuildCompactTrieValueNode(nodes, status, node->flags); //take out nodes?
+                    values->put(key, link, status);
+                }
             } else {
                 link = (BuildCompactTrieNode *)nodes[1];
             }
@@ -1286,8 +1306,8 @@ _sortBuildNodes(const void * /*context*/, const void *voidl, const void *voidr) 
     }
 
     // Most significant is type of node. Can never coalesce.
-    if (left->fVertical != right->fVertical) {
-        return left->fVertical - right->fVertical;
+    if (left->fNodeType != right->fNodeType) {
+        return left->fNodeType - right->fNodeType;
     }
     // Next, the "parent ends word" flag. If that differs, we cannot coalesce.
     if (left->fParentEndsWord != right->fParentEndsWord) {
@@ -1301,12 +1321,12 @@ _sortBuildNodes(const void * /*context*/, const void *voidl, const void *voidr) 
 
     // If the node value differs, we should not coalesce.
     // If values aren't stored, all fValues should be 0.
-    if (left->fValue != right->fValue){
+    if (left->fValue != right->fValue) {
         return left->fValue - right->fValue;
     }
 
     // We know they're both the same node type, so branch for the two cases.
-    if (left->fVertical) {
+    if (left->fNodeType == kVerticalType) {
         result = ((BuildCompactTrieVerticalNode *)left)->fEqual->fNodeID
         - ((BuildCompactTrieVerticalNode *)right)->fEqual->fNodeID;
     }
@@ -1439,20 +1459,25 @@ CompactTrieDictionary::compactMutableTrieDictionary( const MutableTrieDictionary
     // Add node 0, used as the NULL pointer/sentinel.
     nodes.addElement((int32_t)0, status);
 
+    Hashtable *values = NULL;                           // Index of (unique) values
+    if (dict.fValued) {
+        values = new Hashtable(status);
+    }
+
     // Start by creating the special empty node we use to indicate that the parent
     // terminates a word. This must be node 1, because the builder assumes
     // that. This node will never be used for tries storing numerical values.
     if (U_FAILURE(status)) {
         return NULL;
     }
-    BuildCompactTrieNode *terminal = new BuildCompactTrieNode(TRUE, FALSE, nodes, status);
+    BuildCompactTrieNode *terminal = new BuildCompactTrieNode(TRUE, kHorizontalType, nodes, status);
     if (terminal == NULL) {
         status = U_MEMORY_ALLOCATION_ERROR;
     }
 
     // This call does all the work of building the new trie structure. The root
-    // will be node 2.
-    BuildCompactTrieNode *root = compactOneNode(dict.fTrie, FALSE, nodes, status, dict.fValued);
+    // will have node ID 2 before writing to memory.
+    BuildCompactTrieNode *root = compactOneNode(dict.fTrie, FALSE, nodes, status, values);
 #ifdef DEBUG_TRIE_DICT
     (void) ::times(&timing);
     fprintf(stderr, "Compact trie built, %d nodes, time user %f system %f\n",
@@ -1485,15 +1510,31 @@ CompactTrieDictionary::compactMutableTrieDictionary( const MutableTrieDictionary
         return NULL;
     }
 
+    //map terminal value nodes
+    int valueCount = 0;
+    UVector valueNodes(status);
+    if(values != NULL) {
+        valueCount = values->count(); //number of unique terminal value nodes
+    }
+     
+    // map non-terminal nodes
+    int valuePos = 1;//, nodePos = valueCount + valuePos;
+    nodeCount = valueCount + valuePos;
     for (i = 1; i < count; ++i) {
         node = (BuildCompactTrieNode *)nodes[i];
         if (node->fNodeID == i) {
             // Only one node out of each duplicate set is used
-            if (i >= translate.size()) {
+            if (node->fNodeID >= translate.size()) {
                 // Logically extend the mapping table
-                translate.setSize(i+1);
+                translate.setSize(i + 1);
             }
-            translate.setElementAt(nodeCount++, i);
+            //translate.setElementAt(object, index)!
+            if(node->fNodeType == kValueType) {
+                valueNodes.addElement(node, status);
+               translate.setElementAt(valuePos++, i);
+             } else {
+                translate.setElementAt(nodeCount++, i);
+            }
             totalSize += node->size();
         }
     }
@@ -1521,7 +1562,7 @@ CompactTrieDictionary::compactMutableTrieDictionary( const MutableTrieDictionary
         return NULL;
     }
     CompactTrieHeader *header = (CompactTrieHeader *)bytes;
-    //    header->size = totalSize;
+    //header->size = totalSize;
     if(dict.fValued){
         header->magic = COMPACT_TRIE_MAGIC_3;
     } else {
@@ -1536,12 +1577,21 @@ CompactTrieDictionary::compactMutableTrieDictionary( const MutableTrieDictionary
     }
 #endif
     uint32_t offset = offsetof(CompactTrieHeader,offsets)+(nodeCount*sizeof(uint32_t));
-    nodeCount = 1;
+    nodeCount = valueCount + 1;
+
+    // Write terminal value nodes to memory
+    for (i=0; i < valueNodes.size(); i++) {
+        //header->offsets[i + 1] = offset;
+        uint32_t tmpOffset = 0;
+        node = (BuildCompactTrieNode *) valueNodes.elementAt(i);
+        //header->offsets[i + 1] = (uint32_t)node->fValue;
+        node->write((uint8_t *)&header->offsets[i+1], tmpOffset, translate);
+    }
 
     // Now write the data
     for (i = 1; i < count; ++i) {
         node = (BuildCompactTrieNode *)nodes[i];
-        if (node->fNodeID == i) {
+        if (node->fNodeID == i && node->fNodeType != kValueType) {
             header->offsets[nodeCount++] = offset;
             node->write(bytes, offset, translate);
         }
@@ -1570,6 +1620,7 @@ CompactTrieDictionary::compactMutableTrieDictionary( const MutableTrieDictionary
     size_t vItemCount = 0;
     uint32_t previousOff = offset;
     uint32_t numOverflow = 0;
+    uint32_t valueSpace = 0;
     for (uint32_t nodeIdx = nodeCount-1; nodeIdx >= 2; --nodeIdx) {
         const CompactTrieNode *node = getCompactNode(header, nodeIdx);
         int itemCount;
@@ -1580,7 +1631,7 @@ CompactTrieDictionary::compactMutableTrieDictionary( const MutableTrieDictionary
         if(node->flagscount & kEqualOverflows){
             numOverflow++;
         }
-        if (node->flagscount & kVerticalNode && nodeIdx != 2) {
+        if (node->flagscount & kVerticalNode && nodeIdx != header->root) {
             vCount += 1;
             vItemCount += itemCount;
             vSize += previousOff-header->offsets[nodeIdx];
@@ -1588,8 +1639,13 @@ CompactTrieDictionary::compactMutableTrieDictionary( const MutableTrieDictionary
         else {
             hCount += 1;
             hItemCount += itemCount;
-            hSize += previousOff-header->offsets[nodeIdx];
+            if(nodeIdx >= header->root) {
+                hSize += previousOff-header->offsets[nodeIdx];
+            }
         }
+        
+        if(header->magic == COMPACT_TRIE_MAGIC_3 && node->flagscount & kParentEndsWord)
+            valueSpace += sizeof(uint16_t);
         previousOff = header->offsets[nodeIdx];
     }
 
@@ -1598,6 +1654,7 @@ CompactTrieDictionary::compactMutableTrieDictionary( const MutableTrieDictionary
     fprintf(stderr, "Vertical nodes: %d total, average %f bytes with %f items\n", vCount,
             (double)vSize/vCount, (double)vItemCount/vCount);
     fprintf(stderr, "Number of nodes with overflowing nodeIDs: %d \n", numOverflow);
+    fprintf(stderr, "Space taken up by values: %d \n", valueSpace);
 #endif
 
     if (U_FAILURE(status)) {

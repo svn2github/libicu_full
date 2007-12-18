@@ -281,6 +281,7 @@ ICULanguageBreakFactory::loadDictionaryFor(UScriptCode script, int32_t /*breakTy
         }
         dictnbuff[len]=0; // nul terminate
     }
+    
     ures_close(b);
     UDataMemory *file = udata_open(U_ICUDATA_BRKITR, ext, dictnbuff, &status);
     if (U_SUCCESS(status)) {
@@ -294,6 +295,13 @@ ICULanguageBreakFactory::loadDictionaryFor(UScriptCode script, int32_t /*breakTy
             dict = NULL;
         }
         return dict;
+    } else if (dictfname != NULL){
+        //create dummy dict if dictionary filename not valid
+        UChar c = 0x0020;
+        status = U_ZERO_ERROR;
+        MutableTrieDictionary *mtd = new MutableTrieDictionary(c, status, TRUE);
+        mtd->addWord(&c, 1, status, 1);
+        return new CompactTrieDictionary(*mtd, status);  
     }
     return NULL;
 }

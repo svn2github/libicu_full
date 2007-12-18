@@ -217,8 +217,6 @@ int  main(int argc, char **argv) {
         mtd = new MutableTrieDictionary(c, status, TRUE);
         mtd->addWord(&c, 1, status, 1);
 
-//        fprintf(stderr, "Could not open file \"%s\"\n", wordFileName);
-//        exit(-1);
     } else { //read words in from input file
         fseek(file, 0, SEEK_END);
         wordFileSize = ftell(file);
@@ -314,11 +312,6 @@ int  main(int argc, char **argv) {
         }
         while (uc && (breaks.contains(uc) || u_isspace(uc)));
     
-    /*    MutableTrieDictionary *mtd = NULL;
-        if(!breaks.contains(uc) && !u_isspace(uc)) {
-            mtd = new MutableTrieDictionary(uc, status);
-        }
-    */
         mtd = new MutableTrieDictionary(uc, status);
         
         if (U_FAILURE(status)) {
@@ -361,12 +354,9 @@ int  main(int argc, char **argv) {
                     uint32_t value = 0;
                     char s[valueString.length()];
                     valueString.extract(0,valueString.length(), s, valueString.length());
-                    //fprintf(stderr, "valueString=%s\n", s);
                     int n = sscanf(s, "%ud", &value);
-                    //fprintf(stderr, "value=%d n=%d\n", value, n);
                     U_ASSERT(n == 1);
-                    //restrict values to 8 bits for now
-                    U_ASSERT(value >= 0 && value < 256); 
+                    U_ASSERT(value >= 0); 
                     mtd->addWord(candidate, length, status, (uint16_t)value);
                 } else {
                     mtd->addWord(candidate, length, status);

@@ -1009,8 +1009,6 @@ void RBBITest::TestTrieDictWithValue() {
         mutableDict->matches(originalText, originalWord->length(), lengths1, count1, originalWord->length(), values1);
         compactDict->matches(cloneText, cloneWord->length(), lengths2, count2, cloneWord->length(), values2);
         
-//        fprintf(stdout,"node %d, values %x and %x\n", 
-//              counter, values1[count1-1], values2[count2-1]);
         if(values1[count1-1] != values2[count2-1]){
             errln("Values of word %d in MutableTrieDictionary and CompactTrieDictionary do not match, with values %d and %d\n", 
                   counter, values1[count1-1], values2[count2-1]);
@@ -1077,8 +1075,6 @@ void RBBITest::TestTrieDictWithValue() {
         mutableDict->matches(originalText, originalWord->length(), lengths1, count1, originalWord->length(), values1);
         mutable2->matches(cloneText, cloneWord->length(), lengths2, count2, cloneWord->length(), values2);
         
-//        fprintf(stdout,"node %d, values %x and %x, lengths %d and %d\n", 
-//              counter, values1[count1-1], values2[count2-1], originalLength, cloneLength);
         if(values1[count1-1] != values2[count2-1]){
             errln("Values of word %d in original and cloned MutableTrieDictionary do not match, with values %d and %d\n", 
                   counter, values1[count1-1], values2[count2-1]);
