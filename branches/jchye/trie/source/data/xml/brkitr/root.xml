@@ -25,7 +25,6 @@
             </icu:boundaries>
             <icu:dictionaries>
                 <icu:dictionary type="Thai" icu:dependency="thaidict.ctd"/>
-                <icu:dictionary type="Hang" icu:dependency="koreandict.ctd"/>
                 <icu:dictionary type="Hani" icu:dependency="cjdict.ctd"/>
                 <icu:dictionary type="Hira" icu:dependency="cjdict.ctd"/>
                 <icu:dictionary type="Kata" icu:dependency="cjdict.ctd"/>
