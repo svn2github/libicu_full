@@ -1643,6 +1643,12 @@ void RegexTest::Errors() {
 
     // Ticket 5389
     REGEX_ERR("*c", 1, 1, U_REGEX_RULE_SYNTAX);
+    
+    // Invalid Back Reference \0
+    //    For ICU 3.8 and earlier
+    //    For ICU versions newer than 3.8, \0 introduces an octal escape.
+    //
+    REGEX_ERR("(ab)\\0", 1, 6, U_REGEX_INVALID_BACK_REF);
 
 }
 
