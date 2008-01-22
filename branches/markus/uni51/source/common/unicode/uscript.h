@@ -1,6 +1,6 @@
 /*
  **********************************************************************
- *   Copyright (C) 1997-2007, International Business Machines
+ *   Copyright (C) 1997-2008, International Business Machines
  *   Corporation and others.  All Rights Reserved.
  **********************************************************************
  *
@@ -175,8 +175,32 @@ typedef enum UScriptCode {
       USCRIPT_MOON                          = 114,/* Moon */
       USCRIPT_MEITEI_MAYEK                  = 115,/* Mtei */
 
+      /* New script codes from ISO 15924 @draft ICU 4.0 */
+      USCRIPT_IMPERIAL_ARAMAIC              = 116,/* Armi */
+      USCRIPT_AVESTAN                       = 117,/* Avst */
+      USCRIPT_CHAKMA                        = 118,/* Cakm */
+      USCRIPT_KOREAN                        = 119,/* Kore */
+      USCRIPT_KAITHI                        = 120,/* Kthi */
+      USCRIPT_MANICHAEAN                    = 121,/* Mani */
+      USCRIPT_INSCRIPTIONAL_PAHLAVI         = 122,/* Phli */
+      USCRIPT_PSALTER_PAHLAVI               = 123,/* Phlp */
+      USCRIPT_BOOK_PAHLAVI                  = 124,/* Phlv */
+      USCRIPT_INSCRIPTIONAL_PARTHIAN        = 125,/* Prti */
+      USCRIPT_SAMARITAN                     = 126,/* Samr */
+      USCRIPT_TAI_VIET                      = 127,/* Tavt */
+
+      /*
+       * TODO(markus): When script codes with values of 128 and higher need
+       * to be used in uprops.icu (when Unicode assigns the corresponding
+       * scripts to any characters), then genprops, uprops.h and uprops.c
+       * and the corresponding Java code
+       * must be updated, allocating more bits for script codes.
+       */
+      USCRIPT_MATHEMATICAL_NOTATION         = 128,/* Zmth */
+      USCRIPT_SYMBOLS                       = 129,/* Zsym */
+
       /* Private use codes from Qaaa - Qabx are not supported*/
-      USCRIPT_CODE_LIMIT    = 116
+      USCRIPT_CODE_LIMIT    = 130
 } UScriptCode;
 
 /**
