@@ -51,7 +51,6 @@ static void TestCodePoint(void);
 static void TestCharLength(void);
 static void TestCharNames(void);
 static void TestMirroring(void);
-/*       void TestUScriptCodeAPI(void);*/    /* defined in cucdapi.h */
 static void TestUScriptRunAPI(void);
 static void TestAdditionalProperties(void);
 static void TestNumericProperties(void);
@@ -167,10 +166,11 @@ void addUnicodeTest(TestNode** root);
 
 void addUnicodeTest(TestNode** root)
 {
-    addTest(root, &TestUnicodeData, "tsutil/cucdtst/TestUnicodeData");
     addTest(root, &TestCodeUnit, "tsutil/cucdtst/TestCodeUnit");
     addTest(root, &TestCodePoint, "tsutil/cucdtst/TestCodePoint");
     addTest(root, &TestCharLength, "tsutil/cucdtst/TestCharLength");
+    addTest(root, &TestBinaryValues, "tsutil/cucdtst/TestBinaryValues");
+    addTest(root, &TestUnicodeData, "tsutil/cucdtst/TestUnicodeData");
     addTest(root, &TestAdditionalProperties, "tsutil/cucdtst/TestAdditionalProperties");
     addTest(root, &TestNumericProperties, "tsutil/cucdtst/TestNumericProperties");
     addTest(root, &TestUpperLower, "tsutil/cucdtst/TestUpperLower");

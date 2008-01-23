@@ -151,6 +151,7 @@ Unicode .c source files built to "\svn\icuproj\icu\uni51\source\data\out\tmp"
 *** Test suites
 - Test that APIs using Unicode property value aliases (like UnicodeSet)
   support all of the boolean values N/Y, No/Yes, F/T, False/True
+  -> TestBinaryValues() tests in both cintltst and intltest
 
 *** LayoutEngine script information
 * Run ICU4J com.ibm.icu.dev.tool.layout.ScriptNameBuilder. This generates LEScripts.h, LELanguage.h,
@@ -165,6 +166,10 @@ Add new default entries to the indicClassTables array in <icu>/source/layout/Ind
 and the complexTable array in <icu>/source/layoutex/ParagraphLayout.cpp. (This step should be automated...)
 
 * rebuild the layout and layoutex libraries.
+
+*** Documentation
+- Update User Guide
+  + Jamo_Short_Name, sfc->scf, binary property value aliases
 
 ---------------------------------------------------------------------------- ***
 

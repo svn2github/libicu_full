@@ -10,7 +10,7 @@
 #include "cintltst.h"
 #include "cucdapi.h"
 
-#define ARRAY_SIZE(array) (int32_t)(sizeof array  / sizeof array[0])
+#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof(array[0]))
 
 void TestUScriptCodeAPI(){
     int i =0;
@@ -186,7 +186,6 @@ void TestUScriptCodeAPI(){
     }
     /* now test uscript_getScript() API */
     {
-#define MAX_ARRAY_SIZE 23
         uint32_t codepoints[] = {
                 0x0000FF9D, /* USCRIPT_KATAKANA*/
                 0x0000FFBE, /* USCRIPT_HANGUL*/
@@ -244,8 +243,7 @@ void TestUScriptCodeAPI(){
         UErrorCode status = U_ZERO_ERROR;
         UBool passed = TRUE;
 
-        i =0;
-        while(i< MAX_ARRAY_SIZE){
+        for(i=0; i<LENGTHOF(codepoints); ++i){
             code = uscript_getScript(codepoints[i],&status);
             if(U_SUCCESS(status)){
                 if( code != expected[i] ||
@@ -259,7 +257,6 @@ void TestUScriptCodeAPI(){
                          codepoints[i],u_errorName(status));
                 break;
             }
-            i++;
         }
         
         if(passed==FALSE){
@@ -345,11 +342,11 @@ void TestUScriptCodeAPI(){
                 log_err("uscript_getShortName failed for code %i: %s!=%s\n", i, name, expectedShort[j]);
             }
         }
-        for(i=0; i<ARRAY_SIZE(expectedLong); i++){
+        for(i=0; i<LENGTHOF(expectedLong); i++){
             UScriptCode fillIn[5] = {USCRIPT_INVALID_CODE};
             UErrorCode status = U_ZERO_ERROR;
             int32_t len = 0;
-            len = uscript_getCode(expectedShort[i], fillIn, ARRAY_SIZE(fillIn), &status);
+            len = uscript_getCode(expectedShort[i], fillIn, LENGTHOF(fillIn), &status);
             if(U_FAILURE(status)){
                 log_err("uscript_getCode failed for script name %s. Error: %s\n",expectedShort[i], u_errorName(status));
             }
@@ -361,4 +358,24 @@ void TestUScriptCodeAPI(){
             }
         }
     }
- }
+}
+
+void TestBinaryValues() {
+    /*
+     * Unicode 5.1 explicitly defines binary property value aliases.
+     * Verify that they are all recognized.
+     */
+    static const char *const falseValues[]={ "N", "No", "F", "False" };
+    static const char *const trueValues[]={ "Y", "Yes", "T", "True" };
+    int32_t i;
+    for(i=0; i<LENGTHOF(falseValues); ++i) {
+        if(FALSE!=u_getPropertyValueEnum(UCHAR_ALPHABETIC, falseValues[i])) {
+            log_err("u_getPropertyValueEnum(UCHAR_ALPHABETIC, \"%s\")!=FALSE\n", falseValues[i]);
+        }
+    }
+    for(i=0; i<LENGTHOF(trueValues); ++i) {
+        if(TRUE!=u_getPropertyValueEnum(UCHAR_ALPHABETIC, trueValues[i])) {
+            log_err("u_getPropertyValueEnum(UCHAR_ALPHABETIC, \"%s\")!=TRUE\n", trueValues[i]);
+        }
+    }
+}
