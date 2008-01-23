@@ -1,4 +1,4 @@
-* Copyright (C) 2004-2006, International Business Machines
+* Copyright (C) 2004-2008, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *
 *   file name:  changes.txt
@@ -10,13 +10,6 @@
 *   created by: Markus W. Scherer
 *
 * change log for Unicode updates
-
----------------------------------------------------------------------------- ***
-
-* TODO(markus): uprops.icu (uprops.h) only provides 7 bits for script codes.
-  In ICU 4.0 there are 130 script codes now, but there is none above 127 yet
-  which is the script code for an assigned Unicode character, therefore
-  ICU 4.0 uprops.icu does not store any script code values greater than 127.
 
 ---------------------------------------------------------------------------- ***
 
@@ -98,6 +91,15 @@ ucdstrip < 5.1.0\ucd\LineBreak.txt | ucdmerge > ..\unidata\LineBreak.txt
     (removed from SyntheticPropertyValueAliases.txt)
   + 14 new script values added for ISO 15924 coverage (not in Unicode 5.1)
     (added to SyntheticPropertyValueAliases.txt)
+- uprops.icu (uprops.h) only provides 7 bits for script codes.
+  In ICU 4.0 there are USCRIPT_CODE_LIMIT=130 script codes now.
+  There is none above 127 yet which is the script code for an
+  assigned Unicode character, so ICU 4.0 uprops.icu does not store any
+  script code values greater than 127.
+  However, it does need to store the maximum script value=USCRIPT_CODE_LIMIT-1=129
+  in a parallel bit field, and that overflows now.
+  For safety, uprops.h is extended to use two additional bits
+  (for a maximum value of 511) for the script code.
 - renamed property Simple_Case_Folding (sfc->scf)
   + nothing to be done: handled as normal alias
 - new property JSN Jamo_Short_Name
@@ -126,12 +128,17 @@ C:\svn\icuproj\icu\uni51\source\data>NMAKE /f makedata.mak ICUMAKE=\svn\icuproj\
 ICU data make path is \svn\icuproj\icu\uni51\source\data\
 ICU root path is \svn\icuproj\icu\uni51
 Information: cannot find "ucmlocal.mk". Not building user-additional converter files.
-[etc.]
+Information: cannot find "brklocal.mk". Not building user-additional break iterator files.
+Information: cannot find "reslocal.mk". Not building user-additional resource bundle files.
+Information: cannot find "collocal.mk". Not building user-additional resource bundle files.
+Information: cannot find "rbnflocal.mk". Not building user-additional resource bundle files.
+Information: cannot find "trnslocal.mk". Not building user-additional transliterator files.
+Information: cannot find "misclocal.mk". Not building user-additional miscellaenous files.
 Creating data file for Unicode Character Properties
 Creating data file for Unicode Case Mapping Properties
 Creating data file for Unicode BiDi/Shaping Properties
 Creating data file for Unicode Normalization
-Unicode .icu files built to "\svn\icuproj\icu\uni51\source\data\out\build\icudt35l"
+Unicode .icu files built to "\svn\icuproj\icu\uni51\source\data\out\build\icudt39l"
 Unicode .c source files built to "\svn\icuproj\icu\uni51\source\data\out\tmp"
 
 - copy the .c source files to C:\svn\icuproj\icu\uni51\source\common

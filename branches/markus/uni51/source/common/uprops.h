@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 2002-2007, International Business Machines
+*   Copyright (C) 2002-2008, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
@@ -98,7 +98,7 @@ enum {
  * 23..18   Line Break
  * 17..15   East Asian Width
  * 14.. 7   UBlockCode
- *  6.. 0   UScriptCode
+ *  6.. 0   UScriptCode (bits 8..7 are in vector word 2)
  */
 
 /* derived age: one nibble each for major and minor version numbers */
@@ -167,12 +167,17 @@ enum {
  * Properties in vector word 2
  * Bits
  * 31..24   More binary properties
- * 23..19   reserved
+ * 23..21   reserved
+ * 20..19   UScriptCode bits 8..7
+ *          UPROPS_SCRIPT2_SHIFT shifts bits 20..19 to bits 8..7
  * 18..14   Sentence Break
  * 13..10   Word Break
  *  9.. 5   Grapheme Cluster Break
  *  4.. 0   Decomposition Type
  */
+#define UPROPS_SCRIPT2_MASK     0x00180000
+#define UPROPS_SCRIPT2_SHIFT    (19-7)
+
 #define UPROPS_SB_MASK          0x0007c000
 #define UPROPS_SB_SHIFT         14
 
@@ -202,6 +207,20 @@ U_CFUNC uint32_t
 u_getUnicodeProperties(UChar32 c, int32_t column);
 
 /**
+ * Get a properties vector for a code point.
+ * Implemented in uchar.c for uprops.c.
+ * Fills as many as columns entries of propsVector[] as data is available,
+ * returns that number, and sets the remaining entries to 0.
+ * Logically same as
+ *   for(column=0; column<columns; ++column) {
+ *     propsVector[column]=u_getUnicodeProperties(c, column);
+ *   }
+ * @return 0 if no data or illegal argument
+ */
+U_CFUNC int32_t
+u_getPropsVector(UChar32 c, uint32_t propsVector[], int32_t columns);
+
+/**
  * Get the the maximum values for some enum/int properties.
  * Use the same column numbers as for u_getUnicodeProperties().
  * The returned value will contain maximum values stored in the same bit fields
@@ -216,6 +235,20 @@ u_getUnicodeProperties(UChar32 c, int32_t column);
  */
 U_CFUNC int32_t
 uprv_getMaxValues(int32_t column);
+
+/**
+ * Get the vector of all maximum-values words.
+ * Implemented in uchar.c for uprops.c.
+ * Fills as many as columns entries of maxValues[] as data is available,
+ * returns that number, and sets the remaining entries to 0.
+ * Logically same as
+ *   for(column=0; column<columns; ++column) {
+ *     maxValues[column]=uprv_getMaxValues(column);
+ *   }
+ * @return 0 if no data or illegal argument
+ */
+U_CFUNC int32_t
+u_getMaxValuesVector(int32_t maxValues[], int32_t columns);
 
 /**
  * Get the Hangul Syllable Type for c.

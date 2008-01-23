@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 2002-2007, International Business Machines
+*   Copyright (C) 2002-2008, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
@@ -329,7 +329,13 @@ u_getIntPropertyMaxValue(UProperty which) {
         case UCHAR_NUMERIC_TYPE:
             return (int32_t)U_NT_COUNT-1;
         case UCHAR_SCRIPT:
-            return uprv_getMaxValues(0)&UPROPS_SCRIPT_MASK;
+            {
+                int32_t maxValues[3];
+                u_getMaxValuesVector(maxValues, 3);
+                return 
+                    ((maxValues[2]&UPROPS_SCRIPT2_MASK)>>UPROPS_SCRIPT2_SHIFT) |
+                    (maxValues[0]&UPROPS_SCRIPT_MASK);
+            }
         case UCHAR_HANGUL_SYLLABLE_TYPE:
             return (int32_t)U_HST_COUNT-1;
 #if !UCONFIG_NO_NORMALIZATION

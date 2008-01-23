@@ -188,14 +188,6 @@ typedef enum UScriptCode {
       USCRIPT_INSCRIPTIONAL_PARTHIAN        = 125,/* Prti */
       USCRIPT_SAMARITAN                     = 126,/* Samr */
       USCRIPT_TAI_VIET                      = 127,/* Tavt */
-
-      /*
-       * TODO(markus): When script codes with values of 128 and higher need
-       * to be used in uprops.icu (when Unicode assigns the corresponding
-       * scripts to any characters), then genprops, uprops.h and uprops.c
-       * and the corresponding Java code
-       * must be updated, allocating more bits for script codes.
-       */
       USCRIPT_MATHEMATICAL_NOTATION         = 128,/* Zmth */
       USCRIPT_SYMBOLS                       = 129,/* Zsym */
 

@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 2002-2006, International Business Machines
+*   Copyright (C) 2002-2008, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
@@ -78,6 +78,11 @@ ageLineFn(void *context,
           char *fields[][2], int32_t fieldCount,
           UErrorCode *pErrorCode);
 
+static void U_CALLCONV
+scriptsLineFn(void *context,
+              char *fields[][2], int32_t fieldCount,
+              UErrorCode *pErrorCode);
+
 static void
 parseMultiFieldFile(char *filename, char *basename,
                     const char *ucdFile, const char *suffix,
@@ -117,12 +122,6 @@ static void
 parseSingleEnumFile(char *filename, char *basename, const char *suffix,
                     const SingleEnum *sen,
                     UErrorCode *pErrorCode);
-
-static const SingleEnum scriptSingleEnum={
-    "Scripts", "script",
-    UCHAR_SCRIPT,
-    0, 0, UPROPS_SCRIPT_MASK
-};
 
 static const SingleEnum blockSingleEnum={
     "Blocks", "block",
@@ -438,7 +437,7 @@ generateAdditionalProperties(char *filename, const char *suffix, UErrorCode *pEr
      *
      * COMMON==USCRIPT_COMMON==0 - nothing to do
      */
-    parseSingleEnumFile(filename, basename, suffix, &scriptSingleEnum, pErrorCode);
+    parseTwoFieldFile(filename, basename, "Scripts", suffix, scriptsLineFn, pErrorCode);
 
     parseSingleEnumFile(filename, basename, suffix, &blockSingleEnum, pErrorCode);
 
@@ -553,6 +552,52 @@ ageLineFn(void *context,
     }
 }
 
+/* Scripts.txt -------------------------------------------------------------- */
+
+/*
+ * Scripts.txt used to be parsed with
+ *   parseSingleEnumFile(filename, basename, suffix, &scriptSingleEnum, pErrorCode);
+ * until the largest ScriptCode value exceeded UPROPS_SCRIPT_MASK=127,
+ * the limit for the 7-bit field in the properties vector word 0.
+ * ICU 4.0 adds two more bits in vector word 2.
+ */
+static void U_CALLCONV
+scriptsLineFn(void *context,
+              char *fields[][2], int32_t fieldCount,
+              UErrorCode *pErrorCode) {
+    char *s;
+    uint32_t start, limit, uv0, uv2;
+    int32_t value;
+
+    u_parseCodePointRange(fields[0][0], &start, &limit, pErrorCode);
+    if(U_FAILURE(*pErrorCode)) {
+        fprintf(stderr, "genprops: syntax error in Scripts.txt field 0 at %s\n", fields[0][0]);
+        exit(*pErrorCode);
+    }
+    ++limit;
+
+    /* parse property alias */
+    s=trimTerminateField(fields[1][0], fields[1][1]);
+    value=u_getPropertyValueEnum(UCHAR_SCRIPT, s);
+    if(value<0) {
+        fprintf(stderr, "genprops error: unknown script name in Scripts.txt field 1 at %s\n", s);
+        exit(U_PARSE_ERROR);
+    }
+    if(value>((UPROPS_SCRIPT2_MASK>>UPROPS_SCRIPT2_SHIFT)|UPROPS_SCRIPT_MASK)) {
+        fprintf(stderr, "genprops error: script value overflow (0x%x) at %s\n", (int)value, s);
+        exit(U_INTERNAL_PROGRAM_ERROR);
+    }
+
+    uv0=(uint32_t)value&UPROPS_SCRIPT_MASK;
+    uv2=((uint32_t)value<<UPROPS_SCRIPT2_SHIFT)&UPROPS_SCRIPT2_MASK;
+    if( !upvec_setValue(pv, start, limit, 0, uv0, UPROPS_SCRIPT_MASK, pErrorCode) ||
+        !upvec_setValue(pv, start, limit, 2, uv2, UPROPS_SCRIPT2_MASK, pErrorCode)
+    ) {
+        fprintf(stderr, "genprops error: unable to set script code: %s\n", u_errorName(*pErrorCode));
+        exit(*pErrorCode);
+    }
+}
+
 /* DerivedNumericValues.txt ------------------------------------------------- */
 
 static void U_CALLCONV
@@ -573,6 +618,18 @@ numericLineFn(void *context,
         exit(*pErrorCode);
     }
     ++limit;
+
+    /*
+     * Ignore the
+     * # @missing: 0000..10FFFF; NaN
+     * line from Unicode 5.1's DerivedNumericValues.txt:
+     * The following code cannot parse "NaN", and we don't want to overwrite
+     * the numeric values for all characters after reading most
+     * from UnicodeData.txt already.
+     */
+    if(start==0 && limit==0x110000) {
+        return;
+    }
 
     /* check if the numeric value is a fraction (this code does not handle any) */
     isFraction=FALSE;
@@ -722,8 +779,9 @@ writeAdditionalData(FILE *f, uint8_t *p, int32_t capacity, int32_t indexes[UPROP
             (((int32_t)U_LB_COUNT-1)<<UPROPS_LB_SHIFT)|
             (((int32_t)U_EA_COUNT-1)<<UPROPS_EA_SHIFT)|
             (((int32_t)UBLOCK_COUNT-1)<<UPROPS_BLOCK_SHIFT)|
-            ((int32_t)USCRIPT_CODE_LIMIT-1);
+            (((int32_t)USCRIPT_CODE_LIMIT-1)&UPROPS_SCRIPT_MASK);
         indexes[UPROPS_MAX_VALUES_2_INDEX]=
+            ((((int32_t)USCRIPT_CODE_LIMIT-1)<<UPROPS_SCRIPT2_SHIFT)&UPROPS_SCRIPT2_MASK)|
             (((int32_t)U_SB_COUNT-1)<<UPROPS_SB_SHIFT)|
             (((int32_t)U_WB_COUNT-1)<<UPROPS_WB_SHIFT)|
             (((int32_t)U_GCB_COUNT-1)<<UPROPS_GCB_SHIFT)|
