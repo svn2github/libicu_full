@@ -210,7 +210,6 @@ void TestUScriptCodeAPI(){
                 0x0001D182, /* USCRIPT_INHERITED*/
                 0x0001D18B, /* USCRIPT_INHERITED*/
                 0x0001D1AD, /* USCRIPT_INHERITED*/
-                0x00110000, /* USCRIPT_INVALID_CODE */
         };
 
         UScriptCode expected[] = {
@@ -237,7 +236,6 @@ void TestUScriptCodeAPI(){
                 USCRIPT_INHERITED ,
                 USCRIPT_INHERITED ,
                 USCRIPT_INHERITED ,
-                USCRIPT_INVALID_CODE,
         };
         UScriptCode code = USCRIPT_INVALID_CODE;
         UErrorCode status = U_ZERO_ERROR;
