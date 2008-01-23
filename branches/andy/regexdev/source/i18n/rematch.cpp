@@ -55,6 +55,7 @@ RegexMatcher::RegexMatcher(const RegexPattern *pat)  {
     fWordBreakItr      = NULL;
     fTransparentBounds = FALSE;
     fAnchoringBounds   = TRUE;
+    fTimeLimit         = -1;
     if (pat==NULL) {
         fDeferredStatus = U_ILLEGAL_ARGUMENT_ERROR;
         return;
@@ -84,6 +85,7 @@ RegexMatcher::RegexMatcher(const UnicodeString &regexp, const UnicodeString &inp
     fWordBreakItr      = NULL;
     fTransparentBounds = FALSE;
     fAnchoringBounds   = TRUE;
+    fTimeLimit         = -1;
     if (U_FAILURE(status)) {
         return;
     }
@@ -111,6 +113,7 @@ RegexMatcher::RegexMatcher(const UnicodeString &regexp,
     fWordBreakItr      = NULL;
     fTransparentBounds = FALSE;
     fAnchoringBounds   = TRUE;
+    fTimeLimit         = -1;
     if (U_FAILURE(status)) {
         return;
     }
@@ -1289,6 +1292,19 @@ UBool RegexMatcher::isUWordBoundary(int32_t pos) {
 
 //--------------------------------------------------------------------------------
 //
+//   IncrementTime
+//
+//--------------------------------------------------------------------------------
+void RegexMatcher::IncrementTime(UErrorCode &status) {
+    fTickCounter = 10000;    // TODO: put correct value in a constant somewhere.
+    fTime++;
+    if (fTimeLimit >= 0 && fTime >= fTimeLimit) {
+        status = U_REGEX_TIME_OUT;
+    }
+}
+
+//--------------------------------------------------------------------------------
+//
 //   StateSave
 //       Make a new stack frame, initialized as a copy of the current stack frame.
 //       Set the pattern index in the original stack frame from the operand value
@@ -1296,10 +1312,19 @@ UBool RegexMatcher::isUWordBoundary(int32_t pos) {
 //       the newly created stack frame
 //
 //       Note that reserveBlock() may grow the stack, resulting in the
-//       whole thing being relocated in memory.  
+//       whole thing being relocated in memory.
+//
+//    Parameters:
+//       fp           The top frame pointer when called.  At return, a new 
+//                    fame will be present
+//       savePatIdx   An index into the compiled pattern.  Goes into the original
+//                    (not new) frame.  If execution ever back-tracks out of the
+//                    new frame, this will be where we continue from in the pattern.
+//    Return
+//                    The new frame pointer.
 //
 //--------------------------------------------------------------------------------
-inline REStackFrame *RegexMatcher::StateSave(REStackFrame *fp, int32_t savePatIdx, int32_t count, UErrorCode &status) {
+inline REStackFrame *RegexMatcher::StateSave(REStackFrame *fp, int32_t savePatIdx, UErrorCode &status) {
     // push storage for a new frame. 
     int32_t *newFP = fStack->reserveBlock(fFrameSize, status);
     if (newFP == NULL) {
@@ -1322,11 +1347,10 @@ inline REStackFrame *RegexMatcher::StateSave(REStackFrame *fp, int32_t savePatId
         }
     }
     
-    count--;
-    if (count <= 0) {
-       TimeTick(count);    // Resets Count!
+    fTickCounter--;
+    if (fTickCounter <= 0) {
+       IncrementTime(status);    // Re-initializes fTickCounter
     }
-    if (count<=0
     fp->fPatIdx = savePatIdx;
     return (REStackFrame *)newFP;
 }

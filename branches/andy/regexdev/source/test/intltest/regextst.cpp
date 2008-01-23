@@ -837,6 +837,18 @@ void RegexTest::API_Match() {
     }
 #endif
 
+    //
+    //  Time Outs
+    //
+    {
+        UErrorCode status = U_ZERO_ERROR;
+        UnicodeString testString("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+        RegexMatcher matcher("(a+)+b", testString, 0, status);
+        REGEX_CHECK_STATUS;
+        matcher.setTimeLimit(2000, status);
+        REGEX_ASSERT(matcher.lookingAt(status) == FALSE);
+        REGEX_CHECK_STATUS;
+    }
 }
 
 

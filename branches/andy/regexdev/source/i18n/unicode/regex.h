@@ -1146,6 +1146,7 @@ private:
     UBool                isUWordBoundary(int32_t pos);        // perform RBBI based \b test
     REStackFrame        *resetStack();
     inline REStackFrame *StateSave(REStackFrame *fp, int32_t savePatIdx, UErrorCode &status);
+    void                 IncrementTime(UErrorCode &status);
 
 
     const RegexPattern  *fPattern;
@@ -1199,7 +1200,10 @@ private:
     int32_t             fTimeLimit;        // Max time (in arbitrary steps) to let the
                                            //   match engine run.  -1 for unlimited.
     
-    int32+t             fTime;             // Match time, accumulates while matching.
+    int32_t             fTime;             // Match time, accumulates while matching.
+    int32_t             fTickCounter;      // Low bits counter for time.  Counts StateSaves.
+                                           //   Kept separately to keep as much code as possible
+                                           //   out of the inline StateSave function.
 
     int32_t             fStackLimit;       // Maximum memory size to use for the backtrack
                                            //   stack, in bytes.  -1 for unlimited.
