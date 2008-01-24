@@ -2222,6 +2222,10 @@ int32_t RBBICharMonkey::next(int32_t i) {
     UErrorCode status = U_ZERO_ERROR;
     int32_t  retVal = -1;
 
+    if (U_FAILURE(deferredStatus)) {
+        return -1;
+    }
+
     if (fMatcher->find(i, status)) {
         retVal = fMatcher->end(status);
     }
@@ -2266,6 +2270,7 @@ private:
 
     UnicodeSet  *fKatakanaSet;
     UnicodeSet  *fALetterSet;
+    UnicodeSet  *fMidNumLetSet;
     UnicodeSet  *fMidLetterSet;
     UnicodeSet  *fMidNumSet;
     UnicodeSet  *fNumericSet;
@@ -2287,19 +2292,15 @@ RBBIWordMonkey::RBBIWordMonkey()
 
     fSets            = new UVector(status);
 
-    fALetterSet      = new UnicodeSet("[\\p{Word_Break = ALetter}"
-                         "[\\p{Line_Break = Complex_Context}"
-                         "-\\p{Grapheme_Cluster_Break = Extend}"
-                         "-\\p{Grapheme_Cluster_Break = Control}]]",      status);
-    //fALetterSet      = new UnicodeSet("[\\p{Word_Break = ALetter}]",      status);
-    fKatakanaSet     = new UnicodeSet("[\\p{Word_Break = Katakana}-[\\uff9e\\uff9f]]",     status);
+    fALetterSet      = new UnicodeSet("[\\p{Word_Break = ALetter}]",      status);
+    fKatakanaSet     = new UnicodeSet("[\\p{Word_Break = Katakana}]",     status);
+    fMidNumLetSet    = new UnicodeSet("[\\p{Word_Break = MidNumLet}]",     status);
     fMidLetterSet    = new UnicodeSet("[\\p{Word_Break = MidLetter}]",    status);
     fMidNumSet       = new UnicodeSet("[\\p{Word_Break = MidNum}]",       status);
     fNumericSet      = new UnicodeSet("[\\p{Word_Break = Numeric}]",      status);
     fFormatSet       = new UnicodeSet("[\\p{Word_Break = Format}]",       status);
     fExtendNumLetSet = new UnicodeSet("[\\p{Word_Break = ExtendNumLet}]", status);
-    //fExtendSet       = new UnicodeSet("[\\p{Word_Break = Extend}]", status);
-    fExtendSet       = new UnicodeSet("[\\p{Grapheme_Cluster_Break = Extend}\\uff9e\\uff9f]", status);
+    fExtendSet       = new UnicodeSet("[\\p{Word_Break = Extend}]",       status);
 
     fOtherSet        = new UnicodeSet();
     if(U_FAILURE(status)) {
@@ -2316,10 +2317,13 @@ RBBIWordMonkey::RBBIWordMonkey()
     fOtherSet->removeAll(*fExtendNumLetSet);
     fOtherSet->removeAll(*fFormatSet);
     fOtherSet->removeAll(*fExtendSet);
+    // Inhibit dictionary characters from being tested at all.
+    fOtherSet->removeAll(UnicodeSet("[\\p{LineBreak = Complex_Context}]", status));
 
     fSets->addElement(fALetterSet,   status);
     fSets->addElement(fKatakanaSet,  status);
     fSets->addElement(fMidLetterSet, status);
+    fSets->addElement(fMidNumLetSet, status);
     fSets->addElement(fMidNumSet,    status);
     fSets->addElement(fNumericSet,   status);
     fSets->addElement(fFormatSet,    status);
@@ -2346,6 +2350,10 @@ int32_t RBBIWordMonkey::next(int32_t prevPos) {
     int     breakPos = -1;
 
     UChar32 c0, c1, c2, c3;   // The code points at p0, p1, p2 & p3.
+    
+    if (U_FAILURE(deferredStatus)) {
+        return -1;
+    }
 
     // Prev break at end of string.  return DONE.
     if (prevPos >= fText->length()) {
@@ -2395,10 +2403,8 @@ int32_t RBBIWordMonkey::next(int32_t prevPos) {
 
         // Rule (6)  ALetter  x  (MidLetter | MidNumLet) ALetter
         //
-        //    Also incorporates rule 7 by skipping pos ahead to position of the
-        //    terminating ALetter.
         if ( fALetterSet->contains(c1)   &&
-             fMidLetterSet->contains(c2) &&
+             (fMidLetterSet->contains(c2) || fMidNumLetSet->contains(c2)) &&
              fALetterSet->contains(c3)) {
             continue;
         }
@@ -2406,7 +2412,7 @@ int32_t RBBIWordMonkey::next(int32_t prevPos) {
 
         // Rule (7)  ALetter (MidLetter | MidNumLet)  x  ALetter
         if (fALetterSet->contains(c0) &&
-            (fMidLetterSet->contains(c1)  ) &&
+            (fMidLetterSet->contains(c1) ||  fMidNumLetSet->contains(c1)) &&
             fALetterSet->contains(c2)) {
             continue;
         }
@@ -2430,15 +2436,15 @@ int32_t RBBIWordMonkey::next(int32_t prevPos) {
         }
 
         // Rule (11)   Numeric (MidNum | MidNumLet)  x  Numeric
-        if ( fNumericSet->contains(c0) &&
-             fMidNumSet->contains(c1)  &&
+        if (fNumericSet->contains(c0) &&
+            (fMidNumSet->contains(c1) || fMidNumLetSet->contains(c1))  &&
             fNumericSet->contains(c2)) {
             continue;
         }
 
         // Rule (12)  Numeric x (MidNum | MidNumLet) Numeric
         if (fNumericSet->contains(c1) &&
-            fMidNumSet->contains(c2)  &&
+            (fMidNumSet->contains(c2) || fMidNumLetSet->contains(c2))  &&
             fNumericSet->contains(c3)) {
             continue;
         }
@@ -2481,6 +2487,7 @@ RBBIWordMonkey::~RBBIWordMonkey() {
     delete fSets;
     delete fKatakanaSet;
     delete fALetterSet;
+    delete fMidNumLetSet;
     delete fMidLetterSet;
     delete fMidNumSet;
     delete fNumericSet;
@@ -2647,6 +2654,10 @@ int32_t RBBISentMonkey::next(int32_t prevPos) {
 
     UChar32 c0, c1, c2, c3;   // The code points at p0, p1, p2 & p3.
     UChar32 c;
+
+    if (U_FAILURE(deferredStatus)) {
+        return -1;
+    }
 
     // Prev break at end of string.  return DONE.
     if (prevPos >= fText->length()) {
@@ -3048,6 +3059,10 @@ int32_t RBBILineMonkey::next(int32_t startPos) {
                           //     May point to a combining mark.
     int32_t    tPos;      //  temp value.
     UChar32    c;
+
+    if (U_FAILURE(deferredStatus)) {
+        return -1;
+    }
 
     if (startPos >= fText->length()) {
         return -1;
@@ -3547,7 +3562,6 @@ void RBBITest::TestWordBreaks(void)
 {
 #if !UCONFIG_NO_REGULAR_EXPRESSIONS
 
-    // <data><>\u1d4a\u206e<?>\u0603\U0001d7ff<>\u2019<></data>
     Locale        locale("en");
     UErrorCode    status = U_ZERO_ERROR;
     // BreakIterator  *bi = BreakIterator::createCharacterInstance(locale, status);
@@ -3557,7 +3571,7 @@ void RBBITest::TestWordBreaks(void)
     {
     "\\U000e0032\\u0097\\u0f94\\uc2d8\\u05f4\\U000e0031\\u060d",
     "\\U000e0037\\u4666\\u1202\\u003a\\U000e0031\\u064d\\u0bea\\u591c\\U000e0040\\u003b",
-    "\\u0589\\u3e99\\U0001d7f3\\U000e0074\\u1810\\u200e\\U000e004b\\u179c\\u0027\\U000e0061\\u003a",
+    "\\u0589\\u3e99\\U0001d7f3\\U000e0074\\u1810\\u200e\\U000e004b\\u0027\\U000e0061\\u003a",
     "\\u398c\\U000104a5\\U0001d173\\u102d\\u002e\\uca3b\\u002e\\u002c\\u5622",
     "\\u90ca\\u3588\\u009c\\u0953\\u194b",
     "\\u200e\\U000e0072\\u0a4b\\U000e003f\\ufd2b\\u2027\\u002e\\u002e",
@@ -3576,7 +3590,7 @@ void RBBITest::TestWordBreaks(void)
     "\\U000e0022\\u003a\\u10b3\\u003a\\ua21b\\u002e\\U000e0058\\u1732\\U000e002b",
     "\\U0001d7f2\\U000e007d\\u0004\\u0589",
     "\\u82ab\\u17e8\\u0736\\u2019\\U0001d64d",
-    "\\u0e01\\ub55c\\u0a68\\U000e0037\\u0cd6\\u002c\\ub959",
+    "\\ub55c\\u0a68\\U000e0037\\u0cd6\\u002c\\ub959",
     "\\U000e0065\\u302c\\uc986\\u09ee\\U000e0068",
     "\\u0be8\\u002e\\u0c68\\u066e\\u136d\\ufc99\\u59e7",
     "\\u0233\\U000e0020\\u0a69\\u0d6a",

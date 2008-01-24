@@ -45,8 +45,9 @@ $ExtendNumLet = [\p{Word_Break = ExtendNumLet}];
 #   characters requiring dictionary break.
 
 $dictionary   = [:LineBreak = Complex_Context:];
-$Control        = [\p{Grapheme_Cluster_Break = Control}];   #TODO:  does this need updating?
-$ALetterPlus  = [$ALetter [$dictionary-$Extend-$Control]];
+$Control        = [\p{Grapheme_Cluster_Break = Control}]; 
+$ALetterPlus  = [$ALetter [$dictionary-$Extend-$Control]];   # Note:  default ALetter does not
+                                                             #  include the dictionary characters.
 
 #
 #  Rules 4    Ignore Format and Extend characters, 
