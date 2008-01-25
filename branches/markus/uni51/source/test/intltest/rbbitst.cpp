@@ -1916,14 +1916,12 @@ void RBBITest::TestUnicodeFiles() {
     }
     delete bi;
 
-    #if 0
-    bi =  (RuleBasedBreakIterator *)BreakIterator::createCharInstance(Locale::getDefault(), status);
+    bi =  (RuleBasedBreakIterator *)BreakIterator::createLineInstance(Locale::getDefault(), status);
     TEST_ASSERT_SUCCESS(status);
     if (U_SUCCESS(status)) {
-        runUnicodeTestData("LBTest.txt", bi);
+        runUnicodeTestData("LineBreakTest.txt", bi);
     }
     delete bi;
-    #endif
 
 }
 
