@@ -1,4 +1,4 @@
-# Copyright (c) 2002-2006  International Business Machines Corporation and
+# Copyright (c) 2002-2008  International Business Machines Corporation and
 # others. All Rights Reserved.
 #
 #  file:  line.txt
@@ -229,23 +229,22 @@ $CAN_CM $CM*  $WJcm;
 $LB8NonBreaks $WJcm;
 $CM+          $WJcm;
 
-$WJcm [^$CAN_CM];
+$WJcm $CANT_CM;
 $WJcm $CAN_CM $CM*;
 
 #
-# LB 12  Do not break before or after NBSP and related characters.
-#
-#         (!SP) x GL
-[$LB8NonBreaks-$SP] $CM* $GLcm;
-$CM+               $GLcm;
-
+# LB 12  Do not break after NBSP and related characters.
 #         GL  x
-$GLcm ($LB8Breaks | $SP);
-$GLcm [$LB8NonBreaks-$SP] $CM*;     # Don't let a combining mark go onto $CR, $BK, etc.
-                              #  TODO:  I don't think we need this rule.
-                              #         All but $CM will chain off of preceding rule.
-                              #         $GLcm will pick up the CM case by itself.
-
+#
+$GLcm $CAN_CM $CM*;
+$GLcm $CANT_CM;
+ 
+#
+# LB 12a  Do not break before NBSP and related characters ...
+#            [^SP BA HY] x GL
+#
+[[$LB8NonBreaks] - [$SP $BA $HY]] $CM* $GLcm;
+$CM+ GLcm;
 
 
 
@@ -367,6 +366,8 @@ $IScm $ALcm;
 #
 # Rule 30   Do not break between letters, numbers or ordinary symbols
 #           and opening or closing punctuation
+#            (AL | NU) x OP
+#            CL x (AL | NU)
 #
 ($ALcm | $NUcm) $OPcm;
 $CM+ $OPcm;
@@ -465,12 +466,12 @@ $CM* $WJ      [$LB8NonBreaks-$CM];
      $CANT_CM $CM* $WJ;
 $CM* $CAN_CM  $CM* $WJ;
 
-# LB 12
-#         x GL
+# LB 12a
+#      [^SP BA HY] x GL
 #
-$CM* $GL $CM* [$LB8NonBreaks-$CM-$SP];
+$CM* $GL $CM* [$LB8NonBreaks-[$CM $SP $BA $HY]];
 
-#
+# LB 12
 #     GL  x
 #
 $CANT_CM $CM* $GL;
@@ -589,21 +590,23 @@ $CM* ($NU | $ALPlus) $CM* $CL;
 
 !!safe_reverse;
 
-# LB 7
+# LB 9
 $CM+ [^$CM $BK $CR $LF $NL $ZW $SP];
 $CM+ $SP / .;
 
-# LB 9
+# LB 14
 $SP+ $CM* $OP;
 
-# LB 10
+# LB 15
 $SP+ $CM* $QU;
 
-# LB 11
+# LB 16
 $SP+ $CM* $CL;
+
+# LB 17
 $SP+ $CM* $B2;
 
-# LB 18
+# LB 25
 ($CM* ($IS | $SY))+ $CM* $NU;
 $CL $CM* ($NU | $IS | $SY);
 

@@ -3169,10 +3169,16 @@ int32_t RBBILineMonkey::next(int32_t startPos) {
         }
 
         // LB 12
-        //    (!SP) x  GL
         //    GL  x
-        if ((!fSP->contains(prevChar)) && fGL->contains(thisChar) ||
-             fGL->contains(prevChar)) {
+        if (fGL->contains(prevChar)) {
+            continue;
+        }
+        
+        // LB 12a
+        //    [^SP BA HY] x GL
+        if (!(fSP->contains(prevChar) ||
+              fBA->contains(prevChar) ||
+              fHY->contains(prevChar)     ) && fGL->contains(thisChar)) {
             continue;
         }
 
