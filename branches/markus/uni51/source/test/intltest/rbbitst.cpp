@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT:
- * Copyright (c) 1999-2007, International Business Machines Corporation and
+ * Copyright (c) 1999-2008, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 /************************************************************************
@@ -2528,6 +2528,7 @@ private:
     UnicodeSet  *fOLetterSet;
     UnicodeSet  *fNumericSet;
     UnicodeSet  *fATermSet;
+    UnicodeSet  *fSContinueSet;
     UnicodeSet  *fSTermSet;
     UnicodeSet  *fCloseSet;
     UnicodeSet  *fOtherSet;
@@ -2543,17 +2544,21 @@ RBBISentMonkey::RBBISentMonkey()
 
     fSets            = new UVector(status);
 
-    fSepSet          = new UnicodeSet("[\\p{Sentence_Break = Sep}]",     status);
-    fFormatSet       = new UnicodeSet("[\\p{Sentence_Break = Format}]",  status);
-    fSpSet           = new UnicodeSet("[\\p{Sentence_Break = Sp}]",      status);
-    fLowerSet        = new UnicodeSet("[\\p{Sentence_Break = Lower}]",   status);
-    fUpperSet        = new UnicodeSet("[\\p{Sentence_Break = Upper}]",   status);
-    fOLetterSet      = new UnicodeSet("[\\p{Sentence_Break = OLetter}-[\\uff9e\\uff9f]]", status);
-    fNumericSet      = new UnicodeSet("[\\p{Sentence_Break = Numeric}]", status);
-    fATermSet        = new UnicodeSet("[\\p{Sentence_Break = ATerm}]",   status);
-    fSTermSet        = new UnicodeSet("[\\p{Sentence_Break = STerm}]",   status);
-    fCloseSet        = new UnicodeSet("[\\p{Sentence_Break = Close}]",   status);
-    fExtendSet       = new UnicodeSet("[\\p{Grapheme_Extend}\\uff9e\\uff9f]", status);
+    //  Separator Set Note:  Beginning with Unicode 5.1, CR and LF were removed from the separator
+    //                       set and made into character classes of their own.  For the monkey impl,
+    //                       they remain in SEP, since Sep always appears with CR and LF in the rules.
+    fSepSet          = new UnicodeSet("[\\p{Sentence_Break = Sep} \\u000a \\u000d]",     status);
+    fFormatSet       = new UnicodeSet("[\\p{Sentence_Break = Format}]",    status);
+    fSpSet           = new UnicodeSet("[\\p{Sentence_Break = Sp}]",        status);
+    fLowerSet        = new UnicodeSet("[\\p{Sentence_Break = Lower}]",     status);
+    fUpperSet        = new UnicodeSet("[\\p{Sentence_Break = Upper}]",     status);
+    fOLetterSet      = new UnicodeSet("[\\p{Sentence_Break = OLetter}]",   status);
+    fNumericSet      = new UnicodeSet("[\\p{Sentence_Break = Numeric}]",   status);
+    fATermSet        = new UnicodeSet("[\\p{Sentence_Break = ATerm}]",     status);
+    fSContinueSet    = new UnicodeSet("[\\p{Sentence_Break = SContinue}]", status);
+    fSTermSet        = new UnicodeSet("[\\p{Sentence_Break = STerm}]",     status);
+    fCloseSet        = new UnicodeSet("[\\p{Sentence_Break = Close}]",     status);
+    fExtendSet       = new UnicodeSet("[\\p{Sentence_Break = Extend}]",    status);
     fOtherSet        = new UnicodeSet();
 
     if(U_FAILURE(status)) {
@@ -2570,23 +2575,24 @@ RBBISentMonkey::RBBISentMonkey()
     fOtherSet->removeAll(*fOLetterSet);
     fOtherSet->removeAll(*fNumericSet);
     fOtherSet->removeAll(*fATermSet);
+    fOtherSet->removeAll(*fSContinueSet);
     fOtherSet->removeAll(*fSTermSet);
     fOtherSet->removeAll(*fCloseSet);
     fOtherSet->removeAll(*fExtendSet);
 
-    fSets->addElement(fSepSet,     status);
-    fSets->addElement(fFormatSet,  status);
-
-    fSets->addElement(fSpSet,      status);
-    fSets->addElement(fLowerSet,   status);
-    fSets->addElement(fUpperSet,   status);
-    fSets->addElement(fOLetterSet, status);
-    fSets->addElement(fNumericSet, status);
-    fSets->addElement(fATermSet,   status);
-    fSets->addElement(fSTermSet,   status);
-    fSets->addElement(fCloseSet,   status);
-    fSets->addElement(fOtherSet,   status);
-    fSets->addElement(fExtendSet,  status);
+    fSets->addElement(fSepSet,       status);
+    fSets->addElement(fFormatSet,    status);
+    fSets->addElement(fSpSet,        status);
+    fSets->addElement(fLowerSet,     status);
+    fSets->addElement(fUpperSet,     status);
+    fSets->addElement(fOLetterSet,   status);
+    fSets->addElement(fNumericSet,   status);
+    fSets->addElement(fATermSet,     status);
+    fSets->addElement(fSContinueSet, status);
+    fSets->addElement(fSTermSet,     status);
+    fSets->addElement(fCloseSet,     status);
+    fSets->addElement(fOtherSet,     status);
+    fSets->addElement(fExtendSet,    status);
 
     if (U_FAILURE(status)) {
         deferredStatus = status;
@@ -2735,8 +2741,8 @@ int32_t RBBISentMonkey::next(int32_t prevPos) {
             }
         }
 
-        // Rule 8a   (STerm | ATerm) Close* Sp* x (STerm | ATerm);
-        if (fSTermSet->contains(c2) || fATermSet->contains(c2)) {
+        // Rule 8a   (STerm | ATerm) Close* Sp* x (SContinue | STerm | ATerm);
+        if (fSContinueSet->contains(c2) || fSTermSet->contains(c2) || fATermSet->contains(c2)) {
             p8 = p1;
             while (fSpSet->contains(cAt(p8))) {
                 p8 = moveBack(p8);
@@ -2750,7 +2756,7 @@ int32_t RBBISentMonkey::next(int32_t prevPos) {
             }
         }
 
-        // Rule (9)  (STerm | ATerm) Close*  x  (Close | Sp | Sep)
+        // Rule (9)  (STerm | ATerm) Close*  x  (Close | Sp | Sep | CR | LF)
         int p9 = p1;
         while (fCloseSet->contains(cAt(p9))) {
             p9 = moveBack(p9);
@@ -2762,7 +2768,7 @@ int32_t RBBISentMonkey::next(int32_t prevPos) {
             }
         }
 
-        // Rule (10)  (Sterm | ATerm) Close* Sp*  x  (Sp | Sep)
+        // Rule (10)  (Sterm | ATerm) Close* Sp*  x  (Sp | Sep | CR | LF)
         int p10 = p1;
         while (fSpSet->contains(cAt(p10))) {
             p10 = moveBack(p10);
@@ -2776,8 +2782,11 @@ int32_t RBBISentMonkey::next(int32_t prevPos) {
             }
         }
 
-        // Rule (11)  (STerm | ATerm) Close* Sp*   <break>
+        // Rule (11)  (STerm | ATerm) Close* Sp* (Sep | CR | LF)?  <break>
         int p11 = p1;
+        if (fSepSet->contains(cAt(p11))) {
+            p11 = moveBack(p11);
+        }
         while (fSpSet->contains(cAt(p11))) {
             p11 = moveBack(p11);
         }
@@ -2805,6 +2814,7 @@ RBBISentMonkey::~RBBISentMonkey() {
     delete fOLetterSet;
     delete fNumericSet;
     delete fATermSet;
+    delete fSContinueSet;
     delete fSTermSet;
     delete fCloseSet;
     delete fOtherSet;
