@@ -1867,7 +1867,7 @@ inline uint32_t ucol_IGetPrevCE(const UCollator *coll, collIterate *data,
     }
     else {
         UChar ch = 0;
-        UChar *initialPos = data->pos;
+        UChar *initialPos = data->flags & UCOL_ITER_INNORMBUF? NULL : data->pos;
         /*
         Loop handles case when incremental normalize switches to or from the
         side buffer / original string, and we need to start again to get the
@@ -2004,11 +2004,12 @@ inline uint32_t ucol_IGetPrevCE(const UCollator *coll, collIterate *data,
                 }
             }
         }
+
         if(result == UCOL_NOT_FOUND) {
             result = getPrevImplicit(ch, data);
         }
 
-        if ((data->flags & UCOL_ITER_INNORMBUF) == 0 && initialPos != data->pos + 1) {
+        if (initialPos != NULL && initialPos != data->pos + 1) {
             data->returnPos = initialPos;
         }
     }
