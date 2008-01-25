@@ -144,6 +144,10 @@ Unicode .c source files built to "\svn\icuproj\icu\uni51\source\data\out\tmp"
 - copy the .c source files to C:\svn\icuproj\icu\uni51\source\common
   and rebuild the common library
 
+*** Break iterators
+
+* Update break iterator rules to new UAX versions and new property values
+
 *** UCA
 
 * update FractionalUCA.txt and UCARules.txt with new canonical closure

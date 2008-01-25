@@ -1151,7 +1151,7 @@ void UnicodeSetTest::TestCloseOver() {
         // selector, input, output
         CASE,
         "[aq\\u00DF{Bc}{bC}{Fi}]",
-        "[aAqQ\\u00DF\\uFB01{ss}{bc}{fi}]",
+        "[aAqQ\\u00DF\\u1E9E\\uFB01{ss}{bc}{fi}]",  // U+1E9E LATIN CAPITAL LETTER SHARP S is new in Unicode 5.1
 
         CASE,
         "[\\u01F1]", // 'DZ'
