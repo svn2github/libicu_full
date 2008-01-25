@@ -1922,7 +1922,6 @@ void RBBITest::TestUnicodeFiles() {
         runUnicodeTestData("LineBreakTest.txt", bi);
     }
     delete bi;
-
 }
 
 
