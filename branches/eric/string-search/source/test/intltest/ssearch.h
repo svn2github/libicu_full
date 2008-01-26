@@ -1,6 +1,6 @@
 /*
  **********************************************************************
- *   Copyright (C) 2005-2007, International Business Machines
+ *   Copyright (C) 2005-2008, International Business Machines
  *   Corporation and others.  All Rights Reserved.
  **********************************************************************
  */
@@ -28,10 +28,10 @@ public:
 
     virtual void searchTest();
     virtual void searchTime();
+    virtual void offsetTest();
 
 private:
     virtual const char *getPath(char buffer[2048], const char *filename);
-
 };
 
 #endif

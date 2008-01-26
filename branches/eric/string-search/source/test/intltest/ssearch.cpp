@@ -1,6 +1,6 @@
 /*
  **********************************************************************
- *   Copyright (C) 2005-2006, International Business Machines
+ *   Copyright (C) 2005-2008, International Business Machines
  *   Corporation and others.  All Rights Reserved.
  **********************************************************************
  */
@@ -10,6 +10,11 @@
 #include "unicode/unistr.h"
 #include "unicode/putil.h"
 #include "unicode/usearch.h"
+
+#include "cmemory.h"
+#include "unicode/coll.h"
+#include "unicode/tblcoll.h"
+#include "unicode/coleitr.h"
 
 #include "intltest.h"
 #include "ssearch.h"
@@ -32,6 +37,7 @@ char testId[100];
     errln("Failure in file %s, line %d, test ID \"%s\", status = \"%s\"", \
           __FILE__, __LINE__, testId, u_errorName(errcode));}}
 
+#define ARRAY_SIZE(array) (sizeof array / sizeof array[0])
 
 //---------------------------------------------------------------------------
 //
@@ -42,12 +48,9 @@ SSearchTest::SSearchTest()
 {
 }
 
-
 SSearchTest::~SSearchTest()
 {
 }
-
-
 
 void SSearchTest::runIndexedTest( int32_t index, UBool exec, const char* &name, char* /*par*/ )
 {
@@ -59,6 +62,10 @@ void SSearchTest::runIndexedTest( int32_t index, UBool exec, const char* &name, 
             
         case 1: name = "searchTime";
             if (exec) searchTime();
+            break;
+
+        case 2: name = "offsetTest";
+            if (exec) offsetTest();
             break;
 
         default: name = "";
@@ -448,9 +455,207 @@ const char *cPattern = "maketh houndes ete hem";
          //pm = strstr(longishText+j, cPattern);
          //j = (j + i)%5;
     }
+
     printf("%d\n", pm-longishText, j);
     usearch_close(uss);
     ucol_close(collator);
+}
+
+struct Order
+{
+    int32_t order;
+    int32_t offset;
+};
+
+class OrderList
+{
+public:
+    OrderList();
+    ~OrderList();
+
+    int32_t size(void);
+    void add(int32_t order, int32_t offset);
+    const Order *get(int32_t index);
+    void reverse(void);
+    UBool compare(const OrderList &other);
+
+private:
+    Order *list;
+    int32_t listMax;
+    int32_t listSize;
+};
+
+OrderList::OrderList()
+  : list(NULL), listSize(0), listMax(16)
+{
+    list = new Order[listMax];
+}
+
+OrderList::~OrderList()
+{
+    delete[] list;
+}
+
+void OrderList::add(int32_t order, int32_t offset)
+{
+    if (listSize >= listMax) {
+        listMax *= 2;
+
+        Order *newList = new Order[listMax];
+
+        uprv_memcpy(newList, list, listSize * sizeof(Order));
+        delete[] list;
+        list = newList;
+    }
+
+    list[listSize].order  = order;
+    list[listSize].offset = offset;
+
+    listSize += 1;
+}
+
+const Order *OrderList::get(int32_t index)
+{
+    if (index >= listSize) {
+        return NULL;
+    }
+
+    return &list[index];
+}
+
+int32_t OrderList::size()
+{
+    return listSize;
+}
+
+void OrderList::reverse()
+{
+    for(int32_t f = 0, b = listSize - 1; f < b; f += 1, b -= 1) {
+        Order swap = list[b];
+
+        list[b] = list[f];
+        list[f] = swap;
+    }
+}
+
+UBool OrderList::compare(const OrderList &other)
+{
+    if (listSize != other.listSize) {
+        return FALSE;
+    }
+
+    for(int32_t i = 0; i < listSize; i += 1) {
+        if (list[i].order  != other.list[i].order ||
+            list[i].offset != other.list[i].offset) {
+                return FALSE;
+        }
+    }
+
+    return TRUE;
+}
+
+static char *printOffsets(char *buffer, OrderList &list)
+{
+    int32_t size = list.size();
+    char *s = buffer;
+
+    for(int32_t i = 0; i < size; i += 1) {
+        const Order *order = list.get(i);
+
+        if (i != 0) {
+            s += sprintf(s, ", ");
+        }
+
+        s += sprintf(s, "%d", order->offset);
+    }
+
+    return buffer;
+}
+
+static char *printOrders(char *buffer, OrderList &list)
+{
+    int32_t size = list.size();
+    char *s = buffer;
+
+    for(int32_t i = 0; i < size; i += 1) {
+        const Order *order = list.get(i);
+
+        if (i != 0) {
+            s += sprintf(s, ", ");
+        }
+
+        s += sprintf(s, "%8.8X", order->order);
+    }
+
+    return buffer;
+}
+
+void SSearchTest::offsetTest()
+{
+    UnicodeString test[] = {
+        "abc",
+        "ab\\u0300c",
+        "ab\\u0300\\u0323c",
+        " \\uD800\\uDC00\\uDC00",
+        "a\\uD800\\uDC00\\uDC00",
+        "\\u0301A\\u0301\\u0301",
+        "abcd\\r\\u0301",
+        "p\\u00EAche",
+        "pe\\u0302che",
+    };
+
+    int32_t testCount = ARRAY_SIZE(test);
+    UErrorCode status = U_ZERO_ERROR;
+    RuleBasedCollator *col = (RuleBasedCollator *) Collator::createInstance(Locale::getEnglish(), status);
+    char buffer[256];  // A bit of a hack... just happens to be long enough for all the test cases...
+                       // We could allocate one that's the right size by (CE_count * 10) + 2
+                       // 10 chars is enough room for 8 hex digits plus ", ". 2 extra chars for "[" and "]"
+
+    for(int32_t i = 0; i < testCount; i += 1) {
+        UnicodeString ts = test[i].unescape();
+        CollationElementIterator *iter = col->createCollationElementIterator(ts);
+        OrderList forwardList;
+        OrderList backwardList;
+        int32_t order, offset;
+
+        do {
+            offset = iter->getOffset();
+            order  = iter->next(status);
+
+            forwardList.add(order, offset);
+        } while (order != CollationElementIterator::NULLORDER);
+
+        iter->reset();
+        iter->setOffset(ts.length(), status);
+
+        backwardList.add(CollationElementIterator::NULLORDER, iter->getOffset());
+
+        do {
+            order  = iter->previous(status);
+            offset = iter->getOffset();
+
+            if (order == CollationElementIterator::NULLORDER) {
+                break;
+            }
+
+            backwardList.add(order, offset);
+        } while (TRUE);
+
+        backwardList.reverse();
+
+        if (forwardList.compare(backwardList)) {
+            infoln("Works with \"%S\"", test[i].getTerminatedBuffer());
+        } else {
+            errln("Fails with \"%S\"", test[i].getTerminatedBuffer());
+            infoln("Forward offsets:  [%s]", printOffsets(buffer, forwardList));
+            infoln("Backward offsets: [%s]", printOffsets(buffer, backwardList));
+
+            infoln("Forward CEs:  [%s]", printOrders(buffer, forwardList));
+            infoln("Backward CEs: [%s]", printOrders(buffer, backwardList));
+
+            infoln();
+        }
+    }
 }
         
         
