@@ -51,28 +51,28 @@ public:
      * @param date  The from date to be set in date interval.
      * @draft ICU 4.0
      */
-    void setFromDate(const UDate date);
+    inline void setFromDate(const UDate date) { fromDate = date; }
 
     /* 
      * Set the to date.
      * @param date  The to date to be set in date interval.
      * @draft ICU 4.0
      */
-    void setToDate(const UDate date);
+    inline void setToDate(const UDate date) { toDate = date; }
 
     /* 
      * Get the from date.
      * @return  the from date in dateInterval.
      * @draft ICU 4.0
      */
-    UDate getFromDate() const;
+    inline UDate getFromDate() const { return fromDate; }
 
     /* 
      * Get the to date.
      * @return  the to date in dateInterval.
      * @draft ICU 4.0
      */
-    UDate getToDate() const;
+    inline UDate getToDate() const { return toDate; }
 
 
     /**
@@ -101,6 +101,36 @@ public:
      */
     virtual UClassID getDynamicClassID(void) const;
 
+    
+    /**
+     * Copy constructor.
+     * @draft ICU 4.0
+     */
+    DateInterval(const DateInterval& other);
+
+    /**
+     * Default assignment operator
+     * @draft ICU 4.0
+     */
+    DateInterval& operator=(const DateInterval&);
+
+    /**
+     * Equality operator.
+     * @return TRUE if the two DateIntervals are the same
+     * @draft ICU 4.0
+     */
+    inline UBool operator==(const DateInterval& other) { 
+        return ( fromDate == other.fromDate && toDate == other.toDate );
+    }
+
+    /**
+     * Non-equality operator
+     * @return TRUE if the two DateIntervals are not the same
+     * @draft ICU 4.0
+     */
+    inline UBool operator!=(const DateInterval& other) { 
+        return ( !operator==(other) );
+    }
 
 private:
     UDate fromDate;
