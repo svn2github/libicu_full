@@ -38,7 +38,7 @@ public:
      * @param toDate    The to date in date interval.
      * @draft ICU 4.0
      */
-    DateInterval(UDate fromDate, UDate toDate);
+    DateInterval(const UDate fromDate, const UDate toDate);
 
     /**
      * destructor
@@ -51,28 +51,56 @@ public:
      * @param date  The from date to be set in date interval.
      * @draft ICU 4.0
      */
-    void setFromDate(UDate date);
+    void setFromDate(const UDate date);
 
     /* 
      * Set the to date.
      * @param date  The to date to be set in date interval.
      * @draft ICU 4.0
      */
-    void setToDate(UDate date);
+    void setToDate(const UDate date);
 
     /* 
      * Get the from date.
      * @return  the from date in dateInterval.
      * @draft ICU 4.0
      */
-    UDate getFromDate();
+    UDate getFromDate() const;
 
     /* 
      * Get the to date.
      * @return  the to date in dateInterval.
      * @draft ICU 4.0
      */
-    UDate getToDate();
+    UDate getToDate() const;
+
+
+    /**
+     * Return the class ID for this class. This is useful only for comparing to
+     * a return value from getDynamicClassID(). For example:
+     * <pre>
+     * .   Base* polymorphic_pointer = createPolymorphicObject();
+     * .   if (polymorphic_pointer->getDynamicClassID() ==
+     * .       erived::getStaticClassID()) ...
+     * </pre>
+     * @return          The class ID for all objects of this class.
+     * @draft ICU 4.0
+     */
+    static UClassID U_EXPORT2 getStaticClassID(void);
+
+    /**
+     * Returns a unique class ID POLYMORPHICALLY. Pure virtual override. This
+     * method is to implement a simple version of RTTI, since not all C++
+     * compilers support genuine RTTI. Polymorphic operator==() and clone()
+     * methods call this method.
+     *
+     * @return          The class ID for this object. All objects of a
+     *                  given class have the same class ID.  Objects of
+     *                  other classes have different class IDs.
+     * @draft ICU 4.0
+     */
+    virtual UClassID getDynamicClassID(void) const;
+
 
 private:
     UDate fromDate;
