@@ -4159,7 +4159,7 @@ void RBBITest::RunMonkey(BreakIterator *bi, RBBIMonkeyKind &mk, const char *name
         }
 
         // Find the break positions using the preceding() function.
-        memset(precedingBreaks, 0, sizeof(followingBreaks));
+        memset(precedingBreaks, 0, sizeof(precedingBreaks));
         lastBreakPos = testText.length();
         precedingBreaks[testText.length()] = 1;
         for (i=testText.length(); i>0; i--) {
@@ -4172,9 +4172,13 @@ void RBBITest::RunMonkey(BreakIterator *bi, RBBIMonkeyKind &mk, const char *name
                     "Out of range value returned by BreakIterator::preceding().\n"
                     "index=%d;  prev returned %d; lastBreak=%d" ,
                     name,  i, breakPos, lastBreakPos);
-                precedingBreaks[i] = 2;   // Forces an error.
+                if (breakPos >= 0 && breakPos < sizeof(precedingBreaks)) {
+                    precedingBreaks[i] = 2;   // Forces an error.
+                }
             } else {
-                precedingBreaks[breakPos] = 1;
+                if (breakPos >= 0) {
+                    precedingBreaks[breakPos] = 1;
+                } 
                 lastBreakPos = breakPos;
             }
         }
