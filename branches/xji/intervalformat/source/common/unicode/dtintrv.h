@@ -46,28 +46,28 @@ public:
      */
     ~DateInterval();
  
-    /* 
+    /** 
      * Set the from date.
      * @param date  The from date to be set in date interval.
      * @draft ICU 4.0
      */
     inline void setFromDate(const UDate date) { fromDate = date; }
 
-    /* 
+    /**
      * Set the to date.
      * @param date  The to date to be set in date interval.
      * @draft ICU 4.0
      */
     inline void setToDate(const UDate date) { toDate = date; }
 
-    /* 
+    /** 
      * Get the from date.
      * @return  the from date in dateInterval.
      * @draft ICU 4.0
      */
     inline UDate getFromDate() const { return fromDate; }
 
-    /* 
+    /** 
      * Get the to date.
      * @return  the to date in dateInterval.
      * @draft ICU 4.0
@@ -119,7 +119,7 @@ public:
      * @return TRUE if the two DateIntervals are the same
      * @draft ICU 4.0
      */
-    inline UBool operator==(const DateInterval& other) { 
+    inline UBool operator==(const DateInterval& other) const { 
         return ( fromDate == other.fromDate && toDate == other.toDate );
     }
 
@@ -128,8 +128,19 @@ public:
      * @return TRUE if the two DateIntervals are not the same
      * @draft ICU 4.0
      */
-    inline UBool operator!=(const DateInterval& other) { 
+    inline UBool operator!=(const DateInterval& other) const { 
         return ( !operator==(other) );
+    }
+
+
+    /**
+     * clone this object. 
+     * The caller owns the result and should delete it when done.
+     * @return a cloned DateInterval
+     * @draft ICU 4.0
+     */
+    inline DateInterval* clone() const {
+        return new DateInterval(*this);
     }
 
 private:
