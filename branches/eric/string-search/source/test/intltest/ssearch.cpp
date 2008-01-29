@@ -593,11 +593,19 @@ static char *printOrders(char *buffer, OrderList &list)
 void SSearchTest::offsetTest()
 {
     UnicodeString test[] = {
+        "A\\u0300\\u0323B",
+        "A\\u0301\\u0323B",
+        "A\\u0302\\u0301\\u0323B",
         "abc",
         "ab\\u0300c",
         "ab\\u0300\\u0323c",
         " \\uD800\\uDC00\\uDC00",
         "a\\uD800\\uDC00\\uDC00",
+        "A\\u0301\\u0301",
+        "A\\u0301\\u0323",
+        "A\\u0301\\u0323B",
+        "B\\u0301\\u0323C",
+        "A\\u0300\\u0323B",
         "\\u0301A\\u0301\\u0301",
         "abcd\\r\\u0301",
         "p\\u00EAche",
@@ -644,7 +652,14 @@ void SSearchTest::offsetTest()
         backwardList.reverse();
 
         if (forwardList.compare(backwardList)) {
-            infoln("Works with \"%S\"", test[i].getTerminatedBuffer());
+            logln("Works with \"%S\"", test[i].getTerminatedBuffer());
+            logln("Forward offsets:  [%s]", printOffsets(buffer, forwardList));
+//          logln("Backward offsets: [%s]", printOffsets(buffer, backwardList));
+
+            logln("Forward CEs:  [%s]", printOrders(buffer, forwardList));
+//          logln("Backward CEs: [%s]", printOrders(buffer, backwardList));
+
+            logln();
         } else {
             errln("Fails with \"%S\"", test[i].getTerminatedBuffer());
             infoln("Forward offsets:  [%s]", printOffsets(buffer, forwardList));
