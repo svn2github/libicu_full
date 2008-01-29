@@ -2009,7 +2009,7 @@ inline uint32_t ucol_IGetPrevCE(const UCollator *coll, collIterate *data,
             result = getPrevImplicit(ch, data);
         }
 
-        if (initialPos != NULL && initialPos != data->pos + 1) {
+        if (initialPos != NULL && (data->CEpos != data->toReturn || initialPos != data->pos + 1)) {
             data->returnPos = initialPos;
         }
     }
