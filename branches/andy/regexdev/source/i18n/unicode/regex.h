@@ -1036,6 +1036,7 @@ public:
 
   /**
     *  Set the amount of heap storage avaliable for use by the match backtracking stack.
+    *  The matcher is also reset, discarding any results from previous matches.
     *  <p>
     *  ICU uses a backtracking regular expression engine, with the backtrack stack
     *  maintained on the heap.  This function sets the limit to the amount of memory
@@ -1125,10 +1126,11 @@ public:
 private:
     // Constructors and other object boilerplate are private.
     // Instances of RegexMatcher can not be assigned, copied, cloned, etc.
-    RegexMatcher(); // default constructor not implemented
+    RegexMatcher();                  // default constructor not implemented
     RegexMatcher(const RegexPattern *pat);
     RegexMatcher(const RegexMatcher &other);
     RegexMatcher &operator =(const RegexMatcher &rhs);
+    void init(UErrorCode &status);              // Common initialization
     friend class RegexPattern;
     friend class RegexCImpl;
 public:

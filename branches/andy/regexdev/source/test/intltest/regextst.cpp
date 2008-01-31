@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT:
- * Copyright (c) 2002-2007, International Business Machines Corporation and
+ * Copyright (c) 2002-2008, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 
@@ -838,17 +838,48 @@ void RegexTest::API_Match() {
 #endif
 
     //
-    //  Time Outs
+    //  Time Outs.  
+    //       Note:  These tests will need to be changed when the regexp engine is
+    //              able to detect and cut short the exponential time behavior on
+    //              this type of match.
     //
     {
         UErrorCode status = U_ZERO_ERROR;
-        UnicodeString testString("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+        UnicodeString testString("aaaaaaaaaaaaaaaaaaaaa");
         RegexMatcher matcher("(a+)+b", testString, 0, status);
         REGEX_CHECK_STATUS;
-        matcher.setTimeLimit(2000, status);
+        REGEX_ASSERT(matcher.getTimeLimit() == -1);
+        matcher.setTimeLimit(100, status);
+        REGEX_ASSERT(matcher.getTimeLimit() == 100);
+        REGEX_ASSERT(matcher.lookingAt(status) == FALSE);
+        REGEX_ASSERT(status == U_REGEX_TIME_OUT);
+    }
+    {
+        UErrorCode status = U_ZERO_ERROR;
+        UnicodeString testString("aaaaaaaaaaaaaaaaaa");
+        RegexMatcher matcher("(a+)+b", testString, 0, status);
+        REGEX_CHECK_STATUS;
+        matcher.setTimeLimit(100, status);
         REGEX_ASSERT(matcher.lookingAt(status) == FALSE);
         REGEX_CHECK_STATUS;
     }
+    
+    //
+    //  Stack Limits
+    //
+    {
+        UErrorCode status = U_ZERO_ERROR;
+        UnicodeString testString(1000000, 0x41, 1000000);  // Length 1,000,000, filled with 'A'
+        
+        // Adding the capturing parentheses to the pattern "(A)+A$" inhibits optimizations
+        //   of the '+', and makes the stack frames larger.
+        RegexMatcher matcher("(A)+A$", testString, 0, status);
+        REGEX_CHECK_STATUS;
+        matcher.setStackLimit(1000000, status);
+        REGEX_ASSERT(matcher.lookingAt(status) == TRUE);
+        REGEX_CHECK_STATUS;
+    }
+
 }
 
 
