@@ -874,10 +874,23 @@ void RegexTest::API_Match() {
         // Adding the capturing parentheses to the pattern "(A)+A$" inhibits optimizations
         //   of the '+', and makes the stack frames larger.
         RegexMatcher matcher("(A)+A$", testString, 0, status);
+        
+        // With the default stack, this match should fail to run
+        REGEX_ASSERT(matcher.lookingAt(status) == FALSE);
+        REGEX_ASSERT(status == U_BUFFER_OVERFLOW_ERROR);
+        
+        // With unlimited stack, it should run
+        status = U_ZERO_ERROR;
+        matcher.setStackLimit(0, status);
         REGEX_CHECK_STATUS;
-        matcher.setStackLimit(1000000, status);
         REGEX_ASSERT(matcher.lookingAt(status) == TRUE);
         REGEX_CHECK_STATUS;
+
+        // With a limited stack, it the match should fail
+        status = U_ZERO_ERROR;
+        matcher.setStackLimit(10000, status);
+        REGEX_ASSERT(matcher.lookingAt(status) == FALSE);
+        REGEX_ASSERT(status == U_BUFFER_OVERFLOW_ERROR);
     }
 
 }

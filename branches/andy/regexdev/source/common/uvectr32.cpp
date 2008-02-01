@@ -223,6 +223,24 @@ void UVector32::setMaxCapacity(int32_t limit) {
     if (maxCapacity < 0) {
         maxCapacity = 0;
     }
+    if (capacity <= maxCapacity || maxCapacity == 0) {
+        // Current capacity is within the new limit.
+        return;
+    }
+    
+    // New maximum capacity is smaller than the current size.
+    // Realloc the storage to the new, smaller size.
+    int32_t* newElems = (int32_t *)uprv_realloc(elements, sizeof(int32_t)*maxCapacity);
+    if (newElems == NULL) {
+        // Realloc to smaller failed.
+        //   Just keep what we had.  No need to call it a failure.
+        return;
+    }
+    elements = newElems;
+    capacity = maxCapacity;
+    if (count > capacity) {
+        count = capacity;
+    }
 }
 
 /**

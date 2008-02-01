@@ -54,19 +54,8 @@ RegexMatcher::RegexMatcher(const RegexPattern *pat)  {
         fDeferredStatus = U_ILLEGAL_ARGUMENT_ERROR;
         return;
     }
-    if (U_FAILURE(pat->fDeferredStatus)) {
-        fDeferredStatus = pat->fDeferredStatus;
-        return;
-    }
-    if (pat->fDataSize > (int32_t)(sizeof(fSmallData)/sizeof(int32_t))) {
-        fData = (int32_t *)uprv_malloc(pat->fDataSize * sizeof(int32_t)); 
-        if (fData == NULL) {
-            fDeferredStatus = U_MEMORY_ALLOCATION_ERROR;
-            return;
-        }
-    }
-    setStackLimit(DEFAULT_BACKTRACK_STACK_CAPACITY, fDeferredStatus);
-    reset(RegexStaticSets::gStaticSets->fEmptyString);
+    fPattern = pat;
+    init2(RegexStaticSets::gStaticSets->fEmptyString, fDeferredStatus);
 }
 
 
@@ -80,55 +69,22 @@ RegexMatcher::RegexMatcher(const UnicodeString &regexp, const UnicodeString &inp
     UParseError    pe;
     fPatternOwned      = RegexPattern::compile(regexp, flags, pe, status);
     fPattern           = fPatternOwned;
-    if (U_FAILURE(status)) {
-        fDeferredStatus = status;
-        return;
-    }
-    
-    if (fPattern->fDataSize > (int32_t)(sizeof(fSmallData)/sizeof(int32_t))) {
-        fData = (int32_t *)uprv_malloc(fPattern->fDataSize * sizeof(int32_t)); 
-        if (fData == NULL) {
-            status = fDeferredStatus = U_MEMORY_ALLOCATION_ERROR;
-            return;
-        }
-    }
-
-    setStackLimit(DEFAULT_BACKTRACK_STACK_CAPACITY, status);
-    if (U_FAILURE(status)) {
-        fDeferredStatus = status;
-        return;
-    }
-    reset(input);
+    init2(input, status);
 }
 
 
 RegexMatcher::RegexMatcher(const UnicodeString &regexp, 
                            uint32_t flags, UErrorCode &status) {
-    UParseError    pe;
-    fTraceDebug        = FALSE;
-    fDeferredStatus    = U_ZERO_ERROR;
-    fStack             = new UVector32(status); 
-    fData              = fSmallData;
-    fPatternOwned      = RegexPattern::compile(regexp, flags, pe, status);
-    fPattern           = fPatternOwned;
-    fWordBreakItr      = NULL;
-    fTransparentBounds = FALSE;
-    fAnchoringBounds   = TRUE;
-    fTimeLimit         = -1;
+    init(status);
     if (U_FAILURE(status)) {
         return;
     }
-
-    if (fPattern->fDataSize > (int32_t)(sizeof(fSmallData)/sizeof(int32_t))) {
-        fData = (int32_t *)uprv_malloc(fPattern->fDataSize * sizeof(int32_t)); 
-    }
-    if (fStack == NULL || fData == NULL) {
-        status = U_MEMORY_ALLOCATION_ERROR;
-    } else {
-        fStack->setMaxCapacity(DEFAULT_BACKTRACK_STACK_CAPACITY);
-    }
-    reset(RegexStaticSets::gStaticSets->fEmptyString);
+    UParseError    pe;
+    fPatternOwned      = RegexPattern::compile(regexp, flags, pe, status);
+    fPattern           = fPatternOwned;
+    init2(RegexStaticSets::gStaticSets->fEmptyString, status);
 }
+
 
 
 
@@ -150,7 +106,10 @@ RegexMatcher::~RegexMatcher() {
 
 //
 //   init()   common initialization for use by all constructors.
-//            Initialize all fields, get the object into a sane state.
+//            Initialize all fields, get the object into a consistent state.
+//            This must be done even when the initial status shows an error,
+//            so that the object is initialized sufficiently well for the destructor
+//            to run safely.
 //
 void RegexMatcher::init(UErrorCode &status) {
     fPattern           = NULL;
@@ -192,6 +151,33 @@ void RegexMatcher::init(UErrorCode &status) {
         fDeferredStatus = status;
     }
 }
+
+//
+//  init2()   Common initialization for use by RegexMatcher constructors, part 2.
+//            This handles the common setup to be done after the Pattern is available.
+//
+void RegexMatcher::init2(const UnicodeString &input, UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        fDeferredStatus = status;
+        return;
+    }
+
+    if (fPattern->fDataSize > (int32_t)(sizeof(fSmallData)/sizeof(int32_t))) {
+        fData = (int32_t *)uprv_malloc(fPattern->fDataSize * sizeof(int32_t)); 
+        if (fData == NULL) {
+            status = fDeferredStatus = U_MEMORY_ALLOCATION_ERROR;
+            return;
+        }
+    }
+
+    reset(input);
+    setStackLimit(DEFAULT_BACKTRACK_STACK_CAPACITY, status);
+    if (U_FAILURE(status)) {
+        fDeferredStatus = status;
+        return;
+    }
+}
+
 
 static const UChar BACKSLASH  = 0x5c;
 static const UChar DOLLARSIGN = 0x24;
@@ -1178,18 +1164,18 @@ void RegexMatcher::setStackLimit(int32_t limit, UErrorCode &status) {
         return;
     }
     
-    // Reset the matcher.  This is in case there is a current match whose final
-    //    stack frame (containing the match results) would be lost by limiting to
-    //    a smaller stack size.
+    // Reset the matcher.  This is needed here in case there is a current match
+    //    whose final stack frame (containing the match results, pointed to by fFrame) 
+    //    would be lost by resizing to a smaller stack size.
     reset();
     
     if (limit == 0) {
         // Unlimited stack expansion
-        fStack->setMaxCapacity(-1);
+        fStack->setMaxCapacity(0);
     } else {
         // Change unitsof the limit  from bytes to ints, and bump the size up to be big enough to 
         //   hold at least one stack frame for the pattern, if it isn't there already.
-        int32_t adjustedLimit = fStackLimit / sizeof(int32_t);
+        int32_t adjustedLimit = limit / sizeof(int32_t);
         if (adjustedLimit < fPattern->fFrameSize) {
             adjustedLimit = fPattern->fFrameSize;
         }

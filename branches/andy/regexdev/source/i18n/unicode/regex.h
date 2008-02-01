@@ -1048,8 +1048,8 @@ public:
     *  by default.
     *  <p>
     *  @param limit  The maximum size, in bytes, of the matching backtrack stack.
-    *                A value of -1 means no limit.
-    *                The limit must be greater than zero, or -1.
+    *                A value of zero means no limit.
+    *                The limit must be greater or equal to zero.
     *
     *  @param status   A reference to a UErrorCode to receive any errors.
     *
@@ -1130,7 +1130,9 @@ private:
     RegexMatcher(const RegexPattern *pat);
     RegexMatcher(const RegexMatcher &other);
     RegexMatcher &operator =(const RegexMatcher &rhs);
-    void init(UErrorCode &status);              // Common initialization
+    void init(UErrorCode &status);                      // Common initialization
+    void init2(const UnicodeString &s, UErrorCode &e);  // Common initialization, part 2.
+
     friend class RegexPattern;
     friend class RegexCImpl;
 public:
