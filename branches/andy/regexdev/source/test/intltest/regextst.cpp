@@ -2399,17 +2399,82 @@ struct callBackContext {
     int32_t          maxCalls;
     int32_t          numCalls;
     int32_t          lastSteps;
+    void reset(int32_t max) {maxCalls=max; numCalls=0; lastSteps=0;};
 };
 
-UBool U_EXPORT2 testCallBackFn(void *context, int32_t steps) {
+UBool U_EXPORT2 testCallBackFn(const void *context, int32_t steps) {
     callBackContext  *info = (callBackContext *)context;
-    if (info->lastSteps != steps) {
+    if (info->lastSteps+1 != steps) {
         info->test->errln("incorrect steps in callback.  Expected %d, got %d\n", info->lastSteps+1, steps);
     }
-    return  (++info->numCalls < info->maxCalls);
+    info->lastSteps = steps;
+    info->numCalls++;
+    return (info->numCalls < info->maxCalls);
 }
 
 void RegexTest::Callbacks() {
+   {
+        // Getter returns NULLs if no callback has been set
+        
+        //   The variables that the getter will fill in.
+        //   Init to non-null values so that the action of the getter can be seen.
+        const void          *returnedContext = &returnedContext;
+        URegexMatchCallback returnedFn = &testCallBackFn;
+        
+        UErrorCode status = U_ZERO_ERROR;
+        RegexMatcher matcher("x", 0, status);
+        REGEX_CHECK_STATUS;
+        matcher.getMatchCallback(returnedFn, returnedContext, status);
+        REGEX_CHECK_STATUS;
+        REGEX_ASSERT(returnedFn == NULL);
+        REGEX_ASSERT(returnedContext == NULL);
+    }
+    
+   {
+        // Set and Get work
+        callBackContext cbInfo = {this, 0, 0, 0};
+        const void          *returnedContext;
+        URegexMatchCallback returnedFn;
+        UErrorCode status = U_ZERO_ERROR;
+        RegexMatcher matcher("((.)+\\2)+x", 0, status);  // A pattern that can run long.
+        REGEX_CHECK_STATUS;
+        matcher.setMatchCallback(testCallBackFn, &cbInfo, status);
+        REGEX_CHECK_STATUS;
+        matcher.getMatchCallback(returnedFn, returnedContext, status);
+        REGEX_CHECK_STATUS;
+        REGEX_ASSERT(returnedFn == &testCallBackFn);
+        REGEX_ASSERT(returnedContext == &cbInfo);
+        
+        // A short-running match shouldn't invoke the callback
+        status = U_ZERO_ERROR;
+        cbInfo.reset(1);
+        UnicodeString s = "xxx";
+        matcher.reset(s);
+        REGEX_ASSERT(matcher.matches(status));
+        REGEX_CHECK_STATUS;
+        REGEX_ASSERT(cbInfo.numCalls == 0);
+        
+        // A medium-length match that runs long enough to invoke the
+        //   callback, but not so long that the callback aborts it.
+        status = U_ZERO_ERROR;
+        cbInfo.reset(4);
+        s = "aaaaaaaaaaaaaaaaaaab";
+        matcher.reset(s);
+        REGEX_ASSERT(matcher.matches(status)==FALSE);
+        REGEX_CHECK_STATUS;
+        REGEX_ASSERT(cbInfo.numCalls > 0);
+        
+        // A longer running match that the callback function will abort.
+        status = U_ZERO_ERROR;
+        cbInfo.reset(4);
+        s = "aaaaaaaaaaaaaaaaaaaaaaab";
+        matcher.reset(s);
+        REGEX_ASSERT(matcher.matches(status)==FALSE);
+        REGEX_ASSERT(status == U_REGEX_STOPPED_BY_CALLER);
+        REGEX_ASSERT(cbInfo.numCalls == 4);
+    }
+ 
+
 }
 
 #endif  /* !UCONFIG_NO_REGULAR_EXPRESSIONS  */

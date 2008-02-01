@@ -141,6 +141,7 @@ void RegexMatcher::init(UErrorCode &status) {
     fTickCounter       = 0;
     fStackLimit        = DEFAULT_BACKTRACK_STACK_CAPACITY;
     fCallbackFn        = NULL;
+    fCallbackContext   = NULL;
     fTraceDebug        = FALSE;
     fDeferredStatus    = status;
     fData              = fSmallData;
@@ -904,6 +905,7 @@ void RegexMatcher::resetPreserveRegion() {
     fHitEnd         = FALSE;
     fRequireEnd     = FALSE;
     fTime           = 0;
+    fTickCounter    = 10000;    // TODO: put correct value in a constant somewhere.
     resetStack();
 }
 
@@ -1348,12 +1350,24 @@ UBool RegexMatcher::isUWordBoundary(int32_t pos) {
 
 //--------------------------------------------------------------------------------
 //
-//   IncrementTime
+//   IncrementTime     This function is called once each 10000 state saves.
+//                     Increment the "time" counter, and call the user callback
+//                     function if there is one installed.
+//
+//                     If the match operation needs to be aborted, either for a time-out
+//                     or because the user callback asked for it, just set an error status.
+//                     The engine will pick that up and stop in its outer loop.
 //
 //--------------------------------------------------------------------------------
 void RegexMatcher::IncrementTime(UErrorCode &status) {
     fTickCounter = 10000;    // TODO: put correct value in a constant somewhere.
     fTime++;
+    if (fCallbackFn != NULL) {
+        if ((*fCallbackFn)(fCallbackContext, fTime) == FALSE) {
+            status = U_REGEX_STOPPED_BY_CALLER;
+            return;
+        }
+    }
     if (fTimeLimit >= 0 && fTime >= fTimeLimit) {
         status = U_REGEX_TIME_OUT;
     }
