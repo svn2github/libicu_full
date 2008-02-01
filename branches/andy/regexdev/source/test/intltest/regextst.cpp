@@ -66,7 +66,9 @@ void RegexTest::runIndexedTest( int32_t index, UBool exec, const char* &name, ch
         case 6: name = "PerlTests";
             if (exec) PerlTests();
             break;
-
+        case 7: name = "Callbacks";
+          if (exec) Callbacks();
+          break;
 
         default: name = "";
             break; //needed to end loop
@@ -885,13 +887,42 @@ void RegexTest::API_Match() {
         REGEX_CHECK_STATUS;
         REGEX_ASSERT(matcher.lookingAt(status) == TRUE);
         REGEX_CHECK_STATUS;
+        REGEX_ASSERT(matcher.getStackLimit() == 0);
 
         // With a limited stack, it the match should fail
         status = U_ZERO_ERROR;
         matcher.setStackLimit(10000, status);
         REGEX_ASSERT(matcher.lookingAt(status) == FALSE);
         REGEX_ASSERT(status == U_BUFFER_OVERFLOW_ERROR);
+        REGEX_ASSERT(matcher.getStackLimit() == 10000);
     }
+        
+        // A pattern that doesn't save state should work with
+        //   a minimal sized stack
+    {
+        UErrorCode status = U_ZERO_ERROR;
+        UnicodeString testString = "abc";
+        RegexMatcher matcher("abc", testString, 0, status);
+        REGEX_CHECK_STATUS;
+        matcher.setStackLimit(30, status);
+        REGEX_CHECK_STATUS;
+        REGEX_ASSERT(matcher.matches(status) == TRUE);
+        REGEX_CHECK_STATUS;
+        REGEX_ASSERT(matcher.getStackLimit() == 30);
+        
+        // Negative stack sizes should fail
+        status = U_ZERO_ERROR;
+        matcher.setStackLimit(1000, status);
+        REGEX_CHECK_STATUS;
+        matcher.setStackLimit(-1, status);
+        REGEX_ASSERT(status == U_ILLEGAL_ARGUMENT_ERROR);
+        REGEX_ASSERT(matcher.getStackLimit() == 1000);
+    }
+    
+    //
+    //  Call Backs
+    //
+    
 
 }
 
@@ -2355,6 +2386,31 @@ void RegexTest::PerlTests() {
 }
 
 
+//
+//   Callbacks()    Test the callback function.
+//                  When set, callbacks occur periodically during matching operations,
+//                  giving the application code the ability to abort the operation
+//                  before it's normal completion.
+//
+static int callbackCount = 0;
+
+struct callBackContext {
+    RegexTest        *test;
+    int32_t          maxCalls;
+    int32_t          numCalls;
+    int32_t          lastSteps;
+};
+
+UBool U_EXPORT2 testCallBackFn(void *context, int32_t steps) {
+    callBackContext  *info = (callBackContext *)context;
+    if (info->lastSteps != steps) {
+        info->test->errln("incorrect steps in callback.  Expected %d, got %d\n", info->lastSteps+1, steps);
+    }
+    return  (++info->numCalls < info->maxCalls);
+}
+
+void RegexTest::Callbacks() {
+}
 
 #endif  /* !UCONFIG_NO_REGULAR_EXPRESSIONS  */
 
