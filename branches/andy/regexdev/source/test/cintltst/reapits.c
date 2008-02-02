@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT: 
- * Copyright (c) 2004-2007, International Business Machines Corporation and
+ * Copyright (c) 2004-2008, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 /********************************************************************************
@@ -1140,7 +1140,15 @@ static void TestRegexCAPI(void) {
 
         uregex_close(re);
     }
-
+    
+    /*
+     * set/getTimeLimit
+     */
+     TEST_SETUP("abc$", "abcdef", 0);
+     TEST_ASSERT(uregex_getTimeLimit(re, &status) == 0);
+     uregex_setTimeLimit(re, 1000, &status);
+     TEST_ASSERT(uregex_getTimeLimit(re, &status) == 1000);
+     TEST_TEARDOWN;
 }
 
 static void TestBug4315(void) {

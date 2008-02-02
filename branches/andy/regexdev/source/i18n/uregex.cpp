@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-*   Copyright (C) 2004-2007, International Business Machines
+*   Copyright (C) 2004-2008, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *******************************************************************************
 *   file name:  regex.cpp
@@ -632,6 +632,40 @@ uregex_requireEnd(const  URegularExpression   *regexp,
     }
     return regexp->fMatcher->requireEnd();
 }
+
+
+//------------------------------------------------------------------------------
+//
+//    uregex_setTimeLimit
+//
+//------------------------------------------------------------------------------
+U_CAPI void U_EXPORT2 
+uregex_setTimeLimit(URegularExpression   *regexp,
+                    int32_t               limit,
+                    UErrorCode           *status) {
+    if (validateRE(regexp, status) == FALSE) {
+        return;
+    }
+    regexp->fMatcher->setTimeLimit(limit, *status);
+}
+
+
+
+//------------------------------------------------------------------------------
+//
+//    uregex_getTimeLimit
+//
+//------------------------------------------------------------------------------
+U_CAPI int32_t U_EXPORT2 
+uregex_getTimeLimit(const  URegularExpression   *regexp,
+                           UErrorCode           *status) {
+    int32_t retVal = 0;
+    if (validateRE(regexp, status) == FALSE) {
+        retVal = regexp->fMatcher->getTimeLimit();
+    }
+    return retVal;
+}
+
 
 
 //------------------------------------------------------------------------------

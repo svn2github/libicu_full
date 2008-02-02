@@ -1,6 +1,6 @@
 /*
 **********************************************************************
-*   Copyright (C) 2004-2007, International Business Machines
+*   Copyright (C) 2004-2008, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 **********************************************************************
 *   file name:  regex.h
@@ -846,7 +846,7 @@ uregex_split(   URegularExpression      *regexp,
 
   /**
     *   Set a processing time limit for match operations with this URegularExpression.
-    *  
+    *
     *   Some patterns, when matching certain strings, can run in exponential time.
     *   For practical purposes, the match operation may appear to be in an
     *   infinite loop.
@@ -862,7 +862,7 @@ uregex_split(   URegularExpression      *regexp,
     *   <p>
     *
     *   @param   regexp      The compiled regular expression.
-    *   @param   limit       The limit value, or -1 for no limit.
+    *   @param   limit       The limit value, or 0 for no limit.
     *   @param   status      A reference to a UErrorCode to receive any errors.
     *   @draft ICU 4.0
     */
@@ -880,8 +880,8 @@ uregex_setTimeLimit(URegularExpression      *regexp,
     * @draft ICU 4.0
     */
 U_DRAFT int32_t U_EXPORT2
-uregex_getTimeLimit(URegularExpression      *regexp,
-                    UErrorCode              *status);
+uregex_getTimeLimit(const URegularExpression      *regexp,
+                          UErrorCode              *status);
     
   /**
     *  Set the amount of heap storage avaliable for use by the match backtracking stack.
