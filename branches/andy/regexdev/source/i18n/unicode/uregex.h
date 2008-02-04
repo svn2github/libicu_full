@@ -873,6 +873,7 @@ uregex_setTimeLimit(URegularExpression      *regexp,
 
   /**
     * Get the time limit for for matches with this URegularExpression.
+    * A return value of zero indicates that there is no limit.
     *
     *   @param   regexp      The compiled regular expression.
     *   @param   status      A reference to a UErrorCode to receive any errors.
@@ -911,18 +912,18 @@ uregex_setStackLimit(URegularExpression      *regexp,
   /**
     *  Get the size of the heap storage available for use by the back tracking stack.
     *
-    *  @return  the maximum backtracking stack size, in bytes, or -1 if the
+    *  @return  the maximum backtracking stack size, in bytes, or zero if the
     *           stack size is unlimited.
     *  @draft ICU 4.0
     */
 U_DRAFT int32_t U_EXPORT2
-uregex_getStackLimit(URegularExpression      *regexp,
-                     UErrorCode              *status);
+uregex_getStackLimit(const URegularExpression      *regexp,
+                           UErrorCode              *status);
 
 
 /**
   *  Function pointer for a regular expression matching callback function.
-  *  When set, the function will be called periodically during matching
+  *  When set, a callback function will be called periodically during matching
   *  operations.  If the call back function returns FALSE, the matching
   *  operation will be terminated early.
   *
@@ -975,10 +976,10 @@ uregex_setMatchCallback(URegularExpression      *regexp,
   *    @draft ICU 4.0
   */
 U_DRAFT void U_EXPORT2
-uregex_getMatchCallback(URegularExpression      *regexp,
-                        URegexMatchCallback     *callback,
-                        const void              **context,
-                        UErrorCode              *status);
+uregex_getMatchCallback(const URegularExpression    *regexp,
+                        URegexMatchCallback         *callback,
+                        const void                 **context,
+                        UErrorCode                  *status);
 
 
 

@@ -850,7 +850,7 @@ void RegexTest::API_Match() {
         UnicodeString testString("aaaaaaaaaaaaaaaaaaaaa");
         RegexMatcher matcher("(a+)+b", testString, 0, status);
         REGEX_CHECK_STATUS;
-        REGEX_ASSERT(matcher.getTimeLimit() == -1);
+        REGEX_ASSERT(matcher.getTimeLimit() == 0);
         matcher.setTimeLimit(100, status);
         REGEX_ASSERT(matcher.getTimeLimit() == 100);
         REGEX_ASSERT(matcher.lookingAt(status) == FALSE);
@@ -2392,7 +2392,6 @@ void RegexTest::PerlTests() {
 //                  giving the application code the ability to abort the operation
 //                  before it's normal completion.
 //
-static int callbackCount = 0;
 
 struct callBackContext {
     RegexTest        *test;

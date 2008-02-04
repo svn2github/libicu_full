@@ -136,7 +136,7 @@ void RegexMatcher::init(UErrorCode &status) {
     fStack             = NULL;
     fFrame             = NULL;
     fData              = NULL;
-    fTimeLimit         = -1;
+    fTimeLimit         = 0;
     fTime              = 0;
     fTickCounter       = 0;
     fStackLimit        = DEFAULT_BACKTRACK_STACK_CAPACITY;
@@ -1130,7 +1130,7 @@ void RegexMatcher::setTimeLimit(int32_t limit, UErrorCode &status) {
         status = fDeferredStatus;
         return;
     }
-    if (limit == 0 || limit < -1) {
+    if (limit < 0) {
         status = U_ILLEGAL_ARGUMENT_ERROR;
         return;
     }
@@ -1368,7 +1368,7 @@ void RegexMatcher::IncrementTime(UErrorCode &status) {
             return;
         }
     }
-    if (fTimeLimit >= 0 && fTime >= fTimeLimit) {
+    if (fTimeLimit > 0 && fTime >= fTimeLimit) {
         status = U_REGEX_TIME_OUT;
     }
 }
@@ -1479,10 +1479,6 @@ void RegexMatcher::MatchAt(int32_t startIdx, UBool toEnd, UErrorCode &status) {
 
     fFrameSize = fPattern->fFrameSize;
     REStackFrame        *fp            = resetStack();
-
-    int            saveCounter = 0;   // Counter of state saves.
-                                            // Every n counts, fTime is incremented
-                                            // and the user callback function is called.
 
     fp->fPatIdx   = 0;
     fp->fInputIdx = startIdx;

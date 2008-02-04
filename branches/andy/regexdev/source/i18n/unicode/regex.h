@@ -1020,7 +1020,7 @@ public:
     *   By default, the matching time is not limited.
     *   <p>
     *
-    *   @param   limit       The limit value, or -1 for no limit.
+    *   @param   limit       The limit value, or 0 for no limit.
     *   @param   status      A reference to a UErrorCode to receive any errors.
     *   @draft ICU 4.0
     */
@@ -1060,7 +1060,7 @@ public:
   /**
     *  Get the size of the heap storage available for use by the back tracking stack.
     *
-    *  @return  the maximum backtracking stack size, in bytes, or -1 if the
+    *  @return  the maximum backtracking stack size, in bytes, or zero if the
     *           stack size is unlimited.
     *  @draft ICU 4.0
     */

@@ -643,10 +643,9 @@ U_CAPI void U_EXPORT2
 uregex_setTimeLimit(URegularExpression   *regexp,
                     int32_t               limit,
                     UErrorCode           *status) {
-    if (validateRE(regexp, status) == FALSE) {
-        return;
+    if (validateRE(regexp, status)) {
+        regexp->fMatcher->setTimeLimit(limit, *status);
     }
-    regexp->fMatcher->setTimeLimit(limit, *status);
 }
 
 
@@ -660,12 +659,76 @@ U_CAPI int32_t U_EXPORT2
 uregex_getTimeLimit(const  URegularExpression   *regexp,
                            UErrorCode           *status) {
     int32_t retVal = 0;
-    if (validateRE(regexp, status) == FALSE) {
+    if (validateRE(regexp, status)) {
         retVal = regexp->fMatcher->getTimeLimit();
     }
     return retVal;
 }
 
+
+
+//------------------------------------------------------------------------------
+//
+//    uregex_setStackLimit
+//
+//------------------------------------------------------------------------------
+U_CAPI void U_EXPORT2 
+uregex_setStackLimit(URegularExpression   *regexp,
+                    int32_t               limit,
+                    UErrorCode           *status) {
+    if (validateRE(regexp, status)) {
+        regexp->fMatcher->setStackLimit(limit, *status);
+    }
+}
+
+
+
+//------------------------------------------------------------------------------
+//
+//    uregex_getStackLimit
+//
+//------------------------------------------------------------------------------
+U_CAPI int32_t U_EXPORT2 
+uregex_getStackLimit(const  URegularExpression   *regexp,
+                           UErrorCode           *status) {
+    int32_t retVal = 0;
+    if (validateRE(regexp, status)) {
+        retVal = regexp->fMatcher->getStackLimit();
+    }
+    return retVal;
+}
+
+
+//------------------------------------------------------------------------------
+//
+//    uregex_setMatchCallback
+//
+//------------------------------------------------------------------------------
+U_CAPI void U_EXPORT2
+uregex_setMatchCallback(URegularExpression      *regexp,
+                        URegexMatchCallback      callback,
+                        const void              *context,
+                        UErrorCode              *status) {
+    if (validateRE(regexp, status)) {
+      regexp->fMatcher->setMatchCallback(callback, context, *status);
+    }
+}
+
+
+//------------------------------------------------------------------------------
+//
+//    uregex_getMatchCallback
+//
+//------------------------------------------------------------------------------
+U_CAPI void U_EXPORT2 
+uregex_getMatchCallback(const URegularExpression    *regexp,
+                        URegexMatchCallback         *callback,
+                        const void                 **context,
+                        UErrorCode                  *status) {
+     if (validateRE(regexp, status)) {
+         regexp->fMatcher->getMatchCallback(*callback, *context, *status);
+     }
+}
 
 
 //------------------------------------------------------------------------------
