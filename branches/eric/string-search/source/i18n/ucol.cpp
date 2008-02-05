@@ -117,7 +117,6 @@ static
 inline void  IInit_collIterate(const UCollator *collator, const UChar *sourceString,
                               int32_t sourceLen, collIterate *s) {
     (s)->string = (s)->pos = (UChar *)(sourceString);
-    (s)->returnPos = NULL;
     (s)->origFlags = 0;
     (s)->flags = 0;
     if (sourceLen >= 0) {
@@ -131,6 +130,9 @@ inline void  IInit_collIterate(const UCollator *collator, const UChar *sourceStr
     (s)->extendCEs = NULL;
     (s)->extendCEsSize = 0;
     (s)->CEpos = (s)->toReturn = (s)->CEs;
+    (s)->offsetBuffer = NULL;
+    (s)->offsetBufferSize = 0;
+    (s)->offsetReturn = (s)->offsetStore = NULL;
     (s)->writableBuffer = (s)->stackWritableBuffer;
     (s)->writableBufSize = UCOL_WRITABLE_BUFFER_SIZE;
     (s)->coll = (collator);
@@ -165,7 +167,6 @@ inline void backupState(const collIterate *data, collIterateState *backup)
     backup->flags       = data->flags;
     backup->origFlags   = data->origFlags;
     backup->pos         = data->pos;
-    backup->returnPos   = data->returnPos;
     backup->bufferaddress = data->writableBuffer;
     backup->buffersize    = data->writableBufSize;
     backup->iteratorMove = 0;
@@ -206,7 +207,6 @@ inline void loadState(collIterate *data, const collIterateState *backup,
         }
     }
     data->pos         = backup->pos;
-    data->returnPos   = backup->returnPos;
 
     if ((data->flags & UCOL_ITER_INNORMBUF) &&
         data->writableBuffer != backup->bufferaddress) {
@@ -1479,7 +1479,7 @@ inline uint32_t ucol_IGetNextCE(const UCollator *coll, collIterate *collationSou
     }
 
     UChar ch = 0;
-    collationSource->returnPos = NULL;
+    collationSource->offsetReturn = NULL;
 
     for (;;)                           /* Loop handles case when incremental normalize switches   */
     {                                  /*   to or from the side buffer / original string, and we  */
@@ -1858,16 +1858,18 @@ inline uint32_t ucol_IGetPrevCE(const UCollator *coll, collIterate *data,
     if ((data->extendCEs && data->toReturn > data->extendCEs) ||
             (!data->extendCEs && data->toReturn > data->CEs))
     {
-        data->toReturn --;
+        data->toReturn -= 1;
+        // **** is this too soon? ****
+        data->offsetReturn -= 1;
         result = *(data->toReturn);
         if (data->CEs == data->toReturn || data->extendCEs == data->toReturn) {
             data->CEpos = data->toReturn;
-            data->returnPos = NULL;
+            data->offsetReturn = NULL;
         }
     }
     else {
         UChar ch = 0;
-        UChar *initialPos = data->flags & UCOL_ITER_INNORMBUF? NULL : data->pos;
+
         /*
         Loop handles case when incremental normalize switches to or from the
         side buffer / original string, and we need to start again to get the
@@ -2007,10 +2009,6 @@ inline uint32_t ucol_IGetPrevCE(const UCollator *coll, collIterate *data,
 
         if(result == UCOL_NOT_FOUND) {
             result = getPrevImplicit(ch, data);
-        }
-
-        if (initialPos != NULL && (data->CEpos != data->toReturn || initialPos != data->pos + 1)) {
-            data->returnPos = initialPos;
         }
     }
 
@@ -3559,15 +3557,32 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
             *(UCharOffset) = schar;
             noChars++;
 
+            int32_t offsetBias;
+
+            // **** doesn't work if using iterator ****
+            if (source->flags & UCOL_ITER_INNORMBUF) {
+              if (source->fcdPosition == NULL) {
+                offsetBias = 0;
+              } else {
+                  offsetBias = (int32_t)(source->fcdPosition - source->string);
+              }
+            } else {
+              offsetBias = (int32_t)(source->pos - source->string);
+            }
+
             /* a new collIterate is used to simplify things, since using the current
             collIterate will mean that the forward and backwards iteration will
             share and change the same buffers. we don't want to get into that. */
             collIterate temp;
+            int32_t rawOffset;
+
             //IInit_collIterate(coll, UCharOffset, -1, &temp);
             IInit_collIterate(coll, UCharOffset, noChars, &temp);
             temp.flags &= ~UCOL_ITER_NORM;
 
+            rawOffset = temp.pos - temp.string; // should be zero?
             CE = ucol_IGetNextCE(coll, &temp, status);
+
             if (source->extendCEs) {
                 endCEBuffer = source->extendCEs + source->extendCEsSize;
                 CECount = (source->CEpos - source->extendCEs)/sizeof(uint32_t);
@@ -3575,8 +3590,16 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
                 endCEBuffer = source->CEs + UCOL_EXPAND_CE_BUFFER_SIZE;
                 CECount = (source->CEpos - source->CEs)/sizeof(uint32_t);
             }
+
+            if (source->offsetBuffer == NULL) {
+                source->offsetBufferSize = UCOL_EXPAND_CE_BUFFER_SIZE;
+                source->offsetBuffer = (int32_t *) uprv_malloc(sizeof(int32_t) * UCOL_EXPAND_CE_BUFFER_SIZE);
+                source->offsetStore = source->offsetBuffer;
+            }
+
             while (CE != UCOL_NO_MORE_CES) {
                 *(source->CEpos ++) = CE;
+                *(source->offsetStore ++) = rawOffset + offsetBias;
                 CECount++;
                 if (source->CEpos == endCEBuffer) {
                     /* ran out of CE space, reallocate to new buffer.
@@ -3603,30 +3626,56 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
                             source->extendCEs = tempBufCE;
                         }
                     }
-                    if (CECount == -1) {
+
+                    int32_t *tob = (int32_t *) uprv_realloc(source->offsetBuffer,
+                        sizeof(int32_t) * (source->offsetBufferSize + UCOL_EXPAND_CE_BUFFER_EXTEND_SIZE));
+
+                    if (tob != NULL) {
+                        source->offsetBuffer = tob;
+                        source->offsetBufferSize += UCOL_EXPAND_CE_BUFFER_EXTEND_SIZE;
+                    }
+
+                    if (CECount == -1 || tob == NULL) {
                         *status = U_MEMORY_ALLOCATION_ERROR;
                         source->extendCEsSize = 0;
                         source->CEpos = source->CEs;
                         freeHeapWritableBuffer(&temp);
+
                         if (strbuffer != buffer) {
                             uprv_free(strbuffer);
                         }
+
                         return (uint32_t)UCOL_NULLORDER;
                     }
+
                     source->CEpos = source->extendCEs + CECount;
                     endCEBuffer = source->extendCEs + source->extendCEsSize;
+
+                    source->offsetStore = source->offsetBuffer + CECount;
                 }
+
+                rawOffset = temp.pos - temp.string;
                 CE = ucol_IGetNextCE(coll, &temp, status);
             }
+
             freeHeapWritableBuffer(&temp);
+
             if (strbuffer != buffer) {
                 uprv_free(strbuffer);
             }
+
+            source->offsetReturn = source->offsetStore - 1;
+            if (source->offsetReturn == source->offsetBuffer) {
+                source->offsetStore = source->offsetBuffer;
+            }
+
             source->toReturn = source->CEpos - 1;
             if (source->toReturn == source->CEs) {
                 source->CEpos = source->CEs;
             }
+
             return *(source->toReturn);
+
         case LONG_PRIMARY_TAG:
             {
                 *(source->CEpos++) = ((CE & 0xFFFF00) << 8) | (UCOL_BYTE_COMMON << 8) | UCOL_BYTE_COMMON;
@@ -3640,6 +3689,25 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
             NOTE: we can encounter both continuations and expansions in an expansion!
             I have to decide where continuations are going to be dealt with
             */
+            int32_t firstOffset;
+
+            // **** doesn't work if using iterator ****
+            if (source->flags & UCOL_ITER_INNORMBUF) {
+              if (source->fcdPosition == NULL) {
+                firstOffset = 0;
+              } else {
+                  firstOffset = (int32_t)(source->fcdPosition - source->string);
+              }
+            } else {
+              firstOffset = (int32_t)(source->pos - source->string);
+            }
+
+            if (source->offsetBuffer == NULL) {
+                source->offsetBufferSize = UCOL_EXPAND_CE_BUFFER_SIZE;
+                source->offsetBuffer = (int32_t *) uprv_malloc(sizeof(int32_t) * UCOL_EXPAND_CE_BUFFER_SIZE);
+                source->offsetStore = source->offsetBuffer;
+            }
+
             /* find the offset to expansion table */
             CEOffset = (uint32_t *)coll->image + getExpansionOffset(CE);
             size     = getExpansionCount(CE);
@@ -3648,16 +3716,25 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
                 if there are less than 16 elements in expansion, we don't terminate
                 */
                 uint32_t count;
+
                 for (count = 0; count < size; count++) {
                     *(source->CEpos ++) = *CEOffset++;
+                    *(source->offsetStore ++) = firstOffset + 1;
                 }
-            }
-            else {
+            } else {
                 /* else, we do */
                 while (*CEOffset != 0) {
                     *(source->CEpos ++) = *CEOffset ++;
+                    *(source->offsetStore ++) = firstOffset + 1;
                 }
             }
+
+            source->offsetReturn = source->offsetStore - 1;
+            *(source->offsetBuffer) = firstOffset;
+            if (source->offsetReturn == source->offsetBuffer) {
+                source->offsetStore = source->offsetBuffer;
+            }
+
             source->toReturn = source->CEpos - 1;
             // in case of one element expansion, we
             // want to immediately return CEpos

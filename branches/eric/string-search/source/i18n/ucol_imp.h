@@ -267,10 +267,13 @@ typedef struct collIterate {
                     or to writableBuffer */
   UChar *endp;   /* string end ptr.  Is undefined for null terminated strings */
   UChar *pos; /* This is position in the string.  Can be to original or writable buf */
-  UChar *returnPos; /* If non-NULL, use this in ucol_getOffset() */
 
   uint32_t *toReturn; /* This is the CE from CEs buffer that should be returned */
   uint32_t *CEpos; /* This is the position to which we have stored processed CEs */
+
+  int32_t *offsetReturn; /* This is the offset to return, if non-NULL */
+  int32_t *offsetStore;  /* This is the pointer for storing offsets */
+
   UChar *writableBuffer;
   uint32_t writableBufSize;
   UChar *fcdPosition; /* Position in the original string to continue FCD check from. */
@@ -281,6 +284,10 @@ typedef struct collIterate {
   int32_t extendCEsSize; /* Holds the size of the dynamic CEs buffer */
   uint32_t CEs[UCOL_EXPAND_CE_BUFFER_SIZE]; /* This is where we store CEs */
   UChar stackWritableBuffer[UCOL_WRITABLE_BUFFER_SIZE]; /* A writable buffer. */
+
+  int32_t *offsetBuffer;    /* A dynamic buffer to hold offsets */
+  int32_t offsetBufferSize; /* The size of the offset buffer */
+
   UCharIterator *iterator;
   /*int32_t iteratorIndex;*/
 } collIterate;

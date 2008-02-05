@@ -1,6 +1,6 @@
 /*
 ******************************************************************************
-*   Copyright (C) 2001-2006, International Business Machines
+*   Copyright (C) 2001-2008, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 ******************************************************************************
 *
@@ -324,6 +324,10 @@ ucol_closeElements(UCollationElements *elems)
 	  uprv_free(ci->extendCEs);
   }
 
+  if (ci->offsetBuffer) {
+      uprv_free(ci->offsetBuffer);
+  }
+
   if (elems->pce != NULL) {
       delete elems->pce;
   }
@@ -577,8 +581,8 @@ ucol_getOffset(const UCollationElements *elems)
 {
   const collIterate *ci = &(elems->iteratordata_);
 
-  if (ci->returnPos != NULL) {
-      return ci->returnPos - ci->string;
+  if (ci->offsetReturn != NULL) {
+      return *ci->offsetReturn;
   }
 
   // while processing characters in normalization buffer getOffset will 
