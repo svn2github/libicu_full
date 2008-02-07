@@ -593,6 +593,9 @@ static char *printOrders(char *buffer, OrderList &list)
 void SSearchTest::offsetTest()
 {
     UnicodeString test[] = {
+        "a\\u0300\\u0325",
+        "a\\u0325\\u0300",
+        "A\\u0323\\u0300B",
         "A\\u0300\\u0323B",
         "A\\u0301\\u0323B",
         "A\\u0302\\u0301\\u0323B",
@@ -618,6 +621,8 @@ void SSearchTest::offsetTest()
     char buffer[256];  // A bit of a hack... just happens to be long enough for all the test cases...
                        // We could allocate one that's the right size by (CE_count * 10) + 2
                        // 10 chars is enough room for 8 hex digits plus ", ". 2 extra chars for "[" and "]"
+
+    col->setAttribute(UCOL_NORMALIZATION_MODE, UCOL_ON, status);
 
     for(int32_t i = 0; i < testCount; i += 1) {
         UnicodeString ts = test[i].unescape();
