@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT: 
- * Copyright (c) 1997-2007, International Business Machines Corporation and
+ * Copyright (c) 1997-2008, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 /*******************************************************************************
@@ -634,7 +634,7 @@ static void TestNewTypes() {
         expect ="test message ....";
         u_charsToUChars(expect,uExpect,(int32_t)strlen(expect)+1);
         CONFIRM_ErrorCode(status, U_ZERO_ERROR);
-        if(u_strcmp(uExpect,str)){
+        if(str == NULL || u_strcmp(uExpect,str)){
             log_err("Did not get the expected string for test_underscores.\n");
         }
     }
@@ -2306,6 +2306,7 @@ static void TestResourceLevelAliasing(void) {
     tb = ures_getByKey(aliasB, "testAliasToTree", tb, &status);
     if(U_FAILURE(status)){
         log_err("Fetching the resource with key \"testAliasToTree\" failed. Error: %s\n", u_errorName(status));
+        goto cleanup;
     }
     if (strcmp(ures_getKey(tb), "collations") != 0) {
         log_err("ures_getKey(aliasB) unexpectedly returned %s instead of \"collations\"\n", ures_getKey(tb));

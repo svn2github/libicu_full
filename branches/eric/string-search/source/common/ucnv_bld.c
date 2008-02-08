@@ -1,7 +1,7 @@
 /*
  ********************************************************************
  * COPYRIGHT:
- * Copyright (c) 1996-2007, International Business Machines Corporation and
+ * Copyright (c) 1996-2008, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************
  *
@@ -796,9 +796,14 @@ ucnv_createConverter(UConverter *myUConverter, const char *converterName, UError
             if(U_SUCCESS(*err)) {
                 UTRACE_EXIT_PTR_STATUS(myUConverter, *err);
                 return myUConverter;
-            } else {
-                ucnv_unloadSharedDataIfReady(mySharedConverterData);
             }
+            /*
+            else mySharedConverterData was already cleaned up by
+            ucnv_createConverterFromSharedData.
+            */
+            /*else {
+                ucnv_unloadSharedDataIfReady(mySharedConverterData);
+            }*/
         }
     }
 
@@ -972,6 +977,9 @@ ucnv_flushCache ()
     /* Close the default converter without creating a new one so that everything will be flushed. */
     ucnv_close(u_getDefaultConverter(&status));
 
+    /* Flush now because we may not have any shared data in the hash. */
+    ucnv_flushAvailableConverterCache();
+
     /*if shared data hasn't even been lazy evaluated yet
     * return 0
     */
@@ -1023,8 +1031,6 @@ ucnv_flushCache ()
     umtx_unlock(&cnvCacheMutex);
 
     UTRACE_DATA1(UTRACE_INFO, "ucnv_flushCache() exits with %d converters remaining", remaining);
-
-    ucnv_flushAvailableConverterCache();
 
     UTRACE_EXIT_VALUE(tableDeletedNum);
     return tableDeletedNum;

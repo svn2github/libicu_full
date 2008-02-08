@@ -139,6 +139,20 @@ static const ResourceData *getFallbackData(const UResourceBundle* resBundle, con
     }
 }
 
+static void
+free_entry(UResourceDataEntry *entry) {
+    if(entry->fBogus == U_ZERO_ERROR) {
+        res_unload(&(entry->fData));
+    }
+    if(entry->fName != NULL) {
+        uprv_free(entry->fName);
+    }
+    if(entry->fPath != NULL) {
+        uprv_free(entry->fPath);
+    }
+    uprv_free(entry);
+}
+
 /* Works just like ucnv_flushCache() */
 /* TODO: figure out why fCountExisting may not go to zero. Do not make this function public yet. */
 static int32_t ures_flushCache()
@@ -175,16 +189,7 @@ static int32_t ures_flushCache()
         if (resB->fCountExisting == 0) {
             rbDeletedNum++;
             uhash_removeElement(cache, e);
-            if(resB->fBogus == U_ZERO_ERROR) {
-                res_unload(&(resB->fData));
-            }
-            if(resB->fName != NULL) {
-                uprv_free(resB->fName);
-            }
-            if(resB->fPath != NULL) {
-                uprv_free(resB->fPath);
-            }
-            uprv_free(resB);
+            free_entry(resB);
         }
     }
     umtx_unlock(&resbMutex);
@@ -354,11 +359,15 @@ static UResourceDataEntry *init_entry(const char *localeID, const char *path, UE
         {
             UResourceDataEntry *oldR = NULL;
             if((oldR = (UResourceDataEntry *)uhash_get(cache, r)) == NULL) { /* if the data is not cached */
-              /* just insert it in the cache */
+                /* just insert it in the cache */
                 uhash_put(cache, (void *)r, r, status);
+                if (U_FAILURE(*status)) {
+                    free_entry(r);
+                    r = NULL;
+                }
             } else {
-              /* somebody have already inserted it while we were working, discard newly opened data */
-              /* Also, we could get here IF we opened an alias */
+                /* somebody have already inserted it while we were working, discard newly opened data */
+                /* Also, we could get here IF we opened an alias */
                 uprv_free(r->fName);
                 if(r->fPath != NULL) {
                     uprv_free(r->fPath);
@@ -377,41 +386,39 @@ static UResourceDataEntry *init_entry(const char *localeID, const char *path, UE
 /* INTERNAL: */
 /*   CAUTION:  resbMutex must be locked when calling this function! */
 static UResourceDataEntry *findFirstExisting(const char* path, char* name, UBool *isRoot, UBool *hasChopped, UBool *isDefault, UErrorCode* status) {
-  UResourceDataEntry *r = NULL;
-  UBool hasRealData = FALSE;
-  const char *defaultLoc = uloc_getDefault();
-  UErrorCode intStatus = U_ZERO_ERROR;
-  *hasChopped = TRUE; /* we're starting with a fresh name */
+    UResourceDataEntry *r = NULL;
+    UBool hasRealData = FALSE;
+    const char *defaultLoc = uloc_getDefault();
+    *hasChopped = TRUE; /* we're starting with a fresh name */
 
-  while(*hasChopped && !hasRealData) {
-    r = init_entry(name, path, &intStatus);
-    /* Null pointer test */
-    if (r == NULL) {
-    	*status = U_MEMORY_ALLOCATION_ERROR;
-    	return NULL;
+    while(*hasChopped && !hasRealData) {
+        r = init_entry(name, path, status);
+        /* Null pointer test */
+        if (U_FAILURE(*status)) {
+            return NULL;
+        }
+        *isDefault = (UBool)(uprv_strncmp(name, defaultLoc, uprv_strlen(name)) == 0);
+        hasRealData = (UBool)(r->fBogus == U_ZERO_ERROR);
+        if(!hasRealData) {
+            /* this entry is not real. We will discard it. */
+            /* However, the parent line for this entry is  */
+            /* not to be used - as there might be parent   */
+            /* lines in cache from previous openings that  */
+            /* are not updated yet. */
+            r->fCountExisting--;
+            /*entryCloseInt(r);*/
+            r = NULL;
+            *status = U_USING_FALLBACK_WARNING;
+        } else {
+            uprv_strcpy(name, r->fName); /* this is needed for supporting aliases */
+        }
+
+        *isRoot = (UBool)(uprv_strcmp(name, kRootLocaleName) == 0);
+
+        /*Fallback data stuff*/
+        *hasChopped = chopLocale(name);
     }
-    *isDefault = (UBool)(uprv_strncmp(name, defaultLoc, uprv_strlen(name)) == 0);
-    hasRealData = (UBool)(r->fBogus == U_ZERO_ERROR);
-    if(!hasRealData) {
-      /* this entry is not real. We will discard it. */
-      /* However, the parent line for this entry is  */
-      /* not to be used - as there might be parent   */
-      /* lines in cache from previous openings that  */
-      /* are not updated yet. */
-      r->fCountExisting--;
-      /*entryCloseInt(r);*/
-      r = NULL;
-      *status = U_USING_FALLBACK_WARNING;
-    } else {
-      uprv_strcpy(name, r->fName); /* this is needed for supporting aliases */
-    }
-
-    *isRoot = (UBool)(uprv_strcmp(name, kRootLocaleName) == 0);
-
-    /*Fallback data stuff*/
-    *hasChopped = chopLocale(name);
-  }
-  return r;
+    return r;
 }
 
 static void ures_setIsStackObject( UResourceBundle* resB, UBool state) {
@@ -447,7 +454,7 @@ static UResourceDataEntry *entryOpen(const char* path, const char* localeID, UEr
     char name[96];
 
     if(U_FAILURE(*status)) {
-      return NULL;
+        return NULL;
     }
 
     initCache(status);
@@ -456,100 +463,102 @@ static UResourceDataEntry *entryOpen(const char* path, const char* localeID, UEr
 
     umtx_lock(&resbMutex);
     { /* umtx_lock */
-      /* We're going to skip all the locales that do not have any data */
-      r = findFirstExisting(path, name, &isRoot, &hasChopped, &isDefault, &intStatus);
+        /* We're going to skip all the locales that do not have any data */
+        r = findFirstExisting(path, name, &isRoot, &hasChopped, &isDefault, &intStatus);
 
-      if(r != NULL) { /* if there is one real locale, we can look for parents. */
-        t1 = r;
-        hasRealData = TRUE;
-        while (hasChopped && !isRoot && t1->fParent == NULL && !t1->fData.noFallback) {
-            /* insert regular parents */
-            t2 = init_entry(name, r->fPath, &parentStatus);
-            /* Check for null pointer. */
-            if (t2 == NULL) {
-            	*status = U_MEMORY_ALLOCATION_ERROR;
-            	return NULL;
-            }
-            t1->fParent = t2;
-            t1 = t2;
-            hasChopped = chopLocale(name);
-        }
-      }
-
-      /* we could have reached this point without having any real data */
-      /* if that is the case, we need to chain in the default locale   */
-      if(r==NULL && !isDefault && !isRoot /*&& t1->fParent == NULL*/) {
-          /* insert default locale */
-          uprv_strcpy(name, uloc_getDefault());
-          r = findFirstExisting(path, name, &isRoot, &hasChopped, &isDefault, &intStatus);
-          intStatus = U_USING_DEFAULT_WARNING;
-          if(r != NULL) { /* the default locale exists */
+        if(r != NULL) { /* if there is one real locale, we can look for parents. */
             t1 = r;
             hasRealData = TRUE;
-            isDefault = TRUE;
-            while (hasChopped && t1->fParent == NULL) {
-                /* insert chopped defaults */
+            while (hasChopped && !isRoot && t1->fParent == NULL && !t1->fData.noFallback) {
+                /* insert regular parents */
                 t2 = init_entry(name, r->fPath, &parentStatus);
                 /* Check for null pointer. */
                 if (t2 == NULL) {
-                	*status = U_MEMORY_ALLOCATION_ERROR;
-                	return NULL;
+                    *status = U_MEMORY_ALLOCATION_ERROR;
+                    goto finishUnlock;
                 }
                 t1->fParent = t2;
                 t1 = t2;
                 hasChopped = chopLocale(name);
             }
-          } 
-      }
-
-      /* we could still have r == NULL at this point - maybe even default locale is not */
-      /* present */
-      if(r == NULL) {
-        uprv_strcpy(name, kRootLocaleName);
-        r = findFirstExisting(path, name, &isRoot, &hasChopped, &isDefault, &intStatus);
-        if(r != NULL) {
-          t1 = r;
-          intStatus = U_USING_DEFAULT_WARNING;
-          hasRealData = TRUE;
-        } else { /* we don't even have the root locale */
-          *status = U_MISSING_RESOURCE_ERROR;
         }
-      } else if(!isRoot && uprv_strcmp(t1->fName, kRootLocaleName) != 0 && t1->fParent == NULL && !r->fData.noFallback) {
-          /* insert root locale */
-          t2 = init_entry(kRootLocaleName, r->fPath, &parentStatus);
-          /* Check for null pointer. */
-          if (t2 == NULL) {
-        	  *status = U_MEMORY_ALLOCATION_ERROR;
-        	  return NULL;
-          }
-          if(!hasRealData) {
-            r->fBogus = U_USING_DEFAULT_WARNING;
-          }
-          hasRealData = (UBool)((t2->fBogus == U_ZERO_ERROR) | hasRealData);
-          t1->fParent = t2;
-          t1 = t2;
-      }
 
-      while(r != NULL && !isRoot && t1->fParent != NULL) {
-          t1->fParent->fCountExisting++;
-          t1 = t1->fParent;
-          hasRealData = (UBool)((t1->fBogus == U_ZERO_ERROR) | hasRealData);
-      }
+        /* we could have reached this point without having any real data */
+        /* if that is the case, we need to chain in the default locale   */
+        if(r==NULL && !isDefault && !isRoot /*&& t1->fParent == NULL*/) {
+            /* insert default locale */
+            uprv_strcpy(name, uloc_getDefault());
+            r = findFirstExisting(path, name, &isRoot, &hasChopped, &isDefault, &intStatus);
+            intStatus = U_USING_DEFAULT_WARNING;
+            if(r != NULL) { /* the default locale exists */
+                t1 = r;
+                hasRealData = TRUE;
+                isDefault = TRUE;
+                while (hasChopped && t1->fParent == NULL) {
+                    /* insert chopped defaults */
+                    t2 = init_entry(name, r->fPath, &parentStatus);
+                    /* Check for null pointer. */
+                    if (t2 == NULL) {
+                        *status = U_MEMORY_ALLOCATION_ERROR;
+                        goto finishUnlock;
+                    }
+                    t1->fParent = t2;
+                    t1 = t2;
+                    hasChopped = chopLocale(name);
+                }
+            } 
+        }
+
+        /* we could still have r == NULL at this point - maybe even default locale is not */
+        /* present */
+        if(r == NULL) {
+            uprv_strcpy(name, kRootLocaleName);
+            r = findFirstExisting(path, name, &isRoot, &hasChopped, &isDefault, &intStatus);
+            if(r != NULL) {
+                t1 = r;
+                intStatus = U_USING_DEFAULT_WARNING;
+                hasRealData = TRUE;
+            } else { /* we don't even have the root locale */
+                *status = U_MISSING_RESOURCE_ERROR;
+                goto finishUnlock;
+            }
+        } else if(!isRoot && uprv_strcmp(t1->fName, kRootLocaleName) != 0 && t1->fParent == NULL && !r->fData.noFallback) {
+            /* insert root locale */
+            t2 = init_entry(kRootLocaleName, r->fPath, &parentStatus);
+            /* Check for null pointer. */
+            if (t2 == NULL) {
+                *status = U_MEMORY_ALLOCATION_ERROR;
+                goto finishUnlock;
+            }
+            if(!hasRealData) {
+                r->fBogus = U_USING_DEFAULT_WARNING;
+            }
+            hasRealData = (UBool)((t2->fBogus == U_ZERO_ERROR) | hasRealData);
+            t1->fParent = t2;
+            t1 = t2;
+        }
+
+        while(r != NULL && !isRoot && t1->fParent != NULL) {
+            t1->fParent->fCountExisting++;
+            t1 = t1->fParent;
+            hasRealData = (UBool)((t1->fBogus == U_ZERO_ERROR) | hasRealData);
+        }
     } /* umtx_lock */
+finishUnlock:
     umtx_unlock(&resbMutex);
 
     if(U_SUCCESS(*status)) {
-      if(U_SUCCESS(parentStatus)) {
-        if(intStatus != U_ZERO_ERROR) {
-          *status = intStatus;  
+        if(U_SUCCESS(parentStatus)) {
+            if(intStatus != U_ZERO_ERROR) {
+                *status = intStatus;  
+            }
+            return r;
+        } else {
+            *status = parentStatus;
+            return NULL;
         }
-        return r;
-      } else {
-        *status = parentStatus;
-        return NULL;
-      }
     } else {
-      return NULL;
+        return NULL;
     }
 }
 
@@ -967,7 +976,7 @@ static UResourceBundle *init_resb_result(const ResourceData *rdata, Resource r,
     resB->fVersion = NULL;
     resB->fRes = r;
     /*resB->fParent = parent->fRes;*/
-    uprv_memcpy(&resB->fResData, rdata, sizeof(ResourceData));
+    uprv_memmove(&resB->fResData, rdata, sizeof(ResourceData));
     resB->fSize = res_countArrayItems(&(resB->fResData), resB->fRes);
     return resB;
 }
@@ -2599,6 +2608,8 @@ ures_getKeywordValues(const char *path, const char *keyword, UErrorCode *status)
 #endif
     return uloc_openKeywordList(valuesBuf, valuesIndex, status);
 }
+#if 0
+/* This code isn't needed, and given the documentation warnings the implementation is suspect */
 U_INTERNAL UBool U_EXPORT2
 ures_equal(const UResourceBundle* res1, const UResourceBundle* res2){
     if(res1==NULL || res2==NULL){
@@ -2658,4 +2669,6 @@ ures_getParentBundle(const UResourceBundle* res){
     }
     return res->fParentRes;
 }
+#endif
+
 /* eof */
