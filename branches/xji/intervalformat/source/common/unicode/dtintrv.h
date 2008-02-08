@@ -27,12 +27,6 @@ class U_COMMON_API DateInterval : public UObject {
 public:
 
     /** 
-     * Default constructor.
-     * @draft ICU 4.0
-     */
-    DateInterval();
-
-    /** 
      * Constructor given from date and to date.
      * @param fromDate  The from date in date interval.
      * @param toDate    The to date in date interval.
@@ -51,28 +45,28 @@ public:
      * @param date  The from date to be set in date interval.
      * @draft ICU 4.0
      */
-    inline void setFromDate(const UDate date) { fromDate = date; }
+    void setFromDate(const UDate date);
 
     /**
      * Set the to date.
      * @param date  The to date to be set in date interval.
      * @draft ICU 4.0
      */
-    inline void setToDate(const UDate date) { toDate = date; }
+    void setToDate(const UDate date);
 
     /** 
      * Get the from date.
      * @return  the from date in dateInterval.
      * @draft ICU 4.0
      */
-    inline UDate getFromDate() const { return fromDate; }
+    UDate getFromDate() const;
 
     /** 
      * Get the to date.
      * @return  the to date in dateInterval.
      * @draft ICU 4.0
      */
-    inline UDate getToDate() const { return toDate; }
+    UDate getToDate() const;
 
 
     /**
@@ -119,18 +113,14 @@ public:
      * @return TRUE if the two DateIntervals are the same
      * @draft ICU 4.0
      */
-    inline UBool operator==(const DateInterval& other) const { 
-        return ( fromDate == other.fromDate && toDate == other.toDate );
-    }
+    UBool operator==(const DateInterval& other) const;
 
     /**
      * Non-equality operator
      * @return TRUE if the two DateIntervals are not the same
      * @draft ICU 4.0
      */
-    inline UBool operator!=(const DateInterval& other) const { 
-        return ( !operator==(other) );
-    }
+    UBool operator!=(const DateInterval& other) const;
 
 
     /**
@@ -139,15 +129,63 @@ public:
      * @return a cloned DateInterval
      * @draft ICU 4.0
      */
-    inline DateInterval* clone() const {
-        return new DateInterval(*this);
-    }
+    DateInterval* clone() const;
 
 private:
+    /** 
+     * Default constructor, not implemented.
+     * @draft ICU 4.0
+     */
+    DateInterval();
+
     UDate fromDate;
     UDate toDate;
 
 } ;// end class DateInterval
+
+
+inline void 
+DateInterval::setFromDate(const UDate date) { 
+    fromDate = date; 
+}
+
+
+inline void 
+DateInterval::setToDate(const UDate date) { 
+    toDate = date; 
+}
+
+
+inline UDate 
+DateInterval::getFromDate() const { 
+    return fromDate; 
+}
+
+
+inline UDate 
+DateInterval::getToDate() const { 
+    return toDate; 
+}
+
+
+inline UBool 
+DateInterval::operator==(const DateInterval& other) const { 
+    return ( fromDate == other.fromDate && toDate == other.toDate );
+}
+
+
+inline UBool 
+DateInterval::operator!=(const DateInterval& other) const { 
+    return ( !operator==(other) );
+}
+
+
+inline DateInterval* 
+DateInterval::clone() const {
+    return new DateInterval(*this);
+}
+
+
 
 U_NAMESPACE_END
 
