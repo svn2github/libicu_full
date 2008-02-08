@@ -1,6 +1,6 @@
 /*
  *******************************************************************************
- * Copyright (C) 1996-2007, International Business Machines
+ * Copyright (C) 1996-2008, International Business Machines
  * Corporation and others. All Rights Reserved.
  *******************************************************************************
 */
@@ -170,6 +170,48 @@ typedef enum UDateFormatStyle {
     UDAT_IGNORE = -2
 
 } UDateFormatStyle;
+
+
+/**
+ * Predefined skeletons supported in resource files.
+ * It is used in date interval format (factory methods), 
+ * and could be in DateTimePatternGenerator.
+ * We choose to use predefined skeleton string instead of skeleton enum because:
+ * We need to keep consistency between DateFormat and DateIntervalFormat 
+ * factory methods.
+ * It is not good to introduce another set of enum for skeleton while having 
+ * UDateFormatStyle for full pattern.
+ * And it is not good to mix the set of enum for skeleton into UDateFormatStyle.
+ * @draft ICU 4.0
+ */
+
+#define DAY_MONTH_YEAR_DOW_LONG_FORMAT   "EEEEdMMMMy"
+#define DAY_MONTH_YEAR_LONG_FORMAT       "dMMMMy"
+#define DAY_MONTH_LONG_FORMAT            "dMMMM"
+#define MONTH_YEAR_LONG_FORMAT           "MMMMy"
+#define DAY_MONTH_DOW_LONG_FORMAT        "EEEEdMMMM"
+#define DAY_MONTH_YEAR_DOW_MEDIUM_FORMAT "EEEdMMMy"
+#define DAY_MONTH_YEAR_MEDIUM_FORMAT     "dMMMy"
+#define DAY_MONTH_MEDIUM_FORMAT          "dMMM"
+#define MONTH_YEAR_MEDIUM_FORMAT         "MMMy"
+#define DAY_MONTH_DOW_MEDIUM_FORMAT      "EEEdMMM"
+#define DAY_MONTH_YEAR_DOW_SHORT_FORMAT  "EEEdMy"
+#define DAY_MONTH_YEAR_SHORT_FORMAT      "dMy"
+#define DAY_MONTH_SHORT_FORMAT           "dM"
+#define MONTH_YEAR_SHORT_FORMAT          "My"
+#define DAY_MONTH_DOW_SHORT_FORMAT       "EEEdM"
+#define DAY_ONLY_SHORT_FORMAT            "d"
+#define DAY_DOW_SHORT_FORMAT             "EEEd"
+#define YEAR_ONLY_SHORT_FORMAT           "y"
+#define MONTH_ONLY_SHORT_FORMAT          "M"
+#define MONTH_ONLY_MEDIUM_FORMAT         "MMM"
+#define MONTH_ONLY_LONG_FORMAT           "MMMM"
+#define HOUR_MINUTE_FORMAT               "hm"
+#define HOUR_MINUTE_GENERAL_TZ_FORMAT    "hmv"
+#define HOUR_MINUTE_DAYLIGNT_TZ_FORMAT   "hmz"
+#define HOUR_ONLY_FORMAT                 "h"
+#define HOUR_GENERAL_TZ_FORMAT           "hv"
+#define HOUR_DAYLIGNT_TZ_FORMAT          "hz"
 
 /**
  * FieldPosition and UFieldPosition selectors for format fields
