@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- Copyright (c) 2007 IBM Corporation and others. All rights reserved -->
+<!-- Copyright (c) 2007-2008 IBM Corporation and others. All rights reserved -->
 
 <!-- Test data file for string search  -->
 <!DOCTYPE stringsearch-tests [
@@ -20,7 +20,7 @@
 <!ELEMENT post (#PCDATA)>
 ]>
 
-<stringsearch-tests>
+<stringsearch-tests debug="test32">
   <!-- debug="test11"     (for copying into the above element)  -->
     
     <!-- Very simple match  -->
@@ -210,7 +210,7 @@
     </test-case>
 
 
-    <!--  Normalizatino test cases from usrchdat.c  -->
+    <!--  Normalization test cases from usrchdat.c  -->
     <test-case id="test32" strength="TERTIARY"  norm="ON">
       <pattern>a\u0325\u0300</pattern>
       <pre></pre><m>a\u0300\u0325</m>

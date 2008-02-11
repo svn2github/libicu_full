@@ -593,6 +593,7 @@ static char *printOrders(char *buffer, OrderList &list)
 void SSearchTest::offsetTest()
 {
     UnicodeString test[] = {
+        "a\\u0301\\u0325",
         "a\\u0300\\u0325",
         "a\\u0325\\u0300",
         "A\\u0323\\u0300B",

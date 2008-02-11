@@ -3923,8 +3923,8 @@ U_CAPI UBool U_EXPORT2 usearch_searchBackwards(UStringSearch  *strsrch,
         //          all but the first get the index of the following char.)
         //          In this case, reject this match, and continue the search.
         if (targetIx > 0) {
-            if (minLimit == ceb.getPrevious(targetIx - 1)->srcIndex) {
-                targetCEI = ceb.getPrevious(targetIx);
+            if (maxLimit == ceb.getPrevious(targetIx - 2)->srcIndex) {
+                targetCEI = ceb.getPrevious(targetIx - 1);
                 maxLimit = targetCEI->srcIndex;
 
                 if (targetCEI->ce != UCOL_PROCESSED_NULLORDER) {
@@ -3948,11 +3948,13 @@ U_CAPI UBool U_EXPORT2 usearch_searchBackwards(UStringSearch  *strsrch,
         //   meaning that the first char of the match is only partially matched.
         //   With exapnsions, the first CE will report the index of the source 
         //   character, and all subsequent (expansions) CEs will report the source index of the
-        //    _following_ character.  
-        targetCEI = ceb.getPrevious(targetIx + strsrch->pattern.CELength);
+        //    _following_ character. 
+        if (strsrch->pattern.CELength > 1) {
+            targetCEI = ceb.getPrevious(targetIx + strsrch->pattern.CELength - 2);
 
-        if (targetCEI->ce != UCOL_PROCESSED_NULLORDER && mStart == targetCEI->srcIndex) {
-            found = FALSE;
+            if (targetCEI->ce != UCOL_PROCESSED_NULLORDER && mStart == targetCEI->srcIndex) {
+                found = FALSE;
+            }
         }
     
         //  Advance the match end position to the first acceptable match boundary.

@@ -273,6 +273,8 @@ typedef struct collIterate {
 
   int32_t *offsetReturn; /* This is the offset to return, if non-NULL */
   int32_t *offsetStore;  /* This is the pointer for storing offsets */
+  int32_t offsetRepeatCount;  /* Repeat stored offset if non-zero */
+  int32_t offsetRepeatValue;  /* offset value to repeat */
 
   UChar *writableBuffer;
   uint32_t writableBufSize;

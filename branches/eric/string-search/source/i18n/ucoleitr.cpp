@@ -581,6 +581,10 @@ ucol_getOffset(const UCollationElements *elems)
 {
   const collIterate *ci = &(elems->iteratordata_);
 
+  if (ci->offsetRepeatCount > 0) {
+      return ci->offsetRepeatValue;
+  }
+
   if (ci->offsetReturn != NULL) {
       return *ci->offsetReturn;
   }
