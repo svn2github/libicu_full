@@ -1,6 +1,6 @@
 /*
 **********************************************************************
-*   Copyright (C) 2002-2006, International Business Machines
+*   Copyright (C) 2002-2006,2008, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 **********************************************************************
 *
@@ -352,12 +352,13 @@ int  main(int argc, char **argv) {
                     mtd->setValued(TRUE);
     
                     uint32_t value = 0;
-                    char s[valueString.length()];
+                    char* s = new char[valueString.length()];
                     valueString.extract(0,valueString.length(), s, valueString.length());
                     int n = sscanf(s, "%ud", &value);
                     U_ASSERT(n == 1);
                     U_ASSERT(value >= 0); 
                     mtd->addWord(candidate, length, status, (uint16_t)value);
+                    delete[] s;
                 } else {
                     mtd->addWord(candidate, length, status);
                 }
@@ -438,4 +439,3 @@ int  main(int argc, char **argv) {
 
 #endif /* #if !UCONFIG_NO_BREAK_ITERATION */
 }
-

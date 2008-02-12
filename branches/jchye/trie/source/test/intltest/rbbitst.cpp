@@ -1,7 +1,7 @@
 /********************************************************************
  * COPYRIGHT:
- * Copyright (c) 1999-2007, International Business Machines Corporation and
- * others. All Rights Reserved.
+ * Copyright (c) 1999-2007,2008, International Business Machines Corporation 
+ * and others. All Rights Reserved.
  ********************************************************************/
 /************************************************************************
  *   Date        Name        Description
@@ -832,6 +832,34 @@ inline void writeEnumerationToFile(StringEnumeration *enumer, char *filename){
     ucnv_close(cvt);
 }
 
+// A very simple helper class to streamline the buffer handling in
+// TestTrieDictWithValue
+template<class T, size_t N>
+class AutoBuffer {
+ public:
+  AutoBuffer(size_t size) : buffer(stackBuffer) {
+    if (size > N)
+      buffer = new T[size];
+  }
+  ~AutoBuffer() {
+    if (buffer != stackBuffer) 
+      delete [] buffer;
+  }
+  T* elems() {
+    return buffer;
+  }
+  const T& operator[] (size_t i) const {
+    return buffer[i];
+  }
+  T& operator[] (size_t i) {
+    return buffer[i];
+  }
+ private:
+  T stackBuffer[N]; 
+  T* buffer;
+  AutoBuffer();
+};
+
 //----------------------------------------------------------------------------
 //
 // TestTrieDictWithValue    Test trie dictionaries with logprob values and 
@@ -1000,14 +1028,21 @@ void RBBITest::TestTrieDictWithValue() {
         }
         
         // check if attached values of the same word in both dictionaries tally
+#if 0
         int32_t lengths1[originalWord->length()], lengths2[cloneWord->length()];
         uint16_t values1[originalWord->length()], values2[cloneWord->length()];
+#endif
+        AutoBuffer<int32_t, 20> lengths1(originalWord->length());
+        AutoBuffer<int32_t, 20> lengths2(cloneWord->length());
+        AutoBuffer<uint16_t, 20> values1(originalWord->length());
+        AutoBuffer<uint16_t, 20> values2(cloneWord->length());
+      
         originalText = utext_openConstUnicodeString(originalText, originalWord, &status);
         cloneText = utext_openConstUnicodeString(cloneText, cloneWord, &status);
         
         int count1, count2;
-        mutableDict->matches(originalText, originalWord->length(), lengths1, count1, originalWord->length(), values1);
-        compactDict->matches(cloneText, cloneWord->length(), lengths2, count2, cloneWord->length(), values2);
+        mutableDict->matches(originalText, originalWord->length(), lengths1.elems(), count1, originalWord->length(), values1.elems());
+        compactDict->matches(cloneText, cloneWord->length(), lengths2.elems(), count2, cloneWord->length(), values2.elems());
         
         if(values1[count1-1] != values2[count2-1]){
             errln("Values of word %d in MutableTrieDictionary and CompactTrieDictionary do not match, with values %d and %d\n", 
@@ -1066,14 +1101,16 @@ void RBBITest::TestTrieDictWithValue() {
         }
 
         // check if attached values of the same word in both dictionaries tally
-        int32_t lengths1[originalWord->length()], lengths2[cloneWord->length()];
-        uint16_t values1[originalWord->length()], values2[cloneWord->length()];
+        AutoBuffer<int32_t, 20> lengths1(originalWord->length());
+        AutoBuffer<int32_t, 20> lengths2(cloneWord->length());
+        AutoBuffer<uint16_t, 20> values1(originalWord->length());
+        AutoBuffer<uint16_t, 20> values2(cloneWord->length());
         originalText = utext_openConstUnicodeString(originalText, originalWord, &status);
         cloneText = utext_openConstUnicodeString(cloneText, cloneWord, &status);
         
         int count1, count2;
-        mutableDict->matches(originalText, originalWord->length(), lengths1, count1, originalWord->length(), values1);
-        mutable2->matches(cloneText, cloneWord->length(), lengths2, count2, cloneWord->length(), values2);
+        mutableDict->matches(originalText, originalWord->length(), lengths1.elems(), count1, originalWord->length(), values1.elems());
+        mutable2->matches(cloneText, cloneWord->length(), lengths2.elems(), count2, cloneWord->length(), values2.elems());
         
         if(values1[count1-1] != values2[count2-1]){
             errln("Values of word %d in original and cloned MutableTrieDictionary do not match, with values %d and %d\n", 

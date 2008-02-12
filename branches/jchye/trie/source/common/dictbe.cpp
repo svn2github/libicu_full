@@ -1,6 +1,7 @@
 /**
  **********************************************************************************
- * Copyright (C) 2006,2007, International Business Machines Corporation and others. 
+ * Copyright (C) 2006,2007,2008, International Business Machines Corporation 
+ * and others. 
  * All Rights Reserved.                                                        
  **********************************************************************************
  */
@@ -18,6 +19,7 @@
 #include "triedict.h"
 #include "uassert.h"
 #include "unicode/normlzr.h"
+#include "cmemory.h"
 
 #include <stdio.h>
 
@@ -479,9 +481,39 @@ static inline bool isKatakana(uint16_t value) {
             (value >= 0xFF66u && value <= 0xFF9fu);
 }
 
-static inline bool isHangulSyllable(uint16_t value) {
-    return (value >= 0xAC00 && value <= 0xD7A3);
-}
+// A very simple helper class to streamline the buffer handling in
+// divideUpDictionaryRange. 
+template<class T, size_t N>
+class AutoBuffer {
+ public:
+  AutoBuffer(size_t size) : buffer(stackBuffer) {
+    if (size > N)
+      buffer = reinterpret_cast<T*>(uprv_malloc(sizeof(T)*size));
+  }
+  ~AutoBuffer() {
+    if (buffer != stackBuffer) 
+      uprv_free(buffer);
+  }
+#if 0
+  T* operator& () {
+    return buffer;
+  }
+#endif
+  T* elems() {
+    return buffer;
+  }
+  const T& operator[] (size_t i) const {
+    return buffer[i];
+  }
+  T& operator[] (size_t i) {
+    return buffer[i];
+  }
+ private:
+  T stackBuffer[N]; 
+  T* buffer;
+  AutoBuffer();
+};
+
 
 /*
  * @param text A UText representing the text
@@ -490,14 +522,22 @@ static inline bool isHangulSyllable(uint16_t value) {
  * @param foundBreaks Output of C array of int32_t break positions, or 0
  * @return The number of breaks found
  */
-int32_t CjkBreakEngine::divideUpDictionaryRange( UText *text,
+int32_t 
+CjkBreakEngine::divideUpDictionaryRange( UText *text,
         int32_t rangeStart,
         int32_t rangeEnd,
         UStack &foundBreaks ) const {
+    if (rangeStart >= rangeEnd) {
+        return 0;
+    }
+
+    const size_t defaultInputLength = 80;
+    size_t inputLength = rangeEnd - rangeStart;
+    AutoBuffer<UChar, defaultInputLength> charString(inputLength);
+
     UErrorCode status = U_ZERO_ERROR;
-    UChar charString[rangeEnd-rangeStart];
-    utext_extract(text, rangeStart, rangeEnd, charString, rangeEnd-rangeStart, &status);
-    Normalizer normalizer(charString, rangeEnd-rangeStart, UNORM_NFKC);
+    utext_extract(text, rangeStart, rangeEnd, charString.elems(), inputLength, &status);
+    Normalizer normalizer(charString.elems(), inputLength, UNORM_NFKC);
     UnicodeString normalizedString;
     UVector charPositions(status);
     charPositions.addElement(0, status);
@@ -506,16 +546,16 @@ int32_t CjkBreakEngine::divideUpDictionaryRange( UText *text,
         normalizedString.append(uc);
         charPositions.addElement(normalizer.getIndex(), status);
     }
-    UText *normalizedText = NULL;
-    normalizedText = utext_openUnicodeString(normalizedText, &normalizedString, &status);
 
-    //const int numChars = rangeEnd - rangeStart;
+    UText normalizedText = UTEXT_INITIALIZER;
+    utext_openUnicodeString(&normalizedText, &normalizedString, &status);
+
     const int numChars = charPositions.size() - 1;
-    const int maxWordSize = 20;
+    //const int numChars = charPositions.size();
 
     // bestSnlp[i] is the snlp of the best segmentation of the first i characters
     // in the range to be matched.
-    uint32_t *bestSnlp = new uint32_t[numChars + 1];
+    AutoBuffer<uint32_t, defaultInputLength> bestSnlp(numChars + 1);
     bestSnlp[0] = 0;
     for(int i=1; i<=numChars; i++){
         bestSnlp[i] = kuint32max;
@@ -523,26 +563,29 @@ int32_t CjkBreakEngine::divideUpDictionaryRange( UText *text,
 
     // prev[i] is the index of the last CJK character in the previous word in 
     // the best segmentation of the first i characters.
-    int *prev = new int[numChars + 1];
+    AutoBuffer<int, defaultInputLength> prev(numChars + 1);
     for(int i=0; i<=numChars; i++){
         prev[i] = -1;
     }
+
+    const size_t maxWordSize = 20;
+    AutoBuffer<uint16_t, maxWordSize> values(numChars);
+    AutoBuffer<int32_t, maxWordSize> lengths(numChars);
 
     // Dynamic programming to find the best segmentation.
     bool is_prev_katakana = false;
     for (int i = 0; i < numChars; ++i) {
         //utext_setNativeIndex(text, rangeStart + i);
-        utext_setNativeIndex(normalizedText, i);
+        utext_setNativeIndex(&normalizedText, i);
         if (bestSnlp[i] == kuint32max)
             continue;
 
         int count;
         // limit maximum word length matched to size of current substring
-        int maxSearchLength = (i + maxWordSize < numChars)? maxWordSize: numChars - i; 
-        uint16_t values[maxSearchLength];
-        int32_t lengths[maxSearchLength];
+        int maxSearchLength = (i + maxWordSize < (size_t) numChars)? maxWordSize: numChars - i; 
+
         //fDictionary->matches(text, maxSearchLength, lengths, count, maxSearchLength, values);
-        fDictionary->matches(normalizedText, maxSearchLength, lengths, count, maxSearchLength, values);
+        fDictionary->matches(&normalizedText, maxSearchLength, lengths.elems(), count, maxSearchLength, values.elems());
 
         // if there are no single character matches found in the dictionary 
         // starting with this charcter, treat character as a 1-character word 
@@ -550,7 +593,7 @@ int32_t CjkBreakEngine::divideUpDictionaryRange( UText *text,
         // Exclude Korean characters from this treatment, as they should be left
         // together by default.
         if((count == 0 || lengths[0] != 1) &&
-                !isHangulSyllable(utext_current32(normalizedText))){
+                !fHangulWordSet.contains(utext_current32(&normalizedText))){
             values[count] = maxSnlp;
             lengths[count++] = 1;
         }
@@ -570,18 +613,15 @@ int32_t CjkBreakEngine::divideUpDictionaryRange( UText *text,
         // characters is considered a candidate word with a default cost
         // specified in the katakanaCost table according to its length.
         //utext_setNativeIndex(text, rangeStart + i);
-        utext_setNativeIndex(normalizedText, i);
-        //bool is_katakana = isKatakana(utext_current32(text));
-        bool is_katakana = isKatakana(utext_current32(normalizedText));
+        utext_setNativeIndex(&normalizedText, i);
+        bool is_katakana = isKatakana(utext_current32(&normalizedText));
         if (!is_prev_katakana && is_katakana) {
             int j = i + 1;
-            utext_next32(normalizedText);
+            utext_next32(&normalizedText);
             // Find the end of the continuous run of Katakana characters
             while (j < numChars && (j - i) < kMaxKatakanaGroupLength &&
-                    isKatakana(utext_current32(normalizedText))) {
-                //    isKatakana(utext_current32(text))) {
-                //utext_next32(text);
-                utext_next32(normalizedText);
+                    isKatakana(utext_current32(&normalizedText))) {
+                utext_next32(&normalizedText);
                 ++j;
             }
             if ((j - i) < kMaxKatakanaGroupLength) {
@@ -599,7 +639,7 @@ int32_t CjkBreakEngine::divideUpDictionaryRange( UText *text,
     // prev[numChars] is guaranteed to be meaningful.
     // We'll first push in the reverse order, i.e.,
     // t_boundary[0] = numChars, and afterwards do a swap.
-    int t_boundary[numChars + 1];
+    AutoBuffer<int, maxWordSize> t_boundary(numChars + 1);
 
     int numBreaks = 0;
     // No segmentation found, set boundary to end of range
@@ -625,10 +665,7 @@ int32_t CjkBreakEngine::divideUpDictionaryRange( UText *text,
         foundBreaks.push(t_boundary[i] + rangeStart, status);
     }
 
-    // free memory
-    delete[] bestSnlp;
-    delete[] prev;
-    delete normalizedText;
+    utext_close(&normalizedText);
     return numBreaks;
 }
 
