@@ -492,13 +492,15 @@ static uint32_t ucol_getCEGenerator(ucolCEGenerator *g, uint32_t* lows, uint32_t
             if(lows[fStrength*3+s] != highs[fStrength*3+s]) {
                 if(strength == UCOL_SECONDARY) {
                     if (low < UCOL_COMMON_TOP2<<24 ) {
-                       // override low limit if it is under UCOL_COMMON_TOP2.
+                       // Override if low range is less than UCOL_COMMON_TOP2.
 		        low = UCOL_COMMON_TOP2<<24;
                     }
                     high = 0xFFFFFFFF;
                 } else {
-                    //low = 0x02000000; // This needs to be checked - what if low is
-                    // not good...
+                    // Override if low range is less than UCOL_COMMON_BOT3.
+		    if ( low < UCOL_COMMON_BOT3<<24 ) {
+                        low = UCOL_COMMON_BOT3<<24;
+		    }
                     high = 0x40000000;
                 }
                 break;
