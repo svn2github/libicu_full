@@ -4670,8 +4670,9 @@ TestThaiSortKey(void)
   /* since it stays in the same relative position. This should be addressed in CLDR */
   /* UCA 4.0 uint8_t expectedKey[256] = { 0x01, 0xd9, 0xb2, 0x01, 0x05, 0x00 }; */
   /* UCA 4.1 uint8_t expectedKey[256] = { 0x01, 0xdb, 0x3a, 0x01, 0x05, 0x00 }; */
+  /* UCA 5.0 uint8_t expectedKey[256] = { 0x01, 0xdc, 0xce, 0x01, 0x05, 0x00 }; */
   /* UCA 5.0 moves Yammakan */
-  uint8_t expectedKey[256] = { 0x01, 0xdc, 0xce, 0x01, 0x05, 0x00 }; 
+  uint8_t expectedKey[256] = { 0x01, 0xdd, 0x32, 0x01, 0x05, 0x00 }; 
   UCollator *coll = ucol_open("th", &status);
   if(U_FAILURE(status)) {
     log_err("Could not open a collator, exiting (%s)\n", u_errorName(status));
@@ -4953,6 +4954,65 @@ TestVI5913(void)
     ucol_close(coll);
 }
 
+static void
+TestTailor6179(void)
+{
+    UErrorCode status = U_ZERO_ERROR;
+    int32_t i, j;
+    UCollator *coll =NULL;
+    uint8_t  resColl[100], expColl[100];
+    int32_t  rLen, tLen, ruleLen, sLen, kLen;
+
+    UChar rule1[256]={0x26, '[', 'l', 'a', 's', 't',' ',
+        'p', 'r', 'i','m', 'a','r','y',' ', 'i', 'g','n','o','r','a','b','l','e',']',
+        '<','<','a',' ', 0x26, '[', 'f', 'i', 'r', 's', 't',' ',
+        'p', 'r', 'i','m', 'a','r','y',' ', 'i', 'g','n','o','r','a','b','l','e',']',
+        '<','<','b',' ', 0};
+
+    UChar rule2[256]={0x26, '[', 'l', 'a', 's', 't',' ',
+      's', 'e', 'c','o', 'n', 'd', 'a', 'r','y',' ', 'i', 'g','n','o','r','a','b','l','e',']',
+         '<','<','a',' ', 0x26, '[', 'f', 'i', 'r', 's', 't',' ',
+      's', 'e', 'c','o', 'n', 'd', 'a','r','y',' ', 'i', 'g','n','o','r','a','b','l','e',']',
+        '<','<','b',' ', 0};
+
+    UChar tData1[][20]={
+        {'a', 0},
+        {'b', 0},
+        { 0xFDD0,0x009E, 0}
+    };
+
+    /* UCA5.1, the value may increase in later version. */
+    uint8_t firstPrimaryIgnCE[6]={1, 87, 1, 5, 1, 0};
+    uint8_t lastPrimaryIgnCE[6]={1, 0xE7, 0xB9, 1, 5, 0};
+
+    log_verbose("\n\nTailoring test: &[last primary ignorable]<<a  &[first primary ignorable]<<b ");
+    ruleLen = u_strlen(rule1);
+    coll = ucol_openRules(rule1, ruleLen, UCOL_OFF, UCOL_TERTIARY, NULL,&status);
+    if (U_FAILURE(status)) {
+        log_err("Tailoring test: &[last primary ignorable] failed!");
+        return;
+    }
+    /* Test getSortKey. */
+    tLen = u_strlen(tData1[0]);
+    rLen = ucol_getSortKey(coll, tData1[0], tLen, resColl, 100);
+    if (uprv_memcmp(resColl, lastPrimaryIgnCE, uprv_min(rLen, 6)) < 0) {
+        log_err("\n Data1[%d] :%s  \tlen: %d key: ", 0, tData1[0], tLen);
+        for(i = 0; i<rLen; i++) {
+            log_err(" %02X", resColl[i]);
+        }
+    }
+    tLen = u_strlen(tData1[1]);
+    rLen = ucol_getSortKey(coll, tData1[1], tLen, resColl, 100);
+    if (uprv_memcmp(resColl, firstPrimaryIgnCE, uprv_min(rLen, 6)) < 0) {
+        log_err("\n Data1[%d] :%s  \tlen: %d key: ", 1, tData1[1], tLen);
+        for(i = 0; i<rLen; i++) {
+            log_err(" %02X", resColl[i]);
+        }
+    }
+    ucol_close(coll);
+}
+
+
 #define TSKC_DATA_SIZE 5
 #define TSKC_BUF_SIZE  50
 static void
@@ -5125,6 +5185,7 @@ void addMiscCollTest(TestNode** root)
     TEST(TestSortKeyConsistency);
     TEST(TestVI5913);  /* VI, RO tailored rules */
     TEST(TestCroatianSortKey);
+    TEST(TestTailor6179);
 }
 
 #endif /* #if !UCONFIG_NO_COLLATION */
