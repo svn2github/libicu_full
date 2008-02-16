@@ -23,7 +23,8 @@
 #ifndef USPOOF_H
 #define USPOOF_H
 
-
+#include "unicode/utypes.h"
+#include "unicode/uset.h"
 
 struct USpoofChecker;
 typedef struct USpoofChecker USpoofChecker;
@@ -40,7 +41,7 @@ typedef enum USpoofChecks {
     USPOOF_SECURE_ID                =  8,
     USPOOF_MIXED_SCRIPT             = 16,
     USPOOF_SCRIPT_LIMIT             = 32
-    }
+    };
     
     
 /*
@@ -108,7 +109,7 @@ uspoof_limitScriptsTo(USpoofChecker *sc, char *localesList, UErrorCode *status);
  * @status       The error code, set if this function encountes a problem.
  */
 U_DRAFT void U_EXPORT2
-uspoof_limitScriptsTo(USpoofChecker *sc, const USet *chars, UErrorCode *status);
+uspoof_limitScriptsToSet(USpoofChecker *sc, const USet *chars, UErrorCode *status);
 
 
 /*
