@@ -2401,7 +2401,9 @@ struct callBackContext {
     void reset(int32_t max) {maxCalls=max; numCalls=0; lastSteps=0;};
 };
 
-UBool U_EXPORT2 testCallBackFn(const void *context, int32_t steps) {
+U_CDECL_BEGIN
+static UBool U_CALLCONV
+testCallBackFn(const void *context, int32_t steps) {
     callBackContext  *info = (callBackContext *)context;
     if (info->lastSteps+1 != steps) {
         info->test->errln("incorrect steps in callback.  Expected %d, got %d\n", info->lastSteps+1, steps);
@@ -2410,6 +2412,7 @@ UBool U_EXPORT2 testCallBackFn(const void *context, int32_t steps) {
     info->numCalls++;
     return (info->numCalls < info->maxCalls);
 }
+U_CDECL_END
 
 void RegexTest::Callbacks() {
    {

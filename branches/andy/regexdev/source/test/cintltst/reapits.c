@@ -111,8 +111,8 @@ typedef struct callBackContext {
     int32_t          lastSteps;
 } callBackContext;
 
-/* TODO: Make this function static */
-UBool U_EXPORT2 TestCallbackFn(const void *context, int32_t steps) {
+static UBool U_EXPORT2 U_CALLCONV
+TestCallbackFn(const void *context, int32_t steps) {
   callBackContext  *info = (callBackContext *)context;
   if (info->lastSteps+1 != steps) {
       log_err("incorrect steps in callback.  Expected %d, got %d\n", info->lastSteps+1, steps);
