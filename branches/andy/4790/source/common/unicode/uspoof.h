@@ -26,6 +26,11 @@
 #include "unicode/utypes.h"
 #include "unicode/uset.h"
 
+#ifdef XP_CPLUSPLUS
+#include "unicode/unistr.h"
+#endif
+
+
 struct USpoofChecker;
 typedef struct USpoofChecker USpoofChecker;
 
@@ -68,8 +73,10 @@ U_DRAFT int32_t U_EXPORT2
 uspoof_getChecks(const USpoofChecker sc);
 
 /*
- * Limit the acceptable characters to those of the scripts used with
- *    a specifed set of languages.  Any previously set script limit
+ * Limit the acceptable characters to those of the scripts for the
+ *    specifed set of languages, plus characters from the "common" and
+ *    "inherited" script categories which 
+ *    Any previously set script limit
  *    is replaced by the new settings.
  *
  * Supplying an empty list of locales removes all restrictions;
@@ -109,7 +116,7 @@ uspoof_limitScriptsTo(USpoofChecker *sc, char *localesList, UErrorCode *status);
  * @status       The error code, set if this function encountes a problem.
  */
 U_DRAFT void U_EXPORT2
-uspoof_limitScriptsToSet(USpoofChecker *sc, const USet *chars, UErrorCode *status);
+uspoof_limitChars(USpoofChecker *sc, const USet *chars, UErrorCode *status);
 
 
 /*
@@ -157,7 +164,7 @@ uspoof_check(const USpoofChecker *sc, const UChar *text, int32_t length, UErrorC
  * @draft ICU 4.0
  */
 U_DRAFT int32_t U_EXPORT2
-uspoof_check(const USpoofChecker *sc, const char *text, int32_t length, UErrorCode *status);
+uspoof_checkUTF8(const USpoofChecker *sc, const char *text, int32_t length, UErrorCode *status);
 
 
 #ifdef XP_CPLUSPLUS
@@ -179,8 +186,9 @@ uspoof_check(const USpoofChecker *sc, const char *text, int32_t length, UErrorCo
  * @draft ICU 4.0
  */
 U_DRAFT int32_t U_EXPORT2
-uspoof_check(const USpoofChecker *sc, const U_NAMESPACE_QUALIFIER UnicodeString &text, 
-             int32_t length, UErrorCode *status);
+uspoof_checkUString(const USpoofChecker *sc,
+                    const U_NAMESPACE_QUALIFIER UnicodeString &text, 
+                    int32_t length, UErrorCode *status);
 
 #endif
 
@@ -221,40 +229,28 @@ uspoof_areConfusable(const USpoofChecker *sc,
 
 
 U_DRAFT int32_t U_EXPORT2
-uspoof_areConfusable(const USpoofChecker *sc,
-                     const char *s1, int32_t length1,
-                     const char *s2, int32_t length2,
-                     UErrorCode *status);
+uspoof_areConfusableUTF8(const USpoofChecker *sc,
+                         const char *s1, int32_t length1,
+                         const char *s2, int32_t length2,
+                         UErrorCode *status);
 
 
 
 
 #ifdef XP_CPLUSPLUS
 U_DRAFT int32_t U_EXPORT2
-uspoof_areConfusable(const USpoofChecker *sc,
-                     const U_NAMESPACE_QUALIFIER UnicodeString &text,
-                     const U_NAMESPACE_QUALIFIER UnicodeString &text
-                     UErrorCode *status);
+uspoof_areConfusableUString(const USpoofChecker *sc,
+                            const U_NAMESPACE_QUALIFIER UnicodeString &text,
+                            const U_NAMESPACE_QUALIFIER UnicodeString &text
+                            UErrorCode *status);
 #endif
 
 
-#endif
 
 // True if string is limited to characters from the specified srcipt or 
 //  the script associtated with the specified locale
 limitedToScript(UScriptCode script, UErrorCode *status);
 limitedToScriptForLocale(const char *locale, UErrorCode *status);
-
-isMixedScript();
-
-
-USpoof_close();
-
-
-=======
-
-
-sp = USpoof_Open(status);
 
 
 if (USpoof_hasWholeScriptConfusableUTF8(str, status)) ...
@@ -262,3 +258,4 @@ if (USpoof_hasWholeScriptConfusableUTF8(str, status)) ...
 if (USpoof_isWholeScriptConfusableUTF8(str1, str2, status)) {...
 
 
+#endif
