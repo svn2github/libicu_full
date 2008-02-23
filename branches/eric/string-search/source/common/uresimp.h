@@ -46,12 +46,12 @@ typedef struct UResourceDataEntry UResourceDataEntry;
 struct UResourceDataEntry {
     char *fName; /* name of the locale for bundle - still to decide whether it is original or fallback */
     char *fPath; /* path to bundle - used for distinguishing between resources with the same name */
-    uint32_t fCountExisting; /* how much is this resource used */
-    ResourceData fData; /* data for low level access */
     UResourceDataEntry *fParent; /*next resource in fallback chain*/
-/*    UResEntryType fStatus;*/
+    ResourceData fData; /* data for low level access */
+    char fNameBuffer[3]; /* A small buffer of free space for fName. The free space is due to struct padding. */
+    uint32_t fCountExisting; /* how much is this resource used */
     UErrorCode fBogus;
-    int32_t fHashKey; /* for faster access in the hashtable */
+    /* int32_t fHashKey;*/ /* for faster access in the hashtable */
 };
 
 #define RES_BUFSIZE 64
@@ -62,21 +62,20 @@ struct UResourceBundle {
     const char *fKey; /*tag*/
     UResourceDataEntry *fData; /*for low-level access*/
     char *fVersion;
+    UResourceDataEntry *fTopLevelData; /* for getting the valid locale */
     char *fResPath; /* full path to the resource: "zh_TW/CollationElements/Sequence" */
+    ResourceData fResData;
     char fResBuf[RES_BUFSIZE];
     int32_t fResPathLen;
+    Resource fRes;
     UBool fHasFallback;
     UBool fIsTopLevel;
     uint32_t fMagic1;   /* For determining if it's a stack object */
     uint32_t fMagic2;   /* For determining if it's a stack object */
     int32_t fIndex;
     int32_t fSize;
-    ResourceData fResData;
-    Resource fRes;
 
-    UResourceDataEntry *fTopLevelData; /* for getting the valid locale */
-    const UResourceBundle *fParentRes; /* needed to get the actual locale for a child resource */
-
+    /*const UResourceBundle *fParentRes;*/ /* needed to get the actual locale for a child resource */
 };
 
 U_CAPI void U_EXPORT2 ures_initStackObject(UResourceBundle* resB);

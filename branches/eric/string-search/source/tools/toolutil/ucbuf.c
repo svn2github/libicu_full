@@ -33,7 +33,7 @@
 
 #define MAX_IN_BUF 1000
 #define MAX_U_BUF 1500
-#define CONTEXT_LEN 15
+#define CONTEXT_LEN 20
 
 struct UCHARBUF {
     UChar* buffer;
@@ -221,9 +221,9 @@ ucbuf_fillucbuf( UCHARBUF* buf,UErrorCode* error){
                         (UBool)(buf->remaining==0),error);
 
         if(U_FAILURE(*error)){
-            char context[CONTEXT_LEN];
-            char preContext[CONTEXT_LEN];
-            char postContext[CONTEXT_LEN];
+            char context[CONTEXT_LEN+1];
+            char preContext[CONTEXT_LEN+1];
+            char postContext[CONTEXT_LEN+1];
             int8_t len = CONTEXT_LEN;
             int32_t start=0;
             int32_t stop =0;
@@ -417,9 +417,9 @@ ucbuf_getcx32(UCHARBUF* buf,UErrorCode* error) {
      */
     if(c32==0xFFFFFFFF){
         if(buf->showWarning) {
-            char context[20];
-            int32_t len = 20;
-            if(length  < len) {
+            char context[CONTEXT_LEN+1];
+            int32_t len = CONTEXT_LEN;
+            if(length < len) {
                 len = length; 
             }
             context[len]= 0 ; /* null terminate the buffer */
@@ -505,21 +505,21 @@ ucbuf_open(const char* fileName,const char** cp,UBool showWarning, UBool buffere
         buf->buffer=(UChar*) uprv_malloc(U_SIZEOF_UCHAR * buf->bufCapacity );
         if (buf->buffer == NULL) {
             *error = U_MEMORY_ALLOCATION_ERROR;
-            ucnv_close(buf->conv);
-            uprv_free(buf);
-            T_FileStream_close(in);
+            ucbuf_close(buf);
             return NULL;
         }
         buf->currentPos=buf->buffer;
         buf->bufLimit=buf->buffer;
         if(U_FAILURE(*error)){
             fprintf(stderr, "Could not open codepage [%s]: %s\n", *cp, u_errorName(*error));
-            ucnv_close(buf->conv);
-            uprv_free(buf);
-            T_FileStream_close(in);
+            ucbuf_close(buf);
             return NULL;
         }
-        buf=ucbuf_fillucbuf(buf,error);
+        ucbuf_fillucbuf(buf,error);
+        if(U_FAILURE(*error)){
+            ucbuf_close(buf);
+            return NULL;
+        }
         return buf;
     }
     *error =U_FILE_ACCESS_ERROR;

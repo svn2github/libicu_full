@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT:
- * Copyright (c) 1997-2004, International Business Machines Corporation and
+ * Copyright (c) 1997-2008, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 /********************************************************************************
@@ -424,9 +424,9 @@ static void TestPrevious()
     UCollator *c1, *c2, *c3;
     UCollationElements *iter;
     UErrorCode status = U_ZERO_ERROR;
+    UChar test1[50];
+    UChar test2[50];
 
-    test1=(UChar*)malloc(sizeof(UChar) * 50);
-    test2=(UChar*)malloc(sizeof(UChar) * 50);
     u_uastrcpy(test1, "What subset of all possible test cases?");
     u_uastrcpy(test2, "has the highest probability of detecting");
     coll = ucol_open("en_US", &status);
@@ -551,8 +551,6 @@ static void TestPrevious()
     ucol_close(coll);
 
     free(source);
-    free(test1);
-    free(test2);
 }
 
 /**
@@ -567,8 +565,9 @@ static void TestOffset()
     int32_t *orders;
     int32_t orderLength=0;
     int     count = 0;
-    test1=(UChar*)malloc(sizeof(UChar) * 50);
-    test2=(UChar*)malloc(sizeof(UChar) * 50);
+    UChar test1[50];
+    UChar test2[50];
+
     u_uastrcpy(test1, "What subset of all possible test cases?");
     u_uastrcpy(test2, "has the highest probability of detecting");
     en_us = ucol_open("en_US", &status);
@@ -691,8 +690,6 @@ static void TestOffset()
 
     ucol_closeElements(iter);
     ucol_close(en_us);
-    free(test1);
-    free(test2);
 }
 
 /**
@@ -704,8 +701,9 @@ static void TestSetText()
     UErrorCode status = U_ZERO_ERROR;
     UCollator *en_us=NULL;
     UCollationElements *iter1, *iter2;
-    test1=(UChar*)malloc(sizeof(UChar) * 50);
-    test2=(UChar*)malloc(sizeof(UChar) * 50);
+    UChar test1[50];
+    UChar test2[50];
+
     u_uastrcpy(test1, "What subset of all possible test cases?");
     u_uastrcpy(test2, "has the highest probability of detecting");
     en_us = ucol_open("en_US", &status);
@@ -770,8 +768,6 @@ static void TestSetText()
     ucol_closeElements(iter2);
     ucol_closeElements(iter1);
     ucol_close(en_us);
-    free(test1);
-    free(test2);
 }
 
 /** @bug 4108762
@@ -1623,7 +1619,7 @@ static void TestCEValidity()
     /* tailored locales */
     char        locale[][11] = {"fr_FR", "ko_KR", "sh_YU", "th_TH", "zh_CN", "zh__PINYIN"};
     const char *loc;
-    FileStream *file = getFractionalUCA();
+    FileStream *file = NULL;
     char        line[1024];
     UChar       codepoints[10];
     int         count = 0;
@@ -1634,6 +1630,7 @@ static void TestCEValidity()
         return;
     }
     log_verbose("Testing UCA elements\n");
+    file = getFractionalUCA();
     if (file == NULL) {
         log_err("Fractional UCA data can not be opened\n");
         return;
@@ -1819,7 +1816,7 @@ static void TestSortKeyValidity(void)
     UCollator  *coll        = ucol_open("en_US", &status);
     /* tailored locales */
     char        locale[][6] = {"fr_FR", "ko_KR", "sh_YU", "th_TH", "zh_CN"};
-    FileStream *file = getFractionalUCA();
+    FileStream *file = NULL;
     char        line[1024];
     UChar       codepoints[10];
     int         count = 0;
@@ -1829,6 +1826,7 @@ static void TestSortKeyValidity(void)
         return;
     }
     log_verbose("Testing UCA elements\n");
+    file = getFractionalUCA();
     if (file == NULL) {
         log_err("Fractional UCA data can not be opened\n");
         return;

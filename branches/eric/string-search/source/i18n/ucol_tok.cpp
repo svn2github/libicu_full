@@ -1141,6 +1141,7 @@ static UColToken *ucol_tok_initAReset(UColTokenParser *src, UChar *expand, uint3
         // this is a syntax error
         *status = U_INVALID_FORMAT_ERROR;
         syntaxError(src->source,src->parsedToken.charsOffset-1,src->parsedToken.charsOffset+src->parsedToken.charsLen,parseError);
+        uprv_free(sourceToken);
         return 0;
     } else {
         sourceToken->prefix = 0;
@@ -1435,6 +1436,9 @@ uint32_t ucol_tok_assembleTokenList(UColTokenParser *src, UParseError *parseErro
                     // keep the flags around so that we know about before
                     sourceToken->flags = src->parsedToken.flags;
                     uhash_put(src->tailored, sourceToken, sourceToken, status);
+                    if(U_FAILURE(*status)) {
+                        return 0;
+                    }
                 } else {
                     /* we could have fished out a reset here */
                     if(sourceToken->strength != UCOL_TOK_RESET && lastToken != sourceToken) {

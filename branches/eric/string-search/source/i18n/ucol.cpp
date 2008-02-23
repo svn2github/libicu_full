@@ -527,8 +527,8 @@ ucol_safeClone(const UCollator *coll, void *stackBuffer, int32_t * pBufferSize, 
         stackBufferChars = (char *)uprv_malloc(bufferSizeNeeded);
         // Null pointer check.
         if (stackBufferChars == NULL) {
-        	*status = U_MEMORY_ALLOCATION_ERROR;
-        	return NULL;
+            *status = U_MEMORY_ALLOCATION_ERROR;
+            return NULL;
         }
         colAllocated = TRUE;
         if (U_SUCCESS(*status)) {
@@ -545,8 +545,8 @@ ucol_safeClone(const UCollator *coll, void *stackBuffer, int32_t * pBufferSize, 
         image = (uint8_t *)uprv_malloc(imageSize);
         // Null pointer check
         if (image == NULL) {
-        	*status = U_MEMORY_ALLOCATION_ERROR;
-        	return NULL;
+            *status = U_MEMORY_ALLOCATION_ERROR;
+            return NULL;
         }
         ucol_cloneBinary(coll, image, imageSize, status);
         imageAllocated = TRUE;
@@ -1229,50 +1229,41 @@ ucol_initUCA(UErrorCode *status) {
     UMTX_CHECK(NULL, (_staticUCA == NULL), needsInit);
 
     if(needsInit) {
-        UCollator *newUCA = NULL;
-        UDataMemory *result = udata_openChoice(NULL, UCA_DATA_TYPE, UCA_DATA_NAME, isAcceptableUCA, NULL, status);
-
-        if(U_FAILURE(*status)) {
-            if (result) {
-                udata_close(result);
-            }
-            uprv_free(newUCA);
-        }
-
         // init FCD data
         if (fcdTrieIndex == NULL) {
+            // The result is constant, until the library is reloaded.
             fcdTrieIndex = unorm_getFCDTrie(status);
             ucln_i18n_registerCleanup(UCLN_I18N_UCOL, ucol_cleanup);
         }
 
-        if(result != NULL) { /* It looks like sometimes we can fail to find the data file */
-            newUCA = ucol_initCollator((const UCATableHeader *)udata_getMemory(result), newUCA, newUCA, status);
+        UDataMemory *result = udata_openChoice(NULL, UCA_DATA_TYPE, UCA_DATA_NAME, isAcceptableUCA, NULL, status);
+
+        if(U_SUCCESS(*status)){
+            UCollator *newUCA = ucol_initCollator((const UCATableHeader *)udata_getMemory(result), NULL, NULL, status);
             if(U_SUCCESS(*status)){
                 umtx_lock(NULL);
                 if(_staticUCA == NULL) {
                     _staticUCA = newUCA;
+                    newUCA = NULL;
                     UCA_DATA_MEM = result;
                     result = NULL;
-                    newUCA = NULL;
                 }
                 umtx_unlock(NULL);
 
+                ucln_i18n_registerCleanup(UCLN_I18N_UCOL, ucol_cleanup);
                 if(newUCA != NULL) {
+                    ucol_close(newUCA);
                     udata_close(result);
-                    uprv_free(newUCA);
-                }
-                else {
-                    ucln_i18n_registerCleanup(UCLN_I18N_UCOL, ucol_cleanup);
                 }
                 // Initalize variables for implicit generation
-                //const UCAConstants *UCAconsts = (UCAConstants *)((uint8_t *)_staticUCA->image + _staticUCA->image->UCAConsts);
                 uprv_uca_initImplicitConstants(status);
-                //_staticUCA->mapping.getFoldingOffset = _getFoldingOffset;
             }else{
+                ucol_close(newUCA);
                 udata_close(result);
-                uprv_free(newUCA);
-                _staticUCA= NULL;
             }
+        }
+        else {
+            udata_close(result);
         }
     }
     return _staticUCA;
@@ -1669,8 +1660,8 @@ void collPrevIterNormalize(collIterate *data)
             data->writableBuffer = (UChar *)uprv_malloc((normLen + 1) *
                                                         sizeof(UChar));
             if(data->writableBuffer == NULL) { // something is wrong here, return
-            	data->writableBufSize = 0;     // Reset writableBufSize
-            	return;
+                data->writableBufSize = 0;     // Reset writableBufSize
+                return;
             }
             data->flags |= UCOL_ITER_ALLOCATED;
             /* to handle the zero termination */
@@ -2194,7 +2185,7 @@ inline void normalizeNextContraction(collIterate *data)
           data->writableBufSize = size;
           data->flags |= UCOL_ITER_ALLOCATED;
         } else {
-        	return; // Avoid writing past bound of buffer->writableBuffer.
+            return; // Avoid writing past bound of buffer->writableBuffer.
         }
     }
 
@@ -2287,7 +2278,7 @@ inline UChar getNextNormalizedChar(collIterate *data)
                                             *(data->fcdPosition)) + 1;
                 // Check if data->pos received a null pointer
                 if (data->pos == NULL) {
-                	return (UChar)-1; // Return to indicate error.
+                    return (UChar)-1; // Return to indicate error.
                 }
                 return *(data->fcdPosition ++);
             }
@@ -2336,7 +2327,7 @@ inline UChar getNextNormalizedChar(collIterate *data)
                                         data->pos - 1, length);
             // Check if data->pos received a null pointer
             if (data->pos == NULL) {
-            	return (UChar)-1; // Return to indicate error.
+                return (UChar)-1; // Return to indicate error.
             }
             return *(data->pos ++);
         }
@@ -2350,7 +2341,7 @@ inline UChar getNextNormalizedChar(collIterate *data)
         data->pos = insertBufferEnd(data, pEndWritableBuffer, ch) + 1;
         // Check if data->pos received a null pointer
         if (data->pos == NULL) {
-        	return (UChar)-1; // Return to indicate error.
+            return (UChar)-1; // Return to indicate error.
         }
     }
 
@@ -2396,8 +2387,8 @@ inline void setDiscontiguosAttribute(collIterate *source, UChar *buffer,
         source->writableBuffer =
                      (UChar *)uprv_malloc((length + 1) * sizeof(UChar));
         if(source->writableBuffer == NULL) {
-        	source->writableBufSize = 0; // Reset size
-        	return;
+            source->writableBufSize = 0; // Reset size
+            return;
         }
         source->writableBufSize = length;
     }
@@ -2596,8 +2587,6 @@ inline UChar * insertBufferFront(collIterate *data, UChar *pNull, UChar ch)
 static
 inline void normalizePrevContraction(collIterate *data, UErrorCode *status)
 {
-    UChar      *buffer     = data->writableBuffer;
-    uint32_t    buffersize = data->writableBufSize;
     uint32_t    nulltermsize;
     UErrorCode  localstatus = U_ZERO_ERROR;
     UChar      *pEnd       = data->pos + 1;         /* End normalize + 1 */
@@ -2610,12 +2599,12 @@ inline void normalizePrevContraction(collIterate *data, UErrorCode *status)
         normalization buffer not used yet, we'll pull down the next
         character into the end of the buffer
         */
-        *(buffer + (buffersize - 1)) = *(data->pos + 1);
-        nulltermsize                  = buffersize - 1;
+        *(data->writableBuffer + (data->writableBufSize - 1)) = *(data->pos + 1);
+        nulltermsize                  = data->writableBufSize - 1;
     }
     else {
-        nulltermsize = buffersize;
-        UChar *temp = buffer + (nulltermsize - 1);
+        nulltermsize = data->writableBufSize;
+        UChar *temp = data->writableBuffer + (nulltermsize - 1);
         while (*(temp --) != 0) {
             nulltermsize --;
         }
@@ -2629,19 +2618,19 @@ inline void normalizePrevContraction(collIterate *data, UErrorCode *status)
         pStart = data->fcdPosition + 1;
     }
 
-    normLen = unorm_normalize(pStart, pEnd - pStart, UNORM_NFD, 0, buffer, 0,
+    normLen = unorm_normalize(pStart, pEnd - pStart, UNORM_NFD, 0, data->writableBuffer, 0,
                               &localstatus);
 
     if (nulltermsize <= normLen) {
-        uint32_t  size = buffersize - nulltermsize + normLen + 1;
+        uint32_t  size = data->writableBufSize - nulltermsize + normLen + 1;
         UChar    *temp = (UChar *)uprv_malloc(size * sizeof(UChar));
         if (temp == NULL) {
             *status = U_MEMORY_ALLOCATION_ERROR;
             return;
         }
         nulltermsize   = normLen + 1;
-        uprv_memcpy(temp + normLen, buffer,
-                    sizeof(UChar) * (buffersize - nulltermsize));
+        uprv_memcpy(temp + normLen, data->writableBuffer,
+                    sizeof(UChar) * (data->writableBufSize - nulltermsize));
         freeHeapWritableBuffer(data);
         data->writableBuffer = temp;
         data->writableBufSize = size;
@@ -2651,7 +2640,7 @@ inline void normalizePrevContraction(collIterate *data, UErrorCode *status)
     this puts the null termination infront of the normalized string instead
     of the end
     */
-    pStartNorm   = buffer + (nulltermsize - normLen);
+    pStartNorm   = data->writableBuffer + (nulltermsize - normLen);
     *(pStartNorm - 1) = 0;
     unorm_normalize(pStart, pEnd - pStart, UNORM_NFD, 0, pStartNorm, normLen,
                     status);
@@ -3105,8 +3094,8 @@ uint32_t ucol_prv_getSpecialCE(const UCollator *coll, UChar ch, uint32_t CE, col
                                 numTempBuf = (uint8_t *)uprv_malloc(sizeof(uint8_t) * numTempBufSize);
                                 // Null pointer check
                                 if (numTempBuf == NULL) {
-                                	*status = U_MEMORY_ALLOCATION_ERROR;
-                                	return 0;
+                                    *status = U_MEMORY_ALLOCATION_ERROR;
+                                    return 0;
                                 }
                                 uprv_memcpy(numTempBuf, stackNumTempBuf, UCOL_MAX_BUFFER);
                             } else {
@@ -3867,8 +3856,8 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
                                 numTempBuf = (uint8_t *)uprv_malloc(sizeof(uint8_t) * numTempBufSize);
                                 // Null pointer check
                                 if (numTempBuf == NULL) {
-                                	*status = U_MEMORY_ALLOCATION_ERROR;
-                                	return 0;
+                                    *status = U_MEMORY_ALLOCATION_ERROR;
+                                    return 0;
                                 }
                                 uprv_memcpy(numTempBuf, stackNumTempBuf, UCOL_MAX_BUFFER);
                             } else {
@@ -4193,7 +4182,8 @@ uint8_t *reallocateBuffer(uint8_t **secondaries, uint8_t *secStart, uint8_t *sec
         newStart=(uint8_t*)uprv_realloc(secStart, newSize);
         if(newStart==NULL) {
             *status = U_MEMORY_ALLOCATION_ERROR;
-            return NULL;
+            /* Since we're reallocating, return original reference so we don't loose it. */
+            return secStart;
         }
     }
     *secondaries=newStart+offset;
@@ -4359,7 +4349,14 @@ ucol_getSortKey(const    UCollator    *coll,
         /*ucol_calcSortKeySimpleTertiary(...);*/
 
         keySize = coll->sortKeyGen(coll, source, sourceLength, &result, resultLength, FALSE, &status);
-        //((UCollator *)coll)->errorCode = status; /*semantically const */
+        //if (U_FAILURE(status) && status != U_BUFFER_OVERFLOW_ERROR && result && resultLength > 0) {
+            // That's not good. Something unusual happened.
+            // We don't know how much we initialized before we failed.
+            // NULL terminate for safety.
+            // We have no way say that we have generated a partial sort key.
+            //result[0] = 0;
+            //keySize = 0;
+        //}
     }
     UTRACE_DATA2(UTRACE_VERBOSE, "Sort Key = %vb", result, keySize);
     UTRACE_EXIT_STATUS(status);
@@ -4522,15 +4519,17 @@ int32_t ucol_getSortKeySize(const UCollator *coll, collIterate *s, int32_t curre
                 } else {
                     fSecs[fSecsLen++] = secondary;
                     if(fSecsLen == fSecsMaxLen) {
+                        uint8_t *fSecsTemp;
                         if(fSecs == fSecsBuff) {
-                            fSecs = (uint8_t *)uprv_malloc(2*fSecsLen);
+                            fSecsTemp = (uint8_t *)uprv_malloc(2*fSecsLen);
                         } else {
-                            fSecs = (uint8_t *)uprv_realloc(fSecs, 2*fSecsLen);
+                            fSecsTemp = (uint8_t *)uprv_realloc(fSecs, 2*fSecsLen);
                         }
-                        if(fSecs == NULL) {
+                        if(fSecsTemp == NULL) {
                             status = U_MEMORY_ALLOCATION_ERROR;
-                            return -1;
+                            return 0;
                         }
+                        fSecs = fSecsTemp;
                         fSecsMaxLen *= 2;
                     }
                     if(notIsContinuation) {
@@ -4718,6 +4717,8 @@ inline uint8_t *packFrench(uint8_t *primaries, uint8_t *primEnd, uint8_t *second
     return primaries;
 }
 
+#define DEFAULT_ERROR_SIZE_FOR_CALCSORTKEY -1
+
 /* This is the sortkey work horse function */
 U_CFUNC int32_t U_CALLCONV
 ucol_calcSortKey(const    UCollator    *coll,
@@ -4738,7 +4739,7 @@ ucol_calcSortKey(const    UCollator    *coll,
     uint8_t *primaries = *result, *secondaries = second, *tertiaries = tert, *cases = caseB, *quads = quad;
 
     if(U_FAILURE(*status)) {
-      return 0;
+        return 0;
     }
 
     if(primaries == NULL && allocateSKBuffer == TRUE) {
@@ -4830,11 +4831,11 @@ ucol_calcSortKey(const    UCollator    *coll,
     }
 
     if(resultLength == 0 || primaries == NULL) {
-      int32_t keyLen = ucol_getSortKeySize(coll, &s, sortKeySize, strength, len);
-      if(normSource != normBuffer) {
-          uprv_free(normSource);
-      }
-      return keyLen;
+        int32_t keyLen = ucol_getSortKeySize(coll, &s, sortKeySize, strength, len);
+        if(normSource != normBuffer) {
+            uprv_free(normSource);
+        }
+        return keyLen;
     }
     uint8_t *primarySafeEnd = primaries + resultLength - 1;
     if(strength > UCOL_PRIMARY) {
@@ -5116,11 +5117,8 @@ ucol_calcSortKey(const    UCollator    *coll,
                             primarySafeEnd--;
                         }
                     } else {
-                        IInit_collIterate(coll, (UChar *)source, len, &s);
-                        if(source == normSource) {
-                            s.flags &= ~UCOL_ITER_NORM;
-                        }
-                        sortKeySize = ucol_getSortKeySize(coll, &s, sortKeySize, strength, len);
+                        /* We ran out of memory!? We can't recover. */
+                        sortKeySize = DEFAULT_ERROR_SIZE_FOR_CALCSORTKEY;
                         finished = TRUE;
                         break;
                     }
@@ -5138,23 +5136,19 @@ ucol_calcSortKey(const    UCollator    *coll,
                 frenchEndOffset = frenchEndPtr - secStart;
             }
             secStart = reallocateBuffer(&secondaries, secStart, second, &secSize, 2*secSize, status);
+            terStart = reallocateBuffer(&tertiaries, terStart, tert, &terSize, 2*terSize, status);
+            caseStart = reallocateBuffer(&cases, caseStart, caseB, &caseSize, 2*caseSize, status);
+            quadStart = reallocateBuffer(&quads, quadStart, quad, &quadSize, 2*quadSize, status);
+            if(U_FAILURE(*status)) {
+                /* We ran out of memory!? We can't recover. */
+                sortKeySize = DEFAULT_ERROR_SIZE_FOR_CALCSORTKEY;
+                break;
+            }
             if (frenchStartPtr != NULL) {
                 frenchStartPtr = secStart + frenchStartOffset;
                 frenchEndPtr = secStart + frenchEndOffset;
             }
-
-            terStart = reallocateBuffer(&tertiaries, terStart, tert, &terSize, 2*terSize, status);
-            caseStart = reallocateBuffer(&cases, caseStart, caseB, &caseSize, 2*caseSize, status);
-            quadStart = reallocateBuffer(&quads, quadStart, quad, &quadSize, 2*quadSize, status);
             minBufferSize *= 2;
-            if(U_FAILURE(*status)) { // if we cannot reallocate buffers, we can at least give the sortkey size
-                IInit_collIterate(coll, (UChar *)source, len, &s);
-                if(source == normSource) {
-                    s.flags &= ~UCOL_ITER_NORM;
-                }
-                sortKeySize = ucol_getSortKeySize(coll, &s, sortKeySize, strength, len);
-                break;
-            }
         }
     }
 
@@ -5188,6 +5182,11 @@ ucol_calcSortKey(const    UCollator    *coll,
                             uprv_memcpy(primaries, secStart, secsize);
                             primaries += secsize;
                         }
+                        else {
+                            /* We ran out of memory!? We can't recover. */
+                            sortKeySize = DEFAULT_ERROR_SIZE_FOR_CALCSORTKEY;
+                            goto cleanup;
+                        }
                     } else {
                         *status = U_BUFFER_OVERFLOW_ERROR;
                     }
@@ -5202,6 +5201,11 @@ ucol_calcSortKey(const    UCollator    *coll,
                         primStart = reallocateBuffer(&primaries, *result, prim, &resultLength, 2*sortKeySize, status);
                         if(U_SUCCESS(*status)) {
                             primaries = packFrench(primaries, primStart+resultLength, secondaries, &secsize, frenchStartPtr, frenchEndPtr);
+                        }
+                        else {
+                            /* We ran out of memory!? We can't recover. */
+                            sortKeySize = DEFAULT_ERROR_SIZE_FOR_CALCSORTKEY;
+                            goto cleanup;
                         }
                     } else {
                         *status = U_BUFFER_OVERFLOW_ERROR;
@@ -5224,6 +5228,11 @@ ucol_calcSortKey(const    UCollator    *coll,
                         *result = primStart;
                         *(primaries++) = UCOL_LEVELTERMINATOR;
                         uprv_memcpy(primaries, caseStart, casesize);
+                    }
+                    else {
+                        /* We ran out of memory!? We can't recover. */
+                        sortKeySize = DEFAULT_ERROR_SIZE_FOR_CALCSORTKEY;
+                        goto cleanup;
                     }
                 } else {
                     *status = U_BUFFER_OVERFLOW_ERROR;
@@ -5261,6 +5270,11 @@ ucol_calcSortKey(const    UCollator    *coll,
                         *(primaries++) = UCOL_LEVELTERMINATOR;
                         uprv_memcpy(primaries, terStart, tersize);
                     }
+                    else {
+                        /* We ran out of memory!? We can't recover. */
+                        sortKeySize = DEFAULT_ERROR_SIZE_FOR_CALCSORTKEY;
+                        goto cleanup;
+                    }
                 } else {
                     *status = U_BUFFER_OVERFLOW_ERROR;
                 }
@@ -5288,6 +5302,11 @@ ucol_calcSortKey(const    UCollator    *coll,
                             *(primaries++) = UCOL_LEVELTERMINATOR;
                             uprv_memcpy(primaries, quadStart, quadsize);
                         }
+                        else {
+                            /* We ran out of memory!? We can't recover. */
+                            sortKeySize = DEFAULT_ERROR_SIZE_FOR_CALCSORTKEY;
+                            goto cleanup;
+                        }
                     } else {
                         *status = U_BUFFER_OVERFLOW_ERROR;
                     }
@@ -5307,6 +5326,11 @@ ucol_calcSortKey(const    UCollator    *coll,
                             *(primaries++) = UCOL_LEVELTERMINATOR;
                             u_writeIdenticalLevelRun(s.string, len, primaries);
                         }
+                        else {
+                            /* We ran out of memory!? We can't recover. */
+                            sortKeySize = DEFAULT_ERROR_SIZE_FOR_CALCSORTKEY;
+                            goto cleanup;
+                        }
                     } else {
                         *status = U_BUFFER_OVERFLOW_ERROR;
                     }
@@ -5316,6 +5340,24 @@ ucol_calcSortKey(const    UCollator    *coll,
         *(primaries++) = '\0';
     }
 
+    if(allocateSKBuffer == TRUE) {
+        *result = (uint8_t*)uprv_malloc(sortKeySize);
+        /* test for NULL */
+        if (*result == NULL) {
+            *status = U_MEMORY_ALLOCATION_ERROR;
+            goto cleanup;
+        }
+        uprv_memcpy(*result, primStart, sortKeySize);
+        if(primStart != prim) {
+            uprv_free(primStart);
+        }
+    }
+
+cleanup:
+    if (allocateSKBuffer == FALSE && resultLength > 0 && U_FAILURE(*status) && *status != U_BUFFER_OVERFLOW_ERROR) {
+        /* NULL terminate for safety */
+        **result = 0;
+    }
     if(terStart != tert) {
         uprv_free(terStart);
         uprv_free(secStart);
@@ -5325,19 +5367,6 @@ ucol_calcSortKey(const    UCollator    *coll,
 
     if(normSource != normBuffer) {
         uprv_free(normSource);
-    }
-
-    if(allocateSKBuffer == TRUE) {
-        *result = (uint8_t*)uprv_malloc(sortKeySize);
-        /* test for NULL */
-        if (*result == NULL) {
-            *status = U_MEMORY_ALLOCATION_ERROR;
-            return sortKeySize;
-        }
-        uprv_memcpy(*result, primStart, sortKeySize);
-        if(primStart != prim) {
-            uprv_free(primStart);
-        }
     }
 
     return sortKeySize;
@@ -5595,11 +5624,8 @@ ucol_calcSortKeySimpleTertiary(const    UCollator    *coll,
                         *result = primStart;
                         primarySafeEnd = primStart + resultLength - 2;
                     } else {
-                        IInit_collIterate(coll, (UChar *)source, len, &s);
-                        if(source == normSource) {
-                            s.flags &= ~UCOL_ITER_NORM;
-                        }
-                        sortKeySize = ucol_getSortKeySize(coll, &s, sortKeySize, coll->strength, len);
+                        /* We ran out of memory!? We can't recover. */
+                        sortKeySize = DEFAULT_ERROR_SIZE_FOR_CALCSORTKEY;
                         finished = TRUE;
                         break;
                     }
@@ -5614,11 +5640,8 @@ ucol_calcSortKeySimpleTertiary(const    UCollator    *coll,
             terStart = reallocateBuffer(&tertiaries, terStart, tert, &terSize, 2*terSize, status);
             minBufferSize *= 2;
             if(U_FAILURE(*status)) { // if we cannot reallocate buffers, we can at least give the sortkey size
-                IInit_collIterate(coll, (UChar *)source, len, &s);
-                if(source == normSource) {
-                    s.flags &= ~UCOL_ITER_NORM;
-                }
-                sortKeySize = ucol_getSortKeySize(coll, &s, sortKeySize, coll->strength, len);
+                /* We ran out of memory!? We can't recover. */
+                sortKeySize = DEFAULT_ERROR_SIZE_FOR_CALCSORTKEY;
                 break;
             }
         }
@@ -5647,6 +5670,11 @@ ucol_calcSortKeySimpleTertiary(const    UCollator    *coll,
                     *(primaries++) = UCOL_LEVELTERMINATOR;
                     *result = primStart;
                     uprv_memcpy(primaries, secStart, secsize);
+                }
+                else {
+                    /* We ran out of memory!? We can't recover. */
+                    sortKeySize = DEFAULT_ERROR_SIZE_FOR_CALCSORTKEY;
+                    goto cleanup;
                 }
             } else {
                 *status = U_BUFFER_OVERFLOW_ERROR;
@@ -5682,6 +5710,11 @@ ucol_calcSortKeySimpleTertiary(const    UCollator    *coll,
                     *(primaries++) = UCOL_LEVELTERMINATOR;
                     uprv_memcpy(primaries, terStart, tersize);
                 }
+                else {
+                    /* We ran out of memory!? We can't recover. */
+                    sortKeySize = DEFAULT_ERROR_SIZE_FOR_CALCSORTKEY;
+                    goto cleanup;
+                }
             } else {
                 *status = U_MEMORY_ALLOCATION_ERROR;
             }
@@ -5690,6 +5723,24 @@ ucol_calcSortKeySimpleTertiary(const    UCollator    *coll,
         *(primaries++) = '\0';
     }
 
+    if(allocateSKBuffer == TRUE) {
+        *result = (uint8_t*)uprv_malloc(sortKeySize);
+        /* test for NULL */
+        if (*result == NULL) {
+            *status = U_MEMORY_ALLOCATION_ERROR;
+            goto cleanup;
+        }
+        uprv_memcpy(*result, primStart, sortKeySize);
+        if(primStart != prim) {
+            uprv_free(primStart);
+        }
+    }
+
+cleanup:
+    if (allocateSKBuffer == FALSE && resultLength > 0 && U_FAILURE(*status) && *status != U_BUFFER_OVERFLOW_ERROR) {
+        /* NULL terminate for safety */
+        **result = 0;
+    }
     if(terStart != tert) {
         uprv_free(terStart);
         uprv_free(secStart);
@@ -5697,19 +5748,6 @@ ucol_calcSortKeySimpleTertiary(const    UCollator    *coll,
 
     if(normSource != normBuffer) {
         uprv_free(normSource);
-    }
-
-    if(allocateSKBuffer == TRUE) {
-        *result = (uint8_t*)uprv_malloc(sortKeySize);
-        /* test for NULL */
-        if (*result == NULL) {
-            *status = U_MEMORY_ALLOCATION_ERROR;
-            return sortKeySize;
-        }
-        uprv_memcpy(*result, primStart, sortKeySize);
-        if(primStart != prim) {
-            uprv_free(primStart);
-        }
     }
 
     return sortKeySize;
@@ -6730,9 +6768,8 @@ ucol_setUpLatinOne(UCollator *coll, UErrorCode *status) {
     UChar ch = 0;
     UCollationElements *it = ucol_openElements(coll, &ch, 1, status);
     // Check for null pointer 
-    if (it == NULL) {
-    	*status = U_MEMORY_ALLOCATION_ERROR;
-    	return FALSE;
+    if (U_FAILURE(*status)) {
+        return FALSE;
     }
     uprv_memset(coll->latinOneCEs, 0, sizeof(uint32_t)*coll->latinOneTableLen*3);
 
@@ -6894,26 +6931,28 @@ void ucol_updateInternalState(UCollator *coll, UErrorCode *status) {
         coll->tertiaryBottomCount = (uint8_t)(tertiaryTotal - coll->tertiaryTopCount);
 
         if(coll->caseLevel == UCOL_OFF && coll->strength == UCOL_TERTIARY
-            && coll->frenchCollation == UCOL_OFF && coll->alternateHandling == UCOL_NON_IGNORABLE) {
-                coll->sortKeyGen = ucol_calcSortKeySimpleTertiary;
+            && coll->frenchCollation == UCOL_OFF && coll->alternateHandling == UCOL_NON_IGNORABLE)
+        {
+            coll->sortKeyGen = ucol_calcSortKeySimpleTertiary;
         } else {
             coll->sortKeyGen = ucol_calcSortKey;
         }
         if(coll->caseLevel == UCOL_OFF && coll->strength <= UCOL_TERTIARY && coll->numericCollation == UCOL_OFF
-            && coll->alternateHandling == UCOL_NON_IGNORABLE && !coll->latinOneFailed) {
-                if(coll->latinOneCEs == NULL || coll->latinOneRegenTable) {
-                    if(ucol_setUpLatinOne(coll, status)) { // if we succeed in building latin1 table, we'll use it
-                        //fprintf(stderr, "F");
-                        coll->latinOneUse = TRUE;
-                    } else {
-                        coll->latinOneUse = FALSE;
-                    }
-                    if(*status == U_UNSUPPORTED_ERROR) {
-                        *status = U_ZERO_ERROR;
-                    }
-                } else { // latin1Table exists and it doesn't need to be regenerated, just use it
+            && coll->alternateHandling == UCOL_NON_IGNORABLE && !coll->latinOneFailed)
+        {
+            if(coll->latinOneCEs == NULL || coll->latinOneRegenTable) {
+                if(ucol_setUpLatinOne(coll, status)) { // if we succeed in building latin1 table, we'll use it
+                    //fprintf(stderr, "F");
                     coll->latinOneUse = TRUE;
+                } else {
+                    coll->latinOneUse = FALSE;
                 }
+                if(*status == U_UNSUPPORTED_ERROR) {
+                    *status = U_ZERO_ERROR;
+                }
+            } else { // latin1Table exists and it doesn't need to be regenerated, just use it
+                coll->latinOneUse = TRUE;
+            }
         } else {
             coll->latinOneUse = FALSE;
         }
@@ -7389,7 +7428,7 @@ inline void UCOL_INIT_CEBUF(ucol_CEBuf *b) {
 }
 
 static
-void ucol_CEBuf_Expand(ucol_CEBuf *b, collIterate *ci) {
+void ucol_CEBuf_Expand(ucol_CEBuf *b, collIterate *ci, UErrorCode *status) {
     uint32_t  oldSize;
     uint32_t  newSize;
     uint32_t  *newBuf;
@@ -7398,7 +7437,10 @@ void ucol_CEBuf_Expand(ucol_CEBuf *b, collIterate *ci) {
     oldSize = b->pos - b->buf;
     newSize = oldSize * 2;
     newBuf = (uint32_t *)uprv_malloc(newSize * sizeof(uint32_t));
-    if(newBuf != NULL) {
+    if(newBuf == NULL) {
+        *status = U_MEMORY_ALLOCATION_ERROR;
+    }
+    else {
         uprv_memcpy(newBuf, b->buf, oldSize * sizeof(uint32_t));
         if (b->buf != b->localArray) {
             uprv_free(b->buf);
@@ -7410,11 +7452,13 @@ void ucol_CEBuf_Expand(ucol_CEBuf *b, collIterate *ci) {
 }
 
 static
-inline void UCOL_CEBUF_PUT(ucol_CEBuf *b, uint32_t ce, collIterate *ci) {
+inline void UCOL_CEBUF_PUT(ucol_CEBuf *b, uint32_t ce, collIterate *ci, UErrorCode *status) {
     if (b->pos == b->endp) {
-        ucol_CEBuf_Expand(b, ci);
+        ucol_CEBuf_Expand(b, ci, status);
     }
-    *(b)->pos++ = ce;
+    if (U_SUCCESS(*status)) {
+        *(b)->pos++ = ce;
+    }
 }
 
 /* This is a trick string compare function that goes in and uses sortkeys to compare */
@@ -7559,7 +7603,7 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
                 // We get the next CE
                 sOrder = ucol_IGetNextCE(coll, sColl, status);
                 // Stuff it in the buffer
-                UCOL_CEBUF_PUT(&sCEs, sOrder, sColl);
+                UCOL_CEBUF_PUT(&sCEs, sOrder, sColl, status);
                 // And keep just the primary part.
                 sOrder &= UCOL_PRIMARYMASK;
             } while(sOrder == 0);
@@ -7567,7 +7611,7 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
             // see the comments on the above block
             do {
                 tOrder = ucol_IGetNextCE(coll, tColl, status);
-                UCOL_CEBUF_PUT(&tCEs, tOrder, tColl);
+                UCOL_CEBUF_PUT(&tCEs, tOrder, tColl, status);
                 tOrder &= UCOL_PRIMARYMASK;
             } while(tOrder == 0);
 
@@ -7598,7 +7642,7 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
             for(;;) {
                 sOrder = ucol_IGetNextCE(coll, sColl, status);
                 if(sOrder == UCOL_NO_MORE_CES) {
-                    UCOL_CEBUF_PUT(&sCEs, sOrder, sColl);
+                    UCOL_CEBUF_PUT(&sCEs, sOrder, sColl, status);
                     break;
                 } else if(sOrder == 0 || (sInShifted && (sOrder & UCOL_PRIMARYMASK) == 0)) {
                     /* UCA amendment - ignore ignorables that follow shifted code points */
@@ -7607,32 +7651,32 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
                     if((sOrder & UCOL_PRIMARYMASK) > 0) { /* There is primary value */
                         if(sInShifted) {
                             sOrder = (sOrder & UCOL_PRIMARYMASK) | 0xC0; /* preserve interesting continuation */
-                            UCOL_CEBUF_PUT(&sCEs, sOrder, sColl);
+                            UCOL_CEBUF_PUT(&sCEs, sOrder, sColl, status);
                             continue;
                         } else {
-                            UCOL_CEBUF_PUT(&sCEs, sOrder, sColl);
+                            UCOL_CEBUF_PUT(&sCEs, sOrder, sColl, status);
                             break;
                         }
                     } else { /* Just lower level values */
                         if(sInShifted) {
                             continue;
                         } else {
-                            UCOL_CEBUF_PUT(&sCEs, sOrder, sColl);
+                            UCOL_CEBUF_PUT(&sCEs, sOrder, sColl, status);
                             continue;
                         }
                     }
                 } else { /* regular */
                     if((sOrder & UCOL_PRIMARYMASK) > LVT) {
-                        UCOL_CEBUF_PUT(&sCEs, sOrder, sColl);
+                        UCOL_CEBUF_PUT(&sCEs, sOrder, sColl, status);
                         break;
                     } else {
                         if((sOrder & UCOL_PRIMARYMASK) > 0) {
                             sInShifted = TRUE;
                             sOrder &= UCOL_PRIMARYMASK;
-                            UCOL_CEBUF_PUT(&sCEs, sOrder, sColl);
+                            UCOL_CEBUF_PUT(&sCEs, sOrder, sColl, status);
                             continue;
                         } else {
-                            UCOL_CEBUF_PUT(&sCEs, sOrder, sColl);
+                            UCOL_CEBUF_PUT(&sCEs, sOrder, sColl, status);
                             sInShifted = FALSE;
                             continue;
                         }
@@ -7645,7 +7689,7 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
             for(;;) {
                 tOrder = ucol_IGetNextCE(coll, tColl, status);
                 if(tOrder == UCOL_NO_MORE_CES) {
-                    UCOL_CEBUF_PUT(&tCEs, tOrder, tColl);
+                    UCOL_CEBUF_PUT(&tCEs, tOrder, tColl, status);
                     break;
                 } else if(tOrder == 0 || (tInShifted && (tOrder & UCOL_PRIMARYMASK) == 0)) {
                     /* UCA amendment - ignore ignorables that follow shifted code points */
@@ -7654,32 +7698,32 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
                     if((tOrder & UCOL_PRIMARYMASK) > 0) { /* There is primary value */
                         if(tInShifted) {
                             tOrder = (tOrder & UCOL_PRIMARYMASK) | 0xC0; /* preserve interesting continuation */
-                            UCOL_CEBUF_PUT(&tCEs, tOrder, tColl);
+                            UCOL_CEBUF_PUT(&tCEs, tOrder, tColl, status);
                             continue;
                         } else {
-                            UCOL_CEBUF_PUT(&tCEs, tOrder, tColl);
+                            UCOL_CEBUF_PUT(&tCEs, tOrder, tColl, status);
                             break;
                         }
                     } else { /* Just lower level values */
                         if(tInShifted) {
                             continue;
                         } else {
-                            UCOL_CEBUF_PUT(&tCEs, tOrder, tColl);
+                            UCOL_CEBUF_PUT(&tCEs, tOrder, tColl, status);
                             continue;
                         }
                     }
                 } else { /* regular */
                     if((tOrder & UCOL_PRIMARYMASK) > LVT) {
-                        UCOL_CEBUF_PUT(&tCEs, tOrder, tColl);
+                        UCOL_CEBUF_PUT(&tCEs, tOrder, tColl, status);
                         break;
                     } else {
                         if((tOrder & UCOL_PRIMARYMASK) > 0) {
                             tInShifted = TRUE;
                             tOrder &= UCOL_PRIMARYMASK;
-                            UCOL_CEBUF_PUT(&tCEs, tOrder, tColl);
+                            UCOL_CEBUF_PUT(&tCEs, tOrder, tColl, status);
                             continue;
                         } else {
-                            UCOL_CEBUF_PUT(&tCEs, tOrder, tColl);
+                            UCOL_CEBUF_PUT(&tCEs, tOrder, tColl, status);
                             tInShifted = FALSE;
                             continue;
                         }

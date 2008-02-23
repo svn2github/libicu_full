@@ -829,7 +829,7 @@ u_printf_scidbl_handler(const u_printf_stream_handler  *handler,
         format = u_locbund_getNumberFormat(formatBundle, UNUM_DECIMAL);
         /* Check for null pointer */
         if (format == NULL) {
-        	return -1;
+            return 0;
         }
         maxSigDecimalDigits = unum_getAttribute(format, UNUM_MAX_SIGNIFICANT_DIGITS);
         significantDigits = scidbl_info.fPrecision;
@@ -1043,31 +1043,31 @@ static const u_printf_info g_u_printf_infos[UPRINTF_NUM_FMT_HANDLERS] = {
             (s) == MOD_LOWERL || \
             (s) == MOD_L
 /* Returns an array of the parsed argument type given in the format string. */
-ufmt_args* parseArguments(const UChar *alias, va_list ap, UErrorCode *status) {
-	ufmt_args *arglist = NULL;
-	ufmt_type_info *typelist = NULL;
-	UBool *islonglong = NULL;
-	int32_t size = 0;
-	int32_t pos = 0;
-	UChar type;
-	uint16_t handlerNum;
-	const UChar *aliasStart = alias;
-	
-	/* get maximum number of arguments */
-	for(;;) {
-		/* find % */
-		while(*alias != UP_PERCENT && *alias != 0x0000) {
+static ufmt_args* parseArguments(const UChar *alias, va_list ap, UErrorCode *status) {
+    ufmt_args *arglist = NULL;
+    ufmt_type_info *typelist = NULL;
+    UBool *islonglong = NULL;
+    int32_t size = 0;
+    int32_t pos = 0;
+    UChar type;
+    uint16_t handlerNum;
+    const UChar *aliasStart = alias;
+
+    /* get maximum number of arguments */
+    for(;;) {
+        /* find % */
+        while(*alias != UP_PERCENT && *alias != 0x0000) {
             alias++;
         }
-		
-		if(*alias == 0x0000) {
+
+        if(*alias == 0x0000) {
             break;
         }
-		
-		alias++;
-		
-		/* handle the pos number */
-		if(ISDIGIT(*alias)) {
+
+        alias++;
+
+        /* handle the pos number */
+        if(ISDIGIT(*alias)) {
 
             /* handle positional parameters */
             if(ISDIGIT(*alias)) {
@@ -1084,52 +1084,52 @@ ufmt_args* parseArguments(const UChar *alias, va_list ap, UErrorCode *status) {
                 return NULL;
             }
         } else {
-        	return NULL;
+            return NULL;
         }
-		
-		if (pos > size) {
-			size = pos;
-		}		
-	}
-	
-	/* create the parsed argument list */
-	typelist = (ufmt_type_info*)uprv_malloc(sizeof(ufmt_type_info) * size);
-	islonglong = (UBool*)uprv_malloc(sizeof(UBool) * size);
-	arglist = (ufmt_args*)uprv_malloc(sizeof(ufmt_args) * size);
-	
-	/* If malloc failed, return NULL */
-	if (!typelist || !islonglong || !arglist) {
-		if (typelist) {
-			uprv_free(typelist);
-		}
-		
-		if (islonglong) {
-			uprv_free(islonglong);
-		}
-		
-		if (arglist) {
-			uprv_free(arglist);
-		}
-		
-		*status = U_MEMORY_ALLOCATION_ERROR;
-		return NULL;
-	}
-	
-	/* reset alias back to the beginning */
-	alias = aliasStart;
-	
-	for(;;) {
-		/* find % */
-		while(*alias != UP_PERCENT && *alias != 0x0000) {
+
+        if (pos > size) {
+            size = pos;
+        }
+    }
+
+    /* create the parsed argument list */
+    typelist = (ufmt_type_info*)uprv_malloc(sizeof(ufmt_type_info) * size);
+    islonglong = (UBool*)uprv_malloc(sizeof(UBool) * size);
+    arglist = (ufmt_args*)uprv_malloc(sizeof(ufmt_args) * size);
+
+    /* If malloc failed, return NULL */
+    if (!typelist || !islonglong || !arglist) {
+        if (typelist) {
+            uprv_free(typelist);
+        }
+
+        if (islonglong) {
+            uprv_free(islonglong);
+        }
+
+        if (arglist) {
+            uprv_free(arglist);
+        }
+
+        *status = U_MEMORY_ALLOCATION_ERROR;
+        return NULL;
+    }
+
+    /* reset alias back to the beginning */
+    alias = aliasStart;
+
+    for(;;) {
+        /* find % */
+        while(*alias != UP_PERCENT && *alias != 0x0000) {
             alias++;
         }
-		
-		if(*alias == 0x0000) {
+
+        if(*alias == 0x0000) {
             break;
         }
-		
-		alias++;
-		
+
+        alias++;
+
         /* handle positional parameters */
         if(ISDIGIT(*alias)) {
             pos = (int) (*alias++ - DIGIT_ZERO);
@@ -1142,32 +1142,32 @@ ufmt_args* parseArguments(const UChar *alias, va_list ap, UErrorCode *status) {
         /* offset position by 1 */
         pos--;
 
-		/* skip over everything except for the type */
-		while (ISMOD(*alias) || ISFLAG(*alias) || ISDIGIT(*alias) || 
-				*alias == SPEC_ASTERISK || *alias == SPEC_PERIOD || *alias == SPEC_DOLLARSIGN) {
-			islonglong[pos] = FALSE;
-			if (ISMOD(*alias)) {
-				alias++;
-				if (*alias == MOD_LOWERL) {
-					islonglong[pos] = TRUE;
-				} 
-			} 
-			alias++;
-		}
-		type = *alias;
-		
-		/* store the argument type in the correct position of the parsed argument list */
-		handlerNum = (uint16_t)(type - UPRINTF_BASE_FMT_HANDLERS);
-		if (handlerNum < UPRINTF_NUM_FMT_HANDLERS) {
-			typelist[pos] = g_u_printf_infos[ handlerNum ].info;
-		} else {
-			typelist[pos] = ufmt_empty;
-		}
-	}
-	
-	/* store argument in arglist */
-	for (pos = 0; pos < size; pos++) {
-		switch (typelist[pos]) {
+        /* skip over everything except for the type */
+        while (ISMOD(*alias) || ISFLAG(*alias) || ISDIGIT(*alias) || 
+            *alias == SPEC_ASTERISK || *alias == SPEC_PERIOD || *alias == SPEC_DOLLARSIGN) {
+                islonglong[pos] = FALSE;
+                if (ISMOD(*alias)) {
+                    alias++;
+                    if (*alias == MOD_LOWERL) {
+                        islonglong[pos] = TRUE;
+                    } 
+                } 
+                alias++;
+        }
+        type = *alias;
+
+        /* store the argument type in the correct position of the parsed argument list */
+        handlerNum = (uint16_t)(type - UPRINTF_BASE_FMT_HANDLERS);
+        if (handlerNum < UPRINTF_NUM_FMT_HANDLERS) {
+            typelist[pos] = g_u_printf_infos[ handlerNum ].info;
+        } else {
+            typelist[pos] = ufmt_empty;
+        }
+    }
+
+    /* store argument in arglist */
+    for (pos = 0; pos < size; pos++) {
+        switch (typelist[pos]) {
         case ufmt_string:
         case ufmt_ustring:
         case ufmt_pointer:
@@ -1194,12 +1194,12 @@ ufmt_args* parseArguments(const UChar *alias, va_list ap, UErrorCode *status) {
             arglist[pos].ptrValue = NULL;
             break;
         }
-	}
-	
-	uprv_free(typelist);
-	uprv_free(islonglong);
+    }
 
-	return arglist;
+    uprv_free(typelist);
+    uprv_free(islonglong);
+
+    return arglist;
 }
 
 /* We parse the argument list in Unicode */
@@ -1227,13 +1227,13 @@ u_printf_parse(const u_printf_stream_handler *streamHandler,
     ufmt_args *arglist;
     UErrorCode status = U_ZERO_ERROR;
     if (!locStringContext || locStringContext->available >= 0) {
-    	/* get the parsed list of argument types */
-    	arglist = parseArguments(orgAlias, ap, &status);
-    	
-    	/* Return error if parsing failed. */
-	    if (U_FAILURE(status)) {
-	    	return -1;
-	    }
+        /* get the parsed list of argument types */
+        arglist = parseArguments(orgAlias, ap, &status);
+
+        /* Return error if parsing failed. */
+        if (U_FAILURE(status)) {
+            return -1;
+        }
     }
     
     /* iterate through the pattern */
@@ -1498,69 +1498,69 @@ u_printf_parse(const u_printf_stream_handler *streamHandler,
         if (handlerNum < UPRINTF_NUM_FMT_HANDLERS) {
             /* query the info function for argument information */
             argType = g_u_printf_infos[ handlerNum ].info;
-            
+
             /* goto the correct argument on arg_list if position is specified */
             if (spec.fArgPos > 0) {
-            	/* offset position by 1 */
-            	spec.fArgPos--;
-            	switch(argType) {
-	            case ufmt_count:
-	                /* set the spec's width to the # of chars written */
-	                info->fWidth = *written;
-	                /* fall through to set the pointer */
-	            case ufmt_string:
-	            case ufmt_ustring:
-	            case ufmt_pointer:
-	                args.ptrValue = arglist[spec.fArgPos].ptrValue;
-	                break;
-	            case ufmt_char:
-	            case ufmt_uchar:
-	            case ufmt_int:
-	                args.int64Value = arglist[spec.fArgPos].int64Value;
-	                break;
-	            case ufmt_float:
-	                args.floatValue = arglist[spec.fArgPos].floatValue;
-	                break;
-	            case ufmt_double:
-	                args.doubleValue = arglist[spec.fArgPos].doubleValue;
-	                break;
-	            default:
-	                /* else args is ignored */
-	                args.ptrValue = NULL;
-	                break;
-	            }
+                /* offset position by 1 */
+                spec.fArgPos--;
+                switch(argType) {
+                case ufmt_count:
+                    /* set the spec's width to the # of chars written */
+                    info->fWidth = *written;
+                    /* fall through to set the pointer */
+                case ufmt_string:
+                case ufmt_ustring:
+                case ufmt_pointer:
+                    args.ptrValue = arglist[spec.fArgPos].ptrValue;
+                    break;
+                case ufmt_char:
+                case ufmt_uchar:
+                case ufmt_int:
+                    args.int64Value = arglist[spec.fArgPos].int64Value;
+                    break;
+                case ufmt_float:
+                    args.floatValue = arglist[spec.fArgPos].floatValue;
+                    break;
+                case ufmt_double:
+                    args.doubleValue = arglist[spec.fArgPos].doubleValue;
+                    break;
+                default:
+                    /* else args is ignored */
+                    args.ptrValue = NULL;
+                    break;
+                }
             } else { /* no positional argument specified */
-	            switch(argType) {
-	            case ufmt_count:
-	                /* set the spec's width to the # of chars written */
-	                info->fWidth = *written;
-	                /* fall through to set the pointer */
-	            case ufmt_string:
-	            case ufmt_ustring:
-	            case ufmt_pointer:
-	                args.ptrValue = va_arg(ap, void*);
-	                break;
-	            case ufmt_char:
-	            case ufmt_uchar:
-	            case ufmt_int:
-	                if (info->fIsLongLong) {
-	                    args.int64Value = va_arg(ap, int64_t);
-	                }
-	                else {
-	                    args.int64Value = va_arg(ap, int32_t);
-	                }
-	                break;
-	            case ufmt_float:
-	                args.floatValue = (float) va_arg(ap, double);
-	                break;
-	            case ufmt_double:
-	                args.doubleValue = va_arg(ap, double);
-	                break;
-	            default:
-	                /* else args is ignored */
-	                args.ptrValue = NULL;
-	                break;
-	            }
+                switch(argType) {
+                case ufmt_count:
+                    /* set the spec's width to the # of chars written */
+                    info->fWidth = *written;
+                    /* fall through to set the pointer */
+                case ufmt_string:
+                case ufmt_ustring:
+                case ufmt_pointer:
+                    args.ptrValue = va_arg(ap, void*);
+                    break;
+                case ufmt_char:
+                case ufmt_uchar:
+                case ufmt_int:
+                    if (info->fIsLongLong) {
+                        args.int64Value = va_arg(ap, int64_t);
+                    }
+                    else {
+                        args.int64Value = va_arg(ap, int32_t);
+                    }
+                    break;
+                case ufmt_float:
+                    args.floatValue = (float) va_arg(ap, double);
+                    break;
+                case ufmt_double:
+                    args.doubleValue = va_arg(ap, double);
+                    break;
+                default:
+                    /* else args is ignored */
+                    args.ptrValue = NULL;
+                    break;
+                }
             }
 
             /* call the handler function */
@@ -1580,7 +1580,7 @@ u_printf_parse(const u_printf_stream_handler *streamHandler,
     }
     /* delete parsed argument list */
     if (arglist != NULL) {
-    	uprv_free(arglist);
+        uprv_free(arglist);
     }
     /* return # of characters in this format that have been parsed. */
     return (int32_t)(alias - fmt);

@@ -176,6 +176,17 @@ static UBool gDefaultConverterContainsOption;
 
 static const char DATA_TYPE[] = "cnv";
 
+static void
+ucnv_flushAvailableConverterCache() {
+    if (gAvailableConverters) {
+        umtx_lock(&cnvCacheMutex);
+        gAvailableConverterCount = 0;
+        uprv_free((char **)gAvailableConverters);
+        gAvailableConverters = NULL;
+        umtx_unlock(&cnvCacheMutex);
+    }
+}
+
 /* ucnv_cleanup - delete all storage held by the converter cache, except any  */
 /*                in use by open converters.                                  */
 /*                Not thread safe.                                            */
@@ -187,8 +198,8 @@ static UBool U_CALLCONV ucnv_cleanup(void) {
         SHARED_DATA_HASHTABLE = NULL;
     }
 
-    /* Called from ucnv_flushCache because it allocates the hashtable */
-    /*ucnv_flushAvailableConverterCache();*/
+    /* Isn't called from flushCache because other threads may have preexisting references to the table. */
+    ucnv_flushAvailableConverterCache();
 
     gDefaultConverterName = NULL;
     gDefaultConverterNameBuffer[0] = 0;
@@ -949,17 +960,6 @@ ucnv_createConverterFromSharedData(UConverter *myUConverter,
     return myUConverter;
 }
 
-static void
-ucnv_flushAvailableConverterCache() {
-    if (gAvailableConverters) {
-        umtx_lock(&cnvCacheMutex);
-        gAvailableConverterCount = 0;
-        uprv_free((char **)gAvailableConverters);
-        gAvailableConverters = NULL;
-        umtx_unlock(&cnvCacheMutex);
-    }
-}
-
 /*Frees all shared immutable objects that aren't referred to (reference count = 0)
  */
 U_CAPI int32_t U_EXPORT2
@@ -976,9 +976,6 @@ ucnv_flushCache ()
 
     /* Close the default converter without creating a new one so that everything will be flushed. */
     ucnv_close(u_getDefaultConverter(&status));
-
-    /* Flush now because we may not have any shared data in the hash. */
-    ucnv_flushAvailableConverterCache();
 
     /*if shared data hasn't even been lazy evaluated yet
     * return 0

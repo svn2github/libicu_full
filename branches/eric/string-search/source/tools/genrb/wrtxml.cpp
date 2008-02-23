@@ -462,18 +462,17 @@ printComments(UnicodeString *Accumulator, struct UString *src, const char *resNa
 
 #if UCONFIG_NO_REGULAR_EXPRESSIONS==0 /* donot compile when no RegularExpressions are available */
 
-    int32_t capacity = src->fLength;
+    if(status==NULL || U_FAILURE(*status)){
+        return;
+    }
+
+    int32_t capacity = src->fLength + 1;
     char* buf = NULL;
     int32_t bufLen = 0;
     UChar* desc  = (UChar*) uprv_malloc(U_SIZEOF_UCHAR * capacity);
     UChar* trans = (UChar*) uprv_malloc(U_SIZEOF_UCHAR * capacity);
 
     int32_t descLen = 0, transLen=0;
-    if(status==NULL || U_FAILURE(*status)){
-        uprv_free(desc);
-        uprv_free(trans);
-        return;
-    }
     if(desc==NULL || trans==NULL){
         *status = U_MEMORY_ALLOCATION_ERROR;
         uprv_free(desc);
@@ -510,6 +509,9 @@ printComments(UnicodeString *Accumulator, struct UString *src, const char *resNa
         write_tabs(Accumulator);
         print(Accumulator, desc, descLen, "<!--", "-->", status);
     }
+
+    uprv_free(desc);
+    uprv_free(trans);
 #else
 
     fprintf(stderr, "Warning: Could not output comments to XLIFF file. ICU has been built without RegularExpression support.\n");
@@ -1043,7 +1045,6 @@ bundle_write_xml(struct SRBRoot *bundle, const char *outputDir,const char* outpu
     const char *tool_id = "genrb-" GENRB_VERSION "-icu-" U_ICU_VERSION;
     const char *tool_name = "genrb";
 
-    char* pid = NULL;
     char* temp = NULL;
     char* lang = NULL;
     const char* pos = NULL;
@@ -1245,24 +1246,12 @@ bundle_write_xml(struct SRBRoot *bundle, const char *outputDir,const char* outpu
     ucnv_close(conv);
 
 cleanup_bundle_write_xml:
-    if(originalFileName!= NULL) {
-        uprv_free(originalFileName);
-        originalFileName = NULL;
-    }
-    if(lang != NULL) {
-        uprv_free(lang);
-        lang = NULL;
-    }
-    if(pid != NULL) {
-        uprv_free(pid);
-        pid = NULL;
-    }
+    uprv_free(originalFileName);
+    uprv_free(lang);
     if(xmlfileName != NULL) {
         uprv_free(xmlfileName);
-        pid = NULL;
     }
     if(outputFileName != NULL){
         uprv_free(outputFileName);
-        pid = NULL;
     }
 }
