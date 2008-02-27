@@ -360,6 +360,9 @@ ucol_reset(UCollationElements *elems)
         ci->writableBufSize = UCOL_WRITABLE_BUFFER_SIZE;
     }
     ci->fcdPosition = NULL;
+
+  //ci->offsetReturn = ci->offsetStore = NULL;
+	ci->offsetRepeatCount = ci->offsetRepeatValue = 0;
 }
 
 U_CAPI int32_t U_EXPORT2
@@ -584,7 +587,7 @@ ucol_getOffset(const UCollationElements *elems)
 {
   const collIterate *ci = &(elems->iteratordata_);
 
-  if (ci->offsetRepeatCount > 0) {
+  if (ci->offsetRepeatCount > 0 && ci->offsetRepeatValue != 0) {
       return ci->offsetRepeatValue;
   }
 

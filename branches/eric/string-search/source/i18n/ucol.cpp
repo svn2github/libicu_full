@@ -1685,7 +1685,7 @@ void collPrevIterNormalize(collIterate *data)
 
     int32_t firstOffset = data->fcdPosition - data->string;
     int32_t trailOffset = data->pos - data->string + 1;
-    int32_t fcdCount    = pEnd - pStart;
+    int32_t fcdCount    = pEnd - pStart /*+ 1*/;
 
     *(data->offsetStore++) = firstOffset + 1;
     for (int32_t i = 0; i < fcdCount; i += 1) {
@@ -3009,18 +3009,24 @@ uint32_t ucol_prv_getSpecialCE(const UCollator *coll, UChar ch, uint32_t CE, col
                 /* I have to decide where continuations are going to be dealt with */
                 uint32_t size;
                 uint32_t i;    /* general counter */
+
                 CEOffset = (uint32_t *)coll->image+getExpansionOffset(CE); /* find the offset to expansion table */
                 size = getExpansionCount(CE);
                 CE = *CEOffset++;
+			  //source->offsetRepeatCount = -1;
+
                 if(size != 0) { /* if there are less than 16 elements in expansion, we don't terminate */
                     for(i = 1; i<size; i++) {
                         *(source->CEpos++) = *CEOffset++;
+						source->offsetRepeatCount += 1;
                     }
                 } else { /* else, we do */
                     while(*CEOffset != 0) {
                         *(source->CEpos++) = *CEOffset++;
+						source->offsetRepeatCount += 1;
                     }
                 }
+
                 return CE;
             }
         case DIGIT_TAG:
@@ -3607,7 +3613,7 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
             IInit_collIterate(coll, UCharOffset, noChars, &temp);
             temp.flags &= ~UCOL_ITER_NORM;
 
-            rawOffset = temp.pos - temp.string; // should be zero?
+            rawOffset = temp.pos - temp.string; // should always be zero?
             CE = ucol_IGetNextCE(coll, &temp, status);
 
             if (source->extendCEs) {
@@ -3689,6 +3695,7 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
                 CE = ucol_IGetNextCE(coll, &temp, status);
             }
 
+			source->offsetRepeatCount += temp.offsetRepeatCount;
             freeHeapWritableBuffer(&temp);
 
             if (strbuffer != buffer) {

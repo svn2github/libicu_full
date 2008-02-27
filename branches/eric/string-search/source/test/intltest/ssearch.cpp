@@ -54,7 +54,7 @@ SSearchTest::~SSearchTest()
 
 void SSearchTest::runIndexedTest( int32_t index, UBool exec, const char* &name, char* /*par*/ )
 {
-    if (exec) logln("TestSuite CharsetDetectionTest: ");
+    if (exec) logln("TestSuite SSearchTest: ");
     switch (index) {
        case 0: name = "searchTest";
             if (exec) searchTest();
