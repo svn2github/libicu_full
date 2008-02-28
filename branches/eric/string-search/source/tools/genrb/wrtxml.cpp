@@ -53,9 +53,8 @@ static void write_utf8_file(UnicodeString outString, FileStream * outFile, UErro
     int32_t len = 0;
     u_strToUTF8(dest,outString.length() * 3 /2,&len,outString.getBuffer(),outString.length(),status);    
 
-    T_FileStream_write(out, dest, len);
+    T_FileStream_write(outFile, dest, len);
     uprv_free(dest);
-
 }
 
 
@@ -408,11 +407,13 @@ printNoteElements(UnicodeString *Accumulator, struct UString *src, UErrorCode *s
 
     count = getCount(src->fChars,src->fLength, UPC_NOTE, status);
     if(U_FAILURE(*status)){
+        uprv_free(note);
         return;
     }
     for(i=0; i < count; i++){
         noteLen =  getAt(src->fChars,src->fLength, &note, capacity, i, UPC_NOTE, status);
         if(U_FAILURE(*status)){
+            uprv_free(note);
             return;
         }
         if(noteLen > 0){
@@ -558,9 +559,9 @@ static char *printContainer(UnicodeString *Accumulator, struct SResource *res, c
     }
 
     tabCount += 1;
-    if (res->fComment != NULL && res->fComment->fChars != NULL) {
+    if (res->fComment.fLength > 0) {
         /* printComments will print the closing ">\n" */
-        printComments(Accumulator,res->fComment, resname, TRUE, status);
+        printComments(Accumulator, &res->fComment, resname, TRUE, status);
     } else {
         Accumulator->append(UnicodeString(">\n"));
         //T_FileStream_write(out, ">\n", 2);
@@ -625,7 +626,7 @@ string_write_xml(UnicodeString *Accumulator, struct SResource *res, const char* 
     //T_FileStream_write(out, buf, bufLen);
     //T_FileStream_write(out, close_source, (int32_t) uprv_strlen(close_source));
 
-    printNoteElements(Accumulator, res->fComment, status);
+    printNoteElements(Accumulator, &res->fComment, status);
 
     tabCount -= 1;
     write_tabs(Accumulator);
@@ -660,7 +661,7 @@ alias_write_xml(UnicodeString *Accumulator, struct SResource *res, const char* i
     Accumulator->append(UnicodeString(close_source));
     //T_FileStream_write(out, close_source, (int32_t)uprv_strlen(close_source));
 
-    printNoteElements(Accumulator, res->fComment, status);
+    printNoteElements(Accumulator, &res->fComment, status);
 
     tabCount -= 1;
     write_tabs(Accumulator);
@@ -789,7 +790,7 @@ int_write_xml(UnicodeString *Accumulator, struct SResource *res, const char* id,
     Accumulator->append(UnicodeString(close_source));
     //T_FileStream_write(out, close_source, (int32_t)uprv_strlen(close_source));
 
-    printNoteElements(Accumulator, res->fComment, status);
+    printNoteElements(Accumulator, &res->fComment, status);
 
     tabCount -= 1;
     write_tabs(Accumulator);
@@ -866,7 +867,7 @@ bin_write_xml(UnicodeString *Accumulator, struct SResource *res, const char* id,
         Accumulator->append(UnicodeString(close_bin_source));
         //T_FileStream_write(out, close_bin_source, (int32_t)uprv_strlen(close_bin_source));
 
-        printNoteElements(Accumulator, res->fComment, status);
+        printNoteElements(Accumulator, &res->fComment, status);
         tabCount -= 1;
         write_tabs(Accumulator);
         Accumulator->append(UnicodeString(close_bin_unit));
@@ -917,7 +918,7 @@ bin_write_xml(UnicodeString *Accumulator, struct SResource *res, const char* id,
 
         Accumulator->append(UnicodeString(close_bin_source));
         //T_FileStream_write(out, close_bin_source, (int32_t)uprv_strlen(close_bin_source));
-        printNoteElements(Accumulator, res->fComment, status);
+        printNoteElements(Accumulator, &res->fComment, status);
 
         tabCount -= 1;
         write_tabs(Accumulator);
