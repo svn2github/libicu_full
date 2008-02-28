@@ -1876,6 +1876,7 @@ inline uint32_t ucol_IGetPrevCE(const UCollator *coll, collIterate *data,
         } else {
             if (data->offsetReturn == data->offsetBuffer) {
                 data->offsetReturn = NULL;
+				data->offsetStore  = data->offsetBuffer;
             } else {
                 data->offsetReturn -= 1;
             }
@@ -3695,7 +3696,10 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
                 CE = ucol_IGetNextCE(coll, &temp, status);
             }
 
-			source->offsetRepeatCount += temp.offsetRepeatCount;
+			if (source->offsetRepeatValue != 0) {
+				source->offsetRepeatCount += temp.offsetRepeatCount;
+			}
+
             freeHeapWritableBuffer(&temp);
 
             if (strbuffer != buffer) {
