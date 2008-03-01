@@ -1,5 +1,5 @@
 # WordBreakProperty-5.1.0.txt
-# Date: 2007-11-15, 19:25:50 GMT [MD]
+# Date: 2008-02-28, 00:02:06 GMT [MD]
 #
 # Unicode Character Database
 # Copyright (c) 1991-2007 Unicode, Inc.
@@ -26,6 +26,15 @@
 000A          ; LF
 
 # Total code points: 1
+
+# ================================================
+
+000B..000C    ; Newline
+0085          ; Newline
+2028          ; Newline
+2029          ; Newline
+
+# Total code points: 5
 
 # ================================================
 

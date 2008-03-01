@@ -1,5 +1,5 @@
 # DerivedJoiningGroup-5.1.0.txt
-# Date: 2007-11-08, 04:46:20 GMT [MD]
+# Date: 2008-02-24, 23:37:21 GMT [MD]
 #
 # Unicode Character Database
 # Copyright (c) 1991-2007 Unicode, Inc.
@@ -404,7 +404,7 @@
 
 # ================================================
 
-077A..077B    ; Burushashki_Yeh_Barree # Lo   [2] ARABIC LETTER YEH BARREE WITH EXTENDED ARABIC-INDIC DIGIT TWO ABOVE..ARABIC LETTER YEH BARREE WITH EXTENDED ARABIC-INDIC DIGIT THREE ABOVE
+077A..077B    ; Burushaski_Yeh_Barree # Lo   [2] ARABIC LETTER YEH BARREE WITH EXTENDED ARABIC-INDIC DIGIT TWO ABOVE..ARABIC LETTER YEH BARREE WITH EXTENDED ARABIC-INDIC DIGIT THREE ABOVE
 
 # Total code points: 2
 

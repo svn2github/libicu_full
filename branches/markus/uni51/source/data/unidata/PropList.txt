@@ -1,5 +1,5 @@
 # PropList-5.1.0.txt
-# Date: 2007-11-15, 19:25:37 GMT [MD]
+# Date: 2008-02-26, 01:01:20 GMT [MD]
 #
 # Unicode Character Database
 # Copyright (c) 1991-2007 Unicode, Inc.
@@ -792,7 +792,6 @@ FA27..FA29    ; Unified_Ideograph
 
 034F          ; Other_Default_Ignorable_Code_Point
 115F..1160    ; Other_Default_Ignorable_Code_Point
-2064          ; Other_Default_Ignorable_Code_Point
 2065..2069    ; Other_Default_Ignorable_Code_Point
 3164          ; Other_Default_Ignorable_Code_Point
 FFA0          ; Other_Default_Ignorable_Code_Point
@@ -802,7 +801,7 @@ E0002..E001F  ; Other_Default_Ignorable_Code_Point
 E0080..E00FF  ; Other_Default_Ignorable_Code_Point
 E01F0..E0FFF  ; Other_Default_Ignorable_Code_Point
 
-# Total code points: 3779
+# Total code points: 3778
 
 # ================================================
 

@@ -1464,7 +1464,7 @@ typedef enum UJoiningGroup {
     U_JG_FE,        /**< @stable ICU 2.6 */
     U_JG_KHAPH,     /**< @stable ICU 2.6 */
     U_JG_ZHAIN,     /**< @stable ICU 2.6 */
-    U_JG_BURUSHASHKI_YEH_BARREE, /**< @draft ICU 4.0 */
+    U_JG_BURUSHASKI_YEH_BARREE, /**< @draft ICU 4.0 */
     U_JG_COUNT
 } UJoiningGroup;
 
@@ -1485,8 +1485,9 @@ typedef enum UGraphemeClusterBreak {
     U_GCB_LVT = 7,              /*[LVT]*/
     U_GCB_T = 8,                /*[T]*/
     U_GCB_V = 9,                /*[V]*/
-    U_GCB_SPACING_MARK = 10,    /*[SM]*/ /* new in Unicode 5.1/ICU 4.0 */
-    U_GCB_COUNT = 11
+    U_GCB_SPACING_MARK = 10,    /*[SM]*/ /* from here on: new in Unicode 5.1/ICU 4.0 */
+    U_GCB_PREPEND = 11,         /*[PP]*/
+    U_GCB_COUNT = 12
 } UGraphemeClusterBreak;
 
 /**
@@ -1508,8 +1509,9 @@ typedef enum UWordBreakValues {
     U_WB_CR = 8,                /*[CR]*/ /* from here on: new in Unicode 5.1/ICU 4.0 */
     U_WB_EXTEND = 9,            /*[Extend]*/
     U_WB_LF = 10,               /*[LF]*/
-    U_WB_MidNumLet =11,         /*[MB]*/
-    U_WB_COUNT = 12
+    U_WB_MIDNUMLET =11,         /*[MB]*/
+    U_WB_NEWLINE =12,           /*[NL]*/
+    U_WB_COUNT = 13
 } UWordBreakValues;
 
 /**

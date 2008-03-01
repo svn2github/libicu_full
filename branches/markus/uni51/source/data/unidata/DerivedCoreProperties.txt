@@ -1,5 +1,5 @@
 # DerivedCoreProperties-5.1.0.txt
-# Date: 2007-11-15, 19:24:52 GMT [MD]
+# Date: 2008-02-27, 00:25:48 GMT [MD]
 #
 # Unicode Character Database
 # Copyright (c) 1991-2007 Unicode, Inc.
@@ -4477,15 +4477,14 @@ E0100..E01EF  ; XID_Continue
 # ================================================
 
 # Derived Property: Default_Ignorable_Code_Point
-#  Generated from Other_Default_Ignorable_Code_Point + Cf + Cc + Cs
-#  + Noncharacter_Code_Point + Variation_Selector
-#  - White_Space - FFF9..FFFB (Annotation Characters)
-#  - 0600..0603, 06DD, 070F
+#  Generated from
+#    Other_Default_Ignorable_Code_Point
+#  + Cf (Format characters)
+#  + Variation_Selector
+#  - White_Space
+#  - FFF9..FFFB (Annotation Characters)
+#  - 0600..0603, 06DD, 070F (exceptional Cf characters that should be visible)
 
-0000..0008    ; Default_Ignorable_Code_Point
-000E..001F    ; Default_Ignorable_Code_Point
-007F..0084    ; Default_Ignorable_Code_Point
-0086..009F    ; Default_Ignorable_Code_Point
 00AD          ; Default_Ignorable_Code_Point
 034F          ; Default_Ignorable_Code_Point
 115F..1160    ; Default_Ignorable_Code_Point
@@ -4497,38 +4496,20 @@ E0100..E01EF  ; XID_Continue
 2065..2069    ; Default_Ignorable_Code_Point
 206A..206F    ; Default_Ignorable_Code_Point
 3164          ; Default_Ignorable_Code_Point
-D800..DFFF    ; Default_Ignorable_Code_Point
-FDD0..FDEF    ; Default_Ignorable_Code_Point
 FE00..FE0F    ; Default_Ignorable_Code_Point
 FEFF          ; Default_Ignorable_Code_Point
 FFA0          ; Default_Ignorable_Code_Point
 FFF0..FFF8    ; Default_Ignorable_Code_Point
-FFFE..FFFF    ; Default_Ignorable_Code_Point
 1D173..1D17A  ; Default_Ignorable_Code_Point
-1FFFE..1FFFF  ; Default_Ignorable_Code_Point
-2FFFE..2FFFF  ; Default_Ignorable_Code_Point
-3FFFE..3FFFF  ; Default_Ignorable_Code_Point
-4FFFE..4FFFF  ; Default_Ignorable_Code_Point
-5FFFE..5FFFF  ; Default_Ignorable_Code_Point
-6FFFE..6FFFF  ; Default_Ignorable_Code_Point
-7FFFE..7FFFF  ; Default_Ignorable_Code_Point
-8FFFE..8FFFF  ; Default_Ignorable_Code_Point
-9FFFE..9FFFF  ; Default_Ignorable_Code_Point
-AFFFE..AFFFF  ; Default_Ignorable_Code_Point
-BFFFE..BFFFF  ; Default_Ignorable_Code_Point
-CFFFE..CFFFF  ; Default_Ignorable_Code_Point
-DFFFE..E0000  ; Default_Ignorable_Code_Point
+E0000         ; Default_Ignorable_Code_Point
 E0001         ; Default_Ignorable_Code_Point
 E0002..E001F  ; Default_Ignorable_Code_Point
 E0020..E007F  ; Default_Ignorable_Code_Point
 E0080..E00FF  ; Default_Ignorable_Code_Point
 E0100..E01EF  ; Default_Ignorable_Code_Point
 E01F0..E0FFF  ; Default_Ignorable_Code_Point
-EFFFE..EFFFF  ; Default_Ignorable_Code_Point
-FFFFE..FFFFF  ; Default_Ignorable_Code_Point
-10FFFE..10FFFF; Default_Ignorable_Code_Point
 
-# Total code points: 6340
+# Total code points: 4167
 
 # ================================================
 
@@ -4688,6 +4669,7 @@ FFFFE..FFFFF  ; Default_Ignorable_Code_Point
 A66F          ; Grapheme_Extend
 A670..A672    ; Grapheme_Extend
 A67C..A67D    ; Grapheme_Extend
+A802          ; Grapheme_Extend
 A806          ; Grapheme_Extend
 A80B          ; Grapheme_Extend
 A825..A826    ; Grapheme_Extend
@@ -4718,7 +4700,7 @@ FF9E..FF9F    ; Grapheme_Extend
 1D242..1D244  ; Grapheme_Extend
 E0100..E01EF  ; Grapheme_Extend
 
-# Total code points: 1067
+# Total code points: 1068
 
 # ================================================
 
@@ -5591,7 +5573,6 @@ A771..A787    ; Grapheme_Base
 A788..A78A    ; Grapheme_Base
 A78B..A78C    ; Grapheme_Base
 A7FB..A801    ; Grapheme_Base
-A802          ; Grapheme_Base
 A803..A805    ; Grapheme_Base
 A807..A80A    ; Grapheme_Base
 A80C..A822    ; Grapheme_Base
@@ -5850,7 +5831,7 @@ FFFC..FFFD    ; Grapheme_Base
 20000..2A6D6  ; Grapheme_Base
 2F800..2FA1D  ; Grapheme_Base
 
-# Total code points: 99442
+# Total code points: 99441
 
 # ================================================
 

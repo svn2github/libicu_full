@@ -1,5 +1,5 @@
 # SentenceBreakProperty-5.1.0.txt
-# Date: 2007-11-15, 19:25:47 GMT [MD]
+# Date: 2008-02-27, 22:55:28 GMT [MD]
 #
 # Unicode Character Database
 # Copyright (c) 1991-2007 Unicode, Inc.
@@ -2135,16 +2135,26 @@ FF63          ; Close
 
 002C          ; SContinue
 002D          ; SContinue
-003A..003B    ; SContinue
-2014          ; SContinue
+003A          ; SContinue
+055D          ; SContinue
+060C..060D    ; SContinue
+07F8          ; SContinue
+1802          ; SContinue
+1808          ; SContinue
+2013..2014    ; SContinue
 3001          ; SContinue
 FE10..FE11    ; SContinue
-FE13..FE14    ; SContinue
-FE31          ; SContinue
+FE13          ; SContinue
+FE31..FE32    ; SContinue
+FE50..FE51    ; SContinue
+FE55          ; SContinue
+FE58          ; SContinue
+FE63          ; SContinue
 FF0C          ; SContinue
 FF0D          ; SContinue
-FF1A..FF1B    ; SContinue
+FF1A          ; SContinue
+FF64          ; SContinue
 
-# Total code points: 15
+# Total code points: 26
 
 # EOF

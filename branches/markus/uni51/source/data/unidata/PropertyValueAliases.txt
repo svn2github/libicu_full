@@ -1,5 +1,5 @@
 # PropertyValueAliases-5.1.0.txt
-# Date: 2007-11-15, 19:25:46 GMT [MD]
+# Date: 2008-02-28, 21:33:03 GMT [MD]
 #
 # Unicode Character Database
 # Copyright (c) 1991-2007 Unicode, Inc.
@@ -123,13 +123,13 @@ blk; n/a       ; Ancient_Greek_Musical_Notation
 blk; n/a       ; Ancient_Greek_Numbers
 blk; n/a       ; Ancient_Symbols
 blk; n/a       ; Arabic
-blk; n/a       ; Arabic_Presentation_Forms_A
+blk; n/a       ; Arabic_Presentation_Forms_A      ; Arabic_Presentation_Forms-A
 blk; n/a       ; Arabic_Presentation_Forms_B
 blk; n/a       ; Arabic_Supplement
 blk; n/a       ; Armenian
 blk; n/a       ; Arrows
 blk; n/a       ; Balinese
-blk; n/a       ; Basic_Latin
+blk; n/a       ; Basic_Latin                      ; ASCII
 blk; n/a       ; Bengali
 blk; n/a       ; Block_Elements
 blk; n/a       ; Bopomofo
@@ -153,7 +153,7 @@ blk; n/a       ; CJK_Unified_Ideographs
 blk; n/a       ; CJK_Unified_Ideographs_Extension_A
 blk; n/a       ; CJK_Unified_Ideographs_Extension_B
 blk; n/a       ; Combining_Diacritical_Marks
-blk; n/a       ; Combining_Diacritical_Marks_For_Symbols
+blk; n/a       ; Combining_Diacritical_Marks_For_Symbols; Combining_Marks_For_Symbols
 blk; n/a       ; Combining_Diacritical_Marks_Supplement
 blk; n/a       ; Combining_Half_Marks
 blk; n/a       ; Control_Pictures
@@ -182,7 +182,7 @@ blk; n/a       ; Georgian
 blk; n/a       ; Georgian_Supplement
 blk; n/a       ; Glagolitic
 blk; n/a       ; Gothic
-blk; n/a       ; Greek_And_Coptic
+blk; n/a       ; Greek_And_Coptic                 ; Greek
 blk; n/a       ; Greek_Extended
 blk; n/a       ; Gujarati
 blk; n/a       ; Gurmukhi
@@ -207,7 +207,7 @@ blk; n/a       ; Kharoshthi
 blk; n/a       ; Khmer
 blk; n/a       ; Khmer_Symbols
 blk; n/a       ; Lao
-blk; n/a       ; Latin_1_Supplement
+blk; n/a       ; Latin_1_Supplement               ; Latin_1
 blk; n/a       ; Latin_Extended_A
 blk; n/a       ; Latin_Extended_Additional
 blk; n/a       ; Latin_Extended_B
@@ -250,7 +250,7 @@ blk; n/a       ; Phaistos_Disc
 blk; n/a       ; Phoenician
 blk; n/a       ; Phonetic_Extensions
 blk; n/a       ; Phonetic_Extensions_Supplement
-blk; n/a       ; Private_Use_Area
+blk; n/a       ; Private_Use_Area                 ; Private_Use
 blk; n/a       ; Rejang
 blk; n/a       ; Runic
 blk; n/a       ; Saurashtra
@@ -281,7 +281,7 @@ blk; n/a       ; Thai
 blk; n/a       ; Tibetan
 blk; n/a       ; Tifinagh
 blk; n/a       ; Ugaritic
-blk; n/a       ; Unified_Canadian_Aboriginal_Syllabics
+blk; n/a       ; Unified_Canadian_Aboriginal_Syllabics; Canadian_Syllabics
 blk; n/a       ; Vai
 blk; n/a       ; Variation_Selectors
 blk; n/a       ; Variation_Selectors_Supplement
@@ -332,24 +332,24 @@ Dash; Y        ; Yes                              ; T                           
 
 # Decomposition_Type (dt)
 
-dt ; Can       ; Canonical
-dt ; Com       ; Compat
-dt ; Enc       ; Circle
-dt ; Fin       ; Final
-dt ; Font      ; Font
-dt ; Fra       ; Fraction
-dt ; Init      ; Initial
-dt ; Iso       ; Isolated
-dt ; Med       ; Medial
-dt ; Nar       ; Narrow
-dt ; Nb        ; Nobreak
-dt ; None      ; None
-dt ; Sml       ; Small
-dt ; Sqr       ; Square
-dt ; Sub       ; Sub
-dt ; Sup       ; Super
-dt ; Vert      ; Vertical
-dt ; Wide      ; Wide
+dt ; Can       ; Canonical                        ; can
+dt ; Com       ; Compat                           ; com
+dt ; Enc       ; Circle                           ; enc
+dt ; Fin       ; Final                            ; fin
+dt ; Font      ; font
+dt ; Fra       ; Fraction                         ; fra
+dt ; Init      ; Initial                          ; init
+dt ; Iso       ; Isolated                         ; iso
+dt ; Med       ; Medial                           ; med
+dt ; Nar       ; Narrow                           ; nar
+dt ; Nb        ; Nobreak                          ; nb
+dt ; None      ; none
+dt ; Sml       ; Small                            ; sml
+dt ; Sqr       ; Square                           ; sqr
+dt ; Sub       ; sub
+dt ; Sup       ; Super                            ; sup
+dt ; Vert      ; Vertical                         ; vert
+dt ; Wide      ; wide
 
 # Default_Ignorable_Code_Point (DI)
 
@@ -464,6 +464,7 @@ GCB; L         ; L
 GCB; LF        ; LF
 GCB; LV        ; LV
 GCB; LVT       ; LVT
+GCB; PP        ; Prepend
 GCB; SM        ; SpacingMark
 GCB; T         ; T
 GCB; V         ; V
@@ -530,6 +531,58 @@ Ideo; Y        ; Yes                              ; T                           
 # Jamo_Short_Name (JSN)
 
 # @missing: 0000..10FFFF; Jamo_Short_Name; <none>
+JSN; A         ; A
+JSN; AE        ; AE
+JSN; B         ; B
+JSN; BB        ; BB
+JSN; BS        ; BS
+JSN; C         ; C
+JSN; D         ; D
+JSN; DD        ; DD
+JSN; E         ; E
+JSN; EO        ; EO
+JSN; EU        ; EU
+JSN; G         ; G
+JSN; GG        ; GG
+JSN; GS        ; GS
+JSN; H         ; H
+JSN; I         ; I
+JSN; J         ; J
+JSN; JJ        ; JJ
+JSN; K         ; K
+JSN; L         ; L
+JSN; LB        ; LB
+JSN; LG        ; LG
+JSN; LH        ; LH
+JSN; LM        ; LM
+JSN; LP        ; LP
+JSN; LS        ; LS
+JSN; LT        ; LT
+JSN; M         ; M
+JSN; N         ; N
+JSN; NG        ; NG
+JSN; NH        ; NH
+JSN; NJ        ; NJ
+JSN; O         ; O
+JSN; OE        ; OE
+JSN; P         ; P
+JSN; R         ; R
+JSN; S         ; S
+JSN; SS        ; SS
+JSN; T         ; T
+JSN; U         ; U
+JSN; WA        ; WA
+JSN; WAE       ; WAE
+JSN; WE        ; WE
+JSN; WEO       ; WEO
+JSN; WI        ; WI
+JSN; YA        ; YA
+JSN; YAE       ; YAE
+JSN; YE        ; YE
+JSN; YEO       ; YEO
+JSN; YI        ; YI
+JSN; YO        ; YO
+JSN; YU        ; YU
 
 # Join_Control (Join_C)
 
@@ -543,7 +596,7 @@ jg ; n/a       ; Alaph
 jg ; n/a       ; Alef
 jg ; n/a       ; Beh
 jg ; n/a       ; Beth
-jg ; n/a       ; Burushashki_Yeh_Barree
+jg ; n/a       ; Burushaski_Yeh_Barree
 jg ; n/a       ; Dal
 jg ; n/a       ; Dalath_Rish
 jg ; n/a       ; E
@@ -942,6 +995,7 @@ WB ; LF        ; LF
 WB ; MB        ; MidNumLet
 WB ; ML        ; MidLetter
 WB ; MN        ; MidNum
+WB ; NL        ; Newline
 WB ; NU        ; Numeric
 WB ; XX        ; Other
 

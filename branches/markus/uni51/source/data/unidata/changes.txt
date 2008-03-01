@@ -117,6 +117,13 @@ ucdstrip < 5.1.0\ucd\LineBreak.txt | ucdmerge > ..\unidata\LineBreak.txt
     WB ; LF        ; LF
     WB ; MB        ; MidNumLet
 
+* Further changes in the 2008-02-29 update:
+- Default_Ignorable_Code_Point: The new file removes Cc, Cs, noncharacters from DICP
+  because they should not normally be invisible.
+- new Joining Group (JG) value Burushashki_Yeh_Barree was renamed to Burushaski_Yeh_Barree (one 'h' removed)
+- new Grapheme_Cluster_Break (GCB) value: PP=Prepend
+- new Word_Break (WB) value: NL=Newline
+
 * hardcoded Unihan range end/limit (see Unicode 4.1 update for comparison)
 - Unihan range end moves from 9FBB to 9FC3
   search for both 9FBB (end) and 9FBC (limit) (regex 9FB[BC], case-insensitive)

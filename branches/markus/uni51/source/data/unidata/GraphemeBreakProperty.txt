@@ -1,5 +1,5 @@
 # GraphemeBreakProperty-5.1.0.txt
-# Date: 2007-11-15, 19:25:16 GMT [MD]
+# Date: 2008-02-28, 01:26:27 GMT [MD]
 #
 # Unicode Character Database
 # Copyright (c) 1991-2007 Unicode, Inc.
@@ -138,10 +138,15 @@ E0020..E007F  ; Control
 0DD2..0DD4    ; Extend
 0DD6          ; Extend
 0DDF          ; Extend
+0E30          ; Extend
 0E31          ; Extend
+0E32..0E33    ; Extend
 0E34..0E3A    ; Extend
+0E45          ; Extend
 0E47..0E4E    ; Extend
+0EB0          ; Extend
 0EB1          ; Extend
+0EB2..0EB3    ; Extend
 0EB4..0EB9    ; Extend
 0EBB..0EBC    ; Extend
 0EC8..0ECD    ; Extend
@@ -206,6 +211,7 @@ E0020..E007F  ; Control
 A66F          ; Extend
 A670..A672    ; Extend
 A67C..A67D    ; Extend
+A802          ; Extend
 A806          ; Extend
 A80B          ; Extend
 A825..A826    ; Extend
@@ -236,7 +242,14 @@ FF9E..FF9F    ; Extend
 1D242..1D244  ; Extend
 E0100..E01EF  ; Extend
 
-# Total code points: 1067
+# Total code points: 1075
+
+# ================================================
+
+0E40..0E44    ; Prepend
+0EC0..0EC4    ; Prepend
+
+# Total code points: 10
 
 # ================================================
 
@@ -310,7 +323,6 @@ E0100..E01EF  ; Extend
 1BAA          ; SpacingMark
 1C24..1C2B    ; SpacingMark
 1C34..1C35    ; SpacingMark
-A802          ; SpacingMark
 A823..A824    ; SpacingMark
 A827          ; SpacingMark
 A880..A881    ; SpacingMark
@@ -322,7 +334,7 @@ AA4D          ; SpacingMark
 1D166         ; SpacingMark
 1D16D         ; SpacingMark
 
-# Total code points: 218
+# Total code points: 217
 
 # ================================================
 
