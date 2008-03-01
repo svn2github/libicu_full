@@ -4973,6 +4973,8 @@ TestTailor6179(void)
             0x61,0x20,0x26,0x5B,0x66,0x69,0x72,0x73,0x74,0x20,0x73,0x65,0x63,0x6F,0x6E,
             0x64,0x61,0x72,0x79,0x20,0x69,0x67,0x6E,0x6F,0x72,0x61,0x62,0x6C,0x65,0x5D,0x3C,
             0x3C,0x3C,0x20,0x62,0};
+    
+    UChar rule3[256] = { '&', 'z', '<', '<', 'a', '|', '-',0 };
 
     UChar tData1[][20]={
         {0x61, 0},
@@ -4983,6 +4985,11 @@ TestTailor6179(void)
             {0x61, 0},
             {0x62, 0},
             { 0xFDD0,0x009E, 0}
+     };
+    UChar tData3[][20]={
+            {'a', 0},
+            {'a', '-', 0},
+            { 'z', 0}
      };
 
     /* UCA5.1, the value may increase in later version. */
@@ -5049,6 +5056,24 @@ TestTailor6179(void)
         for(i = 0; i<rLen; i++) {
             log_err(" %02X", resColl[i]);
         }
+    }
+    ucol_close(coll);
+    
+    /* Tesn &z <<a|- */
+       log_verbose("\n\nTailoring test: &z <<a|- ");
+       ruleLen = u_strlen(rule3);
+       coll = ucol_openRules(rule3, ruleLen, UCOL_OFF, UCOL_TERTIARY, NULL,&status);
+       if (U_FAILURE(status)) {
+           log_err("Tailoring test: &z <<a|- failed!");
+           return;
+       }
+    for (j=0; j<3; j++) {
+       tLen = u_strlen(tData3[j]);
+       rLen = ucol_getSortKey(coll, tData3[j], tLen, resColl, 100);
+       log_verbose("\n Data[%d] :%s  \tlen: %d key: ", j, tData3[j], rLen);
+       for(i = 0; i<rLen; i++) {
+           log_verbose(" %02X", resColl[i]);
+       }
     }
     ucol_close(coll);
 }
