@@ -929,7 +929,7 @@ UBool hasAccentsBeforeMatch(const UStringSearch *strsrch, int32_t start,
                 ignorable = FALSE;
             }
             ce = getCE(strsrch, ucol_next(coleiter, &status));
-            if (U_FAILURE(status)) {
+            if (U_FAILURE(status) || ce == UCOL_NULLORDER) {
                 return TRUE;
             }
         }
@@ -1002,9 +1002,10 @@ UBool hasAccentsAfterMatch(const UStringSearch *strsrch, int32_t start,
             int32_t             firstce  = strsrch->pattern.CE[0];
             UCollationElements *coleiter = strsrch->textIter;
             UErrorCode          status   = U_ZERO_ERROR;
+			int32_t ce;
             setColEIterOffset(coleiter, start);
-            while (getCE(strsrch, ucol_next(coleiter, &status)) != firstce) {
-                if (U_FAILURE(status)) {
+            while ((ce = getCE(strsrch, ucol_next(coleiter, &status))) != firstce) {
+                if (U_FAILURE(status) || ce == UCOL_NULLORDER) {
                     return TRUE;
                 }
             }
@@ -1020,7 +1021,8 @@ UBool hasAccentsAfterMatch(const UStringSearch *strsrch, int32_t start,
                 }
                 count ++;
             }
-            int32_t ce = ucol_next(coleiter, &status);
+            
+			ce = ucol_next(coleiter, &status);
             if (U_FAILURE(status)) {
                 return TRUE;
             }

@@ -1685,7 +1685,29 @@ void collPrevIterNormalize(collIterate *data)
 
     int32_t firstOffset = data->fcdPosition - data->string;
     int32_t trailOffset = data->pos - data->string + 1;
+	UChar   baseChar    = (data->fcdPosition == NULL)? 0 : *data->fcdPosition;
     int32_t fcdCount    = pEnd - pStart /*+ 1*/;
+
+	/*
+	 * If the base character is the start of a contraction, forward processing
+	 * will normalize the marks while checking for the contraction, which means
+	 * that the offset of the first mark will the same as the other marks. We also
+	 * have to explicitly set the offset of the base character.
+	 * 
+	 * **** THIS IS PROBABLY NOT A COMPLETE TEST ****
+	 */
+	if (baseChar >= 0x100) {
+		int32_t baseOrder = UTRIE_GET32_FROM_LEAD(&data->coll->mapping, baseChar);
+
+		if (baseOrder == UCOL_NOT_FOUND && data->coll->UCA) {
+			baseOrder = UTRIE_GET32_FROM_LEAD(&data->coll->UCA->mapping, baseChar);
+		}
+
+		if (baseOrder > UCOL_NOT_FOUND && getCETag(baseOrder) == CONTRACTION_TAG) {
+			firstOffset -= 1;
+			fcdCount += 1;
+		}
+	}
 
     *(data->offsetStore++) = firstOffset + 1;
     for (int32_t i = 0; i < fcdCount; i += 1) {
@@ -3725,6 +3747,30 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
                 *(source->CEpos++) = ((CE & 0xFFFF00) << 8) | (UCOL_BYTE_COMMON << 8) | UCOL_BYTE_COMMON;
                 *(source->CEpos++) = ((CE & 0xFF)<<24)|UCOL_CONTINUATION_MARKER;
                 source->toReturn = source->CEpos - 1;
+
+				if (source->offsetBuffer == NULL) {
+					source->offsetBufferSize = UCOL_EXPAND_CE_BUFFER_SIZE;
+					source->offsetBuffer = (int32_t *) uprv_malloc(sizeof(int32_t) * UCOL_EXPAND_CE_BUFFER_SIZE);
+					source->offsetStore = source->offsetBuffer;
+				}
+
+				// **** doesn't work if using iterator ****
+				if (source->flags & UCOL_ITER_INNORMBUF) {
+				  source->offsetRepeatCount = 1;
+				} else {
+				  int32_t firstOffset = (int32_t)(source->pos - source->string);
+
+				  *(source->offsetStore++) = firstOffset;
+				  *(source->offsetStore++) = firstOffset + 1;
+
+					source->offsetReturn = source->offsetStore - 1;
+					*(source->offsetBuffer) = firstOffset;
+					if (source->offsetReturn == source->offsetBuffer) {
+						source->offsetStore = source->offsetBuffer;
+					}
+				}
+
+
                 return *(source->toReturn);
             }
 
@@ -4054,18 +4100,37 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
                 V += VBase;
                 T += TBase;
 
+				if (source->offsetBuffer == NULL) {
+					source->offsetBufferSize = UCOL_EXPAND_CE_BUFFER_SIZE;
+					source->offsetBuffer = (int32_t *) uprv_malloc(sizeof(int32_t) * UCOL_EXPAND_CE_BUFFER_SIZE);
+					source->offsetStore = source->offsetBuffer;
+				}
+
+			  int32_t firstOffset = (int32_t)(source->pos - source->string);
+
+			  *(source->offsetStore++) = firstOffset;
+
                 /*
-                return the first CE, but first put the rest into the expansion buffer
-                */
+                 * return the first CE, but first put the rest into the expansion buffer
+                 */
                 if (!source->coll->image->jamoSpecial) {
                     *(source->CEpos++) = UTRIE_GET32_FROM_LEAD(&coll->mapping, L);
                     *(source->CEpos++) = UTRIE_GET32_FROM_LEAD(&coll->mapping, V);
+					*(source->offsetStore++) = firstOffset + 1;
 
-                    if (T != TBase)
+					if (T != TBase) {
                         *(source->CEpos++) = UTRIE_GET32_FROM_LEAD(&coll->mapping, T);
+					    *(source->offsetStore++) = firstOffset + 1;
+					}
 
                     source->toReturn = source->CEpos - 1;
-                    return *(source->toReturn);
+
+					source->offsetReturn = source->offsetStore - 1;
+					if (source->offsetReturn == source->offsetBuffer) {
+						source->offsetStore = source->offsetBuffer;
+					}
+					
+					return *(source->toReturn);
                 } else {
                     // Since Hanguls pass the FCD check, it is
                     // guaranteed that we won't be in
@@ -4109,6 +4174,27 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
             }
 
         case IMPLICIT_TAG:        /* everything that is not defined otherwise */
+			if (source->offsetBuffer == NULL) {
+				source->offsetBufferSize = UCOL_EXPAND_CE_BUFFER_SIZE;
+				source->offsetBuffer = (int32_t *) uprv_malloc(sizeof(int32_t) * UCOL_EXPAND_CE_BUFFER_SIZE);
+				source->offsetStore = source->offsetBuffer;
+			}
+
+			// **** doesn't work if using iterator ****
+			if (source->flags & UCOL_ITER_INNORMBUF) {
+			  source->offsetRepeatCount = 1;
+			} else {
+			  int32_t firstOffset = (int32_t)(source->pos - source->string);
+
+			  *(source->offsetStore++) = firstOffset;
+			  *(source->offsetStore++) = firstOffset + 1;
+
+				source->offsetReturn = source->offsetStore - 1;
+				if (source->offsetReturn == source->offsetBuffer) {
+					source->offsetStore = source->offsetBuffer;
+				}
+			}
+
             return getPrevImplicit(ch, source);
 
             // TODO: Remove CJK implicits as they are handled by the getImplicitPrimary function
