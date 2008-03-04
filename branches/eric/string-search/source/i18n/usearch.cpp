@@ -50,6 +50,9 @@ inline void setColEIterOffset(UCollationElements *elems,
         ci->flags = ci->origFlags;
     }
     ci->fcdPosition = NULL;
+
+	ci->offsetReturn = NULL;
+	ci->offsetRepeatCount = ci->offsetRepeatValue = 0;
 }
 
 /**

@@ -634,6 +634,9 @@ ucol_setOffset(UCollationElements    *elems,
     }
     ci->fcdPosition = NULL;
     elems->reset_ = FALSE;
+
+	ci->offsetReturn = NULL;
+	ci->offsetRepeatCount = ci->offsetRepeatValue = 0;
 }
 
 U_CAPI int32_t U_EXPORT2
