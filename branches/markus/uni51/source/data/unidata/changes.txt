@@ -98,8 +98,12 @@ ucdstrip < 5.1.0\ucd\LineBreak.txt | ucdmerge > ..\unidata\LineBreak.txt
   script code values greater than 127.
   However, it does need to store the maximum script value=USCRIPT_CODE_LIMIT-1=129
   in a parallel bit field, and that overflows now.
-  For safety, uprops.h is extended to use two additional bits
-  (for a maximum value of 511) for the script code.
+  Also, future values >=128 would be incompatible anyway.
+  uprops.h is modified to move around several of the bit fields
+  in the properties vector words, and now uses 8 bits for the script code.
+  Two other bit fields also grow to accommodate future growth:
+  Block (current count: 172) grows from 8 to 9 bits,
+  and Word_Break grows from 4 to 5 bits.
 - renamed property Simple_Case_Folding (sfc->scf)
   + nothing to be done: handled as normal alias
 - new property JSN Jamo_Short_Name

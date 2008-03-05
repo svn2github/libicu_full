@@ -78,11 +78,6 @@ ageLineFn(void *context,
           char *fields[][2], int32_t fieldCount,
           UErrorCode *pErrorCode);
 
-static void U_CALLCONV
-scriptsLineFn(void *context,
-              char *fields[][2], int32_t fieldCount,
-              UErrorCode *pErrorCode);
-
 static void
 parseMultiFieldFile(char *filename, char *basename,
                     const char *ucdFile, const char *suffix,
@@ -123,6 +118,12 @@ parseSingleEnumFile(char *filename, char *basename, const char *suffix,
                     const SingleEnum *sen,
                     UErrorCode *pErrorCode);
 
+static const SingleEnum scriptSingleEnum={ 
+    "Scripts", "script", 
+    UCHAR_SCRIPT, 
+    0, 0, UPROPS_SCRIPT_MASK
+};
+
 static const SingleEnum blockSingleEnum={
     "Blocks", "block",
     UCHAR_BLOCK,
@@ -150,7 +151,7 @@ static const SingleEnum sentenceBreakSingleEnum={
 static const SingleEnum lineBreakSingleEnum={
     "LineBreak", "line break",
     UCHAR_LINE_BREAK,
-    0, UPROPS_LB_SHIFT, UPROPS_LB_MASK
+    UPROPS_LB_VWORD, UPROPS_LB_SHIFT, UPROPS_LB_MASK
 };
 
 static const SingleEnum eawSingleEnum={
@@ -266,12 +267,12 @@ propListNames[]={
     { "Logical_Order_Exception",            1, UPROPS_LOGICAL_ORDER_EXCEPTION },
 
     /* new properties in Unicode 4.0.1 */
-    { "STerm",                              2, UPROPS_V2_S_TERM },
-    { "Variation_Selector",                 2, UPROPS_V2_VARIATION_SELECTOR },
+    { "STerm",                              1, UPROPS_S_TERM },
+    { "Variation_Selector",                 1, UPROPS_VARIATION_SELECTOR },
 
     /* new properties in Unicode 4.1 */
-    { "Pattern_Syntax",                     2, UPROPS_V2_PATTERN_SYNTAX },
-    { "Pattern_White_Space",                2, UPROPS_V2_PATTERN_WHITE_SPACE }
+    { "Pattern_Syntax",                     1, UPROPS_PATTERN_SYNTAX },
+    { "Pattern_White_Space",                1, UPROPS_PATTERN_WHITE_SPACE }
 };
 
 static const Binaries
@@ -437,7 +438,7 @@ generateAdditionalProperties(char *filename, const char *suffix, UErrorCode *pEr
      *
      * COMMON==USCRIPT_COMMON==0 - nothing to do
      */
-    parseTwoFieldFile(filename, basename, "Scripts", suffix, scriptsLineFn, pErrorCode);
+    parseSingleEnumFile(filename, basename, suffix, &scriptSingleEnum, pErrorCode);
 
     parseSingleEnumFile(filename, basename, suffix, &blockSingleEnum, pErrorCode);
 
@@ -548,52 +549,6 @@ ageLineFn(void *context,
 
     if(!upvec_setValue(pv, start, limit, 0, version<<UPROPS_AGE_SHIFT, UPROPS_AGE_MASK, pErrorCode)) {
         fprintf(stderr, "genprops error: unable to set character age: %s\n", u_errorName(*pErrorCode));
-        exit(*pErrorCode);
-    }
-}
-
-/* Scripts.txt -------------------------------------------------------------- */
-
-/*
- * Scripts.txt used to be parsed with
- *   parseSingleEnumFile(filename, basename, suffix, &scriptSingleEnum, pErrorCode);
- * until the largest ScriptCode value exceeded UPROPS_SCRIPT_MASK=127,
- * the limit for the 7-bit field in the properties vector word 0.
- * ICU 4.0 adds two more bits in vector word 2.
- */
-static void U_CALLCONV
-scriptsLineFn(void *context,
-              char *fields[][2], int32_t fieldCount,
-              UErrorCode *pErrorCode) {
-    char *s;
-    uint32_t start, limit, uv0, uv2;
-    int32_t value;
-
-    u_parseCodePointRange(fields[0][0], &start, &limit, pErrorCode);
-    if(U_FAILURE(*pErrorCode)) {
-        fprintf(stderr, "genprops: syntax error in Scripts.txt field 0 at %s\n", fields[0][0]);
-        exit(*pErrorCode);
-    }
-    ++limit;
-
-    /* parse property alias */
-    s=trimTerminateField(fields[1][0], fields[1][1]);
-    value=u_getPropertyValueEnum(UCHAR_SCRIPT, s);
-    if(value<0) {
-        fprintf(stderr, "genprops error: unknown script name in Scripts.txt field 1 at %s\n", s);
-        exit(U_PARSE_ERROR);
-    }
-    if(value>((UPROPS_SCRIPT2_MASK>>UPROPS_SCRIPT2_SHIFT)|UPROPS_SCRIPT_MASK)) {
-        fprintf(stderr, "genprops error: script value overflow (0x%x) at %s\n", (int)value, s);
-        exit(U_INTERNAL_PROGRAM_ERROR);
-    }
-
-    uv0=(uint32_t)value&UPROPS_SCRIPT_MASK;
-    uv2=((uint32_t)value<<UPROPS_SCRIPT2_SHIFT)&UPROPS_SCRIPT2_MASK;
-    if( !upvec_setValue(pv, start, limit, 0, uv0, UPROPS_SCRIPT_MASK, pErrorCode) ||
-        !upvec_setValue(pv, start, limit, 2, uv2, UPROPS_SCRIPT2_MASK, pErrorCode)
-    ) {
-        fprintf(stderr, "genprops error: unable to set script code: %s\n", u_errorName(*pErrorCode));
         exit(*pErrorCode);
     }
 }
@@ -776,12 +731,11 @@ writeAdditionalData(FILE *f, uint8_t *p, int32_t capacity, int32_t indexes[UPROP
             indexes[UPROPS_ADDITIONAL_VECTORS_INDEX]+pvCount;
 
         indexes[UPROPS_MAX_VALUES_INDEX]=
-            (((int32_t)U_LB_COUNT-1)<<UPROPS_LB_SHIFT)|
             (((int32_t)U_EA_COUNT-1)<<UPROPS_EA_SHIFT)|
             (((int32_t)UBLOCK_COUNT-1)<<UPROPS_BLOCK_SHIFT)|
             (((int32_t)USCRIPT_CODE_LIMIT-1)&UPROPS_SCRIPT_MASK);
         indexes[UPROPS_MAX_VALUES_2_INDEX]=
-            ((((int32_t)USCRIPT_CODE_LIMIT-1)<<UPROPS_SCRIPT2_SHIFT)&UPROPS_SCRIPT2_MASK)|
+            (((int32_t)U_LB_COUNT-1)<<UPROPS_LB_SHIFT)|
             (((int32_t)U_SB_COUNT-1)<<UPROPS_SB_SHIFT)|
             (((int32_t)U_WB_COUNT-1)<<UPROPS_WB_SHIFT)|
             (((int32_t)U_GCB_COUNT-1)<<UPROPS_GCB_SHIFT)|

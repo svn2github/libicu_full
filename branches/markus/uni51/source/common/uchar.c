@@ -730,35 +730,6 @@ u_getUnicodeProperties(UChar32 c, int32_t column) {
 }
 
 U_CFUNC int32_t
-u_getPropsVector(UChar32 c, uint32_t propsVector[], int32_t columns) {
-    int32_t column, fillColumns;
-    uint16_t vecIndex;
-    if( columns<=0 ||
-#if !UCHAR_HARDCODE_DATA
-       !HAVE_DATA ||
-#endif
-       countPropsVectors==0
-    ) {
-        vecIndex=0;
-        fillColumns=0;
-    } else {
-        UTRIE_GET16(&propsVectorsTrie, c, vecIndex);
-        if(columns<=propsVectorsColumns) {
-            fillColumns=columns;
-        } else {
-            fillColumns=propsVectorsColumns;
-        }
-    }
-    for(column=0; column<fillColumns; ++column) {
-        propsVector[column]=propsVectors[vecIndex+column];
-    }
-    for(; column<columns; ++column) {
-        propsVector[column]=0;
-    }
-    return fillColumns;
-}
-
-U_CFUNC int32_t
 uprv_getMaxValues(int32_t column) {
 #if !UCHAR_HARDCODE_DATA
     if(HAVE_DATA) {
@@ -776,40 +747,6 @@ uprv_getMaxValues(int32_t column) {
         return 0;
     }
 #endif
-}
-
-U_CFUNC int32_t
-u_getMaxValuesVector(int32_t maxValues[], int32_t columns) {
-    int32_t column, fillColumns;
-    if( columns<=0 ||
-#if !UCHAR_HARDCODE_DATA
-       !HAVE_DATA ||
-#endif
-       countPropsVectors==0
-    ) {
-        fillColumns=0;
-    } else {
-        if(columns<=3) {
-            fillColumns=columns;
-        } else {
-            fillColumns=3;
-        }
-    }
-    switch(fillColumns) {
-    default:
-    case 3:
-        maxValues[2]=indexes[UPROPS_MAX_VALUES_2_INDEX];
-    case 2:
-        maxValues[1]=0;
-    case 1:
-        maxValues[0]=indexes[UPROPS_MAX_VALUES_INDEX];
-    case 0:
-        break;
-    }
-    for(column=fillColumns; column<columns; ++column) {
-        maxValues[column]=0;
-    }
-    return fillColumns;
 }
 
 /*
@@ -861,7 +798,6 @@ u_charAge(UChar32 c, UVersionInfo versionArray) {
 
 U_CAPI UScriptCode U_EXPORT2
 uscript_getScript(UChar32 c, UErrorCode *pErrorCode) {
-    uint32_t propsVector[3];
     if(pErrorCode==NULL || U_FAILURE(*pErrorCode)) {
         return USCRIPT_INVALID_CODE;
     }
@@ -870,10 +806,7 @@ uscript_getScript(UChar32 c, UErrorCode *pErrorCode) {
         return USCRIPT_INVALID_CODE;
     }
 
-    u_getPropsVector(c, propsVector, 3);
-    return (UScriptCode)(
-        ((propsVector[2]&UPROPS_SCRIPT2_MASK)>>UPROPS_SCRIPT2_SHIFT) |
-        (propsVector[0]&UPROPS_SCRIPT_MASK));
+    return (UScriptCode)(u_getUnicodeProperties(c, 0)&UPROPS_SCRIPT_MASK);
 }
 
 U_CAPI UBlockCode U_EXPORT2

@@ -95,26 +95,23 @@ enum {
  * Properties in vector word 0
  * Bits
  * 31..24   DerivedAge version major/minor one nibble each
- * 23..18   Line Break
- * 17..15   East Asian Width
- * 14.. 7   UBlockCode
- *  6.. 0   UScriptCode (bits 8..7 are in vector word 2)
+ * 23..20   reserved
+ * 19..17   East Asian Width
+ * 16.. 8   UBlockCode
+ *  7.. 0   UScriptCode
  */
 
 /* derived age: one nibble each for major and minor version numbers */
 #define UPROPS_AGE_MASK         0xff000000
 #define UPROPS_AGE_SHIFT        24
 
-#define UPROPS_LB_MASK          0x00FC0000
-#define UPROPS_LB_SHIFT         18
+#define UPROPS_EA_MASK          0x000e0000
+#define UPROPS_EA_SHIFT         17
 
-#define UPROPS_EA_MASK          0x00038000
-#define UPROPS_EA_SHIFT         15
+#define UPROPS_BLOCK_MASK       0x0001ff00
+#define UPROPS_BLOCK_SHIFT      8
 
-#define UPROPS_BLOCK_MASK       0x00007f80
-#define UPROPS_BLOCK_SHIFT      7
-
-#define UPROPS_SCRIPT_MASK      0x0000007f
+#define UPROPS_SCRIPT_MASK      0x000000ff
 
 /*
  * Properties in vector word 1
@@ -129,8 +126,6 @@ enum {
  */
 enum {
     UPROPS_WHITE_SPACE,
-        UPROPS_WAS_BIDI_CONTROL,                /* reserved, was used in format version 3 */
-        UPROPS_WAS_JOIN_CONTROL,
     UPROPS_DASH,
     UPROPS_HYPHEN,
     UPROPS_QUOTATION_MARK,
@@ -142,8 +137,6 @@ enum {
     UPROPS_IDEOGRAPHIC,
     UPROPS_DIACRITIC,
     UPROPS_EXTENDER,
-        UPROPS_WAS_LOWERCASE,                   /* reserved, was used in format version 3 */
-        UPROPS_WAS_UPPERCASE,
     UPROPS_NONCHARACTER_CODE_POINT,
     UPROPS_GRAPHEME_EXTEND,
     UPROPS_GRAPHEME_LINK,
@@ -153,49 +146,44 @@ enum {
     UPROPS_UNIFIED_IDEOGRAPH,
     UPROPS_DEFAULT_IGNORABLE_CODE_POINT,
     UPROPS_DEPRECATED,
-        UPROPS_WAS_SOFT_DOTTED,                 /* reserved, was used in format version 3 */
     UPROPS_LOGICAL_ORDER_EXCEPTION,
     UPROPS_XID_START,
     UPROPS_XID_CONTINUE,
     UPROPS_ID_START,                            /* ICU 2.6, uprops format version 3.2 */
     UPROPS_ID_CONTINUE,
     UPROPS_GRAPHEME_BASE,
+    UPROPS_S_TERM,                              /* new in ICU 3.0 and Unicode 4.0.1 */
+    UPROPS_VARIATION_SELECTOR,
+    UPROPS_PATTERN_SYNTAX,                      /* new in ICU 3.4 and Unicode 4.1 */
+    UPROPS_PATTERN_WHITE_SPACE,
+    UPROPS_RESERVED,                            /* reserved & unused */
     UPROPS_BINARY_1_TOP                         /* ==32 - full! */
 };
 
 /*
  * Properties in vector word 2
  * Bits
- * 31..24   More binary properties
- * 23..21   reserved
- * 20..19   UScriptCode bits 8..7
- *          UPROPS_SCRIPT2_SHIFT shifts bits 20..19 to bits 8..7
- * 18..14   Sentence Break
- * 13..10   Word Break
+ * 31..26   reserved
+ * 25..20   Line Break
+ * 19..15   Sentence Break
+ * 14..10   Word Break
  *  9.. 5   Grapheme Cluster Break
  *  4.. 0   Decomposition Type
  */
-#define UPROPS_SCRIPT2_MASK     0x00180000
-#define UPROPS_SCRIPT2_SHIFT    (19-7)
+#define UPROPS_LB_MASK          0x03f00000
+#define UPROPS_LB_SHIFT         20
+#define UPROPS_LB_VWORD         2
 
-#define UPROPS_SB_MASK          0x0007c000
-#define UPROPS_SB_SHIFT         14
+#define UPROPS_SB_MASK          0x000f8000
+#define UPROPS_SB_SHIFT         15
 
-#define UPROPS_WB_MASK          0x00003c00
+#define UPROPS_WB_MASK          0x00007c00
 #define UPROPS_WB_SHIFT         10
 
 #define UPROPS_GCB_MASK         0x000003e0
 #define UPROPS_GCB_SHIFT        5
 
 #define UPROPS_DT_MASK          0x0000001f
-
-enum {
-    UPROPS_V2_S_TERM=24,                        /* new in ICU 3.0 and Unicode 4.0.1 */
-    UPROPS_V2_VARIATION_SELECTOR,
-    UPROPS_V2_PATTERN_SYNTAX,                   /* new in ICU 3.4 and Unicode 4.1 */
-    UPROPS_V2_PATTERN_WHITE_SPACE,
-    UPROPS_V2_TOP                               /* must be <=32 */
-};
 
 /**
  * Get a properties vector word for a code point.
@@ -205,20 +193,6 @@ enum {
  */
 U_CFUNC uint32_t
 u_getUnicodeProperties(UChar32 c, int32_t column);
-
-/**
- * Get a properties vector for a code point.
- * Implemented in uchar.c for uprops.c.
- * Fills as many as columns entries of propsVector[] as data is available,
- * returns that number, and sets the remaining entries to 0.
- * Logically same as
- *   for(column=0; column<columns; ++column) {
- *     propsVector[column]=u_getUnicodeProperties(c, column);
- *   }
- * @return 0 if no data or illegal argument
- */
-U_CFUNC int32_t
-u_getPropsVector(UChar32 c, uint32_t propsVector[], int32_t columns);
 
 /**
  * Get the the maximum values for some enum/int properties.
@@ -235,20 +209,6 @@ u_getPropsVector(UChar32 c, uint32_t propsVector[], int32_t columns);
  */
 U_CFUNC int32_t
 uprv_getMaxValues(int32_t column);
-
-/**
- * Get the vector of all maximum-values words.
- * Implemented in uchar.c for uprops.c.
- * Fills as many as columns entries of maxValues[] as data is available,
- * returns that number, and sets the remaining entries to 0.
- * Logically same as
- *   for(column=0; column<columns; ++column) {
- *     maxValues[column]=uprv_getMaxValues(column);
- *   }
- * @return 0 if no data or illegal argument
- */
-U_CFUNC int32_t
-u_getMaxValuesVector(int32_t maxValues[], int32_t columns);
 
 /**
  * Get the Hangul Syllable Type for c.
