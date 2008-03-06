@@ -3532,19 +3532,6 @@ int32_t RBBILineMonkey::next(int32_t startPos) {
             continue;
         }
 
-        //LB 30 Do not break between letters, numbers or ordinary symbols and opening or closing punctuation
-        //      (AL | NU) x OP
-        //       CL x (AL | NU)
-        if ((fAL->contains(prevChar) || fNU->contains(prevChar)) &&
-              fOP->contains(thisChar)) {
-            continue;
-        }
-        if (fCL->contains(prevChar) &&
-            (fAL->contains(thisChar) || fNU->contains(thisChar))) {
-            continue;
-        }
-
-
         // LB 31    Break everywhere else
         break;
 

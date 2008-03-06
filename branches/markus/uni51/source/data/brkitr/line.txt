@@ -4,7 +4,8 @@
 #  file:  line.txt
 #
 #         Line Breaking Rules
-#         Implement default line breaking as defined by Unicode Standard Annex #14 version 5.0.0
+#         Implement default line breaking as defined by 
+#         Unicode Standard Annex #14 Revision 21 for Unicode 5.1
 #         http://www.unicode.org/reports/tr14/
 
 
@@ -184,7 +185,7 @@ $CANT_CM = [ $SP $BK $CR $LF $NL $ZW $CM];       # Bases that can't take CMs
 #            so for this one case we need to manually list out longer sequences.
 #
 $AL_FOLLOW_NOCM = [$BK $CR $LF $NL $ZW $SP];
-$AL_FOLLOW_CM   = [$CL $EX $IS $SY $WJ $GL $QU $BA $HY $NS $IN $NU $ALPlus $OP];
+$AL_FOLLOW_CM   = [$CL $EX $IS $SY $WJ $GL $QU $BA $HY $NS $IN $NU $ALPlus];
 $AL_FOLLOW      = [$AL_FOLLOW_NOCM $AL_FOLLOW_CM];
 
 
@@ -269,7 +270,7 @@ $CM+          $SY;              # by rule 10, stand-alone CM behaves as AL
 
 
 #
-# LB 14  Do not break after OP, even after spaced
+# LB 14  Do not break after OP, even after spaces
 #
 $OPcm $SP* $CAN_CM $CM*;
 $OPcm $SP* $CANT_CM;
@@ -362,17 +363,6 @@ $CM+ $ALcm;      # The $CM+ is from rule 10, and unattached CM is treated as AL
 
 # LB 29
 $IScm $ALcm;
-
-#
-# Rule 30   Do not break between letters, numbers or ordinary symbols
-#           and opening or closing punctuation
-#            (AL | NU) x OP
-#            CL x (AL | NU)
-#
-($ALcm | $NUcm) $OPcm;
-$CM+ $OPcm;
-$CLcm ($ALcm | $NUcm);
-
 
 
 #
@@ -580,10 +570,6 @@ $CM* $ALPlus $CM* $ALPlus;
 
 # LB 29
 $CM* $ALPlus $CM* $IS;
-
-# LB 30
-$CM* $OP $CM* ($NU | $ALPlus);
-$CM* ($NU | $ALPlus) $CM* $CL;
 
 
 ## -------------------------------------------------
