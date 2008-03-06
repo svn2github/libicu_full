@@ -2380,6 +2380,9 @@ public:
 private:
     UVector      *fSets;
 
+    UnicodeSet  *fCRSet;
+    UnicodeSet  *fLFSet;
+    UnicodeSet  *fNewlineSet;
     UnicodeSet  *fKatakanaSet;
     UnicodeSet  *fALetterSet;
     UnicodeSet  *fMidNumLetSet;
@@ -2401,12 +2404,14 @@ RBBIWordMonkey::RBBIWordMonkey()
 {
     UErrorCode  status = U_ZERO_ERROR;
 
-
     fSets            = new UVector(status);
 
+    fCRSet           = new UnicodeSet("[\\p{Word_Break = CR}]",           status);
+    fLFSet           = new UnicodeSet("[\\p{Word_Break = LF}]",           status);
+    fNewlineSet      = new UnicodeSet("[\\p{Word_Break = Newline}]",      status);
     fALetterSet      = new UnicodeSet("[\\p{Word_Break = ALetter}]",      status);
     fKatakanaSet     = new UnicodeSet("[\\p{Word_Break = Katakana}]",     status);
-    fMidNumLetSet    = new UnicodeSet("[\\p{Word_Break = MidNumLet}]",     status);
+    fMidNumLetSet    = new UnicodeSet("[\\p{Word_Break = MidNumLet}]",    status);
     fMidLetterSet    = new UnicodeSet("[\\p{Word_Break = MidLetter}]",    status);
     fMidNumSet       = new UnicodeSet("[\\p{Word_Break = MidNum}]",       status);
     fNumericSet      = new UnicodeSet("[\\p{Word_Break = Numeric}]",      status);
@@ -2421,6 +2426,9 @@ RBBIWordMonkey::RBBIWordMonkey()
     }
 
     fOtherSet->complement();
+    fOtherSet->removeAll(*fCRSet);
+    fOtherSet->removeAll(*fLFSet);
+    fOtherSet->removeAll(*fNewlineSet);
     fOtherSet->removeAll(*fKatakanaSet);
     fOtherSet->removeAll(*fALetterSet);
     fOtherSet->removeAll(*fMidLetterSet);
@@ -2432,6 +2440,9 @@ RBBIWordMonkey::RBBIWordMonkey()
     // Inhibit dictionary characters from being tested at all.
     fOtherSet->removeAll(UnicodeSet("[\\p{LineBreak = Complex_Context}]", status));
 
+    fSets->addElement(fCRSet,        status);
+    fSets->addElement(fLFSet,        status);
+    fSets->addElement(fNewlineSet,   status);
     fSets->addElement(fALetterSet,   status);
     fSets->addElement(fKatakanaSet,  status);
     fSets->addElement(fMidLetterSet, status);
@@ -2442,7 +2453,6 @@ RBBIWordMonkey::RBBIWordMonkey()
     fSets->addElement(fExtendSet,    status);
     fSets->addElement(fOtherSet,     status);
     fSets->addElement(fExtendNumLetSet, status);
-
 
     if (U_FAILURE(status)) {
         deferredStatus = status;
@@ -2483,9 +2493,13 @@ int32_t RBBIWordMonkey::next(int32_t prevPos) {
         p2 = p3;  c2 = c3;
 
         // Advancd p3 by    X(Extend | Format)*   Rule 4
+        //    But do not advance over Extend & Format following a new line. (Unicode 5.1 change)
         do {
             p3 = fText->moveIndex32(p3, 1);
             c3 = fText->char32At(p3);
+            if (fCRSet->contains(c2) || fLFSet->contains(c2) || fNewlineSet->contains(c2)) {
+               break;
+            };
         }
         while (fFormatSet->contains(c3) || fExtendSet->contains(c3));
 
@@ -2503,9 +2517,18 @@ int32_t RBBIWordMonkey::next(int32_t prevPos) {
         //     No Extend or Format characters may appear between the CR and LF,
         //     which requires the additional check for p2 immediately following p1.
         //
-        if (c1==0x0D && c2==0x0A && p1==(p2-1)) {
+        if (c1==0x0D && c2==0x0A) {
             continue;
         }
+        
+        // Rule (3a)  Break before and after newlines (including CR and LF)
+        //
+        if (fCRSet->contains(c1) || fLFSet->contains(c1) || fNewlineSet->contains(c1)) {
+            break;
+        };
+        if (fCRSet->contains(c2) || fLFSet->contains(c2) || fNewlineSet->contains(c2)) {
+            break;
+        };
 
         // Rule (5).   ALetter x ALetter
         if (fALetterSet->contains(c1) &&
@@ -2597,6 +2620,9 @@ UVector  *RBBIWordMonkey::charClasses() {
 
 RBBIWordMonkey::~RBBIWordMonkey() {
     delete fSets;
+    delete fCRSet;
+    delete fLFSet;
+    delete fNewlineSet;
     delete fKatakanaSet;
     delete fALetterSet;
     delete fMidNumLetSet;
