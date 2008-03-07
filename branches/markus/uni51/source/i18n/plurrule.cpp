@@ -19,38 +19,22 @@
 #include "cmemory.h"
 #include "cstring.h"
 #include "hash.h"
-#include "ucln_in.h"
-#include "umutex.h"
+#include "mutex.h"
 #include "plurrule_impl.h"
 #include "putilimp.h"
+#include "ucln_in.h"
 #include "ustrfmt.h"
 
 #if !UCONFIG_NO_FORMATTING
 
 // gPluralRuleLocaleHash is a global hash table that maps locale name to
 // the pointer of PluralRule. gPluralRuleLocaleHash is built only once and
-// destroried at end of application. We don't need the gPluralRuleLocaleHash
-// when we move plural rules data to resource bundle in ICU4.x release.
-static UMTX pRulesLock = 0;
+// resides in the memory until end of application. We will remove the
+// gPluralRuleLocaleHash table when we move plural rules data to resource
+// bundle in ICU4.0 release.  If Valgrind reports the memory is still 
+// reachable, please ignore it.
 static Hashtable *gPluralRuleLocaleHash=NULL;
 
-U_CDECL_BEGIN
-
-static void U_CALLCONV
-deletePHashRules(void *obj) {
-    delete (RuleChain *)obj;
-}
-
-static UBool plural_rules_cleanup(void) {
-    if (gPluralRuleLocaleHash) {
-        delete gPluralRuleLocaleHash;
-        gPluralRuleLocaleHash = NULL;
-    }
-    umtx_destroy(&pRulesLock);
-    return TRUE;
-}
-
-U_CDECL_END
 
 U_NAMESPACE_BEGIN
 
@@ -140,10 +124,12 @@ static const UChar PK_VAR_N[]={LOW_N,0};
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(PluralRules)
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(PluralKeywordEnumeration)
 
-PluralRules::PluralRules(UErrorCode& status) {
-    fLocaleStringsHash=NULL;
-    rules = NULL;
-    parser = new RuleParser();
+PluralRules::PluralRules(UErrorCode& status)
+:
+    fLocaleStringsHash(NULL),
+    mRules(NULL),
+    mParser(new RuleParser())
+{
     initHashtable(status);
     if (U_SUCCESS(status)) {
         getRuleData(status);
@@ -151,14 +137,17 @@ PluralRules::PluralRules(UErrorCode& status) {
 }
 
 PluralRules::PluralRules(const PluralRules& other)
-: UObject(other)
+: UObject(other),
+    fLocaleStringsHash(NULL),
+    mRules(NULL),
+    mParser(new RuleParser())
 {
     *this=other;
 }
 
 PluralRules::~PluralRules() {
-    delete rules;
-    delete parser;
+    delete mRules;
+    delete mParser;
 }
 
 PluralRules*
@@ -168,9 +157,13 @@ PluralRules::clone() const {
 
 PluralRules&
 PluralRules::operator=(const PluralRules& other) {
-    fLocaleStringsHash=other.fLocaleStringsHash;
-    rules = new RuleChain(*other.rules);
-    parser = new RuleParser();
+    if (this != &other) {
+        fLocaleStringsHash=other.fLocaleStringsHash;
+        delete mRules;
+        mRules = new RuleChain(*other.mRules);
+        delete mParser;
+        mParser = new RuleParser();
+    }
 
     return *this;
 }
@@ -210,9 +203,10 @@ PluralRules::forLocale(const Locale& locale, UErrorCode& status) {
         return NULL;
     }
     UnicodeString localeName(locale.getName());
-    umtx_lock(&pRulesLock);
-    locRules = (RuleChain *) (newRules->fLocaleStringsHash->get(localeName));
-    umtx_unlock(&pRulesLock);
+    {
+        Mutex lock;
+        locRules = (RuleChain *) (newRules->fLocaleStringsHash->get(localeName));
+    }
     if (locRules == NULL) {
         // Check parent locales.
         char parentLocale[ULOC_FULLNAME_CAPACITY];
@@ -220,9 +214,8 @@ PluralRules::forLocale(const Locale& locale, UErrorCode& status) {
         int32_t localeNameLen=0;
         uprv_strcpy(parentLocale, curLocaleName);
         while ((localeNameLen=uloc_getParent(parentLocale, parentLocale, ULOC_FULLNAME_CAPACITY, &status)) > 0) {
-            umtx_lock(&pRulesLock);
+            Mutex lock;
             locRules = (RuleChain *) (newRules->fLocaleStringsHash->get(localeName));
-            umtx_unlock(&pRulesLock);
             if (locRules != NULL) {
                 break;
             }
@@ -238,11 +231,11 @@ PluralRules::forLocale(const Locale& locale, UErrorCode& status) {
 
 UnicodeString
 PluralRules::select(int32_t number) const {
-    if (rules == NULL) {
+    if (mRules == NULL) {
         return PLURAL_DEFAULT_RULE;
     }
     else {
-        return rules->select(number);
+        return mRules->select(number);
     }
 }
 
@@ -256,16 +249,11 @@ PluralRules::getKeywords(UErrorCode& status) const {
 
 UBool
 PluralRules::isKeyword(const UnicodeString& keyword) const {
-    if ( rules == NULL) {
-        if ( keyword != PLURAL_DEFAULT_RULE ) {
-            return FALSE;
-        }
-        else {
-            return TRUE;
-        }
+    if ( mRules == NULL) {
+        return (UBool)( keyword == PLURAL_DEFAULT_RULE );
     }
     else {
-        return rules->isKeyword(keyword);
+        return mRules->isKeyword(keyword);
     }
 }
 
@@ -365,11 +353,11 @@ PluralRules::parseDescription(UnicodeString& data, RuleChain& rules, UErrorCode 
 
     UnicodeString ruleData = data.toLower();
     while (ruleIndex< ruleData.length()) {
-        parser->getNextToken(ruleData, &ruleIndex, token, type, status);
+        mParser->getNextToken(ruleData, &ruleIndex, token, type, status);
         if (U_FAILURE(status)) {
             return;
         }
-        parser->checkSyntax(prevType, type, status);
+        mParser->checkSyntax(prevType, type, status);
         if (U_FAILURE(status)) {
             return;
         }
@@ -472,7 +460,7 @@ PluralRules::getNextLocale(const UnicodeString& localeData, int32_t* curIndex, U
 
 int32_t
 PluralRules::getRepeatLimit() const {
-    return rules->getRepeatLimit();
+    return mRules->getRepeatLimit();
 }
 
 void
@@ -480,29 +468,24 @@ PluralRules::initHashtable(UErrorCode& status) {
     if (fLocaleStringsHash!=NULL) {
         return;
     }
-    UBool needsInit;
-    UMTX_CHECK(&LOCK, (gPluralRuleLocaleHash == NULL), needsInit);/* This is here to prevent race conditions. */
-
-    if (needsInit) {
+    {
+        Mutex lock;
+        if (gPluralRuleLocaleHash == NULL) {
         // This static PluralRule hashtable residents in memory until end of application.
-        umtx_lock(&pRulesLock);
-        if ((gPluralRuleLocaleHash = new Hashtable(TRUE, status))!=NULL) {
-            ucln_i18n_registerCleanup(UCLN_I18N_PLURAL_RULE, plural_rules_cleanup);
-            gPluralRuleLocaleHash->setValueDeleter(deletePHashRules);
-            fLocaleStringsHash = gPluralRuleLocaleHash;
-            umtx_unlock(&pRulesLock);
-            return;
+            if ((gPluralRuleLocaleHash = new Hashtable(TRUE, status))!=NULL) {
+                fLocaleStringsHash = gPluralRuleLocaleHash;
+                return;
+            }
         }
-        umtx_unlock(&pRulesLock);
-    }
-    else {
-        fLocaleStringsHash = gPluralRuleLocaleHash;
+        else {
+            fLocaleStringsHash = gPluralRuleLocaleHash;
+        }
     }
 }
 
 void
 PluralRules::addRules(RuleChain& rules, UErrorCode& status) {
-    addRules(localeName, rules, FALSE, status);
+    addRules(mLocaleName, rules, FALSE, status);
 }
 
 void
@@ -511,20 +494,18 @@ PluralRules::addRules(const UnicodeString& localeName, RuleChain& rules, UBool a
     if ( addToHash )
     {
         {  
-            umtx_lock(&pRulesLock);
+            Mutex lock;
             if ( (RuleChain *)fLocaleStringsHash->get(localeName) == NULL ) {
                 fLocaleStringsHash->put(localeName, newRule, status);
-                umtx_unlock(&pRulesLock);
             }
             else {
-                umtx_unlock(&pRulesLock);
                 delete newRule;
                 return;
             }
         }
     }
     else {
-        this->rules=newRule;
+        this->mRules=newRule;
     }
     newRule->setRepeatLimit();
 }
