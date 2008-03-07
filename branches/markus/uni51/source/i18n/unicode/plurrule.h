@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2007, International Business Machines Corporation and
+* Copyright (C) 2008, International Business Machines Corporation and
 * others. All Rights Reserved.
 *******************************************************************************
 *
@@ -239,9 +239,9 @@ public:
 
 private:
     Hashtable       *fLocaleStringsHash;
-    UnicodeString   localeName;
-    RuleChain       *rules;
-    RuleParser      *parser;
+    UnicodeString   mLocaleName;
+    RuleChain       *mRules;
+    RuleParser      *mParser;
 
     PluralRules();   // default constructor not implemented
     void getRuleData(UErrorCode& status);
