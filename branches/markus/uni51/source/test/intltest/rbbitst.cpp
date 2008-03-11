@@ -1963,12 +1963,11 @@ void RBBITest::runUnicodeTestData(const char *fileName, RuleBasedBreakIterator *
     //       Caputure Group #                  1          2            3            4           5
     //       Parses this item:               divide       x       hex digits   comment & nl   unrecognized
     //
-    UnicodeString tokenExpr = "(?ms)\\s*(?:(\\u00F7)|(\\u00D7)|([0-9a-fA-F]+)|(#.*?$.)|(.*?$.))";
-    RegexMatcher    tokenMatcher(tokenExpr, testFileAsString, 0, status);
+    UnicodeString tokenExpr = "[ \t]*(?:(\\u00F7)|(\\u00D7)|([0-9a-fA-F]+)|((?:#.*)?$)|(.*$))";
+    RegexMatcher    tokenMatcher(tokenExpr, testFileAsString, UREGEX_MULTILINE, status);
     UnicodeString   testString;
     UVector32       breakPositions(status);
     int             lineNumber = 1;
-    int             charIndex  = 0;
     TEST_ASSERT_SUCCESS(status);
     if (U_FAILURE(status)) {
         return;
@@ -1978,7 +1977,7 @@ void RBBITest::runUnicodeTestData(const char *fileName, RuleBasedBreakIterator *
     //  Scan through each test case, building up the string to be broken in testString,
     //   and the positions that should be boundaries in the breakPositions vector.
     //
-    while (tokenMatcher.lookingAt(charIndex, status)) {
+    while (tokenMatcher.find()) {
         if (tokenMatcher.start(1, status) >= 0) {
             // Scanned a divide sign, indicating a break position in the test data.
             if (testString.length()>0) {
@@ -2020,7 +2019,7 @@ void RBBITest::runUnicodeTestData(const char *fileName, RuleBasedBreakIterator *
             //    The string and breakPositions vector will be refilled as the next
             //       test case is parsed.
             testString.remove();
-            breakPositions.setSize(0);
+            breakPositions.removeAllElements();
             lineNumber++;
         } else {
             // Scanner catchall.  Something unrecognized appeared on the line.
@@ -2032,14 +2031,13 @@ void RBBITest::runUnicodeTestData(const char *fileName, RuleBasedBreakIterator *
 
             // Clean up, in preparation for continuing with the next line.
             testString.remove();
-            breakPositions.setSize(0);
+            breakPositions.removeAllElements();
             lineNumber++;
         }
         TEST_ASSERT_SUCCESS(status);
         if (U_FAILURE(status)) {
             break;
         }
-        charIndex = tokenMatcher.end(status);
     }
 
     delete [] testFile;
