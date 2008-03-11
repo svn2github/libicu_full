@@ -1960,11 +1960,11 @@ void RBBITest::runUnicodeTestData(const char *fileName, RuleBasedBreakIterator *
     //  Each kind of token is recognized in its own capture group; what type of item was scanned
     //     is identified by which group had a match.
     //
-    //       Caputure Group #                  1          2            3            4           5
-    //       Parses this item:               divide       x       hex digits   comment & nl   unrecognized
+    //    Caputure Group #                  1          2            3            4           5
+    //    Parses this item:               divide       x      hex digits   comment \n  unrecognized \n
     //
-    UnicodeString tokenExpr = "[ \t]*(?:(\\u00F7)|(\\u00D7)|([0-9a-fA-F]+)|((?:#.*)?$)|(.*$))";
-    RegexMatcher    tokenMatcher(tokenExpr, testFileAsString, UREGEX_MULTILINE, status);
+    UnicodeString tokenExpr = "[ \t]*(?:(\\u00F7)|(\\u00D7)|([0-9a-fA-F]+)|((?:#.*?)?$.)|(.*?$.))";
+    RegexMatcher    tokenMatcher(tokenExpr, testFileAsString, UREGEX_MULTILINE | UREGEX_DOTALL, status);
     UnicodeString   testString;
     UVector32       breakPositions(status);
     int             lineNumber = 1;
@@ -2077,7 +2077,7 @@ void RBBITest::checkUnicodeTestCase(const char *testFileName, int lineNumber,
             break;
         }
         if (pos > expectedPos) {
-            errln("Test file \"%s\", line %d, failed to find break at position %d",
+            errln("Test file \"%s\", line %d, failed to find expected break at position %d",
                 testFileName, lineNumber, expectedPos);
             break;
         }
@@ -2086,7 +2086,7 @@ void RBBITest::checkUnicodeTestCase(const char *testFileName, int lineNumber,
     }
 
     if (pos==BreakIterator::DONE && expectedI<breakPositions->size()) {
-        errln("Test file \"%s\", line %d, failed to find break at position %d",
+        errln("Test file \"%s\", line %d, failed to find expected break at position %d",
             testFileName, lineNumber, breakPositions->elementAti(expectedI));
     }
 }
