@@ -74,6 +74,20 @@ void DateIntervalFormatTest::testAPI() {
         delete dtitvfmt;
     }
 
+    /* ====== Test create date interval instance with default locale and 
+     * ====== date format style
+     */
+    status = U_ZERO_ERROR;
+    logln("Testing DateIntervalFormat create date instance with default locale and date format style");
+ 
+    dtitvfmt = DateIntervalFormat::createDateIntervalInstance(DateFormat::kFull, status);
+    if(U_FAILURE(status)) {
+        dataerrln("ERROR: Could not create DateIntervalFormat (default local + date style) - exitting");
+        return;
+    } else {
+        delete dtitvfmt;
+    }
+
     /* ====== Test create date interval instance with given locale and 
      * ====== date format style
      */
@@ -83,6 +97,21 @@ void DateIntervalFormatTest::testAPI() {
     dtitvfmt = DateIntervalFormat::createDateIntervalInstance(DateFormat::kFull, Locale::getFrench(), status);
     if(U_FAILURE(status)) {
         dataerrln("ERROR: Could not create DateIntervalFormat (local + date style) - exitting");
+        return;
+    } else {
+        delete dtitvfmt;
+    }
+
+
+    /* ====== Test create time interval instance with default locale and 
+     * ====== time format style
+     */
+    status = U_ZERO_ERROR;
+    logln("Testing DateIntervalFormat create time instance with default locale and time format style");
+
+    dtitvfmt = DateIntervalFormat::createTimeIntervalInstance(DateFormat::kLong, status);
+    if(U_FAILURE(status)) {
+        dataerrln("ERROR: Could not create DateIntervalFormat (default local + time style) - exitting");
         return;
     } else {
         delete dtitvfmt;
@@ -102,6 +131,21 @@ void DateIntervalFormatTest::testAPI() {
         delete dtitvfmt;
     }
 
+    /* ====== Test create date time interval instance with default locale and 
+     * ====== date time format style
+     */
+    status = U_ZERO_ERROR;
+    logln("Testing DateIntervalFormat create date time instance with iven locale and date time format style");
+ 
+    dtitvfmt = DateIntervalFormat::createDateTimeIntervalInstance(DateFormat::kMedium, DateFormat::kShort,  status);
+    if(U_FAILURE(status)) {
+        dataerrln("ERROR: Could not create DateIntervalFormat (default locale + date time style) - exitting");
+        return;
+    } else {
+        delete dtitvfmt;
+    }
+
+
     /* ====== Test create date time interval instance with given locale and 
      * ====== date time format style
      */
@@ -116,6 +160,21 @@ void DateIntervalFormatTest::testAPI() {
         delete dtitvfmt;
     }
 
+
+    /* ====== Test create interval instance with default locale and skeleton
+     */
+    status = U_ZERO_ERROR;
+    logln("Testing DateIntervalFormat create instance with default locale and skeleton");
+ 
+    dtitvfmt = DateIntervalFormat::createInstance(DAY_MONTH_YEAR_LONG_FORMAT, FALSE, status);
+    if(U_FAILURE(status)) {
+        dataerrln("ERROR: Could not create DateIntervalFormat (skeleton + default locale) - exitting");
+        return;
+    } else {
+        delete dtitvfmt;
+    }
+
+
     /* ====== Test create interval instance with given locale and skeleton
      */
     status = U_ZERO_ERROR;
@@ -129,6 +188,7 @@ void DateIntervalFormatTest::testAPI() {
         delete dtitvfmt;
     }
 
+
     /* ====== Test create interval instance with dateIntervalInfo and skeleton
      */
     status = U_ZERO_ERROR;
@@ -137,11 +197,28 @@ void DateIntervalFormatTest::testAPI() {
     static const UChar longDateSkeleton[] = {0x64, 0x4D, 0x4D, 0x4D, 0x4D, 0x79, 0};
     DateIntervalInfo* dtitvinf = new DateIntervalInfo(Locale::getSimplifiedChinese(), longDateSkeleton, status);
 
+    dtitvfmt = DateIntervalFormat::createInstance("EEEdMMMyhms", FALSE, dtitvinf, status);
+    if(U_FAILURE(status)) {
+        dataerrln("ERROR: Could not create DateIntervalFormat (skeleton + DateIntervalInfo + default locale) - exitting");
+        return;
+    } else {
+        delete dtitvfmt;
+    } 
+
+
+    /* ====== Test create interval instance with dateIntervalInfo and skeleton
+     */
+    status = U_ZERO_ERROR;
+    logln("Testing DateIntervalFormat create instance with dateIntervalInfo  and skeleton");
+ 
+    dtitvinf = new DateIntervalInfo(Locale::getSimplifiedChinese(), longDateSkeleton, status);
+
     dtitvfmt = DateIntervalFormat::createInstance("EEEdMMMyhms", FALSE, Locale::getSimplifiedChinese(), dtitvinf, status);
     if(U_FAILURE(status)) {
-        dataerrln("ERROR: Could not create DateIntervalFormat (skeleton + DateIntervalInfo) - exitting");
+        dataerrln("ERROR: Could not create DateIntervalFormat (skeleton + DateIntervalInfo + locale) - exitting");
         return;
     } 
+    // not deleted, test clone 
 
 
     // ====== Test clone()
@@ -266,7 +343,6 @@ void DateIntervalFormatTest::testFormat() {
         {"en", "", ""},
         {"zh", "", ""},
         {"de", "", ""},
-/*
         {"ar", "", ""},
         {"en", "GB",  ""},
         {"fr", "", ""},
@@ -281,13 +357,37 @@ void DateIntervalFormatTest::testFormat() {
         {"es", "", ""},
         {"ko", "", ""},
         {"th", "", ""},
-*/
+        {"sv", "", ""},
+        {"fi", "", ""},
+        {"da", "", ""},
+        {"pt", "PT", ""},
+        {"ro", "", ""},
+        {"hu", "", ""},
+        {"he", "", ""},
+        {"in", "", ""},
+        {"cs", "", ""},
+        {"el", "", ""},
+        {"no", "", ""},
+        {"vi", "", ""},
+        {"bg", "", ""},
+        {"hr", "", ""},
+        {"lt", "", ""},
+        {"sk", "", ""},
+        {"sl", "", ""},
+        {"sr", "", ""},
+        {"ca", "", ""},
+        {"lv", "", ""},
+        {"uk", "", ""},
+        {"hi", "", ""},
     };
 
     
     int32_t localeIndex;
     for ( localeIndex = 0; localeIndex < ARRAY_SIZE(testLocale); ++localeIndex ) {
-        expect(DATA, ARRAY_SIZE(DATA), Locale(testLocale[localeIndex][0], testLocale[localeIndex][1], testLocale[localeIndex][2]), testLocale[localeIndex][0]);
+        char locName[32];
+        uprv_strcpy(locName, testLocale[localeIndex][0]);
+        uprv_strcat(locName, testLocale[localeIndex][1]);
+        expect(DATA, ARRAY_SIZE(DATA), Locale(testLocale[localeIndex][0], testLocale[localeIndex][1], testLocale[localeIndex][2]), locName);
     }
 }
 
@@ -456,6 +556,7 @@ void DateIntervalFormatTest::expect(const char** data, int32_t data_length,
             sprintf(mesg, "interval date: %s\n", result);
             PRINTMESG(mesg)
 #endif
+            delete dtitvfmt;
     }
 }
 
