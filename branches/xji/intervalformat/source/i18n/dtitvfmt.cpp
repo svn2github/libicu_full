@@ -36,27 +36,24 @@ U_NAMESPACE_BEGIN
 
 //FIXME: a better way to initialize
 static const UChar gDateFormatSkeleton[][11] = {
-//EEEEdMMMMy
-{CAP_E, CAP_E, CAP_E, CAP_E, LOW_D, CAP_M, CAP_M, CAP_M, CAP_M, LOW_Y, 0},
-//dMMMMy
-{LOW_D, CAP_M, CAP_M, CAP_M, CAP_M, LOW_Y, 0},
-//dMMMy
-{LOW_D, CAP_M, CAP_M, CAP_M, LOW_Y, 0},
-//dMy
-{LOW_D, CAP_M, LOW_Y, 0} };
+//yMMMMEEEEd
+{LOW_Y, CAP_M, CAP_M, CAP_M, CAP_M, CAP_E, CAP_E, CAP_E, CAP_E, LOW_D, 0},
+//yMMMMd
+{LOW_Y, CAP_M, CAP_M, CAP_M, CAP_M, LOW_D, 0},
+//yMMMd
+{LOW_Y, CAP_M, CAP_M, CAP_M, LOW_D, 0},
+//yMd
+{LOW_Y, CAP_M, LOW_D, 0} };
 
+
+static const UChar gFallbackSeparator[] = {SPACE, EN_DASH, SPACE, 0};
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(DateIntervalFormat)
 
 
 DateIntervalFormat* U_EXPORT2
 DateIntervalFormat::createInstance(UErrorCode& status) {
-    if ( U_FAILURE(status) ) {
-        return NULL;
-    }
-    DateFormat* dtfmt = DateFormat::createInstance();
-    DateIntervalInfo* dtitvinf = new DateIntervalInfo(status);
-    return create(dtfmt, dtitvinf, status);
+    return createInstance(Locale::getDefault(), status);
 }
 
 
@@ -69,6 +66,13 @@ DateIntervalFormat::createInstance(const Locale& locale, UErrorCode& status) {
                                                    DateFormat::kShort, locale);
     DateIntervalInfo* dtitvinf = new DateIntervalInfo(locale, status);
     return create(dtfmt, dtitvinf, status);
+}
+
+
+DateIntervalFormat*  U_EXPORT2
+DateIntervalFormat::createDateIntervalInstance(DateFormat::EStyle style,
+                                               UErrorCode& status) {
+    return createDateIntervalInstance(style, Locale::getDefault(), status);
 }
 
 
@@ -89,6 +93,13 @@ DateIntervalFormat::createDateIntervalInstance(DateFormat::EStyle style,
 
 DateIntervalFormat*  U_EXPORT2
 DateIntervalFormat::createTimeIntervalInstance(DateFormat::EStyle style,
+                                               UErrorCode& status) {
+    return createTimeIntervalInstance(style, Locale::getDefault(), status);
+}
+
+
+DateIntervalFormat*  U_EXPORT2
+DateIntervalFormat::createTimeIntervalInstance(DateFormat::EStyle style,
                                                const Locale& locale,
                                                UErrorCode& status) {
     if ( U_FAILURE(status) ) {
@@ -96,6 +107,14 @@ DateIntervalFormat::createTimeIntervalInstance(DateFormat::EStyle style,
     }
     DateFormat* dtfmt = DateFormat::createTimeInstance(style, locale);
     return create(dtfmt, locale, status);
+}
+
+
+DateIntervalFormat*  U_EXPORT2
+DateIntervalFormat::createDateTimeIntervalInstance(DateFormat::EStyle dateStyle,
+                                                   DateFormat::EStyle timeStyle,
+                                                   UErrorCode& status) {
+    return createDateTimeIntervalInstance(dateStyle, timeStyle, Locale::getDefault(), status);
 }
 
 
@@ -112,10 +131,20 @@ DateIntervalFormat::createDateTimeIntervalInstance(DateFormat::EStyle dateStyle,
 }
 
 
+
 DateIntervalFormat* U_EXPORT2
 DateIntervalFormat::createInstance(const UnicodeString& skeleton, 
                                    UBool adjustFieldWidth,
-                                   const Locale& locale, UErrorCode& status) {
+                                   UErrorCode& status) {
+    return createInstance(skeleton, adjustFieldWidth, Locale::getDefault(), status);
+}
+
+
+DateIntervalFormat* U_EXPORT2
+DateIntervalFormat::createInstance(const UnicodeString& skeleton, 
+                                   UBool adjustFieldWidth,
+                                   const Locale& locale, 
+                                   UErrorCode& status) {
     if ( U_FAILURE(status) ) {
         return NULL;
     }
@@ -134,6 +163,16 @@ DateIntervalFormat::createInstance(const UnicodeString& skeleton,
 
     DateIntervalInfo* dtitvinf = new DateIntervalInfo(locale, skeleton,status);
     return create(dtfmt, dtitvinf, status);
+}
+
+
+
+DateIntervalFormat* U_EXPORT2
+DateIntervalFormat::createInstance(const UnicodeString& skeleton,
+                                   UBool adjustFieldWidth,
+                                   DateIntervalInfo* dtitvinf,
+                                   UErrorCode& status) {
+    return createInstance(skeleton, adjustFieldWidth, Locale::getDefault(), dtitvinf, status);
 }
 
 
@@ -310,7 +349,6 @@ DateIntervalFormat::format(Calendar& fromCalendar,
     // FIXME: CAN NOT iterate through UCalendarDateFields, any better way?
     // FIXME: use for loop? better readability, worse performance
     if ( fromCalendar.get(UCAL_ERA,status) != toCalendar.get(UCAL_ERA,status)) {
-        intervalPattern = fIntervalPattern->getFallbackIntervalPattern();
         field = UCAL_ERA;
     } else if ( fromCalendar.get(UCAL_YEAR, status) != 
                 toCalendar.get(UCAL_YEAR, status) ) {
@@ -343,10 +381,7 @@ DateIntervalFormat::format(Calendar& fromCalendar,
         return fDateFormat->format(fromCalendar, appendTo, pos);
     }
     
-    // get interval pattern
-    if ( field != UCAL_ERA ) {
-        intervalPattern = fIntervalPattern->getIntervalPattern(field, status);
-    }
+    intervalPattern = fIntervalPattern->getIntervalPattern(field, status);
 
     if ( U_FAILURE(status) ) {
         return appendTo;
@@ -362,7 +397,9 @@ DateIntervalFormat::format(Calendar& fromCalendar,
             return fDateFormat->format(fromCalendar, appendTo, pos);
         }
 
-        /* following only happen if user create a default DateIntervalInfo and 
+        /* following only happen 
+         * 1. the largest diff cal field is ERA
+         * 2. if user create a default DateIntervalInfo and 
          * add interval pattern, then pass this DateIntervalInfo to create
          * a DateIntervalFormat.
          * otherwise, the DateIntervalInfo in DateIntervalFormat is created
@@ -375,18 +412,20 @@ DateIntervalFormat::format(Calendar& fromCalendar,
              * {date0} - {date1}
              */
             fDateFormat->format(fromCalendar, appendTo, pos);
-            appendTo += SPACE;
-            appendTo += EN_DASH;
-            appendTo += SPACE;
+            appendTo += gFallbackSeparator;
             fDateFormat->format(toCalendar, appendTo, pos);
             return appendTo;
         }
     }
 
-    // begin formatting
-    pos.setBeginIndex(0);
-    pos.setEndIndex(0);
 
+    /* split the interval pattern into 2 parts.
+     * it assumes the interval pattern must have pattern letters in it.
+     * If user set interval pattern as following:
+     * setIntervalPattern(Calendar.YEAR, "'all diff'").
+     * the interval string wont be "all diff", it will be a single
+     * date time pattern
+     */
     UBool inQuote = FALSE;
     UChar prevCh = 0;
     int32_t count = 0;
@@ -430,7 +469,7 @@ DateIntervalFormat::format(Calendar& fromCalendar,
         if (ch == QUOTE) {
             // Consecutive single quotes are a single quote literal,
             // either outside of quotes or between quotes
-            if ((i+1) < intervalPattern->length() && intervalPattern[i+1] == QUOTE) {
+            if ((i+1) < intervalPattern->length() && (*intervalPattern)[i+1] == QUOTE) {
                 ++i;
             } else {
                 inQuote = ! inQuote;
