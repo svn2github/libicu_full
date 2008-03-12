@@ -416,35 +416,12 @@ public:
     /**
      * Create a date/time formatter from skeleton and a given locale.
      *
-     * Users are encouraged to use the following macros defined in udat.h.
-     * 
-     * #define DAY_MONTH_YEAR_DOW_LONG_FORMAT   "EEEEdMMMMy"
-     * #define DAY_MONTH_YEAR_LONG_FORMAT       "dMMMMy"
-     * #define DAY_MONTH_LONG_FORMAT            "dMMMM"
-     * #define MONTH_YEAR_LONG_FORMAT           "MMMMy"
-     * #define DAY_MONTH_DOW_LONG_FORMAT        "EEEEdMMMM"
-     * #define DAY_MONTH_YEAR_DOW_MEDIUM_FORMAT "EEEdMMMy"
-     * #define DAY_MONTH_YEAR_MEDIUM_FORMAT     "dMMMy"
-     * #define DAY_MONTH_MEDIUM_FORMAT          "dMMM"
-     * #define MONTH_YEAR_MEDIUM_FORMAT         "MMMy"
-     * #define DAY_MONTH_DOW_MEDIUM_FORMAT      "EEEdMMM"
-     * #define DAY_MONTH_YEAR_DOW_SHORT_FORMAT  "EEEdMy"
-     * #define DAY_MONTH_YEAR_SHORT_FORMAT      "dMy"
-     * #define DAY_MONTH_SHORT_FORMAT           "dM"
-     * #define MONTH_YEAR_SHORT_FORMAT          "My"
-     * #define DAY_MONTH_DOW_SHORT_FORMAT       "EEEdM"
-     * #define DAY_ONLY_SHORT_FORMAT            "d"
-     * #define DAY_DOW_SHORT_FORMAT             "EEEd"
-     * #define YEAR_ONLY_SHORT_FORMAT           "y"
-     * #define MONTH_ONLY_SHORT_FORMAT          "M"
-     * #define MONTH_ONLY_MEDIUM_FORMAT         "MMM"
-     * #define MONTH_ONLY_LONG_FORMAT           "MMMM"
-     * #define HOUR_MINUTE_FORMAT               "hm"
-     * #define HOUR_MINUTE_GENERAL_TZ_FORMAT    "hmv"
-     * #define HOUR_MINUTE_DAYLIGNT_TZ_FORMAT   "hmz"
-     * #define HOUR_ONLY_FORMAT                 "h"
-     * #define HOUR_GENERAL_TZ_FORMAT           "hv"
-     * #define HOUR_DAYLIGNT_TZ_FORMAT          "hz"
+     * Users are encouraged to use the skeleton macros defined in udat.h.
+     * For example, DAY_MONTH_DOW_LONG_FORMAT, which is "EEEEdMMMM",
+     * and which means the pattern should have day, month, and day-of-week 
+     * fields, and follow the long date format defined in date time pattern.
+     * For example, for English, the full pattern should be 
+     * "EEEE, MMMM d".
      * 
      * @param skeleton  the skeleton on which date format based.
      * @param adjustFieldWidth  whether adjust the skeleton field width or not.
