@@ -608,7 +608,8 @@ public:
 
     /**
      * Check whether the 'field' is smaller than all the fields covered in
-     * pattern, return TRUE if it is.
+     * pattern, return TRUE if it is. The sequence of calendar field, 
+     * from large to small is: ERA, YEAR, MONTH, DATE, AM_PM, HOUR, MINUTE,...
      * @param field    the calendar field need to check against
      * @return         TRUE if the 'field' is smaller than all the fields 
      *                 covered in pattern. FALSE otherwise.
