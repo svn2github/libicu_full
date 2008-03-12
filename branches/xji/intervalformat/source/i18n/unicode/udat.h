@@ -173,33 +173,79 @@ typedef enum UDateFormatStyle {
 
 
 /**
- * Predefined skeletons supported in resource files.
- * It is used in date interval format (factory methods), 
- * and could be in DateTimePatternGenerator.
- * We choose to use predefined skeleton string instead of skeleton enum because:
- * We need to keep consistency between DateFormat and DateIntervalFormat 
+ * Below are a set of pre-defined skeletons.
+ * They have pre-defined interval patterns in resource files.
+ * Users are encouraged to use them in date interval format factory methods.
+ *
+ * <P>
+ * We choose to use predefined skeleton string instead of skeleton enum because
+ * we need to keep consistency between DateFormat and DateIntervalFormat 
  * factory methods.
  * It is not good to introduce another set of enum for skeleton while having 
  * UDateFormatStyle for full pattern.
  * And it is not good to mix the set of enum for skeleton into UDateFormatStyle.
+ * So, a new set of pre-defined skeleton is introduced below.
+ * <P>
+ *
+ * A skeleton 
+ * <ul>
+ * <li>
+ * 1. only keeps the field pattern letter and ignores all other parts 
+ *    in a pattern, such as space, punctuations, and string literals.
+ * <li>
+ * 2. hides the order of fields. 
+ * <li>
+ * 3. might hide a field's pattern letter length.
+ *
+ *    For those non-digit calendar fields, the pattern letter length is 
+ *    important, such as MMM, MMMM, and MMMMM; EEE and EEEE, 
+ *    and the field's pattern letter length is honored.
+ *    
+ *    For the digit calendar fields,  such as M or MM, d or dd, yy or yyyy, 
+ *    the field pattern length is ignored and the best match, which is defined 
+ *    in date time patterns, will be returned without honor the field pattern
+ *    letter length in skeleton.
+ * </ul>
+ *
+ * <P>
+ * For example, given skeleton DAY_MONTH_YEAR_SHORT_FORMAT, which is "dMy",
+ * for English, the full pattern is "M/d/yy", which is the short format
+ * of date pattern having DAY, MONTH, and YEAR.
+ * 
+ * <P>
+ * The skeletons defined below consists of the desired calendar field set 
+ * (for example,  DAY, MONTH, YEAR) and the format length (long, medium, short)
+ * used in date time patterns.
+ * 
+ * For example, skeleton MONTH_YEAR_MEDIUM_FORMAT consists month and year,
+ * and it's corresponding full pattern is medium format date pattern.
+ * So, the skeleton is "MMMy", for English, the full pattern is "MMM yyyy", 
+ * which is the format by removing DATE from medium date format.
+ *
+ * For example, skeleton DAY_MONTH_YEAR_DOW_MEDIUM_FORMAT consists day, month,
+ * year, and day-of-week, and it's corresponding full pattern is the medium
+ * format date pattern. So, the skeleton is "EEEdMMMy", for English,
+ * the full pattern is "EEE, MMM d, yyyy", which is the medium date format
+ * plus day-of-week.
+ *
  * @draft ICU 4.0
  */
 
-#define DAY_MONTH_YEAR_DOW_LONG_FORMAT   "EEEEdMMMMy"
-#define DAY_MONTH_YEAR_LONG_FORMAT       "dMMMMy"
-#define DAY_MONTH_LONG_FORMAT            "dMMMM"
-#define MONTH_YEAR_LONG_FORMAT           "MMMMy"
-#define DAY_MONTH_DOW_LONG_FORMAT        "EEEEdMMMM"
-#define DAY_MONTH_YEAR_DOW_MEDIUM_FORMAT "EEEdMMMy"
-#define DAY_MONTH_YEAR_MEDIUM_FORMAT     "dMMMy"
-#define DAY_MONTH_MEDIUM_FORMAT          "dMMM"
-#define MONTH_YEAR_MEDIUM_FORMAT         "MMMy"
-#define DAY_MONTH_DOW_MEDIUM_FORMAT      "EEEdMMM"
-#define DAY_MONTH_YEAR_DOW_SHORT_FORMAT  "EEEdMy"
-#define DAY_MONTH_YEAR_SHORT_FORMAT      "dMy"
-#define DAY_MONTH_SHORT_FORMAT           "dM"
-#define MONTH_YEAR_SHORT_FORMAT          "My"
-#define DAY_MONTH_DOW_SHORT_FORMAT       "EEEdM"
+#define DAY_MONTH_YEAR_DOW_LONG_FORMAT   "yMMMMEEEEd"
+#define DAY_MONTH_YEAR_LONG_FORMAT       "yMMMMd"
+#define DAY_MONTH_LONG_FORMAT            "MMMMd"
+#define MONTH_YEAR_LONG_FORMAT           "yMMMM"
+#define DAY_MONTH_DOW_LONG_FORMAT        "MMMMEEEEd"
+#define DAY_MONTH_YEAR_DOW_MEDIUM_FORMAT "yMMMEEEd"
+#define DAY_MONTH_YEAR_MEDIUM_FORMAT     "yMMMd"
+#define DAY_MONTH_MEDIUM_FORMAT          "MMMd"
+#define MONTH_YEAR_MEDIUM_FORMAT         "yMMM"
+#define DAY_MONTH_DOW_MEDIUM_FORMAT      "MMMEEEd"
+#define DAY_MONTH_YEAR_DOW_SHORT_FORMAT  "yMEEEd"
+#define DAY_MONTH_YEAR_SHORT_FORMAT      "yMd"
+#define DAY_MONTH_SHORT_FORMAT           "Md"
+#define MONTH_YEAR_SHORT_FORMAT          "yM"
+#define DAY_MONTH_DOW_SHORT_FORMAT       "MEEEd"
 #define DAY_ONLY_SHORT_FORMAT            "d"
 #define DAY_DOW_SHORT_FORMAT             "EEEd"
 #define YEAR_ONLY_SHORT_FORMAT           "y"
