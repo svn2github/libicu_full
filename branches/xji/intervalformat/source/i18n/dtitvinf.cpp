@@ -35,20 +35,19 @@ U_NAMESPACE_BEGIN
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(DateIntervalInfo)
 
 // dMyhm
-static const UChar gShortFormSkeleton[]={LOW_D, CAP_M, LOW_Y, LOW_H, LOW_M, 0};
+static const UChar gShortFormSkeleton[]={LOW_Y, CAP_M, LOW_D, LOW_H, LOW_M, 0};
 static const char gIntervalDateTimePatternTag[]="IntervalDateTimePatterns";
 static const char gDateTimePatternsTag[]="DateTimePatterns";
 static const char gFallbackPatternTag[]="Fallback";
 // later_first:
-static const UChar gLaterFirstPrefix[] = {LOW_L, LOW_A, LOW_T, LOW_E, LOW_R, LOW_LINE, LOW_F, LOW_I, LOW_R, LOW_S, LOW_T, COLON, 0};
+static const UChar gLaterFirstPrefix[] = {LOW_L, LOW_A, LOW_T, LOW_E, LOW_R, LOW_LINE, LOW_F, LOW_I, LOW_R, LOW_S, LOW_T, COLON};
 // {0}
-static const UChar gFirstPattern[] = {LEFT_CURLY_BRACKET, DIGIT_ZERO, RIGHT_CURLY_BRACKET, 0};
+static const UChar gFirstPattern[] = {LEFT_CURLY_BRACKET, DIGIT_ZERO, RIGHT_CURLY_BRACKET};
 // {1}
-static const UChar gSecondPattern[] = {LEFT_CURLY_BRACKET, DIGIT_ONE, RIGHT_CURLY_BRACKET, 0};
+static const UChar gSecondPattern[] = {LEFT_CURLY_BRACKET, DIGIT_ONE, RIGHT_CURLY_BRACKET};
 
 
 DateIntervalInfo::DateIntervalInfo() {
-    fSmallestCalField = UCAL_ERA;
     fFirstDateInPtnIsLaterDate = FALSE;
 }
 
@@ -94,6 +93,9 @@ DateIntervalInfo::setIntervalPattern(UCalendarDateFields lrgDiffCalUnit, const U
     if ( lrgDiffCalUnit == UCAL_HOUR_OF_DAY ) {
         fIntervalPatterns[UCAL_AM_PM] = *finalPattern;
         fIntervalPatterns[UCAL_HOUR] = *finalPattern;
+    } else if ( lrgDiffCalUnit == UCAL_DAY_OF_MONTH ||
+                lrgDiffCalUnit == UCAL_DAY_OF_WEEK ) {
+        fIntervalPatterns[UCAL_DATE] = *finalPattern;
     }
 }
 
@@ -153,11 +155,6 @@ DateIntervalInfo::setFallbackIntervalPattern(const UnicodeString& fallbackPatter
  *    For example, a pattern/skeleton is "hm", but the interval pattern 
  *    includes year, month, and date when year, month, and date differs.
  *
- * 3. the minimum supported calendar field in interval pattern is MINUTE.
- *    So, if the largest different calendar field is less than MINUTE,
- *    the interval pattern is just a single date pattern.
- *    fSmallestCalField is used for this purpose.
- *
  *
  * The process is:
  * 1. calculate fFallbackIntervalPattern, which is defined in resource file and
@@ -172,8 +169,7 @@ DateIntervalInfo::setFallbackIntervalPattern(const UnicodeString& fallbackPatter
  *    fDateTimeFallbackIntervalPattern - use SHORT date and time format as
  *                                       single date format
  *
- * 3. set fSmallestCalField = MINUTE and
- *    fill Interval Patterns for year/month/day/am_pm/hour/minute differs.
+ * 3. fill Interval Patterns for year/month/day/am_pm/hour/minute differs.
  *
  *    check whether skeleton found
  * 3.1 No
@@ -187,7 +183,6 @@ DateIntervalInfo::setFallbackIntervalPattern(const UnicodeString& fallbackPatter
  * 3.2 Yes
  *     if skeleton only contains date pattern,
  *     fill interval patterns for year/month/day differs from resource file,
- *     set fSmallestCalField as DATE
  *
  *     else if skeleton only contains time pattern,
  *     fill interval patterns for am_pm/hour/minute differs from resource file,
@@ -210,7 +205,6 @@ DateIntervalInfo::init(const Locale& locale, const UnicodeString& skeleton, UErr
 
 
     fSkeleton = skeleton;
-    fSmallestCalField = UCAL_MINUTE;
     fFirstDateInPtnIsLaterDate = FALSE;
 
     DateTimePatternGenerator* dtpng = DateTimePatternGenerator::createInstance(locale, status);
@@ -297,9 +291,6 @@ DateIntervalInfo::init(const Locale& locale, const UnicodeString& skeleton, UErr
                   shortTimeFormat, shortTimeFormatLength,
                   dateTimeFormat, dateTimeFormatLength, status);
 
-    if ( timeSkeleton.isEmpty() ) {
-        fSmallestCalField = UCAL_DATE;
-    }
 
     /*
      * fill fIntervalPattern from resource file.
@@ -468,17 +459,17 @@ DateIntervalInfo::initIntvPtnFromRes(const UResourceBundle* intervalDateTimePtn,
         pattern = ures_getNextString(intervalPatterns, &ptLength, &key, &status);
         // FIXME: use pre-defined string literal
         UCalendarDateFields calendarField = UCAL_FIELD_COUNT;
-        if ( !uprv_strcmp(key, "year") ) {
+        if ( !uprv_strcmp(key, "y") ) {
             calendarField = UCAL_YEAR;    
-        } else if ( !uprv_strcmp(key, "month") ) {
+        } else if ( !uprv_strcmp(key, "M") ) {
             calendarField = UCAL_MONTH;
-        } else if ( !uprv_strcmp(key, "day") ) {
+        } else if ( !uprv_strcmp(key, "d") ) {
             calendarField = UCAL_DATE;
-        } else if ( !uprv_strcmp(key, "am-pm") ) {
+        } else if ( !uprv_strcmp(key, "a") ) {
             calendarField = UCAL_AM_PM;    
-        } else if ( !uprv_strcmp(key, "hour") ) {
+        } else if ( !uprv_strcmp(key, "h") ) {
             calendarField = UCAL_HOUR;    
-        } else if ( !uprv_strcmp(key, "minute") ) {
+        } else if ( !uprv_strcmp(key, "m") ) {
             calendarField = UCAL_MINUTE;    
         }
      
@@ -680,7 +671,7 @@ DateIntervalInfo::genFallbackFromPattern(UnicodeString* date0,
                         sizeof(gFirstPattern)/sizeof(gFirstPattern[0]), 0);
     int32_t secondPatternIndex = pattern.indexOf(gSecondPattern, 
                         sizeof(gSecondPattern)/sizeof(gSecondPattern[0]), 0);
-    if ( firstPatternIndex < secondPatternIndex ) { 
+    if ( firstPatternIndex > secondPatternIndex ) { 
         fFirstDateInPtnIsLaterDate = TRUE;
     }
     MessageFormat::format(pattern, timeDateArray, 2, intervalPattern, status);
@@ -693,7 +684,7 @@ DateIntervalInfo::getDateTimeSkeleton(const UnicodeString& skeleton,
                                       UnicodeString& normalizedDateSkeleton, 
                                       UnicodeString& timeSkeleton,
                                       UnicodeString& normalizedTimeSkeleton) {
-    // dateSkeleton follows the sequence of E*d*M*y*
+    // dateSkeleton follows the sequence of y*M*E*d*
     // timeSkeleton follows the sequence of hm*[v|z]?
     int32_t lastIndex;
     int32_t i;
@@ -779,6 +770,18 @@ DateIntervalInfo::getDateTimeSkeleton(const UnicodeString& skeleton,
     }
 
     /* generate normalized form for date*/
+    if ( yCount != 0 ) {
+        normalizedDateSkeleton.append(LOW_Y);
+    }
+    if ( MCount != 0 ) {
+        if ( MCount < 3 ) {
+            normalizedDateSkeleton.append(CAP_M);
+        } else {
+            for ( int32_t i = 0; i < MCount && i < MAX_M_COUNT; ++i ) {
+                 normalizedDateSkeleton.append(CAP_M);
+            }
+        }
+    }
     if ( ECount != 0 ) {
         if ( ECount <= 3 ) {
             normalizedDateSkeleton.append(CAP_E);
@@ -792,18 +795,6 @@ DateIntervalInfo::getDateTimeSkeleton(const UnicodeString& skeleton,
     }
     if ( dCount != 0 ) {
         normalizedDateSkeleton.append(LOW_D);
-    }
-    if ( MCount != 0 ) {
-        if ( MCount < 3 ) {
-            normalizedDateSkeleton.append(CAP_M);
-        } else {
-            for ( int32_t i = 0; i < MCount && i < MAX_M_COUNT; ++i ) {
-                 normalizedDateSkeleton.append(CAP_M);
-            }
-        }
-    }
-    if ( yCount != 0 ) {
-        normalizedDateSkeleton.append(LOW_Y);
     }
 
     /* generate normalized form for time */
@@ -841,7 +832,6 @@ DateIntervalInfo::operator=(const DateIntervalInfo& dtitvinf) {
         i = (UCalendarDateFields)((uint32_t)i + 1);
     }
     fSkeleton = dtitvinf.fSkeleton;
-    fSmallestCalField = dtitvinf.fSmallestCalField;
     fFallbackIntervalPattern = dtitvinf.fFallbackIntervalPattern;
     fDateFallbackIntervalPattern = dtitvinf.fDateFallbackIntervalPattern;
     fTimeFallbackIntervalPattern = dtitvinf.fTimeFallbackIntervalPattern;
@@ -863,7 +853,6 @@ DateIntervalInfo::~DateIntervalInfo() {
 UBool
 DateIntervalInfo::operator==(const DateIntervalInfo& other) const {
     UBool equal = ( fSkeleton == other.fSkeleton &&
-      fSmallestCalField == other.fSmallestCalField &&
       fFallbackIntervalPattern == other.fFallbackIntervalPattern &&
       fDateFallbackIntervalPattern==other.fDateFallbackIntervalPattern &&
       fTimeFallbackIntervalPattern==other.fTimeFallbackIntervalPattern &&
