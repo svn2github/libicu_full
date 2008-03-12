@@ -34,68 +34,159 @@ U_NAMESPACE_BEGIN
 
 
 /**
- * <code>DateIntervalInfo</code> is a public class for encapsulating localizable
- * date time interval patterns. It is used by <code>DateIntervalFormat</code>.
+ * DateIntervalInfo is a public class for encapsulating localizable
+ * date time interval patterns. It is used by DateIntervalFormat.
  *
  * <P>
  * Logically, the interval patterns are mappings 
  * from (skeleton, the_largest_different_calendar_field)  
  * to (date_interval_pattern).
  * <P>
- * A skeleton just includes the pattern letter and lengths,
- * without the punctuations and string literals in a pattern.
- * For example, the skeleton for pattern "d 'on' MMM" is
- * "dMMM".
+ * A skeleton 
+ * <ul>
+ * <li>
+ * 1. only keeps the field pattern letter and ignores all other parts 
+ *    in a pattern, such as space, punctuations, and string literals.
+ * <li>
+ * 2. hides the order of fields. 
+ * <li>
+ * 3. might hide a field's pattern letter length.
  *
- * FIXME: more documents on skeleton
+ *    For those non-digit calendar fields, the pattern letter length is 
+ *    important, such as MMM, MMMM, and MMMMM; EEE and EEEE, 
+ *    and the field's pattern letter length is honored.
+ *    
+ *    For the digit calendar fields,  such as M or MM, d or dd, yy or yyyy, 
+ *    the field pattern length is ignored and the best match, which is defined 
+ *    in date time patterns, will be returned without honor the field pattern
+ *    letter length in skeleton.
+ * </ul>
  *
  * <P>
- * For example, for a skeleton "dMMMy" in  en_US, if the largest different 
- * calendar field between date1 and date2 is "year", the date interval pattern 
- * is "MMM d, yyyy - MMM d, yyyy", such as "Jan 10, 2007 - Jan 10, 2008".
+ * There is a set of pre-defined skeleton macros (defined in udat.h).
+ * The skeletons defined consist of the desired calendar field set 
+ * (for example,  DAY, MONTH, YEAR) and the format length (long, medium, short)
+ * used in date time patterns.
+ * 
+ * For example, skeleton MONTH_YEAR_MEDIUM_FORMAT consists month and year,
+ * and it's corresponding full pattern is medium format date pattern.
+ * So, the skeleton is "yMMM", for English, the full pattern is "MMM yyyy", 
+ * which is the format by removing DATE from medium date format.
+ *
+ * For example, skeleton DAY_MONTH_YEAR_DOW_MEDIUM_FORMAT consists day, month,
+ * year, and day-of-week, and it's corresponding full pattern is the medium
+ * format date pattern. So, the skeleton is "yMMMEEEd", for English,
+ * the full pattern is "EEE, MMM d, yyyy", which is the medium date format
+ * plus day-of-week.
+ *
  * <P>
- * If the largest different calendar field between date1 and date2 is "month", 
- * the date interval pattern is "MMM d - MMM d, yyyy", 
+ * The calendar fields we support for interval formatting are:
+ * year, month, date, day-of-week, am-pm, hour, hour-of-day, and minute.
+ * Those calendar fields can be defined in the following order:
+ * year >  month > date > hour (in day) >  minute 
+ *  
+ * The largest different calendar fields between 2 calendars is the
+ * first different calendar field in above order.
+ *
+ * For example: the largest different calendar fields between "Jan 10, 2007" 
+ * and "Feb 20, 2008" is year.
+ *   
+ * <P>
+ * There are pre-defined interval patterns for those pre-defined skeletons
+ * in locales' resource files.
+ * For example, for a skeleton DAY_MONTH_YEAR_MEDIUM_FORMAT, which is  "yMMMd",
+ * in  en_US, if the largest different calendar field between date1 and date2 
+ * is "year", the date interval pattern  is "MMM d, yyyy - MMM d, yyyy", 
+ * such as "Jan 10, 2007 - Jan 10, 2008".
+ * If the largest different calendar field between date1 and date2 is "month",
+ * the date interval pattern is "MMM d - MMM d, yyyy",
  * such as "Jan 10 - Feb 10, 2007".
- * <P>
- * If the largest different calendar field between date1 and date2 is "day", 
+ * If the largest different calendar field between date1 and date2 is "day",
  * the date interval pattern is ""MMM d-d, yyyy", such as "Jan 10-20, 2007".
- * <P>
- * If all the available fields have the exact same value, it generates a single 
- * date string. For example, if the interval skeleton is "dMMMMy" ( with only
- * day, month, and year), the interval pattern from "Jan 10, 2007" to 
- * "Jan 10, 2007" is "Jan 10, 2007".
- * <P>
- * For a skeleton "MMMy", if the largest different calendar field between date1
- * and date2 is "month". the interval pattern is "MMM-MMM, yyyy", 
- * such as "Jan-Feb, 2007".
+ *
+ * For date skeleton, the interval patterns when year, or month, or date is 
+ * different are defined in resource files.
+ * For time skeleton, the interval patterns when am/pm, or hour, or minute is
+ * different are defined in resource files.
  *
  * <P>
- * The recommendated way to create a <code>DateIntervalFormat</code> object is 
- * <pre>
- * DateIntervalFormat::getInstance(DateFormat*, Locale&).
- * </pre>
- * By using a Locale parameter, the <code>DateIntervalFormat</code> object is 
- * initialized with the default interval patterns for a given or default locale.
- * <P>
- * If clients decided to create <code>DateIntervalFormat</code> object 
- * by supplying their own interval patterns, they can do so with 
- * <pre>
- * DateIntervalFormat::getInstance(DateFormat*, DateIntervalInfo*).
- * </pre>
- * Here, <code>DateIntervalFormat</code> object is initialized with the interval * patterns client supplied. It provides flexibility for powerful usage.
+ * If a skeleton is not found in a locale's DateIntervalInfo, which means
+ * the interval patterns for the skeleton is not defined in resource file,
+ * the interval pattern will falls back to the interval "fallback" pattern 
+ * defined in resource file.
+ * If the interval "fallback" pattern is not defined, the default fall-back
+ * is "{date0} - {data1}".
  *
  * <P>
- * After a <code>DateIntervalInfo</code> object is created, clients may modify
+ * For the combination of date and time, 
+ * The rule to genearte interval patterns are:
+ * <ul>
+ * <li>
+ *    1) when the year, month, or day differs, falls back to fall-back
+ *    interval pattern, which mostly is the concatenate the two original 
+ *    expressions with a separator between, 
+ *    For example, interval pattern from "Jan 10, 2007 10:10 am" 
+ *    to "Jan 11, 2007 10:10am" is 
+ *    "Jan 10, 2007 10:10 am - Jan 11, 2007 10:10am" 
+ * <li>
+ *    2) otherwise, present the date followed by the range expression 
+ *    for the time.
+ *    For example, interval pattern from "Jan 10, 2007 10:10 am" 
+ *    to "Jan 10, 2007 11:10am" is "Jan 10, 2007 10:10 am - 11:10am" 
+ * </ul>
+ *
+ *
+ * <P>
+ * If two dates are the same, the interval pattern is the single date pattern.
+ * For example, interval pattern from "Jan 10, 2007" to "Jan 10, 2007" is 
+ * "Jan 10, 2007".
+ *
+ * Or if the presenting fields between 2 dates have the exact same values,
+ * the interval pattern is the  single date pattern. 
+ * For example, if user only requests year and month,
+ * the interval pattern from "Jan 10, 2007" to "Jan 20, 2007" is "Jan 2007".
+ *
+ * <P>
+ * There are 2 dates in interval pattern. For most locales, the first date
+ * in an interval pattern is the earlier date. There might be a locale in which
+ * the first date in an interval pattern is the later date.
+ * We use fallback format for the default order for the locale.
+ * For example, if the fallback format is "{0} - {1}", it means
+ * the first date in the interval pattern for this locale is earlier date.
+ * If the fallback format is "{1} - {0}", it means the first date is the 
+ * later date.
+ * For a paticular interval pattern, the default order can be overriden
+ * by prefixing "latestFirst:" or "earliestFirst:" to the interval pattern.
+ * For example, if the fallback format is "{0}-{1}",
+ * but for skeleton "yMMMd", the interval pattern when day is different is 
+ * "latestFirst:d-d MMM yy", it means by default, the first date in interval
+ * pattern is the earlier date. But for skeleton "yMMMd", when day is different,
+ * the first date in "d-d MMM yy" is the later date.
+ * 
+ * <P>
+ * The recommended way to create a DateIntervalFormat object is to pass in 
+ * the locale plus the format style or skeleton itself.
+ * By using a Locale parameter, the DateIntervalFormat object is 
+ * initialized with the pre-defined interval patterns for a given or 
+ * default locale.
+ * <P>
+ * Users can also create DateIntervalFormat object 
+ * by supplying their own interval patterns.
+ * It provides flexibility for powerful usage.
+ *
+ * <P>
+ * After a DateIntervalInfo object is created, clients may modify
  * the interval patterns using setIntervalPatterns function as so desired.
- * Currently, the mininum supported calendar field on which the client can
- * set interval pattern is UCAL_MINUTE.
+ * Currently, users can only set interval patterns when the following 
+ * calendar fields are different: ERA, YEAR, MONTH, DATE,  DAY_OF_MONTH, 
+ * DAY_OF_WEEK, AM_PM,  HOUR, HOUR_OF_DAY, and MINUTE.
+ * Interval patterns when other calendar fields are different is not supported.
  * <P>
- * <code>DateIntervalInfo</code> objects are clonable. 
- * When clients obtain a <code>DateIntervalInfo</code> object, 
+ * DateIntervalInfo objects are clonable. 
+ * When clients obtain a DateIntervalInfo object, 
  * they can feel free to modify it as necessary.
  * <P>
- * <code>DateIntervalInfo</code> are not expected to be subclassed. 
+ * DateIntervalInfo are not expected to be subclassed. 
  * Data for a calendar is loaded out of resource bundles. 
  * To ICU 4.0, date interval patterns are only supported in Gregorian calendar. 
  * @draft ICU 4.0
@@ -108,22 +199,23 @@ public:
      * Default constructor.
      * It does not initialize any interval patterns.
      * It should be followed by setIntervalPattern(), 
-     * and is recommended to be used only for powerful users.
-     * 
+     * and is recommended to be used only for powerful users who
+     * wants to create their own interval patterns and use them to create
+     * date interval formatter.
      */
     DateIntervalInfo();
 
     /** 
-     * Construct <code>DateIntervalInfo</code> for the default local,
-     * Gregorian calendar, and date/time skeleton "dMyhm".
+     * Construct DateIntervalInfo for the default local,
+     * Gregorian calendar, and date/time skeleton "yMdhm".
      * @param status  output param set to success/failure code on exit, which
      * @draft ICU 4.0
      */
     DateIntervalInfo(UErrorCode& status);
 
     /** 
-     * Construct <code>DateIntervalInfo</code> for the given local,
-     * Gregorian calendar, and date/time skeleton "dMyhm".
+     * Construct DateIntervalInfo for the given local,
+     * Gregorian calendar, and date/time skeleton "yMdhm".
      * @param locale  the interval patterns are loaded from the Gregorian 
      *                calendar data in this locale.
      * @param status  output param set to success/failure code on exit, which
@@ -133,7 +225,7 @@ public:
 
 
     /** 
-     * Construct <code>DateIntervalInfo</code> for the given local, 
+     * Construct DateIntervalInfo for the given local, 
      * Gregorian calendar and skeleton.
      * @param locale    the interval patterns are loaded from the 
      *                  Gregorian calendar data in this locale.
@@ -196,7 +288,7 @@ public:
 
     /** 
      * Provides a way for client to build interval patterns.
-     * User could construct <code>DateIntervalInfo</code> by providing 
+     * User could construct DateIntervalInfo by providing 
      * a list of patterns.
      * <P>
      * For example:
@@ -208,12 +300,17 @@ public:
      * dIntervalInfo->setFallbackIntervalPattern("yyyy mm dd - yyyy mm dd");
      * </pre>
      *
-     * Restriction: the minimum calendar field to set interval pattern is MINUTE
+     * Restriction: 
+     * Currently, users can only set interval patterns when the following 
+     * calendar fields are different: ERA, YEAR, MONTH, DATE,  DAY_OF_MONTH, 
+     * DAY_OF_WEEK, AM_PM,  HOUR, HOUR_OF_DAY, and MINUTE.
+     * Interval patterns when other calendar fields are different are 
+     * not supported.
      *
      * @param lrgDiffCalUnit   the largest different calendar unit.
      * @param intervalPattern  the interval pattern on the largest different
      *                         calendar unit.
-     *                         For example, if <code>lrgDiffCalUnit</code> is 
+     *                         For example, if lrgDiffCalUnit is 
      *                         "year", the interval pattern for en_US when year
      *                         is different could be "'from' yyyy 'to' yyyy".
      * @param status           output param set to success/failure code on exit,
@@ -253,7 +350,7 @@ public:
      * ( for example, the interval pattern when 'year' is different ) is not
      * found, fall-back pattern will be used. 
      * For those users who set all their patterns ( instead of calling 
-     * non-default constructor to lset constructor get those patterns from 
+     * non-default constructor to let constructor get those patterns from 
      * locale ), if they do not set the fall-back interval pattern, 
      * it will be fall-back to '{date0} - {date1}'.
      *
@@ -262,16 +359,18 @@ public:
      */
     void setFallbackIntervalPattern(const UnicodeString& fallbackPattern); 
 
+
     /**
-     * Get the smallest calendar field the interval patterns based on.
-     * For example, for skeleton dMMMy, there are interval patterns when
-     * year, month, and date are different. The smallest calendar field
-     * is "date". So, if the hour is different between 2 dates,
-     * the interval pattern will be the same as a single date format.
-     * @return the smallest calendar field the interval patterns based on.
-     * @draft ICU 4.0 
+     * check whether the first date in interval pattern is the later date.
+     * An example of interval pattern is "d MMM, yyyy - d MMM, yyyy",
+     * in which, the first part of the pattern is the earlier date.
+     * If the interval pattern is prefixed with "later_first:", for example:
+     * "later_first:d MMM, yyyy - d MMM, yyyy", it means the first part
+     * of the patter is the later date.
+     * @return  true if the first date in interval pattern is the later date.
+     * @draft ICU 4.0
      */
-    UCalendarDateFields getSmallestCalField() const;
+    UBool firstDateInPtnIsLaterDate() const;
 
     /**
      * ICU "poor man's RTTI", returns a UClassID for the actual class.
@@ -287,14 +386,11 @@ public:
      */
     static UClassID U_EXPORT2 getStaticClassID();
 
-
-    UBool firstDateInPtnIsLaterDate() const;
-    
 private:
 
     
     /** 
-     * init the DateIntervalInfo from locale and skeleton.
+     * Initialize the DateIntervalInfo from locale and skeleton.
      * @param locale   the given locale.
      * @param skeleton the given skeleton on which the interval patterns based.
      * @param status   Output param filled with success/failure status.
@@ -499,22 +595,6 @@ private:
      */
     UnicodeString fSkeleton;
 
-    /* save the smallest calendar field among which a set of interval patterns
-     * are defined.
-     * This is used to return a single date format when the 
-     * largest different fields between 2 date is smaller than the
-     * smallest calendar field that a set of interval patterns are defined.
-     *
-     * For example, for skeleton, dMMMy, the interval patterns defined in 
-     * resource bundle are those when year, month, day is different.
-     * So, "day" is the smallest calendar field.
-      const*
-     * If the largest different calendar fields 
-     * between 2 dates is hour, then, a single date format is returned.
-     */
-    UCalendarDateFields  fSmallestCalField;
-
-
     // the mininum different calendar field is UCAL_MINUTE
     UnicodeString        fIntervalPatterns[MINIMUM_SUPPORTED_CALENDAR_FIELD+1];
 
@@ -534,27 +614,20 @@ private:
     
     /**
      * Whether the first date in interval pattern is later date or not.
-     * By default, the first part of the pattern in the interval pattern is 
-     * earlier date, for example, "d MMM" in "d MMM - d MMM yyy".
-     * If an interval pattern is prefixed with "later_first:", for example
-     * "later_first:d MMM - d MMM yyyy", it means the first part of the pattern
-     * is later date. 
+     * Fallback format set the default ordering.
+     * And for a particular interval pattern, the order can be 
+     * overriden by prefixing the interval pattern with "latestFirst:" or 
+     * "earliestFirst:"
      * For example, given 2 date, Jan 10, 2007 to Feb 10, 2007.
-     * If the pattern is "d MMM - d MMM yyyy", the interval format is
+     * if the fallback format is "{0} - {1}", 
+     * and the pattern is "d MMM - d MMM yyyy", the interval format is
      * "10 Jan - 10 Feb, 2007".
-     * If the pattern is "later_first:d MMM - d MMM yyyy", the interval format
+     * If the pattern is "latestFirst:d MMM - d MMM yyyy", the interval format
      * is "10 Feb - 10 Jan, 2007"
      */
     UBool  fFirstDateInPtnIsLaterDate;
 
 };// end class DateIntervalInfo
-
-
-inline UCalendarDateFields
-DateIntervalInfo::getSmallestCalField() const {
-    return fSmallestCalField;
-}
-
 
 
 inline UBool 
