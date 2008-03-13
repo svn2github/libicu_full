@@ -4994,13 +4994,6 @@ const char* const full_data[][3] = {
 
 static void TestLikelySubtags()
 {
-#if 0
-    char buffer[200];
-    UErrorCode status = U_ZERO_ERROR;
-
-    int32_t len = uloc_getVariant("en_Latn__POSIX", buffer, sizeof(buffer), &status);
-
-#else
     char buffer[2000];
     int32_t i = 0;
 
@@ -5098,5 +5091,4 @@ static void TestLikelySubtags()
             }
         }
     }
-#endif
 }

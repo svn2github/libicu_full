@@ -4753,14 +4753,21 @@ appendTag(
 }
 
 /**
- * Create a tag string from the supplied parameters.  The lang parameter must
- * not be a NULL pointer.  The script and region parameters may be NULL pointers.
- * If they are, their corresponding length parameters must be less than or equal
- * to 0.
+ * These are the canonical strings for unknown languages, scripts and regions.
+ **/
+static const char* unknownLanguage = "und";
+static const char* unknownScript = "Zzzz";
+static const char* unknownRegion = "ZZ";
+
+/**
+ * Create a tag string from the supplied parameters.  The lang, script and region
+ * parameters may be NULL pointers. If they are, their corresponding length parameters
+ * must be less than or equal to 0.
  *
- * If either the script or region parameters are empty, and the alternateTags
- * parameter is not NULL, it will be parsed for potential script and region tags
- * to be used when constructing the new tag.
+ * If any of the language, script or region parameters are empty, and the alternateTags
+ * parameter is not NULL, it will be parsed for potential language, script and region tags
+ * to be used when constructing the new tag.  If the alternateTags parameter is NULL, or
+ * it contains no language tag, the default tag for the unknown language is used.
  *
  * If the length of the new string exceeds the capacity of the output buffer, 
  * the function copies as many bytes to the output buffer as it can, and returns
@@ -4806,8 +4813,6 @@ createTagStringWithAlternates(
     }
     else if (tag == NULL ||
              tagCapacity <= 0 ||
-             lang == NULL ||
-             langLength <= 0 ||
              langLength >= ULOC_LANG_CAPACITY ||
              scriptLength >= ULOC_SCRIPT_CAPACITY ||
              regionLength >= ULOC_COUNTRY_CAPACITY)
@@ -4826,11 +4831,55 @@ createTagStringWithAlternates(
         int32_t tagLength = 0;
         int32_t capacityRemaining = tagCapacity;
 
-        appendTag(
-            lang,
-            langLength,
-            tagBuffer,
-            &tagLength);
+        if (langLength > 0)
+        {
+            appendTag(
+                lang,
+                langLength,
+                tagBuffer,
+                &tagLength);
+        }
+        else if (alternateTags == NULL) 
+        {
+            appendTag(
+                unknownLanguage,
+                uprv_strlen(unknownLanguage),
+                tagBuffer,
+                &tagLength);
+        }
+        else
+        {
+            char alternateLang[ULOC_LANG_CAPACITY];
+            int32_t alternateLangLength = sizeof(alternateLang);
+
+            alternateLangLength =
+                uloc_getLanguage(
+                    alternateTags,
+                    alternateLang,
+                    alternateLangLength,
+                    err);
+            if(U_FAILURE(*err) ||
+                alternateLangLength >= ULOC_LANG_CAPACITY)
+            {
+                goto error;
+            }
+            else if (alternateLangLength == 0)
+            {
+                appendTag(
+                    unknownLanguage,
+                    uprv_strlen(unknownLanguage),
+                    tagBuffer,
+                    &tagLength);
+            }
+            else
+            {
+                appendTag(
+                    alternateLang,
+                    alternateLangLength,
+                    tagBuffer,
+                    &tagLength);
+            }
+        }
 
         if (scriptLength > 0)
         {
@@ -4953,9 +5002,17 @@ error:
 }
 
 /**
- * Create a tag string from the supplied parameters.  The lang parameter must
- * not be a NULL pointer.  The script and region parameters may be NULL pointers.
- * If they are, their corresponding length parameters must be 0.
+ * Create a tag string from the supplied parameters.  The lang, script and region
+ * parameters may be NULL pointers. If they are, their corresponding length parameters
+ * must be less than or equal to 0.  If the lang parameter is an empty string, the
+ * default value for an unknown language is written to the output buffer.
+ *
+ * If the length of the new string exceeds the capacity of the output buffer, 
+ * the function copies as many bytes to the output buffer as it can, and returns
+ * the error U_BUFFER_OVERFLOW_ERROR.
+ *
+ * If an illegal argument is provided, the function returns the error
+ * U_ILLEGAL_ARGUMENT_ERROR.
  *
  * @param lang The language tag to use.
  * @param langLength The length of the language tag.
@@ -4999,12 +5056,7 @@ createTagString(
                 err);
 }
 
-/**
- * These are the canonical strings for unknown scripts and regions.
- **/
-static const char* unknownScript = "Zzzz";
-static const char* unknownRegion = "ZZ";
-
+#if 0
 /**
  * Parse the language, script, and region from a tag string.
  * not be a NULL pointer.  The script and region parameters may be NULL pointers.
@@ -5014,22 +5066,18 @@ static const char* unknownRegion = "ZZ";
  * parameter is not NULL, it will be parsed for potential script and region tags
  * to be used when constructing the new tag.
  *
+ * @param localeID The locale ID to parse.
  * @param lang The language tag to use.
  * @param langLength The length of the language tag.
  * @param script The script tag to use.
  * @param scriptLength The length of the script tag.
  * @param region The region tag to use.
  * @param regionLength The length of the region tag.
- * @param trailing Any trailing data to append to the new tag.
- * @param trailingLength The length of the trailing data.
- * @param alternateTags A string containing any alternate tags.
- * @param tag The output buffer.
- * @param tagCapacity The capacity of the output buffer.
  * @param err A pointer to a UErrorCode for error reporting.
+ * @return The number of bytes in the localeID parameter consumed.
  **/
-#if 0
 static int32_t U_CALLCONV
-parseTagString(
+parseTagStringOptional(
     const char* localeID,
     char* lang,
     int32_t* langLength,
@@ -5124,6 +5172,18 @@ parseTagString(
 
     index += *langLength;
 
+    /*
+     * If no language was present, use the value of unknownLanguage
+     * instead. 
+     */
+    if (*langLength == 0)
+    {
+        uprv_strcpy(
+            lang,
+            unknownLanguage);
+        *langLength = uprv_strlen(lang);
+    }
+
     *scriptLength = uloc_getScript(localeID, script, *scriptLength, err);
     if(U_FAILURE(*err)) {
         goto error;
@@ -5178,8 +5238,36 @@ error:
 
     return 0;
 }
+#endif
 
-#else
+/**
+ * Parse the language, script, and region subtags from a tag string, and copy the
+ * results into the corresponding output parameters. The buffers are null-terminated,
+ * unless overflow occurs.
+ *
+ * The langLength, scriptLength, and regionLength parameters are input/output
+ * parameters, and must contain the capacity of their corresponding buffers on
+ * input.  On output, they will contain the actual length of the buffers, not
+ * including the null terminator.
+ *
+ * If the length of any of the output subtags exceeds the capacity of the corresponding
+ * buffer, the function copies as many bytes to the output buffer as it can, and returns
+ * the error U_BUFFER_OVERFLOW_ERROR.  It will not parse any more subtags once overflow
+ * occurs.
+ *
+ * If an illegal argument is provided, the function returns the error
+ * U_ILLEGAL_ARGUMENT_ERROR.
+ *
+ * @param localeID The locale ID to parse.
+ * @param lang The language tag buffer.
+ * @param langLength The length of the language tag.
+ * @param script The script tag buffer.
+ * @param scriptLength The length of the script tag.
+ * @param region The region tag buffer.
+ * @param regionLength The length of the region tag.
+ * @param err A pointer to a UErrorCode for error reporting.
+ * @return The number of chars of the localeID parameter consumed.
+ **/
 static int32_t U_CALLCONV
 parseTagString(
     const char* localeID,
@@ -5191,28 +5279,56 @@ parseTagString(
     int32_t* regionLength,
     UErrorCode* err)
 {
-    int32_t index = 0;
+    const char* position = localeID;
+    int32_t subtagLength = 0;
+
+    if(U_FAILURE(*err) ||
+       localeID == NULL ||
+       lang == NULL ||
+       langLength == NULL ||
+       script == NULL ||
+       scriptLength == NULL ||
+       region == NULL ||
+       regionLength == NULL) {
+        goto error;
+    }
+
+    subtagLength = _getLanguage(position, lang, *langLength, &position);
+    u_terminateChars(lang, *langLength, subtagLength, err);
 
     if(U_FAILURE(*err)) {
         goto error;
     }
 
-    *langLength = uloc_getLanguage(localeID, lang, *langLength, err);
+    *langLength = subtagLength;
+
+    /*
+     * If no language was present, use the value of unknownLanguage
+     * instead. 
+     */
+    if (*langLength == 0)
+    {
+        uprv_strcpy(
+            lang,
+            unknownLanguage);
+        *langLength = uprv_strlen(lang);
+    }
+    else if (_isIDSeparator(*position))
+    {
+        ++position;
+    }
+
+    subtagLength = _getScript(position, script, *scriptLength, &position);
+    u_terminateChars(script, *scriptLength, subtagLength, err);
+
     if(U_FAILURE(*err)) {
         goto error;
     }
 
-    index += *langLength;
-
-    *scriptLength = uloc_getScript(localeID, script, *scriptLength, err);
-    if(U_FAILURE(*err)) {
-        goto error;
-    }
+    *scriptLength = subtagLength;
 
     if (*scriptLength > 0)
     {
-        index += *scriptLength + 1;
-
         if (uprv_strnicmp(script, unknownScript, *scriptLength) == 0)
         {
             /**
@@ -5220,17 +5336,24 @@ parseTagString(
              **/
             *scriptLength = 0;
         }
+
+        if (_isIDSeparator(*position))
+        {
+            ++position;
+        }    
     }
 
-    *regionLength = uloc_getCountry(localeID, region, *regionLength, err);
+    subtagLength = _getCountry(position, region, *regionLength, &position);
+    u_terminateChars(region, *regionLength, subtagLength, err);
+
     if(U_FAILURE(*err)) {
         goto error;
     }
 
+    *regionLength = subtagLength;
+
     if (*regionLength > 0)
     {
-        index += *regionLength + 1;
-
         if (uprv_strnicmp(region, unknownRegion, *regionLength) == 0)
         {
             /**
@@ -5240,25 +5363,23 @@ parseTagString(
         }
     }
 
-    return index;
+exit:
+
+    return (int32_t)(position - localeID);
 
 error:
 
     /**
-     * An overflow indicates the locale ID passed in
-     * is ill-formed.  If we get here, a no error
-     * has already occurred, it's the result of an 
+     * If we get here, we have no explicit error, it's the result of an
      * illegal argument.
      **/
-    if (*err ==  U_BUFFER_OVERFLOW_ERROR ||
-        !U_FAILURE(*err))
+    if (!U_FAILURE(*err))
     {
         *err = U_ILLEGAL_ARGUMENT_ERROR;
     }
 
-    return -1;
+    goto exit;
 }
-#endif
 
 static int32_t U_CALLCONV
 createLikelySubtagsString(
@@ -5314,22 +5435,12 @@ createLikelySubtagsString(
 
         if (likelySubtags != NULL)
         {
-            char newLang[ULOC_LANG_CAPACITY];
-            int32_t newLangLength = sizeof(newLang);
-
-            newLangLength =
-                uloc_getLanguage(
-                    likelySubtags->maximal,
-                    newLang,
-                    newLangLength,
-                    err);
-            if(U_FAILURE(*err)) {
-                goto error;
-            }
-
+            // Always use the language tag from the
+            // maximal string, since it may be more
+            // specific than the one provided.
             return createTagStringWithAlternates(
-                        newLang,
-                        newLangLength,
+                        NULL,
+                        0,
                         NULL,
                         0,
                         NULL,
@@ -5370,22 +5481,12 @@ createLikelySubtagsString(
 
         if (likelySubtags != NULL)
         {
-            char newLang[ULOC_LANG_CAPACITY];
-            int32_t newLangLength = sizeof(newLang);
-
-            newLangLength =
-                uloc_getLanguage(
-                    likelySubtags->maximal,
-                    newLang,
-                    newLangLength,
-                    err);
-            if(U_FAILURE(*err)) {
-                goto error;
-            }
-
+            // Always use the language tag from the
+            // maximal string, since it may be more
+            // specific than the one provided.
             return createTagStringWithAlternates(
-                        newLang,
-                        newLangLength,
+                        NULL,
+                        0,
                         NULL,
                         0,
                         region,
@@ -5426,22 +5527,12 @@ createLikelySubtagsString(
 
         if (likelySubtags != NULL)
         {
-            char newLang[ULOC_LANG_CAPACITY];
-            int32_t newLangLength = sizeof(newLang);
-
-            newLangLength =
-                uloc_getLanguage(
-                    likelySubtags->maximal,
-                    newLang,
-                    newLangLength,
-                    err);
-            if(U_FAILURE(*err)) {
-                goto error;
-            }
-
+            // Always use the language tag from the
+            // maximal string, since it may be more
+            // specific than the one provided.
             return createTagStringWithAlternates(
-                        newLang,
-                        newLangLength,
+                        NULL,
+                        0,
                         script,
                         scriptLength,
                         NULL,
@@ -5481,22 +5572,12 @@ createLikelySubtagsString(
 
         if (likelySubtags != NULL)
         {
-            char newLang[ULOC_LANG_CAPACITY];
-            int32_t newLangLength = sizeof(newLang);
-
-            newLangLength =
-                uloc_getLanguage(
-                    likelySubtags->maximal,
-                    newLang,
-                    newLangLength,
-                    err);
-            if(U_FAILURE(*err)) {
-                goto error;
-            }
-
+            // Always use the language tag from the
+            // maximal string, since it may be more
+            // specific than the one provided.
             return createTagStringWithAlternates(
-                        newLang,
-                        newLangLength,
+                        NULL,
+                        0,
                         script,
                         scriptLength,
                         region,
@@ -5563,6 +5644,12 @@ uloc_addLikelySubtags(const char*    localeID,
         &regionLength,
         err);
     if(U_FAILURE(*err)) {
+        /* Overflow indicates an illegal argument error */
+        if (*err == U_BUFFER_OVERFLOW_ERROR)
+        {
+            *err = U_ILLEGAL_ARGUMENT_ERROR;
+        }
+
         goto error;
     }
 
@@ -5664,6 +5751,12 @@ uloc_minimizeSubtags(const char*    localeID,
             &regionLength,
             err);
     if(U_FAILURE(*err)) {
+        /* Overflow indicates an illegal argument error */
+        if (*err == U_BUFFER_OVERFLOW_ERROR)
+        {
+            *err = U_ILLEGAL_ARGUMENT_ERROR;
+        }
+
         goto error;
     }
 
@@ -5844,6 +5937,8 @@ error:
     }
 
     return -1;
+
+
 }
 
 /*eof*/
