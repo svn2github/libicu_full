@@ -2812,6 +2812,7 @@ const char* const basic_maximize_data[][2] = {
     "en_Gujr_ZA_POSIX",
     "en_Gujr_ZA_POSIX"
 #if 0
+    /* These are disabled pending the resolution of issue 6204. */
   }, {
     "en_US_POSIX_1901",
     "en_Latn_US_POSIX_1901"
@@ -2825,6 +2826,9 @@ const char* const basic_maximize_data[][2] = {
     "de_POSIX_1901",
     "de_Latn_DE_POSIX_1901"
 #endif
+  }, {
+    "zzz",
+    ""
   }
 };
 
@@ -2841,6 +2845,9 @@ const char* const basic_minimize_data[][2] = {
   }, {
     "de_Latn_DE_POSIX_1901",
     "de_POSIX_1901"
+  }, {
+    "und",
+    ""
   }
 };
 
@@ -5013,13 +5020,18 @@ static void TestLikelySubtags()
             log_err("  unexpected failure of uloc_addLikelySubtags(), minimal \"%s\" status %s\n", minimal, u_errorName(status));
             status = U_ZERO_ERROR;
         }
+        else if (uprv_strlen(maximal) == 0) {
+            if (uprv_stricmp(minimal, buffer) != 0) {
+                log_err("  unexpected maximal value \"%s\" in uloc_addLikelySubtags(), minimal \"%s\" = \"%s\"\n", maximal, minimal, buffer);
+            }
+        }
         else if (uprv_stricmp(maximal, buffer) != 0) {
             log_err("  maximal doesn't match expected %s in uloc_addLikelySubtags(), minimal \"%s\" = %s\n", maximal, minimal, buffer);
         }
     }
 
-    for (i = 0; i < sizeof(basic_minimize_data) / sizeof(basic_minimize_data[0]); ++i)
-    {
+    for (i = 0; i < sizeof(basic_minimize_data) / sizeof(basic_minimize_data[0]); ++i) {
+
         UErrorCode status = U_ZERO_ERROR;
         const char* const maximal = basic_minimize_data[i][0];
         const char* const minimal = basic_minimize_data[i][1];
@@ -5035,13 +5047,18 @@ static void TestLikelySubtags()
             log_err("  unexpected failure of uloc_MinimizeSubtags(), maximal \"%s\" status %s\n", maximal, u_errorName(status));
             status = U_ZERO_ERROR;
         }
+        else if (uprv_strlen(minimal) == 0) {
+            if (uprv_stricmp(maximal, buffer) != 0) {
+                log_err("  unexpected minimal value \"%s\" in uloc_minimizeSubtags(), maximal \"%s\" = \"%s\"\n", minimal, maximal, buffer);
+            }
+        }
         else if (uprv_stricmp(minimal, buffer) != 0) {
             log_err("  minimal doesn't match expected %s in uloc_MinimizeSubtags(), maximal \"%s\" = %s\n", minimal, maximal, buffer);
         }
     }
 
-    for (i = 0; i < sizeof(full_data) / sizeof(full_data[0]); ++i)
-    {
+    for (i = 0; i < sizeof(full_data) / sizeof(full_data[0]); ++i) {
+
         UErrorCode status = U_ZERO_ERROR;
         const char* const minimal = full_data[i][0];
         const char* const maximal = full_data[i][1];
@@ -5056,8 +5073,7 @@ static void TestLikelySubtags()
             log_err("  unexpected failure of uloc_addLikelySubtags(), minimal \"%s\" status \"%s\"\n", minimal, u_errorName(status));
             status = U_ZERO_ERROR;
         }
-        else if (uprv_strlen(maximal) == 0)
-        {
+        else if (uprv_strlen(maximal) == 0) {
             if (uprv_stricmp(minimal, buffer) != 0) {
                 log_err("  unexpected maximal value \"%s\" in uloc_addLikelySubtags(), minimal \"%s\" = \"%s\"\n", maximal, minimal, buffer);
             }
@@ -5067,14 +5083,14 @@ static void TestLikelySubtags()
         }
     }
 
-    for (i = 0; i < sizeof(full_data) / sizeof(full_data[0]); ++i)
-    {
+    for (i = 0; i < sizeof(full_data) / sizeof(full_data[0]); ++i) {
+
         UErrorCode status = U_ZERO_ERROR;
         const char* const maximal = full_data[i][1];
         const char* const minimal = full_data[i][2];
 
-        if (strlen(maximal) > 0)
-        {
+        if (strlen(maximal) > 0) {
+
             const int32_t length =
                 uloc_minimizeSubtags(
                     maximal,
@@ -5083,8 +5099,13 @@ static void TestLikelySubtags()
                     &status);
 
             if (U_FAILURE(status)) {
-                log_err("  unexpected failure of uloc_MinimizeSubtags(), maximal \"%s\" status %s\n", maximal, u_errorName(status));
+                log_err("  unexpected failure of uloc_minimizeSubtags(), maximal \"%s\" status %s\n", maximal, u_errorName(status));
                 status = U_ZERO_ERROR;
+            }
+            else if (uprv_strlen(minimal) == 0) {
+                if (uprv_stricmp(maximal, buffer) != 0) {
+                    log_err("  unexpected minimal value \"%s\" in uloc_minimizeSubtags(), maximal \"%s\" = \"%s\"\n", minimal, maximal, buffer);
+                }
             }
             else if (uprv_stricmp(minimal, buffer) != 0) {
                 log_err("  minimal doesn't match expected %s in uloc_MinimizeSubtags(), maximal \"%s\" = %s\n", minimal, maximal, buffer);

@@ -932,12 +932,9 @@ uloc_getLocaleForLCID(uint32_t hostID, char *locale, int32_t localeCapacity,
  *
  *   http://www.unicode.org/reports/tr35/#Likely_Subtags
  *
- * If localID is already in the maximal form, it will be copied to the
- * output buffer.
- *
- * An empty return value indicates there is no current data to support
- * the operation.  For example, "und-Zzzz" cannot be maximized, since
- * there is no reasonable maximization.
+ * If localeID is already in the maximal form, or there is no data available
+ * for maximization, it will be copied to the output buffer.  For example,
+ * "und-Zzzz" cannot be maximized, since there is no reasonable maximization.
  *
  * Examples:
  *
@@ -951,12 +948,13 @@ uloc_getLocaleForLCID(uint32_t hostID, char *locale, int32_t localeCapacity,
  *
  * "zh_Hani" maximizes to "zh_Hans_CN" (Note this will not reverse.)
  *
- * @param localeID the locale to maximize
- * @param maximizedLocalID the maximized locale
- * @param maximizedLocalIDCapacity the size of the maximizedLocalID buffer
- * @param err error information if maximizing the locale failed
- * @return the actual buffer size needed for the maximized locale.  If it's
- * greater than maximizedLocalIDCapacity, the returned ID will be truncated.
+ * @param localeID The locale to maximize
+ * @param maximizedLocaleID The maximized locale
+ * @param maximizedLocaleIDCapacity The capacity of the maximizedLocaleID buffer
+ * @param err Error information if maximizing the locale failed
+ * @return The actual buffer size needed for the maximized locale.  If it's
+ * greater than maximizedLocaleIDCapacity, the returned ID will be truncated.
+ * On error, the return value is -1.
  * @draft ICU 4.0
  */
 U_DRAFT int32_t U_EXPORT2
@@ -972,13 +970,10 @@ uloc_addLikelySubtags(const char*    localeID,
  *
  *   http://www.unicode.org/reports/tr35/#Likely_Subtags
  *
- * If localID is already in the minimal form, it will be copied to the
- * output buffer.
- *
- * An empty return value indicates there is no current data to support
- * the operation.  Since the minimization algorithm relies on proper
- * maximization, see the comments for uloc_addLikelySubtags for reasons
- * why this might fail.
+ * If localeID is already in the minimal form, or there is no data available
+ * for minimization, it will be copied to the output buffer.  Since the
+ * minimization algorithm relies on proper maximization, see the comments
+ * for uloc_addLikelySubtags for reasons why there might not be any data.
  *
  * Examples:
  *
@@ -991,12 +986,13 @@ uloc_addLikelySubtags(const char*    localeID,
  * "zh_Hant_TW" minimizes to "zh_TW" (The region is preferred to the
  * script, and minimizing to "zh" would imply "zh_Hans_CN".)
  *
- * @param localeID the locale to minimize
- * @param minimizedLocalID the minimized locale
- * @param minimizedLocalIDCapacity the size of the minimizedLocalID buffer
- * @param err error information if minimizing the locale failed
- * @return the actual buffer size needed for the minimized locale.  If it's
- * greater than minimizedLocalIDCapacity, the returned ID will be truncated.  
+ * @param localeID The locale to minimize
+ * @param minimizedLocaleID The minimized locale
+ * @param minimizedLocaleIDCapacity The capacity of the minimizedLocaleID buffer
+ * @param err Error information if minimizing the locale failed
+ * @return The actual buffer size needed for the minimized locale.  If it's
+ * greater than minimizedLocaleIDCapacity, the returned ID will be truncated.
+ * On error, the return value is -1.
  * @draft ICU 4.0
  */
 U_DRAFT int32_t U_EXPORT2
