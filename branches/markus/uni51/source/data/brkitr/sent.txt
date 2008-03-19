@@ -6,13 +6,9 @@
 #
 #   ICU Sentence Break Rules
 #      See Unicode Standard Annex #29.
-#      These rules are based on SA 29 version 5.0.0
-#      Includes post 5.0 changes to treat Japanese half width voicing marks
-#        as Grapheme Extend.
+#      These rules are based on SA 29 version 5.1.0
 #
 
-
-$VoiceMarks   = [\uff9e\uff9f];
 
 #
 # Character categories as defined in TR 29
@@ -25,7 +21,7 @@ $Format    = [\p{Sentence_Break = Format}];
 $Sp        = [\p{Sentence_Break = Sp}];
 $Lower     = [\p{Sentence_Break = Lower}];
 $Upper     = [\p{Sentence_Break = Upper}];
-$OLetter   = [\p{Sentence_Break = OLetter}-$VoiceMarks];
+$OLetter   = [\p{Sentence_Break = OLetter}];
 $Numeric   = [\p{Sentence_Break = Numeric}];
 $ATerm     = [\p{Sentence_Break = ATerm}];
 $SContinue = [\p{Sentence_Break = SContinue}];
