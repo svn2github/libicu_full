@@ -4,7 +4,7 @@
  *
  * file name: ubidi_props_data.c
  *
- * machine-generated on: 2008-02-29
+ * machine-generated on: 2008-03-18
  */
 
 static const UVersionInfo ubidi_props_dataVersion={5,1,0,0};

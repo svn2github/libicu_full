@@ -1,8 +1,8 @@
 # DerivedCoreProperties-5.1.0.txt
-# Date: 2008-02-27, 00:25:48 GMT [MD]
+# Date: 2008-03-05, 18:14:01 GMT [MD]
 #
 # Unicode Character Database
-# Copyright (c) 1991-2007 Unicode, Inc.
+# Copyright (c) 1991-2008 Unicode, Inc.
 # For terms of use, see http://www.unicode.org/terms_of_use.html
 # For documentation, see UCD.html
 
@@ -2076,7 +2076,11 @@ FF21..FF3A    ; Uppercase
 
 # Derived Property: ID_Start
 #  Characters that can start an identifier.
-#  Generated from Lu+Ll+Lt+Lm+Lo+Nl+Other_ID_Start
+#  Generated from:
+#      Lu + Ll + Lt + Lm + Lo + Nl
+#    + Other_ID_Start
+#    - Pattern_Syntax
+#    - Pattern_White_Space
 #  NOTE: See UAX #31 for more information
 
 0041..005A    ; ID_Start
@@ -2375,7 +2379,6 @@ FF21..FF3A    ; Uppercase
 2DC8..2DCE    ; ID_Start
 2DD0..2DD6    ; ID_Start
 2DD8..2DDE    ; ID_Start
-2E2F          ; ID_Start
 3005          ; ID_Start
 3006          ; ID_Start
 3007          ; ID_Start
@@ -2524,13 +2527,18 @@ FFDA..FFDC    ; ID_Start
 20000..2A6D6  ; ID_Start
 2F800..2FA1D  ; ID_Start
 
-# Total code points: 93672
+# Total code points: 93671
 
 # ================================================
 
 # Derived Property: ID_Continue
 #  Characters that can continue an identifier.
-#  Generated from: ID_Start + Mn+Mc+Nd+Pc + Other_ID_Continue
+#  Generated from:
+#      ID_Start
+#    + Mn + Mc + Nd + Pc
+#    + Other_ID_Continue
+#    - Pattern_Syntax
+#    - Pattern_White_Space
 #  NOTE: See UAX #31 for more information
 
 0030..0039    ; ID_Continue
@@ -3065,7 +3073,6 @@ FFDA..FFDC    ; ID_Start
 2DD0..2DD6    ; ID_Continue
 2DD8..2DDE    ; ID_Continue
 2DE0..2DFF    ; ID_Continue
-2E2F          ; ID_Continue
 3005          ; ID_Continue
 3006          ; ID_Continue
 3007          ; ID_Continue
@@ -3265,7 +3272,7 @@ FFDA..FFDC    ; ID_Continue
 2F800..2FA1D  ; ID_Continue
 E0100..E01EF  ; ID_Continue
 
-# Total code points: 95331
+# Total code points: 95330
 
 # ================================================
 
@@ -3571,7 +3578,6 @@ E0100..E01EF  ; ID_Continue
 2DC8..2DCE    ; XID_Start
 2DD0..2DD6    ; XID_Start
 2DD8..2DDE    ; XID_Start
-2E2F          ; XID_Start
 3005          ; XID_Start
 3006          ; XID_Start
 3007          ; XID_Start
@@ -3724,7 +3730,7 @@ FFDA..FFDC    ; XID_Start
 20000..2A6D6  ; XID_Start
 2F800..2FA1D  ; XID_Start
 
-# Total code points: 93649
+# Total code points: 93648
 
 # ================================================
 
@@ -4267,7 +4273,6 @@ FFDA..FFDC    ; XID_Start
 2DD0..2DD6    ; XID_Continue
 2DD8..2DDE    ; XID_Continue
 2DE0..2DFF    ; XID_Continue
-2E2F          ; XID_Continue
 3005          ; XID_Continue
 3006          ; XID_Continue
 3007          ; XID_Continue
@@ -4472,7 +4477,7 @@ FFDA..FFDC    ; XID_Continue
 2F800..2FA1D  ; XID_Continue
 E0100..E01EF  ; XID_Continue
 
-# Total code points: 95312
+# Total code points: 95311
 
 # ================================================
 

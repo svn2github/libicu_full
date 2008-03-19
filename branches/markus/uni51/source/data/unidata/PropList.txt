@@ -1,8 +1,8 @@
 # PropList-5.1.0.txt
-# Date: 2008-02-26, 01:01:20 GMT [MD]
+# Date: 2008-03-06, 22:33:39 GMT [MD]
 #
 # Unicode Character Database
-# Copyright (c) 1991-2007 Unicode, Inc.
+# Copyright (c) 1991-2008 Unicode, Inc.
 # For terms of use, see http://www.unicode.org/terms_of_use.html
 # For documentation, see UCD.html
 
@@ -48,6 +48,7 @@
 208B          ; Dash
 2212          ; Dash
 2E17          ; Dash
+2E1A          ; Dash
 301C          ; Dash
 3030          ; Dash
 30A0          ; Dash
@@ -56,7 +57,7 @@ FE58          ; Dash
 FE63          ; Dash
 FF0D          ; Dash
 
-# Total code points: 23
+# Total code points: 24
 
 # ================================================
 
@@ -199,7 +200,6 @@ FF64          ; Terminal_Punctuation
 2145..2149    ; Other_Math
 2195..2199    ; Other_Math
 219C..219F    ; Other_Math
-21A0          ; Other_Math
 21A1..21A2    ; Other_Math
 21A4..21A5    ; Other_Math
 21A7          ; Other_Math
@@ -225,7 +225,6 @@ FF64          ; Terminal_Punctuation
 25E2          ; Other_Math
 25E4          ; Other_Math
 25E7..25EC    ; Other_Math
-25FB..25FD    ; Other_Math
 2605..2606    ; Other_Math
 2640          ; Other_Math
 2642          ; Other_Math
@@ -308,7 +307,7 @@ FF3E          ; Other_Math
 1D7C4..1D7CB  ; Other_Math
 1D7CE..1D7FF  ; Other_Math
 
-# Total code points: 1220
+# Total code points: 1216
 
 # ================================================
 
@@ -332,7 +331,6 @@ FF41..FF46    ; Hex_Digit
 # ================================================
 
 0345          ; Other_Alphabetic
-0374          ; Other_Alphabetic
 05B0..05BD    ; Other_Alphabetic
 05BF          ; Other_Alphabetic
 05C1..05C2    ; Other_Alphabetic
@@ -519,7 +517,7 @@ FB1E          ; Other_Alphabetic
 10A05..10A06  ; Other_Alphabetic
 10A0C..10A0F  ; Other_Alphabetic
 
-# Total code points: 664
+# Total code points: 663
 
 # ================================================
 

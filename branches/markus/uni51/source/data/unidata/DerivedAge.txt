@@ -1,8 +1,8 @@
 # DerivedAge-5.1.0.txt
-# Date: 2007-11-11, 20:29:13 GMT [MD]
+# Date: 2008-03-03, 21:57:14 GMT [MD]
 #
 # Unicode Character Database
-# Copyright (c) 1991-2007 Unicode, Inc.
+# Copyright (c) 1991-2008 Unicode, Inc.
 # For terms of use, see http://www.unicode.org/terms_of_use.html
 # For documentation, see UCD.html
 #
@@ -866,7 +866,7 @@ A840..A877    ; 5.0 #  [56] PHAGS-PA LETTER KA..PHAGS-PA MARK DOUBLE SHAD
 
 # ================================================
 
-# Newly assigned in Unicode 5.1.0 (expected March, 2006)
+# Newly assigned in Unicode 5.1.0 (March, 2008)
 
 0370..0373    ; 5.1 #   [4] GREEK CAPITAL LETTER HETA..GREEK SMALL LETTER ARCHAIC SAMPI
 0376..0377    ; 5.1 #   [2] GREEK CAPITAL LETTER PAMPHYLIAN DIGAMMA..GREEK SMALL LETTER PAMPHYLIAN DIGAMMA
