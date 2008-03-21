@@ -26,7 +26,8 @@
 
 
 #ifdef DTIFMTTS_DEBUG 
-#define PRINTMESG(msg) { std::cout << "(" << __FILE__ << ":" << __LINE__ << ") " << msg << "\n"; }
+//#define PRINTMESG(msg) { std::cout << "(" << __FILE__ << ":" << __LINE__ << ") " << msg << "\n"; }
+#define PRINTMESG(msg) { std::cout << msg; }
 #endif
 
 #define ARRAY_SIZE(array) (sizeof array / sizeof array[0])
@@ -195,7 +196,7 @@ void DateIntervalFormatTest::testAPI() {
     logln("Testing DateIntervalFormat create instance with dateIntervalInfo  and skeleton");
  
     static const UChar longDateSkeleton[] = {0x64, 0x4D, 0x4D, 0x4D, 0x4D, 0x79, 0};
-    DateIntervalInfo* dtitvinf = new DateIntervalInfo(Locale::getSimplifiedChinese(), longDateSkeleton, status);
+    DateIntervalInfo* dtitvinf = new DateIntervalInfo(Locale::getSimplifiedChinese(), status);
 
     dtitvfmt = DateIntervalFormat::createInstance("EEEdMMMyhms", FALSE, dtitvinf, status);
     if(U_FAILURE(status)) {
@@ -211,7 +212,7 @@ void DateIntervalFormatTest::testAPI() {
     status = U_ZERO_ERROR;
     logln("Testing DateIntervalFormat create instance with dateIntervalInfo  and skeleton");
  
-    dtitvinf = new DateIntervalInfo(Locale::getSimplifiedChinese(), longDateSkeleton, status);
+    dtitvinf = new DateIntervalInfo(Locale::getSimplifiedChinese(), status);
 
     dtitvfmt = DateIntervalFormat::createInstance("EEEdMMMyhms", FALSE, Locale::getSimplifiedChinese(), dtitvinf, status);
     if(U_FAILURE(status)) {
@@ -235,7 +236,7 @@ void DateIntervalFormatTest::testAPI() {
     status = U_ZERO_ERROR;
     logln("Testing DateIntervalFormat getDateIntervalInfo");
     const DateIntervalInfo* inf = another->getDateIntervalInfo();
-    dtitvfmt->setDateIntervalInfo(*inf);
+    dtitvfmt->setDateIntervalInfo(*inf, status);
     const DateIntervalInfo* anotherInf = dtitvfmt->getDateIntervalInfo();
     if ( (*inf) != (*anotherInf) || U_FAILURE(status) ) {
         dataerrln("ERROR: getDateIntervalInfo/setDateIntervalInfo failed");
@@ -243,7 +244,7 @@ void DateIntervalFormatTest::testAPI() {
 
     status = U_ZERO_ERROR;
     DateIntervalInfo* nonConstInf = inf->clone();
-    dtitvfmt->adoptDateIntervalInfo(nonConstInf);
+    dtitvfmt->adoptDateIntervalInfo(nonConstInf, status);
     anotherInf = dtitvfmt->getDateIntervalInfo();
     if ( (*inf) != (*anotherInf) || U_FAILURE(status) ) {
         dataerrln("ERROR: adoptDateIntervalInfo failed");
@@ -540,10 +541,12 @@ void DateIntervalFormatTest::expect(const char** data, int32_t data_length,
             }
 
             // test user created DateIntervalInfo
-            DateIntervalInfo* dtitvinf = new DateIntervalInfo();
-            dtitvinf->setIntervalPattern(UCAL_MONTH, "yyyy MMM d - MMM y",ec);
+            ec = U_ZERO_ERROR;
+            DateIntervalInfo* dtitvinf = new DateIntervalInfo(ec);
+            dtitvinf->setFallbackIntervalPattern("{0} --- {1}");
+            dtitvinf->setIntervalPattern(DAY_MONTH_YEAR_MEDIUM_FORMAT, UCAL_MONTH, "yyyy MMM d - MMM y",ec);
             if (!assertSuccess("DateIntervalInfo::setIntervalPattern", ec)) return;
-            dtitvinf->setIntervalPattern(UCAL_HOUR_OF_DAY, "yyyy MMM d HH:mm - HH:mm", ec);
+            dtitvinf->setIntervalPattern(DAY_MONTH_YEAR_MEDIUM_FORMAT, UCAL_HOUR_OF_DAY, "yyyy MMM d HH:mm - HH:mm", ec);
             if (!assertSuccess("DateIntervalInfo::setIntervalPattern", ec)) return;
             DateIntervalFormat* dtitvfmt = DateIntervalFormat::createInstance(DAY_MONTH_YEAR_MEDIUM_FORMAT, FALSE, loc, dtitvinf, ec);
             if (!assertSuccess("createInstance(skeleton,dtitvinf)", ec)) return;
