@@ -302,7 +302,7 @@ DateIntervalInfo::setIntervalPatternInternally(const UnicodeString& skeleton,
     }
     
     patternsOfOneSkeleton[index] = intervalPattern;
-    if ( emptyHash == true ) {
+    if ( emptyHash == TRUE ) {
         fIntervalPatterns->put(skeleton, patternsOfOneSkeleton, status);
     }
 }
