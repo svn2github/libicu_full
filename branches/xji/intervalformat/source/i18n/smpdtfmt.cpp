@@ -2492,7 +2492,14 @@ void SimpleDateFormat::adoptCalendar(Calendar* calendarToAdopt)
 
 
 UBool
-SimpleDateFormat::smallerFieldUnit(UCalendarDateFields field) const {
+SimpleDateFormat::isFieldUnitIgnored(UCalendarDateFields field) const {
+    return isFieldUnitIgnored(fPattern, field);
+}
+
+
+UBool
+SimpleDateFormat::isFieldUnitIgnored(const UnicodeString& pattern, 
+                                     UCalendarDateFields field) {
     int32_t fieldLevel = fgCalendarFieldToLevel[field];
     int32_t level;
     UChar ch;
@@ -2500,8 +2507,8 @@ SimpleDateFormat::smallerFieldUnit(UCalendarDateFields field) const {
     UChar prevCh = 0;
     int32_t count = 0;
 
-    for (int32_t i = 0; i < fPattern.length(); ++i) {
-        ch = fPattern[i];
+    for (int32_t i = 0; i < pattern.length(); ++i) {
+        ch = pattern[i];
         if (ch != prevCh && count > 0) {
             level = fgPatternCharToLevel[prevCh - PATTERN_CHAR_BASE];
             if ( fieldLevel <= level ) {
@@ -2510,7 +2517,7 @@ SimpleDateFormat::smallerFieldUnit(UCalendarDateFields field) const {
             count = 0;
         }
         if (ch == QUOTE) {
-            if ((i+1) < fPattern.length() && fPattern[i+1] == QUOTE) {
+            if ((i+1) < pattern.length() && pattern[i+1] == QUOTE) {
                 ++i;
             } else {
                 inQuote = ! inQuote;
@@ -2531,6 +2538,15 @@ SimpleDateFormat::smallerFieldUnit(UCalendarDateFields field) const {
     }
     return TRUE;
 }
+
+
+
+const Locale&
+SimpleDateFormat::getSmpFmtLocale(void) const {
+    return fLocale;
+}
+
+
 
 U_NAMESPACE_END
 
