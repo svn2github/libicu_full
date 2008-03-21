@@ -27,7 +27,7 @@ static const int32_t AMETE_MIHRET_DELTA = 5500; // 5501 - 1 (Amete Alem 5501 = A
 //-------------------------------------------------------------------------
 
 EthiopicCalendar::EthiopicCalendar(const Locale& aLocale, UErrorCode& success)
-:   CECalendar(aLocale, JD_EPOCH_OFFSET_AMETE_MIHRET, success),
+:   CECalendar(aLocale, success),
     isAmeteAlem(FALSE)
 {
 }
@@ -51,6 +51,9 @@ EthiopicCalendar::clone() const
 const char *
 EthiopicCalendar::getType() const
 {
+    if (isAmeteAlemEra()) {
+        return "ethiopic_aa";
+    }
     return "ethiopic";
 }
 
@@ -97,7 +100,7 @@ void
 EthiopicCalendar::handleComputeFields(int32_t julianDay, UErrorCode &status)
 {
     int32_t eyear, month, day, era, year;
-    jdToEthiopic(julianDay, eyear, month, day);
+    jdToCE(julianDay, getJDEpochOffset(), eyear, month, day);
 
     if (isAmeteAlemEra()) {
         era = AMETE_ALEM;
@@ -182,6 +185,17 @@ EthiopicCalendar::initializeSystemDefaultCentury()
     // out.
 }
 
+int32_t
+EthiopicCalendar::getJDEpochOffset() const
+{
+    return JD_EPOCH_OFFSET_AMETE_MIHRET;
+}
+
+
+#if 0
+// We do not want to introduce this API in ICU4C.
+// It was accidentally introduced in ICU4J as a public API.
+
 //-------------------------------------------------------------------------
 // Calendar system Conversion methods...
 //-------------------------------------------------------------------------
@@ -191,14 +205,7 @@ EthiopicCalendar::ethiopicToJD(int32_t year, int32_t month, int32_t date)
 {
     return ceToJD(year, month, date, JD_EPOCH_OFFSET_AMETE_MIHRET);
 }
-
-
-void
-EthiopicCalendar::jdToEthiopic(int32_t julianDay, int32_t& year, int32_t& month, int32_t& day)
-{
-    return CECalendar::jdToCE(julianDay, JD_EPOCH_OFFSET_AMETE_MIHRET,
-                              year, month, day);
-}
+#endif
 
 U_NAMESPACE_END
 

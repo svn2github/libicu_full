@@ -25,7 +25,7 @@ static const int32_t COPTIC_JD_EPOCH_OFFSET  = 1824665;
 //-------------------------------------------------------------------------
 
 CopticCalendar::CopticCalendar(const Locale& aLocale, UErrorCode& success)
-: CECalendar(aLocale, COPTIC_JD_EPOCH_OFFSET, success)
+: CECalendar(aLocale, success)
 {
 }
 
@@ -76,7 +76,7 @@ void
 CopticCalendar::handleComputeFields(int32_t julianDay, UErrorCode &status)
 {
     int32_t eyear, month, day, era, year;
-    jdToCoptic(julianDay, eyear, month, day);
+    jdToCE(julianDay, getJDEpochOffset(), eyear, month, day);
 
     if (eyear <= 0) {
         era = BCE;
@@ -150,6 +150,17 @@ CopticCalendar::initializeSystemDefaultCentury()
     // out.
 }
 
+int32_t
+CopticCalendar::getJDEpochOffset() const
+{
+    return COPTIC_JD_EPOCH_OFFSET;
+}
+
+
+#if 0
+// We do not want to introduce this API in ICU4C.
+// It was accidentally introduced in ICU4J as a public API.
+
 //-------------------------------------------------------------------------
 // Calendar system Conversion methods...
 //-------------------------------------------------------------------------
@@ -159,14 +170,7 @@ CopticCalendar::copticToJD(int32_t year, int32_t month, int32_t day)
 {
     return CECalendar::ceToJD(year, month, day, COPTIC_JD_EPOCH_OFFSET);
 }
-
-void
-CopticCalendar::jdToCoptic(int32_t julianDay,
-                           int32_t& year, int32_t& month, int32_t& day)
-{
-    return CECalendar::jdToCE(julianDay, COPTIC_JD_EPOCH_OFFSET,
-                              year, month, day);
-}
+#endif
 
 U_NAMESPACE_END
 

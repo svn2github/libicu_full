@@ -187,6 +187,12 @@ protected:
      */
     virtual int32_t defaultCenturyStartYear() const;
 
+    /**
+     * Return the date offset from Julian
+     * @internal
+     */
+    virtual int32_t getJDEpochOffset() const;
+
 private:
     /**
      * The system maintains a static default century start date.  This is initialized
@@ -219,12 +225,13 @@ private:
     static void initializeSystemDefaultCentury(void);
 
     /**
-     * If isAmeteAlem is true, then this calendar use only AMETE_ALEM for the era.
-     * Otherwise (default), this calendar uses both AMETE_ALEM and AMETE_MIHRET.
+     * When isAmeteAlem is true, then this calendar use only AMETE_ALEM
+     * for the era. Otherwise (default), this calendar uses both AMETE_ALEM
+     * and AMETE_MIHRET.
      *
-     * EXTENDED_YEAR   isAmeteAlem(false)   isAmeteAlem(true)
-     *             0      Amete Alem 5500     Amete Alem 5500
-     *             1       Amete Mihret 1     Amete Alem 5501
+     * EXTENDED_YEAR     isAmeteAlem(false)   isAmeteAlem(true)
+     *             0       Amete Alem 5500      Amete Alem 5500
+     *             1        Amete Mihret 1      Amete Alem 5501
      */
     UBool isAmeteAlem;
 
@@ -254,6 +261,10 @@ public:
      */
     U_I18N_API static UClassID U_EXPORT2 getStaticClassID(void);  
 
+#if 0
+// We do not want to introduce this API in ICU4C.
+// It was accidentally introduced in ICU4J as a public API.
+
 public:
     //-------------------------------------------------------------------------
     // Calendar system Conversion methods...
@@ -269,17 +280,7 @@ public:
      * @internal
      */
     int32_t ethiopicToJD(int32_t year, int32_t month, int32_t day);
-
-    /**
-     * Convert a Julian day to an Ethiopic year, month and day
-     *
-     * @param julianDay the Julian day
-     * @param year receives the extended year
-     * @param month receives the month
-     * @param date receives the day
-     * @internal
-     */
-    void jdToEthiopic(int32_t julianDay, int32_t& year, int32_t& month, int32_t& day);
+#endif
 };
 
 U_NAMESPACE_END

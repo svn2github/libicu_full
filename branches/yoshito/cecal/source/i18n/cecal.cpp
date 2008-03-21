@@ -46,9 +46,8 @@ static const int32_t LIMITS[UCAL_FIELD_COUNT][4] = {
 // Constructors...
 //-------------------------------------------------------------------------
 
-CECalendar::CECalendar(const Locale& aLocale, int32_t jdEpochOffset, UErrorCode& success)
-:   Calendar(TimeZone::createDefault(), aLocale, success),
-    jdOffset(jdEpochOffset)
+CECalendar::CECalendar(const Locale& aLocale, UErrorCode& success)
+:   Calendar(TimeZone::createDefault(), aLocale, success)
 {
     setTimeInMillis(getNow(), success);
 }
@@ -56,7 +55,6 @@ CECalendar::CECalendar(const Locale& aLocale, int32_t jdEpochOffset, UErrorCode&
 CECalendar::CECalendar (const CECalendar& other) 
 :   Calendar(other)
 {
-    this->jdOffset = other.jdOffset;
 }
 
 CECalendar::~CECalendar()
@@ -67,7 +65,6 @@ CECalendar&
 CECalendar::operator=(const CECalendar& right)
 {
     Calendar::operator=(right);
-    this->jdOffset = right.jdOffset;
     return *this;
 }
 
@@ -78,7 +75,7 @@ CECalendar::operator=(const CECalendar& right)
 int32_t
 CECalendar::handleComputeMonthStart(int32_t eyear,int32_t emonth, UBool useMonth) const
 {
-    return ceToJD(eyear, emonth, 0, jdOffset);
+    return ceToJD(eyear, emonth, 0, getJDEpochOffset());
 }
 
 int32_t

@@ -32,12 +32,11 @@ protected:
      * with the given locale with the Julian epoch offiset
      *
      * @param aLocale  The given locale.
-     * @param jdOffset The difference between the Julian epoch and this calendar's epoch.
      * @param success  Indicates the status of CECalendar object construction.
      *                 Returns U_ZERO_ERROR if constructed successfully.
      * @internal
      */
-    CECalendar(const Locale& aLocale, int32_t jdOffset, UErrorCode& success);
+    CECalendar(const Locale& aLocale, UErrorCode& success);
 
     /**
      * Copy Constructor
@@ -93,12 +92,13 @@ protected:
     virtual UBool haveDefaultCentury() const;
 
 protected:
-    /*
+    /**
      * The Coptic and Ethiopic calendars differ only in their epochs.
-     * We handle this by setting the jdOffset to the difference between
-     * the Julian and Coptic or Ethiopic epoch.
+     * This method must be implemented by CECalendar subclasses to
+     * return the date offset from Julian
+     * @internal
      */
-    int32_t jdOffset;
+    virtual int32_t getJDEpochOffset() const = 0;
 
     /**
      * Convert an Coptic/Ethiopic year, month, and day to a Julian day.
