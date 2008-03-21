@@ -815,7 +815,6 @@ DateIntervalFormat::getDateTimeSkeleton(const UnicodeString& skeleton,
                                         UnicodeString& normalizedTimeSkeleton) {
     // dateSkeleton follows the sequence of y*M*E*d*
     // timeSkeleton follows the sequence of hm*[v|z]?
-    int32_t lastIndex;
     int32_t ECount = 0;
     int32_t dCount = 0;
     int32_t MCount = 0;
