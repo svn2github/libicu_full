@@ -1,5 +1,5 @@
 # Scripts-5.1.0.txt
-# Date: 2008-03-03, 21:58:08 GMT [MD]
+# Date: 2008-03-20, 17:55:33 GMT [MD]
 #
 # Unicode Character Database
 # Copyright (c) 1991-2008 Unicode, Inc.
@@ -392,7 +392,8 @@
 A700..A716    ; Common
 A717..A71F    ; Common
 A720..A721    ; Common
-A788..A78A    ; Common
+A788          ; Common
+A789..A78A    ; Common
 FD3E          ; Common
 FD3F          ; Common
 FDFD          ; Common

@@ -1,5 +1,5 @@
 # WordBreakProperty-5.1.0.txt
-# Date: 2008-03-03, 21:58:10 GMT [MD]
+# Date: 2008-03-20, 17:55:36 GMT [MD]
 #
 # Unicode Character Database
 # Copyright (c) 1991-2008 Unicode, Inc.
@@ -614,6 +614,7 @@ A717..A71F    ; ALetter
 A722..A76F    ; ALetter
 A770          ; ALetter
 A771..A787    ; ALetter
+A788          ; ALetter
 A78B..A78C    ; ALetter
 A7FB..A801    ; ALetter
 A803..A805    ; ALetter
@@ -716,7 +717,7 @@ FFDA..FFDC    ; ALetter
 1D7AA..1D7C2  ; ALetter
 1D7C4..1D7CB  ; ALetter
 
-# Total code points: 21902
+# Total code points: 21903
 
 # ================================================
 

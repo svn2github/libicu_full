@@ -4,7 +4,7 @@
  *
  * file name: unorm_props_data.c
  *
- * machine-generated on: 2008-03-18
+ * machine-generated on: 2008-03-20
  */
 
 static const UVersionInfo formatVersion={ 2,3,5,2 };

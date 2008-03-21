@@ -1,5 +1,5 @@
 # DerivedCoreProperties-5.1.0.txt
-# Date: 2008-03-05, 18:14:01 GMT [MD]
+# Date: 2008-03-20, 17:54:49 GMT [MD]
 #
 # Unicode Character Database
 # Copyright (c) 1991-2008 Unicode, Inc.
@@ -719,6 +719,7 @@ A717..A71F    ; Alphabetic
 A722..A76F    ; Alphabetic
 A770          ; Alphabetic
 A771..A787    ; Alphabetic
+A788          ; Alphabetic
 A78B..A78C    ; Alphabetic
 A7FB..A801    ; Alphabetic
 A803..A805    ; Alphabetic
@@ -850,7 +851,7 @@ FFDA..FFDC    ; Alphabetic
 20000..2A6D6  ; Alphabetic
 2F800..2FA1D  ; Alphabetic
 
-# Total code points: 94331
+# Total code points: 94332
 
 # ================================================
 
@@ -2416,6 +2417,7 @@ A717..A71F    ; ID_Start
 A722..A76F    ; ID_Start
 A770          ; ID_Start
 A771..A787    ; ID_Start
+A788          ; ID_Start
 A78B..A78C    ; ID_Start
 A7FB..A801    ; ID_Start
 A803..A805    ; ID_Start
@@ -2527,7 +2529,7 @@ FFDA..FFDC    ; ID_Start
 20000..2A6D6  ; ID_Start
 2F800..2FA1D  ; ID_Start
 
-# Total code points: 93671
+# Total code points: 93672
 
 # ================================================
 
@@ -3115,6 +3117,7 @@ A717..A71F    ; ID_Continue
 A722..A76F    ; ID_Continue
 A770          ; ID_Continue
 A771..A787    ; ID_Continue
+A788          ; ID_Continue
 A78B..A78C    ; ID_Continue
 A7FB..A801    ; ID_Continue
 A802          ; ID_Continue
@@ -3272,7 +3275,7 @@ FFDA..FFDC    ; ID_Continue
 2F800..2FA1D  ; ID_Continue
 E0100..E01EF  ; ID_Continue
 
-# Total code points: 95330
+# Total code points: 95331
 
 # ================================================
 
@@ -3614,6 +3617,7 @@ A717..A71F    ; XID_Start
 A722..A76F    ; XID_Start
 A770          ; XID_Start
 A771..A787    ; XID_Start
+A788          ; XID_Start
 A78B..A78C    ; XID_Start
 A7FB..A801    ; XID_Start
 A803..A805    ; XID_Start
@@ -3730,7 +3734,7 @@ FFDA..FFDC    ; XID_Start
 20000..2A6D6  ; XID_Start
 2F800..2FA1D  ; XID_Start
 
-# Total code points: 93648
+# Total code points: 93649
 
 # ================================================
 
@@ -4314,6 +4318,7 @@ A717..A71F    ; XID_Continue
 A722..A76F    ; XID_Continue
 A770          ; XID_Continue
 A771..A787    ; XID_Continue
+A788          ; XID_Continue
 A78B..A78C    ; XID_Continue
 A7FB..A801    ; XID_Continue
 A802          ; XID_Continue
@@ -4477,7 +4482,7 @@ FFDA..FFDC    ; XID_Continue
 2F800..2FA1D  ; XID_Continue
 E0100..E01EF  ; XID_Continue
 
-# Total code points: 95311
+# Total code points: 95312
 
 # ================================================
 
@@ -5575,7 +5580,8 @@ A720..A721    ; Grapheme_Base
 A722..A76F    ; Grapheme_Base
 A770          ; Grapheme_Base
 A771..A787    ; Grapheme_Base
-A788..A78A    ; Grapheme_Base
+A788          ; Grapheme_Base
+A789..A78A    ; Grapheme_Base
 A78B..A78C    ; Grapheme_Base
 A7FB..A801    ; Grapheme_Base
 A803..A805    ; Grapheme_Base
