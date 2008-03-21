@@ -10,7 +10,7 @@
 
 
 //FIXME: how to define it in compiler time
-//#define DTITVINF_DEBUG 1
+//#define DTITVINF_DEBUG 0
 
 
 #ifdef DTITVINF_DEBUG 
@@ -34,787 +34,84 @@ U_NAMESPACE_BEGIN
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(DateIntervalInfo)
 
-// dMyhm
-static const UChar gShortFormSkeleton[]={LOW_Y, CAP_M, LOW_D, LOW_H, LOW_M, 0};
 static const char gIntervalDateTimePatternTag[]="IntervalDateTimePatterns";
-static const char gDateTimePatternsTag[]="DateTimePatterns";
 static const char gFallbackPatternTag[]="Fallback";
-// later_first:
-static const UChar gLaterFirstPrefix[] = {LOW_L, LOW_A, LOW_T, LOW_E, LOW_R, LOW_LINE, LOW_F, LOW_I, LOW_R, LOW_S, LOW_T, COLON};
+
 // {0}
-static const UChar gFirstPattern[] = {LEFT_CURLY_BRACKET, DIGIT_ZERO, RIGHT_CURLY_BRACKET};
+static const UChar gFirstPattern[] = {LEFT_CURLY_BRACKET, DIGIT_ZERO, RIGHT_CURLY_BRACKET, 0};
 // {1}
-static const UChar gSecondPattern[] = {LEFT_CURLY_BRACKET, DIGIT_ONE, RIGHT_CURLY_BRACKET};
+static const UChar gSecondPattern[] = {LEFT_CURLY_BRACKET, DIGIT_ONE, RIGHT_CURLY_BRACKET, 0};
+
+// default fall-back
+static const UChar gDefaultFallbackPattern[] = {LEFT_CURLY_BRACKET, DIGIT_ZERO, RIGHT_CURLY_BRACKET, SPACE, EN_DASH, SPACE, LEFT_CURLY_BRACKET, DIGIT_ONE, RIGHT_CURLY_BRACKET, 0};
 
 
-DateIntervalInfo::DateIntervalInfo() {
-    fFirstDateInPtnIsLaterDate = FALSE;
-}
 
-
-DateIntervalInfo::DateIntervalInfo(UErrorCode& status) {
-    init(Locale::getDefault(), UnicodeString(gShortFormSkeleton), status);
-}
-
-DateIntervalInfo::DateIntervalInfo(const Locale& locale, UErrorCode& status) {
-    init(locale, UnicodeString(gShortFormSkeleton), status);
-}
-
-
-DateIntervalInfo::DateIntervalInfo(const Locale& locale, const UnicodeString& skeleton, UErrorCode& status) {
-    init(locale, skeleton, status);
-}
-
-
-void
-DateIntervalInfo::setIntervalPattern(UCalendarDateFields lrgDiffCalUnit, const UnicodeString& intervalPattern, UErrorCode& status) {
+DateIntervalInfo::DateIntervalInfo(UErrorCode& status) 
+:   fFallbackIntervalPattern(gDefaultFallbackPattern),
+    fFirstDateInPtnIsLaterDate(false),
+    fIntervalPatterns(NULL)
+{
     if ( U_FAILURE(status) ) {
         return;
     }
-    if ( lrgDiffCalUnit > MINIMUM_SUPPORTED_CALENDAR_FIELD ) {
-        status = U_ILLEGAL_ARGUMENT_ERROR;
+    fIntervalPatterns = initHash(status);
+}
+
+
+
+DateIntervalInfo::DateIntervalInfo(const Locale& locale, UErrorCode& status)
+:   fFallbackIntervalPattern(gDefaultFallbackPattern),
+    fFirstDateInPtnIsLaterDate(false),
+    fIntervalPatterns(NULL)
+{
+    if ( U_FAILURE(status) ) {
         return;
     }
-    // check for "later_first:" prefix
-    uint32_t prefixLength = sizeof(gLaterFirstPrefix)/sizeof(gLaterFirstPrefix[0]);
+    initializeData(locale, status);
+}
 
-    const UnicodeString* finalPattern;
-    if ( intervalPattern.compare(gLaterFirstPrefix, prefixLength) == 0 ) {
-        fFirstDateInPtnIsLaterDate = TRUE;
-        UnicodeString realPattern;
-        intervalPattern.extract(prefixLength, 
-                                intervalPattern.length() - prefixLength, 
-                                realPattern);
-        finalPattern = &realPattern;
-    } else {
-        finalPattern = &intervalPattern;
+
+
+void
+DateIntervalInfo::setIntervalPattern(const UnicodeString& skeleton,
+                                     UCalendarDateFields lrgDiffCalUnit,
+                                     const UnicodeString& intervalPattern,
+                                     UErrorCode& status) {
+    if ( U_FAILURE(status) ) {
+        return;
     }
-    fIntervalPatterns[lrgDiffCalUnit] = *finalPattern;
+    
     if ( lrgDiffCalUnit == UCAL_HOUR_OF_DAY ) {
-        fIntervalPatterns[UCAL_AM_PM] = *finalPattern;
-        fIntervalPatterns[UCAL_HOUR] = *finalPattern;
+        setIntervalPatternInternally(skeleton, UCAL_AM_PM, intervalPattern, status);
+        setIntervalPatternInternally(skeleton, UCAL_HOUR, intervalPattern, status);
     } else if ( lrgDiffCalUnit == UCAL_DAY_OF_MONTH ||
                 lrgDiffCalUnit == UCAL_DAY_OF_WEEK ) {
-        fIntervalPatterns[UCAL_DATE] = *finalPattern;
-    }
-}
-
-
-void
-DateIntervalInfo::setFallbackIntervalPattern(const UnicodeString& fallbackPattern) {
-    // check for "later_first:" prefix
-    uint32_t prefixLength = sizeof(gLaterFirstPrefix)/sizeof(gLaterFirstPrefix[0]);
-
-    if ( fallbackPattern.compare(gLaterFirstPrefix, prefixLength) == 0 ) {
-        fFirstDateInPtnIsLaterDate = TRUE;
-        UnicodeString realPattern;
-        fallbackPattern.extract(prefixLength, 
-                                fallbackPattern.length() - prefixLength, 
-                                realPattern);
-        fFallbackIntervalPattern = realPattern;
+        setIntervalPatternInternally(skeleton, UCAL_DATE, intervalPattern, status);
     } else {
-        fFallbackIntervalPattern = fallbackPattern;
+        setIntervalPatternInternally(skeleton, lrgDiffCalUnit, intervalPattern, status);
     }
 }
 
 
-
-/**
- * init the DateIntervalInfo from locale and skeleton.
- * @param locale   the given locale.
- * @param skeleton the given skeleton on which the interval patterns based.
- * @param status   Output param filled with success/failure status.
- *
- * It mainly init the following fields: fIntervalPattern[];
- * 
- * This code is a bit complicated since 
- * 1. the interval patterns saved in resource bundle files are interval
- *    patterns based on date or time only.
- *    It does not have interval patterns based on both date and time.
- *    Interval patterns on both date and time are algorithm generated.
- *
- *    For example, it has interval patterns on skeleton "dMy" and "hm",
- *    but it does not have interval patterns on skeleton "dMyhm".
- *    
- *    The rule to genearte interval patterns for both date and time skeleton are
- *    1) when the year, month, or day differs, concatenate the two original 
- *    expressions with a separator between, 
- *    For example, interval pattern from "Jan 10, 2007 10:10 am" 
- *    to "Jan 11, 2007 10:10am" is 
- *    "Jan 10, 2007 10:10 am - Jan 11, 2007 10:10am" 
- *
- *    2) otherwise, present the date followed by the range expression 
- *    for the time.
- *    For example, interval pattern from "Jan 10, 2007 10:10 am" 
- *    to "Jan 10, 2007 11:10am" is 
- *    "Jan 10, 2007 10:10 am - 11:10am" 
- *
- * 2. even a pattern does not request a certion calendar field,
- *    the interval pattern needs to include such field if such fields are
- *    different between 2 dates.
- *    For example, a pattern/skeleton is "hm", but the interval pattern 
- *    includes year, month, and date when year, month, and date differs.
- *
- *
- * The process is:
- * 1. calculate fFallbackIntervalPattern, which is defined in resource file and
- *    mostly {0} - {1}. The single date/time pattern is the pattern based on 
- *    skeleton. Or could use the  fPattern in SimpleDateFormat.
- *    For example, for en_US, skeleton "dMMM", single date pattern 
- *    is "MMM d", fall back interval pattern will be "MMM d - MMM d".
- *
- * 2. calculate other 3 fallback patterns. 
- *    fDateFallbackIntervalPattern - use SHORT date format as single date format
- *    fTimeFallbackIntervalPattern - use SHORT time format as single time format
- *    fDateTimeFallbackIntervalPattern - use SHORT date and time format as
- *                                       single date format
- *
- * 3. fill Interval Patterns for year/month/day/am_pm/hour/minute differs.
- *
- *    check whether skeleton found
- * 3.1 No
- *     if the largest different calendar field on which the interval pattern
- *     based on exists in the skeleton, fallback to fFallbackIntervalPattern;
- *     elsefallback to 
- *         fDateFallbackIntervalPattern or
- *         fTimeFallbackIntervalPattern or
- *         fallback to fDateTimeFallbackIntervalPattern;
- *
- * 3.2 Yes
- *     if skeleton only contains date pattern,
- *     fill interval patterns for year/month/day differs from resource file,
- *
- *     else if skeleton only contains time pattern,
- *     fill interval patterns for am_pm/hour/minute differs from resource file,
- *     fill interval patterns for year/month/day differs as 
- *     fDateTimeFallbackIntervalPattern
- *
- *     else ( skeleton contains both date and time )
- *     fill interval patterns for year/month/day differs as
- *         fFallbackIntervalPattern if year/month/day exists in skeleton, 
- *         fDateTimeFallbackIntervalPattern if not exists
- *     fill interval patterns for am_pm/hour/minute differs as
- *         concatnation of (single date pattern) and (time interval pattern)
- */
 void
-DateIntervalInfo::init(const Locale& locale, const UnicodeString& skeleton, UErrorCode& status) {
-
-    if ( U_FAILURE(status) ) {
-        return;
-    }
-
-
-    fSkeleton = skeleton;
-    fFirstDateInPtnIsLaterDate = FALSE;
-
-    DateTimePatternGenerator* dtpng = DateTimePatternGenerator::createInstance(locale, status);
-    if (U_FAILURE(status)) {
-        return;
-    }
-
-    /* Check whether the skeleton is a combination of date and time.
-     * For the complication reason 1 explained above.
-     */
-
-    UnicodeString dateSkeleton;
-    UnicodeString timeSkeleton;
-    UnicodeString normalizedTimeSkeleton;
-    UnicodeString normalizedDateSkeleton;
-    /* the difference between time skeleton and normalizedTimeSkeleton are:
-     * 1. both 'H' and 'h' are normalized as 'h' in normalized time skeleton,
-     * 2. 'a' is omitted in normalized time skeleton.
-     * 3. there is only one appearance for 'h', 'm','v', 'z' in normalized time
-     *    skeleton
-     *
-     * The difference between date skeleton and normalizedDateSkeleton are:
-     * 1. both 'y' and 'd' are appeared only once in normalizeDateSkeleton
-     * 2. 'E' and 'EE' are normalized into 'EEE'
-     * 3. 'MM' is normalized into 'M'
-     */
-    getDateTimeSkeleton(skeleton, dateSkeleton, normalizedDateSkeleton,
-                        timeSkeleton, normalizedTimeSkeleton);
-
-
-#ifdef DTITVINF_DEBUG 
-    char skeletonInChar[1000];
-    char mesg[2000];
-    skeleton.extract(0, skeleton.length(), skeletonInChar);
-    sprintf(mesg, "skeleton is: %s", skeletonInChar);
-    PRINTMESG(mesg);
-    dateSkeleton.extract(0, dateSkeleton.length(), skeletonInChar);
-    sprintf(mesg, "date skeleton is: %s", skeletonInChar);
-    PRINTMESG(mesg);
-    timeSkeleton.extract(0, timeSkeleton.length(), skeletonInChar);
-    sprintf(mesg, "time skeleton is: %s", skeletonInChar);
-    PRINTMESG(mesg);
-    normalizedTimeSkeleton.extract(0, normalizedTimeSkeleton.length(), skeletonInChar);
-    sprintf(mesg, "normalizedTime skeleton is: %s", skeletonInChar);
-    PRINTMESG(mesg);
-#endif
-
-
-    // key-value pair: largest_different_calendar_unit, interval_pattern
-    
-    CalendarData* calData = new CalendarData(locale, NULL, status);
-
-    if ( calData == NULL ) {
-        status = U_MEMORY_ALLOCATION_ERROR;
-        return;
-    }
-
-    const UResourceBundle* dateTimePatternsRes = calData->getByKey(
-                                               gDateTimePatternsTag, status);
-    int32_t dateTimeFormatLength;
-    const UChar* dateTimeFormat = ures_getStringByIndex(dateTimePatternsRes,
-                                            (int32_t)DateFormat::kDateTime,
-                                            &dateTimeFormatLength, &status);
-
-    int32_t shortDateFormatLength;
-    const UChar* shortDateFormat =ures_getStringByIndex(dateTimePatternsRes,
-                              DateFormat::kShort + DateFormat::kDateOffset,
-                              &shortDateFormatLength, &status);
-
-    int32_t shortTimeFormatLength;
-    const UChar* shortTimeFormat =ures_getStringByIndex(dateTimePatternsRes,
-                                          DateFormat::kShort,
-                                          &shortTimeFormatLength, &status);
-
-    /* getByKey return result owned by calData.
-     * It override the dateTimePatternsRes get earlier.
-     * That is why we need to save above data for further process.
-     */
-    const UResourceBundle* itvDtPtnResource = calData->getByKey( 
-                                       gIntervalDateTimePatternTag, status);
-
-    genFallbackPattern(dtpng, itvDtPtnResource, skeleton, 
-                  shortDateFormat, shortDateFormatLength, 
-                  shortTimeFormat, shortTimeFormatLength,
-                  dateTimeFormat, dateTimeFormatLength, status);
-
-
-    /*
-     * fill fIntervalPattern from resource file.
-     * fill interval pattern for year/month/day differs for date only skeleton.
-     * fill interval pattern for ampm/hour/minute differ for time only and 
-     * date/time skeleton.  
-     */
-    initIntvPtnFromRes(itvDtPtnResource, normalizedDateSkeleton, normalizedTimeSkeleton, status);
-
-    if ( U_FAILURE(status) ) {
-        // skeleton not found
-        const UnicodeString* shortFormatFallback;
-        // set interval patterns for year, month, date.
-        if ( timeSkeleton.isEmpty() ) {
-            shortFormatFallback = &fDateFallbackIntervalPattern;
-        } else {
-            shortFormatFallback = &fDateTimeFallbackIntervalPattern;
-        }
-
-        if ( fieldExistsInSkeleton(UCAL_YEAR, skeleton) ) {
-            fIntervalPatterns[UCAL_YEAR] = fFallbackIntervalPattern;
-        } else {
-            fIntervalPatterns[UCAL_YEAR] = (*shortFormatFallback);
-        }
-        if ( fieldExistsInSkeleton(UCAL_MONTH, skeleton) ) {
-            fIntervalPatterns[UCAL_MONTH] = fFallbackIntervalPattern;
-        } else {
-            fIntervalPatterns[UCAL_MONTH] = (*shortFormatFallback);
-        }
-        if ( fieldExistsInSkeleton(UCAL_DATE, skeleton) ) {
-            fIntervalPatterns[UCAL_DATE] = fFallbackIntervalPattern;
-        } else {
-            fIntervalPatterns[UCAL_DATE] = (*shortFormatFallback);
-        }
-
-        if ( !timeSkeleton.isEmpty() ) {
-            // set interval pattern for am_pm/hour/minute.
-            if ( dateSkeleton.isEmpty() ) {
-                shortFormatFallback = &fTimeFallbackIntervalPattern;
-            } else {
-                shortFormatFallback = &fDateTimeFallbackIntervalPattern;
-            }
-
-            if ( fieldExistsInSkeleton(UCAL_AM_PM, timeSkeleton) ||
-                 fieldExistsInSkeleton(UCAL_HOUR_OF_DAY, timeSkeleton) ) {
-                fIntervalPatterns[UCAL_AM_PM] = fFallbackIntervalPattern;
-            } else {
-                fIntervalPatterns[UCAL_AM_PM] = *shortFormatFallback;
-            }
-            if ( fieldExistsInSkeleton(UCAL_HOUR, timeSkeleton) ||
-                 fieldExistsInSkeleton(UCAL_HOUR_OF_DAY, timeSkeleton) ) {
-                fIntervalPatterns[UCAL_HOUR] = fFallbackIntervalPattern;
-            } else {
-                fIntervalPatterns[UCAL_HOUR] = *shortFormatFallback;
-            }
-            if ( fieldExistsInSkeleton(UCAL_MINUTE, timeSkeleton) ) {
-                fIntervalPatterns[UCAL_MINUTE] = fFallbackIntervalPattern;
-            } else {
-                fIntervalPatterns[UCAL_MINUTE] = *shortFormatFallback;
-            }
-        }
-        status = U_ZERO_ERROR;
-        return; // end of skeleton not found
-    } 
-
-    // skeleton found
-    if ( timeSkeleton.isEmpty() ) {
-    } else if ( dateSkeleton.isEmpty() ) {
-        // fill interval patterns for year/month/day differ 
-        fIntervalPatterns[UCAL_DATE] = fDateTimeFallbackIntervalPattern;
-        fIntervalPatterns[UCAL_MONTH] = fDateTimeFallbackIntervalPattern;
-        fIntervalPatterns[UCAL_YEAR] = fDateTimeFallbackIntervalPattern;
-    } else {
-        /* if both present,
-         * 1) when the year, month, or day differs, 
-         * concatenate the two original expressions with a separator between, 
-         * 2) otherwise, present the date followed by the 
-         * range expression for the time. 
-         */
-        /*
-         * 1) when the year, month, or day differs, 
-         * concatenate the two original expressions with a separator between, 
-         */
-        if ( fieldExistsInSkeleton(UCAL_YEAR, dateSkeleton) ) {
-            fIntervalPatterns[UCAL_YEAR] = fFallbackIntervalPattern;
-        } else {
-            fIntervalPatterns[UCAL_YEAR] = fDateTimeFallbackIntervalPattern;
-        }
-        if ( fieldExistsInSkeleton(UCAL_MONTH, dateSkeleton) ) {
-            fIntervalPatterns[UCAL_MONTH] = fFallbackIntervalPattern;
-        } else {
-            fIntervalPatterns[UCAL_MONTH] = fDateTimeFallbackIntervalPattern;
-        }
-        if ( fieldExistsInSkeleton(UCAL_DATE, dateSkeleton) ) {
-            fIntervalPatterns[UCAL_DATE] = fFallbackIntervalPattern;
-        } else {
-            fIntervalPatterns[UCAL_DATE] = fDateTimeFallbackIntervalPattern;
-        }
-        
-        /*
-         * 2) otherwise, present the date followed by the 
-         * range expression for the time. 
-         */
-        UnicodeString datePattern =dtpng->getBestPattern(dateSkeleton,
-                                                         status);
-        concatSingleDate2TimeInterval(dateTimeFormat, dateTimeFormatLength,
-                                      datePattern, UCAL_AM_PM, status);
-        concatSingleDate2TimeInterval(dateTimeFormat, dateTimeFormatLength,
-                                      datePattern, UCAL_HOUR, status);
-        concatSingleDate2TimeInterval(dateTimeFormat, dateTimeFormatLength,
-                                      datePattern, UCAL_MINUTE, status);
-    }
-    delete dtpng;
-    delete calData;
-}
-
-
-void
-DateIntervalInfo::initIntvPtnFromRes(const UResourceBundle* intervalDateTimePtn,
-                                     const UnicodeString& dateSkeleton,
-                                     const UnicodeString& timeSkeleton,
-                                     UErrorCode& status) {
-
-    if ( U_FAILURE(status) ) {
-        return;
-    }
-    // has to use UnicodeString instead of char*, even it is slow
-    const UnicodeString* skeleton;
-    if ( !timeSkeleton.isEmpty() ) {
-        skeleton = &timeSkeleton;
-    } else {
-        skeleton = &dateSkeleton;
-    }
-
-    char* skeletonString = new char(skeleton->length()+1);
-    if ( skeletonString == NULL ) {
-        status = U_MEMORY_ALLOCATION_ERROR;
-        return;
-    }
-    skeleton->extract(0, skeleton->length(), skeletonString);
-    UResourceBundle* intervalPatterns = ures_getByKey(
-                                                  intervalDateTimePtn,
-                                                  (const char*)skeletonString,
-                                                  NULL,
-                                                  &status);
-    delete skeletonString;
-
-    if ( U_FAILURE(status) ) {
-        return;
-    }
-
-    // return if interval patterns for skeleton not found
-    if ( intervalPatterns == NULL ) {
-        status = U_MISSING_RESOURCE_ERROR;
-        return;
-    }
-
-    //UResourceBundle keyValuePair;
-    int32_t size = ures_getSize(intervalPatterns);
-    int32_t index;
-    const UChar* pattern;
-    const char* key;
-    int32_t ptLength;
-    UBool laterFirst = FALSE; // assume it applies to all patterns
-    for ( index = 0; index < size; ++index ) {
-        pattern = ures_getNextString(intervalPatterns, &ptLength, &key, &status);
-        // FIXME: use pre-defined string literal
-        UCalendarDateFields calendarField = UCAL_FIELD_COUNT;
-        if ( !uprv_strcmp(key, "y") ) {
-            calendarField = UCAL_YEAR;    
-        } else if ( !uprv_strcmp(key, "M") ) {
-            calendarField = UCAL_MONTH;
-        } else if ( !uprv_strcmp(key, "d") ) {
-            calendarField = UCAL_DATE;
-        } else if ( !uprv_strcmp(key, "a") ) {
-            calendarField = UCAL_AM_PM;    
-        } else if ( !uprv_strcmp(key, "h") ) {
-            calendarField = UCAL_HOUR;    
-        } else if ( !uprv_strcmp(key, "m") ) {
-            calendarField = UCAL_MINUTE;    
-        }
-     
-        /* check prefix "later_first:" in pattern.
-         * assume it applies to all patterns, so only check it once.
-         */
-        if ( index == 0 ) {
-            //checkPatternPrefix(pattern, ptLength);
-            int32_t prefixIndex = 0;
-            int32_t prefixIndexLength = sizeof(gLaterFirstPrefix)/sizeof(gLaterFirstPrefix[0]);
-            if ( prefixIndexLength < ptLength ) {
-                for (; prefixIndex < prefixIndexLength; ++prefixIndex ) {
-                    if (pattern[prefixIndex] != gLaterFirstPrefix[prefixIndex]){
-                        break;
-                    }    
-                }
-                if ( prefixIndex >= prefixIndexLength ) {
-                    fFirstDateInPtnIsLaterDate = TRUE;
-                    pattern += prefixIndexLength;
-                }
-            }
-        }
-      
-        if ( calendarField != UCAL_FIELD_COUNT ) {
-            fIntervalPatterns[calendarField] = pattern;
-        }
-    }
-}
-
-
-
-void
-DateIntervalInfo::concatSingleDate2TimeInterval(
-                                 const UChar* dateTimeFormat,
-                                 int32_t dateTimeFormatLength,
-                                 const UnicodeString& datePattern, 
-                                 UCalendarDateFields field,
-                                 UErrorCode& status) {
-    if ( U_FAILURE(status) ) {
-        return;
-    }
-    UnicodeString combinedPattern;
-
-    UnicodeString  timeIntervalPattern = fIntervalPatterns[field];
-    // timeStr and dateStr not owned by this function, do not delete 
-    UnicodeString* timeStr = new UnicodeString(timeIntervalPattern);
-    UnicodeString* dateStr = new UnicodeString(datePattern);
-
-    concatDateTimePattern(dateTimeFormat, dateTimeFormatLength, 
-                          timeStr, dateStr, combinedPattern, status);
-
-    if ( U_FAILURE(status) ) {
-        return;
-    }
-
-    fIntervalPatterns[field] = combinedPattern;
-
-}
-
-
-void
-DateIntervalInfo::concatDateTimePattern(
-                                 const UChar* dateTimeFormat,
-                                 int32_t dateTimeFormatLength,
-                                 UnicodeString* timeStr,
-                                 UnicodeString* dateStr,
-                                 UnicodeString& combinedPattern,
-                                 UErrorCode& status) {
-    
-    if ( timeStr == NULL || dateStr == NULL ) {
-        status = U_MEMORY_ALLOCATION_ERROR;
-        delete timeStr;
-        delete dateStr;
-        return;
-    }
-
-    Formattable timeDateArray[2];
-    timeDateArray[0].adoptString(timeStr);
-    timeDateArray[1].adoptString(dateStr);
-    
-    MessageFormat::format(
-                UnicodeString(TRUE, dateTimeFormat, dateTimeFormatLength), 
-                timeDateArray, 2, combinedPattern, status);
-
-}
-
-
-
-/* dtpng should be a constant, but DateTimePatternGenerator::getBestPattern()
- * is not a const function, so, can not declare dtpng as constant 
- */
-void
-DateIntervalInfo::genFallbackPattern(DateTimePatternGenerator* dtpng,
-                                     const UResourceBundle* itvDtPtnResource,
-                                     const UnicodeString& skeleton,
-                                     const UChar* date,
-                                     int32_t dateResStrLen,
-                                     const UChar* time,
-                                     int32_t timeResStrLen,
-                                     const UChar* dateTimeFormat,
-                                     int32_t dateTimeFormatLength,
-                                     UErrorCode& status) {
-    if ( U_FAILURE(status) ) {
-        return;
-    }
-    // generate fFallbackIntervalPattern based on skeleton
-    UnicodeString pattern = dtpng->getBestPattern(skeleton, status);
-    genFallbackFromPattern(pattern, itvDtPtnResource,fFallbackIntervalPattern, status);
-
-    /* generate the other 3 fallback patterns use SHORT format
-     *    fDateFallbackIntervalPattern - 
-     *                use SHORT date format as single date format
-     *    fTimeFallbackIntervalPattern - 
-     *                use SHORT time format as single time format
-     *    fDateTimeFallbackIntervalPattern - 
-     *                use SHORT date and time format as
-     */
-
-    genFallbackFromPattern(date, dateResStrLen, itvDtPtnResource, fDateFallbackIntervalPattern, status);
-    genFallbackFromPattern(time, timeResStrLen, itvDtPtnResource, fTimeFallbackIntervalPattern, status);
-                           
-    UnicodeString combinedPattern;
-    // timeStr and dateStr not owned by this function, do not delete 
-    UnicodeString* timeStr = new UnicodeString(TRUE, time, timeResStrLen);
-    UnicodeString* dateStr = new UnicodeString(TRUE, date, dateResStrLen);
-    
-    if ( U_FAILURE(status) ) {
-        return;
-    }
-    concatDateTimePattern(dateTimeFormat, dateTimeFormatLength, 
-                          timeStr, dateStr, combinedPattern, status);
-    genFallbackFromPattern(combinedPattern, itvDtPtnResource, fDateTimeFallbackIntervalPattern, status);
-}
-
-   
-void
-DateIntervalInfo::genFallbackFromPattern(const UnicodeString& pattern,
-                            const UResourceBundle* itvDtPtnResource,
-                            UnicodeString& intervalPattern,
-                            UErrorCode& status) {
-    if ( U_FAILURE(status) ) {
-        return;
-    }
-    // date0 and date1 not owned by this function, do not delete 
-    UnicodeString* date0 = new UnicodeString(pattern);
-    UnicodeString* date1 = new UnicodeString(pattern);
-    genFallbackFromPattern(date0, date1, itvDtPtnResource, intervalPattern, status);
-}
-
-
-
-void
-DateIntervalInfo::genFallbackFromPattern(const UChar* string,
-                                        int32_t strLength,
-                                        const UResourceBundle* itvDtPtnResource,
-                                        UnicodeString& intervalPattern,
-                                        UErrorCode& status) {
-    if ( U_FAILURE(status) ) {
-        return;
-    }
-    // date0 and date1 not owned by this function, do not delete 
-    UnicodeString* date0 = new UnicodeString(TRUE, string, strLength);
-    UnicodeString* date1 = new UnicodeString(TRUE, string, strLength);
-    genFallbackFromPattern(date0, date1, itvDtPtnResource, intervalPattern, status);
-}
-
-
-void
-DateIntervalInfo::genFallbackFromPattern(UnicodeString* date0,
-                                        UnicodeString* date1,
-                                        const UResourceBundle* itvDtPtnResource,
-                                        UnicodeString& intervalPattern,
-                                        UErrorCode& status) {
-    if ( date0 == NULL || date1 == NULL ) {
-        status = U_MEMORY_ALLOCATION_ERROR;
-        delete date0;
-        delete date1;
-        return;
-    }
-
-    Formattable timeDateArray[2];
-    timeDateArray[0].adoptString(date0);
-    timeDateArray[1].adoptString(date1);
-    const UChar* resStr;
-    int32_t resStrLen = 0;
-    UResourceBundle* fbStr = ures_getByKey(itvDtPtnResource, gFallbackPatternTag, NULL,&status);
-
-    if ( U_FAILURE(status) ) {
-        return;
-    }
-    resStr = ures_getStringByIndex(fbStr, 0, &resStrLen, &status);
-    if ( U_FAILURE(status) ) {
-        return;
-    }
-
-    // check whether it is later_first
-    UnicodeString  pattern = UnicodeString(TRUE, resStr, resStrLen);
-    int32_t firstPatternIndex = pattern.indexOf(gFirstPattern, 
+DateIntervalInfo::setFallbackIntervalPattern(
+                                    const UnicodeString& fallbackPattern) {
+    int32_t firstPatternIndex = fallbackPattern.indexOf(gFirstPattern, 
                         sizeof(gFirstPattern)/sizeof(gFirstPattern[0]), 0);
-    int32_t secondPatternIndex = pattern.indexOf(gSecondPattern, 
+    int32_t secondPatternIndex = fallbackPattern.indexOf(gSecondPattern, 
                         sizeof(gSecondPattern)/sizeof(gSecondPattern[0]), 0);
     if ( firstPatternIndex > secondPatternIndex ) { 
-        fFirstDateInPtnIsLaterDate = TRUE;
+        fFirstDateInPtnIsLaterDate = true;
     }
-    MessageFormat::format(pattern, timeDateArray, 2, intervalPattern, status);
-}
-
-
-void
-DateIntervalInfo::getDateTimeSkeleton(const UnicodeString& skeleton, 
-                                      UnicodeString& dateSkeleton, 
-                                      UnicodeString& normalizedDateSkeleton, 
-                                      UnicodeString& timeSkeleton,
-                                      UnicodeString& normalizedTimeSkeleton) {
-    // dateSkeleton follows the sequence of y*M*E*d*
-    // timeSkeleton follows the sequence of hm*[v|z]?
-    int32_t lastIndex;
-    int32_t i;
-    int32_t ECount = 0;
-    int32_t dCount = 0;
-    int32_t MCount = 0;
-    int32_t yCount = 0;
-    int32_t hCount = 0;
-    int32_t mCount = 0;
-    int32_t vCount = 0;
-    int32_t zCount = 0;
-
-    for (i = 0; i < skeleton.length(); ++i) {
-        UChar ch = skeleton[i];
-        switch ( ch ) {
-          case CAP_E:
-            dateSkeleton.append(ch);
-            ++ECount;
-            break;
-          case LOW_D:
-            dateSkeleton.append(ch);
-            ++dCount;
-            break;
-          case CAP_M:
-            dateSkeleton.append(ch);
-            ++MCount;
-            break;
-          case LOW_Y:
-            dateSkeleton.append(ch);
-            ++yCount;
-            break;
-          case CAP_G:
-          case CAP_Y:
-          case LOW_U:
-          case CAP_Q:
-          case LOW_Q:
-          case CAP_L:
-          case LOW_L:
-          case CAP_W:
-          case LOW_W:
-          case CAP_D:
-          case CAP_F:
-          case LOW_G:
-          case LOW_E:
-          case LOW_C:
-            normalizedDateSkeleton.append(ch);
-            dateSkeleton.append(ch);
-            break;
-          case LOW_A:
-            // 'a' is implicitly handled 
-            timeSkeleton.append(ch);
-            break;
-          case LOW_H:
-          case CAP_H:
-            timeSkeleton.append(ch);
-            ++hCount;
-            break;
-          case LOW_M:
-            timeSkeleton.append(ch);
-            ++mCount;
-            break;
-          case LOW_Z:
-            ++zCount;
-            timeSkeleton.append(ch);
-            break;
-          case LOW_V:
-            ++vCount;
-            timeSkeleton.append(ch);
-            break;
-          // FIXME: what is the difference between CAP_V/Z and LOW_V/Z
-          case CAP_V:
-          case CAP_Z:
-          case LOW_K:
-          case CAP_K:
-          case LOW_J:
-          case LOW_S:
-          case CAP_S:
-          case CAP_A:
-            timeSkeleton.append(ch);
-            normalizedTimeSkeleton.append(ch);
-            break;     
-        }
-    }
-
-    /* generate normalized form for date*/
-    if ( yCount != 0 ) {
-        normalizedDateSkeleton.append(LOW_Y);
-    }
-    if ( MCount != 0 ) {
-        if ( MCount < 3 ) {
-            normalizedDateSkeleton.append(CAP_M);
-        } else {
-            for ( int32_t i = 0; i < MCount && i < MAX_M_COUNT; ++i ) {
-                 normalizedDateSkeleton.append(CAP_M);
-            }
-        }
-    }
-    if ( ECount != 0 ) {
-        if ( ECount <= 3 ) {
-            normalizedDateSkeleton.append(CAP_E);
-            normalizedDateSkeleton.append(CAP_E);
-            normalizedDateSkeleton.append(CAP_E);
-        } else {
-            for ( int32_t i = 0; i < ECount && i < MAX_E_COUNT; ++i ) {
-                 normalizedDateSkeleton.append(CAP_E);
-            }
-        }
-    }
-    if ( dCount != 0 ) {
-        normalizedDateSkeleton.append(LOW_D);
-    }
-
-    /* generate normalized form for time */
-    if ( hCount != 0 ) {
-        normalizedTimeSkeleton.append(LOW_H);
-    }
-    if ( mCount != 0 ) {
-        normalizedTimeSkeleton.append(LOW_M);
-    }
-    if ( zCount != 0 ) {
-        normalizedTimeSkeleton.append(LOW_Z);
-    }
-    if ( vCount != 0 ) {
-        normalizedTimeSkeleton.append(LOW_V);
-    }
+    fFallbackIntervalPattern = fallbackPattern;
 }
 
 
 
-DateIntervalInfo::DateIntervalInfo(const DateIntervalInfo& dtitvinf) {
+DateIntervalInfo::DateIntervalInfo(const DateIntervalInfo& dtitvinf)
+:   fIntervalPatterns(NULL)
+{
     *this = dtitvinf;
 }
     
@@ -826,17 +123,20 @@ DateIntervalInfo::operator=(const DateIntervalInfo& dtitvinf) {
         return *this;
     }
     
-    UCalendarDateFields i;
-    for ( i = UCAL_ERA; i <= MINIMUM_SUPPORTED_CALENDAR_FIELD; ) {
-        fIntervalPatterns[i] = dtitvinf.fIntervalPatterns[i];
-        i = (UCalendarDateFields)((uint32_t)i + 1);
-    }
-    fSkeleton = dtitvinf.fSkeleton;
+    UErrorCode status = U_ZERO_ERROR;
+    deleteHash(fIntervalPatterns);
+    fIntervalPatterns = initHash(status);
+    if ( U_FAILURE(status) ) {
+        return *this;
+    } 
+    copyHash(dtitvinf.fIntervalPatterns, fIntervalPatterns, status);
+    if ( U_FAILURE(status) ) {
+        return *this;
+    } 
+
     fFallbackIntervalPattern = dtitvinf.fFallbackIntervalPattern;
-    fDateFallbackIntervalPattern = dtitvinf.fDateFallbackIntervalPattern;
-    fTimeFallbackIntervalPattern = dtitvinf.fTimeFallbackIntervalPattern;
-    fDateTimeFallbackIntervalPattern = dtitvinf.fDateTimeFallbackIntervalPattern;
     fFirstDateInPtnIsLaterDate = dtitvinf.fFirstDateInPtnIsLaterDate;
+    return *this;
 }
 
 
@@ -847,25 +147,19 @@ DateIntervalInfo::clone() const {
 
 
 DateIntervalInfo::~DateIntervalInfo() {
+    deleteHash(fIntervalPatterns);
+    fIntervalPatterns = NULL;
 }
 
 
 UBool
 DateIntervalInfo::operator==(const DateIntervalInfo& other) const {
-    UBool equal = ( fSkeleton == other.fSkeleton &&
+    UBool equal = ( 
       fFallbackIntervalPattern == other.fFallbackIntervalPattern &&
-      fDateFallbackIntervalPattern==other.fDateFallbackIntervalPattern &&
-      fTimeFallbackIntervalPattern==other.fTimeFallbackIntervalPattern &&
-      fFirstDateInPtnIsLaterDate == other.fFirstDateInPtnIsLaterDate &&
-      fDateTimeFallbackIntervalPattern==other.fDateTimeFallbackIntervalPattern);
+      fFirstDateInPtnIsLaterDate == other.fFirstDateInPtnIsLaterDate );
 
-   if ( equal == TRUE ) {
-        UCalendarDateFields i;
-        for ( i = UCAL_ERA; i <= MINIMUM_SUPPORTED_CALENDAR_FIELD && equal; ) {
-            equal = equal && 
-                    ( fIntervalPatterns[i] == other.fIntervalPatterns[i]);
-            i = (UCalendarDateFields)((uint32_t)i + 1);
-        }
+    if ( equal == TRUE ) {
+        equal = fIntervalPatterns->equals(*(other.fIntervalPatterns));
     }
 
     return equal;
@@ -873,28 +167,406 @@ DateIntervalInfo::operator==(const DateIntervalInfo& other) const {
 
 
 const UnicodeString*
-DateIntervalInfo::getIntervalPattern(UCalendarDateFields field,
+DateIntervalInfo::getIntervalPattern(const UnicodeString& skeleton,
+                                     UCalendarDateFields field,
                                      UErrorCode& status) const {
     if ( U_FAILURE(status) ) {
         return NULL;
     }
-    if ( field > MINIMUM_SUPPORTED_CALENDAR_FIELD ) {
-        status = U_ILLEGAL_ARGUMENT_ERROR;
-        return NULL;
+   
+    const UnicodeString* patternsOfOneSkeleton = (UnicodeString*) fIntervalPatterns->get(skeleton);
+    if ( patternsOfOneSkeleton != NULL ) {
+        int8_t index = (int8_t)calendarFieldToIntervalIndex(field, status);
+        if ( U_FAILURE(status) ) {
+            return NULL;
+        }
+        const UnicodeString& intervalPattern =  patternsOfOneSkeleton[index];
+        if ( !intervalPattern.isEmpty() ) {
+            return &intervalPattern;
+        }
     }
-    return (&(fIntervalPatterns[field]));
+    return NULL;
 }
 
 
-const UChar 
-DateIntervalInfo::fgCalendarFieldToPatternLetter[] = 
+void 
+DateIntervalInfo::initializeData(const Locale& locale, UErrorCode& status)
 {
-    /*GyM*/ CAP_G, LOW_Y, CAP_M,
-    /*wWd*/ LOW_W, CAP_W, LOW_D,
-    /*DEF*/ CAP_D, CAP_E, CAP_F,
-    /*ahH*/ LOW_A, LOW_H, CAP_H,
-    /*m..*/ LOW_M,
-};
+    fIntervalPatterns = initHash(status);
+    if ( U_FAILURE(status) ) {
+        return;
+    }
+    CalendarData* calData = new CalendarData(locale, NULL, status);
+    if ( calData == NULL ) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return;
+    }
+
+    const UResourceBundle* itvDtPtnResource = calData->getByKey(
+                                       gIntervalDateTimePatternTag, status);
+
+    // look for fallback first, since it establishes the default order
+    const UChar* resStr;
+    int32_t resStrLen = 0;
+    resStr = ures_getStringByKeyWithFallback(itvDtPtnResource, 
+                                             gFallbackPatternTag, 
+                                             &resStrLen, &status);
+    if ( U_FAILURE(status) ) {
+        return;
+    }
+
+    UnicodeString pattern = UnicodeString(TRUE, resStr, resStrLen);
+    setFallbackIntervalPattern(pattern);
+
+    int32_t size = ures_getSize(itvDtPtnResource);
+    int32_t index;
+    for ( index = 0; index < size; ++index ) {
+        UResourceBundle* oneRes = ures_getByIndex(itvDtPtnResource, index, 
+                                                 NULL, &status);
+        if ( U_FAILURE(status) ) {
+            return;
+        }
+
+        const char* skeleton = ures_getKey(oneRes);
+        if ( skeleton == NULL ) {
+            status = U_MISSING_RESOURCE_ERROR;
+            return;
+        }
+        if ( uprv_strcmp(skeleton, gFallbackPatternTag) == 0 ) {
+            continue;  // fallback
+        }
+
+        UResourceBundle* intervalPatterns = ures_getByKey(itvDtPtnResource,
+                                                      skeleton, NULL, &status);
+
+        if ( U_FAILURE(status) ) {
+            return;
+        }
+
+        // return if interval patterns for skeleton not found
+        if ( intervalPatterns == NULL ) {
+            status = U_MISSING_RESOURCE_ERROR;
+            return;
+        }
+
+        const UChar* pattern;
+        const char* key;
+        int32_t ptLength;
+        int32_t ptnNum = ures_getSize(intervalPatterns);
+        int32_t ptnIndex;
+        for ( ptnIndex = 0; ptnIndex < ptnNum; ++ptnIndex ) {
+            pattern = ures_getNextString(intervalPatterns, &ptLength, &key,
+                                         &status);
+            if ( U_FAILURE(status) ) {
+                return;
+            }
+
+            UCalendarDateFields calendarField = UCAL_FIELD_COUNT;
+            if ( !uprv_strcmp(key, "y") ) {
+                calendarField = UCAL_YEAR;
+            } else if ( !uprv_strcmp(key, "M") ) {
+                calendarField = UCAL_MONTH;
+            } else if ( !uprv_strcmp(key, "d") ) {
+                calendarField = UCAL_DATE;
+            } else if ( !uprv_strcmp(key, "a") ) {
+                calendarField = UCAL_AM_PM;
+            } else if ( !uprv_strcmp(key, "h") ) {
+                calendarField = UCAL_HOUR;
+            } else if ( !uprv_strcmp(key, "m") ) {
+                calendarField = UCAL_MINUTE;
+            }
+            if ( calendarField != UCAL_FIELD_COUNT ) {
+                setIntervalPatternInternally(skeleton, calendarField, pattern,status);
+            }
+        }
+    }
+    delete calData;
+}
+
+
+
+void
+DateIntervalInfo::setIntervalPatternInternally(const UnicodeString& skeleton,
+                                      UCalendarDateFields lrgDiffCalUnit,
+                                      const UnicodeString& intervalPattern,
+                                      UErrorCode& status) {
+    int8_t index = (int8_t)calendarFieldToIntervalIndex(lrgDiffCalUnit,status);
+    if ( U_FAILURE(status) ) {
+        return;
+    }
+    UnicodeString* patternsOfOneSkeleton = (UnicodeString*)(fIntervalPatterns->get(skeleton));
+    UBool emptyHash = false;
+    if ( patternsOfOneSkeleton == NULL ) {
+        patternsOfOneSkeleton = new UnicodeString[kIPI_MAX_INDEX];
+        emptyHash = true;
+    }
+    
+    patternsOfOneSkeleton[index] = intervalPattern;
+    if ( emptyHash == true ) {
+        fIntervalPatterns->put(skeleton, patternsOfOneSkeleton, status);
+    }
+}
+
+
+
+void 
+DateIntervalInfo::parseSkeleton(const UnicodeString& skeleton, 
+                                int32_t* skeletonFieldWidth) {
+    const int8_t PATTERN_CHAR_BASE = 0x41;
+    int32_t i;
+    for ( i = 0; i < skeleton.length(); ++i ) {
+        // it is an ASCII char in skeleton
+        int8_t ch = (int8_t)skeleton.charAt(i);  
+        ++skeletonFieldWidth[ch - PATTERN_CHAR_BASE];
+    }
+}
+
+
+
+UBool 
+DateIntervalInfo::stringNumeric(int32_t fieldWidth, int32_t anotherFieldWidth,
+                                char patternLetter) {
+    if ( patternLetter == 'M' ) {
+        if ( fieldWidth <= 2 && anotherFieldWidth > 2 ||
+             fieldWidth > 2 && anotherFieldWidth <= 2 ) {
+            return true;
+        }
+    }
+    return false;
+}
+
+
+
+const UnicodeString* 
+DateIntervalInfo::getBestSkeleton(const UnicodeString& skeleton,
+                                  int8_t& bestMatchDistanceInfo) const {
+#ifdef DTITVINF_DEBUG
+    char result[1000];
+    char result_1[1000];
+    char mesg[2000];
+    skeleton.extract(0,  skeleton.length(), result, "UTF-8");
+    sprintf(mesg, "in getBestSkeleton: skeleton: %s; \n", result);
+    PRINTMESG(mesg)
+#endif
+
+
+    int32_t inputSkeletonFieldWidth[] =
+    {
+    //       A   B   C   D   E   F   G   H   I   J   K   L   M   N   O
+             0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+    //   P   Q   R   S   T   U   V   W   X   Y   Z
+         0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 0, 0,  0, 0, 0,
+    //       a   b   c   d   e   f   g   h   i   j   k   l   m   n   o
+         0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+    //   p   q   r   s   t   u   v   w   x   y   z
+         0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
+    };
+
+    int32_t skeletonFieldWidth[] =
+    {
+    //       A   B   C   D   E   F   G   H   I   J   K   L   M   N   O
+             0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+    //   P   Q   R   S   T   U   V   W   X   Y   Z
+         0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 0, 0,  0, 0, 0,
+    //       a   b   c   d   e   f   g   h   i   j   k   l   m   n   o
+         0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+    //   p   q   r   s   t   u   v   w   x   y   z
+         0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
+    };
+
+    const int32_t DIFFERENT_FIELD = 0x1000;
+    const int32_t STRING_NUMERIC_DIFFERENCE = 0x100;
+    const int32_t BASE = 0x41;
+
+    // hack for 'v' and 'z'.
+    // resource bundle only have time skeletons ending with 'v',
+    // but not for time skeletons ending with 'z'.
+    UBool replaceZWithV = false;
+    const UnicodeString* inputSkeleton = &skeleton; 
+    UnicodeString copySkeleton;
+    if ( skeleton.indexOf('z') != -1 ) {
+        copySkeleton = skeleton;
+        copySkeleton.findAndReplace("z", "v");
+        inputSkeleton = &copySkeleton;
+        replaceZWithV = true;
+    }
+
+    parseSkeleton(*inputSkeleton, inputSkeletonFieldWidth);
+    int32_t bestDistance = MAX_POSITIVE_INT;
+    const UnicodeString* bestSkeleton = NULL;
+
+    // 0 means exact the same skeletons;
+    // 1 means having the same field, but with different length,
+    // 2 means only z/v differs
+    // -1 means having different field.
+    bestMatchDistanceInfo = 0;
+    int8_t fieldLength = sizeof(skeletonFieldWidth)/sizeof(skeletonFieldWidth[0]);
+
+    int32_t pos = -1;
+    const UHashElement* elem = NULL;
+    while ( (elem = fIntervalPatterns->nextElement(pos)) != NULL ) {
+        const UHashTok keyTok = elem->key;
+        UnicodeString* skeleton = (UnicodeString*)keyTok.pointer;
+#ifdef DTITVINF_DEBUG
+    skeleton->extract(0,  skeleton->length(), result, "UTF-8");
+    sprintf(mesg, "available skeletons: skeleton: %s; \n", result);
+    PRINTMESG(mesg)
+#endif
+
+        // clear skeleton field width
+        int8_t i;
+        for ( i = 0; i < fieldLength; ++i ) {
+            skeletonFieldWidth[i] = 0;    
+        }
+        parseSkeleton(*skeleton, skeletonFieldWidth);
+        // calculate distance
+        int32_t distance = 0;
+        int8_t fieldDifference = 1;
+        for ( i = 0; i < fieldLength; ++i ) {
+            int32_t inputFieldWidth = inputSkeletonFieldWidth[i];
+            int32_t fieldWidth = skeletonFieldWidth[i];
+            if ( inputFieldWidth == fieldWidth ) {
+                continue;
+            }
+            if ( inputFieldWidth == 0 ) {
+                fieldDifference = -1;
+                distance += DIFFERENT_FIELD;
+            } else if ( fieldWidth == 0 ) {
+                fieldDifference = -1;
+                distance += DIFFERENT_FIELD;
+            } else if (stringNumeric(inputFieldWidth, fieldWidth, 
+                                     (char)(i+BASE) ) ) {
+                distance += STRING_NUMERIC_DIFFERENCE;
+            } else {
+                distance += (inputFieldWidth > fieldWidth) ? 
+                            (inputFieldWidth - fieldWidth) : 
+                            (fieldWidth - inputFieldWidth);
+            }
+        }
+        if ( distance < bestDistance ) {
+            bestSkeleton = skeleton;
+            bestDistance = distance;
+            bestMatchDistanceInfo = fieldDifference;
+        }
+        if ( distance == 0 ) {
+            bestMatchDistanceInfo = 0;
+            break;
+        }
+    }
+    if ( replaceZWithV && bestMatchDistanceInfo != -1 ) {
+        bestMatchDistanceInfo = 2;
+    }
+    return bestSkeleton;
+}
+
+
+
+DateIntervalInfo::IntervalPatternIndex
+DateIntervalInfo::calendarFieldToIntervalIndex(UCalendarDateFields field, 
+                                               UErrorCode& status) {
+    IntervalPatternIndex index = kIPI_ERA;
+    switch ( field ) {
+      case UCAL_ERA:
+        break;
+      case UCAL_YEAR:
+        index = kIPI_YEAR;
+        break;
+      case UCAL_MONTH:
+        index = kIPI_MONTH;
+        break;
+      case UCAL_DATE:
+      case UCAL_DAY_OF_WEEK:
+      //case UCAL_DAY_OF_MONTH:
+        index = kIPI_DATE;
+        break;
+      case UCAL_AM_PM:
+        index = kIPI_AM_PM;
+        break;
+      case UCAL_HOUR:
+      case UCAL_HOUR_OF_DAY:
+        index = kIPI_HOUR;
+        break;
+      case UCAL_MINUTE:
+        index = kIPI_MINUTE;
+        break;
+      default:
+        status = U_ILLEGAL_ARGUMENT_ERROR;
+    }
+    return index;
+}
+
+
+
+void
+DateIntervalInfo::deleteHash(Hashtable* hTable) 
+{
+    if ( hTable == NULL ) {
+        return;
+    }
+    int32_t pos = -1;
+    const UHashElement* element = NULL;
+    while ( (element = hTable->nextElement(pos)) != NULL ) {
+        const UHashTok keyTok = element->key;
+        const UHashTok valueTok = element->value;
+        const UnicodeString* value = (UnicodeString*)valueTok.pointer;
+        delete[] value;
+    }
+    delete fIntervalPatterns;
+}
+
+
+
+Hashtable*
+DateIntervalInfo::initHash(UErrorCode& status) {
+    
+    Hashtable* hTable;
+    if ( (hTable = new Hashtable(TRUE, status)) == NULL ) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return NULL;
+    }
+    hTable->setValueCompartor(hashTableValueComparator);
+    return hTable;
+}
+
+
+UBool 
+DateIntervalInfo::hashTableValueComparator(UHashTok val1, UHashTok val2) {
+    const UnicodeString* pattern1 = (UnicodeString*)val1.pointer;
+    const UnicodeString* pattern2 = (UnicodeString*)val2.pointer;
+    UBool ret = TRUE;
+    int8_t i;
+    for ( i = 0; i < kIPI_MAX_INDEX && ret == TRUE; ++i ) {
+        ret = (pattern1[i] == pattern2[i]);
+    }
+    return ret;
+}
+
+
+
+void
+DateIntervalInfo::copyHash(const Hashtable* source,
+                           Hashtable* target,
+                           UErrorCode& status) {
+    int32_t pos = -1;
+    const UHashElement* element = NULL;
+    if ( source ) {
+        while ( (element = source->nextElement(pos)) != NULL ) {
+            const UHashTok keyTok = element->key;
+            const UnicodeString* key = (UnicodeString*)keyTok.pointer;
+            const UHashTok valueTok = element->value;
+            const UnicodeString* value = (UnicodeString*)valueTok.pointer;
+            UnicodeString* copy = new UnicodeString[kIPI_MAX_INDEX];
+            int8_t i;
+            for ( i = 0; i < kIPI_MAX_INDEX; ++i ) {
+                copy[i] = value[i];
+            }
+            target->put(*((UnicodeString*)key->clone()),copy,status);
+            if ( U_FAILURE(status) ) {
+                return;
+            }
+        }
+    }
+}
 
 
 U_NAMESPACE_END
