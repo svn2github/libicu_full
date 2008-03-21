@@ -396,8 +396,10 @@ void DateIntervalFormatTest::testFormat() {
 void DateIntervalFormatTest::expect(const char** data, int32_t data_length,
                                     const Locale& loc, const char* locName) {
 
+    /*
     UnicodeString formatResults[] = {
     };
+    */
 
     UnicodeString skeleton[] = {
         "EEEEdMMMMy",
@@ -439,7 +441,6 @@ void DateIntervalFormatTest::expect(const char** data, int32_t data_length,
     int32_t i = 0;
     UErrorCode ec = U_ZERO_ERROR;
     UnicodeString str, str2;
-    SimpleDateFormat* fmt;
     SimpleDateFormat ref(data[i++], loc, ec);
     if (!assertSuccess("construct SimpleDateFormat", ec)) return;
 
