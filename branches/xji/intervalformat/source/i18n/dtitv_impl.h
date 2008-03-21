@@ -20,6 +20,7 @@
  
 #if !UCONFIG_NO_FORMATTING
 
+#include "unicode/unistr.h"
 
 
 #define QUOTE             ((UChar)0x0027)
@@ -78,10 +79,13 @@
 #define CAP_Y             ((UChar)0x0059)
 #define CAP_Z             ((UChar)0x005A)
 
-#define MINIMUM_SUPPORTED_CALENDAR_FIELD    UCAL_MINUTE
+//#define MINIMUM_SUPPORTED_CALENDAR_FIELD    UCAL_MINUTE
 
 #define MAX_E_COUNT      5
 #define MAX_M_COUNT      5
+//#define MAX_INTERVAL_INDEX 4
+#define MAX_POSITIVE_INT  56632;
+
 
 #endif /* #if !UCONFIG_NO_FORMATTING */
 
