@@ -615,11 +615,36 @@ public:
      *                 covered in pattern. FALSE otherwise.
      * @draft ICU 4.0
      */
-    UBool smallerFieldUnit(UCalendarDateFields field) const;
+    UBool isFieldUnitIgnored(UCalendarDateFields field) const;
+
+
+    /**
+     * Check whether the 'field' is smaller than all the fields covered in
+     * pattern, return TRUE if it is. The sequence of calendar field, 
+     * from large to small is: ERA, YEAR, MONTH, DATE, AM_PM, HOUR, MINUTE,...
+     * @param pattern  the pattern to check against
+     * @param field    the calendar field need to check against
+     * @return         TRUE if the 'field' is smaller than all the fields 
+     *                 covered in pattern. FALSE otherwise.
+     * @draft ICU 4.0
+     */
+    static UBool isFieldUnitIgnored(const UnicodeString& pattern, 
+                                    UCalendarDateFields field);
+
+
+
+    /**
+     * Get the locale of this simple date formatter.
+     * It is used in DateIntervalFormat.
+     *
+     * @return   locale in this simple date formatter
+     * @internal ICU 4.0
+     */
+    const Locale& getSmpFmtLocale(void) const;
+
 
 private:
     friend class DateFormat;
-    friend class DateIntervalFormat;
 
     void initializeDefaultCentury(void);
 
