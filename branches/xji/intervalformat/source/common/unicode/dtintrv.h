@@ -41,20 +41,6 @@ public:
     ~DateInterval();
  
     /** 
-     * Set the from date.
-     * @param date  The from date to be set in date interval.
-     * @draft ICU 4.0
-     */
-    void setFromDate(const UDate date);
-
-    /**
-     * Set the to date.
-     * @param date  The to date to be set in date interval.
-     * @draft ICU 4.0
-     */
-    void setToDate(const UDate date);
-
-    /** 
      * Get the from date.
      * @return  the from date in dateInterval.
      * @draft ICU 4.0
@@ -142,18 +128,6 @@ private:
     UDate toDate;
 
 } ;// end class DateInterval
-
-
-inline void 
-DateInterval::setFromDate(const UDate date) { 
-    fromDate = date; 
-}
-
-
-inline void 
-DateInterval::setToDate(const UDate date) { 
-    toDate = date; 
-}
 
 
 inline UDate 
