@@ -1596,7 +1596,7 @@ inline uint32_t ucol_IGetNextCE(const UCollator *coll, collIterate *collationSou
     }   // end for (;;)
 
 
-    if (ch <= 0xFF) {
+    if (ch <= 0xFF & ch!= 0xB7) {
         /*  For latin-1 characters we never need to fall back to the UCA table        */
         /*    because all of the UCA data is replicated in the latinOneMapping array  */
         order = coll->latinOneMapping[ch];
@@ -2655,7 +2655,7 @@ inline UChar getPrevNormalizedChar(collIterate *data, UErrorCode *status)
     }
 
     start = data->pos;
-    if (data->flags & UCOL_ITER_HASLEN) {
+    if ((data->fcdPosition==NULL)||(data->flags & UCOL_ITER_HASLEN)) {
         /* in data string */
         if ((start - 1) == data->string) {
             return *(start - 1);
@@ -6584,7 +6584,7 @@ ucol_setUpLatinOne(UCollator *coll, UErrorCode *status) {
     // TODO: make safe if you get more than you wanted...
     for(ch = 0; ch <= UCOL_ENDOFLATINONERANGE; ch++) {
         primShift = 24; secShift = 24; terShift = 24;
-        if(ch < 0x100) {
+        if(ch < 0x100 && ch!=0xB7) {
             CE = coll->latinOneMapping[ch];
         } else {
             CE = UTRIE_GET32_FROM_LEAD(&coll->mapping, ch);

@@ -3050,7 +3050,7 @@ static void TestVariableTopSetting(void) {
     /*UChar *conts = (UChar *)((uint8_t *)coll->image + coll->image->UCAConsts+sizeof(UCAConstants));*/
     UChar *conts = (UChar *)((uint8_t *)coll->image + coll->image->contractionUCACombos);
     while(*conts != 0) {
-      if(*(conts+2) == 0) {
+      if((*(conts+2) == 0) || (*(conts+1)==0)) { // contracts or pre-context contractions
         varTop1 = ucol_setVariableTop(coll, conts, -1, &status);
       } else {
         varTop1 = ucol_setVariableTop(coll, conts, 3, &status);
@@ -4671,8 +4671,8 @@ TestThaiSortKey(void)
   /* UCA 4.0 uint8_t expectedKey[256] = { 0x01, 0xd9, 0xb2, 0x01, 0x05, 0x00 }; */
   /* UCA 4.1 uint8_t expectedKey[256] = { 0x01, 0xdb, 0x3a, 0x01, 0x05, 0x00 }; */
   /* UCA 5.0 uint8_t expectedKey[256] = { 0x01, 0xdc, 0xce, 0x01, 0x05, 0x00 }; */
-  /* UCA 5.0 moves Yammakan */
-  uint8_t expectedKey[256] = { 0x01, 0xdd, 0x32, 0x01, 0x05, 0x00 }; 
+  /* UCA 5.1 moves Yammakan */
+  uint8_t expectedKey[256] = { 0x01, 0xe0, 0x4e, 0x01, 0x05, 0x00 }; 
   UCollator *coll = ucol_open("th", &status);
   if(U_FAILURE(status)) {
     log_err("Could not open a collator, exiting (%s)\n", u_errorName(status));
@@ -4681,7 +4681,7 @@ TestThaiSortKey(void)
 
   keyLen = ucol_getSortKey(coll, &yamakan, 1, key, 256);
   if(strcmp((char *)key, (char *)expectedKey)) {
-    log_err("Yammakan key is different from ICU 34!\n");
+    log_err("Yammakan key is different from ICU 4.0!\n");
   }
 
   ucol_close(coll);
@@ -4987,9 +4987,16 @@ TestTailor6179(void)
             { 0xFDD0,0x009E, 0}
      };
     UChar tData3[][20]={
-            {'a', 0},
-            {'a', '-', 0},
-            { 'z', 0}
+            {'-', 0},
+            { 0xb7, 0},
+            { 'L', 0xb7, 0},
+            { 'l', 0xb7, 0},
+            { 'L', 'a', 0xb7, 0},
+            { 0x387, 0},
+            { 'L', 0x387, 0},
+            { 'l', 0x387, 0},
+            { 'l', 'a', 0x387, 0},
+            {'a', 'p', 0},
      };
 
     /* UCA5.1, the value may increase in later version. */
@@ -4999,6 +5006,7 @@ TestTailor6179(void)
     uint8_t lastSecondaryIgnCE[6]={1, 1, 0x05, 0};
 
     /* Test [Last Primary ignorable] */
+    
     log_verbose("\n\nTailoring test: &[last primary ignorable]<<a  &[first primary ignorable]<<b ");
     ruleLen = u_strlen(rule1);
     coll = ucol_openRules(rule1, ruleLen, UCOL_OFF, UCOL_TERTIARY, NULL,&status);
@@ -5067,7 +5075,7 @@ TestTailor6179(void)
            log_err("Tailoring test: &z <<a|- failed!");
            return;
        }
-    for (j=0; j<3; j++) {
+    for (j=0; j<10; j++) {
        tLen = u_strlen(tData3[j]);
        rLen = ucol_getSortKey(coll, tData3[j], tLen, resColl, 100);
        log_verbose("\n Data[%d] :%s  \tlen: %d key: ", j, tData3[j], rLen);
@@ -5076,6 +5084,39 @@ TestTailor6179(void)
        }
     }
     ucol_close(coll);
+    
+    log_verbose("\n\nEN collation:");
+    coll = ucol_open("en", &status);
+    if (U_FAILURE(status)) {
+        log_err("Tailoring test: &z <<a|- failed!");
+        return;
+    }
+    for (j=0; j<10; j++) {
+        tLen = u_strlen(tData3[j]);
+        rLen = ucol_getSortKey(coll, tData3[j], tLen, resColl, 100);
+        log_verbose("\n Data[%d] :%s  \tlen: %d key: ", j, tData3[j], rLen);
+        for(i = 0; i<rLen; i++) {
+            log_verbose(" %02X", resColl[i]);
+        }
+     }
+     ucol_close(coll);
+     
+     
+     log_verbose("\n\nJA collation:");
+     coll = ucol_open("ja", &status);
+     if (U_FAILURE(status)) {
+         log_err("Tailoring test: &z <<a|- failed!");
+         return;
+     }
+     for (j=0; j<10; j++) {
+         tLen = u_strlen(tData3[j]);
+         rLen = ucol_getSortKey(coll, tData3[j], tLen, resColl, 100);
+         log_verbose("\n Data[%d] :%s  \tlen: %d key: ", j, tData3[j], rLen);
+         for(i = 0; i<rLen; i++) {
+             log_verbose(" %02X", resColl[i]);
+         }
+      }
+      ucol_close(coll);
 }
 
 
