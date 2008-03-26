@@ -442,7 +442,7 @@ CjkBreakEngine::CjkBreakEngine(const TrieWordDictionary *adoptDictionary, Langua
     // Korean dictionary only includes Hangul syllables
     fHangulWordSet.applyPattern(UNICODE_STRING_SIMPLE("[\\uac00-\\ud7a3]"), status);
     fHanWordSet.applyPattern(UNICODE_STRING_SIMPLE("[:Han:]"), status);
-    fKatakanaWordSet.applyPattern(UNICODE_STRING_SIMPLE("[[:Katakana:]\\u30fc\\uff9e\\uff9f]"), status);
+    fKatakanaWordSet.applyPattern(UNICODE_STRING_SIMPLE("[[:Katakana:]\\u30fc\\uff9e\\uff9f\uff70]"), status);
     fHiraganaWordSet.applyPattern(UNICODE_STRING_SIMPLE("[:Hiragana:]"), status);
 
     if (U_SUCCESS(status)) {
@@ -603,7 +603,7 @@ CjkBreakEngine::divideUpDictionaryRange( UText *text,
             uint32_t newSnlp = bestSnlp[i] + values[j];
             if (newSnlp < bestSnlp[lengths[j] + i]) {
                 bestSnlp[lengths[j] + i] = newSnlp;
-                prev[lengths[j] + i] = i;
+                prev[charPositions.elementAti(lengths[j] + i)] = i;
             }
         }
 
@@ -628,7 +628,7 @@ CjkBreakEngine::divideUpDictionaryRange( UText *text,
                 uint32_t newSnlp = bestSnlp[i] + getKatakanaCost(j - i);
                 if (newSnlp < bestSnlp[j]) {
                     bestSnlp[j] = newSnlp;
-                    prev[j] = i;
+                    prev[charPositions.elementAti(j)] = i;
                 }
             }
         }
