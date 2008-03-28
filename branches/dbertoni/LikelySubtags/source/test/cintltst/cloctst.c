@@ -2788,14 +2788,14 @@ const char* const basic_maximize_data[][2] = {
     "en_Kore",
     "en_Kore_US"
   }, {
-  "en_Kore_Zz",
-  "en_Kore_US"
+    "en_Kore_Zz",
+    "en_Kore_US"
   }, {
-  "en_Kore_ZA",
-  "en_Kore_ZA"
+    "en_Kore_ZA",
+    "en_Kore_ZA"
   }, {
-  "en_Kore_ZA_POSIX",
-  "en_Kore_ZA_POSIX"
+    "en_Kore_ZA_POSIX",
+    "en_Kore_ZA_POSIX"
   }, {
     "en_Gujr",
     "en_Gujr_US"
@@ -2811,21 +2811,51 @@ const char* const basic_maximize_data[][2] = {
   }, {
     "en_Gujr_ZA_POSIX",
     "en_Gujr_ZA_POSIX"
-#if 0
-    /* These are disabled pending the resolution of issue 6204. */
   }, {
     "en_US_POSIX_1901",
     "en_Latn_US_POSIX_1901"
   }, {
-    "en_Latn_POSIX_1901",
+    "en_Latn__POSIX_1901",
     "en_Latn_US_POSIX_1901"
   }, {
-    "en_POSIX_1901",
+    "en__POSIX_1901",
     "en_Latn_US_POSIX_1901"
   }, {
-    "de_POSIX_1901",
+    "de__POSIX_1901",
     "de_Latn_DE_POSIX_1901"
-#endif
+  }, {
+    "en_US_BOSTON",
+    "en_Latn_US_BOSTON"
+  }, {
+    "th@calendar=buddhist",
+    "th_Thai_TH@calendar=buddhist"
+  }, {
+    "ar_ZZ",
+    "ar_Arab_EG"
+  }, {
+    "cch",
+    "cch_Latn_NG"
+  }, {
+    "zh",
+    "zh_Hans_CN"
+  }, {
+    "zh_TW",
+    "zh_Hant_TW"
+  }, {
+    "zh_HK",
+    "zh_Hant_HK"
+  }, {
+    "zh_Hant",
+    "zh_Hant_TW"
+  }, {
+    "zh_Zzzz_CN",
+    "zh_Hans_CN"
+  }, {
+    "und_US",
+    "en_Latn_US"
+  }, {
+    "und_HK",
+    "zh_Hant_HK"
   }, {
     "zzz",
     ""
@@ -2838,13 +2868,13 @@ const char* const basic_minimize_data[][2] = {
     "en"
   }, {
     "en_Latn_US_POSIX_1901",
-    "en_POSIX_1901"
+    "en__POSIX_1901"
   }, {
     "en_Zzzz_US_POSIX_1901",
-    "en_POSIX_1901"
+    "en__POSIX_1901"
   }, {
     "de_Latn_DE_POSIX_1901",
-    "de_POSIX_1901"
+    "de__POSIX_1901"
   }, {
     "und",
     ""

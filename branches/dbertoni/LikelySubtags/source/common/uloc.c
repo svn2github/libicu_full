@@ -4832,6 +4832,7 @@ createTagStringWithAlternates(
         char tagBuffer[ULOC_FULLNAME_CAPACITY];
         int32_t tagLength = 0;
         int32_t capacityRemaining = tagCapacity;
+        UBool regionAppended = FALSE;
 
         if (langLength > 0) {
             appendTag(
@@ -4927,6 +4928,8 @@ createTagStringWithAlternates(
                 regionLength,
                 tagBuffer,
                 &tagLength);
+
+            regionAppended = TRUE;
         }
         else if (alternateTags != NULL) {
             /*
@@ -4950,6 +4953,8 @@ createTagStringWithAlternates(
                     alternateRegionLength,
                     tagBuffer,
                     &tagLength);
+
+                regionAppended = TRUE;
             }
         }
 
@@ -4969,18 +4974,25 @@ createTagStringWithAlternates(
             capacityRemaining -= toCopy;
         }
 
-        if (trailingLength > 0 && capacityRemaining > 0) {
-            /*
-             * Copy the trailing data into the supplied buffer.  Use uprv_memmove, since we
-             * don't know if the user-supplied buffers overlap.
-             */
-            const int32_t toCopy =
-                trailingLength >= capacityRemaining ? capacityRemaining : trailingLength;
+        if (trailingLength > 0) {
+            if (capacityRemaining > 0 && !regionAppended) {
+                tag[tagLength++] = '_';
+                --capacityRemaining;
+            }
 
-            uprv_memmove(
-                &tag[tagLength],
-                trailing,
-                toCopy);
+            if (capacityRemaining > 0) {
+                /*
+                 * Copy the trailing data into the supplied buffer.  Use uprv_memmove, since we
+                 * don't know if the user-supplied buffers overlap.
+                 */
+                const int32_t toCopy =
+                    trailingLength >= capacityRemaining ? capacityRemaining : trailingLength;
+
+                uprv_memmove(
+                    &tag[tagLength],
+                    trailing,
+                    toCopy);
+            }
         }
 
         tagLength += trailingLength;
@@ -5306,7 +5318,12 @@ parseTagString(
     subtagLength = _getLanguage(position, lang, *langLength, &position);
     u_terminateChars(lang, *langLength, subtagLength, err);
 
-    if(U_FAILURE(*err)) {
+    /*
+     * Note that we explicit consider U_STRING_NOT_TERMINATED_WARNING
+     * to be an error, because it indicates the user-supplied tag is
+     * not well-formed.
+     */
+    if(*err != U_ZERO_ERROR) {
         goto error;
     }
 
@@ -5329,7 +5346,7 @@ parseTagString(
     subtagLength = _getScript(position, script, *scriptLength, &position);
     u_terminateChars(script, *scriptLength, subtagLength, err);
 
-    if(U_FAILURE(*err)) {
+    if(*err != U_ZERO_ERROR) {
         goto error;
     }
 
@@ -5354,7 +5371,7 @@ parseTagString(
     subtagLength = _getCountry(position, region, *regionLength, &position);
     u_terminateChars(region, *regionLength, subtagLength, err);
 
-    if(U_FAILURE(*err)) {
+    if(*err != U_ZERO_ERROR) {
         goto error;
     }
 
@@ -5819,6 +5836,7 @@ uloc_minimizeSubtags(const char*    localeID,
      * Next, try the language and region.
      **/
     if (regionLength > 0) {
+
         char tagBuffer[ULOC_FULLNAME_CAPACITY];
 
         const int32_t tagBufferLength =
