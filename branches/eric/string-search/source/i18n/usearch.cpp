@@ -1164,7 +1164,7 @@ inline int32_t getColElemIterOffset(const UCollationElements *coleiter,
 {
     int32_t result = ucol_getOffset(coleiter);
     // intricacies of the the backwards collation element iterator
-    if (!forwards && inNormBuf(coleiter) && !isFCDPointerNull(coleiter)) {
+    if (FALSE && !forwards && inNormBuf(coleiter) && !isFCDPointerNull(coleiter)) {
         result ++;
     }
     return result;

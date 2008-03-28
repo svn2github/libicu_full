@@ -562,7 +562,7 @@ static void TestOffset()
     UCollator *en_us=NULL;
     UCollationElements *iter, *pristine;
     int32_t offset;
-    int32_t *orders;
+    OrderAndOffset *orders;
     int32_t orderLength=0;
     int     count = 0;
     UChar test1[50];
@@ -649,7 +649,7 @@ static void TestOffset()
         switch (count) {
         case 0:
             if (ucol_getOffset(iter) != 1) {
-                log_err("ERROR: Offset of iteration should be 0\n");
+                log_err("ERROR: Offset of iteration should be 1\n");
             }
             break;
         case 3:
@@ -671,8 +671,14 @@ static void TestOffset()
         U_SUCCESS(status)) {
         switch (count) {
         case 0:
+        case 1:
             if (ucol_getOffset(iter) != 3) {
                 log_err("ERROR: Offset of iteration should be 3\n");
+            }
+            break;
+        case 2:
+            if (ucol_getOffset(iter) != 1) {
+                log_err("ERROR: Offset of iteration should be 1\n");
             }
             break;
         default:

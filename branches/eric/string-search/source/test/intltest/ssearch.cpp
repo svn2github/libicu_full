@@ -593,6 +593,18 @@ static char *printOrders(char *buffer, OrderList &list)
 void SSearchTest::offsetTest()
 {
     UnicodeString test[] = {
+        "\\u0F7F\\u0F80\\u0F81\\u0F82\\u0F83\\u0F84\\u0F85",
+        "\\u0F80\\u0F81\\u0F82\\u0F83\\u0F84\\u0F85",
+        "\\u07E9\\u07EA\\u07F1\\u07F2\\u07F3",
+
+        "\\u02FE\\u02FF"
+        "\\u0300\\u0301\\u0302\\u0303\\u0304\\u0305\\u0306\\u0307\\u0308\\u0309\\u030A\\u030B\\u030C\\u030D\\u030E\\u030F"
+        "\\u0310\\u0311\\u0312\\u0313\\u0314\\u0315\\u0316\\u0317\\u0318\\u0319\\u031A\\u031B\\u031C\\u031D\\u031E\\u031F"
+        "\\u0320\\u0321\\u0322\\u0323\\u0324\\u0325\\u0326\\u0327\\u0328\\u0329\\u032A\\u032B\\u032C\\u032D\\u032E\\u032F"
+        "\\u0330\\u0331\\u0332\\u0333\\u0334\\u0335\\u0336\\u0337\\u0338\\u0339\\u033A\\u033B\\u033C\\u033D\\u033E\\u033F"
+        "\\u0340\\u0341\\u0342\\u0343\\u0344\\u0345\\u0346\\u0347\\u0348\\u0349\\u034A\\u034B\\u034C\\u034D\\u034E",
+
+        "\\u02FE\\u02FF\\u0300\\u0301\\u0302\\u0303\\u0316\\u0317\\u0318",
         "abc\\u0E41\\u0301\\u0316",
 		"abc\\u0E41\\u0316\\u0301",
 		"\\u0E41\\u0301\\u0316",
@@ -630,9 +642,9 @@ void SSearchTest::offsetTest()
     int32_t testCount = ARRAY_SIZE(test);
     UErrorCode status = U_ZERO_ERROR;
     RuleBasedCollator *col = (RuleBasedCollator *) Collator::createInstance(Locale::getEnglish(), status);
-    char buffer[256];  // A bit of a hack... just happens to be long enough for all the test cases...
-                       // We could allocate one that's the right size by (CE_count * 10) + 2
-                       // 10 chars is enough room for 8 hex digits plus ", ". 2 extra chars for "[" and "]"
+    char buffer[4096];  // A bit of a hack... just happens to be long enough for all the test cases...
+                        // We could allocate one that's the right size by (CE_count * 10) + 2
+                        // 10 chars is enough room for 8 hex digits plus ", ". 2 extra chars for "[" and "]"
 
     col->setAttribute(UCOL_NORMALIZATION_MODE, UCOL_ON, status);
 

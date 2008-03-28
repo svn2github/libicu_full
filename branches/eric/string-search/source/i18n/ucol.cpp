@@ -1589,39 +1589,72 @@ void collPrevIterNormalize(collIterate *data)
                     normLen, &status);
 
     if (data->offsetBuffer == NULL) {
-        data->offsetBufferSize = UCOL_EXPAND_CE_BUFFER_SIZE;
-        data->offsetBuffer = (int32_t *) uprv_malloc(sizeof(int32_t) * UCOL_EXPAND_CE_BUFFER_SIZE);
+        int32_t len = normLen >= UCOL_EXPAND_CE_BUFFER_SIZE ? normLen + 1 : UCOL_EXPAND_CE_BUFFER_SIZE;
+
+        data->offsetBufferSize = len;
+        data->offsetBuffer = (int32_t *) uprv_malloc(sizeof(int32_t) * len);
         data->offsetStore = data->offsetBuffer;
+    } else if(data->offsetBufferSize < (int32_t) normLen) {
+        int32_t storeIX = data->offsetStore - data->offsetBuffer;
+        int32_t *tob    = (int32_t *) uprv_realloc(data->offsetBuffer, sizeof(int32_t) * (normLen + 1));
+
+        if (tob != NULL) {
+            data->offsetBuffer = tob;
+            data->offsetStore = &data->offsetBuffer[storeIX];
+            data->offsetBufferSize = normLen + 1;
+        }
     }
 
-    int32_t firstOffset = data->fcdPosition - data->string;
-    int32_t trailOffset = data->pos - data->string + 1;
-	UChar   baseChar    = (data->fcdPosition == NULL)? 0 : *data->fcdPosition;
-    int32_t fcdCount    = pEnd - pStart /*+ 1*/;
+    /*
+     * The usual case at this point is that we've got a base
+     * character followed by marks that were normalized. If
+     * fcdPosition is NULL, that means that we backed up to
+     * the beginning of the string and there's no base character.
+     *
+     * Forward processing will usually normalize when it sees
+     * the first mark, so that mark will get it's natural offset
+     * and the rest will get the offset of the character following
+     * the marks. The base character will also get its natural offset.
+     *
+     * We write the offset of the base character, if there is one,
+     * followed by the offset of the first mark and then the offsets
+     * of the rest of the marks.
+     */
+    int32_t firstMarkOffset = 0;
+    int32_t trailOffset     = data->pos - data->string + 1;
+    int32_t trailCount      = normLen - 1;
 
-	/*
-	 * If the base character is the start of a contraction, forward processing
-	 * will normalize the marks while checking for the contraction, which means
-	 * that the offset of the first mark will the same as the other marks. We also
-	 * have to explicitly set the offset of the base character.
-	 * 
-	 * **** THIS IS PROBABLY NOT A COMPLETE TEST ****
-	 */
-	if (baseChar >= 0x100) {
-		int32_t baseOrder = UTRIE_GET32_FROM_LEAD(&data->coll->mapping, baseChar);
+    if (data->fcdPosition != NULL) {
+        int32_t baseOffset = data->fcdPosition - data->string;
+        UChar   baseChar   = *data->fcdPosition;
 
-		if (baseOrder == UCOL_NOT_FOUND && data->coll->UCA) {
-			baseOrder = UTRIE_GET32_FROM_LEAD(&data->coll->UCA->mapping, baseChar);
-		}
+        firstMarkOffset = baseOffset + 1;
 
-		if (baseOrder > UCOL_NOT_FOUND && getCETag(baseOrder) == CONTRACTION_TAG) {
-			firstOffset -= 1;
-			fcdCount += 1;
-		}
-	}
+        /*
+	     * If the base character is the start of a contraction, forward processing
+	     * will normalize the marks while checking for the contraction, which means
+	     * that the offset of the first mark will the same as the other marks.
+	     * 
+	     * **** THIS IS PROBABLY NOT A COMPLETE TEST ****
+	     */
+	    if (baseChar >= 0x100) {
+		    int32_t baseOrder = UTRIE_GET32_FROM_LEAD(&data->coll->mapping, baseChar);
 
-    *(data->offsetStore++) = firstOffset + 1;
-    for (int32_t i = 0; i < fcdCount; i += 1) {
+		    if (baseOrder == UCOL_NOT_FOUND && data->coll->UCA) {
+			    baseOrder = UTRIE_GET32_FROM_LEAD(&data->coll->UCA->mapping, baseChar);
+		    }
+
+		    if (baseOrder > UCOL_NOT_FOUND && getCETag(baseOrder) == CONTRACTION_TAG) {
+			    firstMarkOffset = trailOffset;
+		    }
+	    }
+
+        *(data->offsetStore++) = baseOffset;
+    }
+
+    *(data->offsetStore++) = firstMarkOffset;
+
+    for (int32_t i = 0; i < trailCount; i += 1) {
         *(data->offsetStore++) = trailOffset;
     }
 
@@ -1874,6 +1907,7 @@ inline uint32_t ucol_IGetPrevCE(const UCollator *coll, collIterate *data,
                         data->pos   = data->fcdPosition + 1;
                     }
                     data->flags = data->origFlags;
+                    data->offsetRepeatValue = 0;
                     continue;
                 }
             }
@@ -2462,6 +2496,7 @@ inline uint32_t getImplicit(UChar32 cp, collIterate *collationSource) {
     }
     uint32_t r = uprv_uca_getImplicitPrimary(cp);
     *(collationSource->CEpos++) = ((r & 0x0000FFFF)<<16) | 0x000000C0;
+    collationSource->offsetRepeatCount += 1;
     return (r & UCOL_PRIMARYMASK) | 0x00000505; // This was 'order'
 }
 
@@ -2934,6 +2969,7 @@ uint32_t ucol_prv_getSpecialCE(const UCollator *coll, UChar ch, uint32_t CE, col
             {
                 *(source->CEpos++) = ((CE & 0xFF)<<24)|UCOL_CONTINUATION_MARKER;
                 CE = ((CE & 0xFFFF00) << 8) | (UCOL_BYTE_COMMON << 8) | UCOL_BYTE_COMMON;
+                source->offsetRepeatCount += 1;
                 return CE;
             }
         case EXPANSION_TAG:
@@ -3332,6 +3368,29 @@ inline uint32_t getPrevImplicit(UChar32 cp, collIterate *collationSource) {
 
     *(collationSource->CEpos++) = (r & UCOL_PRIMARYMASK) | 0x00000505;
     collationSource->toReturn = collationSource->CEpos;
+
+	if (collationSource->offsetBuffer == NULL) {
+		collationSource->offsetBufferSize = UCOL_EXPAND_CE_BUFFER_SIZE;
+		collationSource->offsetBuffer = (int32_t *) uprv_malloc(sizeof(int32_t) * UCOL_EXPAND_CE_BUFFER_SIZE);
+		collationSource->offsetStore = collationSource->offsetBuffer;
+	}
+
+	// **** doesn't work if using iterator ****
+	if (collationSource->flags & UCOL_ITER_INNORMBUF) {
+	  collationSource->offsetRepeatCount = 1;
+	} else {
+	  int32_t firstOffset = (int32_t)(collationSource->pos - collationSource->string);
+
+	  *(collationSource->offsetStore++) = firstOffset;
+	  *(collationSource->offsetStore++) = firstOffset + 1;
+
+		collationSource->offsetReturn = collationSource->offsetStore - 1;
+		*(collationSource->offsetBuffer) = firstOffset;
+		if (collationSource->offsetReturn == collationSource->offsetBuffer) {
+			collationSource->offsetStore = collationSource->offsetBuffer;
+		}
+	}
+
     return ((r & 0x0000FFFF)<<16) | 0x000000C0;
 }
 
@@ -3522,20 +3581,38 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
 
             int32_t offsetBias;
 
+#if 0
+            if (source->offsetReturn != NULL) {
+                source->offsetStore = source->offsetReturn - noChars;
+            }
+
+            // **** doesn't work if using iterator ****
+            if (source->flags & UCOL_ITER_INNORMBUF) {
+                if (source->fcdPosition == NULL) {
+                    offsetBias = 0;
+                } else {
+                    offsetBias = (int32_t)(source->fcdPosition - source->string);
+                }
+            } else {
+                offsetBias = (int32_t)(source->pos - source->string);
+            }
+
+#else
             // **** doesn't work if using iterator ****
             if (source->flags & UCOL_ITER_INNORMBUF) {
 #if 1
-              offsetBias = -1;
+                offsetBias = -1;
 #else
               if (source->fcdPosition == NULL) {
-                offsetBias = 0;
+                  offsetBias = 0;
               } else {
                   offsetBias = (int32_t)(source->fcdPosition - source->string);
               }
 #endif
             } else {
-              offsetBias = (int32_t)(source->pos - source->string);
+                offsetBias = (int32_t)(source->pos - source->string);
             }
+#endif
 
             /* a new collIterate is used to simplify things, since using the current
             collIterate will mean that the forward and backwards iteration will
@@ -3598,15 +3675,7 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
                         }
                     }
 
-                    int32_t *tob = (int32_t *) uprv_realloc(source->offsetBuffer,
-                        sizeof(int32_t) * (source->offsetBufferSize + UCOL_EXPAND_CE_BUFFER_EXTEND_SIZE));
-
-                    if (tob != NULL) {
-                        source->offsetBuffer = tob;
-                        source->offsetBufferSize += UCOL_EXPAND_CE_BUFFER_EXTEND_SIZE;
-                    }
-
-                    if (CECount == -1 || tob == NULL) {
+                    if (CECount == -1) {
                         *status = U_MEMORY_ALLOCATION_ERROR;
                         source->extendCEsSize = 0;
                         source->CEpos = source->CEs;
@@ -3621,8 +3690,29 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
 
                     source->CEpos = source->extendCEs + CECount;
                     endCEBuffer = source->extendCEs + source->extendCEsSize;
+                }
 
-                    source->offsetStore = source->offsetBuffer + CECount;
+                if (offsetBias >= 0 && source->offsetStore >= &source->offsetBuffer[source->offsetBufferSize]) {
+                    int32_t  storeIX = source->offsetStore - source->offsetBuffer;
+                    int32_t *tob = (int32_t *) uprv_realloc(source->offsetBuffer,
+                        sizeof(int32_t) * (source->offsetBufferSize + UCOL_EXPAND_CE_BUFFER_EXTEND_SIZE));
+
+                    if (tob != NULL) {
+                        source->offsetBuffer = tob;
+                        source->offsetStore = &source->offsetBuffer[storeIX];
+                        source->offsetBufferSize += UCOL_EXPAND_CE_BUFFER_EXTEND_SIZE;
+                    } else {
+                        // memory error...
+                        *status = U_MEMORY_ALLOCATION_ERROR;
+                        source->CEpos = source->CEs;
+                        freeHeapWritableBuffer(&temp);
+
+                        if (strbuffer != buffer) {
+                            uprv_free(strbuffer);
+                        }
+
+                        return (uint32_t) UCOL_NULLORDER;
+                    }
                 }
 
                 rawOffset = temp.pos - temp.string;
@@ -3630,7 +3720,12 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
             }
 
 			if (source->offsetRepeatValue != 0) {
-				source->offsetRepeatCount += temp.offsetRepeatCount;
+                if (CECount > noChars) {
+				    source->offsetRepeatCount += temp.offsetRepeatCount;
+                } else {
+                    // **** does this really skip the right offsets? ****
+                    source->offsetReturn -= (noChars - CECount);
+                }
 			}
 
             freeHeapWritableBuffer(&temp);
@@ -3665,9 +3760,8 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
 					source->offsetStore = source->offsetBuffer;
 				}
 
-				// **** doesn't work if using iterator ****
 				if (source->flags & UCOL_ITER_INNORMBUF) {
-				  source->offsetRepeatCount = 1;
+                    source->offsetRepeatCount = 1;
 				} else {
 				  int32_t firstOffset = (int32_t)(source->pos - source->string);
 
@@ -3686,27 +3780,21 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
             }
 
         case EXPANSION_TAG: /* this tag always returns */
+            {
             /*
             This should handle expansion.
             NOTE: we can encounter both continuations and expansions in an expansion!
             I have to decide where continuations are going to be dealt with
             */
-            int32_t firstOffset;
+            int32_t firstOffset = (int32_t)(source->pos - source->string);
 
             // **** doesn't work if using iterator ****
-            if (source->flags & UCOL_ITER_INNORMBUF) {
-#if 1
-              firstOffset = -1;
-              source->offsetRepeatCount = -1;
-#else
-              if (source->fcdPosition == NULL) {
-                firstOffset = 0;
-              } else {
-                  firstOffset = (int32_t)(source->fcdPosition - source->string);
-              }
-#endif
-            } else {
-              firstOffset = (int32_t)(source->pos - source->string);
+            if (source->offsetReturn != NULL) {
+                if (source->offsetReturn == source->offsetBuffer) {
+                    source->offsetStore = source->offsetBuffer;
+                }else {
+                  firstOffset = -1;
+                }
             }
 
             if (source->offsetBuffer == NULL) {
@@ -3729,8 +3817,6 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
 
                     if (firstOffset >= 0) {
                         *(source->offsetStore ++) = firstOffset + 1;
-                    } else {
-                        source->offsetRepeatCount += 1;
                     }
                 }
             } else {
@@ -3740,8 +3826,6 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
 
                     if (firstOffset >= 0) {
                         *(source->offsetStore ++) = firstOffset + 1;
-                    } else {
-                        source->offsetRepeatCount += 1;
                     }
                 }
             }
@@ -3752,6 +3836,8 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
                 if (source->offsetReturn == source->offsetBuffer) {
                     source->offsetStore = source->offsetBuffer;
                 }
+            } else {
+                source->offsetRepeatCount += size - 1;
             }
 
             source->toReturn = source->CEpos - 1;
@@ -3762,6 +3848,7 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
             }
 
             return *(source->toReturn);
+            }
 
         case DIGIT_TAG:
             {
@@ -4085,6 +4172,7 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
             }
 
         case IMPLICIT_TAG:        /* everything that is not defined otherwise */
+#if 0
 			if (source->offsetBuffer == NULL) {
 				source->offsetBufferSize = UCOL_EXPAND_CE_BUFFER_SIZE;
 				source->offsetBuffer = (int32_t *) uprv_malloc(sizeof(int32_t) * UCOL_EXPAND_CE_BUFFER_SIZE);
@@ -4105,6 +4193,7 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
 					source->offsetStore = source->offsetBuffer;
 				}
 			}
+#endif
 
             return getPrevImplicit(ch, source);
 
