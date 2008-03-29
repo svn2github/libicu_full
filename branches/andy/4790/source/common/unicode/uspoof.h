@@ -445,8 +445,8 @@ uspoof_areConfusableUTF8(const USpoofChecker *sc,
  */
 U_DRAFT int32_t U_EXPORT2
 uspoof_areConfusableUnicodeString(const USpoofChecker *sc,
-                                  const U_NAMESPACE_QUALIFIER UnicodeString &text,
-                                  const U_NAMESPACE_QUALIFIER UnicodeString &text,
+                                  const U_NAMESPACE_QUALIFIER UnicodeString &s1,
+                                  const U_NAMESPACE_QUALIFIER UnicodeString &s2,
                                   UErrorCode *status);
 #endif
 
@@ -478,7 +478,7 @@ uspoof_areConfusableUnicodeString(const USpoofChecker *sc,
   *                
   * @draft ICU 4.0
   */
-U_DRAFT int32_t U_EXPORT
+U_DRAFT int32_t U_EXPORT2
 uspoof_getSkeleton(const USpoofChecker *sc,
                    const UChar *s,  int32_t length,
                    UChar *dest, int32_t destCapacity,
@@ -511,7 +511,7 @@ uspoof_getSkeleton(const USpoofChecker *sc,
   *                
   * @draft ICU 4.0
   */   
-U_DRAFT int32_t U_EXPORT
+U_DRAFT int32_t U_EXPORT2
 uspoof_getSkeletonUTF8(const USpoofChecker *sc,
                    const char *s,  int32_t length,
                    char *dest, int32_t destCapacity,
@@ -541,7 +541,7 @@ uspoof_getSkeletonUTF8(const USpoofChecker *sc,
   *                
   * @draft ICU 4.0
   */   
-U_DRAFT UnicodeString & U_EXPORT
+U_DRAFT UnicodeString & U_EXPORT2
 uspoof_getSkeletonUnicodeString(const USpoofChecker *sc,
                                 const UnicodeString &s,
                                 UnicodeString &dest,
@@ -549,3 +549,5 @@ uspoof_getSkeletonUnicodeString(const USpoofChecker *sc,
 #endif
 
 #endif
+
+
