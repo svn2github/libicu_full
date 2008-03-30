@@ -1,7 +1,6 @@
 /**
  **********************************************************************************
- * Copyright (C) 2006,2007,2008, International Business Machines Corporation 
- * and others. 
+ * Copyright (C) 2006,2007,2008, International Business Machines Corporation and others. 
  * All Rights Reserved.                                                        
  **********************************************************************************
  */
@@ -442,7 +441,7 @@ CjkBreakEngine::CjkBreakEngine(const TrieWordDictionary *adoptDictionary, Langua
     // Korean dictionary only includes Hangul syllables
     fHangulWordSet.applyPattern(UNICODE_STRING_SIMPLE("[\\uac00-\\ud7a3]"), status);
     fHanWordSet.applyPattern(UNICODE_STRING_SIMPLE("[:Han:]"), status);
-    fKatakanaWordSet.applyPattern(UNICODE_STRING_SIMPLE("[[:Katakana:]\\u30fc\\uff9e\\uff9f\uff70]"), status);
+    fKatakanaWordSet.applyPattern(UNICODE_STRING_SIMPLE("[[:Katakana:]\\uff9e\\uff9f]"), status);
     fHiraganaWordSet.applyPattern(UNICODE_STRING_SIMPLE("[:Hiragana:]"), status);
 
     if (U_SUCCESS(status)) {
@@ -454,6 +453,7 @@ CjkBreakEngine::CjkBreakEngine(const TrieWordDictionary *adoptDictionary, Langua
             cjSet.addAll(fHanWordSet);
             cjSet.addAll(fKatakanaWordSet);
             cjSet.addAll(fHiraganaWordSet);
+            cjSet.add(UNICODE_STRING_SIMPLE("\\uff70\\u30fc"));
             setCharacters(cjSet);
         }
     }
@@ -535,26 +535,30 @@ CjkBreakEngine::divideUpDictionaryRange( UText *text,
     size_t inputLength = rangeEnd - rangeStart;
     AutoBuffer<UChar, defaultInputLength> charString(inputLength);
 
+    // Normalize the input string and put it in normalizedString.
+    // The map from the indices of the normalized input to the raw
+    // input is kept in charPositions.
     UErrorCode status = U_ZERO_ERROR;
     utext_extract(text, rangeStart, rangeEnd, charString.elems(), inputLength, &status);
     Normalizer normalizer(charString.elems(), inputLength, UNORM_NFKC);
     UnicodeString normalizedString;
-    UVector charPositions(status);
-    charPositions.addElement(0, status);
+    AutoBuffer<int32_t, defaultInputLength> charPositions(inputLength + 1);
+    int numChars = 0;
+    charPositions[numChars] = 0;
     while(normalizer.getIndex() < normalizer.endIndex()){
         UChar uc = normalizer.next();
         normalizedString.append(uc);
-        charPositions.addElement(normalizer.getIndex(), status);
+        charPositions[++numChars] = normalizer.getIndex();
     }
 
     UText normalizedText = UTEXT_INITIALIZER;
     utext_openUnicodeString(&normalizedText, &normalizedString, &status);
 
-    const int numChars = charPositions.size() - 1;
-    //const int numChars = charPositions.size();
+    // From this point on, all the indices refer to the indices of
+    // the normalized input string. 
 
-    // bestSnlp[i] is the snlp of the best segmentation of the first i characters
-    // in the range to be matched.
+    // bestSnlp[i] is the snlp of the best segmentation of the first i 
+    // characters in the range to be matched.
     AutoBuffer<uint32_t, defaultInputLength> bestSnlp(numChars + 1);
     bestSnlp[0] = 0;
     for(int i=1; i<=numChars; i++){
@@ -584,7 +588,6 @@ CjkBreakEngine::divideUpDictionaryRange( UText *text,
         // limit maximum word length matched to size of current substring
         int maxSearchLength = (i + maxWordSize < (size_t) numChars)? maxWordSize: numChars - i; 
 
-        //fDictionary->matches(text, maxSearchLength, lengths, count, maxSearchLength, values);
         fDictionary->matches(&normalizedText, maxSearchLength, lengths.elems(), count, maxSearchLength, values.elems());
 
         // if there are no single character matches found in the dictionary 
@@ -603,7 +606,7 @@ CjkBreakEngine::divideUpDictionaryRange( UText *text,
             uint32_t newSnlp = bestSnlp[i] + values[j];
             if (newSnlp < bestSnlp[lengths[j] + i]) {
                 bestSnlp[lengths[j] + i] = newSnlp;
-                prev[charPositions.elementAti(lengths[j] + i)] = i;
+                prev[lengths[j] + i] = i;
             }
         }
 
@@ -628,7 +631,7 @@ CjkBreakEngine::divideUpDictionaryRange( UText *text,
                 uint32_t newSnlp = bestSnlp[i] + getKatakanaCost(j - i);
                 if (newSnlp < bestSnlp[j]) {
                     bestSnlp[j] = newSnlp;
-                    prev[charPositions.elementAti(j)] = i;
+                    prev[j] = i;
                 }
             }
         }
@@ -647,8 +650,7 @@ CjkBreakEngine::divideUpDictionaryRange( UText *text,
         t_boundary[numBreaks++] = numChars;
     } else {
         for (int i = numChars; i > 0; i = prev[i]){
-            //t_boundary[numBreaks++] = i;
-            t_boundary[numBreaks++] = charPositions.elementAti(i);
+            t_boundary[numBreaks++] = i;
     
         }
         U_ASSERT(prev[t_boundary[numBreaks-1]] == 0);
@@ -661,8 +663,11 @@ CjkBreakEngine::divideUpDictionaryRange( UText *text,
         t_boundary[numBreaks++] = 0;
     }
 
+    // Now that we're done, convert positions in t_bdry[] (indices in 
+    // the normalized input string) back to indices in the raw input string
+    // while reversing t_bdry and pushing values to foundBreaks.
     for (int i = numBreaks-1; i >= 0; i--) {
-        foundBreaks.push(t_boundary[i] + rangeStart, status);
+        foundBreaks.push(charPositions[t_boundary[i]] + rangeStart, status);
     }
 
     utext_close(&normalizedText);
