@@ -1225,7 +1225,6 @@ UCATableHeader *ucol_assembleTailoringTable(UColTokenParser *src, UErrorCode *st
                     elm.prefix = elm.prefixChars;
                     elm.prefixSize = 1;
                     UCAElements *prefixEnt=(UCAElements *)uhash_get(t->prefixLookup, &elm);
-                    // TODO: may need a loop through prefixEnt
                     if ((prefixEnt==NULL) || *(prefixEnt->prefix)!=*(conts+2)) {
                         needToAdd = TRUE;
                     }

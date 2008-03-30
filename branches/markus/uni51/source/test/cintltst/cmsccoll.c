@@ -4973,8 +4973,6 @@ TestTailor6179(void)
             0x61,0x20,0x26,0x5B,0x66,0x69,0x72,0x73,0x74,0x20,0x73,0x65,0x63,0x6F,0x6E,
             0x64,0x61,0x72,0x79,0x20,0x69,0x67,0x6E,0x6F,0x72,0x61,0x62,0x6C,0x65,0x5D,0x3C,
             0x3C,0x3C,0x20,0x62,0};
-    
-    UChar rule3[256] = { '&', 'z', '<', '<', 'a', '|', '-',0 };
 
     UChar tData1[][20]={
         {0x61, 0},
@@ -4985,18 +4983,6 @@ TestTailor6179(void)
             {0x61, 0},
             {0x62, 0},
             { 0xFDD0,0x009E, 0}
-     };
-    UChar tData3[][20]={
-            {'-', 0},
-            { 0xb7, 0},
-            { 'L', 0xb7, 0},
-            { 'l', 0xb7, 0},
-            { 'L', 'a', 0xb7, 0},
-            { 0x387, 0},
-            { 'L', 0x387, 0},
-            { 'l', 0x387, 0},
-            { 'l', 'a', 0x387, 0},
-            {'a', 'p', 0},
      };
 
     /* UCA5.1, the value may increase in later version. */
@@ -5066,24 +5052,33 @@ TestTailor6179(void)
         }
     }
     ucol_close(coll);
+}
+
+static void
+TestUCAPrecontext(void)
+{
+    UErrorCode status = U_ZERO_ERROR;
+    int32_t i, j;
+    UCollator *coll =NULL;
+    uint8_t  resColl[100], prevColl[100];
+    int32_t  rLen, tLen, ruleLen, sLen, kLen;
+    UChar rule1[256]= {0x26, 0xb7, 0x3c, 0x61, 0}; // & middle-dot < a
+    UChar rule2[256]= {0x26, 0x4C, 0xb7, 0x3c, 0x3c, 0x61, 0}; 
+    // & l middle-dot << a  a is an expansion.
     
-    /* Tesn &z <<a|- */
-       log_verbose("\n\nTailoring test: &z <<a|- ");
-       ruleLen = u_strlen(rule3);
-       coll = ucol_openRules(rule3, ruleLen, UCOL_OFF, UCOL_TERTIARY, NULL,&status);
-       if (U_FAILURE(status)) {
-           log_err("Tailoring test: &z <<a|- failed!");
-           return;
-       }
-    for (j=0; j<10; j++) {
-       tLen = u_strlen(tData3[j]);
-       rLen = ucol_getSortKey(coll, tData3[j], tLen, resColl, 100);
-       log_verbose("\n Data[%d] :%s  \tlen: %d key: ", j, tData3[j], rLen);
-       for(i = 0; i<rLen; i++) {
-           log_verbose(" %02X", resColl[i]);
-       }
-    }
-    ucol_close(coll);
+    UChar tData1[][20]={
+            { 0xb7, 0},  // standalone middle dot(0xb7)
+            { 0x387, 0}, // standalone middle dot(0x387)
+            { 0x61, 0},  // a
+            { 0x6C, 0},  // l
+            { 0x4C, 0x0332, 0},       
+            { 0x6C, 0xb7, 0},  // l with middle dot(0xb7)
+            { 0x6C, 0x387, 0}, // l with middle dot(0x387)
+            { 0x4C, 0xb7, 0},  // L with middle dot(0xb7)
+            { 0x4C, 0x387, 0}, // L with middle dot(0x387)
+            { 0x6C, 0x61, 0x387, 0}, // la  with middle dot(0x387)
+            { 0x4C, 0x61, 0xb7, 0},  // La with middle dot(0xb7)
+     };
     
     log_verbose("\n\nEN collation:");
     coll = ucol_open("en", &status);
@@ -5091,13 +5086,18 @@ TestTailor6179(void)
         log_err("Tailoring test: &z <<a|- failed!");
         return;
     }
-    for (j=0; j<10; j++) {
-        tLen = u_strlen(tData3[j]);
-        rLen = ucol_getSortKey(coll, tData3[j], tLen, resColl, 100);
-        log_verbose("\n Data[%d] :%s  \tlen: %d key: ", j, tData3[j], rLen);
+    for (j=0; j<11; j++) {
+        tLen = u_strlen(tData1[j]);
+        rLen = ucol_getSortKey(coll, tData1[j], tLen, resColl, 100);
+        if ((j>0) && (strcmp((char *)resColl, (char *)prevColl)<0)) {
+            log_err("\n Expecting greater key than previous test case: Data[%d] :%s.", 
+                    j, tData1[j]);
+        }
+        log_verbose("\n Data[%d] :%s  \tlen: %d key: ", j, tData1[j], rLen);
         for(i = 0; i<rLen; i++) {
             log_verbose(" %02X", resColl[i]);
         }
+        uprv_memcpy(prevColl, resColl, sizeof(uint8_t)*(rLen+1));
      }
      ucol_close(coll);
      
@@ -5108,15 +5108,70 @@ TestTailor6179(void)
          log_err("Tailoring test: &z <<a|- failed!");
          return;
      }
-     for (j=0; j<10; j++) {
-         tLen = u_strlen(tData3[j]);
-         rLen = ucol_getSortKey(coll, tData3[j], tLen, resColl, 100);
-         log_verbose("\n Data[%d] :%s  \tlen: %d key: ", j, tData3[j], rLen);
+     for (j=0; j<11; j++) {
+         tLen = u_strlen(tData1[j]);
+         rLen = ucol_getSortKey(coll, tData1[j], tLen, resColl, 100);
+         if ((j>0) && (strcmp((char *)resColl, (char *)prevColl)<0)) {
+             log_err("\n Expecting greater key than previous test case: Data[%d] :%s.", 
+                     j, tData1[j]);
+         }
+         log_verbose("\n Data[%d] :%s  \tlen: %d key: ", j, tData1[j], rLen);
          for(i = 0; i<rLen; i++) {
              log_verbose(" %02X", resColl[i]);
          }
+         uprv_memcpy(prevColl, resColl, sizeof(uint8_t)*(rLen+1));
       }
       ucol_close(coll);
+      
+
+      log_verbose("\n\nTailoring test: & middle dot < a ");
+      ruleLen = u_strlen(rule1);
+      coll = ucol_openRules(rule1, ruleLen, UCOL_OFF, UCOL_TERTIARY, NULL,&status);
+      if (U_FAILURE(status)) {
+          log_err("Tailoring test: & middle dot < a failed!");
+          return;
+      }
+      for (j=0; j<11; j++) {
+          tLen = u_strlen(tData1[j]);
+          rLen = ucol_getSortKey(coll, tData1[j], tLen, resColl, 100);
+          if ((j>0) && (strcmp((char *)resColl, (char *)prevColl)<0)) {
+              log_err("\n Expecting greater key than previous test case: Data[%d] :%s.", 
+                      j, tData1[j]);
+          }
+          log_verbose("\n Data[%d] :%s  \tlen: %d key: ", j, tData1[j], rLen);
+          for(i = 0; i<rLen; i++) {
+              log_verbose(" %02X", resColl[i]);
+          }
+          uprv_memcpy(prevColl, resColl, sizeof(uint8_t)*(rLen+1));
+       }
+       ucol_close(coll);
+       
+
+       log_verbose("\n\nTailoring test: & l middle-dot << a ");
+       ruleLen = u_strlen(rule2);
+       coll = ucol_openRules(rule2, ruleLen, UCOL_OFF, UCOL_TERTIARY, NULL,&status);
+       if (U_FAILURE(status)) {
+           log_err("Tailoring test: & l middle-dot << a failed!");
+           return;
+       }
+       for (j=0; j<11; j++) {
+           tLen = u_strlen(tData1[j]);
+           rLen = ucol_getSortKey(coll, tData1[j], tLen, resColl, 100);
+           if ((j>0) && (j!=3) && (strcmp((char *)resColl, (char *)prevColl)<0)) {
+               log_err("\n Expecting greater key than previous test case: Data[%d] :%s.", 
+                       j, tData1[j]);
+           }
+           if ((j==3)&&(strcmp((char *)resColl, (char *)prevColl)>0)) {
+               log_err("\n Expecting smaller key than previous test case: Data[%d] :%s.", 
+                       j, tData1[j]);
+           }
+           log_verbose("\n Data[%d] :%s  \tlen: %d key: ", j, tData1[j], rLen);
+           for(i = 0; i<rLen; i++) {
+               log_verbose(" %02X", resColl[i]);
+           }
+           uprv_memcpy(prevColl, resColl, sizeof(uint8_t)*(rLen+1));
+        }
+        ucol_close(coll);
 }
 
 
@@ -5293,6 +5348,7 @@ void addMiscCollTest(TestNode** root)
     TEST(TestVI5913);  /* VI, RO tailored rules */
     TEST(TestCroatianSortKey);
     TEST(TestTailor6179);
+    TEST(TestUCAPrecontext);
 }
 
 #endif /* #if !UCONFIG_NO_COLLATION */

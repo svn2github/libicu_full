@@ -1102,8 +1102,9 @@ static uint32_t uprv_uca_finalizeAddition(tempUCATable *t, UCAElements *element,
                     origElem->cPoints[0] = element->cPoints[0];
                     origElem->cSize = 1;
                     origElem->CEs[0]=CE;
+                    origElem->mapCE=CE;
                     origElem->noOfCEs=1;
-                    uprv_uca_addAnElement(t, origElem, status);
+                    uprv_uca_finalizeAddition(t, origElem, status);
                     uprv_free(origElem);
                 }
 #ifdef UCOL_DEBUG

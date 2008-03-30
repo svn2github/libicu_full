@@ -989,9 +989,6 @@ struct {
         }
     }
 
-    uint32_t tCE0b7= utrie_get32(t->mapping, 0xb7, NULL);
-    uint32_t tCE387= utrie_get32(t->mapping, 0x387, NULL);
-
     if(UCAVersion[0] == 0 && UCAVersion[1] == 0 && UCAVersion[2] == 0 && UCAVersion[3] == 0) {
         fprintf(stderr, "UCA version not specified. Cannot create data file!\n");
         uprv_uca_closeTempTable(t);
@@ -1017,19 +1014,13 @@ struct {
 
     /* produce canonical closure for table */
     /* first set up constants for implicit calculation */
-    tCE0b7= utrie_get32(t->mapping, 0xb7, NULL);
-    tCE387= utrie_get32(t->mapping, 0x387, NULL);
     uprv_uca_initImplicitConstants(status);
     /* do the closure */
-    tCE0b7= utrie_get32(t->mapping, 0xb7, NULL);
-    tCE387= utrie_get32(t->mapping, 0x387, NULL);
     int32_t noOfClosures = uprv_uca_canonicalClosure(t, NULL, status);
     if(noOfClosures != 0) {
       fprintf(stderr, "Warning: %i canonical closures occured!\n", (int)noOfClosures);
     }
 
-    tCE0b7= utrie_get32(t->mapping, 0xb7, NULL);
-    tCE387= utrie_get32(t->mapping, 0x387, NULL);
     /* test */
     UCATableHeader *myData = uprv_uca_assembleTable(t, status);  
 
