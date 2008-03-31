@@ -3050,7 +3050,7 @@ static void TestVariableTopSetting(void) {
     /*UChar *conts = (UChar *)((uint8_t *)coll->image + coll->image->UCAConsts+sizeof(UCAConstants));*/
     UChar *conts = (UChar *)((uint8_t *)coll->image + coll->image->contractionUCACombos);
     while(*conts != 0) {
-      if((*(conts+2) == 0) || (*(conts+1)==0)) { // contracts or pre-context contractions
+      if((*(conts+2) == 0) || (*(conts+1)==0)) { /* contracts or pre-context contractions */
         varTop1 = ucol_setVariableTop(coll, conts, -1, &status);
       } else {
         varTop1 = ucol_setVariableTop(coll, conts, 3, &status);
@@ -5062,22 +5062,22 @@ TestUCAPrecontext(void)
     UCollator *coll =NULL;
     uint8_t  resColl[100], prevColl[100];
     int32_t  rLen, tLen, ruleLen, sLen, kLen;
-    UChar rule1[256]= {0x26, 0xb7, 0x3c, 0x61, 0}; // & middle-dot < a
+    UChar rule1[256]= {0x26, 0xb7, 0x3c, 0x61, 0}; /* & middle-dot < a */
     UChar rule2[256]= {0x26, 0x4C, 0xb7, 0x3c, 0x3c, 0x61, 0}; 
-    // & l middle-dot << a  a is an expansion.
+    /* & l middle-dot << a  a is an expansion. */
     
     UChar tData1[][20]={
-            { 0xb7, 0},  // standalone middle dot(0xb7)
-            { 0x387, 0}, // standalone middle dot(0x387)
-            { 0x61, 0},  // a
-            { 0x6C, 0},  // l
-            { 0x4C, 0x0332, 0},       
-            { 0x6C, 0xb7, 0},  // l with middle dot(0xb7)
-            { 0x6C, 0x387, 0}, // l with middle dot(0x387)
-            { 0x4C, 0xb7, 0},  // L with middle dot(0xb7)
-            { 0x4C, 0x387, 0}, // L with middle dot(0x387)
-            { 0x6C, 0x61, 0x387, 0}, // la  with middle dot(0x387)
-            { 0x4C, 0x61, 0xb7, 0},  // La with middle dot(0xb7)
+            { 0xb7, 0},  /* standalone middle dot(0xb7) */
+            { 0x387, 0}, /* standalone middle dot(0x387) */
+            { 0x61, 0},  /* a */
+            { 0x6C, 0},  /* l */
+            { 0x4C, 0x0332, 0},  /* l with [first primary ignorable]       
+            { 0x6C, 0xb7, 0},  /* l with middle dot(0xb7) */
+            { 0x6C, 0x387, 0}, /* l with middle dot(0x387) */
+            { 0x4C, 0xb7, 0},  /* L with middle dot(0xb7) */
+            { 0x4C, 0x387, 0}, /* L with middle dot(0x387) */
+            { 0x6C, 0x61, 0x387, 0}, /* la  with middle dot(0x387) */
+            { 0x4C, 0x61, 0xb7, 0},  /* La with middle dot(0xb7) */
      };
     
     log_verbose("\n\nEN collation:");
