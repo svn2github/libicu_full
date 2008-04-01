@@ -79,6 +79,9 @@ U_DRAFT USpoofChecker * U_EXPORT2
 uspoof_open(UErrorCode *status);
 
 
+U_DRAFT void U_EXPORT2
+uspoof_close(USpoofChecker *sc, UErrorCode *status);
+
 /**
  * Specify the set of checks that will be performed by the check
  * functions of this Spoof Checker.
@@ -107,7 +110,7 @@ uspoof_setChecks(USpoofChecker *sc, int32_t checks, UErrorCode *status);
  *
  */
 U_DRAFT int32_t U_EXPORT2
-uspoof_getChecks(const USpoofChecker sc, UErrorCode *status);
+uspoof_getChecks(const USpoofChecker *sc, UErrorCode *status);
 
 /**
  * Limit characters that are acceptable in identifiers being checked to those 
@@ -265,6 +268,12 @@ uspoof_getAllowedUnicodeSet(USpoofChecker *sc, UErrorCode *status);
  * @param length  the length of the string to be checked, expressed in
  *                16 bit UTF-16 code units, or -1 if the string is 
  *                zero terminated.
+ * @position      An out parameter that receives the index of the
+ *                first string position that fails one of the checks.
+ *                This parameter may be null if the position information
+ *                is not needed.
+ *                If the string passes all of the requested checks the 
+ *                parameter value will not be set.
  * @param status  The error code, set if an error occured while attempting to
  *                perform the check.
  *                Spoofing or security issues detected with the input string are
@@ -276,31 +285,10 @@ uspoof_getAllowedUnicodeSet(USpoofChecker *sc, UErrorCode *status);
  * @draft ICU 4.0
  */
 U_DRAFT int32_t U_EXPORT2
-uspoof_check(const USpoofChecker *sc, const UChar *text, int32_t length, UErrorCode *status);
-
-/**
- * Check the specified string for possible security issues.
- * The text to be checked will typically be an indentifier of some sort.
- * The set of checks to be performed is specified with uspoof_setChecks().
- * 
- * @param sc      The USpoofChecker 
- * @param text    The string to be checked for possible security issues,
- *                in UTF-16 format.
- * @param length  the length of the string to be checked, expressed in
- *                16 bit UTF-16 code units, or -1 if the string is 
- *                zero terminated.
- * @param status  The error code, set if an error occured while attempting to
- *                perform the check.
- *                Spoofing or security issues detected with the input string are
- *                not reported here, but through the function's return value.
- * @return        An integer value with bits set for any potential security
- *                or spoofing issues detected.  The bits are defined by
- *                enum USpoofChecks.  Zero is returned if no issues
- *                are found with the input string.
- * @draft ICU 4.0
- */
-U_DRAFT int32_t U_EXPORT2
-uspoof_check(const USpoofChecker *sc, const UChar *text, int32_t length, UErrorCode *status);
+uspoof_check(const USpoofChecker *sc,
+			 const UChar *text, int32_t length, 
+			 int32_t *position,
+			 UErrorCode *status);
 
 
 /**
@@ -312,6 +300,12 @@ uspoof_check(const USpoofChecker *sc, const UChar *text, int32_t length, UErrorC
  * @param text    A UTF-8 string to be checked for possible security issues.
  * @param length  the length of the string to be checked, or -1 if the string is 
  *                zero terminated.
+ * @position      An out parameter that receives the index of the
+ *                first string position that fails one of the checks.
+ *                This parameter may be null if the position information
+ *                is not needed.
+ *                If the string passes all of the requested checks the 
+ *                parameter value will not be set.
  * @param status  The error code, set if an error occured while attempting to
  *                perform the check.
  *                Spoofing or security issues detected with the input string are
@@ -323,7 +317,10 @@ uspoof_check(const USpoofChecker *sc, const UChar *text, int32_t length, UErrorC
  * @draft ICU 4.0
  */
 U_DRAFT int32_t U_EXPORT2
-uspoof_checkUTF8(const USpoofChecker *sc, const char *text, int32_t length, UErrorCode *status);
+uspoof_checkUTF8(const USpoofChecker *sc,
+				 const char *text, int32_t length,
+				 int32_t *position,
+				 UErrorCode *status);
 
 
 #ifdef XP_CPLUSPLUS
@@ -334,10 +331,17 @@ uspoof_checkUTF8(const USpoofChecker *sc, const char *text, int32_t length, UErr
  * 
  * @param sc      The USpoofChecker 
  * @param text    A UnicodeString to be checked for possible security issues.
+ * @position      An out parameter that receives the index of the
+ *                first string position that fails one of the checks.
+ *                This parameter may be null if the position information
+ *                is not needed.
+ *                If the string passes all of the requested checks the 
+ *                parameter value will not be set.
  * @param status  The error code, set if an error occured while attempting to
  *                perform the check.
  *                Spoofing or security issues detected with the input string are
  *                not reported here, but through the function's return value.
+
  * @return        An integer value with bits set for any potential security
  *                or spoofing issues detected.  The bits are defined by
  *                enum USpoofChecks.  Zero is returned if no issues
@@ -347,7 +351,8 @@ uspoof_checkUTF8(const USpoofChecker *sc, const char *text, int32_t length, UErr
 U_DRAFT int32_t U_EXPORT2
 uspoof_checkUnicodeString(const USpoofChecker *sc,
                           const U_NAMESPACE_QUALIFIER UnicodeString &text, 
-                          int32_t length, UErrorCode *status);
+						  int32_t *position, 
+						  UErrorCode *status);
 
 #endif
 
@@ -369,6 +374,13 @@ uspoof_checkUnicodeString(const USpoofChecker *sc,
  * @param length2 The length of the second string, expressed in
  *                16 bit UTF-16 code units, or -1 if the string is 
  *                zero terminated.
+ * @position      An out parameter that receives the index of the
+ *                first confusable position in the strings being checked.
+ *                This parameter may be null if the position information
+ *                is not needed.
+ *                If the strings are not confusable the parameter value
+ *                will not be set.
+
  * @param status  The error code, set if an error occured while attempting to
  *                perform the check.
  *                Confusability of the strings is not reported here,
@@ -383,6 +395,7 @@ U_DRAFT int32_t U_EXPORT2
 uspoof_areConfusable(const USpoofChecker *sc,
                      const UChar *s1, int32_t length1,
                      const UChar *s2, int32_t length2,
+					 int32_t *position,
                      UErrorCode *status);
 
 
@@ -402,6 +415,12 @@ uspoof_areConfusable(const USpoofChecker *sc,
  *                confusability.  The strings are in UTF-18 format.
  * @param length2 The length of the second string in bytes, or -1 
  *                if the string is zero terminated.
+ * @position      An out parameter that receives the index of the
+ *                first confusable position in the strings being checked.
+ *                This parameter may be null if the position information
+ *                is not needed.
+ *                If the strings are not confusable the parameter value
+ *                will not be set.
  * @param status  The error code, set if an error occured while attempting to
  *                perform the check.
  *                Confusability of the strings is not reported here,
@@ -416,6 +435,7 @@ U_DRAFT int32_t U_EXPORT2
 uspoof_areConfusableUTF8(const USpoofChecker *sc,
                          const char *s1, int32_t length1,
                          const char *s2, int32_t length2,
+						 int32_t *position,
                          UErrorCode *status);
 
 
@@ -433,6 +453,12 @@ uspoof_areConfusableUTF8(const USpoofChecker *sc,
  *                confusability.  The strings are in UTF-8 format.
  * @param s2      The second of the two strings to be compared for 
  *                confusability.  The strings are in UTF-18 format.
+ * @position      An out parameter that receives the index of the
+ *                first confusable position in the strings being checked.
+ *                This parameter may be null if the position information
+ *                is not needed.
+ *                If the strings are not confusable the parameter value
+ *                will not be set.
  * @param status  The error code, set if an error occured while attempting to
  *                perform the check.
  *                Confusability of the strings is not reported here,
@@ -447,6 +473,7 @@ U_DRAFT int32_t U_EXPORT2
 uspoof_areConfusableUnicodeString(const USpoofChecker *sc,
                                   const U_NAMESPACE_QUALIFIER UnicodeString &s1,
                                   const U_NAMESPACE_QUALIFIER UnicodeString &s2,
+								  int32_t *position,
                                   UErrorCode *status);
 #endif
 
@@ -546,8 +573,6 @@ uspoof_getSkeletonUnicodeString(const USpoofChecker *sc,
                                 const UnicodeString &s,
                                 UnicodeString &dest,
                                 UErrorCode *status);
-#endif
+#endif   /* XP_CPLUSPLUS */
 
-#endif
-
-
+#endif   /* USPOOF_H */
