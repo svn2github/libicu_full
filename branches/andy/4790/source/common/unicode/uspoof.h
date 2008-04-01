@@ -54,13 +54,17 @@ typedef struct USpoofChecker USpoofChecker;
  * @draft ICU 4.0
  */
 typedef enum USpoofChecks {
-    USPOOF_SINGLE_SCRIPT_CONFUSABLE =  1,
-    USPOOF_MIXED_SCRIPT_CONFUSABLE  =  2,
-    USPOOF_WHOLE_SCRIPT_CONFUSABLE  =  4,
-    USPOOF_SECURE_ID                =  8,
-    USPOOF_MIXED_SCRIPT             = 16,
-    USPOOF_LOCALE_LIMIT             = 32,
-    USPOOF_CHAR_LIMIT               = 64,
+    USPOOF_SINGLE_SCRIPT_CONFUSABLE =   1,
+    USPOOF_MIXED_SCRIPT_CONFUSABLE  =   2,
+    USPOOF_WHOLE_SCRIPT_CONFUSABLE  =   4,
+    /** Modifier for single, mixed & whole script checks.
+        Selects between Lower Case Confusable (0) and
+        Any Case Confusable (1).  */
+    USPOOF_ANY_CASE_CONFUSABLE      =   8,
+    USPOOF_SECURE_ID                =  16,
+    USPOOF_MIXED_SCRIPT             =  32,
+    USPOOF_LOCALE_LIMIT             =  64,
+    USPOOF_CHAR_LIMIT               = 128,
     USPOOF_ALL_CHECKS               = 0x7f
     };
     
