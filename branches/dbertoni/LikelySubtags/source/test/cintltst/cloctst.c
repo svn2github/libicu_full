@@ -5029,9 +5029,82 @@ const char* const full_data[][3] = {
   }
 };
 
+typedef struct errorDataTag {
+    const char* tag;
+    const char* expected;
+    UErrorCode uerror;
+} errorData;
+
+const errorData maximizeErrors[] = {
+    {
+        "enfueiujhytdf",
+        NULL,
+        U_ILLEGAL_ARGUMENT_ERROR
+    },
+    {
+        "en_THUJIOGIURJHGJFURYHFJGURYYYHHGJURHG",
+        NULL,
+        U_ILLEGAL_ARGUMENT_ERROR
+    },
+    {
+        "en_Latn_US_POSIX@currency=EURO;collation=PHONEBOOK;foobar=BLAH"
+        ";baz=GLUGGGLUGG;long=thisisareallylongkeyword;longer=thisisanevenlongkeywordthanthepreviousone;oops=broken",
+        "en_Latn_US_POSIX@currency=EURO;collation=PHONEBOOK;foobar=BLAH"
+        ";baz=GLUGGGLUGG;long=thisisareallylongkeyword;longer=thisisanevenlongkeywordthanthepreviousone;oops=broken",
+        U_BUFFER_OVERFLOW_ERROR
+    },
+    {
+        "en__POSIX@currency=EURO;collation=PHONEBOOK;foobar=BLAH"
+        ";baz=GLUGGGLUGG;long=thisisareallylongkeyword;longer=thisisanevenlongkeywordthanthepreviousone1",
+        "en_Latn_US_POSIX@currency=EURO;collation=PHONEBOOK;foobar=BLAH"
+        ";baz=GLUGGGLUGG;long=thisisareallylongkeyword;longer=thisisanevenlongkeywordthanthepreviousone1",
+        U_STRING_NOT_TERMINATED_WARNING
+    }
+};
+
+const errorData minimizeErrors[] = {
+    {
+        "enfueiujhytdf",
+        NULL,
+        U_ILLEGAL_ARGUMENT_ERROR
+    },
+    {
+        "en_THUJIOGIURJHGJFURYHFJGURYYYHHGJURHG",
+        NULL,
+        U_ILLEGAL_ARGUMENT_ERROR
+    },
+    {
+        "en_Latn_US_POSIX@currency=EURO;collation=PHONEBOOK;foobar=BLAH"
+        ";baz=GLUGGGLUGG;long=thisisareallylongkeyword;longer=thisisanevenlongkeywordthanthepreviousone;oops=broken",
+        "en__POSIX@currency=EURO;collation=PHONEBOOK;foobar=BLAH"
+        ";baz=GLUGGGLUGG;long=thisisareallylongkeyword;longer=thisisanevenlongkeywordthanthepreviousone;oops=broken",
+        U_BUFFER_OVERFLOW_ERROR
+    },
+    {
+        "en_Latn_US_POSIX@currency=EURO;collation=PHONEBOOK;foobar=BLAH"
+        ";baz=GLUGGGLUGG;long=thisisareallylongkeyword;longer=thisisanevenlongkeywordthanthepreviousonei1234567",
+        "en__POSIX@currency=EURO;collation=PHONEBOOK;foobar=BLAH"
+        ";baz=GLUGGGLUGG;long=thisisareallylongkeyword;longer=thisisanevenlongkeywordthanthepreviousonei1234567",
+        U_STRING_NOT_TERMINATED_WARNING
+    }
+};
+
+static int32_t getExpectedReturnValue(const errorData* data)
+{
+    if (data->uerror == U_BUFFER_OVERFLOW_ERROR ||
+        data->uerror == U_STRING_NOT_TERMINATED_WARNING)
+    {
+        return strlen(data->expected);
+    }
+    else
+    {
+        return -1;
+    }
+}
+
 static void TestLikelySubtags()
 {
-    char buffer[2000];
+    char buffer[ULOC_FULLNAME_CAPACITY + ULOC_KEYWORD_AND_VALUES_CAPACITY + 1];
     int32_t i = 0;
 
     for (; i < sizeof(basic_maximize_data) / sizeof(basic_maximize_data[0]); ++i)
@@ -5139,6 +5212,72 @@ static void TestLikelySubtags()
             }
             else if (uprv_stricmp(minimal, buffer) != 0) {
                 log_err("  minimal doesn't match expected %s in uloc_MinimizeSubtags(), maximal \"%s\" = %s\n", minimal, maximal, buffer);
+            }
+        }
+    }
+
+    for (i = 0; i < sizeof(maximizeErrors) / sizeof(maximizeErrors[0]); ++i) {
+
+        UErrorCode status = U_ZERO_ERROR;
+        const char* const minimal = maximizeErrors[i].tag;
+        const char* const maximal = maximizeErrors[i].expected;
+        const UErrorCode expectedStatus = maximizeErrors[i].uerror;
+        const int32_t expectedLength = getExpectedReturnValue(&maximizeErrors[i]);
+
+        const int32_t length =
+            uloc_addLikelySubtags(
+                minimal,
+                buffer,
+                sizeof(buffer),
+                &status);
+
+        if (status == U_ZERO_ERROR) {
+            log_err("  unexpected U_ZERO_ERROR for uloc_addLikelySubtags(), minimal \"%s\" expected status %s\n", minimal, u_errorName(expectedStatus));
+            status = U_ZERO_ERROR;
+        }
+        else if (status != expectedStatus) {
+            log_err("  unexpected status for uloc_addLikelySubtags(), minimal \"%s\" expected status %s, but got %s\n", minimal, u_errorName(expectedStatus), u_errorName(status));
+        }
+        else if (length != expectedLength) {
+            log_err("  unexpected length for uloc_addLikelySubtags(), minimal \"%s\" expected length %d, but got %d\n", minimal, expectedLength, length);
+        }
+        else if (status == U_BUFFER_OVERFLOW_ERROR || status == U_STRING_NOT_TERMINATED_WARNING) {
+            if (uprv_strnicmp(maximal, buffer, sizeof(buffer)) != 0) {
+                log_err("  maximal doesn't match expected %s in uloc_addLikelySubtags(), minimal \"%s\" = %*s\n",
+                    maximal, minimal, (int)sizeof(buffer), buffer);
+            }
+        }
+    }
+
+    for (i = 0; i < sizeof(minimizeErrors) / sizeof(minimizeErrors[0]); ++i) {
+
+        UErrorCode status = U_ZERO_ERROR;
+        const char* const maximal = minimizeErrors[i].tag;
+        const char* const minimal = minimizeErrors[i].expected;
+        const UErrorCode expectedStatus = minimizeErrors[i].uerror;
+        const int32_t expectedLength = getExpectedReturnValue(&minimizeErrors[i]);
+
+        const int32_t length =
+            uloc_minimizeSubtags(
+                maximal,
+                buffer,
+                sizeof(buffer),
+                &status);
+
+        if (status == U_ZERO_ERROR) {
+            log_err("  unexpected U_ZERO_ERROR for uloc_minimizeSubtags(), maximal \"%s\" expected status %s\n", maximal, u_errorName(expectedStatus));
+            status = U_ZERO_ERROR;
+        }
+        else if (status != expectedStatus) {
+            log_err("  unexpected status for uloc_minimizeSubtags(), maximal \"%s\" expected status %s, but got %s\n", maximal, u_errorName(expectedStatus), u_errorName(status));
+        }
+        else if (length != expectedLength) {
+            log_err("  unexpected length for uloc_minimizeSubtags(), maximal \"%s\" expected length %d, but got %d\n", maximal, expectedLength, length);
+        }
+        else if (status == U_BUFFER_OVERFLOW_ERROR || status == U_STRING_NOT_TERMINATED_WARNING) {
+            if (uprv_strnicmp(minimal, buffer, sizeof(buffer)) != 0) {
+                log_err("  minimal doesn't match expected \"%s\" in uloc_minimizeSubtags(), minimal \"%s\" = \"%*s\"\n",
+                    minimal, maximal, (int)sizeof(buffer), buffer);
             }
         }
     }
