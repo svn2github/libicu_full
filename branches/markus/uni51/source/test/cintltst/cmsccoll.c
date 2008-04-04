@@ -36,6 +36,8 @@
 #include "unicode/ucnv.h"
 #include "unicode/ures.h"
 #include "uparse.h"
+#include "putilimp.h"
+
 
 #define LEN(a) (sizeof(a)/sizeof(a[0]))
 
@@ -4958,10 +4960,10 @@ static void
 TestTailor6179(void)
 {
     UErrorCode status = U_ZERO_ERROR;
-    int32_t i, j;
+    int32_t i;
     UCollator *coll =NULL;
-    uint8_t  resColl[100], expColl[100];
-    int32_t  rLen, tLen, ruleLen, sLen, kLen;
+    uint8_t  resColl[100];
+    int32_t  rLen, tLen, ruleLen;
     /* &[last primary ignorable]<< a  &[first primary ignorable]<<b */
     UChar rule1[256]={0x26,0x5B,0x6C,0x61,0x73,0x74,0x20,0x70,0x72,0x69,0x6D,0x61,0x72,0x79,
             0x20,0x69,0x67,0x6E,0x6F,0x72,0x61,0x62,0x6C,0x65,0x5D,0x3C,0x3C,0x20,0x61,0x20,
@@ -5002,7 +5004,7 @@ TestTailor6179(void)
     }
     tLen = u_strlen(tData1[0]);
     rLen = ucol_getSortKey(coll, tData1[0], tLen, resColl, 100);
-    if (uprv_memcmp(resColl, lastPrimaryIgnCE, uprv_min(rLen, 6)) < 0) {
+    if (uprv_memcmp(resColl, lastPrimaryIgnCE, uprv_min(rLen,6)) < 0) {
         log_err("\n Data[%d] :%s  \tlen: %d key: ", 0, tData1[0], rLen);
         for(i = 0; i<rLen; i++) {
             log_err(" %02X", resColl[i]);
@@ -5061,7 +5063,7 @@ TestUCAPrecontext(void)
     int32_t i, j;
     UCollator *coll =NULL;
     uint8_t  resColl[100], prevColl[100];
-    int32_t  rLen, tLen, ruleLen, sLen, kLen;
+    int32_t  rLen, tLen, ruleLen;
     UChar rule1[256]= {0x26, 0xb7, 0x3c, 0x61, 0}; /* & middle-dot < a */
     UChar rule2[256]= {0x26, 0x4C, 0xb7, 0x3c, 0x3c, 0x61, 0}; 
     /* & l middle-dot << a  a is an expansion. */
@@ -5071,7 +5073,7 @@ TestUCAPrecontext(void)
             { 0x387, 0}, /* standalone middle dot(0x387) */
             { 0x61, 0},  /* a */
             { 0x6C, 0},  /* l */
-            { 0x4C, 0x0332, 0},  /* l with [first primary ignorable]       
+            { 0x4C, 0x0332, 0},  /* l with [first primary ignorable] */       
             { 0x6C, 0xb7, 0},  /* l with middle dot(0xb7) */
             { 0x6C, 0x387, 0}, /* l with middle dot(0x387) */
             { 0x4C, 0xb7, 0},  /* L with middle dot(0xb7) */
