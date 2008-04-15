@@ -50,8 +50,15 @@
        <pattern>FUSS</pattern>
        <pre>abc</pre><m>fuß</m><post>sss</post>
     </test-case>
- 
-   <test-case id="test06" strength="PRIMARY" >
+
+  <test-case id="test05.5" strength="PRIMARY" >
+    <pattern>fuss</pattern>
+    <pre>a </pre>
+    <m>fuß</m>
+    <post>ball table</post>
+  </test-case>
+
+  <test-case id="test06" strength="PRIMARY" >
       <pattern>fuß</pattern>
        <pre>abc</pre><m>fuss</m><post>xyz</post>
     </test-case>
@@ -372,5 +379,35 @@
     <pre>p</pre><m>\u00EA</m><post>che</post>
   </test-case>
 
+  <!-- Test cases from ticket:5382 -->
+  <test-case id="test78" strength="SECONDARY" locale="hu_HU">
+    <pattern>\u0170</pattern>
+    <m>\u0171</m>
+    <post>12</post>
+  </test-case>
+
+  <test-case id="test79" strength="SECONDARY" locale="hu_HU">
+    <pattern>\u0170</pattern>
+    <pre>1</pre>
+    <m>\u0171</m>
+    <post>2</post>
+  </test-case>
+
+  <test-case id="test80" strength="SECONDARY" locale="hu_HU">
+    <pattern>\u0170</pattern>
+    <pre>12</pre>
+    <m>\u0171</m>
+  </test-case>
+  
+  <!-- Test cases from ticket:5959 -->
+  <test-case id="test81" strength="SECONDARY">
+    <pattern>\u2166</pattern>
+    <m>VII</m>
+  </test-case>
+
+  <test-case id="test82" strength="SECONDARY">
+    <pattern>VII</pattern>
+    <m>\u2166</m>
+  </test-case>
 </stringsearch-tests>
   

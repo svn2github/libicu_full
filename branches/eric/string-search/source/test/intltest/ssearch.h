@@ -29,6 +29,7 @@ public:
     virtual void searchTest();
     virtual void searchTime();
     virtual void offsetTest();
+    virtual void monkeyTest();
 
 private:
     virtual const char *getPath(char buffer[2048], const char *filename);

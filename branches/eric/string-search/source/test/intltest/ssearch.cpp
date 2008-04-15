@@ -15,6 +15,14 @@
 #include "unicode/coll.h"
 #include "unicode/tblcoll.h"
 #include "unicode/coleitr.h"
+#include "unicode/ucoleitr.h"
+
+#include "unicode/uniset.h"
+#include "unicode/uset.h"
+#include "unicode/ustring.h"
+#include "hash.h"
+#include "uhash.h"
+#include "ucol_imp.h"
 
 #include "intltest.h"
 #include "ssearch.h"
@@ -66,6 +74,10 @@ void SSearchTest::runIndexedTest( int32_t index, UBool exec, const char* &name, 
 
         case 2: name = "offsetTest";
             if (exec) offsetTest();
+            break;
+
+        case 3: name = "monkeyTest";
+            if (exec) monkeyTest();
             break;
 
         default: name = "";
@@ -433,7 +445,13 @@ const char *cPattern = "maketh houndes ete hem";
     int  refMatchPos = (int)(pm - longishText);
     int  icuMatchPos;
     int  icuMatchEnd;
+#if 1
     usearch_search(uss, 0, &icuMatchPos, &icuMatchEnd, &status);
+#else
+    icuMatchPos = usearch_next(uss, &status);
+    icuMatchEnd = usearch_getMatchedLength(uss) + icuMatchPos;
+#endif
+
     TEST_ASSERT_SUCCESS(status);
     TEST_ASSERT_M(refMatchPos == icuMatchPos, "strstr and icu give different match positions.");
 
@@ -442,8 +460,14 @@ const char *cPattern = "maketh houndes ete hem";
 
     // Try loopcounts around 100000 to some millions, depending on the operation,
     //   to get runtimes of at least several seconds.
-    for (i=0; i<1; i++) {
+#define TIMING_LOOP_COUNT 100
+    for (i=0; i<TIMING_LOOP_COUNT; i++) {
+#if 1
         found = usearch_search(uss, 0, &icuMatchPos, &icuMatchEnd, &status);
+#else
+        usearch_reset(uss);
+        icuMatchPos = usearch_next(uss, &status);
+#endif
         //TEST_ASSERT_SUCCESS(status);
         //TEST_ASSERT(found);
 
@@ -700,6 +724,670 @@ void SSearchTest::offsetTest()
             infoln();
         }
     }
+}
+
+class CEList
+{
+public:
+    CEList(UCollator *coll, UnicodeString &string);
+    ~CEList();
+
+    int32_t size() const;
+    int32_t get(int32_t index) const;
+    UBool matchesAt(int32_t offset, const CEList *other) const; 
+
+private:
+    void add(int32_t ce);
+
+    int32_t *ces;
+    int32_t listMax;
+    int32_t listSize;
+};
+
+CEList::CEList(UCollator *coll, UnicodeString &string)
+    : ces(NULL), listMax(8), listSize(0)
+{
+    UErrorCode status = U_ZERO_ERROR;
+    UCollationElements *elems = ucol_openElements(coll, string.getTerminatedBuffer(), string.length(), &status);
+    int32_t order;
+
+    ces = new int32_t[listMax];
+
+    while ((order = ucol_next(elems, &status)) != UCOL_NULLORDER) {
+        order = ucol_primaryOrder(order);
+
+        if (order == UCOL_IGNORABLE) {
+            continue;
+        }
+
+        add(order);
+    }
+
+    ucol_closeElements(elems);
+}
+
+CEList::~CEList()
+{
+    delete[] ces;
+}
+
+void CEList::add(int32_t ce)
+{
+    if (listSize >= listMax) {
+        listMax *= 2;
+
+        int32_t *newCEs = new int32_t[listMax];
+
+        uprv_memcpy(newCEs, ces, listSize * sizeof(int32_t));
+        delete[] ces;
+        ces = newCEs;
+    }
+
+    ces[listSize++] = ce;
+}
+
+int32_t CEList::get(int32_t index) const
+{
+    if (index >= 0 && index < listSize) {
+        return ces[index];
+    }
+
+    return -1;
+}
+
+UBool CEList::matchesAt(int32_t offset, const CEList *other) const
+{
+    if (listSize - offset < other->size()) {
+        return FALSE;
+    }
+
+    for (int32_t i = offset, j = 0; j < other->size(); i += 1, j += 1) {
+        if (ces[i] != other->get(j)) {
+            return FALSE;
+        }
+    }
+
+    return TRUE;
+}
+
+int32_t CEList::size() const
+{
+    return listSize;
+}
+
+class StringList
+{
+public:
+    StringList();
+    ~StringList();
+
+    void add(const UnicodeString *string);
+    void add(const UChar *chars, int32_t count);
+    const UnicodeString *get(int32_t index) const;
+    int32_t size() const;
+
+private:
+    UnicodeString *strings;
+    int32_t listMax;
+    int32_t listSize;
+};
+
+StringList::StringList()
+    : strings(NULL), listMax(16), listSize(0)
+{
+    strings = new UnicodeString [listMax];
+}
+
+StringList::~StringList()
+{
+    delete[] strings;
+}
+
+void StringList::add(const UnicodeString *string)
+{
+    if (listSize >= listMax) {
+        listMax *= 2;
+
+        UnicodeString *newStrings = new UnicodeString[listMax];
+
+        uprv_memcpy(newStrings, strings, listSize * sizeof(UnicodeString));
+
+        delete[] strings;
+        strings = newStrings;
+    }
+
+    // The ctor initialized all the strings in
+    // the array to empty strings, so this
+    // is the same as copying the source string.
+    strings[listSize++].append(*string);
+}
+
+void StringList::add(const UChar *chars, int32_t count)
+{
+    const UnicodeString string(chars, count);
+
+    add(&string);
+}
+
+const UnicodeString *StringList::get(int32_t index) const
+{
+    if (index >= 0 && index < listSize) {
+        return &strings[index];
+    }
+
+    return NULL;
+}
+
+int32_t StringList::size() const
+{
+    return listSize;
+}
+
+class CEToStringsMap
+{
+public:
+
+    CEToStringsMap();
+    ~CEToStringsMap();
+
+    void put(int32_t ce, UnicodeString *string);
+    StringList *getStringList(int32_t ce) const;
+
+private:
+ 
+    static void deleteStringList(void *obj);
+    void putStringList(int32_t ce, StringList *stringList);
+    UHashtable *map;
+};
+
+CEToStringsMap::CEToStringsMap()
+{
+    UErrorCode status = U_ZERO_ERROR;
+
+    map = uhash_open(uhash_hashLong, uhash_compareLong,
+                     uhash_compareCaselessUnicodeString,
+                     &status);
+
+    uhash_setValueDeleter(map, deleteStringList);
+}
+
+CEToStringsMap::~CEToStringsMap()
+{
+    uhash_close(map);
+}
+
+void CEToStringsMap::put(int32_t ce, UnicodeString *string)
+{
+    StringList *strings = getStringList(ce);
+
+    if (strings == NULL) {
+        strings = new StringList();
+        putStringList(ce, strings);
+    }
+
+    strings->add(string);
+}
+
+StringList *CEToStringsMap::getStringList(int32_t ce) const
+{
+    return (StringList *) uhash_iget(map, ce);
+}
+
+void CEToStringsMap::putStringList(int32_t ce, StringList *stringList)
+{
+    UErrorCode status = U_ZERO_ERROR;
+
+    uhash_iput(map, ce, (void *) stringList, &status);
+}
+
+void CEToStringsMap::deleteStringList(void *obj)
+{
+    StringList *strings = (StringList *) obj;
+
+    delete strings;
+}
+
+class StringToCEsMap
+{
+public:
+    StringToCEsMap();
+    ~StringToCEsMap();
+
+    void put(const UnicodeString *string, const CEList *ces);
+    const CEList *get(const UnicodeString *string);
+
+private:
+
+    static void deleteCEList(void *obj);
+
+    UHashtable *map;
+};
+
+StringToCEsMap::StringToCEsMap()
+{
+    UErrorCode status = U_ZERO_ERROR;
+
+    map = uhash_open(uhash_hashCaselessUnicodeString,
+                     uhash_compareCaselessUnicodeString,
+                     uhash_compareLong,
+                     &status);
+
+    uhash_setValueDeleter(map, deleteCEList);
+}
+
+StringToCEsMap::~StringToCEsMap()
+{
+    uhash_close(map);
+}
+
+void StringToCEsMap::put(const UnicodeString *string, const CEList *ces)
+{
+    UErrorCode status = U_ZERO_ERROR;
+
+    uhash_put(map, (void *) string, (void *) ces, &status);
+}
+
+const CEList *StringToCEsMap::get(const UnicodeString *string)
+{
+    return (const CEList *) uhash_get(map, string);
+}
+
+void StringToCEsMap::deleteCEList(void *obj)
+{
+    CEList *list = (CEList *) obj;
+
+    delete list;
+}
+
+static void buildData(UCollator *coll, USet *charsToTest, StringToCEsMap *charsToCEList, CEToStringsMap *ceToCharsStartingWith)
+{
+    int32_t itemCount = uset_getItemCount(charsToTest);
+    UErrorCode status = U_ZERO_ERROR;
+
+    for(int32_t item = 0; item < itemCount; item += 1) {
+        UChar32 start = 0, end = 0;
+        UChar buffer[16];
+        int32_t len = uset_getItem(charsToTest, item, &start, &end,
+                                   buffer, 16, &status);
+
+        if (len == 0) {
+            for (UChar32 ch = start; ch <= end; ch += 1) {
+                UnicodeString *st = new UnicodeString(ch);
+                CEList *ceList = new CEList(coll, *st);
+
+                charsToCEList->put(st, ceList);
+                ceToCharsStartingWith->put(ceList->get(0), st);
+            }
+        } else if (len > 0) {
+            UnicodeString *st = new UnicodeString(buffer, len);
+            CEList *ceList = new CEList(coll, *st);
+
+            charsToCEList->put(st, ceList);
+            ceToCharsStartingWith->put(ceList->get(0), st);
+        } else {
+            // shouldn't happen...
+        }
+    }
+}
+
+static UnicodeString &escape(const UnicodeString &string, UnicodeString &buffer)
+{
+    for(int32_t i = 0; i < string.length(); i += 1) {
+        UChar32 ch = string.char32At(i);
+
+        if (ch >= 0x0020 && ch <= 0x007F) {
+            if (ch == 0x005C) {
+                buffer.append("\\\\");
+            } else {
+                buffer.append(ch);
+            }
+        } else {
+            char cbuffer[12];
+
+            if (ch <= 0xFFFFL) {
+                sprintf(cbuffer, "\\u%4.4X", ch);
+            } else {
+                sprintf(cbuffer, "\\U%8.8X", ch);
+            }
+
+            buffer.append(cbuffer);
+        }
+
+        if (ch >= 0x10000L) {
+            i += 1;
+        }
+    }
+
+    return buffer;
+}
+
+static int32_t minLengthInChars(const CEList *ceList, int32_t offset, StringToCEsMap *charsToCEList, CEToStringsMap *ceToCharsStartingWith,
+                                UnicodeString &debug)
+{
+    // find out shortest string for the longest sequence of ces.
+    // needs to be refined to use dynamic programming, but will be roughly right
+	int32_t totalStringLength = 0;
+	
+    while (offset < ceList->size()) {
+        int32_t ce = ceList->get(offset);
+        int32_t bestLength = INT32_MIN;
+        const UnicodeString *bestString = NULL;
+        int32_t bestCeLength = 0;
+        const StringList *strings = ceToCharsStartingWith->getStringList(ce);
+        int32_t stringCount = strings->size();
+      
+        for (int32_t s = 0; s < stringCount; s += 1) {
+            const UnicodeString *string = strings->get(s);
+            const CEList *ceList2 = charsToCEList->get(string);
+
+            if (ceList->matchesAt(offset, ceList2)) {
+                int32_t length = ceList2->size() - string->length();
+
+                if (bestLength < length) {
+                    bestLength = length;
+                    bestCeLength = ceList2->size();
+                    bestString = string;
+                }
+            }
+        }
+      
+        totalStringLength += bestString->length();
+        escape(*bestString, debug).append("/");
+        offset += bestCeLength;
+    }
+
+    debug.append(0x0000);
+    return totalStringLength;
+}
+
+static void minLengthTest(UCollator *coll, StringToCEsMap *charsToCEList, CEToStringsMap *ceToCharsStartingWith)
+{
+    UnicodeString examples[] = {"fuss", "fiss", "affliss", "VII"};
+    UnicodeString debug;
+    int32_t nExamples = sizeof(examples) / sizeof(examples[0]);
+
+    for (int32_t s = 0; s < nExamples; s += 1) {
+        CEList *ceList = new CEList(coll, examples[s]);
+
+      //infoln("%S:", examples[s].getTerminatedBuffer());
+
+        for(int32_t i = 0; i < examples[s].length(); i += 1) {
+            debug.remove();
+
+            int32_t minLength = minLengthInChars(ceList, i, charsToCEList, ceToCharsStartingWith, debug);
+          //infoln("\t%d\t%S", minLength, debug.getTerminatedBuffer());
+        }
+
+      //infoln();
+        delete ceList;
+    }
+}
+
+//----------------------------------------------------------------------------------------
+//
+//   Random Numbers.  Similar to standard lib rand() and srand()
+//                    Not using library to
+//                      1.  Get same results on all platforms.
+//                      2.  Get access to current seed, to more easily reproduce failures.
+//
+//---------------------------------------------------------------------------------------
+static uint32_t m_seed = 1;
+
+static uint32_t m_rand()
+{
+    m_seed = m_seed * 1103515245 + 12345;
+    return (uint32_t)(m_seed/65536) % 32768;
+}
+
+class Monkey
+{
+public:
+    virtual void append(UnicodeString &test, UnicodeString &alternate) = 0;
+
+protected:
+    Monkey();
+    virtual ~Monkey();
+};
+
+Monkey::Monkey()
+{
+    // ook?
+}
+
+Monkey::~Monkey()
+{
+    // ook?
+}
+
+class SetMonkey : public Monkey
+{
+public:
+    SetMonkey(const USet *theSet);
+    ~SetMonkey();
+
+    virtual void append(UnicodeString &test, UnicodeString &alternate);
+
+private:
+    const USet *set;
+};
+
+SetMonkey::SetMonkey(const USet *theSet)
+    : Monkey(), set(theSet)
+{
+    // ook?
+}
+
+SetMonkey::~SetMonkey()
+{
+    //ook...
+}
+
+void SetMonkey::append(UnicodeString &test, UnicodeString &alternate)
+{
+    int32_t size = uset_size(set);
+    int32_t index = m_rand() % size;
+    UChar32 ch = uset_charAt(set, index);
+    UnicodeString str(ch);
+
+    test.append(str);
+    alternate.append(str); // flip case, or some junk?
+}
+
+class StringSetMonkey : public Monkey
+{
+public:
+    StringSetMonkey(const USet *theSet, UCollator *theCollator, StringToCEsMap *theCharsToCEList, CEToStringsMap *theCeToCharsStartingWith);
+    ~StringSetMonkey();
+
+    void append(UnicodeString &testCase, UnicodeString &alternate);
+
+private:
+    UnicodeString &generateAlternative(const CEList *ceList, UnicodeString &alternate);
+
+    const USet *set;
+    UCollator      *coll;
+    StringToCEsMap *charsToCEList;
+    CEToStringsMap *ceToCharsStartingWith;
+};
+
+StringSetMonkey::StringSetMonkey(const USet *theSet, UCollator *theCollator, StringToCEsMap *theCharsToCEList, CEToStringsMap *theCeToCharsStartingWith)
+: Monkey(), set(theSet), coll(theCollator), charsToCEList(theCharsToCEList), ceToCharsStartingWith(theCeToCharsStartingWith)
+{
+    // ook.
+}
+
+StringSetMonkey::~StringSetMonkey()
+{
+    // ook?
+}
+
+void StringSetMonkey::append(UnicodeString &testCase, UnicodeString &alternate)
+{
+    int32_t itemCount = uset_getItemCount(set), len = 0;
+    int32_t index = m_rand() % itemCount;
+    UChar32 rangeStart = 0, rangeEnd = 0;
+    UChar buffer[16];
+    UErrorCode err = U_ZERO_ERROR;
+
+    len = uset_getItem(set, index, &rangeStart, &rangeEnd, buffer, 16, &err);
+
+    if (len == 0) {
+        int32_t offset = m_rand() % (rangeEnd - rangeStart + 1);
+        UChar32 ch = rangeStart + offset;
+        UnicodeString str(ch);
+
+        testCase.append(str);
+        alternate.append(str); // toggle case, or some junk?
+    } else if (len > 0) {
+        // should check that len < 16...
+        UnicodeString str(buffer, len);
+        CEList ceList(coll, str);
+
+        testCase.append(str);
+        generateAlternative(&ceList, alternate);
+    } else {
+        // shouldn't happen...
+    }
+}
+
+UnicodeString &StringSetMonkey::generateAlternative(const CEList *ceList, UnicodeString &alternate)
+{
+    // find out shortest string for the longest sequence of ces.
+    // needs to be refined to use dynamic programming, but will be roughly right
+    int32_t offset = 0;
+
+    while (offset < ceList->size()) {
+        int32_t ce = ceList->get(offset);
+        int32_t bestLength = INT32_MIN;
+        const UnicodeString *bestString = NULL;
+        int32_t bestCeLength = 0;
+        const StringList *strings = ceToCharsStartingWith->getStringList(ce);
+        int32_t stringCount = strings->size();
+      
+#if 0
+        // find shortest string that generates the same CEList
+        for (int32_t s = 0; s < stringCount; s += 1) {
+            const UnicodeString *string = strings->get(s);
+            const CEList *ceList2 = charsToCEList->get(string);
+
+            if (ceList->matchesAt(offset, ceList2)) {
+                int32_t length = ceList2->size() - string->length();
+
+                if (bestLength < length) {
+                    bestLength = length;
+                    bestCeLength = ceList2->size();
+                    bestString = string;
+                }
+            }
+        }
+      
+        alternate.append(*bestString);
+        offset += bestCeLength;
+#else
+        // find random string that generates the same CEList
+        const CEList *ceList2;
+        const UnicodeString *string;
+
+        do {
+            int32_t s = m_rand() % stringCount;
+            string = strings->get(s);
+            ceList2 = charsToCEList->get(string);
+        } while (! ceList->matchesAt(offset, ceList2));
+
+        offset += ceList2->size();
+        alternate.append(*string);
+#endif
+    }
+
+    return alternate;
+}
+
+static inline USet *uset_openEmpty()
+{
+    return uset_open(1, 0);
+}
+
+void SSearchTest::monkeyTest()
+{
+    // ook!
+    UErrorCode status = U_ZERO_ERROR;
+    U_STRING_DECL(pattern, "[[:assigned:]-[:ideographic:]-[:hangul:]-[:c:]]", 47);
+    U_STRING_INIT(pattern, "[[:assigned:]-[:ideographic:]-[:hangul:]-[:c:]]", 47);
+    UCollator *coll = ucol_open(NULL, &status);
+    USet *charsToTest  = uset_openPattern(pattern, 47, &status);
+    USet *expansions   = uset_openEmpty();
+    USet *contractions = uset_openEmpty();
+    StringToCEsMap *charsToCEList = new StringToCEsMap();
+    CEToStringsMap *ceToCharsStartingWith = new CEToStringsMap();
+
+    ucol_getContractionsAndExpansions(coll, contractions, expansions, FALSE, &status);
+
+    uset_addAll(charsToTest, contractions);
+    uset_addAll(charsToTest, expansions);
+
+    buildData(coll, charsToTest, charsToCEList, ceToCharsStartingWith);
+
+    U_STRING_DECL(letter_pattern, "[[:letter:]-[:ideographic:]-[:hangul:]]", 39);
+    U_STRING_INIT(letter_pattern, "[[:letter:]-[:ideographic:]-[:hangul:]]", 39);
+    USet *letters = uset_openPattern(letter_pattern, 39, &status);
+    SetMonkey letterMonkey(letters);
+    StringSetMonkey contractionMonkey(contractions, coll, charsToCEList, ceToCharsStartingWith);
+    StringSetMonkey expansionMonkey(expansions, coll, charsToCEList, ceToCharsStartingWith);
+    UnicodeString testCase, eTestCase;
+    UnicodeString alternate, eAlternate;
+
+    Monkey *monkeys[] = {
+        &letterMonkey,
+        &contractionMonkey,
+        &expansionMonkey,
+        &contractionMonkey,
+        &expansionMonkey,
+        &contractionMonkey,
+        &expansionMonkey,
+        &contractionMonkey,
+        &expansionMonkey};
+    int32_t monkeyCount = sizeof(monkeys) / sizeof(monkeys[0]);
+
+    for(int32_t t = 0; t < 100; t += 1) {
+        int32_t pieces = (m_rand() % 4) + 1;
+
+        testCase.remove();
+        alternate.remove();
+        letterMonkey.append(testCase, alternate);
+
+        for(int32_t piece = 0; piece < pieces; piece += 1) {
+            int32_t monkey = m_rand() % monkeyCount;
+
+            monkeys[monkey]->append(testCase, alternate);
+        }
+
+      //testCase.append(0x0000);
+      //alternate.append(0x0000);
+
+        eTestCase.remove();
+        eAlternate.remove();
+
+        escape(testCase, eTestCase)/*.append(0x0000)*/;
+        escape(alternate, eAlternate)/*.append(0x0000)*/;
+
+        infoln("%S <=> %S", eTestCase.getTerminatedBuffer(), eAlternate.getTerminatedBuffer());
+
+        const CEList ceTest(coll, testCase);
+        const CEList ceAlt(coll, alternate);
+
+        if (! ceTest.matchesAt(0, &ceAlt)) {
+            errln("testCase and alternate don't generate the same CEs!");
+        }
+    }
+
+    delete ceToCharsStartingWith;
+    delete charsToCEList;
+
+    uset_close(contractions);
+    uset_close(expansions);
+    uset_close(charsToTest);
+
+    ucol_close(coll);
 }
         
         
