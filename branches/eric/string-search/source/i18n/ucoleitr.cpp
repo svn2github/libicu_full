@@ -552,7 +552,55 @@ ucol_getMaxExpansion(const UCollationElements *elems,
                            int32_t            order)
 {
     uint8_t result;
-    UCOL_GETMAXEXPANSION(elems->iteratordata_.coll, (uint32_t)order, result);
+    //UCOL_GETMAXEXPANSION(elems->iteratordata_.coll, (uint32_t)order, result);
+
+    const UCollator *coll = elems->iteratordata_.coll;
+    const uint32_t *start;
+    const uint32_t *limit;
+    const uint32_t *mid;
+          uint32_t strengthMask = 0;
+          uint32_t mOrder = (uint32_t) order;
+
+    switch (coll->strength) 
+    {
+    default:
+        strengthMask |= UCOL_TERTIARYORDERMASK;
+        /* fall through */
+
+    case UCOL_SECONDARY:
+        strengthMask |= UCOL_SECONDARYORDERMASK;
+        /* fall through */
+
+    case UCOL_PRIMARY:
+        strengthMask |= UCOL_PRIMARYORDERMASK;
+    }
+
+    mOrder &= strengthMask;
+    start = (coll)->endExpansionCE;
+    limit = (coll)->lastEndExpansionCE;
+
+    while (start < limit - 1) {
+        mid = start + ((limit - start) >> 1);
+        if (mOrder <= (*mid & strengthMask)) {
+          limit = mid;
+        } else {
+          start = mid;
+        }
+    }
+
+    // FIXME: with a masked search, there might be more than one hit,
+    // so we need to look forward and backward from the match to find all
+    // of the hits...
+    if ((*start & strengthMask) == mOrder) {
+        result = *((coll)->expansionCESize + (start - (coll)->endExpansionCE));
+    } else if ((*limit & strengthMask) == mOrder) {
+         result = *(coll->expansionCESize + (limit - coll->endExpansionCE));
+   } else if ((mOrder & 0xFFFF) == 0x00C0) {
+        result = 2;
+   } else {
+       result = 1;
+   }
+
     return result;
 }
  

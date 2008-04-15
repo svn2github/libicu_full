@@ -2657,7 +2657,7 @@ inline UChar getPrevNormalizedChar(collIterate *data, UErrorCode *status)
     }
 
     start = data->pos;
-    if (data->flags & UCOL_ITER_HASLEN) {
+    if ((data->fcdPosition==NULL)||(data->flags & UCOL_ITER_HASLEN)) {
         /* in data string */
         if ((start - 1) == data->string) {
             return *(start - 1);
@@ -7670,7 +7670,7 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
     UBool qShifted = shifted && checkQuad;
     UBool doHiragana = (coll->hiraganaQ == UCOL_ON) && checkQuad;
 
-    if(doHiragana && shifted) {
+    if(doHiragana /*&& shifted*/) {
         return (ucol_compareUsingSortKeys(sColl, tColl, status));
     }
     uint8_t caseSwitch = coll->caseSwitch;
