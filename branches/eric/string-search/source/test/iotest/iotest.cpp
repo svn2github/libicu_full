@@ -1,6 +1,6 @@
 /*
 **********************************************************************
-*   Copyright (C) 2002-2007, International Business Machines
+*   Copyright (C) 2002-2008, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 **********************************************************************
 *   file name:  iotest.cpp
@@ -44,6 +44,12 @@ public:
         message.extract(0, message.length(), buffer, sizeof(buffer));
         buffer[3999] = 0; /* NULL terminate */
         log_err(buffer);
+    }
+    virtual void dataerrln( const UnicodeString &message ) {
+        char buffer[4000];
+        message.extract(0, message.length(), buffer, sizeof(buffer));
+        buffer[3999] = 0; /* NULL terminate */
+        log_data_err(buffer);
     }
 
     static const char * pathToDataDirectory(void)
@@ -140,7 +146,7 @@ public:
 
             if(U_FAILURE(err)){
                 err = U_FILE_ACCESS_ERROR;
-                log_err("Could not load testtypes.res in testdata bundle with path %s - %s\n", tdpath, u_errorName(err));
+                log_data_err("Could not load testtypes.res in testdata bundle with path %s - %s\n", tdpath, u_errorName(err));
                 return "";
             }
             ures_close(test);
@@ -337,7 +343,7 @@ static void U_CALLCONV DataDrivenPrintf(void)
         delete dataModule;
     }
     else {
-        log_err("Failed: could not load test icuio data\n");
+        log_data_err("Failed: could not load test icuio data\n");
     }
 #endif
 }
@@ -539,7 +545,7 @@ static void U_CALLCONV DataDrivenScanf(void)
         delete dataModule;
     }
     else {
-        log_err("Failed: could not load test icuio data\n");
+        log_data_err("Failed: could not load test icuio data\n");
     }
 #endif
 }
@@ -666,7 +672,7 @@ static void U_CALLCONV DataDrivenPrintfPrecision(void)
         delete dataModule;
     }
     else {
-        log_err("Failed: could not load test icuio data\n");
+        log_data_err("Failed: could not load test icuio data\n");
     }
 #endif
 }
