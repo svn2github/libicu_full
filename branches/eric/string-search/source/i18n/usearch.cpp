@@ -3569,7 +3569,7 @@ static int32_t nextBoundaryAfter(UStringSearch *strsrch, int32_t startIndex) {
         }
         U16_NEXT(text, i, textLen, c);
         gcProperty = u_getIntPropertyValue(c, UCHAR_GRAPHEME_CLUSTER_BREAK);
-        if (gcProperty != U_GCB_EXTEND) {
+        if (gcProperty != U_GCB_EXTEND && gcProperty != U_GCB_SPACING_MARK) {
             break;
         }
     }
@@ -3593,7 +3593,7 @@ static UBool isInCombiningSequence(UStringSearch *strsrch, int32_t index) {
     UChar32  c;
     U16_GET(text, 0, index, textLen, c);
     int32_t gcProperty = u_getIntPropertyValue(c, UCHAR_GRAPHEME_CLUSTER_BREAK);
-    if (gcProperty != U_GCB_EXTEND) {
+    if (gcProperty != U_GCB_EXTEND && gcProperty != U_GCB_SPACING_MARK) {
         return FALSE;
     }
     
