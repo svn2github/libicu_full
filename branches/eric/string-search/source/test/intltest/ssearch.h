@@ -10,6 +10,7 @@
 
 #include "unicode/utypes.h"
 #include "unicode/unistr.h"
+#include "unicode/ucol.h"
 
 #include "intltest.h"
 
@@ -33,6 +34,7 @@ public:
 
 private:
     virtual const char *getPath(char buffer[2048], const char *filename);
+    virtual       UBool monkeyTestCase(UCollator *coll, const UnicodeString &testCase, const UnicodeString &pattern);
 };
 
 #endif

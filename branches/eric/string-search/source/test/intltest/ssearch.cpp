@@ -495,7 +495,7 @@ class OrderList
 {
 public:
     OrderList();
-    OrderList(UCollator *coll, UnicodeString &string, int32_t stringOffset = 0);
+    OrderList(UCollator *coll, const UnicodeString &string, int32_t stringOffset = 0);
     ~OrderList();
 
     int32_t size(void) const;
@@ -519,7 +519,7 @@ OrderList::OrderList()
     list = new Order[listMax];
 }
 
-OrderList::OrderList(UCollator *coll, UnicodeString &string, int32_t stringOffset)
+OrderList::OrderList(UCollator *coll, const UnicodeString &string, int32_t stringOffset)
     : list(NULL), listMax(16), listSize(0)
 {
     UErrorCode status = U_ZERO_ERROR;
@@ -545,16 +545,18 @@ OrderList::OrderList(UCollator *coll, UnicodeString &string, int32_t stringOffse
 
     ucol_setOffset(elems, stringOffset, &status);
 
-    offset = ucol_getOffset(elems);
-    while ((order = ucol_next(elems, &status)) != UCOL_NULLORDER) {
-        order &= strengthMask;
+    do {
+        offset = ucol_getOffset(elems);
+        order = ucol_next(elems, &status);
+
+        if (order != UCOL_NULLORDER) {
+            order &= strengthMask;
+        }
 
         if (order != UCOL_IGNORABLE) {
             add(order, offset);
         }
-
-        offset = ucol_getOffset(elems);
-    }
+    } while (order != UCOL_NULLORDER);
 
     ucol_closeElements(elems);
 }
@@ -646,11 +648,14 @@ UBool OrderList::compare(const OrderList &other) const
 
 UBool OrderList::matchesAt(int32_t offset, const OrderList &other) const
 {
-    if (listSize - offset < other.size()) {
+    // NOTE: sizes include the NULLORDER, which we don't want to compare.
+    int32_t otherSize = other.size() - 1;
+
+    if (listSize - 1 - offset < otherSize) {
         return FALSE;
     }
 
-    for (int32_t i = offset, j = 0; j < other.size(); i += 1, j += 1) {
+    for (int32_t i = offset, j = 0; j < otherSize; i += 1, j += 1) {
         if (getOrder(i) != other.getOrder(j)) {
             return FALSE;
         }
@@ -810,7 +815,7 @@ void SSearchTest::offsetTest()
 class CEList
 {
 public:
-    CEList(UCollator *coll, UnicodeString &string);
+    CEList(UCollator *coll, const UnicodeString &string);
     ~CEList();
 
     int32_t size() const;
@@ -825,11 +830,11 @@ private:
     int32_t listSize;
 };
 
-CEList::CEList(UCollator *coll, UnicodeString &string)
+CEList::CEList(UCollator *coll, const UnicodeString &string)
     : ces(NULL), listMax(8), listSize(0)
 {
     UErrorCode status = U_ZERO_ERROR;
-    UCollationElements *elems = ucol_openElements(coll, string.getTerminatedBuffer(), string.length(), &status);
+    UCollationElements *elems = ucol_openElements(coll, string.getBuffer(), string.length(), &status);
     uint32_t strengthMask = 0;
     int32_t order;
 
@@ -1302,7 +1307,7 @@ public:
     void append(UnicodeString &testCase, UnicodeString &alternate);
 
 private:
-    UnicodeString &generateAlternative(UnicodeString &testCase, UnicodeString &alternate);
+    UnicodeString &generateAlternative(const UnicodeString &testCase, UnicodeString &alternate);
 
     const USet *set;
     UCollator      *coll;
@@ -1349,7 +1354,7 @@ void StringSetMonkey::append(UnicodeString &testCase, UnicodeString &alternate)
     }
 }
 
-UnicodeString &StringSetMonkey::generateAlternative(UnicodeString &testCase, UnicodeString &alternate)
+UnicodeString &StringSetMonkey::generateAlternative(const UnicodeString &testCase, UnicodeString &alternate)
 {
     // find out shortest string for the longest sequence of ces.
     // needs to be refined to use dynamic programming, but will be roughly right
@@ -1556,12 +1561,12 @@ static UBool isInCombiningSequence(const UnicodeString &string, int32_t index) {
     return !(gcProperty==U_GCB_CONTROL || gcProperty==U_GCB_LF || gcProperty==U_GCB_CR);
 }      
         
-static UBool simpleSearch(UCollator *coll, UnicodeString &target, int32_t offset, UnicodeString &pattern, int32_t &matchStart, int32_t &matchEnd)
+static UBool simpleSearch(UCollator *coll, const UnicodeString &target, int32_t offset, const UnicodeString &pattern, int32_t &matchStart, int32_t &matchEnd)
 {
     OrderList targetOrders(coll, target, offset);
     OrderList patternOrders(coll, pattern);
-    int32_t   targetSize  = targetOrders.size();
-    int32_t   patternSize = patternOrders.size();
+    int32_t   targetSize  = targetOrders.size() - 1;
+    int32_t   patternSize = patternOrders.size() - 1;
 
     matchStart = matchEnd = -1;
 
@@ -1570,12 +1575,6 @@ static UBool simpleSearch(UCollator *coll, UnicodeString &target, int32_t offset
             int32_t start    = targetOrders.getOffset(i);
             int32_t maxLimit = targetOrders.getOffset(i + patternSize);
             int32_t minLimit = targetOrders.getOffset(i + patternSize - 1);
-
-            // if the match is at the end of the string, maxLimit will
-            // be -1, so set it to the offset of the last CE + 1.
-            if (maxLimit == -1) {
-                maxLimit = minLimit + 1;
-            }
 
             // if the CE at the start of the match and the
             // next CE have the same offset, it means that
@@ -1620,6 +1619,31 @@ static UBool simpleSearch(UCollator *coll, UnicodeString &target, int32_t offset
 }
 #endif
 
+UBool SSearchTest::monkeyTestCase(UCollator *coll, const UnicodeString &testCase, const UnicodeString &pattern)
+{
+    UErrorCode status = U_ZERO_ERROR;
+    int32_t actualStart = -1, actualEnd = -1;
+  //int32_t expectedStart = prefix.length(), expectedEnd = prefix.length() + altPattern.length();
+    int32_t expectedStart = -1, expectedEnd = -1;
+    UStringSearch *uss = usearch_openFromCollator(pattern.getBuffer(), pattern.length(),
+                                testCase.getBuffer(), testCase.length(),
+                                coll,
+                                NULL,     // the break iterator
+                                &status);
+
+    // **** TODO: find *all* matches, not just first one ****
+    simpleSearch(coll, testCase, 0, pattern, expectedStart, expectedEnd);
+    usearch_search(uss, 0, &actualStart, &actualEnd, &status);
+
+    if (actualStart != expectedStart || actualEnd != expectedEnd) {
+        errln("Match failed: expected [%d, %d], got [%d, %d]", expectedStart, expectedEnd, actualStart, actualEnd);
+    }
+
+    usearch_close(uss);
+
+    return expectedStart >= 0;
+}
+
 void SSearchTest::monkeyTest()
 {
     // ook!
@@ -1638,6 +1662,7 @@ void SSearchTest::monkeyTest()
     uset_addAll(charsToTest, contractions);
     uset_addAll(charsToTest, expansions);
 
+    // TODO: set strength to UCOL_PRIMARY, change CEList to use strength?
     buildData(coll, charsToTest, charsToCEList, ceToCharsStartingWith);
 
     U_STRING_DECL(letter_pattern, "[[:letter:]-[:ideographic:]-[:hangul:]]", 39);
@@ -1665,36 +1690,53 @@ void SSearchTest::monkeyTest()
     int32_t monkeyCount = sizeof(monkeys) / sizeof(monkeys[0]);
     int32_t nonMatchCount = 0;
 
-  //ucol_setStrength(coll, UCOL_PRIMARY); // **** REALLY?? ****
-    for(int32_t t = 0; t < 10000; t += 1) {
-        generateTestCase(coll, monkeys, monkeyCount, pattern, altPattern);
-        generateTestCase(coll, monkeys, monkeyCount, prefix, altPrefix);
-        generateTestCase(coll, monkeys, monkeyCount, suffix, altSuffix);
+    UCollationStrength strengths[] = {UCOL_PRIMARY, UCOL_SECONDARY, UCOL_TERTIARY};
+    const char *strengthNames[] = {"primary", "secondary", "tertiary"};
+    int32_t strengthCount = sizeof(strengths) / sizeof(strengths[0]);
 
-        testCase.remove();
-        testCase.append(prefix);
-        testCase.append(/*alt*/pattern);
-        testCase.append(suffix);
+    for(int32_t s = 0; s < strengthCount; s += 1) {
+        int32_t nonMatchCount = 0;
 
-        int32_t actualStart = -1, actualEnd = -1;
-      //int32_t expectedStart = prefix.length(), expectedEnd = prefix.length() + altPattern.length();
-        int32_t expectedStart = -1, expectedEnd = -1;
-        UStringSearch *uss = usearch_openFromCollator(pattern.getBuffer(), pattern.length(),
-                                    testCase.getBuffer(), testCase.length(),
-                                    coll,
-                                    NULL,     // the break iterator
-                                    &status);
+        ucol_setStrength(coll, strengths[s]);
 
-        simpleSearch(coll, testCase, 0, pattern, expectedStart, expectedEnd);
-        usearch_search(uss, 0, &actualStart, &actualEnd, &status);
+        // TODO: try alternates too? (or loose alternate generation?)
+        for(int32_t t = 0; t < 10000; t += 1) {
+            generateTestCase(coll, monkeys, monkeyCount, pattern, altPattern);
+            generateTestCase(coll, monkeys, monkeyCount, prefix, altPrefix);
+            generateTestCase(coll, monkeys, monkeyCount, suffix, altSuffix);
 
-        if (expectedStart == -1) {
-            nonMatchCount += 1;
+            // pattern
+            if (!monkeyTestCase(coll, pattern, pattern)) {
+                nonMatchCount += 1;
+            }
+
+            testCase.remove();
+            testCase.append(prefix);
+            testCase.append(/*alt*/pattern);
+
+            // prefix + pattern
+            if (!monkeyTestCase(coll, testCase, pattern)) {
+                nonMatchCount += 1;
+            }
+
+            testCase.append(suffix);
+
+            // prefix + pattern + suffix
+            if (!monkeyTestCase(coll, testCase, pattern)) {
+                nonMatchCount += 1;
+            }
+
+            testCase.remove();
+            testCase.append(pattern);
+            testCase.append(suffix);
+            
+            // pattern + suffix
+            if (!monkeyTestCase(coll, testCase, pattern)) {
+                nonMatchCount += 1;
+            }
         }
 
-        if (actualStart != expectedStart || actualEnd != expectedEnd) {
-            errln("Match failed: expected [%d, %d], got [%d, %d]", expectedStart, expectedEnd, actualStart, actualEnd);
-        }
+        infoln("For strength %s the non-match count is %d.", strengthNames[s], nonMatchCount);
     }
 
     delete ceToCharsStartingWith;
