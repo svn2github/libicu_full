@@ -1362,12 +1362,16 @@ UnicodeString &StringSetMonkey::generateAlternative(const UnicodeString &testCas
     UnicodeString alt;
     int32_t offset = 0;
 
+    if (ceList.size() == 0) {
+        return alternate.append(testCase);
+    }
+
     while (offset < ceList.size()) {
         int32_t ce = ceList.get(offset);
         const StringList *strings = ceToCharsStartingWith->getStringList(ce);
 
         if (strings == NULL) {
-            return alternate.append(alt);
+            return alternate.append(testCase);
         }
 
         int32_t stringCount = strings->size();
@@ -1619,12 +1623,13 @@ static UBool simpleSearch(UCollator *coll, const UnicodeString &target, int32_t 
 }
 #endif
 
-UBool SSearchTest::monkeyTestCase(UCollator *coll, const UnicodeString &testCase, const UnicodeString &pattern)
+int32_t SSearchTest::monkeyTestCase(UCollator *coll, const UnicodeString &testCase, const UnicodeString &pattern, const UnicodeString &altPattern)
 {
     UErrorCode status = U_ZERO_ERROR;
     int32_t actualStart = -1, actualEnd = -1;
   //int32_t expectedStart = prefix.length(), expectedEnd = prefix.length() + altPattern.length();
     int32_t expectedStart = -1, expectedEnd = -1;
+    int32_t notFoundCount = 0;
     UStringSearch *uss = usearch_openFromCollator(pattern.getBuffer(), pattern.length(),
                                 testCase.getBuffer(), testCase.length(),
                                 coll,
@@ -1636,12 +1641,30 @@ UBool SSearchTest::monkeyTestCase(UCollator *coll, const UnicodeString &testCase
     usearch_search(uss, 0, &actualStart, &actualEnd, &status);
 
     if (actualStart != expectedStart || actualEnd != expectedEnd) {
-        errln("Match failed: expected [%d, %d], got [%d, %d]", expectedStart, expectedEnd, actualStart, actualEnd);
+        errln("Search for pattern failed: expected [%d, %d], got [%d, %d]", expectedStart, expectedEnd, actualStart, actualEnd);
+    }
+
+    if (expectedStart == -1 && actualStart == -1) {
+        notFoundCount += 1;
+    }
+
+    // **** TODO: find *all* matches, not just first one ****
+    simpleSearch(coll, testCase, 0, altPattern, expectedStart, expectedEnd);
+
+    usearch_setPattern(uss, altPattern.getBuffer(), altPattern.length(), &status);
+    usearch_search(uss, 0, &actualStart, &actualEnd, &status);
+
+    if (actualStart != expectedStart || actualEnd != expectedEnd) {
+        errln("Search for alternate pattern failed: expected [%d, %d], got [%d, %d]", expectedStart, expectedEnd, actualStart, actualEnd);
+    }
+
+    if (expectedStart == -1 && actualStart == -1) {
+        notFoundCount += 1;
     }
 
     usearch_close(uss);
 
-    return expectedStart >= 0;
+    return notFoundCount;
 }
 
 void SSearchTest::monkeyTest()
@@ -1695,48 +1718,43 @@ void SSearchTest::monkeyTest()
     int32_t strengthCount = sizeof(strengths) / sizeof(strengths[0]);
 
     for(int32_t s = 0; s < strengthCount; s += 1) {
-        int32_t nonMatchCount = 0;
+        int32_t notFoundCount = 0;
 
         ucol_setStrength(coll, strengths[s]);
 
-        // TODO: try alternates too? (or loose alternate generation?)
+        // TODO: try alternate prefix and suffix too?
+        // TODO: alterntaes are only equal at primary strength. Is this OK?
         for(int32_t t = 0; t < 10000; t += 1) {
+            int32_t nmc = 0;
+
             generateTestCase(coll, monkeys, monkeyCount, pattern, altPattern);
             generateTestCase(coll, monkeys, monkeyCount, prefix, altPrefix);
             generateTestCase(coll, monkeys, monkeyCount, suffix, altSuffix);
 
             // pattern
-            if (!monkeyTestCase(coll, pattern, pattern)) {
-                nonMatchCount += 1;
-            }
+            notFoundCount += monkeyTestCase(coll, pattern, pattern, altPattern);
 
             testCase.remove();
             testCase.append(prefix);
             testCase.append(/*alt*/pattern);
 
             // prefix + pattern
-            if (!monkeyTestCase(coll, testCase, pattern)) {
-                nonMatchCount += 1;
-            }
+            notFoundCount += monkeyTestCase(coll, testCase, pattern, altPattern);
 
             testCase.append(suffix);
 
             // prefix + pattern + suffix
-            if (!monkeyTestCase(coll, testCase, pattern)) {
-                nonMatchCount += 1;
-            }
+            notFoundCount += monkeyTestCase(coll, testCase, pattern, altPattern);
 
             testCase.remove();
             testCase.append(pattern);
             testCase.append(suffix);
             
             // pattern + suffix
-            if (!monkeyTestCase(coll, testCase, pattern)) {
-                nonMatchCount += 1;
-            }
+            notFoundCount += monkeyTestCase(coll, testCase, pattern, altPattern);
         }
 
-        infoln("For strength %s the non-match count is %d.", strengthNames[s], nonMatchCount);
+        infoln("For strength %s the not found count is %d.", strengthNames[s], notFoundCount);
     }
 
     delete ceToCharsStartingWith;

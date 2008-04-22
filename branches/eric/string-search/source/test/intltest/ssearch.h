@@ -33,8 +33,8 @@ public:
     virtual void monkeyTest();
 
 private:
-    virtual const char *getPath(char buffer[2048], const char *filename);
-    virtual       UBool monkeyTestCase(UCollator *coll, const UnicodeString &testCase, const UnicodeString &pattern);
+    virtual const char   *getPath(char buffer[2048], const char *filename);
+    virtual       int32_t monkeyTestCase(UCollator *coll, const UnicodeString &testCase, const UnicodeString &pattern, const UnicodeString &altPattern);
 };
 
 #endif

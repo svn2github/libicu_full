@@ -457,8 +457,12 @@ inline int16_t initializePattern(UStringSearch *strsrch, UErrorCode *status)
     }
 
     // ** HACK **
-    if (strsrch->pattern.PCE != NULL && strsrch->pattern.PCE != strsrch->pattern.PCEBuffer) {
-        uprv_free(strsrch->pattern.PCE);
+    if (strsrch->pattern.PCE != NULL) {
+        if (strsrch->pattern.PCE != strsrch->pattern.PCEBuffer) {
+            uprv_free(strsrch->pattern.PCE);
+        }
+
+        strsrch->pattern.PCE = NULL;
     }
 
     // since intializePattern is an internal method status is a success.
