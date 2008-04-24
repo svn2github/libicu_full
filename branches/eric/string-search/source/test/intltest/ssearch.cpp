@@ -703,6 +703,7 @@ static char *printOrders(char *buffer, OrderList &list)
 void SSearchTest::offsetTest()
 {
     UnicodeString test[] = {
+        "\\ua191\\u16ef\\u2036\\u017a",
         "\\u0F7F\\u0F80\\u0F81\\u0F82\\u0F83\\u0F84\\u0F85",
         "\\u0F80\\u0F81\\u0F82\\u0F83\\u0F84\\u0F85",
         "\\u07E9\\u07EA\\u07F1\\u07F2\\u07F3",
@@ -1638,7 +1639,13 @@ int32_t SSearchTest::monkeyTestCase(UCollator *coll, const UnicodeString &testCa
 
     // **** TODO: find *all* matches, not just first one ****
     simpleSearch(coll, testCase, 0, pattern, expectedStart, expectedEnd);
+
+#if 0
     usearch_search(uss, 0, &actualStart, &actualEnd, &status);
+#else
+    actualStart = usearch_next(uss, &status);
+    actualEnd   = actualStart + usearch_getMatchedLength(uss);
+#endif
 
     if (actualStart != expectedStart || actualEnd != expectedEnd) {
         errln("Search for pattern failed: expected [%d, %d], got [%d, %d]", expectedStart, expectedEnd, actualStart, actualEnd);
@@ -1652,7 +1659,14 @@ int32_t SSearchTest::monkeyTestCase(UCollator *coll, const UnicodeString &testCa
     simpleSearch(coll, testCase, 0, altPattern, expectedStart, expectedEnd);
 
     usearch_setPattern(uss, altPattern.getBuffer(), altPattern.length(), &status);
+
+#if 0
     usearch_search(uss, 0, &actualStart, &actualEnd, &status);
+#else
+    usearch_reset(uss);
+    actualStart = usearch_next(uss, &status);
+    actualEnd   = actualStart + usearch_getMatchedLength(uss);
+#endif
 
     if (actualStart != expectedStart || actualEnd != expectedEnd) {
         errln("Search for alternate pattern failed: expected [%d, %d], got [%d, %d]", expectedStart, expectedEnd, actualStart, actualEnd);

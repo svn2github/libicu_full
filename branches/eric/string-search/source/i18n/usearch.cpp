@@ -52,6 +52,7 @@ inline void setColEIterOffset(UCollationElements *elems,
     ci->fcdPosition = NULL;
 
 	ci->offsetReturn = NULL;
+    ci->offsetStore  = ci->offsetBuffer;
 	ci->offsetRepeatCount = ci->offsetRepeatValue = 0;
 }
 
@@ -1196,7 +1197,7 @@ UBool checkNextExactContractionMatch(UStringSearch *strsrch,
 {
           UCollationElements *coleiter   = strsrch->textIter;
           int32_t             textlength = strsrch->search->textLength;
-          int32_t         temp       = *start;
+          int32_t             temp       = *start;
     const UCollator          *collator   = strsrch->collator;
     const UChar              *text       = strsrch->search->text;
     // This part checks if either ends of the match contains potential 

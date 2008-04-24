@@ -552,8 +552,10 @@ ucol_getMaxExpansion(const UCollationElements *elems,
                            int32_t            order)
 {
     uint8_t result;
-    //UCOL_GETMAXEXPANSION(elems->iteratordata_.coll, (uint32_t)order, result);
 
+#if 0
+    UCOL_GETMAXEXPANSION(elems->iteratordata_.coll, (uint32_t)order, result);
+#else
     const UCollator *coll = elems->iteratordata_.coll;
     const uint32_t *start;
     const uint32_t *limit;
@@ -600,6 +602,7 @@ ucol_getMaxExpansion(const UCollationElements *elems,
    } else {
        result = 1;
    }
+#endif
 
     return result;
 }
@@ -684,6 +687,7 @@ ucol_setOffset(UCollationElements    *elems,
     elems->reset_ = FALSE;
 
 	ci->offsetReturn = NULL;
+    ci->offsetStore = ci->offsetBuffer;
 	ci->offsetRepeatCount = ci->offsetRepeatValue = 0;
 }
 
