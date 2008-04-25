@@ -112,6 +112,37 @@ struct BMPConfusableTableRow {
 //
 //   String 
 
+
+//
+//  SpoofDataHeader.   Overlays the memory mapped data
+//                     Version info comes from the associated ICU Data header.
+//                     All reserved or unused fields must be zero.
+//
+//                     All byte offset fields are from the start of the
+//                     SpoofDataHeader.
+//
+struct SpoofDataHeader {
+    int32_t      fMagic;                   // == 0x5bof
+    int32_t      fLength;                  // Size in bytes of the SpoofDataHeader
+                                           //   + the following spoof data.
+
+    int32_t      fStringLengthsOffset;     // Byte offset to string lengths table
+    int32_t      fStringLengthsSize;       //  # of entries (int16_t[2] each)
+
+    int32_t      fKeysTableOffset;         // Byte Offset to Keys table
+    int32_t      fKeyTableSize;            //  # of entries (int32_t each)
+
+    int32_t      fStringIndexesOffset;     // Byte Offset to String Indexes Table
+    int32_t      fStringIndexesSize;       //  # of entries (int16_t each)
+
+    int32_t      fStringTableOffset;       // Byte Offset to String Table
+    int32_t      fStringTableSize;         //  Length, in UChars, of string table.
+
+    int32_t      unused[6]; 
+};
+
+
+
 U_NAMESPACE_END
 
 #endif  /* USPOOFIM_H */
