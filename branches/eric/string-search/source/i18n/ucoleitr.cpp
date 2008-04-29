@@ -205,6 +205,8 @@ struct UCollationPCE : public UObject
     UCollationPCE(UCollationElements *elems);
     ~UCollationPCE();
 
+    void init(const UCollator *coll);
+
     virtual UClassID getDynamicClassID() const;
     static UClassID getStaticClassID();
 };
@@ -213,13 +215,17 @@ UOBJECT_DEFINE_RTTI_IMPLEMENTATION(UCollationPCE)
 
 UCollationPCE::UCollationPCE(UCollationElements *elems)
 {
-    const UCollator *coll = elems->iteratordata_.coll;
+    init(elems->iteratordata_.coll);
+}
+
+void UCollationPCE::init(const UCollator *coll)
+{
     UErrorCode status = U_ZERO_ERROR;
 
     strength    = ucol_getStrength(coll);
     toShift     = ucol_getAttribute(coll, UCOL_ALTERNATE_HANDLING, &status) == UCOL_SHIFTED;
     isShifted   = FALSE;
-    variableTop = coll->variableTopValue;
+    variableTop = coll->variableTopValue << 16;
 }
 
 UCollationPCE::~UCollationPCE()
@@ -271,6 +277,14 @@ inline uint64_t processCE(UCollationElements *elems, uint32_t ce)
 
 
     return primary << 48 | secondary << 32 | tertiary << 16 | quaternary;
+}
+
+U_CAPI void U_EXPORT2
+uprv_init_pce(const UCollationElements *elems)
+{
+    if (elems->pce != NULL) {
+        elems->pce->init(elems->iteratordata_.coll);
+    }
 }
 
 /* public methods ---------------------------------------------------- */

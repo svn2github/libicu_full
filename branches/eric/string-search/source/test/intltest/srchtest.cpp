@@ -1818,6 +1818,8 @@ void StringSearchTest::TestCollatorCanonical()
         if (tailored != NULL) {
             delete tailored;
         }
+
+        return;
     }
         
     strsrch->setCollator(m_en_us_, status);

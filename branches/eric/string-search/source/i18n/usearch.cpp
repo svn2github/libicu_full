@@ -3008,6 +3008,7 @@ U_CAPI void U_EXPORT2 usearch_setCollator(      UStringSearch *strsrch,
             *status = U_ILLEGAL_ARGUMENT_ERROR;
             return;
         }
+
         if (strsrch) {
             if (strsrch->ownCollator && (strsrch->collator != collator)) {
                 ucol_close((UCollator *)strsrch->collator);
@@ -3037,6 +3038,9 @@ U_CAPI void U_EXPORT2 usearch_setCollator(      UStringSearch *strsrch,
                 }
             }
         }
+
+        uprv_init_pce(strsrch->textIter);
+        uprv_init_pce(strsrch->utilIter);
     }
 }
 
@@ -3174,6 +3178,7 @@ U_CAPI int32_t U_EXPORT2 usearch_next(UStringSearch *strsrch,
         search->reset             = FALSE;
         int32_t      textlength   = search->textLength;
         if (search->isForwardSearching) {
+#if 0
             if (offset == textlength
                 || (!search->isOverlap && 
                     (offset + strsrch->pattern.defaultShiftSize > textlength ||
@@ -3183,6 +3188,16 @@ U_CAPI int32_t U_EXPORT2 usearch_next(UStringSearch *strsrch,
                 setMatchNotFound(strsrch);
                 return USEARCH_DONE; 
             }
+#else
+            if (offset == textlength ||
+                (! search->isOverlap &&
+                (search->matchedIndex != USEARCH_DONE &&
+                offset + search->matchedLength >= textlength))) {
+                    // not enough characters to match
+                    setMatchNotFound(strsrch);
+                    return USEARCH_DONE;
+            }
+#endif
         }
         else {
             // switching direction. 
@@ -3281,6 +3296,7 @@ U_CAPI int32_t U_EXPORT2 usearch_previous(UStringSearch *strsrch,
             }
         }
         else {
+#if 0
             if (offset == 0 || matchedindex == 0 ||
                 (!search->isOverlap && 
                     (offset < strsrch->pattern.defaultShiftSize ||
@@ -3290,6 +3306,14 @@ U_CAPI int32_t U_EXPORT2 usearch_previous(UStringSearch *strsrch,
                 setMatchNotFound(strsrch);
                 return USEARCH_DONE; 
             }
+#else
+            // Could check pattern length, but the
+            // linear search will do the right thing
+            if (offset == 0 || matchedindex == 0) {
+                setMatchNotFound(strsrch);
+                return USEARCH_DONE;
+            }
+#endif
         }
 
         if (U_SUCCESS(*status)) {
@@ -3847,7 +3871,7 @@ U_CAPI UBool U_EXPORT2 usearch_searchBackwards(UStringSearch  *strsrch,
     // **** to guarantee that might be to count the CEs  ****
     // **** and keep adding more to startIdx until we    ****
     // **** get all the CEs we need.                     ****
-    if (startIdx < strsrch->search->textLength) {
+    if (FALSE && startIdx < strsrch->search->textLength) {
         ucol_setOffset(strsrch->textIter, startIdx + 2, status);
 
         for (targetIx = 0; ; targetIx += 1) {
@@ -3931,7 +3955,7 @@ U_CAPI UBool U_EXPORT2 usearch_searchBackwards(UStringSearch  *strsrch,
         //         (CE to character index mapping in exansions is funny;
         //          all but the first get the index of the following char.)
         //          In this case, reject this match, and continue the search.
-        if (targetIx > 0) {
+        if (targetIx >= 2) {
             if (maxLimit == ceb.getPrevious(targetIx - 2)->srcIndex) {
                 targetCEI = ceb.getPrevious(targetIx - 1);
                 maxLimit = targetCEI->srcIndex;
@@ -4028,6 +4052,7 @@ UBool usearch_handleNextExact(UStringSearch *strsrch, UErrorCode *status)
         return FALSE;
     }
 
+#if 0
     UCollationElements *coleiter        = strsrch->textIter;
     int32_t             textlength      = strsrch->search->textLength;
     int32_t            *patternce       = strsrch->pattern.CE;
@@ -4116,6 +4141,20 @@ UBool usearch_handleNextExact(UStringSearch *strsrch, UErrorCode *status)
     }
     setMatchNotFound(strsrch);
     return FALSE;
+#else
+    int32_t textOffset = ucol_getOffset(strsrch->textIter);
+    int32_t start = -1;
+    int32_t end = -1;
+
+    if (usearch_search(strsrch, textOffset, &start, &end, status)) {
+        strsrch->search->matchedIndex  = start;
+        strsrch->search->matchedLength = end - start;
+        return TRUE;
+    } else {
+        setMatchNotFound(strsrch);
+        return FALSE;
+    }
+#endif
 }
 
 UBool usearch_handleNextCanonical(UStringSearch *strsrch, UErrorCode *status)
@@ -4125,6 +4164,7 @@ UBool usearch_handleNextCanonical(UStringSearch *strsrch, UErrorCode *status)
         return FALSE;
     }
 
+#if 0
     UCollationElements *coleiter        = strsrch->textIter;
     int32_t             textlength      = strsrch->search->textLength;
     int32_t            *patternce       = strsrch->pattern.CE;
@@ -4214,6 +4254,20 @@ UBool usearch_handleNextCanonical(UStringSearch *strsrch, UErrorCode *status)
     }
     setMatchNotFound(strsrch);
     return FALSE;
+#else
+    int32_t textOffset = ucol_getOffset(strsrch->textIter);
+    int32_t start = -1;
+    int32_t end = -1;
+
+    if (usearch_search(strsrch, textOffset, &start, &end, status)) {
+        strsrch->search->matchedIndex  = start;
+        strsrch->search->matchedLength = end - start;
+        return TRUE;
+    } else {
+        setMatchNotFound(strsrch);
+        return FALSE;
+    }
+#endif
 }
 
 UBool usearch_handlePreviousExact(UStringSearch *strsrch, UErrorCode *status)
@@ -4223,6 +4277,7 @@ UBool usearch_handlePreviousExact(UStringSearch *strsrch, UErrorCode *status)
         return FALSE;
     }
 
+#if 0
     UCollationElements *coleiter        = strsrch->textIter;
     int32_t            *patternce       = strsrch->pattern.CE;
     int32_t             patterncelength = strsrch->pattern.CELength;
@@ -4314,6 +4369,20 @@ UBool usearch_handlePreviousExact(UStringSearch *strsrch, UErrorCode *status)
     }
     setMatchNotFound(strsrch);
     return FALSE;
+#else
+    int32_t textOffset = ucol_getOffset(strsrch->textIter);
+    int32_t start = -1;
+    int32_t end = -1;
+
+    if (usearch_searchBackwards(strsrch, textOffset, &start, &end, status)) {
+        strsrch->search->matchedIndex = start;
+        strsrch->search->matchedLength = end - start;
+        return TRUE;
+    } else {
+        setMatchNotFound(strsrch);
+        return FALSE;
+    }
+#endif
 }
 
 UBool usearch_handlePreviousCanonical(UStringSearch *strsrch, 

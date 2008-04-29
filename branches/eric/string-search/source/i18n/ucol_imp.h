@@ -341,6 +341,9 @@ struct UCollationElements
 };
 
 
+U_CAPI void U_EXPORT2
+uprv_init_pce(const struct UCollationElements *elems);
+
 #define UCOL_LEVELTERMINATOR 1
 
 /* mask off anything but primary order */

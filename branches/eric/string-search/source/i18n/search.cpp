@@ -283,10 +283,16 @@ int32_t SearchIterator::previous(UErrorCode &status)
         }
 
         if (matchindex != USEARCH_DONE) {
+            if (m_search_->isOverlap) {
+                matchindex += m_search_->matchedLength - 2;
+            }
+
             return handlePrev(matchindex, status); 
         }
+
         return handlePrev(offset, status);
     }
+
     return USEARCH_DONE;
 }
 

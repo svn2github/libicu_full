@@ -350,11 +350,13 @@ int32_t StringSearch::handleNext(int32_t position, UErrorCode &status)
             // looking at usearch.cpp, this part is shifted out to
             // StringSearch instead of SearchIterator because m_strsrch_ is
             // not accessible in SearchIterator
+#if 0
             if (position + m_strsrch_->pattern.defaultShiftSize
                 > m_search_->textLength) {
                 setMatchNotFound();
                 return USEARCH_DONE;
             }
+#endif
             if (m_search_->matchedLength <= 0) {
                 // the flipping direction issue has already been handled
                 // in next()
@@ -424,11 +426,15 @@ int32_t StringSearch::handlePrev(int32_t position, UErrorCode &status)
             // looking at usearch.cpp, this part is shifted out to
             // StringSearch instead of SearchIterator because m_strsrch_ is
             // not accessible in SearchIterator
+#if 0
             if (!m_search_->isOverlap &&
                 position - m_strsrch_->pattern.defaultShiftSize < 0) {
                 setMatchNotFound();
                 return USEARCH_DONE;
             }
+#else
+            ucol_setOffset(m_strsrch_->textIter, position, &status);
+#endif
             for (;;) {
                 if (m_search_->isCanonicalMatch) {
                     // can't use exact here since extra accents are allowed.
