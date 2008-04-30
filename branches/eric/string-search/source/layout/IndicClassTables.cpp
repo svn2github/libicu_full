@@ -1,6 +1,6 @@
 /*
  *
- * (C) Copyright IBM Corp. 1998-2007 - All Rights Reserved
+ * (C) Copyright IBM Corp. 1998-2008 - All Rights Reserved
  *
  */
 
@@ -248,7 +248,8 @@ static const SplitMatra sinhSplitTable[] = {{0x0DD9, 0x0DCA}, {0x0DD9, 0x0DCF}, 
 #define TELU_SCRIPT_FLAGS (SF_MATRAS_AFTER_BASE | SF_FILTER_ZERO_WIDTH | 3)
 #define KNDA_SCRIPT_FLAGS (SF_MATRAS_AFTER_BASE | SF_FILTER_ZERO_WIDTH | 3)
 #define MLYM_SCRIPT_FLAGS (SF_MPRE_FIXUP | SF_NO_POST_BASE_LIMIT /*| SF_FILTER_ZERO_WIDTH*/)
-#define SINH_SCRIPT_FLAGS (SF_MPRE_FIXUP | SF_NO_POST_BASE_LIMIT)
+//#define SINH_SCRIPT_FLAGS (SF_MPRE_FIXUP | SF_NO_POST_BASE_LIMIT)
+#define SINH_SCRIPT_FLAGS (SF_NO_POST_BASE_LIMIT)
 
 //
 // Indic Class Tables
@@ -392,7 +393,21 @@ static const IndicClassTable * const indicClassTables[scriptCodeCount] = {
     NULL,            /* 'sgnw' (SGNW) */
     NULL,            /* 'sund' (SUND) */
     NULL,            /* 'moon' (MOON) */
-    NULL             /* 'mtei' (MTEI) */
+    NULL,            /* 'mtei' (MTEI) */
+    NULL,            /* 'armi' (ARMI) */
+    NULL,            /* 'avst' (AVST) */
+    NULL,            /* 'cakm' (CAKM) */
+    NULL,            /* 'kore' (KORE) */
+    NULL,            /* 'kthi' (KTHI) */
+    NULL,            /* 'mani' (MANI) */
+    NULL,            /* 'phli' (PHLI) */
+    NULL,            /* 'phlp' (PHLP) */
+    NULL,            /* 'phlv' (PHLV) */
+    NULL,            /* 'prti' (PRTI) */
+    NULL,            /* 'samr' (SAMR) */
+    NULL,            /* 'tavt' (TAVT) */
+    NULL,            /* 'zmth' (ZMTH) */
+    NULL             /* 'zsym' (ZSYM) */
 };
 
 IndicClassTable::CharClass IndicClassTable::getCharClass(LEUnicode ch) const
