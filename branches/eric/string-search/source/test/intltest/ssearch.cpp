@@ -488,7 +488,8 @@ const char *cPattern = "maketh houndes ete hem";
 struct Order
 {
     int32_t order;
-    int32_t offset;
+    int32_t lowOffset;
+    int32_t highOffset;
 };
 
 class OrderList
@@ -499,9 +500,10 @@ public:
     ~OrderList();
 
     int32_t size(void) const;
-    void add(int32_t order, int32_t offset);
+    void add(int32_t order, int32_t low, int32_t high);
     const Order *get(int32_t index) const;
-    int32_t getOffset(int32_t index) const;
+    int32_t getLowOffset(int32_t index) const;
+    int32_t getHighOffset(int32_t index) const;
     int32_t getOrder(int32_t index) const;
     void reverse(void);
     UBool compare(const OrderList &other) const;
@@ -525,7 +527,7 @@ OrderList::OrderList(UCollator *coll, const UnicodeString &string, int32_t strin
     UErrorCode status = U_ZERO_ERROR;
     UCollationElements *elems = ucol_openElements(coll, string.getBuffer(), string.length(), &status);
     uint32_t strengthMask = 0;
-    int32_t order, offset;
+    int32_t order, low, high;
 
     switch (ucol_getStrength(coll)) 
     {
@@ -546,15 +548,16 @@ OrderList::OrderList(UCollator *coll, const UnicodeString &string, int32_t strin
     ucol_setOffset(elems, stringOffset, &status);
 
     do {
-        offset = ucol_getOffset(elems);
+        low   = ucol_getOffset(elems);
         order = ucol_next(elems, &status);
+        high  = ucol_getOffset(elems);
 
         if (order != UCOL_NULLORDER) {
             order &= strengthMask;
         }
 
         if (order != UCOL_IGNORABLE) {
-            add(order, offset);
+            add(order, low, high);
         }
     } while (order != UCOL_NULLORDER);
 
@@ -566,7 +569,7 @@ OrderList::~OrderList()
     delete[] list;
 }
 
-void OrderList::add(int32_t order, int32_t offset)
+void OrderList::add(int32_t order, int32_t low, int32_t high)
 {
     if (listSize >= listMax) {
         listMax *= 2;
@@ -578,8 +581,9 @@ void OrderList::add(int32_t order, int32_t offset)
         list = newList;
     }
 
-    list[listSize].order  = order;
-    list[listSize].offset = offset;
+    list[listSize].order      = order;
+    list[listSize].lowOffset  = low;
+    list[listSize].highOffset = high;
 
     listSize += 1;
 }
@@ -593,12 +597,23 @@ const Order *OrderList::get(int32_t index) const
     return &list[index];
 }
 
-int32_t OrderList::getOffset(int32_t index) const
+int32_t OrderList::getLowOffset(int32_t index) const
 {
     const Order *order = get(index);
 
     if (order != NULL) {
-        return order->offset;
+        return order->lowOffset;
+    }
+
+    return -1;
+}
+
+int32_t OrderList::getHighOffset(int32_t index) const
+{
+    const Order *order = get(index);
+
+    if (order != NULL) {
+        return order->highOffset;
     }
 
     return -1;
@@ -638,7 +653,8 @@ UBool OrderList::compare(const OrderList &other) const
 
     for(int32_t i = 0; i < listSize; i += 1) {
         if (list[i].order  != other.list[i].order ||
-            list[i].offset != other.list[i].offset) {
+            list[i].lowOffset != other.list[i].lowOffset ||
+            list[i].highOffset != other.list[i].highOffset) {
                 return FALSE;
         }
     }
@@ -676,7 +692,7 @@ static char *printOffsets(char *buffer, OrderList &list)
             s += sprintf(s, ", ");
         }
 
-        s += sprintf(s, "%d", order->offset);
+        s += sprintf(s, "(%d, %d)", order->lowOffset, order->highOffset);
     }
 
     return buffer;
@@ -764,29 +780,31 @@ void SSearchTest::offsetTest()
         CollationElementIterator *iter = col->createCollationElementIterator(ts);
         OrderList forwardList;
         OrderList backwardList;
-        int32_t order, offset;
+        int32_t order, low, high;
 
         do {
-            offset = iter->getOffset();
-            order  = iter->next(status);
+            low   = iter->getOffset();
+            order = iter->next(status);
+            high  = iter->getOffset();
 
-            forwardList.add(order, offset);
+            forwardList.add(order, low, high);
         } while (order != CollationElementIterator::NULLORDER);
 
         iter->reset();
         iter->setOffset(ts.length(), status);
 
-        backwardList.add(CollationElementIterator::NULLORDER, iter->getOffset());
+        backwardList.add(CollationElementIterator::NULLORDER, iter->getOffset(), iter->getOffset());
 
         do {
-            order  = iter->previous(status);
-            offset = iter->getOffset();
+            high  = iter->getOffset();
+            order = iter->previous(status);
+            low   = iter->getOffset();
 
             if (order == CollationElementIterator::NULLORDER) {
                 break;
             }
 
-            backwardList.add(order, offset);
+            backwardList.add(order, low, high);
         } while (TRUE);
 
         backwardList.reverse();
@@ -1577,16 +1595,16 @@ static UBool simpleSearch(UCollator *coll, const UnicodeString &target, int32_t 
 
     for(int32_t i = 0; i < targetSize; i += 1) {
         if (targetOrders.matchesAt(i, patternOrders)) {
-            int32_t start    = targetOrders.getOffset(i);
-            int32_t maxLimit = targetOrders.getOffset(i + patternSize);
-            int32_t minLimit = targetOrders.getOffset(i + patternSize - 1);
+            int32_t start    = targetOrders.getLowOffset(i);
+            int32_t maxLimit = targetOrders.getLowOffset(i + patternSize);
+            int32_t minLimit = targetOrders.getLowOffset(i + patternSize - 1);
 
-            // if the CE at the start of the match and the
-            // next CE have the same offset, it means that
-            // the match starts in the middle of an expansion -
-            // all but the first CE of the expansion will have
-            // the offset of the following character.
-            if (start == targetOrders.getOffset(i + 1)) {
+            // if the low and high offsets of the first CE in
+            // the match are the same, it means that the match
+            // starts in the middle of an expansion - all but
+            // the first CE of the expansion will have the offset
+            // of the following character.
+            if (start == targetOrders.getHighOffset(i)) {
                 continue;
             }
 
@@ -1594,23 +1612,20 @@ static UBool simpleSearch(UCollator *coll, const UnicodeString &target, int32_t 
                 continue;
             }
 
-            // if the two CEs following the match both
-            // have the same offset, it means that the
-            // match ends in the middle of an expansion.
-            if (maxLimit == targetOrders.getOffset(i + patternSize + 1)) {
+            // If the low and high offsets of the CE after the match
+            // are the same, it means that the match ends in the middle
+            // of an expansion sequence.
+            if (maxLimit == targetOrders.getHighOffset(i + patternSize) &&
+                targetOrders.getOrder(i + patternSize) != UCOL_NULLORDER) {
                 continue;
             }
 
-            int32_t mend = minLimit;
+            int32_t mend = maxLimit;
 
-            if (mend < maxLimit) {
-                mend = nextBoundaryAfter(target, mend);
-            }
-
-            // if mend is greater than maxLimit, nextBoundaryAfter advanced
-            // us past the last CE that matched the target.
-            if (mend > maxLimit) {
-                continue;
+            if (minLimit < maxLimit) {
+                if (nextBoundaryAfter(target, minLimit) > maxLimit) {
+                    continue;
+                }
             }
 
             matchStart = start;

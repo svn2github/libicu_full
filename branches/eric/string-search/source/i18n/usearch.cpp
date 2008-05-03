@@ -400,7 +400,7 @@ inline uint16_t initializePatternPCETable(UStringSearch *strsrch,
     // ** Should processed CEs be signed or unsigned?
     // ** (the rest of the code in this file seems to play fast-and-loose with 
     // **  whether a CE is signed or unsigned. For example, look at routine above this one.)
-    while ((pce = ucol_nextProcessed(coleiter, NULL, status)) != UCOL_PROCESSED_NULLORDER &&
+    while ((pce = ucol_nextProcessed(coleiter, NULL, NULL, status)) != UCOL_PROCESSED_NULLORDER &&
            U_SUCCESS(*status)) {
         int64_t *temp = addTouint64_tArray(pcetable, offset, &pcetablesize, 
                               pce,
@@ -3409,8 +3409,9 @@ U_CAPI void U_EXPORT2 usearch_reset(UStringSearch *strsrch)
 //       These structs are kept in the circular buffer.
 //
 struct  CEI {
-    int64_t  ce;
-    int32_t  srcIndex;
+    int64_t ce;
+    int32_t lowIndex;
+    int32_t highIndex;
 };
 
 //
@@ -3430,8 +3431,8 @@ struct CEBuffer {
 
                CEBuffer(UStringSearch *ss, UErrorCode *status);
                ~CEBuffer();
-    CEI        *get(int32_t index);
-    CEI        *getPrevious(int32_t index);
+   const CEI   *get(int32_t index);
+   const CEI   *getPrevious(int32_t index);
 };
 
 
@@ -3464,9 +3465,9 @@ CEBuffer::~CEBuffer() {
 //   Index must be in the range
 //          n-history_size < index < n+1
 //   where n is the largest index to have been fetched by some previous call to this function.
-//   The CE value will be UCOL_NULLORDER at end of input.
+//   The CE value will be UCOL__PROCESSED_NULLORDER at end of input.
 //
-CEI *CEBuffer::get(int32_t index) {
+const CEI *CEBuffer::get(int32_t index) {
     int i = index % bufSize;
     if (index>=firstIx && index<limitIx) {
         // The request was for an entry already in our buffer.
@@ -3513,7 +3514,7 @@ CEI *CEBuffer::get(int32_t index) {
 #else
     UErrorCode status = U_ZERO_ERROR;
 
-    buf[i].ce = ucol_nextProcessed(ceIter, &buf[i].srcIndex, &status);
+    buf[i].ce = ucol_nextProcessed(ceIter, &buf[i].lowIndex, &buf[i].highIndex, &status);
 #endif
     return &buf[i];
 }
@@ -3522,9 +3523,9 @@ CEI *CEBuffer::get(int32_t index) {
 //   Index must be in the range
 //          n-history_size < index < n+1
 //   where n is the largest index to have been fetched by some previous call to this function.
-//   The CE value will be UCOL_NULLORDER at end of input.
+//   The CE value will be UCOL__PROCESSED_NULLORDER at end of input.
 //
-CEI *CEBuffer::getPrevious(int32_t index) {
+const CEI *CEBuffer::getPrevious(int32_t index) {
     int i = index % bufSize;
     if (index>=firstIx && index<limitIx) {
         // The request was for an entry already in our buffer.
@@ -3549,7 +3550,7 @@ CEI *CEBuffer::getPrevious(int32_t index) {
 
     UErrorCode status = U_ZERO_ERROR;
 
-    buf[i].ce = ucol_previousProcessed(ceIter, &buf[i].srcIndex, &status);
+    buf[i].ce = ucol_previousProcessed(ceIter, &buf[i].lowIndex, &buf[i].highIndex, &status);
     return &buf[i];
 }
 
@@ -3677,7 +3678,7 @@ U_CAPI UBool U_EXPORT2 usearch_search(UStringSearch  *strsrch,
     
 
     int32_t    targetIx = 0;   
-    CEI       *targetCEI;
+    const CEI *targetCEI;
     int32_t    patIx;
     UBool      found;
 
@@ -3723,19 +3724,20 @@ U_CAPI UBool U_EXPORT2 usearch_search(UStringSearch  *strsrch,
         //  There still is a chance of match failure if the CE range not correspond to
         //     an acceptable character range.
         //
+        const CEI *firstCEI = ceb.get(targetIx);
+        const CEI *lastCEI  = ceb.get(targetIx + strsrch->pattern.CELength - 1);
+        const CEI *nextCEI  = ceb.get(targetIx + strsrch->pattern.CELength);
 
-
-        targetCEI = ceb.get(targetIx+strsrch->pattern.CELength);
-        maxLimit = targetCEI->srcIndex;
-        targetCEI = ceb.get(targetIx);
-        mStart = targetCEI->srcIndex;
-
-        targetCEI = ceb.get(targetIx+strsrch->pattern.CELength-1);
-        minLimit = targetCEI->srcIndex;
+     // targetCEI = ceb.get(targetIx+strsrch->pattern.CELength);
+     // maxLimit = targetCEI->lowIndex;
+        mStart   = firstCEI->lowIndex;
+        minLimit = lastCEI->lowIndex;
+        maxLimit = nextCEI->lowIndex;
 
         // Look at the CE following the match.  If it is UCOL_NULLORDER the match
         //   extended to the end of input, and the match is good.
 
+#if 0
         // Compare the character indicies of the two CEs following the match.
         //   If they are the same, it means one of two things:
         //     1.  The match extended to the last CE from the target text, which is OK, or
@@ -3743,7 +3745,7 @@ U_CAPI UBool U_EXPORT2 usearch_search(UStringSearch  *strsrch,
         //         (CE to character index mapping in exansions is funny;
         //          all but the first get the index of the following char.)
         //          In this case, reject this match, and continue the search.
-        CEI   *secondCEAfter = ceb.get(targetIx+strsrch->pattern.CELength+1);
+        const CEI *secondCEAfter = ceb.get(targetIx+strsrch->pattern.CELength+1);
         if (maxLimit == secondCEAfter->srcIndex) {
             targetCEI = ceb.get(targetIx+strsrch->pattern.CELength);
             maxLimit = targetCEI->srcIndex;
@@ -3752,6 +3754,17 @@ U_CAPI UBool U_EXPORT2 usearch_search(UStringSearch  *strsrch,
                 found = FALSE;
             }
         }
+#else
+        // Look at the high and low indices of the CE following the match. If
+        // they are the same it means one of two things:
+        //    1. The match extended to the last CE from the target text, which is OK, or
+        //    2. The last CE that was part of the match is in an expansion that extends
+        //       to the first CE after the match. In this case, we reject the match.
+        if (nextCEI->lowIndex == nextCEI->highIndex && nextCEI->ce != UCOL_PROCESSED_NULLORDER) {
+            found = FALSE;
+        }
+#endif
+            
 
         // Check for the start of the match being within a combining sequence.
         //   This can happen if the pattern itself begins with a combining char, and
@@ -3768,16 +3781,20 @@ U_CAPI UBool U_EXPORT2 usearch_search(UStringSearch  *strsrch,
         //   With exapnsions, the first CE will report the index of the source 
         //   character, and all subsequent (expansions) CEs will report the source index of the
         //    _following_ character.  
-        int32_t secondIx = ceb.get(targetIx+1)->srcIndex;
+        int32_t secondIx = firstCEI->highIndex;
         if (mStart == secondIx) {
             found = FALSE;
         }
     
         //  Advance the match end position to the first acceptable match boundary.
         //    This advances the index over any combining charcters.
-        mLimit = minLimit;
-        if (minLimit<maxLimit) {
-            mLimit = nextBoundaryAfter(strsrch, minLimit);
+        mLimit = maxLimit;
+        if (minLimit < maxLimit) {
+            int32_t nba = nextBoundaryAfter(strsrch, minLimit);
+
+            if (nba > mLimit) {
+                found = FALSE;
+            }
         }
         
     #ifdef USEARCH_DEBUG
@@ -3785,12 +3802,15 @@ U_CAPI UBool U_EXPORT2 usearch_search(UStringSearch  *strsrch,
             printf("minLimit, maxLimit, mLimit = %d, %d, %d\n", minLimit, maxLimit, mLimit);
         }
     #endif
-        
+ 
+#if 0
         // If advancing to the end of a combining sequence in character indexing space
         //   advanced us beyond the end of the match in CE space, reject this match. 
-        if (mLimit>maxLimit) {
+        if (mLimit > maxLimit) {
             found = FALSE;
         }
+#endif
+
         if (found) {
             break;
         }
@@ -3875,7 +3895,7 @@ U_CAPI UBool U_EXPORT2 usearch_searchBackwards(UStringSearch  *strsrch,
         ucol_setOffset(strsrch->textIter, startIdx + 2, status);
 
         for (targetIx = 0; ; targetIx += 1) {
-            if (ceb.getPrevious(targetIx)->srcIndex <= startIdx) {
+            if (ceb.getPrevious(targetIx)->lowIndex <= startIdx) {
                 break;
             }
         }
@@ -3884,7 +3904,7 @@ U_CAPI UBool U_EXPORT2 usearch_searchBackwards(UStringSearch  *strsrch,
     }
     
 
-    CEI       *targetCEI;
+   const CEI  *targetCEI;
     int32_t    patIx;
     UBool      found;
 
@@ -3933,21 +3953,23 @@ U_CAPI UBool U_EXPORT2 usearch_searchBackwards(UStringSearch  *strsrch,
         //     an acceptable character range.
         //
         targetCEI = ceb.getPrevious(targetIx);
-        minLimit = targetCEI->srcIndex;
+        minLimit = targetCEI->lowIndex;
 
-        if (targetIx > 0) {
-            targetCEI = ceb.getPrevious(targetIx - 1);
-            maxLimit = targetCEI->srcIndex;
-        } else {
-            maxLimit = /*minLimit + 1*/ startIdx;
-        }
+      //if (targetIx > 0) {
+      //    targetCEI = ceb.getPrevious(targetIx - 1);
+      //    maxLimit = targetCEI->srcIndex;
+      //} else {
+      //    maxLimit = /*minLimit + 1*/ startIdx;
+      //}
+        maxLimit = targetCEI->highIndex;
 
         targetCEI = ceb.getPrevious(targetIx + strsrch->pattern.CELength - 1);
-        mStart = targetCEI->srcIndex;
+        mStart = targetCEI->lowIndex;
 
         // Look at the CE following the match.  If it is UCOL_NULLORDER the match
         //   extended to the end of input, and the match is good.
 
+#if 0
         // Compare the character indicies of the two CEs following the match.
         //   If they are the same, it means one of two things:
         //     1.  The match extended to the last CE from the target text, which is OK, or
@@ -3966,6 +3988,21 @@ U_CAPI UBool U_EXPORT2 usearch_searchBackwards(UStringSearch  *strsrch,
                 }
             }
         }
+#else
+        // Look at the high and low indices of the CE following the match. If
+        // they are the same it means one of two things:
+        //    1. The match extended to the last CE from the target text, which is OK, or
+        //    2. The last CE that was part of the match is in an expansion that extends
+        //       to the first CE after the match. In this case, we reject the match.
+        if (targetIx >= 1) {
+            const CEI *firstCEAfter = ceb.getPrevious(targetIx - 1);
+
+            if (firstCEAfter->lowIndex == firstCEAfter->highIndex && firstCEAfter->ce != UCOL_PROCESSED_NULLORDER) {
+                found = FALSE;
+            }
+        }
+#endif
+
 
         // Check for the start of the match being within a combining sequence.
         //   This can happen if the pattern itself begins with a combining char, and
@@ -3977,6 +4014,7 @@ U_CAPI UBool U_EXPORT2 usearch_searchBackwards(UStringSearch  *strsrch,
             found = FALSE;
         }
 
+#if 0
         // Check for the start of the match being within an Collation Element Expansion,
         //   meaning that the first char of the match is only partially matched.
         //   With exapnsions, the first CE will report the index of the source 
@@ -3989,6 +4027,15 @@ U_CAPI UBool U_EXPORT2 usearch_searchBackwards(UStringSearch  *strsrch,
                 found = FALSE;
             }
         }
+#else
+        // Look at the high index of the first CE in the match. If it's the same as the
+        // low index, the first CE in the match is in the middle of an expansion.
+        int32_t secondIx = ceb.getPrevious(targetIx + strsrch->pattern.CELength - 1)->highIndex;
+
+        if (mStart == secondIx) {
+            found = FALSE;
+        }
+#endif
     
         //  Advance the match end position to the first acceptable match boundary.
         //    This advances the index over any combining charcters.

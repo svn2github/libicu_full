@@ -46,7 +46,8 @@ typedef struct collIterate collIterator;
 struct RCEI
 {
     uint32_t ce;
-    int32_t  ix;
+    int32_t  low;
+    int32_t  high;
 };
 
 struct RCEBuffer
@@ -59,9 +60,9 @@ struct RCEBuffer
     RCEBuffer();
     ~RCEBuffer();
 
-    UBool empty();
-    void  put(uint32_t ce, int32_t ix);
-    RCEI *get();
+    UBool empty() const;
+    void  put(uint32_t ce, int32_t ixLow, int32_t ixHigh);
+    const RCEI *get();
 };
 
 RCEBuffer::RCEBuffer()
@@ -78,12 +79,12 @@ RCEBuffer::~RCEBuffer()
     }
 }
 
-UBool RCEBuffer::empty()
+UBool RCEBuffer::empty() const
 {
     return bufferIndex <= 0;
 }
 
-void RCEBuffer::put(uint32_t ce, int32_t ix)
+void RCEBuffer::put(uint32_t ce, int32_t ixLow, int32_t ixHigh)
 {
     if (bufferIndex >= bufferSize) {
         RCEI *newBuffer = NEW_ARRAY(RCEI, bufferSize + BUFFER_GROW);
@@ -98,13 +99,14 @@ void RCEBuffer::put(uint32_t ce, int32_t ix)
         bufferSize += BUFFER_GROW;
     }
 
-    buffer[bufferIndex].ce = ce;
-    buffer[bufferIndex].ix = ix;
+    buffer[bufferIndex].ce   = ce;
+    buffer[bufferIndex].low  = ixLow;
+    buffer[bufferIndex].high = ixHigh;
 
     bufferIndex += 1;
 }
 
-RCEI *RCEBuffer::get()
+const RCEI *RCEBuffer::get()
 {
     if (bufferIndex > 0) {
      return &buffer[--bufferIndex];
@@ -116,7 +118,8 @@ RCEI *RCEBuffer::get()
 struct PCEI
 {
     uint64_t ce;
-    int32_t  ix;
+    int32_t  low;
+    int32_t  high;
 };
 
 struct PCEBuffer
@@ -130,9 +133,9 @@ struct PCEBuffer
     ~PCEBuffer();
 
     void  reset();
-    UBool empty();
-    void  put(uint64_t ce, int32_t ix);
-    PCEI *get();
+    UBool empty() const;
+    void  put(uint64_t ce, int32_t ixLow, int32_t ixHigh);
+    const PCEI *get();
 };
 
 PCEBuffer::PCEBuffer()
@@ -154,12 +157,12 @@ void PCEBuffer::reset()
     bufferIndex = 0;
 }
 
-UBool PCEBuffer::empty()
+UBool PCEBuffer::empty() const
 {
     return bufferIndex <= 0;
 }
 
-void PCEBuffer::put(uint64_t ce, int32_t ix)
+void PCEBuffer::put(uint64_t ce, int32_t ixLow, int32_t ixHigh)
 {
     if (bufferIndex >= bufferSize) {
         PCEI *newBuffer = NEW_ARRAY(PCEI, bufferSize + BUFFER_GROW);
@@ -174,13 +177,14 @@ void PCEBuffer::put(uint64_t ce, int32_t ix)
         bufferSize += BUFFER_GROW;
     }
 
-    buffer[bufferIndex].ce = ce;
-    buffer[bufferIndex].ix = ix;
+    buffer[bufferIndex].ce   = ce;
+    buffer[bufferIndex].low  = ixLow;
+    buffer[bufferIndex].high = ixHigh;
 
     bufferIndex += 1;
 }
 
-PCEI *PCEBuffer::get()
+const PCEI *PCEBuffer::get()
 {
     if (bufferIndex > 0) {
      return &buffer[--bufferIndex];
@@ -402,12 +406,13 @@ ucol_next(UCollationElements *elems,
 
 U_CAPI int64_t U_EXPORT2
 ucol_nextProcessed(UCollationElements *elems,
-                   int32_t            *srcIdx,
+                   int32_t            *ixLow,
+                   int32_t            *ixHigh,
                    UErrorCode         *status)
 {
     const UCollator *coll = elems->iteratordata_.coll;
     int64_t result = UCOL_IGNORABLE;
-    uint32_t sidx = 0;
+    uint32_t low = 0, high = 0;
 
     if (U_FAILURE(*status)) {
         return UCOL_PROCESSED_NULLORDER;
@@ -422,8 +427,9 @@ ucol_nextProcessed(UCollationElements *elems,
     elems->reset_ = FALSE;
 
     do {
-        sidx = ucol_getOffset(elems);
+        low = ucol_getOffset(elems);
         uint32_t ce = (uint32_t) ucol_getNextCE(coll, &elems->iteratordata_, status);
+        high = ucol_getOffset(elems);
 
         if (ce == UCOL_NO_MORE_CES) {
              result = UCOL_PROCESSED_NULLORDER;
@@ -433,8 +439,12 @@ ucol_nextProcessed(UCollationElements *elems,
         result = processCE(elems, ce);
     } while (result == UCOL_IGNORABLE);
 
-    if (srcIdx != NULL) {
-        *srcIdx = sidx;
+    if (ixLow != NULL) {
+        *ixLow = low;
+    }
+
+    if (ixHigh != NULL) {
+        *ixHigh = high;
     }
 
     return result;
@@ -477,7 +487,8 @@ ucol_previous(UCollationElements *elems,
 
 U_CAPI int64_t U_EXPORT2
 ucol_previousProcessed(UCollationElements *elems,
-                   int32_t            *srcIdx,
+                   int32_t            *ixLow,
+                   int32_t            *ixHigh,
                    UErrorCode         *status)
 {
     const UCollator *coll = elems->iteratordata_.coll;
@@ -486,7 +497,7 @@ ucol_previousProcessed(UCollationElements *elems,
  // UCollationStrength strength = ucol_getStrength(coll);
  //  UBool toShift   = ucol_getAttribute(coll, UCOL_ALTERNATE_HANDLING, status) ==  UCOL_SHIFTED;
  // uint32_t variableTop = coll->variableTopValue;
-    uint32_t sidx = 0;
+    uint32_t low = 0, high = 0;
 
     if (U_FAILURE(*status)) {
         return UCOL_PROCESSED_NULLORDER;
@@ -519,9 +530,9 @@ ucol_previousProcessed(UCollationElements *elems,
         
         // **** do we need to reset receb, or will it always be empty at this point ****
         do {
-            // ucol_getPrevCE is pre-decrement, so get offset after.
+            high = ucol_getOffset(elems);
             ce   = ucol_getPrevCE(coll, &elems->iteratordata_, status);
-            sidx = ucol_getOffset(elems);
+            low  = ucol_getOffset(elems);
 
             if (ce == UCOL_NO_MORE_CES) {
                 if (! rceb.empty()) {
@@ -531,31 +542,35 @@ ucol_previousProcessed(UCollationElements *elems,
                 goto finish;
             }
 
-            rceb.put(ce, sidx);
+            rceb.put(ce, low, high);
         } while ((ce & UCOL_PRIMARYMASK) == 0);
 
         // process the raw CEs
         while (! rceb.empty()) {
-            RCEI *rcei = rceb.get();
+            const RCEI *rcei = rceb.get();
 
             result = processCE(elems, rcei->ce);
 
             if (result != UCOL_IGNORABLE) {
-                elems->pce->pceBuffer.put(result, rcei->ix);
+                elems->pce->pceBuffer.put(result, rcei->low, rcei->high);
             }
         }
     }
 
 finish:
     if (elems->pce->pceBuffer.empty()) {
-        // **** set srcIdx? to what? ****
+        // **** set ixLow, ixHigh? To what? ****
         return UCOL_PROCESSED_NULLORDER;
     }
 
-    PCEI *pcei = elems->pce->pceBuffer.get();
+    const PCEI *pcei = elems->pce->pceBuffer.get();
 
-    if (srcIdx != NULL) {
-        *srcIdx = pcei->ix;
+    if (ixLow != NULL) {
+        *ixLow = pcei->low;
+    }
+
+    if (ixHigh != NULL) {
+        *ixHigh = pcei->high;
     }
 
     return pcei->ce;

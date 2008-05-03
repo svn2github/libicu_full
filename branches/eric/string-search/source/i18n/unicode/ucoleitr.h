@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-*   Copyright (C) 2001-2007, International Business Machines
+*   Copyright (C) 2001-2008, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *******************************************************************************
 *
@@ -188,6 +188,8 @@ ucol_previous(UCollationElements *elems, UErrorCode *status);
  * A single character may contain more than one collation element.
  *
  * @param elems The UCollationElements containing the text.
+ * @param ixLow a pointer to an int32_t to receive the iterator index before fetching the CE.
+ * @param ixHigh a pointer to an int32_t to receive the iterator index after fetching the CE.
  * @param status A pointer to an UErrorCode to receive any errors.
  * @return The next collation elements ordering, otherwise returns UCOL_PROCESSED_NULLORDER 
  *         if an error has occured or if the end of string has been reached
@@ -195,7 +197,7 @@ ucol_previous(UCollationElements *elems, UErrorCode *status);
  * @draft ICU 4.0
  */
 U_DRAFT int64_t U_EXPORT2
-ucol_nextProcessed(UCollationElements *elems, int32_t *srcIdx, UErrorCode *status);
+ucol_nextProcessed(UCollationElements *elems, int32_t *ixLow, int32_t *ixHigh, UErrorCode *status);
 
 /**
  * Get the processed ordering priority of the previous collation element in the text.
@@ -206,6 +208,8 @@ ucol_nextProcessed(UCollationElements *elems, int32_t *srcIdx, UErrorCode *statu
  * UCOL_EXPAND_CE_BUFFER_SIZE in ucol_imp.h.
  *
  * @param elems The UCollationElements containing the text.
+ * @param ixLow A pointer to an int32_t to receive the iterator index after fetching the CE
+ * @param ixHigh A pointer to an int32_t to receiver the iterator index before fetching the CE
  * @param status A pointer to an UErrorCode to receive any errors. Noteably 
  *               a U_BUFFER_OVERFLOW_ERROR is returned if the internal stack
  *               buffer has been exhausted.
@@ -216,7 +220,7 @@ ucol_nextProcessed(UCollationElements *elems, int32_t *srcIdx, UErrorCode *statu
  * @draft ICU 4.0
  */
 U_DRAFT int64_t U_EXPORT2
-ucol_previousProcessed(UCollationElements *elems, int32_t *srcIdx, UErrorCode *status);
+ucol_previousProcessed(UCollationElements *elems, int32_t *ixLow, int32_t *ixHigh, UErrorCode *status);
 
 /**
  * Get the maximum length of any expansion sequences that end with the 
