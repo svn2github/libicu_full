@@ -212,6 +212,7 @@ DateIntervalInfo::initializeData(const Locale& locale, UErrorCode& status)
                                              gFallbackPatternTag, 
                                              &resStrLen, &status);
     if ( U_FAILURE(status) ) {
+        delete calData;
         return;
     }
 
@@ -224,12 +225,15 @@ DateIntervalInfo::initializeData(const Locale& locale, UErrorCode& status)
         UResourceBundle* oneRes = ures_getByIndex(itvDtPtnResource, index, 
                                                  NULL, &status);
         if ( U_FAILURE(status) ) {
+            delete calData;
             return;
         }
 
         const char* skeleton = ures_getKey(oneRes);
+        ures_close(oneRes);
         if ( skeleton == NULL ) {
             status = U_MISSING_RESOURCE_ERROR;
+            delete calData;
             return;
         }
         if ( uprv_strcmp(skeleton, gFallbackPatternTag) == 0 ) {
@@ -240,12 +244,14 @@ DateIntervalInfo::initializeData(const Locale& locale, UErrorCode& status)
                                                       skeleton, NULL, &status);
 
         if ( U_FAILURE(status) ) {
+            delete calData;
             return;
         }
 
         // return if interval patterns for skeleton not found
         if ( intervalPatterns == NULL ) {
             status = U_MISSING_RESOURCE_ERROR;
+            delete calData;
             return;
         }
 
@@ -258,6 +264,7 @@ DateIntervalInfo::initializeData(const Locale& locale, UErrorCode& status)
             pattern = ures_getNextString(intervalPatterns, &ptLength, &key,
                                          &status);
             if ( U_FAILURE(status) ) {
+                delete calData;
                 return;
             }
 
@@ -279,6 +286,7 @@ DateIntervalInfo::initializeData(const Locale& locale, UErrorCode& status)
                 setIntervalPatternInternally(skeleton, calendarField, pattern,status);
             }
         }
+        ures_close(intervalPatterns);
     }
     delete calData;
 }
@@ -560,7 +568,7 @@ DateIntervalInfo::copyHash(const Hashtable* source,
             for ( i = 0; i < kIPI_MAX_INDEX; ++i ) {
                 copy[i] = value[i];
             }
-            target->put(*((UnicodeString*)key->clone()),copy,status);
+            target->put(UnicodeString(*key), copy, status);
             if ( U_FAILURE(status) ) {
                 return;
             }
