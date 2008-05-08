@@ -472,6 +472,8 @@ DateIntervalFormat::setDateFormat(const DateFormat& newDateFormat,
     }
     if ( newDateFormat.getDynamicClassID() == SimpleDateFormat::getStaticClassID() ) {
         delete fDateFormat;
+        delete fFromCalendar;
+        delete fToCalendar;
         fDateFormat = new SimpleDateFormat((SimpleDateFormat&)newDateFormat);
         if ( fDateFormat && fDateFormat->getCalendar() ) {
             fFromCalendar = fDateFormat->getCalendar()->clone();
@@ -497,6 +499,8 @@ DateIntervalFormat::adoptDateFormat(DateFormat* newDateFormat,
     }
     if ( newDateFormat->getDynamicClassID() == SimpleDateFormat::getStaticClassID() ) {
         delete fDateFormat;
+        delete fFromCalendar;
+        delete fToCalendar;
         fDateFormat = (SimpleDateFormat*)newDateFormat;
         if ( fDateFormat && fDateFormat->getCalendar() ) {
             fFromCalendar = fDateFormat->getCalendar()->clone();
@@ -631,6 +635,7 @@ DateIntervalFormat::initializePattern(UErrorCode& status) {
     const Locale& locale = fDateFormat->getSmpFmtLocale();
     DateTimePatternGenerator* dtpng = DateTimePatternGenerator::createInstance(locale, status);
     if ( U_FAILURE(status) ) {
+        delete dtpng;
         return;    
     }
     if ( fSkeleton.isEmpty() ) {
@@ -648,6 +653,7 @@ DateIntervalFormat::initializePattern(UErrorCode& status) {
         // or by createInstance(UnicodeString skeleton, .... )
         fSkeleton = dtpng->getSkeleton(fullPattern, status);
         if ( U_FAILURE(status) ) {
+            delete dtpng;
             return;    
         }
     }
@@ -703,6 +709,7 @@ DateIntervalFormat::initializePattern(UErrorCode& status) {
                 timeSkeleton.insert(0, gDateFormatSkeleton[DateFormat::kShort]);
                 UnicodeString pattern =dtpng->getBestPattern(timeSkeleton, status);
                 if ( U_FAILURE(status) ) {
+                    delete dtpng;
                     return;    
                 }
                 // for fall back interval patterns,
@@ -718,6 +725,7 @@ DateIntervalFormat::initializePattern(UErrorCode& status) {
         } else {
             // TODO: fall back
         }
+        delete dtpng;
         return;
     } // end of skeleton not found
     // interval patterns for skeleton are found in resource 
@@ -728,6 +736,7 @@ DateIntervalFormat::initializePattern(UErrorCode& status) {
         timeSkeleton.insert(0, gDateFormatSkeleton[DateFormat::kShort]);
         UnicodeString pattern =dtpng->getBestPattern(timeSkeleton, status);
         if ( U_FAILURE(status) ) {
+            delete dtpng;
             return;    
         }
         // for fall back interval patterns,
@@ -778,6 +787,7 @@ DateIntervalFormat::initializePattern(UErrorCode& status) {
 
         if ( calData == NULL ) {
             status = U_MEMORY_ALLOCATION_ERROR;
+            delete dtpng;
             return;
         }
        
@@ -789,6 +799,7 @@ DateIntervalFormat::initializePattern(UErrorCode& status) {
                                             (int32_t)DateFormat::kDateTime,
                                             &dateTimeFormatLength, &status);
         if ( U_FAILURE(status) ) {
+            delete dtpng;
             return;
         }
 
