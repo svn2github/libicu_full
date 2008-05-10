@@ -1586,10 +1586,13 @@ static UBool isInCombiningSequence(const UnicodeString &string, int32_t index) {
         
 static UBool simpleSearch(UCollator *coll, const UnicodeString &target, int32_t offset, const UnicodeString &pattern, int32_t &matchStart, int32_t &matchEnd)
 {
-    OrderList targetOrders(coll, target, offset);
-    OrderList patternOrders(coll, pattern);
-    int32_t   targetSize  = targetOrders.size() - 1;
-    int32_t   patternSize = patternOrders.size() - 1;
+    UErrorCode      status = U_ZERO_ERROR;
+    OrderList       targetOrders(coll, target, offset);
+    OrderList       patternOrders(coll, pattern);
+    int32_t         targetSize  = targetOrders.size() - 1;
+    int32_t         patternSize = patternOrders.size() - 1;
+    UBreakIterator *charBreakIterator = ubrk_open(UBRK_CHARACTER, ucol_getLocale(coll, ULOC_VALID_LOCALE, &status), 
+        									      target.getBuffer(), target.length(), &status);
 
     matchStart = matchEnd = -1;
 
@@ -1608,7 +1611,8 @@ static UBool simpleSearch(UCollator *coll, const UnicodeString &target, int32_t 
                 continue;
             }
 
-            if (isInCombiningSequence(target, start)) {
+            // Make sure match starts on a grapheme boundary
+            if (! ubrk_isBoundary(charBreakIterator, start)) {
                 continue;
             }
 
@@ -1622,19 +1626,31 @@ static UBool simpleSearch(UCollator *coll, const UnicodeString &target, int32_t 
 
             int32_t mend = maxLimit;
 
+            // Find the first grapheme break after the character index
+            // of the last CE in the match. If it's after character index
+            // that's after the last CE in the match, use that index
+            // as the end of the match.
             if (minLimit < maxLimit) {
-                if (nextBoundaryAfter(target, minLimit) > maxLimit) {
-                    continue;
+                int32_t nba = ubrk_following(charBreakIterator, minLimit);
+
+                if (nba >= targetOrders.getHighOffset(i + patternSize - 1)) {
+                    mend = nba;
                 }
+            }
+
+            if (mend > maxLimit) {
+                continue;
             }
 
             matchStart = start;
             matchEnd   = mend;
 
+            ubrk_close(charBreakIterator);
             return TRUE;
         }
     }
 
+    ubrk_close(charBreakIterator);
     return FALSE;
 }
 #endif

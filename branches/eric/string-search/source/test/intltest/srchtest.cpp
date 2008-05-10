@@ -395,6 +395,7 @@ UBool StringSearchTest::assertCanonicalEqual(const SearchData *search)
     BreakIterator *breaker  = getBreakIterator(search->breaker);
     StringSearch  *strsrch; 
     UChar          temp[128];
+    UBool          result = TRUE;
     
 #if UCONFIG_NO_BREAK_ITERATION
     if(search->breaker) {
@@ -415,22 +416,27 @@ UBool StringSearchTest::assertCanonicalEqual(const SearchData *search)
     }
 #endif
     collator->setStrength(getECollationStrength(search->strength));
+    collator->setAttribute(UCOL_NORMALIZATION_MODE, UCOL_ON, status);
     strsrch = new StringSearch(pattern, text, (RuleBasedCollator *)collator, 
                                breaker, status);
     strsrch->setAttribute(USEARCH_CANONICAL_MATCH, USEARCH_ON, status);
     if (U_FAILURE(status)) {
         errln("Error opening string search %s", u_errorName(status));
-        return FALSE;
+        result = FALSE;
+        goto bail;
     }   
     
     if (!assertEqualWithStringSearch(strsrch, search)) {
-        collator->setStrength(getECollationStrength(UCOL_TERTIARY));
-        delete strsrch;
-        return FALSE;
+        result = FALSE;
+        goto bail;
     }
+
+bail:
     collator->setStrength(getECollationStrength(UCOL_TERTIARY));
+    collator->setAttribute(UCOL_NORMALIZATION_MODE, UCOL_OFF, status);
     delete strsrch;
-    return TRUE;
+
+    return result;
 }
    
 UBool StringSearchTest::assertEqualWithAttribute(const SearchData *search, 
