@@ -2779,10 +2779,16 @@ const char* const basic_maximize_data[][2] = {
     "zu_Zzzz_Zz",
     "zu_Latn_ZA",
   }, {
-    "zu_Zz",
+    "ZU_Zz",
+    "zu_Latn_ZA"
+  }, {
+    "zu_LATN",
     "zu_Latn_ZA"
   }, {
     "en_Zz",
+    "en_Latn_US"
+  }, {
+    "en_us",
     "en_Latn_US"
   }, {
     "en_Kore",
@@ -2868,6 +2874,9 @@ const char* const basic_minimize_data[][2] = {
     "en"
   }, {
     "en_Latn_US_POSIX_1901",
+    "en__POSIX_1901"
+  }, {
+    "EN_Latn_US_POSIX_1901",
     "en__POSIX_1901"
   }, {
     "en_Zzzz_US_POSIX_1901",

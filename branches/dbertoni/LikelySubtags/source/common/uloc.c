@@ -5436,8 +5436,8 @@ error:
     return -1;
 }
 
-U_DRAFT int32_t U_EXPORT2
-uloc_addLikelySubtags(const char*    localeID,
+static int32_t
+_uloc_addLikelySubtags(const char*    localeID,
          char* maximizedLocaleID,
          int32_t maximizedLocaleIDCapacity,
          UErrorCode* err)
@@ -5530,8 +5530,8 @@ error:
     return -1;
 }
 
-U_DRAFT int32_t U_EXPORT2
-uloc_minimizeSubtags(const char*    localeID,
+static int32_t
+_uloc_minimizeSubtags(const char*    localeID,
          char* minimizedLocaleID,
          int32_t minimizedLocaleIDCapacity,
          UErrorCode* err)
@@ -5779,6 +5779,59 @@ error:
     return -1;
 
 
+}
+
+
+U_DRAFT int32_t U_EXPORT2
+uloc_addLikelySubtags(const char*    localeID,
+         char* maximizedLocaleID,
+         int32_t maximizedLocaleIDCapacity,
+         UErrorCode* err)
+{
+    char localeBuffer[ULOC_FULLNAME_CAPACITY];
+
+    uloc_canonicalize(
+        localeID,
+        localeBuffer,
+        sizeof(localeBuffer),
+        err);
+
+    if (U_FAILURE(*err)) {
+        return -1;
+    }
+    else {
+        return _uloc_addLikelySubtags(
+                    localeBuffer,
+                    maximizedLocaleID,
+                    maximizedLocaleIDCapacity,
+                    err);
+    }    
+}
+
+U_DRAFT int32_t U_EXPORT2
+uloc_minimizeSubtags(const char*    localeID,
+         char* minimizedLocaleID,
+         int32_t minimizedLocaleIDCapacity,
+         UErrorCode* err)
+{
+    char localeBuffer[ULOC_FULLNAME_CAPACITY];
+
+    uloc_canonicalize(
+        localeID,
+        localeBuffer,
+        sizeof(localeBuffer),
+        err);
+
+    if (U_FAILURE(*err)) {
+        return -1;
+    }
+    else {
+        return _uloc_minimizeSubtags(
+                    localeBuffer,
+                    minimizedLocaleID,
+                    minimizedLocaleIDCapacity,
+                    err);
+    }    
 }
 
 /*eof*/
