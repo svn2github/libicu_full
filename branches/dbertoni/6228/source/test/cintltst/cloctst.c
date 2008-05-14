@@ -2591,11 +2591,14 @@ static void  TestOrientation()
 {
     static const OrientationStruct toTest [] = {
         { "ar", ULOC_LAYOUT_RTL, ULOC_LAYOUT_TTB },
+        { "aR", ULOC_LAYOUT_RTL, ULOC_LAYOUT_TTB },
         { "ar_Arab", ULOC_LAYOUT_RTL, ULOC_LAYOUT_TTB },
         { "fa", ULOC_LAYOUT_RTL, ULOC_LAYOUT_TTB },
+        { "Fa", ULOC_LAYOUT_RTL, ULOC_LAYOUT_TTB },
         { "he", ULOC_LAYOUT_RTL, ULOC_LAYOUT_TTB },
         { "ps", ULOC_LAYOUT_RTL, ULOC_LAYOUT_TTB },
         { "ur", ULOC_LAYOUT_RTL, ULOC_LAYOUT_TTB },
+        { "UR", ULOC_LAYOUT_RTL, ULOC_LAYOUT_TTB },
         { "en", ULOC_LAYOUT_LTR, ULOC_LAYOUT_TTB }
     };
 
