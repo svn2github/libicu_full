@@ -154,7 +154,7 @@ void StringSearchTest::runIndexedTest(int32_t index, UBool exec,
         CASE(33, TestUClassID)
         CASE(34, TestSubclass)
         CASE(35, TestCoverage)
-        CASE(36, TestDiactricMatch)
+        CASE(36, TestDiacriticMatch)
         default: name = ""; break;
     }
 }
@@ -1552,7 +1552,7 @@ void StringSearchTest::TestIgnorable()
     delete collator;
 }
 
-void StringSearchTest::TestDiactricMatch()
+void StringSearchTest::TestDiacriticMatch()
 {
 	UChar temp[128];
     UErrorCode status = U_ZERO_ERROR;
@@ -1565,7 +1565,7 @@ void StringSearchTest::TestDiactricMatch()
     
     const SearchData *search; 
     
-    search = &(DIACTRICMATCH[count]);
+    search = &(DIACRITICMATCH[count]);
     while (search->text != NULL) {
    		coll = getCollator(search->collator);
     	coll->setStrength(getECollationStrength(search->strength));
@@ -1583,7 +1583,7 @@ void StringSearchTest::TestDiactricMatch()
         if (!assertEqualWithStringSearch(strsrch, search)) {
             errln("Error at test number %d", count);
         }
-        search = &(DIACTRICMATCH[++count]);
+        search = &(DIACRITICMATCH[++count]);
         delete strsrch;
     }
     
@@ -1988,6 +1988,10 @@ void StringSearchTest::TestGetSetOffsetCanonical()
     UnicodeString  pattern("pattern");
     StringSearch  *strsrch = new StringSearch(pattern, text, m_en_us_, NULL, 
                                               status);
+    Collator *collator = strsrch->getCollator();
+
+    collator->setAttribute(UCOL_NORMALIZATION_MODE, UCOL_ON, status);
+
     strsrch->setAttribute(USEARCH_CANONICAL_MATCH, USEARCH_ON, status);
     /* testing out of bounds error */
     strsrch->setOffset(-1, status);
@@ -2031,7 +2035,7 @@ void StringSearchTest::TestGetSetOffsetCanonical()
                 errln("Error match found at %d %d", 
                       strsrch->getMatchedStart(), 
                       strsrch->getMatchedLength());
-                return;
+                goto bail;
             }
             matchindex = search.offset[count + 1] == -1 ? -1 : 
                          search.offset[count + 2];
@@ -2039,7 +2043,7 @@ void StringSearchTest::TestGetSetOffsetCanonical()
                 strsrch->setOffset(search.offset[count + 1] + 1, status);
                 if (strsrch->getOffset() != search.offset[count + 1] + 1) {
                     errln("Error setting offset");
-                    return;
+                    goto bail;
                 }
             }
             
@@ -2053,9 +2057,12 @@ void StringSearchTest::TestGetSetOffsetCanonical()
             errln("Pattern: %s", str);
             errln("Error match found at %d %d", strsrch->getMatchedStart(), 
                    strsrch->getMatchedLength());
-            return;
+            goto bail;
         }
     }
+
+bail:
+    collator->setAttribute(UCOL_NORMALIZATION_MODE, UCOL_OFF, status);
     delete strsrch;
 }
     

@@ -21,6 +21,9 @@
 #include "ucln_in.h"
 #include "uassert.h"
 
+// don't use Boyer-Moore
+#define BOYER_MOORE 0
+
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 
 // internal definition ---------------------------------------------------
@@ -397,6 +400,8 @@ inline uint16_t initializePatternPCETable(UStringSearch *strsrch,
     uint16_t  result = 0;
     int64_t   pce;
 
+    uprv_init_pce(coleiter);
+
     // ** Should processed CEs be signed or unsigned?
     // ** (the rest of the code in this file seems to play fast-and-loose with 
     // **  whether a CE is signed or unsigned. For example, look at routine above this one.)
@@ -564,6 +569,7 @@ inline void initialize(UStringSearch *strsrch, UErrorCode *status)
     strsrch->pattern.defaultShiftSize = 0;
 }
 
+#if BOYER_MOORE
 /**
 * Check to make sure that the match length is at the end of the character by 
 * using the breakiterator.
@@ -759,6 +765,7 @@ inline int32_t shiftForward(UStringSearch *strsrch,
     // * next character is a accent: shift to the next base character
     return textoffset;
 }
+#endif // #if BOYER_MOORE
 
 /**
 * sets match not found 
@@ -778,6 +785,7 @@ inline void setMatchNotFound(UStringSearch *strsrch)
     }
 }
 
+#if BOYER_MOORE
 /**
 * Gets the offset to the next safe point in text.
 * ie. not the middle of a contraction, swappable characters or supplementary
@@ -1049,6 +1057,7 @@ UBool hasAccentsAfterMatch(const UStringSearch *strsrch, int32_t start,
     }
     return FALSE;
 }
+#endif // #if BOYER_MOORE
 
 /**
 * Checks if the offset runs out of the text string
@@ -1062,6 +1071,7 @@ inline UBool isOutOfBounds(int32_t textlength, int32_t offset)
     return offset < 0 || offset > textlength;
 }
 
+#if BOYER_MOORE
 /**
 * Checks for identical match
 * @param strsrch string search data
@@ -2617,6 +2627,7 @@ inline UBool checkPreviousCanonicalMatch(UStringSearch *strsrch,
     strsrch->search->matchedLength = end - *textoffset;
     return TRUE;
 }
+#endif // #if BOYER_MOORE
 
 // constructors and destructor -------------------------------------------
 
@@ -3039,8 +3050,13 @@ U_CAPI void U_EXPORT2 usearch_setCollator(      UStringSearch *strsrch,
             }
         }
 
+        // **** are these calls needed?
+        // **** we call uprv_init_pce in initializePatternPCETable
+        // **** and the CEBuffer constructor...
+#if 0
         uprv_init_pce(strsrch->textIter);
         uprv_init_pce(strsrch->utilIter);
+#endif
     }
 }
 
@@ -3178,7 +3194,7 @@ U_CAPI int32_t U_EXPORT2 usearch_next(UStringSearch *strsrch,
         search->reset             = FALSE;
         int32_t      textlength   = search->textLength;
         if (search->isForwardSearching) {
-#if 0
+#if BOYER_MOORE
             if (offset == textlength
                 || (!search->isOverlap && 
                     (offset + strsrch->pattern.defaultShiftSize > textlength ||
@@ -3192,7 +3208,7 @@ U_CAPI int32_t U_EXPORT2 usearch_next(UStringSearch *strsrch,
             if (offset == textlength ||
                 (! search->isOverlap &&
                 (search->matchedIndex != USEARCH_DONE &&
-                offset + search->matchedLength >= textlength))) {
+                offset + search->matchedLength > textlength))) {
                     // not enough characters to match
                     setMatchNotFound(strsrch);
                     return USEARCH_DONE;
@@ -3261,6 +3277,14 @@ U_CAPI int32_t U_EXPORT2 usearch_next(UStringSearch *strsrch,
                 return USEARCH_DONE;
             }
 
+#if !BOYER_MOORE
+            if (search->matchedIndex == USEARCH_DONE) {
+                ucol_setOffset(strsrch->textIter, search->textLength, status);
+            } else {
+                ucol_setOffset(strsrch->textIter, search->matchedIndex, status);
+            }
+#endif
+
             return search->matchedIndex;
         }
     }
@@ -3296,7 +3320,7 @@ U_CAPI int32_t U_EXPORT2 usearch_previous(UStringSearch *strsrch,
             }
         }
         else {
-#if 0
+#if BOYER_MOORE
             if (offset == 0 || matchedindex == 0 ||
                 (!search->isOverlap && 
                     (offset < strsrch->pattern.defaultShiftSize ||
@@ -3332,6 +3356,14 @@ U_CAPI int32_t U_EXPORT2 usearch_previous(UStringSearch *strsrch,
                 }
             }
             else {
+#if !BOYER_MOORE
+                if (search->matchedIndex != USEARCH_DONE) {
+                    if (search->isOverlap) {
+                        ucol_setOffset(strsrch->textIter, search->matchedIndex + search->matchedLength - 2, status);
+                    }
+                }
+#endif
+
                 if (strsrch->search->isCanonicalMatch) {
                     // can't use exact here since extra accents are allowed.
                     usearch_handlePreviousCanonical(strsrch, status);
@@ -3443,6 +3475,9 @@ CEBuffer::CEBuffer(UStringSearch *ss, UErrorCode *status) {
     ceIter    = ss->textIter;
     firstIx = 0;
     limitIx = 0;
+
+    uprv_init_pce(ceIter);
+
     if (bufSize>DEFAULT_CEBUFFER_SIZE) {
         buf = (CEI *)uprv_malloc(bufSize * sizeof(CEI));
         if (buf == NULL) {
@@ -3469,6 +3504,7 @@ CEBuffer::~CEBuffer() {
 //
 const CEI *CEBuffer::get(int32_t index) {
     int i = index % bufSize;
+
     if (index>=firstIx && index<limitIx) {
         // The request was for an entry already in our buffer.
         //  Just return it.
@@ -3480,42 +3516,22 @@ const CEI *CEBuffer::get(int32_t index) {
     //   that is allowed.
     if (index != limitIx) {
         U_ASSERT(FALSE);
+
         return NULL;
     }
 
     // Manage the circular CE buffer indexing
     limitIx++;
+
     if (limitIx - firstIx >= bufSize) {
         // The buffer is full, knock out the lowest-indexed entry.
         firstIx++;
     }
 
-#if 0
-    // Fetch the new CE from the collation element iterator
-    int ce;
-    int srcIx;
-    UErrorCode status = U_ZERO_ERROR;
-    do {
-        srcIx = ucol_getOffset(ceIter);
-        ce = ucol_next(ceIter, &status);
-        if (U_FAILURE(status)) {
-            ce = UCOL_NULLORDER;
-        }
-        if (ce == UCOL_NULLORDER) {
-            // End of input reached.
-            break;
-        }
-        ce = getCE(strSearch, ce);
-    } while (ce == UCOL_IGNORABLE);
-
-    // Stuff the new CE into the buffer.
-    buf[i].ce       = ce;
-    buf[i].srcIndex = srcIx;
-#else
     UErrorCode status = U_ZERO_ERROR;
 
     buf[i].ce = ucol_nextProcessed(ceIter, &buf[i].lowIndex, &buf[i].highIndex, &status);
-#endif
+
     return &buf[i];
 }
 
@@ -3527,6 +3543,7 @@ const CEI *CEBuffer::get(int32_t index) {
 //
 const CEI *CEBuffer::getPrevious(int32_t index) {
     int i = index % bufSize;
+
     if (index>=firstIx && index<limitIx) {
         // The request was for an entry already in our buffer.
         //  Just return it.
@@ -3538,11 +3555,13 @@ const CEI *CEBuffer::getPrevious(int32_t index) {
     //   that is allowed.
     if (index != limitIx) {
         U_ASSERT(FALSE);
+
         return NULL;
     }
 
     // Manage the circular CE buffer indexing
     limitIx++;
+
     if (limitIx - firstIx >= bufSize) {
         // The buffer is full, knock out the lowest-indexed entry.
         firstIx++;
@@ -3551,6 +3570,7 @@ const CEI *CEBuffer::getPrevious(int32_t index) {
     UErrorCode status = U_ZERO_ERROR;
 
     buf[i].ce = ucol_previousProcessed(ceIter, &buf[i].lowIndex, &buf[i].highIndex, &status);
+
     return &buf[i];
 }
 
@@ -3787,24 +3807,6 @@ U_CAPI UBool U_EXPORT2 usearch_search(UStringSearch  *strsrch,
         // Look at the CE following the match.  If it is UCOL_NULLORDER the match
         //   extended to the end of input, and the match is good.
 
-#if 0
-        // Compare the character indicies of the two CEs following the match.
-        //   If they are the same, it means one of two things:
-        //     1.  The match extended to the last CE from the target text, which is OK, or
-        //     2.  The last CE that was part of the match was the first part of an expansion.
-        //         (CE to character index mapping in exansions is funny;
-        //          all but the first get the index of the following char.)
-        //          In this case, reject this match, and continue the search.
-        const CEI *secondCEAfter = ceb.get(targetIx+strsrch->pattern.CELength+1);
-        if (maxLimit == secondCEAfter->srcIndex) {
-            targetCEI = ceb.get(targetIx+strsrch->pattern.CELength);
-            maxLimit = targetCEI->srcIndex;
-            if (targetCEI->ce != UCOL_PROCESSED_NULLORDER) {
-                // The match stopped in the middle of an expansion
-                found = FALSE;
-            }
-        }
-#else
         // Look at the high and low indices of the CE following the match. If
         // they are the same it means one of two things:
         //    1. The match extended to the last CE from the target text, which is OK, or
@@ -3813,7 +3815,6 @@ U_CAPI UBool U_EXPORT2 usearch_search(UStringSearch  *strsrch,
         if (nextCEI->lowIndex == nextCEI->highIndex && nextCEI->ce != UCOL_PROCESSED_NULLORDER) {
             found = FALSE;
         }
-#endif
             
 
         // Check for the start of the match being within a combining sequence.
@@ -3936,18 +3937,23 @@ U_CAPI UBool U_EXPORT2 usearch_searchBackwards(UStringSearch  *strsrch,
     CEBuffer ceb(strsrch, status);
     int32_t    targetIx = 0;   
 
-    // **** setOffset to startIdx + 2 and start picking  ****
-    // **** up CEs until the offset is equal to startIdx ****
-    // **** that way, the boundary checks will work.     ****
-    // **** We really want to get two CEs. The only way  ****
-    // **** to guarantee that might be to count the CEs  ****
-    // **** and keep adding more to startIdx until we    ****
-    // **** get all the CEs we need.                     ****
-    if (FALSE && startIdx < strsrch->search->textLength) {
-        ucol_setOffset(strsrch->textIter, startIdx + 2, status);
+    /*
+     * Pre-load the buffer with the CE's for the grapheme
+     * after our starting position so that we're sure that
+     * we can look at the CE following the match when we
+     * check the match boundaries.
+     *
+     * This will also pre-fetch the first CE that we'll
+     * consider for the match.
+     */
+    if (startIdx < strsrch->search->textLength) {
+        UBreakIterator *bi = strsrch->search->internalBreakIter;
+        int32_t next = ubrk_following(bi, startIdx);
+
+        ucol_setOffset(strsrch->textIter, next, status);
 
         for (targetIx = 0; ; targetIx += 1) {
-            if (ceb.getPrevious(targetIx)->lowIndex <= startIdx) {
+            if (ceb.getPrevious(targetIx)->lowIndex < startIdx) {
                 break;
             }
         }
@@ -4015,26 +4021,6 @@ U_CAPI UBool U_EXPORT2 usearch_searchBackwards(UStringSearch  *strsrch,
         // Look at the CE following the match.  If it is UCOL_NULLORDER the match
         //   extended to the end of input, and the match is good.
 
-#if 0
-        // Compare the character indicies of the two CEs following the match.
-        //   If they are the same, it means one of two things:
-        //     1.  The match extended to the last CE from the target text, which is OK, or
-        //     2.  The last CE that was part of the match was the first part of an expansion.
-        //         (CE to character index mapping in exansions is funny;
-        //          all but the first get the index of the following char.)
-        //          In this case, reject this match, and continue the search.
-        if (targetIx >= 2) {
-            if (maxLimit == ceb.getPrevious(targetIx - 2)->srcIndex) {
-                targetCEI = ceb.getPrevious(targetIx - 1);
-                maxLimit = targetCEI->srcIndex;
-
-                if (targetCEI->ce != UCOL_PROCESSED_NULLORDER) {
-                    // The match stopped in the middle of an expansion
-                    found = FALSE;
-                }
-            }
-        }
-#else
         // Look at the high and low indices of the CE following the match. If
         // they are the same it means one of two things:
         //    1. The match extended to the last CE from the target text, which is OK, or
@@ -4045,7 +4031,6 @@ U_CAPI UBool U_EXPORT2 usearch_searchBackwards(UStringSearch  *strsrch,
                 found = FALSE;
             }
         }
-#endif
 
 
         // Check for the start of the match being within a combining sequence.
@@ -4058,26 +4043,11 @@ U_CAPI UBool U_EXPORT2 usearch_searchBackwards(UStringSearch  *strsrch,
             found = FALSE;
         }
 
-#if 0
-        // Check for the start of the match being within an Collation Element Expansion,
-        //   meaning that the first char of the match is only partially matched.
-        //   With exapnsions, the first CE will report the index of the source 
-        //   character, and all subsequent (expansions) CEs will report the source index of the
-        //    _following_ character. 
-        if (strsrch->pattern.CELength > 1) {
-            targetCEI = ceb.getPrevious(targetIx + strsrch->pattern.CELength - 2);
-
-            if (targetCEI->ce != UCOL_PROCESSED_NULLORDER && mStart == targetCEI->srcIndex) {
-                found = FALSE;
-            }
-        }
-#else
         // Look at the high index of the first CE in the match. If it's the same as the
         // low index, the first CE in the match is in the middle of an expansion.
         if (mStart == firstCEI->highIndex) {
             found = FALSE;
         }
-#endif
     
         //  Advance the match end position to the first acceptable match boundary.
         //    This advances the index over any combining charcters.
@@ -4150,7 +4120,7 @@ UBool usearch_handleNextExact(UStringSearch *strsrch, UErrorCode *status)
         return FALSE;
     }
 
-#if 0
+#if BOYER_MOORE
     UCollationElements *coleiter        = strsrch->textIter;
     int32_t             textlength      = strsrch->search->textLength;
     int32_t            *patternce       = strsrch->pattern.CE;
@@ -4262,7 +4232,7 @@ UBool usearch_handleNextCanonical(UStringSearch *strsrch, UErrorCode *status)
         return FALSE;
     }
 
-#if 0
+#if BOYER_MOORE
     UCollationElements *coleiter        = strsrch->textIter;
     int32_t             textlength      = strsrch->search->textLength;
     int32_t            *patternce       = strsrch->pattern.CE;
@@ -4375,7 +4345,7 @@ UBool usearch_handlePreviousExact(UStringSearch *strsrch, UErrorCode *status)
         return FALSE;
     }
 
-#if 0
+#if BOYER_MOORE
     UCollationElements *coleiter        = strsrch->textIter;
     int32_t            *patternce       = strsrch->pattern.CE;
     int32_t             patterncelength = strsrch->pattern.CELength;
@@ -4491,7 +4461,7 @@ UBool usearch_handlePreviousCanonical(UStringSearch *strsrch,
         return FALSE;
     }
 
-#if 0
+#if BOYER_MOORE
     UCollationElements *coleiter        = strsrch->textIter;
     int32_t            *patternce       = strsrch->pattern.CE;
     int32_t             patterncelength = strsrch->pattern.CELength;
