@@ -3103,6 +3103,9 @@ compareStringPairStructs(const void *left, const void *right)
 }
 
 /*
+ * TODO(dbertoni)  This will be moved into the ICU data when the CLDR
+ * tool has been updated to generate it.
+ *
  * This array maps a set of tags to its likely maximal set of tags.
  */
 const StringPair likely_subtags[] = {
@@ -4759,9 +4762,9 @@ appendTag(
 /**
  * These are the canonical strings for unknown languages, scripts and regions.
  **/
-static const char* unknownLanguage = "und";
-static const char* unknownScript = "Zzzz";
-static const char* unknownRegion = "ZZ";
+static const char* const unknownLanguage = "und";
+static const char* const unknownScript = "Zzzz";
+static const char* const unknownRegion = "ZZ";
 
 /**
  * Create a tag string from the supplied parameters.  The lang, script and region
