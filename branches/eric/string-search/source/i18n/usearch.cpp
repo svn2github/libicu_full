@@ -3581,12 +3581,11 @@ const CEI *CEBuffer::getPrevious(int32_t index) {
 #include <stdlib.h>
 #endif
 
-//
-//  Find the next acceptable boundary following the specified starting index
-//     in the target text being searched.
-//      TODO:  refine what is an acceptable boundary.  For the moment,
-//             choose the next position not within a combining sequence.
-//
+/*
+ * Find the next break boundary after startIndex. If the UStringSearch object
+ * has an external break iterator, use that. Otherwise use the internal character
+ * break iterator.
+ */
 static int32_t nextBoundaryAfter(UStringSearch *strsrch, int32_t startIndex) {
 #if 0
     const UChar *text = strsrch->search->text;
@@ -3626,9 +3625,13 @@ static int32_t nextBoundaryAfter(UStringSearch *strsrch, int32_t startIndex) {
     }
     return indexOfLastCharChecked;
 #elif !UCONFIG_NO_BREAK_ITERATION
-    UBreakIterator *breakiterator = strsrch->search->internalBreakIter;
+    UBreakIterator *breakiterator = strsrch->search->breakIter;
 
-    if (breakiterator /*&& !ubrk_isBoundary(breakiterator, startIndex)*/) {
+    if (breakiterator == NULL) {
+        breakiterator = strsrch->search->internalBreakIter;
+    }
+
+    if (breakiterator != NULL) {
     	return ubrk_following(breakiterator, startIndex);
     }
 
@@ -3639,9 +3642,13 @@ static int32_t nextBoundaryAfter(UStringSearch *strsrch, int32_t startIndex) {
 #endif
 
 }
-        
-    
-static UBool isInCombiningSequence(UStringSearch *strsrch, int32_t index) {
+
+/*
+ * Returns TRUE if index is on a break boundary. If the UStringSearch
+ * has an external break iterator, test using that, otherwise test
+ * using the internal character break iterator.
+ */
+static UBool isBreakBoundary(UStringSearch *strsrch, int32_t index) {
 #if 0
     const UChar *text = strsrch->search->text;
     int32_t textLen   = strsrch->search->textLength;
@@ -3669,25 +3676,26 @@ static UBool isInCombiningSequence(UStringSearch *strsrch, int32_t index) {
     UBool combining =  !(gcProperty==U_GCB_CONTROL || gcProperty==U_GCB_LF || gcProperty==U_GCB_CR);  
     return combining;
 #elif !UCONFIG_NO_BREAK_ITERATION
-    UBreakIterator *breakiterator = strsrch->search->internalBreakIter;
+    UBreakIterator *breakiterator = strsrch->search->breakIter;
 
-    if (breakiterator && ! ubrk_isBoundary(breakiterator, index)) {
-        return TRUE;
+    if (breakiterator == NULL) {
+        breakiterator = strsrch->search->internalBreakIter;
     }
 
-    return FALSE;
+    return (breakiterator != NULL && ! ubrk_isBoundary(breakiterator, index));
 #else
     // **** or use the original code? ****
     return FALSE;
 #endif
 }      
 
+#if 0
 static UBool onBreakBoundaries(const UStringSearch *strsrch, int32_t start, int32_t end)
 {
 #if !UCONFIG_NO_BREAK_ITERATION
     UBreakIterator *breakiterator = strsrch->search->breakIter;
 
-    if (breakiterator) {
+    if (breakiterator != NULL) {
         int32_t startindex = ubrk_first(breakiterator);
         int32_t endindex   = ubrk_last(breakiterator);
         
@@ -3704,6 +3712,7 @@ static UBool onBreakBoundaries(const UStringSearch *strsrch, int32_t start, int3
 
     return TRUE;
 }
+#endif
 
     
 U_CAPI UBool U_EXPORT2 usearch_search(UStringSearch  *strsrch,
@@ -3823,7 +3832,7 @@ U_CAPI UBool U_EXPORT2 usearch_search(UStringSearch  *strsrch,
         //    to something else.
         //   This type of match should be rejected for not completely consuming a
         //   combining sequence.
-        if (isInCombiningSequence(strsrch, mStart)) {
+        if (isBreakBoundary(strsrch, mStart)) {
             found = FALSE;
         }
 
@@ -3860,7 +3869,7 @@ U_CAPI UBool U_EXPORT2 usearch_search(UStringSearch  *strsrch,
             found = FALSE;
         }
 
-        if (! onBreakBoundaries(strsrch, mStart, mLimit)) {
+        if (isBreakBoundary(strsrch, mLimit)) {
             found = FALSE;
         }
 
@@ -3890,9 +3899,11 @@ U_CAPI UBool U_EXPORT2 usearch_search(UStringSearch  *strsrch,
     if (matchStart != NULL) {
         *matchStart= mStart;
     }
+
     if (matchLimit != NULL) {
         *matchLimit = mLimit;
     }
+
     return found;
 }
 
@@ -4039,7 +4050,7 @@ U_CAPI UBool U_EXPORT2 usearch_searchBackwards(UStringSearch  *strsrch,
         //    to something else.
         //   This type of match should be rejected for not completely consuming a
         //   combining sequence.
-        if (isInCombiningSequence(strsrch, mStart)) {
+        if (isBreakBoundary(strsrch, mStart)) {
             found = FALSE;
         }
 
@@ -4072,7 +4083,8 @@ U_CAPI UBool U_EXPORT2 usearch_searchBackwards(UStringSearch  *strsrch,
             found = FALSE;
         }
 
-        if (! onBreakBoundaries(strsrch, mStart, mLimit)) {
+        // Make sure the end of the match is on a break boundary
+        if (isBreakBoundary(strsrch, mLimit)) {
             found = FALSE;
         }
 
@@ -4102,9 +4114,11 @@ U_CAPI UBool U_EXPORT2 usearch_searchBackwards(UStringSearch  *strsrch,
     if (matchStart != NULL) {
         *matchStart= mStart;
     }
+
     if (matchLimit != NULL) {
         *matchLimit = mLimit;
     }
+
     return found;
 }
 

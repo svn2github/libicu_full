@@ -17,6 +17,8 @@
 #include "unicode/coleitr.h"
 #include "unicode/ucoleitr.h"
 
+#include "unicode/regex.h"        // TODO: make conditional on regexp being built.
+
 #include "unicode/uniset.h"
 #include "unicode/uset.h"
 #include "unicode/ustring.h"
@@ -60,7 +62,7 @@ SSearchTest::~SSearchTest()
 {
 }
 
-void SSearchTest::runIndexedTest( int32_t index, UBool exec, const char* &name, char* /*par*/ )
+void SSearchTest::runIndexedTest( int32_t index, UBool exec, const char* &name, char *params )
 {
     if (exec) logln("TestSuite SSearchTest: ");
     switch (index) {
@@ -77,7 +79,7 @@ void SSearchTest::runIndexedTest( int32_t index, UBool exec, const char* &name, 
             break;
 
         case 3: name = "monkeyTest";
-            if (exec) monkeyTest();
+            if (exec) monkeyTest(params);
             break;
 
         default: name = "";
@@ -1453,64 +1455,6 @@ static inline USet *uset_openEmpty()
     return uset_open(1, 0);
 }
 
-#if 0
-static UBool SimpleMatch(UCollationElements *target, UCollationElements *pattern)
-{
-    UBool getPattern = TRUE, getTarget = TRUE;
-    UErrorCode status = U_ZERO_ERROR;
-    int32_t patternCE, targetCE;
-    int32_t strengthMask = UCOL_PRIMARYORDERMASK;
-
-    while (TRUE) {
-        if (getPattern) {
-            patternCE = ucol_next(pattern, &status) & strengthMask;
-        }
-
-        if (getTarget) {
-            targetCE = ucol_next(target, &status) & strengthMask;
-        }
-
-        getTarget = getPattern = TRUE;
-
-        if (patternCE == (UCOL_NULLORDER & strengthMask)) {
-            break;
-        } else if (patternCE == UCOL_IGNORABLE) {
-            getTarget = FALSE;
-        } else if (targetCE == UCOL_IGNORABLE) {
-            getPattern = FALSE;
-        } else if (patternCE != targetCE) {
-            return FALSE;
-        }
-    }
-
-    return TRUE;
-}
-
-static UBool simpleSearch(UCollator *coll, UnicodeString &target, UnicodeString &pattern, int32_t &matchStart, int32_t &matchEnd)
-{
-   UErrorCode status = U_ZERO_ERROR;
-   UCollationElements *targetIterator = ucol_openElements(coll, target.getBuffer(), target.length(), &status);
-   UCollationElements *patternIterator = ucol_openElements(coll, pattern.getBuffer(), pattern.length(), &status);
-   int32_t start = -1;
-
-   matchStart = matchEnd = -1;
-
-   for (int32_t i = 0; i < target.length(); i += 1) {
-       ucol_setOffset(patternIterator, 0, &status);
-       ucol_setOffset(targetIterator, i, &status);
-
-       start = ucol_getOffset(targetIterator);
-
-       if(SimpleMatch(targetIterator, patternIterator)) {
-           matchStart = start;
-           matchEnd   = ucol_getOffset(targetIterator);
-           return TRUE;
-       }
-   }
-
-   return FALSE;
-}
-#else
 //
 //  Find the next acceptable boundary following the specified starting index
 //     in the target text being searched.
@@ -1642,6 +1586,10 @@ static UBool simpleSearch(UCollator *coll, const UnicodeString &target, int32_t 
                 continue;
             }
 
+            if (! ubrk_isBoundary(charBreakIterator, mend)) {
+                continue;
+            }
+
             matchStart = start;
             matchEnd   = mend;
 
@@ -1653,9 +1601,44 @@ static UBool simpleSearch(UCollator *coll, const UnicodeString &target, int32_t 
     ubrk_close(charBreakIterator);
     return FALSE;
 }
+
+#if !UCONFIG_NO_REGULAR_EXPRESSIONS
+static int32_t  getIntParam(UnicodeString name, UnicodeString &params, int32_t defaultVal) {
+    int32_t val = defaultVal;
+
+    name.append(" *= *(-?\\d+)");
+
+    UErrorCode status = U_ZERO_ERROR;
+    RegexMatcher m(name, params, 0, status);
+
+    if (m.find()) {
+        // The param exists.  Convert the string to an int.
+        char valString[100];
+        int32_t paramLength = m.end(1, status) - m.start(1, status);
+
+        if (paramLength >= (int32_t)(sizeof(valString)-1)) {
+            paramLength = (int32_t)(sizeof(valString)-2);
+        }
+
+        params.extract(m.start(1, status), paramLength, valString, sizeof(valString));
+        val = strtol(valString,  NULL, 10);
+
+        // Delete this parameter from the params string.
+        m.reset();
+        params = m.replaceFirst("", status);
+    }
+
+  //U_ASSERT(U_SUCCESS(status));
+    if (! U_SUCCESS(status)) {
+        val = defaultVal;
+    }
+
+    return val;
+}
 #endif
 
-int32_t SSearchTest::monkeyTestCase(UCollator *coll, const UnicodeString &testCase, const UnicodeString &pattern, const UnicodeString &altPattern)
+int32_t SSearchTest::monkeyTestCase(UCollator *coll, const UnicodeString &testCase, const UnicodeString &pattern, const UnicodeString &altPattern,
+                                    const char *name, const char *strength, uint32_t seed)
 {
     UErrorCode status = U_ZERO_ERROR;
     int32_t actualStart = -1, actualEnd = -1;
@@ -1679,7 +1662,9 @@ int32_t SSearchTest::monkeyTestCase(UCollator *coll, const UnicodeString &testCa
 #endif
 
     if (actualStart != expectedStart || actualEnd != expectedEnd) {
-        errln("Search for pattern failed: expected [%d, %d], got [%d, %d]", expectedStart, expectedEnd, actualStart, actualEnd);
+        errln("Search for <pattern> in <%s> failed: expected [%d, %d], got [%d, %d]\n"
+              "    strength=%s seed=%d",
+              name, expectedStart, expectedEnd, actualStart, actualEnd, strength, seed);
     }
 
     if (expectedStart == -1 && actualStart == -1) {
@@ -1700,7 +1685,9 @@ int32_t SSearchTest::monkeyTestCase(UCollator *coll, const UnicodeString &testCa
 #endif
 
     if (actualStart != expectedStart || actualEnd != expectedEnd) {
-        errln("Search for alternate pattern failed: expected [%d, %d], got [%d, %d]", expectedStart, expectedEnd, actualStart, actualEnd);
+        errln("Search for <alt_pattern> in <%s> failed: expected [%d, %d], got [%d, %d]\n"
+              "    strength=%s seed=%d",
+              name, expectedStart, expectedEnd, actualStart, actualEnd, strength, seed);
     }
 
     if (expectedStart == -1 && actualStart == -1) {
@@ -1712,7 +1699,7 @@ int32_t SSearchTest::monkeyTestCase(UCollator *coll, const UnicodeString &testCa
     return notFoundCount;
 }
 
-void SSearchTest::monkeyTest()
+void SSearchTest::monkeyTest(char *params)
 {
     // ook!
     UErrorCode status = U_ZERO_ERROR;
@@ -1761,8 +1748,47 @@ void SSearchTest::monkeyTest()
     UCollationStrength strengths[] = {UCOL_PRIMARY, UCOL_SECONDARY, UCOL_TERTIARY};
     const char *strengthNames[] = {"primary", "secondary", "tertiary"};
     int32_t strengthCount = sizeof(strengths) / sizeof(strengths[0]);
+    int32_t loopCount = quick? 1000 : 10000;
+    int32_t firstStrength = 0;
+    int32_t lastStrength  = strengthCount - 1;
 
-    for(int32_t s = 0; s < strengthCount; s += 1) {
+    if (params != NULL) {
+#if !UCONFIG_NO_REGULAR_EXPRESSIONS
+        UnicodeString p(params);
+
+        loopCount = getIntParam("loop", p, loopCount);
+        m_seed    = getIntParam("seed", p, m_seed);
+
+        RegexMatcher m(" *strength *= *(primary|secondary|tertiary) *", p, 0, status);
+        if (m.find()) {
+            UnicodeString breakType = m.group(1, status);
+
+            for (int32_t s = 0; s < strengthCount; s += 1) {
+                if (breakType == strengthNames[s]) {
+                    firstStrength = lastStrength = s;
+                    break;
+                }
+            }
+
+            m.reset();
+            p = m.replaceFirst("", status);
+        }
+
+        if (RegexMatcher("\\S", p, 0, status).find()) {
+            // Each option is stripped out of the option string as it is processed.
+            // All options have been checked.  The option string should have been completely emptied..
+            char buf[100];
+            p.extract(buf, sizeof(buf), NULL, status);
+            buf[sizeof(buf)-1] = 0;
+            errln("Unrecognized or extra parameter:  %s\n", buf);
+            return;
+        }
+#else
+        infoln("SSearchTest built with UCONFIG_NO_REGULAR_EXPRESSIONS: ignoring parameters.");
+#endif
+    }
+
+    for(int32_t s = firstStrength; s <= lastStrength; s += 1) {
         int32_t notFoundCount = 0;
 
         ucol_setStrength(coll, strengths[s]);
@@ -1770,33 +1796,34 @@ void SSearchTest::monkeyTest()
         // TODO: try alternate prefix and suffix too?
         // TODO: alterntaes are only equal at primary strength. Is this OK?
         for(int32_t t = 0; t < 10000; t += 1) {
-            int32_t nmc = 0;
+            uint32_t seed = m_seed;
+            int32_t  nmc = 0;
 
             generateTestCase(coll, monkeys, monkeyCount, pattern, altPattern);
-            generateTestCase(coll, monkeys, monkeyCount, prefix, altPrefix);
-            generateTestCase(coll, monkeys, monkeyCount, suffix, altSuffix);
+            generateTestCase(coll, monkeys, monkeyCount, prefix,  altPrefix);
+            generateTestCase(coll, monkeys, monkeyCount, suffix,  altSuffix);
 
             // pattern
-            notFoundCount += monkeyTestCase(coll, pattern, pattern, altPattern);
+            notFoundCount += monkeyTestCase(coll, pattern, pattern, altPattern, "pattern", strengthNames[s], seed);
 
             testCase.remove();
             testCase.append(prefix);
             testCase.append(/*alt*/pattern);
 
             // prefix + pattern
-            notFoundCount += monkeyTestCase(coll, testCase, pattern, altPattern);
+            notFoundCount += monkeyTestCase(coll, testCase, pattern, altPattern, "prefix + pattern", strengthNames[s], seed);
 
             testCase.append(suffix);
 
             // prefix + pattern + suffix
-            notFoundCount += monkeyTestCase(coll, testCase, pattern, altPattern);
+            notFoundCount += monkeyTestCase(coll, testCase, pattern, altPattern, "prefix + pattern + suffix", strengthNames[s], seed);
 
             testCase.remove();
             testCase.append(pattern);
             testCase.append(suffix);
             
             // pattern + suffix
-            notFoundCount += monkeyTestCase(coll, testCase, pattern, altPattern);
+            notFoundCount += monkeyTestCase(coll, testCase, pattern, altPattern, "pattern + suffix", strengthNames[s], seed);
         }
 
         infoln("For strength %s the not found count is %d.", strengthNames[s], notFoundCount);

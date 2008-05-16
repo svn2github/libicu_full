@@ -289,11 +289,12 @@ static const SearchData CONTRACTION[] = {
 
     /* contraction prefix */
     {"AB\\u0315C", "A", NULL, UCOL_TERTIARY, NULL, {-1}, {0}},
-    {"AB\\u0315C", "AB", NULL, UCOL_TERTIARY, NULL, {0, -1}, {2}},
 
 #if GRAPHEME_BOUNDARIES
+    {"AB\\u0315C", "AB", NULL, UCOL_TERTIARY, NULL, {-1}, {0}},
     {"AB\\u0315C", "\\u0315", NULL, UCOL_TERTIARY, NULL, {-1}, {0}},
 #else
+    {"AB\\u0315C", "AB", NULL, UCOL_TERTIARY, NULL, {0, -1}, {2}},
     {"AB\\u0315C", "\\u0315", NULL, UCOL_TERTIARY, NULL, {2, -1}, {1}},
 #endif
 
@@ -639,11 +640,12 @@ static const SearchData CONTRACTIONCANONICAL[] = {
 
     /* contraction prefix */
     {"AB\\u0315C", "A", NULL, UCOL_TERTIARY, NULL, {-1}, {0}},
-    {"AB\\u0315C", "AB", NULL, UCOL_TERTIARY, NULL, {0, -1}, {2}},
 
 #if GRAPHEME_BOUNDARIES
+    {"AB\\u0315C", "AB", NULL, UCOL_TERTIARY, NULL, {-1}, {0}},
     {"AB\\u0315C", "\\u0315", NULL, UCOL_TERTIARY, NULL, {-1}, {0}},
 #else
+    {"AB\\u0315C", "AB", NULL, UCOL_TERTIARY, NULL, {0, -1}, {2}},
     {"AB\\u0315C", "\\u0315", NULL, UCOL_TERTIARY, NULL, {2, -1}, {1}},
 #endif
 

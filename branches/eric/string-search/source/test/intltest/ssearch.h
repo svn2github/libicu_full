@@ -25,16 +25,17 @@ public:
     SSearchTest();
     virtual ~SSearchTest();
 
-    virtual void runIndexedTest(int32_t index, UBool exec, const char* &name, char* par = NULL );
+    virtual void runIndexedTest(int32_t index, UBool exec, const char* &name, char* params = NULL );
 
     virtual void searchTest();
     virtual void searchTime();
     virtual void offsetTest();
-    virtual void monkeyTest();
+    virtual void monkeyTest(char *params);
 
 private:
     virtual const char   *getPath(char buffer[2048], const char *filename);
-    virtual       int32_t monkeyTestCase(UCollator *coll, const UnicodeString &testCase, const UnicodeString &pattern, const UnicodeString &altPattern);
+    virtual       int32_t monkeyTestCase(UCollator *coll, const UnicodeString &testCase, const UnicodeString &pattern, const UnicodeString &altPattern,
+                                         const char *name, const char *strength, uint32_t seed);
 };
 
 #endif
