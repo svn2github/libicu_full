@@ -270,7 +270,7 @@
 					>
 					<Tool
 						Name="VCResourceCompilerTool"
-						AdditionalIncludeDirectories="..\common;$(NoInherit)"
+						AdditionalIncludeDirectories="..\common;..\..\include;$(NoInherit)"
 					/>
 				</FileConfiguration>
 				<FileConfiguration
@@ -278,7 +278,7 @@
 					>
 					<Tool
 						Name="VCResourceCompilerTool"
-						AdditionalIncludeDirectories="..\common;$(NoInherit)"
+						AdditionalIncludeDirectories="..\common;..\..\include;$(NoInherit)"
 					/>
 				</FileConfiguration>
 			</File>

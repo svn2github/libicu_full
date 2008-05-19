@@ -322,6 +322,22 @@
 			<File
 				RelativePath=".\io.rc"
 				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCResourceCompilerTool"
+						AdditionalIncludeDirectories="..\common;..\..\include"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCResourceCompilerTool"
+						AdditionalIncludeDirectories="..\common;..\..\include"
+					/>
+				</FileConfiguration>
 			</File>
 		</Filter>
 	</Files>

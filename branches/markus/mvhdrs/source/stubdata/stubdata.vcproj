@@ -45,7 +45,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="..\common"
+				AdditionalIncludeDirectories="..\..\include"
 				PreprocessorDefinitions="WIN32;NDEBUG"
 				StringPooling="true"
 				ExceptionHandling="0"
@@ -145,7 +145,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\common"
+				AdditionalIncludeDirectories="..\..\include"
 				PreprocessorDefinitions="WIN32;_DEBUG"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -240,7 +240,7 @@
 					>
 					<Tool
 						Name="VCResourceCompilerTool"
-						AdditionalIncludeDirectories="../common"
+						AdditionalIncludeDirectories="..\common;..\..\include"
 					/>
 				</FileConfiguration>
 				<FileConfiguration
@@ -248,7 +248,7 @@
 					>
 					<Tool
 						Name="VCResourceCompilerTool"
-						AdditionalIncludeDirectories="../common"
+						AdditionalIncludeDirectories="..\common;..\..\include"
 					/>
 				</FileConfiguration>
 			</File>

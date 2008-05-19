@@ -587,7 +587,7 @@ res_index:table(nofallback) {
 # If you modify this, modify winmode.c in pkgdata.
 "$(ICUTMP)\icudata.res": "$(ICUMISC)\icudata.rc"
 	@echo Creating data DLL version information from $**
-	@rc.exe /i "..\..\..\..\common" /r /fo $@ $**
+	@rc.exe /i "..\..\..\..\..\include" /i "..\..\..\..\common" /r /fo $@ $**
 
 # Targets for unames.icu
 "$(ICUBLD_PKG)\unames.icu": "$(ICUUNIDATA)\*.txt" "$(ICUTOOLS)\gennames\$(CFG)\gennames.exe"
@@ -596,7 +596,7 @@ res_index:table(nofallback) {
 
 # Targets for pnames.icu
 # >> Depends on the Unicode data as well as uchar.h and uscript.h <<
-"$(ICUBLD_PKG)\pnames.icu": "$(ICUUNIDATA)\*.txt" "$(ICUTOOLS)\genpname\$(CFG)\genpname.exe" "$(ICUP)\source\common\unicode\uchar.h" "$(ICUP)\source\common\unicode\uscript.h"
+"$(ICUBLD_PKG)\pnames.icu": "$(ICUUNIDATA)\*.txt" "$(ICUTOOLS)\genpname\$(CFG)\genpname.exe" "$(ICUP)\include\unicode\uchar.h" "$(ICUP)\include\unicode\uscript.h"
 	@echo Creating data file for Unicode Property Names
 	@"$(ICUTOOLS)\genpname\$(CFG)\genpname" -d "$(ICUBLD_PKG)"
 
