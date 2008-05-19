@@ -5,7 +5,7 @@ dnl others. All Rights Reserved.
 dnl Stephen F. Booth, heavily modified by Yves and others
 
 dnl Process this file with autoconf to produce a configure script
-AC_INIT(common/unicode/utypes.h)
+AC_INIT(../include/unicode/utypes.h)
 
 AC_CONFIG_HEADER(common/icucfg.h)
 PACKAGE="icu"
@@ -17,9 +17,9 @@ dnl Get the ICU version from uversion.h or other headers
 geticuversion() {
     [sed -n 's/^[ 	]*#[ 	]*define[ 	]*U_ICU_VERSION[ 	]*"\([^"]*\)".*/\1/p' "$@"]
 }
-VERSION=`geticuversion $srcdir/common/unicode/uversion.h`
+VERSION=`geticuversion $srcdir/../include/unicode/uversion.h`
 if test x"$VERSION" = x; then
-    VERSION=`geticuversion $srcdir/common/unicode/*.h`
+    VERSION=`geticuversion $srcdir/../include/unicode/*.h`
     if test x"$VERSION" = x; then
         AC_MSG_ERROR([Cannot determine ICU version number from header files])
     fi
@@ -1120,7 +1120,7 @@ AC_OUTPUT([icudefs.mk \
 		test/perf/utfperf/Makefile \
 		samples/Makefile samples/date/Makefile \
 		samples/cal/Makefile samples/layout/Makefile \
-		common/unicode/platform.h])
+		../include/unicode/platform.h])
 
 if test $ICU_USE_THREADS = 0; then
   echo  " *** Note: configuring the ICU without pthread support or testing. If this isn't what you want, then run configure with --enable-threads=yes or check the messages [above] to see why we couldn't find pthread_create()" 1>&6
