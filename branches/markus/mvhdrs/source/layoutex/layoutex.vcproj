@@ -241,6 +241,22 @@
 				RelativePath="LXUtilities.h"
 				>
 			</File>
+			<File
+				RelativePath="..\..\include\layout\ParagraphLayout.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\layout\playout.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\layout\plruns.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\layout\RunArrays.h"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Resource Files"

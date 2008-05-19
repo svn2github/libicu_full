@@ -306,6 +306,14 @@
 				RelativePath=".\uscanf.h"
 				>
 			</File>
+			<File
+				RelativePath="..\..\include\unicode\ustdio.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\ustream.h"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Resource Files"

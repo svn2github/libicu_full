@@ -663,7 +663,43 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\layout\LayoutEngine.h"
+				>
+			</File>
+			<File
 				RelativePath=".\LayoutTables.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\layout\LEFontInstance.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\layout\LEGlyphFilter.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\layout\LEGlyphStorage.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\layout\LEInsertionList.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\layout\LELanguages.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\layout\LEScripts.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\layout\LESwaps.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\layout\LETypes.h"
 				>
 			</File>
 			<File
@@ -676,6 +712,10 @@
 			</File>
 			<File
 				RelativePath=".\LigatureSubstSubtables.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\layout\loengine.h"
 				>
 			</File>
 			<File

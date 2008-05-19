@@ -225,7 +225,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\coleitr.h"
+				>
+			</File>
+			<File
 				RelativePath=".\coll.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\coll.h"
 				>
 			</File>
 			<File
@@ -233,7 +241,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\search.h"
+				>
+			</File>
+			<File
 				RelativePath=".\sortkey.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\sortkey.h"
 				>
 			</File>
 			<File
@@ -241,11 +257,23 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\stsearch.h"
+				>
+			</File>
+			<File
 				RelativePath=".\tblcoll.cpp"
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\tblcoll.h"
+				>
+			</File>
+			<File
 				RelativePath=".\ucol.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\ucol.h"
 				>
 			</File>
 			<File
@@ -305,7 +333,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\ucoleitr.h"
+				>
+			</File>
+			<File
 				RelativePath=".\usearch.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\usearch.h"
 				>
 			</File>
 			<File
@@ -329,6 +365,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\basictz.h"
+				>
+			</File>
+			<File
 				RelativePath=".\buddhcal.cpp"
 				>
 			</File>
@@ -338,6 +378,10 @@
 			</File>
 			<File
 				RelativePath=".\calendar.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\calendar.h"
 				>
 			</File>
 			<File
@@ -361,6 +405,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\choicfmt.h"
+				>
+			</File>
+			<File
 				RelativePath=".\coptccal.cpp"
 				>
 			</File>
@@ -370,6 +418,10 @@
 			</File>
 			<File
 				RelativePath=".\curramt.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\curramt.h"
 				>
 			</File>
 			<File
@@ -385,7 +437,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\currunit.h"
+				>
+			</File>
+			<File
 				RelativePath=".\datefmt.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\datefmt.h"
 				>
 			</File>
 			<File
@@ -393,7 +453,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\dcfmtsym.h"
+				>
+			</File>
+			<File
 				RelativePath=".\decimfmt.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\decimfmt.h"
 				>
 			</File>
 			<File
@@ -409,7 +477,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\dtfmtsym.h"
+				>
+			</File>
+			<File
 				RelativePath=".\dtptngen.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\dtptngen.h"
 				>
 			</File>
 			<File
@@ -421,6 +497,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\dtrule.h"
+				>
+			</File>
+			<File
 				RelativePath=".\ethpccal.cpp"
 				>
 			</File>
@@ -429,7 +509,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\fieldpos.h"
+				>
+			</File>
+			<File
 				RelativePath=".\fmtable.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\fmtable.h"
 				>
 			</File>
 			<File
@@ -441,7 +529,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\format.h"
+				>
+			</File>
+			<File
 				RelativePath=".\gregocal.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\gregocal.h"
 				>
 			</File>
 			<File
@@ -489,11 +585,27 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\measfmt.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\measunit.h"
+				>
+			</File>
+			<File
 				RelativePath=".\measure.cpp"
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\measure.h"
+				>
+			</File>
+			<File
 				RelativePath=".\msgfmt.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\msgfmt.h"
 				>
 			</File>
 			<File
@@ -533,6 +645,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\numfmt.h"
+				>
+			</File>
+			<File
 				RelativePath=".\olsontz.cpp"
 				>
 			</File>
@@ -553,7 +669,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\plurfmt.h"
+				>
+			</File>
+			<File
 				RelativePath=".\plurrule.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\plurrule.h"
 				>
 			</File>
 			<File
@@ -561,7 +685,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\rbnf.h"
+				>
+			</File>
+			<File
 				RelativePath=".\rbtz.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\rbtz.h"
 				>
 			</File>
 			<File
@@ -577,7 +709,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\simpletz.h"
+				>
+			</File>
+			<File
 				RelativePath=".\smpdtfmt.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\smpdtfmt.h"
 				>
 			</File>
 			<File
@@ -593,7 +733,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\timezone.h"
+				>
+			</File>
+			<File
 				RelativePath=".\tzrule.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\tzrule.h"
 				>
 			</File>
 			<File
@@ -601,11 +749,23 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\tztrans.h"
+				>
+			</File>
+			<File
 				RelativePath=".\ucal.cpp"
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\ucal.h"
+				>
+			</File>
+			<File
 				RelativePath=".\ucurr.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\ucurr.h"
 				>
 			</File>
 			<File
@@ -617,7 +777,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\udat.h"
+				>
+			</File>
+			<File
 				RelativePath=".\udatpg.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\udatpg.h"
 				>
 			</File>
 			<File
@@ -625,7 +793,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\ulocdata.h"
+				>
+			</File>
+			<File
 				RelativePath=".\umsg.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\umsg.h"
 				>
 			</File>
 			<File
@@ -637,11 +813,23 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\unum.h"
+				>
+			</File>
+			<File
 				RelativePath=".\utmscale.c"
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\utmscale.h"
+				>
+			</File>
+			<File
 				RelativePath=".\vtzone.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\vtzone.h"
 				>
 			</File>
 			<File
@@ -729,6 +917,10 @@
 			Name="regex"
 			>
 			<File
+				RelativePath="..\..\include\unicode\regex.h"
+				>
+			</File>
+			<File
 				RelativePath=".\regexcmp.cpp"
 				>
 			</File>
@@ -762,6 +954,10 @@
 			</File>
 			<File
 				RelativePath=".\uregex.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\uregex.h"
 				>
 			</File>
 			<File
@@ -945,6 +1141,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\translit.h"
+				>
+			</File>
+			<File
 				RelativePath=".\transreg.cpp"
 				>
 			</File>
@@ -977,7 +1177,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\unirepl.h"
+				>
+			</File>
+			<File
 				RelativePath=".\utrans.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\utrans.h"
 				>
 			</File>
 		</Filter>
@@ -1058,6 +1266,10 @@
 			</File>
 			<File
 				RelativePath=".\ucsdet.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\ucsdet.h"
 				>
 			</File>
 		</Filter>

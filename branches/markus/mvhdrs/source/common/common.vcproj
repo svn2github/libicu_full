@@ -211,6 +211,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\ubidi.h"
+				>
+			</File>
+			<File
 				RelativePath=".\ubidi_props.c"
 				>
 			</File>
@@ -234,6 +238,10 @@
 				RelativePath=".\ushape.c"
 				>
 			</File>
+			<File
+				RelativePath="..\..\include\unicode\ushape.h"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="break iteration"
@@ -251,6 +259,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\brkiter.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\dbbi.h"
+				>
+			</File>
+			<File
 				RelativePath=".\dictbe.cpp"
 				>
 			</File>
@@ -260,6 +276,10 @@
 			</File>
 			<File
 				RelativePath=".\rbbi.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\rbbi.h"
 				>
 			</File>
 			<File
@@ -331,6 +351,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\ubrk.h"
+				>
+			</File>
+			<File
 				RelativePath=".\ubrkimpl.h"
 				>
 			</File>
@@ -371,6 +395,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\strenum.h"
+				>
+			</File>
+			<File
 				RelativePath=".\uarrsort.c"
 				>
 			</File>
@@ -380,6 +408,10 @@
 			</File>
 			<File
 				RelativePath=".\uenum.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\uenum.h"
 				>
 			</File>
 			<File
@@ -447,6 +479,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\docmain.h"
+				>
+			</File>
+			<File
 				RelativePath=".\locmap.c"
 				>
 			</File>
@@ -479,11 +515,39 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\putil.h"
+				>
+			</File>
+			<File
 				RelativePath=".\putilimp.h"
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\pwin32.h"
+				>
+			</File>
+			<File
 				RelativePath=".\uassert.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\uconfig.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\udeprctd.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\udraft.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\uintrnal.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\umachine.h"
 				>
 			</File>
 			<File
@@ -515,7 +579,23 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\uobslete.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\urename.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\usystem.h"
+				>
+			</File>
+			<File
 				RelativePath=".\utrace.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\utrace.h"
 				>
 			</File>
 			<File
@@ -524,6 +604,14 @@
 			</File>
 			<File
 				RelativePath=".\utypes.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\utypes.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\uversion.h"
 				>
 			</File>
 			<File
@@ -559,6 +647,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\ucnv.h"
+				>
+			</File>
+			<File
 				RelativePath=".\ucnv2022.c"
 				>
 			</File>
@@ -575,6 +667,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\ucnv_cb.h"
+				>
+			</File>
+			<File
 				RelativePath=".\ucnv_cnv.c"
 				>
 			</File>
@@ -584,6 +680,10 @@
 			</File>
 			<File
 				RelativePath=".\ucnv_err.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\ucnv_err.h"
 				>
 			</File>
 			<File
@@ -675,6 +775,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\uclean.h"
+				>
+			</File>
+			<File
 				RelativePath=".\ucln.h"
 				>
 			</File>
@@ -696,6 +800,10 @@
 			</File>
 			<File
 				RelativePath=".\udata.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\udata.h"
 				>
 			</File>
 			<File
@@ -746,12 +854,28 @@
 				RelativePath=".\uobject.cpp"
 				>
 			</File>
+			<File
+				RelativePath="..\..\include\unicode\uobject.h"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="formatting"
 			>
 			<File
+				RelativePath="..\..\include\unicode\parseerr.h"
+				>
+			</File>
+			<File
 				RelativePath=".\parsepos.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\parsepos.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\umisc.h"
 				>
 			</File>
 			<File
@@ -791,6 +915,10 @@
 				RelativePath=".\uidna.cpp"
 				>
 			</File>
+			<File
+				RelativePath="..\..\include\unicode\uidna.h"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="locales &amp; resources"
@@ -808,6 +936,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\locid.h"
+				>
+			</File>
+			<File
 				RelativePath=".\locutil.cpp"
 				>
 			</File>
@@ -820,6 +952,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\resbund.h"
+				>
+			</File>
+			<File
 				RelativePath=".\resbund_cnv.cpp"
 				>
 			</File>
@@ -828,11 +964,23 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\ucat.h"
+				>
+			</File>
+			<File
 				RelativePath=".\uloc.c"
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\uloc.h"
+				>
+			</File>
+			<File
 				RelativePath=".\ulocimp.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\ures.h"
 				>
 			</File>
 			<File
@@ -864,11 +1012,23 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\caniter.h"
+				>
+			</File>
+			<File
 				RelativePath=".\normlzr.cpp"
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\normlzr.h"
+				>
+			</File>
+			<File
 				RelativePath=".\unorm.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\unorm.h"
 				>
 			</File>
 			<File
@@ -916,6 +1076,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\symtable.h"
+				>
+			</File>
+			<File
 				RelativePath=".\ucase.c"
 				>
 			</File>
@@ -928,6 +1092,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\uchar.h"
+				>
+			</File>
+			<File
 				RelativePath=".\unames.c"
 				>
 			</File>
@@ -936,11 +1104,27 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\unifilt.h"
+				>
+			</File>
+			<File
 				RelativePath=".\unifunct.cpp"
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\unifunct.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\unimatch.h"
+				>
+			</File>
+			<File
 				RelativePath=".\uniset.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\uniset.h"
 				>
 			</File>
 			<File
@@ -976,7 +1160,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\uscript.h"
+				>
+			</File>
+			<File
 				RelativePath=".\uset.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\uset.h"
 				>
 			</File>
 			<File
@@ -989,6 +1181,10 @@
 			</File>
 			<File
 				RelativePath=".\usetiter.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\usetiter.h"
 				>
 			</File>
 		</Filter>
@@ -1047,12 +1243,20 @@
 				RelativePath=".\usprep.cpp"
 				>
 			</File>
+			<File
+				RelativePath="..\..\include\unicode\usprep.h"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="strings"
 			>
 			<File
 				RelativePath=".\chariter.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\chariter.h"
 				>
 			</File>
 			<File
@@ -1076,7 +1280,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\rep.h"
+				>
+			</File>
+			<File
 				RelativePath=".\schriter.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\schriter.h"
 				>
 			</File>
 			<File
@@ -1084,7 +1296,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\ucasemap.h"
+				>
+			</File>
+			<File
 				RelativePath=".\uchriter.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\uchriter.h"
 				>
 			</File>
 			<File
@@ -1100,7 +1320,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\uiter.h"
+				>
+			</File>
+			<File
 				RelativePath=".\unistr.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\unistr.h"
 				>
 			</File>
 			<File
@@ -1113,6 +1341,10 @@
 			</File>
 			<File
 				RelativePath=".\unistr_props.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\urep.h"
 				>
 			</File>
 			<File
@@ -1140,6 +1372,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\ustring.h"
+				>
+			</File>
+			<File
 				RelativePath=".\ustrtrns.c"
 				>
 			</File>
@@ -1148,7 +1384,31 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\unicode\utext.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\utf.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\utf16.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\utf32.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\utf8.h"
+				>
+			</File>
+			<File
 				RelativePath=".\utf_impl.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\unicode\utf_old.h"
 				>
 			</File>
 		</Filter>
