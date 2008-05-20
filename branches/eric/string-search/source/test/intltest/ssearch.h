@@ -28,7 +28,6 @@ public:
     virtual void runIndexedTest(int32_t index, UBool exec, const char* &name, char* params = NULL );
 
     virtual void searchTest();
-    virtual void searchTime();
     virtual void offsetTest();
     virtual void monkeyTest(char *params);
 

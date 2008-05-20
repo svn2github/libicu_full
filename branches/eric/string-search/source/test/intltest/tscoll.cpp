@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT: 
- * Copyright (c) 1997-2007, International Business Machines Corporation and
+ * Copyright (c) 1997-2008, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 
@@ -49,6 +49,9 @@
 #include "svccoll.h"
 #include "cmemory.h"
 //#include "rndmcoll.h"
+
+// Set to 1 to test offsets in backAndForth()
+#define TEST_OFFSETS 0
 
 #define TESTCLASS(n,classname)        \
     case n:                           \
@@ -436,12 +439,15 @@ void IntlTestCollator::backAndForth(CollationElementIterator &iter)
             }
         }
 
+#if TEST_OFFSETS
         if (offset != orders[index].offset) {
           errln("Mismatched offset at index %d: %d vs. %d", index,
             orders[index].offset, offset);
        //break;
          goto bail;
         }
+#endif
+
     }
 
     while (index != 0 && orders[index - 1].order == 0)

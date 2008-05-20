@@ -1,6 +1,6 @@
 /*
 **********************************************************************
-*   Copyright (C) 2001-2007 IBM and others. All rights reserved.
+*   Copyright (C) 2001-2008 IBM and others. All rights reserved.
 **********************************************************************
 *   Date        Name        Description
 *  06/28/2001   synwee      Creation.
@@ -695,11 +695,11 @@ U_STABLE void U_EXPORT2 usearch_reset(UStringSearch *strsrch);
   *
   *  @internal
   */
-U_DRAFT UBool U_EXPORT2 usearch_search(UStringSearch *strsrch,
-                                       int32_t        startIdx,
-                                       int32_t        *matchStart,
-                                       int32_t        *matchLimit,
-                                       UErrorCode     *status);
+U_INTERNAL UBool U_EXPORT2 usearch_search(UStringSearch *strsrch,
+                                          int32_t        startIdx,
+                                          int32_t        *matchStart,
+                                          int32_t        *matchLimit,
+                                          UErrorCode     *status);
 
 /**
   *  Simple backwards search for the pattern, starting at a specified index,
@@ -755,11 +755,11 @@ U_DRAFT UBool U_EXPORT2 usearch_search(UStringSearch *strsrch,
   *
   *  @internal
   */
-U_DRAFT UBool U_EXPORT2 usearch_searchBackwards(UStringSearch *strsrch,
-                                                int32_t        startIdx,
-                                                int32_t        *matchStart,
-                                                int32_t        *matchLimit,
-                                                UErrorCode     *status);
+U_INTERNAL UBool U_EXPORT2 usearch_searchBackwards(UStringSearch *strsrch,
+                                                   int32_t        startIdx,
+                                                   int32_t        *matchStart,
+                                                   int32_t        *matchLimit,
+                                                   UErrorCode     *status);
 
 #endif /* #if !UCONFIG_NO_COLLATION */
 

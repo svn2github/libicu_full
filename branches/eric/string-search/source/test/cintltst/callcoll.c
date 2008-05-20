@@ -54,6 +54,9 @@
 #include "cmemory.h"
 #include "ucol_imp.h"
 
+/* set to 1 to test offsets in backAndForth() */
+#define TEST_OFFSETS 0
+
 /* perform test with strength PRIMARY */
 static void TestPrimary(void);
 
@@ -519,11 +522,14 @@ backAndForth(UCollationElements *iter)
         }
       }
 
+#if TEST_OFFSETS
       if (offset != orders[index].offset) {
         log_err("Mismatched offset at index %d: %d vs. %d\n", index,
             orders[index].offset, offset);
         goto bail;
       }
+#endif
+
     }
 
     while (index != 0 && orders[index - 1].order == 0) {

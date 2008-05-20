@@ -31,7 +31,7 @@
  * This indicates an error has occured during processing or there are no more CEs 
  * to be returned.
  *
- * @draft ICU 4.0
+ * @internal
  */
 #define UCOL_PROCESSED_NULLORDER        ((int64_t)U_INT64_MAX)
 
@@ -194,9 +194,9 @@ ucol_previous(UCollationElements *elems, UErrorCode *status);
  * @return The next collation elements ordering, otherwise returns UCOL_PROCESSED_NULLORDER 
  *         if an error has occured or if the end of string has been reached
  *
- * @draft ICU 4.0
+ * @internal
  */
-U_DRAFT int64_t U_EXPORT2
+U_INTERNAL int64_t U_EXPORT2
 ucol_nextProcessed(UCollationElements *elems, int32_t *ixLow, int32_t *ixHigh, UErrorCode *status);
 
 /**
@@ -217,9 +217,9 @@ ucol_nextProcessed(UCollationElements *elems, int32_t *ixLow, int32_t *ixHigh, U
  *         UCOL_PROCESSED_NULLORDER if an error has occured or if the start of
  *         string has been reached.
  *
- * @draft ICU 4.0
+ * @internal
  */
-U_DRAFT int64_t U_EXPORT2
+U_INTERNAL int64_t U_EXPORT2
 ucol_previousProcessed(UCollationElements *elems, int32_t *ixLow, int32_t *ixHigh, UErrorCode *status);
 
 /**
