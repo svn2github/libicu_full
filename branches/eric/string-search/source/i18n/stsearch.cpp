@@ -368,6 +368,8 @@ int32_t StringSearch::handleNext(int32_t position, UErrorCode &status)
             }
 
             ucol_setOffset(m_strsrch_->textIter, position, &status);
+            
+#if 0
             for (;;) {
                 if (m_search_->isCanonicalMatch) {
                     // can't use exact here since extra accents are allowed.
@@ -399,6 +401,29 @@ int32_t StringSearch::handleNext(int32_t position, UErrorCode &status)
                     return m_search_->matchedIndex;
                 }
             }
+#else
+            // if m_strsrch_->breakIter is always the same as m_breakiterator_
+            // then we don't need to check the match boundaries here because
+            // usearch_handleNextXXX will already have done it.
+            if (m_search_->isCanonicalMatch) {
+            	// *could* actually use exact here 'cause no extra accents allowed...
+            	usearch_handleNextCanonical(m_strsrch_, &status);
+            } else {
+            	usearch_handleNextExact(m_strsrch_, &status);
+            }
+            
+            if (U_FAILURE(status)) {
+            	return USEARCH_DONE;
+            }
+            
+            if (m_search_->matchedIndex == USEARCH_DONE) {
+            	ucol_setOffset(m_strsrch_->textIter, m_search_->textLength, &status);
+            } else {
+            	ucol_setOffset(m_strsrch_->textIter, m_search_->matchedIndex, &status);
+            }
+            
+            return m_search_->matchedIndex;
+#endif
         }
     }
     return USEARCH_DONE;
@@ -432,9 +457,7 @@ int32_t StringSearch::handlePrev(int32_t position, UErrorCode &status)
                 setMatchNotFound();
                 return USEARCH_DONE;
             }
-#else
-            ucol_setOffset(m_strsrch_->textIter, position, &status);
-#endif
+            
             for (;;) {
                 if (m_search_->isCanonicalMatch) {
                     // can't use exact here since extra accents are allowed.
@@ -458,6 +481,22 @@ int32_t StringSearch::handlePrev(int32_t position, UErrorCode &status)
                     return m_search_->matchedIndex;
                 }
             }
+#else
+            ucol_setOffset(m_strsrch_->textIter, position, &status);
+            
+            if (m_search_->isCanonicalMatch) {
+            	// *could* use exact match here since extra accents *not* allowed!
+            	usearch_handlePreviousCanonical(m_strsrch_, &status);
+            } else {
+            	usearch_handlePreviousExact(m_strsrch_, &status);
+            }
+            
+            if (U_FAILURE(status)) {
+            	return USEARCH_DONE;
+            }
+            
+            return m_search_->matchedIndex;
+#endif
         }
 
         return m_search_->matchedIndex;

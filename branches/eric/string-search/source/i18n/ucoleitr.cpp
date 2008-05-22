@@ -528,7 +528,7 @@ ucol_previousProcessed(UCollationElements *elems,
         RCEBuffer rceb;
         uint32_t ce;
         
-        // **** do we need to reset receb, or will it always be empty at this point ****
+        // **** do we need to reset rceb, or will it always be empty at this point ****
         do {
             high = ucol_getOffset(elems);
             ce   = ucol_getPrevCE(coll, &elems->iteratordata_, status);
@@ -559,7 +559,15 @@ ucol_previousProcessed(UCollationElements *elems,
 
 finish:
     if (elems->pce->pceBuffer.empty()) {
-        // **** set ixLow, ixHigh? To what? ****
+        // **** Is -1 the right value for ixLow, ixHigh? ****
+    	if (ixLow != NULL) {
+    		*ixLow = -1;
+    	}
+    	
+    	if (ixHigh != NULL) {
+    		*ixHigh = -1
+    		;
+    	}
         return UCOL_PROCESSED_NULLORDER;
     }
 
