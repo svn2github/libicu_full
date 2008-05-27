@@ -196,7 +196,6 @@ void DateIntervalFormatTest::testAPI() {
     status = U_ZERO_ERROR;
     logln("Testing DateIntervalFormat create instance with dateIntervalInfo  and skeleton");
  
-    static const UChar longDateSkeleton[] = {0x64, 0x4D, 0x4D, 0x4D, 0x4D, 0x79, 0};
     DateIntervalInfo* dtitvinf = new DateIntervalInfo(Locale::getSimplifiedChinese(), status);
 
     dtitvfmt = DateIntervalFormat::createInstance("EEEdMMMyhms", FALSE, dtitvinf, status);
@@ -327,10 +326,6 @@ void DateIntervalFormatTest::testAPI() {
  */
 void DateIntervalFormatTest::testFormat() {
 
-    // ======= Test create instance with default local
-    UErrorCode status = U_ZERO_ERROR;
-        
-
     const char* DATA[] = {
         "yyyy MM dd HH:mm:ss",
         "2007 10 10 10:10:10", "2008 10 10 10:10:10", 
@@ -384,7 +379,7 @@ void DateIntervalFormatTest::testFormat() {
     };
 
     
-    int32_t localeIndex;
+    uint32_t localeIndex;
     for ( localeIndex = 0; localeIndex < ARRAY_SIZE(testLocale); ++localeIndex ) {
         char locName[32];
         uprv_strcpy(locName, testLocale[localeIndex][0]);
@@ -522,7 +517,7 @@ void DateIntervalFormatTest::expect(const char** data, int32_t data_length,
                 delete dtitvfmt;
             } 
 
-            for ( int32_t skeletonIndex = 0; 
+            for ( uint32_t skeletonIndex = 0; 
                   skeletonIndex < ARRAY_SIZE(skeleton); 
                   ++skeletonIndex ) {
                 const UnicodeString& oneSkeleton = skeleton[skeletonIndex];

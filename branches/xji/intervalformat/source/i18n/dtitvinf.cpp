@@ -110,7 +110,8 @@ DateIntervalInfo::setFallbackIntervalPattern(
 
 
 DateIntervalInfo::DateIntervalInfo(const DateIntervalInfo& dtitvinf)
-:   fIntervalPatterns(NULL)
+:   UObject(dtitvinf),
+    fIntervalPatterns(NULL)
 {
     *this = dtitvinf;
 }

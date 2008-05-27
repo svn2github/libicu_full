@@ -196,8 +196,8 @@ DateIntervalFormat::createInstance(const UnicodeString& skeleton,
 
 
 DateIntervalFormat::DateIntervalFormat()
-:   fDateFormat(NULL),
-    fInfo(NULL),
+:   fInfo(NULL),
+    fDateFormat(NULL),
     fFromCalendar(NULL),
     fToCalendar(NULL)
 {}
@@ -205,8 +205,8 @@ DateIntervalFormat::DateIntervalFormat()
 
 DateIntervalFormat::DateIntervalFormat(const DateIntervalFormat& itvfmt)
 :   Format(itvfmt),
-    fDateFormat(NULL),
     fInfo(NULL),
+    fDateFormat(NULL),
     fFromCalendar(NULL),
     fToCalendar(NULL) {
     *this = itvfmt;
@@ -531,8 +531,8 @@ DateIntervalFormat::DateIntervalFormat(DateFormat* dtfmt,
                                        DateIntervalInfo* dtItvInfo,
                                        const UnicodeString* skeleton,
                                        UErrorCode& status) 
-:   fDateFormat(0),
-    fInfo(0),
+:   fInfo(0),
+    fDateFormat(0),
     fFromCalendar(0),
     fToCalendar(0)
 {

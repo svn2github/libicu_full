@@ -26,22 +26,22 @@ DateInterval::DateInterval(const UDate from, const UDate to)
 {}
 
 
-DateInterval::~DateInterval(){};
+DateInterval::~DateInterval(){}
 
 
-DateInterval::DateInterval(const DateInterval& other) {
+DateInterval::DateInterval(const DateInterval& other)
+: UObject(other) {
     *this = other;
 }   
 
 
 DateInterval&
 DateInterval::operator=(const DateInterval& other) {
-    if ( this == &other ) {
-        return *this;
+    if ( this != &other ) {
+        fromDate = other.fromDate;
+        toDate = other.toDate;
     }
-
-    fromDate = other.fromDate;
-    toDate = other.toDate;
+    return *this;
 }
 
 
