@@ -454,9 +454,9 @@ DateIntervalFormat::format(Calendar& fromCalendar,
 
 
 void
-DateIntervalFormat::parseObject(const UnicodeString& source, 
-                                Formattable& result,
-                                ParsePosition& parse_pos) const {
+DateIntervalFormat::parseObject(const UnicodeString& /* source */, 
+                                Formattable& /* result */,
+                                ParsePosition& /* parse_pos */) const {
     // FIXME: THERE is no error code,
     // then, where to set the not-supported error
 }
