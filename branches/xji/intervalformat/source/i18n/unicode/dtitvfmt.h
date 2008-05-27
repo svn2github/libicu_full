@@ -90,12 +90,12 @@ U_NAMESPACE_BEGIN
  * (for example,  DAY, MONTH, YEAR) and the format length (long, medium, short)
  * used in date time patterns.
  * 
- * For example, skeleton MONTH_YEAR_MEDIUM_FORMAT consists month and year,
+ * For example, skeleton YEAR_MONTH_MEDIUM_FORMAT consists month and year,
  * and it's corresponding full pattern is medium format date pattern.
  * So, the skeleton is "yMMM", for English, the full pattern is "MMM yyyy", 
  * which is the format by removing DATE from medium date format.
  *
- * For example, skeleton DAY_MONTH_YEAR_DOW_MEDIUM_FORMAT consists day, month,
+ * For example, skeleton YEAR_MONTH_DOW_DAY_MEDIUM_FORMAT consists day, month,
  * year, and day-of-week, and it's corresponding full pattern is the medium
  * format date pattern. So, the skeleton is "yMMMEEEd", for English,
  * the full pattern is "EEE, MMM d, yyyy", which is the medium date format
@@ -116,7 +116,7 @@ U_NAMESPACE_BEGIN
  * <P>
  * There are pre-defined interval patterns for those pre-defined skeletons
  * in locales' resource files.
- * For example, for a skeleton DAY_MONTH_YEAR_MEDIUM_FORMAT, which is  "yMMMd",
+ * For example, for a skeleton YEAR_MONTH_DAY_MEDIUM_FORMAT, which is  "yMMMd",
  * in  en_US, if the largest different calendar field between date1 and date2 
  * is "year", the date interval pattern  is "MMM d, yyyy - MMM d, yyyy", 
  * such as "Jan 10, 2007 - Jan 10, 2008".
@@ -186,7 +186,7 @@ U_NAMESPACE_BEGIN
  * 5. create an instance using default or given locale plus given skeleton.
  *    Users are encouraged to created date interval formatter this way and 
  *    to use the pre-defined skeleton macros, such as
- *    MONTH_YEAR_SHORT_FORMAT, which consists the calendar fields and
+ *    YEAR_MONTH_SHORT_FORMAT, which consists the calendar fields and
  *    the format style. 
  * 6. create an instance using default or given locale plus given skeleton
  *    plus a given DateIntervalInfo.
@@ -211,7 +211,7 @@ U_NAMESPACE_BEGIN
  *   DateInterval*  dtInterval = new DateInterval(1000*3600*24, 1000*3600*24*2);
  *   UErrorCode status = U_ZERO_ERROR;
  *   DateIntervalFormat* dtIntervalFmt = DateIntervalFormat::createInstance(
- *                           DAY_MONTH_YEAR_FULL_FORMAT, 
+ *                           YEAR_MONTH_DAY_FULL_FORMAT, 
  *                           FALSE, Locale("en", "GB", ""), status);
  *   UnicodeUnicodeString dateIntervalString;
  *   FieldPosition pos = 0;
@@ -404,25 +404,26 @@ public:
      * interval patterns in resource files.
      * Users are encouraged to use those macros.
      * For example: 
-     * DateIntervalFormat::createInstance(DAY_MONTH_FULL_FORMAT, FALSE, status) 
+     * DateIntervalFormat::createInstance(MONTH_DAY_FULL_FORMAT, FALSE, status) 
      * 
-     * #define DAY_MONTH_YEAR_DOW_LONG_FORMAT   "yMMMMEEEEd"
-     * #define DAY_MONTH_YEAR_LONG_FORMAT       "yMMMMd"
-     * #define DAY_MONTH_LONG_FORMAT            "MMMMd"
-     * #define MONTH_YEAR_LONG_FORMAT           "yMMMM"
-     * #define DAY_MONTH_DOW_LONG_FORMAT        "MMMMEEEEd"
-     * #define DAY_MONTH_YEAR_DOW_MEDIUM_FORMAT "yMMMEEEd"
-     * #define DAY_MONTH_YEAR_MEDIUM_FORMAT     "yMMMd"
-     * #define DAY_MONTH_MEDIUM_FORMAT          "MMMd"
-     * #define MONTH_YEAR_MEDIUM_FORMAT         "yMMM"
-     * #define DAY_MONTH_DOW_MEDIUM_FORMAT      "MMMEEEd"
-     * #define DAY_MONTH_YEAR_DOW_SHORT_FORMAT  "yMEEEd"
-     * #define DAY_MONTH_YEAR_SHORT_FORMAT      "yMd"
-     * #define DAY_MONTH_SHORT_FORMAT           "Md"
-     * #define MONTH_YEAR_SHORT_FORMAT          "yM"
-     * #define DAY_MONTH_DOW_SHORT_FORMAT       "MEEEd"
+     * 
+     * #define YEAR_MONTH_DOW_DAY_LONG_FORMAT   "yMMMMEEEEd"
+     * #define YEAR_MONTH_DAY_LONG_FORMAT       "yMMMMd"
+     * #define MONTH_DAY_LONG_FORMAT            "MMMMd"
+     * #define YEAR_MONTH_LONG_FORMAT           "yMMMM"
+     * #define MONTH_DOW_DAY_LONG_FORMAT        "MMMMEEEEd"
+     * #define YEAR_MONTH_DOW_DAY_MEDIUM_FORMAT "yMMMEEEd"
+     * #define YEAR_MONTH_DAY_MEDIUM_FORMAT     "yMMMd"
+     * #define MONTH_DAY_MEDIUM_FORMAT          "MMMd"
+     * #define YEAR_MONTH_MEDIUM_FORMAT         "yMMM"
+     * #define MONTH_DOW_DAY_MEDIUM_FORMAT      "MMMEEEd"
+     * #define YEAR_MONTH_DOW_DAY_SHORT_FORMAT  "yMEEEd"
+     * #define YEAR_MONTH_DAY_SHORT_FORMAT      "yMd"
+     * #define MONTH_DAY_SHORT_FORMAT           "Md"
+     * #define YEAR_MONTH_SHORT_FORMAT          "yM"
+     * #define MONTH_DOW_DAY_SHORT_FORMAT       "MEEEd"
      * #define DAY_ONLY_SHORT_FORMAT            "d"
-     * #define DAY_DOW_SHORT_FORMAT             "EEEd"
+     * #define DOW_DAY_SHORT_FORMAT             "EEEd"
      * #define YEAR_ONLY_SHORT_FORMAT           "y"
      * #define MONTH_ONLY_SHORT_FORMAT          "M"
      * #define MONTH_ONLY_MEDIUM_FORMAT         "MMM"
@@ -433,15 +434,14 @@ public:
      * #define HOUR_ONLY_FORMAT                 "h"
      * #define HOUR_GENERAL_TZ_FORMAT           "hv"
      * #define HOUR_DAYLIGNT_TZ_FORMAT          "hz"
-     * #define HOUR_DAYLIGNT_TZ_FORMAT          "hz"
-     * 
+     *
      * Those skeletons have pre-defined interval patterns in resource files.
      * Users are encouraged to use them. 
      * For example:
-     * DateIntervalFormat.createInstance(DAY_MONTH_FULL_FORMAT, false, loc);
+     * DateIntervalFormat.createInstance(MONTH_DAY_FULL_FORMAT, false, loc);
      * 
      * The given Locale provides the interval patterns.
-     * For example, for en_GB, if skeleton is DAY_MONTH_YEAR_DOW_MEDIUM_FORMAT,
+     * For example, for en_GB, if skeleton is YEAR_MONTH_DOW_DAY_MEDIUM_FORMAT,
      * which is "yMMMEEEd",
      * the interval patterns defined in resource file to above skeleton are:
      * "EEE, d MMM, yyyy - EEE, d MMM, yyyy" for year differs,
@@ -504,25 +504,25 @@ public:
      * interval patterns in resource files.
      * Users are encouraged to use those macros.
      * For example: 
-     * DateIntervalFormat::createInstance(DAY_MONTH_FULL_FORMAT, FALSE, status) 
+     * DateIntervalFormat::createInstance(MONTH_DAY_FULL_FORMAT, FALSE, status) 
      * 
-     * #define DAY_MONTH_YEAR_DOW_LONG_FORMAT   "yMMMMEEEEd"
-     * #define DAY_MONTH_YEAR_LONG_FORMAT       "yMMMMd"
-     * #define DAY_MONTH_LONG_FORMAT            "MMMMd"
-     * #define MONTH_YEAR_LONG_FORMAT           "yMMMM"
-     * #define DAY_MONTH_DOW_LONG_FORMAT        "MMMMEEEEd"
-     * #define DAY_MONTH_YEAR_DOW_MEDIUM_FORMAT "yMMMEEEd"
-     * #define DAY_MONTH_YEAR_MEDIUM_FORMAT     "yMMMd"
-     * #define DAY_MONTH_MEDIUM_FORMAT          "MMMd"
-     * #define MONTH_YEAR_MEDIUM_FORMAT         "yMMM"
-     * #define DAY_MONTH_DOW_MEDIUM_FORMAT      "MMMEEEd"
-     * #define DAY_MONTH_YEAR_DOW_SHORT_FORMAT  "yMEEEd"
-     * #define DAY_MONTH_YEAR_SHORT_FORMAT      "yMd"
-     * #define DAY_MONTH_SHORT_FORMAT           "Md"
-     * #define MONTH_YEAR_SHORT_FORMAT          "yM"
-     * #define DAY_MONTH_DOW_SHORT_FORMAT       "MEEEd"
+     * #define YEAR_MONTH_DOW_DAY_LONG_FORMAT   "yMMMMEEEEd"
+     * #define YEAR_MONTH_DAY_LONG_FORMAT       "yMMMMd"
+     * #define MONTH_DAY_LONG_FORMAT            "MMMMd"
+     * #define YEAR_MONTH_LONG_FORMAT           "yMMMM"
+     * #define MONTH_DOW_DAY_LONG_FORMAT        "MMMMEEEEd"
+     * #define YEAR_MONTH_DOW_DAY_MEDIUM_FORMAT "yMMMEEEd"
+     * #define YEAR_MONTH_DAY_MEDIUM_FORMAT     "yMMMd"
+     * #define MONTH_DAY_MEDIUM_FORMAT          "MMMd"
+     * #define YEAR_MONTH_MEDIUM_FORMAT         "yMMM"
+     * #define MONTH_DOW_DAY_MEDIUM_FORMAT      "MMMEEEd"
+     * #define YEAR_MONTH_DOW_DAY_SHORT_FORMAT  "yMEEEd"
+     * #define YEAR_MONTH_DAY_SHORT_FORMAT      "yMd"
+     * #define MONTH_DAY_SHORT_FORMAT           "Md"
+     * #define YEAR_MONTH_SHORT_FORMAT          "yM"
+     * #define MONTH_DOW_DAY_SHORT_FORMAT       "MEEEd"
      * #define DAY_ONLY_SHORT_FORMAT            "d"
-     * #define DAY_DOW_SHORT_FORMAT             "EEEd"
+     * #define DOW_DAY_SHORT_FORMAT             "EEEd"
      * #define YEAR_ONLY_SHORT_FORMAT           "y"
      * #define MONTH_ONLY_SHORT_FORMAT          "M"
      * #define MONTH_ONLY_MEDIUM_FORMAT         "MMM"
@@ -533,12 +533,11 @@ public:
      * #define HOUR_ONLY_FORMAT                 "h"
      * #define HOUR_GENERAL_TZ_FORMAT           "hv"
      * #define HOUR_DAYLIGNT_TZ_FORMAT          "hz"
-     * #define HOUR_DAYLIGNT_TZ_FORMAT          "hz"
-     * 
+     *
      * Those skeletons have pre-defined interval patterns in resource files.
      * Users are encouraged to use them. 
      * For example:
-     * DateIntervalFormat.createInstance(DAY_MONTH_FULL_FORMAT, false, loc,itvinf);
+     * DateIntervalFormat.createInstance(MONTH_DAY_FULL_FORMAT, false, loc,itvinf);
      *
      * the DateIntervalInfo provides the interval patterns.
      *

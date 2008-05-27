@@ -208,7 +208,7 @@ typedef enum UDateFormatStyle {
  * </ul>
  *
  * <P>
- * For example, given skeleton DAY_MONTH_YEAR_SHORT_FORMAT, which is "dMy",
+ * For example, given skeleton YEAR_MONTH_DAY_SHORT_FORMAT, which is "yMd",
  * for English, the full pattern is "M/d/yy", which is the short format
  * of date pattern having DAY, MONTH, and YEAR.
  * 
@@ -217,37 +217,37 @@ typedef enum UDateFormatStyle {
  * (for example,  DAY, MONTH, YEAR) and the format length (long, medium, short)
  * used in date time patterns.
  * 
- * For example, skeleton MONTH_YEAR_MEDIUM_FORMAT consists month and year,
+ * For example, skeleton YEAR_MONTH_MEDIUM_FORMAT consists month and year,
  * and it's corresponding full pattern is medium format date pattern.
- * So, the skeleton is "MMMy", for English, the full pattern is "MMM yyyy", 
+ * So, the skeleton is "yMMM", for English, the full pattern is "MMM yyyy", 
  * which is the format by removing DATE from medium date format.
  *
- * For example, skeleton DAY_MONTH_YEAR_DOW_MEDIUM_FORMAT consists day, month,
+ * For example, skeleton YEAR_MONTH_DOW_DAY_MEDIUM_FORMAT consists day, month,
  * year, and day-of-week, and it's corresponding full pattern is the medium
- * format date pattern. So, the skeleton is "EEEdMMMy", for English,
+ * format date pattern. So, the skeleton is "yMMMEEEd", for English,
  * the full pattern is "EEE, MMM d, yyyy", which is the medium date format
  * plus day-of-week.
  *
  * @draft ICU 4.0
  */
 
-#define DAY_MONTH_YEAR_DOW_LONG_FORMAT   "yMMMMEEEEd"
-#define DAY_MONTH_YEAR_LONG_FORMAT       "yMMMMd"
-#define DAY_MONTH_LONG_FORMAT            "MMMMd"
-#define MONTH_YEAR_LONG_FORMAT           "yMMMM"
-#define DAY_MONTH_DOW_LONG_FORMAT        "MMMMEEEEd"
-#define DAY_MONTH_YEAR_DOW_MEDIUM_FORMAT "yMMMEEEd"
-#define DAY_MONTH_YEAR_MEDIUM_FORMAT     "yMMMd"
-#define DAY_MONTH_MEDIUM_FORMAT          "MMMd"
-#define MONTH_YEAR_MEDIUM_FORMAT         "yMMM"
-#define DAY_MONTH_DOW_MEDIUM_FORMAT      "MMMEEEd"
-#define DAY_MONTH_YEAR_DOW_SHORT_FORMAT  "yMEEEd"
-#define DAY_MONTH_YEAR_SHORT_FORMAT      "yMd"
-#define DAY_MONTH_SHORT_FORMAT           "Md"
-#define MONTH_YEAR_SHORT_FORMAT          "yM"
-#define DAY_MONTH_DOW_SHORT_FORMAT       "MEEEd"
+#define YEAR_MONTH_DOW_DAY_LONG_FORMAT   "yMMMMEEEEd"
+#define YEAR_MONTH_DAY_LONG_FORMAT       "yMMMMd"
+#define MONTH_DAY_LONG_FORMAT            "MMMMd"
+#define YEAR_MONTH_LONG_FORMAT           "yMMMM"
+#define MONTH_DOW_DAY_LONG_FORMAT        "MMMMEEEEd"
+#define YEAR_MONTH_DOW_DAY_MEDIUM_FORMAT "yMMMEEEd"
+#define YEAR_MONTH_DAY_MEDIUM_FORMAT     "yMMMd"
+#define MONTH_DAY_MEDIUM_FORMAT          "MMMd"
+#define YEAR_MONTH_MEDIUM_FORMAT         "yMMM"
+#define MONTH_DOW_DAY_MEDIUM_FORMAT      "MMMEEEd"
+#define YEAR_MONTH_DOW_DAY_SHORT_FORMAT  "yMEEEd"
+#define YEAR_MONTH_DAY_SHORT_FORMAT      "yMd"
+#define MONTH_DAY_SHORT_FORMAT           "Md"
+#define YEAR_MONTH_SHORT_FORMAT          "yM"
+#define MONTH_DOW_DAY_SHORT_FORMAT       "MEEEd"
 #define DAY_ONLY_SHORT_FORMAT            "d"
-#define DAY_DOW_SHORT_FORMAT             "EEEd"
+#define DOW_DAY_SHORT_FORMAT             "EEEd"
 #define YEAR_ONLY_SHORT_FORMAT           "y"
 #define MONTH_ONLY_SHORT_FORMAT          "M"
 #define MONTH_ONLY_MEDIUM_FORMAT         "MMM"

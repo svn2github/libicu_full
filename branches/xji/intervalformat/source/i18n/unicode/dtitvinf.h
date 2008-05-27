@@ -71,12 +71,12 @@ U_NAMESPACE_BEGIN
  * (for example,  DAY, MONTH, YEAR) and the format length (long, medium, short)
  * used in date time patterns.
  * 
- * For example, skeleton MONTH_YEAR_MEDIUM_FORMAT consists month and year,
+ * For example, skeleton YEAR_MONTH_MEDIUM_FORMAT consists month and year,
  * and it's corresponding full pattern is medium format date pattern.
- * So, the skeleton is "MMMy", for English, the full pattern is "MMM yyyy", 
+ * So, the skeleton is "yMMM", for English, the full pattern is "MMM yyyy", 
  * which is the format by removing DATE from medium date format.
  *
- * For example, skeleton DAY_MONTH_YEAR_DOW_MEDIUM_FORMAT consists day, month,
+ * For example, skeleton YEAR_MONTH_DOW_DAY_MEDIUM_FORMAT consists day, month,
  * year, and day-of-week, and it's corresponding full pattern is the medium
  * format date pattern. So, the skeleton is "yMMMEEEd", for English,
  * the full pattern is "EEE, MMM d, yyyy", which is the medium date format
@@ -97,7 +97,7 @@ U_NAMESPACE_BEGIN
  * <P>
  * There are pre-defined interval patterns for those pre-defined skeletons
  * in locales' resource files.
- * For example, for a skeleton DAY_MONTH_YEAR_MEDIUM_FORMAT, which is  "yMMMd",
+ * For example, for a skeleton YEAR_MONTH_DAY_MEDIUM_FORMAT, which is  "yMMMd",
  * in  en_US, if the largest different calendar field between date1 and date2 
  * is "year", the date interval pattern  is "MMM d, yyyy - MMM d, yyyy", 
  * such as "Jan 10, 2007 - Jan 10, 2008".

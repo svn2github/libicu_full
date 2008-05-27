@@ -613,7 +613,7 @@ public:
      * @param field    the calendar field need to check against
      * @return         TRUE if the 'field' is smaller than all the fields 
      *                 covered in pattern. FALSE otherwise.
-     * @draft ICU 4.0
+     * @internal ICU 4.0
      */
     UBool isFieldUnitIgnored(UCalendarDateFields field) const;
 
@@ -626,7 +626,7 @@ public:
      * @param field    the calendar field need to check against
      * @return         TRUE if the 'field' is smaller than all the fields 
      *                 covered in pattern. FALSE otherwise.
-     * @draft ICU 4.0
+     * @internal ICU 4.0
      */
     static UBool isFieldUnitIgnored(const UnicodeString& pattern, 
                                     UCalendarDateFields field);
