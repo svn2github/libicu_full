@@ -96,7 +96,9 @@ TestKeyInRootRecursive(UResourceBundle *root, const char *rootName,
 
         subRootBundle = ures_getByKey(root, subBundleKey, NULL, &errorCode);
         if (U_FAILURE(errorCode)) {
-            log_err("Can't open a resource with key \"%s\" in \"%s\" from %s for locale \"%s\"\n",
+            log_err("The resource bundle contains a resource with key \"%s\" in \"%s\" from %s "
+                    "for locale \"%s\", which is not known to be a valid resource.  Did you forget "
+                    "to update source/test/testdata/structLocale.txt?\n",
                     subBundleKey,
                     ures_getKey(currentBundle),
                     rootName,
