@@ -1,0 +1,190 @@
+﻿// ***************************************************************************
+// *
+// * Copyright (C) 2008 International Business Machines
+// * Corporation and others.  All Rights Reserved.
+// * Tool: com.ibm.icu.dev.tool.cldr.LDML2ICUConverter.java
+// * Source File:<path>/common/main/fr_CA.xml
+// *
+// ***************************************************************************
+fr_CA{
+    Currencies{
+        CAD{
+            "$",
+            "dollar canadien",
+        }
+        USD{
+            "$ US",
+            "dollar des États-Unis",
+        }
+    }
+    NumberPatterns{
+        "#,##0.###",
+        "#,##0.00 ¤;(#,##0.00¤)",
+        "#,##0 %",
+        "#E0",
+    }
+    PaperSize:intvector{
+        279,
+        216,
+    }
+    Version{"1.54"}
+    calendar{
+        gregorian{
+            DateTimeElements:intvector{
+                1,
+                4,
+            }
+            DateTimePatterns{
+                "HH 'h' mm 'min' ss 's' v",
+                "HH:mm:ss z",
+                "HH:mm:ss",
+                "HH:mm",
+                "EEEE d MMMM yyyy",
+                "d MMMM yyyy",
+                "yyyy-MM-dd",
+                "yy-MM-dd",
+                "{1} {0}",
+            }
+            availableFormats{
+                HHmm{"HH:mm"}
+                HHmmss{"HH:mm:ss"}
+                MEd{"EEE M-d"}
+                MMMEd{"E d MMM"}
+                MMMMEd{"EEE d MMMM"}
+                MMMMd{"d MMMM"}
+                MMMd{"d MMM"}
+                MMMdd{"dd MMM"}
+                MMd{"MM-d"}
+                MMdd{"MM-dd"}
+                Md{"M-d"}
+                d{"d"}
+                hhmm{"HH:mm"}
+                hhmmss{"HH:mm:ss"}
+                y{"yyyy"}
+                yM{"yyyy-MM"}
+                yMEd{"EEE yyyy-MM-dd"}
+                yMMM{"MMM yyyy"}
+                yMMMEd{"EEE d MMM yyyy"}
+                yMMMM{"MMMM yyyy"}
+                yyMM{"yy-MM"}
+                yyMMM{"MMM yy"}
+                yyMMMEEEd{"EEE d MMM yy"}
+                yyMMMd{"d MMM yy"}
+                yyyyMMMM{"MMMM yyyy"}
+            }
+            intervalFormats{
+                M{
+                    M{"M–M"}
+                }
+                MEd{
+                    M{"E MM-dd – E MM-dd"}
+                    d{"E MM-dd – E MM-dd"}
+                }
+                MMM{
+                    M{"MMM–MMM"}
+                }
+                MMMEd{
+                    M{"'du' E d MMM 'au' E d MMM"}
+                    d{"'du' E d 'au' E d MMM"}
+                }
+                MMMM{
+                    M{"LLLL-LLLL"}
+                }
+                MMMd{
+                    M{"'du' d MMM 'au' d MMM"}
+                    d{"d–d MMM"}
+                }
+                Md{
+                    M{"MM-dd – MM-dd"}
+                    d{"MM-dd – MM-dd"}
+                }
+                d{
+                    d{"d–d"}
+                }
+                fallback{"{0} – {1}"}
+                h{
+                    a{"HH – HH"}
+                    h{"HH–HH"}
+                }
+                hm{
+                    a{"HH:mm – HH:mm"}
+                    h{"HH:mm–HH:mm"}
+                    m{"HH:mm–HH:mm"}
+                }
+                hmv{
+                    a{"HH:mm – HH:mm v"}
+                    h{"HH:mm–HH:mm v"}
+                    m{"HH:mm–HH:mm v"}
+                }
+                hv{
+                    a{"HH – HH v"}
+                    h{"HH–HH v"}
+                }
+                y{
+                    y{"y–y"}
+                }
+                yM{
+                    M{"yy-MM – yy-MM"}
+                    y{"yy-MM – yy-MM"}
+                }
+                yMEd{
+                    M{"'du' E yy-MM-dd 'au' E yy-MM-dd"}
+                    d{"'du' E yy-MM-dd 'au' E yy-MM-dd"}
+                    y{"'du' E yy-MM-dd 'au' E yy-MM-dd"}
+                }
+                yMMM{
+                    M{"MMM–MMM yyyy"}
+                    y{"'de' MMM yyyy 'à' MMM yyyy"}
+                }
+                yMMMEd{
+                    M{"'du' E d MMM 'au' E d MMM yyyy"}
+                    d{"'du' E d 'au' E d MMM yyyy"}
+                    y{"'du' E d MMM yyyy 'au' E d MMM yyyy"}
+                }
+                yMMMM{
+                    M{"MMMM  – MMMM yyyy"}
+                }
+                yMMMd{
+                    M{"'du' d MMM 'au' d MMM yyyy"}
+                    d{"d–d MMM yyyy"}
+                    y{"'du' d MMM yyyy 'au' d MMM yyyy"}
+                }
+                yMd{
+                    M{"yy-MM-dd – yy-MM-dd"}
+                    d{"yy-MM-dd – yy-MM-dd"}
+                    y{"yy-MM-dd – yy-MM-dd"}
+                }
+            }
+        }
+    }
+    zoneStrings{
+        "meta:Alaska"{
+            cu:int{1}
+        }
+        "meta:America_Central"{
+            cu:int{1}
+        }
+        "meta:America_Eastern"{
+            cu:int{1}
+        }
+        "meta:America_Mountain"{
+            cu:int{1}
+        }
+        "meta:America_Pacific"{
+            cu:int{1}
+        }
+        "meta:Atlantic"{
+            cu:int{1}
+        }
+        "meta:Europe_Central"{
+            cu:int{0}
+            sg{"HEC"}
+        }
+        "meta:Europe_Eastern"{
+            cu:int{0}
+        }
+        "meta:Newfoundland"{
+            cu:int{1}
+        }
+    }
+}

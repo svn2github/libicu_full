@@ -1,0 +1,100 @@
+﻿// ***************************************************************************
+// *
+// * Copyright (C) 2008 International Business Machines
+// * Corporation and others.  All Rights Reserved.
+// * Tool: com.ibm.icu.dev.tool.cldr.LDML2ICUConverter.java
+// * Source File:<path>/common/main/ar_LB.xml
+// *
+// ***************************************************************************
+ar_LB{
+    Currencies{
+        LBP{
+            "ل.ل.‏",
+            "جنية لبنانى",
+        }
+    }
+    Scripts{
+        Ital{"اللأيطالية القديمة"}
+    }
+    Version{"1.45"}
+    calendar{
+        gregorian{
+            AmPmMarkers{
+                "ص",
+                "م",
+            }
+            DateTimeElements:intvector{
+                7,
+                1,
+            }
+            availableFormats{
+                Hm{"H:mm"}
+                M{"L"}
+                MMM{"LLL"}
+                MMMEd{"E d MMM"}
+                MMMMd{"d MMMM"}
+                MMMd{"d MMM"}
+                Md{"d/M"}
+                d{"d"}
+                yMMMEd{"EEE، d MMM yyyy"}
+                yMMMM{"MMMM yyyy"}
+            }
+            dayNames{
+                format{
+                    abbreviated{
+                        "الأحد",
+                        "الاثنين",
+                        "الثلاثاء",
+                        "الأربعاء",
+                        "الخميس",
+                        "الجمعة",
+                        "السبت",
+                    }
+                }
+            }
+            intervalFormats{
+                MMMM{
+                    M{"LLLL-LLLL"}
+                }
+            }
+            monthNames{
+                format{
+                    abbreviated{
+                        "كانون الثاني",
+                        "شباط",
+                        "آذار",
+                        "نيسان",
+                        "نوار",
+                        "حزيران",
+                        "تموز",
+                        "آب",
+                        "أيلول",
+                        "تشرين الأول",
+                        "تشرين الثاني",
+                        "كانون الأول",
+                    }
+                    wide{
+                        "كانون الثاني",
+                        "شباط",
+                        "آذار",
+                        "نيسان",
+                        "نوار",
+                        "حزيران",
+                        "تموز",
+                        "آب",
+                        "أيلول",
+                        "تشرين الأول",
+                        "تشرين الثاني",
+                        "كانون الأول",
+                    }
+                }
+            }
+            weekend:intvector{
+                5,
+                0,
+                6,
+                86400000,
+            }
+        }
+    }
+}

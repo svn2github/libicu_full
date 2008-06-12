@@ -1,0 +1,106 @@
+﻿// ***************************************************************************
+// *
+// * Copyright (C) 2008 International Business Machines
+// * Corporation and others.  All Rights Reserved.
+// * Tool: com.ibm.icu.dev.tool.cldr.LDML2ICUConverter.java
+// * Source File:<path>/common/main/en_ZA.xml
+// *
+// ***************************************************************************
+en_ZA{
+    AuxExemplarCharacters{
+        "[á à ă â å ä ā æ ç ḓ é è ĕ ê ë ē í ì ĭ î ï ī ḽ ñ ṅ ṋ ó ò ŏ ô ö ø ō œ š ß ṱ ú"
+        " ù ŭ û ü ū ÿ]"
+    }
+    Languages{
+        ss{"Swati"}
+        st{"Southern Sotho"}
+        sw{"Swahili"}
+        tn{"Tswana"}
+        ts{"Tsonga"}
+        ve{"Venda"}
+    }
+    NumberElements{
+        ",",
+        " ",
+        ";",
+        "%",
+        "0",
+        "#",
+        "-",
+        "E",
+        "‰",
+        "∞",
+        "NaN",
+        "+",
+    }
+    NumberPatterns{
+        "#,##0.###",
+        "¤#,##0.00",
+        "#,##0%",
+        "#E0",
+    }
+    Version{"1.57"}
+    calendar{
+        gregorian{
+            DateTimeElements:intvector{
+                1,
+                1,
+            }
+            DateTimePatterns{
+                "h:mm:ss a v",
+                "h:mm:ss a z",
+                "h:mm:ss a",
+                "h:mm a",
+                "EEEE dd MMMM yyyy",
+                "dd MMMM yyyy",
+                "dd MMM yyyy",
+                "yyyy/MM/dd",
+                "{1} {0}",
+            }
+        }
+    }
+    units{
+        day{
+            one{"{0} day"}
+            other{"{0} days"}
+        }
+        hour{
+            one{"{0} hour"}
+            other{"{0} hours"}
+        }
+        minute{
+            one{"{0} minute"}
+            other{"{0} minutes"}
+        }
+        month{
+            one{"{0} month"}
+            other{"{0} months"}
+        }
+        second{
+            one{"{0} second"}
+            other{"{0} seconds"}
+        }
+        week{
+            one{"{0} week"}
+            other{"{0} weeks"}
+        }
+        year{
+            one{"{0} year"}
+            other{"{0} years"}
+        }
+    }
+    zoneStrings{
+        "meta:Africa_Central"{
+            cu:int{1}
+        }
+        "meta:Africa_Eastern"{
+            cu:int{1}
+        }
+        "meta:Africa_Southern"{
+            cu:int{1}
+        }
+        "meta:Africa_Western"{
+            cu:int{1}
+        }
+    }
+}
