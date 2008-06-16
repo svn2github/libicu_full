@@ -172,7 +172,7 @@ typedef enum UDateFormatStyle {
 } UDateFormatStyle;
 
 
-/*
+/**
  * Below are a set of pre-defined skeletons.
  *
  * <P>
