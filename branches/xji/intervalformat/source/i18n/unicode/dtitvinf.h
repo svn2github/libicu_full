@@ -110,7 +110,7 @@ static UBool U_CALLCONV hashTableValueComparator(UHashTok val1, UHashTok val2) ;
  * the first date in the interval pattern for this locale is earlier date.
  * If the fallback format is "{1} - {0}", it means the first date is the 
  * later date.
- * For a paticular interval pattern, the default order can be overriden
+ * For a particular interval pattern, the default order can be overriden
  * by prefixing "latestFirst:" or "earliestFirst:" to the interval pattern.
  * For example, if the fallback format is "{0}-{1}",
  * but for skeleton "yMMMd", the interval pattern when day is different is 
@@ -137,7 +137,7 @@ static UBool U_CALLCONV hashTableValueComparator(UHashTok val1, UHashTok val2) ;
  * DAY_OF_WEEK, AM_PM,  HOUR, HOUR_OF_DAY, and MINUTE.
  * Interval patterns when other calendar fields are different is not supported.
  * <P>
- * DateIntervalInfo objects are clonable. 
+ * DateIntervalInfo objects are cloneable. 
  * When clients obtain a DateIntervalInfo object, 
  * they can feel free to modify it as necessary.
  * <P>
@@ -191,7 +191,7 @@ public:
      * @return   a copy of the object
      * @draft    ICU4.0
      */
-    DateIntervalInfo* clone(void) const;
+    virtual DateIntervalInfo* clone(void) const;
 
     /**
      * Destructor.
@@ -208,7 +208,7 @@ public:
      * @return         true if other is semantically equal to this.
      * @stable ICU 4.0
      */
-    UBool operator==(const DateIntervalInfo& other) const;
+    virtual UBool operator==(const DateIntervalInfo& other) const;
 
     /**
      * Return true if another object is semantically unequal to this one.
@@ -230,10 +230,10 @@ public:
      * <pre>
      * UErrorCode status = U_ZERO_ERROR;
      * DateIntervalInfo dIntervalInfo = new DateIntervalInfo();
+     * dIntervalInfo->setFallbackIntervalPattern("{0} ~ {1}");
      * dIntervalInfo->setIntervalPattern("yMd", UCAL_YEAR, "'from' yyyy-M-d 'to' yyyy-M-d", status); 
      * dIntervalInfo->setIntervalPattern("yMMMd", UCAL_MONTH, "'from' yyyy MMM d 'to' MMM d", status);
      * dIntervalInfo->setIntervalPattern("yMMMd", UCAL_DAY, "yyyy MMM d-d", status, status);
-     * dIntervalInfo->setFallbackIntervalPattern("{0} ~ {1}");
      * </pre>
      *
      * Restriction: 
@@ -259,7 +259,8 @@ public:
                             UErrorCode& status);
 
     /**
-     * Get the interval pattern given the largest different calendar field.
+     * Get the interval pattern given skeleton and 
+     * the largest different calendar field.
      * @param skeleton   the skeleton
      * @param field      the largest different calendar field
      * @param status     output param set to success/failure code on exit
