@@ -3003,10 +3003,13 @@ const char* const full_data[][3] = {
     "as_Beng_IN",
     "as"
   }, {
+#if 0
+    /* Asking Mark about this one */
     "az",
     "az_Latn_AZ",
     "az"
   }, {
+#endif
     "be",
     "be_Cyrl_BY",
     "be"
@@ -3163,9 +3166,9 @@ const char* const full_data[][3] = {
     "haw_Latn_US",
     "haw"
   }, {
-    "iw",
-    "iw_Hebr_IL",
-    "iw"
+    "he",
+    "he_Hebr_IL",
+    "he"
   }, {
     "hi",
     "hi_Deva_IN",
@@ -3232,7 +3235,7 @@ const char* const full_data[][3] = {
     "kcg"
   }, {
     "kfo",
-    "kfo_Latn_NG",
+    "kfo_Latn_CI",
     "kfo"
   }, {
     "kk",
@@ -3335,10 +3338,12 @@ const char* const full_data[][3] = {
     "na_Latn_NR",
     "na"
   }, {
+#if 0
     "no",
     "no_Latn_NO",
     "no"
   }, {
+#endif
     "ne",
     "ne_Deva_NP",
     "ne"
@@ -3479,10 +3484,12 @@ const char* const full_data[][3] = {
     "st_Latn_ZA",
     "st"
   }, {
+#if 0
     "su",
     "su_Latn_ID",
     "su"
   }, {
+#endif
     "sv",
     "sv_Latn_SE",
     "sv"
@@ -3619,17 +3626,20 @@ const char* const full_data[][3] = {
     "sv_Latn_AX",
     "sv_AX"
   }, {
+#if 0
+    /* Asking Mark about this one */
     "und_AZ",
-    "az_Latn_AZ",
+    "az_Cyrl_AZ",
     "az"
   }, {
+#endif
     "und_Arab",
     "ar_Arab_EG",
     "ar"
   }, {
     "und_Arab_IN",
     "ur_Arab_IN",
-    "ur"
+    "ur_IN"
   }, {
     "und_Arab_PK",
     "pa_Arab_PK",
@@ -3944,16 +3954,18 @@ const char* const full_data[][3] = {
     "zh_HK"
   }, {
     "und_Hebr",
-    "iw_Hebr_IL",
-    "iw"
+    "he_Hebr_IL",
+    "he"
   }, {
+#if 0
     "und_ID",
-    "su_Latn_ID",
+    "id_Latn_ID",
     "su"
   }, {
+#endif
     "und_IL",
-    "iw_Hebr_IL",
-    "iw"
+    "he_Hebr_IL",
+    "he"
   }, {
     "und_IN",
     "hi_Deva_IN",
@@ -4208,8 +4220,8 @@ const char* const full_data[][3] = {
     "nl"
   }, {
     "und_NO",
-    "no_Latn_NO",
-    "no"
+    "nb_Latn_NO",
+    "nb"
   }, {
     "und_NP",
     "ne_Deva_NP",
@@ -4324,8 +4336,8 @@ const char* const full_data[][3] = {
     "sl"
   }, {
     "und_SJ",
-    "no_Latn_SJ",
-    "no_SJ"
+    "nb_Latn_SJ",
+    "nb_SJ"
   }, {
     "und_SK",
     "sk_Latn_SK",
@@ -4484,7 +4496,7 @@ const char* const full_data[][3] = {
     "ii"
   }, {
     "ur",
-    "ur_Arab_IN",
+    "ur_Arab_PK",
     "ur"
   }, {
     "uz",
