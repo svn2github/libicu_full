@@ -17,36 +17,15 @@ en_NZ{
             "US Dollar",
         }
     }
-    CurrencyUnitPatterns{
-        one{"{0} {1}"}
-    }
-    NumberElements{
-        ".",
-        ",",
-        ";",
-        "%",
-        "0",
-        "#",
-        "-",
-        "E",
-        "‰",
-        "∞",
-        "NaN",
-        "+",
-    }
     NumberPatterns{
         "#,##0.###",
         "¤#,##0.00",
         "#,##0%",
         "#E0",
     }
-    Version{"1.55"}
+    Version{"1.56"}
     calendar{
         gregorian{
-            AmPmMarkers{
-                "AM",
-                "PM",
-            }
             DateTimeElements:intvector{
                 1,
                 1,
@@ -63,86 +42,10 @@ en_NZ{
                 "{1} {0}",
             }
             availableFormats{
-                Hm{"HH:mm"}
-                Hms{"HH:mm:ss"}
-                M{"L"}
-                MMM{"LLL"}
-                MMMEd{"E, MMM d"}
-                MMMMEd{"E, MMMM d"}
                 MMMMd{"d MMMM"}
-                MMMd{"MMM d"}
                 Md{"d/M"}
-                d{"d"}
-                hm{"h:mm a"}
-                ms{"mm:ss"}
-                y{"yyyy"}
-                yM{"M/yyyy"}
-                yMMM{"MMM yyyy"}
-                yMMMEd{"EEE, MMM d, yyyy"}
-                yMMMM{"MMMM yyyy"}
-                yQQQ{"QQQ yyyy"}
                 yyyyMM{"MM/yyyy"}
                 yyyyMMMM{"MMMM yyyy"}
-            }
-            dayNames{
-                format{
-                    abbreviated{
-                        "Sun",
-                        "Mon",
-                        "Tue",
-                        "Wed",
-                        "Thu",
-                        "Fri",
-                        "Sat",
-                    }
-                    narrow{
-                        "S",
-                        "M",
-                        "T",
-                        "W",
-                        "T",
-                        "F",
-                        "S",
-                    }
-                    wide{
-                        "Sunday",
-                        "Monday",
-                        "Tuesday",
-                        "Wednesday",
-                        "Thursday",
-                        "Friday",
-                        "Saturday",
-                    }
-                }
-                stand-alone{
-                    abbreviated{
-                        "Sun",
-                        "Mon",
-                        "Tue",
-                        "Wed",
-                        "Thu",
-                        "Fri",
-                        "Sat",
-                    }
-                    narrow{
-                        "S",
-                        "M",
-                        "T",
-                        "W",
-                        "T",
-                        "F",
-                        "S",
-                    }
-                    wide{
-                        "Sunday",
-                        "Monday",
-                        "Tuesday",
-                        "Wednesday",
-                        "Thursday",
-                        "Friday",
-                        "Saturday",
-                    }
-                }
             }
             intervalFormats{
                 M{
@@ -158,9 +61,6 @@ en_NZ{
                 MMMEd{
                     M{"E, d MMM - E, d MMM"}
                     d{"E, d - E, d MMM"}
-                }
-                MMMM{
-                    M{"LLLL-LLLL"}
                 }
                 MMMd{
                     M{"d MMM - d MMM"}
@@ -212,9 +112,6 @@ en_NZ{
                     M{"E, d MMM - E, d MMM yyyy"}
                     d{"E, d - E, d MMM yyyy"}
                     y{"E, d MMM yyyy - E, d MMM yyyy"}
-                }
-                yMMMM{
-                    y{"yyyy-MM – yyyy-MM"}
                 }
                 yMMMd{
                     M{"d MMM - d MMM yyyy"}

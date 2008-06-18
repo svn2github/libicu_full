@@ -171,11 +171,11 @@ kok{
     }
     NumberPatterns{
         "#,##,##0.###",
-        "¤ #,##,##0.00",
+        "¤ #,##,##0.00",
         "#,##,##0%",
         "#E0",
     }
-    Version{"1.55"}
+    Version{"1.56"}
     calendar{
         gregorian{
             AmPmMarkers{

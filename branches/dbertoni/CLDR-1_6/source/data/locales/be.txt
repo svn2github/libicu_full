@@ -335,7 +335,7 @@ be{
             "невядомая або недапушчальная валюта",
         }
     }
-    ExemplarCharacters{"[’ а-д {дж} {дз} е ё ж з й і к-у ў ф-ш ы-я]"}
+    ExemplarCharacters{"[а-д {дж} {дз} е ё ж з й і к-у ў ф-ш ы-я]"}
     Keys{
         calendar{"каляндар"}
         collation{"параўнаньне тэксту"}
@@ -536,7 +536,7 @@ be{
             japanese{"японскі каляндар"}
         }
     }
-    Version{"1.73"}
+    Version{"1.75"}
     calendar{
         gregorian{
             AmPmMarkers{

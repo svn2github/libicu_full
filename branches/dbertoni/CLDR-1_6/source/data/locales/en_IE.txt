@@ -23,7 +23,7 @@ en_IE{
         "#,##0%",
         "#E0",
     }
-    Version{"1.56"}
+    Version{"1.57"}
     calendar{
         gregorian{
             AmPmMarkers{
@@ -81,18 +81,12 @@ en_IE{
                     d{"d-d"}
                 }
                 fallback{"{0} - {1}"}
-                h{
-                    h{"h–h a"}
-                }
                 hm{
                     m{"HH:mm-HH:mm"}
                 }
                 hmv{
                     h{"HH:mm-HH:mm v"}
                     m{"HH:mm-HH:mm v"}
-                }
-                hv{
-                    h{"h–h a v"}
                 }
                 y{
                     y{"y-y"}

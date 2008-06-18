@@ -741,7 +741,7 @@ it{
                 /**
                  * Duplicated from NumberPatterns resource
                  */
-                "¤ #,##0.00",
+                "¤ #,##0.00",
                 ",",
                 ".",
             }
@@ -1884,7 +1884,7 @@ it{
     }
     NumberPatterns{
         "#,##0.###",
-        "¤ #,##0.00",
+        "¤ #,##0.00",
         "#,##0%",
         "#E0",
     }
@@ -2043,7 +2043,7 @@ it{
         ROZAJ{"resiano"}
         SAAHO{"saho"}
     }
-    Version{"1.102"}
+    Version{"1.105"}
     calendar{
         gregorian{
             AmPmMarkers{
@@ -2407,9 +2407,6 @@ it{
         "Africa:Algiers"{
             ec{"Algeri"}
         }
-        "Africa:Ceuta"{
-            ec{"Ceuta"}
-        }
         "Africa:Djibouti"{
             ec{"Gibuti"}
         }
@@ -2422,92 +2419,14 @@ it{
         "Africa:Tunis"{
             ec{"Tunisi"}
         }
-        "America:Adak"{
-            ec{"Adak"}
-        }
         "America:Anchorage"{
             ec{"Fuso orario Alaska"}
-        }
-        "America:Araguaina"{
-            ec{"Araguaina"}
-        }
-        "America:Bahia"{
-            ec{"Bahia"}
-        }
-        "America:Belem"{
-            ec{"Belem"}
-        }
-        "America:Blanc-Sablon"{
-            ec{"Blanc-Sablon"}
-        }
-        "America:Boa_Vista"{
-            ec{"Boa Vista"}
-        }
-        "America:Boise"{
-            ec{"Boise"}
-        }
-        "America:Buenos_Aires"{
-            ec{"Buenos Aires"}
-        }
-        "America:Cambridge_Bay"{
-            ec{"Cambridge Bay"}
-        }
-        "America:Campo_Grande"{
-            ec{"Campo Grande"}
-        }
-        "America:Cancun"{
-            ec{"Cancun"}
-        }
-        "America:Catamarca"{
-            ec{"Catamarca"}
-        }
-        "America:Chicago"{
-            ec{"Chicago"}
-        }
-        "America:Chihuahua"{
-            ec{"Chihuahua"}
-        }
-        "America:Coral_Harbour"{
-            ec{"Coral Harbour"}
         }
         "America:Cordoba"{
             ec{"Cordova"}
         }
-        "America:Cuiaba"{
-            ec{"Cuiaba"}
-        }
-        "America:Danmarkshavn"{
-            ec{"Danmarkshavn"}
-        }
-        "America:Dawson"{
-            ec{"Dawson"}
-        }
-        "America:Dawson_Creek"{
-            ec{"Dawson Creek"}
-        }
-        "America:Denver"{
-            ec{"Denver"}
-        }
-        "America:Detroit"{
-            ec{"Detroit"}
-        }
-        "America:Edmonton"{
-            ec{"Edmonton"}
-        }
-        "America:Eirunepe"{
-            ec{"Eirunepe"}
-        }
         "America:El_Salvador"{
             ec{"Salvador"}
-        }
-        "America:Fortaleza"{
-            ec{"Fortaleza"}
-        }
-        "America:Glace_Bay"{
-            ec{"Glace Bay"}
-        }
-        "America:Goose_Bay"{
-            ec{"Goose Bay"}
         }
         "America:Guadeloupe"{
             ec{"Guadalupa"}
@@ -2515,29 +2434,8 @@ it{
         "America:Guyana"{
             ec{"Guiana"}
         }
-        "America:Halifax"{
-            ec{"Halifax"}
-        }
-        "America:Hermosillo"{
-            ec{"Hermosillo"}
-        }
-        "America:Indianapolis"{
-            ec{"Indianapolis"}
-        }
-        "America:Inuvik"{
-            ec{"Inuvik"}
-        }
-        "America:Iqaluit"{
-            ec{"Iqaluit"}
-        }
         "America:Jamaica"{
             ec{"Giamaica"}
-        }
-        "America:Jujuy"{
-            ec{"Jujuy"}
-        }
-        "America:Juneau"{
-            ec{"Juneau"}
         }
         "America:Martinique"{
             ec{"Martinica"}
@@ -2550,9 +2448,6 @@ it{
         }
         "America:Puerto_Rico"{
             ec{"Portorico"}
-        }
-        "America:Rio_Branco"{
-            ec{"Rio Branco"}
         }
         "America:Sao_Paulo"{
             ec{"San Paolo"}
@@ -2572,65 +2467,23 @@ it{
         "America:St_Vincent"{
             ec{"St. Vincent"}
         }
-        "Antarctica:Casey"{
-            ec{"Casey"}
-        }
-        "Antarctica:Davis"{
-            ec{"Davis"}
-        }
         "Antarctica:DumontDUrville"{
             ec{"Dumont D'Urville"}
         }
         "Antarctica:South_Pole"{
             ec{"Polo Sud"}
         }
-        "Asia:Almaty"{
-            ec{"Almaty"}
-        }
-        "Asia:Anadyr"{
-            ec{"Anadyr"}
-        }
-        "Asia:Aqtau"{
-            ec{"Aqtau"}
-        }
-        "Asia:Aqtobe"{
-            ec{"Aqtobe"}
-        }
         "Asia:Bahrain"{
             ec{"Bahrein"}
-        }
-        "Asia:Choibalsan"{
-            ec{"Choibalsan"}
-        }
-        "Asia:Chongqing"{
-            ec{"Chongqing"}
         }
         "Asia:Damascus"{
             ec{"Damasco"}
         }
-        "Asia:Harbin"{
-            ec{"Harbin"}
-        }
-        "Asia:Hovd"{
-            ec{"Hovd"}
-        }
-        "Asia:Irkutsk"{
-            ec{"Irkutsk"}
-        }
         "Asia:Jakarta"{
             ec{"Giacarta"}
         }
-        "Asia:Jayapura"{
-            ec{"Jayapura"}
-        }
         "Asia:Jerusalem"{
             ec{"Gerusalemme"}
-        }
-        "Asia:Kamchatka"{
-            ec{"Kamchatka"}
-        }
-        "Asia:Kashgar"{
-            ec{"Kashgar"}
         }
         "Asia:Macau"{
             ec{"Macao"}
@@ -2662,27 +2515,6 @@ it{
         "Atlantic:St_Helena"{
             ec{"Sant'Elena"}
         }
-        "Australia:Adelaide"{
-            ec{"Adelaide"}
-        }
-        "Australia:Brisbane"{
-            ec{"Brisbane"}
-        }
-        "Australia:Broken_Hill"{
-            ec{"Broken Hill"}
-        }
-        "Australia:Currie"{
-            ec{"Currie"}
-        }
-        "Australia:Darwin"{
-            ec{"Darwin"}
-        }
-        "Australia:Eucla"{
-            ec{"Eucla"}
-        }
-        "Australia:Hobart"{
-            ec{"Hobart"}
-        }
         "Etc:Unknown"{
             ec{"Sconosciuto"}
         }
@@ -2706,12 +2538,6 @@ it{
         }
         "Europe:Gibraltar"{
             ec{"Gibilterra"}
-        }
-        "Europe:Kaliningrad"{
-            ec{"Kaliningrad"}
-        }
-        "Europe:Kiev"{
-            ec{"Kiev"}
         }
         "Europe:Lisbon"{
             ec{"Lisbona"}
@@ -2755,26 +2581,11 @@ it{
         "Indian:Reunion"{
             ec{"Riunione, isola di"}
         }
-        "Pacific:Chatham"{
-            ec{"Chatham"}
-        }
         "Pacific:Easter"{
             ec{"Pasqua"}
         }
-        "Pacific:Enderbury"{
-            ec{"Enderbury"}
-        }
         "Pacific:Fiji"{
             ec{"Figi"}
-        }
-        "Pacific:Gambier"{
-            ec{"Gambier"}
-        }
-        "Pacific:Honolulu"{
-            ec{"Honolulu"}
-        }
-        "Pacific:Johnston"{
-            ec{"Johnston"}
         }
         "Pacific:Pitcairn"{
             ec{"Pitcairn, isole"}

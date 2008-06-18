@@ -65,7 +65,7 @@ root{
     }
     NumberPatterns{
         "#,##0.###",
-        "¤ #,##0.00",
+        "¤ #,##0.00",
         "#,##0%",
         "#E0",
     }
@@ -73,7 +73,7 @@ root{
         297,
         210,
     }
-    Version{"1.159"}
+    Version{"1.160"}
     calendar{
         buddhist{
             AmPmMarkers{

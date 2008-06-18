@@ -1118,7 +1118,6 @@ ro{
     }
     ExemplarCharacters{"[a ă â b-i î j-p r s ș t ț u v x z]"}
     Keys{
-        calendar{"calendar"}
         collation{"sortare"}
         currency{"monedă"}
     }
@@ -1367,7 +1366,7 @@ ro{
     }
     NumberPatterns{
         "#,##0.###",
-        "#,##0.00 ¤",
+        "#,##0.00 ¤",
         "#,##0%",
         "#E0",
     }
@@ -1454,7 +1453,7 @@ ro{
             traditional{"sortare tradițională"}
         }
     }
-    Version{"1.93"}
+    Version{"1.95"}
     calendar{
         buddhist{
             DateTimePatterns{
@@ -1723,9 +1722,6 @@ ro{
         }
         "America:Martinique"{
             ec{"Martinica"}
-        }
-        "America:Rio_Branco"{
-            ec{"Rio Branco"}
         }
         "America:St_Kitts"{
             ec{"St. Kitts"}

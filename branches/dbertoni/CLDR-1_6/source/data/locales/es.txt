@@ -2386,7 +2386,7 @@ es{
     }
     NumberPatterns{
         "#,##0.###",
-        "¤ #,##0.00",
+        "¤ #,##0.00",
         "#,##0%",
         "#E0",
     }
@@ -2542,7 +2542,7 @@ es{
         POSIX{"Ordenador"}
         REVISED{"Ortografía revisada"}
     }
-    Version{"1.109"}
+    Version{"1.112"}
     calendar{
         gregorian{
             AmPmMarkers{
@@ -2891,9 +2891,6 @@ es{
         "Africa:Cairo"{
             ec{"El Cairo"}
         }
-        "Africa:Ceuta"{
-            ec{"Ceuta"}
-        }
         "Africa:Djibouti"{
             ec{"Yibuti"}
         }
@@ -2914,9 +2911,6 @@ es{
         }
         "Africa:Tunis"{
             ec{"Túnez"}
-        }
-        "America:Anchorage"{
-            ec{"Anchorage"}
         }
         "America:Anguilla"{
             ec{"Anguila"}
@@ -2945,17 +2939,8 @@ es{
         "America:Bogota"{
             ec{"Bogotá"}
         }
-        "America:Buenos_Aires"{
-            ec{"Buenos Aires"}
-        }
-        "America:Campo_Grande"{
-            ec{"Campo Grande"}
-        }
         "America:Cancun"{
             ec{"Cancún"}
-        }
-        "America:Catamarca"{
-            ec{"Catamarca"}
         }
         "America:Cayenne"{
             ec{"Cayena"}
@@ -2963,26 +2948,11 @@ es{
         "America:Cayman"{
             ec{"Caimán"}
         }
-        "America:Chicago"{
-            ec{"Chicago"}
-        }
-        "America:Chihuahua"{
-            ec{"Chihuahua"}
-        }
         "America:Cordoba"{
             ec{"Córdoba"}
         }
         "America:Cuiaba"{
             ec{"Cuiabá"}
-        }
-        "America:Denver"{
-            ec{"Denver"}
-        }
-        "America:Detroit"{
-            ec{"Detroit"}
-        }
-        "America:Edmonton"{
-            ec{"Edmonton"}
         }
         "America:Eirunepe"{
             ec{"Eirunepé"}
@@ -2993,20 +2963,11 @@ es{
         "America:Guadeloupe"{
             ec{"Guadalupe"}
         }
-        "America:Halifax"{
-            ec{"Halifax"}
-        }
         "America:Havana"{
             ec{"La Habana"}
         }
-        "America:Hermosillo"{
-            ec{"Hermosillo"}
-        }
         "America:Indianapolis"{
             ec{"Indianápolis"}
-        }
-        "America:Jujuy"{
-            ec{"Jujuy"}
         }
         "America:Los_Angeles"{
             ec{"Los Ángeles"}
@@ -3038,17 +2999,11 @@ es{
         "America:Panama"{
             ec{"Panamá"}
         }
-        "America:Phoenix"{
-            ec{"Phoenix"}
-        }
         "America:Port-au-Prince"{
             ec{"Puerto Príncipe"}
         }
         "America:Port_of_Spain"{
             ec{"Puerto España"}
-        }
-        "America:Regina"{
-            ec{"Regina"}
         }
         "America:Rio_Branco"{
             ec{"Río Branco"}
@@ -3067,18 +3022,6 @@ es{
         }
         "America:St_Vincent"{
             ec{"San Vicente"}
-        }
-        "America:Tijuana"{
-            ec{"Tijuana"}
-        }
-        "America:Toronto"{
-            ec{"Toronto"}
-        }
-        "America:Vancouver"{
-            ec{"Vancouver"}
-        }
-        "America:Winnipeg"{
-            ec{"Winnipeg"}
         }
         "Antarctica:DumontDUrville"{
             ec{"Dumont d'Urville"}
@@ -3193,18 +3136,6 @@ es{
         }
         "Australia:Adelaide"{
             ec{"Adelaida"}
-        }
-        "Australia:Brisbane"{
-            ec{"Brisbane"}
-        }
-        "Australia:Darwin"{
-            ec{"Darwin"}
-        }
-        "Australia:Hobart"{
-            ec{"Hobart"}
-        }
-        "Australia:Perth"{
-            ec{"Perth"}
         }
         "Australia:Sydney"{
             ec{"Sídney"}
@@ -3600,7 +3531,6 @@ es{
             ld{"Hora de verano de Israel"}
             lg{"Hora de Israel"}
             ls{"Hora estándar de Israel"}
-            sd{"IDT"}
             ss{"IST (Israel)"}
         }
         "meta:Japan"{

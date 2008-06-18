@@ -303,10 +303,6 @@ az{
             "AED",
             "Birləşmiş ərəb emiratlar dirhamı",
         }
-        AFA{
-            "AFA",
-            "AFA",
-        }
         AFN{
             "AFN",
             "Əfgəni",
@@ -326,10 +322,6 @@ az{
         AOA{
             "AOA",
             "Anqola kvanzası",
-        }
-        AOK{
-            "AOK",
-            "AOK",
         }
         AON{
             "AON",
@@ -387,10 +379,6 @@ az{
             "BDT",
             "Banqladeş takası",
         }
-        BEC{
-            "BEC",
-            "BEC",
-        }
         BEF{
             "BEF",
             "Belçika frankı",
@@ -422,10 +410,6 @@ az{
         BND{
             "BND",
             "Bruney dolları",
-        }
-        BOB{
-            "BOB",
-            "BOB",
         }
         BOP{
             "BOP",
@@ -507,10 +491,6 @@ az{
             "CHW",
             "WIR frankası",
         }
-        CLF{
-            "CLF",
-            "CLF",
-        }
         CLP{
             "CLP",
             "Çili pesosu",
@@ -522,10 +502,6 @@ az{
         COP{
             "COP",
             "Kolombiya pesosu",
-        }
-        COU{
-            "COU",
-            "COU",
         }
         CRC{
             "CRC",
@@ -582,10 +558,6 @@ az{
         ECS{
             "ECS",
             "ekvador sukresi",
-        }
-        ECV{
-            "ECV",
-            "ECV",
         }
         EEK{
             "EEK",
@@ -907,10 +879,6 @@ az{
             "MRO",
             "Mavritaniya oyuquyası",
         }
-        MTP{
-            "MTP",
-            "MTP",
-        }
         MUR{
             "MUR",
             "Mavritis rupiyi",
@@ -930,10 +898,6 @@ az{
         MXP{
             "MXP",
             "Meksika gümüş pesosu",
-        }
-        MXV{
-            "MXV",
-            "MXV",
         }
         MYR{
             "MYR",
@@ -962,10 +926,6 @@ az{
         NIC{
             "NIC",
             "Nikaraqua kordobu",
-        }
-        NIO{
-            "NIO",
-            "NIO",
         }
         NLG{
             "NLG",
@@ -1087,10 +1047,6 @@ az{
             "SGD",
             "Sinqapur dolları",
         }
-        SHP{
-            "SHP",
-            "SHP",
-        }
         SIT{
             "SIT",
             "Sloveniya toları",
@@ -1099,10 +1055,6 @@ az{
             "SKK",
             "Slovak korunası",
         }
-        SLL{
-            "SLL",
-            "SLL",
-        }
         SOS{
             "SOS",
             "Somaliya şillingi",
@@ -1110,14 +1062,6 @@ az{
         SRD{
             "SRD",
             "Surinam dolları",
-        }
-        SRG{
-            "SRG",
-            "SRG",
-        }
-        STD{
-            "STD",
-            "STD",
         }
         SUR{
             "SUR",
@@ -1235,10 +1179,6 @@ az{
             "VND",
             "vyetnam donqu",
         }
-        VUV{
-            "VUV",
-            "VUV",
-        }
         WST{
             "WST",
             "qərb samoa talası",
@@ -1251,33 +1191,9 @@ az{
             "XAU",
             "qızıl",
         }
-        XBA{
-            "XBA",
-            "XBA",
-        }
-        XBB{
-            "XBB",
-            "XBB",
-        }
-        XBC{
-            "XBC",
-            "XBC",
-        }
-        XBD{
-            "XBD",
-            "XBD",
-        }
         XCD{
             "XCD",
             "şərq karib dolları",
-        }
-        XDR{
-            "XDR",
-            "XDR",
-        }
-        XEU{
-            "XEU",
-            "XEU",
         }
         XFO{
             "XFO",
@@ -1302,14 +1218,6 @@ az{
         XPT{
             "XPT",
             "platinum",
-        }
-        XRE{
-            "XRE",
-            "XRE",
-        }
-        XTS{
-            "XTS",
-            "XTS",
         }
         XXX{
             "XXX",
@@ -2106,7 +2014,7 @@ az{
             other{"Zimbabve dolları"}
         }
     }
-    ExemplarCharacters{"[a-c ç d e ə f g ğ h i İ ı j-o ö p-s ş t u ü v x-z]"}
+    ExemplarCharacters{"[a-c ç d e ə f g ğ h i {i̇} İ ı j-o ö p-s ş t u ü v x-z]"}
     Languages{
         aa{"afarca"}
         ab{"abxazca"}
@@ -2472,7 +2380,6 @@ az{
         pro{"qədimi provensialca"}
         ps{"Puştu dili"}
         pt{"portuqalca"}
-        pt_BR{"pt_BR"}
         pt_PT{"İber portuqalca"}
         qu{"kuechya dili"}
         raj{"racastan dili"}
@@ -2627,7 +2534,7 @@ az{
     }
     NumberPatterns{
         "#,##0.###",
-        "¤ #,##0.00",
+        "¤ #,##0.00",
         "#,##0%",
         "#E0",
     }
@@ -2772,16 +2679,10 @@ az{
             roc{"Çin respublikası təqvimi"}
         }
         collation{
-            big5han{"big5han"}
-            direct{"direct"}
-            gb2312han{"gb2312han"}
-            phonebook{"phonebook"}
             pinyin{"Pinyin təqvimi"}
-            stroke{"stroke"}
-            traditional{"traditional"}
         }
     }
-    Version{"1.53"}
+    Version{"1.59"}
     calendar{
         gregorian{
             DateTimePatterns{
@@ -2936,12 +2837,6 @@ az{
                         "3-cü kv.",
                         "4-cü kv.",
                     }
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                    }
                     wide{
                         "1-ci kvartal",
                         "2-ci kvartal",
@@ -3000,9 +2895,6 @@ az{
         "Africa:Lubumbashi"{
             ec{"Lubumbaşi"}
         }
-        "America:Adak"{
-            ec{"Adak"}
-        }
         "America:Anchorage"{
             ec{"Ankorac"}
         }
@@ -3030,14 +2922,8 @@ az{
         "America:Bahia"{
             ec{"Bahiya"}
         }
-        "America:Belem"{
-            ec{"Belem"}
-        }
         "America:Blanc-Sablon"{
             ec{"Blank-Sablon"}
-        }
-        "America:Boa_Vista"{
-            ec{"Boa Vista"}
         }
         "America:Boise"{
             ec{"Boyse"}
@@ -3081,9 +2967,6 @@ az{
         "America:Dawson_Creek"{
             ec{"Douson Krik"}
         }
-        "America:Denver"{
-            ec{"Denver"}
-        }
         "America:Detroit"{
             ec{"Detroyt"}
         }
@@ -3092,9 +2975,6 @@ az{
         }
         "America:Eirunepe"{
             ec{"İrunepe"}
-        }
-        "America:Fortaleza"{
-            ec{"Fortaleza"}
         }
         "America:Glace_Bay"{
             ec{"Qleys Bey"}
@@ -3156,9 +3036,6 @@ az{
         "America:Maceio"{
             ec{"Maseyo"}
         }
-        "America:Manaus"{
-            ec{"Manaus"}
-        }
         "America:Mazatlan"{
             ec{"mazaltan"}
         }
@@ -3167,9 +3044,6 @@ az{
         }
         "America:Menominee"{
             ec{"menomini"}
-        }
-        "America:Merida"{
-            ec{"Merida"}
         }
         "America:Mexico_City"{
             ec{"mexiko"}
@@ -3285,9 +3159,6 @@ az{
         "Antarctica:McMurdo"{
             ec{"makmurdo"}
         }
-        "Antarctica:Palmer"{
-            ec{"Palmer"}
-        }
         "Antarctica:Rothera"{
             ec{"rofera"}
         }
@@ -3309,20 +3180,11 @@ az{
         "Asia:Aqtau"{
             ec{"Aktau"}
         }
-        "Asia:Aqtobe"{
-            ec{"Aqtobe"}
-        }
         "Asia:Choibalsan"{
             ec{"Coybalsan"}
         }
         "Asia:Chongqing"{
             ec{"Conqinq"}
-        }
-        "Asia:Harbin"{
-            ec{"Harbin"}
-        }
-        "Asia:Hovd"{
-            ec{"Hovd"}
         }
         "Asia:Irkutsk"{
             ec{"İrkutsk"}
@@ -3339,9 +3201,6 @@ az{
         "Asia:Kashgar"{
             ec{"Kaşqar"}
         }
-        "Asia:Krasnoyarsk"{
-            ec{"Krasnoyarsk"}
-        }
         "Asia:Kuching"{
             ec{"Kuçinq"}
         }
@@ -3353,12 +3212,6 @@ az{
         }
         "Asia:Novosibirsk"{
             ec{"novosibirsk"}
-        }
-        "Asia:Omsk"{
-            ec{"Omsk"}
-        }
-        "Asia:Oral"{
-            ec{"Oral"}
         }
         "Asia:Pontianak"{
             ec{"pontiyanak"}
@@ -3387,9 +3240,6 @@ az{
         "Asia:Yekaterinburg"{
             ec{"yekaterinburq"}
         }
-        "Atlantic:Azores"{
-            ec{"Azores"}
-        }
         "Atlantic:Canary"{
             ec{"Kanari"}
         }
@@ -3413,12 +3263,6 @@ az{
         }
         "Australia:Eucla"{
             ec{"Yukla"}
-        }
-        "Australia:Hobart"{
-            ec{"Hobart"}
-        }
-        "Australia:Lindeman"{
-            ec{"Lindeman"}
         }
         "Australia:Lord_Howe"{
             ec{"Lord Hove"}
@@ -3474,9 +3318,6 @@ az{
         "Pacific:Gambier"{
             ec{"Qambiyer"}
         }
-        "Pacific:Honolulu"{
-            ec{"Honolulu"}
-        }
         "Pacific:Johnston"{
             ec{"Conston"}
         }
@@ -3503,9 +3344,6 @@ az{
         }
         "Pacific:Tarawa"{
             ec{"tarava"}
-        }
-        "Pacific:Truk"{
-            ec{"Truk"}
         }
         "Pacific:Wake"{
             ec{"veyk"}

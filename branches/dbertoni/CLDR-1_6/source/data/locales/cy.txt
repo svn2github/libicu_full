@@ -119,8 +119,6 @@ cy{
         pl{"Pwyleg"}
         ps{"Pashto"}
         pt{"Portiwgaleg"}
-        pt_BR{"Portiwgaleg (Brasil)"}
-        pt_PT{"Portiwgaleg (Portiwgal)"}
         ro{"Rwmaneg"}
         ru{"Rwsieg"}
         sa{"Sansgrit"}
@@ -143,8 +141,6 @@ cy{
         uz{"Wsbeceg"}
         vi{"Fietnameg"}
         zh{"Tseineeg"}
-        zh_Hans{"zh_Hans"}
-        zh_Hant{"zh_Hant"}
         zu{"Zwlw"}
     }
     LocaleScript{
@@ -153,7 +149,7 @@ cy{
     Scripts{
         Latn{"Lladin"}
     }
-    Version{"1.55"}
+    Version{"1.56"}
     calendar{
         gregorian{
             AmPmMarkers{

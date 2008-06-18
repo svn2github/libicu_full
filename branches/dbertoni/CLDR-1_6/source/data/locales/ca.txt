@@ -337,7 +337,7 @@ ca{
                 /**
                  * Duplicated from NumberPatterns resource
                  */
-                "#,##0.00 ¤",
+                "#,##0.00 ¤",
                 ",",
                 ".",
             }
@@ -349,10 +349,6 @@ ca{
         FIM{
             "FIM",
             "Marc finlandès",
-        }
-        FRF{
-            "FRF",
-            "FRF",
         }
         GBP{
             "UK£",
@@ -919,7 +915,7 @@ ca{
     }
     NumberPatterns{
         "#,##0.###",
-        "#,##0.00 ¤",
+        "#,##0.00 ¤",
         "#,##0%",
         "#E0",
     }
@@ -967,24 +963,8 @@ ca{
         FONIPA{"alfabet fonètic internacional"}
         POSIX{"ordenador"}
     }
-    Version{"1.84"}
+    Version{"1.88"}
     calendar{
-        buddhist{
-            availableFormats{
-                MMM{"LLL"}
-            }
-            eras{
-                abbreviated{
-                    "BE",
-                }
-                narrow{
-                    "BE",
-                }
-                wide{
-                    "BE",
-                }
-            }
-        }
         gregorian{
             AmPmMarkers{
                 "AM",
@@ -1192,12 +1172,6 @@ ca{
                         "3T",
                         "4T",
                     }
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                    }
                     wide{
                         "1r trimestre",
                         "2n trimestre",
@@ -1265,32 +1239,11 @@ ca{
         "America:Anchorage"{
             ec{"Hora d'Alaska"}
         }
-        "America:Argentina:La_Rioja"{
-            ec{"La Rioja"}
-        }
-        "America:Argentina:Ushuaia"{
-            ec{"Ushuaia"}
-        }
         "America:Mexico_City"{
             ec{"Mèxic Districte Federal"}
         }
         "America:New_York"{
             ec{"Nova York"}
-        }
-        "America:Rio_Branco"{
-            ec{"Rio Branco"}
-        }
-        "America:Sao_Paulo"{
-            ec{"Sao Paulo"}
-        }
-        "America:Tijuana"{
-            ec{"Tijuana"}
-        }
-        "America:Toronto"{
-            ec{"Toronto"}
-        }
-        "America:Vancouver"{
-            ec{"Vancouver"}
         }
         "Antarctica:South_Pole"{
             ec{"Pol sud"}
@@ -1303,9 +1256,6 @@ ca{
         }
         "Atlantic:Canary"{
             ec{"Illes Canàries"}
-        }
-        "Australia:Sydney"{
-            ec{"Sydney"}
         }
         "Etc:Unknown"{
             ec{"Zona desconeguda"}

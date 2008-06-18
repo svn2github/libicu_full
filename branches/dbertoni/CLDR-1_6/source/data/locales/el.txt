@@ -1522,7 +1522,6 @@ el{
             islamic{"Ισλαμικό Ημερολόγιο"}
             islamic-civil{"Ισλαμικό-Αστικό Ημερολόγιο"}
             japanese{"Ιαπωνικό Ημερολόγιο"}
-            roc{"roc"}
         }
         collation{
             big5han{"Κινεζική Παραδοσιακή Σειρά - Big5"}
@@ -1541,7 +1540,7 @@ el{
         POLYTON{"Πολυτονικό"}
         REVISED{"Αναθεωρημένη Ορθογραφία"}
     }
-    Version{"1.92"}
+    Version{"1.93"}
     calendar{
         gregorian{
             AmPmMarkers{

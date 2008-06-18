@@ -1453,7 +1453,7 @@ is{
     }
     NumberPatterns{
         "#,##0.###",
-        "#,##0.00 ¤",
+        "#,##0.00 ¤",
         "#,##0%",
         "#E0",
     }
@@ -1498,7 +1498,7 @@ is{
             traditional{"Hefðbundin"}
         }
     }
-    Version{"1.85"}
+    Version{"1.87"}
     calendar{
         gregorian{
             AmPmMarkers{
@@ -1828,65 +1828,17 @@ is{
         }
     }
     zoneStrings{
-        "Africa:Kinshasa"{
-            ec{"Kinshasa"}
-        }
         "America:Anchorage"{
             ec{"Anchorage"}
-        }
-        "America:Buenos_Aires"{
-            ec{"Buenos Aires"}
         }
         "America:Cancun"{
             ec{"Kankún"}
         }
-        "America:Danmarkshavn"{
-            ec{"Danmarkshavn"}
-        }
-        "America:Dawson_Creek"{
-            ec{"Dawson Creek"}
-        }
         "America:Denver"{
             ec{"Denver"}
         }
-        "America:Detroit"{
-            ec{"Detroit"}
-        }
-        "America:Edmonton"{
-            ec{"Edmonton"}
-        }
-        "America:Eirunepe"{
-            ec{"Eirunepe"}
-        }
-        "America:Fortaleza"{
-            ec{"Fortaleza"}
-        }
-        "America:Glace_Bay"{
-            ec{"Glace Bay"}
-        }
-        "America:Goose_Bay"{
-            ec{"Goose Bay"}
-        }
-        "America:Halifax"{
-            ec{"Halifax"}
-        }
-        "America:Hermosillo"{
-            ec{"Hermosillo"}
-        }
         "America:Indianapolis"{
             ec{"Indianapolis"}
-        }
-        "America:Inuvik"{
-            ec{"Inuvik"}
-        }
-        "America:Iqaluit"{
-            ec{"Iqaluit"}
-        }
-        "America:Jujuy"{
-            ec{"Jujuy"}
-        }
-        "America:Juneau"{
-            ec{"Juneau"}
         }
         "America:Mexico_City"{
             ec{"Mexíkóborg"}
@@ -1897,29 +1849,14 @@ is{
         "America:Rio_Branco"{
             ec{"Rio Branco"}
         }
-        "Antarctica:Davis"{
-            ec{"Davis"}
-        }
         "Antarctica:DumontDUrville"{
             ec{"Dumont D'Urville"}
         }
         "Antarctica:South_Pole"{
             ec{"Suðurpóllinn"}
         }
-        "Asia:Hovd"{
-            ec{"Hovd"}
-        }
         "Asia:Jakarta"{
             ec{"Djakarta"}
-        }
-        "Asia:Jayapura"{
-            ec{"Jayapura"}
-        }
-        "Asia:Kamchatka"{
-            ec{"Kamchatka"}
-        }
-        "Asia:Kashgar"{
-            ec{"Kashgar"}
         }
         "Asia:Ulaanbaatar"{
             ec{"Úlan Bator"}
@@ -1930,23 +1867,8 @@ is{
         "Atlantic:Canary"{
             ec{"Kanaríeyjar"}
         }
-        "Australia:Darwin"{
-            ec{"Darwin"}
-        }
-        "Australia:Eucla"{
-            ec{"Eucla"}
-        }
-        "Australia:Hobart"{
-            ec{"Hobart"}
-        }
         "Etc:Unknown"{
             ec{"óþekkt"}
-        }
-        "Europe:Kaliningrad"{
-            ec{"Kaliningrad"}
-        }
-        "Europe:Kiev"{
-            ec{"Kiev"}
         }
         "Europe:Moscow"{
             ec{"Moskva"}
@@ -1954,20 +1876,8 @@ is{
         "Pacific:Easter"{
             ec{"Páskaeyja"}
         }
-        "Pacific:Enderbury"{
-            ec{"Enderbury"}
-        }
-        "Pacific:Galapagos"{
-            ec{"Galapagos"}
-        }
-        "Pacific:Gambier"{
-            ec{"Gambier"}
-        }
         "Pacific:Honolulu"{
             ec{"Honolulu"}
-        }
-        "Pacific:Johnston"{
-            ec{"Johnston"}
         }
         "Pacific:Marquesas"{
             ec{"Marquesas-eyjar"}

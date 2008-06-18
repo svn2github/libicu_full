@@ -1294,7 +1294,7 @@ hr{
     }
     NumberPatterns{
         "#,##0.###",
-        "#,##0.00 ¤; -#,##0.00 ¤",
+        "#,##0.00 ¤; -#,##0.00 ¤",
         "#,##0%",
         "#E0",
     }
@@ -1334,7 +1334,7 @@ hr{
             traditional{"Tradicionano poredavanje"}
         }
     }
-    Version{"1.86"}
+    Version{"1.87"}
     calendar{
         gregorian{
             AmPmMarkers{

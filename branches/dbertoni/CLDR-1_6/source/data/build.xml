@@ -366,7 +366,7 @@
                 <include name="likelySubtags.txt" />
             </fileset>
             <fileset id="plurals" dir="${env.ICU4C_DIR}/source/data/misc">
-                <include name="likelySubtags.txt" />
+                <include name="plurals.txt" />
             </fileset>
         </delete>
     </target>

@@ -1943,8 +1943,8 @@ ru{
     }
     NumberPatterns{
         "#,##0.###",
-        "#,##0.00 ¤",
-        "#,##0 %",
+        "#,##0.00 ¤",
+        "#,##0 %",
         "#E0",
     }
     Scripts{
@@ -2113,7 +2113,7 @@ ru{
         TARASK{"Тарашкевица"}
         VALENCIA{"Валенсийский"}
     }
-    Version{"1.121"}
+    Version{"1.124"}
     calendar{
         gregorian{
             AmPmMarkers{

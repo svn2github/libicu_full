@@ -21,36 +21,8 @@ en_CA{
         279,
         216,
     }
-    Version{"1.59"}
+    Version{"1.60"}
     calendar{
-        buddhist{
-            AmPmMarkers{
-                "AM",
-                "PM",
-            }
-            DateTimePatterns{
-                "h:mm:ss a v",
-                "h:mm:ss a z",
-                "h:mm:ss a",
-                "h:mm a",
-                "EEEE, MMMM d, yyyy G",
-                "MMMM d, yyyy G",
-                "MMM d, yyyy G",
-                "M/d/yyyy",
-                "{1} {0}",
-            }
-            eras{
-                abbreviated{
-                    "BE",
-                }
-                narrow{
-                    "BE",
-                }
-                wide{
-                    "BE",
-                }
-            }
-        }
         gregorian{
             DateTimeElements:intvector{
                 1,

@@ -2469,11 +2469,6 @@ en{
         one{"{0} {1}"}
     }
     ExemplarCharacters{"[a-z]"}
-    Keys{
-        calendar{"calendar"}
-        collation{"collation"}
-        currency{"currency"}
-    }
     Languages{
         aa{"Afar"}
         ab{"Abkhazian"}
@@ -3193,7 +3188,7 @@ en{
         VALENCIA{"Valencian"}
         XIANG{"Xiang or Hunanese"}
     }
-    Version{"1.193"}
+    Version{"1.195"}
     calendar{
         gregorian{
             AmPmMarkers{
@@ -3390,10 +3385,6 @@ en{
                     d{"E, MMM d – E, MMM d, yyyy"}
                     y{"E, MMM d, yyyy – E, MMM d, yyyy"}
                 }
-                yMMMM{
-                    M{"yyyy-MM – MM"}
-                    y{"yyyy-MM – yyyy-MM"}
-                }
                 yMMMd{
                     M{"MMM d – MMM d, yyyy"}
                     d{"MMM d–d, yyyy"}
@@ -3474,42 +3465,6 @@ en{
                         "2",
                         "3",
                         "4",
-                    }
-                }
-            }
-        }
-        persian{
-            monthNames{
-                format{
-                    wide{
-                        "Farvardin",
-                        "Ordibehesht",
-                        "Khordad",
-                        "Tir",
-                        "Mordad",
-                        "Shahrivar",
-                        "Mehr",
-                        "Aban",
-                        "Azar",
-                        "Dey",
-                        "Bahman",
-                        "Esfand",
-                    }
-                }
-                stand-alone{
-                    wide{
-                        "Farvardin",
-                        "Ordibehesht",
-                        "Khordad",
-                        "Tir",
-                        "Mordad",
-                        "Shahrivar",
-                        "Mehr",
-                        "Aban",
-                        "Azar",
-                        "Dey",
-                        "Bahman",
-                        "Esfand",
                     }
                 }
             }
@@ -3930,7 +3885,6 @@ en{
             ld{"Israel Daylight Time"}
             lg{"Israel Time"}
             ls{"Israel Standard Time"}
-            sd{"IDT"}
             ss{"IST (Israel)"}
         }
         "meta:Japan"{
