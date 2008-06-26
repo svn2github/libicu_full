@@ -1,0 +1,43 @@
+REM Copyright (C) 2008, International Business Machines Corporation and others. All Rights Reserved.
+
+C:\svn\icuproj\icu\trunk>svn copy svn+ssh://source.icu-project.org/repos/icu/icu/trunk svn+ssh://source.icu-project.org/repos/icu/icu/branches/markus/mvhdrs -m "ticket:5943: branch for moving public header files"
+
+Committed revision 23925.
+
+svn mkdir include
+svn mkdir include\unicode
+svn mkdir include\layout
+\temp\icu\mvhdrs\mv-common.bat
+\temp\icu\mvhdrs\mv-i18n.bat
+\temp\icu\mvhdrs\mv-io.bat
+\temp\icu\mvhdrs\mv-layout.bat
+svn rm source\i18n\unicode
+svn rm source\io\unicode
+svn rm source\layoutex\layout
+
+svn commit -m "ticket:5943: move public header files to top-level include folder, update copyrights"
+
+Committed revision 23926.
+
+Remove custom build steps, no need to copy header files
+- source\common\common.vcproj
+- source\i18n\i18n.vcproj
+- source\io\io.vcproj
+- source\layout\layout.vcproj
+- source\layoutex\layoutex.vcproj
+
+svn commit -m "ticket:5943: remove copy-header custom build steps"
+
+Committed revision 23927.
+
+svn commit -m "ticket:5943: re-add public header files to *.vcproj but only listing the files"
+
+Committed revision 23930.
+
+svn commit -m "ticket:5943: fix include paths to make MSVC build work"
+
+Committed revision 23931.
+
+r23933: "ticket:5943: move platform.h.in as well and fix configure script"
+
+svn diff --diff-cmd "C:\Program Files\KDiff3\kdiff3.exe"
