@@ -105,8 +105,8 @@ U_CAPI UConverterSelector* ucnvsel_unserialize(const char* buffer,
 
 /**
  * serialize a selector into a linear buffer. No alignment necessary
- * The current serialized form is not portable to different Endianness!
- *
+ * The current serialized form is portable to different Endianness, and can
+ * travel between ASCII and EBCDIC systems
  *
  * @param sel selector to consider
  * @param buffer pointer to a linear buffer to receive data
