@@ -65,7 +65,7 @@ struct UConverterSelector {
 /* internal function */
 void generateSelectorData(UConverterSelector* result,
                           const USet* excludedEncodings,
-                          const UBool fallback,
+                          const UConverterUnicodeSet whichSet,
                           UErrorCode* status);
 
 
