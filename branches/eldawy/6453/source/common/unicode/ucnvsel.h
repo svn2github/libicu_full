@@ -21,7 +21,8 @@
 #include "unicode/utypes.h"
 #include "unicode/utf16.h"
 #include "unicode/uenum.h"
-#include "udataswp.h"
+#include "unicode/ucnv.h"
+
 
 /**
  * \file
@@ -49,11 +50,13 @@ typedef struct UConverterSelector UConverterSelector;
  *  NULL means build a selector for all possible converters
  * @param converterListSize number of encodings in above list. 
  *  Setting converterListSize to 0, builds a selector for all
- *  converters
+ *  converters. ucnvsel_open() does not transfer ownership to this
+ *  array. Once uncvsel_open() returns, the caller is free to reuse/destroy
+ *  the array.
  * @param excludedCodePoints a set of codepoints to be excluded from
  *  consideration. set to NULL to exclude nothing
- * @param fallback set to true to consider fallback mapping for converters.
- *                 set to false to consider only roundtrip mappings
+ * @param whichset what converter set to use? use this to determine whether
+ *                 to construct selector for fallback or for roundtrip only mappings
  * @param status an in/out ICU UErrorCode
  * @return a pointer to the created selector
  *
@@ -62,7 +65,7 @@ typedef struct UConverterSelector UConverterSelector;
 U_CAPI UConverterSelector* ucnvsel_open(const char* const*  converterList,
                                       int32_t converterListSize,
                                       const USet* excludedCodePoints,
-                                      UBool fallback,
+                                      const UConverterUnicodeSet   whichSet,
                                       UErrorCode* status);
 
 /* close opened selector */
@@ -87,9 +90,8 @@ U_CAPI void ucnvsel_close(UConverterSelector *sel);
  * to reuse/destroy buffer immediately after calling this function
  * Unserializing a selector is much faster than creating it from scratch
  * and is nicer on the heap (not as many allocations and frees)
- * The optimal usage is to open a selector for desired encodings,
- * serialize it, and then use the serialized version afterwards.
- *
+ * ucnvsel_open() is expensive. Therefore, it is desirable to unserialize the data structre
+ * rather than building it from scratch.
  *
  * @param buffer pointer to a linear buffer containing serialized data
  * @param length the capacity of this buffer (can be equal to or larger than
@@ -164,28 +166,4 @@ U_CAPI UEnumeration *ucnvsel_selectForUTF8(const UConverterSelector*,
                                  UErrorCode *status);
 
 
-/**
- * swap a selector into the desired Endianness and Asciiness of
- * the system. Just as FYI, selectors are always saved in the format
- * of the system that created them. They are only converted if used
- * on another system. In other words, selectors created on different
- * system can be different even if the params are identical (endianness
- * and Asciiness differences only)
- *
- * @param ds pointer to data swapper containing swapping info
- * @param inData pointer to incoming data
- * @param length length of inData in bytes
- * @param outData pointer to output data. Capacity should
- *                be at least equal to capacity of inData
- * @param status an in/out ICU UErrorCode
- * @return 0 on failure, number of bytes swapped on success
- *         number of bytes swapped can be smaller than length
- *
- * @draft ICU 4.2
- */
-U_CAPI int32_t ucnvsel_swap(const UDataSwapper *ds,
-                                 const void *inData,
-                                 int32_t length,
-                                 void *outData,
-                                 UErrorCode *status);
 #endif  // __ICU_UCNV_SEL_H__

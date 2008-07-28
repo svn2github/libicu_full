@@ -69,12 +69,19 @@ void generateSelectorData(UConverterSelector* result,
                           UErrorCode* status);
 
 
+U_CAPI int32_t ucnvsel_swap(const UDataSwapper *ds,
+                                 const void *inData,
+                                 int32_t length,
+                                 void *outData,
+                                 UErrorCode *status);
+
+
 /* open a selector. If converterList is NULL, build for all converters.
    If excludedCodePoints is NULL, don't exclude any codepoints */
 U_CAPI UConverterSelector* ucnvsel_open(const char* const*  converterList,
                                       int32_t converterListSize,
                                       const USet* excludedCodePoints,
-                                      UBool fallback,
+                                      const UConverterUnicodeSet whichSet,
                                       UErrorCode* status ) {
   // allocate a new converter
   UConverterSelector* newSelector;
@@ -84,7 +91,7 @@ U_CAPI UConverterSelector* ucnvsel_open(const char* const*  converterList,
   // accordingly. This call is to get around the constness of
   // converterList by smallest amount of code modification
   if(converterListSize == 0 && converterList != NULL) {
-    return ucnvsel_open(NULL, 0, excludedCodePoints, fallback, status);
+    return ucnvsel_open(NULL, 0, excludedCodePoints, whichSet, status);
   }
 
   // check if already failed
@@ -176,7 +183,7 @@ U_CAPI UConverterSelector* ucnvsel_open(const char* const*  converterList,
   }
 
   newSelector->encodingsCount = converterListSize;
-  generateSelectorData(newSelector, excludedCodePoints, fallback, status);
+  generateSelectorData(newSelector, excludedCodePoints, whichSet, status);
 
   if (U_FAILURE(*status)) {
     // at this point, we know pv and encodings have been allocated. No harm in
@@ -234,8 +241,12 @@ U_CAPI UConverterSelector* ucnvsel_unserialize(const char* buffer,
   buffer += sizeof(uint32_t);
   // at this point, we don't know what the endianness or Asciiness of
   // our system or data is. Detect everything!
+  // notice that a little trick is used here to save work. We don't actually
+  // detect endianness of the machine or of the data. We simply detect
+  // if the 2 are reversed. If they are, we send flags to udata_openSwapper()
+  // to indicate we need endian swapping. Those params are not REALLY
+  // the machine and data endianness
   uint32_t dataEndianness= 0;
-  uint32_t machineEndianness= 0;
   //if endianness need to be reversed
   if (sig == 0x99887766) {
     dataEndianness = 1;
@@ -245,19 +256,19 @@ U_CAPI UConverterSelector* ucnvsel_unserialize(const char* buffer,
   }
 
   int32_t dataASCIIness = ASCIIness;
-  if(dataEndianness != machineEndianness) {
+  if(dataEndianness) {
     //need to convert ASCIIness before using it!
     dataASCIIness = ((char*)&ASCIIness)[3];
   }
   int32_t machineASCIIness = U_CHARSET_FAMILY;
 
   //now, we have everything!!
-  if(dataEndianness != machineEndianness ||
+  if(dataEndianness ||
      dataASCIIness != machineASCIIness) {
     //construct a data swapper!
     UDataSwapper *ds;
 
-    ds=udata_openSwapper(dataEndianness, dataASCIIness, machineEndianness, machineASCIIness, status);
+    ds=udata_openSwapper(dataEndianness, dataASCIIness, 0, machineASCIIness, status);
     char* newBuffer = (char*)uprv_malloc(length);
     if(!newBuffer) {
       udata_closeSwapper(ds);
@@ -454,7 +465,7 @@ U_CAPI int32_t ucnvsel_serialize(const UConverterSelector* sel,
 /* internal function! */
 void generateSelectorData(UConverterSelector* result,
                           const USet* excludedEncodings,
-                          const UBool fallback,
+                          const UConverterUnicodeSet   whichSet,
                           UErrorCode* status) {
   const uint32_t encodingsSize = result->encodingsCount;
   uint32_t i;
@@ -479,14 +490,7 @@ void generateSelectorData(UConverterSelector* result,
       return;
     }
     USet* unicode_point_set;
-    UConverterUnicodeSet   whichSet;
     unicode_point_set = uset_open(1, 0);  // empty set
-
-    if (!fallback) {
-      whichSet = UCNV_ROUNDTRIP_SET;
-    } else {
-      whichSet = UCNV_ROUNDTRIP_AND_FALLBACK_SET;
-    }
 
     ucnv_getUnicodeSet(test_converter, unicode_point_set,
                        whichSet, status);
@@ -750,6 +754,27 @@ U_CAPI UEnumeration *ucnvsel_selectForUTF8(const UConverterSelector* sel,
   return ucnvsel_select(sel, utf8str, length, status, FALSE);
 }
 
+
+
+
+/**
+ * swap a selector into the desired Endianness and Asciiness of
+ * the system. Just as FYI, selectors are always saved in the format
+ * of the system that created them. They are only converted if used
+ * on another system. In other words, selectors created on different
+ * system can be different even if the params are identical (endianness
+ * and Asciiness differences only)
+ *
+ * @param ds pointer to data swapper containing swapping info
+ * @param inData pointer to incoming data
+ * @param length length of inData in bytes
+ * @param outData pointer to output data. Capacity should
+ *                be at least equal to capacity of inData
+ * @param status an in/out ICU UErrorCode
+ * @return 0 on failure, number of bytes swapped on success
+ *         number of bytes swapped can be smaller than length
+ *
+ */
 U_CAPI int32_t ucnvsel_swap(const UDataSwapper *ds,
                                  const void *inData,
                                  int32_t length,
