@@ -39,6 +39,7 @@
 #include "cmemory.h"
 #include "cstring.h"
 
+
 U_NAMESPACE_USE
 
 // maximum possible serialized trie that can ever be reached
@@ -415,7 +416,7 @@ U_CAPI int32_t ucnvsel_serialize(const UConverterSelector* sel,
     return 0;
   }
   // ensure args make sense!
-  if (sel == NULL || bufferCapacity<= 0 || buffer == NULL) {
+  if (sel == NULL || bufferCapacity < 0) {
     *status = U_ILLEGAL_ARGUMENT_ERROR;
     return 0;
   }
@@ -675,7 +676,7 @@ int32_t length, UErrorCode *status, UBool isUTF16) {
     return NULL;
   }
   // ensure args make sense!
-  if (sel == NULL || length < 0 || (s == NULL && length != 0)) {
+  if (sel == NULL || (s == NULL && length != 0)) {
     *status = U_ILLEGAL_ARGUMENT_ERROR;
     return NULL;
   }
@@ -695,25 +696,27 @@ int32_t length, UErrorCode *status, UBool isUTF16) {
                                  sizeof(uint32_t));
   uprv_memset(mask, ~0, (sel->encodingsCount+31)/32 * sizeof(uint32_t));
 
+  if(length == -1) {
+    if(isUTF16)
+      length = u_strlen(utf16buffer);
+    else
+      length = uprv_strlen(utf8buffer);
+  }
+
   if(s) {
-    while (offset < length || length == -1) { //the second part will be
-       //shortcutted almost all the time!
+    while (offset < length) {
        uint16_t result = 0;
        if (isUTF16)
          U16_NEXT(utf16buffer, offset, length, next)
        else
          U8_NEXT(utf8buffer, offset, length, next)
 
-       if(length == -1 && next == 0) {
-         break;
-       }
-
-       if (next >= 0) {
+       if (next != -1) {
          UTRIE_GET16((&sel->constructedTrie), next, result)
-       }
 
-       if (intersectMasks(mask, sel->pv+result, (sel->encodingsCount+31)/32)) {
-         break;
+         if (intersectMasks(mask, sel->pv+result, (sel->encodingsCount+31)/32)) {
+           break;
+         }
        }
     }
   }
