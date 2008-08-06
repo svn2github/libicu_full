@@ -1979,14 +1979,14 @@ ures_openDirect(const char* path, const char* localeID, UErrorCode* status) {
         uprv_free(r);
         return NULL;
     }
-    if(subStatus != U_ZERO_ERROR /*r->fData->fBogus != U_ZERO_ERROR*/) {
+    //if(subStatus != U_ZERO_ERROR /*r->fData->fBogus != U_ZERO_ERROR*/) {
       /* we didn't find one we were looking for - so openDirect */
       /* should fail */
-        entryClose(r->fData);
-        uprv_free(r);
-        *status = U_MISSING_RESOURCE_ERROR;
-        return NULL;
-    }
+    //    entryClose(r->fData);
+    //    uprv_free(r);
+    //    *status = U_MISSING_RESOURCE_ERROR;
+    //    return NULL;
+    //}
 
     r->fKey = NULL;
     r->fVersion = NULL;
