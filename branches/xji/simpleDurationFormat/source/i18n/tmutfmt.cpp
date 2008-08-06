@@ -297,7 +297,7 @@ TimeUnitFormat::parseObject(const UnicodeString& source,
                     continue;
                 }
             }
-            int parseDistance = pos.getIndex() - oldPos;
+            int32_t parseDistance = pos.getIndex() - oldPos;
             if (parseDistance > longestParseDistance) {
                 if (pattern->getArgTypeCount() != 0) {
                     resultNumber = tmpNumber;
@@ -386,8 +386,8 @@ TimeUnitFormat::readFromCurrentLocale(UErrorCode& err) {
         ures_close(rb);
         return;
     }
-    int size = ures_getSize(unitsRes);
-    for ( int index = 0; index < size; ++index) {
+    int32_t size = ures_getSize(unitsRes);
+    for ( int32_t index = 0; index < size; ++index) {
         // resource of one time unit
         UResourceBundle* oneTimeUnit = ures_getByIndex(unitsRes, index,
                                                        NULL, &status);
@@ -411,11 +411,11 @@ TimeUnitFormat::readFromCurrentLocale(UErrorCode& err) {
                 ures_close(oneTimeUnit);
                 break;
             }
-            int count = ures_getSize(countsToPatternRB);
+            int32_t count = ures_getSize(countsToPatternRB);
             const UChar* pattern;
             const char*  pluralCount;
             int32_t ptLength; 
-            for ( int pluralIndex = 0; pluralIndex < count; ++pluralIndex) {
+            for ( int32_t pluralIndex = 0; pluralIndex < count; ++pluralIndex) {
                 // resource of count to pattern
                 pattern = ures_getNextString(countsToPatternRB, &ptLength,
                                              &pluralCount, &status);
@@ -488,7 +488,7 @@ TimeUnitFormat::checkConsistency(UErrorCode& err) {
         const char* pluralCount;
         while ((pluralCount = keywords->next(NULL, err)) != NULL) {
             if ( U_SUCCESS(err) ) {
-                for (int i = 0; i < TimeUnit::UTIMEUNIT_FIELD_COUNT; ++i) {
+                for (int32_t i = 0; i < TimeUnit::UTIMEUNIT_FIELD_COUNT; ++i) {
                     // for each time unit, 
                     // get all the patterns for each plural rule in this locale.
                     Hashtable* countToPatterns = fTimeUnitToCountToPatterns[i];
