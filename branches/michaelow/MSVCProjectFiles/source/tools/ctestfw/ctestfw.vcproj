@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="ctestfw"
-	ProjectGUID="{E7D9BA19-6ED3-4325-8D0D-D724F6D29C65}"
+	ProjectGUID="{ECA6B435-B4FA-4F9F-BF95-F451D078FC47}"
 	>
 	<Platforms>
 		<Platform
