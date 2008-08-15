@@ -2314,6 +2314,28 @@ static void TestSearchForNull(void)
 	{
 		log_err("Expected %d search hits, found %d\n", expectedNum, count);
 	}
+
+    int x = ((UChar) (-1));
+    if(x < 0)
+    {
+        log_err("num: %d\n", x);
+    }
+    else
+    {
+        log_info("num: %d\n", x);     
+    }
+
+    x = ((wchar_t) (-1));
+    if(x < 0)
+    {
+        log_err("num: %d\n", x);
+    }
+    else
+    {
+        log_info("num: %d\n", x);     
+    }
+
+
 }
 
 
@@ -2369,7 +2391,7 @@ void addSearchTest(TestNode** root)
     addTest(root, &TestNumeric, "tscoll/usrchtst/TestNumeric");
     addTest(root, &TestDiacriticMatch, "tscoll/usrchtst/TestDiacriticMatch");
     addTest(root, &TestForwardBackward, "tscoll/usrchtst/TestForwardBackward");
-	/*addTest(root, &TestSearchForNull, "tscoll/usrchtst/TestSearchForNull");*/
+	addTest(root, &TestSearchForNull, "tscoll/usrchtst/TestSearchForNull");
 }
 
 #endif /* #if !UCONFIG_NO_COLLATION */
