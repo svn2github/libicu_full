@@ -2280,6 +2280,7 @@ static void TestSearchForNull(void)
 
 	U_STRING_DECL (text, "0IS 0 OK?", 8);
     U_STRING_INIT (text, "0IS 0 OK?", 8);
+
 	expectedPos = 0;
 	expectedLen = 1;
 	expectedNum = 2;
