@@ -2276,7 +2276,10 @@ static void TestSearchForNull(void)
 	
 	/* static const UChar var[(length)+1]=U_DECLARE_UTF16(cs) */
 	U_STRING_DECL (pattern, "0", 1);
+    U_STRING_INIT (pattern, "0", 1);
+
 	U_STRING_DECL (text, "0IS 0 OK?", 8);
+    U_STRING_INIT (text, "0IS 0 OK?", 8);
 	expectedPos = 0;
 	expectedLen = 1;
 	expectedNum = 2;
@@ -2314,28 +2317,6 @@ static void TestSearchForNull(void)
 	{
 		log_err("Expected %d search hits, found %d\n", expectedNum, count);
 	}
-
-    int x = ((UChar) (-1));
-    if(x < 0)
-    {
-        log_err("num: %d\n", x);
-    }
-    else
-    {
-        log_info("num: %d\n", x);     
-    }
-
-    x = ((wchar_t) (-1));
-    if(x < 0)
-    {
-        log_err("num: %d\n", x);
-    }
-    else
-    {
-        log_info("num: %d\n", x);     
-    }
-
-
 }
 
 
