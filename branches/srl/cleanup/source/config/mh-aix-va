@@ -1,6 +1,6 @@
 ## -*-makefile-*-
 ## Aix-specific setup (for Visual Age 5+)
-## Copyright (c) 1999-2005, International Business Machines Corporation and
+## Copyright (c) 1999-2008, International Business Machines Corporation and
 ## others. All Rights Reserved.
 
 ## Commands to generate dependency files
@@ -15,6 +15,9 @@ CXXFLAGS += -qproto -qroconst
 
 # If you readd this line, you must change the SO value
 #LDFLAGS += -brtl
+
+# set up init point.
+LDFLAGSICUUC += -binitfini::ucln_fini
 
 ## We need to delete things prior to linking, or else we'll get
 ## SEVERE ERROR: output file in use ..  on AIX. 
