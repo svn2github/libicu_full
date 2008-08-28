@@ -17,7 +17,9 @@ CXXFLAGS += -qproto -qroconst
 #LDFLAGS += -brtl
 
 # set up init point.
-LDFLAGSICUUC += -binitfini::ucln_fini
+UCLN_FINI =  ucln_fini_$(SO_TARGET_VERSION_MAJOR)$(ICULIBSUFFIXCNAME)
+CPPFLAGSICUUC += -DUCLN_FINI=$(UCLN_FINI)
+LDFLAGSICUUC += -binitfini::$(UCLN_FINI)
 
 ## We need to delete things prior to linking, or else we'll get
 ## SEVERE ERROR: output file in use ..  on AIX. 

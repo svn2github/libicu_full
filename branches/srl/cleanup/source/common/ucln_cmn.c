@@ -35,12 +35,8 @@ static cleanupFunc *gLibCleanupFunctions[UCLN_COMMON];
 #define UCLN_NO_AUTO_CLEANUP 0
 #endif
 
-/**
- SRL special
-*/
-#ifndef UCLN_DEBUG_CLEANUP
+/*srl special*/
 #define UCLN_DEBUG_CLEANUP 1
-#endif
 
 
 #if defined(UCLN_DEBUG_CLEANUP)
@@ -117,11 +113,15 @@ U_CFUNC UBool ucln_lib_cleanup(void) {
 /** 
  Automatic cleanups
  **/
+#if defined (UCLN_FINI)
+U_CAPI void U_EXPORT2 UCLN_FINI (void);
+#endif
+
 #if UCLN_NO_AUTO_CLEANUP
 /* No automatic cleanups - do nothing.*/
 
-#if defined(U_AIX) && !defined(__GNUC__)
-static void ucln_fini()
+#if defined (UCLN_FINI)
+U_CAPI void U_EXPORT2 UCLN_FINI ()
 {
 }
 #endif
@@ -135,6 +135,7 @@ static void ucln_fini()
 #elif defined(UCLN_AUTO_ATEXIT)
 /*
  * Use the 'atexit' function
+ */
 static UBool gAutoCleanRegistered = FALSE;
 
 static void ucln_atexit_handler() 
@@ -173,15 +174,13 @@ static void ucln_unRegisterAutomaticCleanup () {
     /* Can't unregister. */
 }
 
-#elif defined(U_AIX) && !defined(__GNUC__)
+#elif defined(UCLN_FINI) 
 
-static void ucln_fini()
+U_CAPI void U_EXPORT2 UCLN_FINI ()
 {
-#if !UCLN_NO_AUTO_CLEANUP
     u_cleanup();
 #if defined(UCLN_DEBUG_CLEANUP)
     puts("ucln_cmn.c: ucln_fini() was called, ICU unloaded.");
-#endif
 #endif
 }
 
@@ -243,7 +242,7 @@ static void ucln_registerAutomaticCleanup()
 static void ucln_unRegisterAutomaticCleanup() 
 {
 #if defined(UCLN_DEBUG_CLEANUP)
-    puts(""ucln_cmn.c: ucln_unRegisterAutomaticCleanup() was called - no implementation.");
+    puts("ucln_cmn.c: ucln_unRegisterAutomaticCleanup() was called - no implementation.");
 #endif
     /* disabled. */
 }
