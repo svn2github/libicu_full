@@ -455,6 +455,24 @@ ucol_equal(const UCollator *coll,
            const UChar     *target, int32_t targetLength);
 
 /**
+ * Determine if the source string is a prefix of the target string.
+ * @param coll The UCollator containing the comparison rules.
+ * @param source The source string.
+ * @param sourceLength The length of source, or -1 if null-terminated.
+ * @param target The target string.
+ * @param targetLength The length of target, or -1 if null-terminated.
+ * @return TRUE if source is a prefix of target, FALSE otherwise.
+ * @see ucol_strcoll
+ * @see ucol_greater
+ * @see ucol_equal
+ * @draft ICU 4.2
+ */
+U_STABLE UBool U_EXPORT2 
+ucol_startsWith(const UCollator *coll,
+                const UChar     *source, int32_t sourceLength,
+                const UChar     *target, int32_t targetLength);
+
+/**
  * Compare two UTF-8 encoded trings.
  * The strings will be compared using the options already specified.
  * @param coll The UCollator containing the comparison rules.

@@ -7689,6 +7689,7 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
 //              int32_t            sourceLength,
 //              const UChar        *target,
 //              int32_t            targetLength,
+              UBool       prefixMatch,
               UErrorCode *status)
 {
     U_ALIGN_CODE(16);
@@ -7766,6 +7767,10 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
                 }
             } else {
                 // if two primaries are different, we are done
+                if (prefixMatch && sOrder == UCOL_NO_MORE_CES_PRIMARY) {
+                    break;
+                }
+
                 result = (sOrder < tOrder) ?  UCOL_LESS: UCOL_GREATER;
                 goto commonReturn;
             }
@@ -7887,6 +7892,10 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
                     continue;
                 }
             } else {
+                if (prefixMatch && sOrder == UCOL_NO_MORE_CES_PRIMARY) {
+                    break;
+                }
+
                 result = (sOrder < tOrder) ? UCOL_LESS : UCOL_GREATER;
                 goto commonReturn;
             }
@@ -7919,6 +7928,10 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
                         continue;
                     }
                 } else {
+                    if (prefixMatch && secS == UCOL_NO_MORE_CES_SECONDARY) {
+                        break;
+                    }
+
                     result = (secS < secT) ? UCOL_LESS : UCOL_GREATER;
                     goto commonReturn;
                 }
@@ -7981,6 +7994,10 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
                         continue;
                     }
                 } else {
+                    if (prefixMatch && secS == UCOL_NO_MORE_CES_SECONDARY) {
+                        break;
+                    }
+
                     result = (secS < secT) ? UCOL_LESS : UCOL_GREATER;
                     goto commonReturn;
                 }
@@ -8023,6 +8040,11 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
                 } else {
                     secT = 0;
                 }
+            }
+
+            // **** really?? ****
+            if (prefixMatch && (secS & UCOL_REMOVE_CASE) == UCOL_NO_MORE_CES_TERTIARY) {
+                 break;
             }
 
             if((secS & UCOL_CASE_BIT_MASK) < (secT & UCOL_CASE_BIT_MASK)) {
@@ -8075,6 +8097,10 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
                     continue;
                 }
             } else {
+                if (prefixMatch && (secS & UCOL_REMOVE_CASE) == UCOL_NO_MORE_CES_TERTIARY) {
+                    break;
+                }
+
                 result = (secS < secT) ? UCOL_LESS : UCOL_GREATER;
                 goto commonReturn;
             }
@@ -8129,6 +8155,10 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
                     continue;
                 }
             } else {
+                if (prefixMatch && secS == UCOL_NO_MORE_CES_PRIMARY) {
+                    break;
+                }
+
                 result = (secS < secT) ? UCOL_LESS : UCOL_GREATER;
                 goto commonReturn;
             }
@@ -8147,6 +8177,7 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
     if(checkIdent)
     {
         //result = ucol_checkIdent(&sColl, &tColl, coll->normalizationMode == UCOL_ON);
+        // **** WHAT ABOUT prefixMatch?? ****
         result = ucol_checkIdent(sColl, tColl, TRUE, status);
     }
 
@@ -8533,7 +8564,7 @@ returnRegular:
 
     IInit_collIterate(coll, source, sLen, &sColl);
     IInit_collIterate(coll, target, tLen, &tColl);
-    return ucol_strcollRegular(&sColl, &tColl, status);
+    return ucol_strcollRegular(&sColl, &tColl, FALSE, status);
 }
 
 
@@ -8624,7 +8655,7 @@ ucol_strcollIter( const UCollator    *coll,
 
 
     if(U_SUCCESS(*status)) {
-        result = ucol_strcollRegular(&sColl, &tColl, status);
+        result = ucol_strcollRegular(&sColl, &tColl, FALSE, status);
     }
 
 end_compare:
@@ -8760,12 +8791,146 @@ ucol_strcoll( const UCollator    *coll,
         // Preparing the context objects for iterating over strings
         IInit_collIterate(coll, source, sourceLength, &sColl);
         IInit_collIterate(coll, target, targetLength, &tColl);
-        returnVal = ucol_strcollRegular(&sColl, &tColl, &status);
+        returnVal = ucol_strcollRegular(&sColl, &tColl, FALSE, &status);
     } else {
         returnVal = ucol_strcollUseLatin1(coll, source, sourceLength, target, targetLength, &status);
     }
     UTRACE_EXIT_VALUE(returnVal);
     return returnVal;
+}
+
+/*                                                              */
+/* Check if source string is a prefix of target string          */
+/*                                                              */
+U_CAPI UBool U_EXPORT2
+ucol_startsWith(const UCollator    *coll,
+                const UChar        *source, int32_t  sourceLength,
+                const UChar        *target, int32_t  targetLength)
+{
+    U_ALIGN_CODE(16);
+
+    UTRACE_ENTRY(UTRACE_UCOL_STRCOLL);
+    if (UTRACE_LEVEL(UTRACE_VERBOSE)) {
+        UTRACE_DATA3(UTRACE_VERBOSE, "coll=%p, source=%p, target=%p", coll, source, target);
+        UTRACE_DATA2(UTRACE_VERBOSE, "source string = %vh ", source, sourceLength);
+        UTRACE_DATA2(UTRACE_VERBOSE, "target string = %vh ", target, targetLength);
+    }
+
+    if(source == NULL || target == NULL) {
+        // do not crash, but return. Should have
+        // status argument to return error.
+        UTRACE_EXIT_VALUE(TRUE);
+        return TRUE;
+    }
+
+    /* Quick check if source and target are same strings. */
+    /* They should either both be NULL terminated or the explicit length should be set on both. */
+    if (source==target && sourceLength==targetLength) {
+        UTRACE_EXIT_VALUE(TRUE);
+        return TRUE;
+    }
+
+    /* Scan the strings.  Find:                                                             */
+    /*    The length of any leading portion that is equal                                   */
+    /*    Whether they are exactly equal.  (in which case we just return)                   */
+    const UChar    *pSrc    = source;
+    const UChar    *pTarg   = target;
+    int32_t        equalLength;
+
+    if (sourceLength == -1 && targetLength == -1) {
+        // Both strings are null terminated.
+        //    Scan through any leading equal portion.
+        while (*pSrc == *pTarg && *pSrc != 0) {
+            pSrc += 1;
+            pTarg += 1;
+        }
+
+        if (*pSrc == 0) {
+            UTRACE_EXIT_VALUE(TRUE);
+            return TRUE;
+        }
+
+        equalLength = pSrc - source;
+    } else {
+        // One or both strings has an explicit length.
+        const UChar    *pSrcEnd  = source + sourceLength;
+        const UChar    *pTargEnd = target + targetLength;
+
+        // Scan while the strings are bitwise ==, or until one is exhausted.
+        for (;;) {
+            if (pSrc == pSrcEnd || pTarg == pTargEnd) {
+                break;
+            }
+
+            if ((*pSrc == 0 && sourceLength == -1) || (*pTarg == 0 && targetLength == -1)) {
+                break;
+            }
+
+            if (*pSrc != *pTarg) {
+                break;
+            }
+
+            pSrc += 1;
+            pTarg += 1;
+        }
+
+        equalLength = pSrc - source;
+
+        // If we made it all the way through the source string, we are done.
+        if ((pSrc  == pSrcEnd  || (pSrcEnd  < pSrc  && *pSrc  == 0)))   /* At end of src string, however it was specified. */
+        {
+            UTRACE_EXIT_VALUE(TRUE);
+            return TRUE;
+        }
+    }
+
+    if (equalLength > 0) {
+        /* There is an identical portion at the beginning of the two strings.        */
+        /*   If the identical portion ends within a contraction or a comibining      */
+        /*   character sequence, back up to the start of that sequence.              */
+        
+        // These values should already be set by the code above.
+        //pSrc  = source + equalLength;        /* point to the first differing chars   */
+        //pTarg = target + equalLength;
+        if (pSrc  != source+sourceLength && ucol_unsafeCP(*pSrc, coll) ||
+            pTarg != target+targetLength && ucol_unsafeCP(*pTarg, coll))
+        {
+            // We are stopped in the middle of a contraction.
+            // Scan backwards through the == part of the string looking for the start of the contraction.
+            //   It doesn't matter which string we scan, since they are the same in this region.
+            do {
+                equalLength -= 1;
+                pSrc -= 1;
+            } while (equalLength > 0 && ucol_unsafeCP(*pSrc, coll));
+        }
+
+        source += equalLength;
+        target += equalLength;
+
+        if (sourceLength > 0) {
+            sourceLength -= equalLength;
+        }
+
+        if (targetLength > 0) {
+            targetLength -= equalLength;
+        }
+    }
+
+    UErrorCode status = U_ZERO_ERROR;
+    UCollationResult returnVal;
+
+    // **** HACK: ignore Latin1 check ****
+    if(TRUE || !coll->latinOneUse || (sourceLength > 0 && *source&0xff00) || (targetLength > 0 && *target&0xff00)) {
+        collIterate sColl, tColl;
+        // Preparing the context objects for iterating over strings
+        IInit_collIterate(coll, source, sourceLength, &sColl);
+        IInit_collIterate(coll, target, targetLength, &tColl);
+        returnVal = ucol_strcollRegular(&sColl, &tColl, TRUE, &status);
+    } else {
+        returnVal = ucol_strcollUseLatin1(coll, source, sourceLength, target, targetLength, &status);
+    }
+    UTRACE_EXIT_VALUE(returnVal == UCOL_EQUAL);
+    return returnVal == UCOL_EQUAL;
 }
 
 /* convenience function for comparing strings */
