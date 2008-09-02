@@ -43,9 +43,6 @@ static cleanupFunc *gLibCleanupFunctions[UCLN_COMMON];
 #include <stdio.h>
 #endif
 
-
-
-#if !UCLN_NO_AUTO_CLEANUP
 /**
  * Give the library an opportunity to register an automatic cleanup. 
  * This may be called more than once.
@@ -53,10 +50,12 @@ static cleanupFunc *gLibCleanupFunctions[UCLN_COMMON];
 static void ucln_registerAutomaticCleanup();
 
 /**
- * Unregister an automatic cleanup, if possible.
+ * Unregister an automatic cleanup, if possible. Called from cleanup.
  */
 static void ucln_unRegisterAutomaticCleanup();
-#endif
+
+
+
 
 U_CFUNC void
 ucln_common_registerCleanup(ECleanupCommonType type,
@@ -74,9 +73,7 @@ U_CAPI void U_EXPORT2
 ucln_registerCleanup(ECleanupLibraryType type,
                      cleanupFunc *func)
 {
-#if !UCLN_NO_AUTO_CLEANUP
     ucln_unRegisterAutomaticCleanup();
-#endif
     U_ASSERT(UCLN_START < type && type < UCLN_COMMON);
     if (UCLN_START < type && type < UCLN_COMMON)
     {
@@ -103,44 +100,71 @@ U_CFUNC UBool ucln_lib_cleanup(void) {
             gCommonCleanupFunctions[commonFunc] = NULL;
         }
     }
-#if !UCLN_NO_AUTO_CLEANUP
     ucln_unRegisterAutomaticCleanup();
-#endif
     return TRUE;
 }
 
+/* ------------------- automatic cleanup: bottleneck ---------- */
 
-/** 
- Automatic cleanups
- **/
+/**
+ * This is the main (portable) function to request automatic cleanup.
+ * It may be called directly, or called by various stubs below..
+ */
+U_CAPI void U_EXPORT2 ucln_common_is_closing()
+{
+    u_cleanup();
+#if defined(UCLN_DEBUG_CLEANUP)
+    puts("ucln_cmn.c: ucln_common_is_closing() was called, ICU unloaded.");
+#endif
+}
+
+/* --------- automatic cleanup: calling stubs (independent of each other) ------- */
+
+
 #if defined (UCLN_FINI)
+/**
+ * If UCLN_FINI is defined, it is the (versioned, etc) name of a cleanup
+ * entrypoint. Add a stub to call ucln_common_is_closing.   
+ * Used on AIX.
+ */
 U_CAPI void U_EXPORT2 UCLN_FINI (void);
+
+U_CAPI void U_EXPORT2 UCLN_FINI ()
+{
+    ucln_common_is_closing();
+}
 #endif
 
-#if UCLN_NO_AUTO_CLEANUP
-/* No automatic cleanups - do nothing.*/
+#if defined(__GNUC__)
+/* GCC - use __attribute((destructor)) */
+static void ucln_destructor()   __attribute__((destructor)) ;
 
-#if defined (UCLN_FINI)
-U_CAPI void U_EXPORT2 UCLN_FINI ()
+static void ucln_destructor() 
 {
 }
 #endif
 
-#elif defined(UCLN_AUTO_LOCAL)
-/* To use:  define UCLN_AUTO_LOCAL, and create ucln_local_hook.c containing implementations of 
- * static void functions ucln_registerAutomaticCleanup() and ucln_unRegisterAutomaticCleanup().
+/* ------------ automatic cleanup: registration. Choose ONE ------- */
+
+#if defined(UCLN_AUTO_LOCAL)
+/* To use:  
+ *  1. define UCLN_AUTO_LOCAL, 
+ *  2. create ucln_local_hook.c containing implementations of 
+ *           static void ucln_registerAutomaticCleanup()
+ *           static void ucln_unRegisterAutomaticCleanup()
  */
-# include "ucln_local_hook.c"
+#include "ucln_local_hook.c"
 
 #elif defined(UCLN_AUTO_ATEXIT)
 /*
- * Use the 'atexit' function
+ * Use the ANSI C 'atexit' function. Note that this mechanism does not
+ * guarantee the order of cleanup relative to other users of ICU!
  */
 static UBool gAutoCleanRegistered = FALSE;
 
 static void ucln_atexit_handler() 
 {
-    u_cleanup();
+    ucln_common_is_closing();
 }
 
 static void ucln_registerAutomaticCleanup() 
@@ -152,98 +176,17 @@ static void ucln_registerAutomaticCleanup()
 }
 
 static void ucln_unRegisterAutomaticCleanup () {
-    /* Can't unregister. */
-}
-#elif defined(__GNUC__)
-/* GCC - use __attribute((destructor)) */
-static void ucln_destructor()   __attribute__((destructor)) ;
-
-static void ucln_destructor() 
-{
-    u_cleanup();
-#if defined(UCLN_DEBUG_CLEANUP)
-    puts("ucln_cmn.c: ucln_destructor() was called, ICU unloaded.");
-#endif
 }
 
+#else 
+
+/*
+ * "None of the above" - Default (null) implementation of registration.
+ */
 static void ucln_registerAutomaticCleanup() 
 {
-    /* nothing to do. */
 }
 static void ucln_unRegisterAutomaticCleanup () {
-    /* Can't unregister. */
 }
 
-#elif defined(UCLN_FINI) 
-
-U_CAPI void U_EXPORT2 UCLN_FINI ()
-{
-    u_cleanup();
-#if defined(UCLN_DEBUG_CLEANUP)
-    puts("ucln_cmn.c: ucln_fini() was called, ICU unloaded.");
-#endif
-}
-
-
-static void ucln_registerAutomaticCleanup() 
-{
-    /* nothing to do. */
-}
-static void ucln_unRegisterAutomaticCleanup () {
-    /* Can't unregister. */
-}
-
-#elif defined (U_WINDOWS) && !defined(__GNUC__)
-
-#include <windows.h>
-
-BOOL WINAPI DllMain(HINSTANCE /*hinstDLL*/, DWORD fdwReason, LPVOID /*lpReserved*/ )
-{
-    switch( fdwReason ) 
-    { 
-//        case DLL_PROCESS_ATTACH:
-//            break;
-//
-//        case DLL_THREAD_ATTACH:
-//            break;
-//
-//        case DLL_THREAD_DETACH:
-//            break;
-
-        case DLL_PROCESS_DETACH:
-                u_cleanup();
-#if defined(UCLN_DEBUG_CLEANUP)
-                puts("ucln_cmn.c: ucln_fini() was called, ICU unloaded.");
-#endif         
-            break;
-    }
-    return TRUE;
-}
-
-
-static void ucln_registerAutomaticCleanup() 
-{
-    /* nothing to do. */
-}
-static void ucln_unRegisterAutomaticCleanup () {
-    /* Can't unregister. */
-}
-
-#else
-
-/* Null implementation. */
-static void ucln_registerAutomaticCleanup() 
-{
-#if defined(UCLN_DEBUG_CLEANUP)
-    puts("ucln_cmn.c: ucln_registerAutomaticCleanup() was called - no implementation.");
-#endif
-    /* disabled. */
-}
-static void ucln_unRegisterAutomaticCleanup() 
-{
-#if defined(UCLN_DEBUG_CLEANUP)
-    puts("ucln_cmn.c: ucln_unRegisterAutomaticCleanup() was called - no implementation.");
-#endif
-    /* disabled. */
-}
 #endif

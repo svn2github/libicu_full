@@ -1737,6 +1737,96 @@ u_getVersion(UVersionInfo versionArray) {
     u_versionFromString(versionArray, U_ICU_VERSION);
 }
 
+#if 0 && defined (U_WINDOWS)
+/* 
+ * ICU's own DllMain.
+ */
+
+/*
+ * Pre-existing dllmains, to be called in this order (or reverse order for deinit)
+ */
+BOOL (WINAPI *_pRawDllMain)(HINSTANCE, DWORD, LPVOID);
+BOOL WINAPI _CRT_INIT(HINSTANCE, DWORD, LPVOID);
+BOOL WINAPI DllMain(HINSTANCE, DWORD, LPVOID);
+
+BOOL WINAPI uprv_DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
+{
+    BOOL status = TRUE;
+    printf("Reason %d,_pRawDllMain = %p", fdwReason,  _pRawDllMain);
+    switch(fdwReason) {
+        case DLL_PROCESS_ATTACH:
+             /* ICU does not trap process attach, but must pass these through properly. */
+            if(status && _pRawDllMain != NULL) {
+                status = (*_pRawDllMain)(hinstDLL, fdwReason, lpvReserved);
+            }
+            if(status) {
+                status = _CRT_INIT(hinstDLL, fdwReason, lpvReserved);
+            }
+            if(status) {
+                status = DllMain(hinstDLL, fdwReason, lpvReserved);
+            }
+            /* ICU specific process attach could go here */
+            break;
+
+        case DLL_PROCESS_DETACH:
+            /* Here is the one we actually care about. */
+
+            ucln_common_is_closing();
+
+            if(status) {
+                status = DllMain(hinstDLL, fdwReason, lpvReserved);
+            }
+            if(status) {
+                status = _CRT_INIT(hinstDLL, fdwReason, lpvReserved);
+            }
+            if(status && _pRawDllMain != NULL) {
+                status = (*_pRawDllMain)(hinstDLL, fdwReason, lpvReserved);
+            }
+            break;
+
+        case DLL_THREAD_ATTACH:
+            /* ICU does not trap thread attach, but must pass these through properly. */
+            if(status && _pRawDllMain != NULL) {
+                status = (*_pRawDllMain)(hinstDLL, fdwReason, lpvReserved);
+            }
+            if(status) {
+                status = _CRT_INIT(hinstDLL, fdwReason, lpvReserved);
+            }
+            if(status) {
+                status = DllMain(hinstDLL, fdwReason, lpvReserved);
+            }
+            /* ICU specific thread attach could go here */
+            break;
+
+        case DLL_THREAD_DETACH:
+            /* ICU does not trap thread detach, but must pass these through properly. */
+            /* ICU specific thread detach could go here */
+            if(status) {
+                status = DllMain(hinstDLL, fdwReason, lpvReserved);
+            }
+            if(status) {
+                status = _CRT_INIT(hinstDLL, fdwReason, lpvReserved);
+            }
+            if(status && _pRawDllMain != NULL) {
+                status = (*_pRawDllMain)(hinstDLL, fdwReason, lpvReserved);
+            }
+            break;
+
+        default:
+            if(status) {
+                status = DllMain(hinstDLL, fdwReason, lpvReserved);
+            }
+            if(status) {
+                status = _CRT_INIT(hinstDLL, fdwReason, lpvReserved);
+            }
+            if(status && _pRawDllMain != NULL) {
+                status = (*_pRawDllMain)(hinstDLL, fdwReason, lpvReserved);
+            }
+    }
+    return status;
+}
+#endif
+
 /*
  * Hey, Emacs, please set the following:
  *
