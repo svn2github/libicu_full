@@ -2517,9 +2517,9 @@ void RegexTest::Callbacks() {
 void RegexTest::CSRETest()
 {
     UErrorCode status = U_ZERO_ERROR;
-    const UnicodeString pattern("xAa.*m", -1, US_INV);
-    const UnicodeString target1("xAangstrom", -1, US_INV);
-    const UnicodeString escaped("x\\u00C5ngstrom", -1, US_INV); // A-RING
+    const UnicodeString pattern("Aa.*m", -1, US_INV);
+    const UnicodeString target1("Aangstrom", -1, US_INV);
+    const UnicodeString escaped("\\u00C5ngstrom", -1, US_INV); // \u00C5 == A-RING
     const UnicodeString target2 = escaped.unescape();
     UCollator *coll = ucol_open("da_DK", &status);
 
@@ -2528,13 +2528,27 @@ void RegexTest::CSRETest()
     CSREMatcher matcher(coll, pattern, target1, 0, status);
 
     if (!matcher.matches(status)) {
-        errln("CSRE match failure for Aangstrom.");
+        errln("CSRE: \"Aa.*m\" does not match \"Aangstrom\"");
     }
 
     matcher.reset(target2);
 
     if (!matcher.matches(status)) {
-        errln("CSRE match failure for \\u00C5ngstrom.");
+        errln("CSRE: \"Aa.*m\" does not match \"\\u00C5ngstrom\"");
+    }
+
+    const UnicodeString pattern2("\\u00C5.*m", -1, US_INV);
+
+    CSREMatcher matcher2(coll, pattern2, target1, 0, status);
+
+    if (!matcher2.matches(status)) {
+        errln("CSRE: \"\\u00C5.*m\" does not match \"Aangstrom\"");
+    }
+
+    matcher2.reset(target2);
+
+    if (!matcher2.matches(status)) {
+        errln("CSRE: \"\\u00C5.*m\" does not match \"\\u00C5ngstrom\"");
     }
 }
 
