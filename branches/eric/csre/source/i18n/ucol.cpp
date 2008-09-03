@@ -8958,6 +8958,7 @@ ucol_startsWith(const UCollator    *coll,
 
         returnVal = ucol_strcollRegular(&sColl, &tColl, TRUE, &status);
 
+		// **** need to adjust / validate boundary ****
         if (returnVal == UCOL_EQUAL) {
             int32_t length = equalLength + getOffset(&tColl);
 
