@@ -32,6 +32,7 @@ public:
     virtual void PerlTests();
     virtual void Bug6149();
     virtual void Callbacks();
+    virtual void CSRETest();
 
     // The following functions are internal to the regexp tests.
     virtual UBool doRegexLMTest(const char *pat, const char *text, UBool looking, UBool match, int32_t line);

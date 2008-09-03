@@ -8799,10 +8799,39 @@ ucol_strcoll( const UCollator    *coll,
     return returnVal;
 }
 
+/*
+ * Stolen from ucol_getOffset !!
+ */
+static int32_t getOffset(const collIterate *ci)
+{
+  if (ci->offsetRepeatCount > 0 && ci->offsetRepeatValue != 0) {
+      return ci->offsetRepeatValue;
+  }
+
+  if (ci->offsetReturn != NULL) {
+      return *ci->offsetReturn;
+  }
+
+  // while processing characters in normalization buffer getOffset will 
+  // return the next non-normalized character. 
+  // should be inline with the old implementation since the old codes uses
+  // nextDecomp in normalizer which also decomposes the string till the 
+  // first base character is found.
+  if (ci->flags & UCOL_ITER_INNORMBUF) {
+      if (ci->fcdPosition == NULL) {
+        return 0;
+      }
+      return (int32_t)(ci->fcdPosition - ci->string);
+  }
+  else {
+      return (int32_t)(ci->pos - ci->string);
+  }
+}
+
 /*                                                              */
 /* Check if source string is a prefix of target string          */
 /*                                                              */
-U_CAPI UBool U_EXPORT2
+U_CAPI int32_t U_EXPORT2
 ucol_startsWith(const UCollator    *coll,
                 const UChar        *source, int32_t  sourceLength,
                 const UChar        *target, int32_t  targetLength)
@@ -8819,15 +8848,15 @@ ucol_startsWith(const UCollator    *coll,
     if(source == NULL || target == NULL) {
         // do not crash, but return. Should have
         // status argument to return error.
-        UTRACE_EXIT_VALUE(TRUE);
-        return TRUE;
+        UTRACE_EXIT_VALUE(0);
+        return 0;
     }
 
     /* Quick check if source and target are same strings. */
     /* They should either both be NULL terminated or the explicit length should be set on both. */
     if (source==target && sourceLength==targetLength) {
-        UTRACE_EXIT_VALUE(TRUE);
-        return TRUE;
+        UTRACE_EXIT_VALUE(sourceLength);
+        return sourceLength;
     }
 
     /* Scan the strings.  Find:                                                             */
@@ -8845,12 +8874,12 @@ ucol_startsWith(const UCollator    *coll,
             pTarg += 1;
         }
 
-        if (*pSrc == 0) {
-            UTRACE_EXIT_VALUE(TRUE);
-            return TRUE;
-        }
-
         equalLength = pSrc - source;
+
+        if (*pSrc == 0) {
+            UTRACE_EXIT_VALUE(equalLength);
+            return equalLength;
+        }
     } else {
         // One or both strings has an explicit length.
         const UChar    *pSrcEnd  = source + sourceLength;
@@ -8879,8 +8908,8 @@ ucol_startsWith(const UCollator    *coll,
         // If we made it all the way through the source string, we are done.
         if ((pSrc  == pSrcEnd  || (pSrcEnd  < pSrc  && *pSrc  == 0)))   /* At end of src string, however it was specified. */
         {
-            UTRACE_EXIT_VALUE(TRUE);
-            return TRUE;
+            UTRACE_EXIT_VALUE(equalLength);
+            return equalLength;
         }
     }
 
@@ -8922,15 +8951,25 @@ ucol_startsWith(const UCollator    *coll,
     // **** HACK: ignore Latin1 check ****
     if(TRUE || !coll->latinOneUse || (sourceLength > 0 && *source&0xff00) || (targetLength > 0 && *target&0xff00)) {
         collIterate sColl, tColl;
+
         // Preparing the context objects for iterating over strings
         IInit_collIterate(coll, source, sourceLength, &sColl);
         IInit_collIterate(coll, target, targetLength, &tColl);
+
         returnVal = ucol_strcollRegular(&sColl, &tColl, TRUE, &status);
+
+        if (returnVal == UCOL_EQUAL) {
+            int32_t length = equalLength + getOffset(&tColl);
+
+            UTRACE_EXIT_VALUE(length);
+            return length;
+        }
     } else {
         returnVal = ucol_strcollUseLatin1(coll, source, sourceLength, target, targetLength, &status);
     }
-    UTRACE_EXIT_VALUE(returnVal == UCOL_EQUAL);
-    return returnVal == UCOL_EQUAL;
+
+    UTRACE_EXIT_VALUE(-1);
+    return -1;
 }
 
 /* convenience function for comparing strings */

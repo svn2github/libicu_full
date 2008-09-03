@@ -58,6 +58,7 @@ U_NAMESPACE_BEGIN
 // Forward Declarations...
 
 class RegexMatcher;
+class CSREMatcher;
 class RegexPattern;
 class UVector;
 class UVector32;
@@ -423,6 +424,7 @@ private:
 
     friend class RegexCompile;
     friend class RegexMatcher;
+    friend class CSREMatcher;
     friend class RegexCImpl;
 
     //

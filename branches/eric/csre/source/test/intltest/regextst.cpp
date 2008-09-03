@@ -14,6 +14,8 @@
 #if !UCONFIG_NO_REGULAR_EXPRESSIONS
 
 #include "unicode/regex.h"
+#include "unicode/crematch.h"
+#include "unicode/ucol.h"
 #include "unicode/uchar.h"
 #include "unicode/ucnv.h"
 #include "regextst.h"
@@ -72,6 +74,9 @@ void RegexTest::runIndexedTest( int32_t index, UBool exec, const char* &name, ch
         case 8: name = "Bug 6149";
              if (exec) Bug6149();
              break;
+        case 9: name = "CSRETest";
+            if (exec) CSRETest();
+            break;
 
         default: name = "";
             break; //needed to end loop
@@ -2507,6 +2512,30 @@ void RegexTest::Callbacks() {
     }
  
 
+}
+
+void RegexTest::CSRETest()
+{
+    UErrorCode status = U_ZERO_ERROR;
+    const UnicodeString pattern("xAa.*m", -1, US_INV);
+    const UnicodeString target1("xAangstrom", -1, US_INV);
+    const UnicodeString escaped("x\\u00C5ngstrom", -1, US_INV); // A-RING
+    const UnicodeString target2 = escaped.unescape();
+    UCollator *coll = ucol_open("da_DK", &status);
+
+    ucol_setStrength(coll, UCOL_SECONDARY);
+
+    CSREMatcher matcher(coll, pattern, target1, 0, status);
+
+    if (!matcher.matches(status)) {
+        errln("CSRE match failure for Aangstrom.");
+    }
+
+    matcher.reset(target2);
+
+    if (!matcher.matches(status)) {
+        errln("CSRE match failure for \\u00C5ngstrom.");
+    }
 }
 
 #endif  /* !UCONFIG_NO_REGULAR_EXPRESSIONS  */
