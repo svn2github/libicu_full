@@ -30,6 +30,17 @@
 
 // #include <malloc.h>        // Needed for heapcheck testing
 
+// ***********************************************************************
+// **** TODO:                                                         ****
+// **** > Boundary checking in ucol_startsWith()                      ****
+// **** >    "        "     in find()                                 ****
+// **** > Always match in CE space?                                   ****
+// **** > Implement Tailored Grapheme Cluster                         ****
+// **** > Matching UnicodeSets - CESet?                               ****
+// **** > Should "." really be the same as "\X"?                      ****
+// **** > Case insensitive matching? (just use strength?)             ****
+// ***********************************************************************
+
 U_NAMESPACE_BEGIN
 
 // Default limit for the size of the back track stack, to avoid system
@@ -1863,6 +1874,10 @@ void CSREMatcher::MatchAt(int32_t startIdx, UBool toEnd, UErrorCode &status) {
             break;
 
 
+            // ******************************************************************************
+            // **** This should match a "Tailored Grapheme Cluster" according to UTS #18 ****
+            // ****   http://www.unicode.org/reports/tr18/#Tailored_Graphemes_Clusters   ****
+            // ******************************************************************************
         case URX_DOTANY:
         case URX_BACKSLASH_X:     
             //  Match a Grapheme, as defined by Unicode TR 29.
