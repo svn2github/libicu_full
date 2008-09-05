@@ -4,6 +4,7 @@
 	Version="8.00"
 	Name="cintltst"
 	ProjectGUID="{3D1246AE-1B32-479B-BECA-AEFA97BE2321}"
+	RootNamespace="cintltst"
 	>
 	<Platforms>
 		<Platform
@@ -554,6 +555,18 @@
 			<File
 				RelativePath=".\sorttest.c"
 				>
+			</File>
+			<File
+				RelativePath=".\trie2test.c"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						GeneratePreprocessedFile="0"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\trietest.c"
