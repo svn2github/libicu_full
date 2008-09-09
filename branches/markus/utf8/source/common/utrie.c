@@ -17,7 +17,7 @@
 *   It is a kind of compressed, serializable table of 16- or 32-bit values associated with
 *   Unicode code points (0..0x10ffff).
 */
-
+#define UTRIE_DEBUG
 #ifdef UTRIE_DEBUG
 #   include <stdio.h>
 #endif
@@ -684,6 +684,15 @@ utrie_compact(UNewTrie *trie, UBool overlap, UErrorCode *pErrorCode) {
 }
 
 /* serialization ------------------------------------------------------------ */
+
+U_CAPI void U_EXPORT2
+utrie_printLengths(const UTrie *trie) {
+    long indexLength=trie->indexLength;
+    long dataLength=(long)trie->dataLength;
+    long totalLength=(long)sizeof(UTrieHeader)+indexLength*2+dataLength*(trie->data32!=NULL ? 4 : 2);
+    printf("**UTrieLengths** index:%6ld  data:%6ld  serialized:%6ld\n",
+           indexLength, dataLength, totalLength);
+}
 
 /*
  * Default function for the folding value:

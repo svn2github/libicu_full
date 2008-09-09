@@ -128,10 +128,15 @@ static void
 testTrieGetters(const char *testName,
                 const UTrie2 *trie, UTrie2ValueBits valueBits,
                 const CheckRange checkRanges[], int32_t countCheckRanges) {
+    uint16_t bmpIndex2[UTRIE2_BMP_INDEX_2_LENGTH];
+    UTrie2 bmpTrie;
     uint32_t initialValue, errorValue;
     uint32_t value, value2;
     UChar32 start, limit;
     int32_t i, countSpecials;
+
+    uprv_memcpy(&bmpTrie, trie, sizeof(bmpTrie));
+    utrie2_makeBMPIndex2(&bmpTrie, bmpIndex2);
 
     countSpecials=getSpecialValues(checkRanges, countCheckRanges, &initialValue, &errorValue);
 
@@ -143,9 +148,9 @@ testTrieGetters(const char *testName,
         while(start<limit) {
             if(start<=0xffff) {
                 if(valueBits==UTRIE2_16_VALUE_BITS) {
-                    value2=UTRIE2_GET16_FROM_BMP(trie, start);
+                    value2=UTRIE2_GET16_FROM_BMP(&bmpTrie, start);
                 } else {
-                    value2=UTRIE2_GET32_FROM_BMP(trie, start);
+                    value2=UTRIE2_GET32_FROM_BMP(&bmpTrie, start);
                 }
                 if(value!=value2) {
                     log_err("error: unserialized trie(%s).fromBMP(U+%04lx)==0x%lx instead of 0x%lx\n",
@@ -357,6 +362,8 @@ testTrieUTF16(const char *testName,
     }
 }
 
+/* TODO: un-hardcode for 6+6 shifts */
+#if _SHIFT_1==6 && _SHIFT_2==6
 static void
 testTrieUTF8(const char *testName,
              const UTrie2 *trie, UTrie2ValueBits valueBits,
@@ -438,7 +445,7 @@ testTrieUTF8(const char *testName,
     i=0;
     while(p<limit) {
         sIndex=(int32_t)(p-s);
-        U8_FWD_1(s, sIndex, length);
+        U8_NEXT(s, sIndex, length, c);
         if(valueBits==UTRIE2_16_VALUE_BITS) {
             UTRIE2_U8_NEXT16(trie, p, limit, value);
         } else {
@@ -449,8 +456,8 @@ testTrieUTF8(const char *testName,
                     testName, (long)c, (long)value, (long)values[i]);
         }
         if(sIndex!=(p-s)) {
-            log_err("error: wrong end index from UTRIE2_U8_NEXT(%s): %ld != %ld\n",
-                    testName, (long)(p-s), (long)sIndex);
+            log_err("error: wrong end index from UTRIE2_U8_NEXT(%s)(U+%04lx): %ld != %ld\n",
+                    testName, (long)c, (long)(p-s), (long)sIndex);
             continue;
         }
         ++i;
@@ -462,7 +469,7 @@ testTrieUTF8(const char *testName,
     while(s<p) {
         --i;
         sIndex=(int32_t)(p-s);
-        U8_BACK_1(s, 0, sIndex);
+        U8_PREV(s, 0, sIndex, c);
         if(valueBits==UTRIE2_16_VALUE_BITS) {
             UTRIE2_U8_PREV16(trie, s, p, value);
         } else {
@@ -473,12 +480,13 @@ testTrieUTF8(const char *testName,
                     testName, (long)c, (long)value, (long)values[i]);
         }
         if(sIndex!=(p-s)) {
-            log_err("error: wrong end index from UTRIE2_U8_PREV(%s): %ld != %ld\n",
-                    testName, (long)(p-s), (long)sIndex);
+            log_err("error: wrong end index from UTRIE2_U8_PREV(%s)(U+%04lx): %ld != %ld\n",
+                    testName, (long)c, (long)(p-s), (long)sIndex);
             continue;
         }
     }
 }
+#endif
 
 static void
 testTrieRunTime(const char *testName,
@@ -487,7 +495,10 @@ testTrieRunTime(const char *testName,
     testTrieGetters(testName, trie, valueBits, checkRanges, countCheckRanges);
     testTrieEnum(testName, trie, checkRanges, countCheckRanges);
     testTrieUTF16(testName, trie, valueBits, checkRanges, countCheckRanges);
+/* TODO: un-hardcode for 6+6 shifts */
+#if _SHIFT_1==6 && _SHIFT_2==6
     testTrieUTF8(testName, trie, valueBits, checkRanges, countCheckRanges);
+#endif
 }
 
 static void

@@ -1,3 +1,6 @@
+#define USE_BMP_INDEX_2 1
+#define _SHIFT_1 6
+#define _SHIFT_2 6
 /*
 ******************************************************************************
 *
@@ -49,7 +52,7 @@ enum UTrie2ValueBits {
 typedef enum UTrie2ValueBits UTrie2ValueBits;
 
 /*
- * 0 or 1024=0x400. 1024 for fast _UTRIE2_GET_FROM_BMP() and _UTRIE2_NEXT()
+ * 64=0x40 or 1024=0x400=0x10000>>6. 1024 for fast _UTRIE2_GET_FROM_BMP() and _UTRIE2_NEXT()
  * with special index-2 table for 0..FFFF.
  * Not another special ASCII index block in this case.
  * Needs performance testing to see if this is worth it:
@@ -68,17 +71,17 @@ typedef enum UTrie2ValueBits UTrie2ValueBits;
  *   1.3. Implementation and testing cost
  *   1.4. Size of runtime tries (smaller/bigger; much vs. little data)
  */
-#define UTRIE2_INDEX_2_ASCII_LENGTH (0x10000>>6)
+#define UTRIE2_INDEX_2_ASCII_LENGTH (1<<_SHIFT_1)
 
 /**
  * Trie constants, defining shift widths, index array lengths, etc.
  */
 enum {
     /** Shift size for getting the index-1 table offset. 2*6 to fit UTF-8 trail byte bits. */
-    UTRIE2_SHIFT_1=2*6,
+    UTRIE2_SHIFT_1=_SHIFT_1+_SHIFT_2,
 
     /** Shift size for getting the index-2 table offset. 6 to fit UTF-8 trail byte bits. */
-    UTRIE2_SHIFT_2=6,
+    UTRIE2_SHIFT_2=_SHIFT_2,
 
     /**
      * Difference between the two shift sizes,
@@ -86,11 +89,20 @@ enum {
      */
     UTRIE2_SHIFT_1_2=UTRIE2_SHIFT_1-UTRIE2_SHIFT_2,
 
-    /** Number of entries in an index or data block. 64=0x40 */
-    UTRIE2_BLOCK_LENGTH=1<<UTRIE2_SHIFT_2,
+    /** Number of entries in an index-2 block. 64=0x40 */
+    UTRIE2_INDEX_2_BLOCK_LENGTH=1<<UTRIE2_SHIFT_1_2,
 
-    /** Mask for getting the lower bits for the in-block offset. */
-    UTRIE2_MASK=UTRIE2_BLOCK_LENGTH-1,
+    /** Mask for getting the lower bits for the in-index-2-block offset. */
+    UTRIE2_INDEX_2_MASK=UTRIE2_INDEX_2_BLOCK_LENGTH-1,
+
+    /** Number of entries in a data block. 64=0x40 */
+    UTRIE2_DATA_BLOCK_LENGTH=1<<UTRIE2_SHIFT_2,
+
+    /** Mask for getting the lower bits for the in-data-block offset. */
+    UTRIE2_DATA_MASK=UTRIE2_DATA_BLOCK_LENGTH-1,
+
+    /** Length of the optional runtime BMP index-2 table. 1024=0x400 */
+    UTRIE2_BMP_INDEX_2_LENGTH=0x10000>>UTRIE2_SHIFT_2,
 
     /**
      * Shift size for shifting left the index array values.
@@ -124,7 +136,7 @@ enum {
      * Length 32 for lead bytes C0..DF.
      */
     UTRIE2_UTF8_2B_INDEX_2_OFFSET=UTRIE2_UTF8_3B_INDEX_1_OFFSET+UTRIE2_UTF8_3B_INDEX_1_LENGTH,
-    UTRIE2_UTF8_2B_INDEX_2_LENGTH=32,
+    UTRIE2_UTF8_2B_INDEX_2_LENGTH=0x800>>UTRIE2_SHIFT_2,
 
     /**
      * The regular index-2 table follows at offset 320=0x140.
@@ -135,7 +147,7 @@ enum {
      *   Length 1024=0x400=0x10000>>UTRIE2_SHIFT_2.
      */
     UTRIE2_INDEX_2_OFFSET=UTRIE2_UTF8_2B_INDEX_2_OFFSET+UTRIE2_UTF8_2B_INDEX_2_LENGTH,
-    /* TODO: Move final #define value here: UTRIE2_INDEX_2_ASCII_LENGTH=UTRIE2_BLOCK_LENGTH or 0x10000>>UTRIE2_SHIFT_2,*/
+    /* TODO: Move final #define value here: UTRIE2_INDEX_2_ASCII_LENGTH=UTRIE2_INDEX_2_BLOCK_LENGTH or 0x10000>>UTRIE2_SHIFT_2,*/
 
     /** The start of non-linear-ASCII index-2 blocks, at offset 384=0x180. [Or 1344=0x540] */
     UTRIE2_INDEX_2_START_OFFSET=UTRIE2_INDEX_2_OFFSET+UTRIE2_INDEX_2_ASCII_LENGTH,
@@ -152,7 +164,7 @@ enum {
     UTRIE2_BAD_UTF8_DATA_OFFSET=0x80,
 
     /** The start of non-linear-ASCII data blocks, at offset 192=0xc0. */
-    UTRIE2_DATA_START_OFFSET=UTRIE2_BAD_UTF8_DATA_OFFSET+UTRIE2_BLOCK_LENGTH
+    UTRIE2_DATA_START_OFFSET=0xc0
 };
 
 /**
@@ -182,7 +194,7 @@ enum {
  *
  * @see utrie2_unserializeDummy
  */
-#define UTRIE2_DUMMY_SIZE ((UTRIE2_INDEX_2_START_OFFSET+UTRIE2_BLOCK_LENGTH)*2+UTRIE2_DATA_START_OFFSET*4)
+#define UTRIE2_DUMMY_SIZE ((UTRIE2_INDEX_2_START_OFFSET+UTRIE2_INDEX_2_BLOCK_LENGTH)*2+UTRIE2_DATA_START_OFFSET*4)
 
 /**
  * Run-time Trie structure.
@@ -195,8 +207,9 @@ enum {
  */
 struct UTrie2 {
     const uint16_t *index;
-    const uint16_t *data16; /* for fast UTF-8 ASCII access, if 16b data */
-    const uint32_t *data32; /* NULL if 16b data is used via index */
+    const uint16_t *bmpIndex2;  /* for fast BMP access */
+    const uint16_t *data16;     /* for fast UTF-8 ASCII access, if 16b data */
+    const uint32_t *data32;     /* NULL if 16b data is used via index */
 
     uint16_t indexLength, dataLength;
     uint16_t index2NullOffset, dataNullOffset;
@@ -233,13 +246,21 @@ utrie2_internalU8PrevIndex(const UTrie2 *trie, UChar32 c,
     (trie)->data[ \
         ((int32_t)((trie)->index[ \
             (trie)->index[UTRIE2_INDEX_1_OFFSET+((c)>>UTRIE2_SHIFT_1)]+ \
-            (((c)>>UTRIE2_SHIFT_2)&UTRIE2_MASK)]) \
+            (((c)>>UTRIE2_SHIFT_2)&UTRIE2_INDEX_2_MASK)]) \
         <<UTRIE2_INDEX_SHIFT)+ \
-        ((c)&UTRIE2_MASK)]
+        ((c)&UTRIE2_DATA_MASK)]
 
-#if UTRIE2_INDEX_2_ASCII_LENGTH==64
+#if UTRIE2_INDEX_2_ASCII_LENGTH<(0x10000>>_SHIFT_2)
 /** Internal trie getter from a BMP code point. Returns the data. */
+#if USE_BMP_INDEX_2
+#define _UTRIE2_GET_FROM_BMP(trie, data, c) \
+    (trie)->data[ \
+        ((int32_t)((trie)->bmpIndex2[((c)>>UTRIE2_SHIFT_2)]) \
+        <<UTRIE2_INDEX_SHIFT)+ \
+        ((c)&UTRIE2_DATA_MASK)]
+#else
 #define _UTRIE2_GET_FROM_BMP(trie, data, c) _UTRIE2_GET_UNSAFE(trie, data, c)
+#endif
 
 /** Internal next-post-increment: get the next code point (c) and its data. */
 #define _UTRIE2_NEXT(trie, data, src, limit, c, result) { \
@@ -258,7 +279,7 @@ utrie2_internalU8PrevIndex(const UTrie2 *trie, UChar32 c,
     (trie)->data[ \
         ((int32_t)((trie)->index[UTRIE2_INDEX_2_OFFSET+((c)>>UTRIE2_SHIFT_2)]) \
         <<UTRIE2_INDEX_SHIFT)+ \
-        ((c)&UTRIE2_MASK)]
+        ((c)&UTRIE2_DATA_MASK)]
 
 #define _UTRIE2_NEXT(trie, data, src, limit, c, result) { \
     (c)=*(src)++; \
@@ -289,6 +310,7 @@ utrie2_internalU8PrevIndex(const UTrie2 *trie, UChar32 c,
 }
 
 /** Internal UTF-8 next-post-increment: get the next code point's data. */
+#if _SHIFT_1==6 && _SHIFT_2==6
 #define _UTRIE2_U8_NEXT(trie, ascii, data, src, limit, result) { \
     uint8_t __lead=*(src)++; \
     if(__lead<0xc0) { \
@@ -324,6 +346,44 @@ utrie2_internalU8PrevIndex(const UTrie2 *trie, UChar32 c,
         } \
     } \
 }
+#elif (_SHIFT_1+_SHIFT_2)==12
+#define _UTRIE2_U8_NEXT(trie, ascii, data, src, limit, result) { \
+    uint8_t __lead=*(src)++; \
+    if(__lead<0xc0) { \
+        (result)=(trie)->ascii[__lead]; \
+    } else { \
+        uint8_t __t1, __t2; \
+        if( /* handle U+0000..U+07FF inline */ \
+            __lead<0xe0 && (src)<(limit) && \
+            (__t1=(uint8_t)(*(src)-0x80))<=0x3f \
+        ) { \
+            ++(src); \
+            (result)=(trie)->data[ \
+                ((int32_t)(trie)->index[((int32_t)UTRIE2_UTF8_2B_INDEX_2_OFFSET-(0xc0<<(6-UTRIE2_SHIFT_2)))+ \
+                                        ((int32_t)__lead<<(6-UTRIE2_SHIFT_2))+(__t1>>UTRIE2_SHIFT_2)] \
+                <<UTRIE2_INDEX_SHIFT)+ \
+                (__t1&UTRIE2_DATA_MASK)]; \
+        } else if( /* handle U+0000..U+FFFF inline */ \
+            __lead<0xf0 && ((src)+1)<(limit) && \
+            (__t1=(uint8_t)(*(src)-0x80))<=0x3f && \
+            (__t2=(uint8_t)(*((src)+1)-0x80))<= 0x3f \
+        ) { \
+            (src)+=2; \
+            (result)=(trie)->data[ \
+                ((int32_t)((trie)->index[ \
+                    (trie)->index[(UTRIE2_UTF8_3B_INDEX_1_OFFSET-0xe0)+__lead]+ \
+                    ((int32_t)__t1<<(6-UTRIE2_SHIFT_2))+(__t2>>UTRIE2_SHIFT_2)]) \
+                <<UTRIE2_INDEX_SHIFT)+ \
+                (__t2&UTRIE2_DATA_MASK)]; \
+        } else { \
+            int32_t __index=utrie2_internalU8NextIndex((trie), __lead, (const uint8_t *)(src), \
+                                                                       (const uint8_t *)(limit)); \
+            (src)+=__index&7; \
+            (result)=(trie)->data[__index>>3]; \
+        } \
+    } \
+}
+#endif
 
 /** Internal UTF-8 pre-decrement-previous: get the previous code point's data. */
 #define _UTRIE2_U8_PREV(trie, ascii, data, start, src, result) { \
@@ -502,6 +562,12 @@ utrie2_unserializeDummy(UTrie2 *trie,
                         void *data, int32_t capacity,
                         UErrorCode *pErrorCode);
 
+/**
+ * TODO
+ */
+U_CAPI void U_EXPORT2
+utrie2_makeBMPIndex2(UTrie2 *trie, uint16_t bmpIndex2[UTRIE2_BMP_INDEX_2_LENGTH]);
+
 /* enumeration callback types */
 
 /**
@@ -594,10 +660,9 @@ typedef struct UNewTrie2 UNewTrie2;
  * Although the trie is never fully expanded to a linear array, especially when
  * utrie2_setRange32() is used, the data array could be large during build time.
  * The maximum length is
- * UTRIE2_MAX_BUILD_TIME_DATA_LENGTH=0x110000+UTRIE2_BLOCK_LENGTH+0x400.
+ * UTRIE2_MAX_BUILD_TIME_DATA_LENGTH=0x110000+UTRIE2_DATA_BLOCK_LENGTH+0x400.
  * (Number of Unicode code points + one null block +
  *  possible duplicate entries for 1024 lead surrogates.)
- * (UTRIE2_BLOCK_LENGTH<=0x200 in all cases.)
  *
  * @param fillIn a pointer to a UNewTrie2 structure to be initialized (will not be released), or
  *               NULL if one is to be allocated

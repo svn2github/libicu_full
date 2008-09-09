@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (c) 1996-2007, International Business Machines Corporation
+* Copyright (c) 1996-2008, International Business Machines Corporation
 *               and others. All Rights Reserved.
 *******************************************************************************
 * File unorm.h
@@ -141,7 +141,10 @@ typedef enum {
   UNORM_FCD = 6,
 
   /** One more than the highest normalization mode constant. @stable ICU 2.0 */
-  UNORM_MODE_COUNT
+  UNORM_MODE_COUNT,
+  UNORM_FCD_ALWAYS_GET = 7,
+  UNORM_FCD_U8_NEXT_GET = 8,
+  UNORM_FCD_UTRIE2_U8_NEXT =9
 } UNormalizationMode;
 
 /**
