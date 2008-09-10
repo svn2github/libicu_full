@@ -129,7 +129,7 @@ enum {
      * Length 16 for lead bytes E0..EF.
      */
     UTRIE2_UTF8_3B_INDEX_1_OFFSET=UTRIE2_INDEX_1_OFFSET+UTRIE2_INDEX_1_LENGTH,
-    UTRIE2_UTF8_3B_INDEX_1_LENGTH=16,
+    UTRIE2_UTF8_3B_INDEX_1_LENGTH=0x10000>>UTRIE2_SHIFT_1,
 
     /**
      * The 2-byte UTF-8 version of the index-2 table follows at offset 288=0x120.

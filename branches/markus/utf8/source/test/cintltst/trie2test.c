@@ -362,8 +362,7 @@ testTrieUTF16(const char *testName,
     }
 }
 
-/* TODO: un-hardcode for 6+6 shifts */
-#if _SHIFT_1==6 && _SHIFT_2==6
+#if (_SHIFT_1+_SHIFT_2)==12
 static void
 testTrieUTF8(const char *testName,
              const UTrie2 *trie, UTrie2ValueBits valueBits,
@@ -392,9 +391,9 @@ testTrieUTF8(const char *testName,
     const uint8_t *p, *limit;
 
     uint32_t initialValue, errorValue;
-    uint32_t value;
+    uint32_t value, bytes;
     UChar32 prevCP, c;
-    int32_t i, countSpecials, length, sIndex, countValues;
+    int32_t i, countSpecials, length, countValues;
     int32_t prev8, i8;
 
     countSpecials=getSpecialValues(checkRanges, countCheckRanges, &initialValue, &errorValue);
@@ -444,20 +443,26 @@ testTrieUTF8(const char *testName,
     p=s;
     i=0;
     while(p<limit) {
-        sIndex=(int32_t)(p-s);
-        U8_NEXT(s, sIndex, length, c);
+        prev8=i8=(int32_t)(p-s);
+        U8_NEXT(s, i8, length, c);
         if(valueBits==UTRIE2_16_VALUE_BITS) {
             UTRIE2_U8_NEXT16(trie, p, limit, value);
         } else {
             UTRIE2_U8_NEXT32(trie, p, limit, value);
         }
-        if(value!=values[i]) {
-            log_err("error: wrong value from UTRIE2_U8_NEXT(%s)(U+%04lx): 0x%lx instead of 0x%lx\n",
-                    testName, (long)c, (long)value, (long)values[i]);
+        bytes=0;
+        if(value!=values[i] || i8!=(p-s)) {
+            while(prev8<i8) {
+                bytes=(bytes<<8)|s[prev8++];
+            }
         }
-        if(sIndex!=(p-s)) {
-            log_err("error: wrong end index from UTRIE2_U8_NEXT(%s)(U+%04lx): %ld != %ld\n",
-                    testName, (long)c, (long)(p-s), (long)sIndex);
+        if(value!=values[i]) {
+            log_err("error: wrong value from UTRIE2_U8_NEXT(%s)(%lx->U+%04lx): 0x%lx instead of 0x%lx\n",
+                    testName, (unsigned long)bytes, (long)c, (long)value, (long)values[i]);
+        }
+        if(i8!=(p-s)) {
+            log_err("error: wrong end index from UTRIE2_U8_NEXT(%s)(%lx->U+%04lx): %ld != %ld\n",
+                    testName, (unsigned long)bytes, (long)c, (long)(p-s), (long)i8);
             continue;
         }
         ++i;
@@ -468,20 +473,27 @@ testTrieUTF8(const char *testName,
     i=countValues;
     while(s<p) {
         --i;
-        sIndex=(int32_t)(p-s);
-        U8_PREV(s, 0, sIndex, c);
+        prev8=i8=(int32_t)(p-s);
+        U8_PREV(s, 0, i8, c);
         if(valueBits==UTRIE2_16_VALUE_BITS) {
             UTRIE2_U8_PREV16(trie, s, p, value);
         } else {
             UTRIE2_U8_PREV32(trie, s, p, value);
         }
         if(value!=values[i]) {
-            log_err("error: wrong value from UTRIE2_U8_PREV(%s)(U+%04lx): 0x%lx instead of 0x%lx\n",
-                    testName, (long)c, (long)value, (long)values[i]);
+            log_err("error: wrong value from UTRIE2_U8_PREV(%s)(%lx->U+%04lx): 0x%lx instead of 0x%lx\n",
+                    testName, (unsigned long)bytes, (long)c, (long)value, (long)values[i]);
         }
-        if(sIndex!=(p-s)) {
-            log_err("error: wrong end index from UTRIE2_U8_PREV(%s)(U+%04lx): %ld != %ld\n",
-                    testName, (long)c, (long)(p-s), (long)sIndex);
+        bytes=0;
+        if(value!=values[i] || i8!=(p-s)) {
+            int32_t k=i8;
+            while(k<prev8) {
+                bytes=(bytes<<8)|s[k++];
+            }
+        }
+        if(i8!=(p-s)) {
+            log_err("error: wrong end index from UTRIE2_U8_PREV(%s)(%lx->U+%04lx): %ld != %ld\n",
+                    testName, (unsigned long)bytes, (long)c, (long)(p-s), (long)i8);
             continue;
         }
     }
@@ -495,8 +507,7 @@ testTrieRunTime(const char *testName,
     testTrieGetters(testName, trie, valueBits, checkRanges, countCheckRanges);
     testTrieEnum(testName, trie, checkRanges, countCheckRanges);
     testTrieUTF16(testName, trie, valueBits, checkRanges, countCheckRanges);
-/* TODO: un-hardcode for 6+6 shifts */
-#if _SHIFT_1==6 && _SHIFT_2==6
+#if (_SHIFT_1+_SHIFT_2)==12
     testTrieUTF8(testName, trie, valueBits, checkRanges, countCheckRanges);
 #endif
 }

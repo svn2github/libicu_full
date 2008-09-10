@@ -23,6 +23,9 @@
 U_CAPI void U_EXPORT2
 unorm_initUTrie2(UErrorCode *pErrorCode);
 
+U_CAPI void U_EXPORT2
+ubidi_initUTrie2(UErrorCode *pErrorCode);
+
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 
 // Test object.
@@ -33,6 +36,7 @@ public:
               utf8(NULL), utf8Length(0), countInputCodePoints(0) {
         if (U_SUCCESS(status)) {
             unorm_initUTrie2(&status);
+            ubidi_initUTrie2(&status);
             int32_t inputLength;
             UPerfTest::getBuffer(inputLength, status);
             if(U_SUCCESS(status) && inputLength>0) {

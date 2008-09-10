@@ -244,6 +244,7 @@ utrie2_unserializeDummy(UTrie2 *trie,
     uint16_t *p16;
     int32_t indexLength, shiftedDataLength, length, i;
     int32_t dataMove;  /* >0 if the data is moved to the end of the index array */
+    int32_t overlap, e0Offset, edOffset;
 
     if(U_FAILURE(*pErrorCode)) {
         return 0;
@@ -257,9 +258,28 @@ utrie2_unserializeDummy(UTrie2 *trie,
         return 0;
     }
 
+    /* overlap and position the UTF-8 E0/ED index-2 blocks */
+    if(0xe000&((1L<<UTRIE2_SHIFT_1)-1)) {
+        /*
+         * No overlap: The index-2 indexes for U+d800..U+dfff
+         * are in the middle of the ED index-2 block.
+         * (UTRIE2_SHIFT_1>13)
+         * (Not implemented. Require UTRIE2_SHIFT_1<=13.)
+         */
+        *pErrorCode=U_INTERNAL_PROGRAM_ERROR;
+        return 0;
+    }
+    /*
+     * Overlap the last part of the ED block
+     * with the first part of the E0 block.
+     */
+    overlap=0x800>>UTRIE2_SHIFT_2;
+    edOffset=UTRIE2_INDEX_2_START_OFFSET-(UTRIE2_INDEX_2_BLOCK_LENGTH-overlap);
+    e0Offset=UTRIE2_INDEX_2_START_OFFSET;
+
+
     /* calculate the total length of the dummy trie data */
 
-    /* TODO: un-hardcode E0/ED blocks for 6+6 shifts */
     /* +64=UTRIE2_INDEX_2_BLOCK_LENGTH for overlapped UTF-8 E0/ED index-2 blocks */
     indexLength=UTRIE2_INDEX_2_START_OFFSET+UTRIE2_INDEX_2_BLOCK_LENGTH;
     shiftedDataLength=UTRIE2_DATA_START_OFFSET;
@@ -299,19 +319,20 @@ utrie2_unserializeDummy(UTrie2 *trie,
     }
 
     /* write UTF-8 3-byte index-1 values */
-    *p16++=UTRIE2_INDEX_2_START_OFFSET;                                     /* E0 lead byte */
-    for(i=1; i<0xd; ++i) {                                                  /* E1..EC */
+    *p16++=(uint16_t)e0Offset;                                      /* E0 lead byte */
+    for(i=1; i<(0xd800>>UTRIE2_SHIFT_1); ++i) {                     /* E1..EC */
         *p16++=(uint16_t)UTRIE2_INDEX_2_OFFSET;
     }
-    *p16++=(uint16_t)(UTRIE2_INDEX_2_START_OFFSET-
-                      UTRIE2_INDEX_2_BLOCK_LENGTH/2);                       /* ED */
-    *p16++=(uint16_t)UTRIE2_INDEX_2_OFFSET;                                 /* EE */
-    *p16++=(uint16_t)UTRIE2_INDEX_2_OFFSET;                                 /* EF */
+    *p16++=(uint16_t)edOffset;                                      /* ED */
+    for(++i; i<(0x10000>>UTRIE2_SHIFT_1); ++i) {                    /* EE..EF */
+        *p16++=(uint16_t)UTRIE2_INDEX_2_OFFSET;
+    }
 
     /* write UTF-8 2-byte index-2 values */
-    *p16++=(uint16_t)((dataMove+UTRIE2_BAD_UTF8_DATA_OFFSET)>>UTRIE2_INDEX_SHIFT);  /* C0 */
-    *p16++=(uint16_t)((dataMove+UTRIE2_BAD_UTF8_DATA_OFFSET)>>UTRIE2_INDEX_SHIFT);  /* C1 */
-    for(i=2; i<0x20; ++i) {                                                         /* C2..DF */
+    for(i=0; i<((0xc2-0xc0)<<(6-UTRIE2_SHIFT_2)); ++i) {            /* C0..C1 */
+        *p16++=(uint16_t)((dataMove+UTRIE2_BAD_UTF8_DATA_OFFSET)>>UTRIE2_INDEX_SHIFT);
+    }
+    for(; i<((0xe0-0xc0)<<(6-UTRIE2_SHIFT_2)); ++i) {               /* C2..DF */
         *p16++=(uint16_t)(dataMove>>UTRIE2_INDEX_SHIFT);
     }
 
@@ -320,11 +341,11 @@ utrie2_unserializeDummy(UTrie2 *trie,
         *p16++=(uint16_t)(dataMove>>UTRIE2_INDEX_SHIFT);  /* null data block */
     }
     /* second half of ED block and first half of E0 block */
-    for(i=0; i<UTRIE2_INDEX_2_BLOCK_LENGTH/2; ++i) {
+    for(i=0; i<overlap; ++i) {
         *p16++=(uint16_t)((dataMove+UTRIE2_BAD_UTF8_DATA_OFFSET)>>UTRIE2_INDEX_SHIFT);
     }
     /* second half of E0 block */
-    for(i=0; i<UTRIE2_INDEX_2_BLOCK_LENGTH/2; ++i) {
+    for(; i<UTRIE2_INDEX_2_BLOCK_LENGTH; ++i) {
         *p16++=(uint16_t)(dataMove>>UTRIE2_INDEX_SHIFT);  /* null data block */
     }
 
@@ -1264,7 +1285,7 @@ addUTF8Index2Blocks(UNewTrie2 *trie, UErrorCode *pErrorCode) {
         setIndex2Entry(trie, u8_ed+i, trie->index2[normal_ed+i]);
     }
     /* 3-byte surrogates */
-    for(; i<((0xe000>>UTRIE2_SHIFT_2)&UTRIE2_INDEX_2_MASK); ++i) {
+    for(; i<=((0xdfff>>UTRIE2_SHIFT_2)&UTRIE2_INDEX_2_MASK); ++i) {
         setIndex2Entry(trie, u8_ed+i, UTRIE2_BAD_UTF8_DATA_OFFSET);
     }
     for(; i<UTRIE2_INDEX_2_BLOCK_LENGTH; ++i) {
@@ -1550,18 +1571,19 @@ utrie2_serialize(UNewTrie2 *trie, UTrie2ValueBits valueBits,
 
     /* write UTF-8 3-byte index-1 values */
     *dest16++=(uint16_t)(UTRIE2_INDEX_2_OFFSET+trie->e0Offset);     /* E0 lead byte */
-    for(i=1; i<0xd; ++i) {                                          /* E1..EC */
+    for(i=1; i<(0xd800>>UTRIE2_SHIFT_1); ++i) {                     /* E1..EC */
         *dest16++=(uint16_t)(UTRIE2_INDEX_2_OFFSET+trie->index1[i]);
     }
     *dest16++=(uint16_t)(UTRIE2_INDEX_2_OFFSET+trie->edOffset);     /* ED */
-    *dest16++=(uint16_t)(UTRIE2_INDEX_2_OFFSET+trie->index1[0xe]);  /* EE */
-    *dest16++=(uint16_t)(UTRIE2_INDEX_2_OFFSET+trie->index1[0xf]);  /* EF */
+    for(++i; i<(0x10000>>UTRIE2_SHIFT_1); ++i) {                    /* EE..EF */
+        *dest16++=(uint16_t)(UTRIE2_INDEX_2_OFFSET+trie->index1[i]);
+    }
 
     /* write UTF-8 2-byte index-2 values */
-    /* TODO: un-hardcode for 6+6 shifts */
-    *dest16++=(uint16_t)((dataMove+UTRIE2_BAD_UTF8_DATA_OFFSET)>>UTRIE2_INDEX_SHIFT);   /* C0 */
-    *dest16++=(uint16_t)((dataMove+UTRIE2_BAD_UTF8_DATA_OFFSET)>>UTRIE2_INDEX_SHIFT);   /* C1 */
-    for(i=2; i<0x20; ++i) {                                                             /* C2..DF */
+    for(i=0; i<((0xc2-0xc0)<<(6-UTRIE2_SHIFT_2)); ++i) {            /* C0..C1 */
+        *dest16++=(uint16_t)((dataMove+UTRIE2_BAD_UTF8_DATA_OFFSET)>>UTRIE2_INDEX_SHIFT);
+    }
+    for(; i<((0xe0-0xc0)<<(6-UTRIE2_SHIFT_2)); ++i) {               /* C2..DF */
         *dest16++=(uint16_t)((dataMove+trie->index2[i])>>UTRIE2_INDEX_SHIFT);
     }
 

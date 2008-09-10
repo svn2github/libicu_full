@@ -25,6 +25,7 @@
 #include "uassert.h"
 #include "cmemory.h"
 #include "utrie.h"
+#include "utrie2.h"
 #include "ubidi_props.h"
 #include "ucln_cmn.h"
 
@@ -215,6 +216,14 @@ ubidi_cleanup(void) {
     return TRUE;
 }
 #endif
+
+static UTrie2 bidiTrie2={ 0 };
+static void *bidiTrie2Memory=NULL;
+
+U_CAPI void U_EXPORT2
+ubidi_initUTrie2(UErrorCode *pErrorCode) {
+    bidiTrie2Memory=utrie2_fromUTrie(&bidiTrie2, &ubidi_props_singleton.trie, 0, pErrorCode);
+}
 
 U_CFUNC const UBiDiProps *
 ubidi_getSingleton(UErrorCode *pErrorCode) {
