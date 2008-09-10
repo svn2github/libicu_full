@@ -1161,7 +1161,7 @@ testTrie2FromTrie1(const char *testName,
 
     uprv_strcpy(name, testName);
     uprv_strcat(name, ".16");
-    trie2_memory=utrie2_fromUTrie(&trie2, &trie1_16, errorValue, &errorCode);
+    trie2_memory=utrie2_fromUTrie(&trie2, &trie1_16, errorValue, FALSE, &errorCode);
     if(U_SUCCESS(errorCode)) {
         testTrieRunTime(name, &trie2, UTRIE2_16_VALUE_BITS, checkRanges, countCheckRanges);
     }
@@ -1169,7 +1169,7 @@ testTrie2FromTrie1(const char *testName,
 
     uprv_strcpy(name, testName);
     uprv_strcat(name, ".32");
-    trie2_memory=utrie2_fromUTrie(&trie2, &trie1_32, errorValue, &errorCode);
+    trie2_memory=utrie2_fromUTrie(&trie2, &trie1_32, errorValue, FALSE, &errorCode);
     if(U_SUCCESS(errorCode)) {
         testTrieRunTime(name, &trie2, UTRIE2_32_VALUE_BITS, checkRanges, countCheckRanges);
     }

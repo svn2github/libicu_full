@@ -222,7 +222,7 @@ static void *bidiTrie2Memory=NULL;
 
 U_CAPI void U_EXPORT2
 ubidi_initUTrie2(UErrorCode *pErrorCode) {
-    bidiTrie2Memory=utrie2_fromUTrie(&bidiTrie2, &ubidi_props_singleton.trie, 0, pErrorCode);
+    bidiTrie2Memory=utrie2_fromUTrie(&bidiTrie2, &ubidi_props_singleton.trie, 0, FALSE, pErrorCode);
 }
 
 U_CFUNC const UBiDiProps *

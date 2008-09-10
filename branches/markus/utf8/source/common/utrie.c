@@ -1049,8 +1049,8 @@ enumSameValue(const void *context, uint32_t value) {
  * The values are transformed from the raw trie entries by the enumValue function.
  */
 U_CAPI void U_EXPORT2
-utrie_enum(const UTrie *trie,
-           UTrieEnumValue *enumValue, UTrieEnumRange *enumRange, const void *context) {
+utrie_enumGeneral(const UTrie *trie, UBool enumLeadCUNotCP,
+                  UTrieEnumValue *enumValue, UTrieEnumRange *enumRange, const void *context) {
     const uint32_t *data32;
     const uint16_t *index;
 
@@ -1085,7 +1085,7 @@ utrie_enum(const UTrie *trie,
 
     /* enumerate BMP - the main loop enumerates data blocks */
     for(i=0, c=0; c<=0xffff; ++i) {
-        if(c==0xd800) {
+        if(c==0xd800 && !enumLeadCUNotCP) {
             /* skip lead surrogate code _units_, go to lead surr. code _points_ */
             i=UTRIE_BMP_INDEX_LENGTH;
         } else if(c==0xdc00) {
@@ -1224,4 +1224,10 @@ utrie_enum(const UTrie *trie,
 
     /* deliver last range */
     enumRange(context, prev, c, prevValue);
+}
+
+U_CAPI void U_EXPORT2
+utrie_enum(const UTrie *trie,
+           UTrieEnumValue *enumValue, UTrieEnumRange *enumRange, const void *context) {
+    utrie_enumGeneral(trie, FALSE, enumValue, enumRange, context);
 }

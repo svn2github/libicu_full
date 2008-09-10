@@ -422,6 +422,10 @@ utrie2_getVersion(const void *data, int32_t length, UBool anyEndianOk) {
     return 0;
 }
 
+U_CAPI void U_EXPORT2
+utrie_enumGeneral(const UTrie *trie, UBool enumLeadCUNotCP,
+                  UTrieEnumValue *enumValue, UTrieEnumRange *enumRange, const void *context);
+
 typedef struct NewTrieAndStatus {
     UNewTrie2 *newTrie;
     UBool ok;
@@ -437,7 +441,9 @@ copyEnumRange(const void *context, UChar32 start, UChar32 limit, uint32_t value)
  * TODO: Move to a separate .c file for modularization.
  */
 U_CAPI void * U_EXPORT2
-utrie2_fromUTrie(UTrie2 *trie2, const UTrie *trie1, uint32_t errorValue, UErrorCode *pErrorCode) {
+utrie2_fromUTrie(UTrie2 *trie2, const UTrie *trie1,
+                 uint32_t errorValue, UBool copyLeadCUNotCP,
+                 UErrorCode *pErrorCode) {
     NewTrieAndStatus context;
     void *memory;
 
@@ -452,7 +458,7 @@ utrie2_fromUTrie(UTrie2 *trie2, const UTrie *trie1, uint32_t errorValue, UErrorC
         return NULL;
     }
     context.ok=TRUE;
-    utrie_enum(trie1, NULL, copyEnumRange, &context);
+    utrie_enumGeneral(trie1, copyLeadCUNotCP, NULL, copyEnumRange, &context);
     memory=NULL;
     if(context.ok) {
         memory=utrie2_build(context.newTrie,

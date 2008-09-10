@@ -236,8 +236,8 @@ U_CDECL_BEGIN
 
 U_CAPI void U_EXPORT2
 unorm_initUTrie2(UErrorCode *pErrorCode) {
-    normTrie2Memory=utrie2_fromUTrie(&normTrie2, &normTrie, 0, pErrorCode);
-    fcdTrie2Memory=utrie2_fromUTrie(&fcdTrie2, &fcdTrie, 0, pErrorCode);
+    normTrie2Memory=utrie2_fromUTrie(&normTrie2, &normTrie, 0, TRUE, pErrorCode);
+    fcdTrie2Memory=utrie2_fromUTrie(&fcdTrie2, &fcdTrie, 0, TRUE, pErrorCode);
     if(U_SUCCESS(*pErrorCode)) {
         utrie2_makeBMPIndex2(&normTrie2, normTrie2BmpIndex2);
         utrie2_makeBMPIndex2(&fcdTrie2, fcdTrie2BmpIndex2);

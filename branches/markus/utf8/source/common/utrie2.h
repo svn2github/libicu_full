@@ -629,7 +629,9 @@ utrie2_getVersion(const void *data, int32_t length, UBool anyEndianOk);
  *         The caller must uprv_free() this memory once trie2 is not used any more.
  */
 U_CAPI void * U_EXPORT2
-utrie2_fromUTrie(UTrie2 *trie2, const UTrie *trie1, uint32_t errorValue, UErrorCode *pErrorCode);
+utrie2_fromUTrie(UTrie2 *trie2, const UTrie *trie1,
+                 uint32_t errorValue, UBool copyLeadCUNotCP,
+                 UErrorCode *pErrorCode);
 
 /**
  * Swap a serialized UTrie2.
