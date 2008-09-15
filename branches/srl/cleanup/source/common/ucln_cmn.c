@@ -54,7 +54,23 @@ static void ucln_registerAutomaticCleanup();
  */
 static void ucln_unRegisterAutomaticCleanup();
 
+static void ucln_cleanup_internal(ECleanupLibraryType libType) 
+{
+    if (gLibCleanupFunctions[libType])
+    {
+        gLibCleanupFunctions[libType]();
+        gLibCleanupFunctions[libType] = NULL;
+    }
+}
 
+U_CAPI void U_EXPORT2 ucln_cleanupOne(ECleanupLibraryType libType)
+{
+    if(libType==UCLN_COMMON) {
+        u_cleanup();
+    } else {
+        ucln_cleanup_internal(libType);
+    }
+}
 
 
 U_CFUNC void
@@ -86,11 +102,7 @@ U_CFUNC UBool ucln_lib_cleanup(void) {
     ECleanupCommonType commonFunc = UCLN_COMMON_START;
 
     for (libType++; libType<UCLN_COMMON; libType++) {
-        if (gLibCleanupFunctions[libType])
-        {
-            gLibCleanupFunctions[libType]();
-            gLibCleanupFunctions[libType] = NULL;
-        }
+        ucln_cleanup_internal(libType);
     }
 
     for (commonFunc++; commonFunc<UCLN_COMMON_COUNT; commonFunc++) {
@@ -141,6 +153,7 @@ static void ucln_destructor()   __attribute__((destructor)) ;
 
 static void ucln_destructor() 
 {
+    ucln_common_is_closing();
 }
 #endif
 
