@@ -84,5 +84,12 @@ U_CAPI void U_EXPORT2 ucln_registerCleanup(ECleanupLibraryType type,
  */
 U_CAPI void U_EXPORT2 ucln_cleanupOne(ECleanupLibraryType type);
 
+/**
+ * Define this to completely disable any automatic calls to u_cleanup
+ */
+#ifndef UCLN_NO_AUTO_CLEANUP
+#define UCLN_NO_AUTO_CLEANUP 0
+#endif
+
 
 #endif

@@ -28,12 +28,6 @@
 static cleanupFunc *gCommonCleanupFunctions[UCLN_COMMON_COUNT];
 static cleanupFunc *gLibCleanupFunctions[UCLN_COMMON];
 
-/**
- * Define this to completely disable any automatic calls to u_cleanup
- */
-#ifndef UCLN_NO_AUTO_CLEANUP
-#define UCLN_NO_AUTO_CLEANUP 0
-#endif
 
 /*srl special*/
 #define UCLN_DEBUG_CLEANUP 1
@@ -43,6 +37,7 @@ static cleanupFunc *gLibCleanupFunctions[UCLN_COMMON];
 #include <stdio.h>
 #endif
 
+#if 0
 /**
  * Give the library an opportunity to register an automatic cleanup. 
  * This may be called more than once.
@@ -53,6 +48,7 @@ static void ucln_registerAutomaticCleanup();
  * Unregister an automatic cleanup, if possible. Called from cleanup.
  */
 static void ucln_unRegisterAutomaticCleanup();
+#endif
 
 static void ucln_cleanup_internal(ECleanupLibraryType libType) 
 {
@@ -66,8 +62,14 @@ static void ucln_cleanup_internal(ECleanupLibraryType libType)
 U_CAPI void U_EXPORT2 ucln_cleanupOne(ECleanupLibraryType libType)
 {
     if(libType==UCLN_COMMON) {
+#if defined(UCLN_DEBUG_CLEANUP)
+        fprintf(stderr, "Cleaning up: UCLN_COMMON with u_cleanup, type %d\n", (int)libType);
+#endif
         u_cleanup();
     } else {
+#if defined(UCLN_DEBUG_CLEANUP)
+        fprintf(stderr, "Cleaning up: ? with u_cleanup, type %d\n", (int)libType);
+#endif
         ucln_cleanup_internal(libType);
     }
 }
@@ -77,7 +79,7 @@ U_CFUNC void
 ucln_common_registerCleanup(ECleanupCommonType type,
                             cleanupFunc *func)
 {
-    ucln_registerAutomaticCleanup();
+    /* ucln_registerAutomaticCleanup(); */
     U_ASSERT(UCLN_COMMON_START < type && type < UCLN_COMMON_COUNT);
     if (UCLN_COMMON_START < type && type < UCLN_COMMON_COUNT)
     {
@@ -89,7 +91,7 @@ U_CAPI void U_EXPORT2
 ucln_registerCleanup(ECleanupLibraryType type,
                      cleanupFunc *func)
 {
-    ucln_unRegisterAutomaticCleanup();
+    /*ucln_unRegisterAutomaticCleanup(); */
     U_ASSERT(UCLN_START < type && type < UCLN_COMMON);
     if (UCLN_START < type && type < UCLN_COMMON)
     {
@@ -112,50 +114,15 @@ U_CFUNC UBool ucln_lib_cleanup(void) {
             gCommonCleanupFunctions[commonFunc] = NULL;
         }
     }
-    ucln_unRegisterAutomaticCleanup();
+    /* ucln_unRegisterAutomaticCleanup(); */
     return TRUE;
 }
 
-/* ------------------- automatic cleanup: bottleneck ---------- */
-
-/**
- * This is the main (portable) function to request automatic cleanup.
- * It may be called directly, or called by various stubs below..
- */
-U_CAPI void U_EXPORT2 ucln_common_is_closing()
-{
-    u_cleanup();
-#if defined(UCLN_DEBUG_CLEANUP)
-    puts("ucln_cmn.c: ucln_common_is_closing() was called, ICU unloaded.");
-#endif
-}
-
-/* --------- automatic cleanup: calling stubs (independent of each other) ------- */
 
 
-#if defined (UCLN_FINI)
-/**
- * If UCLN_FINI is defined, it is the (versioned, etc) name of a cleanup
- * entrypoint. Add a stub to call ucln_common_is_closing.   
- * Used on AIX.
- */
-U_CAPI void U_EXPORT2 UCLN_FINI (void);
+#if 0
+/* Automatic registration code. Disabled, as it does not handle per-library cleanup. */
 
-U_CAPI void U_EXPORT2 UCLN_FINI ()
-{
-    ucln_common_is_closing();
-}
-#endif
-
-#if defined(__GNUC__)
-/* GCC - use __attribute((destructor)) */
-static void ucln_destructor()   __attribute__((destructor)) ;
-
-static void ucln_destructor() 
-{
-    ucln_common_is_closing();
-}
-#endif
 
 /* ------------ automatic cleanup: registration. Choose ONE ------- */
 
@@ -203,3 +170,8 @@ static void ucln_unRegisterAutomaticCleanup () {
 }
 
 #endif
+#endif
+
+/**  Auto-client for UCLN_COMMON **/
+#define UCLN_TYPE UCLN_COMMON
+#include "ucln_imp.h"

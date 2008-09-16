@@ -60,13 +60,5 @@ typedef enum ECleanupCommonType {
 U_CFUNC void U_EXPORT2 ucln_common_registerCleanup(ECleanupCommonType type,
                                                    cleanupFunc *func);
 
-/**
- * This function is called by various platform-specific methods
- * to notify the cleanup mechanisms that the common library is being
- * unloaded. It will call u_cleanup unless UCLN_NO_AUTO_CLEANUP is defined.
- *
- * @internal
- */
-U_CAPI void U_EXPORT2 ucln_common_is_closing();
 
 #endif
