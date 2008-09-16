@@ -153,7 +153,3 @@ udbg_escape(const UnicodeString &src, UnicodeString *dst)
 
 #endif
 
-/**  Auto-client **/
-#define UCLN_TYPE UCLN_CTESTFW
-#include "ucln_imp.h"
-
