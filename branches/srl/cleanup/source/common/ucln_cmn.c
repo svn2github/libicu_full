@@ -68,7 +68,7 @@ U_CAPI void U_EXPORT2 ucln_cleanupOne(ECleanupLibraryType libType)
         u_cleanup();
     } else {
 #if defined(UCLN_DEBUG_CLEANUP)
-        fprintf(stderr, "Cleaning up: ? with u_cleanup, type %d\n", (int)libType);
+        fprintf(stderr, "Cleaning up: ? only, type %d\n", (int)libType);
 #endif
         ucln_cleanup_internal(libType);
     }
