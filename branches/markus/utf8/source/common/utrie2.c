@@ -135,13 +135,14 @@ utrie2_internalU8PrevIndex(const UTrie2 *trie, UChar32 c,
 U_CAPI void U_EXPORT2
 utrie_printLengths(const UTrie *trie);
 
+/* TODO: remove from final code */
 U_CAPI void U_EXPORT2
-utrie2_printLengths(const UTrie2 *trie) {
+utrie2_printLengths(const UTrie2 *trie, const char *which) {
     long indexLength=trie->indexLength;
     long shiftedDataLength=(long)trie->dataLength<<UTRIE2_INDEX_SHIFT;
     long totalLength=(long)sizeof(UTrie2Header)+indexLength*2+shiftedDataLength*(trie->data32!=NULL ? 4 : 2);
-    printf("**UTrie2Lengths** index:%6ld  data:%6ld  serialized:%6ld\n",
-           indexLength, shiftedDataLength, totalLength);
+    printf("**UTrie2Lengths(%s)** index:%6ld  data:%6ld  serialized:%6ld\n",
+           which, indexLength, shiftedDataLength, totalLength);
 }
 
 U_CAPI int32_t U_EXPORT2
@@ -470,10 +471,47 @@ utrie2_fromUTrie(UTrie2 *trie2, const UTrie *trie1,
     }
     utrie2_close(context.newTrie);
     if(U_SUCCESS(*pErrorCode)) {
+        /* TODO: remove from final code */
         utrie_printLengths(trie1);
-        utrie2_printLengths(trie2);
+        utrie2_printLengths(trie2, "fromUTrie");
     }
     return memory;
+}
+
+/* TODO: remove from final code */
+U_CAPI void U_EXPORT2
+utrie_enumNewTrie(const UNewTrie *trie,
+                  UTrieEnumValue *enumValue, UTrieEnumRange *enumRange, const void *context);
+
+/* TODO: remove from final code */
+U_CAPI void U_EXPORT2
+utrie2_compareWithUTrie(const UNewTrie *trie1, UBool reduceTo16Bits, UBool copyLeadCUNotCP) {
+    UTrie2 trie2;
+    NewTrieAndStatus context;
+    void *memory;
+    UErrorCode errorCode;
+
+    errorCode=U_ZERO_ERROR;
+    context.newTrie=utrie2_open(trie1->data[0], trie1->data[0], &errorCode);
+    if(U_FAILURE(errorCode)) {
+        return;
+    }
+    context.ok=TRUE;
+    utrie_enumNewTrie(trie1, NULL, copyEnumRange, &context);
+    memory=NULL;
+    if(context.ok) {
+        memory=utrie2_build(context.newTrie,
+                            reduceTo16Bits ? UTRIE2_16_VALUE_BITS : UTRIE2_32_VALUE_BITS,
+                            &trie2, &errorCode);
+    } else {
+        /* most likely reason for utrie2_setRange32() to fail */
+        errorCode=U_MEMORY_ALLOCATION_ERROR;
+    }
+    utrie2_close(context.newTrie);
+    if(U_SUCCESS(errorCode)) {
+        utrie2_printLengths(&trie2, "compareWithUTrie");
+    }
+    uprv_free(memory);
 }
 
 U_CAPI int32_t U_EXPORT2

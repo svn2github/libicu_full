@@ -685,6 +685,7 @@ utrie_compact(UNewTrie *trie, UBool overlap, UErrorCode *pErrorCode) {
 
 /* serialization ------------------------------------------------------------ */
 
+/* TODO: remove from final code */
 U_CAPI void U_EXPORT2
 utrie_printLengths(const UTrie *trie) {
     long indexLength=trie->indexLength;
@@ -693,6 +694,10 @@ utrie_printLengths(const UTrie *trie) {
     printf("**UTrieLengths** index:%6ld  data:%6ld  serialized:%6ld\n",
            indexLength, dataLength, totalLength);
 }
+
+/* TODO: remove from final code */
+U_CAPI void U_EXPORT2
+utrie2_compareWithUTrie(const UNewTrie *trie1, UBool reduceTo16Bits, UBool copyLeadCUNotCP);
 
 /*
  * Default function for the folding value:
@@ -760,6 +765,11 @@ utrie_serialize(UNewTrie *trie, void *dt, int32_t capacity,
         getFoldedValue=defaultGetFoldedValue;
     }
 
+    /* TODO: remove from final code */
+    if(capacity>0) {
+        utrie2_compareWithUTrie(trie, reduceTo16Bits, (UBool)(getFoldedValue!=defaultGetFoldedValue));
+    }
+
     data = (uint8_t*)dt;
     /* fold and compact if necessary, also checks that indexLength is within limits */
     if(!trie->isCompacted) {
@@ -793,6 +803,10 @@ utrie_serialize(UNewTrie *trie, void *dt, int32_t capacity,
     if(length>capacity) {
         return length; /* preflighting */
     }
+
+    /* TODO: remove from final code */
+    printf("**UTrieLengths(serialize)** index:%6ld  data:%6ld  serialized:%6ld\n",
+           (long)trie->indexLength, (long)trie->dataLength, (long)length);
 
     /* set the header fields */
     header=(UTrieHeader *)data;
@@ -1230,4 +1244,80 @@ U_CAPI void U_EXPORT2
 utrie_enum(const UTrie *trie,
            UTrieEnumValue *enumValue, UTrieEnumRange *enumRange, const void *context) {
     utrie_enumGeneral(trie, FALSE, enumValue, enumRange, context);
+}
+
+/* TODO: remove from final code */
+U_CAPI void U_EXPORT2
+utrie_enumNewTrie(const UNewTrie *trie,
+                  UTrieEnumValue *enumValue, UTrieEnumRange *enumRange, const void *context) {
+    const uint32_t *data32;
+    const int32_t *index;
+
+    uint32_t value, prevValue, initialValue;
+    UChar32 c, prev;
+    int32_t i, j, block, prevBlock, nullBlock;
+
+    /* check arguments */
+    if(trie==NULL || trie->index==NULL || enumRange==NULL) {
+        return;
+    }
+    if(enumValue==NULL) {
+        enumValue=enumSameValue;
+    }
+
+    index=trie->index;
+    data32=trie->data;
+
+    /* get the enumeration value that corresponds to an initial-value trie data entry */
+    initialValue=enumValue(context, trie->data[0]);
+
+    /* set variables for previous range */
+    prevBlock=nullBlock=0;
+    prev=0;
+    prevValue=initialValue;
+
+    /* the main loop enumerates data blocks */
+    for(i=0, c=0; c<=0x10ffff; ++i) {
+        block=index[i];
+        block=ABS(block);
+        if(block==prevBlock) {
+            /* the block is the same as the previous one, and filled with value */
+            c+=UTRIE_DATA_BLOCK_LENGTH;
+        } else if(block==nullBlock) {
+            /* this is the all-initial-value block */
+            if(prevValue!=initialValue) {
+                if(prev<c) {
+                    if(!enumRange(context, prev, c, prevValue)) {
+                        return;
+                    }
+                }
+                prevBlock=nullBlock;
+                prev=c;
+                prevValue=initialValue;
+            }
+            c+=UTRIE_DATA_BLOCK_LENGTH;
+        } else {
+            prevBlock=block;
+            for(j=0; j<UTRIE_DATA_BLOCK_LENGTH; ++j) {
+                value=enumValue(context, data32[block+j]);
+                if(value!=prevValue) {
+                    if(prev<c) {
+                        if(!enumRange(context, prev, c, prevValue)) {
+                            return;
+                        }
+                    }
+                    if(j>0) {
+                        /* the block is not filled with all the same value */
+                        prevBlock=-1;
+                    }
+                    prev=c;
+                    prevValue=value;
+                }
+                ++c;
+            }
+        }
+    }
+
+    /* deliver last range */
+    enumRange(context, prev, c, prevValue);
 }
