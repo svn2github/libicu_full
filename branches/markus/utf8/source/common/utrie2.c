@@ -41,7 +41,7 @@
  *
  * UTrie2Header header;
  * uint16_t index[header.index2Length];
- * uint16_t data[header.dataLength<<2];  -- or uint32_t data[...]
+ * uint16_t data[header.shiftedDataLength<<2];  -- or uint32_t data[...]
  * @internal
  */
 typedef struct UTrie2Header {
@@ -58,8 +58,8 @@ typedef struct UTrie2Header {
     /** UTRIE2_INDEX_2_START_OFFSET..UTRIE2_MAX_INDEX_LENGTH */
     uint16_t indexLength;
 
-    /** (UTRIE2_DATA_START_OFFSET..UTRIE2_MAX_DATA_LENGTH)>>UTRIE2_INDEX_SHIFT */
-    uint16_t dataLength;
+    /** TODO: (UTRIE2_DATA_START_OFFSET..UTRIE2_MAX_DATA_LENGTH)>>UTRIE2_INDEX_SHIFT */
+    uint16_t shiftedDataLength;  /* TODO: make int32_t ?! */
 
     /** Null index and data blocks. */
     uint16_t index2NullOffset, dataNullOffset;
@@ -139,10 +139,10 @@ utrie_printLengths(const UTrie *trie);
 U_CAPI void U_EXPORT2
 utrie2_printLengths(const UTrie2 *trie, const char *which) {
     long indexLength=trie->indexLength;
-    long shiftedDataLength=(long)trie->dataLength<<UTRIE2_INDEX_SHIFT;
-    long totalLength=(long)sizeof(UTrie2Header)+indexLength*2+shiftedDataLength*(trie->data32!=NULL ? 4 : 2);
+    long dataLength=(long)trie->dataLength; /* TODO: was  <<UTRIE2_INDEX_SHIFT; */
+    long totalLength=(long)sizeof(UTrie2Header)+indexLength*2+dataLength*(trie->data32!=NULL ? 4 : 2);
     printf("**UTrie2Lengths(%s)** index:%6ld  data:%6ld  serialized:%6ld\n",
-           which, indexLength, shiftedDataLength, totalLength);
+           which, indexLength, dataLength, totalLength);
 }
 
 U_CAPI int32_t U_EXPORT2
@@ -150,7 +150,6 @@ utrie2_unserialize(UTrie2 *trie, UTrie2ValueBits valueBits,
                    const void *data, int32_t length, UErrorCode *pErrorCode) {
     const UTrie2Header *header;
     const uint16_t *p16;
-    int32_t shiftedDataLength;
 
     if(U_FAILURE(*pErrorCode)) {
         return 0;
@@ -185,7 +184,7 @@ utrie2_unserialize(UTrie2 *trie, UTrie2ValueBits valueBits,
 
     /* get the length values and offsets */
     trie->indexLength=header->indexLength;
-    trie->dataLength=header->dataLength;
+    trie->dataLength=header->shiftedDataLength<<2;  /* TODO: revisit shift */
     trie->index2NullOffset=header->index2NullOffset;
     trie->dataNullOffset=header->dataNullOffset;
 
@@ -202,10 +201,9 @@ utrie2_unserialize(UTrie2 *trie, UTrie2ValueBits valueBits,
     length-=2*trie->indexLength;
 
     /* get the data */
-    shiftedDataLength=(int32_t)trie->dataLength<<UTRIE2_INDEX_SHIFT;
     switch(valueBits) {
     case UTRIE2_16_VALUE_BITS:
-        if(length<2*shiftedDataLength) {
+        if(length<2*trie->dataLength) {
             *pErrorCode=U_INVALID_FORMAT_ERROR;
             return 0;
         }
@@ -214,10 +212,10 @@ utrie2_unserialize(UTrie2 *trie, UTrie2ValueBits valueBits,
         trie->data32=NULL;
         trie->initialValue=trie->index[(int32_t)trie->dataNullOffset<<UTRIE2_INDEX_SHIFT];
         trie->errorValue=trie->data16[UTRIE2_BAD_UTF8_DATA_OFFSET];
-        length=(int32_t)sizeof(UTrie2Header)+2*trie->indexLength+2*shiftedDataLength;
+        length=(int32_t)sizeof(UTrie2Header)+2*trie->indexLength+2*trie->dataLength;
         break;
     case UTRIE2_32_VALUE_BITS:
-        if(length<4*shiftedDataLength) {
+        if(length<4*trie->dataLength) {
             *pErrorCode=U_INVALID_FORMAT_ERROR;
             return 0;
         }
@@ -225,7 +223,7 @@ utrie2_unserialize(UTrie2 *trie, UTrie2ValueBits valueBits,
         trie->data32=(const uint32_t *)p16;
         trie->initialValue=trie->data32[(int32_t)trie->dataNullOffset<<UTRIE2_INDEX_SHIFT];
         trie->errorValue=trie->data32[UTRIE2_BAD_UTF8_DATA_OFFSET];
-        length=(int32_t)sizeof(UTrie2Header)+2*trie->indexLength+4*shiftedDataLength;
+        length=(int32_t)sizeof(UTrie2Header)+2*trie->indexLength+4*trie->dataLength;
         break;
     default:
         *pErrorCode=U_INVALID_FORMAT_ERROR;
@@ -243,7 +241,7 @@ utrie2_unserializeDummy(UTrie2 *trie,
                         UErrorCode *pErrorCode) {
     uint32_t *p;
     uint16_t *p16;
-    int32_t indexLength, shiftedDataLength, length, i;
+    int32_t indexLength, dataLength, length, i;
     int32_t dataMove;  /* >0 if the data is moved to the end of the index array */
     int32_t overlap, e0Offset, edOffset;
 
@@ -283,12 +281,12 @@ utrie2_unserializeDummy(UTrie2 *trie,
 
     /* +64=UTRIE2_INDEX_2_BLOCK_LENGTH for overlapped UTF-8 E0/ED index-2 blocks */
     indexLength=UTRIE2_INDEX_2_START_OFFSET+UTRIE2_INDEX_2_BLOCK_LENGTH;
-    shiftedDataLength=UTRIE2_DATA_START_OFFSET;
+    dataLength=UTRIE2_DATA_START_OFFSET;
     length=indexLength*2;
     if(valueBits==UTRIE2_16_VALUE_BITS) {
-        length+=shiftedDataLength*2;
+        length+=dataLength*2;
     } else {
-        length+=shiftedDataLength*4;
+        length+=dataLength*4;
     }
 
     if(length>capacity) {
@@ -304,7 +302,7 @@ utrie2_unserializeDummy(UTrie2 *trie,
     }
 
     trie->indexLength=indexLength;
-    trie->dataLength=(uint16_t)(shiftedDataLength>>UTRIE2_INDEX_SHIFT);
+    trie->dataLength=dataLength;
     trie->index2NullOffset=UTRIE2_INDEX_2_OFFSET;
     trie->dataNullOffset=(uint16_t)(dataMove>>UTRIE2_INDEX_SHIFT);
     trie->initialValue=initialValue;
@@ -429,13 +427,22 @@ utrie_enumGeneral(const UTrie *trie, UBool enumLeadCUNotCP,
 
 typedef struct NewTrieAndStatus {
     UNewTrie2 *newTrie;
+    uint32_t initialValue;
     UBool ok;
 } NewTrieAndStatus;
 
 static UBool U_CALLCONV
 copyEnumRange(const void *context, UChar32 start, UChar32 limit, uint32_t value) {
     NewTrieAndStatus *nt=(NewTrieAndStatus *)context;
-    return nt->ok=utrie2_setRange32(nt->newTrie, start, limit, value, TRUE);
+    if(value!=nt->initialValue) {
+        if(start==(limit-1)) {
+            return nt->ok=utrie2_set32(nt->newTrie, start, value);
+        } else {
+            return nt->ok=utrie2_setRange32(nt->newTrie, start, limit, value, TRUE);
+        }
+    } else {
+        return TRUE;
+    }
 }
 
 /**
@@ -458,6 +465,7 @@ utrie2_fromUTrie(UTrie2 *trie2, const UTrie *trie1,
     if(U_FAILURE(*pErrorCode)) {
         return NULL;
     }
+    context.initialValue=trie1->initialValue;
     context.ok=TRUE;
     utrie_enumGeneral(trie1, copyLeadCUNotCP, NULL, copyEnumRange, &context);
     memory=NULL;
@@ -496,6 +504,7 @@ utrie2_compareWithUTrie(const UNewTrie *trie1, UBool reduceTo16Bits, UBool copyL
     if(U_FAILURE(errorCode)) {
         return;
     }
+    context.initialValue=trie1->data[0];
     context.ok=TRUE;
     utrie_enumNewTrie(trie1, NULL, copyEnumRange, &context);
     memory=NULL;
@@ -520,7 +529,7 @@ utrie2_swap(const UDataSwapper *ds,
             UErrorCode *pErrorCode) {
     const UTrie2Header *inTrie;
     UTrie2Header trie;
-    int32_t shiftedDataLength, size;
+    int32_t dataLength, size;
     UTrie2ValueBits valueBits;
 
     if(U_FAILURE(*pErrorCode)) {
@@ -541,15 +550,15 @@ utrie2_swap(const UDataSwapper *ds,
     trie.signature=ds->readUInt32(inTrie->signature);
     trie.options=ds->readUInt16(inTrie->options);
     trie.indexLength=ds->readUInt16(inTrie->indexLength);
-    trie.dataLength=ds->readUInt16(inTrie->dataLength);
+    trie.shiftedDataLength=ds->readUInt16(inTrie->shiftedDataLength);
 
     valueBits=trie.options&UTRIE2_OPTIONS_VALUE_BITS_MASK;
-    shiftedDataLength=(int32_t)trie.dataLength<<UTRIE2_INDEX_SHIFT;
+    dataLength=(int32_t)trie.shiftedDataLength<<2;  /* TODO: was  <<UTRIE2_INDEX_SHIFT; */
 
     if( trie.signature!=0x54726932 ||
         valueBits<0 || UTRIE2_COUNT_VALUE_BITS<=valueBits ||
         trie.indexLength<UTRIE2_INDEX_2_START_OFFSET ||
-        shiftedDataLength<UTRIE2_DATA_START_OFFSET
+        dataLength<UTRIE2_DATA_START_OFFSET
     ) {
         *pErrorCode=U_INVALID_FORMAT_ERROR; /* not a UTrie */
         return 0;
@@ -558,10 +567,10 @@ utrie2_swap(const UDataSwapper *ds,
     size=sizeof(UTrie2Header)+trie.indexLength*2;
     switch(valueBits) {
     case UTRIE2_16_VALUE_BITS:
-        size+=shiftedDataLength*2;
+        size+=dataLength*2;
         break;
     case UTRIE2_32_VALUE_BITS:
-        size+=shiftedDataLength*4;
+        size+=dataLength*4;
         break;
     default:
         *pErrorCode=U_INVALID_FORMAT_ERROR;
@@ -585,11 +594,11 @@ utrie2_swap(const UDataSwapper *ds,
         /* swap the index and the data */
         switch(valueBits) {
         case UTRIE2_16_VALUE_BITS:
-            ds->swapArray16(ds, inTrie+1, (trie.indexLength+shiftedDataLength)*2, outTrie+1, pErrorCode);
+            ds->swapArray16(ds, inTrie+1, (trie.indexLength+dataLength)*2, outTrie+1, pErrorCode);
             break;
         case UTRIE2_32_VALUE_BITS:
             ds->swapArray16(ds, inTrie+1, trie.indexLength*2, outTrie+1, pErrorCode);
-            ds->swapArray32(ds, (const uint16_t *)(inTrie+1)+trie.indexLength, shiftedDataLength*4,
+            ds->swapArray32(ds, (const uint16_t *)(inTrie+1)+trie.indexLength, dataLength*4,
                                      (uint16_t *)(outTrie+1)+trie.indexLength, pErrorCode);
             break;
         default:
@@ -1429,6 +1438,13 @@ compactData(UNewTrie2 *trie, UErrorCode *pErrorCode) {
     }
     trie->dataNullOffset=trie->map[trie->dataNullOffset>>UTRIE2_SHIFT_2];
 
+    /* ensure dataLength alignment */
+    /* TODO: was  while((newStart&(UTRIE2_DATA_GRANULARITY-1))!=0) { */
+    while((newStart&3)!=0) {
+        /* Arbitrary value. */
+        trie->data[newStart++]=0xffffffff;
+    }
+
 #ifdef UTRIE2_DEBUG
     /* we saved some space */
     printf("compacting UTrie2: count of 32-bit data words %lu->%lu\n",
@@ -1436,9 +1452,6 @@ compactData(UNewTrie2 *trie, UErrorCode *pErrorCode) {
 #endif
 
     trie->dataLength=newStart;
-    if(newStart>UTRIE2_MAX_DATA_LENGTH) {
-        *pErrorCode=U_INDEX_OUTOFBOUNDS_ERROR;
-    }
 }
 
 static void
@@ -1524,9 +1537,6 @@ compactIndex2(UNewTrie2 *trie, UErrorCode *pErrorCode) {
 #endif
 
     trie->index2Length=newStart;
-    if((UTRIE2_INDEX_2_OFFSET+newStart)>UTRIE2_MAX_INDEX_LENGTH) {
-        *pErrorCode=U_INDEX_OUTOFBOUNDS_ERROR;
-    }
 }
 
 /* serialization ------------------------------------------------------------ */
@@ -1575,8 +1585,10 @@ utrie2_serialize(UNewTrie2 *trie, UTrie2ValueBits valueBits,
         dataMove=0;
     }
 
-    /* is dataLength within limits? */
-    if((dataMove+trie->dataLength)>UTRIE2_MAX_DATA_LENGTH) {
+    /* are indexLength and dataLength within limits? */
+    if( (UTRIE2_INDEX_2_OFFSET+trie->index2Length)>UTRIE2_MAX_INDEX_LENGTH ||
+        (dataMove+trie->dataLength)>UTRIE2_MAX_DATA_LENGTH
+    ) {
         *pErrorCode=U_INDEX_OUTOFBOUNDS_ERROR;
         return 0;
     }
@@ -1602,7 +1614,7 @@ utrie2_serialize(UNewTrie2 *trie, UTrie2ValueBits valueBits,
     header->options=(uint16_t)valueBits;
 
     header->indexLength=(uint16_t)allIndexesLength;
-    header->dataLength=(uint16_t)(trie->dataLength>>UTRIE2_INDEX_SHIFT);
+    header->shiftedDataLength=(uint16_t)(trie->dataLength>>2); /* TODO: was  UTRIE2_INDEX_SHIFT); */
     header->index2NullOffset=(uint16_t)(UTRIE2_INDEX_2_OFFSET+trie->index2NullOffset);
     header->dataNullOffset=(uint16_t)((dataMove+trie->dataNullOffset)>>UTRIE2_INDEX_SHIFT);
     header->reserved=0;

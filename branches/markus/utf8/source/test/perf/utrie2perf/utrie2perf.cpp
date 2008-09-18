@@ -20,13 +20,19 @@
 #include "unicode/uperf.h"
 #include "uoptions.h"
 
+#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
+
 U_CAPI void U_EXPORT2
 unorm_initUTrie2(UErrorCode *pErrorCode);
 
 U_CAPI void U_EXPORT2
 ubidi_initUTrie2(UErrorCode *pErrorCode);
 
-#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
+U_NAMESPACE_BEGIN
+
+class UnicodeSet;
+
+U_NAMESPACE_END
 
 // Test object.
 class UTrie2PerfTest : public UPerfTest {
@@ -133,10 +139,29 @@ public:
     }
 };
 
+U_CAPI UBool U_EXPORT2
+unorm_checkFCDUTF8(const uint8_t *src, int32_t srcLength, const UnicodeSet *nx);
+
+class CheckFCDUTF8 : public Command {
+protected:
+    CheckFCDUTF8(const UTrie2PerfTest &testcase) : Command(testcase) {}
+public:
+    static UPerfFunction* get(const UTrie2PerfTest &testcase) {
+        return new CheckFCDUTF8(testcase);
+    }
+    virtual void call(UErrorCode* pErrorCode) {
+        UBool isFCD=unorm_checkFCDUTF8((const uint8_t *)testcase.utf8, testcase.utf8Length, NULL);
+        if(isFCD>1) {
+            fprintf(stderr, "error: bogus result from unorm_checkFCDUTF8()\n");
+        }
+    }
+};
+
 UPerfFunction* UTrie2PerfTest::runIndexedTest(int32_t index, UBool exec, const char* &name, char* par) {
     switch (index) {
         case 0: name = "CheckFCD";              if (exec) return CheckFCD::get(*this); break;
         case 1: name = "CheckFCDAlwaysGet";     if (exec) return CheckFCDAlwaysGet::get(*this); break;
+        case 2: name = "CheckFCDUTF8";          if (exec) return CheckFCDUTF8::get(*this); break;
         default: name = ""; break;
     }
     return NULL;

@@ -3285,6 +3285,110 @@ unorm_checkFCDAlwaysGet(const UChar *src, int32_t srcLength, const UnicodeSet *n
     }
 }
 
+U_CAPI UBool U_EXPORT2
+unorm_checkFCDUTF8(const uint8_t *src, int32_t srcLength, const UnicodeSet *nx) {
+    const uint8_t *limit, *prevSrc;
+    UChar32 c;
+    int32_t i;
+    uint16_t fcd16;
+    int16_t prevCC, cc;
+
+    /* initialize */
+    prevCC=0;
+
+    if(srcLength>=0) {
+        /* string with length */
+        limit=src+srcLength;
+    } else /* srcLength==-1 */ {
+        /* zero-terminated string */
+        limit=NULL;
+    }
+    i=0;
+
+    U_ALIGN_CODE(16);
+
+    for(;;) {
+        /* skip a run of code units with irrelevant data for the FCD check */
+        if(limit==NULL) {
+            for(;;) {
+#if USE_UTRIE2
+                if(*src==0) {
+                    return TRUE;
+                }
+                prevSrc=src;
+                UTRIE2_U8_NEXT16(&fcdTrie2, src, src+6, fcd16);
+#else
+                if(src[i]==0) {
+                    return TRUE;
+                }
+                U8_NEXT(src, i, INT32_MAX, c);
+                if(c>=0) {
+                    UTRIE_GET16(&fcdTrie, c, fcd16);
+                } else {
+                    fcd16=0;
+                }
+#endif
+                if(fcd16==0) {
+                    prevCC=0;
+                } else {
+                    break;
+                }
+            }
+        } else {
+            for(;;) {
+#if USE_UTRIE2
+                if(src==limit) {
+                    return TRUE;
+                }
+                prevSrc=src;
+                UTRIE2_U8_NEXT16(&fcdTrie2, src, limit, fcd16);
+#else
+                if(i==srcLength) {
+                    return TRUE;
+                }
+                U8_NEXT(src, i, srcLength, c);
+                if(c>=0) {
+                    UTRIE_GET16(&fcdTrie, c, fcd16);
+                } else {
+                    fcd16=0;
+                }
+#endif
+                if(fcd16==0) {
+                    prevCC=0;
+                } else {
+                    break;
+                }
+            }
+        }
+
+        if(nx!=NULL) {
+#if USE_UTRIE2
+            int32_t cpLength=(int32_t)(src-prevSrc);
+            i=0;
+            U8_NEXT(prevSrc, i, cpLength, c);
+#endif
+            if(nx->contains(c)) {
+                prevCC=0; /* excluded: fcd16==0 */
+                continue;
+            }
+        }
+
+        /*
+         * prevCC has values from the following ranges:
+         * 0..0xff - the previous trail combining class
+         */
+
+        /* check the combining order */
+        cc=(int16_t)(fcd16>>8);
+        if(cc!=0) {
+            if(cc<prevCC) {
+                return FALSE;
+            }
+        }
+        prevCC=(int16_t)(fcd16&0xff);
+    }
+}
+
 static UNormalizationCheckResult
 _quickCheck(const UChar *src,
             int32_t srcLength,

@@ -1,6 +1,7 @@
 #define USE_BMP_INDEX_2 1
 #define _SHIFT_1 6
 #define _SHIFT_2 6
+#define _I2_SHIFT 2
 /*
 ******************************************************************************
 *
@@ -110,7 +111,7 @@ enum {
      * of compactability.
      * This requires data blocks to be aligned by UTRIE2_DATA_GRANULARITY.
      */
-    UTRIE2_INDEX_SHIFT=2,
+    UTRIE2_INDEX_SHIFT=_I2_SHIFT,
 
     /** The alignment size of a data block. Also the granularity for compaction. */
     UTRIE2_DATA_GRANULARITY=1<<UTRIE2_INDEX_SHIFT,
@@ -178,7 +179,8 @@ enum {
  * Limited by 16-bit index values that are left-shifted by UTRIE2_INDEX_SHIFT,
  * and by uint16_t UTrie2Header.dataLength.
  */
-#define UTRIE2_MAX_DATA_LENGTH (0xffff<<UTRIE2_INDEX_SHIFT)
+/* TODO: decide -- #define UTRIE2_MAX_DATA_LENGTH (0xffff<<UTRIE2_INDEX_SHIFT) */
+#define UTRIE2_MAX_DATA_LENGTH (0x3fffc)
 
 /**
  * Number of bytes for a dummy trie.
@@ -211,7 +213,7 @@ struct UTrie2 {
     const uint16_t *data16;     /* for fast UTF-8 ASCII access, if 16b data */
     const uint32_t *data32;     /* NULL if 16b data is used via index */
 
-    uint16_t indexLength, dataLength;
+    int32_t indexLength, dataLength;
     uint16_t index2NullOffset, dataNullOffset;
     uint32_t initialValue;
     /** Value returned for out-of-range code points and illegal UTF-8. */
