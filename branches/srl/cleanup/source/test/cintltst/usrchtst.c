@@ -2283,6 +2283,10 @@ static void TestSearchForNull(void)
 	expectedPos = 0;
 	expectedLen = 1;
 	expectedNum = 2;
+    
+    pattern[0]=0;
+    text[0]=0;
+    text[4]=0;
 
 	ec=U_ZERO_ERROR;
 
