@@ -46,7 +46,8 @@
 #elif defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
 #   include "unicode/pwin32.h"
 #else
-#   include "unicode/platform.h"
+#   include "unicode/platform.h"  /* platform.h is 'pure defines' */
+#   include "unicode/ptypes.h"    /* ptypes.h contains typedefs and other includes */
 #endif
 
 /*
