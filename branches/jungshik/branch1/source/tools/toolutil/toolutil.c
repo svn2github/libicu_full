@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 1999-2007, International Business Machines
+*   Copyright (C) 1999-2008, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
@@ -42,7 +42,7 @@ U_CAPI const char * U_EXPORT2
 getLongPathname(const char *pathname) {
 #ifdef U_WINDOWS
     /* anticipate problems with "short" pathnames */
-    static WIN32_FIND_DATA info;
+    static WIN32_FIND_DATAA info;
     HANDLE file=FindFirstFileA(pathname, &info);
     if(file!=INVALID_HANDLE_VALUE) {
         if(info.cAlternateFileName[0]!=0) {
