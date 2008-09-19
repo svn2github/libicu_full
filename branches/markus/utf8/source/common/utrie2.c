@@ -428,6 +428,7 @@ utrie_enumGeneral(const UTrie *trie, UBool enumLeadCUNotCP,
 typedef struct NewTrieAndStatus {
     UNewTrie2 *newTrie;
     uint32_t initialValue;
+    int32_t countValues;  /* TODO: remove from final code */
     UBool ok;
 } NewTrieAndStatus;
 
@@ -435,6 +436,7 @@ static UBool U_CALLCONV
 copyEnumRange(const void *context, UChar32 start, UChar32 limit, uint32_t value) {
     NewTrieAndStatus *nt=(NewTrieAndStatus *)context;
     if(value!=nt->initialValue) {
+        nt->countValues+=limit-start;
         if(start==(limit-1)) {
             return nt->ok=utrie2_set32(nt->newTrie, start, value);
         } else {
@@ -466,6 +468,7 @@ utrie2_fromUTrie(UTrie2 *trie2, const UTrie *trie1,
         return NULL;
     }
     context.initialValue=trie1->initialValue;
+    context.countValues=0;
     context.ok=TRUE;
     utrie_enumGeneral(trie1, copyLeadCUNotCP, NULL, copyEnumRange, &context);
     memory=NULL;
@@ -505,10 +508,12 @@ utrie2_compareWithUTrie(const UNewTrie *trie1, UBool reduceTo16Bits, UBool copyL
         return;
     }
     context.initialValue=trie1->data[0];
+    context.countValues=0;
     context.ok=TRUE;
     utrie_enumNewTrie(trie1, NULL, copyEnumRange, &context);
     memory=NULL;
     if(context.ok) {
+        printf("-*- utrie2_compareWithUTrie() countValues=%ld\n", (long)context.countValues);
         memory=utrie2_build(context.newTrie,
                             reduceTo16Bits ? UTRIE2_16_VALUE_BITS : UTRIE2_32_VALUE_BITS,
                             &trie2, &errorCode);

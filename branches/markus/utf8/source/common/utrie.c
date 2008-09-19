@@ -765,14 +765,12 @@ utrie_serialize(UNewTrie *trie, void *dt, int32_t capacity,
         getFoldedValue=defaultGetFoldedValue;
     }
 
-    /* TODO: remove from final code */
-    if(capacity>0) {
-        utrie2_compareWithUTrie(trie, reduceTo16Bits, (UBool)(getFoldedValue!=defaultGetFoldedValue));
-    }
-
     data = (uint8_t*)dt;
     /* fold and compact if necessary, also checks that indexLength is within limits */
     if(!trie->isCompacted) {
+        /* TODO: remove from final code */
+        utrie2_compareWithUTrie(trie, reduceTo16Bits, (UBool)(getFoldedValue!=defaultGetFoldedValue));
+
         /* compact once without overlap to improve folding */
         utrie_compact(trie, FALSE, pErrorCode);
 
@@ -1258,7 +1256,7 @@ utrie_enumNewTrie(const UNewTrie *trie,
     int32_t i, j, block, prevBlock, nullBlock;
 
     /* check arguments */
-    if(trie==NULL || trie->index==NULL || enumRange==NULL) {
+    if(trie==NULL || trie->index==NULL || trie->isCompacted || enumRange==NULL) {
         return;
     }
     if(enumValue==NULL) {
