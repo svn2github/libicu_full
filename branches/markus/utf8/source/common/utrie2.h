@@ -1,6 +1,6 @@
 #define USE_BMP_INDEX_2 1
-#define _SHIFT_1 6
-#define _SHIFT_2 6
+#define _SHIFT_1 7
+#define _SHIFT_2 5
 #define _I2_SHIFT 2
 /*
 ******************************************************************************
@@ -137,7 +137,7 @@ enum {
      * Length 32 for lead bytes C0..DF.
      */
     UTRIE2_UTF8_2B_INDEX_2_OFFSET=UTRIE2_UTF8_3B_INDEX_1_OFFSET+UTRIE2_UTF8_3B_INDEX_1_LENGTH,
-    UTRIE2_UTF8_2B_INDEX_2_LENGTH=0x800>>UTRIE2_SHIFT_2,
+    UTRIE2_UTF8_2B_INDEX_2_LENGTH=0x800>>6,
 
     /**
      * The regular index-2 table follows at offset 320=0x140.
@@ -325,8 +325,7 @@ utrie2_internalU8PrevIndex(const UTrie2 *trie, UChar32 c,
         ) { \
             ++(src); \
             (result)=(trie)->data[ \
-                ((int32_t)(trie)->index[(UTRIE2_UTF8_2B_INDEX_2_OFFSET-0xc0)+__lead] \
-                <<UTRIE2_INDEX_SHIFT)+ \
+                (trie)->index[(UTRIE2_UTF8_2B_INDEX_2_OFFSET-0xc0)+__lead]+ \
                 __t1]; \
         } else if( /* handle U+0000..U+FFFF inline */ \
             __lead<0xf0 && ((src)+1)<(limit) && \
@@ -361,10 +360,8 @@ utrie2_internalU8PrevIndex(const UTrie2 *trie, UChar32 c,
         ) { \
             ++(src); \
             (result)=(trie)->data[ \
-                ((int32_t)(trie)->index[((int32_t)UTRIE2_UTF8_2B_INDEX_2_OFFSET-(0xc0<<(6-UTRIE2_SHIFT_2)))+ \
-                                        ((int32_t)__lead<<(6-UTRIE2_SHIFT_2))+(__t1>>UTRIE2_SHIFT_2)] \
-                <<UTRIE2_INDEX_SHIFT)+ \
-                (__t1&UTRIE2_DATA_MASK)]; \
+                (trie)->index[(UTRIE2_UTF8_2B_INDEX_2_OFFSET-0xc0)+__lead]+ \
+                __t1]; \
         } else if( /* handle U+0000..U+FFFF inline */ \
             __lead<0xf0 && ((src)+1)<(limit) && \
             (__t1=(uint8_t)(*(src)-0x80))<=0x3f && \
