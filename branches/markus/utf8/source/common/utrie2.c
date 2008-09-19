@@ -730,6 +730,9 @@ equal_uint32(const uint32_t *s, const uint32_t *t, int32_t length) {
 
 /* Building a trie ----------------------------------------------------------*/
 
+static int32_t
+allocIndex2Block(UNewTrie2 *trie);
+
 U_CAPI UNewTrie2 * U_EXPORT2
 utrie2_open(uint32_t initialValue, uint32_t errorValue, UErrorCode *pErrorCode) {
     UNewTrie2 *trie;
@@ -745,6 +748,17 @@ utrie2_open(uint32_t initialValue, uint32_t errorValue, UErrorCode *pErrorCode) 
      * and map[block>>UTRIE2_SHIFT_2] stops working.
      */
     if(0xc0&UTRIE2_DATA_MASK) {
+        *pErrorCode=U_INTERNAL_PROGRAM_ERROR;
+        return NULL;
+    }
+
+    /*
+     * Requires UTRIE2_SHIFT_1>=11. Otherwise multiple index-2 E0/ED blocks need
+     * to be filled with UTRIE2_BAD_UTF8_DATA_OFFSET.
+     * Requires UTRIE2_SHIFT_1<=15. Otherwise one single index-2 block contains
+     * all BMP indexes.
+     */
+    if((1L<<UTRIE2_SHIFT_1)<0x800 || 0x10000<=(1L<<UTRIE2_SHIFT_1)) {
         *pErrorCode=U_INTERNAL_PROGRAM_ERROR;
         return NULL;
     }
@@ -815,8 +829,6 @@ utrie2_open(uint32_t initialValue, uint32_t errorValue, UErrorCode *pErrorCode) 
     }
     trie->map[UNEWTRIE2_DATA_NULL_OFFSET>>UTRIE2_SHIFT_2]+=UTRIE2_INDEX_2_BLOCK_LENGTH;
     trie->index2NullOffset=UNEWTRIE2_INDEX_2_NULL_OFFSET;
-    trie->e0Offset=0;
-    trie->edOffset=0;
     trie->index2Length=UNEWTRIE2_INDEX_2_START_OFFSET;
 
     /* set the index-1 indexes for the linear index-2 block */
@@ -828,6 +840,14 @@ utrie2_open(uint32_t initialValue, uint32_t errorValue, UErrorCode *pErrorCode) 
     for(; i<UTRIE2_INDEX_1_LENGTH; ++i) {
         trie->index1[i]=UNEWTRIE2_INDEX_2_NULL_OFFSET;
     }
+
+    /*
+     * Special index-2 blocks for 3-byte UTF-8 lead bytes E0 and ED.
+     * Put the ED block first so that its second half can overlap nicely
+     * with the E0 block's first half.
+     */
+    trie->edOffset=allocIndex2Block(trie);
+    trie->e0Offset=allocIndex2Block(trie);
 
     /*
      * Preallocate and reset data for U+0080..U+07ff,
@@ -1326,37 +1346,14 @@ findSameDataBlock(const uint32_t *data, int32_t dataLength, int32_t otherBlock, 
 }
 
 static void
-addUTF8Index2Blocks(UNewTrie2 *trie, UErrorCode *pErrorCode) {
+addUTF8Index2Blocks(UNewTrie2 *trie) {
     int32_t i, normal_e0, normal_ed, u8_e0, u8_ed;
 
-    if(U_FAILURE(*pErrorCode)) {
-        return;
-    }
-
-    /*
-     * Requires UTRIE2_SHIFT_1>=11. Otherwise multiple index-2 E0/ED blocks need
-     * to be filled with UTRIE2_BAD_UTF8_DATA_OFFSET.
-     * Requires UTRIE2_SHIFT_1<=15. Otherwise one single index-2 block contains
-     * all BMP indexes.
-     */
-    if((1L<<UTRIE2_SHIFT_1)<0x800 || 0x10000<=(1L<<UTRIE2_SHIFT_1)) {
-        *pErrorCode=U_INTERNAL_PROGRAM_ERROR;
-        return;
-    }
     normal_e0=trie->index1[0];
     normal_ed=trie->index1[0xd800>>UTRIE2_SHIFT_1];
 
-    /*
-     * Put the ED block first so that its second half can overlap nicely
-     * with the E0 block's first half.
-     * TODO: move these calls to utrie2_open() and make compaction functions not fail.
-     */
-    u8_ed=allocIndex2Block(trie);
-    u8_e0=allocIndex2Block(trie);
-    if(u8_e0<0) {
-        *pErrorCode=U_INTERNAL_PROGRAM_ERROR;
-        return;
-    }
+    u8_e0=trie->e0Offset;
+    u8_ed=trie->edOffset;
 
     /* E0 block: 3-byte non-shortest forms for U+0000..U+07ff */
     for(i=0; i<(0x800>>UTRIE2_SHIFT_2); ++i) {
@@ -1377,9 +1374,6 @@ addUTF8Index2Blocks(UNewTrie2 *trie, UErrorCode *pErrorCode) {
     for(; i<UTRIE2_INDEX_2_BLOCK_LENGTH; ++i) {
         setIndex2Entry(trie, u8_ed+i, trie->index2[normal_ed+i]);
     }
-
-    trie->e0Offset=u8_e0;
-    trie->edOffset=u8_ed;
 }
 
 /*
@@ -1395,14 +1389,10 @@ addUTF8Index2Blocks(UNewTrie2 *trie, UErrorCode *pErrorCode) {
  * - try to move and overlap blocks that are not already adjacent
  */
 static void
-compactData(UNewTrie2 *trie, UErrorCode *pErrorCode) {
+compactData(UNewTrie2 *trie) {
     int32_t start, newStart, movedStart;
     int32_t blockLength, overlap;
     int32_t i, mapIndex, blockCount;
-
-    if(U_FAILURE(*pErrorCode)) {
-        return;
-    }
 
     /*
      * Start with a block length of 64 for 2-byte UTF-8,
@@ -1505,12 +1495,8 @@ compactData(UNewTrie2 *trie, UErrorCode *pErrorCode) {
 }
 
 static void
-compactIndex2(UNewTrie2 *trie, UErrorCode *pErrorCode) {
+compactIndex2(UNewTrie2 *trie) {
     int32_t i, start, newStart, movedStart, overlap;
-
-    if(U_FAILURE(*pErrorCode)) {
-        return;
-    }
 
     /* do not compact linear-ASCII data */
     newStart=UTRIE2_INDEX_2_ASCII_LENGTH;
@@ -1616,14 +1602,10 @@ utrie2_serialize(UNewTrie2 *trie, UTrie2ValueBits valueBits,
 
     /* compact if necessary */
     if(!trie->isCompacted) {
-        addUTF8Index2Blocks(trie, pErrorCode);
-        compactData(trie, pErrorCode);
-        compactIndex2(trie, pErrorCode);
-
+        addUTF8Index2Blocks(trie);
+        compactData(trie);
+        compactIndex2(trie);
         trie->isCompacted=TRUE;
-        if(U_FAILURE(*pErrorCode)) {
-            return 0;
-        }
     }
 
     allIndexesLength=UTRIE2_INDEX_2_OFFSET+trie->index2Length;
