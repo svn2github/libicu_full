@@ -1,4 +1,5 @@
 #define USE_UTRIE2 1
+#define USE_UTRIE2_U8_NEXT 1
 /*
 ******************************************************************************
 * Copyright (c) 1996-2008, International Business Machines
@@ -3311,12 +3312,22 @@ unorm_checkFCDUTF8(const uint8_t *src, int32_t srcLength, const UnicodeSet *nx) 
         /* skip a run of code units with irrelevant data for the FCD check */
         if(limit==NULL) {
             for(;;) {
-#if USE_UTRIE2
+#if USE_UTRIE2_U8_NEXT
                 if(*src==0) {
                     return TRUE;
                 }
                 prevSrc=src;
                 UTRIE2_U8_NEXT16(&fcdTrie2, src, src+6, fcd16);
+#elif USE_UTRIE2
+                if(src[i]==0) {
+                    return TRUE;
+                }
+                U8_NEXT(src, i, INT32_MAX, c);
+                if(c>=0) {
+                    fcd16=UTRIE2_GET16(&fcdTrie2, c);
+                } else {
+                    fcd16=0;
+                }
 #else
                 if(src[i]==0) {
                     return TRUE;
@@ -3336,12 +3347,22 @@ unorm_checkFCDUTF8(const uint8_t *src, int32_t srcLength, const UnicodeSet *nx) 
             }
         } else {
             for(;;) {
-#if USE_UTRIE2
+#if USE_UTRIE2_U8_NEXT
                 if(src==limit) {
                     return TRUE;
                 }
                 prevSrc=src;
                 UTRIE2_U8_NEXT16(&fcdTrie2, src, limit, fcd16);
+#elif USE_UTRIE2
+                if(i==srcLength) {
+                    return TRUE;
+                }
+                U8_NEXT(src, i, srcLength, c);
+                if(c>=0) {
+                    fcd16=UTRIE2_GET16(&fcdTrie2, c);
+                } else {
+                    fcd16=0;
+                }
 #else
                 if(i==srcLength) {
                     return TRUE;
