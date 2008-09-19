@@ -33,26 +33,31 @@ void TimeUnitTest::runIndexedTest( int32_t index, UBool exec, const char* &name,
  * Test basic
  */
 void TimeUnitTest::testBasic() {
-    const char* locales[] = {"en", "sl", "fr", "zh", "ar", "ru"};
-    for ( int locIndex = 0; locIndex < sizeof(locales)/sizeof(locales[0]); 
+    const char* locales[] = {"en", "sl", "fr", "zh", "ar", "ru", "zh_Hant"};
+    for ( unsigned int locIndex = 0; 
+          locIndex < sizeof(locales)/sizeof(locales[0]); 
           ++locIndex ) {
         UErrorCode status = U_ZERO_ERROR;
-        TimeUnitFormat* format = new TimeUnitFormat(status);
+        Locale loc(locales[locIndex]);
+        TimeUnitFormat** formats = new TimeUnitFormat*[2];
+        formats[TimeUnitFormat::kFull] = new TimeUnitFormat(loc, status);
+        if (!assertSuccess("TimeUnitFormat(full)", status)) return;
+        formats[TimeUnitFormat::kAbbreviate] = new TimeUnitFormat(loc, TimeUnitFormat::kAbbreviate, status);
+        if (!assertSuccess("TimeUnitFormat(short)", status)) return;
 #ifdef TUFMTTS_DEBUG
         std::cout << "locale: " << locales[locIndex] << "\n";
 #endif
-        if (!assertSuccess("TimeUnitFormat()", status)) return;
-        Locale loc(locales[locIndex]);
-        format->setLocale(loc, status);
-        if (!assertSuccess("setLocale()", status)) return;
-        for (TimeUnit::UTimeUnitFields j = TimeUnit::UTIMEUNIT_YEAR; 
+        for (int style = TimeUnitFormat::kFull; 
+             style <= TimeUnitFormat::kAbbreviate;
+             ++style) {
+          for (TimeUnit::UTimeUnitFields j = TimeUnit::UTIMEUNIT_YEAR; 
              j < TimeUnit::UTIMEUNIT_FIELD_COUNT; 
              j = (TimeUnit::UTimeUnitFields)(j+1)) {
 #ifdef TUFMTTS_DEBUG
             std::cout << "time unit: " << j << "\n";
 #endif
             double tests[] = {0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 5, 10, 100, 101.35};
-            for (int i = 0; i < sizeof(tests)/sizeof(tests[0]); ++i) {
+            for (unsigned int i = 0; i < sizeof(tests)/sizeof(tests[0]); ++i) {
 #ifdef TUFMTTS_DEBUG
                 std::cout << "number: " << tests[i] << "\n";
 #endif
@@ -61,22 +66,32 @@ void TimeUnitTest::testBasic() {
                 UnicodeString formatted;
                 Formattable formattable;
                 formattable.adoptObject(source);
-                formatted = ((Format*)format)->format(formattable, formatted, status);
+                formatted = ((Format*)formats[style])->format(formattable, formatted, status);
+                if (!assertSuccess("format()", status)) return;
 #ifdef TUFMTTS_DEBUG
                 char formatResult[1000];
                 formatted.extract(0, formatted.length(), formatResult, "UTF-8");
                 std::cout << "format result: " << formatResult << "\n";
 #endif
-                if (!assertSuccess("format()", status)) return;
                 Formattable result;
-                ((Format*)format)->parseObject(formatted, result, status);
+                ((Format*)formats[style])->parseObject(formatted, result, status);
                 if (!assertSuccess("parseObject()", status)) return;
                 if (result != formattable) {
                     dataerrln("No round trip: ");
                 }
+                // other style parsing
+                Formattable result_1;
+                ((Format*)formats[1-style])->parseObject(formatted, result_1, status);
+                if (!assertSuccess("parseObject()", status)) return;
+                if (result_1 != formattable) {
+                    dataerrln("No round trip: ");
+                }
             }
+          }
         }
-        delete format;
+        delete formats[TimeUnitFormat::kFull];
+        delete formats[TimeUnitFormat::kAbbreviate];
+        delete[] formats;
     }
 }
 
@@ -143,12 +158,9 @@ void TimeUnitTest::testAPI() {
     //
     TimeUnitFormat* tmf_en = new TimeUnitFormat(Locale("en"), status);
     if (!assertSuccess("TimeUnitFormat(en...)", status)) return;
-    TimeUnitFormat tmf_default(status);
-    if (!assertSuccess("TimeUnitFormat(default)", status)) return;
     TimeUnitFormat tmf_fr(Locale("fr"), status);
     if (!assertSuccess("TimeUnitFormat(fr...)", status)) return;
 
-    assertTrue("TimeUnitFormat: en and default are equal", (*tmf_en == tmf_default));
     assertTrue("TimeUnitFormat: en and fr diff", (*tmf_en != tmf_fr));
 
     TimeUnitFormat tmf_assign = *tmf_en;
@@ -157,8 +169,8 @@ void TimeUnitTest::testAPI() {
     TimeUnitFormat tmf_copy(tmf_fr);
     assertTrue("TimeUnitFormat: orig and copy are equal", (tmf_fr == tmf_copy));
 
-    TimeUnitFormat* tmf_clone = (TimeUnitFormat*)tmf_default.clone();
-    assertTrue("TimeUnitFormat: orig and clone are equal", (tmf_default == *tmf_clone));
+    TimeUnitFormat* tmf_clone = (TimeUnitFormat*)tmf_en->clone();
+    assertTrue("TimeUnitFormat: orig and clone are equal", (*tmf_en == *tmf_clone));
     delete tmf_clone;
 
     tmf_en->setLocale(Locale("fr"), status);
@@ -170,9 +182,23 @@ void TimeUnitTest::testAPI() {
     tmf_en->setNumberFormat(*numberFmt, status);
     if (!assertSuccess("setNumberFormat(en...)", status)) return;
     assertTrue("TimeUnitFormat: setLocale", (*tmf_en == tmf_fr));
-    delete numberFmt;
 
     delete tmf_en;
+
+    TimeUnitFormat* en_long = new TimeUnitFormat(Locale("en"), TimeUnitFormat::kFull, status);
+    if (!assertSuccess("TimeUnitFormat(en...)", status)) return;
+    delete en_long;
+
+    TimeUnitFormat* en_short = new TimeUnitFormat(Locale("en"), TimeUnitFormat::kAbbreviate, status);
+    if (!assertSuccess("TimeUnitFormat(en...)", status)) return;
+    delete en_short;
+
+    TimeUnitFormat* format = new TimeUnitFormat(status);
+    format->setLocale(Locale("zh"), status);
+    format->setNumberFormat(*numberFmt, status);
+    if (!assertSuccess("TimeUnitFormat(en...)", status)) return;
+    delete numberFmt;
+    delete format;
 }
 
 

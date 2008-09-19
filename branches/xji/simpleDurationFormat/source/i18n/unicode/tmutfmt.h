@@ -25,7 +25,23 @@
 #include "unicode/numfmt.h"
 #include "unicode/plurrule.h"
 
+/**
+ * @internal ICU 4.2
+ */
+
+union UHashTok;
+
 U_NAMESPACE_BEGIN
+
+U_CDECL_BEGIN
+
+/**
+ * @internal ICU 4.2
+ */
+static UBool U_CALLCONV hashTableValueComparator(UHashTok val1, UHashTok val2) ;
+
+U_CDECL_END
+
 
 class Hashtable;
 
@@ -62,18 +78,38 @@ class Hashtable;
  */
 class U_I18N_API TimeUnitFormat: public MeasureFormat {
 public:
+
     /**
-     * Create TimeUnitFormat with default locale. 
+     * Constants for various styles.
+     * There are 2 styles: full name and abbreviated name.
+     * For example, for English, the full name for hour duration is "3 hours",
+     * and the abbreviated name is "3 hrs".
+     * @draft ICU 4.2
+     */
+    enum EStyle {
+        kFull = 0,
+        kAbbreviate = 1,
+        kTotal = kAbbreviate + 1
+    };
+    
+    /**
+     * Create TimeUnitFormat with default locale, and full name style. 
      * Use setLocale and/or setFormat to modify.
      * @draft ICU 4.2
      */
     TimeUnitFormat(UErrorCode& status);
 
     /**
-     * Create TimeUnitFormat given locale.
+     * Create TimeUnitFormat given locale, and full name style.
      * @draft ICU 4.2
      */
     TimeUnitFormat(const Locale& locale, UErrorCode& status);
+
+    /**
+     * Create TimeUnitFormat given locale and style.
+     * @draft ICU 4.2
+     */
+    TimeUnitFormat(const Locale& locale, EStyle style, UErrorCode& status);
 
     /**
      * Copy constructor.
@@ -190,8 +226,12 @@ private:
     Locale        fLocale;
     Hashtable*    fTimeUnitToCountToPatterns[TimeUnit::UTIMEUNIT_FIELD_COUNT];
     PluralRules*  fPluralRules;
+    EStyle           fStyle;
+
+    friend UBool U_CALLCONV hashTableValueComparator(UHashTok val1, UHashTok val2);
     
-    
+    void create(const Locale& locale, EStyle style, UErrorCode& status);
+
     // it might actually be simpler to make them Decimal Formats later.
     // initialize all private data members
     void setup(UErrorCode& status); 
@@ -200,14 +240,16 @@ private:
     void initDataMembers(UErrorCode& status);
 
     // initialize fTimeUnitToCountToPatterns from current locale's resource.
-    void readFromCurrentLocale(UErrorCode& status);
+    void readFromCurrentLocale(EStyle style, const char* key, UErrorCode& status);
 
     // check completeness of fTimeUnitToCountToPatterns against all time units,
     // and all plural rules, fill in fallback as necessary.
-    void checkConsistency(UErrorCode& status);
+    void checkConsistency(EStyle style, const char* key, UErrorCode& status);
 
     // fill in fTimeUnitToCountToPatterns from locale fall-back chain
-    void searchInLocaleChain(TimeUnit::UTimeUnitFields field, const char*, const char*, Hashtable*, UErrorCode&);
+    void searchInLocaleChain(EStyle style, const char* key, 
+                             TimeUnit::UTimeUnitFields field, const char*, 
+                             const char*, Hashtable*, UErrorCode&);
 
     // initialize hash table
     Hashtable* initHash(UErrorCode& status);
