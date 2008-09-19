@@ -16,6 +16,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include "unicode/uchar.h"
 #include "unicode/unorm.h"
 #include "unicode/uperf.h"
 #include "uoptions.h"
@@ -157,11 +158,70 @@ public:
     }
 };
 
+class ToNFC : public Command {
+protected:
+    ToNFC(const UTrie2PerfTest &testcase) : Command(testcase) {
+        UErrorCode errorCode=U_ZERO_ERROR;
+        destCapacity=unorm_normalize(testcase.getBuffer(), testcase.getBufferLen(),
+                                     UNORM_NFC, 0,
+                                     NULL, 0,
+                                     &errorCode);
+        dest=new UChar[destCapacity];
+    }
+    ~ToNFC() {
+        delete [] dest;
+    }
+public:
+    static UPerfFunction* get(const UTrie2PerfTest &testcase) {
+        return new ToNFC(testcase);
+    }
+    virtual void call(UErrorCode* pErrorCode) {
+        UErrorCode errorCode=U_ZERO_ERROR;
+        int32_t destLength=unorm_normalize(testcase.getBuffer(), testcase.getBufferLen(),
+                                           UNORM_NFC, 0,
+                                           dest, destCapacity,
+                                           &errorCode);
+        if(U_FAILURE(errorCode) || destLength!=destCapacity) {
+            fprintf(stderr, "error: unorm_normalize(UNORM_NFC) failed: %s\n",
+                    u_errorName(errorCode));
+        }
+    }
+
+private:
+    UChar *dest;
+    int32_t destCapacity;
+};
+
+class GetBiDiClass : public Command {
+protected:
+    GetBiDiClass(const UTrie2PerfTest &testcase) : Command(testcase) {}
+public:
+    static UPerfFunction* get(const UTrie2PerfTest &testcase) {
+        return new GetBiDiClass(testcase);
+    }
+    virtual void call(UErrorCode* pErrorCode) {
+        const UChar *buffer=testcase.getBuffer();
+        int32_t length=testcase.getBufferLen();
+        UChar32 c;
+        int32_t i;
+        uint32_t bitSet=0;
+        for(i=0; i<length;) {
+            U16_NEXT(buffer, i, length, c);
+            bitSet|=(uint32_t)1<<u_charDirection(c);
+        }
+        if(length>0 && bitSet==0) {
+            fprintf(stderr, "error: GetBiDiClass() did not collect bits\n");
+        }
+    }
+};
+
 UPerfFunction* UTrie2PerfTest::runIndexedTest(int32_t index, UBool exec, const char* &name, char* par) {
     switch (index) {
         case 0: name = "CheckFCD";              if (exec) return CheckFCD::get(*this); break;
         case 1: name = "CheckFCDAlwaysGet";     if (exec) return CheckFCDAlwaysGet::get(*this); break;
         case 2: name = "CheckFCDUTF8";          if (exec) return CheckFCDUTF8::get(*this); break;
+        case 3: name = "ToNFC";                 if (exec) return ToNFC::get(*this); break;
+        case 4: name = "GetBiDiClass";          if (exec) return GetBiDiClass::get(*this); break;
         default: name = ""; break;
     }
     return NULL;
