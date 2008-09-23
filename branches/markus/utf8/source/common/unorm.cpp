@@ -3312,7 +3312,7 @@ unorm_checkFCDUTF8(const uint8_t *src, int32_t srcLength, const UnicodeSet *nx) 
         /* skip a run of code units with irrelevant data for the FCD check */
         if(limit==NULL) {
             for(;;) {
-#if USE_UTRIE2_U8_NEXT
+#if USE_UTRIE2 && USE_UTRIE2_U8_NEXT
                 if(*src==0) {
                     return TRUE;
                 }
@@ -3347,7 +3347,7 @@ unorm_checkFCDUTF8(const uint8_t *src, int32_t srcLength, const UnicodeSet *nx) 
             }
         } else {
             for(;;) {
-#if USE_UTRIE2_U8_NEXT
+#if USE_UTRIE2 && USE_UTRIE2_U8_NEXT
                 if(src==limit) {
                     return TRUE;
                 }

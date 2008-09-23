@@ -1,3 +1,4 @@
+#define USE_UTRIE2 1
 /*
 *******************************************************************************
 *
@@ -413,8 +414,12 @@ ubidi_getMaxValue(const UBiDiProps *bdp, UProperty which) {
 
 U_CAPI UCharDirection
 ubidi_getClass(const UBiDiProps *bdp, UChar32 c) {
-    uint32_t props;
+    uint16_t props;
+#if USE_UTRIE2
+    props=UTRIE2_GET16(&bidiTrie2, c);
+#else
     GET_PROPS(bdp, c, props);
+#endif
     return (UCharDirection)UBIDI_GET_CLASS(props);
 }
 
