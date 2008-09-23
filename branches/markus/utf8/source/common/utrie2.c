@@ -64,8 +64,13 @@ typedef struct UTrie2Header {
     /** Null index and data blocks. */
     uint16_t index2NullOffset, dataNullOffset;
 
+#if UTRIE2_VERSION_B
+    /** TODO */
+    uint16_t shiftedHighStart;
+#else  /* UTRIE2_VERSION_B */
     /** Pad to 16 bytes. */
     uint16_t reserved;
+#endif  /* UTRIE2_VERSION_B */
 } UTrie2Header;
 
 /**
@@ -77,10 +82,51 @@ enum {
     UTRIE2_OPTIONS_VALUE_BITS_MASK=0xf
 };
 
+static U_INLINE int32_t
+u8Index(const UTrie2 *trie, UChar32 c, int32_t i) {
+    int32_t index;
+    if(c>=0) {
+#if UTRIE2_VERSION_B
+        if(c>=trie->highStart) {
+            index=trie->dataLength-UTRIE2_DATA_GRANULARITY;
+            if(trie->data32==NULL) {
+                index+=trie->indexLength;  /* 16-bit trie */
+            }
+        } else if(c<=0xffff) {
+            index=
+                ((int32_t)(trie->index[c>>UTRIE2_SHIFT_2])
+                <<UTRIE2_INDEX_SHIFT)+
+                (c&UTRIE2_DATA_MASK);
+        } else {
+            index=
+                ((int32_t)(trie->index[
+                    trie->index[(UTRIE2_INDEX_1_OFFSET-UTRIE2_OMITTED_BMP_INDEX_1_LENGTH)+
+                                (c>>UTRIE2_SHIFT_1)]+
+                    ((c>>UTRIE2_SHIFT_2)&UTRIE2_INDEX_2_MASK)])
+                <<UTRIE2_INDEX_SHIFT)+
+                (c&UTRIE2_DATA_MASK);
+        }
+#else  /* UTRIE2_VERSION_B */
+        index=
+            ((int32_t)(trie->index[ \
+                trie->index[UTRIE2_INDEX_1_OFFSET+(c>>UTRIE2_SHIFT_1)]+ \
+                ((c>>UTRIE2_SHIFT_2)&UTRIE2_INDEX_2_MASK)]) \
+            <<UTRIE2_INDEX_SHIFT)+ \
+            (c&UTRIE2_DATA_MASK);
+#endif  /* UTRIE2_VERSION_B */
+    } else {
+        index=UTRIE2_BAD_UTF8_DATA_OFFSET;
+        if(trie->data32==NULL) {
+            index+=trie->indexLength;  /* 16-bit trie */
+        }
+    }
+    return (index<<3)|i;
+}
+
 U_CAPI int32_t U_EXPORT2
 utrie2_internalU8NextIndex(const UTrie2 *trie, UChar32 c,
                            const uint8_t *src, const uint8_t *limit) {
-    int32_t index, i, length;
+    int32_t i, length;
     i=0;
     /* support 64-bit pointers by avoiding cast of arbitrary difference */
     if((limit-src)<=7) {
@@ -89,25 +135,13 @@ utrie2_internalU8NextIndex(const UTrie2 *trie, UChar32 c,
         length=7;
     }
     c=utf8_nextCharSafeBody(src, &i, length, c, -1);
-    if(c>=0) {
-        index=
-            ((int32_t)(trie->index[ \
-                trie->index[UTRIE2_INDEX_1_OFFSET+(c>>UTRIE2_SHIFT_1)]+ \
-                ((c>>UTRIE2_SHIFT_2)&UTRIE2_INDEX_2_MASK)]) \
-            <<UTRIE2_INDEX_SHIFT)+ \
-            (c&UTRIE2_DATA_MASK);
-    } else if(trie->data32!=NULL) {
-        index=UTRIE2_BAD_UTF8_DATA_OFFSET;
-    } else /* 16-bit trie */ {
-        index=trie->indexLength+UTRIE2_BAD_UTF8_DATA_OFFSET;
-    }
-    return (index<<3)|i;
+    return u8Index(trie, c, i);
 }
 
 U_CAPI int32_t U_EXPORT2
 utrie2_internalU8PrevIndex(const UTrie2 *trie, UChar32 c,
                            const uint8_t *start, const uint8_t *src) {
-    int32_t index, i, length;
+    int32_t i, length;
     /* support 64-bit pointers by avoiding cast of arbitrary difference */
     if((src-start)<=7) {
         i=length=(int32_t)(src-start);
@@ -117,19 +151,7 @@ utrie2_internalU8PrevIndex(const UTrie2 *trie, UChar32 c,
     }
     c=utf8_prevCharSafeBody(start, 0, &i, c, -1);
     i=length-i;  /* number of bytes read backward from src */
-    if(c>=0) {
-        index=
-            ((int32_t)(trie->index[ \
-                trie->index[UTRIE2_INDEX_1_OFFSET+(c>>UTRIE2_SHIFT_1)]+ \
-                ((c>>UTRIE2_SHIFT_2)&UTRIE2_INDEX_2_MASK)]) \
-            <<UTRIE2_INDEX_SHIFT)+ \
-            (c&UTRIE2_DATA_MASK);
-    } else if(trie->data32!=NULL) {
-        index=UTRIE2_BAD_UTF8_DATA_OFFSET;
-    } else /* 16-bit trie */ {
-        index=trie->indexLength+UTRIE2_BAD_UTF8_DATA_OFFSET;
-    }
-    return (index<<3)|i;
+    return u8Index(trie, c, i);
 }
 
 U_CAPI void U_EXPORT2
@@ -188,6 +210,10 @@ utrie2_unserialize(UTrie2 *trie, UTrie2ValueBits valueBits,
     trie->index2NullOffset=header->index2NullOffset;
     trie->dataNullOffset=header->dataNullOffset;
 
+#if UTRIE2_VERSION_B
+    trie->highStart=header->shiftedHighStart<<UTRIE2_SHIFT_1;
+#endif  /* UTRIE2_VERSION_B */
+
     length-=(int32_t)sizeof(UTrie2Header);
 
     /* enough data for the index? */
@@ -210,8 +236,11 @@ utrie2_unserialize(UTrie2 *trie, UTrie2ValueBits valueBits,
 
         trie->data16=p16;
         trie->data32=NULL;
-        trie->initialValue=trie->index[(int32_t)trie->dataNullOffset<<UTRIE2_INDEX_SHIFT];
+        trie->initialValue=trie->index[(int32_t)trie->dataNullOffset<<UTRIE2_INDEX_SHIFT];  /* TODO: revisit shift */
         trie->errorValue=trie->data16[UTRIE2_BAD_UTF8_DATA_OFFSET];
+#if UTRIE2_VERSION_B
+        trie->highValue=trie->data16[trie->dataLength-UTRIE2_DATA_GRANULARITY];
+#endif  /* UTRIE2_VERSION_B */
         length=(int32_t)sizeof(UTrie2Header)+2*trie->indexLength+2*trie->dataLength;
         break;
     case UTRIE2_32_VALUE_BITS:
@@ -223,6 +252,9 @@ utrie2_unserialize(UTrie2 *trie, UTrie2ValueBits valueBits,
         trie->data32=(const uint32_t *)p16;
         trie->initialValue=trie->data32[(int32_t)trie->dataNullOffset<<UTRIE2_INDEX_SHIFT];
         trie->errorValue=trie->data32[UTRIE2_BAD_UTF8_DATA_OFFSET];
+#if UTRIE2_VERSION_B
+        trie->highValue=trie->data32[trie->dataLength-UTRIE2_DATA_GRANULARITY];
+#endif  /* UTRIE2_VERSION_B */
         length=(int32_t)sizeof(UTrie2Header)+2*trie->indexLength+4*trie->dataLength;
         break;
     default:
@@ -243,7 +275,9 @@ utrie2_unserializeDummy(UTrie2 *trie,
     uint16_t *dest16;
     int32_t indexLength, dataLength, length, i;
     int32_t dataMove;  /* >0 if the data is moved to the end of the index array */
+#if !UTRIE2_VERSION_B
     int32_t overlap, e0Offset, edOffset;
+#endif  /* UTRIE2_VERSION_B */
 
     if(U_FAILURE(*pErrorCode)) {
         return 0;
@@ -257,8 +291,9 @@ utrie2_unserializeDummy(UTrie2 *trie,
         return 0;
     }
 
+#if !UTRIE2_VERSION_B
     /* overlap and position the UTF-8 E0/ED index-2 blocks */
-    if(0xe000&((1L<<UTRIE2_SHIFT_1)-1)) {
+    if(0xe000&(UTRIE2_CP_PER_INDEX_1_ENTRY-1)) {
         /*
          * No overlap: The index-2 indexes for U+d800..U+dfff
          * are in the middle of the ED index-2 block.
@@ -275,13 +310,18 @@ utrie2_unserializeDummy(UTrie2 *trie,
     overlap=0x800>>UTRIE2_SHIFT_2;
     edOffset=UTRIE2_INDEX_2_START_OFFSET-(UTRIE2_INDEX_2_BLOCK_LENGTH-overlap);
     e0Offset=UTRIE2_INDEX_2_START_OFFSET;
-
+#endif  /* UTRIE2_VERSION_B */
 
     /* calculate the total length of the dummy trie data */
 
+#if UTRIE2_VERSION_B
+    indexLength=UTRIE2_INDEX_1_OFFSET;
+    dataLength=UTRIE2_DATA_START_OFFSET+UTRIE2_DATA_GRANULARITY;
+#else  /* UTRIE2_VERSION_B */
     /* +64=UTRIE2_INDEX_2_BLOCK_LENGTH for overlapped UTF-8 E0/ED index-2 blocks */
     indexLength=UTRIE2_INDEX_2_START_OFFSET+UTRIE2_INDEX_2_BLOCK_LENGTH;
     dataLength=UTRIE2_DATA_START_OFFSET;
+#endif  /* UTRIE2_VERSION_B */
     length=indexLength*2;
     if(valueBits==UTRIE2_16_VALUE_BITS) {
         length+=dataLength*2;
@@ -307,11 +347,21 @@ utrie2_unserializeDummy(UTrie2 *trie,
     trie->dataNullOffset=(uint16_t)(dataMove>>UTRIE2_INDEX_SHIFT);
     trie->initialValue=initialValue;
     trie->errorValue=errorValue;
+#if UTRIE2_VERSION_B
+    trie->highStart=0;
+    trie->highValue=initialValue;
+#endif  /* UTRIE2_VERSION_B */
 
     /* fill the index and data arrays */
     dest16=(uint16_t *)data;
     trie->index=dest16;
 
+#if UTRIE2_VERSION_B
+    /* write the index-2 array values shifted right by UTRIE2_INDEX_SHIFT */
+    for(i=0; i<UTRIE2_INDEX_2_ASCII_LENGTH; ++i) {
+        *dest16++=(uint16_t)(dataMove>>UTRIE2_INDEX_SHIFT);  /* null data block */
+    }
+#else  /* UTRIE2_VERSION_B */
     /* set the index-1 indexes to the null index-2 block */
     for(i=0; i<UTRIE2_INDEX_1_LENGTH; ++i) {
         *dest16++=UTRIE2_INDEX_2_OFFSET;
@@ -326,6 +376,7 @@ utrie2_unserializeDummy(UTrie2 *trie,
     for(++i; i<(0x10000>>UTRIE2_SHIFT_1); ++i) {                    /* EE..EF */
         *dest16++=(uint16_t)UTRIE2_INDEX_2_OFFSET;
     }
+#endif  /* UTRIE2_VERSION_B */
 
     /* write UTF-8 2-byte index-2 values, not right-shifted */
     for(i=0; i<(0xc2-0xc0); ++i) {                                  /* C0..C1 */
@@ -335,6 +386,7 @@ utrie2_unserializeDummy(UTrie2 *trie,
         *dest16++=(uint16_t)dataMove;
     }
 
+#if !UTRIE2_VERSION_B
     /* write the index-2 array values shifted right by UTRIE2_INDEX_SHIFT */
     for(i=0; i<UTRIE2_INDEX_2_ASCII_LENGTH; ++i) {
         *dest16++=(uint16_t)(dataMove>>UTRIE2_INDEX_SHIFT);  /* null data block */
@@ -347,6 +399,7 @@ utrie2_unserializeDummy(UTrie2 *trie,
     for(; i<UTRIE2_INDEX_2_BLOCK_LENGTH; ++i) {
         *dest16++=(uint16_t)(dataMove>>UTRIE2_INDEX_SHIFT);  /* null data block */
     }
+#endif  /* UTRIE2_VERSION_B */
 
     /* write the 16/32-bit data array */
     switch(valueBits) {
@@ -360,6 +413,12 @@ utrie2_unserializeDummy(UTrie2 *trie,
         for(; i<0xc0; ++i) {
             *dest16++=(uint16_t)errorValue;
         }
+#if UTRIE2_VERSION_B
+        /* highValue and reserved values */
+        for(i=0; i<UTRIE2_DATA_GRANULARITY; ++i) {
+            *dest16++=(uint16_t)initialValue;
+        }
+#endif  /* UTRIE2_VERSION_B */
         break;
     case UTRIE2_32_VALUE_BITS:
         /* write 32-bit data values */
@@ -372,6 +431,12 @@ utrie2_unserializeDummy(UTrie2 *trie,
         for(; i<0xc0; ++i) {
             *p++=errorValue;
         }
+#if UTRIE2_VERSION_B
+        /* highValue and reserved values */
+        for(i=0; i<UTRIE2_DATA_GRANULARITY; ++i) {
+            *p++=initialValue;
+        }
+#endif  /* UTRIE2_VERSION_B */
         break;
     default:
         *pErrorCode=U_ILLEGAL_ARGUMENT_ERROR;
@@ -383,6 +448,7 @@ utrie2_unserializeDummy(UTrie2 *trie,
 
 U_CAPI void U_EXPORT2
 utrie2_makeBMPIndex2(UTrie2 *trie, uint16_t bmpIndex2[UTRIE2_BMP_INDEX_2_LENGTH]) {
+#if !UTRIE2_VERSION_B
     int32_t i1, i2Block, i;
 
     i=0;
@@ -392,6 +458,7 @@ utrie2_makeBMPIndex2(UTrie2 *trie, uint16_t bmpIndex2[UTRIE2_BMP_INDEX_2_LENGTH]
         i+=UTRIE2_INDEX_2_BLOCK_LENGTH;
     }
     trie->bmpIndex2=bmpIndex2;
+#endif  /* UTRIE2_VERSION_B */
 }
 
 /*
@@ -562,7 +629,11 @@ utrie2_swap(const UDataSwapper *ds,
 
     if( trie.signature!=0x54726932 ||
         valueBits<0 || UTRIE2_COUNT_VALUE_BITS<=valueBits ||
+#if UTRIE2_VERSION_B
+        trie.indexLength<UTRIE2_INDEX_1_OFFSET ||
+#else  /* UTRIE2_VERSION_B */
         trie.indexLength<UTRIE2_INDEX_2_START_OFFSET ||
+#endif  /* UTRIE2_VERSION_B */
         dataLength<UTRIE2_DATA_START_OFFSET
     ) {
         *pErrorCode=U_INVALID_FORMAT_ERROR; /* not a UTrie */
@@ -618,8 +689,36 @@ utrie2_swap(const UDataSwapper *ds,
 /* Building a trie ---------------------------------------------------------- */
 
 enum {
+#if UTRIE2_VERSION_B
     /**
-     * Maximum length of the build-time index-2 array before folding.
+     * At build time, leave a gap in the index-2 table,
+     * at least as long as the maximum lengths of the 2-byte UTF-8 index-2 table
+     * and the supplementary index-1 table.
+     * Round up to UTRIE2_INDEX_2_BLOCK_LENGTH for proper compacting.
+     */
+    UNEWTRIE2_INDEX_GAP_OFFSET=UTRIE2_INDEX_2_ASCII_LENGTH,
+    UNEWTRIE2_INDEX_GAP_LENGTH=
+        ((UTRIE2_UTF8_2B_INDEX_2_LENGTH+UTRIE2_MAX_INDEX_1_LENGTH)+UTRIE2_INDEX_2_MASK)&
+        ~UTRIE2_INDEX_2_MASK,
+
+    /** The null index-2 block. */
+    UNEWTRIE2_INDEX_2_NULL_OFFSET=UNEWTRIE2_INDEX_GAP_OFFSET+UNEWTRIE2_INDEX_GAP_LENGTH,
+
+    /** The start of allocated index-2 blocks. */
+    UNEWTRIE2_INDEX_2_START_OFFSET=UNEWTRIE2_INDEX_2_NULL_OFFSET+UTRIE2_INDEX_2_BLOCK_LENGTH,
+
+    /**
+     * Maximum length of the build-time index-2 array.
+     * Maximum number of Unicode code points (0x110000) shifted right by UTRIE2_SHIFT_2,
+     * plus the build-time index gap,
+     * plus the null index-2 block.
+     */
+    UNEWTRIE2_MAX_INDEX_2_LENGTH=(0x110000>>UTRIE2_SHIFT_2)+UNEWTRIE2_INDEX_GAP_LENGTH+UTRIE2_INDEX_2_BLOCK_LENGTH,
+
+    UTRIE2_INDEX_1_LENGTH=0x110000>>UTRIE2_SHIFT_1,  /* TODO: rename UNEWTRIE2_... */
+#else  /* UTRIE2_VERSION_B */
+    /**
+     * Maximum length of the build-time index-2 array.
      * Maximum number of Unicode code points (0x110000) shifted right by UTRIE2_SHIFT_2,
      * plus the null index-2 block,
      * plus 2 special index blocks for UTF-8 lead bytes E0 and ED.
@@ -631,6 +730,7 @@ enum {
 
     /** The start of allocated index-2 blocks. */
     UNEWTRIE2_INDEX_2_START_OFFSET=UNEWTRIE2_INDEX_2_NULL_OFFSET+UTRIE2_INDEX_2_BLOCK_LENGTH,
+#endif  /* UTRIE2_VERSION_B */
 
     /**
      * The null data block.
@@ -685,7 +785,12 @@ struct UNewTrie2 {
     uint32_t initialValue, errorValue;
     int32_t index2Length, dataCapacity, dataLength;
     int32_t firstFreeBlock;
+#if UTRIE2_VERSION_B
+    int32_t index2NullOffset, dataNullOffset;
+    UChar32 highStart;
+#else  /* UTRIE2_VERSION_B */
     int32_t index2NullOffset, dataNullOffset, e0Offset, edOffset;
+#endif  /* UTRIE2_VERSION_B */
     UBool isCompacted;
 
     /**
@@ -752,16 +857,30 @@ utrie2_open(uint32_t initialValue, uint32_t errorValue, UErrorCode *pErrorCode) 
         return NULL;
     }
 
+#if UTRIE2_VERSION_B
+    /*
+     * Requires UTRIE2_SHIFT_1>=10 because utrie2_enumNewTrieForLeadSurrogate()
+     * assumes that a single index-2 block is used for 0x400 code points
+     * corresponding to one lead surrogate.
+     * Requires UTRIE2_SHIFT_1<=16. Otherwise one single index-2 block contains
+     * more than one Unicode plane.
+     */
+    if(UTRIE2_CP_PER_INDEX_1_ENTRY<0x400 || 0x10000<UTRIE2_CP_PER_INDEX_1_ENTRY) {
+        *pErrorCode=U_INTERNAL_PROGRAM_ERROR;
+        return NULL;
+    }
+#else  /* UTRIE2_VERSION_B */
     /*
      * Requires UTRIE2_SHIFT_1>=11. Otherwise multiple index-2 E0/ED blocks need
      * to be filled with UTRIE2_BAD_UTF8_DATA_OFFSET.
      * Requires UTRIE2_SHIFT_1<=15. Otherwise one single index-2 block contains
      * all BMP indexes.
      */
-    if((1L<<UTRIE2_SHIFT_1)<0x800 || 0x10000<=(1L<<UTRIE2_SHIFT_1)) {
+    if(UTRIE2_CP_PER_INDEX_1_ENTRY<0x800 || 0x10000<=UTRIE2_CP_PER_INDEX_1_ENTRY) {
         *pErrorCode=U_INTERNAL_PROGRAM_ERROR;
         return NULL;
     }
+#endif  /* UTRIE2_VERSION_B */
 
     trie=(UNewTrie2 *)uprv_malloc(sizeof(UNewTrie2));
     if(trie==NULL) {
@@ -778,6 +897,9 @@ utrie2_open(uint32_t initialValue, uint32_t errorValue, UErrorCode *pErrorCode) 
 
     trie->initialValue=initialValue;
     trie->errorValue=errorValue;
+#if UTRIE2_VERSION_B
+    trie->highStart=0x110000;
+#endif  /* UTRIE2_VERSION_B */
     trie->firstFreeBlock=0;  /* no free block in the list */
     trie->isCompacted=FALSE;
 
@@ -804,35 +926,52 @@ utrie2_open(uint32_t initialValue, uint32_t errorValue, UErrorCode *pErrorCode) 
         trie->index2[i]=j;
         trie->map[i]=1;
     }
-    /* and for the bad-UTF-8-data block, which will be used by E0/ED blocks */
+    /* reference counts for the bad-UTF-8-data block */
     for(; j<0xc0; ++i, j+=UTRIE2_DATA_BLOCK_LENGTH) {
+        trie->map[i]=0;
+    }
+    /*
+     * Reference counts for the null data block: all blocks but ASCII.
+     * Plus 1 so that we don't drop this block during compaction.
+     */
+    /* i==trie->dataNullOffset */
+    trie->map[i++]=(0x110000>>UTRIE2_SHIFT_2)-(0x80>>UTRIE2_SHIFT_2)+1;
+    j+=UTRIE2_DATA_BLOCK_LENGTH;
+    for(; j<UNEWTRIE2_DATA_START_OFFSET; ++i, j+=UTRIE2_DATA_BLOCK_LENGTH) {
         trie->map[i]=0;
     }
 
     /*
      * set the remaining indexes in the ASCII index-2 block
      * to the null data block
+     * TODO: doc ASCII->BMP?!
      */
     for(i=0x80>>UTRIE2_SHIFT_2; i<UTRIE2_INDEX_2_ASCII_LENGTH; ++i) {
         trie->index2[i]=UNEWTRIE2_DATA_NULL_OFFSET;
     }
-    i=UNEWTRIE2_DATA_NULL_OFFSET>>UTRIE2_SHIFT_2;
-    trie->map[i++]=UTRIE2_INDEX_2_ASCII_LENGTH-(0x80>>UTRIE2_SHIFT_2);
-    /* protect the rest of the oversized null block until compaction */
-    for(; i<UNEWTRIE2_DATA_START_OFFSET>>UTRIE2_SHIFT_2; ++i) {
-        trie->map[i]=1;
+
+#if UTRIE2_VERSION_B
+    /*
+     * Fill the index gap with impossible values so that compaction
+     * does not overlap other index-2 blocks with the gap.
+     */
+    for(i=0; i<UNEWTRIE2_INDEX_GAP_LENGTH; ++i) {
+        trie->index2[UNEWTRIE2_INDEX_GAP_OFFSET+i]=-1;
     }
+#endif  /* UTRIE2_VERSION_B */
 
     /* set the indexes in the null index-2 block */
     for(i=0; i<UTRIE2_INDEX_2_BLOCK_LENGTH; ++i) {
         trie->index2[UNEWTRIE2_INDEX_2_NULL_OFFSET+i]=UNEWTRIE2_DATA_NULL_OFFSET;
     }
-    trie->map[UNEWTRIE2_DATA_NULL_OFFSET>>UTRIE2_SHIFT_2]+=UTRIE2_INDEX_2_BLOCK_LENGTH;
     trie->index2NullOffset=UNEWTRIE2_INDEX_2_NULL_OFFSET;
     trie->index2Length=UNEWTRIE2_INDEX_2_START_OFFSET;
 
     /* set the index-1 indexes for the linear index-2 block */
-    for(i=0, j=0; i<(UTRIE2_INDEX_2_ASCII_LENGTH>>UTRIE2_SHIFT_1_2); ++i, j+=UTRIE2_INDEX_2_BLOCK_LENGTH) {
+    for(i=0, j=0;
+        i<(UTRIE2_INDEX_2_ASCII_LENGTH>>UTRIE2_SHIFT_1_2);
+        ++i, j+=UTRIE2_INDEX_2_BLOCK_LENGTH
+    ) {
         trie->index1[i]=j;
     }
 
@@ -841,6 +980,7 @@ utrie2_open(uint32_t initialValue, uint32_t errorValue, UErrorCode *pErrorCode) 
         trie->index1[i]=UNEWTRIE2_INDEX_2_NULL_OFFSET;
     }
 
+#if !UTRIE2_VERSION_B
     /*
      * Special index-2 blocks for 3-byte UTF-8 lead bytes E0 and ED.
      * Put the ED block first so that its second half can overlap nicely
@@ -848,6 +988,7 @@ utrie2_open(uint32_t initialValue, uint32_t errorValue, UErrorCode *pErrorCode) 
      */
     trie->edOffset=allocIndex2Block(trie);
     trie->e0Offset=allocIndex2Block(trie);
+#endif  /* UTRIE2_VERSION_B */
 
     /*
      * Preallocate and reset data for U+0080..U+07ff,
@@ -886,8 +1027,10 @@ utrie2_clone(const UNewTrie2 *other) {
     uprv_memcpy(trie->index1, other->index1, sizeof(trie->index1));
     uprv_memcpy(trie->index2, other->index2, other->index2Length*4);
     trie->index2NullOffset=other->index2NullOffset;
+#if !UTRIE2_VERSION_B
     trie->e0Offset=other->e0Offset;
     trie->edOffset=other->edOffset;
+#endif  /* UTRIE2_VERSION_B */
     trie->index2Length=other->index2Length;
 
     uprv_memcpy(trie->data, other->data, other->dataLength*4);
@@ -904,6 +1047,9 @@ utrie2_clone(const UNewTrie2 *other) {
 
     trie->initialValue=other->initialValue;
     trie->errorValue=other->errorValue;
+#if UTRIE2_VERSION_B
+    trie->highStart=other->highStart;
+#endif  /* UTRIE2_VERSION_B */
     trie->isCompacted=other->isCompacted;
 
     return trie;
@@ -946,6 +1092,11 @@ utrie2_get32(const UNewTrie2 *trie, UChar32 c) {
     if((uint32_t)c>0x10ffff) {
         return trie->errorValue;
     }
+#if UTRIE2_VERSION_B
+    if(c>=trie->highStart) {
+        return trie->data[trie->dataLength-UTRIE2_DATA_GRANULARITY];
+    }
+#endif  /* UTRIE2_VERSION_B */
 
     block=trie->index2[
             trie->index1[c>>UTRIE2_SHIFT_1]+
@@ -969,7 +1120,6 @@ allocIndex2Block(UNewTrie2 *trie) {
     }
     trie->index2Length=newTop;
     uprv_memcpy(trie->index2+newBlock, trie->index2+trie->index2NullOffset, UTRIE2_INDEX_2_BLOCK_LENGTH*4);
-    trie->map[trie->dataNullOffset>>UTRIE2_SHIFT_2]+=UTRIE2_INDEX_2_BLOCK_LENGTH;
     return newBlock;
 }
 
@@ -1345,6 +1495,90 @@ findSameDataBlock(const uint32_t *data, int32_t dataLength, int32_t otherBlock, 
     return -1;
 }
 
+#if UTRIE2_VERSION_B
+
+/*
+ * Find the start of the last range in the trie by enumerating backward.
+ * Indexes for supplementary code points higher than this will be omitted.
+ */
+static UChar32
+findHighStart(UNewTrie2 *trie) {
+    const uint32_t *data32;
+
+    uint32_t value, initialValue, highValue;
+    UChar32 c, prev;
+    int32_t i1, i2, j, i2Block, prevI2Block, index2NullOffset, block, prevBlock, nullBlock;
+
+    data32=trie->data;
+    initialValue=trie->initialValue;
+    highValue=utrie2_get32(trie, 0x10ffff);
+
+    index2NullOffset=trie->index2NullOffset;
+    nullBlock=trie->dataNullOffset;
+
+    /* set variables for previous range */
+    if(highValue==initialValue) {
+        prevI2Block=index2NullOffset;
+        prevBlock=nullBlock;
+    } else {
+        prevI2Block=-1;
+        prevBlock=-1;
+    }
+    prev=0x110000;
+
+    /* enumerate index-2 blocks */
+    i1=UTRIE2_INDEX_1_LENGTH;
+    c=prev;
+    while(c>0) {
+        i2Block=trie->index1[--i1];
+        if(i2Block==prevI2Block) {
+            /* the index-2 block is the same as the previous one, and filled with highValue */
+            c-=UTRIE2_CP_PER_INDEX_1_ENTRY;
+            continue;
+        }
+        prevI2Block=i2Block;
+        if(i2Block==index2NullOffset) {
+            /* this is the null index-2 block */
+            if(highValue!=initialValue) {
+                return c;
+            }
+            c-=UTRIE2_CP_PER_INDEX_1_ENTRY;
+        } else {
+            /* enumerate data blocks for one index-2 block */
+            for(i2=UTRIE2_INDEX_2_BLOCK_LENGTH; i2>0;) {
+                block=trie->index2[i2Block+ --i2];
+                if(block==prevBlock) {
+                    /* the block is the same as the previous one, and filled with highValue */
+                    c-=UTRIE2_DATA_BLOCK_LENGTH;
+                    continue;
+                }
+                prevBlock=block;
+                if(block==nullBlock) {
+                    /* this is the null data block */
+                    if(highValue!=initialValue) {
+                        return c;
+                    }
+                    c-=UTRIE2_DATA_BLOCK_LENGTH;
+                } else {
+                    for(j=UTRIE2_DATA_BLOCK_LENGTH; j>0;) {
+                        value=data32[block+ --j];
+                        if(value!=highValue) {
+                            return c;
+                        }
+                        --c;
+                    }
+                }
+            }
+        }
+    }
+
+    /* deliver last range */
+    /* TODO: write test for this */
+    return 0;
+}
+
+#else  /* UTRIE2_VERSION_B */
+
 static void
 addUTF8Index2Blocks(UNewTrie2 *trie) {
     int32_t i, normal_e0, normal_ed, u8_e0, u8_ed;
@@ -1376,6 +1610,8 @@ addUTF8Index2Blocks(UNewTrie2 *trie) {
     }
 }
 
+#endif  /* UTRIE2_VERSION_B */
+
 /*
  * Compact a build-time trie.
  *
@@ -1394,18 +1630,44 @@ compactData(UNewTrie2 *trie) {
     int32_t blockLength, overlap;
     int32_t i, mapIndex, blockCount;
 
+    /* do not compact linear-ASCII data */
+    newStart=UTRIE2_DATA_START_OFFSET;
+    for(start=0, i=0; start<newStart; start+=UTRIE2_DATA_BLOCK_LENGTH, ++i) {
+        trie->map[i]=start;
+    }
+#if TRY_TO_SQUEEZE_OUT_NULL_BLOCKS
+    /*
+     * Find more null data blocks so that we don't set the
+     * dataNullOffset to "no block" when there is in fact one.
+     */
+    blockLength=64;
+    for(start=UNEWTRIE2_DATA_START_OFFSET; start<trie->dataLength; start+=blockLength;) {
+        if(start==UNEWTRIE2_DATA_0800_OFFSET) {
+            blockLength=UTRIE2_DATA_BLOCK_LENGTH;
+        }
+
+        /* skip blocks that are not used */
+        if(trie->map[start>>UTRIE2_SHIFT_2]>0) {
+            for(i=0; i<blockLength && trie->data[start+i]==trie->initialValue; ++i) {}
+            if(i==blockLength) {
+                /* move the reference count from the other null data block to the canonical one */
+                trie->map[trie->dataNullOffset>>UTRIE2_SHIFT_2]+=
+                    trie->map[start>>UTRIE2_SHIFT_2];
+                trie->map[start>>UTRIE2_SHIFT_2]=0;
+            }
+        }
+    }
+    if(trie->map[trie->dataNullOffset>>UTRIE2_SHIFT_2]==0) {
+        trie->dataNullOffset=-1;
+    }
+#endif
+
     /*
      * Start with a block length of 64 for 2-byte UTF-8,
      * then switch to UTRIE2_DATA_BLOCK_LENGTH.
      */
     blockLength=64;
     blockCount=blockLength>>UTRIE2_SHIFT_2;
-
-    /* do not compact linear-ASCII data */
-    newStart=UTRIE2_DATA_START_OFFSET;
-    for(start=0, i=0; start<newStart; start+=UTRIE2_DATA_BLOCK_LENGTH, ++i) {
-        trie->map[i]=start;
-    }
     for(start=newStart; start<trie->dataLength;) {
         /*
          * start: index of first entry of current block
@@ -1475,7 +1737,13 @@ compactData(UNewTrie2 *trie) {
     for(i=0; i<trie->index2Length; ++i) {
         trie->index2[i]=trie->map[trie->index2[i]>>UTRIE2_SHIFT_2];
     }
+#if TRY_TO_SQUEEZE_OUT_NULL_BLOCKS
+    if(trie->dataNullOffset>=0) {
+        trie->dataNullOffset=trie->map[trie->dataNullOffset>>UTRIE2_SHIFT_2];
+    }
+#else
     trie->dataNullOffset=trie->map[trie->dataNullOffset>>UTRIE2_SHIFT_2];
+#endif
 
     /* ensure dataLength alignment */
     /* TODO: was  while((newStart&(UTRIE2_DATA_GRANULARITY-1))!=0) { */
@@ -1498,17 +1766,45 @@ static void
 compactIndex2(UNewTrie2 *trie) {
     int32_t i, start, newStart, movedStart, overlap;
 
-    /* do not compact linear-ASCII data */
+    /* do not compact linear-ASCII index-2 blocks */
     newStart=UTRIE2_INDEX_2_ASCII_LENGTH;
     for(start=0, i=0; start<newStart; start+=UTRIE2_INDEX_2_BLOCK_LENGTH, ++i) {
         trie->map[i]=start;
     }
-    for(start=newStart; start<trie->index2Length;) {
+#if UTRIE2_VERSION_B
+
+    /* Reduce the index table gap to what will be needed at runtime. */
+    newStart+=UTRIE2_UTF8_2B_INDEX_2_LENGTH+((trie->highStart-0x10000)>>UTRIE2_SHIFT_1);
+
+#if TRY_TO_SQUEEZE_OUT_NULL_BLOCKS
+    /*
+     * TODO: if no null data block, then no null index-2 block,
+     * and begin the loop with start one block higher
+     *
+     * also, the null data block might be used but there might still not be a
+     * null index-2 block
+     *
+     * probably all too complicated
+     */
+#endif
+#endif  /* UTRIE2_VERSION_B */
+    for(start=UNEWTRIE2_INDEX_2_NULL_OFFSET; start<trie->index2Length;) {
         /*
          * start: index of first entry of current block
          * newStart: index where the current block is to be moved
          *           (right after current end of already-compacted data)
          */
+
+#if TRY_TO_SQUEEZE_OUT_NULL_BLOCKS
+        /* skip blocks that are not used */
+        if(trie->map[start>>UTRIE2_SHIFT_1_2]==0) {
+            /* advance start to the next block */
+            start+=UTRIE2_INDEX_2_BLOCK_LENGTH;
+
+            /* leave newStart with the previous block! */
+            continue;
+        }
+#endif
 
         /* search for an identical block */
         if( (movedStart=findSameIndex2Block(trie->index2, newStart, start))
@@ -1551,8 +1847,10 @@ compactIndex2(UNewTrie2 *trie) {
         trie->index1[i]=trie->map[trie->index1[i]>>UTRIE2_SHIFT_1_2];
     }
     trie->index2NullOffset=trie->map[trie->index2NullOffset>>UTRIE2_SHIFT_1_2];
+#if !UTRIE2_VERSION_B
     trie->e0Offset=trie->map[trie->e0Offset>>UTRIE2_SHIFT_1_2];
     trie->edOffset=trie->map[trie->edOffset>>UTRIE2_SHIFT_1_2];
+#endif  /* UTRIE2_VERSION_B */
 
     /*
      * Ensure data table alignment:
@@ -1586,6 +1884,9 @@ utrie2_serialize(UNewTrie2 *trie, UTrie2ValueBits valueBits,
     int32_t i, length;
     int32_t allIndexesLength;
     int32_t dataMove;  /* >0 if the data is moved to the end of the index array */
+#if UTRIE2_VERSION_B
+    UChar32 highStart;
+#endif  /* UTRIE2_VERSION_B */
 
     /* argument check */
     if(U_FAILURE(*pErrorCode)) {
@@ -1602,13 +1903,77 @@ utrie2_serialize(UNewTrie2 *trie, UTrie2ValueBits valueBits,
 
     /* compact if necessary */
     if(!trie->isCompacted) {
+#if UTRIE2_VERSION_B
+        UChar32 suppHighStart;
+        uint32_t highValue;
+
+        /* find highStart and round it up */
+        highStart=findHighStart(trie);
+        highStart=(highStart+(UTRIE2_CP_PER_INDEX_1_ENTRY-1))&~(UTRIE2_CP_PER_INDEX_1_ENTRY-1);
+        highValue=highStart<0x110000 ? utrie2_get32(trie, highStart) : trie->initialValue;
+
+        /*
+         * Set trie->highStart only after utrie2_get32(trie, highStart) and
+         * writing the highValue into the data array.
+         * Otherwise utrie2_get32(trie, highStart) would try to read the highValue.
+         */
+        trie->highStart=highStart;
+
+        /* Blank out [highStart..110000[ to release associated data blocks. */
+        suppHighStart= highStart<=0x10000 ? 0x10000 : highStart;
+        utrie2_setRange32(trie, suppHighStart, 0x110000, trie->initialValue, TRUE);
+
+#if TRY_TO_SQUEEZE_OUT_NULL_BLOCKS
+        /* Don't count this usage of the null data block, in case we can get rid of it. */
+        trie->map[trie->dataNullOffset>>UTRIE2_SHIFT_2]-=
+            (0x110000-suppHighStart)>>UTRIE2_SHIFT_2;
+        /*
+         * problems with squeezing out the null blocks:
+         * a) then we need to store the initialValue in another special place
+         *    like the highValue, and
+         * b) this is probably all too complicated and not worth it
+         *    since it's really useful only when someone uses an initialValue
+         *    that is not actually the default value
+         */
+#endif
+
+        compactData(trie);
+        if(highStart>0x10000) {
+            compactIndex2(trie);
+        }
+
+        /*
+         * Store the highValue in the data array and round up the dataLength.
+         * Must be done after compactData() because that assumes that dataLength
+         * is a multiple of UTRIE2_DATA_BLOCK_LENGTH.
+         */
+        trie->data[trie->dataLength++]=highValue;
+        while((trie->dataLength&(UTRIE2_DATA_GRANULARITY-1))!=0) {
+            /* Set initialValue in case this is used with utrie2_getData(). */
+            trie->data[trie->dataLength++]=trie->initialValue;
+        }
+
+#else  /* UTRIE2_VERSION_B */
         addUTF8Index2Blocks(trie);
         compactData(trie);
         compactIndex2(trie);
+#endif  /* UTRIE2_VERSION_B */
         trie->isCompacted=TRUE;
+#if UTRIE2_VERSION_B
+    } else {
+        highStart=trie->highStart;
+#endif  /* UTRIE2_VERSION_B */
     }
 
+#if UTRIE2_VERSION_B
+    if(highStart<=0x10000) {
+        allIndexesLength=UTRIE2_INDEX_1_OFFSET;
+    } else {
+        allIndexesLength=trie->index2Length;
+    }
+#else  /* UTRIE2_VERSION_B */
     allIndexesLength=UTRIE2_INDEX_2_OFFSET+trie->index2Length;
+#endif  /* UTRIE2_VERSION_B */
 
     if(valueBits==UTRIE2_16_VALUE_BITS) {
         dataMove=allIndexesLength;
@@ -1617,7 +1982,7 @@ utrie2_serialize(UNewTrie2 *trie, UTrie2ValueBits valueBits,
     }
 
     /* are indexLength and dataLength within limits? */
-    if( (UTRIE2_INDEX_2_OFFSET+trie->index2Length)>UTRIE2_MAX_INDEX_LENGTH ||
+    if( allIndexesLength>UTRIE2_MAX_INDEX_LENGTH ||
         /* for unshifted 2-byte UTF-8 index-2 values */
         (dataMove+UNEWTRIE2_DATA_0800_OFFSET)>0xffff ||
         (dataMove+trie->dataLength)>UTRIE2_MAX_DATA_LENGTH
@@ -1650,6 +2015,15 @@ utrie2_serialize(UNewTrie2 *trie, UTrie2ValueBits valueBits,
     header->shiftedDataLength=(uint16_t)(trie->dataLength>>2); /* TODO: was  UTRIE2_INDEX_SHIFT); */
     header->index2NullOffset=(uint16_t)(UTRIE2_INDEX_2_OFFSET+trie->index2NullOffset);
     header->dataNullOffset=(uint16_t)((dataMove+trie->dataNullOffset)>>UTRIE2_INDEX_SHIFT);
+#if UTRIE2_VERSION_B
+    header->shiftedHighStart=(uint16_t)(highStart>>UTRIE2_SHIFT_1);
+
+    /* write the index-2 array values shifted right by UTRIE2_INDEX_SHIFT, after adding dataMove */
+    p=(uint32_t *)trie->index2;
+    for(i=UTRIE2_INDEX_2_ASCII_LENGTH; i>0; --i) {
+        *dest16++=(uint16_t)((dataMove + *p++)>>UTRIE2_INDEX_SHIFT);
+    }
+#else  /* UTRIE2_VERSION_B */
     header->reserved=0;
 
     /* write 16-bit index-1 values, after adding UTRIE2_INDEX_2_OFFSET */
@@ -1667,6 +2041,7 @@ utrie2_serialize(UNewTrie2 *trie, UTrie2ValueBits valueBits,
     for(++i; i<(0x10000>>UTRIE2_SHIFT_1); ++i) {                    /* EE..EF */
         *dest16++=(uint16_t)(UTRIE2_INDEX_2_OFFSET+trie->index1[i]);
     }
+#endif  /* UTRIE2_VERSION_B */
 
     /* write UTF-8 2-byte index-2 values, not right-shifted */
     for(i=0; i<(0xc2-0xc0); ++i) {                                  /* C0..C1 */
@@ -1676,11 +2051,33 @@ utrie2_serialize(UNewTrie2 *trie, UTrie2ValueBits valueBits,
         *dest16++=(uint16_t)(dataMove+trie->index2[i<<(6-UTRIE2_SHIFT_2)]);
     }
 
+#if UTRIE2_VERSION_B
+    if(highStart>0x10000) {
+        int32_t index1Length=(highStart-0x10000)>>UTRIE2_SHIFT_1;
+        int32_t index2Offset=UTRIE2_INDEX_2_ASCII_LENGTH+UTRIE2_UTF8_2B_INDEX_2_LENGTH+index1Length;
+
+        /* write 16-bit index-1 values for supplementary code points */
+        p=(uint32_t *)trie->index1+UTRIE2_OMITTED_BMP_INDEX_1_LENGTH;
+        for(i=index1Length; i>0; --i) {
+            *dest16++=(uint16_t)(UTRIE2_INDEX_2_OFFSET + *p++);
+        }
+
+        /*
+         * write the index-2 array values for supplementary code points,
+         * shifted right by UTRIE2_INDEX_SHIFT, after adding dataMove
+         */
+        p=(uint32_t *)trie->index2+index2Offset;
+        for(i=trie->index2Length-index2Offset; i>0; --i) {
+            *dest16++=(uint16_t)((dataMove + *p++)>>UTRIE2_INDEX_SHIFT);
+        }
+    }
+#else  /* UTRIE2_VERSION_B */
     /* write the index-2 array values shifted right by UTRIE2_INDEX_SHIFT, after adding dataMove */
     p=(uint32_t *)trie->index2;
     for(i=trie->index2Length; i>0; --i) {
         *dest16++=(uint16_t)((dataMove + *p++)>>UTRIE2_INDEX_SHIFT);
     }
+#endif  /* UTRIE2_VERSION_B */
 
     /* write the 16/32-bit data array */
     switch(valueBits) {
@@ -1721,6 +2118,147 @@ enumSameValue(const void *context, uint32_t value) {
  * - Handle the null block specially because we know a priori that it is filled
  *   with a single value.
  */
+#if UTRIE2_VERSION_B
+
+static void
+enumEitherTrie(const UTrie2 *runTimeTrie, const UNewTrie2 *newTrie,
+               UTrie2EnumValue *enumValue, UTrie2EnumRange *enumRange, const void *context) {
+    const uint32_t *data32;
+    const uint16_t *index;
+
+    uint32_t value, prevValue, initialValue;
+    UChar32 c, prev, highStart;
+    int32_t i1, i2, j, i2Block, prevI2Block, index2NullOffset, block, prevBlock, nullBlock;
+
+    if(enumValue==NULL) {
+        enumValue=enumSameValue;
+    }
+
+    if(runTimeTrie!=NULL) {
+        index=runTimeTrie->index;
+        data32=runTimeTrie->data32;
+
+        highStart=runTimeTrie->highStart;
+
+        /* get the enumeration value that corresponds to an initial-value trie data entry */
+        initialValue=enumValue(context, runTimeTrie->initialValue);
+
+        index2NullOffset=runTimeTrie->index2NullOffset;
+        nullBlock=(int32_t)runTimeTrie->dataNullOffset<<UTRIE2_INDEX_SHIFT;
+    } else {
+        index=NULL;
+        data32=newTrie->data;
+
+        highStart=newTrie->highStart;
+
+        /* get the enumeration value that corresponds to an initial-value trie data entry */
+        initialValue=enumValue(context, newTrie->initialValue);
+
+        index2NullOffset=newTrie->index2NullOffset;
+        nullBlock=newTrie->dataNullOffset;
+    }
+
+    /* set variables for previous range */
+    prevI2Block=-1;
+    prevBlock=-1;
+    prev=0;
+    prevValue=0;
+
+    /* enumerate index-2 blocks */
+    i1=0;
+    i2Block=0;
+    for(c=0; c<highStart;) {
+        if(runTimeTrie!=NULL) {
+            if(c<=0xffff) {
+                i2Block=c>>UTRIE2_SHIFT_2;
+            } else {
+                i2Block=index[UTRIE2_INDEX_1_OFFSET+i1++];
+            }
+        } else {
+            i2Block=newTrie->index1[i1++];
+        }
+        if(i2Block==prevI2Block && (c-prev)>=UTRIE2_CP_PER_INDEX_1_ENTRY) {
+            /* the index-2 block is the same as the previous one, and filled with prevValue */
+            c+=UTRIE2_CP_PER_INDEX_1_ENTRY;
+            continue;
+        }
+        prevI2Block=i2Block;
+        if(i2Block==index2NullOffset) {
+            /* this is the null index-2 block */
+            if(prevValue!=initialValue) {
+                if(prev<c && !enumRange(context, prev, c, prevValue)) {
+                    return;
+                }
+                prevBlock=nullBlock;
+                prev=c;
+                prevValue=initialValue;
+            }
+            c+=UTRIE2_CP_PER_INDEX_1_ENTRY;
+        } else {
+            /* enumerate data blocks for one index-2 block */
+            for(i2=0; i2<UTRIE2_INDEX_2_BLOCK_LENGTH; ++i2) {
+                if(runTimeTrie!=NULL) {
+                    block=(int32_t)index[i2Block+i2]<<UTRIE2_INDEX_SHIFT;
+                } else {
+                    block=newTrie->index2[i2Block+i2];
+                }
+                if(block==prevBlock && (c-prev)>=UTRIE2_DATA_BLOCK_LENGTH) {
+                    /* the block is the same as the previous one, and filled with prevValue */
+                    c+=UTRIE2_DATA_BLOCK_LENGTH;
+                    continue;
+                }
+                prevBlock=block;
+                if(block==nullBlock) {
+                    /* this is the null data block */
+                    if(prevValue!=initialValue) {
+                        if(prev<c && !enumRange(context, prev, c, prevValue)) {
+                            return;
+                        }
+                        prev=c;
+                        prevValue=initialValue;
+                    }
+                    c+=UTRIE2_DATA_BLOCK_LENGTH;
+                } else {
+                    for(j=0; j<UTRIE2_DATA_BLOCK_LENGTH; ++j) {
+                        value=enumValue(context, data32!=NULL ? data32[block+j] : index[block+j]);
+                        if(value!=prevValue) {
+                            if(prev<c && !enumRange(context, prev, c, prevValue)) {
+                                return;
+                            }
+                            prev=c;
+                            prevValue=value;
+                        }
+                        ++c;
+                    }
+                }
+            }
+        }
+    }
+
+    /* c==highStart */
+    if(c<0x110000) {
+        uint32_t highValue;
+        if(runTimeTrie!=NULL) {
+            highValue=runTimeTrie->highValue;
+        } else {
+            highValue=newTrie->data[newTrie->dataLength-UTRIE2_DATA_GRANULARITY];
+        }
+        value=enumValue(context, highValue);
+        if(value!=prevValue) {
+            if(prev<c && !enumRange(context, prev, c, prevValue)) {
+                return;
+            }
+            prev=c;
+            prevValue=value;
+        }
+    }
+
+    /* deliver last range */
+    enumRange(context, prev, 0x110000, prevValue);
+}
+
+#else  /* UTRIE2_VERSION_B */
+
 static void
 enumEitherTrie(const UTrie2 *runTimeTrie, const UNewTrie2 *newTrie,
                UTrie2EnumValue *enumValue, UTrie2EnumRange *enumRange, const void *context) {
@@ -1756,10 +2294,10 @@ enumEitherTrie(const UTrie2 *runTimeTrie, const UNewTrie2 *newTrie,
     }
 
     /* set variables for previous range */
-    prevI2Block=index2NullOffset;
-    prevBlock=nullBlock;
+    prevI2Block=-1;
+    prevBlock=-1;
     prev=0;
-    prevValue=initialValue;
+    prevValue=0;
 
     /* enumerate index-2 blocks */
     for(i1=0, c=0; i1<UTRIE2_INDEX_1_LENGTH; ++i1) {
@@ -1768,9 +2306,9 @@ enumEitherTrie(const UTrie2 *runTimeTrie, const UNewTrie2 *newTrie,
         } else {
             i2Block=newTrie->index1[i1];
         }
-        if(i2Block==prevI2Block && (c-prev)>=(1<<UTRIE2_SHIFT_1)) {
-            /* the index-2 block is the same as the previous one, and filled with value */
-            c+=1<<UTRIE2_SHIFT_1;
+        if(i2Block==prevI2Block && (c-prev)>=UTRIE2_CP_PER_INDEX_1_ENTRY) {
+            /* the index-2 block is the same as the previous one, and filled with prevValue */
+            c+=UTRIE2_CP_PER_INDEX_1_ENTRY;
             continue;
         }
         prevI2Block=i2Block;
@@ -1784,7 +2322,7 @@ enumEitherTrie(const UTrie2 *runTimeTrie, const UNewTrie2 *newTrie,
                 prev=c;
                 prevValue=initialValue;
             }
-            c+=1<<UTRIE2_SHIFT_1;
+            c+=UTRIE2_CP_PER_INDEX_1_ENTRY;
         } else {
             /* enumerate data blocks for one index-2 block */
             for(i2=0; i2<UTRIE2_INDEX_2_BLOCK_LENGTH; ++i2) {
@@ -1794,7 +2332,7 @@ enumEitherTrie(const UTrie2 *runTimeTrie, const UNewTrie2 *newTrie,
                     block=newTrie->index2[i2Block+i2];
                 }
                 if(block==prevBlock && (c-prev)>=UTRIE2_DATA_BLOCK_LENGTH) {
-                    /* the block is the same as the previous one, and filled with value */
+                    /* the block is the same as the previous one, and filled with prevValue */
                     c+=UTRIE2_DATA_BLOCK_LENGTH;
                     continue;
                 }
@@ -1830,6 +2368,8 @@ enumEitherTrie(const UTrie2 *runTimeTrie, const UNewTrie2 *newTrie,
     enumRange(context, prev, c, prevValue);
 }
 
+#endif  /* UTRIE2_VERSION_B */
+
 U_CAPI void U_EXPORT2
 utrie2_enum(const UTrie2 *trie,
             UTrie2EnumValue *enumValue, UTrie2EnumRange *enumRange, const void *context) {
@@ -1863,11 +2403,21 @@ utrie2_enumNewTrieForLeadSurrogate(const UNewTrie2 *newTrie, UChar32 lead,
     if(enumValue==NULL) {
         enumValue=enumSameValue;
     }
-    /* get the enumeration value that corresponds to an initial-value trie data entry */
-    prevValue=enumValue(context, newTrie->initialValue);
 
     lead-=0xd7c0;                   /* start code point shifted right by 10 (lead=c>>10) */
     prev=c=lead<<10;                /* start code point */
+#if UTRIE2_VERSION_B
+    if(c>=newTrie->highStart) {
+        enumRange(context,
+                  c, c+0x400,
+                  enumValue(context, newTrie->data[newTrie->dataLength-UTRIE2_DATA_GRANULARITY]));
+        return;
+    }
+#endif  /* UTRIE2_VERSION_B */
+
+    /* get the enumeration value that corresponds to an initial-value trie data entry */
+    prevValue=enumValue(context, newTrie->initialValue);
+
     i1=lead>>(UTRIE2_SHIFT_1-10);   /* >>2 */
     i2=newTrie->index1[i1];         /* same index-2 block for all of these 1024 code points */
     if(i2==newTrie->index2NullOffset) {
@@ -1884,12 +2434,13 @@ utrie2_enumNewTrieForLeadSurrogate(const UNewTrie2 *newTrie, UChar32 lead,
 
         /* enumerate data blocks for a quarter of this index-2 block */
         /* i2+=((c>>6)&0x3f)=((lead<<4)&0x3f)=((lead&3)<<4) where 6==UTRIE2_SHIFT_2 */
+        /* TODO: fix comments */
         i2+=(c>>UTRIE2_SHIFT_2)&UTRIE2_INDEX_2_MASK;
         i2Limit=i2+(0x400>>UTRIE2_SHIFT_2); /* +0x10 */
         for(; i2<i2Limit; ++i2) {
             block=newTrie->index2[i2];
             if(block==prevBlock && (c-prev)>=UTRIE2_DATA_BLOCK_LENGTH) {
-                /* the block is the same as the previous one, and filled with value */
+                /* the block is the same as the previous one, and filled with prevValue */
                 c+=UTRIE2_DATA_BLOCK_LENGTH;
                 continue;
             }

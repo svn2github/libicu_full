@@ -793,9 +793,11 @@ static const SetRange
 setRanges3[]={
     { 0x31,     0xa4,     1, FALSE },
     { 0x3400,   0x6789,   2, FALSE },
-    { 0x30000,  0x34567,  9, TRUE },
-    { 0x38000,  0x40000,  4, TRUE },
-    { 0x45678,  0x56789,  3, TRUE }
+    { 0x8000,   0x89ab,   9, TRUE },
+    { 0x9000,   0xa000,   4, TRUE },
+    { 0xabcd,   0xbcde,   3, TRUE },
+    { 0x55555,  0x110000, 6, TRUE },  /* highStart<U+ffff with non-initialValue */
+    { 0xcccc,   0x55555,  6, TRUE }
 };
 
 static const CheckRange
@@ -805,11 +807,12 @@ checkRanges3[]={
     { 0xa4,     1 },
     { 0x3400,   9 },
     { 0x6789,   2 },
-    { 0x38000,  9 },
-    { 0x40000,  4 },
-    { 0x45678,  9 },
-    { 0x56789,  3 },
-    { 0x110000, 9 }
+    { 0x9000,   9 },
+    { 0xa000,   4 },
+    { 0xabcd,   9 },
+    { 0xbcde,   3 },
+    { 0xcccc,   9 },
+    { 0x110000, 6 }
 };
 
 static void
