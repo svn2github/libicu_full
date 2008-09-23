@@ -362,7 +362,7 @@ testTrieUTF16(const char *testName,
     }
 }
 
-#if (_SHIFT_1+_SHIFT_2)==12
+#if UTRIE2_VERSION_B || (_SHIFT_1+_SHIFT_2)==12
 static void
 testTrieUTF8(const char *testName,
              const UTrie2 *trie, UTrie2ValueBits valueBits,
@@ -507,7 +507,7 @@ testTrieRunTime(const char *testName,
     testTrieGetters(testName, trie, valueBits, checkRanges, countCheckRanges);
     testTrieEnum(testName, trie, checkRanges, countCheckRanges);
     testTrieUTF16(testName, trie, valueBits, checkRanges, countCheckRanges);
-#if (_SHIFT_1+_SHIFT_2)==12
+#if UTRIE2_VERSION_B || (_SHIFT_1+_SHIFT_2)==12
     testTrieUTF8(testName, trie, valueBits, checkRanges, countCheckRanges);
 #endif
 }
