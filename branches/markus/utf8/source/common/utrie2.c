@@ -87,25 +87,7 @@ u8Index(const UTrie2 *trie, UChar32 c, int32_t i) {
     int32_t index;
     if(c>=0) {
 #if UTRIE2_VERSION_B
-        if(c>=trie->highStart) {
-            index=trie->dataLength-UTRIE2_DATA_GRANULARITY;
-            if(trie->data32==NULL) {
-                index+=trie->indexLength;  /* 16-bit trie */
-            }
-        } else if(c<=0xffff) {
-            index=
-                ((int32_t)(trie->index[c>>UTRIE2_SHIFT_2])
-                <<UTRIE2_INDEX_SHIFT)+
-                (c&UTRIE2_DATA_MASK);
-        } else {
-            index=
-                ((int32_t)(trie->index[
-                    trie->index[(UTRIE2_INDEX_1_OFFSET-UTRIE2_OMITTED_BMP_INDEX_1_LENGTH)+
-                                (c>>UTRIE2_SHIFT_1)]+
-                    ((c>>UTRIE2_SHIFT_2)&UTRIE2_INDEX_2_MASK)])
-                <<UTRIE2_INDEX_SHIFT)+
-                (c&UTRIE2_DATA_MASK);
-        }
+        index=_UTRIE2_INDEX_FROM_CP(trie, c);
 #else  /* UTRIE2_VERSION_B */
         index=
             ((int32_t)(trie->index[ \
@@ -212,6 +194,10 @@ utrie2_unserialize(UTrie2 *trie, UTrie2ValueBits valueBits,
 
 #if UTRIE2_VERSION_B
     trie->highStart=header->shiftedHighStart<<UTRIE2_SHIFT_1;
+    trie->highValueIndex=trie->dataLength-UTRIE2_DATA_GRANULARITY;
+    if(valueBits==UTRIE2_16_VALUE_BITS) {
+        trie->highValueIndex+=trie->indexLength;
+    }
 #endif  /* UTRIE2_VERSION_B */
 
     length-=(int32_t)sizeof(UTrie2Header);
@@ -238,9 +224,6 @@ utrie2_unserialize(UTrie2 *trie, UTrie2ValueBits valueBits,
         trie->data32=NULL;
         trie->initialValue=trie->index[(int32_t)trie->dataNullOffset<<UTRIE2_INDEX_SHIFT];  /* TODO: revisit shift */
         trie->errorValue=trie->data16[UTRIE2_BAD_UTF8_DATA_OFFSET];
-#if UTRIE2_VERSION_B
-        trie->highValue=trie->data16[trie->dataLength-UTRIE2_DATA_GRANULARITY];
-#endif  /* UTRIE2_VERSION_B */
         length=(int32_t)sizeof(UTrie2Header)+2*trie->indexLength+2*trie->dataLength;
         break;
     case UTRIE2_32_VALUE_BITS:
@@ -252,9 +235,6 @@ utrie2_unserialize(UTrie2 *trie, UTrie2ValueBits valueBits,
         trie->data32=(const uint32_t *)p16;
         trie->initialValue=trie->data32[(int32_t)trie->dataNullOffset<<UTRIE2_INDEX_SHIFT];
         trie->errorValue=trie->data32[UTRIE2_BAD_UTF8_DATA_OFFSET];
-#if UTRIE2_VERSION_B
-        trie->highValue=trie->data32[trie->dataLength-UTRIE2_DATA_GRANULARITY];
-#endif  /* UTRIE2_VERSION_B */
         length=(int32_t)sizeof(UTrie2Header)+2*trie->indexLength+4*trie->dataLength;
         break;
     default:
@@ -344,12 +324,12 @@ utrie2_unserializeDummy(UTrie2 *trie,
     trie->indexLength=indexLength;
     trie->dataLength=dataLength;
     trie->index2NullOffset=UTRIE2_INDEX_2_OFFSET;
-    trie->dataNullOffset=(uint16_t)(dataMove>>UTRIE2_INDEX_SHIFT);
+    trie->dataNullOffset=(uint16_t)(dataMove>>UTRIE2_INDEX_SHIFT);  /* TODO: remove shift? */
     trie->initialValue=initialValue;
     trie->errorValue=errorValue;
 #if UTRIE2_VERSION_B
     trie->highStart=0;
-    trie->highValue=initialValue;
+    trie->highValueIndex=dataMove+UTRIE2_DATA_START_OFFSET;
 #endif  /* UTRIE2_VERSION_B */
 
     /* fill the index and data arrays */
@@ -1910,11 +1890,10 @@ utrie2_serialize(UNewTrie2 *trie, UTrie2ValueBits valueBits,
         /* find highStart and round it up */
         highStart=findHighStart(trie);
         highStart=(highStart+(UTRIE2_CP_PER_INDEX_1_ENTRY-1))&~(UTRIE2_CP_PER_INDEX_1_ENTRY-1);
-        highValue=highStart<0x110000 ? utrie2_get32(trie, highStart) : trie->initialValue;
+        highValue=highStart<0x110000 ? utrie2_get32(trie, highStart) : trie->errorValue;
 
         /*
-         * Set trie->highStart only after utrie2_get32(trie, highStart) and
-         * writing the highValue into the data array.
+         * Set trie->highStart only after utrie2_get32(trie, highStart).
          * Otherwise utrie2_get32(trie, highStart) would try to read the highValue.
          */
         trie->highStart=highStart;
@@ -2239,7 +2218,10 @@ enumEitherTrie(const UTrie2 *runTimeTrie, const UNewTrie2 *newTrie,
     if(c<0x110000) {
         uint32_t highValue;
         if(runTimeTrie!=NULL) {
-            highValue=runTimeTrie->highValue;
+            highValue=
+                data32!=NULL ?
+                    data32[runTimeTrie->highValueIndex] :
+                    index[runTimeTrie->highValueIndex];
         } else {
             highValue=newTrie->data[newTrie->dataLength-UTRIE2_DATA_GRANULARITY];
         }
