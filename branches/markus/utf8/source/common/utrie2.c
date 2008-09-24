@@ -968,6 +968,7 @@ utrie2_open(uint32_t initialValue, uint32_t errorValue, UErrorCode *pErrorCode) 
      */
     trie->edOffset=allocIndex2Block(trie);
     trie->e0Offset=allocIndex2Block(trie);
+    trie->map[trie->dataNullOffset>>UTRIE2_SHIFT_2]+=2*UTRIE2_INDEX_2_BLOCK_LENGTH;
 #endif  /* UTRIE2_VERSION_B */
 
     /*
