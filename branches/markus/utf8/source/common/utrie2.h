@@ -29,7 +29,9 @@
 U_CDECL_BEGIN
 
 struct UTrie;  /* forward declaration */
+#ifndef __UTRIE_H__
 typedef struct UTrie UTrie;
+#endif
 
 /**
  * \file
