@@ -621,12 +621,12 @@ extern U_IMPORT char *U_TZNAME[];
 #define TZDEFAULT       "/etc/localtime"
 #define TZZONEINFO      "/usr/share/zoneinfo/"
 #endif
-static char gTimeZoneBuffer[PATH_MAX];
-static char *gTimeZoneBufferPtr = NULL;
-#endif
 #if U_HAVE_DIRENT_H
 #define SEARCH_TZFILE
 #include <dirent.h>  /* Needed to search through system timezone files */
+#endif
+static char gTimeZoneBuffer[PATH_MAX];
+static char *gTimeZoneBufferPtr = NULL;
 #endif
 
 #ifndef U_WINDOWS
@@ -1705,8 +1705,11 @@ int_getDefaultCodepage()
 
 #elif defined(OS390)
     static char codepage[64];
-    sprintf(codepage,"%63s" UCNV_SWAP_LFNL_OPTION_STRING, nl_langinfo(CODESET));
+
+    strncpy(codepage, nl_langinfo(CODESET),63-strlen(UCNV_SWAP_LFNL_OPTION_STRING));
+    strcat(codepage,UCNV_SWAP_LFNL_OPTION_STRING);
     codepage[63] = 0; /* NULL terminate */
+
     return codepage;
 
 #elif defined(XP_MAC)
