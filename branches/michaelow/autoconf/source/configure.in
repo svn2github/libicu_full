@@ -1,8 +1,11 @@
-dnl -*-m4-*- 
+dnl -*-m4-*-
 dnl configure.in for ICU
 dnl Copyright (c) 1999-2008, International Business Machines Corporation and
 dnl others. All Rights Reserved.
 dnl Stephen F. Booth, heavily modified by Yves and others
+
+dnl Check for autoconf version
+AC_PREREQ(2.63)
 
 dnl Process this file with autoconf to produce a configure script
 AC_INIT
@@ -458,6 +461,16 @@ fi
 
 AC_SUBST(U_HAVE_INTTYPES_H)
 
+AC_CHECK_HEADERS(dirent.h)
+if test $ac_cv_header_dirent_h = no; then
+ U_HAVE_DIRENT_H=0
+else
+ U_HAVE_DIRENT_H=1
+fi
+
+AC_SUBST(U_HAVE_DIRENT_H)
+
+
 AC_ARG_WITH(iostream,
 	[  --with-iostream=version specify the version of iostream to use (none, old, std, auto) [default=auto]],
 	[case "${withval}" in
@@ -472,7 +485,7 @@ AC_ARG_WITH(iostream,
 U_IOSTREAM_SOURCE=0
 if test x$streams != xnone
 then
-    AC_LANG_PUSH([C++])
+    AC_LANG_PUSH(C++)
     OLD_CXXFLAGS="${CXXFLAGS}"
     case "${icu_cv_host_frag}" in
         mh-hpux-acc)
@@ -521,7 +534,7 @@ then
     fi
 fi
 AC_SUBST(U_IOSTREAM_SOURCE)
-AC_LANG_POP([])
+AC_LANG_POP
 
 dnl Check for endianness
 AC_C_BIGENDIAN()
@@ -556,7 +569,7 @@ AC_SUBST(U_HAVE_NL_LANGINFO_CODESET)
 AC_SUBST(U_NL_LANGINFO_CODESET)
 
 dnl Namespace support checks
-AC_LANG([C++])
+AC_LANG(C++)
 AC_MSG_CHECKING([for namespace support])
 AC_CACHE_VAL(ac_cv_namespace_ok,
     [AC_LINK_IFELSE([AC_LANG_PROGRAM([[changequote(<<, >>)dnl
@@ -616,7 +629,7 @@ fi
 AC_SUBST(U_OVERRIDE_CXX_ALLOCATION)
 AC_SUBST(U_HAVE_PLACEMENT_NEW)
 
-AC_LANG([C])
+AC_LANG(C)
 AC_CHECK_FUNC(popen)
 if test x$ac_cv_func_popen = xyes
 then
