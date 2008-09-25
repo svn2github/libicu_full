@@ -110,7 +110,7 @@ testNewTrieEnum(const char *testName,
         ++checkRanges;
         --countCheckRanges;
     }
-    utrie2_enumNewTrie(newTrie, testEnumValue, testEnumRange, &checkRanges);
+    unewtrie2_enum(newTrie, testEnumValue, testEnumRange, &checkRanges);
 }
 
 /* verify all expected values via UTRIE2_GETxx() */
@@ -238,16 +238,16 @@ testNewTrieGetters(const char *testName,
         value=checkRanges[i].value;
 
         while(start<limit) {
-            if(value!=utrie2_get32(newTrie, start)) {
+            if(value!=unewtrie2_get32(newTrie, start)) {
                 log_err("error: newTrie(%s)[U+%04lx]==0x%lx instead of 0x%lx\n",
-                        testName, (long)start, (long)utrie2_get32(newTrie, start), (long)value);
+                        testName, (long)start, (long)unewtrie2_get32(newTrie, start), (long)value);
             }
             ++start;
         }
     }
 
-    /* test linear ASCII range from utrie2_getData() */
-    data=utrie2_getData(newTrie, &dataLength);
+    /* test linear ASCII range from unewtrie2_getData() */
+    data=unewtrie2_getData(newTrie, &dataLength);
     start=0;
     for(i=countSpecials; i<countCheckRanges && start<=0x7f; ++i) {
         limit=checkRanges[i].limit;
@@ -269,8 +269,8 @@ testNewTrieGetters(const char *testName,
         ++start;
     }
 
-    value=utrie2_get32(newTrie, -1);
-    value2=utrie2_get32(newTrie, 0x110000);
+    value=unewtrie2_get32(newTrie, -1);
+    value2=unewtrie2_get32(newTrie, 0x110000);
     if(value!=errorValue || value2!=errorValue) {
         log_err("error: newTrie(%s).get(out of range) != errorValue\n",
                 testName);
@@ -513,20 +513,20 @@ testTrieSerialize(const char *testName,
     UErrorCode errorCode;
 
     errorCode=U_ZERO_ERROR;
-    length1=utrie2_serialize(newTrie, valueBits, NULL, 0, &errorCode);
+    length1=unewtrie2_serialize(newTrie, valueBits, NULL, 0, &errorCode);
     if(errorCode!=U_BUFFER_OVERFLOW_ERROR) {
-        log_err("error: utrie2_serialize(%s) preflighting set %s != U_BUFFER_OVERFLOW_ERROR\n",
+        log_err("error: unewtrie2_serialize(%s) preflighting set %s != U_BUFFER_OVERFLOW_ERROR\n",
                 testName, u_errorName(errorCode));
         return;
     }
     errorCode=U_ZERO_ERROR;
-    length2=utrie2_serialize(newTrie, valueBits, storage, sizeof(storage), &errorCode);
+    length2=unewtrie2_serialize(newTrie, valueBits, storage, sizeof(storage), &errorCode);
     if(errorCode==U_BUFFER_OVERFLOW_ERROR) {
-        log_err("error: utrie2_serialize(%s) needs more memory\n", testName);
+        log_err("error: unewtrie2_serialize(%s) needs more memory\n", testName);
         return;
     }
     if(U_FAILURE(errorCode)) {
-        log_err("error: utrie2_serialize(%s) failed: %s\n", testName, u_errorName(errorCode));
+        log_err("error: unewtrie2_serialize(%s) failed: %s\n", testName, u_errorName(errorCode));
         return;
     }
     if(length1!=length2) {
@@ -571,7 +571,7 @@ testTrieSerializeAllValueBits(const char *testName,
 
     /*
      * Test with both valueBits serializations,
-     * and that utrie2_serialize() can be called multiple times.
+     * and that unewtrie2_serialize() can be called multiple times.
      */
     uprv_strcpy(name, testName);
     uprv_strcat(name, ".16");
@@ -579,11 +579,11 @@ testTrieSerializeAllValueBits(const char *testName,
 
     if(withClone) {
         /* try cloning after the first serialization */
-        UNewTrie2 *clone=utrie2_clone(newTrie);
+        UNewTrie2 *clone=unewtrie2_clone(newTrie);
         if(clone==NULL) {
             log_err("error: cloning a UNewTrie2 after serialization failed (%s)\n", testName);
         } else {
-            utrie2_close(newTrie);
+            unewtrie2_close(newTrie);
             newTrie=clone;
 
             testNewTrieGetters(testName, newTrie, checkRanges, countCheckRanges);
@@ -613,9 +613,9 @@ makeNewTrieWithRanges(const char *testName, UBool withClone,
     log_verbose("\ntesting Trie '%s'\n", testName);
     errorCode=U_ZERO_ERROR;
     getSpecialValues(checkRanges, countCheckRanges, &initialValue, &errorValue);
-    newTrie=utrie2_open(initialValue, errorValue, &errorCode);
+    newTrie=unewtrie2_open(initialValue, errorValue, &errorCode);
     if(U_FAILURE(errorCode)) {
-        log_err("error: utrie2_open(%s) failed: %s\n", testName, u_errorName(errorCode));
+        log_err("error: unewtrie2_open(%s) failed: %s\n", testName, u_errorName(errorCode));
         return NULL;
     }
 
@@ -624,11 +624,11 @@ makeNewTrieWithRanges(const char *testName, UBool withClone,
     for(i=0; i<countSetRanges; ++i) {
         if(withClone && i==countSetRanges/2) {
             /* switch to a clone in the middle of setting values */
-            UNewTrie2 *clone=utrie2_clone(newTrie);
+            UNewTrie2 *clone=unewtrie2_clone(newTrie);
             if(clone==NULL) {
                 log_err("error: cloning a UNewTrie2 failed (%s)\n", testName);
             } else {
-                utrie2_close(newTrie);
+                unewtrie2_close(newTrie);
                 newTrie=clone;
             }
         }
@@ -637,16 +637,16 @@ makeNewTrieWithRanges(const char *testName, UBool withClone,
         value=setRanges[i].value;
         overwrite=setRanges[i].overwrite;
         if((limit-start)==1 && overwrite) {
-            ok&=utrie2_set32(newTrie, start, value);
+            ok&=unewtrie2_set32(newTrie, start, value);
         } else {
-            ok&=utrie2_setRange32(newTrie, start, limit, value, overwrite);
+            ok&=unewtrie2_setRange32(newTrie, start, limit, value, overwrite);
         }
     }
     if(ok) {
         return newTrie;
     } else {
         log_err("error: setting values into a trie failed (%s)\n", testName);
-        utrie2_close(newTrie);
+        unewtrie2_close(newTrie);
         return NULL;
     }
 }
@@ -661,7 +661,7 @@ testTrieRanges(const char *testName, UBool withClone,
     if(newTrie!=NULL) {
         newTrie=testTrieSerializeAllValueBits(testName, newTrie, withClone,
                                               checkRanges, countCheckRanges);
-        utrie2_close(newTrie);
+        unewtrie2_close(newTrie);
     }
 }
 
@@ -833,28 +833,28 @@ EnumNewTrieForLeadSurrogateTest(void) {
         const CheckRange *checkRanges;
 
         checkRanges=checkRanges2_d800+1;
-        utrie2_enumNewTrieForLeadSurrogate(newTrie, 0xd800,
-                                           testEnumValue, testEnumRange,
-                                           &checkRanges);
+        unewtrie2_enumForLeadSurrogate(newTrie, 0xd800,
+                                       testEnumValue, testEnumRange,
+                                       &checkRanges);
         checkRanges=checkRanges2_d87e+1;
-        utrie2_enumNewTrieForLeadSurrogate(newTrie, 0xd87e,
-                                           testEnumValue, testEnumRange,
-                                           &checkRanges);
+        unewtrie2_enumForLeadSurrogate(newTrie, 0xd87e,
+                                       testEnumValue, testEnumRange,
+                                       &checkRanges);
         checkRanges=checkRanges2_d87f+1;
-        utrie2_enumNewTrieForLeadSurrogate(newTrie, 0xd87f,
-                                           testEnumValue, testEnumRange,
-                                           &checkRanges);
+        unewtrie2_enumForLeadSurrogate(newTrie, 0xd87f,
+                                       testEnumValue, testEnumRange,
+                                       &checkRanges);
         checkRanges=checkRanges2_dbff+1;
-        utrie2_enumNewTrieForLeadSurrogate(newTrie, 0xdbff,
-                                           testEnumValue, testEnumRange,
-                                           &checkRanges);
-        utrie2_close(newTrie);
+        unewtrie2_enumForLeadSurrogate(newTrie, 0xdbff,
+                                       testEnumValue, testEnumRange,
+                                       &checkRanges);
+        unewtrie2_close(newTrie);
     }
 }
 
 static void
 TrieBuildTest(void) {
-    static const char *const testName="utrie2_build()";
+    static const char *const testName="unewtrie2_build()";
     void *memory;
     UNewTrie2 *newTrie;
     UTrie2 trie;
@@ -864,9 +864,9 @@ TrieBuildTest(void) {
                                   setRanges2, LENGTHOF(setRanges2),
                                   checkRanges2, LENGTHOF(checkRanges2));
     errorCode=U_ZERO_ERROR;
-    memory=utrie2_build(newTrie, UTRIE2_16_VALUE_BITS, &trie, &errorCode);
+    memory=unewtrie2_build(newTrie, UTRIE2_16_VALUE_BITS, &trie, &errorCode);
     if(U_FAILURE(errorCode)) {
-        log_err("error: utrie2_build(%s, UTRIE2_16_VALUE_BITS) failed: %s\n",
+        log_err("error: unewtrie2_build(%s, UTRIE2_16_VALUE_BITS) failed: %s\n",
                 testName, u_errorName(errorCode));
     } else {
         testTrieRunTime(testName, &trie, UTRIE2_16_VALUE_BITS,
@@ -874,16 +874,16 @@ TrieBuildTest(void) {
         uprv_free(memory);
     }
     errorCode=U_ZERO_ERROR;
-    memory=utrie2_build(newTrie, UTRIE2_32_VALUE_BITS, &trie, &errorCode);
+    memory=unewtrie2_build(newTrie, UTRIE2_32_VALUE_BITS, &trie, &errorCode);
     if(U_FAILURE(errorCode)) {
-        log_err("error: utrie2_build(%s, UTRIE2_32_VALUE_BITS) failed: %s\n",
+        log_err("error: unewtrie2_build(%s, UTRIE2_32_VALUE_BITS) failed: %s\n",
                 testName, u_errorName(errorCode));
     } else {
         testTrieRunTime(testName, &trie, UTRIE2_32_VALUE_BITS,
                         checkRanges2, LENGTHOF(checkRanges2));
         uprv_free(memory);
     }
-    utrie2_close(newTrie);
+    unewtrie2_close(newTrie);
 }
 
 /* test utrie2_unserializeDummy() ------------------------------------------- */
@@ -953,9 +953,9 @@ FreeBlocksTest(void) {
     UBool ok;
 
     errorCode=U_ZERO_ERROR;
-    newTrie=utrie2_open(1, 0xbad, &errorCode);
+    newTrie=unewtrie2_open(1, 0xbad, &errorCode);
     if(U_FAILURE(errorCode)) {
-        log_err("error: utrie2_open(%s) failed: %s\n", testName, u_errorName(errorCode));
+        log_err("error: unewtrie2_open(%s) failed: %s\n", testName, u_errorName(errorCode));
         return;
     }
 
@@ -965,24 +965,24 @@ FreeBlocksTest(void) {
      */
     ok=TRUE;
     for(i=0; i<(0x120000>>UTRIE2_SHIFT_2)/2; ++i) {
-        ok&=utrie2_setRange32(newTrie, 0x740, 0x840, 1, TRUE);
-        ok&=utrie2_setRange32(newTrie, 0x780, 0x880, 1, TRUE);
-        ok&=utrie2_setRange32(newTrie, 0x740, 0x840, 2, TRUE);
-        ok&=utrie2_setRange32(newTrie, 0x780, 0x880, 3, TRUE);
+        ok&=unewtrie2_setRange32(newTrie, 0x740, 0x840, 1, TRUE);
+        ok&=unewtrie2_setRange32(newTrie, 0x780, 0x880, 1, TRUE);
+        ok&=unewtrie2_setRange32(newTrie, 0x740, 0x840, 2, TRUE);
+        ok&=unewtrie2_setRange32(newTrie, 0x780, 0x880, 3, TRUE);
     }
     /* make blocks that will be free during compaction */
-    ok&=utrie2_setRange32(newTrie, 0x1000, 0x3000, 2, TRUE);
-    ok&=utrie2_setRange32(newTrie, 0x2000, 0x4000, 3, TRUE);
-    ok&=utrie2_setRange32(newTrie, 0x1000, 0x4000, 1, TRUE);
+    ok&=unewtrie2_setRange32(newTrie, 0x1000, 0x3000, 2, TRUE);
+    ok&=unewtrie2_setRange32(newTrie, 0x2000, 0x4000, 3, TRUE);
+    ok&=unewtrie2_setRange32(newTrie, 0x1000, 0x4000, 1, TRUE);
     if(!ok) {
         log_err("error: setting lots of ranges into a trie failed (%s)\n", testName);
-        utrie2_close(newTrie);
+        unewtrie2_close(newTrie);
         return;
     }
 
     newTrie=testTrieSerializeAllValueBits(testName, newTrie, FALSE,
                                           checkRanges, LENGTHOF(checkRanges));
-    utrie2_close(newTrie);
+    unewtrie2_close(newTrie);
 }
 
 static void
@@ -1003,38 +1003,38 @@ GrowDataArrayTest(void) {
     UBool ok;
 
     errorCode=U_ZERO_ERROR;
-    newTrie=utrie2_open(1, 0xbad, &errorCode);
+    newTrie=unewtrie2_open(1, 0xbad, &errorCode);
     if(U_FAILURE(errorCode)) {
-        log_err("error: utrie2_open(%s) failed: %s\n", testName, u_errorName(errorCode));
+        log_err("error: unewtrie2_open(%s) failed: %s\n", testName, u_errorName(errorCode));
         return;
     }
 
     /*
-     * Use utrie2_set32() not utrie2_setRange32() to write non-initialValue-data.
+     * Use unewtrie2_set32() not unewtrie2_setRange32() to write non-initialValue-data.
      * Should grow/reallocate the data array to a sufficient length.
      */
     ok=TRUE;
     for(i=0; i<0x1000; ++i) {
-        ok&=utrie2_set32(newTrie, i, 2);
+        ok&=unewtrie2_set32(newTrie, i, 2);
     }
     for(i=0x720; i<0x1100; ++i) { /* some overlap */
-        ok&=utrie2_set32(newTrie, i, 3);
+        ok&=unewtrie2_set32(newTrie, i, 3);
     }
     for(i=0x7a0; i<0x900; ++i) {
-        ok&=utrie2_set32(newTrie, i, 4);
+        ok&=unewtrie2_set32(newTrie, i, 4);
     }
     for(i=0x8a0; i<0x110000; ++i) {
-        ok&=utrie2_set32(newTrie, i, 5);
+        ok&=unewtrie2_set32(newTrie, i, 5);
     }
     if(!ok) {
         log_err("error: setting lots of values into a trie failed (%s)\n", testName);
-        utrie2_close(newTrie);
+        unewtrie2_close(newTrie);
         return;
     }
 
     newTrie=testTrieSerializeAllValueBits(testName, newTrie, FALSE,
                                           checkRanges, LENGTHOF(checkRanges));
-    utrie2_close(newTrie);
+    unewtrie2_close(newTrie);
 }
 
 /* versions 1 and 2 --------------------------------------------------------- */

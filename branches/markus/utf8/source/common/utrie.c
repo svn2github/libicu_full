@@ -706,7 +706,7 @@ utrie_printLengths(const UTrie *trie) {
 
 /* TODO: remove from final code */
 U_CAPI void U_EXPORT2
-utrie2_compareWithUTrie(const UNewTrie *trie1, UBool reduceTo16Bits, UBool copyLeadCUNotCP);
+unewtrie2_compareWithUTrie(const UNewTrie *trie1, UBool reduceTo16Bits, UBool copyLeadCUNotCP);
 
 /*
  * Default function for the folding value:
@@ -778,7 +778,7 @@ utrie_serialize(UNewTrie *trie, void *dt, int32_t capacity,
     /* fold and compact if necessary, also checks that indexLength is within limits */
     if(!trie->isCompacted) {
         /* TODO: remove from final code */
-        utrie2_compareWithUTrie(trie, reduceTo16Bits, (UBool)(getFoldedValue!=defaultGetFoldedValue));
+        unewtrie2_compareWithUTrie(trie, reduceTo16Bits, (UBool)(getFoldedValue!=defaultGetFoldedValue));
 
         /* compact once without overlap to improve folding */
         utrie_compact(trie, FALSE, pErrorCode);

@@ -523,7 +523,7 @@ utrie2_internalU8PrevIndex(const UTrie2 *trie, UChar32 c,
 
 /**
  * Unserialize a trie from 32-bit-aligned memory.
- * Inverse of utrie2_serialize().
+ * Inverse of unewtrie2_serialize().
  * Fills the UTrie2 runtime trie structure with the settings for the trie data.
  *
  * @param trie a pointer to the runtime trie structure
@@ -555,7 +555,7 @@ utrie2_unserialize(UTrie2 *trie, UTrie2ValueBits valueBits,
  * @param pErrorCode an in/out ICU UErrorCode
  *
  * @see UTRIE2_DUMMY_SIZE
- * @see utrie2_open
+ * @see unewtrie2_open
  */
 U_CAPI int32_t U_EXPORT2
 utrie2_unserializeDummy(UTrie2 *trie,
@@ -654,7 +654,7 @@ typedef struct UNewTrie2 UNewTrie2;
  * array in all cases. The array itself can also be passed in.
  *
  * Although the trie is never fully expanded to a linear array, especially when
- * utrie2_setRange32() is used, the data array could be large during build time.
+ * unewtrie2_setRange32() is used, the data array could be large during build time.
  * The maximum length is
  * UTRIE2_MAX_BUILD_TIME_DATA_LENGTH=0x110000+UTRIE2_DATA_BLOCK_LENGTH+0x400.
  * (Number of Unicode code points + one null block +
@@ -674,7 +674,7 @@ typedef struct UNewTrie2 UNewTrie2;
  * @return a pointer to the allocated and initialized new UNewTrie2
  */
 U_CAPI UNewTrie2 * U_EXPORT2
-utrie2_open(uint32_t initialValue, uint32_t errorValue, UErrorCode *pErrorCode);
+unewtrie2_open(uint32_t initialValue, uint32_t errorValue, UErrorCode *pErrorCode);
 
 /**
  * Clone a build-time trie structure with all entries.
@@ -683,16 +683,16 @@ utrie2_open(uint32_t initialValue, uint32_t errorValue, UErrorCode *pErrorCode);
  * @return a pointer to the new UNewTrie2 clone
  */
 U_CAPI UNewTrie2 * U_EXPORT2
-utrie2_clone(const UNewTrie2 *other);
+unewtrie2_clone(const UNewTrie2 *other);
 
 /**
  * Close a build-time trie structure, and release memory
- * that was allocated by utrie2_open() or utrie2_clone().
+ * that was allocated by unewtrie2_open() or unewtrie2_clone().
  *
  * @param trie the build-time trie
  */
 U_CAPI void U_EXPORT2
-utrie2_close(UNewTrie2 *trie);
+unewtrie2_close(UNewTrie2 *trie);
 
 /**
  * Get the data array of a build-time trie.
@@ -705,7 +705,7 @@ utrie2_close(UNewTrie2 *trie);
  * @return the data array
  */
 U_CAPI uint32_t * U_EXPORT2
-utrie2_getData(const UNewTrie2 *trie, int32_t *pLength);
+unewtrie2_getData(const UNewTrie2 *trie, int32_t *pLength);
 
 /**
  * Get a value from a code point as stored in the build-time trie.
@@ -715,14 +715,14 @@ utrie2_getData(const UNewTrie2 *trie, int32_t *pLength);
  * @return the value
  */
 U_CAPI uint32_t U_EXPORT2
-utrie2_get32(const UNewTrie2 *trie, UChar32 c);
+unewtrie2_get32(const UNewTrie2 *trie, UChar32 c);
 
 /**
  * TODO: Copy docs from utrie2_enum().
  */
 U_CAPI void U_EXPORT2
-utrie2_enumNewTrie(const UNewTrie2 *trie,
-                   UTrie2EnumValue *enumValue, UTrie2EnumRange *enumRange, const void *context);
+unewtrie2_enum(const UNewTrie2 *trie,
+               UTrie2EnumValue *enumValue, UTrie2EnumRange *enumRange, const void *context);
 
 /**
  * Enumerate the UNewTrie2 values for the 1024=0x400 code points
@@ -732,9 +732,9 @@ utrie2_enumNewTrie(const UNewTrie2 *trie,
  * TODO: @param...
  */
 U_CAPI void U_EXPORT2
-utrie2_enumNewTrieForLeadSurrogate(const UNewTrie2 *trie, UChar32 lead,
-                                   UTrie2EnumValue *enumValue, UTrie2EnumRange *enumRange,
-                                   const void *context);
+unewtrie2_enumForLeadSurrogate(const UNewTrie2 *trie, UChar32 lead,
+                               UTrie2EnumValue *enumValue, UTrie2EnumRange *enumRange,
+                               const void *context);
 
 /**
  * Set a value for a code point.
@@ -745,7 +745,7 @@ utrie2_enumNewTrieForLeadSurrogate(const UNewTrie2 *trie, UChar32 lead,
  * @return FALSE if a failure occurred (illegal argument or data array overrun)
  */
 U_CAPI UBool U_EXPORT2
-utrie2_set32(UNewTrie2 *trie, UChar32 c, uint32_t value);
+unewtrie2_set32(UNewTrie2 *trie, UChar32 c, uint32_t value);
 
 /**
  * Set a value in a range of code points [start..limit[.
@@ -760,14 +760,16 @@ utrie2_set32(UNewTrie2 *trie, UChar32 c, uint32_t value);
  * @return FALSE if a failure occurred (illegal argument or data array overrun)
  */
 U_CAPI UBool U_EXPORT2
-utrie2_setRange32(UNewTrie2 *trie, UChar32 start, UChar32 limit, uint32_t value, UBool overwrite);
+unewtrie2_setRange32(UNewTrie2 *trie,
+                     UChar32 start, UChar32 limit,
+                     uint32_t value, UBool overwrite);
 
 /**
  * TODO doc, steal some from unserializeDummy().
  */
 U_CAPI void * U_EXPORT2
-utrie2_build(UNewTrie2 *newTrie, UTrie2ValueBits valueBits,
-             UTrie2 *trie, UErrorCode *pErrorCode);
+unewtrie2_build(UNewTrie2 *newTrie, UTrie2ValueBits valueBits,
+                UTrie2 *trie, UErrorCode *pErrorCode);
 
 /**
  * Compact the build-time trie after all values are set, and then
@@ -793,9 +795,9 @@ utrie2_build(UNewTrie2 *newTrie, UTrie2ValueBits valueBits,
  * @return the number of bytes written for the trie
  */
 U_CAPI int32_t U_EXPORT2
-utrie2_serialize(UNewTrie2 *trie, UTrie2ValueBits valueBits,
-                 void *data, int32_t capacity,
-                 UErrorCode *pErrorCode);
+unewtrie2_serialize(UNewTrie2 *trie, UTrie2ValueBits valueBits,
+                    void *data, int32_t capacity,
+                    UErrorCode *pErrorCode);
 
 U_CDECL_END
 
