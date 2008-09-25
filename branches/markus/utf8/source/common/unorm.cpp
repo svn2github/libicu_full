@@ -227,8 +227,6 @@ static UVersionInfo dataVersion={ 0, 0, 0, 0 };
 
 static UTrie2 normTrie2={ 0 }, fcdTrie2={ 0 };
 static void *normTrie2Memory=NULL, *fcdTrie2Memory=NULL;
-static uint16_t normTrie2BmpIndex2[UTRIE2_BMP_INDEX_2_LENGTH];
-static uint16_t fcdTrie2BmpIndex2[UTRIE2_BMP_INDEX_2_LENGTH];
 
 /* cache UnicodeSets for each combination of exclusion flags */
 static UnicodeSet *nxCache[_NORM_OPTIONS_SETS_MASK+1]={ NULL };
@@ -239,10 +237,6 @@ U_CAPI void U_EXPORT2
 unorm_initUTrie2(UErrorCode *pErrorCode) {
     normTrie2Memory=utrie2_fromUTrie(&normTrie2, &normTrie, 0, TRUE, pErrorCode);
     fcdTrie2Memory=utrie2_fromUTrie(&fcdTrie2, &fcdTrie, 0, TRUE, pErrorCode);
-    if(U_SUCCESS(*pErrorCode)) {
-        utrie2_makeBMPIndex2(&normTrie2, normTrie2BmpIndex2);
-        utrie2_makeBMPIndex2(&fcdTrie2, fcdTrie2BmpIndex2);
-    }
 }
 
 static UBool U_CALLCONV
@@ -532,7 +526,7 @@ _getUTrie2Norm32(UChar c) {
 static inline uint32_t
 _getUTrie2Norm32FromSurrogatePair(UChar c, UChar c2) {
     UChar32 cp=U16_GET_SUPPLEMENTARY(c, c2);
-    return UTRIE2_GET32_UNSAFE(&normTrie2, cp);
+    return UTRIE2_GET32_FROM_SUPP(&normTrie2, cp);
 }
 
 /*

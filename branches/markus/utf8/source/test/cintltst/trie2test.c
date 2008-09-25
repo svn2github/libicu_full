@@ -20,17 +20,7 @@
 #include "utrie.h"
 #include "cstring.h"
 #include "cmemory.h"
-
-#if 1
 #include "cintltst.h"
-#else
-/* definitions from standalone utrie development */
-#define log_err printf
-#define log_verbose printf
-
-#undef u_errorName
-#define u_errorName(errorCode) "some error code"
-#endif
 
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 
@@ -128,15 +118,10 @@ static void
 testTrieGetters(const char *testName,
                 const UTrie2 *trie, UTrie2ValueBits valueBits,
                 const CheckRange checkRanges[], int32_t countCheckRanges) {
-    uint16_t bmpIndex2[UTRIE2_BMP_INDEX_2_LENGTH];
-    UTrie2 bmpTrie;
     uint32_t initialValue, errorValue;
     uint32_t value, value2;
     UChar32 start, limit;
     int32_t i, countSpecials;
-
-    uprv_memcpy(&bmpTrie, trie, sizeof(bmpTrie));
-    utrie2_makeBMPIndex2(&bmpTrie, bmpIndex2);
 
     countSpecials=getSpecialValues(checkRanges, countCheckRanges, &initialValue, &errorValue);
 
@@ -148,12 +133,22 @@ testTrieGetters(const char *testName,
         while(start<limit) {
             if(start<=0xffff) {
                 if(valueBits==UTRIE2_16_VALUE_BITS) {
-                    value2=UTRIE2_GET16_FROM_BMP(&bmpTrie, start);
+                    value2=UTRIE2_GET16_FROM_BMP(trie, start);
                 } else {
-                    value2=UTRIE2_GET32_FROM_BMP(&bmpTrie, start);
+                    value2=UTRIE2_GET32_FROM_BMP(trie, start);
                 }
                 if(value!=value2) {
                     log_err("error: unserialized trie(%s).fromBMP(U+%04lx)==0x%lx instead of 0x%lx\n",
+                            testName, (long)start, (long)value2, (long)value);
+                }
+            } else {
+                if(valueBits==UTRIE2_16_VALUE_BITS) {
+                    value2=UTRIE2_GET16_FROM_SUPP(trie, start);
+                } else {
+                    value2=UTRIE2_GET32_FROM_SUPP(trie, start);
+                }
+                if(value!=value2) {
+                    log_err("error: unserialized trie(%s).fromSupp(U+%04lx)==0x%lx instead of 0x%lx\n",
                             testName, (long)start, (long)value2, (long)value);
                 }
             }
@@ -362,7 +357,6 @@ testTrieUTF16(const char *testName,
     }
 }
 
-#if UTRIE2_VERSION_B || (_SHIFT_1+_SHIFT_2)==12
 static void
 testTrieUTF8(const char *testName,
              const UTrie2 *trie, UTrie2ValueBits valueBits,
@@ -498,7 +492,6 @@ testTrieUTF8(const char *testName,
         }
     }
 }
-#endif
 
 static void
 testTrieRunTime(const char *testName,
@@ -507,9 +500,7 @@ testTrieRunTime(const char *testName,
     testTrieGetters(testName, trie, valueBits, checkRanges, countCheckRanges);
     testTrieEnum(testName, trie, checkRanges, countCheckRanges);
     testTrieUTF16(testName, trie, valueBits, checkRanges, countCheckRanges);
-#if UTRIE2_VERSION_B || (_SHIFT_1+_SHIFT_2)==12
     testTrieUTF8(testName, trie, valueBits, checkRanges, countCheckRanges);
-#endif
 }
 
 static void
