@@ -282,7 +282,7 @@ testTrieUTF16(const char *testName,
               const UTrie2 *trie, UTrie2ValueBits valueBits,
               const CheckRange checkRanges[], int32_t countCheckRanges) {
     UChar s[200];
-    uint32_t values[60];
+    uint32_t values[100];
 
     const UChar *p, *limit;
 
@@ -379,8 +379,8 @@ testTrieUTF8(const char *testName,
         0xfe,
         0xff
     };
-    uint8_t s[400];
-    uint32_t values[120];
+    uint8_t s[600];
+    uint32_t values[200];
 
     const uint8_t *p, *limit;
 
@@ -736,6 +736,33 @@ checkRanges2[]={
     { 0x280,    6 },
     { 0x281,    0 },
     { 0x2c0,    6 },
+    { 0x2f883,  0 },
+    { 0x2f987,  0x7a },
+    { 0x2fa98,  5 },
+    { 0x2fedc,  0x7a },
+    { 0x2ffaa,  1 },
+    { 0x2ffab,  2 },
+    { 0x2ffbb,  0 },
+    { 0x2ffc0,  7 },
+    { 0x110000, 0 }
+};
+
+static const CheckRange
+checkRanges2WithLeadCU[]={
+    { 0,        0 },
+    { 0x21,     0 },
+    { 0x72,     0x5555 },
+    { 0xdd,     3 },
+    { 0xde,     4 },
+    { 0x201,    0 },
+    { 0x240,    6 },
+    { 0x241,    0 },
+    { 0x280,    6 },
+    { 0x281,    0 },
+    { 0x2c0,    6 },
+    { 0xd87e,   0 },
+    { 0xd87f,   0x820 },
+    { 0xd880,   0x840 },
     { 0x2f883,  0 },
     { 0x2f987,  0x7a },
     { 0x2fa98,  5 },
@@ -1112,7 +1139,8 @@ makeNewTrie1WithRanges(const char *testName,
 static void
 testTrie2FromTrie1(const char *testName,
                    const SetRange setRanges[], int32_t countSetRanges,
-                   const CheckRange checkRanges[], int32_t countCheckRanges) {
+                   const CheckRange checkRanges[], int32_t countCheckRanges,
+                   const CheckRange checkRangesWithLeadCU[], int32_t countCheckRangesWithLeadCU) {
     uint32_t memory1_16[3000], memory1_32[3000];
     int32_t length16, length32;
 
@@ -1153,6 +1181,8 @@ testTrie2FromTrie1(const char *testName,
 
     getSpecialValues(checkRanges, countCheckRanges, &initialValue, &errorValue);
 
+    /* test with copyLeadCUNotCP=FALSE */
+
     uprv_strcpy(name, testName);
     uprv_strcat(name, ".16");
     trie2_memory=utrie2_fromUTrie(&trie2, &trie1_16, errorValue, FALSE, &errorCode);
@@ -1168,13 +1198,34 @@ testTrie2FromTrie1(const char *testName,
         testTrieRunTime(name, &trie2, UTRIE2_32_VALUE_BITS, checkRanges, countCheckRanges);
     }
     uprv_free(trie2_memory);
+
+    /* test with copyLeadCUNotCP=TRUE */
+
+    uprv_strcpy(name, testName);
+    uprv_strcat(name, ".leadCU.16");
+    trie2_memory=utrie2_fromUTrie(&trie2, &trie1_16, errorValue, TRUE, &errorCode);
+    if(U_SUCCESS(errorCode)) {
+        testTrieRunTime(name, &trie2, UTRIE2_16_VALUE_BITS,
+                        checkRangesWithLeadCU, countCheckRangesWithLeadCU);
+    }
+    uprv_free(trie2_memory);
+
+    uprv_strcpy(name, testName);
+    uprv_strcat(name, ".leadCU.32");
+    trie2_memory=utrie2_fromUTrie(&trie2, &trie1_32, errorValue, TRUE, &errorCode);
+    if(U_SUCCESS(errorCode)) {
+        testTrieRunTime(name, &trie2, UTRIE2_32_VALUE_BITS,
+                        checkRangesWithLeadCU, countCheckRangesWithLeadCU);
+    }
+    uprv_free(trie2_memory);
 }
 
 static void
 Trie12ConversionTest(void) {
     testTrie2FromTrie1("trie1->trie2",
                        setRanges2, LENGTHOF(setRanges2),
-                       checkRanges2, LENGTHOF(checkRanges2));
+                       checkRanges2, LENGTHOF(checkRanges2),
+                       checkRanges2WithLeadCU, LENGTHOF(checkRanges2WithLeadCU));
 }
 
 void
