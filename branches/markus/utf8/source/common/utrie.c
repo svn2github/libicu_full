@@ -1255,7 +1255,7 @@ utrie_enum(const UTrie *trie,
     utrie_enumGeneral(trie, FALSE, enumValue, enumRange, context);
 }
 
-/* TODO: remove from final code */
+#ifdef UNEWTRIE2_COMPARE_WITH_UTRIE
 U_CAPI void U_EXPORT2
 utrie_enumNewTrie(const UNewTrie *trie,
                   UTrieEnumValue *enumValue, UTrieEnumRange *enumRange, const void *context) {
@@ -1330,3 +1330,4 @@ utrie_enumNewTrie(const UNewTrie *trie,
     /* deliver last range */
     enumRange(context, prev, c, prevValue);
 }
+#endif
