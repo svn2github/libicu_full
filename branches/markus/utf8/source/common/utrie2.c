@@ -13,15 +13,12 @@
 *   created on: 2008aug16 (starting from a copy of utrie.c)
 *   created by: Markus W. Scherer
 *
-*   TODO: Update description.
-*
-*
-*
-*   This is a common implementation of a "folded" trie.
+*   This is a common implementation of a Unicode trie.
 *   It is a kind of compressed, serializable table of 16- or 32-bit values associated with
 *   Unicode code points (0..0x10ffff).
+*   This is the second common version of a Unicode trie (hence the name UTrie2).
+*   See utrie2.h for a comparison.
 */
-#define UTRIE2_DEBUG
 #ifdef UTRIE2_DEBUG
 #   include <stdio.h>
 #endif
@@ -33,6 +30,33 @@
 #include "utrie.h" /* TODO: move with utrie2_fromUTrie() (and getVersion()?) */
 
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
+
+/* Implementation notes ----------------------------------------------------- */
+
+/*
+ * The UTRIE2_SHIFT_1, UTRIE2_SHIFT_2, UTRIE2_INDEX_SHIFT and other values
+ * have been chosen to minimize trie sizes overall.
+ * Most of the code is flexible enough to work with a range of values,
+ * within certain limits.
+ *
+ * Requires UTRIE2_SHIFT_2<=6. Otherwise 0xc0 which is the top of the ASCII-linear data
+ * including the bad-UTF-8-data block is not a multiple of UTRIE2_DATA_BLOCK_LENGTH
+ * and map[block>>UTRIE2_SHIFT_2] (used in reference counting and compaction
+ * remapping) stops working.
+ *
+ * Requires UTRIE2_SHIFT_1>=10 because unewtrie2_enumForLeadSurrogate()
+ * assumes that a single index-2 block is used for 0x400 code points
+ * corresponding to one lead surrogate.
+ *
+ * Requires UTRIE2_SHIFT_1<=16. Otherwise one single index-2 block contains
+ * more than one Unicode plane, and the split of the index-2 table into a BMP
+ * part and a supplementary part, with a gap in between, would not work.
+ *
+ * Requires UTRIE2_INDEX_SHIFT>=1 not because of the code but because
+ * there is data with more than 64k distinct values,
+ * for example for Unihan collation with a separate collation weight per
+ * Han character.
+ */
 
 /* Public UTrie2 API -------------------------------------------------------- */
 
@@ -135,10 +159,10 @@ utrie2_internalU8PrevIndex(const UTrie2 *trie, UChar32 c,
     return u8Index(trie, c, i);
 }
 
+#ifdef UTRIE2_DEBUG
 U_CAPI void U_EXPORT2
 utrie_printLengths(const UTrie *trie);
 
-#ifdef UTRIE2_DEBUG
 U_CAPI void U_EXPORT2
 utrie2_printLengths(const UTrie2 *trie, const char *which) {
     long indexLength=trie->indexLength;
@@ -389,7 +413,9 @@ utrie_enumGeneral(const UTrie *trie, UBool enumLeadCUNotCP,
 typedef struct NewTrieAndStatus {
     UNewTrie2 *newTrie;
     uint32_t initialValue;
-    int32_t countValues;  /* TODO: remove from final code */
+#ifdef UTRIE2_DEBUG
+    int32_t countValues;
+#endif
     UBool ok;
 } NewTrieAndStatus;
 
@@ -397,7 +423,9 @@ static UBool U_CALLCONV
 copyEnumRange(const void *context, UChar32 start, UChar32 limit, uint32_t value) {
     NewTrieAndStatus *nt=(NewTrieAndStatus *)context;
     if(value!=nt->initialValue) {
+#ifdef UTRIE2_DEBUG
         nt->countValues+=limit-start;
+#endif
         if(start==(limit-1)) {
             return nt->ok=unewtrie2_set32(nt->newTrie, start, value);
         } else {
@@ -429,7 +457,9 @@ utrie2_fromUTrie(UTrie2 *trie2, const UTrie *trie1,
         return NULL;
     }
     context.initialValue=trie1->initialValue;
+#ifdef UTRIE2_DEBUG
     context.countValues=0;
+#endif
     context.ok=TRUE;
     utrie_enumGeneral(trie1, copyLeadCUNotCP, NULL, copyEnumRange, &context);
     memory=NULL;
@@ -451,12 +481,11 @@ utrie2_fromUTrie(UTrie2 *trie2, const UTrie *trie1,
     return memory;
 }
 
-/* TODO: remove from final code */
+#ifdef UNEWTRIE2_COMPARE_WITH_UTRIE
 U_CAPI void U_EXPORT2
 utrie_enumNewTrie(const UNewTrie *trie,
                   UTrieEnumValue *enumValue, UTrieEnumRange *enumRange, const void *context);
 
-/* TODO: remove from final code */
 U_CAPI void U_EXPORT2
 unewtrie2_compareWithUTrie(const UNewTrie *trie1, UBool reduceTo16Bits, UBool copyLeadCUNotCP) {
     UTrie2 trie2;
@@ -470,12 +499,16 @@ unewtrie2_compareWithUTrie(const UNewTrie *trie1, UBool reduceTo16Bits, UBool co
         return;
     }
     context.initialValue=trie1->data[0];
+#ifdef UTRIE2_DEBUG
     context.countValues=0;
+#endif
     context.ok=TRUE;
     utrie_enumNewTrie(trie1, NULL, copyEnumRange, &context);
     memory=NULL;
     if(context.ok) {
+#ifdef UTRIE2_DEBUG
         printf("-*- unewtrie2_compareWithUTrie() countValues=%ld\n", (long)context.countValues);
+#endif
         memory=unewtrie2_build(context.newTrie,
                                reduceTo16Bits ? UTRIE2_16_VALUE_BITS : UTRIE2_32_VALUE_BITS,
                                &trie2, &errorCode);
@@ -489,6 +522,7 @@ unewtrie2_compareWithUTrie(const UNewTrie *trie1, UBool reduceTo16Bits, UBool co
     }
     uprv_free(memory);
 }
+#endif
 
 U_CAPI int32_t U_EXPORT2
 utrie2_swap(const UDataSwapper *ds,
@@ -693,30 +727,6 @@ unewtrie2_open(uint32_t initialValue, uint32_t errorValue, UErrorCode *pErrorCod
     int32_t i, j;
 
     if(U_FAILURE(*pErrorCode)) {
-        return NULL;
-    }
-
-    /*
-     * TODO: Remove these tests and turn them into implementation notes at the top.
-     *
-     * Requires UTRIE2_SHIFT_2<=6. Otherwise 0xc0 which is the top of the ASCII-linear data
-     * including the bad-UTF-8-data block is not a multiple of UTRIE2_DATA_BLOCK_LENGTH
-     * and map[block>>UTRIE2_SHIFT_2] stops working.
-     */
-    if(0xc0&UTRIE2_DATA_MASK) {
-        *pErrorCode=U_INTERNAL_PROGRAM_ERROR;
-        return NULL;
-    }
-
-    /*
-     * Requires UTRIE2_SHIFT_1>=10 because unewtrie2_enumForLeadSurrogate()
-     * assumes that a single index-2 block is used for 0x400 code points
-     * corresponding to one lead surrogate.
-     * Requires UTRIE2_SHIFT_1<=16. Otherwise one single index-2 block contains
-     * more than one Unicode plane.
-     */
-    if(UTRIE2_CP_PER_INDEX_1_ENTRY<0x400 || 0x10000<UTRIE2_CP_PER_INDEX_1_ENTRY) {
-        *pErrorCode=U_INTERNAL_PROGRAM_ERROR;
         return NULL;
     }
 
@@ -1408,7 +1418,6 @@ findHighStart(UNewTrie2 *trie) {
     }
 
     /* deliver last range */
-    /* TODO: write test for this */
     return 0;
 }
 

@@ -17,7 +17,6 @@
 *   It is a kind of compressed, serializable table of 16- or 32-bit values associated with
 *   Unicode code points (0..0x10ffff).
 */
-#define UTRIE_DEBUG
 #ifdef UTRIE_DEBUG
 #   include <stdio.h>
 #endif
@@ -694,7 +693,7 @@ utrie_compact(UNewTrie *trie, UBool overlap, UErrorCode *pErrorCode) {
 
 /* serialization ------------------------------------------------------------ */
 
-/* TODO: remove from final code */
+#ifdef UTRIE2_DEBUG
 U_CAPI void U_EXPORT2
 utrie_printLengths(const UTrie *trie) {
     long indexLength=trie->indexLength;
@@ -703,10 +702,12 @@ utrie_printLengths(const UTrie *trie) {
     printf("**UTrieLengths** index:%6ld  data:%6ld  serialized:%6ld\n",
            indexLength, dataLength, totalLength);
 }
+#endif
 
-/* TODO: remove from final code */
+#ifdef UNEWTRIE2_COMPARE_WITH_UTRIE
 U_CAPI void U_EXPORT2
 unewtrie2_compareWithUTrie(const UNewTrie *trie1, UBool reduceTo16Bits, UBool copyLeadCUNotCP);
+#endif
 
 /*
  * Default function for the folding value:
@@ -777,9 +778,9 @@ utrie_serialize(UNewTrie *trie, void *dt, int32_t capacity,
     data = (uint8_t*)dt;
     /* fold and compact if necessary, also checks that indexLength is within limits */
     if(!trie->isCompacted) {
-        /* TODO: remove from final code */
+#ifdef UNEWTRIE2_COMPARE_WITH_UTRIE
         unewtrie2_compareWithUTrie(trie, reduceTo16Bits, (UBool)(getFoldedValue!=defaultGetFoldedValue));
-
+#endif
         /* compact once without overlap to improve folding */
         utrie_compact(trie, FALSE, pErrorCode);
 
@@ -811,9 +812,10 @@ utrie_serialize(UNewTrie *trie, void *dt, int32_t capacity,
         return length; /* preflighting */
     }
 
-    /* TODO: remove from final code */
+#ifdef UTRIE_DEBUG
     printf("**UTrieLengths(serialize)** index:%6ld  data:%6ld  serialized:%6ld\n",
            (long)trie->indexLength, (long)trie->dataLength, (long)length);
+#endif
 
     /* set the header fields */
     header=(UTrieHeader *)data;
