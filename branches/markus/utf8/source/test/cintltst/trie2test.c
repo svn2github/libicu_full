@@ -20,6 +20,7 @@
 #include "utrie.h"
 #include "cstring.h"
 #include "cmemory.h"
+#include "udataswp.h"
 #include "cintltst.h"
 
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
@@ -506,6 +507,7 @@ testTrieRunTime(const char *testName,
 static void
 testTrieSerialize(const char *testName,
                   UNewTrie2 *newTrie, UTrie2ValueBits valueBits,
+                  UBool withSwap,
                   const CheckRange checkRanges[], int32_t countCheckRanges) {
     uint32_t storage[10000];
     UTrie2 trie;
@@ -538,6 +540,53 @@ testTrieSerialize(const char *testName,
     /* getters and enumeration should still work after serialization */
     testNewTrieGetters(testName, newTrie, checkRanges, countCheckRanges);
     testNewTrieEnum(testName, newTrie, checkRanges, countCheckRanges);
+
+    if(withSwap) {
+        uint32_t swapped[10000];
+        int32_t swappedLength;
+
+        UDataSwapper *ds;
+
+        /* swap to opposite-endian */
+        uprv_memset(swapped, 0x55, length2);
+        ds=udata_openSwapper(U_IS_BIG_ENDIAN, U_CHARSET_FAMILY,
+                             !U_IS_BIG_ENDIAN, U_CHARSET_FAMILY, &errorCode);
+        swappedLength=utrie2_swap(ds, storage, -1, NULL, &errorCode);
+        if(U_FAILURE(errorCode) || swappedLength!=length2) {
+            log_err("error: utrie2_swap(%s to OE preflighting) failed (%s) "
+                    "or before/after lengths different\n",
+                    testName, u_errorName(errorCode));
+            udata_closeSwapper(ds);
+            return;
+        }
+        swappedLength=utrie2_swap(ds, storage, length2, swapped, &errorCode);
+        udata_closeSwapper(ds);
+        if(U_FAILURE(errorCode) || swappedLength!=length2) {
+            log_err("error: utrie2_swap(%s to OE) failed (%s) or before/after lengths different\n",
+                    testName, u_errorName(errorCode));
+            return;
+        }
+
+        /* swap back to platform-endian */
+        uprv_memset(storage, 0xaa, length2);
+        ds=udata_openSwapper(!U_IS_BIG_ENDIAN, U_CHARSET_FAMILY,
+                             U_IS_BIG_ENDIAN, U_CHARSET_FAMILY, &errorCode);
+        swappedLength=utrie2_swap(ds, swapped, -1, NULL, &errorCode);
+        if(U_FAILURE(errorCode) || swappedLength!=length2) {
+            log_err("error: utrie2_swap(%s to PE preflighting) failed (%s) "
+                    "or before/after lengths different\n",
+                    testName, u_errorName(errorCode));
+            udata_closeSwapper(ds);
+            return;
+        }
+        swappedLength=utrie2_swap(ds, swapped, length2, storage, &errorCode);
+        udata_closeSwapper(ds);
+        if(U_FAILURE(errorCode) || swappedLength!=length2) {
+            log_err("error: utrie2_swap(%s to PE) failed (%s) or before/after lengths different\n",
+                    testName, u_errorName(errorCode));
+            return;
+        }
+    }
 
     length3=utrie2_unserialize(&trie, valueBits, storage, length2, &errorCode);
     if(U_FAILURE(errorCode)) {
@@ -575,7 +624,9 @@ testTrieSerializeAllValueBits(const char *testName,
      */
     uprv_strcpy(name, testName);
     uprv_strcat(name, ".16");
-    testTrieSerialize(name, newTrie, UTRIE2_16_VALUE_BITS, checkRanges, countCheckRanges);
+    testTrieSerialize(name, newTrie,
+                      UTRIE2_16_VALUE_BITS, withClone,
+                      checkRanges, countCheckRanges);
 
     if(withClone) {
         /* try cloning after the first serialization */
@@ -593,7 +644,9 @@ testTrieSerializeAllValueBits(const char *testName,
 
     uprv_strcpy(name, testName);
     uprv_strcat(name, ".32");
-    testTrieSerialize(name, newTrie, UTRIE2_32_VALUE_BITS, checkRanges, countCheckRanges);
+    testTrieSerialize(name, newTrie,
+                      UTRIE2_32_VALUE_BITS, withClone,
+                      checkRanges, countCheckRanges);
 
     return newTrie; /* could be the clone */
 }
@@ -1269,7 +1322,3 @@ addTrie2Test(TestNode** root) {
     addTest(root, &GetVersionTest, "tsutil/trie2test/GetVersionTest");
     addTest(root, &Trie12ConversionTest, "tsutil/trie2test/Trie12ConversionTest");
 }
-/*
- * TODO
- * - test utrie2_swap()
- */
