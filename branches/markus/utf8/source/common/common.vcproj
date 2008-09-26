@@ -934,6 +934,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\unewtrie2.c"
+				>
+			</File>
+			<File
 				RelativePath=".\ustack.cpp"
 				>
 			</File>
@@ -959,6 +963,10 @@
 			</File>
 			<File
 				RelativePath=".\utrie2.h"
+				>
+			</File>
+			<File
+				RelativePath=".\utrie2_impl.h"
 				>
 			</File>
 			<File
