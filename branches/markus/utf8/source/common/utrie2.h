@@ -51,15 +51,41 @@ typedef struct UTrie UTrie;
  *   entries are designed for fast 1/2-byte UTF-8 lookup.
  */
 
-enum UTrie2ValueBits {
-    UTRIE2_16_VALUE_BITS,
-    UTRIE2_32_VALUE_BITS,
-    UTRIE2_COUNT_VALUE_BITS
+/**
+ * Run-time Trie structure.
+ * Use only with public API macros and functions.
+ *
+ * Either the data table is 16 bits wide and accessed via the index
+ * pointer, with each index item increased by indexLength;
+ * in this case, data32==NULL, and data16 is used for direct ASCII access.
+ *
+ * Or the data table is 32 bits wide and accessed via the data32 pointer.
+ */
+struct UTrie2 {
+    const uint16_t *index;
+    const uint16_t *bmpIndex2;  /* for fast BMP access */
+    const uint16_t *data16;     /* for fast UTF-8 ASCII access, if 16b data */
+    const uint32_t *data32;     /* NULL if 16b data is used via index */
+
+    int32_t indexLength, dataLength;
+    uint16_t index2NullOffset, dataNullOffset;
+    uint32_t initialValue;
+    /** Value returned for out-of-range code points and illegal UTF-8. */
+    uint32_t errorValue;
+
+    /* Start of the last range which ends at U+10ffff, and its value. */
+    UChar32 highStart;
+    int32_t highValueIndex;
 };
-typedef enum UTrie2ValueBits UTrie2ValueBits;
+typedef struct UTrie2 UTrie2;
+
+/* Internal definitions ----------------------------------------------------- */
 
 /**
  * Trie constants, defining shift widths, index array lengths, etc.
+ *
+ * These are needed for the runtime macros but users can treat these as
+ * implementation details and skip to the actual public API further below.
  */
 enum {
     /** Shift size for getting the index-1 table offset. */
@@ -75,7 +101,7 @@ enum {
     UTRIE2_SHIFT_1_2=UTRIE2_SHIFT_1-UTRIE2_SHIFT_2,
 
     /**
-     * Number of index-1 entries for the BMP.
+     * Number of index-1 entries for the BMP. 32=0x20
      * This part of the index-1 table is omitted from the serialized form.
      */
     UTRIE2_OMITTED_BMP_INDEX_1_LENGTH=0x10000>>UTRIE2_SHIFT_1,
@@ -117,7 +143,7 @@ enum {
 
     /**
      * The 2-byte UTF-8 version of the index-2 table follows at offset 2048=0x800.
-     * Length 32 for lead bytes C0..DF, regardless of UTRIE2_SHIFT_2.
+     * Length 32=0x20 for lead bytes C0..DF, regardless of UTRIE2_SHIFT_2.
      */
     UTRIE2_UTF8_2B_INDEX_2_OFFSET=UTRIE2_INDEX_2_BMP_LENGTH,
     UTRIE2_UTF8_2B_INDEX_2_LENGTH=0x800>>6,  /* U+0800 is the first code point after 2-byte UTF-8 */
@@ -139,12 +165,13 @@ enum {
 
     /*
      * Fixed layout of the first part of the data array. -----------------------
-     * Starts with 2 blocks (128=0x80 entries) for ASCII.
+     * Starts with 4 blocks (128=0x80 entries) for ASCII.
      */
 
     /**
      * The illegal-UTF-8 data block follows the ASCII block, at offset 128=0x80.
      * Used with linear access for single bytes 0..0xbf for simple error handling.
+     * Length 64=0x40, not UTRIE2_DATA_BLOCK_LENGTH.
      */
     UTRIE2_BAD_UTF8_DATA_OFFSET=0x80,
 
@@ -152,62 +179,7 @@ enum {
     UTRIE2_DATA_START_OFFSET=0xc0
 };
 
-/**
- * Maximum length of the runtime index array.
- * Limited by its own 16-bit index values, and by uint16_t UTrie2Header.indexLength.
- */
-#define UTRIE2_MAX_INDEX_LENGTH 0xffff
-
-/**
- * Maximum length of the runtime data array.
- * Limited by 16-bit index values that are left-shifted by UTRIE2_INDEX_SHIFT,
- * and by uint16_t UTrie2Header.dataLength.
- */
-#define UTRIE2_MAX_DATA_LENGTH (0xffff<<UTRIE2_INDEX_SHIFT)
-
-/**
- * Number of bytes for a dummy trie.
- * A dummy trie is an empty runtime trie, used when a real data trie cannot be loaded.
- * The number of bytes works for tries with 32-bit data (worst case).
- * This is at least a multiple of 4, for easy stack array definitions like
- *   uint32_t dummy[UTRIE2_DUMMY_SIZE/4];
- * which guarantee proper alignment.
- *
- * BMP index-2 table,
- * plus a minimal data table with linear ASCII,
- * plus the highValue and a few reserved entries.
- *
- * @see utrie2_unserializeDummy
- */
-#define UTRIE2_DUMMY_SIZE (UTRIE2_INDEX_1_OFFSET*2+(UTRIE2_DATA_START_OFFSET+UTRIE2_DATA_GRANULARITY)*4)
-
-/**
- * Run-time Trie structure.
- *
- * Either the data table is 16 bits wide and accessed via the index
- * pointer, with each index item increased by indexLength;
- * in this case, data32==NULL, and data16 is used for direct ASCII access.
- *
- * Or the data table is 32 bits wide and accessed via the data32 pointer.
- */
-struct UTrie2 {
-    const uint16_t *index;
-    const uint16_t *bmpIndex2;  /* for fast BMP access */
-    const uint16_t *data16;     /* for fast UTF-8 ASCII access, if 16b data */
-    const uint32_t *data32;     /* NULL if 16b data is used via index */
-
-    int32_t indexLength, dataLength;
-    uint16_t index2NullOffset, dataNullOffset;
-    uint32_t initialValue;
-    /** Value returned for out-of-range code points and illegal UTF-8. */
-    uint32_t errorValue;
-
-    /* Start of the last range which ends at U+10ffff, and its value. */
-    UChar32 highStart;
-    int32_t highValueIndex;
-};
-
-typedef struct UTrie2 UTrie2;
+/* Internal functions and macros -------------------------------------------- */
 
 /**
  * Internal function for part of the UTRIE2_U8_NEXTxx() macro implementations.
@@ -347,7 +319,7 @@ utrie2_internalU8PrevIndex(const UTrie2 *trie, UChar32 c,
     } \
 }
 
-/* Public UTrie2 API -------------------------------------------------------- */
+/* Public UTrie2 API macros ------------------------------------------------- */
 
 /**
  * Return a 16-bit trie value from a code point, with range checking.
@@ -430,7 +402,7 @@ utrie2_internalU8PrevIndex(const UTrie2 *trie, UChar32 c,
 #define UTRIE2_GET32_UNSAFE(trie, c) _UTRIE2_GET_UNSAFE((trie), data32, (c))
 
 /**
- * Get the next code point (UChar32 c, out), post-increment src,
+ * UTF-16: Get the next code point (UChar32 c, out), post-increment src,
  * and get a 16-bit value from the trie.
  *
  * @param trie (const UTrie2 *, in) a pointer to the runtime trie structure
@@ -442,7 +414,7 @@ utrie2_internalU8PrevIndex(const UTrie2 *trie, UChar32 c,
 #define UTRIE2_NEXT16(trie, src, limit, c, result) _UTRIE2_NEXT(trie, index, src, limit, c, result)
 
 /**
- * Get the next code point (UChar32 c, out), post-increment src,
+ * UTF-16: Get the next code point (UChar32 c, out), post-increment src,
  * and get a 32-bit value from the trie.
  *
  * @param trie (const UTrie2 *, in) a pointer to the runtime trie structure
@@ -454,7 +426,7 @@ utrie2_internalU8PrevIndex(const UTrie2 *trie, UChar32 c,
 #define UTRIE2_NEXT32(trie, src, limit, c, result) _UTRIE2_NEXT(trie, data32, src, limit, c, result)
 
 /**
- * Get the previous code point (UChar32 c, out), pre-decrement src,
+ * UTF-16: Get the previous code point (UChar32 c, out), pre-decrement src,
  * and get a 16-bit value from the trie.
  *
  * @param trie (const UTrie2 *, in) a pointer to the runtime trie structure
@@ -466,7 +438,7 @@ utrie2_internalU8PrevIndex(const UTrie2 *trie, UChar32 c,
 #define UTRIE2_PREV16(trie, start, src, c, result) _UTRIE2_PREV(trie, index, start, src, c, result)
 
 /**
- * Get the previous code point (UChar32 c, out), pre-decrement src,
+ * UTF-16: Get the previous code point (UChar32 c, out), pre-decrement src,
  * and get a 32-bit value from the trie.
  *
  * @param trie (const UTrie2 *, in) a pointer to the runtime trie structure
@@ -521,15 +493,32 @@ utrie2_internalU8PrevIndex(const UTrie2 *trie, UChar32 c,
 #define UTRIE2_U8_PREV32(trie, start, src, result) \
     _UTRIE2_U8_PREV(trie, data32, data32, start, src, result)
 
+/* Public UTrie2 API functions ---------------------------------------------- */
+
+/**
+ * Selectors for the width of a UTrie2 data value.
+ */
+enum UTrie2ValueBits {
+    /** 16 bits per UTrie2 data value. */
+    UTRIE2_16_VALUE_BITS,
+    /** 32 bits per UTrie2 data value. */
+    UTRIE2_32_VALUE_BITS,
+    /** Number of selectors for the width of UTrie2 data values. */
+    UTRIE2_COUNT_VALUE_BITS
+};
+typedef enum UTrie2ValueBits UTrie2ValueBits;
+
 /**
  * Unserialize a trie from 32-bit-aligned memory.
  * Inverse of unewtrie2_serialize().
  * Fills the UTrie2 runtime trie structure with the settings for the trie data.
  *
- * @param trie a pointer to the runtime trie structure
- * TODO: update ###
- * @param data a pointer to 32-bit-aligned memory containing trie data
- * @param length the number of bytes available at data
+ * @param trie a pointer to the runtime trie structure to be filled
+ * @param valueBits selects the data entry size; results in an
+ *                  U_INVALID_FORMAT_ERROR if it does not match the serialized form
+ * @param data a pointer to 32-bit-aligned memory containing the serialized form of a UTrie2
+ * @param length the number of bytes available at data;
+ *               can be more than necessary (see return value)
  * @param pErrorCode an in/out ICU UErrorCode
  * @return the number of bytes at data taken up by the trie data
  */
@@ -538,23 +527,43 @@ utrie2_unserialize(UTrie2 *trie, UTrie2ValueBits valueBits,
                    const void *data, int32_t length, UErrorCode *pErrorCode);
 
 /**
+ * Number of bytes for a dummy trie.
+ * A dummy trie is an empty runtime trie, used when a real data trie cannot be loaded.
+ * The number of bytes works for tries with 32-bit data (worst case).
+ * This is at least a multiple of 4, for easy stack array definitions like
+ *   uint32_t dummy[UTRIE2_DUMMY_SIZE/4];
+ * which guarantee proper alignment.
+ *
+ * BMP index-2 table,
+ * plus a minimal data table with linear ASCII,
+ * plus the highValue and a few reserved entries.
+ *
+ * @see utrie2_unserializeDummy
+ */
+#define UTRIE2_DUMMY_SIZE (UTRIE2_INDEX_1_OFFSET*2+(UTRIE2_DATA_START_OFFSET+UTRIE2_DATA_GRANULARITY)*4)
+
+/**
  * "Unserialize" a dummy trie.
  * A dummy trie is an empty runtime trie, used when a real data trie cannot
  * be loaded.
  *
  * The input memory is filled so that the trie always returns the initialValue,
- * or the leadUnitValue for lead surrogate code points.### TODO
- * The Latin-1 part is always set up to be linear.
+ * or the errorValue for out-of-range code points and illegal UTF-8.
  *
- * @param trie a pointer to the runtime trie structure
- * @param data a pointer to 32-bit-aligned memory to be filled with the dummy trie data
- * @param capacity the number of bytes available at data (recommended to use UTRIE2_DUMMY_SIZE)
+ * @param trie a pointer to the runtime trie structure to be filled
+ * @param valueBits selects the data entry size
  * @param initialValue the initial value that is set for all code points
- * @param leadUnitValue the value for lead surrogate code _units_ that do not
- *                      have associated supplementary data
+ * @param errorValue the value for out-of-range code points and illegal UTF-8
+ * @param data a pointer to 32-bit-aligned memory to be filled with the dummy trie data,
+ *             can be NULL if capacity==0
+ * @param capacity the number of bytes available at data,
+ *                 or 0 for preflighting
+ *                (recommended to use UTRIE2_DUMMY_SIZE, see its documentation)
  * @param pErrorCode an in/out ICU UErrorCode
+ * @return the number of bytes at data taken up by the dummy trie data
  *
  * @see UTRIE2_DUMMY_SIZE
+ * @see utrie2_unserialize
  * @see unewtrie2_open
  */
 U_CAPI int32_t U_EXPORT2
@@ -594,19 +603,19 @@ typedef UBool U_CALLCONV
 UTrie2EnumRange(const void *context, UChar32 start, UChar32 limit, uint32_t value);
 
 /**
- * Enumerate efficiently all values in a trie.
+ * Enumerate efficiently all values in a runtime trie.
  * For each entry in the trie, the value to be delivered is passed through
  * the UTrie2EnumValue function.
  * The value is unchanged if that function pointer is NULL.
  *
- * For each contiguous range of code points with a given value,
+ * For each contiguous range of code points with a given (transformed) value,
  * the UTrie2EnumRange function is called.
  *
  * @param trie a pointer to the runtime trie structure
  * @param enumValue a pointer to a function that may transform the trie entry value,
  *                  or NULL if the values from the trie are to be used directly
  * @param enumRange a pointer to a function that is called for each contiguous range
- *                  of code points with the same value
+ *                  of code points with the same (transformed) value
  * @param context an opaque pointer that is passed on to the callback functions
  */
 U_CAPI void U_EXPORT2
@@ -614,13 +623,33 @@ utrie2_enum(const UTrie2 *trie,
             UTrie2EnumValue *enumValue, UTrie2EnumRange *enumRange, const void *context);
 
 /**
- * TODO
+ * Get the UTrie version from 32-bit-aligned memory containing the serialized form
+ * of either a UTrie (version 1) or a UTrie2 (version 2).
+ *
+ * @param data a pointer to 32-bit-aligned memory containing the serialized form of a UTrie2
+ * @param length the number of bytes available at data;
+ *               can be more than necessary (see return value)
+ * @param anyEndianOk If FALSE, only platform-endian serialized forms are recognized.
+ *                    If TRUE, opposite-endian serialized forms are recognized as well.
+ * @return the UTrie version of the serialized form, or 0 if it is not
+ *         recognized as a serialized UTrie
  */
 U_CAPI int32_t U_EXPORT2
 utrie2_getVersion(const void *data, int32_t length, UBool anyEndianOk);
 
 /**
- * TODO
+ * Build a UTrie2 (version 2) from a UTrie (version 1).
+ * Enumerates all values in the UTrie and builds a UTrie2 with the same values.
+ * A UTrie (version 1) stores values for both lead surrogate code _units_ and
+ * lead surrogate code _points_. The UTrie2 will contain either one or the other
+ * depending on the copyLeadCUNotCP parameter.
+ *
+ * @param trie2 a pointer to the runtime UTrie2 structure to be filled
+ * @param trie1 a pointer to the runtime UTrie structure to be enumerated
+ * @param errorValue the value for out-of-range code points and illegal UTF-8
+ * @param copyLeadCUNotCP If FALSE, copies values for lead surrogate code _points_.
+ *                        If TRUE, copies values for lead surrogate code _units_.
+ * @param pErrorCode an in/out ICU UErrorCode
  * @return Allocated memory with the UTrie2 data arrays.
  *         The caller must uprv_free() this memory once trie2 is not used any more.
  */
@@ -645,32 +674,13 @@ struct UNewTrie2;
 typedef struct UNewTrie2 UNewTrie2;
 
 /**
- * Open a build-time trie structure.
- * TODO: Adjust docs.
+ * Open a build-time trie structure. At build time, 32-bit data values are used.
+ * unewtrie2_serialize() and unewtrie2_build() take a valueBits parameter
+ * which determines the data value width in the serialized and runtime forms.
  *
- *
- *
- * The size of the build-time data array is specified to avoid allocating a large
- * array in all cases. The array itself can also be passed in.
- *
- * Although the trie is never fully expanded to a linear array, especially when
- * unewtrie2_setRange32() is used, the data array could be large during build time.
- * The maximum length is
- * UTRIE2_MAX_BUILD_TIME_DATA_LENGTH=0x110000+UTRIE2_DATA_BLOCK_LENGTH+0x400.
- * (Number of Unicode code points + one null block +
- *  possible duplicate entries for 1024 lead surrogates.)
- *
- * @param fillIn a pointer to a UNewTrie2 structure to be initialized (will not be released), or
- *               NULL if one is to be allocated
- * @param aliasData a pointer to a data array to be used (will not be released), or
- *                  NULL if one is to be allocated
- * @param maxDataLength the capacity of aliasData (if not NULL) or
- *                      the length of the data array to be allocated
  * @param initialValue the initial value that is set for all code points
- * @param leadUnitValue the value for lead surrogate code _units_ that do not
- *                      have associated supplementary data ### TODO
- * @param latin1Linear a flag indicating whether the Latin-1 range is to be allocated and
- *                     kept in a linear, contiguous part of the data array
+ * @param errorValue the value for out-of-range code points and illegal UTF-8
+ * @param pErrorCode an in/out ICU UErrorCode
  * @return a pointer to the allocated and initialized new UNewTrie2
  */
 U_CAPI UNewTrie2 * U_EXPORT2
@@ -686,8 +696,7 @@ U_CAPI UNewTrie2 * U_EXPORT2
 unewtrie2_clone(const UNewTrie2 *other);
 
 /**
- * Close a build-time trie structure, and release memory
- * that was allocated by unewtrie2_open() or unewtrie2_clone().
+ * Close a build-time trie structure, and release associated memory.
  *
  * @param trie the build-time trie
  */
@@ -718,7 +727,23 @@ U_CAPI uint32_t U_EXPORT2
 unewtrie2_get32(const UNewTrie2 *trie, UChar32 c);
 
 /**
- * TODO: Copy docs from utrie2_enum().
+ * Enumerate efficiently all values in a build-time trie.
+ * Do not modify the trie during the enumeration.
+ *
+ * Functions just like utrie2_enum():
+ * For each entry in the trie, the value to be delivered is passed through
+ * the UTrie2EnumValue function.
+ * The value is unchanged if that function pointer is NULL.
+ *
+ * For each contiguous range of code points with a given (transformed) value,
+ * the UTrie2EnumRange function is called.
+ *
+ * @param trie a pointer to the build-time trie structure
+ * @param enumValue a pointer to a function that may transform the trie entry value,
+ *                  or NULL if the values from the trie are to be used directly
+ * @param enumRange a pointer to a function that is called for each contiguous range
+ *                  of code points with the same (transformed) value
+ * @param context an opaque pointer that is passed on to the callback functions
  */
 U_CAPI void U_EXPORT2
 unewtrie2_enum(const UNewTrie2 *trie,
@@ -727,9 +752,27 @@ unewtrie2_enum(const UNewTrie2 *trie,
 /**
  * Enumerate the UNewTrie2 values for the 1024=0x400 code points
  * corresponding to a given lead surrogate.
+ * For example, for the lead surrogate U+D87E it will enumerate the values
+ * for [U+2F800..U+2FC00[.
  * Used by data builder code that sets special lead surrogate code point values
  * to optimize UTF-16 string processing.
- * TODO: @param...
+ *
+ * Do not modify the trie during the enumeration.
+ *
+ * Except for the limited code point range, this functions just like utrie2_enum():
+ * For each entry in the trie, the value to be delivered is passed through
+ * the UTrie2EnumValue function.
+ * The value is unchanged if that function pointer is NULL.
+ *
+ * For each contiguous range of code points with a given (transformed) value,
+ * the UTrie2EnumRange function is called.
+ *
+ * @param trie a pointer to the build-time trie structure
+ * @param enumValue a pointer to a function that may transform the trie entry value,
+ *                  or NULL if the values from the trie are to be used directly
+ * @param enumRange a pointer to a function that is called for each contiguous range
+ *                  of code points with the same (transformed) value
+ * @param context an opaque pointer that is passed on to the callback functions
  */
 U_CAPI void U_EXPORT2
 unewtrie2_enumForLeadSurrogate(const UNewTrie2 *trie, UChar32 lead,
@@ -750,7 +793,7 @@ unewtrie2_set32(UNewTrie2 *trie, UChar32 c, uint32_t value);
 /**
  * Set a value in a range of code points [start..limit[.
  * All code points c with start<=c<limit will get the value if
- * overwrite is TRUE or if the old value is 0.
+ * overwrite is TRUE or if the old value is the initial value.
  *
  * @param trie the build-time trie
  * @param start the first code point to get the value
@@ -765,7 +808,16 @@ unewtrie2_setRange32(UNewTrie2 *trie,
                      uint32_t value, UBool overwrite);
 
 /**
- * TODO doc, steal some from unserializeDummy().
+ * Build a UTrie2 from a UNewTrie2.
+ * Convenience function which combines unewtrie2_serialize(), memory allocation
+ * and utrie2_unserialize().
+ *
+ * @param newTrie the build-time trie
+ * @param valueBits selects the data entry size
+ * @param trie a pointer to the runtime trie structure to be filled
+ * @param pErrorCode an in/out ICU UErrorCode
+ * @return Allocated memory with the UTrie2 data arrays.
+ *         The caller must uprv_free() this memory once the trie is not used any more.
  */
 U_CAPI void * U_EXPORT2
 unewtrie2_build(UNewTrie2 *newTrie, UTrie2ValueBits valueBits,
@@ -775,24 +827,26 @@ unewtrie2_build(UNewTrie2 *newTrie, UTrie2ValueBits valueBits,
  * Compact the build-time trie after all values are set, and then
  * serialize it into 32-bit aligned memory.
  *
- * After this, the trie can only be serizalized again and/or closed;
- * no further values can be added.
- *
- * @see utrie2_unserialize()
+ * After this, the build-time trie is "frozen" or read-only.
+ * Read-only functions for getting and enumerating values continue to work,
+ * but functions to set values will fail after serializing.
+ * The build-time trie can be serialized multiple times, even with
+ * different valueBits parameters.
  *
  * @param trie the build-time trie
- * ### valueBits
- * @param data a pointer to 32-bit-aligned memory for the trie data
- * @param capacity the number of bytes available at data
- * @param ### reduceTo16Bits flag for whether the values are to be reduced to a
- *                       width of 16 bits for serialization and runtime
- * @param pErrorCode a UErrorCode argument; among other possible error codes:
+ * @param valueBits selects the data entry size; results in an
+ *                  U_INVALID_FORMAT_ERROR if it does not match the serialized form
+ * @param data a pointer to 32-bit-aligned memory to be filled with the trie data,
+ *             can be NULL if capacity==0
+ * @param capacity the number of bytes available at data,
+ *                 or 0 for preflighting
+ * @param pErrorCode an in/out ICU UErrorCode; among other possible error codes:
  * - U_BUFFER_OVERFLOW_ERROR if the data storage block is too small for serialization
- * - U_MEMORY_ALLOCATION_ERROR if the trie data array is too small
- * - U_INDEX_OUTOFBOUNDS_ERROR if the index or data arrays are too long
- *                             after compaction for serialization
+ * - U_INDEX_OUTOFBOUNDS_ERROR if the compacted index or data arrays are too long
+ *                             for serialization
  *
  * @return the number of bytes written for the trie
+ * @see utrie2_unserialize()
  */
 U_CAPI int32_t U_EXPORT2
 unewtrie2_serialize(UNewTrie2 *trie, UTrie2ValueBits valueBits,

@@ -58,7 +58,7 @@
  * Han character.
  */
 
-/* Public UTrie2 API -------------------------------------------------------- */
+/* Public UTrie2 API implementation ----------------------------------------- */
 
 /*
  * UTrie and UTrie2 signature values,
@@ -1620,6 +1620,21 @@ compactIndex2(UNewTrie2 *trie) {
 }
 
 /* serialization ------------------------------------------------------------ */
+
+/**
+ * Maximum length of the runtime index array.
+ * Limited by its own 16-bit index values, and by uint16_t UTrie2Header.indexLength.
+ * (The actual maximum length is lower,
+ * (0x110000>>UTRIE2_SHIFT_2)+UTRIE2_UTF8_2B_INDEX_2_LENGTH+UTRIE2_MAX_INDEX_1_LENGTH.)
+ */
+#define UTRIE2_MAX_INDEX_LENGTH 0xffff
+
+/**
+ * Maximum length of the runtime data array.
+ * Limited by 16-bit index values that are left-shifted by UTRIE2_INDEX_SHIFT,
+ * and by uint16_t UTrie2Header.shiftedDataLength.
+ */
+#define UTRIE2_MAX_DATA_LENGTH (0xffff<<UTRIE2_INDEX_SHIFT)
 
 U_CAPI int32_t U_EXPORT2
 unewtrie2_serialize(UNewTrie2 *trie, UTrie2ValueBits valueBits,
