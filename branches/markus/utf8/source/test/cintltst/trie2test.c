@@ -833,6 +833,29 @@ checkRanges3[]={
     { 0x110000, 6 }
 };
 
+/* empty or single-value tries, testing highStart==0 */
+static const SetRange
+setRangesEmpty[]={
+    { 0,        0,        0, FALSE },  /* need some values for it to compile */
+};
+
+static const CheckRange
+checkRangesEmpty[]={
+    { 0,        3 },
+    { 0x110000, 3 }
+};
+
+static const SetRange
+setRangesSingleValue[]={
+    { 0,        0x110000, 5, TRUE },
+};
+
+static const CheckRange
+checkRangesSingleValue[]={
+    { 0,        3 },
+    { 0x110000, 5 }
+};
+
 static void
 TrieTest(void) {
     testTrieRanges("set1", FALSE,
@@ -844,6 +867,12 @@ TrieTest(void) {
     testTrieRanges("set3-initial-9", FALSE,
         setRanges3, LENGTHOF(setRanges3),
         checkRanges3, LENGTHOF(checkRanges3));
+    testTrieRanges("set-empty", FALSE,
+        setRangesEmpty, 0,
+        checkRangesEmpty, LENGTHOF(checkRangesEmpty));
+    testTrieRanges("set-single-value", FALSE,
+        setRangesSingleValue, LENGTHOF(setRangesSingleValue),
+        checkRangesSingleValue, LENGTHOF(checkRangesSingleValue));
 
     testTrieRanges("set2-overlap.withClone", TRUE,
         setRanges2, LENGTHOF(setRanges2),
