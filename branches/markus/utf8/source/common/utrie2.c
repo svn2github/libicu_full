@@ -1830,6 +1830,9 @@ enumSameValue(const void *context, uint32_t value) {
  * Enumerate all ranges of code points with the same relevant values.
  * The values are transformed from the raw trie entries by the enumValue function.
  *
+ * Currently requires start<limit and both start and limit must be multiples
+ * of UTRIE2_DATA_BLOCK_LENGTH.
+ *
  * Optimizations:
  * - Skip a whole block if we know that it is filled with a single value,
  *   and it is the same as we visited just before.
@@ -1838,13 +1841,14 @@ enumSameValue(const void *context, uint32_t value) {
  */
 static void
 enumEitherTrie(const UTrie2 *runTimeTrie, const UNewTrie2 *newTrie,
+               UChar32 start, UChar32 limit,
                UTrie2EnumValue *enumValue, UTrie2EnumRange *enumRange, const void *context) {
     const uint32_t *data32;
     const uint16_t *index;
 
     uint32_t value, prevValue, initialValue;
     UChar32 c, prev, highStart;
-    int32_t i1, i2, j, i2Block, prevI2Block, index2NullOffset, block, prevBlock, nullBlock;
+    int32_t j, i2Block, prevI2Block, index2NullOffset, block, prevBlock, nullBlock;
 
     if(enumValue==NULL) {
         enumValue=enumSameValue;
@@ -1877,21 +1881,20 @@ enumEitherTrie(const UTrie2 *runTimeTrie, const UNewTrie2 *newTrie,
     /* set variables for previous range */
     prevI2Block=-1;
     prevBlock=-1;
-    prev=0;
+    prev=start;
     prevValue=0;
 
     /* enumerate index-2 blocks */
-    i1=0;
-    i2Block=0;
-    for(c=0; c<highStart;) {
+    for(c=start; c<limit && c<highStart;) {
         if(runTimeTrie!=NULL) {
             if(c<=0xffff) {
                 i2Block=c>>UTRIE2_SHIFT_2;
             } else {
-                i2Block=index[UTRIE2_INDEX_1_OFFSET+i1++];
+                i2Block=index[(UTRIE2_INDEX_1_OFFSET-UTRIE2_OMITTED_BMP_INDEX_1_LENGTH)+
+                              (c>>UTRIE2_SHIFT_1)];
             }
         } else {
-            i2Block=newTrie->index1[i1++];
+            i2Block=newTrie->index1[c>>UTRIE2_SHIFT_1];
         }
         if(i2Block==prevI2Block && (c-prev)>=UTRIE2_CP_PER_INDEX_1_ENTRY) {
             /* the index-2 block is the same as the previous one, and filled with prevValue */
@@ -1912,7 +1915,14 @@ enumEitherTrie(const UTrie2 *runTimeTrie, const UNewTrie2 *newTrie,
             c+=UTRIE2_CP_PER_INDEX_1_ENTRY;
         } else {
             /* enumerate data blocks for one index-2 block */
-            for(i2=0; i2<UTRIE2_INDEX_2_BLOCK_LENGTH; ++i2) {
+            int32_t i2, i2Limit;
+            i2=(c>>UTRIE2_SHIFT_2)&UTRIE2_INDEX_2_MASK;
+            if((c>>UTRIE2_SHIFT_1)==(limit>>UTRIE2_SHIFT_1)) {
+                i2Limit=(limit>>UTRIE2_SHIFT_2)&UTRIE2_INDEX_2_MASK;
+            } else {
+                i2Limit=UTRIE2_INDEX_2_BLOCK_LENGTH;
+            }
+            for(; i2<i2Limit; ++i2) {
                 if(runTimeTrie!=NULL) {
                     block=(int32_t)index[i2Block+i2]<<UTRIE2_INDEX_SHIFT;
                 } else {
@@ -1951,8 +1961,10 @@ enumEitherTrie(const UTrie2 *runTimeTrie, const UNewTrie2 *newTrie,
         }
     }
 
-    /* c==highStart */
-    if(c<0x110000) {
+    if(c>limit) {
+        c=limit;  /* could be higher if in the index2NullOffset */
+    } else if(c<limit) {
+        /* c==highStart<limit */
         uint32_t highValue;
         if(runTimeTrie!=NULL) {
             highValue=
@@ -1970,10 +1982,11 @@ enumEitherTrie(const UTrie2 *runTimeTrie, const UNewTrie2 *newTrie,
             prev=c;
             prevValue=value;
         }
+        c=limit;
     }
 
     /* deliver last range */
-    enumRange(context, prev, 0x110000, prevValue);
+    enumRange(context, prev, c, prevValue);
 }
 
 U_CAPI void U_EXPORT2
@@ -1982,7 +1995,7 @@ utrie2_enum(const UTrie2 *trie,
     if(trie==NULL || trie->index==NULL || enumRange==NULL) {
         return;
     }
-    enumEitherTrie(trie, NULL, enumValue, enumRange, context);
+    enumEitherTrie(trie, NULL, 0, 0x110000, enumValue, enumRange, context);
 }
 
 U_CAPI void U_EXPORT2
@@ -1991,89 +2004,16 @@ unewtrie2_enum(const UNewTrie2 *trie,
     if(trie==NULL || enumRange==NULL) {
         return;
     }
-    enumEitherTrie(NULL, trie, enumValue, enumRange, context);
+    enumEitherTrie(NULL, trie, 0, 0x110000, enumValue, enumRange, context);
 }
 
 U_CAPI void U_EXPORT2
 unewtrie2_enumForLeadSurrogate(const UNewTrie2 *newTrie, UChar32 lead,
                                UTrie2EnumValue *enumValue, UTrie2EnumRange *enumRange,
                                const void *context) {
-    uint32_t prevValue;
-    UChar32 c, prev;
-    int32_t i1, i2;
-
     if(newTrie==NULL || enumRange==NULL || !U16_IS_LEAD(lead)) {
         return;
     }
-
-    if(enumValue==NULL) {
-        enumValue=enumSameValue;
-    }
-
-    lead-=0xd7c0;                   /* start code point shifted right by 10 (lead=c>>10) */
-    prev=c=lead<<10;                /* start code point */
-    if(c>=newTrie->highStart) {
-        enumRange(context,
-                  c, c+0x400,
-                  enumValue(context, newTrie->data[newTrie->dataLength-UTRIE2_DATA_GRANULARITY]));
-        return;
-    }
-
-    /* get the enumeration value that corresponds to an initial-value trie data entry */
-    prevValue=enumValue(context, newTrie->initialValue);
-
-    i1=lead>>(UTRIE2_SHIFT_1-10);   /* >>2 */
-    i2=newTrie->index1[i1];         /* same index-2 block for all of these 1024 code points */
-    if(i2==newTrie->index2NullOffset) {
-        /* this is the null index-2 block */
-        c+=0x400;
-    } else {
-        const uint32_t *data32;
-        uint32_t value, initialValue;
-        int32_t i2Limit, j, block, prevBlock, nullBlock;
-
-        initialValue=prevValue;
-        data32=newTrie->data;
-        prevBlock=nullBlock=newTrie->dataNullOffset;
-
-        /* enumerate data blocks for half of this index-2 block */
-        /* i2+=((c>>5)&0x3f)=((lead<<5)&0x3f)=((lead&1)<<5) where 5==UTRIE2_SHIFT_2 */
-        i2+=(c>>UTRIE2_SHIFT_2)&UTRIE2_INDEX_2_MASK;
-        i2Limit=i2+(0x400>>UTRIE2_SHIFT_2); /* +0x10 */
-        for(; i2<i2Limit; ++i2) {
-            block=newTrie->index2[i2];
-            if(block==prevBlock && (c-prev)>=UTRIE2_DATA_BLOCK_LENGTH) {
-                /* the block is the same as the previous one, and filled with prevValue */
-                c+=UTRIE2_DATA_BLOCK_LENGTH;
-                continue;
-            }
-            prevBlock=block;
-            if(block==nullBlock) {
-                /* this is the null data block */
-                if(prevValue!=initialValue) {
-                    if(prev<c && !enumRange(context, prev, c, prevValue)) {
-                        return;
-                    }
-                    prev=c;
-                    prevValue=initialValue;
-                }
-                c+=UTRIE2_DATA_BLOCK_LENGTH;
-            } else {
-                for(j=0; j<UTRIE2_DATA_BLOCK_LENGTH; ++j) {
-                    value=enumValue(context, data32[block+j]);
-                    if(value!=prevValue) {
-                        if(prev<c && !enumRange(context, prev, c, prevValue)) {
-                            return;
-                        }
-                        prev=c;
-                        prevValue=value;
-                    }
-                    ++c;
-                }
-            }
-        }
-    }
-
-    /* deliver last range */
-    enumRange(context, prev, c, prevValue);
+    lead=(lead-0xd7c0)<<10;   /* start code point */
+    enumEitherTrie(NULL, newTrie, lead, lead+0x400, enumValue, enumRange, context);
 }
