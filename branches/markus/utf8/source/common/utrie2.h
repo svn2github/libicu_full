@@ -63,7 +63,6 @@ typedef struct UTrie UTrie;
  */
 struct UTrie2 {
     const uint16_t *index;
-    const uint16_t *bmpIndex2;  /* for fast BMP access */
     const uint16_t *data16;     /* for fast UTF-8 ASCII access, if 16b data */
     const uint32_t *data32;     /* NULL if 16b data is used via index */
 

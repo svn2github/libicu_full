@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 2004-2005, International Business Machines
+*   Copyright (C) 2004-2008, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
@@ -24,6 +24,7 @@
 #include "cmemory.h"
 #include "cstring.h"
 #include "utrie.h"
+#include "utrie2.h"
 #include "uarrsort.h"
 #include "unicode/udata.h"
 #include "unewdata.h"
@@ -379,13 +380,28 @@ generateData(const char *dataDir, UBool csource) {
     if(csource) {
         /* write .c file for hardcoded data */
         UTrie trie={ NULL };
+        UTrie2 trie2;
         FILE *f;
+        void *memory;
 
         utrie_unserialize(&trie, trieBlock, trieSize, &errorCode);
         if(U_FAILURE(errorCode)) {
             fprintf(
                 stderr,
                 "genbidi error: failed to utrie_unserialize(ubidi.icu trie) - %s\n",
+                u_errorName(errorCode));
+            return;
+        }
+
+        /* use UTrie2 */
+        dataInfo.formatVersion[0]=2;
+        dataInfo.formatVersion[2]=0;
+        dataInfo.formatVersion[3]=0;
+        memory=utrie2_fromUTrie(&trie2, &trie, 0, FALSE, &errorCode);
+        if(U_FAILURE(errorCode)) {
+            fprintf(
+                stderr,
+                "genbidi error: utrie2_fromUTrie() failed - %s\n",
                 u_errorName(errorCode));
             return;
         }
@@ -400,9 +416,9 @@ generateData(const char *dataDir, UBool csource) {
                 "static const int32_t ubidi_props_indexes[UBIDI_IX_TOP]={",
                 indexes, 32, UBIDI_IX_TOP,
                 "};\n\n");
-            usrc_writeUTrieArrays(f,
+            usrc_writeUTrie2Arrays(f,
                 "static const uint16_t ubidi_props_trieIndex[%ld]={\n", NULL,
-                &trie,
+                &trie2,
                 "\n};\n\n");
             usrc_writeArray(f,
                 "static const uint32_t ubidi_props_mirrors[%ld]={\n",
@@ -419,14 +435,15 @@ generateData(const char *dataDir, UBool csource) {
                 "  ubidi_props_mirrors,\n"
                 "  ubidi_props_jgArray,\n",
                 f);
-            usrc_writeUTrieStruct(f,
+            usrc_writeUTrie2Struct(f,
                 "  {\n",
-                &trie, "ubidi_props_trieIndex", NULL, NULL,
+                &trie2, "ubidi_props_trieIndex", NULL,
                 "  },\n");
             usrc_writeArray(f, "  { ", dataInfo.formatVersion, 8, 4, " }\n");
             fputs("};\n", f);
             fclose(f);
         }
+        uprv_free(memory);
     } else {
         /* write the data */
         pData=udata_create(dataDir, UBIDI_DATA_TYPE, UBIDI_DATA_NAME, &dataInfo,

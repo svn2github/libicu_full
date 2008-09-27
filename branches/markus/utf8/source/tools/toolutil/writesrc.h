@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 2005, International Business Machines
+*   Copyright (C) 2005-2008, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include "unicode/utypes.h"
 #include "utrie.h"
+#include "utrie2.h"
 
 /**
  * Create a source text file and write a header comment with the ICU copyright.
@@ -66,5 +67,28 @@ usrc_writeUTrieStruct(FILE *f,
                       const char *indexName, const char *dataName,
                       const char *getFoldingOffsetName,
                       const char *postfix);
+
+/**
+ * Calls usrc_writeArray() for the index and data arrays of a runtime UTrie2.
+ * Only the index array is written for a 16-bit UTrie2. In this case, dataPrefix
+ * is ignored and can be NULL.
+ */
+U_CAPI void U_EXPORT2
+usrc_writeUTrie2Arrays(FILE *f,
+                       const char *indexPrefix, const char *dataPrefix,
+                       const UTrie2 *pTrie,
+                       const char *postfix);
+
+/**
+ * Writes the UTrie2 struct values.
+ * The {} and declaration etc. need to be included in prefix/postfix or
+ * printed before and after the array contents.
+ */
+U_CAPI void U_EXPORT2
+usrc_writeUTrie2Struct(FILE *f,
+                       const char *prefix,
+                       const UTrie2 *pTrie,
+                       const char *indexName, const char *dataName,
+                       const char *postfix);
 
 #endif
