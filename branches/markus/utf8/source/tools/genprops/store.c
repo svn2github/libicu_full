@@ -430,7 +430,9 @@ generateData(const char *dataDir, UBool csource) {
     if(csource) {
         /* write .c file for hardcoded data */
         UTrie trie={ NULL };
+        UTrie2 trie2;
         FILE *f;
+        void *memory;
 
         utrie_unserialize(&trie, trieBlock, trieSize, &errorCode);
         if(U_FAILURE(errorCode)) {
@@ -438,7 +440,20 @@ generateData(const char *dataDir, UBool csource) {
                 stderr,
                 "genprops error: failed to utrie_unserialize(uprops.icu main trie) - %s\n",
                 u_errorName(errorCode));
-            return;
+            exit(errorCode);
+        }
+
+        /* use UTrie2 */
+        dataInfo.formatVersion[0]=6;
+        dataInfo.formatVersion[2]=0;
+        dataInfo.formatVersion[3]=0;
+        memory=utrie2_fromUTrie(&trie2, &trie, 0, FALSE, &errorCode);
+        if(U_FAILURE(errorCode)) {
+            fprintf(
+                stderr,
+                "genprops error: utrie2_fromUTrie() failed - %s\n",
+                u_errorName(errorCode));
+            exit(errorCode);
         }
 
         f=usrc_create(dataDir, "uchar_props_data.c");
@@ -451,13 +466,13 @@ generateData(const char *dataDir, UBool csource) {
                 "static const UVersionInfo dataVersion={",
                 dataInfo.dataVersion, 8, 4,
                 "};\n\n");
-            usrc_writeUTrieArrays(f,
+            usrc_writeUTrie2Arrays(f,
                 "static const uint16_t propsTrie_index[%ld]={\n", NULL,
-                &trie,
+                &trie2,
                 "\n};\n\n");
-            usrc_writeUTrieStruct(f,
-                "static const UTrie propsTrie={\n",
-                &trie, "propsTrie_index", NULL, NULL,
+            usrc_writeUTrie2Struct(f,
+                "static const UTrie2 propsTrie={\n",
+                &trie2, "propsTrie_index", NULL,
                 "};\n\n");
 
             additionalPropsSize=writeAdditionalData(f, additionalProps, sizeof(additionalProps), indexes);
@@ -469,6 +484,7 @@ generateData(const char *dataDir, UBool csource) {
                 "};\n\n");
             fclose(f);
         }
+        uprv_free(memory);
     } else {
         /* write the data */
         pData=udata_create(dataDir, DATA_TYPE, DATA_NAME, &dataInfo,

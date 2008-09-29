@@ -21,6 +21,9 @@
 
 #include "unicode/utypes.h"
 #include "utrie.h"
+#include "utrie2.h"
+
+U_CDECL_BEGIN
 
 /*
  * Unicode Properties Vectors associated with code point ranges.
@@ -47,6 +50,22 @@ enum {
     UPVEC_PREV_ROW,
     UPVEC_HEADER_LENGTH
 };
+
+/*
+ * Special pseudo code points for storing the initialValue and the errorValue,
+ * which are used to initialize a UTrie2 or similar.
+ */
+#define UPVEC_FIRST_SPECIAL_CP 0x110000
+#define UPVEC_INITIAL_VALUE_CP 0x110000
+#define UPVEC_ERROR_VALUE_CP 0x110001
+#define UPVEC_LIMIT_CP 0x110002
+
+/*
+ * Special pseudo code point used in upvec_compact() signalling the end of
+ * delivering special values and the beginning of delivering real ones.
+ * Stable value, unlike UPVEC_LIMIT_CP which might grow over time.
+ */
+#define UPVEC_START_REAL_VALUES_CP 0x200000
 
 U_CAPI uint32_t * U_EXPORT2
 upvec_open(int32_t columns, int32_t maxRows);
@@ -82,6 +101,13 @@ upvec_getRow(uint32_t *pv, int32_t rowIndex,
  * The handler's rowIndex is the uint32_t index of the row in the compacted
  * memory block.
  * (Therefore, it starts at 0 increases in increments of the columns value.)
+ *
+ * In a first phase, only special values are delivered (each exactly once),
+ * with start==limit both equalling a special pseudo code point.
+ * Then the handler is called once more with start==limit==UPVEC_START_REAL_VALUES_CP
+ * where rowIndex is the length of the compacted array,
+ * and the row is arbitrary (but not NULL).
+ * Then, in the second phase, the handler is called for each row of real values.
  */
 
 typedef void U_CALLCONV
@@ -93,11 +119,35 @@ UPVecCompactHandler(void *context,
 U_CAPI int32_t U_EXPORT2
 upvec_compact(uint32_t *pv, UPVecCompactHandler *handler, void *context, UErrorCode *pErrorCode);
 
-/* context=UNewTrie, stores the rowIndex values into the trie */
+struct UPVecToUTrieContext {
+    UNewTrie *newTrie;
+    int32_t capacity;
+    int32_t initialValue;
+    UBool latin1Linear;
+};
+typedef struct UPVecToUTrieContext UPVecToUTrieContext;
+
+/* context=UPVecToUTrieContext, creates the trie and stores the rowIndex values */
 U_CAPI void U_CALLCONV
-upvec_compactToTrieHandler(void *context,
-                           UChar32 start, UChar32 limit,
-                           int32_t rowIndex, uint32_t *row, int32_t columns,
-                           UErrorCode *pErrorCode);
+upvec_compactToUTrieHandler(void *context,
+                            UChar32 start, UChar32 limit,
+                            int32_t rowIndex, uint32_t *row, int32_t columns,
+                            UErrorCode *pErrorCode);
+
+struct UPVecToUTrie2Context {
+    UNewTrie2 *newTrie;
+    int32_t initialValue;
+    int32_t errorValue;
+};
+typedef struct UPVecToUTrie2Context UPVecToUTrie2Context;
+
+/* context=UPVecToUTrie2Context, creates the trie and stores the rowIndex values */
+U_CAPI void U_CALLCONV
+upvec_compactToUTrie2Handler(void *context,
+                             UChar32 start, UChar32 limit,
+                             int32_t rowIndex, uint32_t *row, int32_t columns,
+                             UErrorCode *pErrorCode);
+
+U_CDECL_END
 
 #endif

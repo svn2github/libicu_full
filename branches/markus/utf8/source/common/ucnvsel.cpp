@@ -297,7 +297,7 @@ U_CAPI UConverterSelector* ucnvsel_unserialize(const char* buffer,
   buffer+=sizeof(int32_t);
 
   // check length
-  if (length < (sel->pvCount+1)*sizeof(uint32_t)) {
+  if (length < (int32_t)((sel->pvCount+1)*sizeof(uint32_t))) {
     uprv_free(sel);
     *status = U_INVALID_FORMAT_ERROR;
     return NULL;
@@ -371,7 +371,7 @@ U_CAPI UConverterSelector* ucnvsel_unserialize(const char* buffer,
   buffer += sizeof(uint32_t);
 
   // check length
-  if (length < sel->serializedTrieSize) {
+  if (length < (int32_t)sel->serializedTrieSize) {
     uprv_free(sel->pv);
     uprv_free(tempEncodings);
     uprv_free(sel->encodings);
@@ -543,17 +543,17 @@ void generateSelectorData(UConverterSelector* result,
 
   // alright. Now, let's put things in the same exact form you'd get when you
   // unserialize things.
-  UNewTrie* trie = utrie_open(NULL, NULL, CAPACITY, 0, 0, TRUE);
-  result->pvCount = upvec_compact(result->pv, upvec_compactToTrieHandler,
-                                  trie, status);
-  uint32_t length = utrie_serialize(trie, NULL, 0, NULL, TRUE, status);
+  UPVecToUTrieContext toUTrie={ NULL, CAPACITY, 0, TRUE /* latin1Linear */ };
+  result->pvCount = upvec_compact(result->pv, upvec_compactToUTrieHandler,
+                                  &toUTrie, status);
+  uint32_t length = utrie_serialize(toUTrie.newTrie, NULL, 0, NULL, TRUE, status);
   result->serializedTrie = (uint8_t*) uprv_malloc(length);
-  length = utrie_serialize(trie, result->serializedTrie, length, NULL, TRUE,
+  length = utrie_serialize(toUTrie.newTrie, result->serializedTrie, length, NULL, TRUE,
                            status);
   result->serializedTrieSize = length;
   utrie_unserialize(&result->constructedTrie, result->serializedTrie, length,
                     status);
-  utrie_close(trie);
+  utrie_close(toUTrie.newTrie);
 }
 
 
@@ -805,7 +805,7 @@ U_CAPI int32_t ucnvsel_swap(const UDataSwapper *ds,
   outDataC += 3 * sizeof(uint32_t);
 
 
-  if(length < pvCount * sizeof(uint32_t)) {
+  if(length < (int32_t)(pvCount * sizeof(uint32_t))) {
     * status = U_INDEX_OUTOFBOUNDS_ERROR;
     return 0;
   }

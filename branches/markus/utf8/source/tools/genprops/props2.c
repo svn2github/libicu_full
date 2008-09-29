@@ -34,7 +34,7 @@
 
 /* data --------------------------------------------------------------------- */
 
-static UNewTrie *trie;
+static UNewTrie *newTrie;
 uint32_t *pv;
 static int32_t pvCount;
 
@@ -205,6 +205,10 @@ singleEnumLineFn(void *context,
         exit(U_INTERNAL_PROGRAM_ERROR);
     }
 
+    if(start==0 && limit==0x110000) {
+        /* Also set bits for initialValue and errorValue. */
+        limit=UPVEC_LIMIT_CP;
+    }
     if(!upvec_setValue(pv, start, limit, sen->vecWord, uv, sen->vecMask, pErrorCode)) {
         fprintf(stderr, "genprops error: unable to set %s code: %s\n",
                         sen->propName, u_errorName(*pErrorCode));
@@ -364,6 +368,10 @@ binariesLineFn(void *context,
     }
     uv=U_MASK(bin->binaries[i].vecShift);
 
+    if(start==0 && limit==0x110000) {
+        /* Also set bits for initialValue and errorValue. */
+        limit=UPVEC_LIMIT_CP;
+    }
     if(!upvec_setValue(pv, start, limit, bin->binaries[i].vecWord, uv, uv, pErrorCode)) {
         fprintf(stderr, "genprops error: unable to set %s code: %s\n",
                         bin->binaries[i].propName, u_errorName(*pErrorCode));
@@ -407,7 +415,7 @@ initAdditionalProperties() {
 
 U_CFUNC void
 exitAdditionalProperties() {
-    utrie_close(trie);
+    utrie_close(newTrie);
     upvec_close(pv);
 }
 
@@ -490,17 +498,15 @@ generateAdditionalProperties(char *filename, const char *suffix, UErrorCode *pEr
     /* parse EastAsianWidth.txt */
     parseSingleEnumFile(filename, basename, suffix, &eawSingleEnum, pErrorCode);
 
-    trie=utrie_open(NULL, NULL, 50000, 0, 0, TRUE);
-    if(trie==NULL) {
-        *pErrorCode=U_MEMORY_ALLOCATION_ERROR;
-        upvec_close(pv);
-        return;
-    }
-
-    pvCount=upvec_compact(pv, upvec_compactToTrieHandler, trie, pErrorCode);
-    if(U_FAILURE(*pErrorCode)) {
-        fprintf(stderr, "genprops error: unable to build trie for additional properties: %s\n", u_errorName(*pErrorCode));
-        exit(*pErrorCode);
+    {
+        UPVecToUTrieContext toUTrie={ NULL, 50000 /* capacity */, 0, TRUE /* latin1Linear */ };
+        pvCount=upvec_compact(pv, upvec_compactToUTrieHandler, &toUTrie, pErrorCode);
+        if(U_FAILURE(*pErrorCode)) {
+            fprintf(stderr, "genprops error: unable to build trie for additional properties: %s\n",
+                    u_errorName(*pErrorCode));
+            exit(*pErrorCode);
+        }
+        newTrie=toUTrie.newTrie;
     }
 }
 
@@ -547,6 +553,10 @@ ageLineFn(void *context,
         version|=value;
     }
 
+    if(start==0 && limit==0x110000) {
+        /* Also set bits for initialValue and errorValue. */
+        limit=UPVEC_LIMIT_CP;
+    }
     if(!upvec_setValue(pv, start, limit, 0, version<<UPROPS_AGE_SHIFT, UPROPS_AGE_MASK, pErrorCode)) {
         fprintf(stderr, "genprops error: unable to set character age: %s\n", u_errorName(*pErrorCode));
         exit(*pErrorCode);
@@ -691,7 +701,7 @@ writeAdditionalData(FILE *f, uint8_t *p, int32_t capacity, int32_t indexes[UPROP
     UErrorCode errorCode;
 
     errorCode=U_ZERO_ERROR;
-    length=utrie_serialize(trie, p, capacity, NULL, TRUE, &errorCode);
+    length=utrie_serialize(newTrie, p, capacity, NULL, TRUE, &errorCode);
     if(U_FAILURE(errorCode)) {
         fprintf(stderr, "genprops error: unable to serialize trie for additional properties: %s\n", u_errorName(errorCode));
         exit(errorCode);
@@ -701,8 +711,11 @@ writeAdditionalData(FILE *f, uint8_t *p, int32_t capacity, int32_t indexes[UPROP
             printf("size in bytes of additional props trie:%5u\n", (int)length);
         }
         if(f!=NULL) {
-            UTrie trie2={ NULL };
-            utrie_unserialize(&trie2, p, length, &errorCode);
+            UTrie trie={ NULL };
+            UTrie2 trie2;
+            void *memory;
+
+            utrie_unserialize(&trie, p, length, &errorCode);
             if(U_FAILURE(errorCode)) {
                 fprintf(
                     stderr,
@@ -710,14 +723,27 @@ writeAdditionalData(FILE *f, uint8_t *p, int32_t capacity, int32_t indexes[UPROP
                     u_errorName(errorCode));
                 exit(errorCode);
             }
-            usrc_writeUTrieArrays(f,
+
+            /* use UTrie2 */
+            memory=utrie2_fromUTrie(&trie2, &trie, trie.initialValue, FALSE, &errorCode);
+            if(U_FAILURE(errorCode)) {
+                fprintf(
+                    stderr,
+                    "genprops error: utrie2_fromUTrie() failed - %s\n",
+                    u_errorName(errorCode));
+                exit(errorCode);
+            }
+
+            usrc_writeUTrie2Arrays(f,
                 "static const uint16_t propsVectorsTrie_index[%ld]={\n", NULL,
                 &trie2,
                 "\n};\n\n");
-            usrc_writeUTrieStruct(f,
-                "static const UTrie propsVectorsTrie={\n",
-                &trie2, "propsVectorsTrie_index", NULL, NULL,
+            usrc_writeUTrie2Struct(f,
+                "static const UTrie2 propsVectorsTrie={\n",
+                &trie2, "propsVectorsTrie_index", NULL,
                 "};\n\n");
+
+            uprv_free(memory);
         }
 
         p+=length;

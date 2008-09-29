@@ -20,6 +20,7 @@
 #include "unicode/utypes.h"
 #include "cmemory.h"
 #include "utrie.h"
+#include "utrie2.h"
 #include "uarrsort.h"
 #include "propsvec.h"
 
@@ -77,6 +78,7 @@ _findRow(uint32_t *pv, UChar32 rangeStart) {
 U_CAPI uint32_t * U_EXPORT2
 upvec_open(int32_t columns, int32_t maxRows) {
     uint32_t *pv, *row;
+    uint32_t cp;
     int32_t length;
 
     if(columns<1 || maxRows<1) {
@@ -90,17 +92,20 @@ upvec_open(int32_t columns, int32_t maxRows) {
         /* set header */
         pv[UPVEC_COLUMNS]=(uint32_t)columns;
         pv[UPVEC_MAXROWS]=(uint32_t)maxRows;
-        pv[UPVEC_ROWS]=1;
+        pv[UPVEC_ROWS]=1+(UPVEC_LIMIT_CP-UPVEC_FIRST_SPECIAL_CP);
         pv[UPVEC_PREV_ROW]=0;
 
-        /* set initial row */
+        /* set the all-Unicode row and the special-value rows */
         row=pv+UPVEC_HEADER_LENGTH;
-        *row++=0;
-        *row++=0x110000;
-        columns-=2;
-        do {
-            *row++=0;
-        } while(--columns>0);
+        uprv_memset(row, 0, pv[UPVEC_ROWS]*columns*4);
+        row[0]=0;
+        row[1]=0x110000;
+        row+=columns;
+        for(cp=UPVEC_FIRST_SPECIAL_CP; cp<UPVEC_LIMIT_CP; ++cp) {
+            row[0]=cp;
+            row[1]=cp+1;
+            row+=columns;
+        }
     }
     return pv;
 }
@@ -128,7 +133,7 @@ upvec_setValue(uint32_t *pv,
     }
 
     if( pv==NULL ||
-        start<0 || start>limit || limit>0x110000 ||
+        start<0 || start>limit || limit>UPVEC_LIMIT_CP ||
         column<0 || (uint32_t)(column+1)>=pv[UPVEC_COLUMNS]
     ) {
         *pErrorCode=U_ILLEGAL_ARGUMENT_ERROR;
@@ -151,8 +156,25 @@ upvec_setValue(uint32_t *pv,
 
     /* find the last row, always successful */
     lastRow=firstRow;
-    while(limit>(UChar32)lastRow[1]) {
+    /*
+     * Start searching with an unrolled loop:
+     * start and limit are often in a single range, or in adjacent ranges.
+     */
+    if(limit>(UChar32)lastRow[1]) {
         lastRow+=columns;
+        if(limit>(UChar32)lastRow[1]) {
+            lastRow+=columns;
+            if(limit>(UChar32)lastRow[1]) {
+                if((limit-(UChar32)lastRow[1])<10) {
+                    /* we are close, continue looping */
+                    do {
+                        lastRow+=columns;
+                    } while(limit>(UChar32)lastRow[1]);
+                } else {
+                    lastRow=_findRow(pv, limit-1);
+                }
+            }
+        }
     }
 
     /*
@@ -226,7 +248,7 @@ U_CAPI uint32_t U_EXPORT2
 upvec_getValue(uint32_t *pv, UChar32 c, int32_t column) {
     uint32_t *row;
 
-    if(pv==NULL || c<0 || c>=0x110000) {
+    if(pv==NULL || c<0 || c>=UPVEC_LIMIT_CP) {
         return 0;
     }
     row=_findRow(pv, c);
@@ -279,7 +301,7 @@ upvec_compareRows(const void *context, const void *l, const void *r) {
 U_CAPI int32_t U_EXPORT2
 upvec_compact(uint32_t *pv, UPVecCompactHandler *handler, void *context, UErrorCode *pErrorCode) {
     uint32_t *row;
-    int32_t columns, valueColumns, rows, count;
+    int32_t i, columns, valueColumns, rows, count;
     UChar32 start, limit;
 
     /* argument checking */
@@ -292,19 +314,58 @@ upvec_compact(uint32_t *pv, UPVecCompactHandler *handler, void *context, UErrorC
         return 0;
     }
 
-    row=pv+UPVEC_HEADER_LENGTH;
-    columns=(int32_t)pv[UPVEC_COLUMNS];
     rows=(int32_t)pv[UPVEC_ROWS];
-
     if(rows==0) {
         return 0;
     }
 
+    row=pv+UPVEC_HEADER_LENGTH;
+    columns=(int32_t)pv[UPVEC_COLUMNS];
+    valueColumns=columns-2; /* not counting start & limit */
+
     /* sort the properties vectors to find unique vector values */
     if(rows>1) {
-        uprv_sortArray(pv+UPVEC_HEADER_LENGTH, rows, columns*4,
+        uprv_sortArray(row, rows, columns*4,
                        upvec_compareRows, pv, FALSE, pErrorCode);
     }
+    if(U_FAILURE(*pErrorCode)) {
+        return 0;
+    }
+
+    /*
+     * Find and set the special values.
+     * This has to do almost the same work as the compaction below,
+     * to find the indexes where the special-value rows will move.
+     */
+    count=-valueColumns;
+    for(i=0; i<rows; ++i) {
+        start=(UChar32)row[0];
+
+        /* count a new values vector if it is different from the current one */
+        if(count<0 || 0!=uprv_memcmp(row+2, row-valueColumns, valueColumns*4)) {
+            count+=valueColumns;
+        }
+
+        if(start>=UPVEC_FIRST_SPECIAL_CP) {
+#if 0  /* TODO: remove from final version */
+            printf("upvec_compact(): special 0x%lx at index 0x%lx\n",
+                    (long)start, (long)count);
+#endif
+            handler(context, start, start, count, row+2, valueColumns, pErrorCode);
+            if(U_FAILURE(*pErrorCode)) {
+                return 0;
+            }
+        }
+
+        row+=columns;
+    }
+
+    /* count is at the beginning of the last vector, add valueColumns to include that last vector */
+    count+=valueColumns;
+
+    /* Call the handler once more to signal the start of delivering real values. */
+    handler(context, UPVEC_START_REAL_VALUES_CP, UPVEC_START_REAL_VALUES_CP,
+            count, row-valueColumns, valueColumns, pErrorCode);
     if(U_FAILURE(*pErrorCode)) {
         return 0;
     }
@@ -316,10 +377,9 @@ upvec_compact(uint32_t *pv, UPVecCompactHandler *handler, void *context, UErrorC
      * This destroys the Properties Vector structure and replaces it
      * with an array of just vector values.
      */
-    valueColumns=columns-2; /* not counting start & limit */
+    row=pv+UPVEC_HEADER_LENGTH;
     count=-valueColumns;
-
-    do {
+    for(i=0; i<rows; ++i) {
         /* fetch these first before memmove() may overwrite them */
         start=(UChar32)row[0];
         limit=(UChar32)row[1];
@@ -330,24 +390,78 @@ upvec_compact(uint32_t *pv, UPVecCompactHandler *handler, void *context, UErrorC
             uprv_memmove(pv+count, row+2, valueColumns*4);
         }
 
-        handler(context, start, limit, count, pv+count, valueColumns, pErrorCode);
-        if(U_FAILURE(*pErrorCode)) {
-            return 0;
+        if(start<UPVEC_FIRST_SPECIAL_CP) {
+            handler(context, start, limit, count, pv+count, valueColumns, pErrorCode);
+            if(U_FAILURE(*pErrorCode)) {
+                return 0;
+            }
+        } else {
+#if 0  /* TODO: remove from final version */
+            printf("upvec_compact(): special 0x%lx at index 0x%lx\n",
+                    (long)start, (long)count);
+#endif
         }
 
         row+=columns;
-    } while(--rows>0);
+    }
 
     /* count is at the beginning of the last vector, add valueColumns to include that last vector */
     return count+valueColumns;
 }
 
 U_CAPI void U_CALLCONV
-upvec_compactToTrieHandler(void *context,
-                           UChar32 start, UChar32 limit,
-                           int32_t rowIndex, uint32_t *row, int32_t columns,
-                           UErrorCode *pErrorCode) {
-    if(!utrie_setRange32((UNewTrie *)context, start, limit, (uint32_t)rowIndex, FALSE)) {
-        *pErrorCode=U_BUFFER_OVERFLOW_ERROR;
+upvec_compactToUTrieHandler(void *context,
+                            UChar32 start, UChar32 limit,
+                            int32_t rowIndex, uint32_t *row, int32_t columns,
+                            UErrorCode *pErrorCode) {
+    UPVecToUTrieContext *toUTrie=(UPVecToUTrieContext *)context;
+    if(start<UPVEC_FIRST_SPECIAL_CP) {
+        if(!utrie_setRange32(toUTrie->newTrie, start, limit, (uint32_t)rowIndex, TRUE)) {
+            *pErrorCode=U_BUFFER_OVERFLOW_ERROR;
+        }
+    } else {
+        switch(start) {
+        case UPVEC_INITIAL_VALUE_CP:
+            toUTrie->initialValue=rowIndex;
+            break;
+        case UPVEC_START_REAL_VALUES_CP:
+            toUTrie->newTrie=utrie_open(NULL, NULL, toUTrie->capacity,
+                                        toUTrie->initialValue, toUTrie->initialValue,
+                                        toUTrie->latin1Linear);
+            if(toUTrie->newTrie==NULL) {
+                *pErrorCode=U_MEMORY_ALLOCATION_ERROR;
+            }
+            break;
+        default:
+            break;
+        }
+    }
+}
+
+U_CAPI void U_CALLCONV
+upvec_compactToUTrie2Handler(void *context,
+                             UChar32 start, UChar32 limit,
+                             int32_t rowIndex, uint32_t *row, int32_t columns,
+                             UErrorCode *pErrorCode) {
+    UPVecToUTrie2Context *toUTrie2=(UPVecToUTrie2Context *)context;
+    if(start<UPVEC_FIRST_SPECIAL_CP) {
+        if(!unewtrie2_setRange32(toUTrie2->newTrie, start, limit, (uint32_t)rowIndex, TRUE)) {
+            *pErrorCode=U_BUFFER_OVERFLOW_ERROR;
+        }
+    } else {
+        switch(start) {
+        case UPVEC_INITIAL_VALUE_CP:
+            toUTrie2->initialValue=rowIndex;
+            break;
+        case UPVEC_ERROR_VALUE_CP:
+            toUTrie2->errorValue=rowIndex;
+            break;
+        case UPVEC_START_REAL_VALUES_CP:
+            toUTrie2->newTrie=unewtrie2_open(toUTrie2->initialValue,
+                                             toUTrie2->errorValue, pErrorCode);
+            break;
+        default:
+            break;
+        }
     }
 }

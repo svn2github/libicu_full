@@ -390,7 +390,7 @@ generateData(const char *dataDir, UBool csource) {
                 stderr,
                 "genbidi error: failed to utrie_unserialize(ubidi.icu trie) - %s\n",
                 u_errorName(errorCode));
-            return;
+            exit(errorCode);
         }
 
         /* use UTrie2 */
@@ -403,7 +403,7 @@ generateData(const char *dataDir, UBool csource) {
                 stderr,
                 "genbidi error: utrie2_fromUTrie() failed - %s\n",
                 u_errorName(errorCode));
-            return;
+            exit(errorCode);
         }
 
         f=usrc_create(dataDir, "ubidi_props_data.c");
