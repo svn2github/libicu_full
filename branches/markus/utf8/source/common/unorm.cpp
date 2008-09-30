@@ -1,5 +1,3 @@
-#define USE_UTRIE2 1
-#define USE_UTRIE2_U8_NEXT 1
 /*
 ******************************************************************************
 * Copyright (c) 1996-2008, International Business Machines
@@ -40,7 +38,6 @@
 #include "ucase.h"
 #include "cmemory.h"
 #include "umutex.h"
-#include "utrie.h"
 #include "utrie2.h"
 #include "unicode/uset.h"
 #include "udataswp.h"
@@ -137,11 +134,13 @@ isNorm32Regular(uint32_t norm32) {
     return norm32<_NORM_MIN_SPECIAL;
 }
 
+#if 0  // Code changed to use U16_IS_LEAD(c) instead.
 /* is this a norm32 with a special index for a lead surrogate? */
 static inline UBool
 isNorm32LeadSurrogate(uint32_t norm32) {
     return _NORM_MIN_SPECIAL<=norm32 && norm32<_NORM_SURROGATES_TOP;
 }
+#endif
 
 /* is this a norm32 with a special index for a Hangul syllable or a Jamo? */
 static inline UBool
@@ -166,28 +165,9 @@ static inline UBool
 isJamoVTNorm32JamoV(uint32_t norm32) {
     return norm32<_NORM_JAMO_V_TOP;
 }
+U_CDECL_END
 
 /* load unorm.dat ----------------------------------------------------------- */
-
-/* normTrie: 32-bit trie result may contain a special extraData index with the folding offset */
-static int32_t U_CALLCONV
-getFoldingNormOffset(uint32_t norm32) {
-    if(isNorm32LeadSurrogate(norm32)) {
-        return
-            UTRIE_BMP_INDEX_LENGTH+
-                (((int32_t)norm32>>(_NORM_EXTRA_SHIFT-UTRIE_SURROGATE_BLOCK_BITS))&
-                 (0x3ff<<UTRIE_SURROGATE_BLOCK_BITS));
-    } else {
-        return 0;
-    }
-}
-
-/* auxTrie: the folding offset is in bits 9..0 of the 16-bit trie result */
-static int32_t U_CALLCONV
-getFoldingAuxOffset(uint32_t data) {
-    return (int32_t)(data&_NORM_AUX_FNC_MASK)<<UTRIE_SURROGATE_BLOCK_BITS;
-}
-U_CDECL_END
 
 #define UNORM_HARDCODE_DATA 1
 
@@ -225,19 +205,10 @@ static UVersionInfo dataVersion={ 0, 0, 0, 0 };
 
 #endif
 
-static UTrie2 normTrie2={ 0 }, fcdTrie2={ 0 };
-static void *normTrie2Memory=NULL, *fcdTrie2Memory=NULL;
-
 /* cache UnicodeSets for each combination of exclusion flags */
 static UnicodeSet *nxCache[_NORM_OPTIONS_SETS_MASK+1]={ NULL };
 
 U_CDECL_BEGIN
-
-U_CAPI void U_EXPORT2
-unorm_initUTrie2(UErrorCode *pErrorCode) {
-    normTrie2Memory=utrie2_fromUTrie(&normTrie2, &normTrie, 0, TRUE, pErrorCode);
-    fcdTrie2Memory=utrie2_fromUTrie(&fcdTrie2, &fcdTrie, 0, TRUE, pErrorCode);
-}
 
 static UBool U_CALLCONV
 unorm_cleanup(void) {
@@ -251,9 +222,6 @@ unorm_cleanup(void) {
     dataErrorCode=U_ZERO_ERROR;
     haveNormData=0;
 #endif
-
-    uprv_free(normTrie2Memory);
-    uprv_free(fcdTrie2Memory);
 
     for(i=0; i<(int32_t)LENGTHOF(nxCache); ++i) {
         if (nxCache[i]) {
@@ -295,9 +263,11 @@ isAcceptable(void * /* context */,
 
 static UBool U_CALLCONV
 _enumPropertyStartsRange(const void *context, UChar32 start, UChar32 /*limit*/, uint32_t /*value*/) {
-    /* add the start code point to the USet */
-    const USetAdder *sa=(const USetAdder *)context;
-    sa->add(sa->set, start);
+    if(!U_IS_LEAD(start)) {
+        /* add the start code point to the USet */
+        const USetAdder *sa=(const USetAdder *)context;
+        sa->add(sa->set, start);
+    }
     return TRUE;
 }
 
@@ -426,8 +396,9 @@ unorm_haveData(UErrorCode *pErrorCode) {
 }
 
 U_CAPI const uint16_t * U_EXPORT2
-unorm_getFCDTrie(UErrorCode *pErrorCode) {
+unorm_getFCDTrieIndex(UChar32 &fcdHighStart, UErrorCode *pErrorCode) {
     if(_haveData(*pErrorCode)) {
+        fcdHighStart=fcdTrie.highStart;
         return fcdTrie.index;
     } else {
         return NULL;
@@ -438,20 +409,13 @@ unorm_getFCDTrie(UErrorCode *pErrorCode) {
 
 static inline uint32_t
 _getNorm32(UChar c) {
-    return UTRIE_GET32_FROM_LEAD(&normTrie, c);
+    return UTRIE2_GET32_FROM_BMP(&normTrie, c);
 }
 
 static inline uint32_t
-_getNorm32FromSurrogatePair(uint32_t norm32, UChar c2) {
-    /*
-     * the surrogate index in norm32 stores only the number of the surrogate index block
-     * see gennorm/store.c/getFoldedNormValue()
-     */
-    norm32=
-        UTRIE_BMP_INDEX_LENGTH+
-            ((norm32>>(_NORM_EXTRA_SHIFT-UTRIE_SURROGATE_BLOCK_BITS))&
-             (0x3ff<<UTRIE_SURROGATE_BLOCK_BITS));
-    return UTRIE_GET32_FROM_OFFSET_TRAIL(&normTrie, norm32, c2);
+_getNorm32FromSurrogatePair(UChar c, UChar c2) {
+    UChar32 cp=U16_GET_SUPPLEMENTARY(c, c2);
+    return UTRIE2_GET32_FROM_SUPP(&normTrie, cp);
 }
 
 /*
@@ -460,29 +424,36 @@ _getNorm32FromSurrogatePair(uint32_t norm32, UChar c2) {
  */
 static inline uint32_t
 _getNorm32(const UChar *p, uint32_t mask) {
-    uint32_t norm32=_getNorm32(*p);
-    if((norm32&mask) && isNorm32LeadSurrogate(norm32)) {
-        /* *p is a lead surrogate, get the real norm32 */
-        norm32=_getNorm32FromSurrogatePair(norm32, *(p+1));
+    UChar c=*p;
+    uint32_t norm32=_getNorm32(c);
+    if((norm32&mask) && U16_IS_LEAD(c)) {
+        /* c is a lead surrogate, get the real norm32 */
+        norm32=_getNorm32FromSurrogatePair(c, *(p+1));
     }
     return norm32;
 }
 
 static inline uint16_t
 _getFCD16(UChar c) {
-    return UTRIE_GET16_FROM_LEAD(&fcdTrie, c);
+    return UTRIE2_GET16_FROM_BMP(&fcdTrie, c);
 }
 
 static inline uint16_t
-_getFCD16FromSurrogatePair(uint16_t fcd16, UChar c2) {
-    /* the surrogate index in fcd16 is an absolute offset over the start of stage 1 */
-    return UTRIE_GET16_FROM_OFFSET_TRAIL(&fcdTrie, fcd16, c2);
+_getFCD16FromSurrogatePair(UChar c, UChar c2) {
+    UChar32 cp=U16_GET_SUPPLEMENTARY(c, c2);
+    return UTRIE2_GET16_FROM_SUPP(&fcdTrie, cp);
 }
 
 static inline const uint16_t *
 _getExtraData(uint32_t norm32) {
     return extraData+(norm32>>_NORM_EXTRA_SHIFT);
 }
+
+/*
+ * TODO(markus): Revisit if it makes sense for functions like _getNextCC()
+ * and their call sites, and a fair bit of other code here, to work with UTF-16 code units,
+ * or whether code simplification would suggest just using UChar32 and maybe UTRIE2_NEXT32().
+ */
 
 #if 0
 /*
@@ -515,45 +486,6 @@ _getFCD16FromNormData(UChar32 c) {
     return (uint16_t)fcd;
 }
 #endif
-
-/* data access primitives --------------------------------------------------- */
-
-static inline uint32_t
-_getUTrie2Norm32(UChar c) {
-    return UTRIE2_GET32_FROM_BMP(&normTrie2, c);
-}
-
-static inline uint32_t
-_getUTrie2Norm32FromSurrogatePair(UChar c, UChar c2) {
-    UChar32 cp=U16_GET_SUPPLEMENTARY(c, c2);
-    return UTRIE2_GET32_FROM_SUPP(&normTrie2, cp);
-}
-
-/*
- * get a norm32 from text with complete code points
- * (like from decompositions)
- */
-static inline uint32_t
-_getUTrie2Norm32(const UChar *p, uint32_t mask) {
-    uint32_t norm32=_getNorm32(*p);
-    if((norm32&mask) && isNorm32LeadSurrogate(norm32)) {
-        /* *p is a lead surrogate, get the real norm32 */
-        UChar32 c=U16_GET_SUPPLEMENTARY(*p, *(p+1));
-        norm32=UTRIE2_GET32_UNSAFE(&normTrie2, c);
-    }
-    return norm32;
-}
-
-static inline uint16_t
-_getUTrie2FCD16(UChar c) {
-    return UTRIE2_GET16_FROM_BMP(&fcdTrie2, c);
-}
-
-static inline uint16_t
-_getUTrie2FCD16FromSurrogatePair(UChar c, UChar c2) {
-    UChar32 cp=U16_GET_SUPPLEMENTARY(c, c2);
-    return UTRIE2_GET16_UNSAFE(&fcdTrie2, cp);
-}
 
 /* normalization exclusion sets --------------------------------------------- */
 
@@ -839,8 +771,8 @@ unorm_getCanonicalDecomposition(UChar32 c, UChar buffer[4], int32_t *pLength) {
         return NULL;
     }
 
-    UTRIE_GET32(&normTrie, c, norm32);
-    if(norm32&_NORM_QC_NFD) {
+    norm32=UTRIE2_GET32(&normTrie, c);
+    if((norm32&_NORM_QC_NFD)!=0 && !U_IS_LEAD(c)) {
         if(isNorm32HangulOrJamo(norm32)) {
             /* Hangul syllable: decompose algorithmically */
             UChar c2;
@@ -879,26 +811,21 @@ _getNextCC(const UChar *&p, const UChar *limit, UChar &c, UChar &c2) {
     uint32_t norm32;
 
     c=*p++;
+    c2=0;
     norm32=_getNorm32(c);
     if((norm32&_NORM_CC_MASK)==0) {
-        c2=0;
         return 0;
-    } else {
-        if(!isNorm32LeadSurrogate(norm32)) {
-            c2=0;
+    } else if(U16_IS_LEAD(c)) {
+        /* c is a lead surrogate, get the real norm32 */
+        if(p!=limit && U16_IS_TRAIL(c2=*p)) {
+            ++p;
+            norm32=_getNorm32FromSurrogatePair(c, c2);
         } else {
-            /* c is a lead surrogate, get the real norm32 */
-            if(p!=limit && UTF_IS_SECOND_SURROGATE(c2=*p)) {
-                ++p;
-                norm32=_getNorm32FromSurrogatePair(norm32, c2);
-            } else {
-                c2=0;
-                return 0;
-            }
+            c2=0;
+            return 0;
         }
-
-        return (uint8_t)(norm32>>_NORM_CC_SHIFT);
     }
+    return (uint8_t)(norm32>>_NORM_CC_SHIFT);
 }
 
 /*
@@ -910,57 +837,19 @@ static inline uint32_t
 _getPrevNorm32(const UChar *start, const UChar *&src,
                uint32_t minC, uint32_t mask,
                UChar &c, UChar &c2) {
-    uint32_t norm32;
-
     c=*--src;
     c2=0;
 
     /* check for a surrogate before getting norm32 to see if we need to predecrement further */
     if(c<minC) {
         return 0;
-    } else if(!UTF_IS_SURROGATE(c)) {
+    } else if(!U_IS_SURROGATE(c)) {
         return _getNorm32(c);
-    } else if(UTF_IS_SURROGATE_FIRST(c)) {
-        /* unpaired first surrogate */
-        return 0;
-    } else if(src!=start && UTF_IS_FIRST_SURROGATE(c2=*(src-1))) {
+    } else if(U16_IS_SURROGATE_TRAIL(c) && src!=start && U16_IS_LEAD(c2=*(src-1))) {
         --src;
-        norm32=_getNorm32(c2);
-
-        if((norm32&mask)==0) {
-            /* all surrogate pairs with this lead surrogate have only irrelevant data */
-            return 0;
-        } else {
-            /* norm32 must be a surrogate special */
-            return _getNorm32FromSurrogatePair(norm32, c);
-        }
+        return _getNorm32FromSurrogatePair(c2, c);
     } else {
-        /* unpaired second surrogate */
-        c2=0;
-        return 0;
-    }
-}
-
-static inline uint32_t
-_getUTrie2PrevNorm32(const UChar *start, const UChar *&src,
-               uint32_t minC, uint32_t mask,
-               UChar &c, UChar &c2) {
-    c=*--src;
-    c2=0;
-
-    /* check for a surrogate before getting norm32 to see if we need to predecrement further */
-    if(c<minC) {
-        return 0;
-    } else if(!UTF_IS_SURROGATE(c)) {
-        return _getUTrie2Norm32(c);
-    } else if(UTF_IS_SURROGATE_FIRST(c)) {
-        /* unpaired first surrogate */
-        return 0;
-    } else if(src!=start && UTF_IS_FIRST_SURROGATE(c2=*(src-1))) {
-        --src;
-        return _getUTrie2Norm32FromSurrogatePair(c2, c);
-    } else {
-        /* unpaired second surrogate */
+        /* unpaired surrogate */
         c2=0;
         return 0;
     }
@@ -975,13 +864,6 @@ _getPrevCC(const UChar *start, const UChar *&p) {
     UChar c, c2;
 
     return (uint8_t)(_getPrevNorm32(start, p, _NORM_MIN_WITH_LEAD_CC, _NORM_CC_MASK, c, c2)>>_NORM_CC_SHIFT);
-}
-
-static inline uint8_t
-_getUTrie2PrevCC(const UChar *start, const UChar *&p) {
-    UChar c, c2;
-
-    return (uint8_t)(_getUTrie2PrevNorm32(start, p, _NORM_MIN_WITH_LEAD_CC, _NORM_CC_MASK, c, c2)>>_NORM_CC_SHIFT);
 }
 
 /*
@@ -1042,32 +924,28 @@ _isTrueStarter(uint32_t norm32, uint32_t ccOrQCMask, uint32_t decompQCMask) {
 /* uchar.h */
 U_CAPI uint8_t U_EXPORT2
 u_getCombiningClass(UChar32 c) {
-#if !UNORM_HARDCODE_DATA
+#if UNORM_HARDCODE_DATA
+    if(!U_IS_LEAD(c)) {
+#else
     UErrorCode errorCode=U_ZERO_ERROR;
-    if(_haveData(errorCode)) {
+    if(_haveData(errorCode) && !U_IS_LEAD(c)) {
 #endif
-        uint32_t norm32;
-
-        UTRIE_GET32(&normTrie, c, norm32);
+        uint32_t norm32=UTRIE2_GET32(&normTrie, c);
         return (uint8_t)(norm32>>_NORM_CC_SHIFT);
-#if !UNORM_HARDCODE_DATA
     } else {
         return 0;
     }
-#endif
 }
 
 U_CFUNC UBool U_EXPORT2
 unorm_internalIsFullCompositionExclusion(UChar32 c) {
 #if UNORM_HARDCODE_DATA
-    if(auxTrie.index!=NULL) {
+    if(auxTrie.index!=NULL && !U_IS_LEAD(c)) {
 #else
     UErrorCode errorCode=U_ZERO_ERROR;
-    if(_haveData(errorCode) && auxTrie.index!=NULL) {
+    if(_haveData(errorCode) && auxTrie.index!=NULL && !U_IS_LEAD(c)) {
 #endif
-        uint16_t aux;
-
-        UTRIE_GET16(&auxTrie, c, aux);
+        uint16_t aux=UTRIE2_GET16(&auxTrie, c);
         return (UBool)((aux&_NORM_AUX_COMP_EX_MASK)!=0);
     } else {
         return FALSE;
@@ -1077,14 +955,12 @@ unorm_internalIsFullCompositionExclusion(UChar32 c) {
 U_CFUNC UBool U_EXPORT2
 unorm_isCanonSafeStart(UChar32 c) {
 #if UNORM_HARDCODE_DATA
-    if(auxTrie.index!=NULL) {
+    if(auxTrie.index!=NULL && !U_IS_LEAD(c)) {
 #else
     UErrorCode errorCode=U_ZERO_ERROR;
-    if(_haveData(errorCode) && auxTrie.index!=NULL) {
+    if(_haveData(errorCode) && auxTrie.index!=NULL && !U_IS_LEAD(c)) {
 #endif
-        uint16_t aux;
-
-        UTRIE_GET16(&auxTrie, c, aux);
+        uint16_t aux=UTRIE2_GET16(&auxTrie, c);
         return (UBool)((aux&_NORM_AUX_UNSAFE_MASK)==0);
     } else {
         return FALSE;
@@ -1208,12 +1084,12 @@ u_getFC_NFKC_Closure(UChar32 c, UChar *dest, int32_t destCapacity, UErrorCode *p
         *pErrorCode=U_ILLEGAL_ARGUMENT_ERROR;
         return 0;
     }
-    if(!_haveData(*pErrorCode) || auxTrie.index==NULL) {
-        return 0;
+    if(_haveData(*pErrorCode) && auxTrie.index!=NULL && !U_IS_LEAD(c)) {
+        aux=UTRIE2_GET16(&auxTrie, c);
+        aux&=_NORM_AUX_FNC_MASK;
+    } else {
+        aux=0;
     }
-
-    UTRIE_GET16(&auxTrie, c, aux);
-    aux&=_NORM_AUX_FNC_MASK;
     if(aux!=0) {
         const UChar *s;
         int32_t length;
@@ -1239,7 +1115,7 @@ u_getFC_NFKC_Closure(UChar32 c, UChar *dest, int32_t destCapacity, UErrorCode *p
 U_CAPI UBool U_EXPORT2
 unorm_isNFSkippable(UChar32 c, UNormalizationMode mode) {
     uint32_t norm32, mask;
-    uint16_t aux, fcd;
+    uint16_t aux;
 
 #if !UNORM_HARDCODE_DATA
     UErrorCode errorCode=U_ZERO_ERROR;
@@ -1247,6 +1123,10 @@ unorm_isNFSkippable(UChar32 c, UNormalizationMode mode) {
         return FALSE;
     }
 #endif
+
+    if(U_IS_LEAD(c)) {
+        return TRUE;
+    }
 
     /* handle trivial cases; set the comparison mask for the normal ones */
     switch(mode) {
@@ -1267,18 +1147,13 @@ unorm_isNFSkippable(UChar32 c, UNormalizationMode mode) {
         break;
     case UNORM_FCD:
         /* FCD: skippable if lead cc==0 and trail cc<=1 */
-        if(fcdTrie.index!=NULL) {
-            UTRIE_GET16(&fcdTrie, c, fcd);
-            return fcd<=1;
-        } else {
-            return FALSE;
-        }
+        return fcdTrie.index!=NULL && UTRIE2_GET16(&fcdTrie, c)<=1;
     default:
         return FALSE;
     }
 
     /* check conditions (a)..(e), see unormimp.h */
-    UTRIE_GET32(&normTrie, c, norm32);
+    norm32=UTRIE2_GET32(&normTrie, c);
     if((norm32&mask)!=0) {
         return FALSE; /* fails (a)..(e), not skippable */
     }
@@ -1304,7 +1179,7 @@ unorm_isNFSkippable(UChar32 c, UNormalizationMode mode) {
         return FALSE; /* no (f) data, say not skippable to be safe */
     }
 
-    UTRIE_GET16(&auxTrie, c, aux);
+    aux=UTRIE2_GET16(&auxTrie, c);
     return (aux&_NORM_AUX_NFC_SKIP_F_MASK)==0; /* TRUE=skippable if the (f) flag is not set */
 
     /* } else { FCC, test fcd<=1 instead of the above } */
@@ -1319,12 +1194,12 @@ unorm_addPropertyStarts(const USetAdder *sa, UErrorCode *pErrorCode) {
     }
 
     /* add the start code point of each same-value range of each trie */
-    utrie_enum(&normTrie, NULL, _enumPropertyStartsRange, sa);
+    utrie2_enum(&normTrie, NULL, _enumPropertyStartsRange, sa);
     if(fcdTrie.index!=NULL) {
-        utrie_enum(&fcdTrie, NULL, _enumPropertyStartsRange, sa);
+        utrie2_enum(&fcdTrie, NULL, _enumPropertyStartsRange, sa);
     }
     if(auxTrie.index!=NULL) {
-        utrie_enum(&auxTrie, NULL, _enumPropertyStartsRange, sa);
+        utrie2_enum(&auxTrie, NULL, _enumPropertyStartsRange, sa);
     }
 
     /* add Hangul LV syllables and LV+1 because of skippables */
@@ -1350,10 +1225,10 @@ unorm_getQuickCheck(UChar32 c, UNormalizationMode mode) {
     }
 #endif
 
-    UTRIE_GET32(&normTrie, c, norm32);
+    norm32=UTRIE2_GET32(&normTrie, c);
     norm32&=qcMask[mode];
 
-    if(norm32==0) {
+    if(norm32==0 || U_IS_LEAD(c)) {
         return UNORM_YES;
     } else if(norm32&_NORM_QC_ANY_NO) {
         return UNORM_NO;
@@ -1364,7 +1239,6 @@ unorm_getQuickCheck(UChar32 c, UNormalizationMode mode) {
 
 U_CFUNC uint16_t U_EXPORT2
 unorm_getFCD16FromCodePoint(UChar32 c) {
-    uint16_t fcd;
 #if !UNORM_HARDCODE_DATA
     UErrorCode errorCode;
     errorCode=U_ZERO_ERROR;
@@ -1374,13 +1248,11 @@ unorm_getFCD16FromCodePoint(UChar32 c) {
 #if !UNORM_HARDCODE_DATA
         !_haveData(errorCode) ||
 #endif
-        fcdTrie.index==NULL
+        fcdTrie.index==NULL || U_IS_LEAD(c)
     ) {
         return 0;
     }
-
-    UTRIE_GET16(&fcdTrie, c, fcd);
-    return fcd;
+    return UTRIE2_GET16(&fcdTrie, c);
 }
 
 /* reorder UTF-16 in-place -------------------------------------------------- */
@@ -1410,21 +1282,13 @@ _insertOrdered(const UChar *start, UChar *current, UChar *p,
     if(start<current && cc!=0) {
         /* search for the insertion point where cc>=prevCC */
         pPreBack=pBack=current;
-#if USE_UTRIE2
-        prevCC=_getUTrie2PrevCC(start, pPreBack);
-#else
         prevCC=_getPrevCC(start, pPreBack);
-#endif
         if(cc<prevCC) {
             /* this will be the last code point, so keep its cc */
             trailCC=prevCC;
             pBack=pPreBack;
             while(start<pPreBack) {
-#if USE_UTRIE2
-                prevCC=_getUTrie2PrevCC(start, pPreBack);
-#else
                 prevCC=_getPrevCC(start, pPreBack);
-#endif
                 if(cc>=prevCC) {
                     break;
                 }
@@ -1575,12 +1439,12 @@ _findNextStarter(const UChar *src, const UChar *limit,
             break; /* true starter */
         }
 
-        if(isNorm32LeadSurrogate(norm32)) {
+        if(U16_IS_LEAD(c)) {
             /* c is a lead surrogate, get the real norm32 */
-            if((src+1)==limit || !UTF_IS_SECOND_SURROGATE(c2=*(src+1))) {
+            if((src+1)==limit || !U16_IS_TRAIL(c2=*(src+1))) {
                 break; /* unmatched first surrogate: counts as a true starter */
             }
-            norm32=_getNorm32FromSurrogatePair(norm32, c2);
+            norm32=_getNorm32FromSurrogatePair(c, c2);
 
             if((norm32&ccOrQCMask)==0) {
                 break; /* true starter */
@@ -1642,8 +1506,8 @@ unorm_getDecomposition(UChar32 c, UBool compat,
         }
 
         /* data lookup */
-        UTRIE_GET32(&normTrie, c, norm32);
-        if((norm32&qcMask)==0) {
+        norm32=UTRIE2_GET32(&normTrie, c);
+        if((norm32&qcMask)==0 || U_IS_LEAD(c)) {
             /* simple case: no decomposition */
             if(c<=0xffff) {
                 if(destCapacity>0) {
@@ -1819,7 +1683,7 @@ _decompose(UChar *dest, int32_t destCapacity,
                 if(src!=limit && UTF_IS_SECOND_SURROGATE(c2=*src)) {
                     ++src;
                     length=2;
-                    norm32=_getNorm32FromSurrogatePair(norm32, c2);
+                    norm32=_getNorm32FromSurrogatePair(c, c2);
                 } else {
                     c2=0;
                     length=1;
@@ -1951,7 +1815,7 @@ _getNextCombining(UChar *&p, const UChar *limit,
             /* c is a lead surrogate, get the real norm32 */
             if(p!=limit && UTF_IS_SECOND_SURROGATE(c2=*p)) {
                 ++p;
-                norm32=_getNorm32FromSurrogatePair(norm32, c2);
+                norm32=_getNorm32FromSurrogatePair(c, c2);
             } else {
                 c2=0;
                 return 0;
@@ -1984,9 +1848,10 @@ static inline uint16_t
 _getCombiningIndexFromStarter(UChar c, UChar c2) {
     uint32_t norm32;
 
-    norm32=_getNorm32(c);
-    if(c2!=0) {
-        norm32=_getNorm32FromSurrogatePair(norm32, c2);
+    if(c2==0) {
+        norm32=_getNorm32(c);
+    } else {
+        norm32=_getNorm32FromSurrogatePair(c, c2);
     }
     return *(_getExtraData(norm32)-1);
 }
@@ -2457,20 +2322,12 @@ _compose(UChar *dest, int32_t destCapacity,
         /* count code units below the minimum or with irrelevant data for the quick check */
         prevSrc=src;
         if(limit==NULL) {
-#if USE_UTRIE2
-            while((c=*src)<minNoMaybe ? c!=0 : ((norm32=_getUTrie2Norm32(c))&ccOrQCMask)==0) {
-#else
             while((c=*src)<minNoMaybe ? c!=0 : ((norm32=_getNorm32(c))&ccOrQCMask)==0) {
-#endif
                 prevCC=0;
                 ++src;
             }
         } else {
-#if USE_UTRIE2
-            while(src!=limit && ((c=*src)<minNoMaybe || ((norm32=_getUTrie2Norm32(c))&ccOrQCMask)==0)) {
-#else
             while(src!=limit && ((c=*src)<minNoMaybe || ((norm32=_getNorm32(c))&ccOrQCMask)==0)) {
-#endif
                 prevCC=0;
                 ++src;
             }
@@ -2564,11 +2421,7 @@ _compose(UChar *dest, int32_t destCapacity,
                 if(src!=limit && UTF_IS_SECOND_SURROGATE(c2=*src)) {
                     ++src;
                     length=2;
-#if USE_UTRIE2
-                    norm32=_getUTrie2Norm32FromSurrogatePair(c, c2);
-#else
-                    norm32=_getNorm32FromSurrogatePair(norm32, c2);
-#endif
+                    norm32=_getNorm32FromSurrogatePair(c, c2);
                 } else {
                     /* c is an unpaired lead surrogate, nothing to do */
                     c2=0;
@@ -2752,7 +2605,7 @@ _findSafeFCD(const UChar *src, const UChar *limit, uint16_t fcd16) {
             ++src;
         } else if((src+1)!=limit && (c2=*(src+1), UTF_IS_SECOND_SURROGATE(c2))) {
             /* c is a lead surrogate, get the real fcd16 */
-            fcd16=_getFCD16FromSurrogatePair(fcd16, c2);
+            fcd16=_getFCD16FromSurrogatePair(c, c2);
             if(fcd16<=0xff) {
                 break;
             }
@@ -2806,7 +2659,7 @@ _decomposeFCD(const UChar *src, const UChar *decompLimit,
             if(src!=decompLimit && UTF_IS_SECOND_SURROGATE(c2=*src)) {
                 ++src;
                 length=2;
-                norm32=_getNorm32FromSurrogatePair(norm32, c2);
+                norm32=_getNorm32FromSurrogatePair(c, c2);
             } else {
                 c2=0;
                 length=1;
@@ -3002,7 +2855,7 @@ unorm_makeFCD(UChar *dest, int32_t destCapacity,
             /* c is a lead surrogate, get the real fcd16 */
             if(src!=limit && UTF_IS_SECOND_SURROGATE(c2=*src)) {
                 ++src;
-                fcd16=_getFCD16FromSurrogatePair(fcd16, c2);
+                fcd16=_getFCD16FromSurrogatePair(c, c2);
             } else {
                 c2=0;
                 fcd16=0;
@@ -3102,11 +2955,7 @@ unorm_checkFCD(const UChar *src, int32_t srcLength, const UnicodeSet *nx) {
                      * -c fits into int16_t because it is <_NORM_MIN_WITH_LEAD_CC==0x300
                      */
                     prevCC=(int16_t)-c;
-#if USE_UTRIE2
-                } else if((fcd16=_getUTrie2FCD16(c))==0) {
-#else
                 } else if((fcd16=_getFCD16(c))==0) {
-#endif
                     prevCC=0;
                 } else {
                     break;
@@ -3118,11 +2967,7 @@ unorm_checkFCD(const UChar *src, int32_t srcLength, const UnicodeSet *nx) {
                     return TRUE;
                 } else if((c=*src++)<_NORM_MIN_WITH_LEAD_CC) {
                     prevCC=(int16_t)-c;
-#if USE_UTRIE2
-                } else if((fcd16=_getUTrie2FCD16(c))==0) {
-#else
                 } else if((fcd16=_getFCD16(c))==0) {
-#endif
                     prevCC=0;
                 } else {
                     break;
@@ -3135,11 +2980,7 @@ unorm_checkFCD(const UChar *src, int32_t srcLength, const UnicodeSet *nx) {
             /* c is a lead surrogate, get the real fcd16 */
             if(src!=limit && UTF_IS_SECOND_SURROGATE(c2=*src)) {
                 ++src;
-#if USE_UTRIE2
-                fcd16=_getUTrie2FCD16FromSurrogatePair(c, c2);
-#else
-                fcd16=_getFCD16FromSurrogatePair(fcd16, c2);
-#endif
+                fcd16=_getFCD16FromSurrogatePair(c, c2);
             } else {
                 c2=0;
                 fcd16=0;
@@ -3167,11 +3008,7 @@ unorm_checkFCD(const UChar *src, int32_t srcLength, const UnicodeSet *nx) {
             if(prevCC<0) {
                 /* the previous character was <_NORM_MIN_WITH_LEAD_CC, we need to get its trail cc */
                 if(!nx_contains(nx, (UChar32)-prevCC)) {
-#if USE_UTRIE2
-                    prevCC=(int16_t)(_getUTrie2FCD16((UChar)-prevCC)&0xff);
-#else
                     prevCC=(int16_t)(_getFCD16((UChar)-prevCC)&0xff);
-#endif
                 } else {
                     prevCC=0; /* excluded: fcd16==0 */
                 }
@@ -3212,11 +3049,7 @@ unorm_checkFCDAlwaysGet(const UChar *src, int32_t srcLength, const UnicodeSet *n
                 c=*src++;
                 if(c==0) {
                     return TRUE;
-#if USE_UTRIE2
-                } else if((fcd16=_getUTrie2FCD16(c))==0) {
-#else
                 } else if((fcd16=_getFCD16(c))==0) {
-#endif
                     prevCC=0;
                 } else {
                     break;
@@ -3228,11 +3061,7 @@ unorm_checkFCDAlwaysGet(const UChar *src, int32_t srcLength, const UnicodeSet *n
                     return TRUE;
                 } else {
                     c=*src++;
-#if USE_UTRIE2
-                    if((fcd16=_getUTrie2FCD16(c))==0) {
-#else
                     if((fcd16=_getFCD16(c))==0) {
-#endif
                         prevCC=0;
                     } else {
                         break;
@@ -3246,11 +3075,7 @@ unorm_checkFCDAlwaysGet(const UChar *src, int32_t srcLength, const UnicodeSet *n
             /* c is a lead surrogate, get the real fcd16 */
             if(src!=limit && UTF_IS_SECOND_SURROGATE(c2=*src)) {
                 ++src;
-#if USE_UTRIE2
-                fcd16=_getUTrie2FCD16FromSurrogatePair(c, c2);
-#else
-                fcd16=_getFCD16FromSurrogatePair(fcd16, c2);
-#endif
+                fcd16=_getFCD16FromSurrogatePair(c, c2);
             } else {
                 c2=0;
                 fcd16=0;
@@ -3306,33 +3131,11 @@ unorm_checkFCDUTF8(const uint8_t *src, int32_t srcLength, const UnicodeSet *nx) 
         /* skip a run of code units with irrelevant data for the FCD check */
         if(limit==NULL) {
             for(;;) {
-#if USE_UTRIE2 && USE_UTRIE2_U8_NEXT
                 if(*src==0) {
                     return TRUE;
                 }
                 prevSrc=src;
-                UTRIE2_U8_NEXT16(&fcdTrie2, src, src+6, fcd16);
-#elif USE_UTRIE2
-                if(src[i]==0) {
-                    return TRUE;
-                }
-                U8_NEXT(src, i, INT32_MAX, c);
-                if(c>=0) {
-                    fcd16=UTRIE2_GET16(&fcdTrie2, c);
-                } else {
-                    fcd16=0;
-                }
-#else
-                if(src[i]==0) {
-                    return TRUE;
-                }
-                U8_NEXT(src, i, INT32_MAX, c);
-                if(c>=0) {
-                    UTRIE_GET16(&fcdTrie, c, fcd16);
-                } else {
-                    fcd16=0;
-                }
-#endif
+                UTRIE2_U8_NEXT16(&fcdTrie, src, src+6, fcd16);
                 if(fcd16==0) {
                     prevCC=0;
                 } else {
@@ -3341,33 +3144,11 @@ unorm_checkFCDUTF8(const uint8_t *src, int32_t srcLength, const UnicodeSet *nx) 
             }
         } else {
             for(;;) {
-#if USE_UTRIE2 && USE_UTRIE2_U8_NEXT
                 if(src==limit) {
                     return TRUE;
                 }
                 prevSrc=src;
-                UTRIE2_U8_NEXT16(&fcdTrie2, src, limit, fcd16);
-#elif USE_UTRIE2
-                if(i==srcLength) {
-                    return TRUE;
-                }
-                U8_NEXT(src, i, srcLength, c);
-                if(c>=0) {
-                    fcd16=UTRIE2_GET16(&fcdTrie2, c);
-                } else {
-                    fcd16=0;
-                }
-#else
-                if(i==srcLength) {
-                    return TRUE;
-                }
-                U8_NEXT(src, i, srcLength, c);
-                if(c>=0) {
-                    UTRIE_GET16(&fcdTrie, c, fcd16);
-                } else {
-                    fcd16=0;
-                }
-#endif
+                UTRIE2_U8_NEXT16(&fcdTrie, src, limit, fcd16);
                 if(fcd16==0) {
                     prevCC=0;
                 } else {
@@ -3377,11 +3158,9 @@ unorm_checkFCDUTF8(const uint8_t *src, int32_t srcLength, const UnicodeSet *nx) 
         }
 
         if(nx!=NULL) {
-#if USE_UTRIE2
             int32_t cpLength=(int32_t)(src-prevSrc);
             i=0;
             U8_NEXT(prevSrc, i, cpLength, c);
-#endif
             if(nx->contains(c)) {
                 prevCC=0; /* excluded: fcd16==0 */
                 continue;
@@ -3465,7 +3244,7 @@ _quickCheck(const UChar *src,
         }
         return unorm_checkFCD(src, srcLength, nx) ? UNORM_YES : UNORM_NO;
     case UNORM_FCD_ALWAYS_GET:
-        if(fcdTrie2.index==NULL) {
+        if(fcdTrie.index==NULL) {
             *pErrorCode=U_UNSUPPORTED_ERROR;
             return UNORM_MAYBE;
         }
@@ -3520,11 +3299,11 @@ _quickCheck(const UChar *src,
         }
 
         /* check one above-minimum, relevant code unit */
-        if(isNorm32LeadSurrogate(norm32)) {
+        if(U16_IS_LEAD(c)) {
             /* c is a lead surrogate, get the real norm32 */
-            if(src!=limit && UTF_IS_SECOND_SURROGATE(c2=*src)) {
+            if(src!=limit && U16_IS_TRAIL(c2=*src)) {
                 ++src;
-                norm32=_getNorm32FromSurrogatePair(norm32, c2);
+                norm32=_getNorm32FromSurrogatePair(c, c2);
             } else {
                 c2=0;
                 norm32=0;
@@ -3675,13 +3454,6 @@ unorm_internalNormalizeWithNX(UChar *dest, int32_t destCapacity,
                             src, srcLength,
                             options, nx, pErrorCode);
         break;
-#if 0
-    case UNORM_UTRIE2_NFC:
-        destLength=_composeWithUTrie2(dest, destCapacity,
-                            src, srcLength,
-                            options, nx, pErrorCode);
-        break;
-#endif
     case UNORM_NFKC:
         destLength=_compose(dest, destCapacity,
                             src, srcLength,
@@ -3833,7 +3605,7 @@ _getPrevNorm32(UCharIterator &src, uint32_t minC, uint32_t mask, UChar &c, UChar
             return 0;
         } else {
             /* norm32 must be a surrogate special */
-            return _getNorm32FromSurrogatePair(norm32, c);
+            return _getNorm32FromSurrogatePair(c2, c);
         }
     } else {
         /* unpaired second surrogate, undo the c2=src.previous() movement */
@@ -4075,7 +3847,7 @@ _getNextNorm32(UCharIterator &src, uint32_t minC, uint32_t mask, UChar &c, UChar
                 return 0;
             } else {
                 /* norm32 must be a surrogate special */
-                return _getNorm32FromSurrogatePair(norm32, c2);
+                return _getNorm32FromSurrogatePair(c, c2);
             }
         } else {
             /* unmatched surrogate */

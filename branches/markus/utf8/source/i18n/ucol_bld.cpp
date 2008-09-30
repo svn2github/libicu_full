@@ -837,7 +837,8 @@ U_CFUNC void ucol_createElements(UColTokenParser *src, tempUCATable *t, UColTokL
     UColToken *tok = lh->first;
     UColToken *expt = NULL;
     uint32_t i = 0, j = 0;
-    const uint16_t  *fcdTrieData = unorm_getFCDTrie(status);
+    UChar32 fcdHighStart;
+    const uint16_t *fcdTrieIndex = unorm_getFCDTrieIndex(fcdHighStart, status);
 
     while(tok != NULL && U_SUCCESS(*status)) {
         /* first, check if there are any expansions */
@@ -932,7 +933,10 @@ U_CFUNC void ucol_createElements(UColTokenParser *src, tempUCATable *t, UColTokL
                 }
                 if ( !src->buildCCTabFlag ) {
                     // check combining class
-                    int16_t fcd = unorm_getFCD16(fcdTrieData, el.cPoints[i]);
+                    // TODO(markus): what about supplementary code points?
+                    // TODO(markus): Mn followed by non-Mn does not set containCombinMarks?!
+                    // TODO(markus): this tests the tccc not the ccc -- is that correct?
+                    int16_t fcd = unorm_getFCD16(fcdTrieIndex, el.cPoints[i]);
                     if ( (fcd && 0xff) == 0 ) {
                         // reset flag when current char is not combining mark.
                         containCombinMarks = FALSE;

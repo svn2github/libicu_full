@@ -200,21 +200,19 @@ utrie2_internalU8PrevIndex(const UTrie2 *trie, UChar32 c,
 
 
 /** Internal trie getter from a BMP code point. Returns the data index. */
-#define _UTRIE2_INDEX_FROM_BMP(trie, c) \
-    (((int32_t)((trie)->index[(c)>>UTRIE2_SHIFT_2]) \
+#define _UTRIE2_INDEX_FROM_BMP(trieIndex, c) \
+    (((int32_t)((trieIndex)[(c)>>UTRIE2_SHIFT_2]) \
     <<UTRIE2_INDEX_SHIFT)+ \
     ((c)&UTRIE2_DATA_MASK))
 
-/** Internal trie getter from a supplementary code point. Returns the data index. */
-#define _UTRIE2_INDEX_FROM_SUPP(trie, c) \
-    ((c)>=(trie)->highStart ? \
-        (trie)->highValueIndex : \
-        ((int32_t)((trie)->index[ \
-            (trie)->index[(UTRIE2_INDEX_1_OFFSET-UTRIE2_OMITTED_BMP_INDEX_1_LENGTH)+ \
-                          ((c)>>UTRIE2_SHIFT_1)]+ \
-            (((c)>>UTRIE2_SHIFT_2)&UTRIE2_INDEX_2_MASK)]) \
-        <<UTRIE2_INDEX_SHIFT)+ \
-        ((c)&UTRIE2_DATA_MASK))
+/** Internal trie getter from a supplementary code point below highStart. Returns the data index. */
+#define _UTRIE2_INDEX_FROM_SUPP(trieIndex, c) \
+    (((int32_t)((trieIndex)[ \
+        (trieIndex)[(UTRIE2_INDEX_1_OFFSET-UTRIE2_OMITTED_BMP_INDEX_1_LENGTH)+ \
+                      ((c)>>UTRIE2_SHIFT_1)]+ \
+        (((c)>>UTRIE2_SHIFT_2)&UTRIE2_INDEX_2_MASK)]) \
+    <<UTRIE2_INDEX_SHIFT)+ \
+    ((c)&UTRIE2_DATA_MASK))
 
 /**
  * Internal trie getter from a code point, without checking that c is in 0..10FFFF.
@@ -222,16 +220,18 @@ utrie2_internalU8PrevIndex(const UTrie2 *trie, UChar32 c,
  */
 #define _UTRIE2_INDEX_FROM_CP(trie, c) \
     ((c)<=0xffff ? \
-        _UTRIE2_INDEX_FROM_BMP(trie, c) : \
-        _UTRIE2_INDEX_FROM_SUPP(trie, c))
+        _UTRIE2_INDEX_FROM_BMP((trie)->index, c) : \
+        (c)>=(trie)->highStart ? (trie)->highValueIndex : \
+            _UTRIE2_INDEX_FROM_SUPP((trie)->index, c))
 
 /** Internal trie getter from a BMP code point. Returns the data. */
 #define _UTRIE2_GET_FROM_BMP(trie, data, c) \
-    (trie)->data[_UTRIE2_INDEX_FROM_BMP(trie, c)]
+    (trie)->data[_UTRIE2_INDEX_FROM_BMP((trie)->index, c)]
 
 /** Internal trie getter from a supplementary code point. Returns the data. */
 #define _UTRIE2_GET_FROM_SUPP(trie, data, c) \
-    (trie)->data[_UTRIE2_INDEX_FROM_SUPP(trie, c)]
+    (trie)->data[(c)>=(trie)->highStart ? (trie)->highValueIndex : \
+                 _UTRIE2_INDEX_FROM_SUPP((trie)->index, c)]
 
 /**
  * Internal trie getter from a code point, without checking that c is in 0..10FFFF.
