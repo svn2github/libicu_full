@@ -967,13 +967,14 @@ TrieBuildTest(void) {
     void *memory;
     UNewTrie2 *newTrie;
     UTrie2 trie;
+    int32_t length, expectedLength;
     UErrorCode errorCode;
 
     newTrie=makeNewTrieWithRanges(testName, FALSE,
                                   setRanges2, LENGTHOF(setRanges2),
                                   checkRanges2, LENGTHOF(checkRanges2));
     errorCode=U_ZERO_ERROR;
-    memory=unewtrie2_build(newTrie, UTRIE2_16_VALUE_BITS, &trie, &errorCode);
+    memory=unewtrie2_build(newTrie, UTRIE2_16_VALUE_BITS, NULL, &trie, &errorCode);
     if(U_FAILURE(errorCode)) {
         log_err("error: unewtrie2_build(%s, UTRIE2_16_VALUE_BITS) failed: %s\n",
                 testName, u_errorName(errorCode));
@@ -983,8 +984,9 @@ TrieBuildTest(void) {
         uprv_free(memory);
     }
     errorCode=U_ZERO_ERROR;
-    memory=unewtrie2_build(newTrie, UTRIE2_32_VALUE_BITS, &trie, &errorCode);
-    if(U_FAILURE(errorCode)) {
+    memory=unewtrie2_build(newTrie, UTRIE2_32_VALUE_BITS, &length, &trie, &errorCode);
+    expectedLength=16+trie.indexLength*2+trie.dataLength*4;  /* 16=sizeof(UTrie2Header) */
+    if(U_FAILURE(errorCode) || length!=expectedLength) {
         log_err("error: unewtrie2_build(%s, UTRIE2_32_VALUE_BITS) failed: %s\n",
                 testName, u_errorName(errorCode));
     } else {

@@ -813,6 +813,9 @@ unewtrie2_setRange32(UNewTrie2 *trie,
  *
  * @param newTrie the build-time trie
  * @param valueBits selects the data entry size
+ * @param serializedLength output-only: if the function is successful,
+ *                         *serializedLength receives the length of the serialized trie;
+ *                         can be NULL
  * @param trie a pointer to the runtime trie structure to be filled
  * @param pErrorCode an in/out ICU UErrorCode
  * @return Allocated memory with the UTrie2 data arrays.
@@ -820,6 +823,7 @@ unewtrie2_setRange32(UNewTrie2 *trie,
  */
 U_CAPI void * U_EXPORT2
 unewtrie2_build(UNewTrie2 *newTrie, UTrie2ValueBits valueBits,
+                int32_t *serializedLength,
                 UTrie2 *trie, UErrorCode *pErrorCode);
 
 /**

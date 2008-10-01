@@ -136,6 +136,7 @@ utrie2_fromUTrie(UTrie2 *trie2, const UTrie *trie1,
     if(context.ok) {
         memory=unewtrie2_build(context.newTrie,
                                trie1->data32!=NULL ? UTRIE2_32_VALUE_BITS : UTRIE2_16_VALUE_BITS,
+                               NULL,
                                trie2, pErrorCode);
     } else {
         /* most likely reason for unewtrie2_setRange32() to fail */
@@ -181,6 +182,7 @@ unewtrie2_compareWithUTrie(const UNewTrie *trie1, UBool reduceTo16Bits, UBool co
 #endif
         memory=unewtrie2_build(context.newTrie,
                                reduceTo16Bits ? UTRIE2_16_VALUE_BITS : UTRIE2_32_VALUE_BITS,
+                               NULL,
                                &trie2, &errorCode);
     } else {
         /* most likely reason for unewtrie2_setRange32() to fail */
@@ -764,6 +766,7 @@ unewtrie2_setRange32(UNewTrie2 *trie,
 
 U_CAPI void * U_EXPORT2
 unewtrie2_build(UNewTrie2 *newTrie, UTrie2ValueBits valueBits,
+                int32_t *serializedLength,
                 UTrie2 *trie, UErrorCode *pErrorCode) {
     void *memory;
     int32_t length;
@@ -793,7 +796,11 @@ unewtrie2_build(UNewTrie2 *newTrie, UTrie2ValueBits valueBits,
     } else if(U_SUCCESS(*pErrorCode)) {
         *pErrorCode=U_INTERNAL_PROGRAM_ERROR;
     }
-    if(U_FAILURE(*pErrorCode)) {
+    if(U_SUCCESS(*pErrorCode)) {
+        if(serializedLength!=NULL) {
+            *serializedLength=length;
+        }
+    } else {
         uprv_free(memory);
         memory=NULL;
     }
