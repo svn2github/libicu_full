@@ -23,11 +23,17 @@
 
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 
+#if 0
+// Left over from when icu/branches/markus/utf8 could use both old UTrie
+// and new UTrie2, switched with #if in unorm.cpp and ubidi_props.c.
+// Comparative benchmarks were done in that branch on revision r24630
+// and earlier.
 U_CAPI void U_EXPORT2
 unorm_initUTrie2(UErrorCode *pErrorCode);
 
 U_CAPI void U_EXPORT2
 ubidi_initUTrie2(UErrorCode *pErrorCode);
+#endif
 
 U_NAMESPACE_BEGIN
 
@@ -42,8 +48,10 @@ public:
             : UPerfTest(argc, argv, NULL, 0, "", status),
               utf8(NULL), utf8Length(0), countInputCodePoints(0) {
         if (U_SUCCESS(status)) {
+#if 0       // See comment at unorm_initUTrie2() forward declaration.
             unorm_initUTrie2(&status);
             ubidi_initUTrie2(&status);
+#endif
             int32_t inputLength;
             UPerfTest::getBuffer(inputLength, status);
             if(U_SUCCESS(status) && inputLength>0) {
@@ -122,6 +130,8 @@ public:
     }
 };
 
+#if 0  // See comment at unorm_initUTrie2() forward declaration.
+
 class CheckFCDAlwaysGet : public Command {
 protected:
     CheckFCDAlwaysGet(const UTrie2PerfTest &testcase) : Command(testcase) {}
@@ -157,6 +167,8 @@ public:
         }
     }
 };
+
+#endif
 
 class ToNFC : public Command {
 protected:
@@ -218,10 +230,12 @@ public:
 UPerfFunction* UTrie2PerfTest::runIndexedTest(int32_t index, UBool exec, const char* &name, char* par) {
     switch (index) {
         case 0: name = "CheckFCD";              if (exec) return CheckFCD::get(*this); break;
-        case 1: name = "CheckFCDAlwaysGet";     if (exec) return CheckFCDAlwaysGet::get(*this); break;
-        case 2: name = "CheckFCDUTF8";          if (exec) return CheckFCDUTF8::get(*this); break;
-        case 3: name = "ToNFC";                 if (exec) return ToNFC::get(*this); break;
-        case 4: name = "GetBiDiClass";          if (exec) return GetBiDiClass::get(*this); break;
+        case 1: name = "ToNFC";                 if (exec) return ToNFC::get(*this); break;
+        case 2: name = "GetBiDiClass";          if (exec) return GetBiDiClass::get(*this); break;
+#if 0  // See comment at unorm_initUTrie2() forward declaration.
+        case 3: name = "CheckFCDAlwaysGet";     if (exec) return CheckFCDAlwaysGet::get(*this); break;
+        case 4: name = "CheckFCDUTF8";          if (exec) return CheckFCDUTF8::get(*this); break;
+#endif
         default: name = ""; break;
     }
     return NULL;
