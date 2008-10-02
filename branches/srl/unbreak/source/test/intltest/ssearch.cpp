@@ -849,9 +849,8 @@ int32_t StringList::size() const
     return listSize;
 }
 
-U_CDECL_BEGIN
-static void deleteStringList(void *obj);
-U_CDECL_END
+
+U_CFUNC void deleteStringList(void *obj);
 
 class CEToStringsMap
 {
@@ -909,15 +908,15 @@ void CEToStringsMap::putStringList(int32_t ce, StringList *stringList)
     uhash_iput(map, ce, (void *) stringList, &status);
 }
 
-U_CFUNC static void deleteStringList(void *obj)
+U_CFUNC void deleteStringList(void *obj)
 {
     StringList *strings = (StringList *) obj;
 
     delete strings;
 }
 
-static void deleteCEList(void *obj);
-static void deleteUnicodeStringKey(void *obj);
+U_CFUNC void deleteCEList(void *obj);
+U_CFUNC void deleteUnicodeStringKey(void *obj);
 
 class StringToCEsMap
 {
@@ -964,14 +963,14 @@ const CEList *StringToCEsMap::get(const UnicodeString *string)
     return (const CEList *) uhash_get(map, string);
 }
 
-static void deleteCEList(void *obj)
+U_CFUNC void deleteCEList(void *obj)
 {
     CEList *list = (CEList *) obj;
 
     delete list;
 }
 
-static void deleteUnicodeStringKey(void *obj)
+U_CFUNC void deleteUnicodeStringKey(void *obj)
 {
     UnicodeString *key = (UnicodeString *) obj;
 
