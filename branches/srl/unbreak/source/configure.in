@@ -584,32 +584,32 @@ AC_MSG_CHECKING([for properly overriding new and delete])
 U_OVERRIDE_CXX_ALLOCATION=0
 U_HAVE_PLACEMENT_NEW=0
 AC_CACHE_VAL(ac_cv_override_cxx_allocation_ok,
-    [AC_LINK_IFELSE([AC_LANG_PROGRAM([#include <stdlib.h>
+    [AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <stdlib.h>
     class UMemory {
     public:
     void *operator new(size_t size) {return malloc(size);}
-    void *operator new(size_t size) {return malloc(size);}
+    void *operator new[](size_t size) {return malloc(size);}
     void operator delete(void *p) {free(p);}
-    void operator delete(void *p) {free(p);}
+    void operator delete[](void *p) {free(p);}
     };
-    ], [])],[ac_cv_override_cxx_allocation_ok=yes],[ac_cv_override_cxx_allocation_ok=no])] )
+    ]], [])],[ac_cv_override_cxx_allocation_ok=yes],[ac_cv_override_cxx_allocation_ok=no])] )
 AC_MSG_RESULT($ac_cv_override_cxx_allocation_ok)
 if test $ac_cv_override_cxx_allocation_ok = yes
 then
     U_OVERRIDE_CXX_ALLOCATION=1
     AC_MSG_CHECKING([for placement new and delete])
     AC_CACHE_VAL(ac_cv_override_placement_new_ok,
-        [AC_LINK_IFELSE([AC_LANG_PROGRAM([#include <stdlib.h>
+        [AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <stdlib.h>
         class UMemory {
         public:
         void *operator new(size_t size) {return malloc(size);}
-        void *operator new(size_t size) {return malloc(size);}
+        void *operator new[](size_t size) {return malloc(size);}
         void operator delete(void *p) {free(p);}
-        void operator delete(void *p) {free(p);}
+        void operator delete[](void *p) {free(p);}
         void * operator new(size_t, void *ptr) { return ptr; }
         void operator delete(void *, void *) {}
         };
-        ], [])],[ac_cv_override_placement_new_ok=yes],[ac_cv_override_placement_new_ok=no])] )
+        ]], [])],[ac_cv_override_placement_new_ok=yes],[ac_cv_override_placement_new_ok=no])] )
     AC_MSG_RESULT($ac_cv_override_placement_new_ok)
     if test $ac_cv_override_placement_new_ok = yes
     then
@@ -648,22 +648,22 @@ AC_SUBST(U_TZSET)
 
 U_HAVE_TZNAME=0
 AC_CACHE_CHECK(for tzname,ac_cv_var_tzname,
-[AC_LINK_IFELSE([AC_LANG_PROGRAM([#ifndef __USE_POSIX
+[AC_LINK_IFELSE([AC_LANG_PROGRAM([[#ifndef __USE_POSIX
 #define __USE_POSIX
 #endif
 #include <stdlib.h>
 #include <time.h>
 #ifndef tzname /* For SGI.  */
-extern char *tzname; /* RS6000 and others reject char **tzname.  */
-#endif], [atoi(*tzname);])],[ac_cv_var_tzname=yes],[ac_cv_var_tzname=no])])
+extern char *tzname[]; /* RS6000 and others reject char **tzname.  */
+#endif]], [atoi(*tzname);])],[ac_cv_var_tzname=yes],[ac_cv_var_tzname=no])])
 if test $ac_cv_var_tzname = yes; then
   U_TZNAME=tzname
   U_HAVE_TZNAME=1
 else
   AC_CACHE_CHECK(for _tzname,ac_cv_var__tzname,
-  [AC_LINK_IFELSE([AC_LANG_PROGRAM([#include <stdlib.h>
+  [AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <stdlib.h>
   #include <time.h>
-  extern char *_tzname;], [atoi(*_tzname);])],[ac_cv_var__tzname=yes],[ac_cv_var__tzname=no])])
+  extern char *_tzname[];]], [atoi(*_tzname);])],[ac_cv_var__tzname=yes],[ac_cv_var__tzname=no])])
     if test $ac_cv_var__tzname = yes; then
       U_TZNAME=_tzname
       U_HAVE_TZNAME=1

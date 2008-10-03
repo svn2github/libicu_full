@@ -151,6 +151,7 @@ AC_DEFUN(AC_CHECK_64BIT_LIBS,
             case "${host}" in
             sparc*-*-solaris*)
                 SPARCV9=`isainfo -n 2>&1 | grep sparcv9`
+                # "Warning: -xarch=v9 is deprecated, use -m64 to create 64-bit programs"
                 SOL64=`$CXX -xarch=v9 2>&1 && $CC -xarch=v9 2>&1 | grep -v usage:`
                 if test -z "$SOL64" && test -n "$SPARCV9"; then
                     CFLAGS="${CFLAGS} -xtarget=ultra -xarch=v9"
@@ -158,7 +159,15 @@ AC_DEFUN(AC_CHECK_64BIT_LIBS,
                     LDFLAGS="${LDFLAGS} -xtarget=ultra -xarch=v9"
                     ENABLE_64BIT_LIBS=yes
                 else
-                    ENABLE_64BIT_LIBS=no
+                    SOL64=`$CXX -m64 2>&1 && $CC -m64 2>&1 | grep -v usage:`
+                    if test -z "$SOL64" && test -n "$SPARCV9"; then
+                        CFLAGS="${CFLAGS} -m64 "
+                        CXXFLAGS="${CXXFLAGS} -m64 "
+                        LDFLAGS="${LDFLAGS} -m64 "
+                        ENABLE_64BIT_LIBS=yes
+                    else
+                        ENABLE_64BIT_LIBS=no
+                    fi
                 fi
                 ;;
             i386-*-solaris*)
