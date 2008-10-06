@@ -1,5 +1,5 @@
 /******************************************************************************
- *   Copyright (C) 2000-2007, International Business Machines
+ *   Copyright (C) 2000-2008, International Business Machines
  *   Corporation and others.  All Rights Reserved.
  *******************************************************************************
  *   file name:  pkgdata.c
@@ -48,7 +48,6 @@ U_CDECL_BEGIN
 #include "makefile.h"
 U_CDECL_END
 
-static int executeMakefile(const UPKGOptions *o);
 static void loadLists(UPKGOptions *o, UErrorCode *status);
 
 /* always have this fcn, just might not do anything */
@@ -401,96 +400,18 @@ main(int argc, char* argv[]) {
         return 2;
     }
 
-    /* Makefile pathname */
-    uprv_strcpy(tmp, o.tmpDir);
-#ifdef U_MAKE_IS_NMAKE
-    uprv_strcat(tmp, U_FILE_SEP_STRING);
-#else
-    uprv_strcat(tmp, U_FILE_ALT_SEP_STRING);
-#endif
-    uprv_strcat(tmp, o.shortName);
-    uprv_strcat(tmp, "_");
-    uprv_strcat(tmp, o.mode);
-    uprv_strcat(tmp, ".mak");  /* MAY NEED TO CHANGE PER PLATFORM */
+    o.makeFile = "DO_NOT_USE";
 
-    o.makeFile = uprv_strdup(tmp);
-
-    out = T_FileStream_open(o.makeFile, "w");
-    if (out) {
-        pkg_mak_writeHeader(out, &o); /* need to take status */
-        o.fcn(&o, out, &status);
-        pkg_mak_writeFooter(out, &o);
-        T_FileStream_close(out);
-    } else {
-        fprintf(stderr, "warning: couldn't create %s, will use existing file if any\n", o.makeFile);
-        /*status = U_FILE_ACCESS_ERROR;*/
-    }
-
-    if(U_FAILURE(status)) {
-        fprintf(stderr, "Error creating makefile [%s]: %s\n", o.mode,
-            u_errorName(status));
-        return 1;
-    }
 
     if(o.nooutput == TRUE) {
         return 0; /* nothing to do. */
     }
 
-    return executeMakefile(&o);
+    return pkg_executeOptions(&o);
 }
 
-/* POSIX - execute makefile */
-static int executeMakefile(const UPKGOptions *o)
+#if 0
 {
-    char cmd[1024];
-    /*char pwd[1024];*/
-    const char *make;
-    int rc;
-
-    make = getenv("MAKE");
-
-    if(!make || !make[0]) {
-        make = U_MAKE;
-    }
-
-    /*getcwd(pwd, 1024);*/
-#ifdef U_WINDOWS
-    sprintf(cmd, "%s %s%s -f \"%s\" %s %s %s %s",
-        make,
-        o->install ? "INSTALLTO=" : "",
-        o->install ? o->install    : "",
-        o->makeFile,
-        o->clean   ? "clean"      : "",
-        o->rebuild ? "rebuild"    : "",
-        o->install ? "install"    : "",
-        o->makeArgs);
-#elif defined(OS400)
-    sprintf(cmd, "CALL GNU/GMAKE PARM(%s%s%s '-f' '%s' %s %s %s %s%s%s)",
-        o->install ? "'INSTALLTO=" : "",
-        o->install ? o->install    : "",
-        o->install ? "'"           : "",
-        o->makeFile,
-        o->clean   ? "'clean'"     : "",
-        o->rebuild ? "'rebuild'"   : "",
-        o->install ? "'install'"   : "",
-        o->makeArgs && *o->makeArgs ? "'"          : "",
-        o->makeArgs && *o->makeArgs ? o->makeArgs  : "",
-        o->makeArgs && *o->makeArgs ? "'"          : "");
-#else
-    sprintf(cmd, "%s %s%s -f %s %s %s %s %s",
-        make,
-        o->install ? "INSTALLTO=" : "",
-        o->install ? o->install    : "",
-        o->makeFile,
-        o->clean   ? "clean"      : "",
-        o->rebuild ? "rebuild"    : "",
-        o->install ? "install"    : "",
-        o->makeArgs);
-#endif
-    if(o->verbose) {
-        puts(cmd);
-    }
-
     rc = system(cmd);
 
     if(rc < 0) {
@@ -499,6 +420,7 @@ static int executeMakefile(const UPKGOptions *o)
 
     return rc < 128 ? rc : (rc >> 8);
 }
+#endif
 
 
 static void loadLists(UPKGOptions *o, UErrorCode *status)
