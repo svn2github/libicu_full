@@ -1,6 +1,6 @@
 ## -*-makefile-*-
 ## Cygwin-specific setup
-## Copyright (c) 2001-2006, International Business Machines Corporation and
+## Copyright (c) 2001-2008, International Business Machines Corporation and
 ## others. All Rights Reserved.
 
 ## Commands to generate dependency files
@@ -30,8 +30,8 @@ LINK.c=       $(CXX) $(CXXFLAGS) $(LDFLAGS)
 #LINK.cc=      $(CXX) $(CXXFLAGS) $(LDFLAGS)
 
 ## Commands to make a shared library
-SHLIB.c=	$(CC) $(CFLAGS) $(LDFLAGS) -shared
-SHLIB.cc=	$(CXX) $(CXXFLAGS) $(LDFLAGS) -shared
+SHLIB.c=	$(CC) $(CFLAGS) $(LDFLAGS) -shared -Wl,--enable-auto-import -Wl,--out-implib=$(subst cyg,lib,$@).$(A)
+SHLIB.cc=	$(CXX) $(CXXFLAGS) $(LDFLAGS) -shared -Wl,--enable-auto-import -Wl,--out-implib=$(subst cyg,lib,$@).$(A)
 
 ## Compiler switch to embed a runtime search path
 LD_RPATH=	
@@ -45,6 +45,8 @@ SO = dll
 ## Non-shared intermediate object suffix
 STATIC_O = ao
 LIBICU = cyg$(ICUPREFIX)
+## To have an import library is better on Cygwin
+IMPORT_LIB_EXT = .dll.a
 
 # Change the stubnames so that poorly working FAT disks and installation programs can work.
 # This is also for backwards compatibility.
@@ -81,6 +83,10 @@ I18N_STUBNAME = in
 FINAL_SO_TARGET=$(basename $(SO_TARGET))$(SO_TARGET_VERSION_MAJOR).$(SO)
 MIDDLE_SO_TARGET=$(FINAL_SO_TARGET)
 
+IMPORT_LIB = $(subst cyg,lib,$(FINAL_SO_TARGET)).$(A)#M#
+MIDDLE_IMPORT_LIB = $(subst cyg,lib,$(basename $(SO_TARGET)))$(SO_TARGET_VERSION_MAJOR).$(SO).$(A)#M#
+FINAL_IMPORT_LIB = $(IMPORT_LIB)#M#
+
 # The following is for Makefile.inc's use.
 ICULIBSUFFIX_VERSION = $(LIB_VERSION_MAJOR)
 
@@ -88,7 +94,7 @@ ICULIBSUFFIX_VERSION = $(LIB_VERSION_MAJOR)
 #%$(SO_TARGET_VERSION_MAJOR).$(SO): %$(SO_TARGET_VERSION).$(SO)
 #	$(RM) $@ && cp ${<F} $@
 %.$(SO): %$(SO_TARGET_VERSION_MAJOR).$(SO)
-	$(RM) $@ && ln -s ${<F} $@
+	$(RM) $(subst cyg,lib,$@).$(A) && ln -s $(subst cyg,lib,${<F}).$(A) $(subst cyg,lib,$@).$(A)
 
 ## Install libraries as executable
 INSTALL-L=$(INSTALL_PROGRAM)

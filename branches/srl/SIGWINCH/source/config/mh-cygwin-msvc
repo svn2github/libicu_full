@@ -87,7 +87,7 @@ ARFLAGS := /nologo $(ARFLAGS:r=)#M#
 RANLIB = ls -s#M#
 AR_OUTOPT = /OUT:#M#
 
-## An import library is needed for z/OS and MSVC
+## An import library is needed for z/OS, MSVC and Cygwin
 IMPORT_LIB_EXT = .lib
 
 LIBPREFIX=
