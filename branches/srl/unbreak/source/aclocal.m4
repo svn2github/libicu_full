@@ -122,18 +122,25 @@ fi])
 # Check if we can build and use 64-bit libraries
 AC_DEFUN(AC_CHECK_64BIT_LIBS,
 [
-    BITS_REQ=64else32
+    BITS_REQ=nochange
     ENABLE_64BIT_LIBS=unknown
     ## revisit this for cross-compile.
     
     AC_ARG_ENABLE(64bit-libs,
-        [  --enable-64bit-libs     (deprecated, use --with-library-bits) build 64-bit libraries [default=yes, if possible]],
-        [BITS_REQ=${enableval};echo "note, use --with-library-bits instead."]    )
+        [  --enable-64bit-libs     (deprecated, use --with-library-bits) build 64-bit libraries [default= platform default]],
+        [echo "note, use --with-library-bits instead of --*-64bit-libs"
+         case "${withval}" in
+            no|false|32) BITS_REQ=32 ;;
+            yes|true|64) BITS_REQ=64 ;;
+            nochange) BITS_REQ=nochange ;;
+            *) AC_MSG_ERROR(bad value ${withval} for --with-library-bits) ;;
+            esac]    )
+    
 
     AC_ARG_WITH(library-bits,
-        [  --with-library-bits=bits specify how many bits to use for the library (32, 64, 64else32, dontcare) [default=64else32]],
+        [  --with-library-bits=bits specify how many bits to use for the library (32, 64, 64else32, nochange) [default=nochange]],
         [case "${withval}" in
-            dontcare) BITS_REQ=$withval ;;
+            nochange) BITS_REQ=$withval ;;
             32|64|64else32) BITS_REQ=$withval ;;
             *) AC_MSG_ERROR(bad value ${withval} for --with-library-bits) ;;
             esac])
@@ -141,10 +148,37 @@ AC_DEFUN(AC_CHECK_64BIT_LIBS,
     AC_MSG_CHECKING([whether 64 bit binaries are built by default])
     AC_RUN_IFELSE(int main(void) {return (sizeof(void*)*8==64)?0:1;},
        DEFAULT_64BIT=yes, DEFAULT_64BIT=no, DEFAULT_64BIT=unknown)
+    BITS_GOT=unknown
+    BITS_OK=yes
+    if test "$DEFAULT_64BIT" = "yes"; then
+        BITS_GOT=64
+        case "$BITS_REQ" in
+            32) BITS_OK=no;;
+            nochange) ;;
+            *) ;;
+        esac
+    elif test "$DEFAULT_64BIT" = "no"; then
+        BITS_GOT=32
+        case "$BITS_REQ" in
+            64|64else32) BITS_OK=no;;
+            nochange) ;;
+            *) ;;
+        esac
+    elif test "$DEFAULT_64BIT" = "unknown"; then
+        BITS_GOT=unknown
+        case "$BITS_REQ" in
+            64|64else32) BITS_OK=no;;
+            32) BITS_OK=no;;
+            nochange) ;;
+            *) ;;
+        esac
+    fi
+            
     AC_MSG_RESULT($DEFAULT_64BIT);
-    if test "$BITS_REQ" != "dontcare"; then
+    #AC_MSG_RESULT($DEFAULT_64BIT - got $BITS_GOT wanted $BITS_REQ okness $BITS_OK);
+    if test "$BITS_OK" != "yes"; then
         # These results can't be cached because is sets compiler flags.
-        if test "$BITS_REQ" = "64" -o "$BITS_REQ" = "64or32"; then
+        if test "$BITS_REQ" = "64" -o "$BITS_REQ" = "64else32"; then
             AC_MSG_CHECKING([how to build 64-bit executables])
             if test "$GCC" = yes; then
                 #DONOTUSE# This test is wrong.  If it's GCC, just test m64
@@ -153,8 +187,8 @@ AC_DEFUN(AC_CHECK_64BIT_LIBS,
                 OLD_CXXFLAGS="${CXXFLAGS}"
                 CFLAGS="${CFLAGS} -m64"
                 CXXFLAGS="${CXXFLAGS} -m64"
-                AC_RUN_IFELSE(int main(void) {return (sizeof(void*)*8==64)?0:1;},
-                   ENABLE_64BIT_LIBS=yes, ENABLE_64BIT_LIBS=no, ENABLE_64BIT_LIBS=unknown)
+                AC_COMPILE_IFELSE(int main(void) {return (sizeof(void*)*8==64)?0:1;},
+                   ENABLE_64BIT_LIBS=yes, ENABLE_64BIT_LIBS=no)
                 if test "$ENABLE_64BIT_LIBS" != yes; then
                     # Nope. back out changes.
                     CFLAGS="${OLD_CFLAGS}"
@@ -169,13 +203,14 @@ AC_DEFUN(AC_CHECK_64BIT_LIBS,
                     # 1. try -m64
                     CFLAGS="${CFLAGS} -m64"
                     CXXFLAGS="${CXXFLAGS} -m64"
-                    AC_RUN_IFELSE(int main(void) {return (sizeof(void*)*8==64)?0:1;},
-                       ENABLE_64BIT_LIBS=yes, ENABLE_64BIT_LIBS=no, ENABLE_64BIT_LIBS=unknown)
+                    AC_COMPILE_IFELSE(int main(void) {return (sizeof(void*)*8==64)?0:1;},
+                       ENABLE_64BIT_LIBS=yes, ENABLE_64BIT_LIBS=no)
                     if test "$ENABLE_64BIT_LIBS" != yes; then
                         # Nope. back out changes.
                         CFLAGS="${OLD_CFLAGS}"
                         CXXFLAGS="${OLD_CXXFLAGS}"
                         # 2. try xarch=v9 [deprecated]
+                        ## TODO: cross compile: the following won't work.
                         SPARCV9=`isainfo -n 2>&1 | grep sparcv9`
                         SOL64=`$CXX -xarch=v9 2>&1 && $CC -xarch=v9 2>&1 | grep -v usage:`
                         # "Warning: -xarch=v9 is deprecated, use -m64 to create 64-bit programs"
@@ -196,13 +231,14 @@ AC_DEFUN(AC_CHECK_64BIT_LIBS,
                     # 1. try -m64
                     CFLAGS="${CFLAGS} -m64"
                     CXXFLAGS="${CXXFLAGS} -m64"
-                    AC_RUN_IFELSE(int main(void) {return (sizeof(void*)*8==64)?0:1;},
-                       ENABLE_64BIT_LIBS=yes, ENABLE_64BIT_LIBS=no, ENABLE_64BIT_LIBS=unknown)
+                    AC_COMPILE_IFELSE(int main(void) {return (sizeof(void*)*8==64)?0:1;},
+                       ENABLE_64BIT_LIBS=yes, ENABLE_64BIT_LIBS=no)
                     if test "$ENABLE_64BIT_LIBS" != yes; then
                         # Nope. back out changes.
                         CFLAGS="${OLD_CFLAGS}"
                         CXXFLAGS="${OLD_CXXFLAGS}"
                         # 2. try the older compiler option
+                        ## TODO: cross compile problem
                         SOL64=`$CXX -xtarget=generic64 2>&1 && $CC -xtarget=generic64 2>&1 | grep -v usage:`
                         if test -z "$SOL64" && test -n "$AMD64"; then
                             CFLAGS="${CFLAGS} -xtarget=generic64"
@@ -215,6 +251,7 @@ AC_DEFUN(AC_CHECK_64BIT_LIBS,
                     ;;
                 ia64-*-linux*)
                     # check for ecc/ecpc compiler support
+                    ## TODO: cross compiler problem
                     if test -n "`$CXX --help 2>&1 && $CC --help 2>&1 | grep -v Intel`"; then
                         if test -n "`$CXX --help 2>&1 && $CC --help 2>&1 | grep -v Itanium`"; then
                             ENABLE_64BIT_LIBS=yes
@@ -229,6 +266,7 @@ AC_DEFUN(AC_CHECK_64BIT_LIBS,
                 *-*-cygwin)
                     # vcvarsamd64.bat should have been used to enable 64-bit builds.
                     # We only do this check to display the correct answer.
+                    ## TODO: cross compiler problem
                     if test -n "`$CXX -help 2>&1 | grep 'for x64'`"; then
                         ENABLE_64BIT_LIBS=yes
                     else
@@ -243,8 +281,8 @@ AC_DEFUN(AC_CHECK_64BIT_LIBS,
                     CFLAGS="${CFLAGS} -q64"
                     CXXFLAGS="${CXXFLAGS} -q64"
                     LDFLAGS="${LDFLAGS} -q64"
-                    AC_RUN_IFELSE(int main(void) {return (sizeof(void*)*8==64)?0:1;},
-                       ENABLE_64BIT_LIBS=yes, ENABLE_64BIT_LIBS=no, ENABLE_64BIT_LIBS=unknown)
+                    AC_COMPILE_IFELSE(int main(void) {return (sizeof(void*)*8==64)?0:1;},
+                       ENABLE_64BIT_LIBS=yes, ENABLE_64BIT_LIBS=no)
                     if test "$ENABLE_64BIT_LIBS" != yes; then
                         CFLAGS="${OLD_CFLAGS}"
                         CXXFLAGS="${OLD_CXXFLAGS}"
@@ -264,15 +302,15 @@ AC_DEFUN(AC_CHECK_64BIT_LIBS,
                     OLD_CXXFLAGS="${CXXFLAGS}"
                     CFLAGS="${CFLAGS} +DD64"
                     CXXFLAGS="${CXXFLAGS} +DD64"
-                    AC_RUN_IFELSE(int main(void) {return (sizeof(void*)*8==64)?0:1;},
-                        ENABLE_64BIT_LIBS=yes, ENABLE_64BIT_LIBS=no, ENABLE_64BIT_LIBS=unknown)
+                    AC_COMPILE_IFELSE(int main(void) {return (sizeof(void*)*8==64)?0:1;},
+                        ENABLE_64BIT_LIBS=yes, ENABLE_64BIT_LIBS=no)
                     if test "$ENABLE_64BIT_LIBS" != yes; then
                         CFLAGS="${OLD_CFLAGS}"
                         CXXFLAGS="${OLD_CXXFLAGS}"
                         CFLAGS="${CFLAGS} +DA2.0W"
                         CXXFLAGS="${CXXFLAGS} +DA2.0W"
-                        AC_RUN_IFELSE(int main(void) {return (sizeof(void*)*8==64)?0:1;},
-                            ENABLE_64BIT_LIBS=yes, ENABLE_64BIT_LIBS=no, ENABLE_64BIT_LIBS=unknown)
+                        AC_COMPILE_IFELSE(int main(void) {return (sizeof(void*)*8==64)?0:1;},
+                            ENABLE_64BIT_LIBS=yes, ENABLE_64BIT_LIBS=no)
                         if test "$ENABLE_64BIT_LIBS" != yes; then
                             CFLAGS="${OLD_CFLAGS}"
                             CXXFLAGS="${OLD_CXXFLAGS}"
@@ -286,8 +324,8 @@ AC_DEFUN(AC_CHECK_64BIT_LIBS,
                     CFLAGS="${CFLAGS} -Wc,lp64"
                     CXXFLAGS="${CXXFLAGS} -Wc,lp64"
                     LDFLAGS="${LDFLAGS} -Wl,lp64"
-                    AC_RUN_IFELSE(int main(void) {return (sizeof(void*)*8==64)?0:1;},
-                       ENABLE_64BIT_LIBS=yes, ENABLE_64BIT_LIBS=no, ENABLE_64BIT_LIBS=unknown)
+                    AC_COMPILE_IFELSE(int main(void) {return (sizeof(void*)*8==64)?0:1;},
+                       ENABLE_64BIT_LIBS=yes, ENABLE_64BIT_LIBS=no)
                     if test "$ENABLE_64BIT_LIBS" != yes; then
                         CFLAGS="${OLD_CFLAGS}"
                         CXXFLAGS="${OLD_CXXFLAGS}"
@@ -307,8 +345,8 @@ AC_DEFUN(AC_CHECK_64BIT_LIBS,
                 OLD_CXXFLAGS="${CXXFLAGS}"
                 CFLAGS="${CFLAGS} -m32"
                 CXXFLAGS="${CXXFLAGS} -m32"
-                AC_RUN_IFELSE(int main(void) {return (sizeof(void*)*8==32)?0:1;},
-                   ENABLE_64BIT_LIBS=no, ENABLE_64BIT_LIBS=yes, ENABLE_64BIT_LIBS=unknown)
+                AC_COMPILE_IFELSE(int main(void) {return (sizeof(void*)*8==32)?0:1;},
+                   ENABLE_64BIT_LIBS=no, ENABLE_64BIT_LIBS=yes)
                 if test "$ENABLE_64BIT_LIBS" != no; then
                     CFLAGS="${OLD_CFLAGS}"
                     CXXFLAGS="${OLD_CXXFLAGS}"
@@ -329,17 +367,22 @@ AC_DEFUN(AC_CHECK_64BIT_LIBS,
         fi
         # Individual tests that fail should reset their own flags.
         NOW_64BIT=no
-        AC_MSG_CHECKING([whether 64-bit binaries are being built ])
+        NOW_32BIT=no
+        AC_MSG_CHECKING([whether runnable 64-bit binaries are being built ])
         AC_TRY_RUN(int main(void) {return (sizeof(void*)*8==64)?0:1;},
            NOW_64BIT=yes, NOW_64BIT=no, NOW_64BIT=unknown)
         AC_MSG_RESULT($NOW_64BIT);
+        AC_MSG_CHECKING([whether runnable 32-bit binaries are being built ])
+        AC_TRY_RUN(int main(void) {return (sizeof(void*)*8==32)?0:1;},
+           NOW_32BIT=yes, NOW_32BIT=no, NOW_32BIT=unknown)
+        AC_MSG_RESULT($NOW_32BIT);
         
         if test "$BITS_REQ" = "32" -a "$NOW_64BIT" = "yes"; then
             AC_MSG_ERROR([Requested $BITS_REQ but got 64 bit binaries])
-        else
-            if test "$BITS_REQ" = "64" -a "$NOW_64BIT" = "no"; then
-                AC_MSG_ERROR([Requested $BITS_REQ but did not get 64 bit binaries])
-            fi
+        elif test "$BITS_REQ" = "64" -a "$NOW_32BIT" = "yes"; then
+            AC_MSG_ERROR([Requested $BITS_REQ but got 32 bit binaries])
+        elif test "$NOW_32BIT" != "yes" -a "$NOW_64BIT" != "yes"; then 
+            echo "*** Note: Cannot determine bitness - if configure fails later, try --with-library-bits=nochange"
         fi
     fi
 ])

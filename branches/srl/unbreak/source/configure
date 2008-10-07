@@ -1433,7 +1433,7 @@ Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --enable-strict         compile with strict compiler options default=yes
-  --enable-64bit-libs     (deprecated, use --with-library-bits) build 64-bit libraries default=yes, if possible
+  --enable-64bit-libs     (deprecated, use --with-library-bits) build 64-bit libraries default= platform default
   --enable-shared         build shared libraries default=yes
   --enable-static         build static libraries default=no
   --enable-debug          build debug libraries default=no
@@ -1456,7 +1456,7 @@ If set, it will REPLACE any automatic list of libraries.
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
-  --with-library-bits=bits specify how many bits to use for the library (32, 64, 64else32, dontcare) default=64else32
+  --with-library-bits=bits specify how many bits to use for the library (32, 64, 64else32, nochange) default=nochange
   --with-iostream=version specify the version of iostream to use (none, old, std, auto) default=auto
   --with-data-packaging=type specify how to package ICU data (files, archive, library, auto) default=auto
   --with-library-suffix=suffix    tag a suffix to the library names default=
@@ -3664,21 +3664,30 @@ $as_echo "$ac_use_strict_options" >&6; }
 # Check if we can build and use 64-bit libraries
 
 
-    BITS_REQ=64else32
+    BITS_REQ=nochange
     ENABLE_64BIT_LIBS=unknown
     ## revisit this for cross-compile.
 
     # Check whether --enable-64bit-libs was given.
 if test "${enable_64bit_libs+set}" = set; then
-  enableval=$enable_64bit_libs; BITS_REQ=${enableval};echo "note, use --with-library-bits instead."
+  enableval=$enable_64bit_libs; echo "note, use --with-library-bits instead of --*-64bit-libs"
+         case "${withval}" in
+            no|false|32) BITS_REQ=32 ;;
+            yes|true|64) BITS_REQ=64 ;;
+            nochange) BITS_REQ=nochange ;;
+            *) { { $as_echo "$as_me:$LINENO: error: bad value ${withval} for --with-library-bits" >&5
+$as_echo "$as_me: error: bad value ${withval} for --with-library-bits" >&2;}
+   { (exit 1); exit 1; }; } ;;
+            esac
 fi
+
 
 
 
 # Check whether --with-library-bits was given.
 if test "${with_library_bits+set}" = set; then
   withval=$with_library_bits; case "${withval}" in
-            dontcare) BITS_REQ=$withval ;;
+            nochange) BITS_REQ=$withval ;;
             32|64|64else32) BITS_REQ=$withval ;;
             *) { { $as_echo "$as_me:$LINENO: error: bad value ${withval} for --with-library-bits" >&5
 $as_echo "$as_me: error: bad value ${withval} for --with-library-bits" >&2;}
@@ -3731,11 +3740,38 @@ rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext conftest.$a
 fi
 
 
+    BITS_GOT=unknown
+    BITS_OK=yes
+    if test "$DEFAULT_64BIT" = "yes"; then
+        BITS_GOT=64
+        case "$BITS_REQ" in
+            32) BITS_OK=no;;
+            nochange) ;;
+            *) ;;
+        esac
+    elif test "$DEFAULT_64BIT" = "no"; then
+        BITS_GOT=32
+        case "$BITS_REQ" in
+            64|64else32) BITS_OK=no;;
+            nochange) ;;
+            *) ;;
+        esac
+    elif test "$DEFAULT_64BIT" = "unknown"; then
+        BITS_GOT=unknown
+        case "$BITS_REQ" in
+            64|64else32) BITS_OK=no;;
+            32) BITS_OK=no;;
+            nochange) ;;
+            *) ;;
+        esac
+    fi
+
     { $as_echo "$as_me:$LINENO: result: $DEFAULT_64BIT" >&5
 $as_echo "$DEFAULT_64BIT" >&6; };
-    if test "$BITS_REQ" != "dontcare"; then
+    #AC_MSG_RESULT($DEFAULT_64BIT - got $BITS_GOT wanted $BITS_REQ okness $BITS_OK);
+    if test "$BITS_OK" != "yes"; then
         # These results can't be cached because is sets compiler flags.
-        if test "$BITS_REQ" = "64" -o "$BITS_REQ" = "64or32"; then
+        if test "$BITS_REQ" = "64" -o "$BITS_REQ" = "64else32"; then
             { $as_echo "$as_me:$LINENO: checking how to build 64-bit executables" >&5
 $as_echo_n "checking how to build 64-bit executables... " >&6; }
             if test "$GCC" = yes; then
@@ -3745,48 +3781,36 @@ $as_echo_n "checking how to build 64-bit executables... " >&6; }
                 OLD_CXXFLAGS="${CXXFLAGS}"
                 CFLAGS="${CFLAGS} -m64"
                 CXXFLAGS="${CXXFLAGS} -m64"
-                if test "$cross_compiling" = yes; then
-  ENABLE_64BIT_LIBS=unknown
-else
-  cat >conftest.$ac_ext <<_ACEOF
+                cat >conftest.$ac_ext <<_ACEOF
 int main(void) {return (sizeof(void*)*8==64)?0:1;}
 _ACEOF
-rm -f conftest$ac_exeext
-if { (ac_try="$ac_link"
+rm -f conftest.$ac_objext
+if { (ac_try="$ac_compile"
 case "(($ac_try" in
   *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
   *) ac_try_echo=$ac_try;;
 esac
 eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
 $as_echo "$ac_try_echo") >&5
-  (eval "$ac_link") 2>&5
+  (eval "$ac_compile") 2>conftest.er1
   ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
   $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } && { ac_try='./conftest$ac_exeext'
-  { (case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
-$as_echo "$ac_try_echo") >&5
-  (eval "$ac_try") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
+  (exit $ac_status); } && {
+	 test -z "$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       } && test -s conftest.$ac_objext; then
   ENABLE_64BIT_LIBS=yes
 else
-  $as_echo "$as_me: program exited with status $ac_status" >&5
-$as_echo "$as_me: failed program was:" >&5
+  $as_echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-( exit $ac_status )
-ENABLE_64BIT_LIBS=no
-fi
-rm -rf conftest.dSYM
-rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext conftest.$ac_objext conftest.$ac_ext
+	ENABLE_64BIT_LIBS=no
 fi
 
-
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
                 if test "$ENABLE_64BIT_LIBS" != yes; then
                     # Nope. back out changes.
                     CFLAGS="${OLD_CFLAGS}"
@@ -3801,53 +3825,42 @@ fi
                     # 1. try -m64
                     CFLAGS="${CFLAGS} -m64"
                     CXXFLAGS="${CXXFLAGS} -m64"
-                    if test "$cross_compiling" = yes; then
-  ENABLE_64BIT_LIBS=unknown
-else
-  cat >conftest.$ac_ext <<_ACEOF
+                    cat >conftest.$ac_ext <<_ACEOF
 int main(void) {return (sizeof(void*)*8==64)?0:1;}
 _ACEOF
-rm -f conftest$ac_exeext
-if { (ac_try="$ac_link"
+rm -f conftest.$ac_objext
+if { (ac_try="$ac_compile"
 case "(($ac_try" in
   *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
   *) ac_try_echo=$ac_try;;
 esac
 eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
 $as_echo "$ac_try_echo") >&5
-  (eval "$ac_link") 2>&5
+  (eval "$ac_compile") 2>conftest.er1
   ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
   $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } && { ac_try='./conftest$ac_exeext'
-  { (case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
-$as_echo "$ac_try_echo") >&5
-  (eval "$ac_try") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
+  (exit $ac_status); } && {
+	 test -z "$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       } && test -s conftest.$ac_objext; then
   ENABLE_64BIT_LIBS=yes
 else
-  $as_echo "$as_me: program exited with status $ac_status" >&5
-$as_echo "$as_me: failed program was:" >&5
+  $as_echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-( exit $ac_status )
-ENABLE_64BIT_LIBS=no
-fi
-rm -rf conftest.dSYM
-rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext conftest.$ac_objext conftest.$ac_ext
+	ENABLE_64BIT_LIBS=no
 fi
 
-
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
                     if test "$ENABLE_64BIT_LIBS" != yes; then
                         # Nope. back out changes.
                         CFLAGS="${OLD_CFLAGS}"
                         CXXFLAGS="${OLD_CXXFLAGS}"
                         # 2. try xarch=v9 [deprecated]
+                        ## TODO: cross compile: the following won't work.
                         SPARCV9=`isainfo -n 2>&1 | grep sparcv9`
                         SOL64=`$CXX -xarch=v9 2>&1 && $CC -xarch=v9 2>&1 | grep -v usage:`
                         # "Warning: -xarch=v9 is deprecated, use -m64 to create 64-bit programs"
@@ -3868,53 +3881,42 @@ fi
                     # 1. try -m64
                     CFLAGS="${CFLAGS} -m64"
                     CXXFLAGS="${CXXFLAGS} -m64"
-                    if test "$cross_compiling" = yes; then
-  ENABLE_64BIT_LIBS=unknown
-else
-  cat >conftest.$ac_ext <<_ACEOF
+                    cat >conftest.$ac_ext <<_ACEOF
 int main(void) {return (sizeof(void*)*8==64)?0:1;}
 _ACEOF
-rm -f conftest$ac_exeext
-if { (ac_try="$ac_link"
+rm -f conftest.$ac_objext
+if { (ac_try="$ac_compile"
 case "(($ac_try" in
   *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
   *) ac_try_echo=$ac_try;;
 esac
 eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
 $as_echo "$ac_try_echo") >&5
-  (eval "$ac_link") 2>&5
+  (eval "$ac_compile") 2>conftest.er1
   ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
   $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } && { ac_try='./conftest$ac_exeext'
-  { (case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
-$as_echo "$ac_try_echo") >&5
-  (eval "$ac_try") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
+  (exit $ac_status); } && {
+	 test -z "$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       } && test -s conftest.$ac_objext; then
   ENABLE_64BIT_LIBS=yes
 else
-  $as_echo "$as_me: program exited with status $ac_status" >&5
-$as_echo "$as_me: failed program was:" >&5
+  $as_echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-( exit $ac_status )
-ENABLE_64BIT_LIBS=no
-fi
-rm -rf conftest.dSYM
-rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext conftest.$ac_objext conftest.$ac_ext
+	ENABLE_64BIT_LIBS=no
 fi
 
-
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
                     if test "$ENABLE_64BIT_LIBS" != yes; then
                         # Nope. back out changes.
                         CFLAGS="${OLD_CFLAGS}"
                         CXXFLAGS="${OLD_CXXFLAGS}"
                         # 2. try the older compiler option
+                        ## TODO: cross compile problem
                         SOL64=`$CXX -xtarget=generic64 2>&1 && $CC -xtarget=generic64 2>&1 | grep -v usage:`
                         if test -z "$SOL64" && test -n "$AMD64"; then
                             CFLAGS="${CFLAGS} -xtarget=generic64"
@@ -3927,6 +3929,7 @@ fi
                     ;;
                 ia64-*-linux*)
                     # check for ecc/ecpc compiler support
+                    ## TODO: cross compiler problem
                     if test -n "`$CXX --help 2>&1 && $CC --help 2>&1 | grep -v Intel`"; then
                         if test -n "`$CXX --help 2>&1 && $CC --help 2>&1 | grep -v Itanium`"; then
                             ENABLE_64BIT_LIBS=yes
@@ -3941,6 +3944,7 @@ fi
                 *-*-cygwin)
                     # vcvarsamd64.bat should have been used to enable 64-bit builds.
                     # We only do this check to display the correct answer.
+                    ## TODO: cross compiler problem
                     if test -n "`$CXX -help 2>&1 | grep 'for x64'`"; then
                         ENABLE_64BIT_LIBS=yes
                     else
@@ -3955,48 +3959,36 @@ fi
                     CFLAGS="${CFLAGS} -q64"
                     CXXFLAGS="${CXXFLAGS} -q64"
                     LDFLAGS="${LDFLAGS} -q64"
-                    if test "$cross_compiling" = yes; then
-  ENABLE_64BIT_LIBS=unknown
-else
-  cat >conftest.$ac_ext <<_ACEOF
+                    cat >conftest.$ac_ext <<_ACEOF
 int main(void) {return (sizeof(void*)*8==64)?0:1;}
 _ACEOF
-rm -f conftest$ac_exeext
-if { (ac_try="$ac_link"
+rm -f conftest.$ac_objext
+if { (ac_try="$ac_compile"
 case "(($ac_try" in
   *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
   *) ac_try_echo=$ac_try;;
 esac
 eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
 $as_echo "$ac_try_echo") >&5
-  (eval "$ac_link") 2>&5
+  (eval "$ac_compile") 2>conftest.er1
   ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
   $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } && { ac_try='./conftest$ac_exeext'
-  { (case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
-$as_echo "$ac_try_echo") >&5
-  (eval "$ac_try") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
+  (exit $ac_status); } && {
+	 test -z "$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       } && test -s conftest.$ac_objext; then
   ENABLE_64BIT_LIBS=yes
 else
-  $as_echo "$as_me: program exited with status $ac_status" >&5
-$as_echo "$as_me: failed program was:" >&5
+  $as_echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-( exit $ac_status )
-ENABLE_64BIT_LIBS=no
-fi
-rm -rf conftest.dSYM
-rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext conftest.$ac_objext conftest.$ac_ext
+	ENABLE_64BIT_LIBS=no
 fi
 
-
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
                     if test "$ENABLE_64BIT_LIBS" != yes; then
                         CFLAGS="${OLD_CFLAGS}"
                         CXXFLAGS="${OLD_CXXFLAGS}"
@@ -4016,95 +4008,71 @@ fi
                     OLD_CXXFLAGS="${CXXFLAGS}"
                     CFLAGS="${CFLAGS} +DD64"
                     CXXFLAGS="${CXXFLAGS} +DD64"
-                    if test "$cross_compiling" = yes; then
-  ENABLE_64BIT_LIBS=unknown
-else
-  cat >conftest.$ac_ext <<_ACEOF
+                    cat >conftest.$ac_ext <<_ACEOF
 int main(void) {return (sizeof(void*)*8==64)?0:1;}
 _ACEOF
-rm -f conftest$ac_exeext
-if { (ac_try="$ac_link"
+rm -f conftest.$ac_objext
+if { (ac_try="$ac_compile"
 case "(($ac_try" in
   *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
   *) ac_try_echo=$ac_try;;
 esac
 eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
 $as_echo "$ac_try_echo") >&5
-  (eval "$ac_link") 2>&5
+  (eval "$ac_compile") 2>conftest.er1
   ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
   $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } && { ac_try='./conftest$ac_exeext'
-  { (case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
-$as_echo "$ac_try_echo") >&5
-  (eval "$ac_try") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
+  (exit $ac_status); } && {
+	 test -z "$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       } && test -s conftest.$ac_objext; then
   ENABLE_64BIT_LIBS=yes
 else
-  $as_echo "$as_me: program exited with status $ac_status" >&5
-$as_echo "$as_me: failed program was:" >&5
+  $as_echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-( exit $ac_status )
-ENABLE_64BIT_LIBS=no
-fi
-rm -rf conftest.dSYM
-rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext conftest.$ac_objext conftest.$ac_ext
+	ENABLE_64BIT_LIBS=no
 fi
 
-
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
                     if test "$ENABLE_64BIT_LIBS" != yes; then
                         CFLAGS="${OLD_CFLAGS}"
                         CXXFLAGS="${OLD_CXXFLAGS}"
                         CFLAGS="${CFLAGS} +DA2.0W"
                         CXXFLAGS="${CXXFLAGS} +DA2.0W"
-                        if test "$cross_compiling" = yes; then
-  ENABLE_64BIT_LIBS=unknown
-else
-  cat >conftest.$ac_ext <<_ACEOF
+                        cat >conftest.$ac_ext <<_ACEOF
 int main(void) {return (sizeof(void*)*8==64)?0:1;}
 _ACEOF
-rm -f conftest$ac_exeext
-if { (ac_try="$ac_link"
+rm -f conftest.$ac_objext
+if { (ac_try="$ac_compile"
 case "(($ac_try" in
   *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
   *) ac_try_echo=$ac_try;;
 esac
 eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
 $as_echo "$ac_try_echo") >&5
-  (eval "$ac_link") 2>&5
+  (eval "$ac_compile") 2>conftest.er1
   ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
   $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } && { ac_try='./conftest$ac_exeext'
-  { (case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
-$as_echo "$ac_try_echo") >&5
-  (eval "$ac_try") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
+  (exit $ac_status); } && {
+	 test -z "$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       } && test -s conftest.$ac_objext; then
   ENABLE_64BIT_LIBS=yes
 else
-  $as_echo "$as_me: program exited with status $ac_status" >&5
-$as_echo "$as_me: failed program was:" >&5
+  $as_echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-( exit $ac_status )
-ENABLE_64BIT_LIBS=no
-fi
-rm -rf conftest.dSYM
-rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext conftest.$ac_objext conftest.$ac_ext
+	ENABLE_64BIT_LIBS=no
 fi
 
-
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
                         if test "$ENABLE_64BIT_LIBS" != yes; then
                             CFLAGS="${OLD_CFLAGS}"
                             CXXFLAGS="${OLD_CXXFLAGS}"
@@ -4118,48 +4086,36 @@ fi
                     CFLAGS="${CFLAGS} -Wc,lp64"
                     CXXFLAGS="${CXXFLAGS} -Wc,lp64"
                     LDFLAGS="${LDFLAGS} -Wl,lp64"
-                    if test "$cross_compiling" = yes; then
-  ENABLE_64BIT_LIBS=unknown
-else
-  cat >conftest.$ac_ext <<_ACEOF
+                    cat >conftest.$ac_ext <<_ACEOF
 int main(void) {return (sizeof(void*)*8==64)?0:1;}
 _ACEOF
-rm -f conftest$ac_exeext
-if { (ac_try="$ac_link"
+rm -f conftest.$ac_objext
+if { (ac_try="$ac_compile"
 case "(($ac_try" in
   *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
   *) ac_try_echo=$ac_try;;
 esac
 eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
 $as_echo "$ac_try_echo") >&5
-  (eval "$ac_link") 2>&5
+  (eval "$ac_compile") 2>conftest.er1
   ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
   $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } && { ac_try='./conftest$ac_exeext'
-  { (case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
-$as_echo "$ac_try_echo") >&5
-  (eval "$ac_try") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
+  (exit $ac_status); } && {
+	 test -z "$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       } && test -s conftest.$ac_objext; then
   ENABLE_64BIT_LIBS=yes
 else
-  $as_echo "$as_me: program exited with status $ac_status" >&5
-$as_echo "$as_me: failed program was:" >&5
+  $as_echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-( exit $ac_status )
-ENABLE_64BIT_LIBS=no
-fi
-rm -rf conftest.dSYM
-rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext conftest.$ac_objext conftest.$ac_ext
+	ENABLE_64BIT_LIBS=no
 fi
 
-
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
                     if test "$ENABLE_64BIT_LIBS" != yes; then
                         CFLAGS="${OLD_CFLAGS}"
                         CXXFLAGS="${OLD_CXXFLAGS}"
@@ -4181,48 +4137,36 @@ $as_echo_n "checking how to build 32-bit executables... " >&6; }
                 OLD_CXXFLAGS="${CXXFLAGS}"
                 CFLAGS="${CFLAGS} -m32"
                 CXXFLAGS="${CXXFLAGS} -m32"
-                if test "$cross_compiling" = yes; then
-  ENABLE_64BIT_LIBS=unknown
-else
-  cat >conftest.$ac_ext <<_ACEOF
+                cat >conftest.$ac_ext <<_ACEOF
 int main(void) {return (sizeof(void*)*8==32)?0:1;}
 _ACEOF
-rm -f conftest$ac_exeext
-if { (ac_try="$ac_link"
+rm -f conftest.$ac_objext
+if { (ac_try="$ac_compile"
 case "(($ac_try" in
   *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
   *) ac_try_echo=$ac_try;;
 esac
 eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
 $as_echo "$ac_try_echo") >&5
-  (eval "$ac_link") 2>&5
+  (eval "$ac_compile") 2>conftest.er1
   ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
   $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } && { ac_try='./conftest$ac_exeext'
-  { (case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
-$as_echo "$ac_try_echo") >&5
-  (eval "$ac_try") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
+  (exit $ac_status); } && {
+	 test -z "$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       } && test -s conftest.$ac_objext; then
   ENABLE_64BIT_LIBS=no
 else
-  $as_echo "$as_me: program exited with status $ac_status" >&5
-$as_echo "$as_me: failed program was:" >&5
+  $as_echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-( exit $ac_status )
-ENABLE_64BIT_LIBS=yes
-fi
-rm -rf conftest.dSYM
-rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext conftest.$ac_objext conftest.$ac_ext
+	ENABLE_64BIT_LIBS=yes
 fi
 
-
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
                 if test "$ENABLE_64BIT_LIBS" != no; then
                     CFLAGS="${OLD_CFLAGS}"
                     CXXFLAGS="${OLD_CXXFLAGS}"
@@ -4246,8 +4190,9 @@ $as_echo "unknown" >&6; }
         fi
         # Individual tests that fail should reset their own flags.
         NOW_64BIT=no
-        { $as_echo "$as_me:$LINENO: checking whether 64-bit binaries are being built " >&5
-$as_echo_n "checking whether 64-bit binaries are being built ... " >&6; }
+        NOW_32BIT=no
+        { $as_echo "$as_me:$LINENO: checking whether runnable 64-bit binaries are being built " >&5
+$as_echo_n "checking whether runnable 64-bit binaries are being built ... " >&6; }
         if test "$cross_compiling" = yes; then
   NOW_64BIT=unknown
 else
@@ -4297,17 +4242,68 @@ fi
 
         { $as_echo "$as_me:$LINENO: result: $NOW_64BIT" >&5
 $as_echo "$NOW_64BIT" >&6; };
+        { $as_echo "$as_me:$LINENO: checking whether runnable 32-bit binaries are being built " >&5
+$as_echo_n "checking whether runnable 32-bit binaries are being built ... " >&6; }
+        if test "$cross_compiling" = yes; then
+  NOW_32BIT=unknown
+else
+  cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+int main(void) {return (sizeof(void*)*8==32)?0:1;}
+_ACEOF
+rm -f conftest$ac_exeext
+if { (ac_try="$ac_link"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
+$as_echo "$ac_try_echo") >&5
+  (eval "$ac_link") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } && { ac_try='./conftest$ac_exeext'
+  { (case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
+$as_echo "$ac_try_echo") >&5
+  (eval "$ac_try") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  NOW_32BIT=yes
+else
+  $as_echo "$as_me: program exited with status $ac_status" >&5
+$as_echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+( exit $ac_status )
+NOW_32BIT=no
+fi
+rm -rf conftest.dSYM
+rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext conftest.$ac_objext conftest.$ac_ext
+fi
+
+
+        { $as_echo "$as_me:$LINENO: result: $NOW_32BIT" >&5
+$as_echo "$NOW_32BIT" >&6; };
 
         if test "$BITS_REQ" = "32" -a "$NOW_64BIT" = "yes"; then
             { { $as_echo "$as_me:$LINENO: error: Requested $BITS_REQ but got 64 bit binaries" >&5
 $as_echo "$as_me: error: Requested $BITS_REQ but got 64 bit binaries" >&2;}
    { (exit 1); exit 1; }; }
-        else
-            if test "$BITS_REQ" = "64" -a "$NOW_64BIT" = "no"; then
-                { { $as_echo "$as_me:$LINENO: error: Requested $BITS_REQ but did not get 64 bit binaries" >&5
-$as_echo "$as_me: error: Requested $BITS_REQ but did not get 64 bit binaries" >&2;}
+        elif test "$BITS_REQ" = "64" -a "$NOW_32BIT" = "yes"; then
+            { { $as_echo "$as_me:$LINENO: error: Requested $BITS_REQ but got 32 bit binaries" >&5
+$as_echo "$as_me: error: Requested $BITS_REQ but got 32 bit binaries" >&2;}
    { (exit 1); exit 1; }; }
-            fi
+        elif test "$NOW_32BIT" != "yes" -a "$NOW_64BIT" != "yes"; then
+            echo "*** Note: Cannot determine bitness - if configure fails later, try --with-library-bits=nochange"
         fi
     fi
 
