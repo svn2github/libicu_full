@@ -191,8 +191,8 @@ MIDDLE_SO_TARGET=$(FINAL_SO_TARGET)
 
 ## Special pkgdata information that is needed
 PKGDATA_VERSIONING = -r $(SO_TARGET_VERSION_MAJOR)
-ICUPKGDATA_INSTALL_DIR = $(shell cygpath -dma $(DESTDIR)$(ICUPKGDATA_DIR))#M#
-ICUPKGDATA_INSTALL_LIBDIR = $(shell cygpath -dma $(DESTDIR)$(libdir))#M#
+ICUPKGDATA_INSTALL_DIR = $(shell mkdir -p  $(DESTDIR)$(ICUPKGDATA_DIR) ;  cygpath -dma $(DESTDIR)$(ICUPKGDATA_DIR))#M#
+ICUPKGDATA_INSTALL_LIBDIR = $(shell mkdir -p  $(DESTDIR)$(libdir) ; cygpath -dma $(DESTDIR)$(libdir))#M#
 
 ## Versioned import library names. The library names are versioned,
 ## but the import libraries do not need versioning.
