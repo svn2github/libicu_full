@@ -1,5 +1,5 @@
 /*
- * (C) Copyright IBM Corp. 1998-2005 - All Rights Reserved
+ * (C) Copyright IBM Corp. 1998-2008 - All Rights Reserved
  *
  */
 
@@ -18,12 +18,23 @@ U_NAMESPACE_BEGIN
 
 void GlyphPositioningTableHeader::process(LEGlyphStorage &glyphStorage, GlyphPositionAdjustments *glyphPositionAdjustments, le_bool rightToLeft,
                                           LETag scriptTag, LETag languageTag,
-                                          const GlyphDefinitionTableHeader *glyphDefinitionTableHeader,
+                                          const GlyphDefinitionTableHeader *glyphDefinitionTableHeader, LEErrorCode &success,
                                           const LEFontInstance *fontInstance, const FeatureMap *featureMap, le_int32 featureMapCount, le_bool featureOrder) const
 {
+	if (LE_FAILURE(success))
+	{
+		return;
+	} 
+
     GlyphPositioningLookupProcessor processor(this, scriptTag, languageTag, featureMap, featureMapCount, featureOrder);
 
-    processor.process(glyphStorage, glyphPositionAdjustments, rightToLeft, glyphDefinitionTableHeader, fontInstance);
+    if (processor.isBogus())
+	{
+		success = LE_MEMORY_ALLOCATION_ERROR;
+		return;
+	}
+	
+	processor.process(glyphStorage, glyphPositionAdjustments, rightToLeft, glyphDefinitionTableHeader, fontInstance, success);
 
     glyphPositionAdjustments->applyCursiveAdjustments(glyphStorage, rightToLeft, fontInstance);
 }
