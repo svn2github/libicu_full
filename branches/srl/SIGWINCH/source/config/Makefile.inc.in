@@ -276,3 +276,8 @@ GENCCODE_ASSEMBLY = @GENCCODE_ASSEMBLY@
 
 include $(pkgdatadir)/config/@platform_make_fragment_name@
 
+ifeq (selfcheck,$(MAKECMDGOALS)) #M#
+selfcheck: #M#
+	@echo passed #M#
+endif #M#
+
