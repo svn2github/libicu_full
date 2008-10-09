@@ -164,6 +164,7 @@ LETag OpenTypeLayoutEngine::getLangSysTag(le_int32 languageCode)
 void OpenTypeLayoutEngine::setScriptAndLanguageTags()
 {
     fScriptTag  = getScriptTag(fScriptCode);
+    fScriptTagV2 = getV2ScriptTag(fScriptCode);
     fLangSysTag = getLangSysTag(fLanguageCode);
 }
 
@@ -224,10 +225,16 @@ le_int32 OpenTypeLayoutEngine::glyphProcessing(const LEUnicode chars[], le_int32
     if (LE_FAILURE(success)) {
         return 0;
     }
-
+    
     if (fGSUBTable != NULL) {
+        if (fScriptTagV2 != nullScriptTag && fGSUBTable->coversScriptAndLanguage(fScriptTagV2,fLangSysTag)) { 
+            count = fGSUBTable->process(glyphStorage, rightToLeft, fScriptTagV2, fLangSysTag, fGDEFTable, fSubstitutionFilter,
+                                    fFeatureMap, fFeatureMapCount, fFeatureOrder);
+
+        } else {
         count = fGSUBTable->process(glyphStorage, rightToLeft, fScriptTag, fLangSysTag, fGDEFTable, fSubstitutionFilter,
                                     fFeatureMap, fFeatureMapCount, fFeatureOrder);
+        }
     }
 
     return count;

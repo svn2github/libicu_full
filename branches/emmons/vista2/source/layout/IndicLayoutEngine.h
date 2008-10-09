@@ -152,10 +152,11 @@ protected:
     virtual le_int32 glyphProcessing(const LEUnicode chars[], le_int32 offset, le_int32 count, le_int32 max, le_bool rightToLeft,
             LEGlyphStorage &glyphStorage, LEErrorCode &success);
 
+    le_bool fVersion2;
+
 private:
 
     MPreFixups *fMPreFixups;
-	le_bool fVersion2;
 
 };
 

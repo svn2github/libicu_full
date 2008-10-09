@@ -146,6 +146,8 @@ public:
 
 	static const FeatureMap *getv2BasicShapingForms(le_int32 &count);
 
+    static void applyPresentationForms(LEGlyphStorage &glyphStorage);
+
 private:
     // do not instantiate
     IndicReordering();

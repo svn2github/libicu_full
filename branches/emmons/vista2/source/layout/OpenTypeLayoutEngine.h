@@ -228,6 +228,13 @@ protected:
      * @internal
      */
     LETag fScriptTag;
+  
+    /**
+     * The four byte script tag for V2 fonts.
+     *
+     * @internal
+     */
+    LETag fScriptTagV2;
 
     /**
      * The four byte language tag

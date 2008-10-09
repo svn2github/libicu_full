@@ -32,6 +32,7 @@ U_NAMESPACE_BEGIN
 #define blwmFeatureTag LE_BLWM_FEATURE_TAG
 #define abvmFeatureTag LE_ABVM_FEATURE_TAG
 #define distFeatureTag LE_DIST_FEATURE_TAG
+#define caltFeatureTag LE_CALT_FEATURE_TAG
 
 #define loclFeatureMask 0x80000000UL
 #define rphfFeatureMask 0x40000000UL
@@ -52,8 +53,11 @@ U_NAMESPACE_BEGIN
 #define initFeatureMask 0x00008000UL
 #define cjctFeatureMask 0x00004000UL
 #define rkrfFeatureMask 0x00002000UL
+#define caltFeatureMask 0x00001000UL
 
-#define basicShapingFormsMask 0xF7006000UL
+#define basicShapingFormsMask ( loclFeatureMask | nuktFeatureMask | akhnFeatureMask | rphfFeatureMask | rkrfFeatureMask | blwfFeatureMask | halfFeatureMask | vatuFeatureMask | cjctFeatureMask )
+#define presFormsMask ( presFeatureMask | abvsFeatureMask | blwsFeatureMask | pstsFeatureMask | halnFeatureMask | caltFeatureMask )
+
 
 #define C_MALAYALAM_VOWEL_SIGN_U 0x0D41
 #define	C_DOTTED_CIRCLE 0x25CC
@@ -476,6 +480,17 @@ static const FeatureMap v2BasicShapingForms[] = {
 
 static const le_int32 v2BasicShapingFormsCount = LE_ARRAY_SIZE(v2BasicShapingForms);
 
+static const FeatureMap v2PresentationForms[] = {
+	{presFeatureTag, presFeatureMask},
+    {abvsFeatureTag, abvsFeatureMask},
+    {blwsFeatureTag, blwsFeatureMask},
+    {pstsFeatureTag, pstsFeatureMask},
+	{halnFeatureTag, halnFeatureMask}, 
+	{caltFeatureTag, caltFeatureMask}
+};
+
+static const le_int32 v2PresentationFormsCount = LE_ARRAY_SIZE(v2PresentationForms);
+
 static const le_int8 stateTable[][CC_COUNT] =
 {
 //   xx  vm  sm  iv  i2  i3  ct  cn  nu  dv  s1  s2  s3  vr  zw  al
@@ -874,6 +889,15 @@ void IndicReordering::adjustMPres(MPreFixups *mpreFixups, LEGlyphStorage &glyphS
         delete mpreFixups;
     }
 }
+
+void IndicReordering::applyPresentationForms(LEGlyphStorage &glyphStorage)
+{
+
+  // fGSUBTable->process(glyphStorage, rightToLeft, fScriptTagV2, fLangSysTag, fGDEFTable, fSubstitutionFilter,
+  //                                 v2PresentationForms, v2PresentationFormsCount, fFeatureOrder);
+
+}
+
 le_int32 IndicReordering::v2process(const LEUnicode *chars, le_int32 charCount, le_int32 scriptCode,
                                   LEUnicode *outChars, LEGlyphStorage &glyphStorage)
 {
@@ -907,7 +931,16 @@ le_int32 IndicReordering::v2process(const LEUnicode *chars, le_int32 charCount, 
 		
 	    // Populate the output 
 		for ( i = beginSyllable ; i < nextSyllable ; i++ ) {
-			output.writeChar(chars[i],i, basicShapingFormsMask);
+            FeatureMask outMask = basicShapingFormsMask;
+
+            // Since reph can only validly occur at the beginning of a syllable
+            // We only apply it to the first 2 characters in the syllable, to keep it from
+            // conflicting with other features ( i.e. rkrf )
+
+            if ( i - beginSyllable > 1 ) {
+                outMask ^= rphfFeatureMask;
+            }
+			output.writeChar(chars[i],i, outMask);
 		}
 	    
 		output.decomposeReorderMatras(classTable,beginSyllable,nextSyllable);
