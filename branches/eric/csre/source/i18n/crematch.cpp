@@ -513,6 +513,8 @@ UBool CSREMatcher::find() {
                                                       pattern.getBuffer(), pattern.length(),
                                                       inputBuf + pos, fActiveLimit - pos);
 
+                U16_FWD_1(inputBuf, startPos, fActiveLimit);
+
                 // **** Should this just be "> 0"?? ****
                 if (matchLength >= 0) {
 #endif
