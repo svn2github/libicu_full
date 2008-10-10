@@ -8960,7 +8960,7 @@ ucol_startsWith(const UCollator    *coll,
 
 		// **** need to adjust / validate boundary ****
         if (returnVal == UCOL_EQUAL) {
-            int32_t length = equalLength + getOffset(&tColl);
+            int32_t length = equalLength + getOffset(&tColl) - 1;
 
             UTRACE_EXIT_VALUE(length);
             return length;
