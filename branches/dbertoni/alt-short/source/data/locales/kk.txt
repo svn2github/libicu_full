@@ -47,7 +47,7 @@ kk{
         "#,##0%",
         "#E0",
     }
-    Version{"1.57"}
+    Version{"1.58"}
     calendar{
         gregorian{
             DateTimePatterns{
@@ -55,8 +55,8 @@ kk{
                 "HH:mm:ss z",
                 "HH:mm:ss",
                 "HH:mm",
-                "EEEE, d MMMM yyyy 'ж'.",
-                "d MMMM yyyy 'ж'.",
+                "EEEE, d MMMM y 'ж'.",
+                "d MMMM y 'ж'.",
                 "dd.MM.yyyy",
                 "dd.MM.yy",
                 "{1} {0}",

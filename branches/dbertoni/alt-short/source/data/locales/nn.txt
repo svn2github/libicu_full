@@ -307,7 +307,7 @@ nn{
             "afghani (1927-2002)",
         }
         AFN{
-            "AFN",
+            "Af",
             "afghani",
         }
         ALL{
@@ -319,11 +319,11 @@ nn{
             "armensk dram",
         }
         ANG{
-            "ANG",
+            "NAf.",
             "nederlansk antillegylden",
         }
         AOA{
-            "AOA",
+            "Kz",
             "angolsk kwanza",
         }
         AOK{
@@ -339,7 +339,7 @@ nn{
             "angolsk kwanza reajustado (1995-1999)",
         }
         ARA{
-            "ARA",
+            "₳",
             "argentisk austral",
         }
         ARP{
@@ -347,7 +347,7 @@ nn{
             "argentinsk peso (1983-1985)",
         }
         ARS{
-            "ARS",
+            "AR$",
             "argentinsk peso",
         }
         ATS{
@@ -355,11 +355,11 @@ nn{
             "austerriksk schilling",
         }
         AUD{
-            "AUD",
+            "AU$",
             "australsk dollar",
         }
         AWG{
-            "AWG",
+            "Afl.",
             "arubisk gylden",
         }
         AZM{
@@ -371,15 +371,15 @@ nn{
             "bosnisk-hercegovinsk dinar",
         }
         BAM{
-            "BAM",
+            "KM",
             "bosnisk-hercegovinsk mark (konvertibel)",
         }
         BBD{
-            "BBD",
+            "Bds$",
             "barbadisk dollar",
         }
         BDT{
-            "BDT",
+            "Tk",
             "bangladeshisk taka",
         }
         BEC{
@@ -387,7 +387,7 @@ nn{
             "belgisk franc (konvertibel)",
         }
         BEF{
-            "BEF",
+            "BF",
             "belgisk franc",
         }
         BEL{
@@ -403,27 +403,27 @@ nn{
             "bulgarsk ny lev",
         }
         BHD{
-            "BHD",
+            "BD",
             "bahrainsk dinar",
         }
         BIF{
-            "BIF",
+            "FBu",
             "burundisk franc",
         }
         BMD{
-            "BMD",
+            "BD$",
             "bermudisk dollar",
         }
         BND{
-            "BND",
+            "BN$",
             "bruneisk dollar",
         }
         BOB{
-            "BOB",
+            "Bs",
             "boliviano",
         }
         BOP{
-            "BOP",
+            "$b.",
             "bolivisk peso",
         }
         BOV{
@@ -431,15 +431,15 @@ nn{
             "bolivisk mvdol",
         }
         BRB{
-            "BRB",
+            "NCr",
             "brasiliansk cruzeiro novo (1967-1986)",
         }
         BRC{
-            "BRC",
+            "Cz$",
             "brasiliansk cruzado",
         }
         BRE{
-            "BRE",
+            "Cr$",
             "brasiliansk cruzeiro (1990-1993)",
         }
         BRL{
@@ -447,19 +447,19 @@ nn{
             "brasiliansk real",
         }
         BRN{
-            "BRN",
+            "NCz$",
             "brasiliansk cruzado novo",
         }
         BRR{
-            "BRR",
+            "CR$",
             "brasiliansk cruzeiro",
         }
         BSD{
-            "BSD",
+            "BS$",
             "bahamisk dollar",
         }
         BTN{
-            "BTN",
+            "Nu.",
             "bhutansk ngultrum",
         }
         BUK{
@@ -467,15 +467,15 @@ nn{
             "burmesisk kyat",
         }
         CNY{
-            "CNY",
+            "CN¥",
             "kinesisk yuan renminbi",
         }
         CVE{
-            "CVE",
+            "CV$",
             "kappverdisk escudo",
         }
         DKK{
-            "DKK",
+            "Dkr",
             "dansk krone",
         }
         EUR{
@@ -499,7 +499,7 @@ nn{
             "japansk yen",
         }
         MZN{
-            "MZN",
+            "MTn",
             "mosambikisk metical",
         }
         NOK{
@@ -511,7 +511,7 @@ nn{
             "russisk rubel",
         }
         STD{
-            "STD",
+            "Db",
             "Sao Tome og Principe-dobra",
         }
         USD{
@@ -519,7 +519,7 @@ nn{
             "amerikansk dollar",
         }
         XOF{
-            "XOF",
+            "CFA",
             "CFA franc BCEAO",
         }
         XXX{
@@ -531,15 +531,15 @@ nn{
             "sørafrikansk rand (finansiell)",
         }
         ZAR{
-            "ZAR",
+            "R",
             "sørafrikansk rand",
         }
         ZMK{
-            "ZMK",
+            "ZK",
             "zambisk kwacha",
         }
         ZRN{
-            "ZRN",
+            "NZ",
             "zairisk ny zaire",
         }
         ZRZ{
@@ -547,7 +547,7 @@ nn{
             "zairisk zaire",
         }
         ZWD{
-            "ZWD",
+            "Z$",
             "zimbabwisk dollar",
         }
     }
@@ -1240,7 +1240,7 @@ nn{
         SCOUSE{"scouse-dialekt"}
         VALENCIA{"valensisk dialekt"}
     }
-    Version{"1.87"}
+    Version{"1.88"}
     calendar{
         gregorian{
             AmPmMarkers{
@@ -1252,9 +1252,9 @@ nn{
                 "HH.mm.ss z",
                 "HH.mm.ss",
                 "HH.mm",
-                "EEEE d. MMMM yyyy",
-                "d. MMMM yyyy",
-                "d. MMM. yyyy",
+                "EEEE d. MMMM y",
+                "d. MMMM y",
+                "d. MMM. y",
                 "dd.MM.yy",
                 "{1} {0}",
             }
@@ -1262,7 +1262,7 @@ nn{
                 MMMMd{"d. MMMM"}
                 MMdd{"dd.MM"}
                 mmss{"mm.ss"}
-                yyyyMMMM{"MMMM yyyy"}
+                yyyyMMMM{"MMMM y"}
             }
             dayNames{
                 format{

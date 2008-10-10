@@ -21,7 +21,7 @@ es_PE{
         "NaN",
         "+",
     }
-    Version{"1.56"}
+    Version{"1.57"}
     calendar{
         gregorian{
             DateTimePatterns{
@@ -29,8 +29,8 @@ es_PE{
                 "HH:mm:ss z",
                 "HH:mm:ss",
                 "HH:mm",
-                "EEEE d 'de' MMMM 'de' yyyy",
-                "d 'de' MMMM 'de' yyyy",
+                "EEEE d 'de' MMMM 'de' y",
+                "d 'de' MMMM 'de' y",
                 "dd/MM/yyyy",
                 "d/MM/yy",
                 "{1} {0}",

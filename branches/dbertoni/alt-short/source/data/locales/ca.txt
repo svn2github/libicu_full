@@ -299,7 +299,7 @@ ca{
             "Pesseta d'Andorra",
         }
         ARS{
-            "ARS",
+            "AR$",
             "Peso argentí",
         }
         ATS{
@@ -307,7 +307,7 @@ ca{
             "Xíling austríac",
         }
         BEF{
-            "BEF",
+            "BF",
             "Franc belga",
         }
         BRL{
@@ -315,11 +315,11 @@ ca{
             "Real brasiler",
         }
         CHF{
-            "CHF",
+            "Fr.",
             "Franc suís",
         }
         CNY{
-            "CNY",
+            "CN¥",
             "Iuan renmimbi xinès",
         }
         CYP{
@@ -327,7 +327,7 @@ ca{
             "Lliura xipriota",
         }
         DEM{
-            "DEM",
+            "DM",
             "Marc alemany",
         }
         ESP{
@@ -347,19 +347,19 @@ ca{
             "Euro",
         }
         FIM{
-            "FIM",
+            "mk",
             "Marc finlandès",
         }
         FRF{
-            "FRF",
+            "₣",
             "Franc francès",
         }
         GBP{
-            "UK£",
+            "£",
             "Lliura esterlina britànica",
         }
         GRD{
-            "GRD",
+            "₯",
             "Dracma grega",
         }
         IEP{
@@ -367,7 +367,7 @@ ca{
             "Lliura irlandesa",
         }
         INR{
-            "=0#Rs.|1#Re.|1<Rs." /** (choice)  */,
+            "Rs",
             "Rupia índia",
         }
         ITL{
@@ -383,19 +383,19 @@ ca{
             "Franc luxemburguès",
         }
         LVL{
-            "LVL",
+            "Ls",
             "Lats",
         }
         MTL{
-            "MTL",
+            "Lm",
             "Lira maltesa",
         }
         NLG{
-            "NLG",
+            "fl",
             "Florí neerlandès",
         }
         PTE{
-            "PTE",
+            "Esc",
             "Escut portuguès",
         }
         RUB{
@@ -407,11 +407,11 @@ ca{
             "Tolar eslovè",
         }
         TRL{
-            "TRL",
+            "TL",
             "Lira turca (vella)",
         }
         TRY{
-            "TRY",
+            "YTL",
             "Nova lira turca",
         }
         USD{
@@ -967,7 +967,7 @@ ca{
         FONIPA{"alfabet fonètic internacional"}
         POSIX{"ordenador"}
     }
-    Version{"1.90"}
+    Version{"1.93"}
     calendar{
         gregorian{
             AmPmMarkers{
@@ -979,8 +979,8 @@ ca{
                 "H:mm:ss z",
                 "H:mm:ss",
                 "H:mm",
-                "EEEE d 'de' MMMM 'de' yyyy",
-                "d 'de' MMMM 'de' yyyy",
+                "EEEE d 'de' MMMM 'de' y",
+                "d 'de' MMMM 'de' y",
                 "dd/MM/yyyy",
                 "dd/MM/yy",
                 "{1} {0}",
@@ -1000,14 +1000,14 @@ ca{
                 hhmmss{"hh:mm:ss a"}
                 mmss{"mm:ss"}
                 ms{"mm:ss"}
-                y{"yyyy"}
+                y{"y"}
                 yM{"M/yyyy"}
                 yMEd{"E d/M/yyyy"}
-                yMMM{"MMM yyyy"}
-                yMMMEd{"EEE d MMM yyyy"}
-                yMMMM{"LLLL 'del' yyyy"}
+                yMMM{"MMM y"}
+                yMMMEd{"EEE d MMM y"}
+                yMMMM{"LLLL 'del' y"}
                 yQ{"Q yyyy"}
-                yQQQ{"QQQ yyyy"}
+                yQQQ{"QQQ y"}
                 yyQ{"Q yy"}
                 yyyyMM{"MM/yyyy"}
             }
@@ -1219,6 +1219,36 @@ ca{
         second{
             one{"{0} segon"}
             other{"{0} segons"}
+        }
+        week{
+            one{"{0} setmana"}
+            other{"{0} setmanes"}
+        }
+        year{
+            one{"{0} any"}
+            other{"{0} anys"}
+        }
+    }
+    unitsShort{
+        day{
+            one{"{0} dia"}
+            other{"{0} dies"}
+        }
+        hour{
+            one{"{0} h"}
+            other{"{0} h"}
+        }
+        minute{
+            one{"{0} m"}
+            other{"{0} m"}
+        }
+        month{
+            one{"{0} mes"}
+            other{"{0} mesos"}
+        }
+        second{
+            one{"{0} s"}
+            other{"{0} s"}
         }
         week{
             one{"{0} setmana"}

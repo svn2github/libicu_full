@@ -311,7 +311,7 @@ hr{
             "Armenian Dram",
         }
         AOA{
-            "AOA",
+            "Kz",
             "Angolska kvanza",
         }
         AOK{
@@ -339,7 +339,7 @@ hr{
             "Australski dolar",
         }
         AWG{
-            "AWG",
+            "Afl.",
             "arupski gulden",
         }
         AZM{
@@ -371,7 +371,7 @@ hr{
             "bugarski novi lev",
         }
         BHD{
-            "BHD",
+            "BD",
             "bahreinski dinar",
         }
         BMD{
@@ -379,15 +379,15 @@ hr{
             "Bermudski dolar",
         }
         BND{
-            "BND",
+            "BN$",
             "Brunejski dolar",
         }
         BOB{
-            "BOB",
+            "Bs",
             "bolivijano",
         }
         BOP{
-            "BOP",
+            "$b.",
             "bolivijski pezo",
         }
         BOV{
@@ -399,7 +399,7 @@ hr{
             "Brazilski Real",
         }
         BSD{
-            "BSD",
+            "BS$",
             "bahamski dolar",
         }
         BWP{
@@ -415,7 +415,7 @@ hr{
             "bjeloruska rublja",
         }
         BZD{
-            "BZD",
+            "BZ$",
             "belizeanski dolar",
         }
         CAD{
@@ -435,7 +435,7 @@ hr{
             "Čileanski pezo",
         }
         CNY{
-            "CNY",
+            "CN¥",
             "Kineski Yuan Renminbi",
         }
         COP{
@@ -455,7 +455,7 @@ hr{
             "Czechoslovak Hard Koruna",
         }
         CUP{
-            "CUP",
+            "CU$",
             "Kubanski pezo",
         }
         CVE{
@@ -467,7 +467,7 @@ hr{
             "Ciparska funta",
         }
         CZK{
-            "CZK",
+            "Kč",
             "Češka kruna",
         }
         DDM{
@@ -475,7 +475,7 @@ hr{
             "East German Ostmark",
         }
         DEM{
-            "DEM",
+            "DM",
             "Njemačka marka",
         }
         DJF{
@@ -503,19 +503,19 @@ hr{
             "Ecuador Unidad de Valor Constante (UVC)",
         }
         EEK{
-            "EEK",
+            "Ekr",
             "Estonian Kroon",
         }
         EGP{
-            "EGP",
+            "EG£",
             "Egipatska funta",
         }
         ERN{
-            "ERN",
+            "Nfk",
             "Eritrean Nakfa",
         }
         ESP{
-            "ESP",
+            "Pts",
             "Španjolska pezeta",
         }
         ETB{
@@ -527,7 +527,7 @@ hr{
             "Euro",
         }
         FIM{
-            "FIM",
+            "mk",
             "Finska marka",
         }
         FJD{
@@ -535,15 +535,15 @@ hr{
             "Fidžijski dolar",
         }
         FKP{
-            "FKP",
+            "FK£",
             "Falklandska funta",
         }
         FRF{
-            "FRF",
+            "₣",
             "Francuski franak",
         }
         GBP{
-            "UK£",
+            "£",
             "Britanska funta",
         }
         GEK{
@@ -555,7 +555,7 @@ hr{
             "Gruzijski lari",
         }
         GIP{
-            "GIP",
+            "GI£",
             "Gibraltarska funta",
         }
         GMD{
@@ -575,7 +575,7 @@ hr{
             "Equatorial Guinea Ekwele Guineana",
         }
         GRD{
-            "GRD",
+            "₯",
             "Grčka drahma",
         }
         GTQ{
@@ -627,11 +627,11 @@ hr{
             "Irska funta",
         }
         ILP{
-            "ILP",
+            "I£",
             "Israelska funta",
         }
         ILS{
-            "ILS",
+            "₪",
             "Novi izraelski šekel",
         }
         INR{
@@ -647,7 +647,7 @@ hr{
             "Iranski rijal",
         }
         ISK{
-            "ISK",
+            "Ikr",
             "Islandska kruna",
         }
         ITL{
@@ -683,7 +683,7 @@ hr{
             "Comoro Franc",
         }
         KRW{
-            "KRW",
+            "₩",
             "južnokorejski won",
         }
         KWD{
@@ -691,7 +691,7 @@ hr{
             "Kuvajtski dinar",
         }
         KYD{
-            "KYD",
+            "KY$",
             "Kajmanski dolar",
         }
         KZT{
@@ -699,7 +699,7 @@ hr{
             "Kazakhstan Tenge",
         }
         LAK{
-            "LAK",
+            "₭",
             "Laotian Kip",
         }
         LKR{
@@ -707,7 +707,7 @@ hr{
             "Sri Lanka Rupee",
         }
         LRD{
-            "LRD",
+            "L$",
             "Liberijski dolar",
         }
         LSL{
@@ -715,7 +715,7 @@ hr{
             "Lesotho Loti",
         }
         LTL{
-            "LTL",
+            "Lt",
             "Lithuanian Lita",
         }
         LTT{
@@ -727,7 +727,7 @@ hr{
             "Luksemburški franak",
         }
         LVL{
-            "LVL",
+            "Ls",
             "Latvian Lats",
         }
         LVR{
@@ -767,7 +767,7 @@ hr{
             "Mongolski tugrik",
         }
         MOP{
-            "MOP",
+            "MOP$",
             "Macao Pataca",
         }
         MRO{
@@ -779,11 +779,11 @@ hr{
             "Malteška lira",
         }
         MTP{
-            "MTP",
+            "MT£",
             "Malteška funta",
         }
         MUR{
-            "MUR",
+            "MURs",
             "Mauricijska rupija",
         }
         MWK{
@@ -795,7 +795,7 @@ hr{
             "Meksički pezo",
         }
         MXP{
-            "MXP",
+            "MX$",
             "Meksički srebrni pezo (1861-1992)",
         }
         MYR{
@@ -815,11 +815,11 @@ hr{
             "Namibijski dolar",
         }
         NGN{
-            "NGN",
+            "₦",
             "Nigerijska naira",
         }
         NLG{
-            "NLG",
+            "fl",
             "Nizozemski gulden",
         }
         NOK{
@@ -839,15 +839,15 @@ hr{
             "Omanski rijal",
         }
         PAB{
-            "PAB",
+            "B/.",
             "Panamska balboa",
         }
         PEI{
-            "PEI",
+            "I/.",
             "Peruanski inti",
         }
         PEN{
-            "PEN",
+            "S/.",
             "Peruanski novi sol",
         }
         PES{
@@ -855,7 +855,7 @@ hr{
             "Peruanski sol",
         }
         PHP{
-            "PHP",
+            "₱",
             "Filipinski pezo",
         }
         PKR{
@@ -871,11 +871,11 @@ hr{
             "Poljska zlota (1950-1995)",
         }
         PTE{
-            "PTE",
+            "Esc",
             "Portugalski eskudo",
         }
         PYG{
-            "PYG",
+            "₲",
             "Paragvajski gvarani",
         }
         ROL{
@@ -887,7 +887,7 @@ hr{
             "novi rumunjski lev",
         }
         RSD{
-            "RSD",
+            "din.",
             "srpski dinar",
         }
         RUB{
@@ -899,7 +899,7 @@ hr{
             "Ruska rublja (1991-1998)",
         }
         SAR{
-            "SAR",
+            "SR",
             "saudijski rial",
         }
         SBD{
@@ -911,7 +911,7 @@ hr{
             "Sejšelska rupija",
         }
         SDD{
-            "SDD",
+            "LSd",
             "Sudanski dinar",
         }
         SDP{
@@ -951,7 +951,7 @@ hr{
             "Lilangeni",
         }
         THB{
-            "THB",
+            "฿",
             "tajlandski bat",
         }
         TJS{
@@ -963,7 +963,7 @@ hr{
             "Turkmenistanski manat",
         }
         TND{
-            "TND",
+            "DT",
             "Tuniski dinar",
         }
         TPE{
@@ -975,7 +975,7 @@ hr{
             "Turska lira",
         }
         TRY{
-            "TRY",
+            "YTL",
             "Nova Turska Lira",
         }
         TTD{
@@ -991,7 +991,7 @@ hr{
             "Tanzanijski šiling",
         }
         UAH{
-            "UAH",
+            "₴",
             "Ukrajinska hrivnja",
         }
         UGS{
@@ -1023,7 +1023,7 @@ hr{
             "Venezuelski bolivar",
         }
         VND{
-            "VND",
+            "₫",
             "Viejetnamski dong",
         }
         XAU{
@@ -1075,11 +1075,11 @@ hr{
             "Južnoafrički rand",
         }
         ZMK{
-            "ZMK",
+            "ZK",
             "Zambijska kvača",
         }
         ZRN{
-            "ZRN",
+            "NZ",
             "Zairski novi zair",
         }
         ZRZ{
@@ -1334,7 +1334,7 @@ hr{
             traditional{"Tradicionano poredavanje"}
         }
     }
-    Version{"1.90"}
+    Version{"1.93"}
     calendar{
         gregorian{
             AmPmMarkers{
@@ -1346,9 +1346,9 @@ hr{
                 "HH:mm:ss z",
                 "HH:mm:ss",
                 "HH:mm",
-                "EEEE, d. MMMM yyyy.",
-                "d. MMMM yyyy.",
-                "d. MMM. yyyy.",
+                "EEEE, d. MMMM y.",
+                "d. MMMM y.",
+                "d. MMM. y.",
                 "dd.MM.yyyy.",
                 "{1} {0}",
             }
@@ -1363,7 +1363,7 @@ hr{
                 yyQ{"Q yy"}
                 yyQQQQ{"QQQQ yy"}
                 yyyyMM{"yyyy.MM"}
-                yyyyMMMM{"yyyy. MMMM"}
+                yyyyMMMM{"y. MMMM"}
             }
             dayNames{
                 format{
@@ -1506,18 +1506,18 @@ hr{
                     y{"E, dd.MM.yyyy. - E, dd.MM.yyyy."}
                 }
                 yMMM{
-                    M{"LLL-LLL yyyy."}
-                    y{"LLL yyyy. - LLL yyyy."}
+                    M{"LLL-LLL y."}
+                    y{"LLL y. - LLL y."}
                 }
                 yMMMEd{
-                    M{"E, dd. MMM - E, dd. MMM yyyy."}
-                    d{"E, dd. - E, dd. MMM yyyy."}
-                    y{"E, dd. MMM yyyy. - E, dd. MMM yyyy."}
+                    M{"E, dd. MMM - E, dd. MMM y."}
+                    d{"E, dd. - E, dd. MMM y."}
+                    y{"E, dd. MMM y. - E, dd. MMM y."}
                 }
                 yMMMd{
-                    M{"dd. MMM - dd. MMM yyyy."}
-                    d{"dd. - dd. MMM yyyy."}
-                    y{"dd. MMM yyyy. - dd. MMM yyyy."}
+                    M{"dd. MMM - dd. MMM y."}
+                    d{"dd. - dd. MMM y."}
+                    y{"dd. MMM y. - dd. MMM y."}
                 }
                 yMd{
                     M{"dd.MM.yyyy. - dd.MM.yyyy."}
@@ -1613,6 +1613,94 @@ hr{
     }
     measurementSystemNames{
         metric{"metrički"}
+    }
+    units{
+        day{
+            few{"{0} dana"}
+            many{"{0} dana"}
+            one{"{0} dan"}
+            other{"{0} dan"}
+        }
+        hour{
+            few{"{0} sata"}
+            many{"{0} sati"}
+            one{"{0} sat"}
+            other{"{0} sat"}
+        }
+        minute{
+            few{"{0} minute"}
+            many{"{0} minuta"}
+            one{"{0} minuta"}
+            other{"{0} minuta"}
+        }
+        month{
+            few{"{0} mjeseca"}
+            many{"{0} mjeseci"}
+            one{"{0} mjesec"}
+            other{"{0} mjesec"}
+        }
+        second{
+            few{"{0} sekunde"}
+            many{"{0} sekundi"}
+            one{"{0} sekunda"}
+            other{"{0} sekunda"}
+        }
+        week{
+            few{"{0} tjedna"}
+            many{"{0} tjedana"}
+            one{"{0} tjedan"}
+            other{"{0} tjedan"}
+        }
+        year{
+            few{"{0} godine"}
+            many{"{0} godina"}
+            one{"{0} godina"}
+            other{"{0} godina"}
+        }
+    }
+    unitsShort{
+        day{
+            few{"{0} dana"}
+            many{"{0} dana"}
+            one{"{0} dan"}
+            other{"{0} dan"}
+        }
+        hour{
+            few{"{0} h"}
+            many{"{0} h"}
+            one{"{0} h"}
+            other{"{0} h"}
+        }
+        minute{
+            few{"{0} min"}
+            many{"{0} min"}
+            one{"{0} min"}
+            other{"{0} min"}
+        }
+        month{
+            few{"{0} mj."}
+            many{"{0} mj."}
+            one{"{0} mj."}
+            other{"{0} mj."}
+        }
+        second{
+            few{"{0} s"}
+            many{"{0} s"}
+            one{"{0} s"}
+            other{"{0} s"}
+        }
+        week{
+            few{"{0} tj."}
+            many{"{0} tj."}
+            one{"{0} tj."}
+            other{"{0} tj."}
+        }
+        year{
+            few{"{0} g."}
+            many{"{0} g."}
+            one{"{0} g."}
+            other{"{0} g."}
+        }
     }
     zoneStrings{
         "Africa:Kinshasa"{

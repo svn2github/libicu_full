@@ -298,7 +298,7 @@ sl{
             "Brazilski Real",
         }
         CNY{
-            "CNY",
+            "CN¥",
             "Kitajski Yuan Renminbi",
         }
         EUR{
@@ -306,11 +306,11 @@ sl{
             "Evro",
         }
         GBP{
-            "UK£",
+            "£",
             "Britanski Funt Sterling",
         }
         INR{
-            "=0#Rs.|1#Re.|1<Rs." /** (choice)  */,
+            "Rs",
             "Indijski Rupi",
         }
         JPY{
@@ -440,7 +440,7 @@ sl{
             traditional{"Tradicionano zlaganje"}
         }
     }
-    Version{"1.94"}
+    Version{"1.97"}
     calendar{
         gregorian{
             DateTimePatterns{
@@ -448,8 +448,8 @@ sl{
                 "H:mm:ss z",
                 "H:mm:ss",
                 "H:mm",
-                "EEEE, dd. MMMM yyyy",
-                "dd. MMMM yyyy",
+                "EEEE, dd. MMMM y",
+                "dd. MMMM y",
                 "d.M.yyyy",
                 "d.M.yy",
                 "{1} {0}",
@@ -586,7 +586,7 @@ sl{
         month{
             few{"{0} meseci"}
             one{"{0} mesec"}
-            other{"{0} meseci"}
+            other{"{0} mesecev"}
             two{"{0} meseca"}
         }
         second{
@@ -606,6 +606,50 @@ sl{
             one{"{0} leto"}
             other{"{0} let"}
             two{"{0} leti"}
+        }
+    }
+    unitsShort{
+        day{
+            few{"{0} d"}
+            one{"{0} d"}
+            other{"{0} d"}
+            two{"{0} d"}
+        }
+        hour{
+            few{"{0} h"}
+            one{"{0} h"}
+            other{"{0} h"}
+            two{"{0} h"}
+        }
+        minute{
+            few{"{0} min"}
+            one{"{0} min"}
+            other{"{0} min"}
+            two{"{0} min"}
+        }
+        month{
+            few{"{0} m"}
+            one{"{0} m"}
+            other{"{0} m"}
+            two{"{0} m"}
+        }
+        second{
+            few{"{0} s"}
+            one{"{0} s"}
+            other{"{0} s"}
+            two{"{0} s"}
+        }
+        week{
+            few{"{0} t"}
+            one{"{0} t"}
+            other{"{0} t"}
+            two{"{0} t"}
+        }
+        year{
+            few{"{0} l"}
+            one{"{0} l"}
+            other{"{0} l"}
+            two{"{0} l"}
         }
     }
     zoneStrings{

@@ -68,7 +68,7 @@ gu{
         Armn{"અર્મેનિયાઈ"}
         Beng{"બંગાળી"}
     }
-    Version{"1.59"}
+    Version{"1.60"}
     calendar{
         gregorian{
             AmPmMarkers{

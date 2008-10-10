@@ -16,7 +16,7 @@ or{
     }
     Currencies{
         INR{
-            "=0#Rs.|1#Re.|1<Rs." /** (choice)  */,
+            "Rs",
             "ଟଙକା",
         }
     }
@@ -47,7 +47,7 @@ or{
         "#,##,##0%",
         "#E0",
     }
-    Version{"1.41"}
+    Version{"1.42"}
     calendar{
         gregorian{
             DateTimePatterns{
@@ -55,8 +55,8 @@ or{
                 "HH:mm:ss z",
                 "HH:mm:ss",
                 "HH:mm",
-                "MMMM d,EEEE, yyyy",
-                "MMMM d, yyyy",
+                "MMMM d,EEEE, y",
+                "MMMM d, y",
                 "dd-MM-yyyy",
                 "dd-MM-yy",
                 "{1} {0}",

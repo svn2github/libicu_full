@@ -41,7 +41,7 @@ zh_Hant_HK{
             "紐西蘭元",
         }
         RSD{
-            "RSD",
+            "din.",
             "塞爾維亞第納爾",
         }
         SGD{
@@ -91,12 +91,12 @@ zh_Hant_HK{
         SCOTLAND{"蘇格蘭標準英語"}
         SOLBA{"Stolvizza/Solbica 方言"}
     }
-    Version{"1.67"}
+    Version{"1.68"}
     calendar{
         chinese{
             availableFormats{
                 MMMMEd{"M月d日E"}
-                yMEd{"yyyy年M月d日，E"}
+                yMEd{"y年M月d日，E"}
             }
         }
         gregorian{
@@ -109,9 +109,9 @@ zh_Hant_HK{
                 "ahh時mm分ss秒z",
                 "ahh:mm:ss",
                 "ah:mm",
-                "yyyy年M月d日EEEE",
-                "yyyy年M月d日",
-                "yyyy年M月d日",
+                "y年M月d日EEEE",
+                "y年M月d日",
+                "y年M月d日",
                 "yy年M月d日",
                 "{1}{0}",
             }

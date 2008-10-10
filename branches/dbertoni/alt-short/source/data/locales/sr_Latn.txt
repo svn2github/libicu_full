@@ -294,7 +294,7 @@ sr_Latn{
     }
     Currencies{
         ARS{
-            "ARS",
+            "AR$",
             "Argentinski pezo",
         }
         ATS{
@@ -318,11 +318,11 @@ sr_Latn{
             "Bugarski lev",
         }
         BND{
-            "BND",
+            "BN$",
             "Brunejski dolar",
         }
         BOB{
-            "BOB",
+            "Bs",
             "Bolivijski Boliviano",
         }
         BRL{
@@ -338,7 +338,7 @@ sr_Latn{
             "Švajcarski franak",
         }
         CLP{
-            "CLP",
+            "CL$",
             "Čileanski pezo",
         }
         CNY{
@@ -346,7 +346,7 @@ sr_Latn{
             "Kineski Juan Renminbi",
         }
         COP{
-            "COP",
+            "CO$",
             "Kolumbijski pezo",
         }
         CSD{
@@ -354,11 +354,11 @@ sr_Latn{
             "Srpski Dinar (Srbija i Crna Gora)",
         }
         CZK{
-            "CZK",
+            "Kč",
             "Češka kruna",
         }
         DEM{
-            "DEM",
+            "DM",
             "Nemačka marka",
         }
         DKK{
@@ -366,15 +366,15 @@ sr_Latn{
             "Danska kruna",
         }
         EEK{
-            "EEK",
+            "Ekr",
             "Estonska kroon",
         }
         EGP{
-            "EGP",
+            "EG£",
             "Egipatska funta",
         }
         ESP{
-            "ESP",
+            "Pts",
             "Španska pezeta",
         }
         EUR{
@@ -382,27 +382,27 @@ sr_Latn{
             "EVRO",
         }
         FIM{
-            "FIM",
+            "mk",
             "Finska marka",
         }
         FJD{
-            "FJD",
+            "FJ$",
             "Fidži dolar",
         }
         FRF{
-            "FRF",
+            "₣",
             "Francuski franak",
         }
         GBP{
-            "UK£",
+            "£",
             "Funta sterlinga",
         }
         GRD{
-            "GRD",
+            "₯",
             "Drahma",
         }
         HKD{
-            "HKD",
+            "HK$",
             "Hong Kongski Dolari",
         }
         HRD{
@@ -410,11 +410,11 @@ sr_Latn{
             "Hrvatski dinar",
         }
         HRK{
-            "HRK",
+            "kn",
             "Kuna",
         }
         HUF{
-            "HUF",
+            "Ft",
             "Mađarska forinta",
         }
         IEP{
@@ -422,7 +422,7 @@ sr_Latn{
             "Irska funta",
         }
         ILS{
-            "ILS",
+            "₪",
             "Izraelski šekel",
         }
         INR{
@@ -438,7 +438,7 @@ sr_Latn{
             "Jen",
         }
         KES{
-            "KES",
+            "Ksh",
             "Kenijski šiling",
         }
         KWD{
@@ -446,7 +446,7 @@ sr_Latn{
             "Kuvajtski dinar",
         }
         LTL{
-            "LTL",
+            "Lt",
             "Litvanski litas",
         }
         LUF{
@@ -458,7 +458,7 @@ sr_Latn{
             "Marokanski dirham",
         }
         MTL{
-            "MTL",
+            "Lm",
             "Malteška lira",
         }
         MXN{
@@ -466,11 +466,11 @@ sr_Latn{
             "Meksički peso",
         }
         MYR{
-            "MYR",
+            "RM",
             "Malezijski ringgit",
         }
         NLG{
-            "NLG",
+            "fl",
             "Holandski gulden",
         }
         NOK{
@@ -478,15 +478,15 @@ sr_Latn{
             "Norveška kruna",
         }
         NZD{
-            "NZD",
+            "NZ$",
             "Novozelandski dolar",
         }
         PTE{
-            "PTE",
+            "Esc",
             "Portugalski eskudo",
         }
         RSD{
-            "RSD",
+            "дин.",
             "Srpski Dinar",
         }
         RUB{
@@ -506,7 +506,7 @@ sr_Latn{
             "Tolar",
         }
         TRY{
-            "TRY",
+            "YTL",
             "Nova turska lira",
         }
         USD{

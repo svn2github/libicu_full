@@ -236,7 +236,7 @@ hy{
         "#0%",
         "#E0",
     }
-    Version{"1.64"}
+    Version{"1.65"}
     calendar{
         gregorian{
             AmPmMarkers{
@@ -248,9 +248,9 @@ hy{
                 "HH:mm:ss z",
                 "HH:mm:ss",
                 "HH:mm",
-                "EEEE, MMMM d, yyyy",
-                "MMMM dd, yyyy",
-                "MMM d, yyyy",
+                "EEEE, MMMM d, y",
+                "MMMM dd, y",
+                "MMM d, y",
                 "MM/dd/yy",
                 "{1} {0}",
             }

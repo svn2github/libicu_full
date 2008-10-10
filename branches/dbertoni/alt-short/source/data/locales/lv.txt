@@ -399,7 +399,7 @@ lv{
             traditional{"Tradicionālā kārtošanas secība"}
         }
     }
-    Version{"1.82"}
+    Version{"1.85"}
     calendar{
         gregorian{
             DateTimePatterns{
@@ -407,8 +407,8 @@ lv{
                 "HH:mm:ss z",
                 "HH:mm:ss",
                 "HH:mm",
-                "EEEE, yyyy. 'gada' d. MMMM",
-                "yyyy. 'gada' d. MMMM",
+                "EEEE, y. 'gada' d. MMMM",
+                "y. 'gada' d. MMMM",
                 "yyyy.d.M",
                 "yy.d.M",
                 "{1} {0}",
@@ -423,14 +423,14 @@ lv{
                 MMMd{"d. MMM"}
                 d{"d"}
                 ms{"mm:ss"}
-                y{"yyyy"}
+                y{"y"}
                 yM{"mm.yyyy"}
                 yMEd{"EEE, dd.mm.yyyy"}
-                yMMM{"yyyy. MMM"}
-                yMMMEd{"EEE, dd. MMM, yyyy"}
-                yMMMM{"yyyy. MMMM"}
+                yMMM{"y. MMM"}
+                yMMMEd{"EEE, dd. MMM, y"}
+                yMMMM{"y. MMMM"}
                 yQ{"Q yyyy"}
-                yQQQ{"yyyy QQQ"}
+                yQQQ{"y QQQ"}
             }
             dayNames{
                 format{
@@ -539,6 +539,80 @@ lv{
     measurementSystemNames{
         US{"britu"}
         metric{"metriskā"}
+    }
+    units{
+        day{
+            one{"{0} diena"}
+            other{"{0} dienas"}
+            zero{"{0} dienas"}
+        }
+        hour{
+            one{"{0} stunda"}
+            other{"{0} stundas"}
+            zero{"{0} stundas"}
+        }
+        minute{
+            one{"{0} minūte"}
+            other{"{0} minūtes"}
+            zero{"{0} minūtes"}
+        }
+        month{
+            one{"{0} mēnesis"}
+            other{"{0} mēneši"}
+            zero{"{0} mēneši"}
+        }
+        second{
+            one{"{0} sekunde"}
+            other{"{0} sekundes"}
+            zero{"{0} sekundes"}
+        }
+        week{
+            one{"{0} nedēļa"}
+            other{"{0} nedēļas"}
+            zero{"{0} nedēļas"}
+        }
+        year{
+            one{"{0} gads"}
+            other{"{0} gadi"}
+            zero{"{0} gadi"}
+        }
+    }
+    unitsShort{
+        day{
+            one{"{0} d"}
+            other{"{0} d"}
+            zero{"{0} d"}
+        }
+        hour{
+            one{"{0} h"}
+            other{"{0} h"}
+            zero{"{0} h"}
+        }
+        minute{
+            one{"{0} min"}
+            other{"{0} min"}
+            zero{"{0} min"}
+        }
+        month{
+            one{"{0} mēn"}
+            other{"{0} mēn"}
+            zero{"{0} mēn"}
+        }
+        second{
+            one{"{0} s"}
+            other{"{0} s"}
+            zero{"{0} s"}
+        }
+        week{
+            one{"{0} ned"}
+            other{"{0} ned"}
+            zero{"{0} ned"}
+        }
+        year{
+            one{"{0} g"}
+            other{"{0} g"}
+            zero{"{0} g"}
+        }
     }
     zoneStrings{
         "America:Adak"{

@@ -21,9 +21,9 @@ sr_Latn_ME{
                 "HH.mm.ss z",
                 "HH.mm.ss",
                 "HH.mm",
-                "EEEE, dd. MMMM yyyy.",
+                "EEEE, dd. MMMM y.",
                 "d.MM.yyyy.",
-                "dd.MM.yyyy.",
+                "dd.MM.y.",
                 "d.M.yy.",
                 "{1} {0}",
             }

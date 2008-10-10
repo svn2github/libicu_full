@@ -13,7 +13,7 @@ de_BE{
             "Franken",
         }
     }
-    Version{"1.56"}
+    Version{"1.57"}
     calendar{
         gregorian{
             DateTimeElements:intvector{
@@ -25,8 +25,8 @@ de_BE{
                 "HH:mm:ss z",
                 "HH:mm:ss",
                 "HH:mm",
-                "EEEE d MMMM yyyy",
-                "d MMMM yyyy",
+                "EEEE d MMMM y",
+                "d MMMM y",
                 "dd.MM.yyyy",
                 "d/MM/yy",
                 "{1} {0}",

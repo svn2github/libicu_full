@@ -30,7 +30,7 @@ uz_Latn{
             "Brazil reali",
         }
         CNY{
-            "CNY",
+            "CN¥",
             "Xitoy yuani",
         }
         EUR{
@@ -38,11 +38,11 @@ uz_Latn{
             "Evro",
         }
         GBP{
-            "UK£",
+            "£",
             "Ingliz funt sterlingi",
         }
         INR{
-            "=0#Rs.|1#Re.|1<Rs." /** (choice)  */,
+            "Rs",
             "Hind rupiyasi",
         }
         JPY{

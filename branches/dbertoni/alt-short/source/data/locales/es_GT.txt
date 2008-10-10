@@ -7,6 +7,12 @@
 // *
 // ***************************************************************************
 es_GT{
+    Currencies{
+        GTQ{
+            "Q",
+            "quetzal guatemalteco",
+        }
+    }
     NumberElements{
         ".",
         ",",
@@ -21,7 +27,7 @@ es_GT{
         "NaN",
         "+",
     }
-    Version{"1.54"}
+    Version{"1.56"}
     calendar{
         gregorian{
             DateTimePatterns{
@@ -29,8 +35,8 @@ es_GT{
                 "HH:mm:ss z",
                 "HH:mm:ss",
                 "HH:mm",
-                "EEEE d 'de' MMMM 'de' yyyy",
-                "d 'de' MMMM 'de' yyyy",
+                "EEEE d 'de' MMMM 'de' y",
+                "d 'de' MMMM 'de' y",
                 "d/MM/yyyy",
                 "d/MM/yy",
                 "{1} {0}",

@@ -96,7 +96,7 @@ pt_PT{
             "Libra de Chipre",
         }
         CZK{
-            "CZK",
+            "Kč",
             "Coroa da República Checa",
         }
         ECV{
@@ -104,7 +104,7 @@ pt_PT{
             "Unidad de Valor Constante (UVC) do Equador",
         }
         KYD{
-            "KYD",
+            "KY$",
             "Dólar das Ilhas Caimão",
         }
         MWK{
@@ -112,7 +112,7 @@ pt_PT{
             "Cuacha do Malawi",
         }
         MXP{
-            "MXP",
+            "MX$",
             "Peso Plata mexicano (1861-1992)",
         }
         MXV{
@@ -124,7 +124,7 @@ pt_PT{
             "Córdoba nicaraguano",
         }
         NIO{
-            "NIO",
+            "C$",
             "Córdoba Ouro nicaraguano",
         }
         PTE{
@@ -144,7 +144,7 @@ pt_PT{
             "Xelim de Tanzânia",
         }
         WST{
-            "WST",
+            "WS$",
             "Tala de Samoa Ocidental",
         }
     }
@@ -305,7 +305,7 @@ pt_PT{
         POLYTON{"politónico"}
         SOLBA{"dialecto stolvizza/solbica"}
     }
-    Version{"1.76"}
+    Version{"1.77"}
     calendar{
         buddhist{
             DateTimePatterns{
@@ -313,9 +313,9 @@ pt_PT{
                 "HH:mm:ss z",
                 "HH'h'mm'min'ss's'",
                 "HH:mm",
-                "EEEE, MMMM d, yyyy G",
-                "MMMM d, yyyy G",
-                "MMM d, yyyy G",
+                "EEEE, MMMM d, y G",
+                "MMMM d, y G",
+                "MMM d, y G",
                 "M/d/yyyy",
                 "{1} {0}",
             }
@@ -330,8 +330,8 @@ pt_PT{
                 "HH:mm:ss z",
                 "HH:mm:ss",
                 "HH:mm",
-                "EEEE, d 'de' MMMM 'de' yyyy",
-                "d 'de' MMMM 'de' yyyy",
+                "EEEE, d 'de' MMMM 'de' y",
+                "d 'de' MMMM 'de' y",
                 "yyyy/MM/dd",
                 "yy/MM/dd",
                 "{1} {0}",

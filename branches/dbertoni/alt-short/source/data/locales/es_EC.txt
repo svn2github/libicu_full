@@ -19,7 +19,7 @@ es_EC{
         "#,##0%",
         "#E0",
     }
-    Version{"1.57"}
+    Version{"1.58"}
     calendar{
         gregorian{
             DateTimePatterns{
@@ -27,8 +27,8 @@ es_EC{
                 "H:mm:ss z",
                 "H:mm:ss",
                 "H:mm",
-                "EEEE d 'de' MMMM 'de' yyyy",
-                "d 'de' MMMM 'de' yyyy",
+                "EEEE d 'de' MMMM 'de' y",
+                "d 'de' MMMM 'de' y",
                 "dd/MM/yyyy",
                 "dd/MM/yy",
                 "{1} {0}",

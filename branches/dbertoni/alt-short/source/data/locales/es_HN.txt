@@ -7,6 +7,12 @@
 // *
 // ***************************************************************************
 es_HN{
+    Currencies{
+        HNL{
+            "L",
+            "lempira hondureño",
+        }
+    }
     NumberElements{
         ".",
         ",",
@@ -21,7 +27,7 @@ es_HN{
         "NaN",
         "+",
     }
-    Version{"1.55"}
+    Version{"1.57"}
     calendar{
         gregorian{
             DateTimePatterns{
@@ -29,8 +35,8 @@ es_HN{
                 "HH:mm:ss z",
                 "HH:mm:ss",
                 "HH:mm",
-                "EEEE dd 'de' MMMM 'de' yyyy",
-                "dd 'de' MMMM 'de' yyyy",
+                "EEEE dd 'de' MMMM 'de' y",
+                "dd 'de' MMMM 'de' y",
                 "dd/MM/yyyy",
                 "dd/MM/yy",
                 "{1} {0}",

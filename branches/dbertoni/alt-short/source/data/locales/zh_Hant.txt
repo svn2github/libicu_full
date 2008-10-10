@@ -270,7 +270,7 @@ zh_Hant{
             "荷屬安地列斯盾",
         }
         AOA{
-            "AOA",
+            "Kz",
             "安哥拉寬扎",
         }
         AOK{
@@ -286,7 +286,7 @@ zh_Hant{
             "安哥拉新寬扎 Reajustado (1995-1999)",
         }
         ARA{
-            "ARA",
+            "₳",
             "阿根廷奧斯特納爾",
         }
         ARP{
@@ -306,7 +306,7 @@ zh_Hant{
             "澳幣",
         }
         AWG{
-            "AWG",
+            "Afl.",
             "阿魯巴盾",
         }
         AZM{
@@ -314,7 +314,7 @@ zh_Hant{
             "阿塞拜彊馬特納",
         }
         AZN{
-            "AZN",
+            "man.",
             "亞塞拜然蒙納特",
         }
         BAD{
@@ -366,7 +366,7 @@ zh_Hant{
             "百慕達幣",
         }
         BND{
-            "BND",
+            "BN$",
             "汶萊元",
         }
         BOB{
@@ -374,7 +374,7 @@ zh_Hant{
             "玻利維亞貨幣單位",
         }
         BOP{
-            "BOP",
+            "$b.",
             "玻利維亞披索",
         }
         BOV{
@@ -382,15 +382,15 @@ zh_Hant{
             "玻利維亞幕多",
         }
         BRB{
-            "BRB",
+            "NCr",
             "巴西克魯薩多農瓦（1967-1986）",
         }
         BRC{
-            "BRC",
+            "Cz$",
             "巴西克魯賽羅 (1986-1989)",
         }
         BRE{
-            "BRE",
+            "Cr$",
             "巴西克魯賽羅 (1990-1993)",
         }
         BRL{
@@ -398,15 +398,15 @@ zh_Hant{
             "巴西里拉",
         }
         BRN{
-            "BRN",
+            "NCz$",
             "巴西克如爾達農瓦",
         }
         BRR{
-            "BRR",
+            "CR$",
             "巴西克魯賽羅",
         }
         BSD{
-            "BSD",
+            "BS$",
             "巴哈馬元",
         }
         BTN{
@@ -478,7 +478,7 @@ zh_Hant{
             "捷克斯洛伐克硬克朗",
         }
         CUP{
-            "CUP",
+            "CU$",
             "古巴披索",
         }
         CVE{
@@ -490,11 +490,11 @@ zh_Hant{
             "賽浦路斯鎊",
         }
         CZK{
-            "CZK",
+            "Kč",
             "捷克克朗",
         }
         DEM{
-            "DEM",
+            "DM",
             "德國馬克",
         }
         DJF{
@@ -522,19 +522,15 @@ zh_Hant{
             "厄瓜多爾由里達瓦康斯坦 (UVC)",
         }
         EEK{
-            "EEK",
+            "Ekr",
             "愛沙尼亞克朗",
         }
         EGP{
-            "EGP",
+            "EG£",
             "埃及鎊",
         }
-        EQE{
-            "EQE",
-            "埃奎維勒",
-        }
         ERN{
-            "ERN",
+            "Nfk",
             "厄立特里亞納克法",
         }
         ESP{
@@ -550,7 +546,7 @@ zh_Hant{
             "歐元",
         }
         FIM{
-            "FIM",
+            "mk",
             "芬蘭馬克",
         }
         FJD{
@@ -558,11 +554,11 @@ zh_Hant{
             "斐濟元",
         }
         FKP{
-            "FKP",
+            "FK£",
             "福克蘭群島鎊",
         }
         FRF{
-            "FRF",
+            "₣",
             "法國法郎",
         }
         GBP{
@@ -574,7 +570,7 @@ zh_Hant{
             "喬治拉里",
         }
         GHC{
-            "GHC",
+            "₵",
             "迦納仙蔕",
         }
         GHS{
@@ -582,7 +578,7 @@ zh_Hant{
             "加纳塞迪",
         }
         GIP{
-            "GIP",
+            "GI£",
             "直布羅陀鎊",
         }
         GMD{
@@ -602,7 +598,7 @@ zh_Hant{
             "赤道幾內亞埃奎勒",
         }
         GRD{
-            "GRD",
+            "₯",
             "希臘德拉克馬",
         }
         GTQ{
@@ -634,7 +630,7 @@ zh_Hant{
             "克羅地亞第納爾",
         }
         HRK{
-            "HRK",
+            "kn",
             "克羅地亞庫納",
         }
         HUF{
@@ -650,11 +646,11 @@ zh_Hant{
             "愛爾蘭鎊",
         }
         ILP{
-            "ILP",
+            "I£",
             "以色列鎊",
         }
         ILS{
-            "ILS",
+            "₪",
             "以色列新謝克爾",
         }
         INR{
@@ -670,7 +666,7 @@ zh_Hant{
             "伊朗里亞爾",
         }
         ISK{
-            "ISK",
+            "Ikr",
             "冰島克朗",
         }
         ITL{
@@ -706,7 +702,7 @@ zh_Hant{
             "科摩羅法郎",
         }
         KPW{
-            "KPW",
+            "KP₩",
             "北朝鮮幣",
         }
         KRW{
@@ -718,7 +714,7 @@ zh_Hant{
             "科威特第納爾",
         }
         KYD{
-            "KYD",
+            "KY$",
             "開曼群島美元",
         }
         KZT{
@@ -726,7 +722,7 @@ zh_Hant{
             "卡扎克斯坦坦吉",
         }
         LAK{
-            "LAK",
+            "₭",
             "寮國基普",
         }
         LBP{
@@ -738,19 +734,15 @@ zh_Hant{
             "斯里蘭卡盧布",
         }
         LRD{
-            "LRD",
+            "L$",
             "賴比瑞亞元",
         }
         LSL{
             "M",
             "賴索托羅蒂",
         }
-        LSM{
-            "LSM",
-            "馬洛蒂",
-        }
         LTL{
-            "LTL",
+            "Lt",
             "立陶宛里塔",
         }
         LTT{
@@ -770,7 +762,7 @@ zh_Hant{
             "盧森堡金融法郎",
         }
         LVL{
-            "LVL",
+            "Ls",
             "拉脫維亞拉特銀幣",
         }
         LVR{
@@ -822,15 +814,15 @@ zh_Hant{
             "馬爾他里拉",
         }
         MTP{
-            "MTP",
+            "MT£",
             "馬爾他鎊",
         }
         MUR{
-            "MUR",
+            "MURs",
             "模里西斯盧布",
         }
         MVR{
-            "MVR",
+            "Rf",
             "馬爾地夫海島盧非亞",
         }
         MWK{
@@ -842,7 +834,7 @@ zh_Hant{
             "墨西哥 - 披索",
         }
         MXP{
-            "MXP",
+            "MX$",
             "墨西哥銀披索 (1861-1992)",
         }
         MYR{
@@ -866,11 +858,11 @@ zh_Hant{
             "納米比亞元",
         }
         NGN{
-            "NGN",
+            "₦",
             "奈及利亞奈拉",
         }
         NLG{
-            "NLG",
+            "fl",
             "荷蘭盾",
         }
         NOK{
@@ -890,15 +882,15 @@ zh_Hant{
             "阿曼里奧",
         }
         PAB{
-            "PAB",
+            "B/.",
             "巴拿馬巴波亞",
         }
         PEI{
-            "PEI",
+            "I/.",
             "祕魯因蒂",
         }
         PEN{
-            "PEN",
+            "S/.",
             "秘魯新太陽幣",
         }
         PES{
@@ -926,11 +918,11 @@ zh_Hant{
             "波蘭茲羅提 (1950-1995)",
         }
         PTE{
-            "PTE",
+            "Esc",
             "葡萄牙埃斯庫多",
         }
         PYG{
-            "PYG",
+            "₲",
             "巴拉圭瓜拉尼",
         }
         QAR{
@@ -950,7 +942,7 @@ zh_Hant{
             "俄羅斯盧布 (1991-1998)",
         }
         RWF{
-            "RWF",
+            "RF",
             "盧安達法郎",
         }
         SAR{
@@ -966,7 +958,7 @@ zh_Hant{
             "塞舌爾群島盧布",
         }
         SDD{
-            "SDD",
+            "LSd",
             "蘇丹第納爾",
         }
         SDP{
@@ -982,7 +974,7 @@ zh_Hant{
             "新加坡幣",
         }
         SHP{
-            "SHP",
+            "SH£",
             "聖赫勒拿鎊",
         }
         SIT{
@@ -994,7 +986,7 @@ zh_Hant{
             "斯洛伐克克朗",
         }
         SLL{
-            "SLL",
+            "Le",
             "獅子山利昂",
         }
         SOS{
@@ -1002,7 +994,7 @@ zh_Hant{
             "索馬利亞先令",
         }
         SRD{
-            "SRD",
+            "SR$",
             "蘇利南元",
         }
         SRG{
@@ -1018,7 +1010,7 @@ zh_Hant{
             "蘇聯盧布",
         }
         SVC{
-            "SVC",
+            "SV₡",
             "薩爾瓦多科郎",
         }
         SYP{
@@ -1030,7 +1022,7 @@ zh_Hant{
             "史瓦濟蘭里朗吉尼",
         }
         THB{
-            "THB",
+            "฿",
             "泰銖",
         }
         TJR{
@@ -1046,7 +1038,7 @@ zh_Hant{
             "土庫曼馬納特",
         }
         TND{
-            "TND",
+            "DT",
             "突尼西亞第納爾",
         }
         TOP{
@@ -1074,7 +1066,7 @@ zh_Hant{
             "坦尚尼亞先令",
         }
         UAH{
-            "UAH",
+            "₴",
             "烏克蘭格里夫那",
         }
         UAK{
@@ -1122,11 +1114,11 @@ zh_Hant{
             "萬那杜萬杜",
         }
         WST{
-            "WST",
+            "WS$",
             "西薩摩亞塔拉",
         }
         XAF{
-            "XAF",
+            "FCFA",
             "西非法郎 BEAC",
         }
         XAG{
@@ -1174,7 +1166,7 @@ zh_Hant{
             "法國 UIC 法郎",
         }
         XOF{
-            "XOF",
+            "CFA",
             "西非法郎 BCEAO",
         }
         XPF{
@@ -1222,11 +1214,11 @@ zh_Hant{
             "南非蘭特",
         }
         ZMK{
-            "ZMK",
+            "ZK",
             "尚比亞克瓦查",
         }
         ZRN{
-            "ZRN",
+            "NZ",
             "薩伊新扎伊爾",
         }
         ZRZ{
@@ -1827,7 +1819,7 @@ zh_Hant{
         REVISED{"已修訂"}
         SAAHO{"SAAHO"}
     }
-    Version{"1.116"}
+    Version{"1.120"}
     calendar{
         chinese{
             AmPmMarkers{
@@ -1852,8 +1844,8 @@ zh_Hant{
                 "ahh時mm分ss秒z",
                 "ah:mm:ss",
                 "ah:mm",
-                "yyyy年M月d日EEEE",
-                "yyyy年M月d日",
+                "y年M月d日EEEE",
+                "y年M月d日",
                 "yyyy/M/d",
                 "yyyy/M/d",
                 "{1} {0}",
@@ -1867,8 +1859,8 @@ zh_Hant{
                 Md{"M/d"}
                 yM{"yyyy/M"}
                 yMEd{"yyyy/M/d（EEE）"}
-                yMMM{"yyyy年M月"}
-                yMMMM{"yyyy年M月"}
+                yMMM{"y年M月"}
+                yMMMM{"y年M月"}
                 yyMM{"yyyy/MM"}
             }
             dayNames{
@@ -1956,8 +1948,8 @@ zh_Hant{
                     y{"yyyy/M/dE至yyyy/M/dE"}
                 }
                 yMMMM{
-                    M{"yyyy年M月至M月"}
-                    y{"yyyy/M至yyyy/M"}
+                    M{"y年M月至M月"}
+                    y{"y/M至y/M"}
                 }
                 yMd{
                     M{"yyyy/M/d至yyyy/M/d"}
@@ -2059,6 +2051,16 @@ zh_Hant{
     }
     localeDisplayPattern{
         separator{"，"}
+    }
+    units{
+        hour{
+            other{"{0}小時"}
+        }
+    }
+    unitsShort{
+        hour{
+            other{"{0}小時"}
+        }
     }
     zoneStrings{
         "Africa:Bamako"{

@@ -17,7 +17,7 @@ en_HK{
             "USD",
         }
     }
-    Version{"1.48"}
+    Version{"1.49"}
     calendar{
         gregorian{
             DateTimeElements:intvector{
@@ -29,9 +29,9 @@ en_HK{
                 "h:mm:ss a z",
                 "h:mm:ss a",
                 "h:mm a",
-                "EEEE, d MMMM yyyy",
-                "d MMMM yyyy",
-                "d MMM yyyy",
+                "EEEE, d MMMM y",
+                "d MMMM y",
+                "d MMM y",
                 "dd/MM/yyyy",
                 "{1} {0}",
             }

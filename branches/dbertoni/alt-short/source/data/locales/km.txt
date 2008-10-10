@@ -324,7 +324,7 @@ km{
         "#,##0%",
         "#E0",
     }
-    Version{"1.63"}
+    Version{"1.65"}
     calendar{
         gregorian{
             AmPmMarkers{
@@ -336,9 +336,9 @@ km{
                 "H ម៉ោង m នាទី ss វិនាទី​z",
                 "H:mm:ss",
                 "H:mm",
-                "EEEE, yyyy MMMM dd",
-                "yyyy MMMM d",
-                "d MMM yyyy",
+                "EEEE, y MMMM dd",
+                "y MMMM d",
+                "d MMM y",
                 "d/M/yyyy",
                 "{1}, {0}",
             }

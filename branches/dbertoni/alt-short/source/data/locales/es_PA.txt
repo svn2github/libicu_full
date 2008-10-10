@@ -21,7 +21,7 @@ es_PA{
         "NaN",
         "+",
     }
-    Version{"1.55"}
+    Version{"1.56"}
     calendar{
         gregorian{
             DateTimePatterns{
@@ -29,8 +29,8 @@ es_PA{
                 "HH:mm:ss z",
                 "HH:mm:ss",
                 "HH:mm",
-                "EEEE d 'de' MMMM 'de' yyyy",
-                "d 'de' MMMM 'de' yyyy",
+                "EEEE d 'de' MMMM 'de' y",
+                "d 'de' MMMM 'de' y",
                 "MM/dd/yyyy",
                 "MM/dd/yy",
                 "{1} {0}",

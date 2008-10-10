@@ -283,7 +283,7 @@ am{
     LocaleScript{
         "Ethi",
     }
-    Version{"1.77"}
+    Version{"1.78"}
     calendar{
         gregorian{
             DateTimePatterns{
@@ -291,9 +291,9 @@ am{
                 "hh:mm:ss a z",
                 "HH:mm:ss",
                 "HH:mm",
-                "EEEE, yyyy MMMM dd",
-                "yyyy MMMM d",
-                "yyyy MMM d",
+                "EEEE, y MMMM dd",
+                "y MMMM d",
+                "y MMM d",
                 "yyyy-MM-dd",
                 "{1} {0}",
             }

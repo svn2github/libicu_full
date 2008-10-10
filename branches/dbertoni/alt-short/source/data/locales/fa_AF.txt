@@ -112,11 +112,11 @@ fa_AF{
             "افغانی",
         }
         AUD{
-            "AUD",
+            "AU$",
             "دالر آسترالیا",
         }
         BND{
-            "BND",
+            "BN$",
             "دالر برونی",
         }
         BYR{
@@ -124,15 +124,15 @@ fa_AF{
             "روبل روسیهٔ سفید",
         }
         CAD{
-            "CAD",
+            "CA$",
             "دالر کانادا",
         }
         CHF{
-            "CHF",
+            "Fr.",
             "فرانک سویس",
         }
         DKK{
-            "DKK",
+            "Dkr",
             "کرون دنمارک",
         }
         JPY{
@@ -144,19 +144,19 @@ fa_AF{
             "پزوی مکسیکو",
         }
         NLG{
-            "NLG",
+            "fl",
             "گیلدر هالند",
         }
         NOK{
-            "NOK",
+            "Nkr",
             "کرون ناروی",
         }
         SEK{
-            "SEK",
+            "Skr",
             "کرون سویدن",
         }
         SGD{
-            "SGD",
+            "S$",
             "دالر سینگاپور",
         }
         TJS{
@@ -212,7 +212,7 @@ fa_AF{
     Scripts{
         Mong{"مغلی"}
     }
-    Version{"1.59"}
+    Version{"1.60"}
     calendar{
         gregorian{
             DateTimeElements:intvector{

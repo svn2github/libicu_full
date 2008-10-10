@@ -13,7 +13,7 @@ en_GB{
         "#,##0%",
         "#E0",
     }
-    Version{"1.60"}
+    Version{"1.61"}
     calendar{
         gregorian{
             DateTimePatterns{
@@ -21,9 +21,9 @@ en_GB{
                 "HH:mm:ss z",
                 "HH:mm:ss",
                 "HH:mm",
-                "EEEE, d MMMM yyyy",
-                "d MMMM yyyy",
-                "d MMM yyyy",
+                "EEEE, d MMMM y",
+                "d MMMM y",
+                "d MMM y",
                 "dd/MM/yyyy",
                 "{1} {0}",
             }
@@ -36,7 +36,7 @@ en_GB{
                 yMEd{"EEE, d/M/yyyy"}
                 yyMMM{"MMM yy"}
                 yyyyMM{"MM/yyyy"}
-                yyyyMMMM{"MMMM yyyy"}
+                yyyyMMMM{"MMMM y"}
             }
             intervalFormats{
                 M{
@@ -86,18 +86,18 @@ en_GB{
                     y{"E, dd/MM/yyyy - E, dd/MM/yyyy"}
                 }
                 yMMM{
-                    M{"MMM-MMM yyyy"}
-                    y{"MMM yyyy - MMM yyyy"}
+                    M{"MMM-MMM y"}
+                    y{"MMM y - MMM y"}
                 }
                 yMMMEd{
-                    M{"E, d MMM - E, d MMM yyyy"}
-                    d{"E, d - E, d MMM yyyy"}
-                    y{"E, d MMM yyyy - E, d MMM yyyy"}
+                    M{"E, d MMM - E, d MMM y"}
+                    d{"E, d - E, d MMM y"}
+                    y{"E, d MMM y - E, d MMM y"}
                 }
                 yMMMd{
-                    M{"d MMM - d MMM yyyy"}
-                    d{"d-d MMM yyyy"}
-                    y{"d MMM yyyy - d MMM yyyy"}
+                    M{"d MMM - d MMM y"}
+                    d{"d-d MMM y"}
+                    y{"d MMM y - d MMM y"}
                 }
                 yMd{
                     M{"dd/MM/yyyy - dd/MM/yyyy"}

@@ -144,7 +144,7 @@ af{
     }
     Currencies{
         CHF{
-            "CHF",
+            "Fr.",
             "Switserse frank",
         }
         EUR{
@@ -152,7 +152,7 @@ af{
             "Euro",
         }
         GBP{
-            "UK£",
+            "£",
             "Britse pond",
         }
         ITL{
@@ -164,7 +164,7 @@ af{
             "Japannese jen",
         }
         NAD{
-            "NAD",
+            "N$",
             "Namibiese dollar",
         }
         RUB{
@@ -172,11 +172,11 @@ af{
             "Roebel",
         }
         TRL{
-            "TRL",
+            "TL",
             "Ou Turkse lier",
         }
         TRY{
-            "TRY",
+            "YTL",
             "Turkse lier",
         }
         USD{
@@ -250,7 +250,7 @@ af{
         "#,##0%",
         "#E0",
     }
-    Version{"1.65"}
+    Version{"1.66"}
     calendar{
         gregorian{
             AmPmMarkers{
@@ -262,9 +262,9 @@ af{
                 "h:mm:ss a z",
                 "HH:mm:ss",
                 "HH:mm",
-                "EEEE, yyyy MMMM dd",
-                "yyyy MMMM d",
-                "yyyy MMM d",
+                "EEEE, y MMMM dd",
+                "y MMMM d",
+                "y MMM d",
                 "yyyy-MM-dd",
                 "{1} {0}",
             }

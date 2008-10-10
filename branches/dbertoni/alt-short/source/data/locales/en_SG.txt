@@ -23,7 +23,7 @@ en_SG{
         "#,##0%",
         "#E0",
     }
-    Version{"1.54"}
+    Version{"1.55"}
     calendar{
         gregorian{
             DateTimeElements:intvector{
@@ -35,9 +35,9 @@ en_SG{
                 "a hh:mm:ss z",
                 "a hh:mm:ss",
                 "h:mm a",
-                "EEEE, MMMM d, yyyy",
-                "MMMM d, yyyy",
-                "dd-MMM-yyyy",
+                "EEEE, MMMM d, y",
+                "MMMM d, y",
+                "dd-MMM-y",
                 "M/d/yy",
                 "{1} {0}",
             }

@@ -17,7 +17,7 @@ ti_ER{
             "ETB",
         }
     }
-    Version{"1.50"}
+    Version{"1.51"}
     calendar{
         gregorian{
             DateTimeElements:intvector{
@@ -29,9 +29,9 @@ ti_ER{
                 "HH:mm:ss z",
                 "HH:mm:ss",
                 "HH:mm",
-                "EEEE፡ dd MMMM መዓልቲ yyyy G",
-                "yyyy MMMM d",
-                "yyyy MMM d",
+                "EEEE፡ dd MMMM መዓልቲ y G",
+                "y MMMM d",
+                "y MMM d",
                 "yyyy-MM-dd",
                 "{1} {0}",
             }

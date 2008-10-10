@@ -19,7 +19,7 @@ en_ZW{
         "#,##0%",
         "#E0",
     }
-    Version{"1.49"}
+    Version{"1.50"}
     calendar{
         gregorian{
             DateTimeElements:intvector{
@@ -31,9 +31,9 @@ en_ZW{
                 "h:mm:ss a z",
                 "h:mm:ss a",
                 "h:mm a",
-                "EEEE dd MMMM yyyy",
-                "dd MMMM yyyy",
-                "dd MMM,yyyy",
+                "EEEE dd MMMM y",
+                "dd MMMM y",
+                "dd MMM,y",
                 "d/M/yyyy",
                 "{1} {0}",
             }

@@ -31,7 +31,7 @@ es_CL{
             phonebook{"orden de directorio telefónico"}
         }
     }
-    Version{"1.58"}
+    Version{"1.59"}
     calendar{
         gregorian{
             DateTimePatterns{
@@ -39,8 +39,8 @@ es_CL{
                 "H:mm:ss z",
                 "H:mm:ss",
                 "H:mm",
-                "EEEE d 'de' MMMM 'de' yyyy",
-                "d 'de' MMMM 'de' yyyy",
+                "EEEE d 'de' MMMM 'de' y",
+                "d 'de' MMMM 'de' y",
                 "dd-MM-yyyy",
                 "dd-MM-yy",
                 "{1} {0}",

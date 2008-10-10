@@ -841,7 +841,7 @@ mt{
     Variants{
         REVISED{"Ortografija Irriveda"}
     }
-    Version{"1.77"}
+    Version{"1.79"}
     calendar{
         gregorian{
             AmPmMarkers{
@@ -853,9 +853,9 @@ mt{
                 "HH:mm:ss z",
                 "HH:mm:ss",
                 "HH:mm",
-                "EEEE, d 'ta'’ MMMM yyyy",
-                "d 'ta'’ MMMM yyyy",
-                "dd MMM yyyy",
+                "EEEE, d 'ta'’ MMMM y",
+                "d 'ta'’ MMMM y",
+                "dd MMM y",
                 "dd/MM/yyyy",
                 "{1} {0}",
             }
@@ -949,7 +949,7 @@ mt{
                         "Mej",
                         "Ġun",
                         "Lul",
-                        "Awi",
+                        "Aww",
                         "Set",
                         "Ott",
                         "Nov",
@@ -963,7 +963,7 @@ mt{
                         "Mejju",
                         "Ġunju",
                         "Lulju",
-                        "Awissu",
+                        "Awwissu",
                         "Settembru",
                         "Ottubru",
                         "Novembru",
