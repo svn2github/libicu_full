@@ -255,4 +255,25 @@ extern UnicodeString CharsToUnicodeString(const char* chars);
 /* alias for CharsToUnicodeString */
 extern UnicodeString ctou(const char* chars);
 
+/**
+ * Extract a UnicodeString into a char buffer in the default codepage. Escape to \u if needed.
+ * @param buf output buffer
+ * @param bufLen length of buffer
+ * @param str string to convert
+ * @param status status
+ * @return size needed to convert buffer
+ */
+extern int32_t it_extract(char* buf, int32_t bufLen, const UnicodeString& str, UErrorCode& status);
+
+/**
+ * Extract a UnicodeString into a char buffer in the default codepage. Escape to \u if needed.
+ * @param buf output buffer
+ * @param bufLen length of buffer
+ * @param str string to convert
+ * @param strLen length of string, or -1 for null terminated
+ * @param status status
+ * @return size needed to convert buffer
+ */
+extern int32_t it_uastrxcpy(char* buf, int32_t bufLen, UChar *str, int32_t strLen, UErrorCode& status);
+
 #endif // _INTLTEST

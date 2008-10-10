@@ -1,6 +1,6 @@
 /*
 **********************************************************************
-*   Copyright (C) 2001-2006, International Business Machines
+*   Copyright (C) 2001-2008, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 **********************************************************************
 *   Date        Name        Description
@@ -23,6 +23,7 @@ public:
     static UnicodeString hex(UChar ch);
 
     static UnicodeString hex(const UnicodeString& s);
+    static UnicodeString hexIfUnprintable(const UnicodeString& s);
 
     static UnicodeString hex(const UnicodeString& s, UChar sep);
 

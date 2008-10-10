@@ -1,44 +1,226 @@
 // ***************************************************************************
 // *
-// *   Copyright (C) 2004, International Business Machines
+// *   Copyright © 2008, International Business Machines
 // *   Corporation and others.  All Rights Reserved.
 // *
 // ***************************************************************************
-// 
+// ả
 
 pl {
-   SpelloutRules {
-        "-x: minus >>;\n"
-        "zero; jeden; dwa; trzy; cztery; pi\u0119\u0107;\n"
-        "sze\u015B\u0107; siedem; osiem; dziewi\u0119\u0107; dziesi\u0119\u0107;\n"
-        "jedena\u015Bcie; dwana\u015Bcie; trzyna\u015Bcie; czterna\u015Bcie; pi\u0119tna\u015Bcie;\n"
-        "szesna\u015Bcie; siedemna\u015Bcie; osiemna\u015Bcie; dziewi\u0119tna\u015Bcie;\n"
-        "20: dwadzie\u015Bcia[ >>];\n"
-        "30: trzydzie\u015Bci[ >>];\n"
-        "40: czterdzie\u015Bci[ >>];\n"
-        "50: pi\u0119\u0107dziesi\u0105t[ >>];\n"
-        "60: sze\u015B\u0107dziesi\u0105t[ >>];\n"
-        "70: siedemdziesi\u0105t[ >>];\n"
-        "80: osiemdziesi\u0105t[ >>];\n"
-        "90: dziewi\u0119\u0107dziesi\u0105t[ >>];\n"
-        "100: sto[ >>];\n"
-        "200: dwie\u015Bcie[ >>];\n"
-        "300: trzysta[ >>];\n"
-        "400: czterysta[ >>];\n"
-        "500: pi\u0119\u0107set[ >>];\n"
-        "600: sze\u015B\u0107set[ >>];\n"
-        "700: siedemset[ >>];\n"
-        "800: osiemset[ >>];\n"
-        "900: dziewi\u0119\u0107set[ >>];\n"
-        "1000: tysi\u0105c[ >>];\n"
-        "2000: << tysi\u0105cy[ >>];\n"
-        "1,000,000: milion[ >>];\n"
-        "2,000,000: << miliony[ >>];\n"
-        "1,000,000,000: bilion[ >>];\n"
-        "2,000,000,000: << biliony[ >>];\n"
-        "1,000,000,000,000: trylion[ >>];\n"
-        "2,000,000,000,000: << tryliony[ >>];\n"
-        "1,000,000,000,000,000: =#,##0=;" 
-    }
+    //------------------------------------------------------------
+    // Rule Based Number Format Support
+    //------------------------------------------------------------
 
+    // Spellout rules for Polish.
+
+   SpelloutRules {
+        "%neutre: \n"
+            "-x: minus >>;\n"
+            "x.x: << przecinek >>;\n"
+            "zero;" // or null
+            "jedno;" // jed|en, ~na, ~no, ~ni, ~ne;		jeden (masc.), jedna (fem.), jedno (neutr.)
+            "dwa;" // dw|a/~aj/~ie;		dwa (masc./neutr.), dwie (fem.), dwaj (masc. human), dwoje (mix human)
+            "trzy;"
+            "cztery;"
+            "pi\u0119\u0107;"
+            "sze\u015B\u0107;"
+            "siedem;"
+            "osiem;"
+            "dziewi\u0119\u0107;\n"
+            "dziesi\u0119\u0107;" // 10
+            "jedena\u015Bcie;"
+            "dwana\u015Bcie;"
+            "trzyna\u015Bcie;"
+            "czterna\u015Bcie;"
+            "pi\u0119tna\u015Bcie;"
+            "szesna\u015Bcie;"
+            "siedemna\u015Bcie;"
+            "osiemna\u015Bcie;"
+            "dziewi\u0119tna\u015Bcie;\n"
+            "20:   dwa\u00ADdzie\u015Bcia[ >>];\n"
+            "30:  trzy\u00ADdzie\u015Bci[ >>];\n"
+            "40: czter\u00ADdzie\u015Bci[ >>];\n"
+            "50:    <<\u00ADdziesi\u0105t[ >>];\n"
+            //"50:     pi\u0119\u0107\u00ADdziesi\u0105t[ >>];\n"
+            //"60:    sze\u015B\u0107\u00ADdziesi\u0105t[ >>];\n"
+            //"70:             siedem\u00ADdziesi\u0105t[ >>];\n"
+            //"80:              osiem\u00ADdziesi\u0105t[ >>];\n"
+            //"90: dziewi\u0119\u0107\u00ADdziesi\u0105t[ >>];\n"
+            "100:                  sto[ >>];\n"
+            "200: <%feminine<\u00AD\u015Bcie[ >>];\n"
+            "300: <%feminine<\u00ADsta[ >>];\n"
+            //"300:   trzy\u00ADsta[ >>];\n"
+            //"400: cztery\u00ADsta[ >>];\n"
+            "500: <%feminine<\u00ADset[ >>];\n"
+            //"500:     pi\u0119\u0107\u00ADset[ >>];\n"
+            //"600:    sze\u015B\u0107\u00ADset[ >>];\n"
+            //"700:             siedem\u00ADset[ >>];\n"
+            //"800:              osiem\u00ADset[ >>];\n"
+            //"900: dziewi\u0119\u0107\u00ADset[ >>];\n"
+            "1000: <%masculine< tysi\u0105c[ >>];\n"
+            "2000: <%masculine< tysi\u0105ce[ >>];\n"
+            "5000: <%masculine< tysi\u0105cy[ >>];\n"
+            "1,000,000: <%masculine< milion[ >>];\n" //  ~y, ~ów
+            "2,000,000: <%masculine< miliony[ >>];\n"
+            "5,000,000: <%masculine< milion\u00F3w[ >>];\n"
+            "1,000,000,000: <%masculine< miliard[ >>];\n" //  ~y, ~ów
+            "2,000,000,000: <%masculine< miliardy[ >>];\n"
+            "5,000,000,000: <%masculine< miliard\u00F3w[ >>];\n"
+            "1,000,000,000,000: <%masculine< bilion[ >>];\n" //  ~y, ~ów
+            "2,000,000,000,000: <%masculine< biliony[ >>];\n"
+            "5,000,000,000,000: <%masculine< bilion\u00F3w[ >>];\n"
+            "1,000,000,000,000,000: <%masculine< biliard[ >>];\n" //  ~y, ~ów
+            "2,000,000,000,000,000: <%masculine< biliardy[ >>];\n"
+            "5,000,000,000,000,000: <%masculine< biliard\u00F3w[ >>];\n"
+            "1,000,000,000,000,000,000: =#,##0.#=;\n"
+/*
+            "1,000,000,000,000,000,000: <%masculine< trylion[ >>];\n" //  ~y, ~ów
+            "2,000,000,000,000,000,000: <%masculine< tryliony[ >>];\n"
+            "5,000,000,000,000,000,000: <%masculine< trylion\u00F3w[ >>];\n"
+            "1,000,000,000,000,000,000,000: <%masculine< tryliard[ >>];\n" //  ~y, ~ów
+            "2,000,000,000,000,000,000,000: <%masculine< tryliardy[ >>];\n"
+            "5,000,000,000,000,000,000,000: <%masculine< tryliard\u00F3w[ >>];\n"
+            "1,000,000,000,000,000,000,000,000: =#,##0.#=;\n"
+*/
+
+        "%feminine:\n"
+            "-x: minus >>;\n"
+            "x.x: << przecinek >>;\n"
+            "zero;" // or null
+            "jedna;" // jed|en, ~na, ~no, ~ni, ~ne;		jeden (masc.), jedna (fem.), jedno (neutr.)
+            "dwie;" // dw|a/~aj/~ie;		dwa (masc./neutr.), dwie (fem.), dwaj (masc. human), dwoje (mix human)
+            "trzy;"
+            "cztery;"
+            "pi\u0119\u0107;"
+            "sze\u015B\u0107;"
+            "siedem;"
+            "osiem;"
+            "dziewi\u0119\u0107;\n"
+            "dziesi\u0119\u0107;" // 10
+            "jedena\u015Bcie;"
+            "dwana\u015Bcie;"
+            "trzyna\u015Bcie;"
+            "czterna\u015Bcie;"
+            "pi\u0119tna\u015Bcie;"
+            "szesna\u015Bcie;"
+            "siedemna\u015Bcie;"
+            "osiemna\u015Bcie;"
+            "dziewi\u0119tna\u015Bcie;\n"
+            "20:   dwa\u00ADdzie\u015Bcia[ >>];\n"
+            "30:  trzy\u00ADdzie\u015Bci[ >>];\n"
+            "40: czter\u00ADdzie\u015Bci[ >>];\n"
+            "50:    <<\u00ADdziesi\u0105t[ >>];\n"
+            //"50:     pi\u0119\u0107\u00ADdziesi\u0105t[ >>];\n"
+            //"60:    sze\u015B\u0107\u00ADdziesi\u0105t[ >>];\n"
+            //"70:             siedem\u00ADdziesi\u0105t[ >>];\n"
+            //"80:              osiem\u00ADdziesi\u0105t[ >>];\n"
+            //"90: dziewi\u0119\u0107\u00ADdziesi\u0105t[ >>];\n"
+            "100:                  sto[ >>];\n"
+            "200: <%feminine<\u00AD\u015Bcie[ >>];\n"
+            "300: <%feminine<\u00ADsta[ >>];\n"
+            //"300:   trzy\u00ADsta[ >>];\n"
+            //"400: cztery\u00ADsta[ >>];\n"
+            "500: <%feminine<\u00ADset[ >>];\n"
+            //"500:     pi\u0119\u0107\u00ADset[ >>];\n"
+            //"600:    sze\u015B\u0107\u00ADset[ >>];\n"
+            //"700:             siedem\u00ADset[ >>];\n"
+            //"800:              osiem\u00ADset[ >>];\n"
+            //"900: dziewi\u0119\u0107\u00ADset[ >>];\n"
+            "1000: <%masculine< tysi\u0105c[ >>];\n"
+            "2000: <%masculine< tysi\u0105ce[ >>];\n"
+            "5000: <%masculine< tysi\u0105cy[ >>];\n"
+            "1,000,000: <%masculine< milion[ >>];\n" //  ~y, ~ów
+            "2,000,000: <%masculine< miliony[ >>];\n"
+            "5,000,000: <%masculine< milion\u00F3w[ >>];\n"
+            "1,000,000,000: <%masculine< miliard[ >>];\n" //  ~y, ~ów
+            "2,000,000,000: <%masculine< miliardy[ >>];\n"
+            "5,000,000,000: <%masculine< miliard\u00F3w[ >>];\n"
+            "1,000,000,000,000: <%masculine< bilion[ >>];\n" //  ~y, ~ów
+            "2,000,000,000,000: <%masculine< biliony[ >>];\n"
+            "5,000,000,000,000: <%masculine< bilion\u00F3w[ >>];\n"
+            "1,000,000,000,000,000: <%masculine< biliard[ >>];\n" //  ~y, ~ów
+            "2,000,000,000,000,000: <%masculine< biliardy[ >>];\n"
+            "5,000,000,000,000,000: <%masculine< biliard\u00F3w[ >>];\n"
+            "1,000,000,000,000,000,000: =#,##0.#=;\n"
+/*
+            "1,000,000,000,000,000,000: <%masculine< trylion[ >>];\n" //  ~y, ~ów
+            "2,000,000,000,000,000,000: <%masculine< tryliony[ >>];\n"
+            "5,000,000,000,000,000,000: <%masculine< trylion\u00F3w[ >>];\n"
+            "1,000,000,000,000,000,000,000: <%masculine< tryliard[ >>];\n" //  ~y, ~ów
+            "2,000,000,000,000,000,000,000: <%masculine< tryliardy[ >>];\n"
+            "5,000,000,000,000,000,000,000: <%masculine< tryliard\u00F3w[ >>];\n"
+            "1,000,000,000,000,000,000,000,000: =#,##0.#=;\n"
+*/
+
+        "%masculine:\n"
+            "-x: minus >>;\n"
+            "x.x: << przecinek >>;\n"
+            "zero;" // or null
+            "jeden;" // jed|en, ~na, ~no, ~ni, ~ne;		jeden (masc.), jedna (fem.), jedno (neutr.)
+            "dwa;" // dw|a/~aj/~ie;		dwa (masc./neutr.), dwie (fem.), dwaj (masc. human), dwoje (mix human)
+            "trzy;"
+            "cztery;"
+            "pi\u0119\u0107;"
+            "sze\u015B\u0107;"
+            "siedem;"
+            "osiem;"
+            "dziewi\u0119\u0107;\n"
+            "dziesi\u0119\u0107;" // 10
+            "jedena\u015Bcie;"
+            "dwana\u015Bcie;"
+            "trzyna\u015Bcie;"
+            "czterna\u015Bcie;"
+            "pi\u0119tna\u015Bcie;"
+            "szesna\u015Bcie;"
+            "siedemna\u015Bcie;"
+            "osiemna\u015Bcie;"
+            "dziewi\u0119tna\u015Bcie;\n"
+            "20:   dwa\u00ADdzie\u015Bcia[ >>];\n"
+            "30:  trzy\u00ADdzie\u015Bci[ >>];\n"
+            "40: czter\u00ADdzie\u015Bci[ >>];\n"
+            "50:    <<\u00ADdziesi\u0105t[ >>];\n"
+            //"50:     pi\u0119\u0107\u00ADdziesi\u0105t[ >>];\n"
+            //"60:    sze\u015B\u0107\u00ADdziesi\u0105t[ >>];\n"
+            //"70:             siedem\u00ADdziesi\u0105t[ >>];\n"
+            //"80:              osiem\u00ADdziesi\u0105t[ >>];\n"
+            //"90: dziewi\u0119\u0107\u00ADdziesi\u0105t[ >>];\n"
+            "100:                  sto[ >>];\n"
+            "200: <%feminine<\u00AD\u015Bcie[ >>];\n"
+            "300: <%feminine<\u00ADsta[ >>];\n"
+            //"300:   trzy\u00ADsta[ >>];\n"
+            //"400: cztery\u00ADsta[ >>];\n"
+            "500: <%feminine<\u00ADset[ >>];\n"
+            //"500:     pi\u0119\u0107\u00ADset[ >>];\n"
+            //"600:    sze\u015B\u0107\u00ADset[ >>];\n"
+            //"700:             siedem\u00ADset[ >>];\n"
+            //"800:              osiem\u00ADset[ >>];\n"
+            //"900: dziewi\u0119\u0107\u00ADset[ >>];\n"
+            "1000: <%masculine< tysi\u0105c[ >>];\n"
+            "2000: <%masculine< tysi\u0105ce[ >>];\n"
+            "5000: <%masculine< tysi\u0105cy[ >>];\n"
+            "1,000,000: <%masculine< milion[ >>];\n" //  ~y, ~ów
+            "2,000,000: <%masculine< miliony[ >>];\n"
+            "5,000,000: <%masculine< milion\u00F3w[ >>];\n"
+            "1,000,000,000: <%masculine< miliard[ >>];\n" //  ~y, ~ów
+            "2,000,000,000: <%masculine< miliardy[ >>];\n"
+            "5,000,000,000: <%masculine< miliard\u00F3w[ >>];\n"
+            "1,000,000,000,000: <%masculine< bilion[ >>];\n" //  ~y, ~ów
+            "2,000,000,000,000: <%masculine< biliony[ >>];\n"
+            "5,000,000,000,000: <%masculine< bilion\u00F3w[ >>];\n"
+            "1,000,000,000,000,000: <%masculine< biliard[ >>];\n" //  ~y, ~ów
+            "2,000,000,000,000,000: <%masculine< biliardy[ >>];\n"
+            "5,000,000,000,000,000: <%masculine< biliard\u00F3w[ >>];\n"
+            "1,000,000,000,000,000,000: =#,##0.#=;\n"
+/*
+            "1,000,000,000,000,000,000: <%masculine< trylion[ >>];\n" //  ~y, ~ów
+            "2,000,000,000,000,000,000: <%masculine< tryliony[ >>];\n"
+            "5,000,000,000,000,000,000: <%masculine< trylion\u00F3w[ >>];\n"
+            "1,000,000,000,000,000,000,000: <%masculine< tryliard[ >>];\n" //  ~y, ~ów
+            "2,000,000,000,000,000,000,000: <%masculine< tryliardy[ >>];\n"
+            "5,000,000,000,000,000,000,000: <%masculine< tryliard\u00F3w[ >>];\n"
+            "1,000,000,000,000,000,000,000,000: =#,##0.#=;\n"
+*/
+
+        "%number: =%masculine=;\n" // last one is also default
+    }
 }

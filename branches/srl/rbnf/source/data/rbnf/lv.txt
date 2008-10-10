@@ -1,0 +1,61 @@
+// ***************************************************************************
+// *
+// *   Copyright © 2008, International Business Machines
+// *   Corporation and others. All Rights Reserved.
+// *
+// ***************************************************************************
+// ả
+
+lv {
+    //------------------------------------------------------------
+    // Rule Based Number Format Support
+    //------------------------------------------------------------
+
+    // Spellout rules for Latvian.
+
+    // Latvian is closely related to Lithuanian, and probably shares many 
+    // issues with number spellout.
+
+    // These are preliminary, and need to be extended with feminine/masculine at least,
+    // and probably more. This is what I have been able to derive from searching on
+    // the web. It may thus have a number of spelling and grammatical errors. But
+    // it's a start.
+
+    SpelloutRules {
+        "%number:\n"
+            "-x: m\u012Bnuss >>;\n"
+            "x.x: << komats >>;\n"
+            "nulle; viens; divi; tr\u012Bs; \u010Detri; pieci; "
+            "    se\u0161i; septi\u0146i; asto\u0146i; devi\u0146i;\n"
+            "desmit; vienpadsmit; divpadsmit; tr\u012Bspadsmit; \u010Detrpadsmit; piecpadsmit; "
+            "    se\u0161padsmit; septi\u0146padsmit; asto\u0146padsmit; devi\u0146padsmit;\n"
+            "20: divdesmit[ >>];\n"
+            "30: tr\u012Bsdesmit[ >>];\n"
+            "40: \u010Detrdesmit[ >>];\n"
+            "50: piecdesmit[ >>];\n"
+            "60: se\u0161desmit[ >>];\n"
+            "70: septi\u0146desmit[ >>];\n"
+            "80: asto\u0146desmit[ >>];\n"
+            "90: devi\u0146desmit[ >>];\n"
+            "100: simts[ >>];\n"
+            "200: << simti[ >>];\n"
+            "1000: t\u016Bkstotis[ >>];\n"
+            "2000: << t\u016Bksto\u0161i[ >>];\n"
+            "1,000,000: << miljons[ >>];\n"
+            "2,000,000: << miljoni[ >>];\n"
+            "1,000,000,000: << miljards[ >>];\n"
+            "2,000,000,000: << miljardi[ >>];\n"
+            "1,000,000,000,000: << biljons[ >>];\n"
+            "2,000,000,000,000: << biljoni[ >>];\n"
+            "1,000,000,000,000,000: << biljards[ >>];\n"
+            "2,000,000,000,000,000: << biljardi[ >>];\n"
+            "1,000,000,000,000,000,000: =#,##0.#=;\n"
+/*
+            "1,000,000,000,000,000,000: << triljons[ >>];\n"
+            "2,000,000,000,000,000,000: << triljoni[ >>];\n"
+            "1,000,000,000,000,000,000,000: << triljards[ >>];\n"
+            "2,000,000,000,000,000,000,000: << triljardi[ >>];\n"
+            "1,000,000,000,000,000,000,000,000: =#,##0.#=;\n"
+*/
+    }
+}

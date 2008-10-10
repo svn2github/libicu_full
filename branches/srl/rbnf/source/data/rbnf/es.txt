@@ -1,17 +1,19 @@
 // ***************************************************************************
 // *
-// *   Copyright (C) 2004, International Business Machines
-// *   Corporation and others.  All Rights Reserved.
+// *   Copyright © 2008, International Business Machines
+// *   Corporation and others. All Rights Reserved.
 // *
 // ***************************************************************************
-// 
+// ả
 
 es {
     //------------------------------------------------------------
     // Rule Based Number Format Support
     //------------------------------------------------------------
 
-    // * Spellout rules for Spanish.  The Spanish rules are quite similar to
+    // Spellout rules for Spanish (Iberian and Latin American).
+
+    // * The Spanish rules are quite similar to
     // * the English rules, but there are some important differences:
     // * First, we have to provide separate rules for most of the twenties
     // * because the ones digit frequently picks up an accent mark that it
@@ -22,53 +24,169 @@ es {
     // * standing alone, but changes to "ciento" when followed by more digits.
     // * There also some other differences.
 
-    // The Spanish rules are incomplete.  I'm missing information on negative
-    // numbers and numbers with fractional parts.  I also don't have
-    // information on numbers higher than the millions.
-
     SpelloutRules {
-        // negative-number and fraction rules
-        "-x: menos >>;\n"
-        "x.x: << punto >>;\n"
-        // words for values from 0 to 19
-        "cero; uno; dos; tres; cuatro; cinco; seis; siete; ocho; nueve;\n"
-        "diez; once; doce; trece; catorce; quince; diecis\u00e9is;\n"
-        "    diecisiete; dieciocho; diecinueve;\n"
-        // words for values from 20 to 29 (necessary because the ones digit
-        // often picks up an accent mark it doesn't have when standing alone)
-        "veinte; veintiuno; veintid\u00f3s; veintitr\u00e9s; veinticuatro;\n"
-        "    veinticinco; veintis\u00e9is; veintisiete; veintiocho;\n"
-        "    veintinueve;\n"
-        // words for multiples of 10 (notice that the tens digit is separated
-        // from the ones digit by the word "y".)
-        "30: treinta[ y >>];\n"
-        "40: cuarenta[ y >>];\n"
-        "50: cincuenta[ y >>];\n"
-        "60: sesenta[ y >>];\n"
-        "70: setenta[ y >>];\n"
-        "80: ochenta[ y >>];\n"
-        "90: noventa[ y >>];\n"
-        // 100 by itself is "cien," but 100 followed by something is "cineto"
-        "100: cien;\n"
-        "101: ciento >>;\n"
-        // words for multiples of 100 (must be stated because they're
-        // rarely simple concatenations)
-        "200: doscientos[ >>];\n"
-        "300: trescientos[ >>];\n"
-        "400: cuatrocientos[ >>];\n"
-        "500: quinientos[ >>];\n"
-        "600: seiscientos[ >>];\n"
-        "700: setecientos[ >>];\n"
-        "800: ochocientos[ >>];\n"
-        "900: novecientos[ >>];\n"
-        // for 1,000, the multiplier on "mil" is omitted: 2,000 is "dos mil,"
-        // but 1,000 is just "mil."
-        "1000: mil[ >>];\n"
-        "2000: << mil[ >>];\n"
-        // 1,000,000 is "un millon," not "uno millon"
-        "1,000,000: un mill\u00f3n[ >>];\n"
-        "2,000,000: << mill\u00f3n[ >>];\n"
-        // overflow rule
-        "1,000,000,000: =#,##0= (incomplete data);" 
+        "%year: =%masculine=;\n" // the -hundred- convention is not used in Spanish for years
+        "%number: =%masculine=;\n"
+        "%masculina: =%masculine=;\n"
+        "%masculine:\n" // masculine
+            // negative-number and fraction rules
+            "-x: menos >>;\n"
+            "x.x: << coma >>;\n"
+            // words for values from 0 to 19
+            "cero; uno; dos; tres; cuatro; cinco; seis; siete; ocho; nueve;\n"
+            "diez; once; doce; trece; catorce; quince; diecis\u00e9is; dieci>>;\n"
+            // words for values from 20 to 29 (necessary because the ones digit
+            // often picks up an accent mark it doesn't have when standing alone)
+            "20: veinte; veintiuno; veintid\u00f3s; veintitr\u00e9s; veinticuatro;\n"
+            "    veinticinco; veintis\u00e9is; veinti>>;\n"
+            // words for multiples of 10 (notice that the tens digit is separated from the ones digit by the word "y".)
+            "30: treinta[ y >>];\n"
+            "40: cuarenta[ y >>];\n"
+            "50: cincuenta[ y >>];\n"
+            "60: sesenta[ y >>];\n"
+            "70: setenta[ y >>];\n"
+            "80: ochenta[ y >>];\n"
+            "90: noventa[ y >>];\n"
+            // 100 by itself is "cien", but 100 followed by something is "cineto"
+            "100: cien; 101: ciento >>;\n"
+            // words for multiples of 100 (must be stated because they're rarely simple concatenations)
+            "200: dos\u00ADcientos[ >>];\n"
+            "300: tres\u00ADcientos[ >>];\n"
+            "400: cuatro\u00ADcientos[ >>];\n"
+            "500: quinientos[ >>];\n"
+            "600: seis\u00ADcientos[ >>];\n"
+            "700: sete\u00ADcientos[ >>];\n"
+            "800: ocho\u00ADcientos[ >>];\n"
+            "900: nove\u00ADcientos[ >>];\n"
+            // for 1,000, the multiplier on "mil" is omitted: 2,000 is "dos mil", but 1,000 is just "mil".
+            "1000: mil[ >>];\n"
+            "2000: << mil[ >>];\n"
+            "1,000,000: un mill\u00F3n[ >>];\n" // 1,000,000 is "un millon", not "uno millon"
+            "2,000,000: <%masculine< mill\u00F3nes[ >>];\n"
+            "1,000,000,000: un millardo[ >>];\n"
+            "2,000,000,000: <%masculine< millardos[ >>];\n"
+            "1,000,000,000,000: un bill\u00F3n[ >>];\n"
+            "2,000,000,000,000: <%masculine< billi\u00F3nes[ >>];\n"
+            "1,000,000,000,000,000: un billardo[ >>];\n"
+            "2,000,000,000,000,000: <%masculine< billardos[ >>];\n"
+            "1,000,000,000,000,000,000: =#,##0.#=;\n"
+/* 
+ * Current (Java) implementation can't handle these magnitudes
+            "1,000,000,000,000,000,000: un trill\u00F3n[ >>];\n"
+            "2,000,000,000,000,000,000: <%masculine< trill\u00F3nes[ >>];\n"
+ * Current (C++) implmenatation can't handle these magnitudes
+            "1,000,000,000,000,000,000,000: un trillardo[ >>];\n"
+            "2,000,000,000,000,000,000,000: <%masculine< trillardos[ >>];\n"
+            "1,000,000,000,000,000,000,000,000: un cuadrill\u00F3n[ >>];\n"
+            "2,000,000,000,000,000,000,000,000: <%masculine< cuadrill\u00F3nes[ >>];\n"
+            "1,000,000,000,000,000,000,000,000,000: un cuadrillardo[ >>];\n"
+            "2,000,000,000,000,000,000,000,000,000: <%masculine< cuadrillardos[ >>];\n"
+            "1,000,000,000,000,000,000,000,000,000,000: un quintill\u00F3n[ >>];\n"
+            "2,000,000,000,000,000,000,000,000,000,000: <%masculine< quintill\u00F3nes[ >>];\n"
+            "1,000,000,000,000,000,000,000,000,000,000,000: un quintillardo[ >>];\n"
+            "2,000,000,000,000,000,000,000,000,000,000,000: <%masculine< quintillardos[ >>];\n"
+            "1,000,000,000,000,000,000,000,000,000,000,000,000: un sextill\u00F3n[ >>];\n"
+            "2,000,000,000,000,000,000,000,000,000,000,000,000: <%masculine< sextill\u00F3nes[ >>];\n"
+            "1,000,000,000,000,000,000,000,000,000,000,000,000,000: un sextillardo[ >>];\n"
+            "2,000,000,000,000,000,000,000,000,000,000,000,000,000: <%masculine< sextillardos[ >>];\n"
+            "1,000,000,000,000,000,000,000,000,000,000,000,000,000,000: =#,##0.#=;\n"
+*/
+
+        "%feminina: =%feminine=;\n"
+        "%feminine:\n"
+            // negative-number and fraction rules
+            "-x: menos >>;\n"
+            "x.x: << coma >>;\n"
+            "cero; una; dos; tres; cuatro; cinco; seis; siete; ocho; nueve;\n"
+            "diez; once; doce; trece; catorce; quince; diecis\u00e9is; dieci>>;\n"
+            // words for values from 20 to 29 (necessary because the ones digit
+            // often picks up an accent mark it doesn't have when standing alone)
+            "20: veinte; veintiuno; veintid\u00f3s; veintitr\u00e9s; veinticuatro;\n"
+            "    veinticinco; veintis\u00e9is; veinti>>;\n"
+            // words for multiples of 10 (notice that the tens digit is separated from the ones digit by the word "y".)
+            "30: treinta[ y >>];\n"
+            "40: cuarenta[ y >>];\n"
+            "50: cincuenta[ y >>];\n"
+            "60: sesenta[ y >>];\n"
+            "70: setenta[ y >>];\n"
+            "80: ochenta[ y >>];\n"
+            "90: noventa[ y >>];\n"
+            // 100 by itself is "cien", but 100 followed by something is "cineto"
+            "100: cien; 101: ciento >>;\n"
+            // words for multiples of 100 (must be stated because they're rarely simple concatenations)
+            "200: dos\u00ADcientos[ >>];\n"
+            "300: tres\u00ADcientos[ >>];\n"
+            "400: cuatro\u00ADcientos[ >>];\n"
+            "500: quinientos[ >>];\n"
+            "600: seis\u00ADcientos[ >>];\n"
+            "700: sete\u00ADcientos[ >>];\n"
+            "800: ocho\u00ADcientos[ >>];\n"
+            "900: nove\u00ADcientos[ >>];\n"
+            // for 1,000, the multiplier on "mil" is omitted: 2,000 is "dos mil", but 1,000 is just "mil".
+            "1000: mil[ >>];\n"
+            "2000: << mil[ >>];\n"
+            "1,000,000: un mill\u00F3n[ >>];\n" // 1,000,000 is "un millon", not "uno millon"
+            "2,000,000: <%masculine< mill\u00F3nes[ >>];\n"
+            "1,000,000,000: un millardo[ >>];\n"
+            "2,000,000,000: <%masculine< millardos[ >>];\n"
+            "1,000,000,000,000: un bill\u00F3n[ >>];\n"
+            "2,000,000,000,000: <%masculine< billi\u00F3nes[ >>];\n"
+            "1,000,000,000,000,000: un billardo[ >>];\n"
+            "2,000,000,000,000,000: <%masculine< billardos[ >>];\n"
+            "1,000,000,000,000,000,000: =#,##0.#=;\n"
+/* 
+ * Current (Java) implementation can't handle these magnitudes
+            "1,000,000,000,000,000,000: un trill\u00F3n[ >>];\n"
+            "2,000,000,000,000,000,000: <%masculine< trill\u00F3nes[ >>];\n"
+ * Current (C++) implmenatation can't handle these magnitudes
+            "1,000,000,000,000,000,000,000: un trillardo[ >>];\n"
+            "2,000,000,000,000,000,000,000: <%masculine< trillardos[ >>];\n"
+            "1,000,000,000,000,000,000,000,000: un cuadrill\u00F3n[ >>];\n"
+            "2,000,000,000,000,000,000,000,000: <%masculine< cuadrill\u00F3nes[ >>];\n"
+            "1,000,000,000,000,000,000,000,000,000: un cuadrillardo[ >>];\n"
+            "2,000,000,000,000,000,000,000,000,000: <%masculine< cuadrillardos[ >>];\n"
+            "1,000,000,000,000,000,000,000,000,000,000: un quintill\u00F3n[ >>];\n"
+            "2,000,000,000,000,000,000,000,000,000,000: <%masculine< quintill\u00F3nes[ >>];\n"
+            "1,000,000,000,000,000,000,000,000,000,000,000: un quintillardo[ >>];\n"
+            "2,000,000,000,000,000,000,000,000,000,000,000: <%masculine< quintillardos[ >>];\n"
+            "1,000,000,000,000,000,000,000,000,000,000,000,000: un sextill\u00F3n[ >>];\n"
+            "2,000,000,000,000,000,000,000,000,000,000,000,000: <%masculine< sextill\u00F3nes[ >>];\n"
+            "1,000,000,000,000,000,000,000,000,000,000,000,000,000: un sextillardo[ >>];\n"
+            "2,000,000,000,000,000,000,000,000,000,000,000,000,000: <%masculine< sextillardos[ >>];\n"
+            "1,000,000,000,000,000,000,000,000,000,000,000,000,000,000: =#,##0.#=;\n"
+*/
+
+			//00AA;FEMININE ORDINAL INDICATOR;Ll;0;L;<super> 0061;;;;N;;;;;
+			//00BA;MASCULINE ORDINAL INDICATOR;Ll;0;L;<super> 006F;;;;N;;;;;
+			//1D43;MODIFIER LETTER SMALL A;Lm;0;L;<super> 0061;;;;N;;;;;
+			//1D52;MODIFIER LETTER SMALL O;Lm;0;L;<super> 006F;;;;N;;;;;
+        "%dord_masculine:\n"
+            "=#,##0==%%dord_mascabbrev=;\n"
+        "%%dord_mascabbrev:\n"
+            //"o;\n" // to do: use superscript letters; "er" is used for adjective form for 1 and 3 (not covered here)
+            //"\u1D52;"
+            "\u00BA;"
+
+        "%dord_feminine:\n"
+            "=#,##0==%%dord_femabbrev=;\n"
+        "%%dord_femabbrev:\n"
+            //"a;\n" // to do: use superscript letters
+            //"\u1D43;"
+            "\u00AA;"
+
+        "%amount: =%masculine=;\n"
+        "%default: =%amount=;\n" // default (must be last public name)
+        "%%lenient-parse:\n"
+        "   &\u0000 << ' ' << ',' << '-'; \n"
+    }
+    SpelloutLocalizations {
+        { "%number", "%year", "%masculine", "%feminine",
+        }
+        { "es", 
+          "numero", "año", "masculina", "feminina",
+        }
+        { "en", 
+          "number", "year", "masculine", "feminine",
+        }
     }
 }

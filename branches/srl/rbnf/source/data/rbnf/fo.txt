@@ -1,0 +1,161 @@
+// ***************************************************************************
+// *
+// *   Copyright © 2008, International Business Machines
+// *   Corporation and others.  All Rights Reserved.
+// *
+// ***************************************************************************
+// ả
+
+fo {
+    //------------------------------------------------------------
+    // Rule Based Number Format Support
+    //------------------------------------------------------------
+
+    // Spellout rules for Faroese.
+
+    SpelloutRules {
+        "%year:\n"
+            "-x: minus >>;\n"
+            "null; ein; tvey; tr\u00FD; f\u00FDre; fimm; seks; sjey; \u00E1tta; n\u00EDggju;\n"
+            "t\u00EDggju; ellivu; t\u00F3lv; trettan; fj\u00FArtan; f\u00EDmtan; sekstan; seytan; \u00E1tjan; n\u00EDtjan;\n"
+            "20: tj\u00FAgo[\u00AD>>];\n"
+            "30: tr\u00EDati[\u00AD>>];\n" // alt: tretivu
+            "40: f\u00FDrati[\u00AD>>];\n" // alt: fjøruti
+            "50: fimmti[\u00AD>>];\n" // alt: hálvtrýss (cmp. Danish)
+            "60: seksti[\u00AD>>];\n"
+            "70: sjeyti[\u00AD>>];\n"
+            "80: \u00E1ttati[\u00AD>>];\n"
+            "90: n\u00EDti[\u00AD>>];\n"
+            "100: <<\u00ADhundra\u00F0[\u00ADog\u00AD>>];\n"
+            "1000: tusin[\u00ADog\u00AD>>];\n"
+            "1100/100: <<\u00ADhundra\u00F0[\u00ADog\u00AD>>];\n" // <%neutrum< is not sufficient here as that does not give the correct word for 21-hundred and above
+            "10,000: =%number=;\n"
+
+		// for 1, 2, and 3 the inflection/word depends on masc/fem/neutr (like Icelandic for 1, 2, 3, 4), AND ALSO on føll [kasus] (hvørfall[nominativ]/hvønnfall[ackusativ]/hvørjumfall[dativ]/hvørsfall[genitiv])
+		// we only deal with the nominative case here (as yet)
+
+        "%numero: =%number=;\n"
+        "%number: =%masculine=;\n" // ??
+
+        "%neuter: =%neutrum=;\n"
+        "%neutrum:\n" // the same as feminine, except we change the 1-3 digits
+            "-x: minus >>;\n"
+            "x.x: << komma >>;\n"
+            "null; eitt; tvey; tr\u00FD; f\u00FDre; fimm; seks; sjey; \u00E1tta; n\u00EDggju;\n"
+            "t\u00EDggju; ellivu; t\u00F3lv; trettan; fj\u00FArtan; f\u00EDmtan; sekstan; seytan; \u00E1tjan; n\u00EDtjan;\n"
+            "20: tj\u00FAgo[\u00AD>>];\n"
+            "30: tr\u00EDati[\u00AD>>];\n" // alt: tretivu
+            "40: f\u00FDrati[\u00AD>>];\n" // alt: fjøruti
+            "50: fimmti[\u00AD>>];\n" // alt: hálvtrýss (cmp. Danish)
+            "60: seksti[\u00AD>>];\n"
+            "70: sjeyti[\u00AD>>];\n"
+            "80: \u00E1ttati[\u00AD>>];\n"
+            "90: n\u00EDti[\u00AD>>];\n"
+            "100: <%neutrum<\u00ADhundra\u00F0[\u00ADog\u00AD>>];\n"
+            "1000: <%neutrum< tusin[ og >>];\n"
+            "1,000,000: ein milli\u00F3n[ og >>];\n"
+            "2,000,000: <%feminine< milli\u00F3ner[ og >>];\n"
+            "1,000,000,000: ein milliard[ og >>];\n"
+            "2,000,000,000: <%feminine< milliarder[ og >>];\n"
+            "1,000,000,000,000: ein billi\u00F3n[ og >>];\n"
+            "2,000,000,000,000: <%feminine< billi\u00F3ner[ og >>];\n"
+            "1,000,000,000,000,000: ein billiard[ og >>];\n"
+            "2,000,000,000,000,000: <%feminine< billiarder[ og >>];\n"
+            "1,000,000,000,000,000,000: =#,##0.#=;\n"
+
+        "%masculine: =%maskulinum=;\n"
+        "%maskulinum:\n" // masculine; the same as feminine, except we change the 1-3 digits
+            "-x: minus >>;\n"
+            "x.x: << komma >>;\n"
+            "null; ein; tveir; tr\u00EDggir; f\u00FDre; fimm; seks; sjey; \u00E1tta; n\u00EDggju;\n"
+            "t\u00EDggju; ellivu; t\u00F3lv; trettan; fj\u00FArtan; f\u00EDmtan; sekstan; seytan; \u00E1tjan; n\u00EDtjan;\n"
+            "20: tj\u00FAgo[\u00AD>>];\n"
+            "30: tr\u00EDati[\u00AD>>];\n" // alt: tretivu
+            "40: f\u00FDrati[\u00AD>>];\n" // alt: fjøruti
+            "50: fimmti[\u00AD>>];\n" // alt: hálvtrýss (cmp. Danish)
+            "60: seksti[\u00AD>>];\n"
+            "70: sjeyti[\u00AD>>];\n"
+            "80: \u00E1ttati[\u00AD>>];\n"
+            "90: n\u00EDti[\u00AD>>];\n"
+            "100: <%neutrum<\u00ADhundra\u00F0[\u00ADog\u00AD>>];\n"
+            "1000: <%neutrum< tusin[ og >>];\n"
+            "1,000,000: ein milli\u00F3n[ og >>];\n"
+            "2,000,000: <%feminine< milli\u00F3ner[ og >>];\n"
+            "1,000,000,000: ein milliard[ og >>];\n"
+            "2,000,000,000: <%feminine< milliarder[ og >>];\n"
+            "1,000,000,000,000: ein billi\u00F3n[ og >>];\n"
+            "2,000,000,000,000: <%feminine< billi\u00F3ner[ og >>];\n"
+            "1,000,000,000,000,000: ein billiard[ og >>];\n"
+            "2,000,000,000,000,000: <%feminine< billiarder[ og >>];\n"
+            "1,000,000,000,000,000,000: =#,##0.#=;\n"
+
+
+        "%feminine: =%feminumum=;\n"
+        "%reale: =%feminumum=;\n" // ?
+        "%feminumum:\n" // feminine (and nominative)
+            "-x: minus >>;\n"
+            "x.x: << komma >>;\n"
+            "null; ein; tv\u00E6r; tr\u00EDggjar; f\u00FDre; fimm; seks; sjey; \u00E1tta; n\u00EDggju;\n"
+            "t\u00EDggju; ellivu; t\u00F3lv; trettan; fj\u00FArtan; f\u00EDmtan; sekstan; seytan; \u00E1tjan; n\u00EDtjan;\n"
+            "20: tj\u00FAgo[\u00AD>>];\n"
+            "30: tr\u00EDati[\u00AD>>];\n" // alt: tretivu
+            "40: f\u00FDrati[\u00AD>>];\n" // alt: fjøruti
+            "50: fimmti[\u00AD>>];\n" // alt: hálvtrýss (cmp. Danish)
+            "60: seksti[\u00AD>>];\n"
+            "70: sjeyti[\u00AD>>];\n"
+            "80: \u00E1ttati[\u00AD>>];\n"
+            "90: n\u00EDti[\u00AD>>];\n"
+            "100: <%neutrum<\u00ADhundra\u00F0[\u00ADog\u00AD>>];\n"
+            "1000: <%neutrum< tusin[ og >>];\n"
+            "1,000,000: ein milli\u00F3n[ og >>];\n"
+            "2,000,000: <%feminine< milli\u00F3ner[ og >>];\n"
+            "1,000,000,000: ein milliard[ og >>];\n"
+            "2,000,000,000: <%feminine< milliarder[ og >>];\n"
+            "1,000,000,000,000: ein billi\u00F3n[ og >>];\n"
+            "2,000,000,000,000: <%feminine< billi\u00F3ner[ og >>];\n"
+            "1,000,000,000,000,000: ein billiard[ og >>];\n"
+            "2,000,000,000,000,000: <%feminine< billiarder[ og >>];\n"
+            "1,000,000,000,000,000,000: =#,##0.#=;\n"
+/* 
+ * Current (Java) implementation can't handle these magnitudes
+            "1,000,000,000,000,000,000: ein trilli\u00F3n[ og >>];\n"
+            "2,000,000,000,000,000,000: << trilli\u00F3ner[ og >>];\n"
+ * Current (C++) implmenatation can't handle these magnitudes
+            "1,000,000,000,000,000,000,000: ein trilliard[ og >>];\n"
+            "2,000,000,000,000,000,000,000: << trilliarder[ og >>];\n"
+            "1,000,000,000,000,000,000,000,000: ein kvadrilli\u00F3n[ og >>];\n"
+            "2,000,000,000,000,000,000,000,000: << kvadrilli\u00F3ner[ og >>];\n"
+            "1,000,000,000,000,000,000,000,000,000: ein kvadrilliard[ og >>];\n"
+            "2,000,000,000,000,000,000,000,000,000: << kvadrilliarder[ og >>];\n"
+            "1,000,000,000,000,000,000,000,000,000,000: ein kvintilli\u00F3n[ og >>];\n"
+            "2,000,000,000,000,000,000,000,000,000,000: << kvintilli\u00F3ner[ og >>];\n"
+            "1,000,000,000,000,000,000,000,000,000,000,000: ein kvintilliard[ og >>];\n"
+            "2,000,000,000,000,000,000,000,000,000,000,000: << kvintilliarder[ og >>];\n"
+            "1,000,000,000,000,000,000,000,000,000,000,000,000: ein sekstilli\u00F3n[ og >>];\n"
+            "2,000,000,000,000,000,000,000,000,000,000,000,000: << sekstilli\u00F3ner[ og >>];\n"
+            "1,000,000,000,000,000,000,000,000,000,000,000,000,000: ein sekstilliard[ og >>];\n"
+            "2,000,000,000,000,000,000,000,000,000,000,000,000,000: << sekstilliarder[ og >>];\n"
+            "1,000,000,000,000,000,000,000,000,000,000,000,000,000,000: =#,##0.#=;\n"
+*/
+
+        "%dordinal:\n"
+            "=#,##0==%%dordabbrev=;\n"
+        "%%dordabbrev:\n"
+            "'.;\n"
+
+        "%amount: =%masculine=;\n"
+        "%default: =%amount=;\n" // default (must be last public name)
+        "%%lenient-parse:\n"
+        "   &\u0000 << ' ' << ',' << '-'; \n"
+    }
+    SpelloutLocalizations {
+        { "%number", "%year", "%neuter", "%reale",
+        }
+        { "fo", 
+          "nummer", "år", "neutrum", "maskulinum", "femininum",
+        }
+        { "en", 
+          "number", "year", "neuter", "masculine", "feminine",
+        }
+    }
+}

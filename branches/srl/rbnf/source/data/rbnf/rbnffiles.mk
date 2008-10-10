@@ -1,4 +1,4 @@
-# *   Copyright (C) 1997-2005, International Business Machines
+# *   Copyright (C) 1997-2008, International Business Machines
 # *   Corporation and others.  All Rights Reserved.
 # A list of txt's to build
 # Note: 
@@ -31,25 +31,61 @@ RBNF_ALIAS_SOURCE =
 
 # Please try to keep this list in alphabetical order
 RBNF_SOURCE = \
+af.txt \
+ca.txt \
+cs.txt \
 da.txt \
 de.txt \
-en.txt en_GB.txt\
+el.txt \
+en.txt en_GB.txt \
 eo.txt \
 es.txt \
+et.txt \
 fa.txt fa_AF.txt \
+fi.txt \
+fo.txt \
 fr.txt fr_BE.txt fr_CH.txt \
 ga.txt \
 he.txt \
+hu.txt \
+hy.txt \
 it.txt \
+is.txt \
 ja.txt \
+ka.txt \
+kl.txt \
+ko.txt \
+lt.txt \
+lv.txt \
 mt.txt \
+nah.txt \
+nb.txt \
 nl.txt \
+nn.txt \
 pl.txt \
-pt.txt \
+pt.txt pt_PT.txt \
+ro.txt \
 ru.txt \
+se.txt \
+sk.txt \
+sq.txt \
 sv.txt \
 th.txt \
-uk.txt 
+tr.txt \
+uk.txt \
+vi.txt \
+zh.txt zh_Hant.txt \
+#
 
-#These are not in use yet
-# el.txt \
+#sl.txt
+#hr.txt
+#bs.txt
+#sr_Latn.txt
+
+#sr.txt //cyrl
+#mk.txt
+#bg.txt
+#be.txt
+#be_tarask.txt
+
+#lo.txt

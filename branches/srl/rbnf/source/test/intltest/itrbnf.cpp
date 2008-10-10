@@ -106,7 +106,7 @@ void IntlTestRBNF::TestHebrewFraction() {
         UnicodeString expected(text1);
         formatter->format(123.45, result);
         if (result != expected) {
-            errln((UnicodeString)"expected '" + TestUtility::hex(expected) + "'\nbut got: '" + TestUtility::hex(result) + "'");
+            errln((UnicodeString)"expected '" + TestUtility::hexIfUnprintable(expected) + "'\nbut got: '" + TestUtility::hexIfUnprintable(result) + "'");
         } else {
             formatter->parse(result, parseResult, pp);
             if (parseResult.getDouble() != 123.45) {
@@ -119,7 +119,7 @@ void IntlTestRBNF::TestHebrewFraction() {
         result.remove();
         formatter->format(123.0045, result);
         if (result != expected) {
-            errln((UnicodeString)"expected '" + TestUtility::hex(expected) + "'\nbut got: '" + TestUtility::hex(result) + "'");
+            errln((UnicodeString)"expected '" + TestUtility::hexIfUnprintable(expected) + "'\nbut got: '" + TestUtility::hexIfUnprintable(result) + "'");
         } else {
             pp.setIndex(0);
             formatter->parse(result, parseResult, pp);
@@ -283,26 +283,26 @@ IntlTestRBNF::TestAPI() {
   UnicodeString result;
   formatter->format(4.5,result);
   if(result != expected) {
-      errln("Formatted 4.5, expected " + expected + " got " + result);
+      errln("Formatted 4.5, expected " + TestUtility::hexIfUnprintable(expected) + " got " + TestUtility::hexIfUnprintable(result));
   } else {
-      logln("Formatted 4.5, expected " + expected + " got " + result);
+      logln("Formatted 4.5, expected " + TestUtility::hexIfUnprintable(expected) + " got " + TestUtility::hexIfUnprintable(result));
   }
   result.remove();
   expected = "four";
   formatter->format((int32_t)4,result);
   if(result != expected) {
-      errln("Formatted 4, expected " + expected + " got " + result);
+      errln("Formatted 4, expected " + TestUtility::hexIfUnprintable(expected) + " got " + TestUtility::hexIfUnprintable(result));
   } else {
-      logln("Formatted 4, expected " + expected + " got " + result);
+      logln("Formatted 4, expected " + TestUtility::hexIfUnprintable(expected) + " got " + TestUtility::hexIfUnprintable(result));
   }
 
   result.remove();
   FieldPosition pos;
   formatter->format((int64_t)4, result, pos, status = U_ZERO_ERROR);
   if(result != expected) {
-      errln("Formatted 4 int64_t, expected " + expected + " got " + result);
+      errln("Formatted 4 int64_t, expected " + TestUtility::hexIfUnprintable(expected) + " got " + TestUtility::hexIfUnprintable(result));
   } else {
-      logln("Formatted 4 int64_t, expected " + expected + " got " + result);
+      logln("Formatted 4 int64_t, expected " + TestUtility::hexIfUnprintable(expected) + " got " + TestUtility::hexIfUnprintable(result));
   }
 
   //Jitterbug 4452, for coverage
@@ -310,9 +310,9 @@ IntlTestRBNF::TestAPI() {
   FieldPosition pos2;
   formatter->format((int64_t)4, formatter->getRuleSetName(0), result, pos2, status = U_ZERO_ERROR);
   if(result != expected) {
-      errln("Formatted 4 int64_t, expected " + expected + " got " + result);
+      errln("Formatted 4 int64_t, expected " + TestUtility::hexIfUnprintable(expected) + " got " + TestUtility::hexIfUnprintable(result));
   } else {
-      logln("Formatted 4 int64_t, expected " + expected + " got " + result);
+      logln("Formatted 4 int64_t, expected " + TestUtility::hexIfUnprintable(expected) + " got " + TestUtility::hexIfUnprintable(result));
   }
 
   // clean up
@@ -1188,16 +1188,16 @@ IntlTestRBNF::TestSpanishSpellout()
             { "100", "cien" },
             { "106", "ciento seis" },
             { "127", "ciento veintisiete" },
-            { "200", "doscientos" },
+            { "200", "dos\\u00adcientos" },
             { "579", "quinientos setenta y nueve" },
             { "1,000", "mil" },
             { "2,000", "dos mil" },
             { "3,004", "tres mil cuatro" },
             { "4,567", "cuatro mil quinientos sesenta y siete" },
-            { "15,943", "quince mil novecientos cuarenta y tres" },
-            { "2,345,678", "dos mill\\u00f3n trescientos cuarenta y cinco mil seiscientos setenta y ocho"},
+            { "15,943", "quince mil nove\\u00ADcientos cuarenta y tres" },
+            { "2,345,678", "dos mill\\u00f3nes tres\\u00ADcientos cuarenta y cinco mil seis\\u00ADcientos setenta y ocho"},
             { "-36", "menos treinta y seis" },
-            { "234.567", "doscientos treinta y cuatro punto cinco seis siete" },
+            { "234.567", "dos\\u00ADcientos treinta y cuatro coma cinco seis siete" },
             { NULL, NULL}
         };
         
@@ -1224,13 +1224,13 @@ IntlTestRBNF::TestFrenchSpellout()
             { "23", "vingt-trois" },
             { "62", "soixante-deux" },
             { "70", "soixante-dix" },
-            { "71", "soixante et onze" },
+            { "71", "soixante-et-onze" },
             { "73", "soixante-treize" },
             { "80", "quatre-vingts" },
             { "88", "quatre-vingt-huit" },
             { "100", "cent" },
             { "106", "cent six" },
-            { "127", "cent vingt-sept" },
+            { "127", "cent-vingt-sept" },
             { "200", "deux cents" },
             { "579", "cinq cents soixante-dix-neuf" },
             { "1,000", "mille" },
@@ -1252,7 +1252,7 @@ IntlTestRBNF::TestFrenchSpellout()
         formatter->setLenient(TRUE);
         static const char* lpTestData[][2] = {
             { "trente-un", "31" },
-            { "un cents quatre vingt dix huit", "198" },
+            { "un-cents-quatre-vingt-dix-huit", "198" },
             { NULL, NULL}
         };
         doLenientParseTest(formatter, lpTestData);
@@ -1274,13 +1274,42 @@ static const char* const swissFrenchTestData[][2] = {
     { "80", "huitante" },
     { "88", "huitante-huit" },
     { "100", "cent" },
-    { "106", "cent six" },
-    { "127", "cent vingt-sept" },
+    { "106", "cent-six" },
+    { "127", "cent-vingt-sept" },
     { "200", "deux cents" },
     { "579", "cinq cents septante-neuf" },
     { "1,000", "mille" },
     { "1,123", "onze cents vingt-trois" },
     { "1,594", "mille cinq cents nonante-quatre" },
+    { "2,000", "deux mille" },
+    { "3,004", "trois mille quatre" },
+    { "4,567", "quatre mille cinq cents soixante-sept" },
+    { "15,943", "quinze mille neuf cents quarante-trois" },
+    { "2,345,678", "deux million trois cents quarante-cinq mille six cents septante-huit" },
+    { "-36", "moins trente-six" },
+    { "234.567", "deux cents trente-quatre virgule cinq six sept" },
+    { NULL, NULL}
+};
+static const char* const belgianFrenchTestData[][2] = {
+    { "1", "un" },
+    { "15", "quinze" },
+    { "20", "vingt" },
+    { "21", "vingt-et-un" },
+    { "23", "vingt-trois" },
+    { "62", "soixante-deux" },
+    { "70", "septante" },
+    { "71", "septante-et-un" },
+    { "73", "septante-trois" },
+    { "80", "quatre-vingts" },
+    { "88", "quatre-vingt-huit" },
+    { "100", "cent" },
+    { "106", "cent-six" },
+    { "127", "cent-vingt-sept" },
+    { "200", "deux-cents" },
+    { "579", "cinq-cent-septante-neuf" },
+    { "1,000", "mille" },
+    { "1,123", "onze-cents-vingt-trois" },
+    { "1,594", "mille-cinq-cents-nonante-quatre" },
     { "2,000", "deux mille" },
     { "3,004", "trois mille quatre" },
     { "4,567", "quatre mille cinq cents soixante-sept" },
@@ -1318,7 +1347,7 @@ IntlTestRBNF::TestBelgianFrenchSpellout()
         errln("FAIL: could not construct formatter");
     } else {
         // Belgian french should match Swiss french.
-        doTest(formatter, swissFrenchTestData, TRUE);
+        doTest(formatter, belgianFrenchTestData, TRUE);
     }
     delete formatter;
 }
@@ -1384,7 +1413,7 @@ IntlTestRBNF::TestPortugueseSpellout()
             { "108", "cento e oito" },
             { "127", "cento e vinte e sete" },
             { "181", "cento e oitenta e um" },
-            { "200", "duzcentos" },
+            { "200", "duz\\u00ADcentos" },
             { "579", "quinhentos e setenta e nove" },
             { "1,000", "mil" },
             { "2,000", "dois mil" },
@@ -1392,7 +1421,7 @@ IntlTestRBNF::TestPortugueseSpellout()
             { "4,567", "quatro mil quinhentos e sessenta e sete" },
             { "15,943", "quinze mil novecentos e quarenta e tr\\u00EAs" },
             { "-36", "menos trinta e seis" },
-            { "234.567", "duzcentos e trinta e quatro ponto cinco seis sete" },
+            { "234.567", "duz\\u00ADcentos e trinta e quatro v\\u00EDrgula cinco seis sete" },
             { NULL, NULL}
         };
         
@@ -1411,21 +1440,21 @@ IntlTestRBNF::TestGermanSpellout()
         errln("FAIL: could not construct formatter");
     } else {
         static const char* const testData[][2] = {
-            { "1", "eins" },
-            { "15", "f\\u00fcnfzehn" },
+            { "1", "ein" },
+            { "15", "f\\u00fcnf\\u00ADzehn" },
             { "20", "zwanzig" },
-            { "23", "dreiundzwanzig" },
-            { "73", "dreiundsiebzig" },
-            { "88", "achtundachtzig" },
-            { "100", "hundert" },
-            { "106", "hundertsechs" },
+            { "23", "drei\\u00ADund\\u00ADzwanzig" },
+            { "73", "drei\\u00ADund\\u00ADsiebzig" },
+            { "88", "acht\\u00ADund\\u00ADachtzig" },
+            { "100", "ein\\u00ADhundert" },
+            { "106", "ein\\u00ADhundert\\u00ADsechs" },
             { "127", "hundertsiebenundzwanzig" },
-            { "200", "zweihundert" },
+            { "200", "zwei\\u00ADhundert" },
             { "579", "f\\u00fcnfhundertneunundsiebzig" },
             { "1,000", "tausend" },
-            { "2,000", "zweitausend" },
-            { "3,004", "dreitausendvier" },
-            { "4,567", "viertausendf\\u00fcnfhundertsiebenundsechzig" },
+            { "2,000", "zwei\\u00ADtausend" },
+            { "3,004", "drei\\u00ADtausendvier" },
+            { "4,567", "vier\\u00ADtausendf\\u00fcnfhundertsiebenundsechzig" },
             { "15,943", "f\\u00fcnfzehntausendneunhundertdreiundvierzig" },
             { "2,345,678", "zwei Millionen dreihundertf\\u00fcnfundvierzigtausendsechshundertachtundsiebzig" },
             { NULL, NULL}
@@ -1436,7 +1465,7 @@ IntlTestRBNF::TestGermanSpellout()
 #if !UCONFIG_NO_COLLATION
         formatter->setLenient(TRUE);
         static const char* lpTestData[][2] = {
-            { "ein Tausend sechs Hundert fuenfunddreissig", "1,635" },
+            { "ein\\u00adtausend\\u00ADund\\u00ADsechs\\u00adhundert\\u00adfuenf\\u00ADund\\u00ADdrei\\u00dfig", "1,635" },
             { NULL, NULL}
         };
         doLenientParseTest(formatter, lpTestData);
@@ -1482,11 +1511,11 @@ IntlTestRBNF::TestSwedishSpellout()
         errln("FAIL: could not construct formatter");
     } else {
         static const char* testDataDefault[][2] = {
-            { "101", "etthundra\\u00aden" },
-            { "123", "etthundra\\u00adtjugotre" },
+            { "101", "ett\\u00adhundra\\u00aden" },
+            { "123", "ett\\u00adhundra\\u00adtjugotre" },
             { "1,001", "ettusen en" },
-            { "1,100", "ettusen etthundra" },
-            { "1,101", "ettusen etthundra\\u00aden" },
+            { "1,100", "ettusen ett\\u00ADhundra" },
+            { "1,101", "ettusen ett\\u00ADhundra\\u00aden" },
             { "1,234", "ettusen tv\\u00e5hundra\\u00adtrettiofyra" },
             { "10,001", "tio\\u00adtusen en" },
             { "11,000", "elva\\u00adtusen" },
@@ -1499,16 +1528,16 @@ IntlTestRBNF::TestSwedishSpellout()
             { "200,200", "tv\\u00e5hundra\\u00adtusen tv\\u00e5hundra" },
             { "2,002,000", "tv\\u00e5 miljoner tv\\u00e5\\u00adtusen" },
             { "12,345,678", "tolv miljoner trehundra\\u00adfyrtiofem\\u00adtusen sexhundra\\u00adsjuttio\\u00e5tta" },
-            { "123,456.789", "etthundra\\u00adtjugotre\\u00adtusen fyrahundra\\u00adfemtiosex komma sju \\u00e5tta nio" },
+            { "123,456.789", "ett\\u00ADhundra\\u00adtjugotre\\u00adtusen fyrahundra\\u00adfemtiosex komma sju \\u00e5tta nio" },
             { "-12,345.678", "minus tolv\\u00adtusen trehundra\\u00adfyrtiofem komma sex sju \\u00e5tta" },
             { NULL, NULL }
         };
         doTest(formatter, testDataDefault, TRUE);
 
         static const char* testDataNeutrum[][2] = {
-            { "101", "etthundra\\u00adett" },
+            { "101", "ett\\u00ADhundra\\u00adett" },
             { "1,001", "ettusen ett" },
-            { "1,101", "ettusen etthundra\\u00adett" },
+            { "1,101", "ettusen ett\\u00ADhundra\\u00adett" },
             { "10,001", "tio\\u00adtusen ett" },
             { "21,001", "tjugoen\\u00adtusen ett" },
             { NULL, NULL }
@@ -1524,13 +1553,13 @@ IntlTestRBNF::TestSwedishSpellout()
         }
 
         static const char* testDataYear[][2] = {
-            { "101", "etthundra\\u00adett" },
-            { "900", "niohundra" },
-            { "1,001", "tiohundra\\u00adett" },
-            { "1,100", "elvahundra" },
-            { "1,101", "elvahundra\\u00adett" },
-            { "1,234", "tolvhundra\\u00adtrettiofyra" },
-            { "2,001", "tjugohundra\\u00adett" },
+            { "101", "ett\\u00ADhundra\\u00adett" },
+            { "900", "nio\\u00ADhundra" },
+            { "1,001", "tio\\u00ADhundra\\u00adett" },
+            { "1,100", "elva\\u00ADhundra" },
+            { "1,101", "elva\\u00ADhundra\\u00adett" },
+            { "1,234", "tolv\\u00ADhundra\\u00adtrettiofyra" },
+            { "2,001", "tjugo\\u00ADhundra\\u00adett" },
             { "10,001", "tio\\u00adtusen ett" },
             { NULL, NULL }
         };
@@ -1784,9 +1813,9 @@ IntlTestRBNF::TestMultiplierSubstitution(void) {
     UnicodeString expected = UNICODE_STRING_SIMPLE("1.234 million");
     if (expected != res) {
       UnicodeString msg = "Expected: ";
-      msg.append(expected);
+      msg.append(TestUtility::hexIfUnprintable(expected));
       msg.append(" but got ");
-      msg.append(res);
+      msg.append(TestUtility::hexIfUnprintable(res));
       errln(msg);
     }
   }
@@ -1829,11 +1858,11 @@ IntlTestRBNF::doTest(RuleBasedNumberFormat* formatter, const char* const testDat
                         UnicodeString msg = "FAIL: check failed for ";
                         decFmt.format(expectedNumber, msg, status);
                         msg.append(", expected ");
-                        msg.append(expectedString);
+                        msg.append(TestUtility::hexIfUnprintable(expectedString));
                         msg.append(" but got ");
-                        msg.append(actualString);
+                        msg.append(TestUtility::hexIfUnprintable(actualString));
                         errln(msg);
-                        break;
+                       // break;
                     } else {
                         logln(actualString);
                         if (testParsing) {
@@ -1841,7 +1870,7 @@ IntlTestRBNF::doTest(RuleBasedNumberFormat* formatter, const char* const testDat
                             formatter->parse(actualString, parsedNumber, status);
                             if (U_FAILURE(status)) {
                                 UnicodeString msg = "FAIL: formatter could not parse ";
-                                msg.append(actualString);
+                                msg.append(TestUtility::hexIfUnprintable(actualString));
                                 msg.append(" status code: " );
                                 msg.append(u_errorName(status));
                                 errln(msg);
@@ -1849,7 +1878,7 @@ IntlTestRBNF::doTest(RuleBasedNumberFormat* formatter, const char* const testDat
                             } else {
                                 if (parsedNumber != expectedNumber) {
                                     UnicodeString msg = "FAIL: parse failed for ";
-                                    msg.append(actualString);
+                                    msg.append(TestUtility::hexIfUnprintable(actualString));
                                     msg.append(", expected ");
                                     decFmt.format(expectedNumber, msg, status);
                                     msg.append(", but got ");
@@ -1883,7 +1912,7 @@ IntlTestRBNF::doLenientParseTest(RuleBasedNumberFormat* formatter, const char* t
             formatter->parse(spelledNumberString, actualNumber, status);
             if (U_FAILURE(status)) {
                 UnicodeString msg = "FAIL: formatter could not parse ";
-                msg.append(spelledNumberString);
+                msg.append(TestUtility::hexIfUnprintable(spelledNumberString));
                 errln(msg);
                 break;
             } else {
@@ -1896,7 +1925,7 @@ IntlTestRBNF::doLenientParseTest(RuleBasedNumberFormat* formatter, const char* t
                 decFmt->parse(asciiUSNumberString, expectedNumber, status);
                 if (U_FAILURE(status)) {
                     UnicodeString msg = "FAIL: decFmt could not parse ";
-                    msg.append(asciiUSNumberString);
+                    msg.append(TestUtility::hexIfUnprintable(asciiUSNumberString));
                     errln(msg);
                     break;
                 } else {
@@ -1906,14 +1935,14 @@ IntlTestRBNF::doLenientParseTest(RuleBasedNumberFormat* formatter, const char* t
                     decFmt->format(expectedNumber, expectedNumberString, status);
                     if (actualNumberString != expectedNumberString) {
                         UnicodeString msg = "FAIL: parsing";
-                        msg.append(asciiUSNumberString);
+                        msg.append(TestUtility::hexIfUnprintable(asciiUSNumberString));
                         msg.append("\n");
                         msg.append("  lenient parse failed for ");
-                        msg.append(spelledNumberString);
+                        msg.append(TestUtility::hexIfUnprintable(spelledNumberString));
                         msg.append(", expected ");
-                        msg.append(expectedNumberString);
+                        msg.append(TestUtility::hexIfUnprintable(expectedNumberString));
                         msg.append(", but got ");
-                        msg.append(actualNumberString);
+                        msg.append(TestUtility::hexIfUnprintable(actualNumberString));
                         errln(msg);
                         break;
                     }

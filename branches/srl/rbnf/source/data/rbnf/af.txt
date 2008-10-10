@@ -1,0 +1,94 @@
+// ***************************************************************************
+// *
+// *   Copyright © 2008, International Business Machines
+// *   Corporation and others.  All Rights Reserved.
+// *
+// ***************************************************************************
+// ả
+
+af {
+    //------------------------------------------------------------
+    // Rule Based Number Format Support
+    //------------------------------------------------------------
+
+    // Spellout rules for Afrikaans (cmp. Dutch).
+
+    SpelloutRules {
+        "%year:"
+            "-x: min >>;\n"
+            "nul;"
+            "een;"
+            "twee;"
+            "drie;"
+            "vier;"
+            "vyf;"
+            "ses;"
+            "sewe;"
+            "agt;"
+            "nege;\n"
+            "tien;"
+            "elf;"
+            "twaalf;"
+            "dertien;"
+            "veertien;"
+            "vyftien;"
+            "sestien;"
+            "sewentien;"
+            "agttien;"
+            "negentien;\n"
+            "20: [>> en ]twintig;\n"
+            "30: [>> en ]dertig;\n"
+            "40: [>> en ]veertig;\n"
+            "50: [>> en ]vyftig;\n"
+            "60: [>> en ]sestig;\n"
+            "70: [>> en ]sewentig;\n"
+            "80: [>> en ]tagtig;\n"
+            "90: [>> en ]negentig;\n"
+            "100: << honderd[ >>];\n"
+            "1000: duisend[ >>];\n"
+            "1100/100: << honderd[ >>];\n"
+            "10,000: =%number=;\n"
+
+        "%number:"
+            "-x: min >>;\n"
+            "x.x: << komma >>;\n"
+            "nul;"
+            "een;"
+            "twee;"
+            "drie;"
+            "vier;"
+            "vyf;"
+            "ses;"
+            "sewe;"   // rarely written as sewen, but see 17 and 70 (cmp. Dutch zeven)
+            "agt;"
+            "nege;\n" // rarely written as negen, but see 19 and 90 (cmp. Dutch negen)
+            "tien;"
+            "elf;"
+            "twaalf;"
+            "dertien;"
+            "veertien;"
+            "vyftien;"
+            "sestien;"
+            "sewentien;" // not "sewetien" (yet?), though that spelling does occur (rarely)
+            "agttien;"
+            "negentien;\n" // not "negetien" (yet?), though that spelling does occur (rarely)
+            // according to http://nl.wiktionary.org/wiki/Categorie:Hoofdtelwoord_in_het_Afrikaans
+            // there should be no space between the words (cmp. rbnf/de.txt), but it seems more
+            // common, in Afrikaans, to have space between the words than not to have space between them.
+            "20: [>> en ]twintig;\n"
+            "30: [>> en ]dertig;\n"
+            "40: [>> en ]veertig;\n"
+            "50: [>> en ]vyftig;\n"
+            "60: [>> en ]sestig;\n"
+            "70: [>> en ]sewentig;\n" // not "sewetig" (yet?), though that spelling does occur (rarely)
+            "80: [>> en ]tagtig;\n" // not agttig
+            "90: [>> en ]negentig;\n" // not "negetig" (yet?), though that spelling does occur (rarely)
+            "100: << honderd[ >>];\n"
+            "1000: << duisend[ >>];\n"
+            "1,000,000: << miljoen[ >>];\n"
+            "1,000,000,000: << miljard[ >>];\n"
+            "1,000,000,000,000: << biljoen[ >>];\n"
+            "1,000,000,000,000,000: << biljard[ >>];\n"
+            "1,000,000,000,000,000,000: =#,##0.#="
+    }
+}

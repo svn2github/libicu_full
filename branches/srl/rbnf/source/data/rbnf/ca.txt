@@ -1,0 +1,146 @@
+// ***************************************************************************
+// *
+// *   Copyright © 2008, International Business Machines
+// *   Corporation and others. All Rights Reserved.
+// *
+// ***************************************************************************
+// ả
+
+ca {
+    //------------------------------------------------------------
+    // Rule Based Number Format Support
+    //------------------------------------------------------------
+
+    // Spellout rules for Catalan.
+
+    SpelloutRules {
+        "%number: =%masculine=;\n"
+        "%masculin: =%masculine=;\n"
+        "%masculine:\n"
+            "-x: menys >>;\n"
+            "x.x: << coma >>;\n"
+            "zero; u; dos; tres; quatre; cinc; sis; set; vuit; nou;\n" // or "un" for one?
+            "deu; onze; dotze; tretze; catorze; quinze; setze; disset; divuit; dinou;\n"
+            "20: vint[-i->>];\n"
+            "30: trenta[->>];\n"
+            "40: quaranta[->>];\n"
+            "50: cinquanta[->>];\n"
+            "60: seixanta[->>];\n"
+            "70: setanta[->>];\n"
+            "80: vuitanta[->>];\n"
+            "90: noranta[->>];\n"
+            "100: cent[->>];\n"
+            "200: <<-cents; 201: <<-cent >>;\n"
+            "300: <<-cents; 301: <<-cent >>;\n"
+            "400: <<-cents; 401: <<-cent >>;\n"
+            "500: <<-cents; 501: <<-cent >>;\n"
+            "600: <<-cents; 601: <<-cent >>;\n"
+            "700: <<-cents; 701: <<-cent >>;\n"
+            "800: <<-cents; 801: <<-cent >>;\n"
+            "900: <<-cents; 901: <<-cent >>;\n"
+            "1000: mil[ >>];\n"
+            "2000: <%masculine< mil[ >>];\n"
+            "1,000,000: un mili\u00F3[ >>];\n"
+            "2,000,000: <%masculine< milions[ >>];\n"
+            "1,000,000,000: un miliard[ >>];\n"
+            "2,000,000,000: <%masculine< miliards[ >>];\n"
+            "1,000,000,000,000: un bili\u00F3[ >>];\n"
+            "2,000,000,000,000: <%masculine< bilions[ >>];\n"
+            "1,000,000,000,000,000: un biliard[ >>];\n"
+            "2,000,000,000,000,000: <%masculine< biliards[ >>];\n"
+            "1,000,000,000,000,000,000: =#,##0.#=;\n"
+/* 
+ * Current (Java) implementation can't handle these magnitudes
+            "1,000,000,000,000,000,000: un trili\u00F3[ >>];\n"
+            "2,000,000,000,000,000,000: <%masculine< trilions[ >>];\n"
+ * Current (C++) implmenatation can't handle these magnitudes
+            "1,000,000,000,000,000,000,000: un triliard[ >>];\n"
+            "2,000,000,000,000,000,000,000: <%masculine< triliards[ >>];\n"
+            "1,000,000,000,000,000,000,000,000: un quadrili\u00F3[ >>];\n"
+            "2,000,000,000,000,000,000,000,000: <%masculine< quadrilions[ >>];\n"
+            "1,000,000,000,000,000,000,000,000,000: un quadriliard[ >>];\n"
+            "2,000,000,000,000,000,000,000,000,000: <%masculine< quadriliards[ >>];\n"
+            "1,000,000,000,000,000,000,000,000,000,000: un quintili\u00F3[ >>];\n"
+            "2,000,000,000,000,000,000,000,000,000,000: <%masculine< quintilions[ >>];\n"
+            "1,000,000,000,000,000,000,000,000,000,000,000: un quintiliard[ >>];\n"
+            "2,000,000,000,000,000,000,000,000,000,000,000: <%masculine< quintiliards[ >>];\n"
+            "1,000,000,000,000,000,000,000,000,000,000,000,000: un sextili\u00F3[ >>];\n"
+            "2,000,000,000,000,000,000,000,000,000,000,000,000: <%masculine< sextilions[ >>];\n"
+            "1,000,000,000,000,000,000,000,000,000,000,000,000,000: un sextiliard[ >>];\n"
+            "2,000,000,000,000,000,000,000,000,000,000,000,000,000: <%masculine< sextiliards[ >>];\n"
+            "1,000,000,000,000,000,000,000,000,000,000,000,000,000,000: =#,##0.#=;\n"
+*/
+
+        "%féminin: =%feminine=;\n"
+        "%feminine:\n"
+            "-x: menys >>;\n"
+            "x.x: << coma >>;\n"
+            "zero; una; dues; tres; quatre; cinc; sis; set; vuit; nou;\n"
+            "deu; onze; dotze; tretze; catorze; quinze; setze; disset; divuit; dinou;\n"
+            "20: vint[-i->>];\n"
+            "30: trenta[->>];\n"
+            "40: quaranta[->>];\n"
+            "50: cinquanta[->>];\n"
+            "60: seixanta[->>];\n"
+            "70: setanta[->>];\n"
+            "80: vuitanta[->>];\n"
+            "90: noranta[->>];\n"
+            "100: cent[->>];\n"
+            "200: <<-cents; 201: <<-cent >>;\n"
+            "300: <<-cents; 301: <<-cent >>;\n"
+            "400: <<-cents; 401: <<-cent >>;\n"
+            "500: <<-cents; 501: <<-cent >>;\n"
+            "600: <<-cents; 601: <<-cent >>;\n"
+            "700: <<-cents; 701: <<-cent >>;\n"
+            "800: <<-cents; 801: <<-cent >>;\n"
+            "900: <<-cents; 901: <<-cent >>;\n"
+            "1000: mil[ >>];\n"
+            "2000: <%masculine< mil[ >>];\n"
+            "1,000,000: un mili\u00F3[ >>];\n"
+            "2,000,000: <%masculine< milions[ >>];\n"
+            "1,000,000,000: un miliard[ >>];\n"
+            "2,000,000,000: <%masculine< miliards[ >>];\n"
+            "1,000,000,000,000: un bili\u00F3[ >>];\n"
+            "2,000,000,000,000: <%masculine< bilions[ >>];\n"
+            "1,000,000,000,000,000: un biliard[ >>];\n"
+            "2,000,000,000,000,000: <%masculine< biliards[ >>];\n"
+            "1,000,000,000,000,000,000: =#,##0.#=;\n"
+/* 
+ * Current (Java) implementation can't handle these magnitudes
+            "1,000,000,000,000,000,000: un trili\u00F3[ >>];\n"
+            "2,000,000,000,000,000,000: <%masculine< trilions[ >>];\n"
+ * Current (C++) implmenatation can't handle these magnitudes
+            "1,000,000,000,000,000,000,000: un triliard[ >>];\n"
+            "2,000,000,000,000,000,000,000: <%masculine< triliards[ >>];\n"
+            "1,000,000,000,000,000,000,000,000: un quadrili\u00F3[ >>];\n"
+            "2,000,000,000,000,000,000,000,000: <%masculine< quadrilions[ >>];\n"
+            "1,000,000,000,000,000,000,000,000,000: un quadriliard[ >>];\n"
+            "2,000,000,000,000,000,000,000,000,000: <%masculine< quadriliards[ >>];\n"
+            "1,000,000,000,000,000,000,000,000,000,000: un quintili\u00F3[ >>];\n"
+            "2,000,000,000,000,000,000,000,000,000,000: <%masculine< quintilions[ >>];\n"
+            "1,000,000,000,000,000,000,000,000,000,000,000: un quintiliard[ >>];\n"
+            "2,000,000,000,000,000,000,000,000,000,000,000: <%masculine< quintiliards[ >>];\n"
+            "1,000,000,000,000,000,000,000,000,000,000,000,000: un sextili\u00F3[ >>];\n"
+            "2,000,000,000,000,000,000,000,000,000,000,000,000: <%masculine< sextilions[ >>];\n"
+            "1,000,000,000,000,000,000,000,000,000,000,000,000,000: un sextiliard[ >>];\n"
+            "2,000,000,000,000,000,000,000,000,000,000,000,000,000: <%masculine< sextiliards[ >>];\n"
+            "1,000,000,000,000,000,000,000,000,000,000,000,000,000,000: =#,##0.#=;\n"
+*/
+
+        "%amount: =%masculine=;\n"
+        "%main: =%amount=;\n" // default (must be last public name); named for for backwards compatibility
+
+        "%%lenient-parse:\n"
+        "   &\u0000 << ' ' << ',' << '-'; \n"
+    }
+    SpelloutLocalizations {
+        { "%number", "%masculine", "%feminine",
+        }
+        { "ca", 
+          "nombre", "masculin", "féminin",
+        }
+        { "en", 
+          "number", "masculine", "feminine",
+        }
+    }
+}

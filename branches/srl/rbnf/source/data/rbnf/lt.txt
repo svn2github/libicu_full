@@ -1,0 +1,67 @@
+// ***************************************************************************
+// *
+// *   Copyright © 2008, International Business Machines
+// *   Corporation and others. All Rights Reserved.
+// *
+// ***************************************************************************
+// ả
+
+lt {
+    //------------------------------------------------------------
+    // Rule Based Number Format Support
+    //------------------------------------------------------------
+
+    // Spellout rules for Lithuanian.
+
+    // It seems that Lithuanian is extraordinarily complicated (though systematic)
+    // in its dependence on not only grammatical gender, but also depending on
+    // grammatical case, seven of them. (Stick just to nominative?)
+
+    // These are preliminary, and need to be extended with feminine/masculine at least,
+    // and probably more. This is what I have been able to derive from searching on
+    // the web. It may thus have a number of spelling and grammatical errors. But
+    // it's a start.
+
+    SpelloutRules {
+        "%number:\n"
+            "-x: m\u012Bnus >>;\n"
+            "x.x: << kablelis >>;\n"
+            "nulis; vienas; du; trys; keturi; penki; "
+            "   \u0161e\u0161i; septyni; a\u0161tuoni; devyni;\n"
+            //feminine: "nulis; viena; dvi; trys; keturios; penkios; "
+            //feminine: "   \u0161e\u0161ios; septynios; a\u0161tuonios; devynios;\n"
+            //?"nulis; vienetas; dvejetas; trejetas; ketvertas; penketas; " //enfalt, tvåfalt, ???
+            //?"   \u0161e\u0161etas; septynetas; a\u0161tuonetas; devynetas;\n"
+            "de\u0161imt; vienuolika; dvylika; trylika; keturiolika; penkiolika; "
+            "   \u0161e\u0161iolika; septyniolika; a\u0161tuoniolika; devyniolika;\n"
+            "20: dvi\u00ADde\u0161imt[ >>];\n"
+            "30: tris\u00ADde\u0161imt[ >>];\n"
+            "40: keturias\u00ADde\u0161imt[ >>];\n"
+            "50: penkias\u00ADde\u0161imt[ >>];\n"
+            "60: \u0161e\u0161ias\u00ADde\u0161imt[ >>];\n"
+            "70: septynias\u00ADde\u0161imt[ >>];\n"
+            "80: a\u0161tuonias\u00ADde\u0161imt[ >>];\n"
+            "90: devynias\u00ADde\u0161imt[ >>];\n"
+            "100: \u0161imtas[ >>];\n"
+            "200: << \u0161imtai[ >>];\n"
+            "1000: t\u016Bkstantis[ >>];\n"
+            "2000: << t\u016Bkstant\u0173[ >>];\n"
+            "1,000,000: << milijonas[ >>];\n"
+            "2,000,000: << milijon\u0173[ >>];\n" // milijonai, milijonus
+            "1,000,000,000: << milijardas[ >>];\n"
+            "2,000,000,000: << milijard\u0173[ >>];\n" // milijardai
+            //http://lt.wikipedia.org/wiki/Skai%C4%8Dius
+            "1,000,000,000,000: << trilijonas[ >>];\n"
+            "2,000,000,000,000: << trilijon\u0173[ >>];\n" // trilijonai
+            "1,000,000,000,000,000: << kvadrilijonas[ >>];\n"
+            "2,000,000,000,000,000: << kvadrilijon\u0173[ >>];\n" // kvadrilijonai
+            "1,000,000,000,000,000,000: =#,##0.#=;\n"
+/*
+            "1,000,000,000,000,000,000: << kvintilijonas[ >>];\n"
+            "2,000,000,000,000,000,000: << kvintilijon\u0173[ >>];\n" // kvintilijonai
+            "1,000,000,000,000,000,000,000: << sikstilijonas[ >>];\n"
+            "2,000,000,000,000,000,000,000: << sikstilijon\u0173[ >>];\n" // sikstilijonai
+            "1,000,000,000,000,000,000,000,000: =#,##0.#=;\n"
+*/
+    }
+}

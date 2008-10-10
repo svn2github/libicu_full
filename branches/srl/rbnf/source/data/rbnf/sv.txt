@@ -1,10 +1,10 @@
 // ***************************************************************************
 // *
-// *   Copyright (C) 2004, International Business Machines
-// *   Corporation and others.  All Rights Reserved.
+// *   Copyright © 2008, International Business Machines
+// *   Corporation and others. All Rights Reserved.
 // *
 // ***************************************************************************
-// 
+// ả
 
 sv {
     //------------------------------------------------------------
@@ -12,84 +12,237 @@ sv {
     //------------------------------------------------------------
 
     // Spellout rules for Swedish.
-    // Thanks to Kent Karlsson for cleaning up these rules.
-    // (rapport inskickad till ICU 2001-11-03; ny version inskickad till Doug Felt 2001-11-07)
 
     SpelloutRules {
-      "%year:\n"
-          "=%neutrum=;\n"
-          "1000>: <%neutrum<hundra[\u00ad>>];\n"
-          "10,000: =%neutrum=;\n"
-          // the same as default except we change the one's digit, wish there were a better way
-      "%neutrum:\n"
+        "%\u00E5r: =%year=;\n"
+        "%year:\n"
             "-x: minus >>;\n"
-            "x.x: << komma >>;\n"
-            "noll; ett; tv\u00e5; tre; fyra; fem; sex; sju; \u00e5tta; nio;\n"
+            "noll; ett; tv\u00E5; tre; fyra; fem; sex; sju; \u00E5tta; nio;\n" // use neuter when numbering, even when what is numbered has another grammatical gender ('stol ett', 'stol tjugoett', but 'en stol')
             "tio; elva; tolv; tretton; fjorton; femton; sexton; sjutton; arton; nitton;\n"
-            "20: tjugo[>>];\n"
-            "30: trettio[>>];\n"
-            "40: fyrtio[>>];\n"
-            "50: femtio[>>];\n"
-            "60: sextio[>>];\n"
-            "70: sjuttio[>>];\n"
-            "80: \u00e5ttio[>>];\n"
-            "90: nittio[>>];\n"
-            "100: <<hundra[\u00ad>>];\n"
-            "1000: ettusen[ >>];\n"
-            "2000: <%default<\u00adtusen[ >>];\n"
-            "1,000,000: en miljon[ >>];\n"
-            "2,000,000: <%default< miljoner[ >>];\n"
-            "1,000,000,000: en miljard[ >>];\n"
-            "2,000,000,000: <%default< miljarder[ >>];\n"
-            "1,000,000,000,000: en biljon[ >>];\n"
-            "2,000,000,000,000: <%default< biljoner[ >>];\n"
-            "1,000,000,000,000,000: en triljon[ >>];\n"
-            "2,000,000,000,000,000: <%default< triljoner[ >>];\n"
-            "1,000,000,000,000,000,000: =#,##0=;\n"
-      "%default:\n"
-            " -x: minus >>;\n"
+            "20: tjugo[\u00AD>>];\n"
+            "30: trettio[\u00AD>>];\n"
+            "40: fyrtio[\u00AD>>];\n"
+            "50: femtio[\u00AD>>];\n"
+            "60: sextio[\u00AD>>];\n"
+            "70: sjuttio[\u00AD>>];\n"
+            "80: \u00E5ttio[\u00AD>>];\n"
+            "90: nittio[\u00AD>>];\n"
+            "100: <<\u00ADhundra[\u00AD>>];\n"
+            "1000: tusen[\u00AD>>];\n"
+            "1100/100: <<\u00ADhundra[\u00AD>>];\n" // 1921 'nittonhundratjugoett'
+            "10,000: =%number=;\n"
+
+        "%numero: =%number=;\n"
+        "%nummer: =%number=;\n"
+        "%number: \n" // 
+            "-x: minus >>;\n"
+            //"x.x: << komma >%%num_frac>;\n" // cannot handle "leading" zeroes in the fraction properly
             "x.x: << komma >>;\n"
-            "noll; en; tv\u00e5; tre; fyra; fem; sex; sju; \u00e5tta; nio;\n"
+            "noll; ett; tv\u00E5; tre; fyra; fem; sex; sju; \u00E5tta; nio;\n" // use neuter when numbering, even when what is numbered has another grammatical gender ('stol ett', 'stol tjugoett', but 'en stol')
             "tio; elva; tolv; tretton; fjorton; femton; sexton; sjutton; arton; nitton;\n"
-            "20: tjugo[>>];\n"
-            "30: trettio[>>];\n"
-            "40: fyrtio[>>];\n"
-            "50: femtio[>>];\n"
-            "60: sextio[>>];\n"
-            "70: sjuttio[>>];\n"
-            "80: \u00e5ttio[>>];\n"
-            "90: nittio[>>];\n"
-            "100: etthundra[\u00ad>>];\n"
-            "200: <<hundra[\u00ad>>];\n"
-            "1000: ettusen[ >>];\n"
-            "2000: <<\u00adtusen[ >>];\n"
+            "20: tjugo[\u00AD>>];\n"
+            "30: trettio[\u00AD>>];\n"
+            "40: fyrtio[\u00AD>>];\n"
+            "50: femtio[\u00AD>>];\n"
+            "60: sextio[\u00AD>>];\n"
+            "70: sjuttio[\u00AD>>];\n"
+            "80: \u00E5ttio[\u00AD>>];\n"
+            "90: nittio[\u00AD>>];\n"
+            "100: <<\u00ADhundra[\u00AD>>];\n" // 'etthundra', when lead value, this is often (informally!) pronounced as just 'hundra'
+            "1000: ettusen[ >>];\n" // 'ettusen' (not trusting "et\u00ADtusen" to be handled properly in hyphenation), when lead value, this is often (informally!) pronounced as just 'tusen'
+            "2000: <<\u00ADtusen[ >>];\n"
+            "20,000/1000: <<-tusen[ >>];\n" // 'tjugoett-tusen' rather than 'tjugoettusen' (etc.; mostly to avoid the 'ett'+'tusen' to 'ettusen' problem)
+			// TO CONSIDER: add entries to handle the ttt-to-tt problem (but that would need 200 entries with the current(?) syntax)
             "1,000,000: en miljon[ >>];\n"
-            "2,000,000: << miljoner[ >>];\n"
+            "2,000,000: <%reale< miljoner[ >>];\n"
             "1,000,000,000: en miljard[ >>];\n"
-            "2,000,000,000: << miljarder[ >>];\n"
+            "2,000,000,000: <%reale< miljarder[ >>];\n"
             "1,000,000,000,000: en biljon[ >>];\n"
-            "2,000,000,000,000: << biljoner[ >>];\n"
-            "1,000,000,000,000,000: en triljon[ >>];\n"
-            "2,000,000,000,000,000: << triljoner[ >>];\n"
-            "1,000,000,000,000,000,000: =#,##0=;\n" 
+            "2,000,000,000,000: <%reale< biljoner[ >>];\n"
+            "1,000,000,000,000,000: en biljard[ >>];\n"
+            "2,000,000,000,000,000: <%reale< biljarder[ >>];\n"
+            "1,000,000,000,000,000,000: =#,##0.#=;\n"
+
+        //"%%num_frac: \n" // first rule must start with a number > 0; for fraction parts ONLY
+        //    "10: <%number<;\n" // to do: fix leading 0
+        //    "100: <%number<;\n" // to do: fix leading 0s
+        //    "1000: <%number<;\n" // to do: fix leading 0s
+        //    "10,000: <%%digits<;\n" // to do: fix leading 0s
+        //    "100,000: <%%digits<;\n" // to do: fix leading 0s
+        //    "1,000,000: <%%digits<;\n" // to do: fix leading 0s
+        //    "10,000,000: <%%digits<;\n" // to do: fix leading 0s
+        //    "100,000,000: <%%digits<;\n" // to do: fix leading 0s
+        //    "1,000,000,000: <%%digits<;\n" // to do: fix leading 0s
+        //    "10,000,000,000: <#,####0<;\n" // to do: fix leading 0s
+        //"%%digits: \n"
+        //    "noll; ett; två; tre; fyra; fem; sex; sju; åtta; nio;\n"
+        //    "10: << >>;\n"
+
+
+        "%neuter: =%neutrum=;\n"
+        "%neutrum:\n" // neuter; the same as masculine/feminine/reale, except we change the one's digit
+            "-x: minus >>;\n"
+            //"x.x: << komma >%%num_frac>;\n" // cannot handle "leading" zeroes in the fraction properly
+            "x.x: << komma >>;\n"
+            "noll; ett; =%reale=;\n" // while 'tjugoett' (etc.) is ok when numbering, it is still 'tjugoen' (etc.) when giving a count also for neuter (but plural) nouns
+
+        "%masculine: =%reale=;\n"
+        "%feminine: =%reale=;\n"
+        "%maskulinum: =%reale=;\n"
+        "%femininum: =%reale=;\n"
+        "%reale:\n" // masculine, feminine, and reale (reale is another neuter for nouns that used to be masculine or feminine; boats are by some (boat owners...) still regarded as feminine, but are (as many other nouns) reale nowadays)
+            "-x: minus >>;\n"
+            //"x.x: << komma >%%num_frac>;\n" // cannot handle "leading" zeroes in the fraction properly
+            "x.x: << komma >>;\n" // only two and maybe even three digits after the comma should be spelled out as an integer (tre komma fyrtiotvå)
+            "noll; en; tv\u00E5; tre; fyra; fem; sex; sju; \u00E5tta; nio;\n"
+            "tio; elva; tolv; tretton; fjorton; femton; sexton; sjutton; arton; nitton;\n"
+            "20: tjugo[\u00AD>>];\n" // informal:/dial. tjuge
+            "30: trettio[\u00AD>>];\n" // informal: tretti
+            "40: fyrtio[\u00AD>>];\n" // informal: fyrti or förti (or even förrti, which is closest to actual pronunciation, given Swedish orthographic conventions)
+            "50: femtio[\u00AD>>];\n" // informal: femti
+            "60: sextio[\u00AD>>];\n" // informal: sexti
+            "70: sjuttio[\u00AD>>];\n" // informal: sjutti
+            "80: \u00E5ttio[\u00AD>>];\n" // informal: åtti
+            "90: nittio[\u00AD>>];\n" // informal: nitti
+            "100: <%neutrum<\u00ADhundra[\u00AD>>];\n" // 'etthundra', when lead value, this is often (informally!) pronounced as just 'hundra'
+            "1000: ettusen[ >>];\n" // 'ettusen' (never 'entusen'), when lead value, this often (informally!) pronounced as just 'tusen'
+            "2000: <%reale<\u00ADtusen[ >>];\n" // 'tjugoentusen' rather than 'tjugoettusen'
+            "1,000,000: en miljon[ >>];\n"
+            "2,000,000: <%reale< miljoner[ >>];\n"
+            "1,000,000,000: en miljard[ >>];\n"
+            "2,000,000,000: <%reale< miljarder[ >>];\n"
+            "1,000,000,000,000: en biljon[ >>];\n"
+            "2,000,000,000,000: <%reale< biljoner[ >>];\n"
+            "1,000,000,000,000,000: en biljard[ >>];\n"
+            "2,000,000,000,000,000: <%reale< biljarder[ >>];\n"
+            "1,000,000,000,000,000,000: =#,##0.#=;\n"
 /* 
- * Current (java) implementation can't handle these magnitudes
-            "1,000,000,000,000,000,000: en triljard[ >>];\n"
-            "2,000,000,000,000,000,000: << triljarder[ >>];\n"
- * Current (c++) implmenatation can't handle these magnitudes
-            "1,000,000,000,000,000,000,000: en kvartiljon[ >>];\n"
-            "2,000,000,000,000,000,000,000: << kvartiljoner[ >>];\n"
-            "1,000,000,000,000,000,000,000,000: en kvartiljard[ >>];\n"
-            "2,000,000,000,000,000,000,000,000: << kvartiljarder[ >>];\n"
-            "1,000,000,000,000,000,000,000,000,000: en kvintiljon[ >>];\n"
-            "2,000,000,000,000,000,000,000,000,000: << kvintiljoner[ >>];\n"
-            "1,000,000,000,000,000,000,000,000,000,000: en kvintiljard[ >>];\n"
-            "2,000,000,000,000,000,000,000,000,000,000: << kvintiljarder[ >>];\n"
-            "1,000,000,000,000,000,000,000,000,000,000,000: en sextiljon[ >>];\n"
-            "2,000,000,000,000,000,000,000,000,000,000,000: << sextiljoner[ >>];\n"
-            "1,000,000,000,000,000,000,000,000,000,000,000,000: en sextiljard[ >>];\n"
-            "2,000,000,000,000,000,000,000,000,000,000,000,000: << sextiljarder[ >>];\n"
-            "1,000,000,000,000,000,000,000,000,000,000,000,000,000: =#,##0="
+ * Current (Java) implementation can't handle these magnitudes
+            "1,000,000,000,000,000,000: en triljon[ >>];\n"
+            "2,000,000,000,000,000,000: << triljoner[ >>];\n"
+ * Current (C++) implmenatation can't handle these magnitudes
+            "1,000,000,000,000,000,000,000: en triljard[ >>];\n"
+            "2,000,000,000,000,000,000,000: << triljarder[ >>];\n"
+            "1,000,000,000,000,000,000,000,000: en kvadriljon[ >>];\n"
+            "2,000,000,000,000,000,000,000,000: << kvadriljoner[ >>];\n"
+            "1,000,000,000,000,000,000,000,000,000: en kvadriljard[ >>];\n"
+            "2,000,000,000,000,000,000,000,000,000: << kvadriljarder[ >>];\n"
+            "1,000,000,000,000,000,000,000,000,000,000: en kvintiljon[ >>];\n"
+            "2,000,000,000,000,000,000,000,000,000,000: << kvintiljoner[ >>];\n"
+            "1,000,000,000,000,000,000,000,000,000,000,000: en kvintiljard[ >>];\n"
+            "2,000,000,000,000,000,000,000,000,000,000,000: << kvintiljarder[ >>];\n"
+            "1,000,000,000,000,000,000,000,000,000,000,000,000: en sextiljon[ >>];\n"
+            "2,000,000,000,000,000,000,000,000,000,000,000,000: << sextiljoner[ >>];\n"
+            "1,000,000,000,000,000,000,000,000,000,000,000,000,000: en sextiljard[ >>];\n"
+            "2,000,000,000,000,000,000,000,000,000,000,000,000,000: << sextiljarder[ >>];\n"
+            "1,000,000,000,000,000,000,000,000,000,000,000,000,000,000: =#,##0.#=;\n"
 */
+
+
+        "%ord_masculine:\n" // used also for reale when omitting the object; "den förste i månaden", but not when including the object "den första dagen i månaden"
+            "nollte; förste; andre; tredje; fjärde; femte; sjätte; sjunde; åttonde; nionde;\n"
+            "tionde; elfte; tolfte; =%neutrum=de;\n"
+            "20: tjugo>%%ord_masc_nde>;\n"
+            "30: trettio>%%ord_masc_nde>;\n"
+            "40: fyrtio>%%ord_masc_nde>;\n"
+            "50: femtio>%%ord_masc_nde>;\n"
+            "60: sextio>%%ord_masc_nde>;\n"
+            "70: sjuttio>%%ord_masc_nde>;\n"
+            "80: åttio>%%ord_masc_nde>;\n"
+            "90: nittio>%%ord_masc_nde>;\n"
+            "100: <%number<\u00ADhundra>%%ord_masc_de>;\n"
+            "1000: ettusen>%%ord_masc_de>;\n"
+            "2000: <%number<\u00ADtusen>%%ord_masc_de>;\n"
+            "1,000,000: en miljon>%%ord_masc_te>;\n"
+            "2,000,000: <%reale< miljon>%%ord_masc_teer>;\n"
+            "1,000,000,000: en miljard>%%ord_masc_te>;\n"
+            "2,000,000,000: <%reale< miljard>%%ord_masc_teer>;\n"
+            "1,000,000,000,000: en biljon>%%ord_masc_te>;\n"
+            "2,000,000,000,000: <%reale< biljon>%%ord_masc_teer>;\n"
+            "1,000,000,000,000,000: en biljard>%%ord_masc_te>;\n"
+            "2,000,000,000,000,000: <%reale< biljard>%%ord_masc_teer>;\n"
+            "1,000,000,000,000,000,000: =%dord_masculine=;\n"
+        "%%ord_masc_nde:\n"
+            "nde; \u00AD=%ord_masculine=;\n"
+        "%%ord_masc_de:\n"
+            "de; ' =%ord_masculine=;\n"
+        "%%ord_masc_te:\n"
+            "te; ' =%ord_masculine=;\n"
+        "%%ord_masc_teer:\n"
+            "te; er =%ord_masculine=;\n"
+
+        "%ord_feminine: =%ord_neuter=;\n"
+        "%ord_reale: =%ord_neuter=;\n"
+        "%ord_neuter:\n"
+            "nollte; första; andra; tredje; fjärde; femte; sjätte; sjunde; åttonde; nionde;\n"
+            "tionde; elfte; tolfte; =%neutrum=de;\n"
+            "20: tjugo>%%ord_fem_nde>;\n"
+            "30: trettio>%%ord_fem_nde>;\n"
+            "40: fyrtio>%%ord_fem_nde>;\n"
+            "50: femtio>%%ord_fem_nde>;\n"
+            "60: sextio>%%ord_fem_nde>;\n"
+            "70: sjuttio>%%ord_fem_nde>;\n"
+            "80: åttio>%%ord_fem_nde>;\n"
+            "90: nittio>%%ord_fem_nde>;\n"
+            "100: <%number<\u00ADhundra>%%ord_fem_de>;\n"
+            "1000: ettusen>%%ord_fem_de>;\n"
+            "2000: <%number<\u00ADtusen>%%ord_fem_de>;\n"
+            "1,000,000: en miljon>%%ord_fem_te>;\n"
+            "2,000,000: <%reale< miljon>%%ord_fem_teer>;\n"
+            "1,000,000,000: en miljard>%%ord_fem_te>;\n"
+            "2,000,000,000: <%reale< miljard>%%ord_fem_teer>;\n"
+            "1,000,000,000,000: en biljon>%%ord_fem_te>;\n"
+            "2,000,000,000,000: <%reale< biljon>%%ord_fem_teer>;\n"
+            "1,000,000,000,000,000: en biljard>%%ord_fem_te>;\n"
+            "2,000,000,000,000,000: <%reale< biljard>%%ord_fem_teer>;\n"
+            "1,000,000,000,000,000,000: =%dord_feminine=;\n"
+        "%%ord_fem_nde:\n"
+            "nde; \u00AD=%ord_feminine=;\n"
+        "%%ord_fem_de:\n"
+            "de; ' =%ord_feminine=;\n"
+        "%%ord_fem_te:\n"
+            "te; ' =%ord_feminine=;\n"
+        "%%ord_fem_teer:\n"
+            "te; er =%ord_feminine=;\n"
+
+        "%dord_maskulinum: =%dord_masculine=;\n"
+        "%dord_masculine:\n" // used also for reale when omitting the object; "den 1:e i månaden", but not when including the object "den 1:a dagen i månaden"
+            "=#,##0==%%dord_mascabbrev=;\n" // "=#,##0=':e;\n" does not work...; only an e is output
+        "%%dord_mascabbrev:\n"
+            "0: :e;\n" // "0:", without it the ":" is not output; note: this 'e' letter should NOT be superscripted
+
+        "%dord_neutrum: =%dord_feminine=;\n"
+        "%dord_neuter: =%dord_feminine=;\n"
+        "%dord_reale: =%dord_feminine=;\n"
+        "%dord_femininum: =%dord_feminine=;\n"
+        "%dord_feminine:\n"
+            "=#,##0==%%dord_femabbrev=;\n"
+        "%%dord_femabbrev:\n"
+            "0: :e; 1: :a; 2: :a; 3: :e;\n" // "d:", without them the ":" is not output; note: these 'e' and 'a' letters should NOT be superscripted
+            "20: >>;\n"
+            "100: >>;\n"
+
+        "%amount: =%reale=;\n" // amount (en meter, en sekund, en krona, en euro, ...) [actually, monetary values should use "och" instead of "komma" and (most often) use two-digit decimals, never one-digit]
+        "%belopp: =%amount=;\n"
+        "%default: =%amount=;\n" // default (must be last public name); named for backwards compatibility
+        "%%lenientparse:\n"
+        "   &\u0000 << ' ' << ',' << '-'; \n"
+    }
+    SpelloutLocalizations {
+        { 
+          "%number", "%year", "%neuter", "%reale", "%amount"
+          "%ord_masculine", "%ord_feminine", 
+          "%dord_masculine", "%dord_feminine", 
+        }
+        { "sv", 
+          "nummer", "år", "neutrum", "reale/maskulinum/femininum", "belopp", 
+          "ordningstal, maskulinum", "ordningstal, femininum", 
+          "förkortat ordningstal, maskulinum", "förkortat ordningstal, femininum", 
+        }
+        { "en", 
+          "number", "year", "neuter", "reale/masculine/feminine", "amount", 
+          "ordinal, mascule", "ordinal, feminine", 
+          "abbreviated ordinal, mascule", "abbreviated ordinal, feminine", 
+        }
     }
 }

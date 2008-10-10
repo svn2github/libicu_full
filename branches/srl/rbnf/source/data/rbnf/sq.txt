@@ -1,0 +1,56 @@
+// ***************************************************************************
+// *
+// *   Copyright © 2008, International Business Machines
+// *   Corporation and others. All Rights Reserved.
+// *
+// ***************************************************************************
+// ả
+
+sq {
+    //------------------------------------------------------------
+    // Rule Based Number Format Support
+    //------------------------------------------------------------
+
+    // Spellout rules for Albanian.
+
+    SpelloutRules {
+        "%number:\n"
+            "-x: minus >>;\n"
+            "x.x: << ... >>;\n" // temp.
+            "zero; "
+            "nj\u00EB; "
+            "dy; "
+            "tre; "
+            "kat\u00EBr; "
+            "pes\u00EB; "
+            "gjasht\u00EB; "
+            "shtat\u00EB; "
+            "tet\u00EB; "
+            "n\u00EBnt\u00EB; "
+            "dhjet\u00EB; "
+            ">>\u00ADmb\u00EB\u00ADdhjet\u00EB; "
+            "20: nj\u00EB\u00ADzet[ e >>]; " // one twenty
+            "30: tri\u00ADdhjet\u00EB[ e >>]; "
+            //"40: <<\u00ADdhjet\u00EB[ e >>]; " // katërdhjetë, four ten
+            "40: dy\u00ADzet[ e >>]; " //two twenty
+            "50: <<\u00ADdhjet\u00EB[ e >>]; "
+            "100: <<\u00ADqind[ e >>]; "
+            "1000: << mij\u00EB[ e >>]; "
+            "1,000,000: << milion[ e >>]; "
+            "2,000,000: << milion\u00EB[ e >>]; "
+            "1,000,000,000: << miliar[ e >>];\n"
+            "2,000,000,000: << miliar\u00EB[ e >>];\n"
+            "1,000,000,000,000: << bilion[ e >>];\n"
+            "2,000,000,000,000: << bilion\u00EB[ e >>];\n"
+            "1,000,000,000,000,000: << biliar[ e >>];\n"
+            "2,000,000,000,000,000: << biliar\u00EB[ e >>];\n"
+            "1,000,000,000,000,000,000: =#,##0.#=;\n"
+/*
+            "1,000,000,000,000,000,000: << trilion[ e >>];\n"
+            "2,000,000,000,000,000,000: << trilion\u00EB[ e >>];\n"
+            "1,000,000,000,000,000,000,000: << triliar[ e >>];\n"
+            "2,000,000,000,000,000,000,000: << triliar\u00EB[ e >>];\n"
+            "1,000,000,000,000,000,000,000,000: =#,##0.#=;\n"
+*/
+    }
+}

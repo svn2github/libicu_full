@@ -6,15 +6,17 @@
 // ***************************************************************************
 // ả
 
-pt {
+pt_PT {
     //------------------------------------------------------------
     // Rule Based Number Format Support
     //------------------------------------------------------------
 
-    // Spellout rules for Brazilian Portuguese.
+    // Spellout rules for Iberian Portuguese.
 
-    // * Brazilian Portuguese uses short scale for -illions, while
-    // * Iberian Portuguese uses long scale for -illions.
+	// * Brazilian Portuguese uses short scale for -illions, while
+    // * Iberian Portuguese uses long scale for -illions, but unlike
+    // * Spanish, without "milliard" etc., just continue counting the
+    // * lead part (thousand millions, thousand and one millions, ...).
 
     SpelloutRules {
         "%year: =%masculine=;\n"
@@ -46,12 +48,8 @@ pt {
             "2000: <%masculine< mil[ >%%masculine-with-e>];\n"
             "1,000,000: um milh\u00E3o[ >%%masculine-with-e>];\n"
             "2,000,000: <%masculine< milh\u00F5es[ >%%masculine-with-e>];\n"
-            "1,000,000,000: um bilh\u00E3o[ >%%masculine-with-e>];\n"
-            "2,000,000,000: <%masculine< bilh\u00F5es[ >%%masculine-with-e>];\n"
-            "1,000,000,000,000: um trilh\u00E3o[ >%%masculine-with-e>];\n"
-            "2,000,000,000,000: <%masculine< trilh\u00F5es[ >%%masculine-with-e>];\n"
-            "1,000,000,000,000,000: um quatrilh\u00E3o[ >%%masculine-with-e>];\n"
-            "2,000,000,000,000,000: <%masculine< quatrilh\u00F5es[ >%%masculine-with-e>];\n"
+            "1,000,000,000,000: um bilh\u00E3o[ >%%masculine-with-e>];\n"
+            "2,000,000,000,000: <%masculine< bilh\u00F5es[ >%%masculine-with-e>];\n"
             "1,000,000,000,000,000,000: =#,##0.#=;\n"
         "%%masculine-with-e:\n"
             "zero; e um; e dois; e tr\u00EAs; e quatro; e cinco; e seis; e sete; e oito; e nove;\n"
@@ -77,12 +75,8 @@ pt {
             "2000: <%masculine< mil[ >%%masculine-with-e>];\n"
             "1,000,000: um milh\u00E3o[ >%%masculine-with-e>];\n"
             "2,000,000: <%masculine< milh\u00F5es[ >%%masculine-with-e>];\n"
-            "1,000,000,000: um bilh\u00E3o[ >%%masculine-with-e>];\n"
-            "2,000,000,000: <%masculine< bilh\u00F5es[ >%%masculine-with-e>];\n"
-            "1,000,000,000,000: um trilh\u00E3o[ >%%masculine-with-e>];\n"
-            "2,000,000,000,000: <%masculine< trilh\u00F5es[ >%%masculine-with-e>];\n"
-            "1,000,000,000,000,000: um quatrilh\u00E3o[ >%%masculine-with-e>];\n"
-            "2,000,000,000,000,000: <%masculine< quatrilh\u00F5es[ >%%masculine-with-e>];\n"
+            "1,000,000,000,000: um bilh\u00E3o[ >%%masculine-with-e>];\n"
+            "2,000,000,000,000: <%masculine< bilh\u00F5es[ >%%masculine-with-e>];\n"
             "1,000,000,000,000,000,000: =#,##0.#=;\n"
 
         "%feminino: =%feminine=;\n"
@@ -112,12 +106,8 @@ pt {
             "2000: <%masculine< mil[ >%%feminine-with-e>];\n"
             "1,000,000: um milh\u00E3o[ >%%feminine-with-e>];\n"
             "2,000,000: <%masculine< milh\u00F5es[ >%%feminine-with-e>];\n"
-            "1,000,000,000: um bilh\u00E3o[ >%%feminine-with-e>];\n"
-            "2,000,000,000: <%masculine< bilh\u00F5es[ >%%feminine-with-e>];\n"
-            "1,000,000,000,000: um trilh\u00E3o[ >%%feminine-with-e>];\n"
-            "2,000,000,000,000: <%masculine< trilh\u00F5es[ >%%feminine-with-e>];\n"
-            "1,000,000,000,000,000: um quatrilh\u00E3o[ >%%feminine-with-e>];\n"
-            "2,000,000,000,000,000: <%masculine< quatrilh\u00F5es[ >%%feminine-with-e>];\n"
+            "1,000,000,000,000: um bilh\u00E3o[ >%%feminine-with-e>];\n"
+            "2,000,000,000,000: <%masculine< bilh\u00F5es[ >%%feminine-with-e>];\n"
             "1,000,000,000,000,000,000: =#,##0.#=;\n"
         "%%feminine-with-e:\n"
             "zero; e um; e dois; e tr\u00EAs; e quatro; e cinco; e seis; e sete; e oito; e nove;\n"
@@ -143,12 +133,8 @@ pt {
             "2000: <%masculine< mil[ >%%feminine-with-e>];\n"
             "1,000,000: um milh\u00E3o[ >%%feminine-with-e>];\n"
             "2,000,000: <%masculine< milh\u00F5es[ >%%feminine-with-e>];\n"
-            "1,000,000,000: um bilh\u00E3o[ >%%feminine-with-e>];\n"
-            "2,000,000,000: <%masculine< bilh\u00F5es[ >%%feminine-with-e>];\n"
-            "1,000,000,000,000: um trilh\u00E3o[ >%%feminine-with-e>];\n"
-            "2,000,000,000,000: <%masculine< trilh\u00F5es[ >%%feminine-with-e>];\n"
-            "1,000,000,000,000,000: um quatrilh\u00E3o[ >%%feminine-with-e>];\n"
-            "2,000,000,000,000,000: <%masculine< quatrilh\u00F5es[ >%%feminine-with-e>];\n"
+            "1,000,000,000,000: um bilh\u00E3o[ >%%feminine-with-e>];\n"
+            "2,000,000,000,000: <%masculine< bilh\u00F5es[ >%%feminine-with-e>];\n"
             "1,000,000,000,000,000,000: =#,##0.#=;\n"
 
 			//00AA;FEMININE ORDINAL INDICATOR;Ll;0;L;<super> 0061;;;;N;;;;;

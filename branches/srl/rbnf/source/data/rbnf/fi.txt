@@ -1,0 +1,44 @@
+// ***************************************************************************
+// *
+// *   Copyright © 2008, International Business Machines
+// *   Corporation and others. All Rights Reserved.
+// *
+// ***************************************************************************
+// ả
+
+fi {
+    //------------------------------------------------------------
+    // Rule Based Number Format Support
+    //------------------------------------------------------------
+
+    // Spellout rules for Finnish.
+
+    SpelloutRules {
+        "%number:\n"
+            "-x: miinus >>;\n"
+            "x.x: << pilkku >>;\n"
+            "nolla; yksi; kaksi; kolme; nelj\u00E4; viisi; kuusi; seitsem\u00E4n; kahdeksan; yhdeks\u00E4n;\n"
+            "kymmenen; >>\u00ADtoista;\n"
+            "20: <<\u00ADkymment\u00E4[\u00AD>>];\n"
+            "100: <<\u00ADsata[\u00AD>>];\n"
+            "200: <<\u00ADsataa[\u00AD>>];\n"
+            "1000: <<\u00ADtuhat[ >>];\n"
+            "2000: <<\u00ADtuhatta[ >>];\n"
+            "1,000,000: << miljoona[ >>];\n"
+            "2,000,000: << miljoonan[ >>];\n"
+            "1,000,000,000: << miljardi[ >>];\n"
+            "2,000,000,000: << miljardin[ >>];\n"
+            "1,000,000,000,000: << biljoona[ >>];\n"
+            "2,000,000,000,000: << biljoonan[ >>];\n"
+            "1,000,000,000,000,000: << biljardi[ >>];\n"
+            "2,000,000,000,000,000: << biljardin[ >>];\n"
+            "1,000,000,000,000,000,000: =#,##0.#=;\n"
+/*
+            "1,000,000,000,000,000,000: << triljoona[ >>];\n"
+            "2,000,000,000,000,000,000: << triljoonan[ >>];\n"
+            "1,000,000,000,000,000,000,000: << triljardi[ >>];\n"
+            "2,000,000,000,000,000,000,000: << triljardin[ >>];\n"
+            "1,000,000,000,000,000,000,000,000: =#,##0.#=;\n"
+*/
+    }
+}

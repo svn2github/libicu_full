@@ -1,6 +1,6 @@
 /*
  *******************************************************************************
- * Copyright (C) 1996-2006, International Business Machines Corporation and    *
+ * Copyright (C) 1996-2008, International Business Machines Corporation and    *
  * others. All Rights Reserved.                                                *
  *******************************************************************************
  */
@@ -43,6 +43,7 @@ void RbnfRoundTripTest::runIndexedTest(int32_t index, UBool exec, const char* &n
       TESTCASE(9, TestJapaneseSpelloutRT);
       TESTCASE(10, TestRussianSpelloutRT);
       TESTCASE(11, TestPortugueseSpelloutRT);
+      TESTCASE(12, TestOtherSpelloutRT);
 #else
       TESTCASE(0, TestRBNFDisabled);
 #endif
@@ -270,10 +271,85 @@ RbnfRoundTripTest::TestPortugueseSpelloutRT()
   delete formatter;
 }
 
+/**
+ * Perform an exhaustive round-trip test on the Portuguese spellout rules
+ */
+void
+RbnfRoundTripTest::TestOtherSpelloutRT() 
+{
+    const char *tests[] = { 
+       "af",
+       "ca",
+       "cs",
+       "da",
+       "de",
+       "el",
+       "en",
+       "en_GB",
+       "eo",
+       "es",
+       "et",
+       "fa",
+       "fa_AF",
+       "fi",
+       "fo",
+       "fr",
+       "fr_BE",
+       "fr_CH",
+       "ga",
+       "he",
+       "hu",
+       "hy",
+       "is",
+       "it",
+       "ja",
+       "ka",
+       "kl",
+       "ko",
+       "lt",
+       "lv",
+       "mt",
+       "nah",
+       "nb",
+       "nl",
+       "nn",
+       "pl",
+       "pt",
+       "pt_PT",
+       "ro",
+       "root",
+       "ru",
+       "se",
+       "sk",
+       "sq",
+       "sv",
+       "th",
+       "tr",
+       "uk",
+       "vi",
+       "zh",
+       "zh_Hant"
+    };
+  for(int i=0;i<sizeof(tests)/sizeof(tests[0]);i++) { 
+       logln("Testing: %s\n", tests[i]);
+      UErrorCode status = U_ZERO_ERROR;
+      RuleBasedNumberFormat* formatter
+        = new RuleBasedNumberFormat(URBNF_SPELLOUT, Locale(tests[i]), status);
+
+      if (U_FAILURE(status)) {
+        errln("%s: failed to construct formatter", tests[i]);
+      } else {
+        doTest(formatter, -12345678, 12345678, tests[i]);
+      }
+      delete formatter;
+    }
+}
+
 void
 RbnfRoundTripTest::doTest(const RuleBasedNumberFormat* formatter,  
                           double lowLimit,
-                          double highLimit) 
+                          double highLimit,
+                          const char *locale) 
 {
   char buf[128];
 
@@ -298,8 +374,10 @@ RbnfRoundTripTest::doTest(const RuleBasedNumberFormat* formatter,
     Formattable parseResult;
     formatter->parse(formatResult, parseResult, status);
     if (U_FAILURE(status)) {
-      sprintf(buf, "Round-trip status failure: %.12g, status: %d", i, status);
-      errln(buf);
+      sprintf(buf, "%s: Round-trip status failure: %.12g, status: %s: ", locale, i, u_errorName(status));
+      UnicodeString res(buf,"");
+      res += formatResult;
+      errln(res);
       return;
     } else {
       double rt = (parseResult.getType() == Formattable::kDouble) ? 
@@ -307,8 +385,10 @@ RbnfRoundTripTest::doTest(const RuleBasedNumberFormat* formatter,
         (double)parseResult.getLong();
 
       if (rt != i) {
-        sprintf(buf, "Round-trip failed: %.12g -> %.12g", i, rt);
-        errln(buf);
+        sprintf(buf, "%s: Round-trip failed: %.12g -> %.12g: ", locale, i, rt);
+        UnicodeString res(buf,"");
+        res+=formatResult;
+        errln(res);
         return;
       }
     }
@@ -325,9 +405,11 @@ RbnfRoundTripTest::doTest(const RuleBasedNumberFormat* formatter,
       Formattable parseResult;
       formatter->parse(formatResult, parseResult, status);
       if (U_FAILURE(status)) {
-        sprintf(buf, "Round-trip status failure: %.12g, status: %d", d, status);
-        errln(buf);
-        return;
+          sprintf(buf, "%s: Round-trip status failure: %.12g, status: %s: ", locale, d, u_errorName(status));
+          UnicodeString res(buf,"");
+          res += formatResult;
+          errln(res);
+          return;
       } else {
         double rt = (parseResult.getType() == Formattable::kDouble) ? 
           parseResult.getDouble() : 
@@ -335,7 +417,7 @@ RbnfRoundTripTest::doTest(const RuleBasedNumberFormat* formatter,
 
         if (rt != d) {
           UnicodeString msg;
-          sprintf(buf, "Round-trip failed: %.12g -> ", d);
+          sprintf(buf, "%s: Round-trip failed: %.12g -> ", locale, d);
           msg.append(buf);
           msg.append(formatResult);
           sprintf(buf, " -> %.12g", rt);

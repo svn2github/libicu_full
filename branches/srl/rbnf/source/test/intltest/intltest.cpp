@@ -50,6 +50,9 @@ static char* _testDataPath=NULL;
 // Static list of errors found
 static UnicodeString errorList;
 
+static UnicodeString& escape(const UnicodeString& s, UnicodeString& result);
+
+
 //-----------------------------------------------------------------------------
 //convenience classes to ease porting code that uses the Java
 //string-concatenation operator (moved from findword test by rtg)
@@ -917,7 +920,14 @@ void IntlTest::LL_message( UnicodeString message, UBool newline )
     message.findAndReplace(UnicodeString((UChar)'\n'), indent);
 
     // stream out the message
+#if 1
     length = message.extract(0, message.length(), buffer, sizeof(buffer));
+#else
+    {
+        UErrorCode status = U_ZERO_ERROR;
+        length = it_extract(buffer, sizeof(buffer), message, status);
+    }
+#endif
     if (length > 0) {
         length = length > 10000 ? 10000 : length;
         fwrite(buffer, sizeof(*buffer), length, (FILE *)testoutfp);
@@ -1405,6 +1415,38 @@ UnicodeString CharsToUnicodeString(const char* chars)
 UnicodeString ctou(const char* chars) {
     return CharsToUnicodeString(chars);
 }
+
+/**
+ * Extract a UnicodeString into a char buffer in the default codepage. Escape to \u if needed.
+ * @param buf output buffer
+ * @param bufLen length of buffer
+ * @param str string to convert
+ * @param status status
+ * @return size needed to convert buffer
+ */
+int32_t it_extract(char* buf, int32_t bufLen, const UnicodeString& str, UErrorCode& status)
+{
+    UnicodeString result;
+    escape(str, result);
+    return result.extract(0,result.length(),buf, bufLen);
+}
+
+/**
+ * Extract a UnicodeString into a char buffer in the default codepage. Escape to \u if needed.
+ * @param buf output buffer
+ * @param bufLen length of buffer
+ * @param str string to convert
+ * @param strLen length of string, or -1 for null terminated
+ * @param status status
+ * @return size needed to convert buffer
+ */
+int32_t it_uastrxcpy(char* buf, int32_t bufLen, UChar *str, int32_t strLen, UErrorCode& status)
+{
+    UnicodeString result(str, strLen);
+    escape(str, result);
+    return result.extract(0,result.length(),buf, bufLen);
+}
+
 
 #define RAND_M  (714025)
 #define RAND_IA (1366)

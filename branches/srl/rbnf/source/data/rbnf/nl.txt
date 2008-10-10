@@ -1,35 +1,105 @@
 // ***************************************************************************
 // *
-// *   Copyright (C) 2004, International Business Machines
+// *   Copyright © 2008, International Business Machines
 // *   Corporation and others.  All Rights Reserved.
 // *
 // ***************************************************************************
-// 
+// ả
 
 nl {
     //------------------------------------------------------------
     // Rule Based Number Format Support
     //------------------------------------------------------------
 
+    // Spellout rules for Nederlands/Dutch.
+
     SpelloutRules {
-        "-x: min >>;\n"
-        "x.x: << komma >>;\n"
-        "nul; een; twee; drie; vier; vijf; zes; zeven; acht; negen;\n"
-        "tien; elf; twaalf; dertien; veertien; vijftien; zestien;\n"
-        "zeventien; achtien; negentien;\n"
-        "20: [>> en ]twintig;\n"
-        "30: [>> en ]dertig;\n"
-        "40: [>> en ]veertig;\n"
-        "50: [>> en ]vijftig;\n"
-        "60: [>> en ]zestig;\n"
-        "70: [>> en ]zeventig;\n"
-        "80: [>> en ]tachtig;\n"
-        "90: [>> en ]negentig;\n"
-        "100: << honderd[ >>];\n"
-        "1000: << duizend[ >>];\n"
-        "1,000,000: << miljoen[ >>];\n"
-        "1,000,000,000: << miljard[ >>];\n"
-        "1,000,000,000,000: << biljoen[ >>];\n"
-        "1,000,000,000,000,000: =#,##0="
+        "%year:"
+            "-x: min >>;\n"
+            "nul;"
+            "een;"
+            "twee;"
+            "drie;"
+            "vier;"
+            "vijf;" // ij-ligature...
+            "zes;"
+            "zeven;"
+            "acht;"
+            "negen;\n"
+            "tien;"
+            "elf;"
+            "twaalf;"
+            "dertien;"
+            "veertien;"
+            "vijftien;" // ij-ligature...
+            "zestien;"
+            "zeventien;"
+            "achtien;"
+            "negentien;\n"
+            "20: [>%%number-en>]twintig;\n"
+            "30: [>%%number-en>]dertig;\n"
+            "40: [>%%number-en>]veertig;\n"
+            "50: [>%%number-en>]vijftig;\n" // ij ligature...
+            "60: [>%%number-en>]zestig;\n"
+            "70: [>%%number-en>]zeventig;\n"
+            "80: [>%%number-en>]tachtig;\n"
+            "90: [>%%number-en>]negentig;\n"
+            "100: <<\u00ADhonderd[\u00AD>>];\n"
+            "1000: duizend[\u00AD>>];\n"
+            "1100/100: <<\u00ADhonderd[\u00AD>>];\n"
+            "10,000: =%number=;\n"
+
+		"%%number-en:"
+            "1: een\u00ADen\u00AD;"
+            "twee\u00AD\u00EBn\u00AD;" // if hyphenated before the ën, the diaeresis should be removed...
+            "drie\u00AD\u00EBn\u00AD;" // if hyphenated before the ën, the diaeresis should be removed...
+            "vier\u00ADen\u00AD;"
+            "vijf\u00ADen\u00AD;" // ij ligature...
+            "zes\u00ADen\u00AD;"
+            "zeven\u00ADen\u00AD;"
+            "acht\u00ADen\u00AD;"
+            "negen\u00ADen\u00AD;\n"
+
+        "%number:"
+            "-x: min >>;\n"
+            "x.x: << komma >>;\n"
+            "nul;"
+            "een;" // or één
+            "twee;"
+            "drie;"
+            "vier;"
+            "vijf;" // ij-ligature...; vyf in Afrikaans (af) (and rarely in nl)
+            "zes;"     // ses in af
+            "zeven;"   // sewe in af
+            "acht;"    // agt in af
+            "negen;\n" // nege in af
+            "tien;"
+            "elf;"
+            "twaalf;"
+            "dertien;"
+            "veertien;" // not viertien (though that spelling occurs, rarely)
+            "vijftien;" // ij-ligature...; vyftien in af (and rarely in nl)
+            "zestien;"   // sestien in af
+            "zeventien;" // sewentien in af
+            "achttien;"  // agttien in af
+            "negentien;\n"
+            // according to http://nl.wiktionary.org/wiki/Categorie:Hoofdtelwoord_in_het_Nederlands
+            // there should be no space between the words (cmp. rbnf/de.txt), and it seems more
+            // common, in Dutch, not to have space between the words than to have space between them.
+            "20: [>%%number-en>]twintig;\n" // if no space between words: ën if after twee or drie
+            "30: [>%%number-en>]dertig;\n"
+            "40: [>%%number-en>]veertig;\n" // not viertig (though that spelling occurs, rarely)
+            "50: [>%%number-en>]vijftig;\n" // ij ligature...; vyftig in af (and rarely in nl)
+            "60: [>%%number-en>]zestig;\n"   // sestig in af
+            "70: [>%%number-en>]zeventig;\n" // sewentig in af)
+            "80: [>%%number-en>]tachtig;\n"  // not achttig (note that -achtig means -like; tagtig in af
+            "90: [>%%number-en>]negentig;\n"
+            "100: <<\u00ADhonderd[\u00AD>>];\n"
+            "1000: <<\u00ADduizend[\u00AD>>];\n" // duisend in af
+            "1,000,000: << miljoen[ >>];\n"
+            "1,000,000,000: << miljard[ >>];\n"
+            "1,000,000,000,000: << biljoen[ >>];\n"
+            "1,000,000,000,000,000: << biljard[ >>];\n"
+            "1,000,000,000,000,000,000: =#,##0.#="
     }
 }

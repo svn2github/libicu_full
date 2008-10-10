@@ -1,0 +1,43 @@
+// ***************************************************************************
+// *
+// *   Copyright © 2008, International Business Machines
+// *   Corporation and others. All Rights Reserved.
+// *
+// ***************************************************************************
+// ả
+
+et {
+    //------------------------------------------------------------
+    // Rule Based Number Format Support
+    //------------------------------------------------------------
+
+    // Spellout rules for Estonian.
+    // http://www.cusd.claremont.edu/~tkroll/numbers.html
+
+    SpelloutRules {
+        "%number:\n"
+            "-x: miinus >>;\n"
+            "x.x: << koma >>;\n"
+            "null; \u00FCks; kaks; kolm; neli; viis; kuus; seitse; kaheksa; \u00FCheksa;\n"
+            "k\u00FCmme; >>\u00ADteist;\n"
+            "20: <<\u00ADk\u00FCmmend[ >>];\n"
+            "100: <<\u00ADsada[ >>];\n"
+            "1000: << tuhat[ >>];\n"
+            "1,000,000: << miljon[ >>];\n"
+            "2,000,000: << miljonit[ >>];\n"
+            "1,000,000,000: << miljard[ >>];\n"
+            "2,000,000,000: << miljardit[ >>];\n"
+            "1,000,000,000,000: << biljon[ >>];\n"
+            "2,000,000,000,000: << biljonit[ >>];\n"
+            "1,000,000,000,000,000: << biljard[ >>];\n"
+            "2,000,000,000,000,000: << biljardit[ >>];\n"
+            "1,000,000,000,000,000,000: =#,##0.#=;\n"
+/*
+            "1,000,000,000,000,000,000: << triljon[ >>];\n"
+            "2,000,000,000,000,000,000: << triljonit[ >>];\n"
+            "1,000,000,000,000,000,000,000: << triljard[ >>];\n"
+            "2,000,000,000,000,000,000,000: << triljardit[ >>];\n"
+            "1,000,000,000,000,000,000,000,000: =#,##0.#=;\n"
+*/
+    }
+}

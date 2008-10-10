@@ -1,0 +1,38 @@
+// ***************************************************************************
+// *
+// *   Copyright © 2008, International Business Machines
+// *   Corporation and others. All Rights Reserved.
+// *
+// ***************************************************************************
+// 
+
+vi {
+    //------------------------------------------------------------
+    // Rule Based Number Format Support
+    //------------------------------------------------------------
+
+    // Spellout rules for Vietnamese. EXPERIMENTAL!
+
+    SpelloutRules {
+        "%number:"
+            "-x: tr\u1EEB >>;" // trừ (without?); (or "số âm" (negative)?)
+            "x.x: << ph\u1EA9y >>;" // phẩy (comma); (or "điểm" (point)?)
+            "kh\u00F4ng;" // không
+            "m\u1ED9t;" // một
+            "hai;"
+            "ba;"
+            "b\u1ED1n;" // bốn
+            "n\u0103m;" // năm
+            "s\u00E1u;" // sáu
+            "b\u1EA3y;" // bảy
+            "t\u00E1m;" // tám
+            "ch\u00EDn;" // chín
+            "       m\u01B0\u1EDDi[ >>];" // mười
+            "20: << m\u01B0\u01A1i[ >>];" // mươi
+            "100: << tr\u0103m[ >>];" // trăm
+            "1000: << ngh\u00ECn[ >>];" // nghìn; (or "ngàn")
+            "1,000,000: << tri\u1EC7u[ >>];" // triệu
+            "1,000,000,000: << t\u1EF7[ >>];" // tỷ
+            "1,000,000,000,000,000,000: =#,##0.#=;"
+    }
+}

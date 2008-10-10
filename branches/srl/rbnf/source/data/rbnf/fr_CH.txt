@@ -1,57 +1,186 @@
 // ***************************************************************************
 // *
-// *   Copyright (C) 2004, International Business Machines
-// *   Corporation and others.  All Rights Reserved.
+// *   Copyright © 2008, International Business Machines
+// *   Corporation and others. All Rights Reserved.
 // *
 // ***************************************************************************
-// 
+// ả
 
 fr_CH {
     //------------------------------------------------------------
     // Rule Based Number Format Support
     //------------------------------------------------------------
 
-//         * Spellout rules for Swiss French.  Swiss French differs from French French
-//         * in that it does have words for 70, 80, and 90.  This rule set shows them,
-//         * and is simpler as a result.
+    // Spellout rules for Swiss French.
 
-    // again, I'm missing information on negative numbers and decimals for
-    // these to rule sets.  Also, I'm not 100% sure about Swiss French.  Is
-    // this correct?  Is "onze cents" commonly used for 1,100 in both France
-    // and Switzerland?  Can someone fill me in on the rules for the other
-    // French-speaking countries?  I've heard conflicting opinions on which
-    // version is used in Canada, and I understand there's an alternate set
-    // of words for 70, 80, and 90 that is used somewhere, but I don't know
-    // what those words are or where they're used.
+    // * Swiss French differs from French French in that it used the
+    // * old words for 70, 80, and 90. Octante is sometimes used for
+    // * 80, but huitante is more conventional (and more French...).
 
     SpelloutRules {
-        "%main:\n"
+        "%an: =%year=;\n"
+        "%year:\n"
+            "-x: moins >>;\n"
+            "z\u00e9ro; un; deux; trois; quatre; cinq; six; sept; huit; neuf;\n"
+            "dix; onze; douze; treize; quatorze; quinze; seize; dix->>;\n"
+            "20: vingt[->%%et-un>];\n"
+            "30: trente[->%%et-un>];\n"
+            "40: quarante[->%%et-un>];\n"
+            "50: cinquante[->%%et-un>];\n"
+            "60: soixante[->%%et-un>];\n"
+            "70: septante[->%%et-un>];\n"
+            "80: huitante[->%%et-un>];\n" // or 'quatre-vingts' or 'octante'
+            "90: nonante[->%%et-un>];\n"
+            "100: cent[->>];\n"
+            "200: <<-cent[->>];\n" // there should really be an s if there is no number after cent (see below), don't know any succinct rule syntax to express that here
+            "10,000: =%number=;\n"
+
+        "%number: =%masculine=;\n"
+        "%masculin: =%masculine=;\n"
+        "%masculine:\n"
             "-x: moins >>;\n"
             "x.x: << virgule >>;\n"
             "z\u00e9ro; un; deux; trois; quatre; cinq; six; sept; huit; neuf;\n"
-            "dix; onze; douze; treize; quatorze; quinze; seize;\n"
-            "    dix-sept; dix-huit; dix-neuf;\n"
-            "20: vingt[->%%alt-ones>];\n"
-            "30: trente[->%%alt-ones>];\n"
-            "40: quarante[->%%alt-ones>];\n"
-            "50: cinquante[->%%alt-ones>];\n"
-            "60: soixante[->%%alt-ones>];\n"
-               // notice new words for 70, 80, and 90
-            "70: septante[->%%alt-ones>];\n"
-            "80: huitante[->%%alt-ones>];\n"
-            "90: nonante[->%%alt-ones>];\n"
-            "100: cent[ >>];\n"
-            "200: << cents[ >>];\n"
-            "1000: mille[ >>];\n"
-            "1100>: onze cents[ >>];\n"
-            "1200: mille >>;\n"
-            "2000: << mille[ >>];\n"
-            "1,000,000: << million[ >>];\n"
-            "1,000,000,000: << milliarde[ >>];\n"
-            "1,000,000,000,000: << billion[ >>];\n"
-            "1,000,000,000,000,000: =#,##0=;\n"
-        "%%alt-ones:\n"
-            "; et-un; =%main=;" 
-    }
+            "dix; onze; douze; treize; quatorze; quinze; seize; dix->>;\n"
+            "20: vingt[->%%et-un>];\n"
+            "30: trente[->%%et-un>];\n"
+            "40: quarante[->%%et-un>];\n"
+            "50: cinquante[->%%et-un>];\n"
+            "60: soixante[->%%et-un>];\n"
+            "70: septante[->%%et-un>];\n" // septante has a longer history than soixante-dix
+            "80: huitante[->%%et-un>];\n" // or 'quatre-vingts' or 'octante'; huitante has a longer history than quatre-vingt
+            "90: nonante[->%%et-un>];\n" // nonante has a longer history than quatre-vingt-dix
+            "100: cent[->>];\n" // quinze-vingts
+            "200: <<-cents; 201: <<-cent->>;\n"
+            "300: <<-cents; 301: <<-cent->>;\n"
+            "400: <<-cents; 401: <<-cent->>;\n"
+            "500: <<-cents; 501: <<-cent->>;\n"
+            "600: <<-cents; 601: <<-cent->>;\n"
+            "700: <<-cents; 701: <<-cent->>;\n"
+            "800: <<-cents; 801: <<-cent->>;\n"
+            "900: <<-cents; 901: <<-cent->>;\n"
+            "1000: mille[->>];\n"
+            "2000: <%masculine<-mille[->>];\n"
+            "1,000,000: un-million[->>];\n"
+            "2,000,000: <%masculine<-millions[->>];\n"
+            "1,000,000,000: un-milliard[->>];\n"
+            "2,000,000,000: <%masculine<-milliards[->>];\n"
+            "1,000,000,000,000: un-billion[->>];\n"
+            "2,000,000,000,000: <%masculine<-billions[->>];\n"
+            "1,000,000,000,000,000: un-billiard[->>];\n"
+            "2,000,000,000,000,000: <%masculine<-billiards[->>];\n"
+            "1,000,000,000,000,000,000: =#,##0.#=;\n"
+/* 
+ * Current (Java) implementation can't handle these magnitudes
+            "1,000,000,000,000,000,000: un-trillion[->>];\n"
+            "2,000,000,000,000,000,000: <%masculine<-trillions[->>];\n"
+ * Current (C++) implmenatation can't handle these magnitudes
+            "1,000,000,000,000,000,000,000: un-trilliard[->>];\n"
+            "2,000,000,000,000,000,000,000: <%masculine<-trilliards[->>];\n"
+            "1,000,000,000,000,000,000,000,000: un-quadrillion[->>];\n"
+            "2,000,000,000,000,000,000,000,000: <%masculine<-quadrillions[->>];\n"
+            "1,000,000,000,000,000,000,000,000,000: un-quadrilliard[->>];\n"
+            "2,000,000,000,000,000,000,000,000,000: <%masculine<-quadrilliards[->>];\n"
+            "1,000,000,000,000,000,000,000,000,000,000: un-quintillion[->>];\n"
+            "2,000,000,000,000,000,000,000,000,000,000: <%masculine<-quintillions[->>];\n"
+            "1,000,000,000,000,000,000,000,000,000,000,000: un-quintilliard[->>];\n"
+            "2,000,000,000,000,000,000,000,000,000,000,000: <%masculine<-quintilliards[->>];\n"
+            "1,000,000,000,000,000,000,000,000,000,000,000,000: un-sextillion[->>];\n"
+            "2,000,000,000,000,000,000,000,000,000,000,000,000: <%masculine<-sextillions[->>];\n"
+            "1,000,000,000,000,000,000,000,000,000,000,000,000,000: un-sextilliard[->>];\n"
+            "2,000,000,000,000,000,000,000,000,000,000,000,000,000: <%masculine<-sextilliards[->>];\n"
+            "1,000,000,000,000,000,000,000,000,000,000,000,000,000,000: =#,##0.#=;\n"
+*/
+        // %%et-un is used to insert "et" when the ones digit is 1
+        "%%et-un:\n"
+            "; et-un; =%masculine=;\n" 
 
+        "%féminin: =%feminine=;\n"
+        "%feminine:\n"
+            "-x: moins >>;\n"
+            "x.x: << virgule >>;\n"
+            "z\u00e9ro; une; deux; trois; quatre; cinq; six; sept; huit; neuf;\n"
+            "dix; onze; douze; treize; quatorze; quinze; seize; dix->>;\n"
+            "20: vingt[->%%et-une>];\n"
+            "30: trente[->%%et-une>];\n"
+            "40: quarante[->%%et-une>];\n"
+            "50: cinquante[->%%et-une>];\n"
+            "60: soixante[->%%et-une>];\n"
+            "70: septante[->%%et-une>];\n"
+            "80: huitante[->%%et-une>];\n" // or 'quatre-vingts' or 'octante'
+            "90: nonante[->%%et-une>];\n"
+            "100: cent[->>];\n"
+            "200: <<-cents; 201: <<-cent->>;\n"
+            "300: <<-cents; 301: <<-cent->>;\n"
+            "400: <<-cents; 401: <<-cent->>;\n"
+            "500: <<-cents; 501: <<-cent->>;\n"
+            "600: <<-cents; 601: <<-cent->>;\n"
+            "700: <<-cents; 701: <<-cent->>;\n"
+            "800: <<-cents; 801: <<-cent->>;\n"
+            "900: <<-cents; 901: <<-cent->>;\n"
+            "1000: mille[->>];\n"
+            "2000: <%masculine<-mille[->>];\n"
+            "1,000,000: un-million[->>];\n"
+            "2,000,000: <%masculine<-millions[->>];\n"
+            "1,000,000,000: un-milliard[->>];\n"
+            "2,000,000,000: <%masculine<-milliards[->>];\n"
+            "1,000,000,000,000: un-billion[->>];\n"
+            "2,000,000,000,000: <%masculine<-billions[->>];\n"
+            "1,000,000,000,000,000: un-billiard[->>];\n"
+            "2,000,000,000,000,000: <%masculine<-billiards[->>];\n"
+            "1,000,000,000,000,000,000: =#,##0.#=;\n"
+/* 
+ * Current (Java) implementation can't handle these magnitudes
+            "1,000,000,000,000,000,000: un-trillion[->>];\n"
+            "2,000,000,000,000,000,000: <%masculine<-trillions[->>];\n"
+ * Current (C++) implmenatation can't handle these magnitudes
+            "1,000,000,000,000,000,000,000: un-trilliard[->>];\n"
+            "2,000,000,000,000,000,000,000: <%masculine<-trilliards[->>];\n"
+            "1,000,000,000,000,000,000,000,000: un-quadrillion[->>];\n"
+            "2,000,000,000,000,000,000,000,000: <%masculine<-quadrillions[->>];\n"
+            "1,000,000,000,000,000,000,000,000,000: un-quadrilliard[->>];\n"
+            "2,000,000,000,000,000,000,000,000,000: <%masculine<-quadrilliards[->>];\n"
+            "1,000,000,000,000,000,000,000,000,000,000: un-quintillion[->>];\n"
+            "2,000,000,000,000,000,000,000,000,000,000: <%masculine<-quintillions[->>];\n"
+            "1,000,000,000,000,000,000,000,000,000,000,000: un-quintilliard[->>];\n"
+            "2,000,000,000,000,000,000,000,000,000,000,000: <%masculine<-quintilliards[->>];\n"
+            "1,000,000,000,000,000,000,000,000,000,000,000,000: un-sextillion[->>];\n"
+            "2,000,000,000,000,000,000,000,000,000,000,000,000: <%masculine<-sextillions[->>];\n"
+            "1,000,000,000,000,000,000,000,000,000,000,000,000,000: un-sextilliard[->>];\n"
+            "2,000,000,000,000,000,000,000,000,000,000,000,000,000: <%masculine<-sextilliards[->>];\n"
+            "1,000,000,000,000,000,000,000,000,000,000,000,000,000,000: =#,##0.#=;\n"
+*/
+        // %%et-une is used to insert "et" when the ones digit is 1
+        "%%et-une:\n"
+            "; et-une; =%feminine=;\n" 
+
+			//02B3;MODIFIER LETTER SMALL R;Lm;0;L;<super> 0072;;;;N;;;;;
+			//1D49;MODIFIER LETTER SMALL E;Lm;0;L;<super> 0065;;;;N;;;;;
+        "%dord_masculine:\n"
+            "=#,##0==%%dord_mascabbrev=;\n"
+        "%%dord_mascabbrev:\n"
+            //"e; er; e;\n" // to do: use superscript letters, 
+            "\u1D49; \u1D49\u02B3; \u1D49;\n"
+
+        "%dord_feminine:\n"
+            "=#,##0==%%dord_femabbrev=;\n"
+        "%%dord_femabbrev:\n"
+            //"e; re; e;\n" // to do: use superscript letters, 
+            "\u1D49; \u02B3\u1D49; \u1D49;\n"
+
+        "%amount: =%masculine=;\n"
+        "%main: =%amount=;\n" // default (must be last public name); named for for backwards compatibility
+        "%%lenient-parse:\n"
+        "   &\u0000 << ' ' << ',' << '-'; \n"
+    }
+    SpelloutLocalizations {
+        { "%number", "%year", "%masculine", "%feminine",
+        }
+        { "fr", 
+          "nombre", "an", "masculin", "féminin",
+        }
+        { "en", 
+          "number", "year", "masculine", "feminine",
+        }
+    }
 }

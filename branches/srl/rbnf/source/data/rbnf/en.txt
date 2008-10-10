@@ -1,27 +1,47 @@
 // ***************************************************************************
 // *
-// *   Copyright (C) 2004, International Business Machines
-// *   Corporation and others.  All Rights Reserved.
+// *   Copyright © 2008, International Business Machines
+// *   Corporation and others. All Rights Reserved.
 // *
 // ***************************************************************************
-// 
+// ả
 
 en {
-
-
     //------------------------------------------------------------
     // Rule Based Number Format Support
     //------------------------------------------------------------
 
-     // * Spellout rules for U.S. English.  This rule set has two variants:
-     // * %simplified is a set of rules showing the simple method of spelling
-     // * out numbers in English: 289 is formatted as "two hundred eighty-nine".
-     // * %default uses a more complicated algorithm to format
-     // * numbers in a more natural way: 289 is formatted as "two hundred AND
-     // * eighty-nine" and commas are inserted between the thousands groups for
-     // * values above 100,000.
+    // Spellout rules for English.
 
-     SpelloutRules {
+    // * This rule set has three variants:
+    // * %year for year number spellout.
+    // * %simplified is a set of rules showing the simple method of spelling
+    // * out numbers in English: 289 is formatted as "two hundred eighty-nine".
+    // * %default uses a more complicated algorithm to format
+    // * numbers in a more natural way: 289 is formatted as "two hundred AND
+    // * eighty-nine" and commas are inserted between the thousands groups for
+    // * values above 100,000.
+
+    SpelloutRules {
+        "%year:\n"
+            "-x: minus >>;\n"
+            "zero; one; two; three; four; five; six; seven; eigth; nine;\n"
+            "ten; eleven; twelve; thirteen; fourteen; fifteen; sixteen; seventeen; eighteen; nineteen;\n"
+            "20: twenty[->>];\n"
+            "30: thirty[->>];\n"
+            "40: forty[->>];\n"
+            "50: fifty[->>];\n"
+            "60: sixty[->>];\n"
+            "70: seventy[->>];\n"
+            "80: eighty[->>];\n"
+            "90: ninety[->>];\n"
+            "100: << hundred[ and >>];\n"
+            "1000: thousand[ and >>];\n"
+            "1100/100: << hundred[ and >>];\n" // twenty hundred and eight (not so common in English...), keeping the model from the previous centuries, cmp. nineteen hundred and sixty-four
+            "10,000: =%number=;\n"
+
+        "%number: =%default=;\n"
+
         // This rule set shows the normal simple formatting rules for English
         "%simplified:\n"
                // negative number rule.  This rule is used to format negative
@@ -38,11 +58,10 @@ en {
                // the rules for the values from 0 to 19 are simply the
                // words for those numbers
             "zero; one; two; three; four; five; six; seven; eight; nine;\n"
-            "ten; eleven; twelve; thirteen; fourteen; fifteen; sixteen;\n"
-                "seventeen; eighteen; nineteen;\n"
+            "ten; eleven; twelve; thirteen; fourteen; fifteen; sixteen; seventeen; eighteen; nineteen;\n"
                // beginning at 20, we use the >> to mark the position where
                // the result of formatting the number's ones digit.  Thus,
-               // we only need a new rule at every multiple of 10.  Text in
+               // we only need a new rule at every multiple of 10. Text in
                // backets is omitted if the value being formatted is an
                // even multiple of 10.
             "20: twenty[->>];\n"
@@ -53,7 +72,7 @@ en {
             "70: seventy[->>];\n"
             "80: eighty[->>];\n"
             "90: ninety[->>];\n"
-               // beginning at 100, we can use << to mark the position where
+               // beginning at 100, we use << to mark the position where
                // the result of formatting the multiple of 100 is to be
                // inserted.  Notice also that the meaning of >> has shifted:
                // here, it refers to both the ones place and the tens place.
@@ -76,6 +95,7 @@ en {
             "1,000,000: << million[ >>];\n"
             "1,000,000,000: << billion[ >>];\n"
             "1,000,000,000,000: << trillion[ >>];\n"
+            "1,000,000,000,000,000: << quadrillion[ >>];\n"
                // overflow rule.  This rule specifies that values of a
                // quadrillion or more are shown in numerals rather than words.
                // The == token means to format (with new rules) the value
@@ -85,7 +105,7 @@ en {
                // be formatted with a DecimalFormat object, and that it
                // should be formatted with no decimal places, at least one
                // digit, and a thousands separator.
-            "1,000,000,000,000,000: =#,##0=;\n"
+            "1,000,000,000,000,000,000: =#,##0=;\n"
 
         // %default is a more elaborate form of %simplified;  It is basically
         // the same, except that it introduces "and" before the ones digit
@@ -109,7 +129,8 @@ en {
             "1,000,000: << million[>%%commas>];\n"
             "1,000,000,000: << billion[>%%commas>];\n"
             "1,000,000,000,000: << trillion[>%%commas>];\n"
-            "1,000,000,000,000,000: =#,##0=;\n"
+            "1,000,000,000,000,000: << quadrillion[ >>];\n"
+            "1,000,000,000,000,000,000: =#,##0=;\n"
         // if the value passed to this rule set is greater than 100, don't
         // add the "and"; if it's less than 100, add "and" before the last
         // digits
@@ -128,9 +149,10 @@ en {
             "100: , =%default=;\n"
                // put a comma after the millions (or whatever precedes the
                // thousands)
-            "1000: , <%default< thousand, >%default>;\n"
+            "1000: , <%default< thousand[, >%default>];\n" // fixed Ticket #5409, RBNF large numbers with small digits
                // and so on...
             "1,000,000: , =%default=;"
+
         // %%lenient-parse isn't really a set of number formatting rules;
         // it's a set of collation rules.  Lenient-parse mode uses a Collator
         // object to compare fragments of the text being parsed to the text
@@ -143,12 +165,25 @@ en {
         //                "& ' ' , ',' ;\n"
         "   &\u0000 << ' ' << ',' << '-'; \n"
     }
+    SpelloutLocalizations {
+        { "%simplified", "%default", "%year",
+        }
+        { "en", 
+          "simplified", "full", "year",
+        }
+    }
 
 
 //         * This rule set adds an English ordinal abbreviation to the end of a
 //         * number.  For example, 2 is formatted as "2nd".  Parsing doesn't work with
 //         * this rule set.  To parse, use DecimalFormat on the numeral.
     OrdinalRules {
+			//1D48;MODIFIER LETTER SMALL D;Lm;0;L;<super> 0064;;;;N;;;;;
+			//02B0;MODIFIER LETTER SMALL H;Lm;0;L;<super> 0068;;;;N;;;;;
+			//207F;SUPERSCRIPT LATIN SMALL LETTER N;Ll;0;L;<super> 006E;;;;N;;;;;
+			//02B3;MODIFIER LETTER SMALL R;Lm;0;L;<super> 0072;;;;N;;;;;
+			//02E2;MODIFIER LETTER SMALL S;Lm;0;L;<super> 0073;;;;N;;;;;
+			//1D57;MODIFIER LETTER SMALL T;Lm;0;L;<super> 0074;;;;N;;;;;
         // this rule set formats the numeral and calls %%abbrev to
         // supply the abbreviation
         "%main:\n"
@@ -157,9 +192,10 @@ en {
         "%%abbrev:\n"
                // the abbreviations.  Everything from 4 to 19 ends in "th"
             "th; st; nd; rd; th;\n"
+            //"\u1D57\u02B0; \u02E2\u1D57; \u207F\u1D48; \u02B3\u1D48; \u1D57\u02B0;\n" // with superscript letters
                // at 20, we begin repeating the cycle every 10 (13 is "13th",
                // but 23 and 33 are "23rd" and "33rd")  We do this by
-               // ignoring all bug the ones digit in selecting the abbreviation
+               // ignoring all but the ones digit in selecting the abbreviation
             "20: >>;\n"
                // at 100, we repeat the whole cycle by considering only the
                // tens and ones digits in picking an abbreviation
