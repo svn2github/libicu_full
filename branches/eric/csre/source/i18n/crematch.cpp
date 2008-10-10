@@ -504,8 +504,18 @@ UBool CSREMatcher::find() {
             UChar32 theChar = fPattern->fInitialChar;
             for (;;) {
                 int32_t pos = startPos;
+#if 0
                 U16_NEXT(inputBuf, startPos, fActiveLimit, c);  // like c = inputBuf[startPos++];
                 if (c == theChar) {
+#else
+                UnicodeString pattern(theChar);
+                int32_t matchLength = ucol_startsWith(fColl,
+                                                      pattern.getBuffer(), pattern.length(),
+                                                      inputBuf + pos, fActiveLimit - pos);
+
+                // **** Should this just be "> 0"?? ****
+                if (matchLength >= 0) {
+#endif
                     MatchAt(pos, FALSE, fDeferredStatus);
                     if (U_FAILURE(fDeferredStatus)) {
                         return FALSE;
