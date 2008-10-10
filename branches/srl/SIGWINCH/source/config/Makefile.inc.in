@@ -34,6 +34,8 @@ datarootdir = @datarootdir@
 datadir = @datadir@
 sbindir = @sbindir@
 
+BUGGY_MAKE_FILE:::::::::::
+
 # about the ICU version
 VERSION = @VERSION@
 UNICODE_VERSION = @UNICODE_VERSION@
