@@ -869,7 +869,7 @@ void TestOpenVsOpenRules(){
     int32_t numLocales = uloc_countAvailable();
     int32_t sizeOfStdSet;
     uint32_t adder;
-    UChar *str;
+    UChar str[41]; /* create an array of UChar of size maximum strSize + 1 */
     USet *stdSet;
     char* curLoc;
     UCollator * c1;
@@ -933,7 +933,6 @@ void TestOpenVsOpenRules(){
             
             /* make a string with these characters in it */
             strSize = (rand()%40) + 1;
-            str = (UChar*)malloc(sizeof(UChar) * (strSize + 1));
             
             for(z = 0; z < strSize; z++){
                 str[z] = uset_charAt(eSet, rand()%eSize);
@@ -972,8 +971,6 @@ void TestOpenVsOpenRules(){
             /* check that the keys are the same */
             doAssert((memcmp(sortKey1, sortKey2, sortKeyLen1) == 0), "Keys are not equivalent");
 
-
-
             /* clean up after each string */
             free(sortKey1);
             free(sortKey2);    
@@ -984,6 +981,8 @@ void TestOpenVsOpenRules(){
         ucol_close(c1);
         ucol_close(c2);
     }
+    /* final clean up */
+    uset_close(stdSet);
 }
 /*
 ----------------------------------------------------------------------------

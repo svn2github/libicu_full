@@ -567,12 +567,15 @@ struct Enumerator {
   const UConverterSelector* sel;
 };
 
+U_CDECL_BEGIN
 
 static void U_CALLCONV
 ucnvsel_close_selector_iterator(UEnumeration *enumerator) {
   uprv_free(((Enumerator*)(enumerator->context))->index);
   uprv_free(enumerator->context);
+  uprv_free(enumerator);
 }
+
 
 static int32_t U_CALLCONV
 ucnvsel_count_encodings(UEnumeration *enumerator, UErrorCode *status) {
@@ -615,6 +618,9 @@ static void U_CALLCONV ucnvsel_reset_iterator(UEnumeration* enumerator,
   }
   ((Enumerator*)(enumerator->context))->cur = 0;
 }
+
+U_CDECL_END
+
 
 static const UEnumeration defaultEncodings = {
   NULL,
