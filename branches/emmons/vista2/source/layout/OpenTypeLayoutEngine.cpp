@@ -239,7 +239,33 @@ le_int32 OpenTypeLayoutEngine::glyphProcessing(const LEUnicode chars[], le_int32
 
     return count;
 }
+// Input: characters, tags
+// Output: glyphs, char indices
+le_int32 OpenTypeLayoutEngine::glyphSubstitution(le_int32 count, le_int32 max, le_bool rightToLeft,
+                                               LEGlyphStorage &glyphStorage, LEErrorCode &success)
+{
+    if (LE_FAILURE(success)) {
+        return 0;
+    }
 
+    if ( count < 0 || max < 0 ) {
+        success = LE_ILLEGAL_ARGUMENT_ERROR;
+        return 0;
+    }
+   
+    if (fGSUBTable != NULL) {
+        if (fScriptTagV2 != nullScriptTag && fGSUBTable->coversScriptAndLanguage(fScriptTagV2,fLangSysTag)) { 
+            count = fGSUBTable->process(glyphStorage, rightToLeft, fScriptTagV2, fLangSysTag, fGDEFTable, fSubstitutionFilter,
+                                    fFeatureMap, fFeatureMapCount, fFeatureOrder);
+
+        } else {
+        count = fGSUBTable->process(glyphStorage, rightToLeft, fScriptTag, fLangSysTag, fGDEFTable, fSubstitutionFilter,
+                                    fFeatureMap, fFeatureMapCount, fFeatureOrder);
+        }
+    }
+
+    return count;
+}
 le_int32 OpenTypeLayoutEngine::glyphPostProcessing(LEGlyphStorage &tempGlyphStorage, LEGlyphStorage &glyphStorage, LEErrorCode &success)
 {
     if (LE_FAILURE(success)) {

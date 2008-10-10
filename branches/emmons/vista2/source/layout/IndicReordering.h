@@ -144,9 +144,9 @@ public:
 
     static const FeatureMap *getFeatureMap(le_int32 &count);
 
-	static const FeatureMap *getv2BasicShapingForms(le_int32 &count);
+	static const FeatureMap *getv2FeatureMap(le_int32 &count);
 
-    static void applyPresentationForms(LEGlyphStorage &glyphStorage);
+    static void applyPresentationForms(LEGlyphStorage &glyphStorage, le_int32 count);
 
 private:
     // do not instantiate

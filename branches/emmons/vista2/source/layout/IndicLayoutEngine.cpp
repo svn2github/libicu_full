@@ -29,7 +29,7 @@ IndicOpenTypeLayoutEngine::IndicOpenTypeLayoutEngine(const LEFontInstance *fontI
     : OpenTypeLayoutEngine(fontInstance, scriptCode, languageCode, typoFlags, gsubTable), fMPreFixups(NULL)
 {
 	if ( version2 ) {
-		fFeatureMap = IndicReordering::getv2BasicShapingForms(fFeatureMapCount);
+		fFeatureMap = IndicReordering::getv2FeatureMap(fFeatureMapCount);
 	} else {
         fFeatureMap = IndicReordering::getFeatureMap(fFeatureMapCount);
 	}
@@ -72,7 +72,8 @@ le_int32 IndicOpenTypeLayoutEngine::glyphProcessing(const LEUnicode chars[], le_
     }
 
     if (fVersion2) {
-        IndicReordering::applyPresentationForms(glyphStorage);
+        IndicReordering::applyPresentationForms(glyphStorage,retCount);
+        OpenTypeLayoutEngine::glyphSubstitution(count,max, rightToLeft, glyphStorage, success);
     } else {
         IndicReordering::adjustMPres(fMPreFixups, glyphStorage);
     }

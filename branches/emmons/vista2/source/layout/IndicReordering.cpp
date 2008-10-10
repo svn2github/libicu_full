@@ -466,7 +466,7 @@ static const FeatureMap featureMap[] = {
 
 static const le_int32 featureCount = LE_ARRAY_SIZE(featureMap);
 
-static const FeatureMap v2BasicShapingForms[] = {
+static const FeatureMap v2FeatureMap[] = {
 	{loclFeatureTag, loclFeatureMask},
     {nuktFeatureTag, nuktFeatureMask},
     {akhnFeatureTag, akhnFeatureMask},
@@ -475,13 +475,8 @@ static const FeatureMap v2BasicShapingForms[] = {
 	{blwfFeatureTag, blwfFeatureMask},
     {halfFeatureTag, halfFeatureMask},
     {vatuFeatureTag, vatuFeatureMask},
-    {cjctFeatureTag, cjctFeatureMask}
-};
-
-static const le_int32 v2BasicShapingFormsCount = LE_ARRAY_SIZE(v2BasicShapingForms);
-
-static const FeatureMap v2PresentationForms[] = {
-	{presFeatureTag, presFeatureMask},
+    {cjctFeatureTag, cjctFeatureMask},
+    {presFeatureTag, presFeatureMask},
     {abvsFeatureTag, abvsFeatureMask},
     {blwsFeatureTag, blwsFeatureMask},
     {pstsFeatureTag, pstsFeatureMask},
@@ -489,7 +484,7 @@ static const FeatureMap v2PresentationForms[] = {
 	{caltFeatureTag, caltFeatureMask}
 };
 
-static const le_int32 v2PresentationFormsCount = LE_ARRAY_SIZE(v2PresentationForms);
+static const le_int32 v2FeatureMapCount = LE_ARRAY_SIZE(v2FeatureMap);
 
 static const le_int8 stateTable[][CC_COUNT] =
 {
@@ -518,11 +513,11 @@ const FeatureMap *IndicReordering::getFeatureMap(le_int32 &count)
     return featureMap;
 }
 
-const FeatureMap *IndicReordering::getv2BasicShapingForms(le_int32 &count)
+const FeatureMap *IndicReordering::getv2FeatureMap(le_int32 &count)
 {
-    count = v2BasicShapingFormsCount;
+    count = v2FeatureMapCount;
 
-    return v2BasicShapingForms;
+    return v2FeatureMap;
 }
 
 le_int32 IndicReordering::findSyllable(const IndicClassTable *classTable, const LEUnicode *chars, le_int32 prev, le_int32 charCount)
@@ -890,11 +885,13 @@ void IndicReordering::adjustMPres(MPreFixups *mpreFixups, LEGlyphStorage &glyphS
     }
 }
 
-void IndicReordering::applyPresentationForms(LEGlyphStorage &glyphStorage)
+void IndicReordering::applyPresentationForms(LEGlyphStorage &glyphStorage, le_int32 count)
 {
+    LEErrorCode success = LE_NO_ERROR;
 
-  // fGSUBTable->process(glyphStorage, rightToLeft, fScriptTagV2, fLangSysTag, fGDEFTable, fSubstitutionFilter,
-  //                                 v2PresentationForms, v2PresentationFormsCount, fFeatureOrder);
+    for ( le_int32 i = 0 ; i < count ; i++ ) {
+        glyphStorage.setAuxData(i, presFormsMask , success);
+    }
 
 }
 

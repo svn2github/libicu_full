@@ -302,6 +302,8 @@ protected:
      */
     virtual le_int32 glyphProcessing(const LEUnicode chars[], le_int32 offset, le_int32 count, le_int32 max, le_bool rightToLeft,
             LEGlyphStorage &glyphStorage, LEErrorCode &success);
+ 
+    virtual le_int32 glyphSubstitution(le_int32 count, le_int32 max, le_bool rightToLeft, LEGlyphStorage &glyphStorage, LEErrorCode &success);
 
     /**
      * This method does any processing necessary to convert "fake"
