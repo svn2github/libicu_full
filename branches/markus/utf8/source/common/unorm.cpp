@@ -263,11 +263,9 @@ isAcceptable(void * /* context */,
 
 static UBool U_CALLCONV
 _enumPropertyStartsRange(const void *context, UChar32 start, UChar32 /*limit*/, uint32_t /*value*/) {
-    if(!U_IS_LEAD(start)) {
-        /* add the start code point to the USet */
-        const USetAdder *sa=(const USetAdder *)context;
-        sa->add(sa->set, start);
-    }
+    /* add the start code point to the USet */
+    const USetAdder *sa=(const USetAdder *)context;
+    sa->add(sa->set, start);
     return TRUE;
 }
 
@@ -409,7 +407,7 @@ unorm_getFCDTrieIndex(UChar32 &fcdHighStart, UErrorCode *pErrorCode) {
 
 static inline uint32_t
 _getNorm32(UChar c) {
-    return UTRIE2_GET32_FROM_BMP(&normTrie, c);
+    return UTRIE2_GET32_FROM_U16_SINGLE_LEAD(&normTrie, c);
 }
 
 static inline uint32_t
@@ -435,7 +433,7 @@ _getNorm32(const UChar *p, uint32_t mask) {
 
 static inline uint16_t
 _getFCD16(UChar c) {
-    return UTRIE2_GET16_FROM_BMP(&fcdTrie, c);
+    return UTRIE2_GET16_FROM_U16_SINGLE_LEAD(&fcdTrie, c);
 }
 
 static inline uint16_t
@@ -772,7 +770,7 @@ unorm_getCanonicalDecomposition(UChar32 c, UChar buffer[4], int32_t *pLength) {
     }
 
     norm32=UTRIE2_GET32(&normTrie, c);
-    if((norm32&_NORM_QC_NFD)!=0 && !U_IS_LEAD(c)) {
+    if(norm32&_NORM_QC_NFD) {
         if(isNorm32HangulOrJamo(norm32)) {
             /* Hangul syllable: decompose algorithmically */
             UChar c2;
@@ -924,26 +922,26 @@ _isTrueStarter(uint32_t norm32, uint32_t ccOrQCMask, uint32_t decompQCMask) {
 /* uchar.h */
 U_CAPI uint8_t U_EXPORT2
 u_getCombiningClass(UChar32 c) {
-#if UNORM_HARDCODE_DATA
-    if(!U_IS_LEAD(c)) {
-#else
+#if !UNORM_HARDCODE_DATA
     UErrorCode errorCode=U_ZERO_ERROR;
-    if(_haveData(errorCode) && !U_IS_LEAD(c)) {
+    if(_haveData(errorCode)) {
 #endif
         uint32_t norm32=UTRIE2_GET32(&normTrie, c);
         return (uint8_t)(norm32>>_NORM_CC_SHIFT);
+#if !UNORM_HARDCODE_DATA
     } else {
         return 0;
     }
+#endif
 }
 
 U_CFUNC UBool U_EXPORT2
 unorm_internalIsFullCompositionExclusion(UChar32 c) {
 #if UNORM_HARDCODE_DATA
-    if(auxTrie.index!=NULL && !U_IS_LEAD(c)) {
+    if(auxTrie.index!=NULL) {
 #else
     UErrorCode errorCode=U_ZERO_ERROR;
-    if(_haveData(errorCode) && auxTrie.index!=NULL && !U_IS_LEAD(c)) {
+    if(_haveData(errorCode) && auxTrie.index!=NULL) {
 #endif
         uint16_t aux=UTRIE2_GET16(&auxTrie, c);
         return (UBool)((aux&_NORM_AUX_COMP_EX_MASK)!=0);
@@ -955,10 +953,10 @@ unorm_internalIsFullCompositionExclusion(UChar32 c) {
 U_CFUNC UBool U_EXPORT2
 unorm_isCanonSafeStart(UChar32 c) {
 #if UNORM_HARDCODE_DATA
-    if(auxTrie.index!=NULL && !U_IS_LEAD(c)) {
+    if(auxTrie.index!=NULL) {
 #else
     UErrorCode errorCode=U_ZERO_ERROR;
-    if(_haveData(errorCode) && auxTrie.index!=NULL && !U_IS_LEAD(c)) {
+    if(_haveData(errorCode) && auxTrie.index!=NULL) {
 #endif
         uint16_t aux=UTRIE2_GET16(&auxTrie, c);
         return (UBool)((aux&_NORM_AUX_UNSAFE_MASK)==0);
@@ -1084,7 +1082,7 @@ u_getFC_NFKC_Closure(UChar32 c, UChar *dest, int32_t destCapacity, UErrorCode *p
         *pErrorCode=U_ILLEGAL_ARGUMENT_ERROR;
         return 0;
     }
-    if(_haveData(*pErrorCode) && auxTrie.index!=NULL && !U_IS_LEAD(c)) {
+    if(_haveData(*pErrorCode) && auxTrie.index!=NULL) {
         aux=UTRIE2_GET16(&auxTrie, c);
         aux&=_NORM_AUX_FNC_MASK;
     } else {
@@ -1123,10 +1121,6 @@ unorm_isNFSkippable(UChar32 c, UNormalizationMode mode) {
         return FALSE;
     }
 #endif
-
-    if(U_IS_LEAD(c)) {
-        return TRUE;
-    }
 
     /* handle trivial cases; set the comparison mask for the normal ones */
     switch(mode) {
@@ -1228,7 +1222,7 @@ unorm_getQuickCheck(UChar32 c, UNormalizationMode mode) {
     norm32=UTRIE2_GET32(&normTrie, c);
     norm32&=qcMask[mode];
 
-    if(norm32==0 || U_IS_LEAD(c)) {
+    if(norm32==0) {
         return UNORM_YES;
     } else if(norm32&_NORM_QC_ANY_NO) {
         return UNORM_NO;
@@ -1248,7 +1242,7 @@ unorm_getFCD16FromCodePoint(UChar32 c) {
 #if !UNORM_HARDCODE_DATA
         !_haveData(errorCode) ||
 #endif
-        fcdTrie.index==NULL || U_IS_LEAD(c)
+        fcdTrie.index==NULL
     ) {
         return 0;
     }
@@ -1507,7 +1501,7 @@ unorm_getDecomposition(UChar32 c, UBool compat,
 
         /* data lookup */
         norm32=UTRIE2_GET32(&normTrie, c);
-        if((norm32&qcMask)==0 || U_IS_LEAD(c)) {
+        if((norm32&qcMask)==0) {
             /* simple case: no decomposition */
             if(c<=0xffff) {
                 if(destCapacity>0) {

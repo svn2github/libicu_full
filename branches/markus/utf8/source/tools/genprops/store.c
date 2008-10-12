@@ -447,7 +447,7 @@ generateData(const char *dataDir, UBool csource) {
         dataInfo.formatVersion[0]=6;
         dataInfo.formatVersion[2]=0;
         dataInfo.formatVersion[3]=0;
-        memory=utrie2_fromUTrie(&trie2, &trie, 0, FALSE, &errorCode);
+        memory=utrie2_fromUTrie(&trie2, &trie, 0, &errorCode);
         if(U_FAILURE(errorCode)) {
             fprintf(
                 stderr,

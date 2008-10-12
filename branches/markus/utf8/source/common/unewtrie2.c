@@ -64,11 +64,6 @@
 
 /* Public UTrie2 API implementation ----------------------------------------- */
 
-/* for utrie2_fromUTrie(), defined in utrie.c */
-U_CAPI void U_EXPORT2
-utrie_enumGeneral(const UTrie *trie, UBool enumLeadCUNotCP,
-                  UTrieEnumValue *enumValue, UTrieEnumRange *enumRange, const void *context);
-
 typedef struct NewTrieAndStatus {
     UNewTrie2 *newTrie;
     uint32_t initialValue;
@@ -97,7 +92,13 @@ copyEnumRange(const void *context, UChar32 start, UChar32 limit, uint32_t value)
 
 #ifdef UTRIE2_DEBUG
 U_CAPI void U_EXPORT2
-utrie_printLengths(const UTrie *trie);
+utrie_printLengths(const UTrie *trie) {
+    long indexLength=trie->indexLength;
+    long dataLength=(long)trie->dataLength;
+    long totalLength=(long)sizeof(UTrieHeader)+indexLength*2+dataLength*(trie->data32!=NULL ? 4 : 2);
+    printf("**UTrieLengths** index:%6ld  data:%6ld  serialized:%6ld\n",
+           indexLength, dataLength, totalLength);
+}
 
 U_CAPI void U_EXPORT2
 utrie2_printLengths(const UTrie2 *trie, const char *which) {
@@ -111,10 +112,11 @@ utrie2_printLengths(const UTrie2 *trie, const char *which) {
 
 U_CAPI void * U_EXPORT2
 utrie2_fromUTrie(UTrie2 *trie2, const UTrie *trie1,
-                 uint32_t errorValue, UBool copyLeadCUNotCP,
+                 uint32_t errorValue,
                  UErrorCode *pErrorCode) {
     NewTrieAndStatus context;
     void *memory;
+    UChar lead;
 
     if(U_FAILURE(*pErrorCode)) {
         return NULL;
@@ -131,7 +133,18 @@ utrie2_fromUTrie(UTrie2 *trie2, const UTrie *trie1,
     context.countValues=0;
 #endif
     context.ok=TRUE;
-    utrie_enumGeneral(trie1, copyLeadCUNotCP, NULL, copyEnumRange, &context);
+    utrie_enum(trie1, NULL, copyEnumRange, &context);
+    for(lead=0xd800; lead<0xdc00; ++lead) {
+        uint32_t value;
+        if(trie1->data32==NULL) {
+            value=UTRIE_GET16_FROM_LEAD(trie1, lead);
+        } else {
+            value=UTRIE_GET32_FROM_LEAD(trie1, lead);
+        }
+        if(value!=trie1->initialValue) {
+            context.ok&=unewtrie2_set32ForLeadSurrogateCodeUnit(context.newTrie, lead, value);
+        }
+    }
     memory=NULL;
     if(context.ok) {
         memory=unewtrie2_build(context.newTrie,
@@ -289,11 +302,16 @@ unewtrie2_open(uint32_t initialValue, uint32_t errorValue, UErrorCode *pErrorCod
         trie->map[i]=0;
     }
     /*
-     * Reference counts for the null data block: all blocks but ASCII.
+     * Reference counts for the null data block: all blocks except for the ASCII blocks.
      * Plus 1 so that we don't drop this block during compaction.
+     * Plus as many as needed for lead surrogate code points.
      */
     /* i==trie->dataNullOffset */
-    trie->map[i++]=(0x110000>>UTRIE2_SHIFT_2)-(0x80>>UTRIE2_SHIFT_2)+1;
+    trie->map[i++]=
+        (0x110000>>UTRIE2_SHIFT_2)-
+        (0x80>>UTRIE2_SHIFT_2)+
+        1+
+        UTRIE2_LSCP_INDEX_2_LENGTH;
     j+=UTRIE2_DATA_BLOCK_LENGTH;
     for(; j<UNEWTRIE2_DATA_START_OFFSET; ++i, j+=UTRIE2_DATA_BLOCK_LENGTH) {
         trie->map[i]=0;
@@ -324,7 +342,7 @@ unewtrie2_open(uint32_t initialValue, uint32_t errorValue, UErrorCode *pErrorCod
 
     /* set the index-1 indexes for the linear index-2 block */
     for(i=0, j=0;
-        i<(UTRIE2_INDEX_2_BMP_LENGTH>>UTRIE2_SHIFT_1_2);
+        i<UTRIE2_OMITTED_BMP_INDEX_1_LENGTH;
         ++i, j+=UTRIE2_INDEX_2_BLOCK_LENGTH
     ) {
         trie->index1[i]=j;
@@ -413,16 +431,23 @@ unewtrie2_getData(const UNewTrie2 *trie, int32_t *pLength) {
 }
 
 static U_INLINE UBool
-isInNullBlock(UNewTrie2 *trie, UChar32 c) {
-    int32_t block=trie->index2[
-                trie->index1[c>>UTRIE2_SHIFT_1]+
-                ((c>>UTRIE2_SHIFT_2)&UTRIE2_INDEX_2_MASK)];
+isInNullBlock(UNewTrie2 *trie, UChar32 c, UBool forLSCP) {
+    int32_t i2, block;
+
+    if(U_IS_LEAD(c) && forLSCP) {
+        i2=(UTRIE2_LSCP_INDEX_2_OFFSET-(0xd800>>UTRIE2_SHIFT_2))+
+            (c>>UTRIE2_SHIFT_2);
+    } else {
+        i2=trie->index1[c>>UTRIE2_SHIFT_1]+
+            ((c>>UTRIE2_SHIFT_2)&UTRIE2_INDEX_2_MASK);
+    }
+    block=trie->index2[i2];
     return (UBool)(block==trie->dataNullOffset);
 }
 
-U_CAPI uint32_t U_EXPORT2
-unewtrie2_get32(const UNewTrie2 *trie, UChar32 c) {
-    int32_t block;
+static uint32_t
+get32(const UNewTrie2 *trie, UChar32 c, UBool fromLSCP) {
+    int32_t i2, block;
 
     /* valid trie and valid c? */
     if(trie==NULL) {
@@ -431,14 +456,32 @@ unewtrie2_get32(const UNewTrie2 *trie, UChar32 c) {
     if((uint32_t)c>0x10ffff) {
         return trie->errorValue;
     }
-    if(c>=trie->highStart) {
+    if(c>=trie->highStart && (!U_IS_LEAD(c) || fromLSCP)) {
         return trie->data[trie->dataLength-UTRIE2_DATA_GRANULARITY];
     }
 
-    block=trie->index2[
-            trie->index1[c>>UTRIE2_SHIFT_1]+
-            ((c>>UTRIE2_SHIFT_2)&UTRIE2_INDEX_2_MASK)];
+    if(U_IS_LEAD(c) && fromLSCP) {
+        i2=(UTRIE2_LSCP_INDEX_2_OFFSET-(0xd800>>UTRIE2_SHIFT_2))+
+            (c>>UTRIE2_SHIFT_2);
+    } else {
+        i2=trie->index1[c>>UTRIE2_SHIFT_1]+
+            ((c>>UTRIE2_SHIFT_2)&UTRIE2_INDEX_2_MASK);
+    }
+    block=trie->index2[i2];
     return trie->data[block+(c&UTRIE2_DATA_MASK)];
+}
+
+U_CAPI uint32_t U_EXPORT2
+unewtrie2_get32(const UNewTrie2 *trie, UChar32 c) {
+    return get32(trie, c, TRUE);
+}
+
+U_CAPI uint32_t U_EXPORT2
+unewtrie2_get32FromLeadSurrogateCodeUnit(const UNewTrie2 *trie, UChar32 c) {
+    if(!U_IS_LEAD(c)) {
+        return trie->errorValue;
+    }
+    return get32(trie, c, FALSE);
 }
 
 static int32_t
@@ -461,8 +504,12 @@ allocIndex2Block(UNewTrie2 *trie) {
 }
 
 static int32_t
-getIndex2Block(UNewTrie2 *trie, UChar32 c) {
+getIndex2Block(UNewTrie2 *trie, UChar32 c, UBool forLSCP) {
     int32_t i1, i2;
+
+    if(U_IS_LEAD(c) && forLSCP) {
+        return UTRIE2_LSCP_INDEX_2_OFFSET;
+    }
 
     i1=c>>UTRIE2_SHIFT_1;
     i2=trie->index1[i1];
@@ -552,10 +599,10 @@ setIndex2Entry(UNewTrie2 *trie, int32_t i2, int32_t block) {
  * @internal
  */
 static int32_t
-getDataBlock(UNewTrie2 *trie, UChar32 c) {
+getDataBlock(UNewTrie2 *trie, UChar32 c, UBool forLSCP) {
     int32_t i2, oldBlock, newBlock;
 
-    i2=getIndex2Block(trie, c);
+    i2=getIndex2Block(trie, c, forLSCP);
     if(i2<0) {
         return -1;  /* program error */
     }
@@ -579,8 +626,8 @@ getDataBlock(UNewTrie2 *trie, UChar32 c) {
 /**
  * @return TRUE if the value was successfully set
  */
-U_CAPI UBool U_EXPORT2
-unewtrie2_set32(UNewTrie2 *trie, UChar32 c, uint32_t value) {
+static UBool
+set32(UNewTrie2 *trie, UChar32 c, UBool forLSCP, uint32_t value) {
     int32_t block;
 
     /* valid, uncompacted trie and valid c? */
@@ -588,13 +635,23 @@ unewtrie2_set32(UNewTrie2 *trie, UChar32 c, uint32_t value) {
         return FALSE;
     }
 
-    block=getDataBlock(trie, c);
+    block=getDataBlock(trie, c, forLSCP);
     if(block<0) {
         return FALSE;
     }
 
     trie->data[block+(c&UTRIE2_DATA_MASK)]=value;
     return TRUE;
+}
+
+U_CAPI UBool U_EXPORT2
+unewtrie2_set32(UNewTrie2 *trie, UChar32 c, uint32_t value) {
+    return set32(trie, c, TRUE, value);
+}
+
+U_CAPI UBool U_EXPORT2
+unewtrie2_set32ForLeadSurrogateCodeUnit(UNewTrie2 *trie, UChar32 c, uint32_t value) {
+    return set32(trie, c, FALSE, value);
 }
 
 static void
@@ -655,7 +712,7 @@ unewtrie2_setRange32(UNewTrie2 *trie,
         UChar32 nextStart;
 
         /* set partial block at [start..following block boundary[ */
-        block=getDataBlock(trie, start);
+        block=getDataBlock(trie, start, TRUE);
         if(block<0) {
             return FALSE;
         }
@@ -689,13 +746,13 @@ unewtrie2_setRange32(UNewTrie2 *trie,
         int32_t i2;
         UBool setRepeatBlock=FALSE;
 
-        if(value==trie->initialValue && isInNullBlock(trie, start)) {
+        if(value==trie->initialValue && isInNullBlock(trie, start, TRUE)) {
             start+=UTRIE2_DATA_BLOCK_LENGTH; /* nothing to do */
             continue;
         }
 
         /* get index value */
-        i2=getIndex2Block(trie, start);
+        i2=getIndex2Block(trie, start, TRUE);
         if(i2<0) {
             return FALSE;  /* program error */
         }
@@ -740,7 +797,7 @@ unewtrie2_setRange32(UNewTrie2 *trie,
                 setIndex2Entry(trie, i2, repeatBlock);
             } else {
                 /* create and set and fill the repeatBlock */
-                repeatBlock=getDataBlock(trie, start);
+                repeatBlock=getDataBlock(trie, start, TRUE);
                 if(repeatBlock<0) {
                     return FALSE;
                 }
@@ -753,7 +810,7 @@ unewtrie2_setRange32(UNewTrie2 *trie,
 
     if(rest>0) {
         /* set partial block at [last block boundary..limit[ */
-        block=getDataBlock(trie, start);
+        block=getDataBlock(trie, start, TRUE);
         if(block<0) {
             return FALSE;
         }
@@ -1035,6 +1092,10 @@ compactData(UNewTrie2 *trie) {
 
     /* now adjust the index-2 table */
     for(i=0; i<trie->index2Length; ++i) {
+        if(i==UNEWTRIE2_INDEX_GAP_OFFSET) {
+            /* Gap indexes are invalid (-1). Skip over the gap. */
+            i+=UNEWTRIE2_INDEX_GAP_LENGTH;
+        }
         trie->index2[i]=trie->map[trie->index2[i]>>UTRIE2_SHIFT_2];
     }
     trie->dataNullOffset=trie->map[trie->dataNullOffset>>UTRIE2_SHIFT_2];
@@ -1058,7 +1119,7 @@ static void
 compactIndex2(UNewTrie2 *trie) {
     int32_t i, start, newStart, movedStart, overlap;
 
-    /* do not compact linear-ASCII index-2 blocks */
+    /* do not compact linear-BMP index-2 blocks */
     newStart=UTRIE2_INDEX_2_BMP_LENGTH;
     for(start=0, i=0; start<newStart; start+=UTRIE2_INDEX_2_BLOCK_LENGTH, ++i) {
         trie->map[i]=start;

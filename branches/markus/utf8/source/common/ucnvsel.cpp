@@ -736,7 +736,7 @@ U_CAPI UEnumeration *ucnvsel_selectForString(const UConverterSelector* sel,
   while (limit == NULL ? *s != 0 : s != limit) {
     UChar32 c;
     uint16_t pvIndex;
-    UTRIE2_NEXT16(&sel->constructedTrie, s, limit, c, pvIndex);
+    UTRIE2_U16_NEXT16(&sel->constructedTrie, s, limit, c, pvIndex);
     if (intersectMasks(mask, sel->pv+pvIndex, columns)) {
       break;
     }

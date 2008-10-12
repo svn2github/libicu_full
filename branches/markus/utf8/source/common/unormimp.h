@@ -340,7 +340,7 @@ unorm_getFCDTrieIndex(UChar32 &fcdHighStart, UErrorCode *pErrorCode);
  */
 static inline uint16_t
 unorm_getFCD16(const uint16_t *fcdTrieIndex, UChar c) {
-    return fcdTrieIndex[_UTRIE2_INDEX_FROM_BMP(fcdTrieIndex, c)];
+    return fcdTrieIndex[_UTRIE2_INDEX_FROM_U16_SINGLE_LEAD(fcdTrieIndex, c)];
 }
 
 /**
@@ -355,7 +355,7 @@ static inline uint16_t
 unorm_nextFCD16(const uint16_t *fcdTrieIndex, UChar32 fcdHighStart,
                 const UChar *&s, const UChar *limit) {
     UChar32 c=*s++;
-    uint16_t fcd=fcdTrieIndex[_UTRIE2_INDEX_FROM_BMP(fcdTrieIndex, c)];
+    uint16_t fcd=fcdTrieIndex[_UTRIE2_INDEX_FROM_U16_SINGLE_LEAD(fcdTrieIndex, c)];
     if(fcd!=0 && U16_IS_LEAD(c)) {
         UChar c2;
         if(s!=limit && U16_IS_TRAIL(c2=*s)) {
@@ -387,7 +387,7 @@ unorm_prevFCD16(const uint16_t *fcdTrieIndex, UChar32 fcdHighStart,
     UChar32 c=*--s;
     uint16_t fcd;
     if(!U16_IS_SURROGATE(c)) {
-        fcd=fcdTrieIndex[_UTRIE2_INDEX_FROM_BMP(fcdTrieIndex, c)];
+        fcd=fcdTrieIndex[_UTRIE2_INDEX_FROM_U16_SINGLE_LEAD(fcdTrieIndex, c)];
     } else {
         UChar c2;
         if(U16_IS_SURROGATE_TRAIL(c) && s!=start && U16_IS_LEAD(c2=*(s-1))) {

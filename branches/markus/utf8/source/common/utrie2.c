@@ -395,6 +395,8 @@ utrie2_swap(const UDataSwapper *ds,
 
 /* enumeration -------------------------------------------------------------- */
 
+#define MIN(a, b) ((a)<(b) ? (a) : (b))
+
 /* default UTrie2EnumValue() returns the input value itself */
 static uint32_t U_CALLCONV
 enumSameValue(const void *context, uint32_t value) {
@@ -461,20 +463,45 @@ enumEitherTrie(const UTrie2 *runTimeTrie, const UNewTrie2 *newTrie,
 
     /* enumerate index-2 blocks */
     for(c=start; c<limit && c<highStart;) {
-        if(runTimeTrie!=NULL) {
-            if(c<=0xffff) {
+        /* Code point limit for iterating inside this i2Block. */
+        UChar32 tempLimit=c+UTRIE2_CP_PER_INDEX_1_ENTRY;
+        if(limit<tempLimit) {
+            tempLimit=limit;
+        }
+        if(c<=0xffff) {
+            if(!U_IS_SURROGATE(c)) {
                 i2Block=c>>UTRIE2_SHIFT_2;
+            } else if(U_IS_SURROGATE_LEAD(c)) {
+                /*
+                 * Enumerate values for code points, not code units:
+                 * This special block has half the normal length.
+                 */
+                i2Block=UTRIE2_LSCP_INDEX_2_OFFSET;
+                tempLimit=MIN(0xdc00, limit);
             } else {
-                i2Block=index[(UTRIE2_INDEX_1_OFFSET-UTRIE2_OMITTED_BMP_INDEX_1_LENGTH)+
-                              (c>>UTRIE2_SHIFT_1)];
+                /*
+                 * Switch back to the normal part of the index-2 table.
+                 * Enumerate the second half of the surrogates block.
+                 */
+                i2Block=0xd800>>UTRIE2_SHIFT_2;
+                tempLimit=MIN(0xe000, limit);
             }
         } else {
-            i2Block=newTrie->index1[c>>UTRIE2_SHIFT_1];
-        }
-        if(i2Block==prevI2Block && (c-prev)>=UTRIE2_CP_PER_INDEX_1_ENTRY) {
-            /* the index-2 block is the same as the previous one, and filled with prevValue */
-            c+=UTRIE2_CP_PER_INDEX_1_ENTRY;
-            continue;
+            if(runTimeTrie!=NULL) {
+                i2Block=index[(UTRIE2_INDEX_1_OFFSET-UTRIE2_OMITTED_BMP_INDEX_1_LENGTH)+
+                              (c>>UTRIE2_SHIFT_1)];
+            } else {
+                i2Block=newTrie->index1[c>>UTRIE2_SHIFT_1];
+            }
+            if(i2Block==prevI2Block && (c-prev)>=UTRIE2_CP_PER_INDEX_1_ENTRY) {
+                /*
+                 * The index-2 block is the same as the previous one, and filled with prevValue.
+                 * Only possible for supplementary code points because the linear-BMP index-2
+                 * table creates unique i2Block values.
+                 */
+                c+=UTRIE2_CP_PER_INDEX_1_ENTRY;
+                continue;
+            }
         }
         prevI2Block=i2Block;
         if(i2Block==index2NullOffset) {
@@ -492,8 +519,8 @@ enumEitherTrie(const UTrie2 *runTimeTrie, const UNewTrie2 *newTrie,
             /* enumerate data blocks for one index-2 block */
             int32_t i2, i2Limit;
             i2=(c>>UTRIE2_SHIFT_2)&UTRIE2_INDEX_2_MASK;
-            if((c>>UTRIE2_SHIFT_1)==(limit>>UTRIE2_SHIFT_1)) {
-                i2Limit=(limit>>UTRIE2_SHIFT_2)&UTRIE2_INDEX_2_MASK;
+            if((c>>UTRIE2_SHIFT_1)==(tempLimit>>UTRIE2_SHIFT_1)) {
+                i2Limit=(tempLimit>>UTRIE2_SHIFT_2)&UTRIE2_INDEX_2_MASK;
             } else {
                 i2Limit=UTRIE2_INDEX_2_BLOCK_LENGTH;
             }

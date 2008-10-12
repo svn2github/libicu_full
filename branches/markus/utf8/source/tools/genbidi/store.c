@@ -312,7 +312,7 @@ generateData(const char *dataDir, UBool csource) {
     }
 
     prev=jgStart=0;
-    for(i=0; (row=upvec_getRow(pv, i, &start, &limit))!=NULL; ++i) {
+    for(i=0; (row=upvec_getRow(pv, i, &start, &limit))!=NULL && start<UPVEC_FIRST_SPECIAL_CP; ++i) {
         /* store most values from vector column 0 in the trie */
         if(!utrie_setRange32(pTrie, start, limit, *row, TRUE)) {
             fprintf(stderr, "genbidi error: unable to set trie value (overflow)\n");
@@ -397,7 +397,7 @@ generateData(const char *dataDir, UBool csource) {
         dataInfo.formatVersion[0]=2;
         dataInfo.formatVersion[2]=0;
         dataInfo.formatVersion[3]=0;
-        memory=utrie2_fromUTrie(&trie2, &trie, 0, FALSE, &errorCode);
+        memory=utrie2_fromUTrie(&trie2, &trie, 0, &errorCode);
         if(U_FAILURE(errorCode)) {
             fprintf(
                 stderr,

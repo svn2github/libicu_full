@@ -752,7 +752,7 @@ makeCaseClosure() {
         someMappingsAdded=FALSE;
 
         i=0;
-        while((row=upvec_getRow(pv, i, &start, &limit))!=NULL) {
+        while((row=upvec_getRow(pv, i, &start, &limit))!=NULL && start<UPVEC_FIRST_SPECIAL_CP) {
             value=*row;
             if(value!=0) {
                 while(start<limit) {
@@ -1102,7 +1102,7 @@ generateData(const char *dataDir, UBool csource) {
         dataInfo.formatVersion[0]=2;
         dataInfo.formatVersion[2]=0;
         dataInfo.formatVersion[3]=0;
-        memory=utrie2_fromUTrie(&trie2, &trie, 0, FALSE, &errorCode);
+        memory=utrie2_fromUTrie(&trie2, &trie, 0, &errorCode);
         if(U_FAILURE(errorCode)) {
             fprintf(
                 stderr,

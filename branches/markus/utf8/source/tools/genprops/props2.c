@@ -725,7 +725,7 @@ writeAdditionalData(FILE *f, uint8_t *p, int32_t capacity, int32_t indexes[UPROP
             }
 
             /* use UTrie2 */
-            memory=utrie2_fromUTrie(&trie2, &trie, trie.initialValue, FALSE, &errorCode);
+            memory=utrie2_fromUTrie(&trie2, &trie, trie.initialValue, &errorCode);
             if(U_FAILURE(errorCode)) {
                 fprintf(
                     stderr,

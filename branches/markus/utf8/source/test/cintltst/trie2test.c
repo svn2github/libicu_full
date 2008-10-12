@@ -133,14 +133,16 @@ testTrieGetters(const char *testName,
 
         while(start<limit) {
             if(start<=0xffff) {
-                if(valueBits==UTRIE2_16_VALUE_BITS) {
-                    value2=UTRIE2_GET16_FROM_BMP(trie, start);
-                } else {
-                    value2=UTRIE2_GET32_FROM_BMP(trie, start);
-                }
-                if(value!=value2) {
-                    log_err("error: unserialized trie(%s).fromBMP(U+%04lx)==0x%lx instead of 0x%lx\n",
-                            testName, (long)start, (long)value2, (long)value);
+                if(!U_IS_LEAD(start)) {
+                    if(valueBits==UTRIE2_16_VALUE_BITS) {
+                        value2=UTRIE2_GET16_FROM_U16_SINGLE_LEAD(trie, start);
+                    } else {
+                        value2=UTRIE2_GET32_FROM_U16_SINGLE_LEAD(trie, start);
+                    }
+                    if(value!=value2) {
+                        log_err("error: unserialized trie(%s).fromBMP(U+%04lx)==0x%lx instead of 0x%lx\n",
+                                testName, (long)start, (long)value2, (long)value);
+                    }
                 }
             } else {
                 if(valueBits==UTRIE2_16_VALUE_BITS) {
@@ -207,6 +209,36 @@ testTrieGetters(const char *testName,
         ++start;
     }
 
+    if(0!=strncmp(testName, "dummy", 5) && 0!=strncmp(testName, "trie1", 5)) {
+        /* test values for lead surrogate code units */
+        for(start=0xd800; start<0xdc00; ++start) {
+            switch(start) {
+            case 0xd800:
+                value=90;
+                break;
+            case 0xd999:
+                value=94;
+                break;
+            case 0xdbff:
+                value=99;
+                break;
+            default:
+                value=initialValue;
+                break;
+            }
+            if(valueBits==UTRIE2_16_VALUE_BITS) {
+                value2=UTRIE2_GET16_FROM_U16_SINGLE_LEAD(trie, start);
+            } else {
+                value2=UTRIE2_GET32_FROM_U16_SINGLE_LEAD(trie, start);
+            }
+            if(value2!=value) {
+                log_err("error: unserialized trie(%s).lscu[U+%04lx]==0x%lx instead of 0x%lx\n",
+                        testName, (long)start, (long)value2, (long)value);
+            }
+        }
+    }
+
+    /* test errorValue */
     if(valueBits==UTRIE2_16_VALUE_BITS) {
         value=UTRIE2_GET16(trie, -1);
         value2=UTRIE2_GET16(trie, 0x110000);
@@ -270,6 +302,34 @@ testNewTrieGetters(const char *testName,
         ++start;
     }
 
+    /* test values for lead surrogate code units */
+    for(start=0xd7ff; start<0xdc01; ++start) {
+        switch(start) {
+        case 0xd7ff:
+        case 0xdc00:
+            value=errorValue;
+            break;
+        case 0xd800:
+            value=90;
+            break;
+        case 0xd999:
+            value=94;
+            break;
+        case 0xdbff:
+            value=99;
+            break;
+        default:
+            value=initialValue;
+            break;
+        }
+        value2=unewtrie2_get32FromLeadSurrogateCodeUnit(newTrie, start);
+        if(value2!=value) {
+            log_err("error: newTrie(%s).lscu[U+%04lx]==0x%lx instead of 0x%lx\n",
+                    testName, (long)start, (long)value2, (long)value);
+        }
+    }
+
+    /* test errorValue */
     value=unewtrie2_get32(newTrie, -1);
     value2=unewtrie2_get32(newTrie, 0x110000);
     if(value!=errorValue || value2!=errorValue) {
@@ -318,9 +378,9 @@ testTrieUTF16(const char *testName,
         U16_NEXT(s, sIndex, length, c2);
         c=0x33;
         if(valueBits==UTRIE2_16_VALUE_BITS) {
-            UTRIE2_NEXT16(trie, p, limit, c, value);
+            UTRIE2_U16_NEXT16(trie, p, limit, c, value);
         } else {
-            UTRIE2_NEXT32(trie, p, limit, c, value);
+            UTRIE2_U16_NEXT32(trie, p, limit, c, value);
         }
         if(value!=values[i]) {
             log_err("error: wrong value from UTRIE2_NEXT(%s)(U+%04lx): 0x%lx instead of 0x%lx\n",
@@ -343,9 +403,9 @@ testTrieUTF16(const char *testName,
         U16_PREV(s, 0, sIndex, c2);
         c=0x33;
         if(valueBits==UTRIE2_16_VALUE_BITS) {
-            UTRIE2_PREV16(trie, s, p, c, value);
+            UTRIE2_U16_PREV16(trie, s, p, c, value);
         } else {
-            UTRIE2_PREV32(trie, s, p, c, value);
+            UTRIE2_U16_PREV32(trie, s, p, c, value);
         }
         if(value!=values[i]) {
             log_err("error: wrong value from UTRIE2_PREV(%s)(U+%04lx): 0x%lx instead of 0x%lx\n",
@@ -695,6 +755,11 @@ makeNewTrieWithRanges(const char *testName, UBool withClone,
             ok&=unewtrie2_setRange32(newTrie, start, limit, value, overwrite);
         }
     }
+
+    /* set some values for lead surrogate code units */
+    ok&=unewtrie2_set32ForLeadSurrogateCodeUnit(newTrie, 0xd800, 90);
+    ok&=unewtrie2_set32ForLeadSurrogateCodeUnit(newTrie, 0xd999, 94);
+    ok&=unewtrie2_set32ForLeadSurrogateCodeUnit(newTrie, 0xdbff, 99);
     if(ok) {
         return newTrie;
     } else {
@@ -789,33 +854,6 @@ checkRanges2[]={
     { 0x280,    6 },
     { 0x281,    0 },
     { 0x2c0,    6 },
-    { 0x2f883,  0 },
-    { 0x2f987,  0x7a },
-    { 0x2fa98,  5 },
-    { 0x2fedc,  0x7a },
-    { 0x2ffaa,  1 },
-    { 0x2ffab,  2 },
-    { 0x2ffbb,  0 },
-    { 0x2ffc0,  7 },
-    { 0x110000, 0 }
-};
-
-static const CheckRange
-checkRanges2WithLeadCU[]={
-    { 0,        0 },
-    { 0x21,     0 },
-    { 0x72,     0x5555 },
-    { 0xdd,     3 },
-    { 0xde,     4 },
-    { 0x201,    0 },
-    { 0x240,    6 },
-    { 0x241,    0 },
-    { 0x280,    6 },
-    { 0x281,    0 },
-    { 0x2c0,    6 },
-    { 0xd87e,   0 },
-    { 0xd87f,   0x820 },
-    { 0xd880,   0x840 },
     { 0x2f883,  0 },
     { 0x2f987,  0x7a },
     { 0x2fa98,  5 },
@@ -1085,6 +1123,10 @@ FreeBlocksTest(void) {
     ok&=unewtrie2_setRange32(newTrie, 0x1000, 0x3000, 2, TRUE);
     ok&=unewtrie2_setRange32(newTrie, 0x2000, 0x4000, 3, TRUE);
     ok&=unewtrie2_setRange32(newTrie, 0x1000, 0x4000, 1, TRUE);
+    /* set some values for lead surrogate code units */
+    ok&=unewtrie2_set32ForLeadSurrogateCodeUnit(newTrie, 0xd800, 90);
+    ok&=unewtrie2_set32ForLeadSurrogateCodeUnit(newTrie, 0xd999, 94);
+    ok&=unewtrie2_set32ForLeadSurrogateCodeUnit(newTrie, 0xdbff, 99);
     if(!ok) {
         log_err("error: setting lots of ranges into a trie failed (%s)\n", testName);
         unewtrie2_close(newTrie);
@@ -1137,6 +1179,13 @@ GrowDataArrayTest(void) {
     for(i=0x8a0; i<0x110000; ++i) {
         ok&=unewtrie2_set32(newTrie, i, 5);
     }
+    for(i=0xd800; i<0xdc00; ++i) {
+        ok&=unewtrie2_set32ForLeadSurrogateCodeUnit(newTrie, i, 1);
+    }
+    /* set some values for lead surrogate code units */
+    ok&=unewtrie2_set32ForLeadSurrogateCodeUnit(newTrie, 0xd800, 90);
+    ok&=unewtrie2_set32ForLeadSurrogateCodeUnit(newTrie, 0xd999, 94);
+    ok&=unewtrie2_set32ForLeadSurrogateCodeUnit(newTrie, 0xdbff, 99);
     if(!ok) {
         log_err("error: setting lots of values into a trie failed (%s)\n", testName);
         unewtrie2_close(newTrie);
@@ -1223,10 +1272,10 @@ makeNewTrie1WithRanges(const char *testName,
 static void
 testTrie2FromTrie1(const char *testName,
                    const SetRange setRanges[], int32_t countSetRanges,
-                   const CheckRange checkRanges[], int32_t countCheckRanges,
-                   const CheckRange checkRangesWithLeadCU[], int32_t countCheckRangesWithLeadCU) {
+                   const CheckRange checkRanges[], int32_t countCheckRanges) {
     uint32_t memory1_16[3000], memory1_32[3000];
     int32_t length16, length32;
+    UChar lead;
 
     char name[40];
 
@@ -1265,41 +1314,41 @@ testTrie2FromTrie1(const char *testName,
 
     getSpecialValues(checkRanges, countCheckRanges, &initialValue, &errorValue);
 
-    /* test with copyLeadCUNotCP=FALSE */
-
     uprv_strcpy(name, testName);
     uprv_strcat(name, ".16");
-    trie2_memory=utrie2_fromUTrie(&trie2, &trie1_16, errorValue, FALSE, &errorCode);
+    trie2_memory=utrie2_fromUTrie(&trie2, &trie1_16, errorValue, &errorCode);
     if(U_SUCCESS(errorCode)) {
         testTrieRunTime(name, &trie2, UTRIE2_16_VALUE_BITS, checkRanges, countCheckRanges);
+        for(lead=0xd800; lead<0xdc00; ++lead) {
+            uint32_t value1, value2;
+            value1=UTRIE_GET16_FROM_LEAD(&trie1_16, lead);
+            value2=UTRIE2_GET16_FROM_U16_SINGLE_LEAD(&trie2, lead);
+            if(value1!=value2) {
+                log_err("error: utrie2_fromUTrie(%s) wrong value %ld!=%ld "
+                        "from lead surrogate code unit U+%04lx\n",
+                        name, (long)value2, (long)value1, (long)lead);
+                break;
+            }
+        }
     }
     uprv_free(trie2_memory);
 
     uprv_strcpy(name, testName);
     uprv_strcat(name, ".32");
-    trie2_memory=utrie2_fromUTrie(&trie2, &trie1_32, errorValue, FALSE, &errorCode);
+    trie2_memory=utrie2_fromUTrie(&trie2, &trie1_32, errorValue, &errorCode);
     if(U_SUCCESS(errorCode)) {
         testTrieRunTime(name, &trie2, UTRIE2_32_VALUE_BITS, checkRanges, countCheckRanges);
-    }
-    uprv_free(trie2_memory);
-
-    /* test with copyLeadCUNotCP=TRUE */
-
-    uprv_strcpy(name, testName);
-    uprv_strcat(name, ".leadCU.16");
-    trie2_memory=utrie2_fromUTrie(&trie2, &trie1_16, errorValue, TRUE, &errorCode);
-    if(U_SUCCESS(errorCode)) {
-        testTrieRunTime(name, &trie2, UTRIE2_16_VALUE_BITS,
-                        checkRangesWithLeadCU, countCheckRangesWithLeadCU);
-    }
-    uprv_free(trie2_memory);
-
-    uprv_strcpy(name, testName);
-    uprv_strcat(name, ".leadCU.32");
-    trie2_memory=utrie2_fromUTrie(&trie2, &trie1_32, errorValue, TRUE, &errorCode);
-    if(U_SUCCESS(errorCode)) {
-        testTrieRunTime(name, &trie2, UTRIE2_32_VALUE_BITS,
-                        checkRangesWithLeadCU, countCheckRangesWithLeadCU);
+        for(lead=0xd800; lead<0xdc00; ++lead) {
+            uint32_t value1, value2;
+            value1=UTRIE_GET32_FROM_LEAD(&trie1_32, lead);
+            value2=UTRIE2_GET32_FROM_U16_SINGLE_LEAD(&trie2, lead);
+            if(value1!=value2) {
+                log_err("error: utrie2_fromUTrie(%s) wrong value %ld!=%ld "
+                        "from lead surrogate code unit U+%04lx\n",
+                        name, (long)value2, (long)value1, (long)lead);
+                break;
+            }
+        }
     }
     uprv_free(trie2_memory);
 }
@@ -1308,8 +1357,7 @@ static void
 Trie12ConversionTest(void) {
     testTrie2FromTrie1("trie1->trie2",
                        setRanges2, LENGTHOF(setRanges2),
-                       checkRanges2, LENGTHOF(checkRanges2),
-                       checkRanges2WithLeadCU, LENGTHOF(checkRanges2WithLeadCU));
+                       checkRanges2, LENGTHOF(checkRanges2));
 }
 
 void

@@ -2010,12 +2010,12 @@ generateData(const char *dataDir, UBool csource) {
         dataInfo.formatVersion[0]=3;
         dataInfo.formatVersion[2]=0;
         dataInfo.formatVersion[3]=0;
-        normMemory=utrie2_fromUTrie(&normRuntimeTrie2, &normRuntimeTrie, 0, TRUE, &errorCode);
+        normMemory=utrie2_fromUTrie(&normRuntimeTrie2, &normRuntimeTrie, 0, &errorCode);
         if(fcdTrieSize>0) {
-            fcdMemory=utrie2_fromUTrie(&fcdRuntimeTrie2, &fcdRuntimeTrie, 0, TRUE, &errorCode);
+            fcdMemory=utrie2_fromUTrie(&fcdRuntimeTrie2, &fcdRuntimeTrie, 0, &errorCode);
         }
         if(auxTrieSize>0) {
-            auxMemory=utrie2_fromUTrie(&auxRuntimeTrie2, &auxRuntimeTrie, 0, FALSE, &errorCode);
+            auxMemory=utrie2_fromUTrie(&auxRuntimeTrie2, &auxRuntimeTrie, 0, &errorCode);
         }
         if(U_FAILURE(errorCode)) {
             fprintf(

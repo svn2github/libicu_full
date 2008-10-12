@@ -693,17 +693,6 @@ utrie_compact(UNewTrie *trie, UBool overlap, UErrorCode *pErrorCode) {
 
 /* serialization ------------------------------------------------------------ */
 
-#ifdef UTRIE2_DEBUG
-U_CAPI void U_EXPORT2
-utrie_printLengths(const UTrie *trie) {
-    long indexLength=trie->indexLength;
-    long dataLength=(long)trie->dataLength;
-    long totalLength=(long)sizeof(UTrieHeader)+indexLength*2+dataLength*(trie->data32!=NULL ? 4 : 2);
-    printf("**UTrieLengths** index:%6ld  data:%6ld  serialized:%6ld\n",
-           indexLength, dataLength, totalLength);
-}
-#endif
-
 #ifdef UNEWTRIE2_COMPARE_WITH_UTRIE
 U_CAPI void U_EXPORT2
 unewtrie2_compareWithUTrie(const UNewTrie *trie1, UBool reduceTo16Bits, UBool copyLeadCUNotCP);
@@ -1072,8 +1061,8 @@ enumSameValue(const void *context, uint32_t value) {
  * The values are transformed from the raw trie entries by the enumValue function.
  */
 U_CAPI void U_EXPORT2
-utrie_enumGeneral(const UTrie *trie, UBool enumLeadCUNotCP,
-                  UTrieEnumValue *enumValue, UTrieEnumRange *enumRange, const void *context) {
+utrie_enum(const UTrie *trie,
+           UTrieEnumValue *enumValue, UTrieEnumRange *enumRange, const void *context) {
     const uint32_t *data32;
     const uint16_t *index;
 
@@ -1108,7 +1097,7 @@ utrie_enumGeneral(const UTrie *trie, UBool enumLeadCUNotCP,
 
     /* enumerate BMP - the main loop enumerates data blocks */
     for(i=0, c=0; c<=0xffff; ++i) {
-        if(c==0xd800 && !enumLeadCUNotCP) {
+        if(c==0xd800) {
             /* skip lead surrogate code _units_, go to lead surr. code _points_ */
             i=UTRIE_BMP_INDEX_LENGTH;
         } else if(c==0xdc00) {
@@ -1247,12 +1236,6 @@ utrie_enumGeneral(const UTrie *trie, UBool enumLeadCUNotCP,
 
     /* deliver last range */
     enumRange(context, prev, c, prevValue);
-}
-
-U_CAPI void U_EXPORT2
-utrie_enum(const UTrie *trie,
-           UTrieEnumValue *enumValue, UTrieEnumRange *enumRange, const void *context) {
-    utrie_enumGeneral(trie, FALSE, enumValue, enumRange, context);
 }
 
 #ifdef UNEWTRIE2_COMPARE_WITH_UTRIE
