@@ -17,6 +17,7 @@
 *   It is a kind of compressed, serializable table of 16- or 32-bit values associated with
 *   Unicode code points (0..0x10ffff).
 */
+
 #ifdef UTRIE_DEBUG
 #   include <stdio.h>
 #endif
@@ -693,11 +694,6 @@ utrie_compact(UNewTrie *trie, UBool overlap, UErrorCode *pErrorCode) {
 
 /* serialization ------------------------------------------------------------ */
 
-#ifdef UNEWTRIE2_COMPARE_WITH_UTRIE
-U_CAPI void U_EXPORT2
-unewtrie2_compareWithUTrie(const UNewTrie *trie1, UBool reduceTo16Bits, UBool copyLeadCUNotCP);
-#endif
-
 /*
  * Default function for the folding value:
  * Just store the offset (16 bits) if there is any non-initial-value entry.
@@ -767,9 +763,6 @@ utrie_serialize(UNewTrie *trie, void *dt, int32_t capacity,
     data = (uint8_t*)dt;
     /* fold and compact if necessary, also checks that indexLength is within limits */
     if(!trie->isCompacted) {
-#ifdef UNEWTRIE2_COMPARE_WITH_UTRIE
-        unewtrie2_compareWithUTrie(trie, reduceTo16Bits, (UBool)(getFoldedValue!=defaultGetFoldedValue));
-#endif
         /* compact once without overlap to improve folding */
         utrie_compact(trie, FALSE, pErrorCode);
 
@@ -1237,80 +1230,3 @@ utrie_enum(const UTrie *trie,
     /* deliver last range */
     enumRange(context, prev, c, prevValue);
 }
-
-#ifdef UNEWTRIE2_COMPARE_WITH_UTRIE
-U_CAPI void U_EXPORT2
-utrie_enumNewTrie(const UNewTrie *trie,
-                  UTrieEnumValue *enumValue, UTrieEnumRange *enumRange, const void *context) {
-    const uint32_t *data32;
-    const int32_t *index;
-
-    uint32_t value, prevValue, initialValue;
-    UChar32 c, prev;
-    int32_t i, j, block, prevBlock, nullBlock;
-
-    /* check arguments */
-    if(trie==NULL || trie->index==NULL || trie->isCompacted || enumRange==NULL) {
-        return;
-    }
-    if(enumValue==NULL) {
-        enumValue=enumSameValue;
-    }
-
-    index=trie->index;
-    data32=trie->data;
-
-    /* get the enumeration value that corresponds to an initial-value trie data entry */
-    initialValue=enumValue(context, trie->data[0]);
-
-    /* set variables for previous range */
-    prevBlock=nullBlock=0;
-    prev=0;
-    prevValue=initialValue;
-
-    /* the main loop enumerates data blocks */
-    for(i=0, c=0; c<=0x10ffff; ++i) {
-        block=index[i];
-        block=ABS(block);
-        if(block==prevBlock) {
-            /* the block is the same as the previous one, and filled with value */
-            c+=UTRIE_DATA_BLOCK_LENGTH;
-        } else if(block==nullBlock) {
-            /* this is the all-initial-value block */
-            if(prevValue!=initialValue) {
-                if(prev<c) {
-                    if(!enumRange(context, prev, c, prevValue)) {
-                        return;
-                    }
-                }
-                prevBlock=nullBlock;
-                prev=c;
-                prevValue=initialValue;
-            }
-            c+=UTRIE_DATA_BLOCK_LENGTH;
-        } else {
-            prevBlock=block;
-            for(j=0; j<UTRIE_DATA_BLOCK_LENGTH; ++j) {
-                value=enumValue(context, data32[block+j]);
-                if(value!=prevValue) {
-                    if(prev<c) {
-                        if(!enumRange(context, prev, c, prevValue)) {
-                            return;
-                        }
-                    }
-                    if(j>0) {
-                        /* the block is not filled with all the same value */
-                        prevBlock=-1;
-                    }
-                    prev=c;
-                    prevValue=value;
-                }
-                ++c;
-            }
-        }
-    }
-
-    /* deliver last range */
-    enumRange(context, prev, c, prevValue);
-}
-#endif

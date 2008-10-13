@@ -20,7 +20,6 @@
 #include <time.h>
 #include "unicode/utypes.h"
 #include "unicode/putil.h"
-#include "utrie.h"
 #include "utrie2.h"
 #include "cstring.h"
 #include "writesrc.h"
@@ -140,57 +139,6 @@ usrc_writeArray(FILE *f,
 }
 
 U_CAPI void U_EXPORT2
-usrc_writeUTrieArrays(FILE *f,
-                      const char *indexPrefix, const char *dataPrefix,
-                      const UTrie *pTrie,
-                      const char *postfix) {
-    if(pTrie->data32==NULL) {
-        /* 16-bit trie */
-        usrc_writeArray(f, indexPrefix, pTrie->index, 16, pTrie->indexLength+pTrie->dataLength, postfix);
-    } else {
-        /* 32-bit trie */
-        usrc_writeArray(f, indexPrefix, pTrie->index, 16, pTrie->indexLength, postfix);
-        usrc_writeArray(f, dataPrefix, pTrie->data32, 32, pTrie->dataLength, postfix);
-    }
-}
-
-U_CAPI void U_EXPORT2
-usrc_writeUTrieStruct(FILE *f,
-                      const char *prefix,
-                      const UTrie *pTrie,
-                      const char *indexName, const char *dataName,
-                      const char *getFoldingOffsetName,
-                      const char *postfix) {
-    if(prefix!=NULL) {
-        fputs(prefix, f);
-    }
-    if(dataName==NULL) {
-        dataName="NULL";
-    }
-    if(getFoldingOffsetName==NULL) {
-        getFoldingOffsetName="utrie_defaultGetFoldingOffset";
-    }
-    fprintf(
-        f,
-        "    %s,\n"
-        "    %s,\n"
-        "    %s,\n"
-        "    %ld,\n"
-        "    %ld,\n"
-        "    %lu,\n"
-        "    %s\n",
-        indexName,
-        dataName,
-        getFoldingOffsetName,
-        (long)pTrie->indexLength, (long)pTrie->dataLength,
-        (unsigned long)pTrie->initialValue,
-        pTrie->isLatin1Linear ? "TRUE" : "FALSE");
-    if(postfix!=NULL) {
-        fputs(postfix, f);
-    }
-}
-
-U_CAPI void U_EXPORT2
 usrc_writeUTrie2Arrays(FILE *f,
                        const char *indexPrefix, const char *data32Prefix,
                        const UTrie2 *pTrie,
@@ -219,7 +167,7 @@ usrc_writeUTrie2Struct(FILE *f,
         fprintf(
             f,
             "    %s,\n"         /* index */
-            "    %s+0x%lx,\n"   /* data16 */
+            "    %s+%ld,\n"     /* data16 */
             "    NULL,\n",      /* data32 */
             indexName,
             indexName, 
@@ -236,8 +184,8 @@ usrc_writeUTrie2Struct(FILE *f,
     }
     fprintf(
         f,
-        "    0x%lx,\n"          /* indexLength */
-        "    0x%lx,\n"          /* dataLength */
+        "    %ld,\n"            /* indexLength */
+        "    %ld,\n"            /* dataLength */
         "    0x%hx,\n"          /* index2NullOffset */
         "    0x%hx,\n"          /* dataNullOffset */
         "    0x%lx,\n"          /* initialValue */
