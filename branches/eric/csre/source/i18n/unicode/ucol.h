@@ -461,6 +461,7 @@ ucol_equal(const UCollator *coll,
  * @param sourceLength The length of source, or -1 if null-terminated.
  * @param target The target string.
  * @param targetLength The length of target, or -1 if null-terminated.
+ * @param matchWholeSource If <code>TRUE</code> the whole source string must match.
  * @return length of prefix in target, -1 if source is not a prefix of target.
  * @see ucol_strcoll
  * @see ucol_greater
@@ -470,7 +471,8 @@ ucol_equal(const UCollator *coll,
 U_STABLE int32_t U_EXPORT2 
 ucol_startsWith(const UCollator *coll,
                 const UChar     *source, int32_t sourceLength,
-                const UChar     *target, int32_t targetLength);
+                const UChar     *target, int32_t targetLength,
+                      UBool      matchWholeSource);
 
 /**
  * Compare two UTF-8 encoded trings.

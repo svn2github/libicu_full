@@ -508,10 +508,11 @@ UBool CSREMatcher::find() {
                 U16_NEXT(inputBuf, startPos, fActiveLimit, c);  // like c = inputBuf[startPos++];
                 if (c == theChar) {
 #else
-                UnicodeString pattern(theChar);
+              //UnicodeString pattern(theChar);
                 int32_t matchLength = ucol_startsWith(fColl,
-                                                      pattern.getBuffer(), pattern.length(),
-                                                      inputBuf + pos, fActiveLimit - pos);
+                                                      fPattern->fPattern.getBuffer(), fPattern->fPattern.length(),
+                                                      inputBuf + pos, fActiveLimit - pos,
+                                                      FALSE);
 
                 U16_FWD_1(inputBuf, startPos, fActiveLimit);
 
@@ -1574,7 +1575,8 @@ void CSREMatcher::MatchAt(int32_t startIdx, UBool toEnd, UErrorCode &status) {
                 UnicodeString pattern((UChar32) opValue);
                 int32_t matchLength = ucol_startsWith(fColl,
                                                       pattern.getBuffer(), pattern.length(),
-                                                      inputBuf + fp->fInputIdx, fActiveLimit - fp->fInputIdx);
+                                                      inputBuf + fp->fInputIdx, fActiveLimit - fp->fInputIdx,
+                                                      TRUE);
 
                 // **** Should this just be "> 0"?? ****
                 if (matchLength >= 0) {
@@ -1632,7 +1634,7 @@ void CSREMatcher::MatchAt(int32_t startIdx, UBool toEnd, UErrorCode &status) {
                     }
                 }
 #else
-                int32_t matchLength = ucol_startsWith(fColl, pPat, stringLen, pInp, fActiveLimit - fp->fInputIdx);
+                int32_t matchLength = ucol_startsWith(fColl, pPat, stringLen, pInp, fActiveLimit - fp->fInputIdx, TRUE);
 
                 // **** Should this just be "> 0"?? ****
                 if (matchLength >= 0) {
