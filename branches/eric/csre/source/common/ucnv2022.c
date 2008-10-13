@@ -754,6 +754,7 @@ changeState_2022(UConverter* _this,
     UConverterDataISO2022* myData2022 = ((UConverterDataISO2022*)_this->extraInfo);
     uint32_t key = myData2022->key;
     int32_t offset = 0;
+    int8_t initialToULength = _this->toULength;
     char c;
 
     value = VALID_NON_TERMINAL_2022;
@@ -806,7 +807,6 @@ DONE:
         return;
     } else if (value == INVALID_2022 ) {
         *err = U_ILLEGAL_ESCAPE_SEQUENCE;
-        return;
     } else /* value == VALID_TERMINAL_2022 */ {
         switch(var){
 #ifdef U_ENABLE_GENERIC_ISO_2022
@@ -938,6 +938,35 @@ DONE:
     }
     if(U_SUCCESS(*err)) {
         _this->toULength = 0;
+    } else if(*err==U_ILLEGAL_ESCAPE_SEQUENCE) {
+        if(_this->toULength>1) {
+            /*
+             * Ticket 5691: consistent illegal sequences:
+             * - We include at least the first byte (ESC) in the illegal sequence.
+             * - If any of the non-initial bytes could be the start of a character,
+             *   we stop the illegal sequence before the first one of those.
+             *   In escape sequences, all following bytes are "printable", that is,
+             *   unless they are completely illegal (>7f in SBCS, outside 21..7e in DBCS),
+             *   they are valid single/lead bytes.
+             *   For simplicity, we always only report the initial ESC byte as the
+             *   illegal sequence and back out all other bytes we looked at.
+             */
+            /* Back out some bytes. */
+            int8_t backOutDistance=_this->toULength-1;
+            int8_t bytesFromThisBuffer=_this->toULength-initialToULength;
+            if(backOutDistance<=bytesFromThisBuffer) {
+                /* same as initialToULength<=1 */
+                *source-=backOutDistance;
+            } else {
+                /* Back out bytes from the previous buffer: Need to replay them. */
+                _this->preToULength=(int8_t)(bytesFromThisBuffer-backOutDistance);
+                /* same as -(initialToULength-1) */
+                /* preToULength is negative! */
+                uprv_memcpy(_this->preToU, _this->toUBytes+1, -_this->preToULength);
+                *source-=bytesFromThisBuffer;
+            }
+            _this->toULength=1;
+        }
     } else if(*err==U_UNSUPPORTED_ESCAPE_SEQUENCE) {
         _this->toUCallbackReason = UCNV_UNASSIGNED;
     }
@@ -1118,6 +1147,7 @@ _2022FromGR94DBCS(uint32_t value) {
     }
 }
 
+#if 0 /* 5691: Call sites now check for validity. They can just += 0x8080 after that. */
 /*
  * This method does the reverse of _2022FromGR94DBCS(). Given the 2022 code point, it returns the
  * 2 byte value that is in the range A1..FE for each byte. Otherwise it returns the 2022 code point
@@ -1133,6 +1163,7 @@ _2022ToGR94DBCS(uint32_t value) {
         return value;
     }
 }
+#endif
 
 #ifdef U_ENABLE_GENERIC_ISO_2022
 
@@ -2148,7 +2179,7 @@ getTrailByte:
                                     /* Copy before we modify tmpSourceChar so toUnicodeCallback() sees the correct bytes. */
                                     mySourceChar = tmpSourceChar;
                                     if (cs == KSC5601) {
-                                        tmpSourceChar = _2022ToGR94DBCS(tmpSourceChar);
+                                        tmpSourceChar += 0x8080;  /* = _2022ToGR94DBCS(tmpSourceChar) */
                                     }
                                     tempBuf[0] = (char)(tmpSourceChar >> 8);
                                     tempBuf[1] = (char)(tmpSourceChar);
@@ -2657,12 +2688,8 @@ getTrailByte:
                             tempBuf[0] = (char)(mySourceChar + 0x80);
                             tempBuf[1] = (char)(trailByte + 0x80);
                             targetUniChar = ucnv_MBCSSimpleGetNextUChar(sharedData, tempBuf, 2, useFallback);
-                        } else {
-                            leadIsOk = TRUE; /* TODO: remove */
                         }
                         mySourceChar = (mySourceChar << 8) | (uint8_t)(trailByte);
-                    } else {
-                        trailIsOk = TRUE; /* TODO: remove */
                     }
                 } else {
                     args->converter->toUBytes[0] = (uint8_t)mySourceChar;
