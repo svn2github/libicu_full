@@ -1009,6 +1009,7 @@ EnumNewTrieForLeadSurrogateTest(void) {
             }
         } else {
             utrie2_close(trie);
+            break;
         }
     }
 }

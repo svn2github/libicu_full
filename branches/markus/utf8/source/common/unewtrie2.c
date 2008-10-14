@@ -1281,7 +1281,11 @@ utrie2_freeze(UTrie2 *trie, UTrie2ValueBits valueBits, UErrorCode *pErrorCode) {
 
     trie->indexLength=allIndexesLength;
     trie->dataLength=newTrie->dataLength;
-    trie->index2NullOffset=UTRIE2_INDEX_2_OFFSET+newTrie->index2NullOffset;
+    if(highStart<=0x10000) {
+        trie->index2NullOffset=0xffff;
+    } else {
+        trie->index2NullOffset=UTRIE2_INDEX_2_OFFSET+newTrie->index2NullOffset;
+    }
     trie->dataNullOffset=(uint16_t)(dataMove+newTrie->dataNullOffset);
     trie->highValueIndex=dataMove+trie->dataLength-UTRIE2_DATA_GRANULARITY;
 
@@ -1291,10 +1295,10 @@ utrie2_freeze(UTrie2 *trie, UTrie2ValueBits valueBits, UErrorCode *pErrorCode) {
     header->signature=UTRIE2_SIG; /* "Tri2" */
     header->options=(uint16_t)valueBits;
 
-    header->indexLength=(uint16_t)allIndexesLength;
-    header->shiftedDataLength=(uint16_t)(newTrie->dataLength>>UTRIE2_INDEX_SHIFT);
-    header->index2NullOffset=(uint16_t)(UTRIE2_INDEX_2_OFFSET+newTrie->index2NullOffset);
-    header->dataNullOffset=(uint16_t)(dataMove+newTrie->dataNullOffset);
+    header->indexLength=(uint16_t)trie->indexLength;
+    header->shiftedDataLength=(uint16_t)(trie->dataLength>>UTRIE2_INDEX_SHIFT);
+    header->index2NullOffset=trie->index2NullOffset;
+    header->dataNullOffset=trie->dataNullOffset;
     header->shiftedHighStart=(uint16_t)(highStart>>UTRIE2_SHIFT_1);
 
     /* fill the index and data arrays */

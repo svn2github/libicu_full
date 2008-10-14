@@ -641,7 +641,8 @@ struct UTrie2 {
     const uint32_t *data32;     /* NULL if 16b data is used via index */
 
     int32_t indexLength, dataLength;
-    uint16_t index2NullOffset, dataNullOffset;
+    uint16_t index2NullOffset;  /* 0xffff if there is no dedicated index-2 null block */
+    uint16_t dataNullOffset;
     uint32_t initialValue;
     /** Value returned for out-of-range code points and illegal UTF-8. */
     uint32_t errorValue;

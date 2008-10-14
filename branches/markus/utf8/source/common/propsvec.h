@@ -135,9 +135,10 @@ upvec_compactToUTrieHandler(void *context,
                             UErrorCode *pErrorCode);
 
 struct UPVecToUTrie2Context {
-    UNewTrie2 *newTrie;
+    UTrie2 *trie;
     int32_t initialValue;
     int32_t errorValue;
+    int32_t maxValue;
 };
 typedef struct UPVecToUTrie2Context UPVecToUTrie2Context;
 

@@ -712,8 +712,7 @@ writeAdditionalData(FILE *f, uint8_t *p, int32_t capacity, int32_t indexes[UPROP
         }
         if(f!=NULL) {
             UTrie trie={ NULL };
-            UTrie2 trie2;
-            void *memory;
+            UTrie2 *trie2;
 
             utrie_unserialize(&trie, p, length, &errorCode);
             if(U_FAILURE(errorCode)) {
@@ -725,7 +724,7 @@ writeAdditionalData(FILE *f, uint8_t *p, int32_t capacity, int32_t indexes[UPROP
             }
 
             /* use UTrie2 */
-            memory=utrie2_fromUTrie(&trie2, &trie, trie.initialValue, &errorCode);
+            trie2=utrie2_fromUTrie(&trie, trie.initialValue, &errorCode);
             if(U_FAILURE(errorCode)) {
                 fprintf(
                     stderr,
@@ -733,17 +732,38 @@ writeAdditionalData(FILE *f, uint8_t *p, int32_t capacity, int32_t indexes[UPROP
                     u_errorName(errorCode));
                 exit(errorCode);
             }
+            {
+                /* delete lead surrogate code unit values */
+                UChar lead;
+                UBool ok=TRUE;
+                trie2=utrie2_cloneAsThawed(trie2);
+                for(lead=0xd800; lead<0xdc00; ++lead) {
+                    ok&=utrie2_set32ForLeadSurrogateCodeUnit(trie2, lead, trie2->initialValue);
+                }
+                utrie2_freeze(trie2, UTRIE2_16_VALUE_BITS, &errorCode);
+                if(!ok || U_FAILURE(errorCode)) {
+                    fprintf(
+                        stderr,
+                        "genbidi error: deleting lead surrogate code unit values failed - ok=%d - %s\n",
+                        ok, u_errorName(errorCode));
+                    if(U_SUCCESS(errorCode)) {
+                        /* most likely reason for set32... to fail */
+                        errorCode=U_MEMORY_ALLOCATION_ERROR;
+                    }
+                    exit(errorCode);
+                }
+            }
 
             usrc_writeUTrie2Arrays(f,
                 "static const uint16_t propsVectorsTrie_index[%ld]={\n", NULL,
-                &trie2,
+                trie2,
                 "\n};\n\n");
             usrc_writeUTrie2Struct(f,
                 "static const UTrie2 propsVectorsTrie={\n",
-                &trie2, "propsVectorsTrie_index", NULL,
+                trie2, "propsVectorsTrie_index", NULL,
                 "};\n\n");
 
-            uprv_free(memory);
+            utrie2_close(trie2);
         }
 
         p+=length;

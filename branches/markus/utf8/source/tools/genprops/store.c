@@ -430,9 +430,8 @@ generateData(const char *dataDir, UBool csource) {
     if(csource) {
         /* write .c file for hardcoded data */
         UTrie trie={ NULL };
-        UTrie2 trie2;
+        UTrie2 *trie2;
         FILE *f;
-        void *memory;
 
         utrie_unserialize(&trie, trieBlock, trieSize, &errorCode);
         if(U_FAILURE(errorCode)) {
@@ -447,13 +446,34 @@ generateData(const char *dataDir, UBool csource) {
         dataInfo.formatVersion[0]=6;
         dataInfo.formatVersion[2]=0;
         dataInfo.formatVersion[3]=0;
-        memory=utrie2_fromUTrie(&trie2, &trie, 0, &errorCode);
+        trie2=utrie2_fromUTrie(&trie, 0, &errorCode);
         if(U_FAILURE(errorCode)) {
             fprintf(
                 stderr,
                 "genprops error: utrie2_fromUTrie() failed - %s\n",
                 u_errorName(errorCode));
             exit(errorCode);
+        }
+        {
+            /* delete lead surrogate code unit values */
+            UChar lead;
+            UBool ok=TRUE;
+            trie2=utrie2_cloneAsThawed(trie2);
+            for(lead=0xd800; lead<0xdc00; ++lead) {
+                ok&=utrie2_set32ForLeadSurrogateCodeUnit(trie2, lead, trie2->initialValue);
+            }
+            utrie2_freeze(trie2, UTRIE2_16_VALUE_BITS, &errorCode);
+            if(!ok || U_FAILURE(errorCode)) {
+                fprintf(
+                    stderr,
+                    "genprops error: deleting lead surrogate code unit values failed - ok=%d - %s\n",
+                    ok, u_errorName(errorCode));
+                if(U_SUCCESS(errorCode)) {
+                    /* most likely reason for set32... to fail */
+                    errorCode=U_MEMORY_ALLOCATION_ERROR;
+                }
+                exit(errorCode);
+            }
         }
 
         f=usrc_create(dataDir, "uchar_props_data.c");
@@ -468,11 +488,11 @@ generateData(const char *dataDir, UBool csource) {
                 "};\n\n");
             usrc_writeUTrie2Arrays(f,
                 "static const uint16_t propsTrie_index[%ld]={\n", NULL,
-                &trie2,
+                trie2,
                 "\n};\n\n");
             usrc_writeUTrie2Struct(f,
                 "static const UTrie2 propsTrie={\n",
-                &trie2, "propsTrie_index", NULL,
+                trie2, "propsTrie_index", NULL,
                 "};\n\n");
 
             additionalPropsSize=writeAdditionalData(f, additionalProps, sizeof(additionalProps), indexes);
@@ -484,7 +504,7 @@ generateData(const char *dataDir, UBool csource) {
                 "};\n\n");
             fclose(f);
         }
-        uprv_free(memory);
+        utrie2_close(trie2);
     } else {
         /* write the data */
         pData=udata_create(dataDir, DATA_TYPE, DATA_NAME, &dataInfo,

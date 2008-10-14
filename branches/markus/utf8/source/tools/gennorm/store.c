@@ -1985,8 +1985,7 @@ generateData(const char *dataDir, UBool csource) {
 #else
         /* write .c file for hardcoded data */
         UTrie normRuntimeTrie={ NULL }, fcdRuntimeTrie={ NULL }, auxRuntimeTrie={ NULL };
-        UTrie2 normRuntimeTrie2, fcdRuntimeTrie2, auxRuntimeTrie2;
-        void *normMemory, *fcdMemory=NULL, *auxMemory=NULL;
+        UTrie2 *normRuntimeTrie2, *fcdRuntimeTrie2=NULL, *auxRuntimeTrie2=NULL;
         FILE *f;
 
         utrie_unserialize(&normRuntimeTrie, normTrieBlock, normTrieSize, &errorCode);
@@ -2010,12 +2009,12 @@ generateData(const char *dataDir, UBool csource) {
         dataInfo.formatVersion[0]=3;
         dataInfo.formatVersion[2]=0;
         dataInfo.formatVersion[3]=0;
-        normMemory=utrie2_fromUTrie(&normRuntimeTrie2, &normRuntimeTrie, 0, &errorCode);
+        normRuntimeTrie2=utrie2_fromUTrie(&normRuntimeTrie, 0, &errorCode);
         if(fcdTrieSize>0) {
-            fcdMemory=utrie2_fromUTrie(&fcdRuntimeTrie2, &fcdRuntimeTrie, 0, &errorCode);
+            fcdRuntimeTrie2=utrie2_fromUTrie(&fcdRuntimeTrie, 0, &errorCode);
         }
         if(auxTrieSize>0) {
-            auxMemory=utrie2_fromUTrie(&auxRuntimeTrie2, &auxRuntimeTrie, 0, &errorCode);
+            auxRuntimeTrie2=utrie2_fromUTrie(&auxRuntimeTrie, 0, &errorCode);
         }
         if(U_FAILURE(errorCode)) {
             fprintf(
@@ -2023,6 +2022,27 @@ generateData(const char *dataDir, UBool csource) {
                 "gennorm error: utrie2_fromUTrie() failed - %s\n",
                 u_errorName(errorCode));
             exit(errorCode);
+        }
+        if(auxTrieSize>0) {
+            /* delete lead surrogate code unit values */
+            UChar lead;
+            UBool ok=TRUE;
+            auxRuntimeTrie2=utrie2_cloneAsThawed(auxRuntimeTrie2);
+            for(lead=0xd800; lead<0xdc00; ++lead) {
+                ok&=utrie2_set32ForLeadSurrogateCodeUnit(auxRuntimeTrie2, lead, auxRuntimeTrie2->initialValue);
+            }
+            utrie2_freeze(auxRuntimeTrie2, UTRIE2_16_VALUE_BITS, &errorCode);
+            if(!ok || U_FAILURE(errorCode)) {
+                fprintf(
+                    stderr,
+                    "gennorm error: deleting lead surrogate code unit values failed - ok=%d - %s\n",
+                    ok, u_errorName(errorCode));
+                if(U_SUCCESS(errorCode)) {
+                    /* most likely reason for set32... to fail */
+                    errorCode=U_MEMORY_ALLOCATION_ERROR;
+                }
+                exit(errorCode);
+            }
         }
 
         f=usrc_create(dataDir, "unorm_props_data.c");
@@ -2042,11 +2062,11 @@ generateData(const char *dataDir, UBool csource) {
             usrc_writeUTrie2Arrays(f,
                 "static const uint16_t normTrie_index[%ld]={\n",
                 "static const uint32_t normTrie_data32[%ld]={\n",
-                &normRuntimeTrie2,
+                normRuntimeTrie2,
                 "\n};\n\n");
             usrc_writeUTrie2Struct(f,
                 "static const UTrie2 normTrie={\n",
-                &normRuntimeTrie2, "normTrie_index", "normTrie_data32",
+                normRuntimeTrie2, "normTrie_index", "normTrie_data32",
                 "};\n\n");
             usrc_writeArray(f,
                 "static const uint16_t extraData[%ld]={\n",
@@ -2059,11 +2079,11 @@ generateData(const char *dataDir, UBool csource) {
             if(fcdTrieSize>0) {
                 usrc_writeUTrie2Arrays(f,
                     "static const uint16_t fcdTrie_index[%ld]={\n", NULL,
-                    &fcdRuntimeTrie2,
+                    fcdRuntimeTrie2,
                     "\n};\n\n");
                 usrc_writeUTrie2Struct(f,
                     "static const UTrie2 fcdTrie={\n",
-                    &fcdRuntimeTrie2, "fcdTrie_index", NULL,
+                    fcdRuntimeTrie2, "fcdTrie_index", NULL,
                     "};\n\n");
             } else {
                 fputs( "static const UTrie2 fcdTrie={ NULL };\n\n", f);
@@ -2071,11 +2091,11 @@ generateData(const char *dataDir, UBool csource) {
             if(auxTrieSize>0) {
                 usrc_writeUTrie2Arrays(f,
                     "static const uint16_t auxTrie_index[%ld]={\n", NULL,
-                    &auxRuntimeTrie2,
+                    auxRuntimeTrie2,
                     "\n};\n\n");
                 usrc_writeUTrie2Struct(f,
                     "static const UTrie2 auxTrie={\n",
-                    &auxRuntimeTrie2, "auxTrie_index", NULL,
+                    auxRuntimeTrie2, "auxTrie_index", NULL,
                     "};\n\n");
             } else {
                 fputs( "static const UTrie2 auxTrie={ NULL };\n\n", f);
@@ -2086,9 +2106,9 @@ generateData(const char *dataDir, UBool csource) {
                 "\n};\n\n");
             fclose(f);
         }
-        uprv_free(normMemory);
-        uprv_free(fcdMemory);
-        uprv_free(auxMemory);
+        utrie2_close(normRuntimeTrie2);
+        utrie2_close(fcdRuntimeTrie2);
+        utrie2_close(auxRuntimeTrie2);
 #endif
     } else {
         /* write the data */
