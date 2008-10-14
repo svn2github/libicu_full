@@ -223,6 +223,19 @@ U_INTERNAL int64_t U_EXPORT2
 ucol_previousProcessed(UCollationElements *elems, int32_t *ixLow, int32_t *ixHigh, UErrorCode *status);
 
 /**
+ * Scan the UCollationElements over a "Tailored Grapheme Cluster" according to UTS #18.
+ * (http://www.unicode.org/reports/tr18/#Tailored_Graphemes_Clusters)
+ *
+ * @param elems The UCollationElements containing the text.
+ * @param status A pointer to a UErrorCode to receive any errors.
+ * @return The number of characters in the Tailored Grapheme Cluster.
+ * 
+ * @internal
+ */
+U_INTERNAL int32_t U_EXPORT2
+ucol_nextGraphemeCluster(UCollationElements *elems, UErrorCode *status);
+
+/**
  * Get the maximum length of any expansion sequences that end with the 
  * specified comparison order.
  * This is useful for .... ?

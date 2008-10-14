@@ -21,6 +21,7 @@
 #include "unicode/ustring.h"
 #include "unicode/rbbi.h"
 #include "unicode/ucol.h"
+#include "unicode/ucoleitr.h"
 #include "uassert.h"
 #include "cmemory.h"
 #include "uvector.h"
@@ -1906,6 +1907,7 @@ void CSREMatcher::MatchAt(int32_t startIdx, UBool toEnd, UErrorCode &status) {
                     break;
                 }
 
+#if 0
                 // Examine (and consume) the current char.
                 //   Dispatch into a little state machine, based on the char.
                 UChar32  c;
@@ -1969,6 +1971,22 @@ GC_Control:
                 }
 
 GC_Done:
+#else
+                UErrorCode status = U_ZERO_ERROR;
+                UCollationElements *elems = ucol_openElements(fColl, inputBuf + fp->fInputIdx, fActiveLimit - fp->fInputIdx, &status);
+                int32_t graphemeLength = ucol_nextGraphemeCluster(elems, &status);
+
+                ucol_closeElements(elems);
+
+                if (graphemeLength <= 0) {
+                    fp = (REStackFrame *)fStack->popFrame(fFrameSize);
+                    break;
+                }
+
+                fp->fInputIdx += graphemeLength;
+
+#endif
+
                 if (fp->fInputIdx >= fActiveLimit) {
                     fHitEnd = TRUE;
                 }

@@ -593,6 +593,42 @@ finish:
 }
 
 U_CAPI int32_t U_EXPORT2
+ucol_nextGraphemeCluster(UCollationElements *elems, UErrorCode *status)
+{
+    if (U_FAILURE(*status)) {
+        return -1;
+    }
+
+    const UCollator *coll = elems->iteratordata_.coll;
+    uint32_t start = 0, end = 0;
+    uint32_t ce;
+
+    do {
+        start = ucol_getOffset(elems);
+        ce = (uint32_t) ucol_getNextCE(coll, &elems->iteratordata_, status);
+
+        if (ce == UCOL_NO_MORE_CES) {
+            return -1;
+        }
+    } while (ce == 0);
+
+    if ((ce & UCOL_PRIMARYORDERMASK) == 0) {
+        return -1;
+    }
+
+    do {
+        end = ucol_getOffset(elems);
+        ce = (uint32_t) ucol_getNextCE(coll, &elems->iteratordata_, status);
+
+        if (ce == UCOL_NO_MORE_CES) {
+            break;
+        }
+    } while (ce != 0 && (ce & UCOL_PRIMARYORDERMASK) == 0);
+
+    return end - start;
+}
+
+U_CAPI int32_t U_EXPORT2
 ucol_getMaxExpansion(const UCollationElements *elems,
                            int32_t            order)
 {
