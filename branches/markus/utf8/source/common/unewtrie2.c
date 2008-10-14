@@ -1215,13 +1215,22 @@ utrie2_freeze(UTrie2 *trie, UTrie2ValueBits valueBits, UErrorCode *pErrorCode) {
         return;
     }
 
-    if( trie==NULL || trie->newTrie==NULL ||
+    if( trie==NULL ||
         valueBits<0 || UTRIE2_COUNT_VALUE_BITS<=valueBits
     ) {
         *pErrorCode=U_ILLEGAL_ARGUMENT_ERROR;
         return;
     }
     newTrie=trie->newTrie;
+    if(newTrie==NULL) {
+        /* already frozen */
+        UTrie2ValueBits frozenValueBits=
+            trie->data16!=NULL ? UTRIE2_16_VALUE_BITS : UTRIE2_32_VALUE_BITS;
+        if(valueBits!=frozenValueBits) {
+            *pErrorCode=U_ILLEGAL_ARGUMENT_ERROR;
+        }
+        return;
+    }
 
     /* compact if necessary */
     if(!newTrie->isCompacted) {

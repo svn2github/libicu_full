@@ -76,9 +76,10 @@ enum UTrie2ValueBits {
 typedef enum UTrie2ValueBits UTrie2ValueBits;
 
 /**
- * Unserialize a trie from 32-bit-aligned memory.
+ * Open a frozen trie from its serialized from, stored in 32-bit-aligned memory.
  * Inverse of utrie2_serialize().
  * The memory must remain valid and unchanged as long as the trie is used.
+ * You must utrie2_close() the trie once you are done using it.
  *
  * @param valueBits selects the data entry size; results in an
  *                  U_INVALID_FORMAT_ERROR if it does not match the serialized form
@@ -89,19 +90,26 @@ typedef enum UTrie2ValueBits UTrie2ValueBits;
  *                      can be NULL
  * @param pErrorCode an in/out ICU UErrorCode
  * @return the unserialized trie
+ *
+ * @see utrie2_open
+ * @see utrie2_serialize
  */
 U_CAPI UTrie2 * U_EXPORT2
-utrie2_unserialize(UTrie2ValueBits valueBits,
-                   const void *data, int32_t length, int32_t *pActualLength,
-                   UErrorCode *pErrorCode);
+utrie2_openFromSerialized(UTrie2ValueBits valueBits,
+                          const void *data, int32_t length, int32_t *pActualLength,
+                          UErrorCode *pErrorCode);
 
 /**
- * "Unserialize" a dummy trie.
+ * Open a frozen, empty "dummy" trie.
  * A dummy trie is an empty trie, used when a real data trie cannot
- * be loaded.
+ * be loaded. Equivalent to calling utrie2_open() and utrie2_freeze(),
+ * but without internally creating and compacting/serializing the
+ * builder data structure.
  *
  * The trie always returns the initialValue,
  * or the errorValue for out-of-range code points and illegal UTF-8.
+ *
+ * You must utrie2_close() the trie once you are done using it.
  *
  * @param valueBits selects the data entry size
  * @param initialValue the initial value that is set for all code points
@@ -109,16 +117,19 @@ utrie2_unserialize(UTrie2ValueBits valueBits,
  * @param pErrorCode an in/out ICU UErrorCode
  * @return the dummy trie
  *
- * @see utrie2_unserialize
+ * @see utrie2_openFromSerialized
  * @see utrie2_open
  */
 U_CAPI UTrie2 * U_EXPORT2
-utrie2_unserializeDummy(UTrie2ValueBits valueBits,
-                        uint32_t initialValue, uint32_t errorValue,
-                        UErrorCode *pErrorCode);
+utrie2_openDummy(UTrie2ValueBits valueBits,
+                 uint32_t initialValue, uint32_t errorValue,
+                 UErrorCode *pErrorCode);
 
 /**
  * Get a value from a code point as stored in the trie.
+ * Easier to use than UTRIE2_GET16() and UTRIE2_GET32() but slower.
+ * Easier to use because, unlike the macros, this function works on all UTrie2
+ * objects, frozen or not, holding 16-bit or 32-bit data values.
  *
  * @param trie the build-time trie
  * @param c the code point
@@ -184,6 +195,7 @@ utrie2_enum(const UTrie2 *trie,
  * Open an empty, writable trie. At build time, 32-bit data values are used.
  * utrie2_freeze() takes a valueBits parameter
  * which determines the data value width in the serialized and frozen forms.
+ * You must utrie2_close() the trie once you are done using it.
  *
  * @param initialValue the initial value that is set for all code points
  * @param errorValue the value for out-of-range code points and illegal UTF-8
@@ -195,6 +207,7 @@ utrie2_open(uint32_t initialValue, uint32_t errorValue, UErrorCode *pErrorCode);
 
 /**
  * Clone a trie.
+ * You must utrie2_close() the clone once you are done using it.
  *
  * @param other the trie to clone
  * @return a pointer to the new trie clone
@@ -205,6 +218,7 @@ utrie2_clone(const UTrie2 *other);
 /**
  * Clone a trie. The clone will be mutable/writable even if the other trie
  * is frozen. (See utrie2_freeze().)
+ * You must utrie2_close() the clone once you are done using it.
  *
  * @param other the trie to clone
  * @return a pointer to the new trie clone
@@ -226,7 +240,7 @@ utrie2_close(UTrie2 *trie);
  * @param trie the trie
  * @param c the code point
  * @param value the value
- * @return FALSE if a failure occurred (illegal argument or data array overrun)
+ * @return FALSE if a failure occurred (illegal argument, frozen trie, or out-of-memory)
  */
 U_CAPI UBool U_EXPORT2
 utrie2_set32(UTrie2 *trie, UChar32 c, uint32_t value);
@@ -241,7 +255,7 @@ utrie2_set32(UTrie2 *trie, UChar32 c, uint32_t value);
  * @param limit one past the last code point to get the value
  * @param value the value
  * @param overwrite flag for whether old non-initial values are to be overwritten
- * @return FALSE if a failure occurred (illegal argument or data array overrun)
+ * @return FALSE if a failure occurred (illegal argument, frozen trie, or out-of-memory)
  */
 U_CAPI UBool U_EXPORT2
 utrie2_setRange32(UTrie2 *trie,
@@ -262,6 +276,8 @@ utrie2_setRange32(UTrie2 *trie,
  * @param pErrorCode an in/out ICU UErrorCode; among other possible error codes:
  * - U_INDEX_OUTOFBOUNDS_ERROR if the compacted index or data arrays are too long
  *                             for serialization
+ *                             (the trie will be immutable and usable,
+ *                             but not frozen and not usable with the fast macros)
  *
  * @see utrie2_cloneAsThawed
  */
@@ -292,9 +308,9 @@ utrie2_isFrozen(const UTrie2 *trie);
  * - U_BUFFER_OVERFLOW_ERROR if the data storage block is too small for serialization
  * - U_ILLEGAL_ARGUMENT_ERROR if the trie is not frozen or the data and capacity
  *                            parameters are bad
+ * @return the number of bytes written or needed for the trie
  *
- * @return the number of bytes written for the trie
- * @see utrie2_unserialize()
+ * @see utrie2_openFromSerialized()
  */
 U_CAPI int32_t U_EXPORT2
 utrie2_serialize(UTrie2 *trie,

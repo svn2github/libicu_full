@@ -126,9 +126,9 @@ utrie2_internalU8PrevIndex(const UTrie2 *trie, UChar32 c,
 }
 
 U_CAPI UTrie2 * U_EXPORT2
-utrie2_unserialize(UTrie2ValueBits valueBits,
-                   const void *data, int32_t length, int32_t *pActualLength,
-                   UErrorCode *pErrorCode) {
+utrie2_openFromSerialized(UTrie2ValueBits valueBits,
+                          const void *data, int32_t length, int32_t *pActualLength,
+                          UErrorCode *pErrorCode) {
     const UTrie2Header *header;
     const uint16_t *p16;
     int32_t actualLength;
@@ -232,9 +232,9 @@ utrie2_unserialize(UTrie2ValueBits valueBits,
 }
 
 U_CAPI UTrie2 * U_EXPORT2
-utrie2_unserializeDummy(UTrie2ValueBits valueBits,
-                        uint32_t initialValue, uint32_t errorValue,
-                        UErrorCode *pErrorCode) {
+utrie2_openDummy(UTrie2ValueBits valueBits,
+                 uint32_t initialValue, uint32_t errorValue,
+                 UErrorCode *pErrorCode) {
     UTrie2 *trie;
     UTrie2Header *header;
     uint32_t *p;
