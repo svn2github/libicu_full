@@ -1046,9 +1046,11 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
     switch (patternCharIndex) {
     
     // for any "G" symbol, write out the appropriate era string
-    // "GGGG" is wide era name, anything else is abbreviated name
+    // "GGGG" is wide era name, "GGGGG" is narrow era name, anything else is abbreviated name
     case UDAT_ERA_FIELD:
-        if (count >= 4)
+        if (count == 5)
+           _appendSymbol(appendTo, value, fSymbols->fNarrowEras, fSymbols->fNarrowErasCount);
+        else if (count == 4)
            _appendSymbol(appendTo, value, fSymbols->fEraNames, fSymbols->fEraNamesCount);
         else
            _appendSymbol(appendTo, value, fSymbols->fEras, fSymbols->fErasCount);
@@ -1133,9 +1135,22 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
         }
         break;
 
-    // for "EEE", write out the abbreviated day-of-the-week name
-    // for "EEEE", write out the wide day-of-the-week name
-    // for "EEEEE", use the narrow day-of-the-week name
+    // for "ee" or "e", use local numeric day-of-the-week
+    // for "EEEEE" or "eeeee", write out the narrow day-of-the-week name
+    // for "EEEE" or "eeee", write out the wide day-of-the-week name
+    // for "EEE" or "EE" or "E" or "eee", write out the abbreviated day-of-the-week name
+    case UDAT_DOW_LOCAL_FIELD:
+        if ( count < 3 ) {
+            zeroPaddingNumber(appendTo, value, 1, maxIntCount);
+            break;
+        }
+        // fall through to EEEEE-EEE handling, but for that we don't want local day-of-week,
+        // we want standard day-of-week, so first fix value to work for EEEEE-EEE.
+        value = cal.get(UCAL_DAY_OF_WEEK, status);
+        if (U_FAILURE(status)) {
+            return;
+        }
+        // fall through, do not break here
     case UDAT_DAY_OF_WEEK_FIELD:
         if (count == 5) 
             _appendSymbol(appendTo, value, fSymbols->fNarrowWeekdays,
@@ -1925,6 +1940,9 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
 
     switch (patternCharIndex) {
     case UDAT_ERA_FIELD:
+        if (count == 5) {
+            return matchString(text, start, UCAL_ERA, fSymbols->fNarrowEras, fSymbols->fNarrowErasCount, cal);
+        }
         if (count == 4) {
             return matchString(text, start, UCAL_ERA, fSymbols->fEraNames, fSymbols->fEraNamesCount, cal);
         }
