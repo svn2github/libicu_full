@@ -603,6 +603,7 @@ ucol_nextGraphemeCluster(UCollationElements *elems, UErrorCode *status)
     uint32_t start = 0, end = 0;
     uint32_t ce;
 
+#if 0
     do {
         start = ucol_getOffset(elems);
         ce = (uint32_t) ucol_getNextCE(coll, &elems->iteratordata_, status);
@@ -615,6 +616,11 @@ ucol_nextGraphemeCluster(UCollationElements *elems, UErrorCode *status)
     if ((ce & UCOL_PRIMARYORDERMASK) == 0) {
         return -1;
     }
+#else
+    // Unicode.org sample code just discards first CE
+    // and accumulates 'till it gets a non-zero primary...
+    ce = (uint32_t) ucol_getNextCE(coll, &elems->iteratordata_, status);
+#endif
 
     do {
         end = ucol_getOffset(elems);
