@@ -498,6 +498,14 @@ testFrozenTrie(const char *testName,
 }
 
 static void
+testNewTrie(const char *testName, const UTrie2 *trie,
+            const CheckRange checkRanges[], int32_t countCheckRanges) {
+    /* The valueBits are ignored for an unfrozen trie. */
+    testTrieGetters(testName, trie, UTRIE2_COUNT_VALUE_BITS, checkRanges, countCheckRanges);
+    testTrieEnum(testName, trie, checkRanges, countCheckRanges);
+}
+
+static void
 testTrieSerialize(const char *testName,
                   UTrie2 *trie, UTrie2ValueBits valueBits,
                   UBool withSwap,
@@ -660,6 +668,7 @@ testTrieSerialize(const char *testName,
             UTrie2 *clone=utrie2_clone(trie);
             if(clone==NULL) {
                 log_err("error: cloning an unserialized UTrie2 failed (%s)\n", testName);
+                /* no need to break: just test the original trie */
             } else {
                 utrie2_close(trie);
                 trie=clone;
@@ -667,6 +676,28 @@ testTrieSerialize(const char *testName,
             }
         }
         testFrozenTrie(testName, trie, valueBits, checkRanges, countCheckRanges);
+        {
+            /* clone-as-thawed an unserialized trie */
+            UTrie2 *clone=utrie2_cloneAsThawed(trie);
+            if(clone==NULL || utrie2_isFrozen(clone)) {
+                log_err("error: utrie2_cloneAsThawed(unserialized UTrie2 %s) failed (isFrozen: %d)\n",
+                        testName, clone!=NULL && utrie2_isFrozen(trie));
+                break;
+            } else {
+                utrie2_close(trie);
+                trie=clone;
+            }
+        }
+        {
+            uint32_t value=utrie2_get32(trie, 0xa1);
+            if( !utrie2_set32(trie, 0xa1, 789) ||
+                789!=utrie2_get32(trie, 0xa1) ||
+                !utrie2_set32(trie, 0xa1, value)
+            ) {
+                log_err("error: modifying a cloneAsThawed UTrie2 (%s) failed\n", testName);
+            }
+        }
+        testNewTrie(testName, trie, checkRanges, countCheckRanges);
     } while(0);
 
     utrie2_close(trie);
@@ -679,8 +710,7 @@ testTrieSerializeAllValueBits(const char *testName,
     char name[40];
 
     /* verify that all the expected values are in the unfrozen trie */
-    testTrieGetters(testName, trie, UTRIE2_COUNT_VALUE_BITS, checkRanges, countCheckRanges);
-    testTrieEnum(testName, trie, checkRanges, countCheckRanges);
+    testNewTrie(testName, trie, checkRanges, countCheckRanges);
 
     /*
      * Test with both valueBits serializations,
@@ -693,16 +723,18 @@ testTrieSerializeAllValueBits(const char *testName,
                       checkRanges, countCheckRanges);
 
     if(withClone) {
-        /* try cloning after the first serialization */
-        UTrie2 *clone=utrie2_clone(trie);
+        /*
+         * try cloning after the first serialization;
+         * clone-as-thawed just to sometimes try it on an unfrozen trie
+         */
+        UTrie2 *clone=utrie2_cloneAsThawed(trie);
         if(clone==NULL) {
             log_err("error: cloning a UTrie2 after serialization failed (%s)\n", testName);
         } else {
             utrie2_close(trie);
             trie=clone;
 
-            testTrieGetters(testName, trie, UTRIE2_COUNT_VALUE_BITS, checkRanges, countCheckRanges);
-            testTrieEnum(testName, trie, checkRanges, countCheckRanges);
+            testNewTrie(testName, trie, checkRanges, countCheckRanges);
         }
     }
 
