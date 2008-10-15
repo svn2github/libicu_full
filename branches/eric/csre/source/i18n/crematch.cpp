@@ -502,7 +502,14 @@ UBool CSREMatcher::find() {
         {
             // Match starts on exactly one char.
             U_ASSERT(fPattern->fMinMatchLen > 0);
+#if 0
             UChar32 theChar = fPattern->fInitialChar;
+#else
+            int32_t bias = startPos;
+            UErrorCode status = U_ZERO_ERROR;
+            UCollationElements *elems = ucol_openElements(fColl, inputBuf + startPos, fActiveLimit - startPos, &status);
+#endif
+
             for (;;) {
                 int32_t pos = startPos;
 #if 0
@@ -515,26 +522,38 @@ UBool CSREMatcher::find() {
                                                       inputBuf + pos, fActiveLimit - pos,
                                                       FALSE);
 
-                U16_FWD_1(inputBuf, startPos, fActiveLimit);
+              //ucol_setOffset(elems, startPos - bias, &status);
+                startPos += ucol_nextGraphemeCluster(elems, &status);
 
                 // **** Should this just be "> 0"?? ****
                 if (matchLength >= 0) {
 #endif
                     MatchAt(pos, FALSE, fDeferredStatus);
                     if (U_FAILURE(fDeferredStatus)) {
+#if 1
+                        ucol_closeElements(elems);
+#endif
                         return FALSE;
                     }
                     if (fMatch) {
+#if 1
+                        ucol_closeElements(elems);
+#endif
                         return TRUE;
                     }
                 }
+
                 if (pos >= testLen) {
                     fMatch = FALSE;
                     fHitEnd = TRUE;
+#if 1
+                    ucol_closeElements(elems);
+#endif
                     return FALSE;
                 }
             }
         }
+
         U_ASSERT(FALSE);
 
     case START_LINE:
