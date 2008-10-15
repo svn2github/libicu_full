@@ -77,15 +77,16 @@ testEnumValue(const void *context, uint32_t value) {
 
 /* utrie2_enum() callback, verifies a range */
 static UBool U_CALLCONV
-testEnumRange(const void *context, UChar32 start, UChar32 limit, uint32_t value) {
+testEnumRange(const void *context, UChar32 start, UChar32 end, uint32_t value) {
     const CheckRange **pb=(const CheckRange **)context;
     const CheckRange *b=(*pb)++;
+    UChar32 limit=end+1;
     
     value^=0x5555;
     if(start!=(b-1)->limit || limit!=b->limit || value!=b->value) {
-        log_err("error: utrie2_enum() delivers wrong range [U+%04lx..U+%04lx[.0x%lx instead of [U+%04lx..U+%04lx[.0x%lx\n",
-            (long)start, (long)limit, (long)value,
-            (long)(b-1)->limit, (long)b->limit, (long)b->value);
+        log_err("error: utrie2_enum() delivers wrong range [U+%04lx..U+%04lx].0x%lx instead of [U+%04lx..U+%04lx].0x%lx\n",
+            (long)start, (long)end, (long)value,
+            (long)(b-1)->limit, (long)b->limit-1, (long)b->value);
     }
     return TRUE;
 }
@@ -788,7 +789,7 @@ makeTrieWithRanges(const char *testName, UBool withClone,
         if((limit-start)==1 && overwrite) {
             ok&=utrie2_set32(trie, start, value);
         } else {
-            ok&=utrie2_setRange32(trie, start, limit, value, overwrite);
+            ok&=utrie2_setRange32(trie, start, limit-1, value, overwrite);
         }
     }
 
@@ -1124,15 +1125,15 @@ FreeBlocksTest(void) {
      */
     ok=TRUE;
     for(i=0; i<(0x120000>>UTRIE2_SHIFT_2)/2; ++i) {
-        ok&=utrie2_setRange32(trie, 0x740, 0x840, 1, TRUE);
-        ok&=utrie2_setRange32(trie, 0x780, 0x880, 1, TRUE);
-        ok&=utrie2_setRange32(trie, 0x740, 0x840, 2, TRUE);
-        ok&=utrie2_setRange32(trie, 0x780, 0x880, 3, TRUE);
+        ok&=utrie2_setRange32(trie, 0x740, 0x840-1, 1, TRUE);
+        ok&=utrie2_setRange32(trie, 0x780, 0x880-1, 1, TRUE);
+        ok&=utrie2_setRange32(trie, 0x740, 0x840-1, 2, TRUE);
+        ok&=utrie2_setRange32(trie, 0x780, 0x880-1, 3, TRUE);
     }
     /* make blocks that will be free during compaction */
-    ok&=utrie2_setRange32(trie, 0x1000, 0x3000, 2, TRUE);
-    ok&=utrie2_setRange32(trie, 0x2000, 0x4000, 3, TRUE);
-    ok&=utrie2_setRange32(trie, 0x1000, 0x4000, 1, TRUE);
+    ok&=utrie2_setRange32(trie, 0x1000, 0x3000-1, 2, TRUE);
+    ok&=utrie2_setRange32(trie, 0x2000, 0x4000-1, 3, TRUE);
+    ok&=utrie2_setRange32(trie, 0x1000, 0x4000-1, 1, TRUE);
     /* set some values for lead surrogate code units */
     ok&=utrie2_set32ForLeadSurrogateCodeUnit(trie, 0xd800, 90);
     ok&=utrie2_set32ForLeadSurrogateCodeUnit(trie, 0xd999, 94);

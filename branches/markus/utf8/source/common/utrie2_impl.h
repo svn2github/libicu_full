@@ -87,7 +87,7 @@ enum {
 
 /*
  * These definitions are mostly needed by unewtrie2.c, but also by
- * unewtrie2_enum() which shares its implementation with utrie2_enum().
+ * utrie2_get32() and utrie2_enum().
  */
 
 enum {

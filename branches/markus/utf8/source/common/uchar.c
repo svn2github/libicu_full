@@ -280,11 +280,11 @@ _enumTypeValue(const void *context, uint32_t value) {
 }
 
 static UBool U_CALLCONV
-_enumTypeRange(const void *context, UChar32 start, UChar32 limit, uint32_t value) {
+_enumTypeRange(const void *context, UChar32 start, UChar32 end, uint32_t value) {
     /* just cast the value to UCharCategory */
     return ((struct _EnumTypeCallback *)context)->
         enumRange(((struct _EnumTypeCallback *)context)->context,
-                  start, limit, (UCharCategory)value);
+                  start, end+1, (UCharCategory)value);
 }
 
 U_CAPI void U_EXPORT2
@@ -882,7 +882,7 @@ uhst_addPropertyStarts(const USetAdder *sa, UErrorCode *pErrorCode) {
 }
 
 static UBool U_CALLCONV
-_enumPropertyStartsRange(const void *context, UChar32 start, UChar32 limit, uint32_t value) {
+_enumPropertyStartsRange(const void *context, UChar32 start, UChar32 end, uint32_t value) {
     /* add the start code point to the USet */
     const USetAdder *sa=(const USetAdder *)context;
     sa->add(sa->set, start);

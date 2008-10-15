@@ -316,17 +316,21 @@ utrie2_clone(const UTrie2 *other) {
 
 typedef struct NewTrieAndStatus {
     UTrie2 *trie;
+    UBool exclusiveLimit;  /* rather than inclusive range end */
     UBool ok;
 } NewTrieAndStatus;
 
 static UBool U_CALLCONV
-copyEnumRange(const void *context, UChar32 start, UChar32 limit, uint32_t value) {
+copyEnumRange(const void *context, UChar32 start, UChar32 end, uint32_t value) {
     NewTrieAndStatus *nt=(NewTrieAndStatus *)context;
     if(value!=nt->trie->initialValue) {
-        if(start==(limit-1)) {
+        if(nt->exclusiveLimit) {
+            --end;
+        }
+        if(start==end) {
             return nt->ok=utrie2_set32(nt->trie, start, value);
         } else {
-            return nt->ok=utrie2_setRange32(nt->trie, start, limit, value, TRUE);
+            return nt->ok=utrie2_setRange32(nt->trie, start, end, value, TRUE);
         }
     } else {
         return TRUE;
@@ -372,6 +376,7 @@ utrie2_cloneAsThawed(const UTrie2 *other) {
     if(U_FAILURE(errorCode)) {
         return NULL;
     }
+    context.exclusiveLimit=FALSE;
     context.ok=TRUE;
     utrie2_enum(other, NULL, copyEnumRange, &context);
     for(lead=0xd800; lead<0xdc00; ++lead) {
@@ -408,6 +413,7 @@ utrie2_fromUTrie(const UTrie *trie1, uint32_t errorValue, UErrorCode *pErrorCode
     if(U_FAILURE(*pErrorCode)) {
         return NULL;
     }
+    context.exclusiveLimit=TRUE;
     context.ok=TRUE;
     utrie_enum(trie1, NULL, copyEnumRange, &context);
     for(lead=0xd800; lead<0xdc00; ++lead) {
@@ -661,26 +667,28 @@ fillBlock(uint32_t *block, UChar32 start, UChar32 limit,
 
 U_CAPI UBool U_EXPORT2
 utrie2_setRange32(UTrie2 *trie,
-                  UChar32 start, UChar32 limit,
+                  UChar32 start, UChar32 end,
                   uint32_t value, UBool overwrite) {
     /*
-     * repeat value in [start..limit[
+     * repeat value in [start..end]
      * mark index values for repeat-data blocks by setting bit 31 of the index values
      * fill around existing values if any, if(overwrite)
      */
     UNewTrie2 *newTrie;
     int32_t block, rest, repeatBlock;
+    UChar32 limit;
 
     newTrie=trie->newTrie;
     if( newTrie==NULL || newTrie->isCompacted ||
-        (uint32_t)start>0x10ffff || (uint32_t)limit>0x110000 || start>limit
+        (uint32_t)start>0x10ffff || (uint32_t)end>0x10ffff || start>end
     ) {
         return FALSE;
     }
-    if(start==limit || (!overwrite && value==newTrie->initialValue)) {
+    if(!overwrite && value==newTrie->initialValue) {
         return TRUE; /* nothing to do */
     }
 
+    limit=end+1;
     if(start&UTRIE2_DATA_MASK) {
         UChar32 nextStart;
 
@@ -1153,9 +1161,9 @@ compactTrie(UTrie2 *trie) {
             (long)highStart, (long)highValue, (long)trie->initialValue);
 #endif
 
-    /* Blank out [highStart..110000[ to release associated data blocks. */
+    /* Blank out [highStart..10ffff] to release associated data blocks. */
     suppHighStart= highStart<=0x10000 ? 0x10000 : highStart;
-    utrie2_setRange32(trie, suppHighStart, 0x110000, trie->initialValue, TRUE);
+    utrie2_setRange32(trie, suppHighStart, 0x10ffff, trie->initialValue, TRUE);
 
     compactData(newTrie);
     if(highStart>0x10000) {

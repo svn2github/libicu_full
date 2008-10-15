@@ -601,7 +601,7 @@ enumEitherTrie(const UTrie2 *trie,
         if(i2Block==index2NullOffset) {
             /* this is the null index-2 block */
             if(prevValue!=initialValue) {
-                if(prev<c && !enumRange(context, prev, c, prevValue)) {
+                if(prev<c && !enumRange(context, prev, c-1, prevValue)) {
                     return;
                 }
                 prevBlock=nullBlock;
@@ -633,7 +633,7 @@ enumEitherTrie(const UTrie2 *trie,
                 if(block==nullBlock) {
                     /* this is the null data block */
                     if(prevValue!=initialValue) {
-                        if(prev<c && !enumRange(context, prev, c, prevValue)) {
+                        if(prev<c && !enumRange(context, prev, c-1, prevValue)) {
                             return;
                         }
                         prev=c;
@@ -644,7 +644,7 @@ enumEitherTrie(const UTrie2 *trie,
                     for(j=0; j<UTRIE2_DATA_BLOCK_LENGTH; ++j) {
                         value=enumValue(context, data32!=NULL ? data32[block+j] : index[block+j]);
                         if(value!=prevValue) {
-                            if(prev<c && !enumRange(context, prev, c, prevValue)) {
+                            if(prev<c && !enumRange(context, prev, c-1, prevValue)) {
                                 return;
                             }
                             prev=c;
@@ -672,7 +672,7 @@ enumEitherTrie(const UTrie2 *trie,
         }
         value=enumValue(context, highValue);
         if(value!=prevValue) {
-            if(prev<c && !enumRange(context, prev, c, prevValue)) {
+            if(prev<c && !enumRange(context, prev, c-1, prevValue)) {
                 return;
             }
             prev=c;
@@ -682,7 +682,7 @@ enumEitherTrie(const UTrie2 *trie,
     }
 
     /* deliver last range */
-    enumRange(context, prev, c, prevValue);
+    enumRange(context, prev, c-1, prevValue);
 }
 
 U_CAPI void U_EXPORT2

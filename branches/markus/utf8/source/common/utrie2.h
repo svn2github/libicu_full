@@ -160,12 +160,12 @@ UTrie2EnumValue(const void *context, uint32_t value);
  *
  * @param context an opaque pointer, as passed into utrie2_enum()
  * @param start the first code point in a contiguous range with value
- * @param limit one past the last code point in a contiguous range with value
- * @param value the value that is set for all code points in [start..limit[
+ * @param end the last code point in a contiguous range with value (inclusive)
+ * @param value the value that is set for all code points in [start..end]
  * @return FALSE to stop the enumeration
  */
 typedef UBool U_CALLCONV
-UTrie2EnumRange(const void *context, UChar32 start, UChar32 limit, uint32_t value);
+UTrie2EnumRange(const void *context, UChar32 start, UChar32 end, uint32_t value);
 
 /**
  * Enumerate efficiently all values in a trie.
@@ -246,20 +246,20 @@ U_CAPI UBool U_EXPORT2
 utrie2_set32(UTrie2 *trie, UChar32 c, uint32_t value);
 
 /**
- * Set a value in a range of code points [start..limit[.
- * All code points c with start<=c<limit will get the value if
+ * Set a value in a range of code points [start..end].
+ * All code points c with start<=c<=end will get the value if
  * overwrite is TRUE or if the old value is the initial value.
  *
  * @param trie the trie
  * @param start the first code point to get the value
- * @param limit one past the last code point to get the value
+ * @param end the last code point to get the value (inclusive)
  * @param value the value
  * @param overwrite flag for whether old non-initial values are to be overwritten
  * @return FALSE if a failure occurred (illegal argument, frozen trie, or out-of-memory)
  */
 U_CAPI UBool U_EXPORT2
 utrie2_setRange32(UTrie2 *trie,
-                  UChar32 start, UChar32 limit,
+                  UChar32 start, UChar32 end,
                   uint32_t value, UBool overwrite);
 
 /**

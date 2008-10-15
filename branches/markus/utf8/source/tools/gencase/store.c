@@ -409,7 +409,7 @@ setProps(Props *p) {
 
     errorCode=U_ZERO_ERROR;
     if( value!=oldValue &&
-        !upvec_setValue(pv, p->code, p->code+1, 0, value, 0xffffffff, &errorCode)
+        !upvec_setValue(pv, p->code, p->code, 0, value, 0xffffffff, &errorCode)
     ) {
         fprintf(stderr, "gencase error: unable to set case mapping values, code: %s\n",
                         u_errorName(errorCode));
@@ -428,7 +428,7 @@ setProps(Props *p) {
 extern void
 addCaseSensitive(UChar32 first, UChar32 last) {
     UErrorCode errorCode=U_ZERO_ERROR;
-    if(!upvec_setValue(pv, first, last+1, 0, UCASE_SENSITIVE, UCASE_SENSITIVE, &errorCode)) {
+    if(!upvec_setValue(pv, first, last, 0, UCASE_SENSITIVE, UCASE_SENSITIVE, &errorCode)) {
         fprintf(stderr, "gencase error: unable to set UCASE_SENSITIVE, code: %s\n",
                         u_errorName(errorCode));
         exit(errorCode);
@@ -573,7 +573,7 @@ addClosureMapping(UChar32 src, UChar32 dest) {
         }
 
         errorCode=U_ZERO_ERROR;
-        if(!upvec_setValue(pv, src, src+1, 0, value, 0xffffffff, &errorCode)) {
+        if(!upvec_setValue(pv, src, src, 0, value, 0xffffffff, &errorCode)) {
             fprintf(stderr, "gencase error: unable to set case mapping values, code: %s\n",
                             u_errorName(errorCode));
             exit(errorCode);
@@ -718,7 +718,7 @@ makeCaseClosure() {
     UChar *p;
     uint32_t *row;
     uint32_t value;
-    UChar32 start, limit, c, c2;
+    UChar32 start, end, c, c2;
     int32_t i, j;
     UBool someMappingsAdded;
 
@@ -752,10 +752,10 @@ makeCaseClosure() {
         someMappingsAdded=FALSE;
 
         i=0;
-        while((row=upvec_getRow(pv, i, &start, &limit))!=NULL && start<UPVEC_FIRST_SPECIAL_CP) {
+        while((row=upvec_getRow(pv, i, &start, &end))!=NULL && start<UPVEC_FIRST_SPECIAL_CP) {
             value=*row;
             if(value!=0) {
-                while(start<limit) {
+                while(start<=end) {
                     if(addClosure(start, U_SENTINEL, U_SENTINEL, start, value)) {
                         someMappingsAdded=TRUE;
 
@@ -763,7 +763,7 @@ makeCaseClosure() {
                          * stop this loop because pv was changed and row is not valid any more
                          * skip all rows below the current start
                          */
-                        while((row=upvec_getRow(pv, i, NULL, &limit))!=NULL && start>=limit) {
+                        while((row=upvec_getRow(pv, i, NULL, &end))!=NULL && start>end) {
                             ++i;
                         }
                         row=NULL; /* signal to continue with outer loop, without further ++i */
@@ -1039,7 +1039,7 @@ generateData(const char *dataDir, UBool csource) {
     static uint8_t trieBlock[40000];
 
     const uint32_t *row;
-    UChar32 start, limit;
+    UChar32 start, end;
     int32_t i;
 
     UNewDataMemory *pData;
@@ -1054,8 +1054,8 @@ generateData(const char *dataDir, UBool csource) {
         exit(U_MEMORY_ALLOCATION_ERROR);
     }
 
-    for(i=0; (row=upvec_getRow(pv, i, &start, &limit))!=NULL; ++i) {
-        if(start<UPVEC_FIRST_SPECIAL_CP && !utrie_setRange32(pTrie, start, limit, *row, TRUE)) {
+    for(i=0; (row=upvec_getRow(pv, i, &start, &end))!=NULL; ++i) {
+        if(start<UPVEC_FIRST_SPECIAL_CP && !utrie_setRange32(pTrie, start, end+1, *row, TRUE)) {
             fprintf(stderr, "gencase error: unable to set trie value (overflow)\n");
             exit(U_BUFFER_OVERFLOW_ERROR);
         }

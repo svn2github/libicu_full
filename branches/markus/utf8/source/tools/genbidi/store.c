@@ -185,7 +185,7 @@ addMirror(UChar32 src, UChar32 mirror) {
     errorCode=U_ZERO_ERROR;
     if(
         !upvec_setValue(
-            pv, src, src+1, 0,
+            pv, src, src, 0,
             (uint32_t)delta<<UBIDI_MIRROR_DELTA_SHIFT, (uint32_t)(-1)<<UBIDI_MIRROR_DELTA_SHIFT,
             &errorCode)
     ) {
@@ -294,7 +294,7 @@ generateData(const char *dataDir, UBool csource) {
     static uint8_t jgArray[0x300]; /* at most for U+0600..U+08FF */
 
     const uint32_t *row;
-    UChar32 start, limit, prev, jgStart;
+    UChar32 start, end, prev, jgStart;
     int32_t i;
 
     UNewDataMemory *pData;
@@ -312,18 +312,18 @@ generateData(const char *dataDir, UBool csource) {
     }
 
     prev=jgStart=0;
-    for(i=0; (row=upvec_getRow(pv, i, &start, &limit))!=NULL && start<UPVEC_FIRST_SPECIAL_CP; ++i) {
+    for(i=0; (row=upvec_getRow(pv, i, &start, &end))!=NULL && start<UPVEC_FIRST_SPECIAL_CP; ++i) {
         /* store most values from vector column 0 in the trie */
-        if(!utrie_setRange32(pTrie, start, limit, *row, TRUE)) {
+        if(!utrie_setRange32(pTrie, start, end+1, *row, TRUE)) {
             fprintf(stderr, "genbidi error: unable to set trie value (overflow)\n");
             exit(U_BUFFER_OVERFLOW_ERROR);
         }
 
         /* store Joining_Group values from vector column 1 in a simple byte array */
         if(row[1]!=0) {
-            if(start<0x600 || 0x900<=limit) {
+            if(start<0x600 || 0x8ff<end) {
                 fprintf(stderr, "genbidi error: Joining_Group for out-of-range code points U+%04lx..U+%04lx\n",
-                        (long)start, (long)limit);
+                        (long)start, (long)end);
                 exit(U_ILLEGAL_ARGUMENT_ERROR);
             }
 
@@ -337,8 +337,8 @@ generateData(const char *dataDir, UBool csource) {
                 }
             }
 
-            /* set Joining_Group value for start..limit */
-            while(prev<limit) {
+            /* set Joining_Group value for start..end */
+            while(prev<=end) {
                 jgArray[prev++ -jgStart]=(uint8_t)row[1];
             }
         }

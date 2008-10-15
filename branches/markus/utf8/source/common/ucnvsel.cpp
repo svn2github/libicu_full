@@ -494,7 +494,7 @@ static void generateSelectorData(UConverterSelector* result,
      // unicode codepoints, and have space for all those bits needed!
   // set errorValue to all-ones
   for (int32_t col = 0 ; col < columns; col++) {
-    upvec_setValue(result->pv, UPVEC_ERROR_VALUE_CP, UPVEC_ERROR_VALUE_CP + 1,
+    upvec_setValue(result->pv, UPVEC_ERROR_VALUE_CP, UPVEC_ERROR_VALUE_CP,
                    col, ~0, ~0, status);
   }
 
@@ -529,10 +529,7 @@ static void generateSelectorData(UConverterSelector* result,
         // this will be reached for the converters that fill the set with
         // strings. Those should be ignored by our system
       } else {
-        // IMPORTANT: the intervals for usets are INCLUSIVE. However, the
-        // intervals for upvec are NOT INCLUSIVE. This is why we need
-        // end_char+1 here!
-        upvec_setValue(result->pv, start_char, end_char + 1, column, ~0, mask,
+        upvec_setValue(result->pv, start_char, end_char, column, ~0, mask,
                        status);
         if (U_FAILURE(*status)) {
            return;
@@ -557,7 +554,7 @@ static void generateSelectorData(UConverterSelector* result,
         return;
       } else {
         for (int32_t col = 0 ; col < columns; col++) {
-          upvec_setValue(result->pv, start_char, end_char + 1, col, ~0, ~0,
+          upvec_setValue(result->pv, start_char, end_char, col, ~0, ~0,
                         status);
         }
       }
@@ -569,10 +566,6 @@ static void generateSelectorData(UConverterSelector* result,
   UPVecToUTrie2Context toUTrie2={ NULL };
   result->pvCount = upvec_compact(result->pv, upvec_compactToUTrie2Handler,
                                   &toUTrie2, status);
-  if (U_SUCCESS(*status) && toUTrie2.maxValue > 0xffff) {
-      /* too many rows for a 16-bit trie */
-      *status = U_INDEX_OUTOFBOUNDS_ERROR;
-  }
   if (U_SUCCESS(*status)) {
     result->trie = toUTrie2.trie;
     utrie2_freeze(result->trie, UTRIE2_16_VALUE_BITS, status);

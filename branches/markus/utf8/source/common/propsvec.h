@@ -58,12 +58,12 @@ enum {
 #define UPVEC_FIRST_SPECIAL_CP 0x110000
 #define UPVEC_INITIAL_VALUE_CP 0x110000
 #define UPVEC_ERROR_VALUE_CP 0x110001
-#define UPVEC_LIMIT_CP 0x110002
+#define UPVEC_MAX_CP 0x110001
 
 /*
  * Special pseudo code point used in upvec_compact() signalling the end of
  * delivering special values and the beginning of delivering real ones.
- * Stable value, unlike UPVEC_LIMIT_CP which might grow over time.
+ * Stable value, unlike UPVEC_MAX_CP which might grow over time.
  */
 #define UPVEC_START_REAL_VALUES_CP 0x200000
 
@@ -75,7 +75,7 @@ upvec_close(uint32_t *pv);
 
 U_CAPI UBool U_EXPORT2
 upvec_setValue(uint32_t *pv,
-               UChar32 start, UChar32 limit,
+               UChar32 start, UChar32 end,
                int32_t column,
                uint32_t value, uint32_t mask,
                UErrorCode *pErrorCode);
@@ -84,12 +84,12 @@ U_CAPI uint32_t U_EXPORT2
 upvec_getValue(uint32_t *pv, UChar32 c, int32_t column);
 
 /*
- * pRangeStart and pRangeLimit can be NULL.
+ * pRangeStart and pRangeEnd can be NULL.
  * @return NULL if rowIndex out of range and for illegal arguments
  */
 U_CAPI uint32_t * U_EXPORT2
 upvec_getRow(uint32_t *pv, int32_t rowIndex,
-             UChar32 *pRangeStart, UChar32 *pRangeLimit);
+             UChar32 *pRangeStart, UChar32 *pRangeEnd);
 
 /*
  * Compact the vectors:
@@ -103,8 +103,8 @@ upvec_getRow(uint32_t *pv, int32_t rowIndex,
  * (Therefore, it starts at 0 increases in increments of the columns value.)
  *
  * In a first phase, only special values are delivered (each exactly once),
- * with start==limit both equalling a special pseudo code point.
- * Then the handler is called once more with start==limit==UPVEC_START_REAL_VALUES_CP
+ * with start==end both equalling a special pseudo code point.
+ * Then the handler is called once more with start==end==UPVEC_START_REAL_VALUES_CP
  * where rowIndex is the length of the compacted array,
  * and the row is arbitrary (but not NULL).
  * Then, in the second phase, the handler is called for each row of real values.
@@ -112,7 +112,7 @@ upvec_getRow(uint32_t *pv, int32_t rowIndex,
 
 typedef void U_CALLCONV
 UPVecCompactHandler(void *context,
-                    UChar32 start, UChar32 limit,
+                    UChar32 start, UChar32 end,
                     int32_t rowIndex, uint32_t *row, int32_t columns,
                     UErrorCode *pErrorCode);
 
@@ -130,7 +130,7 @@ typedef struct UPVecToUTrieContext UPVecToUTrieContext;
 /* context=UPVecToUTrieContext, creates the trie and stores the rowIndex values */
 U_CAPI void U_CALLCONV
 upvec_compactToUTrieHandler(void *context,
-                            UChar32 start, UChar32 limit,
+                            UChar32 start, UChar32 end,
                             int32_t rowIndex, uint32_t *row, int32_t columns,
                             UErrorCode *pErrorCode);
 
@@ -145,7 +145,7 @@ typedef struct UPVecToUTrie2Context UPVecToUTrie2Context;
 /* context=UPVecToUTrie2Context, creates the trie and stores the rowIndex values */
 U_CAPI void U_CALLCONV
 upvec_compactToUTrie2Handler(void *context,
-                             UChar32 start, UChar32 limit,
+                             UChar32 start, UChar32 end,
                              int32_t rowIndex, uint32_t *row, int32_t columns,
                              UErrorCode *pErrorCode);
 

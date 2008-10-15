@@ -166,17 +166,16 @@ singleEnumLineFn(void *context,
                  UErrorCode *pErrorCode) {
     const SingleEnum *sen;
     char *s;
-    uint32_t start, limit, uv;
+    uint32_t start, end, uv;
     int32_t value;
 
     sen=(const SingleEnum *)context;
 
-    u_parseCodePointRange(fields[0][0], &start, &limit, pErrorCode);
+    u_parseCodePointRange(fields[0][0], &start, &end, pErrorCode);
     if(U_FAILURE(*pErrorCode)) {
         fprintf(stderr, "genprops: syntax error in %s.txt field 0 at %s\n", sen->ucdFile, fields[0][0]);
         exit(*pErrorCode);
     }
-    ++limit;
 
     /* parse property alias */
     s=trimTerminateField(fields[1][0], fields[1][1]);
@@ -205,11 +204,11 @@ singleEnumLineFn(void *context,
         exit(U_INTERNAL_PROGRAM_ERROR);
     }
 
-    if(start==0 && limit==0x110000) {
+    if(start==0 && end==0x10ffff) {
         /* Also set bits for initialValue and errorValue. */
-        limit=UPVEC_LIMIT_CP;
+        end=UPVEC_MAX_CP;
     }
-    if(!upvec_setValue(pv, start, limit, sen->vecWord, uv, sen->vecMask, pErrorCode)) {
+    if(!upvec_setValue(pv, start, end, sen->vecWord, uv, sen->vecMask, pErrorCode)) {
         fprintf(stderr, "genprops error: unable to set %s code: %s\n",
                         sen->propName, u_errorName(*pErrorCode));
         exit(*pErrorCode);
@@ -334,17 +333,16 @@ binariesLineFn(void *context,
                UErrorCode *pErrorCode) {
     const Binaries *bin;
     char *s;
-    uint32_t start, limit, uv;
+    uint32_t start, end, uv;
     int32_t i;
 
     bin=(const Binaries *)context;
 
-    u_parseCodePointRange(fields[0][0], &start, &limit, pErrorCode);
+    u_parseCodePointRange(fields[0][0], &start, &end, pErrorCode);
     if(U_FAILURE(*pErrorCode)) {
         fprintf(stderr, "genprops: syntax error in %s.txt field 0 at %s\n", bin->ucdFile, fields[0][0]);
         exit(*pErrorCode);
     }
-    ++limit;
 
     /* parse binary property name */
     s=(char *)u_skipWhitespace(fields[1][0]);
@@ -368,11 +366,11 @@ binariesLineFn(void *context,
     }
     uv=U_MASK(bin->binaries[i].vecShift);
 
-    if(start==0 && limit==0x110000) {
+    if(start==0 && end==0x10ffff) {
         /* Also set bits for initialValue and errorValue. */
-        limit=UPVEC_LIMIT_CP;
+        end=UPVEC_MAX_CP;
     }
-    if(!upvec_setValue(pv, start, limit, bin->binaries[i].vecWord, uv, uv, pErrorCode)) {
+    if(!upvec_setValue(pv, start, end, bin->binaries[i].vecWord, uv, uv, pErrorCode)) {
         fprintf(stderr, "genprops error: unable to set %s code: %s\n",
                         bin->binaries[i].propName, u_errorName(*pErrorCode));
         exit(*pErrorCode);
@@ -486,10 +484,10 @@ generateAdditionalProperties(char *filename, const char *suffix, UErrorCode *pEr
      * W for plane 2
      */
     *pErrorCode=U_ZERO_ERROR;
-    if( !upvec_setValue(pv, 0xe000, 0xf900, 0, (uint32_t)(U_EA_AMBIGUOUS<<UPROPS_EA_SHIFT), UPROPS_EA_MASK, pErrorCode) ||
-        !upvec_setValue(pv, 0xf0000, 0xffffe, 0, (uint32_t)(U_EA_AMBIGUOUS<<UPROPS_EA_SHIFT), UPROPS_EA_MASK, pErrorCode) ||
-        !upvec_setValue(pv, 0x100000, 0x10fffe, 0, (uint32_t)(U_EA_AMBIGUOUS<<UPROPS_EA_SHIFT), UPROPS_EA_MASK, pErrorCode) ||
-        !upvec_setValue(pv, 0x20000, 0x2fffe, 0, (uint32_t)(U_EA_WIDE<<UPROPS_EA_SHIFT), UPROPS_EA_MASK, pErrorCode)
+    if( !upvec_setValue(pv, 0xe000, 0xf8ff, 0, (uint32_t)(U_EA_AMBIGUOUS<<UPROPS_EA_SHIFT), UPROPS_EA_MASK, pErrorCode) ||
+        !upvec_setValue(pv, 0xf0000, 0xffffd, 0, (uint32_t)(U_EA_AMBIGUOUS<<UPROPS_EA_SHIFT), UPROPS_EA_MASK, pErrorCode) ||
+        !upvec_setValue(pv, 0x100000, 0x10fffd, 0, (uint32_t)(U_EA_AMBIGUOUS<<UPROPS_EA_SHIFT), UPROPS_EA_MASK, pErrorCode) ||
+        !upvec_setValue(pv, 0x20000, 0x2fffd, 0, (uint32_t)(U_EA_WIDE<<UPROPS_EA_SHIFT), UPROPS_EA_MASK, pErrorCode)
     ) {
         fprintf(stderr, "genprops: unable to set default East Asian Widths: %s\n", u_errorName(*pErrorCode));
         exit(*pErrorCode);
@@ -516,15 +514,14 @@ static void U_CALLCONV
 ageLineFn(void *context,
           char *fields[][2], int32_t fieldCount,
           UErrorCode *pErrorCode) {
-    char *s, *end;
-    uint32_t value, start, limit, version;
+    char *s, *numberLimit;
+    uint32_t value, start, end, version;
 
-    u_parseCodePointRange(fields[0][0], &start, &limit, pErrorCode);
+    u_parseCodePointRange(fields[0][0], &start, &end, pErrorCode);
     if(U_FAILURE(*pErrorCode)) {
         fprintf(stderr, "genprops: syntax error in DerivedAge.txt field 0 at %s\n", fields[0][0]);
         exit(*pErrorCode);
     }
-    ++limit;
 
     /* ignore "unassigned" (the default is already set to 0.0) */
     s=(char *)u_skipWhitespace(fields[1][0]);
@@ -533,8 +530,8 @@ ageLineFn(void *context,
     }
 
     /* parse version number */
-    value=(uint32_t)uprv_strtoul(s, &end, 10);
-    if(s==end || value==0 || value>15 || (*end!='.' && *end!=' ' && *end!='\t' && *end!=0)) {
+    value=(uint32_t)uprv_strtoul(s, &numberLimit, 10);
+    if(s==numberLimit || value==0 || value>15 || (*numberLimit!='.' && *numberLimit!=' ' && *numberLimit!='\t' && *numberLimit!=0)) {
         fprintf(stderr, "genprops: syntax error in DerivedAge.txt field 1 at %s\n", fields[1][0]);
         *pErrorCode=U_PARSE_ERROR;
         exit(U_PARSE_ERROR);
@@ -542,10 +539,10 @@ ageLineFn(void *context,
     version=value<<4;
 
     /* parse minor version number */
-    if(*end=='.') {
-        s=(char *)u_skipWhitespace(end+1);
-        value=(uint32_t)uprv_strtoul(s, &end, 10);
-        if(s==end || value>15 || (*end!=' ' && *end!='\t' && *end!=0)) {
+    if(*numberLimit=='.') {
+        s=(char *)u_skipWhitespace(numberLimit+1);
+        value=(uint32_t)uprv_strtoul(s, &numberLimit, 10);
+        if(s==numberLimit || value>15 || (*numberLimit!=' ' && *numberLimit!='\t' && *numberLimit!=0)) {
             fprintf(stderr, "genprops: syntax error in DerivedAge.txt field 1 at %s\n", fields[1][0]);
             *pErrorCode=U_PARSE_ERROR;
             exit(U_PARSE_ERROR);
@@ -553,11 +550,11 @@ ageLineFn(void *context,
         version|=value;
     }
 
-    if(start==0 && limit==0x110000) {
+    if(start==0 && end==0x10ffff) {
         /* Also set bits for initialValue and errorValue. */
-        limit=UPVEC_LIMIT_CP;
+        end=UPVEC_MAX_CP;
     }
-    if(!upvec_setValue(pv, start, limit, 0, version<<UPROPS_AGE_SHIFT, UPROPS_AGE_MASK, pErrorCode)) {
+    if(!upvec_setValue(pv, start, end, 0, version<<UPROPS_AGE_SHIFT, UPROPS_AGE_MASK, pErrorCode)) {
         fprintf(stderr, "genprops error: unable to set character age: %s\n", u_errorName(*pErrorCode));
         exit(*pErrorCode);
     }
@@ -570,19 +567,18 @@ numericLineFn(void *context,
               char *fields[][2], int32_t fieldCount,
               UErrorCode *pErrorCode) {
     Props newProps={ 0 };
-    char *s, *end;
-    uint32_t start, limit, value, oldProps32;
+    char *s, *numberLimit;
+    uint32_t start, end, value, oldProps32;
     int32_t oldType;
     char c;
     UBool isFraction;
 
     /* get the code point range */
-    u_parseCodePointRange(fields[0][0], &start, &limit, pErrorCode);
+    u_parseCodePointRange(fields[0][0], &start, &end, pErrorCode);
     if(U_FAILURE(*pErrorCode)) {
         fprintf(stderr, "genprops: syntax error in DerivedNumericValues.txt field 0 at %s\n", fields[0][0]);
         exit(*pErrorCode);
     }
-    ++limit;
 
     /*
      * Ignore the
@@ -592,7 +588,7 @@ numericLineFn(void *context,
      * the numeric values for all characters after reading most
      * from UnicodeData.txt already.
      */
-    if(start==0 && limit==0x110000) {
+    if(start==0 && end==0x10ffff) {
         return;
     }
 
@@ -600,8 +596,8 @@ numericLineFn(void *context,
     isFraction=FALSE;
     s=uprv_strchr(fields[1][0], '.');
     if(s!=NULL) {
-        end=s+1;
-        while('0'<=(c=*end++) && c<='9') {
+        numberLimit=s+1;
+        while('0'<=(c=*numberLimit++) && c<='9') {
             if(c!='0') {
                 isFraction=TRUE;
                 break;
@@ -620,17 +616,17 @@ numericLineFn(void *context,
             /* large powers of 10 are encoded in a special way, see store.c */
             uint8_t exp=0;
 
-            end=s;
-            while(*(++end)=='0') {
+            numberLimit=s;
+            while(*(++numberLimit)=='0') {
                 ++exp;
             }
             value=1;
             newProps.exponent=exp;
         } else {
             /* normal number parsing */
-            value=(uint32_t)uprv_strtoul(s, &end, 10);
+            value=(uint32_t)uprv_strtoul(s, &numberLimit, 10);
         }
-        if(end<=s || (*end!='.' && u_skipWhitespace(end)!=fields[1][1]) || value>=0x80000000) {
+        if(numberLimit<=s || (*numberLimit!='.' && u_skipWhitespace(numberLimit)!=fields[1][1]) || value>=0x80000000) {
             fprintf(stderr, "genprops: syntax error in DerivedNumericValues.txt field 1 at %s\n", fields[0][0]);
             exit(U_PARSE_ERROR);
         }
@@ -651,7 +647,7 @@ numericLineFn(void *context,
     /* the exponent may have been set above */
     value=makeProps(&newProps);
 
-    for(; start<limit; ++start) {
+    for(; start<=end; ++start) {
         oldProps32=getProps(start);
         oldType=(int32_t)GET_NUMERIC_TYPE(oldProps32);
 

@@ -92,7 +92,7 @@ upvec_open(int32_t columns, int32_t maxRows) {
         /* set header */
         pv[UPVEC_COLUMNS]=(uint32_t)columns;
         pv[UPVEC_MAXROWS]=(uint32_t)maxRows;
-        pv[UPVEC_ROWS]=1+(UPVEC_LIMIT_CP-UPVEC_FIRST_SPECIAL_CP);
+        pv[UPVEC_ROWS]=2+(UPVEC_MAX_CP-UPVEC_FIRST_SPECIAL_CP);
         pv[UPVEC_PREV_ROW]=0;
 
         /* set the all-Unicode row and the special-value rows */
@@ -101,7 +101,7 @@ upvec_open(int32_t columns, int32_t maxRows) {
         row[0]=0;
         row[1]=0x110000;
         row+=columns;
-        for(cp=UPVEC_FIRST_SPECIAL_CP; cp<UPVEC_LIMIT_CP; ++cp) {
+        for(cp=UPVEC_FIRST_SPECIAL_CP; cp<=UPVEC_MAX_CP; ++cp) {
             row[0]=cp;
             row[1]=cp+1;
             row+=columns;
@@ -119,12 +119,13 @@ upvec_close(uint32_t *pv) {
 
 U_CAPI UBool U_EXPORT2
 upvec_setValue(uint32_t *pv,
-               UChar32 start, UChar32 limit,
+               UChar32 start, UChar32 end,
                int32_t column,
                uint32_t value, uint32_t mask,
                UErrorCode *pErrorCode) {
     uint32_t *firstRow, *lastRow;
     int32_t columns;
+    UChar32 limit;
     UBool splitFirstRow, splitLastRow;
 
     /* argument checking */
@@ -133,16 +134,13 @@ upvec_setValue(uint32_t *pv,
     }
 
     if( pv==NULL ||
-        start<0 || start>limit || limit>UPVEC_LIMIT_CP ||
+        start<0 || start>end || end>UPVEC_MAX_CP ||
         column<0 || (uint32_t)(column+1)>=pv[UPVEC_COLUMNS]
     ) {
         *pErrorCode=U_ILLEGAL_ARGUMENT_ERROR;
         return FALSE;
     }
-    if(start==limit) {
-        /* empty range, nothing to do */
-        return TRUE;
-    }
+    limit=end+1;
 
     /* initialize */
     columns=(int32_t)pv[UPVEC_COLUMNS];
@@ -248,7 +246,7 @@ U_CAPI uint32_t U_EXPORT2
 upvec_getValue(uint32_t *pv, UChar32 c, int32_t column) {
     uint32_t *row;
 
-    if(pv==NULL || c<0 || c>=UPVEC_LIMIT_CP) {
+    if(pv==NULL || c<0 || c>UPVEC_MAX_CP) {
         return 0;
     }
     row=_findRow(pv, c);
@@ -257,7 +255,7 @@ upvec_getValue(uint32_t *pv, UChar32 c, int32_t column) {
 
 U_CAPI uint32_t * U_EXPORT2
 upvec_getRow(uint32_t *pv, int32_t rowIndex,
-             UChar32 *pRangeStart, UChar32 *pRangeLimit) {
+             UChar32 *pRangeStart, UChar32 *pRangeEnd) {
     uint32_t *row;
     int32_t columns;
 
@@ -270,8 +268,8 @@ upvec_getRow(uint32_t *pv, int32_t rowIndex,
     if(pRangeStart!=NULL) {
         *pRangeStart=row[0];
     }
-    if(pRangeLimit!=NULL) {
-        *pRangeLimit=row[1];
+    if(pRangeEnd!=NULL) {
+        *pRangeEnd=row[1]-1;
     }
     return row+2;
 }
@@ -347,10 +345,6 @@ upvec_compact(uint32_t *pv, UPVecCompactHandler *handler, void *context, UErrorC
         }
 
         if(start>=UPVEC_FIRST_SPECIAL_CP) {
-#if 0  /* TODO: remove from final version */
-            printf("upvec_compact(): special 0x%lx at index 0x%lx\n",
-                    (long)start, (long)count);
-#endif
             handler(context, start, start, count, row+2, valueColumns, pErrorCode);
             if(U_FAILURE(*pErrorCode)) {
                 return 0;
@@ -391,15 +385,10 @@ upvec_compact(uint32_t *pv, UPVecCompactHandler *handler, void *context, UErrorC
         }
 
         if(start<UPVEC_FIRST_SPECIAL_CP) {
-            handler(context, start, limit, count, pv+count, valueColumns, pErrorCode);
+            handler(context, start, limit-1, count, pv+count, valueColumns, pErrorCode);
             if(U_FAILURE(*pErrorCode)) {
                 return 0;
             }
-        } else {
-#if 0  /* TODO: remove from final version */
-            printf("upvec_compact(): special 0x%lx at index 0x%lx\n",
-                    (long)start, (long)count);
-#endif
         }
 
         row+=columns;
@@ -409,14 +398,22 @@ upvec_compact(uint32_t *pv, UPVecCompactHandler *handler, void *context, UErrorC
     return count+valueColumns;
 }
 
+/*
+ * TODO(markus): Add upvec_compactToUTrie2WithRowIndexes() function that returns
+ * a UTrie2 and does not require the caller to pass in a callback function.
+ *
+ * Add upvec_16BitsToUTrie2() function that enumerates all rows, extracts
+ * some 16-bit field and builds and returns a UTrie2.
+ */
+
 U_CAPI void U_CALLCONV
 upvec_compactToUTrieHandler(void *context,
-                            UChar32 start, UChar32 limit,
+                            UChar32 start, UChar32 end,
                             int32_t rowIndex, uint32_t *row, int32_t columns,
                             UErrorCode *pErrorCode) {
     UPVecToUTrieContext *toUTrie=(UPVecToUTrieContext *)context;
     if(start<UPVEC_FIRST_SPECIAL_CP) {
-        if(!utrie_setRange32(toUTrie->newTrie, start, limit, (uint32_t)rowIndex, TRUE)) {
+        if(!utrie_setRange32(toUTrie->newTrie, start, end+1, (uint32_t)rowIndex, TRUE)) {
             *pErrorCode=U_BUFFER_OVERFLOW_ERROR;
         }
     } else {
@@ -425,11 +422,16 @@ upvec_compactToUTrieHandler(void *context,
             toUTrie->initialValue=rowIndex;
             break;
         case UPVEC_START_REAL_VALUES_CP:
-            toUTrie->newTrie=utrie_open(NULL, NULL, toUTrie->capacity,
-                                        toUTrie->initialValue, toUTrie->initialValue,
-                                        toUTrie->latin1Linear);
-            if(toUTrie->newTrie==NULL) {
-                *pErrorCode=U_MEMORY_ALLOCATION_ERROR;
+            if(rowIndex>0xffff) {
+                /* too many rows for a 16-bit trie */
+                *pErrorCode=U_INDEX_OUTOFBOUNDS_ERROR;
+            } else {
+                toUTrie->newTrie=utrie_open(NULL, NULL, toUTrie->capacity,
+                                            toUTrie->initialValue, toUTrie->initialValue,
+                                            toUTrie->latin1Linear);
+                if(toUTrie->newTrie==NULL) {
+                    *pErrorCode=U_MEMORY_ALLOCATION_ERROR;
+                }
             }
             break;
         default:
@@ -440,12 +442,12 @@ upvec_compactToUTrieHandler(void *context,
 
 U_CAPI void U_CALLCONV
 upvec_compactToUTrie2Handler(void *context,
-                             UChar32 start, UChar32 limit,
+                             UChar32 start, UChar32 end,
                              int32_t rowIndex, uint32_t *row, int32_t columns,
                              UErrorCode *pErrorCode) {
     UPVecToUTrie2Context *toUTrie2=(UPVecToUTrie2Context *)context;
     if(start<UPVEC_FIRST_SPECIAL_CP) {
-        if(!utrie2_setRange32(toUTrie2->trie, start, limit, (uint32_t)rowIndex, TRUE)) {
+        if(!utrie2_setRange32(toUTrie2->trie, start, end, (uint32_t)rowIndex, TRUE)) {
             *pErrorCode=U_BUFFER_OVERFLOW_ERROR;
         }
     } else {
@@ -458,8 +460,13 @@ upvec_compactToUTrie2Handler(void *context,
             break;
         case UPVEC_START_REAL_VALUES_CP:
             toUTrie2->maxValue=rowIndex;
-            toUTrie2->trie=utrie2_open(toUTrie2->initialValue,
-                                       toUTrie2->errorValue, pErrorCode);
+            if(rowIndex>0xffff) {
+                /* too many rows for a 16-bit trie */
+                *pErrorCode=U_INDEX_OUTOFBOUNDS_ERROR;
+            } else {
+                toUTrie2->trie=utrie2_open(toUTrie2->initialValue,
+                                           toUTrie2->errorValue, pErrorCode);
+            }
             break;
         default:
             break;
