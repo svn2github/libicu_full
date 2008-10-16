@@ -603,25 +603,10 @@ ucol_nextGraphemeCluster(UCollationElements *elems, UErrorCode *status)
     uint32_t start = 0, end = 0;
     uint32_t ce;
 
-#if 0
-    do {
-        start = ucol_getOffset(elems);
-        ce = (uint32_t) ucol_getNextCE(coll, &elems->iteratordata_, status);
-
-        if (ce == UCOL_NO_MORE_CES) {
-            return -1;
-        }
-    } while (ce == 0);
-
-    if ((ce & UCOL_PRIMARYORDERMASK) == 0) {
-        return -1;
-    }
-#else
     // Unicode.org sample code just discards first CE
     // and accumulates 'till it gets a non-zero primary...
     start = ucol_getOffset(elems);
     ce = (uint32_t) ucol_getNextCE(coll, &elems->iteratordata_, status);
-#endif
 
     do {
         end = ucol_getOffset(elems);
@@ -633,6 +618,31 @@ ucol_nextGraphemeCluster(UCollationElements *elems, UErrorCode *status)
     } while (ce != 0 && (ce & UCOL_PRIMARYORDERMASK) == 0);
 
     ucol_setOffset(elems, end, status);
+    return end - start;
+}
+
+U_CAPI int32_t U_EXPORT2
+ucol_prevGraphemeCluster(UCollationElements *elems, UErrorCode *status)
+{
+    if (U_FAILURE(*status)) {
+        return -1;
+    }
+
+    const UCollator *coll = elems->iteratordata_.coll;
+    uint32_t start = 0, end = 0;
+    uint32_t ce;
+
+    end = ucol_getOffset(elems);
+
+    do {
+        ce = (uint32_t) ucol_getPrevCE(coll, &elems->iteratordata_, status);
+        start = ucol_getOffset(elems);
+
+        if (ce == UCOL_NO_MORE_CES) {
+            break;
+        }
+    } while (ce != 0 && (ce & UCOL_PRIMARYORDERMASK) == 0);
+
     return end - start;
 }
 

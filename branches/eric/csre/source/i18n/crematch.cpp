@@ -436,26 +436,48 @@ UBool CSREMatcher::find() {
 
     switch (fPattern->fStartType) {
     case START_NO_INFO:
+    {
         // No optimization was found. 
         //  Try a match at each input position.
+#if 1
+        UErrorCode status = U_ZERO_ERROR;
+        UCollationElements *elems = ucol_openElements(fColl, inputBuf + startPos, fActiveLimit - startPos, &status);
+#endif
+
         for (;;) {
             MatchAt(startPos, FALSE, fDeferredStatus);
             if (U_FAILURE(fDeferredStatus)) {
+#if 1
+                ucol_closeElements(elems);
+#endif
                 return FALSE;
             }
             if (fMatch) {
+#if 1
+                ucol_closeElements(elems);
+#endif
                 return TRUE;
             }
             if (startPos >= testLen) {
                 fHitEnd = TRUE;
+#if 1
+                ucol_closeElements(elems);
+#endif
                 return FALSE;
             }
+
+#if 0
             U16_FWD_1(inputBuf, startPos, fActiveLimit);
+#else
+            startPos += ucol_nextGraphemeCluster(elems, &status);
+#endif
+
             // Note that it's perfectly OK for a pattern to have a zero-length
             //   match at the end of a string, so we must make sure that the loop
             //   runs with startPos == testLen the last time through.
         }
         U_ASSERT(FALSE);
+    }
 
     case START_START:
         // Matches are only possible at the start of the input string
@@ -505,7 +527,6 @@ UBool CSREMatcher::find() {
 #if 0
             UChar32 theChar = fPattern->fInitialChar;
 #else
-            int32_t bias = startPos;
             UErrorCode status = U_ZERO_ERROR;
             UCollationElements *elems = ucol_openElements(fColl, inputBuf + startPos, fActiveLimit - startPos, &status);
 #endif
@@ -2831,7 +2852,18 @@ GC_Done:
                 //   (We're going backwards because this loop emulates stack unwinding, not
                 //    the initial scan forward.)
                 U_ASSERT(fp->fInputIdx > 0);
+#if 0
                 U16_BACK_1(inputBuf, 0, fp->fInputIdx);
+#else
+                UErrorCode status = U_ZERO_ERROR;
+                UCollationElements *elems = ucol_openElements(fColl, inputBuf, fp->fInputIdx, &status);
+
+                ucol_setOffset(elems, fp->fInputIdx, &status);
+                fp->fInputIdx -= ucol_prevGraphemeCluster(elems, &status);
+                ucol_closeElements(elems);
+
+#endif
+
                 if (inputBuf[fp->fInputIdx] == 0x0a && 
                     fp->fInputIdx > terminalIdx &&
                     inputBuf[fp->fInputIdx-1] == 0x0d) {
