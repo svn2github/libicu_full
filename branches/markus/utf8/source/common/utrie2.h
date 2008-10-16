@@ -85,7 +85,7 @@ typedef enum UTrie2ValueBits UTrie2ValueBits;
  *                  U_INVALID_FORMAT_ERROR if it does not match the serialized form
  * @param data a pointer to 32-bit-aligned memory containing the serialized form of a UTrie2
  * @param length the number of bytes available at data;
- *               can be more than necessary (see return value)
+ *               can be more than necessary
  * @param pActualLength receives the actual number of bytes at data taken up by the trie data;
  *                      can be NULL
  * @param pErrorCode an in/out ICU UErrorCode
@@ -131,7 +131,7 @@ utrie2_openDummy(UTrie2ValueBits valueBits,
  * Easier to use because, unlike the macros, this function works on all UTrie2
  * objects, frozen or not, holding 16-bit or 32-bit data values.
  *
- * @param trie the build-time trie
+ * @param trie the trie
  * @param c the code point
  * @return the value
  */
@@ -210,10 +210,11 @@ utrie2_open(uint32_t initialValue, uint32_t errorValue, UErrorCode *pErrorCode);
  * You must utrie2_close() the clone once you are done using it.
  *
  * @param other the trie to clone
+ * @param pErrorCode an in/out ICU UErrorCode
  * @return a pointer to the new trie clone
  */
 U_CAPI UTrie2 * U_EXPORT2
-utrie2_clone(const UTrie2 *other);
+utrie2_clone(const UTrie2 *other, UErrorCode *pErrorCode);
 
 /**
  * Clone a trie. The clone will be mutable/writable even if the other trie
@@ -221,10 +222,11 @@ utrie2_clone(const UTrie2 *other);
  * You must utrie2_close() the clone once you are done using it.
  *
  * @param other the trie to clone
+ * @param pErrorCode an in/out ICU UErrorCode
  * @return a pointer to the new trie clone
  */
 U_CAPI UTrie2 * U_EXPORT2
-utrie2_cloneAsThawed(const UTrie2 *other);
+utrie2_cloneAsThawed(const UTrie2 *other, UErrorCode *pErrorCode);
 
 /**
  * Close a trie and release associated memory.
@@ -237,30 +239,33 @@ utrie2_close(UTrie2 *trie);
 /**
  * Set a value for a code point.
  *
- * @param trie the trie
+ * @param trie the unfrozen trie
  * @param c the code point
  * @param value the value
- * @return FALSE if a failure occurred (illegal argument, frozen trie, or out-of-memory)
+ * @param pErrorCode an in/out ICU UErrorCode; among other possible error codes:
+ * - U_NO_WRITE_PERMISSION if the trie is frozen
  */
-U_CAPI UBool U_EXPORT2
-utrie2_set32(UTrie2 *trie, UChar32 c, uint32_t value);
+U_CAPI void U_EXPORT2
+utrie2_set32(UTrie2 *trie, UChar32 c, uint32_t value, UErrorCode *pErrorCode);
 
 /**
  * Set a value in a range of code points [start..end].
  * All code points c with start<=c<=end will get the value if
  * overwrite is TRUE or if the old value is the initial value.
  *
- * @param trie the trie
+ * @param trie the unfrozen trie
  * @param start the first code point to get the value
  * @param end the last code point to get the value (inclusive)
  * @param value the value
  * @param overwrite flag for whether old non-initial values are to be overwritten
- * @return FALSE if a failure occurred (illegal argument, frozen trie, or out-of-memory)
+ * @param pErrorCode an in/out ICU UErrorCode; among other possible error codes:
+ * - U_NO_WRITE_PERMISSION if the trie is frozen
  */
-U_CAPI UBool U_EXPORT2
+U_CAPI void U_EXPORT2
 utrie2_setRange32(UTrie2 *trie,
                   UChar32 start, UChar32 end,
-                  uint32_t value, UBool overwrite);
+                  uint32_t value, UBool overwrite,
+                  UErrorCode *pErrorCode);
 
 /**
  * Freeze a trie. Make it immutable (read-only) and compact it,
@@ -299,7 +304,7 @@ utrie2_isFrozen(const UTrie2 *trie);
  * If the trie is not frozen, then the function returns with a U_ILLEGAL_ARGUMENT_ERROR.
  * A trie can be serialized multiple times.
  *
- * @param trie the trie
+ * @param trie the frozen trie
  * @param data a pointer to 32-bit-aligned memory to be filled with the trie data,
  *             can be NULL if capacity==0
  * @param capacity the number of bytes available at data,
@@ -323,7 +328,8 @@ utrie2_serialize(UTrie2 *trie,
  * Get the UTrie version from 32-bit-aligned memory containing the serialized form
  * of either a UTrie (version 1) or a UTrie2 (version 2).
  *
- * @param data a pointer to 32-bit-aligned memory containing the serialized form of a UTrie2
+ * @param data a pointer to 32-bit-aligned memory containing the serialized form
+ *             of a UTrie, version 1 or 2
  * @param length the number of bytes available at data;
  *               can be more than necessary (see return value)
  * @param anyEndianOk If FALSE, only platform-endian serialized forms are recognized.
@@ -507,7 +513,7 @@ utrie2_fromUTrie(const UTrie *trie1, uint32_t errorValue, UErrorCode *pErrorCode
 /**
  * Get a value from a lead surrogate code unit as stored in the trie.
  *
- * @param trie the build-time trie
+ * @param trie the trie
  * @param c the code unit (U+D800..U+DBFF)
  * @return the value
  */
@@ -547,13 +553,16 @@ utrie2_enumForLeadSurrogate(const UTrie2 *trie, UChar32 lead,
 /**
  * Set a value for a lead surrogate code unit.
  *
- * @param trie the build-time trie
+ * @param trie the unfrozen trie
  * @param lead the lead surrogate code unit (U+D800..U+DBFF)
  * @param value the value
- * @return FALSE if a failure occurred (illegal argument or data array overrun)
+ * @param pErrorCode an in/out ICU UErrorCode; among other possible error codes:
+ * - U_NO_WRITE_PERMISSION if the trie is frozen
  */
-U_CAPI UBool U_EXPORT2
-utrie2_set32ForLeadSurrogateCodeUnit(UTrie2 *trie, UChar32 lead, uint32_t value);
+U_CAPI void U_EXPORT2
+utrie2_set32ForLeadSurrogateCodeUnit(UTrie2 *trie,
+                                     UChar32 lead, uint32_t value,
+                                     UErrorCode *pErrorCode);
 
 /**
  * Return a 16-bit trie value from a UTF-16 single/lead code unit (<=U+ffff).

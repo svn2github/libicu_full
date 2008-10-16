@@ -481,12 +481,51 @@ testTrieUTF8(const char *testName,
 
 static void
 testFrozenTrie(const char *testName,
-               const UTrie2 *trie, UTrie2ValueBits valueBits,
+               UTrie2 *trie, UTrie2ValueBits valueBits,
                const CheckRange checkRanges[], int32_t countCheckRanges) {
+    UErrorCode errorCode;
+    uint32_t value, value2;
+
+    if(!utrie2_isFrozen(trie)) {
+        log_err("error: utrie2_isFrozen(frozen %s) returned FALSE (not frozen)\n",
+                testName);
+        return;
+    }
+
     testTrieGetters(testName, trie, valueBits, checkRanges, countCheckRanges);
     testTrieEnum(testName, trie, checkRanges, countCheckRanges);
     testTrieUTF16(testName, trie, valueBits, checkRanges, countCheckRanges);
     testTrieUTF8(testName, trie, valueBits, checkRanges, countCheckRanges);
+
+    errorCode=U_ZERO_ERROR;
+    value=utrie2_get32(trie, 1);
+    utrie2_set32(trie, 1, 234, &errorCode);
+    value2=utrie2_get32(trie, 1);
+    if(errorCode!=U_NO_WRITE_PERMISSION || value2!=value) {
+        log_err("error: utrie2_set32(frozen %s) failed: it set %s != U_NO_WRITE_PERMISSION\n",
+                testName, u_errorName(errorCode));
+        return;
+    }
+
+    errorCode=U_ZERO_ERROR;
+    utrie2_setRange32(trie, 1, 5, 234, TRUE, &errorCode);
+    value2=utrie2_get32(trie, 1);
+    if(errorCode!=U_NO_WRITE_PERMISSION || value2!=value) {
+        log_err("error: utrie2_setRange32(frozen %s) failed: it set %s != U_NO_WRITE_PERMISSION\n",
+                testName, u_errorName(errorCode));
+        return;
+    }
+
+    errorCode=U_ZERO_ERROR;
+    value=utrie2_get32FromLeadSurrogateCodeUnit(trie, 0xd801);
+    utrie2_set32ForLeadSurrogateCodeUnit(trie, 0xd801, 234, &errorCode);
+    value2=utrie2_get32FromLeadSurrogateCodeUnit(trie, 0xd801);
+    if(errorCode!=U_NO_WRITE_PERMISSION || value2!=value) {
+        log_err("error: utrie2_set32ForLeadSurrogateCodeUnit(frozen %s) failed: "
+                "it set %s != U_NO_WRITE_PERMISSION\n",
+                testName, u_errorName(errorCode));
+        return;
+    }
 }
 
 static void
@@ -508,9 +547,11 @@ testTrieSerialize(const char *testName,
     UErrorCode errorCode;
 
     /* clone the trie so that the caller can reuse the original */
-    trie=utrie2_clone(trie);
-    if(trie==NULL) {
-        log_err("error: utrie2_clone(unfrozen %s) failed\n", testName);
+    errorCode=U_ZERO_ERROR;
+    trie=utrie2_clone(trie, &errorCode);
+    if(U_FAILURE(errorCode)) {
+        log_err("error: utrie2_clone(unfrozen %s) failed - %s\n",
+                testName, u_errorName(errorCode));
         return;
     }
 
@@ -544,9 +585,11 @@ testTrieSerialize(const char *testName,
         errorCode=U_ZERO_ERROR;
         if(withSwap) {
             /* clone a frozen trie */
-            UTrie2 *clone=utrie2_clone(trie);
-            if(clone==NULL) {
-                log_err("error: cloning a frozen UTrie2 failed (%s)\n", testName);
+            UTrie2 *clone=utrie2_clone(trie, &errorCode);
+            if(U_FAILURE(errorCode)) {
+                log_err("error: cloning a frozen UTrie2 failed (%s) - %s\n",
+                        testName, u_errorName(errorCode));
+                errorCode=U_ZERO_ERROR;  /* continue with the original */
             } else {
                 utrie2_close(trie);
                 trie=clone;
@@ -655,11 +698,14 @@ testTrieSerialize(const char *testName,
                     testName, u_errorName(errorCode));
             break;
         }
+        errorCode=U_ZERO_ERROR;
         if(withSwap) {
             /* clone an unserialized trie */
-            UTrie2 *clone=utrie2_clone(trie);
-            if(clone==NULL) {
-                log_err("error: cloning an unserialized UTrie2 failed (%s)\n", testName);
+            UTrie2 *clone=utrie2_clone(trie, &errorCode);
+            if(U_FAILURE(errorCode)) {
+                log_err("error: utrie2_clone(unserialized %s) failed - %s\n",
+                        testName, u_errorName(errorCode));
+                errorCode=U_ZERO_ERROR;
                 /* no need to break: just test the original trie */
             } else {
                 utrie2_close(trie);
@@ -670,10 +716,11 @@ testTrieSerialize(const char *testName,
         testFrozenTrie(testName, trie, valueBits, checkRanges, countCheckRanges);
         {
             /* clone-as-thawed an unserialized trie */
-            UTrie2 *clone=utrie2_cloneAsThawed(trie);
-            if(clone==NULL || utrie2_isFrozen(clone)) {
-                log_err("error: utrie2_cloneAsThawed(unserialized UTrie2 %s) failed (isFrozen: %d)\n",
-                        testName, clone!=NULL && utrie2_isFrozen(trie));
+            UTrie2 *clone=utrie2_cloneAsThawed(trie, &errorCode);
+            if(U_FAILURE(errorCode) || utrie2_isFrozen(clone)) {
+                log_err("error: utrie2_cloneAsThawed(unserialized %s) failed - "
+                        "%s (isFrozen: %d)\n",
+                        testName, u_errorName(errorCode), clone!=NULL && utrie2_isFrozen(trie));
                 break;
             } else {
                 utrie2_close(trie);
@@ -681,12 +728,15 @@ testTrieSerialize(const char *testName,
             }
         }
         {
-            uint32_t value=utrie2_get32(trie, 0xa1);
-            if( !utrie2_set32(trie, 0xa1, 789) ||
-                789!=utrie2_get32(trie, 0xa1) ||
-                !utrie2_set32(trie, 0xa1, value)
-            ) {
-                log_err("error: modifying a cloneAsThawed UTrie2 (%s) failed\n", testName);
+            uint32_t value, value2;
+
+            value=utrie2_get32(trie, 0xa1);
+            utrie2_set32(trie, 0xa1, 789, &errorCode);
+            value2=utrie2_get32(trie, 0xa1);
+            utrie2_set32(trie, 0xa1, value, &errorCode);
+            if(U_FAILURE(errorCode) || value2!=789) {
+                log_err("error: modifying a cloneAsThawed UTrie2 (%s) failed - %s\n",
+                        testName, u_errorName(errorCode));
             }
         }
         testNewTrie(testName, trie, checkRanges, countCheckRanges);
@@ -719,9 +769,11 @@ testTrieSerializeAllValueBits(const char *testName,
          * try cloning after the first serialization;
          * clone-as-thawed just to sometimes try it on an unfrozen trie
          */
-        UTrie2 *clone=utrie2_cloneAsThawed(trie);
-        if(clone==NULL) {
-            log_err("error: cloning a UTrie2 after serialization failed (%s)\n", testName);
+        UErrorCode errorCode=U_ZERO_ERROR;
+        UTrie2 *clone=utrie2_cloneAsThawed(trie, &errorCode);
+        if(U_FAILURE(errorCode)) {
+            log_err("error: utrie2_cloneAsThawed(%s) after serialization failed - %s\n",
+                    testName, u_errorName(errorCode));
         } else {
             utrie2_close(trie);
             trie=clone;
@@ -749,7 +801,7 @@ makeTrieWithRanges(const char *testName, UBool withClone,
     UChar32 start, limit;
     int32_t i;
     UErrorCode errorCode;
-    UBool overwrite, ok;
+    UBool overwrite;
 
     log_verbose("\ntesting Trie '%s'\n", testName);
     errorCode=U_ZERO_ERROR;
@@ -761,13 +813,14 @@ makeTrieWithRanges(const char *testName, UBool withClone,
     }
 
     /* set values from setRanges[] */
-    ok=TRUE;
     for(i=0; i<countSetRanges; ++i) {
         if(withClone && i==countSetRanges/2) {
             /* switch to a clone in the middle of setting values */
-            UTrie2 *clone=utrie2_clone(trie);
-            if(clone==NULL) {
-                log_err("error: cloning a UTrie2 failed (%s)\n", testName);
+            UTrie2 *clone=utrie2_clone(trie, &errorCode);
+            if(U_FAILURE(errorCode)) {
+                log_err("error: utrie2_clone(%s) failed - %s\n",
+                        testName, u_errorName(errorCode));
+                errorCode=U_ZERO_ERROR;  /* continue with the original */
             } else {
                 utrie2_close(trie);
                 trie=clone;
@@ -778,20 +831,21 @@ makeTrieWithRanges(const char *testName, UBool withClone,
         value=setRanges[i].value;
         overwrite=setRanges[i].overwrite;
         if((limit-start)==1 && overwrite) {
-            ok&=utrie2_set32(trie, start, value);
+            utrie2_set32(trie, start, value, &errorCode);
         } else {
-            ok&=utrie2_setRange32(trie, start, limit-1, value, overwrite);
+            utrie2_setRange32(trie, start, limit-1, value, overwrite, &errorCode);
         }
     }
 
     /* set some values for lead surrogate code units */
-    ok&=utrie2_set32ForLeadSurrogateCodeUnit(trie, 0xd800, 90);
-    ok&=utrie2_set32ForLeadSurrogateCodeUnit(trie, 0xd999, 94);
-    ok&=utrie2_set32ForLeadSurrogateCodeUnit(trie, 0xdbff, 99);
-    if(ok) {
+    utrie2_set32ForLeadSurrogateCodeUnit(trie, 0xd800, 90, &errorCode);
+    utrie2_set32ForLeadSurrogateCodeUnit(trie, 0xd999, 94, &errorCode);
+    utrie2_set32ForLeadSurrogateCodeUnit(trie, 0xdbff, 99, &errorCode);
+    if(U_SUCCESS(errorCode)) {
         return trie;
     } else {
-        log_err("error: setting values into a trie failed (%s)\n", testName);
+        log_err("error: setting values into a trie (%s) failed - %s\n",
+                testName, u_errorName(errorCode));
         utrie2_close(trie);
         return NULL;
     }
@@ -1101,7 +1155,6 @@ FreeBlocksTest(void) {
     UTrie2 *trie;
     int32_t i;
     UErrorCode errorCode;
-    UBool ok;
 
     errorCode=U_ZERO_ERROR;
     trie=utrie2_open(1, 0xbad, &errorCode);
@@ -1114,23 +1167,23 @@ FreeBlocksTest(void) {
      * Repeatedly set overlapping same-value ranges to stress the free-data-block management.
      * If it fails, it will overflow the data array.
      */
-    ok=TRUE;
     for(i=0; i<(0x120000>>UTRIE2_SHIFT_2)/2; ++i) {
-        ok&=utrie2_setRange32(trie, 0x740, 0x840-1, 1, TRUE);
-        ok&=utrie2_setRange32(trie, 0x780, 0x880-1, 1, TRUE);
-        ok&=utrie2_setRange32(trie, 0x740, 0x840-1, 2, TRUE);
-        ok&=utrie2_setRange32(trie, 0x780, 0x880-1, 3, TRUE);
+        utrie2_setRange32(trie, 0x740, 0x840-1, 1, TRUE, &errorCode);
+        utrie2_setRange32(trie, 0x780, 0x880-1, 1, TRUE, &errorCode);
+        utrie2_setRange32(trie, 0x740, 0x840-1, 2, TRUE, &errorCode);
+        utrie2_setRange32(trie, 0x780, 0x880-1, 3, TRUE, &errorCode);
     }
     /* make blocks that will be free during compaction */
-    ok&=utrie2_setRange32(trie, 0x1000, 0x3000-1, 2, TRUE);
-    ok&=utrie2_setRange32(trie, 0x2000, 0x4000-1, 3, TRUE);
-    ok&=utrie2_setRange32(trie, 0x1000, 0x4000-1, 1, TRUE);
+    utrie2_setRange32(trie, 0x1000, 0x3000-1, 2, TRUE, &errorCode);
+    utrie2_setRange32(trie, 0x2000, 0x4000-1, 3, TRUE, &errorCode);
+    utrie2_setRange32(trie, 0x1000, 0x4000-1, 1, TRUE, &errorCode);
     /* set some values for lead surrogate code units */
-    ok&=utrie2_set32ForLeadSurrogateCodeUnit(trie, 0xd800, 90);
-    ok&=utrie2_set32ForLeadSurrogateCodeUnit(trie, 0xd999, 94);
-    ok&=utrie2_set32ForLeadSurrogateCodeUnit(trie, 0xdbff, 99);
-    if(!ok) {
-        log_err("error: setting lots of ranges into a trie failed (%s)\n", testName);
+    utrie2_set32ForLeadSurrogateCodeUnit(trie, 0xd800, 90, &errorCode);
+    utrie2_set32ForLeadSurrogateCodeUnit(trie, 0xd999, 94, &errorCode);
+    utrie2_set32ForLeadSurrogateCodeUnit(trie, 0xdbff, 99, &errorCode);
+    if(U_FAILURE(errorCode)) {
+        log_err("error: setting lots of ranges into a trie (%s) failed - %s\n",
+                testName, u_errorName(errorCode));
         utrie2_close(trie);
         return;
     }
@@ -1155,7 +1208,6 @@ GrowDataArrayTest(void) {
     UTrie2 *trie;
     int32_t i;
     UErrorCode errorCode;
-    UBool ok;
 
     errorCode=U_ZERO_ERROR;
     trie=utrie2_open(1, 0xbad, &errorCode);
@@ -1168,28 +1220,28 @@ GrowDataArrayTest(void) {
      * Use utrie2_set32() not utrie2_setRange32() to write non-initialValue-data.
      * Should grow/reallocate the data array to a sufficient length.
      */
-    ok=TRUE;
     for(i=0; i<0x1000; ++i) {
-        ok&=utrie2_set32(trie, i, 2);
+        utrie2_set32(trie, i, 2, &errorCode);
     }
     for(i=0x720; i<0x1100; ++i) { /* some overlap */
-        ok&=utrie2_set32(trie, i, 3);
+        utrie2_set32(trie, i, 3, &errorCode);
     }
     for(i=0x7a0; i<0x900; ++i) {
-        ok&=utrie2_set32(trie, i, 4);
+        utrie2_set32(trie, i, 4, &errorCode);
     }
     for(i=0x8a0; i<0x110000; ++i) {
-        ok&=utrie2_set32(trie, i, 5);
+        utrie2_set32(trie, i, 5, &errorCode);
     }
     for(i=0xd800; i<0xdc00; ++i) {
-        ok&=utrie2_set32ForLeadSurrogateCodeUnit(trie, i, 1);
+        utrie2_set32ForLeadSurrogateCodeUnit(trie, i, 1, &errorCode);
     }
     /* set some values for lead surrogate code units */
-    ok&=utrie2_set32ForLeadSurrogateCodeUnit(trie, 0xd800, 90);
-    ok&=utrie2_set32ForLeadSurrogateCodeUnit(trie, 0xd999, 94);
-    ok&=utrie2_set32ForLeadSurrogateCodeUnit(trie, 0xdbff, 99);
-    if(!ok) {
-        log_err("error: setting lots of values into a trie failed (%s)\n", testName);
+    utrie2_set32ForLeadSurrogateCodeUnit(trie, 0xd800, 90, &errorCode);
+    utrie2_set32ForLeadSurrogateCodeUnit(trie, 0xd999, 94, &errorCode);
+    utrie2_set32ForLeadSurrogateCodeUnit(trie, 0xdbff, 99, &errorCode);
+    if(U_FAILURE(errorCode)) {
+        log_err("error: setting lots of values into a trie (%s) failed - %s\n",
+                testName, u_errorName(errorCode));
         utrie2_close(trie);
         return;
     }
@@ -1265,7 +1317,7 @@ makeNewTrie1WithRanges(const char *testName,
     if(ok) {
         return newTrie;
     } else {
-        log_err("error: setting values into a trie1 failed (%s)\n", testName);
+        log_err("error: setting values into a trie1 (%s) failed\n", testName);
         utrie_close(newTrie);
         return NULL;
     }

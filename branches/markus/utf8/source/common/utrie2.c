@@ -20,7 +20,7 @@
 *   See utrie2.h for a comparison.
 *
 *   This file contains only the runtime and enumeration code, for read-only access.
-*   See unewtrie2.c for the builder code.
+*   See utrie2_builder.c for the builder code.
 */
 #ifdef UTRIE2_DEBUG
 #   include <stdio.h>

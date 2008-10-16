@@ -457,21 +457,16 @@ generateData(const char *dataDir, UBool csource) {
         {
             /* delete lead surrogate code unit values */
             UChar lead;
-            UBool ok=TRUE;
-            trie2=utrie2_cloneAsThawed(trie2);
+            trie2=utrie2_cloneAsThawed(trie2, &errorCode);
             for(lead=0xd800; lead<0xdc00; ++lead) {
-                ok&=utrie2_set32ForLeadSurrogateCodeUnit(trie2, lead, trie2->initialValue);
+                utrie2_set32ForLeadSurrogateCodeUnit(trie2, lead, trie2->initialValue, &errorCode);
             }
             utrie2_freeze(trie2, UTRIE2_16_VALUE_BITS, &errorCode);
-            if(!ok || U_FAILURE(errorCode)) {
+            if(U_FAILURE(errorCode)) {
                 fprintf(
                     stderr,
-                    "genprops error: deleting lead surrogate code unit values failed - ok=%d - %s\n",
-                    ok, u_errorName(errorCode));
-                if(U_SUCCESS(errorCode)) {
-                    /* most likely reason for set32... to fail */
-                    errorCode=U_MEMORY_ALLOCATION_ERROR;
-                }
+                    "genprops error: deleting lead surrogate code unit values failed - %s\n",
+                    u_errorName(errorCode));
                 exit(errorCode);
             }
         }

@@ -447,9 +447,7 @@ upvec_compactToUTrie2Handler(void *context,
                              UErrorCode *pErrorCode) {
     UPVecToUTrie2Context *toUTrie2=(UPVecToUTrie2Context *)context;
     if(start<UPVEC_FIRST_SPECIAL_CP) {
-        if(!utrie2_setRange32(toUTrie2->trie, start, end, (uint32_t)rowIndex, TRUE)) {
-            *pErrorCode=U_BUFFER_OVERFLOW_ERROR;
-        }
+        utrie2_setRange32(toUTrie2->trie, start, end, (uint32_t)rowIndex, TRUE, pErrorCode);
     } else {
         switch(start) {
         case UPVEC_INITIAL_VALUE_CP:

@@ -14,7 +14,7 @@
 *   created by: Markus W. Scherer
 *
 *   Definitions needed for both runtime and builder code for UTrie2,
-*   used by utrie2.c and unewtrie2.c.
+*   used by utrie2.c and utrie2_builder.c.
 */
 
 #ifndef __UTRIE2_IMPL_H__
@@ -26,7 +26,7 @@
 
 /*
  * These definitions are mostly needed by utrie2.c,
- * but also by unewtrie2_serialize().
+ * but also by utrie2_serialize() and utrie2_swap().
  */
 
 /*
@@ -86,7 +86,7 @@ enum {
 /* Building a trie ---------------------------------------------------------- */
 
 /*
- * These definitions are mostly needed by unewtrie2.c, but also by
+ * These definitions are mostly needed by utrie2_builder.c, but also by
  * utrie2_get32() and utrie2_enum().
  */
 
