@@ -149,15 +149,6 @@ testTrieGetters(const char *testName,
                     }
                 }
                 if(valueBits==UTRIE2_16_VALUE_BITS) {
-                    value2=UTRIE2_GET16_UNSAFE(trie, start);
-                } else {
-                    value2=UTRIE2_GET32_UNSAFE(trie, start);
-                }
-                if(value!=value2) {
-                    log_err("error: %s(%s).getUnsafe(U+%04lx)==0x%lx instead of 0x%lx\n",
-                            typeName, testName, (long)start, (long)value2, (long)value);
-                }
-                if(valueBits==UTRIE2_16_VALUE_BITS) {
                     value2=UTRIE2_GET16(trie, start);
                 } else {
                     value2=UTRIE2_GET32(trie, start);

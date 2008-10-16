@@ -370,10 +370,7 @@ utrie2_fromUTrie(const UTrie *trie1, uint32_t errorValue, UErrorCode *pErrorCode
  * @param c (UChar32, in) the input code point
  * @return (uint16_t) The code point's trie value.
  */
-#define UTRIE2_GET16(trie, c) \
-    (((uint32_t)(c)<=0x10ffff) ? \
-        _UTRIE2_GET_UNSAFE((trie), index, (c)) : \
-        (uint16_t)((trie)->errorValue))
+#define UTRIE2_GET16(trie, c) _UTRIE2_GET((trie), index, (trie)->indexLength, (c))
 
 /**
  * Return a 32-bit trie value from a code point, with range checking.
@@ -383,28 +380,7 @@ utrie2_fromUTrie(const UTrie *trie1, uint32_t errorValue, UErrorCode *pErrorCode
  * @param c (UChar32, in) the input code point
  * @return (uint32_t) The code point's trie value.
  */
-#define UTRIE2_GET32(trie, c) \
-    (((uint32_t)(c)<=0x10ffff) ? \
-        _UTRIE2_GET_UNSAFE((trie), data32, (c)) : \
-        (trie)->errorValue)
-
-/**
- * Return a 16-bit trie value from a code point (<=U+10ffff) without range checking.
- *
- * @param trie (const UTrie2 *, in) a frozen trie
- * @param c (UChar32, in) the input code point, must be 0<=c<=U+10ffff
- * @return (uint16_t) The code point's trie value.
- */
-#define UTRIE2_GET16_UNSAFE(trie, c) _UTRIE2_GET_UNSAFE((trie), index, (c))
-
-/**
- * Return a 32-bit trie value from a code point (<=U+10ffff) without range checking.
- *
- * @param trie (const UTrie2 *, in) a frozen trie
- * @param c (UChar32, in) the input code point, must be 0<=c<=U+10ffff
- * @return (uint32_t) The code point's trie value.
- */
-#define UTRIE2_GET32_UNSAFE(trie, c) _UTRIE2_GET_UNSAFE((trie), data32, (c))
+#define UTRIE2_GET32(trie, c) _UTRIE2_GET((trie), data32, 0, (c))
 
 /**
  * UTF-16: Get the next code point (UChar32 c, out), post-increment src,
@@ -818,14 +794,15 @@ utrie2_internalU8PrevIndex(const UTrie2 *trie, UChar32 c,
     ((c)&UTRIE2_DATA_MASK))
 
 /**
- * Internal trie getter from a code point, without checking that c is in 0..10FFFF.
+ * Internal trie getter from a code point, with checking that c is in 0..10FFFF.
  * Returns the data index.
  */
-#define _UTRIE2_INDEX_FROM_CP(trie, c) \
-    ((c)<=0xffff ? \
+#define _UTRIE2_INDEX_FROM_CP(trie, asciiOffset, c) \
+    ((uint32_t)(c)<=0xffff ? \
         _UTRIE2_INDEX_FROM_BMP((trie)->index, c) : \
-        (c)>=(trie)->highStart ? (trie)->highValueIndex : \
-            _UTRIE2_INDEX_FROM_SUPP((trie)->index, c))
+        (uint32_t)(c)>0x10ffff ? (asciiOffset)+UTRIE2_BAD_UTF8_DATA_OFFSET : \
+            (c)>=(trie)->highStart ? (trie)->highValueIndex : \
+                _UTRIE2_INDEX_FROM_SUPP((trie)->index, c))
 
 /** Internal trie getter from a UTF-16 single/lead code unit. Returns the data. */
 #define _UTRIE2_GET_FROM_U16_SINGLE_LEAD(trie, data, c) \
@@ -837,11 +814,11 @@ utrie2_internalU8PrevIndex(const UTrie2 *trie, UChar32 c,
                  _UTRIE2_INDEX_FROM_SUPP((trie)->index, c)]
 
 /**
- * Internal trie getter from a code point, without checking that c is in 0..10FFFF.
+ * Internal trie getter from a code point, with checking that c is in 0..10FFFF.
  * Returns the data.
  */
-#define _UTRIE2_GET_UNSAFE(trie, data, c) \
-    (trie)->data[_UTRIE2_INDEX_FROM_CP(trie, c)]
+#define _UTRIE2_GET(trie, data, asciiOffset, c) \
+    (trie)->data[_UTRIE2_INDEX_FROM_CP(trie, asciiOffset, c)]
 
 /** Internal next-post-increment: get the next code point (c) and its data. */
 #define _UTRIE2_U16_NEXT(trie, data, src, limit, c, result) { \

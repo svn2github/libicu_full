@@ -54,13 +54,12 @@ get32(const UNewTrie2 *trie, UChar32 c, UBool fromLSCP) {
 
 U_CAPI uint32_t U_EXPORT2
 utrie2_get32(const UTrie2 *trie, UChar32 c) {
-    if((uint32_t)c>0x10ffff) {
-        return trie->errorValue;
-    }
     if(trie->data16!=NULL) {
-        return UTRIE2_GET16_UNSAFE(trie, c);
+        return UTRIE2_GET16(trie, c);
     } else if(trie->data32!=NULL) {
-        return UTRIE2_GET32_UNSAFE(trie, c);
+        return UTRIE2_GET32(trie, c);
+    } else if((uint32_t)c>0x10ffff) {
+        return trie->errorValue;
     } else {
         return get32(trie->newTrie, c, TRUE);
     }
@@ -82,15 +81,11 @@ utrie2_get32FromLeadSurrogateCodeUnit(const UTrie2 *trie, UChar32 c) {
 
 static U_INLINE int32_t
 u8Index(const UTrie2 *trie, UChar32 c, int32_t i) {
-    int32_t index;
-    if(c>=0) {
-        index=_UTRIE2_INDEX_FROM_CP(trie, c);
-    } else {
-        index=UTRIE2_BAD_UTF8_DATA_OFFSET;
-        if(trie->data32==NULL) {
-            index+=trie->indexLength;  /* 16-bit trie */
-        }
-    }
+    int32_t index=
+        _UTRIE2_INDEX_FROM_CP(
+            trie,
+            trie->data32==NULL ? trie->indexLength : 0,
+            c);
     return (index<<3)|i;
 }
 
