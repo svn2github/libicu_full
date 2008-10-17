@@ -352,11 +352,12 @@ utrie2_swap(const UDataSwapper *ds,
 /**
  * Build a UTrie2 (version 2) from a UTrie (version 1).
  * Enumerates all values in the UTrie and builds a UTrie2 with the same values.
+ * The resulting UTrie2 will be frozen.
  *
  * @param trie1 the runtime UTrie structure to be enumerated
  * @param errorValue the value for out-of-range code points and illegal UTF-8
  * @param pErrorCode an in/out ICU UErrorCode
- * @return The UTrie2 with the same values as the UTrie.
+ * @return The frozen UTrie2 with the same values as the UTrie.
  */
 U_CAPI UTrie2 * U_EXPORT2
 utrie2_fromUTrie(const UTrie *trie1, uint32_t errorValue, UErrorCode *pErrorCode);
@@ -790,7 +791,7 @@ utrie2_internalU8PrevIndex(const UTrie2 *trie, UChar32 c,
 
 /** Internal trie getter from a BMP code point. Returns the data index. */
 #define _UTRIE2_INDEX_FROM_BMP(trieIndex, c) \
-    _UTRIE2_INDEX_RAW(U_IS_LEAD(c) ? (UTRIE2_LSCP_INDEX_2_OFFSET-(0xd800>>UTRIE2_SHIFT_2)) : 0, \
+    _UTRIE2_INDEX_RAW(U_IS_LEAD(c) ? UTRIE2_LSCP_INDEX_2_OFFSET-(0xd800>>UTRIE2_SHIFT_2) : 0, \
                       trieIndex, c)
 
 /** Internal trie getter from a supplementary code point below highStart. Returns the data index. */
@@ -807,11 +808,17 @@ utrie2_internalU8PrevIndex(const UTrie2 *trie, UChar32 c,
  * Returns the data index.
  */
 #define _UTRIE2_INDEX_FROM_CP(trie, asciiOffset, c) \
-    ((uint32_t)(c)<=0xffff ? \
-        _UTRIE2_INDEX_FROM_BMP((trie)->index, c) : \
-        (uint32_t)(c)>0x10ffff ? (asciiOffset)+UTRIE2_BAD_UTF8_DATA_OFFSET : \
-            (c)>=(trie)->highStart ? (trie)->highValueIndex : \
-                _UTRIE2_INDEX_FROM_SUPP((trie)->index, c))
+    ((uint32_t)(c)<0xd800 ? \
+        _UTRIE2_INDEX_RAW(0, (trie)->index, c) : \
+        (uint32_t)(c)<=0xffff ? \
+            _UTRIE2_INDEX_RAW( \
+                (c)<=0xdbff ? UTRIE2_LSCP_INDEX_2_OFFSET-(0xd800>>UTRIE2_SHIFT_2) : 0, \
+                (trie)->index, c) : \
+            (uint32_t)(c)>0x10ffff ? \
+                (asciiOffset)+UTRIE2_BAD_UTF8_DATA_OFFSET : \
+                (c)>=(trie)->highStart ? \
+                    (trie)->highValueIndex : \
+                    _UTRIE2_INDEX_FROM_SUPP((trie)->index, c))
 
 /** Internal trie getter from a UTF-16 single/lead code unit. Returns the data. */
 #define _UTRIE2_GET_FROM_U16_SINGLE_LEAD(trie, data, c) \
