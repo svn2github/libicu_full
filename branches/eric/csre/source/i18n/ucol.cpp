@@ -8320,7 +8320,7 @@ ucol_strcollPrefix(collIterate *sColl, collIterate *tColl, UBool matchWholeSourc
             if ((!matchWholeSource && matchCount > 0) || sOrder == noMoreCES) {
                 // only accept the match if we're on a grapheme boundary and
                 // not in the middle of an expansion.
-                return (tOrder & UCOL_PRIMARYMASK) != 0 && lowOffset != highOffset;
+                return (tOrder & UCOL_PRIMARYMASK) != 0 && (sOrder == noMoreCES || lowOffset != highOffset);
             }
 
             return FALSE;
