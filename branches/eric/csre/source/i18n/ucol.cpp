@@ -7681,6 +7681,35 @@ cleanup_and_do_compare:
     }
 }
 
+/*
+ * Stolen from ucol_getOffset !!
+ */
+static int32_t getOffset(const collIterate *ci)
+{
+  if (ci->offsetRepeatCount > 0 && ci->offsetRepeatValue != 0) {
+      return ci->offsetRepeatValue;
+  }
+
+  if (ci->offsetReturn != NULL) {
+      return *ci->offsetReturn;
+  }
+
+  // while processing characters in normalization buffer getOffset will 
+  // return the next non-normalized character. 
+  // should be inline with the old implementation since the old codes uses
+  // nextDecomp in normalizer which also decomposes the string till the 
+  // first base character is found.
+  if (ci->flags & UCOL_ITER_INNORMBUF) {
+      if (ci->fcdPosition == NULL) {
+        return 0;
+      }
+      return (int32_t)(ci->fcdPosition - ci->string);
+  }
+  else {
+      return (int32_t)(ci->pos - ci->string);
+  }
+}
+
 typedef enum {
     PREFIX_MATCH_NONE = 0,
     PREFIX_MATCH_TARGET,
@@ -7737,6 +7766,7 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
     uint32_t secS = 0, secT = 0;
     uint32_t sOrder=0, tOrder=0;
     uint32_t matchCount = 0;
+    int32_t lowOffset, highOffset;
 
     // Non shifted primary processing is quite simple
     if(!shifted) {
@@ -7754,7 +7784,10 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
 
             // see the comments on the above block
             do {
-                tOrder = ucol_IGetNextCE(coll, tColl, status);
+                lowOffset  = getOffset(tColl);
+                tOrder     = ucol_IGetNextCE(coll, tColl, status);
+                highOffset = getOffset(tColl);
+
                 UCOL_CEBUF_PUT(&tCEs, tOrder, tColl, status);
                 tOrder &= UCOL_PRIMARYMASK;
             } while(tOrder == 0);
@@ -7778,7 +7811,9 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
                 // if two primaries are different, we are done
                 if ((prefixMatch == PREFIX_MATCH_BOTH && matchCount > 0)||
                     (prefixMatch == PREFIX_MATCH_TARGET && sOrder == UCOL_NO_MORE_CES_PRIMARY)) {
-                    break;
+                    if (tOrder != 0 && lowOffset != highOffset) {
+                        break;
+                    }
                 }
 
                 result = (sOrder < tOrder) ?  UCOL_LESS: UCOL_GREATER;
@@ -7839,7 +7874,10 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
             sInShifted = FALSE;
 
             for(;;) {
-                tOrder = ucol_IGetNextCE(coll, tColl, status);
+                lowOffset  = getOffset(tColl);
+                tOrder     = ucol_IGetNextCE(coll, tColl, status);
+                highOffset = getOffset(tColl);
+
                 if(tOrder == UCOL_NO_MORE_CES) {
                     UCOL_CEBUF_PUT(&tCEs, tOrder, tColl, status);
                     break;
@@ -7905,7 +7943,9 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
             } else {
                 if ((prefixMatch == PREFIX_MATCH_BOTH && matchCount > 0) ||
                     (prefixMatch == PREFIX_MATCH_TARGET && sOrder == UCOL_NO_MORE_CES_PRIMARY)) {
-                    break;
+                    if (tOrder != 0 && lowOffset != highOffset) {
+                        break;
+                    }
                 }
 
                 result = (sOrder < tOrder) ? UCOL_LESS : UCOL_GREATER;
@@ -8225,6 +8265,71 @@ commonReturn:
     return result;
 }
 
+static inline UBool
+ucol_strcollPrefix(collIterate *sColl, collIterate *tColl, UBool matchWholeSource, UErrorCode *status)
+{
+    uint32_t strengthMask, sOrder, tOrder, noMoreCES;
+    int32_t matchCount = 0;
+
+    switch (sColl->coll->strength)
+    {
+    case UCOL_PRIMARY:
+        strengthMask = UCOL_PRIMARYMASK;
+        break;
+
+    case UCOL_SECONDARY:
+        strengthMask = UCOL_PRIMARYMASK | UCOL_SECONDARYMASK;
+        break;
+
+    default:
+        strengthMask = UCOL_PRIMARYMASK | UCOL_SECONDARYMASK| UCOL_TERTIARYMASK;
+    }
+
+    noMoreCES = UCOL_NO_MORE_CES & strengthMask;
+
+    for(;;) {
+        int32_t lowOffset, highOffset;
+
+        do {
+            sOrder = ucol_IGetNextCE(sColl->coll, sColl, status);
+            sOrder &= strengthMask;
+        } while (sOrder == 0);
+
+        do {
+            lowOffset  = getOffset(tColl);
+            tOrder     = ucol_IGetNextCE(tColl->coll, tColl, status);
+            highOffset = getOffset(tColl);
+
+            tOrder &= strengthMask;
+        } while (tOrder == 0);
+
+        if (sOrder == tOrder) {
+            if (sOrder == noMoreCES) {
+                // source is equal to target!
+                return TRUE;
+            }
+
+            matchCount += 1;
+        } else {
+            /*
+             * We found a difference. We have a prefix match if:
+             *  * we've exhausted the source or
+             *  * we only need to match a prefix of the source and
+             *    there's at least one match
+             */ 
+            if ((!matchWholeSource && matchCount > 0) || sOrder == noMoreCES) {
+                // only accept the match if we're on a grapheme boundary and
+                // not in the middle of an expansion.
+                return (tOrder & UCOL_PRIMARYMASK) != 0 && lowOffset != highOffset;
+            }
+
+            return FALSE;
+        }
+    }
+
+    // shouldn't get here...
+    return FALSE;
+}
 
 static inline uint32_t
 ucol_getLatinOneContraction(const UCollator *coll, int32_t strength,
@@ -8827,35 +8932,6 @@ ucol_strcoll( const UCollator    *coll,
     return returnVal;
 }
 
-/*
- * Stolen from ucol_getOffset !!
- */
-static int32_t getOffset(const collIterate *ci)
-{
-  if (ci->offsetRepeatCount > 0 && ci->offsetRepeatValue != 0) {
-      return ci->offsetRepeatValue;
-  }
-
-  if (ci->offsetReturn != NULL) {
-      return *ci->offsetReturn;
-  }
-
-  // while processing characters in normalization buffer getOffset will 
-  // return the next non-normalized character. 
-  // should be inline with the old implementation since the old codes uses
-  // nextDecomp in normalizer which also decomposes the string till the 
-  // first base character is found.
-  if (ci->flags & UCOL_ITER_INNORMBUF) {
-      if (ci->fcdPosition == NULL) {
-        return 0;
-      }
-      return (int32_t)(ci->fcdPosition - ci->string);
-  }
-  else {
-      return (int32_t)(ci->pos - ci->string);
-  }
-}
-
 /*                                                              */
 /* Check if source string is a prefix of target string          */
 /*                                                              */
@@ -8982,6 +9058,7 @@ ucol_startsWith(const UCollator    *coll,
 
     UErrorCode status = U_ZERO_ERROR;
     UCollationResult returnVal;
+    UBool prefixMatch;
 
     // **** HACK: ignore Latin1 check ****
     if(TRUE || !coll->latinOneUse || (sourceLength > 0 && *source&0xff00) || (targetLength > 0 && *target&0xff00)) {
@@ -8991,10 +9068,10 @@ ucol_startsWith(const UCollator    *coll,
         IInit_collIterate(coll, source, sourceLength, &sColl);
         IInit_collIterate(coll, target, targetLength, &tColl);
 
-        returnVal = ucol_strcollRegular(&sColl, &tColl, matchWholeSource? PREFIX_MATCH_TARGET : PREFIX_MATCH_BOTH, &status);
+        prefixMatch = ucol_strcollPrefix(&sColl, &tColl, matchWholeSource, &status);
 
 		// **** need to adjust / validate boundary ****
-        if (returnVal == UCOL_EQUAL) {
+        if (prefixMatch) {
             int32_t length = equalLength + getOffset(&tColl) - 1;
 
             UTRACE_EXIT_VALUE(length);
