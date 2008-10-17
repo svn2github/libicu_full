@@ -564,14 +564,27 @@ UBool CSREMatcher::find() {
                     }
                 }
 
+#if 0
                 if (pos >= testLen) {
                     fMatch = FALSE;
                     fHitEnd = TRUE;
-#if 1
-                    ucol_closeElements(elems);
-#endif
                     return FALSE;
                 }
+#else
+                /*
+                 * testLen is not meaningful when we're dealing with
+                 * CEs because fPattern->fMinMatchLen might be too
+                 * long if the pattern contains contractions.
+                 */
+
+                if (startPos >= fActiveLimit) {
+                    fMatch = FALSE;
+                    fHitEnd = TRUE;
+                    ucol_closeElements(elems);
+
+                    return FALSE;
+                }
+#endif
             }
         }
 
@@ -1647,6 +1660,7 @@ void CSREMatcher::MatchAt(int32_t startIdx, UBool toEnd, UErrorCode &status) {
                 U_ASSERT(opType == URX_STRING_LEN);
                 U_ASSERT(stringLen >= 2);
 
+#if 0
                 // **** this check might not work for CEs ****
                 if (fp->fInputIdx + stringLen > fActiveLimit) {
                     // No match.  String is longer than the remaining input text.
@@ -1654,6 +1668,14 @@ void CSREMatcher::MatchAt(int32_t startIdx, UBool toEnd, UErrorCode &status) {
                     fp = (REStackFrame *)fStack->popFrame(fFrameSize);
                     break;
                 }
+#else
+                if (fp->fInputIdx >= fActiveLimit) {
+                    // No match. We're at the end of the input text.
+                    fHitEnd = TRUE;          // TODO: See ticket:6074
+                    fp = (REStackFrame *)fStack->popFrame(fFrameSize);
+                    break;
+                }
+#endif
 
                 const UChar * pInp = inputBuf + fp->fInputIdx;
                 const UChar * pPat = litText+stringStartIdx;
