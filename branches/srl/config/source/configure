@@ -11411,7 +11411,6 @@ fi
 
 
 echo
-echo "ICU for C/C++ $VERSION is ready to be built."
 echo "=== Important Notes: ==="
 
 if test $ICU_USE_THREADS = 0; then
@@ -11420,7 +11419,7 @@ if test $ICU_USE_THREADS = 0; then
   echo
 fi
 
-echo "Data Packaging: $datapackaging"
+echo "Data Packaging: $datapackaging - see <http://icu-project.org/userguide/icudata.html>"
 echo " This means: $datapackaging_msg"
 echo " To locate data: $datapackaging_howfound"
 
@@ -11441,5 +11440,6 @@ else
 { $as_echo "$as_me:$LINENO: result: too old or test failed - try upgrading GNU Make" >&5
 $as_echo "too old or test failed - try upgrading GNU Make" >&6; }
 fi
+echo "ICU for C/C++ $VERSION is ready to be built."
 
 $as_unset _CXX_CXXSUFFIX

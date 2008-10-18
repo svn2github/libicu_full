@@ -1125,7 +1125,6 @@ AC_CONFIG_FILES([icudefs.mk \
 AC_OUTPUT
 
 echo 
-echo "ICU for C/C++ $VERSION is ready to be built."
 echo "=== Important Notes: ==="
 
 if test $ICU_USE_THREADS = 0; then
@@ -1134,7 +1133,7 @@ if test $ICU_USE_THREADS = 0; then
   echo
 fi
 
-echo "Data Packaging: $datapackaging"
+echo "Data Packaging: $datapackaging - see <http://icu-project.org/userguide/icudata.html>"
 echo " This means: $datapackaging_msg"
 echo " To locate data: $datapackaging_howfound"
 
@@ -1152,5 +1151,6 @@ AC_MSG_RESULT([ok])
 else
 AC_MSG_RESULT([too old or test failed - try upgrading GNU Make])
 fi
+echo "ICU for C/C++ $VERSION is ready to be built."
 
 $as_unset _CXX_CXXSUFFIX

@@ -1,8 +1,7 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 2003-2006, International Business Machines
-*   Corporation and others.  All Rights Reserved.
+*   Copyright (C) 2003-2008, IBM Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
 *   file name:  gensprep.c
@@ -133,13 +132,21 @@ main(int argc, char* argv[]) {
     U_MAIN_INIT_ARGS(argc, argv);
 
     /* preset then read command line options */
-    options[DESTDIR].value=u_getDataDirectory();
+    options[DESTDIR].value=NULL;
     options[SOURCEDIR].value="";
     options[UNICODE_VERSION].value="0"; /* don't assume the unicode version */
     options[BUNDLE_NAME].value = DATA_NAME;
     options[NORMALIZE].value = "";
 
     argc=u_parseArgs(argc, argv, sizeof(options)/sizeof(options[0]), options);
+
+    if(options[ICUDATADIR].doesOccur) {
+        u_setDataDirectory(options[ICUDATADIR].value);
+    }
+
+    if(options[DESTDIR].value==NULL) {
+        options[DESTDIR].value = u_getDataDirectory();
+    }
 
     /* error handling, printing usage message */
     if(argc<0) {
@@ -168,9 +175,6 @@ main(int argc, char* argv[]) {
     }
     if(!options[UNICODE_VERSION].doesOccur){
         return printHelp(argc, argv);
-    }
-    if(options[ICUDATADIR].doesOccur) {
-        u_setDataDirectory(options[ICUDATADIR].value);
     }
 #if UCONFIG_NO_IDNA
 

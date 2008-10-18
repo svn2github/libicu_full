@@ -174,7 +174,8 @@ enum {
     OPT_DESTDIR,
     OPT_VERBOSE,
     OPT_SMALL,
-    OPT_COUNT
+/*    OPT_COUNT, */
+    OPT_DATADIR
 };
 
 static UOption options[]={
@@ -184,7 +185,8 @@ static UOption options[]={
     UOPTION_VERSION,
     UOPTION_DESTDIR,
     UOPTION_VERBOSE,
-    { "small", NULL, NULL, NULL, '\1', UOPT_NO_ARG, 0 }
+    { "small", NULL, NULL, NULL, '\1', UOPT_NO_ARG, 0 },
+    UOPTION_ICUDATADIR
 };
 
 int main(int argc, char* argv[])
@@ -204,13 +206,22 @@ int main(int argc, char* argv[])
 
     U_MAIN_INIT_ARGS(argc, argv);
 
+    /* preset then read command line options */
+    options[OPT_DESTDIR].value=NULL;
+    argc=u_parseArgs(argc, argv, LENGTHOF(options), options);
+    
+    if(options[OPT_DATADIR].doesOccur) {
+        u_setDataDirectory(options[OPT_DATADIR].value);
+    }
+
+    if(options[OPT_DESTDIR].value==NULL) {
+        options[OPT_DESTDIR].value=u_getDataDirectory();
+    }
+
     /* Set up the ICU version number */
     u_getVersion(icuVersion);
     uprv_memcpy(&dataInfo.dataVersion, &icuVersion, sizeof(UVersionInfo));
 
-    /* preset then read command line options */
-    options[OPT_DESTDIR].value=u_getDataDirectory();
-    argc=u_parseArgs(argc, argv, LENGTHOF(options), options);
 
     /* error handling, printing usage message */
     if(argc<0) {
@@ -237,6 +248,9 @@ int main(int argc, char* argv[])
             "\t                    significantly smaller but may not be compatible with\n"
             "\t                    older versions of ICU and will require heap memory\n"
             "\t                    allocation when loaded.\n");
+        fprintf(stderr, "\t-i or --icudatadir  directory for locating any needed intermediate data files,\n"
+            "\t                    followed by path, defaults to %s\n",
+                u_getDataDirectory());
         return argc<0 ? U_ILLEGAL_ARGUMENT_ERROR : U_ZERO_ERROR;
     }
 

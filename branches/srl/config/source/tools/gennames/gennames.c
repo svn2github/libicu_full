@@ -333,7 +333,8 @@ enum {
     UNICODE,
     UNICODE1_NAMES,
     NO_ISO_COMMENTS,
-    ONLY_ISO_COMMENTS
+    ONLY_ISO_COMMENTS,
+    DATA_DIR
 };
 
 static UOption options[]={
@@ -346,7 +347,8 @@ static UOption options[]={
     { "unicode", NULL, NULL, NULL, 'u', UOPT_REQUIRES_ARG, 0 },
     { "unicode1-names", NULL, NULL, NULL, '1', UOPT_NO_ARG, 0 },
     { "no-iso-comments", NULL, NULL, NULL, '\1', UOPT_NO_ARG, 0 },
-    { "only-iso-comments", NULL, NULL, NULL, '\1', UOPT_NO_ARG, 0 }
+    { "only-iso-comments", NULL, NULL, NULL, '\1', UOPT_NO_ARG, 0 },
+    UOPTION_ICUDATADIR
 };
 
 extern int
@@ -357,20 +359,8 @@ main(int argc, char* argv[]) {
 
     U_MAIN_INIT_ARGS(argc, argv);
 
-    /* Initialize ICU */
-    u_init(&errorCode);
-    if (U_FAILURE(errorCode) && errorCode != U_FILE_ACCESS_ERROR) {
-        /* Note: u_init() will try to open ICU property data.
-         *       failures here are expected when building ICU from scratch.
-         *       ignore them.
-         */
-        fprintf(stderr, "%s: can not initialize ICU.  errorCode = %s\n",
-            argv[0], u_errorName(errorCode));
-        exit(1);
-    }
-
     /* preset then read command line options */
-    options[DESTDIR].value=u_getDataDirectory();
+    options[DESTDIR].value=NULL;
     options[UNICODE].value="4.1";
     argc=u_parseArgs(argc, argv, LENGTHOF(options), options);
 
@@ -404,13 +394,33 @@ main(int argc, char* argv[]) {
             "\t-q or --quiet       no output\n"
             "\t-c or --copyright   include a copyright notice\n"
             "\t-d or --destdir     destination directory, followed by the path\n"
-            "\t-u or --unicode     Unicode version, followed by the version like 3.0.0\n");
+            "\t-u or --unicode     Unicode version, followed by the version like 3.0.0. Default: %s\n", options[UNICODE].value);
         fprintf(stderr,
             "\t-1 or --unicode1-names     store Unicode 1.0 character names\n"
             "\t      --no-iso-comments    do not store ISO comments\n"
             "\t      --only-iso-comments  write ucomment.icu with only ISO comments\n");
+        fprintf(stderr, "\t-i or --icudatadir  directory for locating any needed intermediate data files,\n"
+            "\t                    followed by path, defaults to %s\n",
+                u_getDataDirectory());
         return argc<0 ? U_ILLEGAL_ARGUMENT_ERROR : U_ZERO_ERROR;
     }
+
+    if (options[DATA_DIR].doesOccur) {
+        u_setDataDirectory(options[DATA_DIR].value);
+    }
+
+    /* Initialize ICU */
+    u_init(&errorCode);
+    if (U_FAILURE(errorCode) && errorCode != U_FILE_ACCESS_ERROR) {
+        /* Note: u_init() will try to open ICU property data.
+         *       failures here are expected when building ICU from scratch.
+         *       ignore them.
+         */
+        fprintf(stderr, "%s: can not initialize ICU.  errorCode = %s\n",
+            argv[0], u_errorName(errorCode));
+        exit(1);
+    }
+
 
     /* get the options values */
     beVerbose=options[VERBOSE].doesOccur;
@@ -427,6 +437,13 @@ main(int argc, char* argv[]) {
     u_versionFromString(version, options[UNICODE].value);
     uprv_memcpy(dataInfo.dataVersion, version, 4);
     ucdVersion=findUnicodeVersion(version);
+
+    
+    
+    if(options[DESTDIR].value==NULL) {
+        options[DESTDIR].value = u_getDataDirectory();
+    }
+    
 
     init();
     parseDB(argc>=2 ? argv[1] : "-", &moreOptions);

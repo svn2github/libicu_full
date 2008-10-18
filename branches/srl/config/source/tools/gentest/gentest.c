@@ -58,6 +58,7 @@ static UOption options[]={
   /*2*/ UOPTION_DESTDIR,
   /*3*/ UOPTION_DEF("genres", 'r', UOPT_NO_ARG),
   /*4*/ UOPTION_DEF("javastuff", 'j', UOPT_NO_ARG),  
+  /*5*/     UOPTION_ICUDATADIR  /* srl can't count either */
 };
 
 extern int
@@ -65,9 +66,14 @@ main(int argc, char* argv[]) {
     UErrorCode errorCode = U_ZERO_ERROR;
 
     /* preset then read command line options */
-    options[2].value=u_getDataDirectory();
+    options[2].value=NULL;
     argc=u_parseArgs(argc, argv, sizeof(options)/sizeof(options[0]), options);
-
+    if(options[5].doesOccur) {
+        u_setDataDirectory(options[5].value);
+    }
+    if(options[2].value==NULL) {
+        options[2].value = u_getDataDirectory();
+    }
     /* error handling, printing usage message */
     if(argc<0) {
         fprintf(stderr,
@@ -84,6 +90,9 @@ main(int argc, char* argv[]) {
             "\t\t-r or --genres      generate resource file testtable32.txt instead of UData test \n"
             "\t\t-j or --javastuff   generate Java source for DebugUtilities. \n",
             argv[0]);
+        fprintf(stderr, "\t-i or --icudatadir  directory for locating any needed intermediate data files,\n"
+            "\t                    followed by path, defaults to %s\n",
+                u_getDataDirectory());
         return argc<0 ? U_ILLEGAL_ARGUMENT_ERROR : U_ZERO_ERROR;
     }
 

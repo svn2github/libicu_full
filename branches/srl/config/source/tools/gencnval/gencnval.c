@@ -197,7 +197,8 @@ enum
     VERBOSE,
     COPYRIGHT,
     DESTDIR,
-    SOURCEDIR
+    SOURCEDIR,
+    ICUDATA
 };
 
 static UOption options[]={
@@ -206,7 +207,8 @@ static UOption options[]={
     UOPTION_VERBOSE,
     UOPTION_COPYRIGHT,
     UOPTION_DESTDIR,
-    UOPTION_SOURCEDIR
+    UOPTION_SOURCEDIR,
+    UOPTION_ICUDATADIR
 };
 
 extern int
@@ -220,8 +222,18 @@ main(int argc, char* argv[]) {
     U_MAIN_INIT_ARGS(argc, argv);
 
     /* preset then read command line options */
-    options[DESTDIR].value=options[SOURCEDIR].value=u_getDataDirectory();
+    options[DESTDIR].value=options[SOURCEDIR].value=NULL;
     argc=u_parseArgs(argc, argv, sizeof(options)/sizeof(options[0]), options);
+
+    if(options[ICUDATA].doesOccur) {
+        u_setDataDirectory(options[ICUDATA].value);
+    }
+    if(options[DESTDIR].value==NULL) {
+        options[DESTDIR].value = u_getDataDirectory();
+    }
+    if(options[SOURCEDIR].value==NULL) {
+        options[SOURCEDIR].value = u_getDataDirectory();
+    }
 
     /* error handling, printing usage message */
     if(argc<0) {
@@ -240,6 +252,9 @@ main(int argc, char* argv[]) {
             "\t-d or --destdir     destination directory, followed by the path\n"
             "\t-s or --sourcedir   source directory, followed by the path\n",
             argv[0]);
+        fprintf(stderr, "\t-i or --icudatadir  directory for locating any needed intermediate data files,\n"
+            "\t                    followed by path, defaults to %s\n",
+                u_getDataDirectory());
         return argc<0 ? U_ILLEGAL_ARGUMENT_ERROR : U_ZERO_ERROR;
     }
 

@@ -395,7 +395,7 @@ $(BUILDDIR)/ucase.icu: $(UNICODEDATADIR)/UnicodeData.txt $(BINDIR)/gencase$(EXEE
 
 # pnames.icu
 $(BUILDDIR)/pnames.icu: $(UNICODEDATADIR)/PropertyAliases.txt $(UNICODEDATADIR)/PropertyValueAliases.txt $(UNICODEDATADIR)/Blocks.txt $(COMINCDIR)/uscript.h $(COMINCDIR)/uchar.h $(BINDIR)/genpname$(EXEEXT)
-	$(INVOKE) $(BINDIR)/genpname -d $(BUILDDIR)
+	$(INVOKE) $(BINDIR)/genpname -d $(BUILDDIR) -i $(BUILDDIR)
 
 # unorm.icu
 $(BUILDDIR)/unorm.icu: $(UNICODEDATADIR)/UnicodeData.txt $(UNICODEDATADIR)/DerivedNormalizationProps.txt $(UNICODEDATADIR)/BidiMirroring.txt $(BINDIR)/gennorm$(EXEEXT) $(BUILDDIR)/$(ICUDT)pnames.icu $(BUILDDIR)/$(ICUDT)uprops.icu $(BUILDDIR)/$(ICUDT)ucase.icu
@@ -410,11 +410,11 @@ $(COLBLDDIR)/ucadata.icu $(COLBLDDIR)/invuca.icu: $(UNICODEDATADIR)/FractionalUC
 
 # unames.icu
 $(BUILDDIR)/unames.icu: $(UNICODEDATADIR)/UnicodeData.txt $(BINDIR)/gennames$(EXEEXT)
-	$(INVOKE) $(BINDIR)/gennames -1 -d $(BUILDDIR) $(UNICODEDATADIR)/UnicodeData.txt -u $(UNICODE_VERSION)
+	$(INVOKE) $(BINDIR)/gennames -1 -d $(BUILDDIR) $(UNICODEDATADIR)/UnicodeData.txt -u $(UNICODE_VERSION) -i $(BUILDDIR)
 
 # cnvalias.icu
 $(BUILDDIR)/cnvalias.icu: $(UCMSRCDIR)/convrtrs.txt $(BINDIR)/gencnval$(EXEEXT)
-	$(INVOKE) $(BINDIR)/gencnval -d $(BUILDDIR) $(UCMSRCDIR)/convrtrs.txt
+	$(INVOKE) $(BINDIR)/gencnval -d $(BUILDDIR) -i $(BUILDDIR) $(UCMSRCDIR)/convrtrs.txt
 
 # uidna.spp
 $(BUILDDIR)/uidna.spp: $(MISCSRCDIR)/NamePrepProfile.txt $(BINDIR)/gensprep$(EXEEXT) $(BUILDDIR)/unames.icu $(BUILDDIR)/pnames.icu
@@ -438,7 +438,7 @@ $(BRKBLDDIR)/%.ctd: $(BRKSRCDIR)/%.txt $(BINDIR)/genctd$(EXEEXT) $(DAT_FILES)
 ####################################################    CNV
 # CNV FILES
 $(BUILDDIR)/%.cnv: $(UCMSRCDIR)/%.ucm $(BINDIR)/makeconv$(EXEEXT)
-	$(INVOKE) $(BINDIR)/makeconv -c -d $(BUILDDIR) $(UCMSRCDIR)/$(<F)
+	$(INVOKE) $(BINDIR)/makeconv -c -i $(BUILDDIR) -d $(BUILDDIR) $(UCMSRCDIR)/$(<F)
 
 ####################################################    RES
 # RES FILES

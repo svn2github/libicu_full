@@ -1097,6 +1097,12 @@ uprv_pathIsAbsolute(const char *path)
   return FALSE;
 }
 
+static DataDirectoryPathOptions gDataDirectoryPathOptions = U_DATADIR_NORMAL;
+U_INTERNAL void u_setDataDirectoryPathOptions(DataDirectoryPathOptions options) {
+    gDataDirectoryPathOptions = options;
+}
+
+
 U_CAPI const char * U_EXPORT2
 u_getDataDirectory(void) {
     const char *path = NULL;
@@ -1107,7 +1113,9 @@ u_getDataDirectory(void) {
     if(path) {
         return path;
     }
-
+#if defined (U_DATADIR_DEBUG)
+    printf("gDataDirectoryPathOptions=%d\n", gDataDirectoryPathOptions);
+#endif
     /*
     When ICU_NO_USER_DATA_OVERRIDE is defined, users aren't allowed to
     override ICU's data with the ICU_DATA environment variable. This prevents
@@ -1123,21 +1131,49 @@ u_getDataDirectory(void) {
     */
 #   if !defined(ICU_NO_USER_DATA_OVERRIDE) && !UCONFIG_NO_FILE_IO
     /* First try to get the environment variable */
-    path=getenv("ICU_DATA");
+    if(!(gDataDirectoryPathOptions&U_DATADIR_IGNORE_ALL) && !(gDataDirectoryPathOptions&U_DATADIR_IGNORE_ENVVAR)) {
+        path=getenv("ICU_DATA");
+#if defined(U_DATADIR_DEBUG)
+        puts("<< ICU_DATA");
+#endif
+    }
 #   endif
 
     /* ICU_DATA_DIR may be set as a compile option */
 #   ifdef ICU_DATA_DIR
     if(path==NULL || *path==0) {
-        path=ICU_DATA_DIR;
+        if(!(gDataDirectoryPathOptions&U_DATADIR_IGNORE_ALL) && !(gDataDirectoryPathOptions&U_DATADIR_IGNORE_ICU_DATA_DIR)) {
+            path=ICU_DATA_DIR;
+#if defined(U_DATADIR_DEBUG)
+        puts("<< ICU_DATA_DIR");
+#endif
+        }
     }
+#   else
+#    ifdef ICUDATA_INSTALL_DIR
+    /* use the path that ICU was installed with. This can be overridden by defining -DICU_DATA_DIR=\"\" */
+    if(path==NULL || *path==0) {
+        if(!(gDataDirectoryPathOptions&U_DATADIR_IGNORE_ALL) && !(gDataDirectoryPathOptions&U_DATADIR_IGNORE_INSTALLPATH)) {
+            path = ICUDATA_INSTALL_DIR;
+#if defined(U_DATADIR_DEBUG)
+        puts("<< ICUDATA_INSTALL_DIR");
+#endif
+        }
+    }
+#    endif
 #   endif
+
 
     if(path==NULL) {
         /* It looks really bad, set it to something. */
         path = "";
+#if defined(U_DATADIR_DEBUG)
+        puts("<< \"\"");
+#endif
     }
-
+#if defined(U_DATADIR_DEBUG)
+	puts(path);
+#endif
     u_setDataDirectory(path);
     return gDataDirectory;
 }

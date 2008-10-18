@@ -63,6 +63,7 @@ endif
 CPPFLAGS += -I$(srcdir) -I$(top_srcdir)/i18n $(LIBCPPFLAGS)
 DEFS += -DU_COMMON_IMPLEMENTATION
 LDFLAGS += $(LDFLAGSICUUC)
+CPPFLAGS += $(CPPFLAGSICUUC) $(ICUPKGDATA_CPPFLAGS)
 
 # $(LIBICUDT) is either stub data or the real DLL common data.
 LIBS = $(LIBICUDT) $(DEFAULT_LIBS)

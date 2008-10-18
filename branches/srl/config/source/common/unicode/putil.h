@@ -94,6 +94,32 @@ U_STABLE const char* U_EXPORT2 u_getDataDirectory(void);
 U_STABLE void U_EXPORT2 u_setDataDirectory(const char *directory);
 
 /**
+ * Possible settings for u_setDataDirectoryPathOptions()
+ * @see u_setDataDirectoryPathOptions
+ * @internal
+ */
+typedef enum DataDirectoryPathOptions {
+    /** Ignore all paths **/
+    U_DATADIR_IGNORE_ALL = 1 << 1,
+    /** Ignore default installed path **/
+    U_DATADIR_IGNORE_INSTALLPATH = 1 << 2,
+    /** Ignore ICU_DATA environment variable **/
+    U_DATADIR_IGNORE_ENVVAR = 1 << 3,
+    /** Ignore ICU_DATA_DIR #define **/
+    U_DATADIR_IGNORE_ICU_DATA_DIR = 1 << 4,
+    /** No restrictions **/
+    U_DATADIR_NORMAL = 0,
+    /** Default **/
+    U_DATADIR_DEFAULT = U_DATADIR_NORMAL
+} DataDirectoryPathOptions;
+
+/**
+ * Suppress certain paths from being considered as candidates for u_getDataDirectory()
+ * @param options one or more DataDirectoryPathOptions values logically orred together.
+ */
+U_INTERNAL void U_EXPORT2 u_setDataDirectoryPathOptions(DataDirectoryPathOptions options);
+
+/**
  * Please use ucnv_getDefaultName() instead.
  * Return the default codepage for this platform and locale.
  * This function can call setlocale() on Unix platforms. Please read the

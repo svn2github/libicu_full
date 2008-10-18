@@ -1092,7 +1092,7 @@ int main(int argc, char* argv[]) {
     U_MAIN_INIT_ARGS(argc, argv);
 
     /* preset then read command line options */
-    options[4].value=u_getDataDirectory();
+    options[4].value=NULL;
     options[5].value="";
     argc=u_parseArgs(argc, argv, sizeof(options)/sizeof(options[0]), options);
 
@@ -1131,19 +1131,10 @@ int main(int argc, char* argv[]) {
         fprintf(stdout, U_COPYRIGHT_STRING"\n");
         exit(0);
     }
-
-    /* get the options values */
-    destdir = options[4].value;
-    srcDir = options[5].value;
-    VERBOSE = options[6].doesOccur;
-
-    if (options[2].doesOccur) {
-        copyright = U_COPYRIGHT_STRING;
-    }
-
     if (options[7].doesOccur) {
         u_setDataDirectory(options[7].value);
     }
+
     /* Initialize ICU */
     u_init(&status);
     if (U_FAILURE(status) && status != U_FILE_ACCESS_ERROR) {
@@ -1153,6 +1144,17 @@ int main(int argc, char* argv[]) {
     }
     status = U_ZERO_ERROR;
 
+    if(options[4].value==NULL) {
+        options[4].value = u_getDataDirectory();
+    }
+    /* get the options values */
+    destdir = options[4].value;
+    srcDir = options[5].value;
+    VERBOSE = options[6].doesOccur;
+
+    if (options[2].doesOccur) {
+        copyright = U_COPYRIGHT_STRING;
+    }
 
     /* prepare the filename beginning with the source dir */
     uprv_strcpy(filename, srcDir);

@@ -1,7 +1,6 @@
 /*
 **********************************************************************
-*   Copyright (C) 2002-2006, International Business Machines
-*   Corporation and others.  All Rights Reserved.
+*   Copyright (C) 2002-2008, IBM Corporation and others.  All Rights Reserved.
 **********************************************************************
 *   Date        Name        Description
 *   10/11/02    aliu        Creation.
@@ -934,17 +933,6 @@ private:
 };
 
 int main(int argc, char *argv[]) {
-    UErrorCode status = U_ZERO_ERROR;
-    u_init(&status);
-    if (U_FAILURE(status) && status != U_FILE_ACCESS_ERROR) {
-        // Note: u_init() will try to open ICU property data.
-        //       failures here are expected when building ICU from scratch.
-        //       ignore them.
-        fprintf(stderr, "genpname: can not initialize ICU.  Status = %s\n",
-            u_errorName(status));
-        exit(1);
-    }
-
     genpname app;
     U_MAIN_INIT_ARGS(argc, argv);
     int retVal = app.MMain(argc, argv);
@@ -959,6 +947,7 @@ static UOption options[]={
     UOPTION_DESTDIR,
     UOPTION_VERBOSE,
     UOPTION_DEF("debug", 'D', UOPT_REQUIRES_ARG),
+    UOPTION_ICUDATADIR
 };
 
 NameToEnumEntry* genpname::createNameIndex(const AliasList& list,
@@ -1078,15 +1067,10 @@ int genpname::MMain(int argc, char* argv[])
     int32_t i, j;
     UErrorCode status = U_ZERO_ERROR;
 
-    u_init(&status);
-    if (U_FAILURE(status) && status != U_FILE_ACCESS_ERROR) {
-        fprintf(stderr, "Error: u_init returned %s\n", u_errorName(status));
-        status = U_ZERO_ERROR;
-    }
 
 
     /* preset then read command line options */
-    options[3].value=u_getDataDirectory();
+    options[3].value=NULL;
     argc=u_parseArgs(argc, argv, sizeof(options)/sizeof(options[0]), options);
 
     /* error handling, printing usage message */
@@ -1097,6 +1081,10 @@ int genpname::MMain(int argc, char* argv[])
     }
 
     debug = options[5].doesOccur ? (*options[5].value - '0') : 0;
+
+    if (options[6].doesOccur) {
+        u_setDataDirectory(options[6].value);
+    }
 
     if (argc!=1 || options[0].doesOccur || options[1].doesOccur ||
        debug < 0 || debug > 9) {
@@ -1110,13 +1098,27 @@ int genpname::MMain(int argc, char* argv[])
             "\t-d or --destdir     destination directory, followed by the path\n"
             "\t-D or --debug 0..9  emit debugging messages (if > 0)\n",
             argv[0]);
+        fprintf(stderr, "\t-i or --icudatadir  directory for locating any needed intermediate data files,\n"
+            "\t                    followed by path, defaults to %s\n",
+                u_getDataDirectory());
+
         return argc<0 ? U_ILLEGAL_ARGUMENT_ERROR : U_ZERO_ERROR;
     }
 
     /* get the options values */
     useCopyright=options[2].doesOccur;
     verbose = options[4].doesOccur;
-
+    {
+        UErrorCode initStatus = U_ZERO_ERROR;
+        u_init(&initStatus);
+        if (U_FAILURE(initStatus) && initStatus != U_FILE_ACCESS_ERROR) {
+            fprintf(stderr, "Error: u_init returned %s\n", u_errorName(initStatus));
+            exit(1);
+        }
+    }
+    if(options[3].value==NULL) {
+        options[3].value=u_getDataDirectory();
+    }
     // ------------------------------------------------------------
     // Do not sort the string table, instead keep it in data.h order.
     // This simplifies data swapping and testing thereof because the string
