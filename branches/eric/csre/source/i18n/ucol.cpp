@@ -7710,12 +7710,6 @@ static int32_t getOffset(const collIterate *ci)
   }
 }
 
-typedef enum {
-    PREFIX_MATCH_NONE = 0,
-    PREFIX_MATCH_TARGET,
-    PREFIX_MATCH_BOTH
-} PrefixMatch;
-
 static inline UCollationResult
 ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
 //              const UCollator    *coll,
@@ -7723,7 +7717,6 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
 //              int32_t            sourceLength,
 //              const UChar        *target,
 //              int32_t            targetLength,
-              PrefixMatch prefixMatch,
               UErrorCode *status)
 {
     U_ALIGN_CODE(16);
@@ -7765,8 +7758,6 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
 
     uint32_t secS = 0, secT = 0;
     uint32_t sOrder=0, tOrder=0;
-    uint32_t matchCount = 0;
-    int32_t lowOffset, highOffset;
 
     // Non shifted primary processing is quite simple
     if(!shifted) {
@@ -7784,10 +7775,7 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
 
             // see the comments on the above block
             do {
-                lowOffset  = getOffset(tColl);
-                tOrder     = ucol_IGetNextCE(coll, tColl, status);
-                highOffset = getOffset(tColl);
-
+                tOrder = ucol_IGetNextCE(coll, tColl, status);
                 UCOL_CEBUF_PUT(&tCEs, tOrder, tColl, status);
                 tOrder &= UCOL_PRIMARYMASK;
             } while(tOrder == 0);
@@ -7798,9 +7786,6 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
                 if(sOrder == UCOL_NO_MORE_CES_PRIMARY) {
                     break;
                 }
-
-                matchCount += 1;
-
                 if(doHiragana && hirResult == UCOL_EQUAL) {
                     if((sColl->flags & UCOL_WAS_HIRAGANA) != (tColl->flags & UCOL_WAS_HIRAGANA)) {
                         hirResult = ((sColl->flags & UCOL_WAS_HIRAGANA) > (tColl->flags & UCOL_WAS_HIRAGANA))
@@ -7809,13 +7794,6 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
                 }
             } else {
                 // if two primaries are different, we are done
-                if ((prefixMatch == PREFIX_MATCH_BOTH && matchCount > 0)||
-                    (prefixMatch == PREFIX_MATCH_TARGET && sOrder == UCOL_NO_MORE_CES_PRIMARY)) {
-                    if (tOrder != 0 && lowOffset != highOffset) {
-                        break;
-                    }
-                }
-
                 result = (sOrder < tOrder) ?  UCOL_LESS: UCOL_GREATER;
                 goto commonReturn;
             }
@@ -7874,10 +7852,7 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
             sInShifted = FALSE;
 
             for(;;) {
-                lowOffset  = getOffset(tColl);
-                tOrder     = ucol_IGetNextCE(coll, tColl, status);
-                highOffset = getOffset(tColl);
-
+                tOrder = ucol_IGetNextCE(coll, tColl, status);
                 if(tOrder == UCOL_NO_MORE_CES) {
                     UCOL_CEBUF_PUT(&tCEs, tOrder, tColl, status);
                     break;
@@ -7937,17 +7912,9 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
                 } else {
                     sOrder = 0;
                     tOrder = 0;
-                    matchCount += 1;
                     continue;
                 }
             } else {
-                if ((prefixMatch == PREFIX_MATCH_BOTH && matchCount > 0) ||
-                    (prefixMatch == PREFIX_MATCH_TARGET && sOrder == UCOL_NO_MORE_CES_PRIMARY)) {
-                    if (tOrder != 0 && lowOffset != highOffset) {
-                        break;
-                    }
-                }
-
                 result = (sOrder < tOrder) ? UCOL_LESS : UCOL_GREATER;
                 goto commonReturn;
             }
@@ -7960,8 +7927,6 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
 
     /* This is the secondary level of comparison */
     if(checkSecTer) {
-        matchCount = 0;
-
         if(!isFrenchSec) { /* normal */
             sCE = sCEs.buf;
             tCE = tCEs.buf;
@@ -7979,15 +7944,9 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
                         break;
                     } else {
                         secS = 0; secT = 0;
-                        matchCount += 1;
                         continue;
                     }
                 } else {
-                    if ((prefixMatch == PREFIX_MATCH_BOTH && matchCount > 0) ||
-                        (prefixMatch == PREFIX_MATCH_TARGET && secS == UCOL_NO_MORE_CES_SECONDARY)) {
-                        break;
-                    }
-
                     result = (secS < secT) ? UCOL_LESS : UCOL_GREATER;
                     goto commonReturn;
                 }
@@ -8047,15 +8006,9 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
                         break;
                     } else {
                         secS = 0; secT = 0;
-                        matchCount += 1;
                         continue;
                     }
                 } else {
-                    if ((prefixMatch == PREFIX_MATCH_BOTH && matchCount > 0) ||
-                        (prefixMatch == PREFIX_MATCH_TARGET && secS == UCOL_NO_MORE_CES_SECONDARY)) {
-                        break;
-                    }
-
                     result = (secS < secT) ? UCOL_LESS : UCOL_GREATER;
                     goto commonReturn;
                 }
@@ -8067,7 +8020,6 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
     if(checkCase) {
         sCE = sCEs.buf;
         tCE = tCEs.buf;
-        matchCount = 0;
         for(;;) {
             while((secS & UCOL_REMOVE_CASE) == 0) {
                 if(!isContinuation(*sCE++)) {
@@ -8101,13 +8053,6 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
                 }
             }
 
-            // **** really?? ****
-            // Have to check here because following code will return for non-equal case bits
-            if ((prefixMatch == PREFIX_MATCH_BOTH && matchCount > 0) ||
-                (prefixMatch == PREFIX_MATCH_TARGET && (secS & UCOL_REMOVE_CASE) == UCOL_NO_MORE_CES_TERTIARY)) {
-                 break;
-            }
-
             if((secS & UCOL_CASE_BIT_MASK) < (secT & UCOL_CASE_BIT_MASK)) {
                 result = UCOL_LESS;
                 goto commonReturn;
@@ -8121,7 +8066,6 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
             } else {
                 secS = 0;
                 secT = 0;
-                matchCount += 1;
             }
         }
     }
@@ -8132,7 +8076,6 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
         secT = 0;
         sCE = sCEs.buf;
         tCE = tCEs.buf;
-        matchCount = 0;
         for(;;) {
             while((secS & UCOL_REMOVE_CASE) == 0) {
                 secS = *(sCE++) & tertiaryMask;
@@ -8157,15 +8100,9 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
                     break;
                 } else {
                     secS = 0; secT = 0;
-                    matchCount += 1;
                     continue;
                 }
             } else {
-                if ((prefixMatch == PREFIX_MATCH_BOTH && matchCount > 0) ||
-                    (prefixMatch == PREFIX_MATCH_TARGET && (secS & UCOL_REMOVE_CASE) == UCOL_NO_MORE_CES_TERTIARY)) {
-                    break;
-                }
-
                 result = (secS < secT) ? UCOL_LESS : UCOL_GREATER;
                 goto commonReturn;
             }
@@ -8180,7 +8117,6 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
         secT = 0;
         sCE = sCEs.buf;
         tCE = tCEs.buf;
-        matchCount = 0;
         for(;;) {
             while(secS == 0 && secS != UCOL_NO_MORE_CES || (isContinuation(secS) && !sInShifted)) {
                 secS = *(sCE++);
@@ -8218,15 +8154,9 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
                     break;
                 } else {
                     secS = 0; secT = 0;
-                    matchCount += 1;
                     continue;
                 }
             } else {
-                if ((prefixMatch == PREFIX_MATCH_BOTH && matchCount > 0) ||
-                    (prefixMatch == PREFIX_MATCH_TARGET && secS == UCOL_NO_MORE_CES_PRIMARY)) {
-                    break;
-                }
-
                 result = (secS < secT) ? UCOL_LESS : UCOL_GREATER;
                 goto commonReturn;
             }
@@ -8245,7 +8175,6 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
     if(checkIdent)
     {
         //result = ucol_checkIdent(&sColl, &tColl, coll->normalizationMode == UCOL_ON);
-        // **** WHAT ABOUT prefixMatch?? ****
         result = ucol_checkIdent(sColl, tColl, TRUE, status);
     }
 
@@ -8697,7 +8626,7 @@ returnRegular:
 
     IInit_collIterate(coll, source, sLen, &sColl);
     IInit_collIterate(coll, target, tLen, &tColl);
-    return ucol_strcollRegular(&sColl, &tColl, PREFIX_MATCH_NONE, status);
+    return ucol_strcollRegular(&sColl, &tColl, status);
 }
 
 
@@ -8788,7 +8717,7 @@ ucol_strcollIter( const UCollator    *coll,
 
 
     if(U_SUCCESS(*status)) {
-        result = ucol_strcollRegular(&sColl, &tColl, PREFIX_MATCH_NONE, status);
+        result = ucol_strcollRegular(&sColl, &tColl, status);
     }
 
 end_compare:
@@ -8924,7 +8853,7 @@ ucol_strcoll( const UCollator    *coll,
         // Preparing the context objects for iterating over strings
         IInit_collIterate(coll, source, sourceLength, &sColl);
         IInit_collIterate(coll, target, targetLength, &tColl);
-        returnVal = ucol_strcollRegular(&sColl, &tColl, PREFIX_MATCH_NONE, &status);
+        returnVal = ucol_strcollRegular(&sColl, &tColl, &status);
     } else {
         returnVal = ucol_strcollUseLatin1(coll, source, sourceLength, target, targetLength, &status);
     }
