@@ -33,7 +33,7 @@ struct LookupTable;
 
 class LookupProcessor : public UMemory {
 public:
-	le_bool isBogus();
+    le_bool isBogus();
 
     le_int32 process(LEGlyphStorage &glyphStorage, GlyphPositionAdjustments *glyphPositionAdjustments,
                  le_bool rightToLeft, const GlyphDefinitionTableHeader *glyphDefinitionTableHeader, const LEFontInstance *fontInstance, LEErrorCode& success) const;

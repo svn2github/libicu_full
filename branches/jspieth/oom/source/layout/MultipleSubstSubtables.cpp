@@ -16,9 +16,9 @@ U_NAMESPACE_BEGIN
 
 le_uint32 MultipleSubstitutionSubtable::process(GlyphIterator *glyphIterator, LEErrorCode& success, const LEGlyphFilter *filter) const
 {
-	if (LE_FAILURE(success)) {
-		return 0;
-	}
+    if (LE_FAILURE(success)) {
+        return 0;
+    }
 
     LEGlyphID glyph = glyphIterator->getCurrGlyphID();
 
@@ -67,9 +67,9 @@ le_uint32 MultipleSubstitutionSubtable::process(GlyphIterator *glyphIterator, LE
             }
 
             LEGlyphID *newGlyphs = glyphIterator->insertGlyphs(glyphCount, success);
-			if (LE_FAILURE(success)) { 
-				return 0;
-			}
+            if (LE_FAILURE(success)) { 
+                return 0;
+            }
 
             le_int32 insert = 0, direction = 1;
 

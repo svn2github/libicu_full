@@ -48,7 +48,7 @@ struct ContextualSubstitutionBase : GlyphSubstitutionSubtable
         GlyphIterator *glyphIterator,
         const LEFontInstance *fontInstance,
         le_int32 position,
-		LEErrorCode& success);
+        LEErrorCode& success);
 };
 
 struct ContextualSubstitutionSubtable : ContextualSubstitutionBase

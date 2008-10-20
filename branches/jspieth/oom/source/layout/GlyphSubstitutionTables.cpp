@@ -17,14 +17,20 @@
 
 U_NAMESPACE_BEGIN
 
-le_int32 GlyphSubstitutionTableHeader::process(LEGlyphStorage &glyphStorage, le_bool rightToLeft, LETag scriptTag, LETag languageTag,
-                                           const GlyphDefinitionTableHeader *glyphDefinitionTableHeader, LEErrorCode &success,
-                                           const LEGlyphFilter *filter, const FeatureMap *featureMap, le_int32 featureMapCount, le_bool featureOrder) const
+le_int32 GlyphSubstitutionTableHeader::process(LEGlyphStorage &glyphStorage,
+                                               le_bool rightToLeft, 
+                                               LETag scriptTag, 
+                                               LETag languageTag,
+                                               const GlyphDefinitionTableHeader *glyphDefinitionTableHeader, 
+                                               const LEGlyphFilter *filter, 
+                                               const FeatureMap *featureMap, 
+                                               le_int32 featureMapCount, 
+                                               le_bool featureOrder,
+                                               LEErrorCode &success) const
 {
-	if (LE_FAILURE(success))
-	{
-		return 0;
-	} 
+    if (LE_FAILURE(success)) {
+        return 0;
+    } 
 
     GlyphSubstitutionLookupProcessor processor(this, scriptTag, languageTag, filter, featureMap, featureMapCount, featureOrder);
     return processor.process(glyphStorage, NULL, rightToLeft, glyphDefinitionTableHeader, NULL, success);

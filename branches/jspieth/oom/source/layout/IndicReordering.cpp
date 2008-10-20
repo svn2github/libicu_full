@@ -420,20 +420,19 @@ le_int32 IndicReordering::reorder(const LEUnicode *chars, le_int32 charCount, le
                                   LEUnicode *outChars, LEGlyphStorage &glyphStorage,
                                   MPreFixups **outMPreFixups, LEErrorCode& success)
 {
-    if (LE_FAILURE(success))
-	{
-		return 0;
-	}
+    if (LE_FAILURE(success)) {
+        return 0;
+    }
 
     MPreFixups *mpreFixups = NULL;
     const IndicClassTable *classTable = IndicClassTable::getScriptClassTable(scriptCode);
 
     if (classTable->scriptFlags & SF_MPRE_FIXUP) {
         mpreFixups = new MPreFixups(charCount);
-		if (!mpreFixups) { 
-			success = LE_MEMORY_ALLOCATION_ERROR;
-			return 0;
-		}
+        if (mpreFixups == NULL) { 
+            success = LE_MEMORY_ALLOCATION_ERROR;
+            return 0;
+        }
     }
 
     IndicReorderingOutput output(outChars, glyphStorage, mpreFixups);

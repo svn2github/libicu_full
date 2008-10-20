@@ -29,11 +29,11 @@ void SubstitutionLookup::applySubstitutionLookups(
         GlyphIterator *glyphIterator,
         const LEFontInstance *fontInstance,
         le_int32 position,
-		LEErrorCode& success)
+        LEErrorCode& success)
 {
-	if (LE_FAILURE(success)) { 
-		return;
-	}
+    if (LE_FAILURE(success)) { 
+        return;
+    }
 
     GlyphIterator tempIterator(*glyphIterator);
 

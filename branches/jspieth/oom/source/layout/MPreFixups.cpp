@@ -42,9 +42,9 @@ void MPreFixups::add(le_int32 baseIndex, le_int32 mpreIndex)
 
 void MPreFixups::apply(LEGlyphStorage &glyphStorage, LEErrorCode& success)
 {
-	if (LE_FAILURE(success)) { 
-		return;
-	}
+    if (LE_FAILURE(success)) { 
+        return;
+    }
 
     for (le_int32 fixup = 0; fixup < fFixupCount; fixup += 1) {
         le_int32 baseIndex = fFixupData[fixup].fBaseIndex;
@@ -70,14 +70,15 @@ void MPreFixups::apply(LEGlyphStorage &glyphStorage, LEErrorCode& success)
         LEGlyphID *mpreSave  = LE_NEW_ARRAY(LEGlyphID, mpreCount);
         le_int32  *indexSave = LE_NEW_ARRAY(le_int32, mpreCount);
 
-		if (!mpreSave || !indexSave) {
-			LE_DELETE_ARRAY(mpreSave);
-			LE_DELETE_ARRAY(indexSave);
-			success = LE_MEMORY_ALLOCATION_ERROR;
-			return;
-		}
+        if (mpreSave == NULL || indexSave == NULL) {
+            LE_DELETE_ARRAY(mpreSave);
+            LE_DELETE_ARRAY(indexSave);
+            success = LE_MEMORY_ALLOCATION_ERROR;
+            return;
+        }
 
         le_int32   i;
+
         for (i = 0; i < mpreCount; i += 1) {
             mpreSave[i]  = glyphStorage[mpreIndex + i];
             indexSave[i] = glyphStorage.getCharIndex(mpreIndex + i, success); //charIndices[mpreIndex + i];

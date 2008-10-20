@@ -107,10 +107,10 @@ le_int32 IndicOpenTypeLayoutEngine::characterProcessing(const LEUnicode chars[],
     // (probably better than doing the worst case stuff here...)
     le_int32 outCharCount = IndicReordering::reorder(&chars[offset], count, fScriptCode, outChars, glyphStorage, &fMPreFixups, success);
 
-	if (LE_FAILURE(success)) {
-		LE_DELETE_ARRAY(outChars);
-		return 0;
-	}
+    if (LE_FAILURE(success)) {
+        LE_DELETE_ARRAY(outChars);
+        return 0;
+    }
 
     glyphStorage.adoptGlyphCount(outCharCount);
     return outCharCount;

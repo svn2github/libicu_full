@@ -28,17 +28,15 @@ void ContextualSubstitutionBase::applySubstitutionLookups(
         GlyphIterator *glyphIterator,
         const LEFontInstance *fontInstance,
         le_int32 position,
-		LEErrorCode& success)
+        LEErrorCode& success)
 {
-    if (LE_FAILURE(success)) 
-	{ 
-		return;
-	}
+    if (LE_FAILURE(success)) { 
+        return;
+    }
 
     GlyphIterator tempIterator(*glyphIterator);
 
-    for (le_int16 subst = 0; subst < substCount && LE_SUCCESS(success); subst += 1) 
-	{
+    for (le_int16 subst = 0; subst < substCount && LE_SUCCESS(success); subst += 1) {
         le_uint16 sequenceIndex = SWAPW(substLookupRecordArray[subst].sequenceIndex);
         le_uint16 lookupListIndex = SWAPW(substLookupRecordArray[subst].lookupListIndex);
 
@@ -148,15 +146,13 @@ le_bool ContextualSubstitutionBase::matchGlyphCoverages(const Offset *coverageTa
 }
 
 le_uint32 ContextualSubstitutionSubtable::process(const LookupProcessor *lookupProcessor, 
-												  GlyphIterator *glyphIterator,
-												  const LEFontInstance *fontInstance,
-												  LEErrorCode& success
-												  ) const
+                                                  GlyphIterator *glyphIterator,
+                                                  const LEFontInstance *fontInstance,
+                                                  LEErrorCode& success) const
 {
-	if (LE_FAILURE(success)) 
-	{ 
-		return 0;
-	}
+    if (LE_FAILURE(success)) { 
+        return 0;
+    }
 
     switch(SWAPW(subtableFormat))
     {
@@ -187,15 +183,13 @@ le_uint32 ContextualSubstitutionSubtable::process(const LookupProcessor *lookupP
 }
 
 le_uint32 ContextualSubstitutionFormat1Subtable::process(const LookupProcessor *lookupProcessor, 
-														 GlyphIterator *glyphIterator,
-														 const LEFontInstance *fontInstance,
-														 LEErrorCode& success
-														 ) const
+                                                         GlyphIterator *glyphIterator,
+                                                         const LEFontInstance *fontInstance,
+                                                         LEErrorCode& success) const
 {
-	if (LE_FAILURE(success)) 
-	{ 
-		return 0;
-	}
+    if (LE_FAILURE(success)) { 
+        return 0;
+    }
 
     LEGlyphID glyph = glyphIterator->getCurrGlyphID();
     le_int32 coverageIndex = getGlyphCoverage(glyph);
@@ -238,15 +232,13 @@ le_uint32 ContextualSubstitutionFormat1Subtable::process(const LookupProcessor *
 }
 
 le_uint32 ContextualSubstitutionFormat2Subtable::process(const LookupProcessor *lookupProcessor, 
-														 GlyphIterator *glyphIterator,
-														 const LEFontInstance *fontInstance,
-														 LEErrorCode& success
-														 ) const
+                                                         GlyphIterator *glyphIterator,
+                                                         const LEFontInstance *fontInstance,
+                                                         LEErrorCode& success) const
 {
-	if (LE_FAILURE(success)) 
-	{ 
-		return 0;
-	}
+    if (LE_FAILURE(success)) { 
+        return 0;
+    }
 
     LEGlyphID glyph = glyphIterator->getCurrGlyphID();
     le_int32 coverageIndex = getGlyphCoverage(glyph);
@@ -292,15 +284,13 @@ le_uint32 ContextualSubstitutionFormat2Subtable::process(const LookupProcessor *
 }
 
 le_uint32 ContextualSubstitutionFormat3Subtable::process(const LookupProcessor *lookupProcessor, 
-														 GlyphIterator *glyphIterator,
-														 const LEFontInstance *fontInstance,
-														 LEErrorCode& success
-														 )const 
+                                                         GlyphIterator *glyphIterator,
+                                                         const LEFontInstance *fontInstance,
+                                                         LEErrorCode& success)const 
 {
-	if (LE_FAILURE(success)) 
-	{ 
-		return 0;
-	}
+    if (LE_FAILURE(success)) { 
+        return 0;
+    }
 
     le_uint16 gCount = SWAPW(glyphCount);
     le_uint16 subCount = SWAPW(substCount);
@@ -327,15 +317,13 @@ le_uint32 ContextualSubstitutionFormat3Subtable::process(const LookupProcessor *
 }
 
 le_uint32 ChainingContextualSubstitutionSubtable::process(const LookupProcessor *lookupProcessor, 
-														  GlyphIterator *glyphIterator,
-														  const LEFontInstance *fontInstance,
-														  LEErrorCode& success
-														  ) const
+                                                          GlyphIterator *glyphIterator,
+                                                          const LEFontInstance *fontInstance,
+                                                          LEErrorCode& success) const
 {
-	if (LE_FAILURE(success)) 
-	{ 
-		return 0;
-	}
+    if (LE_FAILURE(success)) { 
+        return 0;
+    }
 
     switch(SWAPW(subtableFormat))
     {
@@ -372,15 +360,13 @@ le_uint32 ChainingContextualSubstitutionSubtable::process(const LookupProcessor 
 static const FeatureMask emptyFeatureList = 0x00000000UL;
 
 le_uint32 ChainingContextualSubstitutionFormat1Subtable::process(const LookupProcessor *lookupProcessor, 
-																 GlyphIterator *glyphIterator,
-																 const LEFontInstance *fontInstance,
-																 LEErrorCode& success
-																 ) const
+                                                                 GlyphIterator *glyphIterator,
+                                                                 const LEFontInstance *fontInstance,
+                                                                 LEErrorCode& success) const
 {
-	if (LE_FAILURE(success)) 
-	{ 
-		return 0;
-	}
+    if (LE_FAILURE(success)) { 
+        return 0;
+    }
 
     LEGlyphID glyph = glyphIterator->getCurrGlyphID();
     le_int32 coverageIndex = getGlyphCoverage(glyph);
@@ -445,15 +431,13 @@ le_uint32 ChainingContextualSubstitutionFormat1Subtable::process(const LookupPro
 }
 
 le_uint32 ChainingContextualSubstitutionFormat2Subtable::process(const LookupProcessor *lookupProcessor, 
-																 GlyphIterator *glyphIterator,
-																 const LEFontInstance *fontInstance,
-																 LEErrorCode& success
-																 ) const
+                                                                 GlyphIterator *glyphIterator,
+                                                                 const LEFontInstance *fontInstance,
+                                                                 LEErrorCode& success) const
 {
-	if (LE_FAILURE(success)) 
-	{ 
-		return 0;
-	}
+    if (LE_FAILURE(success)) { 
+        return 0;
+    }
 
     LEGlyphID glyph = glyphIterator->getCurrGlyphID();
     le_int32 coverageIndex = getGlyphCoverage(glyph);
@@ -527,15 +511,13 @@ le_uint32 ChainingContextualSubstitutionFormat2Subtable::process(const LookupPro
 }
 
 le_uint32 ChainingContextualSubstitutionFormat3Subtable::process(const LookupProcessor *lookupProcessor, 
-																 GlyphIterator *glyphIterator,
-																 const LEFontInstance *fontInstance,
-																 LEErrorCode & success
-																 ) const
+                                                                 GlyphIterator *glyphIterator,
+                                                                 const LEFontInstance *fontInstance,
+                                                                 LEErrorCode & success) const
 {
-	if (LE_FAILURE(success)) 
-	{ 
-		return 0;
-	}
+    if (LE_FAILURE(success)) { 
+        return 0;
+    }
 
     le_uint16 backtrkGlyphCount = SWAPW(backtrackGlyphCount);
     le_uint16 inputGlyphCount = (le_uint16) SWAPW(backtrackCoverageTableOffsetArray[backtrkGlyphCount]);

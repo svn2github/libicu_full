@@ -53,16 +53,15 @@ le_int32 LEInsertionList::getGrowAmount()
 
 LEGlyphID *LEInsertionList::insert(le_int32 position, le_int32 count, LEErrorCode &success)
 {
-	if (LE_FAILURE(success)) {
-		return 0;
-	}
+    if (LE_FAILURE(success)) {
+        return 0;
+    }
 
     InsertionRecord *insertion = (InsertionRecord *) LE_NEW_ARRAY(char, sizeof(InsertionRecord) + (count - ANY_NUMBER) * sizeof (LEGlyphID));
-
-	if (!insertion) { 
-		success = LE_MEMORY_ALLOCATION_ERROR;
-		return 0;
-	}
+    if (insertion == NULL) { 
+        success = LE_MEMORY_ALLOCATION_ERROR;
+        return 0;
+    }
 
     insertion->position = position;
     insertion->count = count;

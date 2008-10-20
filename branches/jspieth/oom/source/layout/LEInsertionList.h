@@ -83,7 +83,7 @@ public:
      * @param position the glyph at this position in the array will be
      *                 replaced by the new glyphs.
      * @param count the number of new glyphs
-	 * @param success set to an error code if the auxillary data cannot be retrieved.
+     * @param success set to an error code if the auxillary data cannot be retrieved.
      *
      * @return the address of an array in which to store the new glyphs. This will
      *         <em>not</em> be in the glyph array.

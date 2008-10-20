@@ -20,10 +20,9 @@ U_NAMESPACE_BEGIN
 le_uint32 ExtensionSubtable::process(const LookupProcessor *lookupProcessor, le_uint16 lookupType,
                                       GlyphIterator *glyphIterator, const LEFontInstance *fontInstance, LEErrorCode& success) const
 {
-	if (LE_FAILURE(success)) 
-	{
-		return 0;
-	}
+    if (LE_FAILURE(success)) {
+        return 0;
+    }
 
     le_uint16 elt = SWAPW(extensionLookupType);
 

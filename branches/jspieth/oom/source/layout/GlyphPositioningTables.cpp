@@ -21,20 +21,17 @@ void GlyphPositioningTableHeader::process(LEGlyphStorage &glyphStorage, GlyphPos
                                           const GlyphDefinitionTableHeader *glyphDefinitionTableHeader, LEErrorCode &success,
                                           const LEFontInstance *fontInstance, const FeatureMap *featureMap, le_int32 featureMapCount, le_bool featureOrder) const
 {
-	if (LE_FAILURE(success))
-	{
-		return;
-	} 
+    if (LE_FAILURE(success)) {
+        return;
+    } 
 
     GlyphPositioningLookupProcessor processor(this, scriptTag, languageTag, featureMap, featureMapCount, featureOrder);
-
-    if (processor.isBogus())
-	{
-		success = LE_MEMORY_ALLOCATION_ERROR;
-		return;
-	}
+    if (processor.isBogus()) {
+        success = LE_MEMORY_ALLOCATION_ERROR;
+        return;
+    }
 	
-	processor.process(glyphStorage, glyphPositionAdjustments, rightToLeft, glyphDefinitionTableHeader, fontInstance, success);
+    processor.process(glyphStorage, glyphPositionAdjustments, rightToLeft, glyphDefinitionTableHeader, fontInstance, success);
 
     glyphPositionAdjustments->applyCursiveAdjustments(glyphStorage, rightToLeft, fontInstance);
 }

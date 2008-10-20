@@ -109,14 +109,16 @@ void LEGlyphStorage::allocateGlyphArray(le_int32 initialGlyphCount, le_bool righ
     if (fInsertionList == NULL) {
         // FIXME: check this for failure?
         fInsertionList = new LEInsertionList(rightToLeft);
-		if (fInsertionList == NULL) { 
-			LE_DELETE_ARRAY(fCharIndices);
-			fCharIndices = NULL;
-			LE_DELETE_ARRAY(fGlyphs);
-			fGlyphs = NULL;
-			success = LE_MEMORY_ALLOCATION_ERROR;
-			return;
-		}
+        if (fInsertionList == NULL) { 
+            LE_DELETE_ARRAY(fCharIndices);
+            fCharIndices = NULL;
+
+            LE_DELETE_ARRAY(fGlyphs);
+            fGlyphs = NULL;
+
+            success = LE_MEMORY_ALLOCATION_ERROR;
+            return;
+        }
     }
 }
 
@@ -525,27 +527,29 @@ le_int32 LEGlyphStorage::applyInsertions()
     le_int32 newGlyphCount = fGlyphCount + growAmount;
 
     LEGlyphID *newGlyphs = (LEGlyphID *) LE_GROW_ARRAY(fGlyphs, newGlyphCount); 
-    if (!newGlyphs) { 
-		// Could not grow the glyph array 
-		return fGlyphCount; 
-	} 
-	fGlyphs = newGlyphs; 
-  
+    if (newGlyphs == NULL) { 
+        // Could not grow the glyph array 
+        return fGlyphCount; 
+    } 
+
     le_int32 *newCharIndices = (le_int32 *) LE_GROW_ARRAY(fCharIndices, newGlyphCount);
-    if (!newCharIndices) { 
-		// Could not grow the glyph array 
-		return fGlyphCount; 
-	} 
-	fCharIndices = newCharIndices;
+    if (newCharIndices == NULL) { 
+        // Could not grow the glyph array 
+        return fGlyphCount; 
+    } 
 
     if (fAuxData != NULL) {	
-		le_uint32 *newAuxData = (le_uint32 *) LE_GROW_ARRAY(fAuxData, newGlyphCount); 
-		if (!newAuxData) { 
-			// could not grow the aux data array 
-			return fGlyphCount; 
-		} 
-		fAuxData = (le_uint32 *)newAuxData;
+        le_uint32 *newAuxData = (le_uint32 *) LE_GROW_ARRAY(fAuxData, newGlyphCount); 
+        if (newAuxData == NULL) { 
+            // could not grow the aux data array 
+            return fGlyphCount; 
+        } 
+        fAuxData = (le_uint32 *)newAuxData;
     }
+
+	// Set grown arrays
+    fGlyphs = newGlyphs; 
+    fCharIndices = newCharIndices;
 
     fSrcIndex  = fGlyphCount - 1;
     fDestIndex = newGlyphCount - 1;

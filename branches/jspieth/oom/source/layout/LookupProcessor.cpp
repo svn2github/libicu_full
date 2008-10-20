@@ -22,9 +22,9 @@ U_NAMESPACE_BEGIN
 le_uint32 LookupProcessor::applyLookupTable(const LookupTable *lookupTable, GlyphIterator *glyphIterator,
                                          const LEFontInstance *fontInstance, LEErrorCode& success) const
 {
-	if (LE_FAILURE(success)) {
-		return 0;
-	}
+    if (LE_FAILURE(success)) {
+        return 0;
+    }
 
     le_uint16 lookupType = SWAPW(lookupTable->lookupType);
     le_uint16 subtableCount = SWAPW(lookupTable->subTableCount);
@@ -50,11 +50,11 @@ le_int32 LookupProcessor::process(LEGlyphStorage &glyphStorage, GlyphPositionAdj
                               le_bool rightToLeft, const GlyphDefinitionTableHeader *glyphDefinitionTableHeader,
                               const LEFontInstance *fontInstance, LEErrorCode& success) const
 {
-	if (LE_FAILURE(success)) {
-		return 0;
-	}    
+    if (LE_FAILURE(success)) {
+        return 0;
+    }    
 	
-	le_int32 glyphCount = glyphStorage.getGlyphCount();
+    le_int32 glyphCount = glyphStorage.getGlyphCount();
 
     if (lookupSelectArray == NULL) {
         return glyphCount;
@@ -76,9 +76,9 @@ le_int32 LookupProcessor::process(LEGlyphStorage &glyphStorage, GlyphPositionAdj
 
             while (glyphIterator.findFeatureTag()) {
                 applyLookupTable(lookupTable, &glyphIterator, fontInstance, success);
-				if (LE_FAILURE(success)) { 
-					return 0;
-				}
+                if (LE_FAILURE(success)) { 
+                    return 0;
+                }
             }
 
             newGlyphCount = glyphIterator.applyInsertions();
@@ -91,9 +91,9 @@ le_int32 LookupProcessor::process(LEGlyphStorage &glyphStorage, GlyphPositionAdj
 le_uint32 LookupProcessor::applySingleLookup(le_uint16 lookupTableIndex, GlyphIterator *glyphIterator,
                                           const LEFontInstance *fontInstance, LEErrorCode& success) const
 {
-	if (LE_FAILURE(success)) {
-		return 0;
-	}    
+    if (LE_FAILURE(success)) {
+        return 0;
+    }    
 
     const LookupTable *lookupTable = lookupListTable->getLookupTable(lookupTableIndex);
     le_uint16 lookupFlags = SWAPW(lookupTable->lookupFlags);
@@ -156,10 +156,9 @@ LookupProcessor::LookupProcessor(const char *baseAddress,
     requiredFeatureIndex = SWAPW(langSysTable->reqFeatureIndex);
 
     lookupSelectArray = LE_NEW_ARRAY(FeatureMask, lookupListCount);
-	
-	if (!lookupSelectArray) {
-		return;
-	}
+    if (lookupSelectArray == NULL) {
+        return;
+    }
 
     for (int i = 0; i < lookupListCount; i += 1) {
         lookupSelectArray[i] = 0;
@@ -190,10 +189,9 @@ LookupProcessor::LookupProcessor(const char *baseAddress,
     }
 
     lookupOrderArray = LE_NEW_ARRAY(le_uint16, featureReferences);
-
-	if (!lookupOrderArray) {
-		return;
-	}
+    if (lookupOrderArray == NULL) {
+        return;
+    }
 
     for (le_int32 f = 0; f < featureMapCount; f += 1) {
         FeatureMap fm = featureMap[f];
@@ -283,13 +281,13 @@ LookupProcessor::LookupProcessor(const char *baseAddress,
 
 LookupProcessor::LookupProcessor()
 {
-	lookupOrderArray = 0;
-	lookupSelectArray = 0;
+	lookupOrderArray = NULL;
+	lookupSelectArray = NULL;
 }
 
 le_bool LookupProcessor::isBogus() 
 { 
-	return lookupSelectArray && lookupSelectArray? FALSE : TRUE;
+    return lookupOrderArray && lookupSelectArray;
 }
 
 LookupProcessor::~LookupProcessor()

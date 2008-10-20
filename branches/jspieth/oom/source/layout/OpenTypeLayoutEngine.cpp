@@ -211,8 +211,8 @@ le_int32 OpenTypeLayoutEngine::glyphProcessing(const LEUnicode chars[], le_int32
     }
 
     if (fGSUBTable != NULL) {
-        count = fGSUBTable->process(glyphStorage, rightToLeft, fScriptTag, fLangSysTag, fGDEFTable, success, fSubstitutionFilter,
-                                    fFeatureMap, fFeatureMapCount, fFeatureOrder);
+        count = fGSUBTable->process(glyphStorage, rightToLeft, fScriptTag, fLangSysTag, fGDEFTable, fSubstitutionFilter,
+                                    fFeatureMap, fFeatureMapCount, fFeatureOrder, success);
     }
 
     return count;

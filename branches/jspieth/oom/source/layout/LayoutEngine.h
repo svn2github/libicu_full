@@ -133,12 +133,12 @@ protected:
     LayoutEngine(const LEFontInstance *fontInstance, le_int32 scriptCode, le_int32 languageCode, le_int32 typoFlags);
 
     /**
-	 * Returns true if the constructor failed, leaving the object in an 
-	 * inconsistent state. 
-	 *
-	 * @internal 
-	 */
-	le_bool isBogus();
+     * Returns true if the constructor failed, leaving the object in an 
+     * inconsistent state. 
+     *
+     * @internal 
+     */
+    le_bool isBogus();
 
     /**
      * This overrides the default no argument constructor to make it
