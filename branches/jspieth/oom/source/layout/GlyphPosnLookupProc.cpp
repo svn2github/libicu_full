@@ -68,7 +68,7 @@ le_uint32 GlyphPositioningLookupProcessor::applySubtable(const LookupSubtable *l
     {
         const SinglePositioningSubtable *subtable = (const SinglePositioningSubtable *) lookupSubtable;
 
-		delta = subtable->process(glyphIterator, fontInstance);
+        delta = subtable->process(glyphIterator, fontInstance);
         break;
     }
 
@@ -76,7 +76,7 @@ le_uint32 GlyphPositioningLookupProcessor::applySubtable(const LookupSubtable *l
     {
         const PairPositioningSubtable *subtable = (const PairPositioningSubtable *) lookupSubtable;
 
-		delta = subtable->process(glyphIterator, fontInstance);
+        delta = subtable->process(glyphIterator, fontInstance);
         break;
     }
 
@@ -84,7 +84,7 @@ le_uint32 GlyphPositioningLookupProcessor::applySubtable(const LookupSubtable *l
     {
         const CursiveAttachmentSubtable *subtable = (const CursiveAttachmentSubtable *) lookupSubtable;
 
-		delta = subtable->process(glyphIterator, fontInstance);
+        delta = subtable->process(glyphIterator, fontInstance);
         break;
     }
 
@@ -92,7 +92,7 @@ le_uint32 GlyphPositioningLookupProcessor::applySubtable(const LookupSubtable *l
     {
         const MarkToBasePositioningSubtable *subtable = (const MarkToBasePositioningSubtable *) lookupSubtable;
 
-		delta = subtable->process(glyphIterator, fontInstance);
+        delta = subtable->process(glyphIterator, fontInstance);
         break;
     }
 
@@ -100,7 +100,7 @@ le_uint32 GlyphPositioningLookupProcessor::applySubtable(const LookupSubtable *l
     {
         const MarkToLigaturePositioningSubtable *subtable = (const MarkToLigaturePositioningSubtable *) lookupSubtable;
 
-		delta = subtable->process(glyphIterator, fontInstance);
+        delta = subtable->process(glyphIterator, fontInstance);
         break;
     }
 
@@ -108,7 +108,7 @@ le_uint32 GlyphPositioningLookupProcessor::applySubtable(const LookupSubtable *l
     {
         const MarkToMarkPositioningSubtable *subtable = (const MarkToMarkPositioningSubtable *) lookupSubtable;
 
-		delta = subtable->process(glyphIterator, fontInstance);
+        delta = subtable->process(glyphIterator, fontInstance);
         break;
     }
 
@@ -116,7 +116,7 @@ le_uint32 GlyphPositioningLookupProcessor::applySubtable(const LookupSubtable *l
     {
         const ContextualPositioningSubtable *subtable = (const ContextualPositioningSubtable *) lookupSubtable;
 
-		delta = subtable->process(this, glyphIterator, fontInstance, success);
+        delta = subtable->process(this, glyphIterator, fontInstance, success);
         break;
     }
 
@@ -124,7 +124,7 @@ le_uint32 GlyphPositioningLookupProcessor::applySubtable(const LookupSubtable *l
     {
         const ChainingContextualPositioningSubtable *subtable = (const ChainingContextualPositioningSubtable *) lookupSubtable;
 
-		delta = subtable->process(this, glyphIterator, fontInstance, success);
+        delta = subtable->process(this, glyphIterator, fontInstance, success);
         break;
     }
 
@@ -132,7 +132,7 @@ le_uint32 GlyphPositioningLookupProcessor::applySubtable(const LookupSubtable *l
     {
         const ExtensionSubtable *subtable = (const ExtensionSubtable *) lookupSubtable;
 
-		delta = subtable->process(this, lookupType, glyphIterator, fontInstance, success);
+        delta = subtable->process(this, lookupType, glyphIterator, fontInstance, success);
         break;
     }
 
