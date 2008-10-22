@@ -33,6 +33,7 @@ U_NAMESPACE_BEGIN
 #define abvmFeatureTag LE_ABVM_FEATURE_TAG
 #define distFeatureTag LE_DIST_FEATURE_TAG
 #define caltFeatureTag LE_CALT_FEATURE_TAG
+#define kernFeatureTag LE_KERN_FEATURE_TAG
 
 #define loclFeatureMask 0x80000000UL
 #define rphfFeatureMask 0x40000000UL
@@ -45,7 +46,7 @@ U_NAMESPACE_BEGIN
 #define presFeatureMask 0x00800000UL
 #define blwsFeatureMask 0x00400000UL
 #define abvsFeatureMask 0x00200000UL
-#define pstsFeatureMask 0x00100000UL
+#define pstsFeatureMask 0x00100000UL 
 #define halnFeatureMask 0x00080000UL
 #define blwmFeatureMask 0x00040000UL
 #define abvmFeatureMask 0x00020000UL
@@ -54,13 +55,17 @@ U_NAMESPACE_BEGIN
 #define cjctFeatureMask 0x00004000UL
 #define rkrfFeatureMask 0x00002000UL
 #define caltFeatureMask 0x00001000UL
+#define kernFeatureMask 0x00000800UL
 
 #define basicShapingFormsMask ( loclFeatureMask | nuktFeatureMask | akhnFeatureMask | rphfFeatureMask | rkrfFeatureMask | blwfFeatureMask | halfFeatureMask | vatuFeatureMask | cjctFeatureMask )
-#define presFormsMask ( presFeatureMask | abvsFeatureMask | blwsFeatureMask | pstsFeatureMask | halnFeatureMask | caltFeatureMask )
+#define positioningFormsMask ( kernFeatureMask | distFeatureMask | abvmFeatureMask | blwmFeatureMask )
+#define presentationFormsMask ( presFeatureMask | abvsFeatureMask | blwsFeatureMask | pstsFeatureMask | halnFeatureMask | caltFeatureMask )
 
 
 #define C_MALAYALAM_VOWEL_SIGN_U 0x0D41
 #define	C_DOTTED_CIRCLE 0x25CC
+
+#define INDIC_BLOCK_SIZE 0x7F
 
 class IndicReorderingOutput : public UMemory {
 private:
@@ -481,7 +486,11 @@ static const FeatureMap v2FeatureMap[] = {
     {blwsFeatureTag, blwsFeatureMask},
     {pstsFeatureTag, pstsFeatureMask},
 	{halnFeatureTag, halnFeatureMask}, 
-	{caltFeatureTag, caltFeatureMask}
+	{caltFeatureTag, caltFeatureMask},
+    {kernFeatureTag, kernFeatureMask},
+    {distFeatureTag, distFeatureMask},
+    {abvmFeatureTag, abvmFeatureMask},
+    {blwmFeatureTag, blwmFeatureMask}
 };
 
 static const le_int32 v2FeatureMapCount = LE_ARRAY_SIZE(v2FeatureMap);
@@ -889,8 +898,11 @@ void IndicReordering::applyPresentationForms(LEGlyphStorage &glyphStorage, le_in
 {
     LEErrorCode success = LE_NO_ERROR;
 
+//  This sets us up for 2nd pass of glyph substitution as well as setting the feature masks for the
+//  GPOS table lookups
+
     for ( le_int32 i = 0 ; i < count ; i++ ) {
-        glyphStorage.setAuxData(i, presFormsMask , success);
+        glyphStorage.setAuxData(i, ( presentationFormsMask | positioningFormsMask ), success);
     }
 
 }
@@ -900,8 +912,11 @@ le_int32 IndicReordering::v2process(const LEUnicode *chars, le_int32 charCount, 
 {
     const IndicClassTable *classTable = IndicClassTable::getScriptClassTable(scriptCode);
 
+    DynamicProperties dynProps[INDIC_BLOCK_SIZE];
+    IndicReordering::getDynamicProperties(dynProps,classTable);
+
     IndicReorderingOutput output(outChars, glyphStorage, NULL);
-    le_int32 i, firstConsonant, beginSyllable = 0;
+    le_int32 i, firstConsonant, baseConsonant, beginSyllable = 0;
     le_bool lastInWord = FALSE;
 
     while (beginSyllable < charCount) {
@@ -916,6 +931,16 @@ le_int32 IndicReordering::v2process(const LEUnicode *chars, le_int32 charCount, 
 				}
 		}
 
+        // Find the base consonant
+
+        baseConsonant = nextSyllable - 1;
+        while ( baseConsonant > firstConsonant ) {
+            if ( classTable->isConsonant(chars[baseConsonant]) ) {
+                break;
+            }
+           baseConsonant--;
+        }
+
 		// Handle invalid combinartions
 
         if ( classTable->isVirama(chars[beginSyllable]) || 
@@ -924,7 +949,6 @@ le_int32 IndicReordering::v2process(const LEUnicode *chars, le_int32 charCount, 
 			classTable->isNukta(chars[beginSyllable]) ) {
             output.writeChar(C_DOTTED_CIRCLE,beginSyllable,basicShapingFormsMask);
 		}
-	    // TODO: Find base consonant
 		
 	    // Populate the output 
 		for ( i = beginSyllable ; i < nextSyllable ; i++ ) {
@@ -937,7 +961,15 @@ le_int32 IndicReordering::v2process(const LEUnicode *chars, le_int32 charCount, 
             if ( i - beginSyllable > 1 ) {
                 outMask ^= rphfFeatureMask;
             }
-			output.writeChar(chars[i],i, outMask);
+
+            // Never attempt to apply half forms feature to the base consonant
+            // This prevents half form glyph from appearing when a cluster is incomplete
+            // ( i.e. only consonant + halant )
+
+            if ( i == baseConsonant ) {
+                outMask ^= halfFeatureMask;
+            }
+            output.writeChar(chars[i],i, outMask);
 		}
 	    
 		output.decomposeReorderMatras(classTable,beginSyllable,nextSyllable);
@@ -948,5 +980,35 @@ le_int32 IndicReordering::v2process(const LEUnicode *chars, le_int32 charCount, 
     return output.getOutputIndex();
 }
 
+
+void IndicReordering::getDynamicProperties( DynamicProperties *dProps, const IndicClassTable *classTable ) {
+
+
+    LEUnicode currentChar;
+    LEUnicode virama;
+    LEUnicode workChars[2];
+    LEGlyphStorage workGlyphs;
+
+    IndicReorderingOutput workOutput(workChars, workGlyphs, NULL);
+
+    le_int32 offset;
+
+    // First find the relevant virama for the script we are dealing with
+
+    for ( currentChar = classTable->firstChar ; currentChar <= classTable->lastChar ; currentChar++ ) {
+        if ( classTable->isVirama(currentChar)) {
+            virama = currentChar;
+            break;
+        }
+    }
+
+    for ( currentChar = classTable->firstChar ; currentChar <= classTable->lastChar ; currentChar++ ) {
+        if ( classTable->isConsonant(currentChar)) {
+            workOutput.reset();
+        }
+    }
+
+
+}
 
 U_NAMESPACE_END

@@ -357,8 +357,16 @@ void OpenTypeLayoutEngine::adjustGlyphPositions(const LEUnicode chars[], le_int3
         }
 #endif
 
-        fGPOSTable->process(glyphStorage, adjustments, reverse, fScriptTag, fLangSysTag, fGDEFTable, fFontInstance,
-                            fFeatureMap, fFeatureMapCount, fFeatureOrder);
+        if (fGPOSTable != NULL) {
+            if (fScriptTagV2 != nullScriptTag && fGPOSTable->coversScriptAndLanguage(fScriptTagV2,fLangSysTag)) { 
+                fGPOSTable->process(glyphStorage, adjustments, reverse, fScriptTagV2, fLangSysTag, fGDEFTable, fFontInstance,
+                                fFeatureMap, fFeatureMapCount, fFeatureOrder);
+ 
+            } else {
+                fGPOSTable->process(glyphStorage, adjustments, reverse, fScriptTag, fLangSysTag, fGDEFTable, fFontInstance,
+                                fFeatureMap, fFeatureMapCount, fFeatureOrder);
+            }
+        }
 
         float xAdjust = 0, yAdjust = 0;
 

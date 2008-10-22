@@ -75,11 +75,20 @@ typedef LEUnicode SplitMatra[3];
 class MPreFixups;
 class LEGlyphStorage;
 
+// Dynamic Properties ( v2 fonts only )
+typedef le_uint32 DynamicProperties;
+
+#define DP_REPH               0x80000000U
+#define DP_HALF               0x40000000U
+#define DP_PREF               0x20000000U
+#define DP_BLWF               0x10000000U
+#define DP_PSTF               0x08000000U
+
 struct IndicClassTable
 {
     typedef le_uint32 CharClass;
     typedef le_uint32 ScriptFlags;
-
+    
     LEUnicode firstChar;
     LEUnicode lastChar;
     le_int32 worstCaseExpansion;
@@ -147,6 +156,8 @@ public:
 	static const FeatureMap *getv2FeatureMap(le_int32 &count);
 
     static void applyPresentationForms(LEGlyphStorage &glyphStorage, le_int32 count);
+
+    static void getDynamicProperties(DynamicProperties *dProps, const IndicClassTable *classTable);
 
 private:
     // do not instantiate
