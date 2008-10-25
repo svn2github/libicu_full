@@ -33,13 +33,9 @@
 
 // ***********************************************************************
 // **** TODO:                                                         ****
-// **** > Boundary checking in ucol_startsWith()                      ****
-// **** >    "        "     in find()                                 ****
 // **** > Always match in CE space?                                   ****
-// **** > Implement Tailored Grapheme Cluster                         ****
 // **** > Matching UnicodeSets - CESet?                               ****
 // **** > Should "." really be the same as "\X"?                      ****
-// **** > Case insensitive matching? (just use strength?)             ****
 // ***********************************************************************
 
 U_NAMESPACE_BEGIN
