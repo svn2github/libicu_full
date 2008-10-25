@@ -11445,3 +11445,4 @@ fi
 echo "ICU for C/C++ $VERSION is ready to be built."
 
 $as_unset _CXX_CXXSUFFIX
+
