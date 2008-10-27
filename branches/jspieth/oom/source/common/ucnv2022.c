@@ -754,6 +754,7 @@ changeState_2022(UConverter* _this,
     UConverterDataISO2022* myData2022 = ((UConverterDataISO2022*)_this->extraInfo);
     uint32_t key = myData2022->key;
     int32_t offset = 0;
+    int8_t initialToULength = _this->toULength;
     char c;
 
     value = VALID_NON_TERMINAL_2022;
@@ -806,7 +807,6 @@ DONE:
         return;
     } else if (value == INVALID_2022 ) {
         *err = U_ILLEGAL_ESCAPE_SEQUENCE;
-        return;
     } else /* value == VALID_TERMINAL_2022 */ {
         switch(var){
 #ifdef U_ENABLE_GENERIC_ISO_2022
@@ -938,6 +938,35 @@ DONE:
     }
     if(U_SUCCESS(*err)) {
         _this->toULength = 0;
+    } else if(*err==U_ILLEGAL_ESCAPE_SEQUENCE) {
+        if(_this->toULength>1) {
+            /*
+             * Ticket 5691: consistent illegal sequences:
+             * - We include at least the first byte (ESC) in the illegal sequence.
+             * - If any of the non-initial bytes could be the start of a character,
+             *   we stop the illegal sequence before the first one of those.
+             *   In escape sequences, all following bytes are "printable", that is,
+             *   unless they are completely illegal (>7f in SBCS, outside 21..7e in DBCS),
+             *   they are valid single/lead bytes.
+             *   For simplicity, we always only report the initial ESC byte as the
+             *   illegal sequence and back out all other bytes we looked at.
+             */
+            /* Back out some bytes. */
+            int8_t backOutDistance=_this->toULength-1;
+            int8_t bytesFromThisBuffer=_this->toULength-initialToULength;
+            if(backOutDistance<=bytesFromThisBuffer) {
+                /* same as initialToULength<=1 */
+                *source-=backOutDistance;
+            } else {
+                /* Back out bytes from the previous buffer: Need to replay them. */
+                _this->preToULength=(int8_t)(bytesFromThisBuffer-backOutDistance);
+                /* same as -(initialToULength-1) */
+                /* preToULength is negative! */
+                uprv_memcpy(_this->preToU, _this->toUBytes+1, -_this->preToULength);
+                *source-=bytesFromThisBuffer;
+            }
+            _this->toULength=1;
+        }
     } else if(*err==U_UNSUPPORTED_ESCAPE_SEQUENCE) {
         _this->toUCallbackReason = UCNV_UNASSIGNED;
     }
@@ -1118,6 +1147,7 @@ _2022FromGR94DBCS(uint32_t value) {
     }
 }
 
+#if 0 /* 5691: Call sites now check for validity. They can just += 0x8080 after that. */
 /*
  * This method does the reverse of _2022FromGR94DBCS(). Given the 2022 code point, it returns the
  * 2 byte value that is in the range A1..FE for each byte. Otherwise it returns the 2022 code point
@@ -1133,6 +1163,7 @@ _2022ToGR94DBCS(uint32_t value) {
         return value;
     }
 }
+#endif
 
 #ifdef U_ENABLE_GENERIC_ISO_2022
 
@@ -2121,42 +2152,42 @@ escape:
                     /* G0 DBCS */
                     if(mySource < mySourceLimit) {
                         int leadIsOk, trailIsOk;
-                        char trailByte;
+                        uint8_t trailByte;
 getTrailByte:
-                        trailByte = *mySource;
+                        trailByte = (uint8_t)*mySource;
                         /*
                          * Ticket 5691: consistent illegal sequences:
                          * - We include at least the first byte in the illegal sequence.
                          * - If any of the non-initial bytes could be the start of a character,
                          *   we stop the illegal sequence before the first one of those.
                          *
-                         * In ISO-2022 DBCS, if both bytes are valid or both bytes are outside
-                         * the 21..7e range, then we treat them as a pair.
-                         * Otherwise (valid lead byte + illegal trail byte, or vice versa)
-                         * we report only the first byte as the illegal sequence.
+                         * In ISO-2022 DBCS, if the second byte is in the 21..7e range or is
+                         * an ESC/SO/SI, we report only the first byte as the illegal sequence.
+                         * Otherwise we convert or report the pair of bytes.
                          */
                         leadIsOk = (uint8_t)(mySourceChar - 0x21) <= (0x7e - 0x21);
                         trailIsOk = (uint8_t)(trailByte - 0x21) <= (0x7e - 0x21);
-                        if (leadIsOk == trailIsOk) {
+                        if (leadIsOk && trailIsOk) {
                             ++mySource;
-                            tmpSourceChar = (mySourceChar << 8) | (uint8_t)(trailByte);
-                            if (leadIsOk) {
-                                if(cs == JISX208) {
-                                    _2022ToSJIS((uint8_t)mySourceChar, (uint8_t)trailByte, tempBuf);
-                                    mySourceChar = tmpSourceChar;
-                                } else {
-                                    /* Copy before we modify tmpSourceChar so toUnicodeCallback() sees the correct bytes. */
-                                    mySourceChar = tmpSourceChar;
-                                    if (cs == KSC5601) {
-                                        tmpSourceChar = _2022ToGR94DBCS(tmpSourceChar);
-                                    }
-                                    tempBuf[0] = (char)(tmpSourceChar >> 8);
-                                    tempBuf[1] = (char)(tmpSourceChar);
-                                }
-                                targetUniChar = ucnv_MBCSSimpleGetNextUChar(myData->myConverterArray[cs], tempBuf, 2, FALSE);
-                            } else {
+                            tmpSourceChar = (mySourceChar << 8) | trailByte;
+                            if(cs == JISX208) {
+                                _2022ToSJIS((uint8_t)mySourceChar, trailByte, tempBuf);
                                 mySourceChar = tmpSourceChar;
+                            } else {
+                                /* Copy before we modify tmpSourceChar so toUnicodeCallback() sees the correct bytes. */
+                                mySourceChar = tmpSourceChar;
+                                if (cs == KSC5601) {
+                                    tmpSourceChar += 0x8080;  /* = _2022ToGR94DBCS(tmpSourceChar) */
+                                }
+                                tempBuf[0] = (char)(tmpSourceChar >> 8);
+                                tempBuf[1] = (char)(tmpSourceChar);
                             }
+                            targetUniChar = ucnv_MBCSSimpleGetNextUChar(myData->myConverterArray[cs], tempBuf, 2, FALSE);
+                        } else if (!(trailIsOk || IS_2022_CONTROL(trailByte))) {
+                            /* report a pair of illegal bytes if the second byte is not a DBCS starter */
+                            ++mySource;
+                            /* add another bit so that the code below writes 2 bytes in case of error */
+                            mySourceChar = 0x10000 | (mySourceChar << 8) | trailByte;
                         }
                     } else {
                         args->converter->toUBytes[0] = (uint8_t)mySourceChar;
@@ -2634,35 +2665,33 @@ escape:
             if(myData->toU2022State.g == 1) {
                 if(mySource < mySourceLimit) {
                     int leadIsOk, trailIsOk;
-                    char trailByte;
+                    uint8_t trailByte;
 getTrailByte:
                     targetUniChar = missingCharMarker;
-                    trailByte = *mySource;
+                    trailByte = (uint8_t)*mySource;
                     /*
                      * Ticket 5691: consistent illegal sequences:
                      * - We include at least the first byte in the illegal sequence.
                      * - If any of the non-initial bytes could be the start of a character,
                      *   we stop the illegal sequence before the first one of those.
                      *
-                     * In ISO-2022 DBCS, if both bytes are valid or both bytes are outside
-                     * the 21..7e range, then we treat them as a pair.
-                     * Otherwise (valid lead byte + illegal trail byte, or vice versa)
-                     * we report only the first byte as the illegal sequence.
+                     * In ISO-2022 DBCS, if the second byte is in the 21..7e range or is
+                     * an ESC/SO/SI, we report only the first byte as the illegal sequence.
+                     * Otherwise we convert or report the pair of bytes.
                      */
                     leadIsOk = (uint8_t)(mySourceChar - 0x21) <= (0x7e - 0x21);
                     trailIsOk = (uint8_t)(trailByte - 0x21) <= (0x7e - 0x21);
-                    if (leadIsOk == trailIsOk) {
+                    if (leadIsOk && trailIsOk) {
                         ++mySource;
-                        if (leadIsOk) {
-                            tempBuf[0] = (char)(mySourceChar + 0x80);
-                            tempBuf[1] = (char)(trailByte + 0x80);
-                            targetUniChar = ucnv_MBCSSimpleGetNextUChar(sharedData, tempBuf, 2, useFallback);
-                        } else {
-                            leadIsOk = TRUE; /* TODO: remove */
-                        }
-                        mySourceChar = (mySourceChar << 8) | (uint8_t)(trailByte);
-                    } else {
-                        trailIsOk = TRUE; /* TODO: remove */
+                        tempBuf[0] = (char)(mySourceChar + 0x80);
+                        tempBuf[1] = (char)(trailByte + 0x80);
+                        targetUniChar = ucnv_MBCSSimpleGetNextUChar(sharedData, tempBuf, 2, useFallback);
+                        mySourceChar = (mySourceChar << 8) | trailByte;
+                    } else if (!(trailIsOk || IS_2022_CONTROL(trailByte))) {
+                        /* report a pair of illegal bytes if the second byte is not a DBCS starter */
+                        ++mySource;
+                        /* add another bit so that the code below writes 2 bytes in case of error */
+                        mySourceChar = 0x10000 | (mySourceChar << 8) | trailByte;
                     }
                 } else {
                     args->converter->toUBytes[0] = (uint8_t)mySourceChar;
@@ -3251,42 +3280,44 @@ escape:
                         StateEnum tempState;
                         int32_t tempBufLen;
                         int leadIsOk, trailIsOk;
-                        char trailByte;
+                        uint8_t trailByte;
 getTrailByte:
-                        trailByte = *mySource;
+                        trailByte = (uint8_t)*mySource;
                         /*
                          * Ticket 5691: consistent illegal sequences:
                          * - We include at least the first byte in the illegal sequence.
                          * - If any of the non-initial bytes could be the start of a character,
                          *   we stop the illegal sequence before the first one of those.
                          *
-                         * In ISO-2022 DBCS, if both bytes are valid or both bytes are outside
-                         * the 21..7e range, then we treat them as a pair.
-                         * Otherwise (valid lead byte + illegal trail byte, or vice versa)
-                         * we report only the first byte as the illegal sequence.
+                         * In ISO-2022 DBCS, if the second byte is in the 21..7e range or is
+                         * an ESC/SO/SI, we report only the first byte as the illegal sequence.
+                         * Otherwise we convert or report the pair of bytes.
                          */
                         leadIsOk = (uint8_t)(mySourceChar - 0x21) <= (0x7e - 0x21);
                         trailIsOk = (uint8_t)(trailByte - 0x21) <= (0x7e - 0x21);
-                        if (leadIsOk == trailIsOk) {
+                        if (leadIsOk && trailIsOk) {
                             ++mySource;
-                            if (leadIsOk) {
-                                tempState = (StateEnum)pToU2022State->cs[pToU2022State->g];
-                                if(tempState >= CNS_11643_0) {
-                                    cnv = myData->myConverterArray[CNS_11643];
-                                    tempBuf[0] = (char) (0x80+(tempState-CNS_11643_0));
-                                    tempBuf[1] = (char) (mySourceChar);
-                                    tempBuf[2] = trailByte;
-                                    tempBufLen = 3;
+                            tempState = (StateEnum)pToU2022State->cs[pToU2022State->g];
+                            if(tempState >= CNS_11643_0) {
+                                cnv = myData->myConverterArray[CNS_11643];
+                                tempBuf[0] = (char) (0x80+(tempState-CNS_11643_0));
+                                tempBuf[1] = (char) (mySourceChar);
+                                tempBuf[2] = (char) trailByte;
+                                tempBufLen = 3;
 
-                                }else{
-                                    cnv = myData->myConverterArray[tempState];
-                                    tempBuf[0] = (char) (mySourceChar);
-                                    tempBuf[1] = trailByte;
-                                    tempBufLen = 2;
-                                }
-                                targetUniChar = ucnv_MBCSSimpleGetNextUChar(cnv, tempBuf, tempBufLen, FALSE);
+                            }else{
+                                cnv = myData->myConverterArray[tempState];
+                                tempBuf[0] = (char) (mySourceChar);
+                                tempBuf[1] = (char) trailByte;
+                                tempBufLen = 2;
                             }
-                            mySourceChar = (mySourceChar << 8) | (uint8_t)(trailByte);
+                            targetUniChar = ucnv_MBCSSimpleGetNextUChar(cnv, tempBuf, tempBufLen, FALSE);
+                            mySourceChar = (mySourceChar << 8) | trailByte;
+                        } else if (!(trailIsOk || IS_2022_CONTROL(trailByte))) {
+                            /* report a pair of illegal bytes if the second byte is not a DBCS starter */
+                            ++mySource;
+                            /* add another bit so that the code below writes 2 bytes in case of error */
+                            mySourceChar = 0x10000 | (mySourceChar << 8) | trailByte;
                         }
                         if(pToU2022State->g>=2) {
                             /* return from a single-shift state to the previous one */

@@ -34,7 +34,8 @@ U_NAMESPACE_USE
 #define SECOND_LAST_BYTE_SHIFT_  8
 #define SUPPLEMENTARY_MIN_VALUE_ 0x10000
 
-static const uint16_t *FCD_ = NULL;
+static const uint16_t *fcdTrieIndex = NULL;
+static UChar32 fcdHighStart = 0;
 
 // internal methods -------------------------------------------------
 
@@ -99,7 +100,7 @@ inline int hash(uint32_t ce)
 U_CDECL_BEGIN
 static UBool U_CALLCONV
 usearch_cleanup(void) {
-    FCD_ = NULL;
+    fcdTrieIndex = NULL;
     return TRUE;
 }
 U_CDECL_END
@@ -113,8 +114,8 @@ U_CDECL_END
 static
 inline void initializeFCD(UErrorCode *status) 
 {
-    if (FCD_ == NULL) {
-        FCD_ = unorm_getFCDTrie(status);
+    if (fcdTrieIndex == NULL) {
+        fcdTrieIndex = unorm_getFCDTrieIndex(fcdHighStart, status);
         ucln_i18n_registerCleanup(UCLN_I18N_USEARCH, usearch_cleanup);
     }
 }
@@ -133,22 +134,9 @@ static
 uint16_t getFCD(const UChar   *str, int32_t *offset, 
                              int32_t  strlength)
 {
-    int32_t temp = *offset;
-    uint16_t    result;
-    UChar       ch   = str[temp];
-    result = unorm_getFCD16(FCD_, ch);
-    temp ++;
-    
-    if (result && temp != strlength && UTF_IS_FIRST_SURROGATE(ch)) {
-        ch = str[temp];
-        if (UTF_IS_SECOND_SURROGATE(ch)) {
-            result = unorm_getFCD16FromSurrogatePair(FCD_, result, ch);
-            temp ++;
-        } else {
-            result = 0;
-        }
-    }
-    *offset = temp;
+    const UChar *temp = str + *offset;
+    uint16_t    result = unorm_nextFCD16(fcdTrieIndex, fcdHighStart, temp, str + strlength);
+    *offset = (int32_t)(temp - str);
     return result;
 }
 
@@ -1073,7 +1061,6 @@ inline UBool isOutOfBounds(int32_t textlength, int32_t offset)
     return offset < 0 || offset > textlength;
 }
 
-#if BOYER_MOORE
 /**
 * Checks for identical match
 * @param strsrch string search data
@@ -1135,6 +1122,7 @@ inline UBool checkIdentical(const UStringSearch *strsrch, int32_t start,
     return U_SUCCESS(status) && result;
 }
 
+#if BOYER_MOORE
 /**
 * Checks to see if the match is repeated
 * @param strsrch string search data
@@ -3407,12 +3395,20 @@ U_CAPI void U_EXPORT2 usearch_reset(UStringSearch *strsrch)
         UBool      shift;
         uint32_t   varTop;
 
+        // **** hack to deal w/ how processed CEs encode quaternary ****
+        UCollationStrength newStrength = ucol_getStrength(strsrch->collator);
+        if ((strsrch->strength < UCOL_QUATERNARY && newStrength >= UCOL_QUATERNARY) ||
+            (strsrch->strength >= UCOL_QUATERNARY && newStrength < UCOL_QUATERNARY)) {
+                sameCollAttribute = FALSE;
+        }
+
         strsrch->strength    = ucol_getStrength(strsrch->collator);
         ceMask = getMask(strsrch->strength);
         if (strsrch->ceMask != ceMask) {
             strsrch->ceMask = ceMask;
             sameCollAttribute = FALSE;
         }
+
         // if status is a failure, ucol_getAttribute returns UCOL_DEFAULT
         shift = ucol_getAttribute(strsrch->collator, UCOL_ALTERNATE_HANDLING, 
                                   &status) == UCOL_SHIFTED;
@@ -3884,6 +3880,10 @@ U_CAPI UBool U_EXPORT2 usearch_search(UStringSearch  *strsrch,
         }
 
         if (isBreakBoundary(strsrch, mLimit)) {
+            found = FALSE;
+        }
+
+        if (!checkIdentical(strsrch, mStart, mLimit)) {
             found = FALSE;
         }
 

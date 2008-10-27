@@ -420,10 +420,6 @@ TimeZone::TimeZone(const UnicodeString &id)
 
 TimeZone::~TimeZone()
 {
-    /* When uprv_tzname() is called, memory might have been
-       allocated for the default timezone name. Release this
-       when the timezone object is deleted. */
-    uprv_free_tzname();
 }
 
 // -------------------------------------
@@ -1203,6 +1199,8 @@ TimeZone::getDisplayName(UBool daylight, EDisplayType style, const Locale& local
                 return result.remove();
             }
             format.adoptTimeZone(tz);
+        } else {
+            format.setTimeZone(*this);
         }
     } else {
         // The display name for standard time was requested, but currently in DST

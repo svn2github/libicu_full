@@ -12,7 +12,7 @@
 
 #if !UCONFIG_NO_FORMATTING
 
-//FIXME: put in compilation
+//TODO: put in compilation
 //#define DTITVFMT_DEBUG 1
 
 #include "cstring.h"
@@ -429,8 +429,8 @@ DateIntervalFormat::DateIntervalFormat(const Locale& locale,
         return;
     }
     fDtpng = DateTimePatternGenerator::createInstance(locale, status);
-    DateFormat* dtfmt = DateFormat::createPatternInstance(*skeleton, locale, 
-                                                          fDtpng, status);
+    SimpleDateFormat* dtfmt = createSDFPatternInstance(*skeleton, locale, 
+                                                    fDtpng, status);
     if ( U_FAILURE(status) ) {
         delete dtItvInfo;
         delete fDtpng;
@@ -449,7 +449,7 @@ DateIntervalFormat::DateIntervalFormat(const Locale& locale,
         fSkeleton = *skeleton;
     }
     fInfo = dtItvInfo;
-    fDateFormat = (SimpleDateFormat*)dtfmt;
+    fDateFormat = dtfmt;
     if ( dtfmt->getCalendar() ) {
         fFromCalendar = dtfmt->getCalendar()->clone();
         fToCalendar = dtfmt->getCalendar()->clone();
@@ -460,6 +460,28 @@ DateIntervalFormat::DateIntervalFormat(const Locale& locale,
     initializePattern(status);
 }
 
+
+SimpleDateFormat* U_EXPORT2
+DateIntervalFormat::createSDFPatternInstance(const UnicodeString& skeleton,
+                                             const Locale& locale,
+                                             DateTimePatternGenerator* dtpng,
+                                             UErrorCode& status)
+{
+    if ( U_FAILURE(status) ) {
+        return NULL;
+    }
+
+    const UnicodeString pattern = dtpng->getBestPattern(skeleton, status);
+    if ( U_FAILURE(status) ) {
+        return NULL;
+    }
+    SimpleDateFormat* dtfmt = new SimpleDateFormat(pattern, locale, status);
+    if ( U_FAILURE(status) ) {
+        delete dtfmt;
+        return NULL;
+    }
+    return dtfmt;
+}
 
 
 DateIntervalFormat* U_EXPORT2
@@ -775,7 +797,6 @@ DateIntervalFormat::getDateTimeSkeleton(const UnicodeString& skeleton,
             ++vCount;
             timeSkeleton.append(ch);
             break;
-          // FIXME: what is the difference between CAP_V/Z and LOW_V/Z
           case CAP_V:
           case CAP_Z:
           case LOW_K:

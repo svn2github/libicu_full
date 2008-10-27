@@ -632,7 +632,7 @@ SimpleDateFormat::fgPatternIndexToCalendarField[] =
     /*Yeu*/ UCAL_YEAR_WOY, UCAL_DOW_LOCAL, UCAL_EXTENDED_YEAR,
     /*gAZ*/ UCAL_JULIAN_DAY, UCAL_MILLISECONDS_IN_DAY, UCAL_ZONE_OFFSET,
     /*v*/   UCAL_ZONE_OFFSET,
-    /*c*/   UCAL_DAY_OF_WEEK,
+    /*c*/   UCAL_DOW_LOCAL,
     /*L*/   UCAL_MONTH,
     /*Q*/   UCAL_MONTH,
     /*q*/   UCAL_MONTH,
@@ -1135,9 +1135,22 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
         }
         break;
 
-    // for "EEE", write out the abbreviated day-of-the-week name
-    // for "EEEE", write out the wide day-of-the-week name
-    // for "EEEEE", use the narrow day-of-the-week name
+    // for "ee" or "e", use local numeric day-of-the-week
+    // for "EEEEE" or "eeeee", write out the narrow day-of-the-week name
+    // for "EEEE" or "eeee", write out the wide day-of-the-week name
+    // for "EEE" or "EE" or "E" or "eee", write out the abbreviated day-of-the-week name
+    case UDAT_DOW_LOCAL_FIELD:
+        if ( count < 3 ) {
+            zeroPaddingNumber(appendTo, value, count, maxIntCount);
+            break;
+        }
+        // fall through to EEEEE-EEE handling, but for that we don't want local day-of-week,
+        // we want standard day-of-week, so first fix value to work for EEEEE-EEE.
+        value = cal.get(UCAL_DAY_OF_WEEK, status);
+        if (U_FAILURE(status)) {
+            return;
+        }
+        // fall through, do not break here
     case UDAT_DAY_OF_WEEK_FIELD:
         if (count == 5) 
             _appendSymbol(appendTo, value, fSymbols->fNarrowWeekdays,
@@ -1154,17 +1167,25 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
     // for "cccc", write out the wide day-of-the-week name
     // for "ccccc", use the narrow day-of-the-week name
     case UDAT_STANDALONE_DAY_FIELD:
+        if ( count < 3 ) {
+            zeroPaddingNumber(appendTo, value, 1, maxIntCount);
+            break;
+        }
+        // fall through to alpha DOW handling, but for that we don't want local day-of-week,
+        // we want standard day-of-week, so first fix value.
+        value = cal.get(UCAL_DAY_OF_WEEK, status);
+        if (U_FAILURE(status)) {
+            return;
+        }
         if (count == 5) 
             _appendSymbol(appendTo, value, fSymbols->fStandaloneNarrowWeekdays,
                           fSymbols->fStandaloneNarrowWeekdaysCount);
         else if (count == 4) 
             _appendSymbol(appendTo, value, fSymbols->fStandaloneWeekdays,
                           fSymbols->fStandaloneWeekdaysCount);
-        else if (count == 3)
+        else // count == 3
             _appendSymbol(appendTo, value, fSymbols->fStandaloneShortWeekdays,
                           fSymbols->fStandaloneShortWeekdaysCount);
-        else
-            zeroPaddingNumber(appendTo, value, 1, maxIntCount);
         break;
 
     // for and "a" symbol, write out the whole AM/PM string
@@ -1894,6 +1915,8 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
     // the parsed value.
     if (patternCharIndex == UDAT_HOUR_OF_DAY1_FIELD ||
         patternCharIndex == UDAT_HOUR1_FIELD ||
+        (patternCharIndex == UDAT_DOW_LOCAL_FIELD && count <= 2) ||
+        (patternCharIndex == UDAT_STANDALONE_DAY_FIELD && count <= 2) ||
         (patternCharIndex == UDAT_MONTH_FIELD && count <= 2) ||
         (patternCharIndex == UDAT_STANDALONE_MONTH_FIELD && count <= 2) ||
         (patternCharIndex == UDAT_QUARTER_FIELD && count <= 2) ||
@@ -2050,28 +2073,48 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
         cal.set(UCAL_MILLISECOND, value);
         return pos.getIndex();
 
+    case UDAT_DOW_LOCAL_FIELD:
+        if (count <= 2) // i.e., e or ee
+        {
+            // [We computed 'value' above.]
+            cal.set(UCAL_DOW_LOCAL, value);
+            return pos.getIndex();
+        }
+        // else for eee-eeeee fall through to handling of EEE-EEEEE
+        // fall through, do not break here
     case UDAT_DAY_OF_WEEK_FIELD:
         {
             // Want to be able to parse both short and long forms.
-            // Try count == 4 (DDDD) first:
+            // Try count == 4 (EEEE) first:
             int32_t newStart = 0;
             if ((newStart = matchString(text, start, UCAL_DAY_OF_WEEK,
                                       fSymbols->fWeekdays, fSymbols->fWeekdaysCount, cal)) > 0)
                 return newStart;
-            else // DDDD failed, now try DDD
+            // EEEE failed, now try EEE
+            else if ((newStart = matchString(text, start, UCAL_DAY_OF_WEEK,
+                                   fSymbols->fShortWeekdays, fSymbols->fShortWeekdaysCount, cal)) > 0)
+                return newStart;
+            // EEE failed, now try EEEEE
+            else
                 return matchString(text, start, UCAL_DAY_OF_WEEK,
-                                   fSymbols->fShortWeekdays, fSymbols->fShortWeekdaysCount, cal);
+                                   fSymbols->fNarrowWeekdays, fSymbols->fNarrowWeekdaysCount, cal);
         }
 
     case UDAT_STANDALONE_DAY_FIELD:
         {
+            if (count <= 2) // c or cc
+            {
+                // [We computed 'value' above.]
+                cal.set(UCAL_DOW_LOCAL, value);
+                return pos.getIndex();
+            }
             // Want to be able to parse both short and long forms.
-            // Try count == 4 (DDDD) first:
+            // Try count == 4 (cccc) first:
             int32_t newStart = 0;
             if ((newStart = matchString(text, start, UCAL_DAY_OF_WEEK,
                                       fSymbols->fStandaloneWeekdays, fSymbols->fStandaloneWeekdaysCount, cal)) > 0)
                 return newStart;
-            else // DDDD failed, now try DDD
+            else // cccc failed, now try ccc
                 return matchString(text, start, UCAL_DAY_OF_WEEK,
                                    fSymbols->fStandaloneShortWeekdays, fSymbols->fStandaloneShortWeekdaysCount, cal);
         }
