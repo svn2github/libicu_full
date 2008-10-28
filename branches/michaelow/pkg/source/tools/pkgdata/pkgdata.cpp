@@ -36,6 +36,9 @@
 #include "unewdata.h"
 #include "uoptions.h"
 #include "putilimp.h"
+#include "package.h"
+#include "pkg_icu.h"
+
 
 #if U_HAVE_POPEN
 # include <unistd.h>
@@ -49,6 +52,8 @@ U_CDECL_BEGIN
 U_CDECL_END
 
 static void loadLists(UPKGOptions *o, UErrorCode *status);
+
+static int32_t pkg_executeOptions(UPKGOptions *o);
 
 /* always have this fcn, just might not do anything */
 static void fillInMakefileFromICUConfig(UOption *option);
@@ -201,13 +206,13 @@ main(int argc, char* argv[]) {
                             "\tinto the same directory and not specifying the -O option to pkgdata.\n");
         }
 #endif
-        
+
         if(!options[BLDOPT].doesOccur) {
             fprintf(stderr, " required parameter is missing: -O is required \n");
             fprintf(stderr, "Run '%s --help' for help.\n", progname);
             return 1;
         }
-        
+
         if(!options[NAME].doesOccur) /* -O we already have - don't report it. */
         {
             fprintf(stderr, " required parameter -p is missing \n");
@@ -302,7 +307,7 @@ main(int argc, char* argv[]) {
     } else {
       o.libName = o.shortName;
     }
-    
+
     if(options[QUIET].doesOccur) {
       o.quiet = TRUE;
     } else {
@@ -410,6 +415,48 @@ main(int argc, char* argv[]) {
     return pkg_executeOptions(&o);
 }
 
+#define MODE_COMMON 'c'
+#define MODE_STATIC 's'
+#define MODE_DLL 'd'
+
+static int32_t pkg_executeOptions(UPKGOptions *o) {
+    int32_t result = 0;
+    const char FILE_SEP_CHAR[1] = { U_FILE_SEP_CHAR };
+    const char mode = o->mode[0];
+    char datFileName[256];
+    char datFileNamePath[2048];
+
+    if (o->tmpDir != NULL) {
+        strcpy(datFileName, o->tmpDir);
+        strcat(datFileName, FILE_SEP_CHAR);
+        strcat(datFileName, o->shortName);
+    } else {
+        strcpy(datFileName, o->shortName);
+    }
+
+    strcat(datFileName, ".dat");
+
+    strcpy(datFileNamePath, datFileName);
+
+    result = writePackageDatFile(datFileName, o->comment, o->srcDir, o->fileListFiles->str, NULL, U_IS_BIG_ENDIAN ? 'b' : 'l');
+
+    if (mode == MODE_COMMON) {
+        char targetFileNamePath[2048];
+
+        if (o->targetDir != NULL) {
+            strcpy(targetFileNamePath, o->targetDir);
+            strcat(targetFileNamePath, FILE_SEP_CHAR);
+            strcat(targetFileNamePath, datFileName);
+
+            rename(datFileNamePath, targetFileNamePath);
+        }
+    } else /* if (mode[0] == MODE_STATIC || mode[0] == MODE_DLL) */ {
+
+    }
+
+    return result;
+}
+
 #if 0
 {
     rc = system(cmd);
@@ -433,20 +480,20 @@ static void loadLists(UPKGOptions *o, UErrorCode *status)
     char        tmp[1024];
     char       *s;
     int32_t     ln=0; /* line number */
-    
+
     for(l = o->fileListFiles; l; l = l->next) {
         if(o->verbose) {
             fprintf(stdout, "# Reading %s..\n", l->str);
         }
         /* TODO: stdin */
         in = T_FileStream_open(l->str, "r"); /* open files list */
-        
+
         if(!in) {
             fprintf(stderr, "Error opening <%s>.\n", l->str);
             *status = U_FILE_ACCESS_ERROR;
             return;
         }
-                
+
         while(T_FileStream_readLine(in, line, sizeof(line))!=NULL) { /* for each line */
             ln++;
             if(uprv_strlen(line)>lineMax) {
@@ -514,7 +561,7 @@ static void loadLists(UPKGOptions *o, UErrorCode *status)
                 if(uprv_pathIsAbsolute(s)) {
                     fprintf(stderr, "pkgdata: Error: absolute path encountered. Old style paths are not supported. Use relative paths such as 'fur.res' or 'translit%cfur.res'.\n\tBad path: '%s'\n", U_FILE_SEP_CHAR, s);
                     exit(U_ILLEGAL_ARGUMENT_ERROR);
-                }		
+                }
                 uprv_strcpy(tmp, o->srcDir);
                 uprv_strcat(tmp, o->srcDir[uprv_strlen(o->srcDir)-1]==U_FILE_SEP_CHAR?"":U_FILE_SEP_STRING);
                 uprv_strcat(tmp, s);
@@ -534,42 +581,42 @@ static void fillInMakefileFromICUConfig(UOption *option)
     size_t n;
     static char buf[512] = "";
     static const char cmd[] = "icu-config --incfile";
-    
+
     if(options[5].doesOccur)
     {
         /* informational */
         fprintf(stderr, "%s: No -O option found, trying '%s'.\n", progname, cmd);
     }
-    
+
     p = popen(cmd, "r");
-    
+
     if(p == NULL)
     {
         fprintf(stderr, "%s: icu-config: No icu-config found. (fix PATH or use -O option)\n", progname);
         return;
     }
-    
+
     n = fread(buf, 1, 511, p);
-    
+
     pclose(p);
-    
+
     if(n<=0)
     {
         fprintf(stderr,"%s: icu-config: Could not read from icu-config. (fix PATH or use -O option)\n", progname);
         return;
     }
-    
+
     if(buf[strlen(buf)-1]=='\n')
     {
         buf[strlen(buf)-1]=0;
     }
-    
+
     if(buf[0] == 0)
     {
         fprintf(stderr, "%s: icu-config: invalid response from icu-config (fix PATH or use -O option)\n", progname);
         return;
     }
-    
+
     if(options[5].doesOccur)
     {
         /* informational */
@@ -622,7 +669,7 @@ static void fillInMakefileFromICUConfig(UOption *option)
 #endif
 
     /* no popen available */
-    /* Put other OS specific ways to search for the Makefile.inc type 
+    /* Put other OS specific ways to search for the Makefile.inc type
        information or else fail.. */
 
 #endif

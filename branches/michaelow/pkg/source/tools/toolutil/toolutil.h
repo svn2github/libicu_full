@@ -65,13 +65,13 @@ uprv_mkdir(const char *pathname, UErrorCode *status);
 
 /**
  * Return the modification date for the specified file or directory.
- * Return value is undefined if there was an error. 
+ * Return value is undefined if there was an error.
  */
 U_CAPI UDate U_EXPORT2
 uprv_getModificationDate(const char *pathname, UErrorCode *status);
 
 /*
- * Returns the modification 
+ * Returns the modification
  *
  * @param status Set to an error code when mkdir failed.
  */
