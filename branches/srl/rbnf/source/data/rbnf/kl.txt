@@ -22,7 +22,8 @@ kl {
 
     SpelloutRules {
         "%%numbertimes:" // EXPERIMENTAL; in modern spelling
-            "2: marlunnik;\n"
+            "1: ataaseq;\n" // ataaseqik? ataasennik?
+            "marlunnik;\n"
             "pingasunik;\n"
             "sisamanik;\n"
             "tallimanik;\n"

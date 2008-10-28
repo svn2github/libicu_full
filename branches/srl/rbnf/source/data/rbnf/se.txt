@@ -31,7 +31,7 @@ se {
             "\u010Die\u017Ea;\n" // čieža,   s: tjïjhtje, l: gietjav
             "g\u00E1vcci;\n" // gávcci,   s: gaektsie, l: gáktsa
             "ovcci;\n" // s: uktsie, l: avtse
-            "10: logi;\n; >>\u00ADnuppe\u00ADlohk\u00E1i;\n"      // s:   luhki[>>],    l: lågev; lågenan>>
+            "10: logi; >>\u00ADnuppe\u00ADlohk\u00E1i;\n"      // s:   luhki[>>],    l: lågev; lågenan>>
             "20: <<\u00ADlogi[\u00AD>>];\n" // 'se' modern manner // s: <<luhki(e)[>>], l: <<låhk(e)[>>]
             //"20: <<\u00ADlogi; >>\u00ADgoalmmát\u00ADlohkái;\n" // 'se' traditional manner (>> towards <+1 ordinal< decade)
             //"30: <<\u00ADlogi; >>\u00ADnjealját\u00ADlohkái;\n"
