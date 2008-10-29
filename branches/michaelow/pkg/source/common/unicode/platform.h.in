@@ -339,4 +339,8 @@ typedef unsigned int uint32_t;
 #define U_MAKE  "@U_MAKE@"
 #endif
 
+#ifndef U_GENCCODE_ASSEMBLY
+#define U_GENCCODE_ASSEMBLY "@GENCCODE_ASSEMBLY@"
+#endif
+
 #endif

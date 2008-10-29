@@ -38,6 +38,7 @@
 #include "putilimp.h"
 #include "package.h"
 #include "pkg_icu.h"
+#include "pkg_genc.h"
 
 
 #if U_HAVE_POPEN
@@ -417,7 +418,8 @@ main(int argc, char* argv[]) {
 
 #define MODE_COMMON 'c'
 #define MODE_STATIC 's'
-#define MODE_DLL 'd'
+#define MODE_DLL    'd'
+#define MODE_FILES  'f'
 
 static int32_t pkg_executeOptions(UPKGOptions *o) {
     int32_t result = 0;
@@ -426,32 +428,46 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
     char datFileName[256];
     char datFileNamePath[2048];
 
-    if (o->tmpDir != NULL) {
-        strcpy(datFileName, o->tmpDir);
-        strcat(datFileName, FILE_SEP_CHAR);
-        strcat(datFileName, o->shortName);
-    } else {
-        strcpy(datFileName, o->shortName);
-    }
-
-    strcat(datFileName, ".dat");
-
-    strcpy(datFileNamePath, datFileName);
-
-    result = writePackageDatFile(datFileName, o->comment, o->srcDir, o->fileListFiles->str, NULL, U_IS_BIG_ENDIAN ? 'b' : 'l');
-
-    if (mode == MODE_COMMON) {
-        char targetFileNamePath[2048];
-
-        if (o->targetDir != NULL) {
-            strcpy(targetFileNamePath, o->targetDir);
-            strcat(targetFileNamePath, FILE_SEP_CHAR);
-            strcat(targetFileNamePath, datFileName);
-
-            rename(datFileNamePath, targetFileNamePath);
+    if (mode == MODE_FILES) {
+        // TODO: Copy files over
+    } else /* if (mode == MODE_COMMON || mode == MODE_STATIC || mode == MODE_DLL) */ {
+        if (o->tmpDir != NULL) {
+            strcpy(datFileName, o->tmpDir);
+            strcat(datFileName, FILE_SEP_CHAR);
+            strcat(datFileName, o->shortName);
+        } else {
+            strcpy(datFileName, o->shortName);
         }
-    } else /* if (mode[0] == MODE_STATIC || mode[0] == MODE_DLL) */ {
 
+        strcat(datFileName, ".dat");
+
+        strcpy(datFileNamePath, datFileName);
+
+        result = writePackageDatFile(datFileName, o->comment, o->srcDir, o->fileListFiles->str, NULL, U_IS_BIG_ENDIAN ? 'b' : 'l');
+
+        if (mode == MODE_COMMON) {
+            char targetFileNamePath[2048];
+
+            if (o->targetDir != NULL) {
+                strcpy(targetFileNamePath, o->targetDir);
+                strcat(targetFileNamePath, FILE_SEP_CHAR);
+                strcat(targetFileNamePath, datFileName);
+
+                rename(datFileNamePath, targetFileNamePath);
+            }
+        } else /* if (mode[0] == MODE_STATIC || mode[0] == MODE_DLL) */ {
+            const char* genccodeAssembly = U_GENCCODE_ASSEMBLY;
+            char* assemblyFilePath = NULL;
+
+            /* Offset genccodeAssembly by 3 because "-a " */
+            if (checkAssemblyHeaderName(genccodeAssembly+3)) {
+                /* TODO: tmpDir might be NULL */
+                assemblyFilePath = writeAssemblyCode(datFileNamePath, o->tmpDir, o->entryName, NULL);
+            } else {
+                fprintf(stderr,"Assembly type \"%s\" is unknown.\n", genccodeAssembly);
+                return -1;
+            }
+        }
     }
 
     return result;
