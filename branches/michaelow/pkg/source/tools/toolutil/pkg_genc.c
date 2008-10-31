@@ -45,8 +45,6 @@
 
 #define MAX_COLUMN ((uint32_t)(0xFFFFFFFFU))
 
-static uint32_t column=MAX_COLUMN;
-
 #if defined(U_WINDOWS) || defined(U_ELF)
 #define CAN_GENERATE_OBJECTS
 #endif
@@ -55,15 +53,15 @@ static uint32_t column=MAX_COLUMN;
 static void
 getOutFilename(const char *inFilename, const char *destdir, char *outFilename, char *entryName, const char *newSuffix, const char *optFilename);
 
-static void
-write8(FileStream *out, uint8_t byte);
+static uint32_t
+write8(FileStream *out, uint8_t byte, uint32_t column);
 
-static void
-write32(FileStream *out, uint32_t byte);
+static uint32_t
+write32(FileStream *out, uint32_t byte, uint32_t column);
 
 #ifdef OS400
-static void
-write8str(FileStream *out, uint8_t byte);
+static uint32_t
+write8str(FileStream *out, uint8_t byte, uint32_t column);
 #endif
 /* -------------------------------------------------------------------------- */
 
@@ -216,6 +214,7 @@ checkAssemblyHeaderName(const char* optAssembly) {
 
 U_CAPI void U_EXPORT2
 writeAssemblyCode(const char *filename, const char *destdir, const char *optEntryPoint, const char *optFilename, char *outFilePath) {
+    uint32_t column = MAX_COLUMN;
     char entry[64];
     uint32_t buffer[1024];
     char *bufferStr = (char *)buffer;
@@ -270,7 +269,7 @@ writeAssemblyCode(const char *filename, const char *destdir, const char *optEntr
             }
         }
         for(i=0; i<(length/sizeof(buffer[0])); i++) {
-            write32(out, buffer[i]);
+            column = write32(out, buffer[i], column);
         }
     }
 
@@ -292,6 +291,7 @@ writeAssemblyCode(const char *filename, const char *destdir, const char *optEntr
 
 U_CAPI void U_EXPORT2
 writeCCode(const char *filename, const char *destdir, const char *optName, const char *optFilename) {
+    uint32_t column = MAX_COLUMN;
     char buffer[4096], entry[64];
     FileStream *in, *out;
     size_t i, length;
@@ -354,7 +354,7 @@ writeCCode(const char *filename, const char *destdir, const char *optName, const
             break;
         }
         for(i=0; i<length; ++i) {
-            write8str(out, (uint8_t)buffer[i]);
+            column = write8str(out, (uint8_t)buffer[i], column);
         }
     }
 
@@ -378,7 +378,7 @@ writeCCode(const char *filename, const char *destdir, const char *optName, const
             break;
         }
         for(i=0; i<length; ++i) {
-            write8(out, (uint8_t)buffer[i]);
+            column = write8(out, (uint8_t)buffer[i], column);
         }
     }
 
@@ -399,8 +399,8 @@ writeCCode(const char *filename, const char *destdir, const char *optName, const
     T_FileStream_close(in);
 }
 
-static void
-write32(FileStream *out, uint32_t bitField) {
+static uint32_t
+write32(FileStream *out, uint32_t bitField, uint32_t column) {
     int32_t i;
     char bitFieldStr[64]; /* This is more bits than needed for a 32-bit number */
     char *s = bitFieldStr;
@@ -454,10 +454,11 @@ write32(FileStream *out, uint32_t bitField) {
 
     *(s++)=0;
     T_FileStream_writeLine(out, bitFieldStr);
+    return column;
 }
 
-static void
-write8(FileStream *out, uint8_t byte) {
+static uint32_t
+write8(FileStream *out, uint8_t byte, uint32_t column) {
     char s[4];
     int i=0;
 
@@ -485,11 +486,12 @@ write8(FileStream *out, uint8_t byte) {
         column=1;
     }
     T_FileStream_writeLine(out, s);
+    return column;
 }
 
 #ifdef OS400
-static void
-write8str(FileStream *out, uint8_t byte) {
+static uint32_t
+write8str(FileStream *out, uint8_t byte, uint32_t column) {
     char s[8];
 
     if (byte > 7)
@@ -509,6 +511,7 @@ write8str(FileStream *out, uint8_t byte) {
         column=1;
     }
     T_FileStream_writeLine(out, s);
+    return column;
 }
 #endif
 
@@ -686,7 +689,6 @@ getArchitecture(uint16_t *pCPU, uint16_t *pBits, UBool *pIsBigEndian, const char
 
 U_CAPI void U_EXPORT2
 writeObjectCode(const char *filename, const char *destdir, const char *optEntryPoint, const char *optMatchArch, const char *optFilename) {
-    column=MAX_COLUMN;
     /* common variables */
     char buffer[4096], entry[40]={ 0 };
     FileStream *in, *out;
