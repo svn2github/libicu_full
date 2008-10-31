@@ -176,7 +176,8 @@ main(int argc, char* argv[]) {
             case CALL_WRITEASSEMBLY:
                 writeAssemblyCode(filename, options[kOptDestDir].value,
                                   options[kOptEntryPoint].doesOccur ? options[kOptEntryPoint].value : NULL,
-                                  options[kOptFilename].doesOccur ? options[kOptFilename].value : NULL);
+                                  options[kOptFilename].doesOccur ? options[kOptFilename].value : NULL,
+                                  NULL);
                 break;
 #ifdef CAN_GENERATE_OBJECTS
             case CALL_WRITEOBJECT:

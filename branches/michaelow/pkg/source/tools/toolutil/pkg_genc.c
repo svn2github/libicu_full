@@ -214,12 +214,11 @@ checkAssemblyHeaderName(const char* optAssembly) {
     return FALSE;
 }
 
-U_CAPI char* U_EXPORT2
-writeAssemblyCode(const char *filename, const char *destdir, const char *optEntryPoint, const char *optFilename) {
+U_CAPI void U_EXPORT2
+writeAssemblyCode(const char *filename, const char *destdir, const char *optEntryPoint, const char *optFilename, char *outFilePath) {
     char entry[64];
     uint32_t buffer[1024];
     char *bufferStr = (char *)buffer;
-    char outFilePath[512];
     FileStream *in, *out;
     size_t i, length;
 
@@ -235,7 +234,10 @@ writeAssemblyCode(const char *filename, const char *destdir, const char *optEntr
         fprintf(stderr, "genccode: unable to open output file %s\n", bufferStr);
         exit(U_FILE_ACCESS_ERROR);
     }
-    uprv_strcpy(outFilePath, bufferStr);
+
+    if (outFilePath != NULL) {
+        uprv_strcpy(outFilePath, bufferStr);
+    }
 
     if(optEntryPoint != NULL) {
         uprv_strcpy(entry, optEntryPoint);
@@ -286,8 +288,6 @@ writeAssemblyCode(const char *filename, const char *destdir, const char *optEntr
 
     T_FileStream_close(out);
     T_FileStream_close(in);
-
-    return outFilePath;
 }
 
 U_CAPI void U_EXPORT2

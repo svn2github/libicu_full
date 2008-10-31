@@ -421,9 +421,17 @@
 				>
 			</File>
 			<File
-				RelativePath=".\pkgitems.cpp"
+				RelativePath=".\pkg_genc.c"
 				>
 			</File>
+                        <File
+                                RelativePath=".\pkg_icu.cpp"
+                                >
+                        </File>
+                        <File
+                                RelativePath=".\pkgitems.cpp"
+                                >
+                        </File>
 			<File
 				RelativePath=".\swapimpl.cpp"
 				>
@@ -509,6 +517,14 @@
 				RelativePath=".\package.h"
 				>
 			</File>
+                        <File
+                                RelativePath=".\pkg_genc.h"
+                                >
+                        </File>
+                        <File
+                                RelativePath=".\pkg_icu.h"
+                                >
+                        </File>
 			<File
 				RelativePath=".\pkg_imp.h"
 				>

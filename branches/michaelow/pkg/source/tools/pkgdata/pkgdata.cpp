@@ -457,15 +457,21 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
             }
         } else /* if (mode[0] == MODE_STATIC || mode[0] == MODE_DLL) */ {
             const char* genccodeAssembly = U_GENCCODE_ASSEMBLY;
-            char* assemblyFilePath = NULL;
+            char assemblyFilePath[512];
 
             /* Offset genccodeAssembly by 3 because "-a " */
             if (checkAssemblyHeaderName(genccodeAssembly+3)) {
                 /* TODO: tmpDir might be NULL */
-                assemblyFilePath = writeAssemblyCode(datFileNamePath, o->tmpDir, o->entryName, NULL);
+                writeAssemblyCode(datFileNamePath, o->tmpDir, o->entryName, NULL, assemblyFilePath);
             } else {
                 fprintf(stderr,"Assembly type \"%s\" is unknown.\n", genccodeAssembly);
                 return -1;
+            }
+
+            // TODO: add code to generate static library file
+
+            if (mode == MODE_DLL) {
+                // TODO: add code to generate dynamic library file
             }
         }
     }
