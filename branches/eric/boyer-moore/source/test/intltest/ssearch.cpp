@@ -81,6 +81,26 @@ void SSearchTest::runIndexedTest( int32_t index, UBool exec, const char* &name, 
         case 2: name = "monkeyTest";
             if (exec) monkeyTest(params);
             break;
+
+        case 3: name = "minLengthTest";
+            if (exec) minLengthTest();
+            break;
+
+        case 4: name = "boyerMooreTest";
+            if (exec) boyerMooreTest();
+            break;
+
+        case 5: name = "sundayQuickSearchTest";
+            if (exec) sundayQuickSearchTest();
+            break;
+
+        case 6: name = "goodSuffixTest";
+            if (exec) goodSuffixTest();
+            break;
+
+        case 7: name = "searchTime";
+            if (exec) searchTime();
+            break;
 #endif
         default: name = "";
             break; //needed to end loop
@@ -683,6 +703,8 @@ public:
     int32_t get(int32_t index) const;
     UBool matchesAt(int32_t offset, const CEList *other) const; 
 
+    int32_t &operator[](int32_t index) const;
+
 private:
     void add(int32_t ce);
 
@@ -759,6 +781,11 @@ int32_t CEList::get(int32_t index) const
     }
 
     return -1;
+}
+
+int32_t &CEList::operator[](int32_t index) const
+{
+    return ces[index];
 }
 
 UBool CEList::matchesAt(int32_t offset, const CEList *other) const
@@ -1078,8 +1105,34 @@ static int32_t minLengthInChars(const CEList *ceList, int32_t offset, StringToCE
     return totalStringLength;
 }
 
-static void minLengthTest(UCollator *coll, StringToCEsMap *charsToCEList, CEToStringsMap *ceToCharsStartingWith)
+static USet *uset_openEmpty();
+
+void SSearchTest::minLengthTest()
 {
+    UErrorCode status = U_ZERO_ERROR;
+    U_STRING_DECL(test_pattern, "[[:assigned:]-[:ideographic:]-[:hangul:]-[:c:]]", 47);
+    U_STRING_INIT(test_pattern, "[[:assigned:]-[:ideographic:]-[:hangul:]-[:c:]]", 47);
+    UCollator *coll = ucol_open(NULL, &status);
+
+    if (U_FAILURE(status)) {
+        errln("Failed to create collator in MonkeyTest!");
+        return;
+    }
+
+    USet *charsToTest  = uset_openPattern(test_pattern, 47, &status);
+    USet *expansions   = uset_openEmpty();
+    USet *contractions = uset_openEmpty();
+    StringToCEsMap *charsToCEList = new StringToCEsMap();
+    CEToStringsMap *ceToCharsStartingWith = new CEToStringsMap();
+
+    ucol_getContractionsAndExpansions(coll, contractions, expansions, FALSE, &status);
+
+    uset_addAll(charsToTest, contractions);
+    uset_addAll(charsToTest, expansions);
+
+    // TODO: set strength to UCOL_PRIMARY, change CEList to use strength?
+    buildData(coll, charsToTest, charsToCEList, ceToCharsStartingWith);
+
     UnicodeString examples[] = {"fuss", "fiss", "affliss", "VII"};
     UnicodeString debug;
     int32_t nExamples = sizeof(examples) / sizeof(examples[0]);
@@ -1087,19 +1140,1246 @@ static void minLengthTest(UCollator *coll, StringToCEsMap *charsToCEList, CEToSt
     for (int32_t s = 0; s < nExamples; s += 1) {
         CEList *ceList = new CEList(coll, examples[s]);
 
-      //infoln("%S:", examples[s].getTerminatedBuffer());
+        infoln("%S:", examples[s].getTerminatedBuffer());
 
         for(int32_t i = 0; i < examples[s].length(); i += 1) {
             debug.remove();
 
             int32_t minLength = minLengthInChars(ceList, i, charsToCEList, ceToCharsStartingWith, debug);
-          //infoln("\t%d\t%S", minLength, debug.getTerminatedBuffer());
+            infoln("\t%d\t%S", minLength, debug.getTerminatedBuffer());
         }
 
-      //infoln();
+        infoln();
         delete ceList;
     }
+
+    delete ceToCharsStartingWith;
+    delete charsToCEList;
+
+    uset_close(contractions);
+    uset_close(expansions);
+    uset_close(charsToTest);
+
+    ucol_close(coll);
 }
+
+#if 1
+#define HASH_TABLE_SIZE 257
+
+struct PCE
+{
+    uint64_t ce;
+    int32_t  lowOffset;
+    int32_t  highOffset;
+};
+
+class PCEList
+{
+public:
+    PCEList(UCollator *coll, const UnicodeString &string);
+    ~PCEList();
+
+    int32_t size() const;
+
+    const PCE *get(int32_t index) const;
+
+    int32_t getLowOffset(int32_t index) const;
+    int32_t getHighOffset(int32_t index) const;
+    uint64_t getOrder(int32_t index) const;
+
+    UBool matchesAt(int32_t offset, const PCEList &other) const;
+
+    uint64_t operator[](int32_t index) const;
+
+private:
+    void add(uint64_t ce, int32_t low, int32_t high);
+
+    PCE *list;
+    int32_t listMax;
+    int32_t listSize;
+};
+
+PCEList::PCEList(UCollator *coll, const UnicodeString &string)
+{
+    UErrorCode status = U_ZERO_ERROR;
+    UCollationElements *elems = ucol_openElements(coll, string.getBuffer(), string.length(), &status);
+    uint64_t order;
+    int32_t low, high;
+
+    list = new PCE[listMax];
+
+    ucol_setOffset(elems, 0, &status);
+
+    do {
+        order = ucol_nextProcessed(elems, &low, &high, &status);
+        add(order, low, high);
+    } while (order != UCOL_PROCESSED_NULLORDER);
+
+    ucol_closeElements(elems);
+}
+
+PCEList::~PCEList()
+{
+    delete[] list;
+}
+
+void PCEList::add(uint64_t order, int32_t low, int32_t high)
+{
+    if (listSize >= listMax) {
+        listMax *= 2;
+
+        PCE *newList = new PCE[listMax];
+
+        uprv_memcpy(newList, list, listSize * sizeof(Order));
+        delete[] list;
+        list = newList;
+    }
+
+    list[listSize].ce         = order;
+    list[listSize].lowOffset  = low;
+    list[listSize].highOffset = high;
+
+    listSize += 1;
+}
+
+const PCE *PCEList::get(int32_t index) const
+{
+    if (index >= listSize) {
+        return NULL;
+    }
+
+    return &list[index];
+}
+
+int32_t PCEList::getLowOffset(int32_t index) const
+{
+    const PCE *pce = get(index);
+
+    if (pce != NULL) {
+        return pce->lowOffset;
+    }
+
+    return -1;
+}
+
+int32_t PCEList::getHighOffset(int32_t index) const
+{
+    const PCE *pce = get(index);
+
+    if (pce != NULL) {
+        return pce->highOffset;
+    }
+
+    return -1;
+}
+
+uint64_t PCEList::getOrder(int32_t index) const
+{
+    const PCE *pce = get(index);
+
+    if (pce != NULL) {
+        return pce->ce;
+    }
+
+    return UCOL_PROCESSED_NULLORDER;
+}
+
+int32_t PCEList::size() const
+{
+    return listSize;
+}
+
+UBool PCEList::matchesAt(int32_t offset, const PCEList &other) const
+{
+    // NOTE: sizes include the NULLORDER, which we don't want to compare.
+    int32_t otherSize = other.size() - 1;
+
+    if (listSize - 1 - offset < otherSize) {
+        return FALSE;
+    }
+
+    for (int32_t i = offset, j = 0; j < otherSize; i += 1, j += 1) {
+        if (getOrder(i) != other.getOrder(j)) {
+            return FALSE;
+        }
+    }
+
+    return TRUE;
+}
+
+uint64_t PCEList::operator[](int32_t index) const
+{
+    return getOrder(index);
+}
+
+class CollData
+{
+public:
+    CollData(UCollator *collator);
+    ~CollData();
+
+    UCollator *getCollator() const;
+
+    int32_t minLengthInChars(const CEList *ces, int32_t offset) const;
+
+private:
+    UCollator      *coll;
+    StringToCEsMap *charsToCEList;
+    CEToStringsMap *ceToCharsStartingWith;
+};
+
+CollData::CollData(UCollator *collator)
+  : coll(collator)
+{
+    UErrorCode status = U_ZERO_ERROR;
+    U_STRING_DECL(test_pattern, "[[:assigned:]-[:ideographic:]-[:hangul:]-[:c:]]", 47);
+    U_STRING_INIT(test_pattern, "[[:assigned:]-[:ideographic:]-[:hangul:]-[:c:]]", 47);
+    USet *charsToTest  = uset_openPattern(test_pattern, 47, &status);
+    USet *expansions   = uset_openEmpty();
+    USet *contractions = uset_openEmpty();
+    int32_t itemCount = 0;
+
+    charsToCEList = new StringToCEsMap();
+    ceToCharsStartingWith = new CEToStringsMap();
+
+    ucol_getContractionsAndExpansions(coll, contractions, expansions, FALSE, &status);
+
+    uset_addAll(charsToTest, contractions);
+    uset_addAll(charsToTest, expansions);
+
+    // TODO: set strength to UCOL_PRIMARY, change CEList to use strength?
+    // TODO: fold buildData into this class, and move the above code to it...
+    buildData(coll, charsToTest, charsToCEList, ceToCharsStartingWith);
+
+    uset_close(contractions);
+    uset_close(expansions);
+    uset_close(charsToTest);
+}
+
+CollData::~CollData()
+{
+   delete ceToCharsStartingWith;
+   delete charsToCEList;
+}
+
+UCollator *CollData::getCollator() const
+{
+    return coll;
+}
+
+int32_t CollData::minLengthInChars(const CEList *ceList, int32_t offset) const
+{
+    // find out shortest string for the longest sequence of ces.
+    // needs to be refined to use dynamic programming, but will be roughly right
+	int32_t totalStringLength = 0;
+	
+    while (offset < ceList->size()) {
+        int32_t ce = ceList->get(offset);
+        int32_t bestLength = INT32_MIN;
+        const UnicodeString *bestString = NULL;
+        int32_t bestCeLength = 0;
+        const StringList *strings = ceToCharsStartingWith->getStringList(ce);
+
+        if (strings == NULL) {
+            offset += 1;
+            continue;
+        }
+
+        int32_t stringCount = strings->size();
+      
+        for (int32_t s = 0; s < stringCount; s += 1) {
+            const UnicodeString *string = strings->get(s);
+            const CEList *ceList2 = charsToCEList->get(string);
+
+            if (ceList->matchesAt(offset, ceList2)) {
+                int32_t length = ceList2->size() - string->length();
+
+                if (bestLength < length) {
+                    bestLength = length;
+                    bestCeLength = ceList2->size();
+                    bestString = string;
+                }
+            }
+        }
+
+        if (bestString != NULL) {
+            totalStringLength += bestString->length();
+            offset += bestCeLength;
+        } else {
+            offset += 1;
+        }
+    }
+
+    return totalStringLength;
+}
+
+class BadCharacterTable
+{
+public:
+    BadCharacterTable(CEList &patternCEs, CollData *data, int32_t sunday = 0);
+    ~BadCharacterTable();
+
+    int32_t operator[](uint32_t ce) const;
+    int32_t getMaxSkip() const;
+    int32_t minLengthInChars(int32_t index);
+
+private:
+    static int32_t hash(uint32_t ce);
+
+    int32_t maxSkip;
+    int32_t badCharacterTable[HASH_TABLE_SIZE];
+
+    int32_t *minLengthCache;
+};
+
+// TODO: cache minLenthInChars results:
+//   cache[p] = data->minLengthInChars(&patternCEs, p);
+BadCharacterTable::BadCharacterTable(CEList &patternCEs, CollData *data, int32_t sunday)
+{
+    int32_t plen = patternCEs.size();
+
+    maxSkip = data->minLengthInChars(&patternCEs, 0) + sunday;
+
+    for(int32_t j = 0; j < HASH_TABLE_SIZE; j += 1) {
+        badCharacterTable[j] = maxSkip;
+    }
+
+    minLengthCache = new int32_t[plen];
+
+    for(int32_t p = 0; p < plen - 1; p += 1) {
+        minLengthCache[p] = data->minLengthInChars(&patternCEs, p);
+        badCharacterTable[hash(patternCEs[p])] = minLengthCache[p] - 1 + sunday;
+    }
+
+    // because the above loop doesn't look at the last CE in the pattern
+    minLengthCache[plen - 1] = data->minLengthInChars(&patternCEs, plen - 1);
+}
+
+BadCharacterTable::~BadCharacterTable()
+{
+    delete[] minLengthCache;
+}
+
+int32_t BadCharacterTable::operator[](uint32_t ce) const
+{
+    return badCharacterTable[hash(ce)];
+}
+
+int32_t BadCharacterTable::getMaxSkip() const
+{
+    return maxSkip;
+}
+
+int32_t BadCharacterTable::minLengthInChars(int32_t index)
+{
+    return minLengthCache[index];
+}
+
+int32_t BadCharacterTable::hash(uint32_t ce)
+{
+    return UCOL_PRIMARYORDER(ce) % HASH_TABLE_SIZE;
+}
+
+class GoodSuffixTable
+{
+public:
+    GoodSuffixTable(CEList &patternCEs, BadCharacterTable &badCharacterTable);
+    ~GoodSuffixTable();
+
+    int32_t operator[](int32_t offset) const;
+
+private:
+    int32_t *goodSuffixTable;
+};
+
+GoodSuffixTable::GoodSuffixTable(CEList &patternCEs, BadCharacterTable &badCharacterTable)
+{
+    int32_t patlen = patternCEs.size();
+    int32_t *suff  = new int32_t[patlen];
+    int32_t start = patlen - 1, end = - 1;
+    int32_t maxSkip = badCharacterTable.getMaxSkip();
+
+    // initialze suff
+    suff[patlen - 1] = patlen;
+
+    for (int32_t i = patlen - 2; i >= 0; i -= 1) {
+        // (i > start) means we're inside the last suffix match we found
+        // ((patlen - 1) - end) is how far the end of that match is from end of pattern
+        // (i - start) is how far we are from start of that match
+        // (i + (patlen - 1) - end) is index of same character at end of pattern
+        // so if any suffix match at that character doesn't extend beyond the last match,
+        // it's the suffix for this character as well
+        if (i > start && suff[i + patlen - 1 - end] < i - start) {
+            suff[i] = suff[i + patlen - 1 - end];
+        } else {
+            start = end = i;
+
+            int32_t s = patlen;
+
+            while (start >= 0 && patternCEs[start] == patternCEs[--s]) {
+                start -= 1;
+            }
+
+            suff[i] = end - start;
+        }
+    }
+
+    // now build goodSuffixTable
+    goodSuffixTable  = new int32_t[patlen];
+
+    // initialize entries to minLengthInChars of the pattern
+    for (int32_t i = 0; i < patlen; i += 1) {
+        goodSuffixTable[i] = maxSkip;
+    }
+
+    int32_t prefix = 0;
+
+    for (int32_t i = patlen - /*1*/ 2; i >= 0; i -= 1) {
+        if (suff[i] == i + 1) {
+            // this matching suffix is a prefix of the pattern
+            int32_t prefixSkip = badCharacterTable.minLengthInChars(i + 1);
+
+            // for any mis-match before this suffix, we should skip
+            // so that the front of the pattern (i.e. the prefix)
+            // lines up with the front of the suffix.
+            // (patlen - 1 - i) is the start of the suffix
+            while (prefix < patlen - 1 - i) {
+                // value of maxSkip means never set...
+                if (goodSuffixTable[prefix] == maxSkip) {
+                    goodSuffixTable[prefix] = prefixSkip;
+                }
+
+                prefix += 1;
+            }
+        }
+    }
+
+    for (int32_t i = 0; i < patlen - 1; i += 1) {
+        goodSuffixTable[patlen - 1 - suff[i]] = badCharacterTable.minLengthInChars(i + 1);
+    }
+
+    delete[] suff;
+}
+
+GoodSuffixTable::~GoodSuffixTable()
+{
+    delete[] goodSuffixTable;
+}
+
+int32_t GoodSuffixTable::operator[](int32_t offset) const
+{
+    return goodSuffixTable[offset];
+}
+
+class BoyerMooreSearch
+{
+public:
+    BoyerMooreSearch(UCollator *collator, const UnicodeString &patternString, int32_t sunday = 0);
+    BoyerMooreSearch(CollData *theData, const UnicodeString &patternString);
+    ~BoyerMooreSearch();
+
+    CollData *getData();
+    CEList   *getPatternCEs();
+    BadCharacterTable *getBadCharacterTable();
+    GoodSuffixTable   *getGoodSuffixTable();
+    
+private:
+    UBool ownData;
+    CollData *data;
+    CEList *patCEs;
+    BadCharacterTable *badCharacterTable;
+    GoodSuffixTable   *goodSuffixTable;
+};
+
+CollData *BoyerMooreSearch::getData()
+{
+    return data;
+}
+
+CEList *BoyerMooreSearch::getPatternCEs()
+{
+    return patCEs;
+}
+
+BadCharacterTable *BoyerMooreSearch::getBadCharacterTable()
+{
+    return badCharacterTable;
+}
+
+GoodSuffixTable *BoyerMooreSearch::getGoodSuffixTable()
+{
+    return goodSuffixTable;
+}
+
+BoyerMooreSearch::BoyerMooreSearch(UCollator *collator, const UnicodeString &patternString, int32_t sunday)
+    : ownData(TRUE)
+{
+    data = new CollData(collator);
+    patCEs = new CEList(collator, patternString);
+    badCharacterTable = new BadCharacterTable(*patCEs, data, sunday);
+    goodSuffixTable = new GoodSuffixTable(*patCEs, *badCharacterTable);
+}
+
+BoyerMooreSearch::BoyerMooreSearch(CollData *theData, const UnicodeString &patternString)
+    : ownData(FALSE), data(theData)
+{
+    UCollator *collator = data->getCollator();
+
+    patCEs = new CEList(collator, patternString);
+    badCharacterTable = new BadCharacterTable(*patCEs, data, 0);
+    goodSuffixTable = new GoodSuffixTable(*patCEs, *badCharacterTable);
+}
+
+BoyerMooreSearch::~BoyerMooreSearch()
+{
+    delete goodSuffixTable;
+    delete badCharacterTable;
+    delete patCEs;
+
+    if (ownData) {
+        delete data;
+    }
+}
+
+struct CEI
+{
+    uint32_t order;
+    int32_t  lowOffset;
+    int32_t  highOffset;
+};
+
+class Target
+{
+public:
+    Target(BoyerMooreSearch *bms, const UnicodeString &target);
+    ~Target();
+
+    const CEI *nextCE(int32_t offset);
+    const CEI *prevCE(int32_t offset);
+
+    UBool isBreakBoundary(int32_t offset);
+    int32_t nextBreakBoundary(int32_t offset);
+
+    void setOffset(int32_t offset);
+    void setLast(int32_t last);
+    int32_t getOffset();
+
+private:
+    CEI *ceb;
+    int32_t bufferSize;
+    int32_t bufferMin;
+    int32_t bufferMax;
+
+    uint32_t strengthMask;
+    UCollationElements *elements;
+    UBreakIterator *charBreakIterator;
+};
+
+Target::Target(BoyerMooreSearch *bms, const UnicodeString &target)
+{
+    UErrorCode status = U_ZERO_ERROR;
+    CollData *data = bms->getData();
+    UCollator *coll = data->getCollator();
+    CEList *patCEs = bms->getPatternCEs();
+
+    // **** need a better pad than 20 ****
+    bufferSize = patCEs->size() + 20;
+    ceb = new CEI[bufferSize];
+    bufferMin = 0;
+    bufferMax = 0;
+
+    elements = ucol_openElements(coll, target.getBuffer(), target.length(), &status);
+
+    charBreakIterator = ubrk_open(UBRK_CHARACTER, ucol_getLocale(coll, ULOC_VALID_LOCALE, &status),
+                                  target.getBuffer(), target.length(), &status);
+
+#if 0
+    switch (ucol_getStrength(coll)) 
+    {
+    default:
+        strengthMask |= UCOL_TERTIARYORDERMASK;
+        /* fall through */
+
+    case UCOL_SECONDARY:
+        strengthMask |= UCOL_SECONDARYORDERMASK;
+        /* fall through */
+
+    case UCOL_PRIMARY:
+        strengthMask |= UCOL_PRIMARYORDERMASK;
+    }
+#else
+    strengthMask = UCOL_PRIMARYORDERMASK;
+#endif
+}
+
+Target::~Target()
+{
+    ubrk_close(charBreakIterator);
+    ucol_closeElements(elements);
+
+    delete[] ceb;
+}
+
+const CEI *Target::nextCE(int32_t offset)
+{
+    UErrorCode status = U_ZERO_ERROR;
+    int32_t low = -1, high = -1;
+    uint32_t order;
+
+    if (offset >= bufferMin && offset < bufferMax) {
+        return &ceb[offset];
+    }
+
+    if (bufferMax >= bufferSize || offset != bufferMax) {
+        return NULL;
+    }
+
+    do {
+        low   = ucol_getOffset(elements);
+        order = ucol_next(elements, &status);
+        high  = ucol_getOffset(elements);
+
+        if (order == UCOL_NULLORDER) {
+          //high = low = -1;
+            break;
+        }
+
+        order &= strengthMask;
+    } while (order == UCOL_IGNORABLE);
+
+    ceb[offset].order = order;
+    ceb[offset].lowOffset = low;
+    ceb[offset].highOffset = high;
+
+    bufferMax += 1;
+
+    return &ceb[offset];
+}
+
+const CEI *Target::prevCE(int32_t offset)
+{
+    UErrorCode status = U_ZERO_ERROR;
+    int32_t low = -1, high = -1;
+    uint32_t order;
+
+    if (offset >= bufferMin && offset < bufferMax) {
+        return &ceb[offset];
+    }
+
+    if (bufferMax >= bufferSize || offset != bufferMax) {
+        return NULL;
+    }
+
+    do {
+        high  = ucol_getOffset(elements);
+        order = ucol_previous(elements, &status);
+        low   = ucol_getOffset(elements);
+
+        if (order == UCOL_NULLORDER) {
+            break;
+        }
+
+        order &= strengthMask;
+    } while (order == UCOL_IGNORABLE);
+
+    bufferMax += 1;
+
+    ceb[offset].order       = order;
+    ceb[offset].lowOffset   = low;
+    ceb[offset].highOffset = high;
+
+    return &ceb[offset];
+}
+
+void Target::setOffset(int32_t offset)
+{
+    UErrorCode status = U_ZERO_ERROR;
+
+    bufferMin = 0;
+    bufferMax = 0;
+
+    ucol_setOffset(elements, offset, &status);
+}
+
+void Target::setLast(int32_t last)
+{
+    UErrorCode status = U_ZERO_ERROR;
+
+    bufferMin = 0;
+    bufferMax = 1;
+
+    ceb[0].order      = UCOL_NULLORDER;
+    ceb[0].lowOffset  = last;
+    ceb[0].highOffset = last;
+
+    ucol_setOffset(elements, last, &status);
+}
+
+int32_t Target::getOffset()
+{
+    return ucol_getOffset(elements);
+}
+
+UBool Target::isBreakBoundary(int32_t offset)
+{
+    return ubrk_isBoundary(charBreakIterator, offset);
+}
+
+int32_t Target::nextBreakBoundary(int32_t offset)
+{
+    return ubrk_following(charBreakIterator, offset);
+}
+
+// **** main flow of this code from Laura Werner's "Unicode Text Searching in Java" paper. ****
+/*
+ * TODO:
+ *  * make search work at all strengths - do we need to do this to CollData too?
+ *  * deal with trailing (and leading?) ignorables.
+ *  * Adding BoyerMooreSearch object slowed it down. How can we speed it up?
+ */
+static UBool boyerMooreSearch(BoyerMooreSearch *bms, const UnicodeString &targetString, int32_t offset, int32_t &start, int32_t &end)
+{
+    CollData *data = bms->getData();
+    UCollator *coll = data->getCollator();
+    CEList *patCEs = bms->getPatternCEs();
+    BadCharacterTable *badCharacterTable = bms->getBadCharacterTable();
+    GoodSuffixTable   *goodSuffixTable   = bms->getGoodSuffixTable();
+    Target target(bms, targetString);
+    int32_t plen = patCEs->size();
+    int32_t tlen = targetString.length();
+    int32_t maxSkip = badCharacterTable->getMaxSkip();
+    int32_t tOffset = offset + maxSkip;
+
+    while (tOffset <= tlen) {
+        int32_t pIndex = plen - 1;
+        int32_t tIndex = 0;
+        int32_t lIndex = 0;
+
+        if (tOffset < tlen) {
+            // **** we really want to skip ahead enough to  ****
+            // **** be sure we get at least 1 non-ignorable ****
+            // **** CE after the end of the pattern.        ****
+            int32_t next = target.nextBreakBoundary(tOffset);
+
+            target.setOffset(next);
+
+            for (lIndex = 0; ; lIndex += 1) {
+                const CEI *cei = target.prevCE(lIndex);
+                int32_t low = cei->lowOffset;
+                int32_t high = cei->highOffset;
+
+                if ((high == low && low == tOffset) || low < tOffset) {
+                    break;
+                }
+            }
+        } else {
+          //target.setOffset(tOffset);
+            target.setLast(tOffset);
+            lIndex = 1;
+        }
+
+        tIndex = lIndex;
+
+        // Iterate backward until we hit the beginning of the pattern
+        while (pIndex >= 0) {
+            uint32_t pce = (*patCEs)[pIndex];
+            const CEI *tcei = target.prevCE(tIndex++);
+
+
+            if (tcei->order != pce) {
+                // There is a mismatch at this position.  Decide how far
+                // over to shift the pattern, then try again.
+                int32_t gsOffset = tOffset + (*goodSuffixTable)[pIndex];
+                int32_t old = tOffset;
+
+                tOffset  = /*tcei->highOffset*/ /*tOffset*/ target.getOffset() + (*badCharacterTable)[tcei->order] /*+ 1*/;
+
+                if (gsOffset > tOffset && gsOffset <= tlen) {
+                    tOffset = gsOffset;
+                }
+
+                // **** is this still necessary? ****
+                if (tOffset <= old) {
+                    tOffset = old + 1;
+                }
+
+                break;
+            }
+
+            pIndex -= 1;
+        }
+
+        if (pIndex < 0) {
+            // We made it back to the beginning of the pattern,
+            // which means we matched it all.  Return the location.
+#if 0
+            const CEI *firstCEI = target.prevCE(tIndex - 1);
+            const CEI *lastCEI  = target.prevCE(lIndex);
+            int32_t mStart   = firstCEI->lowOffset;
+            int32_t minLimit = lastCEI->lowOffset;
+            int32_t maxLimit = lastCEI->highOffset;
+            int32_t mLimit; 
+            UBool found = TRUE;
+
+            if (lIndex > 0) {
+                const CEI *nextCEI = target.prevCE(lIndex - 1);
+                
+                maxLimit = nextCEI->lowOffset;
+
+                if (nextCEI->lowOffset == nextCEI->highOffset && nextCEI->order != UCOL_NULLORDER) {
+                    found = FALSE;
+                }
+            }
+
+            if (! target.isBreakBoundary(mStart)) {
+                found = FALSE;
+            }
+
+            if (firstCEI->lowOffset == firstCEI->highOffset) {
+                found = FALSE;
+            }
+
+            mLimit = maxLimit;
+            if (minLimit < maxLimit) {
+                int32_t nbb = target.nextBreakBoundary(minLimit);
+
+                if (nbb > lastCEI->highOffset) {
+                    mLimit = nbb;
+                }
+            }
+#else
+            const CEI firstCEI = *target.prevCE(tIndex - 1);
+            const CEI lastCEI  = *target.prevCE(lIndex);
+            int32_t mStart   = firstCEI.lowOffset;
+            int32_t minLimit = lastCEI.lowOffset;
+            int32_t maxLimit = lastCEI.highOffset;
+            int32_t mLimit; 
+            UBool found = TRUE;
+
+            target.setOffset(/*tOffset*/maxLimit);
+
+            const CEI nextCEI = *target.nextCE(0);
+
+            if (nextCEI.lowOffset > maxLimit) {
+                maxLimit = nextCEI.lowOffset;
+            }
+
+            if (nextCEI.lowOffset == nextCEI.highOffset && nextCEI.order != UCOL_NULLORDER) {
+                found = FALSE;
+            }
+
+            if (! target.isBreakBoundary(mStart)) {
+                found = FALSE;
+            }
+
+            if (firstCEI.lowOffset == firstCEI.highOffset) {
+                found = FALSE;
+            }
+
+            mLimit = maxLimit;
+            if (minLimit < maxLimit) {
+                int32_t nbb = target.nextBreakBoundary(minLimit);
+
+                if (nbb >= lastCEI.highOffset) {
+                    mLimit = nbb;
+                }
+            }
+#endif
+
+            if (mLimit > maxLimit) {
+                found = FALSE;
+            }
+
+            if (! target.isBreakBoundary(mLimit)) {
+                found = FALSE;
+            }
+
+            if (found) {
+                start = mStart;
+                end   = mLimit;
+
+                return TRUE;
+            }
+
+            tOffset += (*goodSuffixTable)[0]; // really?
+        }
+        // Otherwise, we're here because of a mismatch, so keep going....
+    }
+    
+    // no match
+   start = -1;
+   end = -1;
+   return FALSE;
+}
+
+static UBool sundayQuickSearch(const char *pattern, const char *target, int32_t &start, int32_t &end)
+{
+    int32_t skip[265];
+    int32_t m = strlen(pattern);
+    int32_t n = strlen(target);
+    int32_t tOffset = 0;
+
+    for (int32_t i = 0; i < 256; i += 1) {
+        skip[i] = m + 1;
+    }
+
+    for (int32_t i = 0; i < m; i += 1) {
+        skip[pattern[i]] = m - i;
+    }
+
+    while (tOffset <= n - m) {
+        int32_t pIndex = 0;
+
+        while (pIndex < m) {
+            if (pattern[pIndex] != target[tOffset + pIndex]) {
+                char c = target[tOffset + m];
+
+                 printf("skip: pIndex = %d, tOffset = %d, ch = ", pIndex, tOffset);
+                 printf(c < '\x20'? "\\x2.2x" : ", ch = \'%c\'", c);
+                 printf(", skip = %d\n", skip[c]);
+                tOffset += skip[c];
+                break;
+            }
+
+            pIndex += 1;
+        }
+
+        if (pIndex >= m) {
+            start = tOffset;
+            end   = tOffset + m;
+
+            return TRUE;
+        }
+    }
+
+    start = end = -1;
+    return FALSE;
+}
+
+// **** main flow of this code from Laura Werner's "Unicode Text Searching in Java" paper. ****
+static UBool sundayQuickSearch(BoyerMooreSearch *bms, const UnicodeString &targetString, int32_t &start, int32_t &end)
+{
+    CollData *data = bms->getData();
+    UCollator *coll = data->getCollator();
+    CEList *patCEs = bms->getPatternCEs();
+    BadCharacterTable *badCharacterTable = bms->getBadCharacterTable();
+    Target target(bms, targetString);
+    int32_t plen = patCEs->size();
+    int32_t tlen = targetString.length();
+    int32_t mlen = badCharacterTable->getMaxSkip() - 1;
+    int32_t tOffset = 0;
+
+    while (tOffset <= tlen - mlen) {
+        int32_t pIndex = 0;
+        int32_t tIndex = 0;
+
+        target.setOffset(tOffset);
+
+
+        // Iterate forward until we hit the end of the pattern
+        while (pIndex < plen) {
+            uint32_t pce = (*patCEs)[pIndex++];
+            uint32_t tce = target.nextCE(tIndex++)->order;
+
+            if (tce != pce) {
+                // There is a mismatch at this position.  Decide how far
+                // over to shift the pattern, then try again.
+
+                printf("skip: pIndex = %d, tOffset = %d", pIndex - 1, tOffset);
+                target.setOffset(tOffset + mlen);
+                tce = target.nextCE(tIndex)->order;
+
+                UChar c = targetString.charAt(tOffset + mlen);
+
+                printf(", ce = %8.8x (", tce);
+                printf(c < 0x0020? "\\u%4.4x)" : "'%c')", targetString.charAt(tOffset + mlen));
+                printf(", skip = %d\n", (*badCharacterTable)[tce]);
+
+                tOffset += (*badCharacterTable)[tce];
+
+                break;
+            }
+        }
+
+        if (pIndex >= plen) {
+            // We made it back to the end of the pattern,
+            // which means we matched it all.  Return the location.
+            start = tOffset;
+            end   = target.getOffset();
+
+            return TRUE;
+        }
+        // Otherwise, we're here because of a mismatch, so keep going....
+    }
+    
+    // no match
+   start = -1;
+   end = -1;
+   return FALSE;
+}
+
+void SSearchTest::boyerMooreTest()
+{
+    UErrorCode status = U_ZERO_ERROR;
+    UCollator *coll = ucol_open(NULL, &status);
+    UnicodeString lp  = "fuss";
+    UnicodeString sp = "fu\u00DF";
+    BoyerMooreSearch longPattern(coll, lp);
+    BoyerMooreSearch shortPattern(coll, sp);
+    UnicodeString targets[]  = {"fu\u00DF", "fu\u00DFball", "1fu\u00DFball", "12fu\u00DFball", "123fu\u00DFball", "1234fu\u00DFball",
+                                "ffu\u00DF", "fufu\u00DF", "fusfu\u00DF",
+                                "fuss", "ffuss", "fufuss", "fusfuss", "1fuss", "12fuss", "123fuss", "1234fuss", "fu\u00DF", "1fu\u00DF", "12fu\u00DF", "123fu\u00DF", "1234fu\u00DF"};
+    int32_t start = -1, end = -1;
+
+    for (int32_t t = 0; t < (sizeof(targets)/sizeof(targets[0])); t += 1) {
+        if (boyerMooreSearch(&longPattern, targets[t], 0, start, end)) {
+            infoln("Test %d: found long pattern at [%d, %d].", t, start, end);
+        } else {
+            errln("Test %d: did not find long pattern.", t);
+        }
+
+        if (boyerMooreSearch(&shortPattern, targets[t], 0, start, end)) {
+            infoln("Test %d: found short pattern at [%d, %d].", t, start, end);
+        } else {
+            errln("Test %d: did not find short pattern.", t);
+        }
+    }
+
+    ucol_close(coll);
+}
+
+void SSearchTest::goodSuffixTest()
+{
+    UErrorCode status = U_ZERO_ERROR;
+    UCollator *coll = ucol_open(NULL, &status);
+    UnicodeString pat = /*"gcagagag"*/ "fxeld";
+    BoyerMooreSearch pattern(coll, pat);
+    UnicodeString target = /*"gcatcgcagagagtatacagtacg"*/ "cloveldfxeld";
+    int32_t start = -1, end = -1;
+
+    if (boyerMooreSearch(&pattern, target, 0, start, end)) {
+        infoln("Found pattern at [%d, %d].", start, end);
+    } else {
+        errln("Did not find pattern.");
+    }
+
+    ucol_close(coll);
+}
+
+
+void SSearchTest::sundayQuickSearchTest()
+{
+#if 0
+    UErrorCode status = U_ZERO_ERROR;
+    UCollator *coll = ucol_open(NULL, &status);
+    UnicodeString lp  = "fuss";
+  //UnicodeString sp = "fu\u00DF";
+    UnicodeString sp = "\u00DF";
+    BoyerMooreSearch longPattern(coll, lp, 1);
+    BoyerMooreSearch shortPattern(coll, sp, 1);
+    UnicodeString targets[]  = {"fu\u00DF", "fu\u00DFball", "1fu\u00DFball", "12fu\u00DFball", "123fu\u00DFball", "1234fu\u00DFball",
+                                "12345fu\u00DFball", "123456fu\u00DFball", "1234567fu\u00DFball", "12345678fu\u00DFball", "123456789fu\u00DFball", "1234567890fu\u00DFball",
+                                "ffu\u00DF", "fufu\u00DF", "fusfu\u00DF",
+                                "fuss", "ffuss", "fufuss", "fusfuss", "1fuss", "12fuss", "123fuss", "1234fuss"};
+    int32_t start = -1, end = -1;
+
+    for (int32_t t = 0; t < (sizeof(targets)/sizeof(targets[0])); t += 1) {
+        if (sundayQuickSearch(&longPattern, targets[t], start, end)) {
+            infoln("Test %d: found long pattern at [%d, %d].", t, start, end);
+        } else {
+            errln("Test %d: did not find long pattern.", t);
+        }
+
+        if (sundayQuickSearch(&shortPattern, targets[t], start, end)) {
+            infoln("Test %d: found short pattern at [%d, %d].", t, start, end);
+        } else {
+            errln("Test %d: did not find short pattern.", t);
+        }
+    }
+
+    ucol_close(coll);
+#endif
+}
+
+//
+//  searchTime()    A quick and dirty performance test for string search.
+//                  Probably  doesn't really belong as part of intltest, but it
+//                  does check that the search succeeds, and gets the right result,
+//                  so it serves as a functionality test also.
+//
+//                  To run as a perf test, up the loop count, select by commenting
+//                  and uncommenting in the code the operation to be measured,
+//                  rebuild, and measure the running time of this test alone.
+//
+//                     time LD_LIBRARY_PATH=whatever  ./intltest  collate/SSearchTest/searchTime
+//
+void SSearchTest::searchTime() {
+    static const char *longishText =
+"Whylom, as olde stories tellen us,\n"
+"Ther was a duk that highte Theseus:\n"
+"Of Athenes he was lord and governour,\n"
+"And in his tyme swich a conquerour,\n"
+"That gretter was ther noon under the sonne.\n"
+"Ful many a riche contree hadde he wonne;\n"
+"What with his wisdom and his chivalrye,\n"
+"He conquered al the regne of Femenye,\n"
+"That whylom was y-cleped Scithia;\n"
+"And weddede the quene Ipolita,\n"
+"And broghte hir hoom with him in his contree\n"
+"With muchel glorie and greet solempnitee,\n"
+"And eek hir yonge suster Emelye.\n"
+"And thus with victorie and with melodye\n"
+"Lete I this noble duk to Athenes ryde,\n"
+"And al his hoost, in armes, him bisyde.\n"
+"And certes, if it nere to long to here,\n"
+"I wolde han told yow fully the manere,\n"
+"How wonnen was the regne of Femenye\n"
+"By Theseus, and by his chivalrye;\n"
+"And of the grete bataille for the nones\n"
+"Bitwixen Athen's and Amazones;\n"
+"And how asseged was Ipolita,\n"
+"The faire hardy quene of Scithia;\n"
+"And of the feste that was at hir weddinge,\n"
+"And of the tempest at hir hoom-cominge;\n"
+"But al that thing I moot as now forbere.\n"
+"I have, God woot, a large feeld to ere,\n"
+"And wayke been the oxen in my plough.\n"
+"The remenant of the tale is long y-nough.\n"
+"I wol nat letten eek noon of this route;\n"
+"Lat every felawe telle his tale aboute,\n"
+"And lat see now who shal the soper winne;\n"
+"And ther I lefte, I wol ageyn biginne.\n"
+"This duk, of whom I make mencioun,\n"
+"When he was come almost unto the toun,\n"
+"In al his wele and in his moste pryde,\n"
+"He was war, as he caste his eye asyde,\n"
+"Wher that ther kneled in the hye weye\n"
+"A companye of ladies, tweye and tweye,\n"
+"Ech after other, clad in clothes blake; \n"
+"But swich a cry and swich a wo they make,\n"
+"That in this world nis creature livinge,\n"
+"That herde swich another weymentinge;\n"
+"And of this cry they nolde never stenten,\n"
+"Til they the reynes of his brydel henten.\n"
+"'What folk ben ye, that at myn hoomcominge\n"
+"Perturben so my feste with cryinge'?\n"
+"Quod Theseus, 'have ye so greet envye\n"
+"Of myn honour, that thus compleyne and crye? \n"
+"Or who hath yow misboden, or offended?\n"
+"And telleth me if it may been amended;\n"
+"And why that ye ben clothed thus in blak'?\n"
+"The eldest lady of hem alle spak,\n"
+"When she hadde swowned with a deedly chere,\n"
+"That it was routhe for to seen and here,\n"
+"And seyde: 'Lord, to whom Fortune hath yiven\n"
+"Victorie, and as a conquerour to liven,\n"
+"Noght greveth us your glorie and your honour;\n"
+"But we biseken mercy and socour.\n"
+"Have mercy on our wo and our distresse.\n"
+"Som drope of pitee, thurgh thy gentilesse,\n"
+"Up-on us wrecched wommen lat thou falle.\n"
+"For certes, lord, ther nis noon of us alle,\n"
+"That she nath been a duchesse or a quene;\n"
+"Now be we caitifs, as it is wel sene:\n"
+"Thanked be Fortune, and hir false wheel,\n"
+"That noon estat assureth to be weel.\n"
+"And certes, lord, t'abyden your presence,\n"
+"Here in the temple of the goddesse Clemence\n"
+"We han ben waytinge al this fourtenight;\n"
+"Now help us, lord, sith it is in thy might.\n"
+"I wrecche, which that wepe and waille thus,\n"
+"Was whylom wyf to king Capaneus,\n"
+"That starf at Thebes, cursed be that day!\n"
+"And alle we, that been in this array,\n"
+"And maken al this lamentacioun,\n"
+"We losten alle our housbondes at that toun,\n"
+"Whyl that the sege ther-aboute lay.\n"
+"And yet now th'olde Creon, weylaway!\n"
+"The lord is now of Thebes the citee, \n"
+"Fulfild of ire and of iniquitee,\n"
+"He, for despyt, and for his tirannye,\n"
+"To do the dede bodyes vileinye,\n"
+"Of alle our lordes, whiche that ben slawe,\n"
+"Hath alle the bodyes on an heep y-drawe,\n"
+"And wol nat suffren hem, by noon assent,\n"
+"Neither to been y-buried nor y-brent,\n"
+"But maketh houndes ete hem in despyt. zet'\n";
+
+#define TEST_BOYER_MOORE 1
+const char *cPattern = "maketh houndes ete hem";
+//const char *cPattern = "Whylom";
+//const char *cPattern = "zet";
+    const char *testId = "searchTime()";   // for error macros.
+    UnicodeString target = longishText;
+    UErrorCode status = U_ZERO_ERROR;
+
+
+    UCollator *collator = ucol_open("en", &status);
+    CollData data(collator);
+    TEST_ASSERT_SUCCESS(status);
+    //ucol_setStrength(collator, collatorStrength);
+    //ucol_setAttribute(collator, UCOL_NORMALIZATION_MODE, normalize, &status);
+    UnicodeString uPattern = cPattern;
+#ifndef TEST_BOYER_MOORE
+    UStringSearch *uss = usearch_openFromCollator(uPattern.getBuffer(), uPattern.length(),
+                                        target.getBuffer(), target.length(),
+                                        collator,
+                                        NULL,     // the break iterator
+                                        &status);
+    TEST_ASSERT_SUCCESS(status);
+#else
+    BoyerMooreSearch bms(collator, uPattern);
+#endif
+    
+//  int32_t foundStart;
+//  int32_t foundEnd;
+    UBool   found;
+    
+    // Find the match position usgin strstr
+    const char *pm = strstr(longishText, cPattern);
+    TEST_ASSERT_M(pm!=NULL, "No pattern match with strstr");
+    int  refMatchPos = (int)(pm - longishText);
+    int  icuMatchPos;
+    int  icuMatchEnd;
+#ifndef TEST_BOYER_MOORE
+    usearch_search(uss, 0, &icuMatchPos, &icuMatchEnd, &status);
+    TEST_ASSERT_SUCCESS(status);
+#else
+  //found = sundayQuickSearch(&bms, target, icuMatchPos, icuMatchEnd);
+    found = boyerMooreSearch(&bms, target, 0, icuMatchPos, icuMatchEnd);
+#endif
+    TEST_ASSERT_M(refMatchPos == icuMatchPos, "strstr and icu give different match positions.");
+
+    int i;
+    int j=0;
+
+    // Try loopcounts around 100000 to some millions, depending on the operation,
+    //   to get runtimes of at least several seconds.
+    for (i=0; i<10000; i++) {
+#ifndef TEST_BOYER_MOORE
+        found = usearch_search(uss, 0, &icuMatchPos, &icuMatchEnd, &status);
+#else
+        found = boyerMooreSearch(&bms, target, 0, icuMatchPos, icuMatchEnd);
+#endif
+        //TEST_ASSERT_SUCCESS(status);
+        //TEST_ASSERT(found);
+
+        // usearch_setOffset(uss, 0, &status);
+        // icuMatchPos = usearch_next(uss, &status);
+
+         // The i+j stuff is to confuse the optimizer and get it to actually leave the
+         //   call to strstr in place.
+         //pm = strstr(longishText+j, cPattern);
+         //j = (j + i)%5;
+    }
+
+    printf("%d\n", pm-longishText, j);
+#ifndef TEST_BOYER_MOORE
+    usearch_close(uss);
+#endif
+    ucol_close(collator);
+}
+#endif
 
 //----------------------------------------------------------------------------------------
 //
@@ -1496,6 +2776,7 @@ static int32_t  getIntParam(UnicodeString name, UnicodeString &params, int32_t d
 
 #if !UCONFIG_NO_COLLATION
 int32_t SSearchTest::monkeyTestCase(UCollator *coll, const UnicodeString &testCase, const UnicodeString &pattern, const UnicodeString &altPattern,
+                                    BoyerMooreSearch *bms, BoyerMooreSearch *abms,
                                     const char *name, const char *strength, uint32_t seed)
 {
     UErrorCode status = U_ZERO_ERROR;
@@ -1503,11 +2784,15 @@ int32_t SSearchTest::monkeyTestCase(UCollator *coll, const UnicodeString &testCa
   //int32_t expectedStart = prefix.length(), expectedEnd = prefix.length() + altPattern.length();
     int32_t expectedStart = -1, expectedEnd = -1;
     int32_t notFoundCount = 0;
+#if 0
     UStringSearch *uss = usearch_openFromCollator(pattern.getBuffer(), pattern.length(),
                                 testCase.getBuffer(), testCase.length(),
                                 coll,
                                 NULL,     // the break iterator
                                 &status);
+#else
+  //BoyerMooreSearch bms = BoyerMooreSearch(coll, pattern);
+#endif
 
     // **** TODO: find *all* matches, not just first one ****
     simpleSearch(coll, testCase, 0, pattern, expectedStart, expectedEnd);
@@ -1515,8 +2800,9 @@ int32_t SSearchTest::monkeyTestCase(UCollator *coll, const UnicodeString &testCa
 #if 0
     usearch_search(uss, 0, &actualStart, &actualEnd, &status);
 #else
-    actualStart = usearch_next(uss, &status);
-    actualEnd   = actualStart + usearch_getMatchedLength(uss);
+  //actualStart = usearch_next(uss, &status);
+  //actualEnd   = actualStart + usearch_getMatchedLength(uss);
+    boyerMooreSearch(bms, testCase, 0, actualStart, actualEnd);
 #endif
 
     if (actualStart != expectedStart || actualEnd != expectedEnd) {
@@ -1532,14 +2818,19 @@ int32_t SSearchTest::monkeyTestCase(UCollator *coll, const UnicodeString &testCa
     // **** TODO: find *all* matches, not just first one ****
     simpleSearch(coll, testCase, 0, altPattern, expectedStart, expectedEnd);
 
+#if 0
     usearch_setPattern(uss, altPattern.getBuffer(), altPattern.length(), &status);
+#else
+  //BoyerMooreSearch abms(coll, altPattern);
+#endif
 
 #if 0
     usearch_search(uss, 0, &actualStart, &actualEnd, &status);
 #else
-    usearch_reset(uss);
-    actualStart = usearch_next(uss, &status);
-    actualEnd   = actualStart + usearch_getMatchedLength(uss);
+  //usearch_reset(uss);
+  //actualStart = usearch_next(uss, &status);
+  //actualEnd   = actualStart + usearch_getMatchedLength(uss);
+    boyerMooreSearch(abms, testCase, 0, actualStart, actualEnd);
 #endif
 
     if (actualStart != expectedStart || actualEnd != expectedEnd) {
@@ -1552,7 +2843,9 @@ int32_t SSearchTest::monkeyTestCase(UCollator *coll, const UnicodeString &testCa
         notFoundCount += 1;
     }
 
+#if 0
     usearch_close(uss);
+#endif
 
     return notFoundCount;
 }
@@ -1613,7 +2906,7 @@ void SSearchTest::monkeyTest(char *params)
     int32_t strengthCount = sizeof(strengths) / sizeof(strengths[0]);
     int32_t loopCount = quick? 1000 : 10000;
     int32_t firstStrength = 0;
-    int32_t lastStrength  = strengthCount - 1;
+    int32_t lastStrength  = /*strengthCount - 1; //*/ 0;
 
     if (params != NULL) {
 #if !UCONFIG_NO_REGULAR_EXPRESSIONS
@@ -1656,13 +2949,11 @@ void SSearchTest::monkeyTest(char *params)
 
         ucol_setStrength(coll, strengths[s]);
         
-        int32_t i = 1000; //Reduce the number of iteration in non-exhaustive mode
-        if(!quick){
-        	i = 10000; 
-        }
+        CollData *data = new CollData(coll);
+
         // TODO: try alternate prefix and suffix too?
         // TODO: alterntaes are only equal at primary strength. Is this OK?
-        for(int32_t t = 0; t < i; t += 1) {
+        for(int32_t t = 0; t < loopCount; t += 1) {
             uint32_t seed = m_seed;
             int32_t  nmc = 0;
 
@@ -1670,28 +2961,33 @@ void SSearchTest::monkeyTest(char *params)
             generateTestCase(coll, monkeys, monkeyCount, prefix,  altPrefix);
             generateTestCase(coll, monkeys, monkeyCount, suffix,  altSuffix);
 
+            BoyerMooreSearch pat(data, pattern);
+            BoyerMooreSearch alt(data, altPattern);
+
             // pattern
-            notFoundCount += monkeyTestCase(coll, pattern, pattern, altPattern, "pattern", strengthNames[s], seed);
+            notFoundCount += monkeyTestCase(coll, pattern, pattern, altPattern, &pat, &alt, "pattern", strengthNames[s], seed);
 
             testCase.remove();
             testCase.append(prefix);
             testCase.append(/*alt*/pattern);
 
             // prefix + pattern
-            notFoundCount += monkeyTestCase(coll, testCase, pattern, altPattern, "prefix + pattern", strengthNames[s], seed);
+            notFoundCount += monkeyTestCase(coll, testCase, pattern, altPattern, &pat, &alt, "prefix + pattern", strengthNames[s], seed);
 
             testCase.append(suffix);
 
             // prefix + pattern + suffix
-            notFoundCount += monkeyTestCase(coll, testCase, pattern, altPattern, "prefix + pattern + suffix", strengthNames[s], seed);
+            notFoundCount += monkeyTestCase(coll, testCase, pattern, altPattern, &pat, &alt, "prefix + pattern + suffix", strengthNames[s], seed);
 
             testCase.remove();
             testCase.append(pattern);
             testCase.append(suffix);
             
             // pattern + suffix
-            notFoundCount += monkeyTestCase(coll, testCase, pattern, altPattern, "pattern + suffix", strengthNames[s], seed);
+            notFoundCount += monkeyTestCase(coll, testCase, pattern, altPattern, &pat, &alt, "pattern + suffix", strengthNames[s], seed);
         }
+
+        delete data;
 
         logln("For strength %s the not found count is %d.", strengthNames[s], notFoundCount);
     }

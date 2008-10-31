@@ -21,6 +21,9 @@
 //
 //     See srchtest.h for the tests for the rest of the string search functions.
 //
+
+class BoyerMooreSearch;
+
 class SSearchTest: public IntlTest {
 public:
   
@@ -33,10 +36,16 @@ public:
     virtual void searchTest();
     virtual void offsetTest();
     virtual void monkeyTest(char *params);
+    virtual void minLengthTest();
+    virtual void boyerMooreTest();
+    virtual void sundayQuickSearchTest();
+    virtual void goodSuffixTest();
+    virtual void searchTime();
 
 private:
     virtual const char   *getPath(char buffer[2048], const char *filename);
     virtual       int32_t monkeyTestCase(UCollator *coll, const UnicodeString &testCase, const UnicodeString &pattern, const UnicodeString &altPattern,
+                                         BoyerMooreSearch *bms, BoyerMooreSearch *abms,
                                          const char *name, const char *strength, uint32_t seed);
 #endif
                                          
