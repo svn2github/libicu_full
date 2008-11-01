@@ -1410,6 +1410,10 @@ int32_t CollData::minLengthInChars(const CEList *ceList, int32_t offset) const
         }
     }
 
+    if (totalStringLength <= 0) {
+        return 1;
+    }
+
     return totalStringLength;
 }
 
@@ -1434,25 +1438,27 @@ private:
 
 // TODO: cache minLenthInChars results:
 //   cache[p] = data->minLengthInChars(&patternCEs, p);
-BadCharacterTable::BadCharacterTable(CEList &patternCEs, CollData *data, int32_t sunday)
+BadCharacterTable::BadCharacterTable(CEList &patternCEs, CollData *data, int32_t /*sunday*/)
 {
     int32_t plen = patternCEs.size();
 
-    maxSkip = data->minLengthInChars(&patternCEs, 0) + sunday;
+    maxSkip = data->minLengthInChars(&patternCEs, 0) /*+ sunday*/;
 
     for(int32_t j = 0; j < HASH_TABLE_SIZE; j += 1) {
         badCharacterTable[j] = maxSkip;
     }
 
-    minLengthCache = new int32_t[plen];
+    minLengthCache = new int32_t[plen + 1];
 
-    for(int32_t p = 0; p < plen - 1; p += 1) {
+    for(int32_t p = 0; p < plen; p += 1) {
         minLengthCache[p] = data->minLengthInChars(&patternCEs, p);
-        badCharacterTable[hash(patternCEs[p])] = minLengthCache[p] - 1 + sunday;
     }
 
-    // because the above loop doesn't look at the last CE in the pattern
-    minLengthCache[plen - 1] = data->minLengthInChars(&patternCEs, plen - 1);
+    minLengthCache[plen] = 0;
+
+    for(int32_t p = 0; p < plen - 1; p += 1) {
+        badCharacterTable[hash(patternCEs[p])] = minLengthCache[p + 1] /*+ sunday*/;
+    }
 }
 
 BadCharacterTable::~BadCharacterTable()
@@ -1892,7 +1898,8 @@ static UBool boyerMooreSearch(BoyerMooreSearch *bms, const UnicodeString &target
                 int32_t gsOffset = tOffset + (*goodSuffixTable)[pIndex];
                 int32_t old = tOffset;
 
-                tOffset  = /*tcei->highOffset*/ /*tOffset*/ target.getOffset() + (*badCharacterTable)[tcei->order] /*+ 1*/;
+              //tOffset  = /*tcei->highOffset*/ /*tOffset*/ target.getOffset() + (*badCharacterTable)[tcei->order] /*+ 1*/;
+                tOffset += (*badCharacterTable)[tcei->order] - badCharacterTable->minLengthInChars(pIndex + 1);
 
                 if (gsOffset > tOffset && gsOffset <= tlen) {
                     tOffset = gsOffset;
