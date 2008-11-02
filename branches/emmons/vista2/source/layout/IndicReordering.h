@@ -157,6 +157,8 @@ public:
 
     static void applyPresentationForms(LEGlyphStorage &glyphStorage, le_int32 count);
 
+    static void finalReordering(LEGlyphStorage &glyphStorage, le_int32 count);
+
     static void getDynamicProperties(DynamicProperties *dProps, const IndicClassTable *classTable);
 
 private:

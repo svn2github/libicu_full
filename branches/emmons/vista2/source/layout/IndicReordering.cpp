@@ -57,13 +57,26 @@ U_NAMESPACE_BEGIN
 #define caltFeatureMask 0x00001000UL
 #define kernFeatureMask 0x00000800UL
 
-#define basicShapingFormsMask ( loclFeatureMask | nuktFeatureMask | akhnFeatureMask | rphfFeatureMask | rkrfFeatureMask | blwfFeatureMask | halfFeatureMask | vatuFeatureMask | cjctFeatureMask )
+// Syllable structure bits 
+#define baseConsonantMask       0x00000001UL
+#define mainConsonantMask       0x00000002UL
+#define halfConsonantMask       0x00000004UL
+#define rephConsonantMask       0x00000008UL
+#define belowBaseConsonantMask  0x00000010UL
+#define postBaseConsonantMask   0x00000020UL
+#define preBaseReorderingRaMask 0x00000040UL
+#define matrasAndSignsMask      0x00000080UL
+#define beginSyllableMask       0x00000100UL
+#define repositionedGlyphMask   0x00000200UL
+
+#define basicShapingFormsMask ( loclFeatureMask | nuktFeatureMask | akhnFeatureMask | rkrfFeatureMask | blwfFeatureMask | halfFeatureMask | vatuFeatureMask | cjctFeatureMask )
 #define positioningFormsMask ( kernFeatureMask | distFeatureMask | abvmFeatureMask | blwmFeatureMask )
 #define presentationFormsMask ( presFeatureMask | abvsFeatureMask | blwsFeatureMask | pstsFeatureMask | halnFeatureMask | caltFeatureMask )
 
 
 #define C_MALAYALAM_VOWEL_SIGN_U 0x0D41
 #define	C_DOTTED_CIRCLE 0x25CC
+#define NO_GLYPH 0xFFFF
 
 #define INDIC_BLOCK_SIZE 0x7F
 
@@ -187,6 +200,13 @@ public:
         fOutIndex += 1;
     }
 
+    void setFeatures ( le_uint32 charIndex, FeatureMask charFeatures)
+    {
+        LEErrorCode success = LE_NO_ERROR;
+
+        fGlyphStorage.setAuxData( charIndex, charFeatures, success );
+
+    }
 
 	void decomposeReorderMatras ( const IndicClassTable *classTable, le_int32 beginSyllable, le_int32 nextSyllable ) {
 		le_int32 i;
@@ -906,6 +926,39 @@ void IndicReordering::applyPresentationForms(LEGlyphStorage &glyphStorage, le_in
     }
 
 }
+void IndicReordering::finalReordering(LEGlyphStorage &glyphStorage, le_int32 count)
+{
+    LEErrorCode success = LE_NO_ERROR;
+
+    for ( le_int32 i = 0 ; i < count ; i++ ) {
+
+        le_int32 tmpAuxData = glyphStorage.getAuxData(i,success);
+        LEGlyphID tmpGlyph = glyphStorage.getGlyphID(i,success);
+
+        if ( ( tmpGlyph != NO_GLYPH ) && (tmpAuxData & rephConsonantMask) && !(tmpAuxData & repositionedGlyphMask))  {
+
+            le_bool targetPositionFound = false;
+            le_int32 targetPosition = i+1;
+
+          while (!targetPositionFound) {
+                tmpGlyph = glyphStorage.getGlyphID(targetPosition,success);
+                tmpAuxData = glyphStorage.getAuxData(targetPosition,success);
+
+                // TODO: Right now I'm just putting the reph on the base consonant, need to 
+                // do the "full" check per the spec once I get this working - also need to add some error
+                // checking here
+                if ( ( tmpGlyph != NO_GLYPH ) && (tmpAuxData & baseConsonantMask) ) {
+                    targetPositionFound = true;
+                } else {
+                    targetPosition++;
+                }
+            }
+
+            glyphStorage.moveGlyph(i,targetPosition,repositionedGlyphMask);
+        }
+    }
+}
+
 
 le_int32 IndicReordering::v2process(const LEUnicode *chars, le_int32 charCount, le_int32 scriptCode,
                                   LEUnicode *outChars, LEGlyphStorage &glyphStorage)
@@ -934,6 +987,9 @@ le_int32 IndicReordering::v2process(const LEUnicode *chars, le_int32 charCount, 
         // Find the base consonant
 
         baseConsonant = nextSyllable - 1;
+        // TODO: Right now we are assuming that the last consonant in the syllable is the base consonant
+        // Actually it is the last consonant that doesn't have a below base or post-base form.
+
         while ( baseConsonant > firstConsonant ) {
             if ( classTable->isConsonant(chars[baseConsonant]) ) {
                 break;
@@ -952,14 +1008,27 @@ le_int32 IndicReordering::v2process(const LEUnicode *chars, le_int32 charCount, 
 		
 	    // Populate the output 
 		for ( i = beginSyllable ; i < nextSyllable ; i++ ) {
+            output.writeChar(chars[i],i, basicShapingFormsMask);
+        }
+
+        // Adjust features and set syllable structure bits
+
+        for ( i = beginSyllable ; i < nextSyllable ; i++ ) {
+
             FeatureMask outMask = basicShapingFormsMask;
 
             // Since reph can only validly occur at the beginning of a syllable
             // We only apply it to the first 2 characters in the syllable, to keep it from
             // conflicting with other features ( i.e. rkrf )
 
-            if ( i - beginSyllable > 1 ) {
-                outMask ^= rphfFeatureMask;
+            // TODO : Use the dynamic property for determining REPH
+            if ( i == beginSyllable && i < baseConsonant && classTable->isReph(chars[i]) &&
+                 i+1 < nextSyllable && classTable->isVirama(chars[i+1])) {
+                outMask |= rphfFeatureMask;
+                outMask |= rephConsonantMask;
+
+                output.setFeatures(i,outMask);
+                output.setFeatures(i+1,outMask);
             }
 
             // Never attempt to apply half forms feature to the base consonant
@@ -968,8 +1037,10 @@ le_int32 IndicReordering::v2process(const LEUnicode *chars, le_int32 charCount, 
 
             if ( i == baseConsonant ) {
                 outMask ^= halfFeatureMask;
+                outMask |= baseConsonantMask;
+                output.setFeatures(i,outMask);
             }
-            output.writeChar(chars[i],i, outMask);
+
 		}
 	    
 		output.decomposeReorderMatras(classTable,beginSyllable,nextSyllable);
@@ -991,7 +1062,7 @@ void IndicReordering::getDynamicProperties( DynamicProperties *dProps, const Ind
 
     IndicReorderingOutput workOutput(workChars, workGlyphs, NULL);
 
-    le_int32 offset;
+    le_int32 offset = 0;
 
     // First find the relevant virama for the script we are dealing with
 

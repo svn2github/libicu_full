@@ -72,6 +72,7 @@ le_int32 IndicOpenTypeLayoutEngine::glyphProcessing(const LEUnicode chars[], le_
     }
 
     if (fVersion2) {
+        IndicReordering::finalReordering(glyphStorage,retCount);
         IndicReordering::applyPresentationForms(glyphStorage,retCount);
         OpenTypeLayoutEngine::glyphSubstitution(count,max, rightToLeft, glyphStorage, success);
     } else {
