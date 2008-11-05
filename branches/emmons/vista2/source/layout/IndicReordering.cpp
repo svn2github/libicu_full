@@ -58,16 +58,16 @@ U_NAMESPACE_BEGIN
 #define kernFeatureMask 0x00000800UL
 
 // Syllable structure bits 
-#define baseConsonantMask       0x00000001UL
-#define mainConsonantMask       0x00000002UL
-#define halfConsonantMask       0x00000004UL
-#define rephConsonantMask       0x00000008UL
-#define belowBaseConsonantMask  0x00000010UL
+#define baseConsonantMask       0x00000400UL
+#define mainConsonantMask       0x00000200UL
+#define halfConsonantMask       0x00000100UL
+#define rephConsonantMask       0x00000080UL
+#define belowBaseConsonantMask  0x00000040UL
 #define postBaseConsonantMask   0x00000020UL
-#define preBaseReorderingRaMask 0x00000040UL
-#define matrasAndSignsMask      0x00000080UL
-#define beginSyllableMask       0x00000100UL
-#define repositionedGlyphMask   0x00000200UL
+#define preBaseReorderingRaMask 0x00000010UL
+#define matrasAndSignsMask      0x00000008UL
+#define beginSyllableMask       0x00000004UL
+#define repositionedGlyphMask   0x00000002UL
 
 #define basicShapingFormsMask ( loclFeatureMask | nuktFeatureMask | akhnFeatureMask | rkrfFeatureMask | blwfFeatureMask | halfFeatureMask | vatuFeatureMask | cjctFeatureMask )
 #define positioningFormsMask ( kernFeatureMask | distFeatureMask | abvmFeatureMask | blwmFeatureMask )
@@ -208,32 +208,38 @@ public:
 
     }
 
-	void decomposeReorderMatras ( const IndicClassTable *classTable, le_int32 beginSyllable, le_int32 nextSyllable ) {
+    FeatureMask getFeatures ( le_uint32 charIndex )
+    {
+        LEErrorCode success = LE_NO_ERROR;
+        return fGlyphStorage.getAuxData(charIndex,success);
+    }
+
+	void decomposeReorderMatras ( const IndicClassTable *classTable, le_int32 beginSyllable, le_int32 nextSyllable, le_int32 inv_count ) {
 		le_int32 i;
         LEErrorCode success = LE_NO_ERROR;
 
 		for ( i = beginSyllable ; i < nextSyllable ; i++ ) {
-			if ( classTable->isMatra(fOutChars[i])) {
-				IndicClassTable::CharClass matraClass = classTable->getCharClass(fOutChars[i]);	
+			if ( classTable->isMatra(fOutChars[i+inv_count])) {
+				IndicClassTable::CharClass matraClass = classTable->getCharClass(fOutChars[i+inv_count]);	
 				if ( classTable->isSplitMatra(matraClass)) {
-					le_int32 saveIndex = fGlyphStorage.getCharIndex(i,success);
-					le_uint32 saveAuxData = fGlyphStorage.getAuxData(i,success);
+					le_int32 saveIndex = fGlyphStorage.getCharIndex(i+inv_count,success);
+					le_uint32 saveAuxData = fGlyphStorage.getAuxData(i+inv_count,success);
                     const SplitMatra *splitMatra = classTable->getSplitMatra(matraClass);
                     int j;
                     for (j = 0 ; *(splitMatra)[j] != 0 ; j++) {
                         LEUnicode piece = (*splitMatra)[j];
 						if ( j == 0 ) {
-							fOutChars[i] = piece;
+							fOutChars[i+inv_count] = piece;
 							matraClass = classTable->getCharClass(piece);
 						} else {
-							insertCharacter(piece,i+1,saveIndex,saveAuxData);
+							insertCharacter(piece,i+1+inv_count,saveIndex,saveAuxData);
 							nextSyllable++;
 						}
  				    }
 				}
 				
 				if ((matraClass & CF_POS_MASK) == CF_POS_BEFORE) {
-                    moveCharacter(i,beginSyllable);
+                    moveCharacter(i+inv_count,beginSyllable+inv_count);
 				}
 			}
 		}
@@ -969,7 +975,7 @@ le_int32 IndicReordering::v2process(const LEUnicode *chars, le_int32 charCount, 
     IndicReordering::getDynamicProperties(dynProps,classTable);
 
     IndicReorderingOutput output(outChars, glyphStorage, NULL);
-    le_int32 i, firstConsonant, baseConsonant, beginSyllable = 0;
+    le_int32 i, firstConsonant, baseConsonant, secondConsonant, inv_count = 0, beginSyllable = 0;
     le_bool lastInWord = FALSE;
 
     while (beginSyllable < charCount) {
@@ -987,66 +993,95 @@ le_int32 IndicReordering::v2process(const LEUnicode *chars, le_int32 charCount, 
         // Find the base consonant
 
         baseConsonant = nextSyllable - 1;
-        // TODO: Right now we are assuming that the last consonant in the syllable is the base consonant
-        // Actually it is the last consonant that doesn't have a below base or post-base form.
+        secondConsonant = firstConsonant;
+
+        // TODO: Use Dynamic Properties for hasBelowBaseForm and hasPostBaseForm()
 
         while ( baseConsonant > firstConsonant ) {
-            if ( classTable->isConsonant(chars[baseConsonant]) ) {
+            if ( classTable->isConsonant(chars[baseConsonant]) && 
+                 !classTable->hasBelowBaseForm(chars[baseConsonant]) && 
+                 !classTable->hasPostBaseForm(chars[baseConsonant]) ) {
                 break;
             }
-           baseConsonant--;
+            else {
+                if ( classTable->isConsonant(chars[baseConsonant]) ) {
+                    secondConsonant = baseConsonant;
+                }
+                baseConsonant--;
+            }
         }
 
-		// Handle invalid combinartions
+        // If the syllable starts with Ra + Halant ( in a script that has Reph ) and has more than one
+        // consonant, Ra is excluced from candidates for base consonants
 
-        if ( classTable->isVirama(chars[beginSyllable]) || 
-			classTable->isMatra(chars[beginSyllable]) ||
-			classTable->isVowelModifier(chars[beginSyllable]) ||
-			classTable->isNukta(chars[beginSyllable]) ) {
-            output.writeChar(C_DOTTED_CIRCLE,beginSyllable,basicShapingFormsMask);
-		}
-		
+        if ( classTable->isReph(chars[beginSyllable]) &&
+             beginSyllable+1 < nextSyllable && classTable->isVirama(chars[beginSyllable+1]) &&
+             secondConsonant != firstConsonant) {
+            baseConsonant = secondConsonant;                     
+        }
+
 	    // Populate the output 
 		for ( i = beginSyllable ; i < nextSyllable ; i++ ) {
-            output.writeChar(chars[i],i, basicShapingFormsMask);
+
+            // Handle invalid combinartions
+
+            if ( classTable->isVirama(chars[beginSyllable]) || 
+			     classTable->isMatra(chars[beginSyllable]) ||
+			     classTable->isVowelModifier(chars[beginSyllable]) ||
+			     classTable->isNukta(chars[beginSyllable]) ) {
+                     output.writeChar(C_DOTTED_CIRCLE,beginSyllable,basicShapingFormsMask);
+                     inv_count++;
+            }
+             output.writeChar(chars[i],i, basicShapingFormsMask);
+
         }
 
         // Adjust features and set syllable structure bits
 
         for ( i = beginSyllable ; i < nextSyllable ; i++ ) {
 
-            FeatureMask outMask = basicShapingFormsMask;
+            FeatureMask outMask = output.getFeatures(i+inv_count);
+            FeatureMask saveMask = outMask;
 
             // Since reph can only validly occur at the beginning of a syllable
             // We only apply it to the first 2 characters in the syllable, to keep it from
             // conflicting with other features ( i.e. rkrf )
 
-            // TODO : Use the dynamic property for determining REPH
+            // TODO : Use the dynamic property for determining isREPH
             if ( i == beginSyllable && i < baseConsonant && classTable->isReph(chars[i]) &&
                  i+1 < nextSyllable && classTable->isVirama(chars[i+1])) {
                 outMask |= rphfFeatureMask;
                 outMask |= rephConsonantMask;
+                output.setFeatures(i+1+inv_count,outMask);
 
-                output.setFeatures(i,outMask);
-                output.setFeatures(i+1,outMask);
             }
-
-            // Never attempt to apply half forms feature to the base consonant
-            // This prevents half form glyph from appearing when a cluster is incomplete
-            // ( i.e. only consonant + halant )
 
             if ( i == baseConsonant ) {
-                outMask ^= halfFeatureMask;
                 outMask |= baseConsonantMask;
-                output.setFeatures(i,outMask);
             }
 
+            // Don't apply half form to virama that stands alone at the end of a syllable
+            // to prevent half forms from forming when syllable ends with virama
+
+            if ( classTable->isVirama(chars[i]) && (i+1 == nextSyllable) ) {
+                outMask ^= halfFeatureMask;
+                if ( classTable->isConsonant(chars[i-1]) ) {
+                    FeatureMask tmp = output.getFeatures(i-1+inv_count);
+                    tmp ^= halfFeatureMask;
+                    output.setFeatures(i-1+inv_count,tmp);
+                }
+            }
+
+            if ( outMask != saveMask ) {
+                output.setFeatures(i+inv_count,outMask);
+            }
 		}
-	    
-		output.decomposeReorderMatras(classTable,beginSyllable,nextSyllable);
+
+	    output.decomposeReorderMatras(classTable,beginSyllable,nextSyllable,inv_count);
 
         beginSyllable = nextSyllable;   
 	}
+
 
     return output.getOutputIndex();
 }
