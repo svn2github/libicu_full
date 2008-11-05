@@ -171,7 +171,8 @@ main(int argc, char* argv[]) {
             case CALL_WRITECCODE:
                 writeCCode(filename, options[kOptDestDir].value,
                            options[kOptName].doesOccur ? options[kOptName].value : NULL,
-                           options[kOptFilename].doesOccur ? options[kOptFilename].value : NULL);
+                           options[kOptFilename].doesOccur ? options[kOptFilename].value : NULL,
+                           NULL);
                 break;
             case CALL_WRITEASSEMBLY:
                 writeAssemblyCode(filename, options[kOptDestDir].value,
@@ -184,7 +185,8 @@ main(int argc, char* argv[]) {
                 writeObjectCode(filename, options[kOptDestDir].value,
                                 options[kOptEntryPoint].doesOccur ? options[kOptEntryPoint].value : NULL,
                                 options[kOptMatchArch].doesOccur ? options[kOptMatchArch].value : NULL,
-                                options[kOptFilename].doesOccur ? options[kOptFilename].value : NULL);
+                                options[kOptFilename].doesOccur ? options[kOptFilename].value : NULL,
+                                NULL);
                 break;
 #endif
             default:

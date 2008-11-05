@@ -290,7 +290,7 @@ writeAssemblyCode(const char *filename, const char *destdir, const char *optEntr
 }
 
 U_CAPI void U_EXPORT2
-writeCCode(const char *filename, const char *destdir, const char *optName, const char *optFilename) {
+writeCCode(const char *filename, const char *destdir, const char *optName, const char *optFilename, char *outFilePath) {
     uint32_t column = MAX_COLUMN;
     char buffer[4096], entry[64];
     FileStream *in, *out;
@@ -310,6 +310,9 @@ writeCCode(const char *filename, const char *destdir, const char *optName, const
     }
 
     getOutFilename(filename, destdir, buffer, entry+uprv_strlen(entry), ".c", optFilename);
+    if (outFilePath != NULL) {
+        uprv_strcpy(outFilePath, buffer);
+    }
     out=T_FileStream_open(buffer, "w");
     if(out==NULL) {
         fprintf(stderr, "genccode: unable to open output file %s\n", buffer);
@@ -688,7 +691,7 @@ getArchitecture(uint16_t *pCPU, uint16_t *pBits, UBool *pIsBigEndian, const char
 }
 
 U_CAPI void U_EXPORT2
-writeObjectCode(const char *filename, const char *destdir, const char *optEntryPoint, const char *optMatchArch, const char *optFilename) {
+writeObjectCode(const char *filename, const char *destdir, const char *optEntryPoint, const char *optMatchArch, const char *optFilename, char *outFilePath) {
     /* common variables */
     char buffer[4096], entry[40]={ 0 };
     FileStream *in, *out;
@@ -966,6 +969,9 @@ writeObjectCode(const char *filename, const char *destdir, const char *optEntryP
     size=T_FileStream_size(in);
 
     getOutFilename(filename, destdir, buffer, entry+entryOffset, newSuffix, optFilename);
+    if (outFilePath != NULL) {
+        uprv_strcpy(outFilePath, buffer);
+    }
 
     if(optEntryPoint != NULL) {
         uprv_strcpy(entry+entryOffset, optEntryPoint);

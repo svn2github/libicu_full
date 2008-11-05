@@ -423,50 +423,55 @@ main(int argc, char* argv[]) {
 
 static int32_t pkg_executeOptions(UPKGOptions *o) {
     int32_t result = 0;
-    const char FILE_SEP_CHAR[1] = { U_FILE_SEP_CHAR };
+    const char FILE_SEP_CHAR[2] = { U_FILE_SEP_CHAR, 0 };
     const char mode = o->mode[0];
     char datFileName[256];
     char datFileNamePath[2048];
+
+    uprv_memset(datFileName, 0, sizeof(datFileName));
+    uprv_memset(datFileNamePath, 0, sizeof(datFileNamePath));
 
     if (mode == MODE_FILES) {
         // TODO: Copy files over
     } else /* if (mode == MODE_COMMON || mode == MODE_STATIC || mode == MODE_DLL) */ {
         if (o->tmpDir != NULL) {
-            strcpy(datFileName, o->tmpDir);
-            strcat(datFileName, FILE_SEP_CHAR);
-            strcat(datFileName, o->shortName);
-        } else {
-            strcpy(datFileName, o->shortName);
+            uprv_strcpy(datFileNamePath, o->tmpDir);
+            uprv_strcat(datFileNamePath, FILE_SEP_CHAR);
         }
 
-        strcat(datFileName, ".dat");
+        uprv_strcpy(datFileName, o->shortName);
+        uprv_strcat(datFileName, ".dat");
 
-        strcpy(datFileNamePath, datFileName);
+        uprv_strcat(datFileNamePath, datFileName);
 
-        result = writePackageDatFile(datFileName, o->comment, o->srcDir, o->fileListFiles->str, NULL, U_IS_BIG_ENDIAN ? 'b' : 'l');
+        result = writePackageDatFile(datFileNamePath, o->comment, o->srcDir, o->fileListFiles->str, NULL, U_IS_BIG_ENDIAN ? 'b' : 'l');
 
         if (mode == MODE_COMMON) {
             char targetFileNamePath[2048];
 
             if (o->targetDir != NULL) {
-                strcpy(targetFileNamePath, o->targetDir);
-                strcat(targetFileNamePath, FILE_SEP_CHAR);
-                strcat(targetFileNamePath, datFileName);
+                uprv_strcpy(targetFileNamePath, o->targetDir);
+                uprv_strcat(targetFileNamePath, FILE_SEP_CHAR);
+                uprv_strcat(targetFileNamePath, datFileName);
 
                 rename(datFileNamePath, targetFileNamePath);
             }
         } else /* if (mode[0] == MODE_STATIC || mode[0] == MODE_DLL) */ {
+            char gencFilePath[512];
+#ifdef U_GENCCODE_ASSEMBLY
             const char* genccodeAssembly = U_GENCCODE_ASSEMBLY;
-            char assemblyFilePath[512];
 
             /* Offset genccodeAssembly by 3 because "-a " */
             if (checkAssemblyHeaderName(genccodeAssembly+3)) {
                 /* TODO: tmpDir might be NULL */
-                writeAssemblyCode(datFileNamePath, o->tmpDir, o->entryName, NULL, assemblyFilePath);
+                writeAssemblyCode(datFileNamePath, o->tmpDir, o->entryName, NULL, gencFilePath);
             } else {
                 fprintf(stderr,"Assembly type \"%s\" is unknown.\n", genccodeAssembly);
                 return -1;
             }
+#else
+            writeObjectCode(datFileNamePath, o->tmpDir, o->entryName, NULL, NULL, gencFilePath);
+#endif
 
             // TODO: add code to generate static library file
 

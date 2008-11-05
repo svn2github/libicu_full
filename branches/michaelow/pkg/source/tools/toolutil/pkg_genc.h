@@ -16,12 +16,12 @@ U_CAPI UBool U_EXPORT2
 checkAssemblyHeaderName(const char* optAssembly);
 
 U_CAPI void U_EXPORT2
-writeCCode(const char *filename, const char *destdir, const char *optName, const char *optFilename);
+writeCCode(const char *filename, const char *destdir, const char *optName, const char *optFilename, char *outFilePath);
 
 U_CAPI void U_EXPORT2
 writeAssemblyCode(const char *filename, const char *destdir, const char *optEntryPoint, const char *optFilename, char *outFilePath);
 
 U_CAPI void U_EXPORT2
-writeObjectCode(const char *filename, const char *destdir, const char *optEntryPoint, const char *optMatchArch, const char *optFilename);
+writeObjectCode(const char *filename, const char *destdir, const char *optEntryPoint, const char *optMatchArch, const char *optFilename, char *outFilePath);
 
 #endif
