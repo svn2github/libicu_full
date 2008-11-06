@@ -957,8 +957,6 @@ void IndicReordering::finalReordering(LEGlyphStorage &glyphStorage, le_int32 cou
                 tmpGlyph = glyphStorage.getGlyphID(targetPosition,success);
                 tmpAuxData = glyphStorage.getAuxData(targetPosition,success);
 
-                // TODO: Right now I'm just putting the reph on the base consonant, need to 
-                // do the "full" check ( i.e. skip above and post base matras )
                 if ( tmpAuxData & baseConsonantMask ) {
                     baseConsonantData = tmpAuxData;
                     targetPositionFound = true;
