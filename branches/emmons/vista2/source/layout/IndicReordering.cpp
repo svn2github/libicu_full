@@ -59,14 +59,18 @@ U_NAMESPACE_BEGIN
 
 // Syllable structure bits 
 #define baseConsonantMask       0x00000400UL
-#define mainConsonantMask       0x00000200UL
+#define consonantMask           0x00000200UL
 #define halfConsonantMask       0x00000100UL
 #define rephConsonantMask       0x00000080UL
-#define belowBaseConsonantMask  0x00000040UL
-#define postBaseConsonantMask   0x00000020UL
-#define preBaseReorderingRaMask 0x00000010UL
-#define matrasAndSignsMask      0x00000008UL
-#define beginSyllableMask       0x00000004UL
+#define matraMask               0x00000040UL
+#define vowelModifierMask       0x00000020UL
+#define markPositionMask        0x00000018UL
+
+#define postBasePosition        0x00000000UL
+#define preBasePosition         0x00000008UL
+#define aboveBasePosition       0x00000010UL
+#define belowBasePosition       0x00000018UL
+
 #define repositionedGlyphMask   0x00000002UL
 
 #define basicShapingFormsMask ( loclFeatureMask | nuktFeatureMask | akhnFeatureMask | rkrfFeatureMask | blwfFeatureMask | halfFeatureMask | vatuFeatureMask | cjctFeatureMask )
@@ -936,6 +940,8 @@ void IndicReordering::finalReordering(LEGlyphStorage &glyphStorage, le_int32 cou
 {
     LEErrorCode success = LE_NO_ERROR;
 
+    // Reposition REPH as appropriate
+
     for ( le_int32 i = 0 ; i < count ; i++ ) {
 
         le_int32 tmpAuxData = glyphStorage.getAuxData(i,success);
@@ -945,21 +951,52 @@ void IndicReordering::finalReordering(LEGlyphStorage &glyphStorage, le_int32 cou
 
             le_bool targetPositionFound = false;
             le_int32 targetPosition = i+1;
+            le_int32 baseConsonantData;
 
-          while (!targetPositionFound) {
+            while (!targetPositionFound) {
                 tmpGlyph = glyphStorage.getGlyphID(targetPosition,success);
                 tmpAuxData = glyphStorage.getAuxData(targetPosition,success);
 
                 // TODO: Right now I'm just putting the reph on the base consonant, need to 
-                // do the "full" check per the spec once I get this working - also need to add some error
-                // checking here
-                if ( ( tmpGlyph != NO_GLYPH ) && (tmpAuxData & baseConsonantMask) ) {
+                // do the "full" check ( i.e. skip above and post base matras )
+                if ( tmpAuxData & baseConsonantMask ) {
+                    baseConsonantData = tmpAuxData;
                     targetPositionFound = true;
                 } else {
                     targetPosition++;
                 }
             }
 
+            // Make sure we are not putting the reph into an empty hole
+
+            le_bool targetPositionHasGlyph = false;
+            while (!targetPositionHasGlyph) {
+                tmpGlyph = glyphStorage.getGlyphID(targetPosition,success);
+                if ( tmpGlyph != NO_GLYPH ) {
+                    targetPositionHasGlyph = true;
+                } else {
+                    targetPosition--;
+                }
+            }
+
+            // Make sure that REPH is positioned after any above base or post base matras
+            //
+            le_bool checkMatraDone = false;
+            le_int32 checkMatraPosition = targetPosition+1;
+            while ( !checkMatraDone ) {
+               tmpAuxData = glyphStorage.getAuxData(checkMatraPosition,success);
+               if ( checkMatraPosition >= count || ( (tmpAuxData ^ baseConsonantData) & LE_GLYPH_GROUP_MASK)) {
+                   checkMatraDone = true;
+                   continue;
+               }
+               if ( (tmpAuxData & matraMask) && 
+                    (((tmpAuxData & markPositionMask) == aboveBasePosition) || 
+                      ((tmpAuxData & markPositionMask) == postBasePosition))) {
+                   targetPosition = checkMatraPosition;                   
+               }
+               checkMatraPosition++;
+            }
+            
             glyphStorage.moveGlyph(i,targetPosition,repositionedGlyphMask);
         }
     }
@@ -1058,6 +1095,15 @@ le_int32 IndicReordering::v2process(const LEUnicode *chars, le_int32 charCount, 
 
             if ( i == baseConsonant ) {
                 outMask |= baseConsonantMask;
+            }
+
+            if ( classTable->isMatra(chars[i])) {
+                    outMask |= matraMask;
+                    if ( classTable->hasAboveBaseForm(chars[i])) {
+                        outMask |= aboveBasePosition;
+                    } else if ( classTable->hasBelowBaseForm(chars[i])) {
+                        outMask |= belowBasePosition;
+                    }
             }
 
             // Don't apply half form to virama that stands alone at the end of a syllable
