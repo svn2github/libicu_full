@@ -416,6 +416,14 @@ main(int argc, char* argv[]) {
     return pkg_executeOptions(&o);
 }
 
+#define LINK_CMD "link.exe /nologo /release /out:"
+#define LINK_FLAGS "/DLL /NOENTRY /MANIFEST:NO  /base:0x4ad00000 /implib:"
+#define LIB_CMD "LIB.exe /nologo /out:"
+#define ICUDATA_RES_FILE "icudata.res"
+#define LIB_FILE "icudt.lib"
+#define LIB_EXT ".lib"
+#define DLL_EXT ".dll"
+
 #define MODE_COMMON 'c'
 #define MODE_STATIC 's'
 #define MODE_DLL    'd'
@@ -472,12 +480,68 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
 #else
             writeObjectCode(datFileNamePath, o->tmpDir, o->entryName, NULL, NULL, gencFilePath);
 #endif
+            char cmd[1024];
 
-            // TODO: add code to generate static library file
+            if (mode == MODE_STATIC) {
+#ifdef U_WINDOWS
+                char staticLibFilePath[512];
+                uprv_memset(staticLibFilePath, 0, sizeof(staticLibFilePath));
 
-            if (mode == MODE_DLL) {
+                if (o->tmpDir != NULL || o->targetDir != NULL) {
+                    uprv_strcpy(staticLibFilePath, o->tmpDir != NULL ? o->tmpDir : o->targetDir);
+                    uprv_strcat(staticLibFilePath, FILE_SEP_CHAR);
+                }
+
+                uprv_strcat(staticLibFilePath, o->entryName);
+                uprv_strcat(staticLibFilePath, LIB_EXT);
+
+                sprintf(cmd, "%s\"%s\" \"%s\"",
+                        LIB_CMD,
+                        staticLibFilePath,
+                        gencFilePath);
+#endif
+            } else if (mode == MODE_DLL) {
                 // TODO: add code to generate dynamic library file
+#ifdef U_WINDOWS
+                char dllFilePath[512];
+                char libFilePath[512];
+                char resFilePath[512];
+                uprv_memset(dllFilePath, 0, sizeof(dllFilePath));
+                uprv_memset(libFilePath, 0, sizeof(libFilePath));
+                uprv_memset(resFilePath, 0, sizeof(resFilePath));
+
+                if (o->tmpDir != NULL || o->targetDir != NULL) {
+                    if (o->srcDir != NULL) {
+                        uprv_strcpy(dllFilePath, o->srcDir);
+                        uprv_strcpy(libFilePath, o->srcDir);
+                    } else {
+                        uprv_strcpy(dllFilePath, o->tmpDir != NULL ? o->tmpDir : o->targetDir);
+                        uprv_strcpy(libFilePath, o->srcDir);
+                    }
+                    uprv_strcat(dllFilePath, FILE_SEP_CHAR);
+                    uprv_strcat(libFilePath, FILE_SEP_CHAR);
+
+                    uprv_strcpy(resFilePath, o->tmpDir != NULL ? o->tmpDir : o->targetDir);
+                    uprv_strcat(resFilePath, FILE_SEP_CHAR);
+                }
+
+                uprv_strcat(dllFilePath, o->entryName);
+                uprv_strcat(dllFilePath, DLL_EXT);
+                uprv_strcat(libFilePath, LIB_FILE);
+                uprv_strcat(resFilePath, ICUDATA_RES_FILE);
+
+                sprintf(cmd, "%s\"%s\" %s\"%s\" \"%s\" \"%s\"",
+                       LINK_CMD,
+                       dllFilePath,
+                       LINK_FLAGS,
+                       libFilePath,
+                       gencFilePath,
+                       resFilePath
+                       );
+#endif
             }
+
+            result = system(cmd);
         }
     }
 
