@@ -489,7 +489,9 @@ then
         ;;
     esac
     AC_MSG_CHECKING([for iostream usability])
-    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <iostream>]], [[]])],[ac_cv_header_iostream=yes],[ac_cv_header_iostream=no])
+    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <iostream>
+#include <istream>
+#include <ostream>]], [[]])],[ac_cv_header_iostream=yes],[ac_cv_header_iostream=no])
     if test $icu_cv_host_frag = mh-cygwin-msvc
     then
         # <iostream> is always there on Windows.
