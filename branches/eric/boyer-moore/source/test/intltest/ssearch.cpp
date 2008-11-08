@@ -1452,6 +1452,12 @@ BadCharacterTable::BadCharacterTable(CEList &patternCEs, CollData *data, int32_t
 
     for(int32_t p = 0; p < plen; p += 1) {
         minLengthCache[p] = data->minLengthInChars(&patternCEs, p);
+
+        // Make sure this entry is not bigger than the previous one.
+        // Otherwise, we might skip too far in some cases.
+        if (p > 0 && minLengthCache[p] > minLengthCache[p - 1]) {
+            minLengthCache[p] = minLengthCache[p - 1];
+        }
     }
 
     minLengthCache[plen] = 0;
@@ -1860,6 +1866,11 @@ static UBool boyerMooreSearch(BoyerMooreSearch *bms, const UnicodeString &target
         int32_t pIndex = plen - 1;
         int32_t tIndex = 0;
         int32_t lIndex = 0;
+        
+        if (! target.isBreakBoundary(tOffset)) {
+            // **** Do we really want the *previous* boundary? ****
+            tOffset = target.nextBreakBoundary(tOffset);
+        }
 
         if (tOffset < tlen) {
             // **** we really want to skip ahead enough to  ****
@@ -2008,7 +2019,7 @@ static UBool boyerMooreSearch(BoyerMooreSearch *bms, const UnicodeString &target
                 return TRUE;
             }
 
-            tOffset += (*goodSuffixTable)[0]; // really?
+            tOffset += (*goodSuffixTable)[0]; // really? Maybe += 1 or += maxSkip?
         }
         // Otherwise, we're here because of a mismatch, so keep going....
     }
