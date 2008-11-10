@@ -416,13 +416,15 @@ main(int argc, char* argv[]) {
     return pkg_executeOptions(&o);
 }
 
+#ifdef U_WINDOWS
 #define LINK_CMD "link.exe /nologo /release /out:"
 #define LINK_FLAGS "/DLL /NOENTRY /MANIFEST:NO  /base:0x4ad00000 /implib:"
 #define LIB_CMD "LIB.exe /nologo /out:"
-#define ICUDATA_RES_FILE "icudata.res"
 #define LIB_FILE "icudt.lib"
 #define LIB_EXT ".lib"
 #define DLL_EXT ".dll"
+#endif
+#define ICUDATA_RES_FILE "icudata.res"
 
 #define MODE_COMMON 'c'
 #define MODE_STATIC 's'
@@ -499,6 +501,8 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                         LIB_CMD,
                         staticLibFilePath,
                         gencFilePath);
+#else
+
 #endif
             } else if (mode == MODE_DLL) {
                 // TODO: add code to generate dynamic library file
@@ -511,15 +515,17 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                 uprv_memset(resFilePath, 0, sizeof(resFilePath));
 
                 if (o->tmpDir != NULL || o->targetDir != NULL) {
+#ifdef CYGWINMSVC
+                    uprv_strcpy(dllFilePath, o->targetDir != NULL ? o->targetDir : o->tmpDir);
+#else
                     if (o->srcDir != NULL) {
                         uprv_strcpy(dllFilePath, o->srcDir);
-                        uprv_strcpy(libFilePath, o->srcDir);
                     } else {
                         uprv_strcpy(dllFilePath, o->tmpDir != NULL ? o->tmpDir : o->targetDir);
-                        uprv_strcpy(libFilePath, o->srcDir);
                     }
+#endif
                     uprv_strcat(dllFilePath, FILE_SEP_CHAR);
-                    uprv_strcat(libFilePath, FILE_SEP_CHAR);
+                    uprv_strcpy(libFilePath, dllFilePath);
 
                     uprv_strcpy(resFilePath, o->tmpDir != NULL ? o->tmpDir : o->targetDir);
                     uprv_strcat(resFilePath, FILE_SEP_CHAR);
@@ -530,14 +536,20 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                 uprv_strcat(libFilePath, LIB_FILE);
                 uprv_strcat(resFilePath, ICUDATA_RES_FILE);
 
+                if (fopen(resFilePath, "r") == NULL) {
+                    uprv_memset(resFilePath, 0, sizeof(resFilePath));
+                }
+
                 sprintf(cmd, "%s\"%s\" %s\"%s\" \"%s\" \"%s\"",
-                       LINK_CMD,
-                       dllFilePath,
-                       LINK_FLAGS,
-                       libFilePath,
-                       gencFilePath,
-                       resFilePath
-                       );
+                        LINK_CMD,
+                        dllFilePath,
+                        LINK_FLAGS,
+                        libFilePath,
+                        gencFilePath,
+                        resFilePath
+                        );
+#else
+
 #endif
             }
 
