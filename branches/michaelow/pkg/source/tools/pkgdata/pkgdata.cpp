@@ -505,7 +505,12 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                     return -1;
                 }
             } else {
+#if defined(U_WINDOWS) || defined(U_LINUX)
                 writeObjectCode(datFileNamePath, o->tmpDir, o->entryName, NULL, NULL, gencFilePath);
+#else
+                fprintf(stderr,"Assembly type needs to be specified in config file: %s\n", o->options);
+                return -1;
+#endif
             }
 
 #ifdef U_WINDOWS
