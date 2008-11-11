@@ -1322,6 +1322,8 @@ public:
 
     int32_t minLengthInChars(const CEList *ces, int32_t offset) const;
 
+    int32_t minLengthInChars(const CEList *ces, int32_t offset, int32_t *history) const;
+
 private:
     UCollator      *coll;
     StringToCEsMap *charsToCEList;
@@ -1367,6 +1369,7 @@ UCollator *CollData::getCollator() const
     return coll;
 }
 
+#if 0
 int32_t CollData::minLengthInChars(const CEList *ceList, int32_t offset) const
 {
     // find out shortest string for the longest sequence of ces.
@@ -1416,6 +1419,78 @@ int32_t CollData::minLengthInChars(const CEList *ceList, int32_t offset) const
 
     return totalStringLength;
 }
+#else
+int32_t CollData::minLengthInChars(const CEList *ceList, int32_t offset, int32_t *history) const
+{
+    // find out shortest string for the longest sequence of ces.
+    // this can be speed up by remembering the best answer at each CE
+    // this can probably be folded with the minLengthCache...
+
+    if (history[offset] >= 0) {
+        return history[offset];
+    }
+
+    int32_t ce = ceList->get(offset);
+    int32_t maxOffset = ceList->size();
+    int32_t shortestLength = INT32_MAX;
+    const StringList *strings = ceToCharsStartingWith->getStringList(ce);
+
+    if (strings != NULL) {
+        int32_t stringCount = strings->size();
+      
+        for (int32_t s = 0; s < stringCount; s += 1) {
+            const UnicodeString *string = strings->get(s);
+            const CEList *ceList2 = charsToCEList->get(string);
+
+            if (ceList->matchesAt(offset, ceList2)) {
+                int32_t clength = ceList2->size();
+                int32_t slength = string->length();
+                int32_t roffset = offset + clength;
+                int32_t rlength = 0;
+                
+                if (roffset < maxOffset) {
+                    rlength = minLengthInChars(ceList, roffset, history);
+
+                    if (rlength <= 0) {
+                        // ignore any dead ends
+                        continue;
+                    }
+                }
+
+                if (shortestLength > slength + rlength) {
+                    shortestLength = slength + rlength;
+                }
+            }
+        }
+    }
+
+
+    if (shortestLength == INT32_MAX) {
+        // no matching strings at this offset - just move on.
+        shortestLength = offset < (maxOffset - 1)? minLengthInChars(ceList, offset + 1, history) : 0;
+    }
+
+    history[offset] = shortestLength;
+
+    return shortestLength;
+}
+
+int32_t CollData::minLengthInChars(const CEList *ceList, int32_t offset) const
+{
+    int32_t clength = ceList->size();
+    int32_t *history = new int32_t[clength];
+
+    for (int32_t i = 0; i < clength; i += 1) {
+        history[i] = -1;
+    }
+
+    int32_t minLength = minLengthInChars(ceList, offset, history);
+
+    delete[] history;
+
+    return minLength;
+}
+#endif
 
 class BadCharacterTable
 {
@@ -1436,13 +1511,23 @@ private:
     int32_t *minLengthCache;
 };
 
-// TODO: cache minLenthInChars results:
-//   cache[p] = data->minLengthInChars(&patternCEs, p);
 BadCharacterTable::BadCharacterTable(CEList &patternCEs, CollData *data, int32_t /*sunday*/)
+    : minLengthCache(NULL)
 {
     int32_t plen = patternCEs.size();
 
-    maxSkip = data->minLengthInChars(&patternCEs, 0) /*+ sunday*/;
+    // **** need a better way to deal with this ****
+    if (plen == 0) {
+        return;
+    }
+
+    int32_t *history = new int32_t[plen];
+
+    for (int32_t i = 0; i < plen; i += 1) {
+        history[i] = -1;
+    }
+
+    maxSkip = data->minLengthInChars(&patternCEs, 0, history) /*+ sunday*/;
 
     for(int32_t j = 0; j < HASH_TABLE_SIZE; j += 1) {
         badCharacterTable[j] = maxSkip;
@@ -1451,7 +1536,7 @@ BadCharacterTable::BadCharacterTable(CEList &patternCEs, CollData *data, int32_t
     minLengthCache = new int32_t[plen + 1];
 
     for(int32_t p = 0; p < plen; p += 1) {
-        minLengthCache[p] = data->minLengthInChars(&patternCEs, p);
+        minLengthCache[p] = data->minLengthInChars(&patternCEs, p, history);
 
         // Make sure this entry is not bigger than the previous one.
         // Otherwise, we might skip too far in some cases.
@@ -1465,6 +1550,8 @@ BadCharacterTable::BadCharacterTable(CEList &patternCEs, CollData *data, int32_t
     for(int32_t p = 0; p < plen - 1; p += 1) {
         badCharacterTable[hash(patternCEs[p])] = minLengthCache[p + 1] /*+ sunday*/;
     }
+
+    delete[] history;
 }
 
 BadCharacterTable::~BadCharacterTable()
@@ -1505,8 +1592,15 @@ private:
 };
 
 GoodSuffixTable::GoodSuffixTable(CEList &patternCEs, BadCharacterTable &badCharacterTable)
+    : goodSuffixTable(NULL)
 {
     int32_t patlen = patternCEs.size();
+
+    // **** need a better way to deal with this ****
+    if (patlen <= 0) {
+        return;
+    }
+
     int32_t *suff  = new int32_t[patlen];
     int32_t start = patlen - 1, end = - 1;
     int32_t maxSkip = badCharacterTable.getMaxSkip();
@@ -1590,6 +1684,8 @@ public:
     BoyerMooreSearch(CollData *theData, const UnicodeString &patternString);
     ~BoyerMooreSearch();
 
+    UBool empty();
+
     CollData *getData();
     CEList   *getPatternCEs();
     BadCharacterTable *getBadCharacterTable();
@@ -1602,6 +1698,11 @@ private:
     BadCharacterTable *badCharacterTable;
     GoodSuffixTable   *goodSuffixTable;
 };
+
+UBool BoyerMooreSearch::empty()
+{
+    return patCEs->size() <= 0;
+}
 
 CollData *BoyerMooreSearch::getData()
 {
@@ -2981,6 +3082,12 @@ void SSearchTest::monkeyTest(char *params)
 
             BoyerMooreSearch pat(data, pattern);
             BoyerMooreSearch alt(data, altPattern);
+
+            // **** need a better way to deal with this ****
+            if (pat.empty() ||
+                alt.empty()) {
+                    continue;
+            }
 
             // pattern
             notFoundCount += monkeyTestCase(coll, pattern, pattern, altPattern, &pat, &alt, "pattern", strengthNames[s], seed);
