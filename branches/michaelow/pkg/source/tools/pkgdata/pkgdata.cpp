@@ -129,6 +129,25 @@ static UOption options[]={
     /*20*/    UOPTION_DEF( "quiet", 'q', UOPT_NO_ARG)
 };
 
+typedef struct PkgDataFlags {
+    char version[512];
+    char versionmajor[512];
+    char so_ext[10];
+    char a_ext[10];
+    char lib_prefix[10];
+    char compiler[512];
+    char libflags[512];
+    char genlib[512];
+    char ld_soname[512];
+    char rpath_flags[512];
+    char bir_flags[512];
+    char ar[512];
+    char arflags[512];
+    char ranlib[512];
+} PkgDataFlags;
+
+static void pkg_readInFlags(const char* fileName, PkgDataFlags &flags);
+
 const char options_help[][320]={
     "Set the data name",
 #ifdef U_MAKE_IS_NMAKE
@@ -432,11 +451,12 @@ main(int argc, char* argv[]) {
 #define MODE_FILES  'f'
 
 static int32_t pkg_executeOptions(UPKGOptions *o) {
+    PkgDataFlags flags;
     int32_t result = 0;
-    const char FILE_SEP_CHAR[2] = { U_FILE_SEP_CHAR, 0 };
     const char mode = o->mode[0];
     char datFileName[256];
     char datFileNamePath[2048];
+    char cmd[1024];
 
     uprv_memset(datFileName, 0, sizeof(datFileName));
     uprv_memset(datFileNamePath, 0, sizeof(datFileNamePath));
@@ -446,7 +466,7 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
     } else /* if (mode == MODE_COMMON || mode == MODE_STATIC || mode == MODE_DLL) */ {
         if (o->tmpDir != NULL) {
             uprv_strcpy(datFileNamePath, o->tmpDir);
-            uprv_strcat(datFileNamePath, FILE_SEP_CHAR);
+            uprv_strcat(datFileNamePath, U_FILE_SEP_STRING);
         }
 
         uprv_strcpy(datFileName, o->shortName);
@@ -461,10 +481,12 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
 
             if (o->targetDir != NULL) {
                 uprv_strcpy(targetFileNamePath, o->targetDir);
-                uprv_strcat(targetFileNamePath, FILE_SEP_CHAR);
+                uprv_strcat(targetFileNamePath, U_FILE_SEP_STRING);
                 uprv_strcat(targetFileNamePath, datFileName);
 
                 rename(datFileNamePath, targetFileNamePath);
+
+                return result;
             }
         } else /* if (mode[0] == MODE_STATIC || mode[0] == MODE_DLL) */ {
             char gencFilePath[512];
@@ -482,16 +504,16 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
 #else
             writeObjectCode(datFileNamePath, o->tmpDir, o->entryName, NULL, NULL, gencFilePath);
 #endif
-            char cmd[1024];
+            pkg_readInFlags(o->options, flags);
 
-            if (mode == MODE_STATIC) {
 #ifdef U_WINDOWS
+            if (mode == MODE_STATIC) {
                 char staticLibFilePath[512];
                 uprv_memset(staticLibFilePath, 0, sizeof(staticLibFilePath));
 
                 if (o->tmpDir != NULL || o->targetDir != NULL) {
                     uprv_strcpy(staticLibFilePath, o->tmpDir != NULL ? o->tmpDir : o->targetDir);
-                    uprv_strcat(staticLibFilePath, FILE_SEP_CHAR);
+                    uprv_strcat(staticLibFilePath, U_FILE_SEP_STRING);
                 }
 
                 uprv_strcat(staticLibFilePath, o->entryName);
@@ -501,12 +523,7 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                         LIB_CMD,
                         staticLibFilePath,
                         gencFilePath);
-#else
-
-#endif
             } else if (mode == MODE_DLL) {
-                // TODO: add code to generate dynamic library file
-#ifdef U_WINDOWS
                 char dllFilePath[512];
                 char libFilePath[512];
                 char resFilePath[512];
@@ -524,11 +541,11 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                         uprv_strcpy(dllFilePath, o->tmpDir != NULL ? o->tmpDir : o->targetDir);
                     }
 #endif
-                    uprv_strcat(dllFilePath, FILE_SEP_CHAR);
+                    uprv_strcat(dllFilePath, U_FILE_SEP_STRING);
                     uprv_strcpy(libFilePath, dllFilePath);
 
                     uprv_strcpy(resFilePath, o->tmpDir != NULL ? o->tmpDir : o->targetDir);
-                    uprv_strcat(resFilePath, FILE_SEP_CHAR);
+                    uprv_strcat(resFilePath, U_FILE_SEP_STRING);
                 }
 
                 uprv_strcat(dllFilePath, o->entryName);
@@ -548,16 +565,166 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                         gencFilePath,
                         resFilePath
                         );
+            }
 #else
+            char tempObjectFile[512];
+            char tempLibFile[512];
+            uprv_memset(tempLibFile, 0, sizeof(tempLibFile));
 
-#endif
+            if (o->targetDir != NULL) {
+                uprv_strcpy(tempLibFile, o->targetDir);
+                uprv_strcat(tempLibFile, U_FILE_SEP_STRING);
+            }
+            uprv_strcat(tempLibFile, flags.lib_prefix);
+            uprv_strcat(tempLibFile, o->libName);
+
+            for(int32_t i = 0; i < sizeof(tempObjectFile); i++) {
+                tempObjectFile[i] = gencFilePath[i];
+                if (i > 0 && gencFilePath[i] == NULL && gencFilePath[i-1] == 's') {
+                    tempObjectFile[i-1] = 'o';
+                }
             }
 
+            sprintf(cmd, "%s %s -o %s %s",
+                    flags.compiler,
+                    flags.libflags,
+                    tempObjectFile,
+                    gencFilePath);
+
             result = system(cmd);
+            if (result != 0) {
+                return result;
+            }
+
+            if (mode == MODE_STATIC) {
+                sprintf(cmd, "%s %s %s.%s %s",
+                        flags.ar,
+                        flags.arflags,
+                        tempLibFile,
+                        flags.a_ext,
+                        tempObjectFile);
+
+            } else /* if (mode == MODE_DLL) */ {
+                sprintf(cmd, "%s -shared -o %s.%s.%s %s %s%s%s.%s.%s %s %s",
+                        flags.genlib,
+                        tempLibFile,
+                        flags.so_ext,
+                        flags.version,
+                        tempObjectFile,
+                        flags.ld_soname,
+                        flags.lib_prefix,
+                        o->libName,
+                        flags.so_ext,
+                        flags.versionmajor,
+                        flags.rpath_flags,
+                        flags.bir_flags);
+            }
+
+#endif
+        }
+
+        result = system(cmd);
+    }
+    return result;
+}
+
+static int32_t flagOffset(const char *buffer, int32_t bufferSize) {
+    int32_t offset = 0;
+
+    for (offset = 0; offset < bufferSize;offset++) {
+        if (buffer[offset] == '=') {
+            offset++;
+            break;
         }
     }
 
-    return result;
+    if (offset == bufferSize || (offset - 1) == bufferSize) {
+        offset = 0;
+    }
+
+    return offset;
+}
+
+static void extractFlag(char* buffer, int32_t bufferSize, char* flag) {
+    char *pBuffer;
+    int32_t offset;
+    UBool bufferWritten = FALSE;
+
+    offset = flagOffset(buffer, bufferSize);
+    pBuffer = buffer+offset;
+    for(int32_t i = 0;;i++) {
+        if (i > 0 && pBuffer[i] == '.' && pBuffer[i-1] == ',') {
+            flag[i] = NULL;
+            break;
+        }
+        if (pBuffer[i+1] == NULL) {
+            break;
+        }
+        flag[i] = pBuffer[i];
+        if (i == 0) {
+            bufferWritten = TRUE;
+        }
+    }
+
+    if (!bufferWritten) {
+        flag[0] = NULL;
+    }
+}
+
+static void pkg_readInFlags(const char *fileName, PkgDataFlags &flags) {
+    int32_t bufferSize = 2048;
+    char buffer[bufferSize];
+    char *pBuffer;
+    int32_t offset;
+
+    FileStream *f = T_FileStream_open(fileName, "r");
+    if (f == NULL) {
+        return;
+    }
+
+    T_FileStream_readLine(f, buffer, bufferSize);
+    extractFlag(buffer, bufferSize, flags.version);
+
+    T_FileStream_readLine(f, buffer, bufferSize);
+    extractFlag(buffer, bufferSize, flags.versionmajor);
+
+    T_FileStream_readLine(f, buffer, bufferSize);
+    extractFlag(buffer, bufferSize, flags.so_ext);
+
+    T_FileStream_readLine(f, buffer, bufferSize);
+    extractFlag(buffer, bufferSize, flags.a_ext);
+
+    T_FileStream_readLine(f, buffer, bufferSize);
+    extractFlag(buffer, bufferSize, flags.lib_prefix);
+
+    T_FileStream_readLine(f, buffer, bufferSize);
+    extractFlag(buffer, bufferSize, flags.compiler);
+
+    T_FileStream_readLine(f, buffer, bufferSize);
+    extractFlag(buffer, bufferSize, flags.libflags);
+
+    T_FileStream_readLine(f, buffer, bufferSize);
+    extractFlag(buffer, bufferSize, flags.genlib);
+
+    T_FileStream_readLine(f, buffer, bufferSize);
+    extractFlag(buffer, bufferSize, flags.ld_soname);
+
+    T_FileStream_readLine(f, buffer, bufferSize);
+    extractFlag(buffer, bufferSize, flags.rpath_flags);
+
+    T_FileStream_readLine(f, buffer, bufferSize);
+    extractFlag(buffer, bufferSize, flags.bir_flags);
+
+    T_FileStream_readLine(f, buffer, bufferSize);
+    extractFlag(buffer, bufferSize, flags.ar);
+
+    T_FileStream_readLine(f, buffer, bufferSize);
+    extractFlag(buffer, bufferSize, flags.arflags);
+
+    T_FileStream_readLine(f, buffer, bufferSize);
+    extractFlag(buffer, bufferSize, flags.ranlib);
+
+    T_FileStream_close(f);
 }
 
 #if 0

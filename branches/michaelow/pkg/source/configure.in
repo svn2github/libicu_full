@@ -1080,7 +1080,7 @@ fi
 dnl output the Makefiles
 AC_OUTPUT([icudefs.mk \
 		Makefile \
-		data/icupkg.inc \
+		data/pkgdataMakefile \
 		config/Makefile.inc \
 		data/Makefile \
 		stubdata/Makefile \
@@ -1091,6 +1091,7 @@ AC_OUTPUT([icudefs.mk \
 		io/Makefile \
 		extra/Makefile \
 		extra/uconv/Makefile \
+		extra/uconv/pkgdataMakefile \
 		extra/scrptrun/Makefile \
 		tools/Makefile \
 		tools/ctestfw/Makefile \
@@ -1118,7 +1119,7 @@ AC_OUTPUT([icudefs.mk \
 		test/Makefile \
 		test/compat/Makefile \
 		test/testdata/Makefile \
-		test/testdata/pkgdata.inc \
+		test/testdata/pkgdataMakefile \
 		test/hdrtst/Makefile \
 		test/intltest/Makefile \
 		test/cintltst/Makefile \
