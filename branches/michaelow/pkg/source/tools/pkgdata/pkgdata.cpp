@@ -130,6 +130,7 @@ static UOption options[]={
 };
 
 typedef struct PkgDataFlags {
+    char genccode_assembly_type[512];
     char so_ext[10];
     char a_ext[10];
     char lib_prefix[10];
@@ -489,21 +490,23 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
             }
         } else /* if (mode[0] == MODE_STATIC || mode[0] == MODE_DLL) */ {
             char gencFilePath[512];
-#ifdef U_GENCCODE_ASSEMBLY
-            const char* genccodeAssembly = U_GENCCODE_ASSEMBLY;
 
-            /* Offset genccodeAssembly by 3 because "-a " */
-            if (checkAssemblyHeaderName(genccodeAssembly+3)) {
-                /* TODO: tmpDir might be NULL */
-                writeAssemblyCode(datFileNamePath, o->tmpDir, o->entryName, NULL, gencFilePath);
-            } else {
-                fprintf(stderr,"Assembly type \"%s\" is unknown.\n", genccodeAssembly);
-                return -1;
-            }
-#else
-            writeObjectCode(datFileNamePath, o->tmpDir, o->entryName, NULL, NULL, gencFilePath);
-#endif
             pkg_readInFlags(o->options, flags);
+
+            if (flags.genccode_assembly_type[0] != 0) {
+                const char* genccodeAssembly = flags.genccode_assembly_type;
+
+                /* Offset genccodeAssembly by 3 because "-a " */
+                if (checkAssemblyHeaderName(genccodeAssembly+3)) {
+                    /* TODO: tmpDir might be NULL */
+                    writeAssemblyCode(datFileNamePath, o->tmpDir, o->entryName, NULL, gencFilePath);
+                } else {
+                    fprintf(stderr,"Assembly type \"%s\" is unknown.\n", genccodeAssembly);
+                    return -1;
+                }
+            } else {
+                writeObjectCode(datFileNamePath, o->tmpDir, o->entryName, NULL, NULL, gencFilePath);
+            }
 
 #ifdef U_WINDOWS
             if (mode == MODE_STATIC) {
@@ -668,17 +671,19 @@ static void extractFlag(char* buffer, int32_t bufferSize, char* flag) {
     int32_t offset;
     UBool bufferWritten = FALSE;
 
-    offset = flagOffset(buffer, bufferSize);
-    pBuffer = buffer+offset;
-    for(int32_t i = 0;;i++) {
-        if (pBuffer[i+1] == 0) {
-            /* Indicates a new line character. End here. */
-            flag[i] = 0;
-            break;
-        }
-        flag[i] = pBuffer[i];
-        if (i == 0) {
-            bufferWritten = TRUE;
+    if (buffer[0] != 0) {
+        offset = flagOffset(buffer, bufferSize);
+        pBuffer = buffer+offset;
+        for(int32_t i = 0;;i++) {
+            if (pBuffer[i+1] == 0) {
+                /* Indicates a new line character. End here. */
+                flag[i] = 0;
+                break;
+            }
+            flag[i] = pBuffer[i];
+            if (i == 0) {
+                bufferWritten = TRUE;
+            }
         }
     }
 
@@ -697,6 +702,9 @@ static void pkg_readInFlags(const char *fileName, PkgDataFlags &flags) {
     if (f == NULL) {
         return;
     }
+
+    T_FileStream_readLine(f, buffer, bufferSize);
+    extractFlag(buffer, bufferSize, flags.genccode_assembly_type);
 
     T_FileStream_readLine(f, buffer, bufferSize);
     extractFlag(buffer, bufferSize, flags.so_ext);
