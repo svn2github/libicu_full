@@ -13,13 +13,13 @@ top_builddir = ..
 include $(top_builddir)/icudefs.mk
 
 OUTPUTFILE=icupkg.inc
+MIDDLE_SO_TARGET=
 
 all : clean 
-	@echo VERSION=$(SO_TARGET_VERSION) >> $(OUTPUTFILE)
-	@echo VERSION_MAJOR=$(SO_TARGET_VERSION_MAJOR) >> $(OUTPUTFILE)
 	@echo SO=$(SO) >> $(OUTPUTFILE)
 	@echo A=$(A) >> $(OUTPUTFILE)
 	@echo LIBPREFIX=$(LIBPREFIX) >> $(OUTPUTFILE)
+	@echo LIB_EXT_ORDER=$(FINAL_SO_TARGET) >> $(OUTPUTFILE)
 	@echo COMPILE=$(COMPILE.c) >> $(OUTPUTFILE)
 	@echo LIBFLAGS=$(SHAREDLIBCPPFLAGS) $(SHAREDLIBCFLAGS) >> $(OUTPUTFILE)
 	@echo GENLIB=$(SHLIB.c) $(LDFLAGSICUDT) >> $(OUTPUTFILE)

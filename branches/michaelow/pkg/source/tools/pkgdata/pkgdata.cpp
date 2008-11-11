@@ -130,11 +130,10 @@ static UOption options[]={
 };
 
 typedef struct PkgDataFlags {
-    char version[512];
-    char versionmajor[512];
     char so_ext[10];
     char a_ext[10];
     char lib_prefix[10];
+    char lib_ext_order[10];
     char compiler[512];
     char libflags[512];
     char genlib[512];
@@ -567,9 +566,28 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                         );
             }
 #else
+            char version_major[10];
             char tempObjectFile[512];
             char tempLibFile[512];
             uprv_memset(tempLibFile, 0, sizeof(tempLibFile));
+
+            UBool reverseExt = FALSE;
+
+            if (flags.lib_ext_order[uprv_strlen(flags.lib_ext_order)-1] == flags.so_ext[uprv_strlen(flags.so_ext)-1]) {
+                reverseExt = TRUE;
+            }
+
+            if (o->version != NULL) {
+                for (int32_t i = 0;i < sizeof(version_major);i++) {
+                    if (o->version[i] == '.') {
+                        version_major[i] = 0;
+                        break;
+                    }
+                    version_major[i] = o->version[i];
+                }
+            } else {
+                version_major[0] = 0;
+            }
 
             if (o->targetDir != NULL) {
                 uprv_strcpy(tempLibFile, o->targetDir);
@@ -580,7 +598,7 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
 
             for(int32_t i = 0; i < sizeof(tempObjectFile); i++) {
                 tempObjectFile[i] = gencFilePath[i];
-                if (i > 0 && gencFilePath[i] == NULL && gencFilePath[i-1] == 's') {
+                if (i > 0 && gencFilePath[i] == 0 && gencFilePath[i-1] == 's') {
                     tempObjectFile[i-1] = 'o';
                 }
             }
@@ -608,14 +626,14 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                 sprintf(cmd, "%s -shared -o %s.%s.%s %s %s%s%s.%s.%s %s %s",
                         flags.genlib,
                         tempLibFile,
-                        flags.so_ext,
-                        flags.version,
+                        reverseExt ? o->version : flags.so_ext,
+                        reverseExt ? flags.so_ext : o->version,
                         tempObjectFile,
                         flags.ld_soname,
                         flags.lib_prefix,
                         o->libName,
-                        flags.so_ext,
-                        flags.versionmajor,
+                        reverseExt ? version_major : flags.so_ext,
+                        reverseExt ? flags.so_ext : version_major,
                         flags.rpath_flags,
                         flags.bir_flags);
             }
@@ -653,11 +671,9 @@ static void extractFlag(char* buffer, int32_t bufferSize, char* flag) {
     offset = flagOffset(buffer, bufferSize);
     pBuffer = buffer+offset;
     for(int32_t i = 0;;i++) {
-        if (i > 0 && pBuffer[i] == '.' && pBuffer[i-1] == ',') {
-            flag[i] = NULL;
-            break;
-        }
-        if (pBuffer[i+1] == NULL) {
+        if (pBuffer[i+1] == 0) {
+            /* Indicates a new line character. End here. */
+            flag[i] = 0;
             break;
         }
         flag[i] = pBuffer[i];
@@ -667,7 +683,7 @@ static void extractFlag(char* buffer, int32_t bufferSize, char* flag) {
     }
 
     if (!bufferWritten) {
-        flag[0] = NULL;
+        flag[0] = 0;
     }
 }
 
@@ -683,12 +699,6 @@ static void pkg_readInFlags(const char *fileName, PkgDataFlags &flags) {
     }
 
     T_FileStream_readLine(f, buffer, bufferSize);
-    extractFlag(buffer, bufferSize, flags.version);
-
-    T_FileStream_readLine(f, buffer, bufferSize);
-    extractFlag(buffer, bufferSize, flags.versionmajor);
-
-    T_FileStream_readLine(f, buffer, bufferSize);
     extractFlag(buffer, bufferSize, flags.so_ext);
 
     T_FileStream_readLine(f, buffer, bufferSize);
@@ -696,6 +706,9 @@ static void pkg_readInFlags(const char *fileName, PkgDataFlags &flags) {
 
     T_FileStream_readLine(f, buffer, bufferSize);
     extractFlag(buffer, bufferSize, flags.lib_prefix);
+
+    T_FileStream_readLine(f, buffer, bufferSize);
+    extractFlag(buffer, bufferSize, flags.lib_ext_order);
 
     T_FileStream_readLine(f, buffer, bufferSize);
     extractFlag(buffer, bufferSize, flags.compiler);

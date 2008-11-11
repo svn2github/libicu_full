@@ -12,14 +12,15 @@ top_builddir = ../..
 ## All the flags and other definitions are included here.
 include $(top_builddir)/icudefs.mk
 
+MIDDLE_SO_TARGET=
+
 OUTPUTFILE=pkgdata.inc
 
 all : clean 
-	@echo VERSION=$(SO_TARGET_VERSION) >> $(OUTPUTFILE)
-	@echo VERSION_MAJOR=$(SO_TARGET_VERSION_MAJOR) >> $(OUTPUTFILE)
 	@echo SO=$(SO) >> $(OUTPUTFILE)
 	@echo A=$(A) >> $(OUTPUTFILE)
 	@echo LIBPREFIX=$(LIBPREFIX) >> $(OUTPUTFILE)
+	@echo LIB_EXT_ORDER=$(FINAL_SO_TARGET) >> $(OUTPUTFILE)
 	@echo COMPILE=$(COMPILE.c) >> $(OUTPUTFILE)
 	@echo LIBFLAGS=$(SHAREDLIBCPPFLAGS) $(SHAREDLIBCFLAGS) >> $(OUTPUTFILE)
 	@echo GENLIB=$(SHLIB.c) $(LDFLAGSICUDT) >> $(OUTPUTFILE)
