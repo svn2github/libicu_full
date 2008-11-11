@@ -2242,22 +2242,24 @@ void SSearchTest::boyerMooreTest()
     UErrorCode status = U_ZERO_ERROR;
     UCollator *coll = ucol_open(NULL, &status);
     UnicodeString lp  = "fuss";
-    UnicodeString sp = "fu\u00DF";
-    BoyerMooreSearch longPattern(coll, lp);
-    BoyerMooreSearch shortPattern(coll, sp);
-    UnicodeString targets[]  = {"fu\u00DF", "fu\u00DFball", "1fu\u00DFball", "12fu\u00DFball", "123fu\u00DFball", "1234fu\u00DFball",
-                                "ffu\u00DF", "fufu\u00DF", "fusfu\u00DF",
-                                "fuss", "ffuss", "fufuss", "fusfuss", "1fuss", "12fuss", "123fuss", "1234fuss", "fu\u00DF", "1fu\u00DF", "12fu\u00DF", "123fu\u00DF", "1234fu\u00DF"};
+    UnicodeString sp = "fu\\u00DF";
+    BoyerMooreSearch longPattern(coll, lp.unescape());
+    BoyerMooreSearch shortPattern(coll, sp.unescape());
+    UnicodeString targets[]  = {"fu\\u00DF", "fu\\u00DFball", "1fu\\u00DFball", "12fu\\u00DFball", "123fu\\u00DFball", "1234fu\\u00DFball",
+                                "ffu\\u00DF", "fufu\\u00DF", "fusfu\\u00DF",
+                                "fuss", "ffuss", "fufuss", "fusfuss", "1fuss", "12fuss", "123fuss", "1234fuss", "fu\\u00DF", "1fu\\u00DF", "12fu\\u00DF", "123fu\\u00DF", "1234fu\\u00DF"};
     int32_t start = -1, end = -1;
 
     for (int32_t t = 0; t < (sizeof(targets)/sizeof(targets[0])); t += 1) {
-        if (boyerMooreSearch(&longPattern, targets[t], 0, start, end)) {
+        UnicodeString target = targets[t].unescape();
+        
+        if (boyerMooreSearch(&longPattern, target, 0, start, end)) {
             infoln("Test %d: found long pattern at [%d, %d].", t, start, end);
         } else {
             errln("Test %d: did not find long pattern.", t);
         }
 
-        if (boyerMooreSearch(&shortPattern, targets[t], 0, start, end)) {
+        if (boyerMooreSearch(&shortPattern, target, 0, start, end)) {
             infoln("Test %d: found short pattern at [%d, %d].", t, start, end);
         } else {
             errln("Test %d: did not find short pattern.", t);
