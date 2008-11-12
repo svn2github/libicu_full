@@ -671,17 +671,17 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                     return result;
                 }
 
-                sprintf(cmd,"%s %s%s && %s %s%s %s%s && %s %s%s && %s %s%s %s%s",
+                sprintf(cmd,"%s %s%s && %s %s%s %s%s && %s %s%s.%s && %s %s%s %s%s.%s",
                         RM_CMD,
                         targetDir, libFileMajor,
                         LN_CMD,
                         targetDir, libFileVersion,
                         targetDir, libFileMajor,
                         RM_CMD,
-                        targetDir, libFile,
+                        targetDir, libFile, pkgDataFlags[SO_EXT],
                         LN_CMD,
                         targetDir, libFileVersion,
-                        targetDir, libFile);
+                        targetDir, libFile, pkgDataFlags[SO_EXT]);
             }
 
 #endif
