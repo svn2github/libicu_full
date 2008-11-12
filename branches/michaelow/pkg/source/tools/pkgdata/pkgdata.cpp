@@ -132,6 +132,7 @@ static UOption options[]={
 enum {
     GENCCODE_ASSEMBLY_TYPE,
     SO_EXT,
+    SOBJ_EXT,
     A_EXT,
     LIBPREFIX,
     LIB_EXT_ORDER,
@@ -480,15 +481,20 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
         uprv_strcat(datFileNamePath, datFileName);
 
         result = writePackageDatFile(datFileNamePath, o->comment, o->srcDir, o->fileListFiles->str, NULL, U_IS_BIG_ENDIAN ? 'b' : 'l');
-
+        if (result != 0) {
+            fprintf(stderr,"Error writing package dat file.\n");
+            return result;
+        }
         if (mode == MODE_COMMON) {
             char targetFileNamePath[2048];
+            uprv_memset(targetFileNamePath, 0, sizeof(targetFileNamePath));
 
             if (o->targetDir != NULL) {
                 uprv_strcpy(targetFileNamePath, o->targetDir);
                 uprv_strcat(targetFileNamePath, U_FILE_SEP_STRING);
                 uprv_strcat(targetFileNamePath, datFileName);
 
+                /* Move the dat file created to the target directory. */
                 rename(datFileNamePath, targetFileNamePath);
 
                 return result;
@@ -596,13 +602,16 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
             uprv_strcpy(libFile, pkgDataFlags[LIBPREFIX]);
             uprv_strcat(libFile, o->libName);
 
+            /* Remove the ending .s and replace it with .o for the new object file. */
             for(int32_t i = 0; i < sizeof(tempObjectFile); i++) {
                 tempObjectFile[i] = gencFilePath[i];
                 if (i > 0 && gencFilePath[i] == 0 && gencFilePath[i-1] == 's') {
                     tempObjectFile[i-1] = 'o';
+                    break;
                 }
             }
 
+            /* Generate the object file. */
             sprintf(cmd, "%s %s -o %s %s",
                     pkgDataFlags[COMPILER],
                     pkgDataFlags[LIBFLAGS],
@@ -624,16 +633,18 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                         tempObjectFile);
 
             } else /* if (mode == MODE_DLL) */ {
+                UBool reverseExt = FALSE;
                 char version_major[10];
                 char libFileVersion[512];
+                char libFileVersionTmp[512];
                 char libFileMajor[512];
 
-                UBool reverseExt = FALSE;
-
+                /* Certain platforms have different library extension ordering. (e.g. libicudata.##.so vs libicudata.so.##) */
                 if (pkgDataFlags[LIB_EXT_ORDER][uprv_strlen(pkgDataFlags[LIB_EXT_ORDER])-1] == pkgDataFlags[SO_EXT][uprv_strlen(pkgDataFlags[SO_EXT])-1]) {
                     reverseExt = TRUE;
                 }
 
+                /* Get the version major number. */
                 if (o->version != NULL) {
                     for (int32_t i = 0;i < sizeof(version_major);i++) {
                         if (o->version[i] == '.') {
@@ -646,31 +657,68 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                     version_major[0] = 0;
                 }
 
-                sprintf(libFileVersion, "%s.%s.%s",
+                sprintf(libFileVersionTmp, "%s.%s.%s",
                         libFile,
-                        reverseExt ? o->version : pkgDataFlags[SO_EXT],
-                        reverseExt ? pkgDataFlags[SO_EXT] : o->version);
+                        reverseExt ? o->version : pkgDataFlags[SOBJ_EXT],
+                        reverseExt ? pkgDataFlags[SOBJ_EXT] : o->version);
 
                 sprintf(libFileMajor, "%s.%s.%s",
                         libFile,
                         reverseExt ? version_major : pkgDataFlags[SO_EXT],
                         reverseExt ? pkgDataFlags[SO_EXT] : version_major);
 
+                /* Generate the library file. */
                 sprintf(cmd, "%s -shared -o %s%s %s %s%s %s %s",
                         pkgDataFlags[GENLIB],
                         targetDir,
-                        libFileVersion,
+                        libFileVersionTmp,
                         tempObjectFile,
                         pkgDataFlags[LD_SONAME],
-                        libFileMajor,
+                        pkgDataFlags[LD_SONAME][0] == 0 ? "" : libFileMajor,
                         pkgDataFlags[RPATH_FLAGS],
-                        pkgDataFlags[BIR_FLAGS]);
+                        pkgDataFlags[BIR_FLAGS]
+                        );
 
                 result = system(cmd);
                 if (result != 0) {
                     return result;
                 }
 
+                /* Certain platforms uses archive library. (e.g. AIX) */
+                if (uprv_strcmp(pkgDataFlags[SOBJ_EXT], pkgDataFlags[SO_EXT]) == 0 && uprv_strcmp(pkgDataFlags[A_EXT], pkgDataFlags[SO_EXT]) == 0) {
+                    sprintf(libFileVersion, "%s.%s.%s",
+                            libFile,
+                            reverseExt ? o->version : pkgDataFlags[SO_EXT],
+                            reverseExt ? pkgDataFlags[SO_EXT] : o->version);
+
+                    sprintf(cmd, "%s %s %s %s",
+                            pkgDataFlags[AR],
+                            pkgDataFlags[ARFLAGS],
+                            libFileVersionTmp,
+                            libFileVersion);
+
+                    result = system(cmd);
+                    if (result != 0) {
+                        return result;
+                    }
+
+                    /* Remove unneeded library file. */
+                    sprintf(cmd, "%s %s%s",
+                            RM_CMD,
+                            targetDir,
+                            libFileVersionTmp);
+
+                    result = system(cmd);
+                    if (result != 0) {
+                        return result;
+                    }
+
+                } else {
+                    uprv_memset(libFileVersion, 0, sizeof(libFileVersion));
+                    strcpy(libFileVersion, libFileVersionTmp);
+                }
+
+                /* Create symbolic links for the final library file. */
                 sprintf(cmd,"%s %s%s && %s %s%s %s%s && %s %s%s.%s && %s %s%s %s%s.%s",
                         RM_CMD,
                         targetDir, libFileMajor,
@@ -692,6 +740,9 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
     return result;
 }
 
+/*
+ * Get the position after the '=' character.
+ */
 static int32_t flagOffset(const char *buffer, int32_t bufferSize) {
     int32_t offset = 0;
 
@@ -708,13 +759,16 @@ static int32_t flagOffset(const char *buffer, int32_t bufferSize) {
 
     return offset;
 }
-
+/*
+ * Extract the setting after the '=' and store it in flag excluding the newline character.
+ */
 static void extractFlag(char* buffer, int32_t bufferSize, char* flag) {
     char *pBuffer;
     int32_t offset;
     UBool bufferWritten = FALSE;
 
     if (buffer[0] != 0) {
+        /* Get the offset (i.e. position after the '=') */
         offset = flagOffset(buffer, bufferSize);
         pBuffer = buffer+offset;
         for(int32_t i = 0;;i++) {
@@ -735,9 +789,12 @@ static void extractFlag(char* buffer, int32_t bufferSize, char* flag) {
     }
 }
 
+#define MAX_BUFFER_SIZE 2048
+/*
+ * Reads in the given fileName and stores the data in pkgDataFlags.
+ */
 static int32_t pkg_readInFlags(const char *fileName) {
-    int32_t bufferSize = 2048;
-    char buffer[bufferSize];
+    char buffer[MAX_BUFFER_SIZE];
     char *pBuffer;
     int32_t result = 0;
 
@@ -747,12 +804,12 @@ static int32_t pkg_readInFlags(const char *fileName) {
     }
 
     for (int32_t i = 0; i < PKGDATA_FLAGS_SIZE; i++) {
-        if (T_FileStream_readLine(f, buffer, bufferSize) == NULL) {
+        if (T_FileStream_readLine(f, buffer, MAX_BUFFER_SIZE) == NULL) {
             result = -1;
             break;
         }
 
-        extractFlag(buffer, bufferSize, pkgDataFlags[i]);
+        extractFlag(buffer, MAX_BUFFER_SIZE, pkgDataFlags[i]);
     }
 
     T_FileStream_close(f);
