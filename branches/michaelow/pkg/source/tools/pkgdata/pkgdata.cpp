@@ -129,24 +129,27 @@ static UOption options[]={
     /*20*/    UOPTION_DEF( "quiet", 'q', UOPT_NO_ARG)
 };
 
-typedef struct PkgDataFlags {
-    char genccode_assembly_type[512];
-    char so_ext[10];
-    char a_ext[10];
-    char lib_prefix[10];
-    char lib_ext_order[10];
-    char compiler[512];
-    char libflags[512];
-    char genlib[512];
-    char ld_soname[512];
-    char rpath_flags[512];
-    char bir_flags[512];
-    char ar[512];
-    char arflags[512];
-    char ranlib[512];
-} PkgDataFlags;
+enum {
+    GENCCODE_ASSEMBLY_TYPE,
+    SO_EXT,
+    A_EXT,
+    LIBPREFIX,
+    LIB_EXT_ORDER,
+    COMPILER,
+    LIBFLAGS,
+    GENLIB,
+    LD_SONAME,
+    RPATH_FLAGS,
+    BIR_FLAGS,
+    AR,
+    ARFLAGS,
+    RANLIB,
+    PKGDATA_FLAGS_SIZE
+};
 
-static void pkg_readInFlags(const char* fileName, PkgDataFlags &flags);
+static char pkgDataFlags[PKGDATA_FLAGS_SIZE][512];
+
+static int32_t pkg_readInFlags(const char* fileName);
 
 const char options_help[][320]={
     "Set the data name",
@@ -442,6 +445,9 @@ main(int argc, char* argv[]) {
 #define LIB_FILE "icudt.lib"
 #define LIB_EXT ".lib"
 #define DLL_EXT ".dll"
+#else
+#define LN_CMD "ln -s"
+#define RM_CMD "rm -f"
 #endif
 #define ICUDATA_RES_FILE "icudata.res"
 
@@ -451,7 +457,6 @@ main(int argc, char* argv[]) {
 #define MODE_FILES  'f'
 
 static int32_t pkg_executeOptions(UPKGOptions *o) {
-    PkgDataFlags flags;
     int32_t result = 0;
     const char mode = o->mode[0];
     char datFileName[256];
@@ -491,10 +496,13 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
         } else /* if (mode[0] == MODE_STATIC || mode[0] == MODE_DLL) */ {
             char gencFilePath[512];
 
-            pkg_readInFlags(o->options, flags);
+            if (pkg_readInFlags(o->options) < 0) {
+                fprintf(stderr,"Unable to open or read \"%s\" option file.\n", o->options);
+                return -1;
+            }
 
-            if (flags.genccode_assembly_type[0] != 0) {
-                const char* genccodeAssembly = flags.genccode_assembly_type;
+            if (pkgDataFlags[GENCCODE_ASSEMBLY_TYPE] != 0) {
+                const char* genccodeAssembly = pkgDataFlags[GENCCODE_ASSEMBLY_TYPE];
 
                 /* Offset genccodeAssembly by 3 because "-a " */
                 if (checkAssemblyHeaderName(genccodeAssembly+3)) {
@@ -560,7 +568,7 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                 uprv_strcat(libFilePath, LIB_FILE);
                 uprv_strcat(resFilePath, ICUDATA_RES_FILE);
 
-                if (fopen(resFilePath, "r") == NULL) {
+                if (!T_FileStream_file_exists(resFilePath)) {
                     uprv_memset(resFilePath, 0, sizeof(resFilePath));
                 }
 
@@ -574,35 +582,19 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                         );
             }
 #else
-            char version_major[10];
+            char libFile[512];
+            char targetDir[512];
             char tempObjectFile[512];
-            char tempLibFile[512];
-            uprv_memset(tempLibFile, 0, sizeof(tempLibFile));
 
-            UBool reverseExt = FALSE;
-
-            if (flags.lib_ext_order[uprv_strlen(flags.lib_ext_order)-1] == flags.so_ext[uprv_strlen(flags.so_ext)-1]) {
-                reverseExt = TRUE;
-            }
-
-            if (o->version != NULL) {
-                for (int32_t i = 0;i < sizeof(version_major);i++) {
-                    if (o->version[i] == '.') {
-                        version_major[i] = 0;
-                        break;
-                    }
-                    version_major[i] = o->version[i];
-                }
-            } else {
-                version_major[0] = 0;
-            }
+            uprv_memset(targetDir, 0, sizeof(targetDir));
 
             if (o->targetDir != NULL) {
-                uprv_strcpy(tempLibFile, o->targetDir);
-                uprv_strcat(tempLibFile, U_FILE_SEP_STRING);
+                uprv_strcpy(targetDir, o->targetDir);
+                uprv_strcat(targetDir, U_FILE_SEP_STRING);
             }
-            uprv_strcat(tempLibFile, flags.lib_prefix);
-            uprv_strcat(tempLibFile, o->libName);
+
+            uprv_strcpy(libFile, pkgDataFlags[LIBPREFIX]);
+            uprv_strcat(libFile, o->libName);
 
             for(int32_t i = 0; i < sizeof(tempObjectFile); i++) {
                 tempObjectFile[i] = gencFilePath[i];
@@ -612,8 +604,8 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
             }
 
             sprintf(cmd, "%s %s -o %s %s",
-                    flags.compiler,
-                    flags.libflags,
+                    pkgDataFlags[COMPILER],
+                    pkgDataFlags[LIBFLAGS],
                     tempObjectFile,
                     gencFilePath);
 
@@ -623,27 +615,73 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
             }
 
             if (mode == MODE_STATIC) {
-                sprintf(cmd, "%s %s %s.%s %s",
-                        flags.ar,
-                        flags.arflags,
-                        tempLibFile,
-                        flags.a_ext,
+                sprintf(cmd, "%s %s %s%s.%s %s",
+                        pkgDataFlags[AR],
+                        pkgDataFlags[ARFLAGS],
+                        targetDir,
+                        libFile,
+                        pkgDataFlags[A_EXT],
                         tempObjectFile);
 
             } else /* if (mode == MODE_DLL) */ {
-                sprintf(cmd, "%s -shared -o %s.%s.%s %s %s%s%s.%s.%s %s %s",
-                        flags.genlib,
-                        tempLibFile,
-                        reverseExt ? o->version : flags.so_ext,
-                        reverseExt ? flags.so_ext : o->version,
+                char version_major[10];
+                char libFileVersion[512];
+                char libFileMajor[512];
+
+                UBool reverseExt = FALSE;
+
+                if (pkgDataFlags[LIB_EXT_ORDER][uprv_strlen(pkgDataFlags[LIB_EXT_ORDER])-1] == pkgDataFlags[SO_EXT][uprv_strlen(pkgDataFlags[SO_EXT])-1]) {
+                    reverseExt = TRUE;
+                }
+
+                if (o->version != NULL) {
+                    for (int32_t i = 0;i < sizeof(version_major);i++) {
+                        if (o->version[i] == '.') {
+                            version_major[i] = 0;
+                            break;
+                        }
+                        version_major[i] = o->version[i];
+                    }
+                } else {
+                    version_major[0] = 0;
+                }
+
+                sprintf(libFileVersion, "%s.%s.%s",
+                        libFile,
+                        reverseExt ? o->version : pkgDataFlags[SO_EXT],
+                        reverseExt ? pkgDataFlags[SO_EXT] : o->version);
+
+                sprintf(libFileMajor, "%s.%s.%s",
+                        libFile,
+                        reverseExt ? version_major : pkgDataFlags[SO_EXT],
+                        reverseExt ? pkgDataFlags[SO_EXT] : version_major);
+
+                sprintf(cmd, "%s -shared -o %s%s %s %s%s %s %s",
+                        pkgDataFlags[GENLIB],
+                        targetDir,
+                        libFileVersion,
                         tempObjectFile,
-                        flags.ld_soname,
-                        flags.lib_prefix,
-                        o->libName,
-                        reverseExt ? version_major : flags.so_ext,
-                        reverseExt ? flags.so_ext : version_major,
-                        flags.rpath_flags,
-                        flags.bir_flags);
+                        pkgDataFlags[LD_SONAME],
+                        libFileMajor,
+                        pkgDataFlags[RPATH_FLAGS],
+                        pkgDataFlags[BIR_FLAGS]);
+
+                result = system(cmd);
+                if (result != 0) {
+                    return result;
+                }
+
+                sprintf(cmd,"%s %s%s && %s %s%s %s%s && %s %s%s && %s %s%s %s%s",
+                        RM_CMD,
+                        targetDir, libFileMajor,
+                        LN_CMD,
+                        targetDir, libFileVersion,
+                        targetDir, libFileMajor,
+                        RM_CMD,
+                        targetDir, libFile,
+                        LN_CMD,
+                        targetDir, libFileVersion,
+                        targetDir, libFile);
             }
 
 #endif
@@ -697,60 +735,29 @@ static void extractFlag(char* buffer, int32_t bufferSize, char* flag) {
     }
 }
 
-static void pkg_readInFlags(const char *fileName, PkgDataFlags &flags) {
+static int32_t pkg_readInFlags(const char *fileName) {
     int32_t bufferSize = 2048;
     char buffer[bufferSize];
     char *pBuffer;
-    int32_t offset;
+    int32_t result = 0;
 
     FileStream *f = T_FileStream_open(fileName, "r");
     if (f == NULL) {
-        return;
+        return -1;
     }
 
-    T_FileStream_readLine(f, buffer, bufferSize);
-    extractFlag(buffer, bufferSize, flags.genccode_assembly_type);
+    for (int32_t i = 0; i < PKGDATA_FLAGS_SIZE; i++) {
+        if (T_FileStream_readLine(f, buffer, bufferSize) == NULL) {
+            result = -1;
+            break;
+        }
 
-    T_FileStream_readLine(f, buffer, bufferSize);
-    extractFlag(buffer, bufferSize, flags.so_ext);
-
-    T_FileStream_readLine(f, buffer, bufferSize);
-    extractFlag(buffer, bufferSize, flags.a_ext);
-
-    T_FileStream_readLine(f, buffer, bufferSize);
-    extractFlag(buffer, bufferSize, flags.lib_prefix);
-
-    T_FileStream_readLine(f, buffer, bufferSize);
-    extractFlag(buffer, bufferSize, flags.lib_ext_order);
-
-    T_FileStream_readLine(f, buffer, bufferSize);
-    extractFlag(buffer, bufferSize, flags.compiler);
-
-    T_FileStream_readLine(f, buffer, bufferSize);
-    extractFlag(buffer, bufferSize, flags.libflags);
-
-    T_FileStream_readLine(f, buffer, bufferSize);
-    extractFlag(buffer, bufferSize, flags.genlib);
-
-    T_FileStream_readLine(f, buffer, bufferSize);
-    extractFlag(buffer, bufferSize, flags.ld_soname);
-
-    T_FileStream_readLine(f, buffer, bufferSize);
-    extractFlag(buffer, bufferSize, flags.rpath_flags);
-
-    T_FileStream_readLine(f, buffer, bufferSize);
-    extractFlag(buffer, bufferSize, flags.bir_flags);
-
-    T_FileStream_readLine(f, buffer, bufferSize);
-    extractFlag(buffer, bufferSize, flags.ar);
-
-    T_FileStream_readLine(f, buffer, bufferSize);
-    extractFlag(buffer, bufferSize, flags.arflags);
-
-    T_FileStream_readLine(f, buffer, bufferSize);
-    extractFlag(buffer, bufferSize, flags.ranlib);
+        extractFlag(buffer, bufferSize, pkgDataFlags[i]);
+    }
 
     T_FileStream_close(f);
+
+    return result;
 }
 
 #if 0
