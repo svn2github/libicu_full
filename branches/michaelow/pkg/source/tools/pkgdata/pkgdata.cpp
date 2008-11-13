@@ -152,6 +152,8 @@ static char pkgDataFlags[PKGDATA_FLAGS_SIZE][512];
 
 static int32_t pkg_readInFlags(const char* fileName);
 
+static void pkg_checkFlag(char* flag, int32_t length, UPKGOptions *o);
+
 const char options_help[][320]={
     "Set the data name",
 #ifdef U_MAKE_IS_NMAKE
@@ -184,6 +186,7 @@ const char  *progname = "PKGDATA";
 
 int
 main(int argc, char* argv[]) {
+    int result = 0;
     FileStream  *out;
     UPKGOptions  o;
     CharList    *tail;
@@ -308,7 +311,7 @@ main(int argc, char* argv[]) {
         return 1;
     }
 
-    o.shortName = options[0].value;
+    o.shortName = options[NAME].value;
     {
         int32_t len = (int32_t)uprv_strlen(o.shortName);
         char *csname, *cp;
@@ -436,7 +439,9 @@ main(int argc, char* argv[]) {
         return 0; /* nothing to do. */
     }
 
-    return pkg_executeOptions(&o);
+    result = pkg_executeOptions(&o);
+
+    return result;
 }
 
 #ifdef U_WINDOWS
@@ -669,6 +674,7 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                         reverseExt ? version_major : pkgDataFlags[SO_EXT],
                         reverseExt ? pkgDataFlags[SO_EXT] : version_major);
 
+                pkg_checkFlag(pkgDataFlags[BIR_FLAGS], uprv_strlen(pkgDataFlags[BIR_FLAGS]), o);
                 /* Generate the library file. */
                 sprintf(cmd, "%s -o %s%s %s %s%s %s %s",
                         pkgDataFlags[GENLIB],
@@ -791,6 +797,52 @@ static void extractFlag(char* buffer, int32_t bufferSize, char* flag) {
 
     if (!bufferWritten) {
         flag[0] = 0;
+    }
+}
+
+static const char MAP_FILE_EXT[] = ".map";
+
+static void pkg_checkFlag(char* flag, int32_t length, UPKGOptions *o) {
+    char tmpbuffer[512];
+    int32_t start = -1;
+    int32_t count = 0;
+
+    for (int32_t i = 0; i < length; i++) {
+        if (flag[i] == MAP_FILE_EXT[count]) {
+            if (count == 0) {
+                start = i;
+            }
+            count++;
+        } else {
+            count = 0;
+        }
+
+        if (count == uprv_strlen(MAP_FILE_EXT)) {
+            break;
+        }
+    }
+
+    if (start >= 0) {
+        int32_t index = 0;
+        for (int32_t i = 0;;i++) {
+            if (i == start) {
+                for (int32_t n = 0;;n++) {
+                    if (o->shortName[n] == 0) {
+                        break;
+                    }
+                    tmpbuffer[index++] = o->shortName[n];
+                }
+            }
+
+            tmpbuffer[index++] = flag[i];
+
+            if (flag[i] == 0) {
+                break;
+            }
+        }
+
+        uprv_memset(flag, 0, length);
+        uprv_strcpy(flag, tmpbuffer);
     }
 }
 
