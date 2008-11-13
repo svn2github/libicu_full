@@ -502,14 +502,12 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
         } else /* if (mode[0] == MODE_STATIC || mode[0] == MODE_DLL) */ {
             char gencFilePath[512];
 
-#ifndef U_WINDOWS
             if (pkg_readInFlags(o->options) < 0) {
                 fprintf(stderr,"Unable to open or read \"%s\" option file.\n", o->options);
                 return -1;
             }
-#endif
 
-            if (pkgDataFlags[GENCCODE_ASSEMBLY_TYPE] != 0) {
+            if (pkgDataFlags[GENCCODE_ASSEMBLY_TYPE][0] != 0) {
                 const char* genccodeAssembly = pkgDataFlags[GENCCODE_ASSEMBLY_TYPE];
 
                 /* Offset genccodeAssembly by 3 because "-a " */
