@@ -502,10 +502,12 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
         } else /* if (mode[0] == MODE_STATIC || mode[0] == MODE_DLL) */ {
             char gencFilePath[512];
 
+#ifndef U_WINDOWS
             if (pkg_readInFlags(o->options) < 0) {
                 fprintf(stderr,"Unable to open or read \"%s\" option file.\n", o->options);
                 return -1;
             }
+#endif
 
             if (pkgDataFlags[GENCCODE_ASSEMBLY_TYPE] != 0) {
                 const char* genccodeAssembly = pkgDataFlags[GENCCODE_ASSEMBLY_TYPE];
@@ -657,18 +659,20 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                     version_major[0] = 0;
                 }
 
-                sprintf(libFileVersionTmp, "%s.%s.%s",
+                sprintf(libFileVersionTmp, "%s%s%s.%s",
                         libFile,
+                        pkgDataFlags[LIB_EXT_ORDER][0] == '.' ? "." : "",
                         reverseExt ? o->version : pkgDataFlags[SOBJ_EXT],
                         reverseExt ? pkgDataFlags[SOBJ_EXT] : o->version);
 
-                sprintf(libFileMajor, "%s.%s.%s",
+                sprintf(libFileMajor, "%s%s%s.%s",
                         libFile,
+                        pkgDataFlags[LIB_EXT_ORDER][0] == '.' ? "." : "",
                         reverseExt ? version_major : pkgDataFlags[SO_EXT],
                         reverseExt ? pkgDataFlags[SO_EXT] : version_major);
 
                 /* Generate the library file. */
-                sprintf(cmd, "%s -shared -o %s%s %s %s%s %s %s",
+                sprintf(cmd, "%s -o %s%s %s %s%s %s %s",
                         pkgDataFlags[GENLIB],
                         targetDir,
                         libFileVersionTmp,
@@ -685,16 +689,19 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                 }
 
                 /* Certain platforms uses archive library. (e.g. AIX) */
-                if (uprv_strcmp(pkgDataFlags[SOBJ_EXT], pkgDataFlags[SO_EXT]) == 0 && uprv_strcmp(pkgDataFlags[A_EXT], pkgDataFlags[SO_EXT]) == 0) {
-                    sprintf(libFileVersion, "%s.%s.%s",
+                if (uprv_strcmp(pkgDataFlags[SOBJ_EXT], pkgDataFlags[SO_EXT]) != 0 && uprv_strcmp(pkgDataFlags[A_EXT], pkgDataFlags[SO_EXT]) == 0) {
+                    sprintf(libFileVersion, "%s%s%s.%s",
                             libFile,
+                            pkgDataFlags[LIB_EXT_ORDER][0] == '.' ? "." : "",
                             reverseExt ? o->version : pkgDataFlags[SO_EXT],
                             reverseExt ? pkgDataFlags[SO_EXT] : o->version);
 
-                    sprintf(cmd, "%s %s %s %s",
+                    sprintf(cmd, "%s %s %s%s %s%s",
                             pkgDataFlags[AR],
                             pkgDataFlags[ARFLAGS],
+                            targetDir,
                             libFileVersionTmp,
+                            targetDir,
                             libFileVersion);
 
                     result = system(cmd);
