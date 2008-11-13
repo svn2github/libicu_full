@@ -700,9 +700,9 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                             pkgDataFlags[AR],
                             pkgDataFlags[ARFLAGS],
                             targetDir,
-                            libFileVersionTmp,
+                            libFileVersion,
                             targetDir,
-                            libFileVersion);
+                            libFileVersionTmp);
 
                     result = system(cmd);
                     if (result != 0) {
@@ -805,6 +805,13 @@ static int32_t pkg_readInFlags(const char *fileName) {
     char *pBuffer;
     int32_t result = 0;
 
+#ifdef U_WINDOWS
+    /* Zero out the flags since it is not being used. */
+    for (int32_t i = 0; i < PKGDATA_FLAGS_SIZE; i++) {
+        pkgDataFlags[i][0] = 0;
+    }
+
+#else
     FileStream *f = T_FileStream_open(fileName, "r");
     if (f == NULL) {
         return -1;
@@ -820,6 +827,7 @@ static int32_t pkg_readInFlags(const char *fileName) {
     }
 
     T_FileStream_close(f);
+#endif
 
     return result;
 }
