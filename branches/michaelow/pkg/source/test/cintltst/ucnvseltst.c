@@ -26,14 +26,10 @@
 #define FILENAME_BUFFER 1024
 
 #define TDSRCPATH  ".."U_FILE_SEP_STRING"test"U_FILE_SEP_STRING"testdata"U_FILE_SEP_STRING
-        
-
-
 
 static FILE *fopenOrError(const char *filename) {
     int32_t needLen;
     FILE *f;
-    UErrorCode status = U_ZERO_ERROR;
     char fnbuf[FILENAME_BUFFER];
     const char* directory= ctest_dataSrcDir();
     needLen = uprv_strlen(directory)+uprv_strlen(TDSRCPATH)+uprv_strlen(filename)+1;
@@ -57,13 +53,10 @@ static FILE *fopenOrError(const char *filename) {
 
 void addCnvSelTest(TestNode** root)
 {
-    addTest(root, &TestConversionUTF16, "ucnv/ucnvseltst/TestConversionUTF16");
-    addTest(root, &TestConversionUTF8, "ucnv/ucnvseltst/TestConversionUTF8");
-    addTest(root, &TestSerializationAndUnserialization, "ucnv/ucnvseltst/TestSerializationAndUnserialization");
+    addTest(root, &TestConversionUTF16, "tsconv/ucnvseltst/TestConversionUTF16");
+    addTest(root, &TestConversionUTF8, "tsconv/ucnvseltst/TestConversionUTF8");
+    addTest(root, &TestSerializationAndUnserialization, "tsconv/ucnvseltst/TestSerializationAndUnserialization");
 }
-
-
-
 
 /*
  * there doesn't seem to be a fn in ucnv to get the index of a converter
@@ -271,10 +264,12 @@ static void TestConversionUTF8()
         res1 = ucnvsel_selectForUTF8(sel, text+i, -1, &status);
         /* make sure result is correct! */
         verifyResultUTF8(text+i, (const char**) encodings, num_rndm_encodings, res1, excluded_sets[excluded_set_id], UCNV_ROUNDTRIP_SET);
+        uenum_close(res1);
 
         res1 = ucnvsel_selectForUTF8(sel, text+i, uprv_strlen(text+i), &status);
         /* make sure result is correct! */
         verifyResultUTF8(text+i, (const char**)encodings, num_rndm_encodings, res1, excluded_sets[excluded_set_id], UCNV_ROUNDTRIP_SET);
+        uenum_close(res1);
       }
     }
     uprv_free(text);
@@ -366,12 +361,16 @@ static void TestConversionUTF8()
         res1 = ucnvsel_selectForUTF8(sel, text+i, -1, &status);
         /* make sure result is correct! */
         verifyResultUTF8(text+i, (const char**)encodings, num_rndm_encodings, res1,excluded_sets[excluded_set_id],  UCNV_ROUNDTRIP_AND_FALLBACK_SET);
+        uenum_close(res1);
 
         res1 = ucnvsel_selectForUTF8(sel, text+i, uprv_strlen(text+i), &status);
         /* make sure result is correct! */
         verifyResultUTF8(text+i, (const char**)encodings, num_rndm_encodings, res1,excluded_sets[excluded_set_id],  UCNV_ROUNDTRIP_AND_FALLBACK_SET);
+        uenum_close(res1);
       }
     }
+    uprv_free(encodings[0]);
+    uprv_free(encodings);
     uprv_free(text);
     ucnvsel_close(sel);
     prev = testCaseIdx + 1;
@@ -556,10 +555,12 @@ static void TestConversionUTF16()
         res1 = ucnvsel_selectForString(sel, text+i, -1, &status);
         /* make sure result is correct! */
         verifyResultUTF16(text+i, (const char**) encodings, num_rndm_encodings, res1, excluded_sets[excluded_set_id], UCNV_ROUNDTRIP_SET);
+        uenum_close(res1);
 
         res1 = ucnvsel_selectForString(sel, text+i, u_strlen(text+i), &status);
         /* make sure result is correct! */
         verifyResultUTF16(text+i, (const char**)encodings, num_rndm_encodings, res1, excluded_sets[excluded_set_id], UCNV_ROUNDTRIP_SET);
+        uenum_close(res1);
       }
     }
     uprv_free(text);
@@ -652,12 +653,16 @@ static void TestConversionUTF16()
         res1 = ucnvsel_selectForString(sel, text+i, -1, &status);
         /* make sure result is correct! */
         verifyResultUTF16(text+i, (const char**)encodings, num_rndm_encodings, res1,excluded_sets[excluded_set_id],  UCNV_ROUNDTRIP_AND_FALLBACK_SET);
+        uenum_close(res1);
 
         res1 = ucnvsel_selectForString(sel, text+i, u_strlen(text+i), &status);
         /* make sure result is correct! */
         verifyResultUTF16(text+i, (const char**)encodings, num_rndm_encodings, res1,excluded_sets[excluded_set_id],  UCNV_ROUNDTRIP_AND_FALLBACK_SET);
+        uenum_close(res1);
       }
     }
+    uprv_free(encodings[0]);
+    uprv_free(encodings);
     uprv_free(text);
     ucnvsel_close(sel);
     prev = testCaseIdx + 1;
@@ -754,15 +759,41 @@ static void TestSerializationAndUnserialization()
     /* first time */
     status = U_ZERO_ERROR;
     sel = ucnvsel_open((const char**)encodings, testCaseIdx-prev, excluded_sets[excluded_set_id], UCNV_ROUNDTRIP_SET, &status);
+    if (U_FAILURE(status)) {
+      log_err("ucnvsel_open(test case %d) failed: %s\n", curCase, u_errorName(status));
+      uprv_free(encodings);
+      uprv_free(names);
+      return;
+    }
 
     buffer = NULL;
     ser_len = ucnvsel_serialize(sel, NULL, 0, &status);
-    status = U_ZERO_ERROR;
+    if (status != U_BUFFER_OVERFLOW_ERROR) {
+      log_err("ucnvsel_serialize(test case %d preflighting) failed: %s\n", curCase, u_errorName(status));
+      ucnvsel_close(sel);
+      uprv_free(encodings);
+      uprv_free(names);
+      return;
+    }
     buffer = uprv_malloc(ser_len);
+    status = U_ZERO_ERROR;
     ucnvsel_serialize(sel, buffer, ser_len, &status);
-
     ucnvsel_close(sel);
-    sel = ucnvsel_unserialize( buffer,  ser_len,&status);
+    if (U_FAILURE(status)) {
+      log_err("ucnvsel_serialize(test case %d) failed: %s\n", curCase, u_errorName(status));
+      uprv_free(encodings);
+      uprv_free(names);
+      uprv_free(buffer);
+      return;
+    }
+    sel = ucnvsel_openFromSerialized( buffer,  ser_len,&status);
+    if (U_FAILURE(status)) {
+      log_err("ucnvsel_openFromSerialized(test case %d) failed: %s\n", curCase, u_errorName(status));
+      uprv_free(encodings);
+      uprv_free(names);
+      uprv_free(buffer);
+      return;
+    }
 
     /* count how many bytes (Is there a portable function that is more efficient than this?) */
     f1 = fopenOrError("ConverterSelectorTestUTF16.txt");
@@ -794,12 +825,24 @@ static void TestSerializationAndUnserialization()
           break;
         /* test, both with length, and NULL terminated */
         res1 = ucnvsel_selectForString(sel, text+i, -1, &status);
+        if (U_FAILURE(status)) {
+          log_err("ucnvsel_selectForString(test case %d, string %d with NUL) failed: %s\n",
+                  curCase, curTestCase, u_errorName(status));
+          continue;
+        }
         /* make sure result is correct! */
         verifyResultUTF16(text+i, (const char**) encodings, num_rndm_encodings, res1, excluded_sets[excluded_set_id], UCNV_ROUNDTRIP_SET);
+        uenum_close(res1);
 
         res1 = ucnvsel_selectForString(sel, text+i, u_strlen(text+i), &status);
+        if (U_FAILURE(status)) {
+          log_err("ucnvsel_selectForString(test case %d, string %d with length) failed: %s\n",
+                  curCase, curTestCase, u_errorName(status));
+          continue;
+        }
         /* make sure result is correct! */
         verifyResultUTF16(text+i, (const char**)encodings, num_rndm_encodings, res1, excluded_sets[excluded_set_id], UCNV_ROUNDTRIP_SET);
+        uenum_close(res1);
       }
     }
     uprv_free(text);
@@ -868,7 +911,7 @@ static void TestSerializationAndUnserialization()
     ucnvsel_serialize(sel, buffer, ser_len, &status);
 
     ucnvsel_close(sel);
-    sel = ucnvsel_unserialize( buffer,  ser_len,&status);
+    sel = ucnvsel_openFromSerialized( buffer,  ser_len,&status);
 
     /* count how many bytes (Is there a portable function that is more efficient than this?) */
     f1 = fopenOrError("ConverterSelectorTestUTF16.txt");
@@ -902,12 +945,16 @@ static void TestSerializationAndUnserialization()
         res1 = ucnvsel_selectForString(sel, text+i, -1, &status);
         /* make sure result is correct! */
         verifyResultUTF16(text+i, (const char**)encodings, num_rndm_encodings, res1,excluded_sets[excluded_set_id],  UCNV_ROUNDTRIP_AND_FALLBACK_SET);
+        uenum_close(res1);
 
         res1 = ucnvsel_selectForString(sel, text+i, u_strlen(text+i), &status);
         /* make sure result is correct! */
         verifyResultUTF16(text+i, (const char**)encodings, num_rndm_encodings, res1,excluded_sets[excluded_set_id],  UCNV_ROUNDTRIP_AND_FALLBACK_SET);
+        uenum_close(res1);
       }
     }
+    uprv_free(encodings[0]);
+    uprv_free(encodings);
     uprv_free(text);
     ucnvsel_close(sel);
     prev = testCaseIdx + 1;

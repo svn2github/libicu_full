@@ -605,7 +605,7 @@ TimeZone::initDefault()
         ucln_i18n_registerCleanup(UCLN_I18N_TIMEZONE, timeZone_cleanup);
     }
     umtx_unlock(&LOCK);
-
+    
     delete default_zone;
 }
 
@@ -1199,6 +1199,8 @@ TimeZone::getDisplayName(UBool daylight, EDisplayType style, const Locale& local
                 return result.remove();
             }
             format.adoptTimeZone(tz);
+        } else {
+            format.setTimeZone(*this);
         }
     } else {
         // The display name for standard time was requested, but currently in DST
