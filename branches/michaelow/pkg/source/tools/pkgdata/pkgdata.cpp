@@ -856,9 +856,9 @@ static void pkg_checkFlag(char* flag, int32_t length, UPKGOptions *o) {
             return;
         }
 
-        fprintf(tmpBuffer, "%s_dat ", o->entryName);
+        sprintf(tmpbuffer, "%s_dat ", o->entryName);
 
-        T_FileStream_writeLine(f, tmpBuffer);
+        T_FileStream_writeLine(f, tmpbuffer);
 
         T_FileStream_close(f);
     }
