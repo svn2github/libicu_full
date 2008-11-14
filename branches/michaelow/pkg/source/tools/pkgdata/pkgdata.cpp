@@ -803,7 +803,10 @@ static void extractFlag(char* buffer, int32_t bufferSize, char* flag) {
 static const char MAP_FILE_EXT[] = ".map";
 
 static void pkg_checkFlag(char* flag, int32_t length, UPKGOptions *o) {
+#ifdef U_AIX
+    FileStream *f = NULL;
     char tmpbuffer[512];
+    char mapFile[512] = "";
     int32_t start = -1;
     int32_t count = 0;
 
@@ -843,7 +846,23 @@ static void pkg_checkFlag(char* flag, int32_t length, UPKGOptions *o) {
 
         uprv_memset(flag, 0, length);
         uprv_strcpy(flag, tmpbuffer);
+
+        uprv_strcpy(mapFile, o->shortName);
+        uprv_strcat(mapFile, MAP_FILE_EXT);
+
+        f = T_FileStream_open(mapFile, "w");
+        if (f == NULL) {
+            fprintf(stderr,"Unable to create map file: %s.\n", mapFile);
+            return;
+        }
+
+        fprintf(tmpBuffer, "%s_dat ", o->entryName);
+
+        T_FileStream_writeLine(f, tmpBuffer);
+
+        T_FileStream_close(f);
     }
+#endif
 }
 
 #define MAX_BUFFER_SIZE 2048
