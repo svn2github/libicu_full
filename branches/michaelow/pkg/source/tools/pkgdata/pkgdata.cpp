@@ -139,6 +139,7 @@ enum {
     COMPILER,
     LIBFLAGS,
     GENLIB,
+    LDICUDTFLAGS,
     LD_SONAME,
     RPATH_FLAGS,
     BIR_FLAGS,
@@ -152,7 +153,7 @@ static char pkgDataFlags[PKGDATA_FLAGS_SIZE][512];
 
 static int32_t pkg_readInFlags(const char* fileName);
 
-static void pkg_checkFlag(char* flag, int32_t length, UPKGOptions *o);
+static void pkg_checkFlag(UPKGOptions *o);
 
 const char options_help[][320]={
     "Set the data name",
@@ -465,12 +466,9 @@ main(int argc, char* argv[]) {
 static int32_t pkg_executeOptions(UPKGOptions *o) {
     int32_t result = 0;
     const char mode = o->mode[0];
-    char datFileName[256];
-    char datFileNamePath[2048];
+    char datFileName[256] = "";
+    char datFileNamePath[2048] = "";
     char cmd[1024];
-
-    uprv_memset(datFileName, 0, sizeof(datFileName));
-    uprv_memset(datFileNamePath, 0, sizeof(datFileNamePath));
 
     if (mode == MODE_FILES) {
         // TODO: Copy files over
@@ -491,8 +489,7 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
             return result;
         }
         if (mode == MODE_COMMON) {
-            char targetFileNamePath[2048];
-            uprv_memset(targetFileNamePath, 0, sizeof(targetFileNamePath));
+            char targetFileNamePath[2048] = "";
 
             if (o->targetDir != NULL) {
                 uprv_strcpy(targetFileNamePath, o->targetDir);
@@ -534,8 +531,7 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
 
 #ifdef U_WINDOWS
             if (mode == MODE_STATIC) {
-                char staticLibFilePath[512];
-                uprv_memset(staticLibFilePath, 0, sizeof(staticLibFilePath));
+                char staticLibFilePath[512] = "";
 
                 if (o->tmpDir != NULL || o->targetDir != NULL) {
                     uprv_strcpy(staticLibFilePath, o->tmpDir != NULL ? o->tmpDir : o->targetDir);
@@ -550,12 +546,9 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                         staticLibFilePath,
                         gencFilePath);
             } else if (mode == MODE_DLL) {
-                char dllFilePath[512];
-                char libFilePath[512];
-                char resFilePath[512];
-                uprv_memset(dllFilePath, 0, sizeof(dllFilePath));
-                uprv_memset(libFilePath, 0, sizeof(libFilePath));
-                uprv_memset(resFilePath, 0, sizeof(resFilePath));
+                char dllFilePath[512] = "";
+                char libFilePath[512] = "";
+                char resFilePath[512] = "";
 
                 if (o->tmpDir != NULL || o->targetDir != NULL) {
 #ifdef CYGWINMSVC
@@ -593,11 +586,14 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                         );
             }
 #else
-            char libFile[512];
-            char targetDir[512];
-            char tempObjectFile[512];
-
-            uprv_memset(targetDir, 0, sizeof(targetDir));
+#ifdef U_CYGWIN
+            char libFileCygwin[512];
+            sprintf(libFileCygwin, "cyg%s",
+                    o->libName);
+#endif
+            char libFile[512] = "";
+            char targetDir[512] = "";
+            char tempObjectFile[512] = "";
 
             if (o->targetDir != NULL) {
                 uprv_strcpy(targetDir, o->targetDir);
@@ -639,10 +635,10 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
 
             } else /* if (mode == MODE_DLL) */ {
                 UBool reverseExt = FALSE;
-                char version_major[10];
-                char libFileVersion[512];
-                char libFileVersionTmp[512];
-                char libFileMajor[512];
+                char version_major[10] = "";
+                char libFileVersion[512] = "";
+                char libFileVersionTmp[512] = "";
+                char libFileMajor[512] = "";
 
                 /* Certain platforms have different library extension ordering. (e.g. libicudata.##.so vs libicudata.so.##) */
                 if (pkgDataFlags[LIB_EXT_ORDER][uprv_strlen(pkgDataFlags[LIB_EXT_ORDER])-1] == pkgDataFlags[SO_EXT][uprv_strlen(pkgDataFlags[SO_EXT])-1]) {
@@ -658,34 +654,54 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                         }
                         version_major[i] = o->version[i];
                     }
-                } else {
-                    version_major[0] = 0;
                 }
 
+#ifdef U_CYGWIN
+                sprintf(libFileCygwin, "cyg%s%s.%s",
+                        o->libName,
+                        version_major,
+                        pkgDataFlags[SO_EXT]);
+
+                sprintf(pkgDataFlags[SO_EXT], "%s.%s",
+                        pkgDataFlags[SO_EXT],
+                        pkgDataFlags[A_EXT]);
+#else
                 sprintf(libFileVersionTmp, "%s%s%s.%s",
                         libFile,
                         pkgDataFlags[LIB_EXT_ORDER][0] == '.' ? "." : "",
                         reverseExt ? o->version : pkgDataFlags[SOBJ_EXT],
                         reverseExt ? pkgDataFlags[SOBJ_EXT] : o->version);
-
+#endif
                 sprintf(libFileMajor, "%s%s%s.%s",
                         libFile,
                         pkgDataFlags[LIB_EXT_ORDER][0] == '.' ? "." : "",
                         reverseExt ? version_major : pkgDataFlags[SO_EXT],
                         reverseExt ? pkgDataFlags[SO_EXT] : version_major);
 
-                pkg_checkFlag(pkgDataFlags[BIR_FLAGS], uprv_strlen(pkgDataFlags[BIR_FLAGS]), o);
+#ifdef U_CYGWIN
+                uprv_strcpy(libFileVersionTmp, libFileMajor);
+#endif
+
+                pkg_checkFlag(o);
+
                 /* Generate the library file. */
-                sprintf(cmd, "%s -o %s%s %s %s%s %s %s",
+#ifdef U_CYGWIN
+                sprintf(cmd, "%s %s%s%s -o %s%s %s %s%s %s %s",
+#else
+                sprintf(cmd, "%s %s -o %s%s %s %s%s %s %s",
+#endif
                         pkgDataFlags[GENLIB],
+                        pkgDataFlags[LDICUDTFLAGS],
                         targetDir,
                         libFileVersionTmp,
+#ifdef U_CYGWIN
+                        targetDir, libFileCygwin,
+#endif
                         tempObjectFile,
                         pkgDataFlags[LD_SONAME],
                         pkgDataFlags[LD_SONAME][0] == 0 ? "" : libFileMajor,
                         pkgDataFlags[RPATH_FLAGS],
-                        pkgDataFlags[BIR_FLAGS]
-                        );
+                        pkgDataFlags[BIR_FLAGS]);
 
                 result = system(cmd);
                 if (result != 0) {
@@ -725,24 +741,29 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                     }
 
                 } else {
-                    uprv_memset(libFileVersion, 0, sizeof(libFileVersion));
-                    strcpy(libFileVersion, libFileVersionTmp);
+                    uprv_strcpy(libFileVersion, libFileVersionTmp);
                 }
 
                 /* Create symbolic links for the final library file. */
-                sprintf(cmd,"%s %s%s && %s %s%s %s%s && %s %s%s.%s && %s %s%s %s%s.%s",
+#ifndef U_CYGWIN
+                sprintf(cmd, "%s %s%s && %s %s%s %s%s",
                         RM_CMD,
                         targetDir, libFileMajor,
                         LN_CMD,
                         targetDir, libFileVersion,
-                        targetDir, libFileMajor,
+                        targetDir, libFileMajor);
+                result = system(cmd);
+                if (result != 0) {
+                    return result;
+                }
+#endif
+                sprintf(cmd, "%s %s%s.%s && %s %s%s %s%s.%s",
                         RM_CMD,
                         targetDir, libFile, pkgDataFlags[SO_EXT],
                         LN_CMD,
                         targetDir, libFileVersion,
                         targetDir, libFile, pkgDataFlags[SO_EXT]);
             }
-
 #endif
         }
 
@@ -800,15 +821,19 @@ static void extractFlag(char* buffer, int32_t bufferSize, char* flag) {
     }
 }
 
-static const char MAP_FILE_EXT[] = ".map";
-
-static void pkg_checkFlag(char* flag, int32_t length, UPKGOptions *o) {
-#ifdef U_AIX
-    FileStream *f = NULL;
+static void pkg_checkFlag(UPKGOptions *o) {
+    char *flag;
+    int32_t length;
     char tmpbuffer[512];
+#ifdef U_AIX
+    const char MAP_FILE_EXT[] = ".map";
+    FileStream *f = NULL;
     char mapFile[512] = "";
     int32_t start = -1;
     int32_t count = 0;
+
+    flag = pkgDataFlags[BIR_FLAGS];
+    length = uprv_strlen(pkgDataFlags[BIR_FLAGS]);
 
     for (int32_t i = 0; i < length; i++) {
         if (flag[i] == MAP_FILE_EXT[count]) {
@@ -862,6 +887,19 @@ static void pkg_checkFlag(char* flag, int32_t length, UPKGOptions *o) {
 
         T_FileStream_close(f);
     }
+#elif defined(U_CYGWIN)
+    flag = pkgDataFlags[GENLIB];
+    length = uprv_strlen(pkgDataFlags[GENLIB]);
+
+    int32_t position = length - 1;
+
+    for(;position >= 0;position--) {
+        if (flag[position] == '=') {
+            break;
+        }
+    }
+
+    uprv_memset(flag + position, 0, length - position);
 #endif
 }
 
