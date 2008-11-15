@@ -442,6 +442,19 @@ main(int argc, char* argv[]) {
 
     result = pkg_executeOptions(&o);
 
+    if (o.cShortName != NULL) {
+        uprv_free((char *)o.cShortName);
+    }
+    if (o.fileListFiles != NULL) {
+        pkg_deleteList(o.fileListFiles);
+    }
+    if (o.filePaths != NULL) {
+        pkg_deleteList(o.filePaths);
+    }
+    if (o.files != NULL) {
+        pkg_deleteList(o.files);
+    }
+
     return result;
 }
 
@@ -746,23 +759,25 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
 
                 /* Create symbolic links for the final library file. */
 #ifndef U_CYGWIN
-                sprintf(cmd, "%s %s%s && %s %s%s %s%s",
+                sprintf(cmd, "cd %s && %s %s && %s %s %s",
+                        targetDir,
                         RM_CMD,
-                        targetDir, libFileMajor,
+                        libFileMajor,
                         LN_CMD,
-                        targetDir, libFileVersion,
-                        targetDir, libFileMajor);
+                        libFileVersion,
+                        libFileMajor);
                 result = system(cmd);
                 if (result != 0) {
                     return result;
                 }
 #endif
-                sprintf(cmd, "%s %s%s.%s && %s %s%s %s%s.%s",
+                sprintf(cmd, "cd %s && %s %s.%s && %s %s %s.%s",
+                        targetDir,
                         RM_CMD,
-                        targetDir, libFile, pkgDataFlags[SO_EXT],
+                        libFile, pkgDataFlags[SO_EXT],
                         LN_CMD,
-                        targetDir, libFileVersion,
-                        targetDir, libFile, pkgDataFlags[SO_EXT]);
+                        libFileVersion,
+                        libFile, pkgDataFlags[SO_EXT]);
             }
 #endif
         }
