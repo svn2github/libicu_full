@@ -1073,6 +1073,7 @@ static void loadLists(UPKGOptions *o, UErrorCode *status)
 /* Try calling icu-config directly to get information */
 static void fillInMakefileFromICUConfig(UOption *option)
 {
+#if 0
 #if U_HAVE_POPEN
     FILE *p;
     size_t n;
@@ -1170,4 +1171,5 @@ static void fillInMakefileFromICUConfig(UOption *option)
        information or else fail.. */
 
 #endif
+#endif /* End of #if 0 */
 }
