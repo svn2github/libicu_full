@@ -569,6 +569,10 @@ static char *printOrders(char *buffer, OrderList &list)
 void SSearchTest::offsetTest()
 {
     const char *test[] = {
+        // The sequence \u0FB3\u0F71\u0F71\u0F80 contains a discontiguous
+        // contraction (\u0FB3\u0F71\u0F80) logically followed by \u0F71.
+        "\\u1E33\\u0FB3\\u0F71\\u0F71\\u0F80\\uD835\\uDF6C\\u01B0",
+
         "\\ua191\\u16ef\\u2036\\u017a",
 
 #if 0
