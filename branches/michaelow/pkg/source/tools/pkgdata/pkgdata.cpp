@@ -235,11 +235,13 @@ main(int argc, char* argv[]) {
         }
 #endif
 
+#ifndef U_WINDOWS
         if(!options[BLDOPT].doesOccur) {
             fprintf(stderr, " required parameter is missing: -O is required \n");
             fprintf(stderr, "Run '%s --help' for help.\n", progname);
             return 1;
         }
+#endif
 
         if(!options[NAME].doesOccur) /* -O we already have - don't report it. */
         {
