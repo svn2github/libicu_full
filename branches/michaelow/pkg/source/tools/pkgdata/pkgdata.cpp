@@ -666,16 +666,18 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
 #ifdef U_CYGWIN
                 uprv_strcpy(libFileVersionTmp, libFileMajor);
 
-                sprintf(cmd, "%s %s%s%s -o %s%s %s %s%s %s %s",
+                sprintf(cmd, "%s%s%s %s -o %s%s %s %s%s %s %s",
+                        pkgDataFlags[GENLIB],
+                        targetDir,
+                        libFileVersionTmp,
+                        pkgDataFlags[LDICUDTFLAGS],
+                        targetDir, libFileCygwin,
 #else
                 sprintf(cmd, "%s %s -o %s%s %s %s%s %s %s",
-#endif
                         pkgDataFlags[GENLIB],
                         pkgDataFlags[LDICUDTFLAGS],
                         targetDir,
                         libFileVersionTmp,
-#ifdef U_CYGWIN
-                        targetDir, libFileCygwin,
 #endif
                         tempObjectFile,
                         pkgDataFlags[LD_SONAME],
@@ -878,6 +880,7 @@ static void pkg_checkFlag(UPKGOptions *o) {
 
     for(;position >= 0;position--) {
         if (flag[position] == '=') {
+            position++;
             break;
         }
     }
