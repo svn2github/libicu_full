@@ -188,12 +188,12 @@ const char  *progname = "PKGDATA";
 int
 main(int argc, char* argv[]) {
     int result = 0;
-    FileStream  *out;
+    /* FileStream  *out; */
     UPKGOptions  o;
     CharList    *tail;
     UBool        needsHelp = FALSE;
     UErrorCode   status = U_ZERO_ERROR;
-    char         tmp[1024];
+    /* char         tmp[1024]; */
     int32_t i;
 
     U_MAIN_INIT_ARGS(argc, argv);
@@ -223,23 +223,16 @@ main(int argc, char* argv[]) {
             return 1;
         }
 
-        if(!options[BLDOPT].doesOccur) {
-            /* Try to fill in from icu-config or equivalent */
-            fillInMakefileFromICUConfig(&options[1]);
-        }
-#ifdef U_MAKE_IS_NMAKE
-        else {
-            fprintf(stderr, "Warning: You are using the deprecated -O option\n"
-                            "\tYou can fix this warning by installing pkgdata, gencmn and genccode\n"
-                            "\tinto the same directory and not specifying the -O option to pkgdata.\n");
-        }
-#endif
 
 #ifndef U_WINDOWS
         if(!options[BLDOPT].doesOccur) {
             fprintf(stderr, " required parameter is missing: -O is required \n");
             fprintf(stderr, "Run '%s --help' for help.\n", progname);
             return 1;
+        }
+#else
+        if(options[BLDOPT].doesOccur) {
+            fprintf(stderr, "Warning: You are using the -O option which is not needed for MSVC build on Windows.\n");
         }
 #endif
 
@@ -345,33 +338,8 @@ main(int argc, char* argv[]) {
     }
 
     o.verbose   = options[VERBOSE].doesOccur;
-#ifdef U_MAKE_IS_NMAKE /* format is R:pathtoICU or D:pathtoICU */
-    {
-        char *pathstuff = (char *)options[BLDOPT].value;
-        if(options[1].value[uprv_strlen(options[BLDOPT].value)-1] == '\\') {
-            pathstuff[uprv_strlen(options[BLDOPT].value)-1] = '\0';
-        }
-        if(*pathstuff == PKGDATA_DERIVED_PATH || *pathstuff == 'R' || *pathstuff == 'D') {
-            o.options = pathstuff;
-            pathstuff++;
-            if(*pathstuff == ':') {
-                *pathstuff = '\0';
-                pathstuff++;
-            }
-            else {
-                fprintf(stderr, "Error: invalid windows build mode, should be R (release) or D (debug).\n");
-                return 1;
-            }
-        } else {
-            fprintf(stderr, "Error: invalid windows build mode, should be R (release) or D (debug).\n");
-            return 1;
-        }
-        o.icuroot = pathstuff;
-        if (o.verbose) {
-            fprintf(stdout, "# ICUROOT is %s\n", o.icuroot);
-        }
-    }
-#else /* on UNIX, we'll just include the file... */
+
+#ifndef U_WINDOWS /* on UNIX, we'll just include the file... */
     o.options   = options[BLDOPT].value;
 #endif
     if(options[COPYRIGHT].doesOccur) {
@@ -693,14 +661,11 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                         reverseExt ? version_major : pkgDataFlags[SO_EXT],
                         reverseExt ? pkgDataFlags[SO_EXT] : version_major);
 
-#ifdef U_CYGWIN
-                uprv_strcpy(libFileVersionTmp, libFileMajor);
-#endif
-
                 pkg_checkFlag(o);
 
-                /* Generate the library file. */
 #ifdef U_CYGWIN
+                uprv_strcpy(libFileVersionTmp, libFileMajor);
+
                 sprintf(cmd, "%s %s%s%s -o %s%s %s %s%s %s %s",
 #else
                 sprintf(cmd, "%s %s -o %s%s %s %s%s %s %s",
@@ -718,6 +683,7 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                         pkgDataFlags[RPATH_FLAGS],
                         pkgDataFlags[BIR_FLAGS]);
 
+                /* Generate the library file. */
                 result = system(cmd);
                 if (result != 0) {
                     return result;
@@ -925,8 +891,6 @@ static void pkg_checkFlag(UPKGOptions *o) {
  * Reads in the given fileName and stores the data in pkgDataFlags.
  */
 static int32_t pkg_readInFlags(const char *fileName) {
-    char buffer[MAX_BUFFER_SIZE];
-    char *pBuffer;
     int32_t result = 0;
 
 #ifdef U_WINDOWS
@@ -936,6 +900,8 @@ static int32_t pkg_readInFlags(const char *fileName) {
     }
 
 #else
+    char buffer[MAX_BUFFER_SIZE];
+
     FileStream *f = T_FileStream_open(fileName, "r");
     if (f == NULL) {
         return -1;
