@@ -725,7 +725,7 @@ CEList::CEList(UCollator *coll, const UnicodeString &string)
     uint32_t strengthMask = 0;
     int32_t order;
 
-#if 0
+#if 1
     switch (ucol_getStrength(coll)) 
     {
     default:
@@ -968,10 +968,17 @@ StringToCEsMap::StringToCEsMap()
 {
     UErrorCode status = U_ZERO_ERROR;
 
+#if 1
+    map = uhash_open(uhash_hashUnicodeString,
+                     uhash_compareUnicodeString,
+                     uhash_compareLong,
+                     &status);
+#else
     map = uhash_open(uhash_hashCaselessUnicodeString,
                      uhash_compareCaselessUnicodeString,
                      uhash_compareLong,
                      &status);
+#endif
 
     uhash_setValueDeleter(map, deleteCEList);
     uhash_setKeyDeleter(map, deleteUnicodeStringKey);
@@ -1471,7 +1478,8 @@ int32_t CollData::minLengthInChars(const CEList *ceList, int32_t offset, int32_t
 
     if (shortestLength == INT32_MAX) {
         // no matching strings at this offset - just move on.
-        shortestLength = offset < (maxOffset - 1)? minLengthInChars(ceList, offset + 1, history) : 0;
+      //shortestLength = offset < (maxOffset - 1)? minLengthInChars(ceList, offset + 1, history) : 0;
+        return -1;
     }
 
     history[offset] = shortestLength;
@@ -1531,20 +1539,20 @@ BadCharacterTable::BadCharacterTable(CEList &patternCEs, CollData *data, int32_t
         history[i] = -1;
     }
 
-    maxSkip = data->minLengthInChars(&patternCEs, 0, history) /*+ sunday*/;
-
     for(int32_t j = 0; j < HASH_TABLE_SIZE; j += 1) {
         badCharacterTable[j] = maxSkip;
     }
 
     minLengthCache = new int32_t[plen + 1];
 
-    for(int32_t p = 0; p < plen; p += 1) {
+    maxSkip = minLengthCache[0] = data->minLengthInChars(&patternCEs, 0, history) /*+ sunday*/;
+
+    for(int32_t p = 1; p < plen; p += 1) {
         minLengthCache[p] = data->minLengthInChars(&patternCEs, p, history);
 
         // Make sure this entry is not bigger than the previous one.
         // Otherwise, we might skip too far in some cases.
-        if (p > 0 && minLengthCache[p] > minLengthCache[p - 1]) {
+        if (minLengthCache[p] < 0 || minLengthCache[p] > minLengthCache[p - 1]) {
             minLengthCache[p] = minLengthCache[p - 1];
         }
     }
@@ -1810,7 +1818,9 @@ Target::Target(BoyerMooreSearch *bms, const UnicodeString &target)
     charBreakIterator = ubrk_open(UBRK_CHARACTER, ucol_getLocale(coll, ULOC_VALID_LOCALE, &status),
                                   target.getBuffer(), target.length(), &status);
 
-#if 0
+#if 1
+    strengthMask = 0;
+
     switch (ucol_getStrength(coll)) 
     {
     default:
@@ -2244,7 +2254,8 @@ static UBool sundayQuickSearch(BoyerMooreSearch *bms, const UnicodeString &targe
 void SSearchTest::boyerMooreTest()
 {
     UErrorCode status = U_ZERO_ERROR;
-    UCollator *coll = ucol_open(NULL, &status);
+ //UCollator *coll = ucol_open(NULL, &status);
+    UCollator *coll = ucol_openFromShortString("S1", FALSE, NULL, &status);
     UnicodeString lp  = "fuss";
     UnicodeString sp = "fu\\u00DF";
     BoyerMooreSearch longPattern(coll, lp.unescape());
@@ -2930,7 +2941,7 @@ int32_t SSearchTest::monkeyTestCase(UCollator *coll, const UnicodeString &testCa
     boyerMooreSearch(bms, testCase, 0, actualStart, actualEnd);
 #endif
 
-    if (actualStart != expectedStart || actualEnd != expectedEnd) {
+    if (expectedStart >= 0 && (actualStart != expectedStart || actualEnd != expectedEnd)) {
         errln("Search for <pattern> in <%s> failed: expected [%d, %d], got [%d, %d]\n"
               "    strength=%s seed=%d",
               name, expectedStart, expectedEnd, actualStart, actualEnd, strength, seed);
@@ -2958,7 +2969,7 @@ int32_t SSearchTest::monkeyTestCase(UCollator *coll, const UnicodeString &testCa
     boyerMooreSearch(abms, testCase, 0, actualStart, actualEnd);
 #endif
 
-    if (actualStart != expectedStart || actualEnd != expectedEnd) {
+    if (expectedStart >= 0 && (actualStart != expectedStart || actualEnd != expectedEnd)) {
         errln("Search for <alt_pattern> in <%s> failed: expected [%d, %d], got [%d, %d]\n"
               "    strength=%s seed=%d",
               name, expectedStart, expectedEnd, actualStart, actualEnd, strength, seed);
@@ -2993,6 +3004,7 @@ void SSearchTest::monkeyTest(char *params)
     StringToCEsMap *charsToCEList = new StringToCEsMap();
     CEToStringsMap *ceToCharsStartingWith = new CEToStringsMap();
 
+    ucol_setStrength(coll, UCOL_PRIMARY);
     ucol_getContractionsAndExpansions(coll, contractions, expansions, FALSE, &status);
 
     uset_addAll(charsToTest, contractions);
@@ -3031,7 +3043,7 @@ void SSearchTest::monkeyTest(char *params)
     int32_t strengthCount = sizeof(strengths) / sizeof(strengths[0]);
     int32_t loopCount = quick? 1000 : 10000;
     int32_t firstStrength = 0;
-    int32_t lastStrength  = /*strengthCount - 1; //*/ 0;
+    int32_t lastStrength  = strengthCount - 1; //*/ 0;
 
     if (params != NULL) {
 #if !UCONFIG_NO_REGULAR_EXPRESSIONS
