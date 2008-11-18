@@ -1539,13 +1539,13 @@ BadCharacterTable::BadCharacterTable(CEList &patternCEs, CollData *data, int32_t
         history[i] = -1;
     }
 
-    for(int32_t j = 0; j < HASH_TABLE_SIZE; j += 1) {
-        badCharacterTable[j] = maxSkip;
-    }
-
     minLengthCache = new int32_t[plen + 1];
 
     maxSkip = minLengthCache[0] = data->minLengthInChars(&patternCEs, 0, history) /*+ sunday*/;
+
+    for(int32_t j = 0; j < HASH_TABLE_SIZE; j += 1) {
+        badCharacterTable[j] = maxSkip;
+    }
 
     for(int32_t p = 1; p < plen; p += 1) {
         minLengthCache[p] = data->minLengthInChars(&patternCEs, p, history);
