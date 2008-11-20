@@ -39,6 +39,7 @@
 #include "package.h"
 #include "pkg_icu.h"
 #include "pkg_genc.h"
+#include "pkg_gencmn.h"
 
 
 #if U_HAVE_POPEN
@@ -55,6 +56,15 @@ U_CDECL_END
 static void loadLists(UPKGOptions *o, UErrorCode *status);
 
 static int32_t pkg_executeOptions(UPKGOptions *o);
+
+#ifdef U_WINDOWS
+static int32_t pkg_createWindowsDLL(const char mode, const char *gencFilePath, UPKGOptions *o);
+#endif
+static int32_t pkg_createSymLinks(const char *targetDir);
+static int32_t pkg_createWithoutAssemblyCode(UPKGOptions *o, const char *targetDir);
+static int32_t pkg_createWithAssemblyCode(const char *targetDir, const char mode, const char *gencFilePath);
+static int32_t pkg_archiveLibrary(const char *targetDir, const char *version, UBool reverseExt);
+static void createFileNames(const char *version_major, const char *version, const char *libName, const UBool reverseExt);
 
 /* always have this fcn, just might not do anything */
 static void fillInMakefileFromICUConfig(UOption *option);
@@ -150,6 +160,18 @@ enum {
 };
 
 static char pkgDataFlags[PKGDATA_FLAGS_SIZE][512];
+
+enum {
+    LIB_FILE,
+    LIB_FILE_VERSION_MAJOR,
+    LIB_FILE_VERSION,
+    LIB_FILE_VERSION_TMP,
+#ifdef U_CYGWIN
+    LIB_FILE_CYGWIN,
+#endif
+    LIB_FILENAMES_SIZE
+};
+static char libFileNames[LIB_FILENAMES_SIZE][256];
 
 static int32_t pkg_readInFlags(const char* fileName);
 
@@ -428,17 +450,9 @@ main(int argc, char* argv[]) {
     return result;
 }
 
-#ifdef U_WINDOWS
-#define LINK_CMD "link.exe /nologo /release /out:"
-#define LINK_FLAGS "/DLL /NOENTRY /MANIFEST:NO  /base:0x4ad00000 /implib:"
-#define LIB_CMD "LIB.exe /nologo /out:"
-#define LIB_FILE "icudt.lib"
-#define LIB_EXT ".lib"
-#define DLL_EXT ".dll"
-#else
 #define LN_CMD "ln -s"
 #define RM_CMD "rm -f"
-#endif
+
 #define ICUDATA_RES_FILE "icudata.res"
 
 #define MODE_COMMON 'c'
@@ -449,17 +463,21 @@ main(int argc, char* argv[]) {
 static int32_t pkg_executeOptions(UPKGOptions *o) {
     int32_t result = 0;
     const char mode = o->mode[0];
+    char targetDir[512] = "";
+    char tmpDir[512] = "";
     char datFileName[256] = "";
     char datFileNamePath[2048] = "";
-    char cmd[1024];
 
     if (mode == MODE_FILES) {
         // TODO: Copy files over
     } else /* if (mode == MODE_COMMON || mode == MODE_STATIC || mode == MODE_DLL) */ {
-        if (o->tmpDir != NULL) {
-            uprv_strcpy(datFileNamePath, o->tmpDir);
-            uprv_strcat(datFileNamePath, U_FILE_SEP_STRING);
-        }
+        uprv_strcpy(targetDir, o->targetDir);
+        uprv_strcat(targetDir, U_FILE_SEP_STRING);
+
+        uprv_strcpy(tmpDir, o->tmpDir);
+        uprv_strcat(tmpDir, U_FILE_SEP_STRING);
+
+        uprv_strcpy(datFileNamePath, tmpDir);
 
         uprv_strcpy(datFileName, o->shortName);
         uprv_strcat(datFileName, ".dat");
@@ -474,288 +492,431 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
         if (mode == MODE_COMMON) {
             char targetFileNamePath[2048] = "";
 
-            if (o->targetDir != NULL) {
-                uprv_strcpy(targetFileNamePath, o->targetDir);
-                uprv_strcat(targetFileNamePath, U_FILE_SEP_STRING);
-                uprv_strcat(targetFileNamePath, datFileName);
+            uprv_strcpy(targetFileNamePath, targetDir);
+            uprv_strcat(targetFileNamePath, datFileName);
 
-                /* Move the dat file created to the target directory. */
-                rename(datFileNamePath, targetFileNamePath);
+            /* Move the dat file created to the target directory. */
+            rename(datFileNamePath, targetFileNamePath);
 
-                return result;
-            }
+            return result;
         } else /* if (mode[0] == MODE_STATIC || mode[0] == MODE_DLL) */ {
-            char gencFilePath[512];
+            char gencFilePath[512] = "";
+            char version_major[10] = "";
+            UBool reverseExt = FALSE;
 
-            if (pkg_readInFlags(o->options) < 0) {
+            if (pkg_readInFlags(o->options) != 0) {
                 fprintf(stderr,"Unable to open or read \"%s\" option file.\n", o->options);
                 return -1;
             }
+
+#ifndef U_WINDOWS
+            /* Get the version major number. */
+            if (o->version != NULL) {
+                for (int32_t i = 0;i < sizeof(version_major);i++) {
+                    if (o->version[i] == '.') {
+                        version_major[i] = 0;
+                        break;
+                    }
+                    version_major[i] = o->version[i];
+                }
+            }
+
+            /* Certain platforms have different library extension ordering. (e.g. libicudata.##.so vs libicudata.so.##) */
+            if (pkgDataFlags[LIB_EXT_ORDER][uprv_strlen(pkgDataFlags[LIB_EXT_ORDER])-1] == pkgDataFlags[SO_EXT][uprv_strlen(pkgDataFlags[SO_EXT])-1]) {
+                reverseExt = TRUE;
+            }
+
+            createFileNames(version_major, o->version, o->libName, reverseExt);
+
+            pkg_checkFlag(o);
+#endif
 
             if (pkgDataFlags[GENCCODE_ASSEMBLY_TYPE][0] != 0) {
                 const char* genccodeAssembly = pkgDataFlags[GENCCODE_ASSEMBLY_TYPE];
 
                 /* Offset genccodeAssembly by 3 because "-a " */
                 if (checkAssemblyHeaderName(genccodeAssembly+3)) {
-                    /* TODO: tmpDir might be NULL */
                     writeAssemblyCode(datFileNamePath, o->tmpDir, o->entryName, NULL, gencFilePath);
+
+                    result = pkg_createWithAssemblyCode(targetDir, mode, gencFilePath);
+                    if (mode == MODE_STATIC || result != 0) {
+                        return result;
+                    }
                 } else {
                     fprintf(stderr,"Assembly type \"%s\" is unknown.\n", genccodeAssembly);
                     return -1;
                 }
             } else {
-#if defined(U_WINDOWS) || defined(U_LINUX)
-                writeObjectCode(datFileNamePath, o->tmpDir, o->entryName, NULL, NULL, gencFilePath);
-#else
-                fprintf(stderr,"Assembly type needs to be specified in config file: %s\n", o->options);
-                return -1;
-#endif
+// TODO: #if defined(U_WINDOWS) || defined(U_LINUX)
+//                writeObjectCode(datFileNamePath, o->tmpDir, o->entryName, NULL, NULL, gencFilePath);
+// #else
+                result = pkg_createWithoutAssemblyCode(o, targetDir);
+                if (result != 0) {
+                    fprintf(stderr, "Error generating package data.\n");
+                    return result;
+                }
+// #endif
             }
 
 #ifdef U_WINDOWS
-            if (mode == MODE_STATIC) {
-                char staticLibFilePath[512] = "";
-
-                if (o->tmpDir != NULL || o->targetDir != NULL) {
-                    uprv_strcpy(staticLibFilePath, o->tmpDir != NULL ? o->tmpDir : o->targetDir);
-                    uprv_strcat(staticLibFilePath, U_FILE_SEP_STRING);
-                }
-
-                uprv_strcat(staticLibFilePath, o->entryName);
-                uprv_strcat(staticLibFilePath, LIB_EXT);
-
-                sprintf(cmd, "%s\"%s\" \"%s\"",
-                        LIB_CMD,
-                        staticLibFilePath,
-                        gencFilePath);
-            } else if (mode == MODE_DLL) {
-                char dllFilePath[512] = "";
-                char libFilePath[512] = "";
-                char resFilePath[512] = "";
-
-                if (o->tmpDir != NULL || o->targetDir != NULL) {
-#ifdef CYGWINMSVC
-                    uprv_strcpy(dllFilePath, o->targetDir != NULL ? o->targetDir : o->tmpDir);
+            return pkg_createWindowsDLL(mode, gencFilePath, o);
 #else
-                    if (o->srcDir != NULL) {
-                        uprv_strcpy(dllFilePath, o->srcDir);
-                    } else {
-                        uprv_strcpy(dllFilePath, o->tmpDir != NULL ? o->tmpDir : o->targetDir);
-                    }
+
+            /* Certain platforms uses archive library. (e.g. AIX) */
+            result = pkg_archiveLibrary(targetDir, o->version, reverseExt);
+            if (result != 0) {
+               return result;
+           }
+
+            /* Create symbolic links for the final library file. */
+            result = pkg_createSymLinks(targetDir);
+        }
 #endif
-                    uprv_strcat(dllFilePath, U_FILE_SEP_STRING);
-                    uprv_strcpy(libFilePath, dllFilePath);
+    }
+    return result;
+}
 
-                    uprv_strcpy(resFilePath, o->tmpDir != NULL ? o->tmpDir : o->targetDir);
-                    uprv_strcat(resFilePath, U_FILE_SEP_STRING);
-                }
-
-                uprv_strcat(dllFilePath, o->entryName);
-                uprv_strcat(dllFilePath, DLL_EXT);
-                uprv_strcat(libFilePath, LIB_FILE);
-                uprv_strcat(resFilePath, ICUDATA_RES_FILE);
-
-                if (!T_FileStream_file_exists(resFilePath)) {
-                    uprv_memset(resFilePath, 0, sizeof(resFilePath));
-                }
-
-                sprintf(cmd, "%s\"%s\" %s\"%s\" \"%s\" \"%s\"",
-                        LINK_CMD,
-                        dllFilePath,
-                        LINK_FLAGS,
-                        libFilePath,
-                        gencFilePath,
-                        resFilePath
-                        );
-            }
-#else
+static void createFileNames(const char *version_major, const char *version, const char *libName, UBool reverseExt) {
+        sprintf(libFileNames[LIB_FILE], "%s%s",
+                pkgDataFlags[LIBPREFIX],
+                libName);
 #ifdef U_CYGWIN
-            char libFileCygwin[512];
-            sprintf(libFileCygwin, "cyg%s",
-                    o->libName);
+        sprintf(libFileNames[LIB_FILE_CYGWIN], "cyg%s%s.%s",
+                libName,
+                version_major,
+                pkgDataFlags[SO_EXT]);
+
+        sprintf(pkgDataFlags[SO_EXT], "%s.%s",
+                pkgDataFlags[SO_EXT],
+                pkgDataFlags[A_EXT]);
+#else
+        sprintf(libFileNames[LIB_FILE_VERSION_TMP], "%s%s%s.%s",
+                libFileNames[LIB_FILE],
+                pkgDataFlags[LIB_EXT_ORDER][0] == '.' ? "." : "",
+                reverseExt ? version : pkgDataFlags[SOBJ_EXT],
+                reverseExt ? pkgDataFlags[SOBJ_EXT] : version);
 #endif
-            char libFile[512] = "";
-            char targetDir[512] = "";
-            char tempObjectFile[512] = "";
+        sprintf(libFileNames[LIB_FILE_VERSION_MAJOR], "%s%s%s.%s",
+                libFileNames[LIB_FILE],
+                pkgDataFlags[LIB_EXT_ORDER][0] == '.' ? "." : "",
+                reverseExt ? version_major : pkgDataFlags[SO_EXT],
+                reverseExt ? pkgDataFlags[SO_EXT] : version_major);
 
-            if (o->targetDir != NULL) {
-                uprv_strcpy(targetDir, o->targetDir);
-                uprv_strcat(targetDir, U_FILE_SEP_STRING);
-            }
+#ifdef U_CYGWIN
+        uprv_strcpy(libFileNames[LIB_FILE_VERSION_TMP], libFileNames[LIB_FILE_VERSION_MAJOR]);
+#endif
+}
 
-            uprv_strcpy(libFile, pkgDataFlags[LIBPREFIX]);
-            uprv_strcat(libFile, o->libName);
+static int32_t pkg_createSymLinks(const char *targetDir) {
+    char cmd[2048];
+    int32_t result = 0;
 
-            /* Remove the ending .s and replace it with .o for the new object file. */
-            for(int32_t i = 0; i < sizeof(tempObjectFile); i++) {
-                tempObjectFile[i] = gencFilePath[i];
-                if (i > 0 && gencFilePath[i] == 0 && gencFilePath[i-1] == 's') {
-                    tempObjectFile[i-1] = 'o';
+#ifndef U_CYGWIN
+    sprintf(cmd, "cd %s && %s %s && %s %s %s",
+            targetDir,
+            RM_CMD,
+            libFileNames[LIB_FILE_VERSION_MAJOR],
+            LN_CMD,
+            libFileNames[LIB_FILE_VERSION],
+            libFileNames[LIB_FILE_VERSION_MAJOR]);
+    result = system(cmd);
+    if (result != 0) {
+        return result;
+    }
+#endif
+    sprintf(cmd, "cd %s && %s %s.%s && %s %s %s.%s",
+            targetDir,
+            RM_CMD,
+            libFileNames[LIB_FILE], pkgDataFlags[SO_EXT],
+            LN_CMD,
+            libFileNames[LIB_FILE_VERSION],
+            libFileNames[LIB_FILE], pkgDataFlags[SO_EXT]);
+
+     result = system(cmd);
+
+    return result;
+}
+
+static int32_t pkg_archiveLibrary(const char *targetDir, const char *version, UBool reverseExt) {
+    char cmd[2048];
+    int32_t result = 0;
+
+    if (uprv_strcmp(pkgDataFlags[SOBJ_EXT], pkgDataFlags[SO_EXT]) != 0 && uprv_strcmp(pkgDataFlags[A_EXT], pkgDataFlags[SO_EXT]) == 0) {
+        sprintf(libFileNames[LIB_FILE_VERSION], "%s%s%s.%s",
+                libFileNames[LIB_FILE],
+                pkgDataFlags[LIB_EXT_ORDER][0] == '.' ? "." : "",
+                reverseExt ? version : pkgDataFlags[SO_EXT],
+                reverseExt ? pkgDataFlags[SO_EXT] : version);
+
+        sprintf(cmd, "%s %s %s%s %s%s",
+                pkgDataFlags[AR],
+                pkgDataFlags[ARFLAGS],
+                targetDir,
+                libFileNames[LIB_FILE_VERSION],
+                targetDir,
+                libFileNames[LIB_FILE_VERSION_TMP]);
+
+        result = system(cmd);
+        if (result != 0) {
+            return result;
+        }
+
+        /* Remove unneeded library file. */
+        sprintf(cmd, "%s %s%s",
+                RM_CMD,
+                targetDir,
+                libFileNames[LIB_FILE_VERSION_TMP]);
+
+        result = system(cmd);
+        if (result != 0) {
+            return result;
+        }
+
+    } else {
+        uprv_strcpy(libFileNames[LIB_FILE_VERSION], libFileNames[LIB_FILE_VERSION_TMP]);
+    }
+
+    return result;
+}
+
+static int32_t pkg_createWithAssemblyCode(const char *targetDir, const char mode, const char *gencFilePath) {
+    char tempObjectFile[512] = "";
+    char cmd[2048];
+    int32_t result = 0;
+
+    /* Remove the ending .s and replace it with .o for the new object file. */
+    for(int32_t i = 0; i < sizeof(tempObjectFile); i++) {
+        tempObjectFile[i] = gencFilePath[i];
+        if (i > 0 && gencFilePath[i] == 0 && gencFilePath[i-1] == 's') {
+            tempObjectFile[i-1] = 'o';
+            break;
+        }
+    }
+
+    /* Generate the object file. */
+    sprintf(cmd, "%s %s -o %s %s",
+            pkgDataFlags[COMPILER],
+            pkgDataFlags[LIBFLAGS],
+            tempObjectFile,
+            gencFilePath);
+
+    result = system(cmd);
+    if (result != 0) {
+        return result;
+    }
+
+    if (mode == MODE_STATIC) {
+        sprintf(cmd, "%s %s %s%s.%s %s",
+                pkgDataFlags[AR],
+                pkgDataFlags[ARFLAGS],
+                targetDir,
+                libFileNames[LIB_FILE],
+                pkgDataFlags[A_EXT],
+                tempObjectFile);
+
+        return system(cmd);
+    } else /* if (mode == MODE_DLL) */ {
+#ifdef U_CYGWIN
+        sprintf(cmd, "%s%s%s %s -o %s%s %s %s%s %s %s",
+                pkgDataFlags[GENLIB],
+                targetDir,
+                libFileNames[LIB_FILE_VERSION_TMP],
+                pkgDataFlags[LDICUDTFLAGS],
+                targetDir, libFileNames[LIB_FILE_CYGWIN],
+#else
+        sprintf(cmd, "%s %s -o %s%s %s %s%s %s %s",
+                pkgDataFlags[GENLIB],
+                pkgDataFlags[LDICUDTFLAGS],
+                targetDir,
+                libFileNames[LIB_FILE_VERSION_TMP],
+#endif
+                tempObjectFile,
+                pkgDataFlags[LD_SONAME],
+                pkgDataFlags[LD_SONAME][0] == 0 ? "" : libFileNames[LIB_FILE_VERSION_MAJOR],
+                pkgDataFlags[RPATH_FLAGS],
+                pkgDataFlags[BIR_FLAGS]);
+
+        /* Generate the library file. */
+        result = system(cmd);
+    }
+
+    return result;
+}
+enum {
+    DATA_PREFIX_BRKITR,
+    DATA_PREFIX_COLL,
+    DATA_PREFIX_RBNF,
+    DATA_PREFIX_TRANSLIT,
+    DATA_PREFIX_LENGTH
+};
+
+const static char DATA_PREFIX[DATA_PREFIX_LENGTH][10] = {
+        "brkitr",
+        "coll",
+        "rbnf",
+        "translit"
+};
+
+static int32_t pkg_createWithoutAssemblyCode(UPKGOptions *o, const char *targetDir) {
+    CharList *list = o->filePaths;
+    CharList *listNames = o->files;
+    int32_t listSize = pkg_countCharList(list);
+    char *buffer;
+    char *cmd;
+    int32_t result = 0;
+    char gencmnFile[512] = "";
+    char tempObjectFile[512] = "";
+
+    cmd = (char *)uprv_malloc((listSize + 2) * 512);
+    buffer = (char *)uprv_malloc((listSize + 1) * 512);
+
+    for (int32_t i = 0; i < (listSize + 1); i++) {
+        const char *file ;
+        const char *name;
+
+        if (list == NULL) {
+            result = -1;
+            break;
+        }
+        if (i == 0) {
+            createCommonDataFile(o->tmpDir, o->shortName, o->entryName, NULL, o->srcDir, o->comment, o->fileListFiles->str, 0, TRUE, o->verbose, gencmnFile);
+            buffer[0] = 0;
+        } else {
+            char newName[64];
+            char *pSubstring;
+            file = list->str;
+            name = listNames->str;
+
+            newName[0] = 0;
+            for (int32_t n = 0; n < DATA_PREFIX_LENGTH; n++) {
+                pSubstring = uprv_strstr(name, DATA_PREFIX[n]);
+
+                if (pSubstring != NULL) {
+                    char newNameTmp[64] = "";
+                    const char *p = name + uprv_strlen(DATA_PREFIX[n]) + 1;
+                    for (int32_t i = 0;;i++) {
+                        if (p[i] == '.') {
+                            newNameTmp[i] = '_';
+                            continue;
+                        }
+                        newNameTmp[i] = p[i];
+                        if (p[i] == 0) {
+                            break;
+                        }
+                    }
+                    sprintf(newName, "%s_%s",
+                            DATA_PREFIX[n],
+                            newNameTmp);
+                }
+                if (newName[0] != 0) {
                     break;
                 }
             }
 
-            /* Generate the object file. */
-            sprintf(cmd, "%s %s -o %s %s",
+            writeCCode(file, o->tmpDir, o->shortName, newName[0] != 0 ? newName : NULL, gencmnFile);
+        }
+
+        uprv_strcpy(tempObjectFile, gencmnFile);
+        tempObjectFile[uprv_strlen(tempObjectFile) - 1] = 'o';
+
+        sprintf(cmd, "%s %s -o %s %s",
                     pkgDataFlags[COMPILER],
                     pkgDataFlags[LIBFLAGS],
                     tempObjectFile,
-                    gencFilePath);
-
-            result = system(cmd);
-            if (result != 0) {
-                return result;
-            }
-
-            if (mode == MODE_STATIC) {
-                sprintf(cmd, "%s %s %s%s.%s %s",
-                        pkgDataFlags[AR],
-                        pkgDataFlags[ARFLAGS],
-                        targetDir,
-                        libFile,
-                        pkgDataFlags[A_EXT],
-                        tempObjectFile);
-
-            } else /* if (mode == MODE_DLL) */ {
-                UBool reverseExt = FALSE;
-                char version_major[10] = "";
-                char libFileVersion[512] = "";
-                char libFileVersionTmp[512] = "";
-                char libFileMajor[512] = "";
-
-                /* Certain platforms have different library extension ordering. (e.g. libicudata.##.so vs libicudata.so.##) */
-                if (pkgDataFlags[LIB_EXT_ORDER][uprv_strlen(pkgDataFlags[LIB_EXT_ORDER])-1] == pkgDataFlags[SO_EXT][uprv_strlen(pkgDataFlags[SO_EXT])-1]) {
-                    reverseExt = TRUE;
-                }
-
-                /* Get the version major number. */
-                if (o->version != NULL) {
-                    for (int32_t i = 0;i < sizeof(version_major);i++) {
-                        if (o->version[i] == '.') {
-                            version_major[i] = 0;
-                            break;
-                        }
-                        version_major[i] = o->version[i];
-                    }
-                }
-
-#ifdef U_CYGWIN
-                sprintf(libFileCygwin, "cyg%s%s.%s",
-                        o->libName,
-                        version_major,
-                        pkgDataFlags[SO_EXT]);
-
-                sprintf(pkgDataFlags[SO_EXT], "%s.%s",
-                        pkgDataFlags[SO_EXT],
-                        pkgDataFlags[A_EXT]);
-#else
-                sprintf(libFileVersionTmp, "%s%s%s.%s",
-                        libFile,
-                        pkgDataFlags[LIB_EXT_ORDER][0] == '.' ? "." : "",
-                        reverseExt ? o->version : pkgDataFlags[SOBJ_EXT],
-                        reverseExt ? pkgDataFlags[SOBJ_EXT] : o->version);
-#endif
-                sprintf(libFileMajor, "%s%s%s.%s",
-                        libFile,
-                        pkgDataFlags[LIB_EXT_ORDER][0] == '.' ? "." : "",
-                        reverseExt ? version_major : pkgDataFlags[SO_EXT],
-                        reverseExt ? pkgDataFlags[SO_EXT] : version_major);
-
-                pkg_checkFlag(o);
-
-#ifdef U_CYGWIN
-                uprv_strcpy(libFileVersionTmp, libFileMajor);
-
-                sprintf(cmd, "%s%s%s %s -o %s%s %s %s%s %s %s",
-                        pkgDataFlags[GENLIB],
-                        targetDir,
-                        libFileVersionTmp,
-                        pkgDataFlags[LDICUDTFLAGS],
-                        targetDir, libFileCygwin,
-#else
-                sprintf(cmd, "%s %s -o %s%s %s %s%s %s %s",
-                        pkgDataFlags[GENLIB],
-                        pkgDataFlags[LDICUDTFLAGS],
-                        targetDir,
-                        libFileVersionTmp,
-#endif
-                        tempObjectFile,
-                        pkgDataFlags[LD_SONAME],
-                        pkgDataFlags[LD_SONAME][0] == 0 ? "" : libFileMajor,
-                        pkgDataFlags[RPATH_FLAGS],
-                        pkgDataFlags[BIR_FLAGS]);
-
-                /* Generate the library file. */
-                result = system(cmd);
-                if (result != 0) {
-                    return result;
-                }
-
-                /* Certain platforms uses archive library. (e.g. AIX) */
-                if (uprv_strcmp(pkgDataFlags[SOBJ_EXT], pkgDataFlags[SO_EXT]) != 0 && uprv_strcmp(pkgDataFlags[A_EXT], pkgDataFlags[SO_EXT]) == 0) {
-                    sprintf(libFileVersion, "%s%s%s.%s",
-                            libFile,
-                            pkgDataFlags[LIB_EXT_ORDER][0] == '.' ? "." : "",
-                            reverseExt ? o->version : pkgDataFlags[SO_EXT],
-                            reverseExt ? pkgDataFlags[SO_EXT] : o->version);
-
-                    sprintf(cmd, "%s %s %s%s %s%s",
-                            pkgDataFlags[AR],
-                            pkgDataFlags[ARFLAGS],
-                            targetDir,
-                            libFileVersion,
-                            targetDir,
-                            libFileVersionTmp);
-
-                    result = system(cmd);
-                    if (result != 0) {
-                        return result;
-                    }
-
-                    /* Remove unneeded library file. */
-                    sprintf(cmd, "%s %s%s",
-                            RM_CMD,
-                            targetDir,
-                            libFileVersionTmp);
-
-                    result = system(cmd);
-                    if (result != 0) {
-                        return result;
-                    }
-
-                } else {
-                    uprv_strcpy(libFileVersion, libFileVersionTmp);
-                }
-
-                /* Create symbolic links for the final library file. */
-#ifndef U_CYGWIN
-                sprintf(cmd, "cd %s && %s %s && %s %s %s",
-                        targetDir,
-                        RM_CMD,
-                        libFileMajor,
-                        LN_CMD,
-                        libFileVersion,
-                        libFileMajor);
-                result = system(cmd);
-                if (result != 0) {
-                    return result;
-                }
-#endif
-                sprintf(cmd, "cd %s && %s %s.%s && %s %s %s.%s",
-                        targetDir,
-                        RM_CMD,
-                        libFile, pkgDataFlags[SO_EXT],
-                        LN_CMD,
-                        libFileVersion,
-                        libFile, pkgDataFlags[SO_EXT]);
-            }
-#endif
+                    gencmnFile);
+        result = system(cmd);
+        if (result != 0) {
+            break;
         }
 
-        result = system(cmd);
+        sprintf(buffer, "%s %s",
+                buffer,
+                tempObjectFile);
+
+        list = list->next;
+        listNames = listNames->next;
     }
+
+    sprintf(cmd, "%s %s -o %s%s %s %s%s %s %s",
+                    pkgDataFlags[GENLIB],
+                    pkgDataFlags[LDICUDTFLAGS],
+                    targetDir,
+                    libFileNames[LIB_FILE_VERSION_TMP],
+                    buffer,
+                    pkgDataFlags[LD_SONAME],
+                    pkgDataFlags[LD_SONAME][0] == 0 ? "" : libFileNames[LIB_FILE_VERSION_MAJOR],
+                    pkgDataFlags[RPATH_FLAGS],
+                    pkgDataFlags[BIR_FLAGS]);
+
+    /* Generate the library file. */
+    result = system(cmd);
+
+    uprv_free(buffer);
+    uprv_free(cmd);
+
     return result;
 }
+
+#ifdef U_WINDOWS
+#define LINK_CMD "link.exe /nologo /release /out:"
+#define LINK_FLAGS "/DLL /NOENTRY /MANIFEST:NO  /base:0x4ad00000 /implib:"
+#define LIB_CMD "LIB.exe /nologo /out:"
+#define LIB_FILE "icudt.lib"
+#define LIB_EXT ".lib"
+#define DLL_EXT ".dll"
+
+static int32_t pkg_createWindowsDLL(const char mode, const char *gencFilePath, UPKGOptions *o) {
+    if (mode == MODE_STATIC) {
+        char staticLibFilePath[512] = "";
+
+        uprv_strcpy(staticLibFilePath, o->tmpDir);
+        uprv_strcat(staticLibFilePath, U_FILE_SEP_STRING);
+
+        uprv_strcat(staticLibFilePath, o->entryName);
+        uprv_strcat(staticLibFilePath, LIB_EXT);
+
+        sprintf(cmd, "%s\"%s\" \"%s\"",
+                LIB_CMD,
+                staticLibFilePath,
+                gencFilePath);
+    } else if (mode == MODE_DLL) {
+        char dllFilePath[512] = "";
+        char libFilePath[512] = "";
+        char resFilePath[512] = "";
+
+#ifdef CYGWINMSVC
+        uprv_strcpy(dllFilePath, o->targetDir);
+#else
+        uprv_strcpy(dllFilePath, o->srcDir);
+#endif
+        uprv_strcat(dllFilePath, U_FILE_SEP_STRING);
+        uprv_strcpy(libFilePath, dllFilePath);
+
+        uprv_strcpy(resFilePath, o->tmpDir);
+        uprv_strcat(resFilePath, U_FILE_SEP_STRING);
+
+        uprv_strcat(dllFilePath, o->entryName);
+        uprv_strcat(dllFilePath, DLL_EXT);
+        uprv_strcat(libFilePath, LIB_FILE);
+        uprv_strcat(resFilePath, ICUDATA_RES_FILE);
+
+        if (!T_FileStream_file_exists(resFilePath)) {
+            uprv_memset(resFilePath, 0, sizeof(resFilePath));
+        }
+
+        sprintf(cmd, "%s\"%s\" %s\"%s\" \"%s\" \"%s\"",
+                LINK_CMD,
+                dllFilePath,
+                LINK_FLAGS,
+                libFilePath,
+                gencFilePath,
+                resFilePath
+                );
+    }
+
+    return system(cmd);
+}
+#endif
 
 /*
  * Get the position after the '=' character.
@@ -794,6 +955,7 @@ static void extractFlag(char* buffer, int32_t bufferSize, char* flag) {
                 flag[i] = 0;
                 break;
             }
+
             flag[i] = pBuffer[i];
             if (i == 0) {
                 bufferWritten = TRUE;
@@ -807,10 +969,8 @@ static void extractFlag(char* buffer, int32_t bufferSize, char* flag) {
 }
 
 static void pkg_checkFlag(UPKGOptions *o) {
-    char *flag;
-    int32_t length;
-    char tmpbuffer[512];
 #ifdef U_AIX
+    char tmpbuffer[512];
     const char MAP_FILE_EXT[] = ".map";
     FileStream *f = NULL;
     char mapFile[512] = "";
@@ -873,6 +1033,9 @@ static void pkg_checkFlag(UPKGOptions *o) {
         T_FileStream_close(f);
     }
 #elif defined(U_CYGWIN)
+    char *flag;
+    int32_t length;
+
     flag = pkgDataFlags[GENLIB];
     length = uprv_strlen(pkgDataFlags[GENLIB]);
 
