@@ -1504,6 +1504,220 @@ int32_t CollData::minLengthInChars(const CEList *ceList, int32_t offset) const
 }
 #endif
 
+struct CEI
+{
+    uint32_t order;
+    int32_t  lowOffset;
+    int32_t  highOffset;
+};
+
+class Target
+{
+public:
+    Target(UCollator *theCollator, const UnicodeString *target, int32_t patternLength);
+    ~Target();
+
+    void setTargetString(const UnicodeString *target);
+
+    const CEI *nextCE(int32_t offset);
+    const CEI *prevCE(int32_t offset);
+
+    int32_t stringLength();
+
+    UBool isBreakBoundary(int32_t offset);
+    int32_t nextBreakBoundary(int32_t offset);
+
+    void setOffset(int32_t offset);
+    void setLast(int32_t last);
+    int32_t getOffset();
+
+private:
+    CEI *ceb;
+    int32_t bufferSize;
+    int32_t bufferMin;
+    int32_t bufferMax;
+
+    uint32_t strengthMask;
+    UCollator *coll;
+    const UnicodeString *targetString;
+    UCollationElements *elements;
+    UBreakIterator *charBreakIterator;
+};
+
+// **** need a better pad than 20 ****
+Target::Target(UCollator *theCollator, const UnicodeString *target, int32_t patternLength)
+    : bufferSize(patternLength + 20), bufferMin(0), bufferMax(0),
+      strengthMask(0), coll(theCollator), targetString(target), elements(NULL), charBreakIterator(NULL)
+{
+    UErrorCode status = U_ZERO_ERROR;
+
+    ceb = new CEI[bufferSize];
+
+    if (target != NULL) {
+        setTargetString(target);
+    }
+
+    switch (ucol_getStrength(coll)) 
+    {
+    default:
+        strengthMask |= UCOL_TERTIARYORDERMASK;
+        /* fall through */
+
+    case UCOL_SECONDARY:
+        strengthMask |= UCOL_SECONDARYORDERMASK;
+        /* fall through */
+
+    case UCOL_PRIMARY:
+        strengthMask |= UCOL_PRIMARYORDERMASK;
+    }
+}
+
+Target::~Target()
+{
+    ubrk_close(charBreakIterator);
+    ucol_closeElements(elements);
+
+    delete[] ceb;
+}
+
+void Target::setTargetString(const UnicodeString *target)
+{
+    if (charBreakIterator != NULL) {
+        ubrk_close(charBreakIterator);
+        ucol_closeElements(elements);
+    }
+
+    targetString = target;
+
+    if (targetString != NULL) {
+        UErrorCode status = U_ZERO_ERROR;
+
+        elements = ucol_openElements(coll, target->getBuffer(), target->length(), &status);
+
+        charBreakIterator = ubrk_open(UBRK_CHARACTER, ucol_getLocale(coll, ULOC_VALID_LOCALE, &status),
+                                      target->getBuffer(), target->length(), &status);
+    }
+}
+
+const CEI *Target::nextCE(int32_t offset)
+{
+    UErrorCode status = U_ZERO_ERROR;
+    int32_t low = -1, high = -1;
+    uint32_t order;
+
+    if (offset >= bufferMin && offset < bufferMax) {
+        return &ceb[offset];
+    }
+
+    if (bufferMax >= bufferSize || offset != bufferMax) {
+        return NULL;
+    }
+
+    do {
+        low   = ucol_getOffset(elements);
+        order = ucol_next(elements, &status);
+        high  = ucol_getOffset(elements);
+
+        if (order == UCOL_NULLORDER) {
+          //high = low = -1;
+            break;
+        }
+
+        order &= strengthMask;
+    } while (order == UCOL_IGNORABLE);
+
+    ceb[offset].order = order;
+    ceb[offset].lowOffset = low;
+    ceb[offset].highOffset = high;
+
+    bufferMax += 1;
+
+    return &ceb[offset];
+}
+
+const CEI *Target::prevCE(int32_t offset)
+{
+    UErrorCode status = U_ZERO_ERROR;
+    int32_t low = -1, high = -1;
+    uint32_t order;
+
+    if (offset >= bufferMin && offset < bufferMax) {
+        return &ceb[offset];
+    }
+
+    if (bufferMax >= bufferSize || offset != bufferMax) {
+        return NULL;
+    }
+
+    do {
+        high  = ucol_getOffset(elements);
+        order = ucol_previous(elements, &status);
+        low   = ucol_getOffset(elements);
+
+        if (order == UCOL_NULLORDER) {
+            break;
+        }
+
+        order &= strengthMask;
+    } while (order == UCOL_IGNORABLE);
+
+    bufferMax += 1;
+
+    ceb[offset].order       = order;
+    ceb[offset].lowOffset   = low;
+    ceb[offset].highOffset = high;
+
+    return &ceb[offset];
+}
+
+int32_t Target::stringLength()
+{
+    if (targetString != NULL) {
+        return targetString->length();
+    }
+
+    return 0;
+}
+
+void Target::setOffset(int32_t offset)
+{
+    UErrorCode status = U_ZERO_ERROR;
+
+    bufferMin = 0;
+    bufferMax = 0;
+
+    ucol_setOffset(elements, offset, &status);
+}
+
+void Target::setLast(int32_t last)
+{
+    UErrorCode status = U_ZERO_ERROR;
+
+    bufferMin = 0;
+    bufferMax = 1;
+
+    ceb[0].order      = UCOL_NULLORDER;
+    ceb[0].lowOffset  = last;
+    ceb[0].highOffset = last;
+
+    ucol_setOffset(elements, last, &status);
+}
+
+int32_t Target::getOffset()
+{
+    return ucol_getOffset(elements);
+}
+
+UBool Target::isBreakBoundary(int32_t offset)
+{
+    return ubrk_isBoundary(charBreakIterator, offset);
+}
+
+int32_t Target::nextBreakBoundary(int32_t offset)
+{
+    return ubrk_following(charBreakIterator, offset);
+}
+
 class BadCharacterTable
 {
 public:
@@ -1692,12 +1906,16 @@ int32_t GoodSuffixTable::operator[](int32_t offset) const
 class BoyerMooreSearch
 {
 public:
-    BoyerMooreSearch(UCollator *collator, const UnicodeString &patternString, int32_t sunday = 0);
-    BoyerMooreSearch(CollData *theData, const UnicodeString &patternString);
+    BoyerMooreSearch(CollData *theData, const UnicodeString &patternString, const UnicodeString *targetString);
     ~BoyerMooreSearch();
 
     UBool empty();
 
+    UBool search(int32_t offset, int32_t &start, int32_t &end);
+
+    void setTargetString(const UnicodeString *targetString);
+
+    // **** no longer need these? ****
     CollData *getData();
     CEList   *getPatternCEs();
     BadCharacterTable *getBadCharacterTable();
@@ -1709,6 +1927,7 @@ private:
     CEList *patCEs;
     BadCharacterTable *badCharacterTable;
     GoodSuffixTable   *goodSuffixTable;
+    Target *target;
 };
 
 UBool BoyerMooreSearch::empty()
@@ -1736,23 +1955,18 @@ GoodSuffixTable *BoyerMooreSearch::getGoodSuffixTable()
     return goodSuffixTable;
 }
 
-BoyerMooreSearch::BoyerMooreSearch(UCollator *collator, const UnicodeString &patternString, int32_t sunday)
-    : ownData(TRUE)
-{
-    data = new CollData(collator);
-    patCEs = new CEList(collator, patternString);
-    badCharacterTable = new BadCharacterTable(*patCEs, data, sunday);
-    goodSuffixTable = new GoodSuffixTable(*patCEs, *badCharacterTable);
-}
-
-BoyerMooreSearch::BoyerMooreSearch(CollData *theData, const UnicodeString &patternString)
-    : ownData(FALSE), data(theData)
+BoyerMooreSearch::BoyerMooreSearch(CollData *theData, const UnicodeString &patternString, const UnicodeString *targetString)
+    : ownData(FALSE), data(theData), target(NULL)
 {
     UCollator *collator = data->getCollator();
 
     patCEs = new CEList(collator, patternString);
     badCharacterTable = new BadCharacterTable(*patCEs, data, 0);
     goodSuffixTable = new GoodSuffixTable(*patCEs, *badCharacterTable);
+
+    if (targetString != NULL) {
+        target = new Target(collator, targetString, patCEs->size());
+    }
 }
 
 BoyerMooreSearch::~BoyerMooreSearch()
@@ -1766,214 +1980,26 @@ BoyerMooreSearch::~BoyerMooreSearch()
     }
 }
 
-struct CEI
+void BoyerMooreSearch::setTargetString(const UnicodeString *targetString)
 {
-    uint32_t order;
-    int32_t  lowOffset;
-    int32_t  highOffset;
-};
-
-class Target
-{
-public:
-    Target(BoyerMooreSearch *bms, const UnicodeString &target);
-    ~Target();
-
-    const CEI *nextCE(int32_t offset);
-    const CEI *prevCE(int32_t offset);
-
-    UBool isBreakBoundary(int32_t offset);
-    int32_t nextBreakBoundary(int32_t offset);
-
-    void setOffset(int32_t offset);
-    void setLast(int32_t last);
-    int32_t getOffset();
-
-private:
-    CEI *ceb;
-    int32_t bufferSize;
-    int32_t bufferMin;
-    int32_t bufferMax;
-
-    uint32_t strengthMask;
-    UCollationElements *elements;
-    UBreakIterator *charBreakIterator;
-};
-
-Target::Target(BoyerMooreSearch *bms, const UnicodeString &target)
-{
-    UErrorCode status = U_ZERO_ERROR;
-    CollData *data = bms->getData();
-    UCollator *coll = data->getCollator();
-    CEList *patCEs = bms->getPatternCEs();
-
-    // **** need a better pad than 20 ****
-    bufferSize = patCEs->size() + 20;
-    ceb = new CEI[bufferSize];
-    bufferMin = 0;
-    bufferMax = 0;
-
-    elements = ucol_openElements(coll, target.getBuffer(), target.length(), &status);
-
-    charBreakIterator = ubrk_open(UBRK_CHARACTER, ucol_getLocale(coll, ULOC_VALID_LOCALE, &status),
-                                  target.getBuffer(), target.length(), &status);
-
-#if 1
-    strengthMask = 0;
-
-    switch (ucol_getStrength(coll)) 
-    {
-    default:
-        strengthMask |= UCOL_TERTIARYORDERMASK;
-        /* fall through */
-
-    case UCOL_SECONDARY:
-        strengthMask |= UCOL_SECONDARYORDERMASK;
-        /* fall through */
-
-    case UCOL_PRIMARY:
-        strengthMask |= UCOL_PRIMARYORDERMASK;
+    if (target == NULL) {
+        target = new Target(data->getCollator(), targetString, patCEs->size());
+    } else {
+        target->setTargetString(targetString);
     }
-#else
-    strengthMask = UCOL_PRIMARYORDERMASK;
-#endif
-}
-
-Target::~Target()
-{
-    ubrk_close(charBreakIterator);
-    ucol_closeElements(elements);
-
-    delete[] ceb;
-}
-
-const CEI *Target::nextCE(int32_t offset)
-{
-    UErrorCode status = U_ZERO_ERROR;
-    int32_t low = -1, high = -1;
-    uint32_t order;
-
-    if (offset >= bufferMin && offset < bufferMax) {
-        return &ceb[offset];
-    }
-
-    if (bufferMax >= bufferSize || offset != bufferMax) {
-        return NULL;
-    }
-
-    do {
-        low   = ucol_getOffset(elements);
-        order = ucol_next(elements, &status);
-        high  = ucol_getOffset(elements);
-
-        if (order == UCOL_NULLORDER) {
-          //high = low = -1;
-            break;
-        }
-
-        order &= strengthMask;
-    } while (order == UCOL_IGNORABLE);
-
-    ceb[offset].order = order;
-    ceb[offset].lowOffset = low;
-    ceb[offset].highOffset = high;
-
-    bufferMax += 1;
-
-    return &ceb[offset];
-}
-
-const CEI *Target::prevCE(int32_t offset)
-{
-    UErrorCode status = U_ZERO_ERROR;
-    int32_t low = -1, high = -1;
-    uint32_t order;
-
-    if (offset >= bufferMin && offset < bufferMax) {
-        return &ceb[offset];
-    }
-
-    if (bufferMax >= bufferSize || offset != bufferMax) {
-        return NULL;
-    }
-
-    do {
-        high  = ucol_getOffset(elements);
-        order = ucol_previous(elements, &status);
-        low   = ucol_getOffset(elements);
-
-        if (order == UCOL_NULLORDER) {
-            break;
-        }
-
-        order &= strengthMask;
-    } while (order == UCOL_IGNORABLE);
-
-    bufferMax += 1;
-
-    ceb[offset].order       = order;
-    ceb[offset].lowOffset   = low;
-    ceb[offset].highOffset = high;
-
-    return &ceb[offset];
-}
-
-void Target::setOffset(int32_t offset)
-{
-    UErrorCode status = U_ZERO_ERROR;
-
-    bufferMin = 0;
-    bufferMax = 0;
-
-    ucol_setOffset(elements, offset, &status);
-}
-
-void Target::setLast(int32_t last)
-{
-    UErrorCode status = U_ZERO_ERROR;
-
-    bufferMin = 0;
-    bufferMax = 1;
-
-    ceb[0].order      = UCOL_NULLORDER;
-    ceb[0].lowOffset  = last;
-    ceb[0].highOffset = last;
-
-    ucol_setOffset(elements, last, &status);
-}
-
-int32_t Target::getOffset()
-{
-    return ucol_getOffset(elements);
-}
-
-UBool Target::isBreakBoundary(int32_t offset)
-{
-    return ubrk_isBoundary(charBreakIterator, offset);
-}
-
-int32_t Target::nextBreakBoundary(int32_t offset)
-{
-    return ubrk_following(charBreakIterator, offset);
 }
 
 // **** main flow of this code from Laura Werner's "Unicode Text Searching in Java" paper. ****
 /*
  * TODO:
- *  * make search work at all strengths - do we need to do this to CollData too?
  *  * deal with trailing (and leading?) ignorables.
  *  * Adding BoyerMooreSearch object slowed it down. How can we speed it up?
  */
-static UBool boyerMooreSearch(BoyerMooreSearch *bms, const UnicodeString &targetString, int32_t offset, int32_t &start, int32_t &end)
+UBool BoyerMooreSearch::search(int32_t offset, int32_t &start, int32_t &end)
 {
-    CollData *data = bms->getData();
     UCollator *coll = data->getCollator();
-    CEList *patCEs = bms->getPatternCEs();
-    BadCharacterTable *badCharacterTable = bms->getBadCharacterTable();
-    GoodSuffixTable   *goodSuffixTable   = bms->getGoodSuffixTable();
-    Target target(bms, targetString);
     int32_t plen = patCEs->size();
-    int32_t tlen = targetString.length();
+    int32_t tlen = target->stringLength();
     int32_t maxSkip = badCharacterTable->getMaxSkip();
     int32_t tOffset = offset + maxSkip;
 
@@ -1982,21 +2008,23 @@ static UBool boyerMooreSearch(BoyerMooreSearch *bms, const UnicodeString &target
         int32_t tIndex = 0;
         int32_t lIndex = 0;
         
-        if (! target.isBreakBoundary(tOffset)) {
+        // **** figure out how to do this w/o the interator ****
+        if (! target->isBreakBoundary(tOffset)) {
             // **** Do we really want the *previous* boundary? ****
-            tOffset = target.nextBreakBoundary(tOffset);
+            tOffset = target->nextBreakBoundary(tOffset);
         }
 
         if (tOffset < tlen) {
             // **** we really want to skip ahead enough to  ****
             // **** be sure we get at least 1 non-ignorable ****
             // **** CE after the end of the pattern.        ****
-            int32_t next = target.nextBreakBoundary(tOffset);
+            // **** figure out how do this w/o the iterator ****
+            int32_t next = target->nextBreakBoundary(tOffset);
 
-            target.setOffset(next);
+            target->setOffset(next);
 
             for (lIndex = 0; ; lIndex += 1) {
-                const CEI *cei = target.prevCE(lIndex);
+                const CEI *cei = target->prevCE(lIndex);
                 int32_t low = cei->lowOffset;
                 int32_t high = cei->highOffset;
 
@@ -2005,8 +2033,8 @@ static UBool boyerMooreSearch(BoyerMooreSearch *bms, const UnicodeString &target
                 }
             }
         } else {
-          //target.setOffset(tOffset);
-            target.setLast(tOffset);
+          //target->setOffset(tOffset);
+            target->setLast(tOffset);
             lIndex = 1;
         }
 
@@ -2015,7 +2043,7 @@ static UBool boyerMooreSearch(BoyerMooreSearch *bms, const UnicodeString &target
         // Iterate backward until we hit the beginning of the pattern
         while (pIndex >= 0) {
             uint32_t pce = (*patCEs)[pIndex];
-            const CEI *tcei = target.prevCE(tIndex++);
+            const CEI *tcei = target->prevCE(tIndex++);
 
 
             if (tcei->order != pce) {
@@ -2024,7 +2052,7 @@ static UBool boyerMooreSearch(BoyerMooreSearch *bms, const UnicodeString &target
                 int32_t gsOffset = tOffset + (*goodSuffixTable)[pIndex];
                 int32_t old = tOffset;
 
-              //tOffset  = /*tcei->highOffset*/ /*tOffset*/ target.getOffset() + (*badCharacterTable)[tcei->order] /*+ 1*/;
+              //tOffset  = /*tcei->highOffset*/ /*tOffset*/ target->getOffset() + (*badCharacterTable)[tcei->order] /*+ 1*/;
                 tOffset += (*badCharacterTable)[tcei->order] - badCharacterTable->minLengthInChars(pIndex + 1);
 
                 if (gsOffset > tOffset && gsOffset <= tlen) {
@@ -2045,53 +2073,17 @@ static UBool boyerMooreSearch(BoyerMooreSearch *bms, const UnicodeString &target
         if (pIndex < 0) {
             // We made it back to the beginning of the pattern,
             // which means we matched it all.  Return the location.
-#if 0
-            const CEI *firstCEI = target.prevCE(tIndex - 1);
-            const CEI *lastCEI  = target.prevCE(lIndex);
-            int32_t mStart   = firstCEI->lowOffset;
-            int32_t minLimit = lastCEI->lowOffset;
-            int32_t maxLimit = lastCEI->highOffset;
-            int32_t mLimit; 
-            UBool found = TRUE;
-
-            if (lIndex > 0) {
-                const CEI *nextCEI = target.prevCE(lIndex - 1);
-                
-                maxLimit = nextCEI->lowOffset;
-
-                if (nextCEI->lowOffset == nextCEI->highOffset && nextCEI->order != UCOL_NULLORDER) {
-                    found = FALSE;
-                }
-            }
-
-            if (! target.isBreakBoundary(mStart)) {
-                found = FALSE;
-            }
-
-            if (firstCEI->lowOffset == firstCEI->highOffset) {
-                found = FALSE;
-            }
-
-            mLimit = maxLimit;
-            if (minLimit < maxLimit) {
-                int32_t nbb = target.nextBreakBoundary(minLimit);
-
-                if (nbb > lastCEI->highOffset) {
-                    mLimit = nbb;
-                }
-            }
-#else
-            const CEI firstCEI = *target.prevCE(tIndex - 1);
-            const CEI lastCEI  = *target.prevCE(lIndex);
+            const CEI firstCEI = *target->prevCE(tIndex - 1);
+            const CEI lastCEI  = *target->prevCE(lIndex);
             int32_t mStart   = firstCEI.lowOffset;
             int32_t minLimit = lastCEI.lowOffset;
             int32_t maxLimit = lastCEI.highOffset;
             int32_t mLimit; 
             UBool found = TRUE;
 
-            target.setOffset(/*tOffset*/maxLimit);
+            target->setOffset(/*tOffset*/maxLimit);
 
-            const CEI nextCEI = *target.nextCE(0);
+            const CEI nextCEI = *target->nextCE(0);
 
             if (nextCEI.lowOffset > maxLimit) {
                 maxLimit = nextCEI.lowOffset;
@@ -2101,7 +2093,7 @@ static UBool boyerMooreSearch(BoyerMooreSearch *bms, const UnicodeString &target
                 found = FALSE;
             }
 
-            if (! target.isBreakBoundary(mStart)) {
+            if (! target->isBreakBoundary(mStart)) {
                 found = FALSE;
             }
 
@@ -2111,19 +2103,18 @@ static UBool boyerMooreSearch(BoyerMooreSearch *bms, const UnicodeString &target
 
             mLimit = maxLimit;
             if (minLimit < maxLimit) {
-                int32_t nbb = target.nextBreakBoundary(minLimit);
+                int32_t nbb = target->nextBreakBoundary(minLimit);
 
                 if (nbb >= lastCEI.highOffset) {
                     mLimit = nbb;
                 }
             }
-#endif
 
             if (mLimit > maxLimit) {
                 found = FALSE;
             }
 
-            if (! target.isBreakBoundary(mLimit)) {
+            if (! target->isBreakBoundary(mLimit)) {
                 found = FALSE;
             }
 
@@ -2196,7 +2187,7 @@ static UBool sundayQuickSearch(BoyerMooreSearch *bms, const UnicodeString &targe
     UCollator *coll = data->getCollator();
     CEList *patCEs = bms->getPatternCEs();
     BadCharacterTable *badCharacterTable = bms->getBadCharacterTable();
-    Target target(bms, targetString);
+    Target target(coll, &targetString, patCEs->size());
     int32_t plen = patCEs->size();
     int32_t tlen = targetString.length();
     int32_t mlen = badCharacterTable->getMaxSkip() - 1;
@@ -2256,10 +2247,11 @@ void SSearchTest::boyerMooreTest()
     UErrorCode status = U_ZERO_ERROR;
  //UCollator *coll = ucol_open(NULL, &status);
     UCollator *coll = ucol_openFromShortString("S1", FALSE, NULL, &status);
+    CollData data(coll);
     UnicodeString lp  = "fuss";
     UnicodeString sp = "fu\\u00DF";
-    BoyerMooreSearch longPattern(coll, lp.unescape());
-    BoyerMooreSearch shortPattern(coll, sp.unescape());
+    BoyerMooreSearch longPattern(&data, lp.unescape(), NULL);
+    BoyerMooreSearch shortPattern(&data, sp.unescape(), NULL);
     UnicodeString targets[]  = {"fu\\u00DF", "fu\\u00DFball", "1fu\\u00DFball", "12fu\\u00DFball", "123fu\\u00DFball", "1234fu\\u00DFball",
                                 "ffu\\u00DF", "fufu\\u00DF", "fusfu\\u00DF",
                                 "fuss", "ffuss", "fufuss", "fusfuss", "1fuss", "12fuss", "123fuss", "1234fuss", "fu\\u00DF", "1fu\\u00DF", "12fu\\u00DF", "123fu\\u00DF", "1234fu\\u00DF"};
@@ -2268,13 +2260,15 @@ void SSearchTest::boyerMooreTest()
     for (int32_t t = 0; t < (sizeof(targets)/sizeof(targets[0])); t += 1) {
         UnicodeString target = targets[t].unescape();
         
-        if (boyerMooreSearch(&longPattern, target, 0, start, end)) {
+        longPattern.setTargetString(&target);
+        if (longPattern.search(0, start, end)) {
             infoln("Test %d: found long pattern at [%d, %d].", t, start, end);
         } else {
             errln("Test %d: did not find long pattern.", t);
         }
 
-        if (boyerMooreSearch(&shortPattern, target, 0, start, end)) {
+        shortPattern.setTargetString(&target);
+        if (shortPattern.search(0, start, end)) {
             infoln("Test %d: found short pattern at [%d, %d].", t, start, end);
         } else {
             errln("Test %d: did not find short pattern.", t);
@@ -2288,12 +2282,13 @@ void SSearchTest::goodSuffixTest()
 {
     UErrorCode status = U_ZERO_ERROR;
     UCollator *coll = ucol_open(NULL, &status);
+    CollData data(coll);
     UnicodeString pat = /*"gcagagag"*/ "fxeld";
-    BoyerMooreSearch pattern(coll, pat);
     UnicodeString target = /*"gcatcgcagagagtatacagtacg"*/ "cloveldfxeld";
+    BoyerMooreSearch pattern(&data, pat, &target);
     int32_t start = -1, end = -1;
 
-    if (boyerMooreSearch(&pattern, target, 0, start, end)) {
+    if (pattern.search(0, start, end)) {
         infoln("Found pattern at [%d, %d].", start, end);
     } else {
         errln("Did not find pattern.");
@@ -2464,7 +2459,7 @@ const char *cPattern = "maketh houndes ete hem";
                                         &status);
     TEST_ASSERT_SUCCESS(status);
 #else
-    BoyerMooreSearch bms(collator, uPattern);
+    BoyerMooreSearch bms(&data, uPattern, &target);
 #endif
     
 //  int32_t foundStart;
@@ -2482,7 +2477,7 @@ const char *cPattern = "maketh houndes ete hem";
     TEST_ASSERT_SUCCESS(status);
 #else
   //found = sundayQuickSearch(&bms, target, icuMatchPos, icuMatchEnd);
-    found = boyerMooreSearch(&bms, target, 0, icuMatchPos, icuMatchEnd);
+    found = bms.search(0, icuMatchPos, icuMatchEnd);
 #endif
     TEST_ASSERT_M(refMatchPos == icuMatchPos, "strstr and icu give different match positions.");
 
@@ -2495,7 +2490,7 @@ const char *cPattern = "maketh houndes ete hem";
 #ifndef TEST_BOYER_MOORE
         found = usearch_search(uss, 0, &icuMatchPos, &icuMatchEnd, &status);
 #else
-        found = boyerMooreSearch(&bms, target, 0, icuMatchPos, icuMatchEnd);
+        found = bms.search(0, icuMatchPos, icuMatchEnd);
 #endif
         //TEST_ASSERT_SUCCESS(status);
         //TEST_ASSERT(found);
@@ -2938,7 +2933,8 @@ int32_t SSearchTest::monkeyTestCase(UCollator *coll, const UnicodeString &testCa
 #else
   //actualStart = usearch_next(uss, &status);
   //actualEnd   = actualStart + usearch_getMatchedLength(uss);
-    boyerMooreSearch(bms, testCase, 0, actualStart, actualEnd);
+    bms->setTargetString(&testCase);
+    bms->search(0, actualStart, actualEnd);
 #endif
 
     if (expectedStart >= 0 && (actualStart != expectedStart || actualEnd != expectedEnd)) {
@@ -2966,7 +2962,8 @@ int32_t SSearchTest::monkeyTestCase(UCollator *coll, const UnicodeString &testCa
   //usearch_reset(uss);
   //actualStart = usearch_next(uss, &status);
   //actualEnd   = actualStart + usearch_getMatchedLength(uss);
-    boyerMooreSearch(abms, testCase, 0, actualStart, actualEnd);
+    abms->setTargetString(&testCase);
+    abms->search(0, actualStart, actualEnd);
 #endif
 
     if (expectedStart >= 0 && (actualStart != expectedStart || actualEnd != expectedEnd)) {
@@ -3098,8 +3095,8 @@ void SSearchTest::monkeyTest(char *params)
             generateTestCase(coll, monkeys, monkeyCount, prefix,  altPrefix);
             generateTestCase(coll, monkeys, monkeyCount, suffix,  altSuffix);
 
-            BoyerMooreSearch pat(data, pattern);
-            BoyerMooreSearch alt(data, altPattern);
+            BoyerMooreSearch pat(data, pattern, NULL);
+            BoyerMooreSearch alt(data, altPattern, NULL);
 
             // **** need a better way to deal with this ****
             if (pat.empty() ||
