@@ -38,7 +38,6 @@ public:
     virtual void monkeyTest(char *params);
     virtual void minLengthTest();
     virtual void boyerMooreTest();
-    virtual void sundayQuickSearchTest();
     virtual void goodSuffixTest();
     virtual void searchTime();
 

@@ -90,15 +90,11 @@ void SSearchTest::runIndexedTest( int32_t index, UBool exec, const char* &name, 
             if (exec) boyerMooreTest();
             break;
 
-        case 5: name = "sundayQuickSearchTest";
-            if (exec) sundayQuickSearchTest();
-            break;
-
-        case 6: name = "goodSuffixTest";
+        case 5: name = "goodSuffixTest";
             if (exec) goodSuffixTest();
             break;
 
-        case 7: name = "searchTime";
+        case 6: name = "searchTime";
             if (exec) searchTime();
             break;
 #endif
@@ -1123,7 +1119,7 @@ void SSearchTest::minLengthTest()
     UErrorCode status = U_ZERO_ERROR;
     U_STRING_DECL(test_pattern, "[[:assigned:]-[:ideographic:]-[:hangul:]-[:c:]]", 47);
     U_STRING_INIT(test_pattern, "[[:assigned:]-[:ideographic:]-[:hangul:]-[:c:]]", 47);
-    UCollator *coll = ucol_open(NULL, &status);
+    UCollator *coll = ucol_openFromShortString("S1", FALSE, NULL, &status);
 
     if (U_FAILURE(status)) {
         errln("Failed to create collator in MonkeyTest!");
@@ -1721,7 +1717,7 @@ int32_t Target::nextBreakBoundary(int32_t offset)
 class BadCharacterTable
 {
 public:
-    BadCharacterTable(CEList &patternCEs, CollData *data, int32_t sunday = 0);
+    BadCharacterTable(CEList &patternCEs, CollData *data);
     ~BadCharacterTable();
 
     int32_t operator[](uint32_t ce) const;
@@ -1737,7 +1733,7 @@ private:
     int32_t *minLengthCache;
 };
 
-BadCharacterTable::BadCharacterTable(CEList &patternCEs, CollData *data, int32_t /*sunday*/)
+BadCharacterTable::BadCharacterTable(CEList &patternCEs, CollData *data)
     : minLengthCache(NULL)
 {
     int32_t plen = patternCEs.size();
@@ -1755,7 +1751,7 @@ BadCharacterTable::BadCharacterTable(CEList &patternCEs, CollData *data, int32_t
 
     minLengthCache = new int32_t[plen + 1];
 
-    maxSkip = minLengthCache[0] = data->minLengthInChars(&patternCEs, 0, history) /*+ sunday*/;
+    maxSkip = minLengthCache[0] = data->minLengthInChars(&patternCEs, 0, history);
 
     for(int32_t j = 0; j < HASH_TABLE_SIZE; j += 1) {
         badCharacterTable[j] = maxSkip;
@@ -1774,7 +1770,7 @@ BadCharacterTable::BadCharacterTable(CEList &patternCEs, CollData *data, int32_t
     minLengthCache[plen] = 0;
 
     for(int32_t p = 0; p < plen - 1; p += 1) {
-        badCharacterTable[hash(patternCEs[p])] = minLengthCache[p + 1] /*+ sunday*/;
+        badCharacterTable[hash(patternCEs[p])] = minLengthCache[p + 1];
     }
 
     delete[] history;
@@ -1961,7 +1957,7 @@ BoyerMooreSearch::BoyerMooreSearch(CollData *theData, const UnicodeString &patte
     UCollator *collator = data->getCollator();
 
     patCEs = new CEList(collator, patternString);
-    badCharacterTable = new BadCharacterTable(*patCEs, data, 0);
+    badCharacterTable = new BadCharacterTable(*patCEs, data);
     goodSuffixTable = new GoodSuffixTable(*patCEs, *badCharacterTable);
 
     if (targetString != NULL) {
@@ -2136,112 +2132,6 @@ UBool BoyerMooreSearch::search(int32_t offset, int32_t &start, int32_t &end)
    return FALSE;
 }
 
-static UBool sundayQuickSearch(const char *pattern, const char *target, int32_t &start, int32_t &end)
-{
-    int32_t skip[265];
-    int32_t m = strlen(pattern);
-    int32_t n = strlen(target);
-    int32_t tOffset = 0;
-
-    for (int32_t i = 0; i < 256; i += 1) {
-        skip[i] = m + 1;
-    }
-
-    for (int32_t i = 0; i < m; i += 1) {
-        skip[pattern[i]] = m - i;
-    }
-
-    while (tOffset <= n - m) {
-        int32_t pIndex = 0;
-
-        while (pIndex < m) {
-            if (pattern[pIndex] != target[tOffset + pIndex]) {
-                char c = target[tOffset + m];
-
-                 printf("skip: pIndex = %d, tOffset = %d, ch = ", pIndex, tOffset);
-                 printf(c < '\x20'? "\\x2.2x" : ", ch = \'%c\'", c);
-                 printf(", skip = %d\n", skip[c]);
-                tOffset += skip[c];
-                break;
-            }
-
-            pIndex += 1;
-        }
-
-        if (pIndex >= m) {
-            start = tOffset;
-            end   = tOffset + m;
-
-            return TRUE;
-        }
-    }
-
-    start = end = -1;
-    return FALSE;
-}
-
-// **** main flow of this code from Laura Werner's "Unicode Text Searching in Java" paper. ****
-static UBool sundayQuickSearch(BoyerMooreSearch *bms, const UnicodeString &targetString, int32_t &start, int32_t &end)
-{
-    CollData *data = bms->getData();
-    UCollator *coll = data->getCollator();
-    CEList *patCEs = bms->getPatternCEs();
-    BadCharacterTable *badCharacterTable = bms->getBadCharacterTable();
-    Target target(coll, &targetString, patCEs->size());
-    int32_t plen = patCEs->size();
-    int32_t tlen = targetString.length();
-    int32_t mlen = badCharacterTable->getMaxSkip() - 1;
-    int32_t tOffset = 0;
-
-    while (tOffset <= tlen - mlen) {
-        int32_t pIndex = 0;
-        int32_t tIndex = 0;
-
-        target.setOffset(tOffset);
-
-
-        // Iterate forward until we hit the end of the pattern
-        while (pIndex < plen) {
-            uint32_t pce = (*patCEs)[pIndex++];
-            uint32_t tce = target.nextCE(tIndex++)->order;
-
-            if (tce != pce) {
-                // There is a mismatch at this position.  Decide how far
-                // over to shift the pattern, then try again.
-
-                printf("skip: pIndex = %d, tOffset = %d", pIndex - 1, tOffset);
-                target.setOffset(tOffset + mlen);
-                tce = target.nextCE(tIndex)->order;
-
-                UChar c = targetString.charAt(tOffset + mlen);
-
-                printf(", ce = %8.8x (", tce);
-                printf(c < 0x0020? "\\u%4.4x)" : "'%c')", targetString.charAt(tOffset + mlen));
-                printf(", skip = %d\n", (*badCharacterTable)[tce]);
-
-                tOffset += (*badCharacterTable)[tce];
-
-                break;
-            }
-        }
-
-        if (pIndex >= plen) {
-            // We made it back to the end of the pattern,
-            // which means we matched it all.  Return the location.
-            start = tOffset;
-            end   = target.getOffset();
-
-            return TRUE;
-        }
-        // Otherwise, we're here because of a mismatch, so keep going....
-    }
-    
-    // no match
-   start = -1;
-   end = -1;
-   return FALSE;
-}
-
 void SSearchTest::boyerMooreTest()
 {
     UErrorCode status = U_ZERO_ERROR;
@@ -2295,41 +2185,6 @@ void SSearchTest::goodSuffixTest()
     }
 
     ucol_close(coll);
-}
-
-
-void SSearchTest::sundayQuickSearchTest()
-{
-#if 0
-    UErrorCode status = U_ZERO_ERROR;
-    UCollator *coll = ucol_open(NULL, &status);
-    UnicodeString lp  = "fuss";
-  //UnicodeString sp = "fu\u00DF";
-    UnicodeString sp = "\u00DF";
-    BoyerMooreSearch longPattern(coll, lp, 1);
-    BoyerMooreSearch shortPattern(coll, sp, 1);
-    UnicodeString targets[]  = {"fu\u00DF", "fu\u00DFball", "1fu\u00DFball", "12fu\u00DFball", "123fu\u00DFball", "1234fu\u00DFball",
-                                "12345fu\u00DFball", "123456fu\u00DFball", "1234567fu\u00DFball", "12345678fu\u00DFball", "123456789fu\u00DFball", "1234567890fu\u00DFball",
-                                "ffu\u00DF", "fufu\u00DF", "fusfu\u00DF",
-                                "fuss", "ffuss", "fufuss", "fusfuss", "1fuss", "12fuss", "123fuss", "1234fuss"};
-    int32_t start = -1, end = -1;
-
-    for (int32_t t = 0; t < (sizeof(targets)/sizeof(targets[0])); t += 1) {
-        if (sundayQuickSearch(&longPattern, targets[t], start, end)) {
-            infoln("Test %d: found long pattern at [%d, %d].", t, start, end);
-        } else {
-            errln("Test %d: did not find long pattern.", t);
-        }
-
-        if (sundayQuickSearch(&shortPattern, targets[t], start, end)) {
-            infoln("Test %d: found short pattern at [%d, %d].", t, start, end);
-        } else {
-            errln("Test %d: did not find short pattern.", t);
-        }
-    }
-
-    ucol_close(coll);
-#endif
 }
 
 //
@@ -2476,7 +2331,6 @@ const char *cPattern = "maketh houndes ete hem";
     usearch_search(uss, 0, &icuMatchPos, &icuMatchEnd, &status);
     TEST_ASSERT_SUCCESS(status);
 #else
-  //found = sundayQuickSearch(&bms, target, icuMatchPos, icuMatchEnd);
     found = bms.search(0, icuMatchPos, icuMatchEnd);
 #endif
     TEST_ASSERT_M(refMatchPos == icuMatchPos, "strstr and icu give different match positions.");
