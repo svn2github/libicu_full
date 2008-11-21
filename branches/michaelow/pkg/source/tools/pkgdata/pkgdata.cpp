@@ -581,8 +581,8 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                 fprintf(stderr, "Error creating symbolic links of the data library file.\n");
                return result;
            }
-        }
 #endif
+        }
     }
     return result;
 }
@@ -809,7 +809,7 @@ static int32_t pkg_createWithoutAssemblyCode(UPKGOptions *o, const char *targetD
         } else {
             char newName[64];
             char dataName[64];
-            char *pSubstring;
+            const char *pSubstring;
             file = list->str;
             name = listNames->str;
 
@@ -886,6 +886,7 @@ static int32_t pkg_createWithoutAssemblyCode(UPKGOptions *o, const char *targetD
 #define DLL_EXT ".dll"
 
 static int32_t pkg_createWindowsDLL(const char mode, const char *gencFilePath, UPKGOptions *o) {
+    char cmd[2048];
     if (mode == MODE_STATIC) {
         char staticLibFilePath[512] = "";
 
