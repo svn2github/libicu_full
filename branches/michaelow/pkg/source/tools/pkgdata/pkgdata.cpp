@@ -530,8 +530,9 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
 
             createFileNames(version_major, o->version, o->libName, reverseExt);
 
-            /* TODO: (add for Windows build) Check to see if a previous built data library file exists */
-            sprintf(checkLibFile, "%s%s", targetDir, libFileNames[LIB_FILE_VERSION]);
+            // TODO: (add for Windows build also may not be the actual final libfilename (e.g. AIX)
+            /* Check to see if a previous built data library file exists */
+            sprintf(checkLibFile, "%s%s", targetDir, libFileNames[LIB_FILE_VERSION_TMP]);
             if (T_FileStream_file_exists(checkLibFile)) {
                 return result;
             }
