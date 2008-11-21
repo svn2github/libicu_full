@@ -1542,9 +1542,10 @@ private:
     UBreakIterator *charBreakIterator;
 };
 
-// **** need a better pad than 20 ****
+// **** need a better pad than 40    ****
+// **** twice the longest expansion? ****
 Target::Target(UCollator *theCollator, const UnicodeString *target, int32_t patternLength)
-    : bufferSize(patternLength + 20), bufferMin(0), bufferMax(0),
+    : bufferSize(patternLength + 40), bufferMin(0), bufferMax(0),
       strengthMask(0), coll(theCollator), targetString(target), elements(NULL), charBreakIterator(NULL)
 {
     UErrorCode status = U_ZERO_ERROR;
@@ -1739,7 +1740,7 @@ int32_t Target::nextSafeBoundary(int32_t offset)
         offset += 1;
     }
 
-    return offset;
+    return tlen;
 }
 
 class BadCharacterTable
@@ -1995,6 +1996,7 @@ BoyerMooreSearch::BoyerMooreSearch(CollData *theData, const UnicodeString &patte
 
 BoyerMooreSearch::~BoyerMooreSearch()
 {
+    delete target;
     delete goodSuffixTable;
     delete badCharacterTable;
     delete patCEs;
@@ -2077,7 +2079,7 @@ UBool BoyerMooreSearch::search(int32_t offset, int32_t &start, int32_t &end)
                 int32_t low = cei->lowOffset;
                 int32_t high = cei->highOffset;
 
-                if (low < high && low <= tOffset) {
+                if (high == 0 || (low < high && low <= tOffset)) {
                     if (low < tOffset) {
                         while (lIndex >= 0 && target->prevCE(lIndex)->highOffset == high) {
                             lIndex -= 1;
