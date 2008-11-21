@@ -61,8 +61,9 @@ static int32_t pkg_executeOptions(UPKGOptions *o);
 static int32_t pkg_createWindowsDLL(const char mode, const char *gencFilePath, UPKGOptions *o);
 #endif
 static int32_t pkg_createSymLinks(const char *targetDir);
-static int32_t pkg_createWithoutAssemblyCode(UPKGOptions *o, const char *targetDir);
+static int32_t pkg_createWithoutAssemblyCode(UPKGOptions *o, const char *targetDir, const char mode);
 static int32_t pkg_createWithAssemblyCode(const char *targetDir, const char mode, const char *gencFilePath);
+static int32_t pkg_generateLibraryFile(const char *targetDir, const char mode, const char *objectFile, char *command);
 static int32_t pkg_archiveLibrary(const char *targetDir, const char *version, UBool reverseExt);
 static void createFileNames(const char *version_major, const char *version, const char *libName, const UBool reverseExt);
 
@@ -539,7 +540,10 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                     writeAssemblyCode(datFileNamePath, o->tmpDir, o->entryName, NULL, gencFilePath);
 
                     result = pkg_createWithAssemblyCode(targetDir, mode, gencFilePath);
-                    if (mode == MODE_STATIC || result != 0) {
+                    if (result != 0) {
+                        fprintf(stderr, "Error generating assembly code for data.\n");
+                        return result;
+                    } else if (mode == MODE_STATIC) {
                         return result;
                     }
                 } else {
@@ -547,29 +551,36 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                     return -1;
                 }
             } else {
-// TODO: #if defined(U_WINDOWS) || defined(U_LINUX)
-//                writeObjectCode(datFileNamePath, o->tmpDir, o->entryName, NULL, NULL, gencFilePath);
-// #else
-                result = pkg_createWithoutAssemblyCode(o, targetDir);
+#if defined(U_WINDOWS) || defined(U_LINUX)
+                writeObjectCode(datFileNamePath, o->tmpDir, o->entryName, NULL, NULL, gencFilePath);
+                result = pkg_generateLibraryFile(targetDir, mode, gencFilePath, NULL);
+#ifdef U_WINDOWS
+                return pkg_createWindowsDLL(mode, gencFilePath, o);
+#else
+
+#endif
+#else
+                result = pkg_createWithoutAssemblyCode(o, targetDir, mode);
+#endif
                 if (result != 0) {
                     fprintf(stderr, "Error generating package data.\n");
                     return result;
                 }
-// #endif
             }
-
-#ifdef U_WINDOWS
-            return pkg_createWindowsDLL(mode, gencFilePath, o);
-#else
-
+#ifndef U_WINDOWS
             /* Certain platforms uses archive library. (e.g. AIX) */
             result = pkg_archiveLibrary(targetDir, o->version, reverseExt);
             if (result != 0) {
+                fprintf(stderr, "Error creating data archive library file.\n");
                return result;
            }
 
             /* Create symbolic links for the final library file. */
             result = pkg_createSymLinks(targetDir);
+            if (result != 0) {
+                fprintf(stderr, "Error creating symbolic links of the data library file.\n");
+               return result;
+           }
         }
 #endif
     }
@@ -679,30 +690,16 @@ static int32_t pkg_archiveLibrary(const char *targetDir, const char *version, UB
     return result;
 }
 
-static int32_t pkg_createWithAssemblyCode(const char *targetDir, const char mode, const char *gencFilePath) {
-    char tempObjectFile[512] = "";
-    char cmd[2048];
+static int32_t pkg_generateLibraryFile(const char *targetDir, const char mode, const char *objectFile, char *command) {
     int32_t result = 0;
+    char *cmd;
+    UBool cmdFree = FALSE;
 
-    /* Remove the ending .s and replace it with .o for the new object file. */
-    for(int32_t i = 0; i < sizeof(tempObjectFile); i++) {
-        tempObjectFile[i] = gencFilePath[i];
-        if (i > 0 && gencFilePath[i] == 0 && gencFilePath[i-1] == 's') {
-            tempObjectFile[i-1] = 'o';
-            break;
-        }
-    }
-
-    /* Generate the object file. */
-    sprintf(cmd, "%s %s -o %s %s",
-            pkgDataFlags[COMPILER],
-            pkgDataFlags[LIBFLAGS],
-            tempObjectFile,
-            gencFilePath);
-
-    result = system(cmd);
-    if (result != 0) {
-        return result;
+    if (command != NULL) {
+        cmd = command;
+    } else {
+        cmd = (char *)uprv_malloc(sizeof(char) * 2048);
+        cmdFree = TRUE;
     }
 
     if (mode == MODE_STATIC) {
@@ -712,7 +709,7 @@ static int32_t pkg_createWithAssemblyCode(const char *targetDir, const char mode
                 targetDir,
                 libFileNames[LIB_FILE],
                 pkgDataFlags[A_EXT],
-                tempObjectFile);
+                objectFile);
 
         return system(cmd);
     } else /* if (mode == MODE_DLL) */ {
@@ -730,7 +727,7 @@ static int32_t pkg_createWithAssemblyCode(const char *targetDir, const char mode
                 targetDir,
                 libFileNames[LIB_FILE_VERSION_TMP],
 #endif
-                tempObjectFile,
+                objectFile,
                 pkgDataFlags[LD_SONAME],
                 pkgDataFlags[LD_SONAME][0] == 0 ? "" : libFileNames[LIB_FILE_VERSION_MAJOR],
                 pkgDataFlags[RPATH_FLAGS],
@@ -740,7 +737,35 @@ static int32_t pkg_createWithAssemblyCode(const char *targetDir, const char mode
         result = system(cmd);
     }
 
+    if (cmdFree) {
+        uprv_free(cmd);
+    }
+
     return result;
+}
+
+static int32_t pkg_createWithAssemblyCode(const char *targetDir, const char mode, const char *gencFilePath) {
+    char tempObjectFile[512] = "";
+    char cmd[2048];
+    int32_t result = 0;
+
+    /* Remove the ending .s and replace it with .o for the new object file. */
+    uprv_strcpy(tempObjectFile, gencFilePath);
+    tempObjectFile[uprv_strlen(tempObjectFile)-1] = 'o';
+
+    /* Generate the object file. */
+    sprintf(cmd, "%s %s -o %s %s",
+            pkgDataFlags[COMPILER],
+            pkgDataFlags[LIBFLAGS],
+            tempObjectFile,
+            gencFilePath);
+
+    result = system(cmd);
+    if (result != 0) {
+        return result;
+    }
+
+    return pkg_generateLibraryFile(targetDir, mode, tempObjectFile, cmd);
 }
 enum {
     DATA_PREFIX_BRKITR,
@@ -757,7 +782,7 @@ const static char DATA_PREFIX[DATA_PREFIX_LENGTH][10] = {
         "translit"
 };
 
-static int32_t pkg_createWithoutAssemblyCode(UPKGOptions *o, const char *targetDir) {
+static int32_t pkg_createWithoutAssemblyCode(UPKGOptions *o, const char *targetDir, const char mode) {
     CharList *list = o->filePaths;
     CharList *listNames = o->files;
     int32_t listSize = pkg_countCharList(list);
@@ -774,7 +799,7 @@ static int32_t pkg_createWithoutAssemblyCode(UPKGOptions *o, const char *targetD
         const char *file ;
         const char *name;
 
-        if (list == NULL) {
+        if (list == NULL || listNames == NULL) {
             result = -1;
             break;
         }
@@ -783,11 +808,12 @@ static int32_t pkg_createWithoutAssemblyCode(UPKGOptions *o, const char *targetD
             buffer[0] = 0;
         } else {
             char newName[64];
+            char dataName[64];
             char *pSubstring;
             file = list->str;
             name = listNames->str;
 
-            newName[0] = 0;
+            newName[0] = dataName[0] = 0;
             for (int32_t n = 0; n < DATA_PREFIX_LENGTH; n++) {
                 pSubstring = uprv_strstr(name, DATA_PREFIX[n]);
 
@@ -807,13 +833,16 @@ static int32_t pkg_createWithoutAssemblyCode(UPKGOptions *o, const char *targetD
                     sprintf(newName, "%s_%s",
                             DATA_PREFIX[n],
                             newNameTmp);
+                    sprintf(dataName, "%s_%s",
+                            o->shortName,
+                            DATA_PREFIX[n]);
                 }
                 if (newName[0] != 0) {
                     break;
                 }
             }
 
-            writeCCode(file, o->tmpDir, o->shortName, newName[0] != 0 ? newName : NULL, gencmnFile);
+            writeCCode(file, o->tmpDir, dataName[0] != 0 ? dataName : o->shortName, newName[0] != 0 ? newName : NULL, gencmnFile);
         }
 
         uprv_strcpy(tempObjectFile, gencmnFile);
@@ -833,23 +862,14 @@ static int32_t pkg_createWithoutAssemblyCode(UPKGOptions *o, const char *targetD
                 buffer,
                 tempObjectFile);
 
-        list = list->next;
-        listNames = listNames->next;
+        if (i > 0) {
+            list = list->next;
+            listNames = listNames->next;
+        }
     }
 
-    sprintf(cmd, "%s %s -o %s%s %s %s%s %s %s",
-                    pkgDataFlags[GENLIB],
-                    pkgDataFlags[LDICUDTFLAGS],
-                    targetDir,
-                    libFileNames[LIB_FILE_VERSION_TMP],
-                    buffer,
-                    pkgDataFlags[LD_SONAME],
-                    pkgDataFlags[LD_SONAME][0] == 0 ? "" : libFileNames[LIB_FILE_VERSION_MAJOR],
-                    pkgDataFlags[RPATH_FLAGS],
-                    pkgDataFlags[BIR_FLAGS]);
-
     /* Generate the library file. */
-    result = system(cmd);
+    result = pkg_generateLibraryFile(targetDir, mode, buffer, cmd);
 
     uprv_free(buffer);
     uprv_free(cmd);
