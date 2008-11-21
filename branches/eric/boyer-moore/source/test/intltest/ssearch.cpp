@@ -1519,9 +1519,11 @@ public:
     const CEI *prevCE(int32_t offset);
 
     int32_t stringLength();
+    UChar charAt(int32_t offset);
 
     UBool isBreakBoundary(int32_t offset);
     int32_t nextBreakBoundary(int32_t offset);
+    int32_t nextSafeBoundary(int32_t offset);
 
     void setOffset(int32_t offset);
     void setLast(int32_t last);
@@ -1675,6 +1677,15 @@ int32_t Target::stringLength()
     return 0;
 }
 
+UChar Target::charAt(int32_t offset)
+{
+    if (targetString != NULL) {
+        return targetString->charAt(offset);
+    }
+
+    return 0x0000;
+}
+
 void Target::setOffset(int32_t offset)
 {
     UErrorCode status = U_ZERO_ERROR;
@@ -1712,6 +1723,23 @@ UBool Target::isBreakBoundary(int32_t offset)
 int32_t Target::nextBreakBoundary(int32_t offset)
 {
     return ubrk_following(charBreakIterator, offset);
+}
+
+int32_t Target::nextSafeBoundary(int32_t offset)
+{
+    int32_t tlen = targetString->length();
+
+    while (offset < tlen) {
+        UChar ch = charAt(offset);
+
+        if (U_IS_LEAD(ch) || ! ucol_unsafeCP(ch, coll)) {
+            return offset;
+        }
+
+        offset += 1;
+    }
+
+    return offset;
 }
 
 class BadCharacterTable
@@ -2003,7 +2031,8 @@ UBool BoyerMooreSearch::search(int32_t offset, int32_t &start, int32_t &end)
         int32_t pIndex = plen - 1;
         int32_t tIndex = 0;
         int32_t lIndex = 0;
-        
+
+#if 0
         // **** figure out how to do this w/o the interator ****
         if (! target->isBreakBoundary(tOffset)) {
             // **** Do we really want the *previous* boundary? ****
@@ -2033,8 +2062,43 @@ UBool BoyerMooreSearch::search(int32_t offset, int32_t &start, int32_t &end)
             target->setLast(tOffset);
             lIndex = 1;
         }
+#else
+        if (tOffset < tlen) {
+            // **** we really want to skip ahead enough to  ****
+            // **** be sure we get at least 1 non-ignorable ****
+            // **** CE after the end of the pattern.        ****
+            // **** figure out how do this w/o the iterator ****
+            int32_t next = target->nextSafeBoundary(tOffset + 1);
 
-        tIndex = lIndex;
+            target->setOffset(next);
+
+            for (lIndex = 0; ; lIndex += 1) {
+                const CEI *cei = target->prevCE(lIndex);
+                int32_t low = cei->lowOffset;
+                int32_t high = cei->highOffset;
+
+                if (low < high && low <= tOffset) {
+                    if (low < tOffset) {
+                        while (lIndex >= 0 && target->prevCE(lIndex)->highOffset == high) {
+                            lIndex -= 1;
+                        }
+
+                        if (high > tOffset) {
+                            tOffset = high;
+                        }
+                    }
+
+                    break;
+                }
+            }
+        } else {
+          //target->setOffset(tOffset);
+            target->setLast(tOffset);
+            lIndex = 0;
+        }
+#endif
+
+        tIndex = ++lIndex;
 
         // Iterate backward until we hit the beginning of the pattern
         while (pIndex >= 0) {
