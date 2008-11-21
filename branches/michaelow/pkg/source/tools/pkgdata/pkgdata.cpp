@@ -468,6 +468,7 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
     char tmpDir[512] = "";
     char datFileName[256] = "";
     char datFileNamePath[2048] = "";
+    char checkLibFile[2048] = "";
 
     if (mode == MODE_FILES) {
         // TODO: Copy files over
@@ -528,6 +529,13 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
             }
 
             createFileNames(version_major, o->version, o->libName, reverseExt);
+
+            /* TODO: (add for Windows build) Check to see if a previous built data library file exists */
+            sprintf(checkLibFile, "%s%s", targetDir, libFileNames[LIB_FILE_VERSION]);
+            if (T_FileStream_file_exists(checkLibFile)) {
+                return result;
+            }
+
 
             pkg_checkFlag(o);
 #endif
@@ -990,6 +998,8 @@ static void extractFlag(char* buffer, int32_t bufferSize, char* flag) {
 }
 
 static void pkg_checkFlag(UPKGOptions *o) {
+    char *flag = NULL;
+    int32_t length = 0;
 #ifdef U_AIX
     char tmpbuffer[512];
     const char MAP_FILE_EXT[] = ".map";
@@ -1054,9 +1064,6 @@ static void pkg_checkFlag(UPKGOptions *o) {
         T_FileStream_close(f);
     }
 #elif defined(U_CYGWIN)
-    char *flag;
-    int32_t length;
-
     flag = pkgDataFlags[GENLIB];
     length = uprv_strlen(pkgDataFlags[GENLIB]);
 
