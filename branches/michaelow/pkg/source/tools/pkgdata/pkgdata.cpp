@@ -447,7 +447,8 @@ main(int argc, char* argv[]) {
     if (o.files != NULL) {
         pkg_deleteList(o.files);
     }
-
+    char version_major[10] = "";
+    UBool reverseExt = FALSE;
     return result;
 }
 
@@ -530,13 +531,14 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
 
             createFileNames(version_major, o->version, o->libName, reverseExt);
 
-            // TODO: (add for Windows build also may not be the actual final libfilename (e.g. AIX)
-            /* Check to see if a previous built data library file exists */
-            sprintf(checkLibFile, "%s%s", targetDir, libFileNames[LIB_FILE_VERSION_TMP]);
-            if (T_FileStream_file_exists(checkLibFile)) {
-                return result;
+            if (o->version != NULL) {
+                // TODO: (add for Windows build also may not be the actual final libfilename (e.g. AIX)
+                /* Check to see if a previous built data library file exists */
+                sprintf(checkLibFile, "%s%s", targetDir, libFileNames[LIB_FILE_VERSION_TMP]);
+                if (T_FileStream_file_exists(checkLibFile)) {
+                    return result;
+                }
             }
-
 
             pkg_checkFlag(o);
 #endif
@@ -600,31 +602,33 @@ static void createFileNames(const char *version_major, const char *version, cons
         sprintf(libFileNames[LIB_FILE], "%s%s",
                 pkgDataFlags[LIBPREFIX],
                 libName);
+        if (version != NULL) {
 #ifdef U_CYGWIN
-        sprintf(libFileNames[LIB_FILE_CYGWIN], "cyg%s%s.%s",
-                libName,
-                version_major,
-                pkgDataFlags[SO_EXT]);
+            sprintf(libFileNames[LIB_FILE_CYGWIN], "cyg%s%s.%s",
+                    libName,
+                    version_major,
+                    pkgDataFlags[SO_EXT]);
 
-        sprintf(pkgDataFlags[SO_EXT], "%s.%s",
-                pkgDataFlags[SO_EXT],
-                pkgDataFlags[A_EXT]);
+            sprintf(pkgDataFlags[SO_EXT], "%s.%s",
+                    pkgDataFlags[SO_EXT],
+                    pkgDataFlags[A_EXT]);
 #else
-        sprintf(libFileNames[LIB_FILE_VERSION_TMP], "%s%s%s.%s",
-                libFileNames[LIB_FILE],
-                pkgDataFlags[LIB_EXT_ORDER][0] == '.' ? "." : "",
-                reverseExt ? version : pkgDataFlags[SOBJ_EXT],
-                reverseExt ? pkgDataFlags[SOBJ_EXT] : version);
+            sprintf(libFileNames[LIB_FILE_VERSION_TMP], "%s%s%s.%s",
+                    libFileNames[LIB_FILE],
+                    pkgDataFlags[LIB_EXT_ORDER][0] == '.' ? "." : "",
+                    reverseExt ? version : pkgDataFlags[SOBJ_EXT],
+                    reverseExt ? pkgDataFlags[SOBJ_EXT] : version);
 #endif
-        sprintf(libFileNames[LIB_FILE_VERSION_MAJOR], "%s%s%s.%s",
-                libFileNames[LIB_FILE],
-                pkgDataFlags[LIB_EXT_ORDER][0] == '.' ? "." : "",
-                reverseExt ? version_major : pkgDataFlags[SO_EXT],
-                reverseExt ? pkgDataFlags[SO_EXT] : version_major);
+            sprintf(libFileNames[LIB_FILE_VERSION_MAJOR], "%s%s%s.%s",
+                    libFileNames[LIB_FILE],
+                    pkgDataFlags[LIB_EXT_ORDER][0] == '.' ? "." : "",
+                    reverseExt ? version_major : pkgDataFlags[SO_EXT],
+                    reverseExt ? pkgDataFlags[SO_EXT] : version_major);
 
 #ifdef U_CYGWIN
-        uprv_strcpy(libFileNames[LIB_FILE_VERSION_TMP], libFileNames[LIB_FILE_VERSION_MAJOR]);
+            uprv_strcpy(libFileNames[LIB_FILE_VERSION_TMP], libFileNames[LIB_FILE_VERSION_MAJOR]);
 #endif
+        }
 }
 
 static int32_t pkg_createSymLinks(const char *targetDir) {
