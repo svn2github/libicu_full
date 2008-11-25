@@ -1588,7 +1588,7 @@ void SSearchTest::monkeyTest(char *params)
         return;
     }
 
-    CollData  *collData = CollData::open(coll);
+    CollData  *monkeyData = CollData::open(coll);
 
     USet *expansions   = uset_openEmpty();
     USet *contractions = uset_openEmpty();
@@ -1599,8 +1599,8 @@ void SSearchTest::monkeyTest(char *params)
     U_STRING_INIT(letter_pattern, "[[:letter:]-[:ideographic:]-[:hangul:]]", 39);
     USet *letters = uset_openPattern(letter_pattern, 39, &status);
     SetMonkey letterMonkey(letters);
-    StringSetMonkey contractionMonkey(contractions, coll, collData);
-    StringSetMonkey expansionMonkey(expansions, coll, collData);
+    StringSetMonkey contractionMonkey(contractions, coll, monkeyData);
+    StringSetMonkey expansionMonkey(expansions, coll, monkeyData);
     UnicodeString testCase;
     UnicodeString alternate;
     UnicodeString pattern, altPattern;
@@ -1663,22 +1663,13 @@ void SSearchTest::monkeyTest(char *params)
 #endif
     }
 
-    // delete collData if we won't reuse it below
-    if (firstStrength != 0) {
-        CollData::close(collData);
-    }
-
     for(int32_t s = firstStrength; s <= lastStrength; s += 1) {
         int32_t notFoundCount = 0;
 
         ucol_setStrength(coll, strengths[s]);
-        
-        // We already opened a primary strength collData
-        // when we initialized the Monkeys
-        if (s > 0) {
-            collData = CollData::open(coll);
-        }
 
+        CollData *data = CollData::open(coll);
+        
         // TODO: try alternate prefix and suffix too?
         // TODO: alterntaes are only equal at primary strength. Is this OK?
         for(int32_t t = 0; t < loopCount; t += 1) {
@@ -1689,8 +1680,8 @@ void SSearchTest::monkeyTest(char *params)
             generateTestCase(coll, monkeys, monkeyCount, prefix,  altPrefix);
             generateTestCase(coll, monkeys, monkeyCount, suffix,  altSuffix);
 
-            BoyerMooreSearch pat(collData, pattern, NULL);
-            BoyerMooreSearch alt(collData, altPattern, NULL);
+            BoyerMooreSearch pat(data, pattern, NULL);
+            BoyerMooreSearch alt(data, altPattern, NULL);
 
             // **** need a better way to deal with this ****
             if (pat.empty() ||
@@ -1721,7 +1712,7 @@ void SSearchTest::monkeyTest(char *params)
             notFoundCount += monkeyTestCase(coll, testCase, pattern, altPattern, &pat, &alt, "pattern + suffix", strengthNames[s], seed);
         }
 
-        CollData::close(collData);
+        CollData::close(data);
 
         logln("For strength %s the not found count is %d.", strengthNames[s], notFoundCount);
     }
@@ -1729,6 +1720,8 @@ void SSearchTest::monkeyTest(char *params)
     uset_close(contractions);
     uset_close(expansions);
     uset_close(letters);
+
+    CollData::close(monkeyData);
     
     ucol_close(coll);
 }
