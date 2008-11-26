@@ -183,7 +183,8 @@ ucol_open_internal(const char *loc,
     UResourceBundle *collElem = NULL;
     char keyBuffer[256];
     // if there is a keyword, we pick it up and try to get elements
-    if(!uloc_getKeywordValue(loc, "collation", keyBuffer, 256, status)) {
+    if(!uloc_getKeywordValue(loc, "collation", keyBuffer, 256, status) ||
+        !uprv_strcmp(keyBuffer,"default")) { /* Treat 'zz@collation=default' as 'zz'. */
         // no keyword. we try to find the default setting, which will give us the keyword value
         intStatus = U_ZERO_ERROR;
         // finding default value does not affect collation fallback status
@@ -230,9 +231,12 @@ ucol_open_internal(const char *loc,
             if(U_FAILURE(*status)) {
                 goto clean;
             }
-        } else if(U_SUCCESS(*status)) { /* otherwise, we'll pick a collation data that exists */
+        } else if(U_SUCCESS(intStatus)) { /* otherwise, we'll pick a collation data that exists */
             int32_t len = 0;
             const uint8_t *inData = ures_getBinary(binary, &len, status);
+            if(U_FAILURE(*status)) {
+                goto clean;
+            }
             UCATableHeader *colData = (UCATableHeader *)inData;
             if(uprv_memcmp(colData->UCAVersion, UCA->image->UCAVersion, sizeof(UVersionInfo)) != 0 ||
                 uprv_memcmp(colData->UCDVersion, UCA->image->UCDVersion, sizeof(UVersionInfo)) != 0 ||
@@ -260,6 +264,11 @@ ucol_open_internal(const char *loc,
                 }
                 result->freeImageOnClose = FALSE;
             }
+        } else { // !U_SUCCESS(binaryStatus)
+            if(U_SUCCESS(*status)) {
+                *status = intStatus; // propagate underlying error
+            }
+            goto clean;
         }
         intStatus = U_ZERO_ERROR;
         result->rules = ures_getStringByKey(collElem, "Sequence", &result->rulesLength, &intStatus);

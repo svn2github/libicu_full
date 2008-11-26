@@ -2089,8 +2089,10 @@ ja{
                 ms{"mm:ss"}
                 y{"y"}
                 yM{"y/M"}
+                yMd{"y/M/d"}
                 yMEd{"y/M/d(EEE)"}
                 yMMM{"y年M月"}
+                yMMMd{"y年M月d日"}
                 yMMMEd{"y年M月d日(EEE)"}
                 yMMMM{"y年M月"}
                 yQ{"y/Q"}
@@ -2371,9 +2373,13 @@ ja{
             availableFormats{
                 Ed{"d日(EEE)"}
                 MMMEd{"M月d日(EEE)"}
+                MMMd{"M月d日"}
+                Md{"M/d"}
                 y{"Gy年"}
                 yyMM{"Gyy/MM"}
                 yyMMM{"Gy年M月"}
+                yMd{"Gy/M/d"}
+                yMMMd{"Gy年M月d日"}
                 yyQ{"Gyy/Q"}
                 yyyy{"Gy年"}
             }
