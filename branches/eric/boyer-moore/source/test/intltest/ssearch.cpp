@@ -1666,6 +1666,7 @@ void SSearchTest::monkeyTest(char *params)
     for(int32_t s = firstStrength; s <= lastStrength; s += 1) {
         int32_t notFoundCount = 0;
 
+        logln("Setting strength to %s.", strengthNames[s]);
         ucol_setStrength(coll, strengths[s]);
 
         CollData *data = CollData::open(coll);

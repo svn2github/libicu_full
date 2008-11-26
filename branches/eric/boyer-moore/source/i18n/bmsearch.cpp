@@ -89,6 +89,15 @@ Target::Target(UCollator *theCollator, const UnicodeString *target, int32_t patt
 
     ceb = NEW_ARRAY(CEI, bufferSize);
 
+#if 0
+    // This shouldn't be necessary...
+    for (int32_t i = 0; i < bufferSize; i += 1) {
+        ceb[i].order = 0;
+        ceb[i].lowOffset = 0;
+        ceb[i].highOffset = 0;
+    }
+#endif
+
     if (target != NULL) {
         setTargetString(target);
     }

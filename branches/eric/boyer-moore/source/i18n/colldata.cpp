@@ -325,7 +325,7 @@ CollData::CollData(UCollator *collator)
     USet *charsToTest  = uset_openPattern(test_pattern, 47, &status);
     USet *expansions   = uset_openEmpty();
     USet *contractions = uset_openEmpty();
-    int32_t itemCount = uset_getItemCount(charsToTest);;
+    int32_t itemCount;
 
     charsToCEList = new StringToCEsMap();
     ceToCharsStartingWith = new CEToStringsMap();
@@ -335,6 +335,7 @@ CollData::CollData(UCollator *collator)
     uset_addAll(charsToTest, contractions);
     uset_addAll(charsToTest, expansions);
 
+    itemCount = uset_getItemCount(charsToTest);
     for(int32_t item = 0; item < itemCount; item += 1) {
         UChar32 start = 0, end = 0;
         UChar buffer[16];
