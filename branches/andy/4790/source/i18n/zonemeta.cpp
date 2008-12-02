@@ -22,13 +22,14 @@
 #include "cstring.h"
 #include "ucln_in.h"
 
-static UBool gZoneMetaInitialized = FALSE;
-
 // Metazone mapping tables
 static UMTX gZoneMetaLock = NULL;
 static U_NAMESPACE_QUALIFIER Hashtable *gCanonicalMap = NULL;
 static U_NAMESPACE_QUALIFIER Hashtable *gOlsonToMeta = NULL;
 static U_NAMESPACE_QUALIFIER Hashtable *gMetaToOlson = NULL;
+static UBool gCanonicalMapInitialized = FALSE;
+static UBool gOlsonToMetaInitialized = FALSE;
+static UBool gMetaToOlsonInitialized = FALSE;
 
 U_CDECL_BEGIN
 /**
@@ -42,18 +43,19 @@ static UBool U_CALLCONV zoneMeta_cleanup(void)
         delete gCanonicalMap;
         gCanonicalMap = NULL;
     }
+    gCanonicalMapInitialized = FALSE;
 
     if (gOlsonToMeta != NULL) {
         delete gOlsonToMeta;
         gOlsonToMeta = NULL;
     }
+    gOlsonToMetaInitialized = FALSE;
 
     if (gMetaToOlson != NULL) {
         delete gMetaToOlson;
         gMetaToOlson = NULL;
     }
-
-    gZoneMetaInitialized = FALSE;
+    gMetaToOlsonInitialized = FALSE;
 
     return TRUE;
 }
@@ -324,7 +326,6 @@ ZoneMeta::createCanonicalMap(void) {
     numZones = tzenum->count(status);
     if (U_SUCCESS(status)) {
         int32_t i;
-        UnicodeString derefZone;
         for (i = 0; i < numZones; i++) {
             const UnicodeString *zone = tzenum->snext(status);
             if (U_FAILURE(status)) {
@@ -337,15 +338,19 @@ ZoneMeta::createCanonicalMap(void) {
                 // Already included in CLDR data
                 continue;
             }
-            // Check if this is a canonical (dereferenced) zone in the tzdata
-            TimeZone::dereferOlsonLink(*zone, derefZone);
-            if (derefZone.length() == 0) {
-                // Unknown?
-                continue;
-            } else if (derefZone != *zone) {
-                // This is a link in the tzdata.
-                // Check if the canonical zone is already in the canonical map.
-                entry = (CanonicalMapEntry*)canonicalMap->get(derefZone);
+            // Not in CLDR data, but it could be new one whose alias is available
+            // in CLDR.
+            int32_t nTzdataEquivalent = TimeZone::countEquivalentIDs(*zone);
+            int32_t j;
+            for (j = 0; j < nTzdataEquivalent; j++) {
+                UnicodeString alias = TimeZone::getEquivalentID(*zone, j);
+                if (alias == *zone) {
+                    continue;
+                }
+                entry = (CanonicalMapEntry*)canonicalMap->get(alias);
+                if (entry != NULL) {
+                    break;
+                }
             }
             // Create a new map entry
             CanonicalMapEntry* newEntry = (CanonicalMapEntry*)uprv_malloc(sizeof(CanonicalMapEntry));
@@ -356,6 +361,12 @@ ZoneMeta::createCanonicalMap(void) {
             }
             if (entry == NULL) {
                 // Set dereferenced zone ID as the canonical ID
+                UnicodeString derefZone;
+                TimeZone::dereferOlsonLink(*zone, derefZone);
+                if (derefZone.length() == 0) {
+                    // It should never happen.. but just in case
+                    derefZone = *zone;
+                }
                 idLen = derefZone.length() + 1;
                 newEntry->id = (UChar*)uprv_malloc(idLen * sizeof(UChar));
                 if (newEntry->id == NULL) {
@@ -642,32 +653,72 @@ error_cleanup:
  * Initialize global objects
  */
 void
-ZoneMeta::initialize(void) {
+ZoneMeta::initializeCanonicalMap(void) {
     UBool initialized;
-    UMTX_CHECK(&gZoneMetaLock, gZoneMetaInitialized, initialized);
+    UMTX_CHECK(&gZoneMetaLock, gCanonicalMapInitialized, initialized);
     if (initialized) {
         return;
     }
-
-    // Initialize hash tables
+    // Initialize hash table
     Hashtable *tmpCanonicalMap = createCanonicalMap();
+
+    umtx_lock(&gZoneMetaLock);
+    if (!gCanonicalMapInitialized) {
+        gCanonicalMap = tmpCanonicalMap;
+        tmpCanonicalMap = NULL;
+        gCanonicalMapInitialized = TRUE;
+    }
+    umtx_unlock(&gZoneMetaLock);
+
+    // OK to call the following multiple times with the same function
+    ucln_i18n_registerCleanup(UCLN_I18N_ZONEMETA, zoneMeta_cleanup);
+    delete tmpCanonicalMap;
+}
+
+void
+ZoneMeta::initializeOlsonToMeta(void) {
+    UBool initialized;
+    UMTX_CHECK(&gZoneMetaLock, gOlsonToMetaInitialized, initialized);
+    if (initialized) {
+        return;
+    }
+    // Initialize hash tables
     Hashtable *tmpOlsonToMeta = createOlsonToMetaMap();
+
+    umtx_lock(&gZoneMetaLock);
+    if (!gOlsonToMetaInitialized) {
+        gOlsonToMeta = tmpOlsonToMeta;
+        tmpOlsonToMeta = NULL;
+        gOlsonToMetaInitialized = TRUE;
+    }
+    umtx_unlock(&gZoneMetaLock);
+    
+    // OK to call the following multiple times with the same function
+    ucln_i18n_registerCleanup(UCLN_I18N_ZONEMETA, zoneMeta_cleanup);
+    delete tmpOlsonToMeta;
+}
+
+void
+ZoneMeta::initializeMetaToOlson(void) {
+    UBool initialized;
+    UMTX_CHECK(&gZoneMetaLock, gMetaToOlsonInitialized, initialized);
+    if (initialized) {
+        return;
+    }
+    // Initialize hash table
     Hashtable *tmpMetaToOlson = createMetaToOlsonMap();
 
     umtx_lock(&gZoneMetaLock);
-    if (gZoneMetaInitialized) {
-        // Another thread already created mappings
-        delete tmpCanonicalMap;
-        delete tmpOlsonToMeta;
-        delete tmpMetaToOlson;
-    } else {
-        gZoneMetaInitialized = TRUE;
-        gCanonicalMap = tmpCanonicalMap;
-        gOlsonToMeta = tmpOlsonToMeta;
+    if (!gMetaToOlsonInitialized) {
         gMetaToOlson = tmpMetaToOlson;
-        ucln_i18n_registerCleanup(UCLN_I18N_ZONEMETA, zoneMeta_cleanup);
+        tmpMetaToOlson = NULL;
+        gMetaToOlsonInitialized = TRUE;
     }
     umtx_unlock(&gZoneMetaLock);
+    
+    // OK to call the following multiple times with the same function
+    ucln_i18n_registerCleanup(UCLN_I18N_ZONEMETA, zoneMeta_cleanup);
+    delete tmpMetaToOlson;
 }
 
 UnicodeString& U_EXPORT2
@@ -695,7 +746,7 @@ ZoneMeta::getCanonicalCountry(const UnicodeString &tzid, UnicodeString &canonica
 
 const CanonicalMapEntry* U_EXPORT2
 ZoneMeta::getCanonicalInfo(const UnicodeString &tzid) {
-    initialize();
+    initializeCanonicalMap();
     CanonicalMapEntry *entry = NULL;
     if (gCanonicalMap != NULL) {
         entry = (CanonicalMapEntry*)gCanonicalMap->get(tzid);
@@ -757,7 +808,7 @@ ZoneMeta::getMetazoneID(const UnicodeString &tzid, UDate date, UnicodeString &re
 
 const UVector* U_EXPORT2
 ZoneMeta::getMetazoneMappings(const UnicodeString &tzid) {
-    initialize();
+    initializeOlsonToMeta();
     const UVector *result = NULL;
     if (gOlsonToMeta != NULL) {
         result = (UVector*)gOlsonToMeta->get(tzid);
@@ -767,7 +818,7 @@ ZoneMeta::getMetazoneMappings(const UnicodeString &tzid) {
 
 UnicodeString& U_EXPORT2
 ZoneMeta::getZoneIdByMetazone(const UnicodeString &mzid, const UnicodeString &region, UnicodeString &result) {
-    initialize();
+    initializeMetaToOlson();
     UBool isSet = FALSE;
     if (gMetaToOlson != NULL) {
         UVector *mappings = (UVector*)gMetaToOlson->get(mzid);

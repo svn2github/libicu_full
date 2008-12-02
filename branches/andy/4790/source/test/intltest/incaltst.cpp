@@ -1,6 +1,6 @@
 /***********************************************************************
  * COPYRIGHT: 
- * Copyright (c) 1997-2007, International Business Machines Corporation
+ * Copyright (c) 1997-2008, International Business Machines Corporation
  * and others. All Rights Reserved.
  ***********************************************************************/
 
@@ -327,8 +327,8 @@ void IntlCalendarTest::TestTaiwan() {
     };
     Calendar *cal;
     UErrorCode status = U_ZERO_ERROR;
-    cal = Calendar::createInstance("en_US@calendar=taiwan", status);
-    CHECK(status, UnicodeString("Creating en_US@calendar=taiwan calendar"));
+    cal = Calendar::createInstance("en_US@calendar=roc", status);
+    CHECK(status, UnicodeString("Creating en_US@calendar=roc calendar"));
 
     // Sanity check the calendar 
     UDate timeB = Calendar::getNow();
@@ -670,8 +670,6 @@ void IntlCalendarTest::TestJapanese3860()
         }
     }
     
-#if 0
-    // this will NOT work - *all the time*. If it is the 1st of the month, for example it will get Jan 1 heisei 1  => jan 1 showa 64,  wrong era.
     {
         // Test simple parse/format with adopt
         UDate aDate = 0; 
@@ -701,7 +699,7 @@ void IntlCalendarTest::TestJapanese3860()
             int32_t gotYear = cal2->get(UCAL_YEAR, s2);
             int32_t gotEra = cal2->get(UCAL_ERA, s2);
             int32_t expectYear = 1;
-            int32_t expectEra = JapaneseCalendar::kCurrentEra;
+            int32_t expectEra = 235; //JapaneseCalendar::kCurrentEra;
             if((gotYear!=1) || (gotEra != expectEra)) {
                 errln(UnicodeString("parse "+samplestr+" of 'y' as Japanese Calendar, expected year ") + expectYear + 
                     UnicodeString(" and era ") + expectEra +", but got year " + gotYear + " and era " + gotEra + " (Gregorian:" + str +")");
@@ -711,7 +709,7 @@ void IntlCalendarTest::TestJapanese3860()
             delete fmt;
         }
     }    
-#endif
+
     delete cal2;
     delete cal;
     delete fmt2;
@@ -756,7 +754,7 @@ void IntlCalendarTest::TestPersianFormat() {
     } else {
         UnicodeString str;
         fmt->format(aDate, str);
-        logln(UnicodeString() + "as Persian Calendar: " + escape(str)); 
+        logln(UnicodeString() + "as Persian Calendar: " + escape(str));
         UnicodeString expected("Dey 28, 1385 AP");
         if(str != expected) {
             errln("Expected " + escape(expected) + " but got " + escape(str));
@@ -766,6 +764,20 @@ void IntlCalendarTest::TestPersianFormat() {
             UnicodeString str3;
             fmt->format(otherDate, str3);
             errln("Parse incorrect of " + escape(expected) + " - wanted " + aDate + " but got " +  otherDate + ", " + escape(str3)); 
+        } else {
+            logln("Parsed OK: " + expected);
+        }
+        // Two digit year parsing problem #4732
+        fmt->applyPattern("yy-MM-dd");
+        str.remove();
+        fmt->format(aDate, str);
+        expected.setTo("85-10-28");
+        if(str != expected) {
+            errln("Expected " + escape(expected) + " but got " + escape(str));
+        }
+        otherDate = fmt->parse(expected, status);
+        if (otherDate != aDate) {
+            errln("Parse incorrect of " + escape(expected) + " - wanted " + aDate + " but got " + otherDate); 
         } else {
             logln("Parsed OK: " + expected);
         }

@@ -64,7 +64,7 @@ void DataDrivenFormatTest::runIndexedTest(int32_t index, UBool exec,
             name = "";
         }
     } else {
-        errln("format/DataDriven*Test data (format.res) not initialized!");
+        dataerrln("[DATA] format/DataDriven*Test data (format.res) not initialized!");
         name = "";
     }
 
@@ -180,11 +180,11 @@ void DataDrivenFormatTest::testConvertDate(TestData *testData,
         if(date.startsWith(kMILLIS)) {
             UnicodeString millis = UnicodeString(date, kMILLIS.length());
             useDate = TRUE;
-            fromDate = udbg_stoi(millis);
+            fromDate = udbg_stod(millis);
         } else if(date.startsWith(kRELATIVE_MILLIS)) {
             UnicodeString millis = UnicodeString(date, kRELATIVE_MILLIS.length());
             useDate = TRUE;
-            fromDate = udbg_stoi(millis) + now;
+            fromDate = udbg_stod(millis) + now;
         } else if(date.startsWith(kRELATIVE_ADD)) {
             UnicodeString add = UnicodeString(date, kRELATIVE_ADD.length());  // "add" is a string indicating which fields to add
             if(fromSet.parseFrom(add, status)<0 || U_FAILURE(status)) {

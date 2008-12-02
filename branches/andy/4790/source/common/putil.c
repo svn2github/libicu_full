@@ -48,7 +48,7 @@
 #endif
 #endif
 
-/* Make sure things like readlink and such functions work. 
+/* Make sure things like readlink and such functions work.
 Poorly upgraded Solaris machines can't have this defined.
 Cleanly installed Solaris can use this #define.
 */
@@ -114,7 +114,7 @@ Cleanly installed Solaris can use this #define.
 #endif
 
 #ifndef U_WINDOWS
-#include <sys/time.h> 
+#include <sys/time.h>
 #endif
 
 /*
@@ -187,7 +187,7 @@ u_bottomNBytesOfDouble(double* d, int n)
 }
 
 #if defined (U_DEBUG_FAKETIME)
-/* Override the clock to test things without having to move the system clock. 
+/* Override the clock to test things without having to move the system clock.
  * Assumes POSIX gettimeofday() will function
  */
 UDate fakeClock_t0 = 0; /** Time to start the clock from **/
@@ -216,7 +216,7 @@ static UDate getUTCtime_fake() {
         fakeClock_set = TRUE;
     }
     umtx_unlock(&fakeClockMutex);
-    
+
     return getUTCtime_real() + fakeClock_dt;
 }
 #endif
@@ -530,17 +530,17 @@ uprv_maximumPtr(void * base)
 {
 #if defined(OS400)
     /*
-     * With the provided function we should never be out of range of a given segment 
+     * With the provided function we should never be out of range of a given segment
      * (a traditional/typical segment that is).  Our segments have 5 bytes for the
      * id and 3 bytes for the offset.  The key is that the casting takes care of
      * only retrieving the offset portion minus x1000.  Hence, the smallest offset
      * seen in a program is x001000 and when casted to an int would be 0.
      * That's why we can only add 0xffefff.  Otherwise, we would exceed the segment.
      *
-     * Currently, 16MB is the current addressing limitation on i5/OS if the activation is 
+     * Currently, 16MB is the current addressing limitation on i5/OS if the activation is
      * non-TERASPACE.  If it is TERASPACE it is 2GB - 4k(header information).
-     * This function determines the activation based on the pointer that is passed in and 
-     * calculates the appropriate maximum available size for 
+     * This function determines the activation based on the pointer that is passed in and
+     * calculates the appropriate maximum available size for
      * each pointer type (TERASPACE and non-TERASPACE)
      *
      * Unlike other operating systems, the pointer model isn't determined at
@@ -554,7 +554,7 @@ uprv_maximumPtr(void * base)
     return ((void *)(((char *)base)-((uint32_t)(base))+((uint32_t)0xffefff)));
 
 #else
-    return U_MAX_PTR(base); 
+    return U_MAX_PTR(base);
 #endif
 }
 
@@ -604,7 +604,7 @@ uprv_timezone()
 }
 
 /* Note that U_TZNAME does *not* have to be tzname, but if it is,
-   some platforms need to have it declared here. */ 
+   some platforms need to have it declared here. */
 
 #if defined(U_TZNAME) && (defined(U_IRIX) || defined(U_DARWIN) || defined(U_CYGWIN))
 /* RS6000 and others reject char **tzname.  */
@@ -614,12 +614,16 @@ extern U_IMPORT char *U_TZNAME[];
 #if !UCONFIG_NO_FILE_IO && (defined(U_DARWIN) || defined(U_LINUX) || defined(U_BSD))
 /* These platforms are likely to use Olson timezone IDs. */
 #define CHECK_LOCALTIME_LINK 1
-#if defined(U_LINUX)
-#define TZDEFAULT       "/etc/localtime"
-#define TZZONEINFO      "/usr/share/zoneinfo/"
-#else
+#if defined(U_DARWIN)
 #include <tzfile.h>
 #define TZZONEINFO      (TZDIR "/")
+#else
+#define TZDEFAULT       "/etc/localtime"
+#define TZZONEINFO      "/usr/share/zoneinfo/"
+#endif
+#if U_HAVE_DIRENT_H
+#define SEARCH_TZFILE
+#include <dirent.h>  /* Needed to search through system timezone files */
 #endif
 static char gTimeZoneBuffer[PATH_MAX];
 static char *gTimeZoneBufferPtr = NULL;
@@ -752,6 +756,130 @@ static const char* remapShortTimeZone(const char *stdID, const char *dstID, int3
 }
 #endif
 
+#ifdef SEARCH_TZFILE
+#define MAX_PATH_SIZE PATH_MAX /* Set the limit for the size of the path. */
+#define MAX_READ_SIZE 512
+
+typedef struct DefaultTZInfo {
+    char* defaultTZBuffer;
+    int64_t defaultTZFileSize;
+    FILE* defaultTZFilePtr;
+    UBool defaultTZstatus;
+    int32_t defaultTZPosition;
+} DefaultTZInfo;
+
+/*
+ * This method compares the two files given to see if they are a match.
+ * It is currently use to compare two TZ files.
+ */
+static UBool compareBinaryFiles(const char* defaultTZFileName, const char* TZFileName, DefaultTZInfo* tzInfo) {
+    if (tzInfo->defaultTZFilePtr == NULL) {
+        tzInfo->defaultTZFilePtr = fopen(defaultTZFileName, "r");
+    }
+    FILE* file = fopen(TZFileName, "r");
+
+    int64_t sizeFile;
+    int64_t sizeFileLeft;
+    int32_t sizeFileRead;
+    int32_t sizeFileToRead;
+
+    tzInfo->defaultTZPosition = 0; /* reset position to begin search */
+
+    char bufferFile[MAX_READ_SIZE];
+
+    UBool result = TRUE;
+
+    if (file != NULL && tzInfo->defaultTZFilePtr != NULL) {
+        /* First check that the file size are equal. */
+        if (tzInfo->defaultTZFileSize == 0) {
+            fseek(tzInfo->defaultTZFilePtr, 0, SEEK_END);
+            tzInfo->defaultTZFileSize = ftell(tzInfo->defaultTZFilePtr);
+        }
+        fseek(file, 0, SEEK_END);
+        sizeFile = ftell(file);
+        sizeFileLeft = sizeFile;
+
+        if (sizeFile != tzInfo->defaultTZFileSize) {
+            result = FALSE;
+        } else {
+            /* Store the data from the files in seperate buffers and
+             * compare each byte to determine equality.
+             */
+            if (tzInfo->defaultTZBuffer == NULL) {
+                rewind(tzInfo->defaultTZFilePtr);
+                tzInfo->defaultTZBuffer = (char*)uprv_malloc(sizeof(char) * tzInfo->defaultTZFileSize);
+                fread(tzInfo->defaultTZBuffer, 1, tzInfo->defaultTZFileSize, tzInfo->defaultTZFilePtr);
+            }
+            rewind(file);
+            while(sizeFileLeft > 0) {
+                uprv_memset(bufferFile, 0, MAX_READ_SIZE);
+                sizeFileToRead = sizeFileLeft < MAX_READ_SIZE ? sizeFileLeft : MAX_READ_SIZE;
+
+                sizeFileRead = fread(bufferFile, 1, sizeFileToRead, file);
+                if (memcmp(tzInfo->defaultTZBuffer + tzInfo->defaultTZPosition, bufferFile, sizeFileRead) != 0) {
+                    result = FALSE;
+                    break;
+                }
+                sizeFileLeft -= sizeFileRead;
+                tzInfo->defaultTZPosition += sizeFileRead;
+            }
+        }
+    } else {
+        result = FALSE;
+    }
+
+    if (file != NULL) {
+        fclose(file);
+    }
+
+    return result;
+}
+/*
+ * This method recursively traverses the directory given for a matching TZ file and returns the first match.
+ */
+/* dirent also lists two entries: "." and ".." that we can safely ignore. */
+#define SKIP1 "."
+#define SKIP2 ".."
+static char* searchForTZFile(const char* path, DefaultTZInfo* tzInfo) {
+    DIR* dirp = opendir(path);
+    DIR* subDirp = NULL;
+    struct dirent* dirEntry = NULL;
+
+    char* result = NULL;
+
+    /* Save the current path */
+    char curpath[MAX_PATH_SIZE];
+    uprv_memset(curpath, 0, MAX_PATH_SIZE);
+    uprv_strcpy(curpath, path);
+
+    /* Check each entry in the directory. */
+    while((dirEntry = readdir(dirp)) != NULL) {
+        if (uprv_strcmp(dirEntry->d_name, SKIP1) != 0 && uprv_strcmp(dirEntry->d_name, SKIP2) != 0) {
+            /* Create a newpath with the new entry to test each entry in the directory. */
+            char newpath[MAX_PATH_SIZE];
+            uprv_strcpy(newpath, curpath);
+            uprv_strcat(newpath, dirEntry->d_name);
+
+            if ((subDirp = opendir(newpath)) != NULL) {
+                /* If this new path is a directory, make a recursive call with the newpath. */
+                closedir(subDirp);
+                uprv_strcat(newpath, "/");
+                result = searchForTZFile(newpath, tzInfo);
+            } else {
+                if(compareBinaryFiles(TZDEFAULT, newpath, tzInfo)) {
+                    char temp[MAX_PATH_SIZE];
+                    uprv_strcpy(temp, newpath + (sizeof(TZZONEINFO) - 1));
+                    result = temp;
+                    /* Get out after the first one found. */
+                    break;
+                }
+            }
+        }
+    }
+    closedir(dirp);
+    return result;
+}
+#endif
 U_CAPI const char* U_EXPORT2
 uprv_tzname(int n)
 {
@@ -807,6 +935,33 @@ uprv_tzname(int n)
             {
                 return (gTimeZoneBufferPtr = gTimeZoneBuffer + tzZoneInfoLen);
             }
+        } else {
+#if defined(SEARCH_TZFILE)
+            DefaultTZInfo* tzInfo = (DefaultTZInfo*)uprv_malloc(sizeof(DefaultTZInfo));
+            if (tzInfo != NULL) {
+                tzInfo->defaultTZBuffer = NULL;
+                tzInfo->defaultTZFileSize = 0;
+                tzInfo->defaultTZFilePtr = NULL;
+                tzInfo->defaultTZstatus = FALSE;
+                tzInfo->defaultTZPosition = 0;
+
+                gTimeZoneBufferPtr = searchForTZFile(TZZONEINFO, tzInfo);
+
+                /* Free previously allocated memory */
+                if (tzInfo->defaultTZBuffer != NULL) {
+                    uprv_free(tzInfo->defaultTZBuffer);
+                }
+                if (tzInfo->defaultTZFilePtr != NULL) {
+                    fclose(tzInfo->defaultTZFilePtr);
+                }
+                uprv_free(tzInfo);
+            }
+
+            if (gTimeZoneBufferPtr != NULL && isValidOlsonID(gTimeZoneBufferPtr)) {
+                tzInfo->defaultTZstatus = TRUE;
+                return gTimeZoneBufferPtr;
+            }
+#endif
         }
     }
     else {
@@ -891,7 +1046,7 @@ u_setDataDirectory(const char *directory) {
         newDataDir = (char *)uprv_malloc(length + 2);
         /* Exit out if newDataDir could not be created. */
         if (newDataDir == NULL) {
-        	return;
+            return;
         }
         uprv_strcpy(newDataDir, directory);
 
@@ -915,10 +1070,10 @@ u_setDataDirectory(const char *directory) {
 }
 
 U_CAPI UBool U_EXPORT2
-uprv_pathIsAbsolute(const char *path) 
+uprv_pathIsAbsolute(const char *path)
 {
-  if(!path || !*path) { 
-    return FALSE; 
+  if(!path || !*path) {
+    return FALSE;
   }
 
   if(*path == U_FILE_SEP_CHAR) {
@@ -1103,7 +1258,7 @@ static const char *uprv_getPOSIXID(void)
     static const char* posixID = NULL;
     if (posixID == 0) {
         /*
-        * On Solaris two different calls to setlocale can result in 
+        * On Solaris two different calls to setlocale can result in
         * different values. Only get this value once.
         *
         * We must check this first because an application can set this.
@@ -1116,7 +1271,7 @@ static const char *uprv_getPOSIXID(void)
         * Linux can return LC_CTYPE=C;LC_NUMERIC=C;...
         *
         * The default codepage detection also needs to use LC_CTYPE.
-        * 
+        *
         * Do not call setlocale(LC_*, "")! Using an empty string instead
         * of NULL, will modify the libc behavior.
         */
@@ -1188,7 +1343,7 @@ The leftmost codepage (.xxx) wins.
     */
 
     if (gCorrectedPOSIXLocale != NULL) {
-        return gCorrectedPOSIXLocale; 
+        return gCorrectedPOSIXLocale;
     }
 
     if ((p = uprv_strchr(posixID, '.')) != NULL) {
@@ -1196,7 +1351,7 @@ The leftmost codepage (.xxx) wins.
         correctedPOSIXLocale = uprv_malloc(uprv_strlen(posixID)+1);
         /* Exit on memory allocation error. */
         if (correctedPOSIXLocale == NULL) {
-        	return NULL;
+            return NULL;
         }
         uprv_strncpy(correctedPOSIXLocale, posixID, p-posixID);
         correctedPOSIXLocale[p-posixID] = 0;
@@ -1213,7 +1368,7 @@ The leftmost codepage (.xxx) wins.
             correctedPOSIXLocale = uprv_malloc(uprv_strlen(posixID)+1);
             /* Exit on memory allocation error. */
             if (correctedPOSIXLocale == NULL) {
-            	return NULL;
+                return NULL;
             }
             uprv_strncpy(correctedPOSIXLocale, posixID, p-posixID);
             correctedPOSIXLocale[p-posixID] = 0;
@@ -1260,7 +1415,7 @@ The leftmost codepage (.xxx) wins.
         correctedPOSIXLocale = (char *)uprv_malloc(uprv_strlen(posixID) + 1);
         /* Exit on memory allocation error. */
         if (correctedPOSIXLocale == NULL) {
-        	return NULL;
+            return NULL;
         }
         posixID = uprv_strcpy(correctedPOSIXLocale, posixID);
     }
@@ -1272,7 +1427,7 @@ The leftmost codepage (.xxx) wins.
     }
 
     if (correctedPOSIXLocale != NULL) {  /* Was already set - clean up. */
-        uprv_free(correctedPOSIXLocale); 
+        uprv_free(correctedPOSIXLocale);
     }
 
     return posixID;
@@ -1463,6 +1618,13 @@ remapPlatformDependentCodepage(const char *locale, const char *name) {
         */
         name = "eucjis";
     }
+    else if (uprv_strcmp(name, "646") == 0) {
+        /*
+         * The default codepage given by Solaris is 646 but the C library routines treat it as if it was
+         * ISO-8859-1 instead of US-ASCII(646).
+         */
+        name = "ISO-8859-1";
+    }
 #elif defined(U_DARWIN)
     if (locale == NULL && *name == 0) {
         /*
@@ -1471,6 +1633,15 @@ remapPlatformDependentCodepage(const char *locale, const char *name) {
         Mac OS X uses UTF-8 by default (especially the locale data and console).
         */
         name = "UTF-8";
+    }
+    else if (uprv_strcmp(name, "CP949") == 0) {
+        /* Remap CP949 to a similar codepage to avoid issues with backslash and won symbol. */
+        name = "EUC-KR";
+    }
+#elif defined(U_BSD)
+    if (uprv_strcmp(name, "CP949") == 0) {
+        /* Remap CP949 to a similar codepage to avoid issues with backslash and won symbol. */
+        name = "EUC-KR";
     }
 #elif defined(U_HPUX)
     if (locale != NULL && uprv_strcmp(locale, "zh_HK") == 0 && uprv_strcmp(name, "big5") == 0) {
@@ -1513,7 +1684,7 @@ remapPlatformDependentCodepage(const char *locale, const char *name) {
     return name;
 }
 
-static const char*  
+static const char*
 getCodepageFromPOSIXID(const char *localeName, char * buffer, int32_t buffCapacity)
 {
     char localeBuf[100];
@@ -1535,7 +1706,7 @@ getCodepageFromPOSIXID(const char *localeName, char * buffer, int32_t buffCapaci
 }
 #endif
 
-static const char*  
+static const char*
 int_getDefaultCodepage()
 {
 #if defined(OS400)
@@ -1561,8 +1732,11 @@ int_getDefaultCodepage()
 
 #elif defined(OS390)
     static char codepage[64];
-    sprintf(codepage,"%63s" UCNV_SWAP_LFNL_OPTION_STRING, nl_langinfo(CODESET));
+
+    strncpy(codepage, nl_langinfo(CODESET),63-strlen(UCNV_SWAP_LFNL_OPTION_STRING));
+    strcat(codepage,UCNV_SWAP_LFNL_OPTION_STRING);
     codepage[63] = 0; /* NULL terminate */
+
     return codepage;
 
 #elif defined(XP_MAC)

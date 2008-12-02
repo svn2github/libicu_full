@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2007, International Business Machines Corporation and
+* Copyright (C) 2007-2008, International Business Machines Corporation and
 * others. All Rights Reserved.
 ********************************************************************************
 
@@ -35,7 +35,7 @@ void PluralRulesTest::runIndexedTest( int32_t index, UBool exec, const char* &na
     }
 }
 
-#define PLURAL_TEST_NUM    13
+#define PLURAL_TEST_NUM    18
 /**
  * Test various generic API methods of PluralRules for API coverage.
  */
@@ -47,12 +47,17 @@ void PluralRulesTest::testAPI(/*char *par*/)
             UNICODE_STRING_SIMPLE("a: n is not 1"),
             UNICODE_STRING_SIMPLE("a: n mod 3 is not 1"),
             UNICODE_STRING_SIMPLE("a: n in 2..5"),
+            UNICODE_STRING_SIMPLE("a: n within 2..5"),
             UNICODE_STRING_SIMPLE("a: n not in 2..5"),
+            UNICODE_STRING_SIMPLE("a: n not within 2..5"),
             UNICODE_STRING_SIMPLE("a: n mod 10 in 2..5"),
+            UNICODE_STRING_SIMPLE("a: n mod 10 within 2..5"),
             UNICODE_STRING_SIMPLE("a: n mod 10 is 2 and n is not 12"),
             UNICODE_STRING_SIMPLE("a: n mod 10 in 2..3 or n mod 10 is 5"),
+            UNICODE_STRING_SIMPLE("a: n mod 10 within 2..3 or n mod 10 is 5"),
             UNICODE_STRING_SIMPLE("a: n is 1 or n is 4 or n is 23"),
             UNICODE_STRING_SIMPLE("a: n mod 2 is 1 and n is not 3 and n in 1..11"),
+            UNICODE_STRING_SIMPLE("a: n mod 2 is 1 and n is not 3 and n within 1..11"),
             UNICODE_STRING_SIMPLE("a: n mod 2 is 1 or n mod 5 is 1 and n is not 6"),
             "",
     };
@@ -62,11 +67,16 @@ void PluralRulesTest::testAPI(/*char *par*/)
         {0,2,3,4,5,0},
         {0,2,3,5,6,8,9,0},
         {2,3,4,5,0},
+        {2,3,4,5,0},
         {0,1,6,7,8, 0},
+        {0,1,6,7,8, 0},
+        {2,3,4,5,12,13,14,15,22,23,24,25,0},
         {2,3,4,5,12,13,14,15,22,23,24,25,0},
         {2,22,32,42,0},
         {2,3,5,12,13,15,22,23,25,0},
+        {2,3,5,12,13,15,22,23,25,0},
         {1,4,23,0},
+        {1,5,7,9,11,0},
         {1,5,7,9,11,0},
         {1,3,5,7,9,11,13,15,16,0},
     };
@@ -86,6 +96,22 @@ void PluralRulesTest::testAPI(/*char *par*/)
         delete test;
         return;
     }
+    
+    // ======= Test clone, assignment operator && == operator.
+    PluralRules *dupRule = defRule.clone();
+    if (dupRule!=NULL) {
+        if ( *dupRule != defRule ) {
+            errln("ERROR:  clone plural rules test failed!");
+        }
+    }
+    *dupRule = *newEnPlural;
+    if (dupRule!=NULL) {
+        if ( *dupRule != *newEnPlural ) {
+            errln("ERROR:  clone plural rules test failed!");
+        }
+        delete dupRule;
+    }
+
     delete newEnPlural;
 
     // ======= Test empty plural rules   
@@ -95,7 +121,7 @@ void PluralRulesTest::testAPI(/*char *par*/)
     UnicodeString key;
     for (int32_t i=0; i<10; ++i) {
         key = empRule->select(i);
-        if ( key.charAt(0)!='a' ) {
+        if ( key.charAt(0)!= 0x61 ) { // 'a'
             errln("ERROR:  empty plural rules test failed! - exitting");
         }
     }
@@ -127,10 +153,23 @@ void PluralRulesTest::testAPI(/*char *par*/)
     logln("Testing Complex PluralRules");
     // TODO: the complex test data is hard coded. It's better to implement 
     // a parser to parse the test data.
-    UnicodeString complexRule = UNICODE_STRING_SIMPLE("a: n in 2..5; b: n in 5..8; c: n mod 2 is 1"); 
-    char cRuleResult[] = {
-        'o','c','a','a','a','a','b','b','b','c',
-        'o','c'};
+    UnicodeString complexRule = UNICODE_STRING_SIMPLE("a: n in 2..5; b: n in 5..8; c: n mod 2 is 1");
+    UnicodeString complexRule2 = UNICODE_STRING_SIMPLE("a: n within 2..5; b: n within 5..8; c: n mod 2 is 1"); 
+    char cRuleResult[] = 
+    {
+       0x6F, // 'o'
+       0x63, // 'c'
+       0x61, // 'a'
+       0x61, // 'a'
+       0x61, // 'a'
+       0x61, // 'a'
+       0x62, // 'b'
+       0x62, // 'b'
+       0x62, // 'b'
+       0x63, // 'c'
+       0x6F, // 'o'
+       0x63  // 'c'
+    };
     PluralRules *newRules = test->createRules(complexRule, status);
     if ( !checkEqual(newRules, cRuleResult, 12) ) {
          errln("ERROR:  complex plural rules failed! - exitting");
@@ -141,6 +180,41 @@ void PluralRulesTest::testAPI(/*char *par*/)
         delete newRules;
         newRules=NULL;
     }
+    newRules = test->createRules(complexRule2, status);
+    if ( !checkEqual(newRules, cRuleResult, 12) ) {
+         errln("ERROR:  complex plural rules failed! - exitting");
+         delete test;
+         return;
+     }
+    if (newRules!=NULL) {
+        delete newRules;
+        newRules=NULL;
+    }
+    
+    // ======= Test decimal fractions plural rules
+    UnicodeString decimalRule= UNICODE_STRING_SIMPLE("a: n not in 0..100;");
+    UnicodeString KEYWORD_A = UNICODE_STRING_SIMPLE("a");
+    status = U_ZERO_ERROR;
+    newRules = test->createRules(decimalRule, status);
+    if (U_FAILURE(status)) {
+        dataerrln("ERROR: Could not create PluralRules for testing fractions - exitting");
+        delete test;
+        return;
+    }
+    double fData[10] = {-100, -1, -0.0, 0, 0.1, 1, 1.999, 2.0, 100, 100.001 };
+    UBool isKeywordA[10] = { 
+           TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE };
+    for (int32_t i=0; i<10; i++) {
+        if ((newRules->select(fData[i])== KEYWORD_A) != isKeywordA[i]) {
+             errln("ERROR: plural rules for decimal fractions test failed!");
+        }
+    }
+    if (newRules!=NULL) {
+        delete newRules;
+        newRules=NULL;
+    }
+    
+    
     
     // ======= Test Equality
     logln("Testing Equality of PluralRules");
@@ -153,12 +227,32 @@ void PluralRulesTest::testAPI(/*char *par*/)
      }
 
   
-// ======= Test getStaticClassID()
+    // ======= Test getStaticClassID()
     logln("Testing getStaticClassID()");
     
     if(test->getDynamicClassID() != PluralRules::getStaticClassID()) {
         errln("ERROR: getDynamicClassID() didn't return the expected value");
     }
+    // ====== Test fallback to parent locale
+    PluralRules *en_UK = test->forLocale(Locale::getUK(), status);
+    PluralRules *en = test->forLocale(Locale::getEnglish(), status);
+    if (en_UK != NULL && en != NULL) {
+        if ( *en_UK != *en ) {
+            errln("ERROR:  test locale fallback failed!");
+        }
+    }
+    delete en;
+    delete en_UK;
+
+    PluralRules *zh_Hant = test->forLocale(Locale::getTaiwan(), status);
+    PluralRules *zh = test->forLocale(Locale::getChinese(), status);
+    if (zh_Hant != NULL && zh != NULL) {
+        if ( *zh_Hant != *zh ) {
+            errln("ERROR:  test locale fallback failed!");
+        }
+    }
+    delete zh_Hant;
+    delete zh;
     delete test;
 }
 
@@ -168,9 +262,9 @@ void setupResult(const int32_t testSource[], char result[], int32_t* max) {
     
     do {
         while (curIndex < testSource[i]) {
-            result[curIndex++]='o'; //other
+            result[curIndex++]=0x6F; //'o' other
         }
-        result[curIndex++]='a';
+        result[curIndex++]=0x61; // 'a'
         
     } while(testSource[++i]>0);
     *max=curIndex;
@@ -179,13 +273,14 @@ void setupResult(const int32_t testSource[], char result[], int32_t* max) {
 
 UBool checkEqual(PluralRules *test, char *result, int32_t max) {
     UnicodeString key;
+    UBool isEqual = TRUE;
     for (int32_t i=0; i<max; ++i) {
         key= test->select(i);
         if ( key.charAt(0)!=result[i] ) {
-            return FALSE;
+            isEqual = FALSE;
         }
     }
-    return TRUE;
+    return isEqual;
 }
 
 #define MAX_EQ_ROW  2
@@ -208,7 +303,6 @@ UBool testEquality(PluralRules *test) {
     UBool ret=TRUE;
     for (int32_t i=0; i<MAX_EQ_ROW; ++i) {
         PluralRules* rules[MAX_EQ_COL];
-        UnicodeString result[MAX_EQ_COL];
         
         for (int32_t j=0; j<MAX_EQ_COL; ++j) {
             rules[j]=NULL;

@@ -123,7 +123,7 @@ class Hashtable;
  * <pre>
  * UErrorCode status = U_ZERO_ERROR;
  * MessageFormat* msgFmt = new MessageFormat(UnicodeString("{0, plural,
- *   one{0, number, C''est #,##0.0#  fichier} other {Ce sont # fichiers}} dans la liste."),
+ *   one{{0, number, C''est #,##0.0#  fichier}} other {Ce sont # fichiers}} dans la liste."),
  *   Locale("fr"), status);
  * if (U_FAILURE(status)) {
  *     return;
@@ -319,7 +319,21 @@ public:
      * @return        the string containing the formatted plural message.
      * @draft ICU 4.0
      */
-    UnicodeString format(int32_t number, UErrorCode& status) const;
+    UnicodeString format(int32_t number, UErrorCode& status) const;   
+    
+    /**
+     * Formats a plural message for a given number.
+     *
+     * @param number  a number for which the plural message should be formatted
+     *                for. If no pattern has been applied to this
+     *                PluralFormat object yet, the formatted number
+     *                will be returned.
+     * @param status  output param set to success or failure code on exit, which
+     *                must not indicate a failure before the function call.
+     * @return        the string containing the formatted plural message.
+     * @draft ICU 4.0
+     */
+    UnicodeString format(double number, UErrorCode& status) const;
 
     /**
      * Formats a plural message for a given number.
@@ -341,6 +355,27 @@ public:
                           UnicodeString& appendTo,
                           FieldPosition& pos,
                           UErrorCode& status) const;
+    
+    /**
+     * Formats a plural message for a given number.
+     *
+     * @param number   a number for which the plural message should be formatted
+     *                 for. If no pattern has been applied to this
+     *                 <code>PluralFormat</code> object yet, the formatted number
+     *                 will be returned.
+     * @param appendTo output parameter to receive result.
+     *                 result is appended to existing contents.
+     * @param pos      On input: an alignment field, if desired.
+     *                 On output: the offsets of the alignment field.
+     * @param status   output param set to success/failure code on exit, which
+     *                 must not indicate a failure before the function call.
+     * @return         the string containing the formatted plural message.
+     * @draft ICU 4.0
+     */
+    UnicodeString& format(double number,
+                          UnicodeString& appendTo,
+                          FieldPosition& pos,
+                          UErrorCode& status) const;
 
     /**
      * Sets the locale used by this <code>PluraFormat</code> object.
@@ -348,7 +383,7 @@ public:
      *     i.e., a pattern that was applied previously will be removed,
      *     and the NumberFormat is set to the default number format for
      *     the locale.  The resulting format behaves the same as one
-     *     constructed from {@link #PluralFormat(locale)}.
+     *     constructed from {@link #PluralFormat(const Locale& locale, UErrorCode& status)}.
      * @param locale  the <code>locale</code> to use to configure the formatter.
      * @param status  output param set to success/failure code on exit, which
      *                must not indicate a failure before the function call.
@@ -491,7 +526,7 @@ private:
     UBool inRange(UChar ch, fmtToken& type);
     UBool checkSufficientDefinition();
     void parsingFailure();
-    UnicodeString insertFormattedNumber(int32_t number,
+    UnicodeString insertFormattedNumber(double number,
                                         UnicodeString& message,
                                         UnicodeString& appendTo,
                                         FieldPosition& pos) const;

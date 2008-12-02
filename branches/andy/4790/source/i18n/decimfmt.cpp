@@ -67,9 +67,9 @@ U_NAMESPACE_BEGIN
 static void debugout(UnicodeString s) {
     char buf[2000];
     s.extract((int32_t) 0, s.length(), buf);
-    printf("%s", buf);
+    printf("%s\n", buf);
 }
-#define debug(x) printf("%s", x);
+#define debug(x) printf("%s\n", x);
 #else
 #define debugout(x)
 #define debug(x)
@@ -1730,6 +1730,11 @@ int32_t DecimalFormat::compareSimpleAffix(const UnicodeString& affix,
             if (pos == s && !literalMatch) {
                 return -1;
             }
+
+            // If we skip UWhiteSpace in the input text, we need to skip it in the pattern.
+            // Otherwise, the previous lines may have skipped over text (such as U+00A0) that
+            // is also in the affix.
+            i = skipUWhiteSpace(affix, i);
         } else {
             if (pos < input.length() &&
                 input.char32At(pos) == c) {
@@ -1819,10 +1824,10 @@ int32_t DecimalFormat::compareComplexAffix(const UnicodeString& affixPat,
                     const char* loc = getLocaleID(ULOC_VALID_LOCALE, ec);
                     if (U_FAILURE(ec) || loc == NULL || *loc == 0) {
                         // applyPattern has been called; use the symbols
-                    	if (fSymbols == NULL) {
-                    		ec = U_MEMORY_ALLOCATION_ERROR;
-                    		return 0;
-                    	}
+                        if (fSymbols == NULL) {
+                            ec = U_MEMORY_ALLOCATION_ERROR;
+                            return 0;
+                        }
                         loc = fSymbols->getLocale().getName();
                         ec = U_ZERO_ERROR;
                     }
@@ -2137,9 +2142,9 @@ void DecimalFormat::setRoundingIncrement(double newValue) {
             fRoundingIncrement = new DigitList();
         }
         if (fRoundingIncrement != NULL) {
-	        fRoundingIncrement->set((int32_t)newValue);
-	        fRoundingDouble = newValue;
-	        return;
+            fRoundingIncrement->set((int32_t)newValue);
+            fRoundingDouble = newValue;
+            return;
         }
     } 
     // These statements are executed if newValue is less than 0.0
@@ -3726,11 +3731,11 @@ void DecimalFormat::setCurrency(const UChar* theCurrency) {
 
 void DecimalFormat::getEffectiveCurrency(UChar* result, UErrorCode& ec) const {
     if (fSymbols == NULL) {
-    	ec = U_MEMORY_ALLOCATION_ERROR;
-    	return;
+        ec = U_MEMORY_ALLOCATION_ERROR;
+        return;
     }
     ec = U_ZERO_ERROR;
-	const UChar* c = getCurrency();
+    const UChar* c = getCurrency();
     if (*c == 0) {
         const UnicodeString &intl =
             fSymbols->getConstSymbol(DecimalFormatSymbols::kIntlCurrencySymbol);

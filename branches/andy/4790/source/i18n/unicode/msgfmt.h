@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2007, International Business Machines Corporation and others. All Rights Reserved.
+* Copyright (C) 2007-2008, International Business Machines Corporation and others. All Rights Reserved.
 ********************************************************************************
 *
 * File MSGFMT.H
@@ -83,10 +83,10 @@ class DateFormat;
  * identify positions in an array using a name.  UErrorCode is set to
  * U_ARGUMENT_TYPE_MISMATCH if there is a status/success field in the method.
  * These methods are 
- * {@link #adoptFormats(Format** newFormats, int32_t count)},
+ * {@link #adoptFormats(Format** formatsToAdopt, int32_t count)},
  * {@link #setFormats(const Format** newFormats,int32_t count)},
  * {@link #adoptFormat(int32_t n, Format *newFormat)},
- * {@link #getFormats(int32_t& cnt)},
+ * {@link #getFormats(int32_t& count)},
  * {@link #format(const Formattable* source,int32_t cnt,UnicodeString& appendTo, FieldPosition& ignore, UErrorCode& success)},
  * {@link #format(const UnicodeString& pattern,const Formattable* arguments,int32_t cnt,UnicodeString& appendTo,UErrorCode& success)},
  * {@link #format(const Formattable& source, UnicodeString& appendTo,FieldPosition& ignore, UErrorCode& success)},
@@ -511,6 +511,7 @@ public:
      * nor should the ponter of other object .  The pointer and its 
      * contents remain valid only until the next call to any method
      * of this class is made with this object. 
+     * @param formatName the name or number specifying a format
      * @param status  output param set to success/failure code.
      * @draft ICU 4.0
      */
@@ -541,7 +542,7 @@ public:
      * the item will be ignored.
      * The caller should not delete the Format object after this call.
      * @param formatName  Name of the subformat.
-     * @param format      Format to be adopted.
+     * @param formatToAdopt  Format to be adopted.
      * @param status      output param set to success/failure code.
      * @draft ICU 4.0
      */
@@ -747,6 +748,19 @@ public:
      */
     UBool usesNamedArguments() const;
     
+
+    /**
+     * This API is for ICU internal use only.
+     * Please do not use it.
+     *
+     * Returns argument types count in the parsed pattern.
+     * Used to distinguish pattern "{0} d" and "d".
+     *
+     * @return           The number of formattable types in the pattern
+     * @internal
+     */
+    int32_t getArgTypeCount() const;
+
     /**
      * Returns a unique class ID POLYMORPHICALLY.  Pure virtual override.
      * This method is to implement a simple version of RTTI, since not all

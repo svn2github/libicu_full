@@ -78,10 +78,10 @@
 #define LOW_W             ((UChar)0x0077)
 #define LOW_Y             ((UChar)0x0079)
 #define LOW_Z             ((UChar)0x007A)
-#define DT_SHORT          -0x101
-#define DT_LONG           -0x102
+#define DT_SHORT          -0x102
+#define DT_LONG           -0x103
 #define DT_NUMERIC         0x100
-#define DT_NARROW         -0x100
+#define DT_NARROW         -0x101
 #define DT_DELTA           0x10
 
 U_NAMESPACE_BEGIN
@@ -123,6 +123,7 @@ public:
     UnicodeString basePattern;
     PtnSkeleton   *skeleton;
     UnicodeString pattern;
+    UBool         skeletonWasSpecified; // if specified in availableFormats, not derived
     PtnElem       *next;
 
     PtnElem(const UnicodeString &basePattern, const UnicodeString &pattern);
@@ -193,10 +194,9 @@ public:
     PtnElem *boot[MAX_PATTERN_ENTRIES];
     PatternMap();
     virtual  ~PatternMap();
-    void  add(const UnicodeString& basePattern, const PtnSkeleton& skeleton, const UnicodeString& value, UErrorCode& status);
-    UErrorCode status;
-    const UnicodeString* getPatternFromBasePattern(UnicodeString& basePattern);
-    const UnicodeString* getPatternFromSkeleton(PtnSkeleton& skeleton);
+    void  add(const UnicodeString& basePattern, const PtnSkeleton& skeleton, const UnicodeString& value, UBool skeletonWasSpecified, UErrorCode& status);
+    const UnicodeString* getPatternFromBasePattern(UnicodeString& basePattern, UBool& skeletonWasSpecified);
+    const UnicodeString* getPatternFromSkeleton(PtnSkeleton& skeleton, const PtnSkeleton** specifiedSkeletonPtr = 0);
     void copyFrom(const PatternMap& other, UErrorCode& status);
     PtnElem* getHeader(UChar baseChar);
     UBool equals(const PatternMap& other);

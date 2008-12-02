@@ -7,6 +7,8 @@
 
 #
 # Some of these variables are overridden in the config/mh-* files.
+# 
+# Please be sure to update config/Makefile.inc.in  if you add something here.
 #
 
 # Shell to use
@@ -20,6 +22,7 @@ exec_prefix = @exec_prefix@
 
 bindir = @bindir@
 sbindir = @sbindir@
+datarootdir = @datarootdir@
 datadir = @datadir@
 libdir = @libdir@
 includedir = @includedir@
@@ -238,3 +241,5 @@ ifneq ($(ENABLE_SHARED),YES)
 LINK.c = $(LINK.cc)
 endif
 
+# optional include at top
+-include $(top_builddir)/icudefs.local

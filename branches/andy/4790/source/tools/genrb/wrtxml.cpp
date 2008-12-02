@@ -6,7 +6,7 @@
 *
 *******************************************************************************
 *
-* File wrtxml.c
+* File wrtxml.cpp
 *
 * Modification History:
 *
@@ -35,6 +35,8 @@
 #include "unicode/unistr.h"
 #include <time.h>
 
+U_NAMESPACE_USE
+
 static int tabCount = 0;
 
 static FileStream* out=NULL;
@@ -53,9 +55,8 @@ static void write_utf8_file(UnicodeString outString, FileStream * outFile, UErro
     int32_t len = 0;
     u_strToUTF8(dest,outString.length() * 3 /2,&len,outString.getBuffer(),outString.length(),status);    
 
-    T_FileStream_write(out, dest, len);
+    T_FileStream_write(outFile, dest, len);
     uprv_free(dest);
-
 }
 
 
@@ -379,7 +380,7 @@ print(UnicodeString *Accumulator, UChar* src, int32_t srcLen,const char *tagStar
     if(U_SUCCESS(*status)){
         trim(&buf,&bufLen);
         Accumulator->append(UnicodeString(tagStart));
-        Accumulator->append(UnicodeString(buf, "UTF-8")); 
+        Accumulator->append(UnicodeString(buf, bufLen, "UTF-8")); 
         Accumulator->append(UnicodeString(tagEnd));
         Accumulator->append(UnicodeString("\n")); 
         //T_FileStream_write(out,tagStart, (int32_t)uprv_strlen(tagStart));
@@ -408,11 +409,13 @@ printNoteElements(UnicodeString *Accumulator, struct UString *src, UErrorCode *s
 
     count = getCount(src->fChars,src->fLength, UPC_NOTE, status);
     if(U_FAILURE(*status)){
+        uprv_free(note);
         return;
     }
     for(i=0; i < count; i++){
         noteLen =  getAt(src->fChars,src->fLength, &note, capacity, i, UPC_NOTE, status);
         if(U_FAILURE(*status)){
+            uprv_free(note);
             return;
         }
         if(noteLen > 0){
@@ -462,18 +465,17 @@ printComments(UnicodeString *Accumulator, struct UString *src, const char *resNa
 
 #if UCONFIG_NO_REGULAR_EXPRESSIONS==0 /* donot compile when no RegularExpressions are available */
 
-    int32_t capacity = src->fLength;
+    if(status==NULL || U_FAILURE(*status)){
+        return;
+    }
+
+    int32_t capacity = src->fLength + 1;
     char* buf = NULL;
     int32_t bufLen = 0;
     UChar* desc  = (UChar*) uprv_malloc(U_SIZEOF_UCHAR * capacity);
     UChar* trans = (UChar*) uprv_malloc(U_SIZEOF_UCHAR * capacity);
 
     int32_t descLen = 0, transLen=0;
-    if(status==NULL || U_FAILURE(*status)){
-        uprv_free(desc);
-        uprv_free(trans);
-        return;
-    }
     if(desc==NULL || trans==NULL){
         *status = U_MEMORY_ALLOCATION_ERROR;
         uprv_free(desc);
@@ -490,7 +492,7 @@ printComments(UnicodeString *Accumulator, struct UString *src, const char *resNa
             /* print translate attribute */
             buf = convertAndEscape(&buf, 0, &bufLen, trans, transLen, status);
             if(U_SUCCESS(*status)){
-                printAttribute(Accumulator, "translate", UnicodeString(buf, "UTF-8"), bufLen);
+                printAttribute(Accumulator, "translate", UnicodeString(buf, bufLen, "UTF-8"), bufLen);
                 Accumulator->append(UnicodeString(">\n")); 
                 //T_FileStream_write(out,">\n", 2);
             }
@@ -510,6 +512,9 @@ printComments(UnicodeString *Accumulator, struct UString *src, const char *resNa
         write_tabs(Accumulator);
         print(Accumulator, desc, descLen, "<!--", "-->", status);
     }
+
+    uprv_free(desc);
+    uprv_free(trans);
 #else
 
     fprintf(stderr, "Warning: Could not output comments to XLIFF file. ICU has been built without RegularExpression support.\n");
@@ -556,9 +561,9 @@ static char *printContainer(UnicodeString *Accumulator, struct SResource *res, c
     }
 
     tabCount += 1;
-    if (res->fComment != NULL && res->fComment->fChars != NULL) {
+    if (res->fComment.fLength > 0) {
         /* printComments will print the closing ">\n" */
-        printComments(Accumulator,res->fComment, resname, TRUE, status);
+        printComments(Accumulator, &res->fComment, resname, TRUE, status);
     } else {
         Accumulator->append(UnicodeString(">\n"));
         //T_FileStream_write(out, ">\n", 2);
@@ -623,7 +628,7 @@ string_write_xml(UnicodeString *Accumulator, struct SResource *res, const char* 
     //T_FileStream_write(out, buf, bufLen);
     //T_FileStream_write(out, close_source, (int32_t) uprv_strlen(close_source));
 
-    printNoteElements(Accumulator, res->fComment, status);
+    printNoteElements(Accumulator, &res->fComment, status);
 
     tabCount -= 1;
     write_tabs(Accumulator);
@@ -658,7 +663,7 @@ alias_write_xml(UnicodeString *Accumulator, struct SResource *res, const char* i
     Accumulator->append(UnicodeString(close_source));
     //T_FileStream_write(out, close_source, (int32_t)uprv_strlen(close_source));
 
-    printNoteElements(Accumulator, res->fComment, status);
+    printNoteElements(Accumulator, &res->fComment, status);
 
     tabCount -= 1;
     write_tabs(Accumulator);
@@ -787,7 +792,7 @@ int_write_xml(UnicodeString *Accumulator, struct SResource *res, const char* id,
     Accumulator->append(UnicodeString(close_source));
     //T_FileStream_write(out, close_source, (int32_t)uprv_strlen(close_source));
 
-    printNoteElements(Accumulator, res->fComment, status);
+    printNoteElements(Accumulator, &res->fComment, status);
 
     tabCount -= 1;
     write_tabs(Accumulator);
@@ -864,7 +869,7 @@ bin_write_xml(UnicodeString *Accumulator, struct SResource *res, const char* id,
         Accumulator->append(UnicodeString(close_bin_source));
         //T_FileStream_write(out, close_bin_source, (int32_t)uprv_strlen(close_bin_source));
 
-        printNoteElements(Accumulator, res->fComment, status);
+        printNoteElements(Accumulator, &res->fComment, status);
         tabCount -= 1;
         write_tabs(Accumulator);
         Accumulator->append(UnicodeString(close_bin_unit));
@@ -915,7 +920,7 @@ bin_write_xml(UnicodeString *Accumulator, struct SResource *res, const char* id,
 
         Accumulator->append(UnicodeString(close_bin_source));
         //T_FileStream_write(out, close_bin_source, (int32_t)uprv_strlen(close_bin_source));
-        printNoteElements(Accumulator, res->fComment, status);
+        printNoteElements(Accumulator, &res->fComment, status);
 
         tabCount -= 1;
         write_tabs(Accumulator);
@@ -1253,3 +1258,4 @@ cleanup_bundle_write_xml:
         uprv_free(outputFileName);
     }
 }
+

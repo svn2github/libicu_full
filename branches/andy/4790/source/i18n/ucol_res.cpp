@@ -38,12 +38,116 @@
 #include "ustr_imp.h"
 #include "cstring.h"
 #include "umutex.h"
+#include "ucln_in.h"
 #include "ustrenum.h"
 #include "putilimp.h"
 #include "utracimp.h"
 #include "cmemory.h"
 
 U_NAMESPACE_USE
+
+// static UCA. There is only one. Collators don't use it.
+// It is referenced only in ucol_initUCA and ucol_cleanup
+static UCollator* _staticUCA = NULL;
+// static pointer to udata memory. Inited in ucol_initUCA
+// used for cleanup in ucol_cleanup
+static UDataMemory* UCA_DATA_MEM = NULL;
+
+U_CDECL_BEGIN
+static UBool U_CALLCONV
+ucol_res_cleanup(void)
+{
+    if (UCA_DATA_MEM) {
+        udata_close(UCA_DATA_MEM);
+        UCA_DATA_MEM = NULL;
+    }
+    if (_staticUCA) {
+        ucol_close(_staticUCA);
+        _staticUCA = NULL;
+    }
+    return TRUE;
+}
+
+static UBool U_CALLCONV
+isAcceptableUCA(void * /*context*/,
+             const char * /*type*/, const char * /*name*/,
+             const UDataInfo *pInfo){
+  /* context, type & name are intentionally not used */
+    if( pInfo->size>=20 &&
+        pInfo->isBigEndian==U_IS_BIG_ENDIAN &&
+        pInfo->charsetFamily==U_CHARSET_FAMILY &&
+        pInfo->dataFormat[0]==UCA_DATA_FORMAT_0 &&   /* dataFormat="UCol" */
+        pInfo->dataFormat[1]==UCA_DATA_FORMAT_1 &&
+        pInfo->dataFormat[2]==UCA_DATA_FORMAT_2 &&
+        pInfo->dataFormat[3]==UCA_DATA_FORMAT_3 &&
+        pInfo->formatVersion[0]==UCA_FORMAT_VERSION_0 &&
+        pInfo->formatVersion[1]>=UCA_FORMAT_VERSION_1// &&
+        //pInfo->formatVersion[1]==UCA_FORMAT_VERSION_1 &&
+        //pInfo->formatVersion[2]==UCA_FORMAT_VERSION_2 && // Too harsh
+        //pInfo->formatVersion[3]==UCA_FORMAT_VERSION_3 && // Too harsh
+        ) {
+        UVersionInfo UCDVersion;
+        u_getUnicodeVersion(UCDVersion);
+        return (UBool)(pInfo->dataVersion[0]==UCDVersion[0]
+            && pInfo->dataVersion[1]==UCDVersion[1]);
+            //&& pInfo->dataVersion[2]==ucaDataInfo.dataVersion[2]
+            //&& pInfo->dataVersion[3]==ucaDataInfo.dataVersion[3]);
+    } else {
+        return FALSE;
+    }
+}
+U_CDECL_END
+
+/* do not close UCA returned by ucol_initUCA! */
+UCollator *
+ucol_initUCA(UErrorCode *status) {
+    if(U_FAILURE(*status)) {
+        return NULL;
+    }
+    UBool needsInit;
+    UMTX_CHECK(NULL, (_staticUCA == NULL), needsInit);
+
+    if(needsInit) {
+        UDataMemory *result = udata_openChoice(U_ICUDATA_COLL, UCA_DATA_TYPE, UCA_DATA_NAME, isAcceptableUCA, NULL, status);
+
+        if(U_SUCCESS(*status)){
+            UCollator *newUCA = ucol_initCollator((const UCATableHeader *)udata_getMemory(result), NULL, NULL, status);
+            if(U_SUCCESS(*status)){
+                // Initalize variables for implicit generation
+                uprv_uca_initImplicitConstants(status);
+                
+                umtx_lock(NULL);
+                if(_staticUCA == NULL) {
+                    UCA_DATA_MEM = result;
+                    _staticUCA = newUCA;
+                    newUCA = NULL;
+                    result = NULL;
+                }
+                umtx_unlock(NULL);
+
+                ucln_i18n_registerCleanup(UCLN_I18N_UCOL_RES, ucol_res_cleanup);
+                if(newUCA != NULL) {
+                    ucol_close(newUCA);
+                    udata_close(result);
+                }
+            }else{
+                ucol_close(newUCA);
+                udata_close(result);
+            }
+        }
+        else {
+            udata_close(result);
+        }
+    }
+    return _staticUCA;
+}
+
+U_CAPI void U_EXPORT2
+ucol_forgetUCA(void)
+{
+    _staticUCA = NULL;
+    UCA_DATA_MEM = NULL;
+}
 
 /****************************************************************************/
 /* Following are the open/close functions                                   */
@@ -54,7 +158,6 @@ tryOpeningFromRules(UResourceBundle *collElem, UErrorCode *status) {
     int32_t rulesLen = 0;
     const UChar *rules = ures_getStringByKey(collElem, "Sequence", &rulesLen, status);
     return ucol_openRules(rules, rulesLen, UCOL_DEFAULT, UCOL_DEFAULT, NULL, status);
-
 }
 
 
@@ -80,7 +183,8 @@ ucol_open_internal(const char *loc,
     UResourceBundle *collElem = NULL;
     char keyBuffer[256];
     // if there is a keyword, we pick it up and try to get elements
-    if(!uloc_getKeywordValue(loc, "collation", keyBuffer, 256, status)) {
+    if(!uloc_getKeywordValue(loc, "collation", keyBuffer, 256, status) ||
+        !uprv_strcmp(keyBuffer,"default")) { /* Treat 'zz@collation=default' as 'zz'. */
         // no keyword. we try to find the default setting, which will give us the keyword value
         intStatus = U_ZERO_ERROR;
         // finding default value does not affect collation fallback status
@@ -104,10 +208,8 @@ ucol_open_internal(const char *loc,
     if(*status == U_MISSING_RESOURCE_ERROR) { /* We didn't find the tailoring data, we fallback to the UCA */
         *status = U_USING_DEFAULT_WARNING;
         result = ucol_initCollator(UCA->image, result, UCA, status);
-        // Check for null result
-        if (result == NULL) {
-        	*status = U_MEMORY_ALLOCATION_ERROR;
-        	goto clean;
+        if (U_FAILURE(*status)) {
+            goto clean;
         }
         // if we use UCA, real locale is root
         ures_close(b);
@@ -129,9 +231,12 @@ ucol_open_internal(const char *loc,
             if(U_FAILURE(*status)) {
                 goto clean;
             }
-        } else if(U_SUCCESS(*status)) { /* otherwise, we'll pick a collation data that exists */
+        } else if(U_SUCCESS(intStatus)) { /* otherwise, we'll pick a collation data that exists */
             int32_t len = 0;
             const uint8_t *inData = ures_getBinary(binary, &len, status);
+            if(U_FAILURE(*status)) {
+                goto clean;
+            }
             UCATableHeader *colData = (UCATableHeader *)inData;
             if(uprv_memcmp(colData->UCAVersion, UCA->image->UCAVersion, sizeof(UVersionInfo)) != 0 ||
                 uprv_memcmp(colData->UCDVersion, UCA->image->UCDVersion, sizeof(UVersionInfo)) != 0 ||
@@ -159,6 +264,11 @@ ucol_open_internal(const char *loc,
                 }
                 result->freeImageOnClose = FALSE;
             }
+        } else { // !U_SUCCESS(binaryStatus)
+            if(U_SUCCESS(*status)) {
+                *status = intStatus; // propagate underlying error
+            }
+            goto clean;
         }
         intStatus = U_ZERO_ERROR;
         result->rules = ures_getStringByKey(collElem, "Sequence", &result->rulesLength, &intStatus);

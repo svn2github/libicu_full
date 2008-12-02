@@ -25,8 +25,16 @@
 #if defined(U_DARWIN)
 #include <AvailabilityMacros.h>
 #if (ICU_USE_THREADS == 1) && defined(MAC_OS_X_VERSION_10_4) && defined(MAC_OS_X_VERSION_MIN_REQUIRED) && (MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_4)
+#if defined(__STRICT_ANSI__)
+#define UPRV_REMAP_INLINE
+#define inline
+#endif
 #include <libkern/OSAtomic.h>
 #define USE_MAC_OS_ATOMIC_INCREMENT 1
+#if defined(UPRV_REMAP_INLINE)
+#undef inline
+#undef UPRV_REMAP_INLINE
+#endif
 #endif
 #endif
 
@@ -343,6 +351,11 @@ static void initGlobalMutex() {
         }
         gMutexPoolInitialized = TRUE;
     }
+#elif defined (U_DARWIN)
+    /* PTHREAD_MUTEX_INITIALIZER works, don't need to call pthread_mutex_init
+     * as below (which is subject to a race condition)
+     */
+    gMutexPoolInitialized = TRUE;
 #elif defined (POSIX)
     /*  TODO:  experimental code.  Shouldn't need to explicitly init the mutexes. */
     if (gMutexPoolInitialized == FALSE) {

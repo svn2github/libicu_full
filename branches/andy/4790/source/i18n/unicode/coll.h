@@ -1,10 +1,15 @@
 /*
 ******************************************************************************
-*   Copyright (C) 1996-2007, International Business Machines                 *
+*   Copyright (C) 1996-2008, International Business Machines                 *
 *   Corporation and others.  All Rights Reserved.                            *
 ******************************************************************************
 */
 
+/**
+ * \file 
+ * \brief C++ API: Collation Service.
+ */
+ 
 /**
 * File coll.h
 *
@@ -46,11 +51,6 @@
 
 #include "unicode/utypes.h"
 
-/**
- * \file 
- * \brief C++ API: Collation Service.
- */
- 
 #if !UCONFIG_NO_COLLATION
 
 #include "unicode/uobject.h"
@@ -916,8 +916,9 @@ protected:
 
    /**
     * Used internally by registraton to define the requested and valid locales.
-    * @param requestedLocale the requsted locale
+    * @param requestedLocale the requested locale
     * @param validLocale the valid locale
+    * @param actualLocale the actual locale
     * @internal
     */
     virtual void setLocales(const Locale& requestedLocale, const Locale& validLocale, const Locale& actualLocale);

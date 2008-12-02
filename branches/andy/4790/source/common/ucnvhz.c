@@ -59,6 +59,7 @@ typedef struct{
     UBool isEscapeAppended;
     UBool isStateDBCS;
     UBool isTargetUCharDBCS;
+    UBool isEmptySegment;
 }UConverterDataHZ;
 
 
@@ -98,6 +99,7 @@ _HZReset(UConverter *cnv, UConverterResetChoice choice){
         cnv->mode=0;
         if(cnv->extraInfo != NULL){
             ((UConverterDataHZ*)cnv->extraInfo)->isStateDBCS = FALSE;
+            ((UConverterDataHZ*)cnv->extraInfo)->isEmptySegment = FALSE;
         }
     }
     if(choice!=UCNV_RESET_TO_UNICODE) {
@@ -130,6 +132,10 @@ _HZReset(UConverter *cnv, UConverterResetChoice choice){
 *   from-GB code '~}' ($7E7D) is outside the defined GB range.)
 *
 *   Source: RFC 1842
+*
+*   Note that the formal syntax in RFC 1842 is invalid. I assume that the
+*   intended definition of single-byte-segment is as follows (pedberg):
+*   single-byte-segment = single-byte-seq 1*single-byte-char
 */
 
 
@@ -170,20 +176,52 @@ UConverter_toUnicode_HZ_OFFSETS_LOGIC(UConverterToUnicodeArgs *args,
                         args->offsets[myTarget - args->target]=(int32_t)(mySource - args->source - 2);
                     }
                     *(myTarget++)=(UChar)mySourceChar;
+                    myData->isEmptySegment = FALSE;
                     continue;
                 case UCNV_OPEN_BRACE:
-                    myData->isStateDBCS = TRUE;
-                    continue;
                 case UCNV_CLOSE_BRACE:
-                    myData->isStateDBCS = FALSE;
+                    myData->isStateDBCS = (mySourceChar == UCNV_OPEN_BRACE);
+                    if (myData->isEmptySegment) {
+                        myData->isEmptySegment = FALSE; /* we are handling it, reset to avoid future spurious errors */
+                        *err = U_ILLEGAL_ESCAPE_SEQUENCE;
+                        args->converter->toUCallbackReason = UCNV_IRREGULAR;
+                        args->converter->toUBytes[0] = UCNV_TILDE;
+                        args->converter->toUBytes[1] = mySourceChar;
+                        args->converter->toULength = 2;
+                        args->target = myTarget;
+                        args->source = mySource;
+                        return;
+                    }
+                    myData->isEmptySegment = TRUE;
                     continue;
                 default:
                      /* if the first byte is equal to TILDE and the trail byte
                      * is not a valid byte then it is an error condition
                      */
-                    mySourceChar = 0x7e00 | mySourceChar;
-                    targetUniChar = 0xffff;
-                    break;
+                    /*
+                     * Ticket 5691: consistent illegal sequences:
+                     * - We include at least the first byte in the illegal sequence.
+                     * - If any of the non-initial bytes could be the start of a character,
+                     *   we stop the illegal sequence before the first one of those.
+                     */
+                    myData->isEmptySegment = FALSE; /* different error here, reset this to avoid spurious future error */
+                    *err = U_ILLEGAL_ESCAPE_SEQUENCE;
+                    args->converter->toUBytes[0] = UCNV_TILDE;
+                    if( myData->isStateDBCS ?
+                            (0x21 <= mySourceChar && mySourceChar <= 0x7e) :
+                            mySourceChar <= 0x7f
+                    ) {
+                        /* The current byte could be the start of a character: Back it out. */
+                        args->converter->toULength = 1;
+                        --mySource;
+                    } else {
+                        /* Include the current byte in the illegal sequence. */
+                        args->converter->toUBytes[1] = mySourceChar;
+                        args->converter->toULength = 2;
+                    }
+                    args->target = myTarget;
+                    args->source = mySource;
+                    return;
                 }
             } else if(myData->isStateDBCS) {
                 if(args->converter->toUnicodeStatus == 0x00){
@@ -193,24 +231,42 @@ UConverter_toUnicode_HZ_OFFSETS_LOGIC(UConverterToUnicodeArgs *args,
                     } else {
                         /* add another bit to distinguish a 0 byte from not having seen a lead byte */
                         args->converter->toUnicodeStatus = (uint32_t) (mySourceChar | 0x100);
+                        myData->isEmptySegment = FALSE; /* the segment has something, either valid or will produce a different error, so reset this */
                     }
                     continue;
                 }
                 else{
                     /* trail byte */
+                    int leadIsOk, trailIsOk;
                     uint32_t leadByte = args->converter->toUnicodeStatus & 0xff;
-                    if( (uint8_t)(leadByte - 0x21) <= (0x7d - 0x21) &&
-                        (uint8_t)(mySourceChar - 0x21) <= (0x7e - 0x21)
-                    ) {
+                    targetUniChar = 0xffff;
+                    /*
+                     * Ticket 5691: consistent illegal sequences:
+                     * - We include at least the first byte in the illegal sequence.
+                     * - If any of the non-initial bytes could be the start of a character,
+                     *   we stop the illegal sequence before the first one of those.
+                     *
+                     * In HZ DBCS, if the second byte is in the 21..7e range,
+                     * we report only the first byte as the illegal sequence.
+                     * Otherwise we convert or report the pair of bytes.
+                     */
+                    leadIsOk = (uint8_t)(leadByte - 0x21) <= (0x7d - 0x21);
+                    trailIsOk = (uint8_t)(mySourceChar - 0x21) <= (0x7e - 0x21);
+                    if (leadIsOk && trailIsOk) {
                         tempBuf[0] = (char) (leadByte+0x80) ;
                         tempBuf[1] = (char) (mySourceChar+0x80);
                         targetUniChar = ucnv_MBCSSimpleGetNextUChar(myData->gbConverter->sharedData,
                             tempBuf, 2, args->converter->useFallback);
+                        mySourceChar= (leadByte << 8) | mySourceChar;
+                    } else if (trailIsOk) {
+                        /* report a single illegal byte and continue with the following DBCS starter byte */
+                        --mySource;
+                        mySourceChar = (int32_t)leadByte;
                     } else {
-                        targetUniChar = 0xffff;
+                        /* report a pair of illegal bytes if the second byte is not a DBCS starter */
+                        /* add another bit so that the code below writes 2 bytes in case of error */
+                        mySourceChar= 0x10000 | (leadByte << 8) | mySourceChar;
                     }
-                    /* add another bit so that the code below writes 2 bytes in case of error */
-                    mySourceChar= 0x10000 | (leadByte << 8) | mySourceChar;
                     args->converter->toUnicodeStatus =0x00;
                 }
             }
@@ -220,8 +276,10 @@ UConverter_toUnicode_HZ_OFFSETS_LOGIC(UConverterToUnicodeArgs *args,
                     continue;
                 } else if(mySourceChar <= 0x7f) {
                     targetUniChar = (UChar)mySourceChar;  /* ASCII */
+                    myData->isEmptySegment = FALSE; /* the segment has something valid */
                 } else {
                     targetUniChar = 0xffff;
+                    myData->isEmptySegment = FALSE; /* different error here, reset this to avoid spurious future error */
                 }
             }
             if(targetUniChar < 0xfffe){

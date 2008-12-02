@@ -726,7 +726,7 @@ utext_extract(UText *ut,
   * If the index is out of range, it will be pinned to be within
   * the range of the input text.
   *
-  * @draft ICU 3.8
+  * @stable ICU 3.8
   */
 #define UTEXT_SETNATIVEINDEX(ut, ix)                       \
     { int64_t __offset = (ix) - (ut)->chunkNativeStart; \
@@ -1192,7 +1192,7 @@ struct UTextFuncs {
       *              Do not use, reserved for use by the UText framework only.
       *   @internal
       */
-    int32_t       reserved1, reserved2, reserved3;
+    int32_t       reserved1, /** @internal */ reserved2, /** @internal */ reserved3;
 
 
     /**
@@ -1287,6 +1287,10 @@ struct UTextFuncs {
     UTextClose  *spare3;
 
 };
+/**
+ * Function dispatch table for UText
+ * @see UTextFuncs
+ */
 typedef struct UTextFuncs UTextFuncs;
 
  /**

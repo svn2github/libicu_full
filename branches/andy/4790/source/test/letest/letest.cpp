@@ -1,7 +1,7 @@
 /*
  *******************************************************************************
  *
- *   Copyright (C) 1999-2007, International Business Machines
+ *   Copyright (C) 1999-2008, International Business Machines
  *   Corporation and others.  All Rights Reserved.
  *
  *******************************************************************************
@@ -47,7 +47,7 @@ U_CDECL_BEGIN
 static void U_CALLCONV ScriptTest(void)
 {
     if ((int)scriptCodeCount != (int)USCRIPT_CODE_LIMIT) {
-        log_err("ScriptCodes::scriptCodeCount = %n, but UScriptCode::USCRIPT_CODE_LIMIT = %n\n", scriptCodeCount, USCRIPT_CODE_LIMIT);
+        log_err("ScriptCodes::scriptCodeCount = %d, but UScriptCode::USCRIPT_CODE_LIMIT = %d\n", scriptCodeCount, USCRIPT_CODE_LIMIT);
     }
 }
 
@@ -385,13 +385,27 @@ static void checkFontVersion(PortableFontInstance *fontInstance, const char *tes
     if (fontChecksum != testChecksum) {
         const char *fontVersionString = fontInstance->getNameString(NAME_VERSION_STRING,
             PLATFORM_MACINTOSH, MACINTOSH_ROMAN, MACINTOSH_ENGLISH);
+        const LEUnicode *uFontVersionString = NULL;
+
+            // The standard recommends that the Macintosh Roman/English name string be present, but
+            // if it's not, try the Microsoft Unicode/English string.
+            if (fontVersionString == NULL) {
+                uFontVersionString = fontInstance->getUnicodeNameString(NAME_VERSION_STRING,
+                    PLATFORM_MICROSOFT, MICROSOFT_UNICODE_BMP, MICROSOFT_ENGLISH);
+            }
 
         log_info("Test %s: this may not be the same font used to generate the test data.\n", testID);
-        log_info("Your font's version string is \"%s\"\n", fontVersionString);
+
+        if (uFontVersionString != NULL) {
+            log_info("Your font's version string is \"%S\"\n", uFontVersionString);
+            fontInstance->deleteNameString(uFontVersionString);
+        } else {
+            log_info("Your font's version string is \"%s\"\n", fontVersionString);
+            fontInstance->deleteNameString(fontVersionString);
+        }
+
         log_info("The expected version string is \"%s\"\n", testVersionString);
         log_info("If you see errors, they may be due to the version of the font you're using.\n");
-
-        fontInstance->deleteNameString(fontVersionString);
     }
 }
 
@@ -1054,7 +1068,7 @@ int main(int argc, char* argv[])
 
     startTime = uprv_getUTCtime();
 
-    if (!initArgs(argc, argv)) {
+    if (!initArgs(argc, argv, NULL, NULL)) {
         /* Error already displayed. */
         return -1;
     }
@@ -1077,7 +1091,7 @@ int main(int argc, char* argv[])
     u_cleanup();
     errorCode = U_ZERO_ERROR;
 
-    if (!initArgs(argc, argv)) {
+    if (!initArgs(argc, argv, NULL, NULL)) {
         /* Error already displayed. */
         return -1;
     }

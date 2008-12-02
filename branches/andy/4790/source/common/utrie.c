@@ -1,7 +1,7 @@
 /*
 ******************************************************************************
 *
-*   Copyright (C) 2001-2006, International Business Machines
+*   Copyright (C) 2001-2008, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 ******************************************************************************
@@ -406,6 +406,9 @@ utrie_fold(UNewTrie *trie, UNewTrieGetFoldedValue *getFoldedValue, UErrorCode *p
     uint32_t value;
     UChar32 c;
     int32_t indexLength, block;
+#ifdef UTRIE_DEBUG
+    int countLeadCUWithData=0;
+#endif
 
     index=trie->index;
 
@@ -455,7 +458,8 @@ utrie_fold(UNewTrie *trie, UNewTrieGetFoldedValue *getFoldedValue, UErrorCode *p
             c&=~0x3ff;
 
 #ifdef UTRIE_DEBUG
-            printf("supplementary data for lead surrogate U+%04lx\n", (long)(0xd7c0+(c>>10)));
+            ++countLeadCUWithData;
+            /* printf("supplementary data for lead surrogate U+%04lx\n", (long)(0xd7c0+(c>>10))); */
 #endif
 
             /* is there an identical index block? */
@@ -488,6 +492,11 @@ utrie_fold(UNewTrie *trie, UNewTrieGetFoldedValue *getFoldedValue, UErrorCode *p
             c+=UTRIE_DATA_BLOCK_LENGTH;
         }
     }
+#ifdef UTRIE_DEBUG
+    if(countLeadCUWithData>0) {
+        printf("supplementary data for %d lead surrogates\n", countLeadCUWithData);
+    }
+#endif
 
     /*
      * index array overflow?
@@ -785,6 +794,11 @@ utrie_serialize(UNewTrie *trie, void *dt, int32_t capacity,
         return length; /* preflighting */
     }
 
+#ifdef UTRIE_DEBUG
+    printf("**UTrieLengths(serialize)** index:%6ld  data:%6ld  serialized:%6ld\n",
+           (long)trie->indexLength, (long)trie->dataLength, (long)length);
+#endif
+
     /* set the header fields */
     header=(UTrieHeader *)data;
     data+=sizeof(UTrieHeader);
@@ -1047,7 +1061,7 @@ utrie_enum(const UTrie *trie,
 
     uint32_t value, prevValue, initialValue;
     UChar32 c, prev;
-    int32_t l, i, j, block, prevBlock, offset;
+    int32_t l, i, j, block, prevBlock, nullBlock, offset;
 
     /* check arguments */
     if(trie==NULL || trie->index==NULL || enumRange==NULL) {
@@ -1063,8 +1077,14 @@ utrie_enum(const UTrie *trie,
     /* get the enumeration value that corresponds to an initial-value trie data entry */
     initialValue=enumValue(context, trie->initialValue);
 
+    if(data32==NULL) {
+        nullBlock=trie->indexLength;
+    } else {
+        nullBlock=0;
+    }
+
     /* set variables for previous range */
-    prevBlock=0;
+    prevBlock=nullBlock;
     prev=0;
     prevValue=initialValue;
 
@@ -1082,7 +1102,7 @@ utrie_enum(const UTrie *trie,
         if(block==prevBlock) {
             /* the block is the same as the previous one, and filled with value */
             c+=UTRIE_DATA_BLOCK_LENGTH;
-        } else if(block==0) {
+        } else if(block==nullBlock) {
             /* this is the all-initial-value block */
             if(prevValue!=initialValue) {
                 if(prev<c) {
@@ -1090,7 +1110,7 @@ utrie_enum(const UTrie *trie,
                         return;
                     }
                 }
-                prevBlock=0;
+                prevBlock=nullBlock;
                 prev=c;
                 prevValue=initialValue;
             }
@@ -1106,6 +1126,7 @@ utrie_enum(const UTrie *trie,
                         }
                     }
                     if(j>0) {
+                        /* the block is not filled with all the same value */
                         prevBlock=-1;
                     }
                     prev=c;
@@ -1120,7 +1141,7 @@ utrie_enum(const UTrie *trie,
     for(l=0xd800; l<0xdc00;) {
         /* lead surrogate access */
         offset=index[l>>UTRIE_SHIFT]<<UTRIE_INDEX_SHIFT;
-        if(offset==(data32!=NULL ? 0 : trie->indexLength)) {
+        if(offset==nullBlock) {
             /* no entries for a whole block of lead surrogates */
             if(prevValue!=initialValue) {
                 if(prev<c) {
@@ -1128,7 +1149,7 @@ utrie_enum(const UTrie *trie,
                         return;
                     }
                 }
-                prevBlock=0;
+                prevBlock=nullBlock;
                 prev=c;
                 prevValue=initialValue;
             }
@@ -1150,7 +1171,7 @@ utrie_enum(const UTrie *trie,
                         return;
                     }
                 }
-                prevBlock=0;
+                prevBlock=nullBlock;
                 prev=c;
                 prevValue=initialValue;
             }
@@ -1167,7 +1188,7 @@ utrie_enum(const UTrie *trie,
                 if(block==prevBlock) {
                     /* the block is the same as the previous one, and filled with value */
                     c+=UTRIE_DATA_BLOCK_LENGTH;
-                } else if(block==0) {
+                } else if(block==nullBlock) {
                     /* this is the all-initial-value block */
                     if(prevValue!=initialValue) {
                         if(prev<c) {
@@ -1175,7 +1196,7 @@ utrie_enum(const UTrie *trie,
                                 return;
                             }
                         }
-                        prevBlock=0;
+                        prevBlock=nullBlock;
                         prev=c;
                         prevValue=initialValue;
                     }
@@ -1191,6 +1212,7 @@ utrie_enum(const UTrie *trie,
                                 }
                             }
                             if(j>0) {
+                                /* the block is not filled with all the same value */
                                 prevBlock=-1;
                             }
                             prev=c;

@@ -38,6 +38,10 @@
 #include "unicode/uversion.h"
 #include "unicode/uconfig.h"
 
+/**
+ * \def U_HIDE_DRAFT_API
+ * Define this to 1 to request that draft API be "hidden"
+ */
 #if !U_DEFAULT_SHOW_DRAFT && !defined(U_SHOW_DRAFT_API)
 #define U_HIDE_DRAFT_API 1
 #endif
@@ -729,6 +733,9 @@ typedef enum UErrorCode {
     U_REGEX_OCTAL_TOO_BIG,                /**< Octal character constants must be <= 0377.         */
     U_REGEX_MISSING_CLOSE_BRACKET,        /**< Missing closing bracket on a bracket expression.   */
     U_REGEX_INVALID_RANGE,                /**< In a character range [x-y], x is greater than y.   */
+    U_REGEX_STACK_OVERFLOW,               /**< Regular expression backtrack stack overflow.       */
+    U_REGEX_TIME_OUT,                     /**< Maximum allowed match time exceeded                */
+    U_REGEX_STOPPED_BY_CALLER,            /**< Matching operation aborted by user callback fn.    */
     U_REGEX_ERROR_LIMIT,                  /**< This must always be the last value to indicate the limit for regexp errors */
 
     /*

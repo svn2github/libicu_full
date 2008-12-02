@@ -42,6 +42,7 @@ typedef enum ECleanupI18NType {
     UCLN_I18N_USEARCH,
     UCLN_I18N_COLLATOR,
     UCLN_I18N_UCOL,
+    UCLN_I18N_UCOL_RES,
     UCLN_I18N_UCOL_BLD,
     UCLN_I18N_CSDET,
     UCLN_I18N_COUNT /* This must be last */
@@ -52,6 +53,6 @@ typedef enum ECleanupI18NType {
 U_CFUNC void U_EXPORT2 ucln_i18n_registerCleanup(ECleanupI18NType type,
                                                  cleanupFunc *func);
 
-U_CFUNC UBool transliterator_cleanup(void);
+U_CFUNC UBool utrans_transliterator_cleanup(void);
 
 #endif

@@ -1,7 +1,6 @@
 /********************************************************************
- * COPYRIGHT: 
- * Copyright (c) 1997-2008, International Business Machines Corporation and
- * others. All Rights Reserved.
+ * Copyright (c) 1997-2008 International Business Machines 
+ * Corporation and others. All Rights Reserved.
  ********************************************************************/
 /*****************************************************************************
 *
@@ -10,6 +9,7 @@
 * Modification History:
 *        Name                     Description            
 *     Madhu Katragadda             Ported for C API
+*     Brian Rower                  Added TestOpenVsOpenRules
 ******************************************************************************
 *//* C API TEST For COLLATOR */
 
@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "unicode/uloc.h"
+#include "unicode/ulocdata.h"
 #include "unicode/ustring.h"
 #include "unicode/ures.h"
 #include "unicode/ucoleitr.h"
@@ -31,6 +32,7 @@
 
 static void TestAttribute(void);
 static void TestDefault(void);
+static void TestDefaultKeyword(void);
         int TestBufferSize();    /* defined in "colutil.c" */
 
 
@@ -127,6 +129,8 @@ void addCollAPITest(TestNode** root)
     addTest(root, &TestGetContractionsAndUnsafes, "tscoll/capitst/TestGetContractionsAndUnsafes");
     addTest(root, &TestOpenBinary, "tscoll/capitst/TestOpenBinary");
     addTest(root, &TestDefault, "tscoll/capitst/TestDefault");
+    addTest(root, &TestDefaultKeyword, "tscoll/capitst/TestDefaultKeyword");
+    addTest(root, &TestOpenVsOpenRules, "tscoll/capitst/TestOpenVsOpenRules");
 }
 
 void TestGetSetAttr(void) {
@@ -285,10 +289,10 @@ void TestProperty()
       ICU 2.8 currVersionArray = {0x29, 0x80, 0x00, 0x04};
       ICU 3.4 currVersionArray = {0x31, 0xC0, 0x00, 0x04};
     */
-    UVersionInfo currVersionArray = {0x31, 0xC0, 0x00, 0x05};
+    UVersionInfo currVersionArray = {0x31, 0xC0, 0x00, 0x29};
     /* ICU 3.4 had UCA 4.1 */
     /*UVersionInfo currUCAVersionArray = {4, 1, 0, 0};*/
-    UVersionInfo currUCAVersionArray = {5, 0, 0, 0};
+    UVersionInfo currUCAVersionArray = {5, 1, 0, 0};
     UVersionInfo versionArray = {0, 0, 0, 0};
     UVersionInfo versionUCAArray = {0, 0, 0, 0};
     
@@ -771,6 +775,7 @@ void TestSafeClone() {
         ucol_close(ucol_safeClone(someCollators[index], buffer[index], &bufferSize, &err));
         if (err != U_SAFECLONE_ALLOCATED_WARNING) {
             log_err("FAIL: collator number %d was not allocated.\n", index);
+            log_err("FAIL: status of Collator[%d] is %d  (hex: %x).\n", index, err, err);
         }
 
         bufferSize = U_COL_SAFECLONE_BUFFERSIZE;
@@ -857,6 +862,131 @@ void TestCloneBinary(){
     ucol_close(col);
 }
 /*
+    TestOpenVsOpenRules ensures that collators from ucol_open and ucol_openRules 
+    will generate identical sort keys 
+*/
+void TestOpenVsOpenRules(){
+    
+    /* create an array of all the locales */
+    int32_t numLocales = uloc_countAvailable();
+    int32_t sizeOfStdSet;
+    uint32_t adder;
+    UChar str[41]; /* create an array of UChar of size maximum strSize + 1 */
+    USet *stdSet;
+    char* curLoc;
+    UCollator * c1;
+    UCollator * c2;
+    const UChar* rules;
+    int32_t rulesLength;
+    int32_t sortKeyLen1, sortKeyLen2;
+    uint8_t *sortKey1 = NULL, *sortKey2 = NULL;
+    ULocaleData *uld;
+    uint32_t x, y, z;
+    USet *eSet;
+    int32_t eSize;
+    int strSize;
+
+    UErrorCode err = U_ZERO_ERROR;
+
+    /* create a set of standard characters that aren't very interesting...
+    and then we can find some interesting ones later */
+
+    stdSet = uset_open(0x61, 0x7A);
+    uset_addRange(stdSet, 0x41, 0x5A);
+    uset_addRange(stdSet, 0x30, 0x39);
+    sizeOfStdSet = uset_size(stdSet);
+
+    adder = 1;
+    if(QUICK)
+    {
+        adder = 10;
+    }
+
+    for(x = 0; x < numLocales; x+=adder){
+        curLoc = uloc_getAvailable(x);
+        log_verbose("Processing %s\n", curLoc);
+        
+        /* create a collator the normal API way */
+        c1 = ucol_open(curLoc, &err);
+        if (U_FAILURE(err)) {
+            log_err("ERROR: Normal collation creation failed with locale: %s : %s\n", curLoc, myErrorName(err));
+            return;
+        }
+
+        /* grab the rules */
+        rules = ucol_getRules(c1, &rulesLength);
+
+        /* use those rules to create a collator from rules */
+        c2 = ucol_openRules(rules, rulesLength, UCOL_DEFAULT, UCOL_DEFAULT_STRENGTH, NULL, &err);
+        if (U_FAILURE(err)) {
+            log_err("ERROR: Creating collator from rules failed with locale: %s : %s\n", curLoc, myErrorName(err));
+            return;
+        }
+        
+        uld = ulocdata_open(curLoc, &err);
+        
+        /*now that we have some collators, we get several strings */
+        
+        for(y = 0; y < 5; y++){
+        
+            /* get a set of ALL the characters in this locale */
+            eSet =  ulocdata_getExemplarSet(uld, NULL, 0, ULOCDATA_ES_STANDARD, &err);
+            eSize = uset_size(eSet);
+            
+            /* make a string with these characters in it */
+            strSize = (rand()%40) + 1;
+            
+            for(z = 0; z < strSize; z++){
+                str[z] = uset_charAt(eSet, rand()%eSize);
+            }
+            
+            /* change the set to only include 'abnormal' characters (not A-Z, a-z, 0-9 */
+            uset_removeAll(eSet, stdSet);
+            eSize = uset_size(eSet);
+            
+            /* if there are some non-normal characters left, put a few into the string, just to make sure we have some */
+            if(eSize > 0){
+                str[2%strSize] = uset_charAt(eSet, rand()%eSize);
+                str[3%strSize] = uset_charAt(eSet, rand()%eSize);
+                str[5%strSize] = uset_charAt(eSet, rand()%eSize);
+                str[10%strSize] = uset_charAt(eSet, rand()%eSize);
+                str[13%strSize] = uset_charAt(eSet, rand()%eSize);
+            }
+            /* terminate the string */
+            str[strSize-1] = '\0';
+            log_verbose("String used: %S\n", str);
+           
+            /* get sort keys for both of them, and check that the keys are identicle */
+            sortKeyLen1 = ucol_getSortKey(c1, str, u_strlen(str),  NULL, 0);
+            sortKey1 = (uint8_t*)malloc(sizeof(uint8_t) * (sortKeyLen1 + 1));
+            /*memset(sortKey1, 0xFE, sortKeyLen1);*/
+            ucol_getSortKey(c1, str, u_strlen(str), sortKey1, sortKeyLen1 + 1);
+            
+            sortKeyLen2 = ucol_getSortKey(c2, str, u_strlen(str),  NULL, 0);
+            sortKey2 = (uint8_t*)malloc(sizeof(uint8_t) * (sortKeyLen2 + 1));
+            /*memset(sortKey2, 0xFE, sortKeyLen2);*/
+            ucol_getSortKey(c2, str, u_strlen(str), sortKey2, sortKeyLen2 + 1);
+
+            /* Check that the lengths are the same */
+            doAssert((sortKeyLen1 == sortKeyLen2), "Sort key lengths do not match.");
+            
+            /* check that the keys are the same */
+            doAssert((memcmp(sortKey1, sortKey2, sortKeyLen1) == 0), "Keys are not equivalent");
+
+            /* clean up after each string */
+            free(sortKey1);
+            free(sortKey2);    
+            uset_close(eSet);
+        }
+        /* clean up after each locale */
+        ulocdata_close(uld);
+        ucol_close(c1);
+        ucol_close(c2);
+    }
+    /* final clean up */
+    uset_close(stdSet);
+}
+/*
 ----------------------------------------------------------------------------
  ctor -- Tests the getSortKey
 */
@@ -864,10 +994,17 @@ void TestSortKey()
 {   
     uint8_t *sortk1 = NULL, *sortk2 = NULL, *sortk3 = NULL, *sortkEmpty = NULL;
     uint8_t sortk2_compat[] = { 
+        /* 3.9 key, from UCA 5.1 */
+        0x2c, 0x2e, 0x30, 0x32, 0x2c, 0x01, 
+        0x09, 0x01, 0x09, 0x01, 0x2b, 0x01, 
+        0x92, 0x93, 0x94, 0x95, 0x92, 0x0
+
         /* 3.6 key, from UCA 5.0 */
+        /*
         0x29, 0x2b, 0x2d, 0x2f, 0x29, 0x01, 
         0x09, 0x01, 0x09, 0x01, 0x28, 0x01, 
         0x92, 0x93, 0x94, 0x95, 0x92, 0x00
+	*/
         /* 3.4 key, from UCA 4.1 */
         /* 0x28, 0x2a, 0x2c, 0x2e, 0x28, 0x01, 0x09, 0x01, 0x09, 0x01, 0x27, 0x01, 0x92, 0x93, 0x94, 0x95, 0x92, 0x00 */
         /* 2.6.1 key */
@@ -1836,7 +1973,7 @@ static void TestShortString(void)
         int32_t    expectedOffset;
         uint32_t   expectedIdentifier;
     } testCases[] = {
-        {"LDE_RDE_KPHONEBOOK_T0041_ZLATN","B2900_KPHONEBOOK_LDE", "de@collation=phonebook", U_USING_FALLBACK_WARNING, 0, 0 },
+        {"LDE_RDE_KPHONEBOOK_T0041_ZLATN","B2C00_KPHONEBOOK_LDE", "de@collation=phonebook", U_USING_FALLBACK_WARNING, 0, 0 },
         {"LEN_RUS_NO_AS_S4","AS_LEN_NO_S4", NULL, U_USING_FALLBACK_WARNING, 0, 0 },
         {"LDE_VPHONEBOOK_EO_SI","EO_KPHONEBOOK_LDE_SI", "de@collation=phonebook", U_ZERO_ERROR, 0, 0 },
         {"LDE_Kphonebook","KPHONEBOOK_LDE", "de@collation=phonebook", U_ZERO_ERROR, 0, 0 },
@@ -2118,5 +2255,19 @@ static void TestDefault(void) {
         log_err("ucol_getKeywordValues should not work when given a bad status.\n");
     }
 }
+
+static void TestDefaultKeyword(void) {
+    /* Tests for code coverage. */
+    UErrorCode status = U_ZERO_ERROR;
+    const char *loc = "zh_TW@collation=default";
+    UCollator *coll = ucol_open(loc, &status);
+    if(U_FAILURE(status)) {
+        log_info("Warning: ucol_open(%s, ...) returned %s, at least it didn't crash.\n", loc, u_errorName(status));
+    } else if (status != U_USING_FALLBACK_WARNING) {
+        log_err("ucol_open(%s, ...) should return an error or some sort of U_USING_FALLBACK_WARNING, but returned %s\n", loc, u_errorName(status));
+    }
+    ucol_close(coll);
+}
+
 
 #endif /* #if !UCONFIG_NO_COLLATION */

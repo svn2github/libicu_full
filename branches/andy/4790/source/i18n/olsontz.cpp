@@ -138,7 +138,7 @@ OlsonTimeZone::OlsonTimeZone(const UResourceBundle* top,
           for(jj=0;jj<transitionCount;jj++) {
             int32_t year, month, dom, dow;
             double millis=0;
-            double days = Math::floorDivide(((double)transitionTimes[jj])*1000.0, (double)U_MILLIS_PER_DAY, millis);
+            double days = ClockMath::floorDivide(((double)transitionTimes[jj])*1000.0, (double)U_MILLIS_PER_DAY, millis);
             
             Grego::dayToFields(days, year, month, dom, dow);
             U_DEBUG_TZ_MSG(("   Transition %d:  time %d (%04d.%02d.%02d+%.1fh), typedata%d\n", jj, transitionTimes[jj],
@@ -197,7 +197,7 @@ OlsonTimeZone::OlsonTimeZone(const UResourceBundle* top,
                                 data[10] * U_MILLIS_PER_SECOND, ec);
                             // Make sure finalZone was created
                             if (finalZone == NULL) {
-                            	ec = U_MEMORY_ALLOCATION_ERROR;
+                                ec = U_MEMORY_ALLOCATION_ERROR;
                             }
                         } else {
                             ec = U_INVALID_FORMAT_ERROR;
@@ -385,7 +385,7 @@ int32_t OlsonTimeZone::getRawOffset() const {
 void printTime(double ms) {
             int32_t year, month, dom, dow;
             double millis=0;
-            double days = Math::floorDivide(((double)ms), (double)U_MILLIS_PER_DAY, millis);
+            double days = ClockMath::floorDivide(((double)ms), (double)U_MILLIS_PER_DAY, millis);
             
             Grego::dayToFields(days, year, month, dom, dow);
             U_DEBUG_TZ_MSG(("   getHistoricalOffset:  time %.1f (%04d.%02d.%02d+%.1fh)\n", ms,
@@ -505,7 +505,7 @@ UBool OlsonTimeZone::useDaylightTime() const {
     // DST is in use in the current year (at any point in the year)
     // and returns TRUE if so.
 
-    int32_t days = (int32_t)Math::floorDivide(uprv_getUTCtime(), (double)U_MILLIS_PER_DAY); // epoch days
+    int32_t days = (int32_t)ClockMath::floorDivide(uprv_getUTCtime(), (double)U_MILLIS_PER_DAY); // epoch days
 
     int32_t year, month, dom, dow;
     
@@ -650,9 +650,9 @@ OlsonTimeZone::initTransitionRules(UErrorCode& status) {
         initialRule = new InitialTimeZoneRule((dst == 0 ? stdName : dstName), raw, dst);
         // Check to make sure initialRule was created
         if (initialRule == NULL) {
-        	status = U_MEMORY_ALLOCATION_ERROR;
-        	deleteTransitionRules();
-        	return;
+            status = U_MEMORY_ALLOCATION_ERROR;
+            deleteTransitionRules();
+            return;
         }
 
         firstTZTransitionIdx = 0;
@@ -706,9 +706,9 @@ OlsonTimeZone::initTransitionRules(UErrorCode& status) {
                         raw, dst, times, nTimes, DateTimeRule::UTC_TIME);
                     // Check for memory allocation error
                     if (historicRules[typeIdx] == NULL) {
-                    	status = U_MEMORY_ALLOCATION_ERROR;
-                    	deleteTransitionRules();
-                    	return;
+                        status = U_MEMORY_ALLOCATION_ERROR;
+                        deleteTransitionRules();
+                        return;
                     }
                 }
             }
@@ -720,9 +720,9 @@ OlsonTimeZone::initTransitionRules(UErrorCode& status) {
                     *initialRule, *historicRules[typeIdx]);
             // Check to make sure firstTZTransition was created.
             if (firstTZTransition == NULL) {
-            	status = U_MEMORY_ALLOCATION_ERROR;
-            	deleteTransitionRules();
-            	return;
+                status = U_MEMORY_ALLOCATION_ERROR;
+                deleteTransitionRules();
+                return;
             }
         }
     }
@@ -733,9 +733,9 @@ OlsonTimeZone::initTransitionRules(UErrorCode& status) {
         initialRule = new InitialTimeZoneRule((dst == 0 ? stdName : dstName), raw, dst);
         // Check to make sure initialRule was created.
         if (initialRule == NULL) {
-        	status = U_MEMORY_ALLOCATION_ERROR;
-        	deleteTransitionRules();
-        	return;
+            status = U_MEMORY_ALLOCATION_ERROR;
+            deleteTransitionRules();
+            return;
         }
     }
     if (finalZone != NULL) {
@@ -754,9 +754,9 @@ OlsonTimeZone::initTransitionRules(UErrorCode& status) {
             finalZoneWithStartYear = (SimpleTimeZone*)finalZone->clone();
             // Check to make sure finalZone was actually cloned.
             if (finalZoneWithStartYear == NULL) {
-            	status = U_MEMORY_ALLOCATION_ERROR;
-            	deleteTransitionRules();
-            	return;
+                status = U_MEMORY_ALLOCATION_ERROR;
+                deleteTransitionRules();
+                return;
             }
             // finalYear is 1 year before the actual final year.
             // See the comment in the construction method.
@@ -767,27 +767,27 @@ OlsonTimeZone::initTransitionRules(UErrorCode& status) {
             firstFinalRule  = tzt.getTo()->clone();
             // Check to make sure firstFinalRule received proper clone.
             if (firstFinalRule == NULL) {
-            	status = U_MEMORY_ALLOCATION_ERROR;
-	        	deleteTransitionRules();
-	        	return;
+                status = U_MEMORY_ALLOCATION_ERROR;
+                deleteTransitionRules();
+                return;
             }
             startTime = tzt.getTime();
         } else {
             finalZoneWithStartYear = (SimpleTimeZone*)finalZone->clone();
             // Check to make sure finalZoneWithStartYear received proper clone before dereference.
             if (finalZoneWithStartYear == NULL) {
-            	status = U_MEMORY_ALLOCATION_ERROR;
-	        	deleteTransitionRules();
-	        	return;
+                status = U_MEMORY_ALLOCATION_ERROR;
+                deleteTransitionRules();
+                return;
             }
             finalZone->getID(tzid);
             firstFinalRule = new TimeArrayTimeZoneRule(tzid,
                 finalZone->getRawOffset(), 0, &startTime, 1, DateTimeRule::UTC_TIME);
             // Check firstFinalRule was properly created.
             if (firstFinalRule == NULL) {
-            	status = U_MEMORY_ALLOCATION_ERROR;
-	        	deleteTransitionRules();
-	        	return;
+                status = U_MEMORY_ALLOCATION_ERROR;
+                deleteTransitionRules();
+                return;
             }
         }
         TimeZoneRule *prevRule = NULL;
@@ -801,9 +801,9 @@ OlsonTimeZone::initTransitionRules(UErrorCode& status) {
         firstFinalTZTransition = new TimeZoneTransition();
         // Check to make sure firstFinalTZTransition was created before dereferencing
         if (firstFinalTZTransition == NULL) {
-        	status = U_MEMORY_ALLOCATION_ERROR;
-        	deleteTransitionRules();
-        	return;
+            status = U_MEMORY_ALLOCATION_ERROR;
+            deleteTransitionRules();
+            return;
         }
         firstFinalTZTransition->setTime(startTime);
         firstFinalTZTransition->adoptFrom(prevRule->clone());

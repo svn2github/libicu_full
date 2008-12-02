@@ -144,7 +144,7 @@ free_entry(UResourceDataEntry *entry) {
     if(entry->fBogus == U_ZERO_ERROR) {
         res_unload(&(entry->fData));
     }
-    if(entry->fName != NULL) {
+    if(entry->fName != NULL && entry->fName != entry->fNameBuffer) {
         uprv_free(entry->fName);
     }
     if(entry->fPath != NULL) {
@@ -237,10 +237,16 @@ static void initCache(UErrorCode *status) {
 /** INTERNAL: sets the name (locale) of the resource bundle to given name */
 
 static void setEntryName(UResourceDataEntry *res, char *name, UErrorCode *status) {
-    if(res->fName != NULL) {
+    int32_t len = uprv_strlen(name);
+    if(res->fName != NULL && res->fName != res->fNameBuffer) {
         uprv_free(res->fName);
     }
-    res->fName = (char *)uprv_malloc(sizeof(char)*uprv_strlen(name)+1);
+    if (len < (int32_t)sizeof(res->fNameBuffer)) {
+        res->fName = res->fNameBuffer;
+    }
+    else {
+        res->fName = (char *)uprv_malloc(len+1);
+    }
     if(res->fName == NULL) {
         *status = U_MEMORY_ALLOCATION_ERROR;
     } else {
@@ -255,7 +261,7 @@ static void setEntryName(UResourceDataEntry *res, char *name, UErrorCode *status
 static UResourceDataEntry *init_entry(const char *localeID, const char *path, UErrorCode *status) {
     UResourceDataEntry *r = NULL;
     UResourceDataEntry find;
-    int32_t hashValue;
+    /*int32_t hashValue;*/
     char name[96];
     const char *myPath = NULL;
     char aliasName[100] = { 0 };
@@ -277,7 +283,7 @@ static UResourceDataEntry *init_entry(const char *localeID, const char *path, UE
     }
 
     if(path != NULL) { /* if we actually have path, we'll use it */
-      myPath = path;
+        myPath = path;
     }
 
     find.fName = name;
@@ -285,7 +291,7 @@ static UResourceDataEntry *init_entry(const char *localeID, const char *path, UE
 
     /* calculate the hash value of the entry */
     hashkey.pointer = (void *)&find;
-    hashValue = hashEntry(hashkey);
+    /*hashValue = hashEntry(hashkey);*/
 
     /* check to see if we already have this entry */
     r = (UResourceDataEntry *)uhash_get(cache, &find);
@@ -301,31 +307,30 @@ static UResourceDataEntry *init_entry(const char *localeID, const char *path, UE
         UBool result = FALSE;
 
         r = (UResourceDataEntry *) uprv_malloc(sizeof(UResourceDataEntry));
-
         if(r == NULL) {
             *status = U_MEMORY_ALLOCATION_ERROR;
             return NULL;
         }
+
+        uprv_memset(r, 0, sizeof(UResourceDataEntry));
         r->fCountExisting = 1;
+        /*r->fHashKey = hashValue;*/
 
-        r->fName = NULL;
         setEntryName(r, name, status);
+        if (U_FAILURE(*status)) {
+            uprv_free(r);
+            return NULL;
+        }
 
-        r->fPath = NULL;
-        if(myPath != NULL && !U_FAILURE(*status)) {
-            r->fPath = (char *)uprv_malloc(sizeof(char)*uprv_strlen(myPath)+1);
+        if(myPath != NULL) {
+            r->fPath = (char *)uprv_strdup(myPath);
             if(r->fPath == NULL) {
                 *status = U_MEMORY_ALLOCATION_ERROR;
-            } else {
-                uprv_strcpy(r->fPath, myPath);
+                uprv_free(r);
+                return NULL;
             }
         }
 
-        r->fHashKey = hashValue;
-        r->fParent = NULL;
-        uprv_memset(&r->fData, 0, sizeof(ResourceData));
-        r->fBogus = U_ZERO_ERROR;
-        
         /* this is the actual loading - returns bool true/false */
         result = res_load(&(r->fData), r->fPath, r->fName, status);
 
@@ -368,12 +373,7 @@ static UResourceDataEntry *init_entry(const char *localeID, const char *path, UE
             } else {
                 /* somebody have already inserted it while we were working, discard newly opened data */
                 /* Also, we could get here IF we opened an alias */
-                uprv_free(r->fName);
-                if(r->fPath != NULL) {
-                    uprv_free(r->fPath);
-                }
-                res_unload(&(r->fData));
-                uprv_free(r);
+                free_entry(r);
                 r = oldR;
                 r->fCountExisting++;
             }
@@ -453,11 +453,11 @@ static UResourceDataEntry *entryOpen(const char* path, const char* localeID, UEr
     UBool hasChopped = TRUE;
     char name[96];
 
+    initCache(status);
+
     if(U_FAILURE(*status)) {
         return NULL;
     }
-
-    initCache(status);
 
     uprv_strcpy(name, localeID);
 
@@ -624,31 +624,34 @@ U_CFUNC void ures_setResPath(UResourceBundle *resB, const char* toAdd) {
   uprv_strcpy(resB->fResPath, toAdd);
 }
 */
-static void ures_appendResPath(UResourceBundle *resB, const char* toAdd, int32_t lenToAdd) {
-  int32_t resPathLenOrig = resB->fResPathLen;
-  if(resB->fResPath == NULL) {
-    resB->fResPath = resB->fResBuf;
-    *(resB->fResPath) = 0;
-    resB->fResPathLen = 0;
-  } 
-  resB->fResPathLen += lenToAdd;
-  if(RES_BUFSIZE <= resB->fResPathLen+1) {
-    if(resB->fResPath == resB->fResBuf) {
-      resB->fResPath = (char *)uprv_malloc((resB->fResPathLen+1)*sizeof(char));
-      /* Check that memory was allocated correctly. */
-      if (resB->fResPath == NULL) {
-    	  return;
-      }
-      uprv_strcpy(resB->fResPath, resB->fResBuf);
-    } else {
-      resB->fResPath = (char *)uprv_realloc(resB->fResPath, (resB->fResPathLen+1)*sizeof(char));
-      /* Check that memory was reallocated correctly. */
-      if (resB->fResPath == NULL) {
-  	    return;
-      }
+static void ures_appendResPath(UResourceBundle *resB, const char* toAdd, int32_t lenToAdd, UErrorCode *status) {
+    int32_t resPathLenOrig = resB->fResPathLen;
+    if(resB->fResPath == NULL) {
+        resB->fResPath = resB->fResBuf;
+        *(resB->fResPath) = 0;
+        resB->fResPathLen = 0;
+    } 
+    resB->fResPathLen += lenToAdd;
+    if(RES_BUFSIZE <= resB->fResPathLen+1) {
+        if(resB->fResPath == resB->fResBuf) {
+            resB->fResPath = (char *)uprv_malloc((resB->fResPathLen+1)*sizeof(char));
+            /* Check that memory was allocated correctly. */
+            if (resB->fResPath == NULL) {
+                *status = U_MEMORY_ALLOCATION_ERROR;
+                return;
+            }
+            uprv_strcpy(resB->fResPath, resB->fResBuf);
+        } else {
+            char *temp = (char *)uprv_realloc(resB->fResPath, (resB->fResPathLen+1)*sizeof(char));
+            /* Check that memory was reallocated correctly. */
+            if (temp == NULL) {
+                *status = U_MEMORY_ALLOCATION_ERROR;
+                return;
+            }
+            resB->fResPath = temp;
+        }
     }
-  }
-  uprv_strcpy(resB->fResPath + resPathLenOrig, toAdd);
+    uprv_strcpy(resB->fResPath + resPathLenOrig, toAdd);
 }
 
 static void ures_freeResPath(UResourceBundle *resB) {
@@ -953,22 +956,22 @@ static UResourceBundle *init_resb_result(const ResourceData *rdata, Resource r,
     resB->fIsTopLevel = FALSE;
     resB->fIndex = -1;
     resB->fKey = key; 
-    resB->fParentRes = parent;
+    /*resB->fParentRes = parent;*/
     resB->fTopLevelData = parent->fTopLevelData;
     if(parent->fResPath && parent != resB) {
-        ures_appendResPath(resB, parent->fResPath, parent->fResPathLen);
+        ures_appendResPath(resB, parent->fResPath, parent->fResPathLen, status);
     }
     if(key != NULL) {
-        ures_appendResPath(resB, key, (int32_t)uprv_strlen(key));
+        ures_appendResPath(resB, key, (int32_t)uprv_strlen(key), status);
         if(resB->fResPath[resB->fResPathLen-1] != RES_PATH_SEPARATOR) {
-            ures_appendResPath(resB, RES_PATH_SEPARATOR_S, 1);
+            ures_appendResPath(resB, RES_PATH_SEPARATOR_S, 1, status);
         }
     } else if(index >= 0) {
         char buf[256];
         int32_t len = T_CString_integerToString(buf, index, 10);
-        ures_appendResPath(resB, buf, len);
+        ures_appendResPath(resB, buf, len, status);
         if(resB->fResPath[resB->fResPathLen-1] != RES_PATH_SEPARATOR) {
-            ures_appendResPath(resB, RES_PATH_SEPARATOR_S, 1);
+            ures_appendResPath(resB, RES_PATH_SEPARATOR_S, 1, status);
         }
     }
     /* Make sure that Purify doesn't complain about uninitialized memory copies. */
@@ -1007,11 +1010,11 @@ UResourceBundle *ures_copyResb(UResourceBundle *r, const UResourceBundle *origin
         r->fResPath = NULL;
         r->fResPathLen = 0;
         if(original->fResPath) {
-          ures_appendResPath(r, original->fResPath, original->fResPathLen);
+            ures_appendResPath(r, original->fResPath, original->fResPathLen, status);
         }
         ures_setIsStackObject(r, isStackObject);
         if(r->fData != NULL) {
-          entryIncrease(r->fData);
+            entryIncrease(r->fData);
         }
     }
     return r;
@@ -1994,7 +1997,7 @@ ures_openDirect(const char* path, const char* localeID, UErrorCode* status) {
     r->fSize = res_countArrayItems(&(r->fResData), r->fRes);
     r->fResPath = NULL;
     r->fResPathLen = 0;
-    r->fParentRes = NULL;
+    /*r->fParentRes = NULL;*/
     r->fTopLevelData = r->fData;
 
     return r;
@@ -2060,7 +2063,7 @@ ures_getVersionNumber(const UResourceBundle*   resourceBundle)
         ((UResourceBundle *)resourceBundle)->fVersion = (char *)uprv_malloc(1 + len); 
         /* Check for null pointer. */
         if (((UResourceBundle *)resourceBundle)->fVersion == NULL) {
-        	return NULL;
+            return NULL;
         }
        
         if(minor_len > 0) {

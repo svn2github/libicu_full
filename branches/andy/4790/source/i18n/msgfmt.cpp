@@ -1310,7 +1310,7 @@ MessageFormat::parse(const UnicodeString& source,
     // If resultArray could not be created, exit out.
     // Avoid crossing initialization of variables above.
     if (resultArray == NULL) {
-    	goto PARSE_ERROR;
+        goto PARSE_ERROR;
     }
     for (int32_t i = 0; i < subformatCount; ++i) {
         // match up to format
@@ -1465,12 +1465,10 @@ MessageFormat::autoQuoteApostrophe(const UnicodeString& pattern, UErrorCode& sta
 static Format* makeRBNF(URBNFRuleSetTag tag, const Locale& locale, const UnicodeString& defaultRuleSet, UErrorCode& ec) {
     RuleBasedNumberFormat* fmt = new RuleBasedNumberFormat(tag, locale, ec);
     if (fmt == NULL) {
-    	ec = U_MEMORY_ALLOCATION_ERROR;
+        ec = U_MEMORY_ALLOCATION_ERROR;
     } else if (U_SUCCESS(ec) && defaultRuleSet.length() > 0) {
-        fmt->setDefaultRuleSet(defaultRuleSet, ec);
-	    if (U_FAILURE(ec)) { // ignore unrecognized default rule set
-	        ec = U_ZERO_ERROR;
-	    }
+        UErrorCode localStatus = U_ZERO_ERROR; // ignore unrecognized default rule set
+        fmt->setDefaultRuleSet(defaultRuleSet, localStatus);
     }
     return fmt;
 }
@@ -1789,6 +1787,12 @@ MessageFormat::isLegalArgName(const UnicodeString& argName) const {
     return TRUE;
 }
 
+int32_t 
+MessageFormat::getArgTypeCount() const {
+        return argTypeCount; 
+}
+
+
 FormatNameEnumeration::FormatNameEnumeration(UVector *fNameList, UErrorCode& /*status*/) {
     pos=0;
     fFormatNames = fNameList;
@@ -1821,6 +1825,8 @@ FormatNameEnumeration::~FormatNameEnumeration() {
     }
     delete fFormatNames;
 }
+
+
 U_NAMESPACE_END
 
 #endif /* #if !UCONFIG_NO_FORMATTING */

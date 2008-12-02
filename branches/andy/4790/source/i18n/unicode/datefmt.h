@@ -1,6 +1,6 @@
 /*
  ********************************************************************************
- *   Copyright (C) 1997-2007, International Business Machines
+ *   Copyright (C) 1997-2008, International Business Machines
  *   Corporation and others.  All Rights Reserved.
  ********************************************************************************
  *
@@ -37,6 +37,7 @@
 U_NAMESPACE_BEGIN
 
 class TimeZone;
+class DateTimePatternGenerator;
 
 /**
  * DateFormat is an abstract class for a family of classes that convert dates and

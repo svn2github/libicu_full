@@ -65,6 +65,8 @@
 
 U_NAMESPACE_BEGIN
 
+static const UChar PATTERN_CHAR_BASE = 0x40;
+
 /**
  * Last-resort string to use for "GMT" when constructing time zone strings.
  */
@@ -368,20 +370,22 @@ void SimpleDateFormat::construct(EStyle timeStyle,
         // instead of Formattable::setString()'s unaware, safe, deep string clone
         // see Jitterbug 2296
         resStr = ures_getStringByIndex(dateTimePatterns, (int32_t)timeStyle, &resStrLen, &status);
-        UnicodeString *tempus = new UnicodeString(TRUE, resStr, resStrLen);
+        UnicodeString *tempus1 = new UnicodeString(TRUE, resStr, resStrLen);
         // NULL pointer check
-        if (tempus == NULL) {
-        	status = U_MEMORY_ALLOCATION_ERROR;
-        	return;
+        if (tempus1 == NULL) {
+            status = U_MEMORY_ALLOCATION_ERROR;
+            return;
         }
-        timeDateArray[0].adoptString(tempus);
+        timeDateArray[0].adoptString(tempus1);
+        
         resStr = ures_getStringByIndex(dateTimePatterns, (int32_t)dateStyle, &resStrLen, &status);
+        UnicodeString *tempus2 = new UnicodeString(TRUE, resStr, resStrLen);
         // Null pointer check
-        if (tempus == NULL) {
-        	status = U_MEMORY_ALLOCATION_ERROR;
-        	return;
+        if (tempus2 == NULL) {
+            status = U_MEMORY_ALLOCATION_ERROR;
+            return;
         }
-        timeDateArray[1].adoptString(new UnicodeString(TRUE, resStr, resStrLen));
+        timeDateArray[1].adoptString(tempus2);
 
         resStr = ures_getStringByIndex(dateTimePatterns, (int32_t)kDateTime, &resStrLen, &status);
         MessageFormat::format(UnicodeString(TRUE, resStr, resStrLen), timeDateArray, 2, fPattern, status);
@@ -578,6 +582,43 @@ SimpleDateFormat::format(const Formattable& obj,
 
 //----------------------------------------------------------------------
 
+/* Map calendar field into calendar field level.
+ * the larger the level, the smaller the field unit.
+ * For example, UCAL_ERA level is 0, UCAL_YEAR level is 10,
+ * UCAL_MONTH level is 20.
+ * NOTE: if new fields adds in, the table needs to update.
+ */
+const int32_t
+SimpleDateFormat::fgCalendarFieldToLevel[] =
+{
+    /*GyM*/ 0, 10, 20,
+    /*wW*/ 20, 30,
+    /*dDEF*/ 30, 20, 30, 30,
+    /*ahHm*/ 40, 50, 50, 60,
+    /*sS..*/ 70, 80, 
+    /*z?Y*/ 0, 0, 10, 
+    /*eug*/ 30, 10, 0,
+    /*A*/ 40 
+};
+
+
+/* Map calendar field LETTER into calendar field level.
+ * the larger the level, the smaller the field unit.
+ * NOTE: if new fields adds in, the table needs to update.
+ */
+const int32_t
+SimpleDateFormat::fgPatternCharToLevel[] = {
+    //       A   B   C   D   E   F   G   H   I   J   K   L   M   N   O
+        -1, 40, -1, -1, 20,  30, 30,  0,  50, -1, -1, 50, 20,  20, -1, -1,
+    //   P   Q   R   S   T   U   V   W   X   Y   Z
+        -1, 20, -1,  80, -1, -1, 0, 30, -1, 10, 0, -1, -1, -1, -1, -1,
+    //       a   b   c   d   e   f   g   h   i   j   k   l   m   n   o
+        -1, 40, -1, 30,  30, 30, -1, 0, 50, -1, -1,  50, -1,  60, -1, -1,
+    //   p   q   r   s   t   u   v   w   x   y   z
+        -1, 20, -1,  70, -1, 10, 0, 20, -1,  10, 0, -1, -1, -1, -1, -1
+};
+
+
 // Map index into pattern character string to Calendar field number.
 const UCalendarDateFields
 SimpleDateFormat::fgPatternIndexToCalendarField[] =
@@ -591,7 +632,7 @@ SimpleDateFormat::fgPatternIndexToCalendarField[] =
     /*Yeu*/ UCAL_YEAR_WOY, UCAL_DOW_LOCAL, UCAL_EXTENDED_YEAR,
     /*gAZ*/ UCAL_JULIAN_DAY, UCAL_MILLISECONDS_IN_DAY, UCAL_ZONE_OFFSET,
     /*v*/   UCAL_ZONE_OFFSET,
-    /*c*/   UCAL_DAY_OF_WEEK,
+    /*c*/   UCAL_DOW_LOCAL,
     /*L*/   UCAL_MONTH,
     /*Q*/   UCAL_MONTH,
     /*q*/   UCAL_MONTH,
@@ -638,10 +679,6 @@ _appendSymbol(UnicodeString& dst,
 void
 SimpleDateFormat::appendGMT(UnicodeString &appendTo, Calendar& cal, UErrorCode& status) const{
     int32_t offset = cal.get(UCAL_ZONE_OFFSET, status) + cal.get(UCAL_DST_OFFSET, status);
-	// Caused by memory allocation during fSymbols creation.
-	if (fSymbols == NULL) {
-		status = U_MEMORY_ALLOCATION_ERROR;
-	}
     if (U_FAILURE(status)) {
         return;
     }
@@ -666,10 +703,6 @@ SimpleDateFormat::appendGMT(UnicodeString &appendTo, Calendar& cal, UErrorCode& 
 
 int32_t
 SimpleDateFormat::parseGMT(const UnicodeString &text, ParsePosition &pos) const {
-	// Caused by memory allocation during fSymbols creation.
-	if (fSymbols == NULL) {
-		return 0;
-	}
     if (!isDefaultGMTFormat()) {
         int32_t start = pos.getIndex();
 
@@ -692,7 +725,7 @@ SimpleDateFormat::parseGMT(const UnicodeString &text, ParsePosition &pos) const 
                 if (pos.getErrorIndex() == -1 && pos.getIndex() > start) {
                     parsed.getArray(parsedCount);
                     if (parsedCount == 1 && parsed[0].getType() == Formattable::kDate) {
-                        return (int32_t)(-1 * parsed[0].getDate());
+                        return (int32_t)(-1 * (int64_t)parsed[0].getDate());
                     }
                 }
 
@@ -705,7 +738,7 @@ SimpleDateFormat::parseGMT(const UnicodeString &text, ParsePosition &pos) const 
                 if (pos.getErrorIndex() == -1 && pos.getIndex() > start) {
                     parsed.getArray(parsedCount);
                     if (parsedCount == 1 && parsed[0].getType() == Formattable::kDate) {
-                        return (int32_t)parsed[0].getDate();
+                        return (int32_t)((int64_t)parsed[0].getDate());
                     }
                 }
 
@@ -718,7 +751,7 @@ SimpleDateFormat::parseGMT(const UnicodeString &text, ParsePosition &pos) const 
                 if (pos.getErrorIndex() == -1 && pos.getIndex() > start) {
                     parsed.getArray(parsedCount);
                     if (parsedCount == 1 && parsed[0].getType() == Formattable::kDate) {
-                        return (int32_t)(-1 * parsed[0].getDate());
+                        return (int32_t)(-1 * (int64_t)parsed[0].getDate());
                     }
                 }
 
@@ -731,7 +764,7 @@ SimpleDateFormat::parseGMT(const UnicodeString &text, ParsePosition &pos) const 
                 if (pos.getErrorIndex() == -1 && pos.getIndex() > start) {
                     parsed.getArray(parsedCount);
                     if (parsedCount == 1 && parsed[0].getType() == Formattable::kDate) {
-                        return (int32_t)parsed[0].getDate();
+                        return (int32_t)((int64_t)parsed[0].getDate());
                     }
                 }
 
@@ -881,7 +914,6 @@ SimpleDateFormat::parseGMTDefault(const UnicodeString &text, ParsePosition &pos)
 
 UBool
 SimpleDateFormat::isDefaultGMTFormat() const {
-	// fSymbols null pointer is checked in calling methods.
     // GMT pattern
     if (fSymbols->fGmtFormat.length() == 0) {
         // No GMT pattern is set
@@ -937,10 +969,6 @@ SimpleDateFormat::formatRFC822TZ(UnicodeString &appendTo, int32_t offset) const 
 
 void
 SimpleDateFormat::initGMTFormatters(UErrorCode &status) {
-	// Caused by memory allocation error earlier in fSymbols creation.
-	if (fSymbols == NULL) {
-		status = U_MEMORY_ALLOCATION_ERROR;
-	}
     if (U_FAILURE(status)) {
         return;
     }
@@ -949,7 +977,7 @@ SimpleDateFormat::initGMTFormatters(UErrorCode &status) {
         fGMTFormatters = (MessageFormat**)uprv_malloc(kNumGMTFormatters * sizeof(MessageFormat*));
         if (fGMTFormatters) {
             for (int32_t i = 0; i < kNumGMTFormatters; i++) {
-                const UnicodeString *hourPattern;
+                const UnicodeString *hourPattern = NULL; //initialized it to avoid warning
                 switch (i) {
                     case kGMTNegativeHMS:
                         hourPattern = &(fSymbols->fGmtHourFormats[DateFormatSymbols::GMT_NEGATIVE_HMS]);
@@ -989,10 +1017,6 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
                             Calendar& cal,
                             UErrorCode& status) const
 {
-	// Caused by memory allocation during fSymbols creation.
-	if (fSymbols == NULL) {
-		status = U_MEMORY_ALLOCATION_ERROR;
-	}
     if (U_FAILURE(status)) {
         return;
     }
@@ -1022,24 +1046,31 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
     switch (patternCharIndex) {
     
     // for any "G" symbol, write out the appropriate era string
-    // "GGGG" is wide era name, anything else is abbreviated name
+    // "GGGG" is wide era name, "GGGGG" is narrow era name, anything else is abbreviated name
     case UDAT_ERA_FIELD:
-        if (count >= 4)
+        if (count == 5)
+           _appendSymbol(appendTo, value, fSymbols->fNarrowEras, fSymbols->fNarrowErasCount);
+        else if (count == 4)
            _appendSymbol(appendTo, value, fSymbols->fEraNames, fSymbols->fEraNamesCount);
         else
            _appendSymbol(appendTo, value, fSymbols->fEras, fSymbols->fErasCount);
         break;
 
-    // for "yyyy", write out the whole year; for "yy", write out the last 2 digits
+    // OLD: for "yyyy", write out the whole year; for "yy", write out the last 2 digits
+    // NEW: UTS#35:
+//Year  	y  	yy  	yyy  	yyyy  	yyyyy
+//AD 1 	1 	01 	001 	0001 	00001
+//AD 12 	12 	12 	012 	0012 	00012
+//AD 123 	123 	23 	123 	0123 	00123
+//AD 1234 	1234 	34 	1234 	1234 	01234
+//AD 12345 	12345 	45 	12345 	12345 	12345
     case UDAT_YEAR_FIELD:
     case UDAT_YEAR_WOY_FIELD:
-        if (count >= 4) 
-            zeroPaddingNumber(appendTo, value, 4, maxIntCount);
-        else if(count == 1) 
-            zeroPaddingNumber(appendTo, value, count, maxIntCount);
-        else
+        if(count == 2)
             zeroPaddingNumber(appendTo, value, 2, 2);
-        break;  // TODO: this needs to be synced with Java, with GCL/Shanghai's work
+        else 
+            zeroPaddingNumber(appendTo, value, count, maxIntCount);
+        break; 
 
     // for "MMMM", write out the whole month name, for "MMM", write out the month
     // abbreviation, for "M" or "MM", write out the month as a number with the
@@ -1104,9 +1135,22 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
         }
         break;
 
-    // for "EEE", write out the abbreviated day-of-the-week name
-    // for "EEEE", write out the wide day-of-the-week name
-    // for "EEEEE", use the narrow day-of-the-week name
+    // for "ee" or "e", use local numeric day-of-the-week
+    // for "EEEEE" or "eeeee", write out the narrow day-of-the-week name
+    // for "EEEE" or "eeee", write out the wide day-of-the-week name
+    // for "EEE" or "EE" or "E" or "eee", write out the abbreviated day-of-the-week name
+    case UDAT_DOW_LOCAL_FIELD:
+        if ( count < 3 ) {
+            zeroPaddingNumber(appendTo, value, count, maxIntCount);
+            break;
+        }
+        // fall through to EEEEE-EEE handling, but for that we don't want local day-of-week,
+        // we want standard day-of-week, so first fix value to work for EEEEE-EEE.
+        value = cal.get(UCAL_DAY_OF_WEEK, status);
+        if (U_FAILURE(status)) {
+            return;
+        }
+        // fall through, do not break here
     case UDAT_DAY_OF_WEEK_FIELD:
         if (count == 5) 
             _appendSymbol(appendTo, value, fSymbols->fNarrowWeekdays,
@@ -1123,17 +1167,25 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
     // for "cccc", write out the wide day-of-the-week name
     // for "ccccc", use the narrow day-of-the-week name
     case UDAT_STANDALONE_DAY_FIELD:
+        if ( count < 3 ) {
+            zeroPaddingNumber(appendTo, value, 1, maxIntCount);
+            break;
+        }
+        // fall through to alpha DOW handling, but for that we don't want local day-of-week,
+        // we want standard day-of-week, so first fix value.
+        value = cal.get(UCAL_DAY_OF_WEEK, status);
+        if (U_FAILURE(status)) {
+            return;
+        }
         if (count == 5) 
             _appendSymbol(appendTo, value, fSymbols->fStandaloneNarrowWeekdays,
                           fSymbols->fStandaloneNarrowWeekdaysCount);
         else if (count == 4) 
             _appendSymbol(appendTo, value, fSymbols->fStandaloneWeekdays,
                           fSymbols->fStandaloneWeekdaysCount);
-        else if (count == 3)
+        else // count == 3
             _appendSymbol(appendTo, value, fSymbols->fStandaloneShortWeekdays,
                           fSymbols->fStandaloneShortWeekdaysCount);
-        else
-            zeroPaddingNumber(appendTo, value, 1, maxIntCount);
         break;
 
     // for and "a" symbol, write out the whole AM/PM string
@@ -1255,11 +1307,13 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
 void
 SimpleDateFormat::zeroPaddingNumber(UnicodeString &appendTo, int32_t value, int32_t minDigits, int32_t maxDigits) const
 {
-    FieldPosition pos(0);
+    if (fNumberFormat!=NULL) {
+        FieldPosition pos(0);
 
-    fNumberFormat->setMinimumIntegerDigits(minDigits);
-    fNumberFormat->setMaximumIntegerDigits(maxDigits);
-    fNumberFormat->format(value, appendTo, pos);  // 3rd arg is there to speed up processing
+        fNumberFormat->setMinimumIntegerDigits(minDigits);
+        fNumberFormat->setMaximumIntegerDigits(maxDigits);
+        fNumberFormat->format(value, appendTo, pos);  // 3rd arg is there to speed up processing
+    }
 }
 
 //----------------------------------------------------------------------
@@ -1827,12 +1881,6 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
     ParsePosition pos(0);
     int32_t patternCharIndex;
     UnicodeString temp;
-    
-	// Caused by memory allocation during fSymbols creation.
-	if (fSymbols == NULL) {
-		return -1; // Failed
-	}
-    
     UChar *patternCharPtr = u_strchr(DateFormatSymbols::getPatternUChars(), ch);
 
 #if defined (U_DEBUG_CAL)
@@ -1867,6 +1915,8 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
     // the parsed value.
     if (patternCharIndex == UDAT_HOUR_OF_DAY1_FIELD ||
         patternCharIndex == UDAT_HOUR1_FIELD ||
+        (patternCharIndex == UDAT_DOW_LOCAL_FIELD && count <= 2) ||
+        (patternCharIndex == UDAT_STANDALONE_DAY_FIELD && count <= 2) ||
         (patternCharIndex == UDAT_MONTH_FIELD && count <= 2) ||
         (patternCharIndex == UDAT_STANDALONE_MONTH_FIELD && count <= 2) ||
         (patternCharIndex == UDAT_QUARTER_FIELD && count <= 2) ||
@@ -1900,6 +1950,9 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
 
     switch (patternCharIndex) {
     case UDAT_ERA_FIELD:
+        if (count == 5) {
+            return matchString(text, start, UCAL_ERA, fSymbols->fNarrowEras, fSymbols->fNarrowErasCount, cal);
+        }
         if (count == 4) {
             return matchString(text, start, UCAL_ERA, fSymbols->fEraNames, fSymbols->fEraNamesCount, cal);
         }
@@ -2020,28 +2073,48 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
         cal.set(UCAL_MILLISECOND, value);
         return pos.getIndex();
 
+    case UDAT_DOW_LOCAL_FIELD:
+        if (count <= 2) // i.e., e or ee
+        {
+            // [We computed 'value' above.]
+            cal.set(UCAL_DOW_LOCAL, value);
+            return pos.getIndex();
+        }
+        // else for eee-eeeee fall through to handling of EEE-EEEEE
+        // fall through, do not break here
     case UDAT_DAY_OF_WEEK_FIELD:
         {
             // Want to be able to parse both short and long forms.
-            // Try count == 4 (DDDD) first:
+            // Try count == 4 (EEEE) first:
             int32_t newStart = 0;
             if ((newStart = matchString(text, start, UCAL_DAY_OF_WEEK,
                                       fSymbols->fWeekdays, fSymbols->fWeekdaysCount, cal)) > 0)
                 return newStart;
-            else // DDDD failed, now try DDD
+            // EEEE failed, now try EEE
+            else if ((newStart = matchString(text, start, UCAL_DAY_OF_WEEK,
+                                   fSymbols->fShortWeekdays, fSymbols->fShortWeekdaysCount, cal)) > 0)
+                return newStart;
+            // EEE failed, now try EEEEE
+            else
                 return matchString(text, start, UCAL_DAY_OF_WEEK,
-                                   fSymbols->fShortWeekdays, fSymbols->fShortWeekdaysCount, cal);
+                                   fSymbols->fNarrowWeekdays, fSymbols->fNarrowWeekdaysCount, cal);
         }
 
     case UDAT_STANDALONE_DAY_FIELD:
         {
+            if (count <= 2) // c or cc
+            {
+                // [We computed 'value' above.]
+                cal.set(UCAL_DOW_LOCAL, value);
+                return pos.getIndex();
+            }
             // Want to be able to parse both short and long forms.
-            // Try count == 4 (DDDD) first:
+            // Try count == 4 (cccc) first:
             int32_t newStart = 0;
             if ((newStart = matchString(text, start, UCAL_DAY_OF_WEEK,
                                       fSymbols->fStandaloneWeekdays, fSymbols->fStandaloneWeekdaysCount, cal)) > 0)
                 return newStart;
-            else // DDDD failed, now try DDD
+            else // cccc failed, now try ccc
                 return matchString(text, start, UCAL_DAY_OF_WEEK,
                                    fSymbols->fStandaloneShortWeekdays, fSymbols->fStandaloneShortWeekdaysCount, cal);
         }
@@ -2383,13 +2456,8 @@ UnicodeString&
 SimpleDateFormat::toLocalizedPattern(UnicodeString& result,
                                      UErrorCode& status) const
 {
-	// Caused by memory allocation during fSymbols creation.
-	if (fSymbols == NULL) {
-		status = U_MEMORY_ALLOCATION_ERROR;
-	} else {
-		translatePattern(fPattern, result, DateFormatSymbols::getPatternUChars(), fSymbols->fLocalPatternChars, status);
-	}
-	return result;
+    translatePattern(fPattern, result, DateFormatSymbols::getPatternUChars(), fSymbols->fLocalPatternChars, status);
+    return result;
 }
 
 //----------------------------------------------------------------------
@@ -2406,11 +2474,6 @@ void
 SimpleDateFormat::applyLocalizedPattern(const UnicodeString& pattern,
                                         UErrorCode &status)
 {
-	// Caused by memory allocation during fSymbols creation.
-	if (fSymbols == NULL) {
-		status = U_MEMORY_ALLOCATION_ERROR;
-		return;
-	}
     translatePattern(pattern, fPattern, fSymbols->fLocalPatternChars, DateFormatSymbols::getPatternUChars(), status);
 }
 
@@ -2452,6 +2515,68 @@ void SimpleDateFormat::adoptCalendar(Calendar* calendarToAdopt)
   initializeSymbols(fLocale, fCalendar, status);  // we need new symbols
   initializeDefaultCentury();  // we need a new century (possibly)
 }
+
+
+//----------------------------------------------------------------------
+
+
+UBool
+SimpleDateFormat::isFieldUnitIgnored(UCalendarDateFields field) const {
+    return isFieldUnitIgnored(fPattern, field);
+}
+
+
+UBool
+SimpleDateFormat::isFieldUnitIgnored(const UnicodeString& pattern, 
+                                     UCalendarDateFields field) {
+    int32_t fieldLevel = fgCalendarFieldToLevel[field];
+    int32_t level;
+    UChar ch;
+    UBool inQuote = FALSE;
+    UChar prevCh = 0;
+    int32_t count = 0;
+
+    for (int32_t i = 0; i < pattern.length(); ++i) {
+        ch = pattern[i];
+        if (ch != prevCh && count > 0) {
+            level = fgPatternCharToLevel[prevCh - PATTERN_CHAR_BASE];
+            // the larger the level, the smaller the field unit.
+            if ( fieldLevel <= level ) {
+                return FALSE;
+            }
+            count = 0;
+        }
+        if (ch == QUOTE) {
+            if ((i+1) < pattern.length() && pattern[i+1] == QUOTE) {
+                ++i;
+            } else {
+                inQuote = ! inQuote;
+            }
+        } 
+        else if ( ! inQuote && ((ch >= 0x0061 /*'a'*/ && ch <= 0x007A /*'z'*/) 
+                    || (ch >= 0x0041 /*'A'*/ && ch <= 0x005A /*'Z'*/))) {
+            prevCh = ch;
+            ++count;
+        }
+    }
+    if ( count > 0 ) {
+        // last item
+        level = fgPatternCharToLevel[prevCh - PATTERN_CHAR_BASE];
+            if ( fieldLevel <= level ) {
+                return FALSE;
+            }
+    }
+    return TRUE;
+}
+
+
+
+const Locale&
+SimpleDateFormat::getSmpFmtLocale(void) const {
+    return fLocale;
+}
+
+
 
 U_NAMESPACE_END
 

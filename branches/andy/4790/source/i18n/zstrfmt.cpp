@@ -145,8 +145,11 @@ getTimeZoneTranslationType(TimeZoneTranslationTypeIndex typeIdx) {
         case ZSIDX_LONG_DAYLIGHT:
             type = DAYLIGHT_LONG;
             break;
+        case ZSIDX_COUNT:
         case ZSIDX_SHORT_DAYLIGHT:
             type = DAYLIGHT_SHORT;
+            break;
+        default:
             break;
     }
     return type;
@@ -155,106 +158,183 @@ getTimeZoneTranslationType(TimeZoneTranslationTypeIndex typeIdx) {
 #define DEFAULT_CHARACTERNODE_CAPACITY 1
 
 // ----------------------------------------------------------------------------
-CharacterNode::CharacterNode(UChar32 c, UErrorCode &status)
-: fChildren(deleteZoneStringInfo, NULL, DEFAULT_CHARACTERNODE_CAPACITY, status),
-  fValues(deleteZoneStringInfo, NULL, DEFAULT_CHARACTERNODE_CAPACITY, status),
-  fCharacter(c)
-{
+void CharacterNode::clear() {
+    uprv_memset(this, 0, sizeof(*this));
 }
 
-CharacterNode::~CharacterNode() {
-    while (!fChildren.isEmpty()) {
-        CharacterNode *node = (CharacterNode*)fChildren.orphanElementAt(0);
-        delete node;
+void CharacterNode::deleteValues() {
+    if (fValues == NULL) {
+        // Do nothing.
+    } else if (!fHasValuesVector) {
+        deleteZoneStringInfo(fValues);
+    } else {
+        delete (UVector *)fValues;
     }
 }
 
 void
 CharacterNode::addValue(void *value, UErrorCode &status) {
     if (U_FAILURE(status)) {
+        deleteZoneStringInfo(value);
         return;
     }
-    fValues.addElement(value, status);
+    if (fValues == NULL) {
+        fValues = value;
+    } else {
+        // At least one value already.
+        if (!fHasValuesVector) {
+            // There is only one value so far, and not in a vector yet.
+            // Create a vector and add the old value.
+            UVector *values = new UVector(deleteZoneStringInfo, NULL, DEFAULT_CHARACTERNODE_CAPACITY, status);
+            if (U_FAILURE(status)) {
+                deleteZoneStringInfo(value);
+                return;
+            }
+            values->addElement(fValues, status);
+            fValues = values;
+            fHasValuesVector = TRUE;
+        }
+        // Add the new value.
+        ((UVector *)fValues)->addElement(value, status);
+    }
 }
 
-CharacterNode*
-CharacterNode::addChildNode(UChar32 c, UErrorCode &status) {
-    if (U_FAILURE(status)) {
-        return NULL;
-    }
-    CharacterNode *result = NULL;
-    int32_t childrenNum = fChildren.size();
-    for (int32_t i = 0; i < childrenNum; i++) {
-        CharacterNode *node = (CharacterNode*)fChildren.elementAt(i);
-        if (node->getCharacter() == c) {
-            result = node;
-            break;
-        }
-    }
-    if (result == NULL) {
-        result = new CharacterNode(c, status);
-        fChildren.addElement(result, status);
-    }
-
-    return result;
-}
-
-CharacterNode*
-CharacterNode::getChildNode(UChar32 c) const {
-    CharacterNode *result = NULL;
-    int32_t childrenNum = fChildren.size();
-    for (int32_t i = 0; i < childrenNum; i++) {
-        CharacterNode *node = (CharacterNode*)fChildren.elementAt(i);
-        if (node->getCharacter() == c) {
-            result = node;
-            break;
-        }
-    }
-    return result;
+//----------------------------------------------------------------------------
+// Virtual destructor to avoid warning
+TextTrieMapSearchResultHandler::~TextTrieMapSearchResultHandler(){
 }
 
 // ----------------------------------------------------------------------------
 TextTrieMap::TextTrieMap(UBool ignoreCase)
-: fIgnoreCase(ignoreCase), fRoot(NULL) {
+: fIgnoreCase(ignoreCase), fNodes(NULL), fNodesCapacity(0), fNodesCount(0) {
 }
 
 TextTrieMap::~TextTrieMap() {
-    if (fRoot != NULL) {
-        delete fRoot;
+    int32_t index;
+    for (index = 0; index < fNodesCount; ++index) {
+        fNodes[index].deleteValues();
     }
+    uprv_free(fNodes);
 }
 
 void
 TextTrieMap::put(const UnicodeString &key, void *value, UErrorCode &status) {
-    if (fRoot == NULL) {
-        fRoot = new CharacterNode(0, status);
+    if (fNodes == NULL) {
+        fNodesCapacity = 512;
+        fNodes = (CharacterNode *)uprv_malloc(fNodesCapacity * sizeof(CharacterNode));
+        fNodes[0].clear();  // Init root node.
+        fNodesCount = 1;
     }
 
-    UnicodeString keyString(key);
+    UnicodeString foldedKey;
+    const UChar *keyBuffer;
+    int32_t keyLength;
     if (fIgnoreCase) {
-        keyString.foldCase();
+        // Ok to use fastCopyFrom() because we discard the copy when we return.
+        foldedKey.fastCopyFrom(key).foldCase();
+        keyBuffer = foldedKey.getBuffer();
+        keyLength = foldedKey.length();
+    } else {
+        keyBuffer = key.getBuffer();
+        keyLength = key.length();
     }
 
-    CharacterNode *node = fRoot;
-    int32_t index = 0;
-    while (index < keyString.length()) {
-        UChar32 c = keyString.char32At(index);
-        node = node->addChildNode(c, status);  
-        if (U_FAILURE(status)) {
-            return;
-        }
-        index = keyString.moveIndex32(index, 1);
+    CharacterNode *node = fNodes;
+    int32_t index;
+    for (index = 0; index < keyLength; ++index) {
+        node = addChildNode(node, keyBuffer[index], status);
     }
     node->addValue(value, status);
+}
+
+UBool
+TextTrieMap::growNodes() {
+    if (fNodesCapacity == 0xffff) {
+        return FALSE;  // We use 16-bit node indexes.
+    }
+    int32_t newCapacity = fNodesCapacity * 2;
+    if (newCapacity > 0xffff) {
+        newCapacity = 0xffff;
+    }
+    CharacterNode *newNodes = (CharacterNode *)uprv_malloc(newCapacity * sizeof(CharacterNode));
+    if (newNodes == NULL) {
+        return FALSE;
+    }
+    uprv_memcpy(newNodes, fNodes, fNodesCount * sizeof(CharacterNode));
+    uprv_free(fNodes);
+    fNodes = newNodes;
+    fNodesCapacity = newCapacity;
+    return TRUE;
+}
+
+CharacterNode*
+TextTrieMap::addChildNode(CharacterNode *parent, UChar c, UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return NULL;
+    }
+    // Linear search of the sorted list of children.
+    uint16_t prevIndex = 0;
+    uint16_t nodeIndex = parent->fFirstChild;
+    while (nodeIndex > 0) {
+        CharacterNode *current = fNodes + nodeIndex;
+        UChar childCharacter = current->fCharacter;
+        if (childCharacter == c) {
+            return current;
+        } else if (childCharacter > c) {
+            break;
+        }
+        prevIndex = nodeIndex;
+        nodeIndex = current->fNextSibling;
+    }
+
+    // Ensure capacity. Grow fNodes[] if needed.
+    if (fNodesCount == fNodesCapacity) {
+        int32_t parentIndex = (parent - fNodes);
+        if (!growNodes()) {
+            status = U_MEMORY_ALLOCATION_ERROR;
+            return NULL;
+        }
+        parent = fNodes + parentIndex;
+    }
+
+    // Insert a new child node with c in sorted order.
+    CharacterNode *node = fNodes + fNodesCount;
+    node->clear();
+    node->fCharacter = c;
+    node->fNextSibling = nodeIndex;
+    if (prevIndex == 0) {
+        parent->fFirstChild = (uint16_t)fNodesCount;
+    } else {
+        fNodes[prevIndex].fNextSibling = (uint16_t)fNodesCount;
+    }
+    ++fNodesCount;
+    return node;
+}
+
+CharacterNode*
+TextTrieMap::getChildNode(CharacterNode *parent, UChar c) const {
+    // Linear search of the sorted list of children.
+    uint16_t nodeIndex = parent->fFirstChild;
+    while (nodeIndex > 0) {
+        CharacterNode *current = fNodes + nodeIndex;
+        UChar childCharacter = current->fCharacter;
+        if (childCharacter == c) {
+            return current;
+        } else if (childCharacter > c) {
+            break;
+        }
+        nodeIndex = current->fNextSibling;
+    }
+    return NULL;
 }
 
 void
 TextTrieMap::search(const UnicodeString &text, int32_t start,
                   TextTrieMapSearchResultHandler *handler, UErrorCode &status) const {
-    if (fRoot == NULL) {
+    if (fNodes == NULL) {
         return;
     }
-    search(fRoot, text, start, start, handler, status);
+    search(fNodes, text, start, start, handler, status);
 }
 
 void
@@ -263,9 +343,8 @@ TextTrieMap::search(CharacterNode *node, const UnicodeString &text, int32_t star
     if (U_FAILURE(status)) {
         return;
     }
-    const UVector *values = node->getValues();
-    if (values != NULL) {
-        if (!handler->handleMatch(index - start, values, status)) {
+    if (node->hasValues()) {
+        if (!handler->handleMatch(index - start, node, status)) {
             return;
         }
         if (U_FAILURE(status)) {
@@ -280,14 +359,14 @@ TextTrieMap::search(CharacterNode *node, const UnicodeString &text, int32_t star
         int32_t tmpidx = 0;
         while (tmpidx < tmp.length()) {
             c = tmp.char32At(tmpidx);
-            node = node->getChildNode(c);
+            node = getChildNode(node, c);
             if (node == NULL) {
                 break;
             }
             tmpidx = tmp.moveIndex32(tmpidx, 1);
         }
     } else {
-        node = node->getChildNode(c);
+        node = getChildNode(node, c);
     }
     if (node != NULL) {
         search(node, text, start, index+1, handler, status);
@@ -314,13 +393,14 @@ ZoneStringSearchResultHandler::~ZoneStringSearchResultHandler() {
 }
 
 UBool
-ZoneStringSearchResultHandler::handleMatch(int32_t matchLength, const UVector *values, UErrorCode &status) {
+ZoneStringSearchResultHandler::handleMatch(int32_t matchLength, const CharacterNode *node, UErrorCode &status) {
     if (U_FAILURE(status)) {
         return FALSE;
     }
-    if (values != NULL) {
-        for (int32_t i = 0; values->size(); i++) {
-            ZoneStringInfo *zsinfo = (ZoneStringInfo*)values->elementAt(i);
+    if (node->hasValues()) {
+        int32_t valuesCount = node->countValues();
+        for (int32_t i = 0; i < valuesCount; i++) {
+            ZoneStringInfo *zsinfo = (ZoneStringInfo*)node->getValue(i);
             if (zsinfo == NULL) {
                 break;
             }
@@ -650,8 +730,7 @@ ZoneStringFormat::ZoneStringFormat(const Locale &locale, UErrorCode &status)
                                 ZoneStringInfo *zsinfo = new ZoneStringInfo(preferredIdForLocale, strings_mz[typeidx], (TimeZoneTranslationType)type);
                                 fZoneStringsTrie.put(strings_mz[typeidx], zsinfo, status);
                                 if (U_FAILURE(status)) {
-                                    delete zsinfo;
-                                    delete strings_mz;
+                                    delete []strings_mz;
                                     goto error_cleanup;
                                 }
                             }
@@ -664,7 +743,6 @@ ZoneStringFormat::ZoneStringFormat(const Locale &locale, UErrorCode &status)
 
                     fMzidToStrings.put(mzid, tmp_mzStrings, status);
                     if (U_FAILURE(status)) {
-                        delete tmp_mzStrings;
                         goto error_cleanup;
                     }
 
@@ -1014,10 +1092,13 @@ ZoneStringFormat::getString(const UnicodeString &tzid, TimeZoneTranslationTypeIn
                     break;
                 case ZSIDX_SHORT_STANDARD:
                 case ZSIDX_SHORT_DAYLIGHT:
+                case ZSIDX_COUNT: //added to avoid warning
                 case ZSIDX_SHORT_GENERIC:
                     if (!commonlyUsedOnly || zstrings->isShortFormatCommonlyUsed()) {
                         zstrings->getString(typeIdx, result);
                     }
+                    break;
+                default:
                     break;
             }
         }
@@ -1038,10 +1119,13 @@ ZoneStringFormat::getString(const UnicodeString &tzid, TimeZoneTranslationTypeIn
                         break;
                     case ZSIDX_SHORT_STANDARD:
                     case ZSIDX_SHORT_DAYLIGHT:
+                    case ZSIDX_COUNT: //added to avoid warning
                     case ZSIDX_SHORT_GENERIC:
                         if (!commonlyUsedOnly || mzstrings->isShortFormatCommonlyUsed()) {
                             mzstrings->getString(typeIdx, result);
                         }
+                        break;
+                    default:
                         break;
                 }
             }
@@ -1560,6 +1644,11 @@ ZSFCache::get(const Locale &locale, UErrorCode &status) {
     if (entry == NULL) {
         ZoneStringFormat *zsf = new ZoneStringFormat(locale, status);
         if (U_FAILURE(status)) {
+            delete zsf;
+            return NULL;
+        }
+        if (zsf == NULL) {
+            status = U_MEMORY_ALLOCATION_ERROR;
             return NULL;
         }
         // Now add the new entry

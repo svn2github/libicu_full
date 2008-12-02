@@ -15,10 +15,10 @@
 */
 #include "unicode/utypes.h"
 #include "unicode/uspoof.h"
+#include "uspoof_impl.h"
 #include "uspoofim.h"
 
 U_NAMESPACE_BEGIN
-
 
 
 USpoofChecker * U_EXPORT2

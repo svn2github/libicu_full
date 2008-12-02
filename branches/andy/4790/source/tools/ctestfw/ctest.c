@@ -573,20 +573,24 @@ static void *U_CALLCONV ctest_libRealloc(const void *context, void *mem, size_t 
         return NULL;
     }
     if (mem == NULL) {
+        /* New allocation. */
         umtx_atomic_inc(&ALLOCATION_COUNT);
     }
     return realloc(mem, size);
 }
 static void U_CALLCONV ctest_libFree(const void *context, void *mem) {
-    umtx_atomic_dec(&ALLOCATION_COUNT);
+    if (mem != NULL) {
+        umtx_atomic_dec(&ALLOCATION_COUNT);
+    }
     free(mem);
 }
 
 int T_CTEST_EXPORT2
-initArgs( int argc, const char* const argv[])
+initArgs( int argc, const char* const argv[], ArgHandlerPtr argHandler, void *context)
 {
     int                i;
     int                doList = FALSE;
+	int                argSkip = 0;
 
     VERBOSITY = FALSE;
     ERR_MSG = TRUE;
@@ -683,6 +687,10 @@ initArgs( int argc, const char* const argv[])
             help( argv[0] );
             return 0;
         }
+        else if (argHandler != NULL && (argSkip = argHandler(i, argc, argv, context)) > 0)
+        {
+            i += argSkip - 1;
+        }
         else
         {
             printf("* unknown option: %s\n", argv[i]);
@@ -740,10 +748,10 @@ runTestRequest(const TestNode* root,
             errorCount += ERROR_COUNT;
 
             subtreeOptionSeen = TRUE;
-        }
-        else if ((strcmp( argv[i], "-a") == 0) || (strcmp(argv[i],"-all") == 0))
-        {
+        } else if ((strcmp( argv[i], "-a") == 0) || (strcmp(argv[i],"-all") == 0)) {
             subtreeOptionSeen=FALSE;
+        } else if (strcmp( argv[i], "-l") == 0) {
+            doList = TRUE;
         }
         /* else option already handled by initArgs */
     }

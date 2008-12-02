@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-*   Copyright (C) 2000-2007, International Business Machines
+*   Copyright (C) 2000-2008, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *******************************************************************************
 *
@@ -35,6 +35,7 @@
  *                   that it contains the new major/minor combination
  * source/i18n/i18n.vcproj - same as for the common.vcproj
  * source/layout/layout.vcproj - same as for the common.vcproj
+ * source/layoutex/layoutex.vcproj - same
  * source/stubdata/stubdata.vcproj - same as for the common.vcproj
  * source/io/io.vcproj - same as for the common.vcproj
  * source/data/makedata.mak - change U_ICUDATA_NAME so that it contains
@@ -61,19 +62,19 @@
  *  This value will change in the subsequent releases of ICU
  *  @stable ICU 2.4
  */
-#define U_ICU_VERSION_MAJOR_NUM 3
+#define U_ICU_VERSION_MAJOR_NUM 4
 
 /** The current ICU minor version as an integer. 
  *  This value will change in the subsequent releases of ICU
  *  @stable ICU 2.6
  */
-#define U_ICU_VERSION_MINOR_NUM 9
+#define U_ICU_VERSION_MINOR_NUM 1
 
 /** The current ICU patchlevel version as an integer.  
  *  This value will change in the subsequent releases of ICU
  *  @stable ICU 2.4
  */
-#define U_ICU_VERSION_PATCHLEVEL_NUM 1
+#define U_ICU_VERSION_PATCHLEVEL_NUM 2
 
 /** The current ICU build level version as an integer.  
  *  This value is for use by ICU clients. It defaults to 0.
@@ -87,20 +88,20 @@
  *  This value will change in the subsequent releases of ICU
  *  @stable ICU 2.6
  */
-#define U_ICU_VERSION_SUFFIX _3_9
+#define U_ICU_VERSION_SUFFIX _4_1
 
 /** The current ICU library version as a dotted-decimal string. The patchlevel
  *  only appears in this string if it non-zero. 
  *  This value will change in the subsequent releases of ICU
  *  @stable ICU 2.4
  */
-#define U_ICU_VERSION "3.9.1"
+#define U_ICU_VERSION "4.1.2"
 
 /** The current ICU library major/minor version as a string without dots, for library name suffixes. 
  *  This value will change in the subsequent releases of ICU
  *  @stable ICU 2.6
  */
-#define U_ICU_VERSION_SHORT "39"
+#define U_ICU_VERSION_SHORT "41"
 
 /** An ICU version consists of up to 4 numbers from 0..255.
  *  @stable ICU 2.4
@@ -162,7 +163,7 @@ typedef uint8_t UVersionInfo[U_MAX_VERSION_LENGTH];
 #       define U_ICU_NAMESPACE icu
         namespace U_ICU_NAMESPACE { }
 #   else
-#       define U_ICU_NAMESPACE icu_3_9
+#       define U_ICU_NAMESPACE icu_4_1
         namespace U_ICU_NAMESPACE { }
         namespace icu = U_ICU_NAMESPACE;
 #   endif

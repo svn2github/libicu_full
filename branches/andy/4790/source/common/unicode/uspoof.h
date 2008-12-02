@@ -511,6 +511,7 @@ uspoof_areConfusableUnicodeString(const USpoofChecker *sc,
   */
 U_DRAFT int32_t U_EXPORT2
 uspoof_getSkeleton(const USpoofChecker *sc,
+                   USpoofChecks type,
                    const UChar *s,  int32_t length,
                    UChar *dest, int32_t destCapacity,
                    UErrorCode *status);
@@ -544,9 +545,10 @@ uspoof_getSkeleton(const USpoofChecker *sc,
   */   
 U_DRAFT int32_t U_EXPORT2
 uspoof_getSkeletonUTF8(const USpoofChecker *sc,
-                   const char *s,  int32_t length,
-                   char *dest, int32_t destCapacity,
-                   UErrorCode *status);
+                       USpoofChecks type,
+                       const char *s,  int32_t length,
+                       char *dest, int32_t destCapacity,
+                       UErrorCode *status);
     
 #ifdef XP_CPLUSPLUS
 /**
@@ -560,7 +562,7 @@ uspoof_getSkeletonUTF8(const USpoofChecker *sc,
   *  set of existing identifiers, by creating an efficiently
   *  searchable collection of the skeletons.
   *
-  * @param sc      The USpoofChecker 
+  * @param sc      The USpoofChecker.
   * @param s       The input string whose skeleton will be computed.
   * @param dest    The output string, to receive the skeleton string.
   * @param destCapacity  The length of the output buffer, in bytes.

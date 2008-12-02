@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT:
- * Copyright (c) 2001-2007, International Business Machines Corporation and
+ * Copyright (c) 2001-2008, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 /********************************************************************************
@@ -1018,12 +1018,13 @@ static void Test_UChar_WCHART_API(void){
             u_strFromWCS(uDest, uDestLen,&reqLen,wDest,reqLen,&err);
         }
     
-
-        for(i=0; i< uSrcLen; i++){
+        if(!U_FAILURE(err)) {
+         for(i=0; i< uSrcLen; i++){
             if(uDest[i] != src16WithNulls[i]){
                 log_verbose("u_str*WCS() failed for string with nulls expected: \\u%04X got: \\u%04X at index: %i \n", src16WithNulls[i] ,uDest[i],i);
                 failed =TRUE;
             }
+         }
         }
 
         if(U_FAILURE(err)){
@@ -1067,11 +1068,13 @@ static void Test_UChar_WCHART_API(void){
         }
     
 
-        for(i=0; i< uSrcLen; i++){
+        if(!U_FAILURE(err)) {
+         for(i=0; i< uSrcLen; i++){
             if(uDest[i] != src16j[i]){
                 log_verbose("u_str*WCS() failed for null terminated string expected: \\u%04X got: \\u%04X at index: %i \n", src16j[i] ,uDest[i],i);
                 failed =TRUE;
             }
+         }
         }
 
         if(U_FAILURE(err)){
@@ -1188,7 +1191,7 @@ Test_WCHART_LongString(){
     UBool failed = FALSE;
 
     if(U_FAILURE(status)){
-        log_err("Could not get testinclude resource from testtypes bundle. Error: %s\n",u_errorName(status));
+        log_data_err("Could not get testinclude resource from testtypes bundle. Error: %s\n",u_errorName(status));
         return;
     }
 

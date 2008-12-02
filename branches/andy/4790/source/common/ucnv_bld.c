@@ -948,6 +948,7 @@ ucnv_createConverterFromSharedData(UConverter *myUConverter,
     myUConverter->subCharLen = mySharedConverterData->staticData->subCharLen;
     myUConverter->subChars = (uint8_t *)myUConverter->subUChars;
     uprv_memcpy(myUConverter->subChars, mySharedConverterData->staticData->subChar, myUConverter->subCharLen);
+    myUConverter->toUCallbackReason = UCNV_ILLEGAL; /* default reason to invoke (*fromCharErrorBehaviour) */
 
     if(mySharedConverterData->impl->open != NULL) {
         mySharedConverterData->impl->open(myUConverter, realName, locale, options, err);
@@ -1079,8 +1080,8 @@ static UBool haveAvailableConverterList(UErrorCode *pErrorCode) {
 
         umtx_lock(&cnvCacheMutex);
         if (gAvailableConverters == NULL) {
-            gAvailableConverters = localConverterList;
             gAvailableConverterCount = localConverterCount;
+            gAvailableConverters = localConverterList;
             ucln_common_registerCleanup(UCLN_COMMON_UCNV, ucnv_cleanup);
         }
         else {
@@ -1146,6 +1147,9 @@ internalSetName(const char *name, UErrorCode *status) {
     gDefaultConverterContainsOption = containsOption;
     uprv_memcpy(gDefaultConverterNameBuffer, name, length);
     gDefaultConverterNameBuffer[length]=0;
+    
+    /* gDefaultConverterName MUST be the last global var set by this function.  */
+    /*    It is the variable checked in ucnv_getDefaultName() to see if initialization is required. */
     gDefaultConverterName = gDefaultConverterNameBuffer;
 
     ucln_common_registerCleanup(UCLN_COMMON_UCNV, ucnv_cleanup);

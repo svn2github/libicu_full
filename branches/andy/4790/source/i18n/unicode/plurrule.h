@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2007, International Business Machines Corporation and
+* Copyright (C) 2008, International Business Machines Corporation and
 * others. All Rights Reserved.
 *******************************************************************************
 *
@@ -63,14 +63,35 @@ class RuleParser;
  *  before the test as in the previous example.  The second part applies
  *  a different modulus and also uses negation, thus it matches all
  *  numbers _not_ in 12, 13, 14, 112, 113, 114, 212, 213, 214...
- *  </p><pre>
- *
+ *  </p>
+ *  <p>
+ * Syntax:<pre>
+ * \code
+ * rules         = rule (';' rule)*
+ * rule          = keyword ':' condition
+ * keyword       = <identifier>
+ * condition     = and_condition ('or' and_condition)*
+ * and_condition = relation ('and' relation)*
+ * relation      = is_relation | in_relation | within_relation | 'n' <EOL>
+ * is_relation   = expr 'is' ('not')? value
+ * in_relation   = expr ('not')? 'in' range
+ * within_relation = expr ('not')? 'within' range
+ * expr          = 'n' ('mod' value)?
+ * value         = digit+
+ * digit         = 0|1|2|3|4|5|6|7|8|9
+ * range         = value'..'value
+ * \endcode
+ * </pre></p>
+ * <p>
+ *  The difference between 'in' and 'within' is that 'in' only includes
+ *  integers in the specified range, while 'within' includes all values.</p>
+ *  <p>
  *  Keywords
  *  could be defined by users or from ICU locale data. There are 6
  *  predefined values in ICU - 'zero', 'one', 'two', 'few', 'many' and
  *  'other'. Callers need to check the value of keyword returned by
  *  {@link #select} method.
- *  </p><pre>
+ *  </p>
  *
  * Examples:<pre>
  * UnicodeString keyword = pl->select(number);
@@ -78,7 +99,7 @@ class RuleParser;
  *     ...
  * }
  * else if ( ... )
- *
+ * </pre>
  */
 class U_I18N_API PluralRules : public UObject {
 public:
@@ -155,7 +176,7 @@ public:
      * @draft ICU 4.0
      */
     static PluralRules* U_EXPORT2 forLocale(const Locale& locale, UErrorCode& status);
-
+    
     /**
      * Given a number, returns the keyword of the first rule that applies to
      * the number.  This function can be used with isKeyword* functions to
@@ -166,6 +187,17 @@ public:
      * @draft ICU 4.0
      */
     UnicodeString select(int32_t number) const;
+    
+    /**
+     * Given a number, returns the keyword of the first rule that applies to
+     * the number.  This function can be used with isKeyword* functions to
+     * determine the keyword for default plural rules.
+     *
+     * @param number  The number for which the rule has to be determined.
+     * @return        The keyword of the selected rule.
+     * @draft ICU 4.0
+     */
+    UnicodeString select(double number) const;
 
     /**
      * Returns a list of all rule keywords used in this <code>PluralRules</code>
@@ -244,14 +276,12 @@ private:
     RuleParser      *mParser;
 
     PluralRules();   // default constructor not implemented
-    void getRuleData(UErrorCode& status);
     int32_t getRepeatLimit() const;
     void parseDescription(UnicodeString& ruleData, RuleChain& rules, UErrorCode &status);
     void getNextLocale(const UnicodeString& localeData, int32_t* curIndex, UnicodeString& localeName);
-    void addRules(RuleChain& rules, UErrorCode& err);
-    void addRules(const UnicodeString& localeName, RuleChain& rules, UBool addToHash, UErrorCode& err);
-    void initHashtable(UErrorCode& err);
+    void addRules(RuleChain& rules);
     int32_t getNumberValue(const UnicodeString& token) const;
+    UnicodeString getRuleFromResource(const Locale& locale, UErrorCode& status);
 
 };
 

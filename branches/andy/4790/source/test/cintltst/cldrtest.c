@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT:
- * Copyright (c) 1997-2007, International Business Machines Corporation and
+ * Copyright (c) 1997-2008, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 
@@ -219,7 +219,7 @@ TestKeyInRootRecursive(UResourceBundle *root, const char *rootName,
                                 ures_getKey(currentBundle),
                                 locale);
                     }
-                    else if (localeStr[localeStrLen - 1] == (UChar)0x20) {
+                    else if ((localeStr[localeStrLen - 1] == (UChar)0x20) && (strcmp(subBundleKey,"separator") != 0)) {
                         log_err("key \"%s\" at index %d in \"%s\" ends with a space in locale \"%s\"\n",
                                 subBundleKey,
                                 idx,
@@ -305,7 +305,8 @@ TestKeyInRootRecursive(UResourceBundle *root, const char *rootName,
                         subBundleKey,
                         ures_getKey(currentBundle),
                         locale);
-            } else if (string[len - 1] == (UChar)0x20) {
+            /* localeDisplayPattern/separator can end with a space */
+            } else if (string[len - 1] == (UChar)0x20 && (strcmp(subBundleKey,"separator"))) {
                 log_err("key \"%s\" in \"%s\" ends with a space in locale \"%s\"\n",
                         subBundleKey,
                         ures_getKey(currentBundle),
@@ -496,8 +497,8 @@ TestLocaleStructure(void) {
             if(U_SUCCESS(errorCode)) {
                 /* It's installed, but there is no data.
                    It's installed for the g18n white paper [grhoten] */
-                log_err("ERROR: Locale %-5s not installed, and it should be!\n",
-                    uloc_getAvailable(locIndex));
+                log_err("ERROR: Locale %-5s not installed, and it should be, err %s\n",
+                    uloc_getAvailable(locIndex), u_errorName(errorCode));
             } else {
                 log_err("%%%%%%% Unexpected error %d in %s %%%%%%%",
                     u_errorName(errorCode),
@@ -827,8 +828,8 @@ findSetMatch( UScriptCode *scriptCodes, int32_t scriptsLen,
         u_charsToUChars(pattern, uPattern, patternLen);
         scripts[i] = uset_openPattern(uPattern, patternLen, &status);
         if(U_FAILURE(status)){
-            log_err("Could not create set for patter %s. Error: %s\n", pattern, u_errorName(status));
-            break;
+            log_err("Could not create set for pattern %s. Error: %s\n", pattern, u_errorName(status));
+            return;
         }
         pattern[2] = 0; 
     }

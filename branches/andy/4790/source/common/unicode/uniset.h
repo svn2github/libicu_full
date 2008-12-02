@@ -480,7 +480,7 @@ public:
      * @return TRUE/FALSE for whether the set has been frozen
      * @see freeze
      * @see cloneAsThawed
-     * @draft ICU 3.8
+     * @stable ICU 3.8
      */
     inline UBool isFrozen() const;
 
@@ -495,7 +495,7 @@ public:
      * @return this set.
      * @see isFrozen
      * @see cloneAsThawed
-     * @draft ICU 3.8
+     * @stable ICU 3.8
      */
     UnicodeFunctor *freeze();
 
@@ -505,7 +505,7 @@ public:
      * @return the mutable clone
      * @see freeze
      * @see isFrozen
-     * @draft ICU 3.8
+     * @stable ICU 3.8
      */
     UnicodeFunctor *cloneAsThawed() const;
 
@@ -816,7 +816,7 @@ public:
      * @param spanCondition specifies the containment condition
      * @return the length of the initial substring according to the spanCondition;
      *         0 if the start of the string does not fit the spanCondition
-     * @draft ICU 3.8
+     * @stable ICU 3.8
      * @see USetSpanCondition
      */
     int32_t span(const UChar *s, int32_t length, USetSpanCondition spanCondition) const;
@@ -835,7 +835,7 @@ public:
      * @param spanCondition specifies the containment condition
      * @return the start of the trailing substring according to the spanCondition;
      *         the string length if the end of the string does not fit the spanCondition
-     * @draft ICU 3.8
+     * @stable ICU 3.8
      * @see USetSpanCondition
      */
     int32_t spanBack(const UChar *s, int32_t length, USetSpanCondition spanCondition) const;
@@ -855,7 +855,7 @@ public:
      * @param spanCondition specifies the containment condition
      * @return the length of the initial substring according to the spanCondition;
      *         0 if the start of the string does not fit the spanCondition
-     * @draft ICU 3.8
+     * @stable ICU 3.8
      * @see USetSpanCondition
      */
     int32_t spanUTF8(const char *s, int32_t length, USetSpanCondition spanCondition) const;
@@ -874,7 +874,7 @@ public:
      * @param spanCondition specifies the containment condition
      * @return the start of the trailing substring according to the spanCondition;
      *         the string length if the end of the string does not fit the spanCondition
-     * @draft ICU 3.8
+     * @stable ICU 3.8
      * @see USetSpanCondition
      */
     int32_t spanBackUTF8(const char *s, int32_t length, USetSpanCondition spanCondition) const;
@@ -1502,6 +1502,8 @@ private:
     void applyPropertyPattern(RuleCharacterIterator& chars,
                               UnicodeString& rebuiltPat,
                               UErrorCode& ec);
+
+    static const UnicodeSet* getInclusions(int32_t src, UErrorCode &status);
 
     /**
      * A filter that returns TRUE if the given code point should be

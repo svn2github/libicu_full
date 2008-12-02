@@ -41,9 +41,11 @@ static UBool fTrace = FALSE;
 
 U_NAMESPACE_BEGIN
 
+// The state number of the starting state
+#define START_STATE 1
 
-static const int16_t START_STATE = 1;     // The state number of the starting state
-static const int16_t STOP_STATE  = 0;     // The state-transition value indicating "stop"
+// The state-transition value indicating "stop"
+#define STOP_STATE  0
 
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(RuleBasedBreakIterator)
@@ -61,6 +63,20 @@ RuleBasedBreakIterator::RuleBasedBreakIterator(RBBIDataHeader* data, UErrorCode 
 {
     init();
     fData = new RBBIDataWrapper(data, status); // status checked in constructor
+    if (U_FAILURE(status)) {return;}
+    if(fData == 0) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return;
+    }
+}
+
+/**
+ * Same as above but does not adopt memory
+ */
+RuleBasedBreakIterator::RuleBasedBreakIterator(const RBBIDataHeader* data, enum EDontAdopt, UErrorCode &status)
+{
+    init();
+    fData = new RBBIDataWrapper(data, RBBIDataWrapper::kDontAdopt, status); // status checked in constructor
     if (U_FAILURE(status)) {return;}
     if(fData == 0) {
         status = U_MEMORY_ALLOCATION_ERROR;
@@ -99,7 +115,7 @@ RuleBasedBreakIterator::RuleBasedBreakIterator( const UnicodeString  &rules,
     init();
     if (U_FAILURE(status)) {return;}
     RuleBasedBreakIterator *bi = (RuleBasedBreakIterator *)
-        RBBIRuleBuilder::createRuleBasedBreakIterator(rules, parseError, status);
+        RBBIRuleBuilder::createRuleBasedBreakIterator(rules, &parseError, status);
     // Note:  This is a bit awkward.  The RBBI ruleBuilder has a factory method that
     //        creates and returns a complete RBBI.  From here, in a constructor, we
     //        can't just return the object created by the builder factory, hence
@@ -323,12 +339,10 @@ void RuleBasedBreakIterator::setText(UText *ut, UErrorCode &status) {
     if (fDCharIter == NULL) {
         static const UChar c = 0;
         fDCharIter = new UCharCharacterIterator(&c, 0);
-    }
-    
-    // Check for Null pointer
-    if (fDCharIter == NULL) {
-    	status = U_MEMORY_ALLOCATION_ERROR;
-    	return;
+        if (fDCharIter == NULL) {
+            status = U_MEMORY_ALLOCATION_ERROR;
+            return;
+        }
     }
 
     if (fCharIter!=fSCharIter && fCharIter!=fDCharIter) {

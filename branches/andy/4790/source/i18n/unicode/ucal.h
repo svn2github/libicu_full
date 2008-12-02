@@ -149,8 +149,9 @@ typedef void* UCalendar;
  * @stable ICU 2.0
  */
 enum UCalendarType {
-  /** A traditional calendar for the locale */
-  UCAL_TRADITIONAL,
+  /** The default calendar for the locale, which might be the Gregorian calendar */
+  UCAL_DEFAULT,
+  UCAL_TRADITIONAL = UCAL_DEFAULT,
   /** The Gregorian calendar */
   UCAL_GREGORIAN
 };
@@ -601,7 +602,11 @@ ucal_getNow(void);
  * @param zoneID The desired TimeZone ID.  If 0, use the default time zone.
  * @param len The length of zoneID, or -1 if null-terminated.
  * @param locale The desired locale
- * @param type The type of UCalendar to open.
+ * @param type The type of UCalendar to open. This can be UCAL_GREGORIAN to open the Gregorian
+ * calendar for the locale, or UCAL_DEFAULT to open the default calendar for the locale (the
+ * default calendar may also be Gregorian). To open a specific non-Gregorian calendar for the
+ * locale, use uloc_setKeywordValue to set the value of the calendar keyword for the locale
+ * and then pass the locale to ucal_open with UCAL_DEFAULT as the type.
  * @param status A pointer to an UErrorCode to receive any errors
  * @return A pointer to a UCalendar, or 0 if an error occurred.
  * @stable ICU 2.0
@@ -621,6 +626,18 @@ ucal_open(const UChar*   zoneID,
  */
 U_STABLE void U_EXPORT2 
 ucal_close(UCalendar *cal);
+
+/**
+ * Open a copy of a UCalendar.
+ * This function performs a deep copy.
+ * @param cal The calendar to copy
+ * @param status A pointer to an UErrorCode to receive any errors.
+ * @return A pointer to a UCalendar identical to cal.
+ * @draft ICU 4.0
+ */
+U_DRAFT UCalendar* U_EXPORT2 
+ucal_clone(const UCalendar* cal,
+           UErrorCode*      status);
 
 /**
  * Set the TimeZone used by a UCalendar.
@@ -1085,7 +1102,7 @@ ucal_getLocaleByType(const UCalendar *cal, ULocDataLocaleType type, UErrorCode* 
  * Returns the timezone data version currently used by ICU.
  * @param status error code for the operation
  * @return the version string, such as "2007f"
- * @draft ICU 3.8
+ * @stable ICU 3.8
  */
 U_DRAFT const char * U_EXPORT2
 ucal_getTZDataVersion(UErrorCode* status);
@@ -1111,6 +1128,15 @@ ucal_getTZDataVersion(UErrorCode* status);
 U_DRAFT int32_t U_EXPORT2
 ucal_getCanonicalTimeZoneID(const UChar* id, int32_t len,
                             UChar* result, int32_t resultCapacity, UBool *isSystemID, UErrorCode* status);
+/**
+ * Get the resource keyword value string designating the calendar type for the UCalendar.
+ * @param cal The UCalendar to query.
+ * @return The resource keyword value string.
+ * @draft ICU 4.2
+ */
+U_DRAFT const char * U_EXPORT2
+ucal_getType(const UCalendar *cal);
+
 #endif /* #if !UCONFIG_NO_FORMATTING */
 
 #endif

@@ -9,7 +9,7 @@
 
 #include "unicode/utypes.h"
 
-#if !UCONFIG_NO_COLLATION
+#if !UCONFIG_NO_COLLATION && !UCONFIG_NO_BREAK_ITERATION
 
 #include "unicode/brkiter.h"
 #include "unicode/schriter.h"
@@ -25,17 +25,14 @@ SearchIterator::SearchIterator(const SearchIterator &other)
 {   
     m_breakiterator_            = other.m_breakiterator_;
     m_text_                     = other.m_text_;
-    m_search_                   = (USearch *)uprv_malloc(sizeof(USearch)); 
-    // Null pointer check.
-    if (m_search_ != NULL) {
-	    m_search_->breakIter        = other.m_search_->breakIter;
-	    m_search_->isCanonicalMatch = other.m_search_->isCanonicalMatch;
-	    m_search_->isOverlap        = other.m_search_->isOverlap;
-	    m_search_->matchedIndex     = other.m_search_->matchedIndex;
-	    m_search_->matchedLength    = other.m_search_->matchedLength;
-	    m_search_->text             = other.m_search_->text;
-	    m_search_->textLength       = other.m_search_->textLength;
-    }
+    m_search_                   = (USearch *)uprv_malloc(sizeof(USearch));   
+    m_search_->breakIter        = other.m_search_->breakIter;
+    m_search_->isCanonicalMatch = other.m_search_->isCanonicalMatch;
+    m_search_->isOverlap        = other.m_search_->isOverlap;
+    m_search_->matchedIndex     = other.m_search_->matchedIndex;
+    m_search_->matchedLength    = other.m_search_->matchedLength;
+    m_search_->text             = other.m_search_->text;
+    m_search_->textLength       = other.m_search_->textLength;
 }
 
 SearchIterator::~SearchIterator()
@@ -51,11 +48,6 @@ void SearchIterator::setAttribute(USearchAttribute       attribute,
                                   USearchAttributeValue  value,
                                   UErrorCode            &status)
 {
-	// This is due to memory allocation error in the constructor.
-	if (m_search_ == NULL) {
-		status = U_MEMORY_ALLOCATION_ERROR;
-		return;
-	}
     if (U_SUCCESS(status)) {
         switch (attribute)
         {
@@ -77,10 +69,6 @@ void SearchIterator::setAttribute(USearchAttribute       attribute,
 USearchAttributeValue SearchIterator::getAttribute(
                                           USearchAttribute  attribute) const
 {
-	// This is due to memory allocation error in the constructor.
-	if (m_search_ == NULL) {
-		return USEARCH_DEFAULT;
-	}
     switch (attribute) {
     case USEARCH_OVERLAP :
         return (m_search_->isOverlap == TRUE ? USEARCH_ON : USEARCH_OFF);
@@ -94,28 +82,16 @@ USearchAttributeValue SearchIterator::getAttribute(
     
 int32_t SearchIterator::getMatchedStart() const
 {
-	// This is due to memory allocation error in the constructor.
-	if (m_search_ == NULL) {
-		return USEARCH_DONE;
-	}
     return m_search_->matchedIndex;
 }
 
 int32_t SearchIterator::getMatchedLength() const
 {
-	// This is due to memory allocation error in the constructor.
-	if (m_search_ == NULL) {
-		return USEARCH_DONE;
-	}
     return m_search_->matchedLength;
 }
     
 void SearchIterator::getMatchedText(UnicodeString &result) const
 {
-	// This is due to memory allocation error in the constructor.
-	if (m_search_ == NULL) {
-		return;
-	}
     int32_t matchedindex  = m_search_->matchedIndex;
     int32_t     matchedlength = m_search_->matchedLength;
     if (matchedindex != USEARCH_DONE && matchedlength != 0) {
@@ -129,15 +105,22 @@ void SearchIterator::getMatchedText(UnicodeString &result) const
 void SearchIterator::setBreakIterator(BreakIterator *breakiter, 
                                       UErrorCode &status)
 {
-	// This is due to memory allocation error in the constructor.
-	if (m_search_ == NULL) {
-		status = U_MEMORY_ALLOCATION_ERROR;
-		return;
-	}
     if (U_SUCCESS(status)) {
+#if 0
         m_search_->breakIter = NULL;
         // the c++ breakiterator may not make use of ubreakiterator.
         // so we'll have to keep track of it ourselves.
+#else
+        // Well, gee... the Constructors that take a BreakIterator
+        // all cast the BreakIterator to a UBreakIterator and
+        // pass it to the corresponding usearch_openFromXXX
+        // routine, so there's no reason not to do this.
+        //
+        // Besides, a UBreakIterator is a BreakIterator, so
+        // any subclass of BreakIterator should work fine here...
+        m_search_->breakIter = (UBreakIterator *) breakiter;
+#endif
+        
         m_breakiterator_ = breakiter;
     }
 }
@@ -149,11 +132,6 @@ const BreakIterator * SearchIterator::getBreakIterator(void) const
 
 void SearchIterator::setText(const UnicodeString &text, UErrorCode &status)
 {
-	// This is due to memory allocation error in the constructor.
-	if (m_search_ == NULL) {
-		status = U_MEMORY_ALLOCATION_ERROR;
-		return;
-	}
     if (U_SUCCESS(status)) {
         if (text.length() == 0) {
             status = U_ILLEGAL_ARGUMENT_ERROR;
@@ -186,10 +164,6 @@ UBool SearchIterator::operator==(const SearchIterator &that) const
     if (this == &that) {
         return TRUE;
     }
-	// This is due to memory allocation error in the constructor.
-	if (m_search_ == NULL) {
-		return FALSE;
-	}
     return (m_breakiterator_            == that.m_breakiterator_ &&
             m_search_->isCanonicalMatch == that.m_search_->isCanonicalMatch &&
             m_search_->isOverlap        == that.m_search_->isOverlap &&
@@ -224,11 +198,7 @@ int32_t SearchIterator::following(int32_t position,
     
 int32_t SearchIterator::last(UErrorCode &status)
 {
-	// This is due to memory allocation error in the constructor.
-	if (m_search_ == NULL) {
-		status = U_MEMORY_ALLOCATION_ERROR;
-	}
-	if (U_FAILURE(status)) {
+    if (U_FAILURE(status)) {
         return USEARCH_DONE;
     }
     setOffset(m_search_->textLength, status);
@@ -247,10 +217,6 @@ int32_t SearchIterator::preceding(int32_t position,
 
 int32_t SearchIterator::next(UErrorCode &status)
 {
-	// This is due to memory allocation error in the constructor.
-	if (m_search_ == NULL) {
-		status = U_MEMORY_ALLOCATION_ERROR;
-	}
     if (U_SUCCESS(status)) {
         int32_t offset = getOffset();
         int32_t matchindex  = m_search_->matchedIndex;
@@ -296,10 +262,6 @@ int32_t SearchIterator::next(UErrorCode &status)
 
 int32_t SearchIterator::previous(UErrorCode &status)
 {
-	// This is due to memory allocation error in the constructor.
-	if (m_search_ == NULL) {
-		status = U_MEMORY_ALLOCATION_ERROR;
-	}
     if (U_SUCCESS(status)) {
         int32_t offset;
         if (m_search_->reset) {
@@ -333,19 +295,21 @@ int32_t SearchIterator::previous(UErrorCode &status)
         }
 
         if (matchindex != USEARCH_DONE) {
+            if (m_search_->isOverlap) {
+                matchindex += m_search_->matchedLength - 2;
+            }
+
             return handlePrev(matchindex, status); 
         }
+
         return handlePrev(offset, status);
     }
+
     return USEARCH_DONE;
 }
 
 void SearchIterator::reset()
 {
-	// This is due to memory allocation error in the constructor.
-	if (m_search_ == NULL) {
-		return;
-	}
     UErrorCode status = U_ZERO_ERROR;
     setMatchNotFound();
     setOffset(0, status);
@@ -360,19 +324,16 @@ void SearchIterator::reset()
 SearchIterator::SearchIterator()
 {
     m_search_                     = (USearch *)uprv_malloc(sizeof(USearch));
-    // Null pointer check
-    if (m_search_ != NULL) {
-	    m_search_->breakIter          = NULL;
-	    m_search_->isOverlap          = FALSE;
-	    m_search_->isCanonicalMatch   = FALSE;
-	    m_search_->isForwardSearching = TRUE;
-	    m_search_->reset              = TRUE;
-	    m_search_->matchedIndex       = USEARCH_DONE;
-	    m_search_->matchedLength      = 0;
-	    m_search_->text               = NULL;
-	    m_search_->textLength         = 0;
-	    m_breakiterator_              = NULL;
-    }
+    m_search_->breakIter          = NULL;
+    m_search_->isOverlap          = FALSE;
+    m_search_->isCanonicalMatch   = FALSE;
+    m_search_->isForwardSearching = TRUE;
+    m_search_->reset              = TRUE;
+    m_search_->matchedIndex       = USEARCH_DONE;
+    m_search_->matchedLength      = 0;
+    m_search_->text               = NULL;
+    m_search_->textLength         = 0;
+    m_breakiterator_              = NULL;
 }
 
 SearchIterator::SearchIterator(const UnicodeString &text, 
@@ -381,18 +342,15 @@ SearchIterator::SearchIterator(const UnicodeString &text,
                                      m_text_(text)
 {
     m_search_                     = (USearch *)uprv_malloc(sizeof(USearch));
-    // Null pointer check
-    if (m_search_ != NULL) {
-	    m_search_->breakIter          = NULL;
-	    m_search_->isOverlap          = FALSE;
-	    m_search_->isCanonicalMatch   = FALSE;
-	    m_search_->isForwardSearching = TRUE;
-	    m_search_->reset              = TRUE;
-	    m_search_->matchedIndex       = USEARCH_DONE;
-	    m_search_->matchedLength      = 0;
-	    m_search_->text               = m_text_.getBuffer();
-	    m_search_->textLength         = text.length();
-    }
+    m_search_->breakIter          = NULL;
+    m_search_->isOverlap          = FALSE;
+    m_search_->isCanonicalMatch   = FALSE;
+    m_search_->isForwardSearching = TRUE;
+    m_search_->reset              = TRUE;
+    m_search_->matchedIndex       = USEARCH_DONE;
+    m_search_->matchedLength      = 0;
+    m_search_->text               = m_text_.getBuffer();
+    m_search_->textLength         = text.length();
 }
 
 SearchIterator::SearchIterator(CharacterIterator &text, 
@@ -400,20 +358,17 @@ SearchIterator::SearchIterator(CharacterIterator &text,
                                m_breakiterator_(breakiter)
 {
     m_search_                     = (USearch *)uprv_malloc(sizeof(USearch));
-    // Null pointer check.
-    if (m_search_ != NULL) {
-	    m_search_->breakIter          = NULL;
-	    m_search_->isOverlap          = FALSE;
-	    m_search_->isCanonicalMatch   = FALSE;
-	    m_search_->isForwardSearching = TRUE;
-	    m_search_->reset              = TRUE;
-	    m_search_->matchedIndex       = USEARCH_DONE;
-	    m_search_->matchedLength      = 0;
-	    text.getText(m_text_);
-	    m_search_->text               = m_text_.getBuffer();
-	    m_search_->textLength         = m_text_.length();
-	    m_breakiterator_             = breakiter;
-    }
+    m_search_->breakIter          = NULL;
+    m_search_->isOverlap          = FALSE;
+    m_search_->isCanonicalMatch   = FALSE;
+    m_search_->isForwardSearching = TRUE;
+    m_search_->reset              = TRUE;
+    m_search_->matchedIndex       = USEARCH_DONE;
+    m_search_->matchedLength      = 0;
+    text.getText(m_text_);
+    m_search_->text               = m_text_.getBuffer();
+    m_search_->textLength         = m_text_.length();
+    m_breakiterator_             = breakiter;
 }
 
 // protected methods ------------------------------------------------------
@@ -436,19 +391,11 @@ SearchIterator & SearchIterator::operator=(const SearchIterator &that)
 
 void SearchIterator::setMatchLength(int32_t length)
 {
-	// This is due to memory allocation error in the constructor.
-	if (m_search_ == NULL) {
-		return;
-	}
     m_search_->matchedLength = length;
 }
 
 void SearchIterator::setMatchStart(int32_t position)
 {
-	// This is due to memory allocation error in the constructor.
-	if (m_search_ == NULL) {
-		return;
-	}
     m_search_->matchedIndex = position;
 }
 
@@ -457,10 +404,6 @@ void SearchIterator::setMatchNotFound()
     setMatchStart(USEARCH_DONE);
     setMatchLength(0);
     UErrorCode status = U_ZERO_ERROR;
-	// This is due to memory allocation error in the constructor.
-	if (m_search_ == NULL) {
-		return;
-	}
     // by default no errors should be returned here since offsets are within 
     // range.
     if (m_search_->isForwardSearching) {

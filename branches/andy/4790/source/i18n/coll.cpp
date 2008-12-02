@@ -281,8 +281,8 @@ static UBool isAvailableLocaleListInitialized(UErrorCode &status) {
                 umtx_lock(NULL);
                 if (availableLocaleList == NULL)
                 {
-                    availableLocaleList = temp;
                     availableLocaleListCount = localeCount;
+                    availableLocaleList = temp;
                     temp = NULL;
                     ucln_i18n_registerCleanup(UCLN_I18N_COLLATOR, collator_cleanup);
                 } 
@@ -349,7 +349,7 @@ Collator* Collator::makeInstance(const Locale&  desiredLocale,
     // non-table-based Collator in some other way, when it sees that it needs 
     // to.
     // The specific caution is this: RuleBasedCollator(Locale&) will ALWAYS 
-    // return a valid collation object, if the system if functioning properly.  
+    // return a valid collation object, if the system is functioning properly.  
     // The reason is that it will fall back, use the default locale, and even 
     // use the built-in default collation rules. THEREFORE, createInstance() 
     // should in general ONLY CALL RuleBasedCollator(Locale&) IF IT KNOWS IN 
@@ -707,7 +707,7 @@ public:
     {
         CollationLocaleListEnumeration *result = new CollationLocaleListEnumeration();
         if (result) {
-        	result->index = index;
+            result->index = index;
         }
         return result;
     }

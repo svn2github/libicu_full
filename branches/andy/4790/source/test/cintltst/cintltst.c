@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT:
- * Copyright (c) 1997-2007, International Business Machines Corporation and
+ * Copyright (c) 1997-2008, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 /********************************************************************************
@@ -83,7 +83,7 @@ int main(int argc, const char* const argv[])
 
     gOrigArgc = argc;
     gOrigArgv = argv;
-    if (!initArgs(argc, argv)) {
+    if (!initArgs(argc, argv, NULL, NULL)) {
         /* Error already displayed. */
         return -1;
     }
@@ -107,7 +107,7 @@ int main(int argc, const char* const argv[])
 
     while (REPEAT_TESTS > 0) {   /* Loop runs once per complete execution of the tests 
                                   *   used for -r  (repeat) test option.                */
-        if (!initArgs(argc, argv)) {
+        if (!initArgs(argc, argv, NULL, NULL)) {
             /* Error already displayed. */
             return -1;
         }
@@ -318,7 +318,7 @@ const char *  ctest_dataSrcDir()
                 dataSrcDir = ".."U_FILE_SEP_STRING".."U_FILE_SEP_STRING "data" U_FILE_SEP_STRING;
             }
             else {
-                dataSrcDir = ".."U_FILE_SEP_STRING".."U_FILE_SEP_STRING".."U_FILE_SEP_STRING "data" U_FILE_SEP_STRING;
+                dataSrcDir = ".."U_FILE_SEP_STRING".."U_FILE_SEP_STRING".."U_FILE_SEP_STRING".."U_FILE_SEP_STRING "data" U_FILE_SEP_STRING;
             }
         }
     }
@@ -385,7 +385,7 @@ const char *ctest_dataOutDir()
                 dataOutDir = ".."U_FILE_SEP_STRING".."U_FILE_SEP_STRING "data" U_FILE_SEP_STRING "out" U_FILE_SEP_STRING;
             }
             else {
-                dataOutDir = ".."U_FILE_SEP_STRING".."U_FILE_SEP_STRING".."U_FILE_SEP_STRING "data" U_FILE_SEP_STRING "out" U_FILE_SEP_STRING;
+                dataOutDir = ".."U_FILE_SEP_STRING".."U_FILE_SEP_STRING".."U_FILE_SEP_STRING".."U_FILE_SEP_STRING "data" U_FILE_SEP_STRING "out" U_FILE_SEP_STRING;
             }
         }
     }
@@ -433,7 +433,7 @@ UBool ctest_resetICU() {
     char         *dataDir = safeGetICUDataDirectory();
 
     u_cleanup();
-    if (!initArgs(gOrigArgc, gOrigArgv)) {
+    if (!initArgs(gOrigArgc, gOrigArgv, NULL, NULL)) {
         /* Error already displayed. */
         return FALSE;
     }
@@ -534,7 +534,7 @@ const char* loadTestData(UErrorCode* err){
         /* Fall back did not succeed either so return */
         if(U_FAILURE(*err)){
             *err = U_FILE_ACCESS_ERROR;
-            log_err("Could not load testtypes.res in testdata bundle with path %s - %s\n", tdpath, u_errorName(*err));
+            log_data_err("Could not load testtypes.res in testdata bundle with path %s - %s\n", tdpath, u_errorName(*err));
             return "";
         }
         ures_close(test);

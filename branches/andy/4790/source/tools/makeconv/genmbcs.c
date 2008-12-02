@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 2000-2007, International Business Machines
+*   Copyright (C) 2000-2008, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
@@ -1414,7 +1414,7 @@ MBCSWrite(NewConverter *cnvData, const UConverterStaticData *staticData,
     if(mbcsData->omitFromU) {
         /* find how much of stage2 can be omitted */
         int32_t utf8Limit=(int32_t)mbcsData->utf8Max+1;
-        uint32_t st2;
+        uint32_t st2=0; /*initialized it to avoid compiler warnings */
 
         i=utf8Limit>>MBCS_STAGE_1_SHIFT;
         if((utf8Limit&((1<<MBCS_STAGE_1_SHIFT)-1))!=0 && (st2=mbcsData->stage1[i])!=0) {
@@ -1431,8 +1431,10 @@ MBCSWrite(NewConverter *cnvData, const UConverterStaticData *staticData,
         stage2Length-=stage2Start;
         if(VERBOSE) {
             printf("+ omitting %lu out of %lu stage2 entries and %lu fromUBytes\n",
-                   stage2Start, mbcsData->stage2Top, mbcsData->stage3Top);
-            printf("+ total size savings: %lu bytes\n", stage2Start*4+mbcsData->stage3Top);
+                    (unsigned long)stage2Start,
+                    (unsigned long)mbcsData->stage2Top,
+                    (unsigned long)mbcsData->stage3Top);
+            printf("+ total size savings: %lu bytes\n", (unsigned long)stage2Start*4+mbcsData->stage3Top);
         }
     } else {
         stage2Start=0;
