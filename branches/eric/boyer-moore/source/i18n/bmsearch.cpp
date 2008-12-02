@@ -28,8 +28,8 @@
 #include "uhash.h"
 #include "ucol_imp.h"
 
-#include "colldata.h"
-#include "bmsearch.h"
+#include "unicode/colldata.h"
+#include "unicode/bmsearch.h"
 
 U_NAMESPACE_BEGIN
 

@@ -32,8 +32,8 @@
 #include "intltest.h"
 #include "ssearch.h"
 
-#include "colldata.h"
-#include "bmsearch.h"
+#include "unicode/colldata.h"
+#include "unicode/bmsearch.h"
 
 #include "xmlparser.h"
 
