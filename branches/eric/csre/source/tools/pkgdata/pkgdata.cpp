@@ -64,12 +64,14 @@ static int32_t pkg_executeOptions(UPKGOptions *o);
 static int32_t pkg_createWindowsDLL(const char mode, const char *gencFilePath, UPKGOptions *o);
 #endif
 static int32_t pkg_createSymLinks(const char *targetDir);
+static int32_t pkg_installLibrary(const char *installDir, const char *dir);
 static int32_t pkg_createWithoutAssemblyCode(UPKGOptions *o, const char *targetDir, const char mode);
 static int32_t pkg_createWithAssemblyCode(const char *targetDir, const char mode, const char *gencFilePath);
 static int32_t pkg_generateLibraryFile(const char *targetDir, const char mode, const char *objectFile, char *command);
 static int32_t pkg_archiveLibrary(const char *targetDir, const char *version, UBool reverseExt);
 static void createFileNames(const char *version_major, const char *version, const char *libName, const UBool reverseExt);
 
+static int32_t pkg_getOptionsFromICUConfig(UOption *option);
 /* always have this fcn, just might not do anything */
 static void fillInMakefileFromICUConfig(UOption *option);
 
@@ -158,6 +160,7 @@ enum {
     AR,
     ARFLAGS,
     RANLIB,
+    INSTALL_CMD,
     PKGDATA_FLAGS_SIZE
 };
 static char pkgDataFlags[PKGDATA_FLAGS_SIZE][SMALL_BUFFER_MAX_SIZE];
@@ -247,9 +250,11 @@ main(int argc, char* argv[]) {
 
 #ifndef U_WINDOWS
         if(!options[BLDOPT].doesOccur) {
-            fprintf(stderr, " required parameter is missing: -O is required \n");
-            fprintf(stderr, "Run '%s --help' for help.\n", progname);
-            return 1;
+            if (pkg_getOptionsFromICUConfig(&options[BLDOPT]) != 0) {
+                fprintf(stderr, " required parameter is missing: -O is required \n");
+                fprintf(stderr, "Run '%s --help' for help.\n", progname);
+                return 1;
+            }
         }
 #else
         if(options[BLDOPT].doesOccur) {
@@ -388,6 +393,8 @@ main(int argc, char* argv[]) {
 
     if( options[INSTALL].doesOccur ) {
         o.install  = options[INSTALL].value;
+    } else {
+        o.install = NULL;
     }
 
     if( options[SOURCEDIR].doesOccur ) {
@@ -537,6 +544,10 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                 /* Check to see if a previous built data library file exists */
                 sprintf(checkLibFile, "%s%s", targetDir, libFileNames[LIB_FILE_VERSION_TMP]);
                 if (T_FileStream_file_exists(checkLibFile)) {
+                    if (o->install != NULL) {
+                        uprv_strcpy(libFileNames[LIB_FILE_VERSION], libFileNames[LIB_FILE_VERSION_TMP]);
+                        result = pkg_installLibrary(o->install, targetDir);
+                    }
                     return result;
                 }
             }
@@ -584,14 +595,23 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
             if (result != 0) {
                 fprintf(stderr, "Error creating data archive library file.\n");
                return result;
-           }
+            }
 
             /* Create symbolic links for the final library file. */
             result = pkg_createSymLinks(targetDir);
             if (result != 0) {
                 fprintf(stderr, "Error creating symbolic links of the data library file.\n");
-               return result;
-           }
+                return result;
+            }
+
+            /* Install the libraries if option was set. */
+            if (o->install != NULL) {
+                result = pkg_installLibrary(o->install, targetDir);
+                if (result != 0) {
+                    fprintf(stderr, "Error installing the data library.\n");
+                    return result;
+                }
+            }
 #endif
         }
     }
@@ -666,6 +686,26 @@ static int32_t pkg_createSymLinks(const char *targetDir) {
      result = system(cmd);
 
     return result;
+}
+
+static int32_t pkg_installLibrary(const char *installDir, const char *targetDir) {
+    char cmd[SMALL_BUFFER_MAX_SIZE];
+    int32_t result = 0;
+
+    sprintf(cmd, "cd %s && %s %s %s%s%s",
+            targetDir,
+            pkgDataFlags[INSTALL_CMD],
+            libFileNames[LIB_FILE_VERSION],
+            installDir, U_FILE_SEP_STRING, libFileNames[LIB_FILE_VERSION]
+            );
+
+    result = system(cmd);
+
+    if (result != 0) {
+        return result;
+    }
+
+    return pkg_createSymLinks(installDir);
 }
 
 /* Archiving of the library file may be needed depending on the platform and options given.
@@ -1260,6 +1300,58 @@ static void loadLists(UPKGOptions *o, UErrorCode *status)
     } /* for each file list file */
 }
 
+/* Try calling icu-config directly to get the option file. */
+static int32_t pkg_getOptionsFromICUConfig(UOption *option) {
+#if U_HAVE_POPEN
+    FILE *p;
+    size_t n;
+    static char buf[512] = "";
+    const char cmd[] = "icu-config --incpkgdatafile";
+
+    p = popen(cmd, "r");
+
+    if(p == NULL)
+    {
+        fprintf(stderr, "%s: icu-config: No icu-config found. (fix PATH or use -O option)\n", progname);
+        return -1;
+    }
+
+    n = fread(buf, 1, 511, p);
+
+    pclose(p);
+
+    if(n<=0)
+    {
+        fprintf(stderr,"%s: icu-config: Could not read from icu-config. (fix PATH or use -O option)\n", progname);
+        return -1;
+    }
+
+    for (int32_t length = strlen(buf) - 1; length >= 0; length--) {
+        if (buf[length] == '\n' || buf[length] == ' ') {
+            buf[length] = 0;
+        } else {
+            break;
+        }
+    }
+
+    if(buf[strlen(buf)-1]=='\n')
+    {
+        buf[strlen(buf)-1]=0;
+    }
+
+    if(buf[0] == 0)
+    {
+        fprintf(stderr, "%s: icu-config: invalid response from icu-config (fix PATH or use -O option)\n", progname);
+        return -1;
+    }
+
+    option->value = buf;
+    option->doesOccur = TRUE;
+
+    return 0;
+#endif
+    return -1;
+}
 /* Try calling icu-config directly to get information */
 static void fillInMakefileFromICUConfig(UOption *option)
 {

@@ -12,7 +12,7 @@ top_builddir = ..
 ## All the flags and other definitions are included here.
 include $(top_builddir)/icudefs.mk
 
-OUTPUTFILE=icupkg.inc
+OUTPUTFILE=pkgdata.inc
 MIDDLE_SO_TARGET=
 
 all : clean 
@@ -23,7 +23,7 @@ all : clean
 	@echo LIBPREFIX=$(LIBPREFIX) >> $(OUTPUTFILE)
 	@echo LIB_EXT_ORDER=$(FINAL_SO_TARGET) >> $(OUTPUTFILE)
 	@echo COMPILE="$(COMPILE.c)" >> $(OUTPUTFILE)
-	@echo LIBFLAGS="-I$(top_srcdir)/common -I$(top_builddir)/common $(SHAREDLIBCPPFLAGS) $(SHAREDLIBCFLAGS)" >> $(OUTPUTFILE)
+	@echo LIBFLAGS="-I$(prefix)/include $(SHAREDLIBCPPFLAGS) $(SHAREDLIBCFLAGS)" >> $(OUTPUTFILE)
 	@echo GENLIB="$(SHLIB.c)" >> $(OUTPUTFILE)
 	@echo LDICUDTFLAGS=$(LDFLAGSICUDT) >> $(OUTPUTFILE)
 	@echo LD_SONAME=$(LD_SONAME) >> $(OUTPUTFILE)
