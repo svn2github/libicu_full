@@ -28,7 +28,7 @@
 #include "uhash.h"
 #include "ucol_imp.h"
 
-#include "colldata.h"
+#include "unicode/colldata.h"
 
 U_NAMESPACE_BEGIN
 
