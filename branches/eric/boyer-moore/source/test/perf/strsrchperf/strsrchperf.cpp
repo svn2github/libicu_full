@@ -14,7 +14,13 @@
 StringSearchPerformanceTest::StringSearchPerformanceTest(int32_t argc, const char *argv[], UErrorCode &status)
 :UPerfTest(argc,argv,status){
     int32_t start, end;
+
+#ifdef TEST_BOYER_MOORE_SEARCH
+    bms = NULL;
+#else
     srch = NULL;
+#endif
+
     pttrn = NULL;
     if(status== U_ILLEGAL_ARGUMENT_ERROR || line_mode){
        fprintf(stderr,gUsageString, "strsrchperf");
@@ -39,28 +45,50 @@ StringSearchPerformanceTest::StringSearchPerformanceTest(int32_t argc, const cha
     pttrn = temp; /* store word in pttrn */
     ubrk_close(brk);
     
+#ifdef TEST_BOYER_MOORE_SEARCH
+    UnicodeString patternString(pttrn, pttrnLen);
+    UCollator *coll = ucol_open(locale, &status);
+    CollData *data = CollData::open(coll);
+
+    targetString = new UnicodeString(src, srcLen);
+    bms = new BoyerMooreSearch(data, patternString, targetString);
+#else
     /* Create the StringSearch object to be use in performance test. */
     srch = usearch_open(pttrn, pttrnLen, src, srcLen, locale, NULL, &status);
     if(U_FAILURE(status)){
         fprintf(stderr, "FAILED to create UPerfTest object. Error: %s\n", u_errorName(status));
         return;
     }
+#endif
     
 }
 
 StringSearchPerformanceTest::~StringSearchPerformanceTest() {
+    CollData *data  = bms->getData();
+    UCollator *coll = data->getCollator();
+
+    delete bms;
+    delete targetString;
+    CollData::close(data);
+    ucol_close(coll);
+
     if (pttrn != NULL) {
         free(pttrn);
     }
+
+#ifndef TEST_BOYER_MOORE_SEARCH
     if (srch != NULL) {
         usearch_close(srch);
     }
+#endif
 }
 
 UPerfFunction* StringSearchPerformanceTest::runIndexedTest(int32_t index, UBool exec, const char *&name, char *par) {
     switch (index) {
         TESTCASE(0,Test_ICU_Forward_Search);
+#ifndef TEST_BOYER_MOORE_SEARCH
         TESTCASE(1,Test_ICU_Backward_Search);
+#endif
 
         default: 
             name = ""; 
@@ -70,14 +98,20 @@ UPerfFunction* StringSearchPerformanceTest::runIndexedTest(int32_t index, UBool 
 }
 
 UPerfFunction* StringSearchPerformanceTest::Test_ICU_Forward_Search(){
+#ifdef TEST_BOYER_MOORE_SEARCH
+    StringSearchPerfFunction *func = new StringSearchPerfFunction(ICUForwardSearch, bms, src, srcLen, pttrn, pttrnLen);
+#else
     StringSearchPerfFunction* func = new StringSearchPerfFunction(ICUForwardSearch, srch, src, srcLen, pttrn, pttrnLen);
+#endif
     return func;
 }
 
+#ifndef TEST_BOYER_MOORE_SEARCH
 UPerfFunction* StringSearchPerformanceTest::Test_ICU_Backward_Search(){
     StringSearchPerfFunction* func = new StringSearchPerfFunction(ICUBackwardSearch, srch, src, srcLen, pttrn, pttrnLen);
     return func;
 }
+#endif
 
 int main (int argc, const char* argv[]) {
     UErrorCode status = U_ZERO_ERROR;
