@@ -28,7 +28,8 @@ StringSearchPerformanceTest::StringSearchPerformanceTest(int32_t argc, const cha
     }
     /* Get the Text */
     src = getBuffer(srcLen, status);
-    
+
+#if 0
     /* Get a word to find. Do this by selecting a random word with a word breakiterator. */
     UBreakIterator* brk = ubrk_open(UBRK_WORD, locale, src, srcLen, &status);
     if(U_FAILURE(status)){
@@ -44,6 +45,25 @@ StringSearchPerformanceTest::StringSearchPerformanceTest(int32_t argc, const cha
     }
     pttrn = temp; /* store word in pttrn */
     ubrk_close(brk);
+#else
+    /* The first line of the file contains the pattern */
+    start = 0;
+
+    for(end = start; ; end += 1) {
+        UChar ch = src[end];
+
+        if (ch == 0x000A || ch == 0x000D || ch == 0x2028) {
+            break;
+        }
+    }
+
+    pttrnLen = end - start;
+    UChar* temp = (UChar*)malloc(sizeof(UChar)*(pttrnLen));
+    for (int i = 0; i < pttrnLen; i++) {
+        temp[i] = src[start++];
+    }
+    pttrn = temp; /* store word in pttrn */
+#endif
     
 #ifdef TEST_BOYER_MOORE_SEARCH
     UnicodeString patternString(pttrn, pttrnLen);

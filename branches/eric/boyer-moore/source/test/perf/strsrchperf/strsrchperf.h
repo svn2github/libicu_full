@@ -96,7 +96,7 @@ public:
 
 
 #ifdef TEST_BOYER_MOORE_SEARCH
-void ICUForwardSearch(BoyerMooreSearch *bms, const UChar *source, int32_t sourceLen, const UChar *pattern, int32_t patternLen, UErrorCode */*status*/) { 
+void ICUForwardSearch(BoyerMooreSearch *bms, const UChar *source, int32_t sourceLen, const UChar *pattern, int32_t patternLen, UErrorCode * /*status*/) { 
     int32_t offset = 0, start = -1, end = -1;
 
     while (bms->search(offset, start, end)) {
