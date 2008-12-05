@@ -45,7 +45,11 @@ public:
     }
     
     virtual long getOperationsPerIteration() {
+#if 0
         return (long)(srcLen/pttrnLen);
+#else
+        return (long) srcLen;
+#endif
     }
     
 #ifdef TEST_BOYER_MOORE_SEARCH
