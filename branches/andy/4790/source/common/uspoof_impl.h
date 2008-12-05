@@ -4,7 +4,7 @@
 * and others. All Rights Reserved.
 ***************************************************************************
 *
-*  uspoofim.h
+*  uspoof_impl.h
 *
 *    Implemenation header for spoof detection
 *
@@ -19,9 +19,13 @@
 U_NAMESPACE_BEGIN
 
 // The maximium length of the skeleton replacement string resulting from
-//   a single input code point.
-static const int32_t MAX_SKELETON_EXPANSION = 20;
+//   a single input code point.  This is function of the unicode.org data.
+#define USPOOF_MAX_SKELETON_EXPANSION 20
 
+// The default stack buffer size for the NFKD normalization of
+//   input strings to be checked.  Longer strings require allocation
+//   of a heap buffer.
+#define USPOOF_STACK_BUFFER_SIZE 100
 
 class SpoofImpl : public UObject  {
 public:
@@ -33,11 +37,11 @@ public:
 	static SpoofImpl *validateThis(USpoofChecker *sc, UErrorCode &status);
 	static const SpoofImpl *validateThis(const USpoofChecker *sc, UErrorCode &status);
 
-	/** Get the skeleton transform for a single code point.
+	/** Get the confusable skeleton transform for a single code point.
 	 *  The result is a string with a length between 1 and 18.
-	 *  @return   The length in code points of the substition string.
+	 *  @return   The length in UTF-16 code units of the substition string.
 	 */  
-	int32_t ToSkeleton(UChar32 inChar, UChar32 *destBuf) const;
+	int32_t ConfusableLookup(UChar32 inChar, UChar32 *destBuf) const;
 	
 
     /**
@@ -64,8 +68,13 @@ public:
 	// Data Members
 	//
 
-	int32_t   fMagic;             // Internal sanity check.
-	int32_t   fChecks;            // Bit vector of checks to perform.
+	int32_t           fMagic;             // Internal sanity check.
+	int32_t           fChecks;            // Bit vector of checks to perform.
+
+	SpoofData        *fSpoofData;
+	
+	int32_t           fCheckMask;         // Spoof table selector.  f(Check Type)
+	
     const UnicodeSet *fAllowedCharsSet; 
 
 };
@@ -73,12 +82,85 @@ public:
 
 
 //
-//  Data Wrapper & access functions
+//  Confusable Mappings Data Structures
+//
+//    For the confusable data, we are essentially implementing a map,
+//       key:    a code point
+//       value:  a string.  Most commonly one char in length, but can be more.
+//
+//    The keys are stored as a sorted array of 32 bit ints.
+//             bits 0-23    a code point value
+//             bits 24-31   flags
+//                24:  1 if entry applies to SL table
+//                25:  1 if entry applies to SA table
+//                26:  1 if entry applies to ML table
+//                27:  1 if entry applies to MA table
+//                28:  1 if there are multiple entries for this code point.
+//                29-30:  length of value string, in UChars.
+//                         values are (1, 2, 3, other)
+//        The key table is sorted in ascending code point order.  (not on the
+//        32 bit int value, the flag bits do not participate in the sorting.)
+//
+//        Lookup is done by means of a binary search in the key table.
+//
+//    The corresponding values are kept in a parallel array of 16 bit ints.
+//        If the value string is of length 1, it is literally in the value array.
+//        For longer strings, the value array contains an index into the strings table.
+//
+//    String Table:
+//       The strings table contains all of the value strings (those of length two or greater)
+//       concatentated together into one long UChar (UTF-16) array.
+//
+//       The array is arranged by length of the strings - all strings of the same length
+//       are stored together.  The sections are ordered by length of the strings -
+//       all two char strings first, followed by all of the three Char strings, etc.
+//
+//       There is no nul character or other mark between adjacent strings.
+//
+//    String Lengths table
+//       The length of strings from 1 to 3 is flagged in the key table.
+//       For strings of length 4 or longer, the string length table provides a
+//       mapping between an index into the string table and the corresponding length.
+//       Strings of these lengths are rare, so lookup time is not an issue.
+//
+
+// Flag bits in the Key entries
+#define USPOOF_SL_TABLE_FLAG (1<<24)
+#define USPOOF_SA_TABLE_FLAG (1<<25)
+#define USPOOF_ML_TABLE_FLAG (1<<26)
+#define USPOOF_MA_TABLE_FLAG (1<<27)
+#define USPOOF_KEY_MULTIPLE_VALULES (1<<28)
+#define USPOOF_KEY_LENGTH_FIELD(x) (((x)>>29) & 3)
+
+
+
+struct SpoofStringLengthsElement {
+    uint16_t      fLastString;         // index in string table of last string with this length
+    uint16_t      strLength;           // Length of strings
+};
+
+
+//
+//  Spoof Data Wrapper
+//
+//    A small struct that wraps the raw (usually memory mapped) spoof data.
+//    Serves two functions:
+//      1.  Convenience.  Contains real pointers to the data, to avoid dealing with
+//          the offsets in the raw data.
+//      2.  Reference counting.  When a spoof checker is cloned, the raw data is shared
+//          and must be retained until all checkers using the data are closed.
+//    Nothing in this struct includes state that is specific to any particular
+//    USpoofDetector object.
+//
 class SpoofData {
   public:
-    // Map a single code point to a target string, as described section 4 of UTR 39.
-    // 
-    const UChar32 *GetMapping(UChar srcChar, USpoofChecks mappingTable, int32_t &resultLength);
+    SpoofDataHeader            *fRawData          // Ptr to the raw memory-mapped data
+    
+    int32_t                    *fKeys;
+    uint16_t                   *fValues;
+    SpoofStringLengthsLement   *fStringLengths;
+    UChar                      *fStrings;
+
     };
     
 
@@ -106,36 +188,7 @@ struct SpoofDataHeader {
  }; 
 
 
-//
-//  For the data defined in data file "confusables.txt", we need a mapping from
-//      (code point) -> (string, flags)
-//  the string will most commonly be only a single char in length.  The longest is 18 chars.
-
-struct SpoofStringLengthsElement {
-    uint16_t      fLastString;         // index in string table of last string with this length
-    uint16_t      strLength;           // Length of strings
-};
-
-   //       StringLengthsTable[n]
-
-
-//        uint32_t keysTable[n]
-//             // bits 0-23    a code point value
-//             // bits 24-31   flags
-//             //    24:  1 if entry applies to SL table
-//             //    25:  1 if entry applies to SA table
-//             //    26:  1 if entry applies to ML table
-//             //    27:  1 if entry applies to MA table
-//             //    28:  1 if there are multiple entries for this code point.
-//             // Keytable is sorted in ascending code point order.
-//
-//        uint16_t stringIndexTable[n]
-//             //  parallel table to keyTable, above.
-//
-//        UChar stringTable[o]
-//             //  All replacement chars or strings, all concatenated together.
-
-
+/
 
 U_NAMESPACE_END
 

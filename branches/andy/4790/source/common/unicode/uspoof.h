@@ -83,14 +83,29 @@ U_DRAFT USpoofChecker * U_EXPORT2
 uspoof_open(UErrorCode *status);
 
 
+/**
+  * Close a Spoof Checker, freeing any memory that was being held by
+  *   its implementation.
+  */
 U_DRAFT void U_EXPORT2
 uspoof_close(USpoofChecker *sc, UErrorCode *status);
+
+/**
+ * Clone a Spoof Checker.  The clone will be set to perform the same checks
+ *   as the original source.
+ *
+ * @param sc       The source USpoofChecker
+ * @param status   The error code, set if this function encounters a problem.
+ * @return
+ */
+U_DRAFT USpoofChecker * U_EXPORT
+uspoof_clone(const USpoofChecker *sc, UErrorCode *status)
+
 
 /**
  * Specify the set of checks that will be performed by the check
  * functions of this Spoof Checker.
  *
- * 
  * @param sc       The USpoofChecker
  * @checks         The set of checks that this spoof checker will perform.
  *                 The value is a bit set, obtained by OR-ing together

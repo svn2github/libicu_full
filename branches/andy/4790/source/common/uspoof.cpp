@@ -15,6 +15,8 @@
 */
 #include "unicode/utypes.h"
 #include "unicode/uspoof.h"
+#include "unicode/unorm.h"
+#include "cmemory.h"
 #include "uspoof_impl.h"
 
 U_NAMESPACE_BEGIN
@@ -93,20 +95,35 @@ uspoof_getSkeleton(const USpoofChecker *sc,
         return 0;
     }
 
-    // NFKD transform of input here
+    // NFKD transform of the user supplied input
     
-    int32_t inputLimit = length;
-    int32_t inputIndex = 0;
-    if (length == -1) {
-       inputLimit = INT32_MAX;
+    UChar nfkdBuf[USPOOF_STACK_BUFFER_SIZE];
+    UChar *nfkdInput = nfkdBuf;
+    int32_t normalizedLen = unorm_normalize(
+        s, length, UNORM_NFKD, 0, nfkdInput, USPOOF_STACK_BUFFER_SIZE, status);
+    if (*status == U_BUFFER_OVERFLOW_ERROR) {
+        nfkdInput = (UChar *)uprv_malloc((normalizedLen+1)*sizeof(UChar));
+        if (nfkdInput == NULL) {
+            *status = U_MEMORY_ALLOCATION_ERROR;
+            return 0;
+        }
+        normalizedLen = unorm_normalize(s, length, UNORM_NFKD, 0,
+                                        nfkdInput, normalizedLen+1, status);
     }
-    int32_t resultLen = 0;
+    if (U_FAILURE(*status)) {
+        return 0;
+    }
 
-    UChar32 buf[MAX_SKELETON_EXPANSION];
+    // buffer to hold the Unicode defined mappings for a single code point
+    UChar32 buf[USPOOF_MAX_SKELETON_EXPANSION];
+
+    // Apply the mapping to the NFKD form string
     
-    while (inputIndex < inputLimit) {
+    int32_t inputIndex = 0;
+    int32_t resultLen = 0;
+    while (inputIndex < normalizedLen) {
         UChar32 c;
-        U16_GET(s, 0, inputIndex, inputLimit, c);
+        U16_GET(s, 0, inputIndex, normalizedLen, c);
         if (c==0 && length==-1) {
             break;
         }
@@ -122,12 +139,16 @@ uspoof_getSkeleton(const USpoofChecker *sc,
             }
         }
     }
+    
     if (resultLen < destCapacity) {
         dest[resultLen] = 0;
     } else if (resultLen == destCapacity) {
         *status = U_STRING_NOT_TERMINATED_WARNING;
     } else {
         *status = U_BUFFER_OVERFLOW_ERROR;
+    }
+    if (nfkdInput != nfkdBuf) {
+        uprv_free(nfkdInput);
     }
     return resultLen;
 }

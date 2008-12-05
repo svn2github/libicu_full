@@ -64,6 +64,89 @@ const SpoofImpl *SpoofImpl::validateThis(const USpoofChecker *sc, UErrorCode &st
 }
 
 
+int32_t ConfusableLookup(UChar32 inChar, UChar *destBuf) const {
+
+    // Binary search the spoof data key table for the inChar
+    int32_t  *low   = fSpoofData->fKeys;
+    int32_t  *mid   = NULL;
+    int32_t  *limit = low + fSpoofData->fRawData->fKeysSize;
+    UChar     midc;
+    do {
+        int32_t delta = (limit-low)/2;
+        mid = low + delta;
+        midc = *mid & 0xfff;
+        if (inchar == midc) {
+            goto foundChar;
+        } else if (inChar < midc) {
+            limit = mid;
+        } else {
+            low = mid;
+        }
+    } while low < limit-1;
+    mid = low;
+    midc = *mid & 0xfff;
+    if (inchar != midc) {
+        // Char not found.  It maps to itself.
+        int i = 0;
+        U16_APPEND_UNSAFE(destBuf, i, inChar)
+        return i;
+    } 
+  foundChar:
+    int32_t keyFlags = *mid & 0xff000000;
+    if ((keyFlags & fCheckMask) == 0) {
+        // We found the right key char, but the entry doesn't pertain to the
+        //  table we need.  See if there is an adjacent key that does
+        if (keyFlags & USPOOF_KEY_MULTIPLE_VALULES) {
+            for (altMid = mid-1; (*altMid&0x00ffffff) == inChar; altMid--) {
+                keyFlags = *altMid & 0xff000000;
+                if (keyFlags & checkMask) {
+                    mid = altMid;
+                    goto foundKey;
+                }
+            }
+            for (altMid = mid+1; (*altMid&0x00ffffff) == inChar; altMid++) {
+                keyFlags = *altMid & 0xff000000;
+                if (keyFlags & checkMask) {
+                    mid = altMid;
+                    goto foundKey;
+                }
+            }
+        }
+        // No key entry for this char & table.
+        // The input char maps to itself.
+        int i = 0;
+        U16_APPEND_UNSAFE(destBuf, i, inChar)
+        return i;
+    }
+
+  foundKey:
+    int32_t  stringLen = USPOOF_KEY_LENGTH_FIELD(keyFlags) + 1;
+    keyTableIndex = mid - fSpoofData->fKeys;
+
+    // Value is either a UChar  (for strings of length 1) or
+    //                 an index into the string table (for longer strings)
+    uint16_t value = fSpoofData->fValues[stringTableIndex];
+    if (stringLen == 1) {
+        destBuf[0] = value;
+        return 1;
+    }
+
+    // String length of 4 is used for all strings of length >= 4.
+    // Get the real length from the string lengths table,
+    //   which maps string table indexes to lengths.
+    //   (All strings of the same length are stored contiguously in the string table)
+
+    if (stringLen == 4) {
+        // TODO:
+    }
+
+    UChar *src = &fSpoofData->fStrings[value];
+    for (int32_t idx=0; idx<stringLen; idx++) {
+        destBuf[idx] = src[idx];
+    }
+    return stringLen;
+}
+
 U_NAMESPACE_END
 
 U_NAMESPACE_USE
