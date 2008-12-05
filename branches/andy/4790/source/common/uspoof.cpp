@@ -16,7 +16,6 @@
 #include "unicode/utypes.h"
 #include "unicode/uspoof.h"
 #include "uspoof_impl.h"
-#include "uspoofim.h"
 
 U_NAMESPACE_BEGIN
 
@@ -77,6 +76,61 @@ uspoof_setAllowedLocales(USpoofChecker *sc, const char *localesList, UErrorCode 
     // TODO:
 }
 
+
+U_DRAFT int32_t U_EXPORT2
+uspoof_getSkeleton(const USpoofChecker *sc,
+                   USpoofChecks type,
+                   const UChar *s,  int32_t length,
+                   UChar *dest, int32_t destCapacity,
+                   UErrorCode *status) {
+
+    const SpoofImpl *This = SpoofImpl::validateThis(sc, *status);
+    if (U_FAILURE(*status)) {
+        return 0;
+    }
+    if (length<-1 || destCapacity<0 || (destCapacity==0 && dest!=NULL)) {
+        *status = U_ILLEGAL_ARGUMENT_ERROR;
+        return 0;
+    }
+
+    // NFKD transform of input here
+    
+    int32_t inputLimit = length;
+    int32_t inputIndex = 0;
+    if (length == -1) {
+       inputLimit = INT32_MAX;
+    }
+    int32_t resultLen = 0;
+
+    UChar32 buf[MAX_SKELETON_EXPANSION];
+    
+    while (inputIndex < inputLimit) {
+        UChar32 c;
+        U16_GET(s, 0, inputIndex, inputLimit, c);
+        if (c==0 && length==-1) {
+            break;
+        }
+        int32_t replaceLen = This->ToSkeleton(c, buf);
+        int i;
+        for (i=0; i<replaceLen; i++) {
+            UBool err = FALSE;
+            if (resultLen < destCapacity) {
+                U16_APPEND(dest, resultLen, destCapacity, buf[i], err);
+            }
+            if (err || resultLen >= destCapacity) {
+                resultLen += U16_LENGTH(buf[i]);
+            }
+        }
+    }
+    if (resultLen < destCapacity) {
+        dest[resultLen] = 0;
+    } else if (resultLen == destCapacity) {
+        *status = U_STRING_NOT_TERMINATED_WARNING;
+    } else {
+        *status = U_BUFFER_OVERFLOW_ERROR;
+    }
+    return resultLen;
+}
 
 U_DRAFT void U_EXPORT2
 uspoof_setAllowedChars(USpoofChecker *sc, const USet *chars, UErrorCode *status) {

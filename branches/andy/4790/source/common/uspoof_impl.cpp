@@ -10,7 +10,7 @@
 #include "cmemory.h"
 #include "udatamem.h"
 #include "udataswp.h"
-#include "uspoofim.h"
+#include "uspoof_impl.h"
 
 
 U_NAMESPACE_BEGIN
@@ -167,23 +167,23 @@ uspoof_swap(const UDataSwapper *ds, const void *inData, int32_t length, void *ou
     }
 
     // String Lengths Section
-    sectionStart  = ds->readUInt32(spoofDH->fStringLengthsOffset);
+    sectionStart  = ds->readUInt32(spoofDH->fStringLengths);
     sectionLength = ds->readUInt32(spoofDH->fStringLengthsSize) * 4;
     ds->swapArray16(ds, inBytes+sectionStart, sectionLength, outBytes+sectionStart, status);
 
     // String Lengths Section
-    sectionStart  = ds->readUInt32(spoofDH->fKeysTableOffset);
-    sectionLength = ds->readUInt32(spoofDH->fKeyTableSize) * 4;
+    sectionStart  = ds->readUInt32(spoofDH->fKeys);
+    sectionLength = ds->readUInt32(spoofDH->fKeysSize) * 4;
     ds->swapArray16(ds, inBytes+sectionStart, sectionLength, outBytes+sectionStart, status);
 
     // String Lengths Section
-    sectionStart  = ds->readUInt32(spoofDH->fStringIndexesOffset);
-    sectionLength = ds->readUInt32(spoofDH->fStringIndexesSize) * 2;
+    sectionStart  = ds->readUInt32(spoofDH->fStringIndex);
+    sectionLength = ds->readUInt32(spoofDH->fStringIndexSize) * 2;
     ds->swapArray16(ds, inBytes+sectionStart, sectionLength, outBytes+sectionStart, status);
 
     // String Lengths Section
-    sectionStart  = ds->readUInt32(spoofDH->fStringTableOffset);
-    sectionLength = ds->readUInt32(spoofDH->fStringTableSize) * 2;
+    sectionStart  = ds->readUInt32(spoofDH->fStringTable);
+    sectionLength = ds->readUInt32(spoofDH->fStringTableLen) * 2;
     ds->swapArray16(ds, inBytes+sectionStart, sectionLength, outBytes+sectionStart, status);
 
 
