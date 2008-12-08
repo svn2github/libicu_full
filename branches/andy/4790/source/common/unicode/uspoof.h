@@ -98,8 +98,8 @@ uspoof_close(USpoofChecker *sc, UErrorCode *status);
  * @param status   The error code, set if this function encounters a problem.
  * @return
  */
-U_DRAFT USpoofChecker * U_EXPORT
-uspoof_clone(const USpoofChecker *sc, UErrorCode *status)
+U_DRAFT USpoofChecker * U_EXPORT2
+uspoof_clone(const USpoofChecker *sc, UErrorCode *status);
 
 
 /**

@@ -18,7 +18,7 @@
 
 U_NAMESPACE_BEGIN
 
-// The maximium length of the skeleton replacement string resulting from
+// The maximium length (in UTF-16 UChars) of the skeleton replacement string resulting from
 //   a single input code point.  This is function of the unicode.org data.
 #define USPOOF_MAX_SKELETON_EXPANSION 20
 
@@ -26,6 +26,10 @@ U_NAMESPACE_BEGIN
 //   input strings to be checked.  Longer strings require allocation
 //   of a heap buffer.
 #define USPOOF_STACK_BUFFER_SIZE 100
+
+class SpoofData;
+class SpoofDataHeader;
+class SpoofStringLengthsElement;
 
 class SpoofImpl : public UObject  {
 public:
@@ -41,7 +45,7 @@ public:
 	 *  The result is a string with a length between 1 and 18.
 	 *  @return   The length in UTF-16 code units of the substition string.
 	 */  
-	int32_t ConfusableLookup(UChar32 inChar, UChar32 *destBuf) const;
+	int32_t ConfusableLookup(UChar32 inChar, UChar *destBuf) const;
 	
 
     /**
@@ -154,11 +158,11 @@ struct SpoofStringLengthsElement {
 //
 class SpoofData {
   public:
-    SpoofDataHeader            *fRawData          // Ptr to the raw memory-mapped data
+    SpoofDataHeader            *fRawData;          // Ptr to the raw memory-mapped data
     
     int32_t                    *fKeys;
     uint16_t                   *fValues;
-    SpoofStringLengthsLement   *fStringLengths;
+    SpoofStringLengthsElement   *fStringLengths;
     UChar                      *fStrings;
 
     };
@@ -187,8 +191,6 @@ struct SpoofDataHeader {
     int32_t       unused[6];           // Padding, Room for Expansion
  }; 
 
-
-/
 
 U_NAMESPACE_END
 

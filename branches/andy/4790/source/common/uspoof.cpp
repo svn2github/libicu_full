@@ -115,7 +115,7 @@ uspoof_getSkeleton(const USpoofChecker *sc,
     }
 
     // buffer to hold the Unicode defined mappings for a single code point
-    UChar32 buf[USPOOF_MAX_SKELETON_EXPANSION];
+    UChar buf[USPOOF_MAX_SKELETON_EXPANSION];
 
     // Apply the mapping to the NFKD form string
     
@@ -127,16 +127,17 @@ uspoof_getSkeleton(const USpoofChecker *sc,
         if (c==0 && length==-1) {
             break;
         }
-        int32_t replaceLen = This->ToSkeleton(c, buf);
-        int i;
-        for (i=0; i<replaceLen; i++) {
-            UBool err = FALSE;
-            if (resultLen < destCapacity) {
-                U16_APPEND(dest, resultLen, destCapacity, buf[i], err);
+        int32_t replaceLen = This->ConfusableLookup(c, buf);
+        if (resultLen + replaceLen < destCapacity) {
+            int i;
+            for (i=0; i<replaceLen; i++) {
+                buf[resultLen++] = buf[i];
             }
-            if (err || resultLen >= destCapacity) {
-                resultLen += U16_LENGTH(buf[i]);
-            }
+        } else {
+            // Storing the transformed string would overflow the dest buffer.
+            //   Don't bother storing anything, just sum up the required buffer size.
+            //   (We dont guarantee that a truncated buffer is filled to it's end)
+            resultLen += replaceLen;
         }
     }
     
