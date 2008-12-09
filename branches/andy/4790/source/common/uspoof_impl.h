@@ -33,7 +33,7 @@ class SpoofStringLengthsElement;
 
 class SpoofImpl : public UObject  {
 public:
-	SpoofImpl(UErrorCode &status);
+	SpoofImpl(SpoofData *data, UErrorCode &status);
 	SpoofImpl();
 	virtual ~SpoofImpl();
 
@@ -158,37 +158,50 @@ struct SpoofStringLengthsElement {
 //
 class SpoofData {
   public:
-    SpoofDataHeader            *fRawData;          // Ptr to the raw memory-mapped data
+    static SpoofData *getDefault(UErrorCode &status);        // Load standard ICU spoof data.
+    SpoofData();                                    // Create empty spoof data wrapper.
+
     
-    int32_t                    *fKeys;
-    uint16_t                   *fValues;
+    SpoofDataHeader             *fRawData;          // Ptr to the raw memory-mapped data
+    
+    int32_t                     *fKeys;
+    uint16_t                    *fValues;
     SpoofStringLengthsElement   *fStringLengths;
-    UChar                      *fStrings;
+    UChar                       *fStrings;
 
     };
     
 
+//
+//  Structure of the actual binary data, as loaded from the ICU data file,
+//    or as built by the builder.
+//
 struct SpoofDataHeader {
-    int32_t       fMagic;              // (0x8345fdef)
-    int32_t       fLength;             // sizeof(SpoofDataHeader)
+    int32_t       fMagic;                // (0x8345fdef)
+    int32_t       fLength;               // sizeof(SpoofDataHeader)
 
     // The following four sections refer to data representing the confusable data
     //   from the Unicode.org data from "confusables.txt"
 
-    int32_t       fStringLengths;      // byte offset to String Lengths table
-    int32_t       fStringLengthsSize;  // number of entries in lengths table. (2 x 16 bits each)
+    int32_t       fCFUStringLengths;      // byte offset to String Lengths table
+    int32_t       fCFUStringLengthsSize;  // number of entries in lengths table. (2 x 16 bits each)
 
-    int32_t       fKeys;               // byte offset to Keys table
-    int32_t       fKeysSize;           // number of entries in keys table  (32 bits each)
+    int32_t       fCFUKeys;               // byte offset to Keys table
+    int32_t       fCFUKeysSize;           // number of entries in keys table  (32 bits each)
 
-    int32_t       fStringIndex;        // byte offset to String Indexes table
-    int32_t       fStringIndexSize;    // number of entries in String Indexes table (16 bits each)
-                                       //     (number of entries must be same as in Keys table
+    int32_t       fCFUStringIndex;        // byte offset to String Indexes table
+    int32_t       fCFUStringIndexSize;    // number of entries in String Indexes table (16 bits each)
+                                          //     (number of entries must be same as in Keys table
 
-    int32_t       fStringTable;        // byte offset of String table
-    int32_t       fStringTableLen;     // length of string table (in 16 bit UChars)
+    int32_t       fCFUStringTable;        // byte offset of String table
+    int32_t       fCFUStringTableLen;     // length of string table (in 16 bit UChars)
 
-    int32_t       unused[6];           // Padding, Room for Expansion
+    int32_t       unused[6];              // Padding, Room for Expansion
+
+    // The following sections are for data from confusablesWholeScript.txt
+
+    // The following sections are for data from xidmodifications.txt
+    
  }; 
 
 

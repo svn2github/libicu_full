@@ -18,8 +18,9 @@ U_NAMESPACE_BEGIN
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(SpoofImpl)
 
 static const int SPOOF_MAGIC = 0x8345fdef; 
-SpoofImpl::SpoofImpl(UErrorCode &status) {
+SpoofImpl::SpoofImpl(SpoofData *data, UErrorCode &status) {
 	fMagic = SPOOF_MAGIC;
+	fSpoofData = data;
 	fChecks = 0;
 }
 
@@ -69,7 +70,7 @@ int32_t SpoofImpl::ConfusableLookup(UChar32 inChar, UChar *destBuf) const {
     // Binary search the spoof data key table for the inChar
     int32_t  *low   = fSpoofData->fKeys;
     int32_t  *mid   = NULL;
-    int32_t  *limit = low + fSpoofData->fRawData->fKeysSize;
+    int32_t  *limit = low + fSpoofData->fRawData->fCFUKeysSize;
     UChar     midc;
     do {
         int32_t delta = (limit-low)/2;
@@ -146,6 +147,16 @@ int32_t SpoofImpl::ConfusableLookup(UChar32 inChar, UChar *destBuf) const {
         destBuf[idx] = src[idx];
     }
     return stringLen;
+}
+
+
+//
+//  poofData::getDefault() - return a wrapper around the spoof data that is
+//                           baked into the default ICU data.
+//
+SpoofData *SpoofData::getDefault(UErrorCode &status) {
+    // TODO:
+    return NULL;
 }
 
 U_NAMESPACE_END
@@ -251,23 +262,23 @@ uspoof_swap(const UDataSwapper *ds, const void *inData, int32_t length, void *ou
     }
 
     // String Lengths Section
-    sectionStart  = ds->readUInt32(spoofDH->fStringLengths);
-    sectionLength = ds->readUInt32(spoofDH->fStringLengthsSize) * 4;
+    sectionStart  = ds->readUInt32(spoofDH->fCFUStringLengths);
+    sectionLength = ds->readUInt32(spoofDH->fCFUStringLengthsSize) * 4;
     ds->swapArray16(ds, inBytes+sectionStart, sectionLength, outBytes+sectionStart, status);
 
     // String Lengths Section
-    sectionStart  = ds->readUInt32(spoofDH->fKeys);
-    sectionLength = ds->readUInt32(spoofDH->fKeysSize) * 4;
+    sectionStart  = ds->readUInt32(spoofDH->fCFUKeys);
+    sectionLength = ds->readUInt32(spoofDH->fCFUKeysSize) * 4;
     ds->swapArray16(ds, inBytes+sectionStart, sectionLength, outBytes+sectionStart, status);
 
     // String Lengths Section
-    sectionStart  = ds->readUInt32(spoofDH->fStringIndex);
-    sectionLength = ds->readUInt32(spoofDH->fStringIndexSize) * 2;
+    sectionStart  = ds->readUInt32(spoofDH->fCFUStringIndex);
+    sectionLength = ds->readUInt32(spoofDH->fCFUStringIndexSize) * 2;
     ds->swapArray16(ds, inBytes+sectionStart, sectionLength, outBytes+sectionStart, status);
 
     // String Lengths Section
-    sectionStart  = ds->readUInt32(spoofDH->fStringTable);
-    sectionLength = ds->readUInt32(spoofDH->fStringTableLen) * 2;
+    sectionStart  = ds->readUInt32(spoofDH->fCFUStringTable);
+    sectionLength = ds->readUInt32(spoofDH->fCFUStringTableLen) * 2;
     ds->swapArray16(ds, inBytes+sectionStart, sectionLength, outBytes+sectionStart, status);
 
 

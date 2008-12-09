@@ -27,7 +27,7 @@ uspoof_open(UErrorCode *status) {
 	if (U_FAILURE(*status)) {
 	    return NULL;
 	}
-    SpoofImpl *si = new SpoofImpl();
+    SpoofImpl *si = new SpoofImpl(SpoofData::getDefault(*status), *status);
 	if (U_FAILURE(*status)) {
 		delete si;
 		si = NULL;

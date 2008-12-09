@@ -36,6 +36,7 @@
 
 #include "unicode/utypes.h"
 #include "unicode/uset.h"
+#include "unicode/parseerr.h"
 
 #ifdef XP_CPLUSPLUS
 #include "unicode/unistr.h"
@@ -81,6 +82,70 @@ typedef enum USpoofChecks {
  */
 U_DRAFT USpoofChecker * U_EXPORT2
 uspoof_open(UErrorCode *status);
+
+
+/**
+ * Open a Spoof checker from its serialized from, stored in 32-bit-aligned memory.
+ * Inverse of uspoof_serialize().
+ * The memory must remain valid and unchanged as long as the spoof checker, or any
+ * cloned copies of the spoof checker, are in use.
+ * You must close the spoof checker once you are done using it.
+ *
+ * @param data a pointer to 32-bit-aligned memory containing the serialized form of spoof data
+ * @param length the number of bytes available at data;
+ *               can be more than necessary
+ * @param pActualLength receives the actual number of bytes at data taken up by the data;
+ *                      can be NULL
+ * @param status an in/out ICU UErrorCode
+ * @return the spoof checker.
+ *
+ * @see uspoof_open
+ * @see uspoof_serialize
+ */
+U_CAPI USpoofChecker * U_EXPORT2
+uspoof_openFromSerialized(const void *data, int32_t length, int32_t *pActualLength,
+                          UErrorCode *pErrorCode);
+
+/**
+  * Open a Spoof Checker from the source form of the spoof data.
+  * The Three inputs correspond to the Unicode data files confusables.txt
+  * confusablesWholeScript.txt and xidmdifications.txt as described in
+  * Unicode UAX 39.  The syntax of the source data is as described in UAX 39 for
+  * these files, and the content of these files is acceptable input.
+  *
+  * The character encoding of the (char *) input text is UTF-8.
+  *
+  * @param confusables a pointer to the confusable characters definitions,
+  *                    as found in file confusables.txt from unicode.org.
+  * @param confusablesLen The length of the confusables text, or -1 if the
+  *                    input string is zero terminated.
+  * @param confusablesWholeScript
+  *                    a pointer to the whole script confusables definitions,
+  *                    as found in the file xonfusablesWholeScript.txt from unicode.org.
+  * @param confusablesWholeScriptLen The length of the whole script confusables text, or
+  *                    -1 if the input string is zero terminated.
+  * @param xidModifications A pointer to the list of additions and restrictions
+  *                    to Unicode Identifier characters, as found in the
+  *                    Uniocde data file xidmodifications.txt, described in UAX-39.
+  * @param xidModificationsLen The length of the identifier modifications list, or
+  *                    -1 if the input string is zero terminated.
+  * @param errType     In the event of an error in the input, indicates
+  *                    which of the three input section contains the error.
+  *                    The value is one of USPOOF_SINGLE_SCRIPT_CONFUSABLE,
+  *                    USPOOF_WHOLE_SCRIPT_CONFUSABLE, USPOOF_SECURE_ID, or
+  *                    zero if no errors are found.
+  * @param pe          In the event of an error in the input, receives the position
+  *                    in the input text (line, offset) of the error.
+  * @param status      an in/out ICU UErrorCode.  Among the possible errors is
+  *                    U_PARSE_ERROR, which is used to report syntax errors
+  *                    in the input.
+  * @return            A spoof checker that uses the rules from the input files.
+  */
+U_CAPI USpoofChecker * U_EXPORT2
+uspoof_openFromSource(const char *confusables,  int32_t confusablesLen,
+                      const char *confusablesWholeScript, int32_t confusablesWholeScriptLen,
+                      const char *xidModifications, int32_t xidModificationsLen,
+                      int32_t *errType, UParseError *pe, UErrorCode *status);
 
 
 /**
@@ -595,5 +660,29 @@ uspoof_getSkeletonUnicodeString(const USpoofChecker *sc,
                                 UnicodeString &dest,
                                 UErrorCode *status);
 #endif   /* XP_CPLUSPLUS */
+
+
+/**
+ * Serialize the data for a spoof detector into a chunk of memory.
+ * The flattened spoof detection tables can later be used to efficiently
+ * instantiate a new Spoof Detector.
+ *
+ * @param sc   the Spoof Detector whose data is to be serialized.
+ * @param data a pointer to 32-bit-aligned memory to be filled with the data,
+ *             can be NULL if capacity==0
+ * @param capacity the number of bytes available at data,
+ *                 or 0 for preflighting
+ * @param status an in/out ICU UErrorCode; among other possible error codes:
+ * - U_BUFFER_OVERFLOW_ERROR if the data storage block is too small for serialization
+ * - U_ILLEGAL_ARGUMENT_ERROR  the data or capacity parameters are bad
+ * @return the number of bytes written or needed for the spoof data
+ *
+ * @see utrie2_openFromSerialized()
+ */
+U_CAPI int32_t U_EXPORT2
+uspoof_serialize(USpoofChecker *sc,
+                 void *data, int32_t capacity,
+                 UErrorCode *status);
+
 
 #endif   /* USPOOF_H */
