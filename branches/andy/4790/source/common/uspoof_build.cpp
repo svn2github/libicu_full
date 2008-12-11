@@ -80,45 +80,99 @@ uspoof_openFromSource(const char *confusables,  int32_t confusablesLen,
 //  String Pool   A utility class for holding the strings that are the result of
 //                the spoof mappings.  These strings will utimately end up in the
 //                run-time String Table.
-//                This is sort of like a sorted set, except that ICU's anemic built-in
-//                collections don't support that, so it is implemented with combination of
-//                a uhash and a UVector.
+//                This is sort of like a sorted set of strings, except that ICU's anemic
+//                built-in collections don't support those, so it is implemented with a
+//                combination of a uhash and a UVector.
 
 struct SPUString {
     UnicodeString  *fStr;
     int32_t         fStrTableIndex;
+    SPUString(UnicodeString *s) {fStr = s; fStrTableIndex = NULL;};
     }
 
 class SPUStringPool {
   public:
     SPUStringPool(UErrorCode *status);
+    ~SPUStringPool();
     
     // Add a string. Return the string from the table.
     // If the input parameter string is already in the table, delete the
     //  input parameter and return the existing string.
     UnicodeString *addString(UnicodeString *src);
 
-    // Sort the strings, first by length, then by value.
-    // This is the ordering that they will appear in the string pool.
-    // Lacking a sorted tree collection, this becomes a manual step after all
-    //   strings have been added.
-    void sort();
 
     // Get the n-th string in the collection.
-    // sort() must be called before the first call to this function.
     SPUString *getByIndex(int32_t i);
 
     int32_t size();
 
   private:
-    UVector     *fVec;
-    UHashtable  *fHash;
+    UVector     *fVec;    // Elements are SPUString *
+    UHashtable  *fHash;   // Key: UnicodeString  Value: SPUString
 }
 
 SPUStringPool::SPUStringPool(UErrorCode *status) : fVec(NULL), fHash(NULL) {
     fVec = new UVector(*status);
-    fHash = uhash_open(
+    fHash = uhash_open(uhash_uhashUnicodeString,          // key hash function
+                       uhash_uhashCompareUnicodeString,   // Key Comparator
+                       NULL,                              // Value Comparator
+                       status);
+}
 
+
+SPUStringPool::~SPUStringPool() {
+    int i;
+    for (i=fVec->size()-1; i>=0; i--) {
+        SPUString *s = static_cast<SPUString *>(fVec->elementAt(i);
+        delete s;
+    }
+    delete fVec;
+    uhasn_close(fHash);
+}
+
+
+int32_t SPUStringPool::size() {
+    return fVec->size();
+}
+
+SPUString *SPUStringPool::getByIndex(int32_t index) {
+    SPUString *retString = (SPUString *)fVec->elementAt(index);
+    return retString;
+}
+
+// Comparison function for ordering strings in the string pool.
+// Compare by length first, then, within a group of the same length,
+// by code point order.
+static int8_t U_CALLCONV SPUStringCompare(UHashTok tok1, UHashTok tok2) {
+    UnicodeString *s1 = static_cast<UnicodeString *>(tok1.pointer);
+    UnicodeString *s2 = static_cast<UnicodeString *>(tok2.pointer);
+    int32_t len1 = s1->length();
+    int32_t len2 = s2->length();
+    if (len1 < len2) {
+        return -1;
+    } else if (len1 > len2) {
+        return 1;
+    } else {
+        return s1->compareCodePointOrder(*s2);
+    }
+}
+        
+
+SPUString *SPUStringPool::addString(UnicodeString *src, UErrorCode *status) {
+    SPUString *hashedString = uhash_get(fHash, src);
+    if (hashedString != NULL) {
+        delete src;
+    } else {
+        hashedString = new SPUString(src);
+        uhash_put(fhash, src, hashedString, status);
+        fVec->sortedInsert(hashedString, SPUStringCompare, *status);
+    }
+    return hashedString;
+}
+
+    
+    
+    
 //
 // Regular Expression to parse a line from Confusables.txt
 //   Capture Group 1:  the source char
