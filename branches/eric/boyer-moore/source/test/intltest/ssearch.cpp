@@ -876,11 +876,11 @@ void SSearchTest::boyerMooreTest()
     UErrorCode status = U_ZERO_ERROR;
  //UCollator *coll = ucol_open(NULL, &status);
     UCollator *coll = ucol_openFromShortString("S1", FALSE, NULL, &status);
-    CollData data(coll);
+    CollData *data = CollData::open(coll);
     UnicodeString lp  = "fuss";
     UnicodeString sp = "fu\\u00DF";
-    BoyerMooreSearch longPattern(&data, lp.unescape(), NULL);
-    BoyerMooreSearch shortPattern(&data, sp.unescape(), NULL);
+    BoyerMooreSearch longPattern(data, lp.unescape(), NULL);
+    BoyerMooreSearch shortPattern(data, sp.unescape(), NULL);
     UnicodeString targets[]  = {"fu\\u00DF", "fu\\u00DFball", "1fu\\u00DFball", "12fu\\u00DFball", "123fu\\u00DFball", "1234fu\\u00DFball",
                                 "ffu\\u00DF", "fufu\\u00DF", "fusfu\\u00DF",
                                 "fuss", "ffuss", "fufuss", "fusfuss", "1fuss", "12fuss", "123fuss", "1234fuss", "fu\\u00DF", "1fu\\u00DF", "12fu\\u00DF", "123fu\\u00DF", "1234fu\\u00DF"};
@@ -904,6 +904,7 @@ void SSearchTest::boyerMooreTest()
         }
     }
 
+    CollData::close(data);
     ucol_close(coll);
 }
 
@@ -911,10 +912,10 @@ void SSearchTest::goodSuffixTest()
 {
     UErrorCode status = U_ZERO_ERROR;
     UCollator *coll = ucol_open(NULL, &status);
-    CollData data(coll);
+    CollData *data = CollData::open(coll);
     UnicodeString pat = /*"gcagagag"*/ "fxeld";
     UnicodeString target = /*"gcatcgcagagagtatacagtacg"*/ "cloveldfxeld";
-    BoyerMooreSearch pattern(&data, pat, &target);
+    BoyerMooreSearch pattern(data, pat, &target);
     int32_t start = -1, end = -1;
 
     if (pattern.search(0, start, end)) {
@@ -923,6 +924,7 @@ void SSearchTest::goodSuffixTest()
         errln("Did not find pattern.");
     }
 
+    CollData::close(data);
     ucol_close(coll);
 }
 
@@ -1040,7 +1042,7 @@ const char *cPattern = "maketh houndes ete hem";
 
 
     UCollator *collator = ucol_open("en", &status);
-    CollData data(collator);
+    CollData *data = CollData::open(collator);
     TEST_ASSERT_SUCCESS(status);
     //ucol_setStrength(collator, collatorStrength);
     //ucol_setAttribute(collator, UCOL_NORMALIZATION_MODE, normalize, &status);
@@ -1053,7 +1055,7 @@ const char *cPattern = "maketh houndes ete hem";
                                         &status);
     TEST_ASSERT_SUCCESS(status);
 #else
-    BoyerMooreSearch bms(&data, uPattern, &target);
+    BoyerMooreSearch bms(data, uPattern, &target);
 #endif
     
 //  int32_t foundStart;
@@ -1100,6 +1102,8 @@ const char *cPattern = "maketh houndes ete hem";
     printf("%d\n", pm-longishText, j);
 #ifndef TEST_BOYER_MOORE
     usearch_close(uss);
+#else
+    CollData::close(data);
 #endif
     ucol_close(collator);
 }

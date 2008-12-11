@@ -26,7 +26,9 @@
 #include "unicode/ustring.h"
 #include "hash.h"
 #include "uhash.h"
+#include "ucln_in.h"
 #include "ucol_imp.h"
+#include "umutex.h"
 
 #include "unicode/colldata.h"
 
@@ -34,6 +36,7 @@ U_NAMESPACE_BEGIN
 
 #define NEW_ARRAY(type, count) (type *) uprv_malloc((count) * sizeof(type))
 #define DELETE_ARRAY(array) uprv_free((void *) (array))
+#define ARRAY_COPY(dst, src, count) uprv_memcpy((void *) (dst), (void *) (src), (count) * sizeof (src)[0])
 
 static inline USet *uset_openEmpty()
 {
@@ -314,21 +317,215 @@ U_CFUNC void deleteUnicodeStringKey(void *obj)
     delete key;
 }
 
-UOBJECT_DEFINE_RTTI_IMPLEMENTATION(CollData)
+class CollDataCacheEntry : public UMemory
+{
+public:
+    CollDataCacheEntry(CollData *theData);
+    ~CollDataCacheEntry();
 
-CollData::CollData(UCollator *collator)
-  : coll(collator)
+    CollData *data;
+    int32_t   refCount;
+};
+
+CollDataCacheEntry::CollDataCacheEntry(CollData *theData)
+    : data(theData), refCount(1)
+{
+    // nothing else to do
+}
+
+CollDataCacheEntry::~CollDataCacheEntry()
+{
+    // check refCount?
+    delete data;
+}
+
+class CollDataCache : public UMemory
+{
+public:
+    CollDataCache();
+    ~CollDataCache();
+
+    CollData *get(UCollator *collator);
+    void unref(CollData *collData);
+
+private:
+    static char *getKey(UCollator *collator, char *keyBuffer, int32_t *charBufferLength);
+    static void deleteKey(char *key);
+
+    UMTX lock;
+    UHashtable *cache;
+};
+
+U_CFUNC void deleteChars(void *obj)
+{
+    char *chars = (char *) obj;
+
+    // All the key strings are owned by the 
+    // CollData objects and don't need to
+    // be freed here.
+  //DELETE_ARRAY(chars);
+}
+
+U_CFUNC void deleteCollDataCacheEntry(void *obj)
+{
+    CollDataCacheEntry *entry = (CollDataCacheEntry *) obj;
+
+    delete entry;
+}
+
+CollDataCache::CollDataCache()
+    : lock(0), cache(NULL)
 {
     UErrorCode status = U_ZERO_ERROR;
+
+    umtx_init(&lock);
+
+    cache = uhash_open(uhash_hashChars, uhash_compareChars, uhash_compareLong, &status);
+
+    uhash_setValueDeleter(cache, deleteCollDataCacheEntry);
+    uhash_setKeyDeleter(cache, deleteChars);
+}
+
+CollDataCache::~CollDataCache()
+{
+    umtx_lock(&lock);
+    uhash_close(cache);
+    cache = NULL;
+    umtx_unlock(&lock);
+
+    umtx_destroy(&lock);
+}
+
+CollData *CollDataCache::get(UCollator *collator)
+{
+    UErrorCode status = U_ZERO_ERROR;
+    char keyBuffer[KEY_BUFFER_SIZE];
+    int32_t keyLength = KEY_BUFFER_SIZE;
+    char *key = getKey(collator, keyBuffer, &keyLength);
+    CollData *result = NULL, *newData = NULL;
+    CollDataCacheEntry *entry = NULL, *newEntry = NULL;
+
+    umtx_lock(&lock);
+    entry = (CollDataCacheEntry *) uhash_get(cache, key);
+
+    if (entry == NULL) {
+        umtx_unlock(&lock);
+
+        newData = new CollData(collator, key, keyLength);
+        newEntry = new CollDataCacheEntry(newData);
+
+        umtx_lock(&lock);
+        entry = (CollDataCacheEntry *) uhash_get(cache, key);
+
+        if (entry == NULL) {
+            uhash_put(cache, newData->key, newEntry, &status);
+            umtx_unlock(&lock);
+
+            return newData;
+        }
+    }
+
+    result = entry->data;
+    entry->refCount += 1;
+    umtx_unlock(&lock);
+
+    if (key != keyBuffer) {
+        deleteKey(key);
+    }
+
+    if (newEntry != NULL) {
+        delete newEntry;
+        delete newData;
+    }
+
+    return result;
+}
+
+void CollDataCache::unref(CollData *collData)
+{
+    CollDataCacheEntry *entry = NULL;
+    
+    umtx_lock(&lock);
+    entry = (CollDataCacheEntry *) uhash_get(cache, collData->key);
+
+    if (entry != NULL) {
+        entry->refCount -= 1;
+    }
+    umtx_unlock(&lock);
+}
+
+char *CollDataCache::getKey(UCollator *collator, char *keyBuffer, int32_t *keyBufferLength)
+{
+    UErrorCode status = U_ZERO_ERROR;
+    int32_t len = ucol_getShortDefinitionString(collator, NULL, keyBuffer, *keyBufferLength, &status);
+
+    if (len >= *keyBufferLength) {
+        *keyBufferLength = (len + 2) & ~1;  // round to even length, leaving room for terminating null
+        keyBuffer = NEW_ARRAY(char, *keyBufferLength);
+        status = U_ZERO_ERROR;
+
+        len = ucol_getShortDefinitionString(collator, NULL, keyBuffer, *keyBufferLength, &status);
+    }
+
+    keyBuffer[len] = '\0';
+
+    return keyBuffer;
+}
+
+void CollDataCache::deleteKey(char *key)
+{
+    DELETE_ARRAY(key);
+}
+
+U_CDECL_BEGIN
+static UBool coll_data_cleanup(void) {
+    CollData::freeCollDataCache();
+  return TRUE;
+}
+U_CDECL_END
+
+UOBJECT_DEFINE_RTTI_IMPLEMENTATION(CollData)
+
+CollData::CollData()
+{
+    // nothing
+}
+
+#define CLONE_COLLATOR
+CollData::CollData(UCollator *collator, char *cacheKey, int32_t cacheKeyLength)
+{
+    UErrorCode status = U_ZERO_ERROR;
+
+#if 1
     U_STRING_DECL(test_pattern, "[[:assigned:]-[:ideographic:]-[:hangul:]-[:c:]]", 47);
     U_STRING_INIT(test_pattern, "[[:assigned:]-[:ideographic:]-[:hangul:]-[:c:]]", 47);
     USet *charsToTest  = uset_openPattern(test_pattern, 47, &status);
+#else
+    U_STRING_DECL(test_pattern, "[[:assigned:]-[:c:]]", 20);
+    U_STRING_INIT(test_pattern, "[[:assigned:]-[:c:]]", 20);
+    USet *charsToTest  = uset_openPattern(test_pattern, 20, &status);
+#endif
+
     USet *expansions   = uset_openEmpty();
     USet *contractions = uset_openEmpty();
     int32_t itemCount;
 
     charsToCEList = new StringToCEsMap();
     ceToCharsStartingWith = new CEToStringsMap();
+    
+    if (cacheKeyLength > KEY_BUFFER_SIZE) {
+        key = NEW_ARRAY(char, cacheKeyLength);
+    } else {
+        key = keyBuffer;
+    }
+
+    ARRAY_COPY(key, cacheKey, cacheKeyLength);
+
+#ifdef CLONE_COLLATOR
+    coll = ucol_safeClone(collator, NULL, NULL, &status);
+#else
+    coll = collator;
+#endif
 
     ucol_getContractionsAndExpansions(coll, contractions, expansions, FALSE, &status);
 
@@ -368,6 +565,14 @@ CollData::CollData(UCollator *collator)
 
 CollData::~CollData()
 {
+#ifdef CLONE_COLLATOR
+   ucol_close(coll);
+#endif
+
+   if (key != keyBuffer) {
+       DELETE_ARRAY(key);
+   }
+
    delete ceToCharsStartingWith;
    delete charsToCEList;
 }
@@ -459,12 +664,62 @@ int32_t CollData::minLengthInChars(const CEList *ceList, int32_t offset) const
 
 CollData *CollData::open(UCollator *collator)
 {
-    return new CollData(collator);
+    UErrorCode status = U_ZERO_ERROR;
+    CollDataCache *cache = getCollDataCache();
+        
+    return cache->get(collator);
 }
 
 void CollData::close(CollData *collData)
 {
-    delete collData;
+    CollDataCache *cache = getCollDataCache();
+
+    cache->unref(collData);
+}
+
+CollDataCache *CollData::collDataCache = NULL;
+
+CollDataCache *CollData::getCollDataCache()
+{
+    CollDataCache *cache = NULL;
+
+    UMTX_CHECK(NULL, collDataCache, cache);
+
+    if (cache == NULL) {
+        cache = new CollDataCache();
+        umtx_lock(NULL);
+        if (collDataCache == NULL) {
+            collDataCache = cache;
+
+            ucln_i18n_registerCleanup(UCLN_I18N_COLL_DATA, coll_data_cleanup);
+        }
+        umtx_unlock(NULL);
+
+        if (collDataCache != cache) {
+            delete cache;
+        }
+    }
+
+    return collDataCache;
+}
+
+void CollData::freeCollDataCache()
+{
+    CollDataCache *cache = NULL;
+
+    UMTX_CHECK(NULL, collDataCache, cache);
+
+    if (cache != NULL) {
+        umtx_lock(NULL);
+        if (collDataCache != NULL) {
+            collDataCache = NULL;
+        } else {
+            cache = NULL;
+        }
+        umtx_unlock(NULL);
+
+        delete cache;
+    }
 }
 
 U_NAMESPACE_END

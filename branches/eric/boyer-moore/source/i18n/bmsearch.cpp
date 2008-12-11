@@ -525,9 +525,11 @@ BoyerMooreSearch::~BoyerMooreSearch()
     delete badCharacterTable;
     delete patCEs;
 
+#if 0
     if (ownData) {
         delete data;
     }
+#endif
 }
 
 void BoyerMooreSearch::setTargetString(const UnicodeString *targetString)

@@ -22,6 +22,8 @@
 
 U_NAMESPACE_BEGIN
 
+#define KEY_BUFFER_SIZE 64
+
 class U_I18N_API CEList : public UObject
 {
 public:
@@ -67,12 +69,13 @@ private:
 
 class StringToCEsMap;
 class CEToStringsMap;
+class CollDataCache;
 
 class U_I18N_API CollData : public UObject
 {
 public:
-    CollData(UCollator *collator);
-    ~CollData();
+    static CollData *open(UCollator *collator);
+    static void close(CollData *collData);
 
     UCollator *getCollator() const;
 
@@ -84,16 +87,32 @@ public:
 
     int32_t minLengthInChars(const CEList *ces, int32_t offset, int32_t *history) const;
 
-    static CollData *open(UCollator *collator);
-    static void close(CollData *collData);
-
     virtual UClassID getDynamicClassID() const;
     static UClassID getStaticClassID();
 
+    static void freeCollDataCache();
+
 private:
+    friend class CollDataCache;
+    friend class CollDataCacheEntry;
+
+    CollData(UCollator *collator, char *cacheKey, int32_t cachekeyLength);
+    ~CollData();
+
+    CollData();
+
+    static char *getCollatorKey(UCollator *collator, char *buffer, int32_t bufferLength);
+
+    static CollDataCache *getCollDataCache();
+
     UCollator      *coll;
     StringToCEsMap *charsToCEList;
     CEToStringsMap *ceToCharsStartingWith;
+
+    char keyBuffer[KEY_BUFFER_SIZE];
+    char *key;
+
+    static CollDataCache *collDataCache;
 };
 
 U_NAMESPACE_END
