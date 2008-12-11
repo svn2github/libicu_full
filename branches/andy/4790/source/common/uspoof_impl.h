@@ -31,6 +31,10 @@ class SpoofData;
 class SpoofDataHeader;
 class SpoofStringLengthsElement;
 
+/**
+  *  Class SpoofImpl corresponds directly to the plain C API opaque type
+  *  USpoofChecker.  One can be cast to the other.
+  */
 class SpoofImpl : public UObject  {
 public:
 	SpoofImpl(SpoofData *data, UErrorCode &status);
