@@ -53,6 +53,17 @@ U_CDECL_BEGIN
 #include "makefile.h"
 U_CDECL_END
 
+#ifdef U_WINDOWS
+#ifdef __GNUC__
+#define WINDOWS_WITH_GNUC
+#else
+#define WINDOWS_WITH_MSVC
+#endif
+#endif
+#if !defined(WINDOWS_WITH_MSVC) && !defined(U_LINUX)
+#define BUILD_DATA_WITHOUT_ASSEMBLY
+#endif
+
 #define LARGE_BUFFER_MAX_SIZE 2048
 #define SMALL_BUFFER_MAX_SIZE 512
 
@@ -60,18 +71,22 @@ static void loadLists(UPKGOptions *o, UErrorCode *status);
 
 static int32_t pkg_executeOptions(UPKGOptions *o);
 
-#ifdef U_WINDOWS
+#ifdef WINDOWS_WITH_MSVC
 static int32_t pkg_createWindowsDLL(const char mode, const char *gencFilePath, UPKGOptions *o);
 #endif
 static int32_t pkg_createSymLinks(const char *targetDir);
+static int32_t pkg_installLibrary(const char *installDir, const char *dir);
+
+#ifdef BUILD_DATA_WITHOUT_ASSEMBLY
 static int32_t pkg_createWithoutAssemblyCode(UPKGOptions *o, const char *targetDir, const char mode);
+#endif
+
 static int32_t pkg_createWithAssemblyCode(const char *targetDir, const char mode, const char *gencFilePath);
 static int32_t pkg_generateLibraryFile(const char *targetDir, const char mode, const char *objectFile, char *command);
 static int32_t pkg_archiveLibrary(const char *targetDir, const char *version, UBool reverseExt);
 static void createFileNames(const char *version_major, const char *version, const char *libName, const UBool reverseExt);
 
-/* always have this fcn, just might not do anything */
-static void fillInMakefileFromICUConfig(UOption *option);
+static int32_t pkg_getOptionsFromICUConfig(UOption *option);
 
 /* This sets the modes that are available */
 static struct
@@ -158,6 +173,7 @@ enum {
     AR,
     ARFLAGS,
     RANLIB,
+    INSTALL_CMD,
     PKGDATA_FLAGS_SIZE
 };
 static char pkgDataFlags[PKGDATA_FLAGS_SIZE][SMALL_BUFFER_MAX_SIZE];
@@ -216,7 +232,8 @@ main(int argc, char* argv[]) {
     UBool        needsHelp = FALSE;
     UErrorCode   status = U_ZERO_ERROR;
     /* char         tmp[1024]; */
-    int32_t i;
+    uint32_t i;
+    int32_t n;
 
     U_MAIN_INIT_ARGS(argc, argv);
 
@@ -245,11 +262,13 @@ main(int argc, char* argv[]) {
         }
 
 
-#ifndef U_WINDOWS
+#ifndef WINDOWS_WITH_MSVC
         if(!options[BLDOPT].doesOccur) {
-            fprintf(stderr, " required parameter is missing: -O is required \n");
-            fprintf(stderr, "Run '%s --help' for help.\n", progname);
-            return 1;
+            if (pkg_getOptionsFromICUConfig(&options[BLDOPT]) != 0) {
+                fprintf(stderr, " required parameter is missing: -O is required \n");
+                fprintf(stderr, "Run '%s --help' for help.\n", progname);
+                return 1;
+            }
         }
 #else
         if(options[BLDOPT].doesOccur) {
@@ -361,7 +380,7 @@ main(int argc, char* argv[]) {
 
     o.verbose   = options[VERBOSE].doesOccur;
 
-#ifndef U_WINDOWS /* on UNIX, we'll just include the file... */
+#ifndef WINDOWS_WITH_MSVC /* on UNIX, we'll just include the file... */
     o.options   = options[BLDOPT].value;
 #endif
     if(options[COPYRIGHT].doesOccur) {
@@ -388,6 +407,8 @@ main(int argc, char* argv[]) {
 
     if( options[INSTALL].doesOccur ) {
         o.install  = options[INSTALL].value;
+    } else {
+        o.install = NULL;
     }
 
     if( options[SOURCEDIR].doesOccur ) {
@@ -404,8 +425,8 @@ main(int argc, char* argv[]) {
 
     /* OK options are set up. Now the file lists. */
     tail = NULL;
-    for( i=1; i<argc; i++) {
-        if ( !uprv_strcmp(argv[i] , "-") ) {
+    for( n=1; n<argc; n++) {
+        if ( !uprv_strcmp(argv[n] , "-") ) {
             /* stdin */
             if( o.hadStdin == TRUE ) {
                 fprintf(stderr, "Error: can't specify '-' twice!\n"
@@ -415,7 +436,7 @@ main(int argc, char* argv[]) {
             o.hadStdin = TRUE;
         }
 
-        o.fileListFiles = pkg_appendToList(o.fileListFiles, &tail, uprv_strdup(argv[i]));
+        o.fileListFiles = pkg_appendToList(o.fileListFiles, &tail, uprv_strdup(argv[n]));
     }
 
     /* load the files */
@@ -474,10 +495,20 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
         return result;
     } else /* if (mode == MODE_COMMON || mode == MODE_STATIC || mode == MODE_DLL) */ {
         uprv_strcpy(targetDir, o->targetDir);
+#ifdef WINDOWS_WITH_GNUC
+        /* Need to fix the file seperator character when using MinGW. */
+        uprv_strcat(targetDir, "/");
+#else
         uprv_strcat(targetDir, U_FILE_SEP_STRING);
+#endif
 
         uprv_strcpy(tmpDir, o->tmpDir);
+#ifdef WINDOWS_WITH_GNUC
+        /* Need to fix the file seperator character when using MinGW. */
+        uprv_strcat(tmpDir, "/");
+#else
         uprv_strcat(tmpDir, U_FILE_SEP_STRING);
+#endif
 
         uprv_strcpy(datFileNamePath, tmpDir);
 
@@ -511,10 +542,10 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                 return -1;
             }
 
-#ifndef U_WINDOWS
+#ifndef WINDOWS_WITH_MSVC
             /* Get the version major number. */
             if (o->version != NULL) {
-                for (int32_t i = 0;i < sizeof(version_major);i++) {
+                for (uint32_t i = 0;i < sizeof(version_major);i++) {
                     if (o->version[i] == '.') {
                         version_major[i] = 0;
                         break;
@@ -537,6 +568,10 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                 /* Check to see if a previous built data library file exists */
                 sprintf(checkLibFile, "%s%s", targetDir, libFileNames[LIB_FILE_VERSION_TMP]);
                 if (T_FileStream_file_exists(checkLibFile)) {
+                    if (o->install != NULL) {
+                        uprv_strcpy(libFileNames[LIB_FILE_VERSION], libFileNames[LIB_FILE_VERSION_TMP]);
+                        result = pkg_installLibrary(o->install, targetDir);
+                    }
                     return result;
                 }
             }
@@ -551,6 +586,13 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                 if (checkAssemblyHeaderName(genccodeAssembly+3)) {
                     writeAssemblyCode(datFileNamePath, o->tmpDir, o->entryName, NULL, gencFilePath);
 
+#ifdef WINDOWS_WITH_GNUC
+                    /* Need to fix the file seperator character when using MinGW. */
+                    for (int32_t i = 0, size = uprv_strlen(gencFilePath); i < size; i++) {
+                        gencFilePath[i] = (gencFilePath[i] ==U_FILE_SEP_CHAR ) ? '/' : gencFilePath[i];
+                    }
+#endif
+
                     result = pkg_createWithAssemblyCode(targetDir, mode, gencFilePath);
                     if (result != 0) {
                         fprintf(stderr, "Error generating assembly code for data.\n");
@@ -563,14 +605,14 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                     return -1;
                 }
             } else {
-#if defined(U_WINDOWS) || defined(U_LINUX)
+#if defined(WINDOWS_WITH_MSVC) || defined(U_LINUX)
                 writeObjectCode(datFileNamePath, o->tmpDir, o->entryName, NULL, NULL, gencFilePath);
 #ifdef U_LINUX
                 result = pkg_generateLibraryFile(targetDir, mode, gencFilePath, NULL);
-#else U_WINDOWS
+#else /* WINDOWS_WITH_MSVC */
                 return pkg_createWindowsDLL(mode, gencFilePath, o);
 #endif
-#else
+#elif defined(BUILD_DATA_WITHOUT_ASSEMBLY)
                 result = pkg_createWithoutAssemblyCode(o, targetDir, mode);
 #endif
                 if (result != 0) {
@@ -584,14 +626,23 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
             if (result != 0) {
                 fprintf(stderr, "Error creating data archive library file.\n");
                return result;
-           }
+            }
 
             /* Create symbolic links for the final library file. */
             result = pkg_createSymLinks(targetDir);
             if (result != 0) {
                 fprintf(stderr, "Error creating symbolic links of the data library file.\n");
-               return result;
-           }
+                return result;
+            }
+
+            /* Install the libraries if option was set. */
+            if (o->install != NULL) {
+                result = pkg_installLibrary(o->install, targetDir);
+                if (result != 0) {
+                    fprintf(stderr, "Error installing the data library.\n");
+                    return result;
+                }
+            }
 #endif
         }
     }
@@ -666,6 +717,26 @@ static int32_t pkg_createSymLinks(const char *targetDir) {
      result = system(cmd);
 
     return result;
+}
+
+static int32_t pkg_installLibrary(const char *installDir, const char *targetDir) {
+    char cmd[SMALL_BUFFER_MAX_SIZE];
+    int32_t result = 0;
+
+    sprintf(cmd, "cd %s && %s %s %s%s%s",
+            targetDir,
+            pkgDataFlags[INSTALL_CMD],
+            libFileNames[LIB_FILE_VERSION],
+            installDir, U_FILE_SEP_STRING, libFileNames[LIB_FILE_VERSION]
+            );
+
+    result = system(cmd);
+
+    if (result != 0) {
+        return result;
+    }
+
+    return pkg_createSymLinks(installDir);
 }
 
 /* Archiving of the library file may be needed depending on the platform and options given.
@@ -798,6 +869,7 @@ static int32_t pkg_createWithAssemblyCode(const char *targetDir, const char mode
     return pkg_generateLibraryFile(targetDir, mode, tempObjectFile, cmd);
 }
 
+#ifdef BUILD_DATA_WITHOUT_ASSEMBLY
 /*
  * Generation of the data library without assembly code needs to compile each data file
  * individually and then link it all together.
@@ -913,8 +985,9 @@ static int32_t pkg_createWithoutAssemblyCode(UPKGOptions *o, const char *targetD
 
     return result;
 }
+#endif
 
-#ifdef U_WINDOWS
+#ifdef WINDOWS_WITH_MSVC
 #define LINK_CMD "link.exe /nologo /release /out:"
 #define LINK_FLAGS "/DLL /NOENTRY /MANIFEST:NO  /base:0x4ad00000 /implib:"
 #define LIB_CMD "LIB.exe /nologo /out:"
@@ -1027,9 +1100,9 @@ static void extractFlag(char* buffer, int32_t bufferSize, char* flag) {
 }
 
 static void pkg_checkFlag(UPKGOptions *o) {
+#ifdef U_AIX
     char *flag = NULL;
     int32_t length = 0;
-#ifdef U_AIX
     char tmpbuffer[SMALL_BUFFER_MAX_SIZE];
     const char MAP_FILE_EXT[] = ".map";
     FileStream *f = NULL;
@@ -1093,6 +1166,9 @@ static void pkg_checkFlag(UPKGOptions *o) {
         T_FileStream_close(f);
     }
 #elif defined(U_CYGWIN)
+    char *flag = NULL;
+    int32_t length = 0;
+
     flag = pkgDataFlags[GENLIB];
     length = uprv_strlen(pkgDataFlags[GENLIB]);
 
@@ -1115,7 +1191,7 @@ static void pkg_checkFlag(UPKGOptions *o) {
 static int32_t pkg_readInFlags(const char *fileName) {
     int32_t result = 0;
 
-#ifdef U_WINDOWS
+#ifdef WINDOWS_WITH_MSVC
     /* Zero out the flags since it is not being used. */
     for (int32_t i = 0; i < PKGDATA_FLAGS_SIZE; i++) {
         pkgDataFlags[i][0] = 0;
@@ -1260,28 +1336,20 @@ static void loadLists(UPKGOptions *o, UErrorCode *status)
     } /* for each file list file */
 }
 
-/* Try calling icu-config directly to get information */
-static void fillInMakefileFromICUConfig(UOption *option)
-{
-#if 0
+/* Try calling icu-config directly to get the option file. */
+static int32_t pkg_getOptionsFromICUConfig(UOption *option) {
 #if U_HAVE_POPEN
     FILE *p;
     size_t n;
     static char buf[512] = "";
-    static const char cmd[] = "icu-config --incfile";
-
-    if(options[5].doesOccur)
-    {
-        /* informational */
-        fprintf(stderr, "%s: No -O option found, trying '%s'.\n", progname, cmd);
-    }
+    const char cmd[] = "icu-config --incpkgdatafile";
 
     p = popen(cmd, "r");
 
     if(p == NULL)
     {
         fprintf(stderr, "%s: icu-config: No icu-config found. (fix PATH or use -O option)\n", progname);
-        return;
+        return -1;
     }
 
     n = fread(buf, 1, 511, p);
@@ -1291,7 +1359,15 @@ static void fillInMakefileFromICUConfig(UOption *option)
     if(n<=0)
     {
         fprintf(stderr,"%s: icu-config: Could not read from icu-config. (fix PATH or use -O option)\n", progname);
-        return;
+        return -1;
+    }
+
+    for (int32_t length = strlen(buf) - 1; length >= 0; length--) {
+        if (buf[length] == '\n' || buf[length] == ' ') {
+            buf[length] = 0;
+        } else {
+            break;
+        }
     }
 
     if(buf[strlen(buf)-1]=='\n')
@@ -1302,64 +1378,13 @@ static void fillInMakefileFromICUConfig(UOption *option)
     if(buf[0] == 0)
     {
         fprintf(stderr, "%s: icu-config: invalid response from icu-config (fix PATH or use -O option)\n", progname);
-        return;
+        return -1;
     }
 
-    if(options[5].doesOccur)
-    {
-        /* informational */
-        fprintf(stderr, "%s: icu-config: using '-O %s'\n", progname, buf);
-    }
     option->value = buf;
     option->doesOccur = TRUE;
-#else  /* ! U_HAVE_POPEN */
 
-#ifdef U_WINDOWS
-    char pathbuffer[_MAX_PATH] = {0};
-    char *fullEXEpath = NULL;
-    char *pathstuff = NULL;
-
-    if (strchr(progname, U_FILE_SEP_CHAR) != NULL || strchr(progname, U_FILE_ALT_SEP_CHAR) != NULL) {
-        /* pkgdata was executed with relative path */
-        fullEXEpath = _fullpath(pathbuffer, progname, sizeof(pathbuffer));
-        pathstuff = (char *)options[1].value;
-
-        if (fullEXEpath) {
-            pathstuff = strrchr(fullEXEpath, U_FILE_SEP_CHAR);
-            if (pathstuff) {
-                pathstuff[1] = 0;
-                uprv_memmove(fullEXEpath + 2, fullEXEpath, uprv_strlen(fullEXEpath)+1);
-                fullEXEpath[0] = PKGDATA_DERIVED_PATH;
-                fullEXEpath[1] = ':';
-                option->value = uprv_strdup(fullEXEpath);
-                option->doesOccur = TRUE;
-            }
-        }
-    }
-    else {
-        /* pkgdata was executed from the path */
-        /* Search for file in PATH environment variable: */
-        _searchenv("pkgdata.exe", "PATH", pathbuffer );
-        if( *pathbuffer != '\0' ) {
-            fullEXEpath = pathbuffer;
-            pathstuff = strrchr(pathbuffer, U_FILE_SEP_CHAR);
-            if (pathstuff) {
-                pathstuff[1] = 0;
-                uprv_memmove(fullEXEpath + 2, fullEXEpath, uprv_strlen(fullEXEpath)+1);
-                fullEXEpath[0] = PKGDATA_DERIVED_PATH;
-                fullEXEpath[1] = ':';
-                option->value = uprv_strdup(fullEXEpath);
-                option->doesOccur = TRUE;
-            }
-        }
-    }
-    /* else can't determine the path */
+    return 0;
 #endif
-
-    /* no popen available */
-    /* Put other OS specific ways to search for the Makefile.inc type
-       information or else fail.. */
-
-#endif
-#endif /* End of #if 0 */
+    return -1;
 }

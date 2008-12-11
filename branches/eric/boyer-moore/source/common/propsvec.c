@@ -50,6 +50,7 @@ upvec_open(int32_t columns, UErrorCode *pErrorCode) {
         *pErrorCode=U_ILLEGAL_ARGUMENT_ERROR;
         return NULL;
     }
+    columns+=2; /* count range start and limit columns */
 
     pv=(UPropsVectors *)uprv_malloc(sizeof(UPropsVectors));
     v=(uint32_t *)uprv_malloc(UPVEC_INITIAL_ROWS*columns*4);
@@ -61,7 +62,7 @@ upvec_open(int32_t columns, UErrorCode *pErrorCode) {
     }
     uprv_memset(pv, 0, sizeof(UPropsVectors));
     pv->v=v;
-    pv->columns=columns+=2; /* count range start and limit columns */
+    pv->columns=columns;
     pv->maxRows=UPVEC_INITIAL_ROWS;
     pv->rows=2+(UPVEC_MAX_CP-UPVEC_FIRST_SPECIAL_CP);
 
@@ -96,22 +97,34 @@ _findRow(UPropsVectors *pv, UChar32 rangeStart) {
     rows=limit=pv->rows;
     prevRow=pv->prevRow;
 
-    /* check the vicinity of the last-seen row */
-    if(prevRow<rows) {
-        row=pv->v+prevRow*columns;
-        if(rangeStart>=(UChar32)row[0]) {
-            if(rangeStart<(UChar32)row[1]) {
-                /* same row as last seen */
-                return row;
-            } else if(
-                ++prevRow<rows &&
-                rangeStart>=(UChar32)(row+=columns)[0] && rangeStart<(UChar32)row[1]
-            ) {
-                /* next row after the last one */
-                pv->prevRow=prevRow;
-                return row;
-            }
+    /* check the vicinity of the last-seen row (start searching with an unrolled loop) */
+    row=pv->v+prevRow*columns;
+    if(rangeStart>=(UChar32)row[0]) {
+        if(rangeStart<(UChar32)row[1]) {
+            /* same row as last seen */
+            return row;
+        } else if(rangeStart<(UChar32)(row+=columns)[1]) {
+            /* next row after the last one */
+            pv->prevRow=prevRow+1;
+            return row;
+        } else if(rangeStart<(UChar32)(row+=columns)[1]) {
+            /* second row after the last one */
+            pv->prevRow=prevRow+2;
+            return row;
+        } else if((rangeStart-(UChar32)row[1])<10) {
+            /* we are close, continue looping */
+            prevRow+=2;
+            do {
+                ++prevRow;
+                row+=columns;
+            } while(rangeStart>=(UChar32)row[1]);
+            pv->prevRow=prevRow;
+            return row;
         }
+    } else if(rangeStart<(UChar32)pv->v[1]) {
+        /* the very first row */
+        pv->prevRow=0;
+        return pv->v;
     }
 
     /* do a binary search for the start of the range */
@@ -169,31 +182,9 @@ upvec_setValue(UPropsVectors *pv,
 
     /* find the rows whose ranges overlap with the input range */
 
-    /* find the first row, always successful */
+    /* find the first and last rows, always successful */
     firstRow=_findRow(pv, start);
-
-    /* find the last row, always successful */
-    lastRow=firstRow;
-    /*
-     * Start searching with an unrolled loop:
-     * start and limit are often in a single range, or in adjacent ranges.
-     */
-    if(limit>(UChar32)lastRow[1]) {
-        lastRow+=columns;
-        if(limit>(UChar32)lastRow[1]) {
-            lastRow+=columns;
-            if(limit>(UChar32)lastRow[1]) {
-                if((limit-(UChar32)lastRow[1])<10) {
-                    /* we are close, continue looping */
-                    do {
-                        lastRow+=columns;
-                    } while(limit>(UChar32)lastRow[1]);
-                } else {
-                    lastRow=_findRow(pv, limit-1);
-                }
-            }
-        }
-    }
+    lastRow=_findRow(pv, end);
 
     /*
      * Rows need to be split if they partially overlap with the
