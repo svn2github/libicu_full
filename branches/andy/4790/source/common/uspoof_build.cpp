@@ -14,36 +14,64 @@
  *   Unicode Spoof Detection Data Builder
  *   These functions are kept in a separate file so that applications not needing
  *   the builder can more easily exclude them, typically by means of static linking.
+ *
+ *   There are three relatively independent sets of Spoof data,
+ *      Confusables,
+ *      Whole Script Confusables
+ *      ID character extensions.
+ *
+ *    The data tables for each are built separately, each from its own definitions
  */
 
 #include "unicode/utypes.h"
 #include "unicode/uspoof.h"
 #include "unicode/unorm.h"
+#include "unicode/ustring.h"
 #include "cmemory.h"
 #include "uspoof_impl.h"
+#include "uhash.h"
+#include "uvector.h"
 
 U_NAMESPACE_USE
 
 // Forward Declarations
 
 static  void buildConfusableData(SpoofImpl *This, const char *confusables,
-    int32_t confusablesLen, UErrorCode *status);
+    int32_t confusablesLen, UParseError pe, UErrorCode *status);
 
 
+static void buildConfusableWSData(SpoofImpl *This, const char *confusablesWholeScript, 
+    int32_t confusablesWholeScriptLen, UErrorCode *status);
+
+
+static void  buildXidData(SpoofImpl *This, const char *xidModifications,
+    int32_t confusablesWholeScriptLen, UErrorCode *status);
+
+// The main data building functin
 U_CAPI USpoofChecker * U_EXPORT2
 uspoof_openFromSource(const char *confusables,  int32_t confusablesLen,
                       const char *confusablesWholeScript, int32_t confusablesWholeScriptLen,
                       const char *xidModifications, int32_t xidModificationsLen,
-                      int32_t *errType, UParseError *pe, UErrorCode *status) {
+                      int32_t *errorType, UParseError *pe, UErrorCode *status) {
 
     if (U_FAILURE(*status)) {
         return NULL;
     }
+    if (errorType!=NULL) {
+        *errorType = 0;
+    }
+    if (pe != NULL) {
+        pe->line = 0;
+        pe->offset = 0;
+        pe->preContext[0] = 0;
+        pe->postContext[0] = 0;
+    }
+    
     SpoofImpl *This = new SpoofImpl(NULL, *status);
 
-    buildConfusableData(This, confusables, confusablesLen, status);
+    buildConfusableData(This, confusables, confusablesLen, pe, status);
     buildConfusableWSData(This, confusablesWholeScript, confusablesWholeScriptLen, status);
-    buildXidData(xidModifications, confusablesWholeScriptLen, status);
+    buildXidData(This, xidModifications, xidModificationsLen, status);
 
     if (U_FAILURE(*status)) {
         delete This;
@@ -87,8 +115,8 @@ uspoof_openFromSource(const char *confusables,  int32_t confusablesLen,
 struct SPUString {
     UnicodeString  *fStr;
     int32_t         fStrTableIndex;
-    SPUString(UnicodeString *s) {fStr = s; fStrTableIndex = NULL;};
-    }
+    SPUString(UnicodeString *s) {fStr = s; fStrTableIndex = 0;};
+};
 
 class SPUStringPool {
   public:
@@ -98,7 +126,7 @@ class SPUStringPool {
     // Add a string. Return the string from the table.
     // If the input parameter string is already in the table, delete the
     //  input parameter and return the existing string.
-    UnicodeString *addString(UnicodeString *src);
+    SPUString *addString(UnicodeString *src, UErrorCode *status);
 
 
     // Get the n-th string in the collection.
@@ -109,12 +137,12 @@ class SPUStringPool {
   private:
     UVector     *fVec;    // Elements are SPUString *
     UHashtable  *fHash;   // Key: UnicodeString  Value: SPUString
-}
+};
 
 SPUStringPool::SPUStringPool(UErrorCode *status) : fVec(NULL), fHash(NULL) {
     fVec = new UVector(*status);
-    fHash = uhash_open(uhash_uhashUnicodeString,          // key hash function
-                       uhash_uhashCompareUnicodeString,   // Key Comparator
+    fHash = uhash_open(uhash_hashUnicodeString,           // key hash function
+                       uhash_compareUnicodeString,        // Key Comparator
                        NULL,                              // Value Comparator
                        status);
 }
@@ -123,11 +151,11 @@ SPUStringPool::SPUStringPool(UErrorCode *status) : fVec(NULL), fHash(NULL) {
 SPUStringPool::~SPUStringPool() {
     int i;
     for (i=fVec->size()-1; i>=0; i--) {
-        SPUString *s = static_cast<SPUString *>(fVec->elementAt(i);
+        SPUString *s = static_cast<SPUString *>(fVec->elementAt(i));
         delete s;
     }
     delete fVec;
-    uhasn_close(fHash);
+    uhash_close(fHash);
 }
 
 
@@ -159,12 +187,15 @@ static int8_t U_CALLCONV SPUStringCompare(UHashTok tok1, UHashTok tok2) {
         
 
 SPUString *SPUStringPool::addString(UnicodeString *src, UErrorCode *status) {
-    SPUString *hashedString = uhash_get(fHash, src);
+    SPUString *hashedString = static_cast<SPUString *>(uhash_get(fHash, src));
     if (hashedString != NULL) {
         delete src;
     } else {
         hashedString = new SPUString(src);
-        uhash_put(fhash, src, hashedString, status);
+        uhash_put(fHash, src, hashedString, status);
+        // TODO:  probable performance problem with sortedInsert.
+        //        Should append all elements, then sort once.
+        //        No precanned sort function available on UVecctor, though.
         fVec->sortedInsert(hashedString, SPUStringCompare, *status);
     }
     return hashedString;
@@ -172,20 +203,128 @@ SPUString *SPUStringPool::addString(UnicodeString *src, UErrorCode *status) {
 
     
     
-    
-//
-// Regular Expression to parse a line from Confusables.txt
-//   Capture Group 1:  the source char
-//   Capture Group 2:  the replacement chars
-//   Capture Group 3:  the table type, SL, SA, ML, or MA
-static const char * confusableLine = "([0-9A-F]+)\\s+;([^;]+);\\s+(..)";
 
 // Regexp for parsing a hex number out of a space-separated list of them.
 //   Capture group 1 gets the number, with spaces removed.
 static const char * parseHexNumber = "\\s*([0-9A-F]+)";
 
-
-void buildConfusableData(SpoofImpl *This, const char *confusables,
-    int32_t confusablesLen, UErrorCode *status) {
-    
+// Convert a hex number.  Input: UChar *string text.  Output: binary
+//   TODO:  There must be some library function to do this.  Find it.
+static UChar32 ScanHex(const UChar *s, int32_t start, int32_t limit) {
+    int val = 0;
+    for (i=start; i<limit; i++) {
+        int digitVal = s[i] - 0x30;
+        if (digitVal>9) {
+            digitVal = 0xa + (s[i] - 0x41);  // Upper Case 'A'
+        }
+        if (digitVal>15) {
+            digitVal = 0xa + (s[i] - 0x61);  // Lower Case 'a'
+        }
+        U_ASSERT(digitVal <= 0xf);
+        val <<= 4;
+        val += digitVal;
     }
+}
+        
+
+void buildConfusableData(SpoofImpl * This, const char * confusables,
+    int32_t confusablesLen, UParseError pe, UErrorCode *status) {
+
+    // Declarations for allocated items that need to be closed or deleted
+    //   at the end.  Declatations are here at the top to allow common
+    //   cleanup code in the event of errors.
+    UHashtable *SLTable = NULL;
+    UHashtable *SATable = NULL; 
+    UHashtable *MLTable = NULL; 
+    UHashtable *MATable = NULL; 
+    SPUStringPool *stringPool = NULL;
+    URegularExpression *parseLine = NULL;
+    URegularExpression *parseHexNum  = NULL;
+    
+    // Convert the user input data from UTF-8 to UChar (UTF-16)
+    
+    int32_t inputLen = 0;
+    u_strFromUTF8(NULL, 0, &inputLen, confusables, confusablesLen, status);
+    if (U_FAILURE(*status)) {
+        return;
+    }
+    UChar *input = static_cast<UChar *>(uprv_malloc(inputLen+1 * sizeof(UChar)));
+    if (input == NULL) {
+        *status = U_MEMORY_ALLOCATION_ERROR;
+    }
+    u_strFromUTF8(input, inputLen+1, NULL, confusables, confusablesLen, status);
+
+    // Set up intermediate data structures to collect the confusable data as it is being
+    // parsed.
+    
+    UHashtable *SLTable = uhash_open(uhash_hashLong, uhash_compareLong, NULL, status);
+    UHashtable *SATable = uhash_open(uhash_hashLong, uhash_compareLong, NULL, status);
+    UHashtable *MLTable = uhash_open(uhash_hashLong, uhash_compareLong, NULL, status);
+    UHashtable *MATable = uhash_open(uhash_hashLong, uhash_compareLong, NULL, status);
+    SPUStringPool *stringPool = new SPUStringPool(status);
+
+    if (U_FAILURE(*status)) {
+        goto cleanup;
+    }
+
+    // Regular Expression to parse a line from Confusables.txt
+    //   Capture Group 1:  the source char
+    //   Capture Group 2:  the replacement chars
+    //   Capture Group 3:  the table type, SL, SA, ML, or MA
+    //   Capture Group 4:  A blank or comment only line.
+    //   Capture Group 5:  A syntactically invalid line.  Anything that didn't match before.
+    parseLine = uregex_openC(
+        "(?m)^\\s*([0-9A-F]+)\\s+;([^;]+);\\s+(SL|SA|ML|MA)\\s*(?:#.s*?)$|^(\\s*(?:#\\s*))$|^(.*?)$", 0, NULL, status);
+    //  "-------- legal content with optional trailing comment           | comment only    | syntax error
+    //              groups 1-3                                              group 4           group 5
+    
+    // Regular expression for parsing a hex number out of a space-separated list of them.
+    //   Capture group 1 gets the number, with spaces removed.
+    parseHexNum = uregex_openC("\\s*([0-9A-F]+)", 0, NULL, status);
+
+    uregexp.setText(parseLine, input, inputLen, status);
+    int32_t  lineNum;
+    while (uregex_findNext(parseLine, status) {
+        lineNum++;
+        if (uregex_start(4) >= 0) {
+            // this was a blank or comment line.
+            continue;
+        }
+        if (uregex_start(5) >= 0) {
+            // input file syntax error.
+            pe->line = lineNum;
+            *status = U_PARSE_ERROR;
+            goto cleanup;
+        }
+
+        // We have a good input line.  Extract the key character and mapping string, and
+        //    put them into the appropriate mapping table.
+        key = ScanHex(input, uregex_start(parseLine, 1, status), uregex_end(parseLine, 1, status))
+        
+
+
+  cleanup:
+    uprv_free(input);
+    uhash_close(SLTable);
+    uhash_close(SATable);
+    uhash_close(MLTable);
+    uhash_close(MATable);
+    delete stringPool;
+    return
+}
+
+//---------------------------------------------------------------------
+//
+//
+//
+
+static void buildConfusableWSData(SpoofImpl* /* This*/ , const char* /* confusablesWholeScript */,
+    int32_t /* confusablesWholeScriptLen */, UErrorCode * /* status */) {
+}
+
+
+static void  buildXidData(SpoofImpl * /* This */, const char * /* xidModifications */,
+    int32_t /* confusablesWholeScriptLen */, UErrorCode * /* status */) {
+}
+
+

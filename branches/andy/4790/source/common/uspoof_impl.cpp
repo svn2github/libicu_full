@@ -18,7 +18,7 @@ U_NAMESPACE_BEGIN
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(SpoofImpl)
 
 static const int SPOOF_MAGIC = 0x8345fdef; 
-SpoofImpl::SpoofImpl(SpoofData *data, UErrorCode &status) {
+SpoofImpl::SpoofImpl(SpoofData *data, UErrorCode &/*status*/) {
 	fMagic = SPOOF_MAGIC;
 	fSpoofData = data;
 	fChecks = 0;
@@ -154,7 +154,7 @@ int32_t SpoofImpl::ConfusableLookup(UChar32 inChar, UChar *destBuf) const {
 //  poofData::getDefault() - return a wrapper around the spoof data that is
 //                           baked into the default ICU data.
 //
-SpoofData *SpoofData::getDefault(UErrorCode &status) {
+SpoofData *SpoofData::getDefault(UErrorCode &/*status*/) {
     // TODO:
     return NULL;
 }
