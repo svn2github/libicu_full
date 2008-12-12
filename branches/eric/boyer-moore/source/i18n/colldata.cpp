@@ -45,7 +45,10 @@ static inline USet *uset_openEmpty()
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(CEList)
 
+#ifdef INSTRUMENT_CELIST
+int32_t CEList::_active = 0;
 int32_t CEList::_histogram[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+#endif
 
 CEList::CEList(UCollator *coll, const UnicodeString &string)
     : ces(NULL), listMax(CELIST_BUFFER_SIZE), listSize(0)
@@ -69,7 +72,11 @@ CEList::CEList(UCollator *coll, const UnicodeString &string)
         strengthMask |= UCOL_PRIMARYORDERMASK;
     }
 
+#ifdef INSTRUMENT_CELIST
+    _active += 1;
     _histogram[0] += 1;
+#endif
+
     ces = ceBuffer;
 
     while ((order = ucol_next(elems, &status)) != UCOL_NULLORDER) {
@@ -87,6 +94,10 @@ CEList::CEList(UCollator *coll, const UnicodeString &string)
 
 CEList::~CEList()
 {
+#ifdef INSTRUMENT_CELIST
+    _active -= 1;
+#endif
+
     if (ces != ceBuffer) {
         DELETE_ARRAY(ces);
     }
@@ -98,7 +109,9 @@ void CEList::add(int32_t ce)
       //listMax *= 2;
         listMax += CELIST_BUFFER_SIZE;
 
+#ifdef INSTRUMENT_CELIST
         _histogram[listSize / CELIST_BUFFER_SIZE] += 1;
+#endif
 
         int32_t *newCEs = NEW_ARRAY(int32_t, listMax);
 
@@ -150,10 +163,21 @@ int32_t CEList::size() const
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(StringList)
 
+#ifdef INSTRUMENT_STRING_LIST
+int32_t StringList::_lists = 0;
+int32_t StringList::_strings = 0;
+int32_t StringList::_histogram[101] = {0};
+#endif
+
 StringList::StringList()
-    : strings(NULL), listMax(16), listSize(0)
+    : strings(NULL), listMax(STRING_LIST_BUFFER_SIZE), listSize(0)
 {
     strings = new UnicodeString [listMax];
+
+#ifdef INSTRUMENT_STRING_LIST
+    _lists += 1;
+    _histogram[0] += 1;
+#endif
 }
 
 StringList::~StringList()
@@ -163,12 +187,26 @@ StringList::~StringList()
 
 void StringList::add(const UnicodeString *string)
 {
+#ifdef INSTRUMENT_STRING_LIST
+    _strings += 1;
+#endif
+
     if (listSize >= listMax) {
-        listMax *= 2;
+        listMax += STRING_LIST_BUFFER_SIZE;
 
         UnicodeString *newStrings = new UnicodeString[listMax];
 
         uprv_memcpy(newStrings, strings, listSize * sizeof(UnicodeString));
+
+#ifdef INSTRUMENT_STRING_LIST
+        int32_t _h = listSize / STRING_LIST_BUFFER_SIZE;
+
+        if (_h > 100) {
+            _h = 100;
+        }
+
+        _histogram[_h] += 1;
+#endif
 
         delete[] strings;
         strings = newStrings;
@@ -510,7 +548,7 @@ CollData::CollData(UCollator *collator, char *cacheKey, int32_t cacheKeyLength)
 {
     UErrorCode status = U_ZERO_ERROR;
 
-#if 1
+#if 0
     U_STRING_DECL(test_pattern, "[[:assigned:]-[:ideographic:]-[:hangul:]-[:c:]]", 47);
     U_STRING_INIT(test_pattern, "[[:assigned:]-[:ideographic:]-[:hangul:]-[:c:]]", 47);
     USet *charsToTest  = uset_openPattern(test_pattern, 47, &status);
@@ -563,19 +601,25 @@ CollData::CollData(UCollator *collator, char *cacheKey, int32_t cacheKeyLength)
                 UnicodeString *st = new UnicodeString(ch);
                 CEList *ceList = new CEList(coll, *st);
 
+                ceToCharsStartingWith->put(ceList->get(0), st);
+
 #ifdef CACHE_CELISTS
                 charsToCEList->put(st, ceList);
+#else
+                delete ceList;
 #endif
-                ceToCharsStartingWith->put(ceList->get(0), st);
             }
         } else if (len > 0) {
             UnicodeString *st = new UnicodeString(buffer, len);
             CEList *ceList = new CEList(coll, *st);
 
+            ceToCharsStartingWith->put(ceList->get(0), st);
+
 #ifdef CACHE_CELISTS
             charsToCEList->put(st, ceList);
+#else
+            delete ceList;
 #endif
-            ceToCharsStartingWith->put(ceList->get(0), st);
         } else {
             // shouldn't happen...
         }
@@ -651,7 +695,7 @@ int32_t CollData::minLengthInChars(const CEList *ceList, int32_t offset, int32_t
 #ifdef CACHE_CELISTS
             const CEList *ceList2 = charsToCEList->get(string);
 #else
-            CEList *ceList2 = new CEList(coll, *string);
+            const CEList *ceList2 = new CEList(coll, *string);
 #endif
 
             if (ceList->matchesAt(offset, ceList2)) {

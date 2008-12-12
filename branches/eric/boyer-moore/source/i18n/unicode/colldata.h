@@ -23,7 +23,12 @@
 U_NAMESPACE_BEGIN
 
 #define KEY_BUFFER_SIZE 64
+
 #define CELIST_BUFFER_SIZE 4
+#define INSTRUMENT_CELIST
+
+#define STRING_LIST_BUFFER_SIZE 16
+#define INSTRUMENT_STRING_LIST
 
 class U_I18N_API CEList : public UObject
 {
@@ -48,7 +53,10 @@ private:
     int32_t listMax;
     int32_t listSize;
 
+#ifdef INSTRUMENT_CELIST
+    static int32_t _active;
     static int32_t _histogram[10];
+#endif
 };
 
 class U_I18N_API StringList : public UObject
@@ -69,6 +77,12 @@ private:
     UnicodeString *strings;
     int32_t listMax;
     int32_t listSize;
+
+#ifdef INSTRUMENT_STRING_LIST
+    static int32_t _lists;
+    static int32_t _strings;
+    static int32_t _histogram[101];
+#endif
 };
 
 class StringToCEsMap;
