@@ -45,8 +45,10 @@ static inline USet *uset_openEmpty()
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(CEList)
 
+int32_t CEList::_histogram[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
 CEList::CEList(UCollator *coll, const UnicodeString &string)
-    : ces(NULL), listMax(8), listSize(0)
+    : ces(NULL), listMax(CELIST_BUFFER_SIZE), listSize(0)
 {
     UErrorCode status = U_ZERO_ERROR;
     UCollationElements *elems = ucol_openElements(coll, string.getBuffer(), string.length(), &status);
@@ -67,7 +69,8 @@ CEList::CEList(UCollator *coll, const UnicodeString &string)
         strengthMask |= UCOL_PRIMARYORDERMASK;
     }
 
-    ces = NEW_ARRAY(int32_t, listMax);
+    _histogram[0] += 1;
+    ces = ceBuffer;
 
     while ((order = ucol_next(elems, &status)) != UCOL_NULLORDER) {
         order &= strengthMask;
@@ -84,18 +87,27 @@ CEList::CEList(UCollator *coll, const UnicodeString &string)
 
 CEList::~CEList()
 {
-    DELETE_ARRAY(ces);
+    if (ces != ceBuffer) {
+        DELETE_ARRAY(ces);
+    }
 }
 
 void CEList::add(int32_t ce)
 {
     if (listSize >= listMax) {
-        listMax *= 2;
+      //listMax *= 2;
+        listMax += CELIST_BUFFER_SIZE;
+
+        _histogram[listSize / CELIST_BUFFER_SIZE] += 1;
 
         int32_t *newCEs = NEW_ARRAY(int32_t, listMax);
 
         uprv_memcpy(newCEs, ces, listSize * sizeof(int32_t));
-        DELETE_ARRAY(ces);
+
+        if (ces != ceBuffer) {
+            DELETE_ARRAY(ces);
+        }
+
         ces = newCEs;
     }
 
@@ -266,6 +278,7 @@ public:
 
     void put(const UnicodeString *string, const CEList *ces);
     const CEList *get(const UnicodeString *string);
+    void free(const CEList *list);
 
 private:
 
@@ -492,6 +505,7 @@ CollData::CollData()
 }
 
 #define CLONE_COLLATOR
+//#define CACHE_CELISTS
 CollData::CollData(UCollator *collator, char *cacheKey, int32_t cacheKeyLength)
 {
     UErrorCode status = U_ZERO_ERROR;
@@ -510,7 +524,12 @@ CollData::CollData(UCollator *collator, char *cacheKey, int32_t cacheKeyLength)
     USet *contractions = uset_openEmpty();
     int32_t itemCount;
 
+#ifdef CACHE_CELISTS
     charsToCEList = new StringToCEsMap();
+#else
+    charsToCEList = NULL;
+#endif
+
     ceToCharsStartingWith = new CEToStringsMap();
     
     if (cacheKeyLength > KEY_BUFFER_SIZE) {
@@ -544,14 +563,18 @@ CollData::CollData(UCollator *collator, char *cacheKey, int32_t cacheKeyLength)
                 UnicodeString *st = new UnicodeString(ch);
                 CEList *ceList = new CEList(coll, *st);
 
+#ifdef CACHE_CELISTS
                 charsToCEList->put(st, ceList);
+#endif
                 ceToCharsStartingWith->put(ceList->get(0), st);
             }
         } else if (len > 0) {
             UnicodeString *st = new UnicodeString(buffer, len);
             CEList *ceList = new CEList(coll, *st);
 
+#ifdef CACHE_CELISTS
             charsToCEList->put(st, ceList);
+#endif
             ceToCharsStartingWith->put(ceList->get(0), st);
         } else {
             // shouldn't happen...
@@ -574,7 +597,10 @@ CollData::~CollData()
    }
 
    delete ceToCharsStartingWith;
+
+#ifdef CACHE_CELISTS
    delete charsToCEList;
+#endif
 }
 
 UCollator *CollData::getCollator() const
@@ -589,7 +615,18 @@ const StringList *CollData::getStringList(int32_t ce) const
 
 const CEList *CollData::getCEList(const UnicodeString *string) const
 {
+#ifdef CACHE_CELISTS
     return charsToCEList->get(string);
+#else
+    return new CEList(coll, *string);
+#endif
+}
+
+void CollData::freeCEList(const CEList *list)
+{
+#ifndef CACHE_CELISTS
+    delete list;
+#endif
 }
 
 int32_t CollData::minLengthInChars(const CEList *ceList, int32_t offset, int32_t *history) const
@@ -611,7 +648,11 @@ int32_t CollData::minLengthInChars(const CEList *ceList, int32_t offset, int32_t
       
         for (int32_t s = 0; s < stringCount; s += 1) {
             const UnicodeString *string = strings->get(s);
+#ifdef CACHE_CELISTS
             const CEList *ceList2 = charsToCEList->get(string);
+#else
+            CEList *ceList2 = new CEList(coll, *string);
+#endif
 
             if (ceList->matchesAt(offset, ceList2)) {
                 int32_t clength = ceList2->size();
@@ -632,6 +673,10 @@ int32_t CollData::minLengthInChars(const CEList *ceList, int32_t offset, int32_t
                     shortestLength = slength + rlength;
                 }
             }
+
+#ifndef CACHE_CELISTS
+            delete ceList2;
+#endif
         }
     }
 

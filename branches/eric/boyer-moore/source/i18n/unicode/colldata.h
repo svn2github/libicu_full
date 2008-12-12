@@ -23,6 +23,7 @@
 U_NAMESPACE_BEGIN
 
 #define KEY_BUFFER_SIZE 64
+#define CELIST_BUFFER_SIZE 4
 
 class U_I18N_API CEList : public UObject
 {
@@ -42,9 +43,12 @@ public:
 private:
     void add(int32_t ce);
 
+    int32_t ceBuffer[CELIST_BUFFER_SIZE];
     int32_t *ces;
     int32_t listMax;
     int32_t listSize;
+
+    static int32_t _histogram[10];
 };
 
 class U_I18N_API StringList : public UObject
@@ -82,6 +86,7 @@ public:
     const StringList *getStringList(int32_t ce) const;
 
     const CEList *getCEList(const UnicodeString *string) const;
+    void freeCEList(const CEList *list);
 
     int32_t minLengthInChars(const CEList *ces, int32_t offset) const;
 

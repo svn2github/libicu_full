@@ -1258,8 +1258,9 @@ UnicodeString &StringSetMonkey::generateAlternative(const UnicodeString &testCas
         int32_t tries = 0;
       
         // find random string that generates the same CEList
-        const CEList *ceList2;
-        const UnicodeString *string;
+        const CEList *ceList2 = NULL;
+        const UnicodeString *string = NULL;
+              UBool matches = FALSE;
 
         do {
             int32_t s = m_rand() % stringCount;
@@ -1271,10 +1272,16 @@ UnicodeString &StringSetMonkey::generateAlternative(const UnicodeString &testCas
 
             string = strings->get(s);
             ceList2 = collData->getCEList(string);
-        } while (! ceList.matchesAt(offset, ceList2));
+            matches = ceList.matchesAt(offset, ceList2);
+
+            if (! matches) {
+                collData->freeCEList((CEList *) ceList2);
+            }
+        } while (! matches);
 
         alt.append(*string);
         offset += ceList2->size();
+        collData->freeCEList(ceList2);
     }
 
     const CEList altCEs(coll, alt);
