@@ -34,12 +34,16 @@
 #include "uvector.h"
 #include "uassert.h"
 
+
+
+#include <stdio.h>   // DEBUG
+
 U_NAMESPACE_USE
 
 // Forward Declarations
 
 static  void buildConfusableData(SpoofImpl *This, const char *confusables,
-    int32_t confusablesLen, UParseError *pe, UErrorCode *status);
+    int32_t confusablesLen, int32_t *errorType, UParseError *pe, UErrorCode *status);
 
 
 static void buildConfusableWSData(SpoofImpl *This, const char *confusablesWholeScript, 
@@ -71,7 +75,7 @@ uspoof_openFromSource(const char *confusables,  int32_t confusablesLen,
     
     SpoofImpl *This = new SpoofImpl(NULL, *status);
 
-    buildConfusableData(This, confusables, confusablesLen, pe, status);
+    buildConfusableData(This, confusables, confusablesLen, errorType, pe, status);
     buildConfusableWSData(This, confusablesWholeScript, confusablesWholeScriptLen, status);
     buildXidData(This, xidModifications, xidModificationsLen, status);
 
@@ -228,17 +232,22 @@ static UChar32 ScanHex(const UChar *s, int32_t start, int32_t limit, UErrorCode 
     }
     if (val > 0x10ffff) {
         *status = U_PARSE_ERROR;
+        val = 0;
     }
     return (UChar32)val;
 }
         
 
 void buildConfusableData(SpoofImpl * This, const char * confusables,
-    int32_t confusablesLen, UParseError *pe, UErrorCode *status) {
+    int32_t confusablesLen, int32_t *errorType, UParseError *pe, UErrorCode *status) {
 
+    if (U_FAILURE(*status)) {
+        return;
+    }
     // Declarations for allocated items that need to be closed or deleted
     //   at the end.  Declatations are here at the top to allow common
     //   cleanup code in the event of errors.
+    UChar *input = NULL;
     UHashtable *SLTable = NULL;
     UHashtable *SATable = NULL; 
     UHashtable *MLTable = NULL; 
@@ -246,15 +255,17 @@ void buildConfusableData(SpoofImpl * This, const char * confusables,
     SPUStringPool *stringPool = NULL;
     URegularExpression *parseLine = NULL;
     URegularExpression *parseHexNum  = NULL;
-    
+    int32_t lineNum = 0;
+
     // Convert the user input data from UTF-8 to UChar (UTF-16)
     
     int32_t inputLen = 0;
     u_strFromUTF8(NULL, 0, &inputLen, confusables, confusablesLen, status);
-    if (U_FAILURE(*status)) {
-        return;
+    if (*status != U_BUFFER_OVERFLOW_ERROR) {
+        goto cleanup;
     }
-    UChar *input = static_cast<UChar *>(uprv_malloc(inputLen+1 * sizeof(UChar)));
+    *status = U_ZERO_ERROR;
+    input = static_cast<UChar *>(uprv_malloc(inputLen+1 * sizeof(UChar)));
     if (input == NULL) {
         *status = U_MEMORY_ALLOCATION_ERROR;
     }
@@ -268,30 +279,43 @@ void buildConfusableData(SpoofImpl * This, const char * confusables,
     MLTable = uhash_open(uhash_hashLong, uhash_compareLong, NULL, status);
     MATable = uhash_open(uhash_hashLong, uhash_compareLong, NULL, status);
     stringPool = new SPUStringPool(status);
-
     if (U_FAILURE(*status)) {
         goto cleanup;
     }
 
-    // Regular Expression to parse a line from Confusables.txt
+    // Regular Expression to parse a line from Confusables.txt.  The expression will match
+    // any line.  What was matched is determined by examining which capture groups have a match.
     //   Capture Group 1:  the source char
     //   Capture Group 2:  the replacement chars
     //   Capture Group 3-6  the table type, SL, SA, ML, or MA
     //   Capture Group 7:  A blank or comment only line.
     //   Capture Group 8:  A syntactically invalid line.  Anything that didn't match before.
+    // Example Line from the confusables.txt source file:
+    //   "1D702 ;	006E 0329 ;	SL	# MATHEMATICAL ITALIC SMALL ETA ... "
     parseLine = uregex_openC(
-        "(?m)^\\s*([0-9A-F]+)\\s+;([^;]+);\\s+(?:(SL)|(SA)|(ML)|(MA))\\s*(?:#.s*?)$"
-        "|^(\\s*(?:#\\s*))$|^(.*?)$", 0, NULL, status);
-    
+        "(?m)^[ \\t]*([0-9A-Fa-f]+)[ \\t]+;"      // Match the source char
+        "[ \\t]*([0-9A-Fa-f]+"                    // Match the replacement char(s)
+           "(?:[ \\t]+[0-9A-Fa-f]+)*)[ \\t]*;"    //     (continued)
+        "\\s*(?:(SL)|(SA)|(ML)|(MA))"             // Match the table type
+        "[ \\t]*(?:#.*?)?$"                       // Match any trailing #comment
+        "|^([ \\t]*(?:#.*?)?)$"       // OR match empty lines or lines with only a #comment
+        "|^(.*?)$",                   // OR match any line, which catches illegal lines.
+        0, NULL, status);
+        
     // Regular expression for parsing a hex number out of a space-separated list of them.
     //   Capture group 1 gets the number, with spaces removed.
     parseHexNum = uregex_openC("\\s*([0-9A-F]+)", 0, NULL, status);
 
+    // Zap any Byte Order Mark at the start of input.  Changing it to a space is benign
+    //   given the syntax of the input.
+    if (*input == 0xfeff) {
+        *input = 0x20;
+    }
+
+    // Parse the input, one line per iteration of this loop.
     uregex_setText(parseLine, input, inputLen, status);
-    int32_t  lineNum;
-    while (uregex_findNext(parseLine, status)) {  
+    while (uregex_findNext(parseLine, status)) {
         lineNum++;
-        pe->line = lineNum;    // No error yet, but we are prepared just in case.
         if (uregex_start(parseLine, 7, status) >= 0) {
             // this was a blank or comment line.
             continue;
@@ -306,17 +330,19 @@ void buildConfusableData(SpoofImpl * This, const char * confusables,
         //    put them into the appropriate mapping table.
         UChar32 keyChar = ScanHex(input, uregex_start(parseLine, 1, status), 
                           uregex_end(parseLine, 1, status), status);
-        int32_t mapStringStart = uregex_start(parseLine, 1, status);
-        int32_t mapStringLength = uregex_end(parseLine, 1, status) - mapStringStart;
+                          
+        int32_t mapStringStart = uregex_start(parseLine, 2, status);
+        int32_t mapStringLength = uregex_end(parseLine, 2, status) - mapStringStart;
         uregex_setText(parseHexNum, &input[mapStringStart], mapStringLength, status);
+        
         UnicodeString  *mapString = new UnicodeString();
         if (mapString == NULL) {
             *status = U_MEMORY_ALLOCATION_ERROR;
             goto cleanup;
         }
         while (uregex_findNext(parseHexNum, status)) {
-            UChar32 c = ScanHex(&input[mapStringStart], uregex_start(parseLine, 1, status),
-                                 uregex_end(parseLine, 1, status), status);
+            UChar32 c = ScanHex(&input[mapStringStart], uregex_start(parseHexNum, 1, status),
+                                 uregex_end(parseHexNum, 1, status), status);
             mapString->append(c);
         }
         U_ASSERT(mapString->length() >= 1);
@@ -326,11 +352,12 @@ void buildConfusableData(SpoofImpl * This, const char * confusables,
         SPUString *smapString = stringPool->addString(mapString, status);
         
         // Add the UChar -> string mapping to the appropriate table.
-        UHashtable *table = uregex_start(parseLine, 3, status) > 0 ? SLTable :
-                            uregex_start(parseLine, 4, status) > 0 ? SATable :
-                            uregex_start(parseLine, 5, status) > 0 ? MLTable :
-                            uregex_start(parseLine, 6, status) > 0 ? MATable :
+        UHashtable *table = uregex_start(parseLine, 3, status) >= 0 ? SLTable :
+                            uregex_start(parseLine, 4, status) >= 0 ? SATable :
+                            uregex_start(parseLine, 5, status) >= 0 ? MLTable :
+                            uregex_start(parseLine, 6, status) >= 0 ? MATable :
                             NULL;
+        U_ASSERT(table != NULL);
         uhash_iput(table, keyChar, smapString, status);
         if (U_FAILURE(*status)) {
             goto cleanup;
@@ -338,6 +365,11 @@ void buildConfusableData(SpoofImpl * This, const char * confusables,
     }
 
   cleanup:
+    if (U_FAILURE(*status)) {
+        *errorType = USPOOF_SINGLE_SCRIPT_CONFUSABLE;
+        pe->line = lineNum;
+    }
+        
     uprv_free(input);
     uhash_close(SLTable);
     uhash_close(SATable);
