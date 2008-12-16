@@ -28,7 +28,7 @@
 #include "unicode/utypes.h"
 
 /**
- * \file 
+ * \file
  * \brief C++ API: Calendar object
  */
 #if !UCONFIG_NO_FORMATTING
@@ -192,7 +192,7 @@ public:
         DST_OFFSET,           // Example: 0 or U_MILLIS_PER_HOUR
         YEAR_WOY,             // 'Y' Example: 1..big number - Year of Week of Year
         DOW_LOCAL,            // 'e' Example: 1..7 - Day of Week / Localized
-		
+
 		EXTENDED_YEAR,
 		JULIAN_DAY,
 		MILLISECONDS_IN_DAY,
@@ -367,6 +367,22 @@ public:
      * @stable ICU 2.0
      */
     static UDate U_EXPORT2 getNow(void);
+
+    /**
+     * Given a keyword and a Locale, return a string enumeration of all values
+     * that this Locale supports for the given keyword.
+     * @param keyword a particular keyword as enumerated by
+     * ucol_getKeywords. If any other keyword is passed in, status is set
+     * to U_ILLEGAL_ARGUMENT_ERROR.
+     * @param locLD input Locale
+     * @param commonlyUsed if set to true it will return commonly used values with the given Locale, otherwise
+     * returns all the available values
+     * @param status input-output error code
+     * @return a string enumeration over collation keyword values supported by the given Locale, or NULL
+     * upon error. The caller is responsible for deleting the result.
+     * @draft ICU 4.2
+     */
+    static StringEnumeration* U_EXPORT2 getKeywordValuesForLocale(const char *keyword, const Locale& objectLocale, UBool& commonlyUsed, UErrorCode& status);
 
     /**
      * Gets this Calendar's time as milliseconds. May involve recalculation of time due
