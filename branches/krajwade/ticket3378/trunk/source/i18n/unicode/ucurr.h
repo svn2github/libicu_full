@@ -9,9 +9,10 @@
 
 #include "unicode/utypes.h"
 #include "unicode/uenum.h"
+#include "ulocimp.h"
 
 /**
- * \file 
+ * \file
  * \brief C API: Encapsulates information about a currency.
  */
 
@@ -36,7 +37,7 @@
 
 /**
  * Finds a currency code for the given locale.
- * @param locale the locale for which to retrieve a currency code. 
+ * @param locale the locale for which to retrieve a currency code.
  *               Currency can be specified by the "currency" keyword
  *               in which case it overrides the default currency code
  * @param buff   fill in buffer. Can be NULL for preflighting.
@@ -45,8 +46,8 @@
  *               must not be NULL.
  * @param ec error code
  * @return length of the currency string. It should always be 3. If 0,
- *                currency couldn't be found or the input values are 
- *                invalid. 
+ *                currency couldn't be found or the input values are
+ *                invalid.
  * @stable ICU 2.8
  */
 U_STABLE int32_t U_EXPORT2
@@ -95,14 +96,14 @@ typedef const void* UCurrRegistryKey;
  * @stable ICU 2.6
  */
 U_STABLE UCurrRegistryKey U_EXPORT2
-ucurr_register(const UChar* isoCode, 
-                   const char* locale,  
+ucurr_register(const UChar* isoCode,
+                   const char* locale,
                    UErrorCode* status);
 /**
  * Unregister the previously-registered currency definitions using the
  * URegistryKey returned from ucurr_register.  Key becomes invalid after
- * a successful call and should not be used again.  Any currency 
- * that might have been hidden by the original ucurr_register call is 
+ * a successful call and should not be used again.  Any currency
+ * that might have been hidden by the original ucurr_register call is
  * restored.
  * @param key the registry key returned by a previous call to ucurr_register
  * @param status the in/out status code, no special meanings are assigned
@@ -219,7 +220,7 @@ typedef enum UCurrCurrencyType {
 U_STABLE UEnumeration * U_EXPORT2
 ucurr_openISOCurrencies(uint32_t currType, UErrorCode *pErrorCode);
 
-/** 
+/**
  * Finds the number of valid currency codes for the
  * given locale and date.
  * @param locale the locale for which to retrieve the
@@ -234,36 +235,55 @@ ucurr_openISOCurrencies(uint32_t currType, UErrorCode *pErrorCode);
  * @draft ICU 4.0
  */
 U_DRAFT int32_t U_EXPORT2
-ucurr_countCurrencies(const char* locale, 
-                 UDate date, 
-                 UErrorCode* ec); 
+ucurr_countCurrencies(const char* locale,
+                 UDate date,
+                 UErrorCode* ec);
 
-/** 
- * Finds a currency code for the given locale and date 
- * @param locale the locale for which to retrieve a currency code.  
- *               Currency can be specified by the "currency" keyword 
- *               in which case it overrides the default currency code 
- * @param date   the date for which to retrieve a currency code for 
- *               the given locale. 
+/**
+ * Finds a currency code for the given locale and date
+ * @param locale the locale for which to retrieve a currency code.
+ *               Currency can be specified by the "currency" keyword
+ *               in which case it overrides the default currency code
+ * @param date   the date for which to retrieve a currency code for
+ *               the given locale.
  * @param index  the index within the available list of currency codes
  *               for the given locale on the given date.
- * @param buff   fill in buffer. Can be NULL for preflighting. 
- * @param buffCapacity capacity of the fill in buffer. Can be 0 for 
- *               preflighting. If it is non-zero, the buff parameter 
- *               must not be NULL. 
- * @param ec     error code 
- * @return       length of the currency string. It should always be 3. 
- *               If 0, currency couldn't be found or the input values are  
- *               invalid.  
- * @draft ICU 4.0 
- */ 
-U_DRAFT int32_t U_EXPORT2 
-ucurr_forLocaleAndDate(const char* locale, 
-                UDate date, 
+ * @param buff   fill in buffer. Can be NULL for preflighting.
+ * @param buffCapacity capacity of the fill in buffer. Can be 0 for
+ *               preflighting. If it is non-zero, the buff parameter
+ *               must not be NULL.
+ * @param ec     error code
+ * @return       length of the currency string. It should always be 3.
+ *               If 0, currency couldn't be found or the input values are
+ *               invalid.
+ * @draft ICU 4.0
+ */
+U_DRAFT int32_t U_EXPORT2
+ucurr_forLocaleAndDate(const char* locale,
+                UDate date,
                 int32_t index,
-                UChar* buff, 
-                int32_t buffCapacity, 
-                UErrorCode* ec); 
+                UChar* buff,
+                int32_t buffCapacity,
+                UErrorCode* ec);
+
+/**
+ * Given a keyword and a Locale, return a string enumeration of all values
+ * that this Locale supports for the given keyword.
+ * @param keyword a particular keyword as enumerated by
+ * ucol_getKeywords. If any other keyword is passed in, status is set
+ * to U_ILLEGAL_ARGUMENT_ERROR.
+ * @param locale input Locale
+ * @param commonlyUsed if set to true it will return commonly used values with the given Locale, otherwise
+ * returns all the available values
+ * @param status input-output error code
+ * @return a string enumeration over calendar keyword values supported by the given Locale, or NULL
+ * upon error. The caller is responsible for deleting the result.
+ * @draft ICU 4.2
+ */
+U_DRAFT UEnumeration* U_EXPORT2
+ucurr_getKeywordValuesForLocale(const char *keyword, const char* locale, UBool *commonlyUsed, UErrorCode *status);
+
+
 
 #endif /* #if !UCONFIG_NO_FORMATTING */
 
