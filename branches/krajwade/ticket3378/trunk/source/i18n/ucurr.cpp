@@ -1391,7 +1391,7 @@ ucurr_forLocaleAndDate(const char* locale,
 static const char* const KEYWORDS[] = { "currency" };
 
 U_CAPI UEnumeration* U_EXPORT2
-ucurr_getKeywordValuesFoLocale(const char *keyword, const char* locale, UBool *commonlyUsed, UErrorCode *status) {
+ucurr_getKeywordValuesForLocale(const char *keyword, const char* locale, UBool *commonlyUsed, UErrorCode *status) {
 #define VALUES_BUF_SIZE 2048
 #define VALUES_LIST_SIZE 512
 #define BUFFERSIZE 128
