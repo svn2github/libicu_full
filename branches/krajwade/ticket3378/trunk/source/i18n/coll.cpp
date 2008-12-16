@@ -31,7 +31,7 @@
  * 05/06/97     helena      Added memory allocation error detection.
  * 05/08/97     helena      Added createInstance().
  *  6/20/97     helena      Java class name change.
- * 04/23/99     stephen     Removed EDecompositionMode, merged with 
+ * 04/23/99     stephen     Removed EDecompositionMode, merged with
  *                          Normalizer::EMode
  * 11/23/9      srl         Inlining of some critical functions
  * 01/29/01     synwee      Modified into a C++ wrapper calling C APIs (ucol.h)
@@ -100,8 +100,8 @@ CollatorFactory::visible(void) const {
 
 //-------------------------------------------
 
-UnicodeString& 
-CollatorFactory::getDisplayName(const Locale& objectLocale, 
+UnicodeString&
+CollatorFactory::getDisplayName(const Locale& objectLocale,
                                 const Locale& displayLocale,
                                 UnicodeString& result)
 {
@@ -112,7 +112,7 @@ CollatorFactory::getDisplayName(const Locale& objectLocale,
 
 class ICUCollatorFactory : public ICUResourceBundleFactory {
  public:
-    ICUCollatorFactory():  ICUResourceBundleFactory(UnicodeString(U_ICUDATA_COLL, -1, US_INV)) { } 
+    ICUCollatorFactory():  ICUResourceBundleFactory(UnicodeString(U_ICUDATA_COLL, -1, US_INV)) { }
  protected:
     virtual UObject* create(const ICUServiceKey& key, const ICUService* service, UErrorCode& status) const;
 };
@@ -126,7 +126,7 @@ ICUCollatorFactory::create(const ICUServiceKey& key, const ICUService* /* servic
         // default LocaleFactory uses currentLocale since that's the one vetted by handlesKey
         // but for ICU rb resources we use the actual one since it will fallback again
         lkey.canonicalLocale(loc);
-        
+
         return Collator::makeInstance(loc, status);
     }
     return NULL;
@@ -142,11 +142,11 @@ public:
         UErrorCode status = U_ZERO_ERROR;
         registerFactory(new ICUCollatorFactory(), status);
     }
-    
+
     virtual UObject* cloneInstance(UObject* instance) const {
         return ((Collator*)instance)->clone();
     }
-    
+
     virtual UObject* handleDefault(const ICUServiceKey& key, UnicodeString* actualID, UErrorCode& status) const {
         LocaleKey& lkey = (LocaleKey&)key;
         if (actualID) {
@@ -159,7 +159,7 @@ public:
         lkey.canonicalLocale(loc);
         return Collator::makeInstance(loc, status);
     }
-    
+
     virtual UObject* getKey(ICUServiceKey& key, UnicodeString* actualReturn, UErrorCode& status) const {
         UnicodeString ar;
         if (actualReturn == NULL) {
@@ -176,7 +176,7 @@ public:
             const LocaleKey& lkey = (const LocaleKey&)key;
             Locale canonicalLocale("");
             Locale currentLocale("");
-            
+
             LocaleUtility::initLocaleFromName(*actualReturn, currentLocale);
             result->setLocales(lkey.canonicalLocale(canonicalLocale), currentLocale, currentLocale);
         }
@@ -190,7 +190,7 @@ public:
 
 // -------------------------------------
 
-static ICULocaleService* 
+static ICULocaleService*
 getService(void)
 {
     UBool needInit;
@@ -218,7 +218,7 @@ getService(void)
 // -------------------------------------
 
 static inline UBool
-hasService(void) 
+hasService(void)
 {
     UBool retVal;
     UMTX_CHECK(NULL, gService != NULL, retVal);
@@ -227,7 +227,7 @@ hasService(void)
 
 // -------------------------------------
 
-UCollator* 
+UCollator*
 Collator::createUCollator(const char *loc,
                           UErrorCode *status)
 {
@@ -261,15 +261,15 @@ static UBool isAvailableLocaleListInitialized(UErrorCode &status) {
         Locale * temp;
         int32_t i = 0;
         int32_t localeCount;
-        
+
         ures_initStackObject(&installed);
         index = ures_openDirect(U_ICUDATA_COLL, "res_index", &status);
         ures_getByKey(index, "InstalledLocales", &installed, &status);
-        
+
         if(U_SUCCESS(status)) {
             localeCount = ures_getSize(&installed);
             temp = new Locale[localeCount];
-            
+
             if (temp != NULL) {
                 ures_resetIterator(&installed);
                 while(ures_hasNext(&installed)) {
@@ -277,7 +277,7 @@ static UBool isAvailableLocaleListInitialized(UErrorCode &status) {
                     ures_getNextString(&installed, NULL, &tempKey, &status);
                     temp[i++] = Locale(tempKey);
                 }
-                
+
                 umtx_lock(NULL);
                 if (availableLocaleList == NULL)
                 {
@@ -285,7 +285,7 @@ static UBool isAvailableLocaleListInitialized(UErrorCode &status) {
                     availableLocaleList = temp;
                     temp = NULL;
                     ucln_i18n_registerCleanup(UCLN_I18N_COLLATOR, collator_cleanup);
-                } 
+                }
                 umtx_unlock(NULL);
 
                 needInit = FALSE;
@@ -303,7 +303,7 @@ static UBool isAvailableLocaleListInitialized(UErrorCode &status) {
 
 // Collator public methods -----------------------------------------------
 
-Collator* U_EXPORT2 Collator::createInstance(UErrorCode& success) 
+Collator* U_EXPORT2 Collator::createInstance(UErrorCode& success)
 {
     return createInstance(Locale::getDefault(), success);
 }
@@ -311,9 +311,9 @@ Collator* U_EXPORT2 Collator::createInstance(UErrorCode& success)
 Collator* U_EXPORT2 Collator::createInstance(const Locale& desiredLocale,
                                    UErrorCode& status)
 {
-    if (U_FAILURE(status)) 
+    if (U_FAILURE(status))
         return 0;
-    
+
 #if !UCONFIG_NO_SERVICE
     if (hasService()) {
         Locale actualLoc;
@@ -335,31 +335,31 @@ Collator* U_EXPORT2 Collator::createInstance(const Locale& desiredLocale,
 }
 
 
-Collator* Collator::makeInstance(const Locale&  desiredLocale, 
+Collator* Collator::makeInstance(const Locale&  desiredLocale,
                                          UErrorCode& status)
 {
-    // A bit of explanation is required here. Although in the current 
+    // A bit of explanation is required here. Although in the current
     // implementation
-    // Collator::createInstance() is just turning around and calling 
-    // RuleBasedCollator(Locale&), this will not necessarily always be the 
-    // case. For example, suppose we modify this code to handle a 
-    // non-table-based Collator, such as that for Thai. In this case, 
+    // Collator::createInstance() is just turning around and calling
+    // RuleBasedCollator(Locale&), this will not necessarily always be the
+    // case. For example, suppose we modify this code to handle a
+    // non-table-based Collator, such as that for Thai. In this case,
     // createInstance() will have to be modified to somehow determine this fact
-    // (perhaps a field in the resource bundle). Then it can construct the 
-    // non-table-based Collator in some other way, when it sees that it needs 
+    // (perhaps a field in the resource bundle). Then it can construct the
+    // non-table-based Collator in some other way, when it sees that it needs
     // to.
-    // The specific caution is this: RuleBasedCollator(Locale&) will ALWAYS 
-    // return a valid collation object, if the system is functioning properly.  
-    // The reason is that it will fall back, use the default locale, and even 
-    // use the built-in default collation rules. THEREFORE, createInstance() 
-    // should in general ONLY CALL RuleBasedCollator(Locale&) IF IT KNOWS IN 
-    // ADVANCE that the given locale's collation is properly implemented as a 
+    // The specific caution is this: RuleBasedCollator(Locale&) will ALWAYS
+    // return a valid collation object, if the system is functioning properly.
+    // The reason is that it will fall back, use the default locale, and even
+    // use the built-in default collation rules. THEREFORE, createInstance()
+    // should in general ONLY CALL RuleBasedCollator(Locale&) IF IT KNOWS IN
+    // ADVANCE that the given locale's collation is properly implemented as a
     // RuleBasedCollator.
-    // Currently, we don't do this...we always return a RuleBasedCollator, 
-    // whether it is strictly correct to do so or not, without checking, because 
+    // Currently, we don't do this...we always return a RuleBasedCollator,
+    // whether it is strictly correct to do so or not, without checking, because
     // we currently have no way of checking.
-    
-    RuleBasedCollator* collation = new RuleBasedCollator(desiredLocale, 
+
+    RuleBasedCollator* collation = new RuleBasedCollator(desiredLocale,
         status);
     /* test for NULL */
     if (collation == 0) {
@@ -384,14 +384,14 @@ Collator::createInstance(const Locale &loc,
 {
     Collator *collator;
     UVersionInfo info;
-    
+
     collator=new RuleBasedCollator(loc, status);
     /* test for NULL */
     if (collator == 0) {
         status = U_MEMORY_ALLOCATION_ERROR;
         return 0;
     }
-    
+
     if(U_SUCCESS(status)) {
         collator->getVersion(info);
         if(0!=uprv_memcmp(version, info, sizeof(UVersionInfo))) {
@@ -405,7 +405,7 @@ Collator::createInstance(const Locale &loc,
 #endif
 
 // implement deprecated, previously abstract method
-Collator::EComparisonResult Collator::compare(const UnicodeString& source, 
+Collator::EComparisonResult Collator::compare(const UnicodeString& source,
                                     const UnicodeString& target) const
 {
     UErrorCode ec = U_ZERO_ERROR;
@@ -423,28 +423,28 @@ Collator::EComparisonResult Collator::compare(const UnicodeString& source,
 
 // implement deprecated, previously abstract method
 Collator::EComparisonResult Collator::compare(const UChar* source, int32_t sourceLength,
-                                    const UChar* target, int32_t targetLength) 
+                                    const UChar* target, int32_t targetLength)
                                     const
 {
     UErrorCode ec = U_ZERO_ERROR;
     return (Collator::EComparisonResult)compare(source, sourceLength, target, targetLength, ec);
 }
 
-UBool Collator::equals(const UnicodeString& source, 
+UBool Collator::equals(const UnicodeString& source,
                        const UnicodeString& target) const
 {
     UErrorCode ec = U_ZERO_ERROR;
     return (compare(source, target, ec) == UCOL_EQUAL);
 }
 
-UBool Collator::greaterOrEqual(const UnicodeString& source, 
+UBool Collator::greaterOrEqual(const UnicodeString& source,
                                const UnicodeString& target) const
 {
     UErrorCode ec = U_ZERO_ERROR;
     return (compare(source, target, ec) != UCOL_LESS);
 }
 
-UBool Collator::greater(const UnicodeString& source, 
+UBool Collator::greater(const UnicodeString& source,
                         const UnicodeString& target) const
 {
     UErrorCode ec = U_ZERO_ERROR;
@@ -453,7 +453,7 @@ UBool Collator::greater(const UnicodeString& source,
 
 // this API  ignores registered collators, since it returns an
 // array of indefinite lifetime
-const Locale* U_EXPORT2 Collator::getAvailableLocales(int32_t& count) 
+const Locale* U_EXPORT2 Collator::getAvailableLocales(int32_t& count)
 {
     UErrorCode status = U_ZERO_ERROR;
     Locale *result = NULL;
@@ -482,7 +482,7 @@ UnicodeString& U_EXPORT2 Collator::getDisplayName(const Locale& objectLocale,
 
 UnicodeString& U_EXPORT2 Collator::getDisplayName(const Locale& objectLocale,
                                         UnicodeString& name)
-{   
+{
     return getDisplayName(objectLocale, Locale::getDefault(), name);
 }
 
@@ -511,7 +511,7 @@ Collator::Collator()
 * Constructor.
 * Empty constructor, does not handle the arguments.
 * This constructor is done for backward compatibility with 1.7 and 1.8.
-* The task for handling the argument collation strength and normalization 
+* The task for handling the argument collation strength and normalization
 * mode is left to the child class.
 * @param collationStrength collation strength
 * @param decompositionMode
@@ -569,7 +569,7 @@ UnicodeSet *Collator::getTailoredSet(UErrorCode &status) const
 
 #if !UCONFIG_NO_SERVICE
 URegistryKey U_EXPORT2
-Collator::registerInstance(Collator* toAdopt, const Locale& locale, UErrorCode& status) 
+Collator::registerInstance(Collator* toAdopt, const Locale& locale, UErrorCode& status)
 {
     if (U_SUCCESS(status)) {
         return getService()->registerInstance(toAdopt, locale, status);
@@ -583,9 +583,9 @@ class CFactory : public LocaleKeyFactory {
 private:
     CollatorFactory* _delegate;
     Hashtable* _ids;
-    
+
 public:
-    CFactory(CollatorFactory* delegate, UErrorCode& status) 
+    CFactory(CollatorFactory* delegate, UErrorCode& status)
         : LocaleKeyFactory(delegate->visible() ? VISIBLE : INVISIBLE)
         , _delegate(delegate)
         , _ids(NULL)
@@ -608,15 +608,15 @@ public:
             }
         }
     }
-    
+
     virtual ~CFactory()
     {
         delete _delegate;
         delete _ids;
     }
-    
+
     virtual UObject* create(const ICUServiceKey& key, const ICUService* service, UErrorCode& status) const;
-    
+
 protected:
     virtual const Hashtable* getSupportedIDs(UErrorCode& status) const
     {
@@ -625,12 +625,12 @@ protected:
         }
         return NULL;
     }
-    
+
     virtual UnicodeString&
         getDisplayName(const UnicodeString& id, const Locale& locale, UnicodeString& result) const;
 };
 
-UObject* 
+UObject*
 CFactory::create(const ICUServiceKey& key, const ICUService* /* service */, UErrorCode& status) const
 {
     if (handlesKey(key, status)) {
@@ -643,7 +643,7 @@ CFactory::create(const ICUServiceKey& key, const ICUService* /* service */, UErr
 }
 
 UnicodeString&
-CFactory::getDisplayName(const UnicodeString& id, const Locale& locale, UnicodeString& result) const 
+CFactory::getDisplayName(const UnicodeString& id, const Locale& locale, UnicodeString& result) const
 {
     if ((_coverage & 0x1) == 0) {
         UErrorCode status = U_ZERO_ERROR;
@@ -674,7 +674,7 @@ Collator::registerFactory(CollatorFactory* toAdopt, UErrorCode& status)
 // -------------------------------------
 
 UBool U_EXPORT2
-Collator::unregister(URegistryKey key, UErrorCode& status) 
+Collator::unregister(URegistryKey key, UErrorCode& status)
 {
     if (U_SUCCESS(status)) {
         if (hasService()) {
@@ -796,6 +796,17 @@ Collator::getFunctionalEquivalent(const char* keyword, const Locale& locale,
         *loc = 0; // root
     }
     return Locale::createFromName(loc);
+}
+
+StringEnumeration* U_EXPORT2
+Collator::getKeywordValuesForLocale(const char *keyword, const Locale& locale, UBool& commonlyUsed, UErrorCode& status) {
+    // This is a wrapper over ucol_getKeywordValuesFoLocale
+	UEnumeration* uenum = ucol_getKeywordValuesForLocale(keyword,locale.getName(), &commonlyUsed, &status);
+    if (U_FAILURE(status)) {
+        uenum_close(uenum);
+        return NULL;
+    }
+    return new UStringEnumeration(uenum);
 }
 
 // UCollator private data members ----------------------------------------

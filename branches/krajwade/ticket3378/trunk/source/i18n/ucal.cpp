@@ -20,6 +20,7 @@
 #include "cmemory.h"
 #include "cstring.h"
 #include "ustrenum.h"
+#include "ulocimp.h"
 
 U_NAMESPACE_USE
 
@@ -123,7 +124,7 @@ ucal_open(  const UChar*  zoneID,
 {
 
   if(U_FAILURE(*status)) return 0;
-  
+
   TimeZone* zone = (zoneID==NULL) ? TimeZone::createDefault()
       : _createTimeZone(zoneID, len, status);
 
@@ -150,12 +151,12 @@ ucal_close(UCalendar *cal)
   delete (Calendar*) cal;
 }
 
-U_CAPI UCalendar* U_EXPORT2 
+U_CAPI UCalendar* U_EXPORT2
 ucal_clone(const UCalendar* cal,
            UErrorCode*      status)
 {
   if(U_FAILURE(*status)) return 0;
-  
+
   Calendar* res = ((Calendar*)cal)->clone();
 
   if(res == 0) {
@@ -225,7 +226,7 @@ ucal_getTimeZoneDisplayName(const     UCalendar*                 cal,
 }
 
 U_CAPI UBool  U_EXPORT2
-ucal_inDaylightTime(    const    UCalendar*      cal, 
+ucal_inDaylightTime(    const    UCalendar*      cal,
                     UErrorCode*     status )
 {
 
@@ -479,7 +480,7 @@ ucal_getLimit(    const    UCalendar*              cal,
 }
 
 U_CAPI const char * U_EXPORT2
-ucal_getLocaleByType(const UCalendar *cal, ULocDataLocaleType type, UErrorCode* status) 
+ucal_getLocaleByType(const UCalendar *cal, ULocDataLocaleType type, UErrorCode* status)
 {
     if (cal == NULL) {
         if (U_SUCCESS(*status)) {
@@ -529,6 +530,202 @@ ucal_getType(const UCalendar *cal, UErrorCode* status)
         return NULL;
     }
     return ((Calendar*)cal)->getType();
+}
+
+
+#define TOTAL_CALENDAR 11
+#define CALENDAR_VALUE 28
+static const char* const KEYWORDS[] = { "calendar" };
+static char* calendarValues[TOTAL_CALENDAR][CALENDAR_VALUE]={
+        {"japanese","JP",NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL, NULL,
+        		NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL},
+        {"islamic-civil","AE", "BH", "DJ", "DZ", "EG", "EH", "ER", "IL", "IQ", "JO", "KM", "KW",
+            "LB", "LY", "MA", "MR", "OM", "PS", "QA", "SA", "SD", "SY", "TD", "TN", "YE", "AF", "IR"},
+        {"islamic","AE", "BH", "DJ", "DZ", "EG", "EH", "ER", "IL", "IQ", "JO", "KM", "KW",
+            "LB", "LY", "MA", "MR", "OM", "PS", "QA", "SA", "SD", "SY", "TD", "TN", "YE", "AF", "IR"},
+        {"chinese","CN", "CX", "HK", "MO", "SG", "TW",NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL, NULL
+        		,NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL, NULL},
+        {"hebrew","IL",NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL, NULL,
+        		NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL},
+        {"buddhist","TH",NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL, NULL
+        		,NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL},
+        {"coptic","EG",NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL, NULL
+        		,NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL},
+        {"persian","AF", "IR",NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL, NULL
+        		,NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL, NULL,NULL},
+        {"ethiopic","ET",NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL, NULL
+        		,NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL},
+        {"indian","IN",NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL, NULL
+        		,NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL},
+        {"roc","TW",NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL, NULL
+        		,NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL, NULL,NULL, NULL}
+    };
+
+int32_t valueCount[] = {
+		1,27,27,
+		6,1,1,
+		1,2,1,
+		1,1
+};
+
+U_CAPI UEnumeration* U_EXPORT2
+ucal_getKeywordValuesForLocale(const char *keyword, const char* locale, UBool *commonlyUsed, UErrorCode *status) {
+#define VALUES_BUF_SIZE 2048
+#define VALUES_LIST_SIZE 512
+#define U_ICUDATA_CAL U_ICUDATA_NAME
+#define BUFFERSIZE 128
+
+	if (U_FAILURE(*status)) {
+        return NULL;
+    }
+    // hard-coded to accept exactly one collation keyword
+    // modify if additional collation keyword is added later
+    if (keyword==NULL || uprv_strcmp(keyword, KEYWORDS[0])!=0)
+    {
+        *status = U_ILLEGAL_ARGUMENT_ERROR;
+        return NULL;
+    }
+
+    char kwVal[1024] = ""; /* value of keyword 'keyword' */
+
+    char       valuesBuf[VALUES_BUF_SIZE] = "";
+    int32_t    valuesIndex = 0;
+    const char *valuesList[VALUES_LIST_SIZE];
+    int32_t    valuesCount = 0;
+
+    valuesBuf[0]=0;
+    valuesBuf[1]=0;
+
+    const char *k;
+    int32_t i;
+
+   	UErrorCode subStatus = U_ZERO_ERROR;
+   	int32_t kwValLen = 0;
+
+   	kwValLen = uloc_getKeywordValue(locale, keyword, kwVal, 1024-1,&subStatus);
+
+   	if(kwValLen && commonlyUsed){
+   		k = kwVal;
+   		if(k && *k) {
+   			int32_t kLen = (int32_t)uprv_strlen(k);
+   			if((valuesCount >= (VALUES_LIST_SIZE-1)) ||       /* no more space in list .. */
+   					((valuesIndex+kLen+1+1) >= VALUES_BUF_SIZE)) { /* no more space in buffer (string + 2 nulls) */
+   				*status = U_ILLEGAL_ARGUMENT_ERROR; /* out of space.. */
+   			} else {
+   				uprv_strcpy(valuesBuf+valuesIndex, k);
+   				valuesList[valuesCount++] = valuesBuf+valuesIndex;
+   				valuesIndex += kLen;
+   				valuesBuf[valuesIndex++] = 0; /* terminate */
+   			}
+   		}
+   		return uloc_openKeywordList(valuesBuf, valuesIndex, status);
+   	}
+
+   	UResourceBundle *coll = NULL;
+    UResourceBundle *subItem = NULL;
+
+    UResourceBundle *res = NULL;
+
+    if(U_FAILURE(subStatus)) {
+    	*status = subStatus;
+    	return NULL;
+    }
+
+    static const char CALENDAR_DATA[] = "supplementalData";
+    subStatus = U_ZERO_ERROR;
+    UResourceBundle *collVal = NULL;
+    res =   ures_openDirect(NULL, CALENDAR_DATA, &subStatus);
+
+    if((subStatus == U_USING_FALLBACK_WARNING) || (subStatus == U_USING_DEFAULT_WARNING))
+    {
+    	subStatus = U_ZERO_ERROR;
+    }
+
+    if(U_FAILURE(subStatus)) {
+    	*status = subStatus;
+    } else if(subStatus == U_ZERO_ERROR) {
+    	char country[BUFFERSIZE];
+    	int32_t countryName = uloc_getCountry(locale, country, BUFFERSIZE, &subStatus);
+    	if(commonlyUsed && countryName <= 0){
+    		char buffer[ULOC_FULLNAME_CAPACITY + ULOC_KEYWORD_AND_VALUES_CAPACITY + 1];
+    		uloc_addLikelySubtags(locale,buffer,sizeof(buffer),&subStatus);
+    		if(subStatus == U_ZERO_ERROR){
+    			countryName = uloc_getCountry(buffer, country, BUFFERSIZE, &subStatus);
+    		}
+    	}
+        if(commonlyUsed){
+        	k = "gregorian";// Gregorian should always be added
+        	int32_t kLen = (int32_t)uprv_strlen(k);
+        	if((valuesCount >= (VALUES_LIST_SIZE-1)) ||
+        			((valuesIndex+kLen+1+1) >= VALUES_BUF_SIZE)) {
+        		*status = U_ILLEGAL_ARGUMENT_ERROR; /* out of space.. */
+        	} else {
+        		uprv_strcpy(valuesBuf+valuesIndex, k);
+        		valuesList[valuesCount++] = valuesBuf+valuesIndex;
+        		valuesIndex += kLen;
+        		valuesBuf[valuesIndex++] = 0; /* terminate */
+        	}
+        	int32_t j,l;
+        	for(i=0;i<TOTAL_CALENDAR;i++){
+        		for(j=1;j<=valueCount[i];j++){
+        			if(uprv_strcmp(country,calendarValues[i][j])==0){
+        				k = calendarValues[i][0];
+        				for(l=0;k&&l<valuesCount;l++) {
+        					if(!uprv_strcmp(valuesList[l],k)) {
+        						k = NULL; /* found duplicate */
+        					}
+        				}
+        				if(k && *k) {
+        					int32_t kLen = (int32_t)uprv_strlen(k);
+        					if((valuesCount >= (VALUES_LIST_SIZE-1)) ||
+        							((valuesIndex+kLen+1+1) >= VALUES_BUF_SIZE)) {
+        						*status = U_ILLEGAL_ARGUMENT_ERROR;
+        					} else {
+        						uprv_strcpy(valuesBuf+valuesIndex, k);
+        						valuesList[valuesCount++] = valuesBuf+valuesIndex;
+        						valuesIndex += kLen;
+        						valuesBuf[valuesIndex++] = 0; /* terminate */
+        					}
+        				}
+        			}
+        		}
+        	}
+        	return uloc_openKeywordList(valuesBuf, valuesIndex, status);
+        }
+
+    	coll = ures_getByKey(res, "calendarData", NULL, &subStatus);
+    	subStatus = U_ZERO_ERROR;
+    	ures_resetIterator(coll);
+    	while(/*ures_hasNext(coll)*/(collVal = ures_getNextResource(coll, subItem/*collVal*/, &subStatus)) && U_SUCCESS(subStatus)){
+    		k = ures_getKey(collVal);
+
+    		for(i=0;k&&i<valuesCount;i++) {
+    			if(!uprv_strcmp(valuesList[i],k)) {
+    				k = NULL; /* found duplicate */
+    			}
+    		}
+    		if(k && *k) {
+    			int32_t kLen = (int32_t)uprv_strlen(k);
+    			//if(!uprv_strcmp(k,DEFAULT_TAG)) {
+    			//continue; /* don't need 'default'. */
+    			//}
+    			if((valuesCount >= (VALUES_LIST_SIZE-1)) ||       /* no more space in list .. */
+    					((valuesIndex+kLen+1+1) >= VALUES_BUF_SIZE)) { /* no more space in buffer (string + 2 nulls) */
+    				*status = U_ILLEGAL_ARGUMENT_ERROR; /* out of space.. */
+    			} else {
+    				uprv_strcpy(valuesBuf+valuesIndex, k);
+    				valuesList[valuesCount++] = valuesBuf+valuesIndex;
+    				valuesIndex += kLen;
+    				valuesBuf[valuesIndex++] = 0; /* terminate */
+    			}
+    		}
+    		//ures_close(collVal);
+    	}
+    }
+    ures_close(res);
+    ures_close(coll);
+    ures_close(subItem);
+    return uloc_openKeywordList(valuesBuf, valuesIndex, status);
 }
 
 #endif /* #if !UCONFIG_NO_FORMATTING */

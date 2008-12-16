@@ -1122,15 +1122,15 @@ ucurr_openISOCurrencies(uint32_t currType, UErrorCode *pErrorCode) {
 }
 
 U_CAPI int32_t U_EXPORT2
-ucurr_countCurrencies(const char* locale, 
-                 UDate date, 
+ucurr_countCurrencies(const char* locale,
+                 UDate date,
                  UErrorCode* ec)
 {
 	int32_t currCount = 0;
     int32_t resLen = 0;
     const UChar* s = NULL;
 
-    if (ec != NULL && U_SUCCESS(*ec)) 
+    if (ec != NULL && U_SUCCESS(*ec))
 	{
 		// local variables
         UErrorCode localStatus = U_ZERO_ERROR;
@@ -1139,18 +1139,18 @@ ucurr_countCurrencies(const char* locale,
 
 		// get country or country_variant in `id'
 		uint32_t variantType = idForLocale(locale, id, sizeof(id), ec);
-		if (U_FAILURE(*ec)) 
+		if (U_FAILURE(*ec))
 		{
 			return 0;
 		}
 
 		// Remove variants, which is only needed for registration.
 		char *idDelim = strchr(id, VAR_DELIM);
-		if (idDelim) 
+		if (idDelim)
 		{
 			idDelim[0] = 0;
 		}
-	                
+
 		// Look up the CurrencyMap element in the root bundle.
 		UResourceBundle *rb = ures_openDirect(NULL, CURRENCY_DATA, &localStatus);
 		UResourceBundle *cm = ures_getByKey(rb, CURRENCY_MAP, rb, &localStatus);
@@ -1172,19 +1172,19 @@ ucurr_countCurrencies(const char* locale,
 				UResourceBundle *fromRes = ures_getByKey(currencyRes, "from", NULL, &localStatus);
 				const int32_t *fromArray = ures_getIntVector(fromRes, &fromLength, &localStatus);
 
-				int64_t currDate64 = (int64_t)fromArray[0] << 32;			
+				int64_t currDate64 = (int64_t)fromArray[0] << 32;
 				currDate64 |= ((int64_t)fromArray[1] & (int64_t)INT64_C(0x00000000FFFFFFFF));
 				UDate fromDate = (UDate)currDate64;
-					
+
 				if (ures_getSize(currencyRes) > 2)
 				{
 					int32_t toLength = 0;
 					UResourceBundle *toRes = ures_getByKey(currencyRes, "to", NULL, &localStatus);
 					const int32_t *toArray = ures_getIntVector(toRes, &toLength, &localStatus);
-							
-					currDate64 = (int64_t)toArray[0] << 32;			
+
+					currDate64 = (int64_t)toArray[0] << 32;
 					currDate64 |= ((int64_t)toArray[1] & (int64_t)INT64_C(0x00000000FFFFFFFF));
-					UDate toDate = (UDate)currDate64;			
+					UDate toDate = (UDate)currDate64;
 
 					if ((fromDate <= date) && (date < toDate))
 					{
@@ -1211,14 +1211,14 @@ ucurr_countCurrencies(const char* locale,
 		ures_close(countryArray);
 
 		// Check for errors
-        if (*ec == U_ZERO_ERROR || localStatus != U_ZERO_ERROR) 
+        if (*ec == U_ZERO_ERROR || localStatus != U_ZERO_ERROR)
 		{
-			// There is nothing to fallback to. 
+			// There is nothing to fallback to.
 			// Report the failure/warning if possible.
 			*ec = localStatus;
 		}
 
-		if (U_SUCCESS(*ec)) 
+		if (U_SUCCESS(*ec))
 		{
 			// no errors
 			return currCount;
@@ -1231,22 +1231,22 @@ ucurr_countCurrencies(const char* locale,
     return 0;
 }
 
-U_CAPI int32_t U_EXPORT2 
-ucurr_forLocaleAndDate(const char* locale, 
-                UDate date, 
+U_CAPI int32_t U_EXPORT2
+ucurr_forLocaleAndDate(const char* locale,
+                UDate date,
                 int32_t index,
-                UChar* buff, 
-                int32_t buffCapacity, 
+                UChar* buff,
+                int32_t buffCapacity,
                 UErrorCode* ec)
 {
     int32_t resLen = 0;
 	int32_t currIndex = 0;
     const UChar* s = NULL;
 
-    if (ec != NULL && U_SUCCESS(*ec)) 
+    if (ec != NULL && U_SUCCESS(*ec))
 	{
 		// check the arguments passed
-        if ((buff && buffCapacity) || !buffCapacity ) 
+        if ((buff && buffCapacity) || !buffCapacity )
 		{
 			// local variables
             UErrorCode localStatus = U_ZERO_ERROR;
@@ -1255,18 +1255,18 @@ ucurr_forLocaleAndDate(const char* locale,
 
 			// get country or country_variant in `id'
 			uint32_t variantType = idForLocale(locale, id, sizeof(id), ec);
-			if (U_FAILURE(*ec)) 
+			if (U_FAILURE(*ec))
 			{
 				return 0;
 			}
 
 			// Remove variants, which is only needed for registration.
 			char *idDelim = strchr(id, VAR_DELIM);
-			if (idDelim) 
+			if (idDelim)
 			{
 				idDelim[0] = 0;
 			}
-	                
+
 			// Look up the CurrencyMap element in the root bundle.
 			UResourceBundle *rb = ures_openDirect(NULL, CURRENCY_DATA, &localStatus);
 			UResourceBundle *cm = ures_getByKey(rb, CURRENCY_MAP, rb, &localStatus);
@@ -1296,19 +1296,19 @@ ucurr_forLocaleAndDate(const char* locale,
 					UResourceBundle *fromRes = ures_getByKey(currencyRes, "from", NULL, &localStatus);
 					const int32_t *fromArray = ures_getIntVector(fromRes, &fromLength, &localStatus);
 
-					int64_t currDate64 = (int64_t)fromArray[0] << 32;			
+					int64_t currDate64 = (int64_t)fromArray[0] << 32;
 					currDate64 |= ((int64_t)fromArray[1] & (int64_t)INT64_C(0x00000000FFFFFFFF));
 					UDate fromDate = (UDate)currDate64;
-					
+
 					if (ures_getSize(currencyRes) > 2)
 					{
 						int32_t toLength = 0;
 						UResourceBundle *toRes = ures_getByKey(currencyRes, "to", NULL, &localStatus);
 						const int32_t *toArray = ures_getIntVector(toRes, &toLength, &localStatus);
-							
-						currDate64 = (int64_t)toArray[0] << 32;			
+
+						currDate64 = (int64_t)toArray[0] << 32;
 						currDate64 |= ((int64_t)toArray[1] & (int64_t)INT64_C(0x00000000FFFFFFFF));
-						UDate toDate = (UDate)currDate64;			
+						UDate toDate = (UDate)currDate64;
 
 						if ((fromDate <= date) && (date < toDate))
 						{
@@ -1336,7 +1336,7 @@ ucurr_forLocaleAndDate(const char* locale,
 					// close open resources
 					ures_close(currencyRes);
 					ures_close(fromRes);
-				        
+
 					// check for loop exit
 					if (matchFound)
 					{
@@ -1349,14 +1349,14 @@ ucurr_forLocaleAndDate(const char* locale,
 			ures_close(countryArray);
 
 			// Check for errors
-            if (*ec == U_ZERO_ERROR || localStatus != U_ZERO_ERROR) 
+            if (*ec == U_ZERO_ERROR || localStatus != U_ZERO_ERROR)
 			{
-				// There is nothing to fallback to. 
+				// There is nothing to fallback to.
 				// Report the failure/warning if possible.
 				*ec = localStatus;
 			}
 
-			if (U_SUCCESS(*ec)) 
+			if (U_SUCCESS(*ec))
 			{
 				// no errors
 				if((buffCapacity > resLen) && matchFound)
@@ -1373,7 +1373,7 @@ ucurr_forLocaleAndDate(const char* locale,
 			// return null terminated currency string
             return u_terminateUChars(buff, buffCapacity, resLen, ec);
 		}
-        else 
+        else
 		{
 			// illegal argument encountered
             *ec = U_ILLEGAL_ARGUMENT_ERROR;
@@ -1385,6 +1385,155 @@ ucurr_forLocaleAndDate(const char* locale,
 	// some argument passed is no good.
     return resLen;
 }
+
+/*********************************************/
+
+static const char* const KEYWORDS[] = { "currency" };
+
+U_CAPI UEnumeration* U_EXPORT2
+ucurr_getKeywordValuesFoLocale(const char *keyword, const char* locale, UBool *commonlyUsed, UErrorCode *status) {
+#define VALUES_BUF_SIZE 2048
+#define VALUES_LIST_SIZE 512
+#define BUFFERSIZE 128
+#define U_ICUDATA_CAL U_ICUDATA_NAME
+	if (U_FAILURE(*status)) {
+		return NULL;
+	}
+	// hard-coded to accept exactly one collation keyword
+	// modify if additional collation keyword is added later
+	if (keyword==NULL || uprv_strcmp(keyword, KEYWORDS[0])!=0)
+	{
+		*status = U_ILLEGAL_ARGUMENT_ERROR;
+		return NULL;
+	}
+
+	char kwVal[1024] = ""; /* value of keyword 'keyword' */
+
+	char       valuesBuf[VALUES_BUF_SIZE] = "";
+	int32_t    valuesIndex = 0;
+	const char *valuesList[VALUES_LIST_SIZE];
+	int32_t    valuesCount = 0;
+
+	valuesBuf[0]=0;
+	valuesBuf[1]=0;
+
+	const char *k;
+	int32_t i;
+
+	UErrorCode subStatus = U_ZERO_ERROR;
+	int32_t kwValLen = 0;
+
+	kwValLen = uloc_getKeywordValue(locale, keyword, kwVal, 1024-1,&subStatus);
+
+	if(kwValLen){
+		k = kwVal;
+		if(k && *k) {
+			int32_t kLen = (int32_t)uprv_strlen(k);
+			if((valuesCount >= (VALUES_LIST_SIZE-1)) ||       /* no more space in list .. */
+					((valuesIndex+kLen+1+1) >= VALUES_BUF_SIZE)) { /* no more space in buffer (string + 2 nulls) */
+				*status = U_ILLEGAL_ARGUMENT_ERROR; /* out of space.. */
+			} else {
+				uprv_strcpy(valuesBuf+valuesIndex, k);
+				valuesList[valuesCount++] = valuesBuf+valuesIndex;
+				valuesIndex += kLen;
+				valuesBuf[valuesIndex++] = 0; /* terminate */
+			}
+		}
+		return uloc_openKeywordList(valuesBuf, valuesIndex, status);
+	}
+
+	UResourceBundle *coll = NULL;
+	UResourceBundle *subItem = NULL;
+
+	UResourceBundle *res = NULL;
+
+	if(U_FAILURE(subStatus)) {
+		*status = subStatus;
+		return NULL;
+	}
+
+	char countryCode[BUFFERSIZE];
+	int32_t countryLen = uloc_getCountry(locale, countryCode, BUFFERSIZE, &subStatus);
+	if(U_SUCCESS(subStatus) && commonlyUsed && !countryLen){
+		/*char* maxLoc;
+		int32_t maxLocCap = ULOC_FULLNAME_CAPACITY + ULOC_KEYWORD_AND_VALUES_CAPACITY + 1;
+		uloc_addLikelySubtags(locale, maxLoc,maxLocCap, &subStatus);*/
+		char buffer[ULOC_FULLNAME_CAPACITY + ULOC_KEYWORD_AND_VALUES_CAPACITY + 1];
+		uloc_addLikelySubtags(locale,buffer,sizeof(buffer),&subStatus);
+		if(U_FAILURE(subStatus)){
+			*status = subStatus;
+			return NULL;
+		}
+		countryLen = uloc_getCountry(buffer, countryCode, BUFFERSIZE, &subStatus); /*uloc_getCountry(maxLoc, countryCode, ULOC_FULLNAME_CAPACITY, &subStatus);*/
+	}
+
+	static const char CURRENCY_DATA[] = "supplementalData";
+	subStatus = U_ZERO_ERROR;
+	UResourceBundle *countryVal = NULL;
+	res =   ures_openDirect(NULL, CURRENCY_DATA, &subStatus);
+
+	if((subStatus == U_USING_FALLBACK_WARNING) || (subStatus == U_USING_DEFAULT_WARNING))
+	{
+		subStatus = U_ZERO_ERROR;
+	}
+
+	if(U_FAILURE(subStatus)) {
+		*status = subStatus;
+	} else if(subStatus == U_ZERO_ERROR) {
+		coll = ures_getByKey(res, "CurrencyMap", NULL, &subStatus);
+		//subStatus = U_ZERO_ERROR;
+		ures_resetIterator(coll);
+		while(/*U_SUCCESS(subStatus) && ures_hasNext(coll)*/(countryVal = ures_getNextResource(coll, subItem/*collVal*/, &subStatus)) ){
+			const char* country = ures_getKey(countryVal);
+
+			if(commonlyUsed && !(uprv_strcmp(countryCode,country)==0)){
+				continue;
+			}
+			UResourceBundle *currVal = NULL;
+			char idVal[1024] = "";
+			while(U_SUCCESS(subStatus) && (currVal = ures_getNextResource(countryVal, subItem/*collVal*/, &subStatus))){
+				const UChar *id, *to;
+				int32_t idLength = 0;
+				id = ures_getStringByKey(currVal, "id", &idLength, &subStatus);
+				if (ures_getSize(currVal) > 2){
+					continue;
+				}
+				if(U_SUCCESS(subStatus) && idLength) {
+					u_UCharsToChars(id, idVal, u_strlen(id));
+					k = idVal;
+				}
+				for(i=0;k&&i<valuesCount;i++) {
+					if(!uprv_strcmp(valuesList[i],k)) {
+						k = NULL; /* found duplicate */
+					}
+				}
+				if(k && *k) {
+					int32_t kLen = (int32_t)uprv_strlen(k);
+					//if(!uprv_strcmp(k,DEFAULT_TAG)) {
+					//continue; /* don't need 'default'. */
+					//}
+					if((valuesCount >= (VALUES_LIST_SIZE-1)) ||       /* no more space in list .. */
+							((valuesIndex+kLen+1+1) >= VALUES_BUF_SIZE)) { /* no more space in buffer (string + 2 nulls) */
+						*status = U_ILLEGAL_ARGUMENT_ERROR; /* out of space.. */
+					} else {
+						uprv_strcpy(valuesBuf+valuesIndex, k);
+						valuesList[valuesCount++] = valuesBuf+valuesIndex;
+						valuesIndex += kLen;
+						valuesBuf[valuesIndex++] = 0; /* terminate */
+					}
+				}
+			}
+			subStatus = U_ZERO_ERROR;
+			//ures_close(collVal);
+		}
+	}
+
+	ures_close(subItem);
+	ures_close(coll);
+	ures_close(res);
+	return uloc_openKeywordList(valuesBuf, valuesIndex, status);
+}
+
 
 #endif /* #if !UCONFIG_NO_FORMATTING */
 

@@ -43,6 +43,7 @@
 #include "putilimp.h"
 #include "utracimp.h"
 #include "cmemory.h"
+#include "ulocimp.h"
 
 U_NAMESPACE_USE
 
@@ -115,7 +116,7 @@ ucol_initUCA(UErrorCode *status) {
             if(U_SUCCESS(*status)){
                 // Initalize variables for implicit generation
                 uprv_uca_initImplicitConstants(status);
-                
+
                 umtx_lock(NULL);
                 if(_staticUCA == NULL) {
                     UCA_DATA_MEM = result;
@@ -852,5 +853,191 @@ ucol_getTailoredSet(const UCollator *coll, UErrorCode *status)
     ucol_tok_closeTokenList(&src);
     return (USet *)tailored;
 }
+
+/*****************************************************/
+U_CAPI UEnumeration* U_EXPORT2
+ucol_getKeywordValuesForLocale(const char *keyword, const char* locale, UBool *commonlyUsed, UErrorCode *status) {
+#define VALUES_BUF_SIZE 2048
+#define VALUES_LIST_SIZE 512
+#define BUFFERSIZE 128
+#define DEFAULT_TAG       "default"
+
+	if (U_FAILURE(*status)) {
+        return NULL;
+    }
+    // hard-coded to accept exactly one collation keyword
+    // modify if additional collation keyword is added later
+    if (keyword==NULL || uprv_strcmp(keyword, KEYWORDS[0])!=0)
+    {
+        *status = U_ILLEGAL_ARGUMENT_ERROR;
+        return NULL;
+    }
+
+    char kwVal[1024] = ""; /* value of keyword 'keyword' */
+    char defVal[1024] = ""; /* default value for given locale */
+    char base[1024] = ""; /* base locale */
+    char parent[1024];
+    char found[1024];
+    char locName[1024] = "";
+
+    char       valuesBuf[VALUES_BUF_SIZE] = "";
+    int32_t    valuesIndex = 0;
+    const char *valuesList[VALUES_LIST_SIZE];
+    int32_t    valuesCount = 0;
+
+    valuesBuf[0]=0;
+    valuesBuf[1]=0;
+
+    const char *k;
+    int32_t i;
+
+   	UErrorCode subStatus = U_ZERO_ERROR;
+   	int32_t kwValLen = 0;
+
+   	kwValLen = uloc_getKeywordValue(locale, keyword, kwVal, 1024-1,&subStatus);
+
+   	if(kwValLen){
+   		k = kwVal;
+   		if(k && *k) {
+   			int32_t kLen = (int32_t)uprv_strlen(k);
+   			if((valuesCount >= (VALUES_LIST_SIZE-1)) ||       /* no more space in list .. */
+   					((valuesIndex+kLen+1+1) >= VALUES_BUF_SIZE)) { /* no more space in buffer (string + 2 nulls) */
+   				*status = U_ILLEGAL_ARGUMENT_ERROR; /* out of space.. */
+   			} else {
+   				uprv_strcpy(valuesBuf+valuesIndex, k);
+   				valuesList[valuesCount++] = valuesBuf+valuesIndex;
+   				valuesIndex += kLen;
+   				valuesBuf[valuesIndex++] = 0; /* terminate */
+   			}
+   		}
+   		return uloc_openKeywordList(valuesBuf, valuesIndex, status);
+   	}
+
+   	char canonicalLoc[BUFFERSIZE];
+    int32_t len;
+    int32_t nameCapacity = uloc_canonicalize(locale, canonicalLoc, BUFFERSIZE, &subStatus);
+    if(U_FAILURE(subStatus)) {
+        	*status = subStatus;
+        	return NULL;
+    }
+    const char* index = uprv_strchr(canonicalLoc, '@');
+    if(!(index == NULL)) {
+    	uloc_getKeywordValue(canonicalLoc, keyword, kwVal, 1024-1,&subStatus);
+    	k = kwVal;
+    	if(k && *k) {
+    		int32_t kLen = (int32_t)uprv_strlen(k);
+    		if((valuesCount >= (VALUES_LIST_SIZE-1)) ||       /* no more space in list .. */
+    				((valuesIndex+kLen+1+1) >= VALUES_BUF_SIZE)) { /* no more space in buffer (string + 2 nulls) */
+    			*status = U_ILLEGAL_ARGUMENT_ERROR; /* out of space.. */
+    		} else {
+    			uprv_strcpy(valuesBuf+valuesIndex, k);
+    			valuesList[valuesCount++] = valuesBuf+valuesIndex;
+    			valuesIndex += kLen;
+    			valuesBuf[valuesIndex++] = 0; /* terminate */
+    		}
+    		return uloc_openKeywordList(valuesBuf, valuesIndex, status);
+    	}
+    }
+
+   	if(!uprv_strcmp(kwVal, DEFAULT_TAG)) {
+    	kwVal[0] = 0;
+    }
+
+    uloc_getBaseName(locale, base, 1024-1,&subStatus);
+
+    UResourceBundle coll;
+    UResourceBundle subItem;
+
+    ures_initStackObject(&coll);
+    ures_initStackObject(&subItem);
+
+    UResourceBundle *res = NULL;
+
+    uprv_strcpy(parent, base);
+    uprv_strcpy(found, base);
+
+    //res = ures_open(U_ICUDATA_COLL, locale, &subStatus);
+    //uprv_strcpy(found, locale);
+
+    if(U_FAILURE(subStatus)) {
+    	*status = subStatus;
+    	return NULL;
+    }
+
+
+    do{
+    	subStatus = U_ZERO_ERROR;
+    	UResourceBundle *collVal = NULL;
+    	res = ures_open(U_ICUDATA_COLL, parent, &subStatus);
+
+    	if((subStatus == U_USING_FALLBACK_WARNING) || (subStatus == U_USING_DEFAULT_WARNING))
+    	{
+    		subStatus = U_ZERO_ERROR;
+    	}
+
+    	if(U_FAILURE(subStatus)) {
+    		*status = subStatus;
+    	} else if(subStatus == U_ZERO_ERROR) {
+    		ures_getByKey(res, "collations", &coll, &subStatus);
+    		if(!res || U_FAILURE(subStatus)){
+    			ures_close(res);
+    			res = NULL;
+    			continue;
+    		}
+    		subStatus = U_ZERO_ERROR;
+    		ures_resetIterator(&coll);
+    		while(/*ures_hasNext(coll)*/(collVal = ures_getNextResource(&coll, &subItem/*collVal*/, &subStatus)) && U_SUCCESS(subStatus)){
+    			k = ures_getKey(collVal);
+
+    			if(!uprv_strcmp(k,DEFAULT_TAG)) {
+    				const UChar *defUstr;
+    				int32_t defLen;
+    				defUstr = ures_getStringByKey(&coll, DEFAULT_TAG, &defLen, &subStatus);
+    				if(U_SUCCESS(subStatus) && defLen) {
+    					u_UCharsToChars(defUstr, defVal, u_strlen(defUstr));
+    					k = defVal;
+    				}
+    			}
+
+    			for(i=0;k&&i<valuesCount;i++) {
+    				if(!uprv_strcmp(valuesList[i],k)) {
+    					k = NULL; /* found duplicate */
+    				}
+    			}
+    			if(k && *k) {
+    				int32_t kLen = (int32_t)uprv_strlen(k);
+    				//if(!uprv_strcmp(k,DEFAULT_TAG)) {
+    					//continue; /* don't need 'default'. */
+    				//}
+    				if((valuesCount >= (VALUES_LIST_SIZE-1)) ||       /* no more space in list .. */
+    						((valuesIndex+kLen+1+1) >= VALUES_BUF_SIZE)) { /* no more space in buffer (string + 2 nulls) */
+    					*status = U_ILLEGAL_ARGUMENT_ERROR; /* out of space.. */
+    				} else {
+    					uprv_strcpy(valuesBuf+valuesIndex, k);
+    					valuesList[valuesCount++] = valuesBuf+valuesIndex;
+    					valuesIndex += kLen;
+    					valuesBuf[valuesIndex++] = 0; /* terminate */
+    				}
+    			}
+    			//ures_close(collVal);
+    		}
+    	}
+    	//coll = ures_getByKey(res, "collations", NULL, &subStatus);
+    	subStatus = U_ZERO_ERROR;
+    	if (res != NULL) {
+    		uprv_strcpy(found, ures_getLocaleByType(res, ULOC_VALID_LOCALE, &subStatus));
+    	}
+
+    	uloc_getParent(found,parent,sizeof(parent),&subStatus);
+    	ures_close(res);
+    	//uloc_getParent(locale,parent,1023,&subStatus);
+    	res = ures_openDirect(U_ICUDATA_COLL, parent, &subStatus);
+    }while(*found && uprv_strcmp(found, "root") != 0 );
+    ures_close(res);
+    ures_close(&coll);
+    ures_close(&subItem);
+    return uloc_openKeywordList(valuesBuf, valuesIndex, status);
+}
+
 
 #endif /* #if !UCONFIG_NO_COLLATION */
