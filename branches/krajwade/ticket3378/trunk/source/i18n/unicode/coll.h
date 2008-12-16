@@ -6,10 +6,10 @@
 */
 
 /**
- * \file 
+ * \file
  * \brief C++ API: Collation Service.
  */
- 
+
 /**
 * File coll.h
 *
@@ -663,6 +663,19 @@ public:
      */
     static Locale U_EXPORT2 getFunctionalEquivalent(const char* keyword, const Locale& locale,
                                           UBool& isAvailable, UErrorCode& status);
+    /**
+     * Given a keyword and a locale, returns an array of string values in a preferred order that would make a difference.
+     * These are all and only those values where the open (creation) of the service with the locale
+     * formed from the input locale plus input keyword and that value has different behavior than
+     * creation with the input locale alone. For example, calling this with "de", "collation" returns {"phonebook","standard"}
+     * @param keyword one of the keyword {"collation", "calendar", "currency"}
+     * @param locLD input ULocale
+     * @param commonlyUsed if set to true it will return commonly used values with the given locale else all the available values
+     * @param status input-output error code
+     * @return a string enumeration of values for a given keyword and locale
+     * @draft ICU 4.2
+     */
+    static StringEnumeration* U_EXPORT2 getKeywordValuesForLocale(const char *keyword, const Locale& objectLocale, UBool& commonlyUsed, UErrorCode& status);
 
 #if !UCONFIG_NO_SERVICE
     /**
