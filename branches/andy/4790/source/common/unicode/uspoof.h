@@ -153,7 +153,7 @@ uspoof_openFromSource(const char *confusables,  int32_t confusablesLen,
   *   its implementation.
   */
 U_DRAFT void U_EXPORT2
-uspoof_close(USpoofChecker *sc, UErrorCode *status);
+uspoof_close(USpoofChecker *sc);
 
 /**
  * Clone a Spoof Checker.  The clone will be set to perform the same checks

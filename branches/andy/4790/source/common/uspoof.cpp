@@ -22,7 +22,7 @@
 U_NAMESPACE_BEGIN
 
 
-USpoofChecker * U_EXPORT2
+U_CAPI USpoofChecker * U_EXPORT2
 uspoof_open(UErrorCode *status) {
 	if (U_FAILURE(*status)) {
 	    return NULL;
@@ -35,14 +35,15 @@ uspoof_open(UErrorCode *status) {
 	return (USpoofChecker *)si;
 }
 
-U_DRAFT void U_EXPORT2
-uspoof_close(USpoofChecker *sc, UErrorCode *status) {
-	SpoofImpl *This = SpoofImpl::validateThis(sc, *status);
+U_CAPI void U_EXPORT2
+uspoof_close(USpoofChecker *sc) {
+    UErrorCode status = U_ZERO_ERROR;
+	SpoofImpl *This = SpoofImpl::validateThis(sc, status);
     delete This;
 }
 
     
-U_DRAFT void U_EXPORT2
+U_CAPI void U_EXPORT2
 uspoof_setChecks(USpoofChecker *sc, int32_t checks, UErrorCode *status) {
     SpoofImpl *This = SpoofImpl::validateThis(sc, *status);
 	if (This == NULL) {
@@ -52,7 +53,7 @@ uspoof_setChecks(USpoofChecker *sc, int32_t checks, UErrorCode *status) {
     // Verify that the requested checks are all ones (bits) that 
     //   are acceptable, known values.
     if (checks && ~USPOOF_ALL_CHECKS) {
-        *status = U_ILLEGAL_ARGUMENT_ERROR;
+        *status = U_ILLEGAL_ARGUMENT_ERROR; 
         return;
     }
 
@@ -60,7 +61,7 @@ uspoof_setChecks(USpoofChecker *sc, int32_t checks, UErrorCode *status) {
 }
 
 
-U_DRAFT int32_t U_EXPORT2
+U_CAPI int32_t U_EXPORT2
 uspoof_getChecks(const USpoofChecker *sc, UErrorCode *status) {
     const SpoofImpl *This = SpoofImpl::validateThis(sc, *status);
 	if (This == NULL) {
@@ -69,7 +70,7 @@ uspoof_getChecks(const USpoofChecker *sc, UErrorCode *status) {
     return This->fChecks;
 }
 
-U_DRAFT void U_EXPORT2
+U_CAPI void U_EXPORT2
 uspoof_setAllowedLocales(USpoofChecker *sc, const char *localesList, UErrorCode *status) {
     SpoofImpl *This = SpoofImpl::validateThis(sc, *status);
 	if (This == NULL) {
@@ -79,7 +80,7 @@ uspoof_setAllowedLocales(USpoofChecker *sc, const char *localesList, UErrorCode 
 }
 
 
-U_DRAFT int32_t U_EXPORT2
+U_CAPI int32_t U_EXPORT2
 uspoof_getSkeleton(const USpoofChecker *sc,
                    USpoofChecks type,
                    const UChar *s,  int32_t length,
@@ -154,7 +155,7 @@ uspoof_getSkeleton(const USpoofChecker *sc,
     return resultLen;
 }
 
-U_DRAFT void U_EXPORT2
+U_CAPI void U_EXPORT2
 uspoof_setAllowedChars(USpoofChecker *sc, const USet *chars, UErrorCode *status) {
     SpoofImpl *This = SpoofImpl::validateThis(sc, *status);
 	if (This == NULL) {

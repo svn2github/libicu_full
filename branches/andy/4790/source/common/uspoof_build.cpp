@@ -33,6 +33,7 @@
 #include "uhash.h"
 #include "uvector.h"
 #include "uassert.h"
+#include "uarrsort.h"
 
 
 
@@ -122,6 +123,7 @@ struct SPUString {
     UnicodeString  *fStr;
     int32_t         fStrTableIndex;
     SPUString(UnicodeString *s) {fStr = s; fStrTableIndex = 0;};
+    ~SPUString() {delete fStr;};
 };
 
 class SPUStringPool {
@@ -137,6 +139,9 @@ class SPUStringPool {
 
     // Get the n-th string in the collection.
     SPUString *getByIndex(int32_t i);
+
+    // Sort the contents; affects the ordering of getByIndex().
+    void sort(UErrorCode *status);
 
     int32_t size();
 
@@ -174,23 +179,30 @@ SPUString *SPUStringPool::getByIndex(int32_t index) {
     return retString;
 }
 
+
 // Comparison function for ordering strings in the string pool.
 // Compare by length first, then, within a group of the same length,
 // by code point order.
-static int8_t U_CALLCONV SPUStringCompare(UHashTok tok1, UHashTok tok2) {
-    UnicodeString *s1 = static_cast<UnicodeString *>(tok1.pointer);
-    UnicodeString *s2 = static_cast<UnicodeString *>(tok2.pointer);
-    int32_t len1 = s1->length();
-    int32_t len2 = s2->length();
-    if (len1 < len2) {
+// Conforms to the type signature for a USortComparator in uvector.h
+
+static int8_t U_CALLCONV SPUStringCompare(UHashTok left, UHashTok right) {
+    const UnicodeString *sL = static_cast<const UnicodeString *>(left.pointer);
+    const UnicodeString *sR = static_cast<const UnicodeString *>(right.pointer);
+    int32_t lenL = sL->length();
+    int32_t lenR = sR->length();
+    if (lenL < lenR) {
         return -1;
-    } else if (len1 > len2) {
+    } else if (lenL > lenR) {
         return 1;
     } else {
-        return s1->compareCodePointOrder(*s2);
+        return sL->compare(*sR);
     }
 }
-        
+
+void SPUStringPool::sort(UErrorCode *status) {
+    fVec->sort(SPUStringCompare, *status);
+}
+
 
 SPUString *SPUStringPool::addString(UnicodeString *src, UErrorCode *status) {
     SPUString *hashedString = static_cast<SPUString *>(uhash_get(fHash, src));
@@ -199,10 +211,7 @@ SPUString *SPUStringPool::addString(UnicodeString *src, UErrorCode *status) {
     } else {
         hashedString = new SPUString(src);
         uhash_put(fHash, src, hashedString, status);
-        // TODO:  probable performance problem with sortedInsert.
-        //        Should append all elements, then sort once.
-        //        No precanned sort function available on UVecctor, though.
-        fVec->sortedInsert(hashedString, SPUStringCompare, *status);
+        fVec->addElement(hashedString, *status);
     }
     return hashedString;
 }
@@ -236,7 +245,8 @@ static UChar32 ScanHex(const UChar *s, int32_t start, int32_t limit, UErrorCode 
     }
     return (UChar32)val;
 }
-        
+
+
 
 void buildConfusableData(SpoofImpl * This, const char * confusables,
     int32_t confusablesLen, int32_t *errorType, UParseError *pe, UErrorCode *status) {
@@ -251,7 +261,9 @@ void buildConfusableData(SpoofImpl * This, const char * confusables,
     UHashtable *SLTable = NULL;
     UHashtable *SATable = NULL; 
     UHashtable *MLTable = NULL; 
-    UHashtable *MATable = NULL; 
+    UHashtable *MATable = NULL;
+    UHashtable *keySet  = NULL;       // A set of all keys (UChar32s) that go into the four mapping tables.
+    UVector    *keyVec  = NULL;
     SPUStringPool *stringPool = NULL;
     URegularExpression *parseLine = NULL;
     URegularExpression *parseHexNum  = NULL;
@@ -265,7 +277,7 @@ void buildConfusableData(SpoofImpl * This, const char * confusables,
         goto cleanup;
     }
     *status = U_ZERO_ERROR;
-    input = static_cast<UChar *>(uprv_malloc(inputLen+1 * sizeof(UChar)));
+    input = static_cast<UChar *>(uprv_malloc((inputLen+1) * sizeof(UChar)));
     if (input == NULL) {
         *status = U_MEMORY_ALLOCATION_ERROR;
     }
@@ -278,6 +290,8 @@ void buildConfusableData(SpoofImpl * This, const char * confusables,
     SATable = uhash_open(uhash_hashLong, uhash_compareLong, NULL, status);
     MLTable = uhash_open(uhash_hashLong, uhash_compareLong, NULL, status);
     MATable = uhash_open(uhash_hashLong, uhash_compareLong, NULL, status);
+    keySet  = uhash_open(uhash_hashLong, uhash_compareLong, NULL, status);
+    keyVec  = new UVector(*status);
     stringPool = new SPUStringPool(status);
     if (U_FAILURE(*status)) {
         goto cleanup;
@@ -359,10 +373,26 @@ void buildConfusableData(SpoofImpl * This, const char * confusables,
                             NULL;
         U_ASSERT(table != NULL);
         uhash_iput(table, keyChar, smapString, status);
+        uhash_iput(table, keyChar, NULL, status);
         if (U_FAILURE(*status)) {
             goto cleanup;
         }
     }
+
+    // Build the Keys table.  To do that, we first must get a list of all the
+    //  key characters, and sort it into code point order.
+    {
+    int32_t  iterationPosition = -1;
+    const UHashElement *keyElement = NULL;
+    while ((keyElement = uhash_nextElement(keySet, &iterationPosition)) != NULL) {
+        UChar32 keyChar = keyElement->key.integer;
+        keyVec->addElement(keyChar, *status);
+    }
+    }
+    keyVec->sorti(*status);
+
+    stringPool->sort(status);
+    
 
   cleanup:
     if (U_FAILURE(*status)) {
@@ -371,10 +401,14 @@ void buildConfusableData(SpoofImpl * This, const char * confusables,
     }
         
     uprv_free(input);
+    uregex_close(parseLine);
+    uregex_close(parseHexNum);
     uhash_close(SLTable);
     uhash_close(SATable);
     uhash_close(MLTable);
     uhash_close(MATable);
+    uhash_close(keySet);
+    delete keyVec;
     delete stringPool;
     return;
 }
