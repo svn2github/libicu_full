@@ -130,6 +130,9 @@ public:
 //       For strings of length 4 or longer, the string length table provides a
 //       mapping between an index into the string table and the corresponding length.
 //       Strings of these lengths are rare, so lookup time is not an issue.
+//       Each entry consists of
+//            uint16_t      index of the _last_ string with this length
+//            uint16_t      the length
 //
 
 // Flag bits in the Key entries
@@ -162,8 +165,8 @@ struct SpoofStringLengthsElement {
 //
 class SpoofData {
   public:
-    static SpoofData *getDefault(UErrorCode &status);        // Load standard ICU spoof data.
-    SpoofData();                                    // Create empty spoof data wrapper.
+    static SpoofData *getDefault(UErrorCode &status);   // Load standard ICU spoof data.
+    SpoofData();                             // Create empty spoof data wrapper.
 
     
     SpoofDataHeader             *fRawData;          // Ptr to the raw memory-mapped data
@@ -187,9 +190,6 @@ struct SpoofDataHeader {
     // The following four sections refer to data representing the confusable data
     //   from the Unicode.org data from "confusables.txt"
 
-    int32_t       fCFUStringLengths;      // byte offset to String Lengths table
-    int32_t       fCFUStringLengthsSize;  // number of entries in lengths table. (2 x 16 bits each)
-
     int32_t       fCFUKeys;               // byte offset to Keys table
     int32_t       fCFUKeysSize;           // number of entries in keys table  (32 bits each)
 
@@ -199,6 +199,9 @@ struct SpoofDataHeader {
 
     int32_t       fCFUStringTable;        // byte offset of String table
     int32_t       fCFUStringTableLen;     // length of string table (in 16 bit UChars)
+
+    int32_t       fCFUStringLengths;      // byte offset to String Lengths table
+    int32_t       fCFUStringLengthsSize;  // number of entries in lengths table. (2 x 16 bits each)
 
     int32_t       unused[6];              // Padding, Room for Expansion
 

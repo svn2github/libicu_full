@@ -255,7 +255,7 @@ void buildConfusableData(SpoofImpl * This, const char * confusables,
         return;
     }
     // Declarations for allocated items that need to be closed or deleted
-    //   at the end.  Declatations are here at the top to allow common
+    //   at the end.  Declatations are collected here at the top to allow common
     //   cleanup code in the event of errors.
     UChar *input = NULL;
     UHashtable *SLTable = NULL;
@@ -263,7 +263,14 @@ void buildConfusableData(SpoofImpl * This, const char * confusables,
     UHashtable *MLTable = NULL; 
     UHashtable *MATable = NULL;
     UHashtable *keySet  = NULL;       // A set of all keys (UChar32s) that go into the four mapping tables.
-    UVector    *keyVec  = NULL;
+
+    // The binary data is first assembled into the following four collections, then
+    //   copied to its final raw-memory destination.
+    UVector       *keyVec  = NULL;
+    UVector       *valueVec = NULL;
+    UnicodeString *stringTable = NULL;
+    UVector       *stringLengthsTable = NULL;
+    
     SPUStringPool *stringPool = NULL;
     URegularExpression *parseLine = NULL;
     URegularExpression *parseHexNum  = NULL;
@@ -379,19 +386,67 @@ void buildConfusableData(SpoofImpl * This, const char * confusables,
         }
     }
 
-    // Build the Keys table.  To do that, we first must get a list of all the
-    //  key characters, and sort it into code point order.
+    // Input data is now all parsed and collected.
+    // Now create the run-time binary form of the data.
+    //
+    // This is done in two steps.  First the data is assembled into vectors and strings,
+    //   for ease of construction, then the contents of these collections are dumped
+    //   into the actual raw-bytes data storage.
     {
-    int32_t  iterationPosition = -1;
-    const UHashElement *keyElement = NULL;
-    while ((keyElement = uhash_nextElement(keySet, &iterationPosition)) != NULL) {
-        UChar32 keyChar = keyElement->key.integer;
-        keyVec->addElement(keyChar, *status);
-    }
-    }
-    keyVec->sorti(*status);
 
-    stringPool->sort(status);
+        // Build up the string array, and record the index of each string therein
+        //  in the (build time only) string pool.
+        // Strings of length one are not entered into the strings array.
+        // At the same time, build up the string lengths table, which records the
+        // position in the string table of the first string of each length >= 4.
+        // (Strings in the table are sorted by length)
+        stringPool->sort(status);     
+        stringTable = new UnicodeString();
+        stringLengthsTable = new UVector(*status);
+        int32_t previousStringLength = 0;     
+        int32_t previousStringIndex  = 0;
+        int32_t poolSize = stringPool->size();
+        int32_t i;
+        for (i=0; i<poolSize; i++) {
+            SPUString *s = stringPool->getByIndex(i);
+            int32_t strLen = s->fStr->length();
+            int32_t strIndex = stringTable->length();
+            U_ASSERT(strLen >= previousStringLength);
+            if (strLen == 1) {
+                // strings of length one do not get an entry in the string table.
+                s->fStrTableIndex = -1;
+            } else {
+                if ((strLen > previousStringLength) && (previousStringLength >= 4)) {
+                    stringLengthsTable->addElement(previousStringLength, *status);
+                    stringLengthsTable->addElement(previousStringIndex, *status);
+                }
+                s->fStrTableIndex = strIndex;
+                stringTable->append(*(s->fStr));
+            }
+            previousStringLength = strLen;
+            previousStringIndex  = strIndex;
+        }
+        // Make the final entry to the string lengths table.
+        //   (it holds an entry for the _last_ string of each length, so adding the
+        //    final one doesn't happen in the main loop because no longer string was encountered.)
+        if (previousStringLength >= 4) {
+            stringLengthsTable->addElement(previousStringLength, *status);
+            stringLengthsTable->addElement(previousStringIndex, *status);
+        }
+    }
+
+
+    // Build up the Key and Value tables
+    // See the Confusable data structure descriptions in uspoof_impl.h
+    {
+        int32_t  iterationPosition = -1;
+        const UHashElement *keyElement = NULL;
+        while ((keyElement = uhash_nextElement(keySet, &iterationPosition)) != NULL) {
+            UChar32 keyChar = keyElement->key.integer;
+            keyVec->addElement(keyChar, *status);
+        }
+        keyVec->sorti(*status);
+    }
     
 
   cleanup:
