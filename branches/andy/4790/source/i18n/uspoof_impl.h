@@ -1,6 +1,6 @@
 /*
 ***************************************************************************
-* Copyright (C) 2008, International Business Machines Corporation
+* Copyright (C) 2008-2009, International Business Machines Corporation
 * and others. All Rights Reserved.
 ***************************************************************************
 *
@@ -26,6 +26,9 @@ U_NAMESPACE_BEGIN
 //   input strings to be checked.  Longer strings require allocation
 //   of a heap buffer.
 #define USPOOF_STACK_BUFFER_SIZE 100
+
+// Magic number for sanity checking spoof data.
+#define USPOOF_MAGIC 0x3845fdef
 
 class SpoofData;
 class SpoofDataHeader;
@@ -163,19 +166,39 @@ struct SpoofStringLengthsElement {
 //    Nothing in this struct includes state that is specific to any particular
 //    USpoofDetector object.
 //
-class SpoofData {
+class SpoofData: public UMemory {
   public:
     static SpoofData *getDefault(UErrorCode &status);   // Load standard ICU spoof data.
-    SpoofData();                             // Create empty spoof data wrapper.
+    SpoofData(UErrorCode &status);   // Create new spoof data wrapper.
+                                     // Only used when building new data from rules.
+  private:
+    ~SpoofData();                    // Destructor not normally used.
+                                     // Use removeReference() instead.
+  public:
+    // Reference Counting functions.
+    //    Clone of a user-level spoof detector increments the ref count on the data.
+    //    Close of a user-level spoof detector decrements the ref count.
+    //    If the data is owned by us, it will be deleted when count goes to zero.
+    SpoofData *addReference(); 
+    void removeReference();
 
     
     SpoofDataHeader             *fRawData;          // Ptr to the raw memory-mapped data
-    
-    int32_t                     *fKeys;
-    uint16_t                    *fValues;
-    SpoofStringLengthsElement   *fStringLengths;
-    UChar                       *fStrings;
+    UBool                       fDataOwned;         // True if the raw data is owned, and needs
+                                                    //  to be deleted when refcount goes to zero.
+    uint32_t                    fDataLimit;
+    int32_t                     fRefCount;
 
+    // Confusable data
+    int32_t                     *fCFUKeys;
+    uint16_t                    *fCFUValues;
+    SpoofStringLengthsElement   *fCFUStringLengths;
+    UChar                       *fCFUStrings;
+
+    // Whole Script Confusable Data
+
+    // Secure Identifier Data
+    
     };
     
 

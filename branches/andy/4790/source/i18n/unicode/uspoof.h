@@ -1,6 +1,6 @@
 /*
 ***************************************************************************
-* Copyright (C) 2008, International Business Machines Corporation
+* Copyright (C) 2008-2009, International Business Machines Corporation
 * and others. All Rights Reserved.
 ***************************************************************************
 *   file name:  uspoof.h

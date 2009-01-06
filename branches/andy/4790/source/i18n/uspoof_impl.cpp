@@ -1,6 +1,6 @@
 /*
 **********************************************************************
-*   Copyright (C) 1998-2008, International Business Machines
+*   Copyright (C) 2008-2009, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 **********************************************************************
 */
@@ -9,6 +9,7 @@
 #include "unicode/uspoof.h"
 #include "cmemory.h"
 #include "udatamem.h"
+#include "umutex.h"
 #include "udataswp.h"
 #include "uspoof_impl.h"
 
@@ -17,9 +18,8 @@ U_NAMESPACE_BEGIN
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(SpoofImpl)
 
-static const int SPOOF_MAGIC = 0x8345fdef; 
 SpoofImpl::SpoofImpl(SpoofData *data, UErrorCode &/*status*/) {
-	fMagic = SPOOF_MAGIC;
+	fMagic = USPOOF_MAGIC;
 	fSpoofData = data;
 	fChecks = 0;
 }
@@ -44,7 +44,7 @@ SpoofImpl *SpoofImpl::validateThis(USpoofChecker *sc, UErrorCode &status) {
         return NULL;
     };
     SpoofImpl *This = (SpoofImpl *)sc;
-    if (This->fMagic != SPOOF_MAGIC) {
+    if (This->fMagic != USPOOF_MAGIC) {
         return NULL;
     }
     return This;
@@ -58,7 +58,7 @@ const SpoofImpl *SpoofImpl::validateThis(const USpoofChecker *sc, UErrorCode &st
         return NULL;
     };
     const SpoofImpl *This = (const SpoofImpl *)sc;
-    if (This->fMagic != SPOOF_MAGIC) {
+    if (This->fMagic != USPOOF_MAGIC) {
         return NULL;
     }
     return This;
@@ -68,7 +68,7 @@ const SpoofImpl *SpoofImpl::validateThis(const USpoofChecker *sc, UErrorCode &st
 int32_t SpoofImpl::ConfusableLookup(UChar32 inChar, UChar *destBuf) const {
 
     // Binary search the spoof data key table for the inChar
-    int32_t  *low   = fSpoofData->fKeys;
+    int32_t  *low   = fSpoofData->fCFUKeys;
     int32_t  *mid   = NULL;
     int32_t  *limit = low + fSpoofData->fRawData->fCFUKeysSize;
     UChar     midc;
@@ -123,11 +123,11 @@ int32_t SpoofImpl::ConfusableLookup(UChar32 inChar, UChar *destBuf) const {
 
   foundKey:
     int32_t  stringLen = USPOOF_KEY_LENGTH_FIELD(keyFlags) + 1;
-    int32_t keyTableIndex = mid - fSpoofData->fKeys;
+    int32_t keyTableIndex = mid - fSpoofData->fCFUKeys;
 
     // Value is either a UChar  (for strings of length 1) or
     //                 an index into the string table (for longer strings)
-    uint16_t value = fSpoofData->fValues[keyTableIndex];
+    uint16_t value = fSpoofData->fCFUValues[keyTableIndex];
     if (stringLen == 1) {
         destBuf[0] = value;
         return 1;
@@ -142,7 +142,7 @@ int32_t SpoofImpl::ConfusableLookup(UChar32 inChar, UChar *destBuf) const {
         // TODO:
     }
 
-    UChar *src = &fSpoofData->fStrings[value];
+    UChar *src = &fSpoofData->fCFUStrings[value];
     for (int32_t idx=0; idx<stringLen; idx++) {
         destBuf[idx] = src[idx];
     }
@@ -157,6 +157,48 @@ int32_t SpoofImpl::ConfusableLookup(UChar32 inChar, UChar *destBuf) const {
 SpoofData *SpoofData::getDefault(UErrorCode &/*status*/) {
     // TODO:
     return NULL;
+}
+
+
+// Spoof Data constructor for use from data builder.
+//   Initializes a new, empty data area that will be populated later.
+static const int32_t INITIAL_DATA_SIZE = 10000;
+SpoofData::SpoofData(UErrorCode &status) {
+    fRawData = NULL;
+    fDataOwned = true;
+    fRefCount = 1;
+
+    if (U_FAILURE(status)) {
+        return;
+    }
+    fRawData = static_cast<SpoofDataHeader *>(uprv_malloc(INITIAL_DATA_SIZE));
+    fDataLimit = INITIAL_DATA_SIZE;
+    if (fRawData == NULL) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return;
+    }
+    uprv_memset(fRawData, 0, INITIAL_DATA_SIZE);
+
+    fRawData->fMagic = USPOOF_MAGIC;
+    fCFUKeys = NULL;
+    fCFUValues = NULL;
+    fCFUStringLengths = NULL;
+    fCFUStrings = NULL;
+}
+
+
+SpoofData::~SpoofData() {
+    if (fDataOwned) {
+        uprv_free(fRawData);
+    }
+    fRawData = NULL;
+}
+
+
+void SpoofData::removeReference() {
+    if (umtx_atomic_dec(&fRefCount) == 0) {
+        delete this;
+    }
 }
 
 U_NAMESPACE_END
