@@ -143,8 +143,10 @@ public:
 #define USPOOF_SA_TABLE_FLAG (1<<25)
 #define USPOOF_ML_TABLE_FLAG (1<<26)
 #define USPOOF_MA_TABLE_FLAG (1<<27)
-#define USPOOF_KEY_MULTIPLE_VALULES (1<<28)
+#define USPOOF_KEY_MULTIPLE_VALUES (1<<28)
+#define USPOOF_KEY_LENGTH_SHIFT 29
 #define USPOOF_KEY_LENGTH_FIELD(x) (((x)>>29) & 3)
+
 
 
 
@@ -182,6 +184,9 @@ class SpoofData: public UMemory {
     SpoofData *addReference(); 
     void removeReference();
 
+    // Reserve space in the data.  For use by builder when putting together a
+    //   new set of data.
+    void *reserveSpace(int32_t numBytes, UErrorCode &status);
     
     SpoofDataHeader             *fRawData;          // Ptr to the raw memory-mapped data
     UBool                       fDataOwned;         // True if the raw data is owned, and needs
@@ -213,9 +218,10 @@ struct SpoofDataHeader {
     // The following four sections refer to data representing the confusable data
     //   from the Unicode.org data from "confusables.txt"
 
-    int32_t       fCFUKeys;               // byte offset to Keys table
+    int32_t       fCFUKeys;               // byte offset to Keys table (from SpoofDataHeader *)
     int32_t       fCFUKeysSize;           // number of entries in keys table  (32 bits each)
 
+    // TODO: change name to fCFUValues, for consistency.
     int32_t       fCFUStringIndex;        // byte offset to String Indexes table
     int32_t       fCFUStringIndexSize;    // number of entries in String Indexes table (16 bits each)
                                           //     (number of entries must be same as in Keys table

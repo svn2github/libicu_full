@@ -97,7 +97,7 @@ int32_t SpoofImpl::ConfusableLookup(UChar32 inChar, UChar *destBuf) const {
     if ((keyFlags & fCheckMask) == 0) {
         // We found the right key char, but the entry doesn't pertain to the
         //  table we need.  See if there is an adjacent key that does
-        if (keyFlags & USPOOF_KEY_MULTIPLE_VALULES) {
+        if (keyFlags & USPOOF_KEY_MULTIPLE_VALUES) {
             int32_t *altMid;
             for (altMid = mid-1; (*altMid&0x00ffffff) == inChar; altMid--) {
                 keyFlags = *altMid & 0xff000000;

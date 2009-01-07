@@ -89,7 +89,7 @@ uspoof_openFromSource(const char *confusables,  int32_t confusablesLen,
     SpoofImpl *This = new SpoofImpl(newSpoofData, *status);
 
     // Compile the binary data from the source (text) format.
-    ConfusabledataBuilder::buildConfusableData(This, confusables, confusablesLen, errorType, pe, status);
+    ConfusabledataBuilder::buildConfusableData(This, confusables, confusablesLen, errorType, pe, *status);
     buildConfusableWSData(This, confusablesWholeScript, confusablesWholeScriptLen, status);
     buildXidData(This, xidModifications, xidModificationsLen, status);
 

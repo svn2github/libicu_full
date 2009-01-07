@@ -28,7 +28,9 @@
 
 struct SPUString {
     UnicodeString  *fStr;             // The actual string.
-    int32_t         fStrTableIndex;   // Index into the final runtime data for this string
+    int32_t         fStrTableIndex;   // Index into the final runtime data for this string.
+                                      //  (or, for length 1, the single string char itself,
+                                      //   there being no string table entry for it.)
     SPUString(UnicodeString *s);
     ~SPUString();
 };
@@ -44,20 +46,20 @@ struct SPUString {
 
 class SPUStringPool {
   public:
-    SPUStringPool(UErrorCode *status);
+    SPUStringPool(UErrorCode &status);
     ~SPUStringPool();
     
     // Add a string. Return the string from the table.
     // If the input parameter string is already in the table, delete the
     //  input parameter and return the existing string.
-    SPUString *addString(UnicodeString *src, UErrorCode *status);
+    SPUString *addString(UnicodeString *src, UErrorCode &status);
 
 
     // Get the n-th string in the collection.
     SPUString *getByIndex(int32_t i);
 
     // Sort the contents; affects the ordering of getByIndex().
-    void sort(UErrorCode *status);
+    void sort(UErrorCode &status);
 
     int32_t size();
 
@@ -85,8 +87,8 @@ class ConfusabledataBuilder {
 
     // The binary data is first assembled into the following four collections, then
     //   copied to its final raw-memory destination.
-    UVector            *keyVec;
-    UVector            *valueVec;
+    UVector            *fKeyVec;
+    UVector            *fValueVec;
     UnicodeString      *stringTable;
     UVector            *stringLengthsTable;
     
@@ -95,21 +97,28 @@ class ConfusabledataBuilder {
     URegularExpression *fParseHexNum;
     int32_t             fLineNum;
 
-    ConfusabledataBuilder(SpoofImpl *spImpl, UErrorCode *status);
+    ConfusabledataBuilder(SpoofImpl *spImpl, UErrorCode &status);
     ~ConfusabledataBuilder();
-    void build(const char * confusables, int32_t confusablesLen, UErrorCode *status);
+    void build(const char * confusables, int32_t confusablesLen, UErrorCode &status);
 
     // Add an entry to the key and value tables being built
     //   input:  data from SLTable, MATable, etc.
-    //   outut:  entry added to keyVec and valueVec
+    //   outut:  entry added to fKeyVec and fValueVec
     void addKeyEntry(UChar32     keyChar,     // The key character
                      UHashtable *table,       // The table, one of SATable, MATable, etc.
                      int32_t     tableFlag,   // One of USPOOF_SA_TABLE_FLAG, etc.
-                     UErrorCode *status);
+                     UErrorCode &status);
+
+    // From an index into fKeyVec & fValueVec
+    //   get a UnicodeString with the corresponding mapping.
+    UnicodeString getMapping(int32_t key);
+
+    // Populate the final binary output data array with the compiled data.
+    void outputData(UErrorCode &status);
 
   public:
     static void buildConfusableData(SpoofImpl *spImpl, const char * confusables,
-        int32_t confusablesLen, int32_t *errorType, UParseError *pe, UErrorCode *status);
+        int32_t confusablesLen, int32_t *errorType, UParseError *pe, UErrorCode &status);
 };
 
 #endif
