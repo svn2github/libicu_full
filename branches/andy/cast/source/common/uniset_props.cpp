@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 1999-2008, International Business Machines
+*   Copyright (C) 1999-2009, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
@@ -103,17 +103,17 @@ static UnicodeSet *INCLUSIONS[UPROPS_SRC_COUNT] = { NULL }; // cached getInclusi
 // Does not use uset.h to reduce code dependencies
 static void U_CALLCONV
 _set_add(USet *set, UChar32 c) {
-    ((UnicodeSet *)set)->add(c);
+    (reinterpret_cast<UnicodeSet *>(set))->add(c);
 }
 
 static void U_CALLCONV
 _set_addRange(USet *set, UChar32 start, UChar32 end) {
-    ((UnicodeSet *)set)->add(start, end);
+    (reinterpret_cast<UnicodeSet *>(set))->add(start, end);
 }
 
 static void U_CALLCONV
 _set_addString(USet *set, const UChar *str, int32_t length) {
-    ((UnicodeSet *)set)->add(UnicodeString((UBool)(length<0), str, length));
+    (reinterpret_cast<UnicodeSet *>(set))->add(UnicodeString((UBool)(length<0), str, length));
 }
 
 /**
@@ -149,7 +149,7 @@ const UnicodeSet* UnicodeSet::getInclusions(int32_t src, UErrorCode &status) {
     if (needInit) {
         UnicodeSet* incl = new UnicodeSet();
         USetAdder sa = {
-            (USet *)incl,
+            reinterpret_cast<USet *>(incl),
             _set_add,
             _set_addRange,
             _set_addString,
@@ -261,7 +261,7 @@ UnicodeSet::UnicodeSet(const UnicodeString& pattern,
     fFlags(0)
 {   
     if(U_SUCCESS(status)){
-        list = (UChar32*) uprv_malloc(sizeof(UChar32) * capacity);
+        list = static_cast<UChar32*>(uprv_malloc(sizeof(UChar32) * capacity));
         /* test for NULL */
         if(list == NULL) {
             status = U_MEMORY_ALLOCATION_ERROR;  
@@ -290,7 +290,7 @@ UnicodeSet::UnicodeSet(const UnicodeString& pattern,
     fFlags(0)
 {   
     if(U_SUCCESS(status)){
-        list = (UChar32*) uprv_malloc(sizeof(UChar32) * capacity);
+        list = static_cast<UChar32*>(uprv_malloc(sizeof(UChar32) * capacity));
         /* test for NULL */
         if(list == NULL) {
             status = U_MEMORY_ALLOCATION_ERROR;  
@@ -311,7 +311,7 @@ UnicodeSet::UnicodeSet(const UnicodeString& pattern, ParsePosition& pos,
     fFlags(0)
 {
     if(U_SUCCESS(status)){
-        list = (UChar32*) uprv_malloc(sizeof(UChar32) * capacity);
+        list = static_cast<UChar32*>(uprv_malloc(sizeof(UChar32) * capacity));
         /* test for NULL */
         if(list == NULL) {
             status = U_MEMORY_ALLOCATION_ERROR;   
@@ -409,7 +409,7 @@ UnicodeSet& UnicodeSet::applyPattern(const UnicodeString& pattern,
  */
 UBool UnicodeSet::resemblesPattern(const UnicodeString& pattern, int32_t pos) {
     return ((pos+1) < pattern.length() &&
-            pattern.charAt(pos) == (UChar)91/*[*/) ||
+            pattern.charAt(pos) == static_cast<UChar>(91)/*[*/) ||
         resemblesPropertyPattern(pattern, pos);
 }
 
@@ -548,9 +548,10 @@ void UnicodeSet::applyPattern(RuleCharacterIterator& chars,
                         ec = U_MALFORMED_SET;
                         return;
                     }
+                    const UnicodeSet *cm = static_cast<const UnicodeSet*>(m);
                     // casting away const, but `nested' won't be modified
                     // (important not to modify stored set)
-                    nested = (UnicodeSet*) m;
+                    nested = const_cast<UnicodeSet*>(cm);
                     setMode = 3;
                 }
             }
@@ -659,7 +660,7 @@ void UnicodeSet::applyPattern(RuleCharacterIterator& chars,
             case HYPHEN /*'-'*/:
                 if (op == 0) {
                     if (lastItem != 0) {
-                        op = (UChar) c;
+                        op = static_cast<UChar>(c);
                         continue;
                     } else {
                         // Treat final trailing '-' as a literal
@@ -678,7 +679,7 @@ void UnicodeSet::applyPattern(RuleCharacterIterator& chars,
                 return;
             case INTERSECTION /*'&'*/:
                 if (lastItem == 2 && op == 0) {
-                    op = (UChar) c;
+                    op = static_cast<UChar>(c);
                     continue;
                 }
                 // syntaxError(chars, "'&' not after set");
@@ -847,17 +848,17 @@ void UnicodeSet::applyPattern(RuleCharacterIterator& chars,
 //----------------------------------------------------------------
 
 static UBool numericValueFilter(UChar32 ch, void* context) {
-    return u_getNumericValue(ch) == *(double*)context;
+    return u_getNumericValue(ch) == *static_cast<double*>(context);
 }
 
 static UBool generalCategoryMaskFilter(UChar32 ch, void* context) {
-    int32_t value = *(int32_t*)context;
-    return (U_GET_GC_MASK((UChar32) ch) & value) != 0;
+    int32_t value = *static_cast<int32_t*>(context);
+    return (U_GET_GC_MASK(static_cast<UChar32>(ch)) & value) != 0;
 }
 
 static UBool versionFilter(UChar32 ch, void* context) {
     UVersionInfo v, none = { 0, 0, 0, 0};
-    UVersionInfo* version = (UVersionInfo*)context;
+    UVersionInfo* version = static_cast<UVersionInfo*>(context);
     u_charAge(ch, v);
     return uprv_memcmp(&v, &none, sizeof(v)) > 0 && uprv_memcmp(&v, version, sizeof(v)) <= 0;
 }
@@ -868,7 +869,7 @@ typedef struct {
 } IntPropertyContext;
 
 static UBool intPropertyFilter(UChar32 ch, void* context) {
-    IntPropertyContext* c = (IntPropertyContext*)context;
+    IntPropertyContext* c = static_cast<IntPropertyContext*>(context);
     return u_getIntPropertyValue((UChar32) ch, c->prop) == c->value;
 }
 
@@ -1012,7 +1013,7 @@ UnicodeSet::applyPropertyAlias(const UnicodeString& prop,
                     p == UCHAR_LEAD_CANONICAL_COMBINING_CLASS) {
                     char* end;
                     double value = uprv_strtod(vname, &end);
-                    v = (int32_t) value;
+                    v = static_cast<int32_t>(value);
                     if (v != value || v < 0 || *end != 0) {
                         // non-integral or negative value, or trailing junk
                         FAIL(ec);
@@ -1326,7 +1327,7 @@ UnicodeSet& UnicodeSet::closeOver(int32_t attribute) {
             UnicodeSet foldSet(*this);
             UnicodeString str;
             USetAdder sa = {
-                (USet *)&foldSet,
+                reinterpret_cast<USet *>(&foldSet),
                 _set_add,
                 _set_addRange,
                 _set_addString,
@@ -1376,7 +1377,7 @@ UnicodeSet& UnicodeSet::closeOver(int32_t attribute) {
             if (strings != NULL && strings->size() > 0) {
                 if (attribute & USET_CASE_INSENSITIVE) {
                     for (int32_t j=0; j<strings->size(); ++j) {
-                        str = *(const UnicodeString *) strings->elementAt(j);
+                        str = *static_cast<const UnicodeString *>(strings->elementAt(j));
                         str.foldCase();
                         if(!ucase_addStringCaseClosure(csp, str.getBuffer(), str.length(), &sa)) {
                             foldSet.add(str); // does not map to code points: add the folded string itself
@@ -1391,7 +1392,7 @@ UnicodeSet& UnicodeSet::closeOver(int32_t attribute) {
                         const UnicodeString *pStr;
 
                         for (int32_t j=0; j<strings->size(); ++j) {
-                            pStr = (const UnicodeString *) strings->elementAt(j);
+                            pStr = static_cast<const UnicodeString *>(strings->elementAt(j));
                             (str = *pStr).toLower(root);
                             foldSet.add(str);
 #if !UCONFIG_NO_BREAK_ITERATION
