@@ -89,8 +89,8 @@ class ConfusabledataBuilder {
     //   copied to its final raw-memory destination.
     UVector            *fKeyVec;
     UVector            *fValueVec;
-    UnicodeString      *stringTable;
-    UVector            *stringLengthsTable;
+    UnicodeString      *fStringTable;
+    UVector            *fStringLengthsTable;
     
     SPUStringPool      *stringPool;
     URegularExpression *fParseLine;

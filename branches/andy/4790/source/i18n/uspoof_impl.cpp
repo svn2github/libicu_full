@@ -11,6 +11,7 @@
 #include "udatamem.h"
 #include "umutex.h"
 #include "udataswp.h"
+#include "uassert.h"
 #include "uspoof_impl.h"
 
 
@@ -162,7 +163,6 @@ SpoofData *SpoofData::getDefault(UErrorCode &/*status*/) {
 
 // Spoof Data constructor for use from data builder.
 //   Initializes a new, empty data area that will be populated later.
-static const int32_t INITIAL_DATA_SIZE = 10000;
 SpoofData::SpoofData(UErrorCode &status) {
     fRawData = NULL;
     fDataOwned = true;
@@ -171,19 +171,48 @@ SpoofData::SpoofData(UErrorCode &status) {
     if (U_FAILURE(status)) {
         return;
     }
-    fRawData = static_cast<SpoofDataHeader *>(uprv_malloc(INITIAL_DATA_SIZE));
-    fDataLimit = INITIAL_DATA_SIZE;
+
+    // The spoof header should already be sized to be a multiple of 16 bytes.
+    // Just in case it's not, round it up.
+    uint32_t initialSize = (sizeof(SpoofDataHeader) + 15) & ~15;
+    U_ASSERT(initialSize == sizeof(SpoofDataHeader));
+    
+    fRawData = static_cast<SpoofDataHeader *>(uprv_malloc(initialSize));
+    fMemLimit = initialSize;
     if (fRawData == NULL) {
         status = U_MEMORY_ALLOCATION_ERROR;
         return;
     }
-    uprv_memset(fRawData, 0, INITIAL_DATA_SIZE);
+    uprv_memset(fRawData, 0, initialSize);
 
     fRawData->fMagic = USPOOF_MAGIC;
+    initPtrs();
+}
+
+//  initPtrs  Initialize the pointers to the various sections of the raw data.
+//            This operation may need to be repeated during the data build process
+//            when adding to the data causes a realloc(), which then moves everything.
+//
+//            The pointers for non-existent data sections (identified by an offset of 0)
+//            are set to NULL.
+//
+void SpoofData::initPtrs() {
     fCFUKeys = NULL;
     fCFUValues = NULL;
     fCFUStringLengths = NULL;
     fCFUStrings = NULL;
+    if (fRawData->fCFUKeys != 0) {
+        fCFUKeys = (int32_t *)((char *)fRawData + fRawData->fCFUKeys);
+    }
+    if (fRawData->fCFUStringIndex != 0) {
+        fCFUValues = (uint16_t *)((char *)fRawData + fRawData->fCFUStringIndex);
+    }
+    if (fRawData->fCFUStringLengths != 0) {
+        fCFUStringLengths = (SpoofStringLengthsElement *)((char *)fRawData + fRawData->fCFUStringLengths);
+    }
+    if (fRawData->fCFUStringTable != 0) {
+        fCFUStrings = (UChar *)((char *)fRawData + fRawData->fCFUStringTable);
+    }
 }
 
 
@@ -200,6 +229,26 @@ void SpoofData::removeReference() {
         delete this;
     }
 }
+
+
+void *SpoofData::reserveSpace(int32_t numBytes,  UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return NULL;
+    }
+    if (!fDataOwned) {
+        U_ASSERT(FALSE);
+        status = U_INTERNAL_PROGRAM_ERROR;
+        return NULL;
+    }
+
+    numBytes = (numBytes + 15) & ~15;   // Round up to a multiple of 16
+    uint32_t returnOffset = fMemLimit;
+    fMemLimit += numBytes;
+    fRawData = static_cast<SpoofDataHeader *>(uprv_realloc(fRawData, fMemLimit));
+    initPtrs();
+    return (char *)fRawData + returnOffset;
+}
+    
 
 U_NAMESPACE_END
 

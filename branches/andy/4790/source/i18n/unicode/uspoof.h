@@ -573,7 +573,12 @@ uspoof_areConfusableUnicodeString(const USpoofChecker *sc,
   *  set of existing identifiers, by creating an efficiently
   *  searchable collection of the skeletons.
   *
-  * @param sc      The USpoofChecker 
+  * @param sc      The USpoofChecker
+  * @param type    The type of skeleton, corresponding to which
+  *                of the Unicode confusable data tables to use.
+  *                The default is Mixed-Script, Lowercase.
+  *                Allowed options are USPOOF_SINGLE_SCRIPT_CONFUSABLE and
+  *                USPOOF_ANY_CASE_CONFUSABLE.  The two flags may be ORed.
   * @param s       The input string whose skeleton will be computed.
   * @param length  The length of the input string, expressed in 16 bit
   *                UTF-16 code units, or -1 if the string is zero terminated.
@@ -608,6 +613,11 @@ uspoof_getSkeleton(const USpoofChecker *sc,
   *  searchable collection of the skeletons.
   *
   * @param sc      The USpoofChecker 
+  * @param type    The type of skeleton, corresponding to which
+  *                of the Unicode confusable data tables to use.
+  *                The default is Mixed-Script, Lowercase.
+  *                Allowed options are USPOOF_SINGLE_SCRIPT_CONFUSABLE and
+  *                USPOOF_ANY_CASE_CONFUSABLE.  The two flags may be ORed.
   * @param s       The UTF-8 format input string whose skeleton will be computed.
   * @param length  The length of the input string, in bytes,
   *                or -1 if the string is zero terminated.
@@ -643,6 +653,11 @@ uspoof_getSkeletonUTF8(const USpoofChecker *sc,
   *  searchable collection of the skeletons.
   *
   * @param sc      The USpoofChecker.
+  * @param type    The type of skeleton, corresponding to which
+  *                of the Unicode confusable data tables to use.
+  *                The default is Mixed-Script, Lowercase.
+  *                Allowed options are USPOOF_SINGLE_SCRIPT_CONFUSABLE and
+  *                USPOOF_ANY_CASE_CONFUSABLE.  The two flags may be ORed.
   * @param s       The input string whose skeleton will be computed.
   * @param dest    The output string, to receive the skeleton string.
   * @param destCapacity  The length of the output buffer, in bytes.
@@ -656,6 +671,7 @@ uspoof_getSkeletonUTF8(const USpoofChecker *sc,
   */   
 U_DRAFT UnicodeString & U_EXPORT2
 uspoof_getSkeletonUnicodeString(const USpoofChecker *sc,
+                                USpoofChecks type,
                                 const UnicodeString &s,
                                 UnicodeString &dest,
                                 UErrorCode *status);

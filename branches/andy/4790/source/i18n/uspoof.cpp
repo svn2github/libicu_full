@@ -1,6 +1,6 @@
 /*
 ***************************************************************************
-* Copyright (C) 2008, International Business Machines Corporation
+* Copyright (C) 2008-2009, International Business Machines Corporation
 * and others. All Rights Reserved.
 ***************************************************************************
 *   file name:  uspoof.cpp
@@ -154,6 +154,25 @@ uspoof_getSkeleton(const USpoofChecker *sc,
     }
     return resultLen;
 }
+
+
+U_CAPI UnicodeString &  U_EXPORT2
+uspoof_getSkeletonUnicodeString(const USpoofChecker *sc,
+                                USpoofChecks type,
+                                const UnicodeString &s,
+                                UnicodeString &dest,
+                                UErrorCode *status) {
+    dest.remove();
+    
+    const UChar *str = s.getBuffer();
+    int32_t      strLen = s.length();
+    UChar smallBuf[100];
+    int32_t outputSize = uspoof_getSkeleton(sc, type, str, strLen, smallBuf, 100, status);
+    if (U_FAILURE(*status)) {
+        return dest;
+    }
+}
+
 
 U_CAPI void U_EXPORT2
 uspoof_setAllowedChars(USpoofChecker *sc, const USet *chars, UErrorCode *status) {

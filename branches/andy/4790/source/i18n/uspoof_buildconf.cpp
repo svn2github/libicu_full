@@ -176,8 +176,8 @@ ConfusabledataBuilder::ConfusabledataBuilder(SpoofImpl *spImpl, UErrorCode &stat
     keySetVec(NULL),
     fKeyVec(NULL),
     fValueVec(NULL),
-    stringTable(NULL),
-    stringLengthsTable(NULL),
+    fStringTable(NULL),
+    fStringLengthsTable(NULL),
     stringPool(NULL),
     fParseLine(NULL),
     fParseHexNum(NULL),
@@ -344,8 +344,8 @@ void ConfusabledataBuilder::build(const char * confusables, int32_t confusablesL
         // position in the string table of the first string of each length >= 4.
         // (Strings in the table are sorted by length)
         stringPool->sort(status);
-        stringTable = new UnicodeString();
-        stringLengthsTable = new UVector(status);
+        fStringTable = new UnicodeString();
+        fStringLengthsTable = new UVector(status);
         int32_t previousStringLength = 0;
         int32_t previousStringIndex  = 0;
         int32_t poolSize = stringPool->size();
@@ -353,7 +353,7 @@ void ConfusabledataBuilder::build(const char * confusables, int32_t confusablesL
         for (i=0; i<poolSize; i++) {
             SPUString *s = stringPool->getByIndex(i);
             int32_t strLen = s->fStr->length();
-            int32_t strIndex = stringTable->length();
+            int32_t strIndex = fStringTable->length();
             U_ASSERT(strLen >= previousStringLength);
             if (strLen == 1) {
                 // strings of length one do not get an entry in the string table.
@@ -362,11 +362,11 @@ void ConfusabledataBuilder::build(const char * confusables, int32_t confusablesL
                 s->fStrTableIndex = s->fStr->charAt(0);
             } else {
                 if ((strLen > previousStringLength) && (previousStringLength >= 4)) {
-                    stringLengthsTable->addElement(previousStringIndex, status);
-                    stringLengthsTable->addElement(previousStringLength, status);
+                    fStringLengthsTable->addElement(previousStringIndex, status);
+                    fStringLengthsTable->addElement(previousStringLength, status);
                 }
                 s->fStrTableIndex = strIndex;
-                stringTable->append(*(s->fStr));
+                fStringTable->append(*(s->fStr));
             }
             previousStringLength = strLen;
             previousStringIndex  = strIndex;
@@ -375,8 +375,8 @@ void ConfusabledataBuilder::build(const char * confusables, int32_t confusablesL
         //   (it holds an entry for the _last_ string of each length, so adding the
         //    final one doesn't happen in the main loop because no longer string was encountered.)
         if (previousStringLength >= 4) {
-            stringLengthsTable->addElement(previousStringLength, status);
-            stringLengthsTable->addElement(previousStringIndex, status);
+            fStringLengthsTable->addElement(previousStringLength, status);
+            fStringLengthsTable->addElement(previousStringIndex, status);
         }
 
         // Build up the Key and Value tables
@@ -422,11 +422,14 @@ void ConfusabledataBuilder::build(const char * confusables, int32_t confusablesL
 //
 void ConfusabledataBuilder::outputData(UErrorCode &status) {
 
-    USpoofDataHeader *flatData = fSpoofImpl->fSpoofData->fRawData;
+    SpoofDataHeader *flatData = fSpoofImpl->fSpoofData->fRawData;
     U_ASSERT(flatData != NULL);
     U_ASSERT(fSpoofImpl->fSpoofData->fDataOwned == TRUE);
     
     //  The Key Table
+    //     While copying the keys to the runtime array,
+    //       also sanity check that they are sorted.
+    
     int32_t numKeys = fKeyVec->size();
     int32_t *keys =
         static_cast<int32_t *>(fSpoofImpl->fSpoofData->reserveSpace(numKeys*sizeof(int32_t), status));
@@ -434,8 +437,13 @@ void ConfusabledataBuilder::outputData(UErrorCode &status) {
         return;
     }
     int i;
+    int32_t previousKey = 0;
     for (i=0; i<numKeys; i++) {
-        keys[i] = fKeyVec->elementAti(i);
+        int32_t key =  fKeyVec->elementAti(i);
+        U_ASSERT((key & 0x00ffffff) >= (previousKey & 0x00ffffff));
+        U_ASSERT((key & 0xff000000) != 0);
+        keys[i] = key;
+        previousKey = key;
     }
     flatData->fCFUKeys = (char *)keys - (char *)flatData;
     flatData->fCFUKeysSize = numKeys;
@@ -460,7 +468,8 @@ void ConfusabledataBuilder::outputData(UErrorCode &status) {
     fSpoofImpl->fSpoofData->fCFUValues = values;
 
     // The Strings Table.
-    int32_t stringsLength = fCFUStrings->length();
+    
+    uint32_t stringsLength = fStringTable->length();
     // Reserve an extra space so the extracted strings will be nul-terminated.
     // Only a convenience when looking in the debugger, not needed otherwise.
     UChar *strings =
@@ -468,13 +477,34 @@ void ConfusabledataBuilder::outputData(UErrorCode &status) {
     if (U_FAILURE(status)) {
         return;
     }
-    fCFUStrings->extract(strings, stringsLength+1, status);
+    fStringTable->extract(strings, stringsLength+1, status);
     flatData->fCFUStringTable = (char *)values - (char *)flatData;
     flatData->fCFUStringTableLen = stringsLength;
     fSpoofImpl->fSpoofData->fCFUStrings = strings;
     
     // The String Lengths Table
-    
+    //    While copying into the runtime array do some sanity checks on the values
+    //    Each complete entry contains two fields, an index and an offset.
+    //    Lengths should increase with each entry.
+    //    Offsets should be less than the size of the string table.
+    int32_t lengthTableLength = fStringLengthsTable->size();
+    uint16_t *stringLengths =
+        static_cast<uint16_t *>(fSpoofImpl->fSpoofData->reserveSpace(lengthTableLength*sizeof(uint16_t), status));
+    if (U_FAILURE(status)) {
+        return;
+    }
+    int32_t destIndex = 0;
+    uint32_t previousLength = 0;
+    for (i=0; i<lengthTableLength/2; i+=2) {
+        uint32_t offset = static_cast<uint32_t>(fStringLengthsTable->elementAti(i));
+        uint32_t length = static_cast<uint32_t>(fStringLengthsTable->elementAti(i+1));
+        U_ASSERT(offset < stringsLength);
+        U_ASSERT(length < 40);
+        U_ASSERT(length > previousLength);
+        stringLengths[destIndex++] = static_cast<uint16_t>(offset);
+        stringLengths[destIndex++] = static_cast<uint16_t>(length);
+        previousLength = length;
+    }
 }
 
 
@@ -557,19 +587,19 @@ UnicodeString ConfusabledataBuilder::getMapping(int32_t index) {
         return UnicodeString(static_cast<UChar>(value));
       case 1:
       case 2:
-        return UnicodeString(*stringTable, value, length+1);
+        return UnicodeString(*fStringTable, value, length+1);
       case 3:
         length = 0;
         int32_t i;
-        for (i=0; i<stringLengthsTable->size(); i+=2) {
-            int32_t lastIndexWithLen = stringLengthsTable->elementAti(i);
+        for (i=0; i<fStringLengthsTable->size(); i+=2) {
+            int32_t lastIndexWithLen = fStringLengthsTable->elementAti(i);
             if (value <= lastIndexWithLen) {
-                length = stringLengthsTable->elementAti(i+1);
+                length = fStringLengthsTable->elementAti(i+1);
                 break;
             }
         }
         U_ASSERT(length>=3);
-        return UnicodeString(*stringTable, value, length);
+        return UnicodeString(*fStringTable, value, length);
       default:
         U_ASSERT(FALSE);
     }

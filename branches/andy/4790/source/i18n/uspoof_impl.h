@@ -187,11 +187,14 @@ class SpoofData: public UMemory {
     // Reserve space in the data.  For use by builder when putting together a
     //   new set of data.
     void *reserveSpace(int32_t numBytes, UErrorCode &status);
+
+    void initPtrs();
     
     SpoofDataHeader             *fRawData;          // Ptr to the raw memory-mapped data
     UBool                       fDataOwned;         // True if the raw data is owned, and needs
                                                     //  to be deleted when refcount goes to zero.
-    uint32_t                    fDataLimit;
+
+    uint32_t                    fMemLimit;          // Limit of available raw data space
     int32_t                     fRefCount;
 
     // Confusable data
