@@ -124,15 +124,12 @@ uspoof_getSkeleton(const USpoofChecker *sc,
     int32_t resultLen = 0;
     while (inputIndex < normalizedLen) {
         UChar32 c;
-        U16_GET(s, 0, inputIndex, normalizedLen, c);
-        if (c==0 && length==-1) {
-            break;
-        }
+        U16_NEXT(nfkdInput, inputIndex, normalizedLen, c);
         int32_t replaceLen = This->ConfusableLookup(c, buf);
         if (resultLen + replaceLen < destCapacity) {
             int i;
             for (i=0; i<replaceLen; i++) {
-                buf[resultLen++] = buf[i];
+                dest[resultLen++] = buf[i];
             }
         } else {
             // Storing the transformed string would overflow the dest buffer.
@@ -162,15 +159,31 @@ uspoof_getSkeletonUnicodeString(const USpoofChecker *sc,
                                 const UnicodeString &s,
                                 UnicodeString &dest,
                                 UErrorCode *status) {
+    if (U_FAILURE(*status)) {
+        return dest;
+    }
     dest.remove();
     
     const UChar *str = s.getBuffer();
     int32_t      strLen = s.length();
-    UChar smallBuf[100];
+    UChar        smallBuf[100];
+    UChar       *buf = smallBuf;
     int32_t outputSize = uspoof_getSkeleton(sc, type, str, strLen, smallBuf, 100, status);
-    if (U_FAILURE(*status)) {
-        return dest;
+    if (*status == U_BUFFER_OVERFLOW_ERROR) {
+        buf = static_cast<UChar *>(uprv_malloc(outputSize+1));
+        if (buf == NULL) {
+            *status = U_MEMORY_ALLOCATION_ERROR;
+        }
+        uspoof_getSkeleton(sc, type, str, strLen, buf, outputSize+1, status);
     }
+    if (U_SUCCESS(*status)) {
+        dest.setTo(buf, outputSize);
+    }
+
+    if (buf != smallBuf) {
+        uprv_free(buf);
+    }
+    return dest;
 }
 
 

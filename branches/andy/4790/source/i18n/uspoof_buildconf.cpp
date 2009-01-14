@@ -172,8 +172,7 @@ ConfusabledataBuilder::ConfusabledataBuilder(SpoofImpl *spImpl, UErrorCode &stat
     fSATable(NULL), 
     fMLTable(NULL),
     fMATable(NULL),
-    keySet(NULL), 
-    keySetVec(NULL),
+    fKeySet(NULL), 
     fKeyVec(NULL),
     fValueVec(NULL),
     fStringTable(NULL),
@@ -190,8 +189,7 @@ ConfusabledataBuilder::ConfusabledataBuilder(SpoofImpl *spImpl, UErrorCode &stat
     fSATable    = uhash_open(uhash_hashLong, uhash_compareLong, NULL, &status);
     fMLTable    = uhash_open(uhash_hashLong, uhash_compareLong, NULL, &status);
     fMATable    = uhash_open(uhash_hashLong, uhash_compareLong, NULL, &status);
-    keySet     = uhash_open(uhash_hashLong, uhash_compareLong, NULL, &status);
-    keySetVec  = new UVector(status);
+    fKeySet     = new UnicodeSet();
     fKeyVec     = new UVector(status);
     fValueVec   = new UVector(status);
     stringPool = new SPUStringPool(status);
@@ -206,7 +204,7 @@ ConfusabledataBuilder::~ConfusabledataBuilder() {
     uhash_close(fSATable);
     uhash_close(fMLTable);
     uhash_close(fMATable);
-    uhash_close(keySet);
+    delete fKeySet;
     delete fKeyVec;
     delete fValueVec;
     delete stringPool;
@@ -230,7 +228,7 @@ void ConfusabledataBuilder::buildConfusableData(SpoofImpl * spImpl, const char *
 
 void ConfusabledataBuilder::build(const char * confusables, int32_t confusablesLen,
                UErrorCode &status) {
-               
+
     // Convert the user input data from UTF-8 to UChar (UTF-16)
     int32_t inputLen = 0;
     if (U_FAILURE(status)) {
@@ -324,6 +322,7 @@ void ConfusabledataBuilder::build(const char * confusables, int32_t confusablesL
                             NULL;
         U_ASSERT(table != NULL);
         uhash_iput(table, keyChar, smapString, &status);
+        fKeySet->add(keyChar);
         if (U_FAILURE(status)) {
             return;
         }
@@ -335,73 +334,65 @@ void ConfusabledataBuilder::build(const char * confusables, int32_t confusablesL
     // This is done in two steps.  First the data is assembled into vectors and strings,
     //   for ease of construction, then the contents of these collections are dumped
     //   into the actual raw-bytes data storage.
-    {
 
-        // Build up the string array, and record the index of each string therein
-        //  in the (build time only) string pool.
-        // Strings of length one are not entered into the strings array.
-        // At the same time, build up the string lengths table, which records the
-        // position in the string table of the first string of each length >= 4.
-        // (Strings in the table are sorted by length)
-        stringPool->sort(status);
-        fStringTable = new UnicodeString();
-        fStringLengthsTable = new UVector(status);
-        int32_t previousStringLength = 0;
-        int32_t previousStringIndex  = 0;
-        int32_t poolSize = stringPool->size();
-        int32_t i;
-        for (i=0; i<poolSize; i++) {
-            SPUString *s = stringPool->getByIndex(i);
-            int32_t strLen = s->fStr->length();
-            int32_t strIndex = fStringTable->length();
-            U_ASSERT(strLen >= previousStringLength);
-            if (strLen == 1) {
-                // strings of length one do not get an entry in the string table.
-                // Keep the single string character itself here, which is the same
-                //  convention that is used in the final run-time string table index.
-                s->fStrTableIndex = s->fStr->charAt(0);
-            } else {
-                if ((strLen > previousStringLength) && (previousStringLength >= 4)) {
-                    fStringLengthsTable->addElement(previousStringIndex, status);
-                    fStringLengthsTable->addElement(previousStringLength, status);
-                }
-                s->fStrTableIndex = strIndex;
-                fStringTable->append(*(s->fStr));
+    // Build up the string array, and record the index of each string therein
+    //  in the (build time only) string pool.
+    // Strings of length one are not entered into the strings array.
+    // At the same time, build up the string lengths table, which records the
+    // position in the string table of the first string of each length >= 4.
+    // (Strings in the table are sorted by length)
+    stringPool->sort(status);
+    fStringTable = new UnicodeString();
+    fStringLengthsTable = new UVector(status);
+    int32_t previousStringLength = 0;
+    int32_t previousStringIndex  = 0;
+    int32_t poolSize = stringPool->size();
+    int32_t i;
+    for (i=0; i<poolSize; i++) {
+        SPUString *s = stringPool->getByIndex(i);
+        int32_t strLen = s->fStr->length();
+        int32_t strIndex = fStringTable->length();
+        U_ASSERT(strLen >= previousStringLength);
+        if (strLen == 1) {
+            // strings of length one do not get an entry in the string table.
+            // Keep the single string character itself here, which is the same
+            //  convention that is used in the final run-time string table index.
+            s->fStrTableIndex = s->fStr->charAt(0);
+        } else {
+            if ((strLen > previousStringLength) && (previousStringLength >= 4)) {
+                fStringLengthsTable->addElement(previousStringIndex, status);
+                fStringLengthsTable->addElement(previousStringLength, status);
             }
-            previousStringLength = strLen;
-            previousStringIndex  = strIndex;
+            s->fStrTableIndex = strIndex;
+            fStringTable->append(*(s->fStr));
         }
-        // Make the final entry to the string lengths table.
-        //   (it holds an entry for the _last_ string of each length, so adding the
-        //    final one doesn't happen in the main loop because no longer string was encountered.)
-        if (previousStringLength >= 4) {
-            fStringLengthsTable->addElement(previousStringLength, status);
-            fStringLengthsTable->addElement(previousStringIndex, status);
-        }
+        previousStringLength = strLen;
+        previousStringIndex  = strIndex;
+    }
+    // Make the final entry to the string lengths table.
+    //   (it holds an entry for the _last_ string of each length, so adding the
+    //    final one doesn't happen in the main loop because no longer string was encountered.)
+    if (previousStringLength >= 4) {
+        fStringLengthsTable->addElement(previousStringLength, status);
+        fStringLengthsTable->addElement(previousStringIndex, status);
+    }
 
-        // Build up the Key and Value tables
+    // Build up the Key and Value tables
+    //
+    // For each key code point, check which mapping tables it applies to,
+    //   and create the final data for the key & value structures.
+    //
+    //   The four logical mapping tables are conflated into one combined table.
+    //   If multiple logical tables have the same mapping for some key, they
+    //     share a single entry in the combined table.
+    //   If more than one mapping exists for the same key code point, multiple
+    //     entries will be created in the table
 
-        // Create a sorted list of all key code points.
-        //   (This is an intermediate thing, not part of the final data)
-        int32_t  iterationPosition = -1;
-        const UHashElement *keyElement = NULL;
-        while ((keyElement = uhash_nextElement(keySet, &iterationPosition)) != NULL) {
-            UChar32 keyChar = keyElement->key.integer;
-            keySetVec->addElement(keyChar, status);
-        }
-        keySetVec->sorti(status);
-
-        // For each key code point, check which mapping tables it applies to,
-        //   and create the final data for the key & value structures.
-        //
-        //   The four logical mapping tables are conflated into one combined table.
-        //   If multiple logical tables have the same mapping for some key, they
-        //     share a single entry in the combined table.
-        //   If more than one mapping exists for the same key code point, multiple
-        //     entries will be created in the table.
-        int32_t keyCharIndex;
-        for (keyCharIndex=0; keyCharIndex<keySetVec->size(); keyCharIndex++) {
-            UChar32 keyChar = keySetVec->elementAti(keyCharIndex);
+    for (int32_t range=0; range<fKeySet->getRangeCount(); range++) {
+        // It is an oddity of the UnicodeSet API that simply enumerating the contained
+        //   code points requires a nested loop.
+        for (UChar32 keyChar=fKeySet->getRangeStart(range);
+                keyChar<=fKeySet->getRangeEnd(range); keyChar++) {
             addKeyEntry(keyChar, fSLTable, USPOOF_SL_TABLE_FLAG, status);
             addKeyEntry(keyChar, fSATable, USPOOF_SA_TABLE_FLAG, status);
             addKeyEntry(keyChar, fMLTable, USPOOF_ML_TABLE_FLAG, status);
@@ -415,7 +406,7 @@ void ConfusabledataBuilder::build(const char * confusables, int32_t confusablesL
     return;
 }
 
-
+//
 // outputData     The confusable data has been compiled and stored in intermediate
 //                collections and strings.  Copy it from there to the final flat
 //                binary array.
@@ -522,6 +513,12 @@ void ConfusabledataBuilder::addKeyEntry(
     UErrorCode &status) {
 
     SPUString *targetMapping = static_cast<SPUString *>(uhash_iget(table, keyChar));
+    if (targetMapping == NULL) {
+        // No mapping for this key character.
+        //   (This function is called for all four tables for each key char that
+        //    is seen anywhere, so this no entry cases are very much expected.)
+        return;
+    }
     
     // Check whether there is already an entry with the correct mapping.
     // If so, simply set the flag in the keyTable saying that the existing entry
@@ -529,7 +526,7 @@ void ConfusabledataBuilder::addKeyEntry(
 
     UBool keyHasMultipleValues = FALSE;
     int32_t i;
-    for (i=fKeyVec->size()-1; i>0 ; i--) {
+    for (i=fKeyVec->size()-1; i>=0 ; i--) {
         int32_t key = fKeyVec->elementAti(i);
         if ((key & 0x0ffffff) != keyChar) {
             // We have now checked all existing key entries for this key char (if any)
@@ -554,14 +551,13 @@ void ConfusabledataBuilder::addKeyEntry(
     if (keyHasMultipleValues) {
         newKey |= USPOOF_KEY_MULTIPLE_VALUES;
     }
-    
-    int32_t newData = 0;
     int32_t adjustedMappingLength = targetMapping->fStr->length() - 1;
     if (adjustedMappingLength>3) {
         adjustedMappingLength = 3;
     }
-    newData |= (adjustedMappingLength << USPOOF_KEY_LENGTH_SHIFT);
-    newData |= targetMapping->fStrTableIndex;
+    newKey |= adjustedMappingLength << USPOOF_KEY_LENGTH_SHIFT;
+    
+    int32_t newData = targetMapping->fStrTableIndex;
 
     fKeyVec->addElement(newKey, status);
     fValueVec->addElement(newData, status);
@@ -582,6 +578,7 @@ UnicodeString ConfusabledataBuilder::getMapping(int32_t index) {
     int32_t key = fKeyVec->elementAti(index);
     int32_t value = fValueVec->elementAti(index);
     int32_t length = USPOOF_KEY_LENGTH_FIELD(key);
+    int32_t lastIndexWithLen;
     switch (length) {
       case 0:
         return UnicodeString(static_cast<UChar>(value));
@@ -592,7 +589,7 @@ UnicodeString ConfusabledataBuilder::getMapping(int32_t index) {
         length = 0;
         int32_t i;
         for (i=0; i<fStringLengthsTable->size(); i+=2) {
-            int32_t lastIndexWithLen = fStringLengthsTable->elementAti(i);
+            lastIndexWithLen = fStringLengthsTable->elementAti(i);
             if (value <= lastIndexWithLen) {
                 length = fStringLengthsTable->elementAti(i+1);
                 break;

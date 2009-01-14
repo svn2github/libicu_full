@@ -82,8 +82,7 @@ class ConfusabledataBuilder {
     UHashtable *fSATable; 
     UHashtable *fMLTable; 
     UHashtable *fMATable;
-    UHashtable *keySet;     // A set of all keys (UChar32s) that go into the four mapping tables.
-    UVector    *keySetVec;     // A sorted vector of the above set of keys.
+    UnicodeSet *fKeySet;     // A set of all keys (UChar32s) that go into the four mapping tables.
 
     // The binary data is first assembled into the following four collections, then
     //   copied to its final raw-memory destination.
