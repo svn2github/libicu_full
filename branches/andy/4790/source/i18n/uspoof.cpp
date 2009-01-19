@@ -16,6 +16,7 @@
 #include "unicode/utypes.h"
 #include "unicode/uspoof.h"
 #include "unicode/unorm.h"
+#include "unicode/ustring.h"
 #include "cmemory.h"
 #include "uspoof_impl.h"
 
@@ -91,7 +92,27 @@ uspoof_getSkeleton(const USpoofChecker *sc,
     if (U_FAILURE(*status)) {
         return 0;
     }
-    if (length<-1 || destCapacity<0 || (destCapacity==0 && dest!=NULL)) {
+    if (length<-1 || destCapacity<0 || (destCapacity==0 && dest!=NULL) ||
+        (type & ~(USPOOF_SINGLE_SCRIPT_CONFUSABLE | USPOOF_ANY_CASE_CONFUSABLE)) != 0) {
+        *status = U_ILLEGAL_ARGUMENT_ERROR;
+        return 0;
+    }
+
+   int32_t tableMask = 0;
+   switch (type) {
+      case 0:
+        tableMask = USPOOF_ML_TABLE_FLAG;
+        break;
+      case USPOOF_SINGLE_SCRIPT_CONFUSABLE:
+        tableMask = USPOOF_SL_TABLE_FLAG;
+        break;
+      case USPOOF_ANY_CASE_CONFUSABLE:
+        tableMask = USPOOF_MA_TABLE_FLAG;
+        break;
+      case USPOOF_SINGLE_SCRIPT_CONFUSABLE | USPOOF_ANY_CASE_CONFUSABLE:
+        tableMask = USPOOF_SA_TABLE_FLAG;
+        break;
+      default:
         *status = U_ILLEGAL_ARGUMENT_ERROR;
         return 0;
     }
@@ -125,7 +146,7 @@ uspoof_getSkeleton(const USpoofChecker *sc,
     while (inputIndex < normalizedLen) {
         UChar32 c;
         U16_NEXT(nfkdInput, inputIndex, normalizedLen, c);
-        int32_t replaceLen = This->ConfusableLookup(c, buf);
+        int32_t replaceLen = This->confusableLookup(c, tableMask, buf);
         if (resultLen + replaceLen < destCapacity) {
             int i;
             for (i=0; i<replaceLen; i++) {
@@ -184,6 +205,68 @@ uspoof_getSkeletonUnicodeString(const USpoofChecker *sc,
         uprv_free(buf);
     }
     return dest;
+}
+
+
+U_CAPI int32_t U_EXPORT2
+uspoof_getSkeletonUTF8(const USpoofChecker *sc,
+                       USpoofChecks type,
+                       const char *s,  int32_t length,
+                       char *dest, int32_t destCapacity,
+                       UErrorCode *status) {
+    // Lacking a UTF-8 normalization API, just converting the input to
+    // UTF-16 seems as good an approach as any.  In typical use, input will
+    // be an identifier, which is to say not too long for stack buffers.
+    if (U_FAILURE(*status)) {
+        return 0;
+    }
+    // Buffers for the UChar form of the input and skeleton strings.
+    UChar    smallInBuf[USPOOF_STACK_BUFFER_SIZE];
+    UChar   *inBuf = smallInBuf;
+    UChar    smallOutBuf[USPOOF_STACK_BUFFER_SIZE];
+    UChar   *outBuf = smallOutBuf;
+
+    int32_t  lengthInUChars = 0;
+    int32_t  skelLengthInUChars = 0;
+    int32_t  skelLengthInUTF8 = 0;
+    
+    u_strFromUTF8(inBuf, USPOOF_STACK_BUFFER_SIZE, &lengthInUChars,
+                  s, length, status);
+    if (*status == U_BUFFER_OVERFLOW_ERROR) {
+        *status = U_ZERO_ERROR;
+        inBuf = static_cast<UChar *>(uprv_malloc((lengthInUChars+1)*sizeof(UChar)));
+        if (inBuf == NULL) {
+            *status = U_MEMORY_ALLOCATION_ERROR;
+            goto cleanup;
+        }
+        u_strFromUTF8(inBuf, USPOOF_STACK_BUFFER_SIZE, &lengthInUChars+1,
+                      s, length, status);
+    }
+    
+    skelLengthInUChars = uspoof_getSkeleton(sc, type, outBuf, lengthInUChars,
+                                         outBuf, USPOOF_STACK_BUFFER_SIZE, status);
+    if (*status == U_BUFFER_OVERFLOW_ERROR) {
+        *status = U_ZERO_ERROR;
+        outBuf = static_cast<UChar *>(uprv_malloc((skelLengthInUChars+1)*sizeof(UChar)));
+        if (outBuf == NULL) {
+            *status = U_MEMORY_ALLOCATION_ERROR;
+            goto cleanup;
+        }
+        skelLengthInUChars = uspoof_getSkeleton(sc, type, outBuf, lengthInUChars,
+                                         outBuf, USPOOF_STACK_BUFFER_SIZE, status);
+    }
+
+    u_strToUTF8(dest, destCapacity, &skelLengthInUTF8,
+                outBuf, skelLengthInUChars, status);
+
+  cleanup:
+    if (inBuf != smallInBuf) {
+        delete inBuf;
+    }
+    if (outBuf != smallOutBuf) {
+        delete outBuf;
+    }
+    return skelLengthInUTF8;
 }
 
 

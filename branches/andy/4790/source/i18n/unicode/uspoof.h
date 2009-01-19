@@ -626,7 +626,10 @@ uspoof_getSkeleton(const USpoofChecker *sc,
   *                The destCapacity may be zero, in which case the function will
   *                return the actual length of the skeleton.
   * @param status  The error code, set if an error occured while attempting to
-  *                perform the check.
+  *                perform the check.  Possible Errors include U_INVALID_CHAR_FOUND
+  *                   for invalid UTF-8 sequences, and
+  *                   U_BUFFER_OVERFLOW_ERROR if the destination buffer is too small
+  *                   to hold the complete skeleton.
   * @return        The length of the skeleton string, in bytes.  The returned length
   *                is always that of the complete skeleton, even when the
   *                supplied buffer is too small (or of zero length)

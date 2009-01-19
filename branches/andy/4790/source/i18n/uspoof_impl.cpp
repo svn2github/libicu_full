@@ -66,7 +66,7 @@ const SpoofImpl *SpoofImpl::validateThis(const USpoofChecker *sc, UErrorCode &st
 }
 
 
-int32_t SpoofImpl::ConfusableLookup(UChar32 inChar, UChar *destBuf) const {
+int32_t SpoofImpl::confusableLookup(UChar32 inChar, int32_t tableMask, UChar *destBuf) const {
 
     // Binary search the spoof data key table for the inChar
     int32_t  *low   = fSpoofData->fCFUKeys;
@@ -76,7 +76,7 @@ int32_t SpoofImpl::ConfusableLookup(UChar32 inChar, UChar *destBuf) const {
     do {
         int32_t delta = (limit-low)/2;
         mid = low + delta;
-        midc = *mid & 0xfff;
+        midc = *mid & 0x1fffff;
         if (inChar == midc) {
             goto foundChar;
         } else if (inChar < midc) {
@@ -86,7 +86,7 @@ int32_t SpoofImpl::ConfusableLookup(UChar32 inChar, UChar *destBuf) const {
         }
     } while (low < limit-1);
     mid = low;
-    midc = *mid & 0xfff;
+    midc = *mid & 0x1fffff;
     if (inChar != midc) {
         // Char not found.  It maps to itself.
         int i = 0;
@@ -95,21 +95,21 @@ int32_t SpoofImpl::ConfusableLookup(UChar32 inChar, UChar *destBuf) const {
     } 
   foundChar:
     int32_t keyFlags = *mid & 0xff000000;
-    if ((keyFlags & fCheckMask) == 0) {
+    if ((keyFlags & tableMask) == 0) {
         // We found the right key char, but the entry doesn't pertain to the
         //  table we need.  See if there is an adjacent key that does
         if (keyFlags & USPOOF_KEY_MULTIPLE_VALUES) {
             int32_t *altMid;
             for (altMid = mid-1; (*altMid&0x00ffffff) == inChar; altMid--) {
                 keyFlags = *altMid & 0xff000000;
-                if (keyFlags & fCheckMask) {
+                if (keyFlags & tableMask) {
                     mid = altMid;
                     goto foundKey;
                 }
             }
             for (altMid = mid+1; (*altMid&0x00ffffff) == inChar; altMid++) {
                 keyFlags = *altMid & 0xff000000;
-                if (keyFlags & fCheckMask) {
+                if (keyFlags & tableMask) {
                     mid = altMid;
                     goto foundKey;
                 }

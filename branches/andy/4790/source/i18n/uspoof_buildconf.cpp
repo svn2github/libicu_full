@@ -373,8 +373,8 @@ void ConfusabledataBuilder::build(const char * confusables, int32_t confusablesL
     //   (it holds an entry for the _last_ string of each length, so adding the
     //    final one doesn't happen in the main loop because no longer string was encountered.)
     if (previousStringLength >= 4) {
-        fStringLengthsTable->addElement(previousStringLength, status);
         fStringLengthsTable->addElement(previousStringIndex, status);
+        fStringLengthsTable->addElement(previousStringLength, status);
     }
 
     // Build up the Key and Value tables
@@ -411,10 +411,12 @@ void ConfusabledataBuilder::build(const char * confusables, int32_t confusablesL
 //                collections and strings.  Copy it from there to the final flat
 //                binary array.
 //
+//                Note that as each section is added to the output data, the
+//                expand (reserveSpace() function will likely relocate it in memory.
+//                Be careful with pointers.
+//
 void ConfusabledataBuilder::outputData(UErrorCode &status) {
 
-    SpoofDataHeader *flatData = fSpoofImpl->fSpoofData->fRawData;
-    U_ASSERT(flatData != NULL);
     U_ASSERT(fSpoofImpl->fSpoofData->fDataOwned == TRUE);
     
     //  The Key Table
@@ -436,8 +438,9 @@ void ConfusabledataBuilder::outputData(UErrorCode &status) {
         keys[i] = key;
         previousKey = key;
     }
-    flatData->fCFUKeys = (char *)keys - (char *)flatData;
-    flatData->fCFUKeysSize = numKeys;
+    SpoofDataHeader *rawData = fSpoofImpl->fSpoofData->fRawData;
+    rawData->fCFUKeys = (char *)keys - (char *)rawData;
+    rawData->fCFUKeysSize = numKeys;
     fSpoofImpl->fSpoofData->fCFUKeys = keys;
 
 
@@ -454,23 +457,25 @@ void ConfusabledataBuilder::outputData(UErrorCode &status) {
         U_ASSERT(value < 0xffff);
         values[i] = static_cast<uint16_t>(value);
     }
-    flatData->fCFUStringIndex = (char *)values - (char *)flatData;
-    flatData->fCFUStringIndexSize = numValues;
+    rawData = fSpoofImpl->fSpoofData->fRawData;
+    rawData->fCFUStringIndex = (char *)values - (char *)rawData;
+    rawData->fCFUStringIndexSize = numValues;
     fSpoofImpl->fSpoofData->fCFUValues = values;
 
     // The Strings Table.
     
     uint32_t stringsLength = fStringTable->length();
-    // Reserve an extra space so the extracted strings will be nul-terminated.
-    // Only a convenience when looking in the debugger, not needed otherwise.
+    // Reserve an extra space so the string will be nul-terminated.  This is
+    // only a convenience, for when debugging; it is not needed otherwise.
     UChar *strings =
         static_cast<UChar *>(fSpoofImpl->fSpoofData->reserveSpace(stringsLength*sizeof(UChar)+2, status));
     if (U_FAILURE(status)) {
         return;
     }
     fStringTable->extract(strings, stringsLength+1, status);
-    flatData->fCFUStringTable = (char *)values - (char *)flatData;
-    flatData->fCFUStringTableLen = stringsLength;
+    rawData = fSpoofImpl->fSpoofData->fRawData;
+    rawData->fCFUStringTable = (char *)values - (char *)rawData;
+    rawData->fCFUStringTableLen = stringsLength;
     fSpoofImpl->fSpoofData->fCFUStrings = strings;
     
     // The String Lengths Table
@@ -486,7 +491,7 @@ void ConfusabledataBuilder::outputData(UErrorCode &status) {
     }
     int32_t destIndex = 0;
     uint32_t previousLength = 0;
-    for (i=0; i<lengthTableLength/2; i+=2) {
+    for (i=0; i<lengthTableLength; i+=2) {
         uint32_t offset = static_cast<uint32_t>(fStringLengthsTable->elementAti(i));
         uint32_t length = static_cast<uint32_t>(fStringLengthsTable->elementAti(i+1));
         U_ASSERT(offset < stringsLength);
@@ -496,6 +501,11 @@ void ConfusabledataBuilder::outputData(UErrorCode &status) {
         stringLengths[destIndex++] = static_cast<uint16_t>(length);
         previousLength = length;
     }
+    rawData = fSpoofImpl->fSpoofData->fRawData;
+    rawData->fCFUStringLengths = (char *)stringLengths - (char *)rawData;
+    rawData->fCFUStringLengthsSize = lengthTableLength;
+    fSpoofImpl->fSpoofData->fCFUStringLengths =
+        reinterpret_cast<SpoofStringLengthsElement *>(stringLengths);
 }
 
 

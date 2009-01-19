@@ -22,9 +22,8 @@ U_NAMESPACE_BEGIN
 //   a single input code point.  This is function of the unicode.org data.
 #define USPOOF_MAX_SKELETON_EXPANSION 20
 
-// The default stack buffer size for the NFKD normalization of
-//   input strings to be checked.  Longer strings require allocation
-//   of a heap buffer.
+// The default stack buffer size for copies or conversions or normalizations
+// of input strings being checked.  (Used in multiple places.)
 #define USPOOF_STACK_BUFFER_SIZE 100
 
 // Magic number for sanity checking spoof data.
@@ -50,29 +49,14 @@ public:
 
 	/** Get the confusable skeleton transform for a single code point.
 	 *  The result is a string with a length between 1 and 18.
+	 *  @param    tableMask  bit flag specifying which confusable table to use.
+	 *                       One of USPOOF_SL_TABLE_FLAG, USPOOF_MA_TABLE_FLAG, etc.
 	 *  @return   The length in UTF-16 code units of the substition string.
 	 */  
-	int32_t ConfusableLookup(UChar32 inChar, UChar *destBuf) const;
+	int32_t confusableLookup(UChar32 inChar, int32_t tableMask, UChar *destBuf) const;
 	
 
-    /**
-     * Return the class ID for this class.  This is useful only for
-     * comparing to a return value from getDynamicClassID().  For example:
-     * <pre>
-     * .      Base* polymorphic_pointer = createPolymorphicObject();
-     * .      if (polymorphic_pointer->getDynamicClassID() ==
-     * .          Derived::getStaticClassID()) ...
-     * </pre>
-     * @return          The class ID for all objects of this class.
-     * @stable ICU 2.0
-     */
     static UClassID U_EXPORT2 getStaticClassID(void);
-
-    /**
-     * Return a polymorphic class ID for this object. Different subclasses
-     * will return distinct unequal values.
-     * @stable ICU 2.0
-     */
     virtual UClassID getDynamicClassID(void) const;
 
 	//
