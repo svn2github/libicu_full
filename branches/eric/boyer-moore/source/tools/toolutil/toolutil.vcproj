@@ -417,6 +417,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\filetools.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\flagparser.c"
+				>
+			</File>
+			<File
 				RelativePath=".\package.cpp"
 				>
 			</File>
@@ -579,6 +587,14 @@
 			>
 			<File
 				RelativePath=".\filestrm.h"
+				>
+			</File>
+			<File
+				RelativePath=".\filetools.h"
+				>
+			</File>
+			<File
+				RelativePath=".\flagparser.h"
 				>
 			</File>
 			<File
