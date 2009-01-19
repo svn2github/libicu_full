@@ -1,6 +1,6 @@
 /*
  ******************************************************************************
- *   Copyright (C) 1996-2008, International Business Machines                 *
+ *   Copyright (C) 1996-2009, International Business Machines                 *
  *   Corporation and others.  All Rights Reserved.                            *
  ******************************************************************************
  */
@@ -27,12 +27,14 @@
 #include "hash.h"
 #include "uhash.h"
 #include "ucol_imp.h"
+#include "unormimp.h"
 
 #include "unicode/colldata.h"
 #include "unicode/bmsearch.h"
 
 U_NAMESPACE_BEGIN
 
+#define ARRAY_SIZE(array) (sizeof(array)/sizeof(array[0]))
 #define NEW_ARRAY(type, count) (type *) uprv_malloc((count) * sizeof(type))
 #define DELETE_ARRAY(array) uprv_free((void *) (array))
 
@@ -47,7 +49,7 @@ struct CEI
 class Target : public UMemory
 {
 public:
-    Target(UCollator *theCollator, const UnicodeString *target, int32_t patternLength);
+    Target(UCollator *theCollator, const UnicodeString *target, int32_t patternLength, UErrorCode &status);
     ~Target();
 
     void setTargetString(const UnicodeString *target);
@@ -62,6 +64,8 @@ public:
     int32_t nextBreakBoundary(int32_t offset);
     int32_t nextSafeBoundary(int32_t offset);
 
+    UBool isIdentical(UnicodeString &pattern, int32_t start, int32_t end);
+
     void setOffset(int32_t offset);
     void setLast(int32_t last);
     int32_t getOffset();
@@ -73,36 +77,51 @@ private:
     int32_t bufferMax;
 
     uint32_t strengthMask;
+    UCollationStrength strength;
+    uint32_t variableTop;
+    UBool toShift;
     UCollator *coll;
+
     const UnicodeString *targetString;
+    const UChar *targetBuffer;
+    int32_t targetLength;
+
     UCollationElements *elements;
     UBreakIterator *charBreakIterator;
 };
 
-// **** need a better pad than 40    ****
-// **** twice the longest expansion? ****
-Target::Target(UCollator *theCollator, const UnicodeString *target, int32_t patternLength)
-    : bufferSize(patternLength + 40), bufferMin(0), bufferMax(0),
-      strengthMask(0), coll(theCollator), targetString(target), elements(NULL), charBreakIterator(NULL)
+Target::Target(UCollator *theCollator, const UnicodeString *target, int32_t patternLength, UErrorCode &status)
+    : bufferSize(0), bufferMin(0), bufferMax(0),
+      strengthMask(0), strength(UCOL_PRIMARY), variableTop(0), toShift(FALSE), coll(theCollator),
+      targetString(NULL), targetBuffer(NULL), targetLength(0), elements(NULL), charBreakIterator(NULL)
 {
-    UErrorCode status = U_ZERO_ERROR;
+    strength = ucol_getStrength(coll);
+    toShift = ucol_getAttribute(coll, UCOL_ALTERNATE_HANDLING, &status) ==  UCOL_SHIFTED;
+    variableTop = ucol_getVariableTop(coll, &status);
+
+    // find the largest expansion
+    uint8_t maxExpansion = 0;
+    for (const uint8_t *expansion = coll->expansionCESize; *expansion != 0; expansion += 1) {
+        if (*expansion > maxExpansion) {
+            maxExpansion = *expansion;
+        }
+    }
+
+    // room for an extra character on each end, plus 4 for safety
+    bufferSize = patternLength + (2 * maxExpansion) + 4;
 
     ceb = NEW_ARRAY(CEI, bufferSize);
 
-#if 0
-    // This shouldn't be necessary...
-    for (int32_t i = 0; i < bufferSize; i += 1) {
-        ceb[i].order = 0;
-        ceb[i].lowOffset = 0;
-        ceb[i].highOffset = 0;
+    if (ceb == NULL) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return;
     }
-#endif
 
     if (target != NULL) {
         setTargetString(target);
     }
 
-    switch (ucol_getStrength(coll)) 
+    switch (strength) 
     {
     default:
         strengthMask |= UCOL_TERTIARYORDERMASK;
@@ -137,10 +156,17 @@ void Target::setTargetString(const UnicodeString *target)
     if (targetString != NULL) {
         UErrorCode status = U_ZERO_ERROR;
 
+        targetBuffer = targetString->getBuffer();
+        targetLength = targetString->length();
+
         elements = ucol_openElements(coll, target->getBuffer(), target->length(), &status);
+        ucol_forceHanImplicit(elements, &status);
 
         charBreakIterator = ubrk_open(UBRK_CHARACTER, ucol_getLocale(coll, ULOC_VALID_LOCALE, &status),
-                                      target->getBuffer(), target->length(), &status);
+                                      targetBuffer, targetLength, &status);
+    } else {
+        targetBuffer = NULL;
+        targetLength = 0;
     }
 }
 
@@ -149,6 +175,7 @@ const CEI *Target::nextCE(int32_t offset)
     UErrorCode status = U_ZERO_ERROR;
     int32_t low = -1, high = -1;
     uint32_t order;
+    UBool cont = FALSE;
 
     if (offset >= bufferMin && offset < bufferMax) {
         return &ceb[offset];
@@ -168,8 +195,21 @@ const CEI *Target::nextCE(int32_t offset)
             break;
         }
 
+        cont = isContinuation(order);
         order &= strengthMask;
+
+        if (toShift && variableTop > order && (order & UCOL_PRIMARYORDERMASK) != 0) {
+            if (strength >= UCOL_QUATERNARY) {
+                order &= UCOL_PRIMARYORDERMASK;
+            } else {
+                order = UCOL_IGNORABLE;
+            }
+        }
     } while (order == UCOL_IGNORABLE);
+
+    if (cont) {
+        order |= UCOL_CONTINUATION_MARKER;
+    }
 
     ceb[offset].order = order;
     ceb[offset].lowOffset = low;
@@ -185,6 +225,7 @@ const CEI *Target::prevCE(int32_t offset)
     UErrorCode status = U_ZERO_ERROR;
     int32_t low = -1, high = -1;
     uint32_t order;
+    UBool cont = FALSE;
 
     if (offset >= bufferMin && offset < bufferMax) {
         return &ceb[offset];
@@ -203,10 +244,23 @@ const CEI *Target::prevCE(int32_t offset)
             break;
         }
 
+        cont = isContinuation(order);
         order &= strengthMask;
+
+        if (toShift && variableTop > order && (order & UCOL_PRIMARYORDERMASK) != 0) {
+            if (strength >= UCOL_QUATERNARY) {
+                order &= UCOL_PRIMARYORDERMASK;
+            } else {
+                order = UCOL_IGNORABLE;
+            }
+        }
     } while (order == UCOL_IGNORABLE);
 
     bufferMax += 1;
+
+    if (cont) {
+        order |= UCOL_CONTINUATION_MARKER;
+    }
 
     ceb[offset].order       = order;
     ceb[offset].lowOffset   = low;
@@ -218,7 +272,7 @@ const CEI *Target::prevCE(int32_t offset)
 int32_t Target::stringLength()
 {
     if (targetString != NULL) {
-        return targetString->length();
+        return targetLength;
     }
 
     return 0;
@@ -227,7 +281,7 @@ int32_t Target::stringLength()
 UChar Target::charAt(int32_t offset)
 {
     if (targetString != NULL) {
-        return targetString->charAt(offset);
+        return targetBuffer[offset];
     }
 
     return 0x0000;
@@ -274,10 +328,9 @@ int32_t Target::nextBreakBoundary(int32_t offset)
 
 int32_t Target::nextSafeBoundary(int32_t offset)
 {
-    int32_t tlen = targetString->length();
-
-    while (offset < tlen) {
-        UChar ch = charAt(offset);
+    while (offset < targetLength) {
+      //UChar ch = charAt(offset);
+        UChar ch = targetBuffer[offset];
 
         if (U_IS_LEAD(ch) || ! ucol_unsafeCP(ch, coll)) {
             return offset;
@@ -286,7 +339,72 @@ int32_t Target::nextSafeBoundary(int32_t offset)
         offset += 1;
     }
 
-    return tlen;
+    return targetLength;
+}
+
+UBool Target::isIdentical(UnicodeString &pattern, int32_t start, int32_t end)
+{
+    if (strength < UCOL_IDENTICAL) {
+        return TRUE;
+    }
+
+    UChar t2[32], p2[32];
+    const UChar *pBuffer = pattern.getBuffer();
+    int32_t pLength = pattern.length();
+    int32_t length = end - start;
+
+    UErrorCode status = U_ZERO_ERROR, status2 = U_ZERO_ERROR;
+
+    int32_t decomplength = unorm_decompose(t2, ARRAY_SIZE(t2), 
+                                       targetBuffer + start, length, 
+                                       FALSE, 0, &status);
+
+    // use separate status2 in case of buffer overflow
+    if (decomplength != unorm_decompose(p2, ARRAY_SIZE(p2),
+                                        pBuffer, pLength,
+                                        FALSE, 0, &status2)) {
+        return FALSE; // lengths are different
+    }
+
+    // compare contents
+    UChar *text, *pat;
+
+    if(U_SUCCESS(status)) {
+        text = t2;
+        pat = p2;
+    } else if(status == U_BUFFER_OVERFLOW_ERROR) {
+        status = U_ZERO_ERROR;
+
+        // allocate one buffer for both decompositions
+        text = NEW_ARRAY(UChar, decomplength * 2);
+
+        // Check for allocation failure.
+        if (text == NULL) {
+        	return FALSE;
+        }
+
+        pat = text + decomplength;
+
+        unorm_decompose(text, decomplength, targetBuffer + start, 
+                        length, FALSE, 0, &status);
+
+        unorm_decompose(pat, decomplength, pBuffer, 
+                        pLength, FALSE, 0, &status);
+    } else {
+        // NFD failed, make sure that u_memcmp() does not overrun t2 & p2
+        // and that we don't uprv_free() an undefined text pointer
+        text = pat = t2;
+        decomplength = 0;
+    }
+
+    UBool result = (UBool)(u_memcmp(pat, text, decomplength) == 0);
+
+    if(text != t2) {
+        DELETE_ARRAY(text);
+    }
+
+    // return FALSE if NFD failed
+    return U_SUCCESS(status) && result;
 }
 
 #define HASH_TABLE_SIZE 257
@@ -294,7 +412,7 @@ int32_t Target::nextSafeBoundary(int32_t offset)
 class BadCharacterTable : public UMemory
 {
 public:
-    BadCharacterTable(CEList &patternCEs, CollData *data);
+    BadCharacterTable(CEList &patternCEs, CollData *data, UErrorCode &status);
     ~BadCharacterTable();
 
     int32_t operator[](uint32_t ce) const;
@@ -310,23 +428,34 @@ private:
     int32_t *minLengthCache;
 };
 
-BadCharacterTable::BadCharacterTable(CEList &patternCEs, CollData *data)
+BadCharacterTable::BadCharacterTable(CEList &patternCEs, CollData *data, UErrorCode &status)
     : minLengthCache(NULL)
 {
     int32_t plen = patternCEs.size();
 
     // **** need a better way to deal with this ****
-    if (plen == 0) {
+    if (U_FAILURE(status) || plen == 0) {
         return;
     }
 
     int32_t *history = NEW_ARRAY(int32_t, plen);
+
+    if (history == NULL) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return;
+    }
 
     for (int32_t i = 0; i < plen; i += 1) {
         history[i] = -1;
     }
 
     minLengthCache = NEW_ARRAY(int32_t, plen + 1);
+
+    if (minLengthCache == NULL) {
+        DELETE_ARRAY(history);
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return;
+    }
 
     maxSkip = minLengthCache[0] = data->minLengthInChars(&patternCEs, 0, history);
 
@@ -381,7 +510,7 @@ int32_t BadCharacterTable::hash(uint32_t ce)
 class GoodSuffixTable : public UMemory
 {
 public:
-    GoodSuffixTable(CEList &patternCEs, BadCharacterTable &badCharacterTable);
+    GoodSuffixTable(CEList &patternCEs, BadCharacterTable &badCharacterTable, UErrorCode &status);
     ~GoodSuffixTable();
 
     int32_t operator[](int32_t offset) const;
@@ -390,19 +519,24 @@ private:
     int32_t *goodSuffixTable;
 };
 
-GoodSuffixTable::GoodSuffixTable(CEList &patternCEs, BadCharacterTable &badCharacterTable)
+GoodSuffixTable::GoodSuffixTable(CEList &patternCEs, BadCharacterTable &badCharacterTable, UErrorCode &status)
     : goodSuffixTable(NULL)
 {
     int32_t patlen = patternCEs.size();
 
     // **** need a better way to deal with this ****
-    if (patlen <= 0) {
+    if (U_FAILURE(status) || patlen <= 0) {
         return;
     }
 
     int32_t *suff  = NEW_ARRAY(int32_t, patlen);
     int32_t start = patlen - 1, end = - 1;
     int32_t maxSkip = badCharacterTable.getMaxSkip();
+
+    if (suff == NULL) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return;
+    }
 
     // initialze suff
     suff[patlen - 1] = patlen;
@@ -431,6 +565,13 @@ GoodSuffixTable::GoodSuffixTable(CEList &patternCEs, BadCharacterTable &badChara
 
     // now build goodSuffixTable
     goodSuffixTable  = NEW_ARRAY(int32_t, patlen);
+
+    if (goodSuffixTable == NULL) {
+        DELETE_ARRAY(suff);
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return;
+    }
+
 
     // initialize entries to minLengthInChars of the pattern
     for (int32_t i = 0; i < patlen; i += 1) {
@@ -504,17 +645,33 @@ GoodSuffixTable *BoyerMooreSearch::getGoodSuffixTable()
     return goodSuffixTable;
 }
 
-BoyerMooreSearch::BoyerMooreSearch(CollData *theData, const UnicodeString &patternString, const UnicodeString *targetString)
-    : ownData(FALSE), data(theData), target(NULL)
+BoyerMooreSearch::BoyerMooreSearch(CollData *theData, const UnicodeString &patternString, const UnicodeString *targetString,
+                                   UErrorCode &status)
+    : data(theData), patCEs(NULL), badCharacterTable(NULL), goodSuffixTable(NULL), pattern(patternString), target(NULL)
 {
+
+    if (U_FAILURE(status)) {
+        return;
+    }
+
     UCollator *collator = data->getCollator();
 
-    patCEs = new CEList(collator, patternString);
-    badCharacterTable = new BadCharacterTable(*patCEs, data);
-    goodSuffixTable = new GoodSuffixTable(*patCEs, *badCharacterTable);
+    patCEs = new CEList(collator, patternString, status);
+
+    if (patCEs == NULL || U_FAILURE(status)) {
+        return;
+    }
+
+    badCharacterTable = new BadCharacterTable(*patCEs, data, status);
+
+    if (badCharacterTable == NULL || U_FAILURE(status)) {
+        return;
+    }
+
+    goodSuffixTable = new GoodSuffixTable(*patCEs, *badCharacterTable, status);
 
     if (targetString != NULL) {
-        target = new Target(collator, targetString, patCEs->size());
+        target = new Target(collator, targetString, patCEs->size(), status);
     }
 }
 
@@ -524,18 +681,16 @@ BoyerMooreSearch::~BoyerMooreSearch()
     delete goodSuffixTable;
     delete badCharacterTable;
     delete patCEs;
-
-#if 0
-    if (ownData) {
-        delete data;
-    }
-#endif
 }
 
-void BoyerMooreSearch::setTargetString(const UnicodeString *targetString)
+void BoyerMooreSearch::setTargetString(const UnicodeString *targetString, UErrorCode &status)
 {
+    if (U_FAILURE(status)) {
+        return;
+    }
+
     if (target == NULL) {
-        target = new Target(data->getCollator(), targetString, patCEs->size());
+        target = new Target(data->getCollator(), targetString, patCEs->size(), status);
     } else {
         target->setTargetString(targetString);
     }
@@ -555,47 +710,21 @@ UBool BoyerMooreSearch::search(int32_t offset, int32_t &start, int32_t &end)
     int32_t maxSkip = badCharacterTable->getMaxSkip();
     int32_t tOffset = offset + maxSkip;
 
+    if (plen <= 0) {
+        // Searching for a zero length pattern always fails.
+        start = end = -1;
+        return FALSE;
+    }
+
     while (tOffset <= tlen) {
         int32_t pIndex = plen - 1;
         int32_t tIndex = 0;
         int32_t lIndex = 0;
 
-#if 0
-        // **** figure out how to do this w/o the interator ****
-        if (! target->isBreakBoundary(tOffset)) {
-            // **** Do we really want the *previous* boundary? ****
-            tOffset = target->nextBreakBoundary(tOffset);
-        }
-
         if (tOffset < tlen) {
             // **** we really want to skip ahead enough to  ****
             // **** be sure we get at least 1 non-ignorable ****
             // **** CE after the end of the pattern.        ****
-            // **** figure out how do this w/o the iterator ****
-            int32_t next = target->nextBreakBoundary(tOffset);
-
-            target->setOffset(next);
-
-            for (lIndex = 0; ; lIndex += 1) {
-                const CEI *cei = target->prevCE(lIndex);
-                int32_t low = cei->lowOffset;
-                int32_t high = cei->highOffset;
-
-                if ((high == low && low == tOffset) || low < tOffset) {
-                    break;
-                }
-            }
-        } else {
-          //target->setOffset(tOffset);
-            target->setLast(tOffset);
-            lIndex = 1;
-        }
-#else
-        if (tOffset < tlen) {
-            // **** we really want to skip ahead enough to  ****
-            // **** be sure we get at least 1 non-ignorable ****
-            // **** CE after the end of the pattern.        ****
-            // **** figure out how do this w/o the iterator ****
             int32_t next = target->nextSafeBoundary(tOffset + 1);
 
             target->setOffset(next);
@@ -620,11 +749,9 @@ UBool BoyerMooreSearch::search(int32_t offset, int32_t &start, int32_t &end)
                 }
             }
         } else {
-          //target->setOffset(tOffset);
             target->setLast(tOffset);
             lIndex = 0;
         }
-#endif
 
         tIndex = ++lIndex;
 
@@ -637,20 +764,24 @@ UBool BoyerMooreSearch::search(int32_t offset, int32_t &start, int32_t &end)
             if (tcei->order != pce) {
                 // There is a mismatch at this position.  Decide how far
                 // over to shift the pattern, then try again.
+ 
                 int32_t gsOffset = tOffset + (*goodSuffixTable)[pIndex];
+#ifdef EXTRA_CAUTIOUS
                 int32_t old = tOffset;
+#endif
 
-              //tOffset  = /*tcei->highOffset*/ /*tOffset*/ target->getOffset() + (*badCharacterTable)[tcei->order] /*+ 1*/;
                 tOffset += (*badCharacterTable)[tcei->order] - badCharacterTable->minLengthInChars(pIndex + 1);
 
-                if (gsOffset > tOffset && gsOffset <= tlen) {
+                if (gsOffset > tOffset) {
                     tOffset = gsOffset;
                 }
 
-                // **** is this still necessary? ****
+#ifdef EXTRA_CAUTIOUS
+                // Make sure we don't skip backwards...
                 if (tOffset <= old) {
                     tOffset = old + 1;
                 }
+#endif
 
                 break;
             }
@@ -703,6 +834,10 @@ UBool BoyerMooreSearch::search(int32_t offset, int32_t &start, int32_t &end)
             }
 
             if (! target->isBreakBoundary(mLimit)) {
+                found = FALSE;
+            }
+
+            if (! target->isIdentical(pattern, mStart, mLimit)) {
                 found = FALSE;
             }
 

@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT:
- * Copyright (C) 2008 IBM, Inc.   All Rights Reserved.
+ * Copyright (C) 2008-2009 IBM, Inc.   All Rights Reserved.
  *
  ********************************************************************/
 #ifndef _STRSRCHPERF_H
@@ -93,9 +93,7 @@ public:
     
     UPerfFunction* Test_ICU_Forward_Search();
 
-#ifndef TEST_BOYER_MOORE_SEARCH
     UPerfFunction* Test_ICU_Backward_Search();
-#endif
 };
 
 
@@ -103,6 +101,15 @@ public:
 void ICUForwardSearch(BoyerMooreSearch *bms, const UChar *source, int32_t sourceLen, const UChar *pattern, int32_t patternLen, UErrorCode * /*status*/) { 
     int32_t offset = 0, start = -1, end = -1;
 
+    while (bms->search(offset, start, end)) {
+        offset = end;
+    }
+}
+
+void ICUBackwardSearch(BoyerMooreSearch *bms, const UChar *source, int32_t sourceLen, const UChar *pattern, int32_t patternLen, UErrorCode * /*status*/) { 
+    int32_t offset = 0, start = -1, end = -1;
+
+    /* NOTE: No Boyer-Moore backward search yet... */
     while (bms->search(offset, start, end)) {
         offset = end;
     }

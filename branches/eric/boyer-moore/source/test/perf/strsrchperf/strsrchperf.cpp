@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT:
- * Copyright (C) 2008 IBM, Inc.   All Rights Reserved.
+ * Copyright (C) 2008-2009 IBM, Inc.   All Rights Reserved.
  *
  ********************************************************************/
 /** 
@@ -68,18 +68,19 @@ StringSearchPerformanceTest::StringSearchPerformanceTest(int32_t argc, const cha
 #ifdef TEST_BOYER_MOORE_SEARCH
     UnicodeString patternString(pttrn, pttrnLen);
     UCollator *coll = ucol_open(locale, &status);
-    CollData *data = CollData::open(coll);
+    CollData *data = CollData::open(coll, status);
 
     targetString = new UnicodeString(src, srcLen);
-    bms = new BoyerMooreSearch(data, patternString, targetString);
+    bms = new BoyerMooreSearch(data, patternString, targetString, status);
 #else
     /* Create the StringSearch object to be use in performance test. */
     srch = usearch_open(pttrn, pttrnLen, src, srcLen, locale, NULL, &status);
+#endif
+
     if(U_FAILURE(status)){
         fprintf(stderr, "FAILED to create UPerfTest object. Error: %s\n", u_errorName(status));
         return;
     }
-#endif
     
 }
 
@@ -106,9 +107,7 @@ StringSearchPerformanceTest::~StringSearchPerformanceTest() {
 UPerfFunction* StringSearchPerformanceTest::runIndexedTest(int32_t index, UBool exec, const char *&name, char *par) {
     switch (index) {
         TESTCASE(0,Test_ICU_Forward_Search);
-#ifndef TEST_BOYER_MOORE_SEARCH
         TESTCASE(1,Test_ICU_Backward_Search);
-#endif
 
         default: 
             name = ""; 
@@ -126,12 +125,14 @@ UPerfFunction* StringSearchPerformanceTest::Test_ICU_Forward_Search(){
     return func;
 }
 
-#ifndef TEST_BOYER_MOORE_SEARCH
 UPerfFunction* StringSearchPerformanceTest::Test_ICU_Backward_Search(){
+#ifdef TEST_BOYER_MOORE_SEARCH
+    StringSearchPerfFunction *func = new StringSearchPerfFunction(ICUBackwardSearch, bms, src, srcLen, pttrn, pttrnLen);
+#else
     StringSearchPerfFunction* func = new StringSearchPerfFunction(ICUBackwardSearch, srch, src, srcLen, pttrn, pttrnLen);
+#endif
     return func;
 }
-#endif
 
 int main (int argc, const char* argv[]) {
     UErrorCode status = U_ZERO_ERROR;

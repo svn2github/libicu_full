@@ -1,6 +1,6 @@
 /*
  ******************************************************************************
- *   Copyright (C) 1996-2008, International Business Machines                 *
+ *   Copyright (C) 1996-2009, International Business Machines                 *
  *   Corporation and others.  All Rights Reserved.                            *
  ******************************************************************************
  */
@@ -34,6 +34,7 @@
 
 U_NAMESPACE_BEGIN
 
+#define ARRAY_SIZE(array) (sizeof(array)/sizeof(array[0]))
 #define NEW_ARRAY(type, count) (type *) uprv_malloc((count) * sizeof(type))
 #define DELETE_ARRAY(array) uprv_free((void *) (array))
 #define ARRAY_COPY(dst, src, count) uprv_memcpy((void *) (dst), (void *) (src), (count) * sizeof (src)[0])
@@ -50,15 +51,24 @@ int32_t CEList::_active = 0;
 int32_t CEList::_histogram[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 #endif
 
-CEList::CEList(UCollator *coll, const UnicodeString &string)
+CEList::CEList(UCollator *coll, const UnicodeString &string, UErrorCode &status)
     : ces(NULL), listMax(CELIST_BUFFER_SIZE), listSize(0)
 {
-    UErrorCode status = U_ZERO_ERROR;
     UCollationElements *elems = ucol_openElements(coll, string.getBuffer(), string.length(), &status);
+    UCollationStrength strength = ucol_getStrength(coll);
+    UBool toShift = ucol_getAttribute(coll, UCOL_ALTERNATE_HANDLING, &status) ==  UCOL_SHIFTED;
+    uint32_t variableTop = ucol_getVariableTop(coll, &status);
     uint32_t strengthMask = 0;
     int32_t order;
 
-    switch (ucol_getStrength(coll)) 
+    if (U_FAILURE(status)) {
+        return;
+    }
+
+    // **** only set flag if string has Han(gul) ****
+    ucol_forceHanImplicit(elems, &status);
+
+    switch (strength) 
     {
     default:
         strengthMask |= UCOL_TERTIARYORDERMASK;
@@ -80,13 +90,27 @@ CEList::CEList(UCollator *coll, const UnicodeString &string)
     ces = ceBuffer;
 
     while ((order = ucol_next(elems, &status)) != UCOL_NULLORDER) {
+        UBool cont = isContinuation(order);
+
         order &= strengthMask;
+
+        if (toShift && variableTop > order && (order & UCOL_PRIMARYORDERMASK) != 0) {
+            if (strength >= UCOL_QUATERNARY) {
+                order &= UCOL_PRIMARYORDERMASK;
+            } else {
+                order = UCOL_IGNORABLE;
+            }
+        }
 
         if (order == UCOL_IGNORABLE) {
             continue;
         }
 
-        add(order);
+        if (cont) {
+            order |= UCOL_CONTINUATION_MARKER;
+        }
+
+        add(order, status);
     }
 
     ucol_closeElements(elems);
@@ -103,52 +127,61 @@ CEList::~CEList()
     }
 }
 
-void CEList::add(int32_t ce)
+void CEList::add(uint32_t ce, UErrorCode &status)
 {
+    if (U_FAILURE(status)) {
+        return;
+    }
+
     if (listSize >= listMax) {
-      //listMax *= 2;
-        listMax += CELIST_BUFFER_SIZE;
+        int32_t newMax = listMax + CELIST_BUFFER_SIZE;
 
 #ifdef INSTRUMENT_CELIST
         _histogram[listSize / CELIST_BUFFER_SIZE] += 1;
 #endif
 
-        int32_t *newCEs = NEW_ARRAY(int32_t, listMax);
+        uint32_t *newCEs = NEW_ARRAY(uint32_t, newMax);
 
-        uprv_memcpy(newCEs, ces, listSize * sizeof(int32_t));
+        if (newCEs == NULL) {
+            status = U_MEMORY_ALLOCATION_ERROR;
+            return;
+        }
+
+        uprv_memcpy(newCEs, ces, listSize * sizeof(uint32_t));
 
         if (ces != ceBuffer) {
             DELETE_ARRAY(ces);
         }
 
         ces = newCEs;
+        listMax = newMax;
     }
 
     ces[listSize++] = ce;
 }
 
-int32_t CEList::get(int32_t index) const
+uint32_t CEList::get(int32_t index) const
 {
     if (index >= 0 && index < listSize) {
         return ces[index];
     }
 
-    return -1;
+    return UCOL_NULLORDER;
 }
 
-int32_t &CEList::operator[](int32_t index) const
+uint32_t &CEList::operator[](int32_t index) const
 {
     return ces[index];
 }
 
 UBool CEList::matchesAt(int32_t offset, const CEList *other) const
 {
-    if (listSize - offset < other->size()) {
+    if (other == NULL || listSize - offset < other->size()) {
         return FALSE;
     }
 
     for (int32_t i = offset, j = 0; j < other->size(); i += 1, j += 1) {
-        if (ces[i] != other->get(j)) {
+        if (ces[i] != (*other)[j]) {
             return FALSE;
         }
     }
@@ -169,10 +202,19 @@ int32_t StringList::_strings = 0;
 int32_t StringList::_histogram[101] = {0};
 #endif
 
-StringList::StringList()
+StringList::StringList(UErrorCode &status)
     : strings(NULL), listMax(STRING_LIST_BUFFER_SIZE), listSize(0)
 {
+    if (U_FAILURE(status)) {
+        return;
+    }
+
     strings = new UnicodeString [listMax];
+
+    if (strings == NULL) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return;
+    }
 
 #ifdef INSTRUMENT_STRING_LIST
     _lists += 1;
@@ -185,16 +227,20 @@ StringList::~StringList()
     delete[] strings;
 }
 
-void StringList::add(const UnicodeString *string)
+void StringList::add(const UnicodeString *string, UErrorCode &status)
 {
+    if (U_FAILURE(status)) {
+        return;
+    }
+
 #ifdef INSTRUMENT_STRING_LIST
     _strings += 1;
 #endif
 
     if (listSize >= listMax) {
-        listMax += STRING_LIST_BUFFER_SIZE;
+        int32_t newMax = listMax + STRING_LIST_BUFFER_SIZE;
 
-        UnicodeString *newStrings = new UnicodeString[listMax];
+        UnicodeString *newStrings = new UnicodeString[newMax];
 
         uprv_memcpy(newStrings, strings, listSize * sizeof(UnicodeString));
 
@@ -210,6 +256,7 @@ void StringList::add(const UnicodeString *string)
 
         delete[] strings;
         strings = newStrings;
+        listMax = newMax;
     }
 
     // The ctor initialized all the strings in
@@ -218,11 +265,11 @@ void StringList::add(const UnicodeString *string)
     strings[listSize++].append(*string);
 }
 
-void StringList::add(const UChar *chars, int32_t count)
+void StringList::add(const UChar *chars, int32_t count, UErrorCode &status)
 {
     const UnicodeString string(chars, count);
 
-    add(&string);
+    add(&string, status);
 }
 
 const UnicodeString *StringList::get(int32_t index) const
@@ -246,25 +293,32 @@ class CEToStringsMap : public UMemory
 {
 public:
 
-    CEToStringsMap();
+    CEToStringsMap(UErrorCode &status);
     ~CEToStringsMap();
 
-    void put(int32_t ce, UnicodeString *string);
-    StringList *getStringList(int32_t ce) const;
+    void put(uint32_t ce, UnicodeString *string, UErrorCode &status);
+    StringList *getStringList(uint32_t ce) const;
 
 private:
  
-    void putStringList(int32_t ce, StringList *stringList);
+    void putStringList(uint32_t ce, StringList *stringList, UErrorCode &status);
     UHashtable *map;
 };
 
-CEToStringsMap::CEToStringsMap()
+CEToStringsMap::CEToStringsMap(UErrorCode &status)
+    : map(NULL)
 {
-    UErrorCode status = U_ZERO_ERROR;
+    if (U_FAILURE(status)) {
+        return;
+    }
 
     map = uhash_open(uhash_hashLong, uhash_compareLong,
                      uhash_compareCaselessUnicodeString,
                      &status);
+
+    if (U_FAILURE(status)) {
+        return;
+    }
 
     uhash_setValueDeleter(map, deleteStringList);
 }
@@ -274,27 +328,31 @@ CEToStringsMap::~CEToStringsMap()
     uhash_close(map);
 }
 
-void CEToStringsMap::put(int32_t ce, UnicodeString *string)
+void CEToStringsMap::put(uint32_t ce, UnicodeString *string, UErrorCode &status)
 {
     StringList *strings = getStringList(ce);
 
     if (strings == NULL) {
-        strings = new StringList();
-        putStringList(ce, strings);
+        strings = new StringList(status);
+
+        if (strings == NULL || U_FAILURE(status)) {
+            status = U_MEMORY_ALLOCATION_ERROR;
+            return;
+        }
+
+        putStringList(ce, strings, status);
     }
 
-    strings->add(string);
+    strings->add(string, status);
 }
 
-StringList *CEToStringsMap::getStringList(int32_t ce) const
+StringList *CEToStringsMap::getStringList(uint32_t ce) const
 {
     return (StringList *) uhash_iget(map, ce);
 }
 
-void CEToStringsMap::putStringList(int32_t ce, StringList *stringList)
+void CEToStringsMap::putStringList(uint32_t ce, StringList *stringList, UErrorCode &status)
 {
-    UErrorCode status = U_ZERO_ERROR;
-
     uhash_iput(map, ce, (void *) stringList, &status);
 }
 
@@ -311,10 +369,10 @@ U_CFUNC void deleteUnicodeStringKey(void *obj);
 class StringToCEsMap : public UMemory
 {
 public:
-    StringToCEsMap();
+    StringToCEsMap(UErrorCode &status);
     ~StringToCEsMap();
 
-    void put(const UnicodeString *string, const CEList *ces);
+    void put(const UnicodeString *string, const CEList *ces, UErrorCode &status);
     const CEList *get(const UnicodeString *string);
     void free(const CEList *list);
 
@@ -324,14 +382,21 @@ private:
     UHashtable *map;
 };
 
-StringToCEsMap::StringToCEsMap()
+StringToCEsMap::StringToCEsMap(UErrorCode &status)
+    : map(NULL)
 {
-    UErrorCode status = U_ZERO_ERROR;
+    if (U_FAILURE(status)) {
+        return;
+    }
 
     map = uhash_open(uhash_hashUnicodeString,
                      uhash_compareUnicodeString,
                      uhash_compareLong,
                      &status);
+
+    if (U_FAILURE(status)) {
+        return;
+    }
 
     uhash_setValueDeleter(map, deleteCEList);
     uhash_setKeyDeleter(map, deleteUnicodeStringKey);
@@ -342,10 +407,8 @@ StringToCEsMap::~StringToCEsMap()
     uhash_close(map);
 }
 
-void StringToCEsMap::put(const UnicodeString *string, const CEList *ces)
+void StringToCEsMap::put(const UnicodeString *string, const CEList *ces, UErrorCode &status)
 {
-    UErrorCode status = U_ZERO_ERROR;
-
     uhash_put(map, (void *) string, (void *) ces, &status);
 }
 
@@ -393,11 +456,13 @@ CollDataCacheEntry::~CollDataCacheEntry()
 class CollDataCache : public UMemory
 {
 public:
-    CollDataCache();
+    CollDataCache(UErrorCode &status);
     ~CollDataCache();
 
-    CollData *get(UCollator *collator);
+    CollData *get(UCollator *collator, UErrorCode &status);
     void unref(CollData *collData);
+
+    void flush();
 
 private:
     static char *getKey(UCollator *collator, char *keyBuffer, int32_t *charBufferLength);
@@ -424,14 +489,20 @@ U_CFUNC void deleteCollDataCacheEntry(void *obj)
     delete entry;
 }
 
-CollDataCache::CollDataCache()
+CollDataCache::CollDataCache(UErrorCode &status)
     : lock(0), cache(NULL)
 {
-    UErrorCode status = U_ZERO_ERROR;
+    if (U_FAILURE(status)) {
+        return;
+    }
 
     umtx_init(&lock);
 
     cache = uhash_open(uhash_hashChars, uhash_compareChars, uhash_compareLong, &status);
+
+    if (U_FAILURE(status)) {
+        return;
+    }
 
     uhash_setValueDeleter(cache, deleteCollDataCacheEntry);
     uhash_setKeyDeleter(cache, deleteChars);
@@ -447,9 +518,8 @@ CollDataCache::~CollDataCache()
     umtx_destroy(&lock);
 }
 
-CollData *CollDataCache::get(UCollator *collator)
+CollData *CollDataCache::get(UCollator *collator, UErrorCode &status)
 {
-    UErrorCode status = U_ZERO_ERROR;
     char keyBuffer[KEY_BUFFER_SIZE];
     int32_t keyLength = KEY_BUFFER_SIZE;
     char *key = getKey(collator, keyBuffer, &keyLength);
@@ -462,8 +532,13 @@ CollData *CollDataCache::get(UCollator *collator)
     if (entry == NULL) {
         umtx_unlock(&lock);
 
-        newData = new CollData(collator, key, keyLength);
+        newData = new CollData(collator, key, keyLength, status);
         newEntry = new CollDataCacheEntry(newData);
+
+        if (U_FAILURE(status) || newData == NULL || newEntry == NULL) {
+            status = U_MEMORY_ALLOCATION_ERROR;
+            return NULL;
+        }
 
         umtx_lock(&lock);
         entry = (CollDataCacheEntry *) uhash_get(cache, key);
@@ -471,6 +546,13 @@ CollData *CollDataCache::get(UCollator *collator)
         if (entry == NULL) {
             uhash_put(cache, newData->key, newEntry, &status);
             umtx_unlock(&lock);
+
+            if (U_FAILURE(status)) {
+                delete newEntry;
+                delete newData;
+
+                return NULL;
+            }
 
             return newData;
         }
@@ -523,6 +605,22 @@ char *CollDataCache::getKey(UCollator *collator, char *keyBuffer, int32_t *keyBu
     return keyBuffer;
 }
 
+void CollDataCache::flush()
+{
+    const UHashElement *element;
+    int32_t pos = -1;
+
+    umtx_lock(&lock);
+    while ((element = uhash_nextElement(cache, &pos)) != NULL) {
+        CollDataCacheEntry *entry = (CollDataCacheEntry *) element->value.pointer;
+
+        if (entry->refCount <= 0) {
+            uhash_removeElement(cache, element);
+        }
+    }
+    umtx_unlock(&lock);
+}
+
 void CollDataCache::deleteKey(char *key)
 {
     DELETE_ARRAY(key);
@@ -543,35 +641,54 @@ CollData::CollData()
 }
 
 #define CLONE_COLLATOR
-//#define CACHE_CELISTS
-CollData::CollData(UCollator *collator, char *cacheKey, int32_t cacheKeyLength)
-{
-    UErrorCode status = U_ZERO_ERROR;
 
-#if 0
-    U_STRING_DECL(test_pattern, "[[:assigned:]-[:ideographic:]-[:hangul:]-[:c:]]", 47);
-    U_STRING_INIT(test_pattern, "[[:assigned:]-[:ideographic:]-[:hangul:]-[:c:]]", 47);
-    USet *charsToTest  = uset_openPattern(test_pattern, 47, &status);
-#else
+//#define CACHE_CELISTS
+CollData::CollData(UCollator *collator, char *cacheKey, int32_t cacheKeyLength, UErrorCode &status)
+    : coll(NULL), charsToCEList(NULL), ceToCharsStartingWith(NULL), key(NULL)
+{
+    // [:c:] == [[:cn:][:cc:][:co:][:cf:][:cs:]]
+    // i.e. other, control, private use, format, surrogate
     U_STRING_DECL(test_pattern, "[[:assigned:]-[:c:]]", 20);
     U_STRING_INIT(test_pattern, "[[:assigned:]-[:c:]]", 20);
-    USet *charsToTest  = uset_openPattern(test_pattern, 20, &status);
-#endif
+    USet *charsToTest = uset_openPattern(test_pattern, 20, &status);
+
+    // Han ext. A, Han, Jamo, Hangul, Han Ext. B
+    // i.e. all the characers we handle implicitly
+    U_STRING_DECL(remove_pattern, "[[\\u3400-\\u9FFF][\\u1100-\\u11F9][\\uAC00-\\uD7AF][\\U00020000-\\U0002A6DF]]", 70);
+    U_STRING_INIT(remove_pattern, "[[\\u3400-\\u9FFF][\\u1100-\\u11F9][\\uAC00-\\uD7AF][\\U00020000-\\U0002A6DF]]", 70);
+    USet *charsToRemove = uset_openPattern(remove_pattern, 70, &status);
+
+    if (U_FAILURE(status)) {
+        return;
+    }
 
     USet *expansions   = uset_openEmpty();
     USet *contractions = uset_openEmpty();
     int32_t itemCount;
 
 #ifdef CACHE_CELISTS
-    charsToCEList = new StringToCEsMap();
+    charsToCEList = new StringToCEsMap(status);
+
+    if (U_FAILURE(status)) {
+        goto bail;
+    }
 #else
     charsToCEList = NULL;
 #endif
 
-    ceToCharsStartingWith = new CEToStringsMap();
+    ceToCharsStartingWith = new CEToStringsMap(status);
+
+    if (U_FAILURE(status)) {
+        goto bail;
+    }
     
     if (cacheKeyLength > KEY_BUFFER_SIZE) {
         key = NEW_ARRAY(char, cacheKeyLength);
+
+        if (key == NULL) {
+            status = U_MEMORY_ALLOCATION_ERROR;
+            goto bail;
+        }
     } else {
         key = keyBuffer;
     }
@@ -580,6 +697,10 @@ CollData::CollData(UCollator *collator, char *cacheKey, int32_t cacheKeyLength)
 
 #ifdef CLONE_COLLATOR
     coll = ucol_safeClone(collator, NULL, NULL, &status);
+
+    if (U_FAILURE(status)) {
+        goto bail;
+    }
 #else
     coll = collator;
 #endif
@@ -588,6 +709,7 @@ CollData::CollData(UCollator *collator, char *cacheKey, int32_t cacheKeyLength)
 
     uset_addAll(charsToTest, contractions);
     uset_addAll(charsToTest, expansions);
+    uset_removeAll(charsToTest, charsToRemove);
 
     itemCount = uset_getItemCount(charsToTest);
     for(int32_t item = 0; item < itemCount; item += 1) {
@@ -599,35 +721,99 @@ CollData::CollData(UCollator *collator, char *cacheKey, int32_t cacheKeyLength)
         if (len == 0) {
             for (UChar32 ch = start; ch <= end; ch += 1) {
                 UnicodeString *st = new UnicodeString(ch);
-                CEList *ceList = new CEList(coll, *st);
 
-                ceToCharsStartingWith->put(ceList->get(0), st);
+                if (st == NULL) {
+                    status = U_MEMORY_ALLOCATION_ERROR;
+                    break;
+                }
+
+                CEList *ceList = new CEList(coll, *st, status);
+
+                ceToCharsStartingWith->put(ceList->get(0), st, status);
 
 #ifdef CACHE_CELISTS
-                charsToCEList->put(st, ceList);
+                charsToCEList->put(st, ceList, status);
 #else
                 delete ceList;
+                delete st;
 #endif
             }
         } else if (len > 0) {
             UnicodeString *st = new UnicodeString(buffer, len);
-            CEList *ceList = new CEList(coll, *st);
 
-            ceToCharsStartingWith->put(ceList->get(0), st);
+            if (st == NULL) {
+                status = U_MEMORY_ALLOCATION_ERROR;
+                break;
+            }
+
+            CEList *ceList = new CEList(coll, *st, status);
+
+            ceToCharsStartingWith->put(ceList->get(0), st, status);
 
 #ifdef CACHE_CELISTS
-            charsToCEList->put(st, ceList);
+            charsToCEList->put(st, ceList, status);
 #else
             delete ceList;
+            delete st;
 #endif
         } else {
             // shouldn't happen...
         }
+
+        if (U_FAILURE(status)) {
+             break;
+        }
     }
 
+bail:
     uset_close(contractions);
     uset_close(expansions);
+    uset_close(charsToRemove);
     uset_close(charsToTest);
+
+    if (U_FAILURE(status)) {
+        return;
+    }
+
+     UChar   hanRanges[] = {UCOL_FIRST_HAN, UCOL_LAST_HAN, UCOL_FIRST_HAN_COMPAT, UCOL_LAST_HAN_COMPAT, UCOL_FIRST_HAN_A, UCOL_LAST_HAN_A,
+                            UCOL_FIRST_HAN_B_LEAD, UCOL_FIRST_HAN_B_TRAIL, UCOL_LAST_HAN_B_LEAD, UCOL_LAST_HAN_B_TRAIL};
+     UChar  jamoRanges[] = {UCOL_FIRST_L_JAMO, UCOL_FIRST_V_JAMO, UCOL_FIRST_T_JAMO, UCOL_LAST_T_JAMO};
+     UnicodeString hanString(hanRanges, ARRAY_SIZE(hanRanges));
+     UnicodeString jamoString(jamoRanges, ARRAY_SIZE(jamoRanges));
+     CEList hanList(coll, hanString, status);
+     CEList jamoList(coll, jamoString, status);
+     int32_t j = 0;
+
+     if (U_FAILURE(status)) {
+         return;
+     }
+
+     for (int32_t c = 0; c < jamoList.size(); c += 1) {
+         uint32_t jce = jamoList[c];
+
+         if (! isContinuation(jce)) {
+             jamoLimits[j++] = jce;
+         }
+     }
+
+     jamoLimits[3] += (1 << UCOL_PRIMARYORDERSHIFT);
+
+     minHan = 0xFFFFFFFF;
+     maxHan = 0;
+     
+     for(int32_t h = 0; h < hanList.size(); h += 2) {
+         uint32_t han = (uint32_t) hanList[h];
+
+         if (han < minHan) {
+             minHan = han;
+         }
+
+         if (han > maxHan) {
+             maxHan = han;
+         }
+     }
+
+     maxHan += (1 << UCOL_PRIMARYORDERSHIFT);
 }
 
 CollData::~CollData()
@@ -662,7 +848,15 @@ const CEList *CollData::getCEList(const UnicodeString *string) const
 #ifdef CACHE_CELISTS
     return charsToCEList->get(string);
 #else
-    return new CEList(coll, *string);
+    UErrorCode status = U_ZERO_ERROR;
+    const CEList *list = new CEList(coll, *string, status);
+    
+    if (U_FAILURE(status)) {
+        delete list;
+        list = NULL;
+    }
+
+    return list;
 #endif
 }
 
@@ -682,7 +876,7 @@ int32_t CollData::minLengthInChars(const CEList *ceList, int32_t offset, int32_t
         return history[offset];
     }
 
-    int32_t ce = ceList->get(offset);
+    uint32_t ce = ceList->get(offset);
     int32_t maxOffset = ceList->size();
     int32_t shortestLength = INT32_MAX;
     const StringList *strings = ceToCharsStartingWith->getStringList(ce);
@@ -695,7 +889,13 @@ int32_t CollData::minLengthInChars(const CEList *ceList, int32_t offset, int32_t
 #ifdef CACHE_CELISTS
             const CEList *ceList2 = charsToCEList->get(string);
 #else
-            const CEList *ceList2 = new CEList(coll, *string);
+            UErrorCode status = U_ZERO_ERROR;
+            const CEList *ceList2 = new CEList(coll, *string, status);
+
+            if (U_FAILURE(status)) {
+                delete ceList2;
+                ceList2 = NULL;
+            }
 #endif
 
             if (ceList->matchesAt(offset, ceList2)) {
@@ -725,11 +925,76 @@ int32_t CollData::minLengthInChars(const CEList *ceList, int32_t offset, int32_t
     }
 
     if (shortestLength == INT32_MAX) {
-        // no matching strings at this offset - just move on.
-      //shortestLength = offset < (maxOffset - 1)? minLengthInChars(ceList, offset + 1, history) : 0;
+        // No matching strings at this offset. See if 
+        // the CE is in a range we can handle manually.
+        if (ce >= minHan && ce < maxHan) {
+            // all han have implicit orders which
+            // generate two CEs.
+            int32_t roffset = offset + 2;
+            int32_t rlength = 0;
+
+          //history[roffset++] = -1;
+          //history[roffset++] = 1;
+
+            if (roffset < maxOffset) {
+                rlength = minLengthInChars(ceList, roffset, history);
+            }
+
+            if (rlength < 0) {
+                return -1;
+            }
+
+            shortestLength = 1 + rlength;
+            goto have_shortest;
+        } else if (ce >= jamoLimits[0] && ce < jamoLimits[3]) {
+            int32_t roffset = offset;
+            int32_t rlength = 0;
+
+            // **** this loop may not handle archaic Hangul correctly ****
+            for (int32_t j = 0; roffset < maxOffset && j < 4; j += 1, roffset += 1) {
+                uint32_t jce = ceList->get(roffset);
+
+                // Some Jamo have 24-bit primary order; skip the
+                // 2nd CE. This should always be OK because if
+                // we're still in the loop all we've seen are
+                // a series of Jamo in LVT order.
+                if (isContinuation(jce)) {
+                    continue;
+                }
+
+                if (j >= 3 || jce < jamoLimits[j] || jce >= jamoLimits[j + 1]) {
+                    break;
+                }
+            }
+
+            if (roffset == offset) {
+                // we started with a non-L Jamo...
+                // just say it comes from a single character
+                roffset += 1;
+
+                // See if the single Jamo has a 24-bit order.
+                if (roffset < maxOffset && isContinuation(ceList->get(roffset))) {
+                    roffset += 1;
+                }
+            }
+
+            if (roffset < maxOffset) {
+                rlength = minLengthInChars(ceList, roffset, history);
+            }
+
+            if (rlength < 0) {
+                return -1;
+            }
+
+            shortestLength = 1 + rlength;
+            goto have_shortest;
+        }
+
+        // Can't handle it manually either. Just move on.
         return -1;
     }
 
+have_shortest:
     history[offset] = shortestLength;
 
     return shortestLength;
@@ -751,12 +1016,15 @@ int32_t CollData::minLengthInChars(const CEList *ceList, int32_t offset) const
     return minLength;
 }
 
-CollData *CollData::open(UCollator *collator)
+CollData *CollData::open(UCollator *collator, UErrorCode &status)
 {
-    UErrorCode status = U_ZERO_ERROR;
+    if (U_FAILURE(status)) {
+        return NULL;
+    }
+
     CollDataCache *cache = getCollDataCache();
         
-    return cache->get(collator);
+    return cache->get(collator, status);
 }
 
 void CollData::close(CollData *collData)
@@ -770,12 +1038,19 @@ CollDataCache *CollData::collDataCache = NULL;
 
 CollDataCache *CollData::getCollDataCache()
 {
+    UErrorCode status = U_ZERO_ERROR;
     CollDataCache *cache = NULL;
 
     UMTX_CHECK(NULL, collDataCache, cache);
 
     if (cache == NULL) {
-        cache = new CollDataCache();
+        cache = new CollDataCache(status);
+
+        if (U_FAILURE(status)) {
+            delete cache;
+            return NULL;
+        }
+
         umtx_lock(NULL);
         if (collDataCache == NULL) {
             collDataCache = cache;
@@ -808,6 +1083,19 @@ void CollData::freeCollDataCache()
         umtx_unlock(NULL);
 
         delete cache;
+    }
+}
+
+void CollData::flushCollDataCache()
+{
+    CollDataCache *cache = NULL;
+
+    UMTX_CHECK(NULL, collDataCache, cache);
+
+    // **** this will fail if the another ****
+    // **** thread deletes the cache here ****
+    if (cache != NULL) {
+        cache->flush();
     }
 }
 
