@@ -35,6 +35,7 @@
 #include "uassert.h"
 #include "uarrsort.h"
 #include "uspoof_buildconf.h"
+#include "uspoof_buildwsconf.h"
 
 
 #include <stdio.h>   // DEBUG
@@ -43,18 +44,11 @@ U_NAMESPACE_USE
 
 // Forward Declarations
 
-static void buildConfusableWSData(SpoofImpl *This, const char *confusablesWholeScript, 
-    int32_t confusablesWholeScriptLen, UErrorCode *status);
-
 
 static void  buildXidData(SpoofImpl *This, const char *xidModifications,
     int32_t confusablesWholeScriptLen, UErrorCode *status);
 
 
-
-static void buildConfusableWSData(SpoofImpl* /* This*/ , const char* /* confusablesWholeScript */,
-    int32_t /* confusablesWholeScriptLen */, UErrorCode * /* status */) {
-}
 
 
 static void  buildXidData(SpoofImpl * /* This */, const char * /* xidModifications */,
@@ -90,7 +84,10 @@ uspoof_openFromSource(const char *confusables,  int32_t confusablesLen,
 
     // Compile the binary data from the source (text) format.
     ConfusabledataBuilder::buildConfusableData(This, confusables, confusablesLen, errorType, pe, *status);
-    buildConfusableWSData(This, confusablesWholeScript, confusablesWholeScriptLen, status);
+    
+    WSConfusableDataBuilder::buildWSConfusableData(
+            This, confusablesWholeScript, confusablesWholeScriptLen, pe, *status);
+    
     buildXidData(This, xidModifications, xidModificationsLen, status);
 
     if (U_FAILURE(*status)) {

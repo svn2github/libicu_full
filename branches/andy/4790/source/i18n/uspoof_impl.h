@@ -141,6 +141,30 @@ struct SpoofStringLengthsElement {
 
 
 //
+//  Structure for the Whole Script Confusable Data
+//    See Unicode UAX-39, Unicode Security Mechanisms, for a description of the
+//    Whole Script confusable data
+//
+//  The data is stored here as two lists of mappings, stored in code point order.
+//  One list for Lower Case confusables, one list for Any Case confusables.
+//
+//     Code Point -> List of scripts (UScriptCode values) with with confusables for that code point.
+//
+//  The lists are binary-searched by code point at run time, except for the
+//  ASCII range, which is complete and is indexed directly, for speed.
+//
+
+struct WSCMapElement {
+    UChar32      codepointAndCount;    // bits 0-23:   the code point
+                                       // bits 24-32:  count of scripts w/ confusables. 
+    union {
+        uint8_t     scripts[4];        // for code points with 4 or fewer scripts
+                                       //   the script codes here
+        int32_t     dataOffset;        // for code points with more than 4 confusable scripts,
+                                       //   data offset to the list of scriptcodes.
+    };
+};
+//
 //  Spoof Data Wrapper
 //
 //    A small struct that wraps the raw (usually memory mapped) spoof data.
@@ -188,6 +212,8 @@ class SpoofData: public UMemory {
     UChar                       *fCFUStrings;
 
     // Whole Script Confusable Data
+    WSCMapElement               *fWSCAnyTable;
+    WSCMapElement               *fWSCLowerTable;
 
     // Secure Identifier Data
     
@@ -219,11 +245,19 @@ struct SpoofDataHeader {
     int32_t       fCFUStringLengths;      // byte offset to String Lengths table
     int32_t       fCFUStringLengthsSize;  // number of entries in lengths table. (2 x 16 bits each)
 
-    int32_t       unused[6];              // Padding, Room for Expansion
 
     // The following sections are for data from confusablesWholeScript.txt
+    
+    int32_t       fWSCAnyTable;
+    int32_t       fWSCAnyLength;
+    
+    int32_t       fWSCLowerTable;
+    int32_t       fWSCLowerLength;
 
     // The following sections are for data from xidmodifications.txt
+    
+    
+    int32_t       unused[10];              // Padding, Room for Expansion
     
  }; 
 
