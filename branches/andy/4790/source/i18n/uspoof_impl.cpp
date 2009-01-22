@@ -151,6 +151,39 @@ int32_t SpoofImpl::confusableLookup(UChar32 inChar, int32_t tableMask, UChar *de
 }
 
 
+// Convert a text format hex number.  Utility function used by builder code.  Static.
+// Input: UChar *string text.  Output: a UChar32
+// Input has been pre-checked, and will have no non-hex chars.
+// The number must fall in the code point range of 0..0x10ffff
+// Static Function.
+UChar32 SpoofImpl::ScanHex(const UChar *s, int32_t start, int32_t limit, UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return 0;
+    }
+    U_ASSERT(limit-start > 0);
+    uint32_t val = 0;
+    int i;
+    for (i=start; i<limit; i++) {
+        int digitVal = s[i] - 0x30;
+        if (digitVal>9) {
+            digitVal = 0xa + (s[i] - 0x41);  // Upper Case 'A'
+        }
+        if (digitVal>15) {
+            digitVal = 0xa + (s[i] - 0x61);  // Lower Case 'a'
+        }
+        U_ASSERT(digitVal <= 0xf);
+        val <<= 4;
+        val += digitVal;
+    }
+    if (val > 0x10ffff) {
+        status = U_PARSE_ERROR;
+        val = 0;
+    }
+    return (UChar32)val;
+}
+
+
+
 //
 //  poofData::getDefault() - return a wrapper around the spoof data that is
 //                           baked into the default ICU data.

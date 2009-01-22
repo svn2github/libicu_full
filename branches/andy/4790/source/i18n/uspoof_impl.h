@@ -54,7 +54,9 @@ public:
 	 *  @return   The length in UTF-16 code units of the substition string.
 	 */  
 	int32_t confusableLookup(UChar32 inChar, int32_t tableMask, UChar *destBuf) const;
-	
+
+    /** parse a hex number.  Untility used by the builders.   */
+	static UChar32 ScanHex(const UChar *s, int32_t start, int32_t limit, UErrorCode &status);
 
     static UClassID U_EXPORT2 getStaticClassID(void);
     virtual UClassID getDynamicClassID(void) const;

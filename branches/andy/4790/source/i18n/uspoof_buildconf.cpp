@@ -133,36 +133,6 @@ SPUString *SPUStringPool::addString(UnicodeString *src, UErrorCode &status) {
     return hashedString;
 }
 
-    
-// Convert a text format hex number.  Input: UChar *string text.  Output: a UChar32
-// Input has been pre-checked, and will have no non-hex chars.
-// The number must fall in the code point range of 0..0x10ffff
-static UChar32 ScanHex(const UChar *s, int32_t start, int32_t limit, UErrorCode &status) {
-    if (U_FAILURE(status)) {
-        return 0;
-    }
-    U_ASSERT(limit-start > 0);
-    uint32_t val = 0;
-    int i;
-    for (i=start; i<limit; i++) {
-        int digitVal = s[i] - 0x30;
-        if (digitVal>9) {
-            digitVal = 0xa + (s[i] - 0x41);  // Upper Case 'A'
-        }
-        if (digitVal>15) {
-            digitVal = 0xa + (s[i] - 0x61);  // Lower Case 'a'
-        }
-        U_ASSERT(digitVal <= 0xf);
-        val <<= 4;
-        val += digitVal;
-    }
-    if (val > 0x10ffff) {
-        status = U_PARSE_ERROR;
-        val = 0;
-    }
-    return (UChar32)val;
-}
-
 
 
 ConfusabledataBuilder::ConfusabledataBuilder(SpoofImpl *spImpl, UErrorCode &status) :
@@ -291,7 +261,7 @@ void ConfusabledataBuilder::build(const char * confusables, int32_t confusablesL
 
         // We have a good input line.  Extract the key character and mapping string, and
         //    put them into the appropriate mapping table.
-        UChar32 keyChar = ScanHex(fInput, uregex_start(fParseLine, 1, &status),
+        UChar32 keyChar = SpoofImpl::ScanHex(fInput, uregex_start(fParseLine, 1, &status),
                           uregex_end(fParseLine, 1, &status), status);
                           
         int32_t mapStringStart = uregex_start(fParseLine, 2, &status);
@@ -304,7 +274,7 @@ void ConfusabledataBuilder::build(const char * confusables, int32_t confusablesL
             return;
         }
         while (uregex_findNext(fParseHexNum, &status)) {
-            UChar32 c = ScanHex(&fInput[mapStringStart], uregex_start(fParseHexNum, 1, &status),
+            UChar32 c = SpoofImpl::ScanHex(&fInput[mapStringStart], uregex_start(fParseHexNum, 1, &status),
                                  uregex_end(fParseHexNum, 1, &status), status);
             mapString->append(c);
         }

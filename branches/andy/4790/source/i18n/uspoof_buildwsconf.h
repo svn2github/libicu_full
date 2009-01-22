@@ -20,11 +20,31 @@
 #define __USPOOF_BUILDWSCONF_H__
 
 #include "uspoof_impl.h"
+#include "unicode/uscript.h"
+#include "utrie2.h"
+
+class ScriptSet: public UMemory {
+  public:
+    ScriptSet();
+    ~ScriptSet();
+
+    UBool operator == (const ScriptSet &other);
+
+    void Union(const ScriptSet &other);
+    void add(UScriptCode script);
+
+  private:
+    uint32_t  bits[6];
+};
 
 
-class WSConfusableDataBuilder {
+class WSConfusableDataBuilder: public UMemory {
   private:
       WSConfusableDataBuilder();
+      ~WSConfusableDataBuilder();
+
+      UTrie2    *fAnyCaseTrie;
+      UTrie2    *fLowerCaseTrie;
       
     
   public:
