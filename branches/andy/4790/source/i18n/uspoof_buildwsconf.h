@@ -20,21 +20,18 @@
 #define __USPOOF_BUILDWSCONF_H__
 
 #include "uspoof_impl.h"
-#include "unicode/uscript.h"
 #include "utrie2.h"
 
-class ScriptSet: public UMemory {
+struct BuilderScriptSet: public UMemory {
   public:
-    ScriptSet();
-    ~ScriptSet();
+    UChar32      codePoint;
+    UTrie2      *trie;
+    ScriptSet   *sset;
+    uint32_t     index;           // scriptSetsVector index, before deleting dups.
+    uint32_t     rindex;          // scriptSets index, final (runtime) value.
 
-    UBool operator == (const ScriptSet &other);
-
-    void Union(const ScriptSet &other);
-    void add(UScriptCode script);
-
-  private:
-    uint32_t  bits[6];
+    BuilderScriptSet();
+    ~BuilderScriptSet();
 };
 
 

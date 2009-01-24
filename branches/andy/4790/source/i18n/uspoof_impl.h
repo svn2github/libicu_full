@@ -15,6 +15,9 @@
 
 #include "unicode/utypes.h"
 #include "unicode/uspoof.h"
+#include "utrie2.h"
+#include "unicode/uscript.h"
+
 
 U_NAMESPACE_BEGIN
 
@@ -134,11 +137,36 @@ public:
 #define USPOOF_KEY_LENGTH_FIELD(x) (((x)>>29) & 3)
 
 
-
-
 struct SpoofStringLengthsElement {
     uint16_t      fLastString;         // index in string table of last string with this length
     uint16_t      strLength;           // Length of strings
+};
+
+
+//
+//  Wrapper class for the Script code bit sets that are part of the
+//   whole script confusable data.
+//
+//  This class is used both at data build and at run time.
+//  The constructor is only used at build time.
+//  At run time, just point at the prebuilt data and go.
+//  
+class ScriptSet: public UMemory {
+  public:
+    ScriptSet();
+    ~ScriptSet();
+
+    UBool operator == (const ScriptSet &other);
+    ScriptSet & operator = (const ScriptSet &other);
+
+    void Union(const ScriptSet &other);
+    void intersect(const ScriptSet &other);
+    void add(UScriptCode script);
+    void setAll();
+    void resetAll();
+
+  private:
+    uint32_t  bits[6];
 };
 
 
@@ -147,25 +175,17 @@ struct SpoofStringLengthsElement {
 //    See Unicode UAX-39, Unicode Security Mechanisms, for a description of the
 //    Whole Script confusable data
 //
-//  The data is stored here as two lists of mappings, stored in code point order.
-//  One list for Lower Case confusables, one list for Any Case confusables.
+//  The data provides mappings from code points to a set of scripts
+//    that contain characters that might be confused with the code point.
+//  There are two mappings, one for lower case only, and one for characters
+//    of any case.
 //
-//     Code Point -> List of scripts (UScriptCode values) with with confusables for that code point.
+//  The actual data consists of a utrie2 to map from a code point to an offset,
+//  and an array of UScriptSets (essentially bit maps) that is indexed
+//  by the offsets obtained from the Trie.
 //
-//  The lists are binary-searched by code point at run time, except for the
-//  ASCII range, which is complete and is indexed directly, for speed.
 //
 
-struct WSCMapElement {
-    UChar32      codepointAndCount;    // bits 0-23:   the code point
-                                       // bits 24-32:  count of scripts w/ confusables. 
-    union {
-        uint8_t     scripts[4];        // for code points with 4 or fewer scripts
-                                       //   the script codes here
-        int32_t     dataOffset;        // for code points with more than 4 confusable scripts,
-                                       //   data offset to the list of scriptcodes.
-    };
-};
 //
 //  Spoof Data Wrapper
 //
@@ -214,9 +234,10 @@ class SpoofData: public UMemory {
     UChar                       *fCFUStrings;
 
     // Whole Script Confusable Data
-    WSCMapElement               *fWSCAnyTable;
-    WSCMapElement               *fWSCLowerTable;
-
+    UTrie2                      *fAnyCaseTrie;
+    UTrie2                      *fLowerCaseTrie;
+    ScriptSet                   *fScriptSets;
+    
     // Secure Identifier Data
     
     };
@@ -250,16 +271,20 @@ struct SpoofDataHeader {
 
     // The following sections are for data from confusablesWholeScript.txt
     
-    int32_t       fWSCAnyTable;
-    int32_t       fWSCAnyLength;
+    int32_t       fAnyCaseTrie;           // byte offset to the serialized Any Case Trie
+    int32_t       fAnyCaseTrieLength;     // Length (bytes) of the serialized Any Case Trie
     
-    int32_t       fWSCLowerTable;
-    int32_t       fWSCLowerLength;
+    int32_t       fLowerCaseTrie;         // byte offset to the serialized Lower Case Trie
+    int32_t       fLowerCaseTrieLength;   // Length (bytes) of the serialized Lower Case Trie
+
+    int32_t       fScriptSets;            // byte offset to array of ScriptSets
+    int32_t       fScriptSetsLength;      // Number of ScriptSets (24 bytes each)
+    
 
     // The following sections are for data from xidmodifications.txt
     
     
-    int32_t       unused[10];              // Padding, Room for Expansion
+    int32_t       unused[16];              // Padding, Room for Expansion
     
  }; 
 

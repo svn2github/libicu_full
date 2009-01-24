@@ -246,6 +246,13 @@ void SpoofData::initPtrs() {
     if (fRawData->fCFUStringTable != 0) {
         fCFUStrings = (UChar *)((char *)fRawData + fRawData->fCFUStringTable);
     }
+    
+    // NOTE:  do not fix up the pointers to the Tries for Whole Script Confusables.
+    //        These will point to the actual deserialized trie objects,
+    //        not to the serialized trie2 data.
+    if (fRawData->fScriptSets != 0) {
+        fScriptSets = (ScriptSet *)((char *)fRawData + fRawData->fCFUStringTable);
+    }
 }
 
 
@@ -281,7 +288,73 @@ void *SpoofData::reserveSpace(int32_t numBytes,  UErrorCode &status) {
     initPtrs();
     return (char *)fRawData + returnOffset;
 }
-    
+
+
+//----------------------------------------------------------------------------
+//
+//  ScriptSet implementation
+//
+//----------------------------------------------------------------------------
+ScriptSet::ScriptSet() {
+    for (uint32_t i=0; i<sizeof(bits)/sizeof(uint32_t); i++) {
+        bits[i] = 0;
+    }
+}
+
+ScriptSet::~ScriptSet() {
+}
+
+UBool ScriptSet::operator == (const ScriptSet &other) {
+    for (uint32_t i=0; i<sizeof(bits)/sizeof(uint32_t); i++) {
+        if (bits[i] != other.bits[i]) {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+void ScriptSet::add(UScriptCode script) {
+    uint32_t index = script / 32;
+    uint32_t bit   = 1 << (script & 31);
+    U_ASSERT(index < sizeof(bits)*4);
+    bits[index] |= bit;
+}
+
+
+void ScriptSet::Union(const ScriptSet &other) {
+    for (uint32_t i=0; i<sizeof(bits)/sizeof(uint32_t); i++) {
+        bits[i] |= other.bits[i];
+    }
+}
+
+void ScriptSet::intersect(const ScriptSet &other) {
+    for (uint32_t i=0; i<sizeof(bits)/sizeof(uint32_t); i++) {
+        bits[i] &= other.bits[i];
+    }
+}
+
+ScriptSet & ScriptSet::operator =(const ScriptSet &other) {
+    for (uint32_t i=0; i<sizeof(bits)/sizeof(uint32_t); i++) {
+        bits[i] = other.bits[i];
+    }
+    return *this;
+}
+
+
+void ScriptSet::setAll() {
+    for (uint32_t i=0; i<sizeof(bits)/sizeof(uint32_t); i++) {
+        bits[i] = 1;
+    }
+}
+
+
+void ScriptSet::resetAll() {
+    for (uint32_t i=0; i<sizeof(bits)/sizeof(uint32_t); i++) {
+        bits[i] = 0;
+    }
+}
+
+
 
 U_NAMESPACE_END
 
@@ -305,7 +378,7 @@ uspoof_swap(const UDataSwapper *ds, const void *inData, int32_t length, void *ou
     }
 
     //
-    //  Check that the data header is for for break data.
+    //  Check that the data header is for spoof data.
     //    (Header contents are defined in genbrk.cpp)
     //
     const UDataInfo *pInfo = (const UDataInfo *)((const char *)inData+4);

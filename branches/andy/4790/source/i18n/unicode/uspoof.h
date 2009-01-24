@@ -435,8 +435,8 @@ uspoof_checkUTF8(const USpoofChecker *sc,
 U_DRAFT int32_t U_EXPORT2
 uspoof_checkUnicodeString(const USpoofChecker *sc,
                           const U_NAMESPACE_QUALIFIER UnicodeString &text, 
-						  int32_t *position, 
-						  UErrorCode *status);
+                          int32_t *position,
+                          UErrorCode *status);
 
 #endif
 

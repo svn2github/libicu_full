@@ -100,9 +100,13 @@ void WSConfusableDataBuilder::buildWSConfusableData(SpoofImpl *spImpl, const cha
         return;
     }
     URegularExpression *parseRegexp = NULL;
+    int32_t             inputLen    = 0;
     UChar              *input       = NULL;
     int32_t             lineNum     = 0;
-    UVector            *scriptSets  = NULL;
+    
+    UVector            *scriptSets        = NULL;
+    uint32_t            rtScriptSetsCount = 2;
+
 
     WSConfusableDataBuilder *This = new WSConfusableDataBuilder();
     if (This == NULL) {
@@ -110,14 +114,33 @@ void WSConfusableDataBuilder::buildWSConfusableData(SpoofImpl *spImpl, const cha
         return;
     }
     This->fAnyCaseTrie = utrie2_open(0, 0, &status);
-    This->fAnyCaseTrie = utrie2_open(0, 0, &status);
+    This->fLowerCaseTrie = utrie2_open(0, 0, &status);
     
+
+    // The scriptSets vector provides a mapping from TRIE values to the set of scripts.
+    //
+    // Reserved TRIE values:
+    //   0:  Code point has no whole script confusables.
+    //   1:  Code point is of script Common or Inherited.
+    //       These code points do not participate in whole script confusable detection.
+    //       (This is logically equivalent to saying that they contain confusables in
+    //        all scripts)
+    //
+    // Because Trie values are indexes into the ScriptSets vector, pre-fill
+    // vector positions 0 and 1 to avoid conflicts with the reserved values.
     
+    scriptSets = new UVector(status);
+    if (scriptSets == NULL) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        goto cleanup;
+    }
+    scriptSets->addElement((void *)NULL, status);
+    scriptSets->addElement((void *)NULL, status);
+
     // Convert the user input data from UTF-8 to UChar (UTF-16)
-    int32_t inputLen = 0;
     u_strFromUTF8(NULL, 0, &inputLen, confusablesWS, confusablesWSLen, &status);
     if (status != U_BUFFER_OVERFLOW_ERROR) {
-        return;
+        goto cleanup;
     }
     status = U_ZERO_ERROR;
     input = static_cast<UChar *>(uprv_malloc((inputLen+1) * sizeof(UChar)));
@@ -199,21 +222,30 @@ void WSConfusableDataBuilder::buildWSConfusableData(SpoofImpl *spImpl, const cha
         UChar32 cp;
         for (cp=startCodePoint; cp<=endCodePoint; cp++) {
             int32_t setIndex = utrie2_get32(table, cp);
-            ScriptSet *sset = NULL;
-            if (setIndex >= 0) {
+            BuilderScriptSet *bsset = NULL;
+            if (setIndex > 0) {
                 U_ASSERT(setIndex < scriptSets->size());
-                sset = static_cast<ScriptSet *>(scriptSets->elementAt(setIndex));
+                bsset = static_cast<BuilderScriptSet *>(scriptSets->elementAt(setIndex));
             } else {
-                sset = new ScriptSet();
-                if (sset == NULL) {
+                bsset = new BuilderScriptSet();
+                if (bsset == NULL) {
                     status = U_MEMORY_ALLOCATION_ERROR;
                     goto cleanup;
                 }
+                bsset->codePoint = cp;
+                bsset->trie = table;
+                bsset->sset = new ScriptSet();
                 setIndex = scriptSets->size();
-                scriptSets->addElement(sset, status);
+                bsset->index = setIndex;
+                bsset->rindex = 0;
+                if (bsset->sset == NULL) {
+                    status = U_MEMORY_ALLOCATION_ERROR;
+                    goto cleanup;
+                }
+                scriptSets->addElement(bsset, status);
                 utrie2_set32(table, cp, setIndex, &status);
             }
-            sset->add(targScript);
+            bsset->sset->add(targScript);
 
             if (U_FAILURE(status)) {
                 goto cleanup;
@@ -224,9 +256,111 @@ void WSConfusableDataBuilder::buildWSConfusableData(SpoofImpl *spImpl, const cha
                 goto cleanup;
             }
         }
-
-
     }
+
+    // Eliminate duplicate script sets.  At this point we have a separate
+    // script set for every code point that had data in the input file.
+    //
+    // We eliminate underlying ScriptSet objects, not the BuildScriptSets that wrap them
+    //
+    printf("Number of scriptSets: %d\n", scriptSets->size());
+    {
+        int32_t duplicateCount = 0;
+        rtScriptSetsCount = 2;
+        for (int32_t outeri=2; outeri<scriptSets->size(); outeri++) {
+            BuilderScriptSet *outerSet = static_cast<BuilderScriptSet *>(scriptSets->elementAt(outeri));
+            if (outerSet->index != static_cast<uint32_t>(outeri)) {
+                // This set was already identified as a duplicate.
+                //   It will not be allocated a position in the runtime array of ScriptSets.
+                continue;
+            }
+            outerSet->rindex = rtScriptSetsCount++;
+            for (int32_t inneri=outeri+1; inneri<scriptSets->size(); inneri++) {
+                BuilderScriptSet *innerSet = static_cast<BuilderScriptSet *>(scriptSets->elementAt(inneri));
+                if (*(outerSet->sset) == *(innerSet->sset) && outerSet->sset != innerSet->sset) {
+                    delete innerSet->sset;
+                    innerSet->sset = outerSet->sset;
+                    innerSet->index = outeri;
+                    innerSet->rindex = outerSet->rindex;
+                    duplicateCount++;
+                }
+                // But this doesn't get all.  We need to fix the TRIE.
+            }
+        }
+        printf("Number of distinct script sets: %d\n", rtScriptSetsCount);
+    }
+
+    
+
+    // Update the Trie values to be reflect the run time script indexes (after duplicate merging).
+    //    (Trie Values 0 and 1 are reserved, and the corresponding slots in scriptSets
+    //     are unused, which is why the loop index starts at 2.)
+    {
+        for (int32_t i=2; i<scriptSets->size(); i++) {
+            BuilderScriptSet *bSet = static_cast<BuilderScriptSet *>(scriptSets->elementAt(i));
+            if (bSet->rindex != (uint32_t)i) {
+                utrie2_set32(bSet->trie, bSet->codePoint, bSet->rindex, &status);
+            }
+        }
+    }
+
+    // For code points with script==Common or script==Inherited,
+    //   Set the reserved value of 1 into both Tries.  These characters do not participate
+    //   in Whole Script Confusable detection; this reserved value is the means
+    //   by which they are detected.
+    {
+        UnicodeSet ignoreSet;
+        ignoreSet.applyIntPropertyValue(UCHAR_SCRIPT, USCRIPT_COMMON, status);
+        ignoreSet.applyIntPropertyValue(UCHAR_SCRIPT, USCRIPT_INHERITED, status);
+        for (int32_t rn=0; rn<ignoreSet.getRangeCount(); rn++) {
+            UChar32 rangeStart = ignoreSet.getRangeStart(rn);
+            UChar32 rangeEnd   = ignoreSet.getRangeEnd(rn);
+            utrie2_setRange32(This->fAnyCaseTrie,   rangeStart, rangeEnd, 1, TRUE, &status);
+            utrie2_setRange32(This->fLowerCaseTrie, rangeStart, rangeEnd, 1, TRUE, &status);
+        }
+    }
+
+    // Serialize the data to the Spoof Detector
+    {
+        utrie2_freeze(This->fAnyCaseTrie,   UTRIE2_16_VALUE_BITS, &status);
+        int32_t size = utrie2_serialize(This->fAnyCaseTrie, NULL, 0, &status);
+        printf("Any case Trie size: %d\n", size);
+        if (status != U_BUFFER_OVERFLOW_ERROR) {
+            goto cleanup;
+        }
+        status = U_ZERO_ERROR;
+        spImpl->fSpoofData->fRawData->fAnyCaseTrie = spImpl->fSpoofData->fMemLimit;
+        spImpl->fSpoofData->fAnyCaseTrie = This->fAnyCaseTrie;
+        void *where = spImpl->fSpoofData->reserveSpace(size, status);
+        utrie2_serialize(This->fAnyCaseTrie, where, size, &status);
+        
+        utrie2_freeze(This->fLowerCaseTrie, UTRIE2_16_VALUE_BITS, &status);
+        size = utrie2_serialize(This->fLowerCaseTrie, NULL, 0, &status);
+        printf("Lower case Trie size: %d\n", size);
+        if (status != U_BUFFER_OVERFLOW_ERROR) {
+            goto cleanup;
+        }
+        status = U_ZERO_ERROR;
+        spImpl->fSpoofData->fRawData->fLowerCaseTrie = spImpl->fSpoofData->fMemLimit;
+        spImpl->fSpoofData->fLowerCaseTrie = This->fLowerCaseTrie;
+        where = spImpl->fSpoofData->reserveSpace(size, status);
+        utrie2_serialize(This->fLowerCaseTrie, where, size, &status);
+
+        ScriptSet *rtScriptSets =  static_cast<ScriptSet *>
+            (spImpl->fSpoofData->reserveSpace(rtScriptSetsCount * sizeof(ScriptSet), status));
+        uint32_t rindex = 2;
+        for (int32_t i=2; i<scriptSets->size(); i++) {
+            BuilderScriptSet *bSet = static_cast<BuilderScriptSet *>(scriptSets->elementAt(i));
+            if (bSet->rindex < rindex) {
+                // We have already copied this script set to the serialized data.
+                continue;
+            }
+            U_ASSERT(rindex == bSet->rindex);
+            rtScriptSets[rindex] = *bSet->sset;   // Assignment of a ScriptSet just copies the bits.
+            rindex++;
+        }
+    }
+    
 
 cleanup:
     if (U_FAILURE(status)) {
@@ -234,41 +368,18 @@ cleanup:
     }
     uregex_close(parseRegexp);
     uprv_free(input);
+    delete scriptSets;
     return;
 }
 
 
 
-ScriptSet::ScriptSet() {
-    for (int32_t i=0; i<sizeof(bits)/sizeof(uint32_t); i++) {
-        bits[i] = 0;
-    }
+
+
+BuilderScriptSet::BuilderScriptSet() {
 }
 
-ScriptSet::~ScriptSet() {
-}
-
-UBool ScriptSet::operator == (const ScriptSet &other) {
-    for (int32_t i=0; i<sizeof(bits)/sizeof(uint32_t); i++) {
-        if (bits[i] != other.bits[i]) {
-            return FALSE;
-        }
-    }
-    return TRUE;
-}
-
-void ScriptSet::add(UScriptCode script) {
-    int32_t index = script / 32;
-    int32_t bit   = 1 << (script & 31);
-    U_ASSERT(index < sizeof(bits)*4);
-    bits[index] |= bit;
-}
-
-
-void ScriptSet::Union(const ScriptSet &other) {
-    for (int32_t i=0; i<sizeof(bits)/sizeof(uint32_t); i++) {
-        bits[i] |= other.bits[i];
-    }
+BuilderScriptSet::~BuilderScriptSet() {
 }
 
 

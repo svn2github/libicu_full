@@ -82,6 +82,17 @@ uspoof_setAllowedLocales(USpoofChecker *sc, const char * /*localesList*/, UError
 
 
 U_CAPI int32_t U_EXPORT2
+uspoof_checkUnicodeString(const USpoofChecker *sc,
+                          const U_NAMESPACE_QUALIFIER UnicodeString &text, 
+                          int32_t *position,
+                          UErrorCode *status) {
+    if (U_FAILURE(*status)) {
+        return 0;
+    }
+}
+
+
+U_CAPI int32_t U_EXPORT2
 uspoof_getSkeleton(const USpoofChecker *sc,
                    USpoofChecks type,
                    const UChar *s,  int32_t length,
