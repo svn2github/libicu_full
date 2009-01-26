@@ -30,6 +30,55 @@
  * performed by these functions, are describe in 
  * Unicode Technical Report #36, http://unicode.org/reports/tr36, and
  * Unicode Technical Standard #39, http://unicode.org/reports/tr39
+ *
+ * Checks fall into two general categorie:
+ *   1.  Single String Tests.  Check whether a string is potentially potentially
+ *       confusable with any other string.
+ *   2.  Two string tests.  Check whether two specific strings are confusable.
+ *       This does not consider whether either of strings is potentially
+ *       confusable with any string other than the exact one specified.
+ *
+ *   (Clean this up later...)
+ *
+ *  Single Script Confusable Tests:
+ *      Single Identifier tests:
+ *         There exists some other ID, all in the same script (or in commmon script chars)
+ *         that is confusable.
+ *      Double String Tests:
+ *         The two strings have the same script (or may be common only), and
+ *         they are confusable.
+ *
+ *  Mixed Script Confusable
+ *      Single String Tests
+ *         The source string is of mixed script, and there exists some string
+ *         _in a single script_ that is confusable with it.  This test does not check
+ *         for the existence of other mixed script strings that are confusable with
+ *         the string being tested.
+ *      Two Identifiers Test:
+ *         The two strings are confusable.  At least one of them contains characters
+ *         from more than one script.  Not all identifiers that are confusable here
+ *         would fail the single string Mixed Script Confusable test.
+ *         Example:   "Scripts-R-Us" with a Cylrillic (backwards looking) R would not
+ *         fail the single ID test.  But, if it were written with a Cylrillic 'S',
+ *         the two specific Identifiers would be mixed script confusable.
+ *
+ *  Whole Script Confusable
+ *      Single String Test
+ *         The Identifier is of a single script, and there exists another ID
+ *         wholly in some other script that is confusable.
+ *      Two Identifiers Test:
+ *         The two IDs are confusable with the mixed script test,
+ *         each ID is in a single script,
+ *         and the scripts of the two IDs are not the same.
+ *         
+ *  Note on Scripts:
+ *     Characters of script "Common" or "Inherited" are ignored when determining
+ *     the script of an identifier.   When an Identifier contains only Common
+ *     or Inherited characters (a somewhat pathological case), it is logically
+ *     in _all_ scripts.  When a test says that two identifiers must be of the
+ *     same script, such a perverse identifier always is.  (Think of the digits 1,
+ *     with script = Common)
+ *
  */
 #ifndef USPOOF_H
 #define USPOOF_H
@@ -61,11 +110,10 @@ typedef enum USpoofChecks {
     /** Modifier for single, mixed & whole script checks.
         Selects between Lower Case Confusable (0) and
         Any Case Confusable (1).  */
-    USPOOF_ANY_CASE_CONFUSABLE      =   8,
+    USPOOF_ANY_CASE                 =   8,
     USPOOF_SECURE_ID                =  16,
-    USPOOF_MIXED_SCRIPT             =  32,
-    USPOOF_LOCALE_LIMIT             =  64,
-    USPOOF_CHAR_LIMIT               = 128,
+    USPOOF_LOCALE_LIMIT             =  32,
+    USPOOF_CHAR_LIMIT               =  64,
     USPOOF_ALL_CHECKS               = 0x7f
     };
     
