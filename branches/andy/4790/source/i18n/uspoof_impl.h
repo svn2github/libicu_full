@@ -61,6 +61,15 @@ public:
     /** parse a hex number.  Untility used by the builders.   */
 	static UChar32 ScanHex(const UChar *s, int32_t start, int32_t limit, UErrorCode &status);
 
+	// Implementation for Whole Script tests.
+	// Return the test bit flag to be ORed into the eventual user return value
+	//    if a Spoof opportunity is detected.
+	int32_t wholeScripCheck(
+	    const UChar *text, int32_t length, int32_t &position, UErrorCode &status) const;
+	    
+    int32_t mixedScripCheck(
+        const UChar *text, int32_t length, int32_t &position, UErrorCode &status) const;
+    
     static UClassID U_EXPORT2 getStaticClassID(void);
     virtual UClassID getDynamicClassID(void) const;
 

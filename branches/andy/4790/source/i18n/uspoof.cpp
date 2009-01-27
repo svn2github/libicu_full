@@ -86,10 +86,47 @@ uspoof_checkUnicodeString(const USpoofChecker *sc,
                           const U_NAMESPACE_QUALIFIER UnicodeString &text, 
                           int32_t *position,
                           UErrorCode *status) {
-    if (U_FAILURE(*status)) {
+    const SpoofImpl *This = SpoofImpl::validateThis(sc, *status);
+	if (This == NULL) {
+		return 0;
+	}
+    *status = U_UNSUPPORTED_ERROR;
+    return 0;
+}
+
+U_CAPI int32_t U_EXPORT2
+uspoof_check(const USpoofChecker *sc,
+			 const UChar *text, int32_t length, 
+			 int32_t *position,
+			 UErrorCode *status) {
+			 
+    const SpoofImpl *This = SpoofImpl::validateThis(sc, *status);
+	if (This == NULL) {
+		return 0;
+	}
+    if (length < -1) {
+        *status = U_ILLEGAL_ARGUMENT_ERROR;
         return 0;
     }
+
+    int32_t result = 0;
+    
+    if (This->fChecks & USPOOF_WHOLE_SCRIPT_CONFUSABLE) {
+        result |= This->wholeScripCheck(text, length, *position, *status);
+        }
+    
+    if (This->fChecks & USPOOF_MIXED_SCRIPT_CONFUSABLE) {
+        result |= This->mixedScripCheck(text, length, *position, *status);
+        }
+        
+    if (This->fChecks & USPOOF_SINGLE_SCRIPT_CONFUSABLE) {
+        // TODO
+        *status = U_UNSUPPORTED_ERROR;
+        }
+    return result;
+    
 }
+
 
 
 U_CAPI int32_t U_EXPORT2
@@ -104,7 +141,7 @@ uspoof_getSkeleton(const USpoofChecker *sc,
         return 0;
     }
     if (length<-1 || destCapacity<0 || (destCapacity==0 && dest!=NULL) ||
-        (type & ~(USPOOF_SINGLE_SCRIPT_CONFUSABLE | USPOOF_ANY_CASE_CONFUSABLE)) != 0) {
+        (type & ~(USPOOF_SINGLE_SCRIPT_CONFUSABLE | USPOOF_ANY_CASE)) != 0) {
         *status = U_ILLEGAL_ARGUMENT_ERROR;
         return 0;
     }
@@ -117,10 +154,10 @@ uspoof_getSkeleton(const USpoofChecker *sc,
       case USPOOF_SINGLE_SCRIPT_CONFUSABLE:
         tableMask = USPOOF_SL_TABLE_FLAG;
         break;
-      case USPOOF_ANY_CASE_CONFUSABLE:
+      case USPOOF_ANY_CASE:
         tableMask = USPOOF_MA_TABLE_FLAG;
         break;
-      case USPOOF_SINGLE_SCRIPT_CONFUSABLE | USPOOF_ANY_CASE_CONFUSABLE:
+      case USPOOF_SINGLE_SCRIPT_CONFUSABLE | USPOOF_ANY_CASE:
         tableMask = USPOOF_SA_TABLE_FLAG;
         break;
       default:

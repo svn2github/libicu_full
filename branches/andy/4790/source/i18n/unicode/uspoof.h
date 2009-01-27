@@ -43,13 +43,13 @@
  *  Single Script Confusable Tests:
  *      Single Identifier tests:
  *         There exists some other ID, all in the same script (or in commmon script chars)
- *         that is confusable.
+ *         that is confusable.  TODO.  This needs extra data to do in a reasonable way.
  *      Double String Tests:
  *         The two strings have the same script (or may be common only), and
  *         they are confusable.
  *
  *  Mixed Script Confusable
- *      Single String Tests
+ *      Single Identifier Tests
  *         The source string is of mixed script, and there exists some string
  *         _in a single script_ that is confusable with it.  This test does not check
  *         for the existence of other mixed script strings that are confusable with
@@ -104,13 +104,43 @@ typedef struct USpoofChecker USpoofChecker;
  * @draft ICU 4.0
  */
 typedef enum USpoofChecks {
+    /** Applies to Two Identifier tests only.
+      *   The identifiers are both from the same script and are confusable.
+      */
     USPOOF_SINGLE_SCRIPT_CONFUSABLE =   1,
+
+    /** Applies to both Single & Two Identifier Tests.
+     *  Single ID test:
+     *    The identifier contains multiple scripts, and
+     *    is confusable with some other identifer in a single script
+     *  Two ID test:
+     *    The two IDs are confusable, and at least one contains
+     *    characters from more than one script.
+     */
     USPOOF_MIXED_SCRIPT_CONFUSABLE  =   2,
+
+    /** Applies to both Single & Two Identifier Tests
+     *  Single ID test:
+     *    The identifier is of a single script, and
+     *    there exists a confusable identifier in another script.
+     *  Two ID test:
+     *    The identifiers are confusable,
+     *    each is of a single script, and
+     *    the scripts of the two Identifiers are different.
+     */
     USPOOF_WHOLE_SCRIPT_CONFUSABLE  =   4,
+    
     /** Modifier for single, mixed & whole script checks.
         Selects between Lower Case Confusable (0) and
         Any Case Confusable (1).  */
     USPOOF_ANY_CASE                 =   8,
+
+    /** Check that an identifer contains only characters from a
+      * single script (plus chars from the common and inherited scripts.)
+      * Applies to single identifier check only.
+      */
+    USPOOF_SINGLE_SCRIPT            =  16,
+    
     USPOOF_SECURE_ID                =  16,
     USPOOF_LOCALE_LIMIT             =  32,
     USPOOF_CHAR_LIMIT               =  64,

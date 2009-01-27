@@ -66,6 +66,15 @@ const SpoofImpl *SpoofImpl::validateThis(const USpoofChecker *sc, UErrorCode &st
 }
 
 
+//--------------------------------------------------------------------------------------
+//
+//  confusableLookup()    This is the heart of the confusable skeleton generation
+//                        implementation.
+//
+//                        Given a source character, produce the corresponding
+//                        replacement character(s)
+//
+//---------------------------------------------------------------------------------------
 int32_t SpoofImpl::confusableLookup(UChar32 inChar, int32_t tableMask, UChar *destBuf) const {
 
     // Binary search the spoof data key table for the inChar
@@ -148,6 +157,27 @@ int32_t SpoofImpl::confusableLookup(UChar32 inChar, int32_t tableMask, UChar *de
         destBuf[idx] = src[idx];
     }
     return stringLen;
+}
+
+
+//---------------------------------------------------------------------------------------
+//
+//  mixedScriptCheck()
+//
+//          Input text is already normalized to NFKD
+//          Input Length is always provided, never -1 for null terminated.
+//
+//
+//---------------------------------------------------------------------------------------
+int32_t SpoofImpl::mixedScripCheck(
+        const UChar *text, int32_t length, int32_t &position, UErrorCode &status) {
+
+     ScriptSet     confusableScripts();    // This will be the the set of scripts
+
+     int32_t       inputIdx = 0;
+     UChar32       c;
+     while (inputIdx < length) {
+         c = U16_NEXT(text, inputIdx, length, c);
 }
 
 
