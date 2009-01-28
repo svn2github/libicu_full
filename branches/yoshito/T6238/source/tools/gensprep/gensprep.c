@@ -246,7 +246,7 @@ main(int argc, char* argv[]) {
         sprepOptions |= _SPREP_NORMALIZATION_ON;
     }
     
-    if(options[CHECK_BIDI].doesOccur){ /* this option might be set by @check-bidi;; in the source file
+    if(options[CHECK_BIDI].doesOccur){ /* this option might be set by @check-bidi;; in the source file */
         sprepOptions |= _SPREP_CHECK_BIDI_ON;
     }
 
