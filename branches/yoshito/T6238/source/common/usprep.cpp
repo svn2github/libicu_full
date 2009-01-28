@@ -1,7 +1,7 @@
 /*
  *******************************************************************************
  *
- *   Copyright (C) 2003-2008, International Business Machines
+ *   Copyright (C) 2003-2009, International Business Machines
  *   Corporation and others.  All Rights Reserved.
  *
  *******************************************************************************
@@ -416,6 +416,17 @@ usprep_open(const char* path,
        
     /* initialize the profile struct members */
     return usprep_getProfile(path,name,status);
+}
+
+U_CAPI UStringPrepProfile* U_EXPORT2
+usprep_openByType(UStringPrepProfileType type,
+				  UErrorCode* status) {
+    if(status == NULL || U_FAILURE(*status)){
+        return NULL;
+    }
+	/* Not implemented */
+	*status = U_UNSUPPORTED_ERROR;
+	return NULL;
 }
 
 U_CAPI void U_EXPORT2

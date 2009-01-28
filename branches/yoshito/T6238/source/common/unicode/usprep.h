@@ -1,7 +1,7 @@
 /*
  *******************************************************************************
  *
- *   Copyright (C) 2003-2006, International Business Machines
+ *   Copyright (C) 2003-2009, International Business Machines
  *   Corporation and others.  All Rights Reserved.
  *
  *******************************************************************************
@@ -82,6 +82,25 @@ typedef struct UStringPrepProfile UStringPrepProfile;
  */
 #define USPREP_ALLOW_UNASSIGNED 0x0001
 
+enum UStringPrepProfileType {
+	USPREP_RFC3491_NAMEPREP,
+	USPREP_RFC3530_NFS4_CS_PREP,
+	USPREP_RFC3530_NFS4_CS_PREP_CI,
+	USPREP_RFC3530_NSF4_CIS_PREP,
+	USPREP_RFC3530_NSF4_MIXED_PREP_PREFIX,
+	USPREP_RFC3530_NSF4_MIXED_PREP_SUFFIX,
+	USPREP_RFC3722_ISCSI,
+	USPREP_RFC3920_NODEPREP,
+	USPREP_RFC3920_RESOURCEPREP,
+	USPREP_RFC4011_MIB,
+	USPREP_RFC4013_SASLPREP,
+	USPREP_RFC4505_TRACE,
+	USPREP_RFC4518_LDAPPREP,
+	USPREP_RFC4518_LDAPPREP_CI
+};
+
+typedef enum UStringPrepProfileType UStringPrepProfileType;
+
 
 /**
  * Creates a StringPrep profile from the data file.
@@ -103,6 +122,20 @@ usprep_open(const char* path,
             const char* fileName,
             UErrorCode* status);
 
+/**
+ * Creates a StringPrep profile for the specified profile
+ *
+ * @param type		profile type.
+ * @param status    ICU error code in/out parameter. Must not be NULL.
+ *                  Must fulfill U_SUCCESS before the function call.
+ * @return Pointer to UStringPrepProfile that is opened. Should be closed by
+ * calling usprep_close()
+ * @see usprep_close()
+ * @draft ICU 4.2
+ */
+U_DRAFT UStringPrepProfile* U_EXPORT2
+usprep_openByType(UStringPrepProfileType type,
+				  UErrorCode* status);
 
 /**
  * Closes the profile
