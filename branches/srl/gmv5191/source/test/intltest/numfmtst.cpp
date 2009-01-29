@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT: 
- * Copyright (c) 1997-2008, International Business Machines Corporation and
+ * Copyright (c) 1997-2009, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 /* Modification History:
@@ -86,6 +86,8 @@ void NumberFormatTest::runIndexedTest( int32_t index, UBool exec, const char* &n
         CASE(34,TestCurrencyFormat);
         CASE(35,TestRounding);
         CASE(36,TestNonpositiveMultiplier);
+        CASE(37,TestNumberingSystems);
+
         default: name = ""; break;
     }
 }
@@ -2047,6 +2049,12 @@ UBool NumberFormatTest::equalValue(const Formattable& a, const Formattable& b) {
     return FALSE;
 }
 
+void NumberFormatTest::expect3(NumberFormat& fmt, const Formattable& n, const UnicodeString& str) {
+    // Don't round-trip format test, since we explicitly do it
+    expect_rbnf(fmt, n, str, FALSE);
+    expect_rbnf(fmt, str, n);
+}
+
 void NumberFormatTest::expect2(NumberFormat& fmt, const Formattable& n, const UnicodeString& str) {
     // Don't round-trip format test, since we explicitly do it
     expect(fmt, n, str, FALSE);
@@ -2082,6 +2090,59 @@ void NumberFormatTest::expect(NumberFormat& fmt, const UnicodeString& str, const
         errln(UnicodeString("FAIL \"") + str + "\" x " +
               pat + " = " +
               toString(num) + ", expected " + toString(n));
+    }
+}
+
+void NumberFormatTest::expect_rbnf(NumberFormat& fmt, const UnicodeString& str, const Formattable& n) {
+    UErrorCode status = U_ZERO_ERROR;
+    Formattable num;
+    fmt.parse(str, num, status);
+    if (U_FAILURE(status)) {
+        errln(UnicodeString("FAIL: Parse failed for \"") + str + "\"");
+        return;
+    }
+    if (equalValue(num, n)) {
+        logln(UnicodeString("Ok   \"") + str + " = " +
+              toString(num));
+    } else {
+        errln(UnicodeString("FAIL \"") + str + " = " +
+              toString(num) + ", expected " + toString(n));
+    }
+}
+
+void NumberFormatTest::expect_rbnf(NumberFormat& fmt, const Formattable& n,
+                              const UnicodeString& exp, UBool rt) {
+    UnicodeString saw;
+    FieldPosition pos;
+    UErrorCode status = U_ZERO_ERROR;
+    fmt.format(n, saw, pos, status);
+    CHECK(status, "NumberFormat::format");
+    if (saw == exp) {
+        logln(UnicodeString("Ok   ") + toString(n) + 
+              " = \"" +
+              escape(saw) + "\"");
+        // We should be able to round-trip the formatted string =>
+        // number => string (but not the other way around: number
+        // => string => number2, might have number2 != number):
+        if (rt) {
+            Formattable n2;
+            fmt.parse(exp, n2, status);
+            if (U_FAILURE(status)) {
+                errln(UnicodeString("FAIL: Parse failed for \"") + exp + "\"");
+                return;
+            }
+            UnicodeString saw2;
+            fmt.format(n2, saw2, pos, status);
+            CHECK(status, "NumberFormat::format");
+            if (saw2 != exp) {
+                errln((UnicodeString)"FAIL \"" + exp + "\" => " + toString(n2) +
+                      " => \"" + saw2 + "\"");
+            }
+        }
+    } else {
+        errln(UnicodeString("FAIL ") + toString(n) + 
+              " = \"" +
+              escape(saw) + "\", expected \"" + exp + "\"");
     }
 }
 
@@ -2475,5 +2536,44 @@ void NumberFormatTest::TestNonpositiveMultiplier() {
 }
 
 
+/**
+ * Test using various numbering systems and numbering system keyword.
+ */
+
+void NumberFormatTest::TestNumberingSystems() {
+    UErrorCode ec = U_ZERO_ERROR;
+
+    Locale loc1("en", "US", "", "numbers=thai");
+    Locale loc2("en", "US", "", "numbers=hebrew");
+    Locale loc3("en", "US", "", "numbers=persian");
+    Locale loc4("en", "US", "", "numbers=foobar");
+
+    NumberFormat* fmt1= NumberFormat::createInstance(loc1, ec);
+    if (U_FAILURE(ec)) {
+        errln("FAIL: getInstance(en_US@numbers=thai)");
+    }
+    NumberFormat* fmt2= NumberFormat::createInstance(loc2, ec);
+    if (U_FAILURE(ec)) {
+        errln("FAIL: getInstance(en_US@numbers=hebrew)");
+    }
+    NumberFormat* fmt3= NumberFormat::createInstance(loc3, ec);
+    if (U_FAILURE(ec)) {
+        errln("FAIL: getInstance(en_US@numbers=persian)");
+    }
+
+    expect2(*fmt1, 1234.567, CharsToUnicodeString("\\u0E51,\\u0E52\\u0E53\\u0E54.\\u0E55\\u0E56\\u0E57"));
+    expect3(*fmt2, 5678.0, CharsToUnicodeString("\\u05D4\\u05F3\\u05EA\\u05E8\\u05E2\\u05F4\\u05D7"));
+    expect2(*fmt3, 1234.567, CharsToUnicodeString("\\u06F1,\\u06F2\\u06F3\\u06F4.\\u06F5\\u06F6\\u06F7"));
+
+    // Test bogus keyword value
+    NumberFormat* fmt4= NumberFormat::createInstance(loc4, ec);
+    if ( ec != U_UNSUPPORTED_ERROR ) {
+        errln("FAIL: getInstance(en_US@numbers=foobar) should have returned U_UNSUPPORTED_ERROR");
+    }
+
+    delete fmt1;
+    delete fmt2;
+    delete fmt3;
+}
 
 #endif /* #if !UCONFIG_NO_FORMATTING */

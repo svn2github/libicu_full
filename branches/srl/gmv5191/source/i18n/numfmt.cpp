@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 1997-2008, International Business Machines Corporation and    *
+* Copyright (C) 1997-2009, International Business Machines Corporation and    *
 * others. All Rights Reserved.                                                *
 *******************************************************************************
 *
@@ -33,6 +33,8 @@
 #include "unicode/ustring.h"
 #include "unicode/ucurr.h"
 #include "unicode/curramt.h"
+#include "unicode/numsys.h"
+#include "unicode/rbnf.h"
 #include "winnmfmt.h"
 #include "uresimp.h"
 #include "uhash.h"
@@ -861,6 +863,7 @@ NumberFormat::makeInstance(const Locale& desiredLocale,
     UnicodeString pattern;
     UResourceBundle *resource = ures_open((char *)0, desiredLocale.getName(), &status);
     UResourceBundle *numberPatterns = ures_getByKey(resource, DecimalFormat::fgNumberPatterns, NULL, &status);
+    NumberingSystem *ns = NULL;
 
     if (U_FAILURE(status)) {
         // We don't appear to have resource data available -- use the last-resort data
@@ -896,16 +899,33 @@ NumberFormat::makeInstance(const Locale& desiredLocale,
             pattern.setTo(currPattern, u_strlen(currPattern));
         }
     }
-    f = new DecimalFormat(pattern, symbolsToAdopt, status);
-    if (U_FAILURE(status) || f == NULL) {
+
+    ns = NumberingSystem::createInstance(desiredLocale,status);
+    
+    if (U_FAILURE(status)) {
         goto cleanup;
+    }
+
+    if (ns->isAlgorithmic()) {
+        RuleBasedNumberFormat *r = new RuleBasedNumberFormat(URBNF_NUMBERING_SYSTEM,desiredLocale,status);
+        if (U_FAILURE(status) || r == NULL) {
+            goto cleanup;
+        }
+        r->setDefaultRuleSet(ns->getDescription(),status);
+        f = (NumberFormat *) r;
+    } else {
+        f = new DecimalFormat(pattern, symbolsToAdopt, status);
     }
 
     f->setLocaleIDs(ures_getLocaleByType(numberPatterns, ULOC_VALID_LOCALE, &status),
                     ures_getLocaleByType(numberPatterns, ULOC_ACTUAL_LOCALE, &status));
+
 cleanup:
     ures_close(numberPatterns);
     ures_close(resource);
+    if (ns) {
+       delete ns;
+    }
     if (U_FAILURE(status)) {
         /* If f exists, then it will delete the symbols */
         if (f==NULL) {
