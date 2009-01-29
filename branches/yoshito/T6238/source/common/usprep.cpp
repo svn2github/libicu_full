@@ -50,6 +50,26 @@ static uint8_t formatVersion[4]={ 0, 0, 0, 0 };
 /* the Unicode version of the sprep data */
 static UVersionInfo dataVersion={ 0, 0, 0, 0 };
 
+static const struct {
+    UStringPrepProfileType type;
+    const char *name;
+} STD_PROFILES [] = {
+    {USPREP_RFC3491_NAMEPREP,               "rfc3491"},
+    {USPREP_RFC3530_NFS4_CS_PREP,           "rfc3530cs"},
+    {USPREP_RFC3530_NFS4_CS_PREP_CI,        "rfc3530csci"},
+    {USPREP_RFC3530_NSF4_CIS_PREP,          "rfc3491"},
+    {USPREP_RFC3530_NSF4_MIXED_PREP_PREFIX, "rfc3530mixp"},
+    {USPREP_RFC3530_NSF4_MIXED_PREP_SUFFIX, "rfc3491"},
+    {USPREP_RFC3722_ISCSI,                  "rfc3722"},
+    {USPREP_RFC3920_NODEPREP,               "rfc3920node"},
+    {USPREP_RFC3920_RESOURCEPREP,           "rfc3920res"},
+    {USPREP_RFC4011_MIB,                    "rfc4011"},
+    {USPREP_RFC4013_SASLPREP,               "rfc4013"},
+    {USPREP_RFC4505_TRACE,                  "rfc4505"},
+    {USPREP_RFC4518_LDAP,                   "rfc4518"},
+    {USPREP_RFC4518_LDAP_CI,                "rfc4518ci"},
+};
+
 static UBool U_CALLCONV
 isSPrepAcceptable(void * /* context */,
              const char * /* type */, 
@@ -424,8 +444,14 @@ usprep_openByType(UStringPrepProfileType type,
     if(status == NULL || U_FAILURE(*status)){
         return NULL;
     }
-	/* Not implemented */
-	*status = U_UNSUPPORTED_ERROR;
+    int32_t i;
+    for (i = 0; i < sizeof(STD_PROFILES)/sizeof(STD_PROFILES[0]); i++) {
+        if (STD_PROFILES[i].type == type) {
+            return usprep_open(NULL, STD_PROFILES[i].name, status);
+        }
+    }    
+    /* Not implemented */
+	*status = U_ILLEGAL_ARGUMENT_ERROR;
 	return NULL;
 }
 

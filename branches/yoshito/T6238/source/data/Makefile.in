@@ -202,7 +202,7 @@ package390: $(OUTTMPDIR)/icudata390.lst $(PKGDATA_LIST) ./icupkg.inc packagedata
 #  2005-may-05 Removed Unicode properties files (unorm.icu, uprops.icu, ucase.icu, ubidi.icu)
 #  from data build. See Jitterbug 4497. (makedata.mak revision 1.117)
 #
-DAT_FILES_SHORT=pnames.icu unames.icu cnvalias.icu coll/ucadata.icu coll/invuca.icu uidna.spp 
+DAT_FILES_SHORT=pnames.icu unames.icu cnvalias.icu coll/ucadata.icu coll/invuca.icu 
 DAT_FILES=$(DAT_FILES_SHORT:%=$(BUILDDIR)/%)
 
 ## BRK files
@@ -426,10 +426,6 @@ $(BUILDDIR)/cnvalias.icu: $(UCMSRCDIR)/convrtrs.txt $(BINDIR)/gencnval$(EXEEXT)
 
 ####################################################    SPP
 # SPP FILES
-
-# uidna.spp
-$(BUILDDIR)/uidna.spp: $(MISCSRCDIR)/NamePrepProfile.txt $(BINDIR)/gensprep$(EXEEXT) $(BUILDDIR)/unames.icu $(BUILDDIR)/pnames.icu
-	$(INVOKE) $(BINDIR)/gensprep -d $(BUILDDIR) -i $(BUILDDIR) -s $(MISCSRCDIR) -b uidna -n $(UNICODEDATADIR) -u 3.2.0 -k NamePrepProfile.txt
 
 $(BUILDDIR)/%.spp: $(SPREPSRCDIR)/%.txt $(BINDIR)/gensprep$(EXEEXT) $(BUILDDIR)/unames.icu $(BUILDDIR)/pnames.icu
 	$(INVOKE) $(BINDIR)/gensprep -d $(BUILDDIR) -i $(BUILDDIR) -s $(SPREPSRCDIR) -b $(@F:%.spp=%) -m $(UNICODEDATADIR) -u 3.2.0 $(<F)
