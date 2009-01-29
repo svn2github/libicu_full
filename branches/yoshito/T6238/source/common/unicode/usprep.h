@@ -159,7 +159,7 @@ typedef enum UStringPrepProfileType {
      * matching rules
      * @draft ICU 4.2
      */
-	USPREP_RFC4518_LDAP_CI,
+	USPREP_RFC4518_LDAP_CI
 } UStringPrepProfileType;
 
 /**
