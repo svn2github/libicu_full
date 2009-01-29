@@ -7,6 +7,7 @@
 
 #include "unicode/utypes.h"
 #include "unicode/uspoof.h"
+#include "unicode/unorm.h"
 #include "cmemory.h"
 #include "udatamem.h"
 #include "umutex.h"
@@ -427,7 +428,7 @@ NFKDBuffer::NFKDBuffer(const UChar *text, int32_t length, UErrorCode &status) {
     }
     fNormalizedText = fSmallBuf;
     int32_t fNormalizedTextLength = unorm_normalize(
-        s, length, UNORM_NFKD, 0, fNormalizedText, USPOOF_STACK_BUFFER_SIZE, status);
+        text, length, UNORM_NFKD, 0, fNormalizedText, USPOOF_STACK_BUFFER_SIZE, status);
     if (*status == U_BUFFER_OVERFLOW_ERROR) {
         status = U_ZERO_ERROR;
         fNormalizedText = (UChar *)uprv_malloc((normalizedLen+1)*sizeof(UChar));
