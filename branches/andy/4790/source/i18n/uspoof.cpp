@@ -110,21 +110,39 @@ uspoof_check(const USpoofChecker *sc,
     }
 
     int32_t result = 0;
+
+    NFKDBuffer   normalizedInput(text, length, *status);
+    const UChar  *nfkdText = normalizedInput.getBuffer();
+    int32_t      nfkdLength = normalizedInput.getLength();
     
-    if (This->fChecks & USPOOF_WHOLE_SCRIPT_CONFUSABLE) {
-        result |= This->wholeScripCheck(text, length, *position, *status);
-        }
+    int32_t sciptCount = This->scriptScan(nfkdText, nfkdLength, *status);
+    if ((This->fChecks & USPOOF_SINGLE_SCRIPT) && sciptCount == 2) {
+        // Note: scriptCount == 2 covers all cases of the number of scripts >= 2
+        result |= USPOOF_SINGLE_SCRIPT;
+    }
+
     
-    if (This->fChecks & USPOOF_MIXED_SCRIPT_CONFUSABLE) {
-        result |= This->mixedScripCheck(text, length, *position, *status);
-        }
+    
+    if (This->fChecks & (USPOOF_WHOLE_SCRIPT_CONFUSABLE | USPOOF_MIXED_SCRIPT_CONFUSABLE)) {
+        // The basic test is the same for both whole and mixed script confusables.
+        // Return the set of scripts that _every_ input character has a confusable in.
+        ScriptSet *scripts = This->WholeScriptCheck(nfkdText, nfkdLength, *status);
+        int32_t confusableScriptCount = scripts->countMembers();
         
-    if (This->fChecks & USPOOF_SINGLE_SCRIPT_CONFUSABLE) {
-        // TODO
-        *status = U_UNSUPPORTED_ERROR;
+        if ((This->fChecks & USPOOF_WHOLE_SCRIPT_CONFUSABLE) &&
+            confusableScriptCount >= 2 &&
+            sciptCount == 1) {
+            result |= USPOOF_WHOLE_SCRIPT_CONFUSABLE;
         }
-    return result;
     
+        if ((This->fChecks & USPOOF_MIXED_SCRIPT_CONFUSABLE) &&
+            confusableScriptCount >= 1 &&
+            sciptCount > 1) {
+            result |= USPOOF_MIXED_SCRIPT_CONFUSABLE;
+        }
+    }
+
+    return result;
 }
 
 

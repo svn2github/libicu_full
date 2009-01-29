@@ -170,14 +170,39 @@ int32_t SpoofImpl::confusableLookup(UChar32 inChar, int32_t tableMask, UChar *de
 //
 //---------------------------------------------------------------------------------------
 int32_t SpoofImpl::mixedScripCheck(
-        const UChar *text, int32_t length, int32_t &position, UErrorCode &status) {
+        const UChar *text, int32_t length, int32_t &position, UErrorCode &status) const {
 
-     ScriptSet     confusableScripts();    // This will be the the set of scripts
+    ScriptSet     confusableScripts();    // This will be the the set of scripts
 
-     int32_t       inputIdx = 0;
-     UChar32       c;
-     while (inputIdx < length) {
-         c = U16_NEXT(text, inputIdx, length, c);
+    int32_t       inputIdx = 0;
+    UChar32       c;
+    while (inputIdx < length) {
+        U16_NEXT(text, inputIdx, length, c);
+    }
+}
+
+
+
+int32_t SpoofImpl::scriptScan(const UChar *text, int32_t length, UErrorCode &status) const {
+    if (U_FAILURE(status)) {
+        return 0;
+    }
+    int32_t       inputIdx = 0;
+    UChar32       c;
+    int32_t       scriptCount = 0;
+    UScriptCode   lastScript = USCRIPT_INVALID_CODE;
+    while (inputIdx < length && scriptCount < 2) {
+        U16_NEXT(text, inputIdx, length, c);
+        UScriptCode sc = uscript_getScript(c, &status);
+        if (sc == USCRIPT_COMMON || sc == USCRIPT_INHERITED || USCRIPT_UNKNOWN) {
+            continue;
+        }
+        if (sc != lastScript) {
+           scriptCount++;
+           lastScript = sc;
+        }
+    }
+    return scriptCount;
 }
 
 
@@ -215,7 +240,7 @@ UChar32 SpoofImpl::ScanHex(const UChar *s, int32_t start, int32_t limit, UErrorC
 
 
 //
-//  poofData::getDefault() - return a wrapper around the spoof data that is
+//  SpoofData::getDefault() - return a wrapper around the spoof data that is
 //                           baked into the default ICU data.
 //
 SpoofData *SpoofData::getDefault(UErrorCode &/*status*/) {
@@ -383,6 +408,55 @@ void ScriptSet::resetAll() {
         bits[i] = 0;
     }
 }
+
+
+
+
+//-----------------------------------------------------------------------------
+//
+//  NFKDBuffer Implementation.
+//
+//-----------------------------------------------------------------------------
+
+NFKDBuffer::NFKDBuffer(const UChar *text, int32_t length, UErrorCode &status) {
+    fNormalizedText = NULL;
+    fNormalizedTextLength = 0;
+    fOriginalText = text;
+    if (U_FAILURE(status)) {
+        return;
+    }
+    fNormalizedText = fSmallBuf;
+    int32_t fNormalizedTextLength = unorm_normalize(
+        s, length, UNORM_NFKD, 0, fNormalizedText, USPOOF_STACK_BUFFER_SIZE, status);
+    if (*status == U_BUFFER_OVERFLOW_ERROR) {
+        status = U_ZERO_ERROR;
+        fNormalizedText = (UChar *)uprv_malloc((normalizedLen+1)*sizeof(UChar));
+        if (fNormalizedText == NULL) {
+            *status = U_MEMORY_ALLOCATION_ERROR;
+        } else {
+            fNormalizedTextLength = unorm_normalize(s, length, UNORM_NFKD, 0,
+                                        fNormalizedText, normalizedLen+1, status);
+        }
+    }
+}
+
+
+NFKDBuffer::~NFKDBuffer() {
+    if (fNormalizedText != fSmallBuf) {
+        delete fNormalizedText;
+    }
+    fNormalizedText = 0;
+}
+
+NFKDBuffer::getBuffer() {
+    return fNormalizedText;
+}
+
+NFKDBuffer::getLength() {
+    return fNormalizedTextLength;
+}
+
+
 
 
 

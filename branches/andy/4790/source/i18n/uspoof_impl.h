@@ -35,6 +35,7 @@ U_NAMESPACE_BEGIN
 class SpoofData;
 class SpoofDataHeader;
 class SpoofStringLengthsElement;
+class ScriptSet;
 
 /**
   *  Class SpoofImpl corresponds directly to the plain C API opaque type
@@ -69,6 +70,20 @@ public:
 	    
     int32_t mixedScripCheck(
         const UChar *text, int32_t length, int32_t &position, UErrorCode &status) const;
+
+    // Scan a string to determine how many scripts it includes.
+    // Ignore characters with script=Common and scirpt=Inherited.
+    // Return the number of (non-common,inherited) scripts encountered.
+    //     0
+    //     1
+    //     2   (or more.  Scan stops once two scripts are encountered.)
+    //
+    int32_t scriptScan(const UChar *text, int32_t length, UErrorCode &status) const;
+
+
+    // WholeScript and MixedScript check implementation.
+    //
+    ScriptSet *WholeScriptCheck(const UChar *text, int32_t length, UErrorCode &status) const;
     
     static UClassID U_EXPORT2 getStaticClassID(void);
     virtual UClassID getDynamicClassID(void) const;
@@ -173,12 +188,44 @@ class ScriptSet: public UMemory {
     void add(UScriptCode script);
     void setAll();
     void resetAll();
+    int32_t countMembers();
 
   private:
     uint32_t  bits[6];
 };
 
 
+
+
+
+//
+//  NFKDBuffer   A little class to handle the NFKD normalization that is
+//               needed on incoming identifiers to be checked.
+//               Takes care of buffer handling and normalization
+//
+//               Instances of this class are intended to be stack-allocated.
+//
+//               TODO:  how to map position offsets back to user values?
+//
+class NFKDBuffer: public UMemory {
+public:
+    NFKDBuffer(const UChar *text, int32_t length, UErrorCode &status);
+    ~NFKDBuffer();
+    const UChar *getBuffer();
+    int32_t getLength();
+
+  private:
+    const UChar *fOriginalText;
+    const UChar *fNormalizedText;
+    int32_t      fNormalizedTextLength;
+    UChar        fSmallBuf[USPOOF_STACK_BUFFER_SIZE];
+};
+
+
+
+
+
+    
 //
 //  Structure for the Whole Script Confusable Data
 //    See Unicode UAX-39, Unicode Security Mechanisms, for a description of the
