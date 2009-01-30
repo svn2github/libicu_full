@@ -332,6 +332,7 @@ void WSConfusableDataBuilder::buildWSConfusableData(SpoofImpl *spImpl, const cha
         }
         status = U_ZERO_ERROR;
         spImpl->fSpoofData->fRawData->fAnyCaseTrie = spImpl->fSpoofData->fMemLimit;
+        spImpl->fSpoofData->fRawData->fAnyCaseTrieLength = size;
         spImpl->fSpoofData->fAnyCaseTrie = This->fAnyCaseTrie;
         void *where = spImpl->fSpoofData->reserveSpace(size, status);
         utrie2_serialize(This->fAnyCaseTrie, where, size, &status);
@@ -344,10 +345,13 @@ void WSConfusableDataBuilder::buildWSConfusableData(SpoofImpl *spImpl, const cha
         }
         status = U_ZERO_ERROR;
         spImpl->fSpoofData->fRawData->fLowerCaseTrie = spImpl->fSpoofData->fMemLimit;
+        spImpl->fSpoofData->fRawData->fLowerCaseTrieLength = size;
         spImpl->fSpoofData->fLowerCaseTrie = This->fLowerCaseTrie;
         where = spImpl->fSpoofData->reserveSpace(size, status);
         utrie2_serialize(This->fLowerCaseTrie, where, size, &status);
 
+        spImpl->fSpoofData->fRawData->fScriptSets = spImpl->fSpoofData->fMemLimit;
+        spImpl->fSpoofData->fRawData->fScriptSetsLength = rtScriptSetsCount;
         ScriptSet *rtScriptSets =  static_cast<ScriptSet *>
             (spImpl->fSpoofData->reserveSpace(rtScriptSetsCount * sizeof(ScriptSet), status));
         uint32_t rindex = 2;

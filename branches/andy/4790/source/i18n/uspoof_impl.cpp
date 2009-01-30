@@ -210,10 +210,11 @@ int32_t SpoofImpl::scriptScan(const UChar *text, int32_t length, UErrorCode &sta
     UChar32       c;
     int32_t       scriptCount = 0;
     UScriptCode   lastScript = USCRIPT_INVALID_CODE;
+    UScriptCode   sc = USCRIPT_INVALID_CODE;
     while (inputIdx < length && scriptCount < 2) {
         U16_NEXT(text, inputIdx, length, c);
-        UScriptCode sc = uscript_getScript(c, &status);
-        if (sc == USCRIPT_COMMON || sc == USCRIPT_INHERITED || USCRIPT_UNKNOWN) {
+        sc = uscript_getScript(c, &status);
+        if (sc == USCRIPT_COMMON || sc == USCRIPT_INHERITED || sc == USCRIPT_UNKNOWN) {
             continue;
         }
         if (sc != lastScript) {
@@ -473,7 +474,7 @@ NFKDBuffer::NFKDBuffer(const UChar *text, int32_t length, UErrorCode &status) {
         return;
     }
     fNormalizedText = fSmallBuf;
-    int32_t fNormalizedTextLength = unorm_normalize(
+    fNormalizedTextLength = unorm_normalize(
         text, length, UNORM_NFKD, 0, fNormalizedText, USPOOF_STACK_BUFFER_SIZE, &status);
     if (status == U_BUFFER_OVERFLOW_ERROR) {
         status = U_ZERO_ERROR;

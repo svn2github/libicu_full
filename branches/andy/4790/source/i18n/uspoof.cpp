@@ -53,7 +53,7 @@ uspoof_setChecks(USpoofChecker *sc, int32_t checks, UErrorCode *status) {
 
     // Verify that the requested checks are all ones (bits) that 
     //   are acceptable, known values.
-    if (checks && ~USPOOF_ALL_CHECKS) {
+    if (checks & ~USPOOF_ALL_CHECKS) {
         *status = U_ILLEGAL_ARGUMENT_ERROR; 
         return;
     }
@@ -86,12 +86,8 @@ uspoof_checkUnicodeString(const USpoofChecker *sc,
                           const U_NAMESPACE_QUALIFIER UnicodeString &text, 
                           int32_t *position,
                           UErrorCode *status) {
-    const SpoofImpl *This = SpoofImpl::validateThis(sc, *status);
-	if (This == NULL) {
-		return 0;
-	}
-    *status = U_UNSUPPORTED_ERROR;
-    return 0;
+    uint32_t result = uspoof_check(sc, text.getBuffer(), text.length(), position, status);
+    return result;
 }
 
 U_CAPI int32_t U_EXPORT2
