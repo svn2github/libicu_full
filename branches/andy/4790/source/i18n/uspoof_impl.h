@@ -65,12 +65,9 @@ public:
 	// Implementation for Whole Script tests.
 	// Return the test bit flag to be ORed into the eventual user return value
 	//    if a Spoof opportunity is detected.
-	int32_t wholeScripCheck(
-	    const UChar *text, int32_t length, int32_t &position, UErrorCode &status) const;
+	void wholeScriptCheck(
+	    const UChar *text, int32_t length, ScriptSet *result, UErrorCode &status) const;
 	    
-    int32_t mixedScripCheck(
-        const UChar *text, int32_t length, int32_t &position, UErrorCode &status) const;
-
     // Scan a string to determine how many scripts it includes.
     // Ignore characters with script=Common and scirpt=Inherited.
     // Return the number of (non-common,inherited) scripts encountered.
@@ -167,14 +164,16 @@ struct SpoofStringLengthsElement {
 };
 
 
+//-------------------------------------------------------------------------------
 //
-//  Wrapper class for the Script code bit sets that are part of the
-//   whole script confusable data.
+//  ScriptSet - Wrapper class for the Script code bit sets that are part of the
+//              whole script confusable data.
 //
-//  This class is used both at data build and at run time.
-//  The constructor is only used at build time.
-//  At run time, just point at the prebuilt data and go.
+//              This class is used both at data build and at run time.
+//              The constructor is only used at build time.
+//              At run time, just point at the prebuilt data and go.
 //  
+//-------------------------------------------------------------------------------
 class ScriptSet: public UMemory {
   public:
     ScriptSet();
@@ -184,8 +183,9 @@ class ScriptSet: public UMemory {
     ScriptSet & operator = (const ScriptSet &other);
 
     void Union(const ScriptSet &other);
+    void Union(UScriptCode script);
     void intersect(const ScriptSet &other);
-    void add(UScriptCode script);
+    void intersect(UScriptCode script);
     void setAll();
     void resetAll();
     int32_t countMembers();
@@ -197,7 +197,7 @@ class ScriptSet: public UMemory {
 
 
 
-
+//-------------------------------------------------------------------------------
 //
 //  NFKDBuffer   A little class to handle the NFKD normalization that is
 //               needed on incoming identifiers to be checked.
@@ -207,6 +207,7 @@ class ScriptSet: public UMemory {
 //
 //               TODO:  how to map position offsets back to user values?
 //
+//--------------------------------------------------------------------------------
 class NFKDBuffer: public UMemory {
 public:
     NFKDBuffer(const UChar *text, int32_t length, UErrorCode &status);
@@ -216,7 +217,7 @@ public:
 
   private:
     const UChar *fOriginalText;
-    const UChar *fNormalizedText;
+    UChar       *fNormalizedText;
     int32_t      fNormalizedTextLength;
     UChar        fSmallBuf[USPOOF_STACK_BUFFER_SIZE];
 };
@@ -225,23 +226,7 @@ public:
 
 
 
-    
-//
-//  Structure for the Whole Script Confusable Data
-//    See Unicode UAX-39, Unicode Security Mechanisms, for a description of the
-//    Whole Script confusable data
-//
-//  The data provides mappings from code points to a set of scripts
-//    that contain characters that might be confused with the code point.
-//  There are two mappings, one for lower case only, and one for characters
-//    of any case.
-//
-//  The actual data consists of a utrie2 to map from a code point to an offset,
-//  and an array of UScriptSets (essentially bit maps) that is indexed
-//  by the offsets obtained from the Trie.
-//
-//
-
+//-------------------------------------------------------------------------------------
 //
 //  Spoof Data Wrapper
 //
@@ -254,6 +239,7 @@ public:
 //    Nothing in this struct includes state that is specific to any particular
 //    USpoofDetector object.
 //
+//---------------------------------------------------------------------------------------
 class SpoofData: public UMemory {
   public:
     static SpoofData *getDefault(UErrorCode &status);   // Load standard ICU spoof data.
@@ -299,10 +285,12 @@ class SpoofData: public UMemory {
     };
     
 
+//---------------------------------------------------------------------------------------
 //
-//  Structure of the actual binary data, as loaded from the ICU data file,
+//  Raw Binary Data Formats, as loaded from the ICU data file,
 //    or as built by the builder.
 //
+//---------------------------------------------------------------------------------------
 struct SpoofDataHeader {
     int32_t       fMagic;                // (0x8345fdef)
     int32_t       fLength;               // sizeof(SpoofDataHeader)
@@ -343,6 +331,25 @@ struct SpoofDataHeader {
     int32_t       unused[16];              // Padding, Room for Expansion
     
  }; 
+
+
+
+    
+//
+//  Structure for the Whole Script Confusable Data
+//    See Unicode UAX-39, Unicode Security Mechanisms, for a description of the
+//    Whole Script confusable data
+//
+//  The data provides mappings from code points to a set of scripts
+//    that contain characters that might be confused with the code point.
+//  There are two mappings, one for lower case only, and one for characters
+//    of any case.
+//
+//  The actual data consists of a utrie2 to map from a code point to an offset,
+//  and an array of UScriptSets (essentially bit maps) that is indexed
+//  by the offsets obtained from the Trie.
+//
+//
 
 
 U_NAMESPACE_END

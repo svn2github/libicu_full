@@ -126,8 +126,9 @@ uspoof_check(const USpoofChecker *sc,
     if (This->fChecks & (USPOOF_WHOLE_SCRIPT_CONFUSABLE | USPOOF_MIXED_SCRIPT_CONFUSABLE)) {
         // The basic test is the same for both whole and mixed script confusables.
         // Return the set of scripts that _every_ input character has a confusable in.
-        ScriptSet *scripts = This->WholeScriptCheck(nfkdText, nfkdLength, *status);
-        int32_t confusableScriptCount = scripts->countMembers();
+        ScriptSet scripts;
+        This->wholeScriptCheck(nfkdText, nfkdLength, &scripts, *status);
+        int32_t confusableScriptCount = scripts.countMembers();
         
         if ((This->fChecks & USPOOF_WHOLE_SCRIPT_CONFUSABLE) &&
             confusableScriptCount >= 2 &&

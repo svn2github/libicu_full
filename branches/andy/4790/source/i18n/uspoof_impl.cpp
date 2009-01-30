@@ -163,22 +163,40 @@ int32_t SpoofImpl::confusableLookup(UChar32 inChar, int32_t tableMask, UChar *de
 
 //---------------------------------------------------------------------------------------
 //
-//  mixedScriptCheck()
+//  wholeScriptCheck()
 //
-//          Input text is already normalized to NFKD
-//          Input Length is always provided, never -1 for null terminated.
-//
+//      Input text is already normalized to NFKD
+//      Return the set of scripts, each of which can represent something that is
+//             confusable with the input text.  The script of the input text
+//             is included; input consisting of characters from a single script will
+//             always produce a result consisting of a set containing that script.
 //
 //---------------------------------------------------------------------------------------
-int32_t SpoofImpl::mixedScripCheck(
-        const UChar *text, int32_t length, int32_t &position, UErrorCode &status) const {
-
-    ScriptSet     confusableScripts();    // This will be the the set of scripts
+void SpoofImpl::wholeScriptCheck(
+    const UChar *text, int32_t length, ScriptSet *result, UErrorCode &status) const {
 
     int32_t       inputIdx = 0;
     UChar32       c;
+
+    UTrie2 *table =
+        (fChecks & USPOOF_ANY_CASE) ? fSpoofData->fAnyCaseTrie : fSpoofData->fLowerCaseTrie;
+    result->setAll();
     while (inputIdx < length) {
         U16_NEXT(text, inputIdx, length, c);
+        uint32_t index = utrie2_get32(table, c);
+        if (index == 0) {
+            // No confusables in another script for this char.
+            // TODO:  we should change the data to have sets with just the single script
+            //        bit for the script of this char.  Gets rid of this special case.
+            //        Until then, grab the script from the char and intersect it with the set.
+            UScriptCode cpScript = uscript_getScript(c, &status);
+            U_ASSERT(cpScript > USCRIPT_INHERITED);
+            result->intersect(cpScript);
+        } else if (index == 1) {
+            // Script == Common or Inherited.  Nothing to do.
+        } else {
+            result->intersect(fSpoofData->fScriptSets[index]);
+        }
     }
 }
 
@@ -369,7 +387,7 @@ UBool ScriptSet::operator == (const ScriptSet &other) {
     return TRUE;
 }
 
-void ScriptSet::add(UScriptCode script) {
+void ScriptSet::Union(UScriptCode script) {
     uint32_t index = script / 32;
     uint32_t bit   = 1 << (script & 31);
     U_ASSERT(index < sizeof(bits)*4);
@@ -389,6 +407,21 @@ void ScriptSet::intersect(const ScriptSet &other) {
     }
 }
 
+void ScriptSet::intersect(UScriptCode script) {
+    uint32_t index = script / 32;
+    uint32_t bit   = 1 << (script & 31);
+    U_ASSERT(index < sizeof(bits)*4);
+    uint32_t i;
+    for (i=0; i<index; i++) {
+        bits[i] = 0;
+    }
+    bits[index] &= bit;
+    for (i=index+1; i<sizeof(bits)/sizeof(uint32_t); i++) {
+        bits[i] = 0;
+    }
+}
+
+
 ScriptSet & ScriptSet::operator =(const ScriptSet &other) {
     for (uint32_t i=0; i<sizeof(bits)/sizeof(uint32_t); i++) {
         bits[i] = other.bits[i];
@@ -399,7 +432,7 @@ ScriptSet & ScriptSet::operator =(const ScriptSet &other) {
 
 void ScriptSet::setAll() {
     for (uint32_t i=0; i<sizeof(bits)/sizeof(uint32_t); i++) {
-        bits[i] = 1;
+        bits[i] = 0xffffffffu;
     }
 }
 
@@ -410,6 +443,19 @@ void ScriptSet::resetAll() {
     }
 }
 
+int32_t ScriptSet::countMembers() {
+    // This bit counter is good for sparse numbers of '1's, which is
+    //  very much the case that we will usually have.
+    int32_t count = 0;
+    for (uint32_t i=0; i<sizeof(bits)/sizeof(uint32_t); i++) {
+        uint32_t x = bits[i];
+        while (x > 0) {
+            count++;
+            x &= (x - 1);    // and off the least significant one bit.
+        }
+    }
+    return count;
+}
 
 
 
@@ -428,15 +474,15 @@ NFKDBuffer::NFKDBuffer(const UChar *text, int32_t length, UErrorCode &status) {
     }
     fNormalizedText = fSmallBuf;
     int32_t fNormalizedTextLength = unorm_normalize(
-        text, length, UNORM_NFKD, 0, fNormalizedText, USPOOF_STACK_BUFFER_SIZE, status);
-    if (*status == U_BUFFER_OVERFLOW_ERROR) {
+        text, length, UNORM_NFKD, 0, fNormalizedText, USPOOF_STACK_BUFFER_SIZE, &status);
+    if (status == U_BUFFER_OVERFLOW_ERROR) {
         status = U_ZERO_ERROR;
-        fNormalizedText = (UChar *)uprv_malloc((normalizedLen+1)*sizeof(UChar));
+        fNormalizedText = (UChar *)uprv_malloc((fNormalizedTextLength+1)*sizeof(UChar));
         if (fNormalizedText == NULL) {
-            *status = U_MEMORY_ALLOCATION_ERROR;
+            status = U_MEMORY_ALLOCATION_ERROR;
         } else {
-            fNormalizedTextLength = unorm_normalize(s, length, UNORM_NFKD, 0,
-                                        fNormalizedText, normalizedLen+1, status);
+            fNormalizedTextLength = unorm_normalize(text, length, UNORM_NFKD, 0,
+                                        fNormalizedText, fNormalizedTextLength+1, &status);
         }
     }
 }
@@ -449,11 +495,11 @@ NFKDBuffer::~NFKDBuffer() {
     fNormalizedText = 0;
 }
 
-NFKDBuffer::getBuffer() {
+const UChar *NFKDBuffer::getBuffer() {
     return fNormalizedText;
 }
 
-NFKDBuffer::getLength() {
+int32_t NFKDBuffer::getLength() {
     return fNormalizedTextLength;
 }
 

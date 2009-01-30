@@ -218,7 +218,8 @@ void WSConfusableDataBuilder::buildWSConfusableData(SpoofImpl *spImpl, const cha
         // Sanity check that the script of the source code point is the same
         //   as the source script indicated in the input file.  Failure of this check is
         //   an error in the input file.
-        //   
+        // Include the source script in the set (needed for Mixed Script Confusable detection).
+        //
         UChar32 cp;
         for (cp=startCodePoint; cp<=endCodePoint; cp++) {
             int32_t setIndex = utrie2_get32(table, cp);
@@ -245,7 +246,8 @@ void WSConfusableDataBuilder::buildWSConfusableData(SpoofImpl *spImpl, const cha
                 scriptSets->addElement(bsset, status);
                 utrie2_set32(table, cp, setIndex, &status);
             }
-            bsset->sset->add(targScript);
+            bsset->sset->Union(targScript);
+            bsset->sset->Union(srcScript);
 
             if (U_FAILURE(status)) {
                 goto cleanup;
