@@ -20,6 +20,8 @@
 #include "cmemory.h"
 #include "uspoof_impl.h"
 
+#include <stdio.h>      // debug
+
 U_NAMESPACE_BEGIN
 
 
@@ -111,8 +113,9 @@ uspoof_check(const USpoofChecker *sc,
     const UChar  *nfkdText = normalizedInput.getBuffer();
     int32_t      nfkdLength = normalizedInput.getLength();
     
-    int32_t sciptCount = This->scriptScan(nfkdText, nfkdLength, *status);
-    if ((This->fChecks & USPOOF_SINGLE_SCRIPT) && sciptCount == 2) {
+    int32_t scriptCount = This->scriptScan(nfkdText, nfkdLength, *status);
+    printf("scriptCount (clipped to 2) = %d\n", scriptCount);
+    if ((This->fChecks & USPOOF_SINGLE_SCRIPT) && scriptCount == 2) {
         // Note: scriptCount == 2 covers all cases of the number of scripts >= 2
         result |= USPOOF_SINGLE_SCRIPT;
     }
@@ -125,16 +128,17 @@ uspoof_check(const USpoofChecker *sc,
         ScriptSet scripts;
         This->wholeScriptCheck(nfkdText, nfkdLength, &scripts, *status);
         int32_t confusableScriptCount = scripts.countMembers();
+        printf("confusableScriptCount = %d\n", confusableScriptCount);
         
         if ((This->fChecks & USPOOF_WHOLE_SCRIPT_CONFUSABLE) &&
             confusableScriptCount >= 2 &&
-            sciptCount == 1) {
+            scriptCount == 1) {
             result |= USPOOF_WHOLE_SCRIPT_CONFUSABLE;
         }
     
         if ((This->fChecks & USPOOF_MIXED_SCRIPT_CONFUSABLE) &&
             confusableScriptCount >= 1 &&
-            sciptCount > 1) {
+            scriptCount > 1) {
             result |= USPOOF_MIXED_SCRIPT_CONFUSABLE;
         }
     }

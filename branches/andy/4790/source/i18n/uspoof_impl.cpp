@@ -325,8 +325,11 @@ void SpoofData::initPtrs() {
     // NOTE:  do not fix up the pointers to the Tries for Whole Script Confusables.
     //        These will point to the actual deserialized trie objects,
     //        not to the serialized trie2 data.
+    // fAnyCaseTrie =
+    // fLowerCaseTrie =
+    
     if (fRawData->fScriptSets != 0) {
-        fScriptSets = (ScriptSet *)((char *)fRawData + fRawData->fCFUStringTable);
+        fScriptSets = (ScriptSet *)((char *)fRawData + fRawData->fScriptSets);
     }
 }
 

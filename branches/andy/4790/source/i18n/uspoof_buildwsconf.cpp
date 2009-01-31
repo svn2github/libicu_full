@@ -313,7 +313,9 @@ void WSConfusableDataBuilder::buildWSConfusableData(SpoofImpl *spImpl, const cha
     {
         UnicodeSet ignoreSet;
         ignoreSet.applyIntPropertyValue(UCHAR_SCRIPT, USCRIPT_COMMON, status);
-        ignoreSet.applyIntPropertyValue(UCHAR_SCRIPT, USCRIPT_INHERITED, status);
+        UnicodeSet inheritedSet;
+        inheritedSet.applyIntPropertyValue(UCHAR_SCRIPT, USCRIPT_INHERITED, status);
+        ignoreSet.addAll(inheritedSet);
         for (int32_t rn=0; rn<ignoreSet.getRangeCount(); rn++) {
             UChar32 rangeStart = ignoreSet.getRangeStart(rn);
             UChar32 rangeEnd   = ignoreSet.getRangeEnd(rn);
