@@ -141,9 +141,16 @@ typedef enum USpoofChecks {
       */
     USPOOF_SINGLE_SCRIPT            =  16,
     
-    USPOOF_SECURE_ID                =  16,
-    USPOOF_LOCALE_LIMIT             =  32,
-    USPOOF_CHAR_LIMIT               =  64,
+    /** Check that an identifier for the presence of invisble characters,
+      * characters, such as zero-width spaces, or character sequences that are
+      * likely not to display, such as multiple occurences of the same
+      * non-spacing mark.  This does not test the input string as a whole
+      * for conformance to any particular syntax for identifiers.
+      */
+    USPOOF_INVISIBLE                =  32,
+    
+    USPOOF_LOCALE_LIMIT             =  64,
+    USPOOF_CHAR_LIMIT               = 128,
     USPOOF_ALL_CHECKS               = 0x7f
     };
     
@@ -208,9 +215,9 @@ uspoof_openFromSerialized(const void *data, int32_t length, int32_t *pActualLeng
   * @param xidModificationsLen The length of the identifier modifications list, or
   *                    -1 if the input string is zero terminated.
   * @param errType     In the event of an error in the input, indicates
-  *                    which of the three input section contains the error.
-  *                    The value is one of USPOOF_SINGLE_SCRIPT_CONFUSABLE,
-  *                    USPOOF_WHOLE_SCRIPT_CONFUSABLE, USPOOF_SECURE_ID, or
+  *                    which of the input files contains the error.
+  *                    The value is one of USPOOF_SINGLE_SCRIPT_CONFUSABLE or
+  *                    USPOOF_WHOLE_SCRIPT_CONFUSABLE, or
   *                    zero if no errors are found.
   * @param pe          In the event of an error in the input, receives the position
   *                    in the input text (line, offset) of the error.
@@ -222,7 +229,6 @@ uspoof_openFromSerialized(const void *data, int32_t length, int32_t *pActualLeng
 U_CAPI USpoofChecker * U_EXPORT2
 uspoof_openFromSource(const char *confusables,  int32_t confusablesLen,
                       const char *confusablesWholeScript, int32_t confusablesWholeScriptLen,
-                      const char *xidModifications, int32_t xidModificationsLen,
                       int32_t *errType, UParseError *pe, UErrorCode *status);
 
 

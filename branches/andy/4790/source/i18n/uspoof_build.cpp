@@ -42,19 +42,6 @@
 
 U_NAMESPACE_USE
 
-// Forward Declarations
-
-
-static void  buildXidData(SpoofImpl *This, const char *xidModifications,
-    int32_t confusablesWholeScriptLen, UErrorCode *status);
-
-
-
-
-static void  buildXidData(SpoofImpl * /* This */, const char * /* xidModifications */,
-    int32_t /* confusablesWholeScriptLen */, UErrorCode * /* status */) {
-}
-
 
 
 // The main data building function
@@ -62,7 +49,6 @@ static void  buildXidData(SpoofImpl * /* This */, const char * /* xidModificatio
 U_CAPI USpoofChecker * U_EXPORT2
 uspoof_openFromSource(const char *confusables,  int32_t confusablesLen,
                       const char *confusablesWholeScript, int32_t confusablesWholeScriptLen,
-                      const char *xidModifications, int32_t xidModificationsLen,
                       int32_t *errorType, UParseError *pe, UErrorCode *status) {
 
     if (U_FAILURE(*status)) {
@@ -88,8 +74,6 @@ uspoof_openFromSource(const char *confusables,  int32_t confusablesLen,
     WSConfusableDataBuilder::buildWSConfusableData(
             This, confusablesWholeScript, confusablesWholeScriptLen, pe, *status);
     
-    buildXidData(This, xidModifications, xidModificationsLen, status);
-
     if (U_FAILURE(*status)) {
         delete This;
         This = NULL;

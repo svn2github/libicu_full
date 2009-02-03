@@ -19,6 +19,7 @@
 #include "unicode/ustring.h"
 #include "cmemory.h"
 #include "uspoof_impl.h"
+#include "uassert.h"
 
 #include <stdio.h>      // debug
 
@@ -370,5 +371,22 @@ uspoof_setAllowedChars(USpoofChecker *sc, const USet *chars, UErrorCode *status)
     // Set the bit that enables the allowed chars test
     This->fChecks |= USPOOF_CHAR_LIMIT;
 }
+
+
+U_CAPI int32_t U_EXPORT2
+uspoof_serialize(USpoofChecker *sc,void *buf, int32_t capacity, UErrorCode *status) {
+    SpoofImpl *This = SpoofImpl::validateThis(sc, *status);
+    if (This == NULL) {
+        U_ASSERT(U_FAILURE(*status));
+        return 0;
+    }
+    int32_t dataSize = This->fSpoofData->fRawData->fLength;
+    if (capacity < dataSize) {
+        *status = U_BUFFER_OVERFLOW_ERROR;
+        return dataSize;
+    }
+    uprv_memcpy(buf, &This->fSpoofData->fRawData, dataSize);
+}
+    
 
 U_NAMESPACE_END

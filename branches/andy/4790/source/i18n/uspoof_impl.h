@@ -293,7 +293,10 @@ class SpoofData: public UMemory {
 //---------------------------------------------------------------------------------------
 struct SpoofDataHeader {
     int32_t       fMagic;                // (0x8345fdef)
-    int32_t       fLength;               // sizeof(SpoofDataHeader)
+    uint8_t       fFormatVersion[4];     // Data Format. Same as the value in struct UDataInfo
+                                         //   if there is one associated with this data.
+    int32_t       fLength;               // Total lenght in bytes of this spoof data,
+                                         //   including all sections, not just the header.
 
     // The following four sections refer to data representing the confusable data
     //   from the Unicode.org data from "confusables.txt"

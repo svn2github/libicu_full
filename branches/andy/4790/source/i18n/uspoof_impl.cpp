@@ -27,6 +27,9 @@ SpoofImpl::SpoofImpl(SpoofData *data, UErrorCode &/*status*/) {
 }
 
 SpoofImpl::SpoofImpl() {
+    fMagic = USPOOF_MAGIC;
+    fSpoofData = NULL;
+    fChecks = 0;
 }
 
 SpoofImpl::~SpoofImpl() {
@@ -43,12 +46,23 @@ SpoofImpl *SpoofImpl::validateThis(USpoofChecker *sc, UErrorCode &status) {
         return NULL;
     }
     if (sc == NULL) {
+        status = U_ILLEGAL_ARGUMENT_ERROR;
         return NULL;
     };
     SpoofImpl *This = (SpoofImpl *)sc;
     if (This->fMagic != USPOOF_MAGIC) {
+        status = U_INVALID_FORMAT_ERROR;
         return NULL;
     }
+    
+    if (This->fSpoofData->fRawData == NULL ||
+        This->fSpoofData->fRawData->fMagic != USPOOF_MAGIC ||
+        This->fSpoofData->fRawData->fFormatVersion[0] > 1 ||
+        This->fSpoofData->fRawData->fFormatVersion[1] > 0) {
+        status = U_INVALID_FORMAT_ERROR;
+        return NULL;
+    }
+
     return This;
 }
 
@@ -294,6 +308,10 @@ SpoofData::SpoofData(UErrorCode &status) {
     uprv_memset(fRawData, 0, initialSize);
 
     fRawData->fMagic = USPOOF_MAGIC;
+    fRawData->fFormatVersion[0] = 1;
+    fRawData->fFormatVersion[0] = 0;
+    fRawData->fFormatVersion[0] = 0;
+    fRawData->fFormatVersion[0] = 0;
     initPtrs();
 }
 
