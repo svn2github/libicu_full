@@ -245,6 +245,10 @@ class SpoofData: public UMemory {
     static SpoofData *getDefault(UErrorCode &status);   // Load standard ICU spoof data.
     SpoofData(UErrorCode &status);   // Create new spoof data wrapper.
                                      // Only used when building new data from rules.
+    
+    // Constructor for use when creating from prebuilt default data.
+    //   A UDataMemory is what the ICU internal data loading functions provide.
+    SpoofData(UDataMemory *udm, UErrorCode &status);
   private:
     ~SpoofData();                    // Destructor not normally used.
                                      // Use removeReference() instead.
@@ -331,7 +335,7 @@ struct SpoofDataHeader {
     // The following sections are for data from xidmodifications.txt
     
     
-    int32_t       unused[16];              // Padding, Room for Expansion
+    int32_t       unused[15];              // Padding, Room for Expansion
     
  }; 
 

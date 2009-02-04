@@ -277,10 +277,36 @@ UChar32 SpoofImpl::ScanHex(const UChar *s, int32_t start, int32_t limit, UErrorC
 //  SpoofData::getDefault() - return a wrapper around the spoof data that is
 //                           baked into the default ICU data.
 //
-SpoofData *SpoofData::getDefault(UErrorCode &/*status*/) {
-    // TODO:
-    return NULL;
+SpoofData *SpoofData::getDefault(UErrorCode &status) {
+    // TODO:  Cache it.  Lazy create, keep until cleanup.
+
+    UDatatMemory *udm = udata_open(NULL, "cfu", "confusables", status);
+    if (U_FAILURE(*status)) {
+        return NULL;
+    }
+    SpoofData *This = new SpoofData(udm, status);
+    if (U_FAILURE(status)) {
+        delete This;
+        return NULL;
+    }
+    if (This == NULL) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+    }
+    return This;
 }
+
+SPoofData::SpoofData(UDataMemory *udm) {
+}
+
+
+//RBBIDataWrapper::RBBIDataWrapper(UDataMemory* udm, UErrorCode &status) {
+//    const RBBIDataHeader *d = (const RBBIDataHeader *)
+//        // ((char *)&(udm->pHeader->info) + udm->pHeader->info.size);
+//        // taking into consideration the padding added in by udata_write
+//        ((char *)(udm->pHeader) + udm->pHeader->dataHeader.headerSize);
+//    init(d, status);
+//    fUDataMem = udm;
+//}
 
 
 // Spoof Data constructor for use from data builder.
@@ -381,6 +407,7 @@ void *SpoofData::reserveSpace(int32_t numBytes,  UErrorCode &status) {
     uint32_t returnOffset = fMemLimit;
     fMemLimit += numBytes;
     fRawData = static_cast<SpoofDataHeader *>(uprv_realloc(fRawData, fMemLimit));
+    fRawData->fLength = fMemLimit;
     initPtrs();
     return (char *)fRawData + returnOffset;
 }
