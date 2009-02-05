@@ -41,7 +41,7 @@ SpoofImpl::~SpoofImpl() {
 //  Incoming parameter check on Status and the SpoofChecker object
 //    received from the C API.
 //
-SpoofImpl *SpoofImpl::validateThis(USpoofChecker *sc, UErrorCode &status) {
+const SpoofImpl *SpoofImpl::validateThis(const USpoofChecker *sc, UErrorCode &status) {
     if (U_FAILURE(status)) {
         return NULL;
     }
@@ -50,35 +50,22 @@ SpoofImpl *SpoofImpl::validateThis(USpoofChecker *sc, UErrorCode &status) {
         return NULL;
     };
     SpoofImpl *This = (SpoofImpl *)sc;
-    if (This->fMagic != USPOOF_MAGIC) {
+    if (This->fMagic != USPOOF_MAGIC ||
+        This->fSpoofData == NULL) {
         status = U_INVALID_FORMAT_ERROR;
         return NULL;
     }
-    
-    if (This->fSpoofData->fRawData == NULL ||
-        This->fSpoofData->fRawData->fMagic != USPOOF_MAGIC ||
-        This->fSpoofData->fRawData->fFormatVersion[0] > 1 ||
-        This->fSpoofData->fRawData->fFormatVersion[1] > 0) {
-        status = U_INVALID_FORMAT_ERROR;
-        return NULL;
-    }
-
-    return This;
-}
-
-const SpoofImpl *SpoofImpl::validateThis(const USpoofChecker *sc, UErrorCode &status) {
-    if (U_FAILURE(status)) {
-        return NULL;
-    }
-    if (sc == NULL) {
-        return NULL;
-    };
-    const SpoofImpl *This = (const SpoofImpl *)sc;
-    if (This->fMagic != USPOOF_MAGIC) {
+    if (!SpoofData::validateDataVersion(This->fSpoofData->fRawData, status)) {
         return NULL;
     }
     return This;
 }
+
+SpoofImpl *SpoofImpl::validateThis(USpoofChecker *sc, UErrorCode &status) {
+    return const_cast<SpoofImpl *>
+        (SpoofImpl::validateThis(const_cast<const USpoofChecker *>(sc), status));
+}
+
 
 
 //--------------------------------------------------------------------------------------
@@ -273,6 +260,25 @@ UChar32 SpoofImpl::ScanHex(const UChar *s, int32_t start, int32_t limit, UErrorC
 
 
 
+//----------------------------------------------------------------------------------------------
+//
+//   class SpoofData Implementation
+//
+//----------------------------------------------------------------------------------------------
+
+
+UBool SpoofData::validateDataVersion(const SpoofDataHeader *rawData, UErrorCode &status) {
+    if (U_FAILURE(status) ||
+        rawData == NULL ||
+        rawData->fMagic != USPOOF_MAGIC ||
+        rawData->fFormatVersion[0] > 1 ||
+        rawData->fFormatVersion[1] > 0) {
+            status = U_INVALID_FORMAT_ERROR;
+            return FALSE;
+    }
+    return TRUE;
+}
+
 //
 //  SpoofData::getDefault() - return a wrapper around the spoof data that is
 //                           baked into the default ICU data.
@@ -280,8 +286,8 @@ UChar32 SpoofImpl::ScanHex(const UChar *s, int32_t start, int32_t limit, UErrorC
 SpoofData *SpoofData::getDefault(UErrorCode &status) {
     // TODO:  Cache it.  Lazy create, keep until cleanup.
 
-    UDatatMemory *udm = udata_open(NULL, "cfu", "confusables", status);
-    if (U_FAILURE(*status)) {
+    UDataMemory *udm = udata_open(NULL, "cfu", "confusables", &status);
+    if (U_FAILURE(status)) {
         return NULL;
     }
     SpoofData *This = new SpoofData(udm, status);
@@ -295,7 +301,17 @@ SpoofData *SpoofData::getDefault(UErrorCode &status) {
     return This;
 }
 
-SPoofData::SpoofData(UDataMemory *udm) {
+SpoofData::SpoofData(UDataMemory *udm, UErrorCode &status) {
+    fRawData   = NULL;
+    fDataOwned = FALSE;
+    fRefCount  = 0;
+    
+    if (U_FAILURE(status)) {
+        return;
+    }
+    fRawData = reinterpret_cast<SpoofDataHeader *>
+                   ((char *)(udm->pHeader) + udm->pHeader->dataHeader.headerSize);
+    validateDataVersion(fRawData, status);
 }
 
 

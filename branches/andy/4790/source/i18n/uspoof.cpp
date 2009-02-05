@@ -96,7 +96,7 @@ uspoof_checkUnicodeString(const USpoofChecker *sc,
 U_CAPI int32_t U_EXPORT2
 uspoof_check(const USpoofChecker *sc,
 			 const UChar *text, int32_t length, 
-			 int32_t *position,
+			 int32_t * /*position */,
 			 UErrorCode *status) {
 			 
     const SpoofImpl *This = SpoofImpl::validateThis(sc, *status);
@@ -386,6 +386,7 @@ uspoof_serialize(USpoofChecker *sc,void *buf, int32_t capacity, UErrorCode *stat
         return dataSize;
     }
     uprv_memcpy(buf, &This->fSpoofData->fRawData, dataSize);
+    return dataSize;
 }
     
 

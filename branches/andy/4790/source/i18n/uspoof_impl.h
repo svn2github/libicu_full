@@ -17,6 +17,7 @@
 #include "unicode/uspoof.h"
 #include "utrie2.h"
 #include "unicode/uscript.h"
+#include "unicode/udata.h"
 
 
 U_NAMESPACE_BEGIN
@@ -228,10 +229,10 @@ public:
 
 //-------------------------------------------------------------------------------------
 //
-//  Spoof Data Wrapper
+//  SpoofData
 //
-//    A small struct that wraps the raw (usually memory mapped) spoof data.
-//    Serves two functions:
+//    A small class that wraps the raw (usually memory mapped) spoof data.
+//    Serves two primary functions:
 //      1.  Convenience.  Contains real pointers to the data, to avoid dealing with
 //          the offsets in the raw data.
 //      2.  Reference counting.  When a spoof checker is cloned, the raw data is shared
@@ -249,6 +250,10 @@ class SpoofData: public UMemory {
     // Constructor for use when creating from prebuilt default data.
     //   A UDataMemory is what the ICU internal data loading functions provide.
     SpoofData(UDataMemory *udm, UErrorCode &status);
+
+    //  Check raw Spoof Data Version compatibility.
+    //  Return TRUE it looks good.
+    static UBool validateDataVersion(const SpoofDataHeader *rawData, UErrorCode &status);
   private:
     ~SpoofData();                    // Destructor not normally used.
                                      // Use removeReference() instead.
