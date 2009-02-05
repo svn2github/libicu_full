@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT:
- * Copyright (c) 1997-2008, International Business Machines Corporation and
+ * Copyright (c) 1997-2009, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 
@@ -131,6 +131,13 @@ class NumberFormatTest: public CalendarTimeZoneTest {
     void TestRounding(void);
 
     void TestNonpositiveMultiplier(void);
+
+    void TestSpaceParsing();
+    void TestMultiCurrencySign();
+    void TestCurrencyFormatForMixParsing();
+    void TestDecimalFormatCurrencyParse();
+    void TestCurrencyIsoPluralFormat();
+
  private:
 
     static UBool equalValue(const Formattable& a, const Formattable& b);
