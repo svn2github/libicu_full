@@ -172,9 +172,11 @@ uspoof_open(UErrorCode *status);
 /**
  * Open a Spoof checker from its serialized from, stored in 32-bit-aligned memory.
  * Inverse of uspoof_serialize().
- * The memory must remain valid and unchanged as long as the spoof checker, or any
- * cloned copies of the spoof checker, are in use.
- * You must close the spoof checker once you are done using it.
+ * The memory containing the serailized data must remain valid and unchanged
+ * as long as the spoof checker, or any cloned copies of the spoof checker,
+ * are in use.  Ownership of the memory remains with the caller.
+ * The spoof checker (and any clones) must be closed prior to deleting the
+ * serialized data.
  *
  * @param data a pointer to 32-bit-aligned memory containing the serialized form of spoof data
  * @param length the number of bytes available at data;

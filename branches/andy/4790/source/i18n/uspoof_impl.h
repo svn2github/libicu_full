@@ -251,13 +251,13 @@ class SpoofData: public UMemory {
     //   A UDataMemory is what the ICU internal data loading functions provide.
     SpoofData(UDataMemory *udm, UErrorCode &status);
 
+    SpoofData(const void *serializedData, UErrorCode &status);
+
     //  Check raw Spoof Data Version compatibility.
     //  Return TRUE it looks good.
     static UBool validateDataVersion(const SpoofDataHeader *rawData, UErrorCode &status);
-  private:
     ~SpoofData();                    // Destructor not normally used.
                                      // Use removeReference() instead.
-  public:
     // Reference Counting functions.
     //    Clone of a user-level spoof detector increments the ref count on the data.
     //    Close of a user-level spoof detector decrements the ref count.
@@ -269,7 +269,7 @@ class SpoofData: public UMemory {
     //   new set of data.
     void *reserveSpace(int32_t numBytes, UErrorCode &status);
 
-    void initPtrs();
+    void initPtrs(UErrorCode &status);
     
     SpoofDataHeader             *fRawData;          // Ptr to the raw memory-mapped data
     UBool                       fDataOwned;         // True if the raw data is owned, and needs

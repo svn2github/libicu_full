@@ -39,6 +39,40 @@ uspoof_open(UErrorCode *status) {
 	return (USpoofChecker *)si;
 }
 
+
+U_CAPI USpoofChecker * U_EXPORT2
+uspoof_openFromSerialized(const void *data, int32_t length, int32_t *pActualLength,
+                          UErrorCode *status) {
+    if (U_FAILURE(*status)) {
+        return NULL;
+    }
+    SpoofData *sd = new SpoofData(data, *status);
+    SpoofImpl *si = new SpoofImpl(sd, *status);
+    if (U_FAILURE(*status)) {
+        delete sd;
+        delete si;
+        return NULL;
+    }
+    if (sd == NULL || si == NULL) {
+        *status = U_MEMORY_ALLOCATION_ERROR;
+        delete sd;
+        delete si;
+        return NULL;
+    }
+    if (sd->fRawData->fLength < sd->fRawData->fLength) {
+        *status = U_INVALID_FORMAT_ERROR;
+        delete sd;
+        delete si;
+        return NULL;
+    }
+        
+    if (pActualLength != NULL) {
+        *pActualLength = sd->fRawData->fLength;
+    }
+    return reinterpret_cast<USpoofChecker *>(si);
+}
+
+
 U_CAPI void U_EXPORT2
 uspoof_close(USpoofChecker *sc) {
     UErrorCode status = U_ZERO_ERROR;
@@ -46,7 +80,7 @@ uspoof_close(USpoofChecker *sc) {
     delete This;
 }
 
-    
+
 U_CAPI void U_EXPORT2
 uspoof_setChecks(USpoofChecker *sc, int32_t checks, UErrorCode *status) {
     SpoofImpl *This = SpoofImpl::validateThis(sc, *status);
@@ -385,7 +419,7 @@ uspoof_serialize(USpoofChecker *sc,void *buf, int32_t capacity, UErrorCode *stat
         *status = U_BUFFER_OVERFLOW_ERROR;
         return dataSize;
     }
-    uprv_memcpy(buf, &This->fSpoofData->fRawData, dataSize);
+    uprv_memcpy(buf, This->fSpoofData->fRawData, dataSize);
     return dataSize;
 }
     

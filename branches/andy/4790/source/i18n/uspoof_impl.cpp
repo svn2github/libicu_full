@@ -8,6 +8,7 @@
 #include "unicode/utypes.h"
 #include "unicode/uspoof.h"
 #include "unicode/unorm.h"
+#include "utrie2.h"
 #include "cmemory.h"
 #include "udatamem.h"
 #include "umutex.h"
@@ -20,16 +21,20 @@ U_NAMESPACE_BEGIN
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(SpoofImpl)
 
-SpoofImpl::SpoofImpl(SpoofData *data, UErrorCode &/*status*/) {
+SpoofImpl::SpoofImpl(SpoofData *data, UErrorCode &status) :
+    fMagic(0), fSpoofData(NULL) {
+    if (U_FAILURE(status)) {
+        return;
+    }
 	fMagic = USPOOF_MAGIC;
 	fSpoofData = data;
-	fChecks = 0;
+	fChecks = USPOOF_ALL_CHECKS;
 }
 
 SpoofImpl::SpoofImpl() {
     fMagic = USPOOF_MAGIC;
     fSpoofData = NULL;
-    fChecks = 0;
+    fChecks = USPOOF_ALL_CHECKS;
 }
 
 SpoofImpl::~SpoofImpl() {
@@ -301,28 +306,31 @@ SpoofData *SpoofData::getDefault(UErrorCode &status) {
     return This;
 }
 
-SpoofData::SpoofData(UDataMemory *udm, UErrorCode &status) {
-    fRawData   = NULL;
-    fDataOwned = FALSE;
-    fRefCount  = 0;
-    
+
+SpoofData::SpoofData(UDataMemory *udm, UErrorCode &status) :
+   fRawData(NULL), fDataOwned(FALSE), fRefCount(0)
+{
     if (U_FAILURE(status)) {
         return;
     }
     fRawData = reinterpret_cast<SpoofDataHeader *>
                    ((char *)(udm->pHeader) + udm->pHeader->dataHeader.headerSize);
     validateDataVersion(fRawData, status);
+    initPtrs(status);
 }
 
 
-//RBBIDataWrapper::RBBIDataWrapper(UDataMemory* udm, UErrorCode &status) {
-//    const RBBIDataHeader *d = (const RBBIDataHeader *)
-//        // ((char *)&(udm->pHeader->info) + udm->pHeader->info.size);
-//        // taking into consideration the padding added in by udata_write
-//        ((char *)(udm->pHeader) + udm->pHeader->dataHeader.headerSize);
-//    init(d, status);
-//    fUDataMem = udm;
-//}
+SpoofData::SpoofData(const void *data, UErrorCode &status) :
+   fRawData(NULL), fDataOwned(FALSE), fRefCount(0)
+{
+    if (U_FAILURE(status)) {
+        return;
+    }
+    void *ncData = const_cast<void *>(data);
+    fRawData = static_cast<SpoofDataHeader *>(ncData);
+    validateDataVersion(fRawData, status);
+    initPtrs(status);
+}
 
 
 // Spoof Data constructor for use from data builder.
@@ -354,21 +362,32 @@ SpoofData::SpoofData(UErrorCode &status) {
     fRawData->fFormatVersion[0] = 0;
     fRawData->fFormatVersion[0] = 0;
     fRawData->fFormatVersion[0] = 0;
-    initPtrs();
+    initPtrs(status);
 }
 
-//  initPtrs  Initialize the pointers to the various sections of the raw data.
-//            This operation may need to be repeated during the data build process
-//            when adding to the data causes a realloc(), which then moves everything.
+//  SpoofData::initPtrs()
+//            Initialize the pointers to the various sections of the raw data.
+//
+//            This function is used both during the Trie building process (multiple
+//            times, as the individual data sections are added), and
+//            during the opening of a Spoof Checker from prebuilt data.
 //
 //            The pointers for non-existent data sections (identified by an offset of 0)
 //            are set to NULL.
 //
-void SpoofData::initPtrs() {
+//            Note:  During building the data, adding each new data section
+//            reallocs the raw data area, which likely relocates it, which
+//            in turn requires reinitializing all of the pointers into it, hence
+//            multiple calls to this function during building.
+//
+void SpoofData::initPtrs(UErrorCode &status) {
     fCFUKeys = NULL;
     fCFUValues = NULL;
     fCFUStringLengths = NULL;
     fCFUStrings = NULL;
+    if (U_FAILURE(status)) {
+        return;
+    }
     if (fRawData->fCFUKeys != 0) {
         fCFUKeys = (int32_t *)((char *)fRawData + fRawData->fCFUKeys);
     }
@@ -381,12 +400,15 @@ void SpoofData::initPtrs() {
     if (fRawData->fCFUStringTable != 0) {
         fCFUStrings = (UChar *)((char *)fRawData + fRawData->fCFUStringTable);
     }
-    
-    // NOTE:  do not fix up the pointers to the Tries for Whole Script Confusables.
-    //        These will point to the actual deserialized trie objects,
-    //        not to the serialized trie2 data.
-    // fAnyCaseTrie =
-    // fLowerCaseTrie =
+
+    if (fAnyCaseTrie ==  NULL && fRawData->fAnyCaseTrie != 0) {
+        fAnyCaseTrie = utrie2_openFromSerialized(UTRIE2_16_VALUE_BITS,
+            (char *)fRawData + fRawData->fAnyCaseTrie, fRawData->fAnyCaseTrieLength, NULL, &status);
+    }
+    if (fLowerCaseTrie ==  NULL && fRawData->fLowerCaseTrie != 0) {
+        fLowerCaseTrie = utrie2_openFromSerialized(UTRIE2_16_VALUE_BITS,
+            (char *)fRawData + fRawData->fLowerCaseTrie, fRawData->fLowerCaseTrieLength, NULL, &status);
+    }
     
     if (fRawData->fScriptSets != 0) {
         fScriptSets = (ScriptSet *)((char *)fRawData + fRawData->fScriptSets);
@@ -424,7 +446,7 @@ void *SpoofData::reserveSpace(int32_t numBytes,  UErrorCode &status) {
     fMemLimit += numBytes;
     fRawData = static_cast<SpoofDataHeader *>(uprv_realloc(fRawData, fMemLimit));
     fRawData->fLength = fMemLimit;
-    initPtrs();
+    initPtrs(status);
     return (char *)fRawData + returnOffset;
 }
 
