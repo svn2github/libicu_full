@@ -1691,10 +1691,10 @@ he{
                 "HH:mm:ss z",
                 "HH:mm:ss",
                 "HH:mm",
-                { "EEEE d MMMM yyyy", "hebrew" }
-                { "d MMMM yyyy", "hebrew" }
-                { "dd/MM/yyyy", "hebrew" }
-                { "dd/MM/yyyy", "hebrew" }
+                { "EEEE d MMMM yyyy", "hebrew" },
+                { "d MMMM yyyy", "hebrew" },
+                { "dd/MM/yyyy", "hebrew" },
+                { "dd/MM/yyyy", "hebrew" },
                 "{1} {0}",
             }
             eras{
