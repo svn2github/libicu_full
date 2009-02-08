@@ -76,7 +76,7 @@ static void
 TestKeyInRootRecursive(UResourceBundle *root, const char *rootName,
                        UResourceBundle *currentBundle, const char *locale) {
     UErrorCode errorCode = U_ZERO_ERROR;
-    UResourceBundle *subRootBundle = NULL, *subBundle = NULL;
+    UResourceBundle *subRootBundle = NULL, *subBundle = NULL, *arr = NULL;
 
     ures_resetIterator(root);
     ures_resetIterator(currentBundle);
@@ -209,7 +209,7 @@ TestKeyInRootRecursive(UResourceBundle *root, const char *rootName,
                            /* A2 or A4 in the root string indicates that the resource can optionally be an array instead of a */
                            /* string.  Attempt to read it as an array. */
                           errorCode = U_ZERO_ERROR;
-                          UResourceBundle *arr = ures_getByIndex(subBundle,idx,NULL,&errorCode);
+                          arr = ures_getByIndex(subBundle,idx,NULL,&errorCode);
                           if (U_FAILURE(errorCode)) {
                               log_err("Got a NULL string with key \"%s\" in \"%s\" at index %d for root or locale \"%s\"\n",
                                       subBundleKey,
@@ -225,9 +225,11 @@ TestKeyInRootRecursive(UResourceBundle *root, const char *rootName,
                                       ures_getKey(currentBundle),
                                       idx,
                                       locale);
+                              ures_close(arr);
                               continue;
                           }
                           localeStr = ures_getStringByIndex(arr,0,&localeStrLen,&errorCode);
+                          ures_close(arr);
                           if (U_FAILURE(errorCode)) {
                               log_err("Got something other than a string or array for key \"%s\" in \"%s\" at index %d for root or locale \"%s\"\n",
                                       subBundleKey,
