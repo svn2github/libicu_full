@@ -2258,6 +2258,29 @@ void NumberFormatTest::TestHost()
 #ifdef U_WINDOWS
     Win32NumberTest::testLocales(this);
 #endif
+    for (NumberFormat::EStyles k = NumberFormat::kNumberStyle;
+         k < NumberFormat::kStyleCount; k = (NumberFormat::EStyles)(k+1)) {
+        UErrorCode status = U_ZERO_ERROR;
+        Locale loc("en_US@compat=host");
+        NumberFormat *full = NumberFormat::createInstance(loc, status);
+        if (full == NULL || U_FAILURE(status)) {
+            errln("FAIL: Can't create number instance for host");
+            return;
+        }
+        UnicodeString result1;
+        Formattable number(10.00);
+        full->format(number, result1, status);
+        if (U_FAILURE(status)) {
+            errln("FAIL: Can't format for host");
+            return;
+        }
+        Formattable formattable;
+        full->parse(result1, formattable, status);
+        if (U_FAILURE(status)) {
+            errln("FAIL: Can't parse for host");
+            return;
+        }
+    }
 }
 
 void NumberFormatTest::TestHostClone()
