@@ -2033,7 +2033,7 @@ private:
      * and plural currency style. And the patterns are set through applyPattern.
      */
     // TODO: innerclass?
-    struct AffixPatternsForCurrency {
+    struct AffixPatternsForCurrency : public UMemory {
         // negative prefix pattern
         UnicodeString negPrefixPatternForCurrency;
         // negative suffix pattern
@@ -2058,7 +2058,7 @@ private:
      * equals to 3, such as the pattern contains 3 currency sign or 
      * the formatter style is currency plural format style.
      */
-    struct AffixesForCurrency {
+    struct AffixesForCurrency : public UMemory {
         // negative prefix
         UnicodeString negPrefixForCurrency;
         // negative suffix

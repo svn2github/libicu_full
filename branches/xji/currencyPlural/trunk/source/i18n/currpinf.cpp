@@ -9,6 +9,13 @@
 
 #if !UCONFIG_NO_FORMATTING
 
+//#define CURRENCY_PLURAL_INFO_DEBUG 1
+
+#ifdef CURRENCY_PLURAL_INFO_DEBUG
+#include <iostream>
+#endif
+
+
 #include "unicode/locid.h"
 #include "unicode/plurrule.h"
 #include "unicode/ures.h"
@@ -116,6 +123,17 @@ CurrencyPluralInfo::~CurrencyPluralInfo() {
 
 UBool
 CurrencyPluralInfo::operator==(const CurrencyPluralInfo& info) const {
+#ifdef CURRENCY_PLURAL_INFO_DEBUG
+    if (*fPluralRules == *info.fPluralRules) {
+        std::cout << "same plural rules\n";
+    }
+    if (*fLocale == *info.fLocale) {
+        std::cout << "same locale\n";
+    }
+    if (fPluralCountToCurrencyUnitPattern->equals(*info.fPluralCountToCurrencyUnitPattern)) {
+        std::cout << "same pattern\n";
+    }
+#endif
     return *fPluralRules == *info.fPluralRules &&
            *fLocale == *info.fLocale &&
            fPluralCountToCurrencyUnitPattern->equals(*info.fPluralCountToCurrencyUnitPattern);

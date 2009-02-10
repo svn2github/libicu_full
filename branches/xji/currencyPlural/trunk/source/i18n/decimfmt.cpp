@@ -789,7 +789,7 @@ DecimalFormat::operator==(const Format& that) const
     if (!NumberFormat::operator==(that)) {
         if (first) { printf("[ "); first = FALSE; } else { printf(", "); }
         debug("NumberFormat::!=");
-    }
+    } else {
     if (!((fPosPrefixPattern == other->fPosPrefixPattern && // both null
               fPositivePrefix == other->fPositivePrefix)
            || (fPosPrefixPattern != 0 && other->fPosPrefixPattern != 0 &&
@@ -918,11 +918,11 @@ DecimalFormat::operator==(const Format& that) const
     if (fCurrencyPluralInfo == NULL && other->fCurrencyPluralInfo == NULL) {
         debug("fCurrencyPluralInfo == ");
     }
-
+    }
 #endif
 
     return (NumberFormat::operator==(that) &&
-           (fCurrencySignCount == fgCurrencySignCountInPluralFormat) ? 
+            ((fCurrencySignCount == fgCurrencySignCountInPluralFormat) ? 
             (fAffixPatternsForCurrency->equals(*other->fAffixPatternsForCurrency)) :
             (((fPosPrefixPattern == other->fPosPrefixPattern && // both null
               fPositivePrefix == other->fPositivePrefix)
@@ -939,7 +939,7 @@ DecimalFormat::operator==(const Format& that) const
             ((fNegSuffixPattern == other->fNegSuffixPattern && // both null
               fNegativeSuffix == other->fNegativeSuffix)
              || (fNegSuffixPattern != 0 && other->fNegSuffixPattern != 0 &&
-                 *fNegSuffixPattern  == *other->fNegSuffixPattern))) &&
+                 *fNegSuffixPattern  == *other->fNegSuffixPattern)))) &&
             ((fRoundingIncrement == other->fRoundingIncrement) // both null
              || (fRoundingIncrement != NULL &&
                  other->fRoundingIncrement != NULL &&

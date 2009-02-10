@@ -852,6 +852,8 @@ NumberFormat::makeInstance(const Locale& desiredLocale,
             // fall-through
 
         case kCurrencyStyle:
+        case kIsoCurrencyStyle: // do not support plural formatting here
+        case kPluralCurrencyStyle: 
             f = new Win32NumberFormat(desiredLocale, curr, status);
 
             if (U_SUCCESS(status)) {
