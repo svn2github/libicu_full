@@ -1,5 +1,5 @@
 # -*-autoconf-*-
-AC_COPYRIGHT([ Copyright (c) 1999-2008, International Business Machines Corporation and others. All Rights Reserved. ])
+AC_COPYRIGHT([ Copyright (c) 1999-2009, International Business Machines Corporation and others. All Rights Reserved. ])
 # configure.in for ICU
 # Stephen F. Booth, heavily modified by Yves and others
 
@@ -52,7 +52,10 @@ export _CXX_CXXSUFFIX
 # Checks for programs
 AC_PROG_CC
 AC_PROG_CXX
+AC_PROG_CPP
 AC_PROG_INSTALL
+
+AC_SUBST(cross_compiling)
 
 # make sure install is relative to srcdir - if a script
 if test "$srcdir" = "."; then
@@ -234,7 +237,13 @@ AC_SUBST(LIBCFLAGS)
 AC_SUBST(LIBCXXFLAGS)
 
 AC_PROG_RANLIB
-AC_PATH_PROG(AR,ar,[echo archiver ar not found re-run configure ; false],$PATH:/bin:/usr/bin:/usr/ccs/bin)
+
+# look for 'ar' the proper way
+#AC_PATH_PROG(AR,ar,[echo archiver ar not found re-run configure ; false],$PATH:/bin:/usr/bin:/usr/ccs/bin)
+AN_MAKEVAR([AR], [AC_PROG_AR])
+AN_PROGRAM([ar], [AC_PROG_AR])
+AC_DEFUN([AC_PROG_AR], [AC_CHECK_TOOL(AR, ar, $PATH:/bin:/usr/bin:/usr/ccs/bin)])
+AC_PROG_AR
 
 AC_MSG_CHECKING([whether to enable renaming of symbols])
 enabled=yes
@@ -409,6 +418,8 @@ then
 fi
 AC_SUBST(HAVE_MMAP)
 
+AC_MSG_CHECKING([for genccode assembly])
+
 # Check to see if genccode can generate simple assembly.
 GENCCODE_ASSEMBLY=
 case "${host}" in
@@ -440,6 +451,9 @@ ia64-*-hpux*)
 esac
 AC_SUBST(GENCCODE_ASSEMBLY)
 
+AC_MSG_RESULT($GENCCODE_ASSEMBLY)
+
+AC_MSG_CHECKING([for inttypes.h])
 
 # Checks for header files
 AC_CHECK_HEADERS(inttypes.h)
@@ -456,6 +470,7 @@ if test "$CC" = ccc; then
 fi
 
 AC_SUBST(U_HAVE_INTTYPES_H)
+AC_MSG_RESULT($U_HAVE_INTTYPES_H)
 
 AC_CHECK_HEADERS(dirent.h)
 if test $ac_cv_header_dirent_h = no; then
