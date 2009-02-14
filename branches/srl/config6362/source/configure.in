@@ -72,6 +72,21 @@ fi
 AC_PATH_PROGS(U_MAKE, gmake gnumake, make)
 AC_SUBST(U_MAKE)
 
+
+AC_ARG_WITH(cross-build,
+	[  --with-cross-build=dir specify the build directory of an ICU built for the current platform [default=no cross dir]],
+	[cross_buildroot="${withval}"], 
+        [cross_buildroot=""])
+
+if test "X$cross_buildroot" = "X"; then
+    if test "$cross_compiling" = "yes"; then
+        AC_MSG_ERROR([Error! Cross compiling but no --with-cross-build option specified - please supply the path to an executable ICU's build root])
+    fi
+else
+    AC_MSG_RESULT([Using cross buildroot: $cross_buildroot])
+fi
+AC_SUBST(cross_buildroot)
+
 # Check for doxygen to generate documentation
 AC_PATH_PROG(DOXYGEN,doxygen,,$PATH:/usr/local/bin:/usr/bin)
 
@@ -453,8 +468,6 @@ AC_SUBST(GENCCODE_ASSEMBLY)
 
 AC_MSG_RESULT($GENCCODE_ASSEMBLY)
 
-AC_MSG_CHECKING([for inttypes.h])
-
 # Checks for header files
 AC_CHECK_HEADERS(inttypes.h)
 if test $ac_cv_header_inttypes_h = no; then
@@ -470,7 +483,6 @@ if test "$CC" = ccc; then
 fi
 
 AC_SUBST(U_HAVE_INTTYPES_H)
-AC_MSG_RESULT($U_HAVE_INTTYPES_H)
 
 AC_CHECK_HEADERS(dirent.h)
 if test $ac_cv_header_dirent_h = no; then
