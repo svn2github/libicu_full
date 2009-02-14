@@ -17,6 +17,22 @@
 /**
  * \file
  * \brief C API: Unicode Spoof Detection
+ */
+
+#ifndef USPOOF_H
+#define USPOOF_H
+
+#include "unicode/utypes.h"
+#include "unicode/uset.h"
+#include "unicode/parseerr.h"
+
+#ifdef XP_CPLUSPLUS
+#include "unicode/unistr.h"
+#include "unicode/uniset.h"
+#endif
+
+
+ /**
  *
  * <p>C API for Unicode Security and Spoofing Detection</p>
  *
@@ -31,19 +47,17 @@
  * Unicode Technical Report #36, http://unicode.org/reports/tr36, and
  * Unicode Technical Standard #39, http://unicode.org/reports/tr39
  *
- * Checks fall into two general categorie:
- *   1.  Single String Tests.  Check whether a string is potentially potentially
- *       confusable with any other string.
+ * Test functions fall into two general categorie:
+ *   1.  Single String Tests.  Check whether a string (an identifier) is
+ *       potentially potentiallyconfusable with any other string.
  *   2.  Two string tests.  Check whether two specific strings are confusable.
  *       This does not consider whether either of strings is potentially
  *       confusable with any string other than the exact one specified.
  *
- *   (Clean this up later...)
  *
  *  Single Script Confusable Tests:
  *      Single Identifier tests:
- *         There exists some other ID, all in the same script (or in commmon script chars)
- *         that is confusable.  TODO.  This needs extra data to do in a reasonable way.
+ *         No Check
  *      Double String Tests:
  *         The two strings have the same script (or may be common only), and
  *         they are confusable.
@@ -56,8 +70,8 @@
  *         the string being tested.
  *      Two Identifiers Test:
  *         The two strings are confusable.  At least one of them contains characters
- *         from more than one script.  Not all identifiers that are confusable here
- *         would fail the single string Mixed Script Confusable test.
+ *         from more than one script.  Not all identifiers that are confusable with this
+ *         check would fail the single string Mixed Script Confusable test.
  *         Example:   "Scripts-R-Us" with a Cylrillic (backwards looking) R would not
  *         fail the single ID test.  But, if it were written with a Cylrillic 'S',
  *         the two specific Identifiers would be mixed script confusable.
@@ -80,18 +94,6 @@
  *     with script = Common)
  *
  */
-#ifndef USPOOF_H
-#define USPOOF_H
-
-#include "unicode/utypes.h"
-#include "unicode/uset.h"
-#include "unicode/parseerr.h"
-
-#ifdef XP_CPLUSPLUS
-#include "unicode/unistr.h"
-#include "unicode/uniset.h"
-#endif
-
 
 struct USpoofChecker;
 typedef struct USpoofChecker USpoofChecker;
@@ -777,7 +779,7 @@ uspoof_getSkeletonUnicodeString(const USpoofChecker *sc,
  *             can be NULL if capacity==0
  * @param capacity the number of bytes available at data,
  *                 or 0 for preflighting
- * @param status an in/out ICU UErrorCode; among other possible error codes:
+ * @param status an in/out ICU UErrorCode; possible errors include:
  * - U_BUFFER_OVERFLOW_ERROR if the data storage block is too small for serialization
  * - U_ILLEGAL_ARGUMENT_ERROR  the data or capacity parameters are bad
  * @return the number of bytes written or needed for the spoof data
