@@ -239,8 +239,8 @@ LIBICUIO=       -L$(LIBDIR) -l$(STATIC_PREFIX_WHEN_USED)$(ICUPREFIX)$(IO_STUBNAM
 # Invoke, set library path for all ICU libraries.
 # overridden by icucross.mk
 INVOKE = $(LDLIBRARYPATH_ENVVAR)=$(LIBRARY_PATH_PREFIX)$(LIBDIR):$(top_builddir)/stubdata:$(top_builddir)/tools/ctestfw:$$$(LDLIBRARYPATH_ENVVAR) $(LEAK_CHECKER)
-# without icudata
-PKGDATA_INVOKE:=$(subst $(TOOLIBDIR):$(top_builddir)/stubdata,$(top_builddir)/stubdata:$(TOOLIBDIR),$(INVOKE)) $(PKGDATA_INVOKE_OPTS)
+# prefer stubdata
+PKGDATA_INVOKE = $(LDLIBRARYPATH_ENVVAR)=$(top_builddir)/stubdata:$(top_builddir)/tools/ctestfw:$(LIBRARY_PATH_PREFIX)$(LIBDIR):$$$(LDLIBRARYPATH_ENVVAR) $(LEAK_CHECKER) $(PKGDATA_INVOKE_OPTS)
 
 # Platform-specific setup
 include @platform_make_fragment@
