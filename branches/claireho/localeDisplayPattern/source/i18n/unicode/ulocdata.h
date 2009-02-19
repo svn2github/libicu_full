@@ -203,20 +203,20 @@ ulocdata_getCLDRVersion(UVersionInfo versionArray, UErrorCode *status);
 /**
  * Returns locale display pattern associated with a locale.
  *
- * @param localeID The id of the locale for which locale display pattern string
- *                 is to be retrieved.
- * @param pattern  locale display pattern for locale.
+ * @param uld       Pointer to the locale data object from which the
+ *                  exemplar character set is to be retrieved.
+ * @param pattern   locale display pattern for locale.
  * @param patternCapacity the size of the buffer to store the locale display
- *                 pattern with.
- * @param status   Must be a valid pointer to an error code value,
- *                 which must not indicate a failure before the function call.
+ *                  pattern with.
+ * @param status    Must be a valid pointer to an error code value,
+ *                  which must not indicate a failure before the function call.
  * @return the actual buffer size needed for localeDisplayPattern.  If it's greater
  * than patternCapacity, the returned pattern will be truncated.
  *
  * @draft ICU 4.2
  */
 U_DRAFT int32_t U_EXPORT2
-ulocdata_getLocaleDisplayPattern(const char *localeID,
+ulocdata_getLocaleDisplayPattern(ULocaleData *uld,
                                  UChar *pattern,
                                  int32_t patternCapacity,
                                  UErrorCode *status);
@@ -225,15 +225,21 @@ ulocdata_getLocaleDisplayPattern(const char *localeID,
 /**
  * Returns locale separator associated with a locale.
  *
- * @param localeID The id of the locale for which locale separator
- *                 is to be retrieved.
- * @param status   Must be a valid pointer to an error code value,
- *                 which must not indicate a failure before the function call.
- * @return locale separator for given locale.
+ * @param uld       Pointer to the locale data object from which the
+ *                  exemplar character set is to be retrieved.
+ * @param separator locale separator for locale.
+ * @param separatorCapacity the size of the buffer to store the locale
+ *                  separator with.
+ * @param status    Must be a valid pointer to an error code value,
+ *                  which must not indicate a failure before the function call.
+ * @return the actual buffer size needed for localeSeparator.  If it's greater
+ * than separatorCapacity, the returned separator will be truncated.
  *
  * @draft ICU 4.2
  */
-U_DRAFT UChar U_EXPORT2
-ulocdata_getLocaleSeparator(const char *localeID,
+U_DRAFT int32_t U_EXPORT2
+ulocdata_getLocaleSeparator(ULocaleData *uld,
+                            UChar *separator,
+                            int32_t separatorCapacity,
                             UErrorCode *status);
 #endif
