@@ -248,7 +248,7 @@ public:
       *     Return empty string if there is no data for this locale and its parent
       *     locales.
       */
-     UnicodeString& getPatternForCurrencySpacing(ECurrencySpacing type,
+     const UnicodeString& getPatternForCurrencySpacing(ECurrencySpacing type,
                                                  UBool beforeCurrency,
                                                  UErrorCode& status) const;
      /**
@@ -262,7 +262,7 @@ public:
        */
      void setPatternForCurrencySpacing(ECurrencySpacing type,
                                        UBool beforeCurrency,
-                                       const UnicoedString& pattern);
+                                       const UnicodeString& pattern);
 
     /**
      * ICU "poor man's RTTI", returns a UClassID for the actual class.
@@ -359,8 +359,8 @@ private:
     char validLocale[ULOC_FULLNAME_CAPACITY];
     const UChar* currPattern;
 
-    UnicodeString currencySpcBeforeSym[kCurrencySpacingCapacity];
-    UnicodeString currencySpcAfterSym[kCurrencySpacingCapacity];
+    UnicodeString currencySpcBeforeSym[kCurrencySpacingCount];
+    UnicodeString currencySpcAfterSym[kCurrencySpacingCount];
 };
 
 // -------------------------------------
