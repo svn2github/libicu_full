@@ -59,7 +59,7 @@
 #define CSHADDA    128
 #define COMBINE    (SHADDA+CSHADDA)
 
-//NEW Arabic shaping options- Dec 2008 - Added Start
+/* NEW Arabic shaping options- Dec 2008 - Added Start */
 #define HAMZAFE_CHAR       0xfe80
 #define HAMZA06_CHAR       0x0621
 #define YEH_HAMZA_CHAR     0x0626
@@ -85,19 +85,19 @@ uint32_t uShapeTashkeelEnd = U_SHAPE_TASHKEEL_END;
 int spacesRelativeToTextBeginEnd = 0;
 
 static const uint8_t tailFamilyIsolatedFinal[] = {
-    /* FEB1 */ 1, 
-    /* FEB2 */ 1, 
-    /* FEB3 */ 0, 
-    /* FEB4 */ 0, 
-    /* FEB5 */ 1, 
-    /* FEB6 */ 1, 
-    /* FEB7 */ 0, 
-    /* FEB8 */ 0, 
-    /* FEB9 */ 1, 
-    /* FEBA */ 1, 
-    /* FEBB */ 0, 
-    /* FEBC */ 0, 
-    /* FEBD */ 1, 
+    /* FEB1 */ 1,
+    /* FEB2 */ 1,
+    /* FEB3 */ 0,
+    /* FEB4 */ 0,
+    /* FEB5 */ 1,
+    /* FEB6 */ 1,
+    /* FEB7 */ 0,
+    /* FEB8 */ 0,
+    /* FEB9 */ 1,
+    /* FEBA */ 1,
+    /* FEBB */ 0,
+    /* FEBC */ 0,
+    /* FEBD */ 1,
     /* FEBE */ 1
 };
 
@@ -109,14 +109,14 @@ static const uint8_t tashkeelMedial[] = {
     /* FE74 */ 0,
     /* FE75 */ 0,
     /* FE76 */ 0,
-    /* FE77 */ 1, 
-    /* FE78 */ 0, 
-    /* FE79 */ 1, 
-    /* FE7A */ 0, 
-    /* FE7B */ 1, 
-    /* FE7C */ 0, 
-    /* FE7D */ 1, 
-    /* FE7E */ 0, 
+    /* FE77 */ 1,
+    /* FE78 */ 0,
+    /* FE79 */ 1,
+    /* FE7A */ 0,
+    /* FE7B */ 1,
+    /* FE7C */ 0,
+    /* FE7D */ 1,
+    /* FE7E */ 0,
     /* FE7F */ 1
 };
 
@@ -125,11 +125,11 @@ static const UChar yehHamzaToYeh[] =
 /*isolated*/ 0xFEEF,
 /*final*/     0xFEF0
 };
-//NEW Arabic shaping options- Dec 2008 - Added End
+/* NEW Arabic shaping options- Dec 2008 - Added End */
 
 static const uint8_t IrrelevantPos[] = {
     0x0, 0x2, 0x4, 0x6,
-    0x8, 0xA, 0xC, 0xE,
+    0x8, 0xA, 0xC, 0xE
 };
 
 
@@ -468,7 +468,7 @@ isTashkeelChar(UChar ch) {
     return (int32_t)( ch>=0x064B && ch<= 0x0652 );
 }
 
-//NEW Arabic shaping options- Dec 2008 - Added Start
+/* NEW Arabic shaping options- Dec 2008 - Added Start */
 /*
  *Name     : isTashkeelCharFE
  *Function : Returns 1 for Tashkeel characters in FE range else return 0
@@ -477,7 +477,7 @@ static U_INLINE int32_t
 isTashkeelCharFE(UChar ch) {
     return (int32_t)( ch>=0xFE70 && ch<= 0xFE7F );
 }
-//NEW Arabic shaping options- Dec 2008 - Added End
+/* NEW Arabic shaping options- Dec 2008 - Added End */
 
 /*
  *Name     : isAlefChar
@@ -497,7 +497,7 @@ isLamAlefChar(UChar ch) {
     return (int32_t)((ch>=0xFEF5)&&(ch<=0xFEFC) );
 }
 
-//NEW Arabic shaping options- Dec 2008 - Added Start
+/* NEW Arabic shaping options- Dec 2008 - Added Start */
 /*BIDI
  *Name     : isTailChar
  *Function : returns 1 if the character matches one of the tail characters (0xfe73 or 0x200b) otherwise returns 0 
@@ -604,10 +604,10 @@ isIsolatedTashkeelChar(UChar ch){
 }
 
 
-//NEW Arabic shaping options- Dec 2008 - Added End
+/* NEW Arabic shaping options- Dec 2008 - Added End */
 
 
-//NEW Arabic shaping options- Dec 2008 - Update Start
+/* NEW Arabic shaping options- Dec 2008 - Update Start */
 /*
  *Name     : calculateSize
  *Function : This function calculates the destSize to be used in preflighting 
@@ -664,9 +664,9 @@ int32_t destSize,uint32_t options) {
 
     return destSize;
 }
-//NEW Arabic shaping options- Dec 2008 - Update End
+/* NEW Arabic shaping options- Dec 2008 - Update End */
 
-//NEW Arabic shaping options- Dec 2008 - Append Start
+/* NEW Arabic shaping options- Dec 2008 - Append Start */
 /*
  *Name     : handleTashkeelWithTatweel
  *Function : Replaces Tashkeel as following: 
@@ -905,14 +905,11 @@ static int32_t
 expandCompositCharAtBegin(UChar *dest, int32_t sourceLength, int32_t destSize,UErrorCode *pErrorCode) {
     int32_t      i = 0,j = 0;
     int32_t      countl = 0;
-    int32_t      countr = 0;
-    int32_t  inpsize = sourceLength;
-    
     UChar    *tempbuffer=NULL;
     
     tempbuffer = (UChar *)uprv_malloc((sourceLength+1)*U_SIZEOF_UCHAR);
 
-    // Test for NULL 
+    /* Test for NULL */
     if(tempbuffer == NULL) {
         *pErrorCode = U_MEMORY_ALLOCATION_ERROR;
         return 0;
@@ -961,14 +958,14 @@ expandCompositCharAtBegin(UChar *dest, int32_t sourceLength, int32_t destSize,UE
 static int32_t
 expandCompositCharAtEnd(UChar *dest, int32_t sourceLength, int32_t destSize,UErrorCode *pErrorCode) {
     int32_t      i = 0,j = 0;
-    int32_t      countl = 0;
+
     int32_t      countr = 0;
     int32_t  inpsize = sourceLength;
 
     UChar    *tempbuffer=NULL;
     tempbuffer = (UChar *)uprv_malloc((sourceLength+1)*U_SIZEOF_UCHAR);
 
-    // Test for NULL 
+    /* Test for NULL */
     if(tempbuffer == NULL) {
         *pErrorCode = U_MEMORY_ALLOCATION_ERROR;
          return 0;
@@ -1026,10 +1023,9 @@ expandCompositCharAtEnd(UChar *dest, int32_t sourceLength, int32_t destSize,UErr
 static int32_t
 expandCompositCharAtNear(UChar *dest, int32_t sourceLength, int32_t destSize,UErrorCode *pErrorCode,
                          int yehHamzaOption, int seenTailOption, int lamAlefOption) {
-    int32_t      i = 0,j = 0;
-    int32_t      countl = 0;
-    int32_t      countr = 0;
-    int32_t  inpsize = sourceLength;
+    int32_t      i = 0;
+
+
     UChar    lamalefChar, yehhamzaChar;
 
     for(i = 0 ;i<=sourceLength-1;i++) {
@@ -1083,9 +1079,7 @@ expandCompositChar(UChar *dest, int32_t sourceLength,
               UErrorCode *pErrorCode, int shapingMode) {
 
     int32_t      i = 0,j = 0;
-    int32_t      countl = 0;
-    int32_t      countr = 0;
-    int32_t  inpsize = sourceLength;
+
     UChar    *tempbuffer=NULL;
     int yehHamzaOption = 0;
     int seenTailOption = 0;
@@ -1187,7 +1181,7 @@ expandCompositChar(UChar *dest, int32_t sourceLength,
     }
     return destSize;
 }
-//NEW Arabic shaping options- Dec 2008 - Append End
+/* NEW Arabic shaping options- Dec 2008 - Append End */
 
 /*
  *Name     : shapeUnicode
@@ -1205,7 +1199,7 @@ shapeUnicode(UChar *dest, int32_t sourceLength,
     int32_t          lastPos,Nx, Nw;
     unsigned int     Shape;
     int32_t          lamalef_found = 0;
-    //NEW Arabic shaping options- Dec 2008 - Append
+    /* NEW Arabic shaping options- Dec 2008 - Append */
     int32_t seenfamFound = 0, yehhamzaFound =0, tashkeelFound  = 0;
     UChar            prevLink = 0, lastLink = 0, currLink, nextLink = 0;
     UChar            wLamalef;
@@ -1277,7 +1271,7 @@ shapeUnicode(UChar *dest, int32_t sourceLength,
                 currLink = getLink(wLamalef);    /* LAMALEF_SPACE_SUB is added here and is replaced by spaces   */
             }                                    /* in removeLamAlefSpaces()                         */
             
-//NEW Arabic shaping options- Dec 2008 - Append Start
+/* NEW Arabic shaping options- Dec 2008 - Append Start */
 			if ((i > 0) && (dest[i-1] == SPACE_CHAR)){
              if ( isSeenFamilyChar(dest[i])){
                     seenfamFound = 1;
@@ -1292,7 +1286,7 @@ shapeUnicode(UChar *dest, int32_t sourceLength,
                     yehhamzaFound = 1;
                 }
 			}
-//NEW Arabic shaping options- Dec 2008 - Append End
+/* NEW Arabic shaping options- Dec 2008 - Append End */
 
             /*  
              * get the proper shape according to link ability of neighbors
@@ -1319,13 +1313,13 @@ shapeUnicode(UChar *dest, int32_t sourceLength,
                 }
             }
             if ((dest[i] ^ 0x0600) < 0x100) {
-                //NEW Arabic shaping options- Dec 2008 - Append Start
+                /* NEW Arabic shaping options- Dec 2008 - Append End */
                 if ( isTashkeelChar(dest[i]) ){
                     if (tashkeelFlag == 2){
                         dest[i] = TASHKEEL_SPACE_SUB;
                         tashkeelFound  = 1;
                     }else {
-                    //NEW Arabic shaping options- Dec 2008 - Append End
+                    /* NEW Arabic shaping options- Dec 2008 - Append End */
                     dest[i] =  0xFE70 + IrrelevantPos[(dest[i] - 0x064B)] + Shape;
                     }
                 }else if ((currLink & APRESENT) > 0) {
@@ -1351,7 +1345,7 @@ shapeUnicode(UChar *dest, int32_t sourceLength,
             currLink = getLink(dest[i]);
         }
     }
-//NEW Arabic shaping options- Dec 2008 - Append Start
+/* NEW Arabic shaping options- Dec 2008 - Append End */
     destSize = sourceLength;
     if ( (lamalef_found != 0 ) || (tashkeelFound  != 0) ){
         destSize = handleGeneratedSpaces(dest,sourceLength,destSize,options,pErrorCode);
@@ -1360,7 +1354,7 @@ shapeUnicode(UChar *dest, int32_t sourceLength,
     if ( (seenfamFound != 0) || (yehhamzaFound != 0) ) {
         destSize = expandCompositChar(dest, sourceLength,destSize,options,pErrorCode, SHAPE_MODE);
     }
-//NEW Arabic shaping options- Dec 2008 - Append End
+/* NEW Arabic shaping options- Dec 2008 - Append End */
     return destSize;
 }
 
@@ -1375,13 +1369,13 @@ deShapeUnicode(UChar *dest, int32_t sourceLength,
                UErrorCode *pErrorCode) {
     int32_t i = 0;
     int32_t lamalef_found = 0;
-    //NEW Arabic shaping options- Dec 2008 - Append Start
+    /* NEW Arabic shaping options- Dec 2008 - Append End */
     int32_t yehHamzaComposeEnabled = 0;
     int32_t seenComposeEnabled = 0;
 
     yehHamzaComposeEnabled = ((options&U_SHAPE_YEHHAMZA_MASK) == U_SHAPE_YEHHAMZA_TWOCELL_NEAR) ? 1 : 0;
     seenComposeEnabled = ((options&U_SHAPE_SEEN_MASK) == U_SHAPE_SEEN_TWOCELL_NEAR)? 1 : 0;
-    //NEW Arabic shaping options- Dec 2008 - Append End
+    /* NEW Arabic shaping options- Dec 2008 - Append End */
 
     /*
      *This for loop changes the buffer from the Unicode FE range to
@@ -1394,7 +1388,7 @@ deShapeUnicode(UChar *dest, int32_t sourceLength,
             UChar c = convertFBto06 [ (inputChar - 0xFB50) ];
             if (c != 0)
                 dest[i] = c;
-        //NEW Arabic shaping options- Dec 2008 - Append Start
+        /* NEW Arabic shaping options- Dec 2008 - Append End */
         } else if( (yehHamzaComposeEnabled == 1) && ((inputChar == HAMZA06_CHAR) || (inputChar == HAMZAFE_CHAR)) 
                 && (i < (sourceLength - 1)) && isAlefMaksouraChar(dest[i+1] )) {
                  dest[i] = SPACE_CHAR;
@@ -1402,7 +1396,7 @@ deShapeUnicode(UChar *dest, int32_t sourceLength,
         } else if ( (seenComposeEnabled == 1) && (isTailChar(inputChar)) && (i< (sourceLength - 1)) 
                         && (isSeenTailFamilyChar(dest[i+1])) ) {
                 dest[i] = SPACE_CHAR;
-        //NEW Arabic shaping options- Dec 2008 - Append End
+        /* NEW Arabic shaping options- Dec 2008 - Append End */
         } else if (( inputChar >= 0xFE70) && (inputChar <= 0xFEF4 )) { /* FExx Arabic range */
                 dest[i] = convertFEto06 [ (inputChar - 0xFE70) ];
         } else {
@@ -1414,11 +1408,11 @@ deShapeUnicode(UChar *dest, int32_t sourceLength,
     }
   
    destSize = sourceLength;
-   //NEW Arabic shaping options- Dec 2008 - Append Start
+   /* NEW Arabic shaping options- Dec 2008 - Append End */
    if (lamalef_found != 0){
           destSize = expandCompositChar(dest,sourceLength,destSize,options,pErrorCode,DESHAPE_MODE);
    }
-   //NEW Arabic shaping options- Dec 2008 - Append End
+   /* NEW Arabic shaping options- Dec 2008 - Append End */
 
     return destSize;
 }
@@ -1437,13 +1431,13 @@ u_shapeArabic(const UChar *source, int32_t sourceLength,
 
     int32_t destLength;
     
-    //NEW Arabic shaping options- Dec 2008 - Append Start
+    /* NEW Arabic shaping options- Dec 2008 - Append End */
     spacesRelativeToTextBeginEnd = 0;
     uShapeLamalefBegin = U_SHAPE_LAMALEF_BEGIN;
     uShapeLamalefEnd = U_SHAPE_LAMALEF_END;
     uShapeTashkeelBegin = U_SHAPE_TASHKEEL_BEGIN;
     uShapeTashkeelEnd = U_SHAPE_TASHKEEL_END;
-    //NEW Arabic shaping options- Dec 2008 - Append End
+    /* NEW Arabic shaping options- Dec 2008 - Append End */
     
 
     /* usual error checking */
@@ -1451,17 +1445,17 @@ u_shapeArabic(const UChar *source, int32_t sourceLength,
         return 0;
     }
 
-    //make sure that no reserved options values are used; allow dest==NULL only for preflighting
+    /* make sure that no reserved options values are used; allow dest==NULL only for preflighting */
     if( source==NULL || sourceLength<-1 || (dest==NULL && destCapacity!=0) || destCapacity<0 ||
-                //NEW Arabic shaping options- Dec 2008 - Append Start
+                /* NEW Arabic shaping options- Dec 2008 - Append End */
                 (((options&U_SHAPE_TASHKEEL_MASK) > 0) &&
                  ((options&U_SHAPE_LETTERS_SHAPE_TASHKEEL_ISOLATED) == U_SHAPE_LETTERS_SHAPE_TASHKEEL_ISOLATED) ) ||
                 (((options&U_SHAPE_TASHKEEL_MASK) > 0) &&
                  ((options&U_SHAPE_LETTERS_MASK) == U_SHAPE_LETTERS_UNSHAPE)) ||
-                //NEW Arabic shaping options- Dec 2008 - Append End
+                /* NEW Arabic shaping options- Dec 2008 - Append End */
                 (options&U_SHAPE_DIGIT_TYPE_RESERVED)==U_SHAPE_DIGIT_TYPE_RESERVED ||
                 (options&U_SHAPE_DIGITS_MASK)==U_SHAPE_DIGITS_RESERVED ||
-                //NEW Arabic shaping options- Dec 2008 - Updated
+                /* NEW Arabic shaping options- Dec 2008 - Updated */
                 ((options&U_SHAPE_LAMALEF_MASK) != U_SHAPE_LAMALEF_RESIZE  &&
                 (options&U_SHAPE_AGGREGATE_TASHKEEL_MASK) != 0) ||
                 ((options&U_SHAPE_AGGREGATE_TASHKEEL_MASK) == U_SHAPE_AGGREGATE_TASHKEEL &&
@@ -1471,8 +1465,8 @@ u_shapeArabic(const UChar *source, int32_t sourceLength,
         *pErrorCode=U_ILLEGAL_ARGUMENT_ERROR;
         return 0;
     }
-     //NEW Arabic shaping : Validate input  start
-	//Validate  lamalef options
+    /* NEW Arabic shaping : Validate input start */
+	/* Validate  lamalef options */
 	if(((options&U_SHAPE_LAMALEF_MASK) > 0)&&
               !(((options & U_SHAPE_LAMALEF_MASK)==U_SHAPE_LAMALEF_BEGIN) ||
                 ((options & U_SHAPE_LAMALEF_MASK)==U_SHAPE_LAMALEF_END ) ||
@@ -1483,7 +1477,7 @@ u_shapeArabic(const UChar *source, int32_t sourceLength,
 		 *pErrorCode=U_ILLEGAL_ARGUMENT_ERROR;
         return 0;
 	}
-	//Validate  Tashkeel options
+	/* Validate  Tashkeel options */
 	if(((options&U_SHAPE_TASHKEEL_MASK) > 0)&&
                    !(((options & U_SHAPE_TASHKEEL_MASK)==U_SHAPE_TASHKEEL_BEGIN) ||
                      ((options & U_SHAPE_TASHKEEL_MASK)==U_SHAPE_TASHKEEL_END )
@@ -1493,7 +1487,7 @@ u_shapeArabic(const UChar *source, int32_t sourceLength,
 		 *pErrorCode=U_ILLEGAL_ARGUMENT_ERROR;
         return 0;
 	}
-	 //NEW Arabic shaping :Validate input end
+	 /* NEW Arabic shaping :Validate input end */
     /* determine the source length */
     if(sourceLength==-1) {
         sourceLength=u_strlen(source);
@@ -1510,14 +1504,14 @@ u_shapeArabic(const UChar *source, int32_t sourceLength,
         return 0;
     }
     
-    //NEW Arabic shaping options- Dec 2008 - Append Start
+    /* NEW Arabic shaping options- Dec 2008 - Append End */
     /* Does Options contain the new Seen Tail Unicode code point option */
     if ( (options&SHAPE_TAIL_TYPE_MASK) == SHAPE_TAIL_NEW_UNICODE){
         tailChar = NEW_TAIL_CHAR;
     }else {
         tailChar = OLD_TAIL_CHAR;
     }
-    //NEW Arabic shaping options- Dec 2008 - Append End    
+    /* NEW Arabic shaping options- Dec 2008 - Append End */    
 
     if((options&U_SHAPE_LETTERS_MASK)!=U_SHAPE_LETTERS_NOOP) {
         UChar buffer[300];
@@ -1563,7 +1557,7 @@ u_shapeArabic(const UChar *source, int32_t sourceLength,
 
         /* calculate destination size */
         /* TODO: do we ever need to do this pure preflighting? */
-        //NEW Arabic shaping options- Dec 2008 - Updated
+        /* NEW Arabic shaping options- Dec 2008 - Updated */
         if(((options&U_SHAPE_LAMALEF_MASK)==U_SHAPE_LAMALEF_RESIZE) || 
            ((options&U_SHAPE_TASHKEEL_MASK)==U_SHAPE_TASHKEEL_RESIZE)) {
             outputSize=calculateSize(source,sourceLength,destCapacity,options);
@@ -1613,7 +1607,7 @@ u_shapeArabic(const UChar *source, int32_t sourceLength,
             invertBuffer(tempbuffer,sourceLength,options,spacesCountl,spacesCountr);
         }
 
-        //NEW Arabic shaping options- Dec 2008 - Append Start
+        /* NEW Arabic shaping options- Dec 2008 - Append End */
         if((options&U_SHAPE_TEXT_DIRECTION_MASK) == U_SHAPE_TEXT_DIRECTION_VISUAL_LTR) {
             if((options&U_SHAPE_SPACES_RELATIVE_TO_TEXT_MASK) == U_SHAPE_SPACES_RELATIVE_TO_TEXT_BEGIN_END) {
                 spacesRelativeToTextBeginEnd = 1;
@@ -1624,17 +1618,17 @@ u_shapeArabic(const UChar *source, int32_t sourceLength,
                 uShapeTashkeelEnd = U_SHAPE_TASHKEEL_BEGIN;
             }
         }
-        //NEW Arabic shaping options- Dec 2008 - Append End
+        /* NEW Arabic shaping options- Dec 2008 - Append End */
 
         switch(options&U_SHAPE_LETTERS_MASK) {
         case U_SHAPE_LETTERS_SHAPE :
-             //NEW Arabic shaping options- Dec 2008 - Append Start
+             /* NEW Arabic shaping options- Dec 2008 - Append End */
              if( (options&U_SHAPE_TASHKEEL_MASK)> 0 
                  && ((options&U_SHAPE_TASHKEEL_MASK) !=U_SHAPE_TASHKEEL_REPLACE_BY_TATWEEL)) {
                 /* Call the shaping function with tashkeel flag == 2 for removal of tashkeel */
                 destLength = shapeUnicode(tempbuffer,sourceLength,destCapacity,options,pErrorCode,2);
              }else {
-                //default Call the shaping function with tashkeel flag == 1 */
+                /* default Call the shaping function with tashkeel flag == 1 */
                 destLength = shapeUnicode(tempbuffer,sourceLength,destCapacity,options,pErrorCode,1);
 
                 /*After shaping text check if user wants to remove tashkeel and replace it with tatweel*/
@@ -1642,7 +1636,7 @@ u_shapeArabic(const UChar *source, int32_t sourceLength,
                   destLength = handleTashkeelWithTatweel(tempbuffer,destLength,destCapacity,options,pErrorCode);
                 }
             }
-            //NEW Arabic shaping options- Dec 2008 - Append End
+            /* NEW Arabic shaping options- Dec 2008 - Append End */
             break;
         case U_SHAPE_LETTERS_SHAPE_TASHKEEL_ISOLATED :
             /* Call the shaping function with tashkeel flag == 0 */
