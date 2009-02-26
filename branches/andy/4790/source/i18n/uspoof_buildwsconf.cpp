@@ -93,6 +93,16 @@ static void extractGroup(
     s.extract(0, len, destBuf, destCapacity, US_INV);
 }
 
+
+
+//  Build the Whole Script Confusable data
+//
+//     TODO:  Reorganize.  Either get rid of the WSConfusableDataBuilder class,
+//                         because everything is local to this one build function anyhow,
+//                           OR
+//                         break this function into more reasonably sized pieces, with
+//                         state in WSConfusableDataBuilder.
+//
 void WSConfusableDataBuilder::buildWSConfusableData(SpoofImpl *spImpl, const char * confusablesWS,
           int32_t confusablesWSLen, UParseError *pe, UErrorCode &status) 
 {
@@ -376,7 +386,15 @@ cleanup:
     }
     uregex_close(parseRegexp);
     uprv_free(input);
+
+    int32_t i;
+    for (i=0; i<scriptSets->size(); i++) {
+        BuilderScriptSet *bsset = static_cast<BuilderScriptSet *>(scriptSets->elementAt(i));
+        delete bsset;
+    }
+    
     delete scriptSets;
+    delete This;
     return;
 }
 
@@ -385,6 +403,11 @@ cleanup:
 
 
 BuilderScriptSet::BuilderScriptSet() {
+    codePoint = -1;
+    trie = NULL;
+    sset = NULL;
+    index = 0;
+    rindex = 0;
 }
 
 BuilderScriptSet::~BuilderScriptSet() {

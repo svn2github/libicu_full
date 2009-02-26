@@ -29,6 +29,8 @@
 #include "uarrsort.h"
 #include "uspoof_buildconf.h"
 
+#include "stdio.h"    // DEBUG.  Remove.
+
 U_NAMESPACE_USE
 
 
@@ -176,6 +178,8 @@ ConfusabledataBuilder::~ConfusabledataBuilder() {
     uhash_close(fMATable);
     delete fKeySet;
     delete fKeyVec;
+    delete fStringTable;
+    delete fStringLengthsTable;
     delete fValueVec;
     delete stringPool;
 }
@@ -347,7 +351,7 @@ void ConfusabledataBuilder::build(const char * confusables, int32_t confusablesL
         fStringLengthsTable->addElement(previousStringLength, status);
     }
 
-    // Build up the Key and Value tables
+    // Construct the compile-time Key and Value tables
     //
     // For each key code point, check which mapping tables it applies to,
     //   and create the final data for the key & value structures.
@@ -362,7 +366,7 @@ void ConfusabledataBuilder::build(const char * confusables, int32_t confusablesL
         // It is an oddity of the UnicodeSet API that simply enumerating the contained
         //   code points requires a nested loop.
         for (UChar32 keyChar=fKeySet->getRangeStart(range);
-                keyChar<=fKeySet->getRangeEnd(range); keyChar++) {
+                keyChar <= fKeySet->getRangeEnd(range); keyChar++) {
             addKeyEntry(keyChar, fSLTable, USPOOF_SL_TABLE_FLAG, status);
             addKeyEntry(keyChar, fSATable, USPOOF_SA_TABLE_FLAG, status);
             addKeyEntry(keyChar, fMLTable, USPOOF_ML_TABLE_FLAG, status);
@@ -372,7 +376,9 @@ void ConfusabledataBuilder::build(const char * confusables, int32_t confusablesL
 
     // Put the assembled data into the flat runtime array
     outputData(status);
-    
+
+    // All of the intermediate allocated data belongs to the ConfusabledataBuilder
+    //  object  (this), and is deleted in the destructor. 
     return;
 }
 
@@ -444,7 +450,8 @@ void ConfusabledataBuilder::outputData(UErrorCode &status) {
     }
     fStringTable->extract(strings, stringsLength+1, status);
     rawData = fSpoofImpl->fSpoofData->fRawData;
-    rawData->fCFUStringTable = (char *)values - (char *)rawData;
+    U_ASSERT(rawData->fCFUStringTable == 0);
+    rawData->fCFUStringTable = (char *)strings - (char *)rawData;
     rawData->fCFUStringTableLen = stringsLength;
     fSpoofImpl->fSpoofData->fCFUStrings = strings;
     

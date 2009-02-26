@@ -265,11 +265,19 @@ class SpoofData: public UMemory {
     SpoofData *addReference(); 
     void removeReference();
 
-    // Reserve space in the data.  For use by builder when putting together a
-    //   new set of data.
+    // Reserve space in the raw data.  For use by builder when putting together a
+    //   new set of data.  Init the new storage to zero, to prevent inconsistent
+    //   results if it is not all otherwise set by the requester.
+    //  Return:
+    //    pointer to the new space that was added by this function.
     void *reserveSpace(int32_t numBytes, UErrorCode &status);
 
+    // initialize the pointers from this object to the raw data.
     void initPtrs(UErrorCode &status);
+
+    // Reset all fields to an initial state.
+    // Called from the top of all constructors.
+    void reset();
     
     SpoofDataHeader             *fRawData;          // Ptr to the raw memory-mapped data
     UBool                       fDataOwned;         // True if the raw data is owned, and needs
@@ -289,8 +297,7 @@ class SpoofData: public UMemory {
     UTrie2                      *fLowerCaseTrie;
     ScriptSet                   *fScriptSets;
     
-    // Secure Identifier Data
-    
+
     };
     
 

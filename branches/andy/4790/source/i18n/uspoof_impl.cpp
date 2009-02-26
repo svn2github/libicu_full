@@ -31,15 +31,20 @@ SpoofImpl::SpoofImpl(SpoofData *data, UErrorCode &status) :
 	fChecks = USPOOF_ALL_CHECKS;
 }
 
+
 SpoofImpl::SpoofImpl() {
     fMagic = USPOOF_MAGIC;
     fSpoofData = NULL;
     fChecks = USPOOF_ALL_CHECKS;
 }
 
+
 SpoofImpl::~SpoofImpl() {
-	fMagic = 0;   // head off application errors by preventing use of
-	              //    of deleted objects.
+	fMagic = 0;                // head off application errors by preventing use of
+	                           //    of deleted objects.
+	if (fSpoofData != NULL) {
+	    fSpoofData->removeReference();   // Will delete if refCount goes to zero.
+	}
 }
 
 //
@@ -307,9 +312,9 @@ SpoofData *SpoofData::getDefault(UErrorCode &status) {
 }
 
 
-SpoofData::SpoofData(UDataMemory *udm, UErrorCode &status) :
-   fRawData(NULL), fDataOwned(FALSE), fRefCount(0)
+SpoofData::SpoofData(UDataMemory *udm, UErrorCode &status)
 {
+    reset();
     if (U_FAILURE(status)) {
         return;
     }
@@ -320,9 +325,9 @@ SpoofData::SpoofData(UDataMemory *udm, UErrorCode &status) :
 }
 
 
-SpoofData::SpoofData(const void *data, UErrorCode &status) :
-   fRawData(NULL), fDataOwned(FALSE), fRefCount(0)
+SpoofData::SpoofData(const void *data, UErrorCode &status)
 {
+    reset();
     if (U_FAILURE(status)) {
         return;
     }
@@ -336,13 +341,12 @@ SpoofData::SpoofData(const void *data, UErrorCode &status) :
 // Spoof Data constructor for use from data builder.
 //   Initializes a new, empty data area that will be populated later.
 SpoofData::SpoofData(UErrorCode &status) {
-    fRawData = NULL;
-    fDataOwned = true;
-    fRefCount = 1;
-
+    reset();
     if (U_FAILURE(status)) {
         return;
     }
+    fDataOwned = true;
+    fRefCount = 1;
 
     // The spoof header should already be sized to be a multiple of 16 bytes.
     // Just in case it's not, round it up.
@@ -364,6 +368,24 @@ SpoofData::SpoofData(UErrorCode &status) {
     fRawData->fFormatVersion[0] = 0;
     initPtrs(status);
 }
+
+// reset() - initialize all fields.
+//           Should be updated if any new fields are added.
+//           Called by constructors to put things in a known initial state.
+void SpoofData::reset() {
+   fRawData = NULL;
+   fDataOwned = FALSE;
+   fMemLimit = 0;
+   fRefCount = 1;
+   fCFUKeys = NULL;
+   fCFUValues = NULL;
+   fCFUStringLengths = NULL;
+   fCFUStrings = NULL;
+   fAnyCaseTrie = NULL;
+   fLowerCaseTrie = NULL;
+   fScriptSets = NULL;
+}
+
 
 //  SpoofData::initPtrs()
 //            Initialize the pointers to the various sections of the raw data.
@@ -446,6 +468,7 @@ void *SpoofData::reserveSpace(int32_t numBytes,  UErrorCode &status) {
     fMemLimit += numBytes;
     fRawData = static_cast<SpoofDataHeader *>(uprv_realloc(fRawData, fMemLimit));
     fRawData->fLength = fMemLimit;
+    uprv_memset((char *)fRawData + returnOffset, 0, numBytes);
     initPtrs(status);
     return (char *)fRawData + returnOffset;
 }
