@@ -249,6 +249,7 @@ class SpoofData: public UMemory {
     
     // Constructor for use when creating from prebuilt default data.
     //   A UDataMemory is what the ICU internal data loading functions provide.
+    //   The udm is adopted by the SpoofData.
     SpoofData(UDataMemory *udm, UErrorCode &status);
 
     SpoofData(const void *serializedData, UErrorCode &status);
@@ -282,6 +283,9 @@ class SpoofData: public UMemory {
     SpoofDataHeader             *fRawData;          // Ptr to the raw memory-mapped data
     UBool                       fDataOwned;         // True if the raw data is owned, and needs
                                                     //  to be deleted when refcount goes to zero.
+    UDataMemory                 *fUDM;              // If not NULL, our data came from a
+                                                    //   UDataMemory, which we must close when
+                                                    //   we're done.
 
     uint32_t                    fMemLimit;          // Limit of available raw data space
     int32_t                     fRefCount;

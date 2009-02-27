@@ -320,6 +320,7 @@ SpoofData::SpoofData(UDataMemory *udm, UErrorCode &status)
     }
     fRawData = reinterpret_cast<SpoofDataHeader *>
                    ((char *)(udm->pHeader) + udm->pHeader->dataHeader.headerSize);
+    fUDM = udm;
     validateDataVersion(fRawData, status);
     initPtrs(status);
 }
@@ -375,6 +376,7 @@ SpoofData::SpoofData(UErrorCode &status) {
 void SpoofData::reset() {
    fRawData = NULL;
    fDataOwned = FALSE;
+   fUDM      = NULL;
    fMemLimit = 0;
    fRefCount = 1;
    fCFUKeys = NULL;
@@ -439,10 +441,18 @@ void SpoofData::initPtrs(UErrorCode &status) {
 
 
 SpoofData::~SpoofData() {
+    utrie2_close(fAnyCaseTrie);
+    fAnyCaseTrie = NULL;
+    utrie2_close(fLowerCaseTrie);
+    fLowerCaseTrie = NULL;
     if (fDataOwned) {
         uprv_free(fRawData);
     }
     fRawData = NULL;
+    if (fUDM != NULL) {
+        udata_close(fUDM);
+    }
+    fUDM = NULL;
 }
 
 

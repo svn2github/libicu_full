@@ -35,14 +35,10 @@ U_NAMESPACE_USE
 
 
 WSConfusableDataBuilder::WSConfusableDataBuilder() {
-    fAnyCaseTrie = 0;
-    fLowerCaseTrie = 0;
 }
 
 
 WSConfusableDataBuilder::~WSConfusableDataBuilder() {
-    utrie2_close(fAnyCaseTrie);
-    utrie2_close(fLowerCaseTrie);
 }
 
 
@@ -117,14 +113,17 @@ void WSConfusableDataBuilder::buildWSConfusableData(SpoofImpl *spImpl, const cha
     UVector            *scriptSets        = NULL;
     uint32_t            rtScriptSetsCount = 2;
 
+    UTrie2             *anyCaseTrie   = NULL;
+    UTrie2             *lowerCaseTrie = NULL;
+
 
     WSConfusableDataBuilder *This = new WSConfusableDataBuilder();
     if (This == NULL) {
         status = U_MEMORY_ALLOCATION_ERROR;
         return;
     }
-    This->fAnyCaseTrie = utrie2_open(0, 0, &status);
-    This->fLowerCaseTrie = utrie2_open(0, 0, &status);
+    anyCaseTrie = utrie2_open(0, 0, &status);
+    lowerCaseTrie = utrie2_open(0, 0, &status);
     
 
     // The scriptSets vector provides a mapping from TRIE values to the set of scripts.
@@ -218,9 +217,9 @@ void WSConfusableDataBuilder::buildWSConfusableData(SpoofImpl *spImpl, const cha
         }
 
         // select the table - (A) any case or (L) lower case only
-        UTrie2 *table = This->fAnyCaseTrie;
+        UTrie2 *table = anyCaseTrie;
         if (uregex_start(parseRegexp, 7, &status) >= 0) {
-            table = This->fLowerCaseTrie;
+            table = lowerCaseTrie;
         }
 
         // Build the set of scripts containing confusable characters for
@@ -291,6 +290,7 @@ void WSConfusableDataBuilder::buildWSConfusableData(SpoofImpl *spImpl, const cha
                 BuilderScriptSet *innerSet = static_cast<BuilderScriptSet *>(scriptSets->elementAt(inneri));
                 if (*(outerSet->sset) == *(innerSet->sset) && outerSet->sset != innerSet->sset) {
                     delete innerSet->sset;
+                    innerSet->scriptSetOwned = FALSE;
                     innerSet->sset = outerSet->sset;
                     innerSet->index = outeri;
                     innerSet->rindex = outerSet->rindex;
@@ -329,15 +329,15 @@ void WSConfusableDataBuilder::buildWSConfusableData(SpoofImpl *spImpl, const cha
         for (int32_t rn=0; rn<ignoreSet.getRangeCount(); rn++) {
             UChar32 rangeStart = ignoreSet.getRangeStart(rn);
             UChar32 rangeEnd   = ignoreSet.getRangeEnd(rn);
-            utrie2_setRange32(This->fAnyCaseTrie,   rangeStart, rangeEnd, 1, TRUE, &status);
-            utrie2_setRange32(This->fLowerCaseTrie, rangeStart, rangeEnd, 1, TRUE, &status);
+            utrie2_setRange32(anyCaseTrie,   rangeStart, rangeEnd, 1, TRUE, &status);
+            utrie2_setRange32(lowerCaseTrie, rangeStart, rangeEnd, 1, TRUE, &status);
         }
     }
 
     // Serialize the data to the Spoof Detector
     {
-        utrie2_freeze(This->fAnyCaseTrie,   UTRIE2_16_VALUE_BITS, &status);
-        int32_t size = utrie2_serialize(This->fAnyCaseTrie, NULL, 0, &status);
+        utrie2_freeze(anyCaseTrie,   UTRIE2_16_VALUE_BITS, &status);
+        int32_t size = utrie2_serialize(anyCaseTrie, NULL, 0, &status);
         printf("Any case Trie size: %d\n", size);
         if (status != U_BUFFER_OVERFLOW_ERROR) {
             goto cleanup;
@@ -345,12 +345,12 @@ void WSConfusableDataBuilder::buildWSConfusableData(SpoofImpl *spImpl, const cha
         status = U_ZERO_ERROR;
         spImpl->fSpoofData->fRawData->fAnyCaseTrie = spImpl->fSpoofData->fMemLimit;
         spImpl->fSpoofData->fRawData->fAnyCaseTrieLength = size;
-        spImpl->fSpoofData->fAnyCaseTrie = This->fAnyCaseTrie;
+        spImpl->fSpoofData->fAnyCaseTrie = anyCaseTrie;
         void *where = spImpl->fSpoofData->reserveSpace(size, status);
-        utrie2_serialize(This->fAnyCaseTrie, where, size, &status);
+        utrie2_serialize(anyCaseTrie, where, size, &status);
         
-        utrie2_freeze(This->fLowerCaseTrie, UTRIE2_16_VALUE_BITS, &status);
-        size = utrie2_serialize(This->fLowerCaseTrie, NULL, 0, &status);
+        utrie2_freeze(lowerCaseTrie, UTRIE2_16_VALUE_BITS, &status);
+        size = utrie2_serialize(lowerCaseTrie, NULL, 0, &status);
         printf("Lower case Trie size: %d\n", size);
         if (status != U_BUFFER_OVERFLOW_ERROR) {
             goto cleanup;
@@ -358,9 +358,9 @@ void WSConfusableDataBuilder::buildWSConfusableData(SpoofImpl *spImpl, const cha
         status = U_ZERO_ERROR;
         spImpl->fSpoofData->fRawData->fLowerCaseTrie = spImpl->fSpoofData->fMemLimit;
         spImpl->fSpoofData->fRawData->fLowerCaseTrieLength = size;
-        spImpl->fSpoofData->fLowerCaseTrie = This->fLowerCaseTrie;
+        spImpl->fSpoofData->fLowerCaseTrie = lowerCaseTrie;
         where = spImpl->fSpoofData->reserveSpace(size, status);
-        utrie2_serialize(This->fLowerCaseTrie, where, size, &status);
+        utrie2_serialize(lowerCaseTrie, where, size, &status);
 
         spImpl->fSpoofData->fRawData->fScriptSets = spImpl->fSpoofData->fMemLimit;
         spImpl->fSpoofData->fRawData->fScriptSetsLength = rtScriptSetsCount;
@@ -408,9 +408,13 @@ BuilderScriptSet::BuilderScriptSet() {
     sset = NULL;
     index = 0;
     rindex = 0;
+    scriptSetOwned = TRUE;
 }
 
 BuilderScriptSet::~BuilderScriptSet() {
+    if (scriptSetOwned) {
+        delete sset;
+    }
 }
 
 
