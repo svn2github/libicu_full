@@ -13,7 +13,8 @@
 *   created on: 2009Jan19
 *   created by: Andy Heninger
 *
-*   Internal classes for compiling whole script confusable data into its binary (runtime) form.
+*   Internal classes and functions
+*   for compiling whole script confusable data into its binary (runtime) form.
 */
 
 #ifndef __USPOOF_BUILDWSCONF_H__
@@ -48,23 +49,8 @@ struct BuilderScriptSet: public UMemory {
     ~BuilderScriptSet();
 };
 
+void buildWSConfusableData(SpoofImpl *spImpl, const char * confusablesWS,
+          int32_t confusablesWSLen, UParseError *pe, UErrorCode &status); 
 
-class WSConfusableDataBuilder: public UMemory {
-  private:
-      WSConfusableDataBuilder();
-      ~WSConfusableDataBuilder();
-
-      // TODO:  move these to be locals of the build function.
-      //        THese get created by the builder, then adopted by the
-      //         built Spoof Detector.
-      //        Better to reconsruct the run-time Tries from the serialized data,
-      //         since we have that hanging around anyhow.  Avoids keeping two copies of
-      //         the data.
-      
-    
-  public:
-    static void buildWSConfusableData(SpoofImpl *spImpl, const char * confusablesWS,
-        int32_t confusablesWSLen, UParseError *pe, UErrorCode &status);
-};
 
 #endif

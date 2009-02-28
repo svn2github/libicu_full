@@ -28,15 +28,15 @@ U_NAMESPACE_BEGIN
 
 U_CAPI USpoofChecker * U_EXPORT2
 uspoof_open(UErrorCode *status) {
-	if (U_FAILURE(*status)) {
-	    return NULL;
-	}
+    if (U_FAILURE(*status)) {
+        return NULL;
+    }
     SpoofImpl *si = new SpoofImpl(SpoofData::getDefault(*status), *status);
-	if (U_FAILURE(*status)) {
-		delete si;
-		si = NULL;
-	}
-	return (USpoofChecker *)si;
+    if (U_FAILURE(*status)) {
+        delete si;
+        si = NULL;
+    }
+    return (USpoofChecker *)si;
 }
 
 
@@ -73,10 +73,25 @@ uspoof_openFromSerialized(const void *data, int32_t length, int32_t *pActualLeng
 }
 
 
+U_CAPI USpoofChecker * U_EXPORT2
+uspoof_clone(const USpoofChecker *sc, UErrorCode *status) {
+    const SpoofImpl *src = SpoofImpl::validateThis(sc, *status);
+    if (src == NULL) {
+        return NULL;
+    }
+    SpoofImpl *result = new SpoofImpl(*src, *status);   // copy constructor
+    if (U_FAILURE(*status)) {
+        delete result;
+        result = NULL;
+    }
+    return (USpoofChecker *)result;
+}
+
+
 U_CAPI void U_EXPORT2
 uspoof_close(USpoofChecker *sc) {
     UErrorCode status = U_ZERO_ERROR;
-	SpoofImpl *This = SpoofImpl::validateThis(sc, status);
+    SpoofImpl *This = SpoofImpl::validateThis(sc, status);
     delete This;
 }
 
@@ -84,9 +99,9 @@ uspoof_close(USpoofChecker *sc) {
 U_CAPI void U_EXPORT2
 uspoof_setChecks(USpoofChecker *sc, int32_t checks, UErrorCode *status) {
     SpoofImpl *This = SpoofImpl::validateThis(sc, *status);
-	if (This == NULL) {
-		return;
-	}
+    if (This == NULL) {
+        return;
+    }
 
     // Verify that the requested checks are all ones (bits) that 
     //   are acceptable, known values.
@@ -102,19 +117,38 @@ uspoof_setChecks(USpoofChecker *sc, int32_t checks, UErrorCode *status) {
 U_CAPI int32_t U_EXPORT2
 uspoof_getChecks(const USpoofChecker *sc, UErrorCode *status) {
     const SpoofImpl *This = SpoofImpl::validateThis(sc, *status);
-	if (This == NULL) {
-		return 0;
-	}
+    if (This == NULL) {
+        return 0;
+    }
     return This->fChecks;
 }
 
 U_CAPI void U_EXPORT2
 uspoof_setAllowedLocales(USpoofChecker *sc, const char * /*localesList*/, UErrorCode *status) {
     SpoofImpl *This = SpoofImpl::validateThis(sc, *status);
-	if (This == NULL) {
-		return;
-	}
+    if (This == NULL) {
+        return;
+    }
     // TODO:
+}
+
+
+U_CAPI const USet * U_EXPORT2
+uspoof_getAllowedChars(USpoofChecker *sc, UErrorCode *status) {
+    const UnicodeSet *result = uspoof_getAllowedUnicodeSet(sc, status);
+    return reinterpret_cast<const USet *>(result);
+}
+
+U_CAPI const UnicodeSet * U_EXPORT2
+uspoof_getAllowedUnicodeSet(USpoofChecker *sc, UErrorCode *status) {
+    SpoofImpl *This = SpoofImpl::validateThis(sc, *status);
+    if (This == NULL) {
+        return NULL;
+    }
+    if (This->fAllowedCharsSet == NULL) {
+         uspoof_setAllowedUnicodeSet(sc, &UnicodeSet(0, 0x10ffff), status);
+    }
+    return This->fAllowedCharsSet;
 }
 
 
@@ -129,14 +163,14 @@ uspoof_checkUnicodeString(const USpoofChecker *sc,
 
 U_CAPI int32_t U_EXPORT2
 uspoof_check(const USpoofChecker *sc,
-			 const UChar *text, int32_t length, 
-			 int32_t * /*position */,
-			 UErrorCode *status) {
-			 
+             const UChar *text, int32_t length,
+             int32_t * /*position */,
+             UErrorCode *status) {
+             
     const SpoofImpl *This = SpoofImpl::validateThis(sc, *status);
-	if (This == NULL) {
-		return 0;
-	}
+    if (This == NULL) {
+        return 0;
+    }
     if (length < -1) {
         *status = U_ILLEGAL_ARGUMENT_ERROR;
         return 0;
@@ -375,9 +409,9 @@ uspoof_getSkeletonUTF8(const USpoofChecker *sc,
 U_CAPI void U_EXPORT2
 uspoof_setAllowedChars(USpoofChecker *sc, const USet *chars, UErrorCode *status) {
     SpoofImpl *This = SpoofImpl::validateThis(sc, *status);
-	if (This == NULL) {
-		return;
-	}
+    if (This == NULL) {
+        return;
+    }
 
     // Cast the USet to a UnicodeSet.  Slightly dicey - relies on knowing that
     //    a USet * is actually a UnicodeSet.  But we have both USet and

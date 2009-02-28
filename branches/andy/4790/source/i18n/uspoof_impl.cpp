@@ -22,7 +22,7 @@ U_NAMESPACE_BEGIN
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(SpoofImpl)
 
 SpoofImpl::SpoofImpl(SpoofData *data, UErrorCode &status) :
-    fMagic(0), fSpoofData(NULL) {
+    fMagic(0), fSpoofData(NULL), fAllowedCharsSet(NULL) {
     if (U_FAILURE(status)) {
         return;
     }
@@ -38,6 +38,23 @@ SpoofImpl::SpoofImpl() {
     fChecks = USPOOF_ALL_CHECKS;
 }
 
+
+// Copy Constructor, used by the user level clone() function.
+SpoofImpl::SpoofImpl(const SpoofImpl &src, UErrorCode &status)  :
+    fMagic(0), fSpoofData(NULL), fAllowedCharsSet(NULL) {
+    if (U_FAILURE(status)) {
+        return;
+    }
+    fMagic = src.fMagic;
+    fChecks = src.fChecks;
+    if (src.fSpoofData != NULL) {
+        fSpoofData = src.fSpoofData->addReference();
+    }
+    fCheckMask = src.fCheckMask;
+    if (fAllowedCharsSet != NULL) {
+        fAllowedCharsSet = static_cast<UnicodeSet *>(src.fAllowedCharsSet->clone());
+    }
+}
 
 SpoofImpl::~SpoofImpl() {
 	fMagic = 0;                // head off application errors by preventing use of
@@ -460,6 +477,12 @@ void SpoofData::removeReference() {
     if (umtx_atomic_dec(&fRefCount) == 0) {
         delete this;
     }
+}
+
+
+SpoofData *SpoofData::addReference() {
+    umtx_atomic_inc(&fRefCount);
+    return this;
 }
 
 

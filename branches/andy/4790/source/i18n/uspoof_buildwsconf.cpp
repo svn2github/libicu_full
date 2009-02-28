@@ -13,7 +13,9 @@
 *   created on: 2009Jan05  (refactoring earlier files)
 *   created by: Andy Heninger
 *
-*   Internal classes for compililing confusable data into its binary (runtime) form.
+*   Internal functions for compililing Whole Script confusable source data
+*   into its binary (runtime) form.  The binary data format is described
+*   in uspoof_impl.h
 */
 
 #include "unicode/utypes.h"
@@ -33,15 +35,6 @@
 U_NAMESPACE_USE
 
 
-
-WSConfusableDataBuilder::WSConfusableDataBuilder() {
-}
-
-
-WSConfusableDataBuilder::~WSConfusableDataBuilder() {
-}
-
-
 // Regular expression for parsing a line from the Unicode file confusablesWholeScript.txt
 // Example Lines:
 //   006F          ; Latn; Deva; A #      (o)  LATIN SMALL LETTER O
@@ -51,7 +44,7 @@ WSConfusableDataBuilder::~WSConfusableDataBuilder() {
 //    |               |     |----------Target script.   We need this.
 //    |               |----------------Src script.  Should match the script of the source
 //    |                                code points.  Beyond checking that, we don't keep it.
-//    |--------------------------------Src code points or range.
+//    |--------------------------------Source code points or range.
 //
 // The expression will match _all_ lines, including erroneous lines.
 // The result of the parse is returned via the contents of the (match) groups.
@@ -66,9 +59,10 @@ static const char *parseExp =
         "\\s*(?:(A)|(L))"                              // The table A or L.   Group 6 or 7
         "[ \\t]*(?:#.*?)?"                             // Trailing commment
         ")$|"                                          //   OR
-        "^(.*?)$";                                      // An error line.      Group 8.
-                                                       //   (Any line not matching the preceding
-                                                       //    parts of the expression.is an error)
+        "^(.*?)$";                                     // An error line.      Group 8.
+                                                       //    Any line not matching the preceding
+                                                       //    parts of the expression.will match
+                                                       //    this, and thus be flagged as an error
 
 
 // Extract a regular expression match group into a char * string.
@@ -99,7 +93,7 @@ static void extractGroup(
 //                         break this function into more reasonably sized pieces, with
 //                         state in WSConfusableDataBuilder.
 //
-void WSConfusableDataBuilder::buildWSConfusableData(SpoofImpl *spImpl, const char * confusablesWS,
+void buildWSConfusableData(SpoofImpl *spImpl, const char * confusablesWS,
           int32_t confusablesWSLen, UParseError *pe, UErrorCode &status) 
 {
     if (U_FAILURE(status)) {
@@ -116,12 +110,6 @@ void WSConfusableDataBuilder::buildWSConfusableData(SpoofImpl *spImpl, const cha
     UTrie2             *anyCaseTrie   = NULL;
     UTrie2             *lowerCaseTrie = NULL;
 
-
-    WSConfusableDataBuilder *This = new WSConfusableDataBuilder();
-    if (This == NULL) {
-        status = U_MEMORY_ALLOCATION_ERROR;
-        return;
-    }
     anyCaseTrie = utrie2_open(0, 0, &status);
     lowerCaseTrie = utrie2_open(0, 0, &status);
     
@@ -378,6 +366,28 @@ void WSConfusableDataBuilder::buildWSConfusableData(SpoofImpl *spImpl, const cha
             rindex++;
         }
     }
+
+    // Open new utrie2s from the serialized data.  We don't want to keep the ones
+    //   we just built because we would then have two copies of the data, one internal to
+    //   the utries that we have already constructed, and one in the serialized data area.
+    //   An alternative would be to not pre-serialize the Trie data, but that makes the
+    //   spoof detector data different, depending on how the detector was constructed.
+    //   It's simpler to keep the data always the same.
+    
+    spImpl->fSpoofData->fAnyCaseTrie = utrie2_openFromSerialized(
+            UTRIE2_16_VALUE_BITS,
+            (const char *)spImpl->fSpoofData->fRawData + spImpl->fSpoofData->fRawData->fAnyCaseTrie,
+            spImpl->fSpoofData->fRawData->fAnyCaseTrieLength,
+            NULL,
+            &status);
+
+    spImpl->fSpoofData->fLowerCaseTrie = utrie2_openFromSerialized(
+            UTRIE2_16_VALUE_BITS,
+            (const char *)spImpl->fSpoofData->fRawData + spImpl->fSpoofData->fRawData->fLowerCaseTrie,
+            spImpl->fSpoofData->fRawData->fAnyCaseTrieLength,
+            NULL,
+            &status);
+
     
 
 cleanup:
@@ -392,9 +402,9 @@ cleanup:
         BuilderScriptSet *bsset = static_cast<BuilderScriptSet *>(scriptSets->elementAt(i));
         delete bsset;
     }
-    
     delete scriptSets;
-    delete This;
+    utrie2_close(anyCaseTrie);
+    utrie2_close(lowerCaseTrie);
     return;
 }
 

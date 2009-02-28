@@ -48,7 +48,10 @@ public:
 	SpoofImpl();
 	virtual ~SpoofImpl();
 
-
+    /** Copy constructor, used by the user level uspoof_clone() function.
+     */
+    SpoofImpl(const SpoofImpl &src, UErrorCode &status);
+    
 	static SpoofImpl *validateThis(USpoofChecker *sc, UErrorCode &status);
 	static const SpoofImpl *validateThis(const USpoofChecker *sc, UErrorCode &status);
 
