@@ -109,14 +109,12 @@ u_shapeArabic(const UChar *source, int32_t sourceLength,
  */
 #define U_SHAPE_LENGTH_GROW_SHRINK              0
 
-/* NEW Arabic shaping options- Dec 2008 - Append Start */
 /**
  * Memory option: allow the result to have a different length than the source.
  * Affects: LamAlef options
  * This option is an alias to U_SHAPE_LENGTH_GROW_SHRINK
  */
 #define U_SHAPE_LAMALEF_RESIZE                  0 
-/* NEW Arabic shaping options- Dec 2008 - Append End */
 
 /**
  * Memory option: the result must have the same length as the source.
@@ -125,7 +123,6 @@ u_shapeArabic(const UChar *source, int32_t sourceLength,
  */
 #define U_SHAPE_LENGTH_FIXED_SPACES_NEAR        1
 
-/* NEW Arabic shaping options- Dec 2008 - Append Start */
 /**
  * Memory option: the result must have the same length as the source.
  * If more room is necessary, then try to consume spaces next to modified characters.
@@ -133,7 +130,6 @@ u_shapeArabic(const UChar *source, int32_t sourceLength,
  * This option is an alias to U_SHAPE_LENGTH_FIXED_SPACES_NEAR
  */
 #define U_SHAPE_LAMALEF_NEAR                    1 
-/* NEW Arabic shaping options- Dec 2008 - Append End */
 
 /**
  * Memory option: the result must have the same length as the source.
@@ -142,7 +138,6 @@ u_shapeArabic(const UChar *source, int32_t sourceLength,
  */
 #define U_SHAPE_LENGTH_FIXED_SPACES_AT_END      2
 
-/* NEW Arabic shaping options- Dec 2008 - Append Start */
 /**
  * Memory option: the result must have the same length as the source.
  * If more room is necessary, then try to consume spaces at the end of the text.
@@ -150,7 +145,6 @@ u_shapeArabic(const UChar *source, int32_t sourceLength,
  * This option is an alias to U_SHAPE_LENGTH_FIXED_SPACES_AT_END
  */
 #define U_SHAPE_LAMALEF_END                     2 
-/* NEW Arabic shaping options- Dec 2008 - Append End */
 
 /**
  * Memory option: the result must have the same length as the source.
@@ -159,7 +153,6 @@ u_shapeArabic(const UChar *source, int32_t sourceLength,
  */
 #define U_SHAPE_LENGTH_FIXED_SPACES_AT_BEGINNING 3
 
-/* NEW Arabic shaping options- Dec 2008 - Append Start */
 /**
  * Memory option: the result must have the same length as the source.
  * If more room is necessary, then try to consume spaces at the beginning of the text.
@@ -178,25 +171,21 @@ u_shapeArabic(const UChar *source, int32_t sourceLength,
  *               If there are no spaces found, an error U_NO_SPACE_AVAILABLE (as defined in utypes.h) 
  *               will be set in pErrorCode
  *
- * Deshaping Mode: Perform the same function as the flag equals U_SHAPE_LAMALEF_AT_END. 
+ * Deshaping Mode: Perform the same function as the flag equals U_SHAPE_LAMALEF_END. 
  * Affects: LamAlef options
  */
 #define U_SHAPE_LAMALEF_AUTO                     0x10000 
-/* NEW Arabic shaping options- Dec 2008 - Append End */
 
 /** Bit mask for memory options. @stable ICU 2.0 */
-/* NEW Arabic shaping options- Dec 2008 - Updated */
 #define U_SHAPE_LENGTH_MASK                      0x10003 /* Changed old value 3 */
 
 
 /** Bit mask for LamAlef memory options. */
-/* NEW Arabic shaping options- Dec 2008 - Updated */
 #define U_SHAPE_LAMALEF_MASK                     0x10003 /* updated */
 
 /** Direction indicator: the source is in logical (keyboard) order. @stable ICU 2.0 */
 #define U_SHAPE_TEXT_DIRECTION_LOGICAL          0
 
-/* NEW Arabic shaping options- Dec 2008 - Append Start */
 /**
  * Direction indicator:
  * the source is in visual RTL order,
@@ -204,7 +193,6 @@ u_shapeArabic(const UChar *source, int32_t sourceLength,
  * This option is an alias to U_SHAPE_TEXT_DIRECTION_LOGICAL
  */
 #define U_SHAPE_TEXT_DIRECTION_VISUAL_RTL       0
-/* NEW Arabic shaping options- Dec 2008 - Append End */
 
 /**
  * Direction indicator:
@@ -331,8 +319,7 @@ u_shapeArabic(const UChar *source, int32_t sourceLength,
 /** Bit mask for preserve presentation form. @stable ICU 3.6 */
 #define U_SHAPE_PRESERVE_PRESENTATION_MASK      0x8000
 
-/* NEW Arabic shaping options- Dec 2008 - Append Start */
-/* New Seen Tail options */ 
+/* Seen Tail option */ 
 /**
  * Memory option: the result must have the same length as the source.
  * Shaping mode: The SEEN family character will expand into two characters using space near 
@@ -349,7 +336,7 @@ u_shapeArabic(const UChar *source, int32_t sourceLength,
 /** Bit mask for Seen memory options. */
 #define U_SHAPE_SEEN_MASK             0x700000
 
-/* New YehHamza options */ 
+/* YehHamza option */ 
 /**
  * Memory option: the result must have the same length as the source.
  * Shaping mode: The YEHHAMZA character will expand into two characters using space near it 
@@ -411,7 +398,7 @@ u_shapeArabic(const UChar *source, int32_t sourceLength,
 #define U_SHAPE_TASHKEEL_MASK                       0xE0000
 
 
-/* New Space location Control options */ 
+/* Space location Control options */ 
 /**
  * This option affect the meaning of BEGIN and END options. if this option is not used the default
  * for BEGIN and END will be as following: 
@@ -428,7 +415,7 @@ u_shapeArabic(const UChar *source, int32_t sourceLength,
  *    B. BEGIN For Logical text: Same as BEGIN in default behavior. 
  *    C. END For Visual LTR text: This will be the end (left side) of the visual text (corresponding
  *       to the physical memory address beginning for Visual LTR text, Same as BEGIN in default behavior.
- *    D. END For Logical text: Same as END in default behavior. 
+ *    D. END For Logical text: Same as END in default behavior). 
  * Affects: All LamAlef BEGIN, END and AUTO options.
  */
 #define U_SHAPE_SPACES_RELATIVE_TO_TEXT_BEGIN_END 0x4000000
@@ -451,6 +438,5 @@ u_shapeArabic(const UChar *source, int32_t sourceLength,
 
 /** Bit mask for new Unicode Tail option */
 #define SHAPE_TAIL_TYPE_MASK          0x8000000
-/* NEW Arabic shaping options- Dec 2008 - Append End */
 
 #endif
