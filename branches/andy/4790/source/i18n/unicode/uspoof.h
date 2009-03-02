@@ -381,7 +381,7 @@ uspoof_setAllowedChars(USpoofChecker *sc, const USet *chars, UErrorCode *status)
  *                 the USPOOF_CHAR_LIMIT test.
  */
 U_DRAFT const USet * U_EXPORT2
-uspoof_getAllowedChars(USpoofChecker *sc, UErrorCode *status);
+uspoof_getAllowedChars(const USpoofChecker *sc, UErrorCode *status);
 
 
 #ifdef XP_CPLUSPLUS
@@ -425,7 +425,7 @@ uspoof_setAllowedUnicodeSet(USpoofChecker *sc, const UnicodeSet *chars, UErrorCo
  *                 the USPOOF_CHAR_LIMIT test.
  */
 U_DRAFT const UnicodeSet * U_EXPORT2
-uspoof_getAllowedUnicodeSet(USpoofChecker *sc, UErrorCode *status);
+uspoof_getAllowedUnicodeSet(const USpoofChecker *sc, UErrorCode *status);
 #endif
 
 

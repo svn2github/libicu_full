@@ -29,6 +29,10 @@ SpoofImpl::SpoofImpl(SpoofData *data, UErrorCode &status) :
 	fMagic = USPOOF_MAGIC;
 	fSpoofData = data;
 	fChecks = USPOOF_ALL_CHECKS;
+    fAllowedCharsSet = new UnicodeSet(0, 0x10ffff);
+    if (fAllowedCharsSet == NULL) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+    }
 }
 
 
@@ -36,6 +40,7 @@ SpoofImpl::SpoofImpl() {
     fMagic = USPOOF_MAGIC;
     fSpoofData = NULL;
     fChecks = USPOOF_ALL_CHECKS;
+    fAllowedCharsSet = new UnicodeSet(0, 0x10ffff);
 }
 
 
@@ -51,8 +56,9 @@ SpoofImpl::SpoofImpl(const SpoofImpl &src, UErrorCode &status)  :
         fSpoofData = src.fSpoofData->addReference();
     }
     fCheckMask = src.fCheckMask;
-    if (fAllowedCharsSet != NULL) {
-        fAllowedCharsSet = static_cast<UnicodeSet *>(src.fAllowedCharsSet->clone());
+    fAllowedCharsSet = static_cast<UnicodeSet *>(src.fAllowedCharsSet->clone());
+    if (fAllowedCharsSet == NULL) {
+        status = U_MEMORY_ALLOCATION_ERROR;
     }
 }
 
@@ -62,6 +68,7 @@ SpoofImpl::~SpoofImpl() {
 	if (fSpoofData != NULL) {
 	    fSpoofData->removeReference();   // Will delete if refCount goes to zero.
 	}
+    delete fAllowedCharsSet;
 }
 
 //

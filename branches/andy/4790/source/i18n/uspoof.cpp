@@ -145,10 +145,36 @@ uspoof_getAllowedUnicodeSet(USpoofChecker *sc, UErrorCode *status) {
     if (This == NULL) {
         return NULL;
     }
-    if (This->fAllowedCharsSet == NULL) {
-         uspoof_setAllowedUnicodeSet(sc, &UnicodeSet(0, 0x10ffff), status);
-    }
     return This->fAllowedCharsSet;
+}
+
+
+U_CAPI void U_EXPORT2
+uspoof_setAllowedChars(USpoofChecker *sc, const USet *chars, UErrorCode *status) {
+    const UnicodeSet *set = reinterpret_cast<const UnicodeSet *>(chars);
+    uspoof_setAllowedUnicodeSet(sc, set, status);
+}
+
+
+U_CAPI void U_EXPORT2
+uspoof_setAllowedUnicodeSet(USpoofChecker *sc, const UnicodeSet *chars, UErrorCode *status) {
+    SpoofImpl *This = SpoofImpl::validateThis(sc, *status);
+    if (This == NULL) {
+        return;
+    }
+    if (chars->isBogus()) {
+        *status = U_ILLEGAL_ARGUMENT_ERROR;
+        return;
+    }
+    UnicodeSet *clonedSet = static_cast<UnicodeSet *>(chars->clone());
+    if (clonedSet == NULL || clonedSet->isBogus()) {
+        *status = U_MEMORY_ALLOCATION_ERROR;
+        return;
+    }
+    clonedSet->freeze();
+    delete This->fAllowedCharsSet;
+    This->fAllowedCharsSet = clonedSet;
+    This->fChecks |= USPOOF_CHAR_LIMIT;
 }
 
 
@@ -160,6 +186,7 @@ uspoof_checkUnicodeString(const USpoofChecker *sc,
     uint32_t result = uspoof_check(sc, text.getBuffer(), text.length(), position, status);
     return result;
 }
+
 
 U_CAPI int32_t U_EXPORT2
 uspoof_check(const USpoofChecker *sc,
@@ -403,41 +430,6 @@ uspoof_getSkeletonUTF8(const USpoofChecker *sc,
         delete outBuf;
     }
     return skelLengthInUTF8;
-}
-
-
-U_CAPI void U_EXPORT2
-uspoof_setAllowedChars(USpoofChecker *sc, const USet *chars, UErrorCode *status) {
-    SpoofImpl *This = SpoofImpl::validateThis(sc, *status);
-    if (This == NULL) {
-        return;
-    }
-
-    // Cast the USet to a UnicodeSet.  Slightly dicey - relies on knowing that
-    //    a USet * is actually a UnicodeSet.  But we have both USet and
-    //    UnicodeSet interfaces, and need a common internal representation.
-    UnicodeSet *uniset = (UnicodeSet *)chars;
-
-    if (uniset->isBogus()) {
-        *status = U_ILLEGAL_ARGUMENT_ERROR;
-        return;
-    }
-
-    // Clone & freeze the caller's set
-    UnicodeSet *clonedSet = (UnicodeSet *)uniset->clone();
-    if (clonedSet == NULL || clonedSet->isBogus()) {
-        *status = U_MEMORY_ALLOCATION_ERROR;
-        return;
-    }
-    clonedSet->freeze();
-
-    // Any existing set is frozen, meaning it can't be reused.
-    //   Just delete it and create another.
-    delete This->fAllowedCharsSet;
-    This->fAllowedCharsSet = clonedSet;
-
-    // Set the bit that enables the allowed chars test
-    This->fChecks |= USPOOF_CHAR_LIMIT;
 }
 
 

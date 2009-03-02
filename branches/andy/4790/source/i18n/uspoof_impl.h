@@ -100,7 +100,8 @@ public:
 	
 	int32_t           fCheckMask;         // Spoof table selector.  f(Check Type)
 	
-    const UnicodeSet *fAllowedCharsSet; 
+    const UnicodeSet *fAllowedCharsSet;   // The UnicodeSet of allowed characters.
+                                          //   for this Spoof Checker.  Defaults to all chars. 
 
 };
 
@@ -303,8 +304,6 @@ class SpoofData: public UMemory {
     UTrie2                      *fAnyCaseTrie;
     UTrie2                      *fLowerCaseTrie;
     ScriptSet                   *fScriptSets;
-    
-
     };
     
 
