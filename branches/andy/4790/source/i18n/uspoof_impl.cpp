@@ -29,10 +29,12 @@ SpoofImpl::SpoofImpl(SpoofData *data, UErrorCode &status) :
 	fMagic = USPOOF_MAGIC;
 	fSpoofData = data;
 	fChecks = USPOOF_ALL_CHECKS;
-    fAllowedCharsSet = new UnicodeSet(0, 0x10ffff);
-    if (fAllowedCharsSet == NULL) {
+    UnicodeSet *allowedCharsSet = new UnicodeSet(0, 0x10ffff);
+    if (allowedCharsSet == NULL) {
         status = U_MEMORY_ALLOCATION_ERROR;
     }
+    allowedCharsSet->freeze();
+    fAllowedCharsSet = allowedCharsSet;
 }
 
 
@@ -40,7 +42,9 @@ SpoofImpl::SpoofImpl() {
     fMagic = USPOOF_MAGIC;
     fSpoofData = NULL;
     fChecks = USPOOF_ALL_CHECKS;
-    fAllowedCharsSet = new UnicodeSet(0, 0x10ffff);
+    UnicodeSet *allowedCharsSet = new UnicodeSet(0, 0x10ffff);
+    allowedCharsSet->freeze();
+    fAllowedCharsSet = allowedCharsSet;
 }
 
 
@@ -56,7 +60,7 @@ SpoofImpl::SpoofImpl(const SpoofImpl &src, UErrorCode &status)  :
         fSpoofData = src.fSpoofData->addReference();
     }
     fCheckMask = src.fCheckMask;
-    fAllowedCharsSet = static_cast<UnicodeSet *>(src.fAllowedCharsSet->clone());
+    fAllowedCharsSet = static_cast<const UnicodeSet *>(src.fAllowedCharsSet->clone());
     if (fAllowedCharsSet == NULL) {
         status = U_MEMORY_ALLOCATION_ERROR;
     }
@@ -680,12 +684,12 @@ uspoof_swap(const UDataSwapper *ds, const void *inData, int32_t length, void *ou
 
     //
     //  Check that the data header is for spoof data.
-    //    (Header contents are defined in genbrk.cpp)
+    //    (Header contents are defined in gencfu.cpp)
     //
     const UDataInfo *pInfo = (const UDataInfo *)((const char *)inData+4);
-    if(!(  pInfo->dataFormat[0]==0x63 &&   /* dataFormat="cfu " */
+    if(!(  pInfo->dataFormat[0]==0x43 &&   /* dataFormat="Cfu " */
            pInfo->dataFormat[1]==0x66 &&
-           pInfo->dataFormat[2]==0x6b &&
+           pInfo->dataFormat[2]==0x75 &&
            pInfo->dataFormat[3]==0x20 &&
            pInfo->formatVersion[0]==1  )) {
         udata_printError(ds, "uspoof_swap(): data format %02x.%02x.%02x.%02x (format version %02x) is not recognized\n",
@@ -711,7 +715,7 @@ uspoof_swap(const UDataSwapper *ds, const void *inData, int32_t length, void *ou
     //
     const uint8_t   *inBytes =(const uint8_t *)inData+headerSize;
     SpoofDataHeader *spoofDH = (SpoofDataHeader *)inBytes;
-    if (ds->readUInt32(spoofDH->fMagic)   != 0x5b0f ||
+    if (ds->readUInt32(spoofDH->fMagic)   != USPOOF_MAGIC ||
         ds->readUInt32(spoofDH->fLength)  <  sizeof(SpoofDataHeader)) 
     {
         udata_printError(ds, "uspoof_swap(): Spoof Data header is invalid.\n");
@@ -729,7 +733,7 @@ uspoof_swap(const UDataSwapper *ds, const void *inData, int32_t length, void *ou
     }
 
     //
-    // Check that length passed in is consistent with length from RBBI data header.
+    // Check that length passed in is consistent with length from Spoof data header.
     //
     if (length < totalSize) {
         udata_printError(ds, "uspoof_swap(): too few bytes (%d after ICU Data header) for spoof data.\n",
@@ -759,32 +763,49 @@ uspoof_swap(const UDataSwapper *ds, const void *inData, int32_t length, void *ou
         uprv_memset(outBytes, 0, spoofDataLength);
     }
 
-    // String Lengths Section
-    sectionStart  = ds->readUInt32(spoofDH->fCFUStringLengths);
-    sectionLength = ds->readUInt32(spoofDH->fCFUStringLengthsSize) * 4;
-    ds->swapArray16(ds, inBytes+sectionStart, sectionLength, outBytes+sectionStart, status);
-
-    // String Lengths Section
+    // Confusables Keys Section   (fCFUKeys)
     sectionStart  = ds->readUInt32(spoofDH->fCFUKeys);
     sectionLength = ds->readUInt32(spoofDH->fCFUKeysSize) * 4;
-    ds->swapArray16(ds, inBytes+sectionStart, sectionLength, outBytes+sectionStart, status);
+    ds->swapArray32(ds, inBytes+sectionStart, sectionLength, outBytes+sectionStart, status);
 
-    // String Lengths Section
+    // String Index Section
     sectionStart  = ds->readUInt32(spoofDH->fCFUStringIndex);
     sectionLength = ds->readUInt32(spoofDH->fCFUStringIndexSize) * 2;
     ds->swapArray16(ds, inBytes+sectionStart, sectionLength, outBytes+sectionStart, status);
 
-    // String Lengths Section
+    // String Table Section
     sectionStart  = ds->readUInt32(spoofDH->fCFUStringTable);
     sectionLength = ds->readUInt32(spoofDH->fCFUStringTableLen) * 2;
     ds->swapArray16(ds, inBytes+sectionStart, sectionLength, outBytes+sectionStart, status);
 
+    // String Lengths Section
+    sectionStart  = ds->readUInt32(spoofDH->fCFUStringTable);
+    sectionLength = ds->readUInt32(spoofDH->fCFUStringTableLen) * 4;
+    ds->swapArray16(ds, inBytes+sectionStart, sectionLength, outBytes+sectionStart, status);
+
+    // Any Case Trie
+    sectionStart  = ds->readUInt32(spoofDH->fAnyCaseTrie);
+    sectionLength = ds->readUInt32(spoofDH->fAnyCaseTrieLength);
+    utrie2_swap(ds, inBytes+sectionStart, sectionLength, outBytes+sectionStart, status);
+
+    // Lower Case Trie
+    sectionStart  = ds->readUInt32(spoofDH->fLowerCaseTrie);
+    sectionLength = ds->readUInt32(spoofDH->fLowerCaseTrieLength);
+    utrie2_swap(ds, inBytes+sectionStart, sectionLength, outBytes+sectionStart, status);
+
+    // Script Sets.  The data is an array of int32_t
+    sectionStart  = ds->readUInt32(spoofDH->fScriptSets);
+    sectionLength = ds->readUInt32(spoofDH->fScriptSetsLength) * 4;
+    ds->swapArray32(ds, inBytes+sectionStart, sectionLength, outBytes+sectionStart, status);
 
     // And, last, swap the header itself.
-    //   The entire header consists of int32_t values.
+    //   int32_t   fMagic             // swap this
+    //   uint8_t   fFormatVersion[4]  // Do not swap this
+    //   int32_t   all the rest       // Swap the rest, all is 32 bit stuff.
     //
-    ds->swapArray32(ds, inBytes, sizeof(SpoofDataHeader), outBytes, status);
-
+    uint32_t magic = ds->readUInt32(spoofDH->fMagic);
+    ds->writeUInt32((uint32_t *)&outputDH->fMagic, magic);
+    ds->swapArray32(ds, &spoofDH->fLength, sizeof(SpoofDataHeader)-8, &outputDH->fLength, status);
 
     return totalSize;
 }

@@ -379,5 +379,14 @@ struct SpoofDataHeader {
 
 U_NAMESPACE_END
 
+/**
+  * Endianness swap function for binary spoof data.
+  * @internal
+  */
+U_CAPI int32_t U_EXPORT2
+uspoof_swap(const UDataSwapper *ds, const void *inData, int32_t length, void *outData,
+            UErrorCode *status);
+
+
 #endif  /* USPOOFIM_H */
 
