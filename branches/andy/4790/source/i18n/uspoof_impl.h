@@ -72,14 +72,17 @@ public:
 	void wholeScriptCheck(
 	    const UChar *text, int32_t length, ScriptSet *result, UErrorCode &status) const;
 	    
-    // Scan a string to determine how many scripts it includes.
-    // Ignore characters with script=Common and scirpt=Inherited.
-    // Return the number of (non-common,inherited) scripts encountered.
-    //     0
-    //     1
-    //     2   (or more.  Scan stops once two scripts are encountered.)
-    //
-    int32_t scriptScan(const UChar *text, int32_t length, UErrorCode &status) const;
+    /** Scan a string to determine how many scripts it includes.
+     * Ignore characters with script=Common and scirpt=Inherited.
+     * @param    text     The UChar text to be scanned
+     * @param    length   The length of the input text, -1 for nul termintated.
+     * @param    pos      An out parameter, set to the first input postion at which
+     *                    a second script was encountered, ignoring Common and Inherited.
+     * @param    status   For errors.
+     * @return            the number of (non-common,inherited) scripts encountered,
+     *                    clipped to a max of two.
+     */
+    int32_t scriptScan(const UChar *text, int32_t length, int32_t &pos, UErrorCode &status) const;
 
 
     // WholeScript and MixedScript check implementation.
@@ -165,7 +168,7 @@ public:
 
 struct SpoofStringLengthsElement {
     uint16_t      fLastString;         // index in string table of last string with this length
-    uint16_t      strLength;           // Length of strings
+    uint16_t      fStrLength;           // Length of strings
 };
 
 
@@ -256,7 +259,9 @@ class SpoofData: public UMemory {
     //   The udm is adopted by the SpoofData.
     SpoofData(UDataMemory *udm, UErrorCode &status);
 
-    SpoofData(const void *serializedData, UErrorCode &status);
+    // Constructor for use when creating from serialized data.
+    //
+    SpoofData(const void *serializedData, int32_t length, UErrorCode &status);
 
     //  Check raw Spoof Data Version compatibility.
     //  Return TRUE it looks good.

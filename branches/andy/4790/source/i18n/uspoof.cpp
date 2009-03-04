@@ -46,7 +46,7 @@ uspoof_openFromSerialized(const void *data, int32_t length, int32_t *pActualLeng
     if (U_FAILURE(*status)) {
         return NULL;
     }
-    SpoofData *sd = new SpoofData(data, *status);
+    SpoofData *sd = new SpoofData(data, length, *status);
     SpoofImpl *si = new SpoofImpl(sd, *status);
     if (U_FAILURE(*status)) {
         delete sd;
@@ -55,12 +55,6 @@ uspoof_openFromSerialized(const void *data, int32_t length, int32_t *pActualLeng
     }
     if (sd == NULL || si == NULL) {
         *status = U_MEMORY_ALLOCATION_ERROR;
-        delete sd;
-        delete si;
-        return NULL;
-    }
-    if (sd->fRawData->fLength < sd->fRawData->fLength) {
-        *status = U_INVALID_FORMAT_ERROR;
         delete sd;
         delete si;
         return NULL;
@@ -191,7 +185,7 @@ uspoof_checkUnicodeString(const USpoofChecker *sc,
 U_CAPI int32_t U_EXPORT2
 uspoof_check(const USpoofChecker *sc,
              const UChar *text, int32_t length,
-             int32_t * /*position */,
+             int32_t *position,
              UErrorCode *status) {
              
     const SpoofImpl *This = SpoofImpl::validateThis(sc, *status);
@@ -202,29 +196,73 @@ uspoof_check(const USpoofChecker *sc,
         *status = U_ILLEGAL_ARGUMENT_ERROR;
         return 0;
     }
-
-    int32_t result = 0;
-
-    NFKDBuffer   normalizedInput(text, length, *status);
-    const UChar  *nfkdText = normalizedInput.getBuffer();
-    int32_t      nfkdLength = normalizedInput.getLength();
-    
-    int32_t scriptCount = This->scriptScan(nfkdText, nfkdLength, *status);
-    printf("scriptCount (clipped to 2) = %d\n", scriptCount);
-    if ((This->fChecks & USPOOF_SINGLE_SCRIPT) && scriptCount == 2) {
-        // Note: scriptCount == 2 covers all cases of the number of scripts >= 2
-        result |= USPOOF_SINGLE_SCRIPT;
+    if (length == -1) {
+        // It's not worth the bother to handle nul terminated strings everywhere.
+        //   Just get the length and be done with it.
+        length = u_strlen(text);
     }
 
-    
+    int32_t result = 0;
+    int32_t failPos = 0x7fffffff;   // TODO: do we have a #define for max int32?
+
+    // A count of the number of non-Common or inherited scripts.
+    // Needed for both the SINGLE_SCRIPT and the WHOLE/MIXED_SCIRPT_CONFUSABLE tests.
+    // Share the computation when possible.  scriptCount == -1 means that we haven't
+    // done it yet.
+    int32_t scriptCount = -1;
+
+    if ((This->fChecks) & USPOOF_SINGLE_SCRIPT) {
+        scriptCount = This->scriptScan(text, length, failPos, *status);
+        // printf("scriptCount (clipped to 2) = %d\n", scriptCount);
+        if ( scriptCount >= 2) {
+            // Note: scriptCount == 2 covers all cases of the number of scripts >= 2
+            result |= USPOOF_SINGLE_SCRIPT;
+        }
+    }
+
+    if (This->fChecks & USPOOF_CHAR_LIMIT) {
+        int32_t i;
+        UChar32 c;
+        for (i=0; i<length ;) {
+            U16_NEXT(text, i, length, c);
+            if (!This->fAllowedCharsSet->contains(c)) {
+                result |= USPOOF_CHAR_LIMIT;
+                if (i < failPos) {
+                    failPos = i;
+                }
+                break;
+            }
+        }
+    }
+
+    // TODO:  add USPOOF_INVISIBLE check
     
     if (This->fChecks & (USPOOF_WHOLE_SCRIPT_CONFUSABLE | USPOOF_MIXED_SCRIPT_CONFUSABLE)) {
         // The basic test is the same for both whole and mixed script confusables.
-        // Return the set of scripts that _every_ input character has a confusable in.
+        // Compute the set of scripts that every input character has a confusable in.
+        // For this computation an input character is always considered to be
+        //    confusable with itself in its own script.
+        // If the number of such scripts is two or more, and the input consisted of
+        //   characters all from a single script, we have a whole script confusable.
+        //   (The two scripts will be the original script and the one that is confusable)
+        // If the number of such scripts >= one, and the original input contained characters from
+        //   more than one script, we have a mixed script confusable.  (We can transform
+        //   some of the characters, and end up with a visually similar string all in
+        //   one script.)
+
+        NFKDBuffer   normalizedInput(text, length, *status);
+        const UChar  *nfkdText = normalizedInput.getBuffer();
+        int32_t      nfkdLength = normalizedInput.getLength();
+
+        if (scriptCount == -1) {
+        int32_t t;
+            scriptCount = This->scriptScan(text, length, t, *status);
+        }
+        
         ScriptSet scripts;
         This->wholeScriptCheck(nfkdText, nfkdLength, &scripts, *status);
         int32_t confusableScriptCount = scripts.countMembers();
-        printf("confusableScriptCount = %d\n", confusableScriptCount);
+        //printf("confusableScriptCount = %d\n", confusableScriptCount);
         
         if ((This->fChecks & USPOOF_WHOLE_SCRIPT_CONFUSABLE) &&
             confusableScriptCount >= 2 &&
@@ -239,7 +277,54 @@ uspoof_check(const USpoofChecker *sc,
         }
     }
 
+    if (position != NULL && failPos != 0x7fffffff) {
+        *position = failPos;
+    }
     return result;
+}
+
+
+U_CAPI int32_t U_EXPORT2
+uspoof_checkUTF8(const USpoofChecker *sc,
+                 const char *text, int32_t length,
+                 int32_t *position,
+                 UErrorCode *status) {
+
+    if (U_FAILURE(*status)) {
+        return 0;
+    }
+    UChar buf[USPOOF_STACK_BUFFER_SIZE];
+    UChar* text16 = buf;
+    int32_t len16;
+    u_strFromUTF8(text16, USPOOF_STACK_BUFFER_SIZE, &len16, text, length, status);
+
+    if (U_FAILURE(*status) && *status != U_BUFFER_OVERFLOW_ERROR) {
+        return 0;
+    }
+    if (*status == U_BUFFER_OVERFLOW_ERROR) {
+        text16 = static_cast<UChar *>(uprv_malloc(len16 * sizeof(UChar) + 2));
+        if (text16 == NULL) {
+            *status = U_MEMORY_ALLOCATION_ERROR;
+            return 0;
+        }
+        *status = U_ZERO_ERROR;
+        u_strFromUTF8(text16, USPOOF_STACK_BUFFER_SIZE, &len16, text, length, status);
+    }
+
+    int32_t position16 = -1;
+    int32_t result = uspoof_check(sc, text16, len16, &position16, status);
+    if (U_FAILURE(*status)) {
+        return 0;
+    }
+
+    if (position16 > 0) {
+        // Translate a UTF-16 based error position back to a UTF-8 offset.
+        // u_strToUTF8() in preflight mode is an easy way to do it.
+        U_ASSERT(position16 <= len16);
+        u_strToUTF8(NULL, 0, position, text16, position16, status);
+    }
+    return result;
+    
 }
 
 

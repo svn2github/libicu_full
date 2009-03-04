@@ -480,7 +480,9 @@ void ConfusabledataBuilder::outputData(UErrorCode &status) {
     }
     rawData = fSpoofImpl->fSpoofData->fRawData;
     rawData->fCFUStringLengths = (char *)stringLengths - (char *)rawData;
-    rawData->fCFUStringLengthsSize = lengthTableLength;
+    // Note: StringLengthsSize in the raw data is the number of complete entries,
+    //       each consisting of a pair of 16 bit values, hence the divide by 2.
+    rawData->fCFUStringLengthsSize = lengthTableLength / 2;
     fSpoofImpl->fSpoofData->fCFUStringLengths =
         reinterpret_cast<SpoofStringLengthsElement *>(stringLengths);
 }

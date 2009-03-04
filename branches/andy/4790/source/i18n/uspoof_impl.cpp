@@ -183,18 +183,29 @@ int32_t SpoofImpl::confusableLookup(UChar32 inChar, int32_t tableMask, UChar *de
         return 1;
     }
 
-    // String length of 4 is used for all strings of length >= 4.
-    // Get the real length from the string lengths table,
+    // String length of 4 from the above lookup is used for all strings of length >= 4.
+    // For these, get the real length from the string lengths table,
     //   which maps string table indexes to lengths.
-    //   (All strings of the same length are stored contiguously in the string table)
+    //   All strings of the same length are stored contiguously in the string table.
+    //   'value' from the lookup above is the starting index for the desired string.
 
+    int32_t ix;
     if (stringLen == 4) {
         // TODO:
+        int32_t stringLengthsLimit = fSpoofData->fRawData->fCFUStringLengthsSize;
+        for (ix = 0; ix < stringLengthsLimit; ix++) {
+            if (fSpoofData->fCFUStringLengths[ix].fLastString >= value) {
+                stringLen = fSpoofData->fCFUStringLengths[ix].fStrLength;
+                break;
+            }
+        }
+        U_ASSERT(ix < stringLengthsLimit);
     }
 
+    U_ASSERT(value + stringLen < fSpoofData->fRawData->fCFUStringTableLen);
     UChar *src = &fSpoofData->fCFUStrings[value];
-    for (int32_t idx=0; idx<stringLen; idx++) {
-        destBuf[idx] = src[idx];
+    for (ix=0; ix<stringLen; ix++) {
+        destBuf[ix] = src[ix];
     }
     return stringLen;
 }
@@ -241,7 +252,8 @@ void SpoofImpl::wholeScriptCheck(
 
 
 
-int32_t SpoofImpl::scriptScan(const UChar *text, int32_t length, UErrorCode &status) const {
+int32_t SpoofImpl::scriptScan
+        (const UChar *text, int32_t length, int32_t &pos, UErrorCode &status) const {
     if (U_FAILURE(status)) {
         return 0;
     }
@@ -250,8 +262,11 @@ int32_t SpoofImpl::scriptScan(const UChar *text, int32_t length, UErrorCode &sta
     int32_t       scriptCount = 0;
     UScriptCode   lastScript = USCRIPT_INVALID_CODE;
     UScriptCode   sc = USCRIPT_INVALID_CODE;
-    while (inputIdx < length && scriptCount < 2) {
+    while ((inputIdx < length || length == -1) && scriptCount < 2) {
         U16_NEXT(text, inputIdx, length, c);
+        if (c == 0 && length == -1) {
+            break;
+        }
         sc = uscript_getScript(c, &status);
         if (sc == USCRIPT_COMMON || sc == USCRIPT_INHERITED || sc == USCRIPT_UNKNOWN) {
             continue;
@@ -260,6 +275,9 @@ int32_t SpoofImpl::scriptScan(const UChar *text, int32_t length, UErrorCode &sta
            scriptCount++;
            lastScript = sc;
         }
+    }
+    if (scriptCount == 2) {
+        pos = inputIdx;
     }
     return scriptCount;
 }
@@ -354,14 +372,22 @@ SpoofData::SpoofData(UDataMemory *udm, UErrorCode &status)
 }
 
 
-SpoofData::SpoofData(const void *data, UErrorCode &status)
+SpoofData::SpoofData(const void *data, int32_t length, UErrorCode &status)
 {
     reset();
     if (U_FAILURE(status)) {
         return;
     }
+    if ((size_t)length < sizeof(SpoofDataHeader)) {
+        status = U_INVALID_FORMAT_ERROR;
+        return;
+    }
     void *ncData = const_cast<void *>(data);
     fRawData = static_cast<SpoofDataHeader *>(ncData);
+    if (length < fRawData->fLength) {
+        status = U_INVALID_FORMAT_ERROR;
+        return;
+    }
     validateDataVersion(fRawData, status);
     initPtrs(status);
 }
@@ -392,9 +418,9 @@ SpoofData::SpoofData(UErrorCode &status) {
 
     fRawData->fMagic = USPOOF_MAGIC;
     fRawData->fFormatVersion[0] = 1;
-    fRawData->fFormatVersion[0] = 0;
-    fRawData->fFormatVersion[0] = 0;
-    fRawData->fFormatVersion[0] = 0;
+    fRawData->fFormatVersion[1] = 0;
+    fRawData->fFormatVersion[2] = 0;
+    fRawData->fFormatVersion[3] = 0;
     initPtrs(status);
 }
 
@@ -692,10 +718,12 @@ uspoof_swap(const UDataSwapper *ds, const void *inData, int32_t length, void *ou
            pInfo->dataFormat[2]==0x75 &&
            pInfo->dataFormat[3]==0x20 &&
            pInfo->formatVersion[0]==1  )) {
-        udata_printError(ds, "uspoof_swap(): data format %02x.%02x.%02x.%02x (format version %02x) is not recognized\n",
+        udata_printError(ds, "uspoof_swap(): data format %02x.%02x.%02x.%02x "
+                             "(format version %02x %02x %02x %02x) is not recognized\n",
                          pInfo->dataFormat[0], pInfo->dataFormat[1],
                          pInfo->dataFormat[2], pInfo->dataFormat[3],
-                         pInfo->formatVersion[0]);
+                         pInfo->formatVersion[0], pInfo->formatVersion[1],
+                         pInfo->formatVersion[2], pInfo->formatVersion[3]);
         *status=U_UNSUPPORTED_ERROR;
         return 0;
     }
@@ -779,8 +807,8 @@ uspoof_swap(const UDataSwapper *ds, const void *inData, int32_t length, void *ou
     ds->swapArray16(ds, inBytes+sectionStart, sectionLength, outBytes+sectionStart, status);
 
     // String Lengths Section
-    sectionStart  = ds->readUInt32(spoofDH->fCFUStringTable);
-    sectionLength = ds->readUInt32(spoofDH->fCFUStringTableLen) * 4;
+    sectionStart  = ds->readUInt32(spoofDH->fCFUStringLengths);
+    sectionLength = ds->readUInt32(spoofDH->fCFUStringLengthsSize) * 4;
     ds->swapArray16(ds, inBytes+sectionStart, sectionLength, outBytes+sectionStart, status);
 
     // Any Case Trie
