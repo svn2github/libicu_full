@@ -173,16 +173,6 @@ uspoof_setAllowedUnicodeSet(USpoofChecker *sc, const UnicodeSet *chars, UErrorCo
 
 
 U_CAPI int32_t U_EXPORT2
-uspoof_checkUnicodeString(const USpoofChecker *sc,
-                          const U_NAMESPACE_QUALIFIER UnicodeString &text, 
-                          int32_t *position,
-                          UErrorCode *status) {
-    uint32_t result = uspoof_check(sc, text.getBuffer(), text.length(), position, status);
-    return result;
-}
-
-
-U_CAPI int32_t U_EXPORT2
 uspoof_check(const USpoofChecker *sc,
              const UChar *text, int32_t length,
              int32_t *position,
@@ -293,11 +283,11 @@ uspoof_checkUTF8(const USpoofChecker *sc,
     if (U_FAILURE(*status)) {
         return 0;
     }
-    UChar buf[USPOOF_STACK_BUFFER_SIZE];
-    UChar* text16 = buf;
+    UChar stackBuf[USPOOF_STACK_BUFFER_SIZE];
+    UChar* text16 = stackBuf;
     int32_t len16;
+    
     u_strFromUTF8(text16, USPOOF_STACK_BUFFER_SIZE, &len16, text, length, status);
-
     if (U_FAILURE(*status) && *status != U_BUFFER_OVERFLOW_ERROR) {
         return 0;
     }
@@ -308,7 +298,7 @@ uspoof_checkUTF8(const USpoofChecker *sc,
             return 0;
         }
         *status = U_ZERO_ERROR;
-        u_strFromUTF8(text16, USPOOF_STACK_BUFFER_SIZE, &len16, text, length, status);
+        u_strFromUTF8(text16, len16+1, NULL, text, length, status);
     }
 
     int32_t position16 = -1;
@@ -323,10 +313,24 @@ uspoof_checkUTF8(const USpoofChecker *sc,
         U_ASSERT(position16 <= len16);
         u_strToUTF8(NULL, 0, position, text16, position16, status);
     }
+
+    if (text16 != stackBuf) {
+        uprv_free(text16);
+    }
     return result;
     
 }
 
+
+
+U_CAPI int32_t U_EXPORT2
+uspoof_checkUnicodeString(const USpoofChecker *sc,
+                          const U_NAMESPACE_QUALIFIER UnicodeString &text, 
+                          int32_t *position,
+                          UErrorCode *status) {
+    int32_t result = uspoof_check(sc, text.getBuffer(), text.length(), position, status);
+    return result;
+}
 
 
 U_CAPI int32_t U_EXPORT2
