@@ -23,7 +23,7 @@
 
 #include <stdio.h>      // debug
 
-U_NAMESPACE_BEGIN
+U_NAMESPACE_USE
 
 
 U_CAPI USpoofChecker * U_EXPORT2
@@ -128,14 +128,14 @@ uspoof_setAllowedLocales(USpoofChecker *sc, const char * /*localesList*/, UError
 
 
 U_CAPI const USet * U_EXPORT2
-uspoof_getAllowedChars(USpoofChecker *sc, UErrorCode *status) {
+uspoof_getAllowedChars(const USpoofChecker *sc, UErrorCode *status) {
     const UnicodeSet *result = uspoof_getAllowedUnicodeSet(sc, status);
     return reinterpret_cast<const USet *>(result);
 }
 
 U_CAPI const UnicodeSet * U_EXPORT2
-uspoof_getAllowedUnicodeSet(USpoofChecker *sc, UErrorCode *status) {
-    SpoofImpl *This = SpoofImpl::validateThis(sc, *status);
+uspoof_getAllowedUnicodeSet(const USpoofChecker *sc, UErrorCode *status) {
+    const SpoofImpl *This = SpoofImpl::validateThis(sc, *status);
     if (This == NULL) {
         return NULL;
     }
@@ -335,7 +335,7 @@ uspoof_checkUnicodeString(const USpoofChecker *sc,
 
 U_CAPI int32_t U_EXPORT2
 uspoof_getSkeleton(const USpoofChecker *sc,
-                   USpoofChecks type,
+                   uint32_t type,
                    const UChar *s,  int32_t length,
                    UChar *dest, int32_t destCapacity,
                    UErrorCode *status) {
@@ -428,7 +428,7 @@ uspoof_getSkeleton(const USpoofChecker *sc,
 
 U_CAPI UnicodeString &  U_EXPORT2
 uspoof_getSkeletonUnicodeString(const USpoofChecker *sc,
-                                USpoofChecks type,
+                                uint32_t type,
                                 const UnicodeString &s,
                                 UnicodeString &dest,
                                 UErrorCode *status) {
@@ -462,7 +462,7 @@ uspoof_getSkeletonUnicodeString(const USpoofChecker *sc,
 
 U_CAPI int32_t U_EXPORT2
 uspoof_getSkeletonUTF8(const USpoofChecker *sc,
-                       USpoofChecks type,
+                       uint32_t type,
                        const char *s,  int32_t length,
                        char *dest, int32_t destCapacity,
                        UErrorCode *status) {
@@ -537,6 +537,4 @@ uspoof_serialize(USpoofChecker *sc,void *buf, int32_t capacity, UErrorCode *stat
     uprv_memcpy(buf, This->fSpoofData->fRawData, dataSize);
     return dataSize;
 }
-    
 
-U_NAMESPACE_END

@@ -34,8 +34,8 @@ U_NAMESPACE_BEGIN
 #define USPOOF_MAGIC 0x3845fdef
 
 class SpoofData;
-class SpoofDataHeader;
-class SpoofStringLengthsElement;
+struct SpoofDataHeader;
+struct SpoofStringLengthsElement;
 class ScriptSet;
 
 /**

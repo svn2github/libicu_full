@@ -29,6 +29,8 @@
 #ifdef XP_CPLUSPLUS
 #include "unicode/unistr.h"
 #include "unicode/uniset.h"
+
+U_NAMESPACE_USE
 #endif
 
 
@@ -701,7 +703,7 @@ uspoof_areConfusableUnicodeString(const USpoofChecker *sc,
   */
 U_DRAFT int32_t U_EXPORT2
 uspoof_getSkeleton(const USpoofChecker *sc,
-                   USpoofChecks type,
+                   uint32_t type,
                    const UChar *s,  int32_t length,
                    UChar *dest, int32_t destCapacity,
                    UErrorCode *status);
@@ -743,7 +745,7 @@ uspoof_getSkeleton(const USpoofChecker *sc,
   */   
 U_DRAFT int32_t U_EXPORT2
 uspoof_getSkeletonUTF8(const USpoofChecker *sc,
-                       USpoofChecks type,
+                       uint32_t type,
                        const char *s,  int32_t length,
                        char *dest, int32_t destCapacity,
                        UErrorCode *status);
@@ -779,7 +781,7 @@ uspoof_getSkeletonUTF8(const USpoofChecker *sc,
   */   
 U_DRAFT UnicodeString & U_EXPORT2
 uspoof_getSkeletonUnicodeString(const USpoofChecker *sc,
-                                int32_t type,
+                                uint32_t type,
                                 const UnicodeString &s,
                                 UnicodeString &dest,
                                 UErrorCode *status);
