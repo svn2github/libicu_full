@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT: 
- * Copyright (c) 1997-2005, International Business Machines Corporation and
+ * Copyright (c) 1997-2009, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 /*   file name:  strtest.cpp
@@ -17,11 +17,7 @@
 #include "intltest.h"
 #include "strtest.h"
 #include "unicode/ustring.h"
-
-#if defined(U_WINDOWS) && defined(_MSC_VER)
-#include <vector>
-using namespace std;
-#endif
+#include "unicode/std_string.h"
 
 StringTest::~StringTest() {}
 
@@ -178,15 +174,66 @@ void StringTest::runIndexedTest(int32_t index, UBool exec, const char *&name, ch
     case 7:
         name="TestSTLCompatibility";
         if(exec) {
-#if defined(U_WINDOWS) && defined(_MSC_VER)
-            /* Just make sure that it compiles with STL's placement new usage. */
-            vector<UnicodeString> myvect;
-            myvect.push_back(UnicodeString("blah"));
-#endif
+            TestSTLCompatibility();
+        }
+        break;
+    case 8:
+        name="TestStdNamespaceQualifier";
+        if(exec) {
+            TestStdNamespaceQualifier();
+        }
+        break;
+    case 9:
+        name="TestUsingStdNamespace";
+        if(exec) {
+            TestUsingStdNamespace();
         }
         break;
     default:
         name="";
         break;
     }
+}
+
+// Syntax check for the correct namespace qualifier for the standard string class.
+void
+StringTest::TestStdNamespaceQualifier() {
+#if U_HAVE_STD_STRING
+    U_STD_NSQ string s="abc xyz";
+    U_STD_NSQ string t="abc";
+    t.append(" ");
+    t.append("xyz");
+    if(s!=t) {
+        errln("standard string concatenation error: %s != %s", s.c_str(), t.c_str());
+    }
+#endif
+}
+
+void
+StringTest::TestUsingStdNamespace() {
+#if U_HAVE_STD_STRING
+    // Now test that "using namespace std;" is defined correctly.
+    U_STD_NS_USE
+
+    string s="abc xyz";
+    string t="abc";
+    t.append(" ");
+    t.append("xyz");
+    if(s!=t) {
+        errln("standard string concatenation error: %s != %s", s.c_str(), t.c_str());
+    }
+#endif
+}
+
+#if defined(U_WINDOWS) && defined(_MSC_VER)
+#include <vector>
+#endif
+
+void
+StringTest::TestSTLCompatibility() {
+#if defined(U_WINDOWS) && defined(_MSC_VER)
+    /* Just make sure that it compiles with STL's placement new usage. */
+    std::vector<UnicodeString> myvect;
+    myvect.push_back(UnicodeString("blah"));
+#endif
 }

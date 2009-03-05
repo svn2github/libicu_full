@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-*   Copyright (C) 1996-2008, International Business Machines
+*   Copyright (C) 1996-2009, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *******************************************************************************
 */
@@ -523,9 +523,18 @@ ucal_getCanonicalTimeZoneID(const UChar* id, int32_t len,
 }
 
 U_CAPI const char * U_EXPORT2
-ucal_getType(const UCalendar *cal)
+ucal_getType(const UCalendar *cal, UErrorCode* status)
 {
+    if (U_FAILURE(*status)) {
+        return NULL;
+    }
     return ((Calendar*)cal)->getType();
+}
+
+U_CAPI UEnumeration* U_EXPORT2
+ucal_getKeywordValuesForLocale(const char *key, const char* locale, UBool commonlyUsed, UErrorCode *status) {
+    //TODO: provide actual implementation!
+    return NULL;
 }
 
 #endif /* #if !UCONFIG_NO_FORMATTING */

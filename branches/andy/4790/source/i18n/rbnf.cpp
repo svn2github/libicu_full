@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 1997-2008, International Business Machines Corporation
+* Copyright (C) 1997-2009, International Business Machines Corporation
 * and others. All Rights Reserved.
 *******************************************************************************
 */
@@ -24,6 +24,7 @@
 #include "cmemory.h"
 #include "cstring.h"
 #include "util.h"
+#include "uresimp.h"
 
 // debugging
 // #define DEBUG
@@ -732,11 +733,13 @@ RuleBasedNumberFormat::RuleBasedNumberFormat(URBNFRuleSetTag tag, const Locale& 
         return;
     }
 
+    const char* rules_tag = "RBNFRules";
     const char* fmt_tag = "";
     switch (tag) {
     case URBNF_SPELLOUT: fmt_tag = "SpelloutRules"; break;
     case URBNF_ORDINAL: fmt_tag = "OrdinalRules"; break;
     case URBNF_DURATION: fmt_tag = "DurationRules"; break;
+    case URBNF_NUMBERING_SYSTEM: fmt_tag = "NumberingSystemRules"; break;
     default: status = U_ILLEGAL_ARGUMENT_ERROR; return;
     }
 
@@ -748,10 +751,30 @@ RuleBasedNumberFormat::RuleBasedNumberFormat(URBNFRuleSetTag tag, const Locale& 
     if (U_SUCCESS(status)) {
         setLocaleIDs(ures_getLocaleByType(nfrb, ULOC_VALID_LOCALE, &status),
                      ures_getLocaleByType(nfrb, ULOC_ACTUAL_LOCALE, &status));
-        const UChar* description = ures_getStringByKey(nfrb, fmt_tag, &len, &status);
-        UnicodeString desc(description, len);
+
+        UResourceBundle* rbnfRules = ures_getByKeyWithFallback(nfrb, rules_tag, NULL, &status);
+        if (U_FAILURE(status)) {
+            ures_close(nfrb);
+        }
+        UResourceBundle* ruleSets = ures_getByKeyWithFallback(rbnfRules, fmt_tag, NULL, &status);
+        if (U_FAILURE(status)) {
+            ures_close(rbnfRules);
+            ures_close(nfrb);
+            return;
+        }
+        
+        UnicodeString desc;
+        while (ures_hasNext(ruleSets)) {
+           const UChar* currentString = ures_getNextString(ruleSets,&len,NULL,&status);
+           desc.append(currentString);
+        }
         UParseError perror;
+        
+
         init (desc, locinfo, perror, status);
+
+        ures_close(ruleSets);
+        ures_close(rbnfRules);
     }
     ures_close(nfrb);
 }
@@ -1129,9 +1152,13 @@ RuleBasedNumberFormat::parse(const UnicodeString& text,
         }
     }
 
-    parsePosition.setIndex(parsePosition.getIndex() + high_pp.getIndex());
+    int32_t startIndex = parsePosition.getIndex();
+    parsePosition.setIndex(startIndex + high_pp.getIndex());
     if (high_pp.getIndex() > 0) {
         parsePosition.setErrorIndex(-1);
+    } else {
+        int32_t errorIndex = (high_pp.getErrorIndex()>0)? high_pp.getErrorIndex(): 0;
+        parsePosition.setErrorIndex(startIndex + errorIndex);
     }
     result = high_result;
     if (result.getType() == Formattable::kDouble) {
@@ -1196,9 +1223,18 @@ RuleBasedNumberFormat::initDefaultRuleSet()
       return;
     }
 
+    const UnicodeString spellout = UNICODE_STRING_SIMPLE("%spellout");
+    const UnicodeString ordinal = UNICODE_STRING_SIMPLE("%ordinal");
+    const UnicodeString duration = UNICODE_STRING_SIMPLE("%duration");
+
     NFRuleSet**p = &ruleSets[0];
     while (*p) {
-        ++p;
+        if ((*p)->isNamed(spellout) || (*p)->isNamed(ordinal) || (*p)->isNamed(duration)) {
+            defaultRuleSet = *p;
+            return;
+        } else {
+            ++p;
+        }
     }
 
     defaultRuleSet = *--p;

@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-*   Copyright (C) 1996-2008, International Business Machines
+*   Copyright (C) 1996-2009, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *******************************************************************************
 *   file name:  ucol.cpp
@@ -122,7 +122,6 @@ uprv_init_collIterate(const UCollator *collator, const UChar *sourceString,
     /* Out-of-line version for use from other files. */
     IInit_collIterate(collator, sourceString, sourceLen, s);
 }
-
 
 /**
 * Backup the state of the collIterate struct data
@@ -1499,10 +1498,30 @@ inline uint32_t ucol_IGetNextCE(const UCollator *coll, collIterate *collationSou
     }
     else
     {
-        order = UTRIE_GET32_FROM_LEAD(&coll->mapping, ch);
+        // Always use UCA for Han, Hangul
+        // (Han extension A is before main Han block)
+        // **** Han compatibility chars ?? ****
+        if ((collationSource->flags & UCOL_FORCE_HAN_IMPLICIT) != 0 &&
+            (ch >= UCOL_FIRST_HAN_A && ch <= UCOL_LAST_HANGUL)) {
+            if (ch > UCOL_LAST_HAN && ch < UCOL_FIRST_HANGUL) {
+                // between the two target ranges; do normal lookup
+                // **** this range is YI, Modifier tone letters, ****
+                // **** Latin-D, Syloti Nagari, Phagas-pa.       ****
+                // **** Latin-D might be tailored, so we need to ****
+                // **** do the normal lookup for these guys.     ****
+                order = UTRIE_GET32_FROM_LEAD(&coll->mapping, ch);
+            } else {
+                // in one of the target ranges; use UCA
+                order = UCOL_NOT_FOUND;
+            }
+        } else {
+            order = UTRIE_GET32_FROM_LEAD(&coll->mapping, ch);
+        }
+
         if(order > UCOL_NOT_FOUND) {                                       /* if a CE is special                */
             order = ucol_prv_getSpecialCE(coll, ch, order, collationSource, status);    /* and try to get the special CE     */
         }
+
         if(order == UCOL_NOT_FOUND && coll->UCA) {   /* We couldn't find a good CE in the tailoring */
             /* if we got here, the codepoint MUST be over 0xFF - so we look directly in the trie */
             order = UTRIE_GET32_FROM_LEAD(&coll->UCA->mapping, ch);
@@ -1939,7 +1958,23 @@ inline uint32_t ucol_IGetPrevCE(const UCollator *coll, collIterate *data,
                 result = coll->latinOneMapping[ch];
             }
             else {
-                result = UTRIE_GET32_FROM_LEAD(&coll->mapping, ch);
+                // Always use UCA for [3400..9FFF], [AC00..D7AF]
+                // **** [FA0E..FA2F] ?? ****
+                if ((data->flags & UCOL_FORCE_HAN_IMPLICIT) != 0 &&
+                    (ch >= 0x3400 && ch <= 0xD7AF)) {
+                    if (ch > 0x9FFF && ch < 0xAC00) {
+                        // between the two target ranges; do normal lookup
+                        // **** this range is YI, Modifier tone letters, ****
+                        // **** Latin-D, Syloti Nagari, Phagas-pa.       ****
+                        // **** Latin-D might be tailored, so we need to ****
+                        // **** do the normal lookup for these guys.     ****
+                         result = UTRIE_GET32_FROM_LEAD(&coll->mapping, ch);
+                    } else {
+                        result = UCOL_NOT_FOUND;
+                    }
+                } else {
+                    result = UTRIE_GET32_FROM_LEAD(&coll->mapping, ch);
+                }
             }
             if (result > UCOL_NOT_FOUND) {
                 result = ucol_prv_getSpecialPrevCE(coll, ch, result, data, status);
@@ -2682,6 +2717,9 @@ inline UChar getPrevNormalizedChar(collIterate *data, UErrorCode *status)
 /* This function handles the special CEs like contractions, expansions, surrogates, Thai */
 /* It is called by getNextCE */
 
+/* The following should be even */
+#define UCOL_MAX_DIGITS_FOR_NUMBER 254
+
 uint32_t ucol_prv_getSpecialCE(const UCollator *coll, UChar ch, uint32_t CE, collIterate *source, UErrorCode *status) {
     collIterateState entryState;
     backupState(source, &entryState);
@@ -2973,25 +3011,19 @@ uint32_t ucol_prv_getSpecialCE(const UCollator *coll, UChar ch, uint32_t CE, col
                 uint32_t i;    /* general counter */
 
                 if (source->coll->numericCollation == UCOL_ON){
-                    collIterateState digitState = {0,0,0,0,0,0,0,0};
+                    collIterateState digitState = {0,0,0,0,0,0,0,0,0};
                     UChar32 char32 = 0;
+                    int32_t digVal = 0;
 
                     uint32_t digIndx = 0;
                     uint32_t endIndex = 0;
                     uint32_t trailingZeroIndex = 0;
 
-                    uint32_t primWeight = 0;
-
-                    int32_t digVal = 0;
                     uint8_t collateVal = 0;
 
                     UBool nonZeroValReached = FALSE;
 
-                    uint8_t *numTempBuf;
-                    uint8_t stackNumTempBuf[UCOL_MAX_BUFFER]; // I just need a temporary place to store my generated CEs.
-                    uint32_t numTempBufSize = UCOL_MAX_BUFFER;
-
-                    numTempBuf = stackNumTempBuf;
+                    uint8_t numTempBuf[UCOL_MAX_DIGITS_FOR_NUMBER/2 + 2]; // I just need a temporary place to store my generated CEs.
                     /*
                          We parse the source string until we hit a char that's NOT a digit.
                         Use this u_charDigitValue. This might be slow because we have to
@@ -3026,29 +3058,9 @@ uint32_t ucol_prv_getSpecialCE(const UCollator *coll, UChar ch, uint32_t CE, col
                     */
                     digIndx++;
                     for(;;){
-                        // Make sure we have enough space.
-                        if (digIndx >= ((numTempBufSize - 2) * 2) + 1)
-                        {
-                            numTempBufSize *= 2;
-                            if (numTempBuf == stackNumTempBuf){
-                                numTempBuf = (uint8_t *)uprv_malloc(sizeof(uint8_t) * numTempBufSize);
-                                // Null pointer check
-                                if (numTempBuf == NULL) {
-                                    *status = U_MEMORY_ALLOCATION_ERROR;
-                                    return 0;
-                                }
-                                uprv_memcpy(numTempBuf, stackNumTempBuf, UCOL_MAX_BUFFER);
-                            } else {
-                                uint8_t *temp = (uint8_t *)uprv_realloc(numTempBuf, numTempBufSize);
-                                if (temp == NULL) {
-                                    *status = U_MEMORY_ALLOCATION_ERROR;
-                                    /* The original contents weren't freed. */
-                                    uprv_free(temp);
-                                    return 0;
-                                }
-                                numTempBuf = temp;
-                            }
-                        }
+                        // Make sure we have enough space. No longer needed;
+                        // at this point digIndx now has a max value of UCOL_MAX_DIGITS_FOR_NUMBER
+                        // so we just ensure that numTempBuf is big enough.
 
                         // Skipping over leading zeroes.
                         if (digVal != 0) {
@@ -3114,7 +3126,7 @@ uint32_t ucol_prv_getSpecialCE(const UCollator *coll, UChar ch, uint32_t CE, col
                                 char32 = ch;
                             }
 
-                            if ((digVal = u_charDigitValue(char32)) == -1){
+                            if ((digVal = u_charDigitValue(char32)) == -1 || digIndx > UCOL_MAX_DIGITS_FOR_NUMBER){
                                 // Resetting position to point to the next unprocessed char. We
                                 // overshot it when doing our test/set for numbers.
                                 if (char32 > 0xFFFF) { // For surrogates.
@@ -3170,14 +3182,12 @@ uint32_t ucol_prv_getSpecialCE(const UCollator *coll, UChar ch, uint32_t CE, col
                     i = 2; // Reset the index into the buffer.
                     while(i < endIndex)
                     {
-                        primWeight = numTempBuf[i++] << 8;
+                        uint32_t primWeight = numTempBuf[i++] << 8;
                         if ( i < endIndex)
                             primWeight |= numTempBuf[i++];
                         *(source->CEpos++) = (primWeight << UCOL_PRIMARYORDERSHIFT) | UCOL_CONTINUATION_MARKER;
                     }
 
-                    if (numTempBuf != stackNumTempBuf)
-                        uprv_free(numTempBuf);
                 } else {
                     // no numeric mode, we'll just switch to whatever we stashed and continue
                     CEOffset = (uint32_t *)coll->image+getExpansionOffset(CE); /* find the offset to expansion table */
@@ -3545,38 +3555,12 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
 
             int32_t offsetBias;
 
-#if 0
-            if (source->offsetReturn != NULL) {
-                source->offsetStore = source->offsetReturn - noChars;
-            }
-
             // **** doesn't work if using iterator ****
             if (source->flags & UCOL_ITER_INNORMBUF) {
-                if (source->fcdPosition == NULL) {
-                    offsetBias = 0;
-                } else {
-                    offsetBias = (int32_t)(source->fcdPosition - source->string);
-                }
-            } else {
-                offsetBias = (int32_t)(source->pos - source->string);
-            }
-
-#else
-            // **** doesn't work if using iterator ****
-            if (source->flags & UCOL_ITER_INNORMBUF) {
-#if 1
                 offsetBias = -1;
-#else
-              if (source->fcdPosition == NULL) {
-                  offsetBias = 0;
-              } else {
-                  offsetBias = (int32_t)(source->fcdPosition - source->string);
-              }
-#endif
             } else {
                 offsetBias = (int32_t)(source->pos - source->string);
             }
-#endif
 
             /* a new collIterate is used to simplify things, since using the current
             collIterate will mean that the forward and backwards iteration will
@@ -3584,9 +3568,9 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
             collIterate temp;
             int32_t rawOffset;
 
-            //IInit_collIterate(coll, UCharOffset, -1, &temp);
             IInit_collIterate(coll, UCharOffset, noChars, &temp);
             temp.flags &= ~UCOL_ITER_NORM;
+            temp.flags |= source->flags & UCOL_FORCE_HAN_IMPLICIT;
 
             rawOffset = temp.pos - temp.string; // should always be zero?
             CE = ucol_IGetNextCE(coll, &temp, status);
@@ -3679,7 +3663,12 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
                     }
                 }
 
-                rawOffset = temp.pos - temp.string;
+                if ((temp.flags & UCOL_ITER_INNORMBUF) != 0) {
+                    rawOffset = temp.fcdPosition - temp.string;
+                } else {
+                    rawOffset = temp.pos - temp.string;
+                }
+
                 CE = ucol_IGetNextCE(coll, &temp, status);
             }
 
@@ -3824,156 +3813,166 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
                 uint32_t i;    /* general counter */
 
                 if (source->coll->numericCollation == UCOL_ON){
-                    collIterateState state = {0,0,0,0,0,0,0,0};
-                    UChar32 char32 = 0;
-
                     uint32_t digIndx = 0;
                     uint32_t endIndex = 0;
                     uint32_t leadingZeroIndex = 0;
                     uint32_t trailingZeroCount = 0;
 
-                    uint32_t primWeight = 0;
-
-                    int32_t digVal = 0;
                     uint8_t collateVal = 0;
 
                     UBool nonZeroValReached = FALSE;
 
-                    uint8_t *numTempBuf;
-                    uint8_t stackNumTempBuf[UCOL_MAX_BUFFER]; // I just need a temporary place to store my generated CEs.
-                    uint32_t numTempBufSize = UCOL_MAX_BUFFER;
-
-                    numTempBuf = stackNumTempBuf;
+                    uint8_t numTempBuf[UCOL_MAX_DIGITS_FOR_NUMBER/2 + 2]; // I just need a temporary place to store my generated CEs.
                     /*
                     We parse the source string until we hit a char that's NOT a digit.
                     Use this u_charDigitValue. This might be slow because we have to
                     handle surrogates...
                     */
+                    /*
+                    We need to break up the digit string into collection elements of UCOL_MAX_DIGITS_FOR_NUMBER or less,
+                    with any chunks smaller than that being on the right end of the digit string - i.e. the first collation
+                    element we process when going backward. To determine how long that chunk might be, we may need to make
+                    two passes through the loop that collects digits - one to see how long the string is (and how much is
+                    leading zeros) to determine the length of that right-hand chunk, and a second (if the whole string has
+                    more than UCOL_MAX_DIGITS_FOR_NUMBER non-leading-zero digits) to actually process that collation
+                    element chunk after resetting the state to the initialState at the right side of the digit string.
+                    */
+                    uint32_t ceLimit = 0;
+                    UChar initial_ch = ch;
+                    collIterateState initialState = {0,0,0,0,0,0,0,0,0};
+                    backupState(source, &initialState);
 
-                    if (U16_IS_TRAIL (ch)) {
-                        if (!collIter_bos(source)){
-                            UChar lead = getPrevNormalizedChar(source, status);
-                            if(U16_IS_LEAD(lead)) {
-                                char32 = U16_GET_SUPPLEMENTARY(lead,ch);
-                                goBackOne(source);
+                    for(;;) {
+                        collIterateState state = {0,0,0,0,0,0,0,0,0};
+                        UChar32 char32 = 0;
+                        int32_t digVal = 0;
+
+                        if (U16_IS_TRAIL (ch)) {
+                            if (!collIter_bos(source)){
+                                UChar lead = getPrevNormalizedChar(source, status);
+                                if(U16_IS_LEAD(lead)) {
+                                    char32 = U16_GET_SUPPLEMENTARY(lead,ch);
+                                    goBackOne(source);
+                                } else {
+                                    char32 = ch;
+                                }
                             } else {
                                 char32 = ch;
                             }
                         } else {
                             char32 = ch;
                         }
-                    } else {
-                        char32 = ch;
-                    }
-                    digVal = u_charDigitValue(char32);
+                        digVal = u_charDigitValue(char32);
 
-                    for(;;) {
-                        // Make sure we have enough space.
-                        if (digIndx >= ((numTempBufSize - 2) * 2) + 1) {
-                            numTempBufSize *= 2;
-                            if (numTempBuf == stackNumTempBuf) {
-                                numTempBuf = (uint8_t *)uprv_malloc(sizeof(uint8_t) * numTempBufSize);
-                                // Null pointer check
-                                if (numTempBuf == NULL) {
-                                    *status = U_MEMORY_ALLOCATION_ERROR;
-                                    return 0;
+                        for(;;) {
+                            // Make sure we have enough space. No longer needed;
+                            // at this point digIndx now has a max value of UCOL_MAX_DIGITS_FOR_NUMBER
+                            // so we just ensure that numTempBuf is big enough.
+
+                            // Skip over trailing zeroes, and keep a count of them.
+                            if (digVal != 0)
+                                nonZeroValReached = TRUE;
+
+                            if (nonZeroValReached) {
+                                /*
+                                We parse the digit string into base 100 numbers (this fits into a byte).
+                                We only add to the buffer in twos, thus if we are parsing an odd character,
+                                that serves as the 'tens' digit while the if we are parsing an even one, that
+                                is the 'ones' digit. We dumped the parsed base 100 value (collateVal) into
+                                a buffer. We multiply each collateVal by 2 (to give us room) and add 5 (to avoid
+                                overlapping magic CE byte values). The last byte we subtract 1 to ensure it is less
+                                than all the other bytes.
+
+                                Since we're doing in this reverse we want to put the first digit encountered into the
+                                ones place and the second digit encountered into the tens place.
+                                */
+
+                                if ((digIndx + trailingZeroCount) % 2 == 1) {
+                                    // High-order digit case (tens place)
+                                    collateVal += (uint8_t)(digVal * 10);
+
+                                    // We cannot set leadingZeroIndex unless it has been set for the
+                                    // low-order digit. Therefore, all we can do for the high-order
+                                    // digit is turn it off, never on.
+                                    // The only time we will have a high digit without a low is for
+                                    // the very first non-zero digit, so no zero check is necessary.
+                                    if (collateVal != 0)
+                                        leadingZeroIndex = 0;
+
+                                    // The first pass through, digIndx may exceed the limit, but in that case
+                                    // we no longer care about numTempBuf contents since they will be discarded
+                                    if ( digIndx < UCOL_MAX_DIGITS_FOR_NUMBER ) {
+                                        numTempBuf[(digIndx/2) + 2] = collateVal*2 + 6;
+                                    }
+                                    collateVal = 0;
+                                } else {
+                                    // Low-order digit case (ones place)
+                                    collateVal = (uint8_t)digVal;
+
+                                    // Check for leading zeroes.
+                                    if (collateVal == 0) {
+                                        if (!leadingZeroIndex)
+                                            leadingZeroIndex = (digIndx/2) + 2;
+                                    } else
+                                        leadingZeroIndex = 0;
+
+                                    // No need to write to buffer; the case of a last odd digit
+                                    // is handled below.
                                 }
-                                uprv_memcpy(numTempBuf, stackNumTempBuf, UCOL_MAX_BUFFER);
-                            } else {
-                                uint8_t *temp = (uint8_t *)uprv_realloc(numTempBuf, numTempBufSize);
-                                if (temp == NULL) {
-                                    *status = U_MEMORY_ALLOCATION_ERROR;
-                                    /* The original contents weren't freed. */
-                                    uprv_free(temp);
-                                    return 0;
+                                ++digIndx;
+                            } else
+                                ++trailingZeroCount;
+
+                            if (!collIter_bos(source)) {
+                                ch = getPrevNormalizedChar(source, status);
+                                //goBackOne(source);
+                                if (U16_IS_TRAIL(ch)) {
+                                    backupState(source, &state);
+                                    if (!collIter_bos(source)) {
+                                        goBackOne(source);
+                                        UChar lead = getPrevNormalizedChar(source, status);
+
+                                        if(U16_IS_LEAD(lead)) {
+                                            char32 = U16_GET_SUPPLEMENTARY(lead,ch);
+                                        } else {
+                                            loadState(source, &state, FALSE);
+                                            char32 = ch;
+                                        }
+                                    }
+                                } else
+                                    char32 = ch;
+
+                                if ((digVal = u_charDigitValue(char32)) == -1 || (ceLimit > 0 && (digIndx + trailingZeroCount) >= ceLimit)) {
+                                    if (char32 > 0xFFFF) {// For surrogates.
+                                        loadState(source, &state, FALSE);
+                                    }
+                                    // Don't need to "reverse" the goBackOne call,
+                                    // as this points to the next position to process..
+                                    //if (char32 > 0xFFFF) // For surrogates.
+                                    //getNextNormalizedChar(source);
+                                    break;
                                 }
-                                numTempBuf = temp;
-                            }
+
+                                goBackOne(source);
+                            }else
+                                break;
                         }
 
-                        // Skip over trailing zeroes, and keep a count of them.
-                        if (digVal != 0)
-                            nonZeroValReached = TRUE;
-
-                        if (nonZeroValReached) {
-                            /*
-                            We parse the digit string into base 100 numbers (this fits into a byte).
-                            We only add to the buffer in twos, thus if we are parsing an odd character,
-                            that serves as the 'tens' digit while the if we are parsing an even one, that
-                            is the 'ones' digit. We dumped the parsed base 100 value (collateVal) into
-                            a buffer. We multiply each collateVal by 2 (to give us room) and add 5 (to avoid
-                            overlapping magic CE byte values). The last byte we subtract 1 to ensure it is less
-                            than all the other bytes.
-
-                            Since we're doing in this reverse we want to put the first digit encountered into the
-                            ones place and the second digit encountered into the tens place.
-                            */
-
-                            if ((digIndx + trailingZeroCount) % 2 == 1) {
-                                // High-order digit case (tens place)
-                                collateVal += (uint8_t)(digVal * 10);
-
-                                // We cannot set leadingZeroIndex unless it has been set for the
-                                // low-order digit. Therefore, all we can do for the high-order
-                                // digit is turn it off, never on.
-                                // The only time we will have a high digit without a low is for
-                                // the very first non-zero digit, so no zero check is necessary.
-                                if (collateVal != 0)
-                                    leadingZeroIndex = 0;
-
-                                numTempBuf[(digIndx/2) + 2] = collateVal*2 + 6;
-                                collateVal = 0;
-                            } else {
-                                // Low-order digit case (ones place)
-                                collateVal = (uint8_t)digVal;
-
-                                // Check for leading zeroes.
-                                if (collateVal == 0) {
-                                    if (!leadingZeroIndex)
-                                        leadingZeroIndex = (digIndx/2) + 2;
-                                } else
-                                    leadingZeroIndex = 0;
-
-                                // No need to write to buffer; the case of a last odd digit
-                                // is handled below.
-                            }
-                            ++digIndx;
-                        } else
-                            ++trailingZeroCount;
-
-                        if (!collIter_bos(source)) {
-                            ch = getPrevNormalizedChar(source, status);
-                            //goBackOne(source);
-                            if (U16_IS_TRAIL(ch)) {
-                                backupState(source, &state);
-                                if (!collIter_bos(source)) {
-                                    goBackOne(source);
-                                    UChar lead = getPrevNormalizedChar(source, status);
-
-                                    if(U16_IS_LEAD(lead)) {
-                                        char32 = U16_GET_SUPPLEMENTARY(lead,ch);
-                                    } else {
-                                        loadState(source, &state, FALSE);
-                                        char32 = ch;
-                                    }
-                                }
-                            } else
-                                char32 = ch;
-
-                            if ((digVal = u_charDigitValue(char32)) == -1) {
-                                if (char32 > 0xFFFF) {// For surrogates.
-                                    loadState(source, &state, FALSE);
-                                }
-                                // Don't need to "reverse" the goBackOne call,
-                                // as this points to the next position to process..
-                                //if (char32 > 0xFFFF) // For surrogates.
-                                //getNextNormalizedChar(source);
-                                break;
-                            }
-
-                            goBackOne(source);
-                        }else
+                        if (digIndx + trailingZeroCount <= UCOL_MAX_DIGITS_FOR_NUMBER) {
+                            // our collation element is not too big, go ahead and finish with it
                             break;
+                        }
+                        // our digit string is too long for a collation element;
+                        // set the limit for it, reset the state and begin again
+                        ceLimit = (digIndx + trailingZeroCount) % UCOL_MAX_DIGITS_FOR_NUMBER;
+                        if ( ceLimit == 0 ) {
+                            ceLimit = UCOL_MAX_DIGITS_FOR_NUMBER;
+                        }
+                        ch = initial_ch;
+                        loadState(source, &initialState, FALSE);
+                        digIndx = endIndex = leadingZeroIndex = trailingZeroCount = 0;
+                        collateVal = 0;
+                        nonZeroValReached = FALSE;
                     }
 
                     if (! nonZeroValReached) {
@@ -4019,13 +4018,11 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
                         UCOL_BYTE_COMMON; // Tertiary weight.
                     i = endIndex - 1; // Reset the index into the buffer.
                     while(i >= 2) {
-                        primWeight = numTempBuf[i--] << 8;
+                        uint32_t primWeight = numTempBuf[i--] << 8;
                         if ( i >= 2)
                             primWeight |= numTempBuf[i--];
                         *(source->CEpos++) = (primWeight << UCOL_PRIMARYORDERSHIFT) | UCOL_CONTINUATION_MARKER;
                     }
-                    if (numTempBuf != stackNumTempBuf)
-                        uprv_free(numTempBuf);
 
                     source->toReturn = source->CEpos -1;
                     return *(source->toReturn);
@@ -4136,29 +4133,6 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
             }
 
         case IMPLICIT_TAG:        /* everything that is not defined otherwise */
-#if 0
-			if (source->offsetBuffer == NULL) {
-				source->offsetBufferSize = UCOL_EXPAND_CE_BUFFER_SIZE;
-				source->offsetBuffer = (int32_t *) uprv_malloc(sizeof(int32_t) * UCOL_EXPAND_CE_BUFFER_SIZE);
-				source->offsetStore = source->offsetBuffer;
-			}
-
-			// **** doesn't work if using iterator ****
-			if (source->flags & UCOL_ITER_INNORMBUF) {
-			  source->offsetRepeatCount = 1;
-			} else {
-			  int32_t firstOffset = (int32_t)(source->pos - source->string);
-
-			  *(source->offsetStore++) = firstOffset;
-			  *(source->offsetStore++) = firstOffset + 1;
-
-				source->offsetReturn = source->offsetStore - 1;
-				if (source->offsetReturn == source->offsetBuffer) {
-					source->offsetStore = source->offsetBuffer;
-				}
-			}
-#endif
-
             return getPrevImplicit(ch, source);
 
             // TODO: Remove CJK implicits as they are handled by the getImplicitPrimary function

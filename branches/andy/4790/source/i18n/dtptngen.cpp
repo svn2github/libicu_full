@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2007-2008, International Business Machines Corporation and
+* Copyright (C) 2007-2009, International Business Machines Corporation and
 * others. All Rights Reserved.
 *******************************************************************************
 *
@@ -482,7 +482,7 @@ DateTimePatternGenerator::hackTimes(const UnicodeString& hackPattern, UErrorCode
 void
 DateTimePatternGenerator::addCLDRData(const Locale& locale) {
     UErrorCode err = U_ZERO_ERROR;
-    UResourceBundle *rb, *gregorianBundle, *calBundle;
+    UResourceBundle *rb, *calTypeBundle, *calBundle;
     UResourceBundle *patBundle, *fieldBundle, *fBundle;
     UnicodeString rbPattern, value, field;
     UnicodeString conflictingPattern;
@@ -506,6 +506,7 @@ DateTimePatternGenerator::addCLDRData(const Locale& locale) {
     }
 
     rb = ures_open(NULL, locale.getName(), &err);
+    const char *curLocaleName=ures_getLocale(rb, &err);
     const char * calendarTypeToUse = DT_DateTimeGregorianTag; // initial default
     char         calendarType[ULOC_KEYWORDS_CAPACITY]; // to be filled in with the type to use, if all goes well
     if ( U_SUCCESS(err) ) {
@@ -522,11 +523,11 @@ DateTimePatternGenerator::addCLDRData(const Locale& locale) {
         err = U_ZERO_ERROR;
     }
     calBundle = ures_getByKey(rb, DT_DateTimeCalendarTag, NULL, &err);
-    gregorianBundle = ures_getByKey(calBundle, calendarTypeToUse, NULL, &err);
+    calTypeBundle = ures_getByKey(calBundle, calendarTypeToUse, NULL, &err);
 
     key=NULL;
     int32_t dtCount=0;
-    patBundle = ures_getByKeyWithFallback(gregorianBundle, DT_DateTimePatternsTag, NULL, &err);
+    patBundle = ures_getByKeyWithFallback(calTypeBundle, DT_DateTimePatternsTag, NULL, &err);
     while (U_SUCCESS(err)) {
         rbPattern = ures_getNextUnicodeString(patBundle, &key, &err);
         dtCount++;
@@ -542,7 +543,7 @@ DateTimePatternGenerator::addCLDRData(const Locale& locale) {
     ures_close(patBundle);
     
     err = U_ZERO_ERROR;
-    patBundle = ures_getByKeyWithFallback(gregorianBundle, DT_DateTimeAppendItemsTag, NULL, &err);
+    patBundle = ures_getByKeyWithFallback(calTypeBundle, DT_DateTimeAppendItemsTag, NULL, &err);
     key=NULL;
     UnicodeString itemKey;
     while (U_SUCCESS(err)) {
@@ -558,7 +559,7 @@ DateTimePatternGenerator::addCLDRData(const Locale& locale) {
     
     key=NULL;
     err = U_ZERO_ERROR;
-    fBundle = ures_getByKeyWithFallback(gregorianBundle, DT_DateTimeFieldsTag, NULL, &err);
+    fBundle = ures_getByKeyWithFallback(calTypeBundle, DT_DateTimeFieldsTag, NULL, &err);
     for (i=0; i<MAX_RESOURCE_FIELD; ++i) {
         err = U_ZERO_ERROR;
         patBundle = ures_getByKeyWithFallback(fBundle, Resource_Fields[i], NULL, &err);
@@ -578,7 +579,7 @@ DateTimePatternGenerator::addCLDRData(const Locale& locale) {
     // add available formats
     err = U_ZERO_ERROR;
     initHashtable(err);
-    patBundle = ures_getByKeyWithFallback(gregorianBundle, DT_DateTimeAvailableFormatsTag, NULL, &err);
+    patBundle = ures_getByKeyWithFallback(calTypeBundle, DT_DateTimeAvailableFormatsTag, NULL, &err);
     if (U_SUCCESS(err)) {
         int32_t numberKeys = ures_getSize(patBundle);
         int32_t len;
@@ -606,20 +607,21 @@ DateTimePatternGenerator::addCLDRData(const Locale& locale) {
 #endif
     }
     ures_close(patBundle);
-    ures_close(gregorianBundle);
+    ures_close(calTypeBundle);
     ures_close(calBundle);
     ures_close(rb);
     
     err = U_ZERO_ERROR;
     char parentLocale[50];
-    const char *curLocaleName=locale.getName();
     int32_t localeNameLen=0;
     uprv_strcpy(parentLocale, curLocaleName);
     while((localeNameLen=uloc_getParent(parentLocale, parentLocale, 50, &err))>=0 ) {
         rb = ures_open(NULL, parentLocale, &err);
+        curLocaleName=ures_getLocale(rb, &err);
+        uprv_strcpy(parentLocale, curLocaleName);
         calBundle = ures_getByKey(rb, DT_DateTimeCalendarTag, NULL, &err);
-        gregorianBundle = ures_getByKey(calBundle, calendarTypeToUse, NULL, &err);
-        patBundle = ures_getByKeyWithFallback(gregorianBundle, DT_DateTimeAvailableFormatsTag, NULL, &err);
+        calTypeBundle = ures_getByKey(calBundle, calendarTypeToUse, NULL, &err);
+        patBundle = ures_getByKeyWithFallback(calTypeBundle, DT_DateTimeAvailableFormatsTag, NULL, &err);
         if (U_SUCCESS(err)) {
             int32_t numberKeys = ures_getSize(patBundle);
             int32_t len;
@@ -648,8 +650,9 @@ DateTimePatternGenerator::addCLDRData(const Locale& locale) {
             ures_a_close(&aiter);
 #endif
         }
+        err = U_ZERO_ERROR; // reset; if this locale lacks the necessary data, need to keep checking up to root.
         ures_close(patBundle);
-        ures_close(gregorianBundle);
+        ures_close(calTypeBundle);
         ures_close(calBundle);
         ures_close(rb);
         if (localeNameLen==0) {

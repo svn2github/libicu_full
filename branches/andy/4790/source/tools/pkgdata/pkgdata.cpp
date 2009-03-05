@@ -1,5 +1,5 @@
 /******************************************************************************
- *   Copyright (C) 2000-2008, International Business Machines
+ *   Copyright (C) 2000-2009, International Business Machines
  *   Corporation and others.  All Rights Reserved.
  *******************************************************************************
  *   file name:  pkgdata.c
@@ -26,7 +26,16 @@
 #endif
 #endif
 
+
 #include "unicode/utypes.h"
+
+#if U_HAVE_POPEN
+#if defined(U_CYGWIN) && defined(__STRICT_ANSI__)
+/* popen/pclose aren't defined in strict ANSI on Cygwin */
+#undef __STRICT_ANSI__
+#endif
+#endif
+
 #include "unicode/putil.h"
 #include "cmemory.h"
 #include "cstring.h"
@@ -40,6 +49,8 @@
 #include "pkg_icu.h"
 #include "pkg_genc.h"
 #include "pkg_gencmn.h"
+#include "flagparser.h"
+#include "filetools.h"
 
 
 #if U_HAVE_POPEN
@@ -50,8 +61,28 @@
 
 U_CDECL_BEGIN
 #include "pkgtypes.h"
-#include "makefile.h"
 U_CDECL_END
+
+#ifdef U_WINDOWS
+#ifdef __GNUC__
+#define WINDOWS_WITH_GNUC
+#else
+#define WINDOWS_WITH_MSVC
+#endif
+#endif
+#if !defined(WINDOWS_WITH_MSVC) && !defined(U_LINUX)
+#define BUILD_DATA_WITHOUT_ASSEMBLY
+#endif
+#if defined(WINDOWS_WITH_MSVC) || defined(U_LINUX)
+#define CAN_WRITE_OBJ_CODE
+#endif
+
+/* Need to fix the file seperator character when using MinGW. */
+#ifdef WINDOWS_WITH_GNUC
+#define PKGDATA_FILE_SEP_STRING "/"
+#else
+#define PKGDATA_FILE_SEP_STRING U_FILE_SEP_STRING
+#endif
 
 #define LARGE_BUFFER_MAX_SIZE 2048
 #define SMALL_BUFFER_MAX_SIZE 512
@@ -60,42 +91,23 @@ static void loadLists(UPKGOptions *o, UErrorCode *status);
 
 static int32_t pkg_executeOptions(UPKGOptions *o);
 
-#ifdef U_WINDOWS
+#ifdef WINDOWS_WITH_MSVC
 static int32_t pkg_createWindowsDLL(const char mode, const char *gencFilePath, UPKGOptions *o);
 #endif
 static int32_t pkg_createSymLinks(const char *targetDir);
 static int32_t pkg_installLibrary(const char *installDir, const char *dir);
+static int32_t pkg_installFileMode(const char *installDir, const char *srcDir, const char *fileListName);
+
+#ifdef BUILD_DATA_WITHOUT_ASSEMBLY
 static int32_t pkg_createWithoutAssemblyCode(UPKGOptions *o, const char *targetDir, const char mode);
+#endif
+
 static int32_t pkg_createWithAssemblyCode(const char *targetDir, const char mode, const char *gencFilePath);
-static int32_t pkg_generateLibraryFile(const char *targetDir, const char mode, const char *objectFile, char *command);
+static int32_t pkg_generateLibraryFile(const char *targetDir, const char mode, const char *objectFile, char *command = NULL);
 static int32_t pkg_archiveLibrary(const char *targetDir, const char *version, UBool reverseExt);
 static void createFileNames(const char *version_major, const char *version, const char *libName, const UBool reverseExt);
 
 static int32_t pkg_getOptionsFromICUConfig(UOption *option);
-/* always have this fcn, just might not do anything */
-static void fillInMakefileFromICUConfig(UOption *option);
-
-/* This sets the modes that are available */
-static struct
-{
-    const char *name, *alt_name;
-    UPKGMODE   *fcn;
-    const char *desc;
-} modes[] =
-{
-    { "files", 0, pkg_mode_files, "Uses raw data files (no effect). Installation copies all files to the target location." },
-#ifdef U_MAKE_IS_NMAKE
-    { "dll",    "library", pkg_mode_windows,    "Generates one common data file and one shared library, <package>.dll"},
-    { "common", "archive", pkg_mode_windows,    "Generates just the common file, <package>.dat"},
-    { "static", "static",  pkg_mode_windows,    "Generates one statically linked library, " LIB_PREFIX "<package>" UDATA_LIB_SUFFIX }
-#else /*#ifdef U_MAKE_IS_NMAKE*/
-#ifdef UDATA_SO_SUFFIX
-    { "dll",    "library", pkg_mode_dll,    "Generates one shared library, <package>" UDATA_SO_SUFFIX },
-#endif
-    { "common", "archive", pkg_mode_common, "Generates one common data file, <package>.dat" },
-    { "static", "static",  pkg_mode_static, "Generates one statically linked library, " LIB_PREFIX "<package>" UDATA_LIB_SUFFIX }
-#endif /*#ifdef U_MAKE_IS_NMAKE*/
-};
 
 enum {
     NAME,
@@ -107,8 +119,6 @@ enum {
     COPYRIGHT,
     COMMENT,
     DESTDIR,
-    CLEAN,
-    NOOUTPUT,
     REBUILD,
     TEMPDIR,
     INSTALL,
@@ -118,6 +128,25 @@ enum {
     FORCE_PREFIX,
     LIBNAME,
     QUIET
+};
+
+/* This sets the modes that are available */
+static struct {
+    const char *name, *alt_name;
+    const char *desc;
+} modes[] = {
+        { "files", 0,           "Uses raw data files (no effect). Installation copies all files to the target location." },
+#ifdef U_WINDOWS
+        { "dll",    "library",  "Generates one common data file and one shared library, <package>.dll"},
+        { "common", "archive",  "Generates just the common file, <package>.dat"},
+        { "static", "static",   "Generates one statically linked library, " LIB_PREFIX "<package>" UDATA_LIB_SUFFIX }
+#else
+#ifdef UDATA_SO_SUFFIX
+        { "dll",    "library",  "Generates one shared library, <package>" UDATA_SO_SUFFIX },
+#endif
+        { "common", "archive",  "Generates one common data file, <package>.dat" },
+        { "static", "static",   "Generates one statically linked library, " LIB_PREFIX "<package>" UDATA_LIB_SUFFIX }
+#endif
 };
 
 static UOption options[]={
@@ -130,8 +159,6 @@ static UOption options[]={
     /*06*/    UOPTION_COPYRIGHT,                                /* -c */
     /*07*/    UOPTION_DEF( "comment", 'C', UOPT_REQUIRES_ARG),
     /*08*/    UOPTION_DESTDIR,                                  /* -d */
-    /*09*/    UOPTION_DEF( "clean",   'k', UOPT_NO_ARG),
-    /*10*/    UOPTION_DEF( "nooutput",'n', UOPT_NO_ARG),
     /*11*/    UOPTION_DEF( "rebuild", 'F', UOPT_NO_ARG),
     /*12*/    UOPTION_DEF( "tempdir", 'T', UOPT_REQUIRES_ARG),
     /*13*/    UOPTION_DEF( "install", 'I', UOPT_REQUIRES_ARG),
@@ -163,7 +190,7 @@ enum {
     INSTALL_CMD,
     PKGDATA_FLAGS_SIZE
 };
-static char pkgDataFlags[PKGDATA_FLAGS_SIZE][SMALL_BUFFER_MAX_SIZE];
+static char **pkgDataFlags = NULL;
 
 enum {
     LIB_FILE,
@@ -176,8 +203,6 @@ enum {
     LIB_FILENAMES_SIZE
 };
 static char libFileNames[LIB_FILENAMES_SIZE][256];
-
-static int32_t pkg_readInFlags(const char* fileName);
 
 static void pkg_checkFlag(UPKGOptions *o);
 
@@ -195,8 +220,6 @@ const char options_help[][320]={
     "Use the standard ICU copyright",
     "Use a custom comment (instead of the copyright)",
     "Specify the destination directory for files",
-    "Clean out generated & temporary files",
-    "Suppress output of data, just list files to be created",
     "Force rebuilding of all data",
     "Specify temporary dir (default: output dir)",
     "Install the data (specify target)",
@@ -219,7 +242,8 @@ main(int argc, char* argv[]) {
     UBool        needsHelp = FALSE;
     UErrorCode   status = U_ZERO_ERROR;
     /* char         tmp[1024]; */
-    int32_t i;
+    uint32_t i;
+    int32_t n;
 
     U_MAIN_INIT_ARGS(argc, argv);
 
@@ -248,7 +272,7 @@ main(int argc, char* argv[]) {
         }
 
 
-#ifndef U_WINDOWS
+#ifndef WINDOWS_WITH_MSVC
         if(!options[BLDOPT].doesOccur) {
             if (pkg_getOptionsFromICUConfig(&options[BLDOPT]) != 0) {
                 fprintf(stderr, " required parameter is missing: -O is required \n");
@@ -314,26 +338,6 @@ main(int argc, char* argv[]) {
     o.mode      = options[MODE].value;
     o.version   = options[REVISION].doesOccur ? options[REVISION].value : 0;
 
-    o.makeArgs  = NULL;
-
-    o.fcn = NULL;
-
-    for(i=0;i<sizeof(modes)/sizeof(modes[0]);i++) {
-        if(!uprv_strcmp(modes[i].name, o.mode)) {
-            o.fcn = modes[i].fcn;
-            break;
-        } else if (modes[i].alt_name && !uprv_strcmp(modes[i].alt_name, o.mode)) {
-            o.mode = modes[i].name;
-            o.fcn = modes[i].fcn;
-            break;
-        }
-    }
-
-    if(o.fcn == NULL) {
-        fprintf(stderr, "Error: invalid mode '%s' specified. Run '%s --help' to list valid modes.\n", o.mode, progname);
-        return 1;
-    }
-
     o.shortName = options[NAME].value;
     {
         int32_t len = (int32_t)uprv_strlen(o.shortName);
@@ -366,7 +370,7 @@ main(int argc, char* argv[]) {
 
     o.verbose   = options[VERBOSE].doesOccur;
 
-#ifndef U_WINDOWS /* on UNIX, we'll just include the file... */
+#ifndef WINDOWS_WITH_MSVC /* on UNIX, we'll just include the file... */
     o.options   = options[BLDOPT].value;
 #endif
     if(options[COPYRIGHT].doesOccur) {
@@ -381,8 +385,6 @@ main(int argc, char* argv[]) {
         o.targetDir = ".";  /* cwd */
     }
 
-    o.clean     = options[CLEAN].doesOccur;
-    o.nooutput  = options[NOOUTPUT].doesOccur;
     o.rebuild   = options[REBUILD].doesOccur;
 
     if( options[TEMPDIR].doesOccur ) {
@@ -411,18 +413,8 @@ main(int argc, char* argv[]) {
 
     /* OK options are set up. Now the file lists. */
     tail = NULL;
-    for( i=1; i<argc; i++) {
-        if ( !uprv_strcmp(argv[i] , "-") ) {
-            /* stdin */
-            if( o.hadStdin == TRUE ) {
-                fprintf(stderr, "Error: can't specify '-' twice!\n"
-                    "Run '%s --help' for help.\n", progname);
-                return 1;
-            }
-            o.hadStdin = TRUE;
-        }
-
-        o.fileListFiles = pkg_appendToList(o.fileListFiles, &tail, uprv_strdup(argv[i]));
+    for( n=1; n<argc; n++) {
+        o.fileListFiles = pkg_appendToList(o.fileListFiles, &tail, uprv_strdup(argv[n]));
     }
 
     /* load the files */
@@ -432,14 +424,16 @@ main(int argc, char* argv[]) {
         return 2;
     }
 
-    o.makeFile = "DO_NOT_USE";
-
-
-    if(o.nooutput == TRUE) {
-        return 0; /* nothing to do. */
-    }
-
     result = pkg_executeOptions(&o);
+
+    if (pkgDataFlags != NULL) {
+        for (n = 0; n < PKGDATA_FLAGS_SIZE; n++) {
+            if (pkgDataFlags[n] != NULL) {
+                uprv_free(pkgDataFlags[n]);
+            }
+        }
+        uprv_free(pkgDataFlags);
+    }
 
     if (o.cShortName != NULL) {
         uprv_free((char *)o.cShortName);
@@ -460,15 +454,15 @@ main(int argc, char* argv[]) {
 #define LN_CMD "ln -s"
 #define RM_CMD "rm -f"
 
-#define ICUDATA_RES_FILE "icudata.res"
-
 #define MODE_COMMON 'c'
 #define MODE_STATIC 's'
 #define MODE_DLL    'd'
 #define MODE_FILES  'f'
 
 static int32_t pkg_executeOptions(UPKGOptions *o) {
+    UErrorCode status = U_ZERO_ERROR;
     int32_t result = 0;
+    char cmd[SMALL_BUFFER_MAX_SIZE] = "";
     const char mode = o->mode[0];
     char targetDir[SMALL_BUFFER_MAX_SIZE] = "";
     char tmpDir[SMALL_BUFFER_MAX_SIZE] = "";
@@ -476,20 +470,52 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
     char datFileNamePath[LARGE_BUFFER_MAX_SIZE] = "";
     char checkLibFile[LARGE_BUFFER_MAX_SIZE] = "";
 
+    /* Initialize pkgdataFlags */
+    pkgDataFlags = (char**)uprv_malloc(sizeof(char*) * PKGDATA_FLAGS_SIZE);
+    if (pkgDataFlags != NULL) {
+        for (int32_t i = 0; i < PKGDATA_FLAGS_SIZE; i++) {
+            pkgDataFlags[i] = (char*)uprv_malloc(sizeof(char) * SMALL_BUFFER_MAX_SIZE);
+            if (pkgDataFlags[i] != NULL) {
+                pkgDataFlags[i][0] = 0;
+            } else {
+                fprintf(stderr,"Error allocating memory for pkgDataFlags.\n");
+                return -1;
+            }
+        }
+    } else {
+        fprintf(stderr,"Error allocating memory for pkgDataFlags.\n");
+        return -1;
+    }
+#ifndef WINDOWS_WITH_MSVC
+    /* Read in options file. */
+    parseFlagsFile(o->options, pkgDataFlags, SMALL_BUFFER_MAX_SIZE, (int32_t)PKGDATA_FLAGS_SIZE, &status);
+    if (U_FAILURE(status)) {
+        fprintf(stderr,"Unable to open or read \"%s\" option file.\n", o->options);
+        return -1;
+    }
+#endif
     if (mode == MODE_FILES) {
-        // TODO: Copy files over
+        /* Copy the raw data to the installation directory. */
+        if (o->install != NULL) {
+            uprv_strcpy(targetDir, o->install);
+            if (o->shortName != NULL) {
+                uprv_strcat(targetDir, PKGDATA_FILE_SEP_STRING);
+                uprv_strcat(targetDir, o->shortName);
+            }
+            result = pkg_installFileMode(targetDir, o->srcDir, o->fileListFiles->str);
+        }
         return result;
     } else /* if (mode == MODE_COMMON || mode == MODE_STATIC || mode == MODE_DLL) */ {
         uprv_strcpy(targetDir, o->targetDir);
-        uprv_strcat(targetDir, U_FILE_SEP_STRING);
+        uprv_strcat(targetDir, PKGDATA_FILE_SEP_STRING);
 
         uprv_strcpy(tmpDir, o->tmpDir);
-        uprv_strcat(tmpDir, U_FILE_SEP_STRING);
+        uprv_strcat(tmpDir, PKGDATA_FILE_SEP_STRING);
 
         uprv_strcpy(datFileNamePath, tmpDir);
 
         uprv_strcpy(datFileName, o->shortName);
-        uprv_strcat(datFileName, ".dat");
+        uprv_strcat(datFileName, UDATA_CMN_SUFFIX);
 
         uprv_strcat(datFileNamePath, datFileName);
 
@@ -498,14 +524,25 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
             fprintf(stderr,"Error writing package dat file.\n");
             return result;
         }
+
         if (mode == MODE_COMMON) {
             char targetFileNamePath[LARGE_BUFFER_MAX_SIZE] = "";
 
             uprv_strcpy(targetFileNamePath, targetDir);
             uprv_strcat(targetFileNamePath, datFileName);
 
+            if (T_FileStream_file_exists(targetFileNamePath)) {
+                if ((result = remove(targetFileNamePath)) != 0) {
+                    fprintf(stderr, "Unable to remove old dat file: %s\n", targetFileNamePath);
+                    return result;
+                }
+            }
+
             /* Move the dat file created to the target directory. */
-            rename(datFileNamePath, targetFileNamePath);
+            result = rename(datFileNamePath, targetFileNamePath);
+            if (result != 0) {
+                fprintf(stderr, "Unable to move dat file (%s) to target location (%s).\n", datFileNamePath, targetFileNamePath);
+            }
 
             return result;
         } else /* if (mode[0] == MODE_STATIC || mode[0] == MODE_DLL) */ {
@@ -513,15 +550,10 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
             char version_major[10] = "";
             UBool reverseExt = FALSE;
 
-            if (pkg_readInFlags(o->options) != 0) {
-                fprintf(stderr,"Unable to open or read \"%s\" option file.\n", o->options);
-                return -1;
-            }
-
-#ifndef U_WINDOWS
+#ifndef WINDOWS_WITH_MSVC
             /* Get the version major number. */
             if (o->version != NULL) {
-                for (int32_t i = 0;i < sizeof(version_major);i++) {
+                for (uint32_t i = 0;i < sizeof(version_major);i++) {
                     if (o->version[i] == '.') {
                         version_major[i] = 0;
                         break;
@@ -540,15 +572,17 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
             /* Using the base libName and version number, generate the library file names. */
             createFileNames(version_major, o->version, o->libName, reverseExt);
 
-            if (o->version != NULL) {
-                /* Check to see if a previous built data library file exists */
+            if (o->version != 0 && o->rebuild == FALSE) {
+                /* Check to see if a previous built data library file exists and check if it is the latest. */
                 sprintf(checkLibFile, "%s%s", targetDir, libFileNames[LIB_FILE_VERSION_TMP]);
                 if (T_FileStream_file_exists(checkLibFile)) {
-                    if (o->install != NULL) {
-                        uprv_strcpy(libFileNames[LIB_FILE_VERSION], libFileNames[LIB_FILE_VERSION_TMP]);
-                        result = pkg_installLibrary(o->install, targetDir);
+                    if (isFileModTimeLater(checkLibFile, o->srcDir, TRUE) && isFileModTimeLater(checkLibFile, o->options)) {
+                        if (o->install != NULL) {
+                            uprv_strcpy(libFileNames[LIB_FILE_VERSION], libFileNames[LIB_FILE_VERSION_TMP]);
+                            result = pkg_installLibrary(o->install, targetDir);
+                        }
+                        return result;
                     }
-                    return result;
                 }
             }
 
@@ -574,14 +608,14 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                     return -1;
                 }
             } else {
-#if defined(U_WINDOWS) || defined(U_LINUX)
+#ifdef CAN_WRITE_OBJ_CODE
                 writeObjectCode(datFileNamePath, o->tmpDir, o->entryName, NULL, NULL, gencFilePath);
 #ifdef U_LINUX
-                result = pkg_generateLibraryFile(targetDir, mode, gencFilePath, NULL);
-#else U_WINDOWS
+                result = pkg_generateLibraryFile(targetDir, mode, gencFilePath);
+#elif defined(WINDOWS_WITH_MSVC)
                 return pkg_createWindowsDLL(mode, gencFilePath, o);
 #endif
-#else
+#elif defined(BUILD_DATA_WITHOUT_ASSEMBLY)
                 result = pkg_createWithoutAssemblyCode(o, targetDir, mode);
 #endif
                 if (result != 0) {
@@ -659,8 +693,8 @@ static void createFileNames(const char *version_major, const char *version, cons
 
 /* Create the symbolic links for the final library file. */
 static int32_t pkg_createSymLinks(const char *targetDir) {
-    char cmd[LARGE_BUFFER_MAX_SIZE];
     int32_t result = 0;
+    char cmd[LARGE_BUFFER_MAX_SIZE];
 
 #ifndef U_CYGWIN
     sprintf(cmd, "cd %s && %s %s && %s %s %s",
@@ -689,14 +723,14 @@ static int32_t pkg_createSymLinks(const char *targetDir) {
 }
 
 static int32_t pkg_installLibrary(const char *installDir, const char *targetDir) {
-    char cmd[SMALL_BUFFER_MAX_SIZE];
     int32_t result = 0;
+    char cmd[SMALL_BUFFER_MAX_SIZE];
 
     sprintf(cmd, "cd %s && %s %s %s%s%s",
             targetDir,
             pkgDataFlags[INSTALL_CMD],
             libFileNames[LIB_FILE_VERSION],
-            installDir, U_FILE_SEP_STRING, libFileNames[LIB_FILE_VERSION]
+            installDir, PKGDATA_FILE_SEP_STRING, libFileNames[LIB_FILE_VERSION]
             );
 
     result = system(cmd);
@@ -708,12 +742,74 @@ static int32_t pkg_installLibrary(const char *installDir, const char *targetDir)
     return pkg_createSymLinks(installDir);
 }
 
+#ifdef U_WINDOWS_MSVC
+/* Copy commands for installing the raw data files on Windows. */
+#define WIN_INSTALL_CMD "xcopy"
+#define WIN_INSTALL_CMD_FLAGS "/E /Y /K"
+#endif
+static int32_t pkg_installFileMode(const char *installDir, const char *srcDir, const char *fileListName) {
+    int32_t result = 0;
+    char cmd[SMALL_BUFFER_MAX_SIZE] = "";
+
+    if (!T_FileStream_file_exists(installDir)) {
+        UErrorCode status = U_ZERO_ERROR;
+
+        uprv_mkdir(installDir, &status);
+        if (U_FAILURE(status)) {
+            fprintf(stderr, "Error creating installation directory: %s\n", installDir);
+            return -1;
+        }
+    }
+#ifndef U_WINDOWS_WITH_MSVC
+    char buffer[SMALL_BUFFER_MAX_SIZE] = "";
+
+    FileStream *f = T_FileStream_open(fileListName, "r");
+    if (f != NULL) {
+        for(;;) {
+            if (T_FileStream_readLine(f, buffer, SMALL_BUFFER_MAX_SIZE) != NULL) {
+                /* Remove new line character. */
+                buffer[uprv_strlen(buffer)-1] = 0;
+
+                sprintf(cmd, "%s %s%s%s %s%s%s",
+                        pkgDataFlags[INSTALL_CMD],
+                        srcDir, PKGDATA_FILE_SEP_STRING, buffer,
+                        installDir, PKGDATA_FILE_SEP_STRING, buffer);
+
+                result = system(cmd);
+                if (result != 0) {
+                    fprintf(stderr, "Failed to install data file with command: %s\n", cmd);
+                    break;
+                }
+            } else {
+                if (!T_FileStream_eof(f)) {
+                    fprintf(stderr, "Failed to read line from file: %s\n", fileListName);
+                    result = -1;
+                }
+                break;
+            }
+        }
+        T_FileStream_close(f);
+    } else {
+        result = -1;
+        fprintf(stderr, "Unable to open list file: %s\n", fileListName);
+    }
+#else
+    sprintf(cmd, "%s %s %s %s", WIN_INSTALL_CMD, srcDir, installDir, WIN_INSTALL_CMD_FLAGS);
+    result = system(cmd);
+    if (result != 0) {
+        fprintf(stderr, "Failed to install data file with command: %s\n", cmd);
+    }
+#endif
+
+    return result;
+}
+
 /* Archiving of the library file may be needed depending on the platform and options given.
  * If archiving is not needed, copy over the library file name.
  */
 static int32_t pkg_archiveLibrary(const char *targetDir, const char *version, UBool reverseExt) {
-    char cmd[LARGE_BUFFER_MAX_SIZE];
     int32_t result = 0;
+    char cmd[LARGE_BUFFER_MAX_SIZE];
 
     /* If the shard object suffix and the final object suffix is different and the final object suffix and the
      * archive file suffix is the same, then the final library needs to be archived.
@@ -762,14 +858,21 @@ static int32_t pkg_archiveLibrary(const char *targetDir, const char *version, UB
  */
 static int32_t pkg_generateLibraryFile(const char *targetDir, const char mode, const char *objectFile, char *command) {
     int32_t result = 0;
-    char *cmd;
-    UBool cmdFree = FALSE;
+    char *cmd = NULL;
+    UBool freeCmd = FALSE;
 
+    /* This is necessary because if packaging is done without assembly code, objectFile might be extremely large
+     * containing many object files and so the calling function should supply a command buffer that is large
+     * enough to handle this. Otherwise, use the default size.
+     */
     if (command != NULL) {
         cmd = command;
     } else {
-        cmd = (char *)uprv_malloc(sizeof(char) * LARGE_BUFFER_MAX_SIZE);
-        cmdFree = TRUE;
+        if ((cmd = (char *)uprv_malloc(sizeof(char) * LARGE_BUFFER_MAX_SIZE)) == NULL) {
+            fprintf(stderr, "Unable to allocate memory for command.\n");
+            return -1;
+        }
+        freeCmd = TRUE;
     }
 
     if (mode == MODE_STATIC) {
@@ -807,7 +910,7 @@ static int32_t pkg_generateLibraryFile(const char *targetDir, const char mode, c
         result = system(cmd);
     }
 
-    if (cmdFree) {
+    if (freeCmd) {
         uprv_free(cmd);
     }
 
@@ -816,7 +919,7 @@ static int32_t pkg_generateLibraryFile(const char *targetDir, const char mode, c
 
 static int32_t pkg_createWithAssemblyCode(const char *targetDir, const char mode, const char *gencFilePath) {
     char tempObjectFile[SMALL_BUFFER_MAX_SIZE] = "";
-    char cmd[LARGE_BUFFER_MAX_SIZE];
+    char cmd[LARGE_BUFFER_MAX_SIZE] = "";
     int32_t result = 0;
 
     /* Remove the ending .s and replace it with .o for the new object file. */
@@ -835,9 +938,10 @@ static int32_t pkg_createWithAssemblyCode(const char *targetDir, const char mode
         return result;
     }
 
-    return pkg_generateLibraryFile(targetDir, mode, tempObjectFile, cmd);
+    return pkg_generateLibraryFile(targetDir, mode, tempObjectFile);
 }
 
+#ifdef BUILD_DATA_WITHOUT_ASSEMBLY
 /*
  * Generation of the data library without assembly code needs to compile each data file
  * individually and then link it all together.
@@ -856,29 +960,35 @@ const static char DATA_PREFIX[DATA_PREFIX_LENGTH][10] = {
         "translit"
 };
 static int32_t pkg_createWithoutAssemblyCode(UPKGOptions *o, const char *targetDir, const char mode) {
+    int32_t result = 0;
     CharList *list = o->filePaths;
     CharList *listNames = o->files;
     int32_t listSize = pkg_countCharList(list);
     char *buffer;
     char *cmd;
-    int32_t result = 0;
     char gencmnFile[SMALL_BUFFER_MAX_SIZE] = "";
     char tempObjectFile[SMALL_BUFFER_MAX_SIZE] = "";
 
-    cmd = (char *)uprv_malloc((listSize + 2) * SMALL_BUFFER_MAX_SIZE);
-    buffer = (char *)uprv_malloc((listSize + 1) * SMALL_BUFFER_MAX_SIZE);
+    if (list == NULL || listNames == NULL) {
+        /* list and listNames should never be NULL since we are looping through the CharList with
+         * the given size.
+         */
+        return -1;
+    }
+
+    if ((cmd = (char *)uprv_malloc((listSize + 2) * SMALL_BUFFER_MAX_SIZE)) == NULL) {
+        fprintf(stderr, "Unable to allocate memory for cmd.\n");
+        return -1;
+    } else if ((buffer = (char *)uprv_malloc((listSize + 1) * SMALL_BUFFER_MAX_SIZE)) == NULL) {
+        fprintf(stderr, "Unable to allocate memory for buffer.\n");
+        uprv_free(cmd);
+        return -1;
+    }
 
     for (int32_t i = 0; i < (listSize + 1); i++) {
         const char *file ;
         const char *name;
 
-        if (list == NULL || listNames == NULL) {
-            /* list and listNames should never be NULL since we are looping through the CharList with
-             * the given size.
-             */
-            result = -1;
-            break;
-        }
         if (i == 0) {
             /* The first iteration calls the gencmn function and initailizes the buffer. */
             createCommonDataFile(o->tmpDir, o->shortName, o->entryName, NULL, o->srcDir, o->comment, o->fileListFiles->str, 0, TRUE, o->verbose, gencmnFile);
@@ -953,14 +1063,15 @@ static int32_t pkg_createWithoutAssemblyCode(UPKGOptions *o, const char *targetD
 
     return result;
 }
+#endif
 
-#ifdef U_WINDOWS
+#ifdef WINDOWS_WITH_MSVC
 #define LINK_CMD "link.exe /nologo /release /out:"
 #define LINK_FLAGS "/DLL /NOENTRY /MANIFEST:NO  /base:0x4ad00000 /implib:"
 #define LIB_CMD "LIB.exe /nologo /out:"
 #define LIB_FILE "icudt.lib"
-#define LIB_EXT ".lib"
-#define DLL_EXT ".dll"
+#define LIB_EXT UDATA_LIB_SUFFIX
+#define DLL_EXT UDATA_SO_SUFFIX
 
 static int32_t pkg_createWindowsDLL(const char mode, const char *gencFilePath, UPKGOptions *o) {
     char cmd[LARGE_BUFFER_MAX_SIZE];
@@ -968,7 +1079,7 @@ static int32_t pkg_createWindowsDLL(const char mode, const char *gencFilePath, U
         char staticLibFilePath[SMALL_BUFFER_MAX_SIZE] = "";
 
         uprv_strcpy(staticLibFilePath, o->tmpDir);
-        uprv_strcat(staticLibFilePath, U_FILE_SEP_STRING);
+        uprv_strcat(staticLibFilePath, PKGDATA_FILE_SEP_STRING);
 
         uprv_strcat(staticLibFilePath, o->entryName);
         uprv_strcat(staticLibFilePath, LIB_EXT);
@@ -987,11 +1098,11 @@ static int32_t pkg_createWindowsDLL(const char mode, const char *gencFilePath, U
 #else
         uprv_strcpy(dllFilePath, o->srcDir);
 #endif
-        uprv_strcat(dllFilePath, U_FILE_SEP_STRING);
+        uprv_strcat(dllFilePath, PKGDATA_FILE_SEP_STRING);
         uprv_strcpy(libFilePath, dllFilePath);
 
         uprv_strcpy(resFilePath, o->tmpDir);
-        uprv_strcat(resFilePath, U_FILE_SEP_STRING);
+        uprv_strcat(resFilePath, PKGDATA_FILE_SEP_STRING);
 
         uprv_strcat(dllFilePath, o->entryName);
         uprv_strcat(dllFilePath, DLL_EXT);
@@ -1000,6 +1111,12 @@ static int32_t pkg_createWindowsDLL(const char mode, const char *gencFilePath, U
 
         if (!T_FileStream_file_exists(resFilePath)) {
             uprv_memset(resFilePath, 0, sizeof(resFilePath));
+        }
+
+        /* Check if dll file and lib file exists and that it is not newer than genc file. */
+        if (!o->rebuild && (T_FileStream_file_exists(dllFilePath) && isFileModTimeLater(dllFilePath, gencFilePath)) &&
+            (T_FileStream_file_exists(libFilePath) && isFileModTimeLater(libFilePath, gencFilePath))) {
+            return 0;
         }
 
         sprintf(cmd, "%s\"%s\" %s\"%s\" \"%s\" \"%s\"",
@@ -1016,60 +1133,11 @@ static int32_t pkg_createWindowsDLL(const char mode, const char *gencFilePath, U
 }
 #endif
 
-/*
- * Get the position after the '=' character.
- */
-static int32_t flagOffset(const char *buffer, int32_t bufferSize) {
-    int32_t offset = 0;
-
-    for (offset = 0; offset < bufferSize;offset++) {
-        if (buffer[offset] == '=') {
-            offset++;
-            break;
-        }
-    }
-
-    if (offset == bufferSize || (offset - 1) == bufferSize) {
-        offset = 0;
-    }
-
-    return offset;
-}
-/*
- * Extract the setting after the '=' and store it in flag excluding the newline character.
- */
-static void extractFlag(char* buffer, int32_t bufferSize, char* flag) {
-    char *pBuffer;
-    int32_t offset;
-    UBool bufferWritten = FALSE;
-
-    if (buffer[0] != 0) {
-        /* Get the offset (i.e. position after the '=') */
-        offset = flagOffset(buffer, bufferSize);
-        pBuffer = buffer+offset;
-        for(int32_t i = 0;;i++) {
-            if (pBuffer[i+1] == 0) {
-                /* Indicates a new line character. End here. */
-                flag[i] = 0;
-                break;
-            }
-
-            flag[i] = pBuffer[i];
-            if (i == 0) {
-                bufferWritten = TRUE;
-            }
-        }
-    }
-
-    if (!bufferWritten) {
-        flag[0] = 0;
-    }
-}
-
 static void pkg_checkFlag(UPKGOptions *o) {
+#ifdef U_AIX
+    /* AIX needs a map file. */
     char *flag = NULL;
     int32_t length = 0;
-#ifdef U_AIX
     char tmpbuffer[SMALL_BUFFER_MAX_SIZE];
     const char MAP_FILE_EXT[] = ".map";
     FileStream *f = NULL;
@@ -1126,13 +1194,17 @@ static void pkg_checkFlag(UPKGOptions *o) {
             return;
         }
 
-        sprintf(tmpbuffer, "%s_dat ", o->entryName);
+        sprintf(tmpbuffer, "%s%s ", o->entryName, UDATA_CMN_INTERMEDIATE_SUFFIX);
 
         T_FileStream_writeLine(f, tmpbuffer);
 
         T_FileStream_close(f);
     }
 #elif defined(U_CYGWIN)
+    /* Cygwin needs to change flag options. */
+    char *flag = NULL;
+    int32_t length = 0;
+
     flag = pkgDataFlags[GENLIB];
     length = uprv_strlen(pkgDataFlags[GENLIB]);
 
@@ -1148,54 +1220,6 @@ static void pkg_checkFlag(UPKGOptions *o) {
     uprv_memset(flag + position, 0, length - position);
 #endif
 }
-
-/*
- * Opens the given fileName and reads in the information storing the data in pkgDataFlags.
- */
-static int32_t pkg_readInFlags(const char *fileName) {
-    int32_t result = 0;
-
-#ifdef U_WINDOWS
-    /* Zero out the flags since it is not being used. */
-    for (int32_t i = 0; i < PKGDATA_FLAGS_SIZE; i++) {
-        pkgDataFlags[i][0] = 0;
-    }
-
-#else
-    char buffer[LARGE_BUFFER_MAX_SIZE];
-
-    FileStream *f = T_FileStream_open(fileName, "r");
-    if (f == NULL) {
-        return -1;
-    }
-
-    for (int32_t i = 0; i < PKGDATA_FLAGS_SIZE; i++) {
-        if (T_FileStream_readLine(f, buffer, LARGE_BUFFER_MAX_SIZE) == NULL) {
-            result = -1;
-            break;
-        }
-
-        extractFlag(buffer, LARGE_BUFFER_MAX_SIZE, pkgDataFlags[i]);
-    }
-
-    T_FileStream_close(f);
-#endif
-
-    return result;
-}
-
-#if 0
-{
-    rc = system(cmd);
-
-    if(rc < 0) {
-        fprintf(stderr, "# Failed, rc=%d\n", rc);
-    }
-
-    return rc < 128 ? rc : (rc >> 8);
-}
-#endif
-
 
 static void loadLists(UPKGOptions *o, UErrorCode *status)
 {
@@ -1290,7 +1314,7 @@ static void loadLists(UPKGOptions *o, UErrorCode *status)
                     exit(U_ILLEGAL_ARGUMENT_ERROR);
                 }
                 uprv_strcpy(tmp, o->srcDir);
-                uprv_strcat(tmp, o->srcDir[uprv_strlen(o->srcDir)-1]==U_FILE_SEP_CHAR?"":U_FILE_SEP_STRING);
+                uprv_strcat(tmp, o->srcDir[uprv_strlen(o->srcDir)-1] == U_FILE_SEP_CHAR ? "" :PKGDATA_FILE_SEP_STRING);
                 uprv_strcat(tmp, s);
                 o->filePaths = pkg_appendToList(o->filePaths, &tail2, uprv_strdup(tmp));
                 linePtr = lineNext;
@@ -1351,107 +1375,4 @@ static int32_t pkg_getOptionsFromICUConfig(UOption *option) {
     return 0;
 #endif
     return -1;
-}
-/* Try calling icu-config directly to get information */
-static void fillInMakefileFromICUConfig(UOption *option)
-{
-#if 0
-#if U_HAVE_POPEN
-    FILE *p;
-    size_t n;
-    static char buf[512] = "";
-    static const char cmd[] = "icu-config --incfile";
-
-    if(options[5].doesOccur)
-    {
-        /* informational */
-        fprintf(stderr, "%s: No -O option found, trying '%s'.\n", progname, cmd);
-    }
-
-    p = popen(cmd, "r");
-
-    if(p == NULL)
-    {
-        fprintf(stderr, "%s: icu-config: No icu-config found. (fix PATH or use -O option)\n", progname);
-        return;
-    }
-
-    n = fread(buf, 1, 511, p);
-
-    pclose(p);
-
-    if(n<=0)
-    {
-        fprintf(stderr,"%s: icu-config: Could not read from icu-config. (fix PATH or use -O option)\n", progname);
-        return;
-    }
-
-    if(buf[strlen(buf)-1]=='\n')
-    {
-        buf[strlen(buf)-1]=0;
-    }
-
-    if(buf[0] == 0)
-    {
-        fprintf(stderr, "%s: icu-config: invalid response from icu-config (fix PATH or use -O option)\n", progname);
-        return;
-    }
-
-    if(options[5].doesOccur)
-    {
-        /* informational */
-        fprintf(stderr, "%s: icu-config: using '-O %s'\n", progname, buf);
-    }
-    option->value = buf;
-    option->doesOccur = TRUE;
-#else  /* ! U_HAVE_POPEN */
-
-#ifdef U_WINDOWS
-    char pathbuffer[_MAX_PATH] = {0};
-    char *fullEXEpath = NULL;
-    char *pathstuff = NULL;
-
-    if (strchr(progname, U_FILE_SEP_CHAR) != NULL || strchr(progname, U_FILE_ALT_SEP_CHAR) != NULL) {
-        /* pkgdata was executed with relative path */
-        fullEXEpath = _fullpath(pathbuffer, progname, sizeof(pathbuffer));
-        pathstuff = (char *)options[1].value;
-
-        if (fullEXEpath) {
-            pathstuff = strrchr(fullEXEpath, U_FILE_SEP_CHAR);
-            if (pathstuff) {
-                pathstuff[1] = 0;
-                uprv_memmove(fullEXEpath + 2, fullEXEpath, uprv_strlen(fullEXEpath)+1);
-                fullEXEpath[0] = PKGDATA_DERIVED_PATH;
-                fullEXEpath[1] = ':';
-                option->value = uprv_strdup(fullEXEpath);
-                option->doesOccur = TRUE;
-            }
-        }
-    }
-    else {
-        /* pkgdata was executed from the path */
-        /* Search for file in PATH environment variable: */
-        _searchenv("pkgdata.exe", "PATH", pathbuffer );
-        if( *pathbuffer != '\0' ) {
-            fullEXEpath = pathbuffer;
-            pathstuff = strrchr(pathbuffer, U_FILE_SEP_CHAR);
-            if (pathstuff) {
-                pathstuff[1] = 0;
-                uprv_memmove(fullEXEpath + 2, fullEXEpath, uprv_strlen(fullEXEpath)+1);
-                fullEXEpath[0] = PKGDATA_DERIVED_PATH;
-                fullEXEpath[1] = ':';
-                option->value = uprv_strdup(fullEXEpath);
-                option->doesOccur = TRUE;
-            }
-        }
-    }
-    /* else can't determine the path */
-#endif
-
-    /* no popen available */
-    /* Put other OS specific ways to search for the Makefile.inc type
-       information or else fail.. */
-
-#endif
-#endif /* End of #if 0 */
 }

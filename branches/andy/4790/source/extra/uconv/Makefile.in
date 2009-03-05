@@ -1,6 +1,6 @@
 ## ******************************************************************************
 ## *
-## *   Copyright (C) 1999-2008, International Business Machines
+## *   Copyright (C) 1999-2009, International Business Machines
 ## *   Corporation and others.  All Rights Reserved.
 ## *
 ## *******************************************************************************
@@ -112,7 +112,14 @@ resclean:
 distclean-local: clean-local
 	$(RMV) Makefile $(DEPS)
 
-check-local:
+check-local: $(TARGET)
+ifneq (,$(filter $(PKGDATA_MODE),files common))
+	@echo "Currently, pkgdata is in \"$(PKGDATA_MODE)\" mode."
+	@echo "To test uconv, run this manually after installing ICU:"
+	@echo "\"./$(TARGET) -f ibm-37 $(srcdir)/samples/ibm-37-test.txt\""
+else
+	$(INVOKE) ./$(TARGET) -f ibm-37 $(srcdir)/samples/ibm-37-test.txt
+endif
 
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	cd $(top_builddir) \
