@@ -154,7 +154,7 @@ typedef enum USpoofChecks {
     USPOOF_INVISIBLE                =  32,
     USPOOF_CHAR_LIMIT               =  64,
     USPOOF_ALL_CHECKS               = 0x7f
-    };
+    } USpoofChecks;
     
     
 /**
