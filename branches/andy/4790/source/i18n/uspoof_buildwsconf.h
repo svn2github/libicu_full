@@ -24,11 +24,11 @@
 #include "utrie2.h"
 
 //
-// struct BuilderScriptSet.   Represents the set of scripts (Script Codes)
+// class BuilderScriptSet.   Represents the set of scripts (Script Codes)
 //             containing characters that are confusable with one specific
 //             code point.
 //
-struct BuilderScriptSet: public UMemory {
+class BuilderScriptSet: public UMemory {
   public:
     UChar32      codePoint;       // The source code point.
     UTrie2      *trie;            // Any-case or Lower-case Trie.

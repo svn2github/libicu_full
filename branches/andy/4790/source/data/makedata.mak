@@ -679,8 +679,7 @@ res_index:table(nofallback) {
 #     Can't use an inference rule because two .txt source files combine to produce a single .cfu output file
 "$(ICUBLD_PKG)\confusables.cfu": "$(ICUUNIDATA)\confusables.txt" "$(ICUUNIDATA)\confusablesWholeScript.txt" "$(ICUTOOLS)\gencfu\$(CFG)\gencfu.exe"
 	@echo Creating $@
-	@echo "$(ICUTOOLS)\gencfu\$(CFG)\gencfu -c -r "$(ICUUNIDATA)\confusables.txt" -w "$(ICUUNIDATA)\confusablesWholeScript.txt" -o $@ -d"$(ICUBLD_PKG)" -i "$(ICUBLD_PKG)"
-	@"$(ICUTOOLS)\gencfu\$(CFG)\gencfu" -c -r "$(ICUUNIDATA)\confusables.txt" -w "$(ICUUNIDATA)\confusablesWholeScript.txt" -o $@ -d"$(ICUBLD_PKG)" -i "$(ICUBLD_PKG)"
+	@"$(ICUTOOLS)\gencfu\$(CFG)\gencfu" -c -r "$(ICUUNIDATA)\confusables.txt" -w "$(ICUUNIDATA)\confusablesWholeScript.txt" -o $@ -i "$(ICUBLD_PKG)"
 
 !IFDEF ICUDATA_ARCHIVE
 "$(ICUDATA_SOURCE_ARCHIVE)": CREATE_DIRS $(ICUDATA_ARCHIVE) "$(ICUTOOLS)\icupkg\$(CFG)\icupkg.exe"

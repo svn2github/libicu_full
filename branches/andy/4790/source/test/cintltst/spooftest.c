@@ -96,7 +96,7 @@ void addUSpoofTest(TestNode** root);
 
 void addUSpoofTest(TestNode** root)
 {
-    addTest(root, &TestUSpoofCAPI, "uspoof/TestRegexCAPI");
+    addTest(root, &TestUSpoofCAPI, "uspoof/TestUSpoofCAPI");
 }
 
 

@@ -26,7 +26,7 @@
 //              by the confusable mapping data (confusables.txt from Unicode.org)
 //              Instances of SPUString exist during the compilation process only.
 
-struct SPUString {
+struct SPUString : public UMemory {
     UnicodeString  *fStr;             // The actual string.
     int32_t         fStrTableIndex;   // Index into the final runtime data for this string.
                                       //  (or, for length 1, the single string char itself,
@@ -44,7 +44,7 @@ struct SPUString {
 //                combination of a uhash and a UVector.
 
 
-class SPUStringPool {
+class SPUStringPool : public UMemory {
   public:
     SPUStringPool(UErrorCode &status);
     ~SPUStringPool();
@@ -74,7 +74,7 @@ class SPUStringPool {
 //     It encapsulates the intermediate data structures that are used for building.
 //     It exports one static function, to do a confusable data build.
 
-class ConfusabledataBuilder {
+class ConfusabledataBuilder : public UMemory {
   private:
     SpoofImpl  *fSpoofImpl;
     UChar      *fInput;
