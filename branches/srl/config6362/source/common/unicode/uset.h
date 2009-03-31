@@ -97,8 +97,6 @@ enum {
     USET_SERIALIZED_STATIC_ARRAY_CAPACITY=8
 };
 
-#ifndef U_HIDE_DRAFT_API
-
 /**
  * Argument values for whether span() and similar functions continue while
  * the current character is contained vs. not contained in the set.
@@ -207,8 +205,6 @@ typedef enum USetSpanCondition {
      */
     USET_SPAN_CONDITION_COUNT
 } USetSpanCondition;
-
-#endif /* U_HIDE_DRAFT_API */
 
 /**
  * A serialized form of a Unicode set.  Limited manipulations are
@@ -686,6 +682,44 @@ uset_complementAll(USet* set, const USet* complement);
  */
 U_STABLE void U_EXPORT2
 uset_clear(USet* set);
+
+/**
+ * Close this set over the given attribute.  For the attribute
+ * USET_CASE, the result is to modify this set so that:
+ *
+ * 1. For each character or string 'a' in this set, all strings or
+ * characters 'b' such that foldCase(a) == foldCase(b) are added
+ * to this set.
+ *
+ * 2. For each string 'e' in the resulting set, if e !=
+ * foldCase(e), 'e' will be removed.
+ *
+ * Example: [aq\\u00DF{Bc}{bC}{Fi}] => [aAqQ\\u00DF\\uFB01{ss}{bc}{fi}]
+ *
+ * (Here foldCase(x) refers to the operation u_strFoldCase, and a
+ * == b denotes that the contents are the same, not pointer
+ * comparison.)
+ *
+ * A frozen set will not be modified.
+ *
+ * @param set the set
+ *
+ * @param attributes bitmask for attributes to close over.
+ * Currently only the USET_CASE bit is supported.  Any undefined bits
+ * are ignored.
+ * @draft ICU 4.2
+ */
+U_DRAFT void U_EXPORT2
+uset_closeOver(USet* set, int32_t attributes);
+
+/**
+ * Remove all strings from this set.
+ *
+ * @param set the set
+ * @draft ICU 4.2
+ */
+U_DRAFT void U_EXPORT2
+uset_removeAllStrings(USet* set);
 
 /**
  * Returns TRUE if the given USet contains no characters and no

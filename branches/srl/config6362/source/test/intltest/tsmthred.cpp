@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT: 
- * Copyright (c) 1999-2008, International Business Machines Corporation and
+ * Copyright (c) 1999-2009, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 
@@ -11,9 +11,7 @@
 #endif
 
 /* Needed by z/OS to get usleep */
-#if !defined(_XOPEN_SOURCE_EXTENDED)
-#define _XOPEN_SOURCE_EXTENDED 1
-#endif
+#include "platform_xopen_source_extended.h"
 
 #include "unicode/utypes.h"
 #include "unicode/ustring.h"

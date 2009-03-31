@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT: 
- * Copyright (c) 1997-2005, International Business Machines Corporation and
+ * Copyright (c) 1997-2009, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 /*   file name:  strtest.cpp
@@ -17,11 +17,8 @@
 #include "intltest.h"
 #include "strtest.h"
 #include "unicode/ustring.h"
-
-#if defined(U_WINDOWS) && defined(_MSC_VER)
-#include <vector>
-using namespace std;
-#endif
+#include "unicode/std_string.h"
+#include "unicode/stringpiece.h"
 
 StringTest::~StringTest() {}
 
@@ -178,15 +175,209 @@ void StringTest::runIndexedTest(int32_t index, UBool exec, const char *&name, ch
     case 7:
         name="TestSTLCompatibility";
         if(exec) {
-#if defined(U_WINDOWS) && defined(_MSC_VER)
-            /* Just make sure that it compiles with STL's placement new usage. */
-            vector<UnicodeString> myvect;
-            myvect.push_back(UnicodeString("blah"));
-#endif
+            TestSTLCompatibility();
+        }
+        break;
+    case 8:
+        name="TestStdNamespaceQualifier";
+        if(exec) {
+            TestStdNamespaceQualifier();
+        }
+        break;
+    case 9:
+        name="TestUsingStdNamespace";
+        if(exec) {
+            TestUsingStdNamespace();
+        }
+        break;
+    case 10:
+        name="TestStringPiece";
+        if(exec) {
+            TestStringPiece();
         }
         break;
     default:
         name="";
         break;
     }
+}
+
+// Syntax check for the correct namespace qualifier for the standard string class.
+void
+StringTest::TestStdNamespaceQualifier() {
+#if U_HAVE_STD_STRING
+    U_STD_NSQ string s="abc xyz";
+    U_STD_NSQ string t="abc";
+    t.append(" ");
+    t.append("xyz");
+    if(s!=t) {
+        errln("standard string concatenation error: %s != %s", s.c_str(), t.c_str());
+    }
+#endif
+}
+
+void
+StringTest::TestUsingStdNamespace() {
+#if U_HAVE_STD_STRING
+    // Now test that "using namespace std;" is defined correctly.
+    U_STD_NS_USE
+
+    string s="abc xyz";
+    string t="abc";
+    t.append(" ");
+    t.append("xyz");
+    if(s!=t) {
+        errln("standard string concatenation error: %s != %s", s.c_str(), t.c_str());
+    }
+#endif
+}
+
+void
+StringTest::TestStringPiece() {
+    // Default constructor.
+    StringPiece empty;
+    if(!empty.empty() || empty.data()!=NULL || empty.length()!=0 || empty.size()!=0) {
+        errln("StringPiece() failed");
+    }
+    // Construct from NULL const char * pointer.
+    StringPiece null(NULL);
+    if(!null.empty() || null.data()!=NULL || null.length()!=0 || null.size()!=0) {
+        errln("StringPiece(NULL) failed");
+    }
+    // Construct from const char * pointer.
+    static const char *abc_chars="abc";
+    StringPiece abc(abc_chars);
+    if(abc.empty() || abc.data()!=abc_chars || abc.length()!=3 || abc.size()!=3) {
+        errln("StringPiece(abc_chars) failed");
+    }
+    // Construct from const char * pointer and length.
+    static const char *abcdefg_chars="abcdefg";
+    StringPiece abcd(abcdefg_chars, 4);
+    if(abcd.empty() || abcd.data()!=abcdefg_chars || abcd.length()!=4 || abcd.size()!=4) {
+        errln("StringPiece(abcdefg_chars, 4) failed");
+    }
+#if U_HAVE_STD_STRING
+    // Construct from std::string.
+    U_STD_NSQ string uvwxyz_string("uvwxyz");
+    StringPiece uvwxyz(uvwxyz_string);
+    if(uvwxyz.empty() || uvwxyz.data()!=uvwxyz_string.data() || uvwxyz.length()!=6 || uvwxyz.size()!=6) {
+        errln("StringPiece(uvwxyz_string) failed");
+    }
+#endif
+    // Substring constructor with pos.
+    StringPiece sp(abcd, -1);
+    if(sp.empty() || sp.data()!=abcdefg_chars || sp.length()!=4 || sp.size()!=4) {
+        errln("StringPiece(abcd, -1) failed");
+    }
+    sp=StringPiece(abcd, 5);
+    if(!sp.empty() || sp.length()!=0 || sp.size()!=0) {
+        errln("StringPiece(abcd, 5) failed");
+    }
+    sp=StringPiece(abcd, 2);
+    if(sp.empty() || sp.data()!=abcdefg_chars+2 || sp.length()!=2 || sp.size()!=2) {
+        errln("StringPiece(abcd, -1) failed");
+    }
+    // Substring constructor with pos and len.
+    sp=StringPiece(abcd, -1, 8);
+    if(sp.empty() || sp.data()!=abcdefg_chars || sp.length()!=4 || sp.size()!=4) {
+        errln("StringPiece(abcd, -1, 8) failed");
+    }
+    sp=StringPiece(abcd, 5, 8);
+    if(!sp.empty() || sp.length()!=0 || sp.size()!=0) {
+        errln("StringPiece(abcd, 5, 8) failed");
+    }
+    sp=StringPiece(abcd, 2, 8);
+    if(sp.empty() || sp.data()!=abcdefg_chars+2 || sp.length()!=2 || sp.size()!=2) {
+        errln("StringPiece(abcd, -1) failed");
+    }
+    sp=StringPiece(abcd, 2, -1);
+    if(!sp.empty() || sp.length()!=0 || sp.size()!=0) {
+        errln("StringPiece(abcd, 5, -1) failed");
+    }
+    // static const npos
+    const int32_t *ptr_npos=&StringPiece::npos;
+    if(StringPiece::npos!=0x7fffffff || *ptr_npos!=0x7fffffff) {
+        errln("StringPiece::npos!=0x7fffffff");
+    }
+    // substr() method with pos, using len=npos.
+    sp=abcd.substr(-1);
+    if(sp.empty() || sp.data()!=abcdefg_chars || sp.length()!=4 || sp.size()!=4) {
+        errln("abcd.substr(-1) failed");
+    }
+    sp=abcd.substr(5);
+    if(!sp.empty() || sp.length()!=0 || sp.size()!=0) {
+        errln("abcd.substr(5) failed");
+    }
+    sp=abcd.substr(2);
+    if(sp.empty() || sp.data()!=abcdefg_chars+2 || sp.length()!=2 || sp.size()!=2) {
+        errln("abcd.substr(-1) failed");
+    }
+    // substr() method with pos and len.
+    sp=abcd.substr(-1, 8);
+    if(sp.empty() || sp.data()!=abcdefg_chars || sp.length()!=4 || sp.size()!=4) {
+        errln("abcd.substr(-1, 8) failed");
+    }
+    sp=abcd.substr(5, 8);
+    if(!sp.empty() || sp.length()!=0 || sp.size()!=0) {
+        errln("abcd.substr(5, 8) failed");
+    }
+    sp=abcd.substr(2, 8);
+    if(sp.empty() || sp.data()!=abcdefg_chars+2 || sp.length()!=2 || sp.size()!=2) {
+        errln("abcd.substr(-1) failed");
+    }
+    sp=abcd.substr(2, -1);
+    if(!sp.empty() || sp.length()!=0 || sp.size()!=0) {
+        errln("abcd.substr(5, -1) failed");
+    }
+    // clear()
+    sp=abcd;
+    sp.clear();
+    if(!sp.empty() || sp.data()!=NULL || sp.length()!=0 || sp.size()!=0) {
+        errln("abcd.clear() failed");
+    }
+    // remove_prefix()
+    sp=abcd;
+    sp.remove_prefix(-1);
+    if(sp.empty() || sp.data()!=abcdefg_chars || sp.length()!=4 || sp.size()!=4) {
+        errln("abcd.remove_prefix(-1) failed");
+    }
+    sp=abcd;
+    sp.remove_prefix(2);
+    if(sp.empty() || sp.data()!=abcdefg_chars+2 || sp.length()!=2 || sp.size()!=2) {
+        errln("abcd.remove_prefix(2) failed");
+    }
+    sp=abcd;
+    sp.remove_prefix(5);
+    if(!sp.empty() || sp.length()!=0 || sp.size()!=0) {
+        errln("abcd.remove_prefix(5) failed");
+    }
+    // remove_suffix()
+    sp=abcd;
+    sp.remove_suffix(-1);
+    if(sp.empty() || sp.data()!=abcdefg_chars || sp.length()!=4 || sp.size()!=4) {
+        errln("abcd.remove_suffix(-1) failed");
+    }
+    sp=abcd;
+    sp.remove_suffix(2);
+    if(sp.empty() || sp.data()!=abcdefg_chars || sp.length()!=2 || sp.size()!=2) {
+        errln("abcd.remove_suffix(2) failed");
+    }
+    sp=abcd;
+    sp.remove_suffix(5);
+    if(!sp.empty() || sp.length()!=0 || sp.size()!=0) {
+        errln("abcd.remove_suffix(5) failed");
+    }
+}
+
+#if defined(U_WINDOWS) && defined(_MSC_VER)
+#include <vector>
+#endif
+
+void
+StringTest::TestSTLCompatibility() {
+#if defined(U_WINDOWS) && defined(_MSC_VER)
+    /* Just make sure that it compiles with STL's placement new usage. */
+    std::vector<UnicodeString> myvect;
+    myvect.push_back(UnicodeString("blah"));
+#endif
 }

@@ -773,21 +773,20 @@ typedef struct DefaultTZInfo {
  * It is currently use to compare two TZ files.
  */
 static UBool compareBinaryFiles(const char* defaultTZFileName, const char* TZFileName, DefaultTZInfo* tzInfo) {
-    if (tzInfo->defaultTZFilePtr == NULL) {
-        tzInfo->defaultTZFilePtr = fopen(defaultTZFileName, "r");
-    }
-    FILE* file = fopen(TZFileName, "r");
-
+    FILE* file; 
     int64_t sizeFile;
     int64_t sizeFileLeft;
     int32_t sizeFileRead;
     int32_t sizeFileToRead;
+    char bufferFile[MAX_READ_SIZE];
+    UBool result = TRUE;
+
+    if (tzInfo->defaultTZFilePtr == NULL) {
+        tzInfo->defaultTZFilePtr = fopen(defaultTZFileName, "r");
+    }
+    file = fopen(TZFileName, "r");
 
     tzInfo->defaultTZPosition = 0; /* reset position to begin search */
-
-    char bufferFile[MAX_READ_SIZE];
-
-    UBool result = TRUE;
 
     if (file != NULL && tzInfo->defaultTZFilePtr != NULL) {
         /* First check that the file size are equal. */
@@ -867,9 +866,9 @@ static char* searchForTZFile(const char* path, DefaultTZInfo* tzInfo) {
                 result = searchForTZFile(newpath, tzInfo);
             } else {
                 if(compareBinaryFiles(TZDEFAULT, newpath, tzInfo)) {
-                    char temp[MAX_PATH_SIZE];
-                    uprv_strcpy(temp, newpath + (sizeof(TZZONEINFO) - 1));
-                    result = temp;
+                    result = (char *)uprv_malloc(sizeof(char) * MAX_PATH_SIZE);
+                    result[0] = 0;
+                    uprv_strcpy(result, newpath + (sizeof(TZZONEINFO) - 1));
                     /* Get out after the first one found. */
                     break;
                 }
@@ -958,7 +957,6 @@ uprv_tzname(int n)
             }
 
             if (gTimeZoneBufferPtr != NULL && isValidOlsonID(gTimeZoneBufferPtr)) {
-                tzInfo->defaultTZstatus = TRUE;
                 return gTimeZoneBufferPtr;
             }
 #endif
@@ -1572,6 +1570,7 @@ The leftmost codepage (.xxx) wins.
 
 }
 
+#if !U_CHARSET_IS_UTF8
 #if U_POSIX_LOCALE
 /*
 Due to various platform differences, one platform may specify a charset,
@@ -1806,6 +1805,7 @@ uprv_getDefaultCodepage()
     umtx_unlock(NULL);
     return name;
 }
+#endif  /* !U_CHARSET_IS_UTF8 */
 
 
 /* end of platform-specific implementation -------------- */
@@ -1853,7 +1853,7 @@ u_versionFromUString(UVersionInfo versionArray, const UChar *versionString) {
 U_CAPI int32_t U_EXPORT2
 u_compareVersions(UVersionInfo v1, UVersionInfo v2) {
     int n;
-    if(v1==NULL||v2==NULL) return NULL;
+    if(v1==NULL||v2==NULL) return 0;
     for(n=0;n<U_MAX_VERSION_LENGTH;n++) {
       if(v1[n]<v2[n]) {
         return -1;

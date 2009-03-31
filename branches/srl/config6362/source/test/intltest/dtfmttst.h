@@ -136,7 +136,9 @@ public:
     virtual void TestDateFormatZone146(void);
 
     void TestTimeZoneStringsAPI(void);
- 
+
+    void TestGMTParsing(void);
+
 public: // package
     /**
      * Test the formatting of dates in different locales.
@@ -161,6 +163,7 @@ public: // package
 
     void Test6338(void);
 
+    void Test6726(void);
 public:
     /**
      * Test host-specific formatting.

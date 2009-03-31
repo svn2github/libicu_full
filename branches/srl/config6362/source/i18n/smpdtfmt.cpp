@@ -81,6 +81,8 @@ static const UChar gDefGmtNegHmsPat[] = {0x002D, 0x0048, 0x0048, 0x003A, 0x006D,
 static const UChar gDefGmtNegHmPat[]  = {0x002D, 0x0048, 0x0048, 0x003A, 0x006D, 0x006D, 0x0000}; /* -HH:mm */
 static const UChar gDefGmtPosHmsPat[] = {0x002B, 0x0048, 0x0048, 0x003A, 0x006D, 0x006D, 0x003A, 0x0073, 0x0073, 0x0000}; /* +HH:mm:ss */
 static const UChar gDefGmtPosHmPat[]  = {0x002B, 0x0048, 0x0048, 0x003A, 0x006D, 0x006D, 0x0000}; /* +HH:mm */
+static const UChar gUt[]       = {0x0055, 0x0054, 0x0000};  // "UT"
+static const UChar gUtc[]      = {0x0055, 0x0054, 0x0043, 0x0000};  // "UT"
 
 typedef enum GmtPatSize {
     kGmtLen = 3,
@@ -88,7 +90,9 @@ typedef enum GmtPatSize {
     kNegHmsLen = 9,
     kNegHmLen = 6,
     kPosHmsLen = 9,
-    kPosHmLen = 6
+    kPosHmLen = 6,
+    kUtLen = 2,
+    kUtcLen = 3
 } GmtPatSize;
 
 // Stuff needed for numbering system overrides
@@ -567,7 +571,14 @@ void SimpleDateFormat::construct(EStyle timeStyle,
         }
         timeDateArray[1].adoptString(tempus2);
 
-        resStr = ures_getStringByIndex(dateTimePatterns, (int32_t)kDateTime, &resStrLen, &status);
+        int32_t glueIndex = kDateTime;
+        int32_t patternsSize = ures_getSize(dateTimePatterns);
+        if (patternsSize >= (kDateTimeOffset + kShort + 1)) {
+            // Get proper date time format
+            glueIndex = (int32_t)(kDateTimeOffset + (dateStyle - kDateOffset));
+        }
+
+        resStr = ures_getStringByIndex(dateTimePatterns, glueIndex, &resStrLen, &status);
         MessageFormat::format(UnicodeString(TRUE, resStr, resStrLen), timeDateArray, 2, fPattern, status);
     }
     // if the pattern includes just time data or just date date, load the appropriate
@@ -1053,18 +1064,21 @@ SimpleDateFormat::parseGMTDefault(const UnicodeString &text, ParsePosition &pos)
     int32_t start = pos.getIndex();
     NumberFormat *currentNumberFormat = getNumberFormat(UDAT_TIMEZONE_RFC_FIELD);
 
-    if (start + kGmtLen + 1 >= text.length()) {
+    if (start + kUtLen + 1 >= text.length()) {
         pos.setErrorIndex(start);
         return 0;
     }
 
     int32_t cur = start;
     // "GMT"
-    if (text.compare(start, kGmtLen, gGmt) != 0) {
+    if (text.compare(start, kGmtLen, gGmt) == 0) {
+        cur += kGmtLen;
+    } else if (text.compare(start, kUtLen, gUt) == 0) {
+        cur += kUtLen;
+    } else {
         pos.setErrorIndex(start);
         return 0;
     }
-    cur += kGmtLen;
     // Sign
     UBool negative = FALSE;
     if (text.charAt(cur) == (UChar)0x002D /* minus */) {
@@ -2762,6 +2776,22 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
                     return start + matchLen;
                 }
             }
+            // Step 4
+            // Final attempt - is this standalone GMT/UT/UTC?
+            int32_t gmtLen = 0;
+            if (text.compare(start, kGmtLen, gGmt) == 0) {
+                gmtLen = kGmtLen;
+            } else if (text.compare(start, kUtcLen, gUtc) == 0) {
+                gmtLen = kUtcLen;
+            } else if (text.compare(start, kUtLen, gUt) == 0) {
+                gmtLen = kUtLen;
+            }
+            if (gmtLen > 0) {
+                TimeZone *tz = TimeZone::createTimeZone(UnicodeString("Etc/GMT"));
+                cal.adoptTimeZone(tz);
+                return start + gmtLen;
+            }
+
             // complete failure
             return -start;
         }

@@ -1,6 +1,6 @@
 /*
 **********************************************************************
-*   Copyright (C) 1999-2008, International Business Machines
+*   Copyright (C) 1999-2009, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 **********************************************************************
  *  ucnv.h:
@@ -873,7 +873,7 @@ ucnv_getStarters(const UConverter* converter,
 typedef enum UConverterUnicodeSet {
     /** Select the set of roundtrippable Unicode code points. @stable ICU 2.6 */
     UCNV_ROUNDTRIP_SET,
-    /** Select the set of Unicode code points with roundtrip or fallback mappings. @draft ICU 4.0 */
+    /** Select the set of Unicode code points with roundtrip or fallback mappings. @stable ICU 4.0 */
     UCNV_ROUNDTRIP_AND_FALLBACK_SET,
     /** Number of UConverterUnicodeSet selectors. @stable ICU 2.6 */
     UCNV_SET_COUNT
@@ -1790,6 +1790,9 @@ ucnv_getCanonicalName(const char *alias, const char *standard, UErrorCode *pErro
  * It is faster if you pass a NULL argument to ucnv_open the
  * default converter.
  *
+ * If U_CHARSET_IS_UTF8 is defined to 1 in utypes.h then this function
+ * always returns "UTF-8".
+ *
  * @return returns the current default converter name.
  *         Storage owned by the library
  * @see ucnv_setDefaultName
@@ -1805,6 +1808,10 @@ ucnv_getDefaultName(void);
  * should be called during application initialization. Most of the time, the
  * results from ucnv_getDefaultName() or ucnv_open with a NULL string argument
  * is sufficient for your application.
+ *
+ * If U_CHARSET_IS_UTF8 is defined to 1 in utypes.h then this function
+ * does nothing.
+ *
  * @param name the converter name to be the default (must be known by ICU).
  * @see ucnv_getDefaultName
  * @system

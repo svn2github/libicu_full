@@ -59,6 +59,8 @@
 #include "unicode/locid.h"
 #include "unicode/uniset.h"
 #include "unicode/umisc.h"
+#include "unicode/uiter.h"
+#include "unicode/stringpiece.h"
 
 U_NAMESPACE_BEGIN
 
@@ -438,6 +440,38 @@ public:
                                       UErrorCode &status) const = 0;
 
     /**
+     * Compares two strings using the Collator.
+     * Returns whether the first one compares less than/equal to/greater than
+     * the second one.
+     * This version takes UCharIterator input.
+     * @param sIter the first ("source") string iterator
+     * @param tIter the second ("target") string iterator
+     * @param status ICU status
+     * @return UCOL_LESS, UCOL_EQUAL or UCOL_GREATER
+     * @draft ICU 4.2
+     */
+    virtual UCollationResult compare(UCharIterator &sIter,
+                                     UCharIterator &tIter,
+                                     UErrorCode &status) const;
+
+    /**
+     * Compares two UTF-8 strings using the Collator.
+     * Returns whether the first one compares less than/equal to/greater than
+     * the second one.
+     * This version takes UTF-8 input.
+     * Note that a StringPiece can be implicitly constructed
+     * from a std::string or a NUL-terminated const char * string.
+     * @param source the first UTF-8 string
+     * @param target the second UTF-8 string
+     * @param status ICU status
+     * @return UCOL_LESS, UCOL_EQUAL or UCOL_GREATER
+     * @draft ICU 4.2
+     */
+    virtual UCollationResult compareUTF8(const StringPiece &source,
+                                         const StringPiece &target,
+                                         UErrorCode &status) const;
+
+    /**
      * Transforms the string into a series of characters that can be compared
      * with CollationKey::compareTo. It is not possible to restore the original
      * string from the chars in the sort key.  The generated sort key handles
@@ -640,12 +674,13 @@ public:
      * the open (creation) of the service with the locale formed from the input locale
      * plus input keyword and that value has different behavior than creation with the
      * input locale alone.
-     * @param key           one of the keys supported by this service.  For now, only
+     * @param keyword        one of the keys supported by this service.  For now, only
      *                      "collation" is supported.
      * @param locale        the locale
      * @param commonlyUsed  if set to true it will return only commonly used values
      *                      with the given locale in preferred order.  Otherwise,
      *                      it will return all the available values for the locale.
+     * @param status ICU status
      * @return a string enumeration over keyword values for the given key and the locale.
      * @draft ICU 4.2
      */

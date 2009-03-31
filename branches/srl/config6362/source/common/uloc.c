@@ -2897,7 +2897,7 @@ uloc_getCharacterOrientation(const char* localeId,
  * @param localeID locale name
  * @param status Error status
  * @return an enum indicating the layout orientation for lines.
- * @draft ICU 4.0
+ * @stable ICU 4.0
  */
 U_DRAFT ULayoutType U_EXPORT2
 uloc_getLineOrientation(const char* localeId,
@@ -4369,6 +4369,28 @@ uloc_minimizeSubtags(const char*    localeID,
                     minimizedLocaleIDCapacity,
                     err);
     }    
+}
+
+U_DRAFT int32_t U_EXPORT2
+uloc_forLanguageTag(const char* langtag,
+                    char* localeID,
+                    int32_t localeIDCapacity,
+                    int32_t* parsedLength,
+                    UErrorCode* err)
+{
+    /* TODO */
+    return 0;
+}
+
+U_DRAFT int32_t U_EXPORT2
+uloc_toLanguageTag(const char* localeID,
+                   char* langtag,
+                   int32_t langtagCapacity,
+                   UBool strict,
+                   UErrorCode* err)
+{
+    /* TODO */
+    return 0;
 }
 
 /*eof*/

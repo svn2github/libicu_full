@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 2005-2008, International Business Machines
+*   Copyright (C) 2005-2009, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
@@ -26,6 +26,12 @@
 #include "unicode/utypes.h"
 #include "unicode/putil.h"
 #include "unicode/udata.h"
+
+/* Explicit include statement for std_string.h is needed
+ * for compilation on certain platforms. (e.g. AIX/VACPP)
+ */
+#include "unicode/std_string.h"
+
 #include "cmemory.h"
 #include "cstring.h"
 #include "uinvchar.h"
@@ -50,6 +56,8 @@
 #include "triedict.h"
 
 /* swapping implementations in i18n */
+
+#include "uspoof_impl.h"
 
 /* definitions */
 
@@ -556,7 +564,9 @@ static const struct {
     { { 0x54, 0x72, 0x44, 0x63 }, triedict_swap },      /* dataFormat="TrDc " */
 #endif
     { { 0x70, 0x6e, 0x61, 0x6d }, upname_swap },        /* dataFormat="pnam" */
-    { { 0x75, 0x6e, 0x61, 0x6d }, uchar_swapNames }     /* dataFormat="unam" */
+    { { 0x75, 0x6e, 0x61, 0x6d }, uchar_swapNames },    /* dataFormat="unam" */
+
+    { { 0x43, 0x66, 0x75, 0x20 }, uspoof_swap }         /* dataFormat="Cfu " */
 };
 
 U_CAPI int32_t U_EXPORT2

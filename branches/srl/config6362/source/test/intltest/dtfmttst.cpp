@@ -76,9 +76,11 @@ void DateFormatTest::runIndexedTest( int32_t index, UBool exec, const char* &nam
         TESTCASE(36,TestTimeZoneDisplayName);
         TESTCASE(37,TestRoundtripWithCalendar);
         TESTCASE(38,Test6338);
+        TESTCASE(39,Test6726);
+        TESTCASE(40,TestGMTParsing);
         /*
-        TESTCASE(39,TestRelativeError);
-        TESTCASE(40,TestRelativeOther);
+        TESTCASE(41,TestRelativeError);
+        TESTCASE(42,TestRelativeOther);
         */
         default: name = ""; break;
     }
@@ -378,10 +380,10 @@ void DateFormatTest::TestFieldPosition() {
         "mercredi", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "\\u00C9tats-Unis (Los Angeles)",  "", "", "", "", "",
 
         "AD", "1997", "8", "13", "14", "14", "34", "12", "5",
-        "Wed", "225", "2", "33", "3", "PM", "2", "2", "PDT", "1997", "4", "1997", "2450674", "52452513", "-0700", "PT",  "4", "8", "3", "3","PDT",
+        "Wed", "225", "2", "33", "2", "PM", "2", "2", "PDT", "1997", "4", "1997", "2450674", "52452513", "-0700", "PT",  "4", "8", "3", "3","PDT",
 
         "Anno Domini", "1997", "August", "0013", "0014", "0014", "0034", "0012", "5130",
-        "Wednesday", "0225", "0002", "0033", "0003", "PM", "0002", "0002", "Pacific Daylight Time", "1997", "Wednesday", "1997", "2450674", "52452513", "GMT-07:00",
+        "Wednesday", "0225", "0002", "0033", "0002", "PM", "0002", "0002", "Pacific Daylight Time", "1997", "Wednesday", "1997", "2450674", "52452513", "GMT-07:00",
         "Pacific Time",  "Wednesday", "August", "3rd quarter", "3rd quarter", "United States (Los Angeles)"
     };
 
@@ -2381,7 +2383,7 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "zh", "America/Havana", "2004-07-15T00:00:00Z", "ZZZZ", "\\u683c\\u6797\\u5c3c\\u6cbb\\u6807\\u51c6\\u65f6\\u95f4-0400", "-4:00" },
         { "zh", "America/Havana", "2004-07-15T00:00:00Z", "z", "\\u683c\\u6797\\u5c3c\\u6cbb\\u6807\\u51c6\\u65f6\\u95f4-0400", "-4:00" },
         { "zh", "America/Havana", "2004-07-15T00:00:00Z", "zzzz", "\\u53e4\\u5df4\\u590f\\u4ee4\\u6642\\u9593", "-4:00" },
-        { "zh", "America/Havana", "2004-07-15T00:00:00Z", "v", "\\u53e4\\u5df4", "America/Havana" },
+        { "zh", "America/Havana", "2004-07-15T00:00:00Z", "v", "\\u53e4\\u5df4\\u65f6\\u95f4", "America/Havana" },
         { "zh", "America/Havana", "2004-07-15T00:00:00Z", "vvvv", "\\u53e4\\u5df4\\u6642\\u9593", "America/Havana" },
 
         { "zh", "Australia/ACT", "2004-01-15T00:00:00Z", "Z", "+1100", "+11:00" },
@@ -2417,9 +2419,9 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "zh", "Europe/London", "2004-07-15T00:00:00Z", "z", "\\u683c\\u6797\\u5c3c\\u6cbb\\u6807\\u51c6\\u65f6\\u95f4+0100", "+1:00" },
         { "zh", "Europe/London", "2004-07-15T00:00:00Z", "V", "BST", "+1:00" },
         { "zh", "Europe/London", "2004-07-15T00:00:00Z", "zzzz", "\\u683c\\u6797\\u5c3c\\u6cbb\\u6807\\u51c6\\u65f6\\u95f4+0100", "+1:00" },
-        { "zh", "Europe/London", "2004-07-15T00:00:00Z", "v", "\\u82f1\\u56fd", "Europe/London" },
-        { "zh", "Europe/London", "2004-07-15T00:00:00Z", "vvvv", "\\u82f1\\u56fd", "Europe/London" },
-        { "zh", "Europe/London", "2004-07-15T00:00:00Z", "VVVV", "\\u82f1\\u56fd", "Europe/London" },
+        { "zh", "Europe/London", "2004-07-15T00:00:00Z", "v", "\\u82f1\\u56fd\\u65f6\\u95f4", "Europe/London" },
+        { "zh", "Europe/London", "2004-07-15T00:00:00Z", "vvvv", "\\u82f1\\u56fd\\u65f6\\u95f4", "Europe/London" },
+        { "zh", "Europe/London", "2004-07-15T00:00:00Z", "VVVV", "\\u82f1\\u56fd\\u65f6\\u95f4", "Europe/London" },
 
         { "zh", "Etc/GMT+3", "2004-01-15T00:00:00Z", "Z", "-0300", "-3:00" },
         { "zh", "Etc/GMT+3", "2004-01-15T00:00:00Z", "ZZZZ", "\\u683c\\u6797\\u5c3c\\u6cbb\\u6807\\u51c6\\u65f6\\u95f4-0300", "-3:00" },
@@ -2441,7 +2443,7 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "zh", "Asia/Calcutta", "2004-07-15T00:00:00Z", "ZZZZ", "\\u683c\\u6797\\u5c3c\\u6cbb\\u6807\\u51c6\\u65f6\\u95f4+0530", "+5:30" },
         { "zh", "Asia/Calcutta", "2004-07-15T00:00:00Z", "z", "\\u683c\\u6797\\u5c3c\\u6cbb\\u6807\\u51c6\\u65f6\\u95f4+0530", "+05:30" },
         { "zh", "Asia/Calcutta", "2004-07-15T00:00:00Z", "zzzz", "\\u5370\\u5ea6\\u6807\\u51c6\\u65f6\\u95f4", "+5:30" },
-        { "zh", "Asia/Calcutta", "2004-07-15T00:00:00Z", "v", "\\u5370\\u5ea6", "Asia/Calcutta" },
+        { "zh", "Asia/Calcutta", "2004-07-15T00:00:00Z", "v", "\\u5370\\u5ea6\\u65f6\\u95f4", "Asia/Calcutta" },
         { "zh", "Asia/Calcutta", "2004-07-15T00:00:00Z", "vvvv", "\\u5370\\u5ea6\\u6807\\u51c6\\u65f6\\u95f4", "Asia/Calcutta" },
 
         // ==========
@@ -3141,6 +3143,71 @@ void DateFormatTest::Test6338(void)
     delete fmt4;
 
 }
+
+void DateFormatTest::Test6726(void)
+{
+    // status
+    UErrorCode status = U_ZERO_ERROR;
+
+    // fmtf, fmtl, fmtm, fmts;
+    UnicodeString strf, strl, strm, strs;
+    UDate dt = date(2008-1900, UCAL_JUNE, 10, 12, 00);
+
+    Locale loc("ja");
+    DateFormat* fmtf = DateFormat::createDateTimeInstance(DateFormat::FULL, DateFormat::FULL, loc);
+    DateFormat* fmtl = DateFormat::createDateTimeInstance(DateFormat::LONG, DateFormat::FULL, loc);
+    DateFormat* fmtm = DateFormat::createDateTimeInstance(DateFormat::MEDIUM, DateFormat::FULL, loc);
+    DateFormat* fmts = DateFormat::createDateTimeInstance(DateFormat::SHORT, DateFormat::FULL, loc);
+    strf = fmtf->format(dt, strf);
+    strl = fmtl->format(dt, strl);
+    strm = fmtm->format(dt, strm);
+    strs = fmts->format(dt, strs);
+
+/* Locale data is not yet updated
+    if (strf.charAt(13) == UChar(' ')) {
+        errln((UnicodeString)"FAIL: Improper formated date: " + strf);
+    }
+    if (strl.charAt(10) == UChar(' ')) {
+        errln((UnicodeString)"FAIL: Improper formated date: " + strl);
+    }
+*/
+    if (strm.charAt(10) != UChar(' ')) {
+        errln((UnicodeString)"FAIL: Improper formated date: " + strm);
+    }
+    if (strs.charAt(8)  != UChar(' ')) {
+        errln((UnicodeString)"FAIL: Improper formated date: " + strs);
+    }
+
+    delete fmtf;
+    delete fmtl;    
+    delete fmtm;    
+    delete fmts;
+
+    return;
+}
+
+/**
+ * Test DateFormat's parsing of default GMT variants.  See ticket#6135
+ */
+void DateFormatTest::TestGMTParsing() {
+    const char* DATA[] = {
+        "HH:mm:ss Z",
+
+        // pattern, input, expected output (in quotes)
+        "HH:mm:ss Z",       "10:20:30 GMT+03:00",   "10:20:30 +0300",
+        "HH:mm:ss Z",       "10:20:30 UT-02:00",    "10:20:30 -0200",
+        "HH:mm:ss Z",       "10:20:30 GMT",         "10:20:30 +0000",
+        "HH:mm:ss vvvv",    "10:20:30 UT+10:00",    "10:20:30 +1000",
+        "HH:mm:ss zzzz",    "10:20:30 UTC",         "10:20:30 +0000",   // standalone "UTC"
+        "ZZZZ HH:mm:ss",    "UT 10:20:30",          "10:20:30 +0000",
+        "V HH:mm:ss",       "UT+0130 10:20:30",     "10:20:30 +0130",
+        "V HH:mm:ss",       "UTC+0130 10:20:30",    NULL,               // UTC+0130 is not a supported pattern
+        "HH mm Z ss",       "10 20 GMT-1100 30",    "10:20:30 -1100",
+    };
+    const int32_t DATA_len = sizeof(DATA)/sizeof(DATA[0]);
+    expectParse(DATA, DATA_len, Locale("en"));
+}
+
 
 #endif /* #if !UCONFIG_NO_FORMATTING */
 
