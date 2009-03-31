@@ -42,7 +42,7 @@ UNICODE_VERSION="5.1"
 AC_SUBST(UNICODE_VERSION)
 
 # Determine the host system
-AC_CANONICAL_HOST
+AC_CANONICAL_SYSTEM
 
 AC_SUBST(CPPFLAGS)
 
@@ -263,10 +263,11 @@ AC_PROG_RANLIB
 
 # look for 'ar' the proper way
 #AC_PATH_PROG(AR,ar,[echo archiver ar not found re-run configure ; false],$PATH:/bin:/usr/bin:/usr/ccs/bin)
-AN_MAKEVAR([AR], [AC_PROG_AR])
-AN_PROGRAM([ar], [AC_PROG_AR])
-AC_DEFUN([AC_PROG_AR], [AC_CHECK_TOOL(AR, ar, $PATH:/bin:/usr/bin:/usr/ccs/bin)])
-AC_PROG_AR
+AC_CHECK_TOOL(AR, ar)
+if test "x$AR" = "x"; then
+  AC_MSG_ERROR(Archiver ar not found. Set AR= or fix PATH)
+fi
+
 
 AC_MSG_CHECKING([whether to enable renaming of symbols])
 enabled=yes
