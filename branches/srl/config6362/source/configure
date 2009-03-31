@@ -1459,7 +1459,7 @@ If set, it will REPLACE any automatic list of libraries.
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
-  --with-cross-build=dir specify the build directory of an ICU built for the current platform default=no cross dir
+  --with-cross-build=dir specify an absolute path to the build directory of an ICU built for the current platform default=no cross dir
   --with-library-bits=bits specify how many bits to use for the library (32, 64, 64else32, nochange) default=nochange
   --with-iostream=version specify the version of iostream to use (none, old, std, auto) default=auto
   --with-data-packaging=type specify how to package ICU data (files, archive, library, auto) default=auto
@@ -3791,8 +3791,20 @@ $as_echo "$as_me: error: Error! Cross compiling but no --with-cross-build option
    { (exit 1); exit 1; }; }
     fi
 else
-    { $as_echo "$as_me:$LINENO: result: Using cross buildroot: $cross_buildroot" >&5
+    if test -f "${cross_buildroot}/config/icucross.mk"; then
+        { $as_echo "$as_me:$LINENO: result: Using cross buildroot: $cross_buildroot" >&5
 $as_echo "Using cross buildroot: $cross_buildroot" >&6; }
+    else
+        if test -d "${cross_buildroot}"; then
+            { { $as_echo "$as_me:$LINENO: error: ${cross_buildroot}/config/icucross.mk not found. Please build ICU in ${cross_buildroot} first." >&5
+$as_echo "$as_me: error: ${cross_buildroot}/config/icucross.mk not found. Please build ICU in ${cross_buildroot} first." >&2;}
+   { (exit 1); exit 1; }; }
+        else
+            { { $as_echo "$as_me:$LINENO: error: No such directory ${cross_buildroot} supplied as the argument to --with-cross-build. Use an absolute path." >&5
+$as_echo "$as_me: error: No such directory ${cross_buildroot} supplied as the argument to --with-cross-build. Use an absolute path." >&2;}
+   { (exit 1); exit 1; }; }
+        fi
+    fi
 fi
 
 
