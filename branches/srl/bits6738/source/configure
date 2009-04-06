@@ -3996,12 +3996,12 @@ $as_echo "$ac_use_strict_options" >&6; }
     # Check whether --enable-64bit-libs was given.
 if test "${enable_64bit_libs+set}" = set; then
   enableval=$enable_64bit_libs; echo "note, use --with-library-bits instead of --*-64bit-libs"
-         case "${withval}" in
-            no|false|32) BITS_REQ=32 ;;
-            yes|true|64) BITS_REQ=64 ;;
-            nochange) BITS_REQ=nochange ;;
-            *) { { $as_echo "$as_me:$LINENO: error: bad value ${withval} for --with-library-bits" >&5
-$as_echo "$as_me: error: bad value ${withval} for --with-library-bits" >&2;}
+         case "${enableval}" in
+            no|false|32) with_library_bits=32;  ;;
+            yes|true|64) with_library_bits=64else32 ;;
+            nochange) with_library_bits=nochange; ;;
+            *) { { $as_echo "$as_me:$LINENO: error: bad value ${enableval} for '--*-64bit-libs'" >&5
+$as_echo "$as_me: error: bad value ${enableval} for '--*-64bit-libs'" >&2;}
    { (exit 1); exit 1; }; } ;;
             esac
 fi
@@ -4012,7 +4012,7 @@ fi
 # Check whether --with-library-bits was given.
 if test "${with_library_bits+set}" = set; then
   withval=$with_library_bits; case "${withval}" in
-            nochange) BITS_REQ=$withval ;;
+            ""|nochange) BITS_REQ=$withval ;;
             32|64|64else32) BITS_REQ=$withval ;;
             *) { { $as_echo "$as_me:$LINENO: error: bad value ${withval} for --with-library-bits" >&5
 $as_echo "$as_me: error: bad value ${withval} for --with-library-bits" >&2;}

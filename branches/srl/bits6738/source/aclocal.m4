@@ -129,18 +129,18 @@ AC_DEFUN(AC_CHECK_64BIT_LIBS,
     AC_ARG_ENABLE(64bit-libs,
         [  --enable-64bit-libs     (deprecated, use --with-library-bits) build 64-bit libraries [default= platform default]],
         [echo "note, use --with-library-bits instead of --*-64bit-libs"
-         case "${withval}" in
-            no|false|32) BITS_REQ=32 ;;
-            yes|true|64) BITS_REQ=64 ;;
-            nochange) BITS_REQ=nochange ;;
-            *) AC_MSG_ERROR(bad value ${withval} for --with-library-bits) ;;
+         case "${enableval}" in
+            no|false|32) with_library_bits=32;  ;;
+            yes|true|64) with_library_bits=64else32 ;;
+            nochange) with_library_bits=nochange; ;;
+            *) AC_MSG_ERROR(bad value ${enableval} for '--*-64bit-libs') ;;
             esac]    )
     
 
     AC_ARG_WITH(library-bits,
         [  --with-library-bits=bits specify how many bits to use for the library (32, 64, 64else32, nochange) [default=nochange]],
         [case "${withval}" in
-            nochange) BITS_REQ=$withval ;;
+            ""|nochange) BITS_REQ=$withval ;;
             32|64|64else32) BITS_REQ=$withval ;;
             *) AC_MSG_ERROR(bad value ${withval} for --with-library-bits) ;;
             esac])
