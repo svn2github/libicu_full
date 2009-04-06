@@ -419,10 +419,10 @@ AC_DEFUN(AC_CHECK_64BIT_LIBS,
             ARFLAGS="${ARFLAGS_32}"     
             BITS_OK=yes
         elif test "$BITS_REQ" = "64" -a "$BITS_RUN_64" = "yes"; then
-            CFLAGS="${CFLAGS_32}"
-            CXXFLAGS="${CXXFLAGS_32}"
-            LDFLAGS="${LDFLAGS_32}"
-            ARFLAGS="${ARFLAGS_32}"     
+            CFLAGS="${CFLAGS_64}"
+            CXXFLAGS="${CXXFLAGS_64}"
+            LDFLAGS="${LDFLAGS_64}"
+            ARFLAGS="${ARFLAGS_64}"     
             BITS_OK=yes
         elif test "$BITS_OK" != "yes"; then
             AC_MSG_ERROR([Requested $BITS_REQ bit binaries but could not compile and execute them. See readme.html for help with cross compilation., and set compiler options manually.])
