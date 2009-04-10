@@ -1,37 +1,76 @@
 /********************************************************************
  * COPYRIGHT:
- * Copyright (c) 2007, International Business Machines Corporation and
+ * Copyright (c) 2007-2009, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 
 #include "unicode/udbgutil.h"
 
+/*
+To add a new enum type 
+      (For example: UShoeSize  with values USHOE_WIDE=0, USHOE_REGULAR, USHOE_NARROW, USHOE_COUNT)
 
+    1. udbgutil.h:  add  UDBG_UShoeSize to the UDebugEnumType enum before UDBG_ENUM_COUNT
+      ( The subsequent steps involve this file, udbgutil.cpp )
+    2. Find the marker "Add new enum types above this line"
+    3. Before that marker, add a #include of any header file you need.
+    4. Each enum type has three things in this section:  a #define, a count_, and an array of Fields. 
+       It may help to copy and paste a previous definition.
+    5. In the case of the USHOE_... strings above, "USHOE_" is common to all values- six characters
+         " #define LEN_USHOE 6 "   
+       6 characters will strip off "USHOE_" leaving enum values of WIDE, REGULAR, and NARROW.
+    6. Define the 'count_' variable, with the number of enum values. If the enum has a _MAX or _COUNT value, 
+        that can be helpful for automatically defining the count. Otherwise define it manually.
+        " static const int32_t count_UShoeSize = USHOE_COUNT; "
+    7. Define the field names, in order.
+        " static const Field names_UShoeSize[] =  {
+        "  FIELD_NAME_STR( LEN_USHOE, USHOE_WIDE ), 
+        "  FIELD_NAME_STR( LEN_USHOE, USHOE_REGULAR ), 
+        "  FIELD_NAME_STR( LEN_USHOE, USHOE_NARROW ), 
+        " };
+    8. Now, a bit farther down, add the name of the enum itself to the end of names_UDebugEnumType
+          ( UDebugEnumType is an enum, too!)
+        names_UDebugEnumType[] { ...  
+            " FIELD_NAME_STR( LEN_UDBG, UDBG_UShoeSize ),   "
+    9. Find the function _udbg_enumCount  and add the count macro:
+            " COUNT_CASE(UShoeSize)
+   10. Find the function _udbg_enumFields  and add the field macro:
+            " FIELD_CASE(UShoeSize)
+   11. verify that your test code, and Java data generation, works properly.
+*/
 
+/**
+ * Structure representing an enum value
+ */
 struct Field {
-        int32_t prefix; /* how many characters to remove - i.e. UCHAR_ = 5 */
-	const char *str;
-	int32_t num;
+    int32_t prefix;   /**< how many characters to remove in the prefix - i.e. UCHAR_ = 5 */
+	const char *str;  /**< The actual string value */
+	int32_t num;      /**< The numeric value */
 };
 
+/**
+ * Calculate the size of an array.
+ */
 #define DBG_ARRAY_COUNT(x) (sizeof(x)/sizeof(x[0]))
 
-
-// The fields
-
-#if !UCONFIG_NO_FORMATTING
-
-#include "unicode/ucal.h"
-// Calendar
-
-
-// 'UCAL_' = 5
+/**
+ * Define another field name. Used in an array of Field s
+ * @param y the common prefix length (i.e. 6 for "USHOE_" )
+ * @param x the actual enum value - it will be copied in both string and symbolic form.
+ * @see Field
+ */
 #define FIELD_NAME_STR(y,x)  { y, #x, x }
 
+
+// TODO: Currently, this whole functionality goes away with UCONFIG_NO_FORMATTING. Should be split up.
+#if !UCONFIG_NO_FORMATTING
+
+// Calendar
+#include "unicode/ucal.h"
+
+// 'UCAL_' = 5
 #define LEN_UCAL 5 /* UCAL_ */
-
 static const int32_t count_UCalendarDateFields = UCAL_FIELD_COUNT;
-
 static const Field names_UCalendarDateFields[] = 
 {
     FIELD_NAME_STR( LEN_UCAL, UCAL_ERA ),
@@ -61,7 +100,6 @@ static const Field names_UCalendarDateFields[] =
 
 
 static const int32_t count_UCalendarMonths = UCAL_UNDECIMBER+1;
-
 static const Field names_UCalendarMonths[] = 
 {
   FIELD_NAME_STR( LEN_UCAL, UCAL_JANUARY ),
@@ -82,9 +120,7 @@ static const Field names_UCalendarMonths[] =
 #include "unicode/udat.h"
 
 #define LEN_UDAT 5 /* "UDAT_" */
-
 static const int32_t count_UDateFormatStyle = UDAT_SHORT+1;
-
 static const Field names_UDateFormatStyle[] = 
 {
         FIELD_NAME_STR( LEN_UDAT, UDAT_FULL ),
@@ -99,20 +135,31 @@ static const Field names_UDateFormatStyle[] =
      */
 };
  
+#include "unicode/uloc.h"
+
+#define LEN_UAR 12 /* "ULOC_ACCEPT_" */
+static const int32_t count_UAcceptResult = 3;
+static const Field names_UAcceptResult[] = 
+{
+        FIELD_NAME_STR( LEN_UAR, ULOC_ACCEPT_FAILED ),
+        FIELD_NAME_STR( LEN_UAR, ULOC_ACCEPT_VALID ),
+        FIELD_NAME_STR( LEN_UAR, ULOC_ACCEPT_FALLBACK ),
+};
 
 
 #define LEN_UDBG 5 /* "UDBG_" */
-
 static const int32_t count_UDebugEnumType = UDBG_ENUM_COUNT;
-
 static const Field names_UDebugEnumType[] = 
 {
     FIELD_NAME_STR( LEN_UDBG, UDBG_UDebugEnumType ),
     FIELD_NAME_STR( LEN_UDBG, UDBG_UCalendarDateFields ),
     FIELD_NAME_STR( LEN_UDBG, UDBG_UCalendarMonths ),
     FIELD_NAME_STR( LEN_UDBG, UDBG_UDateFormatStyle ),
+    FIELD_NAME_STR( LEN_UDBG, UDBG_UAcceptResult ),
 };
 
+
+// --- Add new enum types above this line ---
 
 #define COUNT_CASE(x)  case UDBG_##x: return (actual?count_##x:DBG_ARRAY_COUNT(names_##x));
 #define COUNT_FAIL_CASE(x) case UDBG_##x: return -1;
@@ -120,7 +167,7 @@ static const Field names_UDebugEnumType[] =
 #define FIELD_CASE(x)  case UDBG_##x: return names_##x;
 #define FIELD_FAIL_CASE(x) case UDBG_##x: return NULL;
 
-#else
+#else  /* no formatting */
 
 #define COUNT_CASE(x)
 #define COUNT_FAIL_CASE(x)
@@ -142,6 +189,7 @@ static int32_t _udbg_enumCount(UDebugEnumType type, UBool actual) {
 		COUNT_CASE(UCalendarDateFields)
 		COUNT_CASE(UCalendarMonths)
 		COUNT_CASE(UDateFormatStyle)
+        COUNT_CASE(UAcceptResult)
 		// COUNT_FAIL_CASE(UNonExistentEnum)
 	default:
 		return -1;
@@ -154,6 +202,7 @@ static const Field* _udbg_enumFields(UDebugEnumType type) {
 		FIELD_CASE(UCalendarDateFields)
 		FIELD_CASE(UCalendarMonths)
 		FIELD_CASE(UDateFormatStyle)
+        FIELD_CASE(UAcceptResult)
 		// FIELD_FAIL_CASE(UNonExistentEnum)
 	default:
 		return NULL;

@@ -1,6 +1,6 @@
 /*
 ************************************************************************
-* Copyright (c) 2008, International Business Machines
+* Copyright (c) 2008-2009, International Business Machines
 * Corporation and others.  All Rights Reserved.
 ************************************************************************
 */
@@ -19,6 +19,7 @@ enum UDebugEnumType {
     UDBG_UCalendarDateFields, /* UCalendarDateFields. Count=UCAL_FIELD_COUNT.  Unsupported if UCONFIG_NO_FORMATTING. */
     UDBG_UCalendarMonths, /* UCalendarMonths. Count= (UCAL_UNDECIMBER+1) */
     UDBG_UDateFormatStyle, /* Count = UDAT_SHORT=1 */
+    UDBG_UAcceptResult, /* Count = ULOC_ACCEPT_FALLBACK+1=3 */
     UDBG_ENUM_COUNT,
     UDBG_INVALID_ENUM = -1 /** Invalid enum value **/
 };

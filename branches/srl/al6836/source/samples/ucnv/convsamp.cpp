@@ -1067,6 +1067,160 @@ UErrorCode convsample_46()
 }
 #undef BUFFERSIZE
 
+
+#define BUFFERSIZE 2048
+
+UErrorCode codepageToCodepageConvert(const char *inputCodepage, FILE *in, const char *targetCodepage, FILE *out) {
+  char  iBuf[BUFFERSIZE];  /* input buf */
+  UChar uBuf[BUFFERSIZE];  /* Unicode buf */
+  char  tBuf[BUFFERSIZE];  /* target buf */
+  
+  /* input pointers */
+  char  *iPtr;
+  char  *iLimit;
+  /* Unicode pointers */
+  const UChar *uPtr;
+  const UChar *uLimit;
+  /* Target pointers */
+  char  *tPtr;
+  char  *tLimit;
+
+  UConverter *i2uConv = NULL; /* Input to Unicode */
+  UConverter *u2tConv = NULL; /* Unicode to Target */
+  
+  UErrorCode status = U_ZERO_ERROR;
+  
+  /* counters - not normally needed in production */
+  /* units */
+  int32_t   inBytes=0;
+  int32_t   uChars=0;
+  int32_t   outBytes=0;
+  
+  /* temporary counts */
+  int32_t   inCount=0;
+  int32_t   uCount = 0;
+  int32_t   outCount =0;
+  
+  /* loop counts */
+  int32_t  inReads=0;
+  int32_t  uConverts=0;
+  int32_t  uFullBuffers=0;
+  int32_t  tConverts=0;
+  int32_t  tFullBuffers=0;
+  
+  // **************************** START SAMPLE *******************
+  i2uConv = ucnv_open( inputCodepage, &status);
+  if(U_FAILURE(status)) {
+      fprintf(stderr, "Can't open input converter: %s: %s\n", inputCodepage, u_errorName(status));
+      return status;
+  }
+  u2tConv = ucnv_open( outputCodepage, &status);
+  if(U_FAILURE(status)) {
+      fprintf(stderr, "Can't open output converter: %s: %s\n", outputCodepage, u_errorName(status));
+      return status;
+  }
+/*
+  bufSize = (BUFFERSIZE*ucnv_getMaxCharSize(conv));
+  printf("input UChars[16] %d * max charsize %d = %d bytes output buffer\n",
+         BUFFERSIZE, ucnv_getMaxCharSize(conv), bufSize);
+  buf = (char*)malloc(bufSize * sizeof(char));
+  assert(buf!=NULL);*/
+  
+  // LOOP #1: grab another buffer's worth of input data
+  while((!feof(f)) && 
+        ((inCount=fread(inBuf, sizeof(iBuf[0]), BUFFERSIZE , f)) > 0) )
+  {
+    bool eof = feof(f); /* if true: no more input. */
+    inBytes += inCount;
+    inReads++;
+
+    // Convert bytes to unicode
+    iPtr = iBuf;
+    iLimit = iPtr + inCount;
+    
+    // LOOP #2: convert all of IN buffer into U buffer
+    UErrorCode i2uStatus = U_ZERO_ERROR;
+    do
+    {
+        uConverts++;
+        /* Unicode target */
+        uPtr = uBuf;
+        uLimit = uBuf+BUFFERSIZE;
+        
+        ucnv_fromUnicode( i2uConv, &uPtr, uLimit, 
+                       &iPtr, iLimit, NULL,
+                       feof(f)?TRUE:FALSE,         /* pass 'flush' when eof */
+                                   /* is true (when no more data will come) */
+                         &i2uStatus);
+      
+        if(i2uStatus == U_BUFFER_OVERFLOW_ERROR)
+        {
+          // simply ran out of space - we'll reset the target ptr the next
+          // time through the loop.
+          
+          i2uStatus = U_ZERO_ERROR; // reset status
+          uFullBuffers++;
+        }
+        else if(U_FAILURE(i2uStatus)) {
+            fprintf(stderr,"Failure after %d uConverts: %s\n", uConverts, u_errorName(i2uStatus));
+            return; /* FAIL */
+        }
+
+        uChars += (uPtr-uBuf);
+        // Process the Unicode
+        
+    } while (iPtr < iLimit); // while simply out of space
+  }
+  
+  fprintf(stderr, "IN:  %d bytes, %d reads\n", inBytes, inReads);
+  fprintf(stderr, "U:   %d uchars, %d converts, %d fullBuffers\n", uChars, uConverts, uFullBuffers);
+  fprintf(stderr, "OUT: %d bytes, %d converts, %d fullBuffers\n", outBytes, tConverts, tFullBuffers);
+  
+  // ***************************** END SAMPLE ********************
+  ucnv_close(conv);
+}
+
+UErrorCode convsample_50()
+{
+  printf("\n\n==============================================\n"
+    "Sample 50: C: convert data50.utf8 from utf-8 to ibm-9067  [data50.out]\n");
+
+  FILE *in;
+  FILE *out;
+
+  const char *inputCodepage = "utf-8";
+  const char *targetCodepage = "ibm-9067";
+  
+  UErrorCode status = U_ZERO_ERROR;
+  uint32_t inchars=0, total=0;
+
+  f = fopen("data50.utf8", "rb");
+  if(!f)
+  {
+    fprintf(stderr, "Couldn't open file 'data50.utf8' (Try http://www.gutenberg.org/files/27301/27301-0.txt and rename it to data50.utf8)\n");
+    return U_FILE_ACCESS_ERROR;
+  }
+
+  out = fopen("data50.out", "wb");
+  if(!out)
+  {
+    fprintf(stderr, "Couldn't create file 'data50.out'.\n");
+    return U_FILE_ACCESS_ERROR;
+  }
+  
+  
+    UErrorCode status = codepageToCodepageConvert(inputCodepage, in, targetCodepage, out);
+
+  fclose(in);
+  fclose(out);
+  printf("\n");
+
+  return U_ZERO_ERROR;
+}
+#undef BUFFERSIZE
+
+
+
 #define BUFFERSIZE 219
 
 
@@ -1077,6 +1231,7 @@ int main()
 
   printf("Default Converter=%s\n", ucnv_getDefaultName() );
   
+  /*
   convsample_02();  // C  , u->koi8r, conv
   convsample_03();  // C,   iterate
 
@@ -1092,6 +1247,8 @@ int main()
   convsample_40();  // C,   cp37 -> UTF16 [data02.bin -> data40.utf16]
   
   convsample_46();  // C,  UTF16 -> latin3 [data41.utf16 -> data46.out]
+*/
+  convsample_50();  // C,  UTF8 -> latinx [data50.utf8 -> data50.out]
   
   printf("End of converter samples.\n");
   

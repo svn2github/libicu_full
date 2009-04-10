@@ -1,7 +1,7 @@
 /*
 ********************************************************************************
 *
-*   Copyright (C) 1996-2008, International Business Machines
+*   Copyright (C) 1996-2009, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 ********************************************************************************
@@ -92,6 +92,8 @@ UTraceLevel ICU_TRACE = UTRACE_OFF;  /* ICU tracing level */
 size_t MINIMUM_MEMORY_SIZE_FAILURE = (size_t)-1; /* Minimum library memory allocation window that will fail. */
 size_t MAXIMUM_MEMORY_SIZE_FAILURE = (size_t)-1; /* Maximum library memory allocation window that will fail. */
 int32_t ALLOCATION_COUNT = 0;
+int32_t COLOR_EMPHASIS =0;
+const char *searchFor = NULL;
 /*-------------------------------------------*/
 
 /* strncmp that also makes sure there's a \0 at s2[0] */
@@ -292,7 +294,9 @@ static void iterateTestsWithLevel ( const TestNode* root,
     /* we want these messages to be at 0 indent. so just push the indent level breifly. */
     saveIndent = INDENT_LEVEL;
     INDENT_LEVEL = 0;
-    log_info("%s%s%c\n", (list[i]->test||mode==SHOWTESTS)?"---":"",pathToFunction, list[i]->test?' ':TEST_SEPARATOR );
+    if(searchFor==NULL || strstr(pathToFunction,searchFor)) {
+        log_info("%s%s%c\n", (list[i]->test||mode==SHOWTESTS)?"---":"",pathToFunction, list[i]->test?' ':TEST_SEPARATOR );
+    }
     INDENT_LEVEL = saveIndent;
 
     iterateTestsWithLevel ( root->child, len, list, mode );
@@ -426,6 +430,9 @@ getTest(const TestNode* root, const char* name)
     }
 }
 
+const char EMPH_ON[] = { 0x1B, '[', '1', 'm', 0 };
+const char EMPH_OFF[] = { 0x1B, '[', 'm', 0 };
+
 static void vlog_err(const char *prefix, const char *pattern, va_list ap)
 {
     if( ERR_MSG == FALSE){
@@ -435,7 +442,13 @@ static void vlog_err(const char *prefix, const char *pattern, va_list ap)
     if(prefix) {
         fputs(prefix, stderr);
     }
+    if(COLOR_EMPHASIS) {
+        fputs(EMPH_ON, stderr);
+    }
     vfprintf(stderr, pattern, ap);
+    if(COLOR_EMPHASIS) {
+        fputs(EMPH_OFF, stderr);
+    }
     fflush(stderr);
     va_end(ap);
 }
@@ -590,6 +603,7 @@ initArgs( int argc, const char* const argv[], ArgHandlerPtr argHandler, void *co
 {
     int                i;
     int                doList = FALSE;
+    int                doSearch = FALSE;
 	int                argSkip = 0;
 
     VERBOSITY = FALSE;
@@ -614,6 +628,15 @@ initArgs( int argc, const char* const argv[], ArgHandlerPtr argHandler, void *co
         else if (strcmp( argv[i], "-l" )==0 )
         {
             doList = TRUE;
+        }
+        else if (strcmp( argv[i], "-C" )==0 )
+        {
+            COLOR_EMPHASIS = TRUE;
+        }
+        else if (strcmp( argv[i], "-s" )==0 )
+        {
+            doSearch = TRUE; /* ignored? */
+            i++; /* skip */
         }
         else if (strcmp( argv[i], "-e1") == 0)
         {
@@ -712,11 +735,12 @@ runTestRequest(const TestNode* root,
              const char* const argv[])
 {
     /**
-     * This main will parse the l, v, h, n, and path arguments
+     * This main will parse the s, l, v, h, n, and path arguments
      */
     const TestNode*    toRun;
     int                i;
     int                doList = FALSE;
+    int                doSearch = FALSE;
     int                subtreeOptionSeen = FALSE;
 
     int                errorCount = 0;
@@ -740,7 +764,7 @@ runTestRequest(const TestNode* root,
                 return -1;
             }
 
-            if( doList == TRUE)
+            if( doList == TRUE || doSearch == TRUE)
                 showTests(toRun);
             else
                 runTests(toRun);
@@ -752,13 +776,19 @@ runTestRequest(const TestNode* root,
             subtreeOptionSeen=FALSE;
         } else if (strcmp( argv[i], "-l") == 0) {
             doList = TRUE;
+        } else if (strcmp( argv[i], "-s") == 0) {
+            doList = TRUE;
+            i++;
+            if(i<argc) {
+                searchFor = argv[i];
+            }
         }
         /* else option already handled by initArgs */
     }
 
     if( subtreeOptionSeen == FALSE) /* no other subtree given, run the default */
     {
-        if( doList == TRUE)
+        if( doList == TRUE || doSearch == TRUE)
             showTests(toRun);
         else
             runTests(toRun);
