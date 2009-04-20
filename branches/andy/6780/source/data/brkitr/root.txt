@@ -17,5 +17,6 @@ root{
     }
     dictionaries{
         Thai:process(dependency){"thaidict.ctd"}
+        Mymr:process(dependency){"mymrdict.ctd"}
     }
 }

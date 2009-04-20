@@ -18,7 +18,7 @@ subdir = test
 ## Files to remove for 'make clean'
 CLEANFILES = *~
 
-SUBDIRS = testdata intltest $(IOTEST) cintltst
+SUBDIRS = testdata intltest $(IOTEST) cintltst thaitest
 
 ## List of phony targets
 .PHONY : everything all all-local all-recursive install install-local		\

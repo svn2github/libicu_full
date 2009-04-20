@@ -10,6 +10,7 @@
 #if !UCONFIG_NO_BREAK_ITERATION
 
 #include "brkeng.h"
+#include "brkengmy.h"
 #include "dictbe.h"
 #include "triedict.h"
 #include "unicode/uchar.h"
@@ -225,6 +226,9 @@ ICULanguageBreakFactory::loadEngineFor(UChar32 c, int32_t breakType) {
             switch(code) {
             case USCRIPT_THAI:
                 engine = new ThaiBreakEngine(dict, status);
+                break;
+            case USCRIPT_MYANMAR:
+                engine = new MyanmarBreakEngine(dict, status);
                 break;
             default:
                 break;

@@ -495,8 +495,8 @@ CompactTrieDictionary::matches( UText *text,
         if (node->flagscount & kVerticalNode) {
             // Vertical node; check all the characters in it
             const CompactTrieVerticalNode *vnode = (const CompactTrieVerticalNode *)node;
-            for (int j = 0; j < nodeCount && i < maxLength; ++j) {
-                if (uc != vnode->chars[j]) {
+            for (int j = 0; j < nodeCount; ++j) {
+                if (i >= maxLength || uc != vnode->chars[j]) {
                     // We hit a non-equal character; return
                     goto exit;
                 }

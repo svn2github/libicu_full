@@ -90,7 +90,7 @@ public:
     // noSpaces     - pointer to a UChar array for the text without spaces
     // noSpaceCount - the number of characters in the noSpaces array
     // verbose      - report all breaks if true, otherwise just report differences
-    ThaiWordbreakTest(const UChar *spaces, int32_t spaceCount, const UChar *noSpaces, int32_t noSpaceCount, UBool verbose);
+    ThaiWordbreakTest(const UChar *spaces, int32_t spaceCount, const UChar *noSpaces, int32_t noSpaceCount, UBool verbose, const char * locale = "th");
     ~ThaiWordbreakTest();
 
     // returns the number of breaks that are in the spaces array
@@ -128,7 +128,8 @@ private:
     // noSpaceCount - the number of UChars in the noSpaces array
     // returns      - true if all breaks match, FALSE otherwise
     UBool compareWordBreaks(const UChar *spaces, int32_t spaceCount,
-                            const UChar *noSpaces, int32_t noSpaceCount);
+                            const UChar *noSpaces, int32_t noSpaceCount,
+                            const char * locale);
 
     // helper method to report a break in the spaces
     // array that's not found in the noSpaces array
@@ -157,10 +158,11 @@ private:
  * The main constructor: it calls compareWordBreaks and reports any differences
  */
 ThaiWordbreakTest::ThaiWordbreakTest(const UChar *spaces, int32_t spaceCount,
-                                     const UChar *noSpaces, int32_t noSpaceCount, UBool verbose)
+                                     const UChar *noSpaces, int32_t noSpaceCount,
+                                     UBool verbose, const char * locale)
 : fBreaksNotFound(0), fInvalidBreaks(0), fWordCount(0), fVerbose(verbose)
 {
-    compareWordBreaks(spaces, spaceCount, noSpaces, noSpaceCount);
+    compareWordBreaks(spaces, spaceCount, noSpaces, noSpaceCount, locale);
 }
 
 /*
@@ -212,10 +214,11 @@ inline int32_t ThaiWordbreakTest::getWordCount()
  * without spaces.
  */
 UBool ThaiWordbreakTest::compareWordBreaks(const UChar *spaces, int32_t spaceCount,
-                                           const UChar *noSpaces, int32_t noSpaceCount)
+                                           const UChar *noSpaces, int32_t noSpaceCount,
+                                           const char * locale)
 {
     UBool result = TRUE;
-    Locale thai("th");
+    Locale thai(locale);
     UCharCharacterIterator *noSpaceIter = new UCharCharacterIterator(noSpaces, noSpaceCount);
     UErrorCode status = U_ZERO_ERROR;
     
@@ -438,6 +441,7 @@ int generateFile(const UChar *chars, int32_t length) {
 int main(int argc, char **argv)
 {
     char *fileName = "space.txt";
+    char *locale = "th";
     int arg = 1;
     UBool verbose = FALSE;
     UBool generate = FALSE;
@@ -449,6 +453,12 @@ int main(int argc, char **argv)
 
     if (argc >= 2 && strcmp(argv[1], "-verbose") == 0) {
         verbose = TRUE;
+        arg += 1;
+    }
+
+    if (argc >= arg + 2 && strcmp(argv[arg], "-locale") == 0) {
+        arg += 1;
+        locale = argv[arg];
         arg += 1;
     }
 
@@ -480,7 +490,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    ThaiWordbreakTest test(spaces, spaceCount, noSpaces, nonSpaceCount, verbose);
+    ThaiWordbreakTest test(spaces, spaceCount, noSpaces, nonSpaceCount, verbose, locale);
 
     printf("word count: %d\n", test.getWordCount());
     printf("breaks not found: %d\n", test.getBreaksNotFound());
