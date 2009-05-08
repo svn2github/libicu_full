@@ -126,6 +126,10 @@ static void debugout(UnicodeString s) {
 #define debug(x)
 #endif
 
+// Set to 1 to make leading zeroes be an error
+// when doing a strict parse.
+#define CHECK_FOR_LEADING_ZERO 0
+
 // *****************************************************************************
 // class DecimalFormat
 // *****************************************************************************
@@ -1913,6 +1917,14 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
         digits.fDecimalAt = digits.fCount = 0;
         UChar32 zero = getConstSymbol(DecimalFormatSymbols::kZeroDigitSymbol).char32At(0);
 
+        UBool strictFail = FALSE; // did we exit with a strict parse failure?
+        int32_t lastGroup = -1; // where did we last see a grouping separator?
+        int32_t digitStart = position;
+        int32_t gs2 = fGroupingSize2 == 0 ? fGroupingSize : fGroupingSize2;
+#if CHECK_FOR_LEADING_ZERO
+        UBool leadingZero = FALSE; // did we see a leading zero?
+#endif
+
         const UnicodeString *decimalString;
         if (fCurrencySignCount > fgCurrencySignCountZero) {
         	decimalString = &getConstSymbol(DecimalFormatSymbols::kMonetarySeparatorSymbol);
@@ -1940,14 +1952,14 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
         UnicodeSet *groupingSet = NULL;
 
         if (decimalCharLength == decimalStringLength) {
-        	decimalSet = DecimalFormatStaticSets::getSimilarDecimals(decimalChar, strictParse, &decimalFallback);
+        	decimalSet = (UnicodeSet *) DecimalFormatStaticSets::getSimilarDecimals(decimalChar, strictParse, &decimalFallback)->cloneAsThawed();
         }
 
         if (groupingCharLength == groupingStringLength) {
             if (strictParse) {
-            	groupingSet = new UnicodeSet(*DecimalFormatStaticSets::gStaticSets->fStrictDefaultGroupingSeparators);
+            	groupingSet = (UnicodeSet *) DecimalFormatStaticSets::gStaticSets->fStrictDefaultGroupingSeparators->cloneAsThawed();
             } else {
-            	groupingSet = new UnicodeSet(*DecimalFormatStaticSets::gStaticSets->fDefaultGroupingSeparators);
+            	groupingSet = (UnicodeSet *) DecimalFormatStaticSets::gStaticSets->fDefaultGroupingSeparators->cloneAsThawed();
             }
 
             groupingSet->add(groupingChar);
@@ -1982,13 +1994,34 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
              * have a value outside the range 0..9.
              */
             digit = ch - zero;
+
             if (digit < 0 || digit > 9)
             {
                 digit = u_charDigitValue(ch);
             }
 
-            if (digit > 0 && digit <= 9)
+            if (digit > 0 && digit <= 9)  // digit == 0 handled below
             {
+                if (strictParse) {
+#if CHECK_FOR_LEADING_ZERO
+                    if (leadingZero) {
+                        // a leading zero before a digit is an error with strict parsing
+                        strictFail = TRUE;
+                        break;
+                    }
+#endif
+
+                    if (backup != -1) {
+                        if ((lastGroup != -1 && backup - lastGroup - 1 != gs2) ||
+                            (lastGroup == -1 && position - digitStart - 1 > gs2)) {
+                            strictFail = TRUE;
+                            break;
+                        }
+
+                        lastGroup = backup;
+                    }
+                }
+
                 // Cancel out backup setting (see grouping handler below)
                 backup = -1;
 
@@ -2001,28 +2034,61 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
             else if (digit == 0)
             {
                 // Cancel out backup setting (see grouping handler below)
+                if (strictParse && backup != -1) {
+                    // comma followed by digit, so group before comma is a
+                    // secondary group.  If there was a group separator
+                    // before that, the group must == the secondary group
+                    // length, else it can be <= the the secondary group
+                    // length.
+                    if ((lastGroup != -1 && backup - lastGroup - 1 != gs2) ||
+                        (lastGroup == -1 && position - digitStart - 1 > gs2)) {
+                        strictFail = TRUE;
+                        break;
+                    }
+
+                    lastGroup = backup;
+                }
+
                 backup = -1;
                 sawDigit = TRUE;
 
-                // Check for leading zeros
-                if (digits.fCount != 0)
-                {
-                    // output a regular zero digit.
-                    ++digitCount;
-                    digits.append((char)(digit + '0'));
+                // handle leading zeros
+                if (digits.fCount != 0) {
+                	digitCount += 1;
+                	digits.append((char) (digit + '0'));
+                } else if (sawDecimal) {
+					// If we have seen the decimal, but no significant digits yet,
+					// then we account for leading zeros by decrementing
+					// digits.decimalAt into negative values.
+                	digits.fDecimalAt -= 1;
+#if CHECK_FOR_LEADING_ZERO
+                } else {
+                	// TODO: Not sure we need to check fUseExponentialNotation
+                	if (strictParse && leadingZero && !fUseExponentialNotation) {
+                		strictFail = TRUE;
+                		break;
+                	}
+
+                	leadingZero = TRUE;
+#endif
                 }
-                else if (sawDecimal)
-                {
-                    // If we have seen the decimal, but no significant digits yet,
-                    // then we account for leading zeros by decrementing the
-                    // digits.fDecimalAt into negative values.
-                    --digits.fDecimalAt;
-                }
-                // else ignore leading zeros in integer part of number.
+
                 position += U16_LENGTH(ch);
             }
             else if (matchSymbol(text, position, groupingStringLength, *groupingString, groupingSet, ch) && isGroupingUsed())
             {
+                if (sawDecimal) {
+                    break;
+                }
+
+                if (strictParse) {
+                    if ((!sawDigit || backup != -1)) {
+                        // leading group, or two group separators in a row
+                        strictFail = TRUE;
+                        break;
+                    }
+                }
+
                 // Ignore grouping characters, if we are using them, but require
                 // that they be followed by a digit.  Otherwise we backup and
                 // reprocess them.
@@ -2034,16 +2100,36 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
                     groupingSet->set(ch, ch);
                 }
             }
-            else if (matchSymbol(text, position, decimalStringLength, *decimalString, decimalSet, ch) && !isParseIntegerOnly() && !sawDecimal)
+            else if (matchSymbol(text, position, decimalStringLength, *decimalString, decimalSet, ch))
             {
+                if (strictParse) {
+                    if (backup != -1 ||
+                        (lastGroup != -1 && position - lastGroup != fGroupingSize + 1)) {
+                        strictFail = TRUE;
+                        break;
+                    }
+                }
+
                 // If we're only parsing integers, or if we ALREADY saw the
                 // decimal, then don't parse this one.
+                if (isParseIntegerOnly() || sawDecimal) {
+                	break;
+                }
 
                 digits.fDecimalAt = digitCount; // Not digits.fCount!
-                sawDecimal = TRUE;
                 position += decimalStringLength;
+                sawDecimal = TRUE;
+#if CHECK_FOR_LEADING_ZERO
+                leadingZero = FALSE;
+#endif
+
+                if (decimalSet != NULL) {
+                    // Once we see a decimal character, we only accept that decimal character from then on.
+                	decimalSet->set(ch, ch);
+                }
             }
-            else {
+            else
+            {
                 const UnicodeString *tmp;
                 tmp = &getConstSymbol(DecimalFormatSymbols::kExponentialSymbol);
                 if (!text.caseCompare(position, tmp->length(), *tmp, U_FOLD_CASE_DEFAULT))    // error code is set below if !sawDigit
@@ -2099,10 +2185,28 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
         }
 
         delete groupingSet;
+        delete decimalSet;
 
         if (backup != -1)
         {
             position = backup;
+        }
+
+        if (strictParse && !sawDecimal) {
+            if (lastGroup != -1 && position - lastGroup != fGroupingSize + 1) {
+                strictFail = TRUE;
+            }
+        }
+
+        if (strictFail) {
+            // only set with strictParse and a leading zero error
+            // leading zeros are an error with strict parsing except
+            // immediately before nondigit (except group separator
+            // followed by digit), or end of text.
+
+            parsePosition.setIndex(oldStart);
+            parsePosition.setErrorIndex(position);
+            return FALSE;
         }
 
         // If there was no decimal point we have an integer

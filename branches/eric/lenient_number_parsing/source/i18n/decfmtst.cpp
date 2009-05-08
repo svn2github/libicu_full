@@ -52,7 +52,7 @@ static const UChar gStrictDotEquivalentsPattern[] = {
         0x005B, 0x002E, 0x2024, 0xFE52, 0xFF0E, 0xFF61, 0x005D, 0x0000};
 
 static const UChar gStrictCommaEquivalentsPattern[] = {
-		// [       ,    \u0668  \uFE10  \uFE50  \uFF0C     ]
+		// [       ,    \u066B  \uFE10  \uFE50  \uFF0C     ]
         0x005B, 0x002C, 0x066B, 0xFE10, 0xFE50, 0xFF0C, 0x005D, 0x0000};
 
 static const UChar gStrictOtherGroupingSeparatorsPattern[] = {
@@ -94,6 +94,16 @@ DecimalFormatStaticSets::DecimalFormatStaticSets(UErrorCode *status)
     		fDefaultGroupingSeparators == NULL || fStrictOtherGroupingSeparators == NULL) {
         goto ExitConstrDeleteAll;
     }
+
+    // Freeze all the sets
+    fDotEquivalents->freeze();
+    fCommaEquivalents->freeze();
+    fOtherGroupingSeparators->freeze();
+    fStrictDotEquivalents->freeze();
+    fStrictCommaEquivalents->freeze();
+    fStrictOtherGroupingSeparators->freeze();
+    fDefaultGroupingSeparators->freeze();
+    fStrictDefaultGroupingSeparators->freeze();
 
     return; // If we reached this point, everything is fine so just exit
 

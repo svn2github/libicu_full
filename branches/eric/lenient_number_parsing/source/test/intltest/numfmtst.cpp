@@ -879,6 +879,12 @@ static const char *lenientNegativePercentTestCases[] = {
 		"- 25"
 };
 
+static const char *strictFailureTestCases[] = {
+		" 1000",
+		"10,00",
+		"1,000,.0"
+};
+
 #define ARRAY_SIZE(array) ((int32_t) (sizeof (array) / sizeof(array[0])))
 
 /**
@@ -969,6 +975,41 @@ NumberFormatTest::TestLenientParse(void)
    }
 
    delete pFormat;
+
+   // Test cases that should fail with a strict parse and pass with a
+   // lenient parse.
+   NumberFormat *nFormat = NumberFormat::createInstance(locale, status);
+
+   // first, make sure that they fail with a strict parse
+   for (int32_t t = 0; t < ARRAY_SIZE(strictFailureTestCases); t += 1) {
+	   UnicodeString testCase = ctou(strictFailureTestCases[t]);
+
+	   nFormat->parse(testCase, n, status);
+	   logln((UnicodeString)"parse(" + testCase + ") = " + n.getLong());
+
+	   if (! U_FAILURE(status)) {
+		   errln((UnicodeString)"Strict Parse succeeded for \"" + (UnicodeString) strictFailureTestCases[t] + (UnicodeString) "\"");
+	   }
+
+	   status = U_ZERO_ERROR;
+   }
+
+   // then, make sure that they pass with a lenient parse
+   nFormat->setParseStrict(FALSE);
+   for (int32_t t = 0; t < ARRAY_SIZE(strictFailureTestCases); t += 1) {
+	   UnicodeString testCase = ctou(strictFailureTestCases[t]);
+
+	   nFormat->parse(testCase, n, status);
+	   logln((UnicodeString)"parse(" + testCase + ") = " + n.getLong());
+
+	   if (U_FAILURE(status) ||n.getType() != Formattable::kLong ||
+	        	n.getLong() != 1000) {
+		   errln((UnicodeString)"Lenient parse failed for \"" + (UnicodeString) strictFailureTestCases[t] + (UnicodeString) "\"");
+		   status = U_ZERO_ERROR;
+	   }
+   }
+
+   delete nFormat;
 }
 
 // -------------------------------------
