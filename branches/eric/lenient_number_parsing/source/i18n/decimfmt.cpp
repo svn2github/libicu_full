@@ -128,7 +128,7 @@ static void debugout(UnicodeString s) {
 
 // Set to 1 to make leading zeroes be an error
 // when doing a strict parse.
-#define CHECK_FOR_LEADING_ZERO 0
+#define CHECK_FOR_LEADING_ZERO 1
 
 // *****************************************************************************
 // class DecimalFormat
@@ -1921,8 +1921,13 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
         int32_t lastGroup = -1; // where did we last see a grouping separator?
         int32_t digitStart = position;
         int32_t gs2 = fGroupingSize2 == 0 ? fGroupingSize : fGroupingSize2;
+
 #if CHECK_FOR_LEADING_ZERO
-        UBool leadingZero = FALSE; // did we see a leading zero?
+        // Strict parsing leading zeroes.  If a leading zero would
+        // be forced by the pattern, then don't fail strict parsing.
+        UBool strictLeadingZero = FALSE;
+        int32_t leadingZeroPos   = 0;
+        int32_t leadingZeroCount = 0;
 #endif
 
         const UnicodeString *decimalString;
@@ -2003,14 +2008,6 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
             if (digit > 0 && digit <= 9)  // digit == 0 handled below
             {
                 if (strictParse) {
-#if CHECK_FOR_LEADING_ZERO
-                    if (leadingZero) {
-                        // a leading zero before a digit is an error with strict parsing
-                        strictFail = TRUE;
-                        break;
-                    }
-#endif
-
                     if (backup != -1) {
                         if ((lastGroup != -1 && backup - lastGroup - 1 != gs2) ||
                             (lastGroup == -1 && position - digitStart - 1 > gs2)) {
@@ -2064,12 +2061,14 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
 #if CHECK_FOR_LEADING_ZERO
                 } else {
                 	// TODO: Not sure we need to check fUseExponentialNotation
-                	if (strictParse && leadingZero && !fUseExponentialNotation) {
-                		strictFail = TRUE;
-                		break;
-                	}
+                	if (strictParse && !fUseExponentialNotation) {
+                		if (!strictLeadingZero) {
+                			leadingZeroPos = position + U16_LENGTH(ch);
+                			strictLeadingZero = TRUE;
+                		}
 
-                	leadingZero = TRUE;
+                		leadingZeroCount += 1;
+                	}
 #endif
                 }
 
@@ -2119,9 +2118,6 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
                 digits.fDecimalAt = digitCount; // Not digits.fCount!
                 position += decimalStringLength;
                 sawDecimal = TRUE;
-#if CHECK_FOR_LEADING_ZERO
-                leadingZero = FALSE;
-#endif
 
                 if (decimalSet != NULL) {
                     // Once we see a decimal character, we only accept that decimal character from then on.
@@ -2191,6 +2187,17 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
         {
             position = backup;
         }
+
+#if CHECK_FOR_LEADING_ZERO
+        // check for strict parse errors
+        if (strictParse && strictLeadingZero) {
+            if ((leadingZeroCount + digits.fDecimalAt) > getMinimumIntegerDigits()) {
+                parsePosition.setIndex(oldStart);
+                parsePosition.setErrorIndex(leadingZeroPos);
+                return FALSE;
+            }
+        }
+#endif
 
         if (strictParse && !sawDecimal) {
             if (lastGroup != -1 && position - lastGroup != fGroupingSize + 1) {
