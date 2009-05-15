@@ -10,6 +10,10 @@
 #include "unicode/colldata.h"
 #include "unicode/bmsearch.h"
 
+
+#if !UCONFIG_NO_COLLATION
+
+
 //#define USE_SAFE_CASTS
 #ifdef USE_SAFE_CASTS
 #define STATIC_CAST(type,value) static_cast<type>(value)
@@ -18,6 +22,8 @@
 #define STATIC_CAST(type,value) (type) (value)
 #define CONST_CAST(type,value) (type) (value)
 #endif
+
+U_NAMESPACE_USE
 
 U_CAPI UCD * U_EXPORT2
 ucd_open(UCollator *coll, UErrorCode *status)
@@ -143,3 +149,5 @@ bms_setTargetString(BMS *bms, const UChar *target, int32_t targetLength, UErrorC
 
     bms->bms->setTargetString(bms->targetString, *status);
 }
+
+#endif

@@ -3242,7 +3242,6 @@ private:
   // None of the following does releaseArray().
   inline void setLength(int32_t len);        // sets only fShortLength and fLength
   inline void setToEmpty();                  // sets fFlags=kShortString
-  inline void setToStackBuffer(int32_t len); // sets fFlags=kShortString
   inline void setArray(UChar *array, int32_t len, int32_t capacity); // does not set fFlags
 
   // allocate the array; result may be fStackBuffer
@@ -4143,12 +4142,6 @@ UnicodeString::setToEmpty() {
 }
 
 inline void
-UnicodeString::setToStackBuffer(int32_t len) {
-  fShortLength = (int8_t)len;
-  fFlags = kShortString;
-}
-
-inline void
 UnicodeString::setArray(UChar *array, int32_t len, int32_t capacity) {
   setLength(len);
   fUnion.fFields.fArray = array;
@@ -4162,12 +4155,26 @@ UnicodeString::getTerminatedBuffer() {
   } else {
     UChar *array = getArrayStart();
     int32_t len = length();
-#ifndef U_VALGRIND
-    if(len < getCapacity() && array[len] == 0) {
+    if(len < getCapacity()) {
+      if(!(fFlags&kBufferIsReadonly)) {
+        /*
+         * We must not write to a readonly buffer, but it is known to be
+         * NUL-terminated if len<capacity.
+         * A shared, allocated buffer (refCount()>1) must not have its contents
+         * modified, but the NUL at [len] is beyond the string contents,
+         * and multiple string objects and threads writing the same NUL into the
+         * same location is harmless.
+         * In all other cases, the buffer is fully writable and it is anyway safe
+         * to write the NUL.
+         *
+         * Note: An earlier version of this code tested whether there is a NUL
+         * at [len] already, but, while safe, it generated lots of warnings from
+         * tools like valgrind and Purify.
+         */
+        array[len] = 0;
+      }
       return array;
-    }
-#endif
-    if(cloneArrayIfNeeded(len+1)) {
+    } else if(cloneArrayIfNeeded(len+1)) {
       array = getArrayStart();
       array[len] = 0;
       return array;

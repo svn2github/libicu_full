@@ -19,6 +19,10 @@
 #ifndef __USPOOF_BUILDCONF_H__
 #define __USPOOF_BUILDCONF_H__
 
+#if !UCONFIG_NO_NORMALIZATION
+
+#if !UCONFIG_NO_REGULAR_EXPRESSIONS 
+
 #include "uspoof_impl.h"
 
 // SPUString
@@ -121,3 +125,5 @@ class ConfusabledataBuilder : public UMemory {
 };
 
 #endif
+#endif  // !UCONFIG_NO_REGULAR_EXPRESSIONS 
+#endif  // __USPOOF_BUILDCONF_H__

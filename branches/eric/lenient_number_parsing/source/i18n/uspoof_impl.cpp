@@ -19,6 +19,8 @@
 #include "uassert.h"
 #include "uspoof_impl.h"
 
+#if !UCONFIG_NO_NORMALIZATION
+
 
 U_NAMESPACE_BEGIN
 
@@ -787,7 +789,7 @@ NFKDBuffer::NFKDBuffer(const UChar *text, int32_t length, UErrorCode &status) {
 
 NFKDBuffer::~NFKDBuffer() {
     if (fNormalizedText != fSmallBuf) {
-        delete fNormalizedText;
+        uprv_free(fNormalizedText);
     }
     fNormalizedText = 0;
 }
@@ -954,5 +956,7 @@ uspoof_swap(const UDataSwapper *ds, const void *inData, int32_t length, void *ou
 
     return totalSize;
 }
+
+#endif
 
 

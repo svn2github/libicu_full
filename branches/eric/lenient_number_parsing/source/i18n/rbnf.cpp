@@ -56,6 +56,10 @@ static const UChar gSemiPercent[] =
 #define kHalfMaxDouble (double)(1 << kSomeNumberOfBitsDiv2)
 #define kMaxDouble (kHalfMaxDouble * kHalfMaxDouble)
 
+// Temporary workaround - when noParse is true, do noting in parse.
+// TODO: We need a real fix - see #6895/#6896
+static const char *NO_SPELLOUT_PARSE_LANGUAGES[] = { "ga", NULL };
+
 U_NAMESPACE_BEGIN
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(RuleBasedNumberFormat)
@@ -652,6 +656,7 @@ RuleBasedNumberFormat::RuleBasedNumberFormat(const UnicodeString& description,
   , lenient(FALSE)
   , lenientParseRules(NULL)
   , localizations(NULL)
+  , noParse(FALSE) //TODO: to be removed after #6895
 {
   LocalizationInfo* locinfo = StringLocalizationInfo::create(locs, perror, status);
   init(description, locinfo, perror, status);
@@ -668,6 +673,7 @@ RuleBasedNumberFormat::RuleBasedNumberFormat(const UnicodeString& description,
   , lenient(FALSE)
   , lenientParseRules(NULL)
   , localizations(NULL)
+  , noParse(FALSE) //TODO: to be removed after #6895
 {
   LocalizationInfo* locinfo = StringLocalizationInfo::create(locs, perror, status);
   init(description, locinfo, perror, status);
@@ -684,6 +690,7 @@ RuleBasedNumberFormat::RuleBasedNumberFormat(const UnicodeString& description,
   , lenient(FALSE)
   , lenientParseRules(NULL)
   , localizations(NULL)
+  , noParse(FALSE) //TODO: to be removed after #6895
 {
   init(description, info, perror, status);
 }
@@ -699,6 +706,7 @@ RuleBasedNumberFormat::RuleBasedNumberFormat(const UnicodeString& description,
   , lenient(FALSE)
   , lenientParseRules(NULL)
   , localizations(NULL)
+  , noParse(FALSE) //TODO: to be removed after #6895
 {
     init(description, NULL, perror, status);
 }
@@ -715,6 +723,7 @@ RuleBasedNumberFormat::RuleBasedNumberFormat(const UnicodeString& description,
   , lenient(FALSE)
   , lenientParseRules(NULL)
   , localizations(NULL)
+  , noParse(FALSE) //TODO: to be removed after #6895
 {
     init(description, NULL, perror, status);
 }
@@ -773,6 +782,19 @@ RuleBasedNumberFormat::RuleBasedNumberFormat(URBNFRuleSetTag tag, const Locale& 
 
         init (desc, locinfo, perror, status);
 
+        //TODO: we need a real fix - see #6895 / #6896
+        noParse = FALSE;
+        if (tag == URBNF_SPELLOUT) {
+            const char *lang = alocale.getLanguage();
+            for (int32_t i = 0; NO_SPELLOUT_PARSE_LANGUAGES[i] != NULL; i++) {
+                if (uprv_strcmp(lang, NO_SPELLOUT_PARSE_LANGUAGES[i]) == 0) {
+                    noParse = TRUE;
+                    break;
+                }
+            }
+        }
+        //TODO: end
+
         ures_close(ruleSets);
         ures_close(rbnfRules);
     }
@@ -807,6 +829,9 @@ RuleBasedNumberFormat::operator=(const RuleBasedNumberFormat& rhs)
     UParseError perror;
     init(rules, rhs.localizations ? rhs.localizations->ref() : NULL, perror, status);
 
+    //TODO: remove below when we fix the parse bug - See #6895 / #6896
+    noParse = rhs.noParse;
+
     return *this;
 }
 
@@ -833,6 +858,9 @@ RuleBasedNumberFormat::clone(void) const
         result = 0;
     } else {
         result->lenient = lenient;
+
+        //TODO: remove below when we fix the parse bug - See #6895 / #6896
+        result->noParse = noParse;
     }
     return result;
 }
@@ -1123,6 +1151,13 @@ RuleBasedNumberFormat::parse(const UnicodeString& text,
                              Formattable& result,
                              ParsePosition& parsePosition) const
 {
+    //TODO: We need a real fix.  See #6895 / #6896
+    if (noParse) {
+        // skip parsing
+        parsePosition.setErrorIndex(0);
+        return;
+    }
+
     if (!ruleSets) {
         parsePosition.setErrorIndex(0);
         return;
@@ -1136,7 +1171,7 @@ RuleBasedNumberFormat::parse(const UnicodeString& text,
 
     for (NFRuleSet** p = ruleSets; *p; ++p) {
         NFRuleSet *rp = *p;
-        if (rp->isPublic()) {
+        if (rp->isPublic() && rp->isParseable()) {
             ParsePosition working_pp(0);
             Formattable working_result;
 
