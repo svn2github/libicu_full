@@ -29,19 +29,54 @@
 #include "cstring.h"
 #include "unewdata.h"
 #include "ustr.h"
+#include "uhash.h"
 
 U_CDECL_BEGIN
 
+/* experimental compression */
+#define LAST_WINDOW_LIMIT 0x20000
+
+typedef struct KeyMapEntry {
+    int32_t oldpos, newpos;
+} KeyMapEntry;
+
 /* Resource bundle root table */
 struct SRBRoot {
-  char *fLocale;
-  int32_t fKeyPoint;
-  char *fKeys;
-  int32_t fKeysCapacity;
-  int32_t fCount;
   struct SResource *fRoot;
+  char *fLocale;
   int32_t fMaxTableLength;
+  /* size of root's children, not counting keys or compact-string bytes */
+  uint32_t fSizeExceptRoot;
   UBool noFallback; /* see URES_ATT_NO_FALLBACK */
+  UBool fIsDoneParsing; /* set while processing & writing */
+
+  char *fKeys;
+  KeyMapEntry *fKeyMap;
+  int32_t fKeyPoint;
+  int32_t fKeysCapacity;
+  int32_t fKeysCount;
+
+  UHashtable *fStringSet;
+  uint8_t *fStringBytes;
+  int32_t fStringBytesCapacity;
+  int32_t fStringBytesLength;
+
+  /* experimental compression */
+  int32_t fStringsCount, fStringsSize;
+  int32_t fPotentialSize, fMiniCount, fMiniReduction;
+  int32_t fIncompressibleStrings;
+  int32_t fCompressedPadding;
+  int32_t fKeysReduction;
+  int32_t fStringDedupReduction;
+  int32_t fWindowCounts[LAST_WINDOW_LIMIT>>5];
+  int32_t fWindows[3];
+  uint32_t fInfixUTF16Size;
+
+  struct SResource *fShortestString, *fLongestString;
+
+  const char *fPoolBundleKeys;
+  int32_t fPoolBundleKeysBottom, fPoolBundleKeysTop;
+  int32_t fPoolBundleKeysCount;
 };
 
 struct SRBRoot *bundle_open(const struct UString* comment, UErrorCode *status);
@@ -64,8 +99,16 @@ void bundle_close(struct SRBRoot *bundle, UErrorCode *status);
 void bundle_setlocale(struct SRBRoot *bundle, UChar *locale, UErrorCode *status);
 int32_t bundle_addtag(struct SRBRoot *bundle, const char *tag, UErrorCode *status);
 
+const char *
+bundle_getKeyBytes(struct SRBRoot *bundle, int32_t *pLength);
+
+int32_t
+bundle_addKeyBytes(struct SRBRoot *bundle, const char *keyBytes, int32_t length, UErrorCode *status);
+
+void
+bundle_compactKeys(struct SRBRoot *bundle, UErrorCode *status);
+
 /* Various resource types */
-struct SResource* res_open(const struct UString* comment, UErrorCode* status);
 
 /*
  * Return a unique pointer to a dummy object,
@@ -76,17 +119,16 @@ struct SResource* res_none(void);
 
 struct SResTable {
     uint32_t fCount;
-    uint32_t fChildrenSize;
+    UBool fIs32Bit;
     struct SResource *fFirst;
     struct SRBRoot *fRoot;
 };
 
-struct SResource* table_open(struct SRBRoot *bundle, char *tag, const struct UString* comment, UErrorCode *status);
+struct SResource* table_open(struct SRBRoot *bundle, const char *tag, const struct UString* comment, UErrorCode *status);
 void table_add(struct SResource *table, struct SResource *res, int linenumber, UErrorCode *status);
 
 struct SResArray {
     uint32_t fCount;
-    uint32_t fChildrenSize;
     struct SResource *fFirst;
     struct SResource *fLast;
 };
@@ -94,9 +136,21 @@ struct SResArray {
 struct SResource* array_open(struct SRBRoot *bundle, const char *tag, const struct UString* comment, UErrorCode *status);
 void array_add(struct SResource *array, struct SResource *res, UErrorCode *status);
 
+enum {
+    MAX_INFIXES = 2
+};
+
 struct SResString {
-    uint32_t fLength;
+    struct SResource *fSame;  /* used for duplicates */
+    struct SResource *fShorter, *fLonger;  /* used for finding infixes */
+    struct SResource *fInfixes[MAX_INFIXES];
     UChar *fChars;
+    int32_t fLength;
+    uint32_t fRes;  /* resource item for this string */
+    int32_t fInfixIndexes[MAX_INFIXES];
+    int8_t fInfixDepth; /* depth of indexes used inside this string */
+    UBool fIsInfix;
+    UBool fWriteUTF16;
 };
 
 struct SResource *string_open(struct SRBRoot *bundle, char *tag, const UChar *value, int32_t len, const struct UString* comment, UErrorCode *status);
@@ -129,8 +183,7 @@ struct SResource *bin_open(struct SRBRoot *bundle, const char *tag, uint32_t len
 
 struct SResource {
     UResType fType;
-    int32_t  fKey;
-    uint32_t fSize; /* Size in bytes outside the header part */
+    int32_t  fKey;  /* Index into bundle->fKeys, or -1 if no key. */
     int      line;  /* used internally to report duplicate keys in tables */
     struct SResource *fNext; /*This is for internal chaining while building*/
     struct UString fComment;
@@ -143,6 +196,9 @@ struct SResource {
         struct SResBinary fBinaryValue;
     } u;
 };
+
+const char *
+res_getKeyString(const struct SRBRoot *bundle, const struct SResource *res, char temp[8]);
 
 void res_close(struct SResource *res);
 void setIncludeCopyright(UBool val);

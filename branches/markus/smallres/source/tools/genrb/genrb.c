@@ -19,6 +19,8 @@
 #include "genrb.h"
 #include "unicode/uclean.h"
 
+#include "ucmndata.h"  /* TODO: for reading the pool bundle */
+
 /* Protos */
 static void  processFile(const char *filename, const char* cp, const char *inputDir, const char *outputDir, const char *packageName, UErrorCode *status);
 static char *make_res_filename(const char *filename, const char *outputDir,
@@ -54,7 +56,9 @@ enum
     NO_BINARY_COLLATION,
     /*added by Jing*/
     LANGUAGE,
-    NO_COLLATION_RULES
+    NO_COLLATION_RULES,
+    WRITE_POOL_BUNDLE,
+    USE_POOL_BUNDLE
 };
 
 UOption options[]={
@@ -71,11 +75,13 @@ UOption options[]={
                       UOPTION_COPYRIGHT,
                       /* UOPTION_PACKAGE_NAME, This option is deprecated and should not be used ever. */
                       UOPTION_BUNDLE_NAME,
-                      UOPTION_DEF( "write-xliff", 'x', UOPT_OPTIONAL_ARG),
-                      UOPTION_DEF( "strict",    'k', UOPT_NO_ARG), /* 14 */
-                      UOPTION_DEF( "noBinaryCollation", 'C', UOPT_NO_ARG),/* 15 */
-                      UOPTION_DEF( "language",  'l', UOPT_REQUIRES_ARG), /* 16 */
-                      UOPTION_DEF( "omitCollationRules", 'R', UOPT_NO_ARG),/* 17 */
+                      UOPTION_DEF("write-xliff", 'x', UOPT_OPTIONAL_ARG),
+                      UOPTION_DEF("strict",    'k', UOPT_NO_ARG), /* 14 */
+                      UOPTION_DEF("noBinaryCollation", 'C', UOPT_NO_ARG),/* 15 */
+                      UOPTION_DEF("language",  'l', UOPT_REQUIRES_ARG), /* 16 */
+                      UOPTION_DEF("omitCollationRules", 'R', UOPT_NO_ARG),/* 17 */
+                      UOPTION_DEF("writePoolBundle", '\x01', UOPT_REQUIRES_ARG),/* 18 */
+                      UOPTION_DEF("usePoolBundle", '\x01', UOPT_REQUIRES_ARG),/* 19 */
                   };
 
 static     UBool       write_java = FALSE;
@@ -83,6 +89,19 @@ static     UBool       write_xliff = FALSE;
 static     const char* outputEnc ="";
 static     const char* gPackageName=NULL;
 static     const char* bundleName=NULL;
+static     struct SRBRoot *newPoolBundle = NULL;
+
+/* TODO: separate header file for ResFile? */
+typedef struct ResFile {
+  uint8_t *fBytes;
+  const int32_t *fIndexes;
+  const char *fKeys;
+  int32_t fKeysBottom, fKeysTop;
+  int32_t fKeysCount;
+} ResFile;
+
+static ResFile poolBundle = { NULL };
+
 /*added by Jing*/
 static     const char* language = NULL;
 static     const char* xliffOutputFileName = NULL;
@@ -107,6 +126,22 @@ main(int argc,
     } else if(argc<2) {
         argc = -1;
     }
+    if(options[WRITE_POOL_BUNDLE].doesOccur && options[USE_POOL_BUNDLE].doesOccur) {
+        fprintf(stderr, "%s: cannot combine --writePoolBundle and --usePoolBundle\n", argv[0]);
+        argc = -1;
+    }
+    if(options[WRITE_POOL_BUNDLE].doesOccur) {
+        const char *poolResName = options[WRITE_POOL_BUNDLE].value;
+        int32_t poolResNameLength = uprv_strlen(options[WRITE_POOL_BUNDLE].value);
+        if(
+            !(uprv_strchr(poolResName, U_FILE_SEP_CHAR) == NULL &&
+              poolResNameLength > 4 &&
+              0 == uprv_strcmp(poolResName + poolResNameLength - 4, ".res"))
+        ) {
+            fprintf(stderr, "%s: the --writePoolBundle value must be a .res file name like pool.res\n", argv[0]);
+            argc = -1;
+        }
+    }
 
     if(options[VERSION].doesOccur) {
         fprintf(stderr,
@@ -118,7 +153,7 @@ main(int argc,
 
     if(argc<0 || options[HELP1].doesOccur || options[HELP2].doesOccur) {
         /*
-         * Broken into chucks because the C89 standard says the minimum
+         * Broken into chunks because the C89 standard says the minimum
          * required supported string length is 509 bytes.
          */
         fprintf(stderr,
@@ -161,6 +196,13 @@ main(int argc,
                 "\t-R or --omitCollationRules do not include collation (tailoring) rules;\n"
                 "\t                           makes .res file smaller and maintains collator instantiation speed\n"
                 "\t                           but tailoring rules will not be available (they are rarely used)\n");
+        fprintf(stderr,
+                "\t      --writePoolBundle    write a .res file with all of the keys of all input bundles;\n"
+                "\t                           takes a .res output file name argument\n"
+                "\t      --usePoolBundle      point to keys from the keys pool bundle if they are available there;\n"
+                "\t                           takes a .res input file name argument;\n"
+                "\t                           makes .res file smaller but dependent on the pool bundle\n"
+                "\t                           (--writePoolBundle and --usePoolBundle cannot be combined)\n");
 
         return argc < 0 ? U_ILLEGAL_ARGUMENT_ERROR : U_ZERO_ERROR;
     }
@@ -241,6 +283,103 @@ main(int argc,
         language = options[LANGUAGE].value;
     }
 
+    if(options[WRITE_POOL_BUNDLE].doesOccur) {
+        newPoolBundle = bundle_open(NULL, &status);
+        if(U_FAILURE(status)) {
+            fprintf(stderr, "unable to create an empty bundle for the pool keys: %s\n", u_errorName(status));
+            return status;
+        } else {
+            const char *poolResName = options[WRITE_POOL_BUNDLE].value;
+            char *nameWithoutSuffix = uprv_malloc(uprv_strlen(poolResName) + 1);
+            if (nameWithoutSuffix == NULL) {
+                fprintf(stderr, "out of memory error\n");
+                return U_MEMORY_ALLOCATION_ERROR;
+            }
+            uprv_strcpy(nameWithoutSuffix, poolResName);
+            *uprv_strrchr(nameWithoutSuffix, '.') = 0;
+            newPoolBundle->fLocale = nameWithoutSuffix;
+        }
+    }
+
+    if(options[USE_POOL_BUNDLE].doesOccur) {
+        const char *poolResName = options[USE_POOL_BUNDLE].value;
+        FileStream *poolFile;
+        int32_t poolFileSize;
+        /*
+         * TODO: Consolidate inputDir/filename handling from main() and processFile()
+         * into a common function, and use it here as well.
+         * Try to create toolutil functions for dealing with dir/filenames and
+         * loading ICU data files without udata_open().
+         * Share code with icupkg?
+         * Also, make_res_filename() seems to be unused. Review and remove.
+         */
+        if (inputDir) {
+            uprv_strcpy(theCurrentFileName, inputDir);
+            uprv_strcat(theCurrentFileName, U_FILE_SEP_STRING);
+        } else {
+            *theCurrentFileName = 0;
+        }
+        uprv_strcat(theCurrentFileName, poolResName);
+        poolFile = T_FileStream_open(theCurrentFileName, "rb");
+        if (poolFile == NULL) {
+            fprintf(stderr, "unable to open pool bundle file %s\n", theCurrentFileName);
+            return 1;
+        }
+        poolFileSize = T_FileStream_size(poolFile);
+        if (poolFileSize < 32) {
+            fprintf(stderr, "the pool bundle file %s is too small\n", theCurrentFileName);
+            return 1;
+        }
+        poolBundle.fBytes = (uint8_t *)uprv_malloc((poolFileSize + 15) & ~15);
+        if (poolFileSize > 0 && poolBundle.fBytes == NULL) {
+            fprintf(stderr, "unable to allocate memory for the pool bundle file %s\n", theCurrentFileName);
+            return U_MEMORY_ALLOCATION_ERROR;
+        } else {
+            const DataHeader *header;
+            int32_t bytesRead = T_FileStream_read(poolFile, poolBundle.fBytes, poolFileSize);
+            if (bytesRead != poolFileSize) {
+                fprintf(stderr, "unable to read the pool bundle file %s\n", theCurrentFileName);
+                return 1;
+            }
+            header = (const DataHeader *)poolBundle.fBytes;
+            if (!(header->dataHeader.magic1==0xda &&
+                header->dataHeader.magic2==0x27 &&
+                header->info.isBigEndian==U_IS_BIG_ENDIAN &&
+                header->info.charsetFamily==U_CHARSET_FAMILY &&
+                header->info.dataFormat[0]==0x52 &&  /* dataFormat="ResB" */
+                header->info.dataFormat[1]==0x65 &&
+                header->info.dataFormat[2]==0x73 &&
+                header->info.dataFormat[3]==0x42 &&
+                header->info.formatVersion[0]==1 &&  /* formatVersion>=1.1 */
+                header->info.formatVersion[1]>=1)
+            ) {
+                fprintf(stderr, "invalid format of pool bundle file %s\n", theCurrentFileName);
+                return U_INVALID_FORMAT_ERROR;
+            }
+            poolBundle.fKeys = (const char *)header + header->dataHeader.headerSize;
+            poolBundle.fIndexes = (const int32_t *)poolBundle.fKeys + 1;
+            if (poolBundle.fIndexes[URES_INDEX_LENGTH] <= URES_INDEX_STRINGS_TOP) {
+                fprintf(stderr, "insufficient indexes[] in pool bundle file %s\n", theCurrentFileName);
+                return U_INVALID_FORMAT_ERROR;
+            }
+            poolBundle.fKeysBottom = (1 + poolBundle.fIndexes[URES_INDEX_LENGTH]) * 4;
+            poolBundle.fKeysTop = poolBundle.fIndexes[URES_INDEX_STRINGS_TOP] * 4;
+        }
+        /* don't count padding bytes (useful for assert() in bundle_compactKeys()) */
+        while (poolBundle.fKeysBottom < poolBundle.fKeysTop &&
+               poolBundle.fKeys[poolBundle.fKeysTop - 1] == (char)0xaa
+        ) {
+            --poolBundle.fKeysTop;
+        }
+        for (i = poolBundle.fKeysBottom; i < poolBundle.fKeysTop; ++i) {
+            if (poolBundle.fKeys[i] == 0) {
+                ++poolBundle.fKeysCount;
+            }
+        }
+        T_FileStream_close(poolFile);
+    }
+
+    printf("genrb number of files: %d\n", argc - 1);
     /* generate the binary files */
     for(i = 1; i < argc; ++i) {
         status = U_ZERO_ERROR;
@@ -254,14 +393,26 @@ main(int argc,
         }
         uprv_strcat(theCurrentFileName, arg);
 
-        if (isVerbose()) {
+        if (1||                  isVerbose()) {
             printf("Processing file \"%s\"\n", theCurrentFileName);
         }
         processFile(arg, encoding, inputDir, outputDir, gPackageName, &status);
     }
 
+    uprv_free(poolBundle.fBytes);
+
+    if(options[WRITE_POOL_BUNDLE].doesOccur) {
+        char outputFileName[256];
+        bundle_compactKeys(newPoolBundle, &status);
+        bundle_write(newPoolBundle, outputDir, NULL, outputFileName, sizeof(outputFileName), &status);
+        bundle_close(newPoolBundle, &status);
+        if(U_FAILURE(status)) {
+            fprintf(stderr, "unable to write the pool bundle: %s\n", u_errorName(status));
+        }
+    }
+
     /* Dont return warnings as a failure */
-    if (! U_FAILURE(status)) {
+    if (U_SUCCESS(status)) {
         return 0;
     }
 
@@ -382,6 +533,32 @@ processFile(const char *filename, const char *cp, const char *inputDir, const ch
     if (data == NULL || U_FAILURE(*status)) {
         fprintf(stderr, "couldn't parse the file %s. Error:%s\n", filename,u_errorName(*status));
         goto finish;
+    }
+    if(options[WRITE_POOL_BUNDLE].doesOccur) {
+        int32_t newKeysLength;
+        const char *newKeys, *newKeysLimit;
+        bundle_compactKeys(data, status);
+        newKeys = bundle_getKeyBytes(data, &newKeysLength);
+        bundle_addKeyBytes(newPoolBundle, newKeys, newKeysLength, status);
+        if(U_FAILURE(*status)) {
+            fprintf(stderr, "bundle_compactKeys(%s) or bundle_getKeyBytes() failed: %s\n",
+                    filename, u_errorName(*status));
+            goto finish;
+        }
+        /* count the number of just-added key strings */
+        for(newKeysLimit = newKeys + newKeysLength; newKeys < newKeysLimit; ++newKeys) {
+            if(*newKeys == 0) {
+                ++newPoolBundle->fKeysCount;
+            }
+        }
+        /* TODO: be done here, or continue to write the normal output file? */
+    }
+
+    if(options[USE_POOL_BUNDLE].doesOccur) {
+        data->fPoolBundleKeys = poolBundle.fKeys;
+        data->fPoolBundleKeysBottom = poolBundle.fKeysBottom;
+        data->fPoolBundleKeysTop = poolBundle.fKeysTop;
+        data->fPoolBundleKeysCount = poolBundle.fKeysCount;
     }
 
     /* Determine the target rb filename */

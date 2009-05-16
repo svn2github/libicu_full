@@ -90,7 +90,7 @@ static void write_tabs(FileStream* os){
 }
 
 /*get ID for each element. ID is globally unique.*/
-static char* getID(const char* id, char* curKey, char* result) {
+static char* getID(const char* id, const char* curKey, char* result) {
     if(curKey == NULL) {
         result = (char *)uprv_malloc(sizeof(char)*uprv_strlen(id) + 1);
         uprv_memset(result, 0, sizeof(char)*uprv_strlen(id) + 1);
@@ -533,13 +533,14 @@ printComments(struct UString *src, const char *resName, UBool printTranslate, UE
  */
 static char *printContainer(struct SResource *res, const char *container, const char *restype, const char *mimetype, const char *id, UErrorCode *status)
 {
-    char *resname = NULL;
+    char resKeyBuffer[8];
+    const char *resname = NULL;
     char *sid = NULL;
 
     write_tabs(out);
 
-    if (res->fKey >= 0 && uprv_strcmp(srBundle->fKeys + res->fKey, "") != 0) {
-        resname = srBundle->fKeys + res->fKey;
+    resname = res_getKeyString(srBundle, res, resKeyBuffer);
+    if (resname != NULL && *resname != 0) {
         sid = getID(id, resname, sid);
     } else {
         sid = getID(id, NULL, sid);
