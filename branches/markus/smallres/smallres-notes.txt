@@ -646,8 +646,68 @@ Committed revision 26011.
 svn copy -r 26008 svn+ssh://source.icu-project.org/repos/icu/icu/trunk/source svn+ssh://source.icu-project.org/repos/icu/icu/branches/markus/smallres -m "ticket:6945: copy trunk/source@26008"
 Committed revision 26012.
 
-TODO:
+svn commit -m "ticket:6945: prototype code, scripts for statistics, and notes"
+Adding         chars-stats.py
+Adding         keys-stats.py
+Adding         potential-stats.py
+Adding         smallres-notes.txt
+Sending        source\tools\genrb\genrb.c
+Sending        source\tools\genrb\reslist.c
+Sending        source\tools\genrb\reslist.h
+Sending        source\tools\genrb\wrtjava.c
+Sending        source\tools\genrb\wrtxml.cpp
+Transmitting file data .........
+Committed revision 26014.
+
+*** first time built in smallres branch; from just-after-ICU 4.2 without Asia/Taipei patch
+*** fix bug in counting strings size: had omitted the 4 resource item bytes in recent code
+    (don't know if this bug has always been there, or if it crept in at some point)
+    (compact strings had counted the resource items, diminishing the savings numbers)
+*** encode empty string values as fRes=0 unless formatVersion=1 (removes them from mini-ASCII)
+*** implement UTF-16 v2 strings:
+- implicit length for short strings <= 32 UChars
+- 1 UChar explicit length for most other strings
+- 2 UChars explicit length for very long strings (theoretically up to 3 UChars for the length)
+- suffix sharing if the suffix uses implicit length
+
+* .dat file size: 16,012,800 bytes
+
+* UTF-16 v2 strings (no pool.res):
+number of resource bundles: 660
+  total size without headers: 9725852 bytes
+  not including savings from key suffix sharing: 228387 bytes
+  not including savings from string de-duplication: 705676 bytes
+keys size: 487992 bytes
+number of strings: 140188
+  strings size including resource items: 6589276 bytes
+size reduction: 1404458 (minus about 660*16=10560 bytes in header)
+  total padding after compressed strings: 18 bytes
+number of strings that fit mini format: 0
+  savings from those: 0
+0 strings are incompressible (longer in "compressed" form than in original UTF-16)
+
+* compact byte strings (no pool.res):
+number of resource bundles: 660
+  total size without headers: 9725852 bytes
+  not including savings from key suffix sharing: 228387 bytes
+  not including savings from string de-duplication: 705676 bytes
+keys size: 487992 bytes
+number of strings: 140188
+  strings size including resource items: 6589276 bytes
+size reduction: 3567784 (minus about 660*16=10560 bytes in header)
+  total padding after compressed strings: 536 bytes
+number of strings that fit mini format: 22678
+  savings from those: 279500
+13 strings are incompressible (longer in "compressed" form than in original UTF-16)
+
+-> UTF-16 v2 string format saves significantly
+-> compact byte strings save another 2MB more than UTF-16 v2
+
     en.txt -s C:\svn\icuproj\icu\trunk\source\data\locales -d \temp\icu\smallres
+
+TODO:
+- try kMaxImplicitStringLength = 16 or 64
+- make kStringsUTF16v1 work in string_preWrite() & string_write()
 - #define WINDOW_CONTAINS(window, c) ((uint32_t)((c) - (window)) <= 0x7f)
 - check if the genrb.vcproj loads an old toolutil library
 - count UChars with NUL and var-length length for runtime,
@@ -662,6 +722,9 @@ TODO:
     * add URES_INDEX_COMPACT_STRINGS_TOP
 - string de-duplication needs the swapper code to track which resources it has already swapped
 - support new format in derb for debugging
+- mini-ASCII: if fRes==0 means "" (again), then mini-ASCII needs to check just that
+  the first and last characters are not NUL (and all are ASCII);
+  then use bits 27..21=0 for single character
 - may need formatVersion 2 even for compact strings depending
   on how indexes[URES_INDEX_STRINGS_TOP] is used;
   e.g. swapper probably charset-swaps up to there,

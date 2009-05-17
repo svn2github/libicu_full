@@ -40,6 +40,13 @@ typedef struct KeyMapEntry {
     int32_t oldpos, newpos;
 } KeyMapEntry;
 
+/* How do we store string values? */
+enum {
+    kStringsUTF16v1,    /* formatVersion 1: int length + UChars + NUL + padding to 4 bytes */
+    kStringsUTF16v2,    /* formatVersion 2: optional length in 1..3 UChars + UChars + NUL */
+    kStringsCompact     /* compact encoding, requires runtime decompacting and cache */
+};
+
 /* Resource bundle root table */
 struct SRBRoot {
   struct SResource *fRoot;
@@ -49,6 +56,7 @@ struct SRBRoot {
   uint32_t fSizeExceptRoot;
   UBool noFallback; /* see URES_ATT_NO_FALLBACK */
   UBool fIsDoneParsing; /* set while processing & writing */
+  int8_t fStringsForm; /* default kStringsUTF16v1 */
 
   char *fKeys;
   KeyMapEntry *fKeyMap;
@@ -57,6 +65,9 @@ struct SRBRoot {
   int32_t fKeysCount;
 
   UHashtable *fStringSet;
+  UChar *fStringsUTF16;
+  int32_t fStringsUTF16Length;
+
   uint8_t *fStringBytes;
   int32_t fStringBytesCapacity;
   int32_t fStringBytesLength;
@@ -151,6 +162,7 @@ struct SResString {
     int8_t fInfixDepth; /* depth of indexes used inside this string */
     UBool fIsInfix;
     UBool fWriteUTF16;
+    int8_t fNumCharsForLength;
 };
 
 struct SResource *string_open(struct SRBRoot *bundle, char *tag, const UChar *value, int32_t len, const struct UString* comment, UErrorCode *status);

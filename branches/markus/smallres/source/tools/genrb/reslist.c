@@ -29,12 +29,19 @@
 
 static UBool gIncludeCopyright = FALSE;
 
+static UChar gEmptyString = 0;
+
 #define PACK_KEYS 0
 
 enum {
+    URES_STRING_UTF16=6,        /* kStringsUTF16v2 */
     URES_STRING_MINI_ASCII=10,  /* 0xA for ASCII */
     URES_STRING_MINI_WINDOW0=11,/* 0xB for Window */
     URES_STRING_COMPACT=12      /* 0xC for Compact */
+};
+
+enum {
+    kMaxImplicitStringLength = 32  /* do not store the length explicitly for such strings */
 };
 
 /*
@@ -763,12 +770,14 @@ string_preWrite(struct SRBRoot *bundle, struct SResource *res,
         size = 4 + (res->u.fString.fLength + 1) * U_SIZEOF_UCHAR;
         size += calcPadding(size);  /* TODO: need padding in size only for dev stats */
     }
-    if (res->u.fString.fRes != 0xffffffff || res->u.fString.fWriteUTF16) {
+    if ((res->u.fString.fRes != 0xffffffff && (res->u.fString.fRes >> 28) != URES_STRING_UTF16) || res->u.fString.fWriteUTF16) {
+    /* TODO: if (res->u.fString.fRes != 0xffffffff || res->u.fString.fWriteUTF16) { */
         /*
          * We visited this string already and either wrote its contents or
          * determined to use the standard UTF-16 form.
          * The first visitor returned the size for that.
          */
+        /* TODO: Note: This automatically includes kStringsUTF16v2 strings! */
         return 0;
     } else if ((same = res->u.fString.fSame) != NULL) {
         /* This is a duplicate. */
@@ -795,6 +804,8 @@ string_preWrite(struct SRBRoot *bundle, struct SResource *res,
             res->u.fString.fRes = same->u.fString.fRes;
             return size;
         }
+    } else if ((res->u.fString.fRes >> 28) == URES_STRING_UTF16) {
+        /* TODO: restore the first if() and remove this one */
     } else if (
         !res->u.fString.fIsInfix &&
         (res->u.fString.fRes = encodeMiniString(bundle, s, length)) != 0xffffffff
@@ -959,10 +970,9 @@ bundle_preWrite(struct SRBRoot *bundle, UErrorCode *status) {
     if (U_FAILURE(*status)) {
         return 0;
     }
-    /* TODO: count and use number of UChars in strings, not total UTF-16 strings byte size */
-    if (bundle->fStringsSize > 0) {
+    if (bundle->fStringsForm == kStringsCompact && bundle->fStringsUTF16Length > 0) {
         struct SResource *current;
-        int32_t capacity = bundle->fStringsSize + bundle->fStringsSize / 4;
+        int32_t capacity = bundle->fStringsUTF16Length + bundle->fStringsUTF16Length / 4;
         capacity &= ~3;  /* ensures padding fits if fStringBytesLength needs it */
         bundle->fStringBytes = (uint8_t *)uprv_malloc(capacity);
         if (bundle->fStringBytes == NULL) {
@@ -1002,6 +1012,7 @@ static uint32_t string_write(UNewDataMemory *mem, uint32_t *byteOffset,
 
     if (res->u.fString.fRes <= 0x0fffffff) {
     /* TODO: if (res->u.fString.fRes != 0xffffffff) { */
+        /* TODO: Note: This will automatically include kStringsUTF16v2 strings! */
         /* The contents of this string were already written. */
         return res->u.fString.fRes;
     } else if (same != NULL) {
@@ -1190,6 +1201,7 @@ uint32_t res_write(UNewDataMemory *mem, uint32_t *byteOffset,
     }
     switch (res->fType) {
     case URES_STRING:
+        bundle->fStringsSize += 4;
         bundle->fPotentialSize += 4 /* resource item */;
         resWord = string_write    (mem, byteOffset, bundle, res, status);
         break;
@@ -1520,11 +1532,16 @@ struct SResource *string_open(struct SRBRoot *bundle, char *tag, const UChar *va
 
     if (!bundle->fIsDoneParsing) {
         /* TODO: fStringsCount is not incremented after parsing for development stats;
-           for final implementation it must always be incremented so that the runtime
-           code can size its hashtable accurately.
+           for final implementation of kStringsCompact it must always be incremented
+           so that the runtime code can size its hashtable accurately.
          */
         ++bundle->fStringsCount;
         bundle->fStringsSize += 4 + (len + 1) * 2 + calcPadding((len + 1) * 2);
+    }
+
+    if (len == 0 && bundle->fStringsForm != kStringsUTF16v1) {
+        res->u.fString.fChars = &gEmptyString;
+        return res;
     }
 
     /* check for duplicates */
@@ -1555,8 +1572,25 @@ struct SResource *string_open(struct SRBRoot *bundle, char *tag, const UChar *va
         /* put it into the set for finding duplicates */
         uhash_put(bundle->fStringSet, res, res, status);
 
+        if (bundle->fStringsForm != kStringsUTF16v1) {
+            if (len <= kMaxImplicitStringLength && !U16_IS_TRAIL(value[0]) && len == u_strlen(value)) {
+                /*
+                 * This string will be stored without an explicit length.
+                 * Runtime will detect !U16_IS_TRAIL(value[0]) and call u_strlen().
+                 */
+                res->u.fString.fNumCharsForLength = 0;
+            } else if (len <= 0x3ee) {  /* TODO: use named constants */
+                res->u.fString.fNumCharsForLength = 1;
+            } else if (len <= 0xfffff) {
+                res->u.fString.fNumCharsForLength = 2;
+            } else {
+                res->u.fString.fNumCharsForLength = 3;  /* TODO: just use v1 form? */
+            }
+            bundle->fStringsUTF16Length += res->u.fString.fNumCharsForLength + len + 1;  /* +1 for the NUL */
+        }
+
         /* put it into the list for finding infixes unless it's very short */
-        if (minBytesAreGE(value, len, MIN_INFIX_LENGTH)) {
+        if (bundle->fStringsForm == kStringsCompact && minBytesAreGE(value, len, MIN_INFIX_LENGTH)) {
             for (current = bundle->fShortestString->u.fString.fLonger;
                  len > current->u.fString.fLength;
                  current = current->u.fString.fLonger) {}
@@ -1690,6 +1724,13 @@ struct SRBRoot *bundle_open(const struct UString* comment, UErrorCode *status) {
     uprv_memset(bundle->fKeys, 0, URES_STRINGS_BOTTOM);
     bundle->fKeyPoint = URES_STRINGS_BOTTOM;
 
+    /* TODO: needs to depend on command-line option */
+#if 0
+    bundle->fStringsForm = kStringsUTF16v2;
+#else
+    bundle->fStringsForm = kStringsCompact;
+#endif
+
     /* doubly-linked list of unique strings with first/last sentinels */
     uprv_memset(bundle->fShortestString, 0, 2 * sizeof(struct SResource));
     bundle->fShortestString->u.fString.fLength = -1;
@@ -1737,7 +1778,10 @@ static void array_close(struct SResource *array) {
 }
 
 static void string_close(struct SResource *string) {
-    if (string->u.fString.fChars != NULL && string->u.fString.fSame == NULL) {
+    if (string->u.fString.fChars != NULL &&
+        string->u.fString.fChars != &gEmptyString &&
+        string->u.fString.fSame == NULL
+    ) {
         uprv_free(string->u.fString.fChars);
         string->u.fString.fChars =NULL;
     }
@@ -1825,6 +1869,7 @@ void bundle_close(struct SRBRoot *bundle, UErrorCode *status) {
     uprv_free(bundle->fKeys);
     uprv_free(bundle->fKeyMap);
     uhash_close(bundle->fStringSet);
+    uprv_free(bundle->fStringsUTF16);
     uprv_free(bundle->fStringBytes);
     uprv_free(bundle);
 }
@@ -2138,7 +2183,7 @@ compareKeySuffixes(const void *context, const void *l, const void *r) {
             return diff;
         }
     }
-    /* sort equal suffixes by descending length */
+    /* sort equal suffixes by descending key length */
     diff = (int32_t)(rLimit - rStart) - (int32_t)(lLimit - lStart);
     if (diff != 0) {
         return diff;
@@ -2629,8 +2674,134 @@ findPrefixesAndSuffixes(struct SRBRoot *bundle, UErrorCode *status) {
     }
 }
 
+static int32_t U_CALLCONV
+compareStringSuffixes(const void *context, const void *l, const void *r) {
+    struct SResource *left = *((struct SResource **)l);
+    struct SResource *right = *((struct SResource **)r);
+    const UChar *lStart = left->u.fString.fChars;
+    const UChar *lLimit = lStart + left->u.fString.fLength;
+    const UChar *rStart = right->u.fString.fChars;
+    const UChar *rLimit = rStart + right->u.fString.fLength;
+    int32_t diff;
+    /* compare keys in reverse character order */
+    while (lStart < lLimit && rStart < rLimit) {
+        diff = (int32_t)*--lLimit - (int32_t)*--rLimit;
+        if (diff != 0) {
+            return diff;
+        }
+    }
+    /* sort equal suffixes by descending string length */
+    return right->u.fString.fLength - left->u.fString.fLength;
+}
+
+static int32_t
+string_writeUTF16v2(struct SRBRoot *bundle, struct SResource *res, int32_t utf16Length) {
+    int32_t length = res->u.fString.fLength;
+    res->u.fString.fRes = ((uint32_t)URES_STRING_UTF16 << 28) | (uint32_t)utf16Length;
+    switch(res->u.fString.fNumCharsForLength) {
+    case 0:
+        break;
+    case 1:
+        bundle->fStringsUTF16[utf16Length++] = (UChar)(0xdc00 + length);
+        break;
+    case 2:
+        bundle->fStringsUTF16[utf16Length] = (UChar)(0xdfef + (length >> 16));
+        bundle->fStringsUTF16[utf16Length + 1] = (UChar)length;
+        utf16Length += 2;
+        break;
+    case 3:
+        bundle->fStringsUTF16[utf16Length] = 0xdfff;
+        bundle->fStringsUTF16[utf16Length + 1] = (UChar)(length >> 16);
+        bundle->fStringsUTF16[utf16Length + 2] = (UChar)length;
+        utf16Length += 3;
+        break;
+    default:
+        break;  /* will not occur */
+    }
+    u_memcpy(bundle->fStringsUTF16 + utf16Length, res->u.fString.fChars, length + 1);
+    return utf16Length + length + 1;
+}
+
 static void
 bundle_compactStrings(struct SRBRoot *bundle, UErrorCode *status) {
-    findPrefixesAndSuffixes(bundle, status);
-    findInfixes(bundle, status);
+    if (U_FAILURE(*status)) {
+        return;
+    }
+    switch(bundle->fStringsForm) {
+    case kStringsUTF16v2:
+        if (bundle->fStringsUTF16Length > 0) {
+            struct SResource **array;
+            int32_t count = uhash_count(bundle->fStringSet);
+            int32_t i, pos;
+            int32_t utf16Length = (bundle->fStringsUTF16Length + 1) & ~1;
+            bundle->fStringsUTF16 = (UChar *)uprv_malloc(utf16Length * U_SIZEOF_UCHAR);
+            array = (struct SResource **)uprv_malloc(count * sizeof(struct SResource **));
+            if (bundle->fStringsUTF16 == NULL || array == NULL) {
+                uprv_free(bundle->fStringsUTF16);
+                bundle->fStringsUTF16 = NULL;
+                uprv_free(array);
+                *status = U_MEMORY_ALLOCATION_ERROR;
+                return;
+            }
+            for (pos = -1, i = 0; i < count; ++i) {
+                array[i] = (struct SResource *)uhash_nextElement(bundle->fStringSet, &pos)->key.pointer;
+            }
+            /* Sort the strings so that each one is immediately followed by all of its suffixes. */
+            uprv_sortArray(array, count, (int32_t)sizeof(struct SResource **),
+                           compareStringSuffixes, NULL, FALSE, status);
+            utf16Length = 0;
+            /* Make suffixes point into earlier, longer strings that contain them. */
+            if (U_SUCCESS(*status)) {
+                for (i = 0; i < count;) {
+                    /*
+                     * This string is not a suffix of the previous one;
+                     * write this one and subsume the following ones that are
+                     * suffixes of this one.
+                     */
+                    struct SResource *res = array[i];
+                    const UChar *strLimit = res->u.fString.fChars + res->u.fString.fLength;
+                    int32_t j;
+                    utf16Length = string_writeUTF16v2(bundle, res, utf16Length);
+                    for (j = i + 1; j < count; ++j) {
+                        struct SResource *suffixRes = array[j];
+                        const UChar *s;
+                        const UChar *suffix = suffixRes->u.fString.fChars;
+                        const UChar *suffixLimit = suffix + suffixRes->u.fString.fLength;
+                        int32_t offset = res->u.fString.fLength - suffixRes->u.fString.fLength;
+                        if (offset < 0) {
+                            break;  /* suffix cannot be longer than the original */
+                        }
+                        /* Is it a suffix of the earlier, longer key? */
+                        for (s = strLimit; suffix < suffixLimit && *--s == *--suffixLimit;) {}
+                        if (suffix == suffixLimit && *s == *suffixLimit) {
+                            if (suffixRes->u.fString.fNumCharsForLength == 0) {
+                                /* yes, point to the earlier string */
+                                suffixRes->u.fString.fRes = res->u.fString.fRes + res->u.fString.fNumCharsForLength + offset;
+                            } else {
+                                /* write the suffix by itself if we need explicit length */
+                                utf16Length = string_writeUTF16v2(bundle, res, utf16Length);
+                            }
+                        } else {
+                            break;  /* not a suffix, restart from here */
+                        }
+                    }
+                    i = j;
+                }
+            }
+            assert(utf16Length <= bundle->fStringsUTF16Length);
+            if (utf16Length & 1) {
+                bundle->fStringsUTF16[utf16Length++] = 0xaaaa;  /* pad to multiple of 4 bytes */
+            }
+            bundle->fStringsUTF16Length = utf16Length;
+            uprv_free(array);
+            bundle->fPotentialSize += utf16Length * U_SIZEOF_UCHAR;
+        }
+        break;
+    case kStringsCompact:
+        findPrefixesAndSuffixes(bundle, status);
+        findInfixes(bundle, status);
+        break;
+    default:
+        break;
+    }
 }
