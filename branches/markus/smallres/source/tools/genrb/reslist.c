@@ -41,7 +41,7 @@ enum {
 };
 
 enum {
-    kMaxImplicitStringLength = 32  /* do not store the length explicitly for such strings */
+    kMaxImplicitStringLength = 40  /* do not store the length explicitly for such strings */
 };
 
 /*
@@ -1725,7 +1725,7 @@ struct SRBRoot *bundle_open(const struct UString* comment, UErrorCode *status) {
     bundle->fKeyPoint = URES_STRINGS_BOTTOM;
 
     /* TODO: needs to depend on command-line option */
-#if 0
+#if 1
     bundle->fStringsForm = kStringsUTF16v2;
 #else
     bundle->fStringsForm = kStringsCompact;
@@ -2779,7 +2779,7 @@ bundle_compactStrings(struct SRBRoot *bundle, UErrorCode *status) {
                                 suffixRes->u.fString.fRes = res->u.fString.fRes + res->u.fString.fNumCharsForLength + offset;
                             } else {
                                 /* write the suffix by itself if we need explicit length */
-                                utf16Length = string_writeUTF16v2(bundle, res, utf16Length);
+                                utf16Length = string_writeUTF16v2(bundle, suffixRes, utf16Length);
                             }
                         } else {
                             break;  /* not a suffix, restart from here */

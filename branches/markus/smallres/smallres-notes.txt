@@ -703,6 +703,32 @@ number of strings that fit mini format: 22678
 -> UTF-16 v2 string format saves significantly
 -> compact byte strings save another 2MB more than UTF-16 v2
 
+svn commit -m "ticket:6945: fix strings size counting (do include resource item words); encode empty string values as fRes=0 unless formatVersion=1; implement UTF-16 v2 strings"
+Sending        smallres-notes.txt
+Sending        source\tools\genrb\reslist.c
+Sending        source\tools\genrb\reslist.h
+Transmitting file data ...
+Committed revision 26015.
+
+svn commit stringcache.cpp -m "ticket:6945: Cache for compacted/compressed resource bundle strings (initial draft code)"
+Adding         stringcache.cpp
+Transmitting file data .
+Committed revision 26016.
+
+*** bug fix: too-long suffix wrote the larger string again, not the suffix
+* corrected savings:
+size reduction: 1405120 with kMaxImplicitStringLength = 32
+
+*** experiments, compared with kMaxImplicitStringLength = 32
+* kMaxImplicitStringLength = 16 -> size reduction: 1356884 -> loss of 48236 bytes
+* kMaxImplicitStringLength = 24 -> size reduction: 1392948 -> loss of 12172 bytes
+* kMaxImplicitStringLength = 32 -> size reduction: 1405120
+* kMaxImplicitStringLength = 40 -> size reduction: 1409340 -> gain of  4220 bytes
+* kMaxImplicitStringLength = 48 -> size reduction: 1410488 -> gain of  5368 bytes
+* kMaxImplicitStringLength = 64 -> size reduction: 1411632 -> gain of  6512 bytes
+-> set kMaxImplicitStringLength = 40
+
+Scratch:
     en.txt -s C:\svn\icuproj\icu\trunk\source\data\locales -d \temp\icu\smallres
 
 TODO:
