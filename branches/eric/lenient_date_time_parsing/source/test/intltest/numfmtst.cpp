@@ -811,7 +811,9 @@ NumberFormatTest::TestParse(void)
     UnicodeString arg("0");
     DecimalFormat* format = new DecimalFormat("00", status);
     //try {
-        Formattable n; format->parse(arg, n, status);
+        Formattable n;
+	
+		format->parse(arg, n, status);
         logln((UnicodeString)"parse(" + arg + ") = " + n.getLong());
         if (n.getType() != Formattable::kLong ||
             n.getLong() != 0) errln((UnicodeString)"FAIL: Expected 0");

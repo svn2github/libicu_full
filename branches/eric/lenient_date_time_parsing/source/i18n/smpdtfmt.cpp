@@ -154,6 +154,125 @@ static const char gDateTimePatternsTag[]="DateTimePatterns";
 static const UChar gEtcUTC[] = {0x45, 0x74, 0x63, 0x2F, 0x55, 0x54, 0x43, 0x00}; // "Etc/UTC"
 static const UChar QUOTE = 0x27; // Single quote
 
+/*
+ * A numeric range
+ */
+typedef struct _range
+{
+    int32_t min;
+    int32_t max;
+};
+
+/*
+ * Numeric range for each UDateFormatField.
+ * A range of {-1, -1} means we don't check
+ * the range.
+ */
+static const _range gFieldRanges[] = {
+    {-1, -1},  // 'G' - UDAT_ERA_FIELD
+    {-1, -1},  // 'y' - UDAT_YEAR_FIELD
+    { 1, 12},  // 'M' - UDAT_MONTH_FIELD
+    { 1, 31},  // 'd' - UDAT_DATE_FIELD
+    { 1, 24},  // 'k' - UDAT_HOUR_OF_DAY1_FIELD
+    { 0, 23},  // 'H' - UDAT_HOUR_OF_DAY0_FIELD
+    { 0, 59},  // 'm' - UDAT_MINUTE_FIELD
+    { 0, 59},  // 's' - UDAT_SEOND_FIELD
+    {-1, -1},  // 'S' - UDAT_FRACTIONAL_SECOND_FIELD (0-999?)
+    {-1, -1},  // 'E' - UDAT_DAY_OF_WEEK_FIELD (1-7?)
+    {-1, -1},  // 'D' - UDAT_DAY_OF_YEAR_FIELD (1 - 366?)
+    {-1, -1},  // 'F' - UDAT_DAY_OF_WEEK_IN_MONTH_FIELD (1-5?)
+    {-1, -1},  // 'w' - UDAT_WEEK_OF_YEAR_FIELD (1-52?)
+    {-1, -1},  // 'W' - UDAT_WEEK_OF_MONTH_FIELD (1-5?)
+    {-1, -1},  // 'a' - UDAT_AM_PM_FIELD
+    { 1, 12},  // 'h' - UDAT_HOUR1_FIELD
+    { 0, 11},  // 'K' - UDAT_HOUR0_FIELD
+    {-1, -1},  // 'z' - UDAT_TIMEZONE_FIELD
+    {-1, -1},  // 'Y' - UDAT_YEAR_WOY_FIELD
+    {-1, -1},  // 'e' - UDAT_DOW_LOCAL_FIELD
+    {-1, -1},  // 'u' - UDAT_EXTENDED_YEAR_FIELD
+    {-1, -1},  // 'g' - UDAT_JULIAN_DAY_FIELD
+    {-1, -1},  // 'A' - UDAT_MILLISECONDS_IN_DAY_FIELD
+    {-1, -1},  // 'Z' - UDAT_TIMEZONE_RFC_FIELD
+    {-1, -1},  // 'v' - UDAT_TIMEZONE_GENERIC_FIELD
+    { 1, 31},  // 'c' - UDAT_STANDALONE_DAY_FIELD
+    { 1, 12},  // 'L' - UDAT_STANDALONE_MONTH_FIELD
+    {-1, -1},  // 'Q' - UDAT_QUARTER_FIELD (1-4?)
+    {-1, -1},  // 'q' - UDAT_STANDALONE_QUARTER_FIELD
+    {-1, -1}   // 'V' - UDAT_TIMEZONE_SPECIAL_FIELD
+};
+
+static const int32_t gFieldRangeBias[] = {
+    -1,  // 'G' - UDAT_ERA_FIELD
+    -1,  // 'y' - UDAT_YEAR_FIELD
+     1,  // 'M' - UDAT_MONTH_FIELD
+     0,  // 'd' - UDAT_DATE_FIELD
+     1,  // 'k' - UDAT_HOUR_OF_DAY1_FIELD
+     0,  // 'H' - UDAT_HOUR_OF_DAY0_FIELD
+     0,  // 'm' - UDAT_MINUTE_FIELD
+     0,  // 's' - UDAT_SEOND_FIELD
+    -1,  // 'S' - UDAT_FRACTIONAL_SECOND_FIELD (0-999?)
+    -1,  // 'E' - UDAT_DAY_OF_WEEK_FIELD (1-7?)
+    -1,  // 'D' - UDAT_DAY_OF_YEAR_FIELD (1 - 366?)
+    -1,  // 'F' - UDAT_DAY_OF_WEEK_IN_MONTH_FIELD (1-5?)
+    -1,  // 'w' - UDAT_WEEK_OF_YEAR_FIELD (1-52?)
+    -1,  // 'W' - UDAT_WEEK_OF_MONTH_FIELD (1-5?)
+    -1,  // 'a' - UDAT_AM_PM_FIELD
+     1,  // 'h' - UDAT_HOUR1_FIELD
+     0,  // 'K' - UDAT_HOUR0_FIELD
+    -1,  // 'z' - UDAT_TIMEZONE_FIELD
+    -1,  // 'Y' - UDAT_YEAR_WOY_FIELD
+    -1,  // 'e' - UDAT_DOW_LOCAL_FIELD
+    -1,  // 'u' - UDAT_EXTENDED_YEAR_FIELD
+    -1,  // 'g' - UDAT_JULIAN_DAY_FIELD
+    -1,  // 'A' - UDAT_MILLISECONDS_IN_DAY_FIELD
+    -1,  // 'Z' - UDAT_TIMEZONE_RFC_FIELD
+    -1,  // 'v' - UDAT_TIMEZONE_GENERIC_FIELD
+     0,  // 'c' - UDAT_STANDALONE_DAY_FIELD
+     1,  // 'L' - UDAT_STANDALONE_MONTH_FIELD
+    -1,  // 'Q' - UDAT_QUARTER_FIELD (1-4?)
+    -1,  // 'q' - UDAT_STANDALONE_QUARTER_FIELD
+    -1   // 'V' - UDAT_TIMEZONE_SPECIAL_FIELD
+};
+
+// COMMA    DASH  PERIOD  SLASH
+static const UChar _dateIgnorables[] = {0x002C, 0x002D, 0x002E, 0x002F, 0x0000};
+
+                                      //  DASH  PERIOD   COLON
+static const UChar _timeIgnorables[] = {0x002D, 0x002E, 0x003A, 0x0000};
+
+static const UChar *gFieldIgnorables[] = {
+    NULL,             // 'G' - UDAT_ERA_FIELD
+    _dateIgnorables,  // 'y' - UDAT_YEAR_FIELD
+    _dateIgnorables,  // 'M' - UDAT_MONTH_FIELD
+    _dateIgnorables,  // 'd' - UDAT_DATE_FIELD
+    _timeIgnorables,  // 'k' - UDAT_HOUR_OF_DAY1_FIELD
+    _timeIgnorables,  // 'H' - UDAT_HOUR_OF_DAY0_FIELD
+    _timeIgnorables,  // 'm' - UDAT_MINUTE_FIELD
+    _timeIgnorables,  // 's' - UDAT_SEOND_FIELD
+    NULL,             // 'S' - UDAT_FRACTIONAL_SECOND_FIELD (0-999?)
+    NULL,             // 'E' - UDAT_DAY_OF_WEEK_FIELD (1-7?)
+    NULL,             // 'D' - UDAT_DAY_OF_YEAR_FIELD (1 - 366?)
+    NULL,             // 'F' - UDAT_DAY_OF_WEEK_IN_MONTH_FIELD (1-5?)
+    NULL,             // 'w' - UDAT_WEEK_OF_YEAR_FIELD (1-52?)
+    NULL,             // 'W' - UDAT_WEEK_OF_MONTH_FIELD (1-5?)
+    NULL,             // 'a' - UDAT_AM_PM_FIELD
+    _timeIgnorables,  // 'h' - UDAT_HOUR1_FIELD
+    _timeIgnorables,  // 'K' - UDAT_HOUR0_FIELD
+    NULL,             // 'z' - UDAT_TIMEZONE_FIELD
+    NULL,             // 'Y' - UDAT_YEAR_WOY_FIELD
+    NULL,             // 'e' - UDAT_DOW_LOCAL_FIELD
+    NULL,             // 'u' - UDAT_EXTENDED_YEAR_FIELD
+    NULL,             // 'g' - UDAT_JULIAN_DAY_FIELD
+    NULL,             // 'A' - UDAT_MILLISECONDS_IN_DAY_FIELD
+    NULL,             // 'Z' - UDAT_TIMEZONE_RFC_FIELD
+    NULL,             // 'v' - UDAT_TIMEZONE_GENERIC_FIELD
+    _dateIgnorables,  // 'c' - UDAT_STANDALONE_DAY_FIELD
+    _dateIgnorables,  // 'L' - UDAT_STANDALONE_MONTH_FIELD
+    NULL,             // 'Q' - UDAT_QUARTER_FIELD (1-4?)
+    NULL,             // 'q' - UDAT_STANDALONE_QUARTER_FIELD
+    NULL              // 'V' - UDAT_TIMEZONE_SPECIAL_FIELD
+};
+
 static UMTX LOCK;
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(SimpleDateFormat)
@@ -661,8 +780,8 @@ SimpleDateFormat::initializeSymbols(const Locale& locale, Calendar* calendar, UE
     fSymbols = new DateFormatSymbols(locale, calendar?calendar->getType() :NULL , status);
     // Null pointer check
     if (fSymbols == NULL) {
-    	status = U_MEMORY_ALLOCATION_ERROR;
-    	return;
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return;
     }
   }
 }
@@ -857,13 +976,13 @@ SimpleDateFormat::fgCalendarFieldToLevel[] =
 const int32_t
 SimpleDateFormat::fgPatternCharToLevel[] = {
     //       A   B   C   D   E   F   G   H   I   J   K   L   M   N   O
-        -1, 40, -1, -1, 20,  30, 30,  0,  50, -1, -1, 50, 20,  20, -1, -1,
+        -1, 40, -1, -1, 20, 30, 30,  0, 50, -1, -1, 50, 20, 20, -1, -1,
     //   P   Q   R   S   T   U   V   W   X   Y   Z
-        -1, 20, -1,  80, -1, -1, 0, 30, -1, 10, 0, -1, -1, -1, -1, -1,
+        -1, 20, -1, 80, -1, -1,  0, 30, -1, 10,  0, -1, -1, -1, -1, -1,
     //       a   b   c   d   e   f   g   h   i   j   k   l   m   n   o
-        -1, 40, -1, 30,  30, 30, -1, 0, 50, -1, -1,  50, -1,  60, -1, -1,
+        -1, 40, -1, 30, 30, 30, -1,  0, 50, -1, -1, 50, -1, 60, -1, -1,
     //   p   q   r   s   t   u   v   w   x   y   z
-        -1, 20, -1,  70, -1, 10, 0, 20, -1,  10, 0, -1, -1, -1, -1, -1
+        -1, 20, -1, 70, -1, 10,  0, 20, -1, 10,  0, -1, -1, -1, -1, -1
 };
 
 
@@ -1481,12 +1600,12 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
 
     // OLD: for "yyyy", write out the whole year; for "yy", write out the last 2 digits
     // NEW: UTS#35:
-//Year  	y  	yy  	yyy  	yyyy  	yyyyy
-//AD 1 	1 	01 	001 	0001 	00001
-//AD 12 	12 	12 	012 	0012 	00012
-//AD 123 	123 	23 	123 	0123 	00123
-//AD 1234 	1234 	34 	1234 	1234 	01234
-//AD 12345 	12345 	45 	12345 	12345 	12345
+//Year         y     yy     yyy     yyyy     yyyyy
+//AD 1         1     01     001     0001     00001
+//AD 12       12     12     012     0012     00012
+//AD 123     123     23     123     0123     00123
+//AD 1234   1234     34    1234     1234     01234
+//AD 12345 12345     45   12345    12345     12345
     case UDAT_YEAR_FIELD:
     case UDAT_YEAR_WOY_FIELD:
         if(count == 2)
@@ -1777,6 +1896,8 @@ SimpleDateFormat::parse(const UnicodeString& text, Calendar& cal, ParsePosition&
     UBool ambiguousYear[] = { FALSE };
     int32_t count = 0;
 
+    UBool lenient = isLenient();
+
     // hack, reset tztype, cast away const
     ((SimpleDateFormat*)this)->tztype = TZTYPE_UNK;
 
@@ -1895,7 +2016,7 @@ SimpleDateFormat::parse(const UnicodeString& text, Calendar& cal, ParsePosition&
                 int32_t s = subParse(text, pos, ch, count,
                                FALSE, TRUE, ambiguousYear, *workCal, i);
 
-                if (s < 0) {
+                if (s <= 0) {
                     status = U_PARSE_ERROR;
                     goto ExitParse;
                 }
@@ -1909,51 +2030,11 @@ SimpleDateFormat::parse(const UnicodeString& text, Calendar& cal, ParsePosition&
         else {
                 
             abutPat = -1; // End of any abutting fields
-
-            // Handle quotes.  Two consecutive quotes is a quote
-            // literal, inside or outside of quotes.  Otherwise a
-            // quote indicates entry or exit from a quoted region.
-            if (ch == QUOTE) {
-                // Match a quote literal '' within OR outside of quotes
-                if ((i+1)<fPattern.length() && fPattern.charAt(i+1)==ch) {
-                    ++i; // Skip over doubled quote
-                    // Fall through and treat quote as a literal
-                } else {
-                    // Enter or exit quoted region
-                    inQuote = !inQuote;
-                    continue;
-                }
+            
+            if (! matchLiterals(fPattern, i, text, pos, lenient)) {
+                status = U_PARSE_ERROR;
+                goto ExitParse;
             }
-
-            // A run of white space in the pattern matches a run
-            // of white space in the input text.
-            if (uprv_isRuleWhiteSpace(ch)) {
-                // Advance over run in pattern
-                while ((i+1)<fPattern.length() &&
-                       uprv_isRuleWhiteSpace(fPattern.charAt(i+1))) {
-                    ++i;
-                }
-
-                // Advance over run in input text
-                int32_t s = pos;
-                while (pos<text.length() &&
-                       ( u_isUWhiteSpace(text.charAt(pos)) || uprv_isRuleWhiteSpace(text.charAt(pos)))) {
-                    ++pos;
-                }
-
-                // Must see at least one white space char in input
-                if (pos > s) {
-                    continue;
-                }
-            } else if (pos<text.length() && text.charAt(pos)==ch) {
-                // Match a literal
-                ++pos;
-                continue;
-            }
-
-            // We fall through to this point if the match fails
-            status = U_PARSE_ERROR;
-            goto ExitParse;
         }
     }
 
@@ -1996,8 +2077,8 @@ SimpleDateFormat::parse(const UnicodeString& text, Calendar& cal, ParsePosition&
             copy = cal.clone();
             // Check for failed cloning.
             if (copy == NULL) {
-            	status = U_MEMORY_ALLOCATION_ERROR;
-            	goto ExitParse;
+                status = U_MEMORY_ALLOCATION_ERROR;
+                goto ExitParse;
             }
             UDate parsedDate = copy->getTime(status);
             // {sfb} check internalGetDefaultCenturyStart
@@ -2012,8 +2093,8 @@ SimpleDateFormat::parse(const UnicodeString& text, Calendar& cal, ParsePosition&
             copy = cal.clone();
             // Check for failed cloning.
             if (copy == NULL) {
-            	status = U_MEMORY_ALLOCATION_ERROR;
-            	goto ExitParse;
+                status = U_MEMORY_ALLOCATION_ERROR;
+                goto ExitParse;
             }
             const TimeZone & tz = cal.getTimeZone();
             BasicTimeZone *btz = NULL;
@@ -2233,6 +2314,133 @@ int32_t SimpleDateFormat::matchQuarterString(const UnicodeString& text,
 }
 
 //----------------------------------------------------------------------
+UBool SimpleDateFormat::matchLiterals(const UnicodeString &pattern,
+                                      int32_t &patternOffset,
+                                      const UnicodeString &text,
+                                      int32_t &textOffset,
+                                      UBool lenient)
+{
+    UBool inQuote = FALSE;
+    UnicodeString literal;
+    int32_t i = patternOffset;
+    
+    // scan pattern looking for contiguous literal characters
+    for ( ; i < pattern.length(); i += 1) {
+        UChar ch = pattern.charAt(i);
+        
+        if (!inQuote && ((ch >= 0x41 && ch <= 0x5A) || (ch >= 0x61 && ch <= 0x7A))) { // unquoted [A-Za-z]
+            break;
+        }
+        
+        if (ch == QUOTE) {
+            // Match a quote literal ('') inside OR outside of quotes
+            if ((i + 1) < pattern.length() && pattern.charAt(i + 1) == QUOTE) {
+                i += 1;
+            } else {
+                inQuote = !inQuote;
+                continue;
+            }
+        }
+        
+        literal += ch;
+    }
+    
+    // at this point, literal contains the literal text
+    // and i is the index of the next non-literal pattern character.
+    int32_t p;
+    int32_t t = textOffset;
+    
+    if (lenient) {
+        // trim leading, trailing whitespace from
+        // the literal text
+        literal.trim();
+        
+        // ignore any leading whitespace in the text
+        while (t < text.length() && u_isWhitespace(text.charAt(t))) {
+            t += 1;
+        }
+    }
+        
+    for (p = 0; p < literal.length() && t < text.length(); p += 1, t += 1) {
+        UBool needWhitespace = FALSE;
+        
+        while (p < literal.length() && uprv_isRuleWhiteSpace(literal.charAt(p))) {
+            needWhitespace = TRUE;
+            p += 1;
+        }
+        
+        if (needWhitespace) {
+            int32_t tStart = t;
+            
+            while (t < text.length()) {
+                UChar tch = text.charAt(t);
+                
+                if (!u_isUWhiteSpace(tch) && !uprv_isRuleWhiteSpace(tch)) {
+                    break;
+                }
+                
+                t += 1;
+            }
+            
+            // TODO: should we require internal spaces
+            // in lenient mode? (There won't be any
+            // leading or trailing spaces)
+            if (!lenient && t == tStart) {
+                // didn't find matching whitespace:
+                // an error in strict mode
+                return FALSE;
+            }
+            
+            // In strict mode, this run of whitespace
+            // may have been at the end.
+            if (p >= literal.length()) {
+                break;
+            }
+        }
+        
+        if (t >= text.length() || literal.charAt(p) != text.charAt(t)) {
+            // Ran out of text, or found a non-matching character:
+            // OK in lenient mode, an error in strict mode.
+            if (lenient) {
+                break;
+            }
+            
+            return FALSE;
+        }
+    }
+    
+    // At this point if we're in strict mode we have a complete match.
+    // If we're in lenient mode we may have a partial match, or no
+    // match at all.
+    if (p <= 0) {
+        // no match. Pretend it matched a run of whitespace
+        // and ignorables in the text.
+        const  UChar *ignorables = NULL;
+        UChar *patternCharPtr = u_strchr(DateFormatSymbols::getPatternUChars(), pattern.charAt(i));
+        
+        if (patternCharPtr != NULL) {
+            UDateFormatField patternCharIndex = (UDateFormatField) (patternCharPtr - DateFormatSymbols::getPatternUChars());
+            
+            ignorables = gFieldIgnorables[patternCharIndex];
+        }
+        
+        for (t = textOffset; t < text.length(); t += 1) {
+            UChar ch = text.charAt(t);
+            
+            if (!u_isWhitespace(ch) && (ignorables == NULL || u_strchr(ignorables, ch) == NULL)) {
+                break;
+            }
+        }
+    }
+    
+    // if we get here, we've got a complete match.
+    patternOffset = i - 1;
+    textOffset = t;
+    
+    return TRUE;
+}
+
+//----------------------------------------------------------------------
 
 int32_t SimpleDateFormat::matchString(const UnicodeString& text,
                               int32_t start,
@@ -2342,6 +2550,8 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
     NumberFormat *currentNumberFormat;
     UnicodeString temp;
     UChar *patternCharPtr = u_strchr(DateFormatSymbols::getPatternUChars(), ch);
+    UBool lenient = isLenient();
+    UBool gotNumber = FALSE;
 
 #if defined (U_DEBUG_CAL)
     //fprintf(stderr, "%s:%d - [%c]  st=%d \n", __FILE__, __LINE__, (char) ch, start);
@@ -2361,12 +2571,16 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
         if (start >= text.length()) {
             return -start;
         }
+        
         UChar32 c = text.char32At(start);
+        
         if (!u_isUWhiteSpace(c)) {
             break;
         }
+        
         start += UTF_CHAR_LENGTH(c);
     }
+    
     pos.setIndex(start);
 
     // We handle a few special cases here where we need to parse
@@ -2375,12 +2589,12 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
     // the parsed value.
     if (patternCharIndex == UDAT_HOUR_OF_DAY1_FIELD ||
         patternCharIndex == UDAT_HOUR1_FIELD ||
-        (patternCharIndex == UDAT_DOW_LOCAL_FIELD && count <= 2) ||
-        (patternCharIndex == UDAT_STANDALONE_DAY_FIELD && count <= 2) ||
-        (patternCharIndex == UDAT_MONTH_FIELD && count <= 2) ||
-        (patternCharIndex == UDAT_STANDALONE_MONTH_FIELD && count <= 2) ||
-        (patternCharIndex == UDAT_QUARTER_FIELD && count <= 2) ||
-        (patternCharIndex == UDAT_STANDALONE_QUARTER_FIELD && count <= 2) ||
+        patternCharIndex == UDAT_DOW_LOCAL_FIELD ||
+        patternCharIndex == UDAT_STANDALONE_DAY_FIELD ||
+        patternCharIndex == UDAT_MONTH_FIELD ||
+        patternCharIndex == UDAT_STANDALONE_MONTH_FIELD ||
+        patternCharIndex == UDAT_QUARTER_FIELD ||
+        patternCharIndex == UDAT_STANDALONE_QUARTER_FIELD ||
         patternCharIndex == UDAT_YEAR_FIELD ||
         patternCharIndex == UDAT_YEAR_WOY_FIELD ||
         patternCharIndex == UDAT_FRACTIONAL_SECOND_FIELD)
@@ -2403,23 +2617,67 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
 
         parseInt(*src, number, pos, allowNegative,currentNumberFormat);
 
-        if (pos.getIndex() == parseStart)
-            return -start;
-        value = number.getLong();
-
-        // suffix processing
         int32_t txtLoc = pos.getIndex();
-        if (value <0 ) {
-            txtLoc = checkIntSuffix(text, txtLoc, patLoc+1, TRUE);
-            if (txtLoc != pos.getIndex()) {
-                value *= -1;
-            }
-        }
-        else {
-            txtLoc = checkIntSuffix(text, txtLoc, patLoc+1, FALSE);
-        }
-        pos.setIndex(txtLoc);
 
+        if (txtLoc > parseStart) {
+            value = number.getLong();
+            gotNumber = TRUE;
+            
+            // suffix processing
+            if (value < 0 ) {
+                txtLoc = checkIntSuffix(text, txtLoc, patLoc+1, TRUE);
+                if (txtLoc != pos.getIndex()) {
+                    value *= -1;
+                }
+            }
+            else {
+                txtLoc = checkIntSuffix(text, txtLoc, patLoc+1, FALSE);
+            }
+            
+            // Check the range of the value
+            int32_t bias = gFieldRangeBias[patternCharIndex];
+            
+            if (bias >= 0 && (value > cal.getMaximum(field) + bias || value < cal.getMinimum(field) + bias)) {
+                return -start;
+            }
+            
+            pos.setIndex(txtLoc);
+        }
+    }
+    
+    // Make sure that we got a number if
+    // we want one, and didn't get one
+    // if we don't want one.
+    switch (patternCharIndex) {
+        case UDAT_HOUR_OF_DAY1_FIELD:
+        case UDAT_HOUR1_FIELD:
+        case UDAT_YEAR_FIELD:
+        case UDAT_YEAR_WOY_FIELD:
+        case UDAT_FRACTIONAL_SECOND_FIELD:
+            // these must be a number
+            if (! gotNumber) {
+                return -start;
+            }
+            
+            break;
+            
+        case UDAT_DOW_LOCAL_FIELD:
+        case UDAT_STANDALONE_DAY_FIELD:
+        case UDAT_MONTH_FIELD:
+        case UDAT_STANDALONE_MONTH_FIELD:
+        case UDAT_QUARTER_FIELD:
+        case UDAT_STANDALONE_QUARTER_FIELD:
+            // in strict mode, these can only
+            // be a number if count <= 2
+            if (!lenient && gotNumber && count > 2) {
+                return -1;
+            }
+            
+            break;
+            
+        default:
+            // we check the rest of the fields below.
+            break;
     }
 
     switch (patternCharIndex) {
@@ -2440,7 +2698,7 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
         // we made adjustments to place the 2-digit year in the proper
         // century, for parsed strings from "00" to "99".  Any other string
         // is treated literally:  "2250", "-1", "1", "002".
-        if (count <= 2 && (pos.getIndex() - start) == 2
+        if (/*count <= 2 &&*/ (pos.getIndex() - start) == 2
             && u_isdigit(text.charAt(start))
             && u_isdigit(text.charAt(start+1)))
         {
@@ -2464,7 +2722,7 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
 
     case UDAT_YEAR_WOY_FIELD:
         // Comment is the same as for UDAT_Year_FIELDs - look above
-        if (count <= 2 && (pos.getIndex() - start) == 2
+        if (/*count <= 2 &&*/ (pos.getIndex() - start) == 2
             && u_isdigit(text.charAt(start))
             && u_isdigit(text.charAt(start+1))
             && fHaveDefaultCentury )
@@ -2478,7 +2736,7 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
         return pos.getIndex();
 
     case UDAT_MONTH_FIELD:
-        if (count <= 2) // i.e., M or MM.
+        if (/*count <= 2*/gotNumber) // i.e., M or MM.
         {
             // Don't want to parse the month if it is a string
             // while pattern uses numeric style: M or MM.
@@ -2500,7 +2758,7 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
         }
 
     case UDAT_STANDALONE_MONTH_FIELD:
-        if (count <= 2) // i.e., L or LL.
+        if (/*count <= 2*/gotNumber) // i.e., L or LL.
         {
             // Don't want to parse the month if it is a string
             // while pattern uses numeric style: M or MM.
@@ -2548,7 +2806,7 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
         return pos.getIndex();
 
     case UDAT_DOW_LOCAL_FIELD:
-        if (count <= 2) // i.e., e or ee
+        if (/*count <= 2*/gotNumber) // i.e., e or ee
         {
             // [We computed 'value' above.]
             cal.set(UCAL_DOW_LOCAL, value);
@@ -2576,7 +2834,7 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
 
     case UDAT_STANDALONE_DAY_FIELD:
         {
-            if (count <= 2) // c or cc
+            if (/*count <= 2*/gotNumber) // c or cc
             {
                 // [We computed 'value' above.]
                 cal.set(UCAL_DOW_LOCAL, value);
@@ -2604,7 +2862,7 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
         return pos.getIndex();
 
     case UDAT_QUARTER_FIELD:
-        if (count <= 2) // i.e., Q or QQ.
+        if (/*count <= 2*/gotNumber) // i.e., Q or QQ.
         {
             // Don't want to parse the month if it is a string
             // while pattern uses numeric style: Q or QQ.
@@ -2626,7 +2884,7 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
         }
 
     case UDAT_STANDALONE_QUARTER_FIELD:
-        if (count <= 2) // i.e., q or qq.
+        if (/*count <= 2*/gotNumber) // i.e., q or qq.
         {
             // Don't want to parse the month if it is a string
             // while pattern uses numeric style: q or q.
@@ -2830,9 +3088,17 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
         }
         parseInt(*src, number, pos, allowNegative,currentNumberFormat);
         if (pos.getIndex() != parseStart) {
-            cal.set(field, number.getLong());
-            return pos.getIndex();
+            int32_t value = number.getLong();
+            
+            // Check the range of the value
+            int32_t bias = gFieldRangeBias[patternCharIndex];
+            
+            if (bias < 0 || (value >= cal.getMinimum(field) + bias && value <= cal.getMaximum(field) + bias)) {
+                cal.set(field, value);
+                return pos.getIndex();
+            }
         }
+
         return -start;
     }
 }
