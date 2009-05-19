@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 2000-2008, International Business Machines
+*   Copyright (C) 2000-2009, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
@@ -51,6 +51,7 @@ enum {
 struct SRBRoot {
   struct SResource *fRoot;
   char *fLocale;
+  int32_t fIndexLength;
   int32_t fMaxTableLength;
   /* size of root's children, not counting keys or compact-string bytes */
   uint32_t fSizeExceptRoot;
@@ -60,9 +61,10 @@ struct SRBRoot {
 
   char *fKeys;
   KeyMapEntry *fKeyMap;
-  int32_t fKeyPoint;
+  int32_t fKeysBottom, fKeysTop;
   int32_t fKeysCapacity;
   int32_t fKeysCount;
+  int32_t fLocalKeyLimit; /* key offset < limit fits into URES_TABLE */
 
   UHashtable *fStringSet;
   UChar *fStringsUTF16;
@@ -213,8 +215,11 @@ const char *
 res_getKeyString(const struct SRBRoot *bundle, const struct SResource *res, char temp[8]);
 
 void res_close(struct SResource *res);
+
 void setIncludeCopyright(UBool val);
 UBool getIncludeCopyright(void);
+
+void setFormatVersion(int32_t formatVersion);
 
 U_CDECL_END
 #endif /* #ifndef RESLIST_H */

@@ -77,7 +77,7 @@ _res_getTableKey(const Resource *pRoot, const Resource res, int32_t indexS) {
     if((uint32_t)indexS<(uint32_t)*p) {
         return RES_GET_KEY(pRoot, p[indexS+1]);
     } else {
-        return NULL;    /* indexS>itemCount */
+        return NULL;    /* indexS>=itemCount */
     }
 }
 
@@ -87,7 +87,7 @@ _res_getTable32Key(const Resource *pRoot, const Resource res, int32_t indexS) {
     if((uint32_t)indexS<(uint32_t)*p) {
         return RES_GET_KEY(pRoot, p[indexS+1]);
     } else {
-        return NULL;    /* indexS>itemCount */
+        return NULL;    /* indexS>=itemCount */
     }
 }
 
@@ -99,7 +99,7 @@ _res_getTableItem(const Resource *pRoot, const Resource res, int32_t indexR) {
     if((uint32_t)indexR<(uint32_t)count) {
         return ((const Resource *)(p+1+count+(~count&1)))[indexR];
     } else {
-        return RES_BOGUS;   /* indexR>itemCount */
+        return RES_BOGUS;   /* indexR>=itemCount */
     }
 }
 
@@ -110,7 +110,7 @@ _res_getTable32Item(const Resource *pRoot, const Resource res, int32_t indexR) {
     if((uint32_t)indexR<(uint32_t)count) {
         return ((const Resource *)(p+1+count))[indexR];
     } else {
-        return RES_BOGUS;   /* indexR>itemCount */
+        return RES_BOGUS;   /* indexR>=itemCount */
     }
 }
 
@@ -538,6 +538,8 @@ typedef struct TempTable {
     const char *keyChars;
     Row *rows;
     int32_t *resort;
+    uint32_t *resFlags;
+    uint8_t majorFormatVersion;
 } TempTable;
 
 enum {
@@ -562,6 +564,9 @@ static const UChar gCollationBinKey[]={
 /*
  * preflight one resource item and set bottom and top values;
  * length, bottom, and top count Resource item offsets (4 bytes each), not bytes
+ *
+ * Preflighting is only necessary for formatVersion 1.0:
+ * 1.1 adds these values to the data format.
  */
 static void
 ures_preflightResource(const UDataSwapper *ds,
@@ -707,13 +712,25 @@ ures_swapResource(const UDataSwapper *ds,
     Resource *q;
     int32_t offset, count;
 
-    if(res==0 || RES_GET_TYPE(res)==URES_INT) {
-        /* empty string or integer, nothing to do */
+    if(RES_GET_TYPE(res)==URES_INT) {
+        /* integer, nothing to do */
         return;
     }
 
     /* all other types use an offset to point to their data */
     offset=(int32_t)RES_GET_OFFSET(res);
+    if(offset==0) {
+        /* special offset indicating an empty item */
+        return;
+    }
+    if(pTempTable->resFlags[offset>>5]&((uint32_t)1<<(offset&0x1f))) {
+        /* we already swapped this resource item */
+        return;
+    } else {
+        /* mark it as swapped now */
+        pTempTable->resFlags[offset>>5]|=((uint32_t)1<<(offset&0x1f));
+    }
+
     p=inBundle+offset;
     q=outBundle+offset;
 
@@ -967,7 +984,7 @@ ures_swap(const UDataSwapper *ds,
     TempTable tempTable;
 
     /* the following integers count Resource item offsets (4 bytes each), not bytes */
-    int32_t bundleLength, stringsBottom, bottom, top;
+    int32_t bundleLength, keysBottom, bottom, top;
 
     /* udata_swapDataHeader checks the arguments */
     headerSize=udata_swapDataHeader(ds, inData, length, outData, pErrorCode);
@@ -991,6 +1008,7 @@ ures_swap(const UDataSwapper *ds,
         *pErrorCode=U_UNSUPPORTED_ERROR;
         return 0;
     }
+    tempTable.majorFormatVersion=pInfo->formatVersion[0];
 
     /* a resource bundle must contain at least one resource item */
     if(length<0) {
@@ -1014,7 +1032,7 @@ ures_swap(const UDataSwapper *ds,
 
     if(pInfo->formatVersion[1]==0) {
         /* preflight to get the bottom, top and maxTableLength values */
-        stringsBottom=1; /* just past root */
+        keysBottom=1; /* just past root */
         bottom=0x7fffffff;
         top=maxTableLength=0;
         ures_preflightResource(ds, inBundle, bundleLength, rootRes,
@@ -1031,8 +1049,8 @@ ures_swap(const UDataSwapper *ds,
 
         inIndexes=(const int32_t *)(inBundle+1);
 
-        stringsBottom=1+udata_readInt32(ds, inIndexes[URES_INDEX_LENGTH]);
-        bottom=udata_readInt32(ds, inIndexes[URES_INDEX_STRINGS_TOP]);
+        keysBottom=1+udata_readInt32(ds, inIndexes[URES_INDEX_LENGTH]);
+        bottom=udata_readInt32(ds, inIndexes[URES_INDEX_KEYS_TOP]);
         top=udata_readInt32(ds, inIndexes[URES_INDEX_BUNDLE_TOP]);
         maxTableLength=udata_readInt32(ds, inIndexes[URES_INDEX_MAX_TABLE_LENGTH]);
 
@@ -1047,14 +1065,40 @@ ures_swap(const UDataSwapper *ds,
     if(length>=0) {
         Resource *outBundle=(Resource *)((char *)outData+headerSize);
 
+        /* track which resources we have already swapped */
+        uint32_t stackResFlags[STACK_ROW_CAPACITY];
+        int32_t resFlagsLength;
+
+        /*
+         * We need one bit per 4 resource bundle bytes so that we can track
+         * every possible Resource for whether we have swapped it already.
+         * Multiple Resource words can refer to the same bundle offsets
+         * for sharing identical values.
+         * We could optimize this by allocating only for locations above
+         * where Resource values are stored (above keys & strings).
+         */
+        resFlagsLength=(length+31)>>5;          /* number of bytes needed */
+        resFlagsLength=(resFlagsLength+3)&~3;   /* multiple of 4 bytes for uint32_t */
+        if(resFlagsLength<=sizeof(stackResFlags)) {
+            tempTable.resFlags=stackResFlags;
+        } else {
+            tempTable.resFlags=(uint32_t *)uprv_malloc(resFlagsLength);
+            if(tempTable.resFlags==NULL) {
+                udata_printError(ds, "ures_swap(): unable to allocate memory for tracking resources\n");
+                *pErrorCode=U_MEMORY_ALLOCATION_ERROR;
+                return 0;
+            }
+        }
+        uprv_memset(tempTable.resFlags, 0, resFlagsLength);
+
         /* copy the bundle for binary and inaccessible data */
         if(inData!=outData) {
             uprv_memcpy(outBundle, inBundle, 4*top);
         }
 
         /* swap the key strings, but not the padding bytes (0xaa) after the last string and its NUL */
-        udata_swapInvStringBlock(ds, inBundle+stringsBottom, 4*(bottom-stringsBottom),
-                                    outBundle+stringsBottom, pErrorCode);
+        udata_swapInvStringBlock(ds, inBundle+keysBottom, 4*(bottom-keysBottom),
+                                    outBundle+keysBottom, pErrorCode);
         if(U_FAILURE(*pErrorCode)) {
             udata_printError(ds, "ures_swap().udata_swapInvStringBlock(keys[%d]) failed\n", 4*(bottom-1));
             return 0;
@@ -1071,6 +1115,9 @@ ures_swap(const UDataSwapper *ds,
                 udata_printError(ds, "ures_swap(): unable to allocate memory for sorting tables (max length: %d)\n",
                                  maxTableLength);
                 *pErrorCode=U_MEMORY_ALLOCATION_ERROR;
+                if(tempTable.resFlags!=stackResFlags) {
+                    uprv_free(tempTable.resFlags);
+                }
                 return 0;
             }
             tempTable.resort=(int32_t *)(tempTable.rows+maxTableLength);
@@ -1088,7 +1135,11 @@ ures_swap(const UDataSwapper *ds,
         }
 
         /* swap the root resource and indexes */
-        ds->swapArray32(ds, inBundle, stringsBottom*4, outBundle, pErrorCode);
+        ds->swapArray32(ds, inBundle, keysBottom*4, outBundle, pErrorCode);
+
+        if(tempTable.resFlags!=stackResFlags) {
+            uprv_free(tempTable.resFlags);
+        }
     }
 
     return headerSize+4*top;

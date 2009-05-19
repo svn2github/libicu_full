@@ -1,7 +1,7 @@
 /*
 ******************************************************************************
 *                                                                            *
-* Copyright (C) 1999-2006, International Business Machines                   *
+* Copyright (C) 1999-2009, International Business Machines                   *
 *                Corporation and others. All Rights Reserved.                *
 *                                                                            *
 ******************************************************************************
@@ -41,20 +41,18 @@ typedef uint32_t Resource;
 
 /* indexes[] value names; indexes are generally 32-bit (Resource) indexes */
 enum {
-    URES_INDEX_LENGTH,          /* [0] contains URES_INDEX_TOP==the length of indexes[] */
-    URES_INDEX_STRINGS_TOP,     /* [1] contains the top of the strings, */
-                                /*     same as the bottom of resources, rounded up */
+    URES_INDEX_LENGTH,          /* [0] contains URES_INDEX_TOP==the length of indexes[];
+                                 *     formatVersion>1: only bits 7..0 contain the length of indexes[] */
+    URES_INDEX_KEYS_TOP,        /* [1] contains the top of the key strings, */
+                                /*     same as the bottom of resources or UTF-16 strings, rounded up */
     URES_INDEX_RESOURCES_TOP,   /* [2] contains the top of all resources */
     URES_INDEX_BUNDLE_TOP,      /* [3] contains the top of the bundle, */
                                 /*     in case it were ever different from [2] */
     URES_INDEX_MAX_TABLE_LENGTH,/* [4] max. length of any table */
     URES_INDEX_ATTRIBUTES,      /* [5] attributes bit set, see URES_ATT_* (new in formatVersion 1.2) */
+    URES_INDEX_UTF16_TOP,       /* [6] top of the UTF-16 string UChars, rounded up (new in formatVersion 2.0) */
+    URES_INDEX_POOL_CRC,        /* [7] CRC checksum of the pool bundle (new in formatVersion 2.0) */
     URES_INDEX_TOP
-};
-
-/* number of bytes at the beginning of the bundle before the strings start */
-enum {
-    URES_STRINGS_BOTTOM=(1+URES_INDEX_TOP)*4
 };
 
 /*

@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 2000-2008, International Business Machines
+*   Copyright (C) 2000-2009, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
@@ -28,6 +28,7 @@
 #define BIN_ALIGNMENT 16
 
 static UBool gIncludeCopyright = FALSE;
+static int32_t gFormatVersion = 1;
 
 static UChar gEmptyString = 0;
 
@@ -85,6 +86,10 @@ UBool getIncludeCopyright(void){
     return gIncludeCopyright;
 }
 
+void setFormatVersion(int32_t formatVersion) {
+    gFormatVersion = formatVersion;
+}
+
 static void
 bundle_compactStrings(struct SRBRoot *bundle, UErrorCode *status);
 
@@ -124,7 +129,7 @@ static void printCounters(const struct SRBRoot *bundle, const char *bundleName, 
            (long)bundle->fCompressedPadding,
            (long)bundle->fKeysReduction,
            (long)bundle->fStringDedupReduction,
-           (long)(bundle->fKeyPoint - URES_STRINGS_BOTTOM));
+           (long)(bundle->fKeysTop - bundle->fKeysBottom));
 }
 
 /* not Han, not Hangul, not an unpaired surrogate? */
@@ -820,7 +825,7 @@ string_preWrite(struct SRBRoot *bundle, struct SResource *res,
         buffer[0] |= (uint8_t)(bestWindow << 6);
         res->u.fString.fRes =
             ((uint32_t)URES_STRING_COMPACT << 28) |
-            ((uint32_t)(bundle->fKeyPoint + bundle->fStringBytesLength));
+            ((uint32_t)(bundle->fKeysTop + bundle->fStringBytesLength));
         writeStringBytes(bundle, buffer, lengthBytes, status);
         if (bestWindow <= 2) {
             encodeSingleByteMode(bundle, res, bundle->fWindows[bestWindow],
@@ -892,17 +897,26 @@ table_preWrite(struct SRBRoot *bundle, struct SResource *res,
                UErrorCode *status) {
     struct SResource *current;
     uint32_t size = 0;
-    uint32_t maxKey = 0;
+    int32_t maxKey = 0, maxPoolKey = 0x80000000;
 
     if (U_FAILURE(*status)) {
         return 0;
     }
     for (current = res->u.fTable.fFirst; current != NULL; current = current->fNext) {
+        int32_t key;
         size += res_preWrite(bundle, current, status);
-        if (bundle->fKeyMap != NULL) {
-            current->fKey = mapKey(bundle, current->fKey);
+        if (bundle->fKeyMap == NULL) {
+            key = current->fKey;
+        } else {
+            key = current->fKey = mapKey(bundle, current->fKey);
         }
-        maxKey |= current->fKey;
+        if (key >= 0) {
+            if (key > maxKey) {
+                maxKey = key;
+            }
+        } else if (key > maxPoolKey) {
+            maxPoolKey = key;
+        }
     }
     if (res == bundle->fRoot) {
         size += bundle->fInfixUTF16Size;
@@ -911,11 +925,11 @@ table_preWrite(struct SRBRoot *bundle, struct SResource *res,
     if(res->u.fTable.fCount > (uint32_t)bundle->fMaxTableLength) {
         bundle->fMaxTableLength = res->u.fTable.fCount;
     }
+    maxPoolKey &= 0x7fffffff;
     if (res->u.fTable.fCount <= 0xffff &&
-        (bundle->fPoolBundleKeys == NULL ?
-            maxKey <= 0xffff : (maxKey & 0x7fffffff) <= 0x7fff)
+        maxKey < bundle->fLocalKeyLimit &&
+        maxPoolKey < (0x10000 - bundle->fLocalKeyLimit)
     ) {
-        /* TODO: it might make sense to reserve more than half the 16-bit key space for pool bundle key offsets */
         /* 16-bit count, 16-bit key offsets, 32-bit values */
         size += 2 + res->u.fTable.fCount * 6;
     } else {
@@ -1164,7 +1178,7 @@ static uint32_t table_write(UNewDataMemory *mem, uint32_t *byteOffset,
         for (current = res->u.fTable.fFirst; current != NULL; current = current->fNext) {
             int32_t key = current->fKey;
             if (key < 0) {
-                key |= 0x8000;  /* offset in the pool bundle */
+                key += bundle->fLocalKeyLimit;  /* offset in the pool bundle */
             }
             udata_write16(mem, (uint16_t)key);
         }
@@ -1248,13 +1262,32 @@ void bundle_write(struct SRBRoot *bundle, const char *outputDir, const char *out
     bundle->fIsDoneParsing = TRUE;
 
     bundle_compactKeys(bundle, status);
+    if (bundle->fPoolBundleKeys == NULL) {
+        /* no pool: any 16-bit key offset fits into URES_TABLE */
+        bundle->fLocalKeyLimit = 0x10000;
+    } else {
+        /*
+         * Uses a pool bundle:
+         * Split the 16-bit key range proportionally between local and pool keys.
+         * Note: This same computation must be done by genrb and the runtime code,
+         * and it must not change without changing the formatVersion!
+         * TODO: Review this. Should fLocalKeyLimit be changed to 0 if it's below a low number?
+         */
+        int32_t sumKeyLengths = bundle->fKeysTop + bundle->fPoolBundleKeysTop;
+        if (sumKeyLengths <= 0x10000) {
+            bundle->fLocalKeyLimit = bundle->fKeysTop;  /* all key offsets fit into 16 bits */
+        } else {
+            /* divide the local limit by the factor of how far the sum exceeds the 16-bit limit */
+            bundle->fLocalKeyLimit = ((int64_t)bundle->fKeysTop * 0x10000) / sumKeyLengths;
+        }
+    }
     /*
-     * Add padding bytes to fKeys so that fKeyPoint is aligned
+     * Add padding bytes to fKeys so that fKeysTop is aligned
      * for use in bundle_preWrite().
      * Safe because the capacity is a multiple of 4.
      */
-    while (bundle->fKeyPoint & 3) {
-        bundle->fKeys[bundle->fKeyPoint++] = 0xaa;
+    while (bundle->fKeysTop & 3) {
+        bundle->fKeys[bundle->fKeysTop++] = 0xaa;
     }
 
     bundle_compactStrings(bundle, status);
@@ -1295,8 +1328,8 @@ void bundle_write(struct SRBRoot *bundle, const char *outputDir, const char *out
 
 #if 0
     {
-        const char *keysStart = bundle->fKeys+URES_STRINGS_BOTTOM;
-        const char *keysLimit = keysStart + bundle->fKeyPoint-URES_STRINGS_BOTTOM;
+        const char *keysStart = bundle->fKeys+bundle->fKeysBottom;
+        const char *keysLimit = keysStart + bundle->fKeysTop-bundle->fKeysBottom;
         const char *keys = keysStart;
         while (keys < keysLimit) {
             char c = *keys;
@@ -1374,7 +1407,7 @@ void bundle_write(struct SRBRoot *bundle, const char *outputDir, const char *out
     }
 
     /* we're gonna put the main table at the end */
-    byteOffset = bundle->fKeyPoint /* TODO: + fStringBytesLength */;
+    byteOffset = bundle->fKeysTop /* TODO: + fStringBytesLength */;
     root = (bundle->fRoot->fType << 28) | ((byteOffset + bundle->fSizeExceptRoot) >> 2);
 
     /* write the root item */
@@ -1389,8 +1422,8 @@ void bundle_write(struct SRBRoot *bundle, const char *outputDir, const char *out
      * to make it easier to parse resource bundles in icuswap or from Java etc.
      */
     uprv_memset(indexes, 0, sizeof(indexes));
-    indexes[URES_INDEX_LENGTH]=             URES_INDEX_TOP;
-    indexes[URES_INDEX_STRINGS_TOP]=        (int32_t)(bundle->fKeyPoint>>2);
+    indexes[URES_INDEX_LENGTH]=             bundle->fIndexLength;
+    indexes[URES_INDEX_KEYS_TOP]=           (int32_t)(bundle->fKeysTop>>2);
     indexes[URES_INDEX_RESOURCES_TOP]=      (int32_t)(top>>2);
     indexes[URES_INDEX_BUNDLE_TOP]=         indexes[URES_INDEX_RESOURCES_TOP];
     indexes[URES_INDEX_MAX_TABLE_LENGTH]=   bundle->fMaxTableLength;
@@ -1406,11 +1439,11 @@ void bundle_write(struct SRBRoot *bundle, const char *outputDir, const char *out
     }
 
     /* write the indexes[] */
-    udata_writeBlock(mem, indexes, sizeof(indexes));
+    udata_writeBlock(mem, indexes, bundle->fIndexLength*4);
 
     /* write the table key strings */
-    udata_writeBlock(mem, bundle->fKeys+URES_STRINGS_BOTTOM,
-                          bundle->fKeyPoint-URES_STRINGS_BOTTOM);
+    udata_writeBlock(mem, bundle->fKeys+bundle->fKeysBottom,
+                          bundle->fKeysTop-bundle->fKeysBottom);
     /* TODO: write bundle->fStringBytes[] */
 
     /* write all of the bundle contents: the root item and its children */
@@ -1720,16 +1753,24 @@ struct SRBRoot *bundle_open(const struct UString* comment, UErrorCode *status) {
 
     bundle->fLocale   = NULL;
     bundle->fKeysCapacity = KEY_SPACE_SIZE;
-    /* formatVersion 1.1: start fKeyPoint after the root item and indexes[] */
-    uprv_memset(bundle->fKeys, 0, URES_STRINGS_BOTTOM);
-    bundle->fKeyPoint = URES_STRINGS_BOTTOM;
+    /* formatVersion 1.1: start fKeysTop after the root item and indexes[] */
+    if (bundle->fPoolBundleKeys != NULL) {
+        bundle->fIndexLength = URES_INDEX_POOL_CRC + 1;
+    } else if (gFormatVersion >= 2) {
+        bundle->fIndexLength = URES_INDEX_UTF16_TOP + 1;
+    } else /* formatVersion 1 */ {
+        bundle->fIndexLength = URES_INDEX_ATTRIBUTES + 1;
+    }
+    bundle->fKeysBottom = (1 /* root */ + bundle->fIndexLength) * 4;
+    uprv_memset(bundle->fKeys, 0, bundle->fKeysBottom);
+    bundle->fKeysTop = bundle->fKeysBottom;
 
-    /* TODO: needs to depend on command-line option */
-#if 1
-    bundle->fStringsForm = kStringsUTF16v2;
-#else
-    bundle->fStringsForm = kStringsCompact;
-#endif
+    if (gFormatVersion == 1) {
+        bundle->fStringsForm = kStringsUTF16v1;
+    } else {
+        bundle->fStringsForm = kStringsUTF16v2;
+    }
+    /* TODO: experiment with bundle->fStringsForm = kStringsCompact; */
 
     /* doubly-linked list of unique strings with first/last sentinels */
     uprv_memset(bundle->fShortestString, 0, 2 * sizeof(struct SResource));
@@ -2083,8 +2124,8 @@ res_getKeyString(const struct SRBRoot *bundle, const struct SResource *res, char
 
 const char *
 bundle_getKeyBytes(struct SRBRoot *bundle, int32_t *pLength) {
-    *pLength = bundle->fKeyPoint - URES_STRINGS_BOTTOM;
-    return bundle->fKeys + URES_STRINGS_BOTTOM;
+    *pLength = bundle->fKeysTop - bundle->fKeysBottom;
+    return bundle->fKeys + bundle->fKeysBottom;
 }
 
 int32_t
@@ -2099,12 +2140,12 @@ bundle_addKeyBytes(struct SRBRoot *bundle, const char *keyBytes, int32_t length,
         return -1;
     }
     if (length == 0) {
-        return bundle->fKeyPoint;
+        return bundle->fKeysTop;
     }
 
-    keypos = bundle->fKeyPoint;
-    bundle->fKeyPoint += length;
-    if (bundle->fKeyPoint >= bundle->fKeysCapacity) {
+    keypos = bundle->fKeysTop;
+    bundle->fKeysTop += length;
+    if (bundle->fKeysTop >= bundle->fKeysCapacity) {
         /* overflow - resize the keys buffer */
         bundle->fKeysCapacity += KEY_SPACE_SIZE;
         bundle->fKeys = uprv_realloc(bundle->fKeys, bundle->fKeysCapacity);
@@ -2231,14 +2272,14 @@ bundle_compactKeys(struct SRBRoot *bundle, UErrorCode *status) {
         ++keys;  /* skip the NUL */
     }
     assert(keys == bundle->fPoolBundleKeys + bundle->fPoolBundleKeysTop);
-    keys = bundle->fKeys + URES_STRINGS_BOTTOM;
+    keys = bundle->fKeys + bundle->fKeysBottom;
     for (; i < keysCount; ++i) {
         map[i].oldpos = (int32_t)(keys - bundle->fKeys);
         map[i].newpos = 0;
         while (*keys != 0) { ++keys; }  /* skip the key */
         ++keys;  /* skip the NUL */
     }
-    assert(keys == bundle->fKeys + bundle->fKeyPoint);
+    assert(keys == bundle->fKeys + bundle->fKeysTop);
     /* Sort the keys so that each one is immediately followed by all of its suffixes. */
     uprv_sortArray(map, keysCount, (int32_t)sizeof(KeyMapEntry),
                    compareKeySuffixes, bundle, FALSE, status);
@@ -2298,8 +2339,8 @@ bundle_compactKeys(struct SRBRoot *bundle, UErrorCode *status) {
         if (U_SUCCESS(*status)) {
             int32_t oldpos, newpos, limit;
             int32_t i;
-            oldpos = newpos = URES_STRINGS_BOTTOM;
-            limit = bundle->fKeyPoint;
+            oldpos = newpos = bundle->fKeysBottom;
+            limit = bundle->fKeysTop;
             /* skip key offsets that point into the pool bundle rather than this new bundle */
             for (i = 0; i < keysCount && map[i].newpos < 0; ++i) {}
             /* TODO: could skip this loop if i == keysCount */
@@ -2316,7 +2357,7 @@ bundle_compactKeys(struct SRBRoot *bundle, UErrorCode *status) {
                 }
             }
             assert(i == keysCount);
-            bundle->fKeyPoint = newpos;
+            bundle->fKeysTop = newpos;
             /* Re-sort once more, by old offsets for binary searching. */
             uprv_sortArray(map, keysCount, (int32_t)sizeof(KeyMapEntry),
                            compareKeyOldpos, NULL, FALSE, status);

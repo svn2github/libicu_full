@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 1998-2008, International Business Machines
+*   Copyright (C) 1998-2009, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
@@ -57,6 +57,7 @@ enum
     /*added by Jing*/
     LANGUAGE,
     NO_COLLATION_RULES,
+    FORMAT_VERSION,
     WRITE_POOL_BUNDLE,
     USE_POOL_BUNDLE
 };
@@ -80,8 +81,9 @@ UOption options[]={
                       UOPTION_DEF("noBinaryCollation", 'C', UOPT_NO_ARG),/* 15 */
                       UOPTION_DEF("language",  'l', UOPT_REQUIRES_ARG), /* 16 */
                       UOPTION_DEF("omitCollationRules", 'R', UOPT_NO_ARG),/* 17 */
-                      UOPTION_DEF("writePoolBundle", '\x01', UOPT_REQUIRES_ARG),/* 18 */
-                      UOPTION_DEF("usePoolBundle", '\x01', UOPT_REQUIRES_ARG),/* 19 */
+                      UOPTION_DEF("formatVersion", '\x01', UOPT_REQUIRES_ARG),/* 18 */
+                      UOPTION_DEF("writePoolBundle", '\x01', UOPT_REQUIRES_ARG),/* 19 */
+                      UOPTION_DEF("usePoolBundle", '\x01', UOPT_REQUIRES_ARG),/* 20 */
                   };
 
 static     UBool       write_java = FALSE;
@@ -142,6 +144,20 @@ main(int argc,
             argc = -1;
         }
     }
+    if(options[FORMAT_VERSION].doesOccur) {
+        const char *s = options[FORMAT_VERSION].value;
+        if(uprv_strlen(s) != 1 || (s[0] != '1' && s[0] != '2')) {
+            fprintf(stderr, "%s: unsupported --formatVersion %s\n", s);
+            argc = -1;
+        } else if(s[0] == '1' &&
+                  (options[WRITE_POOL_BUNDLE].doesOccur || options[USE_POOL_BUNDLE].doesOccur)
+        ) {
+            fprintf(stderr, "%s: cannot combine --formatVersion 1 with --writePoolBundle or --usePoolBundle\n", argv[0]);
+            argc = -1;
+        } else {
+            setFormatVersion(s[0] - '0');
+        }
+    }
 
     if(options[VERSION].doesOccur) {
         fprintf(stderr,
@@ -196,6 +212,9 @@ main(int argc,
                 "\t-R or --omitCollationRules do not include collation (tailoring) rules;\n"
                 "\t                           makes .res file smaller and maintains collator instantiation speed\n"
                 "\t                           but tailoring rules will not be available (they are rarely used)\n");
+        fprintf(stderr,
+                "\t      --formatVersion      write a .res file compatible with the requested formatVersion (single digit);\n"
+                "\t                           for example, --formatVersion 1\n");
         fprintf(stderr,
                 "\t      --writePoolBundle    write a .res file with all of the keys of all input bundles;\n"
                 "\t                           takes a .res output file name argument\n"
@@ -358,12 +377,12 @@ main(int argc,
             }
             poolBundle.fKeys = (const char *)header + header->dataHeader.headerSize;
             poolBundle.fIndexes = (const int32_t *)poolBundle.fKeys + 1;
-            if (poolBundle.fIndexes[URES_INDEX_LENGTH] <= URES_INDEX_STRINGS_TOP) {
+            if (poolBundle.fIndexes[URES_INDEX_LENGTH] <= URES_INDEX_KEYS_TOP) {
                 fprintf(stderr, "insufficient indexes[] in pool bundle file %s\n", theCurrentFileName);
                 return U_INVALID_FORMAT_ERROR;
             }
             poolBundle.fKeysBottom = (1 + poolBundle.fIndexes[URES_INDEX_LENGTH]) * 4;
-            poolBundle.fKeysTop = poolBundle.fIndexes[URES_INDEX_STRINGS_TOP] * 4;
+            poolBundle.fKeysTop = poolBundle.fIndexes[URES_INDEX_KEYS_TOP] * 4;
         }
         /* don't count padding bytes (useful for assert() in bundle_compactKeys()) */
         while (poolBundle.fKeysBottom < poolBundle.fKeysTop &&

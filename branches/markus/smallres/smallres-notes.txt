@@ -728,26 +728,50 @@ size reduction: 1405120 with kMaxImplicitStringLength = 32
 * kMaxImplicitStringLength = 64 -> size reduction: 1411632 -> gain of  6512 bytes
 -> set kMaxImplicitStringLength = 40
 
+svn commit -m "ticket:6945: set kMaxImplicitStringLength = 40 after experiments"
+Sending        smallres-notes.txt
+Sending        source\tools\genrb\reslist.c
+Transmitting file data ..
+Committed revision 26017.
+
+svn commit -m "ticket:6945: ures_swap() track resources to not swap shared resource multiple times; prepare for optionally writing formatVersion 2; flexible local/pool key offsets boundary for URES_TABLE"
+
 Scratch:
     en.txt -s C:\svn\icuproj\icu\trunk\source\data\locales -d \temp\icu\smallres
 
 TODO:
-- try kMaxImplicitStringLength = 16 or 64
+* for v2 with key suffix sharing, pool bundle with shared keys,
+              more compact UTF-16 strings with suffix sharing
+              (still all memory-mappable)
+- consider reusing URES_STRING in v2 rather than adding URES_STRING_UTF16,
+  just like we reuse URES_TABLE
+  (in that case, init fStringsUTF16Length=1 with [0]=0 for empty strings,
+   if v2 string offsets are based on their strings bottom rather than the bundle bottom)
+  -> fewer resource types vs. more complicated runtime code for data access
+     (would have to check both the resource type and the formatVersion)
+- consider stopping support for formatVersion=1.0 in ures_swap()
+  so that we can remove ures_preflightResource()
+  (1.1 was implemented in ICU 2.8; 1.0 does not work for ICU4J)
+- in formatVersion 2 treat _all_ resources with int-offset 0 as "empty"
+  (includes 00000000 for empty strings)
+- in formatVersion 2 reserve bits 31..8 of indexes[0] for future use; use only bits 7..0 for indexes length
 - make kStringsUTF16v1 work in string_preWrite() & string_write()
+- hardcode "pool.res"? save bytes, no need for flexibility
+- support new format in derb for debugging
+- use constants and macros for 0xffffffff==no-resWord-yet, extracting resType & offset etc.
+- do aliases need to be Unicode strings? can they be invariant chars or ASCII?
+  de-duping? suffix sharing??
+- document experiments, decisions and dead ends
+
+* for v2.1 or v3 with compact, byte-oriented strings, 1B/char for most scripts,
+                      maybe zlib compression
 - #define WINDOW_CONTAINS(window, c) ((uint32_t)((c) - (window)) <= 0x7f)
-- check if the genrb.vcproj loads an old toolutil library
-- count UChars with NUL and var-length length for runtime,
-  and use for initial fStringBytesCapacity
 - new indexes:
   + number of compact strings (URES_INDEX_COMPACT_STRINGS_COUNT)
   + number of UChars that they expand to,
     with NUL terminator and 1 or 2 UChars for the length (URES_INDEX_COMPACT_STRINGS_UCHARS)
   + window 0/1 starts, each shifted right 5 bits to fit into 16 (URES_INDEX_WINDOWS)
-  + top of the compact-strings block
-    * rename URES_INDEX_STRINGS_TOP to URES_INDEX_KEYS_TOP and
-    * add URES_INDEX_COMPACT_STRINGS_TOP
-- string de-duplication needs the swapper code to track which resources it has already swapped
-- support new format in derb for debugging
+  + top of the compact-strings block (URES_INDEX_COMPACT_STRINGS_TOP)
 - mini-ASCII: if fRes==0 means "" (again), then mini-ASCII needs to check just that
   the first and last characters are not NUL (and all are ASCII);
   then use bits 27..21=0 for single character
@@ -755,23 +779,6 @@ TODO:
   on how indexes[URES_INDEX_STRINGS_TOP] is used;
   e.g. swapper probably charset-swaps up to there,
   but does other code depend on the bottom of resources to be there?
-- use constants and macros for 0xffffffff==no-resWord-yet, extracting resType & offset etc.
-- design for pooled keys:
-  + use root.res as pool, generate it first, pass it on command line for genrb of others
-  + dependent bundles store keys length & hash or similar to verify match at runtime
-  + root.txt could have a special table of keys (with 0 int values)
-    that gets thrown away after parsing, except that its keys will remain
-  + for dependent bundles, pre-populate the key map with pooled keys (negative oldpos/newpos);
-    extract from pooled keys at NUL terminators
-  + when doing suffix sharing, never try to suffix-match and remove the pooled keys
-  + reuse res_getKeyString() from the packed-key experiment
-  + store either 16-bit or 32-bit key offsets, negative for pooled keys in either case
-    so that we get the benefit of URES_TABLE (not -32)
-  + ++formatVersion
-- if we do go to formatVersion 2.0 then
-  re-introduce 00000000 as the primary encoding for an empty string
-- if we keep aliases as Unicode strings, then maybe we can de-dup and compress
-  them too, with the same code and data structures, only a different resource type?
 - once the compression encoding scheme settles down,
   consider whether we want to allow versioning, and make the runtime code reject
   some byte values and sequences, or set the encoding in stone and allow a wider range of values?
@@ -780,4 +787,5 @@ TODO:
   and more control codes in single-byte mode;
   allowing versioning and checking for valid sequences is more flexible but
   slower at runtime and increases the runtime code size
-- document experiments, decisions and dead ends
+- if we keep aliases as Unicode strings, then maybe we can de-dup and compress
+  them too, with the same code and data structures, only a different resource type?
