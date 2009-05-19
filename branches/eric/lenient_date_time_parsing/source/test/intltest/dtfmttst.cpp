@@ -631,7 +631,6 @@ DateFormatTest::TestLetterDPattern212()
     UnicodeString dateString("1995-040.05:01:29");
     UnicodeString ddateString("1995-02-09.05:01:29");
     UnicodeString bigD("yyyy-DDD.hh:mm:ss");
-  //UnicodeString littleD("yyyy-ddd.hh:mm:ss");
     UnicodeString littleD("yyyy-MM-dd.hh:mm:ss");
     UDate expLittleD = date(95, 0, 1, 5, 1, 29);
     UDate expBigD = expLittleD + 39 * 24 * 3600000.0;

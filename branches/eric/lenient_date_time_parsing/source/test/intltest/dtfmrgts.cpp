@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT: 
- * Copyright (c) 1997-2007, International Business Machines Corporation and
+ * Copyright (c) 1997-2009, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 
@@ -360,6 +360,8 @@ void DateFormatRegressionTest::Test4060212(void)
                             " Want 40");
 
 #if 0
+    // this is an odd usage of "ddd" and it doesn't
+    // work now that date values are range checked.
     logln("Using yyyy-ddd.hh:mm:ss");
     delete formatter;
     formatter = NULL;
@@ -396,9 +398,8 @@ void DateFormatRegressionTest::Test4061287(void)
     }
     failure(status, "new SimpleDateFormat");
     //try {
-  //logln(UnicodeString("") + df->parse("35/01/1971", status));  
     logln(UnicodeString("") + df->parse("30/02/1971", status));  
-    failure(status, "df->parse");
+    failure(status, "df->parse(\"30/02/1971\")");
     //logln(df.parse("35/01/1971").toString());
     //}
     /*catch (ParseException e) {
@@ -408,7 +409,6 @@ void DateFormatRegressionTest::Test4061287(void)
     df->setLenient(FALSE);
     UBool ok = FALSE;
     //try {
-  //logln(UnicodeString("") + df->parse("35/01/1971", status));
     logln(UnicodeString("") + df->parse("30/02/1971", status));
     if(U_FAILURE(status))
         ok = TRUE;
@@ -555,7 +555,7 @@ void DateFormatRegressionTest::Test4071441(void)
   US locale a string formatted according to mm/dd/yy and parses it
   correctly.
 
-  When given a string mm/dd/yyyy it only parses up to the first
+  When given a string mm/dd/yyyy [sic] it only parses up to the first
   two y's, typically resulting in a date in the year 1919.
   
   Please extend the parsing method(s) to handle strings with
@@ -568,7 +568,6 @@ void DateFormatRegressionTest::Test4073003(void)
 {
     //try {
     UErrorCode ec = U_ZERO_ERROR;
-  //SimpleDateFormat fmt("dd/MM/yy", Locale::getUK(), ec);
     SimpleDateFormat fmt("MM/dd/yy", Locale::getUK(), ec);
     if (U_FAILURE(ec)) {
         errln("FAIL: SimpleDateFormat constructor");

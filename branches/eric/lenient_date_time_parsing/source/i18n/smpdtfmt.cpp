@@ -40,6 +40,7 @@
 #include "unicode/decimfmt.h"
 #include "unicode/dcfmtsym.h"
 #include "unicode/uchar.h"
+#include "unicode/uniset.h"
 #include "unicode/ustring.h"
 #include "unicode/basictz.h"
 #include "unicode/simpletz.h"
@@ -53,6 +54,7 @@
 #include "zstrfmt.h"
 #include "cmemory.h"
 #include "umutex.h"
+#include "smpdtfst.h"
 #include <float.h>
 
 #if defined( U_DEBUG_CALSVC ) || defined (U_DEBUG_CAL)
@@ -155,52 +157,14 @@ static const UChar gEtcUTC[] = {0x45, 0x74, 0x63, 0x2F, 0x55, 0x54, 0x43, 0x00};
 static const UChar QUOTE = 0x27; // Single quote
 
 /*
- * A numeric range
+ * The field range check bias for each UDateFormatField.
+ * The bias is added to the minimum and maximum values
+ * before they are compared to the parsed number.
+ * For example, the calendar stores zero-based month numbers
+ * but the parsed month numbers start at 1, so the bias is 1.
+ *
+ * A value of -1 means that the value is not checked.
  */
-typedef struct _range
-{
-    int32_t min;
-    int32_t max;
-};
-
-/*
- * Numeric range for each UDateFormatField.
- * A range of {-1, -1} means we don't check
- * the range.
- */
-static const _range gFieldRanges[] = {
-    {-1, -1},  // 'G' - UDAT_ERA_FIELD
-    {-1, -1},  // 'y' - UDAT_YEAR_FIELD
-    { 1, 12},  // 'M' - UDAT_MONTH_FIELD
-    { 1, 31},  // 'd' - UDAT_DATE_FIELD
-    { 1, 24},  // 'k' - UDAT_HOUR_OF_DAY1_FIELD
-    { 0, 23},  // 'H' - UDAT_HOUR_OF_DAY0_FIELD
-    { 0, 59},  // 'm' - UDAT_MINUTE_FIELD
-    { 0, 59},  // 's' - UDAT_SEOND_FIELD
-    {-1, -1},  // 'S' - UDAT_FRACTIONAL_SECOND_FIELD (0-999?)
-    {-1, -1},  // 'E' - UDAT_DAY_OF_WEEK_FIELD (1-7?)
-    {-1, -1},  // 'D' - UDAT_DAY_OF_YEAR_FIELD (1 - 366?)
-    {-1, -1},  // 'F' - UDAT_DAY_OF_WEEK_IN_MONTH_FIELD (1-5?)
-    {-1, -1},  // 'w' - UDAT_WEEK_OF_YEAR_FIELD (1-52?)
-    {-1, -1},  // 'W' - UDAT_WEEK_OF_MONTH_FIELD (1-5?)
-    {-1, -1},  // 'a' - UDAT_AM_PM_FIELD
-    { 1, 12},  // 'h' - UDAT_HOUR1_FIELD
-    { 0, 11},  // 'K' - UDAT_HOUR0_FIELD
-    {-1, -1},  // 'z' - UDAT_TIMEZONE_FIELD
-    {-1, -1},  // 'Y' - UDAT_YEAR_WOY_FIELD
-    {-1, -1},  // 'e' - UDAT_DOW_LOCAL_FIELD
-    {-1, -1},  // 'u' - UDAT_EXTENDED_YEAR_FIELD
-    {-1, -1},  // 'g' - UDAT_JULIAN_DAY_FIELD
-    {-1, -1},  // 'A' - UDAT_MILLISECONDS_IN_DAY_FIELD
-    {-1, -1},  // 'Z' - UDAT_TIMEZONE_RFC_FIELD
-    {-1, -1},  // 'v' - UDAT_TIMEZONE_GENERIC_FIELD
-    { 1, 31},  // 'c' - UDAT_STANDALONE_DAY_FIELD
-    { 1, 12},  // 'L' - UDAT_STANDALONE_MONTH_FIELD
-    {-1, -1},  // 'Q' - UDAT_QUARTER_FIELD (1-4?)
-    {-1, -1},  // 'q' - UDAT_STANDALONE_QUARTER_FIELD
-    {-1, -1}   // 'V' - UDAT_TIMEZONE_SPECIAL_FIELD
-};
-
 static const int32_t gFieldRangeBias[] = {
     -1,  // 'G' - UDAT_ERA_FIELD
     -1,  // 'y' - UDAT_YEAR_FIELD
@@ -232,45 +196,6 @@ static const int32_t gFieldRangeBias[] = {
     -1,  // 'Q' - UDAT_QUARTER_FIELD (1-4?)
     -1,  // 'q' - UDAT_STANDALONE_QUARTER_FIELD
     -1   // 'V' - UDAT_TIMEZONE_SPECIAL_FIELD
-};
-
-// COMMA    DASH  PERIOD  SLASH
-static const UChar _dateIgnorables[] = {0x002C, 0x002D, 0x002E, 0x002F, 0x0000};
-
-                                      //  DASH  PERIOD   COLON
-static const UChar _timeIgnorables[] = {0x002D, 0x002E, 0x003A, 0x0000};
-
-static const UChar *gFieldIgnorables[] = {
-    NULL,             // 'G' - UDAT_ERA_FIELD
-    _dateIgnorables,  // 'y' - UDAT_YEAR_FIELD
-    _dateIgnorables,  // 'M' - UDAT_MONTH_FIELD
-    _dateIgnorables,  // 'd' - UDAT_DATE_FIELD
-    _timeIgnorables,  // 'k' - UDAT_HOUR_OF_DAY1_FIELD
-    _timeIgnorables,  // 'H' - UDAT_HOUR_OF_DAY0_FIELD
-    _timeIgnorables,  // 'm' - UDAT_MINUTE_FIELD
-    _timeIgnorables,  // 's' - UDAT_SEOND_FIELD
-    NULL,             // 'S' - UDAT_FRACTIONAL_SECOND_FIELD (0-999?)
-    NULL,             // 'E' - UDAT_DAY_OF_WEEK_FIELD (1-7?)
-    NULL,             // 'D' - UDAT_DAY_OF_YEAR_FIELD (1 - 366?)
-    NULL,             // 'F' - UDAT_DAY_OF_WEEK_IN_MONTH_FIELD (1-5?)
-    NULL,             // 'w' - UDAT_WEEK_OF_YEAR_FIELD (1-52?)
-    NULL,             // 'W' - UDAT_WEEK_OF_MONTH_FIELD (1-5?)
-    NULL,             // 'a' - UDAT_AM_PM_FIELD
-    _timeIgnorables,  // 'h' - UDAT_HOUR1_FIELD
-    _timeIgnorables,  // 'K' - UDAT_HOUR0_FIELD
-    NULL,             // 'z' - UDAT_TIMEZONE_FIELD
-    NULL,             // 'Y' - UDAT_YEAR_WOY_FIELD
-    NULL,             // 'e' - UDAT_DOW_LOCAL_FIELD
-    NULL,             // 'u' - UDAT_EXTENDED_YEAR_FIELD
-    NULL,             // 'g' - UDAT_JULIAN_DAY_FIELD
-    NULL,             // 'A' - UDAT_MILLISECONDS_IN_DAY_FIELD
-    NULL,             // 'Z' - UDAT_TIMEZONE_RFC_FIELD
-    NULL,             // 'v' - UDAT_TIMEZONE_GENERIC_FIELD
-    _dateIgnorables,  // 'c' - UDAT_STANDALONE_DAY_FIELD
-    _dateIgnorables,  // 'L' - UDAT_STANDALONE_MONTH_FIELD
-    NULL,             // 'Q' - UDAT_QUARTER_FIELD (1-4?)
-    NULL,             // 'q' - UDAT_STANDALONE_QUARTER_FIELD
-    NULL              // 'V' - UDAT_TIMEZONE_SPECIAL_FIELD
 };
 
 static UMTX LOCK;
@@ -2415,19 +2340,19 @@ UBool SimpleDateFormat::matchLiterals(const UnicodeString &pattern,
     if (p <= 0) {
         // no match. Pretend it matched a run of whitespace
         // and ignorables in the text.
-        const  UChar *ignorables = NULL;
+        const  UnicodeSet *ignorables = NULL;
         UChar *patternCharPtr = u_strchr(DateFormatSymbols::getPatternUChars(), pattern.charAt(i));
         
         if (patternCharPtr != NULL) {
             UDateFormatField patternCharIndex = (UDateFormatField) (patternCharPtr - DateFormatSymbols::getPatternUChars());
             
-            ignorables = gFieldIgnorables[patternCharIndex];
+            ignorables = SimpleDateFormatStaticSets::getIgnorables(patternCharIndex);
         }
         
         for (t = textOffset; t < text.length(); t += 1) {
             UChar ch = text.charAt(t);
             
-            if (!u_isWhitespace(ch) && (ignorables == NULL || u_strchr(ignorables, ch) == NULL)) {
+            if (ignorables == NULL || !ignorables->contains(ch)) {
                 break;
             }
         }
@@ -2698,7 +2623,7 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
         // we made adjustments to place the 2-digit year in the proper
         // century, for parsed strings from "00" to "99".  Any other string
         // is treated literally:  "2250", "-1", "1", "002".
-        if (/*count <= 2 &&*/ (pos.getIndex() - start) == 2
+        if ((pos.getIndex() - start) == 2
             && u_isdigit(text.charAt(start))
             && u_isdigit(text.charAt(start+1)))
         {
@@ -2722,7 +2647,7 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
 
     case UDAT_YEAR_WOY_FIELD:
         // Comment is the same as for UDAT_Year_FIELDs - look above
-        if (/*count <= 2 &&*/ (pos.getIndex() - start) == 2
+        if ((pos.getIndex() - start) == 2
             && u_isdigit(text.charAt(start))
             && u_isdigit(text.charAt(start+1))
             && fHaveDefaultCentury )
@@ -2736,7 +2661,7 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
         return pos.getIndex();
 
     case UDAT_MONTH_FIELD:
-        if (/*count <= 2*/gotNumber) // i.e., M or MM.
+        if (gotNumber) // i.e., M or MM.
         {
             // Don't want to parse the month if it is a string
             // while pattern uses numeric style: M or MM.
@@ -2758,7 +2683,7 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
         }
 
     case UDAT_STANDALONE_MONTH_FIELD:
-        if (/*count <= 2*/gotNumber) // i.e., L or LL.
+        if (gotNumber) // i.e., L or LL.
         {
             // Don't want to parse the month if it is a string
             // while pattern uses numeric style: M or MM.
@@ -2806,7 +2731,7 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
         return pos.getIndex();
 
     case UDAT_DOW_LOCAL_FIELD:
-        if (/*count <= 2*/gotNumber) // i.e., e or ee
+        if (gotNumber) // i.e., e or ee
         {
             // [We computed 'value' above.]
             cal.set(UCAL_DOW_LOCAL, value);
@@ -2834,7 +2759,7 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
 
     case UDAT_STANDALONE_DAY_FIELD:
         {
-            if (/*count <= 2*/gotNumber) // c or cc
+            if (gotNumber) // c or cc
             {
                 // [We computed 'value' above.]
                 cal.set(UCAL_DOW_LOCAL, value);
@@ -2862,7 +2787,7 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
         return pos.getIndex();
 
     case UDAT_QUARTER_FIELD:
-        if (/*count <= 2*/gotNumber) // i.e., Q or QQ.
+        if (gotNumber) // i.e., Q or QQ.
         {
             // Don't want to parse the month if it is a string
             // while pattern uses numeric style: Q or QQ.
@@ -2884,7 +2809,7 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
         }
 
     case UDAT_STANDALONE_QUARTER_FIELD:
-        if (/*count <= 2*/gotNumber) // i.e., q or qq.
+        if (gotNumber) // i.e., q or qq.
         {
             // Don't want to parse the month if it is a string
             // while pattern uses numeric style: q or q.
