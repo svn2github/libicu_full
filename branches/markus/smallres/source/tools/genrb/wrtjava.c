@@ -609,7 +609,6 @@ res_write_java(struct SResource *res,UErrorCode *status) {
              array_write_java     (res, status);
              return;
         case URES_TABLE:
-        case URES_TABLE32:
              table_write_java     (res, status);
              return;
         default:

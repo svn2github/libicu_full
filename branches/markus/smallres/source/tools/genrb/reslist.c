@@ -25,7 +25,19 @@
 
 #include "uarrsort.h"
 
+/*
+ * Align binary data at a 16-byte offset from the start of the resource bundle,
+ * to be safe for any data type it may contain.
+ */
 #define BIN_ALIGNMENT 16
+/*
+ * bin_write() may need to add 0, 4, 8 or 12 bytes of padding before
+ * the binary data to achieve 16-alignment.
+ * While we preflight the bundle size, we always reserve enough space for the
+ * maximum padding at the start because we don't know until actually writing
+ * the data how much padding we will need.
+ */
+#define MAX_BIN_START_PADDING 12
 
 static UBool gIncludeCopyright = FALSE;
 static int32_t gFormatVersion = 1;
@@ -773,7 +785,6 @@ string_preWrite(struct SRBRoot *bundle, struct SResource *res,
         size = 0;
     } else {
         size = 4 + (res->u.fString.fLength + 1) * U_SIZEOF_UCHAR;
-        size += calcPadding(size);  /* TODO: need padding in size only for dev stats */
     }
     if ((res->u.fString.fRes != 0xffffffff && (res->u.fString.fRes >> 28) != URES_STRING_UTF16) || res->u.fString.fWriteUTF16) {
     /* TODO: if (res->u.fString.fRes != 0xffffffff || res->u.fString.fWriteUTF16) { */
@@ -816,7 +827,7 @@ string_preWrite(struct SRBRoot *bundle, struct SResource *res,
         (res->u.fString.fRes = encodeMiniString(bundle, s, length)) != 0xffffffff
     ) {
         ++bundle->fMiniCount;
-        bundle->fMiniReduction += size;
+        bundle->fMiniReduction += size + calcPadding(size);
         /* TODO: return 0; */
     } else if ((bestWindow = findBestWindow(bundle, res, s, length, status)) >= 0) {
         /* use the compact form */
@@ -837,10 +848,10 @@ string_preWrite(struct SRBRoot *bundle, struct SResource *res,
     } else {
         /* use the standard UTF-16 form */
         res->u.fString.fWriteUTF16 = TRUE;
-        bundle->fPotentialSize += size;
+        bundle->fPotentialSize += size + calcPadding(size);
         ++bundle->fIncompressibleStrings;
         printf("incompressible: length %ld  normalSize %ld\n",
-               (long)length, (long)size);
+               (long)length, (long)(size + calcPadding(size)));
         /* TODO: return size; */
     }
 
@@ -927,14 +938,14 @@ table_preWrite(struct SRBRoot *bundle, struct SResource *res,
     }
     maxPoolKey &= 0x7fffffff;
     if (res->u.fTable.fCount <= 0xffff &&
-        maxKey < bundle->fLocalKeyLimit &&
-        maxPoolKey < (0x10000 - bundle->fLocalKeyLimit)
+        (maxKey == 0 || maxKey < bundle->fLocalKeyLimit) &&
+        (maxPoolKey == 0 || maxPoolKey < (0x10000 - bundle->fLocalKeyLimit))
     ) {
         /* 16-bit count, 16-bit key offsets, 32-bit values */
         size += 2 + res->u.fTable.fCount * 6;
     } else {
         /* 32-bit count, key offsets and values */
-        res->u.fTable.fIs32Bit = TRUE;
+        res->fType = URES_TABLE32;
         size += 4 + res->u.fTable.fCount * 8;
     }
     return size;
@@ -950,6 +961,7 @@ res_preWrite(struct SRBRoot *bundle, struct SResource *res,
     }
     switch (res->fType) {
     case URES_STRING:
+    case URES_STRING_UTF16:
         size = string_preWrite(bundle, res, status);
         break;
     case URES_ALIAS:
@@ -959,8 +971,7 @@ res_preWrite(struct SRBRoot *bundle, struct SResource *res,
         size = (1 + res->u.fIntVector.fCount) * 4;
         break;
     case URES_BINARY:
-        /* TODO: reduce overhead from 16 to 12=MAX_BIN_START_PADDING */
-        size = 4 + res->u.fBinaryValue.fLength + BIN_ALIGNMENT;
+        size = 4 + res->u.fBinaryValue.fLength + MAX_BIN_START_PADDING;
         break;
     case URES_INT:
         size = 0;
@@ -969,6 +980,7 @@ res_preWrite(struct SRBRoot *bundle, struct SResource *res,
         size = array_preWrite(bundle, res, status);
         break;
     case URES_TABLE:
+    case URES_TABLE32:
         size = table_preWrite(bundle, res, status);
         break;
     default:
@@ -1123,7 +1135,7 @@ static uint32_t bin_write(UNewDataMemory *mem, uint32_t *byteOffset,
 
     if (dataStart % BIN_ALIGNMENT) {
         pad = (BIN_ALIGNMENT - dataStart % BIN_ALIGNMENT);
-        udata_writePadding(mem, pad);
+        udata_writePadding(mem, pad);  /* pad == 4 or 8 or 12 */
         *byteOffset += pad;
     }
 
@@ -1132,9 +1144,9 @@ static uint32_t bin_write(UNewDataMemory *mem, uint32_t *byteOffset,
     if (res->u.fBinaryValue.fLength > 0) {
         udata_writeBlock(mem, res->u.fBinaryValue.fData, res->u.fBinaryValue.fLength);
     }
-    /* TODO: why so much? because of how fSize got precalculated? if so, then preflighting might be able to fix this */
-    udata_writePadding(mem, BIN_ALIGNMENT - pad);
-    *byteOffset += 4 + res->u.fBinaryValue.fLength + BIN_ALIGNMENT;
+    pad = MAX_BIN_START_PADDING - pad;
+    udata_writePadding(mem, pad);
+    *byteOffset += 4 + res->u.fBinaryValue.fLength + pad;
 
     return resWord;
 }
@@ -1171,9 +1183,8 @@ static uint32_t table_write(UNewDataMemory *mem, uint32_t *byteOffset,
     }
     assert(i == res->u.fTable.fCount);
 
-    resWord = *byteOffset >> 2;
-    if(!res->u.fTable.fIs32Bit) {
-        resWord |= (uint32_t)URES_TABLE << 28;
+    resWord = (res->fType << 28) | (*byteOffset >> 2);
+    if(res->fType == URES_TABLE) {
         udata_write16(mem, (uint16_t)res->u.fTable.fCount);
         for (current = res->u.fTable.fFirst; current != NULL; current = current->fNext) {
             int32_t key = current->fKey;
@@ -1188,8 +1199,7 @@ static uint32_t table_write(UNewDataMemory *mem, uint32_t *byteOffset,
             udata_writePadding(mem, 2);
             *byteOffset += 2;
         }
-    } else {
-        resWord |= (uint32_t)URES_TABLE32 << 28;
+    } else /* URES_TABLE32 */ {
         udata_write32(mem, res->u.fTable.fCount);
         for (current = res->u.fTable.fFirst; current != NULL; current = current->fNext) {
             udata_write32(mem, (uint32_t)current->fKey);
@@ -1215,6 +1225,7 @@ uint32_t res_write(UNewDataMemory *mem, uint32_t *byteOffset,
     }
     switch (res->fType) {
     case URES_STRING:
+    case URES_STRING_UTF16:
         bundle->fStringsSize += 4;
         bundle->fPotentialSize += 4 /* resource item */;
         resWord = string_write    (mem, byteOffset, bundle, res, status);
@@ -1235,6 +1246,7 @@ uint32_t res_write(UNewDataMemory *mem, uint32_t *byteOffset,
         resWord = array_write     (mem, byteOffset, bundle, res, status);
         break;
     case URES_TABLE:
+    case URES_TABLE32:
         resWord = table_write     (mem, byteOffset, bundle, res, status);
         break;
     default:
@@ -1310,21 +1322,6 @@ void bundle_write(struct SRBRoot *bundle, const char *outputDir, const char *out
     if (U_FAILURE(*status)) {
         return;
     }
-
-    /*
-     * TODO: Work in phases.
-     * - Done: Compact the keys.
-     * - Done: Enumerate all string values, eliminate duplicates,
-     *   preflight their lengths and adjust their fType.
-     *   Rewrite SResource.fKey offsets and delete fKeyMap.
-     *   (Remove the mapping code from table_write().)
-     * - Done: Now (not earlier) calculate strings' and containers' fSize and fChildrenSize,
-     *   and table's subtype (16/32-bit key offsets).
-     * - Open the file, write the header, the keys and the compressed strings.
-     * - Then write all non-container items.
-     * - Last write all container items.
-     *   (Revisit whether it's useful for this to be separate.)
-     */
 
 #if 0
     {
@@ -1857,6 +1854,7 @@ void res_close(struct SResource *res) {
     if (res != NULL) {
         switch(res->fType) {
         case URES_STRING:
+        case URES_STRING_UTF16:
             string_close(res);
             break;
         case URES_ALIAS:
@@ -1875,6 +1873,7 @@ void res_close(struct SResource *res) {
             array_close(res);
             break;
         case URES_TABLE:
+        case URES_TABLE32:
             table_close(res);
             break;
         default:

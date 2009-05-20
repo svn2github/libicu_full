@@ -132,7 +132,6 @@ struct SResource* res_none(void);
 
 struct SResTable {
     uint32_t fCount;
-    UBool fIs32Bit;
     struct SResource *fFirst;
     struct SRBRoot *fRoot;
 };

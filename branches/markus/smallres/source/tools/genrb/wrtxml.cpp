@@ -980,7 +980,6 @@ res_write_xml(struct SResource *res, const char* id,  const char* language, UBoo
              return;
 
         case URES_TABLE:
-        case URES_TABLE32:
              table_write_xml     (res, id, language, isTopLevel, status);
              return;
 

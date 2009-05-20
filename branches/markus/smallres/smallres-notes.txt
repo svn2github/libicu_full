@@ -735,6 +735,17 @@ Transmitting file data ..
 Committed revision 26017.
 
 svn commit -m "ticket:6945: ures_swap() track resources to not swap shared resource multiple times; prepare for optionally writing formatVersion 2; flexible local/pool key offsets boundary for URES_TABLE"
+Sending        smallres-notes.txt
+Sending        source\common\uresdata.c
+Sending        source\common\uresdata.h
+Sending        source\tools\genrb\genrb.c
+Sending        source\tools\genrb\parse.c
+Sending        source\tools\genrb\reslist.c
+Sending        source\tools\genrb\reslist.h
+Transmitting file data .......
+Committed revision 26021.
+
+svn commit -m "ticket:6945: bug fixes to get formatVersion 1 to work again; tested via cintltst /udatatst/TestSwapData"
 
 Scratch:
     en.txt -s C:\svn\icuproj\icu\trunk\source\data\locales -d \temp\icu\smallres
@@ -743,6 +754,8 @@ TODO:
 * for v2 with key suffix sharing, pool bundle with shared keys,
               more compact UTF-16 strings with suffix sharing
               (still all memory-mappable)
+- formatVersion=1: consider incrementing the _minor_ formatVersion
+  to indicate the use of key suffix sharing and string duplicate elimination
 - consider reusing URES_STRING in v2 rather than adding URES_STRING_UTF16,
   just like we reuse URES_TABLE
   (in that case, init fStringsUTF16Length=1 with [0]=0 for empty strings,
