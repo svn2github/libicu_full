@@ -40,21 +40,28 @@
 #define MAX_BIN_START_PADDING 12
 
 static UBool gIncludeCopyright = FALSE;
-static int32_t gFormatVersion = 1;
+static int32_t gFormatVersion = 2;
 
 static UChar gEmptyString = 0;
 
 #define PACK_KEYS 0
 
+/* How do we store string values? */
 enum {
-    URES_STRING_UTF16=6,        /* kStringsUTF16v2 */
+    STRINGS_UTF16_V1,   /* formatVersion 1: int length + UChars + NUL + padding to 4 bytes */
+    STRINGS_UTF16_V2,   /* formatVersion 2: optional length in 1..3 UChars + UChars + NUL */
+    STRINGS_COMPACT     /* compact encoding, requires runtime decompacting and cache */
+};
+
+enum {
+    URES_STRING_UTF16=6,        /* STRINGS_UTF16_V2 */
     URES_STRING_MINI_ASCII=10,  /* 0xA for ASCII */
     URES_STRING_MINI_WINDOW0=11,/* 0xB for Window */
     URES_STRING_COMPACT=12      /* 0xC for Compact */
 };
 
 enum {
-    kMaxImplicitStringLength = 40  /* do not store the length explicitly for such strings */
+    MAX_IMPLICIT_STRING_LENGTH = 40  /* do not store the length explicitly for such strings */
 };
 
 /*
@@ -70,7 +77,7 @@ static const struct SResource kNoResource = { URES_NONE };
  */
 static const struct SResource kOutsideBundleTree = { URES_NONE };
 
-static const UDataInfo dataInfo= {
+static UDataInfo dataInfo= {
     sizeof(UDataInfo),
     0,
 
@@ -80,8 +87,14 @@ static const UDataInfo dataInfo= {
     0,
 
     {0x52, 0x65, 0x73, 0x42},     /* dataFormat="ResB" */
-    {1, 2, 0, 0},                 /* formatVersion */
+    {1, 3, 0, 0},                 /* formatVersion */
     {1, 4, 0, 0}                  /* dataVersion take a look at version inside parsed resb*/
+};
+
+static const UVersionInfo gFormatVersions[3] = {  /* indexed by a major-formatVersion integer */
+    { 0, 0, 0, 0 },
+    { 1, 3, 0, 0 },
+    { 2, 0, 0, 0 }
 };
 
 static uint8_t calcPadding(uint32_t size) {
@@ -534,8 +547,8 @@ encodeSingleByteMode(struct SRBRoot *bundle, struct SResource *res,
         if (infix != NULL) {
             /* replace the infix with a reference to the already-written string */
             assert(infix->u.fString.fIsInfix);
-            assert(infix->u.fString.fRes != 0xffffffff);
-            pos += encodeInfixReference(infix->u.fString.fRes, 3, buffer + pos);
+            assert(infix->u.fString.fCompactRes != 0xffffffff);
+            pos += encodeInfixReference(infix->u.fString.fCompactRes, 3, buffer + pos);
         } else {
             break;
         }
@@ -617,8 +630,8 @@ encodeCJK(struct SRBRoot *bundle, struct SResource *res,
         if (infix != NULL) {
             /* replace the infix with a reference to the already-written string */
             assert(infix->u.fString.fIsInfix);
-            assert(infix->u.fString.fRes != 0xffffffff);
-            pos += encodeInfixReference(infix->u.fString.fRes, 0x4b, buffer + pos);
+            assert(infix->u.fString.fCompactRes != 0xffffffff);
+            pos += encodeInfixReference(infix->u.fString.fCompactRes, 0x4b, buffer + pos);
         } else {
             break;
         }
@@ -748,7 +761,8 @@ findBestWindow(struct SRBRoot *bundle, struct SResource *res,
  * will write. It excludes keys, compact strings (in bundle->fStringBytes)
  * and the resource item word that type_write() returns.
  *
- * string_preWrite() also writes compact-string bytes to bundle->fStringBytes.
+ * string_preWrite() also writes UTF-16 v2 string UChars
+ * to bundle->fStringsUTF16, or compact-string bytes to bundle->fStringBytes.
  *
  * table_preWrite() and array_preWrite() set bundle->fSizeExceptRoot
  * to their children's total size if they pre-write the root resource,
@@ -771,35 +785,23 @@ res_write(UNewDataMemory *mem, uint32_t *byteOffset,
           struct SRBRoot *bundle, struct SResource *res,
           UErrorCode *status);
 
+/*
+ * Only called for UTF-16 v1 strings and duplicate UTF-16 v2 strings.
+ * For unique UTF-16 v2 strings, res_preWrite() sees fRes != 0xffffffff
+ * and exits early.
+ */
 static uint32_t
 string_preWrite(struct SRBRoot *bundle, struct SResource *res,
                 UErrorCode *status) {
     struct SResource *same;
-    const UChar *s = res->u.fString.fChars;
-    int32_t length = res->u.fString.fLength;
-    uint32_t size;  /* TODO: remove variable after debugging */
-    int32_t bestWindow;
-    if (res->fNext == &kOutsideBundleTree) {
-        /* TODO: remove after debugging */
-        /* not reachable by enumerating the tree, won't be written as UTF-16 string */
-        size = 0;
-    } else {
-        size = 4 + (res->u.fString.fLength + 1) * U_SIZEOF_UCHAR;
-    }
-    if ((res->u.fString.fRes != 0xffffffff && (res->u.fString.fRes >> 28) != URES_STRING_UTF16) || res->u.fString.fWriteUTF16) {
-    /* TODO: if (res->u.fString.fRes != 0xffffffff || res->u.fString.fWriteUTF16) { */
-        /*
-         * We visited this string already and either wrote its contents or
-         * determined to use the standard UTF-16 form.
-         * The first visitor returned the size for that.
-         */
-        /* TODO: Note: This automatically includes kStringsUTF16v2 strings! */
+    if (res->u.fString.fHasBeenPreWritten) {
+        /* We visited this string already and returned its size. */
         return 0;
     } else if ((same = res->u.fString.fSame) != NULL) {
         /* This is a duplicate. */
-        if (same->u.fString.fRes != 0xffffffff || same->u.fString.fWriteUTF16) {
+        if (same->u.fString.fHasBeenPreWritten) {
             /* The original has been visited already. */
-            res->u.fString.fRes = same->u.fString.fRes;
+            res->fRes = same->fRes;
             return 0;
         } else {
             /*
@@ -808,7 +810,62 @@ string_preWrite(struct SRBRoot *bundle, struct SResource *res,
              *
              * Note: This assigns the correct size to each string resource
              * because the order in which res_preWrite() visits resources is
-             * the same as in res_write(), and the UTF-16 size is counted for
+             * the same as in res_write(), and the size is counted for
+             * the same resource for which it will later be written.
+             */
+            return string_preWrite(bundle, same, status);
+        }
+    } else {
+        /* Write the original UTF-16 form. */
+        res->u.fString.fHasBeenPreWritten = TRUE;
+        return 4 + (res->u.fString.fLength + 1) * U_SIZEOF_UCHAR;
+    }
+}
+
+static uint32_t
+string_preWriteCompact(struct SRBRoot *bundle, struct SResource *res,
+                       uint32_t size,
+                       UErrorCode *status) {
+    struct SResource *same;
+    const UChar *s = res->u.fString.fChars;
+    int32_t length = res->u.fString.fLength;
+    int32_t bestWindow;
+    if (res->fNext == &kOutsideBundleTree) {
+        /* TODO: remove after debugging */
+        /* not reachable by enumerating the tree, won't be written as UTF-16 string */
+        size = 0;
+    } else if (size == 0xffffffff) {
+        /*
+         * TODO: Redo savings calculations now that UTF-16 v2 is implemented.
+         * Don't calculate fMiniReduction here because v2 suffix sharing makes
+         * it impossible to know the exact size for the un-compact string.
+         * Instead, count fPotentialSize and later compare with fStringsUTF16Length.
+         * If writing UTF-16 v1, then count and compare with original string sizes.
+         */
+        size = 4 + (length + 1) * U_SIZEOF_UCHAR;
+    }
+    if (res->u.fString.fCompactRes != 0xffffffff || res->u.fString.fWriteUTF16) {
+        /*
+         * We visited this string already and either wrote its contents or
+         * determined to use the standard UTF-16 form.
+         * The first visitor returned the size for that.
+         * Note: This automatically includes STRINGS_UTF16_V2 strings.
+         */
+        return 0;
+    } else if ((same = res->u.fString.fSame) != NULL) {
+        /* This is a duplicate. */
+        if (same->u.fString.fCompactRes != 0xffffffff || same->u.fString.fWriteUTF16) {
+            /* The original has been visited already. */
+            res->u.fString.fCompactRes = same->u.fString.fCompactRes;
+            return 0;
+        } else {
+            /*
+             * Get the size of the contents of the first-parsed version of this string
+             * which got inserted into a later part of the tree.
+             *
+             * Note: This assigns the correct size to each string resource
+             * because the order in which res_preWrite() visits resources is
+             * the same as in res_write(), and the size is counted for
              * the same resource for which it will later be written.
              *
              * The exception to the resource-visiting order is that
@@ -816,25 +873,23 @@ string_preWrite(struct SRBRoot *bundle, struct SResource *res,
              * This is harmless because infix strings are never written in
              * UTF-16 form.
              */
-            size = string_preWrite(bundle, same, status);
-            res->u.fString.fRes = same->u.fString.fRes;
+            size = string_preWriteCompact(bundle, same, 0xffffffff, status);
+            res->u.fString.fCompactRes = same->u.fString.fCompactRes;
             return size;
         }
-    } else if ((res->u.fString.fRes >> 28) == URES_STRING_UTF16) {
-        /* TODO: restore the first if() and remove this one */
     } else if (
         !res->u.fString.fIsInfix &&
-        (res->u.fString.fRes = encodeMiniString(bundle, s, length)) != 0xffffffff
+        (res->u.fString.fCompactRes = encodeMiniString(bundle, s, length)) != 0xffffffff
     ) {
         ++bundle->fMiniCount;
         bundle->fMiniReduction += size + calcPadding(size);
-        /* TODO: return 0; */
+        return 0;
     } else if ((bestWindow = findBestWindow(bundle, res, s, length, status)) >= 0) {
         /* use the compact form */
         uint8_t buffer[8];
         int32_t lengthBytes = encodeLength(length, buffer);
         buffer[0] |= (uint8_t)(bestWindow << 6);
-        res->u.fString.fRes =
+        res->u.fString.fCompactRes =
             ((uint32_t)URES_STRING_COMPACT << 28) |
             ((uint32_t)(bundle->fKeysTop + bundle->fStringBytesLength));
         writeStringBytes(bundle, buffer, lengthBytes, status);
@@ -844,18 +899,16 @@ string_preWrite(struct SRBRoot *bundle, struct SResource *res,
         } else {
             encodeCJK(bundle, res, s, length, TRUE, status);
         }
-        /* TODO: return 0; */
+        return 0;
     } else {
-        /* use the standard UTF-16 form */
+        /* Write the original UTF-16 form. */
         res->u.fString.fWriteUTF16 = TRUE;
         bundle->fPotentialSize += size + calcPadding(size);
         ++bundle->fIncompressibleStrings;
         printf("incompressible: length %ld  normalSize %ld\n",
                (long)length, (long)(size + calcPadding(size)));
-        /* TODO: return size; */
+        return size;
     }
-
-    return size; /* TODO: move into the two UTF-16 branches */
 }
 
 static uint32_t
@@ -865,6 +918,10 @@ array_preWrite(struct SRBRoot *bundle, struct SResource *res,
     uint32_t size = 0;
 
     if (U_FAILURE(*status)) {
+        return 0;
+    }
+    if (res->u.fArray.fCount == 0 && gFormatVersion > 1) {
+        res->fRes = res->fType << 28;
         return 0;
     }
     for (current = res->u.fArray.fFirst; current != NULL; current = current->fNext) {
@@ -913,6 +970,10 @@ table_preWrite(struct SRBRoot *bundle, struct SResource *res,
     if (U_FAILURE(*status)) {
         return 0;
     }
+    if (res->u.fTable.fCount == 0 && gFormatVersion > 1) {
+        res->fRes = res->fType << 28;
+        return 0;
+    }
     for (current = res->u.fTable.fFirst; current != NULL; current = current->fNext) {
         int32_t key;
         size += res_preWrite(bundle, current, status);
@@ -959,16 +1020,30 @@ res_preWrite(struct SRBRoot *bundle, struct SResource *res,
     if (U_FAILURE(*status) || res == NULL) {
         return 0;
     }
+    if (res->fRes != 0xffffffff) {
+        /*
+         * The resource item word was already precomputed, which means
+         * no further data needs to be written.
+         * This might be an integer, or an empty or UTF-16 v2 string,
+         * empty binary, etc.
+         */
+        return 0;
+    }
     switch (res->fType) {
     case URES_STRING:
-    case URES_STRING_UTF16:
         size = string_preWrite(bundle, res, status);
+        /* TODO: redo and reenable savings stats for compact strings: string_preWriteCompact(bundle, res, size, status); */
         break;
     case URES_ALIAS:
         size = 4 + (res->u.fString.fLength + 1) * U_SIZEOF_UCHAR;
         break;
     case URES_INT_VECTOR:
-        size = (1 + res->u.fIntVector.fCount) * 4;
+        if (res->u.fIntVector.fCount == 0 && gFormatVersion > 1) {
+            res->fRes = res->fType << 28;
+            size = 0;
+        } else {
+            size = (1 + res->u.fIntVector.fCount) * 4;
+        }
         break;
     case URES_BINARY:
         size = 4 + res->u.fBinaryValue.fLength + MAX_BIN_START_PADDING;
@@ -980,7 +1055,6 @@ res_preWrite(struct SRBRoot *bundle, struct SResource *res,
         size = array_preWrite(bundle, res, status);
         break;
     case URES_TABLE:
-    case URES_TABLE32:
         size = table_preWrite(bundle, res, status);
         break;
     default:
@@ -996,7 +1070,7 @@ bundle_preWrite(struct SRBRoot *bundle, UErrorCode *status) {
     if (U_FAILURE(*status)) {
         return 0;
     }
-    if (bundle->fStringsForm == kStringsCompact && bundle->fStringsUTF16Length > 0) {
+    if (bundle->fStringsForm == STRINGS_COMPACT && bundle->fStringsUTF16Length > 0) {
         struct SResource *current;
         int32_t capacity = bundle->fStringsUTF16Length + bundle->fStringsUTF16Length / 4;
         capacity &= ~3;  /* ensures padding fits if fStringBytesLength needs it */
@@ -1020,7 +1094,7 @@ bundle_preWrite(struct SRBRoot *bundle, UErrorCode *status) {
         ) {
             if (current->u.fString.fIsInfix) {
                 /* TODO: remove bundle->fInfixUTF16Size when writing compact strings for real */
-                bundle->fInfixUTF16Size += string_preWrite(bundle, current, status);
+                bundle->fInfixUTF16Size += string_preWriteCompact(bundle, current, 0xffffffff, status);
                 if (U_FAILURE(*status)) {
                     return 0;
                 }
@@ -1030,40 +1104,44 @@ bundle_preWrite(struct SRBRoot *bundle, UErrorCode *status) {
     return res_preWrite(bundle, bundle->fRoot, status);
 }
 
+/*
+ * Only called for UTF-16 v1 strings. For UTF-16 v2 strings,
+ * res_write() sees fRes != 0xffffffff and exits early.
+ */
 static uint32_t string_write(UNewDataMemory *mem, uint32_t *byteOffset,
                              struct SRBRoot *bundle, struct SResource *res,
                              UErrorCode *status) {
     struct SResource *same = res->u.fString.fSame;
     int32_t length;
 
-    if (res->u.fString.fRes <= 0x0fffffff) {
-    /* TODO: if (res->u.fString.fRes != 0xffffffff) { */
-        /* TODO: Note: This will automatically include kStringsUTF16v2 strings! */
-        /* The contents of this string were already written. */
-        return res->u.fString.fRes;
+    if (res->fRes != 0xffffffff) {
+        /*
+         * The contents of this string were already written.
+         * Note: This automatically includes STRINGS_UTF16_V2 strings.
+         */
+        return res->fRes;
     } else if (same != NULL) {
         /* This is a duplicate. */
-        if (same->u.fString.fRes <= 0x0fffffff) {
-        /* TODO: if (same->u.fString.fRes != 0xffffffff) { */
+        if (same->fRes != 0xffffffff) {
             /* The original has been visited already. */
-            res->u.fString.fRes = same->u.fString.fRes;
+            res->fRes = same->fRes;
         } else {
             /*
              * Write the contents of the first-parsed version of this string
              * which got inserted into a later part of the tree.
              */
-            res->u.fString.fRes = string_write(mem, byteOffset, bundle, same, status);
+            res->fRes = string_write(mem, byteOffset, bundle, same, status);
         }
-        return res->u.fString.fRes;
+        return res->fRes;
     }
 
-    /* Write the UTF-16 string. */
-    res->u.fString.fRes = (res->fType << 28) | (*byteOffset >> 2);
+    /* Write the UTF-16 v1 string. */
+    res->fRes = (res->fType << 28) | (*byteOffset >> 2);
     length = res->u.fString.fLength;
     udata_write32(mem, length);
     udata_writeUString(mem, res->u.fString.fChars, length + 1);
     *byteOffset += 4 + (length + 1) * U_SIZEOF_UCHAR;
-    return res->u.fString.fRes;
+    return res->fRes;
 }
 
 static uint32_t alias_write(UNewDataMemory *mem, uint32_t *byteOffset,
@@ -1151,12 +1229,6 @@ static uint32_t bin_write(UNewDataMemory *mem, uint32_t *byteOffset,
     return resWord;
 }
 
-static uint32_t int_write(UNewDataMemory *mem, uint32_t *byteOffset,
-                          struct SRBRoot *bundle, struct SResource *res,
-                          UErrorCode *status) {
-    return (res->fType << 28) | (res->u.fIntValue.fValue & 0xFFFFFFF);
-}
-
 static uint32_t table_write(UNewDataMemory *mem, uint32_t *byteOffset,
                             struct SRBRoot *bundle, struct SResource *res,
                             UErrorCode *status) {
@@ -1223,11 +1295,16 @@ uint32_t res_write(UNewDataMemory *mem, uint32_t *byteOffset,
     if (U_FAILURE(*status) || res == NULL) {
         return 0;
     }
-    switch (res->fType) {
-    case URES_STRING:
-    case URES_STRING_UTF16:
+    if (res->fType == URES_STRING) {
         bundle->fStringsSize += 4;
         bundle->fPotentialSize += 4 /* resource item */;
+    }
+    resWord = res->fRes;
+    if (resWord != 0xffffffff) {
+        return resWord;
+    }
+    switch (res->fType) {
+    case URES_STRING:
         resWord = string_write    (mem, byteOffset, bundle, res, status);
         break;
     case URES_ALIAS:
@@ -1240,8 +1317,7 @@ uint32_t res_write(UNewDataMemory *mem, uint32_t *byteOffset,
         resWord = bin_write       (mem, byteOffset, bundle, res, status);
         break;
     case URES_INT:
-        resWord = int_write       (mem, byteOffset, bundle, res, status);
-        break;
+        break;  /* fRes was set by int_open() */
     case URES_ARRAY:
         resWord = array_write     (mem, byteOffset, bundle, res, status);
         break;
@@ -1398,14 +1474,20 @@ void bundle_write(struct SRBRoot *bundle, const char *outputDir, const char *out
         uprv_strcpy(dataName, bundle->fLocale);
     }
 
+    uprv_memcpy(dataInfo.formatVersion, gFormatVersions + gFormatVersion, sizeof(UVersionInfo));
+
     mem = udata_create(outputDir, "res", dataName, &dataInfo, (gIncludeCopyright==TRUE)? U_COPYRIGHT_STRING:NULL, status);
     if(U_FAILURE(*status)){
         return;
     }
 
     /* we're gonna put the main table at the end */
-    byteOffset = bundle->fKeysTop /* TODO: + fStringBytesLength */;
-    root = (bundle->fRoot->fType << 28) | ((byteOffset + bundle->fSizeExceptRoot) >> 2);
+    byteOffset = bundle->fKeysTop + bundle->fStringsUTF16Length * 2 /* TODO: + fStringBytesLength */;
+    if (bundle->fRoot->fRes != 0xffffffff) {
+        root = bundle->fRoot->fRes;
+    } else {
+        root = (bundle->fRoot->fType << 28) | ((byteOffset + bundle->fSizeExceptRoot) >> 2);
+    }
 
     /* write the root item */
     udata_write32(mem, root);
@@ -1420,20 +1502,29 @@ void bundle_write(struct SRBRoot *bundle, const char *outputDir, const char *out
      */
     uprv_memset(indexes, 0, sizeof(indexes));
     indexes[URES_INDEX_LENGTH]=             bundle->fIndexLength;
-    indexes[URES_INDEX_KEYS_TOP]=           (int32_t)(bundle->fKeysTop>>2);
+    indexes[URES_INDEX_KEYS_TOP]=           bundle->fKeysTop>>2;
     indexes[URES_INDEX_RESOURCES_TOP]=      (int32_t)(top>>2);
     indexes[URES_INDEX_BUNDLE_TOP]=         indexes[URES_INDEX_RESOURCES_TOP];
     indexes[URES_INDEX_MAX_TABLE_LENGTH]=   bundle->fMaxTableLength;
-    /* TODO: bundle->fStringBytesLength, fStringsCount, fStringUCharsCount, fWindows[] */
 
     /*
      * formatVersion 1.2 (ICU 3.6):
      * write indexes[URES_INDEX_ATTRIBUTES] with URES_ATT_NO_FALLBACK set or not set
      * the memset() above initialized all indexes[] to 0
      */
-    if(bundle->noFallback) {
+    if (bundle->noFallback) {
         indexes[URES_INDEX_ATTRIBUTES]=URES_ATT_NO_FALLBACK;
     }
+    /*
+     * formatVersion 2.0 (ICU 4.4):
+     * more compact string value storage, optional pool bundle
+     */
+    if (URES_INDEX_UTF16_TOP < bundle->fIndexLength) {
+        indexes[URES_INDEX_UTF16_TOP] = (bundle->fKeysTop>>2) + (bundle->fStringsUTF16Length>>1);
+    }
+    /* TODO: write pool bundle checksum if this is or uses a pool bundle; set attributes flags as well */
+
+    /* TODO: bundle->fStringBytesLength, fStringsCount, fStringUCharsCount, fWindows[] */
 
     /* write the indexes[] */
     udata_writeBlock(mem, indexes, bundle->fIndexLength*4);
@@ -1441,6 +1532,10 @@ void bundle_write(struct SRBRoot *bundle, const char *outputDir, const char *out
     /* write the table key strings */
     udata_writeBlock(mem, bundle->fKeys+bundle->fKeysBottom,
                           bundle->fKeysTop-bundle->fKeysBottom);
+
+    /* write the v2 UTF-16 strings */
+    udata_writeBlock(mem, bundle->fStringsUTF16, bundle->fStringsUTF16Length*2);
+
     /* TODO: write bundle->fStringBytes[] */
 
     /* write all of the bundle contents: the root item and its children */
@@ -1473,6 +1568,7 @@ struct SResource* res_open(struct SRBRoot *bundle, const char *tag,
     }
     uprv_memset(res, 0, sizeof(struct SResource));
     res->fKey = key;
+    res->fRes = 0xffffffff;
 
     ustr_init(&res->fComment);
     if(comment != NULL){
@@ -1562,22 +1658,22 @@ struct SResource *string_open(struct SRBRoot *bundle, char *tag, const UChar *va
 
     if (!bundle->fIsDoneParsing) {
         /* TODO: fStringsCount is not incremented after parsing for development stats;
-           for final implementation of kStringsCompact it must always be incremented
+           for final implementation of STRINGS_COMPACT it must always be incremented
            so that the runtime code can size its hashtable accurately.
          */
         ++bundle->fStringsCount;
         bundle->fStringsSize += 4 + (len + 1) * 2 + calcPadding((len + 1) * 2);
     }
 
-    if (len == 0 && bundle->fStringsForm != kStringsUTF16v1) {
+    if (len == 0 && gFormatVersion > 1) {
         res->u.fString.fChars = &gEmptyString;
+        res->fRes = 0;
         return res;
     }
 
     /* check for duplicates */
     res->u.fString.fLength = len;
     res->u.fString.fChars  = (UChar *)value;
-    res->u.fString.fRes = 0xffffffff;
 
     if (bundle->fStringSet == NULL) {
         UErrorCode localStatus = U_ZERO_ERROR;  /* if failure: just don't detect dups */
@@ -1602,8 +1698,8 @@ struct SResource *string_open(struct SRBRoot *bundle, char *tag, const UChar *va
         /* put it into the set for finding duplicates */
         uhash_put(bundle->fStringSet, res, res, status);
 
-        if (bundle->fStringsForm != kStringsUTF16v1) {
-            if (len <= kMaxImplicitStringLength && !U16_IS_TRAIL(value[0]) && len == u_strlen(value)) {
+        if (bundle->fStringsForm != STRINGS_UTF16_V1) {
+            if (len <= MAX_IMPLICIT_STRING_LENGTH && !U16_IS_TRAIL(value[0]) && len == u_strlen(value)) {
                 /*
                  * This string will be stored without an explicit length.
                  * Runtime will detect !U16_IS_TRAIL(value[0]) and call u_strlen().
@@ -1620,7 +1716,7 @@ struct SResource *string_open(struct SRBRoot *bundle, char *tag, const UChar *va
         }
 
         /* put it into the list for finding infixes unless it's very short */
-        if (bundle->fStringsForm == kStringsCompact && minBytesAreGE(value, len, MIN_INFIX_LENGTH)) {
+        if (bundle->fStringsForm == STRINGS_COMPACT && minBytesAreGE(value, len, MIN_INFIX_LENGTH)) {
             for (current = bundle->fShortestString->u.fString.fLonger;
                  len > current->u.fString.fLength;
                  current = current->u.fString.fLonger) {}
@@ -1650,6 +1746,11 @@ struct SResource *alias_open(struct SRBRoot *bundle, char *tag, UChar *value, in
         return NULL;
     }
     res->fType = URES_ALIAS;
+    if (len == 0 && gFormatVersion > 1) {
+        res->u.fString.fChars = &gEmptyString;
+        res->fRes = res->fType << 28;
+        return res;
+    }
 
     res->u.fString.fLength = len;
     res->u.fString.fChars  = (UChar *) uprv_malloc(sizeof(UChar) * (len + 1));
@@ -1687,6 +1788,7 @@ struct SResource *int_open(struct SRBRoot *bundle, char *tag, int32_t value, con
     }
     res->fType = URES_INT;
     res->u.fIntValue.fValue = value;
+    res->fRes = (res->fType << 28) | (value & 0x0FFFFFFF);
     return res;
 }
 
@@ -1716,6 +1818,7 @@ struct SResource *bin_open(struct SRBRoot *bundle, const char *tag, uint32_t len
     }
     else {
         res->u.fBinaryValue.fData = NULL;
+        res->fRes = res->fType << 28;
     }
 
     return res;
@@ -1763,11 +1866,11 @@ struct SRBRoot *bundle_open(const struct UString* comment, UErrorCode *status) {
     bundle->fKeysTop = bundle->fKeysBottom;
 
     if (gFormatVersion == 1) {
-        bundle->fStringsForm = kStringsUTF16v1;
+        bundle->fStringsForm = STRINGS_UTF16_V1;
     } else {
-        bundle->fStringsForm = kStringsUTF16v2;
+        bundle->fStringsForm = STRINGS_UTF16_V2;
     }
-    /* TODO: experiment with bundle->fStringsForm = kStringsCompact; */
+    /* TODO: experiment with bundle->fStringsForm = STRINGS_COMPACT; */
 
     /* doubly-linked list of unique strings with first/last sentinels */
     uprv_memset(bundle->fShortestString, 0, 2 * sizeof(struct SResource));
@@ -1854,7 +1957,6 @@ void res_close(struct SResource *res) {
     if (res != NULL) {
         switch(res->fType) {
         case URES_STRING:
-        case URES_STRING_UTF16:
             string_close(res);
             break;
         case URES_ALIAS:
@@ -2737,7 +2839,10 @@ compareStringSuffixes(const void *context, const void *l, const void *r) {
 static int32_t
 string_writeUTF16v2(struct SRBRoot *bundle, struct SResource *res, int32_t utf16Length) {
     int32_t length = res->u.fString.fLength;
-    res->u.fString.fRes = ((uint32_t)URES_STRING_UTF16 << 28) | (uint32_t)utf16Length;
+    res->fRes =
+        ((uint32_t)URES_STRING_UTF16 << 28) |
+        (uint32_t)(bundle->fKeysTop / 2 + utf16Length);
+    res->u.fString.fHasBeenPreWritten = TRUE;
     switch(res->u.fString.fNumCharsForLength) {
     case 0:
         break;
@@ -2768,7 +2873,7 @@ bundle_compactStrings(struct SRBRoot *bundle, UErrorCode *status) {
         return;
     }
     switch(bundle->fStringsForm) {
-    case kStringsUTF16v2:
+    case STRINGS_UTF16_V2:
         if (bundle->fStringsUTF16Length > 0) {
             struct SResource **array;
             int32_t count = uhash_count(bundle->fStringSet);
@@ -2816,7 +2921,7 @@ bundle_compactStrings(struct SRBRoot *bundle, UErrorCode *status) {
                         if (suffix == suffixLimit && *s == *suffixLimit) {
                             if (suffixRes->u.fString.fNumCharsForLength == 0) {
                                 /* yes, point to the earlier string */
-                                suffixRes->u.fString.fRes = res->u.fString.fRes + res->u.fString.fNumCharsForLength + offset;
+                                suffixRes->fRes = res->fRes + res->u.fString.fNumCharsForLength + offset;
                             } else {
                                 /* write the suffix by itself if we need explicit length */
                                 utf16Length = string_writeUTF16v2(bundle, suffixRes, utf16Length);
@@ -2837,7 +2942,7 @@ bundle_compactStrings(struct SRBRoot *bundle, UErrorCode *status) {
             bundle->fPotentialSize += utf16Length * U_SIZEOF_UCHAR;
         }
         break;
-    case kStringsCompact:
+    case STRINGS_COMPACT:
         findPrefixesAndSuffixes(bundle, status);
         findInfixes(bundle, status);
         break;

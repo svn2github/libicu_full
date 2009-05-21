@@ -40,13 +40,6 @@ typedef struct KeyMapEntry {
     int32_t oldpos, newpos;
 } KeyMapEntry;
 
-/* How do we store string values? */
-enum {
-    kStringsUTF16v1,    /* formatVersion 1: int length + UChars + NUL + padding to 4 bytes */
-    kStringsUTF16v2,    /* formatVersion 2: optional length in 1..3 UChars + UChars + NUL */
-    kStringsCompact     /* compact encoding, requires runtime decompacting and cache */
-};
-
 /* Resource bundle root table */
 struct SRBRoot {
   struct SResource *fRoot;
@@ -57,7 +50,7 @@ struct SRBRoot {
   uint32_t fSizeExceptRoot;
   UBool noFallback; /* see URES_ATT_NO_FALLBACK */
   UBool fIsDoneParsing; /* set while processing & writing */
-  int8_t fStringsForm; /* default kStringsUTF16v1 */
+  int8_t fStringsForm; /* default STRINGS_UTF16_V1 */
 
   char *fKeys;
   KeyMapEntry *fKeyMap;
@@ -154,16 +147,19 @@ enum {
 
 struct SResString {
     struct SResource *fSame;  /* used for duplicates */
-    struct SResource *fShorter, *fLonger;  /* used for finding infixes */
-    struct SResource *fInfixes[MAX_INFIXES];
     UChar *fChars;
     int32_t fLength;
-    uint32_t fRes;  /* resource item for this string */
+    int8_t fNumCharsForLength;
+    UBool fHasBeenPreWritten;
+
+    /* TODO: Experimental fields for compact string form (byte-oriented). */
+    uint32_t fCompactRes;  /* TODO: If compact strings go into production, then use fRes instead of this. */
+    struct SResource *fShorter, *fLonger;  /* used for finding infixes */
+    struct SResource *fInfixes[MAX_INFIXES];
     int32_t fInfixIndexes[MAX_INFIXES];
     int8_t fInfixDepth; /* depth of indexes used inside this string */
     UBool fIsInfix;
     UBool fWriteUTF16;
-    int8_t fNumCharsForLength;
 };
 
 struct SResource *string_open(struct SRBRoot *bundle, char *tag, const UChar *value, int32_t len, const struct UString* comment, UErrorCode *status);
@@ -196,6 +192,7 @@ struct SResource *bin_open(struct SRBRoot *bundle, const char *tag, uint32_t len
 
 struct SResource {
     UResType fType;
+    uint32_t fRes;  /* precomputed resource item, if != 0xffffffff */
     int32_t  fKey;  /* Index into bundle->fKeys, or -1 if no key. */
     int      line;  /* used internally to report duplicate keys in tables */
     struct SResource *fNext; /*This is for internal chaining while building*/

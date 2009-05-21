@@ -808,9 +808,6 @@ ures_swapResource(const UDataSwapper *ds,
                  * detect a collation binary that is to be swapped via
                  * ds->compareInvChars(ds, outData+readUInt16(pKey[i]), "%%CollationBin")
                  * etc.
-                 *
-                 * use some UDataSwapFn pointer from somewhere for collation swapping
-                 * because the common library cannot directly call into the i18n library
                  */
                 if(0==ds->compareInvChars(ds,
                             ((const char *)outBundle)+

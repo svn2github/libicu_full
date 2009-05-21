@@ -69,7 +69,22 @@ enum {
 #define URES_ATT_NO_FALLBACK 1
 
 /*
- * File format for .res resource bundle files (formatVersion=1.2)
+ * File format for .res resource bundle files (formatVersion=1.3)
+ *
+ * New in 1.3 compared with 1.2: -------------
+ *
+ * genrb eliminates duplicates among key strings and Unicode string values.
+ * Multiple table items may share one key string, or one item may point
+ * to the suffix of another's key string. ("Suffix sharing")
+ * For example, one key "abc" may be reused for another key "bc" by pointing
+ * to the second character. (Key strings are NUL-terminated.)
+ * Multiple Unicode strings may use the same offset and string data.
+ *
+ * It is allowed for all resource types to share values.
+ * The swapper code (ures_swap()) has been modified so that it swaps each item
+ * exactly once.
+ *
+ * -------------
  *
  * An ICU4C resource bundle file (.res) is a binary, memory-mappable file
  * with nested, hierarchical data structures.
