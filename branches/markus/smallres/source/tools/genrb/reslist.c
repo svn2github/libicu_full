@@ -46,9 +46,6 @@ enum {
 };
 
 enum {
-    URES_TABLE16=5,
-    URES_STRING_UTF16=6,        /* STRINGS_UTF16_V2 */
-    URES_ARRAY16=9,
     URES_STRING_MINI_ASCII=10,  /* 0xA for ASCII */
     URES_STRING_MINI_WINDOW0=11,/* 0xB for Window */
     URES_STRING_COMPACT=12      /* 0xC for Compact */

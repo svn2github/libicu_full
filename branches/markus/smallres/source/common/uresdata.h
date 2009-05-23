@@ -22,6 +22,35 @@
 #include "unicode/udata.h"
 #include "udataswp.h"
 
+/**
+ * Numeric constants for internal-only types of resource items.
+ * These must use different numeric values than UResType constants
+ * because they are used together.
+ * Internal types are never returned by ures_getType().
+ */
+typedef enum {
+    /** Include a negative value so that the compiler uses the same int type as for UResType. */
+    URES_INTERNAL_NONE=-1,
+
+    /** Resource type constant for tables with 32-bit count, key offsets and values. */
+    URES_TABLE32=4,
+
+    /**
+     * Resource type constant for tables with 16-bit count, key offsets and values.
+     * All values are URES_STRING_UTF16 strings.
+     */
+    URES_TABLE16=5,
+
+    /** Resource type constant for 16-bit Unicode strings in formatVersion 2. */
+    URES_STRING_UTF16=6,
+
+    /**
+     * Resource type constant for arrays with 16-bit count and values.
+     * All values are URES_STRING_UTF16 strings.
+     */
+    URES_ARRAY16=9
+} UResInternalType;
+
 /*
  * A Resource is a 32-bit value that has 2 bit fields:
  * 31..28   4-bit type, see enum below
@@ -123,7 +152,7 @@ enum {
  * All resource item values are 4-aligned.
  *
  * The structures (memory layouts) for the values for each item type are listed
- * in the table above.
+ * in the table below.
  *
  * Nested, hierarchical structures: -------------
  *
@@ -158,7 +187,7 @@ enum {
  * 0  Unicode String:   int32_t length, UChar[length], (UChar)0, (padding)
  *                  or  (empty string ("") if offset==0)
  * 1  Binary:           int32_t length, uint8_t[length], (padding)
- *                      - this value should be 32-aligned -
+ *                      - the start of the bytes is 16-aligned -
  * 2  Table:            uint16_t count, uint16_t keyStringOffsets[count], (uint16_t padding), Resource[count]
  * 3  Alias:            (physically same value layout as string, new in ICU 2.4)
  * 4  Table32:          int32_t count, int32_t keyStringOffsets[count], Resource[count]

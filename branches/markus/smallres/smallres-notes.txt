@@ -880,6 +880,15 @@ string size reduction: 1040766 after string de-duplication
 -> in aggregate, it's better to optimize for table16/array16 containing only strings
 
 svn commit -m "ticket:6945: UTF-16+table16/array16 in 16-bit-units array to reduce padding; short strings first for maximum number of strings with 16-bit offsets; insert new first writing pass for all 16-bit-unit values"
+Sending        potential-stats.py
+Sending        smallres-notes.txt
+Sending        source\common\uresdata.h
+Sending        source\tools\genrb\reslist.c
+Sending        source\tools\genrb\reslist.h
+Transmitting file data .....
+Committed revision 26044.
+
+svn commit -m "ticket:6945: implement swapping of resource bundles with new string, table16 and array16 types"
 
 *** Options for pool bundle key strings (ASCII vs. EBCDIC)
 

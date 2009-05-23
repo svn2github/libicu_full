@@ -210,7 +210,7 @@ isAcceptable(void *context,
         pInfo->dataFormat[1]==0x65 &&
         pInfo->dataFormat[2]==0x73 &&
         pInfo->dataFormat[3]==0x42 &&
-        pInfo->formatVersion[0]==1);
+        (pInfo->formatVersion[0]==1 || pInfo->formatVersion[0]==2));
 }
 
 /* semi-public functions ---------------------------------------------------- */
@@ -234,7 +234,7 @@ res_load(ResourceData *pResData,
 
     /* currently, we accept only resources that have a Table as their roots */
     rootType=RES_GET_TYPE(pResData->rootRes);
-    if(rootType!=URES_TABLE && rootType!=URES_TABLE32) {
+    if(rootType!=URES_TABLE && rootType!=URES_TABLE16 && rootType!=URES_TABLE32) {
         *errorCode=U_INVALID_FORMAT_ERROR;
         udata_close(pResData->data);
         pResData->data=NULL; 
@@ -712,9 +712,15 @@ ures_swapResource(const UDataSwapper *ds,
     Resource *q;
     int32_t offset, count;
 
-    if(RES_GET_TYPE(res)==URES_INT) {
-        /* integer, nothing to do */
+    switch(RES_GET_TYPE(res)) {
+    case URES_TABLE16:
+    case URES_STRING_UTF16:
+    case URES_INT:
+    case URES_ARRAY16:
+        /* integer, or points to 16-bit units, nothing to do here */
         return;
+    default:
+        break;
     }
 
     /* all other types use an offset to point to their data */
@@ -981,7 +987,7 @@ ures_swap(const UDataSwapper *ds,
     TempTable tempTable;
 
     /* the following integers count Resource item offsets (4 bytes each), not bytes */
-    int32_t bundleLength, keysBottom, bottom, top;
+    int32_t bundleLength, indexLength, keysBottom, keysTop, resBottom, top;
 
     /* udata_swapDataHeader checks the arguments */
     headerSize=udata_swapDataHeader(ds, inData, length, outData, pErrorCode);
@@ -996,7 +1002,7 @@ ures_swap(const UDataSwapper *ds,
         pInfo->dataFormat[1]==0x65 &&
         pInfo->dataFormat[2]==0x73 &&
         pInfo->dataFormat[3]==0x42 &&
-        pInfo->formatVersion[0]==1
+        (pInfo->formatVersion[0]==1 || pInfo->formatVersion[0]==2)
     )) {
         udata_printError(ds, "ures_swap(): data format %02x.%02x.%02x.%02x (format version %02x) is not a resource bundle\n",
                          pInfo->dataFormat[0], pInfo->dataFormat[1],
@@ -1027,14 +1033,16 @@ ures_swap(const UDataSwapper *ds,
     inBundle=(const Resource *)((const char *)inData+headerSize);
     rootRes=ds->readUInt32(*inBundle);
 
-    if(pInfo->formatVersion[1]==0) {
+    if(pInfo->formatVersion[0]==1 && pInfo->formatVersion[1]==0) {
         /* preflight to get the bottom, top and maxTableLength values */
+        indexLength=0;
         keysBottom=1; /* just past root */
-        bottom=0x7fffffff;
+        keysTop=0x7fffffff;
         top=maxTableLength=0;
         ures_preflightResource(ds, inBundle, bundleLength, rootRes,
-                               &bottom, &top, &maxTableLength,
+                               &keysTop, &top, &maxTableLength,
                                pErrorCode);
+        resBottom=keysTop;
         if(U_FAILURE(*pErrorCode)) {
             udata_printError(ds, "ures_preflightResource(root res=%08x) failed\n",
                              rootRes);
@@ -1046,8 +1054,14 @@ ures_swap(const UDataSwapper *ds,
 
         inIndexes=(const int32_t *)(inBundle+1);
 
-        keysBottom=1+udata_readInt32(ds, inIndexes[URES_INDEX_LENGTH]);
-        bottom=udata_readInt32(ds, inIndexes[URES_INDEX_KEYS_TOP]);
+        indexLength=udata_readInt32(ds, inIndexes[URES_INDEX_LENGTH]);
+        keysBottom=1+indexLength;
+        keysTop=udata_readInt32(ds, inIndexes[URES_INDEX_KEYS_TOP]);
+        if(indexLength>URES_INDEX_16BIT_TOP) {
+            resBottom=udata_readInt32(ds, inIndexes[URES_INDEX_16BIT_TOP]);
+        } else {
+            resBottom=keysTop;
+        }
         top=udata_readInt32(ds, inIndexes[URES_INDEX_BUNDLE_TOP]);
         maxTableLength=udata_readInt32(ds, inIndexes[URES_INDEX_MAX_TABLE_LENGTH]);
 
@@ -1094,11 +1108,20 @@ ures_swap(const UDataSwapper *ds,
         }
 
         /* swap the key strings, but not the padding bytes (0xaa) after the last string and its NUL */
-        udata_swapInvStringBlock(ds, inBundle+keysBottom, 4*(bottom-keysBottom),
+        udata_swapInvStringBlock(ds, inBundle+keysBottom, 4*(keysTop-keysBottom),
                                     outBundle+keysBottom, pErrorCode);
         if(U_FAILURE(*pErrorCode)) {
-            udata_printError(ds, "ures_swap().udata_swapInvStringBlock(keys[%d]) failed\n", 4*(bottom-1));
+            udata_printError(ds, "ures_swap().udata_swapInvStringBlock(keys[%d]) failed\n", 4*(keysTop-keysBottom));
             return 0;
+        }
+
+        /* swap the 16-bit units (strings, table16, array16) */
+        if(keysTop<resBottom) {
+            ds->swapArray16(ds, inBundle+keysTop, (resBottom-keysTop)*4, outBundle+keysTop, pErrorCode);
+            if(U_FAILURE(*pErrorCode)) {
+                udata_printError(ds, "ures_swap().swapArray16(16-bit units[%d]) failed\n", 2*(resBottom-keysTop));
+                return 0;
+            }
         }
 
         /* allocate the temporary table for sorting resource tables */
