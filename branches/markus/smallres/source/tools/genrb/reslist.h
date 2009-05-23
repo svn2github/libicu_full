@@ -58,8 +58,9 @@ struct SRBRoot {
   int32_t fLocalKeyLimit; /* key offset < limit fits into URES_TABLE */
 
   UHashtable *fStringSet;
-  UChar *fStringsUTF16;
-  int32_t fStringsUTF16Length;
+  uint16_t *f16BitUnits;
+  int32_t f16BitUnitsCapacity;
+  int32_t f16BitUnitsLength;
 
   uint8_t *fStringBytes;
   int32_t fStringBytesCapacity;
@@ -123,6 +124,7 @@ struct SResource* res_none(void);
 
 struct SResTable {
     uint32_t fCount;
+    int8_t fType;  /* determined by table_write16() for table_preWrite() & table_write() */
     struct SResource *fFirst;
     struct SRBRoot *fRoot;
 };
@@ -147,6 +149,7 @@ struct SResString {
     struct SResource *fSame;  /* used for duplicates */
     UChar *fChars;
     int32_t fLength;
+    int32_t fSuffixOffset;  /* this string is a suffix of fSame at this offset */
     int8_t fNumCharsForLength;
 
     /* TODO: Experimental fields for compact string form (byte-oriented). */

@@ -50,7 +50,7 @@ print "number of resource items that could use a 16-bit resource item word: %d" 
 print "number of strings: %d" % strings_count
 print "  original strings size including resource items: %d bytes" % sum_strings_size
 print "string size reduction: %d after string de-duplication" % (sum_saved - sum_dedup_saved)
-print "  total padding after v2 or compressed strings: %d bytes" % sum_compressed_padding
+#print "  total padding after v2 or compressed strings: %d bytes" % sum_compressed_padding
 #print "number of strings that fit mini format: %d" % mini_count
 #print "  savings from those: %d" % sum_mini_saved
 #print ("%d strings are incompressible (longer in \"compressed\" " +

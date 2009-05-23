@@ -754,84 +754,6 @@ Sending        source\tools\genrb\wrtxml.cpp
 Transmitting file data .....
 Committed revision 26023.
 
-*** Options for pool bundle key strings (ASCII vs. EBCDIC)
-
-Issue: Key strings contain invariant characters which are platform-dependent.
-At runtime, ures_...ByKey() functions provide an invariant-character (char *)
-string, and ures_getKey() returns a bundle-owned const char *.
-Resource tables are in strcmp() order which is platform-dependent.
-The swapper code re-sorts tables if the charset changes.
-Iterating through tables on different platforms will return items in
-different orders.
-
-Problem: With a pool bundle, re-sorting another bundle's tables requires
-access to the pool bundle's key strings. However, the swapper code does not
-have any way to load a data file in relative position to the piece of memory
-it is currently swapping.
-Also, we need to compute a checksum or fingerprint over a pool bundle, and
-swapping key string bytes will produce different checksums.
-
-Options:
-
-* swap-with-pool:
-Store and compare key strings in their platform charset.
-Somehow give the swapper access to the pool bundle; as another chunk of memory
-or via a data loading interface or similar.
-Pro: Most code would not change.
-Con: Seems logistically very hard. The resource bundle swapper would behave
-     and have an interface unlike any other.
-     Checksums need to be made consistent somehow.
-
-* store-ascii:
-Store and compare key strings in ASCII even on EBCDIC platforms. genrb has to
-swap to ASCII. At runtime, ByKey() lookups need to either swap the input key
-into a buffer or swap its characters on the fly during comparisons.
-Pro: No need for access to the pool bundle while swapping.
-     Consistent checksum and iteration order.
-     No need to re-sort tables while swapping.
-Con: Lookup needs to limit key length to stack buffer size for swapping,
-     or heap-allocate long swapped keys, or swap each character on the fly.
-     ures_getKey() will have to allocate, swap and cache the key.
-
-* compare-ascii:
-Store key strings in their platform charset but compare them in ASCII order.
-Provide a version of strcmp() for EBCDIC platforms that gives the same results
-for equivalent strings as strcmp() itself for ASCII strings.
-It would help to be able to swap the input key.
-Pro: No need for access to the pool bundle while swapping.
-     Consistent iteration order.
-     No need to re-sort tables while swapping.
-Con: Same lookup issues as store-ascii, but ures_getKey() remains trivial.
-     Checksum calculation will need key swapping, in bulk or on the fly.
-
--> Probably best to go with either store-ascii or compare-ascii;
-   on loading, on an EBCDIC platform, swap all key strings (pool and normal)
-   into allocated heap memory (either to ASCII for comparisons or to EBCDIC
-   for ures_getKey()),
-   calculate the pool checksum after swapping,
-   define a maximum key length, swap a lookup input key to ASCII
-   into a fixed-length stack buffer, use normal strcmp().
--> store-ascii avoids swapping while loading the pool bundle into genrb,
-   and avoids swapping the key strings in ures_swap().
-   It could lazily swap to EBCDIC when ures_getKey() is first called for a bundle.
--> compare-ascii could be implemented with on-the-fly swapping-while-comparing
-   and swapping-while-checksumming which would be slower but avoids
-   heap allocation.
-   Swapping-while-comparing would swap only when characters differ.
-
--> Go with compare-ascii, with on-the-fly swapping-while-comparing.
-   genrb will calculate the checksum at pool bundle build time and store it
-   in the pool bundle, so that runtime code need not calculate it.
-   This actually allows us to switch checksum algorithms without changing the
-   formatVersion.
-   Calculating the checksum on an EBCDIC platform will require swapping the keys
-   to ASCII in a temporary buffer, inside genrb.
-
-* Another problem: ures_swap() looks for a key "%%CollationBin" to detect
-collation binaries and call their swapper. With a pool bundle, that key will be
-in the pool and not available to the swapper code. Instead, it should detect
-(("%%CollationBin" || pool key) && looksLikeCollationBinary(data)).
-
 (20090520)
 *** implement writing of UTF-16 v2 strings, some code cleanup, some work towards EBCDIC pool bundles
 * savings output should currently be comparing UTF-16 v1 & v2 strings,
@@ -914,6 +836,128 @@ Scratch:
     en.txt -s C:\svn\icuproj\icu\trunk\source\data\locales -d \temp\icu\smallres
 
 svn commit -m "ticket:6945: reorg bundle preflighting and writing so that preflighting already determines all resource item words; eliminate fixed binary-item padding; experimental support for compact table16 & array16 types; clarify statistics output"
+Sending        potential-stats.py
+Sending        smallres-notes.txt
+Sending        source\tools\genrb\reslist.c
+Sending        source\tools\genrb\reslist.h
+Transmitting file data ....
+Committed revision 26043.
+
+(20090523)
+*** put UTF-16 v2 strings and table16/array16 containers into 16-bit-units array to reduce padding;
+    write short strings first to maximize the number of strings with 16-bit offsets;
+    insert new first writing pass for all 16-bit-unit values
+** table16 and array16
+* strings with offsets <= 0xffff
+
+.dat file size: 14,167,200 bytes
+number of resource bundles: 660
+  total size without headers: 8819764 bytes
+  including savings from key suffix sharing: 228387 bytes
+  including savings from string de-duplication: 705676 bytes
+keys size: 487992 bytes
+number of resource items that could use a 16-bit resource item word: 87197
+number of strings: 140188
+  original strings size including resource items: 6589276 bytes
+string size reduction: 1051678 after string de-duplication
+
+-> a lot fewer 16-bit resource item words than estimated; was the estimate bad?
+-> total savings: 1,845,600 bytes, or 11.5% of .dat file size
+
+* strings with offsets <= 0x7fff,
+  tables with offsets <= 0x7fff
+
+number of resource bundles: 660
+  total size without headers: 8821268 bytes
+  including savings from key suffix sharing: 228387 bytes
+  including savings from string de-duplication: 705676 bytes
+keys size: 487992 bytes
+number of resource items that could use a 16-bit resource item word: 86509
+number of strings: 140188
+  original strings size including resource items: 6589276 bytes
+string size reduction: 1040766 after string de-duplication
+
+-> in aggregate, it's better to optimize for table16/array16 containing only strings
+
+svn commit -m "ticket:6945: UTF-16+table16/array16 in 16-bit-units array to reduce padding; short strings first for maximum number of strings with 16-bit offsets; insert new first writing pass for all 16-bit-unit values"
+
+*** Options for pool bundle key strings (ASCII vs. EBCDIC)
+
+Issue: Key strings contain invariant characters which are platform-dependent.
+At runtime, ures_...ByKey() functions provide an invariant-character (char *)
+string, and ures_getKey() returns a bundle-owned const char *.
+Resource tables are in strcmp() order which is platform-dependent.
+The swapper code re-sorts tables if the charset changes.
+Iterating through tables on different platforms will return items in
+different orders.
+
+Problem: With a pool bundle, re-sorting another bundle's tables requires
+access to the pool bundle's key strings. However, the swapper code does not
+have any way to load a data file in relative position to the piece of memory
+it is currently swapping.
+Also, we need to compute a checksum or fingerprint over a pool bundle, and
+swapping key string bytes will produce different checksums.
+
+Options:
+
+* swap-with-pool:
+Store and compare key strings in their platform charset.
+Somehow give the swapper access to the pool bundle; as another chunk of memory
+or via a data loading interface or similar.
+Pro: Most code would not change.
+Con: Seems logistically very hard. The resource bundle swapper would behave
+     and have an interface unlike any other.
+     Checksums need to be made consistent somehow.
+
+* store-ascii:
+Store and compare key strings in ASCII even on EBCDIC platforms. genrb has to
+swap to ASCII. At runtime, ByKey() lookups need to either swap the input key
+into a buffer or swap its characters on the fly during comparisons.
+Pro: No need for access to the pool bundle while swapping.
+     Consistent checksum and iteration order.
+     No need to re-sort tables while swapping.
+Con: Lookup needs to limit key length to stack buffer size for swapping,
+     or heap-allocate long swapped keys, or swap each character on the fly.
+     ures_getKey() will have to allocate, swap and cache the key.
+
+* compare-ascii:
+Store key strings in their platform charset but compare them in ASCII order.
+Provide a version of strcmp() for EBCDIC platforms that gives the same results
+for equivalent strings as strcmp() itself for ASCII strings.
+It would help to be able to swap the input key.
+Pro: No need for access to the pool bundle while swapping.
+     Consistent iteration order.
+     No need to re-sort tables while swapping.
+Con: Same lookup issues as store-ascii, but ures_getKey() remains trivial.
+     Checksum calculation will need key swapping, in bulk or on the fly.
+
+-> Probably best to go with either store-ascii or compare-ascii;
+   on loading, on an EBCDIC platform, swap all key strings (pool and normal)
+   into allocated heap memory (either to ASCII for comparisons or to EBCDIC
+   for ures_getKey()),
+   calculate the pool checksum after swapping,
+   define a maximum key length, swap a lookup input key to ASCII
+   into a fixed-length stack buffer, use normal strcmp().
+-> store-ascii avoids swapping while loading the pool bundle into genrb,
+   and avoids swapping the key strings in ures_swap().
+   It could lazily swap to EBCDIC when ures_getKey() is first called for a bundle.
+-> compare-ascii could be implemented with on-the-fly swapping-while-comparing
+   and swapping-while-checksumming which would be slower but avoids
+   heap allocation.
+   Swapping-while-comparing would swap only when characters differ.
+
+-> Go with compare-ascii, with on-the-fly swapping-while-comparing.
+   genrb will calculate the checksum at pool bundle build time and store it
+   in the pool bundle, so that runtime code need not calculate it.
+   This actually allows us to switch checksum algorithms without changing the
+   formatVersion.
+   Calculating the checksum on an EBCDIC platform will require swapping the keys
+   to ASCII in a temporary buffer, inside genrb.
+
+* Another problem: ures_swap() looks for a key "%%CollationBin" to detect
+collation binaries and call their swapper. With a pool bundle, that key will be
+in the pool and not available to the swapper code. Instead, it should detect
+(("%%CollationBin" || pool key) && looksLikeCollationBinary(data)).
 
 TODO:
 - xyz_preWrite() update byteOffset, not return size;
@@ -927,17 +971,11 @@ TODO:
   maybe do hash set processing etc. only in table_add() and array_add(),
   and in bundle_write() if fRoot is a string?
   That would allow the parser to call string_close(member) without complications.
+
 * for v2 with key suffix sharing, pool bundle with shared keys,
               more compact UTF-16 strings with suffix sharing
               (still all memory-mappable)
-- formatVersion=1: consider incrementing the _minor_ formatVersion
-  to indicate the use of key suffix sharing and string duplicate elimination
-- consider reusing URES_STRING in v2 rather than adding URES_STRING_UTF16,
-  just like we reuse URES_TABLE
-  (in that case, init fStringsUTF16Length=1 with [0]=0 for empty strings,
-   if v2 string offsets are based on their strings bottom rather than the bundle bottom)
-  -> fewer resource types vs. more complicated runtime code for data access
-     (would have to check both the resource type and the formatVersion)
+- if no 16-bit units at all, then runtime needs to point to fixed NUL for empty strings
 - consider stopping support for formatVersion=1.0 in ures_swap()
   so that we can remove ures_preflightResource()
   (1.1 was implemented in ICU 2.8; 1.0 does not work for ICU4J)

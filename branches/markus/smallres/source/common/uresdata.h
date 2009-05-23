@@ -50,7 +50,8 @@ enum {
                                 /*     in case it were ever different from [2] */
     URES_INDEX_MAX_TABLE_LENGTH,/* [4] max. length of any table */
     URES_INDEX_ATTRIBUTES,      /* [5] attributes bit set, see URES_ATT_* (new in formatVersion 1.2) */
-    URES_INDEX_UTF16_TOP,       /* [6] top of the UTF-16 string UChars, rounded up (new in formatVersion 2.0) */
+    URES_INDEX_16BIT_TOP,       /* [6] top of the 16-bit units (UTF-16 string v2 UChars, URES_TABLE16, URES_ARRAY16),
+                                 *     rounded up (new in formatVersion 2.0) */
     URES_INDEX_POOL_CRC,        /* [7] CRC checksum of the pool bundle (new in formatVersion 2.0) */
     URES_INDEX_TOP
 };
