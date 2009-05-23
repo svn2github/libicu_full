@@ -46,8 +46,6 @@ struct SRBRoot {
   char *fLocale;
   int32_t fIndexLength;
   int32_t fMaxTableLength;
-  /* size of root's children, not counting keys or compact-string bytes */
-  uint32_t fSizeExceptRoot;
   UBool noFallback; /* see URES_ATT_NO_FALLBACK */
   UBool fIsDoneParsing; /* set while processing & writing */
   int8_t fStringsForm; /* default STRINGS_UTF16_V1 */
@@ -150,7 +148,6 @@ struct SResString {
     UChar *fChars;
     int32_t fLength;
     int8_t fNumCharsForLength;
-    UBool fHasBeenPreWritten;
 
     /* TODO: Experimental fields for compact string form (byte-oriented). */
     uint32_t fCompactRes;  /* TODO: If compact strings go into production, then use fRes instead of this. */
@@ -191,10 +188,11 @@ struct SResource *bin_open(struct SRBRoot *bundle, const char *tag, uint32_t len
 /* Resource place holder */
 
 struct SResource {
-    UResType fType;
-    uint32_t fRes;  /* precomputed resource item, if != 0xffffffff */
-    int32_t  fKey;  /* Index into bundle->fKeys, or -1 if no key. */
-    int      line;  /* used internally to report duplicate keys in tables */
+    int8_t   fType;     /* nominal type: fRes (when != 0xffffffff) may use subtype */
+    UBool    fWritten;  /* res_write() can exit early */
+    uint32_t fRes;      /* resource item word; 0xffffffff if not known yet */
+    int32_t  fKey;      /* Index into bundle->fKeys; -1 if no key. */
+    int      line;      /* used internally to report duplicate keys in tables */
     struct SResource *fNext; /*This is for internal chaining while building*/
     struct UString fComment;
     union {

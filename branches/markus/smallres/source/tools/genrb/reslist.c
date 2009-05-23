@@ -30,14 +30,6 @@
  * to be safe for any data type it may contain.
  */
 #define BIN_ALIGNMENT 16
-/*
- * bin_write() may need to add 0, 4, 8 or 12 bytes of padding before
- * the binary data to achieve 16-alignment.
- * While we preflight the bundle size, we always reserve enough space for the
- * maximum padding at the start because we don't know until actually writing
- * the data how much padding we will need.
- */
-#define MAX_BIN_START_PADDING 12
 
 static UBool gIncludeCopyright = FALSE;
 static int32_t gFormatVersion = 2;
@@ -54,7 +46,9 @@ enum {
 };
 
 enum {
+    URES_TABLE16=5,
     URES_STRING_UTF16=6,        /* STRINGS_UTF16_V2 */
+    URES_ARRAY16=9,
     URES_STRING_MINI_ASCII=10,  /* 0xA for ASCII */
     URES_STRING_MINI_WINDOW0=11,/* 0xB for Window */
     URES_STRING_COMPACT=12      /* 0xC for Compact */
@@ -752,26 +746,22 @@ findBestWindow(struct SRBRoot *bundle, struct SResource *res,
 /* Writing Functions */
 
 /*
- * type_preWrite() functions calculate ("preflight") and return
- * the size of their data in the binary file.
- * Most type_preWrite() functions may return any size, but res_preWrite()
- * will always return a multiple of 4.
+ * type_preWrite() functions calculate ("preflight") and advance the *byteOffset
+ * by the size of their data in the binary file and
+ * determine the resource item word.
+ * Most type_preWrite() functions may add any number of bytes, but res_preWrite()
+ * will always pad it to a multiple of 4.
+ * The resource item type may be a related subtype of the fType.
  *
- * The type_preWrite() size is the number of bytes that type_write()
- * will write. It excludes keys, compact strings (in bundle->fStringBytes)
- * and the resource item word that type_write() returns.
- *
- * string_preWrite() also writes UTF-16 v2 string UChars
- * to bundle->fStringsUTF16, or compact-string bytes to bundle->fStringBytes.
- *
- * table_preWrite() and array_preWrite() set bundle->fSizeExceptRoot
- * to their children's total size if they pre-write the root resource,
- * then add the container's own size and return the sum.
- * table_preWrite() also determines whether to use URES_TABLE or
- * URES_TABLE32.
+ * The type_preWrite() and type_write() functions start and end at the same
+ * byteOffset values.
+ * Prewriting allows bundle_write() to determine the root resource item word,
+ * before actually writing the bundle contents to the file,
+ * which is necessary because the root item is stored at the beginning.
  */
-static uint32_t
-res_preWrite(struct SRBRoot *bundle, struct SResource *res,
+static void
+res_preWrite(uint32_t *byteOffset,
+             struct SRBRoot *bundle, struct SResource *res,
              UErrorCode *status);
 
 /*
@@ -790,38 +780,31 @@ res_write(UNewDataMemory *mem, uint32_t *byteOffset,
  * For unique UTF-16 v2 strings, res_preWrite() sees fRes != 0xffffffff
  * and exits early.
  */
-static uint32_t
-string_preWrite(struct SRBRoot *bundle, struct SResource *res,
+static void
+string_preWrite(uint32_t *byteOffset,
+                struct SRBRoot *bundle, struct SResource *res,
                 UErrorCode *status) {
     struct SResource *same;
-    if (res->u.fString.fHasBeenPreWritten) {
-        /* We visited this string already and returned its size. */
-        return 0;
-    } else if ((same = res->u.fString.fSame) != NULL) {
+    if ((same = res->u.fString.fSame) != NULL) {
         /* This is a duplicate. */
-        if (same->u.fString.fHasBeenPreWritten) {
-            /* The original has been visited already. */
-            res->fRes = same->fRes;
-            return 0;
-        } else {
+        if (same->fRes != 0xffffffff) {
             /*
-             * Get the size of the contents of the first-parsed version of this string
+             * The original has not been visited yet.
+             * Add the size of the contents of the first-parsed version of this string
              * which got inserted into a later part of the tree.
-             *
-             * Note: This assigns the correct size to each string resource
-             * because the order in which res_preWrite() visits resources is
-             * the same as in res_write(), and the size is counted for
-             * the same resource for which it will later be written.
              */
-            return string_preWrite(bundle, same, status);
+            string_preWrite(byteOffset, bundle, same, status);
         }
+        res->fRes = same->fRes;
+        res->fWritten = same->fWritten;
     } else {
         /* Write the original UTF-16 form. */
-        res->u.fString.fHasBeenPreWritten = TRUE;
-        return 4 + (res->u.fString.fLength + 1) * U_SIZEOF_UCHAR;
+        res->fRes = (URES_STRING << 28) | (*byteOffset >> 2);
+        *byteOffset += 4 + (res->u.fString.fLength + 1) * U_SIZEOF_UCHAR;
     }
 }
 
+#if 0
 static uint32_t
 string_preWriteCompact(struct SRBRoot *bundle, struct SResource *res,
                        uint32_t size,
@@ -910,28 +893,71 @@ string_preWriteCompact(struct SRBRoot *bundle, struct SResource *res,
         return size;
     }
 }
+#endif
 
-static uint32_t
-array_preWrite(struct SRBRoot *bundle, struct SResource *res,
+static void
+bin_preWrite(uint32_t *byteOffset,
+             struct SRBRoot *bundle, struct SResource *res,
+             UErrorCode *status) {
+    uint32_t pad       = 0;
+    uint32_t dataStart = *byteOffset + sizeof(res->u.fBinaryValue.fLength);
+
+    if (dataStart % BIN_ALIGNMENT) {
+        pad = (BIN_ALIGNMENT - dataStart % BIN_ALIGNMENT);
+        *byteOffset += pad;  /* pad == 4 or 8 or 12 */
+    }
+    res->fRes = (URES_BINARY << 28) | (*byteOffset >> 2);
+    *byteOffset += 4 + res->u.fBinaryValue.fLength;
+}
+
+static int32_t
+makeRes16(uint32_t resWord) {
+    uint32_t type, offset;
+    if (resWord == 0) {
+        return 0;  /* empty string */
+    }
+    type = resWord >> 28;
+    offset = resWord & 0xfffffff;
+    if (type == URES_STRING_UTF16 && offset <= 0xffff) {
+        return (int32_t)offset;
+    }
+#if 0
+    if ((type == URES_TABLE && offset == 0) ||
+        (type == URES_TABLE16 && offset <= 0x7fff)
+    ) {
+        return (int32_t)offset | 0x8000;
+    }
+#endif
+    return -1;
+}
+
+static void
+array_preWrite(uint32_t *byteOffset,
+               struct SRBRoot *bundle, struct SResource *res,
                UErrorCode *status) {
     struct SResource *current;
-    uint32_t size = 0;
+    int32_t res16 = 0;
 
     if (U_FAILURE(*status)) {
-        return 0;
+        return;
     }
     if (res->u.fArray.fCount == 0 && gFormatVersion > 1) {
-        res->fRes = res->fType << 28;
-        return 0;
+        res->fRes = URES_ARRAY << 28;
+        res->fWritten = TRUE;
+        return;
     }
     for (current = res->u.fArray.fFirst; current != NULL; current = current->fNext) {
-        size += res_preWrite(bundle, current, status);
+        res_preWrite(byteOffset, bundle, current, status);
+        res16 |= makeRes16(current->fRes);
     }
-    if (res == bundle->fRoot) {
-        size += bundle->fInfixUTF16Size;
-        bundle->fSizeExceptRoot = size;
+    if (res->u.fArray.fCount <= 0xffff && res16 >= 0) {
+        printf("res16-count: %6ld\n", (long)res->u.fArray.fCount);
+        res->fRes = (URES_ARRAY16 << 28) | (*byteOffset >> 2);
+        *byteOffset += (1 + res->u.fArray.fCount) * 2;
+    } else {
+        res->fRes = (URES_ARRAY << 28) | (*byteOffset >> 2);
+        *byteOffset += (1 + res->u.fArray.fCount) * 4;
     }
-    return size + (1 + res->u.fArray.fCount) * 4;
 }
 
 static int32_t
@@ -960,23 +986,25 @@ mapKey(struct SRBRoot *bundle, int32_t oldpos) {
     return map[start].newpos;
 }
 
-static uint32_t
-table_preWrite(struct SRBRoot *bundle, struct SResource *res,
+static void
+table_preWrite(uint32_t *byteOffset,
+               struct SRBRoot *bundle, struct SResource *res,
                UErrorCode *status) {
     struct SResource *current;
-    uint32_t size = 0;
     int32_t maxKey = 0, maxPoolKey = 0x80000000;
+    int32_t res16 = 0;
 
     if (U_FAILURE(*status)) {
-        return 0;
+        return;
     }
     if (res->u.fTable.fCount == 0 && gFormatVersion > 1) {
-        res->fRes = res->fType << 28;
-        return 0;
+        res->fRes = URES_TABLE << 28;
+        res->fWritten = TRUE;
+        return;
     }
     for (current = res->u.fTable.fFirst; current != NULL; current = current->fNext) {
         int32_t key;
-        size += res_preWrite(bundle, current, status);
+        res_preWrite(byteOffset, bundle, current, status);
         if (bundle->fKeyMap == NULL) {
             key = current->fKey;
         } else {
@@ -989,10 +1017,7 @@ table_preWrite(struct SRBRoot *bundle, struct SResource *res,
         } else if (key > maxPoolKey) {
             maxPoolKey = key;
         }
-    }
-    if (res == bundle->fRoot) {
-        size += bundle->fInfixUTF16Size;
-        bundle->fSizeExceptRoot = size;
+        res16 |= makeRes16(current->fRes);
     }
     if(res->u.fTable.fCount > (uint32_t)bundle->fMaxTableLength) {
         bundle->fMaxTableLength = res->u.fTable.fCount;
@@ -1002,69 +1027,76 @@ table_preWrite(struct SRBRoot *bundle, struct SResource *res,
         (maxKey == 0 || maxKey < bundle->fLocalKeyLimit) &&
         (maxPoolKey == 0 || maxPoolKey < (0x10000 - bundle->fLocalKeyLimit))
     ) {
-        /* 16-bit count, 16-bit key offsets, 32-bit values */
-        size += 2 + res->u.fTable.fCount * 6;
+        if (res16 >= 0) {
+            printf("res16-count: %6ld\n", (long)res->u.fTable.fCount);
+            /* 16-bit count, key offsets and values */
+            res->fRes = (URES_TABLE16 << 28) | (*byteOffset >> 2);
+            *byteOffset += 2 + res->u.fTable.fCount * 4;
+        } else {
+            /* 16-bit count, 16-bit key offsets, 32-bit values */
+            res->fRes = (URES_TABLE << 28) | (*byteOffset >> 2);
+            *byteOffset += 2 + res->u.fTable.fCount * 6;
+        }
     } else {
         /* 32-bit count, key offsets and values */
-        res->fType = URES_TABLE32;
-        size += 4 + res->u.fTable.fCount * 8;
+        res->fRes = (URES_TABLE32 << 28) | (*byteOffset >> 2);
+        *byteOffset += 4 + res->u.fTable.fCount * 8;
     }
-    return size;
 }
 
-static uint32_t
-res_preWrite(struct SRBRoot *bundle, struct SResource *res,
+static void
+res_preWrite(uint32_t *byteOffset,
+             struct SRBRoot *bundle, struct SResource *res,
              UErrorCode *status) {
-    uint32_t size;
-
     if (U_FAILURE(*status) || res == NULL) {
-        return 0;
+        return;
     }
     if (res->fRes != 0xffffffff) {
         /*
          * The resource item word was already precomputed, which means
          * no further data needs to be written.
          * This might be an integer, or an empty or UTF-16 v2 string,
-         * empty binary, etc.
+         * an empty binary, etc.
          */
-        return 0;
+        return;
     }
     switch (res->fType) {
     case URES_STRING:
-        size = string_preWrite(bundle, res, status);
+        string_preWrite(byteOffset, bundle, res, status);
         /* TODO: redo and reenable savings stats for compact strings: string_preWriteCompact(bundle, res, size, status); */
         break;
     case URES_ALIAS:
-        size = 4 + (res->u.fString.fLength + 1) * U_SIZEOF_UCHAR;
+        res->fRes = (URES_ALIAS << 28) | (*byteOffset >> 2);
+        *byteOffset += 4 + (res->u.fString.fLength + 1) * U_SIZEOF_UCHAR;
         break;
     case URES_INT_VECTOR:
         if (res->u.fIntVector.fCount == 0 && gFormatVersion > 1) {
-            res->fRes = res->fType << 28;
-            size = 0;
+            res->fRes = URES_INT_VECTOR << 28;
+            res->fWritten = TRUE;
         } else {
-            size = (1 + res->u.fIntVector.fCount) * 4;
+            res->fRes = (URES_INT_VECTOR << 28) | (*byteOffset >> 2);
+            *byteOffset += (1 + res->u.fIntVector.fCount) * 4;
         }
         break;
     case URES_BINARY:
-        size = 4 + res->u.fBinaryValue.fLength + MAX_BIN_START_PADDING;
+        bin_preWrite(byteOffset, bundle, res, status);
         break;
     case URES_INT:
-        size = 0;
         break;
     case URES_ARRAY:
-        size = array_preWrite(bundle, res, status);
+        array_preWrite(byteOffset, bundle, res, status);
         break;
     case URES_TABLE:
-        size = table_preWrite(bundle, res, status);
+        table_preWrite(byteOffset, bundle, res, status);
         break;
     default:
         *status = U_INTERNAL_PROGRAM_ERROR;
-        size = 0;
         break;
     }
-    return size + calcPadding(size);
+    *byteOffset += calcPadding(*byteOffset);
 }
 
+#if 0
 static uint32_t
 bundle_preWrite(struct SRBRoot *bundle, UErrorCode *status) {
     if (U_FAILURE(*status)) {
@@ -1103,10 +1135,11 @@ bundle_preWrite(struct SRBRoot *bundle, UErrorCode *status) {
     }
     return res_preWrite(bundle, bundle->fRoot, status);
 }
+#endif
 
 /*
  * Only called for UTF-16 v1 strings. For UTF-16 v2 strings,
- * res_write() sees fRes != 0xffffffff and exits early.
+ * res_write() sees fWritten and exits early.
  */
 static uint32_t string_write(UNewDataMemory *mem, uint32_t *byteOffset,
                              struct SRBRoot *bundle, struct SResource *res,
@@ -1114,52 +1147,41 @@ static uint32_t string_write(UNewDataMemory *mem, uint32_t *byteOffset,
     struct SResource *same = res->u.fString.fSame;
     int32_t length;
 
-    if (res->fRes != 0xffffffff) {
-        /*
-         * The contents of this string were already written.
-         * Note: This automatically includes STRINGS_UTF16_V2 strings.
-         */
-        return res->fRes;
-    } else if (same != NULL) {
+    if (same != NULL) {
         /* This is a duplicate. */
-        if (same->fRes != 0xffffffff) {
-            /* The original has been visited already. */
-            res->fRes = same->fRes;
-        } else {
+        if (!same->fWritten) {
             /*
              * Write the contents of the first-parsed version of this string
              * which got inserted into a later part of the tree.
              */
-            res->fRes = string_write(mem, byteOffset, bundle, same, status);
+            string_write(mem, byteOffset, bundle, same, status);
         }
         return res->fRes;
     }
 
     /* Write the UTF-16 v1 string. */
-    res->fRes = (res->fType << 28) | (*byteOffset >> 2);
     length = res->u.fString.fLength;
     udata_write32(mem, length);
     udata_writeUString(mem, res->u.fString.fChars, length + 1);
     *byteOffset += 4 + (length + 1) * U_SIZEOF_UCHAR;
+    res->fWritten = TRUE;
     return res->fRes;
 }
 
 static uint32_t alias_write(UNewDataMemory *mem, uint32_t *byteOffset,
                             struct SRBRoot *bundle, struct SResource *res,
                             UErrorCode *status) {
-    uint32_t resWord = (res->fType << 28) | (*byteOffset >> 2);
     int32_t length = res->u.fString.fLength;
     udata_write32(mem, length);
     udata_writeUString(mem, res->u.fString.fChars, length + 1);
     *byteOffset += 4 + (length + 1) * U_SIZEOF_UCHAR;
-    return resWord;
+    return res->fRes;
 }
 
 static uint32_t array_write(UNewDataMemory *mem, uint32_t *byteOffset,
                             struct SRBRoot *bundle, struct SResource *res,
                             UErrorCode *status) {
     uint32_t *resources = NULL;
-    uint32_t  resWord;
     uint32_t  i;
 
     struct SResource *current = NULL;
@@ -1181,19 +1203,25 @@ static uint32_t array_write(UNewDataMemory *mem, uint32_t *byteOffset,
     }
     assert(i == res->u.fArray.fCount);
 
-    resWord = (res->fType << 28) | (*byteOffset >> 2);
-    udata_write32(mem, res->u.fArray.fCount);
-    udata_writeBlock(mem, resources, sizeof(uint32_t) * res->u.fArray.fCount);
+    if ((res->fRes >> 28) == URES_ARRAY16) {
+        udata_write16(mem, (uint16_t)res->u.fArray.fCount);
+        for (i = 0; i < res->u.fArray.fCount; ++i) {
+            udata_write16(mem, (uint16_t)makeRes16(resources[i]));
+        }
+        *byteOffset += (1 + res->u.fArray.fCount) * 2;
+    } else {
+        udata_write32(mem, res->u.fArray.fCount);
+        udata_writeBlock(mem, resources, sizeof(uint32_t) * res->u.fArray.fCount);
+        *byteOffset += (1 + res->u.fArray.fCount) * 4;
+    }
     uprv_free(resources);
-    *byteOffset += (1 + res->u.fArray.fCount) * 4;
 
-    return resWord;
+    return res->fRes;
 }
 
 static uint32_t intvector_write(UNewDataMemory *mem, uint32_t *byteOffset,
                                 struct SRBRoot *bundle, struct SResource *res,
                                 UErrorCode *status) {
-    uint32_t resWord = (res->fType << 28) | (*byteOffset >> 2);
     uint32_t i = 0;
     udata_write32(mem, res->u.fIntVector.fCount);
     for(i = 0; i<res->u.fIntVector.fCount; i++) {
@@ -1201,7 +1229,7 @@ static uint32_t intvector_write(UNewDataMemory *mem, uint32_t *byteOffset,
     }
     *byteOffset += (1 + res->u.fIntVector.fCount) * 4;
 
-    return resWord;
+    return res->fRes;
 }
 
 static uint32_t bin_write(UNewDataMemory *mem, uint32_t *byteOffset,
@@ -1209,7 +1237,6 @@ static uint32_t bin_write(UNewDataMemory *mem, uint32_t *byteOffset,
                           UErrorCode *status) {
     uint32_t pad       = 0;
     uint32_t dataStart = *byteOffset + sizeof(res->u.fBinaryValue.fLength);
-    uint32_t resWord;
 
     if (dataStart % BIN_ALIGNMENT) {
         pad = (BIN_ALIGNMENT - dataStart % BIN_ALIGNMENT);
@@ -1217,16 +1244,13 @@ static uint32_t bin_write(UNewDataMemory *mem, uint32_t *byteOffset,
         *byteOffset += pad;
     }
 
-    resWord = (res->fType << 28) | (*byteOffset >> 2);
     udata_write32(mem, res->u.fBinaryValue.fLength);
     if (res->u.fBinaryValue.fLength > 0) {
         udata_writeBlock(mem, res->u.fBinaryValue.fData, res->u.fBinaryValue.fLength);
     }
-    pad = MAX_BIN_START_PADDING - pad;
-    udata_writePadding(mem, pad);
-    *byteOffset += 4 + res->u.fBinaryValue.fLength + pad;
+    *byteOffset += 4 + res->u.fBinaryValue.fLength;
 
-    return resWord;
+    return res->fRes;
 }
 
 static uint32_t table_write(UNewDataMemory *mem, uint32_t *byteOffset,
@@ -1234,8 +1258,7 @@ static uint32_t table_write(UNewDataMemory *mem, uint32_t *byteOffset,
                             UErrorCode *status) {
     uint32_t *resources = NULL;
     struct SResource *current;
-    uint32_t  resWord;
-    uint32_t  i;
+    uint32_t i, type;
 
     if (U_FAILURE(*status)) {
         return 0;
@@ -1255,8 +1278,8 @@ static uint32_t table_write(UNewDataMemory *mem, uint32_t *byteOffset,
     }
     assert(i == res->u.fTable.fCount);
 
-    resWord = (res->fType << 28) | (*byteOffset >> 2);
-    if(res->fType == URES_TABLE) {
+    type = res->fRes >> 28;
+    if(type == URES_TABLE || type == URES_TABLE16) {
         udata_write16(mem, (uint16_t)res->u.fTable.fCount);
         for (current = res->u.fTable.fFirst; current != NULL; current = current->fNext) {
             int32_t key = current->fKey;
@@ -1266,8 +1289,8 @@ static uint32_t table_write(UNewDataMemory *mem, uint32_t *byteOffset,
             udata_write16(mem, (uint16_t)key);
         }
         *byteOffset += (1 + res->u.fTable.fCount)* 2;
-        if ((res->u.fTable.fCount & 1) == 0) {
-            /* 16-bit count and even number of 16-bit key offsets need padding */
+        if (type == URES_TABLE && (res->u.fTable.fCount & 1) == 0) {
+            /* 16-bit count and even number of 16-bit key offsets need padding before 32-bit resource items */
             udata_writePadding(mem, 2);
             *byteOffset += 2;
         }
@@ -1279,11 +1302,18 @@ static uint32_t table_write(UNewDataMemory *mem, uint32_t *byteOffset,
         *byteOffset += (1 + res->u.fTable.fCount)* 4;
     }
 
-    udata_writeBlock(mem, resources, sizeof(uint32_t) * res->u.fTable.fCount);
+    if (type == URES_TABLE16) {
+        for (i = 0; i < res->u.fTable.fCount; ++i) {
+            udata_write16(mem, (uint16_t)makeRes16(resources[i]));
+        }
+        *byteOffset += res->u.fTable.fCount * 2;
+    } else {
+        udata_writeBlock(mem, resources, sizeof(uint32_t) * res->u.fTable.fCount);
+        *byteOffset += res->u.fTable.fCount * 4;
+    }
     uprv_free(resources);
-    *byteOffset += res->u.fTable.fCount * 4;
 
-    return resWord;
+    return res->fRes;
 }
 
 uint32_t res_write(UNewDataMemory *mem, uint32_t *byteOffset,
@@ -1299,9 +1329,9 @@ uint32_t res_write(UNewDataMemory *mem, uint32_t *byteOffset,
         bundle->fStringsSize += 4;
         bundle->fPotentialSize += 4 /* resource item */;
     }
-    resWord = res->fRes;
-    if (resWord != 0xffffffff) {
-        return resWord;
+    if (res->fWritten) {
+        assert(res->fRes != 0xffffffff);
+        return res->fRes;
     }
     switch (res->fType) {
     case URES_STRING:
@@ -1317,12 +1347,12 @@ uint32_t res_write(UNewDataMemory *mem, uint32_t *byteOffset,
         resWord = bin_write       (mem, byteOffset, bundle, res, status);
         break;
     case URES_INT:
-        break;  /* fRes was set by int_open() */
+        resWord = res->fRes;  /* fRes was set by int_open() */
+        break;
     case URES_ARRAY:
         resWord = array_write     (mem, byteOffset, bundle, res, status);
         break;
     case URES_TABLE:
-    case URES_TABLE32:
         resWord = table_write     (mem, byteOffset, bundle, res, status);
         break;
     default:
@@ -1335,15 +1365,18 @@ uint32_t res_write(UNewDataMemory *mem, uint32_t *byteOffset,
         udata_writePadding(mem, paddingSize);
         *byteOffset += paddingSize;
     }
+    res->fWritten = TRUE;
     return resWord;
 }
 
-void bundle_write(struct SRBRoot *bundle, const char *outputDir, const char *outputPkg, char *writtenFilename, int writtenFilenameLen, UErrorCode *status) {
+void bundle_write(struct SRBRoot *bundle,
+                  const char *outputDir, const char *outputPkg,
+                  char *writtenFilename, int writtenFilenameLen,
+                  UErrorCode *status) {
     UNewDataMemory *mem        = NULL;
     uint8_t         pad        = 0;
-    uint32_t        root       = 0;
     uint32_t        byteOffset = 0;
-    uint32_t        top, size, rootSize;
+    uint32_t        top, size;
     char            dataName[1024];
     int32_t         indexes[URES_INDEX_TOP];
 
@@ -1370,8 +1403,7 @@ void bundle_write(struct SRBRoot *bundle, const char *outputDir, const char *out
         }
     }
     /*
-     * Add padding bytes to fKeys so that fKeysTop is aligned
-     * for use in bundle_preWrite().
+     * Add padding bytes to fKeys so that fKeysTop is 4-aligned.
      * Safe because the capacity is a multiple of 4.
      */
     while (bundle->fKeysTop & 3) {
@@ -1380,7 +1412,6 @@ void bundle_write(struct SRBRoot *bundle, const char *outputDir, const char *out
 
     bundle_compactStrings(bundle, status);
     findTopWindows(bundle);
-    rootSize = bundle_preWrite(bundle, status);
     /*
      * Add padding bytes to fStringBytes as well.
      * Safe because the capacity is a multiple of 4.
@@ -1390,6 +1421,12 @@ void bundle_write(struct SRBRoot *bundle, const char *outputDir, const char *out
         bundle->fStringBytes[bundle->fStringBytesLength++] = 0xaa;
         ++bundle->fCompressedPadding;
     }
+
+    byteOffset = bundle->fKeysTop + bundle->fStringsUTF16Length * 2 /* TODO: + fStringBytesLength */;
+    res_preWrite(&byteOffset, bundle, bundle->fRoot, status);
+
+    /* total size including the root item */
+    top = byteOffset;
 
     /* all keys have been mapped */
     uprv_free(bundle->fKeyMap);
@@ -1481,19 +1518,8 @@ void bundle_write(struct SRBRoot *bundle, const char *outputDir, const char *out
         return;
     }
 
-    /* we're gonna put the main table at the end */
-    byteOffset = bundle->fKeysTop + bundle->fStringsUTF16Length * 2 /* TODO: + fStringBytesLength */;
-    if (bundle->fRoot->fRes != 0xffffffff) {
-        root = bundle->fRoot->fRes;
-    } else {
-        root = (bundle->fRoot->fType << 28) | ((byteOffset + bundle->fSizeExceptRoot) >> 2);
-    }
-
     /* write the root item */
-    udata_write32(mem, root);
-
-    /* total size including the root item */
-    top = byteOffset + rootSize;
+    udata_write32(mem, bundle->fRoot->fRes);
 
     /*
      * formatVersion 1.1 (ICU 2.8):
@@ -1539,6 +1565,7 @@ void bundle_write(struct SRBRoot *bundle, const char *outputDir, const char *out
     /* TODO: write bundle->fStringBytes[] */
 
     /* write all of the bundle contents: the root item and its children */
+    byteOffset = bundle->fKeysTop + bundle->fStringsUTF16Length * 2 /* TODO: + fStringBytesLength */;
     res_write(mem, &byteOffset, bundle, bundle->fRoot, status);
     assert(byteOffset == top);
 
@@ -1668,6 +1695,7 @@ struct SResource *string_open(struct SRBRoot *bundle, char *tag, const UChar *va
     if (len == 0 && gFormatVersion > 1) {
         res->u.fString.fChars = &gEmptyString;
         res->fRes = 0;
+        res->fWritten = TRUE;
         return res;
     }
 
@@ -1748,7 +1776,8 @@ struct SResource *alias_open(struct SRBRoot *bundle, char *tag, UChar *value, in
     res->fType = URES_ALIAS;
     if (len == 0 && gFormatVersion > 1) {
         res->u.fString.fChars = &gEmptyString;
-        res->fRes = res->fType << 28;
+        res->fRes = URES_ALIAS << 28;
+        res->fWritten = TRUE;
         return res;
     }
 
@@ -1788,7 +1817,8 @@ struct SResource *int_open(struct SRBRoot *bundle, char *tag, int32_t value, con
     }
     res->fType = URES_INT;
     res->u.fIntValue.fValue = value;
-    res->fRes = (res->fType << 28) | (value & 0x0FFFFFFF);
+    res->fRes = (URES_INT << 28) | (value & 0x0FFFFFFF);
+    res->fWritten = TRUE;
     return res;
 }
 
@@ -1818,7 +1848,8 @@ struct SResource *bin_open(struct SRBRoot *bundle, const char *tag, uint32_t len
     }
     else {
         res->u.fBinaryValue.fData = NULL;
-        res->fRes = res->fType << 28;
+        res->fRes = URES_BINARY << 28;
+        res->fWritten = TRUE;
     }
 
     return res;
@@ -1975,7 +2006,6 @@ void res_close(struct SResource *res) {
             array_close(res);
             break;
         case URES_TABLE:
-        case URES_TABLE32:
             table_close(res);
             break;
         default:
@@ -2842,7 +2872,7 @@ string_writeUTF16v2(struct SRBRoot *bundle, struct SResource *res, int32_t utf16
     res->fRes =
         ((uint32_t)URES_STRING_UTF16 << 28) |
         (uint32_t)(bundle->fKeysTop / 2 + utf16Length);
-    res->u.fString.fHasBeenPreWritten = TRUE;
+    res->fWritten = TRUE;
     switch(res->u.fString.fNumCharsForLength) {
     case 0:
         break;
@@ -2922,6 +2952,7 @@ bundle_compactStrings(struct SRBRoot *bundle, UErrorCode *status) {
                             if (suffixRes->u.fString.fNumCharsForLength == 0) {
                                 /* yes, point to the earlier string */
                                 suffixRes->fRes = res->fRes + res->u.fString.fNumCharsForLength + offset;
+                                suffixRes->fWritten = TRUE;
                             } else {
                                 /* write the suffix by itself if we need explicit length */
                                 utf16Length = string_writeUTF16v2(bundle, suffixRes, utf16Length);

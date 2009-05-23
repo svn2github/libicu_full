@@ -856,13 +856,68 @@ size reduction: 1409340 (minus about 660*16=10560 bytes in header)
 -> total actual savings with key suffix sharing, string duplicate elimination,
    string suffix sharing and low-overhead UTF-16 v2 strings
    is 1637296 bytes or about 10.2% of the total .dat file size
+-> Note: the "not including" in the stats output is now incorrect
 
 svn commit -m "ticket:6945: write UTF-16 v2 strings, some code cleanup, some work towards EBCDIC pool bundles"
+Sending        smallres-notes.txt
+Sending        source\common\uinvchar.c
+Sending        source\common\uinvchar.h
+Sending        source\common\uresdata.c
+Sending        source\common\uresdata.h
+Sending        source\tools\genrb\reslist.c
+Sending        source\tools\genrb\reslist.h
+Transmitting file data .......
+Committed revision 26033.
+
+*** bug fix: suffix strings did not have fHasBeenPreWritten
+*** experiment: try using new table (and array?) format with 16-bit resource item words;
+    correct estimate of including tables and arrays requires keeping track of
+    the byteOffset during preWriting
+** table16 only
+* strings with offsets <= 0xffff
+    number of resource items that could use a 16-bit resource item word: 85344
+* strings with offsets <= 0x7fff,
+  tables with offsets <= 0x7fff (estimate)
+    number of resource items that could use a 16-bit resource item word: 73941
+* strings with offsets <= 0x7fff,
+  tables and arrays with offsets <= 0x3fff (estimate)
+    number of resource items that could use a 16-bit resource item word: 73941
+** table16 and array16
+* strings with offsets <= 0xffff
+    number of resource items that could use a 16-bit resource item word: 136654
+* strings with offsets <= 0x7fff,
+  tables with offsets <= 0x7fff (estimate)
+    number of resource items that could use a 16-bit resource item word: 123111
+* strings with offsets <= 0x7fff but nothing else
+    number of resource items that could use a 16-bit resource item word: 123111
+
+-> worth having table16 and array16 types that only hold low-offset strings
+
+*** implement table16 & array16 with only low-offset strings
+
+number of resource bundles: 660
+  total size without headers: 8775104 bytes
+  including savings from key suffix sharing: 228387 bytes
+  including savings from string de-duplication: 705676 bytes
+keys size: 487992 bytes
+number of resource items that could use a 16-bit resource item word: 136654
+number of strings: 140188
+  original strings size including resource items: 6589276 bytes
+string size reduction: 703664 after string de-duplication
+  total padding after v2 or compressed strings: 0 bytes
+
+-> actual savings: 253108 bytes = 126554 uint16_t
+   why different from the 136654 resource items estimated to be able to use this?
+   padding?
 
 Scratch:
     en.txt -s C:\svn\icuproj\icu\trunk\source\data\locales -d \temp\icu\smallres
 
+svn commit -m "ticket:6945: reorg bundle preflighting and writing so that preflighting already determines all resource item words; eliminate fixed binary-item padding; experimental support for compact table16 & array16 types; clarify statistics output"
+
 TODO:
+- xyz_preWrite() update byteOffset, not return size;
+  precompute array and table resource item words to experiment with table16/array16?
 - gOmitCollationRules: string_close(member) after building the binary;
   don't reuse member for bin_open();
   handle string_close() being called before bundle_write() so we don't write
@@ -899,6 +954,7 @@ TODO:
 
 * for v2.1 or v3 with compact, byte-oriented strings, 1B/char for most scripts,
                       maybe zlib compression
+- write all compact strings in bundle_compactStrings(), before bundle_preWrite()
 - redo & reenable correct savings stats for compact strings
 - #define WINDOW_CONTAINS(window, c) ((uint32_t)((c) - (window)) <= 0x7f)
 - new indexes:
