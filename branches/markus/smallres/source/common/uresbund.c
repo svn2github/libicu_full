@@ -836,7 +836,8 @@ static UResourceBundle *init_resb_result(const ResourceData *rdata, Resource r,
                             } else if(idx != -1) {
                                 /* if there is no key, but there is an index, try to get by the index */
                                 /* here we have either a table or an array, so get the element */
-                                if(RES_GET_TYPE(r) == URES_TABLE || RES_GET_TYPE(r) == URES_TABLE32) {
+                                UResType type = RES_GET_TYPE(r);
+                                if(URES_IS_TABLE(type)) {
                                     r = res_getTableItemByIndex(&(mainRes->fResData), r, idx, (const char **)&aKey);
                                 } else { /* array */
                                     r = res_getArrayItem(&(mainRes->fResData), r, idx);
@@ -1025,7 +1026,7 @@ UResourceBundle *ures_copyResb(UResourceBundle *r, const UResourceBundle *origin
  */
 
 U_CAPI const UChar* U_EXPORT2 ures_getString(const UResourceBundle* resB, int32_t* len, UErrorCode* status) {
-
+    const UChar *s;
     if (status==NULL || U_FAILURE(*status)) {
         return NULL;
     }
@@ -1033,21 +1034,11 @@ U_CAPI const UChar* U_EXPORT2 ures_getString(const UResourceBundle* resB, int32_
         *status = U_ILLEGAL_ARGUMENT_ERROR;
         return NULL;
     }
-
-    switch(RES_GET_TYPE(resB->fRes)) {
-        case URES_STRING:
-            return res_getString(&(resB->fResData), resB->fRes, len);
-        case URES_INT:
-        case URES_INT_VECTOR:
-        case URES_BINARY:
-        case URES_ARRAY:
-        case URES_TABLE:
-        case URES_TABLE32:
-        default:
-            *status = U_RESOURCE_TYPE_MISMATCH;
+    s = res_getString(&(resB->fResData), resB->fRes, len);
+    if (s == NULL) {
+        *status = U_RESOURCE_TYPE_MISMATCH;
     }
-
-    return NULL;
+    return s;
 }
 
 static const char *
@@ -1124,6 +1115,7 @@ ures_getUTF8String(const UResourceBundle *resB,
 
 U_CAPI const uint8_t* U_EXPORT2 ures_getBinary(const UResourceBundle* resB, int32_t* len, 
                                                UErrorCode*               status) {
+  const uint8_t *p;
   if (status==NULL || U_FAILURE(*status)) {
     return NULL;
   }
@@ -1131,24 +1123,16 @@ U_CAPI const uint8_t* U_EXPORT2 ures_getBinary(const UResourceBundle* resB, int3
     *status = U_ILLEGAL_ARGUMENT_ERROR;
     return NULL;
   }
-  switch(RES_GET_TYPE(resB->fRes)) {
-  case URES_BINARY:
-    return res_getBinary(&(resB->fResData), resB->fRes, len);
-  case URES_INT:
-  case URES_STRING:
-  case URES_INT_VECTOR:
-  case URES_ARRAY:
-  case URES_TABLE:
-  case URES_TABLE32:
-  default:
+  p = res_getBinary(&(resB->fResData), resB->fRes, len);
+  if (p == NULL) {
     *status = U_RESOURCE_TYPE_MISMATCH;
   }
-
-  return NULL;
+  return p;
 }
 
 U_CAPI const int32_t* U_EXPORT2 ures_getIntVector(const UResourceBundle* resB, int32_t* len, 
                                                    UErrorCode*               status) {
+  const int32_t *p;
   if (status==NULL || U_FAILURE(*status)) {
     return NULL;
   }
@@ -1156,20 +1140,11 @@ U_CAPI const int32_t* U_EXPORT2 ures_getIntVector(const UResourceBundle* resB, i
     *status = U_ILLEGAL_ARGUMENT_ERROR;
     return NULL;
   }
-  switch(RES_GET_TYPE(resB->fRes)) {
-  case URES_INT_VECTOR:
-    return res_getIntVector(&(resB->fResData), resB->fRes, len);
-  case URES_INT:
-  case URES_STRING:
-  case URES_ARRAY:
-  case URES_BINARY:
-  case URES_TABLE:
-  case URES_TABLE32:
-  default:
+  p = res_getIntVector(&(resB->fResData), resB->fRes, len);
+  if (p == NULL) {
     *status = U_RESOURCE_TYPE_MISMATCH;
   }
-
-  return NULL;
+  return p;
 }
 
 /* this function returns a signed integer */ 
@@ -1204,15 +1179,33 @@ U_CAPI uint32_t U_EXPORT2 ures_getUInt(const UResourceBundle* resB, UErrorCode *
   return RES_GET_UINT(resB->fRes);
 }
 
+static const int8_t gPublicTypes[URES_LIMIT] = {
+    URES_STRING,
+    URES_BINARY,
+    URES_TABLE,
+    URES_ALIAS,
+
+    URES_TABLE,     /* URES_TABLE32 */
+    URES_TABLE,     /* URES_TABLE16 */
+    URES_STRING,    /* URES_STRING_V2 */
+    URES_INT,
+
+    URES_ARRAY,
+    URES_ARRAY,     /* URES_ARRAY16 */
+    URES_NONE,
+    URES_NONE,
+
+    URES_NONE,
+    URES_NONE,
+    URES_INT_VECTOR,
+    RES_RESERVED
+};
 
 U_CAPI UResType U_EXPORT2 ures_getType(const UResourceBundle *resB) {
-  UResType type;
-
   if(resB == NULL) {
     return URES_NONE;
   }
-  type = (UResType) RES_GET_TYPE(resB->fRes);
-  return type == URES_TABLE32 ? URES_TABLE : type;
+  return (UResType)gPublicTypes[RES_GET_TYPE(resB->fRes)];
 }
 
 U_CAPI const char * U_EXPORT2 ures_getKey(const UResourceBundle *resB) {
@@ -1273,11 +1266,11 @@ U_CAPI const UChar* U_EXPORT2 ures_getNextString(UResourceBundle *resB, int32_t*
   } else {
     resB->fIndex++;
     switch(RES_GET_TYPE(resB->fRes)) {
-    case URES_INT:
-    case URES_BINARY:
     case URES_STRING:
+    case URES_STRING_V2:
       return res_getString(&(resB->fResData), resB->fRes, len); 
     case URES_TABLE:
+    case URES_TABLE16:
     case URES_TABLE32:
       r = res_getTableItemByIndex(&(resB->fResData), resB->fRes, resB->fIndex, key);
       if(r == RES_BOGUS && resB->fHasFallback) {
@@ -1285,6 +1278,7 @@ U_CAPI const UChar* U_EXPORT2 ures_getNextString(UResourceBundle *resB, int32_t*
       }
       return ures_getStringWithAlias(resB, r, resB->fIndex, len, status);
     case URES_ARRAY:
+    case URES_ARRAY16:
       r = res_getArrayItem(&(resB->fResData), resB->fRes, resB->fIndex);
       if(r == RES_BOGUS && resB->fHasFallback) {
         /* TODO: do the fallback */
@@ -1292,7 +1286,10 @@ U_CAPI const UChar* U_EXPORT2 ures_getNextString(UResourceBundle *resB, int32_t*
       return ures_getStringWithAlias(resB, r, resB->fIndex, len, status);
     case URES_ALIAS:
       return ures_getStringWithAlias(resB, resB->fRes, resB->fIndex, len, status);
+    case URES_INT:
+    case URES_BINARY:
     case URES_INT_VECTOR:
+        *status = U_RESOURCE_TYPE_MISMATCH;
     default:
       return NULL;
     }
@@ -1324,8 +1321,11 @@ U_CAPI UResourceBundle* U_EXPORT2 ures_getNextResource(UResourceBundle *resB, UR
         case URES_INT:
         case URES_BINARY:
         case URES_STRING:
+        case URES_STRING_V2:
+        case URES_INT_VECTOR:
             return ures_copyResb(fillIn, resB, status);
         case URES_TABLE:
+        case URES_TABLE16:
         case URES_TABLE32:
             r = res_getTableItemByIndex(&(resB->fResData), resB->fRes, resB->fIndex, &key);
             if(r == RES_BOGUS && resB->fHasFallback) {
@@ -1333,12 +1333,12 @@ U_CAPI UResourceBundle* U_EXPORT2 ures_getNextResource(UResourceBundle *resB, UR
             }
             return init_resb_result(&(resB->fResData), r, key, resB->fIndex, resB->fData, resB, 0, fillIn, status);
         case URES_ARRAY:
+        case URES_ARRAY16:
             r = res_getArrayItem(&(resB->fResData), resB->fRes, resB->fIndex);
             if(r == RES_BOGUS && resB->fHasFallback) {
                 /* TODO: do the fallback */
             }
             return init_resb_result(&(resB->fResData), r, key, resB->fIndex, resB->fData, resB, 0, fillIn, status);
-        case URES_INT_VECTOR:
         default:
             /*return NULL;*/
             return fillIn;
@@ -1367,8 +1367,11 @@ U_CAPI UResourceBundle* U_EXPORT2 ures_getByIndex(const UResourceBundle *resB, i
         case URES_INT:
         case URES_BINARY:
         case URES_STRING:
+        case URES_STRING_V2:
+        case URES_INT_VECTOR:
             return ures_copyResb(fillIn, resB, status);
         case URES_TABLE:
+        case URES_TABLE16:
         case URES_TABLE32:
             r = res_getTableItemByIndex(&(resB->fResData), resB->fRes, indexR, &key);
             if(r == RES_BOGUS && resB->fHasFallback) {
@@ -1376,12 +1379,12 @@ U_CAPI UResourceBundle* U_EXPORT2 ures_getByIndex(const UResourceBundle *resB, i
             }
             return init_resb_result(&(resB->fResData), r, key, indexR, resB->fData, resB, 0, fillIn, status);
         case URES_ARRAY:
+        case URES_ARRAY16:
             r = res_getArrayItem(&(resB->fResData), resB->fRes, indexR);
             if(r == RES_BOGUS && resB->fHasFallback) {
                 /* TODO: do the fallback */
             }
             return init_resb_result(&(resB->fResData), r, key, indexR, resB->fData, resB, 0, fillIn, status);
-        case URES_INT_VECTOR:
         default:
             /*return NULL;*/
             return fillIn;
@@ -1407,11 +1410,11 @@ U_CAPI const UChar* U_EXPORT2 ures_getStringByIndex(const UResourceBundle *resB,
 
     if(indexS >= 0 && resB->fSize > indexS) {
         switch(RES_GET_TYPE(resB->fRes)) {
-        case URES_INT:
-        case URES_BINARY:
         case URES_STRING:
+        case URES_STRING_V2:
             return res_getString(&(resB->fResData), resB->fRes, len);
         case URES_TABLE:
+        case URES_TABLE16:
         case URES_TABLE32:
             r = res_getTableItemByIndex(&(resB->fResData), resB->fRes, indexS, &key);
             if(r == RES_BOGUS && resB->fHasFallback) {
@@ -1419,6 +1422,7 @@ U_CAPI const UChar* U_EXPORT2 ures_getStringByIndex(const UResourceBundle *resB,
             }
             return ures_getStringWithAlias(resB, r, indexS, len, status);
         case URES_ARRAY:
+        case URES_ARRAY16:
             r = res_getArrayItem(&(resB->fResData), resB->fRes, indexS);
             if(r == RES_BOGUS && resB->fHasFallback) {
                 /* TODO: do the fallback */
@@ -1426,8 +1430,11 @@ U_CAPI const UChar* U_EXPORT2 ures_getStringByIndex(const UResourceBundle *resB,
             return ures_getStringWithAlias(resB, r, indexS, len, status);
         case URES_ALIAS:
             return ures_getStringWithAlias(resB, resB->fRes, indexS, len, status);
-
-        /*case URES_INT_VECTOR:*/
+        case URES_INT:
+        case URES_BINARY:
+        case URES_INT_VECTOR:
+            *status = U_RESOURCE_TYPE_MISMATCH;
+            break;
         default:
           /* must not occur */
           *status = U_INTERNAL_PROGRAM_ERROR;
@@ -1560,6 +1567,7 @@ ures_getByKeyWithFallback(const UResourceBundle *resB,
     /*UResourceDataEntry *realData = NULL;*/
     const char *key = inKey;
     UResourceBundle *helper = NULL;
+    UResType type;
 
     if (status==NULL || U_FAILURE(*status)) {
         return fillIn;
@@ -1569,7 +1577,8 @@ ures_getByKeyWithFallback(const UResourceBundle *resB,
         return fillIn;
     }
 
-    if(RES_GET_TYPE(resB->fRes) == URES_TABLE || RES_GET_TYPE(resB->fRes) == URES_TABLE32) {
+    type = RES_GET_TYPE(resB->fRes);
+    if(URES_IS_TABLE(type)) {
         int32_t t;
         res = res_getTableItemByKey(&(resB->fResData), resB->fRes, &t, &key);
         if(res == RES_BOGUS) {
@@ -1635,6 +1644,7 @@ U_CAPI UResourceBundle* U_EXPORT2 ures_getByKey(const UResourceBundle *resB, con
     Resource res = RES_BOGUS;
     UResourceDataEntry *realData = NULL;
     const char *key = inKey;
+    UResType type;
 
     if (status==NULL || U_FAILURE(*status)) {
         return fillIn;
@@ -1644,7 +1654,8 @@ U_CAPI UResourceBundle* U_EXPORT2 ures_getByKey(const UResourceBundle *resB, con
         return fillIn;
     }
 
-    if(RES_GET_TYPE(resB->fRes) == URES_TABLE || RES_GET_TYPE(resB->fRes) == URES_TABLE32) {
+    type = RES_GET_TYPE(resB->fRes);
+    if(URES_IS_TABLE(type)) {
         int32_t t;
         res = res_getTableItemByKey(&(resB->fResData), resB->fRes, &t, &key);
         if(res == RES_BOGUS) {
@@ -1687,6 +1698,7 @@ U_CAPI const UChar* U_EXPORT2 ures_getStringByKey(const UResourceBundle *resB, c
     Resource res = RES_BOGUS;
     UResourceDataEntry *realData = NULL;
     const char* key = inKey;
+    UResType type;
 
     if (status==NULL || U_FAILURE(*status)) {
         return NULL;
@@ -1696,7 +1708,8 @@ U_CAPI const UChar* U_EXPORT2 ures_getStringByKey(const UResourceBundle *resB, c
         return NULL;
     }
 
-    if(RES_GET_TYPE(resB->fRes) == URES_TABLE || RES_GET_TYPE(resB->fRes) == URES_TABLE32) {
+    type = RES_GET_TYPE(resB->fRes);
+    if(URES_IS_TABLE(type)) {
         int32_t t=0;
 
         res = res_getTableItemByKey(&(resB->fResData), resB->fRes, &t, &key);
@@ -1708,9 +1721,7 @@ U_CAPI const UChar* U_EXPORT2 ures_getStringByKey(const UResourceBundle *resB, c
                 if(U_SUCCESS(*status)) {
                     switch (RES_GET_TYPE(res)) {
                     case URES_STRING:
-                    case URES_TABLE:
-                    case URES_TABLE32:
-                    case URES_ARRAY:
+                    case URES_STRING_V2:
                         return res_getString(rd, res, len);
                     case URES_ALIAS:
                       {
@@ -1732,9 +1743,7 @@ U_CAPI const UChar* U_EXPORT2 ures_getStringByKey(const UResourceBundle *resB, c
         } else {
             switch (RES_GET_TYPE(res)) {
             case URES_STRING:
-            case URES_TABLE:
-            case URES_TABLE32:
-            case URES_ARRAY:
+            case URES_STRING_V2:
                 return res_getString(&(resB->fResData), res, len);
             case URES_ALIAS:
               {

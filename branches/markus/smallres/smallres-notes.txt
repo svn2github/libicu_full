@@ -889,6 +889,55 @@ Transmitting file data .....
 Committed revision 26044.
 
 svn commit -m "ticket:6945: implement swapping of resource bundles with new string, table16 and array16 types"
+Sending        smallres-notes.txt
+Sending        source\common\unicode\ures.h
+Sending        source\common\uresdata.c
+Sending        source\common\uresdata.h
+Sending        source\tools\genrb\reslist.c
+Transmitting file data .....
+Committed revision 26045.
+
+*** found out why the number of strings eligible for table16/array16 dropped:
+    the new _write16() pass did not set the resource item words for duplicate strings
+** table16 and array16
+* strings with offsets <= 0xffff
+
+.dat file size: 14,054,624 bytes
+number of resource bundles: 660
+  total size without headers: 8707200 bytes
+  including savings from key suffix sharing: 228387 bytes
+  including savings from string de-duplication: 705676 bytes
+keys size: 487992 bytes
+number of resource items that could use a 16-bit resource item word: 137851
+number of strings: 140188
+  original strings size including resource items: 6589276 bytes
+string size reduction: 703250 after string de-duplication
+
+-> total savings: 1,958,176 bytes, or 12.2% of .dat file size
+
+** table16 and array16
+* strings with offsets <= 0x7fff,
+  tables with offsets <= 0x7fff
+
+  total size without headers: 8698416 bytes
+number of resource items that could use a 16-bit resource item word: 142401
+
+-> more 16-bit resource items but only 8784 bytes more saved, not worth it
+
+** table16 and array16
+* strings with offsets <= 0x7fff,
+  arrays with offsets <= 0x7fff
+
+  total size without headers: 8689600 bytes
+number of resource items that could use a 16-bit resource item word: 146630
+
+-> more 16-bit resource items, 17600 bytes more saved than just with 16-bit string items
+-> still not really worth the added complexity
+-> this should also get less effective as our data grows and more bundles
+   have > 32k UChars so that none of the table16/array16 will have 15-bit offsets
+-> revert to just using strings in table16/array16
+
+svn commit -m "ticket:6945: add runtime support for string_v2/table16/array16, fix bugs"
 
 *** Options for pool bundle key strings (ASCII vs. EBCDIC)
 

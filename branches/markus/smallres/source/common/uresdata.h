@@ -37,16 +37,16 @@ typedef enum {
 
     /**
      * Resource type constant for tables with 16-bit count, key offsets and values.
-     * All values are URES_STRING_UTF16 strings.
+     * All values are URES_STRING_V2 strings.
      */
     URES_TABLE16=5,
 
     /** Resource type constant for 16-bit Unicode strings in formatVersion 2. */
-    URES_STRING_UTF16=6,
+    URES_STRING_V2=6,
 
     /**
      * Resource type constant for arrays with 16-bit count and values.
-     * All values are URES_STRING_UTF16 strings.
+     * All values are URES_STRING_V2 strings.
      */
     URES_ARRAY16=9
 } UResInternalType;
@@ -67,6 +67,13 @@ typedef uint32_t Resource;
 /* get signed and unsigned integer values directly from the Resource handle */
 #define RES_GET_INT(res) (((int32_t)((res)<<4L))>>4L)
 #define RES_GET_UINT(res) ((res)&0x0fffffff)
+
+#define URES_IS_ARRAY(type) ((type)==URES_ARRAY || (type)==URES_ARRAY16)
+#define URES_IS_TABLE(type) ((type)==URES_TABLE || (type)==URES_TABLE16 || (type)==URES_TABLE32)
+#define URES_IS_CONTAINER(type) (URES_IS_TABLE(type) || URES_IS_ARRAY(type))
+
+#define URES_MAKE_RESOURCE(type, offset) (((Resource)(type)<<28)|(Resource)(offset))
+#define URES_MAKE_EMPTY_RESOURCE(type) ((Resource)(type)<<28)
 
 /* indexes[] value names; indexes are generally 32-bit (Resource) indexes */
 enum {
@@ -211,7 +218,8 @@ enum {
  */
 typedef struct {
     UDataMemory *data;
-    Resource *pRoot;
+    const int32_t *pRoot;
+    const uint16_t *p16BitUnits;
     Resource rootRes;
     UBool noFallback; /* see URES_ATT_NO_FALLBACK */
 } ResourceData;
@@ -237,24 +245,24 @@ res_unload(ResourceData *pResData);
  * Returns NULL if not found.
  */
 U_CFUNC const UChar *
-res_getString(const ResourceData *pResData, const Resource res, int32_t *pLength);
+res_getString(const ResourceData *pResData, Resource res, int32_t *pLength);
 
 U_CFUNC const UChar *
-res_getAlias(const ResourceData *pResData, const Resource res, int32_t *pLength);
+res_getAlias(const ResourceData *pResData, Resource res, int32_t *pLength);
 
 U_CFUNC const uint8_t *
-res_getBinary(const ResourceData *pResData, const Resource res, int32_t *pLength);
+res_getBinary(const ResourceData *pResData, Resource res, int32_t *pLength);
 
 U_CFUNC const int32_t *
-res_getIntVector(const ResourceData *pResData, const Resource res, int32_t *pLength);
+res_getIntVector(const ResourceData *pResData, Resource res, int32_t *pLength);
 
 U_CFUNC Resource
 res_getResource(const ResourceData *pResData, const char *key);
 
 U_CFUNC int32_t
-res_countArrayItems(const ResourceData *pResData, const Resource res);
+res_countArrayItems(const ResourceData *pResData, Resource res);
 
-U_CFUNC Resource res_getArrayItem(const ResourceData *pResData, Resource array, const int32_t indexS);
+U_CFUNC Resource res_getArrayItem(const ResourceData *pResData, Resource array, int32_t indexS);
 U_CFUNC Resource res_getTableItemByIndex(const ResourceData *pResData, Resource table, int32_t indexS, const char ** key);
 U_CFUNC Resource res_getTableItemByKey(const ResourceData *pResData, Resource table, int32_t *indexS, const char* * key);
 

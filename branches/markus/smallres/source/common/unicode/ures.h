@@ -406,7 +406,7 @@ ures_getUTF8String(const UResourceBundle *resB,
  *                Always check the value of status. Don't count on returning NULL.
  *                could be a non-failing error 
  *                e.g.: <TT>U_USING_FALLBACK_WARNING</TT>,<TT>U_USING_DEFAULT_WARNING </TT>
- * @return a pointer to a chuck of unsigned bytes which live in a memory mapped/DLL file.
+ * @return a pointer to a chunk of unsigned bytes which live in a memory mapped/DLL file.
  * @see ures_getString
  * @see ures_getIntVector
  * @see ures_getInt
@@ -428,7 +428,7 @@ ures_getBinary(const UResourceBundle* resourceBundle,
  *                Always check the value of status. Don't count on returning NULL.
  *                could be a non-failing error 
  *                e.g.: <TT>U_USING_FALLBACK_WARNING</TT>,<TT>U_USING_DEFAULT_WARNING </TT>
- * @return a pointer to a chunk of unsigned bytes which live in a memory mapped/DLL file.
+ * @return a pointer to a chunk of integers which live in a memory mapped/DLL file.
  * @see ures_getBinary
  * @see ures_getString
  * @see ures_getInt
