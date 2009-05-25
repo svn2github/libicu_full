@@ -938,6 +938,55 @@ number of resource items that could use a 16-bit resource item word: 146630
 -> revert to just using strings in table16/array16
 
 svn commit -m "ticket:6945: add runtime support for string_v2/table16/array16, fix bugs"
+Sending        smallres-notes.txt
+Sending        source\common\unicode\ures.h
+Sending        source\common\uresbund.c
+Sending        source\common\uresdata.c
+Sending        source\common\uresdata.h
+Sending        source\test\cintltst\crestst.c
+Sending        source\test\cintltst\creststn.c
+Sending        source\tools\genrb\reslist.c
+Transmitting file data ........
+Committed revision 26046.
+
+*** write pool bundle with checksum, write others with the pool checksum
+** use pool bundle for locale bundles:
+number of resource bundles: 660
+  total size without headers: 8268332 bytes
+  including savings from key suffix sharing: 666971 bytes
+  including savings from string de-duplication: 705676 bytes
+keys size: 49124 bytes
+number of strings: 140188
+  original strings size including resource items: 6589276 bytes
+string size reduction: 703250 after string de-duplication
+
+plus locales/pool.res: 14,852 bytes
+.dat file size 13,615,824 bytes
+
+-> using locales/pool.res saves 438,800 bytes in .dat file size
+
+** use pool bundle for locale bundles:
+
+number of resource bundles: 660
+  total size without headers: 8263984 bytes
+  including savings from key suffix sharing: 671297 bytes
+  including savings from string de-duplication: 705676 bytes
+keys size: 44772 bytes
+number of strings: 140188
+  original strings size including resource items: 6589276 bytes
+string size reduction: 703250 after string de-duplication
+
+plus locales/pool.res: 14,852 bytes
+plus coll/pool.res: 260 bytes
+.dat file size 13,611,968 bytes
+
+-> using both locales/pool.res and coll/pool.res saves 442,656 bytes in .dat file size
+-> just another 3856 bytes from using coll/pool.res, not worth it
+
+-> revert to just using locales/pool.res
+-> total savings: 2,396,976 bytes, or 15.0% of .dat file size
+
+svn commit -m "ticket:6945: write pool bundle with checksum, write others with the pool checksum, add locales/pool.res"
 
 *** Options for pool bundle key strings (ASCII vs. EBCDIC)
 
@@ -1033,17 +1082,15 @@ TODO:
 * for v2 with key suffix sharing, pool bundle with shared keys,
               more compact UTF-16 strings with suffix sharing
               (still all memory-mappable)
-- if no 16-bit units at all, then runtime needs to point to fixed NUL for empty strings
+- use pool bundle for testdata including testtable32 to test for keys > 0x10000 bytes
 - consider stopping support for formatVersion=1.0 in ures_swap()
   so that we can remove ures_preflightResource()
   (1.1 was implemented in ICU 2.8; 1.0 does not work for ICU4J)
-- in formatVersion 2 treat _all_ resources with int-offset 0 as "empty"
-  (includes 00000000 for empty strings)
 - in formatVersion 2 reserve bits 31..8 of indexes[0] for future use; use only bits 7..0 for indexes length
 - make kStringsUTF16v1 work in string_preWrite() & string_write()
 - hardcode "pool.res"? save bytes, no need for flexibility
+- swap the --usePoolBundle file in genrb so that a single checked-in file can be used
 - support new format in derb for debugging
-- use constants and macros for 0xffffffff==no-resWord-yet, extracting resType & offset etc.
 - do aliases need to be Unicode strings? can they be invariant chars or ASCII?
   de-duping? suffix sharing??
 - document experiments, decisions and dead ends

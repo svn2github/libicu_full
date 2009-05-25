@@ -1838,7 +1838,7 @@ parse(UCHARBUF *buf, const char *inputDir, const char *outputDir, UErrorCode *st
     ustr_init(&comment);
     expect(TOK_STRING, &tokenValue, &comment, NULL, status);
 
-    bundle = bundle_open(&comment, status);
+    bundle = bundle_open(&comment, FALSE, status);
 
     if (bundle == NULL || U_FAILURE(*status))
     {

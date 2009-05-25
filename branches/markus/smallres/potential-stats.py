@@ -46,7 +46,7 @@ print "  total size without headers: %d bytes" % sum_bundle_size
 print "  including savings from key suffix sharing: %d bytes" % sum_keys_saved
 print "  including savings from string de-duplication: %d bytes" % sum_dedup_saved
 print "keys size: %d bytes" % sum_keys_size
-print "number of resource items that could use a 16-bit resource item word: %d" % sum_res16_count
+#print "number of resource items that could use a 16-bit resource item word: %d" % sum_res16_count
 print "number of strings: %d" % strings_count
 print "  original strings size including resource items: %d bytes" % sum_strings_size
 print "string size reduction: %d after string de-duplication" % (sum_saved - sum_dedup_saved)

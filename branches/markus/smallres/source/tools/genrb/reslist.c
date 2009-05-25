@@ -917,7 +917,7 @@ array_write16(struct SRBRoot *bundle, struct SResource *res,
     if (U_SUCCESS(*status) && res->u.fArray.fCount <= 0xffff && res16 >= 0) {
         uint16_t *p16 = reserve16BitUnits(bundle, 1 + res->u.fArray.fCount, status);
         if (U_SUCCESS(*status)) {
-            printf("res16-count: %6ld\n", (long)res->u.fArray.fCount);
+            /* TODO: printf("res16-count: %6ld\n", (long)res->u.fArray.fCount); */
             res->fRes = URES_MAKE_RESOURCE(URES_ARRAY16, bundle->f16BitUnitsLength);
             *p16++ = (uint16_t)res->u.fArray.fCount;
             for (current = res->u.fArray.fFirst; current != NULL; current = current->fNext) {
@@ -928,7 +928,7 @@ array_write16(struct SRBRoot *bundle, struct SResource *res,
         }
     } else if (res16 < 0) {
         if (res16 & 0x41) {
-            printf("res32-reason: %05lx array[%6ld]\n", (long)res16 & 0x7fffffff, (long)res->u.fArray.fCount);
+            /* TODO: printf("res32-reason: %05lx array[%6ld]\n", (long)res16 & 0x7fffffff, (long)res->u.fArray.fCount); */
         }
     }
 }
@@ -988,7 +988,7 @@ table_write16(struct SRBRoot *bundle, struct SResource *res,
         if (res16 >= 0) {
             uint16_t *p16 = reserve16BitUnits(bundle, 1 + res->u.fTable.fCount * 2, status);
             if (U_SUCCESS(*status)) {
-                printf("res16-count: %6ld\n", (long)res->u.fTable.fCount);
+                /* TODO: printf("res16-count: %6ld\n", (long)res->u.fTable.fCount); */
                 /* 16-bit count, key offsets and values */
                 res->fRes = URES_MAKE_RESOURCE(URES_TABLE16, bundle->f16BitUnitsLength);
                 *p16++ = (uint16_t)res->u.fTable.fCount;
@@ -1003,7 +1003,7 @@ table_write16(struct SRBRoot *bundle, struct SResource *res,
             }
         } else {
             if (res16 & 0x41) {
-                printf("res32-reason: %05lx table[%6ld]\n", (long)res16 & 0x7fffffff, (long)res->u.fTable.fCount);
+                /* TODO: printf("res32-reason: %05lx table[%6ld]\n", (long)res16 & 0x7fffffff, (long)res->u.fTable.fCount); */
             }
             /* 16-bit count, 16-bit key offsets, 32-bit values */
             res->u.fTable.fType = URES_TABLE;
@@ -1503,6 +1503,13 @@ void bundle_write(struct SRBRoot *bundle,
     bundle->fIsDoneParsing = TRUE;
 
     bundle_compactKeys(bundle, status);
+    /*
+     * Add padding bytes to fKeys so that fKeysTop is 4-aligned.
+     * Safe because the capacity is a multiple of 4.
+     */
+    while (bundle->fKeysTop & 3) {
+        bundle->fKeys[bundle->fKeysTop++] = 0xaa;
+    }
     if (bundle->fPoolBundleKeys == NULL) {
         /* no pool: any 16-bit key offset fits into URES_TABLE */
         bundle->fLocalKeyLimit = 0x10000;
@@ -1520,14 +1527,8 @@ void bundle_write(struct SRBRoot *bundle,
         } else {
             /* divide the local limit by the factor of how far the sum exceeds the 16-bit limit */
             bundle->fLocalKeyLimit = ((int64_t)bundle->fKeysTop * 0x10000) / sumKeyLengths;
+            assert(bundle->fLocalKeyLimit <= 0x10000);
         }
-    }
-    /*
-     * Add padding bytes to fKeys so that fKeysTop is 4-aligned.
-     * Safe because the capacity is a multiple of 4.
-     */
-    while (bundle->fKeysTop & 3) {
-        bundle->fKeys[bundle->fKeysTop++] = 0xaa;
     }
 
     bundle_compactStrings(bundle, status);
@@ -1672,7 +1673,18 @@ void bundle_write(struct SRBRoot *bundle,
     if (URES_INDEX_16BIT_TOP < bundle->fIndexLength) {
         indexes[URES_INDEX_16BIT_TOP] = (bundle->fKeysTop>>2) + (bundle->f16BitUnitsLength>>1);
     }
-    /* TODO: write pool bundle checksum if this is or uses a pool bundle; set attributes flags as well */
+    if (URES_INDEX_POOL_CHECKSUM < bundle->fIndexLength) {
+        if (bundle->fIsPoolBundle) {
+            indexes[URES_INDEX_ATTRIBUTES] |= URES_ATT_IS_POOL_BUNDLE | URES_ATT_NO_FALLBACK;
+            indexes[URES_INDEX_POOL_CHECKSUM] =
+                (int32_t)computeCRC((char *)(bundle->fKeys + bundle->fKeysBottom),
+                                    (uint32_t)(bundle->fKeysTop - bundle->fKeysBottom),
+                                    0);
+        } else if (bundle->fPoolBundleKeys != NULL) {
+            indexes[URES_INDEX_ATTRIBUTES] |= URES_ATT_USES_POOL_BUNDLE;
+            indexes[URES_INDEX_POOL_CHECKSUM] = bundle->fPoolChecksum;
+        }
+    }
 
     /* TODO: bundle->fStringBytesLength, fStringsCount, fStringUCharsCount, fWindows[] */
 
@@ -1683,10 +1695,10 @@ void bundle_write(struct SRBRoot *bundle,
     udata_writeBlock(mem, bundle->fKeys+bundle->fKeysBottom,
                           bundle->fKeysTop-bundle->fKeysBottom);
 
+    /* TODO: write bundle->fStringBytes[] */
+
     /* write the v2 UTF-16 strings, URES_TABLE16 and URES_ARRAY16 */
     udata_writeBlock(mem, bundle->f16BitUnits, bundle->f16BitUnitsLength*2);
-
-    /* TODO: write bundle->fStringBytes[] */
 
     /* write all of the bundle contents: the root item and its children */
     byteOffset = bundle->fKeysTop + bundle->f16BitUnitsLength * 2 /* TODO: + fStringBytesLength */;
@@ -1979,7 +1991,7 @@ struct SResource *bin_open(struct SRBRoot *bundle, const char *tag, uint32_t len
     return res;
 }
 
-struct SRBRoot *bundle_open(const struct UString* comment, UErrorCode *status) {
+struct SRBRoot *bundle_open(const struct UString* comment, UBool isPoolBundle, UErrorCode *status) {
     struct SRBRoot *bundle;
 
     if (U_FAILURE(*status)) {
@@ -2009,8 +2021,9 @@ struct SRBRoot *bundle_open(const struct UString* comment, UErrorCode *status) {
     bundle->fLocale   = NULL;
     bundle->fKeysCapacity = KEY_SPACE_SIZE;
     /* formatVersion 1.1: start fKeysTop after the root item and indexes[] */
-    if (bundle->fPoolBundleKeys != NULL) {
-        bundle->fIndexLength = URES_INDEX_POOL_CRC + 1;
+    bundle->fIsPoolBundle = isPoolBundle;
+    if (bundle->fPoolBundleKeys != NULL || isPoolBundle) {
+        bundle->fIndexLength = URES_INDEX_POOL_CHECKSUM + 1;
     } else if (gFormatVersion >= 2) {
         bundle->fIndexLength = URES_INDEX_16BIT_TOP + 1;
     } else /* formatVersion 1 */ {
@@ -2526,7 +2539,6 @@ bundle_compactKeys(struct SRBRoot *bundle, UErrorCode *status) {
         while (*keys != 0) { ++keys; }  /* skip the key */
         ++keys;  /* skip the NUL */
     }
-    assert(keys == bundle->fPoolBundleKeys + bundle->fPoolBundleKeysTop);
     keys = bundle->fKeys + bundle->fKeysBottom;
     for (; i < keysCount; ++i) {
         map[i].oldpos = (int32_t)(keys - bundle->fKeys);
@@ -2534,7 +2546,6 @@ bundle_compactKeys(struct SRBRoot *bundle, UErrorCode *status) {
         while (*keys != 0) { ++keys; }  /* skip the key */
         ++keys;  /* skip the NUL */
     }
-    assert(keys == bundle->fKeys + bundle->fKeysTop);
     /* Sort the keys so that each one is immediately followed by all of its suffixes. */
     uprv_sortArray(map, keysCount, (int32_t)sizeof(KeyMapEntry),
                    compareKeySuffixes, bundle, FALSE, status);

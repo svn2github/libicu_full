@@ -87,8 +87,8 @@ enum {
     URES_INDEX_MAX_TABLE_LENGTH,/* [4] max. length of any table */
     URES_INDEX_ATTRIBUTES,      /* [5] attributes bit set, see URES_ATT_* (new in formatVersion 1.2) */
     URES_INDEX_16BIT_TOP,       /* [6] top of the 16-bit units (UTF-16 string v2 UChars, URES_TABLE16, URES_ARRAY16),
-                                 *     rounded up (new in formatVersion 2.0) */
-    URES_INDEX_POOL_CRC,        /* [7] CRC checksum of the pool bundle (new in formatVersion 2.0) */
+                                 *     rounded up (new in formatVersion 2.0, ICU 4.4) */
+    URES_INDEX_POOL_CHECKSUM,   /* [7] checksum of the pool bundle (new in formatVersion 2.0, ICU 4.4) */
     URES_INDEX_TOP
 };
 
@@ -106,7 +106,15 @@ enum {
 #define URES_ATT_NO_FALLBACK 1
 
 /*
- * File format for .res resource bundle files (formatVersion=1.3)
+ * Attributes for bundles that are, or use, a pool bundle.
+ * A pool bundle provides key strings that are shared among other bundles
+ * to reduce their total size.
+ */
+#define URES_ATT_IS_POOL_BUNDLE 2
+#define URES_ATT_USES_POOL_BUNDLE 4
+
+/*
+ * File format for .res resource bundle files (formatVersion=1.3, ICU 4.4)
  *
  * New in 1.3 compared with 1.2: -------------
  *

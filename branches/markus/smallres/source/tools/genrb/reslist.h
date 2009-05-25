@@ -49,6 +49,7 @@ struct SRBRoot {
   UBool noFallback; /* see URES_ATT_NO_FALLBACK */
   UBool fIsDoneParsing; /* set while processing & writing */
   int8_t fStringsForm; /* default STRINGS_UTF16_V1 */
+  UBool fIsPoolBundle;
 
   char *fKeys;
   KeyMapEntry *fKeyMap;
@@ -62,11 +63,16 @@ struct SRBRoot {
   int32_t f16BitUnitsCapacity;
   int32_t f16BitUnitsLength;
 
+  const char *fPoolBundleKeys;
+  int32_t fPoolBundleKeysBottom, fPoolBundleKeysTop;
+  int32_t fPoolBundleKeysCount;
+  int32_t fPoolChecksum;
+
+  /* experimental compression */
   uint8_t *fStringBytes;
   int32_t fStringBytesCapacity;
   int32_t fStringBytesLength;
 
-  /* experimental compression */
   int32_t fStringsCount, fStringsSize;
   int32_t fPotentialSize, fMiniCount, fMiniReduction;
   int32_t fIncompressibleStrings;
@@ -78,13 +84,9 @@ struct SRBRoot {
   uint32_t fInfixUTF16Size;
 
   struct SResource *fShortestString, *fLongestString;
-
-  const char *fPoolBundleKeys;
-  int32_t fPoolBundleKeysBottom, fPoolBundleKeysTop;
-  int32_t fPoolBundleKeysCount;
 };
 
-struct SRBRoot *bundle_open(const struct UString* comment, UErrorCode *status);
+struct SRBRoot *bundle_open(const struct UString* comment, UBool isPoolBundle, UErrorCode *status);
 void bundle_write(struct SRBRoot *bundle, const char *outputDir, const char *outputPkg, char *writtenFilename, int writtenFilenameLen, UErrorCode *status);
 
 /* write a java resource file */
@@ -217,6 +219,9 @@ void setIncludeCopyright(UBool val);
 UBool getIncludeCopyright(void);
 
 void setFormatVersion(int32_t formatVersion);
+
+/* in wrtxml.cpp */
+uint32_t computeCRC(char *ptr, uint32_t len, uint32_t lastcrc);
 
 U_CDECL_END
 #endif /* #ifndef RESLIST_H */

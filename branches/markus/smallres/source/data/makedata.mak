@@ -550,7 +550,7 @@ CLEAN : GODATA
 # Inference rule for creating resource bundle files
 {$(ICUSRCDATA_RELATIVE_PATH)\$(ICULOC)}.txt.res::
 	@echo Making Locale Resource Bundle files
-	@"$(ICUTOOLS)\genrb\$(CFG)\genrb" -k -d"$(ICUBLD_PKG)" $<
+	@"$(ICUTOOLS)\genrb\$(CFG)\genrb" --usePoolBundle $(ICUSRCDATA_RELATIVE_PATH)\$(ICULOC)\pool.res -k -d"$(ICUBLD_PKG)" $<
 
 res_index.res:
 	@echo Generating <<res_index.txt

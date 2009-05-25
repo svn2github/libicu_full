@@ -100,6 +100,7 @@ typedef struct ResFile {
   const char *fKeys;
   int32_t fKeysBottom, fKeysTop;
   int32_t fKeysCount;
+  int32_t fChecksum;
 } ResFile;
 
 static ResFile poolBundle = { NULL };
@@ -303,7 +304,7 @@ main(int argc,
     }
 
     if(options[WRITE_POOL_BUNDLE].doesOccur) {
-        newPoolBundle = bundle_open(NULL, &status);
+        newPoolBundle = bundle_open(NULL, TRUE, &status);
         if(U_FAILURE(status)) {
             fprintf(stderr, "unable to create an empty bundle for the pool keys: %s\n", u_errorName(status));
             return status;
@@ -324,6 +325,7 @@ main(int argc,
         const char *poolResName = options[USE_POOL_BUNDLE].value;
         FileStream *poolFile;
         int32_t poolFileSize;
+        int32_t indexLength;
         /*
          * TODO: Consolidate inputDir/filename handling from main() and processFile()
          * into a common function, and use it here as well.
@@ -369,26 +371,21 @@ main(int argc,
                 header->info.dataFormat[1]==0x65 &&
                 header->info.dataFormat[2]==0x73 &&
                 header->info.dataFormat[3]==0x42 &&
-                header->info.formatVersion[0]==1 &&  /* formatVersion>=1.1 */
-                header->info.formatVersion[1]>=1)
+                header->info.formatVersion[0]==2)
             ) {
                 fprintf(stderr, "invalid format of pool bundle file %s\n", theCurrentFileName);
                 return U_INVALID_FORMAT_ERROR;
             }
             poolBundle.fKeys = (const char *)header + header->dataHeader.headerSize;
             poolBundle.fIndexes = (const int32_t *)poolBundle.fKeys + 1;
-            if (poolBundle.fIndexes[URES_INDEX_LENGTH] <= URES_INDEX_KEYS_TOP) {
+            indexLength = poolBundle.fIndexes[URES_INDEX_LENGTH];
+            if (indexLength <= URES_INDEX_POOL_CHECKSUM) {
                 fprintf(stderr, "insufficient indexes[] in pool bundle file %s\n", theCurrentFileName);
                 return U_INVALID_FORMAT_ERROR;
             }
-            poolBundle.fKeysBottom = (1 + poolBundle.fIndexes[URES_INDEX_LENGTH]) * 4;
+            poolBundle.fKeysBottom = (1 + indexLength) * 4;
             poolBundle.fKeysTop = poolBundle.fIndexes[URES_INDEX_KEYS_TOP] * 4;
-        }
-        /* don't count padding bytes (useful for assert() in bundle_compactKeys()) */
-        while (poolBundle.fKeysBottom < poolBundle.fKeysTop &&
-               poolBundle.fKeys[poolBundle.fKeysTop - 1] == (char)0xaa
-        ) {
-            --poolBundle.fKeysTop;
+            poolBundle.fChecksum = poolBundle.fIndexes[URES_INDEX_POOL_CHECKSUM];
         }
         for (i = poolBundle.fKeysBottom; i < poolBundle.fKeysTop; ++i) {
             if (poolBundle.fKeys[i] == 0) {
@@ -422,7 +419,6 @@ main(int argc,
 
     if(options[WRITE_POOL_BUNDLE].doesOccur) {
         char outputFileName[256];
-        bundle_compactKeys(newPoolBundle, &status);
         bundle_write(newPoolBundle, outputDir, NULL, outputFileName, sizeof(outputFileName), &status);
         bundle_close(newPoolBundle, &status);
         if(U_FAILURE(status)) {
@@ -578,6 +574,7 @@ processFile(const char *filename, const char *cp, const char *inputDir, const ch
         data->fPoolBundleKeysBottom = poolBundle.fKeysBottom;
         data->fPoolBundleKeysTop = poolBundle.fKeysTop;
         data->fPoolBundleKeysCount = poolBundle.fKeysCount;
+        data->fPoolChecksum = poolBundle.fChecksum;
     }
 
     /* Determine the target rb filename */
