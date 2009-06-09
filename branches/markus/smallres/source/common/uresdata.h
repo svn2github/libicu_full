@@ -309,7 +309,7 @@ typedef struct {
  * Load a resource bundle file.
  * The ResourceData structure must be allocated externally.
  */
-U_CFUNC UBool
+U_CFUNC void
 res_load(ResourceData *pResData,
          const char *path, const char *name, UErrorCode *errorCode);
 

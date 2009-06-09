@@ -132,7 +132,7 @@ isAcceptable(void *context,
 
 /* semi-public functions ---------------------------------------------------- */
 
-U_CFUNC UBool
+U_CFUNC void
 res_load(ResourceData *pResData,
          const char *path, const char *name, UErrorCode *errorCode) {
     UVersionInfo formatVersion;
@@ -143,7 +143,7 @@ res_load(ResourceData *pResData,
     /* load the ResourceBundle file */
     pResData->data=udata_openChoice(path, "res", name, isAcceptable, formatVersion, errorCode);
     if(U_FAILURE(*errorCode)) {
-        return FALSE;
+        return;
     }
 
     /* get its memory and root resource */
@@ -155,9 +155,8 @@ res_load(ResourceData *pResData,
     rootType=RES_GET_TYPE(pResData->rootRes);
     if(!URES_IS_TABLE(rootType)) {
         *errorCode=U_INVALID_FORMAT_ERROR;
-        udata_close(pResData->data);
-        pResData->data=NULL; 
-        return FALSE;
+        res_unload(pResData);
+        return;
     }
 
     if(formatVersion[0]>1 || (formatVersion[0]==1 && formatVersion[1]>=1)) {
@@ -179,8 +178,6 @@ res_load(ResourceData *pResData,
             pResData->p16BitUnits=(const uint16_t *)(pResData->pRoot+indexes[URES_INDEX_KEYS_TOP]);
         }
     }
-
-    return TRUE;
 }
 
 U_CFUNC void

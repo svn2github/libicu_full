@@ -1010,6 +1010,20 @@ Committed revision 26047.
 
 (20090609)
 svn commit -m "ticket:6945: make genrb & runtime work together with pool bundles; document formatVersion 2; cintltst passes"
+Sending        smallres-notes.txt
+Sending        source\common\uresbund.c
+Sending        source\common\uresdata.c
+Sending        source\common\uresdata.h
+Sending        source\common\uresimp.h
+Sending        source\data\makedata.mak
+Sending        source\test\cintltst\hpmufn.c
+Sending        source\tools\genrb\genrb.c
+Sending        source\tools\genrb\reslist.c
+Sending        source\tools\genrb\reslist.h
+Transmitting file data ..........
+Committed revision 26079.
+
+svn commit -m "ticket:6945: fix handling of alias bundles, and cache them; all tests pass"
 
 *** Options for pool bundle key strings (ASCII vs. EBCDIC)
 

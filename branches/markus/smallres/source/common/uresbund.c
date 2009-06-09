@@ -141,9 +141,8 @@ static const ResourceData *getFallbackData(const UResourceBundle* resBundle, con
 
 static void
 free_entry(UResourceDataEntry *entry) {
-    if(entry->fBogus == U_ZERO_ERROR) {
-        res_unload(&(entry->fData));
-    }
+    UResourceDataEntry *alias;
+    res_unload(&(entry->fData));
     if(entry->fName != NULL && entry->fName != entry->fNameBuffer) {
         uprv_free(entry->fName);
     }
@@ -153,17 +152,24 @@ free_entry(UResourceDataEntry *entry) {
     if(entry->fPool != NULL) {
         --entry->fPool->fCountExisting;
     }
+    alias = entry->fAlias;
+    if(alias != NULL) {
+        while(alias->fAlias != NULL) {
+            alias = alias->fAlias;
+        }
+        --alias->fCountExisting;
+    }
     uprv_free(entry);
 }
 
 /* Works just like ucnv_flushCache() */
-/* TODO: figure out why fCountExisting may not go to zero. Do not make this function public yet. */
 static int32_t ures_flushCache()
 {
     UResourceDataEntry *resB;
     int32_t pos;
     int32_t rbDeletedNum = 0;
     const UHashElement *e;
+    UBool deletedMore;
 
     /*if shared data hasn't even been lazy evaluated yet
     * return 0
@@ -174,39 +180,34 @@ static int32_t ures_flushCache()
         return 0;
     }
 
-    /*creates an enumeration to iterate through every element in the table */
-    pos = -1;
-    while ((e = uhash_nextElement(cache, &pos)) != NULL)
-    {
-        resB = (UResourceDataEntry *) e->value.pointer;
-        /* Deletes only if reference counter == 0
-         * Don't worry about the children of this node.
-         * Those will eventually get deleted too, if not already.
-         * Don't worry about the parents of this node.
-         * Those will eventually get deleted too, if not already.
-         */
-        /* DONE: figure out why fCountExisting may not go to zero. Do not make this function public yet. */
-        /* 04/05/2002 [weiv] fCountExisting should now be accurate. If it's not zero, that means that    */
-        /* some resource bundles are still open somewhere. */
+    do {
+        deletedMore = FALSE;
+        /*creates an enumeration to iterate through every element in the table */
+        pos = -1;
+        while ((e = uhash_nextElement(cache, &pos)) != NULL)
+        {
+            resB = (UResourceDataEntry *) e->value.pointer;
+            /* Deletes only if reference counter == 0
+             * Don't worry about the children of this node.
+             * Those will eventually get deleted too, if not already.
+             * Don't worry about the parents of this node.
+             * Those will eventually get deleted too, if not already.
+             */
+            /* 04/05/2002 [weiv] fCountExisting should now be accurate. If it's not zero, that means that    */
+            /* some resource bundles are still open somewhere. */
 
-        /*U_ASSERT(resB->fCountExisting == 0);*/
-        if (resB->fCountExisting == 0) {
-            rbDeletedNum++;
-            uhash_removeElement(cache, e);
-            free_entry(resB);
+            if (resB->fCountExisting == 0) {
+                rbDeletedNum++;
+                deletedMore = TRUE;
+                uhash_removeElement(cache, e);
+                free_entry(resB);
+            }
         }
-    }
-    /* do it again to catch pool bundles whose fCountExisting got decremented */
-    pos = -1;
-    while ((e = uhash_nextElement(cache, &pos)) != NULL)
-    {
-        resB = (UResourceDataEntry *) e->value.pointer;
-        if (resB->fCountExisting == 0) {
-            rbDeletedNum++;
-            uhash_removeElement(cache, e);
-            free_entry(resB);
-        }
-    }
+        /*
+         * Do it again to catch bundles (aliases, pool bundle) whose fCountExisting
+         * got decremented by free_entry().
+         */
+    } while(deletedMore);
     umtx_unlock(&resbMutex);
 
     return rbDeletedNum;
@@ -281,7 +282,6 @@ static UResourceDataEntry *init_entry(const char *localeID, const char *path, UE
     UResourceDataEntry find;
     /*int32_t hashValue;*/
     char name[96];
-    const char *myPath = NULL;
     char aliasName[100] = { 0 };
     int32_t aliasLen = 0;
     /*UBool isAlias = FALSE;*/
@@ -300,12 +300,8 @@ static UResourceDataEntry *init_entry(const char *localeID, const char *path, UE
         uprv_strcpy(name, localeID);
     }
 
-    if(path != NULL) { /* if we actually have path, we'll use it */
-        myPath = path;
-    }
-
     find.fName = name;
-    find.fPath = (char *)myPath;
+    find.fPath = (char *)path;
 
     /* calculate the hash value of the entry */
     hashkey.pointer = (void *)&find;
@@ -313,17 +309,8 @@ static UResourceDataEntry *init_entry(const char *localeID, const char *path, UE
 
     /* check to see if we already have this entry */
     r = (UResourceDataEntry *)uhash_get(cache, &find);
-
-    if(r != NULL) { /* if the entry is already in the hash table */
-        r->fCountExisting++; /* we just increase it's reference count */
-        /* if the resource has a warning */
-        /* we don't want to overwrite a status with no error */
-        if(r->fBogus != U_ZERO_ERROR) {
-          *status = r->fBogus; /* set the returning status */
-        } 
-    } else { /* otherwise, we'll try to construct a new entry */
-        UBool result = FALSE;
-
+    if(r == NULL) {
+        /* if the entry is not yet in the hash table, we'll try to construct a new one */
         r = (UResourceDataEntry *) uprv_malloc(sizeof(UResourceDataEntry));
         if(r == NULL) {
             *status = U_MEMORY_ALLOCATION_ERROR;
@@ -331,7 +318,6 @@ static UResourceDataEntry *init_entry(const char *localeID, const char *path, UE
         }
 
         uprv_memset(r, 0, sizeof(UResourceDataEntry));
-        r->fCountExisting = 1;
         /*r->fHashKey = hashValue;*/
 
         setEntryName(r, name, status);
@@ -340,8 +326,8 @@ static UResourceDataEntry *init_entry(const char *localeID, const char *path, UE
             return NULL;
         }
 
-        if(myPath != NULL) {
-            r->fPath = (char *)uprv_strdup(myPath);
+        if(path != NULL) {
+            r->fPath = (char *)uprv_strdup(path);
             if(r->fPath == NULL) {
                 *status = U_MEMORY_ALLOCATION_ERROR;
                 uprv_free(r);
@@ -349,10 +335,10 @@ static UResourceDataEntry *init_entry(const char *localeID, const char *path, UE
             }
         }
 
-        /* this is the actual loading - returns bool true/false */
-        result = res_load(&(r->fData), r->fPath, r->fName, status);
+        /* this is the actual loading */
+        res_load(&(r->fData), r->fPath, r->fName, status);
 
-        if (result == FALSE || U_FAILURE(*status)) { 
+        if (U_FAILURE(*status)) { 
             /* we have no such entry in dll, so it will always use fallback */
             *status = U_USING_FALLBACK_WARNING;
             r->fBogus = U_USING_FALLBACK_WARNING;
@@ -371,8 +357,6 @@ static UResourceDataEntry *init_entry(const char *localeID, const char *path, UE
                     r->fBogus = *status;
                 }
             }
-            /* We might be able to do this a wee bit more efficiently (we could check whether the aliased data) */
-            /* is already in the cache), but it's good the way it is */
             /* handle the alias by trying to get out the %%Alias tag.*/
             /* We'll try to get alias string from the bundle */
             aliasres = res_getResource(&(r->fData), "%%ALIAS");
@@ -380,15 +364,7 @@ static UResourceDataEntry *init_entry(const char *localeID, const char *path, UE
                 const UChar *alias = res_getString(&(r->fData), aliasres, &aliasLen);
                 if(alias != NULL && aliasLen > 0) { /* if there is actual alias - unload and load new data */
                     u_UCharsToChars(alias, aliasName, aliasLen+1);
-                    /*isAlias = TRUE;*/
-                    res_unload(&(r->fData));
-                    result = res_load(&(r->fData), r->fPath, aliasName, status);
-                    if (result == FALSE || U_FAILURE(*status)) { 
-                        /* we couldn't load aliased data - so we have no data */
-                        *status = U_USING_FALLBACK_WARNING;
-                        r->fBogus = U_USING_FALLBACK_WARNING;
-                    }
-                    setEntryName(r, aliasName, status);
+                    r->fAlias = init_entry(aliasName, path, status);
                 }
             }
         }
@@ -397,8 +373,10 @@ static UResourceDataEntry *init_entry(const char *localeID, const char *path, UE
             UResourceDataEntry *oldR = NULL;
             if((oldR = (UResourceDataEntry *)uhash_get(cache, r)) == NULL) { /* if the data is not cached */
                 /* just insert it in the cache */
-                uhash_put(cache, (void *)r, r, status);
-                if (U_FAILURE(*status)) {
+                UErrorCode cacheStatus = U_ZERO_ERROR;
+                uhash_put(cache, (void *)r, r, &cacheStatus);
+                if (U_FAILURE(cacheStatus)) {
+                    *status = cacheStatus;
                     free_entry(r);
                     r = NULL;
                 }
@@ -407,10 +385,21 @@ static UResourceDataEntry *init_entry(const char *localeID, const char *path, UE
                 /* Also, we could get here IF we opened an alias */
                 free_entry(r);
                 r = oldR;
-                r->fCountExisting++;
             }
         }
 
+    }
+    if(r != NULL) {
+        /* return the real bundle */
+        while(r->fAlias != NULL) {
+            r = r->fAlias;
+        }
+        r->fCountExisting++; /* we increase its reference count */
+        /* if the resource has a warning */
+        /* we don't want to overwrite a status with no error */
+        if(r->fBogus != U_ZERO_ERROR && U_SUCCESS(*status)) {
+             *status = r->fBogus; /* set the returning status */
+        }
     }
     return r;
 }
