@@ -150,6 +150,9 @@ free_entry(UResourceDataEntry *entry) {
     if(entry->fPath != NULL) {
         uprv_free(entry->fPath);
     }
+    if(entry->fPool != NULL) {
+        --entry->fPool->fCountExisting;
+    }
     uprv_free(entry);
 }
 
@@ -157,8 +160,8 @@ free_entry(UResourceDataEntry *entry) {
 /* TODO: figure out why fCountExisting may not go to zero. Do not make this function public yet. */
 static int32_t ures_flushCache()
 {
-    UResourceDataEntry *resB = NULL;
-    int32_t pos = -1;
+    UResourceDataEntry *resB;
+    int32_t pos;
     int32_t rbDeletedNum = 0;
     const UHashElement *e;
 
@@ -172,6 +175,7 @@ static int32_t ures_flushCache()
     }
 
     /*creates an enumeration to iterate through every element in the table */
+    pos = -1;
     while ((e = uhash_nextElement(cache, &pos)) != NULL)
     {
         resB = (UResourceDataEntry *) e->value.pointer;
@@ -186,6 +190,17 @@ static int32_t ures_flushCache()
         /* some resource bundles are still open somewhere. */
 
         /*U_ASSERT(resB->fCountExisting == 0);*/
+        if (resB->fCountExisting == 0) {
+            rbDeletedNum++;
+            uhash_removeElement(cache, e);
+            free_entry(resB);
+        }
+    }
+    /* do it again to catch pool bundles whose fCountExisting got decremented */
+    pos = -1;
+    while ((e = uhash_nextElement(cache, &pos)) != NULL)
+    {
+        resB = (UResourceDataEntry *) e->value.pointer;
         if (resB->fCountExisting == 0) {
             rbDeletedNum++;
             uhash_removeElement(cache, e);
@@ -253,6 +268,9 @@ static void setEntryName(UResourceDataEntry *res, char *name, UErrorCode *status
         uprv_strcpy(res->fName, name);
     }
 }
+
+static UResourceDataEntry *
+getPoolEntry(const char *path, UErrorCode *status);
 
 /**
  *  INTERNAL: Inits and opens an entry from a data DLL.
@@ -339,11 +357,25 @@ static UResourceDataEntry *init_entry(const char *localeID, const char *path, UE
             *status = U_USING_FALLBACK_WARNING;
             r->fBogus = U_USING_FALLBACK_WARNING;
         } else { /* if we have a regular entry */
+            Resource aliasres;
+            if (r->fData.usesPoolBundle) {
+                r->fPool = getPoolEntry(r->fPath, status);
+                if (U_SUCCESS(*status)) {
+                    const int32_t *poolIndexes = r->fPool->fData.pRoot + 1;
+                    if(r->fData.pRoot[1 + URES_INDEX_POOL_CHECKSUM] == poolIndexes[URES_INDEX_POOL_CHECKSUM]) {
+                        r->fData.poolBundleKeys = (const char *)(poolIndexes + poolIndexes[URES_INDEX_LENGTH]);
+                    } else {
+                        r->fBogus = *status = U_INVALID_FORMAT_ERROR;
+                    }
+                } else {
+                    r->fBogus = *status;
+                }
+            }
             /* We might be able to do this a wee bit more efficiently (we could check whether the aliased data) */
             /* is already in the cache), but it's good the way it is */
             /* handle the alias by trying to get out the %%Alias tag.*/
             /* We'll try to get alias string from the bundle */
-            Resource aliasres = res_getResource(&(r->fData), "%%ALIAS");
+            aliasres = res_getResource(&(r->fData), "%%ALIAS");
             if (aliasres != RES_BOGUS) {
                 const UChar *alias = res_getString(&(r->fData), aliasres, &aliasLen);
                 if(alias != NULL && aliasLen > 0) { /* if there is actual alias - unload and load new data */
@@ -381,6 +413,17 @@ static UResourceDataEntry *init_entry(const char *localeID, const char *path, UE
 
     }
     return r;
+}
+
+static UResourceDataEntry *
+getPoolEntry(const char *path, UErrorCode *status) {
+    UResourceDataEntry *poolBundle = init_entry(kPoolBundleName, path, status);
+    if( U_SUCCESS(*status) &&
+        (poolBundle == NULL || poolBundle->fBogus != U_ZERO_ERROR || !poolBundle->fData.isPoolBundle)
+    ) {
+        *status = U_INVALID_FORMAT_ERROR;
+    }
+    return poolBundle;
 }
 
 /* INTERNAL: */
@@ -575,7 +618,7 @@ static void entryCloseInt(UResourceDataEntry *resB) {
         p = resB->fParent;
         resB->fCountExisting--;
 
-        /* Entries are left in the cache. TODO: add ures_cacheFlush() to force a flush
+        /* Entries are left in the cache. TODO: add ures_flushCache() to force a flush
          of the cache. */
 /*
         if(resB->fCountExisting <= 0) {

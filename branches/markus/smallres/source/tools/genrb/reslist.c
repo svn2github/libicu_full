@@ -32,6 +32,7 @@
 #define BIN_ALIGNMENT 16
 
 static UBool gIncludeCopyright = FALSE;
+static UBool gUsePoolBundle = FALSE;
 static int32_t gFormatVersion = 2;
 
 static UChar gEmptyString = 0;
@@ -104,6 +105,10 @@ UBool getIncludeCopyright(void){
 
 void setFormatVersion(int32_t formatVersion) {
     gFormatVersion = formatVersion;
+}
+
+void setUsePoolBundle(UBool use) {
+    gUsePoolBundle = use;
 }
 
 static void
@@ -1510,25 +1515,22 @@ void bundle_write(struct SRBRoot *bundle,
     while (bundle->fKeysTop & 3) {
         bundle->fKeys[bundle->fKeysTop++] = 0xaa;
     }
-    if (bundle->fPoolBundleKeys == NULL) {
-        /* no pool: any 16-bit key offset fits into URES_TABLE */
-        bundle->fLocalKeyLimit = 0x10000;
-    } else {
-        /*
-         * Uses a pool bundle:
-         * Split the 16-bit key range proportionally between local and pool keys.
-         * Note: This same computation must be done by genrb and the runtime code,
-         * and it must not change without changing the formatVersion!
-         * TODO: Review this. Should fLocalKeyLimit be changed to 0 if it's below a low number?
-         */
-        int32_t sumKeyLengths = bundle->fKeysTop + bundle->fPoolBundleKeysTop;
-        if (sumKeyLengths <= 0x10000) {
-            bundle->fLocalKeyLimit = bundle->fKeysTop;  /* all key offsets fit into 16 bits */
+    /*
+     * In URES_TABLE, use all local key offsets that fit into 16 bits,
+     * and use the remaining 16-bit offsets for pool key offsets
+     * if there are any.
+     * If there are no local keys, then use the whole 16-bit space
+     * for pool key offsets.
+     * Note: This cannot be changed without changing the major formatVersion.
+     */
+    if (bundle->fKeysBottom < bundle->fKeysTop) {
+        if (bundle->fKeysTop <= 0x10000) {
+            bundle->fLocalKeyLimit = bundle->fKeysTop;
         } else {
-            /* divide the local limit by the factor of how far the sum exceeds the 16-bit limit */
-            bundle->fLocalKeyLimit = ((int64_t)bundle->fKeysTop * 0x10000) / sumKeyLengths;
-            assert(bundle->fLocalKeyLimit <= 0x10000);
+            bundle->fLocalKeyLimit = 0x10000;
         }
+    } else {
+        bundle->fLocalKeyLimit = 0;
     }
 
     bundle_compactStrings(bundle, status);
@@ -1680,7 +1682,7 @@ void bundle_write(struct SRBRoot *bundle,
                 (int32_t)computeCRC((char *)(bundle->fKeys + bundle->fKeysBottom),
                                     (uint32_t)(bundle->fKeysTop - bundle->fKeysBottom),
                                     0);
-        } else if (bundle->fPoolBundleKeys != NULL) {
+        } else if (gUsePoolBundle) {
             indexes[URES_INDEX_ATTRIBUTES] |= URES_ATT_USES_POOL_BUNDLE;
             indexes[URES_INDEX_POOL_CHECKSUM] = bundle->fPoolChecksum;
         }
@@ -2022,7 +2024,7 @@ struct SRBRoot *bundle_open(const struct UString* comment, UBool isPoolBundle, U
     bundle->fKeysCapacity = KEY_SPACE_SIZE;
     /* formatVersion 1.1: start fKeysTop after the root item and indexes[] */
     bundle->fIsPoolBundle = isPoolBundle;
-    if (bundle->fPoolBundleKeys != NULL || isPoolBundle) {
+    if (gUsePoolBundle || isPoolBundle) {
         bundle->fIndexLength = URES_INDEX_POOL_CHECKSUM + 1;
     } else if (gFormatVersion >= 2) {
         bundle->fIndexLength = URES_INDEX_16BIT_TOP + 1;
@@ -2531,7 +2533,7 @@ bundle_compactKeys(struct SRBRoot *bundle, UErrorCode *status) {
         *status = U_MEMORY_ALLOCATION_ERROR;
         return;
     }
-    keys = (char *)bundle->fPoolBundleKeys + bundle->fPoolBundleKeysBottom;
+    keys = (char *)bundle->fPoolBundleKeys;
     for (i = 0; i < bundle->fPoolBundleKeysCount; ++i) {
         map[i].oldpos =
             (int32_t)(keys - bundle->fPoolBundleKeys) | 0x80000000;  /* negative oldpos */

@@ -266,7 +266,7 @@ GENRB_SOURCE=$(GENRB_SOURCE) $(GENRB_SOURCE_LOCAL)
 !ENDIF
 
 !IFDEF GENRB_SOURCE
-RB_FILES = root.res $(GENRB_ALIAS_SOURCE:.txt=.res) $(GENRB_ALIAS_SOURCE_LOCAL:.txt=.res) $(GENRB_SOURCE:.txt=.res)
+RB_FILES = root.res pool.res $(GENRB_ALIAS_SOURCE:.txt=.res) $(GENRB_ALIAS_SOURCE_LOCAL:.txt=.res) $(GENRB_SOURCE:.txt=.res)
 ALL_RES = $(ALL_RES) res_index.res
 !ENDIF
 
@@ -551,6 +551,9 @@ CLEAN : GODATA
 {$(ICUSRCDATA_RELATIVE_PATH)\$(ICULOC)}.txt.res::
 	@echo Making Locale Resource Bundle files
 	@"$(ICUTOOLS)\genrb\$(CFG)\genrb" --usePoolBundle $(ICUSRCDATA_RELATIVE_PATH)\$(ICULOC)\pool.res -k -d"$(ICUBLD_PKG)" $<
+
+pool.res: $(ICUSRCDATA_RELATIVE_PATH)\$(ICULOC)\pool.res
+	copy $(ICUSRCDATA_RELATIVE_PATH)\$(ICULOC)\pool.res .
 
 res_index.res:
 	@echo Generating <<res_index.txt

@@ -37,7 +37,16 @@
  */
 
 /* get a const char* pointer to the key with the keyOffset byte offset from pRoot */
-#define RES_GET_KEY(pRoot, keyOffset) ((const char *)(pRoot)+(keyOffset))
+#define RES_GET_KEY16(pResData, keyOffset) \
+    ((keyOffset)<(pResData)->localKeyLimit ? \
+        (const char *)(pResData)->pRoot+(keyOffset) : \
+        (pResData)->poolBundleKeys+(keyOffset)-(pResData)->localKeyLimit)
+
+#define RES_GET_KEY32(pResData, keyOffset) \
+    ((keyOffset)>=0 ? \
+        (const char *)(pResData)->pRoot+(keyOffset) : \
+        (pResData)->poolBundleKeys+((keyOffset)&0x7fffffff))
+
 #define URESDATA_ITEM_NOT_FOUND -1
 
 /* empty resource of any type, returned when the resource offset is 0 */
@@ -60,7 +69,7 @@ _res_findTableItem(const ResourceData *pResData, const uint16_t *keyOffsets, int
     limit=length;
     while(start<limit) {
         mid = (start + limit) / 2;
-        tableKey = RES_GET_KEY(pResData->pRoot, keyOffsets[mid]);
+        tableKey = RES_GET_KEY16(pResData, keyOffsets[mid]);
         result = uprv_strcmp(key, tableKey);
         if (result < 0) {
             limit = mid;
@@ -87,7 +96,7 @@ _res_findTable32Item(const ResourceData *pResData, const int32_t *keyOffsets, in
     limit=length;
     while(start<limit) {
         mid = (start + limit) / 2;
-        tableKey = RES_GET_KEY(pResData->pRoot, keyOffsets[mid]);
+        tableKey = RES_GET_KEY32(pResData, keyOffsets[mid]);
         result = uprv_strcmp(key, tableKey);
         if (result < 0) {
             limit = mid;
@@ -129,6 +138,8 @@ res_load(ResourceData *pResData,
     UVersionInfo formatVersion;
     UResType rootType;
 
+    uprv_memset(pResData, 0, sizeof(ResourceData));
+
     /* load the ResourceBundle file */
     pResData->data=udata_openChoice(path, "res", name, isAcceptable, formatVersion, errorCode);
     if(U_FAILURE(*errorCode)) {
@@ -139,7 +150,6 @@ res_load(ResourceData *pResData,
     pResData->pRoot=(const int32_t *)udata_getMemory(pResData->data);
     pResData->rootRes=(Resource)*pResData->pRoot;
     pResData->p16BitUnits=(const uint16_t *)gEmpty;
-    pResData->noFallback=FALSE;
 
     /* currently, we accept only resources that have a Table as their roots */
     rootType=RES_GET_TYPE(pResData->rootRes);
@@ -153,10 +163,17 @@ res_load(ResourceData *pResData,
     if(formatVersion[0]>1 || (formatVersion[0]==1 && formatVersion[1]>=1)) {
         /* bundles with formatVersion 1.1 and later contain an indexes[] array */
         const int32_t *indexes=pResData->pRoot+1;
-        if(indexes[URES_INDEX_LENGTH]>URES_INDEX_ATTRIBUTES) {
-            pResData->noFallback=(UBool)(indexes[URES_INDEX_ATTRIBUTES]&URES_ATT_NO_FALLBACK);
+        int32_t indexLength=indexes[URES_INDEX_LENGTH];
+        if(indexes[URES_INDEX_KEYS_TOP]>(1+indexLength)) {
+            pResData->localKeyLimit=indexes[URES_INDEX_KEYS_TOP]<<2;
         }
-        if( indexes[URES_INDEX_LENGTH]>URES_INDEX_16BIT_TOP &&
+        if(indexLength>URES_INDEX_ATTRIBUTES) {
+            int32_t att=indexes[URES_INDEX_ATTRIBUTES];
+            pResData->noFallback=(UBool)(att&URES_ATT_NO_FALLBACK);
+            pResData->isPoolBundle=(UBool)((att&URES_ATT_IS_POOL_BUNDLE)!=0);
+            pResData->usesPoolBundle=(UBool)((att&URES_ATT_USES_POOL_BUNDLE)!=0);
+        }
+        if( indexLength>URES_INDEX_16BIT_TOP &&
             indexes[URES_INDEX_16BIT_TOP]>indexes[URES_INDEX_KEYS_TOP]
         ) {
             pResData->p16BitUnits=(const uint16_t *)(pResData->pRoot+indexes[URES_INDEX_KEYS_TOP]);
@@ -346,7 +363,7 @@ res_getTableItemByIndex(const ResourceData *pResData, Resource table,
         if(indexR<length) {
             const Resource *p32=(const Resource *)(p+length+(~length&1));
             if(key!=NULL) {
-                *key=RES_GET_KEY(pResData->pRoot, p[indexR]);
+                *key=RES_GET_KEY16(pResData, p[indexR]);
             }
             return p32[indexR];
         }
@@ -357,7 +374,7 @@ res_getTableItemByIndex(const ResourceData *pResData, Resource table,
         length=*p++;
         if(indexR<length) {
             if(key!=NULL) {
-                *key=RES_GET_KEY(pResData->pRoot, p[indexR]);
+                *key=RES_GET_KEY16(pResData, p[indexR]);
             }
             return URES_MAKE_RESOURCE(URES_STRING_V2, p[length+indexR]);
         }
@@ -368,7 +385,7 @@ res_getTableItemByIndex(const ResourceData *pResData, Resource table,
         length=*p++;
         if(indexR<length) {
             if(key!=NULL) {
-                *key=RES_GET_KEY(pResData->pRoot, p[indexR]);
+                *key=RES_GET_KEY32(pResData, p[indexR]);
             }
             return (Resource)p[length+indexR];
         }
@@ -830,7 +847,7 @@ ures_swapResource(const UDataSwapper *ds,
                 }
             }
 
-            if(ds->inCharset==ds->outCharset) {
+            if(pTempTable->majorFormatVersion>1 || ds->inCharset==ds->outCharset) {
                 /* no need to sort, just swap the offset/value arrays */
                 if(pKey16!=NULL) {
                     ds->swapArray16(ds, pKey16, count*2, qKey16, pErrorCode);
@@ -1119,7 +1136,7 @@ ures_swap(const UDataSwapper *ds,
 
         /* allocate the temporary table for sorting resource tables */
         tempTable.keyChars=(const char *)outBundle; /* sort by outCharset */
-        if(maxTableLength<=STACK_ROW_CAPACITY) {
+        if(tempTable.majorFormatVersion>1 || maxTableLength<=STACK_ROW_CAPACITY) {
             tempTable.rows=rows;
             tempTable.resort=resort;
         } else {
@@ -1146,13 +1163,12 @@ ures_swap(const UDataSwapper *ds,
         if(tempTable.rows!=rows) {
             uprv_free(tempTable.rows);
         }
-
-        /* swap the root resource and indexes */
-        ds->swapArray32(ds, inBundle, keysBottom*4, outBundle, pErrorCode);
-
         if(tempTable.resFlags!=stackResFlags) {
             uprv_free(tempTable.resFlags);
         }
+
+        /* swap the root resource and indexes */
+        ds->swapArray32(ds, inBundle, keysBottom*4, outBundle, pErrorCode);
     }
 
     return headerSize+4*top;

@@ -107,16 +107,34 @@ enum {
 
 /*
  * Attributes for bundles that are, or use, a pool bundle.
- * A pool bundle provides key strings that are shared among other bundles
+ * A pool bundle provides key strings that are shared among several other bundles
  * to reduce their total size.
+ * New in formatVersion 2 (ICU 4.4).
  */
 #define URES_ATT_IS_POOL_BUNDLE 2
 #define URES_ATT_USES_POOL_BUNDLE 4
 
 /*
- * File format for .res resource bundle files (formatVersion=1.3, ICU 4.4)
+ * File format for .res resource bundle files (formatVersion=2, ICU 4.4)
  *
- * New in 1.3 compared with 1.2: -------------
+ * New in formatVersion 2 compared with 1.3: -------------
+ *
+ * Three new resource types -- String-v2, Table16 and Array16 -- have their
+ * values stored in a new array of 16-bit units between the table key strings
+ * and the start of the other resources.
+ *
+ * A resource bundle may use a special pool bundle. Some or all of the table key strings
+ * of the using-bundle are omitted, and the key string offsets for such key strings refer
+ * to offsets in the pool bundle.
+ * The using-bundle's and the pool-bundle's indexes[URES_INDEX_POOL_CHECKSUM] values
+ * must match.
+ * Two bits in indexes[URES_INDEX_ATTRIBUTES] indicate whether a resource bundle
+ * is or uses a pool bundle.
+ *
+ * Table key strings must be compared in ASCII order, even if they are not
+ * stored in ASCII.
+ *
+ * New in formatVersion 1.3 compared with 1.2: -------------
  *
  * genrb eliminates duplicates among key strings and Unicode string values.
  * Multiple table items may share one key string, or one item may point
@@ -145,6 +163,12 @@ enum {
  *                   (minus the space for root and indexes[]),
  *                   which consist of invariant characters (ASCII/EBCDIC) and are NUL-terminated;
  *                   padded to multiple of 4 bytes for 4-alignment of the following data
+ *   uint16_t 16BitUnits[]; -- resources that are stored entirely as sequences of 16-bit units
+ *                             (new in formatVersion 2/ICU 4.4)
+ *                             data is indexed by the offset values in 16-bit resource types,
+ *                             with offset 0 pointing to the beginning of this array;
+ *                             there is a 0 at offset 0, for empty resources;
+ *                             padded to multiple of 4 bytes for 4-alignment of the following data
  *   data; -- data directly and indirectly indexed by the root item;
  *            the structure is determined by walking the tree
  *
@@ -155,8 +179,17 @@ enum {
  * Leaves of the tree may be stored first or last or anywhere in between,
  * and it is in theory possible to have unreferenced holes in the file.
  *
+ * 16-bit-unit values:
+ * Starting with formatVersion 2/ICU 4.4, some resources are stored in a special
+ * array of 16-bit units. Each resource value is a sequence of 16-bit units,
+ * with no per-resource padding to a 4-byte boundary.
+ * 16-bit container types (Table16 and Array16) contain Resource16 values
+ * which are offsets to String-v2 resources in the same 16-bit-units array.
+ *
  * Direct values:
  * - Empty Unicode strings have an offset value of 0 in the Resource handle itself.
+ * - Starting with formatVersion 2/ICU 4.4, an offset value of 0 for
+ *   _any_ resource type indicates an empty value.
  * - Integer values are 28-bit values stored in the Resource handle itself;
  *   the interpretation of unsigned vs. signed integers is up to the application.
  *
@@ -166,18 +199,38 @@ enum {
  * To get byte offsets, the offset is multiplied by 4 (or shifted left by 2 bits).
  * All resource item values are 4-aligned.
  *
+ * New in formatVersion 2/ICU 4.4: Some types use offsets into the 16-bit-units array,
+ * indexing 16-bit units in that array.
+ *
  * The structures (memory layouts) for the values for each item type are listed
  * in the table below.
  *
  * Nested, hierarchical structures: -------------
  *
- * Table items contain key-value pairs where the keys are 16-bit offsets to char * key strings.
- * Key string offsets are also relative to the start of the resource data (of the root handle),
- * i.e., the first string has an offset of 4 (after the 4-byte root handle).
+ * Table items contain key-value pairs where the keys are offsets to char * key strings.
+ * The values of these pairs are either Resource handles or
+ * offsets into the 16-bit-units array, depending on the table type.
  *
- * The values of these pairs are Resource handles.
+ * Array items are simple vectors of Resource handles,
+ * or of offsets into the 16-bit-units array, depending on the array type.
  *
- * Array items are simple vectors of Resource handles.
+ * Table key string offsets: -------
+ *
+ * Key string offsets are relative to the start of the resource data (of the root handle),
+ * i.e., the first string has an offset of 4+sizeof(indexes).
+ * (After the 4-byte root handle and after the indexes array.)
+ *
+ * If the resource bundle uses a pool bundle, then some key strings are stored
+ * in the pool bundle rather than in the local bundle itself.
+ * - In a Table or Table16, the 16-bit key string offset is local if it is
+ *   less than indexes[URES_INDEX_KEYS_TOP]<<2.
+ *   Otherwise, subtract indexes[URES_INDEX_KEYS_TOP]<<2 to get the offset into
+ *   the pool bundle key strings.
+ * - In a Table32, the 32-bit key string offset is local if it is non-negative.
+ *   Otherwise, reset bit 31 to get the pool key string offset.
+ *
+ * Unlike the local offset, the pool key offset is relative to
+ * the start of the key strings, not to the start of the bundle.
  *
  * An alias item is special (and new in ICU 2.4): --------------
  *
@@ -196,6 +249,13 @@ enum {
  * Some resource values are stored directly in the offset field of the Resource itself.
  * See UResType in unicode/ures.h for enumeration constants for Resource types.
  *
+ * Some resources have their values stored as sequences of 16-bit units,
+ * at 2-byte offsets from the start of a contiguous 16-bit-unit array between
+ * the table key strings and the other resources. (new in formatVersion 2/ICU 4.4)
+ * At offset 0 of that array is a 16-bit zero value for empty 16-bit resources.
+ * Resource16 values in Table16 and Array16 are 16-bit offsets to String-v2
+ * resources, with the offsets relative to the start of the 16-bit-units array.
+ *
  * Type Name            Memory layout of values
  *                      (in parentheses: scalar, non-offset values)
  *
@@ -207,16 +267,25 @@ enum {
  * 3  Alias:            (physically same value layout as string, new in ICU 2.4)
  * 4  Table32:          int32_t count, int32_t keyStringOffsets[count], Resource[count]
  *                      (new in formatVersion 1.1/ICU 2.8)
- *
+ * 5  Table16:          uint16_t count, uint16_t keyStringOffsets[count], Resource16[count]
+ *                      (stored in the 16-bit-units array; new in formatVersion 2/ICU 4.4)
+ * 6  Unicode String-v2:UChar[length], (UChar)0; length determined by the first UChar:
+ *                      - if first is not a trail surrogate, then the length is implicit
+ *                        and u_strlen() needs to be called
+ *                      - if first<0xdfef then length=first&0x3ff (and skip first)
+ *                      - if first<0xdfff then length=((first-0xdfef)<<16) | second UChar
+ *                      - if first==0xdfff then length=((second UChar)<<16) | third UChar
+ *                      (stored in the 16-bit-units array; new in formatVersion 2/ICU 4.4)
  * 7  Integer:          (28-bit offset is integer value)
  * 8  Array:            int32_t count, Resource[count]
- *
+ * 9  Array16:          uint16_t count, Resource16[count]
+ *                      (stored in the 16-bit-units array; new in formatVersion 2/ICU 4.4)
  * 14 Integer Vector:   int32_t length, int32_t[length]
  * 15 Reserved:         This value denotes special purpose resources and is for internal use.
  *
  * Note that there are 3 types with data vector values:
  * - Vectors of 8-bit bytes stored as type Binary.
- * - Vectors of 16-bit words stored as type Unicode String
+ * - Vectors of 16-bit words stored as type Unicode String or Unicode String-v2
  *                     (no value restrictions, all values 0..ffff allowed!).
  * - Vectors of 32-bit words stored as type Integer Vector.
  */
@@ -228,8 +297,12 @@ typedef struct {
     UDataMemory *data;
     const int32_t *pRoot;
     const uint16_t *p16BitUnits;
+    const char *poolBundleKeys;
     Resource rootRes;
+    int32_t localKeyLimit;
     UBool noFallback; /* see URES_ATT_NO_FALLBACK */
+    UBool isPoolBundle;
+    UBool usesPoolBundle;
 } ResourceData;
 
 /*

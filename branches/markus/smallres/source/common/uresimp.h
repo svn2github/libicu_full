@@ -13,6 +13,7 @@
 #include "uresdata.h"
 
 #define kRootLocaleName         "root"
+#define kPoolBundleName         "pool"
 
 /*
  The default minor version and the version separator must be exactly one
@@ -47,6 +48,7 @@ struct UResourceDataEntry {
     char *fName; /* name of the locale for bundle - still to decide whether it is original or fallback */
     char *fPath; /* path to bundle - used for distinguishing between resources with the same name */
     UResourceDataEntry *fParent; /*next resource in fallback chain*/
+    UResourceDataEntry *fPool;
     ResourceData fData; /* data for low level access */
     char fNameBuffer[3]; /* A small buffer of free space for fName. The free space is due to struct padding. */
     uint32_t fCountExisting; /* how much is this resource used */

@@ -98,7 +98,7 @@ typedef struct ResFile {
   uint8_t *fBytes;
   const int32_t *fIndexes;
   const char *fKeys;
-  int32_t fKeysBottom, fKeysTop;
+  int32_t fKeysLength;
   int32_t fKeysCount;
   int32_t fChecksum;
 } ResFile;
@@ -358,6 +358,7 @@ main(int argc,
         } else {
             const DataHeader *header;
             int32_t bytesRead = T_FileStream_read(poolFile, poolBundle.fBytes, poolFileSize);
+            int32_t keysBottom;
             if (bytesRead != poolFileSize) {
                 fprintf(stderr, "unable to read the pool bundle file %s\n", theCurrentFileName);
                 return 1;
@@ -383,16 +384,18 @@ main(int argc,
                 fprintf(stderr, "insufficient indexes[] in pool bundle file %s\n", theCurrentFileName);
                 return U_INVALID_FORMAT_ERROR;
             }
-            poolBundle.fKeysBottom = (1 + indexLength) * 4;
-            poolBundle.fKeysTop = poolBundle.fIndexes[URES_INDEX_KEYS_TOP] * 4;
+            keysBottom = (1 + indexLength) * 4;
+            poolBundle.fKeys += keysBottom;
+            poolBundle.fKeysLength = (poolBundle.fIndexes[URES_INDEX_KEYS_TOP] * 4) - keysBottom;
             poolBundle.fChecksum = poolBundle.fIndexes[URES_INDEX_POOL_CHECKSUM];
         }
-        for (i = poolBundle.fKeysBottom; i < poolBundle.fKeysTop; ++i) {
+        for (i = 0; i < poolBundle.fKeysLength; ++i) {
             if (poolBundle.fKeys[i] == 0) {
                 ++poolBundle.fKeysCount;
             }
         }
         T_FileStream_close(poolFile);
+        setUsePoolBundle(TRUE);
     }
 
     printf("genrb number of files: %d\n", argc - 1);
@@ -571,8 +574,7 @@ processFile(const char *filename, const char *cp, const char *inputDir, const ch
 
     if(options[USE_POOL_BUNDLE].doesOccur) {
         data->fPoolBundleKeys = poolBundle.fKeys;
-        data->fPoolBundleKeysBottom = poolBundle.fKeysBottom;
-        data->fPoolBundleKeysTop = poolBundle.fKeysTop;
+        data->fPoolBundleKeysLength = poolBundle.fKeysLength;
         data->fPoolBundleKeysCount = poolBundle.fKeysCount;
         data->fPoolChecksum = poolBundle.fChecksum;
     }

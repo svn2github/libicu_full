@@ -64,7 +64,7 @@ struct SRBRoot {
   int32_t f16BitUnitsLength;
 
   const char *fPoolBundleKeys;
-  int32_t fPoolBundleKeysBottom, fPoolBundleKeysTop;
+  int32_t fPoolBundleKeysLength;
   int32_t fPoolBundleKeysCount;
   int32_t fPoolChecksum;
 
@@ -219,6 +219,8 @@ void setIncludeCopyright(UBool val);
 UBool getIncludeCopyright(void);
 
 void setFormatVersion(int32_t formatVersion);
+
+void setUsePoolBundle(UBool use);
 
 /* in wrtxml.cpp */
 uint32_t computeCRC(char *ptr, uint32_t len, uint32_t lastcrc);

@@ -961,9 +961,9 @@ number of strings: 140188
 string size reduction: 703250 after string de-duplication
 
 plus locales/pool.res: 14,852 bytes
-.dat file size 13,615,824 bytes
+.dat file size 13,630,720 bytes
 
--> using locales/pool.res saves 438,800 bytes in .dat file size
+-> using locales/pool.res saves 423,904 bytes in .dat file size
 
 ** use pool bundle for locale bundles:
 
@@ -978,15 +978,38 @@ string size reduction: 703250 after string de-duplication
 
 plus locales/pool.res: 14,852 bytes
 plus coll/pool.res: 260 bytes
-.dat file size 13,611,968 bytes
+.dat file size 13,626,864 bytes
 
--> using both locales/pool.res and coll/pool.res saves 442,656 bytes in .dat file size
+-> using both locales/pool.res and coll/pool.res saves 427,760 bytes in .dat file size
 -> just another 3856 bytes from using coll/pool.res, not worth it
 
 -> revert to just using locales/pool.res
--> total savings: 2,396,976 bytes, or 15.0% of .dat file size
+-> total savings: 2,382,080 bytes, or 14.9% of .dat file size
 
 svn commit -m "ticket:6945: write pool bundle with checksum, write others with the pool checksum, add locales/pool.res"
+Sending        potential-stats.py
+Sending        smallres-notes.txt
+Sending        source\common\uresdata.h
+Adding  (bin)  source\data\locales\pool.res
+Sending        source\data\makedata.mak
+Sending        source\tools\genrb\genrb.c
+Sending        source\tools\genrb\parse.c
+Sending        source\tools\genrb\reslist.c
+Sending        source\tools\genrb\reslist.h
+Sending        source\tools\genrb\wrtxml.cpp
+Transmitting file data ..........
+Committed revision 26047.
+
+(20090529)
+*** bug fix: --usePoolBundle did not actually write the values for
+    URES_ATT_USES_POOL_BUNDLE and URES_INDEX_POOL_CHECKSUM
+
+-> .dat file size: 13,632,048 bytes
+
+*** implement runtime handling of the pool bundle
+
+(20090609)
+svn commit -m "ticket:6945: make genrb & runtime work together with pool bundles; document formatVersion 2; cintltst passes"
 
 *** Options for pool bundle key strings (ASCII vs. EBCDIC)
 
@@ -1058,8 +1081,17 @@ Con: Same lookup issues as store-ascii, but ures_getKey() remains trivial.
    in the pool bundle, so that runtime code need not calculate it.
    This actually allows us to switch checksum algorithms without changing the
    formatVersion.
-   Calculating the checksum on an EBCDIC platform will require swapping the keys
-   to ASCII in a temporary buffer, inside genrb.
+
+* Calculating the checksum on an EBCDIC platform will require swapping the keys
+to ASCII in a temporary buffer, inside genrb.
+-> We could just accept the fact that different-charset-family platforms
+   calculate different checksums. As long as the checksums match between the
+   pool bundle and the using-bundle, everything will just work.
+
+* When we check pool.res into the repository, it would be convenient if
+one and the same version of the file could be used to build data on any platform.
+-> genrb should swap the input pool.res to its local charset-family,
+if not also its local endianness.
 
 * Another problem: ures_swap() looks for a key "%%CollationBin" to detect
 collation binaries and call their swapper. With a pool bundle, that key will be
