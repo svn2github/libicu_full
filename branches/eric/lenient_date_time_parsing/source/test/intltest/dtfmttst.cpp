@@ -1214,6 +1214,9 @@ void DateFormatTest::TestSpaceParsing() {
         
         "MM d yy 'at' hh:mm:ss a", "04/05/06 12:34:56 PM", "2006 04 05 12:34:56",
         
+        "MMMM dd yyyy hh:mm a", "September 27, 1964 21:56 PM", "1964 09 28 09:56:00",
+        NULL,                   "November 4, 2008 0:13 AM",    "2008 11 04 00:13:00",
+        
         "HH'h'mm'min'ss's'", "12h34min56s", "1970 01 01 12:34:56",
         NULL,                "12h34mi56s",  "1970 01 01 12:34:56",
         NULL,                "12h34m56s",   "1970 01 01 12:34:56",

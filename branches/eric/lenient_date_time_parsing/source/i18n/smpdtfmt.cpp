@@ -170,8 +170,8 @@ static const int32_t gFieldRangeBias[] = {
     -1,  // 'y' - UDAT_YEAR_FIELD
      1,  // 'M' - UDAT_MONTH_FIELD
      0,  // 'd' - UDAT_DATE_FIELD
-     1,  // 'k' - UDAT_HOUR_OF_DAY1_FIELD
-     0,  // 'H' - UDAT_HOUR_OF_DAY0_FIELD
+    -1,  // 'k' - UDAT_HOUR_OF_DAY1_FIELD
+    -1,  // 'H' - UDAT_HOUR_OF_DAY0_FIELD
      0,  // 'm' - UDAT_MINUTE_FIELD
      0,  // 's' - UDAT_SEOND_FIELD
     -1,  // 'S' - UDAT_FRACTIONAL_SECOND_FIELD (0-999?)
@@ -181,8 +181,8 @@ static const int32_t gFieldRangeBias[] = {
     -1,  // 'w' - UDAT_WEEK_OF_YEAR_FIELD (1-52?)
     -1,  // 'W' - UDAT_WEEK_OF_MONTH_FIELD (1-5?)
     -1,  // 'a' - UDAT_AM_PM_FIELD
-     1,  // 'h' - UDAT_HOUR1_FIELD
-     0,  // 'K' - UDAT_HOUR0_FIELD
+    -1,  // 'h' - UDAT_HOUR1_FIELD
+    -1,  // 'K' - UDAT_HOUR0_FIELD
     -1,  // 'z' - UDAT_TIMEZONE_FIELD
     -1,  // 'Y' - UDAT_YEAR_WOY_FIELD
     -1,  // 'e' - UDAT_DOW_LOCAL_FIELD
@@ -2513,7 +2513,9 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
     // to handle some of them here because some fields require extra processing on
     // the parsed value.
     if (patternCharIndex == UDAT_HOUR_OF_DAY1_FIELD ||
+        patternCharIndex == UDAT_HOUR_OF_DAY0_FIELD ||
         patternCharIndex == UDAT_HOUR1_FIELD ||
+        patternCharIndex == UDAT_HOUR0_FIELD ||
         patternCharIndex == UDAT_DOW_LOCAL_FIELD ||
         patternCharIndex == UDAT_STANDALONE_DAY_FIELD ||
         patternCharIndex == UDAT_MONTH_FIELD ||
@@ -2575,7 +2577,16 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
     // if we don't want one.
     switch (patternCharIndex) {
         case UDAT_HOUR_OF_DAY1_FIELD:
+        case UDAT_HOUR_OF_DAY0_FIELD:
         case UDAT_HOUR1_FIELD:
+        case UDAT_HOUR0_FIELD:
+            // special range check for hours:
+            if (value < 0 || value > 24) {
+                return -start;
+            }
+            
+            // fall through to gotNumber check
+            
         case UDAT_YEAR_FIELD:
         case UDAT_YEAR_WOY_FIELD:
         case UDAT_FRACTIONAL_SECOND_FIELD:
@@ -2708,6 +2719,10 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
         // [We computed 'value' above.]
         if (value == cal.getMaximum(UCAL_HOUR_OF_DAY) + 1) 
             value = 0;
+            
+        // fall through to set field
+            
+    case UDAT_HOUR_OF_DAY0_FIELD:
         cal.set(UCAL_HOUR_OF_DAY, value);
         return pos.getIndex();
 
@@ -2783,9 +2798,13 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
         // [We computed 'value' above.]
         if (value == cal.getLeastMaximum(UCAL_HOUR)+1) 
             value = 0;
+            
+        // fall through to set field
+            
+    case UDAT_HOUR0_FIELD:
         cal.set(UCAL_HOUR, value);
         return pos.getIndex();
-
+            
     case UDAT_QUARTER_FIELD:
         if (gotNumber) // i.e., Q or QQ.
         {
