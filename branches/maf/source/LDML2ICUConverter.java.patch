@@ -1,0 +1,65 @@
+Index: tools/java/org/unicode/cldr/icu/LDML2ICUConverter.java
+===================================================================
+RCS file: /home/michaelfairley/icu/cldrcvs/cldr/tools/java/org/unicode/cldr/icu/LDML2ICUConverter.java,v
+retrieving revision 1.158
+diff -u -u -r1.158 LDML2ICUConverter.java
+--- tools/java/org/unicode/cldr/icu/LDML2ICUConverter.java	30 Apr 2009 06:10:03 -0000	1.158
++++ tools/java/org/unicode/cldr/icu/LDML2ICUConverter.java	25 Jun 2009 00:49:10 -0000
+@@ -7047,21 +7047,26 @@
+         return data.toString();
+     }
+     private String getStrengthSymbol(String name){
++        String strengthSymbol = "";
+         if(name.equals(LDMLConstants.PC) || name.equals(LDMLConstants.P)){
+-            return "<";
++            strengthSymbol = "<";
+         }else if (name.equals(LDMLConstants.SC)||name.equals(LDMLConstants.S)){
+-            return "<<";
++            strengthSymbol = "<<";
+         }else if(name.equals(LDMLConstants.TC)|| name.equals(LDMLConstants.T)){
+-            return "<<<";
++            strengthSymbol = "<<<";
+         }else if(name.equals(LDMLConstants.QC) || name.equals(LDMLConstants.Q)){
+-            return "<<<<";
++            strengthSymbol = "<<<<";
+         }else if(name.equals(LDMLConstants.IC) || name.equals(LDMLConstants.I)){
+-            return "=";
++            strengthSymbol = "=";
+         }else{
+             System.err.println("Encountered strength: "+name);
+             System.exit(-1);
+         }
+-        return null;
++        if(name.equals(LDMLConstants.PC) || name.equals(LDMLConstants.SC) || name.equals(LDMLConstants.TC)||
++           name.equals(LDMLConstants.QC) ||name.equals(LDMLConstants.IC)){
++            strengthSymbol += "*";
++        }
++        return strengthSymbol;
+     }
+ 
+     private String getStrength(String name){
+@@ -7122,10 +7127,22 @@
+         UCharacterIterator iter = UCharacterIterator.getInstance(data);
+         StringBuffer ret = new StringBuffer();
+         String strengthSymbol = getStrengthSymbol(name);
++        String nonExpandedStrengthSymbol = strengthSymbol.substring(0, strengthSymbol.length()-1);
+         int ch;
++        boolean restartExpandedRules = true;
++        UnicodeSet inertSet = new UnicodeSet("[:nfd_inert:]");
+         while((ch = iter.nextCodePoint() )!= UCharacterIterator.DONE){
+-            if(DEBUG) ret.append(" ");
+-            ret.append(strengthSymbol);
++            if(!inertSet.contains(ch)){
++                if(DEBUG) ret.append(" ");
++                ret.append(nonExpandedStrengthSymbol);
++                restartExpandedRules = true;
++            }else{
++                if(restartExpandedRules){
++                    if(DEBUG) ret.append(" ");
++                    ret.append(strengthSymbol);
++                }
++                restartExpandedRules = false;
++            }
+             if(DEBUG) ret.append(" ");
+             ret.append(quoteOperand(UTF16.valueOf(ch)));
+         }
