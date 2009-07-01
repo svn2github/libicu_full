@@ -227,7 +227,7 @@ void ucol_uprv_tok_setOptionInImage(UColOptionSet *opts, UColAttribute attrib, U
     }
 }
 
-#define UTOK_OPTION_COUNT 20
+#define UTOK_OPTION_COUNT 21
 
 static UBool didInit = FALSE;
 /* we can be strict, or we can be lenient */
@@ -275,6 +275,7 @@ U_STRING_DECL(option_16,    "last",           4);
 U_STRING_DECL(option_17,    "optimize",       8);
 U_STRING_DECL(option_18,    "suppressContractions",         20);
 U_STRING_DECL(option_19,    "numericOrdering",              15);
+U_STRING_DECL(option_20,    "import",         6);
 
 
 /*
@@ -351,7 +352,8 @@ enum OptionNumber {
     OPTION_UNDEFINED,
     OPTION_SCRIPT_ORDER,
     OPTION_CHARSET_NAME,
-    OPTION_CHARSET
+    OPTION_CHARSET,
+    OPTION_IMPORT
 } ;
 
 static const ucolTokOption rulesOptions[UTOK_OPTION_COUNT] = {
@@ -374,7 +376,8 @@ static const ucolTokOption rulesOptions[UTOK_OPTION_COUNT] = {
     /*16*/ {option_00,  9, NULL, 0, UCOL_ATTRIBUTE_COUNT}, /*"undefined"      */
     /*17*/ {option_09, 11, NULL, 0, UCOL_ATTRIBUTE_COUNT}, /*"scriptOrder"    */
     /*18*/ {option_10, 11, NULL, 0, UCOL_ATTRIBUTE_COUNT}, /*"charsetname"    */
-    /*19*/ {option_11,  7, NULL, 0, UCOL_ATTRIBUTE_COUNT}  /*"charset"        */
+    /*19*/ {option_11,  7, NULL, 0, UCOL_ATTRIBUTE_COUNT},  /*"charset"        */
+    /*20*/ {option_20,  6, NULL, 0, UCOL_ATTRIBUTE_COUNT}  /*"import"        */
 };
 
 static
@@ -442,6 +445,7 @@ void ucol_uprv_tok_initData() {
         U_STRING_INIT(option_17, "optimize",       8);
         U_STRING_INIT(option_18, "suppressContractions",         20);
         U_STRING_INIT(option_19, "numericOrdering",      15);
+        U_STRING_INIT(option_20, "import ",        6);
         didInit = TRUE;
     }
 }
@@ -1768,11 +1772,14 @@ uint32_t ucol_tok_assembleTokenList(UColTokenParser *src, UParseError *parseErro
     return src->resultLen;
 }
 
-void ucol_tok_initTokenList(UColTokenParser *src, const UChar *rules, const uint32_t rulesLength, const UCollator *UCA, UErrorCode *status) {
+void ucol_tok_initTokenList(UColTokenParser *src, const UChar *rules, uint32_t rulesLength, const UCollator *UCA, UErrorCode *status) {
     U_NAMESPACE_USE
 
     uint32_t nSize = 0;
     uint32_t estimatedSize = (2*rulesLength+UCOL_TOK_EXTRA_RULE_SPACE_SIZE);
+
+    bool needToDeallocRules = false;
+
     if(U_FAILURE(*status)) {
         return;
     }
@@ -1815,6 +1822,44 @@ void ucol_tok_initTokenList(UColTokenParser *src, const UChar *rules, const uint
                 } else {
                     return;
                 }
+            } else if(optionNumber == OPTION_IMPORT){
+                UChar importRules[] = {0x0026, 0x0061, 0x0062, 0x0063, 0x003c, 0x0064, 0x0065, 0x0066, 0x0000};
+                uint32_t importRulesLength = u_strlen(importRules);
+
+                uint32_t optionEndOffset = u_strchr(rules+i, 0x005D) - rules + 1;
+
+                // Add the length of the imported rules to length of the original rules, and subtract the length of the import option itself
+                uint32_t newRulesLength = rulesLength + importRulesLength - (optionEndOffset - i);
+
+                UChar* newRules = (UChar*)uprv_malloc(newRulesLength*sizeof(UChar));
+
+                // Copy the section of the original rules leading up to the import
+                uprv_memcpy(newRules, rules, i*sizeof(UChar));
+                // Copy the imported rules
+                uprv_memcpy(newRules+i, importRules, importRulesLength*sizeof(UChar));
+                // Copy the rest of the original rules (minus the import option itself)
+                uprv_memcpy(newRules+importRulesLength+i, rules+optionEndOffset, (rulesLength-optionEndOffset)*sizeof(UChar));
+
+                int32_t length;
+                char temp[500];
+                UErrorCode error;
+                u_strToUTF8(temp, 500, &length, rules, rulesLength, &error);
+                printf("%s\n", temp);
+                u_strToUTF8(temp, 500, &length, newRules, newRulesLength, &error);
+                printf("%s\n", temp);
+
+                if(needToDeallocRules){
+                    // if needToDeallocRules is set, then we allocated rules, so it's safe to cast and free
+                    //                    uprv_free((void*)rules);
+                }
+                needToDeallocRules = true;
+                rules = newRules;
+                rulesLength = newRulesLength;
+
+                estimatedSize += importRulesLength*2;
+
+                // First character of the new rules needs to be processed
+                i--;
             }
         }
         //openBrace++;
