@@ -1032,9 +1032,16 @@ Sending        source\common\uresimp.h
 Transmitting file data .....
 Committed revision 26083.
 
-*** move string duplicate elimination to formatVersion 2
-    to keep formatVersion 1.3 compatible with old swapper implementations
+***
 svn commit -m "ticket:6945: move string duplicate elimination to formatVersion 2 to keep formatVersion 1.3 compatible with old swapper implementations"
+Sending        smallres-notes.txt
+Sending        source\common\uresdata.h
+Sending        source\tools\genrb\reslist.c
+Transmitting file data ...
+Committed revision 26221.
+
+***
+svn commit -m "ticket:6945: after r26221, remove experimental string compression code and statistics output from genrb"
 
 *** Options for pool bundle key strings (ASCII vs. EBCDIC)
 

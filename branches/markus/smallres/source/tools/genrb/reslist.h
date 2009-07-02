@@ -33,9 +33,6 @@
 
 U_CDECL_BEGIN
 
-/* experimental compression */
-#define LAST_WINDOW_LIMIT 0x20000
-
 typedef struct KeyMapEntry {
     int32_t oldpos, newpos;
 } KeyMapEntry;
@@ -47,7 +44,6 @@ struct SRBRoot {
   int32_t fIndexLength;
   int32_t fMaxTableLength;
   UBool noFallback; /* see URES_ATT_NO_FALLBACK */
-  UBool fIsDoneParsing; /* set while processing & writing */
   int8_t fStringsForm; /* default STRINGS_UTF16_V1 */
   UBool fIsPoolBundle;
 
@@ -67,23 +63,6 @@ struct SRBRoot {
   int32_t fPoolBundleKeysLength;
   int32_t fPoolBundleKeysCount;
   int32_t fPoolChecksum;
-
-  /* experimental compression */
-  uint8_t *fStringBytes;
-  int32_t fStringBytesCapacity;
-  int32_t fStringBytesLength;
-
-  int32_t fStringsCount, fStringsSize;
-  int32_t fPotentialSize, fMiniCount, fMiniReduction;
-  int32_t fIncompressibleStrings;
-  int32_t fCompressedPadding;
-  int32_t fKeysReduction;
-  int32_t fStringDedupReduction;
-  int32_t fWindowCounts[LAST_WINDOW_LIMIT>>5];
-  int32_t fWindows[3];
-  uint32_t fInfixUTF16Size;
-
-  struct SResource *fShortestString, *fLongestString;
 };
 
 struct SRBRoot *bundle_open(const struct UString* comment, UBool isPoolBundle, UErrorCode *status);
@@ -153,15 +132,6 @@ struct SResString {
     int32_t fLength;
     int32_t fSuffixOffset;  /* this string is a suffix of fSame at this offset */
     int8_t fNumCharsForLength;
-
-    /* TODO: Experimental fields for compact string form (byte-oriented). */
-    uint32_t fCompactRes;  /* TODO: If compact strings go into production, then use fRes instead of this. */
-    struct SResource *fShorter, *fLonger;  /* used for finding infixes */
-    struct SResource *fInfixes[MAX_INFIXES];
-    int32_t fInfixIndexes[MAX_INFIXES];
-    int8_t fInfixDepth; /* depth of indexes used inside this string */
-    UBool fIsInfix;
-    UBool fWriteUTF16;
 };
 
 struct SResource *string_open(struct SRBRoot *bundle, char *tag, const UChar *value, int32_t len, const struct UString* comment, UErrorCode *status);

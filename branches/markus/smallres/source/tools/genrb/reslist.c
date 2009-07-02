@@ -37,19 +37,10 @@ static int32_t gFormatVersion = 2;
 
 static UChar gEmptyString = 0;
 
-#define PACK_KEYS 0
-
 /* How do we store string values? */
 enum {
     STRINGS_UTF16_V1,   /* formatVersion 1: int length + UChars + NUL + padding to 4 bytes */
-    STRINGS_UTF16_V2,   /* formatVersion 2: optional length in 1..3 UChars + UChars + NUL */
-    STRINGS_COMPACT     /* compact encoding, requires runtime decompacting and cache */
-};
-
-enum {
-    URES_STRING_MINI_ASCII=10,  /* 0xA for ASCII */
-    URES_STRING_MINI_WINDOW0=11,/* 0xB for Window */
-    URES_STRING_COMPACT=12      /* 0xC for Compact */
+    STRINGS_UTF16_V2    /* formatVersion 2: optional length in 1..3 UChars + UChars + NUL */
 };
 
 enum {
@@ -62,12 +53,6 @@ enum {
  * (NULL is used in error cases.)
  */
 static const struct SResource kNoResource = { URES_NONE };
-
-/*
- * Used for fNext in strings that are created as new infixes,
- * so that they can be identified during bundle_close() and released.
- */
-static const struct SResource kOutsideBundleTree = { URES_NONE };
 
 static UDataInfo dataInfo= {
     sizeof(UDataInfo),
@@ -113,637 +98,6 @@ void setUsePoolBundle(UBool use) {
 
 static void
 bundle_compactStrings(struct SRBRoot *bundle, UErrorCode *status);
-
-static void
-writeStringBytes(struct SRBRoot *bundle,
-                 const uint8_t *bytes, int32_t length,
-                 UErrorCode *status) {
-    if (U_FAILURE(*status) || length <= 0) {
-        return;
-    }
-    if ((bundle->fStringBytesLength + length) > bundle->fStringBytesCapacity) {
-        uint8_t *stringBytes;
-        int32_t capacity = 2 * bundle->fStringBytesCapacity + length + 1024;
-        capacity &= ~3;  /* ensures padding fits if fStringBytesLength needs it */
-        stringBytes = (uint8_t *)uprv_malloc(capacity);
-        if (stringBytes == NULL) {
-            *status = U_MEMORY_ALLOCATION_ERROR;
-            return;
-        }
-        uprv_memcpy(stringBytes, bundle->fStringBytes, bundle->fStringBytesLength);
-        uprv_free(bundle->fStringBytes);
-        bundle->fStringBytes = stringBytes;
-        bundle->fStringBytesCapacity = capacity;
-    }
-    uprv_memcpy(bundle->fStringBytes + bundle->fStringBytesLength, bytes, length);
-    bundle->fStringBytesLength += length;
-}
-
-static void printCounters(const struct SRBRoot *bundle, const char *bundleName, uint32_t bundleSize) {
-    /* file,size,#strings,str.size,save,#mini,mini.save,incompressible,comp.pad,keys.save,dedup.save,key.size */
-    printf("potential: %s,%lu,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld\n",
-           bundleName, (long)bundleSize,
-           (long)bundle->fStringsCount, (long)bundle->fStringsSize,
-           (long)(bundle->fStringsSize - bundle->fPotentialSize),
-           (long)bundle->fMiniCount, (long)bundle->fMiniReduction,
-           (long)bundle->fIncompressibleStrings,
-           (long)bundle->fCompressedPadding,
-           (long)bundle->fKeysReduction,
-           (long)bundle->fStringDedupReduction,
-           (long)(bundle->fKeysTop - bundle->fKeysBottom));
-}
-
-/* not Han, not Hangul, not an unpaired surrogate? */
-static UBool isCompressible(UChar32 c) {
-    return
-        (c < LAST_WINDOW_LIMIT) &&
-        !(  (0x3400 <= c && c <= 0x9fff) ||
-            (0xac00 <= c && c <= 0xdfff) ||
-            (0x20000 <= c && c <= 0x3ffff));
-}
-
-/* 2-byte-encodable in CJK mode */
-static UBool is2ByteCJK(UChar32 c) {
-    return (0x3000 <= c && c <= 0x4aff) || (0x4e00 <= c && c <= 0x9fff) || (0xac00 <= c && c <= 0xd7ff);
-}
-
-static UBool isDirectASCII(UChar32 c) {
-    /* ASCII character with direct single-byte encoding */
-    if (c <= 0x7e) {
-        if (c >= 0x20 || (c == 9 || c == 0xa || c == 0xd)) {
-            return TRUE;
-        }
-    }
-    return FALSE;
-}
-
-/* minimum possible bytes for the string's characters with a simple, compact encoding */
-static int32_t
-minBytes(const UChar *s, int32_t length) {
-    int32_t i, numBytes;
-    UChar32 c;
-
-    numBytes = 0;
-    for (i = 0; i < length;) {
-        U16_NEXT(s, i, length, c);
-        /* don't count ASCII in its window */
-        if (isCompressible(c)) {
-            ++numBytes;
-        } else if (is2ByteCJK(c)) {
-            numBytes += 2;
-        } else {
-            numBytes += 3;
-        }
-    }
-    return numBytes;
-}
-
-/* same as minBytes() > minNumBytes but faster */
-static UBool
-minBytesAreGE(const UChar *s, int32_t length, int32_t minNumBytes) {
-    int32_t i, numBytes;
-    UChar32 c;
-
-    if (minNumBytes <= 0) {
-        return TRUE;
-    }
-    numBytes = 0;
-    for (i = 0; i < length;) {
-        U16_NEXT(s, i, length, c);
-        /* don't count ASCII in its window */
-        if (isCompressible(c)) {
-            ++numBytes;
-        } else if (is2ByteCJK(c)) {
-            numBytes += 2;
-        } else {
-            numBytes += 3;
-        }
-        if (numBytes >= minNumBytes) {
-            return TRUE;
-        }
-    }
-    return FALSE;
-}
-
-static void
-addToStats(struct SRBRoot *bundle, const UChar *s, int32_t length) {
-    int32_t i, window;
-    UChar32 c;
-
-    for (i = 0; i < length;) {
-        U16_NEXT(s, i, length, c);
-        /* don't count ASCII in its window */
-        if (isCompressible(c) && !isDirectASCII(c)) {
-            window = c >> 5;
-            ++bundle->fWindowCounts[window];
-        }
-    }
-}
-
-static int32_t
-findTopWindow(int32_t *windowCounts, int32_t *topCount) {
-    int32_t i, topIndex, topWindowCount;
-    topIndex = -1;
-    topWindowCount = 0;
-    for (i = 0; i <= ((LAST_WINDOW_LIMIT - 0x80) >> 5); ++i) {
-        if (windowCounts[i] != 0) {
-            /* 4 pieces of 0x20 characters for a 0x80-wide window */
-            int32_t count;
-            /* adjust the window start to prefer multiples of 0x80 */
-            while ((i & 3) != 0 && windowCounts[i - 1] == 0 && windowCounts[i + 3] == 0) {
-                --i;
-            }
-            count = windowCounts[i] + windowCounts[i + 1] +
-                    windowCounts[i + 2] + windowCounts[i + 3];
-            if (count > topWindowCount) {
-                topIndex = i;
-                topWindowCount = count;
-            }
-            /* un-adjust the loop counter again */
-            while (windowCounts[i] == 0) {
-                ++i;
-            }
-        }
-    }
-    if (topIndex >= 0) {
-        *topCount = topWindowCount;  /* TODO: remove topCount arg after debugging */
-        /* delete the counts for this window for looking for the next one */
-        windowCounts[topIndex] = 0;
-        windowCounts[topIndex + 1] = 0;
-        windowCounts[topIndex + 2] = 0;
-        windowCounts[topIndex + 3] = 0;
-        return topIndex << 5;
-    } else {
-        return -1;
-    }
-}
-
-/* make sure that a top window is not found straddling this boundary */
-static void
-noWindowAcross(int32_t *windowCounts, int32_t boundary) {
-    boundary = (boundary - 0x80) >> 5;
-    windowCounts[boundary] += windowCounts[boundary + 1] +
-                              windowCounts[boundary + 2] +
-                              windowCounts[boundary + 3];
-    windowCounts[boundary + 1] = 0;
-    windowCounts[boundary + 2] = 0;
-    windowCounts[boundary + 3] = 0;
-}
-
-static void
-findTopWindows(struct SRBRoot *bundle) {
-    int32_t topWindowCounts[3] = { 0, 0, 0 };
-    int32_t *windowCounts = bundle->fWindowCounts;
-    int32_t *windows = bundle->fWindows;
-    int32_t window;
-    int32_t i;
-
-    /* make sure that a top window is not found straddling UTF-8/16 boundaries */
-    noWindowAcross(windowCounts, 0x80);  /* UTF-8 1/2-byte boundary */
-    noWindowAcross(windowCounts, 0x800);  /* UTF-8 2/3-byte boundary */
-    noWindowAcross(windowCounts, 0xd800);  /* UTF-16 start surrogates */
-    noWindowAcross(windowCounts, 0xdc00);  /* UTF-16 lead/trail surrogates boundary*/
-    noWindowAcross(windowCounts, 0xe000);  /* UTF-16 end surrogates */
-    /* UTF-8 3-byte lead byte boundaries */
-    for (window = 0x1000; window < 0x10000 && window < LAST_WINDOW_LIMIT; window += 0x1000) {
-        noWindowAcross(windowCounts, window);
-    }
-    /* end of BMP, and supplementary character UTF-16 trail surrogate boundaries */
-    for (window = 0x10000; window < LAST_WINDOW_LIMIT; window += 0x400) {
-        noWindowAcross(windowCounts, window);
-    }
-    /*
-     * TODO: Build back to 2 top windows.
-     * Change fWindows length, findTopWindows() loop limit,
-     * string_preWrite() CJK condition, reduce single-byte infix lead2 from 3 to 2.
-     * Change printing of top windows.
-     */
-    windows[0] = windows[1] = windows[2] = 0x1fffff;
-    for (i = 0; i < 3; ++i) {
-        window = findTopWindow(windowCounts, topWindowCounts + i);
-        if (window >= 0) {
-            windows[i] = window;
-        } else {
-            break;
-        }
-    }
-    printf("top windows: %04lx,%ld,%04lx,%ld,%04lx,%ld\n",
-           windows[0], topWindowCounts[0],
-           windows[1], topWindowCounts[1],
-           windows[2], topWindowCounts[2]);
-}
-
-static int32_t
-getWindow(const int32_t *windows, UChar32 c, int32_t *windowIndex) {
-    int32_t i;
-    for (i = 0; i <= 2; ++i) {
-        int32_t w = windows[i];
-        if (w <= c && c <= (w + 0x7f)) {
-            *windowIndex = i;
-            return w;
-        }
-    }
-    return -1;
-}
-
-static uint32_t
-encodeMiniString(const struct SRBRoot *bundle, const UChar *s, int32_t length) {
-    UChar32 chars[4] = { 0 };  /* TODO: keep initializer only for debug output */
-    int32_t i, count;
-    UChar32 c;
-    uint32_t result;
-
-    if (length > 8) {
-        return RES_BOGUS;  /* too long */
-    }
-    if (length == 0) {
-        return URES_MAKE_EMPTY_RESOURCE(URES_STRING_MINI_ASCII);  /* bits 27..0 = 0 for empty string */
-    }
-    /* try to encode 1 character */
-    if (length <= 2) {
-        i = 0;
-        U16_NEXT(s, i, length, c);
-        if (i == length) {
-            /* bits 27..21 = 1 for 1 character */
-            result = URES_MAKE_RESOURCE(URES_STRING_MINI_ASCII, ((uint32_t)1 << 21) | (uint32_t)c);
-            /* TODO: remove printf("mini: single %08lx\n", (long)result); */
-            return result;
-        }
-    }
-    /* try to encode 1..4 ASCII characters */
-    if (length <= 4) {
-        result = 0;
-        for (i = 0;; ++i) {
-            if (i < length) {
-                if (!isDirectASCII(c = s[i])) {
-                    break;  /* does not fit */
-                }
-            } else {
-                c = 0;
-            }
-            result = (result << 7) | (uint32_t)c;
-            if (i == 3) {
-                /* bits 27..21 = 9/A/D/20..7E for 1..4 ASCII chars */
-                return URES_MAKE_RESOURCE(URES_STRING_MINI_ASCII, result);
-            }
-        }
-    }
-    /* read code points */
-    for (count = 0, i = 0; i < length;) {
-        if (count == 4) {
-            return RES_BOGUS;  /* more than 4 characters, does not fit */
-        }
-        U16_NEXT(s, i, length, c);
-        chars[count++] = c;
-    }
-    /* try to encode 1..4 window 0 characters in a separate resource type */
-    if (count <= 4) {
-        int32_t window0 = bundle->fWindows[0];
-        /*
-         * The last 7-bit unit must not be 0 -- the last character must not be
-         * the window start -- because trailing 0 units indicate the string end.
-         */
-        if (chars[count - 1] != window0) {
-            result = 0;
-            for (i = 0;; ++i) {
-                if (i < count) {
-                    c = chars[i] - window0;
-                    if (!(0 <= c && c <= 0x7f)) {
-                        break;  /* does not fit */
-                    }
-                } else {
-                    c = 0;
-                }
-                result = (result << 7) | (uint32_t)c;
-                if (i == 3) {
-                    /* TODO: remove printf("mini: wwww[%d]w0 %08lx <%04lx %04lx %04lx %04lx>\n",
-                           (int)count, (long)result,
-                           (long)chars[0], (long)chars[1], (long)chars[2], (long)chars[3]); */
-                    return URES_MAKE_RESOURCE(URES_STRING_MINI_WINDOW0, result);
-                }
-            }
-        }
-    }
-    return RES_BOGUS;  /* does not fit */
-}
-
-static int32_t
-encodeInfixReference(uint32_t resWord, uint8_t lead2, uint8_t *dest) {
-    UResType type = RES_GET_TYPE(resWord);
-    uint8_t typeBit;
-#if 1
-    /*
-     * TODO: For now assume that the infix is always in URES_STRING_COMPACT form.
-     * Need to decide if this is the only allowed form, in which case we won't
-     * need the typeBit, or if we want to allow another encoding form,
-     * such as zip or similar. See string_write() for more comments.
-     */
-    assert(type == URES_STRING_COMPACT);
-    typeBit = 0;
-#else
-    if (type == URES_STRING) {
-        typeBit = 0;
-    } else if (type == URES_STRING_COMPACT) {
-        typeBit = 0x80;
-    } else {
-        return -1;  /* internal program error */
-    }
-#endif
-    resWord = RES_GET_OFFSET(resWord);
-    if (resWord <= 0x7fff) {
-        dest[0] = lead2;
-        dest[1] = (uint8_t)(typeBit | (resWord >> 8));
-        dest[2] = (uint8_t)resWord;
-        return 3;
-    } else if (resWord <= 0x7fffff) {
-        dest[0] = lead2 + 1;
-        dest[1] = (uint8_t)(typeBit | (resWord >> 16));
-        dest[2] = (uint8_t)(resWord >> 8);
-        dest[3] = (uint8_t)resWord;
-        return 4;
-    } else {
-        dest[0] = lead2 + 2;
-        dest[1] = (uint8_t)(typeBit | (resWord >> 24));
-        dest[2] = (uint8_t)(resWord >> 16);
-        dest[3] = (uint8_t)(resWord >> 8);
-        dest[4] = (uint8_t)resWord;
-        return 5;
-    }
-}
-
-static UChar32
-nextChar(const UChar *s, int32_t i, int32_t length) {
-    if (i < length) {
-        UChar32 c;
-        U16_NEXT(s, i, length, c);
-        return c;
-    } else {
-        return U_SENTINEL;
-    }
-}
-
-static int32_t
-encodeSingleByteMode(struct SRBRoot *bundle, struct SResource *res,
-                     int32_t window, const UChar *s, int32_t length,
-                     UBool writeToStringBytes, UErrorCode *status) {
-    uint8_t buffer[200];
-    int32_t pos = 0;
-    const int32_t *windows = bundle->fWindows;
-    int32_t start = 0, segment = 0, numBytes = 0;
-    if (U_FAILURE(*status)) {
-        return 0;
-    }
-    for (;;) {
-        struct SResource *infix = NULL;
-        int32_t limit = length;
-        if (segment < MAX_INFIXES && (infix = res->u.fString.fInfixes[segment]) != NULL) {
-            limit = res->u.fString.fInfixIndexes[segment];
-        }
-        while (start < limit) {
-            int32_t w, windowIndex;
-            UChar32 c;
-            U16_NEXT(s, start, limit, c);
-            if (isDirectASCII(c)) {
-                /* 9/A/D/20..7E */
-                buffer[pos++] = (uint8_t)c;
-            } else if (window <= c && c <= (window + 0x7f)) {
-                /* 80..FF */
-                buffer[pos++] = (uint8_t)(c - window + 0x80);
-            } else if ((w = getWindow(windows, c, &windowIndex)) >= 0) {
-                /* windowIndex+xx */
-                UChar32 next;
-                buffer[pos++] = (uint8_t)windowIndex;
-                next = nextChar(s, start, limit);  /* one-character lookahead */
-                if (w <= next && next <= (w + 0x7f)) {
-                    /* switch to this window */
-                    window = w;
-                    buffer[pos++] = (uint8_t)(c - w + 0x80);
-                } else {
-                    /* single-quote from this window */
-                    buffer[pos++] = (uint8_t)(c - w);
-                }
-            } else {
-                /* 0F..1F+xx+yy */
-                buffer[pos++] = (uint8_t)(0xf + (c >> 16));
-                buffer[pos++] = (uint8_t)(c >> 8);
-                buffer[pos++] = (uint8_t)c;
-            }
-            /* 8 = 5 + 3 = max infix bytes + max regular-character bytes */
-            if (pos > (sizeof(buffer) - 8)) {
-                numBytes += pos;
-                if (writeToStringBytes) {
-                    writeStringBytes(bundle, buffer, pos, status);
-                    if (U_FAILURE(*status)) {
-                        return 0;
-                    }
-                }
-                pos = 0;
-            }
-        }
-        if (infix != NULL) {
-            /* replace the infix with a reference to the already-written string */
-            assert(infix->u.fString.fIsInfix);
-            assert(infix->u.fString.fCompactRes != RES_BOGUS);
-            pos += encodeInfixReference(infix->u.fString.fCompactRes, 3, buffer + pos);
-        } else {
-            break;
-        }
-        start = limit + infix->u.fString.fLength;
-        ++segment;
-    }
-    if (pos > 0) {
-        numBytes += pos;
-        if (writeToStringBytes) {
-            writeStringBytes(bundle, buffer, pos, status);
-        }
-    }
-    return numBytes;
-}
-
-static int32_t
-encodeCJK(struct SRBRoot *bundle, struct SResource *res,
-          const UChar *s, int32_t length,
-          UBool writeToStringBytes, UErrorCode *status) {
-    uint8_t buffer[200];
-    int32_t pos = 0;
-    int32_t start = 0, segment = 0, numBytes = 0;
-    if (U_FAILURE(*status)) {
-        return 0;
-    }
-    for (;;) {
-        struct SResource *infix = NULL;
-        int32_t limit = length;
-        if (segment < MAX_INFIXES && (infix = res->u.fString.fInfixes[segment]) != NULL) {
-            limit = res->u.fString.fInfixIndexes[segment];
-        }
-        while (start < limit) {
-            UChar32 c;
-            U16_NEXT(s, start, limit, c);
-            if (is2ByteCJK(c)) {
-                buffer[pos++] = (uint8_t)(c >> 8);
-                buffer[pos++] = (uint8_t)c;
-            } else if ((0x20 <= c && c <= 0x7e) || c == 9 || c == 0xa) {
-                if (c >= 0x20) {
-                    if (c <= 0x4f) {
-                        c -= 0x20;  /* 20..4F -> 00..2F */
-                    } else if (c <= 0x5b) {
-                        c += 0xa0 - 0x50;  /* 50..5B -> A0..AB */
-                    } else {
-                        c += 0xd8 - 0x5c;  /* 5C..7E -> D8..FA */
-                    }
-                } else if (c == 9) {
-                    c = 0xfb;
-                } else /* c == 0xa LF */ {
-                    c = 0xfc;
-                }
-                buffer[pos++] = (uint8_t)c;
-            } else if (c <= 0xffff) {
-                buffer[pos++] = (uint8_t)0xfd;
-                buffer[pos++] = (uint8_t)(c >> 8);
-                buffer[pos++] = (uint8_t)c;
-            } else if (0x20000 <= c && c <= 0x2ffff) {
-                buffer[pos++] = (uint8_t)0xfe;
-                buffer[pos++] = (uint8_t)(c >> 8);
-                buffer[pos++] = (uint8_t)c;
-            } else {
-                buffer[pos++] = (uint8_t)0xff;
-                buffer[pos++] = (uint8_t)(c >> 16);
-                buffer[pos++] = (uint8_t)(c >> 8);
-                buffer[pos++] = (uint8_t)c;
-            }
-            /* 9 = 5 + 4 = max infix bytes + max regular-character bytes */
-            if (pos > (sizeof(buffer) - 9)) {
-                numBytes += pos;
-                if (writeToStringBytes) {
-                    writeStringBytes(bundle, buffer, pos, status);
-                    if (U_FAILURE(*status)) {
-                        return 0;
-                    }
-                }
-                pos = 0;
-            }
-        }
-        if (infix != NULL) {
-            /* replace the infix with a reference to the already-written string */
-            assert(infix->u.fString.fIsInfix);
-            assert(infix->u.fString.fCompactRes != RES_BOGUS);
-            pos += encodeInfixReference(infix->u.fString.fCompactRes, 0x4b, buffer + pos);
-        } else {
-            break;
-        }
-        start = limit + infix->u.fString.fLength;
-        ++segment;
-    }
-    if (pos > 0) {
-        numBytes += pos;
-        if (writeToStringBytes) {
-            writeStringBytes(bundle, buffer, pos, status);
-        }
-    }
-    return numBytes;
-}
-
-/*
- * Encode a length value in a variable number of bytes.
- * The .res format limits the bundle size to 1<<30 bytes,
- * which becomes the upper bound for a string length using 1 byte per UChar
- * in a simple compression scheme.
- * However, with infix expansion, the string could theoretically be longer.
- * Encode 31 bits for the full range of non-negative int32_t values.
- * Favor small numbers because most strings are short.
- */
-static int32_t
-encodeLength(int32_t length, uint8_t bytes[5]) {
-    --length;  /* empty strings use the mini format */
-    if (length <= 0x37) {
-        if (bytes != NULL) {
-            bytes[0] = (uint8_t)length;
-        }
-        return 1;
-    } else if (length <= 0x3ff) {
-        if (bytes != NULL) {
-            bytes[0] = (uint8_t)(0x38 | (length >> 7));
-            bytes[1] = (uint8_t)(length & 0x7f);
-        }
-        return 2;
-    } else if (length <= 0x1ffff) {
-        if (bytes != NULL) {
-            bytes[0] = (uint8_t)(0x38 | (length >> 14));
-            bytes[1] = (uint8_t)((length >> 7) | 0x80);
-            bytes[2] = (uint8_t)(length & 0x7f);
-        }
-        return 3;
-    } else if (length <= 0xffffff) {
-        if (bytes != NULL) {
-            bytes[0] = (uint8_t)(0x38 | (length >> 21));
-            bytes[1] = (uint8_t)((length >> 14) | 0x80);
-            bytes[2] = (uint8_t)((length >> 7) | 0x80);
-            bytes[3] = (uint8_t)(length & 0x7f);
-        }
-        return 4;
-    } else {
-        if (bytes != NULL) {
-            bytes[0] = (uint8_t)(0x38 | (length >> 28));
-            bytes[1] = (uint8_t)((length >> 21) | 0x80);
-            bytes[2] = (uint8_t)((length >> 14) | 0x80);
-            bytes[3] = (uint8_t)((length >> 7) | 0x80);
-            bytes[4] = (uint8_t)(length & 0x7f);
-        }
-        return 5;
-    }
-}
-
-static int32_t
-findBestWindow(struct SRBRoot *bundle, struct SResource *res,
-               const UChar *s, int32_t length,
-               UErrorCode *status) {
-    int32_t lengthBytes, fewestBytes;
-    int32_t i, bestWindow;
-
-    if (res->u.fString.fIsInfix) {
-        /*
-         * Must use the compact encoding, not UTF-16, because
-         * an infix must be written to the fStringBytes before
-         * a referring string so that its offset and fRes are known.
-         */
-        fewestBytes = 0x7fffffff;
-        bestWindow = 0;
-    } else {
-        /* Use UTF-16 if that's the shortest encoding. */
-        fewestBytes = 4 + (res->u.fString.fLength + 1) * 2;
-        fewestBytes += calcPadding(fewestBytes);
-        bestWindow = -1;
-    }
-
-    lengthBytes = encodeLength(length, NULL);
-
-    /*
-     * Possible code optimizations:
-     * - pass fewestBytes into encoders so that they can stop
-     *   when they exceed it
-     * - get the set of used windows from the first decoder so we can skip
-     *   trying the other windows if they are unused
-     * - have single-byte encoder check for is2ByteCJK() so we can skip
-     *   the CJK encoder if no such characters occur
-     * - have single-byte encoder detect when it uses exactly one byte
-     *   per code point, and stop here in that case
-     */
-    for (i = 0; i <= 3; ++i) {
-        int32_t numBytes;
-        if (i <= 2) {
-            numBytes = encodeSingleByteMode(bundle, res, bundle->fWindows[i],
-                                            s, length, FALSE, status);
-        } else {
-            numBytes = encodeCJK(bundle, res, s, length, FALSE, status);
-        }
-        numBytes += lengthBytes;
-        if (numBytes < fewestBytes) {
-            fewestBytes = numBytes;
-            bestWindow = i;
-        }
-    }
-    return bestWindow;
-}
 
 /* Writing Functions */
 
@@ -819,23 +173,9 @@ makeRes16(uint32_t resWord) {
     }
     type = RES_GET_TYPE(resWord);
     offset = RES_GET_OFFSET(resWord);
-    if (type == URES_STRING_V2 && offset <= 0xffff) {  /* TODO: <= 0x7fff with one of the sections below in use */
+    if (type == URES_STRING_V2 && offset <= 0xffff) {
         return (int32_t)offset;
     }
-#if 0
-    if ((type == URES_TABLE && offset == 0) ||
-        (type == URES_TABLE16 && offset <= 0x7fff)
-    ) {
-        return (int32_t)offset | 0x8000;
-    }
-#endif
-#if 0
-    if ((type == URES_ARRAY && offset == 0) ||
-        (type == URES_ARRAY16 && offset <= 0x7fff)
-    ) {
-        return (int32_t)offset | 0x8000;
-    }
-#endif
     return -1;
 }
 
@@ -843,12 +183,6 @@ static int32_t
 mapKey(struct SRBRoot *bundle, int32_t oldpos) {
     const KeyMapEntry *map = bundle->fKeyMap;
     int32_t i, start, limit;
-
-#if PACK_KEYS
-    if (oldpos < -1) {
-        return oldpos;  /* packed key */
-    }
-#endif
 
     /* do a binary search for the old, pre-bundle_compactKeys() key offset */
     start = bundle->fPoolBundleKeysCount;
@@ -897,7 +231,7 @@ static void
 array_write16(struct SRBRoot *bundle, struct SResource *res,
               UErrorCode *status) {
     struct SResource *current;
-    int32_t res16 = 0, tempRes16;
+    int32_t res16 = 0;
 
     if (U_FAILURE(*status)) {
         return;
@@ -909,20 +243,11 @@ array_write16(struct SRBRoot *bundle, struct SResource *res,
     }
     for (current = res->u.fArray.fFirst; current != NULL; current = current->fNext) {
         res_write16(bundle, current, status);
-        /* TODO: res16 |= makeRes16(current->fRes); */
-        tempRes16 = makeRes16(current->fRes);
-        if (tempRes16 >= 0) {
-            res16 |= 0x40;
-        } else if (RES_GET_TYPE(current->fRes) == URES_STRING_V2) {
-            res16 |= (int32_t)0x80010000;  /* reason: offset too large */
-        } else {
-            res16 |= (int32_t)0x80000000 | (1 << current->fType);  /* reason: other type */
-        }
+        res16 |= makeRes16(current->fRes);
     }
     if (U_SUCCESS(*status) && res->u.fArray.fCount <= 0xffff && res16 >= 0) {
         uint16_t *p16 = reserve16BitUnits(bundle, 1 + res->u.fArray.fCount, status);
         if (U_SUCCESS(*status)) {
-            /* TODO: printf("res16-count: %6ld\n", (long)res->u.fArray.fCount); */
             res->fRes = URES_MAKE_RESOURCE(URES_ARRAY16, bundle->f16BitUnitsLength);
             *p16++ = (uint16_t)res->u.fArray.fCount;
             for (current = res->u.fArray.fFirst; current != NULL; current = current->fNext) {
@@ -930,10 +255,6 @@ array_write16(struct SRBRoot *bundle, struct SResource *res,
             }
             bundle->f16BitUnitsLength += 1 + res->u.fArray.fCount;
             res->fWritten = TRUE;
-        }
-    } else if (res16 < 0) {
-        if (res16 & 0x41) {
-            /* TODO: printf("res32-reason: %05lx array[%6ld]\n", (long)res16 & 0x7fffffff, (long)res->u.fArray.fCount); */
         }
     }
 }
@@ -943,7 +264,7 @@ table_write16(struct SRBRoot *bundle, struct SResource *res,
               UErrorCode *status) {
     struct SResource *current;
     int32_t maxKey = 0, maxPoolKey = 0x80000000;
-    int32_t res16 = 0, tempRes16;
+    int32_t res16 = 0;
 
     if (U_FAILURE(*status)) {
         return;
@@ -969,15 +290,7 @@ table_write16(struct SRBRoot *bundle, struct SResource *res,
         } else if (key > maxPoolKey) {
             maxPoolKey = key;
         }
-        /* TODO: res16 |= makeRes16(current->fRes); */
-        tempRes16 = makeRes16(current->fRes);
-        if (tempRes16 >= 0) {
-            res16 |= 0x40;
-        } else if (RES_GET_TYPE(current->fRes) == URES_STRING_V2) {
-            res16 |= (int32_t)0x80010000;  /* reason: offset too large */
-        } else {
-            res16 |= (int32_t)0x80000000 | (1 << current->fType);  /* reason: other type */
-        }
+        res16 |= makeRes16(current->fRes);
     }
     if (U_FAILURE(*status)) {
         return;
@@ -993,7 +306,6 @@ table_write16(struct SRBRoot *bundle, struct SResource *res,
         if (res16 >= 0) {
             uint16_t *p16 = reserve16BitUnits(bundle, 1 + res->u.fTable.fCount * 2, status);
             if (U_SUCCESS(*status)) {
-                /* TODO: printf("res16-count: %6ld\n", (long)res->u.fTable.fCount); */
                 /* 16-bit count, key offsets and values */
                 res->fRes = URES_MAKE_RESOURCE(URES_TABLE16, bundle->f16BitUnitsLength);
                 *p16++ = (uint16_t)res->u.fTable.fCount;
@@ -1007,9 +319,6 @@ table_write16(struct SRBRoot *bundle, struct SResource *res,
                 res->fWritten = TRUE;
             }
         } else {
-            if (res16 & 0x41) {
-                /* TODO: printf("res32-reason: %05lx table[%6ld]\n", (long)res16 & 0x7fffffff, (long)res->u.fTable.fCount); */
-            }
             /* 16-bit count, 16-bit key offsets, 32-bit values */
             res->u.fTable.fType = URES_TABLE;
         }
@@ -1024,9 +333,6 @@ res_write16(struct SRBRoot *bundle, struct SResource *res,
             UErrorCode *status) {
     if (U_FAILURE(*status) || res == NULL) {
         return;
-    }
-    if (res->fType == URES_STRING) {
-        bundle->fPotentialSize += 4 /* resource item */;
     }
     if (res->fRes != RES_BOGUS) {
         /*
@@ -1066,96 +372,6 @@ string_preWrite(uint32_t *byteOffset,
     res->fRes = URES_MAKE_RESOURCE(URES_STRING, *byteOffset >> 2);
     *byteOffset += 4 + (res->u.fString.fLength + 1) * U_SIZEOF_UCHAR;
 }
-
-#if 0
-static uint32_t
-string_preWriteCompact(struct SRBRoot *bundle, struct SResource *res,
-                       uint32_t size,
-                       UErrorCode *status) {
-    struct SResource *same;
-    const UChar *s = res->u.fString.fChars;
-    int32_t length = res->u.fString.fLength;
-    int32_t bestWindow;
-    if (res->fNext == &kOutsideBundleTree) {
-        /* TODO: remove after debugging */
-        /* not reachable by enumerating the tree, won't be written as UTF-16 string */
-        size = 0;
-    } else if (size == 0xffffffff) {
-        /*
-         * TODO: Redo savings calculations now that UTF-16 v2 is implemented.
-         * Don't calculate fMiniReduction here because v2 suffix sharing makes
-         * it impossible to know the exact size for the un-compact string.
-         * Instead, count fPotentialSize and later compare with f16BitUnitsLength.
-         * If writing UTF-16 v1, then count and compare with original string sizes.
-         */
-        size = 4 + (length + 1) * U_SIZEOF_UCHAR;
-    }
-    if (res->u.fString.fCompactRes != RES_BOGUS || res->u.fString.fWriteUTF16) {
-        /*
-         * We visited this string already and either wrote its contents or
-         * determined to use the standard UTF-16 form.
-         * The first visitor returned the size for that.
-         * Note: This automatically includes STRINGS_UTF16_V2 strings.
-         */
-        return 0;
-    } else if ((same = res->u.fString.fSame) != NULL) {
-        /* This is a duplicate. */
-        if (same->u.fString.fCompactRes != RES_BOGUS || same->u.fString.fWriteUTF16) {
-            /* The original has been visited already. */
-            res->u.fString.fCompactRes = same->u.fString.fCompactRes;
-            return 0;
-        } else {
-            /*
-             * Get the size of the contents of the first-parsed version of this string
-             * which got inserted into a later part of the tree.
-             *
-             * Note: This assigns the correct size to each string resource
-             * because the order in which res_preWrite() visits resources is
-             * the same as in res_write(), and the size is counted for
-             * the same resource for which it will later be written.
-             *
-             * The exception to the resource-visiting order is that
-             * bundle_preWrite() calls string_preWrite() for infix strings.
-             * This is harmless because infix strings are never written in
-             * UTF-16 form.
-             */
-            size = string_preWriteCompact(bundle, same, 0xffffffff, status);
-            res->u.fString.fCompactRes = same->u.fString.fCompactRes;
-            return size;
-        }
-    } else if (
-        !res->u.fString.fIsInfix &&
-        (res->u.fString.fCompactRes = encodeMiniString(bundle, s, length)) != RES_BOGUS
-    ) {
-        ++bundle->fMiniCount;
-        bundle->fMiniReduction += size + calcPadding(size);
-        return 0;
-    } else if ((bestWindow = findBestWindow(bundle, res, s, length, status)) >= 0) {
-        /* use the compact form */
-        uint8_t buffer[8];
-        int32_t lengthBytes = encodeLength(length, buffer);
-        buffer[0] |= (uint8_t)(bestWindow << 6);
-        res->u.fString.fCompactRes =
-            URES_MAKE_RESOURCE(URES_STRING_COMPACT, bundle->fKeysTop + bundle->fStringBytesLength);
-        writeStringBytes(bundle, buffer, lengthBytes, status);
-        if (bestWindow <= 2) {
-            encodeSingleByteMode(bundle, res, bundle->fWindows[bestWindow],
-                                 s, length, TRUE, status);
-        } else {
-            encodeCJK(bundle, res, s, length, TRUE, status);
-        }
-        return 0;
-    } else {
-        /* Write the original UTF-16 form. */
-        res->u.fString.fWriteUTF16 = TRUE;
-        bundle->fPotentialSize += size + calcPadding(size);
-        ++bundle->fIncompressibleStrings;
-        printf("incompressible: length %ld  normalSize %ld\n",
-               (long)length, (long)(size + calcPadding(size)));
-        return size;
-    }
-}
-#endif
 
 static void
 bin_preWrite(uint32_t *byteOffset,
@@ -1230,7 +446,6 @@ res_preWrite(uint32_t *byteOffset,
     switch (res->fType) {
     case URES_STRING:
         string_preWrite(byteOffset, bundle, res, status);
-        /* TODO: redo and reenable savings stats for compact strings: string_preWriteCompact(bundle, res, size, status); */
         break;
     case URES_ALIAS:
         res->fRes = URES_MAKE_RESOURCE(URES_ALIAS, *byteOffset >> 2);
@@ -1262,47 +477,6 @@ res_preWrite(uint32_t *byteOffset,
     }
     *byteOffset += calcPadding(*byteOffset);
 }
-
-#if 0
-static uint32_t
-bundle_preWrite(struct SRBRoot *bundle, UErrorCode *status) {
-    if (U_FAILURE(*status)) {
-        return 0;
-    }
-    if (bundle->fStringsForm == STRINGS_COMPACT && bundle->f16BitUnitsLength > 0) {
-        struct SResource *current;
-        int32_t capacity = bundle->f16BitUnitsLength + bundle->f16BitUnitsLength / 4;
-        capacity &= ~3;  /* ensures padding fits if fStringBytesLength needs it */
-        bundle->fStringBytes = (uint8_t *)uprv_malloc(capacity);
-        if (bundle->fStringBytes == NULL) {
-            *status = U_MEMORY_ALLOCATION_ERROR;
-            return 0;
-        }
-        bundle->fStringBytesCapacity = capacity;
-        /*
-         * Pre-write all infix strings because
-         * 1. They need to be written before the strings that will refer to them.
-         * 2. Writing them early gives them small offsets which are encoded
-         *    in fewer bytes.
-         * Go from shortest to longest string to minimize the number of bytes
-         * saved for small strings and thus maximize the effectiveness of infixes.
-         */
-        for (current = bundle->fShortestString->u.fString.fLonger;
-             current != bundle->fLongestString;
-             current = current->u.fString.fLonger
-        ) {
-            if (current->u.fString.fIsInfix) {
-                /* TODO: remove bundle->fInfixUTF16Size when writing compact strings for real */
-                bundle->fInfixUTF16Size += string_preWriteCompact(bundle, current, 0xffffffff, status);
-                if (U_FAILURE(*status)) {
-                    return 0;
-                }
-            }
-        }
-    }
-    return res_preWrite(bundle, bundle->fRoot, status);
-}
-#endif
 
 /*
  * Only called for UTF-16 v1 strings. For UTF-16 v2 strings,
@@ -1475,8 +649,6 @@ void bundle_write(struct SRBRoot *bundle,
     char            dataName[1024];
     int32_t         indexes[URES_INDEX_TOP];
 
-    bundle->fIsDoneParsing = TRUE;
-
     bundle_compactKeys(bundle, status);
     /*
      * Add padding bytes to fKeys so that fKeysTop is 4-aligned.
@@ -1504,17 +676,6 @@ void bundle_write(struct SRBRoot *bundle,
     }
 
     bundle_compactStrings(bundle, status);
-    findTopWindows(bundle);
-    /*
-     * Add padding bytes to fStringBytes as well.
-     * Safe because the capacity is a multiple of 4.
-     */
-    bundle->fPotentialSize += bundle->fStringBytesLength;
-    while (bundle->fStringBytesLength & 3) {
-        bundle->fStringBytes[bundle->fStringBytesLength++] = 0xaa;
-        ++bundle->fCompressedPadding;
-    }
-
     res_write16(bundle, bundle->fRoot, status);
     if (bundle->f16BitUnitsLength & 1) {
         bundle->f16BitUnits[bundle->f16BitUnitsLength++] = 0xaaaa;  /* pad to multiple of 4 bytes */
@@ -1523,7 +684,7 @@ void bundle_write(struct SRBRoot *bundle,
     uprv_free(bundle->fKeyMap);
     bundle->fKeyMap = NULL;
 
-    byteOffset = bundle->fKeysTop + bundle->f16BitUnitsLength * 2 /* TODO: + fStringBytesLength */;
+    byteOffset = bundle->fKeysTop + bundle->f16BitUnitsLength * 2;
     res_preWrite(&byteOffset, bundle, bundle->fRoot, status);
 
     /* total size including the root item */
@@ -1532,27 +693,6 @@ void bundle_write(struct SRBRoot *bundle,
     if (U_FAILURE(*status)) {
         return;
     }
-
-#if 0
-    {
-        const char *keysStart = bundle->fKeys+bundle->fKeysBottom;
-        const char *keysLimit = keysStart + bundle->fKeysTop-bundle->fKeysBottom;
-        const char *keys = keysStart;
-        while (keys < keysLimit) {
-            char c = *keys;
-            if (c != 0 && !('a' <= c && c <= 'z') && !('A' <= c && c <= 'Z') && !('0' <= c && c <= '9')) {
-                printf("other-key: %02x\n", (int)c);
-                if (keys == keysStart || *(keys - 1) == 0) {
-                    printf("initial-key: %02x\n", (int)c);
-                }
-                if (keys[1] == 0) {
-                    printf("final-key: %02x\n", (int)c);
-                }
-            }
-            ++keys;
-        }
-    }
-#endif
 
     if (writtenFilename && writtenFilenameLen) {
         *writtenFilename = 0;
@@ -1658,8 +798,6 @@ void bundle_write(struct SRBRoot *bundle,
         }
     }
 
-    /* TODO: bundle->fStringBytesLength, fStringsCount, fStringUCharsCount, fWindows[] */
-
     /* write the indexes[] */
     udata_writeBlock(mem, indexes, bundle->fIndexLength*4);
 
@@ -1667,13 +805,11 @@ void bundle_write(struct SRBRoot *bundle,
     udata_writeBlock(mem, bundle->fKeys+bundle->fKeysBottom,
                           bundle->fKeysTop-bundle->fKeysBottom);
 
-    /* TODO: write bundle->fStringBytes[] */
-
     /* write the v2 UTF-16 strings, URES_TABLE16 and URES_ARRAY16 */
     udata_writeBlock(mem, bundle->f16BitUnits, bundle->f16BitUnitsLength*2);
 
     /* write all of the bundle contents: the root item and its children */
-    byteOffset = bundle->fKeysTop + bundle->f16BitUnitsLength * 2 /* TODO: + fStringBytesLength */;
+    byteOffset = bundle->fKeysTop + bundle->f16BitUnitsLength * 2;
     res_write(mem, &byteOffset, bundle, bundle->fRoot, status);
     assert(byteOffset == top);
 
@@ -1683,8 +819,6 @@ void bundle_write(struct SRBRoot *bundle,
                 (int)size, (int)top);
         *status = U_INTERNAL_PROGRAM_ERROR;
     }
-
-    printCounters(bundle, writtenFilename, size);
 }
 
 /* Opening Functions */
@@ -1754,51 +888,12 @@ string_comp(const UHashTok key1, const UHashTok key2) {
                              FALSE);
 }
 
-enum {
-    /* Pessimistically, it takes 4 encoding bytes to refer to an infix. Worst case is 5. */
-    PESSIMISTIC_ENCODED_INFIX_POINTER_LENGTH = 4,
-    /* An infix should save space overall. */
-    MIN_INFIX_LENGTH = PESSIMISTIC_ENCODED_INFIX_POINTER_LENGTH + 1,
-    /*
-     * Minimum bytes length for a common infix between two longer strings
-     * for it to be worth creating a new string.
-     *
-     * minBytesForInfix = Optimistic number of bytes
-     * just for encoding the common-infix characters without other overhead.
-     * Savings: Twice the difference to the pessimistic... length, one per original string.
-     * Cost: The minimum bytes plus the length byte.
-     *
-     * int32_t minBytesForInfix = minBytes(infix, infixLength);
-     * if (2 * (minBytesForInfix - PESSIMISTIC_ENCODED_INFIX_POINTER_LENGTH) >
-     *     (1 + minBytesForInfix))  // 1 for the length byte
-     *   ... worth it
-     *
-     * which is equivalent to
-     *
-     * int32_t minBytesForInfix = minBytes(infix, infixLength);
-     * if (minBytesForInfix >= (2 *PESSIMISTIC_ENCODED_INFIX_POINTER_LENGTH + 2))
-     *   ... worth it
-     */
-    MIN_COMMON_INFIX_LENGTH = 2 * PESSIMISTIC_ENCODED_INFIX_POINTER_LENGTH + 2,
-    /* Limit recursion depth for decoding. */
-    MAX_INFIX_DEPTH = 4
-};
-
 struct SResource *string_open(struct SRBRoot *bundle, char *tag, const UChar *value, int32_t len, const struct UString* comment, UErrorCode *status) {
     struct SResource *res = res_open(bundle, tag, comment, status);
     if (U_FAILURE(*status)) {
         return NULL;
     }
     res->fType = URES_STRING;
-
-    if (!bundle->fIsDoneParsing) {
-        /* TODO: fStringsCount is not incremented after parsing for development stats;
-           for final implementation of STRINGS_COMPACT it must always be incremented
-           so that the runtime code can size its hashtable accurately.
-         */
-        ++bundle->fStringsCount;
-        bundle->fStringsSize += 4 /* resource item */ + 4 /* length */ + (len + 1) * 2 + calcPadding((len + 1) * 2);
-    }
 
     if (len == 0 && gFormatVersion > 1) {
         res->u.fString.fChars = &gEmptyString;
@@ -1820,8 +915,6 @@ struct SResource *string_open(struct SRBRoot *bundle, char *tag, const UChar *va
         }
     }
     if (res->u.fString.fSame == NULL) {
-        struct SResource *current;
-
         /* this is a new string */
         res->u.fString.fChars = (UChar *) uprv_malloc(sizeof(UChar) * (len + 1));
 
@@ -1854,26 +947,9 @@ struct SResource *string_open(struct SRBRoot *bundle, char *tag, const UChar *va
             }
             bundle->f16BitUnitsLength += res->u.fString.fNumCharsForLength + len + 1;  /* +1 for the NUL */
         }
-
-        /* put it into the list for finding infixes unless it's very short */
-        if (bundle->fStringsForm == STRINGS_COMPACT && minBytesAreGE(value, len, MIN_INFIX_LENGTH)) {
-            for (current = bundle->fShortestString->u.fString.fLonger;
-                 len > current->u.fString.fLength;
-                 current = current->u.fString.fLonger) {}
-            current->u.fString.fShorter->u.fString.fLonger = res;
-            res->u.fString.fShorter = current->u.fString.fShorter;
-            current->u.fString.fShorter = res;
-            res->u.fString.fLonger = current;
-        }
-
-        if (!bundle->fIsDoneParsing) {
-            addToStats(bundle, value, len);
-        }
     } else {
         /* this is a duplicate of fSame */
         struct SResource *same = res->u.fString.fSame;
-        int32_t size = 4 + (len + 1) * U_SIZEOF_UCHAR;  /* TODO: remove after debugging */
-        bundle->fStringDedupReduction += size + calcPadding(size);
         res->u.fString.fChars = same->u.fString.fChars;
     }
     return res;
@@ -1983,10 +1059,7 @@ struct SRBRoot *bundle_open(const struct UString* comment, UBool isPoolBundle, U
 
     bundle->fKeys = (char *) uprv_malloc(sizeof(char) * KEY_SPACE_SIZE);
     bundle->fRoot = table_open(bundle, NULL, comment, status);
-    bundle->fShortestString = (struct SResource *)uprv_malloc(2 * sizeof(struct SResource));
-    if (bundle->fKeys == NULL || bundle->fRoot == NULL ||
-        bundle->fShortestString == NULL || U_FAILURE(*status)
-    ) {
+    if (bundle->fKeys == NULL || bundle->fRoot == NULL || U_FAILURE(*status)) {
         if (U_SUCCESS(*status)) {
             *status = U_MEMORY_ALLOCATION_ERROR;
         }
@@ -2014,15 +1087,6 @@ struct SRBRoot *bundle_open(const struct UString* comment, UBool isPoolBundle, U
     } else {
         bundle->fStringsForm = STRINGS_UTF16_V2;
     }
-    /* TODO: experiment with bundle->fStringsForm = STRINGS_COMPACT; */
-
-    /* doubly-linked list of unique strings with first/last sentinels */
-    uprv_memset(bundle->fShortestString, 0, 2 * sizeof(struct SResource));
-    bundle->fShortestString->u.fString.fLength = -1;
-    bundle->fLongestString = bundle->fShortestString + 1;
-    bundle->fLongestString->u.fString.fLength = 0x7fffffff;
-    bundle->fShortestString->u.fString.fLonger = bundle->fLongestString;
-    bundle->fLongestString->u.fString.fShorter = bundle->fShortestString;
 
     return bundle;
 }
@@ -2132,30 +1196,12 @@ void res_close(struct SResource *res) {
 }
 
 void bundle_close(struct SRBRoot *bundle, UErrorCode *status) {
-    /*
-     * Delete strings that were created as an optimization and are
-     * not reachable by enumerating the bundle tree.
-     * Do this before res_close(root) because that will delete
-     * some of the items in this list.
-     */
-    struct SResource *current, *longer;
-    for (current = bundle->fShortestString->u.fString.fLonger;
-         current != bundle->fLongestString;
-         current = longer
-    ) {
-        longer = current->u.fString.fLonger;
-        if (current->fNext == &kOutsideBundleTree) {
-            res_close(current);
-        }
-    }
-    uprv_free(bundle->fShortestString);
     res_close(bundle->fRoot);
     uprv_free(bundle->fLocale);
     uprv_free(bundle->fKeys);
     uprv_free(bundle->fKeyMap);
     uhash_close(bundle->fStringSet);
     uprv_free(bundle->f16BitUnits);
-    uprv_free(bundle->fStringBytes);
     uprv_free(bundle);
 }
 
@@ -2165,9 +1211,6 @@ void table_add(struct SResource *table, struct SResource *res, int linenumber, U
     struct SResource *prev    = NULL;
     struct SResTable *list;
     const char *resKeyString;
-#if PACK_KEYS
-    char resKeyBuffer[8];
-#endif
 
     if (U_FAILURE(*status)) {
         return;
@@ -2190,21 +1233,12 @@ void table_add(struct SResource *table, struct SResource *res, int linenumber, U
         return;
     }
 
-#if PACK_KEYS
-    resKeyString = unpackKey(list->fRoot->fKeys, res->fKey, resKeyBuffer);
-#else
     resKeyString = list->fRoot->fKeys + res->fKey;
-#endif
 
     current = list->fFirst;
 
     while (current != NULL) {
-#if PACK_KEYS
-        char currentKeyBuffer[8];
-        const char *currentKeyString = unpackKey(list->fRoot->fKeys, current->fKey, currentKeyBuffer);
-#else
         const char *currentKeyString = list->fRoot->fKeys + current->fKey;
-#endif
         int diff = uprv_strcmp(currentKeyString, resKeyString);
         if (diff < 0) {
             prev    = current;
@@ -2283,68 +1317,6 @@ void bundle_setlocale(struct SRBRoot *bundle, UChar *locale, UErrorCode *status)
 
 }
 
-#if PACK_KEYS
-
-/* pack a-zA-Z0-9 and the two other most common key characters into 6 bits each */
-static int32_t
-packKeyChar(int32_t c) {
-    int32_t i;
-    for (i = 0; i < 64; ++i) {
-        if (c == gPackedKeyCodeToChar[i]) {
-            return i;
-        }
-    }
-    return -1;  /* does not fit */
-}
-
-static int32_t
-packKey(const char *key) {
-    int32_t result = 0;
-    int32_t i, c;
-    for (i = 0;; ++i) {
-        c = *key;
-        if (c != 0) {
-            ++key;
-            c = packKeyChar(c);
-            if (c < 0 || (c == 0 && (*key == 0 || i == 4))) {
-                break;  /* does not fit */
-            }
-        }
-        result = (result << 6) | c;
-        if (i == 4) {  /* pack exactly five 6-bit codes */
-            if (c == 0) {  /* reached the end of the string */
-                return result;
-            } else {  /* the string is too long */
-                break;
-            }
-        }
-    }
-    return -1;  /* does not fit */
-}
-
-static const char gPackedKeyCodeToChar[64] = ":_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-
-const char *
-unpackKey(const char *keys, int32_t key, char temp[8]) {
-    if (key >= 0) {
-        return keys + key;
-    } else {
-        char *s;
-        temp[0] = gPackedKeyCodeToChar[(key >> 24) & 0x3f];
-        temp[1] = gPackedKeyCodeToChar[(key >> 18) & 0x3f];
-        temp[2] = gPackedKeyCodeToChar[(key >> 12) & 0x3f];
-        temp[3] = gPackedKeyCodeToChar[(key >> 6) & 0x3f];
-        temp[4] = gPackedKeyCodeToChar[key & 0x3f];
-        /* find the end of the key and NUL-terminate it */
-        s = temp + 5;
-        while (*(s - 1) == ':' && temp < --s) {}
-        *s = 0;
-        return temp;
-    }
-}
-
-#endif
-
 static const char *
 getKeyString(const struct SRBRoot *bundle, int32_t key) {
     if (key < 0) {
@@ -2359,11 +1331,7 @@ res_getKeyString(const struct SRBRoot *bundle, const struct SResource *res, char
     if (res->fKey == -1) {
         return NULL;
     }
-#if PACK_KEYS
-    return unpackKey(bundle->fKeys, res->fKey, temp);
-#else
     return getKeyString(bundle, res->fKey);
-#endif
 }
 
 const char *
@@ -2407,9 +1375,6 @@ bundle_addKeyBytes(struct SRBRoot *bundle, const char *keyBytes, int32_t length,
 int32_t
 bundle_addtag(struct SRBRoot *bundle, const char *tag, UErrorCode *status) {
     int32_t keypos;
-#if PACK_KEYS
-    int32_t packed;
-#endif
 
     if (U_FAILURE(*status)) {
         return -1;
@@ -2419,13 +1384,6 @@ bundle_addtag(struct SRBRoot *bundle, const char *tag, UErrorCode *status) {
         /* no error: the root table and array items have no keys */
         return -1;
     }
-
-#if PACK_KEYS
-    packed = packKey(tag);
-    if (packed >= 0) {
-        return packed | 0x80000000;
-    }
-#endif
 
     keypos = bundle_addKeyBytes(bundle, tag, (int32_t)(uprv_strlen(tag) + 1), status);
     if (U_SUCCESS(*status)) {
@@ -2480,17 +1438,11 @@ compareKeySuffixes(const void *context, const void *l, const void *r) {
 static int32_t U_CALLCONV
 compareKeyNewpos(const void *context, const void *l, const void *r) {
     return compareInt32(((const KeyMapEntry *)l)->newpos, ((const KeyMapEntry *)r)->newpos);
-#if 0
-    return ((const KeyMapEntry *)l)->newpos - ((const KeyMapEntry *)r)->newpos;
-#endif
 }
 
 static int32_t U_CALLCONV
 compareKeyOldpos(const void *context, const void *l, const void *r) {
     return compareInt32(((const KeyMapEntry *)l)->oldpos, ((const KeyMapEntry *)r)->oldpos);
-#if 0
-    return ((const KeyMapEntry *)l)->oldpos - ((const KeyMapEntry *)r)->oldpos;
-#endif
 }
 
 void
@@ -2604,357 +1556,13 @@ bundle_compactKeys(struct SRBRoot *bundle, UErrorCode *status) {
             uprv_sortArray(map, keysCount, (int32_t)sizeof(KeyMapEntry),
                            compareKeyOldpos, NULL, FALSE, status);
             if (U_SUCCESS(*status)) {
-                bundle->fKeysReduction = limit - newpos;
+                /* key size reduction by limit - newpos */
                 bundle->fKeyMap = map;
                 map = NULL;
             }
         }
     }
     uprv_free(map);
-}
-
-static int32_t
-countInfixes(struct SResource *current) {
-    int32_t numInfixes;
-    for (numInfixes = 0;
-         numInfixes < MAX_INFIXES && current->u.fString.fInfixes[numInfixes] != NULL;
-         ++numInfixes) {}
-    return numInfixes;
-}
-
-static UBool
-hasInfixes(struct SResource *current) {
-    return current->u.fString.fInfixes[0] != NULL;
-}
-
-static UBool
-hasMaxInfixes(struct SResource *current) {
-    return current->u.fString.fInfixes[MAX_INFIXES - 1] != NULL;
-}
-
-/*
- * Find a string that is an infix.
- * There might be other infix strings of the same length;
- * which one of such a set is returned is arbitrary.
- */
-static struct SResource *
-findInfix(struct SResource *text, int32_t start, int32_t limit, int32_t *index) {
-    struct SResource *current;
-    const UChar *textChars = text->u.fString.fChars + start;
-    int32_t textLength = limit - start;
-    if (textLength < 1 || !minBytesAreGE(textChars, textLength, MIN_INFIX_LENGTH)) {
-        return NULL;  /* there is no string this short in the list */
-    }
-
-    for (current = text->u.fString.fShorter;
-         current->u.fString.fLength >= 1;
-         current = current->u.fString.fShorter
-    ) {
-        if (current->u.fString.fLength <= textLength) {
-            const UChar *findPos =
-                u_strFindFirst(textChars, textLength,
-                               current->u.fString.fChars, current->u.fString.fLength);
-            if (findPos != NULL) {
-                *index = start + (int32_t)(findPos - textChars);
-                return current;
-            }
-        }
-    }
-    return NULL;
-}
-
-/* current must not yet have MAX_INFIXES infixes */
-static void
-insertInfix(struct SResource *current, int32_t index, struct SResource *infix) {
-    int32_t i, j;
-    int8_t depth = infix->u.fString.fInfixDepth;
-    assert(current != infix);
-    if (depth >= current->u.fString.fInfixDepth) {
-        current->u.fString.fInfixDepth = depth + 1;
-    }
-    infix->u.fString.fIsInfix = TRUE;
-    /* keep infixes in ascending order of indexes */
-    for (i = MAX_INFIXES - 1; i > 0; i = j) {
-        j = i - 1;
-        if (current->u.fString.fInfixes[j] != NULL) {
-            if (index < current->u.fString.fInfixIndexes[j]) {
-                current->u.fString.fInfixes[i] = current->u.fString.fInfixes[j];
-                current->u.fString.fInfixIndexes[i] = current->u.fString.fInfixIndexes[j];
-            } else {
-                break;
-            }
-        }
-    }
-    current->u.fString.fInfixes[i] = infix;
-    current->u.fString.fInfixIndexes[i] = index;
-}
-
-/* current must not yet have MAX_INFIXES infixes */
-static void
-findInfixesForString(struct SRBRoot *bundle, struct SResource *current) {
-    int32_t length = current->u.fString.fLength;
-    while (!hasMaxInfixes(current)) {
-        int32_t start = 0, segment = 0;
-        for (;;) {
-            struct SResource *infix = NULL;
-            int32_t limit = length;
-            if (segment < MAX_INFIXES && (infix = current->u.fString.fInfixes[segment]) != NULL) {
-                limit = current->u.fString.fInfixIndexes[segment];
-            }
-            if (start < limit) {
-                int32_t index;
-                struct SResource *newInfix = findInfix(current, start, limit, &index);
-                if (newInfix != NULL && newInfix->u.fString.fInfixDepth < MAX_INFIX_DEPTH) {
-                    insertInfix(current, index, newInfix);
-                    /* TODO: printf("found infix[%4ld] in string[%6ld]\n", (long)newInfix->u.fString.fLength, (long)length); */
-                    break;  /* try the remaining segments again */
-                }
-            }
-            if (infix == NULL) {
-                /* done: no new infixes found in any segment */
-                return;
-            }
-            start = limit + infix->u.fString.fLength;
-            ++segment;
-        }
-    }
-}
-
-static void
-findInfixes(struct SRBRoot *bundle, UErrorCode *status) {
-    struct SResource *current;
-
-    if (U_FAILURE(*status)) {
-        return;
-    }
-    /* Go from shortest to longest string for counting and capping the recursion depth. */
-    for (current = bundle->fShortestString->u.fString.fLonger;
-         current != bundle->fLongestString;
-         current = current->u.fString.fLonger
-    ) {
-        if (!hasMaxInfixes(current)) {
-            findInfixesForString(bundle, current);
-        }
-    }
-}
-
-/* get the length of the text before the first infix */
-static int32_t
-getFirstSegmentLength(struct SResource *text) {
-    if (text->u.fString.fInfixes[0] != NULL) {
-        return text->u.fString.fInfixIndexes[0];
-    } else {
-        return text->u.fString.fLength;
-    }
-}
-
-/*
- * Returns another string with which text shares a common prefix.
- * text must not yet have MAX_INFIXES infixes.
- */
-static struct SResource *
-findPrefix(struct SResource *text, int32_t *commonLength) {
-    struct SResource *current;
-    const UChar *textChars = text->u.fString.fChars;
-    int32_t textLength = getFirstSegmentLength(text);
-    struct SResource *other;
-    int32_t commonMinBytes;
-
-    if (textLength < 1 || !minBytesAreGE(textChars, textLength, MIN_INFIX_LENGTH)) {
-        return NULL;  /* there is no string this short in the list */
-    }
-
-    other = NULL;
-    commonMinBytes = MIN_INFIX_LENGTH - 1;
-    for (current = text->u.fString.fShorter;
-         current->u.fString.fLength >= 1;
-         current = current->u.fString.fShorter
-    ) {
-        if (!hasMaxInfixes(current)) {
-            const UChar *currentChars = current->u.fString.fChars;
-            int32_t currentLength = getFirstSegmentLength(current);
-            const UChar *currentLimit = currentChars + currentLength;
-
-            if (currentLength > 0 && minBytesAreGE(currentChars, currentLength, MIN_INFIX_LENGTH)) {
-                /* does text share a prefix with current? */
-                const UChar *pc = currentChars;
-                const UChar *pt = textChars;
-                if (*pc == *pt) {
-                    int32_t prefixLength;
-                    /*
-                     * At the beginning of each loop iteration: *pc == *pt.
-                     * After the loop, pc and pt are on the first difference.
-                     */
-                    while (++pc < currentLimit && *pc == *++pt) {}
-                    /* adjust the end of the prefix to a code point boundary */
-                    if (U16_IS_LEAD(*(pc - 1))) {
-                        --pc;
-                    }
-                    prefixLength = (int32_t)(pc - currentChars);
-                    /* is this the longest common prefix so far? */
-                    if (minBytesAreGE(currentChars, prefixLength, commonMinBytes + 1)) {
-                        commonMinBytes = minBytes(currentChars, prefixLength);
-                        other = current;
-                        *commonLength = prefixLength;
-                    }
-                }
-            }
-        }
-    }
-    return other;
-}
-
-/* get the start of the text after the last infix */
-static int32_t
-getLastSegmentStart(struct SResource *text) {
-    if (hasInfixes(text)) {
-        int32_t numInfixes = countInfixes(text);
-        return text->u.fString.fInfixIndexes[numInfixes - 1] +
-               text->u.fString.fInfixes[numInfixes - 1]->u.fString.fLength;
-    } else {
-        return 0;
-    }
-}
-
-/*
- * Returns another string with which text shares a common suffix.
- * text must not yet have MAX_INFIXES infixes.
- */
-static struct SResource *
-findSuffix(struct SResource *text, int32_t *textStart, int32_t *otherStart, int32_t *commonLength) {
-    struct SResource *current;
-    int32_t start = getLastSegmentStart(text);
-    const UChar *textChars = text->u.fString.fChars + start;
-    int32_t textLength = text->u.fString.fLength - start;
-    struct SResource *other;
-    int32_t commonMinBytes;
-
-    if (textLength < 1 || !minBytesAreGE(textChars, textLength, MIN_INFIX_LENGTH)) {
-        return NULL;  /* there is no string this short in the list */
-    }
-
-    other = NULL;
-    commonMinBytes = MIN_INFIX_LENGTH - 1;
-    for (current = text->u.fString.fShorter;
-         current->u.fString.fLength >= 1;
-         current = current->u.fString.fShorter
-    ) {
-        if (!hasMaxInfixes(current)) {
-            int32_t currentStart = getLastSegmentStart(current);
-            const UChar *currentChars = current->u.fString.fChars + currentStart;
-            int32_t currentLength = current->u.fString.fLength - currentStart;
-            const UChar *currentLimit = currentChars + currentLength;
-
-            if (currentLength > 0 && minBytesAreGE(currentChars, currentLength, MIN_INFIX_LENGTH)) {
-                /* does text share a suffix with current? */
-                const UChar *pc = currentLimit - 1;
-                const UChar *pt = textChars + textLength - 1;
-                if (*pc == *pt) {
-                    int32_t suffixLength;
-                    /*
-                     * At the beginning of each loop iteration: *pc == *pt.
-                     * After the loop, pc and pt are on the first (from the start)
-                     * equal character in the suffix.
-                     */
-                    for (; pc > currentChars && *(pc - 1) == *(pt - 1); --pc, --pt) {}
-                    /* adjust the start of the suffix to a code point boundary */
-                    if (U16_IS_TRAIL(*pc)) {
-                        ++pc;
-                    }
-                    suffixLength = (int32_t)(currentLimit - pc);
-                    /* is this the longest common suffix so far? */
-                    if (minBytesAreGE(pc, suffixLength, commonMinBytes + 1)) {
-                        commonMinBytes = minBytes(pc, suffixLength);
-                        other = current;
-                        *textStart = start + (int32_t)(pt - textChars);
-                        *otherStart = currentStart + (int32_t)(pc - currentChars);
-                        *commonLength = suffixLength;
-                    }
-                }
-            }
-        }
-    }
-    return other;
-}
-
-static struct SResource *
-findString(struct SRBRoot *bundle, const UChar *s, int32_t length) {
-    if (bundle->fStringSet != NULL) {
-        struct SResource temp = { URES_STRING };
-        temp.u.fString.fChars = (UChar *)s;
-        temp.u.fString.fLength = length;
-        return uhash_get(bundle->fStringSet, &temp);
-    }
-    return NULL;
-}
-
-static void
-insertCommonInfix(struct SRBRoot *bundle,
-                  const UChar *commonChars, int32_t commonLength,
-                  struct SResource *current, int32_t currentStart,
-                  struct SResource *other, int32_t otherStart,
-                  UErrorCode *status) {
-    /* does this common infix already exist as a string? */
-    const char *name = currentStart == 0 ? "prefix" : "suffix";
-    struct SResource *infix;
-    if (commonLength == other->u.fString.fLength) {
-        infix = other;  /* the whole other string was matched */
-    } else {
-        infix = findString(bundle, commonChars, commonLength);
-    }
-    if (infix != NULL) {
-        /* TODO: printf("found common infix[%3ld] (%s) that already exists as a string\n", commonLength, name); */
-    } else if (minBytesAreGE(commonChars, commonLength, MIN_COMMON_INFIX_LENGTH)) {
-        /* it is long enough to be worth creating a new string */
-        /* TODO: printf("found common infix[%3ld] (%s), creating a new string\n", commonLength, name); */
-        infix = string_open(bundle, NULL, commonChars, commonLength, NULL, status);
-        if (U_FAILURE(*status)) {
-            return;
-        }
-        infix->fNext = (struct SResource *)&kOutsideBundleTree;
-    } else {
-        return;
-    }
-    insertInfix(current, currentStart, infix);
-    if (infix != other) {
-        insertInfix(other, otherStart, infix);
-    }
-}
-
-static void
-findPrefixesAndSuffixes(struct SRBRoot *bundle, UErrorCode *status) {
-    struct SResource *current;
-    UBool addedStrings = FALSE;
-
-    if (U_FAILURE(*status)) {
-        return;
-    }
-    /* Go from longest to shortest string for longest prefixes and suffixes. */
-    for (current = bundle->fLongestString->u.fString.fShorter;
-         current != bundle->fShortestString && U_SUCCESS(*status);
-         current = current->u.fString.fShorter
-    ) {
-        if (!hasMaxInfixes(current)) {
-            int32_t commonLength;
-            struct SResource *other = findPrefix(current, &commonLength);
-            if (other != NULL) {
-                insertCommonInfix(
-                    bundle,
-                    current->u.fString.fChars, commonLength,
-                    current, 0, other, 0, status);
-            }
-        }
-        if (!hasMaxInfixes(current) && U_SUCCESS(*status)) {
-            int32_t currentStart, otherStart, commonLength;
-            struct SResource *other = findSuffix(current, &currentStart, &otherStart, &commonLength);
-            if (other != NULL) {
-                insertCommonInfix(
-                    bundle,
-                    current->u.fString.fChars + currentStart, commonLength,
-                    current, currentStart, other, otherStart, status);
-            }
-        }
-    }
 }
 
 static int32_t U_CALLCONV
@@ -3122,12 +1730,7 @@ bundle_compactStrings(struct SRBRoot *bundle, UErrorCode *status) {
             assert(utf16Length <= bundle->f16BitUnitsLength);
             bundle->f16BitUnitsLength = utf16Length;
             uprv_free(array);
-            bundle->fPotentialSize += utf16Length * U_SIZEOF_UCHAR;
         }
-        break;
-    case STRINGS_COMPACT:
-        findPrefixesAndSuffixes(bundle, status);
-        findInfixes(bundle, status);
         break;
     default:
         break;
