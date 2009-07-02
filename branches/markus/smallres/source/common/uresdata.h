@@ -123,6 +123,17 @@ enum {
  * values stored in a new array of 16-bit units between the table key strings
  * and the start of the other resources.
  *
+ * genrb eliminates duplicates among Unicode string-v2 values.
+ * Multiple Unicode strings may use the same offset and string data,
+ * or a short string may point to the suffix of a longer string. ("Suffix sharing")
+ * For example, one string "abc" may be reused for another string "bc" by pointing
+ * to the second character. (Short strings-v2 are NUL-terminated
+ * and not preceded by an explicit length value.)
+ *
+ * It is allowed for all resource types to share values.
+ * The swapper code (ures_swap()) has been modified so that it swaps each item
+ * exactly once.
+ *
  * A resource bundle may use a special pool bundle. Some or all of the table key strings
  * of the using-bundle are omitted, and the key string offsets for such key strings refer
  * to offsets in the pool bundle.
@@ -136,16 +147,11 @@ enum {
  *
  * New in formatVersion 1.3 compared with 1.2: -------------
  *
- * genrb eliminates duplicates among key strings and Unicode string values.
+ * genrb eliminates duplicates among key strings.
  * Multiple table items may share one key string, or one item may point
  * to the suffix of another's key string. ("Suffix sharing")
  * For example, one key "abc" may be reused for another key "bc" by pointing
  * to the second character. (Key strings are NUL-terminated.)
- * Multiple Unicode strings may use the same offset and string data.
- *
- * It is allowed for all resource types to share values.
- * The swapper code (ures_swap()) has been modified so that it swaps each item
- * exactly once.
  *
  * -------------
  *

@@ -1024,6 +1024,17 @@ Transmitting file data ..........
 Committed revision 26079.
 
 svn commit -m "ticket:6945: fix handling of alias bundles, and cache them; all tests pass"
+Sending        smallres-notes.txt
+Sending        source\common\uresbund.c
+Sending        source\common\uresdata.c
+Sending        source\common\uresdata.h
+Sending        source\common\uresimp.h
+Transmitting file data .....
+Committed revision 26083.
+
+*** move string duplicate elimination to formatVersion 2
+    to keep formatVersion 1.3 compatible with old swapper implementations
+svn commit -m "ticket:6945: move string duplicate elimination to formatVersion 2 to keep formatVersion 1.3 compatible with old swapper implementations"
 
 *** Options for pool bundle key strings (ASCII vs. EBCDIC)
 
@@ -1136,6 +1147,7 @@ TODO:
 - make kStringsUTF16v1 work in string_preWrite() & string_write()
 - hardcode "pool.res"? save bytes, no need for flexibility
 - swap the --usePoolBundle file in genrb so that a single checked-in file can be used
+- icupkg needs to test the usesPoolBundle to generate a dependency on the pool.res data item
 - support new format in derb for debugging
 - do aliases need to be Unicode strings? can they be invariant chars or ASCII?
   de-duping? suffix sharing??

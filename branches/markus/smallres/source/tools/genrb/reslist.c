@@ -1062,24 +1062,9 @@ static void
 string_preWrite(uint32_t *byteOffset,
                 struct SRBRoot *bundle, struct SResource *res,
                 UErrorCode *status) {
-    struct SResource *same;
-    if ((same = res->u.fString.fSame) != NULL) {
-        /* This is a duplicate. */
-        if (same->fRes == RES_BOGUS) {
-            /*
-             * The original has not been visited yet.
-             * Add the size of the contents of the first-parsed version of this string
-             * which got inserted into a later part of the tree.
-             */
-            string_preWrite(byteOffset, bundle, same, status);
-        }
-        res->fRes = same->fRes;
-        res->fWritten = same->fWritten;
-    } else {
-        /* Write the original UTF-16 form. */
-        res->fRes = URES_MAKE_RESOURCE(URES_STRING, *byteOffset >> 2);
-        *byteOffset += 4 + (res->u.fString.fLength + 1) * U_SIZEOF_UCHAR;
-    }
+    /* Write the UTF-16 v1 string. */
+    res->fRes = URES_MAKE_RESOURCE(URES_STRING, *byteOffset >> 2);
+    *byteOffset += 4 + (res->u.fString.fLength + 1) * U_SIZEOF_UCHAR;
 }
 
 #if 0
@@ -1326,23 +1311,8 @@ bundle_preWrite(struct SRBRoot *bundle, UErrorCode *status) {
 static void string_write(UNewDataMemory *mem, uint32_t *byteOffset,
                          struct SRBRoot *bundle, struct SResource *res,
                          UErrorCode *status) {
-    struct SResource *same = res->u.fString.fSame;
-    int32_t length;
-
-    if (same != NULL) {
-        /* This is a duplicate. */
-        if (!same->fWritten) {
-            /*
-             * Write the contents of the first-parsed version of this string
-             * which got inserted into a later part of the tree.
-             */
-            string_write(mem, byteOffset, bundle, same, status);
-        }
-        return;
-    }
-
     /* Write the UTF-16 v1 string. */
-    length = res->u.fString.fLength;
+    int32_t length = res->u.fString.fLength;
     udata_write32(mem, length);
     udata_writeUString(mem, res->u.fString.fChars, length + 1);
     *byteOffset += 4 + (length + 1) * U_SIZEOF_UCHAR;
@@ -1837,15 +1807,17 @@ struct SResource *string_open(struct SRBRoot *bundle, char *tag, const UChar *va
         return res;
     }
 
-    /* check for duplicates */
     res->u.fString.fLength = len;
-    res->u.fString.fChars  = (UChar *)value;
 
-    if (bundle->fStringSet == NULL) {
-        UErrorCode localStatus = U_ZERO_ERROR;  /* if failure: just don't detect dups */
-        bundle->fStringSet = uhash_open(string_hash, string_comp, string_comp, &localStatus);
-    } else {
-        res->u.fString.fSame = uhash_get(bundle->fStringSet, res);
+    if (gFormatVersion > 1) {
+        /* check for duplicates */
+        res->u.fString.fChars  = (UChar *)value;
+        if (bundle->fStringSet == NULL) {
+            UErrorCode localStatus = U_ZERO_ERROR;  /* if failure: just don't detect dups */
+            bundle->fStringSet = uhash_open(string_hash, string_comp, string_comp, &localStatus);
+        } else {
+            res->u.fString.fSame = uhash_get(bundle->fStringSet, res);
+        }
     }
     if (res->u.fString.fSame == NULL) {
         struct SResource *current;
@@ -1861,8 +1833,10 @@ struct SResource *string_open(struct SRBRoot *bundle, char *tag, const UChar *va
 
         uprv_memcpy(res->u.fString.fChars, value, sizeof(UChar) * len);
         res->u.fString.fChars[len] = 0;
-        /* put it into the set for finding duplicates */
-        uhash_put(bundle->fStringSet, res, res, status);
+        if (bundle->fStringSet != NULL) {
+            /* put it into the set for finding duplicates */
+            uhash_put(bundle->fStringSet, res, res, status);
+        }
 
         if (bundle->fStringsForm != STRINGS_UTF16_V1) {
             if (len <= MAX_IMPLICIT_STRING_LENGTH && !U16_IS_TRAIL(value[0]) && len == u_strlen(value)) {
