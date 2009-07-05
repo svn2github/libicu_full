@@ -1042,6 +1042,14 @@ Committed revision 26221.
 
 ***
 svn commit -m "ticket:6945: after r26221, remove experimental string compression code and statistics output from genrb"
+Sending        smallres-notes.txt
+Sending        source\tools\genrb\reslist.c
+Sending        source\tools\genrb\reslist.h
+Transmitting file data ...
+Committed revision 26223.
+
+***
+svn commit -m "ticket:6945: fix gOmitCollationRules (remove omitted rule string from bundle), and remove MAX_INFIXES (leftover from experimental compression)"
 
 *** Options for pool bundle key strings (ASCII vs. EBCDIC)
 
@@ -1131,18 +1139,6 @@ in the pool and not available to the swapper code. Instead, it should detect
 (("%%CollationBin" || pool key) && looksLikeCollationBinary(data)).
 
 TODO:
-- xyz_preWrite() update byteOffset, not return size;
-  precompute array and table resource item words to experiment with table16/array16?
-- gOmitCollationRules: string_close(member) after building the binary;
-  don't reuse member for bin_open();
-  handle string_close() being called before bundle_write() so we don't write
-  the string anyway just because it's in the hash set,
-  but we delete the string at the right time; can't just remove from hash set
-  in case a duplicate points to it;
-  maybe do hash set processing etc. only in table_add() and array_add(),
-  and in bundle_write() if fRoot is a string?
-  That would allow the parser to call string_close(member) without complications.
-
 * for v2 with key suffix sharing, pool bundle with shared keys,
               more compact UTF-16 strings with suffix sharing
               (still all memory-mappable)
@@ -1151,7 +1147,6 @@ TODO:
   so that we can remove ures_preflightResource()
   (1.1 was implemented in ICU 2.8; 1.0 does not work for ICU4J)
 - in formatVersion 2 reserve bits 31..8 of indexes[0] for future use; use only bits 7..0 for indexes length
-- make kStringsUTF16v1 work in string_preWrite() & string_write()
 - hardcode "pool.res"? save bytes, no need for flexibility
 - swap the --usePoolBundle file in genrb so that a single checked-in file can be used
 - icupkg needs to test the usesPoolBundle to generate a dependency on the pool.res data item

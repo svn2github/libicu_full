@@ -1205,6 +1205,13 @@ void bundle_close(struct SRBRoot *bundle, UErrorCode *status) {
     uprv_free(bundle);
 }
 
+void bundle_closeString(struct SRBRoot *bundle, struct SResource *string) {
+    if (bundle->fStringSet != NULL) {
+        uhash_remove(bundle->fStringSet, string);
+    }
+    string_close(string);
+}
+
 /* Adding Functions */
 void table_add(struct SResource *table, struct SResource *res, int linenumber, UErrorCode *status) {
     struct SResource *current = NULL;

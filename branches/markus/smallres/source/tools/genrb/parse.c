@@ -715,12 +715,6 @@ addCollation(struct SResource  *result, uint32_t startline, UErrorCode *status)
 #if UCONFIG_NO_COLLATION
             warning(line, "Not building collation elements because of UCONFIG_NO_COLLATION, see uconfig.h");
 #else
-            /* in order to achieve smaller data files, we can direct genrb */
-            /* to omit collation rules */
-            if(!gOmitCollationRules) {
-              /* first we add the "Sequence", so that we always have rules */
-              table_add(result, member, line, status);
-            }
             if(gMakeBinaryCollation) {
                 UErrorCode intStatus = U_ZERO_ERROR;
 
@@ -729,8 +723,6 @@ addCollation(struct SResource  *result, uint32_t startline, UErrorCode *status)
                 uint8_t   *data  = NULL;
                 UCollator *coll  = NULL;
                 UParseError parseError;
-                /* add sequence */
-                /*table_add(result, member, line, status);*/
 
                 coll = ucol_openRules(member->u.fString.fChars, member->u.fString.fLength,
                     UCOL_OFF, UCOL_DEFAULT_STRENGTH,&parseError, &intStatus);
@@ -754,9 +746,8 @@ addCollation(struct SResource  *result, uint32_t startline, UErrorCode *status)
 
                     if (U_SUCCESS(intStatus) && data != NULL)
                     {
-                        member = bin_open(bundle, "%%CollationBin", len, data, NULL, NULL, status);
-                        /*table_add(bundle->fRoot, member, line, status);*/
-                        table_add(result, member, line, status);
+                        struct SResource *collationBin = bin_open(bundle, "%%CollationBin", len, data, NULL, NULL, status);
+                        table_add(result, collationBin, line, status);
                         uprv_free(data);
                     }
                     else
@@ -784,6 +775,13 @@ addCollation(struct SResource  *result, uint32_t startline, UErrorCode *status)
                 }
             }
 #endif
+            /* in order to achieve smaller data files, we can direct genrb */
+            /* to omit collation rules */
+            if(gOmitCollationRules) {
+                bundle_closeString(bundle, member);
+            } else {
+                table_add(result, member, line, status);
+            }
         }
 
         /*member = string_open(bundle, subtag, tokenValue->fChars, tokenValue->fLength, status);*/

@@ -122,10 +122,6 @@ struct SResArray {
 struct SResource* array_open(struct SRBRoot *bundle, const char *tag, const struct UString* comment, UErrorCode *status);
 void array_add(struct SResource *array, struct SResource *res, UErrorCode *status);
 
-enum {
-    MAX_INFIXES = 2
-};
-
 struct SResString {
     struct SResource *fSame;  /* used for duplicates */
     UChar *fChars;
@@ -135,6 +131,13 @@ struct SResString {
 };
 
 struct SResource *string_open(struct SRBRoot *bundle, char *tag, const UChar *value, int32_t len, const struct UString* comment, UErrorCode *status);
+
+/**
+ * Remove a string from a bundle and close (delete) it.
+ * The string must not have been added to a table or array yet.
+ * This function only undoes what string_open() did.
+ */
+void bundle_closeString(struct SRBRoot *bundle, struct SResource *string);
 
 struct SResource *alias_open(struct SRBRoot *bundle, char *tag, UChar *value, int32_t len, const struct UString* comment, UErrorCode *status);
 
