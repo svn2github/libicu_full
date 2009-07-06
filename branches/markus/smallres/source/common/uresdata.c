@@ -27,6 +27,7 @@
 #include "uarrsort.h"
 #include "udataswp.h"
 #include "ucol_swp.h"
+#include "uinvchar.h"
 #include "uresdata.h"
 #include "uresimp.h"
 
@@ -70,7 +71,11 @@ _res_findTableItem(const ResourceData *pResData, const uint16_t *keyOffsets, int
     while(start<limit) {
         mid = (start + limit) / 2;
         tableKey = RES_GET_KEY16(pResData, keyOffsets[mid]);
-        result = uprv_strcmp(key, tableKey);
+        if (pResData->useNativeStrcmp) {
+            result = uprv_strcmp(key, tableKey);
+        } else {
+            result = uprv_compareInvCharsAsAscii(key, tableKey);
+        }
         if (result < 0) {
             limit = mid;
         } else if (result > 0) {
@@ -97,7 +102,11 @@ _res_findTable32Item(const ResourceData *pResData, const int32_t *keyOffsets, in
     while(start<limit) {
         mid = (start + limit) / 2;
         tableKey = RES_GET_KEY32(pResData, keyOffsets[mid]);
-        result = uprv_strcmp(key, tableKey);
+        if (pResData->useNativeStrcmp) {
+            result = uprv_strcmp(key, tableKey);
+        } else {
+            result = uprv_compareInvCharsAsAscii(key, tableKey);
+        }
         if (result < 0) {
             limit = mid;
         } else if (result > 0) {
@@ -162,7 +171,7 @@ res_load(ResourceData *pResData,
     if(formatVersion[0]>1 || (formatVersion[0]==1 && formatVersion[1]>=1)) {
         /* bundles with formatVersion 1.1 and later contain an indexes[] array */
         const int32_t *indexes=pResData->pRoot+1;
-        int32_t indexLength=indexes[URES_INDEX_LENGTH];
+        int32_t indexLength=indexes[URES_INDEX_LENGTH]&0xff;
         if(indexes[URES_INDEX_KEYS_TOP]>(1+indexLength)) {
             pResData->localKeyLimit=indexes[URES_INDEX_KEYS_TOP]<<2;
         }
@@ -177,6 +186,14 @@ res_load(ResourceData *pResData,
         ) {
             pResData->p16BitUnits=(const uint16_t *)(pResData->pRoot+indexes[URES_INDEX_KEYS_TOP]);
         }
+    }
+
+    if(formatVersion[0]==1 || U_CHARSET_FAMILY==U_ASCII_FAMILY) {
+        /*
+         * formatVersion 1: compare key strings in native-charset order
+         * formatVersion 2 and up: compare key strings in ASCII order
+         */
+        pResData->useNativeStrcmp=TRUE;
     }
 }
 
@@ -1061,7 +1078,7 @@ ures_swap(const UDataSwapper *ds,
 
         inIndexes=(const int32_t *)(inBundle+1);
 
-        indexLength=udata_readInt32(ds, inIndexes[URES_INDEX_LENGTH]);
+        indexLength=udata_readInt32(ds, inIndexes[URES_INDEX_LENGTH])&0xff;
         keysBottom=1+indexLength;
         keysTop=udata_readInt32(ds, inIndexes[URES_INDEX_KEYS_TOP]);
         if(indexLength>URES_INDEX_16BIT_TOP) {

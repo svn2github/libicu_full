@@ -461,14 +461,14 @@ ures_enumDependencies(const UDataSwapper *ds,
      * then add the parent bundle as a dependency
      */
     if(pInfo->formatVersion[1]>=1) {
-        int32_t indexes[URES_INDEX_TOP];
         const int32_t *inIndexes;
+        int32_t indexLength, attributes;
 
         inIndexes=(const int32_t *)inBundle+1;
-        indexes[URES_INDEX_LENGTH]=udata_readInt32(ds, inIndexes[URES_INDEX_LENGTH]);
-        if(indexes[URES_INDEX_LENGTH]>URES_INDEX_ATTRIBUTES) {
-            indexes[URES_INDEX_ATTRIBUTES]=udata_readInt32(ds, inIndexes[URES_INDEX_ATTRIBUTES]);
-            if(0==(indexes[URES_INDEX_ATTRIBUTES]&URES_ATT_NO_FALLBACK)) {
+        indexLength=udata_readInt32(ds, inIndexes[URES_INDEX_LENGTH])&0xff;
+        if(indexLength>URES_INDEX_ATTRIBUTES) {
+            attributes=udata_readInt32(ds, inIndexes[URES_INDEX_ATTRIBUTES]);
+            if(0==(attributes&URES_ATT_NO_FALLBACK)) {
                 /* this bundle participates in locale fallback */
                 checkParent(itemName, check, context, pErrorCode);
             }

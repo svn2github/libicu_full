@@ -24,6 +24,7 @@
 #include "errmsg.h"
 
 #include "uarrsort.h"
+#include "uinvchar.h"
 
 /*
  * Align binary data at a 16-byte offset from the start of the resource bundle,
@@ -1246,7 +1247,16 @@ void table_add(struct SResource *table, struct SResource *res, int linenumber, U
 
     while (current != NULL) {
         const char *currentKeyString = list->fRoot->fKeys + current->fKey;
-        int diff = uprv_strcmp(currentKeyString, resKeyString);
+        int diff;
+        /*
+         * formatVersion 1: compare key strings in native-charset order
+         * formatVersion 2 and up: compare key strings in ASCII order
+         */
+        if (gFormatVersion == 1 || U_CHARSET_FAMILY == U_ASCII_FAMILY) {
+            diff = uprv_strcmp(currentKeyString, resKeyString);
+        } else {
+            diff = uprv_compareInvCharsAsAscii(currentKeyString, resKeyString);
+        }
         if (diff < 0) {
             prev    = current;
             current = current->fNext;

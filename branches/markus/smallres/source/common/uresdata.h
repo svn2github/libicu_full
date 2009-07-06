@@ -78,7 +78,11 @@ typedef uint32_t Resource;
 /* indexes[] value names; indexes are generally 32-bit (Resource) indexes */
 enum {
     URES_INDEX_LENGTH,          /* [0] contains URES_INDEX_TOP==the length of indexes[];
-                                 *     formatVersion>1: only bits 7..0 contain the length of indexes[] */
+                                 *     formatVersion==1: all bits contain the length of indexes[]
+                                 *       but the length is much less than 0xff;
+                                 *     formatVersion>1:
+                                 *       only bits  7..0 contain the length of indexes[],
+                                 *            bits 31..8 are reserved and set to 0 */
     URES_INDEX_KEYS_TOP,        /* [1] contains the top of the key strings, */
                                 /*     same as the bottom of resources or UTF-16 strings, rounded up */
     URES_INDEX_RESOURCES_TOP,   /* [2] contains the top of all resources */
@@ -309,6 +313,7 @@ typedef struct {
     UBool noFallback; /* see URES_ATT_NO_FALLBACK */
     UBool isPoolBundle;
     UBool usesPoolBundle;
+    UBool useNativeStrcmp;
 } ResourceData;
 
 /*

@@ -82,8 +82,8 @@ UOption options[]={
                       UOPTION_DEF("language",  'l', UOPT_REQUIRES_ARG), /* 16 */
                       UOPTION_DEF("omitCollationRules", 'R', UOPT_NO_ARG),/* 17 */
                       UOPTION_DEF("formatVersion", '\x01', UOPT_REQUIRES_ARG),/* 18 */
-                      UOPTION_DEF("writePoolBundle", '\x01', UOPT_REQUIRES_ARG),/* 19 */
-                      UOPTION_DEF("usePoolBundle", '\x01', UOPT_REQUIRES_ARG),/* 20 */
+                      UOPTION_DEF("writePoolBundle", '\x01', UOPT_NO_ARG),/* 19 */
+                      UOPTION_DEF("usePoolBundle", '\x01', UOPT_NO_ARG),/* 20 */
                   };
 
 static     UBool       write_java = FALSE;
@@ -132,18 +132,6 @@ main(int argc,
     if(options[WRITE_POOL_BUNDLE].doesOccur && options[USE_POOL_BUNDLE].doesOccur) {
         fprintf(stderr, "%s: cannot combine --writePoolBundle and --usePoolBundle\n", argv[0]);
         argc = -1;
-    }
-    if(options[WRITE_POOL_BUNDLE].doesOccur) {
-        const char *poolResName = options[WRITE_POOL_BUNDLE].value;
-        int32_t poolResNameLength = uprv_strlen(options[WRITE_POOL_BUNDLE].value);
-        if(
-            !(uprv_strchr(poolResName, U_FILE_SEP_CHAR) == NULL &&
-              poolResNameLength > 4 &&
-              0 == uprv_strcmp(poolResName + poolResNameLength - 4, ".res"))
-        ) {
-            fprintf(stderr, "%s: the --writePoolBundle value must be a .res file name like pool.res\n", argv[0]);
-            argc = -1;
-        }
     }
     if(options[FORMAT_VERSION].doesOccur) {
         const char *s = options[FORMAT_VERSION].value;
@@ -217,11 +205,9 @@ main(int argc,
                 "\t      --formatVersion      write a .res file compatible with the requested formatVersion (single digit);\n"
                 "\t                           for example, --formatVersion 1\n");
         fprintf(stderr,
-                "\t      --writePoolBundle    write a .res file with all of the keys of all input bundles;\n"
-                "\t                           takes a .res output file name argument\n"
-                "\t      --usePoolBundle      point to keys from the keys pool bundle if they are available there;\n"
-                "\t                           takes a .res input file name argument;\n"
-                "\t                           makes .res file smaller but dependent on the pool bundle\n"
+                "\t      --writePoolBundle    write a pool.res file with all of the keys of all input bundles\n"
+                "\t      --usePoolBundle      point to keys from the pool.res keys pool bundle if they are available there;\n"
+                "\t                           makes .res files smaller but dependent on the pool bundle\n"
                 "\t                           (--writePoolBundle and --usePoolBundle cannot be combined)\n");
 
         return argc < 0 ? U_ILLEGAL_ARGUMENT_ERROR : U_ZERO_ERROR;
@@ -309,7 +295,7 @@ main(int argc,
             fprintf(stderr, "unable to create an empty bundle for the pool keys: %s\n", u_errorName(status));
             return status;
         } else {
-            const char *poolResName = options[WRITE_POOL_BUNDLE].value;
+            const char *poolResName = "pool.res";
             char *nameWithoutSuffix = uprv_malloc(uprv_strlen(poolResName) + 1);
             if (nameWithoutSuffix == NULL) {
                 fprintf(stderr, "out of memory error\n");
@@ -322,7 +308,7 @@ main(int argc,
     }
 
     if(options[USE_POOL_BUNDLE].doesOccur) {
-        const char *poolResName = options[USE_POOL_BUNDLE].value;
+        const char *poolResName = "pool.res";
         FileStream *poolFile;
         int32_t poolFileSize;
         int32_t indexLength;
@@ -356,6 +342,7 @@ main(int argc,
             fprintf(stderr, "unable to allocate memory for the pool bundle file %s\n", theCurrentFileName);
             return U_MEMORY_ALLOCATION_ERROR;
         } else {
+            UDataSwapper *ds;
             const DataHeader *header;
             int32_t bytesRead = T_FileStream_read(poolFile, poolBundle.fBytes, poolFileSize);
             int32_t keysBottom;
@@ -363,23 +350,33 @@ main(int argc,
                 fprintf(stderr, "unable to read the pool bundle file %s\n", theCurrentFileName);
                 return 1;
             }
+            /*
+             * Swap the pool bundle so that a single checked-in file can be used.
+             * The swapper functions also test that the data looks like
+             * a well-formed .res file.
+             */
+            ds = udata_openSwapperForInputData(poolBundle.fBytes, bytesRead,
+                                               U_IS_BIG_ENDIAN, U_CHARSET_FAMILY, &status);
+            if (U_FAILURE(status)) {
+                fprintf(stderr, "udata_openSwapperForInputData(pool bundle %s) failed: %s\n",
+                        theCurrentFileName, u_errorName(status));
+                return status;
+            }
+            ures_swap(ds, poolBundle.fBytes, bytesRead, poolBundle.fBytes, &status);
+            udata_closeSwapper(ds);
+            if (U_FAILURE(status)) {
+                fprintf(stderr, "ures_swap(pool bundle %s) failed: %s\n",
+                        theCurrentFileName, u_errorName(status));
+                return status;
+            }
             header = (const DataHeader *)poolBundle.fBytes;
-            if (!(header->dataHeader.magic1==0xda &&
-                header->dataHeader.magic2==0x27 &&
-                header->info.isBigEndian==U_IS_BIG_ENDIAN &&
-                header->info.charsetFamily==U_CHARSET_FAMILY &&
-                header->info.dataFormat[0]==0x52 &&  /* dataFormat="ResB" */
-                header->info.dataFormat[1]==0x65 &&
-                header->info.dataFormat[2]==0x73 &&
-                header->info.dataFormat[3]==0x42 &&
-                header->info.formatVersion[0]==2)
-            ) {
+            if (header->info.formatVersion[0]!=2) {
                 fprintf(stderr, "invalid format of pool bundle file %s\n", theCurrentFileName);
                 return U_INVALID_FORMAT_ERROR;
             }
             poolBundle.fKeys = (const char *)header + header->dataHeader.headerSize;
             poolBundle.fIndexes = (const int32_t *)poolBundle.fKeys + 1;
-            indexLength = poolBundle.fIndexes[URES_INDEX_LENGTH];
+            indexLength = poolBundle.fIndexes[URES_INDEX_LENGTH] & 0xff;
             if (indexLength <= URES_INDEX_POOL_CHECKSUM) {
                 fprintf(stderr, "insufficient indexes[] in pool bundle file %s\n", theCurrentFileName);
                 return U_INVALID_FORMAT_ERROR;

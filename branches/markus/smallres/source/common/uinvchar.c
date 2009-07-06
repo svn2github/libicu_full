@@ -514,7 +514,6 @@ uprv_compareInvEbcdic(const UDataSwapper *ds,
     return outLength-localLength;
 }
 
-#if U_CHARSET_FAMILY==U_EBCDIC_FAMILY
 U_CAPI int32_t U_EXPORT2
 uprv_compareInvEbcdicAsAscii(const char *s1, const char *s2) {
     int32_t c1, c2;
@@ -535,4 +534,3 @@ uprv_compareInvEbcdicAsAscii(const char *s1, const char *s2) {
         }
     }
 }
-#endif

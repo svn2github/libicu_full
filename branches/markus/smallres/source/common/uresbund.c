@@ -349,7 +349,7 @@ static UResourceDataEntry *init_entry(const char *localeID, const char *path, UE
                 if (U_SUCCESS(*status)) {
                     const int32_t *poolIndexes = r->fPool->fData.pRoot + 1;
                     if(r->fData.pRoot[1 + URES_INDEX_POOL_CHECKSUM] == poolIndexes[URES_INDEX_POOL_CHECKSUM]) {
-                        r->fData.poolBundleKeys = (const char *)(poolIndexes + poolIndexes[URES_INDEX_LENGTH]);
+                        r->fData.poolBundleKeys = (const char *)(poolIndexes + (poolIndexes[URES_INDEX_LENGTH] & 0xff));
                     } else {
                         r->fBogus = *status = U_INVALID_FORMAT_ERROR;
                     }

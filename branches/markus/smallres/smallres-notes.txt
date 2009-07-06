@@ -1050,6 +1050,12 @@ Committed revision 26223.
 
 ***
 svn commit -m "ticket:6945: fix gOmitCollationRules (remove omitted rule string from bundle), and remove MAX_INFIXES (leftover from experimental compression)"
+Sending        smallres-notes.txt
+Sending        source\tools\genrb\parse.c
+Sending        source\tools\genrb\reslist.c
+Sending        source\tools\genrb\reslist.h
+Transmitting file data ....
+Committed revision 26226.
 
 *** Options for pool bundle key strings (ASCII vs. EBCDIC)
 
@@ -1138,22 +1144,28 @@ collation binaries and call their swapper. With a pool bundle, that key will be
 in the pool and not available to the swapper code. Instead, it should detect
 (("%%CollationBin" || pool key) && looksLikeCollationBinary(data)).
 
+***
+- hardcode "pool.res": save bytes, no need for flexibility
+- swap the --usePoolBundle file in genrb so that a single checked-in file can be used
+- in formatVersion 2 reserve bits 31..8 of indexes[0] for future use; use only bits 7..0 for indexes length
+
+svn commit -m "ticket:6945: hardcode pool.res filename, add --usePoolBundle to Unix Makefile.in, swap input pool.res in genrb, formatVersion 2+ compare key strings in ASCII order, reserve bits 31..8 of indexes[0] for future use"
+
 TODO:
 * for v2 with key suffix sharing, pool bundle with shared keys,
               more compact UTF-16 strings with suffix sharing
               (still all memory-mappable)
+- test uprv_compareInvEbcdicAsAscii()
 - use pool bundle for testdata including testtable32 to test for keys > 0x10000 bytes
 - consider stopping support for formatVersion=1.0 in ures_swap()
   so that we can remove ures_preflightResource()
   (1.1 was implemented in ICU 2.8; 1.0 does not work for ICU4J)
-- in formatVersion 2 reserve bits 31..8 of indexes[0] for future use; use only bits 7..0 for indexes length
-- hardcode "pool.res"? save bytes, no need for flexibility
-- swap the --usePoolBundle file in genrb so that a single checked-in file can be used
 - icupkg needs to test the usesPoolBundle to generate a dependency on the pool.res data item
 - support new format in derb for debugging
 - do aliases need to be Unicode strings? can they be invariant chars or ASCII?
   de-duping? suffix sharing??
 - document experiments, decisions and dead ends
+- clean up TODO comments
 
 * for v2.1 or v3 with compact, byte-oriented strings, 1B/char for most scripts,
                       maybe zlib compression
