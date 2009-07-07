@@ -141,24 +141,23 @@ isAcceptable(void *context,
 
 /* semi-public functions ---------------------------------------------------- */
 
-U_CFUNC void
-res_load(ResourceData *pResData,
-         const char *path, const char *name, UErrorCode *errorCode) {
-    UVersionInfo formatVersion;
+static void
+res_init(ResourceData *pResData,
+         UVersionInfo formatVersion, const void *inBytes, int32_t length,
+         UErrorCode *errorCode) {
     UResType rootType;
 
-    uprv_memset(pResData, 0, sizeof(ResourceData));
-
-    /* load the ResourceBundle file */
-    pResData->data=udata_openChoice(path, "res", name, isAcceptable, formatVersion, errorCode);
-    if(U_FAILURE(*errorCode)) {
-        return;
-    }
-
-    /* get its memory and root resource */
-    pResData->pRoot=(const int32_t *)udata_getMemory(pResData->data);
+    /* get the root resource */
+    pResData->pRoot=(const int32_t *)inBytes;
     pResData->rootRes=(Resource)*pResData->pRoot;
     pResData->p16BitUnits=(const uint16_t *)gEmpty;
+
+    /* formatVersion 1.1 must have a root item and at least 5 indexes */
+    if(length>=0 && (length/4)<((formatVersion[0]==1 && formatVersion[1]==0) ? 1 : 1+5)) {
+        *errorCode=U_INVALID_FORMAT_ERROR;
+        res_unload(pResData);
+        return;
+    }
 
     /* currently, we accept only resources that have a Table as their roots */
     rootType=RES_GET_TYPE(pResData->rootRes);
@@ -172,6 +171,19 @@ res_load(ResourceData *pResData,
         /* bundles with formatVersion 1.1 and later contain an indexes[] array */
         const int32_t *indexes=pResData->pRoot+1;
         int32_t indexLength=indexes[URES_INDEX_LENGTH]&0xff;
+        if(indexLength<=URES_INDEX_MAX_TABLE_LENGTH) {
+            *errorCode=U_INVALID_FORMAT_ERROR;
+            res_unload(pResData);
+            return;
+        }
+        if( length>=0 &&
+            (length<((1+indexLength)<<2) ||
+             length<(indexes[URES_INDEX_BUNDLE_TOP]<<2))
+        ) {
+            *errorCode=U_INVALID_FORMAT_ERROR;
+            res_unload(pResData);
+            return;
+        }
         if(indexes[URES_INDEX_KEYS_TOP]>(1+indexLength)) {
             pResData->localKeyLimit=indexes[URES_INDEX_KEYS_TOP]<<2;
         }
@@ -180,6 +192,11 @@ res_load(ResourceData *pResData,
             pResData->noFallback=(UBool)(att&URES_ATT_NO_FALLBACK);
             pResData->isPoolBundle=(UBool)((att&URES_ATT_IS_POOL_BUNDLE)!=0);
             pResData->usesPoolBundle=(UBool)((att&URES_ATT_USES_POOL_BUNDLE)!=0);
+        }
+        if((pResData->isPoolBundle || pResData->usesPoolBundle) && indexLength<=URES_INDEX_POOL_CHECKSUM) {
+            *errorCode=U_INVALID_FORMAT_ERROR;
+            res_unload(pResData);
+            return;
         }
         if( indexLength>URES_INDEX_16BIT_TOP &&
             indexes[URES_INDEX_16BIT_TOP]>indexes[URES_INDEX_KEYS_TOP]
@@ -197,6 +214,40 @@ res_load(ResourceData *pResData,
     }
 }
 
+U_CAPI void U_EXPORT2
+res_read(ResourceData *pResData,
+         const UDataInfo *pInfo, const void *inBytes, int32_t length,
+         UErrorCode *errorCode) {
+    UVersionInfo formatVersion;
+
+    uprv_memset(pResData, 0, sizeof(ResourceData));
+    if(U_FAILURE(*errorCode)) {
+        return;
+    }
+    if(!isAcceptable(formatVersion, NULL, NULL, pInfo)) {
+        *errorCode=U_INVALID_FORMAT_ERROR;
+        return;
+    }
+    res_init(pResData, formatVersion, inBytes, length, errorCode);
+}
+
+U_CFUNC void
+res_load(ResourceData *pResData,
+         const char *path, const char *name, UErrorCode *errorCode) {
+    UVersionInfo formatVersion;
+
+    uprv_memset(pResData, 0, sizeof(ResourceData));
+
+    /* load the ResourceBundle file */
+    pResData->data=udata_openChoice(path, "res", name, isAcceptable, formatVersion, errorCode);
+    if(U_FAILURE(*errorCode)) {
+        return;
+    }
+
+    /* get its memory and initialize *pResData */
+    res_init(pResData, formatVersion, udata_getMemory(pResData->data), -1, errorCode);
+}
+
 U_CFUNC void
 res_unload(ResourceData *pResData) {
     if(pResData->data!=NULL) {
@@ -205,7 +256,34 @@ res_unload(ResourceData *pResData) {
     }
 }
 
-U_CFUNC const UChar *
+static const int8_t gPublicTypes[URES_LIMIT] = {
+    URES_STRING,
+    URES_BINARY,
+    URES_TABLE,
+    URES_ALIAS,
+
+    URES_TABLE,     /* URES_TABLE32 */
+    URES_TABLE,     /* URES_TABLE16 */
+    URES_STRING,    /* URES_STRING_V2 */
+    URES_INT,
+
+    URES_ARRAY,
+    URES_ARRAY,     /* URES_ARRAY16 */
+    URES_NONE,
+    URES_NONE,
+
+    URES_NONE,
+    URES_NONE,
+    URES_INT_VECTOR,
+    RES_RESERVED
+};
+
+U_CAPI UResType U_EXPORT2
+res_getPublicType(Resource res) {
+    return (UResType)gPublicTypes[RES_GET_TYPE(res)];
+}
+
+U_CAPI const UChar * U_EXPORT2
 res_getString(const ResourceData *pResData, Resource res, int32_t *pLength) {
     const UChar *p;
     uint32_t offset=RES_GET_OFFSET(res);
@@ -240,7 +318,7 @@ res_getString(const ResourceData *pResData, Resource res, int32_t *pLength) {
     return p;
 }
 
-U_CFUNC const UChar *
+U_CAPI const UChar * U_EXPORT2
 res_getAlias(const ResourceData *pResData, Resource res, int32_t *pLength) {
     const UChar *p;
     uint32_t offset=RES_GET_OFFSET(res);
@@ -259,7 +337,7 @@ res_getAlias(const ResourceData *pResData, Resource res, int32_t *pLength) {
     return p;
 }
 
-U_CFUNC const uint8_t *
+U_CAPI const uint8_t * U_EXPORT2
 res_getBinary(const ResourceData *pResData, Resource res, int32_t *pLength) {
     const uint8_t *p;
     uint32_t offset=RES_GET_OFFSET(res);
@@ -279,7 +357,7 @@ res_getBinary(const ResourceData *pResData, Resource res, int32_t *pLength) {
 }
 
 
-U_CFUNC const int32_t *
+U_CAPI const int32_t * U_EXPORT2
 res_getIntVector(const ResourceData *pResData, Resource res, int32_t *pLength) {
     const int32_t *p;
     uint32_t offset=RES_GET_OFFSET(res);
@@ -297,7 +375,7 @@ res_getIntVector(const ResourceData *pResData, Resource res, int32_t *pLength) {
     return p;
 }
 
-U_CFUNC int32_t
+U_CAPI int32_t U_EXPORT2
 res_countArrayItems(const ResourceData *pResData, Resource res) {
     uint32_t offset=RES_GET_OFFSET(res);
     switch(RES_GET_TYPE(res)) {
@@ -321,7 +399,7 @@ res_countArrayItems(const ResourceData *pResData, Resource res) {
     }
 }
 
-U_CFUNC Resource 
+U_CAPI Resource U_EXPORT2
 res_getTableItemByKey(const ResourceData *pResData, Resource table,
                       int32_t *indexR, const char **key) {
     uint32_t offset=RES_GET_OFFSET(table);
@@ -365,7 +443,7 @@ res_getTableItemByKey(const ResourceData *pResData, Resource table,
     return RES_BOGUS;
 }
 
-U_CFUNC Resource 
+U_CAPI Resource U_EXPORT2
 res_getTableItemByIndex(const ResourceData *pResData, Resource table,
                         int32_t indexR, const char **key) {
     uint32_t offset=RES_GET_OFFSET(table);
@@ -411,14 +489,14 @@ res_getTableItemByIndex(const ResourceData *pResData, Resource table,
     return RES_BOGUS;
 }
 
-U_CFUNC Resource
+U_CAPI Resource U_EXPORT2
 res_getResource(const ResourceData *pResData, const char *key) {
     const char *realKey=key;
     int32_t idx;
     return res_getTableItemByKey(pResData, pResData->rootRes, &idx, &realKey);
 }
 
-U_CFUNC Resource 
+U_CAPI Resource U_EXPORT2
 res_getArrayItem(const ResourceData *pResData, Resource array, int32_t indexR) {
     uint32_t offset=RES_GET_OFFSET(array);
     switch(RES_GET_TYPE(array)) {
@@ -1045,7 +1123,7 @@ ures_swap(const UDataSwapper *ds,
 
         /* formatVersion 1.1 must have a root item and at least 5 indexes */
         if( bundleLength<
-                (pInfo->formatVersion[1]==0 ? 1 : 1+5)
+                ((pInfo->formatVersion[0]==1 && pInfo->formatVersion[1]==0) ? 1 : 1+5)
         ) {
             udata_printError(ds, "ures_swap(): too few bytes (%d after header) for a resource bundle\n",
                              length-headerSize);
@@ -1079,6 +1157,11 @@ ures_swap(const UDataSwapper *ds,
         inIndexes=(const int32_t *)(inBundle+1);
 
         indexLength=udata_readInt32(ds, inIndexes[URES_INDEX_LENGTH])&0xff;
+        if(indexLength<=URES_INDEX_MAX_TABLE_LENGTH) {
+            udata_printError(ds, "ures_swap(): too few indexes for a 1.1+ resource bundle\n");
+            *pErrorCode=U_INDEX_OUTOFBOUNDS_ERROR;
+            return 0;
+        }
         keysBottom=1+indexLength;
         keysTop=udata_readInt32(ds, inIndexes[URES_INDEX_KEYS_TOP]);
         if(indexLength>URES_INDEX_16BIT_TOP) {

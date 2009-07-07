@@ -20,6 +20,7 @@
 
 #include "unicode/utypes.h"
 #include "unicode/udata.h"
+#include "unicode/ures.h"
 #include "udataswp.h"
 
 /**
@@ -317,6 +318,14 @@ typedef struct {
 } ResourceData;
 
 /*
+ * Read a resource bundle from memory.
+ */
+U_INTERNAL void U_EXPORT2
+res_read(ResourceData *pResData,
+         const UDataInfo *pInfo, const void *inBytes, int32_t length,
+         UErrorCode *errorCode);
+
+/*
  * Load a resource bundle file.
  * The ResourceData structure must be allocated externally.
  */
@@ -331,32 +340,40 @@ res_load(ResourceData *pResData,
 U_CFUNC void
 res_unload(ResourceData *pResData);
 
+U_INTERNAL UResType U_EXPORT2
+res_getPublicType(Resource res);
+
 /*
  * Return a pointer to a zero-terminated, const UChar* string
  * and set its length in *pLength.
  * Returns NULL if not found.
  */
-U_CFUNC const UChar *
+U_INTERNAL const UChar * U_EXPORT2
 res_getString(const ResourceData *pResData, Resource res, int32_t *pLength);
 
-U_CFUNC const UChar *
+U_INTERNAL const UChar * U_EXPORT2
 res_getAlias(const ResourceData *pResData, Resource res, int32_t *pLength);
 
-U_CFUNC const uint8_t *
+U_INTERNAL const uint8_t * U_EXPORT2
 res_getBinary(const ResourceData *pResData, Resource res, int32_t *pLength);
 
-U_CFUNC const int32_t *
+U_INTERNAL const int32_t * U_EXPORT2
 res_getIntVector(const ResourceData *pResData, Resource res, int32_t *pLength);
 
-U_CFUNC Resource
+U_INTERNAL Resource U_EXPORT2
 res_getResource(const ResourceData *pResData, const char *key);
 
-U_CFUNC int32_t
+U_INTERNAL int32_t U_EXPORT2
 res_countArrayItems(const ResourceData *pResData, Resource res);
 
-U_CFUNC Resource res_getArrayItem(const ResourceData *pResData, Resource array, int32_t indexS);
-U_CFUNC Resource res_getTableItemByIndex(const ResourceData *pResData, Resource table, int32_t indexS, const char ** key);
-U_CFUNC Resource res_getTableItemByKey(const ResourceData *pResData, Resource table, int32_t *indexS, const char* * key);
+U_INTERNAL Resource U_EXPORT2
+res_getArrayItem(const ResourceData *pResData, Resource array, int32_t indexS);
+
+U_INTERNAL Resource U_EXPORT2
+res_getTableItemByIndex(const ResourceData *pResData, Resource table, int32_t indexS, const char ** key);
+
+U_INTERNAL Resource U_EXPORT2
+res_getTableItemByKey(const ResourceData *pResData, Resource table, int32_t *indexS, const char* * key);
 
 /*
  * Modifies the contents of *path (replacing separators with NULs),

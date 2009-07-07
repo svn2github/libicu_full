@@ -1211,33 +1211,11 @@ U_CAPI uint32_t U_EXPORT2 ures_getUInt(const UResourceBundle* resB, UErrorCode *
   return RES_GET_UINT(resB->fRes);
 }
 
-static const int8_t gPublicTypes[URES_LIMIT] = {
-    URES_STRING,
-    URES_BINARY,
-    URES_TABLE,
-    URES_ALIAS,
-
-    URES_TABLE,     /* URES_TABLE32 */
-    URES_TABLE,     /* URES_TABLE16 */
-    URES_STRING,    /* URES_STRING_V2 */
-    URES_INT,
-
-    URES_ARRAY,
-    URES_ARRAY,     /* URES_ARRAY16 */
-    URES_NONE,
-    URES_NONE,
-
-    URES_NONE,
-    URES_NONE,
-    URES_INT_VECTOR,
-    RES_RESERVED
-};
-
 U_CAPI UResType U_EXPORT2 ures_getType(const UResourceBundle *resB) {
   if(resB == NULL) {
     return URES_NONE;
   }
-  return (UResType)gPublicTypes[RES_GET_TYPE(resB->fRes)];
+  return res_getPublicType(resB->fRes);
 }
 
 U_CAPI const char * U_EXPORT2 ures_getKey(const UResourceBundle *resB) {

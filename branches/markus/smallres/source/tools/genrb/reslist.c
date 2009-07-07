@@ -266,6 +266,7 @@ table_write16(struct SRBRoot *bundle, struct SResource *res,
     struct SResource *current;
     int32_t maxKey = 0, maxPoolKey = 0x80000000;
     int32_t res16 = 0;
+    UBool hasLocalKeys = FALSE, hasPoolKeys = FALSE;
 
     if (U_FAILURE(*status)) {
         return;
@@ -285,11 +286,15 @@ table_write16(struct SRBRoot *bundle, struct SResource *res,
             key = current->fKey = mapKey(bundle, current->fKey);
         }
         if (key >= 0) {
+            hasLocalKeys = TRUE;
             if (key > maxKey) {
                 maxKey = key;
             }
-        } else if (key > maxPoolKey) {
-            maxPoolKey = key;
+        } else {
+            hasPoolKeys = TRUE;
+            if (key > maxPoolKey) {
+                maxPoolKey = key;
+            }
         }
         res16 |= makeRes16(current->fRes);
     }
@@ -301,8 +306,8 @@ table_write16(struct SRBRoot *bundle, struct SResource *res,
     }
     maxPoolKey &= 0x7fffffff;
     if (res->u.fTable.fCount <= 0xffff &&
-        (maxKey == 0 || maxKey < bundle->fLocalKeyLimit) &&
-        (maxPoolKey == 0 || maxPoolKey < (0x10000 - bundle->fLocalKeyLimit))
+        (!hasLocalKeys || maxKey < bundle->fLocalKeyLimit) &&
+        (!hasPoolKeys || maxPoolKey < (0x10000 - bundle->fLocalKeyLimit))
     ) {
         if (res16 >= 0) {
             uint16_t *p16 = reserve16BitUnits(bundle, 1 + res->u.fTable.fCount * 2, status);
