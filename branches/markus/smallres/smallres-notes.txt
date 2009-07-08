@@ -1178,6 +1178,13 @@ Committed revision 26240.
 
 ***
 svn commit -m "ticket:6945: icupkg dependency check: only open a swapper when needed"
+Sending        smallres-notes.txt
+Sending        source\tools\toolutil\pkgitems.cpp
+Transmitting file data ..
+Committed revision 26241.
+
+***
+svn commit -m "ticket:6945: update derb to support URES_TABLE32 (from formatVersion 1.1) and the new formatVersion 2, via calls to uresdata.h functions rather than duplicating them"
 
 TODO:
 * for v2 with key suffix sharing, pool bundle with shared keys,
@@ -1188,7 +1195,6 @@ TODO:
   so that we can remove ures_preflightResource()
   (1.1 was implemented in ICU 2.8; 1.0 does not work for ICU4J)
   http://bugs.icu-project.org/trac/ticket/7035
-- support new format in derb for debugging
 - document experiments, decisions and dead ends
 - clean up TODO comments
 
