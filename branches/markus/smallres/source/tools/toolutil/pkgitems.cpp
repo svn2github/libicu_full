@@ -572,36 +572,16 @@ U_NAMESPACE_BEGIN
 
 void
 Package::enumDependencies(Item *pItem, void *context, CheckDependency check) {
-    const UDataInfo *pInfo;
-    const uint8_t *inBytes;
-    int32_t format, length, infoLength, itemHeaderLength;
-    UErrorCode errorCode;
-
-    errorCode=U_ZERO_ERROR;
-    pInfo=getDataInfo(pItem->data, pItem->length, infoLength, itemHeaderLength, &errorCode);
+    int32_t infoLength, itemHeaderLength;
+    UErrorCode errorCode=U_ZERO_ERROR;
+    const UDataInfo *pInfo=getDataInfo(pItem->data, pItem->length, infoLength, itemHeaderLength, &errorCode);
     if(U_FAILURE(errorCode)) {
         return; // should not occur because readFile() checks headers
     }
 
     // find the data format and call the corresponding function, if any
-    format=getDataFormat(pInfo->dataFormat);
+    int32_t format=getDataFormat(pInfo->dataFormat);
     if(format>=0) {
-        UDataSwapper *ds;
-
-        // TODO: share/cache swappers
-        ds=udata_openSwapper((UBool)pInfo->isBigEndian, pInfo->charsetFamily, U_IS_BIG_ENDIAN, U_CHARSET_FAMILY, &errorCode);
-        if(U_FAILURE(errorCode)) {
-            fprintf(stderr, "icupkg: udata_openSwapper(\"%s\") failed - %s\n",
-                    pItem->name, u_errorName(errorCode));
-            exit(errorCode);
-        }
-
-        ds->printError=printError;
-        ds->printErrorContext=stderr;
-
-        inBytes=pItem->data+itemHeaderLength;
-        length=pItem->length-itemHeaderLength;
-
         switch(format) {
         case FMT_RES:
             {
@@ -615,13 +595,31 @@ Package::enumDependencies(Item *pItem, void *context, CheckDependency check) {
                 break;
             }
         case FMT_CNV:
-            ucnv_enumDependencies(ds, pItem->name, pInfo, inBytes, length, check, context, &errorCode);
-            break;
+            {
+                // TODO: share/cache swappers
+                UDataSwapper *ds=udata_openSwapper(
+                                    (UBool)pInfo->isBigEndian, pInfo->charsetFamily,
+                                    U_IS_BIG_ENDIAN, U_CHARSET_FAMILY,
+                                    &errorCode);
+                if(U_FAILURE(errorCode)) {
+                    fprintf(stderr, "icupkg: udata_openSwapper(\"%s\") failed - %s\n",
+                            pItem->name, u_errorName(errorCode));
+                    exit(errorCode);
+                }
+
+                ds->printError=printError;
+                ds->printErrorContext=stderr;
+
+                const uint8_t *inBytes=pItem->data+itemHeaderLength;
+                int32_t length=pItem->length-itemHeaderLength;
+
+                ucnv_enumDependencies(ds, pItem->name, pInfo, inBytes, length, check, context, &errorCode);
+                udata_closeSwapper(ds);
+                break;
+            }
         default:
             break;
         }
-
-        udata_closeSwapper(ds);
 
         if(U_FAILURE(errorCode)) {
             exit(errorCode);

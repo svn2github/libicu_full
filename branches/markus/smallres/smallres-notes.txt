@@ -1166,6 +1166,18 @@ Committed revision 26227.
 
 ***
 svn commit -m "ticket:6945: reimplement icupkg .res dependency checking code (use uresdata.h functions rather than duplicating .res format runtime code); test uprv_compareInvEbcdicAsAscii()"
+Sending        smallres-notes.txt
+Sending        source\common\uresbund.c
+Sending        source\common\uresdata.c
+Sending        source\common\uresdata.h
+Sending        source\test\cintltst\cstrtest.c
+Sending        source\tools\genrb\reslist.c
+Sending        source\tools\toolutil\pkgitems.cpp
+Transmitting file data .......
+Committed revision 26240.
+
+***
+svn commit -m "ticket:6945: icupkg dependency check: only open a swapper when needed"
 
 TODO:
 * for v2 with key suffix sharing, pool bundle with shared keys,
@@ -1176,15 +1188,14 @@ TODO:
   so that we can remove ures_preflightResource()
   (1.1 was implemented in ICU 2.8; 1.0 does not work for ICU4J)
   http://bugs.icu-project.org/trac/ticket/7035
-- icupkg needs to test the usesPoolBundle to generate a dependency on the pool.res data item
 - support new format in derb for debugging
-- do aliases need to be Unicode strings? can they be invariant chars or ASCII?
-  de-duping? suffix sharing??
 - document experiments, decisions and dead ends
 - clean up TODO comments
 
 * for v2.1 or v3 with compact, byte-oriented strings, 1B/char for most scripts,
                       maybe zlib compression
+- do aliases need to be Unicode strings? can they be invariant chars or ASCII?
+  de-duping? suffix sharing??
 - write all compact strings in bundle_compactStrings(), before bundle_preWrite()
 - redo & reenable correct savings stats for compact strings
 - #define WINDOW_CONTAINS(window, c) ((uint32_t)((c) - (window)) <= 0x7f)
