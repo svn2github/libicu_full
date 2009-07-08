@@ -1185,16 +1185,18 @@ Committed revision 26241.
 
 ***
 svn commit -m "ticket:6945: update derb to support URES_TABLE32 (from formatVersion 1.1) and the new formatVersion 2, via calls to uresdata.h functions rather than duplicating them"
+Sending        smallres-notes.txt
+Sending        source\tools\genrb\derb.c
+Transmitting file data ..
+Committed revision 26243.
+
+***
+svn commit -m "ticket:6945: ures_swap() detect collation binaries by contents if the key string is not available (because it's in the pool bundle)"
 
 TODO:
 * for v2 with key suffix sharing, pool bundle with shared keys,
               more compact UTF-16 strings with suffix sharing
               (still all memory-mappable)
-- ures_swap() detect collation binaries not just by key string
-- consider stopping support for formatVersion=1.0 in ures_swap()
-  so that we can remove ures_preflightResource()
-  (1.1 was implemented in ICU 2.8; 1.0 does not work for ICU4J)
-  http://bugs.icu-project.org/trac/ticket/7035
 - document experiments, decisions and dead ends
 - clean up TODO comments
 

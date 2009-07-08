@@ -167,7 +167,9 @@ res_init(ResourceData *pResData,
         return;
     }
 
-    if(formatVersion[0]>1 || (formatVersion[0]==1 && formatVersion[1]>=1)) {
+    if(formatVersion[0]==1 && formatVersion[1]==0) {
+        pResData->localKeyLimit=0x10000;  /* greater than any 16-bit key string offset */
+    } else {
         /* bundles with formatVersion 1.1 and later contain an indexes[] array */
         const int32_t *indexes=pResData->pRoot+1;
         int32_t indexLength=indexes[URES_INDEX_LENGTH]&0xff;
@@ -641,6 +643,7 @@ typedef struct TempTable {
     Row *rows;
     int32_t *resort;
     uint32_t *resFlags;
+    int32_t localKeyLimit;
     uint8_t majorFormatVersion;
 } TempTable;
 
@@ -648,12 +651,8 @@ enum {
     STACK_ROW_CAPACITY=200
 };
 
-/* binary data with known formats is swapped too */
-typedef enum UResSpecialType {
-    URES_NO_SPECIAL_TYPE,
-    URES_COLLATION_BINARY,
-    URES_SPECIAL_TYPE_COUNT
-} UResSpecialType;
+/* The table item key string is not locally available. */
+static const char *const gUnknownKey="";
 
 /* resource table key for collation binaries: "%%CollationBin" */
 static const UChar gCollationBinKey[]={
@@ -807,7 +806,7 @@ static void
 ures_swapResource(const UDataSwapper *ds,
                   const Resource *inBundle, Resource *outBundle,
                   Resource res, /* caller swaps res itself */
-                  UResSpecialType specialType,
+                  const char *key,
                   TempTable *pTempTable,
                   UErrorCode *pErrorCode) {
     const Resource *p;
@@ -859,11 +858,18 @@ ures_swapResource(const UDataSwapper *ds,
         /* no need to swap or copy bytes - ures_swap() copied them all */
 
         /* swap known formats */
-        if(specialType==URES_COLLATION_BINARY) {
 #if !UCONFIG_NO_COLLATION
+        if( key!=NULL &&  /* the binary is in a table */
+            (key!=gUnknownKey ?
+                /* its table key string is "%%CollationBin" */
+                0==ds->compareInvChars(ds, key, -1,
+                                       gCollationBinKey, LENGTHOF(gCollationBinKey)-1) :
+                /* its table key string is unknown but it looks like a collation binary */
+                ucol_looksLikeCollationBinary(ds, p+1, count))
+        ) {
             ucol_swapBinary(ds, p+1, count, q+1, pErrorCode);
-#endif
         }
+#endif
         break;
     case URES_TABLE:
     case URES_TABLE32:
@@ -912,26 +918,20 @@ ures_swapResource(const UDataSwapper *ds,
 
             /* recurse */
             for(i=0; i<count; ++i) {
-                /*
-                 * detect a collation binary that is to be swapped via
-                 * ds->compareInvChars(ds, outData+readUInt16(pKey[i]), "%%CollationBin")
-                 * etc.
-                 */
-                if(0==ds->compareInvChars(ds,
-                            ((const char *)outBundle)+
-                                (pKey16!=NULL ?
-                                    ds->readUInt16(pKey16[i]) :
-                                    udata_readInt32(ds, pKey32[i])),
-                            -1,
-                            gCollationBinKey, LENGTHOF(gCollationBinKey)-1)
-                ) {
-                    specialType=URES_COLLATION_BINARY;
+                const char *itemKey=gUnknownKey;
+                if(pKey16!=NULL) {
+                    int32_t keyOffset=ds->readUInt16(pKey16[i]);
+                    if(keyOffset<pTempTable->localKeyLimit) {
+                        itemKey=(const char *)outBundle+keyOffset;
+                    }
                 } else {
-                    specialType=URES_NO_SPECIAL_TYPE;
+                    int32_t keyOffset=udata_readInt32(ds, pKey32[i]);
+                    if(keyOffset>=0) {
+                        itemKey=(const char *)outBundle+keyOffset;
+                    }
                 }
-
                 item=ds->readUInt32(p[i]);
-                ures_swapResource(ds, inBundle, outBundle, item, specialType, pTempTable, pErrorCode);
+                ures_swapResource(ds, inBundle, outBundle, item, itemKey, pTempTable, pErrorCode);
                 if(U_FAILURE(*pErrorCode)) {
                     udata_printError(ds, "ures_swapResource(table res=%08x)[%d].recurse(%08x) failed\n",
                                      res, i, item);
@@ -1051,7 +1051,7 @@ ures_swapResource(const UDataSwapper *ds,
             /* recurse */
             for(i=0; i<count; ++i) {
                 item=ds->readUInt32(p[i]);
-                ures_swapResource(ds, inBundle, outBundle, item, URES_NO_SPECIAL_TYPE, pTempTable, pErrorCode);
+                ures_swapResource(ds, inBundle, outBundle, item, NULL, pTempTable, pErrorCode);
                 if(U_FAILURE(*pErrorCode)) {
                     udata_printError(ds, "ures_swapResource(array res=%08x)[%d].recurse(%08x) failed\n",
                                      res, i, item);
@@ -1145,6 +1145,7 @@ ures_swap(const UDataSwapper *ds,
                                &keysTop, &top, &maxTableLength,
                                pErrorCode);
         resBottom=keysTop;
+        tempTable.localKeyLimit=keysTop<<2;
         if(U_FAILURE(*pErrorCode)) {
             udata_printError(ds, "ures_preflightResource(root res=%08x) failed\n",
                              rootRes);
@@ -1177,6 +1178,11 @@ ures_swap(const UDataSwapper *ds,
                              top, bundleLength);
             *pErrorCode=U_INDEX_OUTOFBOUNDS_ERROR;
             return 0;
+        }
+        if(keysTop>(1+indexLength)) {
+            tempTable.localKeyLimit=keysTop<<2;
+        } else {
+            tempTable.localKeyLimit=0;
         }
     }
 
@@ -1251,7 +1257,7 @@ ures_swap(const UDataSwapper *ds,
         }
 
         /* swap the resources */
-        ures_swapResource(ds, inBundle, outBundle, rootRes, URES_NO_SPECIAL_TYPE, &tempTable, pErrorCode);
+        ures_swapResource(ds, inBundle, outBundle, rootRes, NULL, &tempTable, pErrorCode);
         if(U_FAILURE(*pErrorCode)) {
             udata_printError(ds, "ures_swapResource(root res=%08x) failed\n",
                              rootRes);
