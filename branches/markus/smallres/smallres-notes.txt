@@ -1192,6 +1192,106 @@ Committed revision 26243.
 
 ***
 svn commit -m "ticket:6945: ures_swap() detect collation binaries by contents if the key string is not available (because it's in the pool bundle)"
+Sending        smallres-notes.txt
+Sending        source\common\ucol_swp.c
+Sending        source\common\ucol_swp.h
+Sending        source\common\uresdata.c
+Transmitting file data ....
+Committed revision 26247.
+
+*** ICU4J port
+
+svn mkdir svn+ssh://source.icu-project.org/repos/icu/icu4j/branches/markus -m "ticket:6945: create branch for markus"
+Committed revision 26254.
+
+svn mkdir svn+ssh://source.icu-project.org/repos/icu/icu4j/branches/markus/smallres -m "ticket:6945: create branch for small-resource-bundle Java port"
+Committed revision 26255.
+
+svn copy -r 26253 svn+ssh://source.icu-project.org/repos/icu/icu4j/trunk/main svn+ssh://source.icu-project.org/repos/icu/icu4j/branches/markus/smallres -m "ticket:6945: copy trunk/main@26253"
+Committed revision 26256.
+
+svn copy -r 26253 svn+ssh://source.icu-project.org/repos/icu/icu4j/trunk/tools svn+ssh://source.icu-project.org/repos/icu/icu4j/branches/markus/smallres -m "ticket:6945: copy trunk/tools@26253"
+Committed revision 26257.
+
+svn copy -r 26253 svn+ssh://source.icu-project.org/repos/icu/icu4j/trunk/build.properties svn+ssh://source.icu-project.org/repos/icu/icu4j/branches/markus/smallres -m "ticket:6945: copy trunk/build.properties@26253"
+Committed revision 26258.
+
+svn copy -r 26253 svn+ssh://source.icu-project.org/repos/icu/icu4j/trunk/build.xml svn+ssh://source.icu-project.org/repos/icu/icu4j/branches/markus/smallres -m "ticket:6945: copy trunk/build.xml@26253"
+Committed revision 26259.
+
+*** simplify ICU4J data building http://bugs.icu-project.org/trac/ticket/7043
+
+Outline:
+
+$ICU4J_ROOT/main/shared/data/icudata.jar: icudt42l.dat uni-core-data
+    mkdir -p data/out/build/icu4j/com/ibm/icu/impl/data/icudt42b
+    echo "ubidi.icu ucase.icu uprops.icu unorm.icu" > data/out/build/icu4j/add.txt
+    icupkg icudt42l.dat data/out/build/icu4j/icudt42b.dat -a data/out/build/icu4j/add.txt -x '*' -tb -d data/out/build/icu4j/com/ibm/icu/impl/data/icudt42b
+    jar cf data/out/build/icu4j/icudata.jar -C data/out/build/icu4j com/ibm/icu/impl/data/icudt42b
+    cp data/out/build/icu4j/icudata.jar $ICU4J_ROOT/main/shared/data
+
+C:\svn\icuproj\icu\smallres\source\data>nmake -f makedata.mak ICUMAKE=C:\svn\icuproj\icu\smallres\source\data\ CFG=x86\Release JAR="C:\Program Files\Java\jdk1.5.0_07\bin\jar" ICU4J_ROOT=C:\svn\icuproj\icu4j\smallres icudata.jar testdata.jar
+
+svn commit source/tools/toolutil/package.cpp -m "ticket:7043: allow icupkg -a and -x in the same invocation (bug fix: track the platform type when -x swaps a data item)"
+Sending        source\tools\toolutil\package.cpp
+Transmitting file data .
+Committed revision 26266.
+
+svn commit source\data -m "ticket:7043: build ICU4J data .jar file from ICU4C via the data makefile and icupkg (Windows)"
+Sending        source\data\icu4j-readme.txt
+Sending        source\data\makedata.mak
+Transmitting file data ..
+Committed revision 26267.
+
+***
+svn commit main\classes\core\src\com\ibm\icu\impl -m "ticket:6945: start porting to Java"
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundleReader.java
+Transmitting file data .
+Committed revision 26282.
+
+svn commit main\classes\core\src\com\ibm\icu\impl -m "ticket:6945: a little more Java port brainstorming"
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundleImpl.java
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundleReader.java
+Transmitting file data ..
+Committed revision 26283.
+
+svn commit main\classes\core\src\com\ibm\icu\impl -m "ticket:6945: Java: read complete bundles into data structures, implement Table"
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundle.java
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundleImpl.java
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundleReader.java
+Transmitting file data ...
+Committed revision 26284.
+
+svn diff --diff-cmd "C:\Program Files\KDiff3\kdiff3.exe" main\classes\core\src\com\ibm\icu\impl main\classes\core\src\com\ibm\icu\util
+
+svn commit main\classes\core\src\com\ibm\icu\impl main\classes\core\src\com\ibm\icu\util -m "ticket:6945: Java: more or less implemented and weed-whacked"
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundle.java
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundleImpl.java
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundleReader.java
+Sending        main\classes\core\src\com\ibm\icu\util\UResourceBundle.java
+Transmitting file data ....
+Committed revision 26297.
+
+svn commit main\classes\core\src\com\ibm\icu\impl main\classes\core\src\com\ibm\icu\util -m "ticket:6945: Java: implemented enough to not show errors or warnings in Eclipse"
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundle.java
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundleImpl.java
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundleReader.java
+Sending        main\classes\core\src\com\ibm\icu\util\UResourceBundle.java
+Transmitting file data ....
+Committed revision 26298.
+
+svn commit source\data -m "ticket:7043: update ant data build targets"
+Sending        source\data\icu4j-readme.txt
+Transmitting file data .
+Committed revision 26299.
+
+svn commit source -m "ticket:6945: minor getPublicTypes() bug fix (only return public type constants)"
+Sending        source\common\uresdata.c
+Sending        source\tools\genrb\genrb.c
+Transmitting file data ..
+Committed revision 26300.
+
+svn commit -m "ticket:6945: check in Java notes"
 
 TODO:
 * for v2 with key suffix sharing, pool bundle with shared keys,
@@ -1199,6 +1299,13 @@ TODO:
               (still all memory-mappable)
 - document experiments, decisions and dead ends
 - clean up TODO comments
+- document the change in table iteration order on EBCDIC platforms
+- Java:
+  + search for uses of TABLE and ARRAY; generalize to all tables, arrays, or containers?
+  + verify that pool.res is cached, and looked up from the cache
+  + for pool.res, do we need to call UResourceBundle.getBundleInstance()
+    or can we call an ICUResourceBundle method?
+  + review UResourceBundleIterator
 
 * for v2.1 or v3 with compact, byte-oriented strings, 1B/char for most scripts,
                       maybe zlib compression
