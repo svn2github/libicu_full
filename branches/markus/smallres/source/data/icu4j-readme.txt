@@ -34,11 +34,11 @@ TBD
 
 *Java*
 
-After the ICU4C-side steps above, build the resources target of the
+After the ICU4C-side steps above, build the core-data and core-test-data targets of the
         ICU4J ant build to unpack the jar files  with the following commands:
 
         cd $icu4j_root
-        ant resources
+        ant core-data core-test-data
 
 * Alternative instructions *****************************************************
 
