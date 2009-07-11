@@ -409,7 +409,7 @@ main(int argc,
         }
         uprv_strcat(theCurrentFileName, arg);
 
-        if (1||                  isVerbose()) {
+        if (isVerbose()) {
             printf("Processing file \"%s\"\n", theCurrentFileName);
         }
         processFile(arg, encoding, inputDir, outputDir, gPackageName, &status);

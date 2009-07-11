@@ -277,7 +277,7 @@ static const int8_t gPublicTypes[URES_LIMIT] = {
     URES_NONE,
     URES_NONE,
     URES_INT_VECTOR,
-    RES_RESERVED
+    URES_NONE
 };
 
 U_CAPI UResType U_EXPORT2
