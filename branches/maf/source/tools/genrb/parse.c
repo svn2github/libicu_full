@@ -29,6 +29,7 @@
 #include "ustr.h"
 #include "reslist.h"
 #include "rbt_pars.h"
+#include "genrb.h"
 #include "unicode/ustring.h"
 #include "unicode/putil.h"
 #include <stdio.h>
@@ -623,6 +624,180 @@ parseAlias(ParseState* state, char *tag, uint32_t startline, const struct UStrin
     return result;
 }
 
+typedef struct{
+    const char* inputDir;
+    const char* outputDir;
+} GenrbData;
+
+static struct SResource* resLookup(struct SResource* res, const char* key){
+    struct SResource *current = NULL;
+    struct SResTable *list;
+    if (res == res_none()) {
+        return NULL;
+    }
+
+    list = &(res->u.fTable);
+
+    current = list->fFirst;
+    while (current != NULL) {
+        if (uprv_strcmp(((list->fRoot->fKeys) + (current->fKey)), key) == 0) {
+            return current;
+        }
+        current = current->fNext;
+    }
+    return NULL;
+}
+
+static const UChar* importFromDataFile(void* context, const char* locale, const char* type, int32_t* pLength, UErrorCode* status){
+    struct SRBRoot *data         = NULL;
+    UCHARBUF       *ucbuf        = NULL;
+    GenrbData* genrbdata = (GenrbData*) context;
+    int localeLength = strlen(locale);
+    char* filename = (char*)uprv_malloc(localeLength+5);
+    char           *inputDirBuf  = NULL;
+    char           *openFileName = NULL;
+    const char* cp = "";
+    UChar* urules = NULL;
+    int32_t urulesLength = 0;
+    int32_t i = 0;
+    int32_t dirlen  = 0;
+    int32_t filelen = 0;
+    struct SResource* root;
+    struct SResource* collations;
+    struct SResource* collation;
+    struct SResource* sequence;
+
+    memcpy(filename, locale, localeLength);
+    for(i = 0; i < localeLength; i++){
+        if(filename[i] == '-'){
+            filename[i] = '_';
+        }
+    }
+    filename[localeLength]   = '.';
+    filename[localeLength+1] = 't';
+    filename[localeLength+2] = 'x';
+    filename[localeLength+3] = 't';
+    filename[localeLength+4] = 0;
+
+
+    if (status==NULL || U_FAILURE(*status)) {
+        return NULL;
+    }
+    if(filename==NULL){
+        *status=U_ILLEGAL_ARGUMENT_ERROR;
+        return NULL;
+    }else{
+        filelen = (int32_t)uprv_strlen(filename);
+    }
+    if(genrbdata->inputDir == NULL) {
+        const char *filenameBegin = uprv_strrchr(filename, U_FILE_SEP_CHAR);
+        openFileName = (char *) uprv_malloc(dirlen + filelen + 2);
+        openFileName[0] = '\0';
+        if (filenameBegin != NULL) {
+            /*
+             * When a filename ../../../data/root.txt is specified,
+             * we presume that the input directory is ../../../data
+             * This is very important when the resource file includes
+             * another file, like UCARules.txt or thaidict.brk.
+             */
+            int32_t filenameSize = (int32_t)(filenameBegin - filename + 1);
+            inputDirBuf = uprv_strncpy((char *)uprv_malloc(filenameSize), filename, filenameSize);
+
+            /* test for NULL */
+            if(inputDirBuf == NULL) {
+                *status = U_MEMORY_ALLOCATION_ERROR;
+                goto finish;
+            }
+
+            inputDirBuf[filenameSize - 1] = 0;
+            genrbdata->inputDir = inputDirBuf;
+            dirlen  = (int32_t)uprv_strlen(genrbdata->inputDir);
+        }
+    }else{
+        dirlen  = (int32_t)uprv_strlen(genrbdata->inputDir);
+
+        if(genrbdata->inputDir[dirlen-1] != U_FILE_SEP_CHAR) {
+            openFileName = (char *) uprv_malloc(dirlen + filelen + 2);
+
+            /* test for NULL */
+            if(openFileName == NULL) {
+                *status = U_MEMORY_ALLOCATION_ERROR;
+                goto finish;
+            }
+
+            openFileName[0] = '\0';
+            /*
+             * append the input dir to openFileName if the first char in
+             * filename is not file seperation char and the last char input directory is  not '.'.
+             * This is to support :
+             * genrb -s. /home/icu/data
+             * genrb -s. icu/data
+             * The user cannot mix notations like
+             * genrb -s. /icu/data --- the absolute path specified. -s redundant
+             * user should use
+             * genrb -s. icu/data  --- start from CWD and look in icu/data dir
+             */
+            if( (filename[0] != U_FILE_SEP_CHAR) && (genrbdata->inputDir[dirlen-1] !='.')){
+                uprv_strcpy(openFileName, genrbdata->inputDir);
+                openFileName[dirlen]     = U_FILE_SEP_CHAR;
+            }
+            openFileName[dirlen + 1] = '\0';
+        } else {
+            openFileName = (char *) uprv_malloc(dirlen + filelen + 1);
+
+            /* test for NULL */
+            if(openFileName == NULL) {
+                *status = U_MEMORY_ALLOCATION_ERROR;
+                goto finish;
+            }
+
+            uprv_strcpy(openFileName, genrbdata->inputDir);
+
+        }
+    }
+    uprv_strcat(openFileName, filename);
+    printf("%s\n", openFileName);
+    *status = U_ZERO_ERROR;
+    ucbuf = ucbuf_open(openFileName, &cp,getShowWarning(),TRUE, status);
+
+    if(*status == U_FILE_ACCESS_ERROR) {
+
+        fprintf(stderr, "couldn't open file %s\n", openFileName == NULL ? filename : openFileName);
+        goto finish;
+    }
+    if (ucbuf == NULL || U_FAILURE(*status)) {
+        fprintf(stderr, "An error occured processing file %s. Error: %s\n", openFileName == NULL ? filename : openFileName,u_errorName(*status));
+        goto finish;
+    }
+
+    /* Parse the data into an SRBRoot */
+    data = parse(ucbuf, genrbdata->inputDir, genrbdata->outputDir, status);
+
+    root = data->fRoot;
+    collations = resLookup(root, "collations");
+    collation = resLookup(collations, type);
+    sequence = resLookup(collation, "Sequence");
+    urules = sequence->u.fString.fChars;
+    urulesLength = sequence->u.fString.fLength;
+    *pLength = urulesLength;
+
+finish:
+
+    if (inputDirBuf != NULL) {
+        uprv_free(inputDirBuf);
+    }
+
+    if (openFileName != NULL) {
+        uprv_free(openFileName);
+    }
+
+    if(ucbuf) {
+        ucbuf_close(ucbuf);
+    }
+
+    return urules;
+}
+
 static struct SResource *
 addCollation(ParseState* state, struct SResource  *result, uint32_t startline, UErrorCode *status)
 {
@@ -634,6 +809,7 @@ addCollation(ParseState* state, struct SResource  *result, uint32_t startline, U
     UVersionInfo       version;
     UBool              override = FALSE;
     uint32_t           line;
+    GenrbData genrbdata;
     /* '{' . (name resource)* '}' */
     version[0]=0; version[1]=0; version[2]=0; version[3]=0;
 
@@ -733,8 +909,11 @@ addCollation(ParseState* state, struct SResource  *result, uint32_t startline, U
                 /* add sequence */
                 /*table_add(result, member, line, status);*/
 
-                coll = ucol_openRules(member->u.fString.fChars, member->u.fString.fLength,
-                    UCOL_OFF, UCOL_DEFAULT_STRENGTH,&parseError, &intStatus);
+                genrbdata.inputDir = state->inputdir;
+                genrbdata.outputDir = state->outputdir;
+
+                coll = ucol_openRulesForImport(member->u.fString.fChars, member->u.fString.fLength,
+                                               UCOL_OFF, UCOL_DEFAULT_STRENGTH,&parseError, importFromDataFile, &genrbdata, &intStatus);
 
                 if (U_SUCCESS(intStatus) && coll != NULL)
                 {
@@ -1825,7 +2004,8 @@ parse(UCHARBUF *buf, const char *inputDir, const char *outputDir, UErrorCode *st
     enum ETokenType    token;
     ParseState state;
     uint32_t i;
-
+    int encLength;
+    char* enc;
     for (i = 0; i < MAX_LOOKAHEAD + 1; i++)
     {
         ustr_init(&state.lookahead[i].value);
@@ -1851,6 +2031,15 @@ parse(UCHARBUF *buf, const char *inputDir, const char *outputDir, UErrorCode *st
 
 
     bundle_setlocale(state.bundle, tokenValue->fChars, status);
+
+    u_strToUTF8(NULL, 0, &encLength, tokenValue->fChars, u_strlen(tokenValue->fChars), status);
+    *status = U_ZERO_ERROR;
+    enc = (char*)uprv_malloc(encLength + 1);
+    u_strToUTF8(enc, encLength, &encLength, tokenValue->fChars, u_strlen(tokenValue->fChars), status);
+    enc[encLength] = 0;
+    *status = U_ZERO_ERROR;
+    printf("((((( %s )))))\n", enc);
+    uprv_free(enc);
     /* The following code is to make Empty bundle work no matter with :table specifer or not */
     token = getToken(&state, NULL, NULL, &line, status);
     if(token==TOK_COLON) {
@@ -1864,6 +2053,8 @@ parse(UCHARBUF *buf, const char *inputDir, const char *outputDir, UErrorCode *st
         else
         {
             *status=U_PARSE_ERROR;
+        printf("asdsdweqdasdad\n");
+
             error(line, "parse error. Stopped parsing with %s", u_errorName(*status));
         }
     }
@@ -1900,7 +2091,7 @@ parse(UCHARBUF *buf, const char *inputDir, const char *outputDir, UErrorCode *st
     }
     /* top-level tables need not handle special table names like "collations" */
     realParseTable(&state, state.bundle->fRoot, NULL, line, status);
-    
+
     if(dependencyArray!=NULL){
         table_add(state.bundle->fRoot, dependencyArray, 0, status);
         dependencyArray = NULL;

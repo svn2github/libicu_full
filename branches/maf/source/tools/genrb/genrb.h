@@ -39,5 +39,6 @@
 /* The version of genrb */
 #define GENRB_VERSION "3.3"
 
-#endif
+U_CAPI void processFile(const char *filename, const char* cp, const char *inputDir, const char *outputDir, const char *packageName, UErrorCode *status);
 
+#endif

@@ -30,6 +30,7 @@
 #include "ucol_bld.h"
 #include "cmemory.h"
 #include "util.h"
+#include "uresimp.h"
 
 U_CDECL_BEGIN
 static int32_t U_CALLCONV
@@ -1772,7 +1773,38 @@ uint32_t ucol_tok_assembleTokenList(UColTokenParser *src, UParseError *parseErro
     return src->resultLen;
 }
 
-void ucol_tok_initTokenList(UColTokenParser *src, const UChar *rules, uint32_t rulesLength, const UCollator *UCA, UErrorCode *status) {
+const UChar* ucol_tok_getRulesFromBundle(void* context, const char* locale, const char* type, int32_t* pLength, UErrorCode* status)
+{
+    const UChar* rules = NULL;
+    UResourceBundle* bundle;
+    UResourceBundle* collations;
+    UResourceBundle* collation;
+
+    *pLength = 0;
+
+    bundle = ures_open(U_ICUDATA_COLL, locale, status);
+    if(U_SUCCESS(*status)){
+        collations = ures_getByKey(bundle, "collations", NULL, status);
+        if(U_SUCCESS(*status)){
+            collation = ures_getByKey(collations, type, NULL, status);
+            if(U_SUCCESS(*status)){
+                rules = ures_getStringByKey(collation, "Sequence", pLength, status);
+                if(U_FAILURE(*status)){
+                    *pLength = 0;
+                    rules = NULL;
+                }
+                ures_close(collation);
+            }
+            ures_close(collations);
+        }
+    }
+
+    ures_close(bundle);
+
+    return rules;
+}
+
+void ucol_tok_initTokenList(UColTokenParser *src, const UChar *rules, uint32_t rulesLength, const UCollator *UCA, GetCollationRulesFunction importFunc, void* context, UErrorCode *status) {
     U_NAMESPACE_USE
 
     uint32_t nSize = 0;
@@ -1823,10 +1855,45 @@ void ucol_tok_initTokenList(UColTokenParser *src, const UChar *rules, uint32_t r
                     return;
                 }
             } else if(optionNumber == OPTION_IMPORT){
-                UChar importRules[] = {0x0026, 0x0061, 0x0062, 0x0063, 0x003c, 0x0064, 0x0065, 0x0066, 0x0000};
-                uint32_t importRulesLength = u_strlen(importRules);
-
                 uint32_t optionEndOffset = u_strchr(rules+i, 0x005D) - rules + 1;
+                uint32_t optionEndOffsetFromLoc = u_strchr(rules+i, 0x005D) - setStart;
+
+                int32_t optionLength;
+                u_strToUTF8(NULL, 0, &optionLength, setStart, optionEndOffsetFromLoc, status);
+                *status = U_ZERO_ERROR;
+                char* option = (char*)uprv_malloc(optionLength*sizeof(char));
+                u_strToUTF8(option, optionLength, &optionLength, setStart, optionEndOffsetFromLoc, status);
+
+                char* ucoll = strstr(option, "-u-coll-");
+                int32_t localeLength;
+                if(ucoll != NULL){
+                    localeLength = ucoll - option;
+                }else{
+                    localeLength = optionLength;
+                }
+
+                char* locale = (char*)uprv_malloc((localeLength+1)*sizeof(char));
+                uprv_memcpy(locale, option, localeLength);
+                locale[localeLength] = 0;
+
+                // If no "-u-coll" is present, fall back to "standard"
+
+                char* type;
+                if(localeLength + 8 > optionLength){
+                    type = "standard";
+                }else{
+                    type = option + localeLength + 8;// "-u-coll-"
+                    char* typeEnd = strchr(type, ' ');
+                    if(typeEnd != NULL){
+                        type[typeEnd-type] = 0;
+                    }
+                }
+
+                int32_t importRulesLength = 0;
+                const UChar* importRules = importFunc(context, locale, type, &importRulesLength, status);
+
+                uprv_free(locale);
+                uprv_free(option);
 
                 // Add the length of the imported rules to length of the original rules, and subtract the length of the import option itself
                 uint32_t newRulesLength = rulesLength + importRulesLength - (optionEndOffset - i);
@@ -1840,17 +1907,9 @@ void ucol_tok_initTokenList(UColTokenParser *src, const UChar *rules, uint32_t r
                 // Copy the rest of the original rules (minus the import option itself)
                 uprv_memcpy(newRules+importRulesLength+i, rules+optionEndOffset, (rulesLength-optionEndOffset)*sizeof(UChar));
 
-                int32_t length;
-                char temp[500];
-                UErrorCode error;
-                u_strToUTF8(temp, 500, &length, rules, rulesLength, &error);
-                printf("%s\n", temp);
-                u_strToUTF8(temp, 500, &length, newRules, newRulesLength, &error);
-                printf("%s\n", temp);
-
                 if(needToDeallocRules){
                     // if needToDeallocRules is set, then we allocated rules, so it's safe to cast and free
-                    //                    uprv_free((void*)rules);
+                    uprv_free((void*)rules);
                 }
                 needToDeallocRules = true;
                 rules = newRules;
@@ -1874,6 +1933,10 @@ void ucol_tok_initTokenList(UColTokenParser *src, const UChar *rules, uint32_t r
     }
     uprv_memset(src->source, 0, estimatedSize*sizeof(UChar));
     nSize = unorm_normalize(rules, rulesLength, UNORM_NFD, 0, src->source, estimatedSize, status);
+    if(needToDeallocRules){
+        // if needToDeallocRules is set, then we allocated rules, so it's safe to cast and free
+        uprv_free((void*)rules);
+    }
     if(nSize > estimatedSize || *status == U_BUFFER_OVERFLOW_ERROR) {
         *status = U_ZERO_ERROR;
         src->source = (UChar *)uprv_realloc(src->source, (nSize+UCOL_TOK_EXTRA_RULE_SPACE_SIZE)*sizeof(UChar));
