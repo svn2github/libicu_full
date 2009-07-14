@@ -1346,8 +1346,55 @@ Transmitting file data .
 Committed revision 26325.
 
 svn commit -m "ticket:6945: take care of some TODOs"
+Sending        smallres-notes.txt
+Sending        source\tools\genrb\genrb.c
+Sending        source\tools\genrb\reslist.c
+Transmitting file data ...
+Committed revision 26326.
 
 svn copy -r 26321 svn+ssh://source.icu-project.org/repos/icu/icu/trunk/source svn+ssh://source.icu-project.org/repos/icu/icu/branches/markus/smallres2 -m "ticket:6945: copy trunk/source@26321"
+Committed revision 26327.
+
+svn rm svn+ssh://source.icu-project.org/repos/icu/icu/branches/markus/smallres2 -m "ticket:6945: copied wrong source URL"
+Committed revision 26328.
+
+svn copy -r 26321 svn+ssh://source.icu-project.org/repos/icu/icu/trunk svn+ssh://source.icu-project.org/repos/icu/icu/branches/markus/smallres2 -m "ticket:6945: copy trunk@26321"
+Committed revision 26329.
+
+svn merge -r 26012:26326 svn+ssh://source.icu-project.org/repos/icu/icu/branches/markus/smallres
+
+svn commit -m "ticket:6945: merge trunk@26321 and smallres -r 26012:26326 into smallres2"
+Adding         smallres-notes.txt
+Sending        source\common\ucol_swp.c
+Sending        source\common\ucol_swp.h
+Sending        source\common\uinvchar.c
+Sending        source\common\uinvchar.h
+Sending        source\common\unicode\ures.h
+Sending        source\common\uresbund.c
+Sending        source\common\uresdata.c
+Sending        source\common\uresdata.h
+Sending        source\common\uresimp.h
+Sending        source\data\Makefile.in
+Sending        source\data\icu4j-readme.txt
+Adding  (bin)  source\data\locales\pool.res
+Sending        source\data\makedata.mak
+Sending        source\test\cintltst\crestst.c
+Sending        source\test\cintltst\creststn.c
+Sending        source\test\cintltst\cstrtest.c
+Sending        source\test\cintltst\hpmufn.c
+Sending        source\tools\genrb\derb.c
+Sending        source\tools\genrb\genrb.c
+Sending        source\tools\genrb\parse.c
+Sending        source\tools\genrb\reslist.c
+Sending        source\tools\genrb\reslist.h
+Sending        source\tools\genrb\wrtjava.c
+Sending        source\tools\genrb\wrtxml.cpp
+Sending        source\tools\toolutil\package.cpp
+Sending        source\tools\toolutil\pkgitems.cpp
+Transmitting file data .........................
+Committed revision 26330.
+
+svn commit -m "ticket:6945: more notes"
 
 TODO:
 * for v2 with key suffix sharing, pool bundle with shared keys,
