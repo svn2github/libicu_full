@@ -1292,6 +1292,57 @@ Transmitting file data ..
 Committed revision 26300.
 
 svn commit -m "ticket:6945: check in Java notes"
+Sending        smallres-notes.txt
+Transmitting file data .
+Committed revision 26301.
+
+svn commit main\classes\core\src\com\ibm\icu\impl main\classes\core\src\com\ibm\icu\util -m "ticket:6945: Java: keep all bits & bytes access inside ICUResourceBundleReader, and move other stuff out of it"
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundle.java
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundleImpl.java
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundleReader.java
+Sending        main\classes\core\src\com\ibm\icu\util\UResourceBundle.java
+Transmitting file data ....
+Committed revision 26304.
+
+svn commit main\classes\core\src\com\ibm\icu\impl main\classes\core\src\com\ibm\icu\util -m "ticket:6945: Java: small bug fix"
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundleReader.java
+Transmitting file data .
+Committed revision 26305.
+
+svn commit main\classes\core\src\com\ibm\icu\impl main\classes\core\src\com\ibm\icu\util -m "ticket:6945: Java: more bug fixes"
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundle.java
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundleImpl.java
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundleReader.java
+Sending        main\classes\core\src\com\ibm\icu\util\UResourceBundle.java
+Transmitting file data ....
+Committed revision 26307.
+
+*** http://bugs.icu-project.org/trac/ticket/7054 race in using UResourceBundle.addToCache()
+
+svn commit main\classes\core\src\com\ibm\icu\impl main\classes\core\src\com\ibm\icu\util -m "ticket:7054: quick fix for race in using UResourceBundle.addToCache(); real fix later may involve ConcurrentHashMap, or ditching the synchronization"
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundle.java
+Sending        main\classes\core\src\com\ibm\icu\impl\ResourceBundleWrapper.java
+Sending        main\classes\core\src\com\ibm\icu\util\UResourceBundle.java
+Transmitting file data ...
+Committed revision 26308.
+
+svn commit main\classes\core\src\com\ibm\icu\impl main\classes\core\src\com\ibm\icu\util -m "ticket:6945: Java: some more bug fixes"
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundleReader.java
+Sending        main\classes\core\src\com\ibm\icu\impl\OlsonTimeZone.java
+Sending        main\classes\core\src\com\ibm\icu\util\UResourceBundle.java
+Transmitting file data ...
+Committed revision 26313.
+
+svn commit main\classes\core\src\com\ibm\icu\impl main\classes\core\src\com\ibm\icu\util main\tests\core\src\com\ibm\icu\dev -m "ticket:6945: Java: fix alias handling and a couple minor issues"
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundle.java
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundleReader.java
+Sending        main\tests\core\src\com\ibm\icu\dev\test\util\ICUResourceBundleTest.java
+Transmitting file data ...
+Committed revision 26322.
+
+svn commit -m "ticket:6945: check in further notes"
+
+svn copy -r 26321 svn+ssh://source.icu-project.org/repos/icu/icu/trunk/source svn+ssh://source.icu-project.org/repos/icu/icu/branches/markus/smallres2 -m "ticket:6945: copy trunk/source@26321"
 
 TODO:
 * for v2 with key suffix sharing, pool bundle with shared keys,
@@ -1300,12 +1351,6 @@ TODO:
 - document experiments, decisions and dead ends
 - clean up TODO comments
 - document the change in table iteration order on EBCDIC platforms
-- Java:
-  + search for uses of TABLE and ARRAY; generalize to all tables, arrays, or containers?
-  + verify that pool.res is cached, and looked up from the cache
-  + for pool.res, do we need to call UResourceBundle.getBundleInstance()
-    or can we call an ICUResourceBundle method?
-  + review UResourceBundleIterator
 
 * for v2.1 or v3 with compact, byte-oriented strings, 1B/char for most scripts,
                       maybe zlib compression
