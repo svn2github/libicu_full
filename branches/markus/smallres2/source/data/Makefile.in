@@ -290,8 +290,8 @@ endif
 endif
 
 ALL_RES_SRC= $(RES_SRC) $(TRNS_SOURCE) $(MSC_SOURCE)
-RES_FILES = $(ALL_RES_SRC:%.txt=$(BUILDDIR)/%.res)
-RES_FILES_SHORT = $(ALL_RES_SRC:%.txt=%.res)
+RES_FILES = $(ALL_RES_SRC:%.txt=$(BUILDDIR)/%.res) $(BUILDDIR)/pool.res
+RES_FILES_SHORT = $(ALL_RES_SRC:%.txt=%.res) pool.res
 PKGDATA_LIST = $(OUTTMPDIR)/icudata.lst
 
 INDEX_NAME=res_index
@@ -542,7 +542,11 @@ $(TRANSLITBLDDIR)/%.res: $(TRANSLITSRCDIR)/%.txt  $(TOOLBINDIR)/genrb$(TOOLEXEEX
 all-RES:  $(RES_FILES)
 
 $(BUILDDIR)/%.res: $(LOCSRCDIR)/%.txt $(TOOLBINDIR)/genrb$(TOOLEXEEXT) $(DAT_FILES)
-	$(INVOKE) $(TOOLBINDIR)/genrb $(GENRBOPTS) -i $(BUILDDIR) -s $(LOCSRCDIR) -d $(BUILDDIR) $(<F)
+	$(INVOKE) $(TOOLBINDIR)/genrb --usePoolBundle $(GENRBOPTS) -i $(BUILDDIR) -s $(LOCSRCDIR) -d $(BUILDDIR) $(<F)
+
+# copy the pool.res file from the source folder to the build output folder
+$(BUILDDIR)/pool.res: $(LOCSRCDIR)/pool.res
+	cp $(LOCSRCDIR)/pool.res $(BUILDDIR)/pool.res
 
 # if the tzcode directory contains a new tzdata*.tar.gz file, use it for zoneinfo.txt
 TZDATA = $(firstword $(wildcard $(top_builddir)/tools/tzcode/tzdata*.tar.gz) $(wildcard $(top_srcdir)/tools/tzcode/tzdata*.tar.gz))

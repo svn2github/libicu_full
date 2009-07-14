@@ -1,0 +1,1388 @@
+smallres-notes.txt
+
+optimistic potential reduction of resource bundle string sizes via compression (BMP CJK 2B/char, other BMP 1B/char, other supp 3B/char, <=4 ASCII directly in resource item):
+
+ICU4C at revision 25919:
+
+.dat file size: 16,011,520 bytes
+number of resource bundles: 650
+total size without headers: 10172516 bytes
+number of strings: 132130
+strings size including resource items: 6366784 bytes
+potential (optimistic) size reduction: 2741192 (minus about 650*20=13000 bytes in header)
+number of strings that fit 4-ASCII mini format: 18308
+savings from those: 224192
+no strings are incompressible (longer in "compressed" form than in original UTF-16)
+
+potential savings is about 17% of .dat file size
+
+----
+observation: in many collation tailoring files, there is a very short rules string
+but the binary data is at least some 13800 bytes; it would save a lot of space to remove
+the binary data in those cases and just leave the rules strings;
+there are 876076 bytes in 49 such bundles;
+we could probably save about 800000 bytes by omitting the binary collation data for these
+----
+file,size,#strings,str.size,save,#4ascii,4ascii.save,incompressible
+----
+*** real1 implementation (counts only) ***
+
+hand-picked single-byte mode lead byte assignments:
+0=U+00A0 (   ) NO-BREAK SPACE
+1=0964;DEVANAGARI DANDA;Po;0;L;;;;;N;;;;;
+2=0965;DEVANAGARI DOUBLE DANDA;Po;0;L;;;;;N;;;;;
+3=U+200C (  ) ZERO WIDTH NON-JOINER
+4=U+200D (  ) ZERO WIDTH JOINER
+5=U+200E ( ‎ ) LEFT-TO-RIGHT MARK
+6=U+200F ( ‎‏‎ ) RIGHT-TO-LEFT MARK
+7=U+2060 (  ) WORD JOINER
+8=U+3000 ( 　 ) IDEOGRAPHIC SPACE
+9=9 TAB
+A=A LF
+B=single-quote window 0
+C=single-quote window 1
+D=D CR
+E=single-quote window 2
+F..1F=17*single-quote arbitrary code point (2 trail bytes)
+20..7E=ASCII
+7F=single-quote fixed:
+  00..1F, 2000..205F, 20A0..20BF, A0..BF, 3000..303F
+80..FF=current window start + 00..7F
+
+CJK lead byte assignments:
+00..2F=20..4F
+30..9F=3000..9FFF
+A0..AB=50..5B
+AC..D7=AC00..D7FF
+D8..FA=5C..7E
+FB=9 TAB
+FC=A LF
+FD=single-quote BMP code point (2 trail bytes)
+FE=single-quote plane 2 code point (2 trail bytes)
+FF=single-quote plane 1/3..16 code point (3 trail bytes)
+
+* other change from estimated potential above:
+3000..33ff is now counted as both compressible (for single-byte mode)
+and part of 2-byte CJK (for CJK mode)
+
+.dat file size: 16,011,520 bytes
+number of resource bundles: 650
+total size without headers: 10172516 bytes
+number of strings: 132130
+strings size including resource items: 6366784 bytes
+real size reduction: 2633940 (minus about 650*20=13000 bytes in header)
+number of strings that fit 4-ASCII mini format: 18308
+savings from those: 224192
+17 strings are incompressible (longer in "compressed" form than in original UTF-16)
+
+real savings is about 16.5% of .dat file size
+
+real savings is about 96% of potential (with slight modifications to the algorithm in between)
+
+*** real1: no code change, but complete rebuild of all data (apparently some had been missed):
+
+(removed Taipei metazone mappings)
+
+.dat file size: 16,011,616 bytes
+number of resource bundles: 660
+total size without headers: 10664844 bytes
+number of strings: 140182
+strings size including resource items: 6589112 bytes
+size reduction: 2754140 (minus about 660*16=10560 bytes in header)
+number of strings that fit 4-ASCII mini format: 21938
+savings from those: 268068
+    2767 strings/35472 bytes saved in supplementalData.res from 4-ASCII mini format
+31 strings are incompressible (longer in "compressed" form than in original UTF-16)
+    14 from numberingSystems.res
+savings is about 17.2% of .dat file size
+
+*** real2: is4ASCII() -> encodeMiniString() with
+    window chars, 12-bit chars and singles; and remove dandas from gDirectChars[]
+
+(removed Taipei metazone mappings and added en/zh/zh_Hant strings for Asia/Taipei)
+
+This can encode another 3315 strings directly in the 28 bits of the resource item
+which don't fit the 4-ASCII form.
+Of these:
+- 1287 strings with 2 or 3 characters from one of the 3 windows
+  (saves 15444 bytes = 12 bytes per string)
+- 132 strings with 2 characters where both are in 0000..0FFF or in 1000..1FFF
+  (saves 1584 bytes = 12 bytes per string)
+- 1896 strings with a single non-ASCII character
+  (saves 15168 bytes = 8 bytes per string because they are all BMP characters)
+For a total savings of 32196 bytes on top of 4-ASCII strings,
+but not as much compared to the other compression format.
+
+.dat file size: 16,012,240 bytes
+number of resource bundles: 660
+total size without headers: 10665468 bytes
+number of strings: 140202
+strings size including resource items: 6589592 bytes
+size reduction: 2767604 (minus about 660*16=10560 bytes in header)
+number of strings that fit mini format: 25253
+savings from those: 300264
+    2767 strings/35472 bytes saved in supplementalData.res from 4-ASCII mini format
+31 strings are incompressible (longer in "compressed" form than in original UTF-16)
+    14 from numberingSystems.res
+savings is about 17.3% of .dat file size
+
+*** real3: encodeMiniString() debugged, length encoding modified,
+                                        only <=32 in single byte (rather than <=63)
+
+.dat file size: 16,012,240 bytes
+number of resource bundles: 660
+total size without headers: 10665468 bytes
+number of strings: 140202
+strings size including resource items: 6589592 bytes
+size reduction: 2764112 (minus about 660*16=10560 bytes in header)
+total padding after compressed strings: 175654 bytes
+number of strings that fit mini format: 25243
+savings from those: 300144
+    2767 strings/35472 bytes saved in supplementalData.res from mini format
+31 strings are incompressible (longer in "compressed" form than in original UTF-16)
+    14 from numberingSystems.res
+savings is about 17.3% of .dat file size
+
+savings drop by about 3kB due to the length encoding:
+3470 strings have length 33..63 and their lengths are now encoded in 2 bytes instead of 1
+2415 of these strings have length 33..45
+
+3305 mini-strings including 210 two-char 0xxx/1xxx
+
+*** real4: length encoding with 1..60 as single byte
+
+size reduction: 2767228 (minus about 660*16=10560 bytes in header)
+total padding after compressed strings: 175800 bytes
+
+regained most of the 3kB that were lost in real3
+
+*** real5: length encoding with 1..62 as single byte
+
+size reduction: 2767200 (minus about 660*16=10560 bytes in header)
+total padding after compressed strings: 175844 bytes
+
+tiny gain, after taking padding change into account
+(padding can be saved by reordering the bundle items)
+
+only need at most 29 bits in the length, so keep this one;
+if we reorder bundle items to put compressed strings at the beginning,
+then we will need only 28 bits and _could_ in principle go back to the original
+scheme of using a single length escape byte value
+
+*** real6: switch to other window if two such characters in a row (rather than single-quote)
+
+size reduction: 2768224 (minus about 660*16=10560 bytes in header)
+total padding after compressed strings: 175866 bytes
+
+small gain of about 1kB
+
+*** bug fix: use direct-chars (1B) before special-chars (2B)
+
+number of resource bundles: 660
+  total size without headers: 10665468 bytes
+number of strings: 140202
+  strings size including resource items: 6589592 bytes
+size reduction: 2768316 (minus about 660*16=10560 bytes in header)
+  total padding after compressed strings: 175849 bytes
+number of strings that fit mini format: 25243
+  savings from those: 300144
+31 strings are incompressible (longer in "compressed" form than in original UTF-16)
+
+*** remove the mini-string encoding of 2 0xxx or 1xxx characters
+
+size reduction: 2767280 (minus about 660*16=10560 bytes in header)
+  total padding after compressed strings: 176121 bytes
+number of strings that fit mini format: 25033
+  savings from those: 297624
+
+210 fewer mini-strings, savings reduced by 1036 bytes
+
+*** change special-char ranges
+
+old: 00..1F, A0..BF, 2000..205F, 20A0..20BF, 3000..303F
+new: E0..17F, 300..33F, 2000..201F
+
+size reduction: 2769132 (minus about 660*16=10560 bytes in header)
+  total padding after compressed strings: 175881 bytes
+
+small gain of about 2kB
+
+*** remove direct-chars (1 byte) A0, 200C..200F, 2060, 3000
+
+size reduction: 2769056 (minus about 660*16=10560 bytes in header)
+  total padding after compressed strings: 175863 bytes
+
+trivial loss of 76 bytes!
+
+*** remove both direct-chars (1 byte) and special-char ranges (2 bytes)
+
+size reduction: 2766524 (minus about 660*16=10560 bytes in header)
+  total padding after compressed strings: 175975 bytes
+
+savings loss of 2608 bytes compared with the version that had direct-chars and the new special-char ranges
+don't hand-pick anything! not worth it
+
+*** bug fix in counting and sizing incompressible strings
+*** and count as if compressed strings are stored in a block, with only one padding of 0..3 bytes
+
+size reduction: 2942546 (minus about 660*16=10560 bytes in header)
+  total padding after compressed strings: 570 bytes
+
+14 strings are incompressible (longer in "compressed" form than in original UTF-16)
+  all in misc/numberingSystems.txt
+  together, their "compressed" forms are 43 bytes longer than original UTF-16
+
+savings is about 18.4% of .dat file size
+
+*** implement key suffix sharing
+
+number of resource bundles: 660
+  total size without headers: 10437228 bytes
+  not including savings from key suffix sharing: 228220 bytes
+number of strings: 140202
+  strings size including resource items: 6589592 bytes
+size reduction: 2942546 (minus about 660*16=10560 bytes in header)
+  total padding after compressed strings: 570 bytes
+number of strings that fit mini format: 25033
+  savings from those: 297624
+14 strings are incompressible (longer in "compressed" form than in original UTF-16)
+
+savings is about 19.8% of .dat file size
+
+*** implement string value de-duplication
+
+.dat file size: 15,073,280 bytes
+number of resource bundles: 660
+  total size without headers: 9726616 bytes
+  not including savings from key suffix sharing: 228220 bytes
+  not including savings from string de-duplication: 710612 bytes
+number of strings: 140226
+  strings size including resource items: 5878980 bytes
+size reduction: 2585910 (minus about 660*16=10560 bytes in header)
+  total padding after compressed strings: 534 bytes
+number of strings that fit mini format: 20991
+  savings from those: 251224
+14 strings are incompressible (longer in "compressed" form than in original UTF-16)
+
+* saves 938852 bytes (diff total .res size from real3+) just from intra-bundle
+  key suffix sharing and string value de-duplication
+  which we can do now without formatVersion change, without runtime code change,
+  and with only a swapper change!
+* total savings including string value compression is about 3514202 bytes
+  (after subtracting the 10560 additional header bytes)
+
+savings is about 21.9% of original .dat file size
+
+* non-alnum key chars:
+':' = 0x3a: 12047
+'_' = 0x5f: 4595
+'-' = 0x2d:  543
+'%' = 0x25:  248
+' ' = 0x20:  208
+'/' = 0x2f:   25
+'+' = 0x2b:   24
+'.' = 0x2e:    9
+')' = 0x29:    3
+'(' = 0x28:    3
+* non-alnum key chars as first key chars:
+'_' = 0x5f:  154
+'-' = 0x2d:  134
+'%' = 0x25:  124
+* non-alnum key chars as last key chars:
+'_' = 0x5f:  154
+')' = 0x29:    3
+
+*** more mini-strings
+* +3 "resource types" for 4-char-strings from some window
+* +4 "resource types" to make way for 30 bits for 2 15-bit characters for ASCII/window/Unihan/Hangul
+
+size reduction: 2599307 (minus about 660*16=10560 bytes in header)
+  total padding after compressed strings: 531 bytes
+number of strings that fit mini format: 23734
+  savings from those: 291484
+
+2743 more mini-strings than before
+13397 more bytes saved
+
+18300 ASCII mini-strings
+5434 non-ASCII mini-strings:
+   907 CJK          saves 10884 bytes vs. UTF-16, about 4250? vs. compressed
+       of which 712 start with a Han/Hangul character
+  1678 single             13424                         5000?
+   282 www[2]w0            3384                          846
+     6 www[2]w1              72
+     1 www[2]w2              12
+   717 www[3]w0            8604                         2868
+     7 www[3]w1              84
+     0 www[3]w2               0
+  1834 wwww[4]w0          29344                         9170
+     2 wwww[4]w1             32
+     0 wwww[4]w2              0
+  2833 window-0 strings                                12884
+
+-> mini-CJK not worth it
+-> mini-strings with window 1 or 2 not worth it
+-> but 4-char window 0 mini-strings are worth it, use one extra resource type
+
+backup:
+    /* encode a Unihan/Hangul/ASCII/window character in 15 bits */
+    static int32_t
+    encodeMiniCJKChar(const int32_t *windows, UChar32 c) {
+        int32_t w, windowIndex;
+        if (c <= 0x7f) {
+            /* ASCII: 0..7F */
+            return c;
+        } else if (0x4e00 <= c && c <= 0x9fff) {
+            /* Unihan: 200..53FF */
+            return c - 0x4c00;
+        } else if (0xac00 <= c && c <= 0xd7ff) {
+            /* Hangul: 5400..7FFF */
+            return c - (0xac00 - 0x5400);
+        } else if ((w = getWindow(windows, c, &windowIndex)) >= 0) {
+            /* window 0/1/2 character: 80..1FF */
+            return ((windowIndex + 1) << 7) | (c - w);
+        } else {
+            /* does not fit */
+            return -1;
+        }
+    }
+
+*** simplify mini-strings
+1 resource type for 1..4 direct-ASCII or single code point
+1 resource type for 1..4 window 0 characters where the last one is not at the window start
+
+size reduction: 2595031 (minus about 660*16=10560 bytes in header)
+  total padding after compressed strings: 535 bytes
+number of strings that fit mini format: 22811
+  savings from those: 280400
+
+*** change windows to be multiple of 0x20 not 0x80
+
+size reduction: 2596399 (minus about 660*16=10560 bytes in header)
+  total padding after compressed strings: 523 bytes
+number of strings that fit mini format: 22840
+  savings from those: 280796
+13 strings are incompressible (longer in "compressed" form than in original UTF-16)
+
+-> good: gained about 1kB at no runtime cost; more mini-strings; one fewer incompressible string
+
+*** experiment: only 1 window
+
+size reduction: 2574077 (minus about 660*16=10560 bytes in header)
+  total padding after compressed strings: 525 bytes
+number of strings that fit mini format: 22840
+  savings from those: 280796
+20 strings are incompressible (longer in "compressed" form than in original UTF-16)
+
+-> loss of 22322 bytes
+-> keep 3 windows, the extra two don't add much complexity
+
+*** back to 3 windows, count total keys size
+
+number of resource bundles: 660
+  total size without headers: 9726616 bytes
+  not including savings from key suffix sharing: 228220 bytes
+  not including savings from string de-duplication: 710612 bytes
+keys size: 487587 bytes
+number of strings: 140226
+  strings size including resource items: 5878980 bytes
+size reduction: 2596399 (minus about 660*16=10560 bytes in header)
+  total padding after compressed strings: 523 bytes
+number of strings that fit mini format: 22840
+  savings from those: 280796
+13 strings are incompressible (longer in "compressed" form than in original UTF-16)
+
+*** add key packing
+
+number of resource bundles: 660
+  total size without headers: 9760404 bytes
+  not including savings from key suffix sharing: 81838 bytes
+  not including savings from string de-duplication: 710612 bytes
+keys size: 277686 bytes
+number of strings: 140226
+  strings size including resource items: 5878980 bytes
+size reduction: 2596399 (minus about 660*16=10560 bytes in header)
+  total padding after compressed strings: 523 bytes
+number of strings that fit mini format: 22840
+  savings from those: 280796
+13 strings are incompressible (longer in "compressed" form than in original UTF-16)
+
+-> loss of 33788 bytes
+-> big reduction in key string characters but apparently going to 32-bit tables
+   outweighed it
+   (probably packed keys would help if key suffix sharing wasn't implemented)
+
+*** key packing turned off again, results back to previous
+
+*** experiment: no mini-strings
+
+size reduction: 2509369 (minus about 660*16=10560 bytes in header)
+  total padding after compressed strings: 1305 bytes
+number of strings that fit mini format: 0
+  savings from those: 0
+
+-> loss of 87030 bytes
+-> keep mini-strings?
+
+*** experiment: no mini-strings and only one window
+
+size reduction: 2485435 (minus about 660*16=10560 bytes in header)
+  total padding after compressed strings: 1279 bytes
+number of strings that fit mini format: 0
+  savings from those: 0
+20 strings are incompressible (longer in "compressed" form than in original UTF-16)
+
+-> loss of 110964 bytes compared to using mini-strings and 3 windows
+
+*** experiment: mini-strings only for single characters
+
+size reduction: 2516862 (minus about 660*16=10560 bytes in header)
+  total padding after compressed strings: 862 bytes
+number of strings that fit mini format: 3392
+  savings from those: 27136
+13 strings are incompressible (longer in "compressed" form than in original UTF-16)
+
+-> loss of 79537 bytes compared to using single/ASCII/window-0 mini-strings
+
+*** experiment: mini-strings only for single characters & ASCII, not window-0 strings
+
+size reduction: 2583389 (minus about 660*16=10560 bytes in header)
+  total padding after compressed strings: 525 bytes
+number of strings that fit mini format: 19978
+  savings from those: 239068
+13 strings are incompressible (longer in "compressed" form than in original UTF-16)
+
+-> loss of 13010 bytes compared to using single/ASCII/window-0 mini-strings
+-> the ASCII form is worth it (good gain),
+   the single-char form is worth it (trivial code),
+   the window-0 form is only slightly worth it
+   (extra resource type, not too complex, close to 0.1% gain from whole .dat file)
+
+*** experiment: only 1 window, and mini-strings only single/ASCII not window-0
+
+size reduction: 2561067 (minus about 660*16=10560 bytes in header)
+  total padding after compressed strings: 531 bytes
+number of strings that fit mini format: 19978
+  savings from those: 239068
+20 strings are incompressible (longer in "compressed" form than in original UTF-16)
+
+-> loss of 35332 bytes compared to using 3 windows and single/ASCII/window-0 mini-strings
+-> small additional loss from only 1 window,
+   reconfirms that the small extra complexity for 3 windows is ok
+
+*** remove Han Ext. A (3400..4DFF) from 2-byte CJK
+
+size reduction: 2571948 (minus about 660*16=10560 bytes in header)
+  total padding after compressed strings: 524 bytes
+number of strings that fit mini format: 22840
+  savings from those: 280796
+14 strings are incompressible (longer in "compressed" form than in original UTF-16)
+
+-> loss of 24451 bytes, too much
+
+*** remove only last 0x300 Han Ext. A (4B00..4DFF) from 2-byte CJK
+
+size reduction: 2593709 (minus about 660*16=10560 bytes in header)
+  total padding after compressed strings: 525 bytes
+number of strings that fit mini format: 22840
+  savings from those: 280796
+13 strings are incompressible (longer in "compressed" form than in original UTF-16)
+
+-> loss of 2690 bytes
+-> keep this, for 3 bytes for infix strings
+
+*** find infixes among unique string values, suggested by Mark   (20090504)
+
+-> 17053 infixes found with minBytes=6
+-> median infix length is 8 UChars
+-> looks like potential savings of some 100-120kB
+
+-> With minBytes=5 there are 20721 infixes found.
+   Most of the increase is from 5-UChar infixes which must consist of
+   compressible characters. Savings are small for these.
+
+Use 3 byte values in single-byte mode and in CJK mode (4B..4D there) to announce that
+the following 2..4 bytes contain a resource item pointing to the infix string.
+The top 4 bits of the first trail byte are the string resource type,
+the following 12/20/28 bits are the resource offset.
+
+There could be fewer than 4 top bits for the resource type, but it would be
+less flexible. An infix string could be encoded in
+UTF-16 form, compressed bytes or zipped bytes,
+plus possibly other types in the future.
+
+If compressed strings are within the first 4kB of a bundle
+(or first 16kB if using 2 top bits for the string resource type),
+then 3 bytes suffice to indicate an infix.
+For best results, bundle_write() could write/preflight this set of strings first,
+or just those that are infixes of others, in ascending-length order.
+
+For finding common prefixes/suffixes and creating new strings, use something like
+the following to figure out if it's worth doing:
+    /*
+     * minBytesForPrefix = Optimistic number of bytes
+     * just for encoding the prefix characters without other overhead.
+     * 4 = pessimistic number of encoding bytes to refer to the infix.
+     * Savings: Twice the difference, one per original string.
+     * Cost: The minimum bytes plus the length byte.
+     */
+    int32_t minBytesForPrefix = minBytes(prefix, prefixLength);
+    if (2 * (minBytesForPrefix - 4) > (1 /* length byte */ + minBytesForPrefix)) {
+        /* worth it */
+    }
+This is equivalent to  if (minBytesForPrefix > 9) ... and string's minBytes
+should be longer than 9 for looking for prefixes/suffixes.
+
+Look for prefixes/suffixes only when there are no infixes for a string?
+Pro: Avoids possible overlaps of the newly created prefix with an infix.
+Con: Adding new strings during infix finding might be too late for
+     other strings to share the new string.
+
+*** find prefixes and suffixes, and fix some bugs with infixes
+*** modify encodeLength() to encode 31 bits not 29
+
+Note: The stats for numbers and sizes of strings are off
+because string_open() is used to create new strings.
+
+* No looping yet for added strings.
+
+found 20830 infixes
+found 6378 prefixes or suffixes for which it creates new strings
+found 1719 prefixes or suffixes that then already from having been added
+
+*** redid in/pre/suffixes
+* Stats should be back to normal
+
+max. 2 infixes:
+    found 33512 infixes
+    created 13170 new strings
+max. 3 infixes:
+    found 33692 infixes
+    created 13170 new strings
+
+-> keep it at 2
+-> promising
+
+*** re-implemented with preflighting and infix writing (20090507)
+
+number of resource bundles: 660
+  total size without headers: 9726616 bytes
+  not including savings from key suffix sharing: 228220 bytes
+  not including savings from string de-duplication: 710612 bytes
+keys size: 488012 bytes
+number of strings: 140202
+  strings size including resource items: 6028784 bytes
+size reduction: 3007167 (minus about 660*16=10560 bytes in header)
+  total padding after compressed strings: 535 bytes
+number of strings that fit mini format: 22840
+  savings from those: 280796
+13 strings are incompressible (longer in "compressed" form than in original UTF-16)
+
+compared with baseline "back to 3 windows, count total keys size":
+-> gain of 410768 bytes!
+   However, the report shows the UTF-16 strings size to be 149804 bytes
+   larger than before; don't know what changed in accounting.
+   Possibly padding had not been counted before?
+   This would mean that the in/pre/suffix work saves only about 260000 bytes?
+   Or that the previous savings were underreported by this amount?
+
+compared with early "real2":
+-> uncompressed actual .res files here are 938852 bytes smaller,
+   from key suffix sharing and string de-duplication
+-> total savings: 3946019 bytes, or 24.6% of real2's .dat file size
+
+*** experiments:
+1 window not 3: loss of 19894 bytes -> no
+2 windows not 3: loss of 4634 bytes -> yes
+    Note: 2 not 3 windows can be stored in 1 index word not 2,
+    which will save 4*660=2640 bytes to counterbalance the loss
+
+3 windows, best not 1/2: loss of 2834 bytes
+
+2 windows, best not 1: loss of 6700 bytes -> no
+2 windows, best not 1, 7 length bits: loss of 6166 bytes -> no
+    Since 7 length bits don't provide any noticeable gain,
+    there is no cost to having 2 bits in the initial compact-string byte
+    to distinguish between window 0, window 1 and CJK;
+    the last bit combination could be used for zip compression
+    so that we don't need another resource type for that
+    (or maybe we could create another clever format??)
+
+*** experiment: don't count UTF-16 string padding in strings size
+
+number of resource bundles: 660
+  total size without headers: 9726616 bytes
+  not including savings from key suffix sharing: 228220 bytes
+  not including savings from string de-duplication: 710612 bytes
+keys size: 488012 bytes
+number of strings: 140202
+  strings size including resource items: 5896956 bytes
+size reduction: 2875339 (minus about 660*16=10560 bytes in header)
+  total padding after compressed strings: 535 bytes
+number of strings that fit mini format: 22840
+  savings from those: 280796
+13 strings are incompressible (longer in "compressed" form than in original UTF-16)
+
+-> strings size is again close to previous numbers, although not the same;
+   no idea why the difference
+
+*** count UTF-16 padding in strings size again (back to 20090507)
+*** experiments:
+* no infixes: loss of 263772 bytes
+* max infix depth 10 not 4: no change
+
+*** implement --writePoolBundle and --usePoolBundle
+* writing pool bundles for locale and collation files
+
+-> saves about 427959 - 2*64 = 427831 bytes
+427959 bytes reported savings from the suffix sharing of building the two pool.res
+2*64 bytes overhead (non-key string bytes) for the two pool.res
+
+*** 20090516
+
+svn mkdir svn+ssh://source.icu-project.org/repos/icu/icu/branches/markus/smallres -m "ticket:6945: create branch for small-resource-bundle prototyping"
+Committed revision 26011.
+
+svn copy -r 26008 svn+ssh://source.icu-project.org/repos/icu/icu/trunk/source svn+ssh://source.icu-project.org/repos/icu/icu/branches/markus/smallres -m "ticket:6945: copy trunk/source@26008"
+Committed revision 26012.
+
+svn commit -m "ticket:6945: prototype code, scripts for statistics, and notes"
+Adding         chars-stats.py
+Adding         keys-stats.py
+Adding         potential-stats.py
+Adding         smallres-notes.txt
+Sending        source\tools\genrb\genrb.c
+Sending        source\tools\genrb\reslist.c
+Sending        source\tools\genrb\reslist.h
+Sending        source\tools\genrb\wrtjava.c
+Sending        source\tools\genrb\wrtxml.cpp
+Transmitting file data .........
+Committed revision 26014.
+
+*** first time built in smallres branch; from just-after-ICU 4.2 without Asia/Taipei patch
+*** fix bug in counting strings size: had omitted the 4 resource item bytes in recent code
+    (don't know if this bug has always been there, or if it crept in at some point)
+    (compact strings had counted the resource items, diminishing the savings numbers)
+*** encode empty string values as fRes=0 unless formatVersion=1 (removes them from mini-ASCII)
+*** implement UTF-16 v2 strings:
+- implicit length for short strings <= 32 UChars
+- 1 UChar explicit length for most other strings
+- 2 UChars explicit length for very long strings (theoretically up to 3 UChars for the length)
+- suffix sharing if the suffix uses implicit length
+
+* original .dat file size before prototype patches: 16,012,800 bytes
+
+* UTF-16 v2 strings (no pool.res):
+number of resource bundles: 660
+  total size without headers: 9725852 bytes
+  not including savings from key suffix sharing: 228387 bytes
+  not including savings from string de-duplication: 705676 bytes
+keys size: 487992 bytes
+number of strings: 140188
+  strings size including resource items: 6589276 bytes
+size reduction: 1404458 (minus about 660*16=10560 bytes in header)
+  total padding after compressed strings: 18 bytes
+number of strings that fit mini format: 0
+  savings from those: 0
+0 strings are incompressible (longer in "compressed" form than in original UTF-16)
+
+* compact byte strings (no pool.res):
+number of resource bundles: 660
+  total size without headers: 9725852 bytes
+  not including savings from key suffix sharing: 228387 bytes
+  not including savings from string de-duplication: 705676 bytes
+keys size: 487992 bytes
+number of strings: 140188
+  strings size including resource items: 6589276 bytes
+size reduction: 3567784 (minus about 660*16=10560 bytes in header)
+  total padding after compressed strings: 536 bytes
+number of strings that fit mini format: 22678
+  savings from those: 279500
+13 strings are incompressible (longer in "compressed" form than in original UTF-16)
+
+-> UTF-16 v2 string format saves significantly
+-> compact byte strings save another 2MB more than UTF-16 v2
+
+svn commit -m "ticket:6945: fix strings size counting (do include resource item words); encode empty string values as fRes=0 unless formatVersion=1; implement UTF-16 v2 strings"
+Sending        smallres-notes.txt
+Sending        source\tools\genrb\reslist.c
+Sending        source\tools\genrb\reslist.h
+Transmitting file data ...
+Committed revision 26015.
+
+svn commit stringcache.cpp -m "ticket:6945: Cache for compacted/compressed resource bundle strings (initial draft code)"
+Adding         stringcache.cpp
+Transmitting file data .
+Committed revision 26016.
+
+*** bug fix: too-long suffix wrote the larger string again, not the suffix
+* corrected savings:
+size reduction: 1405120 with kMaxImplicitStringLength = 32
+
+*** experiments, compared with kMaxImplicitStringLength = 32
+* kMaxImplicitStringLength = 16 -> size reduction: 1356884 -> loss of 48236 bytes
+* kMaxImplicitStringLength = 24 -> size reduction: 1392948 -> loss of 12172 bytes
+* kMaxImplicitStringLength = 32 -> size reduction: 1405120
+* kMaxImplicitStringLength = 40 -> size reduction: 1409340 -> gain of  4220 bytes
+* kMaxImplicitStringLength = 48 -> size reduction: 1410488 -> gain of  5368 bytes
+* kMaxImplicitStringLength = 64 -> size reduction: 1411632 -> gain of  6512 bytes
+-> set kMaxImplicitStringLength = 40
+
+svn commit -m "ticket:6945: set kMaxImplicitStringLength = 40 after experiments"
+Sending        smallres-notes.txt
+Sending        source\tools\genrb\reslist.c
+Transmitting file data ..
+Committed revision 26017.
+
+svn commit -m "ticket:6945: ures_swap() track resources to not swap shared resource multiple times; prepare for optionally writing formatVersion 2; flexible local/pool key offsets boundary for URES_TABLE"
+Sending        smallres-notes.txt
+Sending        source\common\uresdata.c
+Sending        source\common\uresdata.h
+Sending        source\tools\genrb\genrb.c
+Sending        source\tools\genrb\parse.c
+Sending        source\tools\genrb\reslist.c
+Sending        source\tools\genrb\reslist.h
+Transmitting file data .......
+Committed revision 26021.
+
+svn commit -m "ticket:6945: bug fixes to get formatVersion 1 to work again; tested via cintltst /udatatst/TestSwapData"
+Sending        smallres-notes.txt
+Sending        source\tools\genrb\reslist.c
+Sending        source\tools\genrb\reslist.h
+Sending        source\tools\genrb\wrtjava.c
+Sending        source\tools\genrb\wrtxml.cpp
+Transmitting file data .....
+Committed revision 26023.
+
+(20090520)
+*** implement writing of UTF-16 v2 strings, some code cleanup, some work towards EBCDIC pool bundles
+* savings output should currently be comparing UTF-16 v1 & v2 strings,
+  although with formatVersion 2 those savings have already been realized
+
+.dat file size: 14,375,504 bytes
+number of resource bundles: 660
+  total size without headers: 9028212 bytes
+  not including savings from key suffix sharing: 228387 bytes
+  not including savings from string de-duplication: 705676 bytes
+keys size: 487992 bytes
+number of strings: 140188
+  strings size including resource items: 6589276 bytes
+size reduction: 1409340 (minus about 660*16=10560 bytes in header)
+
+-> total resource bundle size is 697640 bytes lower than the original smallres
+   build, in line with the back-of-the-envelope estimate of saving
+   some 5 bytes per string (4 length bytes and average 1 padding byte)
+-> realization: string duplicate elimination has been counted as part of
+   reported savings; they do not add up on top of each other;
+   incremental savings from further tricks should be accurate though
+-> total actual savings with key suffix sharing, string duplicate elimination,
+   string suffix sharing and low-overhead UTF-16 v2 strings
+   is 1637296 bytes or about 10.2% of the total .dat file size
+-> Note: the "not including" in the stats output is now incorrect
+
+svn commit -m "ticket:6945: write UTF-16 v2 strings, some code cleanup, some work towards EBCDIC pool bundles"
+Sending        smallres-notes.txt
+Sending        source\common\uinvchar.c
+Sending        source\common\uinvchar.h
+Sending        source\common\uresdata.c
+Sending        source\common\uresdata.h
+Sending        source\tools\genrb\reslist.c
+Sending        source\tools\genrb\reslist.h
+Transmitting file data .......
+Committed revision 26033.
+
+*** bug fix: suffix strings did not have fHasBeenPreWritten
+*** experiment: try using new table (and array?) format with 16-bit resource item words;
+    correct estimate of including tables and arrays requires keeping track of
+    the byteOffset during preWriting
+** table16 only
+* strings with offsets <= 0xffff
+    number of resource items that could use a 16-bit resource item word: 85344
+* strings with offsets <= 0x7fff,
+  tables with offsets <= 0x7fff (estimate)
+    number of resource items that could use a 16-bit resource item word: 73941
+* strings with offsets <= 0x7fff,
+  tables and arrays with offsets <= 0x3fff (estimate)
+    number of resource items that could use a 16-bit resource item word: 73941
+** table16 and array16
+* strings with offsets <= 0xffff
+    number of resource items that could use a 16-bit resource item word: 136654
+* strings with offsets <= 0x7fff,
+  tables with offsets <= 0x7fff (estimate)
+    number of resource items that could use a 16-bit resource item word: 123111
+* strings with offsets <= 0x7fff but nothing else
+    number of resource items that could use a 16-bit resource item word: 123111
+
+-> worth having table16 and array16 types that only hold low-offset strings
+
+*** implement table16 & array16 with only low-offset strings
+
+number of resource bundles: 660
+  total size without headers: 8775104 bytes
+  including savings from key suffix sharing: 228387 bytes
+  including savings from string de-duplication: 705676 bytes
+keys size: 487992 bytes
+number of resource items that could use a 16-bit resource item word: 136654
+number of strings: 140188
+  original strings size including resource items: 6589276 bytes
+string size reduction: 703664 after string de-duplication
+  total padding after v2 or compressed strings: 0 bytes
+
+-> actual savings: 253108 bytes = 126554 uint16_t
+   why different from the 136654 resource items estimated to be able to use this?
+   padding?
+
+Scratch:
+    en.txt -s C:\svn\icuproj\icu\trunk\source\data\locales -d \temp\icu\smallres
+
+svn commit -m "ticket:6945: reorg bundle preflighting and writing so that preflighting already determines all resource item words; eliminate fixed binary-item padding; experimental support for compact table16 & array16 types; clarify statistics output"
+Sending        potential-stats.py
+Sending        smallres-notes.txt
+Sending        source\tools\genrb\reslist.c
+Sending        source\tools\genrb\reslist.h
+Transmitting file data ....
+Committed revision 26043.
+
+(20090523)
+*** put UTF-16 v2 strings and table16/array16 containers into 16-bit-units array to reduce padding;
+    write short strings first to maximize the number of strings with 16-bit offsets;
+    insert new first writing pass for all 16-bit-unit values
+** table16 and array16
+* strings with offsets <= 0xffff
+
+.dat file size: 14,167,200 bytes
+number of resource bundles: 660
+  total size without headers: 8819764 bytes
+  including savings from key suffix sharing: 228387 bytes
+  including savings from string de-duplication: 705676 bytes
+keys size: 487992 bytes
+number of resource items that could use a 16-bit resource item word: 87197
+number of strings: 140188
+  original strings size including resource items: 6589276 bytes
+string size reduction: 1051678 after string de-duplication
+
+-> a lot fewer 16-bit resource item words than estimated; was the estimate bad?
+-> total savings: 1,845,600 bytes, or 11.5% of .dat file size
+
+* strings with offsets <= 0x7fff,
+  tables with offsets <= 0x7fff
+
+number of resource bundles: 660
+  total size without headers: 8821268 bytes
+  including savings from key suffix sharing: 228387 bytes
+  including savings from string de-duplication: 705676 bytes
+keys size: 487992 bytes
+number of resource items that could use a 16-bit resource item word: 86509
+number of strings: 140188
+  original strings size including resource items: 6589276 bytes
+string size reduction: 1040766 after string de-duplication
+
+-> in aggregate, it's better to optimize for table16/array16 containing only strings
+
+svn commit -m "ticket:6945: UTF-16+table16/array16 in 16-bit-units array to reduce padding; short strings first for maximum number of strings with 16-bit offsets; insert new first writing pass for all 16-bit-unit values"
+Sending        potential-stats.py
+Sending        smallres-notes.txt
+Sending        source\common\uresdata.h
+Sending        source\tools\genrb\reslist.c
+Sending        source\tools\genrb\reslist.h
+Transmitting file data .....
+Committed revision 26044.
+
+svn commit -m "ticket:6945: implement swapping of resource bundles with new string, table16 and array16 types"
+Sending        smallres-notes.txt
+Sending        source\common\unicode\ures.h
+Sending        source\common\uresdata.c
+Sending        source\common\uresdata.h
+Sending        source\tools\genrb\reslist.c
+Transmitting file data .....
+Committed revision 26045.
+
+*** found out why the number of strings eligible for table16/array16 dropped:
+    the new _write16() pass did not set the resource item words for duplicate strings
+** table16 and array16
+* strings with offsets <= 0xffff
+
+.dat file size: 14,054,624 bytes
+number of resource bundles: 660
+  total size without headers: 8707200 bytes
+  including savings from key suffix sharing: 228387 bytes
+  including savings from string de-duplication: 705676 bytes
+keys size: 487992 bytes
+number of resource items that could use a 16-bit resource item word: 137851
+number of strings: 140188
+  original strings size including resource items: 6589276 bytes
+string size reduction: 703250 after string de-duplication
+
+-> total savings: 1,958,176 bytes, or 12.2% of .dat file size
+
+** table16 and array16
+* strings with offsets <= 0x7fff,
+  tables with offsets <= 0x7fff
+
+  total size without headers: 8698416 bytes
+number of resource items that could use a 16-bit resource item word: 142401
+
+-> more 16-bit resource items but only 8784 bytes more saved, not worth it
+
+** table16 and array16
+* strings with offsets <= 0x7fff,
+  arrays with offsets <= 0x7fff
+
+  total size without headers: 8689600 bytes
+number of resource items that could use a 16-bit resource item word: 146630
+
+-> more 16-bit resource items, 17600 bytes more saved than just with 16-bit string items
+-> still not really worth the added complexity
+-> this should also get less effective as our data grows and more bundles
+   have > 32k UChars so that none of the table16/array16 will have 15-bit offsets
+-> revert to just using strings in table16/array16
+
+svn commit -m "ticket:6945: add runtime support for string_v2/table16/array16, fix bugs"
+Sending        smallres-notes.txt
+Sending        source\common\unicode\ures.h
+Sending        source\common\uresbund.c
+Sending        source\common\uresdata.c
+Sending        source\common\uresdata.h
+Sending        source\test\cintltst\crestst.c
+Sending        source\test\cintltst\creststn.c
+Sending        source\tools\genrb\reslist.c
+Transmitting file data ........
+Committed revision 26046.
+
+*** write pool bundle with checksum, write others with the pool checksum
+** use pool bundle for locale bundles:
+number of resource bundles: 660
+  total size without headers: 8268332 bytes
+  including savings from key suffix sharing: 666971 bytes
+  including savings from string de-duplication: 705676 bytes
+keys size: 49124 bytes
+number of strings: 140188
+  original strings size including resource items: 6589276 bytes
+string size reduction: 703250 after string de-duplication
+
+plus locales/pool.res: 14,852 bytes
+.dat file size 13,630,720 bytes
+
+-> using locales/pool.res saves 423,904 bytes in .dat file size
+
+** use pool bundle for locale bundles:
+
+number of resource bundles: 660
+  total size without headers: 8263984 bytes
+  including savings from key suffix sharing: 671297 bytes
+  including savings from string de-duplication: 705676 bytes
+keys size: 44772 bytes
+number of strings: 140188
+  original strings size including resource items: 6589276 bytes
+string size reduction: 703250 after string de-duplication
+
+plus locales/pool.res: 14,852 bytes
+plus coll/pool.res: 260 bytes
+.dat file size 13,626,864 bytes
+
+-> using both locales/pool.res and coll/pool.res saves 427,760 bytes in .dat file size
+-> just another 3856 bytes from using coll/pool.res, not worth it
+
+-> revert to just using locales/pool.res
+-> total savings: 2,382,080 bytes, or 14.9% of .dat file size
+
+svn commit -m "ticket:6945: write pool bundle with checksum, write others with the pool checksum, add locales/pool.res"
+Sending        potential-stats.py
+Sending        smallres-notes.txt
+Sending        source\common\uresdata.h
+Adding  (bin)  source\data\locales\pool.res
+Sending        source\data\makedata.mak
+Sending        source\tools\genrb\genrb.c
+Sending        source\tools\genrb\parse.c
+Sending        source\tools\genrb\reslist.c
+Sending        source\tools\genrb\reslist.h
+Sending        source\tools\genrb\wrtxml.cpp
+Transmitting file data ..........
+Committed revision 26047.
+
+(20090529)
+*** bug fix: --usePoolBundle did not actually write the values for
+    URES_ATT_USES_POOL_BUNDLE and URES_INDEX_POOL_CHECKSUM
+
+-> .dat file size: 13,632,048 bytes
+
+*** implement runtime handling of the pool bundle
+
+(20090609)
+svn commit -m "ticket:6945: make genrb & runtime work together with pool bundles; document formatVersion 2; cintltst passes"
+Sending        smallres-notes.txt
+Sending        source\common\uresbund.c
+Sending        source\common\uresdata.c
+Sending        source\common\uresdata.h
+Sending        source\common\uresimp.h
+Sending        source\data\makedata.mak
+Sending        source\test\cintltst\hpmufn.c
+Sending        source\tools\genrb\genrb.c
+Sending        source\tools\genrb\reslist.c
+Sending        source\tools\genrb\reslist.h
+Transmitting file data ..........
+Committed revision 26079.
+
+svn commit -m "ticket:6945: fix handling of alias bundles, and cache them; all tests pass"
+Sending        smallres-notes.txt
+Sending        source\common\uresbund.c
+Sending        source\common\uresdata.c
+Sending        source\common\uresdata.h
+Sending        source\common\uresimp.h
+Transmitting file data .....
+Committed revision 26083.
+
+***
+svn commit -m "ticket:6945: move string duplicate elimination to formatVersion 2 to keep formatVersion 1.3 compatible with old swapper implementations"
+Sending        smallres-notes.txt
+Sending        source\common\uresdata.h
+Sending        source\tools\genrb\reslist.c
+Transmitting file data ...
+Committed revision 26221.
+
+***
+svn commit -m "ticket:6945: after r26221, remove experimental string compression code and statistics output from genrb"
+Sending        smallres-notes.txt
+Sending        source\tools\genrb\reslist.c
+Sending        source\tools\genrb\reslist.h
+Transmitting file data ...
+Committed revision 26223.
+
+***
+svn commit -m "ticket:6945: fix gOmitCollationRules (remove omitted rule string from bundle), and remove MAX_INFIXES (leftover from experimental compression)"
+Sending        smallres-notes.txt
+Sending        source\tools\genrb\parse.c
+Sending        source\tools\genrb\reslist.c
+Sending        source\tools\genrb\reslist.h
+Transmitting file data ....
+Committed revision 26226.
+
+*** Options for pool bundle key strings (ASCII vs. EBCDIC)
+
+Issue: Key strings contain invariant characters which are platform-dependent.
+At runtime, ures_...ByKey() functions provide an invariant-character (char *)
+string, and ures_getKey() returns a bundle-owned const char *.
+Resource tables are in strcmp() order which is platform-dependent.
+The swapper code re-sorts tables if the charset changes.
+Iterating through tables on different platforms will return items in
+different orders.
+
+Problem: With a pool bundle, re-sorting another bundle's tables requires
+access to the pool bundle's key strings. However, the swapper code does not
+have any way to load a data file in relative position to the piece of memory
+it is currently swapping.
+Also, we need to compute a checksum or fingerprint over a pool bundle, and
+swapping key string bytes will produce different checksums.
+
+Options:
+
+* swap-with-pool:
+Store and compare key strings in their platform charset.
+Somehow give the swapper access to the pool bundle; as another chunk of memory
+or via a data loading interface or similar.
+Pro: Most code would not change.
+Con: Seems logistically very hard. The resource bundle swapper would behave
+     and have an interface unlike any other.
+     Checksums need to be made consistent somehow.
+
+* store-ascii:
+Store and compare key strings in ASCII even on EBCDIC platforms. genrb has to
+swap to ASCII. At runtime, ByKey() lookups need to either swap the input key
+into a buffer or swap its characters on the fly during comparisons.
+Pro: No need for access to the pool bundle while swapping.
+     Consistent checksum and iteration order.
+     No need to re-sort tables while swapping.
+Con: Lookup needs to limit key length to stack buffer size for swapping,
+     or heap-allocate long swapped keys, or swap each character on the fly.
+     ures_getKey() will have to allocate, swap and cache the key.
+
+* compare-ascii:
+Store key strings in their platform charset but compare them in ASCII order.
+Provide a version of strcmp() for EBCDIC platforms that gives the same results
+for equivalent strings as strcmp() itself for ASCII strings.
+It would help to be able to swap the input key.
+Pro: No need for access to the pool bundle while swapping.
+     Consistent iteration order.
+     No need to re-sort tables while swapping.
+Con: Same lookup issues as store-ascii, but ures_getKey() remains trivial.
+     Checksum calculation will need key swapping, in bulk or on the fly.
+
+-> Probably best to go with either store-ascii or compare-ascii;
+   on loading, on an EBCDIC platform, swap all key strings (pool and normal)
+   into allocated heap memory (either to ASCII for comparisons or to EBCDIC
+   for ures_getKey()),
+   calculate the pool checksum after swapping,
+   define a maximum key length, swap a lookup input key to ASCII
+   into a fixed-length stack buffer, use normal strcmp().
+-> store-ascii avoids swapping while loading the pool bundle into genrb,
+   and avoids swapping the key strings in ures_swap().
+   It could lazily swap to EBCDIC when ures_getKey() is first called for a bundle.
+-> compare-ascii could be implemented with on-the-fly swapping-while-comparing
+   and swapping-while-checksumming which would be slower but avoids
+   heap allocation.
+   Swapping-while-comparing would swap only when characters differ.
+
+-> Go with compare-ascii, with on-the-fly swapping-while-comparing.
+   genrb will calculate the checksum at pool bundle build time and store it
+   in the pool bundle, so that runtime code need not calculate it.
+   This actually allows us to switch checksum algorithms without changing the
+   formatVersion.
+
+* Calculating the checksum on an EBCDIC platform will require swapping the keys
+to ASCII in a temporary buffer, inside genrb.
+-> We could just accept the fact that different-charset-family platforms
+   calculate different checksums. As long as the checksums match between the
+   pool bundle and the using-bundle, everything will just work.
+
+* When we check pool.res into the repository, it would be convenient if
+one and the same version of the file could be used to build data on any platform.
+-> genrb should swap the input pool.res to its local charset-family,
+if not also its local endianness.
+
+* Another problem: ures_swap() looks for a key "%%CollationBin" to detect
+collation binaries and call their swapper. With a pool bundle, that key will be
+in the pool and not available to the swapper code. Instead, it should detect
+(("%%CollationBin" || pool key) && looksLikeCollationBinary(data)).
+
+***
+- hardcode "pool.res": save bytes, no need for flexibility
+- swap the --usePoolBundle file in genrb so that a single checked-in file can be used
+- in formatVersion 2 reserve bits 31..8 of indexes[0] for future use; use only bits 7..0 for indexes length
+
+svn commit -m "ticket:6945: hardcode pool.res filename, add --usePoolBundle to Unix Makefile.in, swap input pool.res in genrb, formatVersion 2+ compare key strings in ASCII order, reserve bits 31..8 of indexes[0] for future use"
+Sending        smallres-notes.txt
+Sending        source\common\uinvchar.c
+Sending        source\common\uinvchar.h
+Sending        source\common\uresbund.c
+Sending        source\common\uresdata.c
+Sending        source\common\uresdata.h
+Sending        source\data\Makefile.in
+Sending        source\data\makedata.mak
+Sending        source\tools\genrb\genrb.c
+Sending        source\tools\genrb\reslist.c
+Sending        source\tools\toolutil\pkgitems.cpp
+Transmitting file data ...........
+Committed revision 26227.
+
+***
+svn commit -m "ticket:6945: reimplement icupkg .res dependency checking code (use uresdata.h functions rather than duplicating .res format runtime code); test uprv_compareInvEbcdicAsAscii()"
+Sending        smallres-notes.txt
+Sending        source\common\uresbund.c
+Sending        source\common\uresdata.c
+Sending        source\common\uresdata.h
+Sending        source\test\cintltst\cstrtest.c
+Sending        source\tools\genrb\reslist.c
+Sending        source\tools\toolutil\pkgitems.cpp
+Transmitting file data .......
+Committed revision 26240.
+
+***
+svn commit -m "ticket:6945: icupkg dependency check: only open a swapper when needed"
+Sending        smallres-notes.txt
+Sending        source\tools\toolutil\pkgitems.cpp
+Transmitting file data ..
+Committed revision 26241.
+
+***
+svn commit -m "ticket:6945: update derb to support URES_TABLE32 (from formatVersion 1.1) and the new formatVersion 2, via calls to uresdata.h functions rather than duplicating them"
+Sending        smallres-notes.txt
+Sending        source\tools\genrb\derb.c
+Transmitting file data ..
+Committed revision 26243.
+
+***
+svn commit -m "ticket:6945: ures_swap() detect collation binaries by contents if the key string is not available (because it's in the pool bundle)"
+Sending        smallres-notes.txt
+Sending        source\common\ucol_swp.c
+Sending        source\common\ucol_swp.h
+Sending        source\common\uresdata.c
+Transmitting file data ....
+Committed revision 26247.
+
+*** ICU4J port
+
+svn mkdir svn+ssh://source.icu-project.org/repos/icu/icu4j/branches/markus -m "ticket:6945: create branch for markus"
+Committed revision 26254.
+
+svn mkdir svn+ssh://source.icu-project.org/repos/icu/icu4j/branches/markus/smallres -m "ticket:6945: create branch for small-resource-bundle Java port"
+Committed revision 26255.
+
+svn copy -r 26253 svn+ssh://source.icu-project.org/repos/icu/icu4j/trunk/main svn+ssh://source.icu-project.org/repos/icu/icu4j/branches/markus/smallres -m "ticket:6945: copy trunk/main@26253"
+Committed revision 26256.
+
+svn copy -r 26253 svn+ssh://source.icu-project.org/repos/icu/icu4j/trunk/tools svn+ssh://source.icu-project.org/repos/icu/icu4j/branches/markus/smallres -m "ticket:6945: copy trunk/tools@26253"
+Committed revision 26257.
+
+svn copy -r 26253 svn+ssh://source.icu-project.org/repos/icu/icu4j/trunk/build.properties svn+ssh://source.icu-project.org/repos/icu/icu4j/branches/markus/smallres -m "ticket:6945: copy trunk/build.properties@26253"
+Committed revision 26258.
+
+svn copy -r 26253 svn+ssh://source.icu-project.org/repos/icu/icu4j/trunk/build.xml svn+ssh://source.icu-project.org/repos/icu/icu4j/branches/markus/smallres -m "ticket:6945: copy trunk/build.xml@26253"
+Committed revision 26259.
+
+*** simplify ICU4J data building http://bugs.icu-project.org/trac/ticket/7043
+
+Outline:
+
+$ICU4J_ROOT/main/shared/data/icudata.jar: icudt42l.dat uni-core-data
+    mkdir -p data/out/build/icu4j/com/ibm/icu/impl/data/icudt42b
+    echo "ubidi.icu ucase.icu uprops.icu unorm.icu" > data/out/build/icu4j/add.txt
+    icupkg icudt42l.dat data/out/build/icu4j/icudt42b.dat -a data/out/build/icu4j/add.txt -x '*' -tb -d data/out/build/icu4j/com/ibm/icu/impl/data/icudt42b
+    jar cf data/out/build/icu4j/icudata.jar -C data/out/build/icu4j com/ibm/icu/impl/data/icudt42b
+    cp data/out/build/icu4j/icudata.jar $ICU4J_ROOT/main/shared/data
+
+C:\svn\icuproj\icu\smallres\source\data>nmake -f makedata.mak ICUMAKE=C:\svn\icuproj\icu\smallres\source\data\ CFG=x86\Release JAR="C:\Program Files\Java\jdk1.5.0_07\bin\jar" ICU4J_ROOT=C:\svn\icuproj\icu4j\smallres icudata.jar testdata.jar
+
+svn commit source/tools/toolutil/package.cpp -m "ticket:7043: allow icupkg -a and -x in the same invocation (bug fix: track the platform type when -x swaps a data item)"
+Sending        source\tools\toolutil\package.cpp
+Transmitting file data .
+Committed revision 26266.
+
+svn commit source\data -m "ticket:7043: build ICU4J data .jar file from ICU4C via the data makefile and icupkg (Windows)"
+Sending        source\data\icu4j-readme.txt
+Sending        source\data\makedata.mak
+Transmitting file data ..
+Committed revision 26267.
+
+***
+svn commit main\classes\core\src\com\ibm\icu\impl -m "ticket:6945: start porting to Java"
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundleReader.java
+Transmitting file data .
+Committed revision 26282.
+
+svn commit main\classes\core\src\com\ibm\icu\impl -m "ticket:6945: a little more Java port brainstorming"
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundleImpl.java
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundleReader.java
+Transmitting file data ..
+Committed revision 26283.
+
+svn commit main\classes\core\src\com\ibm\icu\impl -m "ticket:6945: Java: read complete bundles into data structures, implement Table"
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundle.java
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundleImpl.java
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundleReader.java
+Transmitting file data ...
+Committed revision 26284.
+
+svn diff --diff-cmd "C:\Program Files\KDiff3\kdiff3.exe" main\classes\core\src\com\ibm\icu\impl main\classes\core\src\com\ibm\icu\util
+
+svn commit main\classes\core\src\com\ibm\icu\impl main\classes\core\src\com\ibm\icu\util -m "ticket:6945: Java: more or less implemented and weed-whacked"
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundle.java
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundleImpl.java
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundleReader.java
+Sending        main\classes\core\src\com\ibm\icu\util\UResourceBundle.java
+Transmitting file data ....
+Committed revision 26297.
+
+svn commit main\classes\core\src\com\ibm\icu\impl main\classes\core\src\com\ibm\icu\util -m "ticket:6945: Java: implemented enough to not show errors or warnings in Eclipse"
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundle.java
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundleImpl.java
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundleReader.java
+Sending        main\classes\core\src\com\ibm\icu\util\UResourceBundle.java
+Transmitting file data ....
+Committed revision 26298.
+
+svn commit source\data -m "ticket:7043: update ant data build targets"
+Sending        source\data\icu4j-readme.txt
+Transmitting file data .
+Committed revision 26299.
+
+svn commit source -m "ticket:6945: minor getPublicTypes() bug fix (only return public type constants)"
+Sending        source\common\uresdata.c
+Sending        source\tools\genrb\genrb.c
+Transmitting file data ..
+Committed revision 26300.
+
+svn commit -m "ticket:6945: check in Java notes"
+Sending        smallres-notes.txt
+Transmitting file data .
+Committed revision 26301.
+
+svn commit main\classes\core\src\com\ibm\icu\impl main\classes\core\src\com\ibm\icu\util -m "ticket:6945: Java: keep all bits & bytes access inside ICUResourceBundleReader, and move other stuff out of it"
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundle.java
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundleImpl.java
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundleReader.java
+Sending        main\classes\core\src\com\ibm\icu\util\UResourceBundle.java
+Transmitting file data ....
+Committed revision 26304.
+
+svn commit main\classes\core\src\com\ibm\icu\impl main\classes\core\src\com\ibm\icu\util -m "ticket:6945: Java: small bug fix"
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundleReader.java
+Transmitting file data .
+Committed revision 26305.
+
+svn commit main\classes\core\src\com\ibm\icu\impl main\classes\core\src\com\ibm\icu\util -m "ticket:6945: Java: more bug fixes"
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundle.java
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundleImpl.java
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundleReader.java
+Sending        main\classes\core\src\com\ibm\icu\util\UResourceBundle.java
+Transmitting file data ....
+Committed revision 26307.
+
+*** http://bugs.icu-project.org/trac/ticket/7054 race in using UResourceBundle.addToCache()
+
+svn commit main\classes\core\src\com\ibm\icu\impl main\classes\core\src\com\ibm\icu\util -m "ticket:7054: quick fix for race in using UResourceBundle.addToCache(); real fix later may involve ConcurrentHashMap, or ditching the synchronization"
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundle.java
+Sending        main\classes\core\src\com\ibm\icu\impl\ResourceBundleWrapper.java
+Sending        main\classes\core\src\com\ibm\icu\util\UResourceBundle.java
+Transmitting file data ...
+Committed revision 26308.
+
+svn commit main\classes\core\src\com\ibm\icu\impl main\classes\core\src\com\ibm\icu\util -m "ticket:6945: Java: some more bug fixes"
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundleReader.java
+Sending        main\classes\core\src\com\ibm\icu\impl\OlsonTimeZone.java
+Sending        main\classes\core\src\com\ibm\icu\util\UResourceBundle.java
+Transmitting file data ...
+Committed revision 26313.
+
+svn commit main\classes\core\src\com\ibm\icu\impl main\classes\core\src\com\ibm\icu\util main\tests\core\src\com\ibm\icu\dev -m "ticket:6945: Java: fix alias handling and a couple minor issues"
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundle.java
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundleReader.java
+Sending        main\tests\core\src\com\ibm\icu\dev\test\util\ICUResourceBundleTest.java
+Transmitting file data ...
+Committed revision 26322.
+
+svn commit -m "ticket:6945: check in further notes"
+Sending        smallres-notes.txt
+Transmitting file data .
+Committed revision 26325.
+
+svn commit -m "ticket:6945: take care of some TODOs"
+
+svn copy -r 26321 svn+ssh://source.icu-project.org/repos/icu/icu/trunk/source svn+ssh://source.icu-project.org/repos/icu/icu/branches/markus/smallres2 -m "ticket:6945: copy trunk/source@26321"
+
+TODO:
+* for v2 with key suffix sharing, pool bundle with shared keys,
+              more compact UTF-16 strings with suffix sharing
+              (still all memory-mappable)
+- document experiments, decisions and dead ends
+- document the change in table iteration order on EBCDIC platforms
+
+* for v2.1 or v3 with compact, byte-oriented strings, 1B/char for most scripts,
+                      maybe zlib compression
+- do aliases need to be Unicode strings? can they be invariant chars or ASCII?
+  de-duping? suffix sharing??
+- write all compact strings in bundle_compactStrings(), before bundle_preWrite()
+- redo & reenable correct savings stats for compact strings
+- #define WINDOW_CONTAINS(window, c) ((uint32_t)((c) - (window)) <= 0x7f)
+- new indexes:
+  + number of compact strings (URES_INDEX_COMPACT_STRINGS_COUNT)
+  + number of UChars that they expand to,
+    with NUL terminator and 1 or 2 UChars for the length (URES_INDEX_COMPACT_STRINGS_UCHARS)
+  + window 0/1 starts, each shifted right 5 bits to fit into 16 (URES_INDEX_WINDOWS)
+  + top of the compact-strings block (URES_INDEX_COMPACT_STRINGS_TOP)
+- mini-ASCII: if fRes==0 means "" (again), then mini-ASCII needs to check just that
+  the first and last characters are not NUL (and all are ASCII);
+  then use bits 27..21=0 for single character
+- may need formatVersion 2 even for compact strings depending
+  on how indexes[URES_INDEX_STRINGS_TOP] is used;
+  e.g. swapper probably charset-swaps up to there,
+  but does other code depend on the bottom of resources to be there?
+- once the compression encoding scheme settles down,
+  consider whether we want to allow versioning, and make the runtime code reject
+  some byte values and sequences, or set the encoding in stone and allow a wider range of values?
+  e.g., for direct-ASCII only allow 9/A/D/20..7E,
+  or allow 2..7F in mini-strings (1..7F in trail codes there)
+  and more control codes in single-byte mode;
+  allowing versioning and checking for valid sequences is more flexible but
+  slower at runtime and increases the runtime code size
+- if we keep aliases as Unicode strings, then maybe we can de-dup and compress
+  them too, with the same code and data structures, only a different resource type?
