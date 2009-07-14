@@ -944,12 +944,12 @@ struct SResource *string_open(struct SRBRoot *bundle, char *tag, const UChar *va
                  * Runtime will detect !U16_IS_TRAIL(value[0]) and call u_strlen().
                  */
                 res->u.fString.fNumCharsForLength = 0;
-            } else if (len <= 0x3ee) {  /* TODO: use named constants */
+            } else if (len <= 0x3ee) {
                 res->u.fString.fNumCharsForLength = 1;
             } else if (len <= 0xfffff) {
                 res->u.fString.fNumCharsForLength = 2;
             } else {
-                res->u.fString.fNumCharsForLength = 3;  /* TODO: just use v1 form? */
+                res->u.fString.fNumCharsForLength = 3;
             }
             bundle->f16BitUnitsLength += res->u.fString.fNumCharsForLength + len + 1;  /* +1 for the NUL */
         }
@@ -1559,20 +1559,21 @@ bundle_compactKeys(struct SRBRoot *bundle, UErrorCode *status) {
             limit = bundle->fKeysTop;
             /* skip key offsets that point into the pool bundle rather than this new bundle */
             for (i = 0; i < keysCount && map[i].newpos < 0; ++i) {}
-            /* TODO: could skip this loop if i == keysCount */
-            while (oldpos < limit) {
-                if (keys[oldpos] == 1) {
-                    ++oldpos;  /* skip unused bytes */
-                } else {
-                    /* adjust the new offsets for keys starting here */
-                    while (i < keysCount && map[i].newpos == oldpos) {
-                        map[i++].newpos = newpos;
+            if (i < keysCount) {
+                while (oldpos < limit) {
+                    if (keys[oldpos] == 1) {
+                        ++oldpos;  /* skip unused bytes */
+                    } else {
+                        /* adjust the new offsets for keys starting here */
+                        while (i < keysCount && map[i].newpos == oldpos) {
+                            map[i++].newpos = newpos;
+                        }
+                        /* move the key characters to their new position */
+                        keys[newpos++] = keys[oldpos++];
                     }
-                    /* move the key characters to their new position */
-                    keys[newpos++] = keys[oldpos++];
                 }
+                assert(i == keysCount);
             }
-            assert(i == keysCount);
             bundle->fKeysTop = newpos;
             /* Re-sort once more, by old offsets for binary searching. */
             uprv_sortArray(map, keysCount, (int32_t)sizeof(KeyMapEntry),

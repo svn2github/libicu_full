@@ -566,7 +566,6 @@ processFile(const char *filename, const char *cp, const char *inputDir, const ch
                 ++newPoolBundle->fKeysCount;
             }
         }
-        /* TODO: be done here, or continue to write the normal output file? */
     }
 
     if(options[USE_POOL_BUNDLE].doesOccur) {

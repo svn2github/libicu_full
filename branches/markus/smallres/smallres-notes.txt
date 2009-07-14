@@ -1341,6 +1341,11 @@ Transmitting file data ...
 Committed revision 26322.
 
 svn commit -m "ticket:6945: check in further notes"
+Sending        smallres-notes.txt
+Transmitting file data .
+Committed revision 26325.
+
+svn commit -m "ticket:6945: take care of some TODOs"
 
 svn copy -r 26321 svn+ssh://source.icu-project.org/repos/icu/icu/trunk/source svn+ssh://source.icu-project.org/repos/icu/icu/branches/markus/smallres2 -m "ticket:6945: copy trunk/source@26321"
 
@@ -1349,7 +1354,6 @@ TODO:
               more compact UTF-16 strings with suffix sharing
               (still all memory-mappable)
 - document experiments, decisions and dead ends
-- clean up TODO comments
 - document the change in table iteration order on EBCDIC platforms
 
 * for v2.1 or v3 with compact, byte-oriented strings, 1B/char for most scripts,
