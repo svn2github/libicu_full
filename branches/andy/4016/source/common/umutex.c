@@ -6,7 +6,7 @@
 *
 ******************************************************************************
 *
-* File CMUTEX.C
+* File umutex.c
 *
 * Modification History:
 *
@@ -79,6 +79,11 @@
  *   threads were more or less simultaenously the first to use ICU in a process, and
  *   were racing into the mutex initialization code.
  *
+ *   Double checked lazy init of OS level mutexes works where it wouldn't with
+ *   normal user level data because the OS level lock functions have to
+ *   include whatever memory voodoo may be required to ensure that they see current 
+ *   mutex state.
+ *
  *   The solution for the global mutex init is platform dependent.
  *   On POSIX systems, C-style init can be used on a mutex, with the 
  *   macro PTHREAD_MUTEX_INITIALIZER.  The mutex is then ready for use, without
@@ -98,93 +103,70 @@
  *
  */ 
 
-#define  MAX_MUTEXES  40
-static UMTX              gGlobalMutex          = NULL;
-static UMTX              gIncDecMutex          = NULL;       
-#if (ICU_USE_THREADS == 1)
-static UBool             gMutexPoolInitialized = FALSE;
-static char              gMutexesInUse[MAX_MUTEXES];   
-
-#if defined(U_WINDOWS) 
-/*-------------------------------------------------------------
- *
- *   WINDOWS  platform variable declarations
- *
- *-------------------------------------------------------------*/
-static CRITICAL_SECTION  gMutexes[MAX_MUTEXES];
-static CRITICAL_SECTION  gGlobalWinMutex;
-
-
-/* On WIN32 mutexes are reentrant.  This makes it difficult to debug
- * deadlocking problems that show up on POSIXy platforms, where
- * mutexes deadlock upon reentry.  ICU contains checking code for
- * the global mutex as well as for other mutexes in the pool.
- *
- * This is for debugging purposes.
- *
- * This has no effect on non-WIN32 platforms, non-DEBUG builds, and
- * non-ICU_USE_THREADS builds.
- *
- * Note: The CRITICAL_SECTION structure already has a RecursionCount
- * member that can be used for this purpose, but portability to
- * Win98/NT/2K needs to be tested before use.  Works fine on XP.
- * After portability is confirmed, the built-in RecursionCount can be
- * used, and the gRecursionCountPool can be removed.
- *
- * Note: Non-global mutex checking only happens if there is no custom
- * pMutexLockFn defined.  Use one function, not two (don't use
- * pMutexLockFn and pMutexUnlockFn) so the increment and decrement of
- * the recursion count don't get out of sync.  Users might set just
- * one function, e.g., to perform a custom action, followed by a
- * standard call to EnterCriticalSection.
+/* On WIN32 mutexes are reentrant.  On POSIX platforms they are not, and a deadlock
+ * will occur if a thread attempts to acquire a mutex it already has locked.
+ * ICU mutexes (in debug builds) include checking code that will cause an assertion
+ * failure if a mutex is reentered.  If you are having deadlock problems
+ * on a POSIX machine, debugging may be easier on Windows.
  */
-#if defined(U_DEBUG) && (ICU_USE_THREADS==1)
-static int32_t gRecursionCount = 0; /* detect global mutex locking */      
-static int32_t gRecursionCountPool[MAX_MUTEXES]; /* ditto for non-global */
+
+
+
+#if (ICU_USE_THREADS == 0)
+#define MUTEX_TYPE void *
+#define PLATFORM_MUTEX_INIT(m) 
+#define PLATFORM_MUTEX_LOCK(m) 
+#define PLATFORM_MUTEX_UNLOCK(m) 
+#define PLATFORM_MUTEX_DESTROY(m) 
+
+#elif defined(U_WINDOWS)
+#define MUTEX_TYPE CRITICAL_SECTION
+#define PLATFORM_MUTEX_INIT(m) InitializeCriticalSection(m)
+#define PLATFORM_MUTEX_LOCK(m) EnterCriticalSection(m)
+#define PLATFORM_MUTEX_UNLOCK(m) LeaveCriticalSection(m)
+#define PLATFORM_MUTEX_DESTROY(m) DeleteCriticalSection(m)
+
+#elif defined(POSIX)
+#define MUTEX_TYPE pthread_mutex_t   
+#define PLATFORM_MUTEX_INIT(m) pthread_mutex_init(m, NULL)
+#define PLATFORM_MUTEX_LOCK(m) pthread_mutex_lock(m)
+#define PLATFORM_MUTEX_UNLOCK(m) pthread_mutex_unlock(m)
+#define PLATFORM_MUTEX_DESTROY(m) pthread_mutex_destroy(m)
+
+#else   
+/* Unknown platform.  Note that user can still set mutex functions at run time. */
+#define MUTEX_TYPE void *
+#define PLATFORM_MUTEX_INIT(m) 
+#define PLATFORM_MUTEX_LOCK(m)
+#define PLATFORM_MUTEX_UNLOCK(m) 
+#define PLATFORM_MUTEX_DESTROY(m) 
 #endif
 
 
-#elif defined(POSIX) 
-/*-------------------------------------------------------------
- *
- *   POSIX   platform variable declarations
- *
- *-------------------------------------------------------------*/
-static pthread_mutex_t   gMutexes[MAX_MUTEXES] = {
-    PTHREAD_MUTEX_INITIALIZER, PTHREAD_MUTEX_INITIALIZER, PTHREAD_MUTEX_INITIALIZER,
-    PTHREAD_MUTEX_INITIALIZER, PTHREAD_MUTEX_INITIALIZER, PTHREAD_MUTEX_INITIALIZER,
-    PTHREAD_MUTEX_INITIALIZER, PTHREAD_MUTEX_INITIALIZER, PTHREAD_MUTEX_INITIALIZER,
-    PTHREAD_MUTEX_INITIALIZER, PTHREAD_MUTEX_INITIALIZER, PTHREAD_MUTEX_INITIALIZER,
-    PTHREAD_MUTEX_INITIALIZER, PTHREAD_MUTEX_INITIALIZER, PTHREAD_MUTEX_INITIALIZER,
-    PTHREAD_MUTEX_INITIALIZER, PTHREAD_MUTEX_INITIALIZER, PTHREAD_MUTEX_INITIALIZER,
-    PTHREAD_MUTEX_INITIALIZER, PTHREAD_MUTEX_INITIALIZER
+typedef struct ICUMutex ICUMutex;
+
+struct ICUMutex {
+    UBool        heapAllocated;
+    ICUMutex    *next;
+    int32_t      recursionCount;
+    MUTEX_TYPE   platformMutex;
+    UMTX         userMutex;   /* TODO:  make a union?  */
 };
 
-#else 
-/*-------------------------------------------------------------
- *
- *   UNKNOWN   platform  declarations
- *
- *-------------------------------------------------------------*/
-static void *gMutexes[MAX_MUTEXES] = {
-    NULL, NULL, NULL,
-    NULL, NULL, NULL,
-    NULL, NULL, NULL,
-    NULL, NULL, NULL,
-    NULL, NULL, NULL,
-    NULL, NULL, NULL,
-    NULL, NULL };
 
-/* Unknown platform.  OK so long as ICU_USE_THREAD is not set.  
-                      Note that user can still set mutex functions at run time,
-                      and that the global mutex variable is still needed in that case. */
-#if (ICU_USE_THREADS == 1)
-#error no ICU mutex implementation for this platform
+#if defined(POSIX)
+static ICUMutex globalMutex = {FALSE, NULL, 0, PTHREAD_MUTEX_INITIALIZER};
+UMTX  gGlobalMutex = &globalMutex;
+#else
+UMTX  gGlobalMutex = NULL;
 #endif
-#endif
-#endif /* ICU_USE_THREADS==1 */
 
-
+/* Head of the list of all ICU mutexes.
+ * Linked list is through ICUMutex::next
+ * Modifications to the list are synchronized with the global mutex.
+ * Needed for u_cleanup(), which needs to dispose of all of the ICU mutexes.
+ */
+static ICUMutex *mutexListHead;
 
 
 /*
@@ -206,49 +188,31 @@ static const void    *gMutexContext   = NULL;
 U_CAPI void  U_EXPORT2
 umtx_lock(UMTX *mutex)
 {
+    ICUMutex *m;
+
     if (mutex == NULL) {
         mutex = &gGlobalMutex;
     }
-
-    if (*mutex == NULL) {
-        /* Lock of an uninitialized mutex.  Initialize it before proceeding.   */
-        umtx_init(mutex);    
+    m = (ICUMutex *)*mutex;
+    if (m == NULL) {
+        /* See note on double-checked lazy init, above.  We can get away with it here, with mutexes,
+         * where we couldn't with normal user level data.
+         */
+        m = umtx_init(mutex);    
     }
 
     if (pMutexLockFn != NULL) {
-        (*pMutexLockFn)(gMutexContext, mutex);
+        (*pMutexLockFn)(gMutexContext, &m->platformMutex);
     } else {
-
-#if (ICU_USE_THREADS == 1)
-#if defined(U_WINDOWS)
-        EnterCriticalSection((CRITICAL_SECTION*) *mutex);
-#elif defined(POSIX)
-        pthread_mutex_lock((pthread_mutex_t*) *mutex);
-#endif   /* cascade of platforms */
-#endif /* ICU_USE_THREADS==1 */
+        PLATFORM_MUTEX_LOCK(mutex->platformMutex);
     }
 
-#if defined(U_WINDOWS) && defined(U_DEBUG) && (ICU_USE_THREADS==1)
-    if (mutex == &gGlobalMutex) {         /* Detect Reentrant locking of the global mutex.      */
-        gRecursionCount++;                /* Recursion causes deadlocks on Unixes.              */
-        U_ASSERT(gRecursionCount == 1);   /* Detection works on Windows.  Debug problems there. */
-    }
-    /* This handles gGlobalMutex too, but only if there is no pMutexLockFn */
-    else if (pMutexLockFn == NULL) { /* see comments above */
-        size_t i = ((CRITICAL_SECTION*)*mutex) - &gMutexes[0];
-        U_ASSERT(i >= 0 && i < MAX_MUTEXES);
-        ++gRecursionCountPool[i];
-
-        U_ASSERT(gRecursionCountPool[i] == 1); /* !Detect Deadlock! */
-
-        /* This works and is fast, but needs testing on Win98/NT/2K.
-           See comments above. [alan]
-          U_ASSERT((CRITICAL_SECTION*)*mutex >= &gMutexes[0] &&
-                   (CRITICAL_SECTION*)*mutex <= &gMutexes[MAX_MUTEXES]);
-          U_ASSERT(((CRITICAL_SECTION*)*mutex)->RecursionCount == 1);
-        */
-    }
-#endif /*U_DEBUG*/
+#if defined(U_DEBUG)
+        m->recursionCount++;              /* Recursion causes deadlock on Unixes.               */
+        U_ASSERT(recursionCount == 1);    /* Recursion detection works on Windows.              */
+                                          /* Assertion failure on non-Windows indicates a       */
+                                          /*   problem with the mutex implementation itself.    */
+#endif
 }
 
 
@@ -263,171 +227,106 @@ umtx_unlock(UMTX* mutex)
         mutex = &gGlobalMutex;
     }
 
-    if(*mutex == NULL)    {
-#if (ICU_USE_THREADS == 1)
+    ICUMutex *m = *(ICUMutex **)mutex
+    if (m == NULL) {
         U_ASSERT(FALSE);  /* This mutex is not initialized.     */
-#endif
         return; 
     }
 
-#if defined (U_WINDOWS) && defined (U_DEBUG) && (ICU_USE_THREADS==1)
-    if (mutex == &gGlobalMutex) {
-        gRecursionCount--;
-        U_ASSERT(gRecursionCount == 0);  /* Detect unlock of an already unlocked mutex */
-    }
-    /* This handles gGlobalMutex too, but only if there is no pMutexLockFn */
-    else if (pMutexLockFn == NULL) { /* see comments above */
-        size_t i = ((CRITICAL_SECTION*)*mutex) - &gMutexes[0];
-        U_ASSERT(i >= 0 && i < MAX_MUTEXES);
-        --gRecursionCountPool[i];
-
-        U_ASSERT(gRecursionCountPool[i] == 0); /* !Detect Deadlock! */
-
-        /* This works and is fast, but needs testing on Win98/NT/2K.
-           Note that RecursionCount will be 1, not 0, since we haven't
-           left the CRITICAL_SECTION yet.  See comments above. [alan]
-          U_ASSERT((CRITICAL_SECTION*)*mutex >= &gMutexes[0] &&
-                   (CRITICAL_SECTION*)*mutex <= &gMutexes[MAX_MUTEXES]);
-          U_ASSERT(((CRITICAL_SECTION*)*mutex)->RecursionCount == 1);
-        */
-    }
+#if defined (U_DEBUG)
+    m->recursionCount--;
+    U_ASSERT(mutex->recursionCount == 0);  /* Detect unlock of an already unlocked mutex */
 #endif
 
     if (pMutexUnlockFn) {
-        (*pMutexUnlockFn)(gMutexContext, mutex);
+        (*pMutexUnlockFn)(gMutexContext, &m->platformMutex);
     } else {
-#if (ICU_USE_THREADS==1)
-#if defined (U_WINDOWS)
-        LeaveCriticalSection((CRITICAL_SECTION*)*mutex);
-#elif defined (POSIX)
-        pthread_mutex_unlock((pthread_mutex_t*)*mutex);
-#endif  /* cascade of platforms */
-#endif /* ICU_USE_THREADS == 1 */
+        PLATFORM_MUTEX_UNLOCK(mutex->platformMutex);
     }
 }
 
 
-
-
-/*
- *   initGlobalMutex    Do the platform specific initialization of the ICU global mutex.
- *                      Separated out from the other mutexes because it is different:
- *                      Mutex storage is static for POSIX, init must be thread safe 
- *                      without the use of another mutex.
+/* umtx_ct   Allocate and initialize a new ICUMutex.
+ *           If a non-null pointer is supplied, initialize an existing ICU Mutex.
  */
-static void initGlobalMutex() {
-    /*
-     * If User Supplied mutex functions are in use
-     *    init the icu global mutex using them.  
-     */
+static ICUMutex *umtx_ct(ICUMutex *m) {
+    if (m == NULL) {
+        m = (ICUMutex *)uprv_malloc(sizeof(ICUMutex));
+        m ->heapAllocated = TRUE;
+    }
+    m->next = NULL;
+    m->recursionCount = 0;
     if (pMutexInitFn != NULL) {
-        if (gGlobalMutex==NULL) {
-            UErrorCode status = U_ZERO_ERROR;
-            (*pMutexInitFn)(gMutexContext, &gGlobalMutex, &status);
-            if (U_FAILURE(status)) {
-                /* TODO:  how should errors here be handled? */
-                return;
-            }
-        }
-        return;
+        UErrorCode status = U_ZERO_ERROR;
+        (*pMutexInitFn)(gMutexContext, &m->platformMutex, &status);
+        U_ASSERT(U_SUCCESS(status));
+    } else {
+        PLATFORM_MUTEX_INIT(m->platformMutex);
     }
-
-    /* No user override of mutex functions.
-     *   Use default ICU mutex implementations.
-     */
-#if (ICU_USE_THREADS == 1)
-    /*
-     *  for Windows, init the pool of critical sections that we
-     *    will use as needed for ICU mutexes.
-     */
-#if defined (U_WINDOWS)
-    if (gMutexPoolInitialized == FALSE) {
-        int i;
-        for (i=0; i<MAX_MUTEXES; i++) {
-            InitializeCriticalSection(&gMutexes[i]);
-#if defined (U_DEBUG)
-            gRecursionCountPool[i] = 0; /* see comments above */
-#endif
-        }
-        gMutexPoolInitialized = TRUE;
-    }
-#elif defined (U_DARWIN)
-    /* PTHREAD_MUTEX_INITIALIZER works, don't need to call pthread_mutex_init
-     * as below (which is subject to a race condition)
-     */
-    gMutexPoolInitialized = TRUE;
-#elif defined (POSIX)
-    /*  TODO:  experimental code.  Shouldn't need to explicitly init the mutexes. */
-    if (gMutexPoolInitialized == FALSE) {
-        int i;
-        for (i=0; i<MAX_MUTEXES; i++) {
-            pthread_mutex_init(&gMutexes[i], NULL);
-        }
-        gMutexPoolInitialized = TRUE;
-    }
-#endif 
-
-    /*
-     * for both Windows & POSIX, the first mutex in the array is used
-     *   for the ICU global mutex.
-     */
-    gGlobalMutex = &gMutexes[0];
-    gMutexesInUse[0] = 1;
-
-#else  /* ICU_USE_THREADS */
-    gGlobalMutex = &gGlobalMutex;  /* With no threads, we must still set the mutex to
-                                    * some non-null value to make the rest of the
-                                    *   (not ifdefed) mutex code think that it is initialized.
-                                    */
-#endif /* ICU_USE_THREADS */
+    return m;
 }
 
 
-
-
-
-U_CAPI void  U_EXPORT2
-umtx_init(UMTX *mutex)
-{
-    if (mutex == NULL || mutex == &gGlobalMutex) {
-        initGlobalMutex();
+/* umtx_dt   Delete a ICUMutex.  Destroy the underlying OS Platform mutex.
+ *           Does not touch the linked list of ICU Mutexes.
+ *           Statically allocated mutexes are returned to their initial state.
+ */
+static void umtx_dt(ICUMutex *m) {
+    if (pMutexDestroyFn != NULL) {
+        UErrorCode status = U_ZERO_ERROR;
+        (*pMutexDestroyFn)(gMutexContext, &m->platformMutex, &status);
+        U_ASSERT(U_SUCCESS(status));
     } else {
-        umtx_lock(NULL);
-        if (*mutex != NULL) {
-            /* Another thread initialized this mutex first. */
-            umtx_unlock(NULL);
-            return;
-        }
-
-        if (pMutexInitFn != NULL) {
-            UErrorCode status = U_ZERO_ERROR;
-            (*pMutexInitFn)(gMutexContext, mutex, &status);
-            /* TODO:  how to report failure on init? */
-            umtx_unlock(NULL);
-            return;
-        }
-        else {
-#if (ICU_USE_THREADS == 1)
-            /*  Search through our pool of pre-allocated mutexes for one that is not
-            *  already in use.    */
-            int i;
-            for (i=0; i<MAX_MUTEXES; i++) {
-                if (gMutexesInUse[i] == 0) {
-                    gMutexesInUse[i] = 1;
-                    *mutex = &gMutexes[i];
-                    break;
-                }
-            }
-#endif
-        }
-        umtx_unlock(NULL);
-
-#if (ICU_USE_THREADS == 1)
-        /* No more mutexes were available from our pre-allocated pool.  */
-        /*   TODO:  how best to deal with this?                    */
-        U_ASSERT(*mutex != NULL);
-#endif
+        PLATFORM_MUTEX_DESTROY(m->platformMutex);
     }
+
+    if (m->heapAllocated) {
+        uprv_free(m);
+    } else {
+        /* The only non-heap allocated mutex is the global mutex on POSIX platforms,
+         * and it must be initialized and ready to use in the event that ICU is restarted.
+         */
+        umtx_ct(m);
+    }
+        
+}
+    
+
+static ICUMutex *umtx_init(UMTX *mutex) {
+    ICUMutex m = umtx_ct();
+    void *originalValue;
+
+#if defined(U_WINDOWS)
+    originalValue = InterlockedCompareExchangePointer(mutex, m, NULL);
+#else
+    /* For POSIX, the global mutex is always available.
+     * For unknown platforms, the global mutex will work if there are user defined mutex functions.
+     */
+    umtx_lock(NULL);
+    originalValue = *mutex;
+    if (originalValue == NULL) {
+        *mutex = m;
+    }
+    umtx_unlock(NULL);
+#endif
+
+    if (originalValue != NULL) {
+        umtx_dt(m);
+        return originalValue;
+    }
+
+    /* Hook the new mutex into the list of all ICU mutexes, so that we can find and
+     * delete it for u_cleanup().
+     * This is a little tricky when we are initializing the global mutex on Windows.  We will do
+     * a recursive call to umtx_lock(), but by this point the mutex is initialized and we will not
+     * reenter umtx_init().
+     */
+
+    umtx_lock(NULL);
+    m->next = mutexListHead;
+    mutexListHead = m;
+    umtx_unlock(NULL);
+    return m;
 }
 
 
@@ -444,33 +343,32 @@ umtx_destroy(UMTX *mutex) {
         mutex = &gGlobalMutex;
     }
     
-    if (*mutex == NULL) {  /* someone already did it. */
+    ICUMutex *m = (ICUMutex *)*mutex;
+    if (m == NULL) {  /* Mutex not initialized  */
         return;
     }
 
-    /*  The life of the inc/dec mutex is tied to that of the global mutex.  */
-    if (mutex == &gGlobalMutex) {
-        umtx_destroy(&gIncDecMutex);
+    /* Remove this mutex from the linked list of mutexes.  Do before destroying the
+     * underlying OS mutex, because this might be the ICU global mutex
+     */
+    umtx_lock()
+    if (mutexListHead = m) {
+        mutexListHead = m->next;
+    } else {
+        for (ICUMutex *prev = mutexListHead; prev!=NULL && prev->next!=m; prev = prev->next);
+            /*  Empty for body */
+        if (prev != NULL) {
+            prev->next = m->next;
+        }
     }
+    umtx_unlock();
 
     if (pMutexDestroyFn != NULL) {
         /* Mutexes are being managed by the app.  Call back to it for the destroy. */
-        (*pMutexDestroyFn)(gMutexContext, mutex);
+        (*pMutexDestroyFn)(gMutexContext, &m->platformMutex);
     }
     else {
-#if (ICU_USE_THREADS == 1)
-        /* Return this mutex to the pool of available mutexes, if it came from the
-         *  pool in the first place.
-         */
-        /* TODO use pointer math here, instead of iterating! */
-        int i;
-        for (i=0; i<MAX_MUTEXES; i++)  {
-            if (*mutex == &gMutexes[i]) {
-                gMutexesInUse[i] = 0;
-                break;
-            }
-        }
-#endif
+        PLATFORM_MUTEX_DESTROY(mutex->platformMutex);
     }
 
     *mutex = NULL;
@@ -503,9 +401,14 @@ u_setMutexFunctions(const void *context, UMtxInitFn *i, UMtxFn *d, UMtxFn *l, UM
     pMutexLockFn    = l;
     pMutexUnlockFn  = u;
     gMutexContext   = context;
-    gGlobalMutex    = NULL;         /* For POSIX, the global mutex will be pre-initialized */
-                                    /*   Undo that, force re-initialization on first use   */
-                                    /*   of the global mutex.                              */
+
+    /* If there is a static global ICU mutex, initialize it.
+     * This will be the case for non-Windows platforms.
+     */
+    if (*gGlobalMutex != NULL) {
+        ICUMutex *m = (ICUMutex *)*gGlobalMutex;
+        umtx_ct(m);
+    }
 }
 
 
@@ -614,7 +517,9 @@ u_setAtomicIncDecFunctions(const void *context, UMtxAtomicFn *ip, UMtxAtomicFn *
  *      Destroy the global mutex(es), and reset the mutex function callback pointers.
  */
 U_CFUNC UBool umtx_cleanup(void) {
-    umtx_destroy(NULL);
+
+    /*  TODO:  destroy all mutexes.  */
+    
     pMutexInitFn    = NULL;
     pMutexDestroyFn = NULL;
     pMutexLockFn    = NULL;
@@ -625,24 +530,6 @@ U_CFUNC UBool umtx_cleanup(void) {
     pDecFn          = NULL;
     gIncDecContext  = NULL;
     gIncDecMutex    = NULL;
-
-#if (ICU_USE_THREADS == 1)
-    if (gMutexPoolInitialized) {
-        int i;
-        for (i=0; i<MAX_MUTEXES; i++) {
-            if (gMutexesInUse[i]) {
-#if defined (U_WINDOWS)
-                DeleteCriticalSection(&gMutexes[i]);
-#elif defined (POSIX)
-                pthread_mutex_destroy(&gMutexes[i]);
-#endif
-                gMutexesInUse[i] = 0;
-            }
-        }
-    }
-    gMutexPoolInitialized = FALSE;
-#endif
-
     return TRUE;
 }
 
