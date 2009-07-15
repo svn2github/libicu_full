@@ -198,18 +198,19 @@ umtx_lock(UMTX *mutex)
         /* See note on double-checked lazy init, above.  We can get away with it here, with mutexes,
          * where we couldn't with normal user level data.
          */
-        m = umtx_init(mutex);    
+        umtx_init(mutex);    
+        m = (ICUMutex *)*mutex;
     }
 
     if (pMutexLockFn != NULL) {
-        (*pMutexLockFn)(gMutexContext, &m->platformMutex);
+        (*pMutexLockFn)(gMutexContext, &m->userMutex);
     } else {
-        PLATFORM_MUTEX_LOCK(mutex->platformMutex);
+        PLATFORM_MUTEX_LOCK(&m->platformMutex);
     }
 
 #if defined(U_DEBUG)
         m->recursionCount++;              /* Recursion causes deadlock on Unixes.               */
-        U_ASSERT(recursionCount == 1);    /* Recursion detection works on Windows.              */
+        U_ASSERT(m->recursionCount == 1); /* Recursion detection works on Windows.              */
                                           /* Assertion failure on non-Windows indicates a       */
                                           /*   problem with the mutex implementation itself.    */
 #endif
@@ -223,11 +224,11 @@ umtx_lock(UMTX *mutex)
 U_CAPI void  U_EXPORT2
 umtx_unlock(UMTX* mutex)
 {
+    ICUMutex *m;
     if(mutex == NULL) {
         mutex = &gGlobalMutex;
     }
-
-    ICUMutex *m = *(ICUMutex **)mutex
+    m = (ICUMutex *)*mutex;
     if (m == NULL) {
         U_ASSERT(FALSE);  /* This mutex is not initialized.     */
         return; 
@@ -235,13 +236,13 @@ umtx_unlock(UMTX* mutex)
 
 #if defined (U_DEBUG)
     m->recursionCount--;
-    U_ASSERT(mutex->recursionCount == 0);  /* Detect unlock of an already unlocked mutex */
+    U_ASSERT(m->recursionCount == 0);  /* Detect unlock of an already unlocked mutex */
 #endif
 
     if (pMutexUnlockFn) {
-        (*pMutexUnlockFn)(gMutexContext, &m->platformMutex);
+        (*pMutexUnlockFn)(gMutexContext, &m->userMutex);
     } else {
-        PLATFORM_MUTEX_UNLOCK(mutex->platformMutex);
+        PLATFORM_MUTEX_UNLOCK(&m->platformMutex);
     }
 }
 
@@ -258,10 +259,10 @@ static ICUMutex *umtx_ct(ICUMutex *m) {
     m->recursionCount = 0;
     if (pMutexInitFn != NULL) {
         UErrorCode status = U_ZERO_ERROR;
-        (*pMutexInitFn)(gMutexContext, &m->platformMutex, &status);
+        (*pMutexInitFn)(gMutexContext, &m->userMutex, &status);
         U_ASSERT(U_SUCCESS(status));
     } else {
-        PLATFORM_MUTEX_INIT(m->platformMutex);
+        PLATFORM_MUTEX_INIT(&m->platformMutex);
     }
     return m;
 }
@@ -273,11 +274,9 @@ static ICUMutex *umtx_ct(ICUMutex *m) {
  */
 static void umtx_dt(ICUMutex *m) {
     if (pMutexDestroyFn != NULL) {
-        UErrorCode status = U_ZERO_ERROR;
-        (*pMutexDestroyFn)(gMutexContext, &m->platformMutex, &status);
-        U_ASSERT(U_SUCCESS(status));
+        (*pMutexDestroyFn)(gMutexContext, &m->userMutex);
     } else {
-        PLATFORM_MUTEX_DESTROY(m->platformMutex);
+        PLATFORM_MUTEX_DESTROY(&m->platformMutex);
     }
 
     if (m->heapAllocated) {
@@ -292,9 +291,15 @@ static void umtx_dt(ICUMutex *m) {
 }
     
 
-static ICUMutex *umtx_init(UMTX *mutex) {
-    ICUMutex m = umtx_ct();
+U_CAPI void  U_EXPORT2
+umtx_init(UMTX *mutex) {
+    ICUMutex *m;
     void *originalValue;
+
+    if (*mutex != NULL) {
+        return;
+    }
+    m = umtx_ct(NULL);
 
 #if defined(U_WINDOWS)
     originalValue = InterlockedCompareExchangePointer(mutex, m, NULL);
@@ -312,7 +317,7 @@ static ICUMutex *umtx_init(UMTX *mutex) {
 
     if (originalValue != NULL) {
         umtx_dt(m);
-        return originalValue;
+        return;
     }
 
     /* Hook the new mutex into the list of all ICU mutexes, so that we can find and
@@ -326,7 +331,7 @@ static ICUMutex *umtx_init(UMTX *mutex) {
     m->next = mutexListHead;
     mutexListHead = m;
     umtx_unlock(NULL);
-    return m;
+    return;
 }
 
 
@@ -339,11 +344,12 @@ static ICUMutex *umtx_init(UMTX *mutex) {
  */                  
 U_CAPI void  U_EXPORT2
 umtx_destroy(UMTX *mutex) {
+    ICUMutex *m;
     if (mutex == NULL) {  /* destroy the global mutex */
         mutex = &gGlobalMutex;
     }
     
-    ICUMutex *m = (ICUMutex *)*mutex;
+    m = (ICUMutex *)*mutex;
     if (m == NULL) {  /* Mutex not initialized  */
         return;
     }
@@ -351,24 +357,24 @@ umtx_destroy(UMTX *mutex) {
     /* Remove this mutex from the linked list of mutexes.  Do before destroying the
      * underlying OS mutex, because this might be the ICU global mutex
      */
-    umtx_lock()
-    if (mutexListHead = m) {
+    umtx_lock(NULL);
+    if (mutexListHead == m) {
         mutexListHead = m->next;
     } else {
-        for (ICUMutex *prev = mutexListHead; prev!=NULL && prev->next!=m; prev = prev->next);
+        ICUMutex *prev;
+        for (prev = mutexListHead; prev!=NULL && prev->next!=m; prev = prev->next);
             /*  Empty for body */
         if (prev != NULL) {
             prev->next = m->next;
         }
     }
-    umtx_unlock();
+    umtx_unlock(NULL);
 
     if (pMutexDestroyFn != NULL) {
-        /* Mutexes are being managed by the app.  Call back to it for the destroy. */
-        (*pMutexDestroyFn)(gMutexContext, &m->platformMutex);
+        (*pMutexDestroyFn)(gMutexContext, &m->userMutex);
     }
     else {
-        PLATFORM_MUTEX_DESTROY(mutex->platformMutex);
+        PLATFORM_MUTEX_DESTROY(&m->platformMutex);
     }
 
     *mutex = NULL;
@@ -405,8 +411,8 @@ u_setMutexFunctions(const void *context, UMtxInitFn *i, UMtxFn *d, UMtxFn *l, UM
     /* If there is a static global ICU mutex, initialize it.
      * This will be the case for non-Windows platforms.
      */
-    if (*gGlobalMutex != NULL) {
-        ICUMutex *m = (ICUMutex *)*gGlobalMutex;
+    if (gGlobalMutex != NULL) {
+        ICUMutex *m = (ICUMutex *)gGlobalMutex;
         umtx_ct(m);
     }
 }
@@ -426,6 +432,7 @@ static UMtxAtomicFn  *pIncFn = NULL;
 static UMtxAtomicFn  *pDecFn = NULL;
 static const void *gIncDecContext  = NULL;
 
+static UMTX    gIncDecMutex = NULL;
 
 U_CAPI int32_t U_EXPORT2
 umtx_atomic_inc(int32_t *p)  {
