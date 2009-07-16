@@ -146,6 +146,7 @@
 typedef struct ICUMutex ICUMutex;
 
 struct ICUMutex {
+    UMTX        *owner;
     UBool        heapAllocated;
     ICUMutex    *next;
     int32_t      recursionCount;
@@ -155,7 +156,7 @@ struct ICUMutex {
 
 
 #if defined(POSIX)
-static ICUMutex globalMutex = {FALSE, NULL, 0, PTHREAD_MUTEX_INITIALIZER};
+static ICUMutex globalMutex = {NULL, FALSE, NULL, 0, PTHREAD_MUTEX_INITIALIZER, NULL};
 UMTX  gGlobalMutex = &globalMutex;
 #else
 UMTX  gGlobalMutex = NULL;
@@ -253,10 +254,11 @@ umtx_unlock(UMTX* mutex)
 static ICUMutex *umtx_ct(ICUMutex *m) {
     if (m == NULL) {
         m = (ICUMutex *)uprv_malloc(sizeof(ICUMutex));
-        m ->heapAllocated = TRUE;
+        m->heapAllocated = TRUE;
     }
     m->next = NULL;
     m->recursionCount = 0;
+    m->userMutex = NULL;
     if (pMutexInitFn != NULL) {
         UErrorCode status = U_ZERO_ERROR;
         (*pMutexInitFn)(gMutexContext, &m->userMutex, &status);
@@ -270,24 +272,18 @@ static ICUMutex *umtx_ct(ICUMutex *m) {
 
 /* umtx_dt   Delete a ICUMutex.  Destroy the underlying OS Platform mutex.
  *           Does not touch the linked list of ICU Mutexes.
- *           Statically allocated mutexes are returned to their initial state.
  */
 static void umtx_dt(ICUMutex *m) {
     if (pMutexDestroyFn != NULL) {
         (*pMutexDestroyFn)(gMutexContext, &m->userMutex);
+        m->userMutex = NULL;
     } else {
         PLATFORM_MUTEX_DESTROY(&m->platformMutex);
     }
 
     if (m->heapAllocated) {
         uprv_free(m);
-    } else {
-        /* The only non-heap allocated mutex is the global mutex on POSIX platforms,
-         * and it must be initialized and ready to use in the event that ICU is restarted.
-         */
-        umtx_ct(m);
     }
-        
 }
     
 
@@ -320,6 +316,8 @@ umtx_init(UMTX *mutex) {
         return;
     }
 
+    m->owner = mutex;
+
     /* Hook the new mutex into the list of all ICU mutexes, so that we can find and
      * delete it for u_cleanup().
      * This is a little tricky when we are initializing the global mutex on Windows.  We will do
@@ -345,18 +343,26 @@ umtx_init(UMTX *mutex) {
 U_CAPI void  U_EXPORT2
 umtx_destroy(UMTX *mutex) {
     ICUMutex *m;
-    if (mutex == NULL) {  /* destroy the global mutex */
-        mutex = &gGlobalMutex;
+    
+    /* No one should be deleting the global ICU mutex. 
+     *   (u_cleanup() does delete it, but does so explicitly, not by passing NULL)
+     */
+    U_ASSERT(mutex != NULL);
+    if (mutex == NULL) { 
+        return;
     }
     
     m = (ICUMutex *)*mutex;
-    if (m == NULL) {  /* Mutex not initialized  */
+    if (m == NULL) {  /* Mutex not initialized, or already destroyed.  */
         return;
     }
 
-    /* Remove this mutex from the linked list of mutexes.  Do before destroying the
-     * underlying OS mutex, because this might be the ICU global mutex
-     */
+    U_ASSERT(m->owner == mutex);
+    if (m->owner != mutex) {
+        return;
+    }
+
+    /* Remove this mutex from the linked list of mutexes.  */
     umtx_lock(NULL);
     if (mutexListHead == m) {
         mutexListHead = m->next;
@@ -377,7 +383,8 @@ umtx_destroy(UMTX *mutex) {
         PLATFORM_MUTEX_DESTROY(&m->platformMutex);
     }
 
-    *mutex = NULL;
+    umtx_dt(m);        /* Delete the internal ICUMutex   */
+    *mutex = NULL;     /* Clear the caller's UMTX        */
 }
 
 
@@ -400,6 +407,12 @@ u_setMutexFunctions(const void *context, UMtxInitFn *i, UMtxFn *d, UMtxFn *l, UM
         *status = U_INVALID_STATE_ERROR;
         return;
     }
+    
+    /* Kill any existing global mutex.
+     * Necessary if there are multiple calls to u_setMutexFunctions without
+     *   an intervening u_cleanup(), and the first spins up a global mutex.
+     */
+    umtx_destroy(&gGlobalMutex);
 
     /* Swap in the mutex function pointers.  */
     pMutexInitFn    = i;
@@ -408,13 +421,12 @@ u_setMutexFunctions(const void *context, UMtxInitFn *i, UMtxFn *d, UMtxFn *l, UM
     pMutexUnlockFn  = u;
     gMutexContext   = context;
 
-    /* If there is a static global ICU mutex, initialize it.
-     * This will be the case for non-Windows platforms.
-     */
-    if (gGlobalMutex != NULL) {
-        ICUMutex *m = (ICUMutex *)gGlobalMutex;
-        umtx_ct(m);
-    }
+#if defined (POSIX) 
+    /* POSIX platforms must have a functioning global mutex 
+     * to allow them to restart ICU after a cleanup. */
+    umtx_ct(&globalMutex);
+    gGlobalMutex = &globalMutex;
+#endif
 }
 
 
@@ -525,18 +537,36 @@ u_setAtomicIncDecFunctions(const void *context, UMtxAtomicFn *ip, UMtxAtomicFn *
  */
 U_CFUNC UBool umtx_cleanup(void) {
 
-    /*  TODO:  destroy all mutexes.  */
-    
+    /* Delete all of the ICU mutexes.  Do the global mutex last because it is used during
+     * the delete operation of other mutexes.
+     */
+    while (mutexListHead != NULL) {
+        UMTX *umtx = mutexListHead->owner;
+        U_ASSERT(*umtx = (void *)mutexListHead);
+        if (umtx != &gGlobalMutex) {
+            umtx_destroy(umtx);
+        }
+    }
+
+
+    umtx_dt(&globalMutex);
+        
     pMutexInitFn    = NULL;
     pMutexDestroyFn = NULL;
     pMutexLockFn    = NULL;
     pMutexUnlockFn  = NULL;
     gMutexContext   = NULL;
-    gGlobalMutex    = NULL;
     pIncFn          = NULL;
     pDecFn          = NULL;
     gIncDecContext  = NULL;
     gIncDecMutex    = NULL;
+
+#if defined (POSIX) 
+    /* POSIX platforms must have a functioning global mutex 
+     * to allow them to restart ICU after a cleanup. */
+    umtx_ct(&globalMutex);
+    gGlobalMutex = &globalMutex;
+#endif
     return TRUE;
 }
 
