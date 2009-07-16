@@ -1395,6 +1395,99 @@ Transmitting file data .........................
 Committed revision 26330.
 
 svn commit -m "ticket:6945: more notes"
+Sending        smallres-notes.txt
+Transmitting file data .
+Committed revision 26331.
+
+svn switch svn+ssh://source.icu-project.org/repos/icu/icu/branches/markus/smallres2
+
+svn copy -r 26319 svn+ssh://source.icu-project.org/repos/icu/icu4j/trunk svn+ssh://source.icu-project.org/repos/icu/icu4j/branches/markus/smallres2 -m "ticket:6945: copy trunk@26319"
+Committed revision 26334.
+
+svn merge -r 26259:26322 svn+ssh://source.icu-project.org/repos/icu/icu4j/branches/markus/smallres
+
+svn commit -m "ticket:6945: merge trunk@26319 and smallres -r 26259:26322 into smallres2"
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundle.java
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundleImpl.java
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundleReader.java
+Sending        main\classes\core\src\com\ibm\icu\impl\OlsonTimeZone.java
+Sending        main\classes\core\src\com\ibm\icu\impl\ResourceBundleWrapper.java
+Sending        main\classes\core\src\com\ibm\icu\util\UResourceBundle.java
+Sending        main\tests\core\src\com\ibm\icu\dev\test\util\ICUResourceBundleTest.java
+Transmitting file data .......
+Committed revision 26335.
+
+nmake -f makedata.mak ICUMAKE=C:\svn\icuproj\icu\smallres\source\data\ CFG=x86\Release JAR="C:\Program Files\Java\jdk1.5.0_07\bin\jar" ICU4J_ROOT=C:\svn\icuproj\icu4j\smallres icudata.jar testdata.jar
+
+* in icu4j/smallres branch:
+svn commit -m "ticket:6945: data from icu/branches/markus/smallres2 = icu/trunk@26321 plus pool.res and .res formatVersion 2"
+Sending        main\shared\data\icudata.jar
+Sending        main\shared\data\testdata.jar
+Transmitting file data ..
+Committed revision 26336.
+
+* in icu4j/smallres2 branch:
+svn commit -m "ticket:6945: data from icu/branches/markus/smallres2 = icu/trunk@26321 plus pool.res and .res formatVersion 2"
+Sending        main\shared\data\icudata.jar
+Sending        main\shared\data\testdata.jar
+Transmitting file data ..
+Committed revision 26340.
+
+svn commit -m "ticket:6945: change ICU4J data version to 43b to match the icudata.jar"
+Sending        main\classes\core\src\com\ibm\icu\util\VersionInfo.java
+Transmitting file data .
+Committed revision 26341.
+
+svn commit -m "ticket:6945: fix getKeys(): ResourceTable needs to implement getKey(index)"
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundleImpl.java
+Transmitting file data .
+Committed revision 26343.
+
+svn commit -m "ticket:6945: ByteBuffer getBinary(): make the buffer's position=0 and change more callers to deal with read-only buffers"
+Sending        main\classes\charset\src\com\ibm\icu\charset\CharsetDecoderICU.java
+Sending        main\classes\charset\src\com\ibm\icu\charset\CharsetMBCS.java
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundleReader.java
+Sending        main\tests\charset\src\com\ibm\icu\dev\test\charset\TestConversion.java
+Transmitting file data ....
+Committed revision 26345.
+
+svn commit -m "ticket:6945: make RuleBasedCollator work with read-only data from getBinary()"
+Sending        main\classes\collate\src\com\ibm\icu\text\CollatorReader.java
+Sending        main\classes\collate\src\com\ibm\icu\text\RuleBasedCollator.java
+Transmitting file data ..
+Committed revision 26346.
+
+svn commit -m "ticket:6945: CollatorReader does not use ByteArrayInputStream any more"
+Sending        main\classes\collate\src\com\ibm\icu\text\CollatorReader.java
+Transmitting file data .
+Committed revision 26347.
+
+svn commit -m "ticket:6945: test and fix getKeys(): make it behave as ResourceBundle.getKeys() is documented to (includes parent bundle keys); for all non-table resource items, return an empty Enumeration"
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundle.java
+Sending        main\classes\core\src\com\ibm\icu\impl\ICUResourceBundleImpl.java
+Sending        main\classes\core\src\com\ibm\icu\util\UResourceBundle.java
+Sending        main\tests\core\src\com\ibm\icu\dev\test\util\ICUResourceBundleTest.java
+Transmitting file data ....
+Committed revision 26352.
+
+svn commit -m "ticket:6945: make UResourceBundle.handleKeySet() @internal for now"
+Sending        main\classes\core\src\com\ibm\icu\util\UResourceBundle.java
+Transmitting file data .
+Committed revision 26353.
+
+svn commit source/common/uresbund.c -m "ticket:6945: report error when pool.res is invalid, rather than crashing"
+Sending        source\common\uresbund.c
+Transmitting file data .
+Committed revision 26360.
+
+svn commit source -m "ticket:6945: swap pool.res while copying from source folder to build output folder"
+Sending        source\data\Makefile.in
+Sending        source\data\makedata.mak
+Sending        source\tools\icupkg\icupkg.cpp
+Transmitting file data ...
+Committed revision 26361.
+
+svn commit source -m "ticket:6945: more Java and C++ notes"
 
 TODO:
 * for v2 with key suffix sharing, pool bundle with shared keys,
