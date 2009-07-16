@@ -599,8 +599,10 @@ CLEAN : GODATA
 	@echo Making Locale Resource Bundle files
 	@"$(ICUTOOLS)\genrb\$(CFG)\genrb" --usePoolBundle -k -d"$(ICUBLD_PKG)" $<
 
+# copy the pool.res file from the source folder to the build output folder
+# and swap it to native endianness
 pool.res: $(ICUSRCDATA_RELATIVE_PATH)\$(ICULOC)\pool.res
-	copy $(ICUSRCDATA_RELATIVE_PATH)\$(ICULOC)\pool.res .
+	"$(ICUPBIN)\icupkg" -tl "$(ICUSRCDATA_RELATIVE_PATH)\$(ICULOC)\pool.res" pool.res
 
 res_index.res:
 	@echo Generating <<res_index.txt

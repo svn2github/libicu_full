@@ -545,8 +545,9 @@ $(BUILDDIR)/%.res: $(LOCSRCDIR)/%.txt $(TOOLBINDIR)/genrb$(TOOLEXEEXT) $(DAT_FIL
 	$(INVOKE) $(TOOLBINDIR)/genrb --usePoolBundle $(GENRBOPTS) -i $(BUILDDIR) -s $(LOCSRCDIR) -d $(BUILDDIR) $(<F)
 
 # copy the pool.res file from the source folder to the build output folder
+# and swap it to native endianness
 $(BUILDDIR)/pool.res: $(LOCSRCDIR)/pool.res
-	cp $(LOCSRCDIR)/pool.res $(BUILDDIR)/pool.res
+	$(INVOKE) $(TOOLBINDIR)/icupkg -t$(ICUDATA_CHAR) $(LOCSRCDIR)/pool.res $(BUILDDIR)/pool.res
 
 # if the tzcode directory contains a new tzdata*.tar.gz file, use it for zoneinfo.txt
 TZDATA = $(firstword $(wildcard $(top_builddir)/tools/tzcode/tzdata*.tar.gz) $(wildcard $(top_srcdir)/tools/tzcode/tzdata*.tar.gz))
