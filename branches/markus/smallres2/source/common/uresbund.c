@@ -357,14 +357,16 @@ static UResourceDataEntry *init_entry(const char *localeID, const char *path, UE
                     r->fBogus = *status;
                 }
             }
-            /* handle the alias by trying to get out the %%Alias tag.*/
-            /* We'll try to get alias string from the bundle */
-            aliasres = res_getResource(&(r->fData), "%%ALIAS");
-            if (aliasres != RES_BOGUS) {
-                const UChar *alias = res_getString(&(r->fData), aliasres, &aliasLen);
-                if(alias != NULL && aliasLen > 0) { /* if there is actual alias - unload and load new data */
-                    u_UCharsToChars(alias, aliasName, aliasLen+1);
-                    r->fAlias = init_entry(aliasName, path, status);
+            if (U_SUCCESS(*status)) {
+                /* handle the alias by trying to get out the %%Alias tag.*/
+                /* We'll try to get alias string from the bundle */
+                aliasres = res_getResource(&(r->fData), "%%ALIAS");
+                if (aliasres != RES_BOGUS) {
+                    const UChar *alias = res_getString(&(r->fData), aliasres, &aliasLen);
+                    if(alias != NULL && aliasLen > 0) { /* if there is actual alias - unload and load new data */
+                        u_UCharsToChars(alias, aliasName, aliasLen+1);
+                        r->fAlias = init_entry(aliasName, path, status);
+                    }
                 }
             }
         }
