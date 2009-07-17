@@ -1,9 +1,9 @@
 ********************************************************************************
-* Copyright (C) 2008-2009, International Business Machines Corporation 	       *
-* and others. All Rights Reserved.			      		       *
-*									       *
+* Copyright (C) 2008-2009, International Business Machines Corporation         *
+* and others. All Rights Reserved.                                             *
+*                                                                              *
 * 6/26/08 - Created by Brian Rower - heavy copying from ICU4J readme & others  *
-*									       *
+*                                                                              *
 ********************************************************************************
 
 Procedures for building ICU4J data from ICU4C data:
@@ -15,11 +15,11 @@ In the following,
         $icu4j_root is the ICU4J root directory
         $jdk_bin is the JDK bin directory (for the jar tool)
 
-*Windows*
-
 1. Download and build ICU4C. For more instructions on downloading and building
         ICU4C, see the ICU4C readme at:
         http://source.icu-project.org/repos/icu/icu/trunk/readme.html#HowToBuild
+
+*Windows*
 
 2. On the command line, cd to $icu4c_root\source\data.
 
@@ -30,7 +30,18 @@ In the following,
 
 *Linux*
 
-TBD
+        $icu4c_build is the ICU4C root build directory,
+        which is $icu4c_root/source in an in-source build
+
+2. On the command line, cd to $icu4c_build/data.
+
+3. Do
+        make JAR=$jdk_bin/jar ICU4J_ROOT=$icu4j_root icudata.jar
+        cd ../test/testdata
+        make JAR=$jdk_bin/jar ICU4J_ROOT=$icu4j_root testdata.jar
+
+        (You can omit the ICU4J_ROOT argument to skip the final copying.)
+        (You can omit the JAR if it's just jar.)
 
 *Java*
 
@@ -66,7 +77,7 @@ Procedures for building ICU4J data from ICU4C data on a Unix system:
 
         For example, on Cygwinc (notice the backslash used for the space):
                 GENDTJAR_JARHOME=/cygdrive/c/Program\ Files/Java/jdk1.5.0_15/bin
-        
+
 5. In this same directory $icu4c_root/source/tools/genrb, 
         run the command 'make build-icu4j'
 
@@ -103,7 +114,7 @@ old procedure which uses less automation & path "guessing":
 
 4. Build resources target of ant to unpack the jar files 
         with the following commands:
-        
+
         cd $icu4j_root
         ant resources
 

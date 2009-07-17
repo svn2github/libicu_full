@@ -1489,6 +1489,8 @@ Committed revision 26361.
 
 svn commit source -m "ticket:6945: more Java and C++ notes"
 
+svn commit -m 'ticket:7043: build ICU4J data .jar file from ICU4C via the data and testdata makefiles and icupkg (Linux)'
+
 TODO:
 * for v2 with key suffix sharing, pool bundle with shared keys,
               more compact UTF-16 strings with suffix sharing
