@@ -79,10 +79,6 @@
  *   threads were more or less simultaenously the first to use ICU in a process, and
  *   were racing into the mutex initialization code.
  *
- *   Double checked lazy init of OS level mutexes works where it wouldn't with
- *   normal user level data because the OS level lock functions have to
- *   include whatever memory voodoo may be required to ensure that they see current 
- *   mutex state.
  *
  *   The solution for the global mutex init is platform dependent.
  *   On POSIX systems, C-style init can be used on a mutex, with the 
@@ -93,14 +89,12 @@
  *   InitializeCriticalSection() must be called.  If the global mutex does not
  *   appear to be initialized, a thread will create and initialize a new
  *   CRITICAL_SECTION, then use a Windows InterlockedCompareAndExchange to
- *   avoid problems with race conditions.
+ *   swap it in as the global mutex while avoid problems with race conditions.
  *
- *   If an application has overridden the ICU mutex implementation
- *   by calling u_setMutexFunctions(), the user supplied init function must
- *   be safe in the event that multiple threads concurrently attempt to init
- *   the same mutex.  The first thread should do the init, and the others should
- *   have no effect.
- *
+ *   Simple lazy init of OS level mutexes works where it wouldn't with
+ *   normal user level data because the OS level mutex lock functions have to
+ *   include whatever memory voodoo may be required to ensure that they see current 
+ *   mutex state.
  */ 
 
 /* On WIN32 mutexes are reentrant.  On POSIX platforms they are not, and a deadlock
@@ -111,13 +105,15 @@
  */
 
 
-
 #if (ICU_USE_THREADS == 0)
 #define MUTEX_TYPE void *
 #define PLATFORM_MUTEX_INIT(m) 
 #define PLATFORM_MUTEX_LOCK(m) 
 #define PLATFORM_MUTEX_UNLOCK(m) 
 #define PLATFORM_MUTEX_DESTROY(m) 
+#define SYNC_COMPARE_AND_SWAP(dest, oldval, newval) \
+            mutexed_compare_and_swap(dest, newval, oldval)
+
 
 #elif defined(U_WINDOWS)
 #define MUTEX_TYPE CRITICAL_SECTION
@@ -125,6 +121,9 @@
 #define PLATFORM_MUTEX_LOCK(m) EnterCriticalSection(m)
 #define PLATFORM_MUTEX_UNLOCK(m) LeaveCriticalSection(m)
 #define PLATFORM_MUTEX_DESTROY(m) DeleteCriticalSection(m)
+#define SYNC_COMPARE_AND_SWAP(dest, oldval, newval) \
+            InterlockedCompareExchangePointer(dest, newval, oldval)
+
 
 #elif defined(POSIX)
 #define MUTEX_TYPE pthread_mutex_t   
@@ -132,6 +131,14 @@
 #define PLATFORM_MUTEX_LOCK(m) pthread_mutex_lock(m)
 #define PLATFORM_MUTEX_UNLOCK(m) pthread_mutex_unlock(m)
 #define PLATFORM_MUTEX_DESTROY(m) pthread_mutex_destroy(m)
+#if (U_HAVE_GCC_ATOMICS == 1)
+#define SYNC_COMPARE_AND_SWAP(dest, oldval, newval) \
+            __sync_val_compare_and_swap(dest, oldval, newval)
+#else
+#define SYNC_COMPARE_AND_SWAP(dest, oldval, newval) \
+            mutexed_compare_and_swap(dest, newval, oldval)
+#endif
+
 
 #else   
 /* Unknown platform.  Note that user can still set mutex functions at run time. */
@@ -140,8 +147,12 @@
 #define PLATFORM_MUTEX_LOCK(m)
 #define PLATFORM_MUTEX_UNLOCK(m) 
 #define PLATFORM_MUTEX_DESTROY(m) 
+#define SYNC_COMPARE_AND_SWAP(dest, oldval, newval) \
+            mutexed_compare_and_swap(dest, newval, oldval)
+
 #endif
 
+static void *mutexed_compare_and_swap(void **dest, void *newval, void *oldval);
 
 typedef struct ICUMutex ICUMutex;
 
@@ -197,7 +208,7 @@ umtx_lock(UMTX *mutex)
     }
     m = (ICUMutex *)*mutex;
     if (m == NULL) {
-        /* See note on double-checked lazy init, above.  We can get away with it here, with mutexes,
+        /* See note on lazy init, above.  We can get away with it here, with mutexes,
          * where we couldn't with normal user level data.
          */
         umtx_init(mutex);    
@@ -301,29 +312,9 @@ umtx_init(UMTX *mutex) {
         m = &globalMutex;
     }
 #endif
+
     m = umtx_ct(m);
-
-#if defined(U_WINDOWS)
-    originalValue = InterlockedCompareExchangePointer(mutex, m, NULL);
-#else
-    /*  POSIX.
-     *    Normally the global mutex will be pre-initialized and usable.
-     *    The only time we reinitialize the global mutex is after a u_cleanup()
-     *    or after setting the mutex functions.  Those operations are not
-     *    thread safe.
-     */
-    if (mutex != &gGlobalMutex) {
-        umtx_lock(NULL);
-    }
-    originalValue = *mutex;
-    if (originalValue == NULL) {
-        *mutex = m;
-    }
-    if (mutex != &gGlobalMutex) {
-        umtx_unlock(NULL);
-    }
-#endif
-
+    originalValue = SYNC_COMPARE_AND_SWAP(mutex, NULL, m);
     if (originalValue != NULL) {
         umtx_dt(m);
         return;
@@ -333,9 +324,6 @@ umtx_init(UMTX *mutex) {
 
     /* Hook the new mutex into the list of all ICU mutexes, so that we can find and
      * delete it for u_cleanup().
-     * This is a little tricky when we are initializing the global mutex on Windows.  We will do
-     * a recursive call to umtx_lock(), but by this point the mutex is initialized and we will not
-     * reenter umtx_init().
      */
 
     umtx_lock(NULL);
@@ -389,13 +377,6 @@ umtx_destroy(UMTX *mutex) {
     }
     umtx_unlock(NULL);
 
-    if (pMutexDestroyFn != NULL) {
-        (*pMutexDestroyFn)(gMutexContext, &m->userMutex);
-    }
-    else {
-        PLATFORM_MUTEX_DESTROY(&m->platformMutex);
-    }
-
     umtx_dt(m);        /* Delete the internal ICUMutex   */
     *mutex = NULL;     /* Clear the caller's UMTX        */
 }
@@ -441,6 +422,37 @@ u_setMutexFunctions(const void *context, UMtxInitFn *i, UMtxFn *d, UMtxFn *l, UM
 }
 
 
+/*   synchronized compare and swap function, for use when OS or compiler built-in
+ *   equivalents aren't available.
+ *
+ *   This operation relies on the ICU global mutex for synchronization.
+ *
+ *   There are two cases where this function can be entered when the global mutex is not
+ *   yet initialized - at the end  u_cleanup(), and at the end of u_setMutexFunctions, both
+ *   of which re-init the global mutex.  But neither function is thread-safe, so the lack of
+ *   synchronization at these points doesn't matter.
+ */
+static void *mutexed_compare_and_swap(void **dest, void *newval, void *oldval) {
+    void *temp;
+    UBool needUnlock = FALSE;
+
+    if (gGlobalMutex != NULL) {
+        umtx_lock(&gGlobalMutex);
+        needUnlock = TRUE;
+    }
+
+    temp = *dest;
+    if (temp == oldval) {
+        *dest = newval;
+    }
+    
+    if (needUnlock) {
+        umtx_unlock(&gGlobalMutex);
+    }
+    return temp;
+}
+
+
 
 /*-----------------------------------------------------------------
  *
@@ -467,6 +479,8 @@ umtx_atomic_inc(int32_t *p)  {
             retVal = InterlockedIncrement((LONG*)p);
         #elif defined(USE_MAC_OS_ATOMIC_INCREMENT)
             retVal = OSAtomicIncrement32Barrier(p);
+        #elif (U_HAVE_GCC_ATOMICS == 1)
+            retVal = __sync_add_and_fetch(p, 1);
         #elif defined (POSIX) && ICU_USE_THREADS == 1
             umtx_lock(&gIncDecMutex);
             retVal = ++(*p);
@@ -489,6 +503,8 @@ umtx_atomic_dec(int32_t *p) {
             retVal = InterlockedDecrement((LONG*)p);
         #elif defined(USE_MAC_OS_ATOMIC_INCREMENT)
             retVal = OSAtomicDecrement32Barrier(p);
+        #elif (U_HAVE_GCC_ATOMICS == 1)
+            retVal = __sync_sub_and_fetch(p, 1);
         #elif defined (POSIX) && ICU_USE_THREADS == 1
             umtx_lock(&gIncDecMutex);
             retVal = --(*p);
@@ -549,15 +565,16 @@ u_setAtomicIncDecFunctions(const void *context, UMtxAtomicFn *ip, UMtxAtomicFn *
 U_CFUNC UBool umtx_cleanup(void) {
 
     /* Delete all of the ICU mutexes.  Do the global mutex last because it is used during
-     * the delete operation of other mutexes.
+     * the umtx_destroy operation of other mutexes.
      */
-    ICUMutex *listPtr = mutexListHead;
-    while (listPtr != NULL) {
-        UMTX *umtx = listPtr->owner;
-        U_ASSERT(*umtx = (void *)listPtr);
-        if (umtx == &gGlobalMutex) {
-            listPtr= listPtr->next;   /* Skip over global mutex in the list */
-        } else {
+    ICUMutex *thisMutex = NULL;
+    ICUMutex *nextMutex = NULL;
+
+    for (thisMutex=mutexListHead; thisMutex!=NULL; thisMutex=nextMutex) {
+        UMTX *umtx = thisMutex->owner;
+        nextMutex = thisMutex->next;
+        U_ASSERT(*umtx = (void *)thisMutex);
+        if (umtx != &gGlobalMutex) {
             umtx_destroy(umtx);
         }
     }
@@ -574,8 +591,9 @@ U_CFUNC UBool umtx_cleanup(void) {
     gIncDecMutex    = NULL;
 
 #if defined (POSIX) 
-    /* POSIX platforms must have a functioning global mutex 
-     * to allow them to restart ICU after a cleanup. */
+    /* POSIX platforms must have a functioning global mutex to permit the safe creation 
+     * of additional mutexes should ICU be used again following this u_cleanup(). 
+     */
     umtx_init(&gGlobalMutex);
 #endif
     return TRUE;
