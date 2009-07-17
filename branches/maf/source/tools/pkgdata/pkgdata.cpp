@@ -118,6 +118,7 @@ static int32_t pkg_archiveLibrary(const char *targetDir, const char *version, UB
 static void createFileNames(const char *version_major, const char *version, const char *libName, const UBool reverseExt);
 
 static int32_t pkg_getOptionsFromICUConfig(UOption *option);
+static int runCommand(const char* command);
 
 enum {
     NAME,
@@ -214,7 +215,7 @@ enum {
 };
 static char libFileNames[LIB_FILENAMES_SIZE][256];
 
-static void pkg_checkFlag(UPKGOptions *o);
+static UPKGOptions  *pkg_checkFlag(UPKGOptions *o);
 
 const char options_help[][320]={
     "Set the data name",
@@ -460,6 +461,15 @@ main(int argc, char* argv[]) {
 
     return result;
 }
+
+static int runCommand(const char* command) { 
+    printf("pkgdata: %s\n", command); 
+    int result = system(command); 
+    if (result != 0) { 
+        printf("-- return status = %d\n", result); 
+    }
+    return result; 
+} 
 
 #define LN_CMD "ln -s"
 #define RM_CMD "rm -f"
@@ -724,7 +734,7 @@ static int32_t pkg_createSymLinks(const char *targetDir) {
             LN_CMD,
             libFileNames[LIB_FILE_VERSION],
             libFileNames[LIB_FILE_VERSION_MAJOR]);
-    result = system(cmd);
+    result = runCommand(cmd);
     if (result != 0) {
         return result;
     }
@@ -737,7 +747,7 @@ static int32_t pkg_createSymLinks(const char *targetDir) {
             libFileNames[LIB_FILE_VERSION],
             libFileNames[LIB_FILE], pkgDataFlags[SO_EXT]);
 
-     result = system(cmd);
+     result = runCommand(cmd);
 
     return result;
 }
@@ -753,7 +763,7 @@ static int32_t pkg_installLibrary(const char *installDir, const char *targetDir)
             installDir, PKGDATA_FILE_SEP_STRING, libFileNames[LIB_FILE_VERSION]
             );
 
-    result = system(cmd);
+    result = runCommand(cmd);
 
     if (result != 0) {
         return result;
@@ -795,7 +805,7 @@ static int32_t pkg_installFileMode(const char *installDir, const char *srcDir, c
                         srcDir, PKGDATA_FILE_SEP_STRING, buffer,
                         installDir, PKGDATA_FILE_SEP_STRING, buffer);
 
-                result = system(cmd);
+                result = runCommand(cmd);
                 if (result != 0) {
                     fprintf(stderr, "Failed to install data file with command: %s\n", cmd);
                     break;
@@ -815,7 +825,7 @@ static int32_t pkg_installFileMode(const char *installDir, const char *srcDir, c
     }
 #else
     sprintf(cmd, "%s %s %s %s", WIN_INSTALL_CMD, srcDir, installDir, WIN_INSTALL_CMD_FLAGS);
-    result = system(cmd);
+    result = runCommand(cmd);
     if (result != 0) {
         fprintf(stderr, "Failed to install data file with command: %s\n", cmd);
     }
@@ -849,7 +859,17 @@ static int32_t pkg_archiveLibrary(const char *targetDir, const char *version, UB
                 targetDir,
                 libFileNames[LIB_FILE_VERSION_TMP]);
 
-        result = system(cmd);
+        result = runCommand(cmd); 
+        if (result != 0) { 
+            return result; 
+        } 
+        
+        sprintf(cmd, "%s %s%s", 
+            pkgDataFlags[RANLIB], 
+            targetDir, 
+            libFileNames[LIB_FILE_VERSION]);
+        
+        result = runCommand(cmd); 
         if (result != 0) {
             return result;
         }
@@ -860,7 +880,7 @@ static int32_t pkg_archiveLibrary(const char *targetDir, const char *version, UB
                 targetDir,
                 libFileNames[LIB_FILE_VERSION_TMP]);
 
-        result = system(cmd);
+        result = runCommand(cmd);
         if (result != 0) {
             return result;
         }
@@ -908,7 +928,20 @@ static int32_t pkg_generateLibraryFile(const char *targetDir, const char mode, c
                 pkgDataFlags[A_EXT],
                 objectFile);
 
-        result = system(cmd);
+        result = runCommand(cmd); 
+        if (result == 0) {
+#ifdef OS400 
+            sprintf(cmd, "QSH CMD('%s %s%s.%s')", 
+#else 
+            sprintf(cmd, "%s %s%s.%s", 
+#endif 
+                    pkgDataFlags[RANLIB], 
+                    targetDir, 
+                    libFileNames[LIB_FILE], 
+                    pkgDataFlags[A_EXT]); 
+        
+            result = runCommand(cmd); 
+        }
     } else /* if (mode == MODE_DLL) */ {
 #ifdef U_CYGWIN
         sprintf(cmd, "%s%s%s %s -o %s%s %s %s%s %s %s",
@@ -935,7 +968,7 @@ static int32_t pkg_generateLibraryFile(const char *targetDir, const char mode, c
                 pkgDataFlags[BIR_FLAGS]);
 
         /* Generate the library file. */
-        result = system(cmd);
+        result = runCommand(cmd);
     }
 
     if (freeCmd) {
@@ -961,7 +994,7 @@ static int32_t pkg_createWithAssemblyCode(const char *targetDir, const char mode
             tempObjectFile,
             gencFilePath);
 
-    result = system(cmd);
+    result = runCommand(cmd);
     if (result != 0) {
         return result;
     }
@@ -1048,7 +1081,7 @@ static int32_t pkg_createWithoutAssemblyCode(UPKGOptions *o, const char *targetD
                         tempObjectFile,
                         gencmnFile);
             
-            result = system(cmd);
+            result = runCommand(cmd);
             if (result != 0) {
                 break;
             }
@@ -1099,7 +1132,7 @@ static int32_t pkg_createWithoutAssemblyCode(UPKGOptions *o, const char *targetD
             sprintf(cmd, "cat %s >> %s", gencmnFile, icudtAll);
 #endif
             
-            result = system(cmd);
+            result = runCommand(cmd);
             if (result != 0) {
                 break;
             } else {
@@ -1121,7 +1154,7 @@ static int32_t pkg_createWithoutAssemblyCode(UPKGOptions *o, const char *targetD
                     pkgDataFlags[LIBFLAGS],
                     tempObjectFile,
                     gencmnFile);
-        result = system(cmd);
+        result = runCommand(cmd);
         if (result != 0) {
             break;
         }
@@ -1150,7 +1183,7 @@ static int32_t pkg_createWithoutAssemblyCode(UPKGOptions *o, const char *targetD
         tempObjectFile,
         icudtAll);
     
-    result = system(cmd);
+    result = runCommand(cmd);
     if (result == 0) {
         sprintf(buffer, "%s %s",
             buffer,
@@ -1234,11 +1267,11 @@ static int32_t pkg_createWindowsDLL(const char mode, const char *gencFilePath, U
                 );
     }
 
-    return system(cmd);
+    return runCommand(cmd);
 }
 #endif
 
-static void pkg_checkFlag(UPKGOptions *o) {
+static UPKGOptions *pkg_checkFlag(UPKGOptions *o) {
 #ifdef U_AIX
     /* AIX needs a map file. */
     char *flag = NULL;
@@ -1296,14 +1329,13 @@ static void pkg_checkFlag(UPKGOptions *o) {
         f = T_FileStream_open(mapFile, "w");
         if (f == NULL) {
             fprintf(stderr,"Unable to create map file: %s.\n", mapFile);
-            return;
+        } else {
+            sprintf(tmpbuffer, "%s%s ", o->entryName, UDATA_CMN_INTERMEDIATE_SUFFIX);
+    
+            T_FileStream_writeLine(f, tmpbuffer);
+    
+            T_FileStream_close(f);
         }
-
-        sprintf(tmpbuffer, "%s%s ", o->entryName, UDATA_CMN_INTERMEDIATE_SUFFIX);
-
-        T_FileStream_writeLine(f, tmpbuffer);
-
-        T_FileStream_close(f);
     }
 #elif defined(U_CYGWIN)
     /* Cygwin needs to change flag options. */
@@ -1339,6 +1371,9 @@ static void pkg_checkFlag(UPKGOptions *o) {
         }
     }
 #endif
+    // Don't really need a return value, just need to stop compiler warnings about
+    // the unused parameter 'o' on platforms where it is not otherwise used.
+    return o;   
 }
 
 static void loadLists(UPKGOptions *o, UErrorCode *status)

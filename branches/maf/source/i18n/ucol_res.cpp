@@ -329,7 +329,6 @@ ucol_open(const char *loc,
     UTRACE_DATA1(UTRACE_INFO, "locale = \"%s\"", loc);
     UCollator *result = NULL;
 
-    u_init(status);
 #if !UCONFIG_NO_SERVICE
     result = Collator::createUCollator(loc, status);
     if (result == NULL)
@@ -358,11 +357,6 @@ ucol_openRulesForImport( const UChar        *rules,
 
     if(status == NULL || U_FAILURE(*status)){
         return 0;
-    }
-
-    u_init(status);
-    if (U_FAILURE(*status)) {
-        return NULL;
     }
 
     if(rules == NULL || rulesLength < -1) {

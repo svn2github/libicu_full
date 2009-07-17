@@ -1861,10 +1861,30 @@ void ucol_tok_initTokenList(UColTokenParser *src, const UChar *rules, uint32_t r
                 int32_t optionLength;
                 u_strToUTF8(NULL, 0, &optionLength, setStart, optionEndOffsetFromLoc, status);
                 *status = U_ZERO_ERROR;
-                char* option = (char*)uprv_malloc(optionLength*sizeof(char));
-                u_strToUTF8(option, optionLength, &optionLength, setStart, optionEndOffsetFromLoc, status);
+                char* option = (char*)uprv_malloc((optionLength+1)*sizeof(char));
+                u_strToUTF8(option, optionLength+1, &optionLength, setStart, optionEndOffsetFromLoc, status);
 
-                char* ucoll = strstr(option, "-u-coll-");
+                int32_t localeLength;
+                int32_t templ;
+                localeLength = uloc_forLanguageTag(option, NULL, 0, NULL, status);
+                *status = U_ZERO_ERROR;
+                char* locale = (char*)uprv_malloc(localeLength+1);
+                uloc_forLanguageTag(option, locale, localeLength+1, &templ, status);
+
+                int32_t typeLength;
+                char* type;
+                typeLength = uloc_getKeywordValue(locale, "collation", NULL, 0, status);
+                *status = U_ZERO_ERROR;
+                if (typeLength > 0){
+                    type = (char*)uprv_malloc(typeLength+1);
+                    uloc_getKeywordValue(locale, "collation", type, typeLength+1, status);
+                    char* at = strchr(locale, '@');
+                    //                    *at = 0;
+                }else{
+                    type = "standard";
+                }
+
+                /*char* ucoll = strstr(option, "-u-coll-");
                 int32_t localeLength;
                 if(ucoll != NULL){
                     localeLength = ucoll - option;
@@ -1887,7 +1907,7 @@ void ucol_tok_initTokenList(UColTokenParser *src, const UChar *rules, uint32_t r
                     if(typeEnd != NULL){
                         type[typeEnd-type] = 0;
                     }
-                }
+                }*/
 
                 int32_t importRulesLength = 0;
                 const UChar* importRules = importFunc(context, locale, type, &importRulesLength, status);
