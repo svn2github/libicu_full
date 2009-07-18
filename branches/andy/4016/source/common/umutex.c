@@ -564,6 +564,10 @@ u_setAtomicIncDecFunctions(const void *context, UMtxAtomicFn *ip, UMtxAtomicFn *
  */
 U_CFUNC UBool umtx_cleanup(void) {
 
+    /* Extra, do-nothing function call to suppress compiler warnings on platforms where
+     *   mutexed_compare_and_swap is not otherwise used.  */
+    mutexed_compare_and_swap(&gGlobalMutex, NULL, NULL);
+
     /* Delete all of the ICU mutexes.  Do the global mutex last because it is used during
      * the umtx_destroy operation of other mutexes.
      */
@@ -591,8 +595,8 @@ U_CFUNC UBool umtx_cleanup(void) {
     gIncDecMutex    = NULL;
 
 #if defined (POSIX) 
-    /* POSIX platforms must have a functioning global mutex to permit the safe creation 
-     * of additional mutexes should ICU be used again following this u_cleanup(). 
+    /* POSIX platforms must come out of u_cleanup() with a functioning global mutex 
+     * to permit the safe resumption of use of ICU in multi-threaded environments. 
      */
     umtx_init(&gGlobalMutex);
 #endif

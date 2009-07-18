@@ -681,19 +681,18 @@ AC_SUBST(U_HAVE_PLACEMENT_NEW)
 # AC_TRY_LINK([], [int foo, bar; bar = __sync_val_compare_and_swap(&foo, 0, 1);],, 
 AC_LANG(C)
 AC_MSG_CHECKING([for gcc atomic functions])
-AC_TRY_RUN(
-[
-    int main() {
-        volatile int ref = 1;
-        __sync_fetch_and_add (&ref, 1);
-        __sync_sub_and_fetch (&ref, 1);
-        /* Make sure test fails if operations are not supported */
-        __sync_val_compare_and_swap(&ref, 1, 0);
-        return ref;
-    }
-],
+AC_LINK_IFELSE([AC_LANG_PROGRAM(
+    [[
+        void *p;
+        int   i;
+    ]],
+    [[
+        __sync_fetch_and_add(&i, 1);
+        __sync_fetch_and_sub(&i, 1);
+        __sync_val_compare_and_swap(&p, 0, 0);
+    ]]
+)],
 [U_HAVE_GCC_ATOMICS=1; AC_MSG_RESULT([yes])],
-[U_HAVE_GCC_ATOMICS=0; AC_MSG_RESULT([no])],
 [U_HAVE_GCC_ATOMICS=0; AC_MSG_RESULT([no])])
 AC_SUBST(U_HAVE_GCC_ATOMICS)
 
