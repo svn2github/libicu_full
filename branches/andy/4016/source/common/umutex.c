@@ -563,6 +563,8 @@ u_setAtomicIncDecFunctions(const void *context, UMtxAtomicFn *ip, UMtxAtomicFn *
  *      Destroy the global mutex(es), and reset the mutex function callback pointers.
  */
 U_CFUNC UBool umtx_cleanup(void) {
+    ICUMutex *thisMutex = NULL;
+    ICUMutex *nextMutex = NULL;
 
     /* Extra, do-nothing function call to suppress compiler warnings on platforms where
      *   mutexed_compare_and_swap is not otherwise used.  */
@@ -571,9 +573,6 @@ U_CFUNC UBool umtx_cleanup(void) {
     /* Delete all of the ICU mutexes.  Do the global mutex last because it is used during
      * the umtx_destroy operation of other mutexes.
      */
-    ICUMutex *thisMutex = NULL;
-    ICUMutex *nextMutex = NULL;
-
     for (thisMutex=mutexListHead; thisMutex!=NULL; thisMutex=nextMutex) {
         UMTX *umtx = thisMutex->owner;
         nextMutex = thisMutex->next;
