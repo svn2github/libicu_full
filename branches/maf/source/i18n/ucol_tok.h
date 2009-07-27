@@ -123,7 +123,7 @@ typedef struct {
   USet *copySet;
   USet *removeSet;
   UBool buildCCTabFlag;  /* Tailoring rule requirs building combining class table. */
-  uint32_t prevStrength;
+  uint32_t prevStrength; /* For keeping track of previous token's strength in compact list syntax */
 } UColTokenParser;
 
 typedef struct {

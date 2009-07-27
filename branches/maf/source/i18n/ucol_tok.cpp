@@ -1065,7 +1065,7 @@ ucol_tok_parseNextToken(UColTokenParser *src,
                             *status = U_INVALID_FORMAT_ERROR;
                             syntaxError(src->source,(int32_t)(src->current-src->source),(int32_t)(src->end-src->source),parseError);
                             return NULL;
-                        }else{
+                        }else{ /* If prevStrength is set, then we are currently parsing a compact list */
                             newStrength = src->prevStrength;
                         }
                     }
@@ -1085,7 +1085,7 @@ ucol_tok_parseNextToken(UColTokenParser *src,
                             src->parsedToken.charsOffset = (uint32_t)(src->current - src->source);
                         }
                         src->parsedToken.charsLen++;
-                        if(src->prevStrength != UCOL_TOK_UNSET){
+                        if(src->prevStrength != UCOL_TOK_UNSET){ /* If we are working on a compact list, return the token immediately. */
                             U16_NEXT(0, src->current, src->end, codepoint);
                             src->parsedToken.charsLen+= U16_LENGTH(codepoint) - 1;
                             goto EndOfLoop;
