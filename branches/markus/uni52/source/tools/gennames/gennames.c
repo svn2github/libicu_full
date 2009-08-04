@@ -164,6 +164,7 @@ enum {
     UNI_4_1,
     UNI_5_0,
     UNI_5_1,
+    UNI_5_2,
     UNI_VER_COUNT
 };
 
@@ -179,10 +180,11 @@ unicodeVersions[]={
     { 4, 0, 1, 0 },
     { 4, 1, 0, 0 },
     { 5, 0, 0, 0 },
-    { 5, 1, 0, 0 }
+    { 5, 1, 0, 0 },
+    { 5, 2, 0, 0 }
 };
 
-static int32_t ucdVersion=UNI_5_1;
+static int32_t ucdVersion=UNI_5_2;
 
 static int32_t
 findUnicodeVersion(const UVersionInfo version) {

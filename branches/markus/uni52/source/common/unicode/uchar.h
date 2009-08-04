@@ -39,7 +39,7 @@ U_CDECL_BEGIN
  * @see u_getUnicodeVersion
  * @stable ICU 2.0
  */
-#define U_UNICODE_VERSION "5.1"
+#define U_UNICODE_VERSION "5.2"
 
 /**
  * \file
