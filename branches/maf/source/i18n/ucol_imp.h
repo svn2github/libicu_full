@@ -734,6 +734,8 @@ typedef struct {
       /*UColAttributeValue*/ int32_t strength;          /* attribute for strength */
       /*UColAttributeValue*/ int32_t hiraganaQ;         /* attribute for special Hiragana */
       /*UColAttributeValue*/ int32_t numericCollation;  /* attribute for numeric collation */
+      UScriptCode* scriptOrder;
+      int32_t scriptOrderLength;
       uint32_t reserved[15];                 /* for future use */
 } UColOptionSet;
 
@@ -980,6 +982,9 @@ struct UCollator {
     uint8_t tertiaryBottomCount;
 
     UVersionInfo dataVersion;               /* Data info of UCA table */
+    UScriptCode* scriptOrder;
+    int32_t scriptOrderLength;
+    uint8_t* scriptReorderTable;
 };
 
 U_CDECL_END
@@ -1043,6 +1048,8 @@ ucol_openRulesForImport( const UChar        *rules,
                          UErrorCode         *status);
 
 U_CAPI const U_EXPORT2 UChar* ucol_tok_getRulesFromBundle(void* context, const char* locale, const char* type, int32_t* pLength, UErrorCode* status);
+
+U_CAPI void ucol_buildScriptReorderTable(UCollator *coll);
 
 #ifdef XP_CPLUSPLUS
 /*

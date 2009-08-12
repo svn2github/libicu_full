@@ -5665,6 +5665,139 @@ static void TestImportWithType(void)
 
 }
 
+const static UChar testGreekFirstSourceCases[][MAX_TOKEN_LEN] = {
+    {0x0041},
+    {0x03B1, 0x0041},
+    {0x0061},
+    {0x0041, 0x0061},
+    {0x0391}
+};
+
+const static UChar testGreekFirstTargetCases[][MAX_TOKEN_LEN] = {
+    {0x03B1},
+    {0x0041, 0x03B1},
+    {0x0391},
+    {0x0391, 0x03B1},
+    {0x0391}
+};
+
+const static UCollationResult greekFirstResults[] = {
+    UCOL_GREATER,
+    UCOL_LESS,
+    UCOL_GREATER,
+    UCOL_GREATER,
+    UCOL_EQUAL
+};
+
+static void TestGreekFirstReorder(void)
+{
+
+    int32_t i;
+    UParseError error;
+    UErrorCode status = U_ZERO_ERROR;
+    UCollator  *myCollation;
+    char srules[500] = "[scriptReorder Grek]";
+    UChar rules[500];
+    uint32_t length = 0;
+    UScriptCode scriptOrder[1] = {USCRIPT_GREEK};
+    u_strFromUTF8(rules, 500, &length, srules, strlen(srules), &status);
+    myCollation = ucol_openRules(rules, length, UCOL_ON, UCOL_TERTIARY, &error, &status);
+    if(U_FAILURE(status)){
+        log_err_status(status, "ERROR: in creation of rule based collator: %s\n", myErrorName(status));
+        return;
+    }
+    log_verbose("Testing the [scriptReorder grek]\n");
+    /*ucol_setAttribute(myCollation, UCOL_NORMALIZATION_MODE, UCOL_ON, &status);
+      ucol_setStrength(myCollation, UCOL_TERTIARY);*/
+    for (i = 0; i < 5 ; i++)
+    {
+        doTest(myCollation, testGreekFirstSourceCases[i], testGreekFirstTargetCases[i], greekFirstResults[i]);
+    }
+    ucol_close(myCollation);
+
+    myCollation = ucol_open("en", &status);
+    if(U_FAILURE(status)){
+        log_err_status(status, "ERROR: in creation of rule based collator: %s\n", myErrorName(status));
+        return;
+    }
+    ucol_setScriptOrder(myCollation, scriptOrder, 1);
+    log_verbose("Testing the [scriptReorder grek]\n");
+    /*ucol_setAttribute(myCollation, UCOL_NORMALIZATION_MODE, UCOL_ON, &status);
+      ucol_setStrength(myCollation, UCOL_TERTIARY);*/
+    for (i = 0; i < 5 ; i++)
+    {
+        doTest(myCollation, testGreekFirstSourceCases[i], testGreekFirstTargetCases[i], greekFirstResults[i]);
+    }
+    ucol_close(myCollation);
+}
+
+const static UChar testUnknownReorderSourceCases[][MAX_TOKEN_LEN] = {
+    {0x0041},
+    {0x0041},
+    {0x0031},
+    {0x0391},
+    {0x0031}
+};
+
+const static UChar testUnknownReorderTargetCases[][MAX_TOKEN_LEN] = {
+    {0x03B1},
+    {0x0031},
+    {0x0391},
+    {0x099d},
+    {0x0032}
+};
+
+const static UCollationResult unknownReorderResults[] = {
+    UCOL_LESS,
+    UCOL_LESS,
+    UCOL_GREATER,
+    UCOL_LESS,
+    UCOL_LESS
+};
+
+static void TestUnknownReorder(void)
+{
+
+    int32_t i;
+    UParseError error;
+    UErrorCode status = U_ZERO_ERROR;
+    UCollator  *myCollation;
+    char srules[500] = "[scriptReorder Latn Zzzz Zyyy]";
+    UChar rules[500];
+    uint32_t length = 0;
+    UScriptCode scriptOrder[3] = {USCRIPT_LATIN, USCRIPT_UNKNOWN, USCRIPT_COMMON};
+
+    u_strFromUTF8(rules, 500, &length, srules, strlen(srules), &status);
+    myCollation = ucol_openRules(rules, length, UCOL_ON, UCOL_TERTIARY, &error, &status);
+    if(U_FAILURE(status)){
+        log_err_status(status, "ERROR: in creation of rule based collator: %s\n", myErrorName(status));
+        return;
+    }
+    log_verbose("Testing the [scriptReorder latn zzzz zyyy]\n");
+    /*ucol_setAttribute(myCollation, UCOL_NORMALIZATION_MODE, UCOL_ON, &status);
+      ucol_setStrength(myCollation, UCOL_TERTIARY);*/
+    for (i = 0; i < 5 ; i++)
+    {
+        doTest(myCollation, testUnknownReorderSourceCases[i], testUnknownReorderTargetCases[i], unknownReorderResults[i]);
+    }
+    ucol_close(myCollation);
+
+    myCollation = ucol_open("en", &status);
+    if(U_FAILURE(status)){
+        log_err_status(status, "ERROR: in creation of rule based collator: %s\n", myErrorName(status));
+        return;
+    }
+    ucol_setScriptOrder(myCollation, scriptOrder, 3);
+    log_verbose("Testing the script reordering setter\n");
+    /*ucol_setAttribute(myCollation, UCOL_NORMALIZATION_MODE, UCOL_ON, &status);
+      ucol_setStrength(myCollation, UCOL_TERTIARY);*/
+    for (i = 0; i < 5 ; i++)
+    {
+        doTest(myCollation, testUnknownReorderSourceCases[i], testUnknownReorderTargetCases[i], unknownReorderResults[i]);
+    }
+    ucol_close(myCollation);
+}
+
 #define TEST(x) addTest(root, &x, "tscoll/cmsccoll/" # x)
 
 void addMiscCollTest(TestNode** root)
@@ -5744,6 +5877,8 @@ void addMiscCollTest(TestNode** root)
     TEST(TestSameStrengthList);
     TEST(TestImport);
     TEST(TestImportWithType);
+    TEST(TestGreekFirstReorder);
+    TEST(TestUnknownReorder);
 }
 
 #endif /* #if !UCONFIG_NO_COLLATION */

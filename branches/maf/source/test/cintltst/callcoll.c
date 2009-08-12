@@ -1296,4 +1296,3 @@ static void TestJ5298(void)
     log_verbose("\n");
 }
 #endif /* #if !UCONFIG_NO_COLLATION */
-

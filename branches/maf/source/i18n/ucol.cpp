@@ -581,6 +581,12 @@ ucol_close(UCollator *coll)
         if(coll->image != NULL && coll->freeImageOnClose) {
             uprv_free((UCATableHeader *)coll->image);
         }
+        if(coll->scriptReorderTable != NULL){
+            uprv_free(coll->scriptReorderTable);
+        }
+        if(coll->scriptOrder != NULL){
+            uprv_free(coll->scriptOrder);
+        }
 
         /* Here, it would be advisable to close: */
         /* - UData for UCA (unless we stuff it in the root resb */
@@ -669,7 +675,9 @@ void ucol_setOptionsFromHeader(UCollator* result, UColOptionSet * opts, UErrorCo
     result->variableTopValue = opts->variableTopValue;
     result->alternateHandling = (UColAttributeValue)opts->alternateHandling;
     result->hiraganaQ = (UColAttributeValue)opts->hiraganaQ;
-    result->numericCollation = (UColAttributeValue)opts->numericCollation;
+    result->numericCollation = (UColAttributeValue)opts->numericCollations;
+    result->scriptOrder = opts->scriptOrder;
+    result->scriptOrderLength = opts->scriptOrderLength;
 
     result->caseFirstisDefault = TRUE;
     result->caseLevelisDefault = TRUE;
@@ -784,6 +792,8 @@ UCollator* ucol_initCollator(const UCATableHeader *image, UCollator *fillIn, con
     result->alternateHandling = (UColAttributeValue)result->options->alternateHandling;
     result->hiraganaQ = (UColAttributeValue)result->options->hiraganaQ;
     result->numericCollation = (UColAttributeValue)result->options->numericCollation;
+    result->scriptOrder = result->options->scriptOrder;
+    result->scriptOrderLength = result->options->scriptOrderLength;
 
     result->caseFirstisDefault = TRUE;
     result->caseLevelisDefault = TRUE;
@@ -794,8 +804,6 @@ UCollator* ucol_initCollator(const UCATableHeader *image, UCollator *fillIn, con
     result->alternateHandlingisDefault = TRUE;
     result->hiraganaQisDefault = TRUE;
     result->numericCollationisDefault = TRUE;
-
-    /*result->scriptOrder = NULL;*/
 
     result->rules = NULL;
     result->rulesLength = 0;
@@ -847,6 +855,7 @@ UCollator* ucol_initCollator(const UCATableHeader *image, UCollator *fillIn, con
     result->requestedLocale = NULL;
     result->hasRealData = FALSE; // real data lives in .dat file...
     result->freeImageOnClose = FALSE;
+    result->scriptReorderTable = NULL;
 
     return result;
 }
@@ -4478,6 +4487,9 @@ int32_t ucol_getSortKeySize(const UCollator *coll, collIterate *s, int32_t curre
         primary2 = (uint8_t)((order >>= 8) & UCOL_BYTE_SIZE_MASK);
         primary1 = (uint8_t)(order >> 8);
 
+        if(coll->scriptReorderTable != NULL && notIsContinuation){
+            primary1 = coll->scriptReorderTable[primary1];
+        }
 
         if(shifted && ((notIsContinuation && order <= variableTopValue && primary1 > 0)
             || (!notIsContinuation && wasShifted))
@@ -4806,7 +4818,6 @@ ucol_calcSortKey(const    UCollator    *coll,
     UBool  shifted = (coll->alternateHandling == UCOL_SHIFTED);
     //UBool  qShifted = shifted && (compareQuad == 0);
     UBool  doHiragana = (coll->hiraganaQ == UCOL_ON) && (compareQuad == 0);
-    /*const uint8_t *scriptOrder = coll->scriptOrder;*/
 
     uint32_t variableTopValue = coll->variableTopValue;
     // TODO: UCOL_COMMON_BOT4 should be a function of qShifted. If we have no
@@ -4935,9 +4946,9 @@ ucol_calcSortKey(const    UCollator    *coll,
             primary2 = (uint8_t)((order >>= 8) & UCOL_BYTE_SIZE_MASK);
             primary1 = (uint8_t)(order >> 8);
 
-            /*if(notIsContinuation && scriptOrder != NULL) {
-            primary1 = scriptOrder[primary1];
-            }*/
+            if(notIsContinuation && coll->scriptReorderTable != NULL) {
+                primary1 = coll->scriptReorderTable[primary1];
+            }
 
             if(shifted && ((notIsContinuation && order <= variableTopValue && primary1 > 0)
                 || (!notIsContinuation && wasShifted))
@@ -5550,9 +5561,14 @@ ucol_calcSortKeySimpleTertiary(const    UCollator    *coll,
             } else {
                 tertiary = (uint8_t)((order & UCOL_REMOVE_CONTINUATION));
             }
+
             secondary = (uint8_t)((order >>= 8) & UCOL_BYTE_SIZE_MASK);
             primary2 = (uint8_t)((order >>= 8) & UCOL_BYTE_SIZE_MASK);
             primary1 = (uint8_t)(order >> 8);
+
+            if(coll->scriptReorderTable != NULL && notIsContinuation){
+                primary1 = coll->scriptReorderTable[primary1];
+            }
 
             /* Note: This code assumes that the table is well built i.e. not having 0 bytes where they are not supposed to be. */
             /* Usually, we'll have non-zero primary1 & primary2, except in cases of LatinOne and friends, when primary2 will   */
@@ -6140,6 +6156,11 @@ ucol_nextSortKeyPart(const UCollator *coll,
                 cces = 0;
                 level = UCOL_PSK_SECONDARY;
                 break;
+            }
+            if(!isContinuation(CE)){
+                if(coll->scriptReorderTable != NULL){
+                    CE = (coll->scriptReorderTable[CE>>24] << 24) | (CE & 0x00FFFFFF);
+                }
             }
             if(!isShiftedCE(CE, LVT, &wasShifted)) {
                 CE >>= UCOL_PRIMARYORDERSHIFT; /* get primary */
@@ -7262,6 +7283,44 @@ ucol_getStrength(const UCollator *coll)
     return ucol_getAttribute(coll, UCOL_STRENGTH, &status);
 }
 
+U_STABLE int32_t U_EXPORT2 
+ucol_getScriptOrder(const UCollator *coll,
+                    UScriptCode *dest,
+                    const int32_t destCapacity,
+                    UErrorCode *pErrorCode){
+    int i;
+    if(pErrorCode==NULL || U_FAILURE(*pErrorCode)){
+        return NULL;
+    }
+    if(coll->scriptOrder == NULL){
+        return 0;
+    }
+    if(coll->scriptOrderLength > destCapacity){
+        *pErrorCode = U_BUFFER_OVERFLOW_ERROR;
+    }
+    for(i = 0; (i < coll->scriptOrderLength) && (i < destCapacity); i++){
+        dest[i] = coll->scriptOrder[i];
+    }
+    return coll->scriptOrderLength;
+}
+
+U_STABLE void U_EXPORT2 
+ucol_setScriptOrder(UCollator *coll,
+                    const UScriptCode *scriptOrder,
+                    const int32_t scriptOrderLength){
+    int i;
+    if(coll->scriptOrder != NULL){
+        uprv_free(coll->scriptOrder);
+    }
+    coll->scriptOrder = (UScriptCode*) uprv_malloc(scriptOrderLength*sizeof(UScriptCode));
+    for(i = 0; i < scriptOrderLength; i++){
+        coll->scriptOrder[i] = scriptOrder[i];
+    }
+    coll->scriptOrderLength = scriptOrderLength;
+    ucol_buildScriptReorderTable(coll);
+}
+
+
 /****************************************************************************/
 /* Following are misc functions                                             */
 /* there are new APIs and some compatibility APIs                           */
@@ -7682,6 +7741,11 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
                 tOrder &= UCOL_PRIMARYMASK;
             } while(tOrder == 0);
 
+            if(coll->scriptReorderTable != NULL){
+                sOrder = (coll->scriptReorderTable[sOrder>>24] << 24) | (sOrder & 0x00FFFFFF);
+                tOrder = (coll->scriptReorderTable[tOrder>>24] << 24) | (tOrder & 0x00FFFFFF);
+            }
+
             // if both primaries are the same
             if(sOrder == tOrder) {
                 // and there are no more CEs, we advance to the next level
@@ -7733,6 +7797,9 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
                         }
                     }
                 } else { /* regular */
+                    if(coll->scriptReorderTable != NULL){
+                        sOrder = (coll->scriptReorderTable[sOrder>>24] << 24) | (sOrder & 0x00FFFFFF);
+                    }
                     if((sOrder & UCOL_PRIMARYMASK) > LVT) {
                         UCOL_CEBUF_PUT(&sCEs, sOrder, sColl, status);
                         break;
@@ -7780,6 +7847,9 @@ ucol_strcollRegular( collIterate *sColl, collIterate *tColl,
                         }
                     }
                 } else { /* regular */
+                    if(coll->scriptReorderTable != NULL){
+                        tOrder = (coll->scriptReorderTable[tOrder>>24] << 24) | (tOrder & 0x00FFFFFF);
+                    }
                     if((tOrder & UCOL_PRIMARYMASK) > LVT) {
                         UCOL_CEBUF_PUT(&tCEs, tOrder, tColl, status);
                         break;
@@ -8261,6 +8331,10 @@ ucol_strcollUseLatin1( const UCollator    *coll,
                     //return ucol_strcollRegular(coll, source, sLen, target, tLen, status);
                 }
             }
+        }
+        if(coll->scriptReorderTable != NULL){
+            sOrder = (coll->scriptReorderTable[sOrder>>24] << 24) | (sOrder & 0x00FFFFFF);
+            tOrder = (coll->scriptReorderTable[tOrder>>24] << 24) | (tOrder & 0x00FFFFFF);
         }
         if(endOfSource) { // source is finished, but target is not, say the result.
             return UCOL_LESS;

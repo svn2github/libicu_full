@@ -163,6 +163,336 @@ tryOpeningFromRules(UResourceBundle *collElem, UErrorCode *status) {
 }
 
 
+void ucol_buildScriptReorderTable(UCollator *coll){
+    UScriptCode defaultScriptOrder[256] = {
+        /* 0x00 */ USCRIPT_INVALID_CODE, /* USCRIPT_INVALID_CODE represents scripts that should not be reordered */
+        /* 0x01 */ USCRIPT_INVALID_CODE,
+        /* 0x02 */ USCRIPT_INVALID_CODE,
+        /* 0x03 */ USCRIPT_INVALID_CODE,
+        /* 0x04 */ USCRIPT_INVALID_CODE,
+        /* 0x05 */ USCRIPT_COMMON,
+        /* 0x06 */ USCRIPT_COMMON,
+        /* 0x07 */ USCRIPT_COMMON,
+        /* 0x08 */ USCRIPT_COMMON,
+        /* 0x09 */ USCRIPT_COMMON,
+        /* 0x0A */ USCRIPT_COMMON,
+        /* 0x0B */ USCRIPT_COMMON,
+        /* 0x0C */ USCRIPT_COMMON,
+        /* 0x0D */ USCRIPT_COMMON,
+        /* 0x0E */ USCRIPT_COMMON,
+        /* 0x0F */ USCRIPT_COMMON,
+        /* 0x10 */ USCRIPT_COMMON,
+        /* 0x11 */ USCRIPT_COMMON,
+        /* 0x12 */ USCRIPT_COMMON,
+        /* 0x13 */ USCRIPT_COMMON,
+        /* 0x14 */ USCRIPT_COMMON,
+        /* 0x15 */ USCRIPT_COMMON,
+        /* 0x16 */ USCRIPT_COMMON,
+        /* 0x17 */ USCRIPT_COMMON,
+        /* 0x18 */ USCRIPT_COMMON,
+        /* 0x19 */ USCRIPT_COMMON,
+        /* 0x1A */ USCRIPT_COMMON,
+        /* 0x1B */ USCRIPT_COMMON,
+        /* 0x1C */ USCRIPT_COMMON,
+        /* 0x1D */ USCRIPT_COMMON,
+        /* 0x1E */ USCRIPT_COMMON,
+        /* 0x1F */ USCRIPT_COMMON,
+        /* 0x20 */ USCRIPT_COMMON,
+        /* 0x21 */ USCRIPT_COMMON,
+        /* 0x22 */ USCRIPT_COMMON,
+        /* 0x23 */ USCRIPT_COMMON,
+        /* 0x24 */ USCRIPT_COMMON,
+        /* 0x25 */ USCRIPT_COMMON,
+        /* 0x26 */ USCRIPT_COMMON,
+        /* 0x27 */ USCRIPT_COMMON,
+        /* 0x28 */ USCRIPT_COMMON,
+        /* 0x29 */ USCRIPT_COMMON,
+        /* 0x2A */ USCRIPT_COMMON,
+        /* 0x2B */ USCRIPT_COMMON,
+        /* 0x2C */ USCRIPT_LATIN,
+        /* 0x2D */ USCRIPT_LATIN,
+        /* 0x2E */ USCRIPT_LATIN,
+        /* 0x2F */ USCRIPT_LATIN,
+        /* 0x30 */ USCRIPT_LATIN,
+        /* 0x31 */ USCRIPT_LATIN,
+        /* 0x32 */ USCRIPT_LATIN,
+        /* 0x33 */ USCRIPT_LATIN,
+        /* 0x34 */ USCRIPT_LATIN,
+        /* 0x35 */ USCRIPT_LATIN,
+        /* 0x36 */ USCRIPT_LATIN,
+        /* 0x37 */ USCRIPT_LATIN,
+        /* 0x38 */ USCRIPT_LATIN,
+        /* 0x39 */ USCRIPT_LATIN,
+        /* 0x3A */ USCRIPT_LATIN,
+        /* 0x3B */ USCRIPT_LATIN,
+        /* 0x3C */ USCRIPT_LATIN,
+        /* 0x3D */ USCRIPT_LATIN,
+        /* 0x3E */ USCRIPT_LATIN,
+        /* 0x3F */ USCRIPT_LATIN,
+        /* 0x40 */ USCRIPT_LATIN,
+        /* 0x41 */ USCRIPT_LATIN,
+        /* 0x42 */ USCRIPT_LATIN,
+        /* 0x43 */ USCRIPT_LATIN,
+        /* 0x44 */ USCRIPT_LATIN,
+        /* 0x45 */ USCRIPT_LATIN,
+        /* 0x46 */ USCRIPT_LATIN,
+        /* 0x47 */ USCRIPT_LATIN,
+        /* 0x48 */ USCRIPT_LATIN,
+        /* 0x49 */ USCRIPT_LATIN,
+        /* 0x4A */ USCRIPT_LATIN,
+        /* 0x4B */ USCRIPT_LATIN,
+        /* 0x4C */ USCRIPT_LATIN,
+        /* 0x4D */ USCRIPT_LATIN,
+        /* 0x4E */ USCRIPT_LATIN,
+        /* 0x4F */ USCRIPT_LATIN,
+        /* 0x50 */ USCRIPT_LATIN,
+        /* 0x51 */ USCRIPT_LATIN,
+        /* 0x52 */ USCRIPT_LATIN,
+        /* 0x53 */ USCRIPT_LATIN,
+        /* 0x54 */ USCRIPT_LATIN,
+        /* 0x55 */ USCRIPT_LATIN,
+        /* 0x56 */ USCRIPT_LATIN,
+        /* 0x57 */ USCRIPT_LATIN,
+        /* 0x58 */ USCRIPT_LATIN,
+        /* 0x59 */ USCRIPT_LATIN,
+        /* 0x5A */ USCRIPT_LATIN,
+        /* 0x5B */ USCRIPT_LATIN,
+        /* 0x5C */ USCRIPT_LATIN,
+        /* 0x5D */ USCRIPT_LATIN,
+        /* 0x5E */ USCRIPT_LATIN,
+        /* 0x5F */ USCRIPT_LATIN,
+        /* 0x60 */ USCRIPT_GREEK,
+        /* 0x61 */ USCRIPT_COPTIC,
+        /* 0x62 */ USCRIPT_CYRILLIC,
+        /* 0x63 */ USCRIPT_CYRILLIC,
+        /* 0x64 */ USCRIPT_GLAGOLITIC,
+        /* 0x65 */ USCRIPT_GEORGIAN,
+        /* 0x66 */ USCRIPT_ARMENIAN,
+        /* 0x67 */ USCRIPT_HEBREW,
+        /* 0x68 */ USCRIPT_ARABIC,
+        /* 0x69 */ USCRIPT_ARABIC,
+        /* 0x6A */ USCRIPT_SYRIAC,
+        /* 0x6B */ USCRIPT_THAANA,
+        /* 0x6C */ USCRIPT_NKO,
+        /* 0x6D */ USCRIPT_TIFINAGH,
+        /* 0x6E */ USCRIPT_ETHIOPIC,
+        /* 0x6F */ USCRIPT_ETHIOPIC,
+        /* 0x70 */ USCRIPT_ETHIOPIC,
+        /* 0x71 */ USCRIPT_ETHIOPIC,
+        /* 0x72 */ USCRIPT_DEVANAGARI,
+        /* 0x73 */ USCRIPT_BENGALI,
+        /* 0x74 */ USCRIPT_GURMUKHI,
+        /* 0x75 */ USCRIPT_GUJARATI,
+        /* 0x76 */ USCRIPT_ORIYA,
+        /* 0x77 */ USCRIPT_TAMIL,
+        /* 0x78 */ USCRIPT_TELUGU,
+        /* 0x79 */ USCRIPT_KANNADA,
+        /* 0x7A */ USCRIPT_MALAYALAM,
+        /* 0x7B */ USCRIPT_SINHALA,
+        /* 0x7C */ USCRIPT_SYLOTI_NAGRI,
+        /* 0x7D */ USCRIPT_SAURASHTRA,
+        /* 0x7E */ USCRIPT_SUNDANESE,
+        /* 0x7F */ USCRIPT_THAI,
+        /* 0x80 */ USCRIPT_LAO,
+        /* 0x81 */ USCRIPT_TIBETAN,
+        /* 0x82 */ USCRIPT_LEPCHA,
+        /* 0x83 */ USCRIPT_PHAGS_PA,
+        /* 0x84 */ USCRIPT_LIMBU,
+        /* 0x85 */ USCRIPT_TAGALOG,
+        /* 0x86 */ USCRIPT_HANUNOO,
+        /* 0x87 */ USCRIPT_BUHID,
+        /* 0x88 */ USCRIPT_TAGBANWA,
+        /* 0x89 */ USCRIPT_BUGINESE,
+        /* 0x8A */ USCRIPT_REJANG,
+        /* 0x8B */ USCRIPT_KAYAH_LI,
+        /* 0x8C */ USCRIPT_MYANMAR,
+        /* 0x8D */ USCRIPT_MYANMAR,
+        /* 0x8E */ USCRIPT_KHMER,
+        /* 0x8F */ USCRIPT_TAI_LE,
+        /* 0x90 */ USCRIPT_NEW_TAI_LUE,
+        /* 0x91 */ USCRIPT_CHAM,
+        /* 0x92 */ USCRIPT_BALINESE,
+        /* 0x93 */ USCRIPT_MONGOLIAN,
+        /* 0x94 */ USCRIPT_MONGOLIAN,
+        /* 0x95 */ USCRIPT_OL_CHIKI,
+        /* 0x96 */ USCRIPT_CHEROKEE,
+        /* 0x97 */ USCRIPT_CANADIAN_ABORIGINAL,
+        /* 0x98 */ USCRIPT_CANADIAN_ABORIGINAL,
+        /* 0x99 */ USCRIPT_CANADIAN_ABORIGINAL,
+        /* 0x9A */ USCRIPT_CANADIAN_ABORIGINAL,
+        /* 0x9B */ USCRIPT_CANADIAN_ABORIGINAL,
+        /* 0x9C */ USCRIPT_CANADIAN_ABORIGINAL,
+        /* 0x9D */ USCRIPT_OGHAM,
+        /* 0x9E */ USCRIPT_RUNIC,
+        /* 0x9F */ USCRIPT_VAI,
+        /* 0xA0 */ USCRIPT_VAI,
+        /* 0xA1 */ USCRIPT_VAI,
+        /* 0xA2 */ USCRIPT_HANGUL,
+        /* 0xA3 */ USCRIPT_HIRAGANA,
+        /* 0xA4 */ USCRIPT_BOPOMOFO,
+        /* 0xA5 */ USCRIPT_YI,
+        /* 0xA6 */ USCRIPT_YI,
+        /* 0xA7 */ USCRIPT_YI,
+        /* 0xA8 */ USCRIPT_YI,
+        /* 0xA9 */ USCRIPT_YI,
+        /* 0xAA */ USCRIPT_YI,
+        /* 0xAB */ USCRIPT_YI,
+        /* 0xAC */ USCRIPT_YI,
+        /* 0xAD */ USCRIPT_YI,
+        /* 0xAE */ USCRIPT_YI,
+        /* 0xAF */ USCRIPT_CARIAN,
+        /* 0xB0 */ USCRIPT_DESERET,
+        /* 0xB1 */ USCRIPT_LINEAR_B,
+        /* 0xB2 */ USCRIPT_LINEAR_B,
+        /* 0xB3 */ USCRIPT_UGARITIC,
+        /* 0xB4 */ USCRIPT_CUNEIFORM,
+        /* 0xB5 */ USCRIPT_CUNEIFORM,
+        /* 0xB6 */ USCRIPT_CUNEIFORM,
+        /* 0xB7 */ USCRIPT_CUNEIFORM,
+        /* 0xB8 */ USCRIPT_CUNEIFORM,
+        /* 0xB9 */ USCRIPT_CUNEIFORM,
+        /* 0xBA */ USCRIPT_CUNEIFORM,
+        /* 0xBB */ USCRIPT_INVALID_CODE,
+        /* 0xBC */ USCRIPT_INVALID_CODE,
+        /* 0xBD */ USCRIPT_INVALID_CODE,
+        /* 0xBE */ USCRIPT_INVALID_CODE,
+        /* 0xBF */ USCRIPT_INVALID_CODE,
+        /* 0xC0 */ USCRIPT_INVALID_CODE,
+        /* 0xC1 */ USCRIPT_INVALID_CODE,
+        /* 0xC2 */ USCRIPT_INVALID_CODE,
+        /* 0xC3 */ USCRIPT_INVALID_CODE,
+        /* 0xC4 */ USCRIPT_INVALID_CODE,
+        /* 0xC5 */ USCRIPT_INVALID_CODE,
+        /* 0xC6 */ USCRIPT_INVALID_CODE,
+        /* 0xC7 */ USCRIPT_INVALID_CODE,
+        /* 0xC8 */ USCRIPT_INVALID_CODE,
+        /* 0xC9 */ USCRIPT_INVALID_CODE,
+        /* 0xCA */ USCRIPT_INVALID_CODE,
+        /* 0xCB */ USCRIPT_INVALID_CODE,
+        /* 0xCC */ USCRIPT_INVALID_CODE,
+        /* 0xCD */ USCRIPT_INVALID_CODE,
+        /* 0xCE */ USCRIPT_INVALID_CODE,
+        /* 0xCF */ USCRIPT_INVALID_CODE,
+        /* 0xD0 */ USCRIPT_INVALID_CODE,
+        /* 0xD1 */ USCRIPT_INVALID_CODE,
+        /* 0xD2 */ USCRIPT_INVALID_CODE,
+        /* 0xD3 */ USCRIPT_INVALID_CODE,
+        /* 0xD4 */ USCRIPT_INVALID_CODE,
+        /* 0xD5 */ USCRIPT_INVALID_CODE,
+        /* 0xD6 */ USCRIPT_INVALID_CODE,
+        /* 0xD7 */ USCRIPT_INVALID_CODE,
+        /* 0xD8 */ USCRIPT_INVALID_CODE,
+        /* 0xD9 */ USCRIPT_INVALID_CODE,
+        /* 0xDA */ USCRIPT_INVALID_CODE,
+        /* 0xDB */ USCRIPT_INVALID_CODE,
+        /* 0xDC */ USCRIPT_INVALID_CODE,
+        /* 0xDD */ USCRIPT_INVALID_CODE,
+        /* 0xDE */ USCRIPT_INVALID_CODE,
+        /* 0xDF */ USCRIPT_INVALID_CODE,
+        /* 0xE0 */ USCRIPT_HAN,
+        /* 0xE1 */ USCRIPT_HAN,
+        /* 0xE2 */ USCRIPT_INVALID_CODE,
+        /* 0xE3 */ USCRIPT_INVALID_CODE,
+        /* 0xE4 */ USCRIPT_INVALID_CODE,
+        /* 0xE5 */ USCRIPT_INVALID_CODE,
+        /* 0xE6 */ USCRIPT_INVALID_CODE,
+        /* 0xE7 */ USCRIPT_INVALID_CODE,
+        /* 0xE8 */ USCRIPT_INVALID_CODE,
+        /* 0xE9 */ USCRIPT_INVALID_CODE,
+        /* 0xEA */ USCRIPT_INVALID_CODE,
+        /* 0xEB */ USCRIPT_INVALID_CODE,
+        /* 0xEC */ USCRIPT_INVALID_CODE,
+        /* 0xED */ USCRIPT_INVALID_CODE,
+        /* 0xEE */ USCRIPT_INVALID_CODE,
+        /* 0xEF */ USCRIPT_INVALID_CODE,
+        /* 0xF0 */ USCRIPT_INVALID_CODE,
+        /* 0xF1 */ USCRIPT_INVALID_CODE,
+        /* 0xF2 */ USCRIPT_INVALID_CODE,
+        /* 0xF3 */ USCRIPT_INVALID_CODE,
+        /* 0xF4 */ USCRIPT_INVALID_CODE,
+        /* 0xF5 */ USCRIPT_INVALID_CODE,
+        /* 0xF6 */ USCRIPT_INVALID_CODE,
+        /* 0xF7 */ USCRIPT_INVALID_CODE,
+        /* 0xF8 */ USCRIPT_INVALID_CODE,
+        /* 0xF9 */ USCRIPT_INVALID_CODE,
+        /* 0xFA */ USCRIPT_INVALID_CODE,
+        /* 0xFB */ USCRIPT_INVALID_CODE,
+        /* 0xFC */ USCRIPT_INVALID_CODE,
+        /* 0xFD */ USCRIPT_INVALID_CODE,
+        /* 0xFE */ USCRIPT_INVALID_CODE,
+        /* 0xFF */ USCRIPT_INVALID_CODE
+    };
+
+    int i;
+    UScriptCode *next;
+    UScriptCode *last;
+
+    // The lowest byte that hasn't been assigned a mapping
+    int toBottom = 0;
+    // The highest byte that hasn't been assigned a mapping
+    int toTop = 255;
+
+    bool filled[256];
+    for(i = 0; i < 256; i++){
+        filled[i] = false;
+    }
+
+    if(coll->scriptOrderLength != 0){
+        if(coll->scriptReorderTable == NULL){
+            coll->scriptReorderTable = (uint8_t*)uprv_malloc(256*sizeof(uint8_t));
+        }
+        /* Start from the front of the list and place each script we encounter at the
+           earliest possible locatation in the permutation table. If we encounter
+           UNKNOWN, start processing from the back, and place each script in the last
+           possible location. At each step, we also need to make sure that any scripts
+           that need to not be moved are copied to their same location in the final table.*/
+        next = coll->scriptOrder;
+        while(next < coll->scriptOrder+coll->scriptOrderLength){
+            if(*next != USCRIPT_UNKNOWN){
+                for (i = 0; i < 256; i++){
+                    while(defaultScriptOrder[toBottom] == USCRIPT_INVALID_CODE){
+                        filled[toBottom] = true;
+                        coll->scriptReorderTable[toBottom] = toBottom++;
+                    }
+                    if(defaultScriptOrder[i] == *next){
+                        filled[i] = true;
+                        coll->scriptReorderTable[i] = toBottom++;
+                    }
+                }
+            }else{
+                last = coll->scriptOrder+coll->scriptOrderLength-1;
+                while(last > next){
+                    for (i = 255; i >= 0; i--){
+                        while(defaultScriptOrder[toTop] == USCRIPT_INVALID_CODE){
+                            filled[toTop] = true;
+                            coll->scriptReorderTable[toTop] = toTop--;
+                        }
+                        if(defaultScriptOrder[i] == *last){
+                            filled[i] = true;
+                            coll->scriptReorderTable[i] = toTop--;
+                        }
+                    }
+                    --last;
+                }
+                break;
+            }
+            ++next;
+        }
+
+        /* Copy everything that's left over */
+        for (i = 0; i < 256; i++){
+            if(!filled[i]){
+                coll->scriptReorderTable[i] = toBottom++;
+            }
+        }
+    }else{
+        if(coll->scriptReorderTable != NULL){
+            uprv_free(coll->scriptReorderTable);
+            coll->scriptReorderTable = NULL;
+        }
+    }
+}
+
 // API in ucol_imp.h
 
 U_CFUNC UCollator*
@@ -471,6 +801,7 @@ ucol_openRulesForImport( const UChar        *rules,
         result->requestedLocale = NULL;
         ucol_setAttribute(result, UCOL_STRENGTH, strength, status);
         ucol_setAttribute(result, UCOL_NORMALIZATION_MODE, norm, status);
+        ucol_buildScriptReorderTable(result);
     } else {
 cleanup:
         if(result != NULL) {
@@ -571,6 +902,14 @@ ucol_equals(const UCollator *source, const UCollator *target) {
     // if any of attributes are different, collators are not equal
     for(i = 0; i < UCOL_ATTRIBUTE_COUNT; i++) {
         if(ucol_getAttribute(source, (UColAttribute)i, &status) != ucol_getAttribute(target, (UColAttribute)i, &status) || U_FAILURE(status)) {
+            return FALSE;
+        }
+    }
+    if(source->scriptOrderLength != target->scriptOrderLength){
+        return FALSE;
+    }
+    for(int i = 0; i < source->scriptOrderLength; i++){
+        if(source->scriptOrder[i] != target->scriptOrder[i]){
             return FALSE;
         }
     }
