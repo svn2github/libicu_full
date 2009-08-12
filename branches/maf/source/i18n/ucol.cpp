@@ -675,7 +675,7 @@ void ucol_setOptionsFromHeader(UCollator* result, UColOptionSet * opts, UErrorCo
     result->variableTopValue = opts->variableTopValue;
     result->alternateHandling = (UColAttributeValue)opts->alternateHandling;
     result->hiraganaQ = (UColAttributeValue)opts->hiraganaQ;
-    result->numericCollation = (UColAttributeValue)opts->numericCollations;
+    result->numericCollation = (UColAttributeValue)opts->numericCollation;
     result->scriptOrder = opts->scriptOrder;
     result->scriptOrderLength = opts->scriptOrderLength;
 
