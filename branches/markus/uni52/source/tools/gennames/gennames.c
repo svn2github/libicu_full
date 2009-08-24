@@ -1101,6 +1101,11 @@ generateAlgorithmicData(UNewDataMemory *pData, Options *storeOptions) {
         0, 5,
         sizeof(AlgorithmicRange)+PREFIX_LENGTH_4
     };
+    static AlgorithmicRange cjkExtC={
+        0x2a700, 0x2b734,
+        0, 5,
+        sizeof(AlgorithmicRange)+PREFIX_LENGTH_4
+    };
 
     static char jamo[]=
         "HANGUL SYLLABLE \0"
@@ -1133,7 +1138,10 @@ generateAlgorithmicData(UNewDataMemory *pData, Options *storeOptions) {
 
     size=0;
 
-    if(ucdVersion>=UNI_5_1) {
+    if(ucdVersion>=UNI_5_2) {
+        /* Unicode 5.2 and up has a longer CJK Unihan range than before */
+        cjk.rangeEnd=0x9FCB;
+    } else if(ucdVersion>=UNI_5_1) {
         /* Unicode 5.1 and up has a longer CJK Unihan range than before */
         cjk.rangeEnd=0x9FC3;
     } else if(ucdVersion>=UNI_4_1) {
@@ -1144,6 +1152,9 @@ generateAlgorithmicData(UNewDataMemory *pData, Options *storeOptions) {
     /* number of ranges of algorithmic names */
     if(!storeOptions->storeNames) {
         countAlgRanges=0;
+    } else if(ucdVersion>=UNI_5_2) {
+        /* Unicode 5.2 and up has 5 ranges including CJK Extension C */
+        countAlgRanges=5;
     } else if(ucdVersion>=UNI_3_1) {
         /* Unicode 3.1 and up has 4 ranges including CJK Extension B */
         countAlgRanges=4;
@@ -1211,6 +1222,19 @@ generateAlgorithmicData(UNewDataMemory *pData, Options *storeOptions) {
     if(countAlgRanges>=4) {
         if(pData!=NULL) {
             udata_writeBlock(pData, &cjkExtB, sizeof(AlgorithmicRange));
+            udata_writeString(pData, prefix, PREFIX_LENGTH);
+            if(PREFIX_LENGTH<PREFIX_LENGTH_4) {
+                udata_writePadding(pData, PREFIX_LENGTH_4-PREFIX_LENGTH);
+            }
+        } else {
+            size+=sizeof(AlgorithmicRange)+PREFIX_LENGTH_4;
+        }
+    }
+
+    /* range 4: cjk extension c */
+    if(countAlgRanges>=5) {
+        if(pData!=NULL) {
+            udata_writeBlock(pData, &cjkExtC, sizeof(AlgorithmicRange));
             udata_writeString(pData, prefix, PREFIX_LENGTH);
             if(PREFIX_LENGTH<PREFIX_LENGTH_4) {
                 udata_writePadding(pData, PREFIX_LENGTH_4-PREFIX_LENGTH);

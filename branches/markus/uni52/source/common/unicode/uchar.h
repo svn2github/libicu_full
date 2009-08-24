@@ -1291,8 +1291,63 @@ enum UBlockCode {
     /** @stable ICU 4.0 */
     UBLOCK_DOMINO_TILES = 171, /*[1F030]*/
 
+    /* New blocks in Unicode 5.2 */
+
+    /** @draft ICU 4.4 */
+    UBLOCK_SAMARITAN = 172, /*[0800]*/
+    /** @draft ICU 4.4 */
+    UBLOCK_UNIFIED_CANADIAN_ABORIGINAL_SYLLABICS_EXTENDED = 173, /*[18B0]*/
+    /** @draft ICU 4.4 */
+    UBLOCK_TAI_THAM = 174, /*[1A20]*/
+    /** @draft ICU 4.4 */
+    UBLOCK_VEDIC_EXTENSIONS = 175, /*[1CD0]*/
+    /** @draft ICU 4.4 */
+    UBLOCK_LISU = 176, /*[A4D0]*/
+    /** @draft ICU 4.4 */
+    UBLOCK_BAMUM = 177, /*[A6A0]*/
+    /** @draft ICU 4.4 */
+    UBLOCK_COMMON_INDIC_NUMBER_FORMS = 178, /*[A830]*/
+    /** @draft ICU 4.4 */
+    UBLOCK_DEVANAGARI_EXTENDED = 179, /*[A8E0]*/
+    /** @draft ICU 4.4 */
+    UBLOCK_HANGUL_JAMO_EXTENDED_A = 180, /*[A960]*/
+    /** @draft ICU 4.4 */
+    UBLOCK_JAVANESE = 181, /*[A980]*/
+    /** @draft ICU 4.4 */
+    UBLOCK_MYANMAR_EXTENDED_A = 182, /*[AA60]*/
+    /** @draft ICU 4.4 */
+    UBLOCK_TAI_VIET = 183, /*[AA80]*/
+    /** @draft ICU 4.4 */
+    UBLOCK_MEETEI_MAYEK = 184, /*[ABC0]*/
+    /** @draft ICU 4.4 */
+    UBLOCK_HANGUL_JAMO_EXTENDED_B = 185, /*[D7B0]*/
+    /** @draft ICU 4.4 */
+    UBLOCK_IMPERIAL_ARAMAIC = 186, /*[10840]*/
+    /** @draft ICU 4.4 */
+    UBLOCK_OLD_SOUTH_ARABIAN = 187, /*[10A60]*/
+    /** @draft ICU 4.4 */
+    UBLOCK_AVESTAN = 188, /*[10B00]*/
+    /** @draft ICU 4.4 */
+    UBLOCK_INSCRIPTIONAL_PARTHIAN = 189, /*[10B40]*/
+    /** @draft ICU 4.4 */
+    UBLOCK_INSCRIPTIONAL_PAHLAVI = 190, /*[10B60]*/
+    /** @draft ICU 4.4 */
+    UBLOCK_OLD_TURKIC = 191, /*[10C00]*/
+    /** @draft ICU 4.4 */
+    UBLOCK_RUMI_NUMERAL_SYMBOLS = 192, /*[10E60]*/
+    /** @draft ICU 4.4 */
+    UBLOCK_KAITHI = 193, /*[11080]*/
+    /** @draft ICU 4.4 */
+    UBLOCK_EGYPTIAN_HIEROGLYPHS = 194, /*[13000]*/
+    /** @draft ICU 4.4 */
+    UBLOCK_ENCLOSED_ALPHANUMERIC_SUPPLEMENT = 195, /*[1F100]*/
+    /** @draft ICU 4.4 */
+    UBLOCK_ENCLOSED_IDEOGRAPHIC_SUPPLEMENT = 196, /*[1F200]*/
+    /** @draft ICU 4.4 */
+    UBLOCK_CJK UNIFIED_IDEOGRAPHS_EXTENSION_C = 197, /*[2A700]*/
+
     /** @stable ICU 2.0 */
-    UBLOCK_COUNT = 172,
+    UBLOCK_COUNT = 198,
 
     /** @stable ICU 2.0 */
     UBLOCK_INVALID_CODE=-1
@@ -1465,6 +1520,8 @@ typedef enum UJoiningGroup {
     U_JG_KHAPH,     /**< @stable ICU 2.6 */
     U_JG_ZHAIN,     /**< @stable ICU 2.6 */
     U_JG_BURUSHASKI_YEH_BARREE, /**< @stable ICU 4.0 */
+    U_JG_FARSI_YEH, /**< @draft ICU 4.4 */
+    U_JG_NYA,       /**< @draft ICU 4.4 */
     U_JG_COUNT
 } UJoiningGroup;
 
