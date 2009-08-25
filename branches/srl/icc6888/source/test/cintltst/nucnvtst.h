@@ -18,6 +18,7 @@
 #include "cintltst.h"
 #include "unicode/utypes.h"
 
-static void TestInBufSizes(void);
+void addTestNewConvert(TestNode** root);
+
 
 #endif

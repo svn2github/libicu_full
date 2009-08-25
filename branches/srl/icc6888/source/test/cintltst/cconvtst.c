@@ -15,7 +15,7 @@
 #include "cintltst.h"
 
 void addTestConvert(TestNode**);
-void addTestNewConvert(TestNode**);
+#include "nucnvtst.h"
 void addTestConvertErrorCallBack(TestNode** root);
 void addTestEuroRegression(TestNode** root);
 void addTestConverterFallBack(TestNode** root);
