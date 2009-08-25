@@ -11,7 +11,7 @@
  *   PropertyAliases.txt
  *   PropertyValueAliases.txt
  *
- * Date: Sun Aug 23 20:57:34 2009
+ * Date: Tue Aug 25 10:04:39 2009
  * Unicode version: 5.2.0
  * Script: preparse.pl
  */
@@ -1094,17 +1094,17 @@ int32_t NAME_GROUP[] = {
     0, -124,            /* 336: "", "Carian" */
     0, -131,            /* 338: "", "Cham" */
     0, -133,            /* 340: "", "Cherokee" */
-    0, -110,            /* 342: "", "CJK_Unified_Ideographs_Extension_C" */
-    0, -100,            /* 344: "", "CJK_Compatibility" */
-    0, -101,            /* 346: "", "CJK_Compatibility_Forms" */
-    0, -102,            /* 348: "", "CJK_Compatibility_Ideographs" */
-    0, -103,            /* 350: "", "CJK_Compatibility_Ideographs_Supplement" */
-    0, -104,            /* 352: "", "CJK_Radicals_Supplement" */
-    0, -105,            /* 354: "", "CJK_Strokes" */
-    0, -106,            /* 356: "", "CJK_Symbols_And_Punctuation" */
-    0, -107,            /* 358: "", "CJK_Unified_Ideographs" */
-    0, -108,            /* 360: "", "CJK_Unified_Ideographs_Extension_A" */
-    0, -109,            /* 362: "", "CJK_Unified_Ideographs_Extension_B" */
+    0, -100,            /* 342: "", "CJK_Compatibility" */
+    0, -101,            /* 344: "", "CJK_Compatibility_Forms" */
+    0, -102,            /* 346: "", "CJK_Compatibility_Ideographs" */
+    0, -103,            /* 348: "", "CJK_Compatibility_Ideographs_Supplement" */
+    0, -104,            /* 350: "", "CJK_Radicals_Supplement" */
+    0, -105,            /* 352: "", "CJK_Strokes" */
+    0, -106,            /* 354: "", "CJK_Symbols_And_Punctuation" */
+    0, -107,            /* 356: "", "CJK_Unified_Ideographs" */
+    0, -108,            /* 358: "", "CJK_Unified_Ideographs_Extension_A" */
+    0, -109,            /* 360: "", "CJK_Unified_Ideographs_Extension_B" */
+    0, -110,            /* 362: "", "CJK_Unified_Ideographs_Extension_C" */
     0, -141,            /* 364: "", "Combining_Diacritical_Marks" */
     0, -143,            /* 366: "", "Combining_Diacritical_Marks_Supplement" */
     0, -144,            /* 368: "", "Combining_Half_Marks" */
@@ -1739,17 +1739,17 @@ const Alias VALUES_blk[] = {
     Alias((int32_t) UBLOCK_CARIAN, 336),
     Alias((int32_t) UBLOCK_CHAM, 338),
     Alias((int32_t) UBLOCK_CHEROKEE, 340),
-    Alias((int32_t) UBLOCK_CJK, 342),
-    Alias((int32_t) UBLOCK_CJK_COMPATIBILITY, 344),
-    Alias((int32_t) UBLOCK_CJK_COMPATIBILITY_FORMS, 346),
-    Alias((int32_t) UBLOCK_CJK_COMPATIBILITY_IDEOGRAPHS, 348),
-    Alias((int32_t) UBLOCK_CJK_COMPATIBILITY_IDEOGRAPHS_SUPPLEMENT, 350),
-    Alias((int32_t) UBLOCK_CJK_RADICALS_SUPPLEMENT, 352),
-    Alias((int32_t) UBLOCK_CJK_STROKES, 354),
-    Alias((int32_t) UBLOCK_CJK_SYMBOLS_AND_PUNCTUATION, 356),
-    Alias((int32_t) UBLOCK_CJK_UNIFIED_IDEOGRAPHS, 358),
-    Alias((int32_t) UBLOCK_CJK_UNIFIED_IDEOGRAPHS_EXTENSION_A, 360),
-    Alias((int32_t) UBLOCK_CJK_UNIFIED_IDEOGRAPHS_EXTENSION_B, 362),
+    Alias((int32_t) UBLOCK_CJK_COMPATIBILITY, 342),
+    Alias((int32_t) UBLOCK_CJK_COMPATIBILITY_FORMS, 344),
+    Alias((int32_t) UBLOCK_CJK_COMPATIBILITY_IDEOGRAPHS, 346),
+    Alias((int32_t) UBLOCK_CJK_COMPATIBILITY_IDEOGRAPHS_SUPPLEMENT, 348),
+    Alias((int32_t) UBLOCK_CJK_RADICALS_SUPPLEMENT, 350),
+    Alias((int32_t) UBLOCK_CJK_STROKES, 352),
+    Alias((int32_t) UBLOCK_CJK_SYMBOLS_AND_PUNCTUATION, 354),
+    Alias((int32_t) UBLOCK_CJK_UNIFIED_IDEOGRAPHS, 356),
+    Alias((int32_t) UBLOCK_CJK_UNIFIED_IDEOGRAPHS_EXTENSION_A, 358),
+    Alias((int32_t) UBLOCK_CJK_UNIFIED_IDEOGRAPHS_EXTENSION_B, 360),
+    Alias((int32_t) UBLOCK_CJK_UNIFIED_IDEOGRAPHS_EXTENSION_C, 362),
     Alias((int32_t) UBLOCK_COMBINING_DIACRITICAL_MARKS, 364),
     Alias((int32_t) UBLOCK_COMBINING_DIACRITICAL_MARKS_SUPPLEMENT, 366),
     Alias((int32_t) UBLOCK_COMBINING_HALF_MARKS, 368),
