@@ -1,7 +1,7 @@
 /*
 ******************************************************************************
 *                                                                            *
-* Copyright (C) 2001-2006, International Business Machines                   *
+* Copyright (C) 2001-2009, International Business Machines                   *
 *                Corporation and others. All Rights Reserved.                *
 *                                                                            *
 ******************************************************************************
@@ -48,4 +48,9 @@ void ucln_io_registerCleanup(ECleanupIOType type,
         gCleanupFunctions[type] = func;
     }
 }
+
+
+/**  Auto-client */ 
+#define UCLN_TYPE UCLN_IO
+#include "ucln_imp.h"
 
