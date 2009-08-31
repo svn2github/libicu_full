@@ -148,7 +148,6 @@ BOOL WINAPI uprv_DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved
 
 #endif
 
-
 #else
 #error This file can only be included once.
 #endif

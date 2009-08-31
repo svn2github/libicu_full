@@ -426,6 +426,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\ucln_ct.c"
+				>
+			</File>
+			<File
 				RelativePath=".\udbgutil.cpp"
 				>
 			</File>
