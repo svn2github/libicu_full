@@ -52,7 +52,7 @@ static void ucln_destructor()
 
 /* Windows: DllMain */
 
-#if 0 && defined (U_WINDOWS)
+#if defined (U_WINDOWS)
 /* 
  * ICU's own DllMain.
  */
