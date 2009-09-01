@@ -30,7 +30,7 @@ LDFLAGSICUI18N += $(LDFLAGS_FINI)
 CPPFLAGSCTESTFW += $(CPPFLAGS_FINI)
 LDFLAGSCTESTFW += $(LDFLAGS_FINI)
 
-# ICUIO, ICUI18N, CTESTFW
+# ICUUC, ICUIO, ICUI18N, CTESTFW
 
 ## We need to delete things prior to linking, or else we'll get
 ## SEVERE ERROR: output file in use ..  on AIX. 
