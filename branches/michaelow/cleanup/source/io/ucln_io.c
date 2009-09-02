@@ -19,6 +19,10 @@
 #include "umutex.h"
 #include "uassert.h"
 
+/**  Auto-client */
+#define UCLN_TYPE UCLN_IO
+#include "ucln_imp.h"
+
 /* Leave this copyright notice here! It needs to go somewhere in this library. */
 static const char copyright[] = U_COPYRIGHT_STRING;
 
@@ -47,10 +51,9 @@ void ucln_io_registerCleanup(ECleanupIOType type,
     {
         gCleanupFunctions[type] = func;
     }
+
+#if ENABLE_PER_LIBRARY_CLEANUP && (defined(UCLN_AUTO_ATEXIT) || defined(UCLN_AUTO_LOCAL))
+    ucln_registerAutomaticCleanup();
+#endif
 }
-
-
-/**  Auto-client */ 
-#define UCLN_TYPE UCLN_IO
-#include "ucln_imp.h"
 

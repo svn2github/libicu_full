@@ -91,5 +91,24 @@ U_CAPI void U_EXPORT2 ucln_cleanupOne(ECleanupLibraryType type);
 #define UCLN_NO_AUTO_CLEANUP 0
 #endif
 
+#if ENABLE_PER_LIBRARY_CLEANUP
+/**
+ * Definition for further customization of the automatic clean up functionality.
+ * Choose one
+ */
+/**
+ * Define this to use atexit when using automatic clean up functions (see ucln_imp.h)
+ */
+#ifndef UCLN_AUTO_ATEXIT
+/*#define UCLN_AUTO_ATEXIT*/
+#endif
+
+/**
+ * Define this to provide own implementation of automatic clean up functions (see ucln_imp.h)
+ */
+#ifndef UCLN_AUTO_LOCAL
+/*#define UCLN_AUTO_LOCAL*/
+#endif
+#endif
 
 #endif

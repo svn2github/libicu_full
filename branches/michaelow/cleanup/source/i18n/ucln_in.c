@@ -18,6 +18,10 @@
 #include "ucln_in.h"
 #include "uassert.h"
 
+/**  Auto-client for UCLN_I18N **/
+#define UCLN_TYPE UCLN_I18N
+#include "ucln_imp.h"
+
 /* Leave this copyright notice here! It needs to go somewhere in this library. */
 static const char copyright[] = U_COPYRIGHT_STRING;
 
@@ -46,11 +50,8 @@ void ucln_i18n_registerCleanup(ECleanupI18NType type,
     {
         gCleanupFunctions[type] = func;
     }
+#if ENABLE_PER_LIBRARY_CLEANUP && (defined(UCLN_AUTO_ATEXIT) || defined(UCLN_AUTO_LOCAL))
+    ucln_registerAutomaticCleanup();
+#endif
 }
-
-/**  Auto-client for UCLN_I18N **/
-#define UCLN_TYPE UCLN_I18N
-#include "ucln_imp.h"
-
-
 

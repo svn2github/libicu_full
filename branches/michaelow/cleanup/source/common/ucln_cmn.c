@@ -25,6 +25,10 @@
 #include "cmemory.h"
 #include "uassert.h"
 
+/**  Auto-client for UCLN_COMMON **/
+#define UCLN_TYPE UCLN_COMMON
+#include "ucln_imp.h"
+
 static cleanupFunc *gCommonCleanupFunctions[UCLN_COMMON_COUNT];
 static cleanupFunc *gLibCleanupFunctions[UCLN_COMMON];
 
@@ -35,19 +39,6 @@ static cleanupFunc *gLibCleanupFunctions[UCLN_COMMON];
 
 #if defined(UCLN_DEBUG_CLEANUP)
 #include <stdio.h>
-#endif
-
-#if 0
-/**
- * Give the library an opportunity to register an automatic cleanup. 
- * This may be called more than once.
- */
-static void ucln_registerAutomaticCleanup();
-
-/**
- * Unregister an automatic cleanup, if possible. Called from cleanup.
- */
-static void ucln_unRegisterAutomaticCleanup();
 #endif
 
 static void ucln_cleanup_internal(ECleanupLibraryType libType) 
@@ -85,6 +76,9 @@ ucln_common_registerCleanup(ECleanupCommonType type,
     {
         gCommonCleanupFunctions[type] = func;
     }
+#if ENABLE_PER_LIBRARY_CLEANUP && (defined(UCLN_AUTO_ATEXIT) || defined(UCLN_AUTO_LOCAL))
+    ucln_registerAutomaticCleanup();
+#endif
 }
 
 U_CAPI void U_EXPORT2
@@ -117,61 +111,3 @@ U_CFUNC UBool ucln_lib_cleanup(void) {
     /* ucln_unRegisterAutomaticCleanup(); */
     return TRUE;
 }
-
-
-
-#if 0
-/* Automatic registration code. Disabled, as it does not handle per-library cleanup. */
-
-
-/* ------------ automatic cleanup: registration. Choose ONE ------- */
-
-#if defined(UCLN_AUTO_LOCAL)
-/* To use:  
- *  1. define UCLN_AUTO_LOCAL, 
- *  2. create ucln_local_hook.c containing implementations of 
- *           static void ucln_registerAutomaticCleanup()
- *           static void ucln_unRegisterAutomaticCleanup()
- */
-#include "ucln_local_hook.c"
-
-#elif defined(UCLN_AUTO_ATEXIT)
-/*
- * Use the ANSI C 'atexit' function. Note that this mechanism does not
- * guarantee the order of cleanup relative to other users of ICU!
- */
-static UBool gAutoCleanRegistered = FALSE;
-
-static void ucln_atexit_handler() 
-{
-    ucln_common_is_closing();
-}
-
-static void ucln_registerAutomaticCleanup() 
-{
-    if(!gAutoCleanRegistered) {
-        gAutoCleanRegistered = TRUE;
-        atexit(&ucln_atexit_handler);
-    }
-}
-
-static void ucln_unRegisterAutomaticCleanup () {
-}
-
-#else 
-
-/*
- * "None of the above" - Default (null) implementation of registration.
- */
-static void ucln_registerAutomaticCleanup() 
-{
-}
-static void ucln_unRegisterAutomaticCleanup () {
-}
-
-#endif
-#endif
-
-/**  Auto-client for UCLN_COMMON **/
-#define UCLN_TYPE UCLN_COMMON
-#include "ucln_imp.h"

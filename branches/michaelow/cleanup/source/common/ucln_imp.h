@@ -19,10 +19,61 @@
 #define __UCLN_IMP_H__
 
 #include "ucln.h"
+#include <stdlib.h>
 
 #if ENABLE_PER_LIBRARY_CLEANUP
 
-#if defined (UCLN_FINI)
+/*
+ * The following declarations are for when UCLN_AUTO_LOCAL or UCLN_AUTO_ATEXIT
+ * are defined. They are commented out because they are static and will be defined
+ * later. The information is still here to provide some guidance for the developer
+ * who chooses to use UCLN_AUTO_LOCAL.
+ */
+/**
+ * Give the library an opportunity to register an automatic cleanup.
+ * This may be called more than once.
+ */
+/*static void ucln_registerAutomaticCleanup();*/
+/**
+ * Unregister an automatic cleanup, if possible. Called from cleanup.
+ */
+/*static void ucln_unRegisterAutomaticCleanup();*/
+
+/* ------------ automatic cleanup: registration. Choose ONE ------- */
+#if defined(UCLN_AUTO_LOCAL)
+/* To use:
+ *  1. define UCLN_AUTO_LOCAL,
+ *  2. create ucln_local_hook.c containing implementations of
+ *           static void ucln_registerAutomaticCleanup()
+ *           static void ucln_unRegisterAutomaticCleanup()
+ */
+#include "ucln_local_hook.c"
+
+#elif defined(UCLN_AUTO_ATEXIT)
+/*
+ * Use the ANSI C 'atexit' function. Note that this mechanism does not
+ * guarantee the order of cleanup relative to other users of ICU!
+ */
+static UBool gAutoCleanRegistered = FALSE;
+
+static void ucln_atexit_handler()
+{
+    ucln_cleanupOne(UCLN_TYPE);
+}
+
+static void ucln_registerAutomaticCleanup()
+{
+    if(!gAutoCleanRegistered) {
+        gAutoCleanRegistered = TRUE;
+        atexit(&ucln_atexit_handler);
+    }
+}
+
+static void ucln_unRegisterAutomaticCleanup () {
+}
+/* ------------end of automatic cleanup: registration. ------- */
+
+#elif defined (UCLN_FINI)
 /**
  * If UCLN_FINI is defined, it is the (versioned, etc) name of a cleanup
  * entrypoint. Add a stub to call ucln_common_is_closing.   
@@ -37,9 +88,8 @@ U_CAPI void U_EXPORT2 UCLN_FINI ()
      ucln_cleanupOne(UCLN_TYPE);
 #endif
 }
-#endif
 
-#if !UCLN_NO_AUTO_CLEANUP
+#elif !UCLN_NO_AUTO_CLEANUP
 /* GCC */
 #if defined(__GNUC__)
 /* GCC - use __attribute((destructor)) */
