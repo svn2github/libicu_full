@@ -701,6 +701,7 @@ LIBCXXFLAGS
 LIBCFLAGS
 U_USE_GCC_VISIBILITY_ATTRIBUTE
 U_DEFAULT_SHOW_DRAFT
+ENABLE_PER_LIBRARY_CLEANUP
 ENABLE_RELEASE
 ENABLE_DEBUG
 ENABLE_STATIC
@@ -791,6 +792,7 @@ enable_shared
 enable_static
 enable_debug
 enable_release
+enable_lib_cleanup
 enable_draft
 enable_renaming
 enable_tracing
@@ -1448,6 +1450,7 @@ Optional Features:
   --enable-static         build static libraries default=no
   --enable-debug          build debug libraries default=no
   --enable-release        build release libraries default=yes
+  --enable-lib-cleanup    enable per library cleanup default=no
   --enable-draft          enable draft APIs default=yes
   --enable-renaming       add a version suffix to symbols default=yes
   --enable-tracing        enable function and data tracing default=no
@@ -5006,6 +5009,23 @@ ENABLE_RELEASE=1
 if test "${enable_release+set}" = set; then
   enableval=$enable_release;  case "${enableval}" in
          no) enabled=no; ENABLE_RELEASE=0 ;;
+         *) ;;
+    esac
+fi
+
+{ $as_echo "$as_me:$LINENO: result: $enabled" >&5
+$as_echo "$enabled" >&6; }
+
+
+# Check whether to build shared libraries
+{ $as_echo "$as_me:$LINENO: checking whether to enable per library cleanup" >&5
+$as_echo_n "checking whether to enable per library cleanup... " >&6; }
+enabled=no
+ENABLE_PER_LIBRARY_CLEANUP=0
+# Check whether --enable-lib-cleanup was given.
+if test "${enable_lib_cleanup+set}" = set; then
+  enableval=$enable_lib_cleanup;  case "${enableval}" in
+         yes) enabled=yes; ENABLE_PER_LIBRARY_CLEANUP=1 ;;
          *) ;;
     esac
 fi

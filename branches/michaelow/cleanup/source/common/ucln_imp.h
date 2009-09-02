@@ -20,6 +20,8 @@
 
 #include "ucln.h"
 
+#if ENABLE_PER_LIBRARY_CLEANUP
+
 #if defined (UCLN_FINI)
 /**
  * If UCLN_FINI is defined, it is the (versioned, etc) name of a cleanup
@@ -78,7 +80,7 @@ BOOL WINAPI _CRT_INIT(HINSTANCE, DWORD, LPVOID);
 BOOL WINAPI DllMain(HINSTANCE, DWORD, LPVOID); 
 */
 
-BOOL WINAPI uprv_DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
+BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
     BOOL status = TRUE;
     printf("Reason %d,_pRawDllMain = %p - type=%d", fdwReason,  NULL, UCLN_TYPE);
@@ -152,6 +154,8 @@ BOOL WINAPI uprv_DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved
 #endif
 
 #endif
+
+#endif /* ENABLE_PER_LIBRARY_CLEANUP */
 
 #else
 #error This file can only be included once.

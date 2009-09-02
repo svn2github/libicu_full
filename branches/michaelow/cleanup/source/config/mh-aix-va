@@ -16,6 +16,7 @@ CXXFLAGS += -qproto -qroconst
 # If you readd this line, you must change the SO value
 #LDFLAGS += -brtl
 
+ifeq ($(ENABLE_PER_LIBRARY_CLEANUP),1)
 # set up init point.
 UCLN_FINI =  ucln_fini$(TARGET_STUBNAME)_$(SO_TARGET_VERSION_MAJOR)$(ICULIBSUFFIXCNAME)
 CPPFLAGS_FINI = -DUCLN_FINI=$(UCLN_FINI)
@@ -31,6 +32,7 @@ CPPFLAGSCTESTFW += $(CPPFLAGS_FINI)
 LDFLAGSCTESTFW += $(LDFLAGS_FINI)
 
 # ICUUC, ICUIO, ICUI18N, CTESTFW
+endif
 
 ## We need to delete things prior to linking, or else we'll get
 ## SEVERE ERROR: output file in use ..  on AIX. 
