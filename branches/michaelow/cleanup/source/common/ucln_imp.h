@@ -26,7 +26,7 @@
 /**
  * If UCLN_FINI is defined, it is the (versioned, etc) name of a cleanup
  * entrypoint. Add a stub to call ucln_common_is_closing.   
- * Used on AIX.
+ * Used on AIX, Solaris, and HP-UX
  */
 U_CAPI void U_EXPORT2 UCLN_FINI (void);
 
@@ -70,82 +70,34 @@ static void ucln_destructor()
 #   define NOIME
 #   define NOMCX
 #   include <windows.h>
-#   include <stdio.h>
 /*
- * Pre-existing dllmains, to be called in this order (or reverse order for deinit)
- * TODO: Do we need this if we are not going to call them?
- *
-BOOL (WINAPI *_pRawDllMain)(HINSTANCE, DWORD, LPVOID);
-BOOL WINAPI _CRT_INIT(HINSTANCE, DWORD, LPVOID);
-BOOL WINAPI DllMain(HINSTANCE, DWORD, LPVOID); 
-*/
-
+ * This is a stub DllMain function with icu specific process handling code.
+ */
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
     BOOL status = TRUE;
-    printf("Reason %d,_pRawDllMain = %p - type=%d", fdwReason,  NULL, UCLN_TYPE);
-    fflush(stdout);
+
     switch(fdwReason) {
         case DLL_PROCESS_ATTACH:
              /* ICU does not trap process attach, but must pass these through properly. */
-            /* TODO: Commented out.  Do we need to call these?
-            if(status && _pRawDllMain != NULL) {
-                status = (*_pRawDllMain)(hinstDLL, fdwReason, lpvReserved);
-            }
-            if(status) {
-                status = _CRT_INIT(hinstDLL, fdwReason, lpvReserved);
-            }
-            if(status) {
-                status = DllMain(hinstDLL, fdwReason, lpvReserved);
-            }*/
-
             /* ICU specific process attach could go here */
             break;
 
         case DLL_PROCESS_DETACH:
             /* Here is the one we actually care about. */
+
             ucln_cleanupOne(UCLN_TYPE);
 
-            /* TODO: Commented out.  Do we need to call these?
-           if(status) {
-                status = DllMain(hinstDLL, fdwReason, lpvReserved);
-            }
-            if(status) {
-                status = _CRT_INIT(hinstDLL, fdwReason, lpvReserved);
-            }
-            if(status && _pRawDllMain != NULL) {
-                status = (*_pRawDllMain)(hinstDLL, fdwReason, lpvReserved);
-            }*/
             break;
 
         case DLL_THREAD_ATTACH:
             /* ICU does not trap thread attach, but must pass these through properly. */
-            /* TODO: Commented out.  Do we need to call these?
-            if(status && _pRawDllMain != NULL) {
-                status = (*_pRawDllMain)(hinstDLL, fdwReason, lpvReserved);
-            }
-            if(status) {
-                status = _CRT_INIT(hinstDLL, fdwReason, lpvReserved);
-            }
-            if(status) {
-                status = DllMain(hinstDLL, fdwReason, lpvReserved);
-            }*/
             /* ICU specific thread attach could go here */
             break;
 
         case DLL_THREAD_DETACH:
             /* ICU does not trap thread detach, but must pass these through properly. */
             /* ICU specific thread detach could go here */
-            /* TODO: Commented out.  Do we need to call these?
-            if(status) {
-                status = DllMain(hinstDLL, fdwReason, lpvReserved);
-            }
-            if(status) {
-                status = _CRT_INIT(hinstDLL, fdwReason, lpvReserved);
-            }
-            if(status && _pRawDllMain != NULL) {
-                status = (*_pRawDllMain)(hinstDLL, fdwReason, lpvReserved);
-            }*/
             break;
 
     }

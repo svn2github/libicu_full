@@ -186,8 +186,8 @@ typedef unsigned int uint32_t;
 #endif
 
 /** 1 or 0 to enable or disable per library cleanup. If undefined, default is: enabled. */
-#ifndef ENABLE_PER_LIBRARY_EXIT_CLEANUP
-#define ENABLE_PER_LIBRARY_EXIT_CLEANUP 1
+#ifndef ENABLE_PER_LIBRARY_CLEANUP
+#define ENABLE_PER_LIBRARY_CLEANUP 1
 #endif
 
 /* On strong memory model CPUs (e.g. x86 CPUs), we use a safe & quick double check mutex lock. */
