@@ -21,7 +21,7 @@
 #include "ucln.h"
 #include <stdlib.h>
 
-#if ENABLE_PER_LIBRARY_CLEANUP
+#if !UCLN_NO_AUTO_CLEANUP
 
 /*
  * The following declarations are for when UCLN_AUTO_LOCAL or UCLN_AUTO_ATEXIT
@@ -76,22 +76,17 @@ static void ucln_unRegisterAutomaticCleanup () {
 #elif defined (UCLN_FINI)
 /**
  * If UCLN_FINI is defined, it is the (versioned, etc) name of a cleanup
- * entrypoint. Add a stub to call ucln_common_is_closing.   
+ * entrypoint. Add a stub to call ucln_cleanupOne
  * Used on AIX, Solaris, and HP-UX
  */
 U_CAPI void U_EXPORT2 UCLN_FINI (void);
 
 U_CAPI void U_EXPORT2 UCLN_FINI ()
 {
-#if !UCLN_NO_AUTO_CLEANUP
     /* This function must be defined, if UCLN_FINI is defined, else link error. */
      ucln_cleanupOne(UCLN_TYPE);
-#endif
 }
-
-#elif !UCLN_NO_AUTO_CLEANUP
-/* GCC */
-#if defined(__GNUC__)
+#elif defined(__GNUC__)
 /* GCC - use __attribute((destructor)) */
 static void ucln_destructor()   __attribute__((destructor)) ;
 
@@ -99,12 +94,9 @@ static void ucln_destructor()
 {
     ucln_cleanupOne(UCLN_TYPE);
 }
-#endif
-
 
 /* Windows: DllMain */
-
-#if defined (U_WINDOWS)
+#elif defined (U_WINDOWS)
 /* 
  * ICU's own DllMain.
  */
@@ -155,9 +147,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 }
 #endif
 
-#endif
-
-#endif /* ENABLE_PER_LIBRARY_CLEANUP */
+#endif /* UCLN_NO_AUTO_CLEANUP */
 
 #else
 #error This file can only be included once.

@@ -52,7 +52,7 @@ void ucln_io_registerCleanup(ECleanupIOType type,
         gCleanupFunctions[type] = func;
     }
 
-#if ENABLE_PER_LIBRARY_CLEANUP && (defined(UCLN_AUTO_ATEXIT) || defined(UCLN_AUTO_LOCAL))
+#if !UCLN_NO_AUTO_CLEANUP && (defined(UCLN_AUTO_ATEXIT) || defined(UCLN_AUTO_LOCAL))
     ucln_registerAutomaticCleanup();
 #endif
 }

@@ -185,9 +185,9 @@ typedef unsigned int uint32_t;
 #define ICU_USE_THREADS 1
 #endif
 
-/** 1 or 0 to enable or disable per library cleanup. If undefined, default is: enabled. */
-#ifndef ENABLE_PER_LIBRARY_CLEANUP
-#define ENABLE_PER_LIBRARY_CLEANUP 1
+/** 0 or 1 to enable or disable auto cleanup of libraries. If undefined, default is: enabled. */
+#ifndef UCLN_NO_AUTO_CLEANUP
+#define UCLN_NO_AUTO_CLEANUP 0
 #endif
 
 /* On strong memory model CPUs (e.g. x86 CPUs), we use a safe & quick double check mutex lock. */

@@ -76,7 +76,7 @@ ucln_common_registerCleanup(ECleanupCommonType type,
     {
         gCommonCleanupFunctions[type] = func;
     }
-#if ENABLE_PER_LIBRARY_CLEANUP && (defined(UCLN_AUTO_ATEXIT) || defined(UCLN_AUTO_LOCAL))
+#if !UCLN_NO_AUTO_CLEANUP && (defined(UCLN_AUTO_ATEXIT) || defined(UCLN_AUTO_LOCAL))
     ucln_registerAutomaticCleanup();
 #endif
 }
