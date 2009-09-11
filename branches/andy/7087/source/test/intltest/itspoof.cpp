@@ -321,7 +321,7 @@ void IntlTestSpoof::testConfData() {
     FILE     *f = NULL;
     f = fopen(buffer, "rb");
     if (f == 0) {
-        errln("Skipping test testConfData.  File confusables.txt not accessible.");
+        errln("Skipping test spoof/testConfData.  File confusables.txt not accessible.");
         return;
     }
     fseek(f, 0, SEEK_END);
@@ -338,7 +338,6 @@ void IntlTestSpoof::testConfData() {
     fclose(f);
     UnicodeString confusablesTxt = UnicodeString::fromUTF8(StringPiece(fileBuf, fileSize));
 
-    printf("file length from string is %d\n", confusablesTxt.length());
     USpoofChecker *sc = uspoof_open(&status);
     TEST_ASSERT_SUCCESS(status);
 
@@ -386,7 +385,7 @@ void IntlTestSpoof::testConfData() {
             int i = 0;
             while (i < actual.length()) {
                 appendHexUChar(line, actual.char32At(i));
-                i = line.moveIndex32(i, 1);
+                i = actual.moveIndex32(i, 1);
             }
             errln(line);
         }
