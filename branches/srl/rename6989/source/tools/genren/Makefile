@@ -11,7 +11,7 @@ top_srcdir = $(TOP)
 
 top_builddir = $(TOP)
 
--include $(TOP)/icudefs.mk
+include $(TOP)/icudefs.mk
 ICUDIR=ICUunrenamed
 #SO=so
 
