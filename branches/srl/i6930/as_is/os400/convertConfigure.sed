@@ -14,8 +14,8 @@ s/rm[ ]*-f[ ]*-r/del -f/g
 s/rm[ ]*-rf/del -f/g
 s/rm[ ]*-fr/del -f/g
 s/rm[ ]*-f/del -f/g
-#don't clean up some awks for debugging
-s/[ ]*del -f [^ ]*.awk/#&/
+##don't clean up some awks for debugging
+#s/[ ]*del -f [^ ]*.awk/#&/
 # Borne shell isn't always available on i5/OS
 s/\/bin\/sh/\/usr\/bin\/qsh/g
 # no diff in qsh the equivalent is cmp
