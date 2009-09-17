@@ -1,5 +1,5 @@
 # LineBreak-5.2.0.txt
-# Date: 2009-06-09, 17:43:00 PDT [KW]
+# Date: 2009-08-17, 12:21:00 PDT [KW]
 #
 # Line Break Properties
 #
@@ -17,7 +17,7 @@
 #         "BK", "CR", "LF", "CM", "SG", "GL", "CB", "SP", "ZW",
 #         "NL", "WJ", "JL", "JV", "JT", "H2", "H3"
 #   Informative:
-#         "XX", "OP", "CL", "QU", "NS", "EX", "SY",
+#         "XX", "OP", "CL", "CP", "QU", "NS", "EX", "SY",
 #         "IS", "PR", "PO", "NU", "AL", "ID", "IN", "HY",
 #         "BB", "BA", "SA", "AI", "B2"
 #  - All code points, assigned and unassigned, that are not listed
@@ -57,7 +57,7 @@
 0026;AL
 0027;QU
 0028;OP
-0029;CL
+0029;CP
 002A;AL
 002B;PR
 002C;IS
@@ -71,7 +71,7 @@
 0040..005A;AL
 005B;OP
 005C;PR
-005D;CL
+005D;CP
 005E..007A;AL
 007B;OP
 007C;BA

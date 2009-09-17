@@ -1,5 +1,5 @@
 # DerivedNumericValues-5.2.0.txt
-# Date: 2009-05-22, 18:51:30 GMT [MD]
+# Date: 2009-08-22, 04:58:28 GMT [MD]
 #
 # Unicode Character Database
 # Copyright (c) 1991-2009 Unicode, Inc.
@@ -326,9 +326,10 @@ FF11          ; 1.0 ; ; 1 # Nd       FULLWIDTH DIGIT ONE
 1D7E3         ; 1.0 ; ; 1 # Nd       MATHEMATICAL SANS-SERIF DIGIT ONE
 1D7ED         ; 1.0 ; ; 1 # Nd       MATHEMATICAL SANS-SERIF BOLD DIGIT ONE
 1D7F7         ; 1.0 ; ; 1 # Nd       MATHEMATICAL MONOSPACE DIGIT ONE
+1F102         ; 1.0 ; ; 1 # No       DIGIT ONE COMMA
 2092A         ; 1.0 ; ; 1 # Lo       CJK UNIFIED IDEOGRAPH-2092A
 
-# Total code points: 90
+# Total code points: 91
 
 # ================================================
 
@@ -427,10 +428,10 @@ FF12          ; 2.0 ; ; 2 # Nd       FULLWIDTH DIGIT TWO
 1D7E4         ; 2.0 ; ; 2 # Nd       MATHEMATICAL SANS-SERIF DIGIT TWO
 1D7EE         ; 2.0 ; ; 2 # Nd       MATHEMATICAL SANS-SERIF BOLD DIGIT TWO
 1D7F8         ; 2.0 ; ; 2 # Nd       MATHEMATICAL MONOSPACE DIGIT TWO
-1F102..1F103  ; 2.0 ; ; 2 # No   [2] DIGIT ONE COMMA..DIGIT TWO COMMA
+1F103         ; 2.0 ; ; 2 # No       DIGIT TWO COMMA
 22390         ; 2.0 ; ; 2 # Lo       CJK UNIFIED IDEOGRAPH-22390
 
-# Total code points: 95
+# Total code points: 94
 
 # ================================================
 

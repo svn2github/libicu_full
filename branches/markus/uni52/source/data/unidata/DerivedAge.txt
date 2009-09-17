@@ -1,5 +1,5 @@
 # DerivedAge-5.2.0.txt
-# Date: 2009-05-30, 03:42:28 GMT [MD]
+# Date: 2009-08-22, 17:29:35 GMT [MD]
 #
 # Unicode Character Database
 # Copyright (c) 1991-2009 Unicode, Inc.
@@ -8,10 +8,6 @@
 #
 # Unicode Character Database: Derived Property Data
 # This file shows when various code points were first assigned in Unicode.
-#
-# Caution: When using the Age *property*, all assigned code points
-# in each version are included, not just the newly assigned code points.
-# For more information, see http://www.unicode.org/reports/tr18/
 #
 # Notes:
 #
@@ -37,7 +33,13 @@
 
 # ================================================
 
-# Property:	Age
+# Property: Age
+#
+# Note: When using the Age property in regular expressions,
+# an expression such as "\p{age=3.0}" matches all of the code points
+# assigned in Version 3.0--that is, all the code points with a value
+# less than or equal to 3.0 for the Age property.
+# For more information, see [http://www.unicode.org/reports/tr18/].
 
 #  All code points not explicitly listed for Age
 #  have the value unassigned.

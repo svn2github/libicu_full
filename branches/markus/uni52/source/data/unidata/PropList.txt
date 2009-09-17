@@ -1,5 +1,5 @@
 # PropList-5.2.0.txt
-# Date: 2009-06-09, 21:40:23 GMT [MD]
+# Date: 2009-08-22, 04:58:40 GMT [MD]
 #
 # Unicode Character Database
 # Copyright (c) 1991-2009 Unicode, Inc.

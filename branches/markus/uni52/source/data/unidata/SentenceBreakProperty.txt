@@ -1,5 +1,5 @@
 # SentenceBreakProperty-5.2.0.txt
-# Date: 2009-06-09, 21:40:27 GMT [MD]
+# Date: 2009-08-22, 04:58:44 GMT [MD]
 #
 # Unicode Character Database
 # Copyright (c) 1991-2009 Unicode, Inc.
@@ -1894,6 +1894,8 @@ AAB5..AAB6    ; OLetter
 AAB9..AABD    ; OLetter
 AAC0          ; OLetter
 AAC2          ; OLetter
+AADB..AADC    ; OLetter
+AADD          ; OLetter
 ABC0..ABE2    ; OLetter
 AC00..D7A3    ; OLetter
 D7B0..D7C6    ; OLetter
@@ -1968,7 +1970,7 @@ FFDA..FFDC    ; OLetter
 2A700..2B734  ; OLetter
 2F800..2FA1D  ; OLetter
 
-# Total code points: 96402
+# Total code points: 96405
 
 # ================================================
 

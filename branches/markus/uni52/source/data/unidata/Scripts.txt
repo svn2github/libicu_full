@@ -1,5 +1,5 @@
 # Scripts-5.2.0.txt
-# Date: 2009-06-09, 22:08:59 GMT [MD]
+# Date: 2009-08-22, 04:58:43 GMT [MD]
 #
 # Unicode Character Database
 # Copyright (c) 1991-2009 Unicode, Inc.
@@ -1835,7 +1835,9 @@ AABE..AABF    ; Tai_Viet
 AAC0          ; Tai_Viet
 AAC1          ; Tai_Viet
 AAC2          ; Tai_Viet
-AADB..AADF    ; Tai_Viet
+AADB..AADC    ; Tai_Viet
+AADD          ; Tai_Viet
+AADE..AADF    ; Tai_Viet
 
 # Total code points: 72
 

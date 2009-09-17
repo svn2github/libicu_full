@@ -1,5 +1,5 @@
 # DerivedBidiClass-5.2.0.txt
-# Date: 2009-06-09, 21:39:54 GMT [MD]
+# Date: 2009-08-26, 00:50:45 GMT [MD]
 #
 # Unicode Character Database
 # Copyright (c) 1991-2009 Unicode, Inc.
@@ -12,8 +12,8 @@
 # Unlike other properties, unassigned code points in blocks
 # reserved for right-to-left scripts are given either types R or AL.
 #
-# The unassigned code points that default to AL are:
-#     U+0600..U+07BF, U+FB50..U+FDFF, U+FE70..U+FEFF
+# The unassigned code points that default to AL are in the ranges:
+#     [\u0600-\u07BF \uFB50-\uFDFF \uFE70-\uFEFF]
 #
 #     Arabic:            U+0600  -  U+06FF
 #     Syriac:            U+0700  -  U+074F
@@ -25,8 +25,8 @@
 #                        U+FE70  -  U+FEFF
 #           minus noncharacter code points.
 #
-# The unassigned code points that default to R are:
-#     U+0590..U+05FF, U+07C0..U+08FF, U+FB1D  -  U+FB4F, U+10800..U+10FFF, U+1E800 - U+1EFFF
+# The unassigned code points that default to R are in the ranges:
+#     [\u0590-\u05FF \u07C0-\u08FF \uFB1D-\uFB4F \U00010800-\U00010FFF \U0001E800-\U0001EFFF]
 #
 #     Hebrew:            U+0590  -  U+05FF
 #     NKo:               U+07C0  -  U+07FF
@@ -605,7 +605,9 @@ AAB5..AAB6    ; L # Lo   [2] TAI VIET VOWEL E..TAI VIET VOWEL O
 AAB9..AABD    ; L # Lo   [5] TAI VIET VOWEL UEA..TAI VIET VOWEL AN
 AAC0          ; L # Lo       TAI VIET TONE MAI NUENG
 AAC2          ; L # Lo       TAI VIET TONE MAI SONG
-AADB..AADF    ; L # So   [5] TAI VIET SYMBOL KON..TAI VIET SYMBOL KOI KOI
+AADB..AADC    ; L # Lo   [2] TAI VIET SYMBOL KON..TAI VIET SYMBOL NUENG
+AADD          ; L # Lm       TAI VIET SYMBOL SAM
+AADE..AADF    ; L # Po   [2] TAI VIET SYMBOL HO HOI..TAI VIET SYMBOL KOI KOI
 ABC0..ABE2    ; L # Lo  [35] MEETEI MAYEK LETTER KOK..MEETEI MAYEK LETTER I LONSUM
 ABE3..ABE4    ; L # Mc   [2] MEETEI MAYEK VOWEL SIGN ONAP..MEETEI MAYEK VOWEL SIGN INAP
 ABE6..ABE7    ; L # Mc   [2] MEETEI MAYEK VOWEL SIGN YENAP..MEETEI MAYEK VOWEL SIGN SOUNAP
@@ -836,11 +838,10 @@ FB46..FB4F    ; R # Lo  [10] HEBREW LETTER TSADI WITH DAGESH..HEBREW LIGATURE AL
 10B80..10BFF  ; R # Cn [128] <reserved-10B80>..<reserved-10BFF>
 10C00..10C48  ; R # Lo  [73] OLD TURKIC LETTER ORKHON A..OLD TURKIC LETTER ORKHON BASH
 10C49..10E5F  ; R # Cn [535] <reserved-10C49>..<reserved-10E5F>
-10E60..10E7E  ; R # No  [31] RUMI DIGIT ONE..RUMI FRACTION TWO THIRDS
 10E7F..10FFF  ; R # Cn [385] <reserved-10E7F>..<reserved-10FFF>
 1E800..1EFFF  ; R # Cn [2048] <reserved-1E800>..<reserved-1EFFF>
 
-# Total code points: 4472
+# Total code points: 4441
 
 # ================================================
 
@@ -920,8 +921,9 @@ FFE5..FFE6    ; ET # Sc   [2] FULLWIDTH YEN SIGN..FULLWIDTH WON SIGN
 0660..0669    ; AN # Nd  [10] ARABIC-INDIC DIGIT ZERO..ARABIC-INDIC DIGIT NINE
 066B..066C    ; AN # Po   [2] ARABIC DECIMAL SEPARATOR..ARABIC THOUSANDS SEPARATOR
 06DD          ; AN # Cf       ARABIC END OF AYAH
+10E60..10E7E  ; AN # No  [31] RUMI DIGIT ONE..RUMI FRACTION TWO THIRDS
 
-# Total code points: 17
+# Total code points: 48
 
 # ================================================
 

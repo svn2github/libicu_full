@@ -38,17 +38,19 @@ python ucdcopy.py "C:\Documents and Settings\mscherer\My Documents\unicode\ucd\5
 - PropertyAliases.txt
   moved from numeric to enumerated:
     ccc       ; Canonical_Combining_Class
-  new string property:
+  new string properties:
     NFKC_CF   ; NFKC_Casefold
+    Name_Alias; Name_Alias
   new binary properties:
     Cased     ; Cased
     CI        ; Case_Ignorable
-    IC        ; Is_Cased
-    ICF       ; Is_Casefolded
-    ILC       ; Is_Lowercase
-    INFKC_CF  ; Is_NFKC_Casefold
-    ITC       ; Is_Titlecase
-    IUC       ; Is_Uppercase
+    CWCF      ; Changes_When_Casefolded
+    CWCM      ; Changes_When_Casemapped
+    CWKCF     ; Changes_When_NFKC_Casefolded
+    CWL       ; Changes_When_Lowercased
+    CWT       ; Changes_When_Titlecased
+    CWU       ; Changes_When_Uppercased
+  new CJK Unihan properties (not supported by ICU)
 - PropertyValueAliases.txt
   new block names
   new scripts
@@ -56,33 +58,20 @@ python ucdcopy.py "C:\Documents and Settings\mscherer\My Documents\unicode\ucd\5
     sc ; Qaai      ; Inherited
     ->
     sc ; Zinh      ; Inherited                        ; Qaai
+  new Line_Break (lb) value:
+    lb ; CP        ; Close_Parenthesis
   new Joining_Group (jg) values: Farsi_Yeh, Nya
   other new values:
     ccc; 214; ATA  ; Attached_Above
-  other:
-    the new binary properties don't have the customary F/False/T/True aliases
-      (they only have N/No/Y/Yes)
-      (reported 20090823)
 - DerivedBidiClass.txt
-  inconsistent range syntax in R defaults:
-    U+0590..U+05FF, U+07C0..U+08FF, U+FB1D  -  U+FB4F, U+10800..U+10FFF, U+1E800 - U+1EFFF
-    also ranges in the "tables" use dash not ..
-    (reported 20090823)
   new default-R range: U+1E800 - U+1EFFF
-- DerivedNumericValues.txt
-  one character name seems to disagree with the numeric value:
-    1F102..1F103  ; 2.0 ; ; 2 # No   [2] DIGIT ONE COMMA..DIGIT TWO COMMA
-    (should be fixed when derived files are regenerated from newer core data)
 - UnicodeData.txt
-  are all of the ISO comments gone?
+  all of the ISO comments are gone
   new CJK block end:
     9FC3;<CJK Ideograph, Last> -> 9FCB;<CJK Ideograph, Last>
   new CJK block:
     2A700;<CJK Ideograph Extension C, First>;Lo;0;L;;;;;N;;;;;
     2B734;<CJK Ideograph Extension C, Last>;Lo;0;L;;;;;N;;;;;
-  two numeric values for one character disagree:
-    1F102;DIGIT ONE COMMA;No;0;EN;<compat> 0031 002C;;1;2;N;;;;;
-    (fixed in d12 version from 2009-08-17)
 
 * genpname
 - run preparse.pl
@@ -111,6 +100,8 @@ python ucdcopy.py "C:\Documents and Settings\mscherer\My Documents\unicode\ucd\5
   + 1 new script values added for ISO 15924 coverage (not in Unicode 5.1)
     (added to SyntheticPropertyValueAliases.txt)
 - new Joining Group (JG) values: Farsi_Yeh, Nya
+- new Line_Break (lb) value:
+    lb ; CP        ; Close_Parenthesis
 
 * hardcoded Unihan range end/limit
 - Unihan range end moves from 9FC3 to 9FCB
