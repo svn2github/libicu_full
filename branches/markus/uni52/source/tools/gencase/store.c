@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 2004-2008, International Business Machines
+*   Copyright (C) 2004-2009, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
@@ -351,9 +351,15 @@ setProps(Props *p) {
     if((value&UCASE_TYPE_MASK)==UCASE_NONE) {
         if(ucdVersion>=UNI_4_1) {
             /*
-             * Unicode 4.1 and up: (D47a) Word_Break=MidLetter or Mn, Me, Cf, Lm, Sk
-             * Unicode 5.1 and up: Word_Break=(MidLetter or MidNumLet) or Mn, Me, Cf, Lm, Sk
+             * Unicode 4.1 & 5.0: (D47a) Word_Break=MidLetter or Mn, Me, Cf, Lm, Sk
+             * Unicode 5.1: Word_Break=(MidLetter or MidNumLet) or Mn, Me, Cf, Lm, Sk
              *   The UGENCASE_IS_MID_LETTER_SHIFT bit is set for both WB=MidLetter and WB=MidNumLet.
+             * Unicode 5.2: The definition (Unicode Standard Definition D121) is unchanged,
+             *   but now Case_Ignorable is a public property
+             *   with its values listed in DerivedCoreProperties.txt.
+             *   gencase.c parses those values as well, just in case the definition changes
+             *   in the future. gencase.c sets the UGENCASE_IS_MID_LETTER_SHIFT bit
+             *   for each Case_Ignorable entry. (It never resets that bit.)
              */
             if(
                 (U_MASK(p->gc)&(U_GC_MN_MASK|U_GC_ME_MASK|U_GC_CF_MASK|U_GC_LM_MASK|U_GC_SK_MASK))!=0 ||
