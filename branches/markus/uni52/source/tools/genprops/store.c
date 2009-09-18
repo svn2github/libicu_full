@@ -411,9 +411,6 @@ generateData(const char *dataDir, UBool csource) {
         }
 
         /* use UTrie2 */
-        dataInfo.formatVersion[0]=6;
-        dataInfo.formatVersion[2]=0;
-        dataInfo.formatVersion[3]=0;
         trie2=utrie2_fromUTrie(&trie, 0, &errorCode);
         if(U_FAILURE(errorCode)) {
             fprintf(
@@ -441,10 +438,12 @@ generateData(const char *dataDir, UBool csource) {
 
         f=usrc_create(dataDir, "uchar_props_data.c");
         if(f!=NULL) {
+            /* unused
             usrc_writeArray(f,
                 "static const UVersionInfo formatVersion={",
                 dataInfo.formatVersion, 8, 4,
                 "};\n\n");
+             */
             usrc_writeArray(f,
                 "static const UVersionInfo dataVersion={",
                 dataInfo.dataVersion, 8, 4,
