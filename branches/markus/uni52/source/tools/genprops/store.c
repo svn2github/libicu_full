@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 1999-2008, International Business Machines
+*   Copyright (C) 1999-2009, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
@@ -41,7 +41,7 @@ the udata API for loading ICU data. Especially, a UDataInfo structure
 precedes the actual data. It contains platform properties values and the
 file format version.
 
-The following is a description of format version 5 .
+The following is a description of format version 6 .
 
 The format changes between version 3 and 4 because the properties related to
 case mappings and bidi/shaping are pulled out into separate files
@@ -54,6 +54,10 @@ For details see "Changes in format version 4" below.
 Format version 5 became necessary because the bit field for script codes
 overflowed. Several bit fields got rearranged, and three (Script, Block,
 Word_Break) got widened by one bit each.
+
+Format version 6 became necessary because Unicode 5.2 adds fractions with
+denominators 9, 10 and 16, and it was easier to redesign the encoding of numeric
+types and values rather than add another variant to the previous format.
 
 Data contents:
 
@@ -130,45 +134,23 @@ and 0<=c<0x110000, the lookup is done like this:
 Each 16-bit properties word contains:
 
  0.. 4  general category
- 5.. 7  numeric type
-        non-digit numbers are stored with multiple types and pseudo-types
-        in order to facilitate compact encoding:
-        0 no numeric value (0)
-        1 decimal digit value (0..9)
-        2 digit value (0..9)
-        3 (U_NT_NUMERIC) normal non-digit numeric value 0..0xff
-        4 (internal type UPROPS_NT_FRACTION) fraction
-        5 (internal type UPROPS_NT_LARGE) large number >0xff
-        6..7 reserved
+     5  reserved
+ 6..15  numeric type and value (ntv)
 
-        when returning the numeric type from a public API,
-        internal types must be turned into U_NT_NUMERIC
+Encoding of numeric type and value in the 10-bit ntv field:
+    ntv             type            value
+    0               U_NT_NONE       0
+    1..10           U_NT_DECIMAL    0..9
+    11..20          U_NT_DIGIT      0..9
+    21..0x2ff       U_NT_NUMERIC    see below
+    0x300..0x3ff    reserved
 
- 8..15  numeric value
-        encoding of fractions and large numbers see below
-
-Fractions:
-    // n is the 8-bit numeric value from bits 8..15 of the trie word (shifted down)
-    int32_t num, den;
-    num=n>>3;       // num=0..31
-    den=(n&7)+2;    // den=2..9
-    if(num==0) {
-        num=-1;     // num=-1 or 1..31
-    }
-    double result=(double)num/(double)den;
-
-Large numbers:
-    // n is the 8-bit numeric value from bits 8..15 of the trie word (shifted down)
-    int32_t m, e;
-    m=n>>4;         // m=0..15
-    e=(n&0xf);
-    if(m==0) {
-        m=1;        // for large powers of 10
-        e+=18;      // e=18..33
-    } else {
-        e+=2;       // e=2..17
-    } // m==10..15 are reserved
-    double result=(double)m*10^e;
+    For U_NT_NUMERIC:
+    ntv             value
+    21..0xaf        integer     0..154
+    0xb0..0x1df     fraction    ((ntv>>4)-12) / ((ntv&0xf)+1) = -1..17 / 1..16
+    0x1e0..0x2ff    large int   ((ntv>>5)-14) * 10^((ntv&0x1f)+2) = (1..9)*(10^2..10^33)
+                    (only one significant decimal digit)
 
 --- Additional properties (new in format version 2.1) ---
 
@@ -243,7 +225,7 @@ static UDataInfo dataInfo={
     0,
 
     { 0x55, 0x50, 0x72, 0x6f },                 /* dataFormat="UPro" */
-    { 5, 0, UTRIE_SHIFT, UTRIE_INDEX_SHIFT },   /* formatVersion */
+    { 6, 0, UTRIE_SHIFT, UTRIE_INDEX_SHIFT },   /* formatVersion */
     { 5, 1, 0, 0 }                              /* dataVersion */
 };
 
@@ -275,19 +257,12 @@ exitStore() {
     exitAdditionalProperties();
 }
 
-static uint32_t printNumericTypeValueError(Props *p) {
-    fprintf(stderr, "genprops error: unable to encode numeric type & value %d  %ld/%lu E%d\n",
-            (int)p->numericType, (long)p->numericValue, (unsigned long)p->denominator, p->exponent);
-    exit(U_ILLEGAL_ARGUMENT_ERROR);
-    return 0;
-}
-
 /* store a character's properties ------------------------------------------- */
 
 extern uint32_t
 makeProps(Props *p) {
     uint32_t den;
-    int32_t type, value, exp;
+    int32_t type, value, exp, ntv;
 
     /* encode numeric type & value */
     type=p->numericType;
@@ -295,74 +270,67 @@ makeProps(Props *p) {
     den=p->denominator;
     exp=p->exponent;
 
-    if(den!=0) {
-        /* fraction */
-        if( type!=U_NT_NUMERIC ||
-            value<-1 || value==0 || value>UPROPS_FRACTION_MAX_NUM ||
-            den<UPROPS_FRACTION_MIN_DEN || UPROPS_FRACTION_MAX_DEN<den ||
-            exp!=0
-        ) {
-            return printNumericTypeValueError(p);
+    ntv=-1; /* the numeric type and value cannot be encoded if ntv remains -1 */
+    switch(type) {
+    case U_NT_NONE:
+        if(value==0 && den==0 && exp==0) {
+            ntv=UPROPS_NTV_NONE;
         }
-        type=UPROPS_NT_FRACTION;
-
-        if(value==-1) {
-            value=0;
+        break;
+    case U_NT_DECIMAL:
+        if(0<=value && value<=9 && den==0 && exp==0) {
+            ntv=UPROPS_NTV_DECIMAL_START+value;
         }
-        den-=UPROPS_FRACTION_DEN_OFFSET;
-        value=(value<<UPROPS_FRACTION_NUM_SHIFT)|den;
-    } else if(exp!=0) {
-        /* very large value */
-        if( type!=U_NT_NUMERIC ||
-            value<1 || 9<value ||
-            exp<UPROPS_LARGE_MIN_EXP || UPROPS_LARGE_MAX_EXP_EXTRA<exp
-        ) {
-            return printNumericTypeValueError(p);
+        break;
+    case U_NT_DIGIT:
+        if(0<=value && value<=9 && den==0 && exp==0) {
+            ntv=UPROPS_NTV_DIGIT_START+value;
         }
-        type=UPROPS_NT_LARGE;
-
-        if(exp<=UPROPS_LARGE_MAX_EXP) {
-            /* 1..9 * 10^(2..17) */
-            exp-=UPROPS_LARGE_EXP_OFFSET;
-        } else {
-            /* 1 * 10^(18..33) */
-            if(value!=1) {
-                return printNumericTypeValueError(p);
+        break;
+    case U_NT_NUMERIC:
+        if(den==0) {
+            if(exp==2 && (value*100)<=UPROPS_NTV_MAX_SMALL_INT) {
+                /* small integer parsed like a large one */
+                ntv=UPROPS_NTV_NUMERIC_START+value*100;
+            } else if(exp==0 && value>=0) {
+                if(value<=UPROPS_NTV_MAX_SMALL_INT) {
+                    /* small integer */
+                    ntv=UPROPS_NTV_NUMERIC_START+value;
+                } else {
+                    /* large integer parsed like a small one */
+                    /* split the value into mantissa and exponent, base 10 */
+                    int32_t mant=value;
+                    while((mant%10)==0) {
+                        mant/=10;
+                        ++exp;
+                    }
+                    if(mant<=9) {
+                        ntv=((mant+14)<<5)+(exp-2);
+                    }
+                }
+            } else if(2<=exp && exp<=33 && 1<=value && value<=9) {
+                /* large, single-significant-digit integer */
+                ntv=((value+14)<<5)+(exp-2);
             }
-            value=0;
-            exp-=UPROPS_LARGE_EXP_OFFSET_EXTRA;
+        } else if(exp==0) {
+            if(-1<=value && value<=17 && 1<=den && den<=16) {
+                /* fraction */
+                ntv=((value+12)<<4)+(den-1);
+            }
         }
-        value=(value<<UPROPS_LARGE_MANT_SHIFT)|exp;
-    } else if(value>UPROPS_MAX_SMALL_NUMBER) {
-        /* large value */
-        if(type!=U_NT_NUMERIC) {
-            return printNumericTypeValueError(p);
-        }
-        type=UPROPS_NT_LARGE;
-
-        /* split the value into mantissa and exponent, base 10 */
-        while((value%10)==0) {
-            value/=10;
-            ++exp;
-        }
-        if(value>9) {
-            return printNumericTypeValueError(p);
-        }
-
-        exp-=UPROPS_LARGE_EXP_OFFSET;
-        value=(value<<UPROPS_LARGE_MANT_SHIFT)|exp;
-    } else if(value<0) {
-        /* unable to encode negative values, other than fractions -1/x */
-        return printNumericTypeValueError(p);
-
-    /* } else normal value=0..0xff { */
+    default:
+        break;
+    }
+    if(ntv<0) {
+        fprintf(stderr, "genprops error: unable to encode numeric type %d & value %ld/%lu E%d\n",
+                (int)type, (long)value, (unsigned long)den, exp);
+        exit(U_ILLEGAL_ARGUMENT_ERROR);
     }
 
     /* encode the properties */
     return
         (uint32_t)p->generalCategory |
-        ((uint32_t)type<<UPROPS_NUMERIC_TYPE_SHIFT) |
-        ((uint32_t)value<<UPROPS_NUMERIC_VALUE_SHIFT);
+        (ntv<<UPROPS_NUMERIC_TYPE_VALUE_SHIFT);
 }
 
 extern void

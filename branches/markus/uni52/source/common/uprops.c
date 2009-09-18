@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 2002-2008, International Business Machines
+*   Copyright (C) 2002-2009, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
@@ -223,7 +223,6 @@ u_hasBinaryProperty(UChar32 c, UProperty which) {
 U_CAPI int32_t U_EXPORT2
 u_getIntPropertyValue(UChar32 c, UProperty which) {
     UErrorCode errorCode;
-    int32_t type;
 
     if(which<UCHAR_BINARY_START) {
         return 0; /* undefined */
@@ -255,13 +254,10 @@ u_getIntPropertyValue(UChar32 c, UProperty which) {
             return ubidi_getJoiningType(GET_BIDI_PROPS(), c);
         case UCHAR_LINE_BREAK:
             return (int32_t)(u_getUnicodeProperties(c, UPROPS_LB_VWORD)&UPROPS_LB_MASK)>>UPROPS_LB_SHIFT;
-        case UCHAR_NUMERIC_TYPE:
-            type=(int32_t)GET_NUMERIC_TYPE(u_getUnicodeProperties(c, -1));
-            if(type>U_NT_NUMERIC) {
-                /* keep internal variants of U_NT_NUMERIC from becoming visible */
-                type=U_NT_NUMERIC;
-            }
-            return type;
+        case UCHAR_NUMERIC_TYPE: {
+            int32_t ntv=(int32_t)GET_NUMERIC_TYPE_VALUE(u_getUnicodeProperties(c, -1));
+            return UPROPS_NTV_GET_TYPE(ntv);
+        }
         case UCHAR_SCRIPT:
             errorCode=U_ZERO_ERROR;
             return (int32_t)uscript_getScript(c, &errorCode);

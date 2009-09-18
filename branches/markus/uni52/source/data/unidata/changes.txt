@@ -108,31 +108,28 @@ python ucdcopy.py "C:\Documents and Settings\mscherer\My Documents\unicode\ucd\5
   search for both 9FC3 (end) and 9FC4 (limit) (regex 9FC[34], case-insensitive)
   + do change gennames.c
 
->> DONE with the above, TODO the following <<
+* Compare definitions of new binary properties with what we used to use
+  in algorithms, to see if the definitions changed.
+- Verified that definitions for Cased and Case_Ignorable are unchanged.
+  The gencase tool now parses the newly public Case_Ignorable values
+  in case the definition changes in the future.
 
-- TODO: new property ...
-
-TODO: compare definitions of new binary properties with what we used to use
-in algorithms, to see if the definitions changed;
-for example the new Case_Ignorable definition:
-# Derived Property:   Case_Ignorable (CI)
-#  As defined by Unicode Standard Definition D121
-#  C is defined to be case-ignorable if
-#    Word_Break(C) = MidLetter or MidNumLet, or
-#    General_Category(C) = Nonspacing_Mark (Mn), Enclosing_Mark (Me), Format (Cf), Modifier_Letter (Lm), or Modifier_Symbol (Sk).
-
-* Further changes in the 2008-02-29 update:
-- Default_Ignorable_Code_Point: The new file removes Cc, Cs, noncharacters from DICP
-  because they should not normally be invisible.
-- new Joining Group (JG) value Burushashki_Yeh_Barree was renamed to Burushaski_Yeh_Barree (one 'h' removed)
-- new Grapheme_Cluster_Break (GCB) value: PP=Prepend
-- new Word_Break (WB) value: NL=Newline
+* uchar.c & uprops.h & uprops.c & genprops
+- new numeric values that didn't exist in Unicode data before:
+    1/7, 1/9, 1/10, 3/10, 1/16, 3/16
+  the ones with denominators >9 cannot be supported by uprops.icu formatVersion 5,
+  therefore redesign the encoding of numeric types and values for formatVersion 6;
+  design for simple numbers up to at least 144 ("one gross"),
+  large values up to at least 10^20,
+  and fractions with numerators -1..17 and denominators 1..16
+  to cover current and expected future values
+  (e.g., more Han numeric values, Meroitic twelfths)
 
 * build Unicode data source code for hardcoding core data
-C:\svn\icuproj\icu\uni51\source\data>NMAKE /f makedata.mak ICUMAKE=\svn\icuproj\icu\uni51\source\data\ CFG=debug uni-core-data
+C:\svn\icuproj\icu\trunk\source\data>NMAKE /f makedata.mak ICUMAKE=\svn\icuproj\icu\trunk\source\data\ CFG=x86\release uni-core-data
 
-ICU data make path is \svn\icuproj\icu\uni51\source\data\
-ICU root path is \svn\icuproj\icu\uni51
+ICU data make path is \svn\icuproj\icu\trunk\source\data\
+ICU root path is \svn\icuproj\icu\trunk
 Information: cannot find "ucmlocal.mk". Not building user-additional converter files.
 Information: cannot find "brklocal.mk". Not building user-additional break iterator files.
 Information: cannot find "reslocal.mk". Not building user-additional resource bundle files.
@@ -140,15 +137,31 @@ Information: cannot find "collocal.mk". Not building user-additional resource bu
 Information: cannot find "rbnflocal.mk". Not building user-additional resource bundle files.
 Information: cannot find "trnslocal.mk". Not building user-additional transliterator files.
 Information: cannot find "misclocal.mk". Not building user-additional miscellaenous files.
+Information: cannot find "spreplocal.mk". Not building user-additional stringprep files.
+Creating data file for Unicode Property Names
 Creating data file for Unicode Character Properties
 Creating data file for Unicode Case Mapping Properties
 Creating data file for Unicode BiDi/Shaping Properties
 Creating data file for Unicode Normalization
-Unicode .icu files built to "\svn\icuproj\icu\uni51\source\data\out\build\icudt39l"
-Unicode .c source files built to "\svn\icuproj\icu\uni51\source\data\out\tmp"
+Unicode .icu files built to "\svn\icuproj\icu\trunk\source\data\out\build\icudt43l"
+Unicode .c source files built to "\svn\icuproj\icu\trunk\source\data\out\tmp"
 
-- copy the .c source files to C:\svn\icuproj\icu\uni51\source\common
+>> DONE with the above, TODO the following <<
+
+- copy the .c source files to C:\svn\icuproj\icu\trunk\source\common
   and rebuild the common library
+
+*** Implement Cased & Case_Ignorable properties
+TODO: via UProperty; call ucase.h functions ucase_getType() and ucase_getTypeOrIgnorable()
+
+*** Implement Name_Alias property
+TODO:
+- add it as another name field in unames.icu
+- make it available via u_charName() and UCharNameChoice and
+- consider it in u_charFromName()
+
+*** Implement Changes_When_Xyz properties
+TODO: Without stored data?
 
 *** Break iterators
 
