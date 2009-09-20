@@ -519,7 +519,7 @@ static void TestMisc()
 {
     static const UChar sampleSpaces[] = {0x0020, 0x00a0, 0x2000, 0x2001, 0x2005};
     static const UChar sampleNonSpaces[] = {0x61, 0x62, 0x63, 0x64, 0x74};
-    static const UChar sampleUndefined[] = {0xfff1, 0xfff7, 0xfa6b };
+    static const UChar sampleUndefined[] = {0xfff1, 0xfff7, 0xfa6e};
     static const UChar sampleDefined[] = {0x523E, 0x4f88, 0xfffd};
     static const UChar sampleBase[] = {0x0061, 0x0031, 0x03d2};
     static const UChar sampleNonBase[] = {0x002B, 0x0020, 0x203B};
@@ -1151,6 +1151,8 @@ enumDefaultsRange(const void *context, UChar32 start, UChar32 limit, UCharCatego
         { 0xFF00, U_RIGHT_TO_LEFT_ARABIC },
         { 0x10800, U_LEFT_TO_RIGHT },
         { 0x11000, U_RIGHT_TO_LEFT },
+        { 0x1E800, U_LEFT_TO_RIGHT },  /* new default-R range in Unicode 5.2: U+1E800 - U+1EFFF */
+        { 0x1F000, U_RIGHT_TO_LEFT },
         { 0x110000, U_LEFT_TO_RIGHT }
     };
 
@@ -2213,7 +2215,8 @@ TestAdditionalProperties() {
         { 0xfe02, UCHAR_DEFAULT_IGNORABLE_CODE_POINT, TRUE },
         { 0x1801, UCHAR_DEFAULT_IGNORABLE_CODE_POINT, FALSE },
 
-        { 0x0341, UCHAR_DEPRECATED, TRUE },
+        { 0x0149, UCHAR_DEPRECATED, TRUE },         /* changed in Unicode 5.2 */
+        { 0x0341, UCHAR_DEPRECATED, FALSE },        /* changed in Unicode 5.2 */
         { 0xe0041, UCHAR_DEPRECATED, TRUE },        /* changed from Unicode 5 to 5.1 */
         { 0xe0100, UCHAR_DEPRECATED, FALSE },
 
@@ -2327,7 +2330,8 @@ TestAdditionalProperties() {
         { 0x10EEEE, UCHAR_EAST_ASIAN_WIDTH, U_EA_AMBIGUOUS },
 
         /* UCHAR_GENERAL_CATEGORY tested for assigned characters in TestUnicodeData() */
-        { 0xd7d7, UCHAR_GENERAL_CATEGORY, 0 },
+        { 0xd7c7, UCHAR_GENERAL_CATEGORY, 0 },
+        { 0xd7d7, UCHAR_GENERAL_CATEGORY, U_OTHER_LETTER },     /* changed in Unicode 5.2 */
 
         { 0x0444, UCHAR_JOINING_GROUP, U_JG_NO_JOINING_GROUP },
         { 0x0639, UCHAR_JOINING_GROUP, U_JG_AIN },
@@ -2366,27 +2370,43 @@ TestAdditionalProperties() {
 
         /* UCHAR_SCRIPT tested in TestUScriptCodeAPI() */
 
+        { 0x10ff, UCHAR_HANGUL_SYLLABLE_TYPE, 0 },
         { 0x1100, UCHAR_HANGUL_SYLLABLE_TYPE, U_HST_LEADING_JAMO },
         { 0x1111, UCHAR_HANGUL_SYLLABLE_TYPE, U_HST_LEADING_JAMO },
         { 0x1159, UCHAR_HANGUL_SYLLABLE_TYPE, U_HST_LEADING_JAMO },
+        { 0x115a, UCHAR_HANGUL_SYLLABLE_TYPE, U_HST_LEADING_JAMO },     /* changed in Unicode 5.2 */
+        { 0x115e, UCHAR_HANGUL_SYLLABLE_TYPE, U_HST_LEADING_JAMO },     /* changed in Unicode 5.2 */
         { 0x115f, UCHAR_HANGUL_SYLLABLE_TYPE, U_HST_LEADING_JAMO },
+
+        { 0xa95f, UCHAR_HANGUL_SYLLABLE_TYPE, 0 },
+        { 0xa960, UCHAR_HANGUL_SYLLABLE_TYPE, U_HST_LEADING_JAMO },     /* changed in Unicode 5.2 */
+        { 0xa97c, UCHAR_HANGUL_SYLLABLE_TYPE, U_HST_LEADING_JAMO },     /* changed in Unicode 5.2 */
+        { 0xa97d, UCHAR_HANGUL_SYLLABLE_TYPE, 0 },
 
         { 0x1160, UCHAR_HANGUL_SYLLABLE_TYPE, U_HST_VOWEL_JAMO },
         { 0x1161, UCHAR_HANGUL_SYLLABLE_TYPE, U_HST_VOWEL_JAMO },
         { 0x1172, UCHAR_HANGUL_SYLLABLE_TYPE, U_HST_VOWEL_JAMO },
         { 0x11a2, UCHAR_HANGUL_SYLLABLE_TYPE, U_HST_VOWEL_JAMO },
+        { 0x11a3, UCHAR_HANGUL_SYLLABLE_TYPE, U_HST_VOWEL_JAMO },       /* changed in Unicode 5.2 */
+        { 0x11a7, UCHAR_HANGUL_SYLLABLE_TYPE, U_HST_VOWEL_JAMO },       /* changed in Unicode 5.2 */
+
+        { 0xd7af, UCHAR_HANGUL_SYLLABLE_TYPE, 0 },
+        { 0xd7b0, UCHAR_HANGUL_SYLLABLE_TYPE, U_HST_VOWEL_JAMO },       /* changed in Unicode 5.2 */
+        { 0xd7c6, UCHAR_HANGUL_SYLLABLE_TYPE, U_HST_VOWEL_JAMO },       /* changed in Unicode 5.2 */
+        { 0xd7c7, UCHAR_HANGUL_SYLLABLE_TYPE, 0 },
 
         { 0x11a8, UCHAR_HANGUL_SYLLABLE_TYPE, U_HST_TRAILING_JAMO },
         { 0x11b8, UCHAR_HANGUL_SYLLABLE_TYPE, U_HST_TRAILING_JAMO },
         { 0x11c8, UCHAR_HANGUL_SYLLABLE_TYPE, U_HST_TRAILING_JAMO },
         { 0x11f9, UCHAR_HANGUL_SYLLABLE_TYPE, U_HST_TRAILING_JAMO },
+        { 0x11fa, UCHAR_HANGUL_SYLLABLE_TYPE, U_HST_TRAILING_JAMO },    /* changed in Unicode 5.2 */
+        { 0x11ff, UCHAR_HANGUL_SYLLABLE_TYPE, U_HST_TRAILING_JAMO },    /* changed in Unicode 5.2 */
+        { 0x1200, UCHAR_HANGUL_SYLLABLE_TYPE, 0 },
 
-        { 0x115a, UCHAR_HANGUL_SYLLABLE_TYPE, 0 },
-        { 0x115e, UCHAR_HANGUL_SYLLABLE_TYPE, 0 },
-        { 0x11a3, UCHAR_HANGUL_SYLLABLE_TYPE, 0 },
-        { 0x11a7, UCHAR_HANGUL_SYLLABLE_TYPE, 0 },
-        { 0x11fa, UCHAR_HANGUL_SYLLABLE_TYPE, 0 },
-        { 0x11ff, UCHAR_HANGUL_SYLLABLE_TYPE, 0 },
+        { 0xd7ca, UCHAR_HANGUL_SYLLABLE_TYPE, 0 },
+        { 0xd7cb, UCHAR_HANGUL_SYLLABLE_TYPE, U_HST_TRAILING_JAMO },    /* changed in Unicode 5.2 */
+        { 0xd7fb, UCHAR_HANGUL_SYLLABLE_TYPE, U_HST_TRAILING_JAMO },    /* changed in Unicode 5.2 */
+        { 0xd7fc, UCHAR_HANGUL_SYLLABLE_TYPE, 0 },
 
         { 0xac00, UCHAR_HANGUL_SYLLABLE_TYPE, U_HST_LV_SYLLABLE },
         { 0xac1c, UCHAR_HANGUL_SYLLABLE_TYPE, U_HST_LV_SYLLABLE },
@@ -2542,6 +2562,8 @@ TestAdditionalProperties() {
 
     /* test u_hasBinaryProperty() and u_getIntPropertyValue() */
     for(i=0; i<sizeof(props)/sizeof(props[0]); ++i) {
+        const char *whichName;
+
         if(props[i][0]<0) {
             /* Unicode version break */
             if(uVersion<props[i][1]) {
@@ -2553,19 +2575,20 @@ TestAdditionalProperties() {
 
         c=(UChar32)props[i][0];
         which=(UProperty)props[i][1];
+        whichName=u_getPropertyName(which, U_LONG_PROPERTY_NAME);
 
         if(which<UCHAR_INT_START) {
             result=u_hasBinaryProperty(c, which);
             if(result!=props[i][2]) {
-                log_err("error: u_hasBinaryProperty(U+%04lx, %d)=%d is wrong (props[%d])\n",
-                        c, which, result, i);
+                log_err("error: u_hasBinaryProperty(U+%04lx, %s)=%d is wrong (props[%d])\n",
+                        c, whichName, result, i);
             }
         }
 
         result=u_getIntPropertyValue(c, which);
         if(result!=props[i][2]) {
-            log_err("error: u_getIntPropertyValue(U+%04lx, 0x1000+%d)=%d is wrong, should be %d (props[%d])\n",
-                    c, (int32_t)which-0x1000, result, props[i][2], i);
+            log_err("error: u_getIntPropertyValue(U+%04lx, %s)=%d is wrong, should be %d (props[%d])\n",
+                    c, whichName, result, props[i][2], i);
         }
 
         /* test separate functions, too */
@@ -2611,7 +2634,14 @@ TestNumericProperties(void) {
         { 0x0F33, U_NT_NUMERIC, -1./2. },
         { 0x0C66, U_NT_DECIMAL, 0 },
         { 0x96f6, U_NT_NUMERIC, 0 },
+        { 0xa833, U_NT_NUMERIC, 1./16. },
+        { 0x2152, U_NT_NUMERIC, 1./10. },
+        { 0x2151, U_NT_NUMERIC, 1./9. },
+        { 0x1245f, U_NT_NUMERIC, 1./8. },
+        { 0x2150, U_NT_NUMERIC, 1./7. },
         { 0x2159, U_NT_NUMERIC, 1./6. },
+        { 0x09f6, U_NT_NUMERIC, 3./16. },
+        { 0x2155, U_NT_NUMERIC, 1./5. },
         { 0x00BD, U_NT_NUMERIC, 1./2. },
         { 0x0031, U_NT_DECIMAL, 1. },
         { 0x4e00, U_NT_NUMERIC, 1. },
@@ -2647,12 +2677,14 @@ TestNumericProperties(void) {
         { 0x4e07, U_NT_NUMERIC, 10000. },
         { 0x4ebf, U_NT_NUMERIC, 100000000. },
         { 0x5146, U_NT_NUMERIC, 1000000000000. },
+        { -1, U_NT_NONE, U_NO_NUMERIC_VALUE },
         { 0x61, U_NT_NONE, U_NO_NUMERIC_VALUE },
         { 0x3000, U_NT_NONE, U_NO_NUMERIC_VALUE },
         { 0xfffe, U_NT_NONE, U_NO_NUMERIC_VALUE },
         { 0x10301, U_NT_NONE, U_NO_NUMERIC_VALUE },
         { 0xe0033, U_NT_NONE, U_NO_NUMERIC_VALUE },
-        { 0x10ffff, U_NT_NONE, U_NO_NUMERIC_VALUE }
+        { 0x10ffff, U_NT_NONE, U_NO_NUMERIC_VALUE },
+        { 0x110000, U_NT_NONE, U_NO_NUMERIC_VALUE }
     };
 
     double nv;
