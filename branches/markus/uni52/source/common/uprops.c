@@ -220,6 +220,27 @@ u_hasBinaryProperty(UChar32 c, UProperty which) {
     return FALSE;
 }
 
+/*
+ * Map some of the Grapheme Cluster Break values to Hangul Syllable Types.
+ * Hangul_Syllable_Type is fully redundant with a subset of Grapheme_Cluster_Break.
+ */
+static const UHangulSyllableType gcbToHst[]={
+    U_HST_NOT_APPLICABLE,   /* U_GCB_OTHER */
+    U_HST_NOT_APPLICABLE,   /* U_GCB_CONTROL */
+    U_HST_NOT_APPLICABLE,   /* U_GCB_CR */
+    U_HST_NOT_APPLICABLE,   /* U_GCB_EXTEND */
+    U_HST_LEADING_JAMO,     /* U_GCB_L */
+    U_HST_NOT_APPLICABLE,   /* U_GCB_LF */
+    U_HST_LV_SYLLABLE,      /* U_GCB_LV */
+    U_HST_LVT_SYLLABLE,     /* U_GCB_LVT */
+    U_HST_TRAILING_JAMO,    /* U_GCB_T */
+    U_HST_VOWEL_JAMO        /* U_GCB_V */
+    /*
+     * Omit GCB values beyond what we need for hst.
+     * The code below checks for the array length.
+     */
+};
+
 U_CAPI int32_t U_EXPORT2
 u_getIntPropertyValue(UChar32 c, UProperty which) {
     UErrorCode errorCode;
@@ -261,8 +282,15 @@ u_getIntPropertyValue(UChar32 c, UProperty which) {
         case UCHAR_SCRIPT:
             errorCode=U_ZERO_ERROR;
             return (int32_t)uscript_getScript(c, &errorCode);
-        case UCHAR_HANGUL_SYLLABLE_TYPE:
-            return uchar_getHST(c);
+        case UCHAR_HANGUL_SYLLABLE_TYPE: {
+            /* see comments on gcbToHst[] above */
+            int32_t gcb=(int32_t)(u_getUnicodeProperties(c, 2)&UPROPS_GCB_MASK)>>UPROPS_GCB_SHIFT;
+            if(gcb<LENGTHOF(gcbToHst)) {
+                return gcbToHst[gcb];
+            } else {
+                return U_HST_NOT_APPLICABLE;
+            }
+        }
 #if !UCONFIG_NO_NORMALIZATION
         case UCHAR_NFD_QUICK_CHECK:
         case UCHAR_NFKD_QUICK_CHECK:
@@ -351,6 +379,15 @@ u_getIntPropertyMaxValue(UProperty which) {
     }
 }
 
+/*
+ * TODO: Simplify, similar to binProps[].
+ * Use an array of column/source, mask, shift values to drive returning simple
+ * properties and their sources.
+ *
+ * TODO: Split the single propsvec into one per column, and have
+ * upropsvec_addPropertyStarts() pass a trie value function that gets the
+ * desired column's values.
+ */
 U_CFUNC UPropertySource U_EXPORT2
 uprops_getSource(UProperty which) {
     if(which<UCHAR_BINARY_START) {
@@ -368,9 +405,6 @@ uprops_getSource(UProperty which) {
         case UCHAR_GENERAL_CATEGORY:
         case UCHAR_NUMERIC_TYPE:
             return UPROPS_SRC_CHAR;
-
-        case UCHAR_HANGUL_SYLLABLE_TYPE:
-            return UPROPS_SRC_HST;
 
         case UCHAR_CANONICAL_COMBINING_CLASS:
         case UCHAR_NFD_QUICK_CHECK:
@@ -534,7 +568,6 @@ uprv_getInclusions(const USetAdder *sa, UErrorCode *pErrorCode) {
     unorm_addPropertyStarts(sa, pErrorCode);
 #endif
     uchar_addPropertyStarts(sa, pErrorCode);
-    uhst_addPropertyStarts(sa, pErrorCode);
     ucase_addPropertyStarts(ucase_getSingleton(pErrorCode), sa, pErrorCode);
     ubidi_addPropertyStarts(ubidi_getSingleton(pErrorCode), sa, pErrorCode);
 }

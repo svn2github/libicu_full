@@ -125,6 +125,15 @@ python ucdcopy.py "C:\Documents and Settings\mscherer\My Documents\unicode\ucd\5
   to cover current and expected future values
   (e.g., more Han numeric values, Meroitic twelfths)
 
+* reimplement Hangul_Syllable_Type for new Jamo characters
+- the old code assumed that all Jamo characters are in the 11xx block
+- Unicode 5.2 fills holes there and adds new Jamo characters in
+    A960..A97F; Hangul Jamo Extended-A
+  and in
+    D7B0..D7FF; Hangul Jamo Extended-B
+- Hangul_Syllable_Type can be trivially derived from a subset of
+  Grapheme_Cluster_Break values
+
 * build Unicode data source code for hardcoding core data
 C:\svn\icuproj\icu\trunk\source\data>NMAKE /f makedata.mak ICUMAKE=\svn\icuproj\icu\trunk\source\data\ CFG=x86\release uni-core-data
 

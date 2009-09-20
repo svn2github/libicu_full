@@ -199,13 +199,6 @@ U_CFUNC int32_t
 uprv_getMaxValues(int32_t column);
 
 /**
- * Get the Hangul Syllable Type for c.
- * @internal
- */
-U_CFUNC UHangulSyllableType
-uchar_getHST(UChar32 c);
-
-/**
  * Checks if c is alphabetic, or a decimal digit; implements UCHAR_POSIX_ALNUM.
  * @internal
  */
@@ -327,8 +320,6 @@ enum UPropertySource {
     UPROPS_SRC_CHAR,
     /** From uchar.c/uprops.icu properties vectors trie */
     UPROPS_SRC_PROPSVEC,
-    /** Hangul_Syllable_Type, from uchar.c/uprops.icu */
-    UPROPS_SRC_HST,
     /** From unames.c/unames.icu */
     UPROPS_SRC_NAMES,
     /** From unorm.cpp/unorm.icu */
@@ -366,13 +357,6 @@ uchar_addPropertyStarts(const USetAdder *sa, UErrorCode *pErrorCode);
  */
 U_CFUNC void U_EXPORT2
 upropsvec_addPropertyStarts(const USetAdder *sa, UErrorCode *pErrorCode);
-
-/**
- * Same as uchar_addPropertyStarts() but only for Hangul_Syllable_Type.
- * @internal
- */
-U_CFUNC void U_EXPORT2
-uhst_addPropertyStarts(const USetAdder *sa, UErrorCode *pErrorCode);
 
 /**
  * Return a set of characters for property enumeration.
