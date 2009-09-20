@@ -17,7 +17,7 @@
 #  - Differs from previous version in that MAX value was introduced at 1F.
 #    All tertiary values are shifted down by 1, filling the gap at 7!
 
-[UCA version = 5.1.0]
+[UCA version = 5.2.0]
 
 0000; [,,]
 0001; [,,]
