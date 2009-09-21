@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 2000-2008, International Business Machines
+*   Copyright (C) 2000-2009, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
@@ -786,6 +786,14 @@ void writeOutData(UCATableHeader *data,
     }
 }
 
+enum {
+    /*
+     * Maximum number of UCA contractions we can store.
+     * May need to be increased for a new Unicode version.
+     */
+    MAX_UCA_CONTRACTION_CES=2048
+};
+
 static int32_t
 write_uca_table(const char *filename,
                 const char *outputDir,
@@ -817,8 +825,8 @@ write_uca_table(const char *filename,
         return 0;
     }
     uprv_memset(opts, 0, sizeof(UColOptionSet));
-    UChar contractionCEs[512][3];
-    uprv_memset(contractionCEs, 0, 512*3*sizeof(UChar));
+    UChar contractionCEs[MAX_UCA_CONTRACTION_CES][3];
+    uprv_memset(contractionCEs, 0, sizeof(contractionCEs));
     uint32_t noOfContractions = 0;
     UCAConstants consts;
     uprv_memset(&consts, 0, sizeof(consts));
@@ -948,6 +956,13 @@ struct {
               if(UTF_IS_LEAD(element->cPoints[0]) && UTF_IS_TRAIL(element->cPoints[1]) && element->cSize == 2) {
                 surrogateCount++;
               } else {
+                if(noOfContractions>=MAX_UCA_CONTRACTION_CES) {
+                  fprintf(stderr,
+                          "\nMore than %d contractions. Please increase MAX_UCA_CONTRACTION_CES in genuca.cpp. "
+                          "Exiting...\n",
+                          (int)MAX_UCA_CONTRACTION_CES);
+                  exit(*status);
+                }
                 contractionCEs[noOfContractions][0] = element->cPoints[0];
                 contractionCEs[noOfContractions][1] = element->cPoints[1];
                 if(element->cSize > 2) { // the third one
@@ -967,6 +982,13 @@ struct {
                 // contractionCEs[1]: '\0' to differentiate with contractions.
                 // contractionCEs[2]: prefix char
                 if (element->prefixSize>0) {
+                    if(noOfContractions>=MAX_UCA_CONTRACTION_CES) {
+                      fprintf(stderr,
+                              "\nMore than %d contractions. Please increase MAX_UCA_CONTRACTION_CES in genuca.cpp. "
+                              "Exiting...\n",
+                              (int)MAX_UCA_CONTRACTION_CES);
+                      exit(*status);
+                    }
                     contractionCEs[noOfContractions][0]=element->cPoints[0];
                     contractionCEs[noOfContractions][1]='\0';
                     contractionCEs[noOfContractions][2]=element->prefixChars[0];
