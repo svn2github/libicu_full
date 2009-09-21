@@ -3191,6 +3191,7 @@ private:
     UnicodeSet  *fH2;
     UnicodeSet  *fH3;
     UnicodeSet  *fCL;
+    UnicodeSet  *fCP;
     UnicodeSet  *fEX;
     UnicodeSet  *fIN;
     UnicodeSet  *fJL;
@@ -3242,7 +3243,8 @@ RBBILineMonkey::RBBILineMonkey()
     fHY    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=HY}]"), status);
     fH2    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=H2}]"), status);
     fH3    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=H3}]"), status);
-    fCL    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=CL}]"), status);
+    fCL    = new UnicodeSet(UNICODE_STRING_SIMPLE("[[\\p{Line_break=CL}]-[\\u0029\\u005d]]"), status); // TODO: fix when props are updated.
+    fCP    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\u0029\\u005d]"), status);
     fEX    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=EX}]"), status);
     fIN    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=IN}]"), status);
     fJL    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=JL}]"), status);
@@ -3292,6 +3294,7 @@ RBBILineMonkey::RBBILineMonkey()
     fSets->addElement(fH2, status);
     fSets->addElement(fH3, status);
     fSets->addElement(fCL, status);
+    fSets->addElement(fCP, status);
     fSets->addElement(fEX, status);
     fSets->addElement(fIN, status);
     fSets->addElement(fJL, status);
@@ -3317,7 +3320,7 @@ RBBILineMonkey::RBBILineMonkey()
             "((\\p{Line_Break=OP}|\\p{Line_Break=HY})\\p{Line_Break=CM}*)?"
             "\\p{Line_Break=NU}\\p{Line_Break=CM}*"
             "((\\p{Line_Break=NU}|\\p{Line_Break=IS}|\\p{Line_Break=SY})\\p{Line_Break=CM}*)*"
-            "(\\p{Line_Break=CL}\\p{Line_Break=CM}*)?"
+            "((\\p{Line_Break=CL}|[\\u0029\\u005d])\\p{Line_Break=CM}*)?"   // TODO: p{Line_Break=CP}
             "((\\p{Line_Break=PR}|\\p{Line_Break=PO})\\p{Line_Break=CM}*)?";
 
     fNumberMatcher = new RegexMatcher(
@@ -3520,10 +3523,11 @@ int32_t RBBILineMonkey::next(int32_t startPos) {
 
 
         // LB 13  Don't break before closings.
-        //        NU x CL  and NU x IS are not matched here so that they will
+        //        NU x CL,  NU x CP  and NU x IS are not matched here so that they will
         //        fall into LB 17 and the more general number regular expression.
         //
         if (!fNU->contains(prevChar) && fCL->contains(thisChar) ||
+            !fNU->contains(prevChar) && fCP->contains(thisChar) ||
                                         fEX->contains(thisChar) ||
             !fNU->contains(prevChar) && fIS->contains(thisChar) ||
             !fNU->contains(prevChar) && fSY->contains(thisChar))    {
@@ -3569,8 +3573,8 @@ int32_t RBBILineMonkey::next(int32_t startPos) {
 
 
 
-        // LB 16   CL SP* x NS
-        //    Scan backwards for SP* CM* CL
+        // LB 16   (CL | CP) SP* x NS
+        //    Scan backwards for SP* CM* (CL | CP)
         if (fNS->contains(thisChar)) {
             int tPos = prevPos;
             while (tPos>0 && fSP->contains(fText->char32At(tPos))) {
@@ -3579,7 +3583,7 @@ int32_t RBBILineMonkey::next(int32_t startPos) {
             while (tPos>0 && fCM->contains(fText->char32At(tPos))) {
                 tPos = fText->moveIndex32(tPos, -1);
             }
-            if (fCL->contains(fText->char32At(tPos))) {
+            if (fCL->contains(fText->char32At(tPos)) || fCP->contains(fText->char32At(tPos))) {
                 continue;
             }
         }
@@ -3729,6 +3733,16 @@ int32_t RBBILineMonkey::next(int32_t startPos) {
             continue;
         }
 
+        // LB 30    Do not break between letters, numbers, or ordinary symbols and opening or closing punctuation.
+        //          (AL | NU) x OP
+        //          CP x (AL | NU)
+        if ((fAL->contains(prevChar) || fNU->contains(prevChar)) && fOP->contains(thisChar)) {
+            continue;
+        }
+        if (fCP->contains(prevChar) && (fAL->contains(thisChar) || fNU->contains(thisChar))) {
+            continue;
+        }
+
         // LB 31    Break everywhere else
         break;
 
@@ -3763,6 +3777,7 @@ RBBILineMonkey::~RBBILineMonkey() {
     delete fH2;
     delete fH3;
     delete fCL;
+    delete fCP;
     delete fEX;
     delete fIN;
     delete fJL;
