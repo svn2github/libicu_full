@@ -9,6 +9,7 @@
 #include "unicode/uniset.h"
 #include "unicode/putil.h"
 #include "cstring.h"
+#include "hash.h"
 #include "uparse.h"
 #include "ucdtest.h"
 
@@ -16,10 +17,17 @@
 
 UnicodeTest::UnicodeTest()
 {
+    UErrorCode errorCode=U_ZERO_ERROR;
+    unknownPropertyNames=new U_NAMESPACE_QUALIFIER Hashtable(errorCode);
+    if(U_FAILURE(errorCode)) {
+        delete unknownPropertyNames;
+        unknownPropertyNames=NULL;
+    }
 }
 
 UnicodeTest::~UnicodeTest()
 {
+    delete unknownPropertyNames;
 }
 
 void UnicodeTest::runIndexedTest( int32_t index, UBool exec, const char* &name, char* /*par*/ )
@@ -117,7 +125,13 @@ derivedCorePropsLineFn(void *context,
     /* parse derived binary property name, ignore unknown names */
     i=getTokenIndex(derivedCorePropsNames, LENGTHOF(derivedCorePropsNames), fields[1][0]);
     if(i<0) {
-        me->errln("UnicodeTest warning: unknown property name '%s' in \n", fields[1][0]);
+        UnicodeString propName(fields[1][0], (int32_t)(fields[1][1]-fields[1][0]));
+        propName.trim();
+        if(me->unknownPropertyNames->find(propName)==NULL) {
+            UErrorCode errorCode=U_ZERO_ERROR;
+            me->unknownPropertyNames->puti(propName, 1, errorCode);
+            me->errln("UnicodeTest warning: unknown property name '%s' in DerivedCoreProperties.txt\n", fields[1][0]);
+        }
         return;
     }
 
