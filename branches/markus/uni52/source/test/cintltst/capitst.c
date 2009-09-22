@@ -294,10 +294,8 @@ void TestProperty()
       ICU 2.8 currVersionArray = {0x29, 0x80, 0x00, 0x04};
       ICU 3.4 currVersionArray = {0x31, 0xC0, 0x00, 0x04};
     */
-    UVersionInfo currVersionArray = {0x31, 0xC0, 0x00, 0x29};
-    /* ICU 3.4 had UCA 4.1 */
-    /*UVersionInfo currUCAVersionArray = {4, 1, 0, 0};*/
-    UVersionInfo currUCAVersionArray = {5, 1, 0, 0};
+    UVersionInfo currVersionArray = {0x31, 0xC0, 0x00, 0x2a};
+    UVersionInfo currUCAVersionArray = {5, 2, 0, 0};
     UVersionInfo versionArray = {0, 0, 0, 0};
     UVersionInfo versionUCAArray = {0, 0, 0, 0};
 
@@ -886,7 +884,7 @@ void TestOpenVsOpenRules(){
     int32_t sortKeyLen1, sortKeyLen2;
     uint8_t *sortKey1 = NULL, *sortKey2 = NULL;
     ULocaleData *uld;
-    uint32_t x, y, z;
+    int32_t x, y, z;
     USet *eSet;
     int32_t eSize;
     int strSize;

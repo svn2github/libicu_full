@@ -155,10 +155,20 @@ Creating data file for Unicode Normalization
 Unicode .icu files built to "\svn\icuproj\icu\trunk\source\data\out\build\icudt43l"
 Unicode .c source files built to "\svn\icuproj\icu\trunk\source\data\out\tmp"
 
->> DONE with the above, TODO the following <<
-
 - copy the .c source files to C:\svn\icuproj\icu\trunk\source\common
   and rebuild the common library
+
+*** UCA
+
+- update FractionalUCA.txt and UCARules.txt with new canonical closure (output from Mark's Unicode tools)
+- update source/test/testdata/CollationTest_*.txt with output from Mark's Unicode tools
+- generate the *_STUB.txt files via source/tools/genuca/genteststub.py
+  on Windows:
+    python C:\svn\icuproj\icu\trunk\source\tools\genuca\genteststub.py CollationTest_NON_IGNORABLE_SHORT.txt CollationTest_NON_IGNORABLE_STUB.txt
+    python C:\svn\icuproj\icu\trunk\source\tools\genuca\genteststub.py CollationTest_SHIFTED_SHORT.txt CollationTest_SHIFTED_STUB.txt
+- run all tests with the *_SHORT.txt or the full files (the full ones have comments)
+
+>> DONE with the above, TODO the following <<
 
 *** Implement Cased & Case_Ignorable properties
 TODO: via UProperty; call ucase.h functions ucase_getType() and ucase_getTypeOrIgnorable()
@@ -175,10 +185,7 @@ TODO: Without stored data?
 *** Break iterators
 
 * Update break iterator rules to new UAX versions and new property values
-
-*** UCA
-
-* update FractionalUCA.txt and UCARules.txt with new canonical closure
+* Update source/test/testdata/<boundary>Test.txt files from <unicode.org ucd>/ucd/auxiliary
 
 *** Test suites
 - Test that APIs using Unicode property value aliases (like UnicodeSet)
