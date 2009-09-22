@@ -160,13 +160,15 @@ Unicode .c source files built to "\svn\icuproj\icu\trunk\source\data\out\tmp"
 
 *** UCA
 
-- update FractionalUCA.txt and UCARules.txt with new canonical closure (output from Mark's Unicode tools)
+- update FractionalUCA.txt with new canonical closure (output from Mark's Unicode tools)
+- update source/data/unidata/UCARules.txt with UCA_Rules_SHORT.txt from Mark's Unicode tools
 - update source/test/testdata/CollationTest_*.txt with output from Mark's Unicode tools
-- generate the *_STUB.txt files via source/tools/genuca/genteststub.py
+- generate the source/test/testdata/CollationTest_*_STUB.txt files via source/tools/genuca/genteststub.py
   on Windows:
     python C:\svn\icuproj\icu\trunk\source\tools\genuca\genteststub.py CollationTest_NON_IGNORABLE_SHORT.txt CollationTest_NON_IGNORABLE_STUB.txt
     python C:\svn\icuproj\icu\trunk\source\tools\genuca\genteststub.py CollationTest_SHIFTED_SHORT.txt CollationTest_SHIFTED_STUB.txt
 - run all tests with the *_SHORT.txt or the full files (the full ones have comments)
+  not just the *_STUB.txt files
 
 >> DONE with the above, TODO the following <<
 
