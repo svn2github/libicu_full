@@ -384,8 +384,10 @@ UnicodeString &IntlTestCollator::prettify(const CollationKey &source, UnicodeStr
 
     for (i = 0; i < byteCount; i += 1)
     {
+        if (i != 0) {
+            target += " ";
+        }
         appendHex(bytes[i], 2, target);
-        target += " ";
     }
 
     target += "]";
