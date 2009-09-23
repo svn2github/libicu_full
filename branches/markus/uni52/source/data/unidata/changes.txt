@@ -169,6 +169,9 @@ Unicode .c source files built to "\svn\icuproj\icu\trunk\source\data\out\tmp"
     python C:\svn\icuproj\icu\trunk\source\tools\genuca\genteststub.py CollationTest_SHIFTED_SHORT.txt CollationTest_SHIFTED_STUB.txt
 - run all tests with the *_SHORT.txt or the full files (the full ones have comments)
   not just the *_STUB.txt files
+- note on intltest: if collate/UCAConformanceTest fails, then
+  utility/MultithreadTest/TestCollators will fail as well;
+  fix the conformance test before looking into the multi-thread test
 
 >> DONE with the above, TODO the following <<
 
