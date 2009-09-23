@@ -25822,11 +25822,14 @@ A962; [AA 46 FA, 05, 05]
 
 A963; [AA 46 FD, 05, 05]
 
-A964; [AA 47, 05, 05]
+# Begin temporary patch to avoid prefix problem.
+# U+A964 had AA 47 and U+A965 had AA 47 03.
+A964; [AA 47 03, 05, 05]
 
-A965; [AA 47 03, 05, 05]
+A965; [AA 47 05, 05, 05]
 
-A966; [AA 47 06, 05, 05]
+A966; [AA 47 07, 05, 05]
+# End temporary patch to avoid prefix problem.
 
 A967; [AA 47 09, 05, 05]
 

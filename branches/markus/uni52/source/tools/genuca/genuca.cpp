@@ -519,6 +519,7 @@ UCAElements *readAnElement(FILE *data, tempUCATable *t, UCAConstants *consts, UE
                 //consts->UCA_NEXT_TOP_VALUE = theValue<<24 | 0x030303;
               //}
             } else if (vt[cnt].what_to_do == READCE) { /* vt[cnt].what_to_do == READCE */
+              // TODO: combine & clean up the two CE parsers
               pointer = strchr(buffer+vtLen, '[');
               if(pointer) {
                 pointer++;
@@ -703,6 +704,29 @@ UCAElements *readAnElement(FILE *data, tempUCATable *t, UCAConstants *consts, UE
                 break;
             }
             pointer++;
+        }
+    }
+    // Check for valid bytes in CE weights.
+    // TODO: Tighten this so that it allows 03 & 04 in intermediate bytes
+    // but not in final bytes.
+    // See http://bugs.icu-project.org/trac/ticket/7167
+    for (i = 0; i < (int32_t)CEindex; ++i) {
+        uint32_t value = element->CEs[i];
+        uint8_t bytes[4] = {
+            (uint8_t)(value >> 24),
+            (uint8_t)(value >> 16),
+            (uint8_t)(value >> 8),
+            (uint8_t)(value & UCOL_NEW_TERTIARYORDERMASK)
+        };
+        for (int j = 0; j < 4; ++j) {
+            uint8_t maxByte =
+                (isContinuation(value) || j == 1) ?
+                    UCOL_BYTE_FIRST_TAILORED :
+                    UCOL_BYTE_COMMON;
+            if (0 != bytes[j] && bytes[j] < maxByte) {
+                fprintf(stderr, "Warning: invalid UCA weight byte %02X for %s\n", bytes[j], buffer);
+                // TODO: return NULL;
+            }
         }
     }
 
