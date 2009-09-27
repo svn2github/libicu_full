@@ -144,7 +144,9 @@ static const struct {
     { UPROPS_SRC_CHAR,  0 },                                    /* UCHAR_POSIX_BLANK */
     { UPROPS_SRC_CHAR,  0 },                                    /* UCHAR_POSIX_GRAPH */
     { UPROPS_SRC_CHAR,  0 },                                    /* UCHAR_POSIX_PRINT */
-    { UPROPS_SRC_CHAR,  0 }                                     /* UCHAR_POSIX_XDIGIT */
+    { UPROPS_SRC_CHAR,  0 },                                    /* UCHAR_POSIX_XDIGIT */
+    { UPROPS_SRC_CASE,  0 },                                    /* UCHAR_CASED */
+    { UPROPS_SRC_CASE,  0 }                                     /* UCHAR_CASE_IGNORABLE */
 };
 
 U_CAPI UBool U_EXPORT2

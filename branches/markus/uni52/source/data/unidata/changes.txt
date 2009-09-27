@@ -97,7 +97,7 @@ python ucdcopy.py "C:\Documents and Settings\mscherer\My Documents\unicode\ucd\5
   + several new script values already added in ICU 4.0 for ISO 15924 coverage
     (removed from SyntheticPropertyValueAliases.txt, see genpname notes above)
   + 3 new script values added for ISO 15924 and Unicode 5.2 coverage
-  + 1 new script values added for ISO 15924 coverage (not in Unicode 5.1)
+  + 1 new script value added for ISO 15924 coverage (not in Unicode 5.2)
     (added to SyntheticPropertyValueAliases.txt)
 - new Joining Group (JG) values: Farsi_Yeh, Nya
 - new Line_Break (lb) value:
@@ -173,10 +173,12 @@ Unicode .c source files built to "\svn\icuproj\icu\trunk\source\data\out\tmp"
   utility/MultithreadTest/TestCollators will fail as well;
   fix the conformance test before looking into the multi-thread test
 
->> DONE with the above, TODO the following <<
-
 *** Implement Cased & Case_Ignorable properties
-TODO: via UProperty; call ucase.h functions ucase_getType() and ucase_getTypeOrIgnorable()
+- via UProperty; call ucase.h functions ucase_getType() and ucase_getTypeOrIgnorable()
+- Problem: These properties should be disjoint, but aren't.
+  Hardcode the intersection and work to fix it in the next Unicode version.
+
+>> DONE with the above, TODO the following <<
 
 *** Implement Name_Alias property
 TODO:

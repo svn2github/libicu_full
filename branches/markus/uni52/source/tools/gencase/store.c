@@ -230,7 +230,10 @@ unicodeVersions[]={
     { 3, 2, 0, 0 },
     { 4, 0, 0, 0 },
     { 4, 0, 1, 0 },
-    { 4, 1, 0, 0 }
+    { 4, 1, 0, 0 },
+    { 5, 1, 0, 0 },
+    { 5, 2, 0, 0 },
+    { 6, 0, 0, 0 }
 };
 
 int32_t ucdVersion=UNI_4_1;
@@ -348,37 +351,34 @@ setProps(Props *p) {
 
     /* encode case-ignorable as delta==1 on uncased characters */
     isCaseIgnorable=FALSE;
-    if((value&UCASE_TYPE_MASK)==UCASE_NONE) {
-        if(ucdVersion>=UNI_4_1) {
-            /*
-             * Unicode 4.1 & 5.0: (D47a) Word_Break=MidLetter or Mn, Me, Cf, Lm, Sk
-             * Unicode 5.1: Word_Break=(MidLetter or MidNumLet) or Mn, Me, Cf, Lm, Sk
-             *   The UGENCASE_IS_MID_LETTER_SHIFT bit is set for both WB=MidLetter and WB=MidNumLet.
-             * Unicode 5.2: The definition (Unicode Standard Definition D121) is unchanged,
-             *   but now Case_Ignorable is a public property
-             *   with its values listed in DerivedCoreProperties.txt.
-             *   gencase.c parses those values as well, just in case the definition changes
-             *   in the future. gencase.c sets the UGENCASE_IS_MID_LETTER_SHIFT bit
-             *   for each Case_Ignorable entry. (It never resets that bit.)
-             */
-            if(
-                (U_MASK(p->gc)&(U_GC_MN_MASK|U_GC_ME_MASK|U_GC_CF_MASK|U_GC_LM_MASK|U_GC_SK_MASK))!=0 ||
-                (upvec_getValue(pv, p->code, 1)&U_MASK(UGENCASE_IS_MID_LETTER_SHIFT))!=0
-            ) {
-                isCaseIgnorable=TRUE;
-            }
-        } else {
-            /* before Unicode 4.1: Mn, Me, Cf, Lm, Sk or 0027 or 00AD or 2019 */
-            if(
-                (U_MASK(p->gc)&(U_GC_MN_MASK|U_GC_ME_MASK|U_GC_CF_MASK|U_GC_LM_MASK|U_GC_SK_MASK))!=0 ||
-                p->code==0x27 || p->code==0xad || p->code==0x2019
-            ) {
-                isCaseIgnorable=TRUE;
-            }
+    if(ucdVersion>=UNI_4_1) {
+        /*
+         * Unicode 4.1 & 5.0: (D47a) Word_Break=MidLetter or Mn, Me, Cf, Lm, Sk
+         * Unicode 5.1: Word_Break=(MidLetter or MidNumLet) or Mn, Me, Cf, Lm, Sk
+         *   The UGENCASE_IS_MID_LETTER_SHIFT bit is set for both WB=MidLetter and WB=MidNumLet.
+         * Unicode 5.2: The definition (Unicode Standard Definition D121) is unchanged,
+         *   but now Case_Ignorable is a public property
+         *   with its values listed in DerivedCoreProperties.txt.
+         *   gencase.c parses those values as well, just in case the definition changes
+         *   in the future. gencase.c sets the UGENCASE_IS_MID_LETTER_SHIFT bit
+         *   for each Case_Ignorable entry. (It never resets that bit.)
+         */
+        if(
+            (U_MASK(p->gc)&(U_GC_MN_MASK|U_GC_ME_MASK|U_GC_CF_MASK|U_GC_LM_MASK|U_GC_SK_MASK))!=0 ||
+            (upvec_getValue(pv, p->code, 1)&U_MASK(UGENCASE_IS_MID_LETTER_SHIFT))!=0
+        ) {
+            isCaseIgnorable=TRUE;
+        }
+    } else {
+        /* before Unicode 4.1: Mn, Me, Cf, Lm, Sk or 0027 or 00AD or 2019 */
+        if(
+            (U_MASK(p->gc)&(U_GC_MN_MASK|U_GC_ME_MASK|U_GC_CF_MASK|U_GC_LM_MASK|U_GC_SK_MASK))!=0 ||
+            p->code==0x27 || p->code==0xad || p->code==0x2019
+        ) {
+            isCaseIgnorable=TRUE;
         }
     }
-
-    if(isCaseIgnorable && p->code!=0x307) {
+    if(isCaseIgnorable) {
         /*
          * We use one of the delta/exception bits, which works because we only
          * store the case-ignorable flag for uncased characters.
@@ -390,13 +390,30 @@ setProps(Props *p) {
          * U+0307 is uncased, Mn, has conditional special casing and
          * is therefore handled in code instead.
          */
-        if(value&UCASE_EXCEPTION) {
-            fprintf(stderr, "gencase error: unable to encode case-ignorable for U+%04lx with exceptions\n",
-                            (unsigned long)p->code);
-            exit(U_INTERNAL_PROGRAM_ERROR);
-        }
-
         delta=1;
+
+        if((value&UCASE_TYPE_MASK)!=UCASE_NONE) {
+            /*
+             * TODO: Unicode 5.2 has characters that are both Cased and Case_Ignorable,
+             * which is wrong. (But not new: At least Unicode 5.1 had the same bug.)
+             * ICU cannot currently handle these.
+             * ICU 4.4 handles these in the runtime code rather than flip-flopping on the data structure.
+             * Hopefully the next Unicode version fixes this bug.
+             */
+            if(ucdVersion!=UNI_5_2) {  /* time bomb */
+                static const char *const caseTypeNames[]={ "Uncased", "Lowercase", "Uppercase", "Titlecase" };
+                fprintf(stderr, "gencase error: unable to encode case-ignorable for U+%04lx which is %s\n",
+                                (unsigned long)p->code, caseTypeNames[value&UCASE_TYPE_MASK]);
+            }
+            isCaseIgnorable=FALSE;
+        }
+        if(p->code!=0x307 && (value&UCASE_EXCEPTION)!=0) {
+            if(p->code!=0x345 || ucdVersion!=UNI_5_2) {  /* time bomb */
+                fprintf(stderr, "gencase error: unable to encode case-ignorable for U+%04lx with exceptions\n",
+                                (unsigned long)p->code);
+                exit(U_INTERNAL_PROGRAM_ERROR);
+            }
+        }
     }
 
     /* handle exceptions */

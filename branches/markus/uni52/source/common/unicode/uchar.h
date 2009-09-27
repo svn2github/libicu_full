@@ -414,8 +414,12 @@ typedef enum UProperty {
         See the uchar.h file documentation.
         @stable ICU 3.4 */
     UCHAR_POSIX_XDIGIT=48,
+    /** Binary property Cased. For Lowercase, Uppercase and Titlecase characters. @draft ICU 4.4 */
+    UCHAR_CASED=49,
+    /** Binary property Case_Ignorable. Used in context-sensitive case mappings. @draft ICU 4.4 */
+    UCHAR_CASE_IGNORABLE=50,
     /** One more than the last constant for binary Unicode properties. @stable ICU 2.1 */
-    UCHAR_BINARY_LIMIT=49,
+    UCHAR_BINARY_LIMIT=51,
 
     /** Enumerated property Bidi_Class.
         Same as u_charDirection, returns UCharDirection values. @stable ICU 2.2 */

@@ -1586,6 +1586,56 @@ ucase_hasBinaryProperty(UChar32 c, UProperty which) {
         return ucase_isSoftDotted(csp, c);
     case UCHAR_CASE_SENSITIVE:
         return ucase_isCaseSensitive(csp, c);
+    case UCHAR_CASED:
+        return (UBool)(UCASE_NONE!=ucase_getType(csp, c));
+    case UCHAR_CASE_IGNORABLE:
+        /*
+         * TODO: Should just be return (UBool)(ucase_getTypeOrIgnorable(csp, c)<0);
+         * Unicode 5.1/5.2 have a bug, with 117 characters that are both Lowercase and Case_Ignorable.
+         * We handle the intersection here in the property function
+         * until the next Unicode version fixes this bug.
+         *   02B0..02B8     #  [9] MODIFIER LETTER SMALL H..MODIFIER LETTER SMALL Y
+         *   02C0..02C1     #  [2] MODIFIER LETTER GLOTTAL STOP..MODIFIER LETTER REVERSED GLOTTAL STOP
+         *   02E0..02E4     #  [5] MODIFIER LETTER SMALL GAMMA..MODIFIER LETTER SMALL REVERSED GLOTTAL STOP
+         *   0345           #      COMBINING GREEK YPOGEGRAMMENI
+         *   037A           #      GREEK YPOGEGRAMMENI
+         *   1D2C..1D61     # [54] MODIFIER LETTER CAPITAL A..MODIFIER LETTER SMALL CHI
+         *   1D78           #      MODIFIER LETTER CYRILLIC EN
+         *   1D9B..1DBF     # [37] MODIFIER LETTER SMALL TURNED ALPHA..MODIFIER LETTER SMALL THETA
+         *   2090..2094     #  [5] LATIN SUBSCRIPT SMALL LETTER A..LATIN SUBSCRIPT SMALL LETTER SCHWA
+         *   2C7D           #      MODIFIER LETTER CAPITAL V
+         *   A770           #      MODIFIER LETTER US
+         */
+        {
+            int32_t type=ucase_getTypeOrIgnorable(csp, c);
+            if(type<0) {
+                return TRUE;
+            }
+            if(type==UCASE_LOWER) {
+                /* inversion list */
+                static const UChar lowercaseIgnorableSet[]={
+                    0x2b9,
+                    0x2c0, 0x2c2,
+                    0x2e0, 0x2e5,
+                    0x345, 0x346,
+                    0x37a, 0x37b,
+                    0x1d2c, 0x1d62,
+                    0x1d78, 0x1d79,
+                    0x1d9b, 0x1dc0,
+                    0x2090, 0x2095,
+                    0x2c7d, 0x2c7e
+                };
+                int i;
+                if(c<0x2b0) {
+                    return FALSE;
+                } else if(c>0x2c7d) {
+                    return (UBool)(c==0xa770);
+                }
+                for(i=0; c>=lowercaseIgnorableSet[i]; ++i) {}
+                return (UBool)((i&1)==0);
+            }
+            return FALSE;
+        }
     default:
         return FALSE;
     }

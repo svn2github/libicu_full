@@ -88,7 +88,9 @@ derivedCorePropsNames[]={
     "Default_Ignorable_Code_Point",
     "Grapheme_Extend",
     "Grapheme_Link", /* Unicode 5 moves this property here from PropList.txt */
-    "Grapheme_Base"
+    "Grapheme_Base",
+    "Cased",
+    "Case_Ignorable"
 };
 
 static const UProperty
@@ -104,7 +106,9 @@ derivedCorePropsIndex[]={
     UCHAR_DEFAULT_IGNORABLE_CODE_POINT,
     UCHAR_GRAPHEME_EXTEND,
     UCHAR_GRAPHEME_LINK,
-    UCHAR_GRAPHEME_BASE
+    UCHAR_GRAPHEME_BASE,
+    UCHAR_CASED,
+    UCHAR_CASE_IGNORABLE
 };
 
 U_CFUNC void U_CALLCONV
