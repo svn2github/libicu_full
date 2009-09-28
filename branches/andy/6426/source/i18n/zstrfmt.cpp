@@ -30,7 +30,7 @@
 #include "uassert.h"
 
 #include <stdio.h>
-int32_t gDebugCount = 0;  // Debugging.  Remove.
+int32_t gDebugCount = 0;  // TODO: Debugging.  Remove.
 
 /**
  * global ZoneStringFormatCache stuffs
@@ -210,7 +210,8 @@ TextTrieMapSearchResultHandler::~TextTrieMapSearchResultHandler(){
 
 // ----------------------------------------------------------------------------
 TextTrieMap::TextTrieMap(UBool ignoreCase)
-: fIgnoreCase(ignoreCase), fNodes(NULL), fNodesCapacity(0), fNodesCount(0), fLazyContents(NULL) {
+: fIgnoreCase(ignoreCase), fNodes(NULL), fNodesCapacity(0), fNodesCount(0), 
+  fLazyContents(NULL), fIsEmpty(TRUE) {
 }
 
 TextTrieMap::~TextTrieMap() {
@@ -219,7 +220,23 @@ TextTrieMap::~TextTrieMap() {
         fNodes[index].deleteValues();
     }
     uprv_free(fNodes);
+    if (fLazyContents) {
+        for (int32_t i=0; i<fLazyContents->size(); i+=2) {
+            ZoneStringInfo *zsinf = (ZoneStringInfo *)fLazyContents->elementAt(i+1);
+            delete zsinf;
+        } 
+        delete fLazyContents;
+    }
 }
+
+int32_t TextTrieMap::isEmpty() const {
+    // Use a separate field for fIsEmpty because it will remain unchanged once the
+    //   Trie is built, while fNodes and fLazyContents change with the lazy init
+    //   of the nodes structure.  Trying to test the changing fields has
+    //   thread safety complications.
+    return fIsEmpty;
+}
+
 
 //  We defer actually building the TextTrieMap node structure until the first time a
 //     search is performed.  put() simply saves the parameters in case we do
@@ -227,6 +244,7 @@ TextTrieMap::~TextTrieMap() {
 //     
 void
 TextTrieMap::put(const UnicodeString &key, void *value, ZSFStringPool &sp, UErrorCode &status) {
+    fIsEmpty = FALSE;
     if (fLazyContents == NULL) {
         fLazyContents = new UVector(status);
         if (fLazyContents == NULL) {
@@ -585,6 +603,8 @@ ZoneStringFormat::ZoneStringFormat(const UnicodeString* const* strings,
             goto error_cleanup;
         }
     }
+    fStringPool.freeze();
+    // fZoneStringsTrie.buildTrie(status);  // TODO:  debug only.
     return;
 
 error_cleanup:
@@ -1618,7 +1638,6 @@ ZoneStrings::ZoneStrings(UnicodeString *strings,
     fGenericPartialLocationRowCount(genericRowCount), 
     fGenericPartialLocationColCount(genericColCount) {
 
-    gDebugCount++;
     int32_t i, j;
     if (strings != NULL) {
         fStrings = (const UChar **)uprv_malloc(sizeof(const UChar **) * stringsCount);
@@ -1945,7 +1964,6 @@ const UChar *ZSFStringPool::get(const UnicodeString &s) {
 void ZSFStringPool::freeze() {
     uhash_close(fHash);
     fHash = NULL;
-    printf("%d nodes created.\n", gDebugCount);
 }
 
 

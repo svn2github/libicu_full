@@ -122,7 +122,7 @@ public:
     void put(const UnicodeString &key, void *value, ZSFStringPool &sp, UErrorCode &status);
     void search(const UnicodeString &text, int32_t start,
         TextTrieMapSearchResultHandler *handler, UErrorCode& status) const;
-    inline int32_t isEmpty() const;
+    int32_t isEmpty() const;
 
 private:
     UBool           fIgnoreCase;
@@ -131,6 +131,7 @@ private:
     int32_t         fNodesCount;
 
     UVector         *fLazyContents;
+    UBool           fIsEmpty;      
 
     UBool growNodes();
     CharacterNode* addChildNode(CharacterNode *parent, UChar c, UErrorCode &status);
@@ -142,9 +143,6 @@ private:
         int32_t index, TextTrieMapSearchResultHandler *handler, UErrorCode &status) const;
 };
 
-inline UChar32 TextTrieMap::isEmpty(void) const {
-    return fNodes == NULL;
-}
 
 // Name types, these bit flag are used for zone string lookup
 enum TimeZoneTranslationType {
