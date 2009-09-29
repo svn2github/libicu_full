@@ -330,6 +330,8 @@ enum UPropertySource {
     UPROPS_SRC_BIDI,
     /** From uchar.c/uprops.icu main trie as well as properties vectors trie */
     UPROPS_SRC_CHAR_AND_PROPSVEC,
+    /** From ucase.c/ucase.icu as well as unorm.cpp/unorm.icu */
+    UPROPS_SRC_CASE_AND_NORM,
     /** One more than the highest UPropertySource (UPROPS_SRC_) constant. */
     UPROPS_SRC_COUNT
 };

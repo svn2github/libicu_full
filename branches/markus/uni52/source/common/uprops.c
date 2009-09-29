@@ -24,6 +24,7 @@
 #include "unicode/utypes.h"
 #include "unicode/uchar.h"
 #include "unicode/uscript.h"
+#include "unicode/ustring.h"
 #include "cstring.h"
 #include "ucln_cmn.h"
 #include "umutex.h"
@@ -146,7 +147,12 @@ static const struct {
     { UPROPS_SRC_CHAR,  0 },                                    /* UCHAR_POSIX_PRINT */
     { UPROPS_SRC_CHAR,  0 },                                    /* UCHAR_POSIX_XDIGIT */
     { UPROPS_SRC_CASE,  0 },                                    /* UCHAR_CASED */
-    { UPROPS_SRC_CASE,  0 }                                     /* UCHAR_CASE_IGNORABLE */
+    { UPROPS_SRC_CASE,  0 },                                    /* UCHAR_CASE_IGNORABLE */
+    { UPROPS_SRC_CASE,  0 },                                    /* UCHAR_CHANGES_WHEN_LOWERCASED */
+    { UPROPS_SRC_CASE,  0 },                                    /* UCHAR_CHANGES_WHEN_UPPERCASED */
+    { UPROPS_SRC_CASE,  0 },                                    /* UCHAR_CHANGES_WHEN_TITLECASED */
+    { UPROPS_SRC_CASE_AND_NORM,  0 },                           /* UCHAR_CHANGES_WHEN_CASEFOLDED */
+    { UPROPS_SRC_CASE,  0 }                                     /* UCHAR_CHANGES_WHEN_CASEMAPPED */
 };
 
 U_CAPI UBool U_EXPORT2
@@ -216,6 +222,52 @@ u_hasBinaryProperty(UChar32 c, UProperty which) {
                 default:
                     break;
                 }
+            } else if(column==UPROPS_SRC_CASE_AND_NORM) {
+#if !UCONFIG_NO_NORMALIZATION
+                UChar nfdBuffer[4];
+                const UChar *nfd=NULL;
+                int32_t nfdLength;
+                UErrorCode errorCode;
+                switch(which) {
+                case UCHAR_CHANGES_WHEN_CASEFOLDED:
+                    if(unorm_haveData(&errorCode)) {
+                        nfd=unorm_getCanonicalDecomposition(c, nfdBuffer, &nfdLength);
+                    }
+                    if(nfd!=NULL) {
+                        /* c has a decomposition */
+                        if(nfdLength==1) {
+                            c=nfd[0];  /* single BMP code point */
+                        } else if(nfdLength<=U16_MAX_LENGTH) {
+                            int32_t i=0;
+                            U16_NEXT(nfd, i, nfdLength, c);
+                            if(i==nfdLength) {
+                                /* single supplementary code point */
+                            } else {
+                                c=U_SENTINEL;
+                            }
+                        } else {
+                            c=U_SENTINEL;
+                        }
+                    } else if(c<0) {
+                        return FALSE;  /* protect against bad input */
+                    }
+                    errorCode=U_ZERO_ERROR;
+                    if(c>=0) {
+                        /* single code point */
+                        const UCaseProps *csp=ucase_getSingleton(&errorCode);
+                        const UChar *resultString;
+                        return (UBool)(ucase_toFullFolding(csp, c, &resultString, U_FOLD_CASE_DEFAULT)>=0);
+                    } else {
+                        /* guess some large but stack-friendly capacity */
+                        UChar dest[2*UCASE_MAX_STRING_LENGTH];
+                        int32_t destLength;
+                        destLength=u_strFoldCase(dest, LENGTHOF(dest), nfd, nfdLength, U_FOLD_CASE_DEFAULT, &errorCode);
+                        return (UBool)(U_SUCCESS(errorCode) && 0!=u_strCompare(nfd, nfdLength, dest, destLength, FALSE));
+                    }
+                default:
+                    break;
+                }
+#endif
             }
         }
     }

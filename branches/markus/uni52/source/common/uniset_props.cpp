@@ -173,6 +173,10 @@ const UnicodeSet* UnicodeSet::getInclusions(int32_t src, UErrorCode &status) {
             case UPROPS_SRC_NORM:
                 unorm_addPropertyStarts(&sa, &status);
                 break;
+            case UPROPS_SRC_CASE_AND_NORM:
+                ucase_addPropertyStarts(ucase_getSingleton(&status), &sa, &status);
+                unorm_addPropertyStarts(&sa, &status);
+                break;
 #endif
             case UPROPS_SRC_CASE:
                 ucase_addPropertyStarts(ucase_getSingleton(&status), &sa, &status);

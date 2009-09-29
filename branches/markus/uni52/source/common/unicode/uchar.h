@@ -418,8 +418,18 @@ typedef enum UProperty {
     UCHAR_CASED=49,
     /** Binary property Case_Ignorable. Used in context-sensitive case mappings. @draft ICU 4.4 */
     UCHAR_CASE_IGNORABLE=50,
+    /** Binary property Changes_When_Lowercased. @draft ICU 4.4 */
+    UCHAR_CHANGES_WHEN_LOWERCASED=51,
+    /** Binary property Changes_When_Uppercased. @draft ICU 4.4 */
+    UCHAR_CHANGES_WHEN_UPPERCASED=52,
+    /** Binary property Changes_When_Titlecased. @draft ICU 4.4 */
+    UCHAR_CHANGES_WHEN_TITLECASED=53,
+    /** Binary property Changes_When_Casefolded. @draft ICU 4.4 */
+    UCHAR_CHANGES_WHEN_CASEFOLDED=54,
+    /** Binary property Changes_When_Casemapped. @draft ICU 4.4 */
+    UCHAR_CHANGES_WHEN_CASEMAPPED=55,
     /** One more than the last constant for binary Unicode properties. @stable ICU 2.1 */
-    UCHAR_BINARY_LIMIT=51,
+    UCHAR_BINARY_LIMIT=56,
 
     /** Enumerated property Bidi_Class.
         Same as u_charDirection, returns UCharDirection values. @stable ICU 2.2 */

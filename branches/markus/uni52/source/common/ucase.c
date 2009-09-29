@@ -1573,6 +1573,8 @@ u_foldCase(UChar32 c, uint32_t options) {
 U_CFUNC int32_t U_EXPORT2
 ucase_hasBinaryProperty(UChar32 c, UProperty which) {
     /* case mapping properties */
+    const UChar *resultString;
+    int32_t locCache;
     const UCaseProps *csp=GET_CASE_PROPS();
     if(csp==NULL) {
         return FALSE;
@@ -1636,6 +1638,34 @@ ucase_hasBinaryProperty(UChar32 c, UProperty which) {
             }
             return FALSE;
         }
+    /*
+     * Note: The following Changes_When_Xyz are defined as testing whether
+     * the NFD form of the input changes when Xyz-case-mapped.
+     * However, this simpler implementation of these properties,
+     * ignoring NFD, passes the tests.
+     * The implementation needs to be changed if the tests start failing.
+     * When that happens, optimizations should be used to work with the
+     * per-single-code point ucase_toFullXyz() functions unless
+     * the NFD form has more than one code point,
+     * and the property starts set needs to be the union of the
+     * start sets for normalization and case mappings.
+     */
+    case UCHAR_CHANGES_WHEN_LOWERCASED:
+        locCache=UCASE_LOC_ROOT;
+        return (UBool)(ucase_toFullLower(csp, c, NULL, NULL, &resultString, "", &locCache)>=0);
+    case UCHAR_CHANGES_WHEN_UPPERCASED:
+        locCache=UCASE_LOC_ROOT;
+        return (UBool)(ucase_toFullUpper(csp, c, NULL, NULL, &resultString, "", &locCache)>=0);
+    case UCHAR_CHANGES_WHEN_TITLECASED:
+        locCache=UCASE_LOC_ROOT;
+        return (UBool)(ucase_toFullTitle(csp, c, NULL, NULL, &resultString, "", &locCache)>=0);
+    /* case UCHAR_CHANGES_WHEN_CASEFOLDED: -- in uprops.c */
+    case UCHAR_CHANGES_WHEN_CASEMAPPED:
+        locCache=UCASE_LOC_ROOT;
+        return (UBool)(
+            ucase_toFullLower(csp, c, NULL, NULL, &resultString, "", &locCache)>=0 ||
+            ucase_toFullUpper(csp, c, NULL, NULL, &resultString, "", &locCache)>=0 ||
+            ucase_toFullTitle(csp, c, NULL, NULL, &resultString, "", &locCache)>=0);
     default:
         return FALSE;
     }
