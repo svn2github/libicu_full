@@ -92,12 +92,12 @@ class ZSFStringPool: public UMemory {
      *
      * Life time of the returned string is that of the pool.
      */
-    const UChar *get(const UChar *s);
+    const UChar *get(const UChar *s, UErrorCode &status);
 
     /* Get the pooled string that is equal to the supplied string s.
      * Copy the string into the pool if it is not already present.
      */
-    const UChar *get(const UnicodeString &s);
+    const UChar *get(const UnicodeString &s, UErrorCode &status);
 
     /* Freeze the string pool.  Discards the hash table that is used
      * for looking up a string.  All pointers to pooled strings remain valid.
@@ -190,7 +190,7 @@ private:
     friend class ZoneStringSearchResultHandler;
 
     ZoneStringInfo(const UnicodeString &id, const UnicodeString &str, 
-                   TimeZoneTranslationType type, ZSFStringPool &sp);
+                   TimeZoneTranslationType type, ZSFStringPool &sp, UErrorCode &status);
 
     const UChar   *fId;
     const UChar   *fStr;
@@ -283,8 +283,9 @@ public:
 
 private:
     Locale      fLocale;
-    Hashtable   fTzidToStrings;
-    Hashtable   fMzidToStrings;
+    UHashtable   *fTzidToStrings;
+    UHashtable   *fMzidToStrings;
+
     TextTrieMap fZoneStringsTrie;
     ZSFStringPool  fStringPool;
 
@@ -411,7 +412,8 @@ public:
                 UnicodeString **genericPartialLocationStrings, 
                 int32_t        genericRowCount, 
                 int32_t        genericColCount,
-                ZSFStringPool &sp);
+                ZSFStringPool &sp,
+                UErrorCode    &status);
 
     virtual         ~ZoneStrings();
     UnicodeString&   getString(int32_t typeIdx, UnicodeString &result) const;
