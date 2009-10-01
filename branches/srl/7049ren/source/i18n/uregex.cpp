@@ -64,6 +64,10 @@ RegularExpression::~RegularExpression() {
     fMagic = 0;
 }
 
+U_NAMESPACE_END
+
+U_NAMESPACE_USE
+
 //----------------------------------------------------------------------------------------
 //
 //   validateRE    Do boilerplate style checks on API function parameters.
@@ -849,7 +853,7 @@ uregex_replaceFirst(URegularExpression  *regexp2,
 //
 //------------------------------------------------------------------------------
 
-
+U_NAMESPACE_BEGIN
 //
 //  Dummy class, because these functions need to be friends of class RegexMatcher,
 //               and stand-alone C functions don't work as friends
@@ -868,6 +872,9 @@ class RegexCImpl {
                   int32_t               *destCapacity,
                   UErrorCode            *status);
 };
+
+U_NAMESPACE_END
+
 
 
 //
@@ -1397,8 +1404,6 @@ uregex_split(   URegularExpression      *regexp2,
     }
     return i+1;
 }
-
-U_NAMESPACE_END
 
 
 #endif   // !UCONFIG_NO_REGULAR_EXPRESSIONS
