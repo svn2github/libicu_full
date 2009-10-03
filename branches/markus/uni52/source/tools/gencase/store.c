@@ -390,9 +390,9 @@ setProps(Props *p) {
          * U+0307 is uncased, Mn, has conditional special casing and
          * is therefore handled in code instead.
          */
-        delta=1;
-
-        if((value&UCASE_TYPE_MASK)!=UCASE_NONE) {
+        if((value&UCASE_TYPE_MASK)==UCASE_NONE) {
+            delta=1;
+        } else {
             /*
              * TODO: Unicode 5.2 has characters that are both Cased and Case_Ignorable,
              * which is wrong. (But not new: At least Unicode 5.1 had the same bug.)

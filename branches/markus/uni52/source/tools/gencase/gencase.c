@@ -235,7 +235,7 @@ main(int argc, char* argv[]) {
     }
     if(argc<0 || options[HELP_H].doesOccur || options[HELP_QUESTION_MARK].doesOccur) {
         /*
-         * Broken into chucks because the C89 standard says the minimum
+         * Broken into chunks because the C89 standard says the minimum
          * required supported string length is 509 bytes.
          */
         fprintf(stderr,

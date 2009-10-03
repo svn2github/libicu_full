@@ -178,6 +178,9 @@ Unicode .c source files built to "\svn\icuproj\icu\trunk\source\data\out\tmp"
 - Problem: These properties should be disjoint, but aren't.
   Hardcode the intersection and work to fix it in the next Unicode version.
 
+*** Implement Changes_When_Xyz properties
+- without stored data
+
 >> DONE with the above, TODO the following <<
 
 *** Implement Name_Alias property
@@ -185,9 +188,6 @@ TODO:
 - add it as another name field in unames.icu
 - make it available via u_charName() and UCharNameChoice and
 - consider it in u_charFromName()
-
-*** Implement Changes_When_Xyz properties
-TODO: Without stored data?
 
 *** Break iterators
 
