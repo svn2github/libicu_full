@@ -678,7 +678,7 @@ res_index:table(nofallback) {
 # Targets for unames.icu
 "$(ICUBLD_PKG)\unames.icu": "$(ICUUNIDATA)\*.txt" "$(ICUTOOLS)\gennames\$(CFG)\gennames.exe"
 	@echo Creating data file for Unicode Names
-	@"$(ICUTOOLS)\gennames\$(CFG)\gennames" -1 -u $(UNICODE_VERSION) -d "$(ICUBLD_PKG)" "$(ICUUNIDATA)\UnicodeData.txt"
+	@"$(ICUTOOLS)\gennames\$(CFG)\gennames" -1 -u $(UNICODE_VERSION) -d "$(ICUBLD_PKG)" "$(ICUUNIDATA)\UnicodeData.txt" "$(ICUUNIDATA)\NameAliases.txt"
 
 # Targets for pnames.icu
 # >> Depends on the Unicode data as well as uchar.h and uscript.h <<

@@ -115,6 +115,7 @@ _unidata_files = {
   "DerivedJoiningGroup.txt": shutil.copy,
   "DerivedJoiningType.txt": shutil.copy,
   "DerivedNumericValues.txt": shutil.copy,
+  "NameAliases.txt": shutil.copy,
   "NormalizationCorrections.txt": shutil.copy,
   "PropertyAliases.txt": shutil.copy,
   "PropertyValueAliases.txt": shutil.copy,
