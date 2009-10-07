@@ -1497,10 +1497,19 @@ static int32_t MakeDir(char* str)
 
 static const struct {
     uint32_t code;
-    const char *name, *oldName, *extName;
+    const char *name, *oldName, *extName, *alias;
 } names[]={
     {0x0061, "LATIN SMALL LETTER A", "", "LATIN SMALL LETTER A"},
-    {0x0284, "LATIN SMALL LETTER DOTLESS J WITH STROKE AND HOOK", "LATIN SMALL LETTER DOTLESS J BAR HOOK", "LATIN SMALL LETTER DOTLESS J WITH STROKE AND HOOK" },
+    {0x01a2, "LATIN CAPITAL LETTER OI",
+             "LATIN CAPITAL LETTER O I",
+             "LATIN CAPITAL LETTER OI",
+             "LATIN CAPITAL LETTER GHA"},
+    {0x0284, "LATIN SMALL LETTER DOTLESS J WITH STROKE AND HOOK",
+             "LATIN SMALL LETTER DOTLESS J BAR HOOK",
+             "LATIN SMALL LETTER DOTLESS J WITH STROKE AND HOOK" },
+    {0x0fd0, "TIBETAN MARK BSKA- SHOG GI MGO RGYAN", "",
+             "TIBETAN MARK BSKA- SHOG GI MGO RGYAN",
+             "TIBETAN MARK BKA- SHOG GI MGO RGYAN"},
     {0x3401, "CJK UNIFIED IDEOGRAPH-3401", "", "CJK UNIFIED IDEOGRAPH-3401" },
     {0x7fed, "CJK UNIFIED IDEOGRAPH-7FED", "", "CJK UNIFIED IDEOGRAPH-7FED" },
     {0xac00, "HANGUL SYLLABLE GA", "", "HANGUL SYLLABLE GA" },
@@ -1510,6 +1519,9 @@ static const struct {
     {0xff08, "FULLWIDTH LEFT PARENTHESIS", "FULLWIDTH OPENING PARENTHESIS", "FULLWIDTH LEFT PARENTHESIS" },
     {0xffe5, "FULLWIDTH YEN SIGN", "", "FULLWIDTH YEN SIGN" },
     {0xffff, "", "", "<noncharacter-FFFF>" },
+    {0x1d0c5, "BYZANTINE MUSICAL SYMBOL FHTORA SKLIRON CHROMA VASIS", "",
+              "BYZANTINE MUSICAL SYMBOL FHTORA SKLIRON CHROMA VASIS",
+              "BYZANTINE MUSICAL SYMBOL FTHORA SKLIRON CHROMA VASIS"},
     {0x23456, "CJK UNIFIED IDEOGRAPH-23456", "", "CJK UNIFIED IDEOGRAPH-23456" }
 };
 
@@ -1518,6 +1530,7 @@ enumCharNamesFn(void *context,
                 UChar32 code, UCharNameChoice nameChoice,
                 const char *name, int32_t length) {
     int32_t *pCount=(int32_t *)context;
+    const char *expected;
     int i;
 
     if(length<=0 || length!=(int32_t)strlen(name)) {
@@ -1541,8 +1554,15 @@ enumCharNamesFn(void *context,
                     }
                     break;
                 case U_UNICODE_10_CHAR_NAME:
-                    if(names[i].oldName[0]==0 || 0!=strcmp(name, names[i].oldName)) {
-                        log_err("u_enumCharName(0x%lx - 1.0)=%s instead of %s\n", code, name, names[i].oldName);
+                    expected=names[i].oldName;
+                    if(expected[0]==0 || 0!=strcmp(name, expected)) {
+                        log_err("u_enumCharName(0x%lx - 1.0)=%s instead of %s\n", code, name, expected);
+                    }
+                    break;
+                case U_CHAR_NAME_ALIAS:
+                    expected=names[i].alias;
+                    if(expected==NULL || expected[0]==0 || 0!=strcmp(name, expected)) {
+                        log_err("u_enumCharName(0x%lx - alias)=%s instead of %s\n", code, name, expected);
                     }
                     break;
                 case U_CHAR_NAME_CHOICE_COUNT:
@@ -1598,6 +1618,7 @@ TestCharNames() {
     static char name[80];
     UErrorCode errorCode=U_ZERO_ERROR;
     struct enumExtCharNamesContext extContext;
+    const char *expected;
     int32_t length;
     UChar32 c;
     int32_t i;
@@ -1656,6 +1677,35 @@ TestCharNames() {
             }
             if(c!=(UChar32)names[i].code) {
                 log_err("u_charFromName(%s - 1.0) gets 0x%lx instead of 0x%lx\n", names[i].oldName, c, names[i].code);
+            }
+        }
+
+        /* Unicode character name alias */
+        length=u_charName(names[i].code, U_CHAR_NAME_ALIAS, name, sizeof(name), &errorCode);
+        if(U_FAILURE(errorCode)) {
+            log_err("u_charName(0x%lx - alias) error %s\n", names[i].code, u_errorName(errorCode));
+            return;
+        }
+        expected=names[i].alias;
+        if(expected==NULL) {
+            expected="";
+        }
+        if(length<0 || (length>0 && 0!=strcmp(name, expected)) || length!=(uint16_t)strlen(name)) {
+            log_err("u_charName(0x%lx - alias) gets %s length %ld instead of nothing or %s\n",
+                    names[i].code, name, length, expected);
+        }
+
+        /* find the Unicode character name alias if it is stored (length>0 means that we could read it) */
+        if(expected[0]!=0 /* && length>0 */) {
+            c=u_charFromName(U_CHAR_NAME_ALIAS, expected, &errorCode);
+            if(U_FAILURE(errorCode)) {
+                log_err("u_charFromName(%s - alias) error %s\n",
+                        expected, u_errorName(errorCode));
+                return;
+            }
+            if(c!=(UChar32)names[i].code) {
+                log_err("u_charFromName(%s - alias) gets 0x%lx instead of 0x%lx\n",
+                        expected, c, names[i].code);
             }
         }
     }

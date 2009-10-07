@@ -181,10 +181,7 @@ Unicode .c source files built to "\svn\icuproj\icu\trunk\source\data\out\tmp"
 *** Implement Changes_When_Xyz properties
 - without stored data
 
->> DONE with the above, TODO the following <<
-
 *** Implement Name_Alias property
-TODO:
 - add it as another name field in unames.icu
 - make it available via u_charName() and UCharNameChoice and
 - consider it in u_charFromName()
@@ -194,12 +191,7 @@ TODO:
 * Update break iterator rules to new UAX versions and new property values
 * Update source/test/testdata/<boundary>Test.txt files from <unicode.org ucd>/ucd/auxiliary
 
-*** Test suites
-- Test that APIs using Unicode property value aliases (like UnicodeSet)
-  support all of the boolean values N/Y, No/Yes, F/T, False/True
-  -> TestBinaryValues() tests in both cintltst and intltest
-
-TODO: add test code to parse the new properties and compare with results from new API
+>> DONE with the above, TODO the following <<
 
 TODO: new BidiTest file
   review format and data

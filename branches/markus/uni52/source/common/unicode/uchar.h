@@ -1406,6 +1406,7 @@ typedef enum UCharNameChoice {
     U_UNICODE_CHAR_NAME,
     U_UNICODE_10_CHAR_NAME,
     U_EXTENDED_CHAR_NAME,
+    U_CHAR_NAME_ALIAS,          /**< Corrected name from NameAliases.txt. @draft ICU 4.4 */
     U_CHAR_NAME_CHOICE_COUNT
 } UCharNameChoice;
 
@@ -2528,6 +2529,9 @@ u_charName(UChar32 code, UCharNameChoice nameChoice,
  * Get the ISO 10646 comment for a character.
  * The ISO 10646 comment is an informative field in the Unicode Character
  * Database (UnicodeData.txt field 11) and is from the ISO 10646 names list.
+ *
+ * Note: Unicode 5.2 removes all ISO comment data, resulting in empty strings
+ * returned for all characters.
  *
  * @param c The character (code point) for which to get the ISO comment.
  *             It must be <code>0<=c<=0x10ffff</code>.
