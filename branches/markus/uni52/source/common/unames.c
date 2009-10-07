@@ -949,7 +949,7 @@ enumAlgNames(AlgorithmicRange *range,
     char buffer[200];
     uint16_t length;
 
-    if(nameChoice==U_UNICODE_10_CHAR_NAME) {
+    if(nameChoice!=U_UNICODE_CHAR_NAME && nameChoice!=U_EXTENDED_CHAR_NAME) {
         return TRUE;
     }
 
@@ -1087,7 +1087,7 @@ static UChar32
 findAlgName(AlgorithmicRange *range, UCharNameChoice nameChoice, const char *otherName) {
     UChar32 code;
 
-    if(nameChoice==U_UNICODE_10_CHAR_NAME) {
+    if(nameChoice!=U_UNICODE_CHAR_NAME && nameChoice!=U_EXTENDED_CHAR_NAME) {
         return 0xffff;
     }
 
