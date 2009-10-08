@@ -19,7 +19,7 @@ en_BW{
         "#,##0%",
         "#E0",
     }
-    Version{"1.51"}
+    Version{"2.0.41.78"}
     calendar{
         gregorian{
             DateTimeElements:intvector{

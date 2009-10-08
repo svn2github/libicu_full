@@ -7,7 +7,7 @@
 // *
 // ***************************************************************************
 /**
- *  ICU <specials> source: <path>/xml/main/he.xml
+ *  ICU <specials > source: <path>/xml/main/he.xml
  */
 he{
     AuxExemplarCharacters{
@@ -300,7 +300,7 @@ he{
     }
     Currencies{
         ADP{
-            "ADP",
+            "ADP" /** ===  */,
             "פזטה אנדורית",
         }
         AED{
@@ -328,15 +328,15 @@ he{
             "קואנזה אנגולי",
         }
         AON{
-            "AON",
+            "AON" /** ===  */,
             "קואנזה חדש אנגולי (1990-2000)",
         }
         AOR{
-            "AOR",
+            "AOR" /** ===  */,
             "קואנזה רג׳וסטדו אנגולי (1995-1999)",
         }
         ARP{
-            "ARP",
+            "ARP" /** ===  */,
             "פזו ארגנטינאי (1983-1985)",
         }
         ARS{
@@ -344,7 +344,7 @@ he{
             "פזו ארגנטינאי",
         }
         ATS{
-            "ATS",
+            "ATS" /** ===  */,
             "שילינג אוסטרי",
         }
         AUD{
@@ -364,7 +364,7 @@ he{
             "מאנאט אזרביג׳ני",
         }
         BAD{
-            "BAD",
+            "BAD" /** ===  */,
             "דינר של בוסניה־הרצגובינה",
         }
         BAM{
@@ -380,7 +380,7 @@ he{
             "טאקה בנגלדשי",
         }
         BEC{
-            "BEC",
+            "BEC" /** ===  */,
             "פרנק בלגי (בר המרה)",
         }
         BEF{
@@ -388,7 +388,7 @@ he{
             "פרנק בלגי",
         }
         BGL{
-            "BGL",
+            "BGL" /** ===  */,
             "לב בולגרי ישן",
         }
         BGN{
@@ -420,11 +420,11 @@ he{
             "פזו בוליבי",
         }
         BRB{
-            "NCr",
+            "BRB" /** ===  */,
             "קרוזיארו חדש ברזילאי (1967-1986)",
         }
         BRC{
-            "Cz$",
+            "BRC" /** ===  */,
             "קרוזדו ברזילאי",
         }
         BRL{
@@ -476,11 +476,11 @@ he{
             "קולון קוסטה־ריקני",
         }
         CSD{
-            "CSD",
+            "CSD" /** ===  */,
             "דינר סרבי ישן",
         }
         CSK{
-            "CSK",
+            "CSK" /** ===  */,
             "קורונה צ׳כית",
         }
         CUP{
@@ -496,7 +496,7 @@ he{
             "קורונה צ'כית",
         }
         DDM{
-            "DDM",
+            "DDM" /** ===  */,
             "מרק מזרח גרמני",
         }
         DEM{
@@ -520,7 +520,7 @@ he{
             "דינר אלג׳ירי",
         }
         ECS{
-            "ECS",
+            "ECS" /** ===  */,
             "סוקר אקואדורי",
         }
         EEK{
@@ -592,7 +592,7 @@ he{
             "קצל גואטמלי",
         }
         GWP{
-            "GWP",
+            "GWP" /** ===  */,
             "פזו גינאי",
         }
         GYD{
@@ -636,7 +636,7 @@ he{
             "ש\"ח",
         }
         INR{
-            "₨",
+            "Rs",
             "רופי הודית",
         }
         IQD{
@@ -684,7 +684,7 @@ he{
             "פרנק קומורואי",
         }
         KPW{
-            "KP₩",
+            "KPW",
             "וון צפון קוראני",
         }
         KRW{
@@ -728,7 +728,7 @@ he{
             "ליטא ליטאי",
         }
         LUF{
-            "LUF",
+            "LUF" /** ===  */,
             "פרנק לוקסמבורגי",
         }
         LVL{
@@ -744,7 +744,7 @@ he{
             "דירהם מרוקאי",
         }
         MAF{
-            "MAF",
+            "MAF" /** ===  */,
             "פרנק מרוקאי",
         }
         MDL{
@@ -752,7 +752,7 @@ he{
             "ליאו מולדובני",
         }
         MGF{
-            "MGF",
+            "MGF" /** ===  */,
             "פרנק מדגסקארי",
         }
         MMK{
@@ -768,11 +768,11 @@ he{
             "רופי מאוריציני",
         }
         MVR{
-            "Rf",
+            "MVR",
             "רופיה מלדיבית",
         }
         MWK{
-            "MK",
+            "MWK",
             "קואצ׳ה מלאוי",
         }
         MXN{
@@ -872,11 +872,11 @@ he{
             "רובל",
         }
         RUR{
-            "RUR",
+            "RUR" /** ===  */,
             "רובל רוסי (1991 - 1998)",
         }
         RWF{
-            "RF",
+            "RWF",
             "פרנק רואנדי",
         }
         SAR{
@@ -896,7 +896,7 @@ he{
             "דינר סודני",
         }
         SDP{
-            "SDP",
+            "SDP" /** ===  */,
             "לירה סודנית",
         }
         SEK{
@@ -912,7 +912,7 @@ he{
             "פאונד סנט הלני",
         }
         SIT{
-            "SIT",
+            "SIT" /** ===  */,
             "טולאר סלובני",
         }
         SKK{
@@ -940,7 +940,7 @@ he{
             "דוברה של סן טומה ופרינסיפה",
         }
         SUR{
-            "SUR",
+            "SUR" /** ===  */,
             "רובל סובייטי",
         }
         SYP{
@@ -972,7 +972,7 @@ he{
             "פאאמגה טונגי",
         }
         TPE{
-            "TPE",
+            "TPE" /** ===  */,
             "אסקודו טימוראי",
         }
         TRL{
@@ -1000,7 +1000,7 @@ he{
             "גריבנה אוקראיני",
         }
         UGS{
-            "UGS",
+            "UGS" /** ===  */,
             "שילינג אוגנדי (1966 - 1987)",
         }
         UGX{
@@ -1012,11 +1012,11 @@ he{
             "דולר אמריקאי",
         }
         USN{
-            "USN",
+            "USN" /** ===  */,
             "דולר אמריקאי (היום הבא)",
         }
         USS{
-            "USS",
+            "USS" /** ===  */,
             "דולר אמריקאי (היום הזה)",
         }
         UYU{
@@ -1028,7 +1028,7 @@ he{
             "סום אוזבקי",
         }
         VEB{
-            "Bs.",
+            "VEB" /** ===  */,
             "בוליבר ונצואלי",
         }
         VND{
@@ -1084,7 +1084,7 @@ he{
             "סימון \"ללא מטבע\"",
         }
         YDD{
-            "YDD",
+            "YDD" /** ===  */,
             "דינר תימני",
         }
         YER{
@@ -1092,7 +1092,7 @@ he{
             "ריאל תימני",
         }
         ZAL{
-            "ZAL",
+            "ZAL" /** ===  */,
             "ראנד דרום אפריקאי (כספי)",
         }
         ZAR{
@@ -1492,7 +1492,7 @@ he{
         MONOTON{"מונוטונית"}
         POSIX{"מחשב"}
     }
-    Version{"1.124"}
+    Version{"2.0.42.82"}
     calendar{
         gregorian{
             AmPmMarkers{
@@ -1636,86 +1636,86 @@ he{
             }
             intervalFormats{
                 M{
-                    M{"M-M"}
+                    M{"M–M"}
                 }
                 MEd{
-                    M{"EEEE dd/MM - EEEE dd/MM"}
-                    d{"EEEE dd/MM - EEEE dd/MM"}
+                    M{"EEEE dd/MM – EEEE dd/MM"}
+                    d{"EEEE dd/MM – EEEE dd/MM"}
                 }
                 MMM{
-                    M{"MMM-MMM"}
+                    M{"MMM–MMM"}
                 }
                 MMMEd{
-                    M{"EEEE d MMM - EEEE d MMM"}
-                    d{"EEEE d MMM - EEEE d MMM"}
+                    M{"EEEE d MMM – EEEE d MMM"}
+                    d{"EEEE d MMM – EEEE d MMM"}
                 }
                 MMMM{
-                    M{"LLLL-LLLL"}
+                    M{"LLLL–LLLL"}
                 }
                 MMMd{
-                    M{"d MMM - d MMM"}
-                    d{"d-d MMM"}
+                    M{"d MMM – d MMM"}
+                    d{"d–d MMM"}
                 }
                 Md{
-                    M{"dd/MM - dd/MM"}
-                    d{"dd/MM - dd/MM"}
+                    M{"dd/MM – dd/MM"}
+                    d{"dd/MM – dd/MM"}
                 }
                 d{
-                    d{"d-d"}
+                    d{"d–d"}
                 }
                 fallback{"{0} – {1}"}
                 h{
-                    a{"HH-HH"}
+                    a{"HH–HH"}
                     h{"HH–HH"}
                 }
                 hm{
-                    a{"HH:mm-HH:mm"}
+                    a{"HH:mm–HH:mm"}
                     h{"HH:mm–HH:mm"}
                     m{"HH:mm–HH:mm"}
                 }
                 hmv{
-                    a{"HH:mm-HH:mm v"}
+                    a{"HH:mm–HH:mm v"}
                     h{"HH:mm–HH:mm v"}
                     m{"HH:mm–HH:mm v"}
                 }
                 hv{
-                    a{"HH-HH v"}
+                    a{"HH–HH v"}
                     h{"HH–HH v"}
                 }
                 y{
-                    y{"y-y"}
+                    y{"y–y"}
                 }
                 yM{
-                    M{"MM/yy - MM/yy"}
-                    y{"MM/yy - MM/yy"}
+                    M{"MM/yy – MM/yy"}
+                    y{"MM/yy – MM/yy"}
                 }
                 yMEd{
-                    M{"EEEE dd/MM/yy - EEEE dd/MM/yy"}
-                    d{"EEEE dd/MM/yy - EEEE dd/MM/yy"}
-                    y{"EEEE dd/MM/yy - EEEE dd/MM/yy"}
+                    M{"EEEE dd/MM/yy – EEEE dd/MM/yy"}
+                    d{"EEEE dd/MM/yy – EEEE dd/MM/yy"}
+                    y{"EEEE dd/MM/yy – EEEE dd/MM/yy"}
                 }
                 yMMM{
-                    M{"MMM-MMM y"}
-                    y{"MMM y - MMM y"}
+                    M{"MMM–MMM y"}
+                    y{"MMM y – MMM y"}
                 }
                 yMMMEd{
-                    M{"EEEE d MMM - EEEE d MMM y"}
-                    d{"EEEE d MMM - EEEE d MMM y"}
-                    y{"EEEE d MMM y - EEEE d MMM y"}
+                    M{"EEEE d MMM – EEEE d MMM y"}
+                    d{"EEEE d MMM – EEEE d MMM y"}
+                    y{"EEEE d MMM y – EEEE d MMM y"}
                 }
                 yMMMM{
                     M{"yyyy-MM – MM"}
                     y{"yyyy-MM – yyyy-MM"}
                 }
                 yMMMd{
-                    M{"d MMM - d MMM y"}
-                    d{"d-d MMM y"}
-                    y{"d MMM y - d MMM y"}
+                    M{"d MMM – d MMM y"}
+                    d{"d–d MMM y"}
+                    y{"d MMM y – d MMM y"}
                 }
                 yMd{
-                    M{"dd/MM/yy - dd/MM/yy"}
-                    d{"dd/MM/yy - dd/MM/yy"}
-                    y{"dd/MM/yy - dd/MM/yy"}
+                    M{"dd/MM/yy – dd/MM/yy"}
+                    d{"dd/MM/yy – dd/MM/yy"}
+                    y{"dd/MM/yy – dd/MM/yy"}
                 }
             }
             monthNames{
@@ -1823,7 +1823,7 @@ he{
                         "כסלו",
                         "טבת",
                         "שבט",
-                        "אדר א'",
+                        "אדר א׳",
                         "אדר",
                         "ניסן",
                         "אייר",
@@ -1831,6 +1831,7 @@ he{
                         "תמוז",
                         "אב",
                         "אלול",
+                        "אדר ב׳",
                     }
                 }
                 stand-alone{
@@ -1840,7 +1841,7 @@ he{
                         "כסלו",
                         "טבת",
                         "שבט",
-                        "אדר א'",
+                        "אדר א׳",
                         "אדר",
                         "ניסן",
                         "אייר",
@@ -1848,6 +1849,7 @@ he{
                         "תמוז",
                         "אב",
                         "אלול",
+                        "אדר ב׳",
                     }
                 }
             }

@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT: 
- * Copyright (c) 1997-2008, International Business Machines Corporation and
+ * Copyright (c) 1997-2009, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 
@@ -79,6 +79,7 @@ public:
     virtual UBool setQuick( UBool quick = TRUE );
     virtual UBool setLeaks( UBool leaks = TRUE );
     virtual UBool setWarnOnMissingData( UBool warn_on_missing_data = TRUE );
+    virtual int32_t setThreadCount( int32_t count = 1);
 
     virtual int32_t getErrors( void );
     virtual int32_t getDataErrors (void );
@@ -107,6 +108,8 @@ public:
     virtual void dataerr( const UnicodeString &message );
 
     virtual void dataerrln( const UnicodeString &message );
+    
+    void errcheckln(UErrorCode status, const UnicodeString &message );
 
     // convenience functions: sprintf() + errln() etc.
     void log(const char *fmt, ...);
@@ -117,6 +120,7 @@ public:
     void errln(const char *fmt, ...);
     void dataerr(const char *fmt, ...);
     void dataerrln(const char *fmt, ...);
+    void errcheckln(UErrorCode status, const char *fmt, ...);
 
     // Print ALL named errors encountered so far
     void printErrors(); 
@@ -152,11 +156,11 @@ public:
 
 protected:
     /* JUnit-like assertions. Each returns TRUE if it succeeds. */
-    UBool assertTrue(const char* message, UBool condition, UBool quiet=FALSE);
+    UBool assertTrue(const char* message, UBool condition, UBool quiet=FALSE, UBool possibleDataError=FALSE);
     UBool assertFalse(const char* message, UBool condition, UBool quiet=FALSE);
-    UBool assertSuccess(const char* message, UErrorCode ec);
+    UBool assertSuccess(const char* message, UErrorCode ec, UBool possibleDataError=FALSE);
     UBool assertEquals(const char* message, const UnicodeString& expected,
-                       const UnicodeString& actual);
+                       const UnicodeString& actual, UBool possibleDataError=FALSE);
     UBool assertEquals(const char* message, const char* expected,
                        const char* actual);
 #if !UCONFIG_NO_FORMATTING
@@ -189,6 +193,7 @@ protected:
     UBool       quick;
     UBool       leaks;
     UBool       warn_on_missing_data;
+    int32_t     threadCount;
 
 private:
     UBool       LL_linestart;

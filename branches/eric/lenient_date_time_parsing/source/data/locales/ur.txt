@@ -7,7 +7,7 @@
 // *
 // ***************************************************************************
 /**
- *  ICU <specials> source: <path>/xml/main/ur.xml
+ *  ICU <specials > source: <path>/xml/main/ur.xml
  */
 ur{
     Countries{
@@ -108,7 +108,7 @@ ur{
             "اسرائیلی شیکل",
         }
         INR{
-            "₨",
+            "Rs",
             "انڈین روپیہ",
         }
         JPY{
@@ -176,7 +176,7 @@ ur{
             "سنگا پور ڈالر",
         }
         SIT{
-            "SIT",
+            "SIT" /** ===  */,
             "سلوانین ٹولر",
         }
         SKK{
@@ -200,7 +200,7 @@ ur{
             "امریکی ڈالر",
         }
         VEB{
-            "Bs.",
+            "VEB" /** ===  */,
             "وینزویلا بولیور",
         }
         ZAR{
@@ -316,7 +316,7 @@ ur{
         "#,##0%",
         "#E0",
     }
-    Version{"1.63"}
+    Version{"2.0.42.82"}
     calendar{
         gregorian{
             DateTimePatterns{

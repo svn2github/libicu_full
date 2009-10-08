@@ -1,6 +1,6 @@
 /*
 *****************************************************************************
-* Copyright (C) 2001-2008, International Business Machines orporation  
+* Copyright (C) 2001-2009, International Business Machines orporation  
 * and others. All Rights Reserved.
 ****************************************************************************/
 
@@ -25,7 +25,7 @@
             logln(#test "---");       \
             logln((UnicodeString)""); \
             if(areBroken) {           \
-                  errln(__FILE__ " cannot test - failed to create collator.");  \
+                  dataerrln(__FILE__ " cannot test - failed to create collator.");  \
             } else {                  \
                 test();               \
             }                         \
@@ -114,7 +114,9 @@ void StringSearchTest::runIndexedTest(int32_t index, UBool exec,
     }
 
     switch (index) {
+#if !UCONFIG_NO_FILE_IO
         CASE(0, TestOpenClose)
+#endif
         CASE(1, TestInitialization)
         CASE(2, TestBasic)
         CASE(3, TestNormExact)

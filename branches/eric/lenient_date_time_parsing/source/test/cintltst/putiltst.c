@@ -18,6 +18,7 @@
 #include "cmemory.h"
 #include "unicode/putil.h"
 #include "unicode/ustring.h"
+#include "unicode/icudataver.h"
 #include "cstring.h"
 #include "putilimp.h"
 
@@ -187,6 +188,9 @@ static void TestVersion()
     char versionString[17]; /* xxx.xxx.xxx.xxx\0 */
     UChar versionUString[] = { 0x0031, 0x002E, 0x0030, 0x002E,
                                0x0032, 0x002E, 0x0038, 0x0000 }; /* 1.0.2.8 */
+    UBool isModified = FALSE;
+    UVersionInfo version;
+    UErrorCode status = U_ZERO_ERROR;
 
     log_verbose("Testing the API u_versionToString().....\n");
     u_versionToString(versionArray, versionString);
@@ -267,6 +271,17 @@ static void TestVersion()
     else {
        log_verbose(" from UString: %s\n", versionString);
     }
+
+    /* Test the data version API for better code coverage */
+    u_getDataVersion(version, &status);
+    if (U_FAILURE(status)) {
+        log_err("ERROR: Unable to get data version.");
+    } else {
+        u_isDataOlder(version, &isModified, &status);
+        if (U_FAILURE(status)) {
+            log_err("ERROR: Unable to compare data version.");
+        }
+    }
 }
 
 static void TestCompareVersions()
@@ -286,7 +301,7 @@ static void TestCompareVersions()
    int32_t op, invop, got, invgot; 
    UVersionInfo v1, v2;
    int32_t j;
-   log_verbose("Testing u_compareVersions()\n");
+   log_verbose("Testing memcmp()\n");
    for(j=0;testCases[j]!=NULL;j+=3) {
     v1str = testCases[j+0];
     opstr = testCases[j+1];
@@ -303,17 +318,17 @@ static void TestCompareVersions()
     invop = 0-op; /* inverse operation: with v1 and v2 switched */
     u_versionFromString(v1, v1str);
     u_versionFromString(v2, v2str);
-    got = u_compareVersions(v1,v2);
-    invgot = u_compareVersions(v2,v1); /* oppsite */
-    if(got==op) {
+	got = memcmp(v1, v2, sizeof(UVersionInfo));
+	invgot = memcmp(v2, v1, sizeof(UVersionInfo)); /* Opposite */
+    if((got <= 0 && op <= 0) || (got >= 0 && op >= 0)) {
         log_verbose("%d: %s %s %s, OK\n", (j/3), v1str, opstr, v2str);
     } else {
-        log_err("%d: %s %s %s: wanted %d got %d\n", (j/3), v1str, opstr, v2str, op, got);
+        log_err("%d: %s %s %s: wanted values of the same sign, %d got %d\n", (j/3), v1str, opstr, v2str, op, got);
     }
-    if(invgot==invop) {
+    if((invgot >= 0 && invop >= 0) || (invgot <= 0 && invop <= 0)) {
         log_verbose("%d: %s (%d) %s, OK (inverse)\n", (j/3), v2str, invop, v1str);
     } else {
-        log_err("%d: %s (%d) %s: wanted %d got %d\n", (j/3), v2str, invop, v1str, invop, invgot);
+        log_err("%d: %s (%d) %s: wanted values of the same sign, %d got %d\n", (j/3), v2str, invop, v1str, invop, invgot);
     }
    }
 }
@@ -438,10 +453,10 @@ void addPUtilTest(TestNode** root);
 void
 addPUtilTest(TestNode** root)
 {
-    addTest(root, &TestPUtilAPI,       "putiltst/TestPUtilAPI");
     addTest(root, &TestVersion,       "putiltst/TestVersion");
     addTest(root, &TestCompareVersions,       "putiltst/TestCompareVersions");
 /*    addTest(root, &testIEEEremainder,  "putiltst/testIEEEremainder"); */
     addTest(root, &TestErrorName, "putiltst/TestErrorName");
+    addTest(root, &TestPUtilAPI,       "putiltst/TestPUtilAPI");
 }
 

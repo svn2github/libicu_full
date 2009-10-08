@@ -43,6 +43,7 @@
 #include "ucln_in.h"
 #include "cstring.h"
 #include "putilimp.h"
+#include "umutex.h"
 #include <float.h>
 
 //#define FMT_DEBUG
@@ -101,6 +102,41 @@ static const UChar * const gLastResortNumberPatterns[] =
     gLastResortIsoCurrencyPat,
     gLastResortPluralCurrencyPat,
 };
+
+// Static hashtable cache of NumberingSystem objects used by NumberFormat 
+static UHashtable * NumberingSystem_cache = NULL; 
+
+static UMTX nscacheMutex = NULL;
+
+#if !UCONFIG_NO_SERVICE
+static U_NAMESPACE_QUALIFIER ICULocaleService* gService = NULL;
+#endif
+
+/** 
+ * Release all static memory held by Number Format.   
+ */  
+U_CDECL_BEGIN 
+static void U_CALLCONV
+deleteNumberingSystem(void *obj) {
+    delete (U_NAMESPACE_QUALIFIER NumberingSystem *)obj;
+}
+
+static UBool U_CALLCONV numfmt_cleanup(void) {
+#if !UCONFIG_NO_SERVICE
+    if (gService) {
+        delete gService;
+        gService = NULL;
+    }
+#endif
+    if (NumberingSystem_cache) { 
+        // delete NumberingSystem_cache; 
+        uhash_close(NumberingSystem_cache); 
+        NumberingSystem_cache = NULL; 
+    }
+
+    return TRUE; 
+} 
+U_CDECL_END
 
 // *****************************************************************************
 // class NumberFormat
@@ -483,20 +519,6 @@ NumberFormat::getAvailableLocales(int32_t& count)
 //-------------------------------------------
 
 #if !UCONFIG_NO_SERVICE
-static ICULocaleService* gService = NULL;
-
-/**
- * Release all static memory held by numberformat.  
- */
-U_CDECL_BEGIN
-static UBool U_CALLCONV numfmt_cleanup(void) {
-    if (gService) {
-        delete gService;
-        gService = NULL;
-    }
-    return TRUE;
-}
-U_CDECL_END
 
 // -------------------------------------
 
@@ -880,6 +902,10 @@ NumberFormat::makeInstance(const Locale& desiredLocale,
     UResourceBundle *numberPatterns = ures_getByKey(resource, DecimalFormat::fgNumberPatterns, NULL, &status);
     NumberingSystem *ns = NULL;
     UBool deleteSymbols = TRUE;
+    UHashtable * cache = NULL; 
+    int32_t hashKey; 
+    UBool getCache = FALSE;
+    UBool deleteNS = FALSE;
 
     if (U_FAILURE(status)) {
         // We don't appear to have resource data available -- use the last-resort data
@@ -926,10 +952,74 @@ NumberFormat::makeInstance(const Locale& desiredLocale,
             pattern.setTo(currPattern, u_strlen(currPattern));
         }
     }
-
-    ns = NumberingSystem::createInstance(desiredLocale,status);
     
-    if (U_FAILURE(status)) {
+    // Use numbering system cache hashtable 
+    UMTX_CHECK(&nscacheMutex, (UBool)(cache != NumberingSystem_cache), getCache);
+    if (getCache) {
+        umtx_lock(&nscacheMutex); 
+        cache = NumberingSystem_cache; 
+        umtx_unlock(&nscacheMutex); 
+    }
+
+    // Check cache we got, create if non-existant 
+    status = U_ZERO_ERROR; 
+    if (cache == NULL) { 
+        cache = uhash_open(uhash_hashLong,  
+                           uhash_compareLong,  
+                           NULL,  
+                           &status); 
+     
+        if (cache == NULL || U_FAILURE(status)) { 
+            // cache not created - out of memory 
+            cache = NULL;  
+        } 
+        else { 
+            // cache created 
+            uhash_setValueDeleter(cache, deleteNumberingSystem);
+         
+            // set final NumberingSystem_cache value 
+            UHashtable* h = NULL; 
+
+            UMTX_CHECK(&nscacheMutex, (UBool)(h != NumberingSystem_cache), getCache);
+            if (getCache) {
+                umtx_lock(&nscacheMutex); 
+                h = NumberingSystem_cache; 
+                umtx_unlock(&nscacheMutex);
+            }
+            if (h == NULL) { 
+                umtx_lock(&nscacheMutex);
+                NumberingSystem_cache = h = cache; 
+                cache = NULL; 
+                ucln_i18n_registerCleanup(UCLN_I18N_NUMFMT, numfmt_cleanup);
+                umtx_unlock(&nscacheMutex);
+            }
+
+            if(cache != NULL) { 
+              uhash_close(cache); 
+            } 
+            cache = h; 
+        } 
+    } 
+     
+    // Get cached numbering system 
+    if (cache != NULL) { 
+        hashKey = desiredLocale.hashCode(); 
+        
+        umtx_lock(&nscacheMutex); 
+        ns = (NumberingSystem *)uhash_iget(cache, hashKey); 
+        if (ns == NULL) { 
+            ns = NumberingSystem::createInstance(desiredLocale,status); 
+            uhash_iput(cache, hashKey, (void*)ns, &status); 
+        } 
+        umtx_unlock(&nscacheMutex);
+    } 
+    else { 
+        ns = NumberingSystem::createInstance(desiredLocale,status);
+        deleteNS = TRUE;
+    } 
+    
+    // check results of getting a numbering system 
+    if ((ns == NULL) || (U_FAILURE(status))) { 
         goto cleanup;
     }
 
@@ -989,9 +1079,11 @@ NumberFormat::makeInstance(const Locale& desiredLocale,
 cleanup:
     ures_close(numberPatterns);
     ures_close(resource);
-    if (ns) {
-       delete ns;
+
+    if (deleteNS && ns) {
+        delete ns;
     }
+    
     if (U_FAILURE(status)) {
         /* If f exists, then it will delete the symbols */
         if (f==NULL) {

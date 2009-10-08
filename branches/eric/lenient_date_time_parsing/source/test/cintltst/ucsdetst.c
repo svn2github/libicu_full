@@ -42,8 +42,10 @@ void addUCsdetTest(TestNode** root)
     addTest(root, &TestInputFilter, "ucsdetst/TestInputFilter");
     addTest(root, &TestChaining, "ucsdetst/TestErrorChaining");
     addTest(root, &TestBufferOverflow, "ucsdetst/TestBufferOverflow");
+#if !UCONFIG_NO_LEGACY_CONVERSION
     addTest(root, &TestIBM424, "ucsdetst/TestIBM424");
     addTest(root, &TestIBM420, "ucsdetst/TestIBM420");
+#endif
 }
 
 static int32_t preflight(const UChar *src, int32_t length, UConverter *cnv)
@@ -250,7 +252,7 @@ static void TestC1Bytes(void)
     name  = ucsdet_getName(match, &status);
 
     if (strcmp(name, "windows-1252") != 0) {
-        log_err("English text with C1 bytes does not detect as windows-1252, but as %s\n", name);
+        log_data_err("English text with C1 bytes does not detect as windows-1252, but as %s. (Are you missing data?)\n", name);
     }
 
     ucsdet_setText(csd, bISO, lISO, &status);
@@ -487,7 +489,7 @@ static void TestIBM424(void)
 
     name  = ucsdet_getName(match, &status);
     if (strcmp(name, "IBM424_rtl") != 0) {
-        log_err("Encoding detection failure for IBM424_rtl: got %s\n", name);
+        log_data_err("Encoding detection failure for IBM424_rtl: got %s. (Are you missing data?)\n", name);
     }
     
     ucsdet_setText(csd, bytes_r, brLength, &status);
@@ -500,7 +502,7 @@ static void TestIBM424(void)
 
     name  = ucsdet_getName(match, &status);
     if (strcmp(name, "IBM424_ltr") != 0) {
-        log_err("Encoding detection failure for IBM424_ltr: got %s\n", name);
+        log_data_err("Encoding detection failure for IBM424_ltr: got %s. (Are you missing data?)\n", name);
     }
 
 bail:
@@ -565,7 +567,7 @@ static void TestIBM420(void)
 
     name  = ucsdet_getName(match, &status);
     if (strcmp(name, "IBM420_rtl") != 0) {
-        log_err("Encoding detection failure for IBM420_rtl: got %s\n", name);
+        log_data_err("Encoding detection failure for IBM420_rtl: got %s. (Are you missing data?)\n", name);
     }
     
     ucsdet_setText(csd, bytes_r, brLength, &status);
@@ -578,7 +580,7 @@ static void TestIBM420(void)
 
     name  = ucsdet_getName(match, &status);
     if (strcmp(name, "IBM420_ltr") != 0) {
-        log_err("Encoding detection failure for IBM420_ltr: got %s\n", name);
+        log_data_err("Encoding detection failure for IBM420_ltr: got %s. (Are you missing data?)\n", name);
     }
 
 bail:

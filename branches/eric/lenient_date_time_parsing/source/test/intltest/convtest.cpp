@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 2003-2008, International Business Machines
+*   Copyright (C) 2003-2009, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
@@ -67,9 +67,15 @@ void
 ConversionTest::runIndexedTest(int32_t index, UBool exec, const char *&name, char * /*par*/) {
     if (exec) logln("TestSuite ConversionTest: ");
     switch (index) {
+#if !UCONFIG_NO_FILE_IO
         case 0: name="TestToUnicode"; if (exec) TestToUnicode(); break;
         case 1: name="TestFromUnicode"; if (exec) TestFromUnicode(); break;
         case 2: name="TestGetUnicodeSet"; if (exec) TestGetUnicodeSet(); break;
+#else
+        case 0:
+        case 1:
+        case 2: name="skip"; break;
+#endif
         case 3: name="TestGetUnicodeSet2"; if (exec) TestGetUnicodeSet2(); break;
         default: name=""; break; //needed to end loop
     }
@@ -185,7 +191,7 @@ ConversionTest::TestToUnicode() {
         delete dataModule;
     }
     else {
-        dataerrln("[DATA] Could not load test conversion data");
+        dataerrln("Could not load test conversion data");
     }
 }
 
@@ -338,7 +344,7 @@ ConversionTest::TestFromUnicode() {
         delete dataModule;
     }
     else {
-        dataerrln("[DATA] Could not load test conversion data");
+        dataerrln("Could not load test conversion data");
     }
 }
 
@@ -417,7 +423,7 @@ ConversionTest::TestGetUnicodeSet() {
 
                 cnv=cnv_open(charset, errorCode);
                 if(U_FAILURE(errorCode)) {
-                    errln("error opening \"%s\" for conversion/getUnicodeSet test case %d - %s",
+                    errcheckln(errorCode, "error opening \"%s\" for conversion/getUnicodeSet test case %d - %s",
                             charset, i, u_errorName(errorCode));
                     errorCode=U_ZERO_ERROR;
                     continue;
@@ -462,7 +468,7 @@ ConversionTest::TestGetUnicodeSet() {
         delete dataModule;
     }
     else {
-        dataerrln("[DATA] Could not load test conversion data");
+        dataerrln("Could not load test conversion data");
     }
 }
 
@@ -551,7 +557,7 @@ ConversionTest::TestGetUnicodeSet2() {
         UErrorCode errorCode=U_ZERO_ERROR;
         UConverter *cnv=cnv_open(cnvNames[i], errorCode);
         if(U_FAILURE(errorCode)) {
-            errln("failed to open converter %s - %s", cnvNames[i], u_errorName(errorCode));
+            errcheckln(errorCode, "failed to open converter %s - %s", cnvNames[i], u_errorName(errorCode));
             continue;
         }
         UnicodeSet expected;
@@ -945,7 +951,7 @@ ConversionTest::ToUnicodeCase(ConversionCase &cc, UConverterToUCallback callback
     errorCode=U_ZERO_ERROR;
     cnv=cnv_open(cc.charset, errorCode);
     if(U_FAILURE(errorCode)) {
-        errln("toUnicode[%d](%s cb=\"%s\" fb=%d flush=%d) ucnv_open() failed - %s",
+        errcheckln(errorCode, "toUnicode[%d](%s cb=\"%s\" fb=%d flush=%d) ucnv_open() failed - %s",
                 cc.caseNr, cc.charset, cc.cbopt, cc.fallbacks, cc.finalFlush, u_errorName(errorCode));
         return FALSE;
     }
@@ -1015,7 +1021,7 @@ ConversionTest::ToUnicodeCase(ConversionCase &cc, UConverterToUCallback callback
             // otherwise do nothing to make sure that flushing resets
             ucnv_resetToUnicode(cnv);
         }
-        if (resultOffsets[resultLength] != -1) {
+        if (cc.offsets != NULL && resultOffsets[resultLength] != -1) {
             errln("toUnicode[%d](%s) Conversion wrote too much to offsets at index %d",
                 cc.caseNr, cc.charset, resultLength);
         }
@@ -1352,7 +1358,7 @@ ConversionTest::FromUnicodeCase(ConversionCase &cc, UConverterFromUCallback call
     errorCode=U_ZERO_ERROR;
     cnv=cnv_open(cc.charset, errorCode);
     if(U_FAILURE(errorCode)) {
-        errln("fromUnicode[%d](%s cb=\"%s\" fb=%d flush=%d) ucnv_open() failed - %s",
+        errcheckln(errorCode, "fromUnicode[%d](%s cb=\"%s\" fb=%d flush=%d) ucnv_open() failed - %s",
                 cc.caseNr, cc.charset, cc.cbopt, cc.fallbacks, cc.finalFlush, u_errorName(errorCode));
         return FALSE;
     }

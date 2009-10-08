@@ -80,16 +80,18 @@ void addUDataTest(TestNode** root);
 void
 addUDataTest(TestNode** root)
 {
+#if !UCONFIG_NO_FILE_IO && !UCONFIG_NO_LEGACY_CONVERSION
     addTest(root, &TestUDataOpen,       "udatatst/TestUDataOpen"      );
     addTest(root, &TestUDataOpenChoiceDemo1, "udatatst/TestUDataOpenChoiceDemo1");
     addTest(root, &TestUDataOpenChoiceDemo2, "udatatst/TestUDataOpenChoiceDemo2"); 
     addTest(root, &TestUDataGetInfo,    "udatatst/TestUDataGetInfo"   );
     addTest(root, &TestUDataGetMemory,  "udatatst/TestUDataGetMemory" );
-    addTest(root, &TestUDataSetAppData, "udatatst/TestUDataSetAppData" );
     addTest(root, &TestErrorConditions, "udatatst/TestErrorConditions");
     addTest(root, &TestAppData, "udatatst/TestAppData" );
-    addTest(root, &TestICUDataName, "udatatst/TestICUDataName" );
     addTest(root, &TestSwapData, "udatatst/TestSwapData" );
+#endif
+    addTest(root, &TestUDataSetAppData, "udatatst/TestUDataSetAppData" );
+    addTest(root, &TestICUDataName, "udatatst/TestICUDataName" );
     addTest(root, &PointerTableOfContents, "udatatst/PointerTableOfContents" );
     addTest(root, &SetBadCommonData, "udatatst/SetBadCommonData" );
     addTest(root, &TestUDataFileAccess, "udatatst/TestUDataFileAccess" );
@@ -497,7 +499,7 @@ static void TestUDataFileAccess(){
     u_setDataDirectory(icuDataDir);
     u_init(&status);
     if(U_FAILURE(status)){
-        log_err("%s\n", u_errorName(status));
+        log_err_status(status, "%s\n", u_errorName(status));
     }
     free(icuDataDir);
     ctest_resetICU();

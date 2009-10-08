@@ -7,7 +7,7 @@
 // *
 // ***************************************************************************
 /**
- *  ICU <specials> source: <path>/xml/main/mr.xml
+ *  ICU <specials > source: <path>/xml/main/mr.xml
  */
 mr{
     AuxExemplarCharacters{"[\u200C \u200D]"}
@@ -967,7 +967,7 @@ mr{
         Zyyy{"सामान्य"}
         Zzzz{"अज्ञात वा अवैध लिपी"}
     }
-    Version{"1.83"}
+    Version{"2.0.42.82"}
     calendar{
         gregorian{
             AmPmMarkers{

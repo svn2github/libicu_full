@@ -7,14 +7,14 @@
 // *
 // ***************************************************************************
 /**
- *  ICU <specials> source: <path>/xml/collation/pa.xml
+ *  ICU <specials > source: <path>/xml/collation/pa.xml
  */
 pa{
-    Version{"1.29"}
+    Version{"2.0.42.63"}
     collations{
         standard{
-            Sequence{" [normalization on ]"}
-            Version{"1.6"}
+            Sequence{" [normalization on ]&ੱ<<ੰ<<ਂ<<ਁ<<਼&ੜ<੍"}
+            Version{"1.7"}
         }
     }
 }

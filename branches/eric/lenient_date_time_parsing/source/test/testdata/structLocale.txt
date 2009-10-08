@@ -10,6 +10,7 @@
 // root can't be used to validate the structure.
 // This file was generated from en.txt, and all ".*" were replaced with "".
 structLocale:table(nofallback){
+    %%ParentIsRoot:int{0}
     BreakDictionaryData:bin {00}
     Countries{
         001{""}
@@ -4154,6 +4155,7 @@ structLocale:table(nofallback){
         mdf{""}
         mdr{""}
         men{""}
+        mfe{""}
         mg{""}
         mga{""}
         mh{""}
@@ -5776,6 +5778,7 @@ structLocale:table(nofallback){
                         "",
                         "",
                         "",
+                        "",
                     }
                     abbreviated{
                         "",
@@ -5791,8 +5794,10 @@ structLocale:table(nofallback){
                         "",
                         "",
                         "",
+                        "",
                     }
                     narrow{
+                        "",
                         "",
                         "",
                         "",
@@ -5823,8 +5828,10 @@ structLocale:table(nofallback){
                         "",
                         "",
                         "",
+                        "",
                     }
                     abbreviated{
+                        "",
                         "",
                         "",
                         "",
@@ -5841,6 +5848,7 @@ structLocale:table(nofallback){
                     }
                     default{""}
                     narrow{
+                        "",
                         "",
                         "",
                         "",
@@ -15132,6 +15140,16 @@ structLocale:table(nofallback){
             cu:int{0}
         }
         "meta:Tahiti"{
+            ld{""}
+            lg{""}
+            ls{""}
+            sd{""}
+            sg{""}
+            ss{""}
+            //ec{""} // Metazones have no exemplar city
+            cu:int{0}
+        }
+        "meta:Taipei"{
             ld{""}
             lg{""}
             ls{""}

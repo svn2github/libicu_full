@@ -7,14 +7,14 @@
 // *
 // ***************************************************************************
 /**
- *  ICU <specials> source: <path>/xml/collation/tr.xml
+ *  ICU <specials > source: <path>/xml/collation/tr.xml
  */
 tr{
-    Version{"1.22"}
+    Version{"2.0.41.26"}
     collations{
         standard{
             Sequence{"&C<ç<<<Ç&G<ğ<<<Ğ&[before 1]i<ı<<<I&i<<<İ&O<ö<<<Ö&S<ş<<<Ş&U<ü<<<Ü"}
-            Version{"1.6"}
+            Version{"1.7"}
         }
     }
 }

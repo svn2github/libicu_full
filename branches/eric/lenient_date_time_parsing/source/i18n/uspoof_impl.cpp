@@ -27,7 +27,7 @@ U_NAMESPACE_BEGIN
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(SpoofImpl)
 
 SpoofImpl::SpoofImpl(SpoofData *data, UErrorCode &status) :
-    fMagic(0), fSpoofData(NULL), fAllowedCharsSet(NULL) {
+    fMagic(0), fSpoofData(NULL), fAllowedCharsSet(NULL) , fAllowedLocales(NULL) {
     if (U_FAILURE(status)) {
         return;
     }
@@ -130,7 +130,7 @@ int32_t SpoofImpl::confusableLookup(UChar32 inChar, int32_t tableMask, UChar *de
     int32_t  *low   = fSpoofData->fCFUKeys;
     int32_t  *mid   = NULL;
     int32_t  *limit = low + fSpoofData->fRawData->fCFUKeysSize;
-    UChar     midc;
+    UChar32   midc;
     do {
         int32_t delta = (limit-low)/2;
         mid = low + delta;

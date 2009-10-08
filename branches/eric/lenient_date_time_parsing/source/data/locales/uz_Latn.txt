@@ -7,9 +7,10 @@
 // *
 // ***************************************************************************
 /**
- *  ICU <specials> source: <path>/xml/main/uz_Latn.xml
+ *  ICU <specials > source: <path>/xml/main/uz_Latn.xml
  */
 uz_Latn{
+    %%ParentIsRoot:int{1}
     Countries{
         AF{"Afgʿoniston"}
         BR{"Braziliya"}
@@ -42,7 +43,7 @@ uz_Latn{
             "Ingliz funt sterlingi",
         }
         INR{
-            "₨",
+            "Rs",
             "Hind rupiyasi",
         }
         JPY{
@@ -84,7 +85,7 @@ uz_Latn{
         Cyrl{"Kiril"}
         Latn{"Lotin"}
     }
-    Version{"1.21"}
+    Version{"2.0.42.82"}
     calendar{
         gregorian{
             dayNames{

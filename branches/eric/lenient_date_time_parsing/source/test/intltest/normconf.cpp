@@ -1,6 +1,6 @@
 /*
 ************************************************************************
-* Copyright (c) 1997-2008, International Business Machines
+* Copyright (c) 1997-2009, International Business Machines
 * Corporation and others.  All Rights Reserved.
 ************************************************************************
 */
@@ -21,7 +21,7 @@
 
 #define ARRAY_LENGTH(array) (sizeof(array) / sizeof(array[0]))
 
-#define CASE(id,test) case id:                          \
+#define CASE(id,test,exec) case id:                          \
                           name = #test;                 \
                           if (exec) {                   \
                               logln(#test "---");       \
@@ -32,8 +32,10 @@
 
 void NormalizerConformanceTest::runIndexedTest(int32_t index, UBool exec, const char* &name, char* /*par*/) {
     switch (index) {
-        CASE(0, TestConformance);
-        CASE(1, TestConformance32);
+        CASE(0, TestConformance, exec);
+#if !UCONFIG_NO_FILE_IO && !UCONFIG_NO_LEGACY_CONVERSION
+        CASE(1, TestConformance32, exec);
+#endif
         // CASE(2, TestCase6);
         default: name = ""; break;
     }
@@ -141,7 +143,7 @@ NormalizerConformanceTest::openNormalizationTestFile(const char *filename) {
     }
 #endif
 
-    dataerrln("[DATA] Failed to open %s", filename);
+    dataerrln("Failed to open %s", filename);
     return NULL;
 }
 

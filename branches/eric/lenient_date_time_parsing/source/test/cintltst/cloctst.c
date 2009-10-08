@@ -206,7 +206,9 @@ void addLocaleTest(TestNode** root)
     TESTCASE(TestDisplayNames);
     TESTCASE(TestGetAvailableLocales);
     TESTCASE(TestDataDirectory);
+#if !UCONFIG_NO_FILE_IO && !UCONFIG_NO_LEGACY_CONVERSION
     TESTCASE(TestISOFunctions);
+#endif
     TESTCASE(TestISO3Fallback);
     TESTCASE(TestUninstalledISO3Names);
     TESTCASE(TestSimpleDisplayNames);
@@ -219,7 +221,9 @@ void addLocaleTest(TestNode** root)
     TESTCASE(TestDisplayKeywords);
     TESTCASE(TestDisplayKeywordValues);
     TESTCASE(TestGetBaseName);
+#if !UCONFIG_NO_FILE_IO
     TESTCASE(TestGetLocale);
+#endif
     TESTCASE(TestDisplayNameWarning);
     TESTCASE(TestNonexistentLanguageExemplars);
     TESTCASE(TestLocDataErrorCodeChaining);
@@ -577,7 +581,7 @@ static void TestDisplayNames()
     length=uloc_getDisplayLanguage(NULL, NULL, buffer, LENGTHOF(buffer), &errorCode);
     if(U_FAILURE(errorCode) || (length<=3 && buffer[0]<=0x7f)) {
         /* check <=3 to reject getting the language code as a display name */
-        log_err("unable to get a display string for the language of the default locale - %s\n", u_errorName(errorCode));
+        log_data_err("unable to get a display string for the language of the default locale - %s (Are you missing data?)\n", u_errorName(errorCode));
     }
 
     /* test that we get the language code itself for an unknown language, and a default warning */
@@ -615,7 +619,7 @@ static void TestDisplayNames()
             } else {
                 expectBuffer = CharsToUChars(expect[i]);
                 if(u_strcmp(buffer,expectBuffer)) {
-                    log_err("FAIL in uloc_getDisplayName(%s,%s,..) expected '%s' got '%s'\n", aLocale, testL[i], expect[i], austrdup(buffer));
+                    log_data_err("FAIL in uloc_getDisplayName(%s,%s,..) expected '%s' got '%s' (Are you missing data?)\n", aLocale, testL[i], expect[i], austrdup(buffer));
                 } else {
                     log_verbose("pass in uloc_getDisplayName(%s,%s,..) got '%s'\n", aLocale, testL[i], expect[i]);
                 }
@@ -828,23 +832,23 @@ setUpDataTable();
             expectedName=dataTable[DNAME_EN][i];
 
         if (0 !=u_strcmp(testLang,expectedLang))  {
-            log_data_err(" Display Language mismatch: got %s expected %s displayLocale=%s\n", austrdup(testLang), austrdup(expectedLang), displayLocale);
+            log_data_err(" Display Language mismatch: got %s expected %s displayLocale=%s (Are you missing data?)\n", austrdup(testLang), austrdup(expectedLang), displayLocale);
         }
 
         if (0 != u_strcmp(testScript,expectedScript))   {
-            log_data_err(" Display Script mismatch: got %s expected %s displayLocale=%s\n", austrdup(testScript), austrdup(expectedScript), displayLocale);
+            log_data_err(" Display Script mismatch: got %s expected %s displayLocale=%s (Are you missing data?)\n", austrdup(testScript), austrdup(expectedScript), displayLocale);
         }
 
         if (0 != u_strcmp(testCtry,expectedCtry))   {
-            log_data_err(" Display Country mismatch: got %s expected %s displayLocale=%s\n", austrdup(testCtry), austrdup(expectedCtry), displayLocale);
+            log_data_err(" Display Country mismatch: got %s expected %s displayLocale=%s (Are you missing data?)\n", austrdup(testCtry), austrdup(expectedCtry), displayLocale);
         }
 
         if (0 != u_strcmp(testVar,expectedVar))    {
-            log_data_err(" Display Variant mismatch: got %s expected %s displayLocale=%s\n", austrdup(testVar), austrdup(expectedVar), displayLocale);
+            log_data_err(" Display Variant mismatch: got %s expected %s displayLocale=%s (Are you missing data?)\n", austrdup(testVar), austrdup(expectedVar), displayLocale);
         }
 
         if(0 != u_strcmp(testName, expectedName))    {
-            log_data_err(" Display Name mismatch: got %s expected %s displayLocale=%s\n", austrdup(testName), austrdup(expectedName), displayLocale);
+            log_data_err(" Display Name mismatch: got %s expected %s displayLocale=%s (Are you missing data?)\n", austrdup(testName), austrdup(expectedName), displayLocale);
         }
 
         if(testName!=&_NUL) {
@@ -1170,7 +1174,11 @@ static void TestVariantParsing()
     }
     u_uastrcpy(displayName, dispName);
     if(u_strcmp(got,displayName)!=0) {
-        log_err("FAIL: getDisplayName() Wanted %s, got %s\n", dispName, austrdup(got));
+        if (status == U_USING_DEFAULT_WARNING) {
+            log_data_err("FAIL: getDisplayName() got %s. Perhaps you are missing data?\n", u_errorName(status));
+        } else {
+            log_err("FAIL: getDisplayName() Wanted %s, got %s\n", dispName, austrdup(got));
+        }
     }
 
     size=0;
@@ -1919,7 +1927,11 @@ static void TestDisplayKeywords(void)
                       break; 
                   }
                   if(u_strncmp(displayKeyword, testCases[i].displayKeyword, displayKeywordLen)!=0){
-                      log_err("uloc_getDisplayKeyword did not get the expected value for keyword : %s in locale id: %s for display locale: %s \n", testCases[i].localeID, keyword, testCases[i].displayLocale); 
+                      if (status == U_USING_DEFAULT_WARNING) {
+                          log_data_err("uloc_getDisplayKeyword did not get the expected value for keyword : %s in locale id: %s for display locale: %s . Got error: %s. Perhaps you are missing data?\n", testCases[i].localeID, keyword, testCases[i].displayLocale, u_errorName(status));
+                      } else {
+                          log_err("uloc_getDisplayKeyword did not get the expected value for keyword : %s in locale id: %s for display locale: %s \n", testCases[i].localeID, keyword, testCases[i].displayLocale);
+                      }
                       break; 
                   }
               }else{
@@ -1998,7 +2010,11 @@ static void TestDisplayKeywordValues(void){
                       break; 
                   }
                   if(u_strncmp(displayKeywordValue, testCases[i].displayKeywordValue, displayKeywordValueLen)!=0){
-                      log_err("uloc_getDisplayKeywordValue did not return the expected value keyword : %s in locale id: %s for display locale: %s with error : %s \n", testCases[i].localeID, keyword, testCases[i].displayLocale, u_errorName(status)); 
+                      if (status == U_USING_DEFAULT_WARNING) {
+                          log_data_err("uloc_getDisplayKeywordValue did not return the expected value keyword : %s in locale id: %s for display locale: %s with error : %s Perhaps you are missing data\n", testCases[i].localeID, keyword, testCases[i].displayLocale, u_errorName(status)); 
+                      } else {
+                          log_err("uloc_getDisplayKeywordValue did not return the expected value keyword : %s in locale id: %s for display locale: %s with error : %s \n", testCases[i].localeID, keyword, testCases[i].displayLocale, u_errorName(status)); 
+                      }
                       break;   
                   }
               }else{
@@ -2047,7 +2063,11 @@ static void TestDisplayKeywordValues(void){
                       break; 
                   }
                   if(u_strncmp(displayKeywordValue, expected[keywordCount], displayKeywordValueLen)!=0){
-                      log_err("uloc_getDisplayKeywordValue did not return the expected value keyword : %s in locale id: %s for display locale: %s \n", localeID, keyword, displayLocale); 
+                      if (status == U_USING_DEFAULT_WARNING) {
+                          log_data_err("uloc_getDisplayKeywordValue did not return the expected value keyword : %s in locale id: %s for display locale: %s  got error: %s. Perhaps you are missing data?\n", localeID, keyword, displayLocale, u_errorName(status));
+                      } else {
+                          log_err("uloc_getDisplayKeywordValue did not return the expected value keyword : %s in locale id: %s for display locale: %s \n", localeID, keyword, displayLocale);
+                      }
                       break;   
                   }
               }else{
@@ -2167,7 +2187,7 @@ static void TestGetLocale(void) {
                         NULL, 0,
                         NULL, 0, &ec);
         if (U_FAILURE(ec)) {
-            log_err("udat_open failed.Error %s\n", u_errorName(ec));
+            log_data_err("udat_open failed.Error %s\n", u_errorName(ec));
             return;
         }
         valid = udat_getLocaleByType(obj, ULOC_VALID_LOCALE, &ec);
@@ -2324,7 +2344,7 @@ static void TestNonexistentLanguageExemplars(void) {
     UErrorCode ec = U_ZERO_ERROR;
     ULocaleData *uld = ulocdata_open("qqq",&ec);
     if (ec != U_USING_DEFAULT_WARNING) {
-        log_err("Exemplar set for \"qqq\", expecting U_USING_DEFAULT_WARNING, but got %s\n",
+        log_err_status(ec, "Exemplar set for \"qqq\", expecting U_USING_DEFAULT_WARNING, but got %s\n",
             u_errorName(ec));
     }
     uset_close(ulocdata_getExemplarSet(uld, NULL, 0, ULOCDATA_ES_STANDARD, &ec));
@@ -2349,7 +2369,7 @@ static void TestLanguageExemplarsFallbacks(void) {
     ULocaleData *uld = ulocdata_open("en_US",&ec);
     uset_close(ulocdata_getExemplarSet(uld, NULL, 0, ULOCDATA_ES_STANDARD, &ec));
     if (ec != U_USING_FALLBACK_WARNING) {
-        log_err("Exemplar set for \"en_US\", expecting U_USING_FALLBACK_WARNING, but got %s\n",
+        log_err_status(ec, "Exemplar set for \"en_US\", expecting U_USING_FALLBACK_WARNING, but got %s\n",
             u_errorName(ec));
     }
     ulocdata_close(uld);
@@ -2357,7 +2377,7 @@ static void TestLanguageExemplarsFallbacks(void) {
     uld = ulocdata_open("en",&ec);
     uset_close(ulocdata_getExemplarSet(uld, NULL, 0, ULOCDATA_ES_STANDARD, &ec));
     if (ec != U_ZERO_ERROR) {
-        log_err("Exemplar set for \"en\", expecting U_ZERO_ERROR, but got %s\n",
+        log_err_status(ec, "Exemplar set for \"en\", expecting U_ZERO_ERROR, but got %s\n",
             u_errorName(ec));
     }
     ulocdata_close(uld);
@@ -2423,14 +2443,14 @@ static void TestAcceptLanguage(void) {
         uenum_close(available);
         log_verbose(" got %s, %s [%s]\n", tmp[0]?tmp:"(EMPTY)", acceptResult(outResult), u_errorName(status));
         if(outResult != tests[i].res) {
-            log_err("FAIL: #%d: expected outResult of %s but got %s\n", i, 
+            log_err_status(status, "FAIL: #%d: expected outResult of %s but got %s\n", i, 
                 acceptResult( tests[i].res), 
                 acceptResult( outResult));
             log_info("test #%d: http[%s], ICU[%s], expect %s, %s\n", 
                 i, http[tests[i].httpSet], tests[i].icuSet, tests[i].expect,acceptResult(tests[i].res));
         }
         if((outResult>0)&&uprv_strcmp(tmp, tests[i].expect)) {
-            log_err("FAIL: #%d: expected %s but got %s\n", i, tests[i].expect, tmp);
+            log_err_status(status, "FAIL: #%d: expected %s but got %s\n", i, tests[i].expect, tmp);
             log_info("test #%d: http[%s], ICU[%s], expect %s, %s\n", 
                 i, http[tests[i].httpSet], tests[i].icuSet, tests[i].expect, acceptResult(tests[i].res));
         }
@@ -2467,7 +2487,7 @@ static void TestCalendar() {
     UErrorCode status = U_ZERO_ERROR;
     UResourceBundle *resIndex = ures_open(NULL,"res_index", &status);
     if(U_FAILURE(status)){
-        log_err("Could not open res_index.res. Exiting. Error: %s\n", u_errorName(status));
+        log_err_status(status, "Could not open res_index.res. Exiting. Error: %s\n", u_errorName(status));
         return;
     }
     for (i=0; i<LENGTHOF(LOCALE_ALIAS); i++) {
@@ -2503,7 +2523,7 @@ static void TestDateFormat() {
     UErrorCode status = U_ZERO_ERROR;
     UResourceBundle *resIndex = ures_open(NULL,"res_index", &status);
     if(U_FAILURE(status)){
-        log_err("Could not open res_index.res. Exiting. Error: %s\n", u_errorName(status));
+        log_err_status(status, "Could not open res_index.res. Exiting. Error: %s\n", u_errorName(status));
         return;
     }
     for (i=0; i<LENGTHOF(LOCALE_ALIAS); i++) {
@@ -2546,7 +2566,7 @@ static void TestCollation() {
     UErrorCode status = U_ZERO_ERROR;
     UResourceBundle *resIndex = ures_open(NULL,"res_index", &status);
     if(U_FAILURE(status)){
-        log_err("Could not open res_index.res. Exiting. Error: %s\n", u_errorName(status));
+        log_err_status(status, "Could not open res_index.res. Exiting. Error: %s\n", u_errorName(status));
         return;
     }
     for (i=0; i<LENGTHOF(LOCALE_ALIAS); i++) {
@@ -2589,7 +2609,7 @@ typedef struct OrientationStructTag {
     ULayoutType line;
 } OrientationStruct;
 
-const char* ULayoutTypeToString(ULayoutType type)
+static const char* ULayoutTypeToString(ULayoutType type)
 {
     switch(type)
     {
@@ -2637,7 +2657,7 @@ static void  TestOrientation()
         const ULayoutType lo = uloc_getLineOrientation(localeId, &statusLO);
         const ULayoutType expectedLO = toTest[i].line;
         if (U_FAILURE(statusCO)) {
-            log_err(
+            log_err_status(statusCO,
                 "  unexpected failure for uloc_getCharacterOrientation(), with localId \"%s\" and status %s\n",
                 localeId,
                 u_errorName(statusCO));
@@ -2650,7 +2670,7 @@ static void  TestOrientation()
                 ULayoutTypeToString(co));
         }
         if (U_FAILURE(statusLO)) {
-            log_err(
+            log_err_status(statusLO,
                 "  unexpected failure for uloc_getLineOrientation(), with localId \"%s\" and status %s\n",
                 localeId,
                 u_errorName(statusLO));
@@ -2670,7 +2690,7 @@ static void  TestULocale() {
     UErrorCode status = U_ZERO_ERROR;
     UResourceBundle *resIndex = ures_open(NULL,"res_index", &status);
     if(U_FAILURE(status)){
-        log_err("Could not open res_index.res. Exiting. Error: %s\n", u_errorName(status));
+        log_err_status(status, "Could not open res_index.res. Exiting. Error: %s\n", u_errorName(status));
         return;
     }
     for (i=0; i<LENGTHOF(LOCALE_ALIAS); i++) {
@@ -5189,14 +5209,14 @@ static void TestLikelySubtags()
         const char* const minimal = basic_maximize_data[i][0];
         const char* const maximal = basic_maximize_data[i][1];
 
-        const int32_t length =
+        /* const int32_t length = */
             uloc_addLikelySubtags(
                 minimal,
                 buffer,
                 sizeof(buffer),
                 &status);
         if (U_FAILURE(status)) {
-            log_err("  unexpected failure of uloc_addLikelySubtags(), minimal \"%s\" status %s\n", minimal, u_errorName(status));
+            log_err_status(status, "  unexpected failure of uloc_addLikelySubtags(), minimal \"%s\" status %s\n", minimal, u_errorName(status));
             status = U_ZERO_ERROR;
         }
         else if (uprv_strlen(maximal) == 0) {
@@ -5215,7 +5235,7 @@ static void TestLikelySubtags()
         const char* const maximal = basic_minimize_data[i][0];
         const char* const minimal = basic_minimize_data[i][1];
 
-        const int32_t length =
+        /* const int32_t length = */
             uloc_minimizeSubtags(
                 maximal,
                 buffer,
@@ -5223,7 +5243,7 @@ static void TestLikelySubtags()
                 &status);
 
         if (U_FAILURE(status)) {
-            log_err("  unexpected failure of uloc_MinimizeSubtags(), maximal \"%s\" status %s\n", maximal, u_errorName(status));
+            log_err_status(status, "  unexpected failure of uloc_MinimizeSubtags(), maximal \"%s\" status %s\n", maximal, u_errorName(status));
             status = U_ZERO_ERROR;
         }
         else if (uprv_strlen(minimal) == 0) {
@@ -5242,14 +5262,14 @@ static void TestLikelySubtags()
         const char* const minimal = full_data[i][0];
         const char* const maximal = full_data[i][1];
 
-        const int32_t length =
+        /* const int32_t length = */
             uloc_addLikelySubtags(
                 minimal,
                 buffer,
                 sizeof(buffer),
                 &status);
         if (U_FAILURE(status)) {
-            log_err("  unexpected failure of uloc_addLikelySubtags(), minimal \"%s\" status \"%s\"\n", minimal, u_errorName(status));
+            log_err_status(status, "  unexpected failure of uloc_addLikelySubtags(), minimal \"%s\" status \"%s\"\n", minimal, u_errorName(status));
             status = U_ZERO_ERROR;
         }
         else if (uprv_strlen(maximal) == 0) {
@@ -5270,7 +5290,7 @@ static void TestLikelySubtags()
 
         if (strlen(maximal) > 0) {
 
-            const int32_t length =
+            /* const int32_t length = */
                 uloc_minimizeSubtags(
                     maximal,
                     buffer,
@@ -5278,7 +5298,7 @@ static void TestLikelySubtags()
                     &status);
 
             if (U_FAILURE(status)) {
-                log_err("  unexpected failure of uloc_minimizeSubtags(), maximal \"%s\" status %s\n", maximal, u_errorName(status));
+                log_err_status(status, "  unexpected failure of uloc_minimizeSubtags(), maximal \"%s\" status %s\n", maximal, u_errorName(status));
                 status = U_ZERO_ERROR;
             }
             else if (uprv_strlen(minimal) == 0) {
@@ -5313,7 +5333,7 @@ static void TestLikelySubtags()
             status = U_ZERO_ERROR;
         }
         else if (status != expectedStatus) {
-            log_err("  unexpected status for uloc_addLikelySubtags(), minimal \"%s\" expected status %s, but got %s\n", minimal, u_errorName(expectedStatus), u_errorName(status));
+            log_err_status(status, "  unexpected status for uloc_addLikelySubtags(), minimal \"%s\" expected status %s, but got %s\n", minimal, u_errorName(expectedStatus), u_errorName(status));
         }
         else if (length != expectedLength) {
             log_err("  unexpected length for uloc_addLikelySubtags(), minimal \"%s\" expected length %d, but got %d\n", minimal, expectedLength, length);
@@ -5347,7 +5367,7 @@ static void TestLikelySubtags()
             status = U_ZERO_ERROR;
         }
         else if (status != expectedStatus) {
-            log_err("  unexpected status for uloc_minimizeSubtags(), maximal \"%s\" expected status %s, but got %s\n", maximal, u_errorName(expectedStatus), u_errorName(status));
+            log_err_status(status, "  unexpected status for uloc_minimizeSubtags(), maximal \"%s\" expected status %s, but got %s\n", maximal, u_errorName(expectedStatus), u_errorName(status));
         }
         else if (length != expectedLength) {
             log_err("  unexpected length for uloc_minimizeSubtags(), maximal \"%s\" expected length %d, but got %d\n", maximal, expectedLength, length);
@@ -5364,27 +5384,27 @@ static void TestLikelySubtags()
 const char* const locale_to_langtag[][3] = {
     {"",            "und",          "und"},
     {"en",          "en",           "en"},
-    {"en_US",       "en-us",        "en-us"},
-    {"iw_IL",       "he-il",        "he-il"},
-    {"sr_Latn_SR",  "sr-latn-sr",   "sr-latn-sr"},
+    {"en_US",       "en-US",        "en-US"},
+    {"iw_IL",       "he-IL",        "he-IL"},
+    {"sr_Latn_SR",  "sr-Latn-SR",   "sr-Latn-SR"},
     {"en__POSIX",   "en-posix",     "en-posix"},
     {"en_POSIX",    "en",           NULL},
     {"und_555",     "und-555",      "und-555"},
     {"123",         "und",          NULL},
     {"%$#&",        "und",          NULL},
-    {"_Latn",       "und-latn",     "und-latn"},
-    {"_DE",         "und-de",       "und-de"},
-    {"und_FR",      "und-fr",       "und-fr"},
-    {"th_TH_TH",    "th-th",        NULL},
+    {"_Latn",       "und-Latn",     "und-Latn"},
+    {"_DE",         "und-DE",       "und-DE"},
+    {"und_FR",      "und-FR",       "und-FR"},
+    {"th_TH_TH",    "th-TH",        NULL},
     {"bogus",       "bogus",        "bogus"},
     {"foooobarrr",  "und",          NULL},
-    {"az_AZ_CYRL",  "az-cyrl-az",   "az-cyrl-az"},
-    {"aa_BB_CYRL",  "aa-bb",        NULL},
-    {"en_US_1234",  "en-us-1234",   "en-us-1234"},
-    {"en_US_VARIANTA_VARIANTB", "en-us-varianta-variantb",  "en-us-varianta-variantb"},
-    {"en_US_VARIANTB_VARIANTA", "en-us-varianta-variantb",  "en-us-varianta-variantb"},
+    {"az_AZ_CYRL",  "az-Cyrl-AZ",   "az-Cyrl-AZ"},
+    {"aa_BB_CYRL",  "aa-BB",        NULL},
+    {"en_US_1234",  "en-US-1234",   "en-US-1234"},
+    {"en_US_VARIANTA_VARIANTB", "en-US-varianta-variantb",  "en-US-varianta-variantb"},
+    {"en_US_VARIANTB_VARIANTA", "en-US-varianta-variantb",  "en-US-varianta-variantb"},
     {"ja__9876_5432",   "ja-5432-9876", "ja-5432-9876"},
-    {"zh_Hant__VAR",    "zh-hant",  NULL},
+    {"zh_Hant__VAR",    "zh-Hant",  NULL},
     {"es__BADVARIANT_GOODVAR",  "es-goodvar",   NULL},
     {"en@calendar=gregorian",   "en-u-ca-gregory",  "en-u-ca-gregory"},
     {"de@collation=phonebook;calendar=gregorian",   "de-u-ca-gregory-co-phonebk",   "de-u-ca-gregory-co-phonebk"},
@@ -5422,7 +5442,7 @@ static void TestToLanguageTag(void) {
                 log_err("Error should be returned by uloc_toLanguageTag for locale id [%s], but [%s] is returned without errors\n",
                     inloc, langtag);
             } else if (uprv_strcmp(langtag, expected) != 0) {
-                log_err("uloc_toLanguageTag returned language tag [%s] for input locale [%s] - expected: [%s]\n",
+                log_data_err("uloc_toLanguageTag returned language tag [%s] for input locale [%s] - expected: [%s]. Are you missing data?\n",
                     langtag, inloc, expected);
             }
         }
@@ -5435,7 +5455,7 @@ static void TestToLanguageTag(void) {
         len = uloc_toLanguageTag(inloc, langtag, sizeof(langtag), TRUE, &status);
         if (U_FAILURE(status)) {
             if (expected != NULL) {
-                log_err("Error returned by uloc_toLanguageTag {strict} for locale id [%s] - error: %s\n",
+                log_data_err("Error returned by uloc_toLanguageTag {strict} for locale id [%s] - error: %s Are you missing data?\n",
                     inloc, u_errorName(status));
             }
         } else {
@@ -5457,11 +5477,11 @@ static const struct {
 } langtag_to_locale[] = {
     {"en",                  "en",                   2},
     {"en-us",               "en_US",                5},
-    {"und-us",              "_US",                  6},
+    {"und-US",              "_US",                  6},
     {"und-latn",            "_Latn",                8},
-    {"en-us-posix",         "en_US_POSIX",          11},
+    {"en-US-posix",         "en_US_POSIX",          11},
     {"de-de_euro",          "de",                   2},
-    {"kok-in",              "kok_IN",               6},
+    {"kok-IN",              "kok_IN",               6},
     {"123",                 "",                     0},
     {"en_us",               "",                     0},
     {"en-latn-x",           "en_Latn",              7},
@@ -5501,7 +5521,7 @@ static void TestForLanguageTag(void) {
         locale[0] = 0;        
         uloc_forLanguageTag(langtag_to_locale[i].bcpID, locale, sizeof(locale), &parsedLen, &status);
         if (U_FAILURE(status)) {
-            log_err("Error returned by uloc_forLanguageTag for language tag [%s] - error: %s\n",
+            log_err_status(status, "Error returned by uloc_forLanguageTag for language tag [%s] - error: %s\n",
                 langtag_to_locale[i].bcpID, u_errorName(status));
         } else {
             if (uprv_strcmp(langtag_to_locale[i].locID, locale) != 0) {

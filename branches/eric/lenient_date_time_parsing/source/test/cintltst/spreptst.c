@@ -47,6 +47,7 @@ UStringPrepProfileType getTypeFromProfileName(const char* profileName);
 void 
 addUStringPrepTest(TestNode** root)
 {
+#if !UCONFIG_NO_FILE_IO && !UCONFIG_NO_LEGACY_CONVERSION
    addTest(root, &Test_nfs4_cs_prep_data,    "spreptst/Test_nfs4_cs_prep_data");
    addTest(root, &Test_nfs4_cis_prep_data,   "spreptst/Test_nfs4_cis_prep_data");
    addTest(root, &Test_nfs4_mixed_prep_data, "spreptst/Test_nfs4_mixed_prep_data");
@@ -54,6 +55,7 @@ addUStringPrepTest(TestNode** root)
    addTest(root, &Test_nfs4_cis_prep,        "spreptst/Test_nfs4_cis_prep");
    addTest(root, &Test_nfs4_mixed_prep,      "spreptst/Test_nfs4_mixed_prep");
    addTest(root, &TestBEAMWarning,           "spreptst/TestBEAMWarning");
+#endif
    addTest(root, &TestCoverage,              "spreptst/TestCoverage");
    addTest(root, &TestStringPrepProfiles,              "spreptst/TestStringPrepProfiles");
 }
@@ -751,7 +753,7 @@ UStringPrepProfileType getTypeFromProfileName(const char* profileName) {
 }
 static void TestStringPrepProfiles(void) {
     UErrorCode status = U_ZERO_ERROR;
-    char *profileName;
+    const char *profileName = NULL;
     UChar src[SPREP_PROFILE_TEST_MAX_LENGTH];
     UChar expected[SPREP_PROFILE_TEST_MAX_LENGTH];
     UChar result[SPREP_PROFILE_TEST_MAX_LENGTH];
@@ -768,7 +770,7 @@ static void TestStringPrepProfiles(void) {
             profileName = profile_test_case[i];
             sprep = usprep_openByType(getTypeFromProfileName(profileName), &status);
             if (U_FAILURE(status)) {
-                log_err("Unable to open String Prep Profile with: %s\n", profileName);
+                log_data_err("Unable to open String Prep Profile with: %s\n", profileName);
                 break;
             }
             
