@@ -835,6 +835,12 @@ static const char *lenientAffixTestCases[] = {
 		"( 1 )"
 };
 
+static const char *lenientMinusTestCases[] = {
+    "-5",
+    "\\u22125",
+    "\\u20105"
+};
+
 static const char *lenientCurrencyTestCases[] = {
 		"$1,000",
 		"$ 1,000",
@@ -913,8 +919,44 @@ NumberFormatTest::TestLenientParse(void)
 
     delete format;
 
-    Locale locale("en_US");
-    NumberFormat *cFormat = NumberFormat::createInstance(locale, NumberFormat::kCurrencyStyle, status);
+    Locale en_US("en_US");
+    Locale sv_SE("sv_SE");
+    
+    NumberFormat *mFormat = NumberFormat::createInstance(sv_SE, NumberFormat::kNumberStyle, status);
+    
+    mFormat->setParseStrict(FALSE);
+    for (int32_t t = 0; t < ARRAY_SIZE(lenientMinusTestCases); t += 1) {
+        UnicodeString testCase = ctou(lenientMinusTestCases[t]);
+        
+        mFormat->parse(testCase, n, status);
+        logln((UnicodeString)"parse(" + testCase + ") = " + n.getLong());
+        
+        if (U_FAILURE(status) || n.getType() != Formattable::kLong || n.getLong() != -5) {
+            errln((UnicodeString)"Lenient parse failed for \"" + (UnicodeString) lenientMinusTestCases[t] + (UnicodeString) "\"");
+            status = U_ZERO_ERROR;
+        }
+    }
+    
+    delete mFormat;
+    
+    mFormat = NumberFormat::createInstance(en_US, NumberFormat::kNumberStyle, status);
+    
+    mFormat->setParseStrict(FALSE);
+    for (int32_t t = 0; t < ARRAY_SIZE(lenientMinusTestCases); t += 1) {
+        UnicodeString testCase = ctou(lenientMinusTestCases[t]);
+        
+        mFormat->parse(testCase, n, status);
+        logln((UnicodeString)"parse(" + testCase + ") = " + n.getLong());
+        
+        if (U_FAILURE(status) || n.getType() != Formattable::kLong || n.getLong() != -5) {
+            errln((UnicodeString)"Lenient parse failed for \"" + (UnicodeString) lenientMinusTestCases[t] + (UnicodeString) "\"");
+            status = U_ZERO_ERROR;
+        }
+    }
+    
+    delete mFormat;
+    
+    NumberFormat *cFormat = NumberFormat::createInstance(en_US, NumberFormat::kCurrencyStyle, status);
 
     cFormat->setParseStrict(FALSE);
     for (int32_t t = 0; t < ARRAY_SIZE (lenientCurrencyTestCases); t += 1) {
@@ -945,7 +987,7 @@ NumberFormatTest::TestLenientParse(void)
 
     delete cFormat;
 
-    NumberFormat *pFormat = NumberFormat::createPercentInstance(locale, status);
+    NumberFormat *pFormat = NumberFormat::createPercentInstance(en_US, status);
 
     pFormat->setParseStrict(FALSE);
     for (int32_t t = 0; t < ARRAY_SIZE (lenientPercentTestCases); t += 1) {
@@ -978,7 +1020,7 @@ NumberFormatTest::TestLenientParse(void)
 
    // Test cases that should fail with a strict parse and pass with a
    // lenient parse.
-   NumberFormat *nFormat = NumberFormat::createInstance(locale, status);
+   NumberFormat *nFormat = NumberFormat::createInstance(en_US, status);
 
    // first, make sure that they fail with a strict parse
    for (int32_t t = 0; t < ARRAY_SIZE(strictFailureTestCases); t += 1) {
