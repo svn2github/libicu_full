@@ -30,6 +30,7 @@
 #define TDSRCPATH  ".." U_FILE_SEP_STRING "test" U_FILE_SEP_STRING "testdata" U_FILE_SEP_STRING
 
 static void TestSelector(void);
+void addCnvSelTest(TestNode** root);  /* Declaration required to suppress compiler warnings. */
 
 void addCnvSelTest(TestNode** root)
 {
@@ -46,6 +47,10 @@ getAvailableNames() {
     return TRUE;
   }
   gCountAvailable = ucnv_countAvailable();
+  if (gCountAvailable == 0) {
+    log_data_err("No converters available.\n");
+    return FALSE;
+  }
   gAvailableNames = (const char **)uprv_malloc(gCountAvailable * sizeof(const char *));
   if (gAvailableNames == NULL) {
     log_err("unable to allocate memory for %ld available converter names\n",

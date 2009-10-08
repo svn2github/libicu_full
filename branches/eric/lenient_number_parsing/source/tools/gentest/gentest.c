@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 1999-2008, International Business Machines
+*   Copyright (C) 1999-2009, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
@@ -111,7 +111,7 @@ createData(const char* outputDirectory, UErrorCode *errorCode) {
     pData=udata_create(outputDirectory, DATA_TYPE, DATA_NAME, &dataInfo,
                        U_COPYRIGHT_STRING, errorCode);
     if(U_FAILURE(*errorCode)) {
-        fprintf(stderr, "gentest: unable to create data memory, error %d\n", *errorCode);
+        fprintf(stderr, "gentest: unable to create data memory, %s\n", u_errorName(*errorCode));
         exit(*errorCode);
     }
 
@@ -196,6 +196,7 @@ outputJavaStuff(const char* progname, const char *outputDir) {
             fprintf(out, 
                 "           ");
             switch(t) {
+#if !UCONFIG_NO_FORMATTING
             case UDBG_UCalendarDateFields:
             case UDBG_UCalendarMonths:
                 /* Temporary workaround for IS_LEAP_MOTH #6051 */
@@ -204,6 +205,7 @@ outputJavaStuff(const char* progname, const char *outputDir) {
                 } else
                 fprintf(out, "com.ibm.icu.util.Calendar.%s, /* %d */", udbg_enumName((UDebugEnumType)t,i), i);
                 break;
+#endif
             case UDBG_UDebugEnumType:
             default:
                 fprintf(out,"%d, /* %s */", i, udbg_enumName((UDebugEnumType)t,i));

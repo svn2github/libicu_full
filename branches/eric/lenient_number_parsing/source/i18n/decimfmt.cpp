@@ -2626,7 +2626,7 @@ int32_t DecimalFormat::match(const UnicodeString& text, int32_t pos, UChar32 ch)
         // Advance over run of white space in input text
         // Must see at least one white space char in input
         int32_t s = pos;
-        pos = skipUWhiteSpace(text, pos);
+        pos = skipRuleWhiteSpace(text, pos);
         if (pos == s) {
             return -1;
         }
@@ -2952,7 +2952,8 @@ DecimalFormat::ERoundingMode DecimalFormat::getRoundingMode() const {
 void DecimalFormat::setRoundingMode(ERoundingMode roundingMode) {
     fRoundingMode = roundingMode;
     if (fRoundingIncrement == NULL) {
-        setRoundingIncrement(pow(10.0, -getMaximumFractionDigits()));
+        /* cast to double to avoid ambiguous pow() overloads */
+        setRoundingIncrement(pow(10.0, (double)-getMaximumFractionDigits()));
     }
 }
 

@@ -5,7 +5,7 @@
 *   Corporation and others.  All Rights Reserved.
 *
 ******************************************************************************
-*   file name:  uspoof_buildconf.cpp
+*   file name:  uspoof_conf.cpp
 *   encoding:   US-ASCII
 *   tab size:   8 (not used)
 *   indentation:4
@@ -30,7 +30,7 @@
 #include "uvector.h"
 #include "uassert.h"
 #include "uarrsort.h"
-#include "uspoof_buildconf.h"
+#include "uspoof_conf.h"
 
 U_NAMESPACE_USE
 
@@ -289,7 +289,7 @@ void ConfusabledataBuilder::build(const char * confusables, int32_t confusablesL
         // This a little like a Java intern() - any duplicates will be eliminated.
         SPUString *smapString = stringPool->addString(mapString, status);
         
-        // Add the UChar -> string mapping to the appropriate table.
+        // Add the UChar32 -> string mapping to the appropriate table.
         UHashtable *table = uregex_start(fParseLine, 3, &status) >= 0 ? fSLTable :
                             uregex_start(fParseLine, 4, &status) >= 0 ? fSATable :
                             uregex_start(fParseLine, 5, &status) >= 0 ? fMLTable :

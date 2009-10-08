@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT:
- * Copyright (c) 1997-2008, International Business Machines Corporation and
+ * Copyright (c) 1997-2009, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 /*******************************************************************************
@@ -23,6 +23,7 @@
 #include "unicode/ustring.h"
 #include "unicode/ucol.h"
 #include "cmemory.h"
+#include "nucnvtst.h"
 
 static void TestNextUChar(UConverter* cnv, const char* source, const char* limit, const int32_t results[], const char* message);
 static void TestNextUCharError(UConverter* cnv, const char* source, const char* limit, UErrorCode expected, const char* message);
@@ -50,6 +51,9 @@ static void TestLATIN1(void);
 static void TestSBCS(void);
 static void TestDBCS(void);
 static void TestMBCS(void);
+#if !UCONFIG_NO_LEGACY_CONVERSION && !UCONFIG_NO_FILE_IO
+static void TestICCRunout(void);
+#endif
 
 #ifdef U_ENABLE_GENERIC_ISO_2022
 static void TestISO_2022(void);
@@ -85,6 +89,8 @@ static void TestJB5275_1(void);
 static void TestJitterbug6175(void);
 #endif
 
+static void TestInBufSizes(void);
+
 static void TestRoundTrippingAllUTF(void);
 static void TestConv(const uint16_t in[],
                      int len,
@@ -92,7 +98,6 @@ static void TestConv(const uint16_t in[],
                      const char* lang,
                      char byteArr[],
                      int byteArrLen);
-void addTestNewConvert(TestNode** root);
 
 /* open a converter, using test data if it begins with '@' */
 static UConverter *my_ucnv_open(const char *cnv, UErrorCode *err);
@@ -227,8 +232,10 @@ static void TestOutBufSizes(void)
 
 void addTestNewConvert(TestNode** root)
 {
+#if !UCONFIG_NO_FILE_IO
    addTest(root, &TestInBufSizes, "tsconv/nucnvtst/TestInBufSizes");
    addTest(root, &TestOutBufSizes, "tsconv/nucnvtst/TestOutBufSizes");
+#endif
    addTest(root, &TestConverterTypesAndStarters, "tsconv/nucnvtst/TestConverterTypesAndStarters");
    addTest(root, &TestAmbiguous, "tsconv/nucnvtst/TestAmbiguous");
    addTest(root, &TestSignatureDetection, "tsconv/nucnvtst/TestSignatureDetection");
@@ -253,7 +260,10 @@ void addTestNewConvert(TestNode** root)
 
 #if !UCONFIG_NO_LEGACY_CONVERSION
    addTest(root, &TestSBCS, "tsconv/nucnvtst/TestSBCS");
+#if !UCONFIG_NO_FILE_IO
    addTest(root, &TestDBCS, "tsconv/nucnvtst/TestDBCS");
+   addTest(root, &TestICCRunout, "tsconv/nucnvtst/TestICCRunout");
+#endif
    addTest(root, &TestMBCS, "tsconv/nucnvtst/TestMBCS");
 
 #ifdef U_ENABLE_GENERIC_ISO_2022
@@ -290,7 +300,7 @@ void addTestNewConvert(TestNode** root)
 #endif
 
 
-#if !UCONFIG_NO_LEGACY_CONVERSION
+#if !UCONFIG_NO_LEGACY_CONVERSION && !UCONFIG_NO_FILE_IO
    addTest(root, &TestCoverageMBCS, "tsconv/nucnvtst/TestCoverageMBCS");
 #endif
 
@@ -1486,7 +1496,7 @@ static void TestAmbiguous()
         0
     };
     UChar asciiResult[200], sjisResult[200];
-    int32_t asciiLength = 0, sjisLength = 0, i;
+    int32_t /*asciiLength = 0,*/ sjisLength = 0, i;
     const char *name;
 
     /* enumerate all converters */
@@ -1526,7 +1536,7 @@ static void TestAmbiguous()
         return;
     }
     /* convert target from Latin-1 to Unicode */
-    asciiLength = ucnv_toUChars(ascii_cnv, asciiResult, sizeof(asciiResult)/U_SIZEOF_UCHAR, target, (int32_t)strlen(target), &status);
+    /*asciiLength =*/ ucnv_toUChars(ascii_cnv, asciiResult, sizeof(asciiResult)/U_SIZEOF_UCHAR, target, (int32_t)strlen(target), &status);
     if (U_FAILURE(status))
     {
         log_err("Failed to convert the Latin-1 string.\n");
@@ -1769,8 +1779,7 @@ TestSignatureDetection(){
     }
 }
 
-void
-static TestUTF7() {
+static void TestUTF7() {
     /* test input */
     static const uint8_t in[]={
         /* H - +Jjo- - ! +- +2AHcAQ */
@@ -1813,8 +1822,7 @@ static TestUTF7() {
     ucnv_close(cnv);
 }
 
-void
-static TestIMAP() {
+static void TestIMAP() {
     /* test input */
     static const uint8_t in[]={
         /* H - &Jjo- - ! &- &2AHcAQ- \ */
@@ -1857,8 +1865,7 @@ static TestIMAP() {
     ucnv_close(cnv);
 }
 
-void
-static TestUTF8() {
+static void TestUTF8() {
     /* test input */
     static const uint8_t in[]={
         0x61,
@@ -1923,8 +1930,7 @@ static TestUTF8() {
     ucnv_close(cnv);
 }
 
-void
-static TestCESU8() {
+static void TestCESU8() {
     /* test input */
     static const uint8_t in[]={
         0x61,
@@ -1995,8 +2001,7 @@ static TestCESU8() {
     ucnv_close(cnv);
 }
 
-void
-static TestUTF16() {
+static void TestUTF16() {
     /* test input */
     static const uint8_t in1[]={
         0xfe, 0xff, 0x4e, 0x00, 0xfe, 0xff
@@ -2054,8 +2059,7 @@ static TestUTF16() {
     ucnv_close(cnv);
 }
 
-void
-static TestUTF16BE() {
+static void TestUTF16BE() {
     /* test input */
     static const uint8_t in[]={
         0x00, 0x61,
@@ -2165,8 +2169,7 @@ TestUTF16LE() {
     ucnv_close(cnv);
 }
 
-void
-static TestUTF32() {
+static void TestUTF32() {
     /* test input */
     static const uint8_t in1[]={
         0x00, 0x00, 0xfe, 0xff,   0x00, 0x10, 0x0f, 0x00,   0x00, 0x00, 0xfe, 0xff
@@ -2482,7 +2485,7 @@ TestLATIN1() {
     UErrorCode errorCode=U_ZERO_ERROR;
     UConverter *cnv=ucnv_open("LATIN_1", &errorCode);
     if(U_FAILURE(errorCode)) {
-        log_err("Unable to open a LATIN_1 converter: %s\n", u_errorName(errorCode));
+        log_data_err("Unable to open a LATIN_1 converter: %s\n", u_errorName(errorCode));
         return;
     }
     TestNextUChar(cnv, source, limit, results, "LATIN_1");
@@ -2628,6 +2631,60 @@ TestMBCS() {
 
 }
 
+#if !UCONFIG_NO_LEGACY_CONVERSION && !UCONFIG_NO_FILE_IO
+static void
+TestICCRunout() {
+/*    { "ibm-1363", :bin{ a2aea2 }, "\u00a1\u001a", :intvector{ 0, 2 }, :int{1}, :int{0}, "\", "?", :bin{""} } */
+
+    const char *cnvName = "ibm-1363";
+    UErrorCode status = U_ZERO_ERROR;
+    const uint8_t sourceData[] = { 0xa2, 0xae, 0xa2 };
+    UChar   expectUData[] = { 0x00a1, 0x001a };
+    const uint8_t *source = sourceData;
+    const uint8_t *sourceLim = sourceData+sizeof(sourceData);
+    UChar   targetBuf[256];
+    UChar   *target = targetBuf;
+    UChar   *targetLim = target+256;
+    UChar c1, c2, c3;
+    UConverter *cnv=ucnv_open(cnvName, &status);
+    if(U_FAILURE(status)) {
+        log_data_err("Unable to open %s converter: %s\n", cnvName, u_errorName(status));
+	return;
+    }
+    
+#if 0
+    ucnv_toUnicode(cnv, &target, targetLim, &source, sourceLim, NULL, TRUE, &status);
+
+    log_info("After convert: target@%d, source@%d, status%s\n",
+	     target-targetBuf, source-sourceData, u_errorName(status));
+
+    if(U_FAILURE(status)) {
+	log_err("Failed to convert: %s\n", u_errorName(status));
+    } else {
+	
+    }
+#endif
+
+    c1=ucnv_getNextUChar(cnv, &source, sourceLim, &status);
+    log_verbose("c1: U+%04X, source@%d, status %s\n", c1, source-sourceData, u_errorName(status));
+
+    c2=ucnv_getNextUChar(cnv, &source, sourceLim, &status);
+    log_verbose("c2: U+%04X, source@%d, status %s\n", c2, source-sourceData, u_errorName(status));
+
+    c3=ucnv_getNextUChar(cnv, &source, sourceLim, &status);
+    log_verbose("c3: U+%04X, source@%d, status %s\n", c3, source-sourceData, u_errorName(status));
+
+    if(status==U_INDEX_OUTOFBOUNDS_ERROR && c3==0xFFFF) {
+	log_verbose("OK\n");
+    } else {
+	log_err("FAIL: c3 was not FFFF or err was not U_INDEXOUTOFBOUNDS_ERROR\n");
+    }
+
+    ucnv_close(cnv);
+    
+}
+#endif
+
 #ifdef U_ENABLE_GENERIC_ISO_2022
 
 static void
@@ -2697,7 +2754,7 @@ TestSmallTargetBuffer(const uint16_t* source, const UChar* sourceLimit,UConverte
     char *cTarget;
     const char *cTargetLimit;
     char *cBuf;
-    UChar *uBuf,*test;
+    UChar *uBuf; /*,*test;*/
     int32_t uBufSize = 120;
     int len=0;
     int i=2;
@@ -2745,7 +2802,7 @@ TestSmallTargetBuffer(const uint16_t* source, const UChar* sourceLimit,UConverte
         }while(cSource<cSourceLimit);
 
         uSource = source;
-        test =uBuf;
+        /*test =uBuf;*/
         for(len=0;len<(int)(source - sourceLimit);len++){
             if(uBuf[len]!=uSource[len]){
                 log_err("Expected : \\u%04X \t Got: \\u%04X\n",uSource[len],(int)uBuf[len]) ;
@@ -2813,7 +2870,7 @@ static void TestSmallSourceBuffer(const uint16_t* source, const UChar* sourceLim
     char *cTarget;
     const char *cTargetLimit;
     char *cBuf;
-    UChar *uBuf,*test;
+    UChar *uBuf; /*,*test;*/
     int32_t uBufSize = 120;
     int len=0;
     int i=2;
@@ -2867,7 +2924,7 @@ static void TestSmallSourceBuffer(const uint16_t* source, const UChar* sourceLim
         }while(cSource<cTarget);
 
         uSource = source;
-        test =uBuf;
+        /*test =uBuf;*/
         for(;len<(int)(source - sourceLimit);len++){
             if(uBuf[len]!=uSource[len]){
                 log_err("Expected : \\u%04X \t Got: \\u%04X\n",uSource[len],(int)uBuf[len]) ;
@@ -2880,14 +2937,14 @@ static void TestSmallSourceBuffer(const uint16_t* source, const UChar* sourceLim
 static void
 TestGetNextUChar2022(UConverter* cnv, const char* source, const char* limit,
                      const uint16_t results[], const char* message){
-     const char* s0;
+/*     const char* s0; */
      const char* s=(char*)source;
      const uint16_t *r=results;
      UErrorCode errorCode=U_ZERO_ERROR;
      uint32_t c,exC;
      ucnv_reset(cnv);
      while(s<limit) {
-        s0=s;
+	 /* s0=s; */
         c=ucnv_getNextUChar(cnv, &s, limit, &errorCode);
         if(errorCode==U_INDEX_OUTOFBOUNDS_ERROR) {
             break; /* no more significant input */
@@ -5217,7 +5274,7 @@ static void TestJitterbug255()
     const char *testBuffer = (const char *)testBytes;
     const char *testEnd = (const char *)testBytes + sizeof(testBytes);
     UErrorCode status = U_ZERO_ERROR;
-    UChar32 result;
+    /*UChar32 result;*/
     UConverter *cnv = 0;
 
     cnv = ucnv_open("shift-jis", &status);
@@ -5227,7 +5284,7 @@ static void TestJitterbug255()
     }
     while (testBuffer != testEnd)
     {
-        result = ucnv_getNextUChar (cnv, &testBuffer, testEnd , &status);
+        /*result = */ucnv_getNextUChar (cnv, &testBuffer, testEnd , &status);
         if (U_FAILURE(status))
         {
             log_err("Failed to convert the next UChar for SJIS.\n");
@@ -5292,7 +5349,7 @@ static void TestJitterbug981(){
     }
     myCollator = ucol_open("zh", &status);
     if(U_FAILURE(status)){
-        log_err("Could not open collator for zh locale. Error: %s\n", u_errorName(status));
+        log_data_err("Could not open collator for zh locale. Error: %s\n", u_errorName(status));
         ucnv_close(utf8cnv);
         return;
     }
@@ -5376,6 +5433,12 @@ static void TestJB5275_1(){
     const char* source = data;
     const char* sourceLimit = data+strlen(data);
     const UChar* exp = expected;
+    
+    if (U_FAILURE(status)) {
+        log_data_err("Unable to open converter: iscii-gur got errorCode: %s\n", u_errorName(status));
+        return;
+    }
+    
     log_verbose("Testing switching back to default script when new line is encountered.\n");
     ucnv_toUnicode(conv, &target, targetLimit, &source, sourceLimit, NULL, TRUE, &status);
     if(U_FAILURE(status)){

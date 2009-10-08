@@ -5,7 +5,7 @@
 *   Corporation and others.  All Rights Reserved.
 *
 ******************************************************************************
-*   file name:  uspoof_buildconf.h
+*   file name:  uspoof_conf.h
 *   encoding:   US-ASCII
 *   tab size:   8 (not used)
 *   indentation:4
@@ -24,6 +24,8 @@
 #if !UCONFIG_NO_REGULAR_EXPRESSIONS 
 
 #include "uspoof_impl.h"
+
+U_NAMESPACE_BEGIN
 
 // SPUString
 //              Holds a string that is the result of one of the mappings defined
@@ -123,6 +125,7 @@ class ConfusabledataBuilder : public UMemory {
     static void buildConfusableData(SpoofImpl *spImpl, const char * confusables,
         int32_t confusablesLen, int32_t *errorType, UParseError *pe, UErrorCode &status);
 };
+U_NAMESPACE_END
 
 #endif
 #endif  // !UCONFIG_NO_REGULAR_EXPRESSIONS 

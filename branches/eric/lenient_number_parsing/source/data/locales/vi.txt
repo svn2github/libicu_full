@@ -7,10 +7,10 @@
 // *
 // ***************************************************************************
 /**
- *  ICU <specials> source: <path>/xml/main/vi.xml
+ *  ICU <specials > source: <path>/xml/main/vi.xml
  */
 vi{
-    AuxExemplarCharacters{"[f j w z]"}
+    AuxExemplarCharacters{"[]"}
     Countries{
         001{"Thế giới"}
         002{"Châu Phi"}
@@ -344,7 +344,7 @@ vi{
             "Franc Guinea",
         }
         GNS{
-            "GNS",
+            "GNS" /** ===  */,
             "Syli Guinea",
         }
         GRD{
@@ -356,7 +356,7 @@ vi{
             "Quetzal Guatemala",
         }
         GWP{
-            "GWP",
+            "GWP" /** ===  */,
             "Peso Guinea-Bissau",
         }
         GYD{
@@ -396,7 +396,7 @@ vi{
             "Sêken Ixraen",
         }
         INR{
-            "₨",
+            "Rs",
             "Rupi Ấn Độ",
         }
         IQD{
@@ -504,7 +504,7 @@ vi{
             "Đô-la Singapore",
         }
         SIT{
-            "SIT",
+            "SIT" /** ===  */,
             "Tôla Xlôvênia",
         }
         SKK{
@@ -536,7 +536,7 @@ vi{
             "Đô-la Mỹ",
         }
         VEB{
-            "Bs.",
+            "VEB" /** ===  */,
             "Bôliva Vênêduêla",
         }
         VND{
@@ -609,7 +609,6 @@ vi{
         hy{"Tiếng Ác-mê-ni"}
         ia{"Tiếng Khoa Học Quốc Tế"}
         id{"Tiếng In-đô-nê-xia"}
-        ie{"Tiếng Khoa học quốc tế"}
         is{"Tiếng Ai-xơ-len"}
         it{"Tiếng Ý"}
         ja{"Tiếng Nhật"}
@@ -708,7 +707,7 @@ vi{
             gregorian{"gregorian"}
         }
     }
-    Version{"1.82"}
+    Version{"2.0.42.82"}
     calendar{
         gregorian{
             AmPmMarkers{

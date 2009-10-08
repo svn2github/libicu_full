@@ -305,11 +305,13 @@ CalendarTest::TestGenericAPI()
         cal->after(*cal2, status) ||
         U_FAILURE(status)) errln("FAIL: equals/before/after failed after setTime(+1000)");
 
-    logln("cal1->roll(UCAL_SECOND)");
+    logln("cal->roll(UCAL_SECOND)");
     cal->roll(UCAL_SECOND, (UBool) TRUE, status);
     logln(UnicodeString("cal=")  +cal->getTime(status)  + UnicodeString(calToStr(*cal)));
-
+    cal->roll(UCAL_SECOND, (int32_t)0, status);
+    logln(UnicodeString("cal=")  +cal->getTime(status)  + UnicodeString(calToStr(*cal)));
     if (failure(status, "Calendar::roll")) return;
+
     if (!(eq=cal->equals(*cal2, status)) ||
         (b4=cal->before(*cal2, status)) ||
         (af=cal->after(*cal2, status)) ||
@@ -401,14 +403,23 @@ CalendarTest::TestGenericAPI()
         if (cal->isSet((UCalendarDateFields)i)) errln("FAIL: Calendar::clear/isSet failed " + fieldName((UCalendarDateFields)i));
     }
 
+    if(cal->getActualMinimum(Calendar::SECOND, status) != 0){
+        errln("Calendar is suppose to return 0 for getActualMinimum");
+    }
+
+    Calendar *cal3 = Calendar::createInstance(status);
+    cal3->roll(Calendar::SECOND, (int32_t)0, status);
+    if (failure(status, "Calendar::roll(EDateFields, int32_t, UErrorCode)")) return;
+
     delete cal;
     delete cal2;
+    delete cal3;
 
     int32_t count;
     const Locale* loc = Calendar::getAvailableLocales(count);
     if (count < 1 || loc == 0)
     {
-        errln("FAIL: getAvailableLocales failed");
+        dataerrln("FAIL: getAvailableLocales failed");
     }
     else
     {
@@ -464,6 +475,33 @@ CalendarTest::TestGenericAPI()
     if (gc2 != *gc || !(gc2 == *gc)) errln("FAIL: GregorianCalendar assignment/operator==/operator!= failed");
     delete gc;
     delete z;
+
+    /* Code coverage for Calendar class. */
+    cal = Calendar::createInstance(status);
+    if (failure(status, "Calendar::createInstance")) {
+        return;
+    }else {
+        ((Calendar *)cal)->roll(UCAL_HOUR, (int32_t)100, status);
+        ((Calendar *)cal)->clear(UCAL_HOUR);
+        URegistryKey key = cal->registerFactory(NULL, status);
+        cal->unregister(key, status);
+    }
+    delete cal;
+
+    status = U_ZERO_ERROR;
+    cal = Calendar::createInstance(Locale("he_IL@calendar=hebrew"), status);
+    if (failure(status, "Calendar::createInstance")) {
+        return;
+    } else {
+        cal->roll(Calendar::MONTH, (int32_t)100, status);
+    }
+
+    StringEnumeration *en = Calendar::getKeywordValuesForLocale(NULL, Locale::getDefault(),FALSE, status);
+    if (en == NULL || U_FAILURE(status)) {
+        errln("FAIL: getKeywordValuesForLocale for Calendar.");
+    }
+    delete en;
+    delete cal;
 }
 
 // -------------------------------------
@@ -1112,7 +1150,11 @@ CalendarTest::TestSecondsZero121()
     if (U_FAILURE(status)) { errln("Calendar::getTime failed"); return; }
     UnicodeString s;
     dateToString(d, s);
-    if (s.indexOf(":00 ") < 0) errln("Expected to see :00 in " + s);
+    if (s.indexOf("DATE_FORMAT_FAILURE") >= 0) {
+        dataerrln("Got: \"DATE_FORMAT_FAILURE\".");
+    } else if (s.indexOf(":00 ") < 0) {
+        errln("Expected to see :00 in " + s);
+    }
     delete cal;
 }
  
@@ -1309,7 +1351,7 @@ CalendarTest::TestDOW_LOCALandYEAR_WOY()
     Calendar *cal=Calendar::createInstance(Locale::getGermany(), status);
     if (U_FAILURE(status)) { errln("Couldn't create GregorianCalendar"); return; }
     SimpleDateFormat *sdf=new SimpleDateFormat(UnicodeString("YYYY'-W'ww-ee"), Locale::getGermany(), status);
-    if (U_FAILURE(status)) { errln("Couldn't create SimpleDateFormat"); return; }
+    if (U_FAILURE(status)) { errcheckln(status, "Couldn't create SimpleDateFormat - %s", u_errorName(status)); return; }
 
     // ICU no longer use localized date-time pattern characters by default.
     // So we set pattern chars using 'J' instead of 'Y'.
@@ -1548,7 +1590,7 @@ CalendarTest::marchByDelta(Calendar* cal, int32_t delta)
 
 #define CHECK(status, msg) \
     if (U_FAILURE(status)) { \
-        errln(msg); \
+        errcheckln(status, msg); \
         return; \
     }
 

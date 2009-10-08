@@ -75,7 +75,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="..\..\bin\icuuc42.dll"
+				OutputFile="..\..\bin\icuuc43.dll"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ProgramDatabaseFile=".\..\..\lib\icuuc.pdb"
@@ -168,7 +168,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="..\..\bin\icuuc42d.dll"
+				OutputFile="..\..\bin\icuuc43d.dll"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
@@ -259,7 +259,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="..\..\bin64\icuuc42.dll"
+				OutputFile="..\..\bin64\icuuc43.dll"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ProgramDatabaseFile=".\..\..\lib64\icuuc.pdb"
@@ -354,7 +354,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="..\..\bin64\icuuc42d.dll"
+				OutputFile="..\..\bin64\icuuc43d.dll"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
@@ -1089,6 +1089,50 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\icudataver.c"
+				>
+			</File>
+			<File
+				RelativePath=".\unicode\icudataver.h"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+						CommandLine="copy &quot;$(InputPath)&quot; ..\..\include\unicode&#x0D;&#x0A;"
+						Outputs="..\..\include\unicode\$(InputFileName)"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+						CommandLine="copy &quot;$(InputPath)&quot; ..\..\include\unicode&#x0D;&#x0A;"
+						Outputs="..\..\include\unicode\$(InputFileName)"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|x64"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+						CommandLine="copy &quot;$(InputPath)&quot; ..\..\include\unicode&#x0D;&#x0A;"
+						Outputs="..\..\include\unicode\$(InputFileName)"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|x64"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+						CommandLine="copy &quot;$(InputPath)&quot; ..\..\include\unicode&#x0D;&#x0A;"
+						Outputs="..\..\include\unicode\$(InputFileName)"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
 				RelativePath=".\locmap.c"
 				>
 			</File>
@@ -1721,6 +1765,46 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\unicode\uvernum.h"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+						CommandLine="copy &quot;$(InputPath)&quot; ..\..\include\unicode&#x0D;&#x0A;"
+						Outputs="..\..\include\unicode\$(InputFileName)"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+						CommandLine="copy &quot;$(InputPath)&quot; ..\..\include\unicode&#x0D;&#x0A;"
+						Outputs="..\..\include\unicode\$(InputFileName)"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|x64"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+						CommandLine="copy &quot;$(InputPath)&quot; ..\..\include\unicode&#x0D;&#x0A;"
+						Outputs="..\..\include\unicode\$(InputFileName)"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|x64"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+						CommandLine="copy &quot;$(InputPath)&quot; ..\..\include\unicode&#x0D;&#x0A;"
+						Outputs="..\..\include\unicode\$(InputFileName)"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
 				RelativePath=".\unicode\uversion.h"
 				>
 				<FileConfiguration
@@ -2135,9 +2219,45 @@
 			<File
 				RelativePath=".\ucln_cmn.c"
 				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						DisableLanguageExtensions="false"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						DisableLanguageExtensions="false"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						DisableLanguageExtensions="false"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						DisableLanguageExtensions="false"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\ucln_cmn.h"
+				>
+			</File>
+			<File
+				RelativePath=".\ucln_imp.h"
 				>
 			</File>
 			<File

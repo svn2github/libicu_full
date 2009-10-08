@@ -37,8 +37,6 @@
 static int32_t pass;
 static int32_t fail;
 
-static void TestCLDRVersion();
-
 
 /*****************************************************************************/
 /**
@@ -182,6 +180,7 @@ static void TestGetFunctionalEquivalent(void);
 static void TestCLDRStyleAliases(void);
 static void TestFallbackCodes(void);
 static void TestGetUTF8String(void);
+static void TestCLDRVersion(void);
 
 /***************************************************************************************/
 
@@ -190,13 +189,10 @@ static void TestGetUTF8String(void);
 void addNEWResourceBundleTest(TestNode** root)
 {
     addTest(root, &TestErrorCodes,            "tsutil/creststn/TestErrorCodes");
+#if !UCONFIG_NO_FILE_IO && !UCONFIG_NO_LEGACY_CONVERSION   
     addTest(root, &TestEmptyBundle,           "tsutil/creststn/TestEmptyBundle");
     addTest(root, &TestConstruction1,         "tsutil/creststn/TestConstruction1");
     addTest(root, &TestResourceBundles,       "tsutil/creststn/TestResourceBundles");
-    addTest(root, &TestFallback,              "tsutil/creststn/TestFallback");
-    addTest(root, &TestGetVersion,            "tsutil/creststn/TestGetVersion");
-    addTest(root, &TestGetVersionColl,        "tsutil/creststn/TestGetVersionColl");
-    addTest(root, &TestAliasConflict,         "tsutil/creststn/TestAliasConflict");
     addTest(root, &TestNewTypes,              "tsutil/creststn/TestNewTypes");
     addTest(root, &TestEmptyTypes,            "tsutil/creststn/TestEmptyTypes");
     addTest(root, &TestBinaryCollationData,   "tsutil/creststn/TestBinaryCollationData");
@@ -205,15 +201,20 @@ void addNEWResourceBundleTest(TestNode** root)
     addTest(root, &TestDecodedBundle,         "tsutil/creststn/TestDecodedBundle");
     addTest(root, &TestResourceLevelAliasing, "tsutil/creststn/TestResourceLevelAliasing");
     addTest(root, &TestDirectAccess,          "tsutil/creststn/TestDirectAccess"); 
+    addTest(root, &TestXPath,                 "tsutil/creststn/TestXPath");
+    addTest(root, &TestCLDRStyleAliases,      "tsutil/creststn/TestCLDRStyleAliases");
+    addTest(root, &TestFallbackCodes,         "tsutil/creststn/TestFallbackCodes");
+    addTest(root, &TestGetUTF8String,         "tsutil/creststn/TestGetUTF8String");
+    addTest(root, &TestCLDRVersion,           "tsutil/creststn/TestCLDRVersion");
+#endif
+    addTest(root, &TestFallback,              "tsutil/creststn/TestFallback");
+    addTest(root, &TestGetVersion,            "tsutil/creststn/TestGetVersion");
+    addTest(root, &TestGetVersionColl,        "tsutil/creststn/TestGetVersionColl");
+    addTest(root, &TestAliasConflict,         "tsutil/creststn/TestAliasConflict");
     addTest(root, &TestGetKeywordValues,      "tsutil/creststn/TestGetKeywordValues"); 
     addTest(root, &TestGetFunctionalEquivalent,"tsutil/creststn/TestGetFunctionalEquivalent");
     addTest(root, &TestJB3763,                "tsutil/creststn/TestJB3763");
-    addTest(root, &TestXPath,                 "tsutil/creststn/TestXPath"); 
-    addTest(root, &TestCLDRStyleAliases,      "tsutil/creststn/TestCLDRStyleAliases");
-    addTest(root, &TestFallbackCodes,         "tsutil/creststn/TestFallbackCodes");    
     addTest(root, &TestStackReuse,            "tsutil/creststn/TestStackReuse");
-    addTest(root, &TestGetUTF8String,         "tsutil/creststn/TestGetUTF8String");
-    addTest(root, &TestCLDRVersion,           "tsutil/creststn/TestCLDRVersion");
 }
 
 
@@ -243,7 +244,7 @@ static void checkStatus(int32_t line, UErrorCode expected, UErrorCode status) {
     log_data_err("Resource not present, cannot test (%s:%d)\n", __FILE__, line);
   }
   if(status != expected) {
-    log_err("%s:%d: Expected error code %s, got error code %s\n", __FILE__, line, u_errorName(expected), u_errorName(status));
+    log_err_status(status, "%s:%d: Expected error code %s, got error code %s\n", __FILE__, line, u_errorName(expected), u_errorName(status));
   }
 }
 
@@ -344,12 +345,12 @@ static void TestAliasConflict(void) {
     he = ures_open(NULL, "he", &status);
     iw = ures_open(NULL, "iw", &status);
     if(U_FAILURE(status)) { 
-        log_err("Failed to get resource with %s\n", myErrorName(status));
+        log_err_status(status, "Failed to get resource with %s\n", myErrorName(status));
     }
     ures_close(iw);
     result = ures_getStringByKey(he, "ExemplarCharacters", &resultLen, &status);
     if(U_FAILURE(status) || result == NULL) { 
-        log_err("Failed to get resource ExemplarCharacters with %s\n", myErrorName(status));
+        log_err_status(status, "Failed to get resource ExemplarCharacters with %s\n", myErrorName(status));
     }
     ures_close(he);
 
@@ -358,7 +359,7 @@ static void TestAliasConflict(void) {
         status = U_ZERO_ERROR;
         norway = ures_open(NULL, norwayNames[i], &status);
         if(U_FAILURE(status)) { 
-            log_err("Failed to get resource with %s for %s\n", myErrorName(status), norwayNames[i]);
+            log_err_status(status, "Failed to get resource with %s for %s\n", myErrorName(status), norwayNames[i]);
             continue;
         }
         realName = ures_getLocale(norway, &status);
@@ -854,8 +855,8 @@ static void TestEmptyTypes() {
     }
     else {
         binResult=ures_getBinary(res, &len, &status);
-        if(!U_SUCCESS(status) || binResult != NULL || len != 0) {
-            log_err("Shouldn't get emptybin\n");
+        if(!U_SUCCESS(status) || len != 0) {
+            log_err("Couldn't get emptybin, or it's not empty\n");
         }
     }
 
@@ -871,7 +872,7 @@ static void TestEmptyTypes() {
     else {
         resArray=ures_getByIndex(res, 0, resArray, &status);
         if(U_SUCCESS(status) || resArray != NULL){
-            log_err("Shouldn't get emptyarray\n");
+            log_err("Shouldn't get emptyarray[0]\n");
         }
     }
 
@@ -887,7 +888,7 @@ static void TestEmptyTypes() {
     else {
         resArray=ures_getByIndex(res, 0, resArray, &status);
         if(U_SUCCESS(status) || resArray != NULL){
-            log_err("Shouldn't get emptytable\n");
+            log_err("Shouldn't get emptytable[0]\n");
         }
     }
 
@@ -1028,7 +1029,7 @@ static void TestAPI() {
     status = U_ZERO_ERROR;
     ures_close(ures_openU(NULL, "root", &status));
     if(U_FAILURE(status)){
-        log_err("ERROR: ures_openU() failed path = NULL with %s\n", myErrorName(status));
+        log_err_status(status, "ERROR: ures_openU() failed path = NULL with %s\n", myErrorName(status));
     }
 
     status = U_ILLEGAL_ARGUMENT_ERROR;
@@ -1039,7 +1040,7 @@ static void TestAPI() {
     status = U_ZERO_ERROR;
     teRes=ures_openU(utestdatapath, "te", &status);
     if(U_FAILURE(status)){
-        log_err("ERROR: ures_openU() failed path =%s with %s\n", austrdup(utestdatapath), myErrorName(status));
+        log_err_status(status, "ERROR: ures_openU() failed path =%s with %s\n", austrdup(utestdatapath), myErrorName(status));
         return;
     }
     /*Test ures_getLocale() */
@@ -1385,7 +1386,7 @@ static void TestGetVersion(){
         log_verbose("Testing version number for locale %s\n", locName);
         resB = ures_open(NULL,locName, &status);
         if (U_FAILURE(status)) {
-            log_err("Resource bundle creation for locale %s failed.: %s\n", locName, myErrorName(status));
+            log_err_status(status, "Resource bundle creation for locale %s failed.: %s\n", locName, myErrorName(status));
             ures_close(resB);
             return;
         }
@@ -1420,7 +1421,7 @@ static void TestGetVersionColl(){
     log_verbose("The ures_getVersion(%s) tests begin : \n", U_ICUDATA_COLL);
     locs = ures_openAvailableLocales(U_ICUDATA_COLL, &status);
     if (U_FAILURE(status)) {
-       log_err("enumeration of %s failed.: %s\n", U_ICUDATA_COLL, myErrorName(status));
+       log_err_status(status, "enumeration of %s failed.: %s\n", U_ICUDATA_COLL, myErrorName(status));
        return;
     }
 
@@ -2016,7 +2017,7 @@ static void TestFallback()
     fr_FR = ures_open(NULL, "fr_FR", &status);
     if(U_FAILURE(status))
     {
-        log_err("Couldn't open fr_FR - %d\n", status);
+        log_err_status(status, "Couldn't open fr_FR - %s\n", u_errorName(status));
         return;
     }
 
@@ -2043,10 +2044,10 @@ static void TestFallback()
     ures_close(subResource);
 
     /* and this is a Fallback, to fr */
-    junk = tres_getString(fr_FR, -1, "Countries", &resultLen, &status);
+    junk = tres_getString(fr_FR, -1, "ExemplarCharacters", &resultLen, &status);
     if(status != U_USING_FALLBACK_WARNING)
     {
-        log_data_err("Expected U_USING_FALLBACK_ERROR when trying to get Countries from fr_FR, got %d\n", 
+        log_data_err("Expected U_USING_FALLBACK_ERROR when trying to get ExemplarCharacters from fr_FR, got %d\n", 
             status);
     }
     
@@ -2061,7 +2062,7 @@ static void TestFallback()
         UResourceBundle* resLocID = ures_getByKey(myResB, "Version", NULL, &err);
         UResourceBundle* tResB;
         const UChar* version = NULL;
-        static const UChar versionStr[] = { 0x0031, 0x002E, 0x0034, 0x0036, 0x0000};
+        static const UChar versionStr[] = { 0x0032, 0x002E, 0x0030, 0x002E, 0x0034, 0x0031, 0x002E, 0x0032, 0x0033, 0x0000};
 
         if(err != U_ZERO_ERROR){
             log_data_err("Expected U_ZERO_ERROR when trying to test no_NO_NY aliased to nn_NO for Version err=%s\n",u_errorName(err));
@@ -2147,7 +2148,7 @@ static void TestResourceLevelAliasing(void) {
       /* testing referencing/composed alias */
       uk = ures_findResource("ja/LocaleScript/2", uk, &status);
       if((uk == NULL) || U_FAILURE(status)) {
-        log_err("Couldn't findResource('ja/LocaleScript/2') err %s\n", u_errorName(status));
+        log_err_status(status, "Couldn't findResource('ja/LocaleScript/2') err %s\n", u_errorName(status));
         goto cleanup;
       } 
       
@@ -2372,7 +2373,7 @@ static void TestDirectAccess(void) {
     
     t2 = ures_open(NULL, "sr", &status);
     if(U_FAILURE(status)) {
-        log_err("Couldn't open 'sr' resource bundle, error %s\n", u_errorName(status));
+        log_err_status(status, "Couldn't open 'sr' resource bundle, error %s\n", u_errorName(status));
         log_data_err("No 'sr', no test - you have bigger problems than testing direct access. "
                      "You probably have no data! Aborting this test\n");
     }
@@ -2422,7 +2423,7 @@ static void TestDirectAccess(void) {
     t2 = ures_getByKeyWithFallback(t2, "islamic-civil", t2, &status);
     t2 = ures_getByKeyWithFallback(t2, "eras", t2, &status);
     if(U_FAILURE(status)) {
-        log_err("Didn't get Eras. I know they are there!\n");
+        log_err_status(status, "Didn't get Eras. I know they are there!\n");
     }
     status = U_ZERO_ERROR;
 
@@ -2451,7 +2452,7 @@ static void TestJB3763(void) {
     t = ures_getByKeyWithFallback(t, "gregorian", t, &status);
     t = ures_getByKeyWithFallback(t, "AmPmMarkers", t, &status);
     if(U_FAILURE(status)) {
-        log_err("This resource should be available?\n");
+        log_err_status(status, "This resource should be available?\n");
     }
     status = U_ZERO_ERROR;
 
@@ -2480,11 +2481,11 @@ static void TestGetKeywordValues(void) {
         }
     }
     if(foundStandard == FALSE) {
-        log_err("'standard' was not found in the keyword list.\n");
+        log_err_status(status, "'standard' was not found in the keyword list.\n");
     }
     uenum_close(kwVals);
     if(U_FAILURE(status)) {
-        log_err("err %s getting collation values\n", u_errorName(status));
+        log_err_status(status, "err %s getting collation values\n", u_errorName(status));
     }
     status = U_ZERO_ERROR;
 #endif
@@ -2504,11 +2505,11 @@ static void TestGetKeywordValues(void) {
         }
     }
     if(foundStandard == FALSE) {
-        log_err("'japanese' was not found in the calendar keyword list.\n");
+        log_err_status(status, "'japanese' was not found in the calendar keyword list.\n");
     }
     uenum_close(kwVals);
     if(U_FAILURE(status)) {
-        log_err("err %s getting calendar values\n", u_errorName(status));
+        log_err_status(status, "err %s getting calendar values\n", u_errorName(status));
     }
 }
 
@@ -2527,7 +2528,7 @@ static void TestGetFunctionalEquivalentOf(const char *path, const char *resName,
             resName, keyword, inLocale,
             &gotAvail, truncate, &status);
         if(U_FAILURE(status) || (len <= 0)) {
-            log_err("FAIL: got len %d, err %s  on #%d: %c\t%s\t%s\n",  
+            log_err_status(status, "FAIL: got len %d, err %s  on #%d: %c\t%s\t%s\n",  
                 len, u_errorName(status),
                 i/3,expectAvail?'t':'f', inLocale, expectLocale);
         } else {
@@ -2956,7 +2957,7 @@ TestGetUTF8String() {
     ures_close(res);
 }
 
-void TestCLDRVersion() {
+static void TestCLDRVersion(void) {
   UVersionInfo zeroVersion;
   UVersionInfo testExpect;
   UVersionInfo testCurrent;
@@ -2971,7 +2972,7 @@ void TestCLDRVersion() {
   ulocdata_getCLDRVersion(cldrVersion, &status);
   if(U_FAILURE(status)) {
     /* the show is pretty much over at this point */
-    log_err("FAIL: ulocdata_getCLDRVersion() returned %s\n", u_errorName(status));
+    log_err_status(status, "FAIL: ulocdata_getCLDRVersion() returned %s\n", u_errorName(status));
     return;
   } else {
     u_versionToString(cldrVersion, tmp);
@@ -2983,9 +2984,6 @@ void TestCLDRVersion() {
   {
     UResourceBundle *res;
     const char *testdatapath;
-    char buffer8[16];
-    const char *s8;
-    int32_t length8;
 
     status = U_ZERO_ERROR;
     testdatapath = loadTestData(&status);
@@ -3012,12 +3010,12 @@ void TestCLDRVersion() {
 
   u_versionToString(testExpect,tmp);
   log_verbose("(data) ExpectCLDRVersionAtLeast { %s }\n", tmp); 
-  if(u_compareVersions(cldrVersion, testExpect) < 0) {
+  if(memcmp(cldrVersion, testExpect, sizeof(UVersionInfo)) < 0) {
     log_data_err("CLDR version is too old, expect at least %s.", tmp);
   }
   u_versionToString(testCurrent,tmp);
   log_verbose("(data) CurrentCLDRVersion { %s }\n", tmp); 
-  switch(u_compareVersions(cldrVersion, testCurrent)) {
+  switch(memcmp(cldrVersion, testCurrent, sizeof(UVersionInfo))) {
     case 0: break; /* OK- current. */
     case -1: log_info("CLDR version is behind 'current' (for testdata/root.txt) %s. Some things may fail.\n", tmp); break;
     case 1: log_info("CLDR version is ahead of 'current' (for testdata/root.txt) %s. Some things may fail.\n", tmp); break;

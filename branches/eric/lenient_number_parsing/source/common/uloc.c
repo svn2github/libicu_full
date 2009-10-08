@@ -76,6 +76,9 @@ static const char _kRootName[]        = "root";
 static const char _kIndexTag[]        = "InstalledLocales";
 static const char _kCurrency[]        = "currency";
 static const char _kCurrencies[]      = "Currencies";
+static const char _kLocaleDisplayPattern[] = "localeDisplayPattern";
+static const char _kPattern[]         = "pattern";
+static const char _kSeparator[]       = "separator";
 static char** _installedLocales = NULL;
 static int32_t _installedLocalesCount = 0;
 
@@ -146,7 +149,7 @@ static const char * const LANGUAGES[] = {
     "lah", "lam", "lb",  "lez", "lg",  "li",  "ln",  "lo",  "lol",
     "loz", "lt",  "lu",  "lua", "lui", "lun", "luo", "lus",
     "lv",  "mad", "mag", "mai", "mak", "man", "map", "mas",
-    "mdf", "mdr", "men", "mg",  "mga", "mh",  "mi",  "mic", "min",
+    "mdf", "mdr", "men", "mfe", "mg",  "mga", "mh",  "mi",  "mic", "min",
     "mis", "mk",  "mkh", "ml",  "mn",  "mnc", "mni", "mno",
     "mo",  "moh", "mos", "mr",  "ms",  "mt",  "mul", "mun",
     "mus", "mwl", "mwr", "my",  "myn", "myv", "na",  "nah", "nai", "nap",
@@ -262,8 +265,8 @@ static const char * const LANGUAGES_3[] = {
     "loz", "lit", "lub", "lua", "lui", "lun", "luo", "lus",
 /*  "lv",  "mad", "mag", "mai", "mak", "man", "map", "mas",    */
     "lav", "mad", "mag", "mai", "mak", "man", "map", "mas",
-/*  "mdf", "mdr", "men", "mg",  "mga", "mh",  "mi",  "mic", "min",    */
-    "mdf", "mdr", "men", "mlg", "mga", "mah", "mri", "mic", "min",
+/*  "mdf", "mdr", "men", "mfe", "mg",  "mga", "mh",  "mi",  "mic", "min",    */
+    "mdf", "mdr", "men", "mfe", "mlg", "mga", "mah", "mri", "mic", "min",
 /*  "mis", "mk",  "mkh", "ml",  "mn",  "mnc", "mni", "mno",    */
     "mis", "mkd", "mkh", "mal", "mon", "mnc", "mni", "mno",
 /*  "mo",  "moh", "mos", "mr",  "ms",  "mt",  "mul", "mun",    */
@@ -2338,6 +2341,22 @@ uloc_getDisplayName(const char *locale,
     char keywordValue[256];
     int32_t keywordValueLen = 0;
 
+    int32_t locSepLen = 0;
+    int32_t locPatLen = 0;
+    int32_t p0Len = 0;
+    int32_t defaultPatternLen = 9;
+    const UChar *dispLocSeparator;
+    const UChar *dispLocPattern;
+    static const UChar defaultSeparator[3] = { 0x002c, 0x0020 , 0x0000 }; /* comma + space */
+    static const UChar defaultPattern[10] = { 0x007b, 0x0030, 0x007d, 0x0020, 0x0028, 0x007b, 0x0031, 0x007d, 0x0029, 0x0000 }; /* {0} ({1}) */
+    static const UChar pat0[4] = { 0x007b, 0x0030, 0x007d , 0x0000 } ; /* {0} */
+    static const UChar pat1[4] = { 0x007b, 0x0031, 0x007d , 0x0000 } ; /* {1} */
+    
+    UResourceBundle *bundle = NULL;
+    UResourceBundle *locdsppat = NULL;
+    
+    UErrorCode status = U_ZERO_ERROR;
+
     /* argument checking */
     if(pErrorCode==NULL || U_FAILURE(*pErrorCode)) {
         return 0;
@@ -2346,6 +2365,26 @@ uloc_getDisplayName(const char *locale,
     if(destCapacity<0 || (destCapacity>0 && dest==NULL)) {
         *pErrorCode=U_ILLEGAL_ARGUMENT_ERROR;
         return 0;
+    }
+
+    bundle    = ures_open(NULL, displayLocale, &status);
+    locdsppat = ures_getByKeyWithFallback(bundle, _kLocaleDisplayPattern, NULL, &status);
+    dispLocSeparator = ures_getStringByKeyWithFallback(locdsppat, _kSeparator, &locSepLen, &status);
+    dispLocPattern = ures_getStringByKeyWithFallback(locdsppat, _kPattern, &locPatLen, &status);
+        
+    /*close the bundles */
+    ures_close(locdsppat);
+    ures_close(bundle);
+
+    /* If we couldn't find any data, then use the defaults */
+    if ( locSepLen == 0) {
+       dispLocSeparator = defaultSeparator;
+       locSepLen = 2;
+    }
+
+    if ( locPatLen == 0) {
+       dispLocPattern = defaultPattern;
+       locPatLen = 9;
     }
 
     /*
@@ -2360,6 +2399,8 @@ uloc_getDisplayName(const char *locale,
     hasLanguage= length>0;
 
     if(hasLanguage) {
+        p0Len = length;
+
         /* append " (" */
         if(length<destCapacity) {
             dest[length]=0x20;
@@ -2390,15 +2431,11 @@ uloc_getDisplayName(const char *locale,
     length+=length2;
 
     if(hasScript) {
-        /* append ", " */
-        if(length<destCapacity) {
-            dest[length]=0x2c;
+        /* append separator */
+        if(length+locSepLen<=destCapacity) {
+            u_memcpy(dest+length,dispLocSeparator,locSepLen);
         }
-        ++length;
-        if(length<destCapacity) {
-            dest[length]=0x20;
-        }
-        ++length;
+        length+=locSepLen;
     }
 
     if(*pErrorCode==U_BUFFER_OVERFLOW_ERROR) {
@@ -2420,15 +2457,11 @@ uloc_getDisplayName(const char *locale,
     length+=length2;
 
     if(hasCountry) {
-        /* append ", " */
-        if(length<destCapacity) {
-            dest[length]=0x2c;
+        /* append separator */
+        if(length+locSepLen<=destCapacity) {
+            u_memcpy(dest+length,dispLocSeparator,locSepLen);
         }
-        ++length;
-        if(length<destCapacity) {
-            dest[length]=0x20;
-        }
-        ++length;
+        length+=locSepLen;
     }
 
     if(*pErrorCode==U_BUFFER_OVERFLOW_ERROR) {
@@ -2450,15 +2483,11 @@ uloc_getDisplayName(const char *locale,
     length+=length2;
 
     if(hasVariant) {
-        /* append ", " */
-        if(length<destCapacity) {
-            dest[length]=0x2c;
+        /* append separator */
+        if(length+locSepLen<=destCapacity) {
+            u_memcpy(dest+length,dispLocSeparator,locSepLen);
         }
-        ++length;
-        if(length<destCapacity) {
-            dest[length]=0x20;
-        }
-        ++length;
+        length+=locSepLen;
     }
 
     keywordEnum = uloc_openKeywords(locale, pErrorCode);
@@ -2495,12 +2524,10 @@ uloc_getDisplayName(const char *locale,
             }
           }
           if(keywordCount > 1) {
-            if(length + length3 + 1 < destCapacity && keywordCount) {
-              dest[length + length3]=0x2c;
-              dest[length + length3+1]=0x20;
-            }
-            length3++; /* ',' */
-            length3++; /* ' ' */ 
+              if(length + length3 + locSepLen <= destCapacity && keywordCount) {
+                  u_memcpy(dest+length+length3,dispLocSeparator,locSepLen);
+                  length3+=locSepLen;
+              }
           }
     }
     uenum_close(keywordEnum);
@@ -2509,13 +2536,13 @@ uloc_getDisplayName(const char *locale,
     length += length3;
 
 
-
     if ((hasScript && !hasCountry)
         || ((hasScript || hasCountry) && !hasVariant && !hasKeywords)
-        || ((hasScript || hasCountry || hasVariant) && !hasKeywords)
-        || (hasLanguage && !hasScript && !hasCountry && !hasVariant && !hasKeywords))
-    {
-        /* remove ", " or " (" */
+        || ((hasScript || hasCountry || hasVariant) && !hasKeywords)) {
+        /* Remove separator  */
+        length -= locSepLen;
+    } else if (hasLanguage && !hasScript && !hasCountry && !hasVariant && !hasKeywords) {
+        /* Remove " (" */
         length-=2;
     }
 
@@ -2525,8 +2552,47 @@ uloc_getDisplayName(const char *locale,
             dest[length]=0x29;
         }
         ++length;
-    }
 
+        /* If the localized display pattern is something other than the default pattern of "{0} ({1})", then
+         * then we need to do the formatting here.  It would be easier to use a messageFormat to do this, but we
+         * can't since we don't have the APIs in the i18n library available to us at this point.
+         */
+        if (locPatLen != defaultPatternLen || u_strcmp(dispLocPattern,defaultPattern)) { /* Something other than the default pattern */
+           UChar *p0 = u_strstr(dispLocPattern,pat0);
+           UChar *p1 = u_strstr(dispLocPattern,pat1);
+           u_terminateUChars(dest, destCapacity, length, pErrorCode);
+
+           if ( p0 != NULL && p1 != NULL ) { /* The pattern is well formed */
+              if ( dest ) {
+                  int32_t destLen = 0;
+                  UChar *result = (UChar *)uprv_malloc((length+1)*sizeof(UChar)); 
+                  UChar *upos = (UChar *)dispLocPattern;
+                  u_strcpy(result,dest);
+                  dest[0] = 0;
+                  while ( *upos ) {
+                     if ( upos == p0 ) { /* Handle {0} substitution */
+                         u_strncat(dest,result,p0Len);
+                         destLen += p0Len;
+                         dest[destLen] = 0; /* Null terminate */
+                         upos += 3;
+                     } else if ( upos == p1 ) { /* Handle {1} substitution */
+                         UChar *p1Start = &result[p0Len+2];
+                         u_strncat(dest,p1Start,length-p0Len-3);
+                         destLen += (length-p0Len-3);
+                         dest[destLen] = 0; /* Null terminate */
+                         upos += 3;
+                     } else { /* Something from the pattern not {0} or {1} */
+                         u_strncat(dest,upos,1);
+                         upos++;
+                         destLen++;
+                         dest[destLen] = 0; /* Null terminate */
+                     }
+                  } 
+                  uprv_free(result);
+              }
+           }
+        }
+    }
     if(*pErrorCode==U_BUFFER_OVERFLOW_ERROR) {
         /* keep preflighting */
         *pErrorCode=U_ZERO_ERROR;

@@ -66,7 +66,10 @@ struct UResourceBundleAIterator {
 
 /* Must be C linkage to pass function pointer to the sort function */
 
-extern "C" static int32_t U_CALLCONV
+#if !defined (OS390) && !defined (OS400)
+extern "C"
+#endif
+static int32_t U_CALLCONV
 ures_a_codepointSort(const void *context, const void *left, const void *right) {
     //CompareContext *cmp=(CompareContext *)context;
     return u_strcmp(((const UResAEntry *)left)->key,
@@ -377,7 +380,7 @@ DateTimePatternGenerator::initData(const Locale& locale, UErrorCode &status) {
     if (U_FAILURE(status)) {
         return;
     }
-    addCLDRData(locale);
+    addCLDRData(locale, status);
     setDateTimeFromCalendar(locale, status);
     setDecimalSymbols(locale, status);
 } // DateTimePatternGenerator::initData
@@ -489,8 +492,7 @@ DateTimePatternGenerator::hackTimes(const UnicodeString& hackPattern, UErrorCode
 static const UChar hourFormatChars[] = { CAP_H, LOW_H, CAP_K, LOW_K, 0 }; // HhKk, the hour format characters
 
 void
-DateTimePatternGenerator::addCLDRData(const Locale& locale) {
-    UErrorCode err = U_ZERO_ERROR;
+DateTimePatternGenerator::addCLDRData(const Locale& locale, UErrorCode& err) {
     UResourceBundle *rb, *calTypeBundle, *calBundle;
     UResourceBundle *patBundle, *fieldBundle, *fBundle;
     UnicodeString rbPattern, value, field;
@@ -501,6 +503,8 @@ DateTimePatternGenerator::addCLDRData(const Locale& locale) {
 
     UnicodeString defaultItemFormat(TRUE, UDATPG_ItemFormat, LENGTHOF(UDATPG_ItemFormat)-1);  // Read-only alias.
 
+    err = U_ZERO_ERROR;
+    
     fDefaultHourFormatChar = 0;
     for (i=0; i<UDATPG_FIELD_COUNT; ++i ) {
         appendItemNames[i]=CAP_F;
@@ -516,6 +520,9 @@ DateTimePatternGenerator::addCLDRData(const Locale& locale) {
     }
 
     rb = ures_open(NULL, locale.getName(), &err);
+    if (rb == NULL || U_FAILURE(err)) {
+        return;
+    }
     const char *curLocaleName=ures_getLocaleByType(rb, ULOC_ACTUAL_LOCALE, &err);
     const char * calendarTypeToUse = DT_DateTimeGregorianTag; // initial default
     char         calendarType[ULOC_KEYWORDS_CAPACITY]; // to be filled in with the type to use, if all goes well
@@ -562,7 +569,7 @@ DateTimePatternGenerator::addCLDRData(const Locale& locale) {
                 }
             }
         }
-    };
+    }
     ures_close(patBundle);
 
     err = U_ZERO_ERROR;
@@ -588,7 +595,7 @@ DateTimePatternGenerator::addCLDRData(const Locale& locale) {
         patBundle = ures_getByKeyWithFallback(fBundle, Resource_Fields[i], NULL, &err);
         fieldBundle = ures_getByKeyWithFallback(patBundle, "dn", NULL, &err);
         rbPattern = ures_getNextUnicodeString(fieldBundle, &key, &err);
-       ures_close(fieldBundle);
+        ures_close(fieldBundle);
         ures_close(patBundle);
         if (rbPattern.length()==0 ) {
             continue;

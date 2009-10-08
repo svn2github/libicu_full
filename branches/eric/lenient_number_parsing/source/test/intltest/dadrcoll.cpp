@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT: 
- * Copyright (c) 1997-2008, International Business Machines Corporation and
+ * Copyright (c) 1997-2009, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 
@@ -17,7 +17,7 @@
 
 #include "unicode/utypes.h"
 
-#if !UCONFIG_NO_COLLATION
+#if !UCONFIG_NO_COLLATION && !UCONFIG_NO_FILE_IO
 
 #include "unicode/uchar.h"
 #include "unicode/tstdtmod.h"
@@ -73,7 +73,7 @@ void DataDrivenCollatorTest::runIndexedTest( int32_t index, UBool exec, const ch
       name = "";
     }
   } else {
-    dataerrln("[DATA] collate/DataDrivenTest data not initialized!");
+    dataerrln("collate/DataDrivenTest data not initialized!");
     name = "";
   }
 

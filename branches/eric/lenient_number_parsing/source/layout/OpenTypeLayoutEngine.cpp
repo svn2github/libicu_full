@@ -24,6 +24,8 @@
 
 #include "GDEFMarkFilter.h"
 
+#include "KernTable.h"
+
 U_NAMESPACE_BEGIN
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(OpenTypeLayoutEngine)
@@ -35,6 +37,7 @@ UOBJECT_DEFINE_RTTI_IMPLEMENTATION(OpenTypeLayoutEngine)
 #define markFeatureTag LE_MARK_FEATURE_TAG
 #define mkmkFeatureTag LE_MKMK_FEATURE_TAG
 #define loclFeatureTag LE_LOCL_FEATURE_TAG
+#define caltFeatureTag LE_CALT_FEATURE_TAG
 
 // 'dlig' not used at the moment
 #define dligFeatureTag 0x646C6967
@@ -50,8 +53,9 @@ UOBJECT_DEFINE_RTTI_IMPLEMENTATION(OpenTypeLayoutEngine)
 #define markFeatureMask 0x04000000UL
 #define mkmkFeatureMask 0x02000000UL
 #define loclFeatureMask 0x01000000UL
+#define caltFeatureMask 0x00800000UL
 
-#define minimalFeatures     (ccmpFeatureMask | markFeatureMask | mkmkFeatureMask | loclFeatureMask)
+#define minimalFeatures     (ccmpFeatureMask | markFeatureMask | mkmkFeatureMask | loclFeatureMask | caltFeatureMask)
 #define ligaFeatures        (ligaFeatureMask | cligFeatureMask | minimalFeatures)
 #define kernFeatures        (kernFeatureMask | paltFeatureMask | minimalFeatures)
 #define kernAndLigaFeatures (ligaFeatures    | kernFeatures)
@@ -65,7 +69,8 @@ static const FeatureMap featureMap[] =
     {paltFeatureTag, paltFeatureMask},
     {markFeatureTag, markFeatureMask},
     {mkmkFeatureTag, mkmkFeatureMask},
-    {loclFeatureTag, loclFeatureMask}
+    {loclFeatureTag, loclFeatureMask},
+    {caltFeatureTag, caltFeatureMask}
 };
 
 static const le_int32 featureMapCount = LE_ARRAY_SIZE(featureMap);
@@ -366,6 +371,10 @@ void OpenTypeLayoutEngine::adjustGlyphPositions(const LEUnicode chars[], le_int3
                 fGPOSTable->process(glyphStorage, adjustments, reverse, fScriptTag, fLangSysTag, fGDEFTable, success, fFontInstance,
                                 fFeatureMap, fFeatureMapCount, fFeatureOrder);
             }
+        } else if ( fTypoFlags & 0x1 ) {
+            static const le_uint32 kernTableTag = LE_KERN_TABLE_TAG;
+            KernTable kt(fFontInstance, getFontTable(kernTableTag));
+            kt.process(glyphStorage);
         }
 
         float xAdjust = 0, yAdjust = 0;

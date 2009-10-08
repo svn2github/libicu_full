@@ -846,6 +846,9 @@ static char* searchForTZFile(const char* path, DefaultTZInfo* tzInfo) {
     struct dirent* dirEntry = NULL;
 
     char* result = NULL;
+    if (dirp == NULL) {
+        return result;
+    }
 
     /* Save the current path */
     char curpath[MAX_PATH_SIZE];
@@ -969,7 +972,11 @@ uprv_tzname(int n)
 #endif
 
 #ifdef U_TZNAME
-#if !defined(U_WINDOWS)
+#ifdef U_WINDOWS
+    /* The return value is free'd in timezone.cpp on Windows because
+     * the other code path returns a pointer to a heap location. */
+    return uprv_strdup(U_TZNAME[n]);
+#else
     /*
     U_TZNAME is usually a non-unique abbreviation, which isn't normally usable.
     So we remap the abbreviation to an olson ID.
@@ -993,8 +1000,8 @@ uprv_tzname(int n)
             return tzid;
         }
     }
-#endif
     return U_TZNAME[n];
+#endif
 #else
     return "";
 #endif
@@ -1637,6 +1644,12 @@ remapPlatformDependentCodepage(const char *locale, const char *name) {
         /* Remap CP949 to a similar codepage to avoid issues with backslash and won symbol. */
         name = "EUC-KR";
     }
+    else if (locale != NULL && uprv_strcmp(locale, "en_US_POSIX") != 0 && uprv_strcmp(name, "US-ASCII") == 0) {
+        /*
+         * For non C/POSIX locale, default the code page to UTF-8 instead of US-ASCII.
+         */
+        name = "UTF-8";
+    }
 #elif defined(U_BSD)
     if (uprv_strcmp(name, "CP949") == 0) {
         /* Remap CP949 to a similar codepage to avoid issues with backslash and won symbol. */
@@ -1674,6 +1687,13 @@ remapPlatformDependentCodepage(const char *locale, const char *name) {
         ibm-33722 is the default for eucJP (similar to Windows).
         */
         name = "eucjis";
+    }
+    else if (locale != NULL && uprv_strcmp(locale, "en_US_POSIX") != 0 &&
+            (uprv_strcmp(name, "ANSI_X3.4-1968") == 0 || uprv_strcmp(name, "US-ASCII") == 0)) {
+        /*
+         * For non C/POSIX locale, default the code page to UTF-8 instead of US-ASCII.
+         */
+        name = "UTF-8";
     }
 #endif
     /* return NULL when "" is passed in */
@@ -1773,7 +1793,19 @@ int_getDefaultCodepage()
        nl_langinfo may use the same buffer as setlocale. */
     {
         const char *codeset = nl_langinfo(U_NL_LANGINFO_CODESET);
-        codeset = remapPlatformDependentCodepage(NULL, codeset);
+#if defined(U_DARWIN) || defined(U_LINUX)
+        /*
+         * On Linux and MacOSX, ensure that default codepage for non C/POSIX locale is UTF-8
+         * instead of ASCII.
+         */
+        if (uprv_strcmp(localeName, "en_US_POSIX") != 0) {
+            codeset = remapPlatformDependentCodepage(localeName, codeset);
+        } else
+#endif
+        {
+            codeset = remapPlatformDependentCodepage(NULL, codeset);
+        }
+
         if (codeset != NULL) {
             uprv_strncpy(codesetName, codeset, sizeof(codesetName));
             codesetName[sizeof(codesetName)-1] = 0;
@@ -1850,21 +1882,6 @@ u_versionFromUString(UVersionInfo versionArray, const UChar *versionString) {
     }
 }
 
-U_CAPI int32_t U_EXPORT2
-u_compareVersions(UVersionInfo v1, UVersionInfo v2) {
-    int n;
-    if(v1==NULL||v2==NULL) return 0;
-    for(n=0;n<U_MAX_VERSION_LENGTH;n++) {
-      if(v1[n]<v2[n]) {
-        return -1;
-      } else if(v1[n]>v2[n]) {
-        return  1;
-      }
-    }
-    return 0; /* no difference */
-}
-
-
 U_CAPI void U_EXPORT2
 u_versionToString(UVersionInfo versionArray, char *versionString) {
     uint16_t count, part;
@@ -1926,7 +1943,6 @@ U_CAPI void U_EXPORT2
 u_getVersion(UVersionInfo versionArray) {
     u_versionFromString(versionArray, U_ICU_VERSION);
 }
-
 /*
  * Hey, Emacs, please set the following:
  *

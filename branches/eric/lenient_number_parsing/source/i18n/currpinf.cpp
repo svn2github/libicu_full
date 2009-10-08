@@ -183,6 +183,9 @@ void
 CurrencyPluralInfo::setPluralRules(const UnicodeString& ruleDescription,
                                    UErrorCode& status) {
     if (U_SUCCESS(status)) {
+        if (fPluralRules) {
+            delete fPluralRules;
+        }
         fPluralRules = PluralRules::createRules(ruleDescription, status);
     }
 }
@@ -211,6 +214,9 @@ CurrencyPluralInfo::initialize(const Locale& loc, UErrorCode& status) {
     }
     delete fLocale;
     fLocale = loc.clone();
+    if (fPluralRules) {
+        delete fPluralRules;
+    }
     fPluralRules = PluralRules::forLocale(loc, status);
     setupCurrencyPluralPattern(loc, status);
 }
@@ -222,6 +228,9 @@ CurrencyPluralInfo::setupCurrencyPluralPattern(const Locale& loc, UErrorCode& st
         return;
     }
 
+    if (fPluralCountToCurrencyUnitPattern) {
+        deleteHash(fPluralCountToCurrencyUnitPattern);
+    }
     fPluralCountToCurrencyUnitPattern = initHash(status);
     if (U_FAILURE(status)) {
         return;
@@ -240,13 +249,15 @@ CurrencyPluralInfo::setupCurrencyPluralPattern(const Locale& loc, UErrorCode& st
     // TODO: Java
     // parse to check whether there is ";" separator in the numberStylePattern
     UBool hasSeparator = false;
-    for (int32_t styleCharIndex = 0; styleCharIndex < ptnLen; ++styleCharIndex) {
-        if (numberStylePattern[styleCharIndex] == gNumberPatternSeparator) {
-            hasSeparator = true;
-            // split the number style pattern into positive and negative
-            negNumberStylePattern = numberStylePattern + styleCharIndex + 1;
-            negNumberStylePatternLen = ptnLen - styleCharIndex - 1;
-            numberStylePatternLen = styleCharIndex;
+    if (U_SUCCESS(ec)) {
+        for (int32_t styleCharIndex = 0; styleCharIndex < ptnLen; ++styleCharIndex) {
+            if (numberStylePattern[styleCharIndex] == gNumberPatternSeparator) {
+                hasSeparator = true;
+                // split the number style pattern into positive and negative
+                negNumberStylePattern = numberStylePattern + styleCharIndex + 1;
+                negNumberStylePatternLen = ptnLen - styleCharIndex - 1;
+                numberStylePatternLen = styleCharIndex;
+            }
         }
     }
     ures_close(numberPatterns);

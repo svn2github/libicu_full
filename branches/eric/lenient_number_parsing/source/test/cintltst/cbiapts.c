@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT: 
- * Copyright (c) 1997-2008, International Business Machines Corporation and
+ * Copyright (c) 1997-2009, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 /********************************************************************************
@@ -33,10 +33,10 @@
 #include "cbiapts.h"
 
 #define TEST_ASSERT_SUCCESS(status) {if (U_FAILURE(status)) { \
-log_err("Failure at file %s, line %d, error = %s\n", __FILE__, __LINE__, u_errorName(status));}}
+log_data_err("Failure at file %s, line %d, error = %s (Are you missing data?)\n", __FILE__, __LINE__, u_errorName(status));}}
 
 #define TEST_ASSERT(expr) {if ((expr)==FALSE) { \
-log_err("Test Failure at file %s, line %d\n", __FILE__, __LINE__);}}
+log_data_err("Test Failure at file %s, line %d (Are you missing data?)\n", __FILE__, __LINE__);}}
 
 static void TestBreakIteratorSafeClone(void);
 static void TestBreakIteratorRules(void);
@@ -48,12 +48,14 @@ void addBrkIterAPITest(TestNode** root);
 
 void addBrkIterAPITest(TestNode** root)
 {
+#if !UCONFIG_NO_FILE_IO
     addTest(root, &TestBreakIteratorCAPI, "tstxtbd/cbiapts/TestBreakIteratorCAPI");
     addTest(root, &TestBreakIteratorSafeClone, "tstxtbd/cbiapts/TestBreakIteratorSafeClone");
+    addTest(root, &TestBreakIteratorUText, "tstxtbd/cbiapts/TestBreakIteratorUText");
+#endif
     addTest(root, &TestBreakIteratorRules, "tstxtbd/cbiapts/TestBreakIteratorRules");
     addTest(root, &TestBreakIteratorRuleError, "tstxtbd/cbiapts/TestBreakIteratorRuleError");
     addTest(root, &TestBreakIteratorStatusVec, "tstxtbd/cbiapts/TestBreakIteratorStatusVec");
-    addTest(root, &TestBreakIteratorUText, "tstxtbd/cbiapts/TestBreakIteratorUText");
 }
 
 #define CLONETEST_ITERATOR_COUNT 2
@@ -155,7 +157,7 @@ static void TestBreakIteratorCAPI()
         log_data_err("Check your data - it doesn't seem to be around\n");
         return;
     } else if(U_FAILURE(status)){
-        log_err("FAIL: Error in ubrk_open() for word breakiterator: %s\n", myErrorName(status));
+        log_err_status(status, "FAIL: Error in ubrk_open() for word breakiterator: %s\n", myErrorName(status));
     }
     else{
         log_verbose("PASS: Successfully opened  word breakiterator\n");
@@ -163,7 +165,7 @@ static void TestBreakIteratorCAPI()
     
     sentence     = ubrk_open(UBRK_SENTENCE, "en_US", text, u_strlen(text), &status);
     if(U_FAILURE(status)){
-        log_err("FAIL: Error in ubrk_open() for sentence breakiterator: %s\n", myErrorName(status));
+        log_err_status(status, "FAIL: Error in ubrk_open() for sentence breakiterator: %s\n", myErrorName(status));
         return;
     }
     else{
@@ -513,7 +515,7 @@ static UBreakIterator * testOpenRules(char *rules) {
                         &parseErr, &status);
     
     if (U_FAILURE(status)) {
-        log_err("FAIL: ubrk_openRules: ICU Error \"%s\"\n", u_errorName(status));
+        log_data_err("FAIL: ubrk_openRules: ICU Error \"%s\" (Are you missing data?)\n", u_errorName(status));
         bi = 0;
     };
     freeToUCharStrings(&strCleanUp);
@@ -598,7 +600,7 @@ static void TestBreakIteratorRuleError() {
         ubrk_close(bi);
     } else {
         if (parseErr.line != 3 || parseErr.offset != 8) {
-            log_err("FAIL: incorrect error position reported. Got line %d, char %d, expected line 3, char 7\n",
+            log_data_err("FAIL: incorrect error position reported. Got line %d, char %d, expected line 3, char 7 (Are you missing data?)\n",
                 parseErr.line, parseErr.offset);
         }
     }
@@ -675,7 +677,7 @@ static void TestBreakIteratorUText(void) {
 
     bi = ubrk_open(UBRK_WORD, "en_US", NULL, 0, &status);
     if (U_FAILURE(status)) {
-        log_err("Failure at file %s, line %d, error = %s\n", __FILE__, __LINE__, u_errorName(status));
+        log_err_status(status, "Failure at file %s, line %d, error = %s\n", __FILE__, __LINE__, u_errorName(status));
         return;
     }
 

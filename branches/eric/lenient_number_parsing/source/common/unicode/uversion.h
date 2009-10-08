@@ -11,13 +11,12 @@
 *
 *   Created by: Vladimir Weinstein
 *
-*  Contains all the important version numbers for ICU. 
 *  Gets included by utypes.h and Windows .rc files
 */
 
 /**
  * \file
- * \brief C API: Contains all the important version numbers for ICU. 
+ * \brief C API: API for accessing ICU version numbers. 
  */
 /*===========================================================================*/
 /* Main ICU version information                                              */
@@ -46,62 +45,13 @@
 
 #include "unicode/umachine.h"
 
-/** The standard copyright notice that gets compiled into each library. 
- *  This value will change in the subsequent releases of ICU
- *  @stable ICU 2.4
- */
-#define U_COPYRIGHT_STRING \
-  " Copyright (C) 2009, International Business Machines Corporation and others. All Rights Reserved. "
+/* Actual version info lives in uvernum.h */
+#include "unicode/uvernum.h"
 
 /** Maximum length of the copyright string.
  *  @stable ICU 2.4
  */
 #define U_COPYRIGHT_STRING_LENGTH  128
-
-/** The current ICU major version as an integer. 
- *  This value will change in the subsequent releases of ICU
- *  @stable ICU 2.4
- */
-#define U_ICU_VERSION_MAJOR_NUM 4
-
-/** The current ICU minor version as an integer. 
- *  This value will change in the subsequent releases of ICU
- *  @stable ICU 2.6
- */
-#define U_ICU_VERSION_MINOR_NUM 2
-
-/** The current ICU patchlevel version as an integer.  
- *  This value will change in the subsequent releases of ICU
- *  @stable ICU 2.4
- */
-#define U_ICU_VERSION_PATCHLEVEL_NUM 0
-
-/** The current ICU build level version as an integer.  
- *  This value is for use by ICU clients. It defaults to 0.
- *  @stable ICU 4.0
- */
-#ifndef U_ICU_VERSION_BUILDLEVEL_NUM
-#define U_ICU_VERSION_BUILDLEVEL_NUM 0
-#endif
-
-/** Glued version suffix for renamers 
- *  This value will change in the subsequent releases of ICU
- *  @stable ICU 2.6
- */
-#define U_ICU_VERSION_SUFFIX _4_2
-
-/** The current ICU library version as a dotted-decimal string. The patchlevel
- *  only appears in this string if it non-zero. 
- *  This value will change in the subsequent releases of ICU
- *  @stable ICU 2.4
- */
-#define U_ICU_VERSION "4.2"
-
-/** The current ICU library major/minor version as a string without dots, for library name suffixes. 
- *  This value will change in the subsequent releases of ICU
- *  @stable ICU 2.6
- */
-#define U_ICU_VERSION_SHORT "42"
 
 /** An ICU version consists of up to 4 numbers from 0..255.
  *  @stable ICU 2.4
@@ -119,6 +69,7 @@
 #define U_MAX_VERSION_STRING_LENGTH 20
 
 /** The binary form of a version on ICU APIs is an array of 4 uint8_t.
+ *  To compare two versions, use memcmp(v1,v2,sizeof(UVersionInfo)).
  *  @stable ICU 2.4
  */
 typedef uint8_t UVersionInfo[U_MAX_VERSION_LENGTH];
@@ -136,7 +87,7 @@ typedef uint8_t UVersionInfo[U_MAX_VERSION_LENGTH];
 
 /**
  * \def U_NAMESPACE_END
- * This is used to end a declaration of a public ICU C++ API 
+ * This is used to end a declaration of a public ICU C++ API
  * If the compiler doesn't support namespaces, this does nothing.
  * @stable ICU 2.4
  */
@@ -163,7 +114,7 @@ typedef uint8_t UVersionInfo[U_MAX_VERSION_LENGTH];
 #       define U_ICU_NAMESPACE icu
         namespace U_ICU_NAMESPACE { }
 #   else
-#       define U_ICU_NAMESPACE icu_4_2
+#       define U_ICU_NAMESPACE U_ICU_ENTRY_POINT_RENAME(icu)
         namespace U_ICU_NAMESPACE { }
         namespace icu = U_ICU_NAMESPACE;
 #   endif
@@ -185,7 +136,6 @@ typedef uint8_t UVersionInfo[U_MAX_VERSION_LENGTH];
 #   define U_NAMESPACE_USE
 #   define U_NAMESPACE_QUALIFIER
 #endif
-
 
 /*===========================================================================*/
 /* General version helper functions. Definitions in putil.c                  */
@@ -219,6 +169,7 @@ u_versionFromString(UVersionInfo versionArray, const char *versionString);
 U_STABLE void U_EXPORT2
 u_versionFromUString(UVersionInfo versionArray, const UChar *versionString);
 
+
 /**
  * Write a string with dotted-decimal version information according
  * to the input UVersionInfo.
@@ -244,59 +195,4 @@ u_versionToString(UVersionInfo versionArray, char *versionString);
  */
 U_STABLE void U_EXPORT2
 u_getVersion(UVersionInfo versionArray);
-
-/**
- * Compare two version numbers, v1 and v2, numerically.
- * Returns 0 if v1 == v2
- * Returns -1 if v1 < v2  (v1 is older, v2 is newer)
- * Returns +1 if v1 > v2  (v1 is newer, v2 is older)
- * @param v1 version to compare
- * @param v2 version to compare
- * @return comparison result
- * @draft ICU 4.2
- */
-U_STABLE int32_t U_EXPORT2
-u_compareVersions(UVersionInfo v1, UVersionInfo v2);
-
-
-/*===========================================================================
- * ICU collation framework version information                               
- * Version info that can be obtained from a collator is affected by these    
- * numbers in a secret and magic way. Please use collator version as whole
- *===========================================================================
- */
-
-/** Collation runtime version (sort key generator, strcoll). 
- * If the version is different, sortkeys for the same string could be different 
- * version 2 was in ICU 1.8.1. changed is: compression intervals, French secondary 
- * compression, generating quad level always when strength is quad or more 
- * version 4 - ICU 2.2 - tracking UCA changes, ignore completely ignorables 
- * in contractions, ignore primary ignorables after shifted 
- * version 5 - ICU 2.8 - changed implicit generation code
- * version 6 - ICU 3.4 - with the UCA 4.1, Thai tag is no longer generated or used
- * This value may change in the subsequent releases of ICU
- * @stable ICU 2.4
- */
-#define UCOL_RUNTIME_VERSION 6
-
-/** Builder code version. When this is different, same tailoring might result
- * in assigning different collation elements to code points                  
- * version 2 was in ICU 1.8.1. added support for prefixes, tweaked canonical 
- * closure. However, the tailorings should probably get same CEs assigned    
- * version 5 - ICU 2.2 - fixed some bugs, renamed some indirect values.      
- * version 6 - ICU 2.8 - fixed bug in builder that allowed 0xFF in primary values
- * version 7 - ICU 3.4 - with the UCA 4.1 Thai tag is no longer processed, complete ignorables
- *                       now break contractions
- * Backward compatible with the old rules. 
- * This value may change in the subsequent releases of ICU
- * @stable ICU 2.4
- */
-#define UCOL_BUILDER_VERSION 7
-
-/** This is the version of the tailorings 
- *  This value may change in the subsequent releases of ICU
- *  @stable ICU 2.4
- */
-#define UCOL_TAILORINGS_VERSION 1
-
 #endif

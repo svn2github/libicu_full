@@ -1,6 +1,6 @@
 /***********************************************************************
  * COPYRIGHT: 
- * Copyright (c) 1997-2005, International Business Machines Corporation
+ * Copyright (c) 1997-2009, International Business Machines Corporation
  * and others. All Rights Reserved.
  ***********************************************************************/
 
@@ -53,10 +53,39 @@ void IntlTestDateFormatAPI::runIndexedTest( int32_t index, UBool exec, const cha
                 }
                 break;
 
+        case 3: name = "TestCoverage";
+                if (exec) {
+                    logln("TestCoverage---"); logln("");
+                    TestCoverage();
+                }
+                break;
+
         default: name = ""; break;
     }
 }
 
+/**
+ * Add better code coverage.
+ */
+void IntlTestDateFormatAPI::TestCoverage(void)
+{
+    const char *LOCALES[] = {
+            "zh_CN@calendar=chinese",
+            "cop_EG@calendar=coptic",
+            "hi_IN@calendar=indian",
+            "am_ET@calendar=ethiopic"
+    };
+    int32_t numOfLocales = 4;
+
+    for (int32_t i = 0; i < numOfLocales; i++) {
+        DateFormat *df = DateFormat::createDateTimeInstance(DateFormat::kMedium, DateFormat::kMedium, Locale(LOCALES[i]));
+        if (df == NULL){
+            dataerrln("Error creating DateFormat instances.");
+            return;
+        }
+        delete df;
+    }
+}
 /**
  * Test that the equals method works correctly.
  */
@@ -110,7 +139,7 @@ void IntlTestDateFormatAPI::testAPI(/* char* par */)
     DateFormat *de = DateFormat::createDateTimeInstance(DateFormat::LONG, DateFormat::LONG, Locale::getGerman());
 
     if (def == NULL || fr == NULL || it == NULL || de == NULL){
-        dataerrln("Error creating instnaces.");
+        dataerrln("Error creating DateFormat instances.");
     }
 
 // ======= Test equality
@@ -225,7 +254,7 @@ if (fr != NULL && it != NULL && de != NULL)
     status = U_ZERO_ERROR;
     DateFormat *test = new SimpleDateFormat(status);
     if(U_FAILURE(status)) {
-        errln("ERROR: Couldn't create a DateFormat");
+        errcheckln(status, "ERROR: Couldn't create a DateFormat - %s", u_errorName(status));
     }
 
     if(test->getDynamicClassID() != SimpleDateFormat::getStaticClassID()) {
@@ -267,7 +296,7 @@ IntlTestDateFormatAPI::TestNameHiding(void) {
             dateFmt->format(dateObj, str, fpos, status);
             delete dateFmt;
         } else {
-            errln("FAIL: Can't create DateFormat");
+            dataerrln("FAIL: Can't create DateFormat");
         }
     }
 
@@ -296,7 +325,7 @@ IntlTestDateFormatAPI::TestNameHiding(void) {
             fmt->format(numObj, str, fpos, status);
             delete fmt;
         } else {
-            errln("FAIL: Can't create NumberFormat()");
+            dataerrln("FAIL: Can't create NumberFormat()");
         }
     }
 
@@ -317,7 +346,7 @@ IntlTestDateFormatAPI::TestNameHiding(void) {
           fmt.parse(str, obj, ppos);
           fmt.parse(str, obj, status);
         } else {
-          errln("FAIL: Couldn't instantiate DecimalFormat, error %s. Quitting test", u_errorName(status));
+          errcheckln(status, "FAIL: Couldn't instantiate DecimalFormat, error %s. Quitting test", u_errorName(status));
         }
     }
 

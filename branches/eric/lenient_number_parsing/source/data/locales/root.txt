@@ -7,7 +7,7 @@
 // *
 // ***************************************************************************
 /**
- *  ICU <specials> source: <path>/xml/main/root.xml
+ *  ICU <specials > source: <path>/xml/main/root.xml
  */
 root{
     AuxExemplarCharacters{"[]"}
@@ -15,10 +15,6 @@ root{
         AFN{
             "Af",
             "AFN",
-        }
-        ALL{
-            "ALL",
-            "ALL",
         }
         ANG{
             "NAf.",
@@ -29,15 +25,15 @@ root{
             "AOA",
         }
         ARA{
-            "₳",
+            "₳" /** ===  */,
             "ARA",
         }
         ARL{
-            "$L",
+            "$L" /** ===  */,
             "ARL",
         }
         ARM{
-            "m$n",
+            "m$n" /** ===  */,
             "ARM",
         }
         ARS{
@@ -69,7 +65,7 @@ root{
             "BDT",
         }
         BEF{
-            "BF",
+            "BF" /** ===  */,
             "BEF",
         }
         BHD{
@@ -93,36 +89,12 @@ root{
             "BOB",
         }
         BOP{
-            "$b.",
+            "$b." /** ===  */,
             "BOP",
-        }
-        BRB{
-            "NCr",
-            "BRB",
-        }
-        BRC{
-            "Cz$",
-            "BRC",
-        }
-        BRE{
-            "Cr$",
-            "BRE",
         }
         BRL{
             "R$",
             "BRL",
-        }
-        BRN{
-            "NCz$",
-            "BRN",
-        }
-        BRR{
-            "CR$",
-            "BRR",
-        }
-        BRZ{
-            "₢",
-            "BRZ",
         }
         BSD{
             "BS$",
@@ -153,7 +125,7 @@ root{
             "CHF",
         }
         CLE{
-            "Eº",
+            "Eº" /** ===  */,
             "CLE",
         }
         CLP{
@@ -185,7 +157,7 @@ root{
             "CVE",
         }
         CYP{
-            "CY£",
+            "CY£" /** ===  */,
             "CYP",
         }
         CZK{
@@ -193,7 +165,7 @@ root{
             "CZK",
         }
         DEM{
-            "DM",
+            "DM" /** ===  */,
             "DEM",
         }
         DJF{
@@ -225,7 +197,7 @@ root{
             "ERN",
         }
         ESP{
-            "Pts",
+            "Pts" /** ===  */,
             "ESP",
         }
         ETB{
@@ -237,7 +209,7 @@ root{
             "EUR",
         }
         FIM{
-            "mk",
+            "mk" /** ===  */,
             "FIM",
         }
         FJD{
@@ -249,7 +221,7 @@ root{
             "FKP",
         }
         FRF{
-            "₣",
+            "₣" /** ===  */,
             "FRF",
         }
         GBP{
@@ -257,7 +229,7 @@ root{
             "GBP",
         }
         GHC{
-            "₵",
+            "₵" /** ===  */,
             "GHC",
         }
         GHS{
@@ -277,7 +249,7 @@ root{
             "GNF",
         }
         GRD{
-            "₯",
+            "₯" /** ===  */,
             "GRD",
         }
         GTQ{
@@ -313,11 +285,11 @@ root{
             "IDR",
         }
         IEP{
-            "IR£",
+            "IR£" /** ===  */,
             "IEP",
         }
         ILP{
-            "I£",
+            "I£" /** ===  */,
             "ILP",
         }
         ILS{
@@ -325,7 +297,7 @@ root{
             "ILS",
         }
         INR{
-            "₨",
+            "Rs",
             "INR",
         }
         ISK{
@@ -333,7 +305,7 @@ root{
             "ISK",
         }
         ITL{
-            "IT₤",
+            "IT₤" /** ===  */,
             "ITL",
         }
         JMD{
@@ -355,10 +327,6 @@ root{
         KMF{
             "CF",
             "KMF",
-        }
-        KPW{
-            "KP₩",
-            "KPW",
         }
         KRW{
             "₩",
@@ -421,27 +389,19 @@ root{
             "MRO",
         }
         MTL{
-            "Lm",
+            "Lm" /** ===  */,
             "MTL",
         }
         MTP{
-            "MT£",
+            "MT£" /** ===  */,
             "MTP",
         }
         MUR{
             "MURs",
             "MUR",
         }
-        MVR{
-            "Rf",
-            "MVR",
-        }
-        MWK{
-            "MK",
-            "MWK",
-        }
         MXP{
-            "MX$",
+            "MX$" /** ===  */,
             "MXP",
         }
         MYR{
@@ -453,7 +413,7 @@ root{
             "MZM",
         }
         MZN{
-            "MTn",
+            "MTn" /** ===  */,
             "MZN",
         }
         NAD{
@@ -469,7 +429,7 @@ root{
             "NIO",
         }
         NLG{
-            "fl",
+            "fl" /** ===  */,
             "NLG",
         }
         NOK{
@@ -489,7 +449,7 @@ root{
             "PAB",
         }
         PEI{
-            "I/.",
+            "I/." /** ===  */,
             "PEI",
         }
         PEN{
@@ -513,7 +473,7 @@ root{
             "PLN",
         }
         PTE{
-            "Esc",
+            "Esc" /** ===  */,
             "PTE",
         }
         PYG{
@@ -525,20 +485,16 @@ root{
             "QAR",
         }
         RHD{
-            "RH$",
+            "RH$" /** ===  */,
             "RHD",
         }
         RON{
-            "RON",
+            "RON" /** ===  */,
             "RON",
         }
         RSD{
             "din.",
             "RSD",
-        }
-        RWF{
-            "RF",
-            "RWF",
         }
         SAR{
             "SR",
@@ -553,7 +509,7 @@ root{
             "SCR",
         }
         SDD{
-            "LSd",
+            "LSd" /** ===  */,
             "SDD",
         }
         SEK{
@@ -585,7 +541,7 @@ root{
             "SRD",
         }
         SRG{
-            "Sf",
+            "Sf" /** ===  */,
             "SRG",
         }
         STD{
@@ -621,7 +577,7 @@ root{
             "TOP",
         }
         TRL{
-            "TRL",
+            "TRL" /** ===  */,
             "TRL",
         }
         TRY{
@@ -655,10 +611,6 @@ root{
         UYU{
             "$U",
             "UYU",
-        }
-        VEB{
-            "Bs.",
-            "VEB",
         }
         VEF{
             "Bs.F.",
@@ -705,11 +657,11 @@ root{
             "ZMK",
         }
         ZRN{
-            "NZ",
+            "NZ" /** ===  */,
             "ZRN",
         }
         ZRZ{
-            "ZRZ",
+            "ZRZ" /** ===  */,
             "ZRZ",
         }
         ZWD{
@@ -749,7 +701,7 @@ root{
         297,
         210,
     }
-    Version{"1.186"}
+    Version{"2.0.42.82"}
     calendar{
         buddhist{
             AmPmMarkers{
@@ -1178,21 +1130,21 @@ root{
             }
             intervalFormats{
                 M{
-                    M{"M-M"}
+                    M{"M–M"}
                 }
                 MEd{
                     M{"E, MM-dd – E, MM-dd"}
                     d{"E, MM-dd – E, MM-dd"}
                 }
                 MMM{
-                    M{"LLL-LLL"}
+                    M{"LLL–LLL"}
                 }
                 MMMEd{
                     M{"E, MM-d – E, MM-d"}
                     d{"E, MM-d – E, MM-d"}
                 }
                 MMMM{
-                    M{"LLLL-LLLL"}
+                    M{"LLLL–LLLL"}
                 }
                 MMMd{
                     M{"MM-d – MM-d"}
@@ -1203,29 +1155,29 @@ root{
                     d{"MM-dd – dd"}
                 }
                 d{
-                    d{"d-d"}
+                    d{"d–d"}
                 }
                 fallback{"{0} – {1}"}
                 h{
-                    a{"HH-HH"}
-                    h{"HH-HH"}
+                    a{"HH–HH"}
+                    h{"HH–HH"}
                 }
                 hm{
-                    a{"HH:mm-HH:mm"}
-                    h{"HH:mm-HH:mm"}
-                    m{"HH:mm-HH:mm"}
+                    a{"HH:mm–HH:mm"}
+                    h{"HH:mm–HH:mm"}
+                    m{"HH:mm–HH:mm"}
                 }
                 hmv{
-                    a{"HH:mm-HH:mm v"}
-                    h{"HH:mm-HH:mm v"}
-                    m{"HH:mm-HH:mm v"}
+                    a{"HH:mm–HH:mm v"}
+                    h{"HH:mm–HH:mm v"}
+                    m{"HH:mm–HH:mm v"}
                 }
                 hv{
-                    a{"HH-HH v"}
-                    h{"HH-HH v"}
+                    a{"HH–HH v"}
+                    h{"HH–HH v"}
                 }
                 y{
-                    y{"y-y"}
+                    y{"y–y"}
                 }
                 yM{
                     M{"yyyy-MM – MM"}
@@ -1351,7 +1303,7 @@ root{
                 format{
                     abbreviated:alias{"/LOCALE/calendar/hebrew/monthNames/format/wide"}
                     default{"wide"}
-                    narrow:alias{"/LOCALE/calendar/hebrew/monthNames/stand-alone/narrow"}
+                    narrow:alias{"/LOCALE/calendar/hebrew/monthNames/format/wide"}
                     wide{
                         "Tishri",
                         "Heshvan",
@@ -1366,25 +1318,12 @@ root{
                         "Tamuz",
                         "Av",
                         "Elul",
+                        "Adar II",
                     }
                 }
                 stand-alone{
                     abbreviated:alias{"/LOCALE/calendar/hebrew/monthNames/format/abbreviated"}
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                        "5",
-                        "6",
-                        "7",
-                        "8",
-                        "9",
-                        "10",
-                        "11",
-                        "12",
-                        "13",
-                    }
+                    narrow:alias{"/LOCALE/calendar/hebrew/monthNames/format/narrow"}
                     wide:alias{"/LOCALE/calendar/hebrew/monthNames/format/wide"}
                 }
             }
@@ -2393,6 +2332,7 @@ root{
             ss{"BAKT"}
         }
         "meta:Bangladesh"{
+            sd{"BDST"}
             ss{"BDT"}
         }
         "meta:Bering"{
@@ -2820,6 +2760,10 @@ root{
         }
         "meta:Tahiti"{
             ss{"TAHT"}
+        }
+        "meta:Taipei"{
+            sd{"CDT (TW)"}
+            ss{"CST (TW)"}
         }
         "meta:Tajikistan"{
             ss{"TJT"}

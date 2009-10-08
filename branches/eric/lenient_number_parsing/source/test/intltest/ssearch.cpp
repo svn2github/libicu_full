@@ -52,7 +52,7 @@ char testId[100];
     errln("Failure in file %s, line %d.   \"%s\"", __FILE__, __LINE__, m);return;}}
 
 #define TEST_ASSERT_SUCCESS(errcode) {if (U_FAILURE(errcode)) { \
-    errln("Failure in file %s, line %d, test ID \"%s\", status = \"%s\"", \
+    dataerrln("Failure in file %s, line %d, test ID \"%s\", status = \"%s\"", \
           __FILE__, __LINE__, testId, u_errorName(errcode));}}
 
 #define ARRAY_SIZE(array) (sizeof array / sizeof array[0])
@@ -116,6 +116,9 @@ void SSearchTest::runIndexedTest( int32_t index, UBool exec, const char* &name, 
         case 9: name = "udhrTest";
             if (exec) udhrTest();
             break;
+        case 10: name = "stringListTest";
+            if (exec) stringListTest();
+            break;
 #endif
         default: name = "";
             break; //needed to end loop
@@ -143,7 +146,7 @@ const char *SSearchTest::getPath(char buffer[2048], const char *filename) {
 
 void SSearchTest::searchTest()
 {
-#if !UCONFIG_NO_REGULAR_EXPRESSIONS
+#if !UCONFIG_NO_REGULAR_EXPRESSIONS && !UCONFIG_NO_FILE_IO
     UErrorCode status = U_ZERO_ERROR;
     char path[PATH_BUFFER_SIZE];
     const char *testFilePath = getPath(path, "ssearch.xml");
@@ -190,7 +193,7 @@ void SSearchTest::searchTest()
         //    Default is tertiary if the XML attribute is missing from the test case.
         //
         const UnicodeString *strength = testCase->getAttribute("strength");
-        UColAttributeValue collatorStrength;
+        UColAttributeValue collatorStrength = UCOL_PRIMARY;
         if      (strength==NULL)          { collatorStrength = UCOL_TERTIARY;}
         else if (*strength=="PRIMARY")    { collatorStrength = UCOL_PRIMARY;}
         else if (*strength=="SECONDARY")  { collatorStrength = UCOL_SECONDARY;}
@@ -312,9 +315,9 @@ void SSearchTest::searchTest()
         //
         foundMatch= usearch_search(uss, 0, &foundStart, &foundLimit, &status);
         TEST_ASSERT_SUCCESS(status);
-        if (foundMatch && expectedMatchStart<0 ||
-            foundStart != expectedMatchStart   ||
-            foundLimit != expectedMatchLimit) {
+        if ((foundMatch && expectedMatchStart<0) ||
+            (foundStart != expectedMatchStart)   ||
+            (foundLimit != expectedMatchLimit)) {
                 TEST_ASSERT(FALSE);   //  ouput generic error position
                 infoln("Found, expected match start = %d, %d \n"
                        "Found, expected match limit = %d, %d",
@@ -343,9 +346,9 @@ void SSearchTest::searchTest()
         //
         foundMatch= usearch_searchBackwards(uss, target.length(), &foundStart, &foundLimit, &status);
         TEST_ASSERT_SUCCESS(status);
-        if (foundMatch && expectedMatchStart<0 ||
-            foundStart != expectedMatchStart   ||
-            foundLimit != expectedMatchLimit) {
+        if ((foundMatch && expectedMatchStart<0) ||
+            (foundStart != expectedMatchStart)   ||
+            (foundLimit != expectedMatchLimit)) {
                 TEST_ASSERT(FALSE);   //  ouput generic error position
                 infoln("Found, expected backwards match start = %d, %d \n"
                        "Found, expected backwards match limit = %d, %d",
@@ -363,8 +366,8 @@ void SSearchTest::searchTest()
 
 struct UdhrTestCase
 {
-    char *locale;
-    char *file;
+    const char *locale;
+    const char *file;
 };
 
 void SSearchTest::udhrTest()
@@ -538,7 +541,7 @@ void SSearchTest::bmSearchTest()
         //    Default is tertiary if the XML attribute is missing from the test case.
         //
         const UnicodeString *strength = testCase->getAttribute("strength");
-        UColAttributeValue collatorStrength;
+        UColAttributeValue collatorStrength = UCOL_PRIMARY;
         if      (strength==NULL)          { collatorStrength = UCOL_TERTIARY;}
         else if (*strength=="PRIMARY")    { collatorStrength = UCOL_PRIMARY;}
         else if (*strength=="SECONDARY")  { collatorStrength = UCOL_SECONDARY;}
@@ -658,9 +661,9 @@ void SSearchTest::bmSearchTest()
         //
         foundMatch = bms_search(bms, 0, &foundStart, &foundLimit);
       //TEST_ASSERT_SUCCESS(status);
-        if (foundMatch && expectedMatchStart < 0 ||
-            foundStart != expectedMatchStart   ||
-            foundLimit != expectedMatchLimit) {
+        if ((foundMatch && expectedMatchStart < 0) ||
+            (foundStart != expectedMatchStart)     ||
+            (foundLimit != expectedMatchLimit)) {
                 TEST_ASSERT(FALSE);   //  ouput generic error position
                 infoln("Found, expected match start = %d, %d \n"
                        "Found, expected match limit = %d, %d",
@@ -709,7 +712,7 @@ private:
 };
 
 OrderList::OrderList()
-  : list(NULL), listSize(0), listMax(16)
+  : list(NULL),  listMax(16), listSize(0)
 {
     list = new Order[listMax];
 }
@@ -973,7 +976,7 @@ void SSearchTest::offsetTest()
     UErrorCode status = U_ZERO_ERROR;
     RuleBasedCollator *col = (RuleBasedCollator *) Collator::createInstance(Locale::getEnglish(), status);
     if (U_FAILURE(status)) {
-        errln("Failed to create collator in offsetTest!");
+        errcheckln(status, "Failed to create collator in offsetTest! - %s", u_errorName(status));
         return;
     }
     char buffer[4096];  // A bit of a hack... just happens to be long enough for all the test cases...
@@ -1040,6 +1043,7 @@ void SSearchTest::offsetTest()
     delete col;
 }
 
+#if 0
 static UnicodeString &escape(const UnicodeString &string, UnicodeString &buffer)
 {
     for(int32_t i = 0; i < string.length(); i += 1) {
@@ -1070,6 +1074,7 @@ static UnicodeString &escape(const UnicodeString &string, UnicodeString &buffer)
 
     return buffer;
 }
+#endif
 
 #if 1
 
@@ -1224,6 +1229,8 @@ void SSearchTest::boyerMooreTest()
     UErrorCode status = U_ZERO_ERROR;
     UCollator *coll = NULL;
     CollData *data = NULL;
+    const CEList* ce = NULL;
+    const CEList* ce1 = NULL;
     UnicodeString lp  = "fuss";
     UnicodeString sp = "fu\\u00DF";
     BoyerMooreSearch *longPattern = NULL;
@@ -1235,7 +1242,7 @@ void SSearchTest::boyerMooreTest()
 
     coll = ucol_openFromShortString("S1", FALSE, NULL, &status);
     if (U_FAILURE(status)) {
-        errln("Could not open collator.");
+        errcheckln(status, "Could not open collator. - %s", u_errorName(status));
         return;
     }
 
@@ -1245,6 +1252,17 @@ void SSearchTest::boyerMooreTest()
         goto close_data;
     }
 
+    data->getDynamicClassID();
+    if (U_FAILURE(status)) {
+        errln("Could not get dynamic class ID of CollData.");
+        goto close_patterns;
+    }
+
+    data->getStaticClassID();
+    if (U_FAILURE(status)) {
+        errln("Could not get static class ID of CollData.");
+        goto close_patterns;
+    }
 
     longPattern = new BoyerMooreSearch(data, lp.unescape(), NULL, status);
     shortPattern = new BoyerMooreSearch(data, sp.unescape(), NULL, status);
@@ -1253,7 +1271,73 @@ void SSearchTest::boyerMooreTest()
         goto close_patterns;
     }
 
-    for (int32_t t = 0; t < (sizeof(targets)/sizeof(targets[0])); t += 1) {
+    longPattern->getBadCharacterTable();
+    shortPattern->getBadCharacterTable();
+    if (U_FAILURE(status)) {
+        errln("Could not get bad character table.");
+        goto close_patterns;
+    }
+
+    longPattern->getGoodSuffixTable();
+    shortPattern->getGoodSuffixTable();
+    if (U_FAILURE(status)) {
+        errln("Could not get good suffix table.");
+        goto close_patterns;
+    }
+
+    longPattern->getDynamicClassID();
+    shortPattern->getDynamicClassID();
+    if (U_FAILURE(status)) {
+        errln("Could not get dynamic class ID of BoyerMooreSearch.");
+        goto close_patterns;
+    }
+
+    longPattern->getStaticClassID();
+    shortPattern->getStaticClassID();
+    if (U_FAILURE(status)) {
+        errln("Could not get static class ID of BoyerMooreSearch.");
+        goto close_patterns;
+    }
+
+    longPattern->getData();
+    shortPattern->getData();
+    if (U_FAILURE(status)) {
+        errln("Could not get collate data.");
+        goto close_patterns;
+    }
+
+    ce = longPattern->getPatternCEs();
+    ce1 = shortPattern->getPatternCEs();
+    if (U_FAILURE(status)) {
+        errln("Could not get pattern CEs.");
+        goto close_patterns;
+    }
+
+    ce->getDynamicClassID();
+    ce1->getDynamicClassID();
+    if (U_FAILURE(status)) {
+        errln("Could not get dynamic class ID of CEList.");
+        goto close_patterns;
+    }
+
+    ce->getStaticClassID();
+    ce1->getStaticClassID();
+    if (U_FAILURE(status)) {
+        errln("Could not get static class ID of CEList.");
+        goto close_patterns;
+    }
+
+    if(data->minLengthInChars(ce,0) != 3){
+        errln("Minimal Length in Characters for 'data' with 'ce' was suppose to give 3.");
+        goto close_patterns;
+    }
+
+    if(data->minLengthInChars(ce1,0) != 3){
+        errln("Minimal Length in Characters for 'data' with 'ce1' was suppose to give 3.");
+        goto close_patterns;
+    }
+
+    for (uint32_t t = 0; t < (sizeof(targets)/sizeof(targets[0])); t += 1) {
         UnicodeString target = targets[t].unescape();
 
         longPattern->setTargetString(&target, status);
@@ -1268,6 +1352,14 @@ void SSearchTest::boyerMooreTest()
             logln("Test %d: found short pattern at [%d, %d].", t, start, end);
         } else {
             errln("Test %d: did not find short pattern.", t);
+        }
+
+        if(longPattern->empty()){
+            errln("Test %d: Long pattern should not have been empty.");
+        }
+
+        if(shortPattern->empty()){
+            errln("Test %d: Short pattern should not have been empty.");
         }
     }
 
@@ -1298,7 +1390,7 @@ void SSearchTest::bmsTest()
 
     coll = ucol_openFromShortString("S1", FALSE, NULL, &status);
     if (U_FAILURE(status)) {
-        errln("Could not open collator.");
+        errcheckln(status, "Could not open collator. - %s", u_errorName(status));
         return;
     }
 
@@ -1315,7 +1407,7 @@ void SSearchTest::bmsTest()
         goto close_patterns;
     }
 
-    for (int32_t t = 0; t < (sizeof(targets)/sizeof(targets[0])); t += 1) {
+    for (uint32_t t = 0; t < (sizeof(targets)/sizeof(targets[0])); t += 1) {
         UnicodeString target = targets[t].unescape();
 
         bms_setTargetString(longPattern, target.getBuffer(), target.length(), &status);
@@ -1333,12 +1425,26 @@ void SSearchTest::bmsTest()
         }
     }
 
+    /* Add better coverage for bms code. */
+    if(bms_empty(longPattern)) {
+        errln("FAIL: longgPattern is empty.");
+    }
+
+    if (!bms_getData(longPattern)) {
+        errln("FAIL: bms_getData returned NULL.");
+    }
+
+    if (!ucd_getCollator(data)) {
+        errln("FAIL: ucd_getCollator returned NULL.");
+    }
+
 close_patterns:
     bms_close(shortPattern);
     bms_close(longPattern);
 
 close_data:
     ucd_close(data);
+    ucd_freeCache();
     ucol_close(coll);
 }
 
@@ -1354,7 +1460,7 @@ void SSearchTest::goodSuffixTest()
 
     coll = ucol_open(NULL, &status);
     if (U_FAILURE(status)) {
-        errln("Couldn't open collator.");
+        errcheckln(status, "Couldn't open collator. - %s", u_errorName(status));
         return;
     }
 
@@ -1499,7 +1605,10 @@ const char *cPattern = "maketh houndes ete hem";
 
     UCollator *collator = ucol_open("en", &status);
     CollData *data = CollData::open(collator, status);
-    TEST_ASSERT_SUCCESS(status);
+    if (U_FAILURE(status) || collator == NULL || data == NULL) {
+        errcheckln(status, "Unable to open UCollator or CollData. - %s", u_errorName(status));
+        return;
+    } 
     //ucol_setStrength(collator, collatorStrength);
     //ucol_setAttribute(collator, UCOL_NORMALIZATION_MODE, normalize, &status);
     UnicodeString uPattern = cPattern;
@@ -1556,7 +1665,7 @@ const char *cPattern = "maketh houndes ete hem";
          //j = (j + i)%5;
     }
 
-    printf("%d\n", pm-longishText, j);
+    printf("%ld, %d\n", pm-longishText, j);
 #ifndef TEST_BOYER_MOORE
     usearch_close(uss);
 #else
@@ -1781,6 +1890,7 @@ static void generateTestCase(UCollator *coll, Monkey *monkeys[], int32_t monkeyC
 //      TODO:  refine what is an acceptable boundary.  For the moment,
 //             choose the next position not within a combining sequence.
 //
+#if 0
 static int32_t nextBoundaryAfter(const UnicodeString &string, int32_t startIndex) {
     const UChar *text = string.getBuffer();
     int32_t textLen   = string.length();
@@ -1822,7 +1932,9 @@ static int32_t nextBoundaryAfter(const UnicodeString &string, int32_t startIndex
 
     return indexOfLastCharChecked;
 }
+#endif
 
+#if 0
 static UBool isInCombiningSequence(const UnicodeString &string, int32_t index) {
     const UChar *text = string.getBuffer();
     int32_t textLen   = string.length();
@@ -1847,6 +1959,7 @@ static UBool isInCombiningSequence(const UnicodeString &string, int32_t index) {
 
     return !(gcProperty==U_GCB_CONTROL || gcProperty==U_GCB_LF || gcProperty==U_GCB_CR);
 }
+#endif
 
 static UBool simpleSearch(UCollator *coll, const UnicodeString &target, int32_t offset, const UnicodeString &pattern, int32_t &matchStart, int32_t &matchEnd)
 {
@@ -2071,7 +2184,7 @@ void SSearchTest::monkeyTest(char *params)
     UCollator *coll = ucol_openFromShortString("S1", FALSE, NULL, &status);
 
     if (U_FAILURE(status)) {
-        errln("Failed to create collator in MonkeyTest!");
+        errcheckln(status, "Failed to create collator in MonkeyTest! - %s", u_errorName(status));
         return;
     }
 
@@ -2105,7 +2218,7 @@ void SSearchTest::monkeyTest(char *params)
         &contractionMonkey,
         &expansionMonkey};
     int32_t monkeyCount = sizeof(monkeys) / sizeof(monkeys[0]);
-    int32_t nonMatchCount = 0;
+    // int32_t nonMatchCount = 0;
 
     UCollationStrength strengths[] = {UCOL_PRIMARY, UCOL_SECONDARY, UCOL_TERTIARY};
     const char *strengthNames[] = {"primary", "secondary", "tertiary"};
@@ -2160,7 +2273,7 @@ void SSearchTest::monkeyTest(char *params)
         // TODO: alterntaes are only equal at primary strength. Is this OK?
         for(int32_t t = 0; t < loopCount; t += 1) {
             uint32_t seed = m_seed;
-            int32_t  nmc = 0;
+            // int32_t  nmc = 0;
 
             generateTestCase(coll, monkeys, monkeyCount, pattern, altPattern);
             generateTestCase(coll, monkeys, monkeyCount, prefix,  altPrefix);
@@ -2208,7 +2321,7 @@ void SSearchTest::bmMonkeyTest(char *params)
     UCollator *coll = ucol_openFromShortString("S1", FALSE, NULL, &status);
 
     if (U_FAILURE(status)) {
-        errln("Failed to create collator in MonkeyTest!");
+        errcheckln(status, "Failed to create collator in MonkeyTest! - %s", u_errorName(status));
         return;
     }
 
@@ -2242,7 +2355,7 @@ void SSearchTest::bmMonkeyTest(char *params)
         &contractionMonkey,
         &expansionMonkey};
     int32_t monkeyCount = sizeof(monkeys) / sizeof(monkeys[0]);
-    int32_t nonMatchCount = 0;
+    // int32_t nonMatchCount = 0;
 
     UCollationStrength strengths[] = {UCOL_PRIMARY, UCOL_SECONDARY, UCOL_TERTIARY};
     const char *strengthNames[] = {"primary", "secondary", "tertiary"};
@@ -2299,7 +2412,7 @@ void SSearchTest::bmMonkeyTest(char *params)
         // TODO: alterntaes are only equal at primary strength. Is this OK?
         for(int32_t t = 0; t < loopCount; t += 1) {
             uint32_t seed = m_seed;
-            int32_t  nmc = 0;
+            // int32_t  nmc = 0;
 
             generateTestCase(coll, monkeys, monkeyCount, pattern, altPattern);
             generateTestCase(coll, monkeys, monkeyCount, prefix,  altPrefix);
@@ -2351,6 +2464,27 @@ void SSearchTest::bmMonkeyTest(char *params)
     CollData::close(monkeyData);
 
     ucol_close(coll);
+}
+
+void SSearchTest::stringListTest(){
+    UErrorCode status = U_ZERO_ERROR;
+    StringList *sl = new StringList(status);
+    if(U_FAILURE(status)){
+        errln("ERROR: stringListTest: Could not start StringList");
+    }
+
+    const UChar chars[] = {
+            0x0000
+    };
+    sl->add(chars, (int32_t) 0, status);
+    if(U_FAILURE(status)){
+        errln("ERROR: stringListTest: StringList::add");
+    }
+
+    if(sl->getDynamicClassID() != StringList::getStaticClassID()){
+        errln("ERROR: stringListTest: getDynamicClassID and getStaticClassID does not match");
+    }
+    delete sl;
 }
 
 #endif
