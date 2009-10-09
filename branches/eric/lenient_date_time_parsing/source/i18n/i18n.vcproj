@@ -78,7 +78,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="..\..\bin\icuin42.dll"
+				OutputFile="..\..\bin\icuin43.dll"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ProgramDatabaseFile=".\..\..\lib\icuin.pdb"
@@ -171,7 +171,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="..\..\bin64\icuin42.dll"
+				OutputFile="..\..\bin64\icuin43.dll"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ProgramDatabaseFile=".\..\..\lib64\icuin.pdb"
@@ -266,7 +266,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="..\..\bin\icuin42d.dll"
+				OutputFile="..\..\bin\icuin43d.dll"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
@@ -363,7 +363,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="..\..\bin64\icuin42d.dll"
+				OutputFile="..\..\bin64\icuin43d.dll"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
@@ -3281,6 +3281,38 @@
 			<File
 				RelativePath=".\ucln_in.c"
 				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						DisableLanguageExtensions="false"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						DisableLanguageExtensions="false"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						DisableLanguageExtensions="false"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						DisableLanguageExtensions="false"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\ucln_in.h"
@@ -3915,19 +3947,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\uspoof_buildconf.cpp"
+				RelativePath=".\uspoof_conf.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\uspoof_buildconf.h"
-				>
-			</File>
-			<File
-				RelativePath=".\uspoof_buildwsconf.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\uspoof_buildwsconf.h"
+				RelativePath=".\uspoof_conf.h"
 				>
 			</File>
 			<File
@@ -3936,6 +3960,14 @@
 			</File>
 			<File
 				RelativePath=".\uspoof_impl.h"
+				>
+			</File>
+			<File
+				RelativePath=".\uspoof_wsconf.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\uspoof_wsconf.h"
 				>
 			</File>
 		</Filter>
