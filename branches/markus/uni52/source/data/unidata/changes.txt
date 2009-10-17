@@ -204,10 +204,23 @@ ScriptRunData.cpp, which is no longer needed.)
 
 The generated files have a current copyright date and "@draft" statement.
 
+-> Eric Mader wrote in email on 20090930:
+    "I think the tool has been modified to update @draft to @stable for
+     older scripts and to add @draft for new scripts.
+     (I worked with an intern on this last year.)
+     You should check the output after you run it."
+
 * copy the above files into <icu>/source/layout, replacing the old files.
 
 Add new default entries to the indicClassTables array in <icu>/source/layout/IndicClassTables.cpp
 and the complexTable array in <icu>/source/layoutex/ParagraphLayout.cpp. (This step should be automated...)
+
+-> Eric Mader wrote in email on 20090930:
+    "This is just a matter of making sure that all the per-script tables have
+     entries for any new scripts that were added.
+     If any new Indic characters were added, then the class tables in
+     IndicClassTables.cpp should be updated to reflect this.
+     John Emmons should know how to do this if it's required."
 
 * rebuild the layout and layoutex libraries.
 
