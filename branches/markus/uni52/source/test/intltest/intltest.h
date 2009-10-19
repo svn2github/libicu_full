@@ -290,7 +290,7 @@ public:
         ptr=NULL;
         return p;
     }
-    // Delete the object it owns and adopt (take ownership of) the one passed in.
+    // Deletes the object it owns and adopt (take ownership of) the one passed in.
     void adoptInstead(T *p) {
         // delete ptr;
         prt=p;

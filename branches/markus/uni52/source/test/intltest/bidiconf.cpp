@@ -304,17 +304,20 @@ UBool BiDiConformanceTest::parseInputStringFromBiDiClasses(const char *&start) {
 }
 
 void BiDiConformanceTest::TestBidiTest() {
-    char unidataPath[400];
-    if(getUnidataPath(unidataPath)==NULL) {
-        errln("unable to find the source/data/unidata folder");
+    IntlTestErrorCode errorCode(*this, "TestBidiTest");
+    const char *sourceTestDataPath=getSourceTestData(errorCode);
+    if(errorCode.logIfFailureAndReset("unable to find the source/test/testdata "
+                                      "folder (getSourceTestData())")) {
+        return;
     }
-    strcat(unidataPath, "BidiTest.txt");
-    LocalStdioFilePointer bidiTestFile(fopen(unidataPath, "r"));
+    char bidiTestPath[400];
+    strcpy(bidiTestPath, sourceTestDataPath);
+    strcat(bidiTestPath, "BidiTest.txt");
+    LocalStdioFilePointer bidiTestFile(fopen(bidiTestPath, "r"));
     if(bidiTestFile.isNull()) {
-        errln("unable to open %s", unidataPath);
+        errln("unable to open %s", bidiTestPath);
     }
     LocalUBiDiPointer ubidi(ubidi_open());
-    IntlTestErrorCode errorCode(*this, "TestBidiTest");
     ubidi_setClassCallback(ubidi.getAlias(), biDiConfUBiDiClassCallback, NULL,
                            NULL, NULL, errorCode);
     if(errorCode.logIfFailureAndReset("ubidi_setClassCallback()")) {

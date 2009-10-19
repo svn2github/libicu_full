@@ -193,9 +193,11 @@ Unicode .c source files built to "\svn\icuproj\icu\trunk\source\data\out\tmp"
 
 >> DONE with the above, TODO the following <<
 
-TODO: new BidiTest file
-  review format and data
-  write test code using this data
+*** new BidiTest file
+- review format and data
+- copy BidiTest.txt to source/test/testdata
+- write test code using this data
+- fix ICU code where it fails the conformance test
 
 *** LayoutEngine script information
 * Run ICU4J com.ibm.icu.dev.tool.layout.ScriptNameBuilder. This generates LEScripts.h, LELanguage.h,
