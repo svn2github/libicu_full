@@ -22,12 +22,15 @@
 #include "unicode/ubidi.h"
 #include "unicode/errorcode.h"
 #include "unicode/putil.h"
+#include "unicode/unistr.h"
 #include "intltest.h"
 #include "uparse.h"
 
 class BiDiConformanceTest : public IntlTest {
 public:
-    BiDiConformanceTest() {}
+    BiDiConformanceTest() :
+        directionBits(0), lineNumber(0), levelsCount(0), orderingCount(0),
+        errorCount(0) {}
 
     void runIndexedTest(int32_t index, UBool exec, const char *&name, char *par=NULL);
 
@@ -35,14 +38,22 @@ public:
 private:
     char *getUnidataPath(char path[]);
 
-    int32_t parseLevels(const char *start, UBiDiLevel levels[]);
-    int32_t parseOrdering(const char *start, int32_t ordering[]);
-    UnicodeString parseInputStringFromBiDiClasses(const char *&start);
+    UBool parseLevels(const char *start);
+    UBool parseOrdering(const char *start);
+    UBool parseInputStringFromBiDiClasses(const char *&start);
 
-    void checkLevels(const char *line, const UnicodeString &s,
-                     const UBiDiLevel expectedLevels[], int32_t expectedCount,
-                     const UBiDiLevel actualLevels[], int32_t actualCount,
+    void checkLevels(const UBiDiLevel actualLevels[], int32_t actualCount,
                      const char *paraLevelName);
+
+    char line[10000];
+    UBiDiLevel levels[1000];
+    uint32_t directionBits;
+    int32_t ordering[1000];
+    int32_t lineNumber;
+    int32_t levelsCount;
+    int32_t orderingCount;
+    int32_t errorCount;
+    UnicodeString inputString;
 };
 
 extern IntlTest *createBiDiConformanceTest() {
@@ -134,39 +145,41 @@ U_DEFINE_LOCAL_OPEN_POINTER(LocalUBiDiPointer, UBiDi, ubidi_close);
 // TODO: Make "public" in uparse.h.
 #define U_IS_INV_WHITESPACE(c) ((c)==' ' || (c)=='\t' || (c)=='\r' || (c)=='\n')
 
-int32_t BiDiConformanceTest::parseLevels(const char *start, UBiDiLevel levels[]) {
-    int32_t length=0;
+UBool BiDiConformanceTest::parseLevels(const char *start) {
+    directionBits=0;
+    levelsCount=0;
     while(*start!=0 && *(start=u_skipWhitespace(start))!=0) {
         if(*start=='x') {
-            levels[length++]=UBIDI_DEFAULT_LTR;
+            levels[levelsCount++]=UBIDI_DEFAULT_LTR;
             ++start;
         } else {
             char *end;
             uint32_t value=(uint32_t)strtoul(start, &end, 10);
             if(end<=start || (!U_IS_INV_WHITESPACE(*end) && *end!=0) || value>(UBIDI_MAX_EXPLICIT_LEVEL+1)) {
                 errln("@Levels: parse error at %s", start);
-                return -1;
+                return FALSE;
             }
-            levels[length++]=(UBiDiLevel)value;
+            levels[levelsCount++]=(UBiDiLevel)value;
+            directionBits|=(1<<(value&1));
             start=end;
         }
     }
-    return length;
+    return TRUE;
 }
 
-int32_t BiDiConformanceTest::parseOrdering(const char *start, int32_t ordering[]) {
-    int32_t length=0;
+UBool BiDiConformanceTest::parseOrdering(const char *start) {
+    orderingCount=0;
     while(*start!=0 && *(start=u_skipWhitespace(start))!=0) {
         char *end;
         uint32_t value=(uint32_t)strtoul(start, &end, 10);
         if(end<=start || (!U_IS_INV_WHITESPACE(*end) && *end!=0) || value>=1000) {
             errln("@Reorder: parse error at %s", start);
-            return -1;
+            return FALSE;
         }
-        ordering[length++]=(int32_t)value;
+        ordering[orderingCount++]=(int32_t)value;
         start=end;
     }
-    return length;
+    return TRUE;
 }
 
 static const UChar charFromBiDiClass[U_CHAR_DIRECTION_COUNT]={
@@ -207,29 +220,87 @@ biDiConfUBiDiClassCallback(const void *context, UChar32 c) {
 
 U_CDECL_END
 
-UnicodeString BiDiConformanceTest::parseInputStringFromBiDiClasses(const char *&start) {
-    UnicodeString s;
-    char bidiClassString[20];
+static const int8_t biDiClassNameLengths[U_CHAR_DIRECTION_COUNT+1]={
+    1, 1, 2, 2, 2, 2, 2, 1, 1, 2, 2, 3, 3, 2, 3, 3, 3, 3, 2, 0
+};
+
+UBool BiDiConformanceTest::parseInputStringFromBiDiClasses(const char *&start) {
+    inputString.remove();
+    /*
+     * Lengthy but fast BiDi class parser.
+     * A simple parser could terminate or extract the name string and use
+     *   int32_t biDiClassInt=u_getPropertyValueEnum(UCHAR_BIDI_CLASS, bidiClassString);
+     * but that makes this test take significantly more time.
+     */
     while(*start!=0 && *(start=u_skipWhitespace(start))!=0 && *start!=';') {
-        int32_t bidiClassStringLength=0;
-        while(*start!=0 && *start!=';' && !U_IS_INV_WHITESPACE(*start)) {
-            if(bidiClassStringLength>=(sizeof(bidiClassString)-1)) {
-                errln("BiDi class string too long at %s", start-bidiClassStringLength);
-                s.setToBogus();
-                return s;
+        UCharDirection biDiClass=U_CHAR_DIRECTION_COUNT;
+        // Compare each character once until we have a match on
+        // a complete, short BiDi class name.
+        if(start[0]=='L') {
+            if(start[1]=='R') {
+                if(start[2]=='E') {
+                    biDiClass=U_LEFT_TO_RIGHT_EMBEDDING;
+                } else if(start[2]=='O') {
+                    biDiClass=U_LEFT_TO_RIGHT_OVERRIDE;
+                }
+            } else {
+                biDiClass=U_LEFT_TO_RIGHT;
             }
-            bidiClassString[bidiClassStringLength++]=*start++;
+        } else if(start[0]=='R') {
+            if(start[1]=='L') {
+                if(start[2]=='E') {
+                    biDiClass=U_RIGHT_TO_LEFT_EMBEDDING;
+                } else if(start[2]=='O') {
+                    biDiClass=U_RIGHT_TO_LEFT_OVERRIDE;
+                }
+            } else {
+                biDiClass=U_RIGHT_TO_LEFT;
+            }
+        } else if(start[0]=='E') {
+            if(start[1]=='N') {
+                biDiClass=U_EUROPEAN_NUMBER;
+            } else if(start[1]=='S') {
+                biDiClass=U_EUROPEAN_NUMBER_SEPARATOR;
+            } else if(start[1]=='T') {
+                biDiClass=U_EUROPEAN_NUMBER_TERMINATOR;
+            }
+        } else if(start[0]=='A') {
+            if(start[1]=='L') {
+                biDiClass=U_RIGHT_TO_LEFT_ARABIC;
+            } else if(start[1]=='N') {
+                biDiClass=U_ARABIC_NUMBER;
+            }
+        } else if(start[0]=='C' && start[1]=='S') {
+            biDiClass=U_COMMON_NUMBER_SEPARATOR;
+        } else if(start[0]=='B') {
+            if(start[1]=='N') {
+                biDiClass=U_BOUNDARY_NEUTRAL;
+            } else {
+                biDiClass=U_BLOCK_SEPARATOR;
+            }
+        } else if(start[0]=='S') {
+            biDiClass=U_SEGMENT_SEPARATOR;
+        } else if(start[0]=='W' && start[1]=='S') {
+            biDiClass=U_WHITE_SPACE_NEUTRAL;
+        } else if(start[0]=='O' && start[1]=='N') {
+            biDiClass=U_OTHER_NEUTRAL;
+        } else if(start[0]=='P' && start[1]=='D' && start[2]=='F') {
+            biDiClass=U_POP_DIRECTIONAL_FORMAT;
+        } else if(start[0]=='N' && start[1]=='S' && start[2]=='M') {
+            biDiClass=U_DIR_NON_SPACING_MARK;
         }
-        bidiClassString[bidiClassStringLength]=0;
-        int32_t bidiClassInt=u_getPropertyValueEnum(UCHAR_BIDI_CLASS, bidiClassString);
-        if(bidiClassInt<0) {
-            errln("BiDi class string not recognized at %s", start-bidiClassStringLength);
-            s.setToBogus();
-            return s;
+        // Now we verify that the class name is terminated properly,
+        // and not just the start of a longer word.
+        int8_t biDiClassNameLength=biDiClassNameLengths[biDiClass];
+        char c=start[biDiClassNameLength];
+        if(biDiClass==U_CHAR_DIRECTION_COUNT || (!U_IS_INV_WHITESPACE(c) && c!=';' && c!=0)) {
+            errln("BiDi class string not recognized at %s", start);
+            return FALSE;
         }
-        s.append(charFromBiDiClass[bidiClassInt]);
+        inputString.append(charFromBiDiClass[biDiClass]);
+        start+=biDiClassNameLength;
     }
-    return s;
+    return TRUE;
 }
 
 void BiDiConformanceTest::TestBidiTest() {
@@ -249,11 +320,12 @@ void BiDiConformanceTest::TestBidiTest() {
     if(errorCode.logIfFailureAndReset("ubidi_setClassCallback()")) {
         return;
     }
-    static char line[10000];
-    static UBiDiLevel levels[1000];
-    static int32_t ordering[1000];
-    int32_t levelsCount=0, orderingCount=0;
-    while(fgets(line, (int)sizeof(line), bidiTestFile.getAlias())!=NULL) {
+    lineNumber=0;
+    levelsCount=0;
+    orderingCount=0;
+    errorCount=0;
+    while(errorCount<10 && fgets(line, (int)sizeof(line), bidiTestFile.getAlias())!=NULL) {
+        ++lineNumber;
         // Remove trailing comments and whitespace.
         char *commentStart=strchr(line, '#');
         if(commentStart!=NULL) {
@@ -267,18 +339,17 @@ void BiDiConformanceTest::TestBidiTest() {
         if(*start=='@') {
             ++start;
             if(0==strncmp(start, "Levels:", 7)) {
-                if((levelsCount=parseLevels(start+7, levels))<0) {
+                if(!parseLevels(start+7)) {
                     return;
                 }
             } else if(0==strncmp(start, "Reorder:", 8)) {
-                if((orderingCount=parseOrdering(start+8, ordering))<0) {
+                if(!parseOrdering(start+8)) {
                     return;
                 }
             }
             // Skip unknown @Xyz: ...
         } else {
-            UnicodeString s=parseInputStringFromBiDiClasses(start);
-            if(s.isBogus()) {
+            if(!parseInputStringFromBiDiClasses(start)) {
                 return;
             }
             start=u_skipWhitespace(start);
@@ -298,16 +369,14 @@ void BiDiConformanceTest::TestBidiTest() {
             static const char *const paraLevelNames[]={ "auto/LTR", "LTR", "RTL" };
             for(int i=0; i<=2; ++i) {
                 if(bitset&(1<<i)) {
-                    ubidi_setPara(ubidi.getAlias(), s.getBuffer(), s.length(),
+                    ubidi_setPara(ubidi.getAlias(), inputString.getBuffer(), inputString.length(),
                                   paraLevels[i], NULL, errorCode);
                     const UBiDiLevel *actualLevels=ubidi_getLevels(ubidi.getAlias(), errorCode);
                     if(errorCode.logIfFailureAndReset("ubidi_setPara() or ubidi_getLevels()")) {
                         errln("Input line: %s", line);
                         return;
                     }
-                    checkLevels(line, s,
-                                levels, levelsCount,
-                                actualLevels, ubidi_getProcessedLength(ubidi.getAlias()),
+                    checkLevels(actualLevels, ubidi_getProcessedLength(ubidi.getAlias()),
                                 paraLevelNames[i]);
                 }
             }
@@ -323,33 +392,51 @@ static UChar printLevel(UBiDiLevel level) {
     }
 }
 
-void BiDiConformanceTest::checkLevels(const char *line, const UnicodeString &s,
-                                      const UBiDiLevel expectedLevels[], int32_t expectedCount,
-                                      const UBiDiLevel actualLevels[], int32_t actualCount,
+static uint32_t getDirectionBits(const UBiDiLevel actualLevels[], int32_t actualCount) {
+    uint32_t actualDirectionBits=0;
+    for(int32_t i=0; i<actualCount; ++i) {
+        actualDirectionBits|=(1<<(actualLevels[i]&1));
+    }
+    return actualDirectionBits;
+}
+
+void BiDiConformanceTest::checkLevels(const UBiDiLevel actualLevels[], int32_t actualCount,
                                       const char *paraLevelName) {
     UBool isError=FALSE;
-    if(expectedCount!=actualCount) {
+    if(levelsCount!=actualCount) {
         errln("Wrong number of level values; expected %d actual %d",
-              (int)expectedCount, (int)actualCount);
+              (int)levelsCount, (int)actualCount);
         isError=TRUE;
     } else {
         for(int32_t i=0; i<actualCount; ++i) {
-            if(expectedLevels[i]!=actualLevels[i] && expectedLevels[i]<UBIDI_DEFAULT_LTR) {
-                errln("Wrong level value at index %d; expected %d actual %d",
-                      (int)i, expectedLevels[i], actualLevels[i]);
-                isError=TRUE;
-                break;
+            if(levels[i]!=actualLevels[i] && levels[i]<UBIDI_DEFAULT_LTR) {
+                if(directionBits!=3 && directionBits==getDirectionBits(actualLevels, actualCount)) {
+                    // ICU used a shortcut:
+                    // Since the text is unidirectional, it did not store the resolved
+                    // levels but just returns all levels as the paragraph level 0 or 1.
+                    // The reordering result is the same, so this is fine.
+                    break;
+                } else {
+                    errln("Wrong level value at index %d; expected %d actual %d",
+                          (int)i, levels[i], actualLevels[i]);
+                    isError=TRUE;
+                    break;
+                }
             }
         }
     }
     if(isError) {
-        errln("Input line:         %s", line);
-        errln(UnicodeString("Input string:       ")+s);
+        ++errorCount;
+        errln("Input line %5d:   %s", (int)lineNumber, line);
+        errln(UnicodeString("Input string:       ")+inputString);
         errln("Para level:         %s", paraLevelName);
         UnicodeString els("Expected levels:   ");
+        int32_t i;
+        for(i=0; i<levelsCount; ++i) {
+            els.append(0x20).append(printLevel(levels[i]));
+        }
         UnicodeString als("Actual   levels:   ");
-        for(int32_t i=0; i<actualCount; ++i) {
-            els.append(0x20).append(printLevel(expectedLevels[i]));
+        for(i=0; i<actualCount; ++i) {
             als.append(0x20).append(printLevel(actualLevels[i]));
         }
         errln(els);

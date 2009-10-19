@@ -263,6 +263,8 @@ extern UnicodeString ctou(const char* chars);
 /**
  * Does not throw exceptions.
  * Do not use this base class directly, since it does not delete its pointer.
+ * A subclass must implement methods that delete the pointer:
+ * Destructor and adoptInstead().
  */
 template<typename T>
 class /* U_COMMON_API */ LocalPointerBase {
@@ -270,7 +272,7 @@ public:
     // Takes ownership.
     explicit LocalPointerBase(T *p=NULL) : ptr(p) {}
     // Deletes the object it owns.
-    ~LocalPointerBase() {}
+    ~LocalPointerBase() { /* delete ptr; */ }
     // NULL checks.
     UBool isNull() const { return ptr==NULL; }
     UBool isValid() const { return ptr!=NULL; }
@@ -289,7 +291,10 @@ public:
         return p;
     }
     // Delete the object it owns and adopt (take ownership of) the one passed in.
-    void adoptInstead(T *p) {}
+    void adoptInstead(T *p) {
+        // delete ptr;
+        prt=p;
+    }
 protected:
     T *ptr;
 private:
