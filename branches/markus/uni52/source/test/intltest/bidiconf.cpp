@@ -319,6 +319,7 @@ void BiDiConformanceTest::TestBidiTest() {
     LocalStdioFilePointer bidiTestFile(fopen(bidiTestPath, "r"));
     if(bidiTestFile.isNull()) {
         errln("unable to open %s", bidiTestPath);
+        return;
     }
     LocalUBiDiPointer ubidi(ubidi_open());
     ubidi_setClassCallback(ubidi.getAlias(), biDiConfUBiDiClassCallback, NULL,

@@ -265,6 +265,10 @@ extern UnicodeString ctou(const char* chars);
  * Do not use this base class directly, since it does not delete its pointer.
  * A subclass must implement methods that delete the pointer:
  * Destructor and adoptInstead().
+ *
+ * There is no operator T *() provided because the programmer must decide
+ * whether to use getAlias() (without transfer of ownership) or orpan()
+ * (with transfer of ownership and NULLing of the pointer).
  */
 template<typename T>
 class /* U_COMMON_API */ LocalPointerBase {
@@ -284,7 +288,7 @@ public:
     T *getAlias() const { return ptr; }
     T &operator*() const { return *ptr; }
     T *operator->() const { return ptr; }
-    // Give up ownership; the internal pointer becomes NULL;
+    // Gives up ownership; the internal pointer becomes NULL.
     T *orphan() {
         T *p=ptr;
         ptr=NULL;
@@ -322,7 +326,7 @@ private:
 //    }
 
 // Option 2: Require all subclasses to override all deleting methods
-// (desctructor and adoptInstead()) if they need to use something other than
+// (destructor and adoptInstead()) if they need to use something other than
 // the delete operator.
 // Con: More methods need to be overwritten, and if we add further deleting
 // methods, then that set increases further.
@@ -334,12 +338,26 @@ class /* U_COMMON_API */ LocalPointer : public LocalPointerBase<T> {
 public:
     explicit LocalPointer(T *p=NULL) : LocalPointerBase<T>(p) {}
     ~LocalPointer() {
-        delete ptr;
+        delete LocalPointerBase<T>::ptr;
     }
     void adoptInstead(T *p) {
-        delete ptr;
-        ptr=p;
+        delete LocalPointerBase<T>::ptr;
+        LocalPointerBase<T>::ptr=p;
     }
+};
+
+template<typename T>
+class /* U_COMMON_API */ LocalArray : public LocalPointerBase<T> {
+public:
+    explicit LocalArray(T *p=NULL) : LocalPointerBase<T>(p) {}
+    ~LocalArray() {
+        delete[] LocalPointerBase<T>::ptr;
+    }
+    void adoptInstead(T *p) {
+        delete[] LocalPointerBase<T>::ptr;
+        LocalPointerBase<T>::ptr=p;
+    }
+    T &operator[](ptrdiff_t i) const { return LocalPointerBase<T>::ptr[i]; }
 };
 
 // Requirement: The closeFunction must tolerate a NULL pointer.
@@ -347,7 +365,7 @@ public:
 #define U_DEFINE_LOCAL_OPEN_POINTER(LocalPointerClassName, Type, closeFunction) \
     class /* U_COMMON_API */ LocalPointerClassName : public LocalPointerBase<Type> { \
     public: \
-        LocalPointerClassName(Type *p) : LocalPointerBase<Type>(p) {} \
+        explicit LocalPointerClassName(Type *p=NULL) : LocalPointerBase<Type>(p) {} \
         ~LocalPointerClassName() { closeFunction(ptr); } \
         void adoptInstead(Type *p) { \
             closeFunction(ptr); \
