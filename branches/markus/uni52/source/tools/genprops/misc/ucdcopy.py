@@ -108,6 +108,7 @@ def CopyAndStripAndMerge(s, t):
 _unidata_files = {
   # Simply copy these files.
   "BidiMirroring.txt": shutil.copy,
+  "BidiTest.txt": shutil.copy,
   "Blocks.txt": shutil.copy,
   "CaseFolding.txt": shutil.copy,
   "DerivedAge.txt": shutil.copy,

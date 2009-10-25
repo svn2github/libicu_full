@@ -29,7 +29,7 @@ Unicode 5.2 update
 
 * file preparation
 
-python ucdcopy.py "C:\Documents and Settings\mscherer\My Documents\unicode\ucd\5.2.0" C:\svn\icuproj\icu\trunk\source\data\unidata
+python source\tools\genprops\misc\ucdcopy.py "C:\Documents and Settings\mscherer\My Documents\unicode\ucd\5.2.0" C:\svn\icuproj\icu\trunk\source\data\unidata
 - includes finding files regardless of version numbers,
   copying them, and performing the equivalent processing of the
   ucdstrip and ucdmerge tools on the desired set of files
@@ -163,10 +163,13 @@ Unicode .c source files built to "\svn\icuproj\icu\trunk\source\data\out\tmp"
 - update FractionalUCA.txt with new canonical closure (output from Mark's Unicode tools)
 - update source/data/unidata/UCARules.txt with UCA_Rules_SHORT.txt from Mark's Unicode tools
 - update source/test/testdata/CollationTest_*.txt with output from Mark's Unicode tools
-- generate the source/test/testdata/CollationTest_*_STUB.txt files via source/tools/genuca/genteststub.py
-  on Windows:
-    python C:\svn\icuproj\icu\trunk\source\tools\genuca\genteststub.py CollationTest_NON_IGNORABLE_SHORT.txt CollationTest_NON_IGNORABLE_STUB.txt
-    python C:\svn\icuproj\icu\trunk\source\tools\genuca\genteststub.py CollationTest_SHIFTED_SHORT.txt CollationTest_SHIFTED_STUB.txt
+[ Begin obsolete instructions:
+  Starting with UCA 5.2, we use the CollationTest_*_SHORT.txt files not the *_STUB.txt files.
+    - generate the source/test/testdata/CollationTest_*_STUB.txt files via source/tools/genuca/genteststub.py
+      on Windows:
+        python C:\svn\icuproj\icu\trunk\source\tools\genuca\genteststub.py CollationTest_NON_IGNORABLE_SHORT.txt CollationTest_NON_IGNORABLE_STUB.txt
+        python C:\svn\icuproj\icu\trunk\source\tools\genuca\genteststub.py CollationTest_SHIFTED_SHORT.txt CollationTest_SHIFTED_STUB.txt
+  End obsolete instructions]
 - run all tests with the *_SHORT.txt or the full files (the full ones have comments)
   not just the *_STUB.txt files
 - note on intltest: if collate/UCAConformanceTest fails, then
@@ -191,13 +194,13 @@ Unicode .c source files built to "\svn\icuproj\icu\trunk\source\data\out\tmp"
 * Update break iterator rules to new UAX versions and new property values
 * Update source/test/testdata/<boundary>Test.txt files from <unicode.org ucd>/ucd/auxiliary
 
->> DONE with the above, TODO the following <<
-
 *** new BidiTest file
 - review format and data
 - copy BidiTest.txt to source/test/testdata
 - write test code using this data
 - fix ICU code where it fails the conformance test
+
+>> DONE with the above, TODO the following <<
 
 *** LayoutEngine script information
 * Run ICU4J com.ibm.icu.dev.tool.layout.ScriptNameBuilder. This generates LEScripts.h, LELanguage.h,

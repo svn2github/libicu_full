@@ -43,22 +43,6 @@ file format version.
 
 The following is a description of format version 6 .
 
-The format changes between version 3 and 4 because the properties related to
-case mappings and bidi/shaping are pulled out into separate files
-for modularization.
-In order to reduce the need for code changes, some of the previous data
-structures are omitted, rather than rearranging everything.
-
-For details see "Changes in format version 4" below.
-
-Format version 5 became necessary because the bit field for script codes
-overflowed. Several bit fields got rearranged, and three (Script, Block,
-Word_Break) got widened by one bit each.
-
-Format version 6 became necessary because Unicode 5.2 adds fractions with
-denominators 9, 10 and 16, and it was easier to redesign the encoding of numeric
-types and values rather than add another variant to the previous format.
-
 Data contents:
 
 The contents is a parsed, binary form of several Unicode character
@@ -79,7 +63,7 @@ Formally, the file contains the following structures:
     const int32_t indexes[16] with values i0..i15:
 
   i0 indicates the length of the main trie.
-  i0..i3 all have the same value in format version 4.0;
+  i0..i3 all have the same value in format versions 4.0 and higher;
          the related props32[] and exceptions[] and uchars[] were used in format version 3
 
     i0 propsIndex; -- 32-bit unit index to the table of 32-bit properties words
@@ -99,7 +83,7 @@ Formally, the file contains the following structures:
 
     PT serialized properties trie, see utrie.h (byte size: 4*(i0-16))
 
-  P, E, and U are not used (empty) in format version 4
+  P, E, and U are not used (empty) in format versions 4 and above
 
     P  const uint32_t props32[i1-i0];
     E  const uint32_t exceptions[i2-i1];
@@ -207,10 +191,20 @@ The indexes[] values for the omitted structures are still filled in
 
 --- Changes in format version 5 ---
 
-Rearranged bit fields in the second trie (AT) because the script code field
-overflowed. Old code would have seen nonsensically low values for new, higher
-script codes.
+Format version 5 became necessary because the bit field for script codes
+overflowed. The changes are incompatible because
+old code would have seen nonsensically low values for new, higher script codes.
+
+Rearranged bit fields in the second trie (AT) and widened three (Script, Block,
+Word_Break) by one bit each.
+
 Modified bit fields in icu/source/common/uprops.h
+
+--- Changes in format version 6 ---
+
+Format version 6 became necessary because Unicode 5.2 adds fractions with
+denominators 9, 10 and 16, and it was easier to redesign the encoding of numeric
+types and values rather than add another variant to the previous format.
 
 ----------------------------------------------------------------------------- */
 
