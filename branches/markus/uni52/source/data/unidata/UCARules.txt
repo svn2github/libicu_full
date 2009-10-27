@@ -1,6 +1,6 @@
 ﻿#	UCA Rules
 #	This file contains the UCA tables for the given version, but transformed into rule syntax.
-#	Generated:   2009-09-24, 00:41:26 GMT [MD]
+#	Generated:   2009-10-24, 00:18:38 GMT [MD]
 #	NOTE: Since UCA handles canonical equivalents, no composites are necessary
 #	(except in extensions).
 #	For syntax description, see: http://oss.software.ibm.com/icu/userguide/Collate_Intro.html
@@ -11075,12 +11075,12 @@
  <	 ય
  <	 ર
  <	 લ
- <	 ળ
  <	 વ
  <	 શ
  <	 ષ
  <	 સ
  <	 હ
+ <	 ળ
  <	 ઽ
  <	 ા
  <	 િ
@@ -11262,12 +11262,12 @@
  <	 ర
  <	 ఱ
  <	 ల
- <	 ళ
  <	 వ
  <	 శ
  <	 ష
  <	 స
  <	 హ
+ <	 ళ
  <	 ఽ
  <	 ా
  <	 ి
@@ -11376,8 +11376,8 @@
  <	 ഒ
  <	 ഓ
  <	 ഔ
- <	 ൿ
  <	 ക
+   <<<	 ൿ / ്
  <	 ഖ
  <	 ഗ
  <	 ഘ
@@ -11391,14 +11391,14 @@
  <	 ഠ
  <	 ഡ
  <	 ഢ
- <	 ൺ
  <	 ണ
+   <<<	 ൺ / ്
  <	 ത
  <	 ഥ
  <	 ദ
  <	 ധ
- <	 ൻ
  <	 ന
+   <<<	 ൻ / ്
  <	 പ
  <	 ഫ
  <	 ബ
@@ -11406,19 +11406,19 @@
  <	 മ
  <	 യ
  <	 ര
- <	 ർ
- <	 ൽ
+   <<<	 ർ / ്
  <	 ല
- <	 ൾ
+   <<<	 ൽ / ്
  <	 വ
  <	 ശ
  <	 ഷ
  <	 സ
  <	 ഹ
-   <<<	 ഽ / た
  <	 ള
+   <<<	 ൾ / ്
  <	 ഴ
  <	 റ
+ <	 ഽ
  <	 ാ
  <	 ി
  <	 ീ
@@ -11495,7 +11495,6 @@
  <	 හ
  <	 ළ
  <	 ෆ
- <	 ්
  <	 ා
  <	 ැ
  <	 ෑ
@@ -11504,6 +11503,9 @@
  <	 ු
  <	 ූ
  <	 ෘ
+ <	 ෲ
+ <	 ෟ
+ <	 ෳ
  <	 ෙ
  <	 ේ
  <	 ෛ
@@ -11512,9 +11514,7 @@
  <	 ෝ
     =	 ෝ
  <	 ෞ
- <	 ෟ
- <	 ෲ
- <	 ෳ
+ <	 ්
  <	 ꯀ
  <	 ꯁ
  <	 ꯂ
