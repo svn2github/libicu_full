@@ -586,7 +586,7 @@ u_charDigitValue(UChar32 c) {
     int32_t value;
     GET_PROPS(c, props);
     value=(int32_t)GET_NUMERIC_TYPE_VALUE(props)-UPROPS_NTV_DECIMAL_START;
-    if(0<=value && value<=9) {
+    if(value<=9) {
         return value;
     } else {
         return -1;
