@@ -25,8 +25,9 @@
 #include "uhash.h"
 #include "uresimp.h"
 #include "ulist.h"
+#include "ureslocs.h"
 
-//#define UCURR_DEBUG 1
+// #define UCURR_DEBUG 1
 #ifdef UCURR_DEBUG
 #include "stdio.h"
 #endif
@@ -516,7 +517,7 @@ ucurr_getName(const UChar* currency,
 
     const UChar* s = NULL;
     ec2 = U_ZERO_ERROR;
-    UResourceBundle* rb = ures_open(NULL, loc, &ec2);
+    UResourceBundle* rb = ures_open(U_ICUDATA_CURR, loc, &ec2);
 
     rb = ures_getByKey(rb, CURRENCIES, rb, &ec2);
 
@@ -596,7 +597,7 @@ ucurr_getPluralName(const UChar* currency,
 
     const UChar* s = NULL;
     ec2 = U_ZERO_ERROR;
-    UResourceBundle* rb = ures_open(NULL, loc, &ec2);
+    UResourceBundle* rb = ures_open(U_ICUDATA_CURR, loc, &ec2);
 
     rb = ures_getByKey(rb, CURRENCYPLURALS, rb, &ec2);
 
@@ -702,7 +703,7 @@ getCurrencyNameCount(const char* loc, int32_t* total_currency_name_count, int32_
     for (;;) {
         UErrorCode ec2 = U_ZERO_ERROR;
         // TODO: ures_openDirect?
-        UResourceBundle* rb = ures_open(NULL, locale, &ec2);
+        UResourceBundle* rb = ures_open(U_ICUDATA_CURR, locale, &ec2);
         UResourceBundle* curr = ures_getByKey(rb, CURRENCIES, NULL, &ec2);
         int32_t n = ures_getSize(curr);
         for (int32_t i=0; i<n; ++i) {
@@ -813,7 +814,7 @@ collectCurrencyNames(const char* locale,
     for (int32_t localeLevel = 0; ; ++localeLevel) {
         ec2 = U_ZERO_ERROR;
         // TODO: ures_openDirect
-        UResourceBundle* rb = ures_open(NULL, loc, &ec2);
+        UResourceBundle* rb = ures_open(U_ICUDATA_CURR, loc, &ec2);
         UResourceBundle* curr = ures_getByKey(rb, CURRENCIES, NULL, &ec2);
         int32_t n = ures_getSize(curr);
         for (int32_t i=0; i<n; ++i) {
