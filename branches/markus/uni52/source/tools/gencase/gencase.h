@@ -90,6 +90,7 @@ typedef struct {
     SpecialCasing *specialCasing;
     CaseFolding *caseFolding;
     uint8_t gc, cc;
+    UBool isCaseIgnorable;
 } Props;
 
 /* global flags */

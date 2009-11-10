@@ -178,8 +178,9 @@ Unicode .c source files built to "\svn\icuproj\icu\trunk\source\data\out\tmp"
 
 *** Implement Cased & Case_Ignorable properties
 - via UProperty; call ucase.h functions ucase_getType() and ucase_getTypeOrIgnorable()
-- Problem: These properties should be disjoint, but aren't.
-  Hardcode the intersection and work to fix it in the next Unicode version.
+- Problem: These properties should be disjoint, but aren't
+- UTC 2009nov decision: skip all Case_Ignorable regardless of whether they are Cased or not
+- change ucase.icu to be able to store any combination of Cased and Case_Ignorable
 
 *** Implement Changes_When_Xyz properties
 - without stored data
@@ -200,7 +201,19 @@ Unicode .c source files built to "\svn\icuproj\icu\trunk\source\data\out\tmp"
 - write test code using this data
 - fix ICU code where it fails the conformance test
 
+*** Java
+- generally, find and update code corresponding to C/C++
+- UCharacter.UnicodeBlock constants:
+  a) add an _ID integer per new block, update COUNT
+  b) add a class instance per new block
+     Visual Studio regex:
+        find            UBLOCK_{[^ ]+} = [0-9]+, {/.+}
+        replace with    public static final UnicodeBlock \1 = new UnicodeBlock("\1", \1_ID); \2
+- CHAR_NAME_ALIAS -> UCharacter.getNameAlias() and getCharFromNameAlias()
+
 >> DONE with the above, TODO the following <<
+
+- port test changes to Java
 
 *** LayoutEngine script information
 * Run ICU4J com.ibm.icu.dev.tool.layout.ScriptNameBuilder. This generates LEScripts.h, LELanguage.h,
