@@ -310,6 +310,10 @@
                     <arg name="-f"/>
                     <arg name="-m" value="${env.CLDR_DIR}/common/supplemental" />
                 </args>
+		<remapper>
+		  <remap sourcePath="/CurrencyMap" targetDir="curr" />
+		  <remap sourcePath="/CurrencyMeta" targetDir="curr" />
+		</remapper>
             </run>
         </cldr-build>
     </target>

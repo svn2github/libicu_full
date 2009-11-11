@@ -125,7 +125,7 @@ _findMetaData(const UChar* currency, UErrorCode& ec) {
     // Get CurrencyMeta resource out of root locale file.  [This may
     // move out of the root locale file later; if it does, update this
     // code.]
-    UResourceBundle* currencyData = ures_openDirect(NULL, CURRENCY_DATA, &ec);
+    UResourceBundle* currencyData = ures_openDirect(U_ICUDATA_CURR, CURRENCY_DATA, &ec);
     UResourceBundle* currencyMeta = ures_getByKey(currencyData, CURRENCY_META, currencyData, &ec);
 
     if (U_FAILURE(ec)) {
@@ -387,7 +387,7 @@ ucurr_forLocale(const char* locale,
                 }
 
                 // Look up the CurrencyMap element in the root bundle.
-                UResourceBundle *rb = ures_openDirect(NULL, CURRENCY_DATA, &localStatus);
+                UResourceBundle *rb = ures_openDirect(U_ICUDATA_CURR, CURRENCY_DATA, &localStatus);
                 UResourceBundle *cm = ures_getByKey(rb, CURRENCY_MAP, rb, &localStatus);
                 UResourceBundle *countryArray = ures_getByKey(rb, id, cm, &localStatus);
                 UResourceBundle *currencyReq = ures_getByIndex(countryArray, 0, NULL, &localStatus);
@@ -1859,7 +1859,7 @@ ucurr_countCurrencies(const char* locale,
         }
 
         // Look up the CurrencyMap element in the root bundle.
-        UResourceBundle *rb = ures_openDirect(NULL, CURRENCY_DATA, &localStatus);
+        UResourceBundle *rb = ures_openDirect(U_ICUDATA_CURR, CURRENCY_DATA, &localStatus);
         UResourceBundle *cm = ures_getByKey(rb, CURRENCY_MAP, rb, &localStatus);
 
         // Using the id derived from the local, get the currency data
@@ -1975,7 +1975,7 @@ ucurr_forLocaleAndDate(const char* locale,
             }
 
             // Look up the CurrencyMap element in the root bundle.
-            UResourceBundle *rb = ures_openDirect(NULL, CURRENCY_DATA, &localStatus);
+            UResourceBundle *rb = ures_openDirect(U_ICUDATA_CURR, CURRENCY_DATA, &localStatus);
             UResourceBundle *cm = ures_getByKey(rb, CURRENCY_MAP, rb, &localStatus);
 
             // Using the id derived from the local, get the currency data
@@ -2133,7 +2133,7 @@ U_CAPI UEnumeration *U_EXPORT2 ucurr_getKeywordValuesForLocale(const char *key, 
     memcpy(en, &defaultKeywordValues, sizeof(UEnumeration));
     en->context = values;
     
-    UResourceBundle *bundle = ures_openDirect(NULL, "supplementalData", status);
+    UResourceBundle *bundle = ures_openDirect(U_ICUDATA_CURR, "supplementalData", status);
     ures_getByKey(bundle, "CurrencyMap", bundle, status);
     UResourceBundle bundlekey, regbndl, curbndl, to;
     ures_initStackObject(&bundlekey);
@@ -2150,7 +2150,7 @@ U_CAPI UEnumeration *U_EXPORT2 ucurr_getKeywordValuesForLocale(const char *key, 
         UBool isPrefRegion = uprv_strcmp(region, prefRegion) == 0 ? TRUE : FALSE;
         if (!isPrefRegion && commonlyUsed) {
             // With commonlyUsed=true, we do not put
-            // currencies for other regionsin the
+            // currencies for other regions in the
             // result list.
             continue;
         }
