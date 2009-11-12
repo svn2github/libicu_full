@@ -1124,11 +1124,16 @@ void CollationAPITest::TestSortKey()
     doAssert(key2.compareTo(key3) == Collator::EQUAL,
         "Result should be \"abcda\" ==  \"abcda\"");
 
+    // Clone the key2 sortkey for later.
+    int32_t keylength = 0;
+    const uint8_t *key2primary_alias = key2.getByteArray(keylength);
+    LocalArray<uint8_t> key2primary(new uint8_t[keylength]);
+    memcpy(key2primary.getAlias(), key2primary_alias, keylength);
+
     col->getSortKey(test1, sortkey1, 64);
     col->getSortKey(test2, sortkey2, 64);
     col->getSortKey(test3, sortkey3, 64);
 
-    int32_t keylength = 0;
     const uint8_t *tempkey = key1.getByteArray(keylength);
     doAssert(memcmp(tempkey, sortkey1, keylength) == 0,
         "Test1 string should have the same collation key and sort key");
@@ -1181,6 +1186,10 @@ void CollationAPITest::TestSortKey()
         "Result should be \"Abcda\" == \"abcda\"");
     doAssert(key2.compareTo(key3) == Collator::EQUAL,
         "Result should be \"abcda\" ==  \"abcda\"");
+
+    tempkey = key2.getByteArray(keylength);
+    doAssert(memcmp(tempkey, key2primary.getAlias(), keylength - 1) == 0,
+             "Binary format for 'abcda' sortkey different for secondary strength!");
 
     col->getSortKey(test1, sortkey1, 64);
     col->getSortKey(test2, sortkey2, 64);
