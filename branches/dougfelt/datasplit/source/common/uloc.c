@@ -1278,34 +1278,47 @@ _getCountry(const char *localeID,
             char *country, int32_t countryCapacity,
             const char **pEnd)
 {
-    int32_t i=0;
+    int32_t idLen=0;
     char cnty[ULOC_COUNTRY_CAPACITY]={ 0, 0, 0, 0 };
     int32_t offset;
 
     /* copy the country as far as possible and count its length */
-    while(!_isTerminator(*localeID) && !_isIDSeparator(*localeID)) {
-        if(i<countryCapacity) {
-            country[i]=(char)uprv_toupper(*localeID);
+    while(!_isTerminator(localeID[idLen]) && !_isIDSeparator(localeID[idLen])) {
+        if(idLen<(ULOC_COUNTRY_CAPACITY-1)) {   /*CWB*/
+            cnty[idLen]=(char)uprv_toupper(localeID[idLen]);
         }
-        if(i<(ULOC_COUNTRY_CAPACITY-1)) {   /*CWB*/
-            cnty[i]=(char)uprv_toupper(*localeID);
-        }
-        i++;
-        localeID++;
+        idLen++;
     }
 
-    /* convert 3 character code to 2 character code if possible *CWB*/
-    if(i==3) {
-        offset=_findIndex(COUNTRIES_3, cnty);
-        if(offset>=0) {
-            i=_copyCount(country, countryCapacity, COUNTRIES[offset]);
+    /* the country should be either length 2 or 3 */
+    if (idLen == 2 || idLen == 3) {
+        UBool gotCountry = FALSE;
+        /* convert 3 character code to 2 character code if possible *CWB*/
+        if(idLen==3) {
+            offset=_findIndex(COUNTRIES_3, cnty);
+            if(offset>=0) {
+                idLen=_copyCount(country, countryCapacity, COUNTRIES[offset]);
+                gotCountry = TRUE;
+            }
         }
+        if (!gotCountry) {
+            int32_t i = 0;
+            for (i = 0; i < idLen; i++) {
+                if (i < countryCapacity) {
+                    country[i]=(char)uprv_toupper(localeID[i]);
+                }
+            }
+        }
+        localeID+=idLen;
+    } else {
+        idLen = 0;
     }
 
     if(pEnd!=NULL) {
         *pEnd=localeID;
     }
-    return i;
+
+    return idLen;
 }
 
 /**
@@ -1602,7 +1615,7 @@ _canonicalize(const char* localeID,
 
     /* if we are doing a full canonicalization, then put results in
        localeBuffer, if necessary; otherwise send them to result. */
-    if (OPTION_SET(options, _ULOC_CANONICALIZE) &&
+    if (/*OPTION_SET(options, _ULOC_CANONICALIZE) &&*/
         (result == NULL || resultCapacity <  sizeof(localeBuffer))) {
         name = localeBuffer;
         nameCapacity = sizeof(localeBuffer);
@@ -1617,7 +1630,7 @@ _canonicalize(const char* localeID,
     if(len == I_DEFAULT_LENGTH && uprv_strncmp(origLocaleID, i_default, len) == 0) {
         const char *d = uloc_getDefault();
         
-        len = uprv_strlen(d);
+        len = (int32_t)uprv_strlen(d);
 
         if (name != NULL) {
             uprv_strncpy(name, d, len);
@@ -1647,13 +1660,23 @@ _canonicalize(const char* localeID,
         }
 
         if (_isIDSeparator(*localeID)) {
-            len+=_getCountry(localeID+1, name+len, nameCapacity-len, &localeID);
+            const char *cntryID;
+            int32_t cntrySize = _getCountry(localeID+1, name+len, nameCapacity-len, &cntryID);
+            if (cntrySize > 0) {
+                /* Found optional country */
+                localeID = cntryID;
+                len+=cntrySize;
+            }
             if(_isIDSeparator(*localeID)) {
-                ++fieldCount;
-                if(len<nameCapacity) {
-                    name[len]='_';
+                /* If there is something else, then we add the _  if we found country before.*/
+                if (cntrySize > 0) {
+                    ++fieldCount;
+                    if(len<nameCapacity) {
+                        name[len]='_';
+                    }
+                    ++len;
                 }
-                ++len;
+
                 variantSize = _getVariant(localeID+1, *localeID, name+len, nameCapacity-len);
                 if (variantSize > 0) {
                     variant = name+len;
@@ -1935,7 +1958,12 @@ uloc_getVariant(const char* localeID,
         }
         /* Skip the Country */
         if (_isIDSeparator(*localeID)) {
-            _getCountry(localeID+1, NULL, 0, &localeID);
+            const char *cntryID;
+            _getCountry(localeID+1, NULL, 0, &cntryID);
+            if (cntryID != localeID) {
+                /* Found optional country */
+                localeID = cntryID;
+            }
             if(_isIDSeparator(*localeID)) {
                 i=_getVariant(localeID+1, *localeID, variant, variantCapacity);
             }
@@ -3408,7 +3436,7 @@ createTagStringWithAlternates(
              */
             appendTag(
                 unknownLanguage,
-                uprv_strlen(unknownLanguage),
+                (int32_t)uprv_strlen(unknownLanguage),
                 tagBuffer,
                 &tagLength);
         }
@@ -3436,7 +3464,7 @@ createTagStringWithAlternates(
                  */
                 appendTag(
                     unknownLanguage,
-                    uprv_strlen(unknownLanguage),
+                    (int32_t)uprv_strlen(unknownLanguage),
                     tagBuffer,
                     &tagLength);
             }
@@ -3709,7 +3737,7 @@ parseTagString(
         uprv_strcpy(
             lang,
             unknownLanguage);
-        *langLength = uprv_strlen(lang);
+        *langLength = (int32_t)uprv_strlen(lang);
     }
     else if (_isIDSeparator(*position)) {
         ++position;
@@ -4029,6 +4057,25 @@ error:
     return -1;
 }
 
+#define CHECK_TRAILING_VARIANT_SIZE(trailing, trailingLength) \
+    {   int32_t count = 0; \
+        int32_t i; \
+        for (i = 0; i < trailingLength; i++) { \
+            if (trailing[i] == '-' || trailing[i] == '_') { \
+                count = 0; \
+                if (count > 8) { \
+                    goto error; \
+                } \
+            } else if (trailing[i] == '@') { \
+                break; \
+            } else if (count > 8) { \
+                goto error; \
+            } else { \
+                count++; \
+            } \
+        } \
+    }
+
 static int32_t
 _uloc_addLikelySubtags(const char*    localeID,
          char* maximizedLocaleID,
@@ -4075,7 +4122,9 @@ _uloc_addLikelySubtags(const char*    localeID,
 
     /* Find the length of the trailing portion. */
     trailing = &localeID[trailingIndex];
-    trailingLength = uprv_strlen(trailing);
+    trailingLength = (int32_t)uprv_strlen(trailing);
+
+    CHECK_TRAILING_VARIANT_SIZE(trailing, trailingLength);
 
     resultLength =
         createLikelySubtagsString(
@@ -4092,8 +4141,7 @@ _uloc_addLikelySubtags(const char*    localeID,
             err);
 
     if (resultLength == 0) {
-        const int32_t localIDLength =
-            uprv_strlen(localeID);
+        const int32_t localIDLength = (int32_t)uprv_strlen(localeID);
 
         /*
          * If we get here, we need to return localeID.
@@ -4179,7 +4227,9 @@ _uloc_minimizeSubtags(const char*    localeID,
 
     /* Find the spot where the variants begin, if any. */
     trailing = &localeID[trailingIndex];
-    trailingLength = uprv_strlen(trailing);
+    trailingLength = (int32_t)uprv_strlen(trailing);
+
+    CHECK_TRAILING_VARIANT_SIZE(trailing, trailingLength);
 
     createTagString(
         lang,
@@ -4348,7 +4398,7 @@ _uloc_minimizeSubtags(const char*    localeID,
         /**
          * If we got here, return the locale ID parameter.
          **/
-        const int32_t localeIDLength = uprv_strlen(localeID);
+        const int32_t localeIDLength = (int32_t)uprv_strlen(localeID);
 
         uprv_memcpy(
             minimizedLocaleID,
