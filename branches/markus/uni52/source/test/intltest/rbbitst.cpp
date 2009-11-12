@@ -3243,8 +3243,8 @@ RBBILineMonkey::RBBILineMonkey()
     fHY    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=HY}]"), status);
     fH2    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=H2}]"), status);
     fH3    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=H3}]"), status);
-    fCL    = new UnicodeSet(UNICODE_STRING_SIMPLE("[[\\p{Line_break=CL}]-[\\u0029\\u005d]]"), status); // TODO: fix when props are updated.
-    fCP    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\u0029\\u005d]"), status);
+    fCL    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=CL}]"), status);
+    fCP    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=CP}]"), status);
     fEX    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=EX}]"), status);
     fIN    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=IN}]"), status);
     fJL    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=JL}]"), status);
@@ -3320,7 +3320,7 @@ RBBILineMonkey::RBBILineMonkey()
             "((\\p{Line_Break=OP}|\\p{Line_Break=HY})\\p{Line_Break=CM}*)?"
             "\\p{Line_Break=NU}\\p{Line_Break=CM}*"
             "((\\p{Line_Break=NU}|\\p{Line_Break=IS}|\\p{Line_Break=SY})\\p{Line_Break=CM}*)*"
-            "((\\p{Line_Break=CL}|[\\u0029\\u005d])\\p{Line_Break=CM}*)?"   // TODO: p{Line_Break=CP}
+            "((\\p{Line_Break=CL}|\\p{Line_Break=CP})\\p{Line_Break=CM}*)?"
             "((\\p{Line_Break=PR}|\\p{Line_Break=PO})\\p{Line_Break=CM}*)?";
 
     fNumberMatcher = new RegexMatcher(

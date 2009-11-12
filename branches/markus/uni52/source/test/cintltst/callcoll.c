@@ -206,7 +206,7 @@ void addAllCollTest(TestNode** root)
     addTest(root, &TestInvalidRules, "tscoll/callcoll/TestInvalidRules");
     addTest(root, &TestJB1401, "tscoll/callcoll/TestJB1401");
     addTest(root, &TestJitterbug1098, "tscoll/callcoll/TestJitterbug1098");
-    /* TODO: Re-enable! addTest(root, &TestFCDCrash, "tscoll/callcoll/TestFCDCrash"); */
+    addTest(root, &TestFCDCrash, "tscoll/callcoll/TestFCDCrash");
     addTest(root, &TestJ5298, "tscoll/callcoll/TestJ5298");
 }
 

@@ -5468,7 +5468,7 @@ void addMiscCollTest(TestNode** root)
     TEST(TestIncrementalNormalize);
     TEST(TestComposeDecompose);
     TEST(TestCompressOverlap);
-    /* TODO: Re-enable! TEST(TestContraction); */
+    TEST(TestContraction);
     TEST(TestExpansion);
     /*TEST(PrintMarkDavis);*/ /* this test doesn't test - just prints sortkeys */
     /*TEST(TestGetCaseBit);*/ /*this one requires internal things to be exported */
@@ -5487,7 +5487,7 @@ void addMiscCollTest(TestNode** root)
     TEST(TestImplicitGeneration);
     TEST(TestSeparateTrees);
     TEST(TestBeforePinyin);
-    /* TODO: Re-enable! TEST(TestBeforeTightening); */
+    TEST(TestBeforeTightening);
     /*TEST(TestMoreBefore);*/
     TEST(TestTailorNULL);
     TEST(TestUpperFirstQuaternary);

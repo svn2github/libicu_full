@@ -92,7 +92,7 @@ static const struct {
     /*
      * column and mask values for binary properties from u_getUnicodeProperties().
      * Must be in order of corresponding UProperty,
-     * and there must be exacly one entry per binary UProperty.
+     * and there must be exactly one entry per binary UProperty.
      *
      * Properties with mask 0 are handled in code.
      * For them, column is the UPropertySource value.
