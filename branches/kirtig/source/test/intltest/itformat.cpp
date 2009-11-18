@@ -50,6 +50,7 @@
 #include "tzfmttst.h"       // TimeZoneFormatTest
 #include "plurults.h"       // PluralRulesTest
 #include "plurfmts.h"       // PluralFormatTest
+#include "selfmts.h"     // SelectFormatTest
 #include "dtifmtts.h"       // DateIntervalFormatTest
 #include "tufmtts.h"        // TimeUnitTest
 
@@ -123,6 +124,7 @@ void IntlTestFormat::runIndexedTest( int32_t index, UBool exec, const char* &nam
         TESTCLASS(36,PluralFormatTest);
         TESTCLASS(37,DateIntervalFormatTest);
         TESTCLASS(38,TimeUnitTest);
+        TESTCLASS(39,SelectFormatTest);
 
         default: name = ""; break; //needed to end loop
     }

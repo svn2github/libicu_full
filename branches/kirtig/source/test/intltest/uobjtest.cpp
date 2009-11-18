@@ -192,6 +192,7 @@ UObject *UObjectTest::testClass(UObject *obj,
 #include "unicode/parsepos.h"
 #include "unicode/plurrule.h"
 #include "unicode/plurfmt.h"
+#include "unicode/selfmt.h"
 #include "unicode/rbbi.h"
 #include "unicode/rbnf.h"
 #include "unicode/regex.h"

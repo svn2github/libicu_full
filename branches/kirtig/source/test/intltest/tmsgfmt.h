@@ -14,6 +14,7 @@
 
 #include "unicode/unistr.h"
 #include "unicode/fmtable.h"
+#include "unicode/msgfmt.h"
 #include "intltest.h"
 
 /**
@@ -60,6 +61,24 @@ public:
      * tests MesageFormat functionality with a PluralFormat.
      **/
     void testMsgFormatPlural(/* char* par */);
+
+    /** 
+     * tests MessageFormat functionality with a SelectFormat.
+     **/
+    void testMsgFormatSelect(/* char* par */);
+
+    /** 
+     * Internal method to format a MessageFormat object with passed args 
+     **/
+    void internalFormat(MessageFormat* msgFmt ,
+        Formattable* args , int32_t numOfArgs ,
+        UnicodeString expected ,char* errMsg);
+
+    /** 
+     * Internal method to create a MessageFormat object with passed args 
+     **/
+    MessageFormat* internalCreate(
+        UnicodeString pattern ,Locale locale , UErrorCode& err, char* errMsg);
 
     /**
      * Verify that MessageFormat accomodates more than 10 arguments
