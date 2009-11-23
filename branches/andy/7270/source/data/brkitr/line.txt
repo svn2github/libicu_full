@@ -217,6 +217,7 @@ $CM+          [$SP $ZW];
 #
 $LB8Breaks    = [$LB4Breaks $ZW];
 $LB8NonBreaks = [[$LB4NonBreaks] - [$ZW]];
+$ZW $SP+ / [$LB4NonBreaks - $SP];
 
 
 # LB 9     Combining marks.      X   $CM needs to behave like X, where X is not $SP, $BK $CR $LF $NL 
@@ -453,6 +454,7 @@ $LF $CR;
 [$SP $ZW] $CM+ $CAN_CM;
 
 # LB 8 Break after zero width space
+[$LB4NonBreaks-$SP] / $SP+ $ZW;
 
 
 # LB 9,10  Combining marks.
@@ -595,6 +597,9 @@ $CM* ($ALPlus | $NU) $CM* $CP;
 
 !!safe_reverse;
 
+# LB 8
+$SP+ $ZW;
+
 # LB 9
 $CM+ [^$CM $BK $CR $LF $NL $ZW $SP];
 $CM+ $SP / .;
@@ -631,6 +636,6 @@ $dictionary $dictionary;
 #  turn off rule chaining.  We don't want to move more
 #  than necessary.
 #
-[$CM $OP $QU $CL $CP $B2 $PR $HY $SP $dictionary]+ [^$CM $OP $QU $CL $CP $B2 $PR $HY $dictionary];
+[$CM $OP $QU $CL $CP $B2 $PR $HY $SP $ZW $dictionary]+ [^$CM $OP $QU $CL $CP $B2 $PR $HY $ZW $dictionary];
 $dictionary $dictionary;
 
