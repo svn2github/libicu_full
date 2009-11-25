@@ -42,6 +42,10 @@
      **/
     static void TestMsgFormatChoice(void);
     /**
+     * Test u_formatMessage() with Select option
+     **/
+    static void TestMsgFormatSelect(void);
+    /**
      * Test u_parseMessage() with various test patterns()
      **/
     static void TestParseMessage(void);
