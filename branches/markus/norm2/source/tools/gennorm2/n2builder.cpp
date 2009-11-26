@@ -29,6 +29,7 @@
 #include "unicode/udata.h"
 #include "unicode/uniset.h"
 #include "unicode/unistr.h"
+#include "unicode/ustring.h"
 #include "normalizer2impl.h"
 #include "toolutil.h"
 #include "unewdata.h"
@@ -77,18 +78,26 @@ static UDataInfo dataInfo={
 U_NAMESPACE_BEGIN
 
 struct Norm {
+    UnicodeString *mapping;
+    int32_t mappingPhase;
+    UBool mappingIsRoundTrip;
     uint8_t cc;
 };
 
-Normalizer2DataBuilder::Normalizer2DataBuilder(UErrorCode &errorCode) {
+Normalizer2DataBuilder::Normalizer2DataBuilder(UErrorCode &errorCode) :
+        phase(0), overrideHandling(OVERRIDE_PREVIOUS) {
     memset(unicodeVersion, 0, sizeof(unicodeVersion));
     normTrie=utrie2_open(0, 0, &errorCode);
-    normMem=utm_open("gennorm2 normalization structs", 20000, 20000, sizeof(Norm));
+    normMem=utm_open("gennorm2 normalization structs", 10000, 200000, sizeof(Norm));
     norms=allocNorm();  // unused Norm struct at index 0
 }
 
 Normalizer2DataBuilder::~Normalizer2DataBuilder() {
     utrie2_close(normTrie);
+    int32_t count=utm_countItems(normMem);
+    for(int32_t i=0; i<count; ++i) {
+        delete norms[i].mapping;
+    }
     utm_close(normMem);
 }
 
@@ -128,6 +137,54 @@ Norm *Normalizer2DataBuilder::createNorm(UChar32 c) {
         utrie2_set32(normTrie, c, (uint32_t)(p-norms), errorCode);
         return p;
     }
+}
+
+Norm *Normalizer2DataBuilder::createNormForMapping(UChar32 c) {
+    Norm *p=createNorm(c);
+    if(p->mapping!=NULL) {
+        if( overrideHandling==OVERRIDE_NONE ||
+            (overrideHandling==OVERRIDE_PREVIOUS && p->mappingPhase==phase)
+        ) {
+            fprintf(stderr,
+                    "error in gennorm2 phase %d: "
+                    "not permitted to override mapping for U+%04lx from phase %d\n",
+                    (int)phase, (long)c, (int)p->mappingPhase);
+            exit(U_INVALID_FORMAT_ERROR);
+        }
+        delete p->mapping;
+        p->mapping=NULL;
+    }
+    p->mappingPhase=phase;
+    return p;
+}
+
+void Normalizer2DataBuilder::setOverrideHandling(OverrideHandling oh) {
+    overrideHandling=oh;
+    ++phase;
+}
+
+void Normalizer2DataBuilder::setCC(UChar32 c, uint8_t cc) {
+    createNorm(c)->cc=cc;
+}
+
+void Normalizer2DataBuilder::setOneWayMapping(UChar32 c, const UnicodeString &m) {
+    Norm *p=createNormForMapping(c);
+    p->mapping=new UnicodeString(m);
+    p->mappingIsRoundTrip=FALSE;
+}
+
+void Normalizer2DataBuilder::setRoundTripMapping(UChar32 c, const UnicodeString &m) {
+    int32_t numCP=u_countChar32(m.getBuffer(), m.length());
+    if(numCP!=2) {
+        fprintf(stderr,
+                "error in gennorm2 phase %d: "
+                "illegal round-trip mapping from U+%04lx to %d!=2 code points\n",
+                (int)phase, (long)c, (int)numCP);
+        exit(U_INVALID_FORMAT_ERROR);
+    }
+    Norm *p=createNormForMapping(c);
+    p->mapping=new UnicodeString(m);
+    p->mappingIsRoundTrip=TRUE;
 }
 
 U_NAMESPACE_END
