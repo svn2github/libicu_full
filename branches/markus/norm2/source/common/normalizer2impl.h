@@ -28,7 +28,7 @@
 
 U_NAMESPACE_BEGIN
 
-class NormalizerData : public UMemory {
+class Normalizer2Data : public UMemory {
 public:
     // TODO: load() & unload()
     uint16_t getNorm16(UChar32 c) const { return UTRIE2_GET16(&trie, c); }
@@ -121,7 +121,7 @@ private:
 
 class ReorderingBuffer : public UMemory {
 public:
-    ReorderingBuffer(const NormalizerData &normData, UnicodeString &dest) :
+    ReorderingBuffer(const Normalizer2Data &normData, UnicodeString &dest) :
         data(normData), str(dest),
         start(NULL), reorderStart(NULL), limit(NULL),
         remainingCapacity(0), lastCC(0) {}
@@ -184,7 +184,7 @@ private:
     }
     UBool resize(int32_t appendLength);
 
-    const NormalizerData &data;
+    const Normalizer2Data &data;
     UnicodeString &str;
     UChar *start, *reorderStart, *limit;
     int32_t remainingCapacity;
@@ -198,7 +198,7 @@ private:
     UChar *codePointStart, *codePointLimit;
 };
 
-class NormalizerImpl : public UObject {
+class Normalizer2Impl : public UObject {
     void decompose(const UChar *src, int32_t srcLength,
                    UnicodeString &dest,
                    UNormalizationAppendMode appendMode,
@@ -218,7 +218,7 @@ private:
     const UChar *findPreviousCompStarter(const UChar *start, const UChar *p);
     const UChar *findNextCompStarter(const UChar *p, const UChar *limit);
 
-    NormalizerData data;
+    Normalizer2Data data;
 };
 
 U_NAMESPACE_END

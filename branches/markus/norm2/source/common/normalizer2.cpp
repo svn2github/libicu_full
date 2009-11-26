@@ -262,7 +262,7 @@ void ReorderingBuffer::insert(UChar32 c, uint8_t cc) {
     }
 }
 
-UBool NormalizerImpl::decompose(const UChar *src, int32_t srcLength, ReorderingBuffer &buffer) {
+UBool Normalizer2Impl::decompose(const UChar *src, int32_t srcLength, ReorderingBuffer &buffer) {
     const UChar *limit;
     if(srcLength>=0) {
         limit=src+srcLength;  // string with length
@@ -317,7 +317,7 @@ UBool NormalizerImpl::decompose(const UChar *src, int32_t srcLength, ReorderingB
     return TRUE;
 }
 
-UBool NormalizerImpl::decompose(UChar32 c, uint16_t norm16, ReorderingBuffer &buffer) {
+UBool Normalizer2Impl::decompose(UChar32 c, uint16_t norm16, ReorderingBuffer &buffer) {
     // Only loops for 1:1 algorithmic mappings.
     for(;;) {
         // get the decomposition and the lead and trail cc's
@@ -348,10 +348,10 @@ UBool NormalizerImpl::decompose(UChar32 c, uint16_t norm16, ReorderingBuffer &bu
         } else {
             // c decomposes, get everything from the variable-length extra data
             const uint16_t *mapping=data.getMapping(norm16);
-            int32_t length=*mapping&NormalizerData::MAPPING_LENGTH_MASK;
+            int32_t length=*mapping&Normalizer2Data::MAPPING_LENGTH_MASK;
             uint8_t leadCC, trailCC;
             trailCC=(uint8_t)(*mapping>>8);
-            if(*mapping++&NormalizerData::MAPPING_HAS_CCC_LCCC_WORD) {
+            if(*mapping++&Normalizer2Data::MAPPING_HAS_CCC_LCCC_WORD) {
                 leadCC=(uint8_t)(*mapping++>>8);
             } else {
                 leadCC=0;
@@ -362,7 +362,7 @@ UBool NormalizerImpl::decompose(UChar32 c, uint16_t norm16, ReorderingBuffer &bu
     }
 }
 
-UBool NormalizerImpl::isCompStarter(UChar32 c, uint16_t norm16) {
+UBool Normalizer2Impl::isCompStarter(UChar32 c, uint16_t norm16) {
     // Partial copy of the decompose(c) function.
     for(;;) {
         if(data.isCompYesAndZeroCC(norm16)) {
@@ -380,8 +380,8 @@ UBool NormalizerImpl::isCompStarter(UChar32 c, uint16_t norm16) {
         } else {
             // c decomposes, get everything from the variable-length extra data
             const uint16_t *mapping=data.getMapping(norm16);
-            int32_t length=*mapping&NormalizerData::MAPPING_LENGTH_MASK;
-            if((*mapping++&NormalizerData::MAPPING_HAS_CCC_LCCC_WORD) && (*mapping++&0xff00)) {
+            int32_t length=*mapping&Normalizer2Data::MAPPING_LENGTH_MASK;
+            if((*mapping++&Normalizer2Data::MAPPING_HAS_CCC_LCCC_WORD) && (*mapping++&0xff00)) {
                 return FALSE;  // non-zero leadCC
             }
             if(length==0) {
@@ -395,7 +395,7 @@ UBool NormalizerImpl::isCompStarter(UChar32 c, uint16_t norm16) {
     }
 }
 
-const UChar *NormalizerImpl::findPreviousCompStarter(const UChar *start, const UChar *p) {
+const UChar *Normalizer2Impl::findPreviousCompStarter(const UChar *start, const UChar *p) {
     BackwardUTrie2StringIterator iter(&data.getTrie(), start, p);
     uint16_t norm16;
     do {
@@ -404,7 +404,7 @@ const UChar *NormalizerImpl::findPreviousCompStarter(const UChar *start, const U
     return iter.codePointStart;
 }
 
-const UChar *NormalizerImpl::findNextCompStarter(const UChar *p, const UChar *limit) {
+const UChar *Normalizer2Impl::findNextCompStarter(const UChar *p, const UChar *limit) {
     ForwardUTrie2StringIterator iter(&data.getTrie(), p, limit);
     uint16_t norm16;
     do {
@@ -418,7 +418,7 @@ U_NAMESPACE_END
 #endif  // !UCONFIG_NO_NORMALIZATION
 
 // Normalizer2 unmodifiable? Yes, please...
-//   Singletons?? Prefer to have NormalizerImpl singletons but separate Normalizer2 instances.
+//   Singletons?? Prefer to have Normalizer2Impl singletons but separate Normalizer2 instances.
 // Builder code needs to impose limitations:
 // _NORM_MIN_WITH_LEAD_CC>=0x300
 // Hangul & Jamo properties, except if excluded

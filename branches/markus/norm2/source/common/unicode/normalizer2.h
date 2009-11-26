@@ -33,7 +33,7 @@ typedef enum UNormalizationAppendMode {
 
 U_NAMESPACE_BEGIN
 
-class NormalizerImpl;
+class Normalizer2Impl;
 
 class Normalizer2 : public UObject {
 public:
@@ -47,11 +47,19 @@ public:
     normalizeAndAppend(const UnicodeString &src,
                        UnicodeString &dest,
                        UNormalizationAppendMode appendMode,
-                       UErrorCode &errorCode) = 0;
+                       UErrorCode &errorCode) const = 0;
+
+    UnicodeString
+    normalize(const UnicodeString &src, UErrorCode &errorCode) const {
+        UnicodeString result;
+        normalizeAndAppend(src, result, UNORM_SIMPLE_APPEND, errorCode);
+        return result;
+    }
+
 protected:
-    Normalizer2(const NormalizerImpl &ni) : impl(ni) {}
+    Normalizer2(const Normalizer2Impl &ni) : impl(ni) {}
     // TODO: no copy, ==, etc.
-    const NormalizerImpl &impl;
+    const Normalizer2Impl &impl;
 };
 
 U_NAMESPACE_END
