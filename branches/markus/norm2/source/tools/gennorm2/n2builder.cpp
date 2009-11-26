@@ -78,9 +78,11 @@ static UDataInfo dataInfo={
 U_NAMESPACE_BEGIN
 
 struct Norm {
+    enum MappingType { NONE, REMOVED, ROUND_TRIP, ONE_WAY };
+
     UnicodeString *mapping;
     int32_t mappingPhase;
-    UBool mappingIsRoundTrip;
+    MappingType mappingType;
     uint8_t cc;
 };
 
@@ -139,22 +141,23 @@ Norm *Normalizer2DataBuilder::createNorm(UChar32 c) {
     }
 }
 
-Norm *Normalizer2DataBuilder::createNormForMapping(UChar32 c) {
-    Norm *p=createNorm(c);
-    if(p->mapping!=NULL) {
-        if( overrideHandling==OVERRIDE_NONE ||
-            (overrideHandling==OVERRIDE_PREVIOUS && p->mappingPhase==phase)
-        ) {
-            fprintf(stderr,
-                    "error in gennorm2 phase %d: "
-                    "not permitted to override mapping for U+%04lx from phase %d\n",
-                    (int)phase, (long)c, (int)p->mappingPhase);
-            exit(U_INVALID_FORMAT_ERROR);
+Norm *Normalizer2DataBuilder::checkNormForMapping(Norm *p, UChar32 c) {
+    if(p!=NULL) {
+        if(p->mappingType!=Norm::NONE) {
+            if( overrideHandling==OVERRIDE_NONE ||
+                (overrideHandling==OVERRIDE_PREVIOUS && p->mappingPhase==phase)
+            ) {
+                fprintf(stderr,
+                        "error in gennorm2 phase %d: "
+                        "not permitted to override mapping for U+%04lx from phase %d\n",
+                        (int)phase, (long)c, (int)p->mappingPhase);
+                exit(U_INVALID_FORMAT_ERROR);
+            }
+            delete p->mapping;
+            p->mapping=NULL;
         }
-        delete p->mapping;
-        p->mapping=NULL;
+        p->mappingPhase=phase;
     }
-    p->mappingPhase=phase;
     return p;
 }
 
@@ -168,9 +171,9 @@ void Normalizer2DataBuilder::setCC(UChar32 c, uint8_t cc) {
 }
 
 void Normalizer2DataBuilder::setOneWayMapping(UChar32 c, const UnicodeString &m) {
-    Norm *p=createNormForMapping(c);
+    Norm *p=checkNormForMapping(createNorm(c), c);
     p->mapping=new UnicodeString(m);
-    p->mappingIsRoundTrip=FALSE;
+    p->mappingType=Norm::ONE_WAY;
 }
 
 void Normalizer2DataBuilder::setRoundTripMapping(UChar32 c, const UnicodeString &m) {
@@ -182,9 +185,16 @@ void Normalizer2DataBuilder::setRoundTripMapping(UChar32 c, const UnicodeString 
                 (int)phase, (long)c, (int)numCP);
         exit(U_INVALID_FORMAT_ERROR);
     }
-    Norm *p=createNormForMapping(c);
+    Norm *p=checkNormForMapping(createNorm(c), c);
     p->mapping=new UnicodeString(m);
-    p->mappingIsRoundTrip=TRUE;
+    p->mappingType=Norm::ROUND_TRIP;
+}
+
+void Normalizer2DataBuilder::removeMapping(UChar32 c) {
+    Norm *p=checkNormForMapping(getNorm(c), c);
+    if(p!=NULL) {
+        p->mappingType=Norm::REMOVED;
+    }
 }
 
 U_NAMESPACE_END

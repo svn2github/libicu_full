@@ -28,8 +28,11 @@
 #include "unicode/uchar.h"
 #include "unicode/unistr.h"
 #include "n2builder.h"
+#include "normalizer2impl.h"
 #include "uoptions.h"
 #include "uparse.h"
+
+#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 
 // TODO: make public in uparse.h
 // #define IS_INV_WHITESPACE(c) ((c)==' ' || (c)=='\t' || (c)=='\r' || (c)=='\n')
@@ -185,17 +188,20 @@ void parseFile(FILE *f, Normalizer2DataBuilder &builder) {
         if(line[0]=='*') {
             continue;  // reserved syntax
         }
-        char *delimiter=strchr(line, ':');
-        if(delimiter) {
-            *delimiter=0;
-            u_parseCodePointRange(line, &startCP, &endCP, errorCode);
-            errorCode.assertSuccess();
-
+        const char *delimiter;
+        int32_t rangeLength=
+            u_parseCodePointRangeAnyTerminator(line, &startCP, &endCP, &delimiter, errorCode);
+        if(errorCode.isFailure()) {
+            fprintf(stderr, "gennorm2 error: parsing code point range from %s\n", line);
+            exit(errorCode.reset());
+        }
+        delimiter=u_skipWhitespace(delimiter);
+        if(*delimiter==':') {
             const char *s=u_skipWhitespace(delimiter+1);
             char *end;
             unsigned long value=strtoul(s, &end, 10);
             if(end<=s || *u_skipWhitespace(end)!=0 || value>=0xff) {
-                fprintf(stderr, "gennorm2 error: parsing ccc from %s\n", s);
+                fprintf(stderr, "gennorm2 error: parsing ccc from %s\n", line);
                 exit(U_PARSE_ERROR);
             }
             for(UChar32 c=(UChar32)startCP; c<=(UChar32)endCP; ++c) {
@@ -203,6 +209,41 @@ void parseFile(FILE *f, Normalizer2DataBuilder &builder) {
             }
             continue;
         }
+        if(*delimiter=='-') {
+            if(*u_skipWhitespace(delimiter+1)!=0) {
+                fprintf(stderr, "gennorm2 error: parsing remove-mapping %s\n", line);
+                exit(U_PARSE_ERROR);
+            }
+            for(UChar32 c=(UChar32)startCP; c<=(UChar32)endCP; ++c) {
+                builder.removeMapping(c);
+            }
+            continue;
+        }
+        if(*delimiter=='=' || *delimiter=='>') {
+            UChar uchars[Normalizer2Data::MAPPING_LENGTH_MASK];
+            int32_t length=u_parseString(delimiter+1, uchars, LENGTHOF(uchars), NULL, errorCode);
+            if(errorCode.isFailure()) {
+                fprintf(stderr, "gennorm2 error: parsing mapping string from %s\n", line);
+                exit(errorCode.reset());
+            }
+            UnicodeString mapping(FALSE, uchars, length);
+            if(*delimiter=='=') {
+                if(rangeLength!=1) {
+                    fprintf(stderr,
+                            "gennorm2 error: round-trip mapping for more than 1 code point on %s\n",
+                            line);
+                    exit(U_PARSE_ERROR);
+                }
+                builder.setRoundTripMapping((UChar32)startCP, mapping);
+            } else {
+                for(UChar32 c=(UChar32)startCP; c<=(UChar32)endCP; ++c) {
+                    builder.setOneWayMapping(c, mapping);
+                }
+            }
+            continue;
+        }
+        fprintf(stderr, "gennorm2 error: unrecognized data line %s\n", line);
+        exit(U_PARSE_ERROR);
     }
 }
 

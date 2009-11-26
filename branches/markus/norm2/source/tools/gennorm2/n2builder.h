@@ -58,6 +58,7 @@ public:
     void setCC(UChar32 c, uint8_t cc);
     void setOneWayMapping(UChar32 c, const UnicodeString &m);
     void setRoundTripMapping(UChar32 c, const UnicodeString &m);
+    void removeMapping(UChar32 c);
 
     void setUnicodeVersion(const char *v);
 
@@ -67,7 +68,7 @@ private:
     Norm *allocNorm();
     Norm *getNorm(UChar32 c);
     Norm *createNorm(UChar32 c);
-    Norm *createNormForMapping(UChar32 c);
+    Norm *checkNormForMapping(Norm *p, UChar32 c);
 
     UTrie2 *normTrie;
     UToolMemory *normMem;
