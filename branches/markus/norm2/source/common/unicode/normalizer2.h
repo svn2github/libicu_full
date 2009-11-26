@@ -19,7 +19,9 @@
 
 #include "unicode/utypes.h"
 
-#if !UCONFIG_NO_NORMALIZATION && defined(XP_CPLUSPLUS)
+// TODO: add to list of C++ header files
+
+#if !UCONFIG_NO_NORMALIZATION
 
 #include "unicode/unistr.h"
 #include "unicode/unorm.h"
@@ -64,5 +66,5 @@ protected:
 
 U_NAMESPACE_END
 
-#endif  // !UCONFIG_NO_NORMALIZATION && defined(XP_CPLUSPLUS)
+#endif  // !UCONFIG_NO_NORMALIZATION
 #endif  // __NORMALIZER2_H__

@@ -30,6 +30,8 @@
 #include "uoptions.h"
 #include "uparse.h"
 
+U_NAMESPACE_BEGIN
+
 UBool beVerbose=FALSE, haveCopyright=TRUE;
 
 IcuToolErrorCode::~IcuToolErrorCode() {
@@ -64,7 +66,7 @@ static UOption options[]={
     UOPTION_DEF("unicode", 'u', UOPT_REQUIRES_ARG)
 };
 
-extern int
+extern "C" int
 main(int argc, char* argv[]) {
     U_MAIN_INIT_ARGS(argc, argv);
 
@@ -122,7 +124,7 @@ main(int argc, char* argv[]) {
 
 #else
 
-    IcuToolErrorCode errorCode("gennorm/main()");
+    IcuToolErrorCode errorCode("gennorm2/main()");
     LocalPointer<Normalizer2DataBuilder> n2builder(new Normalizer2DataBuilder(errorCode));
     errorCode.assertSuccess();
 
@@ -143,6 +145,8 @@ main(int argc, char* argv[]) {
 #if !UCONFIG_NO_NORMALIZATION
 
 #endif // !UCONFIG_NO_NORMALIZATION
+
+U_NAMESPACE_END
 
 /*
  * Hey, Emacs, please set the following:

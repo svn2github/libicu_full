@@ -20,9 +20,12 @@
 #include "unicode/utypes.h"
 #include "unicode/errorcode.h"
 #include "unicode/unistr.h"
+#include "toolutil.h"
 #include "utrie2.h"
 
 #define DATA_TYPE "nrm"
+
+U_NAMESPACE_BEGIN
 
 extern UBool beVerbose, haveCopyright;
 
@@ -36,6 +39,8 @@ protected:
 private:
     const char *location;
 };
+
+struct Norm;
 
 class Normalizer2DataBuilder {
 public:
@@ -51,8 +56,17 @@ public:
 private:
     // TODO: no copy, assign, etc.
 
-    UTrie2 *trie;
+    Norm *allocNorm();
+    Norm *getNorm(UChar32 c);
+    Norm *createNorm(UChar32 c);
+
+    UTrie2 *normTrie;
+    UToolMemory *normMem;
+    Norm *norms;
+
     UVersionInfo unicodeVersion;
 };
+
+U_NAMESPACE_END
 
 #endif  // __N2BUILDER_H__

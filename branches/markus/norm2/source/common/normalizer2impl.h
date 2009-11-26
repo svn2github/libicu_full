@@ -19,7 +19,7 @@
 
 #include "unicode/utypes.h"
 
-#if !UCONFIG_NO_NORMALIZATION && defined(XP_CPLUSPLUS)
+#if !UCONFIG_NO_NORMALIZATION
 
 #include "unicode/normalizer2.h"
 #include "unicode/udata.h"
@@ -223,5 +223,5 @@ private:
 
 U_NAMESPACE_END
 
-#endif  // !UCONFIG_NO_NORMALIZATION && defined(XP_CPLUSPLUS)
+#endif  // !UCONFIG_NO_NORMALIZATION
 #endif  // __NORMALIZER2IMPL_H__
