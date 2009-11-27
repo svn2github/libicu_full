@@ -42,7 +42,7 @@ public:
     UBool isMaybeOrNonZeroCC(uint16_t norm16) { return norm16>=minMaybeYes; }
     // TODO: static UBool isInert(uint16_t norm16) { return norm16==0; }
     // TODO: static UBool isJamoL(uint16_t norm16) { return norm16==1; }
-    // TODO: static UBool isJamoVT(uint16_t norm16) { return norm16==MIN_YES_YES_WITH_CC; }
+    // TODO: static UBool isJamoVT(uint16_t norm16) { return norm16==JAMO_VT; }
     UBool isHangul(uint16_t norm16) const { return norm16==minYesNo; }
     UBool isCompYesAndZeroCC(uint16_t norm16) const { return norm16<minNoNo; }
     // TODO: UBool isCompYesOrMaybe(uint16_t norm16) const { return norm16<minNoNo || minMaybeYes<=norm16; }
@@ -50,7 +50,7 @@ public:
     // TODO: UBool isDecompYesAndZeroCC(uint16_t norm16) const {
     //     return norm16<minYesNo ||
     //            (minMaybeYes<=norm16 && (norm16<=MIN_NORMAL_MAYBE_YES ||
-    //                                     norm16==MIN_YES_YES_WITH_CC));
+    //                                     norm16==JAMO_VT));
     // }
     /**
      * A little faster and simpler than isDecompYesAndZeroCC() but does not include
@@ -58,7 +58,7 @@ public:
      * (Standard Unicode 5.2 normalization does not have such characters.)
      */
     UBool isMostDecompYesAndZeroCC(uint16_t norm16) const {
-        return norm16<minYesNo || norm16==MIN_NORMAL_MAYBE_YES || norm16==MIN_YES_YES_WITH_CC;
+        return norm16<minYesNo || norm16==MIN_NORMAL_MAYBE_YES || norm16==JAMO_VT;
     }
     UBool isNoNoAlgorithmic(uint16_t norm16) const { return norm16>=limitNoNo; }
 
@@ -87,7 +87,8 @@ public:
     const UTrie2 &getTrie() const { return trie; }
 
     enum {
-        MIN_YES_YES_WITH_CC=0xff00,
+        MIN_YES_YES_WITH_CC=0xff01,
+        JAMO_VT=0xff00,
         MIN_NORMAL_MAYBE_YES=0xfe00,
         MAX_DELTA=0x20
     };

@@ -95,7 +95,7 @@ main(int argc, char* argv[]) {
     if(!options[OUTPUT_FILENAME].doesOccur) {
         argc=-1;
     }
-    if( argc<0 ||
+    if( argc<2 ||
         options[HELP_H].doesOccur || options[HELP_QUESTION_MARK].doesOccur
     ) {
         /*
@@ -164,6 +164,8 @@ main(int argc, char* argv[]) {
         parseFile(f.getAlias(), *builder);
         filename.erase(pathLength);
     }
+
+    builder->writeBinaryFile(options[OUTPUT_FILENAME].value);
 
     return errorCode.get();
 

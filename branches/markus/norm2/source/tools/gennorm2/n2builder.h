@@ -42,6 +42,13 @@ private:
 
 struct Norm;
 
+U_CDECL_BEGIN
+
+static UBool U_CALLCONV
+addComposition(const void *context, UChar32 start, UChar32 end, uint32_t value);
+
+U_CDECL_END
+
 class Normalizer2DataBuilder {
 public:
     Normalizer2DataBuilder(UErrorCode &errorCode);
@@ -62,13 +69,21 @@ public:
 
     void setUnicodeVersion(const char *v);
 
+    void writeBinaryFile(const char *filename);
+
 private:
     // TODO: no copy, assign, etc.
+
+    friend static UBool U_CALLCONV
+        icu::addComposition(const void *context, UChar32 start, UChar32 end, uint32_t value);
 
     Norm *allocNorm();
     Norm *getNorm(UChar32 c);
     Norm *createNorm(UChar32 c);
     Norm *checkNormForMapping(Norm *p, UChar32 c);
+    UBool addComposition(UChar32 start, UChar32 end, uint32_t value);
+    void makeCompositions();
+    void setHangulData();
 
     UTrie2 *normTrie;
     UToolMemory *normMem;
