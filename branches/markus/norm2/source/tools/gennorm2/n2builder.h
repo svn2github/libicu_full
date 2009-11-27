@@ -42,13 +42,6 @@ private:
 
 struct Norm;
 
-U_CDECL_BEGIN
-
-static UBool U_CALLCONV
-addComposition(const void *context, UChar32 start, UChar32 end, uint32_t value);
-
-U_CDECL_END
-
 class Normalizer2DataBuilder {
 public:
     Normalizer2DataBuilder(UErrorCode &errorCode);
@@ -74,15 +67,18 @@ public:
 private:
     // TODO: no copy, assign, etc.
 
-    friend static UBool U_CALLCONV
-        icu::addComposition(const void *context, UChar32 start, UChar32 end, uint32_t value);
+    friend class CompositionBuilder;
+    friend class Decomposer;
+
+    uint8_t getCC(UChar32 c);
 
     Norm *allocNorm();
     Norm *getNorm(UChar32 c);
     Norm *createNorm(UChar32 c);
     Norm *checkNormForMapping(Norm *p, UChar32 c);
-    UBool addComposition(UChar32 start, UChar32 end, uint32_t value);
-    void makeCompositions();
+    void addComposition(UChar32 start, UChar32 end, uint32_t value);
+    UBool decompose(UChar32 start, UChar32 end, uint32_t value);
+    void reorder(Norm *p);
     void setHangulData();
 
     UTrie2 *normTrie;

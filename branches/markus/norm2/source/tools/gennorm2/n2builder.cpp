@@ -123,6 +123,25 @@ struct Norm {
     UBool combinesBack;
 };
 
+class Normalizer2DBEnumerator {
+public:
+    Normalizer2DBEnumerator(Normalizer2DataBuilder &b) : builder(b) {}
+    virtual ~Normalizer2DBEnumerator() {}
+    virtual UBool rangeHandler(UChar32 start, UChar32 end, uint32_t value) = 0;
+    Normalizer2DBEnumerator *ptr() { return this; }
+protected:
+    Normalizer2DataBuilder &builder;
+};
+
+U_CDECL_BEGIN
+
+static UBool U_CALLCONV
+enumRangeHandler(const void *context, UChar32 start, UChar32 end, uint32_t value) {
+    return ((Normalizer2DBEnumerator *)context)->rangeHandler(start, end, value);
+}
+
+U_CDECL_END
+
 Normalizer2DataBuilder::Normalizer2DataBuilder(UErrorCode &errorCode) :
         phase(0), overrideHandling(OVERRIDE_PREVIOUS) {
     memset(unicodeVersion, 0, sizeof(unicodeVersion));
@@ -133,8 +152,8 @@ Normalizer2DataBuilder::Normalizer2DataBuilder(UErrorCode &errorCode) :
 
 Normalizer2DataBuilder::~Normalizer2DataBuilder() {
     utrie2_close(normTrie);
-    int32_t count=utm_countItems(normMem);
-    for(int32_t i=0; i<count; ++i) {
+    int32_t normsLength=utm_countItems(normMem);
+    for(int32_t i=1; i<normsLength; ++i) {
         delete norms[i].mapping;
         delete norms[i].compositions;
     }
@@ -179,6 +198,11 @@ Norm *Normalizer2DataBuilder::createNorm(UChar32 c) {
     }
 }
 
+uint8_t Normalizer2DataBuilder::getCC(UChar32 c) {
+    uint32_t i=utrie2_get32(normTrie, c);
+    return i==0 ? 0 : norms[i].cc;
+}
+
 Norm *Normalizer2DataBuilder::checkNormForMapping(Norm *p, UChar32 c) {
     if(p!=NULL) {
         if(p->mappingType!=Norm::NONE) {
@@ -208,16 +232,33 @@ void Normalizer2DataBuilder::setCC(UChar32 c, uint8_t cc) {
     createNorm(c)->cc=cc;
 }
 
+static UBool isWellFormed(const UnicodeString &s) {
+    UErrorCode errorCode=U_ZERO_ERROR;
+    u_strToUTF8(NULL, 0, NULL, s.getBuffer(), s.length(), &errorCode);
+    return U_SUCCESS(errorCode) || errorCode==U_BUFFER_OVERFLOW_ERROR;
+}
+
 void Normalizer2DataBuilder::setOneWayMapping(UChar32 c, const UnicodeString &m) {
+    if(!isWellFormed(m)) {
+        fprintf(stderr,
+                "error in gennorm2 phase %d: "
+                "illegal one-way mapping from U+%04lX to malformed string\n",
+                (int)phase, (long)c);
+        exit(U_INVALID_FORMAT_ERROR);
+    }
     Norm *p=checkNormForMapping(createNorm(c), c);
     p->mapping=new UnicodeString(m);
     p->mappingType=Norm::ONE_WAY;
 }
 
-// TODO: check for well-formed UTF-16 mappings
-// TODO: check that a mapping does not contain the original character
-
 void Normalizer2DataBuilder::setRoundTripMapping(UChar32 c, const UnicodeString &m) {
+    if(!isWellFormed(m)) {
+        fprintf(stderr,
+                "error in gennorm2 phase %d: "
+                "illegal round-trip mapping from U+%04lX to malformed string\n",
+                (int)phase, (long)c);
+        exit(U_INVALID_FORMAT_ERROR);
+    }
     int32_t numCP=u_countChar32(m.getBuffer(), m.length());
     if(numCP!=2) {
         fprintf(stderr,
@@ -238,16 +279,16 @@ void Normalizer2DataBuilder::removeMapping(UChar32 c) {
     }
 }
 
-U_CDECL_BEGIN
+class CompositionBuilder : public Normalizer2DBEnumerator {
+public:
+    CompositionBuilder(Normalizer2DataBuilder &b) : Normalizer2DBEnumerator(b) {}
+    virtual UBool rangeHandler(UChar32 start, UChar32 end, uint32_t value) {
+        builder.addComposition(start, end, value);
+        return TRUE;
+    }
+};
 
-static UBool U_CALLCONV
-addComposition(const void *context, UChar32 start, UChar32 end, uint32_t value) {
-    return ((Normalizer2DataBuilder *)context)->addComposition(start, end, value);
-}
-
-U_CDECL_END
-
-UBool
+void
 Normalizer2DataBuilder::addComposition(UChar32 start, UChar32 end, uint32_t value) {
     if(norms[value].mappingType==Norm::ROUND_TRIP) {
         if(start!=end) {
@@ -258,11 +299,9 @@ Normalizer2DataBuilder::addComposition(UChar32 start, UChar32 end, uint32_t valu
             exit(U_INVALID_FORMAT_ERROR);
         }
         // setRoundTripMapping() ensured that there are exactly two code points.
-        const UChar *m=norms[value].mapping->getBuffer();
-        int32_t i=0, length=norms[value].mapping->length();
-        UChar32 lead, trail;
-        U16_NEXT(m, i, length, lead);
-        U16_NEXT(m, i, length, trail);
+        const UnicodeString &m=*norms[value].mapping;
+        UChar32 lead=m.char32At(0);
+        UChar32 trail=m.char32At(m.length()-1);
         // Flag for trailing character.
         createNorm(trail)->combinesBack=TRUE;
         // Insert (trail, composite) pair into compositions list for the lead character.
@@ -290,11 +329,99 @@ Normalizer2DataBuilder::addComposition(UChar32 start, UChar32 end, uint32_t valu
             compositions->insert(it, pair);
         }
     }
-    return TRUE;
 }
 
-void Normalizer2DataBuilder::makeCompositions() {
-    utrie2_enum(normTrie, NULL, icu::addComposition, this);
+class Decomposer : public Normalizer2DBEnumerator {
+public:
+    Decomposer(Normalizer2DataBuilder &b) : Normalizer2DBEnumerator(b), didDecompose(FALSE) {}
+    virtual UBool rangeHandler(UChar32 start, UChar32 end, uint32_t value) {
+        didDecompose|=builder.decompose(start, end, value);
+        return TRUE;
+    }
+    UBool didDecompose;
+};
+
+UBool
+Normalizer2DataBuilder::decompose(UChar32 start, UChar32 end, uint32_t value) {
+    if(norms[value].mappingType>Norm::REMOVED) {
+        const UnicodeString &m=*norms[value].mapping;
+        UnicodeString *decomposed=NULL;
+        const UChar *s=m.getBuffer();
+        int32_t length=m.length();
+        int32_t prev, i=0;
+        UChar32 c;
+        while(i<length) {
+            prev=i;
+            U16_NEXT(s, i, length, c);
+            if(start<=c && c<=end) {
+                fprintf(stderr,
+                        "gennorm2 error: U+%04lX maps to itself directly or indirectly\n",
+                        (long)c);
+                exit(U_INVALID_FORMAT_ERROR);
+            }
+            Norm *p=getNorm(c);
+            if(p!=NULL && p->mappingType>Norm::REMOVED) {
+                if(decomposed==NULL) {
+                    decomposed=new UnicodeString(m, 0, prev);
+                }
+                decomposed->append(*p->mapping);
+                if(norms[value].mappingType==Norm::ROUND_TRIP && p->mappingType!=Norm::ROUND_TRIP) {
+                    norms[value].mappingType=Norm::ONE_WAY;
+                }
+            } else if(decomposed!=NULL) {
+                decomposed->append(m, prev, i-prev);
+            }
+        }
+        if(decomposed!=NULL) {
+            delete norms[value].mapping;
+            norms[value].mapping=decomposed;
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+void
+Normalizer2DataBuilder::reorder(Norm *p) {
+    if(p->mappingType>Norm::REMOVED) {
+        UnicodeString &m=*p->mapping;
+        int32_t length=m.length();
+        UChar *s=m.getBuffer(-1);
+        int32_t prev, i=0;
+        UChar32 c;
+        uint8_t cc, lastCC=0;
+        while(i<length) {
+            prev=i;
+            U16_NEXT(s, i, length, c);
+            cc=getCC(c);
+            if(lastCC<=cc || cc==0) {
+                lastCC=cc;
+            } else {
+                // Let this code point bubble back to its canonical order.
+                int32_t cpStart=prev, cpLimit;
+                UChar32 c2;
+                uint8_t cc2;
+                U16_BACK_1(s, 0, cpStart);  // Skip the previous code point where 0<cc<lastCC.
+                for(;;) {
+                    cpLimit=cpStart;
+                    if(cpStart==0) {
+                        break;
+                    }
+                    U16_PREV(s, 0, cpStart, c2);
+                    cc2=getCC(c2);
+                    if(cc2<=cc) {
+                        break;
+                    }
+                }
+                // Insert c at cpLimit.
+                for(int32_t q=prev, r=i; cpLimit!=q;) {
+                    s[--r]=s[--q];
+                }
+                U16_APPEND_UNSAFE(s, cpLimit, c);
+            }
+        }
+        m.releaseBuffer(length);
+    }
 }
 
 void Normalizer2DataBuilder::setHangulData() {
@@ -329,7 +456,19 @@ void Normalizer2DataBuilder::setHangulData() {
 }
 
 void Normalizer2DataBuilder::writeBinaryFile(const char *filename) {
-    makeCompositions();
+    utrie2_enum(normTrie, NULL, enumRangeHandler, CompositionBuilder(*this).ptr());
+
+    Decomposer decomposer(*this);
+    do {
+        decomposer.didDecompose=FALSE;
+        utrie2_enum(normTrie, NULL, enumRangeHandler, &decomposer);
+    } while(decomposer.didDecompose);
+
+    int32_t normsLength=utm_countItems(normMem);
+    for(int32_t i=1; i<normsLength; ++i) {
+        reorder(norms+i);
+    }
+
     setHangulData();
 }
 
