@@ -362,6 +362,73 @@ UBool Normalizer2Impl::decompose(UChar32 c, uint16_t norm16, ReorderingBuffer &b
     }
 }
 
+/*
+ * Finds the recomposition result for
+ * a forward-combining "lead" character,
+ * specified with a pointer to its compositions list,
+ * and a backward-combining "trail" character.
+ *
+ * If the lead and trail characters combine, then this function returns
+ * the following "compositeAndFwd" value:
+ * Bits 21..1  composite character
+ * Bit      0  set if the composite is a forward-combining starter
+ * otherwise it returns -1.
+ *
+ * The compositions list has (trail, compositeAndFwd) pair entries,
+ * encoded as either pairs or triples of 16-bit units.
+ * The last entry has the high bit of its first unit set.
+ *
+ * The list is sorted by ascending trail characters (there are no duplicates).
+ * A linear search is used.
+ *
+ * See normalizer2impl.h for a more detailed description
+ * of the composition table format.
+ */
+static int32_t combine(const uint16_t *table, UChar32 trail) {
+    uint16_t key1, firstUnit;
+    if(trail<Normalizer2Data::COMP_1_TRAIL_LIMIT) {
+        // trail character is 0..33FF
+        // result entry may have 2 or 3 units
+        key1=(uint16_t)(trail<<1);
+        while(key1>(firstUnit=*table)) {
+            table+=2+(firstUnit&Normalizer2Data::COMP_1_TRIPLE);
+        }
+        if(key1==(firstUnit&Normalizer2Data::COMP_1_TRAIL_MASK)) {
+            if(firstUnit&Normalizer2Data::COMP_1_TRIPLE) {
+                return ((int32_t)table[1]<<16)|table[2];
+            } else {
+                return table[1];
+            }
+        }
+    } else {
+        // trail character is 3400..10FFFF
+        // result entry has 3 units
+        key1=(uint16_t)(Normalizer2Data::COMP_1_TRAIL_LIMIT+
+                        ((trail>>Normalizer2Data::COMP_1_TRAIL_SHIFT))&
+                         ~Normalizer2Data::COMP_1_TRIPLE);
+        uint16_t key2=(uint16_t)(trail<<Normalizer2Data::COMP_2_TRAIL_SHIFT);
+        uint16_t secondUnit;
+        for(;;) {
+            if(key1>(firstUnit=*table)) {
+                table+=2+(firstUnit&Normalizer2Data::COMP_1_TRIPLE);
+            } else if(key1==(firstUnit&Normalizer2Data::COMP_1_TRAIL_MASK)) {
+                if(key2>(secondUnit=table[1])) {
+                    if(firstUnit&Normalizer2Data::COMP_1_LAST_TUPLE) {
+                        break;
+                    } else {
+                        table+=3;
+                    }
+                } else if(key2==(secondUnit&Normalizer2Data::COMP_2_TRAIL_MASK)) {
+                    return ((int32_t)(secondUnit&~Normalizer2Data::COMP_2_TRAIL_MASK)<<16)|table[2];
+                } else {
+                    break;
+                }
+            }
+        }
+    }
+    return -1;
+}
+
 UBool Normalizer2Impl::isCompStarter(UChar32 c, uint16_t norm16) {
     // Partial copy of the decompose(c) function.
     for(;;) {

@@ -99,6 +99,16 @@ public:
         // 0x20 is reserved
         MAPPING_LENGTH_MASK=0x1f
     };
+
+    enum {
+        COMP_1_LAST_TUPLE=0x8000,
+        COMP_1_TRIPLE=1,
+        COMP_1_TRAIL_LIMIT=0x3400,
+        COMP_1_TRAIL_MASK=0x7ffe,
+        COMP_1_TRAIL_SHIFT=9,  // 10-1 for the "triple" bit
+        COMP_2_TRAIL_SHIFT=6,
+        COMP_2_TRAIL_MASK=0xffc0
+    };
 private:
     uint8_t getCCFromNoNo(uint16_t norm16) const {
         const uint16_t *mapping=getMapping(norm16);

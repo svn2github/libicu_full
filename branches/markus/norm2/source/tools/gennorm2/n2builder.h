@@ -76,10 +76,15 @@ private:
     Norm *getNorm(UChar32 c);
     Norm *createNorm(UChar32 c);
     Norm *checkNormForMapping(Norm *p, UChar32 c);
+
     void addComposition(UChar32 start, UChar32 end, uint32_t value);
     UBool decompose(UChar32 start, UChar32 end, uint32_t value);
     void reorder(Norm *p);
     void setHangulData();
+    void writeMapping(UChar32 c, Norm *p);
+    void writeCompositions(UChar32 c, Norm *p);
+    void writeData(UChar32 c, Norm *p);
+    void processData();
 
     UTrie2 *normTrie;
     UToolMemory *normMem;
@@ -87,6 +92,9 @@ private:
 
     int32_t phase;
     OverrideHandling overrideHandling;
+
+    UTrie2 *norm16Trie;
+    UnicodeString extraData;
 
     UVersionInfo unicodeVersion;
 };

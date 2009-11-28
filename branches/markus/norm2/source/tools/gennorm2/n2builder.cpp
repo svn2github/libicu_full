@@ -114,7 +114,18 @@ struct CompositionPair {
 struct Norm {
     enum MappingType { NONE, REMOVED, ROUND_TRIP, ONE_WAY };
 
+    // Requires mappingType>REMOVED and well-formed mapping.
+    void setMappingCP() {
+        UChar32 c;
+        if(!mapping->isEmpty() && mapping->length()==U16_LENGTH(c=mapping->char32At(0))) {
+            mappingCP=c;
+        } else {
+            mappingCP=U_SENTINEL;
+        }
+    }
+
     UnicodeString *mapping;
+    UChar32 mappingCP;  // set if mapping to 1 code point
     int32_t mappingPhase;
     MappingType mappingType;
 
@@ -158,6 +169,7 @@ Normalizer2DataBuilder::~Normalizer2DataBuilder() {
         delete norms[i].compositions;
     }
     utm_close(normMem);
+    utrie2_close(norm16Trie);
 }
 
 void
@@ -249,6 +261,7 @@ void Normalizer2DataBuilder::setOneWayMapping(UChar32 c, const UnicodeString &m)
     Norm *p=checkNormForMapping(createNorm(c), c);
     p->mapping=new UnicodeString(m);
     p->mappingType=Norm::ONE_WAY;
+    p->setMappingCP();
 }
 
 void Normalizer2DataBuilder::setRoundTripMapping(UChar32 c, const UnicodeString &m) {
@@ -270,6 +283,7 @@ void Normalizer2DataBuilder::setRoundTripMapping(UChar32 c, const UnicodeString 
     Norm *p=checkNormForMapping(createNorm(c), c);
     p->mapping=new UnicodeString(m);
     p->mappingType=Norm::ROUND_TRIP;
+    p->mappingCP=U_SENTINEL;
 }
 
 void Normalizer2DataBuilder::removeMapping(UChar32 c) {
@@ -375,6 +389,7 @@ Normalizer2DataBuilder::decompose(UChar32 start, UChar32 end, uint32_t value) {
         if(decomposed!=NULL) {
             delete norms[value].mapping;
             norms[value].mapping=decomposed;
+            norms[value].setMappingCP();
             return TRUE;
         }
     }
@@ -450,12 +465,94 @@ void Normalizer2DataBuilder::setHangulData() {
         if(norm16==0) {
             norm16=2;  // TODO: minYesNo
         }
-        utrie2_setRange32(normTrie, range->start, range->limit-1, norm16, TRUE, errorCode);
+        utrie2_setRange32(norm16Trie, range->start, range->limit-1, norm16, TRUE, errorCode);
         errorCode.assertSuccess();
     }
 }
 
-void Normalizer2DataBuilder::writeBinaryFile(const char *filename) {
+// Requires p->mappingType>Norm::REMOVED.
+void Normalizer2DataBuilder::writeMapping(UChar32 c, Norm *p) {
+    UnicodeString &m=*p->mapping;
+    int32_t length=m.length();
+    if(length>Normalizer2Data::MAPPING_LENGTH_MASK) {
+        fprintf(stderr,
+                "gennorm2 error: "
+                "mapping for U+%04lX longer than maximum of %d\n",
+                (long)c, Normalizer2Data::MAPPING_LENGTH_MASK);
+        exit(U_INVALID_FORMAT_ERROR);
+    }
+    int32_t leadCC, trailCC;
+    if(length==0) {
+        leadCC=trailCC=0;
+    } else {
+        leadCC=getCC(m.char32At(0));
+        trailCC=getCC(m.char32At(length-1));
+    }
+    int32_t firstUnit=length|(trailCC<<8);
+    int32_t secondUnit=p->cc|(leadCC<<8);
+    if(secondUnit!=0) {
+        firstUnit|=Normalizer2Data::MAPPING_HAS_CCC_LCCC_WORD;
+    }
+    if(p->compositions!=NULL) {
+        firstUnit|=Normalizer2Data::MAPPING_PLUS_COMPOSITION_LIST;
+    }
+    extraData.append((UChar)firstUnit);
+    if(secondUnit!=0) {
+        extraData.append((UChar)secondUnit);
+    }
+    extraData.append(m);
+}
+
+// Requires p->compositions!=NULL.
+void Normalizer2DataBuilder::writeCompositions(UChar32 c, Norm *p) {
+    int32_t length=p->compositions->size();
+    for(int32_t i=0; i<length; ++i) {
+        CompositionPair &pair=p->compositions->at(i);
+        // 22 bits for the composite character and whether it combines forward.
+        UChar32 compositeAndFwd=pair.composite<<1;
+        Norm *compositeNorm=getNorm(pair.composite);
+        if(compositeNorm!=NULL && compositeNorm->compositions!=NULL) {
+            compositeAndFwd|=1;  // The composite character also combines-forward.
+        }
+        // Encode most pairs in two units and some in three.
+        int32_t firstUnit, secondUnit, thirdUnit;
+        if(pair.trail<Normalizer2Data::COMP_1_TRAIL_LIMIT) {
+            if(compositeAndFwd<=0xffff) {
+                firstUnit=pair.trail<<1;
+                secondUnit=compositeAndFwd;
+                thirdUnit=-1;
+            } else {
+                firstUnit=(pair.trail<<1)|Normalizer2Data::COMP_1_TRIPLE;
+                secondUnit=compositeAndFwd>>16;
+                thirdUnit=compositeAndFwd;
+            }
+        } else {
+            firstUnit=(Normalizer2Data::COMP_1_TRAIL_LIMIT+
+                       (pair.trail>>Normalizer2Data::COMP_1_TRAIL_SHIFT))|
+                      Normalizer2Data::COMP_1_TRIPLE;
+            secondUnit=(pair.trail<<Normalizer2Data::COMP_2_TRAIL_SHIFT)|
+                       (compositeAndFwd>>16);
+            thirdUnit=compositeAndFwd;
+        }
+        // Set the high bit of the first unit if this is the last composition pair.
+        if(i==(length-1)) {
+            firstUnit|=Normalizer2Data::COMP_1_LAST_TUPLE;
+        }
+        extraData.append((UChar)firstUnit).append((UChar)secondUnit);
+        if(thirdUnit>=0) {
+            extraData.append((UChar)thirdUnit);
+        }
+    }
+}
+
+void Normalizer2DataBuilder::writeData(UChar32 c, Norm *p) {
+}
+
+void Normalizer2DataBuilder::processData() {
+    IcuToolErrorCode errorCode("gennorm2/processData()");
+    norm16Trie=utrie2_open(0, 0, errorCode);
+    errorCode.assertSuccess();
+
     utrie2_enum(normTrie, NULL, enumRangeHandler, CompositionBuilder(*this).ptr());
 
     Decomposer decomposer(*this);
@@ -470,6 +567,10 @@ void Normalizer2DataBuilder::writeBinaryFile(const char *filename) {
     }
 
     setHangulData();
+}
+
+void Normalizer2DataBuilder::writeBinaryFile(const char *filename) {
+    processData();
 }
 
 U_NAMESPACE_END
