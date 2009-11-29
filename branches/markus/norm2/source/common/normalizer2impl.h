@@ -81,7 +81,7 @@ public:
     }
 
     // Requires minYesNo<norm16<limitNoNo.
-    const uint16_t *getMapping(uint16_t norm16) const { return mappings+norm16; }
+    const uint16_t *getMapping(uint16_t norm16) const { return extraData+norm16; }
 
     UChar getMinDecompNoCodePoint() const { return minDecompNoCP; }
     const UTrie2 &getTrie() const { return trie; }
@@ -91,6 +91,34 @@ public:
         JAMO_VT=0xff00,
         MIN_NORMAL_MAYBE_YES=0xfe00,
         MAX_DELTA=0x20
+    };
+
+    enum {
+        // Byte offsets from the start of the data, after the generic header.
+        IX_NORM_TRIE_OFFSET,
+        IX_EXTRA_DATA_OFFSET,
+        IX_FCD_TRIE_OFFSET,
+        IX_RESERVED3_OFFSET,
+        IX_RESERVED4_OFFSET,
+        IX_RESERVED5_OFFSET,
+        IX_RESERVED6_OFFSET,
+        IX_RESERVED7_OFFSET,
+        IX_RESERVED8_OFFSET,
+        IX_TOTAL_SIZE,
+
+        // Thresholds for quick check combinations and types of extra data.
+        IX_MIN_YES_NO,
+        IX_MIN_NO_NO,
+        IX_LIMIT_NO_NO,
+        IX_MIN_MAYBE_YES,
+        IX_RESERVED14,
+        IX_RESERVED15,
+        IX_RESERVED16,
+        IX_RESERVED17,
+        IX_RESERVED18,
+        IX_RESERVED19,
+
+        IX_COUNT
     };
 
     enum {
@@ -121,8 +149,8 @@ private:
 
     UTrie2 trie;
     const int32_t *indexes;
-    const uint16_t *compositions;
-    const uint16_t *mappings;
+    const uint16_t *maybeYesCompositions;
+    const uint16_t *extraData;  // mappings and/or compositions for yesYes, yesNo & noNo characters
     UDataMemory *memory;
 
     UChar minDecompNoCP;

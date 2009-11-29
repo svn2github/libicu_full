@@ -132,6 +132,14 @@ struct Norm {
     std::vector<CompositionPair> *compositions;
     uint8_t cc;
     UBool combinesBack;
+
+    enum OffsetType {
+        OFFSET_NONE, OFFSET_MAYBEYES,
+        OFFSET_YESYES, OFFSET_YESNO, OFFSET_NONO,
+        OFFSET_DELTA
+    };
+    enum { OFFSET_SHIFT=4 };
+    int32_t offset;
 };
 
 class Normalizer2DBEnumerator {
@@ -211,8 +219,7 @@ Norm *Normalizer2DataBuilder::createNorm(UChar32 c) {
 }
 
 uint8_t Normalizer2DataBuilder::getCC(UChar32 c) {
-    uint32_t i=utrie2_get32(normTrie, c);
-    return i==0 ? 0 : norms[i].cc;
+    return norms[utrie2_get32(normTrie, c)].cc;
 }
 
 Norm *Normalizer2DataBuilder::checkNormForMapping(Norm *p, UChar32 c) {
@@ -355,9 +362,35 @@ public:
     UBool didDecompose;
 };
 
+static inline UBool isHangul(UChar32 c) {
+    return HANGUL_BASE<=c && c<(HANGUL_BASE+HANGUL_COUNT);
+}
+
+static UBool
+getHangulDecomposition(UChar32 c, UChar hangulBuffer[3]) {
+    // Hangul syllable: decompose algorithmically
+    c-=HANGUL_BASE;
+    if((uint32_t)c>=HANGUL_COUNT) {
+        return FALSE;  // not a Hangul syllable
+    }
+
+    UChar32 c2;
+    c2=c%JAMO_T_COUNT;
+    c/=JAMO_T_COUNT;
+    hangulBuffer[0]=JAMO_L_BASE+c/JAMO_V_COUNT;
+    hangulBuffer[1]=JAMO_V_BASE+c%JAMO_V_COUNT;
+    if(c2==0) {
+        hangulBuffer[2]=0;
+    } else {
+        hangulBuffer[2]=JAMO_T_BASE+c2;
+    }
+    return TRUE;
+}
+
 UBool
 Normalizer2DataBuilder::decompose(UChar32 start, UChar32 end, uint32_t value) {
     if(norms[value].mappingType>Norm::REMOVED) {
+        UChar hangulBuffer[3];
         const UnicodeString &m=*norms[value].mapping;
         UnicodeString *decomposed=NULL;
         const UChar *s=m.getBuffer();
@@ -382,6 +415,11 @@ Normalizer2DataBuilder::decompose(UChar32 start, UChar32 end, uint32_t value) {
                 if(norms[value].mappingType==Norm::ROUND_TRIP && p->mappingType!=Norm::ROUND_TRIP) {
                     norms[value].mappingType=Norm::ONE_WAY;
                 }
+            } else if(getHangulDecomposition(c, hangulBuffer)) {
+                if(decomposed==NULL) {
+                    decomposed=new UnicodeString(m, 0, prev);
+                }
+                decomposed->append(hangulBuffer, hangulBuffer[2]==0 ? 2 : 3);
             } else if(decomposed!=NULL) {
                 decomposed->append(m, prev, i-prev);
             }
@@ -389,7 +427,8 @@ Normalizer2DataBuilder::decompose(UChar32 start, UChar32 end, uint32_t value) {
         if(decomposed!=NULL) {
             delete norms[value].mapping;
             norms[value].mapping=decomposed;
-            norms[value].setMappingCP();
+            // Not  norms[value].setMappingCP();  because the original mapping
+            // is most likely to be encodable as a delta.
             return TRUE;
         }
     }
@@ -439,39 +478,8 @@ Normalizer2DataBuilder::reorder(Norm *p) {
     }
 }
 
-void Normalizer2DataBuilder::setHangulData() {
-    HangulIterator hi;
-    const HangulIterator::Range *range;
-    // Check that none of the Hangul/Jamo code points have data.
-    while((range=hi.nextRange())!=NULL) {
-        for(UChar32 c=range->start; c<range->limit; ++c) {
-            Norm *p=getNorm(c);
-            if( p!=NULL && (p->cc!=0 || p->mappingType>Norm::REMOVED ||
-                            p->compositions!=NULL || p->combinesBack)
-            ) {
-                fprintf(stderr,
-                        "gennorm2 error: "
-                        "illegal mapping or ccc data for Hangul or Jamo U+%04lX\n",
-                        (long)c);
-                exit(U_INVALID_FORMAT_ERROR);
-            }
-        }
-    }
-    // Set data for algorithmic runtime handling.
-    IcuToolErrorCode errorCode("gennorm2/setHangulData()");
-    hi.reset();
-    while((range=hi.nextRange())!=NULL) {
-        uint16_t norm16=range->norm16;
-        if(norm16==0) {
-            norm16=2;  // TODO: minYesNo
-        }
-        utrie2_setRange32(norm16Trie, range->start, range->limit-1, norm16, TRUE, errorCode);
-        errorCode.assertSuccess();
-    }
-}
-
 // Requires p->mappingType>Norm::REMOVED.
-void Normalizer2DataBuilder::writeMapping(UChar32 c, Norm *p) {
+void Normalizer2DataBuilder::writeMapping(UChar32 c, Norm *p, UnicodeString &dataString) {
     UnicodeString &m=*p->mapping;
     int32_t length=m.length();
     if(length>Normalizer2Data::MAPPING_LENGTH_MASK) {
@@ -496,15 +504,22 @@ void Normalizer2DataBuilder::writeMapping(UChar32 c, Norm *p) {
     if(p->compositions!=NULL) {
         firstUnit|=Normalizer2Data::MAPPING_PLUS_COMPOSITION_LIST;
     }
-    extraData.append((UChar)firstUnit);
+    dataString.append((UChar)firstUnit);
     if(secondUnit!=0) {
-        extraData.append((UChar)secondUnit);
+        dataString.append((UChar)secondUnit);
     }
-    extraData.append(m);
+    dataString.append(m);
 }
 
 // Requires p->compositions!=NULL.
-void Normalizer2DataBuilder::writeCompositions(UChar32 c, Norm *p) {
+void Normalizer2DataBuilder::writeCompositions(UChar32 c, Norm *p, UnicodeString &dataString) {
+    if(p->cc!=0) {
+        fprintf(stderr,
+                "gennorm2 error: "
+                "U+%04lX combines-forward and has ccc!=0, not possible in Unicode normalization\n",
+                (long)c);
+        exit(U_INVALID_FORMAT_ERROR);
+    }
     int32_t length=p->compositions->size();
     for(int32_t i=0; i<length; ++i) {
         CompositionPair &pair=p->compositions->at(i);
@@ -538,14 +553,135 @@ void Normalizer2DataBuilder::writeCompositions(UChar32 c, Norm *p) {
         if(i==(length-1)) {
             firstUnit|=Normalizer2Data::COMP_1_LAST_TUPLE;
         }
-        extraData.append((UChar)firstUnit).append((UChar)secondUnit);
+        dataString.append((UChar)firstUnit).append((UChar)secondUnit);
         if(thirdUnit>=0) {
-            extraData.append((UChar)thirdUnit);
+            dataString.append((UChar)thirdUnit);
         }
     }
 }
 
-void Normalizer2DataBuilder::writeData(UChar32 c, Norm *p) {
+class ExtraDataWriter : public Normalizer2DBEnumerator {
+public:
+    ExtraDataWriter(Normalizer2DataBuilder &b) :
+        Normalizer2DBEnumerator(b),
+        yesYesCompositions(1000, (UChar32)0xffff, 2),  // 0=inert, 1=Jamo L, 2=start of compositions
+        yesNoData(1000, (UChar32)0, 1) {}  // 0=Hangul, 1=start of normal data
+    virtual UBool rangeHandler(UChar32 start, UChar32 end, uint32_t value) {
+        if(value!=0) {
+            if(start!=end) {
+                fprintf(stderr,
+                        "gennorm2 error: unexpected shared data for "
+                        "multiple code points U+%04lX..U+%04lX\n",
+                        (long)start, (long)end);
+                exit(U_INTERNAL_PROGRAM_ERROR);
+            }
+            builder.writeExtraData(start, value, *this);
+        }
+        return TRUE;
+    }
+    UnicodeString maybeYesCompositions;
+    UnicodeString yesYesCompositions;
+    UnicodeString yesNoData;
+    UnicodeString noNoMappings;
+};
+
+void Normalizer2DataBuilder::writeExtraData(UChar32 c, uint32_t value, ExtraDataWriter &writer) {
+    Norm *p=norms+value;
+    if(p->combinesBack) {
+        if(p->mappingType>Norm::REMOVED) {
+            fprintf(stderr,
+                    "gennorm2 error: "
+                    "U+%04lX combines-back and decomposes, not possible in Unicode normalization\n",
+                    (long)c);
+            exit(U_INVALID_FORMAT_ERROR);
+        }
+        if(p->compositions!=NULL) {
+            p->offset=
+                (writer.maybeYesCompositions.length()<<Norm::OFFSET_SHIFT)|
+                Norm::OFFSET_MAYBEYES;
+            writeCompositions(c, p, writer.maybeYesCompositions);
+        }
+    } else if(p->mappingType<=Norm::REMOVED) {
+        if(p->compositions!=NULL) {
+            p->offset=
+                (writer.yesYesCompositions.length()<<Norm::OFFSET_SHIFT)|
+                Norm::OFFSET_YESYES;
+            writeCompositions(c, p, writer.yesYesCompositions);
+        }
+    } else if(p->mappingType==Norm::ROUND_TRIP) {
+        if(p->cc!=0) {
+            fprintf(stderr,
+                    "gennorm2 error: "
+                    "U+%04lX has a round-trip mapping and ccc!=0, "
+                    "not possible in Unicode normalization\n",
+                    (long)c);
+            exit(U_INVALID_FORMAT_ERROR);
+        }
+        p->offset=
+            (writer.yesNoData.length()<<Norm::OFFSET_SHIFT)|
+            Norm::OFFSET_YESNO;
+        writeMapping(c, p, writer.yesNoData);
+        if(p->compositions!=NULL) {
+            writeCompositions(c, p, writer.yesNoData);
+        }
+    } else /* one-way */ {
+        if(p->compositions!=NULL) {
+            fprintf(stderr,
+                    "gennorm2 error: "
+                    "U+%04lX combines-forward and has a one-way mapping, "
+                    "not possible in Unicode normalization\n",
+                    (long)c);
+            exit(U_INVALID_FORMAT_ERROR);
+        }
+        if(p->cc==0) {
+            // Try a compact, algorithmic encoding.
+            // Only for ccc=0.
+            // Not when mapping to a Hangul syllable, or else the runtime decomposition and
+            // data access functions would have to deal with Hangul-Jamo decomposition.
+            if(p->mapping->isEmpty()) {
+                p->offset=Norm::OFFSET_DELTA;  // maps to empty string
+            } else if(p->mappingCP>=0 && !isHangul(p->mappingCP)) {
+                int32_t delta=c-p->mappingCP;
+                if(-Normalizer2Data::MAX_DELTA<=delta && delta<=Normalizer2Data::MAX_DELTA) {
+                    p->offset=(delta<<Norm::OFFSET_SHIFT)|Norm::OFFSET_DELTA;
+                }
+            }
+        }
+        if(p->offset==0) {
+            p->offset=
+                (writer.noNoMappings.length()<<Norm::OFFSET_SHIFT)|
+                Norm::OFFSET_NONO;
+            writeMapping(c, p, writer.noNoMappings);
+        }
+    }
+}
+
+void Normalizer2DataBuilder::setHangulData() {
+    HangulIterator hi;
+    const HangulIterator::Range *range;
+    // Check that none of the Hangul/Jamo code points have data.
+    while((range=hi.nextRange())!=NULL) {
+        for(UChar32 c=range->start; c<range->limit; ++c) {
+            if(utrie2_get32(norm16Trie, c)!=0) {
+                fprintf(stderr,
+                        "gennorm2 error: "
+                        "illegal mapping/composition/ccc data for Hangul or Jamo U+%04lX\n",
+                        (long)c);
+                exit(U_INVALID_FORMAT_ERROR);
+            }
+        }
+    }
+    // Set data for algorithmic runtime handling.
+    IcuToolErrorCode errorCode("gennorm2/setHangulData()");
+    hi.reset();
+    while((range=hi.nextRange())!=NULL) {
+        uint16_t norm16=range->norm16;
+        if(norm16==0) {
+            norm16=indexes[Normalizer2Data::IX_MIN_YES_NO];  // Hangul LV/LVT encoded as minYesNo
+        }
+        utrie2_setRange32(norm16Trie, range->start, range->limit-1, norm16, TRUE, errorCode);
+        errorCode.assertSuccess();
+    }
 }
 
 void Normalizer2DataBuilder::processData() {
@@ -565,6 +701,37 @@ void Normalizer2DataBuilder::processData() {
     for(int32_t i=1; i<normsLength; ++i) {
         reorder(norms+i);
     }
+
+    ExtraDataWriter extraDataWriter(*this);
+    utrie2_enum(normTrie, NULL, enumRangeHandler, &extraDataWriter);
+
+    extraData=extraDataWriter.maybeYesCompositions;
+    extraData.append(extraDataWriter.yesYesCompositions).
+              append(extraDataWriter.yesNoData).
+              append(extraDataWriter.noNoMappings);
+
+    indexes[Normalizer2Data::IX_MIN_YES_NO]=
+        extraDataWriter.yesYesCompositions.length();
+    indexes[Normalizer2Data::IX_MIN_NO_NO]=
+        indexes[Normalizer2Data::IX_MIN_YES_NO]+
+        extraDataWriter.yesNoData.length();
+    indexes[Normalizer2Data::IX_LIMIT_NO_NO]=
+        indexes[Normalizer2Data::IX_MIN_NO_NO]+
+        extraDataWriter.noNoMappings.length();
+    indexes[Normalizer2Data::IX_MIN_MAYBE_YES]=
+        Normalizer2Data::MIN_NORMAL_MAYBE_YES-
+        extraDataWriter.maybeYesCompositions.length();
+
+    int32_t centerNoNoDelta=indexes[Normalizer2Data::IX_MIN_MAYBE_YES]-Normalizer2Data::MAX_DELTA-1;
+    int32_t minNoNoDelta=centerNoNoDelta-Normalizer2Data::MAX_DELTA;
+    if(indexes[Normalizer2Data::IX_LIMIT_NO_NO]>minNoNoDelta) {
+        fprintf(stderr,
+                "gennorm2 error: "
+                "data structure overflow, too much mapping composition data\n");
+        exit(U_BUFFER_OVERFLOW_ERROR);
+    }
+
+    // TODO: write final norm16
 
     setHangulData();
 }

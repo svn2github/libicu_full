@@ -20,6 +20,7 @@
 #include "unicode/utypes.h"
 #include "unicode/errorcode.h"
 #include "unicode/unistr.h"
+#include "normalizer2impl.h"  // for IX_COUNT
 #include "toolutil.h"
 #include "utrie2.h"
 
@@ -69,6 +70,7 @@ private:
 
     friend class CompositionBuilder;
     friend class Decomposer;
+    friend class ExtraDataWriter;
 
     uint8_t getCC(UChar32 c);
 
@@ -81,9 +83,9 @@ private:
     UBool decompose(UChar32 start, UChar32 end, uint32_t value);
     void reorder(Norm *p);
     void setHangulData();
-    void writeMapping(UChar32 c, Norm *p);
-    void writeCompositions(UChar32 c, Norm *p);
-    void writeData(UChar32 c, Norm *p);
+    void writeMapping(UChar32 c, Norm *p, UnicodeString &dataString);
+    void writeCompositions(UChar32 c, Norm *p, UnicodeString &dataString);
+    void writeExtraData(UChar32 c, uint32_t value, ExtraDataWriter &writer);
     void processData();
 
     UTrie2 *normTrie;
@@ -93,6 +95,7 @@ private:
     int32_t phase;
     OverrideHandling overrideHandling;
 
+    int32_t indexes[Normalizer2Data::IX_COUNT];
     UTrie2 *norm16Trie;
     UnicodeString extraData;
 
