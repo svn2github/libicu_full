@@ -87,6 +87,10 @@ public:
     const UTrie2 &getTrie() const { return trie; }
 
     enum {
+        MIN_CCC_LCCC_CP=0x300
+    };
+
+    enum {
         MIN_YES_YES_WITH_CC=0xff01,
         JAMO_VT=0xff00,
         MIN_NORMAL_MAYBE_YES=0xfe00,
@@ -106,13 +110,15 @@ public:
         IX_RESERVED8_OFFSET,
         IX_TOTAL_SIZE,
 
-        // Thresholds for quick check combinations and types of extra data.
+        // Code point thresholds for quick check codes.
+        IX_MIN_DECOMP_NO_MAYBE_CP,
+        IX_MIN_COMP_NO_MAYBE_CP,
+
+        // Norm16 value thresholds for quick check combinations and types of extra data.
         IX_MIN_YES_NO,
         IX_MIN_NO_NO,
         IX_LIMIT_NO_NO,
         IX_MIN_MAYBE_YES,
-        IX_RESERVED14,
-        IX_RESERVED15,
         IX_RESERVED16,
         IX_RESERVED17,
         IX_RESERVED18,

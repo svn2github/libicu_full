@@ -143,7 +143,7 @@ UBool ReorderingBuffer::append(const UChar *s, int32_t length, uint8_t leadCC, u
             }
             break;
         } else {
-            // TODO: iterator? using _NORM_MIN_WITH_LEAD_CC?
+            // TODO: iterator? using MIN_CCC_LCCC_CP?
             int32_t i=0;
             UChar32 c;
             U16_NEXT(s, i, length, c);
@@ -230,7 +230,7 @@ uint8_t ReorderingBuffer::previousCC() {
         return 0;
     }
     UChar c=*--codePointStart;
-    if(c<_NORM_MIN_WITH_LEAD_CC) {
+    if(c<Normalizer2Data::MIN_CCC_LCCC_CP) {
         return 0;
     }
 
@@ -487,7 +487,6 @@ U_NAMESPACE_END
 // Normalizer2 unmodifiable? Yes, please...
 //   Singletons?? Prefer to have Normalizer2Impl singletons but separate Normalizer2 instances.
 // Builder code needs to impose limitations:
-// _NORM_MIN_WITH_LEAD_CC>=0x300
 // Hangul & Jamo properties, except if excluded
 // Might be trouble if mapping Hangul and/or Jamo to something else.
 // Consider not supporting an exclusions set at runtime.

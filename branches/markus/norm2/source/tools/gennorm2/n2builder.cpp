@@ -167,7 +167,7 @@ Normalizer2DataBuilder::Normalizer2DataBuilder(UErrorCode &errorCode) :
         phase(0), overrideHandling(OVERRIDE_PREVIOUS) {
     memset(unicodeVersion, 0, sizeof(unicodeVersion));
     normTrie=utrie2_open(0, 0, &errorCode);
-    normMem=utm_open("gennorm2 normalization structs", 10000, 200000, sizeof(Norm));
+    normMem=utm_open("gennorm2 normalization structs", 10000, 0x110100, sizeof(Norm));
     norms=allocNorm();  // unused Norm struct at index 0
     memset(indexes, 0, sizeof(indexes));
 }
@@ -186,7 +186,6 @@ Normalizer2DataBuilder::~Normalizer2DataBuilder() {
 void
 Normalizer2DataBuilder::setUnicodeVersion(const char *v) {
     u_versionFromString(unicodeVersion, v);
-    // TODO: do when writing the file: uprv_memcpy(dataInfo.dataVersion, unicodeVersion, 4);
 }
 
 Norm *Normalizer2DataBuilder::allocNorm() {
@@ -543,6 +542,13 @@ void Normalizer2DataBuilder::writeMapping(UChar32 c, const Norm *p, UnicodeStrin
         leadCC=getCC(m.char32At(0));
         trailCC=getCC(m.char32At(length-1));
     }
+    if(c<Normalizer2Data::MIN_CCC_LCCC_CP && (p->cc!=0 || leadCC!=0)) {
+        fprintf(stderr,
+                "gennorm2 error: "
+                "U+%04lX below U+0300 has ccc!=0 or lccc!=0, not supported by ICU\n",
+                (long)c);
+        exit(U_INVALID_FORMAT_ERROR);
+    }
     int32_t firstUnit=length|(trailCC<<8);
     int32_t secondUnit=p->cc|(leadCC<<8);
     if(secondUnit!=0) {
@@ -726,35 +732,50 @@ void Normalizer2DataBuilder::writeNorm16(UChar32 start, UChar32 end, uint32_t va
         const Norm *p=norms+value;
         int32_t offset=p->offset>>Norm::OFFSET_SHIFT;
         int32_t norm16=0;
+        UBool isDecompNoMaybe=FALSE;
+        UBool isCompNoMaybe=FALSE;
         switch(p->offset&Norm::OFFSET_MASK) {
         case Norm::OFFSET_NONE:
             // No mapping, no compositions list.
             if(p->combinesBack) {
                 norm16=Normalizer2Data::MIN_NORMAL_MAYBE_YES+p->cc;
+                isDecompNoMaybe=(UBool)(p->cc!=0);
+                isCompNoMaybe=TRUE;
             } else if(p->cc!=0) {
                 norm16=Normalizer2Data::MIN_YES_YES_WITH_CC-1+p->cc;
+                isDecompNoMaybe=isCompNoMaybe=TRUE;
             }
             break;
         case Norm::OFFSET_MAYBE_YES:
             norm16=indexes[Normalizer2Data::IX_MIN_MAYBE_YES]+offset;
+            isCompNoMaybe=TRUE;
             break;
         case Norm::OFFSET_YES_YES:
             norm16=offset;
             break;
         case Norm::OFFSET_YES_NO:
             norm16=indexes[Normalizer2Data::IX_MIN_YES_NO]+offset;
+            isDecompNoMaybe=TRUE;
             break;
         case Norm::OFFSET_NO_NO:
             norm16=indexes[Normalizer2Data::IX_MIN_NO_NO]+offset;
+            isDecompNoMaybe=isCompNoMaybe=TRUE;
             break;
         case Norm::OFFSET_DELTA:
             norm16=getCenterNoNoDelta()+offset;
+            isDecompNoMaybe=isCompNoMaybe=TRUE;
             break;
         default:  // Should not occur.
             exit(U_INTERNAL_PROGRAM_ERROR);
         }
         IcuToolErrorCode errorCode("gennorm2/writeNorm16()");
         utrie2_setRange32(norm16Trie, start, end, (uint32_t)norm16, TRUE, errorCode);
+        if(isDecompNoMaybe && start<indexes[Normalizer2Data::IX_MIN_DECOMP_NO_MAYBE_CP]) {
+            indexes[Normalizer2Data::IX_MIN_DECOMP_NO_MAYBE_CP]=start;
+        }
+        if(isCompNoMaybe && start<indexes[Normalizer2Data::IX_MIN_COMP_NO_MAYBE_CP]) {
+            indexes[Normalizer2Data::IX_MIN_COMP_NO_MAYBE_CP]=start;
+        }
     }
 }
 
@@ -780,6 +801,13 @@ void Normalizer2DataBuilder::setHangulData() {
         uint16_t norm16=range->norm16;
         if(norm16==0) {
             norm16=(uint16_t)indexes[Normalizer2Data::IX_MIN_YES_NO];  // Hangul LV/LVT encoded as minYesNo
+            if(range->start<indexes[Normalizer2Data::IX_MIN_DECOMP_NO_MAYBE_CP]) {
+                indexes[Normalizer2Data::IX_MIN_DECOMP_NO_MAYBE_CP]=range->start;
+            }
+        } else {
+            if(range->start<indexes[Normalizer2Data::IX_MIN_COMP_NO_MAYBE_CP]) {  // Jamo V/T are maybeYes
+                indexes[Normalizer2Data::IX_MIN_COMP_NO_MAYBE_CP]=range->start;
+            }
         }
         utrie2_setRange32(norm16Trie, range->start, range->limit-1, norm16, TRUE, errorCode);
         errorCode.assertSuccess();
@@ -803,6 +831,9 @@ void Normalizer2DataBuilder::processData() {
     for(int32_t i=1; i<normsLength; ++i) {
         reorder(norms+i);
     }
+
+    indexes[Normalizer2Data::IX_MIN_DECOMP_NO_MAYBE_CP]=0x110000;
+    indexes[Normalizer2Data::IX_MIN_COMP_NO_MAYBE_CP]=0x110000;
 
     ExtraDataWriter extraDataWriter(*this);
     utrie2_enum(normTrie, NULL, enumRangeHandler, &extraDataWriter);
@@ -870,8 +901,15 @@ void Normalizer2DataBuilder::writeBinaryFile(const char *filename) {
         printf("size of normalization trie:         %5ld bytes\n", (long)norm16TrieLength);
         printf("size of 16-bit extra data:          %5ld uint16_t\n", (long)extraData.length());
         printf("size of binary data file contents:  %5ld bytes\n", (long)totalSize);
+        printf("minDecompNoMaybeCodePoint:         U+%04lX\n", (long)indexes[Normalizer2Data::IX_MIN_DECOMP_NO_MAYBE_CP]);
+        printf("minCompNoMaybeCodePoint:           U+%04lX\n", (long)indexes[Normalizer2Data::IX_MIN_COMP_NO_MAYBE_CP]);
+        printf("minYesNo:                          0x%04x\n", (int)indexes[Normalizer2Data::IX_MIN_YES_NO]);
+        printf("minNoNo:                           0x%04x\n", (int)indexes[Normalizer2Data::IX_MIN_NO_NO]);
+        printf("limitNoNo:                         0x%04x\n", (int)indexes[Normalizer2Data::IX_LIMIT_NO_NO]);
+        printf("minMaybeYes:                       0x%04x\n", (int)indexes[Normalizer2Data::IX_MIN_MAYBE_YES]);
     }
 
+    memcpy(dataInfo.dataVersion, unicodeVersion, 4);
     UNewDataMemory *pData=
         udata_create(NULL, NULL, filename, &dataInfo,
                      haveCopyright ? U_COPYRIGHT_STRING : NULL, errorCode);

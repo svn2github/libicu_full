@@ -34,9 +34,6 @@
 
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 
-// TODO: make public in uparse.h
-// #define IS_INV_WHITESPACE(c) ((c)==' ' || (c)=='\t' || (c)=='\r' || (c)=='\n')
-
 U_NAMESPACE_BEGIN
 
 UBool beVerbose=FALSE, haveCopyright=TRUE;
