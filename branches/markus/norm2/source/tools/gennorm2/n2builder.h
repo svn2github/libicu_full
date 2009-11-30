@@ -71,6 +71,7 @@ private:
     friend class CompositionBuilder;
     friend class Decomposer;
     friend class ExtraDataWriter;
+    friend class Norm16Writer;
 
     uint8_t getCC(UChar32 c);
 
@@ -83,9 +84,13 @@ private:
     UBool decompose(UChar32 start, UChar32 end, uint32_t value);
     void reorder(Norm *p);
     void setHangulData();
-    void writeMapping(UChar32 c, Norm *p, UnicodeString &dataString);
-    void writeCompositions(UChar32 c, Norm *p, UnicodeString &dataString);
+    void writeMapping(UChar32 c, const Norm *p, UnicodeString &dataString);
+    void writeCompositions(UChar32 c, const Norm *p, UnicodeString &dataString);
     void writeExtraData(UChar32 c, uint32_t value, ExtraDataWriter &writer);
+    int32_t getCenterNoNoDelta() {
+        return indexes[Normalizer2Data::IX_MIN_MAYBE_YES]-Normalizer2Data::MAX_DELTA-1;
+    }
+    void writeNorm16(UChar32 start, UChar32 end, uint32_t value);
     void processData();
 
     UTrie2 *normTrie;
