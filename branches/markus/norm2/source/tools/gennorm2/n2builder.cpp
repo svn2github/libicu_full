@@ -684,13 +684,19 @@ void Normalizer2DataBuilder::writeExtraData(UChar32 c, uint32_t value, ExtraData
             // Only for ccc=0.
             // Not when mapping to a Hangul syllable, or else the runtime decomposition and
             // data access functions would have to deal with Hangul-Jamo decomposition.
-            if(p->mapping->isEmpty()) {
+            /* TODO: no special case for empty string -- if(p->mapping->isEmpty()) {
                 p->offset=Norm::OFFSET_DELTA;  // maps to empty string
-            } else if(p->mappingCP>=0 && !isHangul(p->mappingCP)) {
+            } else */ if(p->mappingCP>=0 && !isHangul(p->mappingCP)) {
+#if 1
                 int32_t delta=p->mappingCP-c;
                 if(-Normalizer2Data::MAX_DELTA<=delta && delta<=Normalizer2Data::MAX_DELTA) {
                     p->offset=(delta<<Norm::OFFSET_SHIFT)|Norm::OFFSET_DELTA;
                 }
+#else
+                if(p->mappingCP<=0x58f) {
+                    p->offset=(-p->mappingCP<<Norm::OFFSET_SHIFT)|Norm::OFFSET_DELTA;
+                }
+#endif
             }
         }
         if(p->offset==0) {

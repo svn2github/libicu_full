@@ -321,9 +321,8 @@ UBool Normalizer2Impl::decompose(UChar32 c, uint16_t norm16, ReorderingBuffer &b
     // Only loops for 1:1 algorithmic mappings.
     for(;;) {
         // get the decomposition and the lead and trail cc's
-        uint8_t cc;
         if(data.isDecompYes(norm16)) {
-            cc=data.getCCFromYesOrMaybe(norm16);  // c does not decompose
+            return buffer.append(c, data.getCCFromYesOrMaybe(norm16));  // c does not decompose
         } else if(data.isHangul(norm16)) {
             // Hangul syllable: decompose algorithmically
             UChar jamos[3];
@@ -338,11 +337,7 @@ UBool Normalizer2Impl::decompose(UChar32 c, uint16_t norm16, ReorderingBuffer &b
             }
             return buffer.appendZeroCC(jamos, c2==0 ? 2 : 3);
         } else if(data.isNoNoAlgorithmic(norm16)) {
-            UChar32 c2=data.mapAlgorithmic(c, norm16);
-            if(c==c2) {
-                return TRUE;  // c is removed (maps to an empty string).
-            }
-            c=c2;
+            c=data.mapAlgorithmic(c, norm16);
             norm16=data.getNorm16(c);
             continue;
         } else {
@@ -358,7 +353,6 @@ UBool Normalizer2Impl::decompose(UChar32 c, uint16_t norm16, ReorderingBuffer &b
             }
             return buffer.append((const UChar *)mapping, length, leadCC, trailCC);
         }
-        return buffer.append(c, cc);
     }
 }
 
@@ -437,11 +431,7 @@ UBool Normalizer2Impl::isCompStarter(UChar32 c, uint16_t norm16) {
         } else if(data.isMaybeOrNonZeroCC(norm16)) {
             return FALSE;
         } else if(data.isNoNoAlgorithmic(norm16)) {
-            UChar32 c2=data.mapAlgorithmic(c, norm16);
-            if(c==c2) {
-                return FALSE;  // c is removed (maps to an empty string).
-            }
-            c=c2;
+            c=data.mapAlgorithmic(c, norm16);
             norm16=data.getNorm16(c);
             continue;
         } else {

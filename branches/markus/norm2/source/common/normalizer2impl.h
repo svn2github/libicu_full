@@ -94,7 +94,7 @@ public:
         MIN_YES_YES_WITH_CC=0xff01,
         JAMO_VT=0xff00,
         MIN_NORMAL_MAYBE_YES=0xfe00,
-        MAX_DELTA=0x20
+        MAX_DELTA=0x40
     };
 
     enum {
