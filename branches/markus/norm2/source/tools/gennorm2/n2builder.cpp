@@ -738,18 +738,18 @@ void Normalizer2DataBuilder::writeNorm16(UChar32 start, UChar32 end, uint32_t va
         const Norm *p=norms+value;
         int32_t offset=p->offset>>Norm::OFFSET_SHIFT;
         int32_t norm16=0;
-        UBool isDecompNoMaybe=FALSE;
+        UBool isDecompNo=FALSE;
         UBool isCompNoMaybe=FALSE;
         switch(p->offset&Norm::OFFSET_MASK) {
         case Norm::OFFSET_NONE:
             // No mapping, no compositions list.
             if(p->combinesBack) {
                 norm16=Normalizer2Data::MIN_NORMAL_MAYBE_YES+p->cc;
-                isDecompNoMaybe=(UBool)(p->cc!=0);
+                isDecompNo=(UBool)(p->cc!=0);
                 isCompNoMaybe=TRUE;
             } else if(p->cc!=0) {
                 norm16=Normalizer2Data::MIN_YES_YES_WITH_CC-1+p->cc;
-                isDecompNoMaybe=isCompNoMaybe=TRUE;
+                isDecompNo=isCompNoMaybe=TRUE;
             }
             break;
         case Norm::OFFSET_MAYBE_YES:
@@ -761,11 +761,11 @@ void Normalizer2DataBuilder::writeNorm16(UChar32 start, UChar32 end, uint32_t va
             break;
         case Norm::OFFSET_YES_NO:
             norm16=indexes[Normalizer2Data::IX_MIN_YES_NO]+offset;
-            isDecompNoMaybe=TRUE;
+            isDecompNo=TRUE;
             break;
         case Norm::OFFSET_NO_NO:
             norm16=indexes[Normalizer2Data::IX_MIN_NO_NO]+offset;
-            isDecompNoMaybe=isCompNoMaybe=TRUE;
+            isDecompNo=isCompNoMaybe=TRUE;
             if(beVerbose) {  // TODO: remove after debugging
                 if(p->cc==0 && !p->mapping->isEmpty() && p->mappingCP>=0 && !isHangul(p->mappingCP)) {
                     // printf("non-algorithmic mapping to single code point: %04lX>%04lX\n", start, p->mappingCP);
@@ -774,15 +774,15 @@ void Normalizer2DataBuilder::writeNorm16(UChar32 start, UChar32 end, uint32_t va
             break;
         case Norm::OFFSET_DELTA:
             norm16=getCenterNoNoDelta()+offset;
-            isDecompNoMaybe=isCompNoMaybe=TRUE;
+            isDecompNo=isCompNoMaybe=TRUE;
             break;
         default:  // Should not occur.
             exit(U_INTERNAL_PROGRAM_ERROR);
         }
         IcuToolErrorCode errorCode("gennorm2/writeNorm16()");
         utrie2_setRange32(norm16Trie, start, end, (uint32_t)norm16, TRUE, errorCode);
-        if(isDecompNoMaybe && start<indexes[Normalizer2Data::IX_MIN_DECOMP_NO_MAYBE_CP]) {
-            indexes[Normalizer2Data::IX_MIN_DECOMP_NO_MAYBE_CP]=start;
+        if(isDecompNo && start<indexes[Normalizer2Data::IX_MIN_DECOMP_NO_CP]) {
+            indexes[Normalizer2Data::IX_MIN_DECOMP_NO_CP]=start;
         }
         if(isCompNoMaybe && start<indexes[Normalizer2Data::IX_MIN_COMP_NO_MAYBE_CP]) {
             indexes[Normalizer2Data::IX_MIN_COMP_NO_MAYBE_CP]=start;
@@ -812,8 +812,8 @@ void Normalizer2DataBuilder::setHangulData() {
         uint16_t norm16=range->norm16;
         if(norm16==0) {
             norm16=(uint16_t)indexes[Normalizer2Data::IX_MIN_YES_NO];  // Hangul LV/LVT encoded as minYesNo
-            if(range->start<indexes[Normalizer2Data::IX_MIN_DECOMP_NO_MAYBE_CP]) {
-                indexes[Normalizer2Data::IX_MIN_DECOMP_NO_MAYBE_CP]=range->start;
+            if(range->start<indexes[Normalizer2Data::IX_MIN_DECOMP_NO_CP]) {
+                indexes[Normalizer2Data::IX_MIN_DECOMP_NO_CP]=range->start;
             }
         } else {
             if(range->start<indexes[Normalizer2Data::IX_MIN_COMP_NO_MAYBE_CP]) {  // Jamo V/T are maybeYes
@@ -843,7 +843,7 @@ void Normalizer2DataBuilder::processData() {
         reorder(norms+i);
     }
 
-    indexes[Normalizer2Data::IX_MIN_DECOMP_NO_MAYBE_CP]=0x110000;
+    indexes[Normalizer2Data::IX_MIN_DECOMP_NO_CP]=0x110000;
     indexes[Normalizer2Data::IX_MIN_COMP_NO_MAYBE_CP]=0x110000;
 
     ExtraDataWriter extraDataWriter(*this);
@@ -912,7 +912,7 @@ void Normalizer2DataBuilder::writeBinaryFile(const char *filename) {
         printf("size of normalization trie:         %5ld bytes\n", (long)norm16TrieLength);
         printf("size of 16-bit extra data:          %5ld uint16_t\n", (long)extraData.length());
         printf("size of binary data file contents:  %5ld bytes\n", (long)totalSize);
-        printf("minDecompNoMaybeCodePoint:         U+%04lX\n", (long)indexes[Normalizer2Data::IX_MIN_DECOMP_NO_MAYBE_CP]);
+        printf("minDecompNoCodePoint:              U+%04lX\n", (long)indexes[Normalizer2Data::IX_MIN_DECOMP_NO_CP]);
         printf("minCompNoMaybeCodePoint:           U+%04lX\n", (long)indexes[Normalizer2Data::IX_MIN_COMP_NO_MAYBE_CP]);
         printf("minYesNo:                          0x%04x\n", (int)indexes[Normalizer2Data::IX_MIN_YES_NO]);
         printf("minNoNo:                           0x%04x\n", (int)indexes[Normalizer2Data::IX_MIN_NO_NO]);

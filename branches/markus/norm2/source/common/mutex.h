@@ -71,6 +71,71 @@ inline Mutex::~Mutex()
   umtx_unlock(fMutex);
 }
 
+// common code for singletons ---------------------------------------------- ***
+
+/**
+ * Function pointer for the instantiator parameter of IcuSingleton::getInstance().
+ * The function creates some object, optionally using the context parameter.
+ * The function need not check for U_FAILURE(errorCode).
+ */
+typedef void *InstantiatorFn(const void *context, UErrorCode &errorCode);
+
+/**
+ * Singleton struct with shared instantiation/mutexing code.
+ * Best used via IcuSingletonWrapper or similar.
+ * Define a static IcuSingleton instance via the STATIC_ICU_SINGLETON macro.
+ */
+struct IcuSingleton {
+    void *fInstance;
+    UErrorCode fErrorCode;
+    int8_t fHaveInstance;
+
+    /**
+     * Returns the singleton instance, or NULL if it could not be created.
+     * Calls the instantiator with the context if the instance has not been
+     * created yet. In a race condition, the duplicate may not be NULL.
+     * The caller must delete the duplicate.
+     * The caller need not initialize the duplicate before the call.
+     * The singleton creation is only attempted once. If it fails,
+     * the singleton will then always return NULL.
+     */
+    void *getInstance(InstantiatorFn *instantiator, const void *context,
+                      void *&duplicate,
+                      UErrorCode &errorCode);
+    /**
+     * Resets the fields. The caller must have deleted the singleton instance.
+     * Not mutexed.
+     * Call this from a cleanup function.
+     */
+    void reset();
+};
+
+#define STATIC_ICU_SINGLETON(name) static IcuSingleton name={ NULL, U_ZERO_ERROR, 0 }
+
+/**
+ * Handy wrapper for an IcuSingleton.
+ * Intended for temporary use on the stack, to make the IcuSingleton easier to deal with.
+ * Takes care of the duplicate deletion and type casting.
+ */
+template<typename T>
+class IcuSingletonWrapper {
+public:
+    IcuSingletonWrapper(IcuSingleton &s) : singleton(s) {}
+    void deleteInstance() {
+        delete (T *)singleton.fInstance;
+        singleton.reset();
+    }
+    T *getInstance(InstantiatorFn *instantiator, const void *context,
+                   UErrorCode &errorCode) {
+        void *duplicate;
+        T *instance=(T *)singleton.getInstance(instantiator, context, duplicate, errorCode);
+        delete (T *)duplicate;
+        return instance;
+    }
+private:
+    IcuSingleton &singleton;
+};
+
 U_NAMESPACE_END
 
 #endif //_MUTEX_

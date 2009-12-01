@@ -33,6 +33,7 @@
 #include "unicode/uniset.h"
 #include "unicode/usetiter.h"
 #include "unicode/unorm.h"
+#include "normalizer2impl.h"
 #include "ucln_cmn.h"
 #include "unormimp.h"
 #include "ucase.h"

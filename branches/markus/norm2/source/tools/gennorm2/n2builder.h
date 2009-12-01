@@ -24,8 +24,6 @@
 #include "toolutil.h"
 #include "utrie2.h"
 
-#define DATA_TYPE "nrm"
-
 U_NAMESPACE_BEGIN
 
 extern UBool beVerbose, haveCopyright;

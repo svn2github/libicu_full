@@ -18,10 +18,15 @@
 
 #if !UCONFIG_NO_NORMALIZATION
 
+#include "unicode/localpointer.h"
 #include "unicode/normalizer2.h"
 #include "unicode/udata.h"
 #include "unicode/ustring.h"
+#include "cmemory.h"
+#include "mutex.h"
 #include "normalizer2impl.h"
+#include "ucln_cmn.h"
+#include "utrie2.h"
 
 U_NAMESPACE_BEGIN
 
@@ -75,6 +80,74 @@ public:
 
     const UChar *limit;
 };
+
+Normalizer2Data::Normalizer2Data() : memory(NULL), trie(NULL) {}
+
+Normalizer2Data::~Normalizer2Data() {
+    udata_close(memory);
+    utrie2_close(trie);
+}
+
+UBool U_CALLCONV
+Normalizer2Data::isAcceptable(void *context,
+                              const char *type, const char *name,
+                              const UDataInfo *pInfo) {
+    if(
+        pInfo->size>=20 &&
+        pInfo->isBigEndian==U_IS_BIG_ENDIAN &&
+        pInfo->charsetFamily==U_CHARSET_FAMILY &&
+        pInfo->dataFormat[0]==0x4e &&    /* dataFormat="Nrm2" */
+        pInfo->dataFormat[1]==0x72 &&
+        pInfo->dataFormat[2]==0x6d &&
+        pInfo->dataFormat[3]==0x32 &&
+        pInfo->formatVersion[0]==1
+    ) {
+        Normalizer2Data *me=(Normalizer2Data *)context;
+        uprv_memcpy(me->dataVersion, pInfo->dataVersion, 4);
+        return TRUE;
+    } else {
+        return FALSE;
+    }
+}
+
+void
+Normalizer2Data::load(const char *packageName, const char *name, UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) {
+        return;
+    }
+    memory=udata_openChoice(packageName, "nrm", name, isAcceptable, this, &errorCode);
+    if(U_FAILURE(errorCode)) {
+        return;
+    }
+    const uint8_t *inBytes=(const uint8_t *)udata_getMemory(memory);
+    const int32_t *inIndexes=(const int32_t *)inBytes;
+    int32_t indexesLength=inIndexes[IX_NORM_TRIE_OFFSET]/4;
+    if(indexesLength<=IX_MIN_MAYBE_YES) {
+        errorCode=U_INVALID_FORMAT_ERROR;  // Not enough indexes.
+        return;
+    }
+    // Copy the indexes. Take care of possible growth of the array.
+    if(indexesLength>IX_COUNT) {
+        indexesLength=IX_COUNT;
+    }
+    uprv_memcpy(indexes, inIndexes, indexesLength*4);
+    if(indexesLength<IX_COUNT) {
+        uprv_memset(indexes+indexesLength, 0, (IX_COUNT-indexesLength)*4);
+    }
+
+    int32_t offset=indexes[IX_NORM_TRIE_OFFSET];
+    int32_t nextOffset=indexes[IX_EXTRA_DATA_OFFSET];
+    trie=utrie2_openFromSerialized(UTRIE2_16_VALUE_BITS,
+                                   inBytes+offset, nextOffset-offset, NULL,
+                                   &errorCode);
+    if(U_FAILURE(errorCode)) {
+        return;
+    }
+
+    offset=nextOffset;
+    maybeYesCompositions=(const uint16_t *)(inBytes+offset);
+    extraData=maybeYesCompositions+(MIN_NORMAL_MAYBE_YES-indexes[IX_MIN_MAYBE_YES]);
+}
 
 UBool ReorderingBuffer::init(UNormalizationAppendMode appendMode) {
     int32_t length=str.length();
@@ -262,6 +335,69 @@ void ReorderingBuffer::insert(UChar32 c, uint8_t cc) {
     }
 }
 
+Normalizer2Impl *
+Normalizer2Impl::createInstance(const char *packageName,
+                                const char *name,
+                                UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) {
+        return NULL;
+    }
+    LocalPointer<Normalizer2Impl> impl(new Normalizer2Impl);
+    if(impl.isNull()) {
+        errorCode=U_MEMORY_ALLOCATION_ERROR;
+        return NULL;
+    }
+    impl->data.load(packageName, name, errorCode);
+    return U_SUCCESS(errorCode) ? impl.orphan() : NULL;
+}
+
+U_CDECL_BEGIN
+static UBool U_CALLCONV uprv_normalizer2_cleanup();
+U_CDECL_END
+
+class Normalizer2ImplSingleton : public IcuSingletonWrapper<Normalizer2Impl> {
+public:
+    Normalizer2ImplSingleton(IcuSingleton &s, const char *n) :
+        IcuSingletonWrapper<Normalizer2Impl>(s), name(n) {}
+    Normalizer2Impl *getInstance(UErrorCode &errorCode) {
+        return IcuSingletonWrapper<Normalizer2Impl>::getInstance(createInstance, name, errorCode);
+    }
+private:
+    static void *createInstance(const void *context, UErrorCode &errorCode) {
+        ucln_common_registerCleanup(UCLN_COMMON_NORMALIZER2, uprv_normalizer2_cleanup);
+        return Normalizer2Impl::createInstance(NULL, (const char *)context, errorCode);
+    }
+
+    const char *name;
+};
+
+STATIC_ICU_SINGLETON(nfcSingleton);
+STATIC_ICU_SINGLETON(nfkcSingleton);
+STATIC_ICU_SINGLETON(nfkc_cfSingleton);
+
+U_CDECL_BEGIN
+
+static UBool U_CALLCONV uprv_normalizer2_cleanup() {
+    Normalizer2ImplSingleton(nfcSingleton, NULL).deleteInstance();
+    Normalizer2ImplSingleton(nfkcSingleton, NULL).deleteInstance();
+    Normalizer2ImplSingleton(nfkc_cfSingleton, NULL).deleteInstance();
+    return TRUE;
+}
+
+U_CDECL_END
+
+Normalizer2Impl *Normalizer2Impl::getNFCInstance(UErrorCode &errorCode) {
+    return Normalizer2ImplSingleton(nfcSingleton, "nfc").getInstance(errorCode);
+}
+
+Normalizer2Impl *Normalizer2Impl::getNFKCInstance(UErrorCode &errorCode) {
+    return Normalizer2ImplSingleton(nfkcSingleton, "nfkc").getInstance(errorCode);
+}
+
+Normalizer2Impl *Normalizer2Impl::getNFKC_CFInstance(UErrorCode &errorCode) {
+    return Normalizer2ImplSingleton(nfkc_cfSingleton, "nfkc_cf").getInstance(errorCode);
+}
+
 UBool Normalizer2Impl::decompose(const UChar *src, int32_t srcLength, ReorderingBuffer &buffer) {
     const UChar *limit;
     if(srcLength>=0) {
@@ -270,7 +406,7 @@ UBool Normalizer2Impl::decompose(const UChar *src, int32_t srcLength, Reordering
         limit=NULL;  // zero-terminated string
     }
 
-    UChar minNoCP=data.getMinDecompNoCodePoint();
+    UChar32 minNoCP=data.getMinDecompNoCodePoint();
 
     U_ALIGN_CODE(16);
 
@@ -336,7 +472,7 @@ UBool Normalizer2Impl::decompose(UChar32 c, uint16_t norm16, ReorderingBuffer &b
                 jamos[2]=(UChar)(JAMO_T_BASE+c2);
             }
             return buffer.appendZeroCC(jamos, c2==0 ? 2 : 3);
-        } else if(data.isNoNoAlgorithmic(norm16)) {
+        } else if(data.isDecompNoAlgorithmic(norm16)) {
             c=data.mapAlgorithmic(c, norm16);
             norm16=data.getNorm16(c);
             continue;
@@ -430,7 +566,7 @@ UBool Normalizer2Impl::isCompStarter(UChar32 c, uint16_t norm16) {
             return TRUE;
         } else if(data.isMaybeOrNonZeroCC(norm16)) {
             return FALSE;
-        } else if(data.isNoNoAlgorithmic(norm16)) {
+        } else if(data.isDecompNoAlgorithmic(norm16)) {
             c=data.mapAlgorithmic(c, norm16);
             norm16=data.getNorm16(c);
             continue;
@@ -453,7 +589,7 @@ UBool Normalizer2Impl::isCompStarter(UChar32 c, uint16_t norm16) {
 }
 
 const UChar *Normalizer2Impl::findPreviousCompStarter(const UChar *start, const UChar *p) {
-    BackwardUTrie2StringIterator iter(&data.getTrie(), start, p);
+    BackwardUTrie2StringIterator iter(data.getTrie(), start, p);
     uint16_t norm16;
     do {
         norm16=iter.previous16();
@@ -462,7 +598,7 @@ const UChar *Normalizer2Impl::findPreviousCompStarter(const UChar *start, const 
 }
 
 const UChar *Normalizer2Impl::findNextCompStarter(const UChar *p, const UChar *limit) {
-    ForwardUTrie2StringIterator iter(&data.getTrie(), p, limit);
+    ForwardUTrie2StringIterator iter(data.getTrie(), p, limit);
     uint16_t norm16;
     do {
         norm16=iter.next16();
@@ -476,9 +612,7 @@ U_NAMESPACE_END
 
 // Normalizer2 unmodifiable? Yes, please...
 //   Singletons?? Prefer to have Normalizer2Impl singletons but separate Normalizer2 instances.
-// Builder code needs to impose limitations:
-// Hangul & Jamo properties, except if excluded
-// Might be trouble if mapping Hangul and/or Jamo to something else.
+// #if for code only for minMaybeYes<MIN_NORMAL_MAYBE_YES. Benchmark both ways.
 // Consider not supporting an exclusions set at runtime.
 //   Otherwise need to pull nx_contains() into the ReorderingBuffer etc.
 //   Can support Unicode 3.2 normalization via UnicodeSet span outside of normalization calls.
