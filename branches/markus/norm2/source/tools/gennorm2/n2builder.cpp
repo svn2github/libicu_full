@@ -697,7 +697,7 @@ void Normalizer2DataBuilder::writeExtraData(UChar32 c, uint32_t value, ExtraData
             int32_t oldNoNoLength=writer.noNoMappings.length();
             writeMapping(c, p, writer.noNoMappings);
             UnicodeString newMapping(FALSE,
-                                     writer.noNoMappings.getBuffer(),
+                                     writer.noNoMappings.getBuffer()+oldNoNoLength,
                                      writer.noNoMappings.length()-oldNoNoLength);
             int32_t previousOffset=writer.previousNoNoMappings.geti(newMapping);
             if(previousOffset!=0) {
@@ -760,6 +760,11 @@ void Normalizer2DataBuilder::writeNorm16(UChar32 start, UChar32 end, uint32_t va
         case Norm::OFFSET_NO_NO:
             norm16=indexes[Normalizer2Data::IX_MIN_NO_NO]+offset;
             isDecompNoMaybe=isCompNoMaybe=TRUE;
+            if(beVerbose) {  // TODO: remove after debugging
+                if(p->cc==0 && !p->mapping->isEmpty() && p->mappingCP>=0 && !isHangul(p->mappingCP)) {
+                    // printf("non-algorithmic mapping to single code point: %04lX>%04lX\n", start, p->mappingCP);
+                }
+            }
             break;
         case Norm::OFFSET_DELTA:
             norm16=getCenterNoNoDelta()+offset;
