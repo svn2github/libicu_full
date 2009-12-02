@@ -28,9 +28,10 @@
 
 // TODO: Move to old unorm.h or new unormalizer2.h.
 typedef enum UNormalizationAppendMode {
+    UNORM_REPLACE,
     UNORM_SIMPLE_APPEND,
     UNORM_MERGE_APPEND,
-    UNORM_APPEND_MODE_COUNT
+    // TODO: needed? error checking?? UNORM_APPEND_MODE_COUNT
 } UNormalizationAppendMode;
 
 U_NAMESPACE_BEGIN

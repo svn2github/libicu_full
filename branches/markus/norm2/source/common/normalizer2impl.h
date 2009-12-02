@@ -191,6 +191,7 @@ public:
             appendBMP((UChar)c, cc) :
             appendSupplementary(c, cc);
     }
+    // s must be in NFD, otherwise change the implementation.
     UBool append(const UChar *s, int32_t length, uint8_t leadCC, uint8_t trailCC);
     UBool appendZeroCC(const UChar *s, int32_t length);
     void removeZeroCCSuffix(int32_t length);

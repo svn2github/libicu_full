@@ -150,6 +150,9 @@ Normalizer2Data::load(const char *packageName, const char *name, UErrorCode &err
 }
 
 UBool ReorderingBuffer::init(UNormalizationAppendMode appendMode) {
+    if(appendMode==UNORM_REPLACE) {
+        str.remove();
+    }
     int32_t length=str.length();
     start=str.getBuffer(-1);
     if(start==NULL) {
@@ -157,7 +160,7 @@ UBool ReorderingBuffer::init(UNormalizationAppendMode appendMode) {
     }
     limit=start+length;
     remainingCapacity=str.getCapacity()-length;
-    if(appendMode==UNORM_SIMPLE_APPEND) {
+    if(appendMode<=UNORM_SIMPLE_APPEND) {
         reorderStart=limit;
     } else {
         resetReorderStart();
@@ -203,39 +206,29 @@ UBool ReorderingBuffer::append(const UChar *s, int32_t length, uint8_t leadCC, u
         return FALSE;
     }
     remainingCapacity-=length;
-    for(;;) {
-        if(lastCC<=leadCC || leadCC==0) {
-            if(leadCC<=1) {
-                reorderStart=limit+1;  // Ok if not a code point boundary.
-            }
-            const UChar *sLimit=s+length;
-            do { *limit++=*s++; } while(s<sLimit);
-            lastCC=trailCC;
-            if(trailCC<=1) {
-                reorderStart=limit;
-            }
-            break;
-        } else {
-            // TODO: iterator? using MIN_CCC_LCCC_CP?
-            int32_t i=0;
-            UChar32 c;
+    if(lastCC<=leadCC || leadCC==0) {
+        if(trailCC<=1) {
+            reorderStart=limit+length;
+        } else if(leadCC<=1) {
+            reorderStart=limit+1;  // Ok if not a code point boundary.
+        }
+        const UChar *sLimit=s+length;
+        do { *limit++=*s++; } while(s!=sLimit);
+        lastCC=trailCC;
+    } else {
+        int32_t i=0;
+        UChar32 c;
+        U16_NEXT(s, i, length, c);
+        insert(c, leadCC);  // insert first code point
+        while(i<length) {
             U16_NEXT(s, i, length, c);
-            insert(c, leadCC);  // insert first code point
             if(i<length) {
-                s+=i;
-                length-=i;
-                i=0;
-                U16_NEXT(s, i, length, c);
-                if(i<length) {
-                    // s must be in NFD, otherwise we need to use getCC().
-                    leadCC=data.getCCFromYesOrMaybe(data.getNorm16(c));
-                } else {
-                    leadCC=trailCC;
-                }
-                // continue appending the rest of the string
+                // s must be in NFD, otherwise we need to use getCC().
+                leadCC=data.getCCFromYesOrMaybe(data.getNorm16(c));
             } else {
-                break;
+                leadCC=trailCC;
             }
+            append(c, leadCC);
         }
     }
     return TRUE;
@@ -445,6 +438,7 @@ UBool Normalizer2Impl::decompose(const UChar *src, int32_t srcLength, Reordering
         UChar c2;
         if(U16_IS_LEAD(c)) {
             if(src!=limit && U16_IS_TRAIL(c2=*src)) {
+                ++src;
                 c=U16_GET_SUPPLEMENTARY(c, c2);
                 norm16=data.getNorm16FromSupplementary(c);
             } else {
@@ -502,6 +496,10 @@ void Normalizer2Impl::decompose(const UChar *src, int32_t srcLength,
                                 UnicodeString &dest, UNormalizationAppendMode appendMode,
                                 UErrorCode &errorCode) {
     if(U_SUCCESS(errorCode)) {
+        if(appendMode!=UNORM_REPLACE && dest.isBogus()) {
+            errorCode=U_ILLEGAL_ARGUMENT_ERROR;
+            return;
+        }
         ReorderingBuffer buffer(data, dest);
         if(!buffer.init(appendMode) || !decompose(src, srcLength, buffer)) {
             errorCode=U_MEMORY_ALLOCATION_ERROR;
