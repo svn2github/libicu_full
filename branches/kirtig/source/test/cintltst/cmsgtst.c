@@ -662,9 +662,8 @@ static void TestMsgFormatSelect(void)
     str1=(UChar*)malloc(sizeof(UChar) * 25);
     u_uastrcpy(str1, "female");
     log_verbose("Testing message format with Select test #1\n:");
-    /* "{0} est {1, select, female {allÃ©e} other {allÃ©}} Ã Paris."  */
-    u_uastrcpy(pattern, "{0} est {1, select, female {allÃ©e} other {allÃ©}} Ã Paris.");
-    u_uastrcpy(expected, "Kirti est allÃ©e Ã Paris.");
+    u_uastrcpy(pattern, "{0} est {1, select, female {all\\u00E9e} other {all\\u00E9}} \\u00E0 Paris.");
+    u_uastrcpy(expected, "Kirti est all\\u00E9e \\u00E0 Paris.");
     resultlength=0;
     resultLengthOut=u_formatMessage( "fr", pattern, u_strlen(pattern), NULL, resultlength, &status, str , str1);
     if(status==U_BUFFER_OVERFLOW_ERROR)
@@ -691,8 +690,8 @@ static void TestMsgFormatSelect(void)
     str1=(UChar*)malloc(sizeof(UChar) * 25);
     u_uastrcpy(str1, "other");
     log_verbose("Testing message format with Select test #2\n:");
-    u_uastrcpy(pattern, "{0} est {1, select, female {{2,number,integer} allÃ©e} other {allÃ©}} Ã Paris.");
-    u_uastrcpy(expected, "Noname est allÃ© Ã Paris.");
+    u_uastrcpy(pattern, "{0} est {1, select, female {{2,number,integer} all\\u00E9e} other {all\\u00E9}} \\u00E0 Paris.");
+    u_uastrcpy(expected, "Noname est all\\u00E9 \\u00E0 Paris.");
     resultlength=0;
     resultLengthOut=u_formatMessage( "fr", pattern, u_strlen(pattern), NULL, resultlength, &status, str , str1,6);
     if(status==U_BUFFER_OVERFLOW_ERROR)
