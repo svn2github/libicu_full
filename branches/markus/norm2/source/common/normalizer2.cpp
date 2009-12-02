@@ -224,8 +224,10 @@ UBool ReorderingBuffer::append(const UChar *s, int32_t length, uint8_t leadCC, u
             if(i<length) {
                 s+=i;
                 length-=i;
+                i=0;
                 U16_NEXT(s, i, length, c);
                 if(i<length) {
+                    // s must be in NFD, otherwise we need to use getCC().
                     leadCC=data.getCCFromYesOrMaybe(data.getNorm16(c));
                 } else {
                     leadCC=trailCC;
@@ -323,9 +325,8 @@ uint8_t ReorderingBuffer::previousCC() {
 void ReorderingBuffer::insert(UChar32 c, uint8_t cc) {
     for(setIterator(), skipPrevious(); previousCC()>cc;) {}
     // insert c at codePointLimit, after the character with prevCC<=cc
-    int32_t length=U16_LENGTH(c);
     UChar *q=limit;
-    UChar *r=limit+=length;
+    UChar *r=limit+=U16_LENGTH(c);
     do {
         *--r=*--q;
     } while(codePointLimit!=q);
@@ -442,9 +443,14 @@ UBool Normalizer2Impl::decompose(const UChar *src, int32_t srcLength, Reordering
         // Check one above-minimum, relevant code point.
         ++src;
         UChar c2;
-        if(U16_IS_LEAD(c) && src!=limit && U16_IS_TRAIL(c2=*src)) {
-            c=U16_GET_SUPPLEMENTARY(c, c2);
-            norm16=data.getNorm16FromSupplementary(c);
+        if(U16_IS_LEAD(c)) {
+            if(src!=limit && U16_IS_TRAIL(c2=*src)) {
+                c=U16_GET_SUPPLEMENTARY(c, c2);
+                norm16=data.getNorm16FromSupplementary(c);
+            } else {
+                // Data for lead surrogate code *point* not code *unit*. Normally 0.
+                norm16=data.getNorm16FromBMP((UChar)c);
+            }
         }
         if(!decompose(c, norm16, buffer)) {
             return FALSE;
@@ -488,6 +494,17 @@ UBool Normalizer2Impl::decompose(UChar32 c, uint16_t norm16, ReorderingBuffer &b
                 leadCC=0;
             }
             return buffer.append((const UChar *)mapping, length, leadCC, trailCC);
+        }
+    }
+}
+
+void Normalizer2Impl::decompose(const UChar *src, int32_t srcLength,
+                                UnicodeString &dest, UNormalizationAppendMode appendMode,
+                                UErrorCode &errorCode) {
+    if(U_SUCCESS(errorCode)) {
+        ReorderingBuffer buffer(data, dest);
+        if(!buffer.init(appendMode) || !decompose(src, srcLength, buffer)) {
+            errorCode=U_MEMORY_ALLOCATION_ERROR;
         }
     }
 }

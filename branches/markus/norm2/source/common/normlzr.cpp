@@ -1,7 +1,7 @@
 /*
  *************************************************************************
  * COPYRIGHT: 
- * Copyright (c) 1996-2005, International Business Machines Corporation and
+ * Copyright (c) 1996-2009, International Business Machines Corporation and
  * others. All Rights Reserved.
  *************************************************************************
  */
@@ -17,6 +17,7 @@
 #include "unicode/uiter.h"
 #include "unicode/normlzr.h"
 #include "cmemory.h"
+#include "normalizer2impl.h"
 #include "unormimp.h"
 
 U_NAMESPACE_BEGIN
@@ -141,20 +142,28 @@ Normalizer::normalize(const UnicodeString& source,
             dest=&localDest;
         }
 
-        UChar *buffer=dest->getBuffer(source.length());
-        int32_t length=unorm_internalNormalize(buffer, dest->getCapacity(),
+        if(mode==UNORM_NFD && options==0) {
+            Normalizer2Impl *impl=Normalizer2Impl::getNFCInstance(status);
+            if(U_SUCCESS(status)) {
+                result.remove();
+                impl->decompose(source.getBuffer(), source.length(), result, UNORM_SIMPLE_APPEND, status);
+            }
+        } else {
+            UChar *buffer=dest->getBuffer(source.length());
+            int32_t length=unorm_internalNormalize(buffer, dest->getCapacity(),
+                                                   source.getBuffer(), source.length(),
+                                                   mode, options,
+                                                   &status);
+            dest->releaseBuffer(U_SUCCESS(status) ? length : 0);
+            if(status==U_BUFFER_OVERFLOW_ERROR) {
+                status=U_ZERO_ERROR;
+                buffer=dest->getBuffer(length);
+                length=unorm_internalNormalize(buffer, dest->getCapacity(),
                                                source.getBuffer(), source.length(),
                                                mode, options,
                                                &status);
-        dest->releaseBuffer(U_SUCCESS(status) ? length : 0);
-        if(status==U_BUFFER_OVERFLOW_ERROR) {
-            status=U_ZERO_ERROR;
-            buffer=dest->getBuffer(length);
-            length=unorm_internalNormalize(buffer, dest->getCapacity(),
-                                           source.getBuffer(), source.length(),
-                                           mode, options,
-                                           &status);
-            dest->releaseBuffer(U_SUCCESS(status) ? length : 0);
+                dest->releaseBuffer(U_SUCCESS(status) ? length : 0);
+            }
         }
 
         if(dest==&localDest) {

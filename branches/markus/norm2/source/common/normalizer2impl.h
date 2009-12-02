@@ -234,7 +234,7 @@ private:
             p[1]=U16_TRAIL(c);
             p+=2;
         }
-        return p;
+        return p;  // TODO: necessary?
     }
     UBool resize(int32_t appendLength);
 

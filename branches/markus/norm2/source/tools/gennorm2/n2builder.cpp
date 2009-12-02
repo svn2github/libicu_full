@@ -825,6 +825,19 @@ void Normalizer2DataBuilder::setHangulData() {
     }
 }
 
+U_CDECL_BEGIN
+
+static UBool U_CALLCONV
+enumRangeMaxValue(const void *context, UChar32 start, UChar32 end, uint32_t value) {
+    uint32_t *pMaxValue=(uint32_t *)context;
+    if(value>*pMaxValue) {
+        *pMaxValue=value;
+    }
+    return TRUE;
+}
+
+U_CDECL_END
+
 void Normalizer2DataBuilder::processData() {
     IcuToolErrorCode errorCode("gennorm2/processData()");
     norm16Trie=utrie2_open(0, 0, errorCode);
@@ -881,6 +894,28 @@ void Normalizer2DataBuilder::processData() {
     utrie2_enum(normTrie, NULL, enumRangeHandler, Norm16Writer(*this).ptr());
 
     setHangulData();
+
+    // Look for the "worst" norm16 value of any supplementary code point
+    // corresponding to a lead surrogate, and set it as that surrogate's value.
+    // Enables quick check inner loops to look at only code units.
+    //
+    // We could be more sophisticated:
+    // We could collect a bit set for whether there are values in the different
+    // norm16 ranges (yesNo, maybeYes, yesYesWithCC etc.)
+    // and select the best value that only breaks the composition and/or decomposition
+    // inner loops if necessary.
+    // However, that seems like overkill for an optimization for supplementary characters.
+    for(UChar lead=0xd800; lead<0xdc00; ++lead) {
+        uint32_t maxValue=0;
+        utrie2_enumForLeadSurrogate(norm16Trie, lead, NULL, enumRangeMaxValue, &maxValue);
+        if(maxValue>=(uint32_t)indexes[Normalizer2Data::IX_LIMIT_NO_NO]) {
+            // Set noNo ("worst" value) if it got into "less-bad" maybeYes or ccc!=0.
+            // Otherwise it might end up at something like JAMO_VT which stays in
+            // the inner decomposition quick check loop.
+            maxValue=(uint32_t)indexes[Normalizer2Data::IX_LIMIT_NO_NO]-1;
+        }
+        utrie2_set32ForLeadSurrogateCodeUnit(norm16Trie, lead, maxValue, errorCode);
+    }
 }
 
 void Normalizer2DataBuilder::writeBinaryFile(const char *filename) {
