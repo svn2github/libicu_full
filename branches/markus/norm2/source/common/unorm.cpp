@@ -121,11 +121,6 @@ enum {
 };
 
 U_CDECL_BEGIN
-static inline UBool
-isHangulWithoutJamoT(UChar c) {
-    c-=HANGUL_BASE;
-    return c<HANGUL_COUNT && c%JAMO_T_COUNT==0;
-}
 
 /* norm32 helpers */
 

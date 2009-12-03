@@ -217,7 +217,7 @@ UBool ReorderingBuffer::append(const UChar *s, int32_t length, uint8_t leadCC, u
             U16_NEXT(s, i, length, c);
             if(i<length) {
                 // s must be in NFD, otherwise we need to use getCC().
-                leadCC=data.getCCFromYesOrMaybe(data.getNorm16(c));
+                leadCC=Normalizer2Data::getCCFromYesOrMaybe(data.getNorm16(c));
             } else {
                 leadCC=trailCC;
             }
@@ -302,7 +302,7 @@ uint8_t ReorderingBuffer::previousCC() {
     } else {
         norm16=data.getNorm16FromBMP(c);
     }
-    return data.getCCFromYesOrMaybe(norm16);
+    return Normalizer2Data::getCCFromYesOrMaybe(norm16);
 }
 
 // Inserts c somewhere before the last character.
@@ -394,13 +394,13 @@ UBool Normalizer2Impl::decompose(const UChar *src, int32_t srcLength,
     }
 
     UChar32 minNoCP=data.getMinDecompNoCodePoint();
+    uint16_t norm16=0;
 
     U_ALIGN_CODE(16);
 
     for(;;) {
         // count code units below the minimum or with irrelevant data for the quick check
         UChar32 c;
-        uint16_t norm16=0;
         const UChar *prevSrc=src;
         if(limit==NULL) {
             while((c=*src)<minNoCP ?
@@ -428,8 +428,8 @@ UBool Normalizer2Impl::decompose(const UChar *src, int32_t srcLength,
 
         // Check one above-minimum, relevant code point.
         ++src;
-        UChar c2;
         if(U16_IS_LEAD(c)) {
+            UChar c2;
             if(src!=limit && U16_IS_TRAIL(c2=*src)) {
                 ++src;
                 c=U16_GET_SUPPLEMENTARY(c, c2);
@@ -451,7 +451,8 @@ UBool Normalizer2Impl::decompose(UChar32 c, uint16_t norm16, ReorderingBuffer &b
     for(;;) {
         // get the decomposition and the lead and trail cc's
         if(data.isDecompYes(norm16)) {
-            return buffer.append(c, data.getCCFromYesOrMaybe(norm16));  // c does not decompose
+            // c does not decompose
+            return buffer.append(c, Normalizer2Data::getCCFromYesOrMaybe(norm16));
         } else if(data.isHangul(norm16)) {
             // Hangul syllable: decompose algorithmically
             UChar jamos[3];
@@ -560,22 +561,22 @@ void Normalizer2Impl::decomposeAndAppend(const UChar *src, int32_t srcLength,
  * A linear search is used.
  *
  * See normalizer2impl.h for a more detailed description
- * of the composition table format.
+ * of the compositions list format.
  */
-static int32_t combine(const uint16_t *table, UChar32 trail) {
+static int32_t combine(const uint16_t *list, UChar32 trail) {
     uint16_t key1, firstUnit;
     if(trail<Normalizer2Data::COMP_1_TRAIL_LIMIT) {
         // trail character is 0..33FF
         // result entry may have 2 or 3 units
         key1=(uint16_t)(trail<<1);
-        while(key1>(firstUnit=*table)) {
-            table+=2+(firstUnit&Normalizer2Data::COMP_1_TRIPLE);
+        while(key1>(firstUnit=*list)) {
+            list+=2+(firstUnit&Normalizer2Data::COMP_1_TRIPLE);
         }
         if(key1==(firstUnit&Normalizer2Data::COMP_1_TRAIL_MASK)) {
             if(firstUnit&Normalizer2Data::COMP_1_TRIPLE) {
-                return ((int32_t)table[1]<<16)|table[2];
+                return ((int32_t)list[1]<<16)|list[2];
             } else {
-                return table[1];
+                return list[1];
             }
         }
     } else {
@@ -587,24 +588,194 @@ static int32_t combine(const uint16_t *table, UChar32 trail) {
         uint16_t key2=(uint16_t)(trail<<Normalizer2Data::COMP_2_TRAIL_SHIFT);
         uint16_t secondUnit;
         for(;;) {
-            if(key1>(firstUnit=*table)) {
-                table+=2+(firstUnit&Normalizer2Data::COMP_1_TRIPLE);
+            if(key1>(firstUnit=*list)) {
+                list+=2+(firstUnit&Normalizer2Data::COMP_1_TRIPLE);
             } else if(key1==(firstUnit&Normalizer2Data::COMP_1_TRAIL_MASK)) {
-                if(key2>(secondUnit=table[1])) {
+                if(key2>(secondUnit=list[1])) {
                     if(firstUnit&Normalizer2Data::COMP_1_LAST_TUPLE) {
                         break;
                     } else {
-                        table+=3;
+                        list+=3;
                     }
                 } else if(key2==(secondUnit&Normalizer2Data::COMP_2_TRAIL_MASK)) {
-                    return ((int32_t)(secondUnit&~Normalizer2Data::COMP_2_TRAIL_MASK)<<16)|table[2];
+                    return ((int32_t)(secondUnit&~Normalizer2Data::COMP_2_TRAIL_MASK)<<16)|list[2];
                 } else {
                     break;
                 }
+            } else {
+                break;
             }
         }
     }
     return -1;
+}
+
+/*
+ * Recomposes the text in [p..limit[
+ * (which is in NFD - decomposed and canonically ordered),
+ * and returns how much shorter the string became.
+ *
+ * Note that recomposition never lengthens the text:
+ * Any character consists of either one or two code units;
+ * a composition may contain at most one more code unit than the original starter,
+ * while the combining mark that is removed has at least one code unit.
+ */
+void Normalizer2Impl::recompose(ReorderingBuffer &buffer, int32_t recomposeStartIndex) const {
+    UChar *p=buffer.getStart()+recomposeStartIndex;
+    UChar *limit=buffer.getLimit();
+
+    UChar *starter, *pRemove, *q, *r;
+    const uint16_t *compositionsList;
+    UChar32 c, compositeAndFwd;
+    uint16_t norm16;
+    uint8_t cc, prevCC;
+    UBool starterIsSupplementary;
+
+    // Some of the following variables are not used until we have a forward-combining starter
+    // and are only initialized now to avoid compiler warnings.
+    compositionsList=NULL;  // used as indicator for whether we have a forward-combining starter
+    starter=NULL;
+    starterIsSupplementary=FALSE;
+    prevCC=0;
+
+    for(;;) {
+        UTRIE2_U16_NEXT16(data.getTrie(), p, limit, c, norm16);
+        cc=Normalizer2Data::getCCFromYesOrMaybe(norm16);
+        if( // this character combines backward and
+            data.isMaybe(norm16) &&
+            // we have seen a starter that combines forward and
+            compositionsList!=NULL &&
+            // the backward-combining character is not blocked
+            (prevCC<cc || prevCC==0)
+        ) {
+            if(Normalizer2Data::isJamoVT(norm16)) {
+                // c is a Jamo V/T, see if we can compose it with the previous character.
+                if(c<JAMO_T_BASE) {
+                    // c is a Jamo Vowel, compose with previous Jamo L and following Jamo T.
+                    UChar prev=(UChar)(*starter-JAMO_L_BASE);
+                    if(prev<JAMO_L_COUNT) {
+                        pRemove=p-1;
+                        UChar syllable=(UChar)(HANGUL_BASE+(prev*JAMO_V_COUNT+(c-JAMO_V_BASE))*JAMO_T_COUNT);
+                        UChar t;
+                        if(p!=limit && (t=(UChar)(*p-JAMO_T_BASE))<JAMO_T_COUNT) {
+                            ++p;
+                            syllable+=t;  // The next character was a Jamo T.
+                        }
+                        *starter=syllable;
+                        // remove the Jamo V/T
+                        q=pRemove;
+                        r=p;
+                        while(r<limit) {
+                            *q++=*r++;
+                        }
+                        p=pRemove;
+                    }
+                }
+                /*
+                 * No "else" for Jamo T:
+                 * Since the input is in NFD, there are no Hangul LV syllables that
+                 * a Jamo T could combine with.
+                 * All Jamo Ts are combined above when handling Jamo Vs.
+                 */
+                if(p==limit) {
+                    break;
+                }
+                compositionsList=NULL;
+                continue;
+            } else if((compositeAndFwd=combine(compositionsList, c))>=0) {
+                // The starter and the combining mark (c) do combine.
+                UChar32 composite=compositeAndFwd>>1;
+
+                // Replace the starter with the composite, remove the combining mark.
+                pRemove=p-U16_LENGTH(composite);  // pointer to the combining mark
+                if(starterIsSupplementary) {
+                    if(U_IS_SUPPLEMENTARY(composite)) {
+                        // both are supplementary
+                        starter[0]=U16_LEAD(composite);
+                        starter[1]=U16_TRAIL(composite);
+                    } else {
+                        *starter=(UChar)composite;
+                        // The composite is shorter than the starter,
+                        // move the intermediate characters forward one.
+                        starterIsSupplementary=FALSE;
+                        q=starter+1;
+                        r=q+1;
+                        while(r<pRemove) {
+                            *q++=*r++;
+                        }
+                        --pRemove;
+                    }
+                } else if(U_IS_SUPPLEMENTARY(composite)) {
+                    // The composite is longer than the starter,
+                    // move the intermediate characters back one.
+                    starterIsSupplementary=TRUE;
+                    ++starter;  // temporarily increment for the loop boundary
+                    q=pRemove;
+                    r=++pRemove;
+                    while(starter<q) {
+                        *--r=*--q;
+                    }
+                    *starter=U16_TRAIL(composite);
+                    *--starter=U16_LEAD(composite);  // undo the temporary increment
+                } else {
+                    // both are on the BMP
+                    *starter=(UChar)composite;
+                }
+
+                /* remove the combining mark by moving the following text over it */
+                if(pRemove<p) {
+                    q=pRemove;
+                    r=p;
+                    while(r<limit) {
+                        *q++=*r++;
+                    }
+                    p=pRemove;
+                }
+                // Keep prevCC because we removed the combining mark.
+
+                if(p==limit) {
+                    break;
+                }
+                // Is the composite a starter that combines forward?
+                if(compositeAndFwd&1) {
+                    compositionsList=
+                        data.getCompositionsListForComposite(data.getNorm16(composite));
+                } else {
+                    compositionsList=NULL;
+                }
+
+                // We combined; continue with looking for compositions.
+                continue;
+            }
+        }
+
+        // no combination this time
+        prevCC=cc;
+        if(p==limit) {
+            break;
+        }
+
+        // If c did not combine, then check if it is a starter.
+        if(cc==0) {
+            // Found a new starter.
+            if((compositionsList=data.getCompositionsListForDecompYesAndZeroCC(norm16))!=NULL) {
+                // It may combine with something, prepare for it.
+                if(U_IS_BMP(c)) {
+                    starterIsSupplementary=FALSE;
+                    starter=p-1;
+                } else {
+                    starterIsSupplementary=TRUE;
+                    starter=p-2;
+                }
+            }
+#if 0  // TODO
+        } else if(options&_NORM_OPTIONS_COMPOSE_CONTIGUOUS) {
+            // FCC: no discontiguous compositions; any intervening character blocks.
+            compositionsList=NULL;
+#endif
+        }
+    }
+    buffer.setReorderingLimitAndLastCC(limit, prevCC);
 }
 
 UBool Normalizer2Impl::compose(const UChar *src, int32_t srcLength,
@@ -616,26 +787,38 @@ UBool Normalizer2Impl::compose(const UChar *src, int32_t srcLength,
         limit=NULL;  // zero-terminated string
     }
 
+    /*
+     * prevStarter points to the last character before the current one
+     * that is a composition starter with ccc==0 and quick check "yes".
+     * Keeping track of prevStarter saves us looking for a composition starter
+     * when we find a "no" or "maybe".
+     *
+     * When we back out from prevSrc back to prevStarter,
+     * then we also remove those same characters (which had been simply copied)
+     * from the ReorderingBuffer.
+     * Therefore, at all times, the [prevStarter..prevSrc[ source units
+     * must correspond 1:1 to destination units at the end of the destination buffer.
+     */
+    const UChar *prevStarter=src;
+
     UChar32 minNoMaybeCP=data.getMinCompNoMaybeCodePoint();
+    uint16_t norm16=0;
 
     U_ALIGN_CODE(16);
-
-    // *** TODO: The rest of this function is just a copy of decompose() so far. ***
 
     for(;;) {
         // count code units below the minimum or with irrelevant data for the quick check
         UChar32 c;
-        uint16_t norm16=0;
         const UChar *prevSrc=src;
         if(limit==NULL) {
             while((c=*src)<minNoMaybeCP ?
-                  c!=0 : data.isMostDecompYesAndZeroCC(norm16=data.getNorm16FromSingleLead(c))) {
+                  c!=0 : data.isCompYesAndZeroCC(norm16=data.getNorm16FromSingleLead(c))) {
                 ++src;
             }
         } else {
             while(src!=limit &&
                   ((c=*src)<minNoMaybeCP ||
-                   data.isMostDecompYesAndZeroCC(norm16=data.getNorm16FromSingleLead(c)))) {
+                   data.isCompYesAndZeroCC(norm16=data.getNorm16FromSingleLead(c)))) {
                 ++src;
             }
         }
@@ -645,16 +828,56 @@ UBool Normalizer2Impl::compose(const UChar *src, int32_t srcLength,
             if(!buffer.appendZeroCC(prevSrc, (int32_t)(src-prevSrc))) {
                 return FALSE;
             }
+            // Set prevStarter to the last character in the quick check loop.
+            prevStarter=src-1;
+            if(U16_IS_TRAIL(*prevStarter) && prevSrc<prevStarter && U16_IS_LEAD(*(prevStarter-1))) {
+                --prevStarter;
+            }
+            // The start of the current character (c).
+            prevSrc=src;
         }
 
         if(limit==NULL ? c==0 : src==limit) {
             break;  // end of source reached
         }
 
-        // Check one above-minimum, relevant code point.
         ++src;
-        UChar c2;
-        if(U16_IS_LEAD(c)) {
+        // Check one above-minimum, relevant code point.
+        /*
+         * norm16 is for c=*(src-1) which has "no" or "maybe" properties, and/or ccc!=0.
+         * Check for Jamo V/T, then for surrogates and regular characters.
+         * c is not a Hangul syllable or Jamo L because those have "yes" properties.
+         */
+        if(Normalizer2Data::isJamoVT(norm16)) {
+            UChar prev=buffer.lastUChar();
+            if(c<JAMO_T_BASE) {
+                // c is a Jamo Vowel, compose with previous Jamo L and following Jamo T.
+                prev=(UChar)(prev-JAMO_L_BASE);
+                if(prev<JAMO_L_COUNT) {
+                    UChar syllable=(UChar)(HANGUL_BASE+(prev*JAMO_V_COUNT+(c-JAMO_V_BASE))*JAMO_T_COUNT);
+                    UChar t;
+                    if(src!=limit && (t=(UChar)(*src-JAMO_T_BASE))<JAMO_T_COUNT) {
+                        ++src;
+                        syllable+=t;  // The next character was a Jamo T.
+                        prevStarter=src;
+                    }
+                    buffer.lastUChar()=syllable;
+                    continue;
+                }
+            } else if(isHangulWithoutJamoT(prev)) {
+                // c is a Jamo Trailing consonant,
+                // compose with previous Hangul LV that does not contain a Jamo T.
+                buffer.lastUChar()=(UChar)(prev+c-JAMO_T_BASE);
+                prevStarter=src;
+                continue;
+            }
+            // The Jamo V/T did not compose into a Hangul syllable.
+            if(!buffer.appendBMP((UChar)c, 0)) {
+                return TRUE;
+            }
+            continue;
+        } else if(U16_IS_LEAD(c)) {
+            UChar c2;
             if(src!=limit && U16_IS_TRAIL(c2=*src)) {
                 ++src;
                 c=U16_GET_SUPPLEMENTARY(c, c2);
@@ -663,10 +886,80 @@ UBool Normalizer2Impl::compose(const UChar *src, int32_t srcLength,
                 // Data for lead surrogate code *point* not code *unit*. Normally 0.
                 norm16=data.getNorm16FromBMP((UChar)c);
             }
+            if(data.isCompYesAndZeroCC(norm16)) {
+                prevStarter=prevSrc;
+                if(!buffer.append(c, 0)) {
+                    return TRUE;
+                }
+                continue;
+            }
         }
-        if(!decompose(c, norm16, buffer)) {
+
+        /*
+         * Source buffer pointers:
+         *
+         *  all done      quick check   current char  not yet
+         *                "yes" but     (c)           processed
+         *                may combine
+         *                forward
+         * [-------------[-------------[-------------[-------------[
+         * |             |             |             |             |
+         * orig. src     prevStarter   prevSrc       src           limit
+         *
+         *
+         * Destination buffer pointers inside the ReorderingBuffer:
+         *
+         *  all done      might take    not filled yet
+         *                characters for
+         *                reordering
+         * [-------------[-------------[-------------[
+         * |             |             |             |
+         * start         reorderStart  limit         |
+         *                             +remainingCap.+
+         */
+        if(data.isCompYes(norm16)) {
+            if(!buffer.append(c, Normalizer2Data::getCCFromYes(norm16))) {
+                return TRUE;
+            }
+            continue;
+        }
+
+        /*
+         * Find appropriate boundaries around this character,
+         * decompose the source text from between the boundaries,
+         * and recompose it.
+         *
+         * We may need to remove the last few characters from the ReorderingBuffer
+         * to account for source text that was copied or appended
+         * but needs to take part in the recomposition.
+         */
+
+        /*
+         * Find the last composition starter in [prevStarter..src[.
+         * It is either the decomposition of the current character (at prevSrc),
+         * or prevStarter.
+         */
+        if(isCompStarter(c, norm16)) {
+            prevStarter=prevSrc;
+        } else {
+            buffer.removeZeroCCSuffix((int32_t)(prevSrc-prevStarter));
+        }
+
+        // Find the next composition starter in [src..limit[ -
+        // modifies src to point to the next starter.
+        UChar *nextStarter=(UChar *)findNextCompStarter(src, limit);
+
+        // Decompose [prevStarter..nextStarter[ into the buffer and then recompose that part of it.
+        int32_t recomposeStartIndex=buffer.length();
+        if(!decompose(prevStarter, (int32_t)(nextStarter-prevStarter), buffer)) {
             return FALSE;
         }
+        if(prevStarter!=prevSrc || src!=nextStarter) {  // Recompose if more than one character.
+            recompose(buffer, recomposeStartIndex);
+        }
+
+        // Move to the next starter. We never need to look back before this point again.
+        prevStarter=src=nextStarter;
     }
     return TRUE;
 }

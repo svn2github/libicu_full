@@ -50,12 +50,18 @@ public:
         return getNorm16FromSupplementary(U16_GET_SUPPLEMENTARY(c, c2));
     }
 
+    UBool isMaybe(uint16_t norm16) const {
+        return indexes[IX_MIN_MAYBE_YES]<=norm16 && norm16<=JAMO_VT;
+    }
     UBool isMaybeOrNonZeroCC(uint16_t norm16) const { return norm16>=indexes[IX_MIN_MAYBE_YES]; }
     // TODO: static UBool isInert(uint16_t norm16) const { return norm16==0; }
     // TODO: static UBool isJamoL(uint16_t norm16) const { return norm16==1; }
-    // TODO: static UBool isJamoVT(uint16_t norm16) const { return norm16==JAMO_VT; }
+    static UBool isJamoVT(uint16_t norm16) { return norm16==JAMO_VT; }
     UBool isHangul(uint16_t norm16) const { return norm16==indexes[IX_MIN_YES_NO]; }
     UBool isCompYesAndZeroCC(uint16_t norm16) const { return norm16<indexes[IX_MIN_NO_NO]; }
+    UBool isCompYes(uint16_t norm16) const {
+        return norm16>=MIN_YES_YES_WITH_CC || norm16<indexes[IX_MIN_NO_NO];
+    }
     // TODO: UBool isCompYesOrMaybe(uint16_t norm16) const {
     //     return norm16<indexes[IX_MIN_NO_NO] || indexes[IX_MIN_MAYBE_YES]<=norm16;
     // }
@@ -64,8 +70,8 @@ public:
     }
     UBool isDecompYesAndZeroCC(uint16_t norm16) const {
         return norm16<indexes[IX_MIN_YES_NO] ||
-               (indexes[IX_MIN_MAYBE_YES]<=norm16 && (norm16<=MIN_NORMAL_MAYBE_YES ||
-                                                      norm16==JAMO_VT));
+               norm16==JAMO_VT ||
+               (indexes[IX_MIN_MAYBE_YES]<=norm16 && norm16<=MIN_NORMAL_MAYBE_YES);
     }
     /**
      * A little faster and simpler than isDecompYesAndZeroCC() but does not include
@@ -86,8 +92,13 @@ public:
         }
         return getCCFromNoNo(norm16);
     }
-    uint8_t getCCFromYesOrMaybe(uint16_t norm16) const {
+    static uint8_t getCCFromYesOrMaybe(uint16_t norm16) {
         return norm16>=MIN_NORMAL_MAYBE_YES ? (uint8_t)norm16 : 0;
+    }
+    // For use with isCompYes().
+    // Perhaps the compiler can combine the two tests for MIN_YES_YES_WITH_CC.
+    static uint8_t getCCFromYes(uint16_t norm16) {
+        return norm16>=MIN_YES_YES_WITH_CC ? (uint8_t)norm16 : 0;
     }
 
     // Requires algorithmic-NoNo.
@@ -97,6 +108,20 @@ public:
 
     // Requires indexes[IX_MIN_YES_NO]<norm16<indexes[IX_LIMIT_NO_NO].
     const uint16_t *getMapping(uint16_t norm16) const { return extraData+norm16; }
+    const uint16_t *getCompositionsListForDecompYesAndZeroCC(uint16_t norm16) const {
+        if(norm16==0 || MIN_NORMAL_MAYBE_YES<=norm16) {
+            return NULL;
+        } else if(norm16<indexes[IX_MIN_MAYBE_YES]) {
+            return extraData+norm16;  // for Jamo L: harmless empty list
+        } else {
+            return maybeYesCompositions+norm16-indexes[IX_MIN_MAYBE_YES];
+        }
+    }
+    const uint16_t *getCompositionsListForComposite(uint16_t norm16) const {
+        const uint16_t *list=extraData+norm16;  // composite has both mapping & compositions list
+        return list+*list+  // mapping pointer + mapping length
+            ((*list>>7)&1);  // +1 if MAPPING_HAS_CCC_LCCC_WORD
+    }
 
     UChar32 getMinDecompNoCodePoint() const { return indexes[IX_MIN_DECOMP_NO_CP]; }
     UChar32 getMinCompNoMaybeCodePoint() const { return indexes[IX_MIN_COMP_NO_MAYBE_CP]; }
@@ -110,6 +135,7 @@ public:
         MIN_YES_YES_WITH_CC=0xff01,
         JAMO_VT=0xff00,
         MIN_NORMAL_MAYBE_YES=0xfe00,
+        JAMO_L=1,
         MAX_DELTA=0x40
     };
 
@@ -194,8 +220,10 @@ public:
     UBool init();
 
     UBool isEmpty() const { return start!=limit; }
+    int32_t length() const { return (int32_t)(limit-start); }
     UChar *getStart() { return start; }
     UChar *getLimit() { return limit; }
+    UChar &lastUChar() { return *(limit-1); }
 
     UBool append(UChar32 c, uint8_t cc) {
         return (c<=0xffff) ?
@@ -204,22 +232,6 @@ public:
     }
     // s must be in NFD, otherwise change the implementation.
     UBool append(const UChar *s, int32_t length, uint8_t leadCC, uint8_t trailCC);
-    UBool appendZeroCC(const UChar *s, int32_t length);
-    void removeZeroCCSuffix(int32_t length);
-private:
-    /*
-     * TODO: Revisit whether it makes sense to track reorderStart.
-     * It is set to after the last known character with cc<=1,
-     * which stops previousCC() before it reads that character and looks up its cc.
-     * previousCC() is normally only called from insert().
-     * In other words, reorderStart speeds up the insertion of a combining mark
-     * into a multi-combining mark sequence where it does not belong at the end.
-     * This might not be worth the trouble.
-     * On the other hand, it's not a huge amount of trouble.
-     *
-     * We probably need it for UNORM_SIMPLE_APPEND.
-     */
-
     UBool appendBMP(UChar c, uint8_t cc) {
         if(remainingCapacity==0 && !resize(1)) {
             return FALSE;
@@ -236,6 +248,27 @@ private:
         --remainingCapacity;
         return TRUE;
     }
+    UBool appendZeroCC(const UChar *s, int32_t length);
+    void removeZeroCCSuffix(int32_t length);
+    void setReorderingLimitAndLastCC(UChar *newLimit, uint8_t newLastCC) {
+        remainingCapacity+=(int32_t)(limit-newLimit);
+        reorderStart=limit=newLimit;
+        lastCC=newLastCC;
+    }
+private:
+    /*
+     * TODO: Revisit whether it makes sense to track reorderStart.
+     * It is set to after the last known character with cc<=1,
+     * which stops previousCC() before it reads that character and looks up its cc.
+     * previousCC() is normally only called from insert().
+     * In other words, reorderStart speeds up the insertion of a combining mark
+     * into a multi-combining mark sequence where it does not belong at the end.
+     * This might not be worth the trouble.
+     * On the other hand, it's not a huge amount of trouble.
+     *
+     * We probably need it for UNORM_SIMPLE_APPEND.
+     */
+
     UBool appendSupplementary(UChar32 c, uint8_t cc);
     void insert(UChar32 c, uint8_t cc);
     static UChar *writeCodePoint(UChar *p, UChar32 c) {
@@ -292,6 +325,8 @@ private:
 
     UBool decompose(const UChar *src, int32_t srcLength, ReorderingBuffer &buffer) const;
     UBool decompose(UChar32 c, uint16_t norm16, ReorderingBuffer &buffer) const;
+
+    void recompose(ReorderingBuffer &buffer, int32_t recomposeStartIndex) const;
     UBool compose(const UChar *src, int32_t srcLength, ReorderingBuffer &buffer) const;
 
     /**

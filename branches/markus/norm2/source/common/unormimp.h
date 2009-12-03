@@ -180,6 +180,14 @@ enum {
     HANGUL_COUNT=JAMO_L_COUNT*JAMO_V_COUNT*JAMO_T_COUNT
 };
 
+#ifdef XP_CPLUSPLUS
+static inline UBool
+isHangulWithoutJamoT(UChar c) {
+    c-=HANGUL_BASE;
+    return c<HANGUL_COUNT && c%JAMO_T_COUNT==0;
+}
+#endif
+
 #if !UCONFIG_NO_NORMALIZATION
 
 /* Constants for options flags for normalization. @draft ICU 2.6 */

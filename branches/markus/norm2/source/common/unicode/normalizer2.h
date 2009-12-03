@@ -40,6 +40,11 @@ typedef enum {
      */
     UNORM2_COMPOSE,
     /**
+     * Map, and reorder canonically.
+     * @draft ICU 4.4
+     */
+    UNORM2_DECOMPOSE,
+    /**
      * Compose only contiguously.
      * The result will often but not always be in NFC.
      * The result will conform to FCD which is useful for processing.
@@ -47,11 +52,6 @@ typedef enum {
      * @draft ICU 4.4
      */
     UNORM2_FCC,
-    /**
-     * Map and canonically order.
-     * @draft ICU 4.4
-     */
-    UNORM2_DECOMPOSE,
     /**
      * "Fast C or D" form.
      * Further decomposition without reordering would yield NFD.
