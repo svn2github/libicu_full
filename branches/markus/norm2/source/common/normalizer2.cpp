@@ -149,10 +149,7 @@ Normalizer2Data::load(const char *packageName, const char *name, UErrorCode &err
     extraData=maybeYesCompositions+(MIN_NORMAL_MAYBE_YES-indexes[IX_MIN_MAYBE_YES]);
 }
 
-UBool ReorderingBuffer::init(UNormalizationAppendMode appendMode) {
-    if(appendMode==UNORM_REPLACE) {
-        str.remove();
-    }
+UBool ReorderingBuffer::init() {
     int32_t length=str.length();
     start=str.getBuffer(-1);
     if(start==NULL) {
@@ -160,23 +157,19 @@ UBool ReorderingBuffer::init(UNormalizationAppendMode appendMode) {
     }
     limit=start+length;
     remainingCapacity=str.getCapacity()-length;
-    if(appendMode<=UNORM_SIMPLE_APPEND) {
-        reorderStart=limit;
+    reorderStart=start;
+    if(start==limit) {
+        lastCC=0;
     } else {
-        resetReorderStart();
+        setIterator();
+        lastCC=previousCC();
+        // Set reorderStart after the last code point with cc<=1 if there is one.
+        if(lastCC>1) {
+            while(previousCC()>1) {}
+        }
+        reorderStart=codePointLimit;
     }
     return TRUE;
-}
-
-void ReorderingBuffer::resetReorderStart() {
-    reorderStart=start;
-    setIterator();
-    lastCC=previousCC();
-    // Set reorderStart after the last code point with cc<=1 if there is one.
-    if(lastCC>1) {
-        while(previousCC()>1) {}
-    }
-    reorderStart=codePointLimit;
 }
 
 UBool ReorderingBuffer::appendSupplementary(UChar32 c, uint8_t cc) {
@@ -257,7 +250,6 @@ void ReorderingBuffer::removeZeroCCSuffix(int32_t length) {
         limit=start;
         remainingCapacity=str.getCapacity();
     }
-    // TODO: resetReorderStart(); ??
     reorderStart=limit;
 }
 
@@ -392,7 +384,8 @@ Normalizer2Impl *Normalizer2Impl::getNFKC_CFInstance(UErrorCode &errorCode) {
     return Normalizer2ImplSingleton(nfkc_cfSingleton, "nfkc_cf").getInstance(errorCode);
 }
 
-UBool Normalizer2Impl::decompose(const UChar *src, int32_t srcLength, ReorderingBuffer &buffer) {
+UBool Normalizer2Impl::decompose(const UChar *src, int32_t srcLength,
+                                 ReorderingBuffer &buffer) const {
     const UChar *limit;
     if(srcLength>=0) {
         limit=src+srcLength;  // string with length
@@ -453,7 +446,7 @@ UBool Normalizer2Impl::decompose(const UChar *src, int32_t srcLength, Reordering
     return TRUE;
 }
 
-UBool Normalizer2Impl::decompose(UChar32 c, uint16_t norm16, ReorderingBuffer &buffer) {
+UBool Normalizer2Impl::decompose(UChar32 c, uint16_t norm16, ReorderingBuffer &buffer) const {
     // Only loops for 1:1 algorithmic mappings.
     for(;;) {
         // get the decomposition and the lead and trail cc's
@@ -493,17 +486,57 @@ UBool Normalizer2Impl::decompose(UChar32 c, uint16_t norm16, ReorderingBuffer &b
 }
 
 void Normalizer2Impl::decompose(const UChar *src, int32_t srcLength,
-                                UnicodeString &dest, UNormalizationAppendMode appendMode,
-                                UErrorCode &errorCode) {
-    if(U_SUCCESS(errorCode)) {
-        if(appendMode!=UNORM_REPLACE && dest.isBogus()) {
-            errorCode=U_ILLEGAL_ARGUMENT_ERROR;
-            return;
-        }
-        ReorderingBuffer buffer(data, dest);
-        if(!buffer.init(appendMode) || !decompose(src, srcLength, buffer)) {
+                                UnicodeString &dest,
+                                UErrorCode &errorCode) const {
+    if(U_FAILURE(errorCode)) {
+        dest.setToBogus();
+        return;
+    }
+    dest.remove();
+    ReorderingBuffer buffer(data, dest);
+    if(!buffer.init() || !decompose(src, srcLength, buffer)) {
+        errorCode=U_MEMORY_ALLOCATION_ERROR;
+        dest.setToBogus();
+    }
+}
+
+void Normalizer2Impl::decomposeAndAppend(const UChar *src, int32_t srcLength,
+                                         UnicodeString &dest, UBool doDecompose,
+                                         UErrorCode &errorCode) const {
+    if(U_FAILURE(errorCode)) {
+        return;
+    }
+    if(dest.isBogus()) {
+        errorCode=U_ILLEGAL_ARGUMENT_ERROR;
+        return;
+    }
+    ReorderingBuffer buffer(data, dest);
+    if(!buffer.init()) {
+        errorCode=U_MEMORY_ALLOCATION_ERROR;
+        return;
+    }
+    if(doDecompose) {
+        if(!decompose(src, srcLength, buffer)) {
             errorCode=U_MEMORY_ALLOCATION_ERROR;
         }
+        return;
+    }
+    // Just merge the strings at the boundary.
+    if(srcLength<0) {
+        srcLength=u_strlen(src);
+    }
+    ForwardUTrie2StringIterator iter(data.getTrie(), src, src+srcLength);
+    uint16_t first16, norm16;
+    first16=norm16=iter.next16();
+    while(!data.isDecompYesAndZeroCC(norm16)) {
+        norm16=iter.next16();
+    };
+    if(!buffer.append(src, (int32_t)(iter.codePointStart-src), data.getCC(first16), 0)) {
+        errorCode=U_MEMORY_ALLOCATION_ERROR;
+        return;
+    }
+    if(!buffer.appendZeroCC(iter.codePointStart, srcLength-(int32_t)(iter.codePointStart-src))) {
+        errorCode=U_MEMORY_ALLOCATION_ERROR;
     }
 }
 
@@ -574,7 +607,128 @@ static int32_t combine(const uint16_t *table, UChar32 trail) {
     return -1;
 }
 
-UBool Normalizer2Impl::isCompStarter(UChar32 c, uint16_t norm16) {
+UBool Normalizer2Impl::compose(const UChar *src, int32_t srcLength,
+                               ReorderingBuffer &buffer) const {
+    const UChar *limit;
+    if(srcLength>=0) {
+        limit=src+srcLength;  // string with length
+    } else /* srcLength==-1 */ {
+        limit=NULL;  // zero-terminated string
+    }
+
+    UChar32 minNoMaybeCP=data.getMinCompNoMaybeCodePoint();
+
+    U_ALIGN_CODE(16);
+
+    // *** TODO: The rest of this function is just a copy of decompose() so far. ***
+
+    for(;;) {
+        // count code units below the minimum or with irrelevant data for the quick check
+        UChar32 c;
+        uint16_t norm16=0;
+        const UChar *prevSrc=src;
+        if(limit==NULL) {
+            while((c=*src)<minNoMaybeCP ?
+                  c!=0 : data.isMostDecompYesAndZeroCC(norm16=data.getNorm16FromSingleLead(c))) {
+                ++src;
+            }
+        } else {
+            while(src!=limit &&
+                  ((c=*src)<minNoMaybeCP ||
+                   data.isMostDecompYesAndZeroCC(norm16=data.getNorm16FromSingleLead(c)))) {
+                ++src;
+            }
+        }
+
+        // copy these code units all at once
+        if(src!=prevSrc) {
+            if(!buffer.appendZeroCC(prevSrc, (int32_t)(src-prevSrc))) {
+                return FALSE;
+            }
+        }
+
+        if(limit==NULL ? c==0 : src==limit) {
+            break;  // end of source reached
+        }
+
+        // Check one above-minimum, relevant code point.
+        ++src;
+        UChar c2;
+        if(U16_IS_LEAD(c)) {
+            if(src!=limit && U16_IS_TRAIL(c2=*src)) {
+                ++src;
+                c=U16_GET_SUPPLEMENTARY(c, c2);
+                norm16=data.getNorm16FromSupplementary(c);
+            } else {
+                // Data for lead surrogate code *point* not code *unit*. Normally 0.
+                norm16=data.getNorm16FromBMP((UChar)c);
+            }
+        }
+        if(!decompose(c, norm16, buffer)) {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+void Normalizer2Impl::compose(const UChar *src, int32_t srcLength,
+                              UnicodeString &dest,
+                              UErrorCode &errorCode) const {
+    if(U_FAILURE(errorCode)) {
+        dest.setToBogus();
+        return;
+    }
+    dest.remove();
+    ReorderingBuffer buffer(data, dest);
+    if(!buffer.init() || !compose(src, srcLength, buffer)) {
+        errorCode=U_MEMORY_ALLOCATION_ERROR;
+        dest.setToBogus();
+    }
+}
+
+void Normalizer2Impl::composeAndAppend(const UChar *src, int32_t srcLength,
+                                       UnicodeString &dest, UBool doCompose,
+                                       UErrorCode &errorCode) const {
+    if(U_FAILURE(errorCode)) {
+        return;
+    }
+    if(dest.isBogus()) {
+        errorCode=U_ILLEGAL_ARGUMENT_ERROR;
+        return;
+    }
+    ReorderingBuffer buffer(data, dest);
+    if(!buffer.init()) {
+        errorCode=U_MEMORY_ALLOCATION_ERROR;
+        return;
+    }
+    if(!buffer.isEmpty()) {
+        const UChar *firstStarterInSrc=findNextCompStarter(src,
+                                                           srcLength>=0 ? src+srcLength : NULL);
+        if(src!=firstStarterInSrc) {
+            const UChar *lastStarterInDest=findPreviousCompStarter(buffer.getStart(),
+                                                                   buffer.getLimit());
+            UnicodeString middle(lastStarterInDest,
+                                 (int32_t)(buffer.getLimit()-lastStarterInDest));
+            buffer.removeZeroCCSuffix((int32_t)(buffer.getLimit()-lastStarterInDest));
+            middle.append(src, (int32_t)(firstStarterInSrc-src));
+            if(!compose(middle.getBuffer(), middle.length(), buffer)) {
+                errorCode=U_MEMORY_ALLOCATION_ERROR;
+                return;
+            }
+            if(srcLength>=0) {
+                srcLength-=(int32_t)(firstStarterInSrc-src);
+            }
+            src=firstStarterInSrc;
+        }
+    }
+    if(doCompose ?
+            !compose(src, srcLength, buffer) :
+            !buffer.appendZeroCC(src, srcLength>=0 ? srcLength : u_strlen(src))) {
+        errorCode=U_MEMORY_ALLOCATION_ERROR;
+    }
+}
+
+UBool Normalizer2Impl::isCompStarter(UChar32 c, uint16_t norm16) const {
     // Partial copy of the decompose(c) function.
     for(;;) {
         if(data.isCompYesAndZeroCC(norm16)) {
@@ -603,7 +757,7 @@ UBool Normalizer2Impl::isCompStarter(UChar32 c, uint16_t norm16) {
     }
 }
 
-const UChar *Normalizer2Impl::findPreviousCompStarter(const UChar *start, const UChar *p) {
+const UChar *Normalizer2Impl::findPreviousCompStarter(const UChar *start, const UChar *p) const {
     BackwardUTrie2StringIterator iter(data.getTrie(), start, p);
     uint16_t norm16;
     do {
@@ -612,7 +766,7 @@ const UChar *Normalizer2Impl::findPreviousCompStarter(const UChar *start, const 
     return iter.codePointStart;
 }
 
-const UChar *Normalizer2Impl::findNextCompStarter(const UChar *p, const UChar *limit) {
+const UChar *Normalizer2Impl::findNextCompStarter(const UChar *p, const UChar *limit) const {
     ForwardUTrie2StringIterator iter(data.getTrie(), p, limit);
     uint16_t norm16;
     do {
@@ -621,12 +775,66 @@ const UChar *Normalizer2Impl::findNextCompStarter(const UChar *p, const UChar *l
     return iter.codePointStart;
 }
 
+// Public API dispatch via Normalizer2 subclasses -------------------------- ***
+
+UnicodeString &
+DecomposeNormalizer2::normalize(const UnicodeString &src,
+                                UnicodeString &dest,
+                                UErrorCode &errorCode) const {
+    assertNotBogus(src, errorCode);
+    impl.decompose(src.getBuffer(), src.length(), dest, errorCode);
+    return dest;
+}
+
+UnicodeString &
+DecomposeNormalizer2::normalizeSecondAndAppend(UnicodeString &first,
+                                               const UnicodeString &second,
+                                               UErrorCode &errorCode) const {
+    assertNotBogus(second, errorCode);
+    impl.decomposeAndAppend(second.getBuffer(), second.length(), first, TRUE, errorCode);
+    return first;
+}
+
+UnicodeString &
+DecomposeNormalizer2::append(UnicodeString &first,
+                             const UnicodeString &second,
+                             UErrorCode &errorCode) const {
+    assertNotBogus(second, errorCode);
+    impl.decomposeAndAppend(second.getBuffer(), second.length(), first, FALSE, errorCode);
+    return first;
+}
+
+UnicodeString &
+ComposeNormalizer2::normalize(const UnicodeString &src,
+                              UnicodeString &dest,
+                              UErrorCode &errorCode) const {
+    assertNotBogus(src, errorCode);
+    impl.compose(src.getBuffer(), src.length(), dest, errorCode);
+    return dest;
+}
+
+UnicodeString &
+ComposeNormalizer2::normalizeSecondAndAppend(UnicodeString &first,
+                                             const UnicodeString &second,
+                                             UErrorCode &errorCode) const {
+    assertNotBogus(second, errorCode);
+    impl.composeAndAppend(second.getBuffer(), second.length(), first, TRUE, errorCode);
+    return first;
+}
+
+UnicodeString &
+ComposeNormalizer2::append(UnicodeString &first,
+                           const UnicodeString &second,
+                           UErrorCode &errorCode) const {
+    assertNotBogus(second, errorCode);
+    impl.composeAndAppend(second.getBuffer(), second.length(), first, FALSE, errorCode);
+    return first;
+}
+
 U_NAMESPACE_END
 
 #endif  // !UCONFIG_NO_NORMALIZATION
 
-// Normalizer2 unmodifiable? Yes, please...
-//   Singletons?? Prefer to have Normalizer2Impl singletons but separate Normalizer2 instances.
 // #if for code only for minMaybeYes<MIN_NORMAL_MAYBE_YES. Benchmark both ways.
 // Consider not supporting an exclusions set at runtime.
 //   Otherwise need to pull nx_contains() into the ReorderingBuffer etc.

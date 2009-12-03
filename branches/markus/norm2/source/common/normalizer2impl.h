@@ -28,6 +28,12 @@
 
 U_NAMESPACE_BEGIN
 
+inline void assertNotBogus(const UnicodeString &s, UErrorCode &errorCode) {
+    if(U_SUCCESS(errorCode) && s.isBogus()) {
+        errorCode=U_ILLEGAL_ARGUMENT_ERROR;
+    }
+}
+
 class Normalizer2Data : public UMemory {
 public:
     Normalizer2Data();
@@ -44,10 +50,10 @@ public:
         return getNorm16FromSupplementary(U16_GET_SUPPLEMENTARY(c, c2));
     }
 
-    UBool isMaybeOrNonZeroCC(uint16_t norm16) { return norm16>=indexes[IX_MIN_MAYBE_YES]; }
-    // TODO: static UBool isInert(uint16_t norm16) { return norm16==0; }
-    // TODO: static UBool isJamoL(uint16_t norm16) { return norm16==1; }
-    // TODO: static UBool isJamoVT(uint16_t norm16) { return norm16==JAMO_VT; }
+    UBool isMaybeOrNonZeroCC(uint16_t norm16) const { return norm16>=indexes[IX_MIN_MAYBE_YES]; }
+    // TODO: static UBool isInert(uint16_t norm16) const { return norm16==0; }
+    // TODO: static UBool isJamoL(uint16_t norm16) const { return norm16==1; }
+    // TODO: static UBool isJamoVT(uint16_t norm16) const { return norm16==JAMO_VT; }
     UBool isHangul(uint16_t norm16) const { return norm16==indexes[IX_MIN_YES_NO]; }
     UBool isCompYesAndZeroCC(uint16_t norm16) const { return norm16<indexes[IX_MIN_NO_NO]; }
     // TODO: UBool isCompYesOrMaybe(uint16_t norm16) const {
@@ -56,11 +62,11 @@ public:
     UBool isDecompYes(uint16_t norm16) const {
         return norm16<indexes[IX_MIN_YES_NO] || indexes[IX_MIN_MAYBE_YES]<=norm16;
     }
-    // TODO: UBool isDecompYesAndZeroCC(uint16_t norm16) const {
-    //     return norm16<indexes[IX_MIN_YES_NO] ||
-    //            (indexes[IX_MIN_MAYBE_YES]<=norm16 && (norm16<=MIN_NORMAL_MAYBE_YES ||
-    //                                                   norm16==JAMO_VT));
-    // }
+    UBool isDecompYesAndZeroCC(uint16_t norm16) const {
+        return norm16<indexes[IX_MIN_YES_NO] ||
+               (indexes[IX_MIN_MAYBE_YES]<=norm16 && (norm16<=MIN_NORMAL_MAYBE_YES ||
+                                                      norm16==JAMO_VT));
+    }
     /**
      * A little faster and simpler than isDecompYesAndZeroCC() but does not include
      * the MaybeYes which combine-forward and have ccc=0.
@@ -93,6 +99,7 @@ public:
     const uint16_t *getMapping(uint16_t norm16) const { return extraData+norm16; }
 
     UChar32 getMinDecompNoCodePoint() const { return indexes[IX_MIN_DECOMP_NO_CP]; }
+    UChar32 getMinCompNoMaybeCodePoint() const { return indexes[IX_MIN_COMP_NO_MAYBE_CP]; }
     const UTrie2 *getTrie() const { return trie; }
 
     enum {
@@ -184,7 +191,11 @@ public:
             str.releaseBuffer((int32_t)(limit-start));
         }
     }
-    UBool init(UNormalizationAppendMode appendMode);
+    UBool init();
+
+    UBool isEmpty() const { return start!=limit; }
+    UChar *getStart() { return start; }
+    UChar *getLimit() { return limit; }
 
     UBool append(UChar32 c, uint8_t cc) {
         return (c<=0xffff) ?
@@ -208,7 +219,7 @@ private:
      *
      * We probably need it for UNORM_SIMPLE_APPEND.
      */
-    void resetReorderStart();
+
     UBool appendBMP(UChar c, uint8_t cc) {
         if(remainingCapacity==0 && !resize(1)) {
             return FALSE;
@@ -264,13 +275,24 @@ public:
 
     void decompose(const UChar *src, int32_t srcLength,
                    UnicodeString &dest,
-                   UNormalizationAppendMode appendMode,
-                   UErrorCode &errorCode);
+                   UErrorCode &errorCode) const;
+    void decomposeAndAppend(const UChar *src, int32_t srcLength,
+                            UnicodeString &dest,
+                            UBool doDecompose,
+                            UErrorCode &errorCode) const;
+    void compose(const UChar *src, int32_t srcLength,
+                 UnicodeString &dest,
+                 UErrorCode &errorCode) const;
+    void composeAndAppend(const UChar *src, int32_t srcLength,
+                          UnicodeString &dest,
+                          UBool doCompose,
+                          UErrorCode &errorCode) const;
 private:
     Normalizer2Impl() {}
 
-    UBool decompose(const UChar *src, int32_t srcLength, ReorderingBuffer &buffer);
-    UBool decompose(UChar32 c, uint16_t norm16, ReorderingBuffer &buffer);
+    UBool decompose(const UChar *src, int32_t srcLength, ReorderingBuffer &buffer) const;
+    UBool decompose(UChar32 c, uint16_t norm16, ReorderingBuffer &buffer) const;
+    UBool compose(const UChar *src, int32_t srcLength, ReorderingBuffer &buffer) const;
 
     /**
      * Is c a composition starter?
@@ -279,11 +301,47 @@ private:
      * As a shortcut, this is true if c itself has ccc=0 && NFC_QC=Yes
      * (isCompYesAndZeroCC()) so we need not decompose.
      */
-    UBool isCompStarter(UChar32 c, uint16_t norm16);
-    const UChar *findPreviousCompStarter(const UChar *start, const UChar *p);
-    const UChar *findNextCompStarter(const UChar *p, const UChar *limit);
+    UBool isCompStarter(UChar32 c, uint16_t norm16) const;
+    const UChar *findPreviousCompStarter(const UChar *start, const UChar *p) const;
+    const UChar *findNextCompStarter(const UChar *p, const UChar *limit) const;
 
     Normalizer2Data data;
+};
+
+class DecomposeNormalizer2 : public Normalizer2 {
+public:
+    DecomposeNormalizer2(const Normalizer2Impl &ni) : Normalizer2(ni) {}
+
+    virtual UnicodeString &
+    normalize(const UnicodeString &src,
+              UnicodeString &dest,
+              UErrorCode &errorCode) const;
+    virtual UnicodeString &
+    normalizeSecondAndAppend(UnicodeString &first,
+                             const UnicodeString &second,
+                             UErrorCode &errorCode) const;
+    virtual UnicodeString &
+    append(UnicodeString &first,
+           const UnicodeString &second,
+           UErrorCode &errorCode) const;
+};
+
+class ComposeNormalizer2 : public Normalizer2 {
+public:
+    ComposeNormalizer2(const Normalizer2Impl &ni) : Normalizer2(ni) {}
+
+    virtual UnicodeString &
+    normalize(const UnicodeString &src,
+              UnicodeString &dest,
+              UErrorCode &errorCode) const;
+    virtual UnicodeString &
+    normalizeSecondAndAppend(UnicodeString &first,
+                             const UnicodeString &second,
+                             UErrorCode &errorCode) const;
+    virtual UnicodeString &
+    append(UnicodeString &first,
+           const UnicodeString &second,
+           UErrorCode &errorCode) const;
 };
 
 U_NAMESPACE_END
