@@ -28,12 +28,6 @@
 
 U_NAMESPACE_BEGIN
 
-inline void assertNotBogus(const UnicodeString &s, UErrorCode &errorCode) {
-    if(U_SUCCESS(errorCode) && s.isBogus()) {
-        errorCode=U_ILLEGAL_ARGUMENT_ERROR;
-    }
-}
-
 class Normalizer2Data : public UMemory {
 public:
     Normalizer2Data();
@@ -299,12 +293,11 @@ private:
 
 class Normalizer2Impl : public UMemory {
 public:
-    static Normalizer2Impl *createInstance(const char *packageName,
-                                           const char *name,
-                                           UErrorCode &errorCode);
-    static Normalizer2Impl *getNFCInstance(UErrorCode &errorCode);
-    static Normalizer2Impl *getNFKCInstance(UErrorCode &errorCode);
-    static Normalizer2Impl *getNFKC_CFInstance(UErrorCode &errorCode);
+    Normalizer2Impl() {}
+
+    void load(const char *packageName, const char *name, UErrorCode &errorCode) {
+        data.load(packageName, name, errorCode);
+    }
 
     void decompose(const UChar *src, int32_t srcLength,
                    UnicodeString &dest,
@@ -321,8 +314,6 @@ public:
                           UBool doCompose,
                           UErrorCode &errorCode) const;
 private:
-    Normalizer2Impl() {}
-
     UBool decompose(const UChar *src, int32_t srcLength, ReorderingBuffer &buffer) const;
     UBool decompose(UChar32 c, uint16_t norm16, ReorderingBuffer &buffer) const;
 
@@ -343,40 +334,18 @@ private:
     Normalizer2Data data;
 };
 
-class DecomposeNormalizer2 : public Normalizer2 {
+/**
+ * ICU-internal shortcut for quick access to standard Unicode normalization.
+ */
+class InternalNormalizer2Provider {
 public:
-    DecomposeNormalizer2(const Normalizer2Impl &ni) : Normalizer2(ni) {}
-
-    virtual UnicodeString &
-    normalize(const UnicodeString &src,
-              UnicodeString &dest,
-              UErrorCode &errorCode) const;
-    virtual UnicodeString &
-    normalizeSecondAndAppend(UnicodeString &first,
-                             const UnicodeString &second,
-                             UErrorCode &errorCode) const;
-    virtual UnicodeString &
-    append(UnicodeString &first,
-           const UnicodeString &second,
-           UErrorCode &errorCode) const;
-};
-
-class ComposeNormalizer2 : public Normalizer2 {
-public:
-    ComposeNormalizer2(const Normalizer2Impl &ni) : Normalizer2(ni) {}
-
-    virtual UnicodeString &
-    normalize(const UnicodeString &src,
-              UnicodeString &dest,
-              UErrorCode &errorCode) const;
-    virtual UnicodeString &
-    normalizeSecondAndAppend(UnicodeString &first,
-                             const UnicodeString &second,
-                             UErrorCode &errorCode) const;
-    virtual UnicodeString &
-    append(UnicodeString &first,
-           const UnicodeString &second,
-           UErrorCode &errorCode) const;
+    static Normalizer2 *getNFCInstance(UErrorCode &errorCode);
+    static Normalizer2 *getNFDInstance(UErrorCode &errorCode);
+    static Normalizer2 *getNFKCInstance(UErrorCode &errorCode);
+    static Normalizer2 *getNFKDInstance(UErrorCode &errorCode);
+    static Normalizer2 *getNFKC_CFInstance(UErrorCode &errorCode);
+private:
+    InternalNormalizer2Provider();  // No instantiation.
 };
 
 U_NAMESPACE_END

@@ -143,9 +143,9 @@ Normalizer::normalize(const UnicodeString& source,
         }
 
         if(mode==UNORM_NFD && options==0) {
-            Normalizer2Impl *impl=Normalizer2Impl::getNFCInstance(status);
+            Normalizer2 *n2=InternalNormalizer2Provider::getNFDInstance(status);
             if(U_SUCCESS(status)) {
-                impl->decompose(source.getBuffer(), source.length(), *dest, status);
+                n2->normalize(source, *dest, status);
             }
         } else {
             UChar *buffer=dest->getBuffer(source.length());

@@ -3074,6 +3074,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\normalizer2impl.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\normalizer2impl.h"
 				>
 			</File>

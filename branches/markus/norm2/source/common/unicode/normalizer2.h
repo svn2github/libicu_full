@@ -128,6 +128,20 @@ public:
            const UnicodeString &second,
            UErrorCode &errorCode) const = 0;
 
+    /**
+     * ICU "poor man's RTTI", returns a UClassID for this class.
+     * @returns a UClassID for this class.
+     * @draft ICU 4.4
+     */
+    static UClassID U_EXPORT2 getStaticClassID();
+
+    /**
+     * ICU "poor man's RTTI", returns a UClassID for the actual class.
+     * @return a UClassID for the actual class.
+     * @draft ICU 4.4
+     */
+    virtual UClassID getDynamicClassID() const;
+
 protected:
     Normalizer2(const Normalizer2Impl &ni) : impl(ni) {}
     // TODO: no copy, ==, etc.
