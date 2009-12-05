@@ -66,8 +66,6 @@ typedef enum {
 
 U_NAMESPACE_BEGIN
 
-class Normalizer2Impl;
-
 class Normalizer2 : public UObject {
 public:
     // Returns unmodifiable singleton.
@@ -142,10 +140,7 @@ public:
      */
     virtual UClassID getDynamicClassID() const;
 
-protected:
-    Normalizer2(const Normalizer2Impl &ni) : impl(ni) {}
     // TODO: no copy, ==, etc.
-    const Normalizer2Impl &impl;
 };
 
 U_NAMESPACE_END

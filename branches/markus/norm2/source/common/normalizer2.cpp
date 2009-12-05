@@ -20,13 +20,10 @@
 
 #include "unicode/localpointer.h"
 #include "unicode/normalizer2.h"
-#include "unicode/udata.h"
-#include "unicode/ustring.h"
 #include "cstring.h"
 #include "mutex.h"
 #include "normalizer2impl.h"
 #include "ucln_cmn.h"
-#include "utrie2.h"
 
 U_NAMESPACE_BEGIN
 
@@ -38,9 +35,15 @@ inline void assertNotBogus(const UnicodeString &s, UErrorCode &errorCode) {
 
 // Public API dispatch via Normalizer2 subclasses -------------------------- ***
 
-class DecomposeNormalizer2 : public Normalizer2 {
+class Normalizer2WithImpl : public Normalizer2 {
+protected:
+    Normalizer2WithImpl(const Normalizer2Impl &ni) : impl(ni) {}
+    const Normalizer2Impl &impl;
+};
+
+class DecomposeNormalizer2 : public Normalizer2WithImpl {
 public:
-    DecomposeNormalizer2(const Normalizer2Impl &ni) : Normalizer2(ni) {}
+    DecomposeNormalizer2(const Normalizer2Impl &ni) : Normalizer2WithImpl(ni) {}
 
     virtual UnicodeString &
     normalize(const UnicodeString &src,
@@ -68,9 +71,9 @@ public:
     }
 };
 
-class ComposeNormalizer2 : public Normalizer2 {
+class ComposeNormalizer2 : public Normalizer2WithImpl {
 public:
-    ComposeNormalizer2(const Normalizer2Impl &ni) : Normalizer2(ni) {}
+    ComposeNormalizer2(const Normalizer2Impl &ni) : Normalizer2WithImpl(ni) {}
 
     virtual UnicodeString &
     normalize(const UnicodeString &src,

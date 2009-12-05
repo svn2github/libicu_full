@@ -86,7 +86,7 @@ private:
     void writeCompositions(UChar32 c, const Norm *p, UnicodeString &dataString);
     void writeExtraData(UChar32 c, uint32_t value, ExtraDataWriter &writer);
     int32_t getCenterNoNoDelta() {
-        return indexes[Normalizer2Data::IX_MIN_MAYBE_YES]-Normalizer2Data::MAX_DELTA-1;
+        return indexes[Normalizer2Impl::IX_MIN_MAYBE_YES]-Normalizer2Impl::MAX_DELTA-1;
     }
     void writeNorm16(UChar32 start, UChar32 end, uint32_t value);
     void processData();
@@ -98,7 +98,7 @@ private:
     int32_t phase;
     OverrideHandling overrideHandling;
 
-    int32_t indexes[Normalizer2Data::IX_COUNT];
+    int32_t indexes[Normalizer2Impl::IX_COUNT];
     UTrie2 *norm16Trie;
     UnicodeString extraData;
 

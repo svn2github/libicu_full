@@ -13,7 +13,7 @@
 *   created on: 2009nov25
 *   created by: Markus W. Scherer
 *
-* Builds Normalizer2Data and writes a binary .nrm file.
+* Builds Normalizer2 data and writes a binary .nrm file.
 * For the file format see source/common/normalizer2impl.h.
 */
 
@@ -101,8 +101,8 @@ private:
 
 const HangulIterator::Range HangulIterator::ranges[4]={
     { JAMO_L_BASE, JAMO_L_BASE+JAMO_L_COUNT, 1 },
-    { JAMO_V_BASE, JAMO_V_BASE+JAMO_V_COUNT, Normalizer2Data::JAMO_VT },
-    { JAMO_T_BASE+1, JAMO_T_BASE+JAMO_T_COUNT, Normalizer2Data::JAMO_VT },  // +1: not U+11A7
+    { JAMO_V_BASE, JAMO_V_BASE+JAMO_V_COUNT, Normalizer2Impl::JAMO_VT },
+    { JAMO_T_BASE+1, JAMO_T_BASE+JAMO_T_COUNT, Normalizer2Impl::JAMO_VT },  // +1: not U+11A7
     { HANGUL_BASE, HANGUL_BASE+HANGUL_COUNT, 0 },  // will become minYesNo
 };
 
@@ -528,11 +528,11 @@ Normalizer2DataBuilder::reorder(Norm *p) {
 void Normalizer2DataBuilder::writeMapping(UChar32 c, const Norm *p, UnicodeString &dataString) {
     UnicodeString &m=*p->mapping;
     int32_t length=m.length();
-    if(length>Normalizer2Data::MAPPING_LENGTH_MASK) {
+    if(length>Normalizer2Impl::MAPPING_LENGTH_MASK) {
         fprintf(stderr,
                 "gennorm2 error: "
                 "mapping for U+%04lX longer than maximum of %d\n",
-                (long)c, Normalizer2Data::MAPPING_LENGTH_MASK);
+                (long)c, Normalizer2Impl::MAPPING_LENGTH_MASK);
         exit(U_INVALID_FORMAT_ERROR);
     }
     int32_t leadCC, trailCC;
@@ -542,7 +542,7 @@ void Normalizer2DataBuilder::writeMapping(UChar32 c, const Norm *p, UnicodeStrin
         leadCC=getCC(m.char32At(0));
         trailCC=getCC(m.char32At(length-1));
     }
-    if(c<Normalizer2Data::MIN_CCC_LCCC_CP && (p->cc!=0 || leadCC!=0)) {
+    if(c<Normalizer2Impl::MIN_CCC_LCCC_CP && (p->cc!=0 || leadCC!=0)) {
         fprintf(stderr,
                 "gennorm2 error: "
                 "U+%04lX below U+0300 has ccc!=0 or lccc!=0, not supported by ICU\n",
@@ -552,10 +552,10 @@ void Normalizer2DataBuilder::writeMapping(UChar32 c, const Norm *p, UnicodeStrin
     int32_t firstUnit=length|(trailCC<<8);
     int32_t secondUnit=p->cc|(leadCC<<8);
     if(secondUnit!=0) {
-        firstUnit|=Normalizer2Data::MAPPING_HAS_CCC_LCCC_WORD;
+        firstUnit|=Normalizer2Impl::MAPPING_HAS_CCC_LCCC_WORD;
     }
     if(p->compositions!=NULL) {
-        firstUnit|=Normalizer2Data::MAPPING_PLUS_COMPOSITION_LIST;
+        firstUnit|=Normalizer2Impl::MAPPING_PLUS_COMPOSITION_LIST;
     }
     dataString.append((UChar)firstUnit);
     if(secondUnit!=0) {
@@ -584,27 +584,27 @@ void Normalizer2DataBuilder::writeCompositions(UChar32 c, const Norm *p, Unicode
         }
         // Encode most pairs in two units and some in three.
         int32_t firstUnit, secondUnit, thirdUnit;
-        if(pair.trail<Normalizer2Data::COMP_1_TRAIL_LIMIT) {
+        if(pair.trail<Normalizer2Impl::COMP_1_TRAIL_LIMIT) {
             if(compositeAndFwd<=0xffff) {
                 firstUnit=pair.trail<<1;
                 secondUnit=compositeAndFwd;
                 thirdUnit=-1;
             } else {
-                firstUnit=(pair.trail<<1)|Normalizer2Data::COMP_1_TRIPLE;
+                firstUnit=(pair.trail<<1)|Normalizer2Impl::COMP_1_TRIPLE;
                 secondUnit=compositeAndFwd>>16;
                 thirdUnit=compositeAndFwd;
             }
         } else {
-            firstUnit=(Normalizer2Data::COMP_1_TRAIL_LIMIT+
-                       (pair.trail>>Normalizer2Data::COMP_1_TRAIL_SHIFT))|
-                      Normalizer2Data::COMP_1_TRIPLE;
-            secondUnit=(pair.trail<<Normalizer2Data::COMP_2_TRAIL_SHIFT)|
+            firstUnit=(Normalizer2Impl::COMP_1_TRAIL_LIMIT+
+                       (pair.trail>>Normalizer2Impl::COMP_1_TRAIL_SHIFT))|
+                      Normalizer2Impl::COMP_1_TRIPLE;
+            secondUnit=(pair.trail<<Normalizer2Impl::COMP_2_TRAIL_SHIFT)|
                        (compositeAndFwd>>16);
             thirdUnit=compositeAndFwd;
         }
         // Set the high bit of the first unit if this is the last composition pair.
         if(i==(length-1)) {
-            firstUnit|=Normalizer2Data::COMP_1_LAST_TUPLE;
+            firstUnit|=Normalizer2Impl::COMP_1_LAST_TUPLE;
         }
         dataString.append((UChar)firstUnit).append((UChar)secondUnit);
         if(thirdUnit>=0) {
@@ -689,7 +689,7 @@ void Normalizer2DataBuilder::writeExtraData(UChar32 c, uint32_t value, ExtraData
             } else */ if(p->mappingCP>=0 && !isHangul(p->mappingCP)) {
 #if 1
                 int32_t delta=p->mappingCP-c;
-                if(-Normalizer2Data::MAX_DELTA<=delta && delta<=Normalizer2Data::MAX_DELTA) {
+                if(-Normalizer2Impl::MAX_DELTA<=delta && delta<=Normalizer2Impl::MAX_DELTA) {
                     p->offset=(delta<<Norm::OFFSET_SHIFT)|Norm::OFFSET_DELTA;
                 }
 #else
@@ -744,27 +744,27 @@ void Normalizer2DataBuilder::writeNorm16(UChar32 start, UChar32 end, uint32_t va
         case Norm::OFFSET_NONE:
             // No mapping, no compositions list.
             if(p->combinesBack) {
-                norm16=Normalizer2Data::MIN_NORMAL_MAYBE_YES+p->cc;
+                norm16=Normalizer2Impl::MIN_NORMAL_MAYBE_YES+p->cc;
                 isDecompNo=(UBool)(p->cc!=0);
                 isCompNoMaybe=TRUE;
             } else if(p->cc!=0) {
-                norm16=Normalizer2Data::MIN_YES_YES_WITH_CC-1+p->cc;
+                norm16=Normalizer2Impl::MIN_YES_YES_WITH_CC-1+p->cc;
                 isDecompNo=isCompNoMaybe=TRUE;
             }
             break;
         case Norm::OFFSET_MAYBE_YES:
-            norm16=indexes[Normalizer2Data::IX_MIN_MAYBE_YES]+offset;
+            norm16=indexes[Normalizer2Impl::IX_MIN_MAYBE_YES]+offset;
             isCompNoMaybe=TRUE;
             break;
         case Norm::OFFSET_YES_YES:
             norm16=offset;
             break;
         case Norm::OFFSET_YES_NO:
-            norm16=indexes[Normalizer2Data::IX_MIN_YES_NO]+offset;
+            norm16=indexes[Normalizer2Impl::IX_MIN_YES_NO]+offset;
             isDecompNo=TRUE;
             break;
         case Norm::OFFSET_NO_NO:
-            norm16=indexes[Normalizer2Data::IX_MIN_NO_NO]+offset;
+            norm16=indexes[Normalizer2Impl::IX_MIN_NO_NO]+offset;
             isDecompNo=isCompNoMaybe=TRUE;
             if(beVerbose) {  // TODO: remove after debugging
                 if(p->cc==0 && !p->mapping->isEmpty() && p->mappingCP>=0 && !isHangul(p->mappingCP)) {
@@ -781,11 +781,11 @@ void Normalizer2DataBuilder::writeNorm16(UChar32 start, UChar32 end, uint32_t va
         }
         IcuToolErrorCode errorCode("gennorm2/writeNorm16()");
         utrie2_setRange32(norm16Trie, start, end, (uint32_t)norm16, TRUE, errorCode);
-        if(isDecompNo && start<indexes[Normalizer2Data::IX_MIN_DECOMP_NO_CP]) {
-            indexes[Normalizer2Data::IX_MIN_DECOMP_NO_CP]=start;
+        if(isDecompNo && start<indexes[Normalizer2Impl::IX_MIN_DECOMP_NO_CP]) {
+            indexes[Normalizer2Impl::IX_MIN_DECOMP_NO_CP]=start;
         }
-        if(isCompNoMaybe && start<indexes[Normalizer2Data::IX_MIN_COMP_NO_MAYBE_CP]) {
-            indexes[Normalizer2Data::IX_MIN_COMP_NO_MAYBE_CP]=start;
+        if(isCompNoMaybe && start<indexes[Normalizer2Impl::IX_MIN_COMP_NO_MAYBE_CP]) {
+            indexes[Normalizer2Impl::IX_MIN_COMP_NO_MAYBE_CP]=start;
         }
     }
 }
@@ -811,13 +811,13 @@ void Normalizer2DataBuilder::setHangulData() {
     while((range=hi.nextRange())!=NULL) {
         uint16_t norm16=range->norm16;
         if(norm16==0) {
-            norm16=(uint16_t)indexes[Normalizer2Data::IX_MIN_YES_NO];  // Hangul LV/LVT encoded as minYesNo
-            if(range->start<indexes[Normalizer2Data::IX_MIN_DECOMP_NO_CP]) {
-                indexes[Normalizer2Data::IX_MIN_DECOMP_NO_CP]=range->start;
+            norm16=(uint16_t)indexes[Normalizer2Impl::IX_MIN_YES_NO];  // Hangul LV/LVT encoded as minYesNo
+            if(range->start<indexes[Normalizer2Impl::IX_MIN_DECOMP_NO_CP]) {
+                indexes[Normalizer2Impl::IX_MIN_DECOMP_NO_CP]=range->start;
             }
         } else {
-            if(range->start<indexes[Normalizer2Data::IX_MIN_COMP_NO_MAYBE_CP]) {  // Jamo V/T are maybeYes
-                indexes[Normalizer2Data::IX_MIN_COMP_NO_MAYBE_CP]=range->start;
+            if(range->start<indexes[Normalizer2Impl::IX_MIN_COMP_NO_MAYBE_CP]) {  // Jamo V/T are maybeYes
+                indexes[Normalizer2Impl::IX_MIN_COMP_NO_MAYBE_CP]=range->start;
             }
         }
         utrie2_setRange32(norm16Trie, range->start, range->limit-1, norm16, TRUE, errorCode);
@@ -856,8 +856,8 @@ void Normalizer2DataBuilder::processData() {
         reorder(norms+i);
     }
 
-    indexes[Normalizer2Data::IX_MIN_DECOMP_NO_CP]=0x110000;
-    indexes[Normalizer2Data::IX_MIN_COMP_NO_MAYBE_CP]=0x110000;
+    indexes[Normalizer2Impl::IX_MIN_DECOMP_NO_CP]=0x110000;
+    indexes[Normalizer2Impl::IX_MIN_COMP_NO_MAYBE_CP]=0x110000;
 
     ExtraDataWriter extraDataWriter(*this);
     utrie2_enum(normTrie, NULL, enumRangeHandler, &extraDataWriter);
@@ -871,20 +871,20 @@ void Normalizer2DataBuilder::processData() {
         extraData.append((UChar)0);
     }
 
-    indexes[Normalizer2Data::IX_MIN_YES_NO]=
+    indexes[Normalizer2Impl::IX_MIN_YES_NO]=
         extraDataWriter.yesYesCompositions.length();
-    indexes[Normalizer2Data::IX_MIN_NO_NO]=
-        indexes[Normalizer2Data::IX_MIN_YES_NO]+
+    indexes[Normalizer2Impl::IX_MIN_NO_NO]=
+        indexes[Normalizer2Impl::IX_MIN_YES_NO]+
         extraDataWriter.yesNoData.length();
-    indexes[Normalizer2Data::IX_LIMIT_NO_NO]=
-        indexes[Normalizer2Data::IX_MIN_NO_NO]+
+    indexes[Normalizer2Impl::IX_LIMIT_NO_NO]=
+        indexes[Normalizer2Impl::IX_MIN_NO_NO]+
         extraDataWriter.noNoMappings.length();
-    indexes[Normalizer2Data::IX_MIN_MAYBE_YES]=
-        Normalizer2Data::MIN_NORMAL_MAYBE_YES-
+    indexes[Normalizer2Impl::IX_MIN_MAYBE_YES]=
+        Normalizer2Impl::MIN_NORMAL_MAYBE_YES-
         extraDataWriter.maybeYesCompositions.length();
 
-    int32_t minNoNoDelta=getCenterNoNoDelta()-Normalizer2Data::MAX_DELTA;
-    if(indexes[Normalizer2Data::IX_LIMIT_NO_NO]>minNoNoDelta) {
+    int32_t minNoNoDelta=getCenterNoNoDelta()-Normalizer2Impl::MAX_DELTA;
+    if(indexes[Normalizer2Impl::IX_LIMIT_NO_NO]>minNoNoDelta) {
         fprintf(stderr,
                 "gennorm2 error: "
                 "data structure overflow, too much mapping composition data\n");
@@ -908,11 +908,11 @@ void Normalizer2DataBuilder::processData() {
     for(UChar lead=0xd800; lead<0xdc00; ++lead) {
         uint32_t maxValue=0;
         utrie2_enumForLeadSurrogate(norm16Trie, lead, NULL, enumRangeMaxValue, &maxValue);
-        if(maxValue>=(uint32_t)indexes[Normalizer2Data::IX_LIMIT_NO_NO]) {
+        if(maxValue>=(uint32_t)indexes[Normalizer2Impl::IX_LIMIT_NO_NO]) {
             // Set noNo ("worst" value) if it got into "less-bad" maybeYes or ccc!=0.
             // Otherwise it might end up at something like JAMO_VT which stays in
             // the inner decomposition quick check loop.
-            maxValue=(uint32_t)indexes[Normalizer2Data::IX_LIMIT_NO_NO]-1;
+            maxValue=(uint32_t)indexes[Normalizer2Impl::IX_LIMIT_NO_NO]-1;
         }
         utrie2_set32ForLeadSurrogateCodeUnit(norm16Trie, lead, maxValue, errorCode);
     }
@@ -935,11 +935,11 @@ void Normalizer2DataBuilder::writeBinaryFile(const char *filename) {
     errorCode.assertSuccess();
 
     int32_t offset=(int32_t)sizeof(indexes);
-    indexes[Normalizer2Data::IX_NORM_TRIE_OFFSET]=offset;
+    indexes[Normalizer2Impl::IX_NORM_TRIE_OFFSET]=offset;
     offset+=norm16TrieLength;
-    indexes[Normalizer2Data::IX_EXTRA_DATA_OFFSET]=offset;
+    indexes[Normalizer2Impl::IX_EXTRA_DATA_OFFSET]=offset;
     int32_t totalSize=offset+=extraData.length()*2;
-    for(int32_t i=Normalizer2Data::IX_FCD_TRIE_OFFSET; i<=Normalizer2Data::IX_TOTAL_SIZE; ++i) {
+    for(int32_t i=Normalizer2Impl::IX_FCD_TRIE_OFFSET; i<=Normalizer2Impl::IX_TOTAL_SIZE; ++i) {
         indexes[i]=totalSize;
     }
 
@@ -947,12 +947,12 @@ void Normalizer2DataBuilder::writeBinaryFile(const char *filename) {
         printf("size of normalization trie:         %5ld bytes\n", (long)norm16TrieLength);
         printf("size of 16-bit extra data:          %5ld uint16_t\n", (long)extraData.length());
         printf("size of binary data file contents:  %5ld bytes\n", (long)totalSize);
-        printf("minDecompNoCodePoint:              U+%04lX\n", (long)indexes[Normalizer2Data::IX_MIN_DECOMP_NO_CP]);
-        printf("minCompNoMaybeCodePoint:           U+%04lX\n", (long)indexes[Normalizer2Data::IX_MIN_COMP_NO_MAYBE_CP]);
-        printf("minYesNo:                          0x%04x\n", (int)indexes[Normalizer2Data::IX_MIN_YES_NO]);
-        printf("minNoNo:                           0x%04x\n", (int)indexes[Normalizer2Data::IX_MIN_NO_NO]);
-        printf("limitNoNo:                         0x%04x\n", (int)indexes[Normalizer2Data::IX_LIMIT_NO_NO]);
-        printf("minMaybeYes:                       0x%04x\n", (int)indexes[Normalizer2Data::IX_MIN_MAYBE_YES]);
+        printf("minDecompNoCodePoint:              U+%04lX\n", (long)indexes[Normalizer2Impl::IX_MIN_DECOMP_NO_CP]);
+        printf("minCompNoMaybeCodePoint:           U+%04lX\n", (long)indexes[Normalizer2Impl::IX_MIN_COMP_NO_MAYBE_CP]);
+        printf("minYesNo:                          0x%04x\n", (int)indexes[Normalizer2Impl::IX_MIN_YES_NO]);
+        printf("minNoNo:                           0x%04x\n", (int)indexes[Normalizer2Impl::IX_MIN_NO_NO]);
+        printf("limitNoNo:                         0x%04x\n", (int)indexes[Normalizer2Impl::IX_LIMIT_NO_NO]);
+        printf("minMaybeYes:                       0x%04x\n", (int)indexes[Normalizer2Impl::IX_MIN_MAYBE_YES]);
     }
 
     memcpy(dataInfo.dataVersion, unicodeVersion, 4);
