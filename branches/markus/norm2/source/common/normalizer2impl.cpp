@@ -320,6 +320,20 @@ Normalizer2Impl::load(const char *packageName, const char *name, UErrorCode &err
     extraData=maybeYesCompositions+(MIN_NORMAL_MAYBE_YES-indexes[IX_MIN_MAYBE_YES]);
 }
 
+uint8_t Normalizer2Impl::getTrailCCFromCompYesAndZeroCC(const UChar *cpStart, const UChar *cpLimit) const {
+    uint16_t prevNorm16;
+    if(cpStart==(cpLimit-1)) {
+        prevNorm16=getNorm16FromBMP(*cpStart);
+    } else {
+        prevNorm16=getNorm16FromSurrogatePair(cpStart[0], cpStart[1]);
+    }
+    if(prevNorm16<indexes[IX_MIN_YES_NO]) {
+        return 0;  // yesYes has ccc=tccc=0
+    } else {
+        return (uint8_t)(*getMapping(prevNorm16)>>8);  // tccc from noNo
+    }
+}
+
 UBool Normalizer2Impl::decompose(const UChar *src, int32_t srcLength,
                                  ReorderingBuffer &buffer) const {
     const UChar *limit;
@@ -556,7 +570,8 @@ int32_t Normalizer2Impl::combine(const uint16_t *list, UChar32 trail) {
  * a composition may contain at most one more code unit than the original starter,
  * while the combining mark that is removed has at least one code unit.
  */
-void Normalizer2Impl::recompose(ReorderingBuffer &buffer, int32_t recomposeStartIndex) const {
+void Normalizer2Impl::recompose(ReorderingBuffer &buffer, int32_t recomposeStartIndex,
+                                UBool onlyContiguous) const {
     UChar *p=buffer.getStart()+recomposeStartIndex;
     UChar *limit=buffer.getLimit();
 
@@ -704,18 +719,17 @@ void Normalizer2Impl::recompose(ReorderingBuffer &buffer, int32_t recomposeStart
                     starter=p-2;
                 }
             }
-#if 0  // TODO
-        } else if(options&_NORM_OPTIONS_COMPOSE_CONTIGUOUS) {
+        } else if(onlyContiguous) {
             // FCC: no discontiguous compositions; any intervening character blocks.
             compositionsList=NULL;
-#endif
         }
     }
     buffer.setReorderingLimitAndLastCC(limit, prevCC);
 }
 
 UBool Normalizer2Impl::compose(const UChar *src, int32_t srcLength,
-                               ReorderingBuffer &buffer) const {
+                               ReorderingBuffer &buffer,
+                               UBool onlyContiguous) const {
     const UChar *limit;
     if(srcLength>=0) {
         limit=src+srcLength;  // string with length
@@ -778,7 +792,6 @@ UBool Normalizer2Impl::compose(const UChar *src, int32_t srcLength,
         }
 
         ++src;
-        // Check one above-minimum, relevant code point.
         /*
          * norm16 is for c=*(src-1) which has "no" or "maybe" properties, and/or ccc!=0.
          * Check for Jamo V/T, then for surrogates and regular characters.
@@ -830,6 +843,11 @@ UBool Normalizer2Impl::compose(const UChar *src, int32_t srcLength,
                 continue;
             }
         }
+        /*
+         * Now isCompYesAndZeroCC(norm16) is false, that is, norm16>=indexes[IX_MIN_NO_NO].
+         * c is either a "noNo" (has a mapping) or a "maybeYes" (combines backward)
+         * or has ccc!=0.
+         */
 
         /*
          * Source buffer pointers:
@@ -853,11 +871,26 @@ UBool Normalizer2Impl::compose(const UChar *src, int32_t srcLength,
          * start         reorderStart  limit         |
          *                             +remainingCap.+
          */
-        if(isCompYes(norm16)) {
-            if(!buffer.append(c, getCCFromYes(norm16))) {
-                return TRUE;
+        if(norm16>=MIN_YES_YES_WITH_CC) {
+            uint8_t cc=(uint8_t)norm16;  // cc!=0
+            if( onlyContiguous &&  // FCC
+                buffer.getLastCC()==0 && prevStarter<prevSrc &&
+                // buffer.getLastCC()==0 && prevStarter<prevSrc tell us that
+                // [prevStarter..prevSrc[ (which is exactly one character under these conditions)
+                // passed the quick check "yes && ccc==0" test.
+                // Check whether the last character was a "yesYes" or a "yesNo".
+                // If a "yesNo", then we get its trailing ccc from its
+                // mapping and check for canonical order.
+                // All other cases are ok.
+                getTrailCCFromCompYesAndZeroCC(prevStarter, prevSrc)>cc
+            ) {
+                // Fails FCD test, need to decompose and contiguously recompose.
+            } else {
+                if(!buffer.append(c, cc)) {
+                    return TRUE;
+                }
+                continue;
             }
-            continue;
         }
 
         /*
@@ -891,7 +924,7 @@ UBool Normalizer2Impl::compose(const UChar *src, int32_t srcLength,
             return FALSE;
         }
         if(prevStarter!=prevSrc || src!=nextStarter) {  // Recompose if more than one character.
-            recompose(buffer, recomposeStartIndex);
+            recompose(buffer, recomposeStartIndex, onlyContiguous);
         }
 
         // Move to the next starter. We never need to look back before this point again.
@@ -902,6 +935,7 @@ UBool Normalizer2Impl::compose(const UChar *src, int32_t srcLength,
 
 void Normalizer2Impl::compose(const UChar *src, int32_t srcLength,
                               UnicodeString &dest,
+                              UBool onlyContiguous,
                               UErrorCode &errorCode) const {
     if(U_FAILURE(errorCode)) {
         dest.setToBogus();
@@ -909,14 +943,16 @@ void Normalizer2Impl::compose(const UChar *src, int32_t srcLength,
     }
     dest.remove();
     ReorderingBuffer buffer(*this, dest);
-    if(!buffer.init() || !compose(src, srcLength, buffer)) {
+    if(!buffer.init() || !compose(src, srcLength, buffer, onlyContiguous)) {
         errorCode=U_MEMORY_ALLOCATION_ERROR;
         dest.setToBogus();
     }
 }
 
 void Normalizer2Impl::composeAndAppend(const UChar *src, int32_t srcLength,
-                                       UnicodeString &dest, UBool doCompose,
+                                       UnicodeString &dest,
+                                       UBool doCompose,
+                                       UBool onlyContiguous,
                                        UErrorCode &errorCode) const {
     if(U_FAILURE(errorCode)) {
         return;
@@ -940,7 +976,7 @@ void Normalizer2Impl::composeAndAppend(const UChar *src, int32_t srcLength,
                                  (int32_t)(buffer.getLimit()-lastStarterInDest));
             buffer.removeZeroCCSuffix((int32_t)(buffer.getLimit()-lastStarterInDest));
             middle.append(src, (int32_t)(firstStarterInSrc-src));
-            if(!compose(middle.getBuffer(), middle.length(), buffer)) {
+            if(!compose(middle.getBuffer(), middle.length(), buffer, onlyContiguous)) {
                 errorCode=U_MEMORY_ALLOCATION_ERROR;
                 return;
             }
@@ -951,7 +987,7 @@ void Normalizer2Impl::composeAndAppend(const UChar *src, int32_t srcLength,
         }
     }
     if(doCompose ?
-            !compose(src, srcLength, buffer) :
+            !compose(src, srcLength, buffer, onlyContiguous) :
             !buffer.appendZeroCC(src, srcLength>=0 ? srcLength : u_strlen(src))) {
         errorCode=U_MEMORY_ALLOCATION_ERROR;
     }

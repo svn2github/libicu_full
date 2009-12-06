@@ -73,14 +73,15 @@ public:
 
 class ComposeNormalizer2 : public Normalizer2WithImpl {
 public:
-    ComposeNormalizer2(const Normalizer2Impl &ni) : Normalizer2WithImpl(ni) {}
+    ComposeNormalizer2(const Normalizer2Impl &ni, UBool fcc) :
+        Normalizer2WithImpl(ni), onlyContiguous(fcc) {}
 
     virtual UnicodeString &
     normalize(const UnicodeString &src,
               UnicodeString &dest,
               UErrorCode &errorCode) const {
         assertNotBogus(src, errorCode);
-        impl.compose(src.getBuffer(), src.length(), dest, errorCode);
+        impl.compose(src.getBuffer(), src.length(), dest, onlyContiguous, errorCode);
         return dest;
     }
     virtual UnicodeString &
@@ -88,7 +89,8 @@ public:
                              const UnicodeString &second,
                              UErrorCode &errorCode) const {
         assertNotBogus(second, errorCode);
-        impl.composeAndAppend(second.getBuffer(), second.length(), first, TRUE, errorCode);
+        impl.composeAndAppend(second.getBuffer(), second.length(), first,
+                              TRUE, onlyContiguous, errorCode);
         return first;
     }
     virtual UnicodeString &
@@ -96,9 +98,12 @@ public:
            const UnicodeString &second,
            UErrorCode &errorCode) const {
         assertNotBogus(second, errorCode);
-        impl.composeAndAppend(second.getBuffer(), second.length(), first, FALSE, errorCode);
+        impl.composeAndAppend(second.getBuffer(), second.length(), first,
+                              FALSE, onlyContiguous, errorCode);
         return first;
     }
+private:
+    UBool onlyContiguous;
 };
 
 // instance cache ---------------------------------------------------------- ***
@@ -107,11 +112,12 @@ struct Norm2AllModes : public UMemory {
     static Norm2AllModes *createInstance(const char *packageName,
                                          const char *name,
                                          UErrorCode &errorCode);
-    Norm2AllModes() : comp(impl), decomp(impl) {}
+    Norm2AllModes() : comp(impl, FALSE), decomp(impl), fcc(impl, TRUE) {}
 
     Normalizer2Impl impl;
     ComposeNormalizer2 comp;
     DecomposeNormalizer2 decomp;
+    ComposeNormalizer2 fcc;
 };
 
 Norm2AllModes *
@@ -175,6 +181,11 @@ Normalizer2 *InternalNormalizer2Provider::getNFDInstance(UErrorCode &errorCode) 
     return allModes!=NULL ? &allModes->decomp : NULL;
 }
 
+Normalizer2 *InternalNormalizer2Provider::getFCCInstance(UErrorCode &errorCode) {
+    Norm2AllModes *allModes=Norm2AllModesSingleton(nfcSingleton, "nfc").getInstance(errorCode);
+    return allModes!=NULL ? &allModes->fcc : NULL;
+}
+
 Normalizer2 *InternalNormalizer2Provider::getNFKCInstance(UErrorCode &errorCode) {
     Norm2AllModes *allModes=
         Norm2AllModesSingleton(nfkcSingleton, "nfkc").getInstance(errorCode);
@@ -216,6 +227,8 @@ Normalizer2::getInstance(const char *packageName,
                 return &allModes->comp;
             case UNORM2_DECOMPOSE:
                 return &allModes->decomp;
+            case UNORM2_COMPOSE_CONTIGUOUS:
+                return &allModes->fcc;
             default:
                 break;  // do nothing
             }

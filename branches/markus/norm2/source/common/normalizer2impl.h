@@ -48,6 +48,7 @@ public:
     UChar *getStart() { return start; }
     UChar *getLimit() { return limit; }
     UChar &lastUChar() { return *(limit-1); }
+    uint8_t getLastCC() const { return lastCC; }
 
     UBool append(UChar32 c, uint8_t cc) {
         return (c<=0xffff) ?
@@ -223,10 +224,12 @@ public:
                             UErrorCode &errorCode) const;
     void compose(const UChar *src, int32_t srcLength,
                  UnicodeString &dest,
+                 UBool onlyContiguous,
                  UErrorCode &errorCode) const;
     void composeAndAppend(const UChar *src, int32_t srcLength,
                           UnicodeString &dest,
                           UBool doCompose,
+                          UBool onlyContiguous,
                           UErrorCode &errorCode) const;
 private:
     static UBool U_CALLCONV
@@ -241,9 +244,9 @@ private:
     static UBool isJamoVT(uint16_t norm16) { return norm16==JAMO_VT; }
     UBool isHangul(uint16_t norm16) const { return norm16==indexes[IX_MIN_YES_NO]; }
     UBool isCompYesAndZeroCC(uint16_t norm16) const { return norm16<indexes[IX_MIN_NO_NO]; }
-    UBool isCompYes(uint16_t norm16) const {
-        return norm16>=MIN_YES_YES_WITH_CC || norm16<indexes[IX_MIN_NO_NO];
-    }
+    // TODO: UBool isCompYes(uint16_t norm16) const {
+    //     return norm16>=MIN_YES_YES_WITH_CC || norm16<indexes[IX_MIN_NO_NO];
+    // }
     // TODO: UBool isCompYesOrMaybe(uint16_t norm16) const {
     //     return norm16<indexes[IX_MIN_NO_NO] || indexes[IX_MIN_MAYBE_YES]<=norm16;
     // }
@@ -267,9 +270,9 @@ private:
 
     // For use with isCompYes().
     // Perhaps the compiler can combine the two tests for MIN_YES_YES_WITH_CC.
-    static uint8_t getCCFromYes(uint16_t norm16) {
-        return norm16>=MIN_YES_YES_WITH_CC ? (uint8_t)norm16 : 0;
-    }
+    // TODO: static uint8_t getCCFromYes(uint16_t norm16) {
+    //     return norm16>=MIN_YES_YES_WITH_CC ? (uint8_t)norm16 : 0;
+    // }
     uint8_t getCCFromNoNo(uint16_t norm16) const {
         const uint16_t *mapping=getMapping(norm16);
         if(*mapping&MAPPING_HAS_CCC_LCCC_WORD) {
@@ -278,6 +281,8 @@ private:
             return 0;
         }
     }
+    // requires that the [cpStart..cpLimit[ character passes isCompYesAndZeroCC()
+    uint8_t getTrailCCFromCompYesAndZeroCC(const UChar *cpStart, const UChar *cpLimit) const;
 
     // Requires algorithmic-NoNo.
     UChar32 mapAlgorithmic(UChar32 c, uint16_t norm16) const {
@@ -305,8 +310,11 @@ private:
     UBool decompose(UChar32 c, uint16_t norm16, ReorderingBuffer &buffer) const;
 
     static int32_t combine(const uint16_t *list, UChar32 trail);
-    void recompose(ReorderingBuffer &buffer, int32_t recomposeStartIndex) const;
-    UBool compose(const UChar *src, int32_t srcLength, ReorderingBuffer &buffer) const;
+    void recompose(ReorderingBuffer &buffer, int32_t recomposeStartIndex,
+                   UBool onlyContiguous) const;
+    UBool compose(const UChar *src, int32_t srcLength,
+                  ReorderingBuffer &buffer,
+                  UBool onlyContiguous) const;
 
     /**
      * Is c a composition starter?
@@ -330,10 +338,11 @@ private:
 /**
  * ICU-internal shortcut for quick access to standard Unicode normalization.
  */
-class InternalNormalizer2Provider {
+class U_COMMON_API InternalNormalizer2Provider {
 public:
     static Normalizer2 *getNFCInstance(UErrorCode &errorCode);
     static Normalizer2 *getNFDInstance(UErrorCode &errorCode);
+    static Normalizer2 *getFCCInstance(UErrorCode &errorCode);
     static Normalizer2 *getNFKCInstance(UErrorCode &errorCode);
     static Normalizer2 *getNFKDInstance(UErrorCode &errorCode);
     static Normalizer2 *getNFKC_CFInstance(UErrorCode &errorCode);
