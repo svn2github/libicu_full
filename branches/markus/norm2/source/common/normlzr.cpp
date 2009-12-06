@@ -142,13 +142,25 @@ Normalizer::normalize(const UnicodeString& source,
             dest=&localDest;
         }
 
-        if(mode==UNORM_NFD && options==0) {
-            Normalizer2 *n2=InternalNormalizer2Provider::getNFDInstance(status);
-            if(U_SUCCESS(status)) {
-                n2->normalize(source, *dest, status);
+        if(UNORM_NFD<=mode && mode<=UNORM_NFKC && options==0) {
+            Normalizer2 *n2;
+            switch(mode) {
+            case UNORM_NFD:
+                n2=InternalNormalizer2Provider::getNFDInstance(status);
+                break;
+            case UNORM_NFKD:
+                n2=InternalNormalizer2Provider::getNFKDInstance(status);
+                break;
+            case UNORM_NFC:
+                n2=InternalNormalizer2Provider::getNFCInstance(status);
+                break;
+            case UNORM_NFKC:
+                n2=InternalNormalizer2Provider::getNFKCInstance(status);
+                break;
+            default:
+                n2=NULL;
+                break;
             }
-        } else if(mode==UNORM_NFC && options==0) {
-            Normalizer2 *n2=InternalNormalizer2Provider::getNFCInstance(status);
             if(U_SUCCESS(status)) {
                 n2->normalize(source, *dest, status);
             }
@@ -168,13 +180,12 @@ Normalizer::normalize(const UnicodeString& source,
                                                &status);
                 dest->releaseBuffer(U_SUCCESS(status) ? length : 0);
             }
+            if(U_FAILURE(status)) {
+                result.setToBogus();
+            }
         }
-
-        if(dest==&localDest) {
+        if(dest==&localDest && U_SUCCESS(status)) {
             result=*dest;
-        }
-        if(U_FAILURE(status)) {
-            result.setToBogus();
         }
     }
 }
