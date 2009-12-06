@@ -295,14 +295,16 @@ private:
         if(norm16==0 || MIN_NORMAL_MAYBE_YES<=norm16) {
             return NULL;
         } else if(norm16<indexes[IX_MIN_MAYBE_YES]) {
-            return extraData+norm16;  // for Jamo L: harmless empty list
+            return extraData+norm16;  // for yesYes; if Jamo L: harmless empty list
         } else {
             return maybeYesCompositions+norm16-indexes[IX_MIN_MAYBE_YES];
         }
     }
     const uint16_t *getCompositionsListForComposite(uint16_t norm16) const {
         const uint16_t *list=extraData+norm16;  // composite has both mapping & compositions list
-        return list+*list+  // mapping pointer + mapping length
+        return list+  // mapping pointer
+            1+  // +1 to skip the first unit with the mapping lenth
+            (*list&MAPPING_LENGTH_MASK)+  // + mapping length
             ((*list>>7)&1);  // +1 if MAPPING_HAS_CCC_LCCC_WORD
     }
 

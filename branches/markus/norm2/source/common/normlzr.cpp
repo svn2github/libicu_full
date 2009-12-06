@@ -147,6 +147,11 @@ Normalizer::normalize(const UnicodeString& source,
             if(U_SUCCESS(status)) {
                 n2->normalize(source, *dest, status);
             }
+        } else if(mode==UNORM_NFC && options==0) {
+            Normalizer2 *n2=InternalNormalizer2Provider::getNFCInstance(status);
+            if(U_SUCCESS(status)) {
+                n2->normalize(source, *dest, status);
+            }
         } else {
             UChar *buffer=dest->getBuffer(source.length());
             int32_t length=unorm_internalNormalize(buffer, dest->getCapacity(),

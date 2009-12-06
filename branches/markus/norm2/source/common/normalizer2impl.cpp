@@ -181,6 +181,7 @@ void ReorderingBuffer::removeZeroCCSuffix(int32_t length) {
         limit=start;
         remainingCapacity=str.getCapacity();
     }
+    lastCC=0;
     reorderStart=limit;
 }
 
@@ -619,6 +620,7 @@ void Normalizer2Impl::recompose(ReorderingBuffer &buffer, int32_t recomposeStart
                         while(r<limit) {
                             *q++=*r++;
                         }
+                        limit=q;
                         p=pRemove;
                     }
                 }
@@ -638,7 +640,7 @@ void Normalizer2Impl::recompose(ReorderingBuffer &buffer, int32_t recomposeStart
                 UChar32 composite=compositeAndFwd>>1;
 
                 // Replace the starter with the composite, remove the combining mark.
-                pRemove=p-U16_LENGTH(composite);  // pointer to the combining mark
+                pRemove=p-U16_LENGTH(c);  // pRemove & p: start & limit of the combining mark
                 if(starterIsSupplementary) {
                     if(U_IS_SUPPLEMENTARY(composite)) {
                         // both are supplementary
@@ -680,6 +682,7 @@ void Normalizer2Impl::recompose(ReorderingBuffer &buffer, int32_t recomposeStart
                     while(r<limit) {
                         *q++=*r++;
                     }
+                    limit=q;
                     p=pRemove;
                 }
                 // Keep prevCC because we removed the combining mark.
@@ -822,7 +825,7 @@ UBool Normalizer2Impl::compose(const UChar *src, int32_t srcLength,
             }
             // The Jamo V/T did not compose into a Hangul syllable.
             if(!buffer.appendBMP((UChar)c, 0)) {
-                return TRUE;
+                return FALSE;
             }
             continue;
         } else if(U16_IS_LEAD(c)) {
@@ -838,7 +841,7 @@ UBool Normalizer2Impl::compose(const UChar *src, int32_t srcLength,
             if(isCompYesAndZeroCC(norm16)) {
                 prevStarter=prevSrc;
                 if(!buffer.append(c, 0)) {
-                    return TRUE;
+                    return FALSE;
                 }
                 continue;
             }
@@ -887,7 +890,7 @@ UBool Normalizer2Impl::compose(const UChar *src, int32_t srcLength,
                 // Fails FCD test, need to decompose and contiguously recompose.
             } else {
                 if(!buffer.append(c, cc)) {
-                    return TRUE;
+                    return FALSE;
                 }
                 continue;
             }
@@ -923,9 +926,7 @@ UBool Normalizer2Impl::compose(const UChar *src, int32_t srcLength,
         if(!decompose(prevStarter, (int32_t)(nextStarter-prevStarter), buffer)) {
             return FALSE;
         }
-        if(prevStarter!=prevSrc || src!=nextStarter) {  // Recompose if more than one character.
-            recompose(buffer, recomposeStartIndex, onlyContiguous);
-        }
+        recompose(buffer, recomposeStartIndex, onlyContiguous);
 
         // Move to the next starter. We never need to look back before this point again.
         prevStarter=src=nextStarter;
