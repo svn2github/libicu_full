@@ -908,7 +908,9 @@ void Normalizer2DataBuilder::processData() {
     for(UChar lead=0xd800; lead<0xdc00; ++lead) {
         uint32_t maxValue=0;
         utrie2_enumForLeadSurrogate(norm16Trie, lead, NULL, enumRangeMaxValue, &maxValue);
-        if(maxValue>=(uint32_t)indexes[Normalizer2Impl::IX_LIMIT_NO_NO]) {
+        if( maxValue>=(uint32_t)indexes[Normalizer2Impl::IX_LIMIT_NO_NO] &&
+            maxValue>(uint32_t)indexes[Normalizer2Impl::IX_MIN_NO_NO]
+        ) {
             // Set noNo ("worst" value) if it got into "less-bad" maybeYes or ccc!=0.
             // Otherwise it might end up at something like JAMO_VT which stays in
             // the inner decomposition quick check loop.

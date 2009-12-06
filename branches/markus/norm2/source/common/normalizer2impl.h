@@ -309,6 +309,7 @@ private:
     }
 
     UBool decompose(const UChar *src, int32_t srcLength, ReorderingBuffer &buffer) const;
+    UBool decomposeShort(const UChar *src, const UChar *limit, ReorderingBuffer &buffer) const;
     UBool decompose(UChar32 c, uint16_t norm16, ReorderingBuffer &buffer) const;
 
     static int32_t combine(const uint16_t *list, UChar32 trail);

@@ -397,6 +397,23 @@ UBool Normalizer2Impl::decompose(const UChar *src, int32_t srcLength,
     return TRUE;
 }
 
+// Decompose a short piece of text which is likely to contain characters that
+// fail the quick check loop and/or where the quick check loop's overhead
+// is unlikely to be amortized.
+// Called by the compose() and makeFCD() implementations.
+UBool Normalizer2Impl::decomposeShort(const UChar *src, const UChar *limit,
+                                      ReorderingBuffer &buffer) const {
+    while(src<limit) {
+        UChar32 c;
+        uint16_t norm16;
+        UTRIE2_U16_NEXT16(trie, src, limit, c, norm16);
+        if(!decompose(c, norm16, buffer)) {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
 UBool Normalizer2Impl::decompose(UChar32 c, uint16_t norm16, ReorderingBuffer &buffer) const {
     // Only loops for 1:1 algorithmic mappings.
     for(;;) {
@@ -923,7 +940,7 @@ UBool Normalizer2Impl::compose(const UChar *src, int32_t srcLength,
 
         // Decompose [prevStarter..nextStarter[ into the buffer and then recompose that part of it.
         int32_t recomposeStartIndex=buffer.length();
-        if(!decompose(prevStarter, (int32_t)(nextStarter-prevStarter), buffer)) {
+        if(!decomposeShort(prevStarter, nextStarter, buffer)) {
             return FALSE;
         }
         recompose(buffer, recomposeStartIndex, onlyContiguous);
