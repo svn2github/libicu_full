@@ -22,6 +22,7 @@
 #include "unicode/udata.h"
 #include "unicode/ustring.h"
 #include "cmemory.h"
+#include "mutex.h"
 #include "normalizer2impl.h"
 #include "utrie2.h"
 
@@ -76,6 +77,24 @@ public:
     }
 
     const UChar *limit;
+};
+
+class UTrie2Singleton {
+public:
+    UTrie2Singleton(SimpleSingleton &s) : singleton(s) {}
+    void deleteInstance() {
+        utrie2_close((UTrie2 *)singleton.fInstance);
+        singleton.reset();
+    }
+    UTrie2 *getInstance(InstantiatorFn *instantiator, const void *context,
+                        UErrorCode &errorCode) {
+        void *duplicate;
+        UTrie2 *instance=(UTrie2 *)singleton.getInstance(instantiator, context, duplicate, errorCode);
+        utrie2_close((UTrie2 *)duplicate);
+        return instance;
+    }
+private:
+    SimpleSingleton &singleton;
 };
 
 // ReorderingBuffer -------------------------------------------------------- ***
@@ -258,6 +277,7 @@ void ReorderingBuffer::insert(UChar32 c, uint8_t cc) {
 Normalizer2Impl::~Normalizer2Impl() {
     udata_close(memory);
     utrie2_close(trie);
+    UTrie2Singleton(fcdTrieSingleton).deleteInstance();
 }
 
 UBool U_CALLCONV
@@ -319,6 +339,9 @@ Normalizer2Impl::load(const char *packageName, const char *name, UErrorCode &err
     offset=nextOffset;
     maybeYesCompositions=(const uint16_t *)(inBytes+offset);
     extraData=maybeYesCompositions+(MIN_NORMAL_MAYBE_YES-indexes[IX_MIN_MAYBE_YES]);
+
+    // TODO: remove after debugging
+    getFCDTrie(errorCode);
 }
 
 uint8_t Normalizer2Impl::getTrailCCFromCompYesAndZeroCC(const UChar *cpStart, const UChar *cpLimit) const {
@@ -1056,6 +1079,93 @@ const UChar *Normalizer2Impl::findNextCompStarter(const UChar *p, const UChar *l
         norm16=iter.next16();
     } while(!isCompStarter(iter.codePoint, norm16));
     return iter.codePointStart;
+}
+
+class FCDTrieSingleton : public UTrie2Singleton {
+public:
+    FCDTrieSingleton(SimpleSingleton &s, Normalizer2Impl &ni, UErrorCode &ec) :
+        UTrie2Singleton(s), impl(ni), errorCode(ec) {}
+    UTrie2 *getInstance(UErrorCode &errorCode) {
+        return UTrie2Singleton::getInstance(createInstance, this, errorCode);
+    }
+    static void *createInstance(const void *context, UErrorCode &errorCode);
+    UBool rangeHandler(UChar32 start, UChar32 end, uint32_t value) {
+        if(value!=0) {
+            impl.setFCD16FromNorm16(start, end, (uint16_t)value, newFCDTrie, errorCode);
+        }
+        return U_SUCCESS(errorCode);
+    }
+
+    Normalizer2Impl &impl;
+    UTrie2 *newFCDTrie;
+    UErrorCode &errorCode;
+};
+
+U_CDECL_BEGIN
+
+static UBool U_CALLCONV
+enumRangeHandler(const void *context, UChar32 start, UChar32 end, uint32_t value) {
+    return ((FCDTrieSingleton *)context)->rangeHandler(start, end, value);
+}
+
+U_CDECL_END
+
+void *FCDTrieSingleton::createInstance(const void *context, UErrorCode &errorCode) {
+    FCDTrieSingleton *me=(FCDTrieSingleton *)context;
+    me->newFCDTrie=utrie2_open(0, 0, &errorCode);
+    if(U_SUCCESS(errorCode)) {
+        utrie2_enum(me->impl.getNormTrie(), NULL, enumRangeHandler, me);
+        if(U_SUCCESS(errorCode)) {
+            return me->newFCDTrie;
+        }
+    }
+    utrie2_close(me->newFCDTrie);
+    return NULL;
+}
+
+void Normalizer2Impl::setFCD16FromNorm16(UChar32 start, UChar32 end, uint16_t norm16,
+                                         UTrie2 *newFCDTrie, UErrorCode &errorCode) const {
+    // Only loops for 1:1 algorithmic mappings.
+    for(;;) {
+        if(norm16>=MIN_NORMAL_MAYBE_YES) {
+            norm16&=0xff;
+            norm16|=norm16<<8;
+        } else if(norm16<=indexes[IX_MIN_YES_NO] || indexes[IX_MIN_MAYBE_YES]<=norm16) {
+            // no decomposition or Hangul syllable, all zeros
+            break;
+        } else if(indexes[IX_LIMIT_NO_NO]<=norm16) {
+            int32_t delta=norm16-(indexes[IX_MIN_MAYBE_YES]-MAX_DELTA-1);
+            if(start==end) {
+                start+=delta;
+                norm16=getNorm16(start);
+                continue;
+            } else {
+                // the same delta leads from different original characters to different mappings
+                do {
+                    UChar32 c=start+delta;
+                    setFCD16FromNorm16(c, c, getNorm16(c), newFCDTrie, errorCode);
+                } while(++start<=end);
+                break;
+            }
+        } else {
+            // c decomposes, get everything from the variable-length extra data
+            const uint16_t *mapping=getMapping(norm16);
+            if(*mapping&MAPPING_HAS_CCC_LCCC_WORD) {
+                norm16=mapping[1]&0xff00;  // lccc
+            } else {
+                norm16=0;
+            }
+            norm16|=*mapping>>8;  // tccc
+        }
+        utrie2_setRange32(newFCDTrie, start, end, norm16, TRUE, &errorCode);
+        break;
+    }
+}
+
+const UTrie2 *Normalizer2Impl::getFCDTrie(UErrorCode &errorCode) const {
+    // Logically const: Synchronized instantiation.
+    Normalizer2Impl *me=const_cast<Normalizer2Impl *>(this);
+    return FCDTrieSingleton(me->fcdTrieSingleton, *me, errorCode).getInstance(errorCode);
 }
 
 U_NAMESPACE_END

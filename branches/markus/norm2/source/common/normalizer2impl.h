@@ -24,6 +24,7 @@
 #include "unicode/normalizer2.h"
 #include "unicode/udata.h"
 #include "unicode/unistr.h"
+#include "mutex.h"
 #include "unormimp.h"
 
 U_NAMESPACE_BEGIN
@@ -124,12 +125,17 @@ private:
 
 class Normalizer2Impl : public UMemory {
 public:
-    Normalizer2Impl() : memory(NULL), trie(NULL) {}
+    Normalizer2Impl() : memory(NULL), trie(NULL) {
+        fcdTrieSingleton.fInstance=NULL;
+    }
     ~Normalizer2Impl();
 
     void load(const char *packageName, const char *name, UErrorCode &errorCode);
 
     // low-level properties ------------------------------------------------ ***
+
+    const UTrie2 *getNormTrie() const { return trie; }
+    const UTrie2 *getFCDTrie(UErrorCode &errorCode) const ;
 
     uint16_t getNorm16(UChar32 c) const { return UTRIE2_GET16(trie, c); }
     uint16_t getNorm16FromBMP(UChar c) const { return UTRIE2_GET16(trie, c); }
@@ -231,6 +237,9 @@ public:
                           UBool doCompose,
                           UBool onlyContiguous,
                           UErrorCode &errorCode) const;
+
+    void setFCD16FromNorm16(UChar32 start, UChar32 end, uint16_t norm16,
+                            UTrie2 *newFCDTrie, UErrorCode &errorCode) const;
 private:
     static UBool U_CALLCONV
     isAcceptable(void *context, const char *type, const char *name, const UDataInfo *pInfo);
@@ -336,6 +345,8 @@ private:
     UTrie2 *trie;
     const uint16_t *maybeYesCompositions;
     const uint16_t *extraData;  // mappings and/or compositions for yesYes, yesNo & noNo characters
+
+    SimpleSingleton fcdTrieSingleton;
 };
 
 /**

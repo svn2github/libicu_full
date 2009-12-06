@@ -140,12 +140,12 @@ U_CDECL_BEGIN
 static UBool U_CALLCONV uprv_normalizer2_cleanup();
 U_CDECL_END
 
-class Norm2AllModesSingleton : public IcuSingletonWrapper<Norm2AllModes> {
+class Norm2AllModesSingleton : public TriStateSingletonWrapper<Norm2AllModes> {
 public:
-    Norm2AllModesSingleton(IcuSingleton &s, const char *n) :
-        IcuSingletonWrapper<Norm2AllModes>(s), name(n) {}
+    Norm2AllModesSingleton(TriStateSingleton &s, const char *n) :
+        TriStateSingletonWrapper<Norm2AllModes>(s), name(n) {}
     Norm2AllModes *getInstance(UErrorCode &errorCode) {
-        return IcuSingletonWrapper<Norm2AllModes>::getInstance(createInstance, name, errorCode);
+        return TriStateSingletonWrapper<Norm2AllModes>::getInstance(createInstance, name, errorCode);
     }
 private:
     static void *createInstance(const void *context, UErrorCode &errorCode) {
@@ -156,9 +156,9 @@ private:
     const char *name;
 };
 
-STATIC_ICU_SINGLETON(nfcSingleton);
-STATIC_ICU_SINGLETON(nfkcSingleton);
-STATIC_ICU_SINGLETON(nfkc_cfSingleton);
+STATIC_TRI_STATE_SINGLETON(nfcSingleton);
+STATIC_TRI_STATE_SINGLETON(nfkcSingleton);
+STATIC_TRI_STATE_SINGLETON(nfkc_cfSingleton);
 
 U_CDECL_BEGIN
 

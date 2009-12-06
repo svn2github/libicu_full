@@ -16,9 +16,32 @@
 
 U_NAMESPACE_BEGIN
 
-void *IcuSingleton::getInstance(InstantiatorFn *instantiator, const void *context,
-                                void *&duplicate,
-                                UErrorCode &errorCode) {
+void *SimpleSingleton::getInstance(InstantiatorFn *instantiator, const void *context,
+                                   void *&duplicate,
+                                   UErrorCode &errorCode) {
+    duplicate=NULL;
+    if(U_FAILURE(errorCode)) {
+        return NULL;
+    }
+    void *instance;
+    UMTX_CHECK(NULL, fInstance, instance);
+    if(instance!=NULL) {
+        return instance;
+    } else {
+        instance=instantiator(context, errorCode);
+        Mutex mutex;
+        if(fInstance==NULL && U_SUCCESS(errorCode)) {
+            fInstance=instance;
+        } else {
+            duplicate=instance;
+        }
+        return fInstance;
+    }
+}
+
+void *TriStateSingleton::getInstance(InstantiatorFn *instantiator, const void *context,
+                                     void *&duplicate,
+                                     UErrorCode &errorCode) {
     duplicate=NULL;
     if(U_FAILURE(errorCode)) {
         return NULL;
@@ -50,7 +73,7 @@ void *IcuSingleton::getInstance(InstantiatorFn *instantiator, const void *contex
     }
 }
 
-void IcuSingleton::reset() {
+void TriStateSingleton::reset() {
     fInstance=NULL;
     fErrorCode=U_ZERO_ERROR;
     fHaveInstance=0;
