@@ -106,17 +106,50 @@ private:
     UBool onlyContiguous;
 };
 
+class FCDNormalizer2 : public Normalizer2WithImpl {
+public:
+    FCDNormalizer2(const Normalizer2Impl &ni) : Normalizer2WithImpl(ni) {}
+
+    virtual UnicodeString &
+    normalize(const UnicodeString &src,
+              UnicodeString &dest,
+              UErrorCode &errorCode) const {
+        assertNotBogus(src, errorCode);
+        impl.makeFCD(src.getBuffer(), src.length(), dest, errorCode);
+        return dest;
+    }
+    virtual UnicodeString &
+    normalizeSecondAndAppend(UnicodeString &first,
+                             const UnicodeString &second,
+                             UErrorCode &errorCode) const {
+        assertNotBogus(second, errorCode);
+        // TODO: real FCD
+        impl.decomposeAndAppend(second.getBuffer(), second.length(), first, TRUE, errorCode);
+        return first;
+    }
+    virtual UnicodeString &
+    append(UnicodeString &first,
+           const UnicodeString &second,
+           UErrorCode &errorCode) const {
+        assertNotBogus(second, errorCode);
+        // TODO: real FCD
+        impl.decomposeAndAppend(second.getBuffer(), second.length(), first, FALSE, errorCode);
+        return first;
+    }
+};
+
 // instance cache ---------------------------------------------------------- ***
 
 struct Norm2AllModes : public UMemory {
     static Norm2AllModes *createInstance(const char *packageName,
                                          const char *name,
                                          UErrorCode &errorCode);
-    Norm2AllModes() : comp(impl, FALSE), decomp(impl), fcc(impl, TRUE) {}
+    Norm2AllModes() : comp(impl, FALSE), decomp(impl), fcd(impl), fcc(impl, TRUE) {}
 
     Normalizer2Impl impl;
     ComposeNormalizer2 comp;
     DecomposeNormalizer2 decomp;
+    FCDNormalizer2 fcd;
     ComposeNormalizer2 fcc;
 };
 
@@ -181,6 +214,16 @@ Normalizer2 *InternalNormalizer2Provider::getNFDInstance(UErrorCode &errorCode) 
     return allModes!=NULL ? &allModes->decomp : NULL;
 }
 
+Normalizer2 *InternalNormalizer2Provider::getFCDInstance(UErrorCode &errorCode) {
+    Norm2AllModes *allModes=Norm2AllModesSingleton(nfcSingleton, "nfc").getInstance(errorCode);
+    if(allModes!=NULL) {
+        allModes->impl.getFCDTrie(errorCode);
+        return &allModes->fcc;
+    } else {
+        return NULL;
+    }
+}
+
 Normalizer2 *InternalNormalizer2Provider::getFCCInstance(UErrorCode &errorCode) {
     Norm2AllModes *allModes=Norm2AllModesSingleton(nfcSingleton, "nfc").getInstance(errorCode);
     return allModes!=NULL ? &allModes->fcc : NULL;
@@ -227,6 +270,9 @@ Normalizer2::getInstance(const char *packageName,
                 return &allModes->comp;
             case UNORM2_DECOMPOSE:
                 return &allModes->decomp;
+            case UNORM2_FCD:
+                allModes->impl.getFCDTrie(errorCode);
+                return &allModes->fcd;
             case UNORM2_COMPOSE_CONTIGUOUS:
                 return &allModes->fcc;
             default:

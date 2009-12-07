@@ -177,6 +177,24 @@ UBool ReorderingBuffer::append(const UChar *s, int32_t length, uint8_t leadCC, u
     return TRUE;
 }
 
+UBool ReorderingBuffer::appendZeroCC(UChar32 c) {
+    int32_t cpLength=U16_LENGTH(c);
+    if(remainingCapacity<cpLength && !resize(cpLength)) {
+        return FALSE;
+    }
+    remainingCapacity-=cpLength;
+    if(cpLength==1) {
+        *limit++=(UChar)c;
+    } else {
+        limit[0]=U16_LEAD(c);
+        limit[1]=U16_TRAIL(c);
+        limit+=2;
+    }
+    lastCC=0;
+    reorderStart=limit;
+    return TRUE;
+}
+
 UBool ReorderingBuffer::appendZeroCC(const UChar *s, int32_t length) {
     if(length==0) {
         return TRUE;
@@ -276,7 +294,7 @@ void ReorderingBuffer::insert(UChar32 c, uint8_t cc) {
 
 Normalizer2Impl::~Normalizer2Impl() {
     udata_close(memory);
-    utrie2_close(trie);
+    utrie2_close(normTrie);
     UTrie2Singleton(fcdTrieSingleton).deleteInstance();
 }
 
@@ -329,9 +347,9 @@ Normalizer2Impl::load(const char *packageName, const char *name, UErrorCode &err
 
     int32_t offset=indexes[IX_NORM_TRIE_OFFSET];
     int32_t nextOffset=indexes[IX_EXTRA_DATA_OFFSET];
-    trie=utrie2_openFromSerialized(UTRIE2_16_VALUE_BITS,
-                                   inBytes+offset, nextOffset-offset, NULL,
-                                   &errorCode);
+    normTrie=utrie2_openFromSerialized(UTRIE2_16_VALUE_BITS,
+                                       inBytes+offset, nextOffset-offset, NULL,
+                                       &errorCode);
     if(U_FAILURE(errorCode)) {
         return;
     }
@@ -339,9 +357,6 @@ Normalizer2Impl::load(const char *packageName, const char *name, UErrorCode &err
     offset=nextOffset;
     maybeYesCompositions=(const uint16_t *)(inBytes+offset);
     extraData=maybeYesCompositions+(MIN_NORMAL_MAYBE_YES-indexes[IX_MIN_MAYBE_YES]);
-
-    // TODO: remove after debugging
-    getFCDTrie(errorCode);
 }
 
 uint8_t Normalizer2Impl::getTrailCCFromCompYesAndZeroCC(const UChar *cpStart, const UChar *cpLimit) const {
@@ -429,7 +444,7 @@ UBool Normalizer2Impl::decomposeShort(const UChar *src, const UChar *limit,
     while(src<limit) {
         UChar32 c;
         uint16_t norm16;
-        UTRIE2_U16_NEXT16(trie, src, limit, c, norm16);
+        UTRIE2_U16_NEXT16(normTrie, src, limit, c, norm16);
         if(!decompose(c, norm16, buffer)) {
             return FALSE;
         }
@@ -517,7 +532,7 @@ void Normalizer2Impl::decomposeAndAppend(const UChar *src, int32_t srcLength,
     if(srcLength<0) {
         srcLength=u_strlen(src);
     }
-    ForwardUTrie2StringIterator iter(trie, src, src+srcLength);
+    ForwardUTrie2StringIterator iter(normTrie, src, src+srcLength);
     uint16_t first16, norm16;
     first16=norm16=iter.next16();
     while(!isDecompYesAndZeroCC(norm16)) {
@@ -631,7 +646,7 @@ void Normalizer2Impl::recompose(ReorderingBuffer &buffer, int32_t recomposeStart
     prevCC=0;
 
     for(;;) {
-        UTRIE2_U16_NEXT16(trie, p, limit, c, norm16);
+        UTRIE2_U16_NEXT16(normTrie, p, limit, c, norm16);
         cc=getCCFromYesOrMaybe(norm16);
         if( // this character combines backward and
             isMaybe(norm16) &&
@@ -959,17 +974,17 @@ UBool Normalizer2Impl::compose(const UChar *src, int32_t srcLength,
 
         // Find the next composition starter in [src..limit[ -
         // modifies src to point to the next starter.
-        UChar *nextStarter=(UChar *)findNextCompStarter(src, limit);
+        src=(UChar *)findNextCompStarter(src, limit);
 
-        // Decompose [prevStarter..nextStarter[ into the buffer and then recompose that part of it.
+        // Decompose [prevStarter..src[ into the buffer and then recompose that part of it.
         int32_t recomposeStartIndex=buffer.length();
-        if(!decomposeShort(prevStarter, nextStarter, buffer)) {
+        if(!decomposeShort(prevStarter, src, buffer)) {
             return FALSE;
         }
         recompose(buffer, recomposeStartIndex, onlyContiguous);
 
         // Move to the next starter. We never need to look back before this point again.
-        prevStarter=src=nextStarter;
+        prevStarter=src;
     }
     return TRUE;
 }
@@ -1064,7 +1079,7 @@ UBool Normalizer2Impl::isCompStarter(UChar32 c, uint16_t norm16) const {
 }
 
 const UChar *Normalizer2Impl::findPreviousCompStarter(const UChar *start, const UChar *p) const {
-    BackwardUTrie2StringIterator iter(trie, start, p);
+    BackwardUTrie2StringIterator iter(normTrie, start, p);
     uint16_t norm16;
     do {
         norm16=iter.previous16();
@@ -1073,7 +1088,7 @@ const UChar *Normalizer2Impl::findPreviousCompStarter(const UChar *start, const 
 }
 
 const UChar *Normalizer2Impl::findNextCompStarter(const UChar *p, const UChar *limit) const {
-    ForwardUTrie2StringIterator iter(trie, p, limit);
+    ForwardUTrie2StringIterator iter(normTrie, p, limit);
     uint16_t norm16;
     do {
         norm16=iter.next16();
@@ -1115,6 +1130,7 @@ void *FCDTrieSingleton::createInstance(const void *context, UErrorCode &errorCod
     me->newFCDTrie=utrie2_open(0, 0, &errorCode);
     if(U_SUCCESS(errorCode)) {
         utrie2_enum(me->impl.getNormTrie(), NULL, enumRangeHandler, me);
+        utrie2_freeze(me->newFCDTrie, UTRIE2_16_VALUE_BITS, &errorCode);
         if(U_SUCCESS(errorCode)) {
             return me->newFCDTrie;
         }
@@ -1166,6 +1182,183 @@ const UTrie2 *Normalizer2Impl::getFCDTrie(UErrorCode &errorCode) const {
     // Logically const: Synchronized instantiation.
     Normalizer2Impl *me=const_cast<Normalizer2Impl *>(this);
     return FCDTrieSingleton(me->fcdTrieSingleton, *me, errorCode).getInstance(errorCode);
+}
+
+UBool
+Normalizer2Impl::makeFCD(const UChar *src, int32_t srcLength,
+                         ReorderingBuffer &buffer) const {
+    const UChar *limit;
+    if(srcLength>=0) {
+        limit=src+srcLength;  // string with length
+    } else /* srcLength==-1 */ {
+        limit=NULL;  // zero-terminated string
+    }
+
+    // Note: In this function we use buffer.appendZeroCC() because we track
+    // the lead and trail combining classes here, rather than leaving it to
+    // the ReorderingBuffer.
+    // The exception is the call to decomposeShort() which uses the buffer
+    // in the normal way.
+
+    // Tracks the last FCD-safe boundary, before lccc=0 or after tccc<=1.
+    // Similar to the prevStarter in the compose() implementation.
+    const UChar *prevBoundary=src;
+
+    int32_t prevFCD16=0;
+    uint16_t fcd16=0;
+
+    U_ALIGN_CODE(16);
+
+    for(;;) {
+        // count code units with lccc==0
+        UChar32 c;
+        const UChar *prevSrc=src;
+        if(limit==NULL) {
+            for(;;) {
+                c=*src;
+                if(c<MIN_CCC_LCCC_CP) {
+                    if(c==0) {
+                        break;
+                    }
+                    prevFCD16=~c;
+                } else if((fcd16=getFCD16FromSingleLead(c))<=0xff) {
+                    prevFCD16=fcd16;
+                } else {
+                    break;
+                }
+                ++src;
+            }
+        } else {
+            for(;;) {
+                if(src==limit) {
+                    break;
+                } else if((c=*src)<MIN_CCC_LCCC_CP) {
+                    prevFCD16=~c;
+                } else if((fcd16=getFCD16FromSingleLead(c))<=0xff) {
+                    prevFCD16=fcd16;
+                } else {
+                    break;
+                }
+                ++src;
+            }
+        }
+
+        // copy these code units all at once
+        if(src!=prevSrc) {
+            if(!buffer.appendZeroCC(prevSrc, (int32_t)(src-prevSrc))) {
+                return FALSE;
+            }
+            prevBoundary=src;
+            if(prevFCD16<0) {
+                // Fetching the fcd16 value was deferred for this below-U+0300 code point.
+                // We know that its lccc==0.
+                prevFCD16=getFCD16FromSingleLead((UChar)~prevFCD16);
+                if(prevFCD16>1) {
+                    --prevBoundary;
+                }
+            } else if(prevFCD16>1) {
+                // We know that the previous character's lccc==0.
+                if(U16_IS_TRAIL(*--prevBoundary) && prevSrc<prevBoundary && U16_IS_LEAD(*(prevBoundary-1))) {
+                    --prevBoundary;
+                }
+            }
+            // The start of the current character (c).
+            prevSrc=src;
+        }
+
+        if(limit==NULL ? c==0 : src==limit) {
+            break;  // end of source reached
+        }
+
+        ++src;
+        // The current character (c) has a non-zero lead combining class.
+        // Check for surrogates, proper order, and decompose locally if necessary.
+        if(U16_IS_LEAD(c)) {
+            UChar c2;
+            if(src!=limit && U16_IS_TRAIL(c2=*src)) {
+                ++src;
+                c=U16_GET_SUPPLEMENTARY(c, c2);
+                fcd16=getFCD16FromSupplementary(c);
+            } else {
+                // Data for lead surrogate code *point* not code *unit*. Normally 0.
+                fcd16=getFCD16FromBMP((UChar)c);
+            }
+            if(fcd16<=0xff) {
+                if(fcd16<=1) {
+                    prevBoundary=src;
+                } else {
+                    prevBoundary=prevSrc;
+                }
+                if(!buffer.appendZeroCC(c)) {
+                    return FALSE;
+                }
+                prevFCD16=fcd16;
+                continue;
+            }
+        }
+        // c at [prevSrc..src[ has lccc!=0.
+
+        if((prevFCD16&0xff)<=(fcd16>>8)) {
+            // proper order: prev tccc <= current lccc
+            if((fcd16&0xff)<=1) {
+                prevBoundary=src;
+            }
+            prevFCD16=fcd16;
+            if(!buffer.appendZeroCC(c)) {
+                return FALSE;
+            }
+            continue;
+        } else {
+            /*
+             * Back out the part of the source that we copied already but
+             * is now going to be decomposed.
+             * prevSrc is set to after what was copied.
+             */
+            buffer.removeZeroCCSuffix((int32_t)(prevSrc-prevBoundary));
+            /*
+             * Find the part of the source that needs to be decomposed,
+             * up to the next safe boundary.
+             */
+            src=findNextFCDBoundary(src, limit);
+            /*
+             * The source text does not fulfill the conditions for FCD.
+             * Decompose and reorder a limited piece of the text.
+             */
+            decomposeShort(prevBoundary, src, buffer);
+            prevBoundary=src;
+            prevFCD16=0;
+        }
+    }
+    return TRUE;
+}
+
+void
+Normalizer2Impl::makeFCD(const UChar *src, int32_t srcLength,
+                         UnicodeString &dest,
+                         UErrorCode &errorCode) const {
+    if(U_FAILURE(errorCode)) {
+        dest.setToBogus();
+        return;
+    }
+    dest.remove();
+    ReorderingBuffer buffer(*this, dest);
+    if(!buffer.init() || !makeFCD(src, srcLength, buffer)) {
+        errorCode=U_MEMORY_ALLOCATION_ERROR;
+        dest.setToBogus();
+    }
+}
+
+const UChar *Normalizer2Impl::findNextFCDBoundary(const UChar *p, const UChar *limit) const {
+    ForwardUTrie2StringIterator iter(fcdTrie(), p, limit);
+    uint16_t fcd16;
+    for(;;) {
+        fcd16=iter.next16();
+        if(fcd16<=0xff) {
+            return iter.codePointStart;
+        } else if((fcd16&0xff)<=1) {
+            return iter.codePointLimit;
+        }
+    }
 }
 
 U_NAMESPACE_END

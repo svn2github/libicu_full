@@ -74,6 +74,7 @@ public:
         --remainingCapacity;
         return TRUE;
     }
+    UBool appendZeroCC(UChar32 c);
     UBool appendZeroCC(const UChar *s, int32_t length);
     void removeZeroCCSuffix(int32_t length);
     void setReorderingLimitAndLastCC(UChar *newLimit, uint8_t newLastCC) {
@@ -97,15 +98,13 @@ private:
 
     UBool appendSupplementary(UChar32 c, uint8_t cc);
     void insert(UChar32 c, uint8_t cc);
-    static UChar *writeCodePoint(UChar *p, UChar32 c) {
+    static void writeCodePoint(UChar *p, UChar32 c) {
         if(c<=0xffff) {
-            *p++=(UChar)c;
+            *p=(UChar)c;
         } else {
             p[0]=U16_LEAD(c);
             p[1]=U16_TRAIL(c);
-            p+=2;
         }
-        return p;  // TODO: necessary?
     }
     UBool resize(int32_t appendLength);
 
@@ -125,7 +124,7 @@ private:
 
 class Normalizer2Impl : public UMemory {
 public:
-    Normalizer2Impl() : memory(NULL), trie(NULL) {
+    Normalizer2Impl() : memory(NULL), normTrie(NULL) {
         fcdTrieSingleton.fInstance=NULL;
     }
     ~Normalizer2Impl();
@@ -134,15 +133,17 @@ public:
 
     // low-level properties ------------------------------------------------ ***
 
-    const UTrie2 *getNormTrie() const { return trie; }
+    const UTrie2 *getNormTrie() const { return normTrie; }
     const UTrie2 *getFCDTrie(UErrorCode &errorCode) const ;
 
-    uint16_t getNorm16(UChar32 c) const { return UTRIE2_GET16(trie, c); }
-    uint16_t getNorm16FromBMP(UChar c) const { return UTRIE2_GET16(trie, c); }
+    uint16_t getNorm16(UChar32 c) const { return UTRIE2_GET16(normTrie, c); }
+    uint16_t getNorm16FromBMP(UChar c) const { return UTRIE2_GET16(normTrie, c); }
     uint16_t getNorm16FromSingleLead(UChar c) const {
-        return UTRIE2_GET16_FROM_U16_SINGLE_LEAD(trie, c);
+        return UTRIE2_GET16_FROM_U16_SINGLE_LEAD(normTrie, c);
     }
-    uint16_t getNorm16FromSupplementary(UChar32 c) const { return UTRIE2_GET16_FROM_SUPP(trie, c); }
+    uint16_t getNorm16FromSupplementary(UChar32 c) const {
+        return UTRIE2_GET16_FROM_SUPP(normTrie, c);
+    }
     uint16_t getNorm16FromSurrogatePair(UChar c, UChar c2) const {
         return getNorm16FromSupplementary(U16_GET_SUPPLEMENTARY(c, c2));
     }
@@ -159,6 +160,18 @@ public:
     static uint8_t getCCFromYesOrMaybe(uint16_t norm16) {
         return norm16>=MIN_NORMAL_MAYBE_YES ? (uint8_t)norm16 : 0;
     }
+
+    uint16_t getFCD16(UChar32 c) const { return UTRIE2_GET16(fcdTrie(), c); }
+    uint16_t getFCD16FromBMP(UChar c) const { return UTRIE2_GET16(fcdTrie(), c); }
+    uint16_t getFCD16FromSingleLead(UChar c) const {
+        return UTRIE2_GET16_FROM_U16_SINGLE_LEAD(fcdTrie(), c);
+    }
+    uint16_t getFCD16FromSupplementary(UChar32 c) const {
+        return UTRIE2_GET16_FROM_SUPP(fcdTrie(), c);
+    }
+
+    void setFCD16FromNorm16(UChar32 start, UChar32 end, uint16_t norm16,
+                            UTrie2 *newFCDTrie, UErrorCode &errorCode) const;
 
     enum {
         MIN_CCC_LCCC_CP=0x300
@@ -237,9 +250,9 @@ public:
                           UBool doCompose,
                           UBool onlyContiguous,
                           UErrorCode &errorCode) const;
-
-    void setFCD16FromNorm16(UChar32 start, UChar32 end, uint16_t norm16,
-                            UTrie2 *newFCDTrie, UErrorCode &errorCode) const;
+    void makeFCD(const UChar *src, int32_t srcLength,
+                 UnicodeString &dest,
+                 UErrorCode &errorCode) const;
 private:
     static UBool U_CALLCONV
     isAcceptable(void *context, const char *type, const char *name, const UDataInfo *pInfo);
@@ -339,10 +352,16 @@ private:
     const UChar *findPreviousCompStarter(const UChar *start, const UChar *p) const;
     const UChar *findNextCompStarter(const UChar *p, const UChar *limit) const;
 
+    const UTrie2 *fcdTrie() const { return (const UTrie2 *)fcdTrieSingleton.fInstance; }
+    UBool makeFCD(const UChar *src, int32_t srcLength,
+                  ReorderingBuffer &buffer) const;
+
+    const UChar *findNextFCDBoundary(const UChar *p, const UChar *limit) const;
+
     UDataMemory *memory;
     UVersionInfo dataVersion;
     int32_t indexes[IX_COUNT];  // copied not pointed to remove an indirection
-    UTrie2 *trie;
+    UTrie2 *normTrie;
     const uint16_t *maybeYesCompositions;
     const uint16_t *extraData;  // mappings and/or compositions for yesYes, yesNo & noNo characters
 
@@ -356,6 +375,7 @@ class U_COMMON_API InternalNormalizer2Provider {
 public:
     static Normalizer2 *getNFCInstance(UErrorCode &errorCode);
     static Normalizer2 *getNFDInstance(UErrorCode &errorCode);
+    static Normalizer2 *getFCDInstance(UErrorCode &errorCode);
     static Normalizer2 *getFCCInstance(UErrorCode &errorCode);
     static Normalizer2 *getNFKCInstance(UErrorCode &errorCode);
     static Normalizer2 *getNFKDInstance(UErrorCode &errorCode);

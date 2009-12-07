@@ -142,9 +142,10 @@ Normalizer::normalize(const UnicodeString& source,
             dest=&localDest;
         }
 
-        if(UNORM_NFD<=mode && mode<=UNORM_NFKC && options==0) {
+        if(UNORM_NFD<=mode && options==0) {
             Normalizer2 *n2;
             switch(mode) {
+            // TODO: UNORM_NONE, return no-op Normalizer2 instance
             case UNORM_NFD:
                 n2=InternalNormalizer2Provider::getNFDInstance(status);
                 break;
@@ -156,6 +157,9 @@ Normalizer::normalize(const UnicodeString& source,
                 break;
             case UNORM_NFKC:
                 n2=InternalNormalizer2Provider::getNFKCInstance(status);
+                break;
+            case UNORM_FCD:
+                n2=InternalNormalizer2Provider::getFCDInstance(status);
                 break;
             default:
                 n2=NULL;
