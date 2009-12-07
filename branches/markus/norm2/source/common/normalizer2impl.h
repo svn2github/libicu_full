@@ -29,6 +29,16 @@
 
 U_NAMESPACE_BEGIN
 
+/**
+ * Check that the string is readable and writable.
+ * Sets U_ILLEGAL_ARGUMENT_ERROR if the string isBogus() or has an open getBuffer().
+ */
+inline void checkCanGetBuffer(const UnicodeString &s, UErrorCode &errorCode) {
+    if(U_SUCCESS(errorCode) && s.isBogus()) {
+        errorCode=U_ILLEGAL_ARGUMENT_ERROR;
+    }
+}
+
 class Normalizer2Impl;
 
 class ReorderingBuffer : public UMemory {
@@ -42,7 +52,7 @@ public:
             str.releaseBuffer((int32_t)(limit-start));
         }
     }
-    UBool init();
+    UBool init(UErrorCode &errorCode);
 
     UBool isEmpty() const { return start!=limit; }
     int32_t length() const { return (int32_t)(limit-start); }
@@ -51,15 +61,17 @@ public:
     UChar &lastUChar() { return *(limit-1); }
     uint8_t getLastCC() const { return lastCC; }
 
-    UBool append(UChar32 c, uint8_t cc) {
+    UBool append(UChar32 c, uint8_t cc, UErrorCode &errorCode) {
         return (c<=0xffff) ?
-            appendBMP((UChar)c, cc) :
-            appendSupplementary(c, cc);
+            appendBMP((UChar)c, cc, errorCode) :
+            appendSupplementary(c, cc, errorCode);
     }
     // s must be in NFD, otherwise change the implementation.
-    UBool append(const UChar *s, int32_t length, uint8_t leadCC, uint8_t trailCC);
-    UBool appendBMP(UChar c, uint8_t cc) {
-        if(remainingCapacity==0 && !resize(1)) {
+    UBool append(const UChar *s, int32_t length,
+                 uint8_t leadCC, uint8_t trailCC,
+                 UErrorCode &errorCode);
+    UBool appendBMP(UChar c, uint8_t cc, UErrorCode &errorCode) {
+        if(remainingCapacity==0 && !resize(1, errorCode)) {
             return FALSE;
         }
         if(lastCC<=cc || cc==0) {
@@ -74,8 +86,8 @@ public:
         --remainingCapacity;
         return TRUE;
     }
-    UBool appendZeroCC(UChar32 c);
-    UBool appendZeroCC(const UChar *s, const UChar *sLimit);
+    UBool appendZeroCC(UChar32 c, UErrorCode &errorCode);
+    UBool appendZeroCC(const UChar *s, const UChar *sLimit, UErrorCode &errorCode);
     void removeZeroCCSuffix(int32_t length);
     void setReorderingLimitAndLastCC(UChar *newLimit, uint8_t newLastCC) {
         remainingCapacity+=(int32_t)(limit-newLimit);
@@ -96,7 +108,7 @@ private:
      * We probably need it for UNORM_SIMPLE_APPEND.
      */
 
-    UBool appendSupplementary(UChar32 c, uint8_t cc);
+    UBool appendSupplementary(UChar32 c, uint8_t cc, UErrorCode &errorCode);
     void insert(UChar32 c, uint8_t cc);
     static void writeCodePoint(UChar *p, UChar32 c) {
         if(c<=0xffff) {
@@ -106,7 +118,7 @@ private:
             p[1]=U16_TRAIL(c);
         }
     }
-    UBool resize(int32_t appendLength);
+    UBool resize(int32_t appendLength, UErrorCode &errorCode);
 
     const Normalizer2Impl &impl;
     UnicodeString &str;
@@ -242,20 +254,20 @@ public:
                             UBool doDecompose,
                             UErrorCode &errorCode) const;
     void compose(const UChar *src, int32_t srcLength,
-                 UnicodeString &dest,
                  UBool onlyContiguous,
+                 UnicodeString &dest,
                  UErrorCode &errorCode) const;
     void composeAndAppend(const UChar *src, int32_t srcLength,
-                          UnicodeString &dest,
                           UBool doCompose,
                           UBool onlyContiguous,
+                          UnicodeString &dest,
                           UErrorCode &errorCode) const;
     void makeFCD(const UChar *src, int32_t srcLength,
                  UnicodeString &dest,
                  UErrorCode &errorCode) const;
     void makeFCDAndAppend(const UChar *src, int32_t srcLength,
-                          UnicodeString &dest,
                           UBool doMakeFCD,
+                          UnicodeString &dest,
                           UErrorCode &errorCode) const;
 private:
     static UBool U_CALLCONV
@@ -336,17 +348,22 @@ private:
 
     const UChar *copyLowPrefixFromNulTerminated(const UChar *src,
                                                 UChar32 minNeedDataCP,
-                                                ReorderingBuffer &buffer) const;
-    UBool decompose(const UChar *src, const UChar *limit, ReorderingBuffer &buffer) const;
-    UBool decomposeShort(const UChar *src, const UChar *limit, ReorderingBuffer &buffer) const;
-    UBool decompose(UChar32 c, uint16_t norm16, ReorderingBuffer &buffer) const;
+                                                ReorderingBuffer &buffer,
+                                                UErrorCode &errorCode) const;
+    UBool decompose(const UChar *src, const UChar *limit,
+                    ReorderingBuffer &buffer, UErrorCode &errorCode) const;
+    UBool decomposeShort(const UChar *src, const UChar *limit,
+                         ReorderingBuffer &buffer, UErrorCode &errorCode) const;
+    UBool decompose(UChar32 c, uint16_t norm16,
+                    ReorderingBuffer &buffer, UErrorCode &errorCode) const;
 
     static int32_t combine(const uint16_t *list, UChar32 trail);
     void recompose(ReorderingBuffer &buffer, int32_t recomposeStartIndex,
                    UBool onlyContiguous) const;
     UBool compose(const UChar *src, const UChar *limit,
+                  UBool onlyContiguous,
                   ReorderingBuffer &buffer,
-                  UBool onlyContiguous) const;
+                  UErrorCode &errorCode) const;
 
     /**
      * Is c a composition starter?
@@ -361,7 +378,7 @@ private:
 
     const UTrie2 *fcdTrie() const { return (const UTrie2 *)fcdTrieSingleton.fInstance; }
     UBool makeFCD(const UChar *src, const UChar *limit,
-                  ReorderingBuffer &buffer) const;
+                  ReorderingBuffer &buffer, UErrorCode &errorCode) const;
 
     const UChar *findPreviousFCDBoundary(const UChar *start, const UChar *p) const;
     const UChar *findNextFCDBoundary(const UChar *p, const UChar *limit) const;

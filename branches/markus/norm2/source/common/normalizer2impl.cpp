@@ -99,10 +99,12 @@ private:
 
 // ReorderingBuffer -------------------------------------------------------- ***
 
-UBool ReorderingBuffer::init() {
+UBool ReorderingBuffer::init(UErrorCode &errorCode) {
     int32_t length=str.length();
     start=str.getBuffer(-1);
     if(start==NULL) {
+        // getBuffer() already did str.setToBogus()
+        errorCode=U_MEMORY_ALLOCATION_ERROR;
         return FALSE;
     }
     limit=start+length;
@@ -122,8 +124,8 @@ UBool ReorderingBuffer::init() {
     return TRUE;
 }
 
-UBool ReorderingBuffer::appendSupplementary(UChar32 c, uint8_t cc) {
-    if(remainingCapacity<2 && !resize(2)) {
+UBool ReorderingBuffer::appendSupplementary(UChar32 c, uint8_t cc, UErrorCode &errorCode) {
+    if(remainingCapacity<2 && !resize(2, errorCode)) {
         return FALSE;
     }
     if(lastCC<=cc || cc==0) {
@@ -141,11 +143,13 @@ UBool ReorderingBuffer::appendSupplementary(UChar32 c, uint8_t cc) {
     return TRUE;
 }
 
-UBool ReorderingBuffer::append(const UChar *s, int32_t length, uint8_t leadCC, uint8_t trailCC) {
+UBool ReorderingBuffer::append(const UChar *s, int32_t length,
+                               uint8_t leadCC, uint8_t trailCC,
+                               UErrorCode &errorCode) {
     if(length==0) {
         return TRUE;
     }
-    if(remainingCapacity<length && !resize(length)) {
+    if(remainingCapacity<length && !resize(length, errorCode)) {
         return FALSE;
     }
     remainingCapacity-=length;
@@ -171,15 +175,15 @@ UBool ReorderingBuffer::append(const UChar *s, int32_t length, uint8_t leadCC, u
             } else {
                 leadCC=trailCC;
             }
-            append(c, leadCC);
+            append(c, leadCC, errorCode);
         }
     }
     return TRUE;
 }
 
-UBool ReorderingBuffer::appendZeroCC(UChar32 c) {
+UBool ReorderingBuffer::appendZeroCC(UChar32 c, UErrorCode &errorCode) {
     int32_t cpLength=U16_LENGTH(c);
-    if(remainingCapacity<cpLength && !resize(cpLength)) {
+    if(remainingCapacity<cpLength && !resize(cpLength, errorCode)) {
         return FALSE;
     }
     remainingCapacity-=cpLength;
@@ -195,12 +199,12 @@ UBool ReorderingBuffer::appendZeroCC(UChar32 c) {
     return TRUE;
 }
 
-UBool ReorderingBuffer::appendZeroCC(const UChar *s, const UChar *sLimit) {
+UBool ReorderingBuffer::appendZeroCC(const UChar *s, const UChar *sLimit, UErrorCode &errorCode) {
     if(s==sLimit) {
         return TRUE;
     }
     int32_t length=(int32_t)(sLimit-s);
-    if(remainingCapacity<length && !resize(length)) {
+    if(remainingCapacity<length && !resize(length, errorCode)) {
         return FALSE;
     }
     u_memcpy(limit, s, length);
@@ -223,7 +227,7 @@ void ReorderingBuffer::removeZeroCCSuffix(int32_t length) {
     reorderStart=limit;
 }
 
-UBool ReorderingBuffer::resize(int32_t appendLength) {
+UBool ReorderingBuffer::resize(int32_t appendLength, UErrorCode &errorCode) {
     int32_t reorderStartIndex=(int32_t)(reorderStart-start);
     int32_t length=(int32_t)(limit-start);
     str.releaseBuffer(length);
@@ -238,6 +242,8 @@ UBool ReorderingBuffer::resize(int32_t appendLength) {
     }
     start=str.getBuffer(newCapacity);
     if(start==NULL) {
+        // getBuffer() already did str.setToBogus()
+        errorCode=U_MEMORY_ALLOCATION_ERROR;
         return FALSE;
     }
     reorderStart=start+reorderStartIndex;
@@ -377,7 +383,8 @@ uint8_t Normalizer2Impl::getTrailCCFromCompYesAndZeroCC(const UChar *cpStart, co
 const UChar *
 Normalizer2Impl::copyLowPrefixFromNulTerminated(const UChar *src,
                                                 UChar32 minNeedDataCP,
-                                                ReorderingBuffer &buffer) const {
+                                                ReorderingBuffer &buffer,
+                                                UErrorCode &errorCode) const {
     // Make some effort to support NUL-terminated strings reasonably.
     // Take the part of the fast quick check loop that does not look up
     // data and check the first part of the string.
@@ -389,7 +396,7 @@ Normalizer2Impl::copyLowPrefixFromNulTerminated(const UChar *src,
     // Back out the last character for full processing.
     // Copy this prefix.
     if(--src!=prevSrc) {
-        if(!buffer.appendZeroCC(prevSrc, src)) {
+        if(!buffer.appendZeroCC(prevSrc, src, errorCode)) {
             return NULL;
         }
     }
@@ -397,14 +404,15 @@ Normalizer2Impl::copyLowPrefixFromNulTerminated(const UChar *src,
 }
 
 UBool Normalizer2Impl::decompose(const UChar *src, const UChar *limit,
-                                 ReorderingBuffer &buffer) const {
+                                 ReorderingBuffer &buffer,
+                                 UErrorCode &errorCode) const {
     const UChar *prevSrc;
     UChar32 minNoCP=indexes[IX_MIN_DECOMP_NO_CP];
     UChar32 c=0;
     uint16_t norm16=0;
 
     if(limit==NULL) {
-        src=copyLowPrefixFromNulTerminated(src, minNoCP, buffer);
+        src=copyLowPrefixFromNulTerminated(src, minNoCP, buffer, errorCode);
         if(src==NULL) {
             return FALSE;
         }
@@ -420,7 +428,7 @@ UBool Normalizer2Impl::decompose(const UChar *src, const UChar *limit,
             ++src;
         }
         // copy these code units all at once
-        if(src!=prevSrc && !buffer.appendZeroCC(prevSrc, src)) {
+        if(src!=prevSrc && !buffer.appendZeroCC(prevSrc, src, errorCode)) {
             return FALSE;
         }
         if(src==limit) {
@@ -440,7 +448,7 @@ UBool Normalizer2Impl::decompose(const UChar *src, const UChar *limit,
                 norm16=getNorm16FromBMP((UChar)c);
             }
         }
-        if(!decompose(c, norm16, buffer)) {
+        if(!decompose(c, norm16, buffer, errorCode)) {
             return FALSE;
         }
     }
@@ -452,25 +460,28 @@ UBool Normalizer2Impl::decompose(const UChar *src, const UChar *limit,
 // is unlikely to be amortized.
 // Called by the compose() and makeFCD() implementations.
 UBool Normalizer2Impl::decomposeShort(const UChar *src, const UChar *limit,
-                                      ReorderingBuffer &buffer) const {
+                                      ReorderingBuffer &buffer,
+                                      UErrorCode &errorCode) const {
     while(src<limit) {
         UChar32 c;
         uint16_t norm16;
         UTRIE2_U16_NEXT16(normTrie, src, limit, c, norm16);
-        if(!decompose(c, norm16, buffer)) {
+        if(!decompose(c, norm16, buffer, errorCode)) {
             return FALSE;
         }
     }
     return TRUE;
 }
 
-UBool Normalizer2Impl::decompose(UChar32 c, uint16_t norm16, ReorderingBuffer &buffer) const {
+UBool Normalizer2Impl::decompose(UChar32 c, uint16_t norm16,
+                                 ReorderingBuffer &buffer,
+                                 UErrorCode &errorCode) const {
     // Only loops for 1:1 algorithmic mappings.
     for(;;) {
         // get the decomposition and the lead and trail cc's
         if(isDecompYes(norm16)) {
             // c does not decompose
-            return buffer.append(c, getCCFromYesOrMaybe(norm16));
+            return buffer.append(c, getCCFromYesOrMaybe(norm16), errorCode);
         } else if(isHangul(norm16)) {
             // Hangul syllable: decompose algorithmically
             UChar jamos[3];
@@ -483,7 +494,7 @@ UBool Normalizer2Impl::decompose(UChar32 c, uint16_t norm16, ReorderingBuffer &b
             if(c2!=0) {
                 jamos[2]=(UChar)(JAMO_T_BASE+c2);
             }
-            return buffer.appendZeroCC(jamos, jamos+(c2==0 ? 2 : 3));
+            return buffer.appendZeroCC(jamos, jamos+(c2==0 ? 2 : 3), errorCode);
         } else if(isDecompNoAlgorithmic(norm16)) {
             c=mapAlgorithmic(c, norm16);
             norm16=getNorm16(c);
@@ -499,7 +510,7 @@ UBool Normalizer2Impl::decompose(UChar32 c, uint16_t norm16, ReorderingBuffer &b
             } else {
                 leadCC=0;
             }
-            return buffer.append((const UChar *)mapping, length, leadCC, trailCC);
+            return buffer.append((const UChar *)mapping, length, leadCC, trailCC, errorCode);
         }
     }
 }
@@ -513,31 +524,23 @@ void Normalizer2Impl::decompose(const UChar *src, int32_t srcLength,
     }
     dest.remove();
     ReorderingBuffer buffer(*this, dest);
-    if(!buffer.init() || !decompose(src, srcLength>=0 ? src+srcLength : NULL, buffer)) {
-        errorCode=U_MEMORY_ALLOCATION_ERROR;
-        dest.setToBogus();
-    }
+    buffer.init(errorCode) &&
+        decompose(src, srcLength>=0 ? src+srcLength : NULL, buffer, errorCode);
 }
 
 void Normalizer2Impl::decomposeAndAppend(const UChar *src, int32_t srcLength,
                                          UnicodeString &dest, UBool doDecompose,
                                          UErrorCode &errorCode) const {
+    checkCanGetBuffer(dest, errorCode);
     if(U_FAILURE(errorCode)) {
         return;
     }
-    if(dest.isBogus()) {
-        errorCode=U_ILLEGAL_ARGUMENT_ERROR;
-        return;
-    }
     ReorderingBuffer buffer(*this, dest);
-    if(!buffer.init()) {
-        errorCode=U_MEMORY_ALLOCATION_ERROR;
+    if(!buffer.init(errorCode)) {
         return;
     }
     if(doDecompose) {
-        if(!decompose(src, srcLength>=0 ? src+srcLength : NULL, buffer)) {
-            errorCode=U_MEMORY_ALLOCATION_ERROR;
-        }
+        decompose(src, srcLength>=0 ? src+srcLength : NULL, buffer, errorCode);
         return;
     }
     // Just merge the strings at the boundary.
@@ -548,13 +551,8 @@ void Normalizer2Impl::decomposeAndAppend(const UChar *src, int32_t srcLength,
     while(!isDecompYesAndZeroCC(norm16)) {
         norm16=iter.next16();
     };
-    if(!buffer.append(src, (int32_t)(iter.codePointStart-src), getCC(first16), 0)) {
-        errorCode=U_MEMORY_ALLOCATION_ERROR;
-        return;
-    }
-    if(!buffer.appendZeroCC(iter.codePointStart, limit)) {
-        errorCode=U_MEMORY_ALLOCATION_ERROR;
-    }
+    buffer.append(src, (int32_t)(iter.codePointStart-src), getCC(first16), 0, errorCode) &&
+        buffer.appendZeroCC(iter.codePointStart, limit, errorCode);
 }
 
 /*
@@ -796,8 +794,9 @@ void Normalizer2Impl::recompose(ReorderingBuffer &buffer, int32_t recomposeStart
 }
 
 UBool Normalizer2Impl::compose(const UChar *src, const UChar *limit,
+                               UBool onlyContiguous,
                                ReorderingBuffer &buffer,
-                               UBool onlyContiguous) const {
+                               UErrorCode &errorCode) const {
     /*
      * prevStarter points to the last character before the current one
      * that is a composition starter with ccc==0 and quick check "yes".
@@ -817,7 +816,7 @@ UBool Normalizer2Impl::compose(const UChar *src, const UChar *limit,
     uint16_t norm16=0;
 
     if(limit==NULL) {
-        src=copyLowPrefixFromNulTerminated(src, minNoMaybeCP, buffer);
+        src=copyLowPrefixFromNulTerminated(src, minNoMaybeCP, buffer, errorCode);
         if(src==NULL) {
             return FALSE;
         }
@@ -834,7 +833,7 @@ UBool Normalizer2Impl::compose(const UChar *src, const UChar *limit,
         }
         // copy these code units all at once
         if(src!=prevSrc) {
-            if(!buffer.appendZeroCC(prevSrc, src)) {
+            if(!buffer.appendZeroCC(prevSrc, src, errorCode)) {
                 return FALSE;
             }
             if(src==limit) {
@@ -881,7 +880,7 @@ UBool Normalizer2Impl::compose(const UChar *src, const UChar *limit,
                 continue;
             }
             // The Jamo V/T did not compose into a Hangul syllable.
-            if(!buffer.appendBMP((UChar)c, 0)) {
+            if(!buffer.appendBMP((UChar)c, 0, errorCode)) {
                 return FALSE;
             }
             continue;
@@ -897,7 +896,7 @@ UBool Normalizer2Impl::compose(const UChar *src, const UChar *limit,
             }
             if(isCompYesAndZeroCC(norm16)) {
                 prevStarter=prevSrc;
-                if(!buffer.append(c, 0)) {
+                if(!buffer.append(c, 0, errorCode)) {
                     return FALSE;
                 }
                 continue;
@@ -946,7 +945,7 @@ UBool Normalizer2Impl::compose(const UChar *src, const UChar *limit,
             ) {
                 // Fails FCD test, need to decompose and contiguously recompose.
             } else {
-                if(!buffer.append(c, cc)) {
+                if(!buffer.append(c, cc, errorCode)) {
                     return FALSE;
                 }
                 continue;
@@ -980,7 +979,7 @@ UBool Normalizer2Impl::compose(const UChar *src, const UChar *limit,
 
         // Decompose [prevStarter..src[ into the buffer and then recompose that part of it.
         int32_t recomposeStartIndex=buffer.length();
-        if(!decomposeShort(prevStarter, src, buffer)) {
+        if(!decomposeShort(prevStarter, src, buffer, errorCode)) {
             return FALSE;
         }
         recompose(buffer, recomposeStartIndex, onlyContiguous);
@@ -992,8 +991,8 @@ UBool Normalizer2Impl::compose(const UChar *src, const UChar *limit,
 }
 
 void Normalizer2Impl::compose(const UChar *src, int32_t srcLength,
-                              UnicodeString &dest,
                               UBool onlyContiguous,
+                              UnicodeString &dest,
                               UErrorCode &errorCode) const {
     if(U_FAILURE(errorCode)) {
         dest.setToBogus();
@@ -1001,29 +1000,21 @@ void Normalizer2Impl::compose(const UChar *src, int32_t srcLength,
     }
     dest.remove();
     ReorderingBuffer buffer(*this, dest);
-    if( !buffer.init() ||
-        !compose(src, srcLength>=0 ? src+srcLength : NULL, buffer, onlyContiguous)
-    ) {
-        errorCode=U_MEMORY_ALLOCATION_ERROR;
-        dest.setToBogus();
-    }
+    buffer.init(errorCode) &&
+        compose(src, srcLength>=0 ? src+srcLength : NULL, onlyContiguous, buffer, errorCode);
 }
 
 void Normalizer2Impl::composeAndAppend(const UChar *src, int32_t srcLength,
-                                       UnicodeString &dest,
                                        UBool doCompose,
                                        UBool onlyContiguous,
+                                       UnicodeString &dest,
                                        UErrorCode &errorCode) const {
+    checkCanGetBuffer(dest, errorCode);
     if(U_FAILURE(errorCode)) {
         return;
     }
-    if(dest.isBogus()) {
-        errorCode=U_ILLEGAL_ARGUMENT_ERROR;
-        return;
-    }
     ReorderingBuffer buffer(*this, dest);
-    if(!buffer.init()) {
-        errorCode=U_MEMORY_ALLOCATION_ERROR;
+    if(!buffer.init(errorCode)) {
         return;
     }
     const UChar *limit=srcLength>=0 ? src+srcLength : u_strchr(src, 0);
@@ -1037,17 +1028,16 @@ void Normalizer2Impl::composeAndAppend(const UChar *src, int32_t srcLength,
             buffer.removeZeroCCSuffix((int32_t)(buffer.getLimit()-lastStarterInDest));
             middle.append(src, (int32_t)(firstStarterInSrc-src));
             const UChar *middleStart=middle.getBuffer();
-            if(!compose(middleStart, middleStart+middle.length(), buffer, onlyContiguous)) {
-                errorCode=U_MEMORY_ALLOCATION_ERROR;
+            if(!compose(middleStart, middleStart+middle.length(), onlyContiguous, buffer, errorCode)) {
                 return;
             }
             src=firstStarterInSrc;
         }
     }
-    if(doCompose ?
-            !compose(src, limit, buffer, onlyContiguous) :
-            !buffer.appendZeroCC(src, limit)) {
-        errorCode=U_MEMORY_ALLOCATION_ERROR;
+    if(doCompose) {
+        compose(src, limit, onlyContiguous, buffer, errorCode);
+    } else {
+        buffer.appendZeroCC(src, limit, errorCode);
     }
 }
 
@@ -1207,7 +1197,8 @@ const UTrie2 *Normalizer2Impl::getFCDTrie(UErrorCode &errorCode) const {
 
 UBool
 Normalizer2Impl::makeFCD(const UChar *src, const UChar *limit,
-                         ReorderingBuffer &buffer) const {
+                         ReorderingBuffer &buffer,
+                         UErrorCode &errorCode) const {
     // Note: In this function we use buffer.appendZeroCC() because we track
     // the lead and trail combining classes here, rather than leaving it to
     // the ReorderingBuffer.
@@ -1223,7 +1214,7 @@ Normalizer2Impl::makeFCD(const UChar *src, const UChar *limit,
     uint16_t fcd16=0;
 
     if(limit==NULL) {
-        src=copyLowPrefixFromNulTerminated(src, MIN_CCC_LCCC_CP, buffer);
+        src=copyLowPrefixFromNulTerminated(src, MIN_CCC_LCCC_CP, buffer, errorCode);
         if(src==NULL) {
             return FALSE;
         }
@@ -1247,7 +1238,7 @@ Normalizer2Impl::makeFCD(const UChar *src, const UChar *limit,
         }
         // copy these code units all at once
         if(src!=prevSrc) {
-            if(!buffer.appendZeroCC(prevSrc, src)) {
+            if(!buffer.appendZeroCC(prevSrc, src, errorCode)) {
                 return FALSE;
             }
             if(src==limit) {
@@ -1292,7 +1283,7 @@ Normalizer2Impl::makeFCD(const UChar *src, const UChar *limit,
                 } else {
                     prevBoundary=prevSrc;
                 }
-                if(!buffer.appendZeroCC(c)) {
+                if(!buffer.appendZeroCC(c, errorCode)) {
                     return FALSE;
                 }
                 prevFCD16=fcd16;
@@ -1306,7 +1297,7 @@ Normalizer2Impl::makeFCD(const UChar *src, const UChar *limit,
             if((fcd16&0xff)<=1) {
                 prevBoundary=src;
             }
-            if(!buffer.appendZeroCC(c)) {
+            if(!buffer.appendZeroCC(c, errorCode)) {
                 return FALSE;
             }
             prevFCD16=fcd16;
@@ -1327,7 +1318,7 @@ Normalizer2Impl::makeFCD(const UChar *src, const UChar *limit,
              * The source text does not fulfill the conditions for FCD.
              * Decompose and reorder a limited piece of the text.
              */
-            if(!decomposeShort(prevBoundary, src, buffer)) {
+            if(!decomposeShort(prevBoundary, src, buffer, errorCode)) {
                 return FALSE;
             }
             prevBoundary=src;
@@ -1347,26 +1338,20 @@ Normalizer2Impl::makeFCD(const UChar *src, int32_t srcLength,
     }
     dest.remove();
     ReorderingBuffer buffer(*this, dest);
-    if(!buffer.init() || !makeFCD(src, srcLength>=0 ? src+srcLength : NULL, buffer)) {
-        errorCode=U_MEMORY_ALLOCATION_ERROR;
-        dest.setToBogus();
-    }
+    buffer.init(errorCode) &&
+        makeFCD(src, srcLength>=0 ? src+srcLength : NULL, buffer, errorCode);
 }
 
 void Normalizer2Impl::makeFCDAndAppend(const UChar *src, int32_t srcLength,
-                                       UnicodeString &dest,
                                        UBool doMakeFCD,
+                                       UnicodeString &dest,
                                        UErrorCode &errorCode) const {
+    checkCanGetBuffer(dest, errorCode);
     if(U_FAILURE(errorCode)) {
         return;
     }
-    if(dest.isBogus()) {
-        errorCode=U_ILLEGAL_ARGUMENT_ERROR;
-        return;
-    }
     ReorderingBuffer buffer(*this, dest);
-    if(!buffer.init()) {
-        errorCode=U_MEMORY_ALLOCATION_ERROR;
+    if(!buffer.init(errorCode)) {
         return;
     }
     const UChar *limit=srcLength>=0 ? src+srcLength : u_strchr(src, 0);
@@ -1381,17 +1366,16 @@ void Normalizer2Impl::makeFCDAndAppend(const UChar *src, int32_t srcLength,
             buffer.removeZeroCCSuffix((int32_t)(buffer.getLimit()-lastBoundaryInDest));
             middle.append(src, (int32_t)(firstBoundaryInSrc-src));
             const UChar *middleStart=middle.getBuffer();
-            if(!makeFCD(middleStart, middleStart+middle.length(), buffer)) {
-                errorCode=U_MEMORY_ALLOCATION_ERROR;
+            if(!makeFCD(middleStart, middleStart+middle.length(), buffer, errorCode)) {
                 return;
             }
             src=firstBoundaryInSrc;
         }
     }
-    if(doMakeFCD ?
-            !makeFCD(src, limit, buffer) :
-            !buffer.appendZeroCC(src, limit)) {
-        errorCode=U_MEMORY_ALLOCATION_ERROR;
+    if(doMakeFCD) {
+        makeFCD(src, limit, buffer, errorCode);
+    } else {
+        buffer.appendZeroCC(src, limit, errorCode);
     }
 }
 

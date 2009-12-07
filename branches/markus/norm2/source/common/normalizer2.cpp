@@ -27,12 +27,6 @@
 
 U_NAMESPACE_BEGIN
 
-inline void assertNotBogus(const UnicodeString &s, UErrorCode &errorCode) {
-    if(U_SUCCESS(errorCode) && s.isBogus()) {
-        errorCode=U_ILLEGAL_ARGUMENT_ERROR;
-    }
-}
-
 // Public API dispatch via Normalizer2 subclasses -------------------------- ***
 
 class Normalizer2WithImpl : public Normalizer2 {
@@ -49,7 +43,7 @@ public:
     normalize(const UnicodeString &src,
               UnicodeString &dest,
               UErrorCode &errorCode) const {
-        assertNotBogus(src, errorCode);
+        checkCanGetBuffer(src, errorCode);
         impl.decompose(src.getBuffer(), src.length(), dest, errorCode);
         return dest;
     }
@@ -57,7 +51,7 @@ public:
     normalizeSecondAndAppend(UnicodeString &first,
                              const UnicodeString &second,
                              UErrorCode &errorCode) const {
-        assertNotBogus(second, errorCode);
+        checkCanGetBuffer(second, errorCode);
         impl.decomposeAndAppend(second.getBuffer(), second.length(), first, TRUE, errorCode);
         return first;
     }
@@ -65,7 +59,7 @@ public:
     append(UnicodeString &first,
            const UnicodeString &second,
            UErrorCode &errorCode) const {
-        assertNotBogus(second, errorCode);
+        checkCanGetBuffer(second, errorCode);
         impl.decomposeAndAppend(second.getBuffer(), second.length(), first, FALSE, errorCode);
         return first;
     }
@@ -80,26 +74,28 @@ public:
     normalize(const UnicodeString &src,
               UnicodeString &dest,
               UErrorCode &errorCode) const {
-        assertNotBogus(src, errorCode);
-        impl.compose(src.getBuffer(), src.length(), dest, onlyContiguous, errorCode);
+        checkCanGetBuffer(src, errorCode);
+        impl.compose(src.getBuffer(), src.length(), onlyContiguous, dest, errorCode);
         return dest;
     }
     virtual UnicodeString &
     normalizeSecondAndAppend(UnicodeString &first,
                              const UnicodeString &second,
                              UErrorCode &errorCode) const {
-        assertNotBogus(second, errorCode);
-        impl.composeAndAppend(second.getBuffer(), second.length(), first,
-                              TRUE, onlyContiguous, errorCode);
+        checkCanGetBuffer(second, errorCode);
+        impl.composeAndAppend(second.getBuffer(), second.length(),
+                              TRUE, onlyContiguous,
+                              first, errorCode);
         return first;
     }
     virtual UnicodeString &
     append(UnicodeString &first,
            const UnicodeString &second,
            UErrorCode &errorCode) const {
-        assertNotBogus(second, errorCode);
-        impl.composeAndAppend(second.getBuffer(), second.length(), first,
-                              FALSE, onlyContiguous, errorCode);
+        checkCanGetBuffer(second, errorCode);
+        impl.composeAndAppend(second.getBuffer(), second.length(),
+                              FALSE, onlyContiguous,
+                              first, errorCode);
         return first;
     }
 private:
@@ -114,7 +110,7 @@ public:
     normalize(const UnicodeString &src,
               UnicodeString &dest,
               UErrorCode &errorCode) const {
-        assertNotBogus(src, errorCode);
+        checkCanGetBuffer(src, errorCode);
         impl.makeFCD(src.getBuffer(), src.length(), dest, errorCode);
         return dest;
     }
@@ -122,16 +118,16 @@ public:
     normalizeSecondAndAppend(UnicodeString &first,
                              const UnicodeString &second,
                              UErrorCode &errorCode) const {
-        assertNotBogus(second, errorCode);
-        impl.makeFCDAndAppend(second.getBuffer(), second.length(), first, TRUE, errorCode);
+        checkCanGetBuffer(second, errorCode);
+        impl.makeFCDAndAppend(second.getBuffer(), second.length(), TRUE, first, errorCode);
         return first;
     }
     virtual UnicodeString &
     append(UnicodeString &first,
            const UnicodeString &second,
            UErrorCode &errorCode) const {
-        assertNotBogus(second, errorCode);
-        impl.makeFCDAndAppend(second.getBuffer(), second.length(), first, FALSE, errorCode);
+        checkCanGetBuffer(second, errorCode);
+        impl.makeFCDAndAppend(second.getBuffer(), second.length(), FALSE, first, errorCode);
         return first;
     }
 };
