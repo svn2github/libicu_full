@@ -1123,6 +1123,16 @@ enumRangeHandler(const void *context, UChar32 start, UChar32 end, uint32_t value
     return ((FCDTrieSingleton *)context)->rangeHandler(start, end, value);
 }
 
+static UBool U_CALLCONV
+enumRangeHasValue(const void *context, UChar32 start, UChar32 end, uint32_t value) {
+    if(value!=0) {
+        *((UBool *)context)=TRUE;
+        return FALSE;
+    } else {
+        return TRUE;
+    }
+}
+
 U_CDECL_END
 
 void *FCDTrieSingleton::createInstance(const void *context, UErrorCode &errorCode) {
@@ -1130,6 +1140,15 @@ void *FCDTrieSingleton::createInstance(const void *context, UErrorCode &errorCod
     me->newFCDTrie=utrie2_open(0, 0, &errorCode);
     if(U_SUCCESS(errorCode)) {
         utrie2_enum(me->impl.getNormTrie(), NULL, enumRangeHandler, me);
+        for(UChar lead=0xd800; lead<0xdc00; ++lead) {
+            UBool hasValue=FALSE;
+            utrie2_enumForLeadSurrogate(me->newFCDTrie, lead, NULL, enumRangeHasValue, &hasValue);
+            if(hasValue!=0) {
+                // Set a "bad" value for makeFCD() to break the quick check loop
+                // and look up the value for the supplementary code point.
+                utrie2_set32ForLeadSurrogateCodeUnit(me->newFCDTrie, lead, 0xffff, &errorCode);
+            }
+        }
         utrie2_freeze(me->newFCDTrie, UTRIE2_16_VALUE_BITS, &errorCode);
         if(U_SUCCESS(errorCode)) {
             return me->newFCDTrie;
@@ -1200,7 +1219,7 @@ Normalizer2Impl::makeFCD(const UChar *src, int32_t srcLength,
     // The exception is the call to decomposeShort() which uses the buffer
     // in the normal way.
 
-    // Tracks the last FCD-safe boundary, before lccc=0 or after tccc<=1.
+    // Tracks the last FCD-safe boundary, before lccc=0 or after properly-ordered tccc<=1.
     // Similar to the prevStarter in the compose() implementation.
     const UChar *prevBoundary=src;
 
@@ -1353,21 +1372,12 @@ Normalizer2Impl::makeFCD(const UChar *src, int32_t srcLength,
 const UChar *Normalizer2Impl::findNextFCDBoundary(const UChar *p, const UChar *limit) const {
     ForwardUTrie2StringIterator iter(fcdTrie(), p, limit);
     uint16_t fcd16;
-    for(;;) {
+    do {
         fcd16=iter.next16();
-        if(fcd16<=0xff) {
-            return iter.codePointStart;
-        } else if((fcd16&0xff)<=1) {
-            return iter.codePointLimit;
-        }
-    }
+    } while(fcd16>0xff);
+    return iter.codePointStart;
 }
 
 U_NAMESPACE_END
 
 #endif  // !UCONFIG_NO_NORMALIZATION
-
-// #if for code only for minMaybeYes<MIN_NORMAL_MAYBE_YES. Benchmark both ways.
-// Consider not supporting an exclusions set at runtime.
-//   Otherwise need to pull nx_contains() into the ReorderingBuffer etc.
-//   Can support Unicode 3.2 normalization via UnicodeSet span outside of normalization calls.
