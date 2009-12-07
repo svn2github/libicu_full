@@ -123,8 +123,7 @@ public:
                              const UnicodeString &second,
                              UErrorCode &errorCode) const {
         assertNotBogus(second, errorCode);
-        // TODO: real FCD
-        impl.decomposeAndAppend(second.getBuffer(), second.length(), first, TRUE, errorCode);
+        impl.makeFCDAndAppend(second.getBuffer(), second.length(), first, TRUE, errorCode);
         return first;
     }
     virtual UnicodeString &
@@ -132,8 +131,7 @@ public:
            const UnicodeString &second,
            UErrorCode &errorCode) const {
         assertNotBogus(second, errorCode);
-        // TODO: real FCD
-        impl.decomposeAndAppend(second.getBuffer(), second.length(), first, FALSE, errorCode);
+        impl.makeFCDAndAppend(second.getBuffer(), second.length(), first, FALSE, errorCode);
         return first;
     }
 };

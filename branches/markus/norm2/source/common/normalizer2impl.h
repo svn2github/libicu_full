@@ -75,7 +75,7 @@ public:
         return TRUE;
     }
     UBool appendZeroCC(UChar32 c);
-    UBool appendZeroCC(const UChar *s, int32_t length);
+    UBool appendZeroCC(const UChar *s, const UChar *sLimit);
     void removeZeroCCSuffix(int32_t length);
     void setReorderingLimitAndLastCC(UChar *newLimit, uint8_t newLastCC) {
         remainingCapacity+=(int32_t)(limit-newLimit);
@@ -253,6 +253,10 @@ public:
     void makeFCD(const UChar *src, int32_t srcLength,
                  UnicodeString &dest,
                  UErrorCode &errorCode) const;
+    void makeFCDAndAppend(const UChar *src, int32_t srcLength,
+                          UnicodeString &dest,
+                          UBool doMakeFCD,
+                          UErrorCode &errorCode) const;
 private:
     static UBool U_CALLCONV
     isAcceptable(void *context, const char *type, const char *name, const UDataInfo *pInfo);
@@ -330,14 +334,17 @@ private:
             ((*list>>7)&1);  // +1 if MAPPING_HAS_CCC_LCCC_WORD
     }
 
-    UBool decompose(const UChar *src, int32_t srcLength, ReorderingBuffer &buffer) const;
+    const UChar *copyLowPrefixFromNulTerminated(const UChar *src,
+                                                UChar32 minNeedDataCP,
+                                                ReorderingBuffer &buffer) const;
+    UBool decompose(const UChar *src, const UChar *limit, ReorderingBuffer &buffer) const;
     UBool decomposeShort(const UChar *src, const UChar *limit, ReorderingBuffer &buffer) const;
     UBool decompose(UChar32 c, uint16_t norm16, ReorderingBuffer &buffer) const;
 
     static int32_t combine(const uint16_t *list, UChar32 trail);
     void recompose(ReorderingBuffer &buffer, int32_t recomposeStartIndex,
                    UBool onlyContiguous) const;
-    UBool compose(const UChar *src, int32_t srcLength,
+    UBool compose(const UChar *src, const UChar *limit,
                   ReorderingBuffer &buffer,
                   UBool onlyContiguous) const;
 
@@ -353,9 +360,10 @@ private:
     const UChar *findNextCompStarter(const UChar *p, const UChar *limit) const;
 
     const UTrie2 *fcdTrie() const { return (const UTrie2 *)fcdTrieSingleton.fInstance; }
-    UBool makeFCD(const UChar *src, int32_t srcLength,
+    UBool makeFCD(const UChar *src, const UChar *limit,
                   ReorderingBuffer &buffer) const;
 
+    const UChar *findPreviousFCDBoundary(const UChar *start, const UChar *p) const;
     const UChar *findNextFCDBoundary(const UChar *p, const UChar *limit) const;
 
     UDataMemory *memory;
