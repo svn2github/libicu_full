@@ -218,7 +218,7 @@ Normalizer2 *InternalNormalizer2Provider::getFCDInstance(UErrorCode &errorCode) 
     Norm2AllModes *allModes=Norm2AllModesSingleton(nfcSingleton, "nfc").getInstance(errorCode);
     if(allModes!=NULL) {
         allModes->impl.getFCDTrie(errorCode);
-        return &allModes->fcc;
+        return &allModes->fcd;
     } else {
         return NULL;
     }

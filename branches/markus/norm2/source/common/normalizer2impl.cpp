@@ -1303,10 +1303,10 @@ Normalizer2Impl::makeFCD(const UChar *src, int32_t srcLength,
             if((fcd16&0xff)<=1) {
                 prevBoundary=src;
             }
-            prevFCD16=fcd16;
             if(!buffer.appendZeroCC(c)) {
                 return FALSE;
             }
+            prevFCD16=fcd16;
             continue;
         } else {
             /*
@@ -1324,7 +1324,9 @@ Normalizer2Impl::makeFCD(const UChar *src, int32_t srcLength,
              * The source text does not fulfill the conditions for FCD.
              * Decompose and reorder a limited piece of the text.
              */
-            decomposeShort(prevBoundary, src, buffer);
+            if(!decomposeShort(prevBoundary, src, buffer)) {
+                return FALSE;
+            }
             prevBoundary=src;
             prevFCD16=0;
         }
