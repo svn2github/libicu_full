@@ -347,10 +347,10 @@ private:
 
     const UChar *copyLowPrefixFromNulTerminated(const UChar *src,
                                                 UChar32 minNeedDataCP,
-                                                ReorderingBuffer &buffer,
+                                                ReorderingBuffer *buffer,
                                                 UErrorCode &errorCode) const;
-    UBool decompose(const UChar *src, const UChar *limit,
-                    ReorderingBuffer &buffer, UErrorCode &errorCode) const;
+    const UChar *decompose(const UChar *src, const UChar *limit,
+                           ReorderingBuffer *buffer, UErrorCode &errorCode) const;
     UBool decomposeShort(const UChar *src, const UChar *limit,
                          ReorderingBuffer &buffer, UErrorCode &errorCode) const;
     UBool decompose(UChar32 c, uint16_t norm16,
@@ -359,10 +359,11 @@ private:
     static int32_t combine(const uint16_t *list, UChar32 trail);
     void recompose(ReorderingBuffer &buffer, int32_t recomposeStartIndex,
                    UBool onlyContiguous) const;
-    UBool compose(const UChar *src, const UChar *limit,
-                  UBool onlyContiguous,
-                  ReorderingBuffer &buffer,
-                  UErrorCode &errorCode) const;
+    const UChar *compose(const UChar *src, const UChar *limit,
+                         UBool doCompose,
+                         UBool onlyContiguous,
+                         ReorderingBuffer *buffer,
+                         UErrorCode &errorCode) const;
 
     /**
      * Is c a composition starter?
@@ -376,8 +377,8 @@ private:
     const UChar *findNextCompStarter(const UChar *p, const UChar *limit) const;
 
     const UTrie2 *fcdTrie() const { return (const UTrie2 *)fcdTrieSingleton.fInstance; }
-    UBool makeFCD(const UChar *src, const UChar *limit,
-                  ReorderingBuffer &buffer, UErrorCode &errorCode) const;
+    const UChar *makeFCD(const UChar *src, const UChar *limit,
+                         ReorderingBuffer *buffer, UErrorCode &errorCode) const;
 
     const UChar *findPreviousFCDBoundary(const UChar *start, const UChar *p) const;
     const UChar *findNextFCDBoundary(const UChar *p, const UChar *limit) const;
