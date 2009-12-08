@@ -81,8 +81,13 @@ PLUGINFILE=$(PLUGINDIR)/icuplugins$(SO_TARGET_VERSION_MAJOR).txt
 $(PLUGINFILE): Makefile
 	echo "$(shell pwd)/$(PLUGIN)	myPlugin	x=4" > $@
 
+CFLAGS+=$(SHAREDLIBCFLAGS)
+
+#testplug.o: testplug.c
+#	$(COMPILE.cc) $(DYNAMICCPPFLAGS)  $(DYNAMICCFLAGS) $(CFLAGS) $(LIBS) -o $@ $<
+
 $(PLUGIN): testplug.o
-	$(SHLIB.cc) $(LD_SONAME) $(OUTOPT)$@ $^ $(LIBS)
+	$(SHLIB.cc) $(SHAREDLIBCFLAGS) $(LD_SONAME) $(OUTOPT)$@ $^ $(LIBS)
 
 plugin: $(PLUGIN)
 
