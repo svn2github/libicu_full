@@ -110,7 +110,7 @@ struct SimpleSingleton {
     void reset() { fInstance=NULL; }
 };
 
-#define STATIC_SIMPLE_SINGLETON(name) static SimpleSingleton name={ NULL, U_ZERO_ERROR, 0 }
+#define STATIC_SIMPLE_SINGLETON(name) static SimpleSingleton name={ NULL }
 
 /**
  * Handy wrapper for an SimpleSingleton.

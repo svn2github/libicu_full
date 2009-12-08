@@ -76,7 +76,24 @@ U_NAMESPACE_BEGIN
 
 class U_COMMON_API Normalizer2 : public UObject {
 public:
-    // Returns unmodifiable singleton.
+    /**
+     * Returns a Normalizer2 instance which uses the specified data file
+     * (packageName/name similar to ucnv_openPackage() and ures_open()/ResourceBundle)
+     * and which composes or decomposes text according to the specified mode.
+     * Returns an unmodifiable singleton instance.
+     *
+     * Use packageName=NULL for data files that are part of ICU's own data.
+     * Use name="nfc" and UNORM2_COMPOSE/UNORM2_DECOMPOSE for Unicode standard NFC/NFD.
+     * Use name="nfkc" and UNORM2_COMPOSE/UNORM2_DECOMPOSE for Unicode standard NFKC/NFKD.
+     * Use name="nfkc_cf" and UNORM2_COMPOSE for Unicode standard NFKC_CF=NFKC_Casefold.
+     *
+     * @param errorCode Standard ICU error code. Its input value must
+     *                  pass the U_SUCCESS() test, or else the function returns
+     *                  immediately. Check for U_FAILURE() on output or use with
+     *                  function chaining. (See User Guide for details.)
+     * @return the requested Normalizer2, if successful
+     * @draft ICU 4.4
+     */
     static Normalizer2 *
     getInstance(const char *packageName,
                 const char *name,
@@ -86,6 +103,10 @@ public:
     /**
      * Returns the normalized form of the source string.
      * @param src source string
+     * @param errorCode Standard ICU error code. Its input value must
+     *                  pass the U_SUCCESS() test, or else the function returns
+     *                  immediately. Check for U_FAILURE() on output or use with
+     *                  function chaining. (See User Guide for details.)
      * @return normalized src
      * @draft ICU 4.4
      */
@@ -100,6 +121,10 @@ public:
      * (replacing its contents) and returns the destination string.
      * @param src source string
      * @param dest destination string; its contents is replaced with normalized src
+     * @param errorCode Standard ICU error code. Its input value must
+     *                  pass the U_SUCCESS() test, or else the function returns
+     *                  immediately. Check for U_FAILURE() on output or use with
+     *                  function chaining. (See User Guide for details.)
      * @return dest
      * @draft ICU 4.4
      */
@@ -113,6 +138,10 @@ public:
      * The result is normalized if the first string was normalized.
      * @param first string, should be normalized
      * @param second string, will be normalized
+     * @param errorCode Standard ICU error code. Its input value must
+     *                  pass the U_SUCCESS() test, or else the function returns
+     *                  immediately. Check for U_FAILURE() on output or use with
+     *                  function chaining. (See User Guide for details.)
      * @return first
      * @draft ICU 4.4
      */
@@ -126,6 +155,10 @@ public:
      * The result is normalized if both the strings were normalized.
      * @param first string, should be normalized
      * @param second string, should be normalized
+     * @param errorCode Standard ICU error code. Its input value must
+     *                  pass the U_SUCCESS() test, or else the function returns
+     *                  immediately. Check for U_FAILURE() on output or use with
+     *                  function chaining. (See User Guide for details.)
      * @return first
      * @draft ICU 4.4
      */
@@ -133,6 +166,69 @@ public:
     append(UnicodeString &first,
            const UnicodeString &second,
            UErrorCode &errorCode) const = 0;
+
+    /**
+     * Tests if the string is normalized.
+     * Internally, in cases where the quickCheck() method would return "maybe"
+     * (which is only possible for the two COMPOSE modes) this method
+     * resolves to "yes" or "no" to provide a definitive result,
+     * at the cost of doing more work in those cases.
+     * @param s input string
+     * @param errorCode Standard ICU error code. Its input value must
+     *                  pass the U_SUCCESS() test, or else the function returns
+     *                  immediately. Check for U_FAILURE() on output or use with
+     *                  function chaining. (See User Guide for details.)
+     * @return TRUE if s is normalized
+     * @draft ICU 4.4
+     */
+    virtual UBool
+    isNormalized(const UnicodeString &s, UErrorCode &errorCode) const = 0;
+
+    /**
+     * Tests if the string is normalized.
+     * For the two COMPOSE modes, the result could be "maybe" in cases that
+     * would take a little more work to resolve definitively.
+     * Use spanQuickCheckYes() and normalizeSecondAndAppend() for a faster
+     * combination of quick check + normalization, to avoid
+     * re-checking the "yes" prefix.
+     * @param s input string
+     * @param errorCode Standard ICU error code. Its input value must
+     *                  pass the U_SUCCESS() test, or else the function returns
+     *                  immediately. Check for U_FAILURE() on output or use with
+     *                  function chaining. (See User Guide for details.)
+     * @return UNormalizationCheckResult
+     * @draft ICU 4.4
+     */
+    virtual UNormalizationCheckResult
+    quickCheck(const UnicodeString &s, UErrorCode &errorCode) const = 0;
+
+    /**
+     * Returns the end of the normalized substring of the input string starting
+     * at the specified index.
+     * In other words, with <code>end=spanQuickCheckYes(s, start, ec);</code>
+     * the substring <code>UnicodeString(s, start, end-start)</code>
+     * will pass the quick check with a "yes" result.
+     *
+     * The returned end index is usually one or more characters before the
+     * "no" or "maybe" character: The end index is at a normalization boundary,
+     * so that the portions of the string before it and after it
+     * can be handled independently.
+     *
+     * When the goal is a normalized string and most input strings are expected
+     * to be normalized already, then call this method,
+     * and if it returns a prefix shorter than the input string,
+     * copy that prefix and use normalizeSecondAndAppend() for the remainder.
+     * @param s input string
+     * @param start starting index in the string for the quick check
+     * @param errorCode Standard ICU error code. Its input value must
+     *                  pass the U_SUCCESS() test, or else the function returns
+     *                  immediately. Check for U_FAILURE() on output or use with
+     *                  function chaining. (See User Guide for details.)
+     * @return UNormalizationCheckResult
+     * @draft ICU 4.4
+     */
+    virtual int32_t
+    spanQuickCheckYes(const UnicodeString &s, int32_t start, UErrorCode &errorCode) const = 0;
 
     /**
      * ICU "poor man's RTTI", returns a UClassID for this class.

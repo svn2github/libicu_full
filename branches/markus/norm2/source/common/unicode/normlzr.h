@@ -287,7 +287,7 @@ public:
    * @see isNormalized
    * @stable ICU 2.6
    */
-  static inline UNormalizationCheckResult
+  static UNormalizationCheckResult
   quickCheck(const UnicodeString &source, UNormalizationMode mode, int32_t options, UErrorCode &status);
 
   /**
@@ -328,7 +328,7 @@ public:
    * @see quickCheck
    * @stable ICU 2.6
    */
-  static inline UBool
+  static UBool
   isNormalized(const UnicodeString &src, UNormalizationMode mode, int32_t options, UErrorCode &errorCode);
 
   /**
@@ -761,48 +761,14 @@ inline UNormalizationCheckResult
 Normalizer::quickCheck(const UnicodeString& source,
                        UNormalizationMode mode,
                        UErrorCode &status) {
-    if(U_FAILURE(status)) {
-        return UNORM_MAYBE;
-    }
-
-    return unorm_quickCheck(source.getBuffer(), source.length(),
-                            mode, &status);
-}
-
-inline UNormalizationCheckResult
-Normalizer::quickCheck(const UnicodeString& source,
-                       UNormalizationMode mode, int32_t options,
-                       UErrorCode &status) {
-    if(U_FAILURE(status)) {
-        return UNORM_MAYBE;
-    }
-
-    return unorm_quickCheckWithOptions(source.getBuffer(), source.length(),
-                                       mode, options, &status);
+    return quickCheck(source, mode, 0, status);
 }
 
 inline UBool
 Normalizer::isNormalized(const UnicodeString& source,
                          UNormalizationMode mode,
                          UErrorCode &status) {
-    if(U_FAILURE(status)) {
-        return FALSE;
-    }
-
-    return unorm_isNormalized(source.getBuffer(), source.length(),
-                              mode, &status);
-}
-
-inline UBool
-Normalizer::isNormalized(const UnicodeString& source,
-                         UNormalizationMode mode, int32_t options,
-                         UErrorCode &status) {
-    if(U_FAILURE(status)) {
-        return FALSE;
-    }
-
-    return unorm_isNormalizedWithOptions(source.getBuffer(), source.length(),
-                                         mode, options, &status);
+    return isNormalized(source, mode, 0, status);
 }
 
 inline int32_t

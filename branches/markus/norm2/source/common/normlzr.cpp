@@ -142,29 +142,8 @@ Normalizer::normalize(const UnicodeString& source,
             dest=&localDest;
         }
 
-        if(UNORM_NFD<=mode && options==0) {
-            Normalizer2 *n2;
-            switch(mode) {
-            // TODO: UNORM_NONE, return no-op Normalizer2 instance
-            case UNORM_NFD:
-                n2=InternalNormalizer2Provider::getNFDInstance(status);
-                break;
-            case UNORM_NFKD:
-                n2=InternalNormalizer2Provider::getNFKDInstance(status);
-                break;
-            case UNORM_NFC:
-                n2=InternalNormalizer2Provider::getNFCInstance(status);
-                break;
-            case UNORM_NFKC:
-                n2=InternalNormalizer2Provider::getNFKCInstance(status);
-                break;
-            case UNORM_FCD:
-                n2=InternalNormalizer2Provider::getFCDInstance(status);
-                break;
-            default:
-                n2=NULL;
-                break;
-            }
+        if(options==0) {  // TODO: pass through all options
+            Normalizer2 *n2=InternalNormalizer2Provider::getInstance(mode, options, status);
             if(U_SUCCESS(status)) {
                 n2->normalize(source, *dest, status);
             }
@@ -283,6 +262,36 @@ Normalizer::decompose(const UnicodeString& source,
         if(U_FAILURE(status)) {
             result.setToBogus();
         }
+    }
+}
+
+UNormalizationCheckResult
+Normalizer::quickCheck(const UnicodeString& source,
+                       UNormalizationMode mode, int32_t options,
+                       UErrorCode &status) {
+    if(options==0) {  // TODO: pass through all options
+        Normalizer2 *n2=InternalNormalizer2Provider::getInstance(mode, options, status);
+        if(U_SUCCESS(status)) {
+            return n2->quickCheck(source, status);
+        } else {
+            return UNORM_MAYBE;
+        }
+    } else {
+        return unorm_quickCheckWithOptions(source.getBuffer(), source.length(),
+                                           mode, options, &status);
+    }
+}
+
+UBool
+Normalizer::isNormalized(const UnicodeString& source,
+                         UNormalizationMode mode, int32_t options,
+                         UErrorCode &status) {
+    if(options==0) {  // TODO: pass through all options
+        Normalizer2 *n2=InternalNormalizer2Provider::getInstance(mode, options, status);
+        return U_SUCCESS(status) && n2->isNormalized(source, status);
+    } else {
+        return unorm_isNormalizedWithOptions(source.getBuffer(), source.length(),
+                                             mode, options, &status);
     }
 }
 

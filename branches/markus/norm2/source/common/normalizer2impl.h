@@ -245,28 +245,27 @@ public:
 
     // higher-level functionality ------------------------------------------ ***
 
-    void decompose(const UChar *src, int32_t srcLength,
-                   UnicodeString &dest,
-                   UErrorCode &errorCode) const;
-    void decomposeAndAppend(const UChar *src, int32_t srcLength,
-                            UnicodeString &dest,
+    const UChar *decompose(const UChar *src, const UChar *limit,
+                           ReorderingBuffer *buffer, UErrorCode &errorCode) const;
+    void decomposeAndAppend(const UChar *src, const UChar *limit,
                             UBool doDecompose,
+                            ReorderingBuffer &buffer,
                             UErrorCode &errorCode) const;
-    void compose(const UChar *src, int32_t srcLength,
-                 UBool onlyContiguous,
-                 UnicodeString &dest,
-                 UErrorCode &errorCode) const;
-    void composeAndAppend(const UChar *src, int32_t srcLength,
+    const UChar *compose(const UChar *src, const UChar *limit,
+                         UBool onlyContiguous,
+                         UNormalizationCheckResult *pQCResult,
+                         ReorderingBuffer *buffer,
+                         UErrorCode &errorCode) const;
+    void composeAndAppend(const UChar *src, const UChar *limit,
                           UBool doCompose,
                           UBool onlyContiguous,
-                          UnicodeString &dest,
+                          ReorderingBuffer &buffer,
                           UErrorCode &errorCode) const;
-    void makeFCD(const UChar *src, int32_t srcLength,
-                 UnicodeString &dest,
-                 UErrorCode &errorCode) const;
-    void makeFCDAndAppend(const UChar *src, int32_t srcLength,
+    const UChar *makeFCD(const UChar *src, const UChar *limit,
+                         ReorderingBuffer *buffer, UErrorCode &errorCode) const;
+    void makeFCDAndAppend(const UChar *src, const UChar *limit,
                           UBool doMakeFCD,
-                          UnicodeString &dest,
+                          ReorderingBuffer &buffer,
                           UErrorCode &errorCode) const;
 private:
     static UBool U_CALLCONV
@@ -349,8 +348,6 @@ private:
                                                 UChar32 minNeedDataCP,
                                                 ReorderingBuffer *buffer,
                                                 UErrorCode &errorCode) const;
-    const UChar *decompose(const UChar *src, const UChar *limit,
-                           ReorderingBuffer *buffer, UErrorCode &errorCode) const;
     UBool decomposeShort(const UChar *src, const UChar *limit,
                          ReorderingBuffer &buffer, UErrorCode &errorCode) const;
     UBool decompose(UChar32 c, uint16_t norm16,
@@ -359,11 +356,6 @@ private:
     static int32_t combine(const uint16_t *list, UChar32 trail);
     void recompose(ReorderingBuffer &buffer, int32_t recomposeStartIndex,
                    UBool onlyContiguous) const;
-    const UChar *compose(const UChar *src, const UChar *limit,
-                         UBool doCompose,
-                         UBool onlyContiguous,
-                         ReorderingBuffer *buffer,
-                         UErrorCode &errorCode) const;
 
     /**
      * Is c a composition starter?
@@ -377,8 +369,6 @@ private:
     const UChar *findNextCompStarter(const UChar *p, const UChar *limit) const;
 
     const UTrie2 *fcdTrie() const { return (const UTrie2 *)fcdTrieSingleton.fInstance; }
-    const UChar *makeFCD(const UChar *src, const UChar *limit,
-                         ReorderingBuffer *buffer, UErrorCode &errorCode) const;
 
     const UChar *findPreviousFCDBoundary(const UChar *start, const UChar *p) const;
     const UChar *findNextFCDBoundary(const UChar *p, const UChar *limit) const;
@@ -405,6 +395,9 @@ public:
     static Normalizer2 *getNFKCInstance(UErrorCode &errorCode);
     static Normalizer2 *getNFKDInstance(UErrorCode &errorCode);
     static Normalizer2 *getNFKC_CFInstance(UErrorCode &errorCode);
+    static Normalizer2 *getNoopInstance(UErrorCode &errorCode);
+
+    static Normalizer2 *getInstance(UNormalizationMode, int32_t options, UErrorCode &errorCode);
 private:
     InternalNormalizer2Provider();  // No instantiation.
 };
