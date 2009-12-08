@@ -841,17 +841,17 @@ static UBool compareBinaryFiles(const char* defaultTZFileName, const char* TZFil
 #define SKIP2 ".."
 static char SEARCH_TZFILE_RESULT[MAX_PATH_SIZE] = "";
 static char* searchForTZFile(const char* path, DefaultTZInfo* tzInfo) {
-    DIR* dirp = opendir(path);
+    char curpath[MAX_PATH_SIZE];
     DIR* subDirp = NULL;
     struct dirent* dirEntry = NULL;
-
     char* result = NULL;
+    DIR* dirp = opendir(path);
+    
     if (dirp == NULL) {
         return result;
     }
 
     /* Save the current path */
-    char curpath[MAX_PATH_SIZE];
     uprv_memset(curpath, 0, MAX_PATH_SIZE);
     uprv_strcpy(curpath, path);
 
@@ -1943,6 +1943,88 @@ U_CAPI void U_EXPORT2
 u_getVersion(UVersionInfo versionArray) {
     u_versionFromString(versionArray, U_ICU_VERSION);
 }
+
+/**
+ * icucfg.h dependent code 
+ */
+ 
+#if defined(HAVE_CONFIG_H)
+#include "icucfg.h"
+#endif
+
+#if defined(U_CHECK_DYLOAD)
+
+#if defined(HAVE_DLOPEN) 
+
+#ifdef HAVE_DLFCN_H
+#include <dlfcn.h>
+#endif
+
+U_INTERNAL void * U_EXPORT2
+uprv_dl_open(const char *libName, UErrorCode *status) {
+    void *ret = NULL;
+    if(U_FAILURE(*status)) return ret;
+    ret =  dlopen(libName, RTLD_NOW|RTLD_GLOBAL);
+    if(ret==NULL) {
+        *status = U_MISSING_RESOURCE_ERROR;
+        /* TODO: read errno and translate. */
+    }
+    return ret;
+}
+
+U_INTERNAL void U_EXPORT2
+uprv_dl_close(void *lib, UErrorCode *status) {
+    if(U_FAILURE(*status)) return;
+    dlclose(lib);
+    /* TODO: translate errno? */
+}
+
+U_INTERNAL void* U_EXPORT2
+uprv_dl_sym(void *lib, const char* sym, UErrorCode *status) {
+    void *ret = NULL;
+    if(U_FAILURE(*status)) return ret;
+    ret = dlsym(lib, sym);
+    if(ret == NULL) {
+        *status = U_MISSING_RESOURCE_ERROR;
+        /* TODO: translate errno? */
+    }
+    return ret;
+}
+
+#else
+
+/* null (nonexistent) implementation. */
+
+U_INTERNAL void * U_EXPORT2
+uprv_dl_open(const char *libName, UErrorCode *status) {
+    if(U_FAILURE(*status)) return NULL;
+    *status = U_UNIMPLEMENTED_ERROR;
+    return NULL;
+}
+
+U_INTERNAL void U_EXPORT2
+uprv_dl_close(void *lib, UErrorCode *status) {
+    if(U_FAILURE(*status)) return;
+    *status = U_UNIMPLEMENTED_ERROR;
+    return;
+}
+
+
+U_INTERNAL void* U_EXPORT2
+uprv_dl_sym(void *lib, const char* sym, UErrorCode *status) {
+    if(U_FAILURE(*status)) return NULL;
+    *status = U_UNIMPLEMENTED_ERROR;
+    return;
+}
+
+
+
+#endif
+
+
+#endif
+
+
 /*
  * Hey, Emacs, please set the following:
  *
