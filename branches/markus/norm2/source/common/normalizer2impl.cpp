@@ -856,8 +856,8 @@ UBool Normalizer2Impl::compose(const UChar *src, const UChar *limit,
          * Check for Jamo V/T, then for surrogates and regular characters.
          * c is not a Hangul syllable or Jamo L because those have "yes" properties.
          */
-        if(isJamoVT(norm16)) {
-            UChar prev=buffer.lastUChar();
+        if(isJamoVT(norm16) && prevStarter!=prevSrc) {
+            UChar prev=*(prevSrc-1);
             if(c<JAMO_T_BASE) {
                 // c is a Jamo Vowel, compose with previous Jamo L and following Jamo T.
                 prev=(UChar)(prev-JAMO_L_BASE);
@@ -869,13 +869,13 @@ UBool Normalizer2Impl::compose(const UChar *src, const UChar *limit,
                         syllable+=t;  // The next character was a Jamo T.
                         prevStarter=src;
                     }
-                    buffer.lastUChar()=syllable;
+                    *(buffer.getLimit()-1)=syllable;
                     continue;
                 }
             } else if(isHangulWithoutJamoT(prev)) {
                 // c is a Jamo Trailing consonant,
                 // compose with previous Hangul LV that does not contain a Jamo T.
-                buffer.lastUChar()=(UChar)(prev+c-JAMO_T_BASE);
+                *(buffer.getLimit()-1)=(UChar)(prev+c-JAMO_T_BASE);
                 prevStarter=src;
                 continue;
             }

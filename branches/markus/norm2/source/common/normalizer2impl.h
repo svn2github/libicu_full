@@ -58,7 +58,6 @@ public:
     int32_t length() const { return (int32_t)(limit-start); }
     UChar *getStart() { return start; }
     UChar *getLimit() { return limit; }
-    UChar &lastUChar() { return *(limit-1); }
     uint8_t getLastCC() const { return lastCC; }
 
     UBool append(UChar32 c, uint8_t cc, UErrorCode &errorCode) {
