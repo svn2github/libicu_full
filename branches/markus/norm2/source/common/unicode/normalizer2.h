@@ -26,7 +26,7 @@
 #include "unicode/unistr.h"
 #include "unicode/unorm.h"
 
-// TODO: Copy \file comments from unorm.h and/or normlzr.h.
+// TODO: Copy \file and other comments from unorm.h and/or normlzr.h.
 // TODO: Move UNORM2_ enums to new unormalizer2.h.
 
 /**
@@ -74,13 +74,35 @@ typedef enum {
 
 U_NAMESPACE_BEGIN
 
+/**
+ * Unicode normalization functionality for standard Unicode normalization or
+ * using custom mapping tables.
+ * All instances of this class are unmodifiable/immutable.
+ * Instances returned by getInstance() are singletons that must not be deleted by the caller.
+ *
+ * This class offers functions for iterative normalization which is useful
+ * when only a small portion of a longer string/text needs to be processed.
+ * [TODO: Needed as public API?]
+ * In ICU, iterative normalization is used by
+ * the NormalizationTransliterator (to avoid replacing already-normalized text)
+ * and ucol_nextSortKeyPart() (to process only the substring for which
+ * sort key bytes are computed).
+ *
+ * Iterative normalization moves from one normalization boundary to the next
+ * or preceding boundary. At such a boundary, the portions of the string
+ * before it and after it do not interact and can be handled independently.
+ * Note: The spanQuickCheckYes() also stops at a normalization boundary.
+ *
+ * The set of normalization boundaries returned by these functions may not be
+ * complete: There may be more boundaries that could be returned.
+ */
 class U_COMMON_API Normalizer2 : public UObject {
 public:
     /**
      * Returns a Normalizer2 instance which uses the specified data file
      * (packageName/name similar to ucnv_openPackage() and ures_open()/ResourceBundle)
      * and which composes or decomposes text according to the specified mode.
-     * Returns an unmodifiable singleton instance.
+     * Returns an unmodifiable singleton instance. Do not delete it.
      *
      * Use packageName=NULL for data files that are part of ICU's own data.
      * Use name="nfc" and UNORM2_COMPOSE/UNORM2_DECOMPOSE for Unicode standard NFC/NFD.
@@ -94,7 +116,7 @@ public:
      * @return the requested Normalizer2, if successful
      * @draft ICU 4.4
      */
-    static Normalizer2 *
+    static const Normalizer2 *
     getInstance(const char *packageName,
                 const char *name,
                 UNormalization2Mode mode,
@@ -210,9 +232,8 @@ public:
      * will pass the quick check with a "yes" result.
      *
      * The returned end index is usually one or more characters before the
-     * "no" or "maybe" character: The end index is at a normalization boundary,
-     * so that the portions of the string before it and after it
-     * can be handled independently.
+     * "no" or "maybe" character: The end index is at a normalization boundary.
+     * (See the class documentation for more about normalization boundaries.)
      *
      * When the goal is a normalized string and most input strings are expected
      * to be normalized already, then call this method,
@@ -229,6 +250,70 @@ public:
      */
     virtual int32_t
     spanQuickCheckYes(const UnicodeString &s, int32_t start, UErrorCode &errorCode) const = 0;
+
+#if 0
+    // TODO: Needed as public API?
+    //       Not currently used anywhere in ICU,
+    //       except that internal versions are used in the append() implementations.
+    /**
+     * Returns an index greater than start where there is a normalization boundary.
+     * (See the class documentation for more about normalization boundaries.)
+     * @param s input string
+     * @param start starting index in the string
+     * @return index of the next boundary
+     * @draft ICU 4.4
+     */
+    virtual int32_t
+    nextBoundary(const UnicodeString &s, int32_t start) const = 0;
+
+    /**
+     * Returns an index less than start where there is a normalization boundary.
+     * (See the class documentation for more about normalization boundaries.)
+     * @param s input string
+     * @param start starting index in the string
+     * @return index of the previous boundary
+     * @draft ICU 4.4
+     */
+    virtual int32_t
+    previousBoundary(const UnicodeString &s, int32_t start) const = 0;
+#endif
+
+#if 0
+    // TODO: Needed as public API?
+    //       (Needed internally for unorm_next() and NormalizationTransliterator.)
+    // TODO: Copy to UnicodeString or append to Appendable interface
+    //       which we don't have yet?
+    // TODO: previousBoundary() copy to UnicodeString or
+    //       append to Appendable interface?? or
+    //       prepend to Prependable interface???
+    /**
+     * Moves the UCharIterator to the next normalization boundary.
+     * (See the class documentation for more about normalization boundaries.)
+     * If the destination string is provided, then the substring
+     * between the starting and ending UCharIterator position
+     * is appended to that destination string.
+     * @param src input character iterator
+     * @param start starting index in the string
+     * @return number of UChars between the starting and ending UCharIterator position
+     * @draft ICU 4.4
+     */
+    virtual int32_t
+    nextBoundary(UCharIterator *src, UnicodeString *dest) const = 0;
+
+    /**
+     * Moves the UCharIterator to the previous normalization boundary.
+     * (See the class documentation for more about normalization boundaries.)
+     * If the destination string is provided, then the substring
+     * between the starting and ending UCharIterator position
+     * is prepended to that destination string.
+     * @param src input character iterator
+     * @param start starting index in the string
+     * @return number of UChars between the starting and ending UCharIterator position
+     * @draft ICU 4.4
+     */
+    virtual int32_t
+    previousBoundary(UCharIterator *src, UnicodeString *dest) const = 0;
+#endif
 
     /**
      * ICU "poor man's RTTI", returns a UClassID for this class.

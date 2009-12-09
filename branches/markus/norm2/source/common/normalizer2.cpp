@@ -424,7 +424,7 @@ InternalNormalizer2Provider::getInstance(UNormalizationMode mode, int32_t option
     }
 }
 
-Normalizer2 *
+const Normalizer2 *
 Normalizer2::getInstance(const char *packageName,
                          const char *name,
                          UNormalization2Mode mode,

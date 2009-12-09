@@ -827,8 +827,8 @@ Normalizer2Impl::compose(const UChar *src, const UChar *limit,
      * when we find a "no" or "maybe".
      *
      * When we back out from prevSrc back to prevStarter,
-     * then we also remove those same characters (which had been simply copied)
-     * from the ReorderingBuffer.
+     * then we also remove those same characters (which had been simply copied
+     * or canonically-order-inserted) from the ReorderingBuffer.
      * Therefore, at all times, the [prevStarter..prevSrc[ source units
      * must correspond 1:1 to destination units at the end of the destination buffer.
      */
@@ -1358,9 +1358,9 @@ Normalizer2Impl::makeFCD(const UChar *src, const UChar *limit,
             return prevBoundary;  // quick check "no"
         } else {
             /*
-             * Back out the part of the source that we copied already but
-             * is now going to be decomposed.
-             * prevSrc is set to after what was copied.
+             * Back out the part of the source that we copied or appended
+             * already but is now going to be decomposed.
+             * prevSrc is set to after what was copied/appended.
              */
             buffer->removeZeroCCSuffix((int32_t)(prevSrc-prevBoundary));
             /*
