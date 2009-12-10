@@ -4365,6 +4365,9 @@ UnicodeString::truncate(int32_t targetLength)
     return FALSE;
   } else if((uint32_t)targetLength < (uint32_t)length()) {
     setLength(targetLength);
+    if((fFlags&kBufferIsReadonly) && fUnion.fFields.fArray[targetLength] != 0) {
+      fUnion.fFields.fCapacity = targetLength;
+    }
     return TRUE;
   } else {
     return FALSE;

@@ -77,6 +77,7 @@ public:
     void TestNameSpace(void);
     void TestUTF32(void);
     void TestUTF8(void);
+    void TestReadOnlyAlias(void);
 };
 
 class StringCaseTest: public IntlTest {

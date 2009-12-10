@@ -62,6 +62,7 @@ void UnicodeStringTest::runIndexedTest( int32_t index, UBool exec, const char* &
         case 17: name = "TestNameSpace"; if (exec) TestNameSpace(); break;
         case 18: name = "TestUTF32"; if (exec) TestUTF32(); break;
         case 19: name = "TestUTF8"; if (exec) TestUTF8(); break;
+        case 20: name = "TestReadOnlyAlias"; if (exec) TestReadOnlyAlias(); break;
 
         default: name = ""; break; //needed to end loop
     }
@@ -1872,4 +1873,30 @@ UnicodeStringTest::TestUTF8() {
         errln("UnicodeString::toUTF8String() did not create the expected string.");
     }
 #endif
+}
+
+void
+UnicodeStringTest::TestReadOnlyAlias() {
+    UChar uchars[]={ 0x61, 0x62, 0 };
+    UnicodeString alias(TRUE, uchars, 2);
+    if(alias.length()!=2 || alias.getBuffer()!=uchars || alias.getTerminatedBuffer()!=uchars) {
+        errln("UnicodeString read-only-aliasing constructor does not behave as expected.");
+        return;
+    }
+    alias.truncate(1);
+    if(alias.length()!=1 || alias.getBuffer()!=uchars) {
+        errln("UnicodeString(read-only-alias).truncate() did not preserve aliasing as expected.");
+    }
+    if(alias.getTerminatedBuffer()==uchars) {
+        errln("UnicodeString(read-only-alias).truncate().getTerminatedBuffer() "
+              "did not allocate and copy as expected.");
+    }
+    if(uchars[1]!=0x62) {
+        errln("UnicodeString(read-only-alias).truncate().getTerminatedBuffer() "
+              "modified the original buffer.");
+    }
+    if(1!=u_strlen(alias.getTerminatedBuffer())) {
+        errln("UnicodeString(read-only-alias).truncate().getTerminatedBuffer() "
+              "does not return a buffer terminated at the proper length.");
+    }
 }
