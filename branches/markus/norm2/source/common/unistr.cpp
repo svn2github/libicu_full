@@ -780,6 +780,19 @@ UnicodeString::extract(int32_t start,
   return u_terminateChars(target, targetCapacity, length, &status);
 }
 
+UnicodeString
+UnicodeString::tempSubString(int32_t start, int32_t len) const {
+  UnicodeString result;
+  const UChar *array = getBuffer();  // not getArrayStart() to check kIsBogus & kOpenGetBuffer
+  if(array == NULL) {
+    result.setToBogus();
+  } else {
+    pinIndices(start, len);
+    result.setTo(FALSE, array + start, len);
+  }
+  return result;
+}
+
 int32_t
 UnicodeString::toUTF8(int32_t start, int32_t len,
                       char *target, int32_t capacity) const {
@@ -1218,14 +1231,34 @@ UnicodeString::doReplace(int32_t start,
     return *this;
   }
 
+  int32_t oldLength = this->length();
+
+  // optimize (read-only alias).remove(0, start) and .remove(start, end)
+  if((fFlags&kBufferIsReadonly) && srcLength == 0) {
+    if(start == 0) {
+      // remove prefix by adjusting the array pointer
+      pinIndex(length);
+      fUnion.fFields.fArray += length;
+      fUnion.fFields.fCapacity -= length;
+      setLength(oldLength - length);
+      return *this;
+    } else {
+      pinIndex(start);
+      if((start + length) >= oldLength) {
+        // remove suffix by reducing the length (like truncate())
+        setLength(start);
+        fUnion.fFields.fCapacity = start;  // not NUL-terminated any more
+        return *this;
+      }
+    }
+  }
+
   if(srcChars == 0) {
     srcStart = srcLength = 0;
   } else if(srcLength < 0) {
     // get the srcLength if necessary
     srcLength = u_strlen(srcChars + srcStart);
   }
-
-  int32_t oldLength = this->length();
 
   // calculate the size of the string after the replace
   int32_t newSize;
@@ -1594,4 +1627,3 @@ static void uprv_UnicodeStringDummy(void) {
     delete [] (new UnicodeString[2]);
 }
 #endif
-
