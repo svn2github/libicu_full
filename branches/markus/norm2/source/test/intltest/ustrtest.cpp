@@ -1121,6 +1121,30 @@ UnicodeStringTest::TestMiscellaneous()
     if(test1.hasMetaData() || UnicodeString().hasMetaData()) {
         errln("UnicodeString::hasMetaData() returns TRUE");
     }
+
+    // test getTerminatedBuffer() on a truncated, shared, heap-allocated string
+    test1=UNICODE_STRING_SIMPLE("abcdefghijklmnopqrstuvwxyz0123456789.");
+    test1.truncate(36);  // ensure length()<getCapacity()
+    test2=test1;  // share the buffer
+    test1.truncate(5);
+    if(test1.length()!=5 || test1.getTerminatedBuffer()[5]!=0) {
+        errln("UnicodeString(shared buffer).truncate() failed");
+    }
+    if(test2.length()!=36 || test2[5]!=0x66 || u_strlen(test2.getTerminatedBuffer())!=36) {
+        errln("UnicodeString(shared buffer).truncate().getTerminatedBuffer() "
+              "modified another copy of the string!");
+    }
+    test1=UNICODE_STRING_SIMPLE("abcdefghijklmnopqrstuvwxyz0123456789.");
+    test1.truncate(36);  // ensure length()<getCapacity()
+    test2=test1;  // share the buffer
+    test1.remove();
+    if(test1.length()!=0 || test1.getTerminatedBuffer()[0]!=0) {
+        errln("UnicodeString(shared buffer).remove() failed");
+    }
+    if(test2.length()!=36 || test2[0]!=0x61 || u_strlen(test2.getTerminatedBuffer())!=36) {
+        errln("UnicodeString(shared buffer).remove().getTerminatedBuffer() "
+              "modified another copy of the string!");
+    }
 }
 
 void
@@ -1898,5 +1922,27 @@ UnicodeStringTest::TestReadOnlyAlias() {
     if(1!=u_strlen(alias.getTerminatedBuffer())) {
         errln("UnicodeString(read-only-alias).truncate().getTerminatedBuffer() "
               "does not return a buffer terminated at the proper length.");
+    }
+
+    alias.setTo(TRUE, uchars, 2);
+    if(alias.length()!=2 || alias.getBuffer()!=uchars || alias.getTerminatedBuffer()!=uchars) {
+        errln("UnicodeString read-only-aliasing setTo() does not behave as expected.");
+        return;
+    }
+    alias.remove();
+    if(alias.length()!=0) {
+        errln("UnicodeString(read-only-alias).remove() did not work.");
+    }
+    if(alias.getTerminatedBuffer()==uchars) {
+        errln("UnicodeString(read-only-alias).remove().getTerminatedBuffer() "
+              "did not un-alias as expected.");
+    }
+    if(uchars[0]!=0x61) {
+        errln("UnicodeString(read-only-alias).remove().getTerminatedBuffer() "
+              "modified the original buffer.");
+    }
+    if(0!=u_strlen(alias.getTerminatedBuffer())) {
+        errln("UnicodeString.setTo(read-only-alias).remove().getTerminatedBuffer() "
+              "does not return a buffer terminated at length 0.");
     }
 }

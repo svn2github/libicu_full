@@ -4161,7 +4161,13 @@ UnicodeString::getTerminatedBuffer() {
   } else {
     UChar *array = getArrayStart();
     int32_t len = length();
-    if(len < getCapacity()) {
+    if(len < getCapacity() && ((fFlags&kRefCounted) == 0 || refCount() == 1)) {
+      /*
+       * kRefCounted: Do not write the NUL if the buffer is shared.
+       * That is mostly safe, except when the length of one copy was modified
+       * without copy-on-write, e.g., via truncate(newLength) or remove(void).
+       * Then the NUL would be written into the middle of another copy's string.
+       */
       if(!(fFlags&kBufferIsReadonly)) {
         /*
          * We must not write to a readonly buffer, but it is known to be
@@ -4332,10 +4338,12 @@ inline UnicodeString&
 UnicodeString::remove()
 {
   // remove() of a bogus string makes the string empty and non-bogus
-  if(isBogus()) {
-    unBogus();
+  // we also un-alias a read-only alias to deal with NUL-termination
+  // issues with getTerminatedBuffer()
+  if(fFlags & (kIsBogus|kBufferIsReadonly)) {
+    setToEmpty();
   } else {
-    setLength(0);
+    fShortLength = 0;
   }
   return *this;
 }
@@ -4365,8 +4373,8 @@ UnicodeString::truncate(int32_t targetLength)
     return FALSE;
   } else if((uint32_t)targetLength < (uint32_t)length()) {
     setLength(targetLength);
-    if((fFlags&kBufferIsReadonly) && fUnion.fFields.fArray[targetLength] != 0) {
-      fUnion.fFields.fCapacity = targetLength;
+    if(fFlags&kBufferIsReadonly) {
+      fUnion.fFields.fCapacity = targetLength;  // not NUL-terminated any more
     }
     return TRUE;
   } else {
