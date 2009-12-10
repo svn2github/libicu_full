@@ -390,4 +390,18 @@ uchar_swapNames(const UDataSwapper *ds,
                 const void *inData, int32_t length, void *outData,
                 UErrorCode *pErrorCode);
 
+#ifdef XP_CPLUSPLUS
+
+U_NAMESPACE_BEGIN
+
+class UnicodeSet;
+
+// implemented in uniset_props.cpp
+U_CFUNC UnicodeSet *
+uniset_getUnicode32Instance(UErrorCode &errorCode);
+
+U_NAMESPACE_END
+
+#endif
+
 #endif

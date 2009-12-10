@@ -74,6 +74,8 @@ typedef enum {
 
 U_NAMESPACE_BEGIN
 
+class UnicodeSet;
+
 /**
  * Unicode normalization functionality for standard Unicode normalization or
  * using custom mapping tables.
@@ -141,6 +143,7 @@ public:
     /**
      * Writes the normalized form of the source string to the destination string
      * (replacing its contents) and returns the destination string.
+     * The source and destination strings must be different objects.
      * @param src source string
      * @param dest destination string; its contents is replaced with normalized src
      * @param errorCode Standard ICU error code. Its input value must
@@ -158,6 +161,7 @@ public:
      * Appends the normalized form of the second string to the first string
      * (merging them at the boundary) and returns the first string.
      * The result is normalized if the first string was normalized.
+     * The first and second strings must be different objects.
      * @param first string, should be normalized
      * @param second string, will be normalized
      * @param errorCode Standard ICU error code. Its input value must
@@ -175,6 +179,7 @@ public:
      * Appends the second string to the first string
      * (merging them at the boundary) and returns the first string.
      * The result is normalized if both the strings were normalized.
+     * The first and second strings must be different objects.
      * @param first string, should be normalized
      * @param second string, should be normalized
      * @param errorCode Standard ICU error code. Its input value must
@@ -225,10 +230,9 @@ public:
     quickCheck(const UnicodeString &s, UErrorCode &errorCode) const = 0;
 
     /**
-     * Returns the end of the normalized substring of the input string starting
-     * at the specified index.
-     * In other words, with <code>end=spanQuickCheckYes(s, start, ec);</code>
-     * the substring <code>UnicodeString(s, start, end-start)</code>
+     * Returns the end of the normalized substring of the input string.
+     * In other words, with <code>end=spanQuickCheckYes(s, ec);</code>
+     * the substring <code>UnicodeString(s, 0, end)</code>
      * will pass the quick check with a "yes" result.
      *
      * The returned end index is usually one or more characters before the
@@ -240,7 +244,6 @@ public:
      * and if it returns a prefix shorter than the input string,
      * copy that prefix and use normalizeSecondAndAppend() for the remainder.
      * @param s input string
-     * @param start starting index in the string for the quick check
      * @param errorCode Standard ICU error code. Its input value must
      *                  pass the U_SUCCESS() test, or else the function returns
      *                  immediately. Check for U_FAILURE() on output or use with
@@ -249,7 +252,7 @@ public:
      * @draft ICU 4.4
      */
     virtual int32_t
-    spanQuickCheckYes(const UnicodeString &s, int32_t start, UErrorCode &errorCode) const = 0;
+    spanQuickCheckYes(const UnicodeString &s, UErrorCode &errorCode) const = 0;
 
 #if 0
     // TODO: Needed as public API?
@@ -330,6 +333,49 @@ public:
     virtual UClassID getDynamicClassID() const;
 
     // TODO: no copy, ==, etc.
+};
+
+class U_COMMON_API FilteredNormalizer2 : public Normalizer2 {
+public:
+    FilteredNormalizer2(const Normalizer2 &n2, const UnicodeSet &filterSet) :
+            norm2(n2), set(filterSet) {}
+
+    virtual UnicodeString &
+    normalize(const UnicodeString &src,
+              UnicodeString &dest,
+              UErrorCode &errorCode) const;
+    virtual UnicodeString &
+    normalizeSecondAndAppend(UnicodeString &first,
+                             const UnicodeString &second,
+                             UErrorCode &errorCode) const;
+    virtual UnicodeString &
+    append(UnicodeString &first,
+           const UnicodeString &second,
+           UErrorCode &errorCode) const;
+
+    virtual UBool
+    isNormalized(const UnicodeString &s, UErrorCode &errorCode) const;
+    virtual UNormalizationCheckResult
+    quickCheck(const UnicodeString &s, UErrorCode &errorCode) const;
+    virtual int32_t
+    spanQuickCheckYes(const UnicodeString &s, UErrorCode &errorCode) const;
+
+    /**
+     * ICU "poor man's RTTI", returns a UClassID for this class.
+     * @returns a UClassID for this class.
+     * @draft ICU 4.4
+     */
+    static UClassID U_EXPORT2 getStaticClassID();
+
+    /**
+     * ICU "poor man's RTTI", returns a UClassID for the actual class.
+     * @return a UClassID for the actual class.
+     * @draft ICU 4.4
+     */
+    virtual UClassID getDynamicClassID() const;
+private:
+    const Normalizer2 &norm2;
+    const UnicodeSet &set;
 };
 
 U_NAMESPACE_END

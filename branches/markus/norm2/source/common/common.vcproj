@@ -3030,6 +3030,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\filterednormalizer2.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\normalizer2.cpp"
 				>
 			</File>

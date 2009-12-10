@@ -10,6 +10,7 @@
 
 #if !UCONFIG_NO_NORMALIZATION
 
+#include "unicode/uniset.h"
 #include "unicode/unistr.h"
 #include "unicode/chariter.h"
 #include "unicode/schriter.h"
@@ -19,6 +20,7 @@
 #include "cmemory.h"
 #include "normalizer2impl.h"
 #include "unormimp.h"
+#include "uprops.h"  // for uniset_getUnicode32Instance()
 
 U_NAMESPACE_BEGIN
 
@@ -141,30 +143,13 @@ Normalizer::normalize(const UnicodeString& source,
             // the source and result strings are the same object, use a temporary one
             dest=&localDest;
         }
-
-        if(options==0) {  // TODO: pass through all options
-            Normalizer2 *n2=InternalNormalizer2Provider::getInstance(mode, options, status);
-            if(U_SUCCESS(status)) {
+        Normalizer2 *n2=InternalNormalizer2Provider::getInstance(mode, status);
+        if(U_SUCCESS(status)) {
+            if(options&UNORM_UNICODE_3_2) {
+                FilteredNormalizer2(*n2, *uniset_getUnicode32Instance(status)).
+                    normalize(source, *dest, status);
+            } else {
                 n2->normalize(source, *dest, status);
-            }
-        } else {
-            UChar *buffer=dest->getBuffer(source.length());
-            int32_t length=unorm_internalNormalize(buffer, dest->getCapacity(),
-                                                   source.getBuffer(), source.length(),
-                                                   mode, options,
-                                                   &status);
-            dest->releaseBuffer(U_SUCCESS(status) ? length : 0);
-            if(status==U_BUFFER_OVERFLOW_ERROR) {
-                status=U_ZERO_ERROR;
-                buffer=dest->getBuffer(length);
-                length=unorm_internalNormalize(buffer, dest->getCapacity(),
-                                               source.getBuffer(), source.length(),
-                                               mode, options,
-                                               &status);
-                dest->releaseBuffer(U_SUCCESS(status) ? length : 0);
-            }
-            if(U_FAILURE(status)) {
-                result.setToBogus();
             }
         }
         if(dest==&localDest && U_SUCCESS(status)) {
@@ -269,16 +254,16 @@ UNormalizationCheckResult
 Normalizer::quickCheck(const UnicodeString& source,
                        UNormalizationMode mode, int32_t options,
                        UErrorCode &status) {
-    if(options==0) {  // TODO: pass through all options
-        Normalizer2 *n2=InternalNormalizer2Provider::getInstance(mode, options, status);
-        if(U_SUCCESS(status)) {
-            return n2->quickCheck(source, status);
+    Normalizer2 *n2=InternalNormalizer2Provider::getInstance(mode, status);
+    if(U_SUCCESS(status)) {
+        if(options&UNORM_UNICODE_3_2) {
+            return FilteredNormalizer2(*n2, *uniset_getUnicode32Instance(status)).
+                quickCheck(source, status);
         } else {
-            return UNORM_MAYBE;
+            return n2->quickCheck(source, status);
         }
     } else {
-        return unorm_quickCheckWithOptions(source.getBuffer(), source.length(),
-                                           mode, options, &status);
+        return UNORM_MAYBE;
     }
 }
 
@@ -286,12 +271,16 @@ UBool
 Normalizer::isNormalized(const UnicodeString& source,
                          UNormalizationMode mode, int32_t options,
                          UErrorCode &status) {
-    if(options==0) {  // TODO: pass through all options
-        Normalizer2 *n2=InternalNormalizer2Provider::getInstance(mode, options, status);
-        return U_SUCCESS(status) && n2->isNormalized(source, status);
+    Normalizer2 *n2=InternalNormalizer2Provider::getInstance(mode, status);
+    if(U_SUCCESS(status)) {
+        if(options&UNORM_UNICODE_3_2) {
+            return FilteredNormalizer2(*n2, *uniset_getUnicode32Instance(status)).
+                isNormalized(source, status);
+        } else {
+            return n2->isNormalized(source, status);
+        }
     } else {
-        return unorm_isNormalizedWithOptions(source.getBuffer(), source.length(),
-                                             mode, options, &status);
+        return FALSE;
     }
 }
 

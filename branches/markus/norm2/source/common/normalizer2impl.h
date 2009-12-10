@@ -397,7 +397,7 @@ public:
     static Normalizer2 *getNFKC_CFInstance(UErrorCode &errorCode);
     static Normalizer2 *getNoopInstance(UErrorCode &errorCode);
 
-    static Normalizer2 *getInstance(UNormalizationMode, int32_t options, UErrorCode &errorCode);
+    static Normalizer2 *getInstance(UNormalizationMode, UErrorCode &errorCode);
 private:
     InternalNormalizer2Provider();  // No instantiation.
 };

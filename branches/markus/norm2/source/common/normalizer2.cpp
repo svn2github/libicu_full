@@ -20,6 +20,8 @@
 
 #include "unicode/localpointer.h"
 #include "unicode/normalizer2.h"
+#include "unicode/unistr.h"
+#include "unicode/unorm.h"
 #include "cstring.h"
 #include "mutex.h"
 #include "normalizer2impl.h"
@@ -36,7 +38,11 @@ class NoopNormalizer2 : public Normalizer2 {
               UnicodeString &dest,
               UErrorCode &errorCode) const {
         if(U_SUCCESS(errorCode)) {
-            dest=src;
+            if(&dest!=&src) {
+                dest=src;
+            } else {
+                errorCode=U_ILLEGAL_ARGUMENT_ERROR;
+            }
         }
         return dest;
     }
@@ -54,7 +60,11 @@ class NoopNormalizer2 : public Normalizer2 {
            const UnicodeString &second,
            UErrorCode &errorCode) const {
         if(U_SUCCESS(errorCode)) {
-            first.append(second);
+            if(&first!=&second) {
+                first.append(second);
+            } else {
+                errorCode=U_ILLEGAL_ARGUMENT_ERROR;
+            }
         }
         return first;
     }
@@ -67,7 +77,7 @@ class NoopNormalizer2 : public Normalizer2 {
         return UNORM_YES;
     }
     virtual int32_t
-    spanQuickCheckYes(const UnicodeString &s, int32_t start, UErrorCode &errorCode) const {
+    spanQuickCheckYes(const UnicodeString &s, UErrorCode &errorCode) const {
         return s.length();
     }
 };
@@ -86,6 +96,10 @@ protected:
         checkCanGetBuffer(src, errorCode);
         if(U_FAILURE(errorCode)) {
             dest.setToBogus();
+            return dest;
+        }
+        if(&dest==&src) {
+            errorCode=U_ILLEGAL_ARGUMENT_ERROR;
             return dest;
         }
         dest.remove();
@@ -123,6 +137,10 @@ protected:
         if(U_FAILURE(errorCode)) {
             return first;
         }
+        if(&first==&second) {
+            errorCode=U_ILLEGAL_ARGUMENT_ERROR;
+            return first;
+        }
         ReorderingBuffer buffer(impl, first);
         if(buffer.init(errorCode)) {
             const UChar *secondArray=second.getBuffer();
@@ -144,27 +162,20 @@ protected:
         }
         const UChar *sArray=s.getBuffer();
         const UChar *sLimit=sArray+s.length();
-        const UChar *spanLimit=spanQuickCheckYes(sArray, sLimit, errorCode);
-        return spanLimit==sLimit;
+        return sLimit==spanQuickCheckYes(sArray, sLimit, errorCode);
     }
     virtual UNormalizationCheckResult
     quickCheck(const UnicodeString &s, UErrorCode &errorCode) const {
         return Normalizer2WithImpl::isNormalized(s, errorCode) ? UNORM_YES : UNORM_NO;
     }
     virtual int32_t
-    spanQuickCheckYes(const UnicodeString &s, int32_t start, UErrorCode &errorCode) const {
+    spanQuickCheckYes(const UnicodeString &s, UErrorCode &errorCode) const {
         checkCanGetBuffer(s, errorCode);
         if(U_FAILURE(errorCode)) {
             return 0;
         }
-        int32_t sLength=s.length();
-        if(start<0 || sLength<start) {
-            errorCode=U_ILLEGAL_ARGUMENT_ERROR;
-            return 0;
-        }
         const UChar *sArray=s.getBuffer();
-        const UChar *spanLimit=spanQuickCheckYes(sArray+start, sArray+sLength, errorCode);
-        return (int32_t)(spanLimit-sArray);
+        return (int32_t)(spanQuickCheckYes(sArray, sArray+s.length(), errorCode)-sArray);
     }
     virtual const UChar *
     spanQuickCheckYes(const UChar *src, const UChar *limit, UErrorCode &errorCode) const = 0;
@@ -398,29 +409,23 @@ Normalizer2 *InternalNormalizer2Provider::getNoopInstance(UErrorCode &errorCode)
 }
 
 Normalizer2 *
-InternalNormalizer2Provider::getInstance(UNormalizationMode mode, int32_t options,
-                                         UErrorCode &errorCode) {
+InternalNormalizer2Provider::getInstance(UNormalizationMode mode, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) {
         return NULL;
     }
-    if(options==0) {  // TODO: support UNORM_UNICODE_3_2
-        switch(mode) {
-        case UNORM_NFD:
-            return getNFDInstance(errorCode);
-        case UNORM_NFKD:
-            return getNFKDInstance(errorCode);
-        case UNORM_NFC:
-            return getNFCInstance(errorCode);
-        case UNORM_NFKC:
-            return getNFKCInstance(errorCode);
-        case UNORM_FCD:
-            return getFCDInstance(errorCode);
-        default:  // UNORM_NONE
-            return getNoopInstance(errorCode);
-        }
-    } else {
-        errorCode=U_UNSUPPORTED_ERROR;
-        return NULL;
+    switch(mode) {
+    case UNORM_NFD:
+        return getNFDInstance(errorCode);
+    case UNORM_NFKD:
+        return getNFKDInstance(errorCode);
+    case UNORM_NFC:
+        return getNFCInstance(errorCode);
+    case UNORM_NFKC:
+        return getNFKCInstance(errorCode);
+    case UNORM_FCD:
+        return getFCDInstance(errorCode);
+    default:  // UNORM_NONE
+        return getNoopInstance(errorCode);
     }
 }
 
