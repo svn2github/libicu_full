@@ -24,6 +24,7 @@
 #include "cmemory.h"
 #include "mutex.h"
 #include "normalizer2impl.h"
+#include "uassert.h"
 #include "utrie2.h"
 
 U_NAMESPACE_BEGIN
@@ -343,17 +344,17 @@ Normalizer2Impl::load(const char *packageName, const char *name, UErrorCode &err
         errorCode=U_INVALID_FORMAT_ERROR;  // Not enough indexes.
         return;
     }
-    // Copy the indexes. Take care of possible growth of the array.
-    if(indexesLength>IX_COUNT) {
-        indexesLength=IX_COUNT;
-    }
-    uprv_memcpy(indexes, inIndexes, indexesLength*4);
-    if(indexesLength<IX_COUNT) {
-        uprv_memset(indexes+indexesLength, 0, (IX_COUNT-indexesLength)*4);
-    }
 
-    int32_t offset=indexes[IX_NORM_TRIE_OFFSET];
-    int32_t nextOffset=indexes[IX_EXTRA_DATA_OFFSET];
+    minDecompNoCP=inIndexes[IX_MIN_DECOMP_NO_CP];
+    minCompNoMaybeCP=inIndexes[IX_MIN_COMP_NO_MAYBE_CP];
+
+    minYesNo=inIndexes[IX_MIN_YES_NO];
+    minNoNo=inIndexes[IX_MIN_NO_NO];
+    limitNoNo=inIndexes[IX_LIMIT_NO_NO];
+    minMaybeYes=inIndexes[IX_MIN_MAYBE_YES];
+
+    int32_t offset=inIndexes[IX_NORM_TRIE_OFFSET];
+    int32_t nextOffset=inIndexes[IX_EXTRA_DATA_OFFSET];
     normTrie=utrie2_openFromSerialized(UTRIE2_16_VALUE_BITS,
                                        inBytes+offset, nextOffset-offset, NULL,
                                        &errorCode);
@@ -363,7 +364,7 @@ Normalizer2Impl::load(const char *packageName, const char *name, UErrorCode &err
 
     offset=nextOffset;
     maybeYesCompositions=(const uint16_t *)(inBytes+offset);
-    extraData=maybeYesCompositions+(MIN_NORMAL_MAYBE_YES-indexes[IX_MIN_MAYBE_YES]);
+    extraData=maybeYesCompositions+(MIN_NORMAL_MAYBE_YES-minMaybeYes);
 }
 
 uint8_t Normalizer2Impl::getTrailCCFromCompYesAndZeroCC(const UChar *cpStart, const UChar *cpLimit) const {
@@ -373,7 +374,7 @@ uint8_t Normalizer2Impl::getTrailCCFromCompYesAndZeroCC(const UChar *cpStart, co
     } else {
         prevNorm16=getNorm16FromSurrogatePair(cpStart[0], cpStart[1]);
     }
-    if(prevNorm16<indexes[IX_MIN_YES_NO]) {
+    if(prevNorm16<minYesNo) {
         return 0;  // yesYes has ccc=tccc=0
     } else {
         return (uint8_t)(*getMapping(prevNorm16)>>8);  // tccc from noNo
@@ -407,7 +408,7 @@ const UChar *
 Normalizer2Impl::decompose(const UChar *src, const UChar *limit,
                            ReorderingBuffer *buffer,
                            UErrorCode &errorCode) const {
-    UChar32 minNoCP=indexes[IX_MIN_DECOMP_NO_CP];
+    UChar32 minNoCP=minDecompNoCP;
     if(limit==NULL) {
         src=copyLowPrefixFromNulTerminated(src, minNoCP, buffer, errorCode);
         if(U_FAILURE(errorCode)) {
@@ -820,7 +821,7 @@ Normalizer2Impl::compose(const UChar *src, const UChar *limit,
                          UNormalizationCheckResult *pQCResult,
                          ReorderingBuffer *buffer,
                          UErrorCode &errorCode) const {
-    UChar32 minNoMaybeCP=indexes[IX_MIN_COMP_NO_MAYBE_CP];
+    UChar32 minNoMaybeCP=minCompNoMaybeCP;
     if(limit==NULL) {
         src=copyLowPrefixFromNulTerminated(src, minNoMaybeCP,
                                            pQCResult==NULL ? buffer : NULL,
@@ -906,7 +907,7 @@ Normalizer2Impl::compose(const UChar *src, const UChar *limit,
 
         src+=U16_LENGTH(c);
         /*
-         * isCompYesAndZeroCC(norm16) is false, that is, norm16>=indexes[IX_MIN_NO_NO].
+         * isCompYesAndZeroCC(norm16) is false, that is, norm16>=minNoNo.
          * c is either a "noNo" (has a mapping) or a "maybeYes" (combines backward)
          * or has ccc!=0.
          * Check for Jamo V/T, then for regular characters.
@@ -1221,11 +1222,11 @@ void Normalizer2Impl::setFCD16FromNorm16(UChar32 start, UChar32 end, uint16_t no
         if(norm16>=MIN_NORMAL_MAYBE_YES) {
             norm16&=0xff;
             norm16|=norm16<<8;
-        } else if(norm16<=indexes[IX_MIN_YES_NO] || indexes[IX_MIN_MAYBE_YES]<=norm16) {
+        } else if(norm16<=minYesNo || minMaybeYes<=norm16) {
             // no decomposition or Hangul syllable, all zeros
             break;
-        } else if(indexes[IX_LIMIT_NO_NO]<=norm16) {
-            int32_t delta=norm16-(indexes[IX_MIN_MAYBE_YES]-MAX_DELTA-1);
+        } else if(limitNoNo<=norm16) {
+            int32_t delta=norm16-(minMaybeYes-MAX_DELTA-1);
             if(start==end) {
                 start+=delta;
                 norm16=getNorm16(start);
@@ -1447,6 +1448,105 @@ const UChar *Normalizer2Impl::findNextFCDBoundary(const UChar *p, const UChar *l
         fcd16=iter.next16();
     } while(fcd16>0xff);
     return iter.codePointStart;
+}
+
+// Normalizer2 data swapping ----------------------------------------------- ***
+
+U_CAPI int32_t U_EXPORT2
+unorm2_swap(const UDataSwapper *ds,
+            const void *inData, int32_t length, void *outData,
+            UErrorCode *pErrorCode) {
+    const UDataInfo *pInfo;
+    int32_t headerSize;
+
+    const uint8_t *inBytes;
+    uint8_t *outBytes;
+
+    const int32_t *inIndexes;
+    int32_t indexes[Normalizer2Impl::IX_MIN_MAYBE_YES+1];
+
+    int32_t i, offset, nextOffset, size;
+
+    /* udata_swapDataHeader checks the arguments */
+    headerSize=udata_swapDataHeader(ds, inData, length, outData, pErrorCode);
+    if(pErrorCode==NULL || U_FAILURE(*pErrorCode)) {
+        return 0;
+    }
+
+    /* check data format and format version */
+    pInfo=(const UDataInfo *)((const char *)inData+4);
+    if(!(
+        pInfo->dataFormat[0]==0x4e &&   /* dataFormat="Nrm2" */
+        pInfo->dataFormat[1]==0x72 &&
+        pInfo->dataFormat[2]==0x6d &&
+        pInfo->dataFormat[3]==0x32 &&
+        pInfo->formatVersion[0]==1
+    )) {
+        udata_printError(ds, "unorm2_swap(): data format %02x.%02x.%02x.%02x (format version %02x) is not recognized as Normalizer2 data\n",
+                         pInfo->dataFormat[0], pInfo->dataFormat[1],
+                         pInfo->dataFormat[2], pInfo->dataFormat[3],
+                         pInfo->formatVersion[0]);
+        *pErrorCode=U_UNSUPPORTED_ERROR;
+        return 0;
+    }
+
+    inBytes=(const uint8_t *)inData+headerSize;
+    outBytes=(uint8_t *)outData+headerSize;
+
+    inIndexes=(const int32_t *)inBytes;
+
+    if(length>=0) {
+        length-=headerSize;
+        if(length<sizeof(indexes)) {
+            udata_printError(ds, "unorm2_swap(): too few bytes (%d after header) for Normalizer2 data\n",
+                             length);
+            *pErrorCode=U_INDEX_OUTOFBOUNDS_ERROR;
+            return 0;
+        }
+    }
+
+    /* read the first few indexes */
+    for(i=0; i<=Normalizer2Impl::IX_MIN_MAYBE_YES; ++i) {
+        indexes[i]=udata_readInt32(ds, inIndexes[i]);
+    }
+
+    /* get the total length of the data */
+    size=indexes[Normalizer2Impl::IX_TOTAL_SIZE];
+
+    if(length>=0) {
+        if(length<size) {
+            udata_printError(ds, "unorm2_swap(): too few bytes (%d after header) for all of Normalizer2 data\n",
+                             length);
+            *pErrorCode=U_INDEX_OUTOFBOUNDS_ERROR;
+            return 0;
+        }
+
+        /* copy the data for inaccessible bytes */
+        if(inBytes!=outBytes) {
+            uprv_memcpy(outBytes, inBytes, size);
+        }
+
+        offset=0;
+
+        /* swap the int32_t indexes[] */
+        nextOffset=indexes[Normalizer2Impl::IX_NORM_TRIE_OFFSET];
+        ds->swapArray32(ds, inBytes, nextOffset-offset, outBytes, pErrorCode);
+        offset=nextOffset;
+
+        /* swap the UTrie2 */
+        nextOffset=indexes[Normalizer2Impl::IX_EXTRA_DATA_OFFSET];
+        utrie2_swap(ds, inBytes+offset, nextOffset-offset, outBytes+offset, pErrorCode);
+        offset=nextOffset;
+
+        /* swap the uint16_t extraData[] */
+        nextOffset=indexes[Normalizer2Impl::IX_EXTRA_DATA_OFFSET+1];
+        ds->swapArray16(ds, inBytes+offset, nextOffset-offset, outBytes+offset, pErrorCode);
+        offset=nextOffset;
+
+        U_ASSERT(offset==size);
+    }
+
+    return headerSize+size;
 }
 
 U_NAMESPACE_END

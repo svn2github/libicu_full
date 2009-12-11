@@ -954,7 +954,7 @@ void Normalizer2DataBuilder::writeBinaryFile(const char *filename) {
     offset+=norm16TrieLength;
     indexes[Normalizer2Impl::IX_EXTRA_DATA_OFFSET]=offset;
     int32_t totalSize=offset+=extraData.length()*2;
-    for(int32_t i=Normalizer2Impl::IX_FCD_TRIE_OFFSET; i<=Normalizer2Impl::IX_TOTAL_SIZE; ++i) {
+    for(int32_t i=Normalizer2Impl::IX_RESERVED2_OFFSET; i<=Normalizer2Impl::IX_TOTAL_SIZE; ++i) {
         indexes[i]=totalSize;
     }
 

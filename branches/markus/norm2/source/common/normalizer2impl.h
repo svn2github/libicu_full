@@ -163,7 +163,7 @@ public:
         if(norm16>=MIN_NORMAL_MAYBE_YES) {
             return (uint8_t)norm16;
         }
-        if(norm16<indexes[IX_MIN_NO_NO] || indexes[IX_LIMIT_NO_NO]<=norm16) {
+        if(norm16<minNoNo || limitNoNo<=norm16) {
             return 0;
         }
         return getCCFromNoNo(norm16);
@@ -203,7 +203,7 @@ public:
         // Byte offsets from the start of the data, after the generic header.
         IX_NORM_TRIE_OFFSET,
         IX_EXTRA_DATA_OFFSET,
-        IX_FCD_TRIE_OFFSET,
+        IX_RESERVED2_OFFSET,
         IX_RESERVED3_OFFSET,
         IX_RESERVED4_OFFSET,
         IX_RESERVED5_OFFSET,
@@ -274,28 +274,24 @@ private:
     static UBool U_CALLCONV
     isAcceptable(void *context, const char *type, const char *name, const UDataInfo *pInfo);
 
-    UBool isMaybe(uint16_t norm16) const {
-        return indexes[IX_MIN_MAYBE_YES]<=norm16 && norm16<=JAMO_VT;
-    }
-    UBool isMaybeOrNonZeroCC(uint16_t norm16) const { return norm16>=indexes[IX_MIN_MAYBE_YES]; }
-    // TODO: static UBool isInert(uint16_t norm16) const { return norm16==0; }
-    // TODO: static UBool isJamoL(uint16_t norm16) const { return norm16==1; }
+    UBool isMaybe(uint16_t norm16) const { return minMaybeYes<=norm16 && norm16<=JAMO_VT; }
+    UBool isMaybeOrNonZeroCC(uint16_t norm16) const { return norm16>=minMaybeYes; }
+    // static UBool isInert(uint16_t norm16) const { return norm16==0; }
+    // static UBool isJamoL(uint16_t norm16) const { return norm16==1; }
     static UBool isJamoVT(uint16_t norm16) { return norm16==JAMO_VT; }
-    UBool isHangul(uint16_t norm16) const { return norm16==indexes[IX_MIN_YES_NO]; }
-    UBool isCompYesAndZeroCC(uint16_t norm16) const { return norm16<indexes[IX_MIN_NO_NO]; }
-    // TODO: UBool isCompYes(uint16_t norm16) const {
-    //     return norm16>=MIN_YES_YES_WITH_CC || norm16<indexes[IX_MIN_NO_NO];
+    UBool isHangul(uint16_t norm16) const { return norm16==minYesNo; }
+    UBool isCompYesAndZeroCC(uint16_t norm16) const { return norm16<minNoNo; }
+    // UBool isCompYes(uint16_t norm16) const {
+    //     return norm16>=MIN_YES_YES_WITH_CC || norm16<minNoNo;
     // }
-    // TODO: UBool isCompYesOrMaybe(uint16_t norm16) const {
-    //     return norm16<indexes[IX_MIN_NO_NO] || indexes[IX_MIN_MAYBE_YES]<=norm16;
+    // UBool isCompYesOrMaybe(uint16_t norm16) const {
+    //     return norm16<minNoNo || minMaybeYes<=norm16;
     // }
-    UBool isDecompYes(uint16_t norm16) const {
-        return norm16<indexes[IX_MIN_YES_NO] || indexes[IX_MIN_MAYBE_YES]<=norm16;
-    }
+    UBool isDecompYes(uint16_t norm16) const { return norm16<minYesNo || minMaybeYes<=norm16; }
     UBool isDecompYesAndZeroCC(uint16_t norm16) const {
-        return norm16<indexes[IX_MIN_YES_NO] ||
+        return norm16<minYesNo ||
                norm16==JAMO_VT ||
-               (indexes[IX_MIN_MAYBE_YES]<=norm16 && norm16<=MIN_NORMAL_MAYBE_YES);
+               (minMaybeYes<=norm16 && norm16<=MIN_NORMAL_MAYBE_YES);
     }
     /**
      * A little faster and simpler than isDecompYesAndZeroCC() but does not include
@@ -303,13 +299,13 @@ private:
      * (Standard Unicode 5.2 normalization does not have such characters.)
      */
     UBool isMostDecompYesAndZeroCC(uint16_t norm16) const {
-        return norm16<indexes[IX_MIN_YES_NO] || norm16==MIN_NORMAL_MAYBE_YES || norm16==JAMO_VT;
+        return norm16<minYesNo || norm16==MIN_NORMAL_MAYBE_YES || norm16==JAMO_VT;
     }
-    UBool isDecompNoAlgorithmic(uint16_t norm16) const { return norm16>=indexes[IX_LIMIT_NO_NO]; }
+    UBool isDecompNoAlgorithmic(uint16_t norm16) const { return norm16>=limitNoNo; }
 
     // For use with isCompYes().
     // Perhaps the compiler can combine the two tests for MIN_YES_YES_WITH_CC.
-    // TODO: static uint8_t getCCFromYes(uint16_t norm16) {
+    // static uint8_t getCCFromYes(uint16_t norm16) {
     //     return norm16>=MIN_YES_YES_WITH_CC ? (uint8_t)norm16 : 0;
     // }
     uint8_t getCCFromNoNo(uint16_t norm16) const {
@@ -325,18 +321,18 @@ private:
 
     // Requires algorithmic-NoNo.
     UChar32 mapAlgorithmic(UChar32 c, uint16_t norm16) const {
-        return c+norm16-(indexes[IX_MIN_MAYBE_YES]-MAX_DELTA-1);
+        return c+norm16-(minMaybeYes-MAX_DELTA-1);
     }
 
-    // Requires indexes[IX_MIN_YES_NO]<norm16<indexes[IX_LIMIT_NO_NO].
+    // Requires minYesNo<norm16<limitNoNo.
     const uint16_t *getMapping(uint16_t norm16) const { return extraData+norm16; }
     const uint16_t *getCompositionsListForDecompYesAndZeroCC(uint16_t norm16) const {
         if(norm16==0 || MIN_NORMAL_MAYBE_YES<=norm16) {
             return NULL;
-        } else if(norm16<indexes[IX_MIN_MAYBE_YES]) {
+        } else if(norm16<minMaybeYes) {
             return extraData+norm16;  // for yesYes; if Jamo L: harmless empty list
         } else {
-            return maybeYesCompositions+norm16-indexes[IX_MIN_MAYBE_YES];
+            return maybeYesCompositions+norm16-minMaybeYes;
         }
     }
     const uint16_t *getCompositionsListForComposite(uint16_t norm16) const {
@@ -378,7 +374,17 @@ private:
 
     UDataMemory *memory;
     UVersionInfo dataVersion;
-    int32_t indexes[IX_COUNT];  // copied not pointed to remove an indirection
+
+    // Code point thresholds for quick check codes.
+    UChar32 minDecompNoCP;
+    UChar32 minCompNoMaybeCP;
+
+    // Norm16 value thresholds for quick check combinations and types of extra data.
+    uint16_t minYesNo;
+    uint16_t minNoNo;
+    uint16_t limitNoNo;
+    uint16_t minMaybeYes;
+
     UTrie2 *normTrie;
     const uint16_t *maybeYesCompositions;
     const uint16_t *extraData;  // mappings and/or compositions for yesYes, yesNo & noNo characters
@@ -404,6 +410,11 @@ public:
 private:
     InternalNormalizer2Provider();  // No instantiation.
 };
+
+U_CAPI int32_t U_EXPORT2
+unorm2_swap(const UDataSwapper *ds,
+            const void *inData, int32_t length, void *outData,
+            UErrorCode *pErrorCode);
 
 U_NAMESPACE_END
 
