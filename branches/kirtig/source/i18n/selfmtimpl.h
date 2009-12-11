@@ -88,8 +88,6 @@ U_NAMESPACE_BEGIN
 #define LOW_Y             ((UChar)0x0079)
 #define LOW_Z             ((UChar)0x007A)
 
-#define SELECT_RANGE_HIGH  0x7fffffff;
-
 class UnicodeSet;
 
 U_NAMESPACE_END

@@ -16,6 +16,7 @@
 *   06/17/97    helena      Fixed the getPattern to return the correct pattern.
 *   07/09/97    helena      Made ParsePosition into a class.
 *   02/22/99    stephen     Removed character literals for EBCDIC safety
+*   11/01/09    kirtig      Added SelectFormat  
 ********************************************************************************
 */
 
@@ -1609,27 +1610,11 @@ MessageFormat::makeFormat(int32_t formatNumber,
         fmt = makeRBNF(URBNF_DURATION, fLocale, segments[3], ec);
         break;
     case 8: // plural
-        argType = Formattable::kDouble;
-        quotedPattern = segments[3];
-        for (int32_t i = 0; i < quotedPattern.length(); ++i) {
-            UChar ch = quotedPattern.charAt(i);
-            if (ch == SINGLE_QUOTE) {
-                if (i+1 < quotedPattern.length() && quotedPattern.charAt(i+1)==SINGLE_QUOTE) {
-                    unquotedPattern+=ch;
-                    ++i;
-                }
-                else {
-                    inQuote = !inQuote;
-                }
-            } 
-            else {
-                unquotedPattern += ch;
-            }
-        }
-        fmt = new PluralFormat(fLocale, unquotedPattern, ec);
-        break;
     case 9: // Select
-        argType = Formattable::kString;
+        if(typeID == 8)
+            argType = Formattable::kDouble;
+        else
+            argType = Formattable::kString;
         quotedPattern = segments[3];
         for (int32_t i = 0; i < quotedPattern.length(); ++i) {
             UChar ch = quotedPattern.charAt(i);
@@ -1646,7 +1631,10 @@ MessageFormat::makeFormat(int32_t formatNumber,
                 unquotedPattern += ch;
             }
         }
-        fmt = new SelectFormat(unquotedPattern, ec);
+        if(typeID == 8)
+            fmt = new PluralFormat(fLocale, unquotedPattern, ec);
+        else
+            fmt = new SelectFormat(unquotedPattern, ec);
         break;
     default:
         argType = Formattable::kString;
