@@ -190,6 +190,8 @@ class DateFormat;
  *                      | "date" { "," datetimeStyle }
  *                      | "number" { "," numberStyle }
  *                      | "choice" "," choiceStyle
+ *                      | "plural" "," pluralStyle
+ *                      | "select" "," selectStyle
  *
  *       datetimeStyle := "short"
  *                      | "medium"
@@ -202,16 +204,18 @@ class DateFormat;
  *                      | "integer"
  *                      | numberFormatPattern
  *
- *       choiceStyle :=   choiceFormatPattern
+ *       choiceStyle := choiceFormatPattern
  * 
  *       pluralStyle := pluralFormatPattern
+ * 
+ *       selectStyle := selectFormatPattern
  * \endcode
  * </pre>
  * If there is no elementFormat, then the argument must be a string,
  * which is substituted. If there is no dateTimeStyle or numberStyle,
  * then the default format is used (e.g.  NumberFormat::createInstance(),
  * DateFormat::createTimeInstance(DateFormat::kDefault, ...) or DateFormat::createDateInstance(DateFormat::kDefault, ...). For
- * a ChoiceFormat, the pattern must always be specified, since there
+ * a ChoiceFormat, PluralFormat, or SelectFormat, the pattern must always be specified, since there
  * is no default.
  * <P>
  * In strings, single quotes can be used to quote syntax characters.
@@ -334,7 +338,7 @@ public:
     /**
      * Constructs a new MessageFormat using the given pattern and locale.
      * @param pattern   Pattern used to construct object.
-     * @param newLocale The locale to use for formatting dates and numbers.
+     * @param newLocale The locale to use for formatting dates and numbers and plurals.
      * @param status    Input/output error code.  If the
      *                  pattern cannot be parsed, set to failure code.
      * @stable ICU 2.0
@@ -345,7 +349,7 @@ public:
     /**
      * Constructs a new MessageFormat using the given pattern and locale.
      * @param pattern   Pattern used to construct object.
-     * @param newLocale The locale to use for formatting dates and numbers.
+     * @param newLocale The locale to use for formatting dates and numbers and plurals.
      * @param parseError Struct to recieve information on position 
      *                   of error within the pattern.
      * @param status    Input/output error code.  If the
@@ -392,7 +396,7 @@ public:
 
     /**
      * Sets the locale. This locale is used for fetching default number or date
-     * format information.
+     * format information , and for interpreting plural formats.
      * @param theLocale    the new locale value to be set.
      * @stable ICU 2.0
      */
@@ -400,7 +404,7 @@ public:
 
     /**
      * Gets the locale. This locale is used for fetching default number or date
-     * format information.
+     * format information , and for interpreting plural formats.
      * @return    the locale of the object.
      * @stable ICU 2.0
      */
