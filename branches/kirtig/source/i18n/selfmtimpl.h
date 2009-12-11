@@ -90,23 +90,7 @@ U_NAMESPACE_BEGIN
 
 #define SELECT_RANGE_HIGH  0x7fffffff;
 
-
 class UnicodeSet;
-
-typedef enum tokenType {
-  none,
-  tLetter,
-  tNumber,
-  tComma,
-  tSemiColon,
-  tSpace,
-  tColon,
-  tDot,
-  tKeyword,
-  tOther,
-  tLeftBrace,
-  tRightBrace
-}tokenType;
 
 U_NAMESPACE_END
 

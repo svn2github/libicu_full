@@ -89,117 +89,153 @@ SelectFormat::applyPattern(const UnicodeString& newPattern, UErrorCode& status) 
     } 
     this->parsedValuesHash=NULL;
     this->pattern = newPattern;
-    UnicodeString token;
-    UnicodeString temp = "";
+    enum State{ startState , keywordState , pastKeywordState , phraseState};
+
+    //Initialization
+    UnicodeString keyword = UnicodeString();
+    UnicodeString phrase = UnicodeString();
+    UnicodeString* ptrPhrase ;
     int32_t braceCount=0;
-    fmtToken type;
-    UBool spaceIncluded=FALSE;
-    
+
     if (parsedValuesHash==NULL) {
+        parsedValuesHash = new Hashtable(TRUE, status);
         parsedValuesHash = new Hashtable(TRUE, status);
         if (U_FAILURE(status)) {
             return;
         }
         parsedValuesHash->setValueDeleter(deleteHashStrings);
     }
-    
-    UBool getKeyword=TRUE;
-    UnicodeString hashKeyword;
-    UnicodeString *hashPattern;
-    
+
+    //Process the state machine
+    static State state = startState;
     for (int32_t i=0; i<pattern.length(); ++i) {
         UChar ch=pattern.charAt(i);
-
-        if ( !inRange(ch, type) ) {
-            if (getKeyword) {
+        //fmtToken type;
+        characterClass type;
+        //Get the charcter and chek for validity
+        if ( !classifyCharacters(ch, type) ) {
+            if( state == keywordState ){
                 status = U_ILLEGAL_CHARACTER;
                 return;
-            }
-            else {
-                token += ch;
+            }else {
+                phrase += ch;
                 continue;
             }
         }
-        switch (type) {
-            case tSpace:
-                if (token.length()==0) {
-                    continue;
-                }
-                if (getKeyword) {
-                    // space after keyword
-                    spaceIncluded = TRUE;
-                }
-                else {
-                    token += ch;
-                }
-                break;
-            case tLeftBrace:
-                if ( getKeyword ) {
-                    if (parsedValuesHash->get(token)!= NULL) {
-                        status = U_DUPLICATE_KEYWORD;
-                        return; 
-                    }
-                    if (token.length()==0) {
+        //Process the character
+        switch (state) {
+            //At the start of pattern
+            case startState:
+                switch (type) {
+                    case tSpace:
+                        break;
+                    case tStartKeyword:
+                        state = keywordState;
+                        keyword += ch;
+                        break;
+                    //If anything else is encountered,it's a syntax error
+                    case tContinueKeyword:
+                    case tLeftBrace:
+                    case tRightBrace:
+                    case tOther:
+                    default:
                         status = U_PATTERN_SYNTAX_ERROR;
                         return;
-                    }
-                    
-                    hashKeyword = token;
-                    getKeyword = FALSE;
-                    token.remove();
-                    token = UnicodeString();
-                }
-                else  {
-                    if (braceCount==0) {
+                }//end of switch(type)
+                break;
+            //Handle the keyword state
+            case keywordState:
+                switch (type) {
+                    case tSpace:
+                        if( keyword.length() > 0)
+                            state = pastKeywordState;
+                        break;
+                    case tStartKeyword:
+                    case tContinueKeyword:
+                        keyword += ch;
+                        break;
+                    case tLeftBrace:
+                        state = phraseState;
+                        break;
+                    //If anything else is encountered,it's a syntax error
+                    case tRightBrace:
+                    case tOther:
+                    default:
                         status = U_PATTERN_SYNTAX_ERROR;
                         return;
-                    }
-                    else {
-                        token += ch;
-                    }
-                }
-                braceCount++;
-                spaceIncluded = FALSE;
+                }//end of switch(type)
                 break;
-            case tRightBrace:
-                if ( getKeyword ) {
-                    status = U_PATTERN_SYNTAX_ERROR;
-                    return;
-                }
-                else  {
-                    hashPattern = new UnicodeString(token);
-                    parsedValuesHash->put(hashKeyword, hashPattern, status);
-                    braceCount--;
-                    if ( braceCount==0 ) {
-                        getKeyword=TRUE;
-                        hashKeyword.remove();
-                        hashPattern=NULL;
-                        token.remove();
-                        token = UnicodeString(); 
-                    }
-                    else {
-                        token += ch;
-                    }
-                }
-                spaceIncluded = FALSE;
+            //Handle the pastkeyword state
+            case pastKeywordState:
+                switch (type) {
+                    case tSpace:
+                        break;
+                    case tLeftBrace:
+                        state = phraseState;
+                        break;
+                    //If anything else is encountered,it's a syntax error
+                    case tStartKeyword:
+                    case tContinueKeyword:
+                    case tRightBrace:
+                    case tOther:
+                    default:
+                        status = U_PATTERN_SYNTAX_ERROR;
+                        return;
+                }//end of switch(type)
                 break;
-            case tLetter:
-                if (spaceIncluded) {
-                    status = U_PATTERN_SYNTAX_ERROR;
-                    return;
-                }
+            //Handle the phrase state
+            case phraseState:
+                switch (type) {
+                    case tLeftBrace:
+                        braceCount++;
+                        phrase += ch;
+                        break;
+                    case tRightBrace:
+                        if(braceCount == 0){
+                            //Check validity of keyword
+                            if (parsedValuesHash->get(keyword)!= NULL) {
+                                status = U_DUPLICATE_KEYWORD;
+                                return; 
+                            }
+                            if (keyword.length()==0) {
+                                status = U_PATTERN_SYNTAX_ERROR;
+                                return;
+                            }
+                            //Store the keyword, phrase pair in hashTable
+                            ptrPhrase = new UnicodeString(phrase);
+                            parsedValuesHash->put( keyword, ptrPhrase, status);
+                            //Reinitialize
+                            keyword.remove();
+                            keyword = UnicodeString();
+                            phrase.remove();
+                            phrase = UnicodeString();
+                            ptrPhrase = NULL;
+                            braceCount=0;
+                            state=startState;
+                        }
+                        if(braceCount > 0){
+                            braceCount-- ;
+                            phrase += ch;
+                        }
+                        break;
+                    case tSpace:
+                    case tStartKeyword:
+                    case tContinueKeyword:
+                    case tOther:
+                    default:
+                        phrase += ch;
+                }//end of switch(type)
+                break;
+            //Handle the  default case of switch
             default:
-                token+=ch;
                 break;
-        }
+        }//end of switch(state)
     }
-    if ( checkSufficientDefinition() ) {
-        return;
-    }
-    else {
+    //Check if "other" keyword is present 
+    if ( !checkSufficientDefinition() ) {
         status = U_DEFAULT_KEYWORD_MISSING;
-        return;
     }
+    return;
 }
 
 UnicodeString&
@@ -236,7 +272,11 @@ SelectFormat::format(UnicodeString sInput,
     if (selectedPattern==NULL) {
         selectedPattern = (UnicodeString *)parsedValuesHash->get(SELECT_KEYWORD_OTHER);
     }
-    appendTo = insertFormattedSelect(*selectedPattern, appendTo);
+/*
+    if ( startIndex < message.length() ) {
+        result += UnicodeString(message, startIndex, message.length()-startIndex);
+    }
+*/
     
     return appendTo;
 }
@@ -248,27 +288,32 @@ SelectFormat::toPattern(UnicodeString& appendTo) {
 }
 
 UBool
-SelectFormat::inRange(UChar ch, fmtToken& type) {
+SelectFormat::classifyCharacters(UChar ch, characterClass& type) {
     if ((ch>=CAP_A) && (ch<=CAP_Z)) {
         // we assume all characters are in lower case already.
         return FALSE;
     }
     if ((ch>=LOW_A) && (ch<=LOW_Z)) {
-        type = tLetter;
+        type = tStartKeyword;
+        return TRUE;
+    }
+    if ((ch>=U_ZERO) && (ch<=U_NINE)) {
+        type = tContinueKeyword;
         return TRUE;
     }
     switch (ch) {
         case LEFTBRACE: 
             type = tLeftBrace;
             return TRUE;
-        case SPACE:
-            type = tSpace;
-            return TRUE;
         case RIGHTBRACE:
             type = tRightBrace;
             return TRUE;
+        case SPACE:
+            type = tSpace;
+            return TRUE;
         case HYPHEN:
-            type = tLetter;
+        case LOWLINE:
+            type = tContinueKeyword;
             return TRUE;
         default :
             type = none;
@@ -369,6 +414,7 @@ SelectFormat::parseObject(const UnicodeString& /*source*/,
     // TODO: not yet supported in icu4j and icu4c
 }
 
+/*
 UnicodeString
 SelectFormat::insertFormattedSelect( UnicodeString& message,
                                     UnicodeString& appendTo) const {
@@ -395,6 +441,7 @@ SelectFormat::insertFormattedSelect( UnicodeString& message,
     appendTo = result;
     return result;
 }
+*/
 
 void
 SelectFormat::copyHashtable(Hashtable *other, UErrorCode& status) {

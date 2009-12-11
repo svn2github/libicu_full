@@ -354,28 +354,27 @@ public:
      virtual UClassID getDynamicClassID() const;
 
 private:
-    typedef enum fmtToken {
-        none,
-        tLetter,
-        tNumber,
-        tSpace,
+    typedef enum characterClass{
+        tStartKeyword,
+        tContinueKeyword,
         tLeftBrace,
-        tRightBrace
-    }fmtToken;
+        tRightBrace,
+        tSpace,
+        tOther,
+        none
+    }characterClass;
 
     UnicodeString pattern;
+    //Hash to store the keyword, phrase pairs
     Hashtable  *parsedValuesHash;
 
     SelectFormat();   // default constructor not implemented
     void init(UErrorCode& status);
-    UBool inRange(UChar ch, fmtToken& type);
+    //For the applyPattern , classifies char.s in one of the characterClass
+    UBool classifyCharacters(UChar ch, characterClass& type); 
+    //Checks if the "other" keyword is present in pattern
     UBool checkSufficientDefinition();
     void parsingFailure();
-    
-    UnicodeString insertFormattedSelect( UnicodeString& message,
-                                        UnicodeString& appendTo
-                                        ) const;
-
     void copyHashtable(Hashtable *other, UErrorCode& status);
 };
 
