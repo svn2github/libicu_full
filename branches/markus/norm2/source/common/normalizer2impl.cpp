@@ -1190,7 +1190,7 @@ void *FCDTrieSingleton::createInstance(const void *context, UErrorCode &errorCod
             if(hasValue!=0) {
                 // Set a "bad" value for makeFCD() to break the quick check loop
                 // and look up the value for the supplementary code point.
-                utrie2_set32ForLeadSurrogateCodeUnit(me->newFCDTrie, lead, 0xffff, &errorCode);
+                utrie2_set32ForLeadSurrogateCodeUnit(me->newFCDTrie, lead, 0x1ff, &errorCode);
             }
         }
         utrie2_freeze(me->newFCDTrie, UTRIE2_16_VALUE_BITS, &errorCode);
@@ -1229,12 +1229,19 @@ void Normalizer2Impl::setFCD16FromNorm16(UChar32 start, UChar32 end, uint16_t no
         } else {
             // c decomposes, get everything from the variable-length extra data
             const uint16_t *mapping=getMapping(norm16);
-            if(*mapping&MAPPING_HAS_CCC_LCCC_WORD) {
-                norm16=mapping[1]&0xff00;  // lccc
+            if((*mapping&MAPPING_LENGTH_MASK)==0) {
+                // A character that is deleted (maps to an empty string) must
+                // get the worst-case lccc and tccc values because arbitrary
+                // characters on both sides will become adjacent.
+                norm16=0x1ff;
             } else {
-                norm16=0;
+                if(*mapping&MAPPING_HAS_CCC_LCCC_WORD) {
+                    norm16=mapping[1]&0xff00;  // lccc
+                } else {
+                    norm16=0;
+                }
+                norm16|=*mapping>>8;  // tccc
             }
-            norm16|=*mapping>>8;  // tccc
         }
         utrie2_setRange32(newFCDTrie, start, end, norm16, TRUE, &errorCode);
         break;

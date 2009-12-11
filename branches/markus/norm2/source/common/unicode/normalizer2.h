@@ -23,6 +23,7 @@
 
 #if !UCONFIG_NO_NORMALIZATION
 
+#include "unicode/uniset.h"
 #include "unicode/unistr.h"
 #include "unicode/unorm.h"
 
@@ -73,8 +74,6 @@ typedef enum {
 } UNormalization2Mode;
 
 U_NAMESPACE_BEGIN
-
-class UnicodeSet;
 
 /**
  * Unicode normalization functionality for standard Unicode normalization or
@@ -374,6 +373,18 @@ public:
      */
     virtual UClassID getDynamicClassID() const;
 private:
+    UnicodeString &
+    normalize(const UnicodeString &src,
+              UnicodeString &dest,
+              USetSpanCondition spanCondition,
+              UErrorCode &errorCode) const;
+
+    UnicodeString &
+    normalizeSecondAndAppend(UnicodeString &first,
+                             const UnicodeString &second,
+                             UBool doNormalize,
+                             UErrorCode &errorCode) const;
+
     const Normalizer2 &norm2;
     const UnicodeSet &set;
 };
