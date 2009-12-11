@@ -426,11 +426,33 @@ Normalizer2Impl::decompose(const UChar *src, const UChar *limit,
 
     for(;;) {
         // count code units below the minimum or with irrelevant data for the quick check
-        prevSrc=src;
-        while(src!=limit &&
-              ((c=*src)<minNoCP ||
-               isMostDecompYesAndZeroCC(norm16=getNorm16FromSingleLead(c)))) {
-            ++src;
+        for(prevSrc=src; src!=limit;) {
+            if( (c=*src)<minNoCP ||
+                isMostDecompYesAndZeroCC(norm16=UTRIE2_GET16_FROM_U16_SINGLE_LEAD(normTrie, c))
+            ) {
+                ++src;
+            } else if(!U16_IS_SURROGATE(c)) {
+                break;
+            } else {
+                UChar c2;
+                if(U16_IS_SURROGATE_LEAD(c)) {
+                    if((src+1)!=limit && U16_IS_TRAIL(c2=src[1])) {
+                        c=U16_GET_SUPPLEMENTARY(c, c2);
+                    }
+                } else /* trail surrogate */ {
+                    if(prevSrc<src && U16_IS_LEAD(c2=*(src-1))) {
+                        --src;
+                        c=U16_GET_SUPPLEMENTARY(c2, c);
+                    } else {
+                        break;  // c's norm16 already failed the test
+                    }
+                }
+                if(isMostDecompYesAndZeroCC(norm16=getNorm16(c))) {
+                    src+=U16_LENGTH(c);
+                } else {
+                    break;
+                }
+            }
         }
         // copy these code units all at once
         if(src!=prevSrc) {
@@ -448,18 +470,7 @@ Normalizer2Impl::decompose(const UChar *src, const UChar *limit,
         }
 
         // Check one above-minimum, relevant code point.
-        ++src;
-        if(U16_IS_LEAD(c)) {
-            UChar c2;
-            if(src!=limit && U16_IS_TRAIL(c2=*src)) {
-                ++src;
-                c=U16_GET_SUPPLEMENTARY(c, c2);
-                norm16=getNorm16FromSupplementary(c);
-            } else {
-                // Data for lead surrogate code *point* not code *unit*. Normally 0.
-                norm16=getNorm16FromBMP((UChar)c);
-            }
-        }
+        src+=U16_LENGTH(c);
         if(buffer!=NULL) {
             if(!decompose(c, norm16, *buffer, errorCode)) {
                 break;
@@ -842,11 +853,33 @@ Normalizer2Impl::compose(const UChar *src, const UChar *limit,
 
     for(;;) {
         // count code units below the minimum or with irrelevant data for the quick check
-        prevSrc=src;
-        while(src!=limit &&
-              ((c=*src)<minNoMaybeCP ||
-               isCompYesAndZeroCC(norm16=getNorm16FromSingleLead(c)))) {
-            ++src;
+        for(prevSrc=src; src!=limit;) {
+            if( (c=*src)<minNoMaybeCP ||
+                isCompYesAndZeroCC(norm16=UTRIE2_GET16_FROM_U16_SINGLE_LEAD(normTrie, c))
+            ) {
+                ++src;
+            } else if(!U16_IS_SURROGATE(c)) {
+                break;
+            } else {
+                UChar c2;
+                if(U16_IS_SURROGATE_LEAD(c)) {
+                    if((src+1)!=limit && U16_IS_TRAIL(c2=src[1])) {
+                        c=U16_GET_SUPPLEMENTARY(c, c2);
+                    }
+                } else /* trail surrogate */ {
+                    if(prevSrc<src && U16_IS_LEAD(c2=*(src-1))) {
+                        --src;
+                        c=U16_GET_SUPPLEMENTARY(c2, c);
+                    } else {
+                        break;  // c's norm16 already failed the test
+                    }
+                }
+                if(isCompYesAndZeroCC(norm16=getNorm16(c))) {
+                    src+=U16_LENGTH(c);
+                } else {
+                    break;
+                }
+            }
         }
         // copy these code units all at once
         if(src!=prevSrc) {
@@ -871,10 +904,12 @@ Normalizer2Impl::compose(const UChar *src, const UChar *limit,
             break;
         }
 
-        ++src;
+        src+=U16_LENGTH(c);
         /*
-         * norm16 is for c=*(src-1) which has "no" or "maybe" properties, and/or ccc!=0.
-         * Check for Jamo V/T, then for surrogates and regular characters.
+         * isCompYesAndZeroCC(norm16) is false, that is, norm16>=indexes[IX_MIN_NO_NO].
+         * c is either a "noNo" (has a mapping) or a "maybeYes" (combines backward)
+         * or has ccc!=0.
+         * Check for Jamo V/T, then for regular characters.
          * c is not a Hangul syllable or Jamo L because those have "yes" properties.
          */
         if(isJamoVT(norm16) && prevStarter!=prevSrc) {
@@ -921,34 +956,7 @@ Normalizer2Impl::compose(const UChar *src, const UChar *limit,
                 prevCC=0;
             }
             continue;
-        } else if(U16_IS_LEAD(c)) {
-            UChar c2;
-            if(src!=limit && U16_IS_TRAIL(c2=*src)) {
-                ++src;
-                c=U16_GET_SUPPLEMENTARY(c, c2);
-                norm16=getNorm16FromSupplementary(c);
-            } else {
-                // Data for lead surrogate code *point* not code *unit*. Normally 0.
-                norm16=getNorm16FromBMP((UChar)c);
-            }
-            if(isCompYesAndZeroCC(norm16)) {
-                prevStarter=prevSrc;
-                if(pQCResult==NULL) {
-                    if(!buffer->append(c, 0, errorCode)) {
-                        break;
-                    }
-                } else {
-                    prevCC=0;
-                }
-                continue;
-            }
         }
-        /*
-         * Now isCompYesAndZeroCC(norm16) is false, that is, norm16>=indexes[IX_MIN_NO_NO].
-         * c is either a "noNo" (has a mapping) or a "maybeYes" (combines backward)
-         * or has ccc!=0.
-         */
-
         /*
          * Source buffer pointers:
          *
@@ -1162,19 +1170,18 @@ public:
 
 U_CDECL_BEGIN
 
+// Set the FCD value for a range of same-norm16 charcters.
 static UBool U_CALLCONV
 enumRangeHandler(const void *context, UChar32 start, UChar32 end, uint32_t value) {
     return ((FCDTrieSingleton *)context)->rangeHandler(start, end, value);
 }
 
+// Collect (OR together) the FCD values for a range of supplementary characters,
+// for their lead surrogate code unit.
 static UBool U_CALLCONV
-enumRangeHasValue(const void *context, UChar32 start, UChar32 end, uint32_t value) {
-    if(value!=0) {
-        *((UBool *)context)=TRUE;
-        return FALSE;
-    } else {
-        return TRUE;
-    }
+enumRangeOrValue(const void *context, UChar32 start, UChar32 end, uint32_t value) {
+    *((uint32_t *)context)|=value;
+    return TRUE;
 }
 
 U_CDECL_END
@@ -1185,12 +1192,17 @@ void *FCDTrieSingleton::createInstance(const void *context, UErrorCode &errorCod
     if(U_SUCCESS(errorCode)) {
         utrie2_enum(me->impl.getNormTrie(), NULL, enumRangeHandler, me);
         for(UChar lead=0xd800; lead<0xdc00; ++lead) {
-            UBool hasValue=FALSE;
-            utrie2_enumForLeadSurrogate(me->newFCDTrie, lead, NULL, enumRangeHasValue, &hasValue);
-            if(hasValue!=0) {
+            uint32_t oredValue=utrie2_get32(me->newFCDTrie, lead);
+            utrie2_enumForLeadSurrogate(me->newFCDTrie, lead, NULL, enumRangeOrValue, &oredValue);
+            if(oredValue!=0) {
                 // Set a "bad" value for makeFCD() to break the quick check loop
                 // and look up the value for the supplementary code point.
-                utrie2_set32ForLeadSurrogateCodeUnit(me->newFCDTrie, lead, 0x1ff, &errorCode);
+                // If there is any lccc, then set the worst-case lccc of 1.
+                // The ORed-together value's tccc is already the worst case.
+                if(oredValue>0xff) {
+                    oredValue=0x100|(oredValue&0xff);
+                }
+                utrie2_set32ForLeadSurrogateCodeUnit(me->newFCDTrie, lead, oredValue, &errorCode);
             }
         }
         utrie2_freeze(me->newFCDTrie, UTRIE2_16_VALUE_BITS, &errorCode);
@@ -1272,6 +1284,8 @@ Normalizer2Impl::makeFCD(const UChar *src, const UChar *limit,
     // The exception is the call to decomposeShort() which uses the buffer
     // in the normal way.
 
+    const UTrie2 *trie=fcdTrie();
+
     // Tracks the last FCD-safe boundary, before lccc=0 or after properly-ordered tccc<=1.
     // Similar to the prevStarter in the compose() implementation.
     const UChar *prevBoundary=src;
@@ -1282,18 +1296,36 @@ Normalizer2Impl::makeFCD(const UChar *src, const UChar *limit,
 
     for(;;) {
         // count code units with lccc==0
-        prevSrc=src;
-        for(;;) {
-            if(src==limit) {
-                break;
-            } else if((c=*src)<MIN_CCC_LCCC_CP) {
+        for(prevSrc=src; src!=limit;) {
+            if((c=*src)<MIN_CCC_LCCC_CP) {
                 prevFCD16=~c;
-            } else if((fcd16=getFCD16FromSingleLead(c))<=0xff) {
+                ++src;
+            } else if((fcd16=UTRIE2_GET16_FROM_U16_SINGLE_LEAD(trie, c))<=0xff) {
                 prevFCD16=fcd16;
-            } else {
+                ++src;
+            } else if(!U16_IS_SURROGATE(c)) {
                 break;
+            } else {
+                UChar c2;
+                if(U16_IS_SURROGATE_LEAD(c)) {
+                    if((src+1)!=limit && U16_IS_TRAIL(c2=src[1])) {
+                        c=U16_GET_SUPPLEMENTARY(c, c2);
+                    }
+                } else /* trail surrogate */ {
+                    if(prevSrc<src && U16_IS_LEAD(c2=*(src-1))) {
+                        --src;
+                        c=U16_GET_SUPPLEMENTARY(c2, c);
+                    } else {
+                        break;  // c's norm16 already failed the test
+                    }
+                }
+                if((fcd16=getFCD16(c))<=0xff) {
+                    prevFCD16=fcd16;
+                    src+=U16_LENGTH(c);
+                } else {
+                    break;
+                }
             }
-            ++src;
         }
         // copy these code units all at once
         if(src!=prevSrc) {
@@ -1304,17 +1336,24 @@ Normalizer2Impl::makeFCD(const UChar *src, const UChar *limit,
                 break;
             }
             prevBoundary=src;
+            // We know that the previous character's lccc==0.
             if(prevFCD16<0) {
                 // Fetching the fcd16 value was deferred for this below-U+0300 code point.
-                // We know that its lccc==0.
                 prevFCD16=getFCD16FromSingleLead((UChar)~prevFCD16);
                 if(prevFCD16>1) {
                     --prevBoundary;
                 }
-            } else if(prevFCD16>1) {
-                // We know that the previous character's lccc==0.
-                if(U16_IS_TRAIL(*--prevBoundary) && prevSrc<prevBoundary && U16_IS_LEAD(*(prevBoundary-1))) {
-                    --prevBoundary;
+            } else {
+                const UChar *p=src-1;
+                if(U16_IS_TRAIL(*p) && prevSrc<p && U16_IS_LEAD(*(p-1))) {
+                    --p;
+                    // Need to fetch the previous character's FCD value because
+                    // prevFCD16 was just for the trail surrogate code point.
+                    prevFCD16=getFCD16FromSurrogatePair(p[0], p[1]);
+                    // Still known to have lccc==0 because its lead surrogate unit had lccc==0.
+                }
+                if(prevFCD16>1) {
+                    prevBoundary=p;
                 }
             }
             // The start of the current character (c).
@@ -1323,34 +1362,9 @@ Normalizer2Impl::makeFCD(const UChar *src, const UChar *limit,
             break;
         }
 
-        ++src;
-        // The current character (c) has a non-zero lead combining class.
-        // Check for surrogates, proper order, and decompose locally if necessary.
-        if(U16_IS_LEAD(c)) {
-            UChar c2;
-            if(src!=limit && U16_IS_TRAIL(c2=*src)) {
-                ++src;
-                c=U16_GET_SUPPLEMENTARY(c, c2);
-                fcd16=getFCD16FromSupplementary(c);
-            } else {
-                // Data for lead surrogate code *point* not code *unit*. Normally 0.
-                fcd16=getFCD16FromBMP((UChar)c);
-            }
-            if(fcd16<=0xff) {
-                if(fcd16<=1) {
-                    prevBoundary=src;
-                } else {
-                    prevBoundary=prevSrc;
-                }
-                if(buffer!=NULL && !buffer->appendZeroCC(c, errorCode)) {
-                    break;
-                }
-                prevFCD16=fcd16;
-                continue;
-            }
-        }
-        // c at [prevSrc..src[ has lccc!=0.
-
+        src+=U16_LENGTH(c);
+        // The current character (c) at [prevSrc..src[ has a non-zero lead combining class.
+        // Check for proper order, and decompose locally if necessary.
         if((prevFCD16&0xff)<=(fcd16>>8)) {
             // proper order: prev tccc <= current lccc
             if((fcd16&0xff)<=1) {

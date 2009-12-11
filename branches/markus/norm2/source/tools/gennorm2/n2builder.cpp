@@ -906,7 +906,7 @@ void Normalizer2DataBuilder::processData() {
     // inner loops if necessary.
     // However, that seems like overkill for an optimization for supplementary characters.
     for(UChar lead=0xd800; lead<0xdc00; ++lead) {
-        uint32_t maxValue=0;
+        uint32_t maxValue=utrie2_get32(norm16Trie, lead);
         utrie2_enumForLeadSurrogate(norm16Trie, lead, NULL, enumRangeMaxValue, &maxValue);
         if( maxValue>=(uint32_t)indexes[Normalizer2Impl::IX_LIMIT_NO_NO] &&
             maxValue>(uint32_t)indexes[Normalizer2Impl::IX_MIN_NO_NO]
@@ -917,6 +917,19 @@ void Normalizer2DataBuilder::processData() {
             maxValue=(uint32_t)indexes[Normalizer2Impl::IX_LIMIT_NO_NO]-1;
         }
         utrie2_set32ForLeadSurrogateCodeUnit(norm16Trie, lead, maxValue, errorCode);
+    }
+
+    // Adjust supplementary minimum code points to break quick check loops at their lead surrogates.
+    // For an empty data file, minCP=0x110000 turns into 0xdc00 (first trail surrogate)
+    // which is harmless.
+    // As a result, the minimum code points are always BMP code points.
+    int32_t minCP=indexes[Normalizer2Impl::IX_MIN_DECOMP_NO_CP];
+    if(minCP>=0x10000) {
+        indexes[Normalizer2Impl::IX_MIN_DECOMP_NO_CP]=U16_LEAD(minCP);
+    }
+    minCP=indexes[Normalizer2Impl::IX_MIN_COMP_NO_MAYBE_CP];
+    if(minCP>=0x10000) {
+        indexes[Normalizer2Impl::IX_MIN_COMP_NO_MAYBE_CP]=U16_LEAD(minCP);
     }
 }
 

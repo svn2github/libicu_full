@@ -180,6 +180,9 @@ public:
     uint16_t getFCD16FromSupplementary(UChar32 c) const {
         return UTRIE2_GET16_FROM_SUPP(fcdTrie(), c);
     }
+    uint16_t getFCD16FromSurrogatePair(UChar c, UChar c2) const {
+        return getFCD16FromSupplementary(U16_GET_SUPPLEMENTARY(c, c2));
+    }
 
     void setFCD16FromNorm16(UChar32 start, UChar32 end, uint16_t norm16,
                             UTrie2 *newFCDTrie, UErrorCode &errorCode) const;
