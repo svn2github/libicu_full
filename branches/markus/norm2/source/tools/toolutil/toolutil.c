@@ -235,6 +235,7 @@ utm_hasCapacity(UToolMemory *mem, int32_t capacity) {
             fprintf(stderr, "error: %s - out of memory\n", mem->name);
             exit(U_MEMORY_ALLOCATION_ERROR);
         }
+        mem->capacity=newCapacity;
     }
 
     return TRUE;
@@ -242,9 +243,11 @@ utm_hasCapacity(UToolMemory *mem, int32_t capacity) {
 
 U_CAPI void * U_EXPORT2
 utm_alloc(UToolMemory *mem) {
-    char *p=(char *)mem->array+mem->idx*mem->size;
-    int32_t newIndex=mem->idx+1;
+    char *p=NULL;
+    int32_t oldIndex=mem->idx;
+    int32_t newIndex=oldIndex+1;
     if(utm_hasCapacity(mem, newIndex)) {
+        p=(char *)mem->array+oldIndex*mem->size;
         mem->idx=newIndex;
         uprv_memset(p, 0, mem->size);
     }
@@ -253,9 +256,11 @@ utm_alloc(UToolMemory *mem) {
 
 U_CAPI void * U_EXPORT2
 utm_allocN(UToolMemory *mem, int32_t n) {
-    char *p=(char *)mem->array+mem->idx*mem->size;
-    int32_t newIndex=mem->idx+n;
+    char *p=NULL;
+    int32_t oldIndex=mem->idx;
+    int32_t newIndex=oldIndex+n;
     if(utm_hasCapacity(mem, newIndex)) {
+        p=(char *)mem->array+oldIndex*mem->size;
         mem->idx=newIndex;
         uprv_memset(p, 0, n*mem->size);
     }
