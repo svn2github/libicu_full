@@ -25,6 +25,7 @@
 #include "mutex.h"
 #include "normalizer2impl.h"
 #include "uassert.h"
+#include "uset_imp.h"
 #include "utrie2.h"
 
 U_NAMESPACE_BEGIN
@@ -379,6 +380,31 @@ uint8_t Normalizer2Impl::getTrailCCFromCompYesAndZeroCC(const UChar *cpStart, co
     } else {
         return (uint8_t)(*getMapping(prevNorm16)>>8);  // tccc from noNo
     }
+}
+
+U_CDECL_BEGIN
+
+static UBool U_CALLCONV
+enumPropertyStartsRange(const void *context, UChar32 start, UChar32 /*end*/, uint32_t /*value*/) {
+    /* add the start code point to the USet */
+    const USetAdder *sa=(const USetAdder *)context;
+    sa->add(sa->set, start);
+    return TRUE;
+}
+
+U_CDECL_END
+
+void
+Normalizer2Impl::addPropertyStarts(const USetAdder *sa, UErrorCode &errorCode) {
+    /* add the start code point of each same-value range of each trie */
+    utrie2_enum(normTrie, NULL, enumPropertyStartsRange, sa);
+
+    /* add Hangul LV syllables and LV+1 because of skippables */
+    for(UChar c=HANGUL_BASE; c<HANGUL_BASE+HANGUL_COUNT; c+=JAMO_T_COUNT) {
+        sa->add(sa->set, c);
+        sa->add(sa->set, c+1);
+    }
+    sa->add(sa->set, HANGUL_BASE+HANGUL_COUNT); /* add Hangul+1 to continue with other properties */
 }
 
 const UChar *

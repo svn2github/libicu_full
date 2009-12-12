@@ -26,6 +26,7 @@
 #include "unicode/unistr.h"
 #include "mutex.h"
 #include "unormimp.h"
+#include "uset_imp.h"
 
 U_NAMESPACE_BEGIN
 
@@ -141,6 +142,8 @@ public:
     ~Normalizer2Impl();
 
     void load(const char *packageName, const char *name, UErrorCode &errorCode);
+
+    void addPropertyStarts(const USetAdder *sa, UErrorCode &errorCode);
 
     // low-level properties ------------------------------------------------ ***
 
@@ -397,16 +400,19 @@ private:
  */
 class U_COMMON_API InternalNormalizer2Provider {
 public:
-    static Normalizer2 *getNFCInstance(UErrorCode &errorCode);
-    static Normalizer2 *getNFDInstance(UErrorCode &errorCode);
-    static Normalizer2 *getFCDInstance(UErrorCode &errorCode);
-    static Normalizer2 *getFCCInstance(UErrorCode &errorCode);
-    static Normalizer2 *getNFKCInstance(UErrorCode &errorCode);
-    static Normalizer2 *getNFKDInstance(UErrorCode &errorCode);
-    static Normalizer2 *getNFKC_CFInstance(UErrorCode &errorCode);
-    static Normalizer2 *getNoopInstance(UErrorCode &errorCode);
+    static const Normalizer2 *getNFCInstance(UErrorCode &errorCode);
+    static const Normalizer2 *getNFDInstance(UErrorCode &errorCode);
+    static const Normalizer2 *getFCDInstance(UErrorCode &errorCode);
+    static const Normalizer2 *getFCCInstance(UErrorCode &errorCode);
+    static const Normalizer2 *getNFKCInstance(UErrorCode &errorCode);
+    static const Normalizer2 *getNFKDInstance(UErrorCode &errorCode);
+    static const Normalizer2 *getNFKC_CFInstance(UErrorCode &errorCode);
+    static const Normalizer2 *getNoopInstance(UErrorCode &errorCode);
 
-    static Normalizer2 *getInstance(UNormalizationMode, UErrorCode &errorCode);
+    static const Normalizer2 *getInstance(UNormalizationMode mode, UErrorCode &errorCode);
+
+    static const Normalizer2Impl *getNFCImpl(UErrorCode &errorCode);
+    static const Normalizer2Impl *getNFKC_CFImpl(UErrorCode &errorCode);
 private:
     InternalNormalizer2Provider();  // No instantiation.
 };

@@ -3498,7 +3498,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\uprops.c"
+				RelativePath=".\uprops.cpp"
 				>
 			</File>
 			<File

@@ -5,7 +5,7 @@
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
-*   file name:  uprops.h
+*   file name:  uprops.cpp
 *   encoding:   US-ASCII
 *   tab size:   8 (not used)
 *   indentation:4
@@ -26,6 +26,7 @@
 #include "unicode/uscript.h"
 #include "unicode/ustring.h"
 #include "cstring.h"
+#include "normalizer2impl.h"
 #include "ucln_cmn.h"
 #include "umutex.h"
 #include "unormimp.h"
@@ -152,7 +153,8 @@ static const struct {
     { UPROPS_SRC_CASE,  0 },                                    /* UCHAR_CHANGES_WHEN_UPPERCASED */
     { UPROPS_SRC_CASE,  0 },                                    /* UCHAR_CHANGES_WHEN_TITLECASED */
     { UPROPS_SRC_CASE_AND_NORM,  0 },                           /* UCHAR_CHANGES_WHEN_CASEFOLDED */
-    { UPROPS_SRC_CASE,  0 }                                     /* UCHAR_CHANGES_WHEN_CASEMAPPED */
+    { UPROPS_SRC_CASE,  0 },                                    /* UCHAR_CHANGES_WHEN_CASEMAPPED */
+    { UPROPS_SRC_NFKC_CF, 0 }                                   /* UCHAR_CHANGES_WHEN_NFKC_CASEFOLDED */
 };
 
 U_CAPI UBool U_EXPORT2
@@ -184,6 +186,16 @@ u_hasBinaryProperty(UChar32 c, UProperty which) {
                     return unorm_isCanonSafeStart(c);
                 default:
                     break;
+                }
+#endif
+            } else if(column==UPROPS_SRC_NFKC_CF) {  // TODO: implement getting starts sets from N2Impl
+#if !UCONFIG_NO_NORMALIZATION
+                UErrorCode errorCode=U_ZERO_ERROR;
+                const Normalizer2 *kcf=InternalNormalizer2Provider::getNFKC_CFInstance(errorCode);
+                if(U_SUCCESS(errorCode)) {
+                    UnicodeString src(c);
+                    UnicodeString dest=kcf->normalize(src, errorCode);
+                    return U_SUCCESS(errorCode) && dest!=src;
                 }
 #endif
             } else if(column==UPROPS_SRC_BIDI) {

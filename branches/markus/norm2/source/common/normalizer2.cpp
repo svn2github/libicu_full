@@ -361,17 +361,17 @@ static UBool U_CALLCONV uprv_normalizer2_cleanup() {
 
 U_CDECL_END
 
-Normalizer2 *InternalNormalizer2Provider::getNFCInstance(UErrorCode &errorCode) {
+const Normalizer2 *InternalNormalizer2Provider::getNFCInstance(UErrorCode &errorCode) {
     Norm2AllModes *allModes=Norm2AllModesSingleton(nfcSingleton, "nfc").getInstance(errorCode);
     return allModes!=NULL ? &allModes->comp : NULL;
 }
 
-Normalizer2 *InternalNormalizer2Provider::getNFDInstance(UErrorCode &errorCode) {
+const Normalizer2 *InternalNormalizer2Provider::getNFDInstance(UErrorCode &errorCode) {
     Norm2AllModes *allModes=Norm2AllModesSingleton(nfcSingleton, "nfc").getInstance(errorCode);
     return allModes!=NULL ? &allModes->decomp : NULL;
 }
 
-Normalizer2 *InternalNormalizer2Provider::getFCDInstance(UErrorCode &errorCode) {
+const Normalizer2 *InternalNormalizer2Provider::getFCDInstance(UErrorCode &errorCode) {
     Norm2AllModes *allModes=Norm2AllModesSingleton(nfcSingleton, "nfc").getInstance(errorCode);
     if(allModes!=NULL) {
         allModes->impl.getFCDTrie(errorCode);
@@ -381,34 +381,34 @@ Normalizer2 *InternalNormalizer2Provider::getFCDInstance(UErrorCode &errorCode) 
     }
 }
 
-Normalizer2 *InternalNormalizer2Provider::getFCCInstance(UErrorCode &errorCode) {
+const Normalizer2 *InternalNormalizer2Provider::getFCCInstance(UErrorCode &errorCode) {
     Norm2AllModes *allModes=Norm2AllModesSingleton(nfcSingleton, "nfc").getInstance(errorCode);
     return allModes!=NULL ? &allModes->fcc : NULL;
 }
 
-Normalizer2 *InternalNormalizer2Provider::getNFKCInstance(UErrorCode &errorCode) {
+const Normalizer2 *InternalNormalizer2Provider::getNFKCInstance(UErrorCode &errorCode) {
     Norm2AllModes *allModes=
         Norm2AllModesSingleton(nfkcSingleton, "nfkc").getInstance(errorCode);
     return allModes!=NULL ? &allModes->comp : NULL;
 }
 
-Normalizer2 *InternalNormalizer2Provider::getNFKDInstance(UErrorCode &errorCode) {
+const Normalizer2 *InternalNormalizer2Provider::getNFKDInstance(UErrorCode &errorCode) {
     Norm2AllModes *allModes=
         Norm2AllModesSingleton(nfkcSingleton, "nfkc").getInstance(errorCode);
     return allModes!=NULL ? &allModes->decomp : NULL;
 }
 
-Normalizer2 *InternalNormalizer2Provider::getNFKC_CFInstance(UErrorCode &errorCode) {
+const Normalizer2 *InternalNormalizer2Provider::getNFKC_CFInstance(UErrorCode &errorCode) {
     Norm2AllModes *allModes=
         Norm2AllModesSingleton(nfkc_cfSingleton, "nfkc_cf").getInstance(errorCode);
     return allModes!=NULL ? &allModes->comp : NULL;
 }
 
-Normalizer2 *InternalNormalizer2Provider::getNoopInstance(UErrorCode &errorCode) {
+const Normalizer2 *InternalNormalizer2Provider::getNoopInstance(UErrorCode &errorCode) {
     return Norm2Singleton(noopSingleton).getInstance(errorCode);
 }
 
-Normalizer2 *
+const Normalizer2 *
 InternalNormalizer2Provider::getInstance(UNormalizationMode mode, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) {
         return NULL;
@@ -427,6 +427,20 @@ InternalNormalizer2Provider::getInstance(UNormalizationMode mode, UErrorCode &er
     default:  // UNORM_NONE
         return getNoopInstance(errorCode);
     }
+}
+
+const Normalizer2Impl *
+InternalNormalizer2Provider::getNFCImpl(UErrorCode &errorCode) {
+    Norm2AllModes *allModes=
+        Norm2AllModesSingleton(nfcSingleton, "nfc").getInstance(errorCode);
+    return allModes!=NULL ? &allModes->impl : NULL;
+}
+
+const Normalizer2Impl *
+InternalNormalizer2Provider::getNFKC_CFImpl(UErrorCode &errorCode) {
+    Norm2AllModes *allModes=
+        Norm2AllModesSingleton(nfkc_cfSingleton, "nfkc_cf").getInstance(errorCode);
+    return allModes!=NULL ? &allModes->impl : NULL;
 }
 
 const Normalizer2 *

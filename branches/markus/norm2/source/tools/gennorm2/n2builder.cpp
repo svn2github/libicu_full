@@ -274,6 +274,13 @@ void Normalizer2DataBuilder::setOneWayMapping(UChar32 c, const UnicodeString &m)
 }
 
 void Normalizer2DataBuilder::setRoundTripMapping(UChar32 c, const UnicodeString &m) {
+    if(U_IS_SURROGATE(c)) {
+        fprintf(stderr,
+                "error in gennorm2 phase %d: "
+                "illegal round-trip mapping from surrogate code point U+%04lX\n",
+                (int)phase, (long)c);
+        exit(U_INVALID_FORMAT_ERROR);
+    }
     if(!isWellFormed(m)) {
         fprintf(stderr,
                 "error in gennorm2 phase %d: "

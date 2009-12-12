@@ -428,8 +428,10 @@ typedef enum UProperty {
     UCHAR_CHANGES_WHEN_CASEFOLDED=54,
     /** Binary property Changes_When_Casemapped. @draft ICU 4.4 */
     UCHAR_CHANGES_WHEN_CASEMAPPED=55,
+    /** Binary property Changes_When_NFKC_Casefolded. @draft ICU 4.4 */
+    UCHAR_CHANGES_WHEN_NFKC_CASEFOLDED=56,
     /** One more than the last constant for binary Unicode properties. @stable ICU 2.1 */
-    UCHAR_BINARY_LIMIT=56,
+    UCHAR_BINARY_LIMIT=57,
 
     /** Enumerated property Bidi_Class.
         Same as u_charDirection, returns UCharDirection values. @stable ICU 2.2 */
