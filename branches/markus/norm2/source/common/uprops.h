@@ -332,6 +332,10 @@ enum UPropertySource {
     UPROPS_SRC_CHAR_AND_PROPSVEC,
     /** From ucase.c/ucase.icu as well as unorm.cpp/unorm.icu */
     UPROPS_SRC_CASE_AND_NORM,
+    /** From normalizer2impl.cpp/nfc.nrm */
+    UPROPS_SRC_NFC,
+    /** From normalizer2impl.cpp/nfkc_cf.nrm */
+    UPROPS_SRC_NFKC_CF,
     /** One more than the highest UPropertySource (UPROPS_SRC_) constant. */
     UPROPS_SRC_COUNT
 };

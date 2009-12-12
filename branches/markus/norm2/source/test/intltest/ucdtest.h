@@ -13,9 +13,9 @@ U_CFUNC void U_CALLCONV unicodeDataLineFn(void *context,
                               UErrorCode *pErrorCode);
 
 U_CFUNC void U_CALLCONV
-derivedCorePropsLineFn(void *context,
-                       char *fields[][2], int32_t fieldCount,
-                       UErrorCode *pErrorCode);
+derivedPropsLineFn(void *context,
+                   char *fields[][2], int32_t fieldCount,
+                   UErrorCode *pErrorCode);
 
 U_NAMESPACE_BEGIN
 
@@ -43,11 +43,11 @@ private:
                               UErrorCode *pErrorCode);
 
     friend void U_CALLCONV
-    derivedCorePropsLineFn(void *context,
+    derivedPropsLineFn(void *context,
                            char *fields[][2], int32_t fieldCount,
                            UErrorCode *pErrorCode);
 
-    UnicodeSet derivedCoreProps[30];
+    UnicodeSet derivedProps[30];
     U_NAMESPACE_QUALIFIER Hashtable *unknownPropertyNames;
 };
 

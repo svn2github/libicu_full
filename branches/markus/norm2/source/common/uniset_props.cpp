@@ -33,6 +33,7 @@
 #include "uvector.h"
 #include "uprops.h"
 #include "propname.h"
+#include "normalizer2impl.h"
 #include "unormimp.h"
 #include "ucase.h"
 #include "ubidi_props.h"
@@ -212,6 +213,20 @@ const UnicodeSet* UnicodeSet::getInclusions(int32_t src, UErrorCode &status) {
                 ucase_addPropertyStarts(ucase_getSingleton(&status), &sa, &status);
                 unorm_addPropertyStarts(&sa, &status);
                 break;
+            case UPROPS_SRC_NFC: {
+                const Normalizer2Impl *impl=InternalNormalizer2Provider::getNFCImpl(status);
+                if(U_SUCCESS(status)) {
+                    impl->addPropertyStarts(&sa, status);
+                }
+                break;
+            }
+            case UPROPS_SRC_NFKC_CF: {
+                const Normalizer2Impl *impl=InternalNormalizer2Provider::getNFKC_CFImpl(status);
+                if(U_SUCCESS(status)) {
+                    impl->addPropertyStarts(&sa, status);
+                }
+                break;
+            }
 #endif
             case UPROPS_SRC_CASE:
                 ucase_addPropertyStarts(ucase_getSingleton(&status), &sa, &status);

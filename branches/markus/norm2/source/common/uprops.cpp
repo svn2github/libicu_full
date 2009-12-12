@@ -191,10 +191,20 @@ u_hasBinaryProperty(UChar32 c, UProperty which) {
             } else if(column==UPROPS_SRC_NFKC_CF) {  // TODO: implement getting starts sets from N2Impl
 #if !UCONFIG_NO_NORMALIZATION
                 UErrorCode errorCode=U_ZERO_ERROR;
-                const Normalizer2 *kcf=InternalNormalizer2Provider::getNFKC_CFInstance(errorCode);
+                const Normalizer2Impl *kcf=InternalNormalizer2Provider::getNFKC_CFImpl(errorCode);
                 if(U_SUCCESS(errorCode)) {
                     UnicodeString src(c);
-                    UnicodeString dest=kcf->normalize(src, errorCode);
+                    UnicodeString dest;
+                    {
+                        // The ReorderingBuffer must be in a block because its destructor
+                        // needs to release dest's buffer before we look at its contents.
+                        ReorderingBuffer buffer(*kcf, dest);
+                        if(U_SUCCESS(errorCode) && buffer.init(errorCode)) {
+                            const UChar *srcArray=src.getBuffer();
+                            kcf->compose(srcArray, srcArray+src.length(), FALSE,
+                                         NULL, &buffer, errorCode);
+                        }
+                    }
                     return U_SUCCESS(errorCode) && dest!=src;
                 }
 #endif

@@ -395,7 +395,7 @@ enumPropertyStartsRange(const void *context, UChar32 start, UChar32 /*end*/, uin
 U_CDECL_END
 
 void
-Normalizer2Impl::addPropertyStarts(const USetAdder *sa, UErrorCode &errorCode) {
+Normalizer2Impl::addPropertyStarts(const USetAdder *sa, UErrorCode &errorCode) const {
     /* add the start code point of each same-value range of each trie */
     utrie2_enum(normTrie, NULL, enumPropertyStartsRange, sa);
 
@@ -681,6 +681,9 @@ void Normalizer2Impl::recompose(ReorderingBuffer &buffer, int32_t recomposeStart
                                 UBool onlyContiguous) const {
     UChar *p=buffer.getStart()+recomposeStartIndex;
     UChar *limit=buffer.getLimit();
+    if(p==limit) {
+        return;
+    }
 
     UChar *starter, *pRemove, *q, *r;
     const uint16_t *compositionsList;

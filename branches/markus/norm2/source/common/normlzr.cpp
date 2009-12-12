@@ -143,7 +143,7 @@ Normalizer::normalize(const UnicodeString& source,
             // the source and result strings are the same object, use a temporary one
             dest=&localDest;
         }
-        Normalizer2 *n2=InternalNormalizer2Provider::getInstance(mode, status);
+        const Normalizer2 *n2=InternalNormalizer2Provider::getInstance(mode, status);
         if(U_SUCCESS(status)) {
             if(options&UNORM_UNICODE_3_2) {
                 FilteredNormalizer2(*n2, *uniset_getUnicode32Instance(status)).
@@ -254,7 +254,7 @@ UNormalizationCheckResult
 Normalizer::quickCheck(const UnicodeString& source,
                        UNormalizationMode mode, int32_t options,
                        UErrorCode &status) {
-    Normalizer2 *n2=InternalNormalizer2Provider::getInstance(mode, status);
+    const Normalizer2 *n2=InternalNormalizer2Provider::getInstance(mode, status);
     if(U_SUCCESS(status)) {
         if(options&UNORM_UNICODE_3_2) {
             return FilteredNormalizer2(*n2, *uniset_getUnicode32Instance(status)).
@@ -271,7 +271,7 @@ UBool
 Normalizer::isNormalized(const UnicodeString& source,
                          UNormalizationMode mode, int32_t options,
                          UErrorCode &status) {
-    Normalizer2 *n2=InternalNormalizer2Provider::getInstance(mode, status);
+    const Normalizer2 *n2=InternalNormalizer2Provider::getInstance(mode, status);
     if(U_SUCCESS(status)) {
         if(options&UNORM_UNICODE_3_2) {
             return FilteredNormalizer2(*n2, *uniset_getUnicode32Instance(status)).

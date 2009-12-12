@@ -143,7 +143,7 @@ public:
 
     void load(const char *packageName, const char *name, UErrorCode &errorCode);
 
-    void addPropertyStarts(const USetAdder *sa, UErrorCode &errorCode);
+    void addPropertyStarts(const USetAdder *sa, UErrorCode &errorCode) const;
 
     // low-level properties ------------------------------------------------ ***
 
