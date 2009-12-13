@@ -81,20 +81,11 @@ U_NAMESPACE_BEGIN
  * All instances of this class are unmodifiable/immutable.
  * Instances returned by getInstance() are singletons that must not be deleted by the caller.
  *
- * This class offers functions for iterative normalization which is useful
- * when only a small portion of a longer string/text needs to be processed.
- * [TODO: Needed as public API?]
- * In ICU, iterative normalization is used by
- * the NormalizationTransliterator (to avoid replacing already-normalized text)
- * and ucol_nextSortKeyPart() (to process only the substring for which
- * sort key bytes are computed).
- *
- * Iterative normalization moves from one normalization boundary to the next
- * or preceding boundary. At such a boundary, the portions of the string
+ * The spanQuickCheckYes() stops at a normalization boundary.
+ * At such a boundary, the portions of the string
  * before it and after it do not interact and can be handled independently.
- * Note: The spanQuickCheckYes() also stops at a normalization boundary.
  *
- * The set of normalization boundaries returned by these functions may not be
+ * The set of normalization boundaries returned may not be
  * complete: There may be more boundaries that could be returned.
  */
 class U_COMMON_API Normalizer2 : public UObject {
@@ -253,70 +244,6 @@ public:
     virtual int32_t
     spanQuickCheckYes(const UnicodeString &s, UErrorCode &errorCode) const = 0;
 
-#if 0
-    // TODO: Needed as public API?
-    //       Not currently used anywhere in ICU,
-    //       except that internal versions are used in the append() implementations.
-    /**
-     * Returns an index greater than start where there is a normalization boundary.
-     * (See the class documentation for more about normalization boundaries.)
-     * @param s input string
-     * @param start starting index in the string
-     * @return index of the next boundary
-     * @draft ICU 4.4
-     */
-    virtual int32_t
-    nextBoundary(const UnicodeString &s, int32_t start) const = 0;
-
-    /**
-     * Returns an index less than start where there is a normalization boundary.
-     * (See the class documentation for more about normalization boundaries.)
-     * @param s input string
-     * @param start starting index in the string
-     * @return index of the previous boundary
-     * @draft ICU 4.4
-     */
-    virtual int32_t
-    previousBoundary(const UnicodeString &s, int32_t start) const = 0;
-#endif
-
-#if 0
-    // TODO: Needed as public API?
-    //       (Needed internally for unorm_next() and NormalizationTransliterator.)
-    // TODO: Copy to UnicodeString or append to Appendable interface
-    //       which we don't have yet?
-    // TODO: previousBoundary() copy to UnicodeString or
-    //       append to Appendable interface?? or
-    //       prepend to Prependable interface???
-    /**
-     * Moves the UCharIterator to the next normalization boundary.
-     * (See the class documentation for more about normalization boundaries.)
-     * If the destination string is provided, then the substring
-     * between the starting and ending UCharIterator position
-     * is appended to that destination string.
-     * @param src input character iterator
-     * @param start starting index in the string
-     * @return number of UChars between the starting and ending UCharIterator position
-     * @draft ICU 4.4
-     */
-    virtual int32_t
-    nextBoundary(UCharIterator *src, UnicodeString *dest) const = 0;
-
-    /**
-     * Moves the UCharIterator to the previous normalization boundary.
-     * (See the class documentation for more about normalization boundaries.)
-     * If the destination string is provided, then the substring
-     * between the starting and ending UCharIterator position
-     * is prepended to that destination string.
-     * @param src input character iterator
-     * @param start starting index in the string
-     * @return number of UChars between the starting and ending UCharIterator position
-     * @draft ICU 4.4
-     */
-    virtual int32_t
-    previousBoundary(UCharIterator *src, UnicodeString *dest) const = 0;
-#endif
-
     /**
      * ICU "poor man's RTTI", returns a UClassID for this class.
      * @returns a UClassID for this class.
@@ -334,28 +261,123 @@ public:
     // TODO: no copy, ==, etc.
 };
 
+/**
+ * Normalization filtered by a UnicodeSet.
+ * Normalizes portions of the text contained in the filter set and leaves
+ * portions not contained in the filter set unchanged.
+ * Filtering is done via UnicodeSet::span(..., USET_SPAN_SIMPLE).
+ * Not-in-the-filter text is treated as "is normalized" and "quick check yes".
+ * This class implements all of (and only) the Normalizer2 API.
+ * An instance of this class is unmodifiable/immutable but is constructed and
+ * must be destructed by the owner.
+ * @draft ICU 4.4
+ */
 class U_COMMON_API FilteredNormalizer2 : public Normalizer2 {
 public:
+    /**
+     * Constructs a filtered normalizer wrapping any Normalizer2 instance
+     * and a filter set.
+     * Both are aliased and must not be modified or deleted while this object
+     * is used.
+     * The filter set should be frozen; otherwise the performance will suffer greatly.
+     * @param n2 wrapped Normalizer2 instance
+     * @param filterSet UnicodeSet which determines the characters to be normalized
+     * @draft ICU 4.4
+     */
     FilteredNormalizer2(const Normalizer2 &n2, const UnicodeSet &filterSet) :
             norm2(n2), set(filterSet) {}
 
+    /**
+     * Writes the normalized form of the source string to the destination string
+     * (replacing its contents) and returns the destination string.
+     * The source and destination strings must be different objects.
+     * @param src source string
+     * @param dest destination string; its contents is replaced with normalized src
+     * @param errorCode Standard ICU error code. Its input value must
+     *                  pass the U_SUCCESS() test, or else the function returns
+     *                  immediately. Check for U_FAILURE() on output or use with
+     *                  function chaining. (See User Guide for details.)
+     * @return dest
+     * @draft ICU 4.4
+     */
     virtual UnicodeString &
     normalize(const UnicodeString &src,
               UnicodeString &dest,
               UErrorCode &errorCode) const;
+    /**
+     * Appends the normalized form of the second string to the first string
+     * (merging them at the boundary) and returns the first string.
+     * The result is normalized if the first string was normalized.
+     * The first and second strings must be different objects.
+     * @param first string, should be normalized
+     * @param second string, will be normalized
+     * @param errorCode Standard ICU error code. Its input value must
+     *                  pass the U_SUCCESS() test, or else the function returns
+     *                  immediately. Check for U_FAILURE() on output or use with
+     *                  function chaining. (See User Guide for details.)
+     * @return first
+     * @draft ICU 4.4
+     */
     virtual UnicodeString &
     normalizeSecondAndAppend(UnicodeString &first,
                              const UnicodeString &second,
                              UErrorCode &errorCode) const;
+    /**
+     * Appends the second string to the first string
+     * (merging them at the boundary) and returns the first string.
+     * The result is normalized if both the strings were normalized.
+     * The first and second strings must be different objects.
+     * @param first string, should be normalized
+     * @param second string, should be normalized
+     * @param errorCode Standard ICU error code. Its input value must
+     *                  pass the U_SUCCESS() test, or else the function returns
+     *                  immediately. Check for U_FAILURE() on output or use with
+     *                  function chaining. (See User Guide for details.)
+     * @return first
+     * @draft ICU 4.4
+     */
     virtual UnicodeString &
     append(UnicodeString &first,
            const UnicodeString &second,
            UErrorCode &errorCode) const;
 
+    /**
+     * Tests if the string is normalized.
+     * For details see the Normalizer2 base class documentation.
+     * @param s input string
+     * @param errorCode Standard ICU error code. Its input value must
+     *                  pass the U_SUCCESS() test, or else the function returns
+     *                  immediately. Check for U_FAILURE() on output or use with
+     *                  function chaining. (See User Guide for details.)
+     * @return TRUE if s is normalized
+     * @draft ICU 4.4
+     */
     virtual UBool
     isNormalized(const UnicodeString &s, UErrorCode &errorCode) const;
+    /**
+     * Tests if the string is normalized.
+     * For details see the Normalizer2 base class documentation.
+     * @param s input string
+     * @param errorCode Standard ICU error code. Its input value must
+     *                  pass the U_SUCCESS() test, or else the function returns
+     *                  immediately. Check for U_FAILURE() on output or use with
+     *                  function chaining. (See User Guide for details.)
+     * @return UNormalizationCheckResult
+     * @draft ICU 4.4
+     */
     virtual UNormalizationCheckResult
     quickCheck(const UnicodeString &s, UErrorCode &errorCode) const;
+    /**
+     * Returns the end of the normalized substring of the input string.
+     * For details see the Normalizer2 base class documentation.
+     * @param s input string
+     * @param errorCode Standard ICU error code. Its input value must
+     *                  pass the U_SUCCESS() test, or else the function returns
+     *                  immediately. Check for U_FAILURE() on output or use with
+     *                  function chaining. (See User Guide for details.)
+     * @return UNormalizationCheckResult
+     * @draft ICU 4.4
+     */
     virtual int32_t
     spanQuickCheckYes(const UnicodeString &s, UErrorCode &errorCode) const;
 

@@ -55,7 +55,7 @@ public:
     }
     UBool init(UErrorCode &errorCode);
 
-    UBool isEmpty() const { return start!=limit; }
+    UBool isEmpty() const { return start==limit; }
     int32_t length() const { return (int32_t)(limit-start); }
     UChar *getStart() { return start; }
     UChar *getLimit() { return limit; }
@@ -398,7 +398,7 @@ private:
 /**
  * ICU-internal shortcut for quick access to standard Unicode normalization.
  */
-class U_COMMON_API InternalNormalizer2Provider {
+class U_COMMON_API Normalizer2Factory {
 public:
     static const Normalizer2 *getNFCInstance(UErrorCode &errorCode);
     static const Normalizer2 *getNFDInstance(UErrorCode &errorCode);
@@ -414,7 +414,7 @@ public:
     static const Normalizer2Impl *getNFCImpl(UErrorCode &errorCode);
     static const Normalizer2Impl *getNFKC_CFImpl(UErrorCode &errorCode);
 private:
-    InternalNormalizer2Provider();  // No instantiation.
+    Normalizer2Factory();  // No instantiation.
 };
 
 U_CAPI int32_t U_EXPORT2

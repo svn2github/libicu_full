@@ -143,7 +143,7 @@ Normalizer::normalize(const UnicodeString& source,
             // the source and result strings are the same object, use a temporary one
             dest=&localDest;
         }
-        const Normalizer2 *n2=InternalNormalizer2Provider::getInstance(mode, status);
+        const Normalizer2 *n2=Normalizer2Factory::getInstance(mode, status);
         if(U_SUCCESS(status)) {
             if(options&UNORM_UNICODE_3_2) {
                 FilteredNormalizer2(*n2, *uniset_getUnicode32Instance(status)).
@@ -163,45 +163,7 @@ Normalizer::compose(const UnicodeString& source,
                     UBool compat, int32_t options,
                     UnicodeString& result, 
                     UErrorCode &status) {
-    if(source.isBogus() || U_FAILURE(status)) {
-        result.setToBogus();
-        if(U_SUCCESS(status)) {
-            status=U_ILLEGAL_ARGUMENT_ERROR;
-        }
-    } else {
-        UnicodeString localDest;
-        UnicodeString *dest;
-
-        if(&source!=&result) {
-            dest=&result;
-        } else {
-            // the source and result strings are the same object, use a temporary one
-            dest=&localDest;
-        }
-
-        UChar *buffer=dest->getBuffer(source.length());
-        int32_t length=unorm_compose(buffer, dest->getCapacity(),
-                                     source.getBuffer(), source.length(),
-                                     compat, options,
-                                     &status);
-        dest->releaseBuffer(U_SUCCESS(status) ? length : 0);
-        if(status==U_BUFFER_OVERFLOW_ERROR) {
-            status=U_ZERO_ERROR;
-            buffer=dest->getBuffer(length);
-            length=unorm_compose(buffer, dest->getCapacity(),
-                                 source.getBuffer(), source.length(),
-                                 compat, options,
-                                 &status);
-            dest->releaseBuffer(U_SUCCESS(status) ? length : 0);
-        }
-
-        if(dest==&localDest) {
-            result=*dest;
-        }
-        if(U_FAILURE(status)) {
-            result.setToBogus();
-        }
-    }
+    normalize(source, compat ? UNORM_NFKC : UNORM_NFC, options, result, status);
 }
 
 void U_EXPORT2
@@ -209,52 +171,14 @@ Normalizer::decompose(const UnicodeString& source,
                       UBool compat, int32_t options,
                       UnicodeString& result, 
                       UErrorCode &status) {
-    if(source.isBogus() || U_FAILURE(status)) {
-        result.setToBogus();
-        if(U_SUCCESS(status)) {
-            status=U_ILLEGAL_ARGUMENT_ERROR;
-        }
-    } else {
-        UnicodeString localDest;
-        UnicodeString *dest;
-
-        if(&source!=&result) {
-            dest=&result;
-        } else {
-            // the source and result strings are the same object, use a temporary one
-            dest=&localDest;
-        }
-
-        UChar *buffer=dest->getBuffer(source.length());
-        int32_t length=unorm_decompose(buffer, dest->getCapacity(),
-                                     source.getBuffer(), source.length(),
-                                     compat, options,
-                                     &status);
-        dest->releaseBuffer(U_SUCCESS(status) ? length : 0);
-        if(status==U_BUFFER_OVERFLOW_ERROR) {
-            status=U_ZERO_ERROR;
-            buffer=dest->getBuffer(length);
-            length=unorm_decompose(buffer, dest->getCapacity(),
-                                   source.getBuffer(), source.length(),
-                                   compat, options,
-                                   &status);
-            dest->releaseBuffer(U_SUCCESS(status) ? length : 0);
-        }
-
-        if(dest==&localDest) {
-            result=*dest;
-        }
-        if(U_FAILURE(status)) {
-            result.setToBogus();
-        }
-    }
+    normalize(source, compat ? UNORM_NFKD : UNORM_NFD, options, result, status);
 }
 
 UNormalizationCheckResult
 Normalizer::quickCheck(const UnicodeString& source,
                        UNormalizationMode mode, int32_t options,
                        UErrorCode &status) {
-    const Normalizer2 *n2=InternalNormalizer2Provider::getInstance(mode, status);
+    const Normalizer2 *n2=Normalizer2Factory::getInstance(mode, status);
     if(U_SUCCESS(status)) {
         if(options&UNORM_UNICODE_3_2) {
             return FilteredNormalizer2(*n2, *uniset_getUnicode32Instance(status)).
@@ -271,7 +195,7 @@ UBool
 Normalizer::isNormalized(const UnicodeString& source,
                          UNormalizationMode mode, int32_t options,
                          UErrorCode &status) {
-    const Normalizer2 *n2=InternalNormalizer2Provider::getInstance(mode, status);
+    const Normalizer2 *n2=Normalizer2Factory::getInstance(mode, status);
     if(U_SUCCESS(status)) {
         if(options&UNORM_UNICODE_3_2) {
             return FilteredNormalizer2(*n2, *uniset_getUnicode32Instance(status)).
@@ -298,36 +222,24 @@ Normalizer::concatenate(UnicodeString &left, UnicodeString &right,
         UnicodeString localDest;
         UnicodeString *dest;
 
-        if(&left!=&result && &right!=&result) {
+        if(&right!=&result) {
             dest=&result;
         } else {
-            // the source and result strings are the same object, use a temporary one
+            // the right and result strings are the same object, use a temporary one
             dest=&localDest;
         }
-
-        UChar *buffer=dest->getBuffer(left.length()+right.length());
-        int32_t length=unorm_concatenate(left.getBuffer(), left.length(),
-                                         right.getBuffer(), right.length(),
-                                         buffer, dest->getCapacity(),
-                                         mode, options,
-                                         &errorCode);
-        dest->releaseBuffer(U_SUCCESS(errorCode) ? length : 0);
-        if(errorCode==U_BUFFER_OVERFLOW_ERROR) {
-            errorCode=U_ZERO_ERROR;
-            buffer=dest->getBuffer(length);
-            int32_t length=unorm_concatenate(left.getBuffer(), left.length(),
-                                             right.getBuffer(), right.length(),
-                                             buffer, dest->getCapacity(),
-                                             mode, options,
-                                             &errorCode);
-            dest->releaseBuffer(U_SUCCESS(errorCode) ? length : 0);
+        *dest=left;
+        const Normalizer2 *n2=Normalizer2Factory::getInstance(mode, errorCode);
+        if(U_SUCCESS(errorCode)) {
+            if(options&UNORM_UNICODE_3_2) {
+                FilteredNormalizer2(*n2, *uniset_getUnicode32Instance(errorCode)).
+                    append(*dest, right, errorCode);
+            } else {
+                n2->append(*dest, right, errorCode);
+            }
         }
-
-        if(dest==&localDest) {
+        if(dest==&localDest && U_SUCCESS(errorCode)) {
             result=*dest;
-        }
-        if(U_FAILURE(errorCode)) {
-            result.setToBogus();
         }
     }
     return result;

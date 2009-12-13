@@ -82,6 +82,23 @@ class NoopNormalizer2 : public Normalizer2 {
     }
 };
 
+/**
+ * [TODO: Needed as public API?]
+ * This class offers functions for iterative normalization which is useful
+ * when only a small portion of a longer string/text needs to be processed.
+ * In ICU, iterative normalization is used by
+ * the NormalizationTransliterator (to avoid replacing already-normalized text)
+ * and ucol_nextSortKeyPart() (to process only the substring for which
+ * sort key bytes are computed).
+ *
+ * Iterative normalization moves from one normalization boundary to the next
+ * or preceding boundary. At such a boundary, the portions of the string
+ * before it and after it do not interact and can be handled independently.
+ * Note: The spanQuickCheckYes() also stops at a normalization boundary.
+ *
+ * The set of normalization boundaries returned by these functions may not be
+ * complete: There may be more boundaries that could be returned.
+ */
 // Intermediate class:
 // Has Normalizer2Impl and does boilerplate argument checking and setup.
 class Normalizer2WithImpl : public Normalizer2 {
@@ -181,6 +198,70 @@ protected:
     spanQuickCheckYes(const UChar *src, const UChar *limit, UErrorCode &errorCode) const = 0;
 
     const Normalizer2Impl &impl;
+
+#if 0
+    // TODO: Needed as public API?
+    //       Not currently used anywhere in ICU,
+    //       except that internal versions are used in the append() implementations.
+    /**
+     * Returns an index greater than start where there is a normalization boundary.
+     * (See the class documentation for more about normalization boundaries.)
+     * @param s input string
+     * @param start starting index in the string
+     * @return index of the next boundary
+     * @draft ICU 4.4
+     */
+    virtual int32_t
+    nextBoundary(const UnicodeString &s, int32_t start) const = 0;
+
+    /**
+     * Returns an index less than start where there is a normalization boundary.
+     * (See the class documentation for more about normalization boundaries.)
+     * @param s input string
+     * @param start starting index in the string
+     * @return index of the previous boundary
+     * @draft ICU 4.4
+     */
+    virtual int32_t
+    previousBoundary(const UnicodeString &s, int32_t start) const = 0;
+#endif
+
+#if 0
+    // TODO: Needed as public API?
+    //       (Needed internally for unorm_next() and NormalizationTransliterator.)
+    // TODO: Copy to UnicodeString or append to Appendable interface
+    //       which we don't have yet?
+    // TODO: previousBoundary() copy to UnicodeString or
+    //       append to Appendable interface?? or
+    //       prepend to Prependable interface???
+    /**
+     * Moves the UCharIterator to the next normalization boundary.
+     * (See the class documentation for more about normalization boundaries.)
+     * If the destination string is provided, then the substring
+     * between the starting and ending UCharIterator position
+     * is appended to that destination string.
+     * @param src input character iterator
+     * @param start starting index in the string
+     * @return number of UChars between the starting and ending UCharIterator position
+     * @draft ICU 4.4
+     */
+    virtual int32_t
+    nextBoundary(UCharIterator *src, UnicodeString *dest) const = 0;
+
+    /**
+     * Moves the UCharIterator to the previous normalization boundary.
+     * (See the class documentation for more about normalization boundaries.)
+     * If the destination string is provided, then the substring
+     * between the starting and ending UCharIterator position
+     * is prepended to that destination string.
+     * @param src input character iterator
+     * @param start starting index in the string
+     * @return number of UChars between the starting and ending UCharIterator position
+     * @draft ICU 4.4
+     */
+    virtual int32_t
+    previousBoundary(UCharIterator *src, UnicodeString *dest) const = 0;
+#endif
 };
 
 class DecomposeNormalizer2 : public Normalizer2WithImpl {
@@ -361,17 +442,17 @@ static UBool U_CALLCONV uprv_normalizer2_cleanup() {
 
 U_CDECL_END
 
-const Normalizer2 *InternalNormalizer2Provider::getNFCInstance(UErrorCode &errorCode) {
+const Normalizer2 *Normalizer2Factory::getNFCInstance(UErrorCode &errorCode) {
     Norm2AllModes *allModes=Norm2AllModesSingleton(nfcSingleton, "nfc").getInstance(errorCode);
     return allModes!=NULL ? &allModes->comp : NULL;
 }
 
-const Normalizer2 *InternalNormalizer2Provider::getNFDInstance(UErrorCode &errorCode) {
+const Normalizer2 *Normalizer2Factory::getNFDInstance(UErrorCode &errorCode) {
     Norm2AllModes *allModes=Norm2AllModesSingleton(nfcSingleton, "nfc").getInstance(errorCode);
     return allModes!=NULL ? &allModes->decomp : NULL;
 }
 
-const Normalizer2 *InternalNormalizer2Provider::getFCDInstance(UErrorCode &errorCode) {
+const Normalizer2 *Normalizer2Factory::getFCDInstance(UErrorCode &errorCode) {
     Norm2AllModes *allModes=Norm2AllModesSingleton(nfcSingleton, "nfc").getInstance(errorCode);
     if(allModes!=NULL) {
         allModes->impl.getFCDTrie(errorCode);
@@ -381,35 +462,35 @@ const Normalizer2 *InternalNormalizer2Provider::getFCDInstance(UErrorCode &error
     }
 }
 
-const Normalizer2 *InternalNormalizer2Provider::getFCCInstance(UErrorCode &errorCode) {
+const Normalizer2 *Normalizer2Factory::getFCCInstance(UErrorCode &errorCode) {
     Norm2AllModes *allModes=Norm2AllModesSingleton(nfcSingleton, "nfc").getInstance(errorCode);
     return allModes!=NULL ? &allModes->fcc : NULL;
 }
 
-const Normalizer2 *InternalNormalizer2Provider::getNFKCInstance(UErrorCode &errorCode) {
+const Normalizer2 *Normalizer2Factory::getNFKCInstance(UErrorCode &errorCode) {
     Norm2AllModes *allModes=
         Norm2AllModesSingleton(nfkcSingleton, "nfkc").getInstance(errorCode);
     return allModes!=NULL ? &allModes->comp : NULL;
 }
 
-const Normalizer2 *InternalNormalizer2Provider::getNFKDInstance(UErrorCode &errorCode) {
+const Normalizer2 *Normalizer2Factory::getNFKDInstance(UErrorCode &errorCode) {
     Norm2AllModes *allModes=
         Norm2AllModesSingleton(nfkcSingleton, "nfkc").getInstance(errorCode);
     return allModes!=NULL ? &allModes->decomp : NULL;
 }
 
-const Normalizer2 *InternalNormalizer2Provider::getNFKC_CFInstance(UErrorCode &errorCode) {
+const Normalizer2 *Normalizer2Factory::getNFKC_CFInstance(UErrorCode &errorCode) {
     Norm2AllModes *allModes=
         Norm2AllModesSingleton(nfkc_cfSingleton, "nfkc_cf").getInstance(errorCode);
     return allModes!=NULL ? &allModes->comp : NULL;
 }
 
-const Normalizer2 *InternalNormalizer2Provider::getNoopInstance(UErrorCode &errorCode) {
+const Normalizer2 *Normalizer2Factory::getNoopInstance(UErrorCode &errorCode) {
     return Norm2Singleton(noopSingleton).getInstance(errorCode);
 }
 
 const Normalizer2 *
-InternalNormalizer2Provider::getInstance(UNormalizationMode mode, UErrorCode &errorCode) {
+Normalizer2Factory::getInstance(UNormalizationMode mode, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) {
         return NULL;
     }
@@ -430,14 +511,14 @@ InternalNormalizer2Provider::getInstance(UNormalizationMode mode, UErrorCode &er
 }
 
 const Normalizer2Impl *
-InternalNormalizer2Provider::getNFCImpl(UErrorCode &errorCode) {
+Normalizer2Factory::getNFCImpl(UErrorCode &errorCode) {
     Norm2AllModes *allModes=
         Norm2AllModesSingleton(nfcSingleton, "nfc").getInstance(errorCode);
     return allModes!=NULL ? &allModes->impl : NULL;
 }
 
 const Normalizer2Impl *
-InternalNormalizer2Provider::getNFKC_CFImpl(UErrorCode &errorCode) {
+Normalizer2Factory::getNFKC_CFImpl(UErrorCode &errorCode) {
     Norm2AllModes *allModes=
         Norm2AllModesSingleton(nfkc_cfSingleton, "nfkc_cf").getInstance(errorCode);
     return allModes!=NULL ? &allModes->impl : NULL;

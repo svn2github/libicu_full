@@ -589,12 +589,13 @@ void Normalizer2Impl::decomposeAndAppend(const UChar *src, const UChar *limit,
     }
     // Just merge the strings at the boundary.
     ForwardUTrie2StringIterator iter(normTrie, src, limit);
-    uint16_t first16, norm16;
-    first16=norm16=iter.next16();
-    while(!isDecompYesAndZeroCC(norm16)) {
-        norm16=iter.next16();
+    uint8_t firstCC, prevCC, cc;
+    firstCC=prevCC=cc=getCC(iter.next16());
+    while(cc!=0) {
+        prevCC=cc;
+        cc=getCC(iter.next16());
     };
-    buffer.append(src, (int32_t)(iter.codePointStart-src), getCC(first16), 0, errorCode) &&
+    buffer.append(src, (int32_t)(iter.codePointStart-src), firstCC, prevCC, errorCode) &&
         buffer.appendZeroCC(iter.codePointStart, limit, errorCode);
 }
 

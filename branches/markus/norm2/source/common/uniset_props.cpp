@@ -214,14 +214,14 @@ const UnicodeSet* UnicodeSet::getInclusions(int32_t src, UErrorCode &status) {
                 unorm_addPropertyStarts(&sa, &status);
                 break;
             case UPROPS_SRC_NFC: {
-                const Normalizer2Impl *impl=InternalNormalizer2Provider::getNFCImpl(status);
+                const Normalizer2Impl *impl=Normalizer2Factory::getNFCImpl(status);
                 if(U_SUCCESS(status)) {
                     impl->addPropertyStarts(&sa, status);
                 }
                 break;
             }
             case UPROPS_SRC_NFKC_CF: {
-                const Normalizer2Impl *impl=InternalNormalizer2Provider::getNFKC_CFImpl(status);
+                const Normalizer2Impl *impl=Normalizer2Factory::getNFKC_CFImpl(status);
                 if(U_SUCCESS(status)) {
                     impl->addPropertyStarts(&sa, status);
                 }

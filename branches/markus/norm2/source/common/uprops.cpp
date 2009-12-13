@@ -191,7 +191,7 @@ u_hasBinaryProperty(UChar32 c, UProperty which) {
             } else if(column==UPROPS_SRC_NFKC_CF) {  // TODO: implement getting starts sets from N2Impl
 #if !UCONFIG_NO_NORMALIZATION
                 UErrorCode errorCode=U_ZERO_ERROR;
-                const Normalizer2Impl *kcf=InternalNormalizer2Provider::getNFKC_CFImpl(errorCode);
+                const Normalizer2Impl *kcf=Normalizer2Factory::getNFKC_CFImpl(errorCode);
                 if(U_SUCCESS(errorCode)) {
                     UnicodeString src(c);
                     UnicodeString dest;
