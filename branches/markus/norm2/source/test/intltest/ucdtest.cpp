@@ -15,6 +15,20 @@
 
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof(array[0]))
 
+static const char *ignorePropNames[]={
+    "FC_NFKC",
+    "Full_Composition_Exclusion",
+    "NFD_QC",
+    "NFC_QC",
+    "NFKD_QC",
+    "NFKC_QC",
+    "Expands_On_NFD",
+    "Expands_On_NFC",
+    "Expands_On_NFKD",
+    "Expands_On_NFKC",
+    "NFKC_CF"
+};
+
 UnicodeTest::UnicodeTest()
 {
     UErrorCode errorCode=U_ZERO_ERROR;
@@ -22,6 +36,10 @@ UnicodeTest::UnicodeTest()
     if(U_FAILURE(errorCode)) {
         delete unknownPropertyNames;
         unknownPropertyNames=NULL;
+    }
+    // Ignore some property names altogether.
+    for(int32_t i=0; i<LENGTHOF(ignorePropNames); ++i) {
+        unknownPropertyNames->puti(UnicodeString(ignorePropNames[i], -1, US_INV), 1, errorCode);
     }
 }
 
