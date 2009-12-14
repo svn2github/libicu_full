@@ -36,24 +36,6 @@ inline void checkCanGetBuffer(const UnicodeString &s, UErrorCode &errorCode) {
     }
 }
 
-// TODO: use UnicodeSet::span(UnicodeString &s, ...) and UnicodeString::tempSubString()
-
-static int32_t setSpan(const UnicodeSet &set,
-                       const UnicodeString &s, int32_t start,
-                       USetSpanCondition spanCondition) {
-    return start+set.span(s.getBuffer()+start, s.length()-start, spanCondition);
-}
-
-static int32_t setSpanBack(const UnicodeSet &set,
-                           const UnicodeString &s, int32_t start,
-                           USetSpanCondition spanCondition) {
-    int32_t sLength=s.length();
-    if(start>sLength) {
-        start=sLength;
-    }
-    return set.span(s.getBuffer(), start, spanCondition);
-}
-
 UnicodeString &
 FilteredNormalizer2::normalize(const UnicodeString &src,
                                UnicodeString &dest,
@@ -85,7 +67,7 @@ FilteredNormalizer2::normalize(const UnicodeString &src,
                                UErrorCode &errorCode) const {
     UnicodeString tempDest;  // Don't throw away destination buffer between iterations.
     for(int32_t prevSpanLimit=0; prevSpanLimit<src.length();) {
-        int32_t spanLimit=setSpan(set, src, prevSpanLimit, spanCondition);
+        int32_t spanLimit=set.span(src, prevSpanLimit, spanCondition);
         int32_t spanLength=spanLimit-prevSpanLimit;
         if(spanCondition==USET_SPAN_NOT_CONTAINED) {
             if(spanLength!=0) {
@@ -145,10 +127,10 @@ FilteredNormalizer2::normalizeSecondAndAppend(UnicodeString &first,
         }
     }
     // merge the in-filter suffix of the first string with the in-filter prefix of the second
-    int32_t prefixLimit=setSpan(set, second, 0, USET_SPAN_SIMPLE);
+    int32_t prefixLimit=set.span(second, 0, USET_SPAN_SIMPLE);
     if(prefixLimit!=0) {
         UnicodeString prefix(second.tempSubString(0, prefixLimit));
-        int32_t suffixStart=setSpanBack(set, first, INT32_MAX, USET_SPAN_SIMPLE);
+        int32_t suffixStart=set.spanBack(first, INT32_MAX, USET_SPAN_SIMPLE);
         if(suffixStart==0) {
             if(doNormalize) {
                 norm2.normalizeSecondAndAppend(first, prefix, errorCode);
@@ -184,7 +166,7 @@ FilteredNormalizer2::isNormalized(const UnicodeString &s, UErrorCode &errorCode)
     }
     USetSpanCondition spanCondition=USET_SPAN_SIMPLE;
     for(int32_t prevSpanLimit=0; prevSpanLimit<s.length();) {
-        int32_t spanLimit=setSpan(set, s, prevSpanLimit, spanCondition);
+        int32_t spanLimit=set.span(s, prevSpanLimit, spanCondition);
         if(spanCondition==USET_SPAN_NOT_CONTAINED) {
             spanCondition=USET_SPAN_SIMPLE;
         } else {
@@ -208,7 +190,7 @@ FilteredNormalizer2::quickCheck(const UnicodeString &s, UErrorCode &errorCode) c
     }
     USetSpanCondition spanCondition=USET_SPAN_SIMPLE;
     for(int32_t prevSpanLimit=0; prevSpanLimit<s.length();) {
-        int32_t spanLimit=setSpan(set, s, prevSpanLimit, spanCondition);
+        int32_t spanLimit=set.span(s, prevSpanLimit, spanCondition);
         if(spanCondition==USET_SPAN_NOT_CONTAINED) {
             spanCondition=USET_SPAN_SIMPLE;
         } else {
@@ -232,7 +214,7 @@ FilteredNormalizer2::spanQuickCheckYes(const UnicodeString &s, UErrorCode &error
     }
     USetSpanCondition spanCondition=USET_SPAN_SIMPLE;
     for(int32_t prevSpanLimit=0; prevSpanLimit<s.length();) {
-        int32_t spanLimit=setSpan(set, s, prevSpanLimit, spanCondition);
+        int32_t spanLimit=set.span(s, prevSpanLimit, spanCondition);
         if(spanCondition==USET_SPAN_NOT_CONTAINED) {
             spanCondition=USET_SPAN_SIMPLE;
         } else {
