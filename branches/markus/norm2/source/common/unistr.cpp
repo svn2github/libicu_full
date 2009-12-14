@@ -782,15 +782,13 @@ UnicodeString::extract(int32_t start,
 
 UnicodeString
 UnicodeString::tempSubString(int32_t start, int32_t len) const {
-  UnicodeString result;
+  pinIndices(start, len);
   const UChar *array = getBuffer();  // not getArrayStart() to check kIsBogus & kOpenGetBuffer
-  if(array == NULL) {
-    result.setToBogus();
-  } else {
-    pinIndices(start, len);
-    result.setTo(FALSE, array + start, len);
+  if(array==NULL) {
+    array=fUnion.fStackBuffer;  // anything not NULL because that would make an empty string
+    len=-2;  // bogus result string
   }
-  return result;
+  return UnicodeString(FALSE, array + start, len);
 }
 
 int32_t

@@ -1899,6 +1899,11 @@ UnicodeStringTest::TestUTF8() {
 #endif
 }
 
+// Test if this compiler supports Return Value Optimization of unnamed temporary objects.
+static UnicodeString wrapUChars(const UChar *uchars) {
+    return UnicodeString(TRUE, uchars, -1);
+}
+
 void
 UnicodeStringTest::TestReadOnlyAlias() {
     UChar uchars[]={ 0x61, 0x62, 0 };
@@ -1944,5 +1949,41 @@ UnicodeStringTest::TestReadOnlyAlias() {
     if(0!=u_strlen(alias.getTerminatedBuffer())) {
         errln("UnicodeString.setTo(read-only-alias).remove().getTerminatedBuffer() "
               "does not return a buffer terminated at length 0.");
+    }
+
+    UChar abc[]={ 0x61, 0x62, 0x63, 0 };
+    UBool hasRVO= wrapUChars(abc).getBuffer()==abc;
+
+    UnicodeString longString=UNICODE_STRING_SIMPLE("abcdefghijklmnopqrstuvwxyz0123456789");
+    UnicodeString temp;
+    temp.fastCopyFrom(longString.tempSubString());
+    if(temp!=longString || (hasRVO && temp.getBuffer()!=longString.getBuffer())) {
+        errln("UnicodeString.tempSubString() failed");
+    }
+    temp.fastCopyFrom(longString.tempSubString(-3, 5));
+    if(longString.compare(0, 5, temp)!=0 || (hasRVO && temp.getBuffer()!=longString.getBuffer())) {
+        errln("UnicodeString.tempSubString(-3, 5) failed");
+    }
+    temp.fastCopyFrom(longString.tempSubString(17));
+    if(longString.compare(17, INT32_MAX, temp)!=0 || (hasRVO && temp.getBuffer()!=longString.getBuffer()+17)) {
+        errln("UnicodeString.tempSubString(17) failed");
+    }
+    temp.fastCopyFrom(longString.tempSubString(99));
+    if(!temp.isEmpty()) {
+        errln("UnicodeString.tempSubString(99) failed");
+    }
+    temp.fastCopyFrom(longString.tempSubStringBetween(6));
+    if(longString.compare(6, INT32_MAX, temp)!=0 || (hasRVO && temp.getBuffer()!=longString.getBuffer()+6)) {
+        errln("UnicodeString.tempSubStringBetween(6) failed");
+    }
+    temp.fastCopyFrom(longString.tempSubStringBetween(8, 18));
+    if(longString.compare(8, 10, temp)!=0 || (hasRVO && temp.getBuffer()!=longString.getBuffer()+8)) {
+        errln("UnicodeString.tempSubStringBetween(8, 18) failed");
+    }
+    UnicodeString bogusString;
+    bogusString.setToBogus();
+    temp.fastCopyFrom(bogusString.tempSubStringBetween(8, 18));
+    if(!temp.isBogus()) {
+        errln("UnicodeString.setToBogus().tempSubStringBetween(8, 18) failed");
     }
 }
