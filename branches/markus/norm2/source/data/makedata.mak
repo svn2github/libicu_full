@@ -474,8 +474,8 @@ ALL : GODATA "$(ICU_LIB_TARGET)" "$(TESTDATAOUT)\testdata.dat"
 # when updating the Unicode data.
 # Changed in makedata.mak revision 1.117. See Jitterbug 4497.
 # Command line:
-#   C:\svn\icuproj\icu\trunk\source\data>nmake -f makedata.mak ICUMAKE=C:\svn\icuproj\icu\trunk\source\data\ CFG=Debug uni-core-data
-uni-core-data: GODATA "$(ICUBLD_PKG)\uprops.icu" "$(ICUBLD_PKG)\ucase.icu" "$(ICUBLD_PKG)\ubidi.icu" "$(ICUBLD_PKG)\unorm.icu"
+#   C:\svn\icuproj\icu\trunk\source\data>nmake -f makedata.mak ICUMAKE=C:\svn\icuproj\icu\trunk\source\data\ CFG=x86\Debug uni-core-data
+uni-core-data: GODATA "$(ICUBLD_PKG)\uprops.icu" "$(ICUBLD_PKG)\ucase.icu" "$(ICUBLD_PKG)\ubidi.icu" "$(ICUBLD_PKG)\unorm.icu" "$(ICUTMP)\unorm_props_data.c"
 	@echo Unicode .icu files built to "$(ICUBLD_PKG)"
 	@echo Unicode .c source files built to "$(ICUTMP)"
 
@@ -882,9 +882,10 @@ res_index:table(nofallback) {
 	@"$(ICUTOOLS)\gencase\$(CFG)\gencase" --csource -u $(UNICODE_VERSION) -i "$(ICUBLD_PKG)" -s "$(ICUUNIDATA)" -d "$(ICUTMP)"
 
 # Targets for unorm.icu
-"$(ICUBLD_PKG)\unorm.icu": "$(ICUUNIDATA)\*.txt" "$(ICUTOOLS)\gennorm\$(CFG)\gennorm.exe" "$(ICUBLD_PKG)\pnames.icu" "$(ICUBLD_PKG)\uprops.icu" "$(ICUBLD_PKG)\ucase.icu"
+# ICU 4.4: "$(ICUBLD_PKG)\unorm.icu" is now prebuilt, see below.
+"$(ICUTMP)\unorm_props_data.c": "$(ICUUNIDATA)\*.txt" "$(ICUTOOLS)\gennorm\$(CFG)\gennorm.exe" "$(ICUBLD_PKG)\pnames.icu" "$(ICUBLD_PKG)\uprops.icu" "$(ICUBLD_PKG)\ucase.icu"
 	@echo Creating data file for Unicode Normalization
-	@"$(ICUTOOLS)\gennorm\$(CFG)\gennorm" -u $(UNICODE_VERSION) -i "$(ICUBLD_PKG)" -s "$(ICUUNIDATA)" -d "$(ICUBLD_PKG)"
+	@rem @"$(ICUTOOLS)\gennorm\$(CFG)\gennorm" -u $(UNICODE_VERSION) -i "$(ICUBLD_PKG)" -s "$(ICUUNIDATA)" -d "$(ICUBLD_PKG)"
 	@"$(ICUTOOLS)\gennorm\$(CFG)\gennorm" --csource -u $(UNICODE_VERSION) -i "$(ICUBLD_PKG)" -s "$(ICUUNIDATA)" -d "$(ICUTMP)"
 
 # Targets for converters
@@ -900,6 +901,9 @@ res_index:table(nofallback) {
 	@"$(ICUTOOLS)\genuca\$(CFG)\genuca" -d "$(ICUBLD_PKG)\$(ICUCOL)" -i "$(ICUBLD_PKG)" -s "$(ICUUNIDATA)"
 
 # Targets for prebuilt Unicode data
+"$(ICUBLD_PKG)\unorm.icu": $(ICUSRCDATA_RELATIVE_PATH)\in\unorm.icu
+	"$(ICUPBIN)\icupkg" -tl $? $@
+
 "$(ICUBLD_PKG)\nfc.nrm": $(ICUSRCDATA_RELATIVE_PATH)\in\nfc.nrm
 	"$(ICUPBIN)\icupkg" -tl $? $@
 
