@@ -1242,7 +1242,7 @@ UnicodeString::doReplace(int32_t start,
       return *this;
     } else {
       pinIndex(start);
-      if((start + length) >= oldLength) {
+      if(length >= (oldLength - start)) {
         // remove suffix by reducing the length (like truncate())
         setLength(start);
         fUnion.fFields.fCapacity = start;  // not NUL-terminated any more

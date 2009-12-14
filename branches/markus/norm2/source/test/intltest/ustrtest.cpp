@@ -1951,10 +1951,26 @@ UnicodeStringTest::TestReadOnlyAlias() {
               "does not return a buffer terminated at length 0.");
     }
 
+    UnicodeString longString=UNICODE_STRING_SIMPLE("abcdefghijklmnopqrstuvwxyz0123456789");
+    alias.setTo(FALSE, longString.getBuffer(), longString.length());
+    alias.remove(0, 10);
+    if(longString.compare(10, INT32_MAX, alias)!=0 || alias.getBuffer()!=longString.getBuffer()+10) {
+        errln("UnicodeString.setTo(read-only-alias).remove(0, 10) did not preserve aliasing as expected.");
+    }
+    alias.setTo(FALSE, longString.getBuffer(), longString.length());
+    alias.remove(27, 99);
+    if(longString.compare(0, 27, alias)!=0 || alias.getBuffer()!=longString.getBuffer()) {
+        errln("UnicodeString.setTo(read-only-alias).remove(27, 99) did not preserve aliasing as expected.");
+    }
+    alias.setTo(FALSE, longString.getBuffer(), longString.length());
+    alias.retainBetween(6, 30);
+    if(longString.compare(6, 24, alias)!=0 || alias.getBuffer()!=longString.getBuffer()+6) {
+        errln("UnicodeString.setTo(read-only-alias).retainBetween(6, 30) did not preserve aliasing as expected.");
+    }
+
     UChar abc[]={ 0x61, 0x62, 0x63, 0 };
     UBool hasRVO= wrapUChars(abc).getBuffer()==abc;
 
-    UnicodeString longString=UNICODE_STRING_SIMPLE("abcdefghijklmnopqrstuvwxyz0123456789");
     UnicodeString temp;
     temp.fastCopyFrom(longString.tempSubString());
     if(temp!=longString || (hasRVO && temp.getBuffer()!=longString.getBuffer())) {
