@@ -961,7 +961,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\utrie2.c"
+				RelativePath=".\utrie2.cpp"
 				>
 			</File>
 			<File
