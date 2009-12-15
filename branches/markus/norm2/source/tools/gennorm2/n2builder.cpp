@@ -40,26 +40,7 @@
 
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 
-/* file data ---------------------------------------------------------------- */
-
-#if UCONFIG_NO_NORMALIZATION
-
-/* dummy UDataInfo cf. udata.h */
-static UDataInfo dataInfo = {
-    sizeof(UDataInfo),
-    0,
-
-    U_IS_BIG_ENDIAN,
-    U_CHARSET_FAMILY,
-    U_SIZEOF_UCHAR,
-    0,
-
-    { 0, 0, 0, 0 },                 /* dummy dataFormat */
-    { 0, 0, 0, 0 },                 /* dummy formatVersion */
-    { 0, 0, 0, 0 }                  /* dummy dataVersion */
-};
-
-#else
+#if !UCONFIG_NO_NORMALIZATION
 
 /* UDataInfo cf. udata.h */
 static UDataInfo dataInfo={
@@ -691,9 +672,7 @@ void Normalizer2DataBuilder::writeExtraData(UChar32 c, uint32_t value, ExtraData
             // Only for ccc=0.
             // Not when mapping to a Hangul syllable, or else the runtime decomposition and
             // data access functions would have to deal with Hangul-Jamo decomposition.
-            /* TODO: no special case for empty string -- if(p->mapping->isEmpty()) {
-                p->offset=Norm::OFFSET_DELTA;  // maps to empty string
-            } else */ if(p->mappingCP>=0 && !isHangul(p->mappingCP)) {
+            if(p->mappingCP>=0 && !isHangul(p->mappingCP)) {
 #if 1
                 int32_t delta=p->mappingCP-c;
                 if(-Normalizer2Impl::MAX_DELTA<=delta && delta<=Normalizer2Impl::MAX_DELTA) {
@@ -773,11 +752,6 @@ void Normalizer2DataBuilder::writeNorm16(UChar32 start, UChar32 end, uint32_t va
         case Norm::OFFSET_NO_NO:
             norm16=indexes[Normalizer2Impl::IX_MIN_NO_NO]+offset;
             isDecompNo=isCompNoMaybe=TRUE;
-            if(beVerbose) {  // TODO: remove after debugging
-                if(p->cc==0 && !p->mapping->isEmpty() && p->mappingCP>=0 && !isHangul(p->mappingCP)) {
-                    // printf("non-algorithmic mapping to single code point: %04lX>%04lX\n", start, p->mappingCP);
-                }
-            }
             break;
         case Norm::OFFSET_DELTA:
             norm16=getCenterNoNoDelta()+offset;

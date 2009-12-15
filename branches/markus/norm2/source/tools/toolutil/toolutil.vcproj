@@ -512,7 +512,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\toolutil.c"
+				RelativePath=".\toolutil.cpp"
 				>
 				<FileConfiguration
 					Name="Release|Win32"

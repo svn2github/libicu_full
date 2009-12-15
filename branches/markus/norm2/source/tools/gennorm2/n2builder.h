@@ -18,6 +18,9 @@
 #define __N2BUILDER_H__
 
 #include "unicode/utypes.h"
+
+#if !UCONFIG_NO_NORMALIZATION
+
 #include "unicode/errorcode.h"
 #include "unicode/unistr.h"
 #include "normalizer2impl.h"  // for IX_COUNT
@@ -27,17 +30,6 @@
 U_NAMESPACE_BEGIN
 
 extern UBool beVerbose, haveCopyright;
-
-// TODO: move to toolutil library
-class IcuToolErrorCode : public ErrorCode {
-public:
-    IcuToolErrorCode(const char *loc) : location(loc) {}
-    virtual ~IcuToolErrorCode();
-protected:
-    virtual void handleFailure() const;
-private:
-    const char *location;
-};
 
 struct Norm;
 
@@ -64,12 +56,14 @@ public:
     void writeBinaryFile(const char *filename);
 
 private:
-    // TODO: no copy, assign, etc.
-
     friend class CompositionBuilder;
     friend class Decomposer;
     friend class ExtraDataWriter;
     friend class Norm16Writer;
+
+    // No copy constructor nor assignment operator.
+    Normalizer2DataBuilder(const Normalizer2DataBuilder &other);
+    Normalizer2DataBuilder &operator=(const Normalizer2DataBuilder &other);
 
     uint8_t getCC(UChar32 c);
 
@@ -106,5 +100,7 @@ private:
 };
 
 U_NAMESPACE_END
+
+#endif // #if !UCONFIG_NO_NORMALIZATION
 
 #endif  // __N2BUILDER_H__

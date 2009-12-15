@@ -22,6 +22,7 @@
 #include "unicode/normalizer2.h"
 #include "unicode/unistr.h"
 #include "unicode/unorm.h"
+#include "cpputils.h"
 #include "cstring.h"
 #include "mutex.h"
 #include "normalizer2impl.h"
@@ -110,7 +111,7 @@ protected:
     normalize(const UnicodeString &src,
               UnicodeString &dest,
               UErrorCode &errorCode) const {
-        checkCanGetBuffer(src, errorCode);
+        uprv_checkCanGetBuffer(src, errorCode);
         if(U_FAILURE(errorCode)) {
             dest.setToBogus();
             return dest;
@@ -149,8 +150,8 @@ protected:
                              const UnicodeString &second,
                              UBool doNormalize,
                              UErrorCode &errorCode) const {
-        checkCanGetBuffer(first, errorCode);
-        checkCanGetBuffer(second, errorCode);
+        uprv_checkCanGetBuffer(first, errorCode);
+        uprv_checkCanGetBuffer(second, errorCode);
         if(U_FAILURE(errorCode)) {
             return first;
         }
@@ -173,7 +174,7 @@ protected:
     // quick checks
     virtual UBool
     isNormalized(const UnicodeString &s, UErrorCode &errorCode) const {
-        checkCanGetBuffer(s, errorCode);
+        uprv_checkCanGetBuffer(s, errorCode);
         if(U_FAILURE(errorCode)) {
             return FALSE;
         }
@@ -187,7 +188,7 @@ protected:
     }
     virtual int32_t
     spanQuickCheckYes(const UnicodeString &s, UErrorCode &errorCode) const {
-        checkCanGetBuffer(s, errorCode);
+        uprv_checkCanGetBuffer(s, errorCode);
         if(U_FAILURE(errorCode)) {
             return 0;
         }
@@ -302,7 +303,7 @@ public:
 
     virtual UBool
     isNormalized(const UnicodeString &s, UErrorCode &errorCode) const {
-        checkCanGetBuffer(s, errorCode);
+        uprv_checkCanGetBuffer(s, errorCode);
         if(U_FAILURE(errorCode)) {
             return UNORM_MAYBE;
         }
@@ -318,7 +319,7 @@ public:
     }
     virtual UNormalizationCheckResult
     quickCheck(const UnicodeString &s, UErrorCode &errorCode) const {
-        checkCanGetBuffer(s, errorCode);
+        uprv_checkCanGetBuffer(s, errorCode);
         if(U_FAILURE(errorCode)) {
             return UNORM_MAYBE;
         }

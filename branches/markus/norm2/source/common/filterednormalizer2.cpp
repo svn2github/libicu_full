@@ -22,25 +22,15 @@
 #include "unicode/uniset.h"
 #include "unicode/unistr.h"
 #include "unicode/unorm.h"
+#include "cpputils.h"
 
 U_NAMESPACE_BEGIN
-
-// TODO: duplicate from normalizer2impl.h; move to a lower-level header file
-/**
- * Check that the string is readable and writable.
- * Sets U_ILLEGAL_ARGUMENT_ERROR if the string isBogus() or has an open getBuffer().
- */
-inline void checkCanGetBuffer(const UnicodeString &s, UErrorCode &errorCode) {
-    if(U_SUCCESS(errorCode) && s.isBogus()) {
-        errorCode=U_ILLEGAL_ARGUMENT_ERROR;
-    }
-}
 
 UnicodeString &
 FilteredNormalizer2::normalize(const UnicodeString &src,
                                UnicodeString &dest,
                                UErrorCode &errorCode) const {
-    checkCanGetBuffer(src, errorCode);
+    uprv_checkCanGetBuffer(src, errorCode);
     if(U_FAILURE(errorCode)) {
         dest.setToBogus();
         return dest;
@@ -110,8 +100,8 @@ FilteredNormalizer2::normalizeSecondAndAppend(UnicodeString &first,
                                               const UnicodeString &second,
                                               UBool doNormalize,
                                               UErrorCode &errorCode) const {
-    checkCanGetBuffer(first, errorCode);
-    checkCanGetBuffer(second, errorCode);
+    uprv_checkCanGetBuffer(first, errorCode);
+    uprv_checkCanGetBuffer(second, errorCode);
     if(U_FAILURE(errorCode)) {
         return first;
     }
@@ -160,7 +150,7 @@ FilteredNormalizer2::normalizeSecondAndAppend(UnicodeString &first,
 
 UBool
 FilteredNormalizer2::isNormalized(const UnicodeString &s, UErrorCode &errorCode) const {
-    checkCanGetBuffer(s, errorCode);
+    uprv_checkCanGetBuffer(s, errorCode);
     if(U_FAILURE(errorCode)) {
         return FALSE;
     }
@@ -184,7 +174,7 @@ FilteredNormalizer2::isNormalized(const UnicodeString &s, UErrorCode &errorCode)
 
 UNormalizationCheckResult
 FilteredNormalizer2::quickCheck(const UnicodeString &s, UErrorCode &errorCode) const {
-    checkCanGetBuffer(s, errorCode);
+    uprv_checkCanGetBuffer(s, errorCode);
     if(U_FAILURE(errorCode)) {
         return UNORM_MAYBE;
     }
@@ -208,7 +198,7 @@ FilteredNormalizer2::quickCheck(const UnicodeString &s, UErrorCode &errorCode) c
 
 int32_t
 FilteredNormalizer2::spanQuickCheckYes(const UnicodeString &s, UErrorCode &errorCode) const {
-    checkCanGetBuffer(s, errorCode);
+    uprv_checkCanGetBuffer(s, errorCode);
     if(U_FAILURE(errorCode)) {
         return 0;
     }

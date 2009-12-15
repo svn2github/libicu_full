@@ -29,8 +29,13 @@
 #include "unicode/unistr.h"
 #include "n2builder.h"
 #include "normalizer2impl.h"
+#include "toolutil.h"
 #include "uoptions.h"
 #include "uparse.h"
+
+#if UCONFIG_NO_NORMALIZATION
+#include "unewdata.h"
+#endif
 
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 
@@ -40,17 +45,9 @@ UBool beVerbose=FALSE, haveCopyright=TRUE;
 
 U_DEFINE_LOCAL_OPEN_POINTER(LocalStdioFilePointer, FILE, fclose);
 
-IcuToolErrorCode::~IcuToolErrorCode() {
-    // Safe because our handleFailure() does not throw exceptions.
-    if(isFailure()) { handleFailure(); }
-}
-
-void IcuToolErrorCode::handleFailure() const {
-    fprintf(stderr, "error at %s: %s\n", location, errorName());
-    exit(errorCode);
-}
-
+#if !UCONFIG_NO_NORMALIZATION
 void parseFile(FILE *f, Normalizer2DataBuilder &builder);
+#endif
 
 /* -------------------------------------------------------------------------- */
 
@@ -121,18 +118,19 @@ main(int argc, char* argv[]) {
     beVerbose=options[VERBOSE].doesOccur;
     haveCopyright=options[COPYRIGHT].doesOccur;
 
+    IcuToolErrorCode errorCode("gennorm2/main()");
+
 #if UCONFIG_NO_NORMALIZATION
 
     fprintf(stderr,
         "gennorm2 writes a dummy binary data file "
         "because UCONFIG_NO_NORMALIZATION is set, \n"
         "see icu/source/common/unicode/uconfig.h\n");
-    // TODO: generateData(destDir, options[CSOURCE].doesOccur);
+    udata_createDummy(NULL, NULL, options[OUTPUT_FILENAME].value, errorCode);
     return U_UNSUPPORTED_ERROR;
 
 #else
 
-    IcuToolErrorCode errorCode("gennorm2/main()");
     LocalPointer<Normalizer2DataBuilder> builder(new Normalizer2DataBuilder(errorCode));
     errorCode.assertSuccess();
 

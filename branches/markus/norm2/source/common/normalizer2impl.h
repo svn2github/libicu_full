@@ -30,16 +30,6 @@
 
 U_NAMESPACE_BEGIN
 
-/**
- * Check that the string is readable and writable.
- * Sets U_ILLEGAL_ARGUMENT_ERROR if the string isBogus() or has an open getBuffer().
- */
-inline void checkCanGetBuffer(const UnicodeString &s, UErrorCode &errorCode) {
-    if(U_SUCCESS(errorCode) && s.isBogus()) {
-        errorCode=U_ILLEGAL_ARGUMENT_ERROR;
-    }
-}
-
 class Normalizer2Impl;
 
 class ReorderingBuffer : public UMemory {

@@ -38,6 +38,7 @@ measfmt.h
 measunit.h
 measure.h
 msgfmt.h
+normalizer2.h
 normlzr.h
 numfmt.h
 numsys.h

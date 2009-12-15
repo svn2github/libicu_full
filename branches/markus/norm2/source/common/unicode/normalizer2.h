@@ -17,9 +17,12 @@
 #ifndef __NORMALIZER2_H__
 #define __NORMALIZER2_H__
 
-#include "unicode/utypes.h"
+/**
+ * \file
+ * \brief C++ API: New API for Unicode Normalization.
+ */
 
-// TODO: add to list of C++ header files
+#include "unicode/utypes.h"
 
 #if !UCONFIG_NO_NORMALIZATION
 
@@ -27,11 +30,13 @@
 #include "unicode/unistr.h"
 #include "unicode/unorm.h"
 
-// TODO: Copy \file and other comments from unorm.h and/or normlzr.h.
 // TODO: Move UNORM2_ enums to new unormalizer2.h.
 
 /**
  * Constants for normalization modes.
+ * For details about standard Unicode normalization forms
+ * and about the algorithms which are also used with custom mapping tables
+ * see http://www.unicode.org/unicode/reports/tr15/
  * @draft ICU 4.4
  */
 typedef enum {
@@ -39,6 +44,8 @@ typedef enum {
      * Decomposition followed by composition.
      * Same as standard NFC when using an "nfc" instance.
      * Same as standard NFKC when using an "nfkc" instance.
+     * For details about standard Unicode normalization forms
+     * see http://www.unicode.org/unicode/reports/tr15/
      * @draft ICU 4.4
      */
     UNORM2_COMPOSE,
@@ -46,6 +53,8 @@ typedef enum {
      * Map, and reorder canonically.
      * Same as standard NFD when using an "nfc" instance.
      * Same as standard NFKD when using an "nfkc" instance.
+     * For details about standard Unicode normalization forms
+     * see http://www.unicode.org/unicode/reports/tr15/
      * @draft ICU 4.4
      */
     UNORM2_DECOMPOSE,
@@ -53,6 +62,9 @@ typedef enum {
      * "Fast C or D" form.
      * Further decomposition <i>without reordering</i>
      * would yield the same form as DECOMPOSE.
+     * Text in "Fast C or D" form can be processed efficiently with data tables
+     * that are "canonically closed", that is, that provide equivalent data for
+     * equivalent text, without having to be fully normalized.
      * Not a standard Unicode normalization form.
      * Not a unique form: Different FCD strings can be canonically equivalent.
      * For details see http://www.unicode.org/notes/tn5/#FCD
@@ -68,16 +80,14 @@ typedef enum {
      * For details see http://www.unicode.org/notes/tn5/#FCC
      * @draft ICU 4.4
      */
-    UNORM2_COMPOSE_CONTIGUOUS,
-    /** One more than the highest normalization mode constant. @draft ICU 4.4 */
-    // TODO: needed? error checking?? UNORM2_MODE_COUNT
+    UNORM2_COMPOSE_CONTIGUOUS
 } UNormalization2Mode;
 
 U_NAMESPACE_BEGIN
 
 /**
  * Unicode normalization functionality for standard Unicode normalization or
- * using custom mapping tables.
+ * for using custom mapping tables.
  * All instances of this class are unmodifiable/immutable.
  * Instances returned by getInstance() are singletons that must not be deleted by the caller.
  *
@@ -87,6 +97,7 @@ U_NAMESPACE_BEGIN
  *
  * The set of normalization boundaries returned may not be
  * complete: There may be more boundaries that could be returned.
+ * @draft ICU 4.4
  */
 class U_COMMON_API Normalizer2 : public UObject {
 public:
@@ -257,8 +268,6 @@ public:
      * @draft ICU 4.4
      */
     virtual UClassID getDynamicClassID() const;
-
-    // TODO: no copy, ==, etc.
 };
 
 /**

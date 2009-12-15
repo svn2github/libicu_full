@@ -21,11 +21,6 @@
 #include <stdio.h>
 #include <sys/stat.h>
 #include "unicode/utypes.h"
-#include "unicode/putil.h"
-#include "cmemory.h"
-#include "cstring.h"
-#include "toolutil.h"
-#include "unicode/ucal.h"
 
 #ifdef U_WINDOWS
 #   define VC_EXTRALEAN
@@ -41,6 +36,27 @@
 #   include <sys/types.h>
 #endif
 #include <errno.h>
+
+#include "unicode/errorcode.h"
+#include "unicode/putil.h"
+#include "cmemory.h"
+#include "cstring.h"
+#include "toolutil.h"
+#include "unicode/ucal.h"
+
+U_NAMESPACE_BEGIN
+
+IcuToolErrorCode::~IcuToolErrorCode() {
+    // Safe because our handleFailure() does not throw exceptions.
+    if(isFailure()) { handleFailure(); }
+}
+
+void IcuToolErrorCode::handleFailure() const {
+    fprintf(stderr, "error at %s: %s\n", location, errorName());
+    exit(errorCode);
+}
+
+U_NAMESPACE_END
 
 static int32_t currentYear = -1;
 
