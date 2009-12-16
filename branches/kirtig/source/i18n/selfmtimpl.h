@@ -37,6 +37,7 @@ U_NAMESPACE_BEGIN
 #define SLASH             ((UChar)0x002F)
 #define BACKSLASH         ((UChar)0x005C)
 #define SPACE             ((UChar)0x0020)
+#define TAB               ((UChar)0x0009)
 #define QUOTATION_MARK    ((UChar)0x0022)
 #define ASTERISK          ((UChar)0x002A)
 #define COMMA             ((UChar)0x002C)
