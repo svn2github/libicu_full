@@ -16,14 +16,15 @@
 
 const UnicodeString SIMPLE_PATTERN = UnicodeString("feminine {feminineVerbValue} other{otherVerbValue}");
 #define SELECT_PATTERN_DATA 4
-#define SELECT_SYNTAX_DATA 7
+#define SELECT_SYNTAX_DATA 11
 
 void SelectFormatTest::runIndexedTest( int32_t index, UBool exec, const char* &name, char* /*par*/ )
 {
     if (exec) logln("TestSuite SelectFormat");
     switch (index) {
-        TESTCASE(0, selectFormatAPITest);
-        TESTCASE(1, selectFormatUnitTest);
+        //TESTCASE(0, selectFormatAPITest);
+        //TESTCASE(1, selectFormatUnitTest);
+        TESTCASE(0, selectFormatUnitTest);
         default: name = "";
             break;
     }
@@ -41,7 +42,7 @@ void SelectFormatTest::selectFormatUnitTest(/*char *par*/)
         UNICODE_STRING_SIMPLE("odd{The number {1} is odd}other{The number {1} is even}"),
     };
 
-    UnicodeString checkSyntaxtData[SELECT_SYNTAX_DATA] = {
+    UnicodeString checkSyntaxData[SELECT_SYNTAX_DATA] = {
         UNICODE_STRING_SIMPLE("odd{foo} odd{bar} other{foobar}"),
         UNICODE_STRING_SIMPLE("odd{foo} other{bar} other{foobar}"),
         UNICODE_STRING_SIMPLE("odd{foo}"),
@@ -49,6 +50,24 @@ void SelectFormatTest::selectFormatUnitTest(/*char *par*/)
         UNICODE_STRING_SIMPLE("odd{foo},other{bar}"),
         UNICODE_STRING_SIMPLE("od d{foo} other{bar}"),
         UNICODE_STRING_SIMPLE("odd{foo}{foobar}other{foo}"),
+        UNICODE_STRING_SIMPLE("odd{foo1}other{foo2}}"),  
+        UNICODE_STRING_SIMPLE("odd{foo1}other{foo2} "),  
+        UNICODE_STRING_SIMPLE("odd{foo1}other{{foo2}"),  
+        UNICODE_STRING_SIMPLE("odd{fo{o1}other{foo2}}")
+    };
+
+    UErrorCode expErrorCodes[SELECT_SYNTAX_DATA]={
+        U_DUPLICATE_KEYWORD, 
+        U_DUPLICATE_KEYWORD,  
+        U_DEFAULT_KEYWORD_MISSING,
+        U_PATTERN_SYNTAX_ERROR,
+        U_PATTERN_SYNTAX_ERROR,
+        U_PATTERN_SYNTAX_ERROR,
+        U_PATTERN_SYNTAX_ERROR,
+        U_PATTERN_SYNTAX_ERROR,  
+        U_PATTERN_SYNTAX_ERROR,  
+        U_PATTERN_SYNTAX_ERROR,  
+        U_DEFAULT_KEYWORD_MISSING
     };
 
     UErrorCode status = U_ZERO_ERROR;
@@ -62,18 +81,25 @@ void SelectFormatTest::selectFormatUnitTest(/*char *par*/)
     logln("SelectFormat Unit Test : Testing SelectFormat pattern syntax.");
     for (int32_t i=0; i<SELECT_SYNTAX_DATA; ++i) {
         status = U_ZERO_ERROR;
-        selFmt->applyPattern(checkSyntaxtData[i], status);
-        if (U_SUCCESS(status)) {
-            errln("ERROR: SelectFormat Unit Test failed to detect syntax error with pattern: "+checkSyntaxtData[i]);
+        selFmt->applyPattern(checkSyntaxData[i], status);
+        if( status!= expErrorCodes[i] ){
+            errln("\nERROR: Unexpected result - SelectFormat Unit Test failed to detect syntax error with pattern: "+checkSyntaxData[i]+" and expected status="+ u_errorName(expErrorCodes[i]) + " and resulted status="+u_errorName(status));
         }
     }
 
+    logln("SelectFormat Unit Test : Creaing format object for Testing applying various patterns");
     status = U_ZERO_ERROR;
     selFmt = new SelectFormat( SIMPLE_PATTERN , status); 
+    logln("1111111111");
+    //SelectFormat* selFmt1 = new SelectFormat( SIMPLE_PATTERN , status); 
+    logln("2222222222");
     if (U_FAILURE(status)) {
+    logln("33333333333");
         errln("ERROR: SelectFormat Unit Test constructor failed in unit tests.- exitting");
+    logln("44444444444444");
         return;
     }
+    logln("555555555555555");
     // ======= Test applying various pattern
     logln("SelectFormat Unit Test : Testing applying various patterns");
     
