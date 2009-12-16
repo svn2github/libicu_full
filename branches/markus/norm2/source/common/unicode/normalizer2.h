@@ -28,60 +28,7 @@
 
 #include "unicode/uniset.h"
 #include "unicode/unistr.h"
-#include "unicode/unorm.h"
-
-// TODO: Move UNORM2_ enums to new unormalizer2.h.
-
-/**
- * Constants for normalization modes.
- * For details about standard Unicode normalization forms
- * and about the algorithms which are also used with custom mapping tables
- * see http://www.unicode.org/unicode/reports/tr15/
- * @draft ICU 4.4
- */
-typedef enum {
-    /**
-     * Decomposition followed by composition.
-     * Same as standard NFC when using an "nfc" instance.
-     * Same as standard NFKC when using an "nfkc" instance.
-     * For details about standard Unicode normalization forms
-     * see http://www.unicode.org/unicode/reports/tr15/
-     * @draft ICU 4.4
-     */
-    UNORM2_COMPOSE,
-    /**
-     * Map, and reorder canonically.
-     * Same as standard NFD when using an "nfc" instance.
-     * Same as standard NFKD when using an "nfkc" instance.
-     * For details about standard Unicode normalization forms
-     * see http://www.unicode.org/unicode/reports/tr15/
-     * @draft ICU 4.4
-     */
-    UNORM2_DECOMPOSE,
-    /**
-     * "Fast C or D" form.
-     * Further decomposition <i>without reordering</i>
-     * would yield the same form as DECOMPOSE.
-     * Text in "Fast C or D" form can be processed efficiently with data tables
-     * that are "canonically closed", that is, that provide equivalent data for
-     * equivalent text, without having to be fully normalized.
-     * Not a standard Unicode normalization form.
-     * Not a unique form: Different FCD strings can be canonically equivalent.
-     * For details see http://www.unicode.org/notes/tn5/#FCD
-     * @draft ICU 4.4
-     */
-    UNORM2_FCD,
-    /**
-     * Compose only contiguously.
-     * Also known as "FCC" or "Fast C Contiguous".
-     * The result will often but not always be in NFC.
-     * The result will conform to FCD which is useful for processing.
-     * Not a standard Unicode normalization form.
-     * For details see http://www.unicode.org/notes/tn5/#FCC
-     * @draft ICU 4.4
-     */
-    UNORM2_COMPOSE_CONTIGUOUS
-} UNormalization2Mode;
+#include "unicode/unorm2.h"
 
 U_NAMESPACE_BEGIN
 
@@ -112,6 +59,9 @@ public:
      * Use name="nfkc" and UNORM2_COMPOSE/UNORM2_DECOMPOSE for Unicode standard NFKC/NFKD.
      * Use name="nfkc_cf" and UNORM2_COMPOSE for Unicode standard NFKC_CF=NFKC_Casefold.
      *
+     * @param packageName NULL for ICU built-in data, otherwise application data package name
+     * @param name "nfc" or "nfkc" or "nfkc_cf" or name of custom data file
+     * @param mode normalization mode (compose or decompose etc.)
      * @param errorCode Standard ICU error code. Its input value must
      *                  pass the U_SUCCESS() test, or else the function returns
      *                  immediately. Check for U_FAILURE() on output or use with

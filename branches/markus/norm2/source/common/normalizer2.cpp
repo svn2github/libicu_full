@@ -567,6 +567,126 @@ Normalizer2::getInstance(const char *packageName,
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(Normalizer2)
 
+// C API ------------------------------------------------------------------- ***
+
+U_DRAFT const UNormalizer2 * U_EXPORT2
+unorm2_getInstance(const char *packageName,
+                   const char *name,
+                   UNormalization2Mode mode,
+                   UErrorCode *pErrorCode) {
+    return (const UNormalizer2 *)Normalizer2::getInstance(packageName, name, mode, *pErrorCode);
+}
+
+U_DRAFT void U_EXPORT2
+unorm2_close(UNormalizer2 *norm2) {
+    delete (Normalizer2 *)norm2;
+}
+
+U_DRAFT int32_t U_EXPORT2
+unorm2_normalize(const UNormalizer2 *norm2,
+                 const UChar *src, int32_t length,
+                 UChar *dest, int32_t capacity,
+                 UErrorCode *pErrorCode) {
+    if(U_FAILURE(*pErrorCode)) {
+        return 0;
+    }
+    if(src==NULL || length<-1 || capacity<0 || (dest==NULL && capacity>0) || src==dest) {
+        *pErrorCode=U_ILLEGAL_ARGUMENT_ERROR;
+        return 0;
+    }
+    UnicodeString srcString(FALSE, src, length);
+    UnicodeString destString(dest, 0, capacity);
+    ((const Normalizer2 *)norm2)->normalize(srcString, destString, *pErrorCode);
+    return destString.extract(dest, capacity, *pErrorCode);
+}
+
+U_DRAFT int32_t U_EXPORT2
+unorm2_normalizeSecondAndAppend(const UNormalizer2 *norm2,
+                                UChar *first, int32_t firstLength, int32_t firstCapacity,
+                                const UChar *second, int32_t secondLength,
+                                UErrorCode *pErrorCode) {
+    if(U_FAILURE(*pErrorCode)) {
+        return 0;
+    }
+    if( second==NULL || secondLength<-1 ||
+        firstCapacity<0 || (first==NULL && firstCapacity>0) ||
+        first==second
+    ) {
+        *pErrorCode=U_ILLEGAL_ARGUMENT_ERROR;
+        return 0;
+    }
+    UnicodeString firstString(first, 0, firstCapacity);
+    UnicodeString secondString(FALSE, second, secondLength);
+    ((const Normalizer2 *)norm2)->normalizeSecondAndAppend(firstString, secondString, *pErrorCode);
+    return firstString.extract(first, firstCapacity, *pErrorCode);
+}
+
+U_DRAFT int32_t U_EXPORT2
+unorm2_append(const UNormalizer2 *norm2,
+              UChar *first, int32_t firstLength, int32_t firstCapacity,
+              const UChar *second, int32_t secondLength,
+              UErrorCode *pErrorCode) {
+    if(U_FAILURE(*pErrorCode)) {
+        return 0;
+    }
+    if( second==NULL || secondLength<-1 ||
+        firstCapacity<0 || (first==NULL && firstCapacity>0) ||
+        first==second
+    ) {
+        *pErrorCode=U_ILLEGAL_ARGUMENT_ERROR;
+        return 0;
+    }
+    UnicodeString firstString(first, 0, firstCapacity);
+    UnicodeString secondString(FALSE, second, secondLength);
+    ((const Normalizer2 *)norm2)->append(firstString, secondString, *pErrorCode);
+    return firstString.extract(first, firstCapacity, *pErrorCode);
+}
+
+U_DRAFT UBool U_EXPORT2
+unorm2_isNormalized(const UNormalizer2 *norm2,
+                    const UChar *s, int32_t length,
+                    UErrorCode *pErrorCode) {
+    if(U_FAILURE(*pErrorCode)) {
+        return 0;
+    }
+    if(s==NULL || length<-1) {
+        *pErrorCode=U_ILLEGAL_ARGUMENT_ERROR;
+        return 0;
+    }
+    UnicodeString sString(FALSE, s, length);
+    return ((const Normalizer2 *)norm2)->isNormalized(sString, *pErrorCode);
+}
+
+U_DRAFT UNormalizationCheckResult U_EXPORT2
+unorm2_quickCheck(const UNormalizer2 *norm2,
+                  const UChar *s, int32_t length,
+                  UErrorCode *pErrorCode) {
+    if(U_FAILURE(*pErrorCode)) {
+        return UNORM_NO;
+    }
+    if(s==NULL || length<-1) {
+        *pErrorCode=U_ILLEGAL_ARGUMENT_ERROR;
+        return UNORM_NO;
+    }
+    UnicodeString sString(FALSE, s, length);
+    return ((const Normalizer2 *)norm2)->quickCheck(sString, *pErrorCode);
+}
+
+U_DRAFT int32_t U_EXPORT2
+unorm2_spanQuickCheckYes(const UNormalizer2 *norm2,
+                         const UChar *s, int32_t length,
+                         UErrorCode *pErrorCode) {
+    if(U_FAILURE(*pErrorCode)) {
+        return 0;
+    }
+    if(s==NULL || length<-1) {
+        *pErrorCode=U_ILLEGAL_ARGUMENT_ERROR;
+        return 0;
+    }
+    UnicodeString sString(FALSE, s, length);
+    return ((const Normalizer2 *)norm2)->spanQuickCheckYes(sString, *pErrorCode);
+}
+
 U_NAMESPACE_END
 
 #endif  // !UCONFIG_NO_NORMALIZATION

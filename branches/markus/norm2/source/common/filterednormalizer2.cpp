@@ -224,6 +224,23 @@ FilteredNormalizer2::spanQuickCheckYes(const UnicodeString &s, UErrorCode &error
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(FilteredNormalizer2)
 
+U_DRAFT UNormalizer2 * U_EXPORT2
+unorm2_openFiltered(const UNormalizer2 *norm2, const USet *filterSet, UErrorCode *pErrorCode) {
+    if(U_FAILURE(*pErrorCode)) {
+        return NULL;
+    }
+    if(filterSet==NULL) {
+        *pErrorCode=U_ILLEGAL_ARGUMENT_ERROR;
+        return NULL;
+    }
+    Normalizer2 *fn2=new FilteredNormalizer2(*(Normalizer2 *)norm2,
+                                             *UnicodeSet::fromUSet(filterSet));
+    if(fn2==NULL) {
+        *pErrorCode=U_MEMORY_ALLOCATION_ERROR;
+    }
+    return (UNormalizer2 *)fn2;
+}
+
 U_NAMESPACE_END
 
 #endif  // !UCONFIG_NO_NORMALIZATION
