@@ -24,9 +24,8 @@ void SelectFormatTest::runIndexedTest( int32_t index, UBool exec, const char* &n
 {
     if (exec) logln("TestSuite SelectFormat");
     switch (index) {
-        //TESTCASE(0, selectFormatAPITest);
-        //TESTCASE(1, selectFormatUnitTest);
-        TESTCASE(0, selectFormatUnitTest);
+        TESTCASE(0, selectFormatAPITest);
+        TESTCASE(1, selectFormatUnitTest);
         default: name = "";
             break;
     }
@@ -147,7 +146,6 @@ void SelectFormatTest::selectFormatUnitTest(/*char *par*/)
             if (U_FAILURE(status)) {
                 errln("ERROR: SelectFormat Unit test failed in format() with argument: "+ formatArgs[j]);
             }else{
-                logln("Result is " + result + " with argument = "+ formatArgs[j] + " for the pattern " + patternTestData[i]);
                 if( result != expFormatResult[i][j] ){
                     errln("ERROR: SelectFormat Unit test failed in format() with unexpected result\n  with argument: "+ formatArgs[j] + "\n result obtained: " + result + "\n and expected is: " + expFormatResult[i][j] );
                 }
