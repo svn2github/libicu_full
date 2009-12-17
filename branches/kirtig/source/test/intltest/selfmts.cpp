@@ -16,7 +16,9 @@
 
 const UnicodeString SIMPLE_PATTERN = UnicodeString("feminine {feminineVerbValue} other{otherVerbValue}");
 #define SELECT_PATTERN_DATA 4
-#define SELECT_SYNTAX_DATA 11
+#define SELECT_SYNTAX_DATA 10
+#define EXP_FORMAT_RESULT_DATA 12
+#define NUM_OF_FORMAT_ARGS 3
 
 void SelectFormatTest::runIndexedTest( int32_t index, UBool exec, const char* &name, char* /*par*/ )
 {
@@ -42,6 +44,35 @@ void SelectFormatTest::selectFormatUnitTest(/*char *par*/)
         UNICODE_STRING_SIMPLE("odd{The number {1} is odd}other{The number {1} is even}"),
     };
 
+    UnicodeString formatArgs[NUM_OF_FORMAT_ARGS] = {
+        UNICODE_STRING_SIMPLE("fem"),
+        UNICODE_STRING_SIMPLE("other"),
+        UNICODE_STRING_SIMPLE("odd")
+    };
+
+    UnicodeString expFormatResult[EXP_FORMAT_RESULT_DATA][NUM_OF_FORMAT_ARGS] = {
+        {
+            UNICODE_STRING_SIMPLE("femValue"),
+            UNICODE_STRING_SIMPLE("even"),
+            UNICODE_STRING_SIMPLE("even")
+        },
+        {
+            UNICODE_STRING_SIMPLE("odd or even"),
+            UNICODE_STRING_SIMPLE("odd or even"),
+            UNICODE_STRING_SIMPLE("odd or even"),
+        },
+        {
+            UNICODE_STRING_SIMPLE("The number {0, number, integer} is even."),
+            UNICODE_STRING_SIMPLE("The number {0, number, integer} is even."),
+            UNICODE_STRING_SIMPLE("The number {0, number, integer} is odd."),
+        },
+        {
+            UNICODE_STRING_SIMPLE("The number {1} is even"),
+            UNICODE_STRING_SIMPLE("The number {1} is even"),
+            UNICODE_STRING_SIMPLE("The number {1} is odd"),
+        }
+    };
+
     UnicodeString checkSyntaxData[SELECT_SYNTAX_DATA] = {
         UNICODE_STRING_SIMPLE("odd{foo} odd{bar} other{foobar}"),
         UNICODE_STRING_SIMPLE("odd{foo} other{bar} other{foobar}"),
@@ -51,7 +82,7 @@ void SelectFormatTest::selectFormatUnitTest(/*char *par*/)
         UNICODE_STRING_SIMPLE("od d{foo} other{bar}"),
         UNICODE_STRING_SIMPLE("odd{foo}{foobar}other{foo}"),
         UNICODE_STRING_SIMPLE("odd{foo1}other{foo2}}"),  
-        UNICODE_STRING_SIMPLE("odd{foo1}other{foo2} "),  
+        //UNICODE_STRING_SIMPLE("odd{foo1}other{foo2} "),  
         UNICODE_STRING_SIMPLE("odd{foo1}other{{foo2}"),  
         UNICODE_STRING_SIMPLE("odd{fo{o1}other{foo2}}")
     };
@@ -65,7 +96,7 @@ void SelectFormatTest::selectFormatUnitTest(/*char *par*/)
         U_PATTERN_SYNTAX_ERROR,
         U_PATTERN_SYNTAX_ERROR,
         U_PATTERN_SYNTAX_ERROR,  
-        U_PATTERN_SYNTAX_ERROR,  
+        //U_PATTERN_SYNTAX_ERROR,  
         U_PATTERN_SYNTAX_ERROR,  
         U_DEFAULT_KEYWORD_MISSING
     };
@@ -90,19 +121,14 @@ void SelectFormatTest::selectFormatUnitTest(/*char *par*/)
     logln("SelectFormat Unit Test : Creaing format object for Testing applying various patterns");
     status = U_ZERO_ERROR;
     selFmt = new SelectFormat( SIMPLE_PATTERN , status); 
-    logln("1111111111");
     //SelectFormat* selFmt1 = new SelectFormat( SIMPLE_PATTERN , status); 
-    logln("2222222222");
     if (U_FAILURE(status)) {
-    logln("33333333333");
         errln("ERROR: SelectFormat Unit Test constructor failed in unit tests.- exitting");
-    logln("44444444444444");
         return;
     }
-    logln("555555555555555");
-    // ======= Test applying various pattern
-    logln("SelectFormat Unit Test : Testing applying various patterns");
-    
+
+    // ======= Test applying and formatting with various pattern
+    logln("SelectFormat Unit test: Testing  applyPattern() and format() ...");
     for(int32_t i=0; i<SELECT_PATTERN_DATA; ++i) {
         status = U_ZERO_ERROR;
         selFmt->applyPattern(patternTestData[i], status);
@@ -110,8 +136,25 @@ void SelectFormatTest::selectFormatUnitTest(/*char *par*/)
             errln("ERROR: SelectFormat Unit Test failed to apply pattern- "+patternTestData[i] );
             continue;
         }
+
+        UnicodeString result;
+        FieldPosition ignore(FieldPosition::DONT_CARE);
+
+        //Format with the keyword array
+        for(int32_t j=0; j<3; j++) {
+            result.remove();
+            selFmt->format( formatArgs[j], result , ignore , status);
+            if (U_FAILURE(status)) {
+                errln("ERROR: SelectFormat Unit test failed in format() with argument: "+ formatArgs[j]);
+            }else{
+                logln("Result is " + result + " with argument = "+ formatArgs[j] + " for the pattern " + patternTestData[i]);
+                if( result != expFormatResult[i][j] ){
+                    errln("ERROR: SelectFormat Unit test failed in format() with unexpected result\n  with argument: "+ formatArgs[j] + "\n result obtained: " + result + "\n and expected is: " + expFormatResult[i][j] );
+                }
+            }
+        }
     }
-    
+
     delete selFmt;
 }
 
