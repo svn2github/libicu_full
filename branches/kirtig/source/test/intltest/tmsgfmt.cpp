@@ -785,8 +785,16 @@ void TestMessageFormat::testMsgFormatSelect(/* char* par */)
         Formattable testArgs15[] = {"Kirti","female",5,"female"};
         Formattable testArgs16[] = {"Kirti","female",1,"other"};
         Formattable testArgs17[] = {"Kirti","female",5,"other"};
+        Formattable testArgs18[] = {"Kirti","mixed",1,"mixed"};
+        Formattable testArgs19[] = {"Kirti","mixed",1,"other"};
+        Formattable testArgs20[] = {"Kirti","female",1,"mixed"};
+        Formattable testArgs21[] = {"Kirti","mixed",5,"mixed"};
+        Formattable testArgs22[] = {"Kirti","mixed",5,"other"};
+        Formattable testArgs23[] = {"Kirti","female",5,"mixed"};
         Formattable* testArgs[] = {testArgs10,testArgs11,testArgs12,testArgs13,
-                                   testArgs14,testArgs15,testArgs16,testArgs17 };
+                                   testArgs14,testArgs15,testArgs16,testArgs17,
+                                   testArgs18,testArgs19,testArgs20,testArgs21,
+                                   testArgs22,testArgs23 };
         UnicodeString exp[] = {
             "Kirti und sein Freund gingen nach Paris." ,
             "Kirti und seine 6 Freunde gingen nach Paris." ,
@@ -795,9 +803,16 @@ void TestMessageFormat::testMsgFormatSelect(/* char* par */)
             "Kirti und ihre Freundin  gingen nach Paris.",
             "Kirti und ihre 5 Freundinnen  gingen nach Paris.",
             "Kirti und ihr Freund  gingen nach Paris.",
-            "Kirti und ihre 5 Freunde  gingen nach Paris."};
+            "Kirti und ihre 5 Freunde  gingen nach Paris.",
+            "Kirti und sein Freund gingen nach Paris.", 
+            "Kirti und sein Freund gingen nach Paris.", 
+            "Kirti und ihr Freund  gingen nach Paris.",
+            "Kirti und seine 5 Freunde gingen nach Paris." ,
+            "Kirti und seine 5 Freunde gingen nach Paris." ,
+            "Kirti und ihre 5 Freunde  gingen nach Paris."
+        };
         //Format
-        for( int i=0; i< 8; i++){
+        for( int i=0; i< 14; i++){
             internalFormat( msgFmt6 , testArgs[i], 4, exp[i] ,(char*)"From TestMessageFormat::testSelectFormat format t6");
         }
     }
