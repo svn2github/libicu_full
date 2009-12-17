@@ -46,7 +46,7 @@ U_CDECL_END
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(SelectFormat)
 
 #define MAX_KEYWORD_SIZE 30
-static const UChar SELECT_KEYWORD_OTHER[]={LOW_O, LOW_T, LOW_H, LOW_E, LOW_R, 0};
+static const UChar SELECT_KEYWORD_OTHER[] = {LOW_O, LOW_T, LOW_H, LOW_E, LOW_R, 0};
 
 SelectFormat::SelectFormat(UErrorCode& status) {
    if (U_FAILURE(status)) {
@@ -75,7 +75,7 @@ SelectFormat::~SelectFormat() {
 
 void
 SelectFormat::init(UErrorCode& status) {
-    parsedValuesHash=NULL;
+    parsedValuesHash = NULL;
     pattern.remove();
     status = U_ZERO_ERROR;
 }
@@ -86,7 +86,8 @@ SelectFormat::applyPattern(const UnicodeString& newPattern, UErrorCode& status) 
     if (U_FAILURE(status)) {
       return;
     } 
-    this->parsedValuesHash=NULL;
+
+    this->parsedValuesHash = NULL;
     this->pattern = newPattern;
     enum State{ startState, keywordState, pastKeywordState, phraseState};
 
@@ -94,7 +95,7 @@ SelectFormat::applyPattern(const UnicodeString& newPattern, UErrorCode& status) 
     UnicodeString keyword = UnicodeString();
     UnicodeString phrase = UnicodeString();
     UnicodeString* ptrPhrase ;
-    int32_t braceCount=0;
+    int32_t braceCount = 0;
 
     if (parsedValuesHash == NULL) {
         parsedValuesHash = new Hashtable(TRUE, status);
@@ -107,12 +108,13 @@ SelectFormat::applyPattern(const UnicodeString& newPattern, UErrorCode& status) 
 
     //Process the state machine
     State state = startState;
-    for (int32_t i=0; i<pattern.length(); ++i) {
+    for (int32_t i = 0; i < pattern.length(); ++i) {
         //Get the character and check its type
-        UChar ch=pattern.charAt(i);
+        UChar ch = pattern.charAt(i);
         characterClass type;
         classifyCharacter(ch, type); 
 
+        //Allow any character in phrase but nowhere else
         if ( type == tOther ) {
             if ( state == phraseState ){
                 phrase += ch;
@@ -184,9 +186,10 @@ SelectFormat::applyPattern(const UnicodeString& newPattern, UErrorCode& status) 
                         phrase += ch;
                         break;
                     case tRightBrace:
+                        //Matching keyword, phrase pair found
                         if (braceCount == 0){
                             //Check validity of keyword
-                            if (parsedValuesHash->get(keyword)!= NULL) {
+                            if (parsedValuesHash->get(keyword) != NULL) {
                                 status = U_DUPLICATE_KEYWORD;
                                 return; 
                             }
@@ -194,15 +197,18 @@ SelectFormat::applyPattern(const UnicodeString& newPattern, UErrorCode& status) 
                                 status = U_PATTERN_SYNTAX_ERROR;
                                 return;
                             }
+
                             //Store the keyword, phrase pair in hashTable
                             ptrPhrase = new UnicodeString(phrase);
                             parsedValuesHash->put( keyword, ptrPhrase, status);
+
                             //Reinitialize
                             keyword.remove();
                             phrase.remove();
                             ptrPhrase = NULL;
-                            state=startState;
+                            state = startState;
                         }
+
                         if (braceCount > 0){
                             braceCount-- ;
                             phrase += ch;
@@ -221,10 +227,12 @@ SelectFormat::applyPattern(const UnicodeString& newPattern, UErrorCode& status) 
         }//end of switch(state)
     }
 
-    if ( state!=startState){
+    //Check if the stae machine is back to startState
+    if ( state != startState){
         status = U_PATTERN_SYNTAX_ERROR;
         return;
     }
+
     //Check if "other" keyword is present 
     if ( !checkSufficientDefinition() ) {
         status = U_DEFAULT_KEYWORD_MISSING;
@@ -280,21 +288,21 @@ SelectFormat::format(UnicodeString sInput,
 
 UnicodeString&
 SelectFormat::toPattern(UnicodeString& appendTo) {
-    appendTo+= pattern;
+    appendTo += pattern;
     return appendTo;
 }
 
 void
 SelectFormat::classifyCharacter(UChar ch, characterClass& type) const{
-    if ((ch>=CAP_A) && (ch<=CAP_Z)) {
+    if ((ch >= CAP_A) && (ch <= CAP_Z)) {
         type = tStartKeyword;
         return;
     }
-    if ((ch>=LOW_A) && (ch<=LOW_Z)) {
+    if ((ch >= LOW_A) && (ch <= LOW_Z)) {
         type = tStartKeyword;
         return;
     }
-    if ((ch>=U_ZERO) && (ch<=U_NINE)) {
+    if ((ch >= U_ZERO) && (ch <= U_NINE)) {
         type = tContinueKeyword;
         return;
     }
@@ -335,11 +343,14 @@ SelectFormat::checkValidKeyword(UnicodeString argKeyword ) const{
     UnicodeString keyword = UnicodeString();
     enum State{ startState, keywordState, pastKeywordState };
 
+    //Initialize
     State state = startState;
     keyword.remove();
-    for (int32_t i=0; i<argKeyword.length(); ++i) {
+
+    //Start the processing
+    for (int32_t i = 0; i < argKeyword.length(); ++i) {
         //Get the character and check its type
-        UChar ch=argKeyword.charAt(i);
+        UChar ch = argKeyword.charAt(i);
         characterClass type;
         classifyCharacter(ch, type); 
 
@@ -435,7 +446,7 @@ SelectFormat::operator==(const Format& other) const {
 
     const UHashElement* elem = NULL;
     int32_t pos = -1;
-    while ((elem=hashOther->nextElement(pos))!=NULL) {
+    while ((elem = hashOther->nextElement(pos)) != NULL) {
         const UHashTok otherKeyTok = elem->key;
         UnicodeString* otherKey = (UnicodeString*)otherKeyTok.pointer;
         const UHashTok otherKeyToVal = elem->value;
@@ -450,8 +461,8 @@ SelectFormat::operator==(const Format& other) const {
         }
         
     }
-    pos=-1;
-    while ((elem=parsedValuesHash->nextElement(pos))!=NULL) {
+    pos = -1;
+    while ((elem = parsedValuesHash->nextElement(pos)) != NULL) {
         const UHashTok thisKeyTok = elem->key;
         UnicodeString* thisKey = (UnicodeString*)thisKeyTok.pointer;
         const UHashTok thisKeyToVal = elem->value;
@@ -498,7 +509,7 @@ SelectFormat::copyHashtable(Hashtable *other, UErrorCode& status) {
     const UHashElement* elem = NULL;
 
     // walk through the hash table and create a deep clone
-    while ((elem = other->nextElement(pos))!= NULL){
+    while ((elem = other->nextElement(pos)) != NULL){
         const UHashTok otherKeyTok = elem->key;
         UnicodeString* otherKey = (UnicodeString*)otherKeyTok.pointer;
         const UHashTok otherKeyToVal = elem->value;
@@ -510,9 +521,7 @@ SelectFormat::copyHashtable(Hashtable *other, UErrorCode& status) {
     }
 }
 
-
 U_NAMESPACE_END
-
 
 #endif /* #if !UCONFIG_NO_FORMATTING */
 
