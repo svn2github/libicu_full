@@ -11,6 +11,7 @@
 *
 *   Date        Name        Description
 *   11/11/09    kirtig      Finished first cut of implementation.
+*   11/16/09    kirtig      Improved version 
 *******************************************************************************
 */
 
@@ -49,21 +50,6 @@ UOBJECT_DEFINE_RTTI_IMPLEMENTATION(SelectFormat)
 
 #define MAX_KEYWORD_SIZE 30
 static const UChar SELECT_KEYWORD_OTHER[]={LOW_O,LOW_T,LOW_H,LOW_E,LOW_R,0};
-
-char *austrdup(const UChar* unichars)
-{
-    int   length;
-    char *newString;
-
-    length    = u_strlen ( unichars );
-    newString = (char*)uprv_malloc ( sizeof( char ) * 4 * ( length + 1 ) );
-    if ( newString == NULL )
-        return NULL;
-
-    u_austrcpy ( newString, unichars );
-
-    return newString;
-}
 
 SelectFormat::SelectFormat(UErrorCode& status) {
    if (U_FAILURE(status)) {
@@ -104,9 +90,7 @@ SelectFormat::applyPattern(const UnicodeString& newPattern, UErrorCode& status) 
       return;
     } 
     this->parsedValuesHash=NULL;
-    printf("Value of newPattern is -%s- \n", austrdup(newPattern.getBuffer()) );
     this->pattern = newPattern;
-    printf("Value of pattern is -%s- \n", austrdup(pattern.getBuffer()) );
     enum State{ startState , keywordState , pastKeywordState , phraseState};
 
     //Initialization
@@ -127,35 +111,29 @@ SelectFormat::applyPattern(const UnicodeString& newPattern, UErrorCode& status) 
     //Process the state machine
     State state = startState;
     for (int32_t i=0; i<pattern.length(); ++i) {
-        UChar ch=pattern.charAt(i);
-        printf("\nCurrent ch =%c with i=%d" ,ch ,i);
-        //fmtToken type;
-        characterClass type;
         //Get the character and check its type
+        UChar ch=pattern.charAt(i);
+        characterClass type;
         classifyCharacter(ch, type); 
+
         if ( type== tOther ) {
-            printf("\ntype is tOther");
             if( state == phraseState ){
-                printf("\ntype tOther and sate is phraseState");
                 phrase += ch;
                 continue;
             }else {
-                printf("\nIllegal char.");
                 status = U_PATTERN_SYNTAX_ERROR;
                 return;
             }
         }
-        printf("\n About to process");
-        //Process the character
+
+        //Process the state machine
         switch (state) {
             //At the start of pattern
             case startState:
-                printf("\nInside startState");
                 switch (type) {
                     case tSpace:
                         break;
                     case tStartKeyword:
-                        printf("\n***********Entering keywordState");
                         state = keywordState;
                         keyword += ch;
                         break;
@@ -165,12 +143,11 @@ SelectFormat::applyPattern(const UnicodeString& newPattern, UErrorCode& status) 
                         return;
                 }//end of switch(type)
                 break;
+
             //Handle the keyword state
             case keywordState:
-                printf("\nInside keywordState");
                 switch (type) {
                     case tSpace:
-                        printf("\n***********Entering pastKeywordState");
                         state = pastKeywordState;
                         break;
                     case tStartKeyword:
@@ -178,7 +155,6 @@ SelectFormat::applyPattern(const UnicodeString& newPattern, UErrorCode& status) 
                         keyword += ch;
                         break;
                     case tLeftBrace:
-                        printf("\n***********Entering phraseState");
                         state = phraseState;
                         break;
                     //If anything else is encountered,it's a syntax error
@@ -187,14 +163,13 @@ SelectFormat::applyPattern(const UnicodeString& newPattern, UErrorCode& status) 
                         return;
                 }//end of switch(type)
                 break;
+
             //Handle the pastkeyword state
             case pastKeywordState:
-                printf("\nInside pastKeywordState");
                 switch (type) {
                     case tSpace:
                         break;
                     case tLeftBrace:
-                        printf("\n***********Entering phraseState");
                         state = phraseState;
                         break;
                     //If anything else is encountered,it's a syntax error
@@ -203,45 +178,47 @@ SelectFormat::applyPattern(const UnicodeString& newPattern, UErrorCode& status) 
                         return;
                 }//end of switch(type)
                 break;
+
             //Handle the phrase state
             case phraseState:
-                printf("\nInside phraseState");
                 switch (type) {
                     case tLeftBrace:
                         braceCount++;
                         phrase += ch;
                         break;
                     case tRightBrace:
-                        printf("\n***********Inside phraseState-tRightBrace with braceCount =%d", braceCount);
                         if(braceCount == 0){
-                            printf("\naaaaaaaaaaaaaaaaaaa");
-    printf("Value of keyWord -%s- \n", austrdup(keyword.getBuffer()) );
                             //Check validity of keyword
                             if (parsedValuesHash->get(keyword)!= NULL) {
-                                printf("\njjjjjjjjjjjjj");
                                 status = U_DUPLICATE_KEYWORD;
                                 return; 
                             }
-                            printf("\n66666666666666666");
                             if (keyword.length()==0) {
-                                printf("\nkkkkkkkkkkkkkk");
                                 status = U_PATTERN_SYNTAX_ERROR;
                                 return;
                             }
-                            printf("\n90909090990");
                             //Store the keyword, phrase pair in hashTable
                             ptrPhrase = new UnicodeString(phrase);
                             parsedValuesHash->put( keyword, ptrPhrase, status);
-    printf("Value of keyWord and ptrPhrase are -%s- and -%s- \n", austrdup(keyword.getBuffer()) , austrdup(ptrPhrase->getBuffer()) );
                             //Reinitialize
                             keyword.remove();
                             phrase.remove();
                             ptrPhrase = NULL;
                             state=startState;
+/*
+                            //Check if there is a space before the next keyword starts
+                            if( (i+1) < pattern.length()){
+                                ch=pattern.charAt(i+1);
+                                //Get the character and check its type
+                                classifyCharacter(ch, type); 
+                                if ( type!= tSpace ) {
+                                    status = U_PATTERN_SYNTAX_ERROR;
+                                    return;
+                                }
+                            }
+*/
                         }
-                        printf("\n99999999999999");
                         if(braceCount > 0){
-                            printf("\nbbbbbbbbbbbbbbb");
                             braceCount-- ;
                             phrase += ch;
                         }
@@ -250,13 +227,15 @@ SelectFormat::applyPattern(const UnicodeString& newPattern, UErrorCode& status) 
                         phrase += ch;
                 }//end of switch(type)
                 break;
+
             //Handle the  default case of switch(state)
             default:
                 status = U_PATTERN_SYNTAX_ERROR;
                 return;
+
         }//end of switch(state)
     }
-    printf("\n\n------------State at the end of pattern loop is %d",state);
+
     if( state!=startState){
         status = U_PATTERN_SYNTAX_ERROR;
         return;
