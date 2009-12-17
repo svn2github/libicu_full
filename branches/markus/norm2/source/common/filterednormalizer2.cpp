@@ -222,6 +222,21 @@ FilteredNormalizer2::spanQuickCheckYes(const UnicodeString &s, UErrorCode &error
     return s.length();
 }
 
+UBool
+FilteredNormalizer2::hasBoundaryBefore(UChar32 c) const {
+    return !set.contains(c) || norm2.hasBoundaryBefore(c);
+}
+
+UBool
+FilteredNormalizer2::hasBoundaryAfter(UChar32 c) const {
+    return !set.contains(c) || norm2.hasBoundaryAfter(c);
+}
+
+UBool
+FilteredNormalizer2::isInert(UChar32 c) const {
+    return !set.contains(c) || norm2.isInert(c);
+}
+
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(FilteredNormalizer2)
 
 U_DRAFT UNormalizer2 * U_EXPORT2

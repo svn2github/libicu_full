@@ -38,12 +38,27 @@ U_NAMESPACE_BEGIN
  * All instances of this class are unmodifiable/immutable.
  * Instances returned by getInstance() are singletons that must not be deleted by the caller.
  *
- * The spanQuickCheckYes() stops at a normalization boundary.
- * At such a boundary, the portions of the string
- * before it and after it do not interact and can be handled independently.
+ * Some of the functions in this class identify normalization boundaries.
+ * At a normalization boundary, the portions of the string
+ * before it and starting from it do not interact and can be handled independently.
  *
- * The set of normalization boundaries returned may not be
+ * The spanQuickCheckYes() stops at a normalization boundary.
+ * When the goal is a normalized string, then the text before the boundary
+ * can be copied, and the remainder can be processed with normalizeSecondAndAppend().
+ *
+ * The isBoundary() function tests whether a character is at a normalization boundary.
+ * This is used for moving from one normalization boundary to the next
+ * or preceding boundary, and for performing iterative normalization.
+ *
+ * Iterative normalization is useful when only a small portion of a
+ * longer string needs to be processed.
+ * In ICU, iterative normalization is used by the NormalizationTransliterator
+ * (to avoid replacing already-normalized text) and ucol_nextSortKeyPart()
+ * (to process only the substring for which sort key bytes are computed).
+ *
+ * The set of normalization boundaries returned by these functions may not be
  * complete: There may be more boundaries that could be returned.
+ * Different functions may return different boundaries.
  * @draft ICU 4.4
  */
 class U_COMMON_API Normalizer2 : public UObject {
@@ -206,6 +221,48 @@ public:
     spanQuickCheckYes(const UnicodeString &s, UErrorCode &errorCode) const = 0;
 
     /**
+     * Tests if the character has a normalization boundary before it.
+     * If true, then the character does not normalization-interact with
+     * preceding characters.
+     * In other words, a string containing this character can be normalized
+     * by processing portions before this character and starting from this
+     * character independently.
+     * This is used for iterative normalization. See the class documentation for details.
+     * @param c character to test
+     * @return TRUE if c has a normalization boundary before it
+     * @draft ICU 4.4
+     */
+    virtual UBool hasBoundaryBefore(UChar32 c) const = 0;
+
+    /**
+     * Tests if the character has a normalization boundary after it.
+     * If true, then the character does not normalization-interact with
+     * following characters.
+     * In other words, a string containing this character can be normalized
+     * by processing portions up to this character and after this
+     * character independently.
+     * This is used for iterative normalization. See the class documentation for details.
+     * @param c character to test
+     * @return TRUE if c has a normalization boundary after it
+     * @draft ICU 4.4
+     */
+    virtual UBool hasBoundaryAfter(UChar32 c) const = 0;
+
+    /**
+     * Tests if the character is normalization-inert.
+     * If true, then the character does not change, nor normalization-interact with
+     * preceding or following characters.
+     * In other words, a string containing this character can be normalized
+     * by processing portions before this character and after this
+     * character independently.
+     * This is used for iterative normalization. See the class documentation for details.
+     * @param c character to test
+     * @return TRUE if c is normalization-inert
+     * @draft ICU 4.4
+     */
+    virtual UBool isInert(UChar32 c) const = 0;
+
+    /**
      * ICU "poor man's RTTI", returns a UClassID for this class.
      * @returns a UClassID for this class.
      * @draft ICU 4.4
@@ -217,7 +274,7 @@ public:
      * @return a UClassID for the actual class.
      * @draft ICU 4.4
      */
-    virtual UClassID getDynamicClassID() const;
+    virtual UClassID getDynamicClassID() const = 0;
 };
 
 /**
@@ -339,6 +396,33 @@ public:
      */
     virtual int32_t
     spanQuickCheckYes(const UnicodeString &s, UErrorCode &errorCode) const;
+
+    /**
+     * Tests if the character has a normalization boundary before it.
+     * For details see the Normalizer2 base class documentation.
+     * @param c character to test
+     * @return TRUE if c has a normalization boundary before it
+     * @draft ICU 4.4
+     */
+    virtual UBool hasBoundaryBefore(UChar32 c) const;
+
+    /**
+     * Tests if the character has a normalization boundary after it.
+     * For details see the Normalizer2 base class documentation.
+     * @param c character to test
+     * @return TRUE if c has a normalization boundary after it
+     * @draft ICU 4.4
+     */
+    virtual UBool hasBoundaryAfter(UChar32 c) const;
+
+    /**
+     * Tests if the character is normalization-inert.
+     * For details see the Normalizer2 base class documentation.
+     * @param c character to test
+     * @return TRUE if c is normalization-inert
+     * @draft ICU 4.4
+     */
+    virtual UBool isInert(UChar32 c) const;
 
     /**
      * ICU "poor man's RTTI", returns a UClassID for this class.

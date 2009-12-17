@@ -225,7 +225,7 @@ public:
     enum {
         MAPPING_HAS_CCC_LCCC_WORD=0x80,
         MAPPING_PLUS_COMPOSITION_LIST=0x40,
-        // 0x20 is reserved
+        MAPPING_NO_COMP_BOUNDARY_AFTER=0x20,
         MAPPING_LENGTH_MASK=0x1f
     };
 
@@ -263,13 +263,28 @@ public:
                           UBool doMakeFCD,
                           ReorderingBuffer &buffer,
                           UErrorCode &errorCode) const;
+
+    UBool hasDecompBoundary(UChar32 c, UBool before) const;
+    UBool isDecompInert(UChar32 c) const { return isDecompYesAndZeroCC(getNorm16(c)); }
+
+    UBool hasCompBoundaryBefore(UChar32 c) const {
+        return c<minCompNoMaybeCP || hasCompBoundaryBefore(c, getNorm16(c));
+    }
+    UBool hasCompBoundaryAfter(UChar32 c, UBool onlyContiguous, UBool testInert) const;
+
+    UBool hasFCDBoundaryBefore(UChar32 c) const { return c<MIN_CCC_LCCC_CP || getFCD16(c)<=0xff; }
+    UBool hasFCDBoundaryAfter(UChar32 c) const {
+        uint16_t fcd16=getFCD16(c);
+        return fcd16<=1 || (fcd16&0xff)==0;
+    }
+    UBool isFCDInert(UChar32 c) const { return getFCD16(c)<=1; }
 private:
     static UBool U_CALLCONV
     isAcceptable(void *context, const char *type, const char *name, const UDataInfo *pInfo);
 
     UBool isMaybe(uint16_t norm16) const { return minMaybeYes<=norm16 && norm16<=JAMO_VT; }
     UBool isMaybeOrNonZeroCC(uint16_t norm16) const { return norm16>=minMaybeYes; }
-    // static UBool isInert(uint16_t norm16) const { return norm16==0; }
+    static UBool isInert(uint16_t norm16) { return norm16==0; }
     // static UBool isJamoL(uint16_t norm16) const { return norm16==1; }
     static UBool isJamoVT(uint16_t norm16) { return norm16==JAMO_VT; }
     UBool isHangul(uint16_t norm16) const { return norm16==minYesNo; }
@@ -280,6 +295,9 @@ private:
     // UBool isCompYesOrMaybe(uint16_t norm16) const {
     //     return norm16<minNoNo || minMaybeYes<=norm16;
     // }
+    UBool hasZeroCCFromDecompYes(uint16_t norm16) {
+        return norm16<=MIN_NORMAL_MAYBE_YES || norm16==JAMO_VT;
+    }
     UBool isDecompYes(uint16_t norm16) const { return norm16<minYesNo || minMaybeYes<=norm16; }
     UBool isDecompYesAndZeroCC(uint16_t norm16) const {
         return norm16<minYesNo ||
@@ -349,16 +367,9 @@ private:
     void recompose(ReorderingBuffer &buffer, int32_t recomposeStartIndex,
                    UBool onlyContiguous) const;
 
-    /**
-     * Is c a composition starter?
-     * True if its decomposition begins with a character that has
-     * ccc=0 && NFC_QC=Yes (isCompYesAndZeroCC()).
-     * As a shortcut, this is true if c itself has ccc=0 && NFC_QC=Yes
-     * (isCompYesAndZeroCC()) so we need not decompose.
-     */
-    UBool isCompStarter(UChar32 c, uint16_t norm16) const;
-    const UChar *findPreviousCompStarter(const UChar *start, const UChar *p) const;
-    const UChar *findNextCompStarter(const UChar *p, const UChar *limit) const;
+    UBool hasCompBoundaryBefore(UChar32 c, uint16_t norm16) const;
+    const UChar *findPreviousCompBoundary(const UChar *start, const UChar *p) const;
+    const UChar *findNextCompBoundary(const UChar *p, const UChar *limit) const;
 
     const UTrie2 *fcdTrie() const { return (const UTrie2 *)fcdTrieSingleton.fInstance; }
 

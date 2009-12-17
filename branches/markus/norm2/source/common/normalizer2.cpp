@@ -81,29 +81,20 @@ class NoopNormalizer2 : public Normalizer2 {
     spanQuickCheckYes(const UnicodeString &s, UErrorCode &errorCode) const {
         return s.length();
     }
+    virtual UBool hasBoundaryBefore(UChar32 c) const { return TRUE; }
+    virtual UBool hasBoundaryAfter(UChar32 c) const { return TRUE; }
+    virtual UBool isInert(UChar32 c) const { return TRUE; }
+
+    static UClassID U_EXPORT2 getStaticClassID();
+    virtual UClassID getDynamicClassID() const;
 };
 
-/**
- * [TODO: Needed as public API?]
- * This class offers functions for iterative normalization which is useful
- * when only a small portion of a longer string/text needs to be processed.
- * In ICU, iterative normalization is used by
- * the NormalizationTransliterator (to avoid replacing already-normalized text)
- * and ucol_nextSortKeyPart() (to process only the substring for which
- * sort key bytes are computed).
- *
- * Iterative normalization moves from one normalization boundary to the next
- * or preceding boundary. At such a boundary, the portions of the string
- * before it and after it do not interact and can be handled independently.
- * Note: The spanQuickCheckYes() also stops at a normalization boundary.
- *
- * The set of normalization boundaries returned by these functions may not be
- * complete: There may be more boundaries that could be returned.
- */
+UOBJECT_DEFINE_RTTI_IMPLEMENTATION(NoopNormalizer2)
+
 // Intermediate class:
 // Has Normalizer2Impl and does boilerplate argument checking and setup.
 class Normalizer2WithImpl : public Normalizer2 {
-protected:
+public:
     Normalizer2WithImpl(const Normalizer2Impl &ni) : impl(ni) {}
 
     // normalize
@@ -198,72 +189,13 @@ protected:
     virtual const UChar *
     spanQuickCheckYes(const UChar *src, const UChar *limit, UErrorCode &errorCode) const = 0;
 
+    static UClassID U_EXPORT2 getStaticClassID();
+    virtual UClassID getDynamicClassID() const;
+
     const Normalizer2Impl &impl;
-
-#if 0
-    // TODO: Needed as public API?
-    //       Not currently used anywhere in ICU,
-    //       except that internal versions are used in the append() implementations.
-    /**
-     * Returns an index greater than start where there is a normalization boundary.
-     * (See the class documentation for more about normalization boundaries.)
-     * @param s input string
-     * @param start starting index in the string
-     * @return index of the next boundary
-     * @draft ICU 4.4
-     */
-    virtual int32_t
-    nextBoundary(const UnicodeString &s, int32_t start) const = 0;
-
-    /**
-     * Returns an index less than start where there is a normalization boundary.
-     * (See the class documentation for more about normalization boundaries.)
-     * @param s input string
-     * @param start starting index in the string
-     * @return index of the previous boundary
-     * @draft ICU 4.4
-     */
-    virtual int32_t
-    previousBoundary(const UnicodeString &s, int32_t start) const = 0;
-#endif
-
-#if 0
-    // TODO: Needed as public API?
-    //       (Needed internally for unorm_next() and NormalizationTransliterator.)
-    // TODO: Copy to UnicodeString or append to Appendable interface
-    //       which we don't have yet?
-    // TODO: previousBoundary() copy to UnicodeString or
-    //       append to Appendable interface?? or
-    //       prepend to Prependable interface???
-    /**
-     * Moves the UCharIterator to the next normalization boundary.
-     * (See the class documentation for more about normalization boundaries.)
-     * If the destination string is provided, then the substring
-     * between the starting and ending UCharIterator position
-     * is appended to that destination string.
-     * @param src input character iterator
-     * @param start starting index in the string
-     * @return number of UChars between the starting and ending UCharIterator position
-     * @draft ICU 4.4
-     */
-    virtual int32_t
-    nextBoundary(UCharIterator *src, UnicodeString *dest) const = 0;
-
-    /**
-     * Moves the UCharIterator to the previous normalization boundary.
-     * (See the class documentation for more about normalization boundaries.)
-     * If the destination string is provided, then the substring
-     * between the starting and ending UCharIterator position
-     * is prepended to that destination string.
-     * @param src input character iterator
-     * @param start starting index in the string
-     * @return number of UChars between the starting and ending UCharIterator position
-     * @draft ICU 4.4
-     */
-    virtual int32_t
-    previousBoundary(UCharIterator *src, UnicodeString *dest) const = 0;
-#endif
 };
+
+UOBJECT_DEFINE_RTTI_IMPLEMENTATION(Normalizer2WithImpl)
 
 class DecomposeNormalizer2 : public Normalizer2WithImpl {
 public:
@@ -283,6 +215,9 @@ public:
     spanQuickCheckYes(const UChar *src, const UChar *limit, UErrorCode &errorCode) const {
         return impl.decompose(src, limit, NULL, errorCode);
     }
+    virtual UBool hasBoundaryBefore(UChar32 c) const { return impl.hasDecompBoundary(c, TRUE); }
+    virtual UBool hasBoundaryAfter(UChar32 c) const { return impl.hasDecompBoundary(c, FALSE); }
+    virtual UBool isInert(UChar32 c) const { return impl.isDecompInert(c); }
 };
 
 class ComposeNormalizer2 : public Normalizer2WithImpl {
@@ -333,6 +268,9 @@ public:
         UNormalizationCheckResult qcResult=UNORM_YES;
         return impl.compose(src, limit, onlyContiguous, &qcResult, NULL, errorCode);
     }
+    virtual UBool hasBoundaryBefore(UChar32 c) const { return impl.hasCompBoundaryBefore(c); }
+    virtual UBool hasBoundaryAfter(UChar32 c) const { return impl.hasCompBoundaryAfter(c, onlyContiguous, FALSE); }
+    virtual UBool isInert(UChar32 c) const { return impl.hasCompBoundaryAfter(c, onlyContiguous, TRUE); }
 private:
     UBool onlyContiguous;
 };
@@ -355,6 +293,9 @@ public:
     spanQuickCheckYes(const UChar *src, const UChar *limit, UErrorCode &errorCode) const {
         return impl.makeFCD(src, limit, NULL, errorCode);
     }
+    virtual UBool hasBoundaryBefore(UChar32 c) const { return impl.hasFCDBoundaryBefore(c); }
+    virtual UBool hasBoundaryAfter(UChar32 c) const { return impl.hasFCDBoundaryAfter(c); }
+    virtual UBool isInert(UChar32 c) const { return impl.isFCDInert(c); }
 };
 
 // instance cache ---------------------------------------------------------- ***
@@ -565,7 +506,7 @@ Normalizer2::getInstance(const char *packageName,
     return NULL;
 }
 
-UOBJECT_DEFINE_RTTI_IMPLEMENTATION(Normalizer2)
+UOBJECT_DEFINE_ABSTRACT_RTTI_IMPLEMENTATION(Normalizer2)
 
 // C API ------------------------------------------------------------------- ***
 
@@ -594,10 +535,57 @@ unorm2_normalize(const UNormalizer2 *norm2,
         *pErrorCode=U_ILLEGAL_ARGUMENT_ERROR;
         return 0;
     }
-    UnicodeString srcString(FALSE, src, length);
     UnicodeString destString(dest, 0, capacity);
-    ((const Normalizer2 *)norm2)->normalize(srcString, destString, *pErrorCode);
+    const Normalizer2 *n2=(const Normalizer2 *)norm2;
+    if(n2->getDynamicClassID()==Normalizer2WithImpl::getStaticClassID()) {
+        // Avoid duplicate argument checking and support NUL-terminated src.
+        const Normalizer2WithImpl *n2wi=(const Normalizer2WithImpl *)n2;
+        ReorderingBuffer buffer(n2wi->impl, destString);
+        if(buffer.init(*pErrorCode)) {
+            n2wi->normalize(src, length>=0 ? src+length : NULL, buffer, *pErrorCode);
+        }
+    } else {
+        UnicodeString srcString(FALSE, src, length);
+        n2->normalize(srcString, destString, *pErrorCode);
+    }
     return destString.extract(dest, capacity, *pErrorCode);
+}
+
+static int32_t
+normalizeSecondAndAppend(const UNormalizer2 *norm2,
+                         UChar *first, int32_t firstLength, int32_t firstCapacity,
+                         const UChar *second, int32_t secondLength,
+                         UBool doNormalize,
+                         UErrorCode *pErrorCode) {
+    if(U_FAILURE(*pErrorCode)) {
+        return 0;
+    }
+    if( second==NULL || secondLength<-1 ||
+        firstCapacity<0 || (first==NULL && firstCapacity>0) ||
+        first==second
+    ) {
+        *pErrorCode=U_ILLEGAL_ARGUMENT_ERROR;
+        return 0;
+    }
+    UnicodeString firstString(first, firstLength, firstCapacity);
+    const Normalizer2 *n2=(const Normalizer2 *)norm2;
+    if(n2->getDynamicClassID()==Normalizer2WithImpl::getStaticClassID()) {
+        // Avoid duplicate argument checking and support NUL-terminated src.
+        const Normalizer2WithImpl *n2wi=(const Normalizer2WithImpl *)n2;
+        ReorderingBuffer buffer(n2wi->impl, firstString);
+        if(buffer.init(*pErrorCode)) {
+            n2wi->normalizeAndAppend(second, secondLength>=0 ? second+secondLength : NULL,
+                                     doNormalize, buffer, *pErrorCode);
+        }
+    } else {
+        UnicodeString secondString(FALSE, second, secondLength);
+        if(doNormalize) {
+            n2->normalizeSecondAndAppend(firstString, secondString, *pErrorCode);
+        } else {
+            n2->append(firstString, secondString, *pErrorCode);
+        }
+    }
+    return firstString.extract(first, firstCapacity, *pErrorCode);
 }
 
 U_DRAFT int32_t U_EXPORT2
@@ -605,20 +593,10 @@ unorm2_normalizeSecondAndAppend(const UNormalizer2 *norm2,
                                 UChar *first, int32_t firstLength, int32_t firstCapacity,
                                 const UChar *second, int32_t secondLength,
                                 UErrorCode *pErrorCode) {
-    if(U_FAILURE(*pErrorCode)) {
-        return 0;
-    }
-    if( second==NULL || secondLength<-1 ||
-        firstCapacity<0 || (first==NULL && firstCapacity>0) ||
-        first==second
-    ) {
-        *pErrorCode=U_ILLEGAL_ARGUMENT_ERROR;
-        return 0;
-    }
-    UnicodeString firstString(first, 0, firstCapacity);
-    UnicodeString secondString(FALSE, second, secondLength);
-    ((const Normalizer2 *)norm2)->normalizeSecondAndAppend(firstString, secondString, *pErrorCode);
-    return firstString.extract(first, firstCapacity, *pErrorCode);
+    return normalizeSecondAndAppend(norm2,
+                                    first, firstLength, firstCapacity,
+                                    second, secondLength,
+                                    TRUE, pErrorCode);
 }
 
 U_DRAFT int32_t U_EXPORT2
@@ -626,20 +604,10 @@ unorm2_append(const UNormalizer2 *norm2,
               UChar *first, int32_t firstLength, int32_t firstCapacity,
               const UChar *second, int32_t secondLength,
               UErrorCode *pErrorCode) {
-    if(U_FAILURE(*pErrorCode)) {
-        return 0;
-    }
-    if( second==NULL || secondLength<-1 ||
-        firstCapacity<0 || (first==NULL && firstCapacity>0) ||
-        first==second
-    ) {
-        *pErrorCode=U_ILLEGAL_ARGUMENT_ERROR;
-        return 0;
-    }
-    UnicodeString firstString(first, 0, firstCapacity);
-    UnicodeString secondString(FALSE, second, secondLength);
-    ((const Normalizer2 *)norm2)->append(firstString, secondString, *pErrorCode);
-    return firstString.extract(first, firstCapacity, *pErrorCode);
+    return normalizeSecondAndAppend(norm2,
+                                    first, firstLength, firstCapacity,
+                                    second, secondLength,
+                                    FALSE, pErrorCode);
 }
 
 U_DRAFT UBool U_EXPORT2
@@ -685,6 +653,21 @@ unorm2_spanQuickCheckYes(const UNormalizer2 *norm2,
     }
     UnicodeString sString(FALSE, s, length);
     return ((const Normalizer2 *)norm2)->spanQuickCheckYes(sString, *pErrorCode);
+}
+
+U_DRAFT UBool U_EXPORT2
+unorm2_hasBoundaryBefore(const UNormalizer2 *norm2, UChar32 c) {
+    return ((const Normalizer2 *)norm2)->hasBoundaryBefore(c);
+}
+
+U_DRAFT UBool U_EXPORT2
+unorm2_hasBoundaryAfter(const UNormalizer2 *norm2, UChar32 c) {
+    return ((const Normalizer2 *)norm2)->hasBoundaryAfter(c);
+}
+
+U_DRAFT UBool U_EXPORT2
+unorm2_isInert(const UNormalizer2 *norm2, UChar32 c) {
+    return ((const Normalizer2 *)norm2)->isInert(c);
 }
 
 U_NAMESPACE_END

@@ -309,7 +309,7 @@ uint8_t Normalizer2Impl::getTrailCCFromCompYesAndZeroCC(const UChar *cpStart, co
     if(prevNorm16<minYesNo) {
         return 0;  // yesYes has ccc=tccc=0
     } else {
-        return (uint8_t)(*getMapping(prevNorm16)>>8);  // tccc from noNo
+        return (uint8_t)(*getMapping(prevNorm16)>>8);  // tccc from yesNo
     }
 }
 
@@ -493,14 +493,14 @@ UBool Normalizer2Impl::decompose(UChar32 c, uint16_t norm16,
         } else if(isDecompNoAlgorithmic(norm16)) {
             c=mapAlgorithmic(c, norm16);
             norm16=getNorm16(c);
-            continue;
         } else {
             // c decomposes, get everything from the variable-length extra data
             const uint16_t *mapping=getMapping(norm16);
-            int32_t length=*mapping&MAPPING_LENGTH_MASK;
+            uint16_t firstUnit=*mapping++;
+            int32_t length=firstUnit&MAPPING_LENGTH_MASK;
             uint8_t leadCC, trailCC;
-            trailCC=(uint8_t)(*mapping>>8);
-            if(*mapping++&MAPPING_HAS_CCC_LCCC_WORD) {
+            trailCC=(uint8_t)(firstUnit>>8);
+            if(firstUnit&MAPPING_HAS_CCC_LCCC_WORD) {
                 leadCC=(uint8_t)(*mapping++>>8);
             } else {
                 leadCC=0;
@@ -528,6 +528,45 @@ void Normalizer2Impl::decomposeAndAppend(const UChar *src, const UChar *limit,
     };
     buffer.append(src, (int32_t)(iter.codePointStart-src), firstCC, prevCC, errorCode) &&
         buffer.appendZeroCC(iter.codePointStart, limit, errorCode);
+}
+
+// Note: hasDecompBoundary() could be implemented as aliases to
+// hasFCDBoundaryBefore() and hasFCDBoundaryAfter()
+// at the cost of building the FCD trie for a decomposition normalizer.
+UBool Normalizer2Impl::hasDecompBoundary(UChar32 c, UBool before) const {
+    for(;;) {
+        if(c<minDecompNoCP) {
+            return TRUE;
+        }
+        uint16_t norm16=getNorm16(c);
+        if(isHangul(norm16) || isDecompYesAndZeroCC(norm16)) {
+            return TRUE;
+        } else if(norm16>MIN_NORMAL_MAYBE_YES) {
+            return FALSE;  // ccc!=0
+        } else if(isDecompNoAlgorithmic(norm16)) {
+            c=mapAlgorithmic(c, norm16);
+        } else {
+            // c decomposes, get everything from the variable-length extra data
+            const uint16_t *mapping=getMapping(norm16);
+            uint16_t firstUnit=*mapping++;
+            if((firstUnit&MAPPING_LENGTH_MASK)==0) {
+                return FALSE;
+            }
+            if(!before) {
+                // decomp after-boundary: same as hasFCDBoundaryAfter(),
+                // fcd16<=1 || trailCC==0
+                if(firstUnit>0x1ff) {
+                    return FALSE;  // trailCC>1
+                }
+                if(firstUnit<=0xff) {
+                    return TRUE;  // trailCC==0
+                }
+                // if(trailCC==1) test leadCC==0, same as checking for before-boundary
+            }
+            // TRUE if leadCC==0 (hasFCDBoundaryBefore())
+            return (firstUnit&MAPPING_HAS_CCC_LCCC_WORD)==0 || (*mapping&0xff00)==0;
+        }
+    }
 }
 
 /*
@@ -795,8 +834,8 @@ Normalizer2Impl::compose(const UChar *src, const UChar *limit,
 
     /*
      * prevStarter points to the last character before the current one
-     * that is a composition starter with ccc==0 and quick check "yes".
-     * Keeping track of prevStarter saves us looking for a composition starter
+     * that is a composition boundary with ccc==0 and quick check "yes".
+     * Keeping track of prevStarter saves us looking for a composition boundary
      * when we find a "no" or "maybe".
      *
      * When we back out from prevSrc back to prevStarter,
@@ -996,19 +1035,19 @@ Normalizer2Impl::compose(const UChar *src, const UChar *limit,
          */
 
         /*
-         * Find the last composition starter in [prevStarter..src[.
+         * Find the last composition boundary in [prevStarter..src[.
          * It is either the decomposition of the current character (at prevSrc),
          * or prevStarter.
          */
-        if(isCompStarter(c, norm16)) {
+        if(hasCompBoundaryBefore(c, norm16)) {
             prevStarter=prevSrc;
         } else if(pQCResult==NULL) {
             buffer->removeZeroCCSuffix((int32_t)(prevSrc-prevStarter));
         }
 
-        // Find the next composition starter in [src..limit[ -
+        // Find the next composition boundary in [src..limit[ -
         // modifies src to point to the next starter.
-        src=(UChar *)findNextCompStarter(src, limit);
+        src=(UChar *)findNextCompBoundary(src, limit);
 
         // Decompose [prevStarter..src[ into the buffer and then recompose that part of it.
         int32_t recomposeStartIndex=buffer->length();
@@ -1039,10 +1078,10 @@ void Normalizer2Impl::composeAndAppend(const UChar *src, const UChar *limit,
                                        ReorderingBuffer &buffer,
                                        UErrorCode &errorCode) const {
     if(!buffer.isEmpty()) {
-        const UChar *firstStarterInSrc=findNextCompStarter(src, limit);
+        const UChar *firstStarterInSrc=findNextCompBoundary(src, limit);
         if(src!=firstStarterInSrc) {
-            const UChar *lastStarterInDest=findPreviousCompStarter(buffer.getStart(),
-                                                                   buffer.getLimit());
+            const UChar *lastStarterInDest=findPreviousCompBoundary(buffer.getStart(),
+                                                                    buffer.getLimit());
             UnicodeString middle(lastStarterInDest,
                                  (int32_t)(buffer.getLimit()-lastStarterInDest));
             buffer.removeZeroCCSuffix((int32_t)(buffer.getLimit()-lastStarterInDest));
@@ -1063,8 +1102,14 @@ void Normalizer2Impl::composeAndAppend(const UChar *src, const UChar *limit,
     }
 }
 
-UBool Normalizer2Impl::isCompStarter(UChar32 c, uint16_t norm16) const {
-    // Partial copy of the decompose(c) function.
+/**
+ * Does c have a composition boundary before it?
+ * True if its decomposition begins with a character that has
+ * ccc=0 && NFC_QC=Yes (isCompYesAndZeroCC()).
+ * As a shortcut, this is true if c itself has ccc=0 && NFC_QC=Yes
+ * (isCompYesAndZeroCC()) so we need not decompose.
+ */
+UBool Normalizer2Impl::hasCompBoundaryBefore(UChar32 c, uint16_t norm16) const {
     for(;;) {
         if(isCompYesAndZeroCC(norm16)) {
             return TRUE;
@@ -1073,16 +1118,15 @@ UBool Normalizer2Impl::isCompStarter(UChar32 c, uint16_t norm16) const {
         } else if(isDecompNoAlgorithmic(norm16)) {
             c=mapAlgorithmic(c, norm16);
             norm16=getNorm16(c);
-            continue;
         } else {
             // c decomposes, get everything from the variable-length extra data
             const uint16_t *mapping=getMapping(norm16);
-            int32_t length=*mapping&MAPPING_LENGTH_MASK;
-            if((*mapping++&MAPPING_HAS_CCC_LCCC_WORD) && (*mapping++&0xff00)) {
-                return FALSE;  // non-zero leadCC
-            }
-            if(length==0) {
+            uint16_t firstUnit=*mapping++;
+            if((firstUnit&MAPPING_LENGTH_MASK)==0) {
                 return FALSE;
+            }
+            if((firstUnit&MAPPING_HAS_CCC_LCCC_WORD) && (*mapping++&0xff00)) {
+                return FALSE;  // non-zero leadCC
             }
             int32_t i=0;
             UChar32 c;
@@ -1092,21 +1136,54 @@ UBool Normalizer2Impl::isCompStarter(UChar32 c, uint16_t norm16) const {
     }
 }
 
-const UChar *Normalizer2Impl::findPreviousCompStarter(const UChar *start, const UChar *p) const {
+UBool Normalizer2Impl::hasCompBoundaryAfter(UChar32 c, UBool onlyContiguous, UBool testInert) const {
+    for(;;) {
+        uint16_t norm16=getNorm16(c);
+        if(isInert(norm16)) {
+            return TRUE;
+        } else if(norm16<=minYesNo) {
+            // Hangul LVT (==minYesNo) has a boundary after it.
+            // Hangul LV and non-inert yesYes characters combine forward.
+            return isHangul(norm16) && !isHangulWithoutJamoT((UChar)c);
+        } else if(norm16>= (testInert ? minNoNo : minMaybeYes)) {
+            return FALSE;
+        } else if(isDecompNoAlgorithmic(norm16)) {
+            c=mapAlgorithmic(c, norm16);
+        } else {
+            // c decomposes, get everything from the variable-length extra data.
+            // If testInert, then c must be a yesNo character which has lccc=0,
+            // otherwise it could be a noNo.
+            const uint16_t *mapping=getMapping(norm16);
+            uint16_t firstUnit=*mapping;
+            // TRUE if
+            //      c is not deleted, and
+            //      it and its decomposition do not combine forward, and it has a starter, and
+            //      if FCC then trailCC<=1
+            return
+                (firstUnit&MAPPING_LENGTH_MASK)!=0 &&
+                (firstUnit&(MAPPING_PLUS_COMPOSITION_LIST|MAPPING_NO_COMP_BOUNDARY_AFTER))!=0 &&
+                (!onlyContiguous || firstUnit<=0x1ff);
+        }
+    }
+}
+
+const UChar *Normalizer2Impl::findPreviousCompBoundary(const UChar *start, const UChar *p) const {
     BackwardUTrie2StringIterator iter(normTrie, start, p);
     uint16_t norm16;
     do {
         norm16=iter.previous16();
-    } while(!isCompStarter(iter.codePoint, norm16));
+    } while(!hasCompBoundaryBefore(iter.codePoint, norm16));
+    // We could also test hasCompBoundaryAfter() and return iter.codePointLimit,
+    // but that's probably not worth the extra cost.
     return iter.codePointStart;
 }
 
-const UChar *Normalizer2Impl::findNextCompStarter(const UChar *p, const UChar *limit) const {
+const UChar *Normalizer2Impl::findNextCompBoundary(const UChar *p, const UChar *limit) const {
     ForwardUTrie2StringIterator iter(normTrie, p, limit);
     uint16_t norm16;
     do {
         norm16=iter.next16();
-    } while(!isCompStarter(iter.codePoint, norm16));
+    } while(!hasCompBoundaryBefore(iter.codePoint, norm16));
     return iter.codePointStart;
 }
 
@@ -1203,13 +1280,14 @@ void Normalizer2Impl::setFCD16FromNorm16(UChar32 start, UChar32 end, uint16_t no
         } else {
             // c decomposes, get everything from the variable-length extra data
             const uint16_t *mapping=getMapping(norm16);
-            if((*mapping&MAPPING_LENGTH_MASK)==0) {
+            uint16_t firstUnit=*mapping;
+            if((firstUnit&MAPPING_LENGTH_MASK)==0) {
                 // A character that is deleted (maps to an empty string) must
                 // get the worst-case lccc and tccc values because arbitrary
                 // characters on both sides will become adjacent.
                 norm16=0x1ff;
             } else {
-                if(*mapping&MAPPING_HAS_CCC_LCCC_WORD) {
+                if(firstUnit&MAPPING_HAS_CCC_LCCC_WORD) {
                     norm16=mapping[1]&0xff00;  // lccc
                 } else {
                     norm16=0;

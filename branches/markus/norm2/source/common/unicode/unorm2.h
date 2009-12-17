@@ -311,5 +311,38 @@ unorm2_spanQuickCheckYes(const UNormalizer2 *norm2,
                          const UChar *s, int32_t length,
                          UErrorCode *pErrorCode);
 
+/**
+ * Tests if the character has a normalization boundary before it.
+ * For details see the Normalizer2 base class documentation.
+ * @param norm2 UNormalizer2 instance
+ * @param c character to test
+ * @return TRUE if c has a normalization boundary before it
+ * @draft ICU 4.4
+ */
+U_DRAFT UBool U_EXPORT2
+unorm2_hasBoundaryBefore(const UNormalizer2 *norm2, UChar32 c);
+
+/**
+ * Tests if the character has a normalization boundary after it.
+ * For details see the Normalizer2 base class documentation.
+ * @param norm2 UNormalizer2 instance
+ * @param c character to test
+ * @return TRUE if c has a normalization boundary after it
+ * @draft ICU 4.4
+ */
+U_DRAFT UBool U_EXPORT2
+unorm2_hasBoundaryAfter(const UNormalizer2 *norm2, UChar32 c);
+
+/**
+ * Tests if the character is normalization-inert.
+ * For details see the Normalizer2 base class documentation.
+ * @param norm2 UNormalizer2 instance
+ * @param c character to test
+ * @return TRUE if c is normalization-inert
+ * @draft ICU 4.4
+ */
+U_DRAFT UBool U_EXPORT2
+unorm2_isInert(const UNormalizer2 *norm2, UChar32 c);
+
 #endif  /* !UCONFIG_NO_NORMALIZATION */
 #endif  /* __UNORM2_H__ */
