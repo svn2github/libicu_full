@@ -15,7 +15,6 @@
 *******************************************************************************
 */
 
-
 #include "unicode/utypes.h"
 #include "unicode/ustring.h"
 #include "unicode/ucnv_err.h"
@@ -47,7 +46,7 @@ U_CDECL_END
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(SelectFormat)
 
 #define MAX_KEYWORD_SIZE 30
-static const UChar SELECT_KEYWORD_OTHER[]={LOW_O,LOW_T,LOW_H,LOW_E,LOW_R,0};
+static const UChar SELECT_KEYWORD_OTHER[]={LOW_O, LOW_T, LOW_H, LOW_E, LOW_R, 0};
 
 SelectFormat::SelectFormat(UErrorCode& status) {
    if (U_FAILURE(status)) {
@@ -89,7 +88,7 @@ SelectFormat::applyPattern(const UnicodeString& newPattern, UErrorCode& status) 
     } 
     this->parsedValuesHash=NULL;
     this->pattern = newPattern;
-    enum State{ startState , keywordState , pastKeywordState , phraseState};
+    enum State{ startState, keywordState, pastKeywordState, phraseState};
 
     //Initialization
     UnicodeString keyword = UnicodeString();
@@ -115,7 +114,7 @@ SelectFormat::applyPattern(const UnicodeString& newPattern, UErrorCode& status) 
         classifyCharacter(ch, type); 
 
         if ( type == tOther ) {
-            if( state == phraseState ){
+            if ( state == phraseState ){
                 phrase += ch;
                 continue;
             }else {
@@ -135,7 +134,7 @@ SelectFormat::applyPattern(const UnicodeString& newPattern, UErrorCode& status) 
                         state = keywordState;
                         keyword += ch;
                         break;
-                    //If anything else is encountered,it's a syntax error
+                    //If anything else is encountered, it's a syntax error
                     default:
                         status = U_PATTERN_SYNTAX_ERROR;
                         return;
@@ -155,7 +154,7 @@ SelectFormat::applyPattern(const UnicodeString& newPattern, UErrorCode& status) 
                     case tLeftBrace:
                         state = phraseState;
                         break;
-                    //If anything else is encountered,it's a syntax error
+                    //If anything else is encountered, it's a syntax error
                     default:
                         status = U_PATTERN_SYNTAX_ERROR;
                         return;
@@ -170,7 +169,7 @@ SelectFormat::applyPattern(const UnicodeString& newPattern, UErrorCode& status) 
                     case tLeftBrace:
                         state = phraseState;
                         break;
-                    //If anything else is encountered,it's a syntax error
+                    //If anything else is encountered, it's a syntax error
                     default:
                         status = U_PATTERN_SYNTAX_ERROR;
                         return;
@@ -185,7 +184,7 @@ SelectFormat::applyPattern(const UnicodeString& newPattern, UErrorCode& status) 
                         phrase += ch;
                         break;
                     case tRightBrace:
-                        if(braceCount == 0){
+                        if (braceCount == 0){
                             //Check validity of keyword
                             if (parsedValuesHash->get(keyword)!= NULL) {
                                 status = U_DUPLICATE_KEYWORD;
@@ -204,7 +203,7 @@ SelectFormat::applyPattern(const UnicodeString& newPattern, UErrorCode& status) 
                             ptrPhrase = NULL;
                             state=startState;
                         }
-                        if(braceCount > 0){
+                        if (braceCount > 0){
                             braceCount-- ;
                             phrase += ch;
                         }
@@ -222,7 +221,7 @@ SelectFormat::applyPattern(const UnicodeString& newPattern, UErrorCode& status) 
         }//end of switch(state)
     }
 
-    if( state!=startState){
+    if ( state!=startState){
         status = U_PATTERN_SYNTAX_ERROR;
         return;
     }
@@ -261,7 +260,7 @@ SelectFormat::format(UnicodeString sInput,
 
     //Check for the validity of the keyword
     UnicodeString& addrKeyword = sInput;
-    if( !checkValidKeyword(addrKeyword) ){
+    if ( !checkValidKeyword(addrKeyword) ){
         success = U_ILLEGAL_ARGUMENT_ERROR;
         return appendTo;
     }
@@ -360,7 +359,7 @@ SelectFormat::checkValidKeyword(UnicodeString argKeyword ) const{
                         state = keywordState;
                         keyword += ch;
                         break;
-                    //If anything else is encountered,it's a syntax error
+                    //If anything else is encountered, it's a syntax error
                     default:
                         return FALSE;
                 }//end of switch(type)
@@ -426,43 +425,43 @@ SelectFormat::operator==(const Format& other) const {
     // Format::operator== guarantees that this cast is safe
     SelectFormat* fmt = (SelectFormat*)&other;
     Hashtable* hashOther = fmt->parsedValuesHash;
-    if( parsedValuesHash == NULL && hashOther == NULL)
+    if ( parsedValuesHash == NULL && hashOther == NULL)
         return TRUE;
-    if( parsedValuesHash == NULL || hashOther == NULL)
+    if ( parsedValuesHash == NULL || hashOther == NULL)
         return FALSE;
-    if( hashOther->count() != parsedValuesHash->count() ){
+    if ( hashOther->count() != parsedValuesHash->count() ){
         return FALSE;
     }
 
     const UHashElement* elem = NULL;
     int32_t pos = -1;
-    while((elem=hashOther->nextElement(pos))!=NULL) {
+    while ((elem=hashOther->nextElement(pos))!=NULL) {
         const UHashTok otherKeyTok = elem->key;
         UnicodeString* otherKey = (UnicodeString*)otherKeyTok.pointer;
         const UHashTok otherKeyToVal = elem->value;
         UnicodeString* otherValue = (UnicodeString*)otherKeyToVal.pointer; 
 
         UnicodeString* thisElemValue = (UnicodeString*)parsedValuesHash->get(*otherKey);
-        if( thisElemValue == NULL ){
+        if ( thisElemValue == NULL ){
             return FALSE;
         }
-        if( *thisElemValue != *otherValue){
+        if ( *thisElemValue != *otherValue){
             return FALSE;
         }
         
     }
     pos=-1;
-    while((elem=parsedValuesHash->nextElement(pos))!=NULL) {
+    while ((elem=parsedValuesHash->nextElement(pos))!=NULL) {
         const UHashTok thisKeyTok = elem->key;
         UnicodeString* thisKey = (UnicodeString*)thisKeyTok.pointer;
         const UHashTok thisKeyToVal = elem->value;
         UnicodeString* thisValue = (UnicodeString*)thisKeyToVal.pointer;
 
         UnicodeString* otherElemValue = (UnicodeString*)hashOther->get(*thisKey);
-        if( otherElemValue == NULL ){
+        if ( otherElemValue == NULL ){
             return FALSE;
         }
-        if( *otherElemValue != *thisValue){
+        if ( *otherElemValue != *thisValue){
             return FALSE;
         }
 
@@ -490,7 +489,7 @@ SelectFormat::copyHashtable(Hashtable *other, UErrorCode& status) {
         return;
     }
     parsedValuesHash = new Hashtable(TRUE, status);
-    if(U_FAILURE(status)){
+    if (U_FAILURE(status)){
         return;
     }
     parsedValuesHash->setValueDeleter(deleteHashStrings);
@@ -499,13 +498,13 @@ SelectFormat::copyHashtable(Hashtable *other, UErrorCode& status) {
     const UHashElement* elem = NULL;
 
     // walk through the hash table and create a deep clone
-    while((elem = other->nextElement(pos))!= NULL){
+    while ((elem = other->nextElement(pos))!= NULL){
         const UHashTok otherKeyTok = elem->key;
         UnicodeString* otherKey = (UnicodeString*)otherKeyTok.pointer;
         const UHashTok otherKeyToVal = elem->value;
         UnicodeString* otherValue = (UnicodeString*)otherKeyToVal.pointer;
         parsedValuesHash->put(*otherKey, new UnicodeString(*otherValue), status);
-        if(U_FAILURE(status)){
+        if (U_FAILURE(status)){
             return;
         }
     }
