@@ -370,11 +370,11 @@ private:
     SelectFormat();   // default constructor not implemented
     void init(UErrorCode& status);
     //For the applyPattern , classifies char.s in one of the characterClass
-    void classifyCharacter(UChar ch, characterClass& type); 
+    void classifyCharacter(UChar ch, characterClass& type) const; 
     //Checks if the "other" keyword is present in pattern
     UBool checkSufficientDefinition();
     //Checks if the keyword passed is valid            
-    UBool checkValidKeyword(UnicodeString& argKeyword);
+    UBool checkValidKeyword(UnicodeString argKeyword) const;
     void parsingFailure();
     void copyHashtable(Hashtable *other, UErrorCode& status);
 };
