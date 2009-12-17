@@ -81,7 +81,6 @@ void SelectFormatTest::selectFormatUnitTest(/*char *par*/)
         UNICODE_STRING_SIMPLE("od d{foo} other{bar}"),
         UNICODE_STRING_SIMPLE("odd{foo}{foobar}other{foo}"),
         UNICODE_STRING_SIMPLE("odd{foo1}other{foo2}}"),  
-        //UNICODE_STRING_SIMPLE("odd{foo1}other{foo2} "),  
         UNICODE_STRING_SIMPLE("odd{foo1}other{{foo2}"),  
         UNICODE_STRING_SIMPLE("odd{fo{o1}other{foo2}}")
     };
@@ -95,7 +94,6 @@ void SelectFormatTest::selectFormatUnitTest(/*char *par*/)
         U_PATTERN_SYNTAX_ERROR,
         U_PATTERN_SYNTAX_ERROR,
         U_PATTERN_SYNTAX_ERROR,  
-        //U_PATTERN_SYNTAX_ERROR,  
         U_PATTERN_SYNTAX_ERROR,  
         U_DEFAULT_KEYWORD_MISSING
     };
@@ -128,6 +126,9 @@ void SelectFormatTest::selectFormatUnitTest(/*char *par*/)
 
     // ======= Test applying and formatting with various pattern
     logln("SelectFormat Unit test: Testing  applyPattern() and format() ...");
+    UnicodeString result;
+    FieldPosition ignore(FieldPosition::DONT_CARE);
+
     for(int32_t i=0; i<SELECT_PATTERN_DATA; ++i) {
         status = U_ZERO_ERROR;
         selFmt->applyPattern(patternTestData[i], status);
@@ -136,20 +137,38 @@ void SelectFormatTest::selectFormatUnitTest(/*char *par*/)
             continue;
         }
 
-        UnicodeString result;
-        FieldPosition ignore(FieldPosition::DONT_CARE);
-
         //Format with the keyword array
         for(int32_t j=0; j<3; j++) {
             result.remove();
             selFmt->format( formatArgs[j], result , ignore , status);
             if (U_FAILURE(status)) {
-                errln("ERROR: SelectFormat Unit test failed in format() with argument: "+ formatArgs[j]);
+                errln("ERROR: SelectFormat Unit test failed in format() with argument: "+ formatArgs[j] + " and error is " + u_errorName(status) );
             }else{
                 if( result != expFormatResult[i][j] ){
                     errln("ERROR: SelectFormat Unit test failed in format() with unexpected result\n  with argument: "+ formatArgs[j] + "\n result obtained: " + result + "\n and expected is: " + expFormatResult[i][j] );
                 }
             }
+        }
+    }
+
+    //Test with an invalid keyword
+    logln("SelectFormat Unit test: Testing  format() with keyword method and with invalid keywords...");
+    status = U_ZERO_ERROR;
+    result.remove();
+    UnicodeString keywords[] = {
+        "9Keyword-_",       //Starts with a digit
+        "-Keyword-_",       //Starts with a hyphen
+        "_Keyword-_",       //Starts with a underscore
+        "\\u00E9Keyword-_", //Starts with non-ASCII character
+        "Key*word-_"        //Contains a sepial character not allowed
+        "*Keyword-_"       //Starts with a sepial character not allowed
+    };
+
+    selFmt = new SelectFormat( SIMPLE_PATTERN , status); 
+    for (int i = 0; i< 6; i++ ){
+        selFmt->format( keywords[i], result , ignore , status);
+        if (!U_FAILURE(status)) {
+            errln("ERROR: SelectFormat Unit test failed in format() with keyWord and with an invalid keyword as : "+ keywords[i]);
         }
     }
 
@@ -280,6 +299,7 @@ void SelectFormatTest::selectFormatAPITest(/*char *par*/)
             errln("ERROR: SelectFormat API test failed in format() with unexpected result with Formattable");
         }
     }
+
 
     delete selFmt1;
 }
