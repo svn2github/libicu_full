@@ -124,7 +124,7 @@ class Hashtable;
   * <p>The <code>SelectFormat</code> pattern text defines the phrase  output
   * for each user-defined keyword.
   * The pattern is a sequence of <code><i>keyword</i>{<i>phrase</i>}</code>
-  * clauses, separated by white space characters.
+  * clauses. 
   * Each clause assigns the phrase <code><i>phrase</i></code>
   * to the user-defined <code><i>keyword</i></code>.</p>
   *
