@@ -15,6 +15,7 @@
 ***********************************************************************/
 
 #include "unicode/utypes.h"
+#include "unicode/localpointer.h"
 #include "itmajor.h"
 
 #include "itutil.h"
@@ -34,6 +35,8 @@
 #include "testidna.h"
 #include "convtest.h"
 #include "csdetest.h"
+
+extern IntlTest *createBiDiConformanceTest();
 
 #define CASE_SUITE(id, suite) case id:                  \
                           name = #suite;                \
@@ -191,6 +194,15 @@ void MajorTestLevel::runIndexedTest( int32_t index, UBool exec, const char* &nam
 #else
                 name = "skip";
 #endif
+                break;
+
+            case 15: name = "bidi";
+                if (exec) {
+                    logln("TestSuite bidi---"); logln();
+                    LocalPointer<IntlTest> test(createBiDiConformanceTest());
+                    callTest(*test, par);
+                }
+
                 break;
 
         default: name = ""; break;

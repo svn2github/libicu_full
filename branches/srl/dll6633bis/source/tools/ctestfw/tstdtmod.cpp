@@ -6,10 +6,44 @@
 
 /* Created by weiv 05/09/2002 */
 
+#include <stdarg.h>
+
 #include "unicode/tstdtmod.h"
 #include "cmemory.h"
+#include <stdio.h>
 
 TestLog::~TestLog() {}
+
+IcuTestErrorCode::~IcuTestErrorCode() {
+    // Safe because our handleFailure() does not throw exceptions.
+    if(isFailure()) { handleFailure(); }
+}
+
+UBool IcuTestErrorCode::logIfFailureAndReset(const char *fmt, ...) {
+    if(isFailure()) {
+        char buffer[4000];
+        va_list ap;
+        va_start(ap, fmt);
+        vsprintf(buffer, fmt, ap);
+        va_end(ap);
+        UnicodeString msg(testName, -1, US_INV);
+        msg.append(UNICODE_STRING_SIMPLE(" failure: ")).append(UnicodeString(errorName(), -1, US_INV));
+        msg.append(UNICODE_STRING_SIMPLE(" - ")).append(UnicodeString(buffer, -1, US_INV));
+        testClass.errln(msg);
+        reset();
+        return TRUE;
+    } else {
+        reset();
+        return FALSE;
+    }
+}
+
+void IcuTestErrorCode::handleFailure() const {
+    // testClass.errln("%s failure - %s", testName, errorName());
+    UnicodeString msg(testName, -1, US_INV);
+    msg.append(UNICODE_STRING_SIMPLE(" failure: ")).append(UnicodeString(errorName(), -1, US_INV));
+    testClass.errln(msg);
+}
 
 TestDataModule *TestDataModule::getTestDataModule(const char* name, TestLog& log, UErrorCode &status)
 {

@@ -25,12 +25,12 @@
 #include "unicode/utypes.h"
 #include "unicode/uset.h"
 #include "unicode/parseerr.h"
-
+#include "unicode/localpointer.h"
 
 #if !UCONFIG_NO_NORMALIZATION
 
 
-#ifdef XP_CPLUSPLUS
+#if U_SHOW_CPLUSPLUS_API
 #include "unicode/unistr.h"
 #include "unicode/uniset.h"
 
@@ -290,6 +290,25 @@ uspoof_openFromSource(const char *confusables,  int32_t confusablesLen,
 U_DRAFT void U_EXPORT2
 uspoof_close(USpoofChecker *sc);
 
+#if U_SHOW_CPLUSPLUS_API
+
+U_NAMESPACE_BEGIN
+
+/**
+ * \class LocalUSpoofCheckerPointer
+ * "Smart pointer" class, closes a USpoofChecker via uspoof_close().
+ * For most methods see the LocalPointerBase base class.
+ *
+ * @see LocalPointerBase
+ * @see LocalPointer
+ * @draft ICU 4.4
+ */
+U_DEFINE_LOCAL_OPEN_POINTER(LocalUSpoofCheckerPointer, USpoofChecker, uspoof_close);
+
+U_NAMESPACE_END
+
+#endif
+
 /**
  * Clone a Spoof Checker.  The clone will be set to perform the same checks
  *   as the original source.
@@ -448,7 +467,7 @@ U_DRAFT const USet * U_EXPORT2
 uspoof_getAllowedChars(const USpoofChecker *sc, UErrorCode *status);
 
 
-#ifdef XP_CPLUSPLUS
+#if U_SHOW_CPLUSPLUS_API
 /**
  * Limit the acceptable characters to those specified by a Unicode Set.
  *   Any previously specified character limit is
@@ -566,7 +585,7 @@ uspoof_checkUTF8(const USpoofChecker *sc,
                  UErrorCode *status);
 
 
-#ifdef XP_CPLUSPLUS
+#if U_SHOW_CPLUSPLUS_API
 /**
  * Check the specified string for possible security issues.
  * The text to be checked will typically be an indentifier of some sort.
@@ -682,7 +701,7 @@ uspoof_areConfusableUTF8(const USpoofChecker *sc,
 
 
 
-#ifdef XP_CPLUSPLUS
+#if U_SHOW_CPLUSPLUS_API
 /**
  * Check the whether two specified strings are visually confusable.
  * The types of confusability to be tested - single script, mixed script,
@@ -793,7 +812,7 @@ uspoof_getSkeletonUTF8(const USpoofChecker *sc,
                        char *dest, int32_t destCapacity,
                        UErrorCode *status);
     
-#ifdef XP_CPLUSPLUS
+#if U_SHOW_CPLUSPLUS_API
 /**
   *  Get the "skeleton" for an identifier string.
   *  Skeletons are a transformation of the input string;
@@ -828,7 +847,7 @@ uspoof_getSkeletonUnicodeString(const USpoofChecker *sc,
                                 const UnicodeString &s,
                                 UnicodeString &dest,
                                 UErrorCode *status);
-#endif   /* XP_CPLUSPLUS */
+#endif   /* U_SHOW_CPLUSPLUS_API */
 
 
 /**

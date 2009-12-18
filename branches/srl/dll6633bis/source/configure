@@ -1454,7 +1454,7 @@ Optional Features:
   --enable-debug          build debug libraries default=no
   --enable-release        build release libraries default=yes
   --enable-auto-cleanup   enable auto cleanup of libraries default=no
-  --enable-draft          enable draft APIs default=yes
+  --enable-draft          enable draft APIs (and internal APIs) default=yes
   --enable-renaming       add a version suffix to symbols default=yes
   --enable-tracing        enable function and data tracing default=no
   --disable-dyload        disable dynamic loading default=no
@@ -1946,7 +1946,7 @@ $as_echo_n "checking for ICU version numbers... " >&6; }
 geticuversion() {
     sed -n 's/^[ 	]*#[ 	]*define[ 	]*U_ICU_VERSION[ 	]*"\([^"]*\)".*/\1/p' "$@"
 }
-VERSION=`geticuversion $srcdir/common/unicode/uversion.h`
+VERSION=`geticuversion $srcdir/common/unicode/uvernum.h`
 if test x"$VERSION" = x; then
     VERSION=`geticuversion $srcdir/common/unicode/*.h`
     if test x"$VERSION" = x; then
@@ -1966,7 +1966,7 @@ LIB_VERSION_MAJOR=`echo $LIB_VERSION | sed 's/\..*//'`
 { $as_echo "$as_me:$LINENO: result: release $VERSION, library $LIB_VERSION" >&5
 $as_echo "release $VERSION, library $LIB_VERSION" >&6; }
 
-UNICODE_VERSION="5.1"
+UNICODE_VERSION="5.2"
 
 
 # Determine the host system

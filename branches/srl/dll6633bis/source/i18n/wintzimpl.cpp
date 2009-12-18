@@ -20,6 +20,7 @@
 #include "unicode/basictz.h"
 #include "putilimp.h"
 #include "uassert.h"
+#include "cmemory.h"
 
 #   define WIN32_LEAN_AND_MEAN
 #   define VC_EXTRALEAN
@@ -43,6 +44,7 @@ static UBool getSystemTimeInformation(TimeZone *tz, SYSTEMTIME &daylightDate, SY
     if (U_SUCCESS(status)) {
         if (std == NULL || dst == NULL) {
             bias = -1 * (initial->getRawOffset()/60000);
+            standardBias = 0;
             daylightBias = 0;
             // Do not use DST.  Set 0 to all stadardDate/daylightDate fields
             standardDate.wYear = standardDate.wMonth  = standardDate.wDayOfWeek = standardDate.wDay = 
@@ -54,6 +56,7 @@ static UBool getSystemTimeInformation(TimeZone *tz, SYSTEMTIME &daylightDate, SY
             U_ASSERT(dst->getRule()->getDateRuleType() == DateTimeRule::DOW);
 
             bias = -1 * (std->getRawOffset()/60000);
+            standardBias = 0;
             daylightBias = -1 * (dst->getDSTSavings()/60000);
             // Always use DOW type rule
             int32_t hour, min, sec, mil;
@@ -121,7 +124,9 @@ static UBool getWindowsTimeZoneInfo(TIME_ZONE_INFORMATION *zoneInfo, const UChar
         int32_t standardBias;
         SYSTEMTIME daylightDate;
         SYSTEMTIME standardDate;
+
         if (getSystemTimeInformation(tz, daylightDate, standardDate, bias, daylightBias, standardBias)) {
+            uprv_memset(zoneInfo, 0, sizeof(TIME_ZONE_INFORMATION)); // We do not set standard/daylight names, so nullify first.
             zoneInfo->Bias          = bias;
             zoneInfo->DaylightBias  = daylightBias;
             zoneInfo->StandardBias  = standardBias;
