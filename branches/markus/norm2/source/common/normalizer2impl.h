@@ -201,8 +201,6 @@ public:
         IX_RESERVED4_OFFSET,
         IX_RESERVED5_OFFSET,
         IX_RESERVED6_OFFSET,
-        IX_RESERVED7_OFFSET,
-        IX_RESERVED8_OFFSET,
         IX_TOTAL_SIZE,
 
         // Code point thresholds for quick check codes.
@@ -214,11 +212,9 @@ public:
         IX_MIN_NO_NO,
         IX_LIMIT_NO_NO,
         IX_MIN_MAYBE_YES,
-        IX_RESERVED16,
-        IX_RESERVED17,
-        IX_RESERVED18,
-        IX_RESERVED19,
 
+        IX_RESERVED14,
+        IX_RESERVED15,
         IX_COUNT
     };
 

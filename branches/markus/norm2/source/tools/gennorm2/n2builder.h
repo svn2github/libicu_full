@@ -33,6 +33,8 @@ extern UBool beVerbose, haveCopyright;
 
 struct Norm;
 
+class BuilderReorderingBuffer;
+
 class Normalizer2DataBuilder {
 public:
     Normalizer2DataBuilder(UErrorCode &errorCode);
@@ -65,16 +67,20 @@ private:
     Normalizer2DataBuilder(const Normalizer2DataBuilder &other);
     Normalizer2DataBuilder &operator=(const Normalizer2DataBuilder &other);
 
-    uint8_t getCC(UChar32 c);
-
     Norm *allocNorm();
     Norm *getNorm(UChar32 c);
     Norm *createNorm(UChar32 c);
-    Norm *checkNormForMapping(Norm *p, UChar32 c);
+    Norm *checkNormForMapping(Norm *p, UChar32 c);  // check for permitted overrides
+
+    const Norm &getNormRef(UChar32 c) const;
+    uint8_t getCC(UChar32 c) const;
+    UBool combinesWithCCBetween(const Norm &norm, uint8_t lowCC, uint8_t highCC) const;
+    UChar32 combine(const Norm &norm, UChar32 trail) const;
 
     void addComposition(UChar32 start, UChar32 end, uint32_t value);
     UBool decompose(UChar32 start, UChar32 end, uint32_t value);
-    void reorder(Norm *p);
+    void reorder(Norm *p, BuilderReorderingBuffer &buffer);
+    UBool hasNoCompBoundaryAfter(BuilderReorderingBuffer &buffer);
     void setHangulData();
     void writeMapping(UChar32 c, const Norm *p, UnicodeString &dataString);
     void writeCompositions(UChar32 c, const Norm *p, UnicodeString &dataString);
