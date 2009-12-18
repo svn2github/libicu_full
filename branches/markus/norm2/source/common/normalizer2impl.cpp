@@ -1161,7 +1161,7 @@ UBool Normalizer2Impl::hasCompBoundaryAfter(UChar32 c, UBool onlyContiguous, UBo
             //      if FCC then trailCC<=1
             return
                 (firstUnit&MAPPING_LENGTH_MASK)!=0 &&
-                (firstUnit&(MAPPING_PLUS_COMPOSITION_LIST|MAPPING_NO_COMP_BOUNDARY_AFTER))!=0 &&
+                (firstUnit&(MAPPING_PLUS_COMPOSITION_LIST|MAPPING_NO_COMP_BOUNDARY_AFTER))==0 &&
                 (!onlyContiguous || firstUnit<=0x1ff);
         }
     }

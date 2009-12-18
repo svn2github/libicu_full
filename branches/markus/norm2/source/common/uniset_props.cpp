@@ -220,6 +220,13 @@ const UnicodeSet* UnicodeSet::getInclusions(int32_t src, UErrorCode &status) {
                 }
                 break;
             }
+            case UPROPS_SRC_NFKC: {
+                const Normalizer2Impl *impl=Normalizer2Factory::getNFKCImpl(status);
+                if(U_SUCCESS(status)) {
+                    impl->addPropertyStarts(&sa, status);
+                }
+                break;
+            }
             case UPROPS_SRC_NFKC_CF: {
                 const Normalizer2Impl *impl=Normalizer2Factory::getNFKC_CFImpl(status);
                 if(U_SUCCESS(status)) {

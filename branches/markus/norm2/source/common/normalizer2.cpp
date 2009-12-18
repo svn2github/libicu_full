@@ -460,6 +460,13 @@ Normalizer2Factory::getNFCImpl(UErrorCode &errorCode) {
 }
 
 const Normalizer2Impl *
+Normalizer2Factory::getNFKCImpl(UErrorCode &errorCode) {
+    Norm2AllModes *allModes=
+        Norm2AllModesSingleton(nfkcSingleton, "nfkc").getInstance(errorCode);
+    return allModes!=NULL ? &allModes->impl : NULL;
+}
+
+const Normalizer2Impl *
 Normalizer2Factory::getNFKC_CFImpl(UErrorCode &errorCode) {
     Norm2AllModes *allModes=
         Norm2AllModesSingleton(nfkc_cfSingleton, "nfkc_cf").getInstance(errorCode);

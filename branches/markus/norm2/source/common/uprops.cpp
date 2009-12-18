@@ -135,10 +135,10 @@ static const struct {
     { UPROPS_SRC_CASE,  0 },                                    /* UCHAR_CASE_SENSITIVE */
     {  1,               U_MASK(UPROPS_S_TERM) },
     {  1,               U_MASK(UPROPS_VARIATION_SELECTOR) },
-    { UPROPS_SRC_NORM,  0 },                                    /* UCHAR_NFD_INERT */
-    { UPROPS_SRC_NORM,  0 },                                    /* UCHAR_NFKD_INERT */
-    { UPROPS_SRC_NORM,  0 },                                    /* UCHAR_NFC_INERT */
-    { UPROPS_SRC_NORM,  0 },                                    /* UCHAR_NFKC_INERT */
+    { UPROPS_SRC_NFC,   0 },                                    /* UCHAR_NFD_INERT */
+    { UPROPS_SRC_NFKC,  0 },                                    /* UCHAR_NFKD_INERT */
+    { UPROPS_SRC_NFC,   0 },                                    /* UCHAR_NFC_INERT */
+    { UPROPS_SRC_NFKC,  0 },                                    /* UCHAR_NFKC_INERT */
     { UPROPS_SRC_NORM,  0 },                                    /* UCHAR_SEGMENT_STARTER */
     {  1,               U_MASK(UPROPS_PATTERN_SYNTAX) },
     {  1,               U_MASK(UPROPS_PATTERN_WHITE_SPACE) },
@@ -177,18 +177,24 @@ u_hasBinaryProperty(UChar32 c, UProperty which) {
                 switch(which) {
                 case UCHAR_FULL_COMPOSITION_EXCLUSION:
                     return unorm_internalIsFullCompositionExclusion(c);
-                case UCHAR_NFD_INERT:
-                case UCHAR_NFKD_INERT:
-                case UCHAR_NFC_INERT:
-                case UCHAR_NFKC_INERT:
-                    return unorm_isNFSkippable(c, (UNormalizationMode)(which-UCHAR_NFD_INERT+UNORM_NFD));
                 case UCHAR_SEGMENT_STARTER:
                     return unorm_isCanonSafeStart(c);
                 default:
                     break;
                 }
 #endif
-            } else if(column==UPROPS_SRC_NFKC_CF) {  // TODO: implement getting starts sets from N2Impl
+            } else if(column==UPROPS_SRC_NFC || column==UPROPS_SRC_NFKC) {
+                // currently only for UCHAR_NF..._INERT properties
+#if !UCONFIG_NO_NORMALIZATION
+                UErrorCode errorCode=U_ZERO_ERROR;
+                const Normalizer2 *norm2=Normalizer2Factory::getInstance(
+                    (UNormalizationMode)(which-UCHAR_NFD_INERT+UNORM_NFD), errorCode);
+                if(U_SUCCESS(errorCode)) {
+                    return norm2->isInert(c);
+                }
+#endif
+            } else if(column==UPROPS_SRC_NFKC_CF) {
+                // currently only for UCHAR_CHANGES_WHEN_NFKC_CASEFOLDED
 #if !UCONFIG_NO_NORMALIZATION
                 UErrorCode errorCode=U_ZERO_ERROR;
                 const Normalizer2Impl *kcf=Normalizer2Factory::getNFKC_CFImpl(errorCode);

@@ -1109,6 +1109,7 @@ u_getFC_NFKC_Closure(UChar32 c, UChar *dest, int32_t destCapacity, UErrorCode *p
     }
 }
 
+#if 0  // TODO: remove
 /* Is c an NF<mode>-skippable code point? See unormimp.h. */
 U_CAPI UBool U_EXPORT2
 unorm_isNFSkippable(UChar32 c, UNormalizationMode mode) {
@@ -1178,6 +1179,7 @@ unorm_isNFSkippable(UChar32 c, UNormalizationMode mode) {
 
     /* } else { FCC, test fcd<=1 instead of the above } */
 }
+#endif
 
 U_CAPI void U_EXPORT2
 unorm_addPropertyStarts(const USetAdder *sa, UErrorCode *pErrorCode) {

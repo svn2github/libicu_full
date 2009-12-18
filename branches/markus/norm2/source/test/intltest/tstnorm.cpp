@@ -1715,72 +1715,23 @@ U_CDECL_END
 
 void
 BasicNormalizerTest::TestSkippable() {
-    UnicodeSet starts, diff, skipSets[UNORM_MODE_COUNT], expectSets[UNORM_MODE_COUNT];
-    UnicodeSet *startsPtr = &starts;
+    UnicodeSet diff, skipSets[UNORM_MODE_COUNT], expectSets[UNORM_MODE_COUNT];
     UnicodeString s, pattern;
-    UChar32 start, limit, rangeStart, rangeEnd;
-    int32_t i, range, count;
-
-    UErrorCode status;
 
     /* build NF*Skippable sets from runtime data */
-    status=U_ZERO_ERROR;
-    USetAdder sa = {
-        (USet *)startsPtr,
-        _set_add,
-        _set_addRange,
-        _set_addString,
-        NULL, // don't need remove()
-        NULL
-    };
-    unorm_addPropertyStarts(&sa, &status);
-    if(U_FAILURE(status)) {
-        errln("unable to load normalization data for unorm_addPropertyStarts(() - %s\n", u_errorName(status));
+    IcuTestErrorCode errorCode(*this, "TestSkippable");
+    skipSets[UNORM_NFD].applyPattern(UNICODE_STRING_SIMPLE("[:NFD_Inert:]"), errorCode);
+    skipSets[UNORM_NFKD].applyPattern(UNICODE_STRING_SIMPLE("[:NFKD_Inert:]"), errorCode);
+    skipSets[UNORM_NFC].applyPattern(UNICODE_STRING_SIMPLE("[:NFC_Inert:]"), errorCode);
+    skipSets[UNORM_NFKC].applyPattern(UNICODE_STRING_SIMPLE("[:NFKC_Inert:]"), errorCode);
+    if(errorCode.logIfFailureAndReset("UnicodeSet(NF..._Inert) failed")) {
         return;
-    }
-    count=starts.getRangeCount();
-
-    start=limit=0;
-    rangeStart=rangeEnd=0;
-    range=0;
-    for(;;) {
-        if(start<limit) {
-            /* get properties for start and apply them to [start..limit[ */
-            if(unorm_isNFSkippable(start, UNORM_NFD)) {
-                skipSets[UNORM_NFD].add(start, limit-1);
-            }
-            if(unorm_isNFSkippable(start, UNORM_NFKD)) {
-                skipSets[UNORM_NFKD].add(start, limit-1);
-            }
-            if(unorm_isNFSkippable(start, UNORM_NFC)) {
-                skipSets[UNORM_NFC].add(start, limit-1);
-            }
-            if(unorm_isNFSkippable(start, UNORM_NFKC)) {
-                skipSets[UNORM_NFKC].add(start, limit-1);
-            }
-        }
-
-        /* go to next range of same properties */
-        start=limit;
-        if(++limit>rangeEnd) {
-            if(range<count) {
-                limit=rangeStart=starts.getRangeStart(range);
-                rangeEnd=starts.getRangeEnd(range);
-                ++range;
-            } else if(range==count) {
-                /* additional range to complete the Unicode code space */
-                limit=rangeStart=rangeEnd=0x110000;
-                ++range;
-            } else {
-                break;
-            }
-        }
     }
 
     /* get expected sets from hardcoded patterns */
     initExpectedSkippables(expectSets);
 
-    for(i=UNORM_NONE; i<UNORM_MODE_COUNT; ++i) {
+    for(int32_t i=UNORM_NONE; i<UNORM_MODE_COUNT; ++i) {
         if(skipSets[i]!=expectSets[i]) {
             errln("error: TestSkippable skipSets[%d]!=expectedSets[%d]\n"
                   "may need to update hardcoded UnicodeSet patterns in\n"

@@ -409,6 +409,7 @@ public:
     static const Normalizer2 *getInstance(UNormalizationMode mode, UErrorCode &errorCode);
 
     static const Normalizer2Impl *getNFCImpl(UErrorCode &errorCode);
+    static const Normalizer2Impl *getNFKCImpl(UErrorCode &errorCode);
     static const Normalizer2Impl *getNFKC_CFImpl(UErrorCode &errorCode);
 private:
     Normalizer2Factory();  // No instantiation.
