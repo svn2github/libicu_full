@@ -1977,10 +1977,84 @@ _composeHangul(UChar prev, UChar c, uint32_t norm32, const UChar *&src, const UC
     return FALSE;
 }
 
+class UCharBuffer {
+public:
+    UCharBuffer() : uchars(), length(0) {}
+    ~UCharBuffer() {}
+    UChar *getAlias() const { return uchars.getAlias(); }
+    UChar *getLimit() const { return getAlias()+length; }
+    operator UChar *() const { return uchars.getAlias(); }
+    int32_t getLength() const { return length; }
+    void setLength(int32_t newLength) {
+        if(newLength<0) {
+            length=0;
+        } else if(newLength<length) {
+            length=newLength;
+        }
+    }
+    void setLimit(const UChar *newLimit) {
+        UChar *start=uchars.getAlias();
+        if(start<=newLimit && newLimit<(start+length)) {
+            length=(int32_t)(newLimit-start);
+        }
+    }
+    UChar &operator[](ptrdiff_t i) { return uchars[i]; }
+    UBool append(UChar c) {
+        if(length>=uchars.getCapacity() && NULL==uchars.resize(2*uchars.getCapacity(), length)) {
+            return FALSE;
+        }
+        uchars[length++]=c;
+    }
+    UChar *getAppendBuffer(int32_t minCapacity,
+                           int32_t desiredCapacityHint,
+                           int32_t &resultCapacity) {
+        int32_t capacity=uchars.getCapacity();
+        int32_t restCapacity=capacity-length;
+        if(minCapacity>restCapacity) {
+            int32_t newCapacity=capacity+desiredCapacityHint;
+            int32_t doubleCapacity=2*capacity;
+            if(newCapacity<doubleCapacity) {
+                newCapacity=doubleCapacity;
+            }
+            if(NULL==uchars.resize(newCapacity, length)) {
+                return NULL;
+            }
+        }
+        resultCapacity=uchars.getCapacity()-length;
+        return uchars.getAlias()+length;
+    }
+    void releaseAppendBuffer(int32_t len) {
+        length+=len;
+    }
+    UBool append(const UChar *p, int32_t len) {
+        int32_t newLength=length+len;
+        if(p==(uchars.getAlias()+length)) {
+            length=newLength;
+            return TRUE;  // caller wrote to the getAppendBuffer()
+        }
+        if(newLength>uchars.getCapacity()) {
+            int32_t newCapacity=length+2*len;
+            int32_t doubleCapacity=2*uchars.getCapacity();
+            if(newCapacity<doubleCapacity) {
+                newCapacity=doubleCapacity;
+            }
+            if(NULL==uchars.resize(newCapacity, length)) {
+                return FALSE;
+            }
+        }
+        u_memcpy(uchars.getAlias(), p, len);
+        length=newLength;
+        return TRUE;
+    }
+private:
+    MaybeStackArray<UChar, _STACK_BUFFER_CAPACITY> uchars;
+    int32_t length;
+};
+
 /*
- * recompose the characters in [p..limit[
+ * recompose the characters in the buffer
  * (which is in NFD - decomposed and canonically ordered),
- * adjust limit, and return the trailing cc
+ * and return the trailing cc
  *
  * since for NFKC we may get Jamos in decompositions, we need to
  * recompose those too
@@ -1991,7 +2065,9 @@ _composeHangul(UChar prev, UChar c, uint32_t norm32, const UChar *&src, const UC
  * while the combining mark that is removed has at least one code unit
  */
 static uint8_t
-_recompose(UChar *p, UChar *&limit, int32_t options, const UnicodeSet *nx) {
+_recompose(UCharBuffer &buffer, int32_t options, const UnicodeSet *nx) {
+    UChar *p;
+    UChar *limit;
     UChar *starter, *pRemove, *q, *r;
     uint32_t combineFlags;
     UChar c, c2;
@@ -2000,6 +2076,8 @@ _recompose(UChar *p, UChar *&limit, int32_t options, const UnicodeSet *nx) {
     uint8_t cc, prevCC;
     UBool starterIsSupplementary;
 
+    p=buffer.getAlias();
+    limit=buffer.getLimit();
     starter=NULL;                   /* no starter */
     combineFwdIndex=0;              /* will not be used until starter!=NULL - avoid compiler warnings */
     combineBackIndex=0;             /* will always be set if combineFlags!=0 - avoid compiler warnings */
@@ -2009,106 +2087,71 @@ _recompose(UChar *p, UChar *&limit, int32_t options, const UnicodeSet *nx) {
 
     for(;;) {
         combineFlags=_getNextCombining(p, limit, c, c2, combineBackIndex, cc, nx);
-        if((combineFlags&_NORM_COMBINES_BACK) && starter!=NULL) {
+        if(
+            // this character combines backward and
+            (combineFlags&_NORM_COMBINES_BACK) &&
+            // we have seen a starter that combines forward and
+            starter!=NULL &&
+            // the backward-combining character is not blocked
+            (prevCC<cc || prevCC==0)
+        ) {
             if(combineBackIndex&0x8000) {
                 /* c is a Jamo V/T, see if we can compose it with the previous character */
-                /* for the PRI #29 fix, check that there is no intervening combining mark */
-                if((options&UNORM_BEFORE_PRI_29) || prevCC==0) {
-                    pRemove=NULL; /* NULL while no Hangul composition */
-                    combineFlags=0;
-                    c2=*starter;
-                    if(combineBackIndex==0xfff2) {
-                        /* Jamo V, compose with previous Jamo L and following Jamo T */
-                        c2=(UChar)(c2-JAMO_L_BASE);
-                        if(c2<JAMO_L_COUNT) {
-                            pRemove=p-1;
-                            c=(UChar)(HANGUL_BASE+(c2*JAMO_V_COUNT+(c-JAMO_V_BASE))*JAMO_T_COUNT);
-                            if(p!=limit && (c2=(UChar)(*p-JAMO_T_BASE))<JAMO_T_COUNT) {
-                                ++p;
-                                c+=c2;
-                            } else {
-                                /* the result is an LV syllable, which is a starter (unlike LVT) */
-                                combineFlags=_NORM_COMBINES_FWD;
+                pRemove=NULL; /* NULL while no Hangul composition */
+                combineFlags=0;
+                c2=*starter;
+                if(combineBackIndex==0xfff2) {
+                    /* Jamo V, compose with previous Jamo L and following Jamo T */
+                    c2=(UChar)(c2-JAMO_L_BASE);
+                    if(c2<JAMO_L_COUNT) {
+                        pRemove=p-1;
+                        c=(UChar)(HANGUL_BASE+(c2*JAMO_V_COUNT+(c-JAMO_V_BASE))*JAMO_T_COUNT);
+                        if(p!=limit && (c2=(UChar)(*p-JAMO_T_BASE))<JAMO_T_COUNT) {
+                            ++p;
+                            c+=c2;
+                        }
+                        if(!nx_contains(nx, c)) {
+                            *starter=c;
+                        } else {
+                            /* excluded */
+                            if(!isHangulWithoutJamoT(c)) {
+                                --p; /* undo the ++p from reading the Jamo T */
                             }
-                            if(!nx_contains(nx, c)) {
-                                *starter=c;
-                            } else {
-                                /* excluded */
-                                if(!isHangulWithoutJamoT(c)) {
-                                    --p; /* undo the ++p from reading the Jamo T */
-                                }
-                                /* c is modified but not used any more -- c=*(p-1); -- re-read the Jamo V/T */
-                                pRemove=NULL;
-                            }
+                            /* c is modified but not used any more -- c=*(p-1); -- re-read the Jamo V/T */
+                            pRemove=NULL;
                         }
-
-                    /*
-                     * Normally, the following can not occur:
-                     * Since the input is in NFD, there are no Hangul LV syllables that
-                     * a Jamo T could combine with.
-                     * All Jamo Ts are combined above when handling Jamo Vs.
-                     *
-                     * However, before the PRI #29 fix, this can occur due to
-                     * an intervening combining mark between the Hangul LV and the Jamo T.
-                     */
-                    } else {
-                        /* Jamo T, compose with previous Hangul that does not have a Jamo T */
-                        if(isHangulWithoutJamoT(c2)) {
-                            c2+=(UChar)(c-JAMO_T_BASE);
-                            if(!nx_contains(nx, c2)) {
-                                pRemove=p-1;
-                                *starter=c2;
-                            }
-                        }
-                    }
-
-                    if(pRemove!=NULL) {
-                        /* remove the Jamo(s) */
-                        q=pRemove;
-                        r=p;
-                        while(r<limit) {
-                            *q++=*r++;
-                        }
-                        p=pRemove;
-                        limit=q;
-                    }
-
-                    c2=0; /* c2 held *starter temporarily */
-
-                    if(combineFlags!=0) {
-                        /*
-                         * not starter=NULL because the composition is a Hangul LV syllable
-                         * and might combine once more (but only before the PRI #29 fix)
-                         */
-
-                        /* done? */
-                        if(p==limit) {
-                            return prevCC;
-                        }
-
-                        /* the composition is a Hangul LV syllable which is a starter that combines forward */
-                        combineFwdIndex=0xfff0;
-
-                        /* we combined; continue with looking for compositions */
-                        continue;
                     }
                 }
-
                 /*
-                 * now: cc==0 and the combining index does not include "forward" ->
-                 * the rest of the loop body will reset starter to NULL;
-                 * technically, a composed Hangul syllable is a starter, but it
-                 * does not combine forward now that we have consumed all eligible Jamos;
-                 * for Jamo V/T, combineFlags does not contain _NORM_COMBINES_FWD
+                 * No "else" for Jamo T:
+                 * Since the input is in NFD, there are no Hangul LV syllables that
+                 * a Jamo T could combine with.
+                 * All Jamo Ts are combined above when handling Jamo Vs.
                  */
 
+                if(pRemove!=NULL) {
+                    /* remove the Jamo(s) */
+                    q=pRemove;
+                    r=p;
+                    while(r<limit) {
+                        *q++=*r++;
+                    }
+                    p=pRemove;
+                    buffer.setLimit(limit=q);
+                }
+
+                c2=0; /* c2 held *starter temporarily */
+
+                /* done? */
+                if(p==limit) {
+                    return prevCC;
+                }
+
+                starter=NULL;
+                continue;
             } else if(
                 /* the starter is not a Hangul LV or Jamo V/T and */
                 !(combineFwdIndex&0x8000) &&
-                /* the combining mark is not blocked and */
-                ((options&UNORM_BEFORE_PRI_29) ?
-                    (prevCC!=cc || prevCC==0) :
-                    (prevCC<cc || prevCC==0)) &&
                 /* the starter and the combining mark (c, c2) do combine and */
                 0!=(result=_combine(combiningTable+combineFwdIndex, combineBackIndex, value, value2)) &&
                 /* the composition result is not excluded */
@@ -2155,7 +2198,7 @@ _recompose(UChar *p, UChar *&limit, int32_t options, const UnicodeSet *nx) {
                         *q++=*r++;
                     }
                     p=pRemove;
-                    limit=q;
+                    buffer.setLimit(limit=q);
                 }
 
                 /* keep prevCC because we removed the combining mark */
@@ -2209,41 +2252,48 @@ _recompose(UChar *p, UChar *&limit, int32_t options, const UnicodeSet *nx) {
 
 /* decompose and recompose [prevStarter..src[ */
 static const UChar *
-_composePart(UChar *stackBuffer, UChar *&buffer, int32_t &bufferCapacity, int32_t &length,
+_composePart(UCharBuffer &buffer,
              const UChar *prevStarter, const UChar *src,
              uint8_t &prevCC,
              int32_t options, const UnicodeSet *nx,
              UErrorCode *pErrorCode) {
-    UChar *recomposeLimit;
     uint8_t trailCC;
     UBool compat;
 
     compat=(UBool)((options&_NORM_OPTIONS_COMPAT)!=0);
 
     /* decompose [prevStarter..src[ */
-    length=_decompose(buffer, bufferCapacity,
+    // TODO: change _decompose() to write to the UCharBuffer
+    int32_t capacity;
+    int32_t length=(int32_t)(src-prevStarter);
+    UChar *p=buffer.getAppendBuffer(length, 2*length, capacity);
+    if(p==NULL) {
+        *pErrorCode=U_MEMORY_ALLOCATION_ERROR;
+        return NULL;
+    }
+    length=_decompose(p, capacity,
                       prevStarter, (int32_t)(src-prevStarter),
                       compat, nx,
                       trailCC);
-    if(length>bufferCapacity) {
-        if(!u_growBufferFromStatic(stackBuffer, &buffer, &bufferCapacity, 2*length, 0)) {
+    if(length>capacity) {
+        p=buffer.getAppendBuffer(length, 2*length, capacity);
+        if(p==NULL) {
             *pErrorCode=U_MEMORY_ALLOCATION_ERROR;
             return NULL;
         }
-        length=_decompose(buffer, bufferCapacity,
+        length=_decompose(p, capacity,
                           prevStarter, (int32_t)(src-prevStarter),
                           compat, nx,
                           trailCC);
     }
+    buffer.releaseAppendBuffer(length);
 
     /* recompose the decomposition */
-    recomposeLimit=buffer+length;
     if(length>=2) {
-        prevCC=_recompose(buffer, recomposeLimit, options, nx);
+        prevCC=_recompose(buffer, options, nx);
     }
 
-    /* return with a pointer to the recomposition and its length */
-    length=(int32_t)(recomposeLimit-buffer);
+    /* return with a pointer to the recomposition */
     return buffer;
 }
 
@@ -2252,10 +2302,7 @@ _compose(UChar *dest, int32_t destCapacity,
          const UChar *src, int32_t srcLength,
          int32_t options, const UnicodeSet *nx,
          UErrorCode *pErrorCode) {
-    UChar stackBuffer[_STACK_BUFFER_CAPACITY];
-    UChar *buffer;
-    int32_t bufferCapacity;
-
+    UCharBuffer buffer;
     const UChar *limit, *prevSrc, *prevStarter;
     uint32_t norm32, ccOrQCMask, qcMask;
     int32_t destIndex, reorderStartIndex, length;
@@ -2271,8 +2318,6 @@ _compose(UChar *dest, int32_t destCapacity,
     }
 
     /* initialize */
-    buffer=stackBuffer;
-    bufferCapacity=_STACK_BUFFER_CAPACITY;
 
     /*
      * prevStarter points to the last character before the current one
@@ -2469,8 +2514,8 @@ _compose(UChar *dest, int32_t destCapacity,
                 src=_findNextStarter(src, limit, qcMask, decompQCMask, minNoMaybe);
 
                 /* compose [prevStarter..src[ */
-                p=_composePart(stackBuffer, buffer, bufferCapacity,
-                               length,          /* output */
+                buffer.setLength(0);
+                p=_composePart(buffer,          /* output */
                                prevStarter, src,
                                prevCC,          /* output */
                                options, nx,
@@ -2482,6 +2527,7 @@ _compose(UChar *dest, int32_t destCapacity,
                 }
 
                 /* append the recomposed buffer contents to the destination buffer */
+                length=buffer.getLength();
                 if((destIndex+length)<=destCapacity) {
                     while(length>0) {
                         dest[destIndex++]=*p++;
@@ -2521,11 +2567,6 @@ _compose(UChar *dest, int32_t destCapacity,
             destIndex+=length;
             prevCC=cc;
         }
-    }
-
-    /* cleanup */
-    if(buffer!=stackBuffer) {
-        uprv_free(buffer);
     }
 
     return destIndex;
@@ -3027,10 +3068,6 @@ _quickCheck(const UChar *src,
             UBool allowMaybe,
             const UnicodeSet *nx,
             UErrorCode *pErrorCode) {
-    UChar stackBuffer[_STACK_BUFFER_CAPACITY];
-    UChar *buffer;
-    int32_t bufferCapacity;
-
     const UChar *start, *limit;
     uint32_t norm32, qcNorm32, ccOrQCMask, qcMask;
     int32_t options;
@@ -3086,9 +3123,7 @@ _quickCheck(const UChar *src,
     }
 
     /* initialize */
-    buffer=stackBuffer;
-    bufferCapacity=_STACK_BUFFER_CAPACITY;
-
+    UCharBuffer buffer;
     ccOrQCMask=_NORM_CC_MASK|qcMask;
     result=UNORM_YES;
     prevCC=0;
@@ -3111,7 +3146,7 @@ _quickCheck(const UChar *src,
                 c=*src++;
                 if(c<minNoMaybe) {
                     if(c==0) {
-                        goto endloop; /* break out of outer loop */
+                        return result; /* break out of outer loop */
                     }
                 } else if(((norm32=_getNorm32(c))&ccOrQCMask)!=0) {
                     break;
@@ -3121,7 +3156,7 @@ _quickCheck(const UChar *src,
         } else {
             for(;;) {
                 if(src==limit) {
-                    goto endloop; /* break out of outer loop */
+                    return result; /* break out of outer loop */
                 } else if((c=*src++)>=minNoMaybe && ((norm32=_getNorm32(c))&ccOrQCMask)!=0) {
                     break;
                 }
@@ -3169,7 +3204,6 @@ _quickCheck(const UChar *src,
                 /* normalize a section around here to see if it is really normalized or not */
                 const UChar *prevStarter;
                 uint32_t decompQCMask;
-                int32_t length;
 
                 decompQCMask=(qcMask<<2)&0xf; /* decomposition quick check mask */
 
@@ -3184,8 +3218,8 @@ _quickCheck(const UChar *src,
                 src=_findNextStarter(src, limit, qcMask, decompQCMask, minNoMaybe);
 
                 /* decompose and recompose [prevStarter..src[ */
-                _composePart(stackBuffer, buffer, bufferCapacity,
-                             length,
+                buffer.setLength(0);
+                _composePart(buffer,
                              prevStarter,
                              src,
                              prevCC,
@@ -3196,7 +3230,7 @@ _quickCheck(const UChar *src,
                 }
 
                 /* compare the normalized version with the original */
-                if(0!=uprv_strCompare(prevStarter, (int32_t)(src-prevStarter), buffer, length, FALSE, FALSE)) {
+                if(0!=uprv_strCompare(prevStarter, (int32_t)(src-prevStarter), buffer, buffer.getLength(), FALSE, FALSE)) {
                     result=UNORM_NO; /* normalization differs */
                     break;
                 }
@@ -3205,12 +3239,6 @@ _quickCheck(const UChar *src,
             }
         }
     }
-endloop:
-
-    if(buffer!=stackBuffer) {
-        uprv_free(buffer);
-    }
-
     return result;
 }
 

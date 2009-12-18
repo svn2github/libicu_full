@@ -560,7 +560,6 @@
 #define ucd_getCollator U_ICU_ENTRY_POINT_RENAME(ucd_getCollator)
 #define ucd_open U_ICU_ENTRY_POINT_RENAME(ucd_open)
 #define uchar_addPropertyStarts U_ICU_ENTRY_POINT_RENAME(uchar_addPropertyStarts)
-#define uchar_getHST U_ICU_ENTRY_POINT_RENAME(uchar_getHST)
 #define uchar_swapNames U_ICU_ENTRY_POINT_RENAME(uchar_swapNames)
 #define ucln_cleanupOne U_ICU_ENTRY_POINT_RENAME(ucln_cleanupOne)
 #define ucln_common_registerCleanup U_ICU_ENTRY_POINT_RENAME(ucln_common_registerCleanup)
@@ -933,7 +932,6 @@
 #define uhash_setResizePolicy U_ICU_ENTRY_POINT_RENAME(uhash_setResizePolicy)
 #define uhash_setValueComparator U_ICU_ENTRY_POINT_RENAME(uhash_setValueComparator)
 #define uhash_setValueDeleter U_ICU_ENTRY_POINT_RENAME(uhash_setValueDeleter)
-#define uhst_addPropertyStarts U_ICU_ENTRY_POINT_RENAME(uhst_addPropertyStarts)
 #define uidna_IDNToASCII U_ICU_ENTRY_POINT_RENAME(uidna_IDNToASCII)
 #define uidna_IDNToUnicode U_ICU_ENTRY_POINT_RENAME(uidna_IDNToUnicode)
 #define uidna_compare U_ICU_ENTRY_POINT_RENAME(uidna_compare)
@@ -1499,6 +1497,7 @@
 #define utrie_swap U_ICU_ENTRY_POINT_RENAME(utrie_swap)
 #define utrie_unserialize U_ICU_ENTRY_POINT_RENAME(utrie_unserialize)
 #define utrie_unserializeDummy U_ICU_ENTRY_POINT_RENAME(utrie_unserializeDummy)
+
 /* C++ class names renaming defines */
 
 #ifdef XP_CPLUSPLUS

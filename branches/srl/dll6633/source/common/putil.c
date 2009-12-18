@@ -113,6 +113,10 @@ Cleanly installed Solaris can use this #define.
 #include <sys/neutrino.h>
 #endif
 
+#if defined(U_DARWIN)
+#include <TargetConditionals.h>
+#endif
+
 #ifndef U_WINDOWS
 #include <sys/time.h>
 #endif
@@ -622,6 +626,7 @@ extern U_IMPORT char *U_TZNAME[];
 #define TZZONEINFO      "/usr/share/zoneinfo/"
 #endif
 #if U_HAVE_DIRENT_H
+#define TZFILE_SKIP     "posixrules" /* tz file to skip when searching. */
 #define SEARCH_TZFILE
 #include <dirent.h>  /* Needed to search through system timezone files */
 #endif
@@ -842,10 +847,10 @@ static UBool compareBinaryFiles(const char* defaultTZFileName, const char* TZFil
 static char SEARCH_TZFILE_RESULT[MAX_PATH_SIZE] = "";
 static char* searchForTZFile(const char* path, DefaultTZInfo* tzInfo) {
     char curpath[MAX_PATH_SIZE];
+    DIR* dirp = opendir(path);
     DIR* subDirp = NULL;
     struct dirent* dirEntry = NULL;
     char* result = NULL;
-    DIR* dirp = opendir(path);
     
     if (dirp == NULL) {
         return result;
@@ -868,7 +873,7 @@ static char* searchForTZFile(const char* path, DefaultTZInfo* tzInfo) {
                 closedir(subDirp);
                 uprv_strcat(newpath, "/");
                 result = searchForTZFile(newpath, tzInfo);
-            } else {
+            } else if (uprv_strcmp(TZFILE_SKIP, dirEntry->d_name) != 0) {
                 if(compareBinaryFiles(TZDEFAULT, newpath, tzInfo)) {
                     uprv_strcpy(SEARCH_TZFILE_RESULT, newpath + (sizeof(TZZONEINFO) - 1));
                     result = SEARCH_TZFILE_RESULT;
@@ -1105,6 +1110,10 @@ uprv_pathIsAbsolute(const char *path)
 U_CAPI const char * U_EXPORT2
 u_getDataDirectory(void) {
     const char *path = NULL;
+#if defined(U_DARWIN) && TARGET_IPHONE_SIMULATOR
+    const char *simulator_root = NULL;
+    char datadir_path_buffer[PATH_MAX];
+#endif
 
     /* if we have the directory, then return it immediately */
     UMTX_CHECK(NULL, gDataDirectory, path);
@@ -1135,6 +1144,14 @@ u_getDataDirectory(void) {
 #   ifdef ICU_DATA_DIR
     if(path==NULL || *path==0) {
         path=ICU_DATA_DIR;
+#if defined(U_DARWIN) && TARGET_IPHONE_SIMULATOR
+        simulator_root=getenv("IPHONE_SIMULATOR_ROOT");
+        if (simulator_root != NULL) {
+            (void) strlcpy(datadir_path_buffer, simulator_root, PATH_MAX);
+            (void) strlcat(datadir_path_buffer, path, PATH_MAX);
+            path=datadir_path_buffer;
+        }
+#endif
     }
 #   endif
 

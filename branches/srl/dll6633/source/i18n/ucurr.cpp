@@ -25,8 +25,9 @@
 #include "uhash.h"
 #include "uresimp.h"
 #include "ulist.h"
+#include "ureslocs.h"
 
-//#define UCURR_DEBUG 1
+// #define UCURR_DEBUG 1
 #ifdef UCURR_DEBUG
 #include "stdio.h"
 #endif
@@ -124,7 +125,7 @@ _findMetaData(const UChar* currency, UErrorCode& ec) {
     // Get CurrencyMeta resource out of root locale file.  [This may
     // move out of the root locale file later; if it does, update this
     // code.]
-    UResourceBundle* currencyData = ures_openDirect(NULL, CURRENCY_DATA, &ec);
+    UResourceBundle* currencyData = ures_openDirect(U_ICUDATA_CURR, CURRENCY_DATA, &ec);
     UResourceBundle* currencyMeta = ures_getByKey(currencyData, CURRENCY_META, currencyData, &ec);
 
     if (U_FAILURE(ec)) {
@@ -386,7 +387,7 @@ ucurr_forLocale(const char* locale,
                 }
 
                 // Look up the CurrencyMap element in the root bundle.
-                UResourceBundle *rb = ures_openDirect(NULL, CURRENCY_DATA, &localStatus);
+                UResourceBundle *rb = ures_openDirect(U_ICUDATA_CURR, CURRENCY_DATA, &localStatus);
                 UResourceBundle *cm = ures_getByKey(rb, CURRENCY_MAP, rb, &localStatus);
                 UResourceBundle *countryArray = ures_getByKey(rb, id, cm, &localStatus);
                 UResourceBundle *currencyReq = ures_getByIndex(countryArray, 0, NULL, &localStatus);
@@ -516,7 +517,7 @@ ucurr_getName(const UChar* currency,
 
     const UChar* s = NULL;
     ec2 = U_ZERO_ERROR;
-    UResourceBundle* rb = ures_open(NULL, loc, &ec2);
+    UResourceBundle* rb = ures_open(U_ICUDATA_CURR, loc, &ec2);
 
     rb = ures_getByKey(rb, CURRENCIES, rb, &ec2);
 
@@ -596,7 +597,7 @@ ucurr_getPluralName(const UChar* currency,
 
     const UChar* s = NULL;
     ec2 = U_ZERO_ERROR;
-    UResourceBundle* rb = ures_open(NULL, loc, &ec2);
+    UResourceBundle* rb = ures_open(U_ICUDATA_CURR, loc, &ec2);
 
     rb = ures_getByKey(rb, CURRENCYPLURALS, rb, &ec2);
 
@@ -702,7 +703,7 @@ getCurrencyNameCount(const char* loc, int32_t* total_currency_name_count, int32_
     for (;;) {
         UErrorCode ec2 = U_ZERO_ERROR;
         // TODO: ures_openDirect?
-        UResourceBundle* rb = ures_open(NULL, locale, &ec2);
+        UResourceBundle* rb = ures_open(U_ICUDATA_CURR, locale, &ec2);
         UResourceBundle* curr = ures_getByKey(rb, CURRENCIES, NULL, &ec2);
         int32_t n = ures_getSize(curr);
         for (int32_t i=0; i<n; ++i) {
@@ -813,7 +814,7 @@ collectCurrencyNames(const char* locale,
     for (int32_t localeLevel = 0; ; ++localeLevel) {
         ec2 = U_ZERO_ERROR;
         // TODO: ures_openDirect
-        UResourceBundle* rb = ures_open(NULL, loc, &ec2);
+        UResourceBundle* rb = ures_open(U_ICUDATA_CURR, loc, &ec2);
         UResourceBundle* curr = ures_getByKey(rb, CURRENCIES, NULL, &ec2);
         int32_t n = ures_getSize(curr);
         for (int32_t i=0; i<n; ++i) {
@@ -1858,7 +1859,7 @@ ucurr_countCurrencies(const char* locale,
         }
 
         // Look up the CurrencyMap element in the root bundle.
-        UResourceBundle *rb = ures_openDirect(NULL, CURRENCY_DATA, &localStatus);
+        UResourceBundle *rb = ures_openDirect(U_ICUDATA_CURR, CURRENCY_DATA, &localStatus);
         UResourceBundle *cm = ures_getByKey(rb, CURRENCY_MAP, rb, &localStatus);
 
         // Using the id derived from the local, get the currency data
@@ -1974,7 +1975,7 @@ ucurr_forLocaleAndDate(const char* locale,
             }
 
             // Look up the CurrencyMap element in the root bundle.
-            UResourceBundle *rb = ures_openDirect(NULL, CURRENCY_DATA, &localStatus);
+            UResourceBundle *rb = ures_openDirect(U_ICUDATA_CURR, CURRENCY_DATA, &localStatus);
             UResourceBundle *cm = ures_getByKey(rb, CURRENCY_MAP, rb, &localStatus);
 
             // Using the id derived from the local, get the currency data
@@ -2132,7 +2133,7 @@ U_CAPI UEnumeration *U_EXPORT2 ucurr_getKeywordValuesForLocale(const char *key, 
     memcpy(en, &defaultKeywordValues, sizeof(UEnumeration));
     en->context = values;
     
-    UResourceBundle *bundle = ures_openDirect(NULL, "supplementalData", status);
+    UResourceBundle *bundle = ures_openDirect(U_ICUDATA_CURR, "supplementalData", status);
     ures_getByKey(bundle, "CurrencyMap", bundle, status);
     UResourceBundle bundlekey, regbndl, curbndl, to;
     ures_initStackObject(&bundlekey);
@@ -2149,7 +2150,7 @@ U_CAPI UEnumeration *U_EXPORT2 ucurr_getKeywordValuesForLocale(const char *key, 
         UBool isPrefRegion = uprv_strcmp(region, prefRegion) == 0 ? TRUE : FALSE;
         if (!isPrefRegion && commonlyUsed) {
             // With commonlyUsed=true, we do not put
-            // currencies for other regionsin the
+            // currencies for other regions in the
             // result list.
             continue;
         }
@@ -2181,10 +2182,10 @@ U_CAPI UEnumeration *U_EXPORT2 ucurr_getKeywordValuesForLocale(const char *key, 
             } else {
                 hasTo = TRUE;
             }
-            if (isPrefRegion && !hasTo && !ulist_containsString(values, curID, uprv_strlen(curID))) {
+            if (isPrefRegion && !hasTo && !ulist_containsString(values, curID, (int32_t)uprv_strlen(curID))) {
                 // Currently active currency for the target country
                 ulist_addItemEndList(values, curID, TRUE, status);
-            } else if (!ulist_containsString(otherValues, curID, uprv_strlen(curID)) && !commonlyUsed) {
+            } else if (!ulist_containsString(otherValues, curID, (int32_t)uprv_strlen(curID)) && !commonlyUsed) {
                 ulist_addItemEndList(otherValues, curID, TRUE, status);
             } else {
                 uprv_free(curID);
@@ -2205,7 +2206,7 @@ U_CAPI UEnumeration *U_EXPORT2 ucurr_getKeywordValuesForLocale(const char *key, 
             char *value = NULL;
             ulist_resetList(otherValues);
             while ((value = (char *)ulist_getNext(otherValues)) != NULL) {
-                if (!ulist_containsString(values, value, uprv_strlen(value))) {
+                if (!ulist_containsString(values, value, (int32_t)uprv_strlen(value))) {
                     char *tmpValue = (char *)uprv_malloc(sizeof(char) * ULOC_KEYWORDS_CAPACITY);
                     uprv_memcpy(tmpValue, value, uprv_strlen(value) + 1);
                     ulist_addItemEndList(values, tmpValue, TRUE, status);

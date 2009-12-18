@@ -62,7 +62,7 @@ UnicodeString toString(int32_t n);
         name = #test;                 \
         if (exec) {                   \
             logln(#test "---");       \
-            logln((UnicodeString)""); \
+            logln();                  \
             test();                   \
         }                             \
         break
@@ -71,6 +71,7 @@ class IntlTest : public TestLog {
 public:
 
     IntlTest();
+    // TestLog has a virtual destructor.
 
     virtual UBool runTest( char* name = NULL, char* par = NULL ); // not to be overidden
 

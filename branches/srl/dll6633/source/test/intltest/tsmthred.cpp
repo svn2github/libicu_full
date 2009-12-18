@@ -18,6 +18,7 @@
 #include "cmemory.h"
 #include "cstring.h"
 #include "uparse.h"
+#include "unicode/localpointer.h"
 #include "unicode/resbund.h"
 #include "unicode/udata.h"
 #include "unicode/uloc.h"
@@ -558,8 +559,7 @@ public:
     virtual void run()
     {
         fTraceInfo                     = 1;
-        NumberFormat *formatter        = NULL;
-        NumberFormat *percentFormatter = NULL;
+        LocalPointer<NumberFormat> percentFormatter;
         UErrorCode status = U_ZERO_ERROR;
 
 #if 0
@@ -638,13 +638,13 @@ public:
         int32_t iteration;
         
         status = U_ZERO_ERROR;
-        formatter = NumberFormat::createInstance(Locale::getEnglish(),status);
+        LocalPointer<NumberFormat> formatter(NumberFormat::createInstance(Locale::getEnglish(),status));
         if(U_FAILURE(status)) {
             error("Error on NumberFormat::createInstance().");
             goto cleanupAndReturn;
         }
         
-        percentFormatter = NumberFormat::createPercentInstance(Locale::getFrench(),status);
+        percentFormatter.adoptInstead(NumberFormat::createPercentInstance(Locale::getFrench(),status));
         if(U_FAILURE(status))             {
             error("Error on NumberFormat::createPercentInstance().");
             goto cleanupAndReturn;
@@ -746,9 +746,6 @@ public:
         }   /*  end of for loop */
         
 cleanupAndReturn:
-        delete formatter;
-        delete percentFormatter;
-        
         //  while (fNum == 4) {SimpleThread::sleep(10000);}   // Force a failure by preventing thread from finishing
         fTraceInfo = 2;
     }
@@ -771,14 +768,14 @@ void MultithreadTest::TestThreadedIntl()
     //
     logln("Spawning: %d threads * %d iterations each.",
                 kFormatThreadThreads, kFormatThreadIterations);
-    FormatThreadTest  *tests = new FormatThreadTest[kFormatThreadThreads];
+    LocalArray<FormatThreadTest> tests(new FormatThreadTest[kFormatThreadThreads]);
     for(int32_t j = 0; j < kFormatThreadThreads; j++) {
         tests[j].fNum = j;
         int32_t threadStatus = tests[j].start();
         if (threadStatus != 0) {
             errln("System Error %d starting thread number %d.", threadStatus, j);
             SimpleThread::errorFunc();
-            goto cleanupAndReturn;
+            return;
         }
         haveDisplayedInfo[j] = FALSE;
     }
@@ -819,8 +816,6 @@ void MultithreadTest::TestThreadedIntl()
     //
     //  All threads have finished.
     //
-cleanupAndReturn:
-    delete [] tests;
 }
 #endif /* #if !UCONFIG_NO_FORMATTING */
 
@@ -1016,8 +1011,7 @@ void MultithreadTest::TestCollators()
 
     int32_t noSpawned = 0;
     int32_t spawnResult = 0;
-    CollatorThreadTest *tests;
-    tests = new CollatorThreadTest[kCollatorThreadThreads];
+    LocalArray<CollatorThreadTest> tests(new CollatorThreadTest[kCollatorThreadThreads]);
 
     logln(UnicodeString("Spawning: ") + kCollatorThreadThreads + " threads * " + kFormatThreadIterations + " iterations each.");
     int32_t j = 0;
@@ -1077,7 +1071,6 @@ void MultithreadTest::TestCollators()
                 SimpleThread::errorFunc();
             }
             ucol_close(coll);
-            delete[] tests;
             //for(i = 0; i < lineNum; i++) {
             //delete[] lines[i].buff;
             //}
@@ -1160,6 +1153,9 @@ void MultithreadTest::TestString()
 
     UnicodeString *testString = new UnicodeString("This is the original test string.");
 
+    // Not using LocalArray<StringThreadTest2> tests[kStringThreadThreads];
+    // because we don't always want to delete them.
+    // See the comments below the cleanupAndReturn label.
     StringThreadTest2  *tests[kStringThreadThreads];
     for(j = 0; j < kStringThreadThreads; j++) {
         tests[j] = new StringThreadTest2(testString, j);

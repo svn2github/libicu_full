@@ -45,6 +45,9 @@
 #if !U_DEFAULT_SHOW_DRAFT && !defined(U_SHOW_DRAFT_API)
 #define U_HIDE_DRAFT_API 1
 #endif
+#if !U_DEFAULT_SHOW_DRAFT && !defined(U_SHOW_INTERNAL_API)
+#define U_HIDE_INTERNAL_API 1
+#endif
 
 #ifdef U_HIDE_DRAFT_API
 #include "unicode/udraft.h"
@@ -211,7 +214,8 @@
  * @stable ICU 2.0
  */
 #define U_ICUDATA_NAME    "icudt" U_ICU_VERSION_SHORT U_ICUDATA_TYPE_LETTER
-
+#define U_USRDATA_NAME    "usrdt" U_ICU_VERSION_SHORT U_ICUDATA_TYPE_LETTER
+#define U_USE_USRDATA     1
 
 /**
  *  U_ICU_ENTRY_POINT is the name of the DLL entry point to the ICU data library.
