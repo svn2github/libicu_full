@@ -18,14 +18,11 @@
  
 #if !UCONFIG_NO_NORMALIZATION
 
-#include "unicode/uobject.h"
-#include "unicode/unistr.h"
 #include "unicode/chariter.h"
+#include "unicode/normalizer2.h"
+#include "unicode/unistr.h"
 #include "unicode/unorm.h"
-
-
-struct UCharIterator;
-typedef struct UCharIterator UCharIterator; /**< C typedef for struct UCharIterator. @stable ICU 2.1 */
+#include "unicode/uobject.h"
 
 U_NAMESPACE_BEGIN
 /**
@@ -726,18 +723,20 @@ private:
   UBool nextNormalize();
   UBool previousNormalize();
 
-  void    init(CharacterIterator *iter);
+  void    init();
   void    clearBuffer(void);
 
   //-------------------------------------------------------------------------
   // Private data
   //-------------------------------------------------------------------------
 
+  FilteredNormalizer2*fFilteredNorm2;  // owned if not NULL
+  const Normalizer2  *fNorm2;  // not owned; may be equal to fFilteredNorm2
   UNormalizationMode  fUMode;
   int32_t             fOptions;
 
   // The input text and our position in it
-  UCharIterator       *text;
+  CharacterIterator  *text;
 
   // The normalization buffer is the result of normalization
   // of the source in [currentIndex..nextIndex[ .
@@ -746,7 +745,6 @@ private:
   // A buffer for holding intermediate results
   UnicodeString       buffer;
   int32_t         bufferPos;
-
 };
 
 //-------------------------------------------------------------------------
