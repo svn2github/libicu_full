@@ -208,7 +208,7 @@ u_hasBinaryProperty(UChar32 c, UProperty which) {
                         if(U_SUCCESS(errorCode) && buffer.init(errorCode)) {
                             const UChar *srcArray=src.getBuffer();
                             kcf->compose(srcArray, srcArray+src.length(), FALSE,
-                                         NULL, &buffer, errorCode);
+                                         TRUE, buffer, errorCode);
                         }
                     }
                     return U_SUCCESS(errorCode) && dest!=src;

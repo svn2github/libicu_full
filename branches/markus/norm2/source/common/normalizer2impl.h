@@ -243,11 +243,14 @@ public:
                             UBool doDecompose,
                             ReorderingBuffer &buffer,
                             UErrorCode &errorCode) const;
-    const UChar *compose(const UChar *src, const UChar *limit,
-                         UBool onlyContiguous,
-                         UNormalizationCheckResult *pQCResult,
-                         ReorderingBuffer *buffer,
-                         UErrorCode &errorCode) const;
+    UBool compose(const UChar *src, const UChar *limit,
+                  UBool onlyContiguous,
+                  UBool doCompose,
+                  ReorderingBuffer &buffer,
+                  UErrorCode &errorCode) const;
+    const UChar *composeQuickCheck(const UChar *src, const UChar *limit,
+                                   UBool onlyContiguous,
+                                   UNormalizationCheckResult *pQCResult) const;
     void composeAndAppend(const UChar *src, const UChar *limit,
                           UBool doCompose,
                           UBool onlyContiguous,

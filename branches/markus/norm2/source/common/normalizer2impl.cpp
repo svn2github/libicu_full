@@ -306,8 +306,8 @@ uint8_t Normalizer2Impl::getTrailCCFromCompYesAndZeroCC(const UChar *cpStart, co
     } else {
         prevNorm16=getNorm16FromSurrogatePair(cpStart[0], cpStart[1]);
     }
-    if(prevNorm16<minYesNo) {
-        return 0;  // yesYes has ccc=tccc=0
+    if(prevNorm16<=minYesNo) {
+        return 0;  // yesYes and Hangul LV/LVT have ccc=tccc=0
     } else {
         return (uint8_t)(*getMapping(prevNorm16)>>8);  // tccc from yesNo
     }
@@ -810,31 +810,29 @@ void Normalizer2Impl::recompose(ReorderingBuffer &buffer, int32_t recomposeStart
     buffer.setReorderingLimitAndLastCC(limit, prevCC);
 }
 
-// Three operations in one function:
-//  operation       pQCResult   buffer
-//  normalize       ==NULL      !=NULL
-//  quick check     !=NULL      ==NULL (*pQCResult must be UNORM_YES)
-//  isNormalized    !=NULL      !=NULL (buffer must be empty and initialized)
-const UChar *
+// Very similar to composeQuickCheck(): Make the same changes in both places if relevant.
+// doCompose: normalize
+// !doCompose: isNormalized (buffer must be empty and initialized)
+UBool
 Normalizer2Impl::compose(const UChar *src, const UChar *limit,
                          UBool onlyContiguous,
-                         UNormalizationCheckResult *pQCResult,
-                         ReorderingBuffer *buffer,
+                         UBool doCompose,
+                         ReorderingBuffer &buffer,
                          UErrorCode &errorCode) const {
     UChar32 minNoMaybeCP=minCompNoMaybeCP;
     if(limit==NULL) {
         src=copyLowPrefixFromNulTerminated(src, minNoMaybeCP,
-                                           pQCResult==NULL ? buffer : NULL,
+                                           doCompose ? &buffer : NULL,
                                            errorCode);
         if(U_FAILURE(errorCode)) {
-            return src;
+            return FALSE;
         }
         limit=u_strchr(src, 0);
     }
 
     /*
      * prevStarter points to the last character before the current one
-     * that is a composition boundary with ccc==0 and quick check "yes".
+     * that has a composition boundary before it with ccc==0 and quick check "yes".
      * Keeping track of prevStarter saves us looking for a composition boundary
      * when we find a "no" or "maybe".
      *
@@ -849,7 +847,7 @@ Normalizer2Impl::compose(const UChar *src, const UChar *limit,
     UChar32 c=0;
     uint16_t norm16=0;
 
-    // only for quick check
+    // only for isNormalized
     uint8_t prevCC=0;
 
     for(;;) {
@@ -884,8 +882,8 @@ Normalizer2Impl::compose(const UChar *src, const UChar *limit,
         }
         // copy these code units all at once
         if(src!=prevSrc) {
-            if(pQCResult==NULL) {
-                if(!buffer->appendZeroCC(prevSrc, src, errorCode)) {
+            if(doCompose) {
+                if(!buffer.appendZeroCC(prevSrc, src, errorCode)) {
                     break;
                 }
             } else {
@@ -914,18 +912,13 @@ Normalizer2Impl::compose(const UChar *src, const UChar *limit,
          * c is not a Hangul syllable or Jamo L because those have "yes" properties.
          */
         if(isJamoVT(norm16) && prevStarter!=prevSrc) {
-            if(buffer==NULL) {
-                *pQCResult=UNORM_MAYBE;
-                return prevStarter;
-            }
             UChar prev=*(prevSrc-1);
             if(c<JAMO_T_BASE) {
                 // c is a Jamo Vowel, compose with previous Jamo L and following Jamo T.
                 prev=(UChar)(prev-JAMO_L_BASE);
                 if(prev<JAMO_L_COUNT) {
-                    if(pQCResult!=NULL) {
-                        *pQCResult=UNORM_NO;
-                        return prevStarter;
+                    if(!doCompose) {
+                        return FALSE;
                     }
                     UChar syllable=(UChar)(HANGUL_BASE+(prev*JAMO_V_COUNT+(c-JAMO_V_BASE))*JAMO_T_COUNT);
                     UChar t;
@@ -934,23 +927,22 @@ Normalizer2Impl::compose(const UChar *src, const UChar *limit,
                         syllable+=t;  // The next character was a Jamo T.
                         prevStarter=src;
                     }
-                    *(buffer->getLimit()-1)=syllable;
+                    *(buffer.getLimit()-1)=syllable;
                     continue;
                 }
             } else if(isHangulWithoutJamoT(prev)) {
                 // c is a Jamo Trailing consonant,
                 // compose with previous Hangul LV that does not contain a Jamo T.
-                if(pQCResult!=NULL) {
-                    *pQCResult=UNORM_NO;
-                    return prevStarter;
+                if(!doCompose) {
+                    return FALSE;
                 }
-                *(buffer->getLimit()-1)=(UChar)(prev+c-JAMO_T_BASE);
+                *(buffer.getLimit()-1)=(UChar)(prev+c-JAMO_T_BASE);
                 prevStarter=src;
                 continue;
             }
             // The Jamo V/T did not compose into a Hangul syllable.
-            if(pQCResult==NULL) {
-                if(!buffer->appendBMP((UChar)c, 0, errorCode)) {
+            if(doCompose) {
+                if(!buffer.appendBMP((UChar)c, 0, errorCode)) {
                     break;
                 }
             } else {
@@ -983,7 +975,7 @@ Normalizer2Impl::compose(const UChar *src, const UChar *limit,
         if(norm16>=MIN_YES_YES_WITH_CC) {
             uint8_t cc=(uint8_t)norm16;  // cc!=0
             if( onlyContiguous &&  // FCC
-                (pQCResult==NULL ? buffer->getLastCC() : prevCC)==0 &&
+                (doCompose ? buffer.getLastCC() : prevCC)==0 &&
                 prevStarter<prevSrc &&
                 // buffer.getLastCC()==0 && prevStarter<prevSrc tell us that
                 // [prevStarter..prevSrc[ (which is exactly one character under these conditions)
@@ -995,33 +987,22 @@ Normalizer2Impl::compose(const UChar *src, const UChar *limit,
                 getTrailCCFromCompYesAndZeroCC(prevStarter, prevSrc)>cc
             ) {
                 // Fails FCD test, need to decompose and contiguously recompose.
-                if(pQCResult!=NULL) {
-                    *pQCResult=UNORM_NO;
-                    return prevStarter;
+                if(!doCompose) {
+                    return FALSE;
                 }
-            } else {
-                if(pQCResult==NULL) {
-                    if(!buffer->append(c, cc, errorCode)) {
-                        break;
-                    }
-                } else {
-                    if(prevCC<=cc) {
-                        prevCC=cc;
-                    } else {
-                        *pQCResult=UNORM_NO;
-                        return prevStarter;
-                    }
+            } else if(doCompose) {
+                if(!buffer.append(c, cc, errorCode)) {
+                    break;
                 }
                 continue;
+            } else if(prevCC<=cc) {
+                prevCC=cc;
+                continue;
+            } else {
+                return FALSE;
             }
-        } else if(pQCResult!=NULL) {
-            if(!isMaybeOrNonZeroCC(norm16)) {
-                *pQCResult=UNORM_NO;
-                return prevStarter;
-            } else if(buffer==NULL) {
-                *pQCResult=UNORM_MAYBE;
-                return prevStarter;
-            }
+        } else if(!doCompose && !isMaybeOrNonZeroCC(norm16)) {
+            return FALSE;
         }
 
         /*
@@ -1041,8 +1022,8 @@ Normalizer2Impl::compose(const UChar *src, const UChar *limit,
          */
         if(hasCompBoundaryBefore(c, norm16)) {
             prevStarter=prevSrc;
-        } else if(pQCResult==NULL) {
-            buffer->removeZeroCCSuffix((int32_t)(prevSrc-prevStarter));
+        } else if(doCompose) {
+            buffer.removeZeroCCSuffix((int32_t)(prevSrc-prevStarter));
         }
 
         // Find the next composition boundary in [src..limit[ -
@@ -1050,26 +1031,135 @@ Normalizer2Impl::compose(const UChar *src, const UChar *limit,
         src=(UChar *)findNextCompBoundary(src, limit);
 
         // Decompose [prevStarter..src[ into the buffer and then recompose that part of it.
-        int32_t recomposeStartIndex=buffer->length();
-        if(!decomposeShort(prevStarter, src, *buffer, errorCode)) {
+        int32_t recomposeStartIndex=buffer.length();
+        if(!decomposeShort(prevStarter, src, buffer, errorCode)) {
             break;
         }
-        recompose(*buffer, recomposeStartIndex, onlyContiguous);
-        if(pQCResult!=NULL) {
-            int32_t bufferLength=buffer->length();
+        recompose(buffer, recomposeStartIndex, onlyContiguous);
+        if(!doCompose) {
+            int32_t bufferLength=buffer.length();
             if( bufferLength!=(int32_t)(src-prevStarter) ||
-                0!=u_memcmp(buffer->getStart(), prevStarter, bufferLength)
+                0!=u_memcmp(buffer.getStart(), prevStarter, bufferLength)
             ) {
-                *pQCResult=UNORM_NO;
-                return prevStarter;
+                return FALSE;
             }
-            buffer->removeZeroCCSuffix(bufferLength);
+            buffer.removeZeroCCSuffix(bufferLength);
+            prevCC=0;
         }
 
         // Move to the next starter. We never need to look back before this point again.
         prevStarter=src;
     }
-    return src;
+    return TRUE;
+}
+
+// Very similar to compose(): Make the same changes in both places if relevant.
+// pQCResult==NULL: spanQuickCheckYes
+// pQCResult!=NULL: quickCheck (*pQCResult must be UNORM_YES)
+const UChar *
+Normalizer2Impl::composeQuickCheck(const UChar *src, const UChar *limit,
+                                   UBool onlyContiguous,
+                                   UNormalizationCheckResult *pQCResult) const {
+    UChar32 minNoMaybeCP=minCompNoMaybeCP;
+    if(limit==NULL) {
+        UErrorCode errorCode=U_ZERO_ERROR;
+        src=copyLowPrefixFromNulTerminated(src, minNoMaybeCP, NULL, errorCode);
+        limit=u_strchr(src, 0);
+    }
+
+    /*
+     * prevStarter points to the last character before the current one
+     * that has a composition boundary before it with ccc==0 and quick check "yes".
+     */
+    const UChar *prevStarter=src;
+    const UChar *prevSrc;
+    UChar32 c=0;
+    uint16_t norm16=0;
+    uint8_t prevCC=0;
+
+    for(;;) {
+        // count code units below the minimum or with irrelevant data for the quick check
+        for(prevSrc=src;;) {
+            if(src==limit) {
+                return src;
+            }
+            if( (c=*src)<minNoMaybeCP ||
+                isCompYesAndZeroCC(norm16=UTRIE2_GET16_FROM_U16_SINGLE_LEAD(normTrie, c))
+            ) {
+                ++src;
+            } else if(!U16_IS_SURROGATE(c)) {
+                break;
+            } else {
+                UChar c2;
+                if(U16_IS_SURROGATE_LEAD(c)) {
+                    if((src+1)!=limit && U16_IS_TRAIL(c2=src[1])) {
+                        c=U16_GET_SUPPLEMENTARY(c, c2);
+                    }
+                } else /* trail surrogate */ {
+                    if(prevSrc<src && U16_IS_LEAD(c2=*(src-1))) {
+                        --src;
+                        c=U16_GET_SUPPLEMENTARY(c2, c);
+                    } else {
+                        break;  // c's norm16 already failed the test
+                    }
+                }
+                if(isCompYesAndZeroCC(norm16=getNorm16(c))) {
+                    src+=U16_LENGTH(c);
+                } else {
+                    break;
+                }
+            }
+        }
+        if(src!=prevSrc) {
+            // Set prevStarter to the last character in the quick check loop.
+            prevStarter=src-1;
+            if(U16_IS_TRAIL(*prevStarter) && prevSrc<prevStarter && U16_IS_LEAD(*(prevStarter-1))) {
+                --prevStarter;
+            }
+            prevCC=0;
+            // The start of the current character (c).
+            prevSrc=src;
+        }
+
+        src+=U16_LENGTH(c);
+        /*
+         * isCompYesAndZeroCC(norm16) is false, that is, norm16>=minNoNo.
+         * c is either a "noNo" (has a mapping) or a "maybeYes" (combines backward)
+         * or has ccc!=0.
+         */
+        if(isMaybeOrNonZeroCC(norm16)) {
+            uint8_t cc=getCCFromYesOrMaybe(norm16);
+            if( onlyContiguous &&  // FCC
+                cc!=0 &&
+                prevCC==0 &&
+                prevStarter<prevSrc &&
+                // prevCC==0 && prevStarter<prevSrc tell us that
+                // [prevStarter..prevSrc[ (which is exactly one character under these conditions)
+                // passed the quick check "yes && ccc==0" test.
+                // Check whether the last character was a "yesYes" or a "yesNo".
+                // If a "yesNo", then we get its trailing ccc from its
+                // mapping and check for canonical order.
+                // All other cases are ok.
+                getTrailCCFromCompYesAndZeroCC(prevStarter, prevSrc)>cc
+            ) {
+                // Fails FCD test.
+            } else if(prevCC<=cc || cc==0) {
+                prevCC=cc;
+                if(norm16<MIN_YES_YES_WITH_CC) {
+                    if(pQCResult!=NULL) {
+                        *pQCResult=UNORM_MAYBE;
+                    } else {
+                        return prevStarter;
+                    }
+                }
+                continue;
+            }
+        }
+        if(pQCResult!=NULL) {
+            *pQCResult=UNORM_NO;
+        }
+        return prevStarter;
+    }
 }
 
 void Normalizer2Impl::composeAndAppend(const UChar *src, const UChar *limit,
@@ -1088,7 +1178,7 @@ void Normalizer2Impl::composeAndAppend(const UChar *src, const UChar *limit,
             middle.append(src, (int32_t)(firstStarterInSrc-src));
             const UChar *middleStart=middle.getBuffer();
             compose(middleStart, middleStart+middle.length(), onlyContiguous,
-                    NULL, &buffer, errorCode);
+                    TRUE, buffer, errorCode);
             if(U_FAILURE(errorCode)) {
                 return;
             }
@@ -1096,7 +1186,7 @@ void Normalizer2Impl::composeAndAppend(const UChar *src, const UChar *limit,
         }
     }
     if(doCompose) {
-        compose(src, limit, onlyContiguous, NULL, &buffer, errorCode);
+        compose(src, limit, onlyContiguous, TRUE, buffer, errorCode);
     } else {
         buffer.appendZeroCC(src, limit, errorCode);
     }

@@ -228,7 +228,7 @@ public:
     virtual void
     normalize(const UChar *src, const UChar *limit,
               ReorderingBuffer &buffer, UErrorCode &errorCode) const {
-        impl.compose(src, limit, onlyContiguous, NULL, &buffer, errorCode);
+        impl.compose(src, limit, onlyContiguous, TRUE, buffer, errorCode);
     }
     virtual void
     normalizeAndAppend(const UChar *src, const UChar *limit, UBool doNormalize,
@@ -247,10 +247,8 @@ public:
         if(!buffer.init(errorCode)) {
             return UNORM_MAYBE;
         }
-        UNormalizationCheckResult qcResult=UNORM_YES;
         const UChar *sArray=s.getBuffer();
-        impl.compose(sArray, sArray+s.length(), onlyContiguous, &qcResult, &buffer, errorCode);
-        return qcResult==UNORM_YES;
+        return impl.compose(sArray, sArray+s.length(), onlyContiguous, FALSE, buffer, errorCode);
     }
     virtual UNormalizationCheckResult
     quickCheck(const UnicodeString &s, UErrorCode &errorCode) const {
@@ -260,17 +258,22 @@ public:
         }
         UNormalizationCheckResult qcResult=UNORM_YES;
         const UChar *sArray=s.getBuffer();
-        impl.compose(sArray, sArray+s.length(), onlyContiguous, &qcResult, NULL, errorCode);
+        impl.composeQuickCheck(sArray, sArray+s.length(), onlyContiguous, &qcResult);
         return qcResult;
     }
     virtual const UChar *
     spanQuickCheckYes(const UChar *src, const UChar *limit, UErrorCode &errorCode) const {
-        UNormalizationCheckResult qcResult=UNORM_YES;
-        return impl.compose(src, limit, onlyContiguous, &qcResult, NULL, errorCode);
+        return impl.composeQuickCheck(src, limit, onlyContiguous, NULL);
     }
-    virtual UBool hasBoundaryBefore(UChar32 c) const { return impl.hasCompBoundaryBefore(c); }
-    virtual UBool hasBoundaryAfter(UChar32 c) const { return impl.hasCompBoundaryAfter(c, onlyContiguous, FALSE); }
-    virtual UBool isInert(UChar32 c) const { return impl.hasCompBoundaryAfter(c, onlyContiguous, TRUE); }
+    virtual UBool hasBoundaryBefore(UChar32 c) const {
+        return impl.hasCompBoundaryBefore(c);
+    }
+    virtual UBool hasBoundaryAfter(UChar32 c) const {
+        return impl.hasCompBoundaryAfter(c, onlyContiguous, FALSE);
+    }
+    virtual UBool isInert(UChar32 c) const {
+        return impl.hasCompBoundaryAfter(c, onlyContiguous, TRUE);
+    }
 private:
     UBool onlyContiguous;
 };
