@@ -18,6 +18,7 @@
 #define __UNORMIMP_H__
 
 #include "unicode/utypes.h"
+#include "normalizer2impl.h"
 
 #if !UCONFIG_NO_NORMALIZATION
 
@@ -162,33 +163,6 @@ enum {
      */
     _NORM_DECOMP_LENGTH_MASK=0x7f
 };
-
-#endif /* #if !UCONFIG_NO_NORMALIZATION */
-
-/* Korean Hangul and Jamo constants */
-enum {
-    JAMO_L_BASE=0x1100,     /* "lead" jamo */
-    JAMO_V_BASE=0x1161,     /* "vowel" jamo */
-    JAMO_T_BASE=0x11a7,     /* "trail" jamo */
-
-    HANGUL_BASE=0xac00,
-
-    JAMO_L_COUNT=19,
-    JAMO_V_COUNT=21,
-    JAMO_T_COUNT=28,
-
-    HANGUL_COUNT=JAMO_L_COUNT*JAMO_V_COUNT*JAMO_T_COUNT
-};
-
-#ifdef XP_CPLUSPLUS
-static inline UBool
-isHangulWithoutJamoT(UChar c) {
-    c-=HANGUL_BASE;
-    return c<HANGUL_COUNT && c%JAMO_T_COUNT==0;
-}
-#endif
-
-#if !UCONFIG_NO_NORMALIZATION
 
 /* Constants for options flags for normalization. @draft ICU 2.6 */
 enum {

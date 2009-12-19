@@ -19,16 +19,38 @@
 
 #include "unicode/utypes.h"
 
-#if !UCONFIG_NO_NORMALIZATION
+/* Korean Hangul and Jamo constants */
+enum {
+    JAMO_L_BASE=0x1100,     /* "lead" jamo */
+    JAMO_V_BASE=0x1161,     /* "vowel" jamo */
+    JAMO_T_BASE=0x11a7,     /* "trail" jamo */
+
+    HANGUL_BASE=0xac00,
+
+    JAMO_L_COUNT=19,
+    JAMO_V_COUNT=21,
+    JAMO_T_COUNT=28,
+
+    HANGUL_COUNT=JAMO_L_COUNT*JAMO_V_COUNT*JAMO_T_COUNT
+};
+
+#if !UCONFIG_NO_NORMALIZATION && defined(XP_CPLUSPLUS)
 
 #include "unicode/normalizer2.h"
 #include "unicode/udata.h"
 #include "unicode/unistr.h"
+#include "unicode/unorm.h"
 #include "mutex.h"
-#include "unormimp.h"
 #include "uset_imp.h"
+#include "utrie2.h"
 
 U_NAMESPACE_BEGIN
+
+static inline UBool
+isHangulWithoutJamoT(UChar c) {
+    c-=HANGUL_BASE;
+    return c<HANGUL_COUNT && c%JAMO_T_COUNT==0;
+}
 
 class Normalizer2Impl;
 
@@ -425,5 +447,5 @@ unorm2_swap(const UDataSwapper *ds,
 
 U_NAMESPACE_END
 
-#endif  // !UCONFIG_NO_NORMALIZATION
-#endif  // __NORMALIZER2IMPL_H__
+#endif  /* !UCONFIG_NO_NORMALIZATION && defined(XP_CPLUSPLUS) */
+#endif  /* __NORMALIZER2IMPL_H__ */
