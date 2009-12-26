@@ -286,28 +286,6 @@ U_CAPI void U_EXPORT2
 unorm_getUnicodeVersion(UVersionInfo *versionInfo, UErrorCode *pErrorCode);
 
 /**
- * Get the canonical decomposition for one code point.
- * Requires unorm_haveData() and buffer!=NULL and pLength!=NULL.
- * @param c code point
- * @param buffer out-only buffer for algorithmic decompositions of Hangul
- * @param length out-only, takes the length of the decomposition, if any
- * @return pointer to decomposition, or 0 if none
- * @internal
- */
-U_CFUNC const UChar *
-unorm_getCanonicalDecomposition(UChar32 c, UChar buffer[4], int32_t *pLength);
-
-/**
- * internal API, used by the canonical iterator
- * TODO Consider using signature similar to unorm_getCanonicalDecomposition()
- * for more efficiency
- * @internal
- */
-U_CAPI int32_t U_EXPORT2
-unorm_getDecomposition(UChar32 c, UBool compat,
-                       UChar *dest, int32_t destCapacity);
-
-/**
  * Internal API, used by enumeration of canonically equivalent strings
  * @internal
  */

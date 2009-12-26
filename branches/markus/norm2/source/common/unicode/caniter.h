@@ -1,6 +1,6 @@
 /*
  *******************************************************************************
- * Copyright (C) 1996-2006, International Business Machines Corporation and    *
+ * Copyright (C) 1996-2009, International Business Machines Corporation and    *
  * others. All Rights Reserved.                                                *
  *******************************************************************************
  */
@@ -173,6 +173,8 @@ private:
 
     // transient fields
     UnicodeString buffer;
+
+    const Normalizer2 &nfd;
 
     // we have a segment, in NFD. Find all the strings that are canonically equivalent to it.
     UnicodeString *getEquivalents(const UnicodeString &segment, int32_t &result_len, UErrorCode &status); //private String[] getEquivalents(String segment)

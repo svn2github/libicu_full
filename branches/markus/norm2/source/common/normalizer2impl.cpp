@@ -510,6 +510,49 @@ UBool Normalizer2Impl::decompose(UChar32 c, uint16_t norm16,
     }
 }
 
+const UChar *
+Normalizer2Impl::getDecomposition(UChar32 c, UChar buffer[4], int32_t &length) const {
+    const UChar *decomp=NULL;
+    uint16_t norm16;
+    for(;;) {
+        if(c<minDecompNoCP) {
+            return decomp;
+        } else if(isDecompYes(norm16=getNorm16(c))) {
+            // c does not decompose
+            return decomp;
+        } else if(isHangul(norm16)) {
+            // Hangul syllable: decompose algorithmically
+            UChar c2;
+            c-=HANGUL_BASE;
+            c2=(UChar)(c%JAMO_T_COUNT);
+            c/=JAMO_T_COUNT;
+            buffer[0]=(UChar)(JAMO_L_BASE+c/JAMO_V_COUNT);
+            buffer[1]=(UChar)(JAMO_V_BASE+c%JAMO_V_COUNT);
+            if(c2==0) {
+                length=2;
+            } else {
+                buffer[2]=(UChar)(JAMO_T_BASE+c2);
+                length=3;
+            }
+            return buffer;
+        } else if(isDecompNoAlgorithmic(norm16)) {
+            c=mapAlgorithmic(c, norm16);
+            decomp=buffer;
+            length=0;
+            U16_APPEND_UNSAFE(buffer, length, c);
+        } else {
+            // c decomposes, get everything from the variable-length extra data
+            const uint16_t *mapping=getMapping(norm16);
+            uint16_t firstUnit=*mapping++;
+            length=firstUnit&MAPPING_LENGTH_MASK;
+            if(firstUnit&MAPPING_HAS_CCC_LCCC_WORD) {
+                ++mapping;
+            }
+            return (const UChar *)mapping;
+        }
+    }
+}
+
 void Normalizer2Impl::decomposeAndAppend(const UChar *src, const UChar *limit,
                                          UBool doDecompose,
                                          ReorderingBuffer &buffer,

@@ -22,12 +22,13 @@
 
 #if !UCONFIG_NO_NORMALIZATION
 
-#include "unicode/ustring.h"
-#include "unicode/unorm.h"
 #include "unicode/uniset.h"
+#include "unicode/unorm.h"
+#include "unicode/ustring.h"
+#include "cmemory.h"
+#include "normalizer2impl.h"
 #include "unormimp.h"
 #include "ucase.h"
-#include "cmemory.h"
 
 U_NAMESPACE_USE
 
@@ -140,6 +141,7 @@ unorm_cmpEquivFold(const UChar *s1, int32_t length1,
                    const UChar *s2, int32_t length2,
                    uint32_t options,
                    UErrorCode *pErrorCode) {
+    const Normalizer2Impl *nfcImpl;
     const UCaseProps *csp;
 
     /* current-level start/limit - s1/s2 as current */
@@ -152,7 +154,7 @@ unorm_cmpEquivFold(const UChar *s1, int32_t length1,
     /* stacks of previous-level start/current/limit */
     CmpEquivLevel stack1[2], stack2[2];
 
-    /* decomposition buffers for Hangul */
+    /* buffers for algorithmic decompositions */
     UChar decomp1[4], decomp2[4];
 
     /* case folding buffers, only use current-level start/limit */
@@ -173,18 +175,18 @@ unorm_cmpEquivFold(const UChar *s1, int32_t length1,
      */
 
     /* normalization/properties data loaded? */
-    if( ((options&_COMPARE_EQUIV)!=0 && !unorm_haveData(pErrorCode)) ||
-        U_FAILURE(*pErrorCode)
-    ) {
-        return 0;
+    if((options&_COMPARE_EQUIV)!=0) {
+        nfcImpl=Normalizer2Factory::getNFCImpl(*pErrorCode);
+    } else {
+        nfcImpl=NULL;
     }
     if((options&U_COMPARE_IGNORE_CASE)!=0) {
         csp=ucase_getSingleton(pErrorCode);
-        if(U_FAILURE(*pErrorCode)) {
-            return 0;
-        }
     } else {
         csp=NULL;
+    }
+    if(U_FAILURE(*pErrorCode)) {
+        return 0;
     }
 
     /* initialize */
@@ -404,7 +406,7 @@ unorm_cmpEquivFold(const UChar *s1, int32_t length1,
         }
 
         if( level1<2 && (options&_COMPARE_EQUIV) &&
-            0!=(p=unorm_getCanonicalDecomposition((UChar32)cp1, decomp1, &length))
+            0!=(p=nfcImpl->getDecomposition((UChar32)cp1, decomp1, length))
         ) {
             /* cp1 decomposes into p[length] */
             if(U_IS_SURROGATE(c1)) {
@@ -445,7 +447,7 @@ unorm_cmpEquivFold(const UChar *s1, int32_t length1,
         }
 
         if( level2<2 && (options&_COMPARE_EQUIV) &&
-            0!=(p=unorm_getCanonicalDecomposition((UChar32)cp2, decomp2, &length))
+            0!=(p=nfcImpl->getDecomposition((UChar32)cp2, decomp2, length))
         ) {
             /* cp2 decomposes into p[length] */
             if(U_IS_SURROGATE(c2)) {

@@ -264,14 +264,16 @@ u_hasBinaryProperty(UChar32 c, UProperty which) {
             } else if(column==UPROPS_SRC_CASE_AND_NORM) {
 #if !UCONFIG_NO_NORMALIZATION
                 UChar nfdBuffer[4];
-                const UChar *nfd=NULL;
+                const UChar *nfd;
                 int32_t nfdLength;
-                UErrorCode errorCode = U_ZERO_ERROR;
+                UErrorCode errorCode=U_ZERO_ERROR;
+                const Normalizer2Impl *nfcImpl=Normalizer2Factory::getNFCImpl(errorCode);
+                if(U_FAILURE(errorCode)) {
+                    return FALSE;
+                }
                 switch(which) {
                 case UCHAR_CHANGES_WHEN_CASEFOLDED:
-                    if(unorm_haveData(&errorCode)) {
-                        nfd=unorm_getCanonicalDecomposition(c, nfdBuffer, &nfdLength);
-                    }
+                    nfd=nfcImpl->getDecomposition(c, nfdBuffer, nfdLength);
                     if(nfd!=NULL) {
                         /* c has a decomposition */
                         if(nfdLength==1) {

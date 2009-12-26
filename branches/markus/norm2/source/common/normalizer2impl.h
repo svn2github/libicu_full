@@ -146,7 +146,7 @@ private:
     UChar *codePointStart, *codePointLimit;
 };
 
-class Normalizer2Impl : public UMemory {
+class U_COMMON_API Normalizer2Impl : public UMemory {
 public:
     Normalizer2Impl() : memory(NULL), normTrie(NULL) {
         fcdTrieSingleton.fInstance=NULL;
@@ -213,6 +213,15 @@ public:
 
     void setFCD16FromNorm16(UChar32 start, UChar32 end, uint16_t norm16,
                             UTrie2 *newFCDTrie, UErrorCode &errorCode) const;
+
+    /**
+     * Get the decomposition for one code point.
+     * @param c code point
+     * @param buffer out-only buffer for algorithmic decompositions
+     * @param length out-only, takes the length of the decomposition, if any
+     * @return pointer to the decomposition, or NULL if none
+     */
+    const UChar *getDecomposition(UChar32 c, UChar buffer[4], int32_t &length) const;
 
     enum {
         MIN_CCC_LCCC_CP=0x300
