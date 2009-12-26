@@ -812,16 +812,10 @@ void Normalizer2DataBuilder::writeExtraData(UChar32 c, uint32_t value, ExtraData
             // Not when mapping to a Hangul syllable, or else the runtime decomposition and
             // data access functions would have to deal with Hangul-Jamo decomposition.
             if(p->mappingCP>=0 && !isHangul(p->mappingCP)) {
-#if 1
                 int32_t delta=p->mappingCP-c;
                 if(-Normalizer2Impl::MAX_DELTA<=delta && delta<=Normalizer2Impl::MAX_DELTA) {
                     p->offset=(delta<<Norm::OFFSET_SHIFT)|Norm::OFFSET_DELTA;
                 }
-#else
-                if(p->mappingCP<=0x58f) {
-                    p->offset=(-p->mappingCP<<Norm::OFFSET_SHIFT)|Norm::OFFSET_DELTA;
-                }
-#endif
             }
         }
         if(p->offset==0) {

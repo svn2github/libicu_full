@@ -189,6 +189,10 @@ public:
     virtual const UChar *
     spanQuickCheckYes(const UChar *src, const UChar *limit, UErrorCode &errorCode) const = 0;
 
+    virtual UNormalizationCheckResult getQuickCheck(UChar32 c) const {
+        return UNORM_YES;
+    }
+
     static UClassID U_EXPORT2 getStaticClassID();
     virtual UClassID getDynamicClassID() const;
 
@@ -214,6 +218,9 @@ public:
     virtual const UChar *
     spanQuickCheckYes(const UChar *src, const UChar *limit, UErrorCode &errorCode) const {
         return impl.decompose(src, limit, NULL, errorCode);
+    }
+    virtual UNormalizationCheckResult getQuickCheck(UChar32 c) const {
+        return impl.isDecompYes(impl.getNorm16(c)) ? UNORM_YES : UNORM_NO;
     }
     virtual UBool hasBoundaryBefore(UChar32 c) const { return impl.hasDecompBoundary(c, TRUE); }
     virtual UBool hasBoundaryAfter(UChar32 c) const { return impl.hasDecompBoundary(c, FALSE); }
@@ -264,6 +271,9 @@ public:
     virtual const UChar *
     spanQuickCheckYes(const UChar *src, const UChar *limit, UErrorCode &errorCode) const {
         return impl.composeQuickCheck(src, limit, onlyContiguous, NULL);
+    }
+    virtual UNormalizationCheckResult getQuickCheck(UChar32 c) const {
+        return impl.getCompQuickCheck(impl.getNorm16(c));
     }
     virtual UBool hasBoundaryBefore(UChar32 c) const {
         return impl.hasCompBoundaryBefore(c);
@@ -476,6 +486,17 @@ Normalizer2Factory::getNFKC_CFImpl(UErrorCode &errorCode) {
     return allModes!=NULL ? &allModes->impl : NULL;
 }
 
+const UTrie2 *
+Normalizer2Factory::getFCDTrie(UErrorCode &errorCode) {
+    Norm2AllModes *allModes=
+        Norm2AllModesSingleton(nfcSingleton, "nfc").getInstance(errorCode);
+    if(allModes!=NULL) {
+        return allModes->impl.getFCDTrie(errorCode);
+    } else {
+        return NULL;
+    }
+}
+
 const Normalizer2 *
 Normalizer2::getInstance(const char *packageName,
                          const char *name,
@@ -678,6 +699,33 @@ unorm2_hasBoundaryAfter(const UNormalizer2 *norm2, UChar32 c) {
 U_DRAFT UBool U_EXPORT2
 unorm2_isInert(const UNormalizer2 *norm2, UChar32 c) {
     return ((const Normalizer2 *)norm2)->isInert(c);
+}
+
+// Some properties APIs ---------------------------------------------------- ***
+
+U_CFUNC UNormalizationCheckResult U_EXPORT2
+unorm_getQuickCheck(UChar32 c, UNormalizationMode mode) {
+    if(mode<=UNORM_NONE || UNORM_FCD<=mode) {
+        return UNORM_YES;
+    }
+    UErrorCode errorCode=U_ZERO_ERROR;
+    const Normalizer2 *norm2=Normalizer2Factory::getInstance(mode, errorCode);
+    if(U_SUCCESS(errorCode)) {
+        return ((const Normalizer2WithImpl *)norm2)->getQuickCheck(c);
+    } else {
+        return UNORM_MAYBE;
+    }
+}
+
+U_CAPI const uint16_t * U_EXPORT2
+unorm_getFCDTrieIndex(UChar32 &fcdHighStart, UErrorCode *pErrorCode) {
+    const UTrie2 *trie=Normalizer2Factory::getFCDTrie(*pErrorCode);
+    if(U_SUCCESS(*pErrorCode)) {
+        fcdHighStart=trie->highStart;
+        return trie->index;
+    } else {
+        return NULL;
+    }
 }
 
 U_NAMESPACE_END

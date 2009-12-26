@@ -393,16 +393,6 @@ unorm_haveData(UErrorCode *pErrorCode) {
     return _haveData(*pErrorCode);
 }
 
-U_CAPI const uint16_t * U_EXPORT2
-unorm_getFCDTrieIndex(UChar32 &fcdHighStart, UErrorCode *pErrorCode) {
-    if(_haveData(*pErrorCode)) {
-        fcdHighStart=fcdTrie.highStart;
-        return fcdTrie.index;
-    } else {
-        return NULL;
-    }
-}
-
 /* data access primitives --------------------------------------------------- */
 
 static inline uint32_t
@@ -919,37 +909,6 @@ _isTrueStarter(uint32_t norm32, uint32_t ccOrQCMask, uint32_t decompQCMask) {
     return FALSE;
 }
 
-/* uchar.h */
-U_CAPI uint8_t U_EXPORT2
-u_getCombiningClass(UChar32 c) {
-#if !UNORM_HARDCODE_DATA
-    UErrorCode errorCode=U_ZERO_ERROR;
-    if(_haveData(errorCode)) {
-#endif
-        uint32_t norm32=UTRIE2_GET32(&normTrie, c);
-        return (uint8_t)(norm32>>_NORM_CC_SHIFT);
-#if !UNORM_HARDCODE_DATA
-    } else {
-        return 0;
-    }
-#endif
-}
-
-U_CFUNC UBool U_EXPORT2
-unorm_internalIsFullCompositionExclusion(UChar32 c) {
-#if UNORM_HARDCODE_DATA
-    if(auxTrie.index!=NULL) {
-#else
-    UErrorCode errorCode=U_ZERO_ERROR;
-    if(_haveData(errorCode) && auxTrie.index!=NULL) {
-#endif
-        uint16_t aux=UTRIE2_GET16(&auxTrie, c);
-        return (UBool)((aux&_NORM_AUX_COMP_EX_MASK)!=0);
-    } else {
-        return FALSE;
-    }
-}
-
 U_CFUNC UBool U_EXPORT2
 unorm_isCanonSafeStart(UChar32 c) {
 #if UNORM_HARDCODE_DATA
@@ -1109,78 +1068,6 @@ u_getFC_NFKC_Closure(UChar32 c, UChar *dest, int32_t destCapacity, UErrorCode *p
     }
 }
 
-#if 0  // TODO: remove
-/* Is c an NF<mode>-skippable code point? See unormimp.h. */
-U_CAPI UBool U_EXPORT2
-unorm_isNFSkippable(UChar32 c, UNormalizationMode mode) {
-    uint32_t norm32, mask;
-    uint16_t aux;
-
-#if !UNORM_HARDCODE_DATA
-    UErrorCode errorCode=U_ZERO_ERROR;
-    if(!_haveData(errorCode)) {
-        return FALSE;
-    }
-#endif
-
-    /* handle trivial cases; set the comparison mask for the normal ones */
-    switch(mode) {
-    case UNORM_NONE:
-        return TRUE;
-    case UNORM_NFD:
-        mask=_NORM_CC_MASK|_NORM_QC_NFD;
-        break;
-    case UNORM_NFKD:
-        mask=_NORM_CC_MASK|_NORM_QC_NFKD;
-        break;
-    case UNORM_NFC:
-    /* case UNORM_FCC: */
-        mask=_NORM_CC_MASK|_NORM_COMBINES_ANY|(_NORM_QC_NFC&_NORM_QC_ANY_NO);
-        break;
-    case UNORM_NFKC:
-        mask=_NORM_CC_MASK|_NORM_COMBINES_ANY|(_NORM_QC_NFKC&_NORM_QC_ANY_NO);
-        break;
-    case UNORM_FCD:
-        /* FCD: skippable if lead cc==0 and trail cc<=1 */
-        return fcdTrie.index!=NULL && UTRIE2_GET16(&fcdTrie, c)<=1;
-    default:
-        return FALSE;
-    }
-
-    /* check conditions (a)..(e), see unormimp.h */
-    norm32=UTRIE2_GET32(&normTrie, c);
-    if((norm32&mask)!=0) {
-        return FALSE; /* fails (a)..(e), not skippable */
-    }
-
-    if(mode<UNORM_NFC) {
-        return TRUE; /* NF*D, passed (a)..(c), is skippable */
-    }
-
-    /* NF*C/FCC, passed (a)..(e) */
-    if((norm32&_NORM_QC_NFD)==0) {
-        return TRUE; /* no canonical decomposition, is skippable */
-    }
-
-    /* check Hangul syllables algorithmically */
-    if(isNorm32HangulOrJamo(norm32)) {
-        /* Jamo passed (a)..(e) above, must be Hangul */
-        return !isHangulWithoutJamoT((UChar)c); /* LVT are skippable, LV are not */
-    }
-
-    /* if(mode<=UNORM_NFKC) { -- enable when implementing FCC */
-    /* NF*C, test (f) flag */
-    if(!formatVersion_2_2 || auxTrie.index==NULL) {
-        return FALSE; /* no (f) data, say not skippable to be safe */
-    }
-
-    aux=UTRIE2_GET16(&auxTrie, c);
-    return (aux&_NORM_AUX_NFC_SKIP_F_MASK)==0; /* TRUE=skippable if the (f) flag is not set */
-
-    /* } else { FCC, test fcd<=1 instead of the above } */
-}
-#endif
-
 U_CAPI void U_EXPORT2
 unorm_addPropertyStarts(const USetAdder *sa, UErrorCode *pErrorCode) {
     UChar c;
@@ -1204,51 +1091,6 @@ unorm_addPropertyStarts(const USetAdder *sa, UErrorCode *pErrorCode) {
         sa->add(sa->set, c+1);
     }
     sa->add(sa->set, HANGUL_BASE+HANGUL_COUNT); /* add Hangul+1 to continue with other properties */
-}
-
-U_CFUNC UNormalizationCheckResult U_EXPORT2
-unorm_getQuickCheck(UChar32 c, UNormalizationMode mode) {
-    static const uint32_t qcMask[UNORM_MODE_COUNT]={
-        0, 0, _NORM_QC_NFD, _NORM_QC_NFKD, _NORM_QC_NFC, _NORM_QC_NFKC
-    };
-
-    uint32_t norm32;
-
-#if !UNORM_HARDCODE_DATA
-    UErrorCode errorCode=U_ZERO_ERROR;
-    if(!_haveData(errorCode)) {
-        return UNORM_YES;
-    }
-#endif
-
-    norm32=UTRIE2_GET32(&normTrie, c);
-    norm32&=qcMask[mode];
-
-    if(norm32==0) {
-        return UNORM_YES;
-    } else if(norm32&_NORM_QC_ANY_NO) {
-        return UNORM_NO;
-    } else /* _NORM_QC_ANY_MAYBE */ {
-        return UNORM_MAYBE;
-    }
-}
-
-U_CFUNC uint16_t U_EXPORT2
-unorm_getFCD16FromCodePoint(UChar32 c) {
-#if !UNORM_HARDCODE_DATA
-    UErrorCode errorCode;
-    errorCode=U_ZERO_ERROR;
-#endif
-
-    if(
-#if !UNORM_HARDCODE_DATA
-        !_haveData(errorCode) ||
-#endif
-        fcdTrie.index==NULL
-    ) {
-        return 0;
-    }
-    return UTRIE2_GET16(&fcdTrie, c);
 }
 
 /* reorder UTF-16 in-place -------------------------------------------------- */

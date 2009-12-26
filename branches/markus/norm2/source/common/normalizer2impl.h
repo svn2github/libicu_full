@@ -174,6 +174,18 @@ public:
         return getNorm16FromSupplementary(U16_GET_SUPPLEMENTARY(c, c2));
     }
 
+    UNormalizationCheckResult getCompQuickCheck(uint16_t norm16) const {
+        if(norm16<minNoNo || MIN_YES_YES_WITH_CC<=norm16) {
+            return UNORM_YES;
+        } else if(minMaybeYes<=norm16) {
+            return UNORM_MAYBE;
+        } else {
+            return UNORM_NO;
+        }
+    }
+    UBool isCompNo(uint16_t norm16) const { return minNoNo<=norm16 && norm16<minMaybeYes; }
+    UBool isDecompYes(uint16_t norm16) const { return norm16<minYesNo || minMaybeYes<=norm16; }
+
     uint8_t getCC(uint16_t norm16) const {
         if(norm16>=MIN_NORMAL_MAYBE_YES) {
             return (uint8_t)norm16;
@@ -319,7 +331,6 @@ private:
     UBool hasZeroCCFromDecompYes(uint16_t norm16) {
         return norm16<=MIN_NORMAL_MAYBE_YES || norm16==JAMO_VT;
     }
-    UBool isDecompYes(uint16_t norm16) const { return norm16<minYesNo || minMaybeYes<=norm16; }
     UBool isDecompYesAndZeroCC(uint16_t norm16) const {
         return norm16<minYesNo ||
                norm16==JAMO_VT ||
@@ -436,6 +447,8 @@ public:
     static const Normalizer2Impl *getNFCImpl(UErrorCode &errorCode);
     static const Normalizer2Impl *getNFKCImpl(UErrorCode &errorCode);
     static const Normalizer2Impl *getNFKC_CFImpl(UErrorCode &errorCode);
+
+    static const UTrie2 *getFCDTrie(UErrorCode &errorCode);
 private:
     Normalizer2Factory();  // No instantiation.
 };
@@ -444,6 +457,103 @@ U_CAPI int32_t U_EXPORT2
 unorm2_swap(const UDataSwapper *ds,
             const void *inData, int32_t length, void *outData,
             UErrorCode *pErrorCode);
+
+/**
+ * Get the NF*_QC property for a code point, for u_getIntPropertyValue().
+ * @internal
+ */
+U_CFUNC UNormalizationCheckResult U_EXPORT2
+unorm_getQuickCheck(UChar32 c, UNormalizationMode mode);
+
+/**
+ * Internal API, used by collation code.
+ * Get access to the internal FCD trie table to be able to perform
+ * incremental, per-code unit, FCD checks in collation.
+ * One pointer is sufficient because the trie index values are offset
+ * by the index size, so that the same pointer is used to access the trie data.
+ * Code points at fcdHighStart and above have a zero FCD value.
+ * @internal
+ */
+U_CAPI const uint16_t * U_EXPORT2
+unorm_getFCDTrieIndex(UChar32 &fcdHighStart, UErrorCode *pErrorCode);
+
+/**
+ * Internal API, used by collation code.
+ * Get the FCD value for a code unit, with
+ * bits 15..8   lead combining class
+ * bits  7..0   trail combining class
+ *
+ * If c is a lead surrogate and the value is not 0,
+ * then some of c's associated supplementary code points have a non-zero FCD value.
+ *
+ * @internal
+ */
+static inline uint16_t
+unorm_getFCD16(const uint16_t *fcdTrieIndex, UChar c) {
+    return fcdTrieIndex[_UTRIE2_INDEX_FROM_U16_SINGLE_LEAD(fcdTrieIndex, c)];
+}
+
+/**
+ * Internal API, used by collation code.
+ * Get the FCD value of the next code point (post-increment), with
+ * bits 15..8   lead combining class
+ * bits  7..0   trail combining class
+ *
+ * @internal
+ */
+static inline uint16_t
+unorm_nextFCD16(const uint16_t *fcdTrieIndex, UChar32 fcdHighStart,
+                const UChar *&s, const UChar *limit) {
+    UChar32 c=*s++;
+    uint16_t fcd=fcdTrieIndex[_UTRIE2_INDEX_FROM_U16_SINGLE_LEAD(fcdTrieIndex, c)];
+    if(fcd!=0 && U16_IS_LEAD(c)) {
+        UChar c2;
+        if(s!=limit && U16_IS_TRAIL(c2=*s)) {
+            ++s;
+            c=U16_GET_SUPPLEMENTARY(c, c2);
+            if(c<fcdHighStart) {
+                fcd=fcdTrieIndex[_UTRIE2_INDEX_FROM_SUPP(fcdTrieIndex, c)];
+            } else {
+                fcd=0;
+            }
+        } else /* unpaired lead surrogate */ {
+            fcd=0;
+        }
+    }
+    return fcd;
+}
+
+/**
+ * Internal API, used by collation code.
+ * Get the FCD value of the previous code point (pre-decrement), with
+ * bits 15..8   lead combining class
+ * bits  7..0   trail combining class
+ *
+ * @internal
+ */
+static inline uint16_t
+unorm_prevFCD16(const uint16_t *fcdTrieIndex, UChar32 fcdHighStart,
+                const UChar *start, const UChar *&s) {
+    UChar32 c=*--s;
+    uint16_t fcd;
+    if(!U16_IS_SURROGATE(c)) {
+        fcd=fcdTrieIndex[_UTRIE2_INDEX_FROM_U16_SINGLE_LEAD(fcdTrieIndex, c)];
+    } else {
+        UChar c2;
+        if(U16_IS_SURROGATE_TRAIL(c) && s!=start && U16_IS_LEAD(c2=*(s-1))) {
+            --s;
+            c=U16_GET_SUPPLEMENTARY(c2, c);
+            if(c<fcdHighStart) {
+                fcd=fcdTrieIndex[_UTRIE2_INDEX_FROM_SUPP(fcdTrieIndex, c)];
+            } else {
+                fcd=0;
+            }
+        } else /* unpaired surrogate */ {
+            fcd=0;
+        }
+    }
+    return fcd;
+}
 
 U_NAMESPACE_END
 

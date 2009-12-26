@@ -17,7 +17,6 @@
 
 static const char *ignorePropNames[]={
     "FC_NFKC",
-    "Full_Composition_Exclusion",
     "NFD_QC",
     "NFC_QC",
     "NFKD_QC",
@@ -104,6 +103,7 @@ derivedPropsNames[]={
     "XID_Start",
     "XID_Continue",
     "Default_Ignorable_Code_Point",
+    "Full_Composition_Exclusion",
     "Grapheme_Extend",
     "Grapheme_Link", /* Unicode 5 moves this property here from PropList.txt */
     "Grapheme_Base",
@@ -128,6 +128,7 @@ derivedPropsIndex[]={
     UCHAR_XID_START,
     UCHAR_XID_CONTINUE,
     UCHAR_DEFAULT_IGNORABLE_CODE_POINT,
+    UCHAR_FULL_COMPOSITION_EXCLUSION,
     UCHAR_GRAPHEME_EXTEND,
     UCHAR_GRAPHEME_LINK,
     UCHAR_GRAPHEME_BASE,

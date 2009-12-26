@@ -650,10 +650,6 @@ u_getNumericValue(UChar32 c) {
     }
 }
 
-/* ICU 3.4: bidi/shaping properties moved to ubidi_props.c */
-
-/* ICU 2.1: u_getCombiningClass() moved to unorm.cpp */
-
 U_CAPI int32_t U_EXPORT2
 u_digit(UChar32 ch, int8_t radix) {
     int8_t value;

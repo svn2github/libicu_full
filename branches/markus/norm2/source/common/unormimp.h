@@ -279,108 +279,6 @@ unorm_internalQuickCheck(const UChar *src,
 #if !UCONFIG_NO_NORMALIZATION
 
 /**
- * Internal API to get the 16-bit FCD value (lccc + tccc) for c,
- * for u_getIntPropertyValue().
- * @internal
- */
-U_CFUNC uint16_t U_EXPORT2
-unorm_getFCD16FromCodePoint(UChar32 c);
-
-#ifdef XP_CPLUSPLUS
-
-/**
- * Internal API, used by collation code.
- * Get access to the internal FCD trie table to be able to perform
- * incremental, per-code unit, FCD checks in collation.
- * One pointer is sufficient because the trie index values are offset
- * by the index size, so that the same pointer is used to access the trie data.
- * Code points at fcdHighStart and above have a zero FCD value.
- * @internal
- */
-U_CAPI const uint16_t * U_EXPORT2
-unorm_getFCDTrieIndex(UChar32 &fcdHighStart, UErrorCode *pErrorCode);
-
-/**
- * Internal API, used by collation code.
- * Get the FCD value for a code unit, with
- * bits 15..8   lead combining class
- * bits  7..0   trail combining class
- *
- * If c is a lead surrogate and the value is not 0,
- * then some of c's associated supplementary code points have a non-zero FCD value.
- *
- * @internal
- */
-static inline uint16_t
-unorm_getFCD16(const uint16_t *fcdTrieIndex, UChar c) {
-    return fcdTrieIndex[_UTRIE2_INDEX_FROM_U16_SINGLE_LEAD(fcdTrieIndex, c)];
-}
-
-/**
- * Internal API, used by collation code.
- * Get the FCD value of the next code point (post-increment), with
- * bits 15..8   lead combining class
- * bits  7..0   trail combining class
- *
- * @internal
- */
-static inline uint16_t
-unorm_nextFCD16(const uint16_t *fcdTrieIndex, UChar32 fcdHighStart,
-                const UChar *&s, const UChar *limit) {
-    UChar32 c=*s++;
-    uint16_t fcd=fcdTrieIndex[_UTRIE2_INDEX_FROM_U16_SINGLE_LEAD(fcdTrieIndex, c)];
-    if(fcd!=0 && U16_IS_LEAD(c)) {
-        UChar c2;
-        if(s!=limit && U16_IS_TRAIL(c2=*s)) {
-            ++s;
-            c=U16_GET_SUPPLEMENTARY(c, c2);
-            if(c<fcdHighStart) {
-                fcd=fcdTrieIndex[_UTRIE2_INDEX_FROM_SUPP(fcdTrieIndex, c)];
-            } else {
-                fcd=0;
-            }
-        } else /* unpaired lead surrogate */ {
-            fcd=0;
-        }
-    }
-    return fcd;
-}
-
-/**
- * Internal API, used by collation code.
- * Get the FCD value of the previous code point (pre-decrement), with
- * bits 15..8   lead combining class
- * bits  7..0   trail combining class
- *
- * @internal
- */
-static inline uint16_t
-unorm_prevFCD16(const uint16_t *fcdTrieIndex, UChar32 fcdHighStart,
-                const UChar *start, const UChar *&s) {
-    UChar32 c=*--s;
-    uint16_t fcd;
-    if(!U16_IS_SURROGATE(c)) {
-        fcd=fcdTrieIndex[_UTRIE2_INDEX_FROM_U16_SINGLE_LEAD(fcdTrieIndex, c)];
-    } else {
-        UChar c2;
-        if(U16_IS_SURROGATE_TRAIL(c) && s!=start && U16_IS_LEAD(c2=*(s-1))) {
-            --s;
-            c=U16_GET_SUPPLEMENTARY(c2, c);
-            if(c<fcdHighStart) {
-                fcd=fcdTrieIndex[_UTRIE2_INDEX_FROM_SUPP(fcdTrieIndex, c)];
-            } else {
-                fcd=0;
-            }
-        } else /* unpaired surrogate */ {
-            fcd=0;
-        }
-    }
-    return fcd;
-}
-
-#endif
-
-/**
  * internal API, used by StringPrep
  * @internal
  */
@@ -410,13 +308,6 @@ unorm_getDecomposition(UChar32 c, UBool compat,
                        UChar *dest, int32_t destCapacity);
 
 /**
- * internal API, used by uprops.cpp
- * @internal
- */
-U_CFUNC UBool U_EXPORT2
-unorm_internalIsFullCompositionExclusion(UChar32 c);
-
-/**
  * Internal API, used by enumeration of canonically equivalent strings
  * @internal
  */
@@ -429,13 +320,6 @@ unorm_isCanonSafeStart(UChar32 c);
  */
 U_CAPI UBool U_EXPORT2
 unorm_getCanonStartSet(UChar32 c, USerializedSet *fillSet);
-
-/**
- * Is c an NF<mode>-skippable code point? See unormimp.h.
- * @internal
- */
-U_CAPI UBool U_EXPORT2
-unorm_isNFSkippable(UChar32 c, UNormalizationMode mode);
 
 #ifdef XP_CPLUSPLUS
 
@@ -465,13 +349,6 @@ U_CAPI int32_t U_EXPORT2
 unorm_swap(const UDataSwapper *ds,
            const void *inData, int32_t length, void *outData,
            UErrorCode *pErrorCode);
-
-/**
- * Get the NF*_QC property for a code point, for u_getIntPropertyValue().
- * @internal
- */
-U_CFUNC UNormalizationCheckResult U_EXPORT2
-unorm_getQuickCheck(UChar32 c, UNormalizationMode mode);
 
 /**
  * Description of the format of unorm.icu version 2.3.
