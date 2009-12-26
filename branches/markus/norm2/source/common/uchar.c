@@ -28,7 +28,6 @@
 #include "ucln_cmn.h"
 #include "utrie2.h"
 #include "udataswp.h"
-#include "unormimp.h" /* JAMO_L_BASE etc. */
 #include "uprops.h"
 
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))

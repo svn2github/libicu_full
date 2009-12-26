@@ -568,6 +568,7 @@ processCombining() {
 
 /* processing incoming normalization data ----------------------------------- */
 
+#if GENNORM_OBSOLETE
 /*
  * Decompose Hangul syllables algorithmically and fill a pseudo-Norm struct.
  * c must be a Hangul syllable code point.
@@ -602,6 +603,7 @@ getHangulDecomposition(uint32_t c, Norm *pHangulNorm, uint32_t hangulBuffer[3]) 
         pHangulNorm->lenNFKD=length;
     }
 }
+#endif
 
 /*
  * decompose the one decomposition further, may generate two decompositions

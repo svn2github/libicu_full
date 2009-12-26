@@ -18,7 +18,6 @@
 #define __UNORMIMP_H__
 
 #include "unicode/utypes.h"
-#include "normalizer2impl.h"
 
 #if !UCONFIG_NO_NORMALIZATION
 

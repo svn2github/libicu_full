@@ -25,12 +25,12 @@
 #include "unicode/udata.h"
 #include "unicode/uchar.h"
 #include "unicode/uniset.h"
+#include "normalizer2impl.h"
 #include "ucol_bld.h"
 #include "ucol_elm.h"
 #include "ucol_cnt.h"
 #include "ucln_in.h"
 #include "umutex.h"
-#include "unormimp.h"
 #include "cmemory.h"
 
 static const InverseUCATableHeader* _staticInvUCA = NULL;

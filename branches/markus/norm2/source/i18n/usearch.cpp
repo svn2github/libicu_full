@@ -14,12 +14,14 @@
 #include "unicode/usearch.h"
 #include "unicode/ustring.h"
 #include "unicode/uchar.h"
+#include "normalizer2impl.h"
 #include "unormimp.h"
 #include "ucol_imp.h"
 #include "usrchimp.h"
 #include "cmemory.h"
 #include "ucln_in.h"
 #include "uassert.h"
+#include "ustr_imp.h"
 
 U_NAMESPACE_USE
 

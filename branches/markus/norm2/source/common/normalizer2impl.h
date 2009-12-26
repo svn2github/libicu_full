@@ -19,6 +19,18 @@
 
 #include "unicode/utypes.h"
 
+#if !UCONFIG_NO_NORMALIZATION
+
+#include "unicode/normalizer2.h"
+#include "unicode/udata.h"
+#include "unicode/unistr.h"
+#include "unicode/unorm.h"
+#include "mutex.h"
+#include "uset_imp.h"
+#include "utrie2.h"
+
+U_NAMESPACE_BEGIN
+
 /* Korean Hangul and Jamo constants */
 enum {
     JAMO_L_BASE=0x1100,     /* "lead" jamo */
@@ -33,18 +45,6 @@ enum {
 
     HANGUL_COUNT=JAMO_L_COUNT*JAMO_V_COUNT*JAMO_T_COUNT
 };
-
-#if !UCONFIG_NO_NORMALIZATION && defined(XP_CPLUSPLUS)
-
-#include "unicode/normalizer2.h"
-#include "unicode/udata.h"
-#include "unicode/unistr.h"
-#include "unicode/unorm.h"
-#include "mutex.h"
-#include "uset_imp.h"
-#include "utrie2.h"
-
-U_NAMESPACE_BEGIN
 
 static inline UBool
 isHangulWithoutJamoT(UChar c) {
@@ -566,5 +566,5 @@ unorm_prevFCD16(const uint16_t *fcdTrieIndex, UChar32 fcdHighStart,
 
 U_NAMESPACE_END
 
-#endif  /* !UCONFIG_NO_NORMALIZATION && defined(XP_CPLUSPLUS) */
+#endif  /* !UCONFIG_NO_NORMALIZATION */
 #endif  /* __NORMALIZER2IMPL_H__ */
