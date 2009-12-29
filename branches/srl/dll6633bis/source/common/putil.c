@@ -1983,6 +1983,7 @@ uprv_dl_open(const char *libName, UErrorCode *status) {
     if(U_FAILURE(*status)) return ret;
     ret =  dlopen(libName, RTLD_NOW|RTLD_GLOBAL);
     if(ret==NULL) {
+        perror("dlopen");
         *status = U_MISSING_RESOURCE_ERROR;
         /* TODO: read errno and translate. */
     }
@@ -2015,14 +2016,14 @@ uprv_dl_sym(void *lib, const char* sym, UErrorCode *status) {
 U_INTERNAL void * U_EXPORT2
 uprv_dl_open(const char *libName, UErrorCode *status) {
     if(U_FAILURE(*status)) return NULL;
-    *status = U_UNIMPLEMENTED_ERROR;
+    *status = U_UNSUPPORTED_ERROR;
     return NULL;
 }
 
 U_INTERNAL void U_EXPORT2
 uprv_dl_close(void *lib, UErrorCode *status) {
     if(U_FAILURE(*status)) return;
-    *status = U_UNIMPLEMENTED_ERROR;
+    *status = U_UNSUPPORTED_ERROR;
     return;
 }
 
@@ -2030,8 +2031,8 @@ uprv_dl_close(void *lib, UErrorCode *status) {
 U_INTERNAL void* U_EXPORT2
 uprv_dl_sym(void *lib, const char* sym, UErrorCode *status) {
     if(U_FAILURE(*status)) return NULL;
-    *status = U_UNIMPLEMENTED_ERROR;
-    return;
+    *status = U_UNSUPPORTED_ERROR;
+    return NULL;
 }
 
 

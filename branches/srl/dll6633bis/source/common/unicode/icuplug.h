@@ -34,9 +34,12 @@ typedef struct UPlugData UPlugData;
  * Random Token to identify a valid ICU plugin. Plugins must return this 
  * from the entrypoint.
  */
-#define U_PLUG_TOKEN 0x54762486
+#define UPLUG_TOKEN 0x54762486
 
-#define UPLUG_NAME_MAX              1024
+/**
+ * Max width of names, symbols, and configuration strings
+ */
+#define UPLUG_NAME_MAX              100
 
 
 typedef uint32_t UPlugTokenReturn;
@@ -54,6 +57,9 @@ typedef enum {
 
 /**
  * Level of plugin loading
+ *     INITIAL:  UNKNOWN
+ *       QUERY:   INVALID ->  { LOW | HIGH }
+ *     ERR -> INVALID
  */
 typedef enum {
     UPLUG_LEVEL_INVALID = 0,     /**< The plugin is invalid, hasn't called uplug_setLevel, or can't load. **/
@@ -63,14 +69,14 @@ typedef enum {
     UPLUG_LEVEL_COUNT         /**< count of known reasons **/
 } UPlugLevel;
 
-U_CDECL_BEGIN
+/*U_CDECL_BEGIN*/
 
 
 /**
  * Entrypoint for an ICU plugin.
  * @param data the UPlugData handle. 
  * @param status the plugin's extended status code.
- * @return A valid plugin must return U_PLUG_TOKEN
+ * @return A valid plugin must return UPLUG_TOKEN
  */
 typedef UPlugTokenReturn (U_EXPORT2 UPlugEntrypoint) (
                   UPlugData *data,
@@ -97,6 +103,21 @@ uplug_setPlugLevel(UPlugData *data, UPlugLevel level);
  */
 U_CAPI UPlugLevel U_EXPORT2
 uplug_getPlugLevel(UPlugData *data);
+
+/**
+ * Get the lowest level of plug which can currently load.
+ * For example, if UPLUG_LEVEL_LOW is returned, then low level plugins may load
+ * if UPLUG_LEVEL_HIGH is returned, then only high level plugins may load.
+ * @return the lowest level of plug which can currently load
+ */
+U_CAPI UPlugLevel U_EXPORT2 uplug_getCurrentLevel();
+
+
+/**
+ * Get plug load status
+ */
+U_CAPI UErrorCode U_EXPORT2
+uplug_getPlugLoadStatus(UPlugData *plug); 
 
 /**
  * Set the user-readable name of this plugin.
@@ -189,17 +210,19 @@ uplug_nextPlug(UPlugData *prior);
  * This is useful for testing plugins. 
  * Note that it will have a 'NULL' library pointer associated
  * with it, and therefore no llibrary will be closed at cleanup time.
+ * Low level plugins may not be able to load, as ordering can't be enforced.
  * @param entrypoint entrypoint to install
  * @param config user specified configuration string, if available, or NULL.
  * @param status error result
  * @return the new UPlugData associated with this plugin, or NULL if error.
  */
 U_CAPI UPlugData* U_EXPORT2
-uplug_installPlugFromEntrypoint(UPlugEntrypoint *entrypoint, const char *config, UErrorCode *status);
+uplug_loadPlugFromEntrypoint(UPlugEntrypoint *entrypoint, const char *config, UErrorCode *status);
 
 
 /**
- * Inject a plugin from a library, as if the information came from a config file
+ * Inject a plugin from a library, as if the information came from a config file.
+ * Low level plugins may not be able to load, and ordering can't be enforced.
  * @param libName DLL name to load
  * @param sym symbol of plugin (UPlugEntrypoint function)
  * @param config configuration string, or NULL
@@ -207,7 +230,7 @@ uplug_installPlugFromEntrypoint(UPlugEntrypoint *entrypoint, const char *config,
  * @return the new UPlugData associated with this plugin, or NULL if error.
  */
 U_CAPI UPlugData* U_EXPORT2
-uplug_installPlugFromLibrary(const char *libName, const char *sym, const char *config, UErrorCode *status);
+uplug_loadPlugFromLibrary(const char *libName, const char *sym, const char *config, UErrorCode *status);
 
 /**
  * Remove a plugin. 
@@ -225,10 +248,24 @@ uplug_removePlug(UPlugData *plug, UErrorCode *status);
  * @param status error result
  * @internal - Internal use only.
  */
-U_CAPI void U_EXPORT2
+U_INTERNAL void U_EXPORT2
 uplug_init(UErrorCode *status);
 
+/**
+ * Get raw plug N
+ * @internal - Internal use only
+ */ 
+U_INTERNAL UPlugData* U_EXPORT2
+uplug_getPlugInternal(int32_t n);
 
-U_CDECL_END
+/**
+ * Get the name of the plugin file. 
+ * @internal - Internal use only.
+ */
+U_INTERNAL const char* U_EXPORT2
+uplug_getPluginFile();
+
+
+/*U_CDECL_END*/
 
 #endif

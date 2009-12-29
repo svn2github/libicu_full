@@ -39,6 +39,7 @@ static UOption options[]={
   /*1*/ UOPTION_HELP_QUESTION_MARK,
   /*2*/ UOPTION_DEF("interactive", 'i', UOPT_NO_ARG),
   /*3*/ UOPTION_VERBOSE,
+  /*4*/ UOPTION_DEF("list-plugins", 'L', UOPT_NO_ARG),
 };
 
 void *theLib = NULL;
@@ -215,7 +216,7 @@ cmd_help()
     fprintf(stderr, "\tI " U_ICUDATA_NAME "      ( default for 'I')\n");
 #endif
 */
-    fprintf(stderr, "HAHAHAHA \n");
+    fprintf(stderr, "No help available yet, sorry. \n");
 }
 
 const char *prettyDir(const char *d)
@@ -236,6 +237,11 @@ void cmd_version(UBool noLoad)
     fprintf(stderr, "ICUDATA is %s\n", U_ICUDATA_NAME);
     u_init(&status);
     fprintf(stderr, "u_init returned %s\n", u_errorName(status));
+    fprintf(stderr, "plugin file is: %s\n", uplug_getPluginFile());
+}
+
+void cmd_cleanup(UBool noLoad)
+{
     u_cleanup();
     fprintf(stderr,"u_cleanup() returned.\n");
     fprintf(stderr, "Default locale is %s\n", uloc_getDefault());
@@ -244,6 +250,81 @@ void cmd_version(UBool noLoad)
         fprintf(stderr, "Default converter is %s.\n", ucnv_getDefaultName());
     }
 }
+
+
+void cmd_listplugins() {
+    int32_t i;
+    UPlugData *plug;
+    
+    printf("Plugins: \n");
+    printf(    "# %6s   %s \n",
+                       "Level",
+                       "Name" );
+    printf(    "    %10s:%-10s\n",
+                       "Library",
+                       "Symbol"
+            );
+
+                       
+    printf(    "       config| (configuration string)\n");
+    printf(    " >>>   Error          | Explanation \n");
+    printf(    "-----------------------------------\n");
+        
+    for(i=0;(plug=uplug_getPlugInternal(i))!=NULL;i++) {
+        UErrorCode libStatus = U_ZERO_ERROR;
+        const char *name = uplug_getPlugName(plug);
+        const char *sym = uplug_getSymbolName(plug);
+        const char *lib = uplug_getLibraryName(plug, &libStatus);
+        const char *config = uplug_getConfiguration(plug);
+        UErrorCode loadStatus = uplug_getPlugLoadStatus(plug);
+        const char *message = NULL;
+        
+        printf("\n#%d  %-6s %s \n",
+            i+1,
+            udbg_enumName(UDBG_UPlugLevel,(int32_t)uplug_getPlugLevel(plug)),
+            name!=NULL?(*name?name:"this plugin did not call uplug_setPlugName()"):"(null)"
+        );
+        printf("    plugin| %10s:%-10s\n",
+            (U_SUCCESS(libStatus)?(lib!=NULL?lib:"(null)"):u_errorName(libStatus)),
+            sym!=NULL?sym:"(null)"
+        );
+        
+        if(config!=NULL&&*config) {
+            printf("    config| %s\n", config);
+        }
+        
+        switch(loadStatus) {
+            case U_PLUGIN_CHANGED_LEVEL_WARNING:
+                message = "Note: This plugin changed the system level (by allocating memory or calling something which does). Later plugins may not load.";
+                break;
+                
+            case U_PLUGIN_DIDNT_SET_LEVEL:
+                message = "Error: This plugin did not call uplug_setPlugLevel during QUERY.";
+                break;
+            
+            case U_PLUGIN_TOO_HIGH:
+                message = "Error: This plugin couldn't load because the system level was too high. Try loading this plugin earlier.";
+                break;
+                
+            case U_ZERO_ERROR: 
+                message = NULL; /* no message */
+                break;
+            default:
+                if(U_FAILURE(loadStatus)) {
+                    message = "error loading:";
+                } else {
+                    message = "warning during load:";
+                }            
+        }
+        
+        if(message!=NULL) {
+            printf("\\\\\\ status| %s\n"
+                   "/// %s\n", u_errorName(loadStatus), message);
+        }
+        
+    }
+}
+
 
 void cmd_path(const char *buf)
 {
@@ -465,7 +546,8 @@ doInteractive()
 extern int
 main(int argc, char* argv[]) {
     UErrorCode errorCode = U_ZERO_ERROR;
-
+    UBool didSomething = FALSE;
+    
     /* preset then read command line options */
     argc=u_parseArgs(argc, argv, sizeof(options)/sizeof(options[0]), options);
 
@@ -486,10 +568,25 @@ main(int argc, char* argv[]) {
     
     if(options[2].doesOccur) {
         doInteractive();
-    } else  if(options[3].doesOccur) {
-        cmd_version(false);
     } else {
+        if(options[3].doesOccur) {
+            cmd_version(FALSE);
+            didSomething = TRUE;
+        }
         
+        if(options[4].doesOccur) {
+            cmd_listplugins();
+            didSomething = TRUE;
+        }
+
+        if(options[3].doesOccur) {  /* 2nd part of version: cleanup */
+            cmd_cleanup(FALSE);
+            didSomething = TRUE;
+        }
+        
+        if(!didSomething) {
+            cmd_version(FALSE);  /* at least print the version # */
+        }
     }
 
     return U_FAILURE(errorCode);

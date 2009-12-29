@@ -15,7 +15,7 @@ include $(top_builddir)/icudefs.mk
 subdir = tools/icuinfo
 
 ## Extra files to remove for 'make clean'
-CLEANFILES = *~ $(DEPS)
+CLEANFILES = *~ $(DEPS) $(PLUGIN_OBJECTS) $(PLUGINFILE) $(PLUGIN)
 
 ## Target information
 TARGET = icuinfo$(EXEEXT)
@@ -28,6 +28,7 @@ CPPFLAGS+= -I$(top_srcdir)/i18n
 LIBS = $(LIBCTESTFW) $(LIBICUTOOLUTIL) $(LIBICUI18N) $(LIBICUUC) $(DEFAULT_LIBS) $(LIB_M)
 
 OBJECTS = icuinfo.o
+PLUGIN_OBJECTS = testplug.o
 
 DEPS = $(OBJECTS:.o=.d)
 
@@ -83,16 +84,13 @@ $(PLUGINFILE): Makefile
 
 CFLAGS+=$(SHAREDLIBCFLAGS)
 
-#testplug.o: testplug.c
-#	$(COMPILE.cc) $(DYNAMICCPPFLAGS)  $(DYNAMICCFLAGS) $(CFLAGS) $(LIBS) -o $@ $<
-
-$(PLUGIN): testplug.o
+$(PLUGIN): $(PLUGIN_OBJECTS)
 	$(SHLIB.cc) $(SHAREDLIBCFLAGS) $(LD_SONAME) $(OUTOPT)$@ $^ $(LIBS)
 
 plugin: $(PLUGIN)
 
 plugin-check: $(PLUGIN) $(PLUGINFILE)
-	$(INVOKE) ICU_PLUGINS=$(shell pwd) ./$(TARGET) -v
+	$(INVOKE) ICU_PLUGINS=$(shell pwd) ./$(TARGET) -v -L
 
 
 ifeq (,$(MAKECMDGOALS))

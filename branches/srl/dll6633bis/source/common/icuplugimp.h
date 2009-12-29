@@ -31,6 +31,7 @@ struct UPlugData {
     UPlugLevel  level; /**< level of plugin */
     UBool   awaitingLoad; /**< TRUE if the plugin is awaiting a load call */
     UBool   dontUnload; /**< TRUE if plugin must stay resident (leak plugin and lib) */
+    UErrorCode pluginStatus; /**< status code of plugin */
 };
 
 
