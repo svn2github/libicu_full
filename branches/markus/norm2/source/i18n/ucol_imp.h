@@ -41,6 +41,10 @@
 
 #if !UCONFIG_NO_COLLATION
 
+#ifdef XP_CPLUSPLUS
+#include "unicode/normalizer2.h"
+#include "unicode/unistr.h"
+#endif
 #include "unicode/ucol.h"
 #include "utrie.h"
 #include "cmemory.h"
@@ -264,12 +268,14 @@ minimum number for special Jamo
 
 #define NFC_ZERO_CC_BLOCK_LIMIT_  0x300
 
+#ifdef XP_CPLUSPLUS
+
 typedef struct collIterate {
-  UChar *string; /* Original string */
+  const UChar *string; /* Original string */
   /* UChar *start;  Pointer to the start of the source string. Either points to string
                     or to writableBuffer */
-  UChar *endp;   /* string end ptr.  Is undefined for null terminated strings */
-  UChar *pos; /* This is position in the string.  Can be to original or writable buf */
+  const UChar *endp; /* string end ptr.  Is undefined for null terminated strings */
+  const UChar *pos; /* This is position in the string.  Can be to original or writable buf */
 
   uint32_t *toReturn; /* This is the CE from CEs buffer that should be returned */
   uint32_t *CEpos; /* This is the position to which we have stored processed CEs */
@@ -279,16 +285,15 @@ typedef struct collIterate {
   int32_t offsetRepeatCount;  /* Repeat stored offset if non-zero */
   int32_t offsetRepeatValue;  /* offset value to repeat */
 
-  UChar *writableBuffer;
-  uint32_t writableBufSize;
-  UChar *fcdPosition; /* Position in the original string to continue FCD check from. */
+  UnicodeString writableBuffer;
+  const UChar *fcdPosition; /* Position in the original string to continue FCD check from. */
   const UCollator *coll;
+  const Normalizer2 *nfd;
   uint8_t   flags;
   uint8_t   origFlags;
   uint32_t *extendCEs; /* This is use if CEs is not big enough */
   int32_t extendCEsSize; /* Holds the size of the dynamic CEs buffer */
   uint32_t CEs[UCOL_EXPAND_CE_BUFFER_SIZE]; /* This is where we store CEs */
-  UChar stackWritableBuffer[UCOL_WRITABLE_BUFFER_SIZE]; /* A writable buffer. */
 
   int32_t *offsetBuffer;    /* A dynamic buffer to hold offsets */
   int32_t offsetBufferSize; /* The size of the offset buffer */
@@ -305,11 +310,11 @@ struct used internally in getSpecial*CE.
 data similar to collIterate.
 */
 struct collIterateState {
-    UChar    *pos; /* This is position in the string.  Can be to original or writable buf */
-    UChar    *returnPos;
-    UChar    *fcdPosition; /* Position in the original string to continue FCD check from. */
-    UChar    *bufferaddress; /* address of the normalization buffer */
-    uint32_t  buffersize;
+    const UChar *pos; /* This is position in the string.  Can be to original or writable buf */
+    const UChar *returnPos;
+    const UChar *fcdPosition; /* Position in the original string to continue FCD check from. */
+    const UChar *bufferaddress; /* address of the normalization buffer */
+    int32_t  buffersize;
     uint8_t   flags;
     uint8_t   origFlags;
     uint32_t   iteratorIndex;
@@ -317,7 +322,9 @@ struct collIterateState {
 };
 
 U_CAPI void U_EXPORT2 
-uprv_init_collIterate(const UCollator *collator, const UChar *sourceString, int32_t sourceLen, collIterate *s);
+uprv_init_collIterate(const UCollator *collator,
+                      const UChar *sourceString, int32_t sourceLen,
+                      collIterate *s, UErrorCode *status);
 
 U_NAMESPACE_BEGIN
 
@@ -350,6 +357,8 @@ struct UCollationElements
 
 U_CAPI void U_EXPORT2
 uprv_init_pce(const struct UCollationElements *elems);
+
+#endif
 
 #define UCOL_LEVELTERMINATOR 1
 
@@ -473,6 +482,8 @@ uprv_init_pce(const struct UCollationElements *elems);
             }                                                                \
 }
 
+#ifdef XP_CPLUSPLUS
+
 U_CFUNC
 uint32_t ucol_prv_getSpecialCE(const UCollator *coll, UChar ch, uint32_t CE, collIterate *source, UErrorCode *status);
 
@@ -537,6 +548,8 @@ ucol_cloneRuleData(const UCollator *coll, int32_t *length, UErrorCode *status);
  */
 U_CFUNC void U_EXPORT2
 ucol_setReqValidLocales(UCollator *coll, char *requestedLocaleToAdopt, char *validLocaleToAdopt, char *actualLocaleToAdopt);
+
+#endif
 
 #define UCOL_SPECIAL_FLAG 0xF0000000
 #define UCOL_TAG_SHIFT 24
@@ -1061,11 +1074,11 @@ static inline UBool ucol_unsafeCP(UChar c, const UCollator *coll) {
     htbyte = coll->unsafeCP[hash>>3];
     return ((htbyte >> (hash & 7)) & 1);
 }
-#endif /* XP_CPLUSPLUS */
 
 /* The offsetBuffer in collIterate might need to be freed to avoid memory leaks. */
 void ucol_freeOffsetBuffer(collIterate *s); 
 
+#endif /* XP_CPLUSPLUS */
 
 #endif /* #if !UCONFIG_NO_COLLATION */
 

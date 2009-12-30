@@ -730,7 +730,8 @@ void Normalizer2Impl::recompose(ReorderingBuffer &buffer, int32_t recomposeStart
                     UChar prev=(UChar)(*starter-JAMO_L_BASE);
                     if(prev<JAMO_L_COUNT) {
                         pRemove=p-1;
-                        UChar syllable=(UChar)(HANGUL_BASE+(prev*JAMO_V_COUNT+(c-JAMO_V_BASE))*JAMO_T_COUNT);
+                        UChar syllable=(UChar)
+                            (HANGUL_BASE+(prev*JAMO_V_COUNT+(c-JAMO_V_BASE))*JAMO_T_COUNT);
                         UChar t;
                         if(p!=limit && (t=(UChar)(*p-JAMO_T_BASE))<JAMO_T_COUNT) {
                             ++p;
@@ -874,18 +875,18 @@ Normalizer2Impl::compose(const UChar *src, const UChar *limit,
     }
 
     /*
-     * prevStarter points to the last character before the current one
+     * prevBoundary points to the last character before the current one
      * that has a composition boundary before it with ccc==0 and quick check "yes".
-     * Keeping track of prevStarter saves us looking for a composition boundary
+     * Keeping track of prevBoundary saves us looking for a composition boundary
      * when we find a "no" or "maybe".
      *
-     * When we back out from prevSrc back to prevStarter,
+     * When we back out from prevSrc back to prevBoundary,
      * then we also remove those same characters (which had been simply copied
      * or canonically-order-inserted) from the ReorderingBuffer.
-     * Therefore, at all times, the [prevStarter..prevSrc[ source units
+     * Therefore, at all times, the [prevBoundary..prevSrc[ source units
      * must correspond 1:1 to destination units at the end of the destination buffer.
      */
-    const UChar *prevStarter=src;
+    const UChar *prevBoundary=src;
     const UChar *prevSrc;
     UChar32 c=0;
     uint16_t norm16=0;
@@ -935,10 +936,12 @@ Normalizer2Impl::compose(const UChar *src, const UChar *limit,
             if(src==limit) {
                 break;
             }
-            // Set prevStarter to the last character in the quick check loop.
-            prevStarter=src-1;
-            if(U16_IS_TRAIL(*prevStarter) && prevSrc<prevStarter && U16_IS_LEAD(*(prevStarter-1))) {
-                --prevStarter;
+            // Set prevBoundary to the last character in the quick check loop.
+            prevBoundary=src-1;
+            if( U16_IS_TRAIL(*prevBoundary) && prevSrc<prevBoundary &&
+                U16_IS_LEAD(*(prevBoundary-1))
+            ) {
+                --prevBoundary;
             }
             // The start of the current character (c).
             prevSrc=src;
@@ -954,7 +957,7 @@ Normalizer2Impl::compose(const UChar *src, const UChar *limit,
          * Check for Jamo V/T, then for regular characters.
          * c is not a Hangul syllable or Jamo L because those have "yes" properties.
          */
-        if(isJamoVT(norm16) && prevStarter!=prevSrc) {
+        if(isJamoVT(norm16) && prevBoundary!=prevSrc) {
             UChar prev=*(prevSrc-1);
             if(c<JAMO_T_BASE) {
                 // c is a Jamo Vowel, compose with previous Jamo L and following Jamo T.
@@ -963,12 +966,13 @@ Normalizer2Impl::compose(const UChar *src, const UChar *limit,
                     if(!doCompose) {
                         return FALSE;
                     }
-                    UChar syllable=(UChar)(HANGUL_BASE+(prev*JAMO_V_COUNT+(c-JAMO_V_BASE))*JAMO_T_COUNT);
+                    UChar syllable=(UChar)
+                        (HANGUL_BASE+(prev*JAMO_V_COUNT+(c-JAMO_V_BASE))*JAMO_T_COUNT);
                     UChar t;
                     if(src!=limit && (t=(UChar)(*src-JAMO_T_BASE))<JAMO_T_COUNT) {
                         ++src;
                         syllable+=t;  // The next character was a Jamo T.
-                        prevStarter=src;
+                        prevBoundary=src;
                     }
                     *(buffer.getLimit()-1)=syllable;
                     continue;
@@ -980,7 +984,7 @@ Normalizer2Impl::compose(const UChar *src, const UChar *limit,
                     return FALSE;
                 }
                 *(buffer.getLimit()-1)=(UChar)(prev+c-JAMO_T_BASE);
-                prevStarter=src;
+                prevBoundary=src;
                 continue;
             }
             // The Jamo V/T did not compose into a Hangul syllable.
@@ -1002,7 +1006,7 @@ Normalizer2Impl::compose(const UChar *src, const UChar *limit,
          *                forward
          * [-------------[-------------[-------------[-------------[
          * |             |             |             |             |
-         * orig. src     prevStarter   prevSrc       src           limit
+         * orig. src     prevBoundary  prevSrc       src           limit
          *
          *
          * Destination buffer pointers inside the ReorderingBuffer:
@@ -1019,15 +1023,15 @@ Normalizer2Impl::compose(const UChar *src, const UChar *limit,
             uint8_t cc=(uint8_t)norm16;  // cc!=0
             if( onlyContiguous &&  // FCC
                 (doCompose ? buffer.getLastCC() : prevCC)==0 &&
-                prevStarter<prevSrc &&
-                // buffer.getLastCC()==0 && prevStarter<prevSrc tell us that
-                // [prevStarter..prevSrc[ (which is exactly one character under these conditions)
+                prevBoundary<prevSrc &&
+                // buffer.getLastCC()==0 && prevBoundary<prevSrc tell us that
+                // [prevBoundary..prevSrc[ (which is exactly one character under these conditions)
                 // passed the quick check "yes && ccc==0" test.
                 // Check whether the last character was a "yesYes" or a "yesNo".
                 // If a "yesNo", then we get its trailing ccc from its
                 // mapping and check for canonical order.
                 // All other cases are ok.
-                getTrailCCFromCompYesAndZeroCC(prevStarter, prevSrc)>cc
+                getTrailCCFromCompYesAndZeroCC(prevBoundary, prevSrc)>cc
             ) {
                 // Fails FCD test, need to decompose and contiguously recompose.
                 if(!doCompose) {
@@ -1059,30 +1063,30 @@ Normalizer2Impl::compose(const UChar *src, const UChar *limit,
          */
 
         /*
-         * Find the last composition boundary in [prevStarter..src[.
+         * Find the last composition boundary in [prevBoundary..src[.
          * It is either the decomposition of the current character (at prevSrc),
-         * or prevStarter.
+         * or prevBoundary.
          */
         if(hasCompBoundaryBefore(c, norm16)) {
-            prevStarter=prevSrc;
+            prevBoundary=prevSrc;
         } else if(doCompose) {
-            buffer.removeZeroCCSuffix((int32_t)(prevSrc-prevStarter));
+            buffer.removeZeroCCSuffix((int32_t)(prevSrc-prevBoundary));
         }
 
         // Find the next composition boundary in [src..limit[ -
         // modifies src to point to the next starter.
         src=(UChar *)findNextCompBoundary(src, limit);
 
-        // Decompose [prevStarter..src[ into the buffer and then recompose that part of it.
+        // Decompose [prevBoundary..src[ into the buffer and then recompose that part of it.
         int32_t recomposeStartIndex=buffer.length();
-        if(!decomposeShort(prevStarter, src, buffer, errorCode)) {
+        if(!decomposeShort(prevBoundary, src, buffer, errorCode)) {
             break;
         }
         recompose(buffer, recomposeStartIndex, onlyContiguous);
         if(!doCompose) {
             int32_t bufferLength=buffer.length();
-            if( bufferLength!=(int32_t)(src-prevStarter) ||
-                0!=u_memcmp(buffer.getStart(), prevStarter, bufferLength)
+            if( bufferLength!=(int32_t)(src-prevBoundary) ||
+                0!=u_memcmp(buffer.getStart(), prevBoundary, bufferLength)
             ) {
                 return FALSE;
             }
@@ -1091,7 +1095,7 @@ Normalizer2Impl::compose(const UChar *src, const UChar *limit,
         }
 
         // Move to the next starter. We never need to look back before this point again.
-        prevStarter=src;
+        prevBoundary=src;
     }
     return TRUE;
 }
@@ -1111,10 +1115,10 @@ Normalizer2Impl::composeQuickCheck(const UChar *src, const UChar *limit,
     }
 
     /*
-     * prevStarter points to the last character before the current one
+     * prevBoundary points to the last character before the current one
      * that has a composition boundary before it with ccc==0 and quick check "yes".
      */
-    const UChar *prevStarter=src;
+    const UChar *prevBoundary=src;
     const UChar *prevSrc;
     UChar32 c=0;
     uint16_t norm16=0;
@@ -1154,10 +1158,12 @@ Normalizer2Impl::composeQuickCheck(const UChar *src, const UChar *limit,
             }
         }
         if(src!=prevSrc) {
-            // Set prevStarter to the last character in the quick check loop.
-            prevStarter=src-1;
-            if(U16_IS_TRAIL(*prevStarter) && prevSrc<prevStarter && U16_IS_LEAD(*(prevStarter-1))) {
-                --prevStarter;
+            // Set prevBoundary to the last character in the quick check loop.
+            prevBoundary=src-1;
+            if( U16_IS_TRAIL(*prevBoundary) && prevSrc<prevBoundary &&
+                U16_IS_LEAD(*(prevBoundary-1))
+            ) {
+                --prevBoundary;
             }
             prevCC=0;
             // The start of the current character (c).
@@ -1175,15 +1181,15 @@ Normalizer2Impl::composeQuickCheck(const UChar *src, const UChar *limit,
             if( onlyContiguous &&  // FCC
                 cc!=0 &&
                 prevCC==0 &&
-                prevStarter<prevSrc &&
-                // prevCC==0 && prevStarter<prevSrc tell us that
-                // [prevStarter..prevSrc[ (which is exactly one character under these conditions)
+                prevBoundary<prevSrc &&
+                // prevCC==0 && prevBoundary<prevSrc tell us that
+                // [prevBoundary..prevSrc[ (which is exactly one character under these conditions)
                 // passed the quick check "yes && ccc==0" test.
                 // Check whether the last character was a "yesYes" or a "yesNo".
                 // If a "yesNo", then we get its trailing ccc from its
                 // mapping and check for canonical order.
                 // All other cases are ok.
-                getTrailCCFromCompYesAndZeroCC(prevStarter, prevSrc)>cc
+                getTrailCCFromCompYesAndZeroCC(prevBoundary, prevSrc)>cc
             ) {
                 // Fails FCD test.
             } else if(prevCC<=cc || cc==0) {
@@ -1192,7 +1198,7 @@ Normalizer2Impl::composeQuickCheck(const UChar *src, const UChar *limit,
                     if(pQCResult!=NULL) {
                         *pQCResult=UNORM_MAYBE;
                     } else {
-                        return prevStarter;
+                        return prevBoundary;
                     }
                 }
                 continue;
@@ -1201,7 +1207,7 @@ Normalizer2Impl::composeQuickCheck(const UChar *src, const UChar *limit,
         if(pQCResult!=NULL) {
             *pQCResult=UNORM_NO;
         }
-        return prevStarter;
+        return prevBoundary;
     }
 }
 
@@ -1460,7 +1466,7 @@ Normalizer2Impl::makeFCD(const UChar *src, const UChar *limit,
     const UTrie2 *trie=fcdTrie();
 
     // Tracks the last FCD-safe boundary, before lccc=0 or after properly-ordered tccc<=1.
-    // Similar to the prevStarter in the compose() implementation.
+    // Similar to the prevBoundary in the compose() implementation.
     const UChar *prevBoundary=src;
     const UChar *prevSrc;
     UChar32 c=0;

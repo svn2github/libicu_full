@@ -769,7 +769,7 @@
 			Name="collation"
 			>
 			<File
-				RelativePath=".\ucol_swp.c"
+				RelativePath=".\ucol_swp.cpp"
 				>
 				<FileConfiguration
 					Name="Release|Win32"

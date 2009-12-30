@@ -1067,6 +1067,8 @@ static void setIndirectBoundaries(uint32_t indexR, uint32_t *start, uint32_t *en
     }
 }
 
+#if 0
+/* TODO(markus): Move to intltest. collIterate requires C++. */
 static void testCEs(UCollator *coll, UErrorCode *status) {
     const UChar *rules = NULL, *current = NULL;
     int32_t ruleLen = 0;
@@ -1273,6 +1275,7 @@ static void testCEs(UCollator *coll, UErrorCode *status) {
     }
     ucol_close(UCA);
 }
+#endif
 
 #if 0
 /* these locales are now picked from index RB */
@@ -1352,6 +1355,8 @@ static void TestCollations(void) {
     ucol_close(UCA);
 }
 
+#if 0
+/* TODO(markus): Move to intltest with testCEs(). */
 static void RamsRulesTest(void) {
     UErrorCode status = U_ZERO_ERROR;
     int32_t i = 0;
@@ -1409,6 +1414,7 @@ static void RamsRulesTest(void) {
     }
 
 }
+#endif
 
 static void IsTailoredTest(void) {
     UErrorCode status = U_ZERO_ERROR;
@@ -2912,6 +2918,8 @@ static void TestBocsuCoverage(void) {
   }
 }
 
+#if 0
+/* TODO(markus): Move to intltest. collIterate requires C++. */
 static void TestVariableTopSetting(void) {
   UErrorCode status = U_ZERO_ERROR;
   const UChar *current = NULL;
@@ -3125,6 +3133,7 @@ static void TestVariableTopSetting(void) {
   }
 
 }
+#endif
 
 static void TestNonChars(void) {
   static const char *test[] = {
@@ -5442,7 +5451,7 @@ void addMiscCollTest(TestNode** root)
     TEST(TestNonChars);
     TEST(TestExtremeCompression);
     TEST(TestSurrogates);
-    TEST(TestVariableTopSetting);
+    /* TODO(markus): move to intltest: TEST(TestVariableTopSetting); */
     TEST(TestBocsuCoverage);
     TEST(TestCyrillicTailoring);
     TEST(TestCase);
@@ -5450,7 +5459,7 @@ void addMiscCollTest(TestNode** root)
     TEST(BlackBirdTest);
     TEST(FunkyATest);
     TEST(BillFairmanTest);
-    TEST(RamsRulesTest);
+    /* TODO(markus): move to intltest: TEST(RamsRulesTest); */
     TEST(IsTailoredTest);
     TEST(TestCollations);
     TEST(TestChMove);

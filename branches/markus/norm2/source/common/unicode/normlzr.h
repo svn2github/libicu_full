@@ -30,6 +30,10 @@ U_NAMESPACE_BEGIN
  * <a href="http://www.unicode.org/unicode/reports/tr15/" target="unicode">
  * Unicode Standard Annex #15: Unicode Normalization Forms</a>.
  *
+ * Note: This API has been replaced by the Normalizer2 class and is only available
+ * for backward compatibility. This class simply delegates to the Normalizer2 class.
+ * There is one exception: The new API does not provide a replacement for Normalizer::compare().
+ *
  * The Normalizer class consists of two parts:
  * - static functions that normalize strings or test if strings are normalized
  * - a Normalizer object is an iterator that takes any kind of text and
@@ -37,13 +41,11 @@ U_NAMESPACE_BEGIN
  *
  * The Normalizer class is not suitable for subclassing.
  *
- * The static functions are basically wrappers around the C implementation,
- * using UnicodeString instead of UChar*.
  * For basic information about normalization forms and details about the C API
  * please see the documentation in unorm.h.
  *
  * The iterator API with the Normalizer constructors and the non-static functions
- * uses a CharacterIterator as input. It is possible to pass a string which
+ * use a CharacterIterator as input. It is possible to pass a string which
  * is then internally wrapped in a CharacterIterator.
  * The input text is not normalized all at once, but incrementally where needed
  * (providing efficient random access).

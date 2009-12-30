@@ -1458,32 +1458,6 @@ _decompose(UChar *dest, int32_t destCapacity,
     return destIndex;
 }
 
-U_CAPI int32_t U_EXPORT2
-unorm_decompose(UChar *dest, int32_t destCapacity,
-                const UChar *src, int32_t srcLength,
-                UBool compat, int32_t options,
-                UErrorCode *pErrorCode) {
-    const UnicodeSet *nx;
-    int32_t destIndex;
-    uint8_t trailCC;
-
-    if(!_haveData(*pErrorCode)) {
-        return 0;
-    }
-
-    nx=getNX(options, *pErrorCode);
-    if(U_FAILURE(*pErrorCode)) {
-        return 0;
-    }
-
-    destIndex=_decompose(dest, destCapacity,
-                         src, srcLength,
-                         compat, nx,
-                         trailCC);
-
-    return u_terminateUChars(dest, destCapacity, destIndex, pErrorCode);
-}
-
 /* make NFC & NFKC ---------------------------------------------------------- */
 
 /* get the composition properties of the next character */
@@ -2273,38 +2247,6 @@ _compose(UChar *dest, int32_t destCapacity,
     }
 
     return destIndex;
-}
-
-U_CAPI int32_t U_EXPORT2
-unorm_compose(UChar *dest, int32_t destCapacity,
-              const UChar *src, int32_t srcLength,
-              UBool compat, int32_t options,
-              UErrorCode *pErrorCode) {
-    const UnicodeSet *nx;
-    int32_t destIndex;
-
-    if(!_haveData(*pErrorCode)) {
-        return 0;
-    }
-
-    nx=getNX(options, *pErrorCode);
-    if(U_FAILURE(*pErrorCode)) {
-        return 0;
-    }
-
-    /* reset options bits that should only be set here or inside _compose() */
-    options&=~(_NORM_OPTIONS_SETS_MASK|_NORM_OPTIONS_COMPAT|_NORM_OPTIONS_COMPOSE_CONTIGUOUS);
-
-    if(compat) {
-        options|=_NORM_OPTIONS_COMPAT;
-    }
-
-    destIndex=_compose(dest, destCapacity,
-                       src, srcLength,
-                       options, nx,
-                       pErrorCode);
-
-    return u_terminateUChars(dest, destCapacity, destIndex, pErrorCode);
 }
 
 /* make FCD ----------------------------------------------------------------- */

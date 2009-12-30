@@ -211,30 +211,6 @@ unorm_internalNormalizeWithNX(UChar *dest, int32_t destCapacity,
                               UNormalizationMode mode, int32_t options, const U_NAMESPACE_QUALIFIER UnicodeSet *nx,
                               UErrorCode *pErrorCode);
 
-#endif
-
-/**
- * internal API, used by normlzr.cpp
- * @internal
- */
-U_CAPI int32_t U_EXPORT2
-unorm_decompose(UChar *dest, int32_t destCapacity,
-                const UChar *src, int32_t srcLength,
-                UBool compat, int32_t options,
-                UErrorCode *pErrorCode);
-
-/**
- * internal API, used by normlzr.cpp
- * @internal
- */
-U_CAPI int32_t U_EXPORT2
-unorm_compose(UChar *dest, int32_t destCapacity,
-              const UChar *src, int32_t srcLength,
-              UBool compat, int32_t options,
-              UErrorCode *pErrorCode);
-
-#ifdef XP_CPLUSPLUS
-
 /**
  * internal API, used by unormcmp.cpp
  * @internal

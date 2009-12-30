@@ -28,6 +28,11 @@
  *
  * <h2>Unicode normalization API</h2>
  *
+ * Note: This API has been replaced by the unorm2.h API and is only available
+ * for backward compatibility. The functions here simply delegate to the
+ * unorm2.h functions, for example unorm2_getInstance() and unorm2_normalize().
+ * There is one exception: The new API does not provide a replacement for unorm_compare().
+ *
  * <code>unorm_normalize</code> transforms Unicode text into an equivalent composed or
  * decomposed form, allowing for easier sorting and searching of text.
  * <code>unorm_normalize</code> supports the standard normalization forms described in
