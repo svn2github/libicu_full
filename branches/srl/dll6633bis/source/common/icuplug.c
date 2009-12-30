@@ -367,7 +367,7 @@ uplug_removePlug(UPlugData *plug, UErrorCode *status)  {
 }
 
 
-#pragma mark High Level - Implementor's API
+
 
 U_CAPI void U_EXPORT2 
 uplug_setPlugNoUnload(UPlugData *data, UBool dontUnload)

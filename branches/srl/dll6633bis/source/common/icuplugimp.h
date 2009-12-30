@@ -17,7 +17,7 @@
 #ifndef ICUPLUGIMP_H
 #define ICUPLUGIMP_H
 
-#include <unicode/icuplug.h>
+#include "unicode/icuplug.h"
 
 struct UPlugData {
     UPlugEntrypoint  *entrypoint; /**< plugin entrypoint */

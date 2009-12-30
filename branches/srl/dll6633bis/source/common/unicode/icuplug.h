@@ -17,7 +17,7 @@
 #ifndef ICUPLUG_H
 #define ICUPLUG_H
 
-#include <unicode/utypes.h>
+#include "unicode/utypes.h"
 
 
 /* === Basic types === */

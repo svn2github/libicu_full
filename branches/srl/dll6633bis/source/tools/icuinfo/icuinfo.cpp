@@ -73,6 +73,7 @@ void printInfo(const UDataInfo *info)
     printVersion(info->dataVersion);
 }
 
+#if 0
 void cmd_C(const char */*buf*/, UErrorCode *status)
 {
     if(theLib != NULL)
@@ -187,6 +188,8 @@ void cmd_S(char *buf, UErrorCode *status)
     }
 
 }
+#endif
+
 
 #define CAN_DYNAMIC_LOAD 1
 
@@ -345,7 +348,7 @@ void cmd_path(const char *buf)
     fprintf(stderr, "ICU data path is  %s\n", prettyDir(u_getDataDirectory()));
 }
 
-void cmd_unload(const char */*buf*/, UDataMemory *old)
+void cmd_unload(const char * /*buf*/, UDataMemory *old)
 {
     if(old)
     {
@@ -479,7 +482,7 @@ doInteractive()
 
         switch(linebuf[0])
         {
-#if CAN_DYNAMIC_LOAD
+#if 0 && CAN_DYNAMIC_LOAD
         case 'O':
             cmd_O(linebuf, &status);
             break;
