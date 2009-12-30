@@ -52,7 +52,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="..\..\common;..\toolutil"
+				AdditionalIncludeDirectories="..\..\common;..\toolutil;..\ctestfw"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CRT_SECURE_NO_DEPRECATE"
 				StringPooling="true"
 				RuntimeLibrary="2"
@@ -139,7 +139,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="..\..\common;..\toolutil"
+				AdditionalIncludeDirectories="..\..\common;..\toolutil;..\ctestfw"
 				PreprocessorDefinitions="WIN64;WIN32;NDEBUG;_CRT_SECURE_NO_DEPRECATE"
 				StringPooling="true"
 				RuntimeLibrary="2"
@@ -317,7 +317,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\..\common;..\toolutil"
+				AdditionalIncludeDirectories="..\..\common;..\toolutil;..\ctestfw"
 				PreprocessorDefinitions="WIN64;WIN32;_DEBUG;_CRT_SECURE_NO_DEPRECATE"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
