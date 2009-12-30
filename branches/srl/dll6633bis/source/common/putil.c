@@ -2039,6 +2039,56 @@ uprv_dl_sym(void *lib, const char* sym, UErrorCode *status) {
 
 #endif
 
+#elif defined U_WINDOWS
+
+U_INTERNAL void * U_EXPORT2
+uprv_dl_open(const char *libName, UErrorCode *status) {
+   	HMODULE lib = NULL;
+
+	if(U_FAILURE(*status)) return NULL;
+    
+	lib = LoadLibrary(libName);
+
+	if(lib==NULL) {
+		*status = U_MISSING_RESOURCE_ERROR;
+	}
+
+    return (void*)lib;
+}
+
+U_INTERNAL void U_EXPORT2
+uprv_dl_close(void *lib, UErrorCode *status) {
+	HMODULE handle = (HMODULE)lib;
+    if(U_FAILURE(*status)) return;
+    
+	FreeLibrary(handle);
+
+    return;
+}
+
+
+U_INTERNAL void* U_EXPORT2
+uprv_dl_sym(void *lib, const char* sym, UErrorCode *status) {
+	HMODULE handle = (HMODULE)lib;
+	void * addr = NULL;
+
+	if(U_FAILURE(*status) || lib==NULL) return NULL;
+   
+	addr = GetProcAddress(handle, sym);
+
+	if(addr==NULL) {
+		DWORD lastError = GetLastError();
+		if(lastError == ERROR_PROC_NOT_FOUND) {
+			*status = U_MISSING_RESOURCE_ERROR;
+		} else {
+			*status = U_UNSUPPORTED_ERROR; /* other unknown error. */
+		}
+	}
+
+    return NULL;
+}
+
+
 #else
 
 /* No dynamic loading set. */

@@ -20,7 +20,7 @@
 #include "putilimp.h"
 #include "ucln.h"
 
-#define UPLUG_TRACE 0
+#define UPLUG_TRACE 1
 #if UPLUG_TRACE
 #include <stdio.h>
 #define DBG(x) printf("%s:%d: ",__FILE__,__LINE__); printf x; 
@@ -28,12 +28,12 @@
 #define DBG(x)
 #endif
 
-#pragma mark overall globals
+
 
 #define UPLUG_LIBRARY_INITIAL_COUNT 8
 #define UPLUG_PLUGIN_INITIAL_COUNT 12
 
-#pragma mark NOTES
+
 /*
  - have a callback to determine HIGH or LOW level
  - automatically run all LOW level then HIGH level plugins in order
@@ -42,7 +42,7 @@
  
   */
 
-#pragma mark internal
+
 
 /**
  * Remove an item
@@ -69,7 +69,7 @@ static int32_t uplug_removeEntryAt(void *list, int32_t listSize, int32_t memberS
 }
 
 
-#pragma mark Library management
+
 
 
 /**
@@ -202,12 +202,12 @@ uplug_closeLibrary(void *lib, UErrorCode *status) {
     *status = U_INTERNAL_PROGRAM_ERROR; /* could not find the entry! */
 }
 
-#pragma mark Plugin globals 
+
 
 UPlugData pluginList[UPLUG_PLUGIN_INITIAL_COUNT];
 int32_t pluginCount = 0;
 
-#pragma mark Plug Iteration
+
 
   
 static int32_t uplug_pluginNumber(UPlugData* d) {
@@ -238,7 +238,7 @@ uplug_nextPlug(UPlugData *prior) {
     }
 }
 
-#pragma mark plug load and unload
+
 
 /**
  * Call the plugin with some params
@@ -260,7 +260,10 @@ static void uplug_unloadPlug(UPlugData *plug, UErrorCode *status) {
         *status = U_INTERNAL_PROGRAM_ERROR;
         return; 
     }
-    uplug_callPlug(plug, UPLUG_REASON_UNLOAD, status);
+	if(U_SUCCESS(plug->pluginStatus)) {
+		/* Don't unload a plug which has a failing load status - means it didn't actually load. */
+	    uplug_callPlug(plug, UPLUG_REASON_UNLOAD, status);
+	}
 }
 
 static void uplug_queryPlug(UPlugData *plug, UErrorCode *status) {
@@ -294,14 +297,47 @@ static void uplug_loadPlug(UPlugData *plug, UErrorCode *status) {
     }
 }
 
-static UPlugData *uplug_allocatePlug(UPlugEntrypoint *entrypoint, const char *config, void *lib, const char *symName,
-                            UErrorCode *status) {
+static UPlugData *uplug_allocateEmptyPlug(UErrorCode *status)
+{
     UPlugData *plug = NULL;
+
     if(U_FAILURE(*status)) {
         return NULL;
     }
+
+	if(pluginCount == UPLUG_PLUGIN_INITIAL_COUNT) {
+		*status = U_MEMORY_ALLOCATION_ERROR;
+		return NULL;
+	}
+
     plug = &pluginList[pluginCount++];
 
+    plug->token = UPLUG_TOKEN;
+    plug->structSize = sizeof(UPlugData);
+    plug->name[0]=0;
+    plug->level = UPLUG_LEVEL_UNKNOWN; /* initialize to null state */
+    plug->awaitingLoad = TRUE;
+    plug->dontUnload = FALSE;
+    plug->pluginStatus = U_ZERO_ERROR;
+	plug->libName[0] = 0;
+	plug->config[0]=0;
+	plug->sym[0]=0;
+	plug->lib=NULL;
+	plug->entrypoint=NULL;
+
+
+	return plug;
+}
+
+static UPlugData *uplug_allocatePlug(UPlugEntrypoint *entrypoint, const char *config, void *lib, const char *symName,
+                            UErrorCode *status) {
+	UPlugData *plug;
+
+    if(U_FAILURE(*status)) {
+        return NULL;
+    }
+
+	plug = uplug_allocateEmptyPlug(status);
     if(config!=NULL) {
         strncpy(plug->config, config, UPLUG_NAME_MAX);
     } else {
@@ -316,13 +352,6 @@ static UPlugData *uplug_allocatePlug(UPlugEntrypoint *entrypoint, const char *co
     
     plug->entrypoint = entrypoint;
     plug->lib = lib;
-    plug->token = UPLUG_TOKEN;
-    plug->structSize = sizeof(UPlugData);
-    plug->name[0]=0;
-    plug->level = UPLUG_LEVEL_UNKNOWN; /* initialize to null state */
-    plug->awaitingLoad = TRUE;
-    plug->dontUnload = FALSE;
-    plug->pluginStatus = U_ZERO_ERROR;
     uplug_queryPlug(plug, status);
     
     return plug;
@@ -407,7 +436,11 @@ uplug_getSymbolName(UPlugData *data) {
 
 U_CAPI const char * U_EXPORT2
 uplug_getLibraryName(UPlugData *data, UErrorCode *status) {
-    return uplug_findLibrary(data->lib, status);
+	if(data->libName[0]) {
+		return data->libName;
+	} else {
+	    return uplug_findLibrary(data->lib, status);
+	}
 }
 
 U_CAPI void * U_EXPORT2
@@ -447,7 +480,7 @@ uplug_getPlugLoadStatus(UPlugData *plug) {
 }
 
 
-#pragma mark Plug Install
+
 
 /**
  * Initialize a plugin fron an entrypoint and library - but don't load it.
@@ -474,11 +507,38 @@ uplug_loadPlugFromEntrypoint(UPlugEntrypoint *entrypoint, const char *config, UE
 }
 
 
+static UPlugData* 
+uplug_initErrorPlug(const char *libName, const char *sym, const char *config, const char *nameOrError, UErrorCode loadStatus, UErrorCode *status)
+{
+	UPlugData *plug = uplug_allocateEmptyPlug(status);
+	if(U_FAILURE(*status)) return NULL;
+
+	plug->pluginStatus = loadStatus;
+	plug->awaitingLoad = FALSE; /* Won't load. */
+	plug->dontUnload = TRUE; /* cannot unload. */
+
+	if(sym!=NULL) {
+        strncpy(plug->sym, sym, UPLUG_NAME_MAX);
+	}
+
+	if(libName!=NULL) {
+		strncpy(plug->libName, libName, UPLUG_NAME_MAX);
+	}
+
+	if(nameOrError!=NULL) {
+		strncpy(plug->name, nameOrError, UPLUG_NAME_MAX);
+	}
+
+	if(config!=NULL) {
+		strncpy(plug->config, config, UPLUG_NAME_MAX);
+	}
+}
+
 /**
  * Fetch a plugin from DLL, and then initialize it from a library- but don't load it.
  */
  
-static UPlugData* U_EXPORT2
+static UPlugData* 
 uplug_initPlugFromLibrary(const char *libName, const char *sym, const char *config, UErrorCode *status) {
     void *lib = NULL;
     UPlugData *plug = NULL;
@@ -495,11 +555,17 @@ uplug_initPlugFromLibrary(const char *libName, const char *sym, const char *conf
                 plug->lib = lib; /* plug takes ownership of library */
                 lib = NULL; /* library is now owned by plugin. */
             }
+		} else {
+			UErrorCode subStatus = U_ZERO_ERROR;
+			plug = uplug_initErrorPlug(libName,sym,config,"ERROR: Could not load entrypoint",(lib==NULL)?U_MISSING_RESOURCE_ERROR:*status,&subStatus);
         }
         if(lib!=NULL) { /* still need to close the lib */
             UErrorCode subStatus = U_ZERO_ERROR;
             uplug_closeLibrary(lib, &subStatus); /* don't care here */
         }
+	} else {
+		UErrorCode subStatus = U_ZERO_ERROR;
+		plug = uplug_initErrorPlug(libName,sym,config,"ERROR: could not load library",(lib==NULL)?U_MISSING_RESOURCE_ERROR:*status,&subStatus);
     }
     return plug;
 }
@@ -516,7 +582,6 @@ uplug_loadPlugFromLibrary(const char *libName, const char *sym, const char *conf
 
 
 
-#pragma mark SPI
 
 #include <stdio.h>
 

@@ -4,7 +4,8 @@
 #include "unicode/uclean.h"
 #include "cmemory.h"
 
-UPlugTokenReturn myPlugin (
+U_CAPI
+UPlugTokenReturn U_EXPORT2 myPlugin (
                   UPlugData *data,
                   UPlugReason reason,
                   UErrorCode *status) {
@@ -19,7 +20,8 @@ UPlugTokenReturn myPlugin (
 }
 
 
-UPlugTokenReturn myPluginLow (
+U_CAPI
+UPlugTokenReturn U_EXPORT2 myPluginLow (
                   UPlugData *data,
                   UPlugReason reason,
                   UErrorCode *status) {
@@ -36,7 +38,8 @@ UPlugTokenReturn myPluginLow (
 /**
  * Says it's low, but isn't.
  */
-UPlugTokenReturn myPluginBad (
+U_CAPI
+UPlugTokenReturn U_EXPORT2 myPluginBad (
                   UPlugData *data,
                   UPlugReason reason,
                   UErrorCode *status) {
@@ -60,8 +63,8 @@ UPlugTokenReturn myPluginBad (
     return UPLUG_TOKEN;
 }
 
-
-UPlugTokenReturn myPluginHigh (
+U_CAPI 
+UPlugTokenReturn U_EXPORT2 myPluginHigh (
                   UPlugData *data,
                   UPlugReason reason,
                   UErrorCode *status) {
@@ -100,7 +103,8 @@ static void * U_CALLCONV myMemRealloc(const void *context, void *mem, size_t siz
     return retPtr;
 }
 
-UPlugTokenReturn debugMemoryPlugin (
+U_CAPI
+UPlugTokenReturn U_EXPORT2 debugMemoryPlugin (
                   UPlugData *data,
                   UPlugReason reason,
                   UErrorCode *status) {

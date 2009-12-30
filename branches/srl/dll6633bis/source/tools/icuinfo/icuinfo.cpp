@@ -240,7 +240,8 @@ void cmd_version(UBool noLoad)
     fprintf(stderr, "ICUDATA is %s\n", U_ICUDATA_NAME);
     u_init(&status);
     fprintf(stderr, "u_init returned %s\n", u_errorName(status));
-    fprintf(stderr, "plugin file is: %s\n", uplug_getPluginFile());
+	const char *pluginFile = uplug_getPluginFile();
+	fprintf(stderr, "plugin file is: %s\n", (pluginFile&&*pluginFile)?pluginFile:"(not set. try setting ICU_PLUGINS to a directory.)");
 }
 
 void cmd_cleanup(UBool noLoad)
@@ -326,6 +327,10 @@ void cmd_listplugins() {
         }
         
     }
+	if(i==0) {
+		printf("No plugins loaded.\n");
+	}
+
 }
 
 

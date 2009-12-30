@@ -24,6 +24,7 @@ struct UPlugData {
     uint32_t structSize;    /**< initialized to the size of this structure */
     uint32_t token;         /**< must be U_PLUG_TOKEN */
     void *lib;              /**< plugin library, or NULL */
+	char libName[UPLUG_NAME_MAX];   /**< library name */
     char sym[UPLUG_NAME_MAX];        /**< plugin symbol, or NULL */
     char config[UPLUG_NAME_MAX];     /**< configuration data */
     void *context;          /**< user context data */
