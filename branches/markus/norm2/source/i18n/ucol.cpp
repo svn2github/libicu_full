@@ -45,6 +45,8 @@
 
 U_NAMESPACE_USE
 
+#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
+
 #define LAST_BYTE_MASK_           0xFF
 #define SECOND_LAST_BYTE_SHIFT_   8
 
@@ -179,21 +181,21 @@ inline void loadState(collIterate *data, const collIterateState *backup,
     data->pos         = backup->pos;
 
     if ((data->flags & UCOL_ITER_INNORMBUF) &&
-        data->writableBuffer != backup->bufferaddress) {
+        data->writableBuffer.getBuffer() != backup->bufferaddress) {
         /*
         this is when a new buffer has been reallocated and we'll have to
         calculate the new position.
         note the new buffer has to contain the contents of the old buffer.
         */
         if (forwards) {
-            data->pos = data->writableBuffer.getBuffer() +
+            data->pos = data->writableBuffer.getTerminatedBuffer() +
                                          (data->pos - backup->bufferaddress);
         }
         else {
             /* backwards direction */
             int32_t temp = backup->buffersize -
                                   (int32_t)(data->pos - backup->bufferaddress);
-            data->pos = data->writableBuffer.getBuffer() + (data->writableBuffer.length() - temp);
+            data->pos = data->writableBuffer.getTerminatedBuffer() + (data->writableBuffer.length() - temp);
         }
     }
     if ((data->flags & UCOL_ITER_INNORMBUF) == 0) {
@@ -213,6 +215,50 @@ inline void loadState(collIterate *data, const collIterateState *backup,
     }
 }
 
+static UBool
+reallocCEs(collIterate *data, int32_t newCapacity) {
+    uint32_t *oldCEs = data->extendCEs;
+    if(oldCEs == NULL) {
+        oldCEs = data->CEs;
+    }
+    int32_t length = data->CEpos - oldCEs;
+    uint32_t *newCEs = (uint32_t *)uprv_malloc(newCapacity * 4);
+    if(newCEs == NULL) {
+        return FALSE;
+    }
+    uprv_memcpy(newCEs, oldCEs, length * 4);
+    uprv_free(data->extendCEs);
+    data->extendCEs = newCEs;
+    data->extendCEsSize = newCapacity;
+    data->CEpos = newCEs + length;
+    return TRUE;
+}
+
+static UBool
+increaseCEsCapacity(collIterate *data) {
+    int32_t oldCapacity;
+    if(data->extendCEs != NULL) {
+        oldCapacity = data->extendCEsSize;
+    } else {
+        oldCapacity = LENGTHOF(data->CEs);
+    }
+    return reallocCEs(data, 2 * oldCapacity);
+}
+
+static UBool
+ensureCEsCapacity(collIterate *data, int32_t minCapacity) {
+    int32_t oldCapacity;
+    if(data->extendCEs != NULL) {
+        oldCapacity = data->extendCEsSize;
+    } else {
+        oldCapacity = LENGTHOF(data->CEs);
+    }
+    if(minCapacity <= oldCapacity) {
+        return TRUE;
+    }
+    oldCapacity *= 2;
+    return reallocCEs(data, minCapacity > oldCapacity ? minCapacity : oldCapacity);
+}
 
 /*
 * collIter_eos()
@@ -2197,11 +2243,9 @@ inline UChar getNextNormalizedChar(collIterate *data)
 * the correct position
 * @param source data string source
 * @param buffer character buffer
-* @param tempdb current position in buffer that has been used up
 */
 static
-inline void setDiscontiguosAttribute(collIterate *source, UChar *buffer,
-                                     UChar *tempdb)
+inline void setDiscontiguosAttribute(collIterate *source, const UnicodeString &buffer)
 {
     /* okay confusing part here. to ensure that the skipped characters are
     considered later, we need to place it in the appropriate position in the
@@ -2213,16 +2257,18 @@ inline void setDiscontiguosAttribute(collIterate *source, UChar *buffer,
     well, so that the whole chunk of codes in the getNextCE, ucol_prv_getSpecialCE does
     not require any changes, which be really painful. */
     if (source->flags & UCOL_ITER_INNORMBUF) {
-        u_strcpy(tempdb, source->pos);
+        int32_t replaceLength = source->pos - source->writableBuffer.getBuffer();
+        source->writableBuffer.replace(0, replaceLength, buffer);
     }
     else {
         source->fcdPosition  = source->pos;
         source->origFlags    = source->flags;
         source->flags       |= UCOL_ITER_INNORMBUF;
         source->flags       &= ~(UCOL_ITER_NORM | UCOL_ITER_HASLEN | UCOL_USE_ITERATOR);
+        source->writableBuffer = buffer;
     }
 
-    source->pos = source->writableBuffer.setTo(buffer, -1).getTerminatedBuffer();
+    source->pos = source->writableBuffer.getTerminatedBuffer();
 }
 
 /**
@@ -2240,19 +2286,15 @@ uint32_t getDiscontiguous(const UCollator *coll, collIterate *source,
     /* source->pos currently points to the second combining character after
        the start character */
           const UChar *temppos      = source->pos;
-          UChar    buffer[4*UCOL_MAX_BUFFER];
-          UChar   *tempdb       = buffer;
+          UnicodeString buffer;
     const UChar   *tempconstart = constart;
           uint8_t  tempflags    = source->flags;
           UBool    multicontraction = FALSE;
-          UChar   *tempbufferpos = 0;
           collIterateState discState;
 
           backupState(source, &discState);
 
-    //*tempdb = *(source->pos - 1);
-    *tempdb = peekCharacter(source, -1);
-    tempdb++;
+    buffer.setTo(peekCharacter(source, -1));
     for (;;) {
         UChar    *UCharOffset;
         UChar     schar,
@@ -2274,9 +2316,8 @@ uint32_t getDiscontiguous(const UCollator *coll, collIterate *source,
                  //u_getCombiningClass(*(source->pos)) == 0) {
             //constart = (UChar *)coll->image + getContractOffset(CE);
             if (multicontraction) {
-                *tempbufferpos = 0;
                 source->pos    = temppos - 1;
-                setDiscontiguosAttribute(source, buffer, tempdb);
+                setDiscontiguosAttribute(source, buffer);
                 return *(coll->contractionCEs +
                                     (tempconstart - coll->contractionIndex));
             }
@@ -2294,22 +2335,19 @@ uint32_t getDiscontiguous(const UCollator *coll, collIterate *source,
         if (schar != tchar) {
             /* not the correct codepoint. we stuff the current codepoint into
             the discontiguos buffer and try the next character */
-            *tempdb = schar;
-            tempdb ++;
+            buffer.append(schar);
             continue;
         }
         else {
             if (u_getCombiningClass(schar) ==
                 u_getCombiningClass(peekCharacter(source, -2))) {
                 //u_getCombiningClass(*(source->pos - 2))) {
-                *tempdb = schar;
-                tempdb ++;
+                buffer.append(schar);
                 continue;
             }
             result = *(coll->contractionCEs +
                                       (UCharOffset - coll->contractionIndex));
         }
-        *tempdb = 0;
 
         if (result == UCOL_NOT_FOUND) {
           break;
@@ -2320,10 +2358,9 @@ uint32_t getDiscontiguous(const UCollator *coll, collIterate *source,
                 != UCOL_NOT_FOUND) {
                 multicontraction = TRUE;
                 temppos       = source->pos + 1;
-                tempbufferpos = buffer + u_strlen(buffer);
             }
         } else {
-            setDiscontiguosAttribute(source, buffer, tempdb);
+            setDiscontiguosAttribute(source, buffer);
             return result;
         }
     }
@@ -2365,12 +2402,11 @@ inline uint32_t getImplicit(UChar32 cp, collIterate *collationSource) {
 * front null terminator.
 * @param data collation element iterator data
 * @param ch character to be appended
-* @return positon of added character
 */
 static
-inline const UChar *insertBufferFront(collIterate *data, UChar ch)
+inline void insertBufferFront(collIterate *data, UChar ch)
 {
-    return data->writableBuffer.setCharAt(0, ch).insert(0, (UChar)0).getTerminatedBuffer() + 1;
+    data->pos = data->writableBuffer.setCharAt(0, ch).insert(0, (UChar)0).getTerminatedBuffer() + 2;
 }
 
 /**
@@ -2419,7 +2455,7 @@ inline void normalizePrevContraction(collIterate *data, UErrorCode *status)
     of the end
     */
     data->pos =
-        data->writableBuffer.insert(0, (UChar)0).append(endOfBuffer).getBuffer() +
+        data->writableBuffer.insert(0, (UChar)0).append(endOfBuffer).getTerminatedBuffer() +
         1 + normLen;
     data->origFlags  = data->flags;
     data->flags     |= UCOL_ITER_INNORMBUF;
@@ -3414,32 +3450,8 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
                     If reallocation fails, reset pointers and bail out,
                     there's no guarantee of the right character position after
                     this bail*/
-                    if (source->extendCEs == NULL) {
-                        source->extendCEs = (uint32_t *)uprv_malloc(sizeof(uint32_t) *
-                            (source->extendCEsSize =UCOL_EXPAND_CE_BUFFER_SIZE + UCOL_EXPAND_CE_BUFFER_EXTEND_SIZE));
-                        if (source->extendCEs == NULL) {
-                            // Handle error later.
-                            CECount = -1;
-                        } else {
-                            source->extendCEs = (uint32_t *)uprv_memcpy(source->extendCEs, source->CEs, UCOL_EXPAND_CE_BUFFER_SIZE * sizeof(uint32_t));
-                        }
-                    } else {
-                        uint32_t *tempBufCE = (uint32_t *)uprv_realloc(source->extendCEs,
-                            sizeof(uint32_t) * (source->extendCEsSize += UCOL_EXPAND_CE_BUFFER_EXTEND_SIZE));
-                        if (tempBufCE == NULL) {
-                            // Handle error later.
-                            CECount = -1;
-                        }
-                        else {
-                            source->extendCEs = tempBufCE;
-                        }
-                    }
-
-                    if (CECount == -1) {
+                    if (!increaseCEsCapacity(source)) {
                         *status = U_MEMORY_ALLOCATION_ERROR;
-                        source->extendCEsSize = 0;
-                        source->CEpos = source->CEs;
-
                         if (strbuffer != buffer) {
                             uprv_free(strbuffer);
                         }
@@ -3447,7 +3459,6 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
                         return (uint32_t)UCOL_NULLORDER;
                     }
 
-                    source->CEpos = source->extendCEs + CECount;
                     endCEBuffer = source->extendCEs + source->extendCEsSize;
                 }
 
@@ -3617,7 +3628,6 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
                 We do a check to see if we want to collate digits as numbers; if so we generate
                 a custom collation key. Otherwise we pull out the value stored in the expansion table.
                 */
-                //uint32_t size;
                 uint32_t i;    /* general counter */
 
                 if (source->coll->numericCollation == UCOL_ON){
@@ -3820,8 +3830,11 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
                     numTempBuf[1] = (uint8_t)(0x80 + (exponent & 0x7F));
 
                     // Now transfer the collation key to our collIterate struct.
-                    // The total size for our collation key is endIndx bumped up to the next largest even value divided by two.
-                    //size = ((endIndex+1) & ~1)/2;
+                    // The total size for our collation key is half of endIndex, rounded up.
+                    int32_t size = (endIndex+1)/2;
+                    if(!ensureCEsCapacity(source, size)) {
+                        return UCOL_NULLORDER;
+                    }
                     *(source->CEpos++) = (((numTempBuf[0] << 8) | numTempBuf[1]) << UCOL_PRIMARYORDERSHIFT) | //Primary weight
                         (UCOL_BYTE_COMMON << UCOL_SECONDARYORDERSHIFT) | // Secondary weight
                         UCOL_BYTE_COMMON; // Tertiary weight.

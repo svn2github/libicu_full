@@ -333,7 +333,7 @@ typedef struct UCollationPCE UCollationPCE;
 
 U_NAMESPACE_END
 
-struct UCollationElements
+struct UCollationElements : public UMemory
 {
   /**
   * Struct wrapper for source data
