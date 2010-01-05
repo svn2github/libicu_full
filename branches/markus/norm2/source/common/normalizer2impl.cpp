@@ -32,9 +32,9 @@ U_NAMESPACE_BEGIN
 
 // ReorderingBuffer -------------------------------------------------------- ***
 
-UBool ReorderingBuffer::init(UErrorCode &errorCode) {
+UBool ReorderingBuffer::init(int32_t destCapacity, UErrorCode &errorCode) {
     int32_t length=str.length();
-    start=str.getBuffer(-1);
+    start=str.getBuffer(destCapacity);
     if(start==NULL) {
         // getBuffer() already did str.setToBogus()
         errorCode=U_MEMORY_ALLOCATION_ERROR;
@@ -167,11 +167,10 @@ UBool ReorderingBuffer::resize(int32_t appendLength, UErrorCode &errorCode) {
     int32_t newCapacity=length+appendLength;
     int32_t doubleCapacity=2*str.getCapacity();
     if(newCapacity<doubleCapacity) {
-        if(doubleCapacity<1024) {
-            newCapacity=1024;
-        } else {
-            newCapacity=doubleCapacity;
-        }
+        newCapacity=doubleCapacity;
+    }
+    if(newCapacity<256) {
+        newCapacity=256;
     }
     start=str.getBuffer(newCapacity);
     if(start==NULL) {

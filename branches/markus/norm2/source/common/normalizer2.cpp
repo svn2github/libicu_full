@@ -102,19 +102,19 @@ public:
     normalize(const UnicodeString &src,
               UnicodeString &dest,
               UErrorCode &errorCode) const {
-        uprv_checkCanGetBuffer(src, errorCode);
         if(U_FAILURE(errorCode)) {
             dest.setToBogus();
             return dest;
         }
-        if(&dest==&src) {
+        const UChar *sArray=src.getBuffer();
+        if(&dest==&src || sArray==NULL) {
             errorCode=U_ILLEGAL_ARGUMENT_ERROR;
+            dest.setToBogus();
             return dest;
         }
         dest.remove();
         ReorderingBuffer buffer(impl, dest);
-        if(buffer.init(errorCode)) {
-            const UChar *sArray=src.getBuffer();
+        if(buffer.init(src.length(), errorCode)) {
             normalize(sArray, sArray+src.length(), buffer, errorCode);
         }
         return dest;
@@ -142,17 +142,16 @@ public:
                              UBool doNormalize,
                              UErrorCode &errorCode) const {
         uprv_checkCanGetBuffer(first, errorCode);
-        uprv_checkCanGetBuffer(second, errorCode);
         if(U_FAILURE(errorCode)) {
             return first;
         }
-        if(&first==&second) {
+        const UChar *secondArray=second.getBuffer();
+        if(&first==&second || secondArray==NULL) {
             errorCode=U_ILLEGAL_ARGUMENT_ERROR;
             return first;
         }
         ReorderingBuffer buffer(impl, first);
-        if(buffer.init(errorCode)) {
-            const UChar *secondArray=second.getBuffer();
+        if(buffer.init(first.length()+second.length(), errorCode)) {
             normalizeAndAppend(secondArray, secondArray+second.length(), doNormalize,
                                buffer, errorCode);
         }
@@ -165,11 +164,14 @@ public:
     // quick checks
     virtual UBool
     isNormalized(const UnicodeString &s, UErrorCode &errorCode) const {
-        uprv_checkCanGetBuffer(s, errorCode);
         if(U_FAILURE(errorCode)) {
             return FALSE;
         }
         const UChar *sArray=s.getBuffer();
+        if(sArray==NULL) {
+            errorCode=U_ILLEGAL_ARGUMENT_ERROR;
+            return FALSE;
+        }
         const UChar *sLimit=sArray+s.length();
         return sLimit==spanQuickCheckYes(sArray, sLimit, errorCode);
     }
@@ -179,11 +181,14 @@ public:
     }
     virtual int32_t
     spanQuickCheckYes(const UnicodeString &s, UErrorCode &errorCode) const {
-        uprv_checkCanGetBuffer(s, errorCode);
         if(U_FAILURE(errorCode)) {
             return 0;
         }
         const UChar *sArray=s.getBuffer();
+        if(sArray==NULL) {
+            errorCode=U_ILLEGAL_ARGUMENT_ERROR;
+            return 0;
+        }
         return (int32_t)(spanQuickCheckYes(sArray, sArray+s.length(), errorCode)-sArray);
     }
     virtual const UChar *
@@ -245,26 +250,32 @@ public:
 
     virtual UBool
     isNormalized(const UnicodeString &s, UErrorCode &errorCode) const {
-        uprv_checkCanGetBuffer(s, errorCode);
         if(U_FAILURE(errorCode)) {
-            return UNORM_MAYBE;
+            return FALSE;
+        }
+        const UChar *sArray=s.getBuffer();
+        if(sArray==NULL) {
+            errorCode=U_ILLEGAL_ARGUMENT_ERROR;
+            return FALSE;
         }
         UnicodeString temp;
         ReorderingBuffer buffer(impl, temp);
-        if(!buffer.init(errorCode)) {
-            return UNORM_MAYBE;
+        if(!buffer.init(5, errorCode)) {  // small destCapacity for substring normalization
+            return FALSE;
         }
-        const UChar *sArray=s.getBuffer();
         return impl.compose(sArray, sArray+s.length(), onlyContiguous, FALSE, buffer, errorCode);
     }
     virtual UNormalizationCheckResult
     quickCheck(const UnicodeString &s, UErrorCode &errorCode) const {
-        uprv_checkCanGetBuffer(s, errorCode);
         if(U_FAILURE(errorCode)) {
             return UNORM_MAYBE;
         }
-        UNormalizationCheckResult qcResult=UNORM_YES;
         const UChar *sArray=s.getBuffer();
+        if(sArray==NULL) {
+            errorCode=U_ILLEGAL_ARGUMENT_ERROR;
+            return UNORM_MAYBE;
+        }
+        UNormalizationCheckResult qcResult=UNORM_YES;
         impl.composeQuickCheck(sArray, sArray+s.length(), onlyContiguous, &qcResult);
         return qcResult;
     }
@@ -572,7 +583,7 @@ unorm2_normalize(const UNormalizer2 *norm2,
         // Avoid duplicate argument checking and support NUL-terminated src.
         const Normalizer2WithImpl *n2wi=(const Normalizer2WithImpl *)n2;
         ReorderingBuffer buffer(n2wi->impl, destString);
-        if(buffer.init(*pErrorCode)) {
+        if(buffer.init(length, *pErrorCode)) {
             n2wi->normalize(src, length>=0 ? src+length : NULL, buffer, *pErrorCode);
         }
     } else {
@@ -592,7 +603,7 @@ normalizeSecondAndAppend(const UNormalizer2 *norm2,
         return 0;
     }
     if( second==NULL || secondLength<-1 ||
-        firstCapacity<0 || (first==NULL && firstCapacity>0) ||
+        firstCapacity<0 || (first==NULL && firstCapacity>0) || firstLength<-1 ||
         first==second
     ) {
         *pErrorCode=U_ILLEGAL_ARGUMENT_ERROR;
@@ -604,7 +615,7 @@ normalizeSecondAndAppend(const UNormalizer2 *norm2,
         // Avoid duplicate argument checking and support NUL-terminated src.
         const Normalizer2WithImpl *n2wi=(const Normalizer2WithImpl *)n2;
         ReorderingBuffer buffer(n2wi->impl, firstString);
-        if(buffer.init(*pErrorCode)) {
+        if(buffer.init(firstLength+secondLength+1, *pErrorCode)) {  // destCapacity>=-1
             n2wi->normalizeAndAppend(second, secondLength>=0 ? second+secondLength : NULL,
                                      doNormalize, buffer, *pErrorCode);
         }

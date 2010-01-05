@@ -216,7 +216,8 @@ u_hasBinaryProperty(UChar32 c, UProperty which) {
                         // The ReorderingBuffer must be in a block because its destructor
                         // needs to release dest's buffer before we look at its contents.
                         ReorderingBuffer buffer(*kcf, dest);
-                        if(U_SUCCESS(errorCode) && buffer.init(errorCode)) {
+                        // Small destCapacity for NFKC_CF(c).
+                        if(U_SUCCESS(errorCode) && buffer.init(5, errorCode)) {
                             const UChar *srcArray=src.getBuffer();
                             kcf->compose(srcArray, srcArray+src.length(), FALSE,
                                          TRUE, buffer, errorCode);

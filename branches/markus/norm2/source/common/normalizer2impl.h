@@ -65,7 +65,7 @@ public:
             str.releaseBuffer((int32_t)(limit-start));
         }
     }
-    UBool init(UErrorCode &errorCode);
+    UBool init(int32_t destCapacity, UErrorCode &errorCode);
 
     UBool isEmpty() const { return start==limit; }
     int32_t length() const { return (int32_t)(limit-start); }
