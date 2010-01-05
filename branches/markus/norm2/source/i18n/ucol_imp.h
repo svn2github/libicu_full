@@ -270,7 +270,7 @@ minimum number for special Jamo
 
 #ifdef XP_CPLUSPLUS
 
-typedef struct collIterate {
+typedef struct collIterate : public UMemory {
   const UChar *string; /* Original string */
   /* UChar *start;  Pointer to the start of the source string. Either points to string
                     or to writableBuffer */
@@ -302,6 +302,12 @@ typedef struct collIterate {
   /*int32_t iteratorIndex;*/
 } collIterate;
 
+#else
+
+typedef struct collIterate collIterate;
+
+#endif
+
 #define paddedsize(something) ((something)+((((something)%4)!=0)?(4-(something)%4):0))
 #define headersize (paddedsize(sizeof(UCATableHeader))+paddedsize(sizeof(UColOptionSet)))
 
@@ -321,10 +327,23 @@ struct collIterateState {
     int32_t    iteratorMove;
 };
 
-U_CAPI void U_EXPORT2 
+U_CAPI void U_EXPORT2
 uprv_init_collIterate(const UCollator *collator,
                       const UChar *sourceString, int32_t sourceLen,
                       collIterate *s, UErrorCode *status);
+
+/* Internal functions for C test code. */
+U_CAPI collIterate * U_EXPORT2
+uprv_new_collIterate(UErrorCode *status);
+
+U_CAPI void U_EXPORT2
+uprv_delete_collIterate(collIterate *s);
+
+/* @return s->pos == s->endp */
+U_CAPI UBool U_EXPORT2
+uprv_collIterateAtEnd(collIterate *s);
+
+#ifdef XP_CPLUSPLUS
 
 U_NAMESPACE_BEGIN
 
@@ -482,8 +501,6 @@ uprv_init_pce(const struct UCollationElements *elems);
             }                                                                \
 }
 
-#ifdef XP_CPLUSPLUS
-
 U_CFUNC
 uint32_t ucol_prv_getSpecialCE(const UCollator *coll, UChar ch, uint32_t CE, collIterate *source, UErrorCode *status);
 
@@ -548,8 +565,6 @@ ucol_cloneRuleData(const UCollator *coll, int32_t *length, UErrorCode *status);
  */
 U_CFUNC void U_EXPORT2
 ucol_setReqValidLocales(UCollator *coll, char *requestedLocaleToAdopt, char *validLocaleToAdopt, char *actualLocaleToAdopt);
-
-#endif
 
 #define UCOL_SPECIAL_FLAG 0xF0000000
 #define UCOL_TAG_SHIFT 24
@@ -1074,11 +1089,10 @@ static inline UBool ucol_unsafeCP(UChar c, const UCollator *coll) {
     htbyte = coll->unsafeCP[hash>>3];
     return ((htbyte >> (hash & 7)) & 1);
 }
+#endif /* XP_CPLUSPLUS */
 
 /* The offsetBuffer in collIterate might need to be freed to avoid memory leaks. */
 void ucol_freeOffsetBuffer(collIterate *s); 
-
-#endif /* XP_CPLUSPLUS */
 
 #endif /* #if !UCONFIG_NO_COLLATION */
 

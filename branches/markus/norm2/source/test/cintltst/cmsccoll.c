@@ -1067,8 +1067,6 @@ static void setIndirectBoundaries(uint32_t indexR, uint32_t *start, uint32_t *en
     }
 }
 
-#if 0
-/* TODO(markus): Move to intltest. collIterate requires C++. */
 static void testCEs(UCollator *coll, UErrorCode *status) {
     const UChar *rules = NULL, *current = NULL;
     int32_t ruleLen = 0;
@@ -1095,7 +1093,7 @@ static void testCEs(UCollator *coll, UErrorCode *status) {
     UColOptionSet opts;
     UParseError parseError;
     UChar *rulesCopy = NULL;
-    collIterate c;
+    collIterate *c = uprv_new_collIterate(status);
     UCAConstants *consts = NULL;
     uint32_t UCOL_RESET_TOP_VALUE, /*UCOL_RESET_TOP_CONT, */
         UCOL_NEXT_TOP_VALUE, UCOL_NEXT_TOP_CONT;
@@ -1104,12 +1102,15 @@ static void testCEs(UCollator *coll, UErrorCode *status) {
 
     if (U_FAILURE(*status)) {
         log_err("Could not open root collator %s\n", u_errorName(*status));
+        uprv_delete_collIterate(c);
         return;
     }
 
     colLoc = ucol_getLocaleByType(coll, ULOC_ACTUAL_LOCALE, status);
     if (U_FAILURE(*status)) {
         log_err("Could not get collator name: %s\n", u_errorName(*status));
+        ucol_close(UCA);
+        uprv_delete_collIterate(c);
         return;
     }
 
@@ -1185,15 +1186,15 @@ static void testCEs(UCollator *coll, UErrorCode *status) {
             varT = (UBool)((specs & UCOL_TOK_VARIABLE_TOP) != 0);
             top_ = (UBool)((specs & UCOL_TOK_TOP) != 0);
 
-            uprv_init_collIterate(coll, rulesCopy+chOffset, chLen, &c);
+            uprv_init_collIterate(coll, rulesCopy+chOffset, chLen, c, status);
 
-            currCE = ucol_getNextCE(coll, &c, status);
+            currCE = ucol_getNextCE(coll, c, status);
             if(currCE == 0 && UCOL_ISTHAIPREVOWEL(*(rulesCopy+chOffset))) {
                 log_verbose("Thai prevowel detected. Will pick next CE\n");
-                currCE = ucol_getNextCE(coll, &c, status);
+                currCE = ucol_getNextCE(coll, c, status);
             }
 
-            currContCE = ucol_getNextCE(coll, &c, status);
+            currContCE = ucol_getNextCE(coll, c, status);
             if(!isContinuation(currContCE)) {
                 currContCE = 0;
             }
@@ -1274,8 +1275,8 @@ static void testCEs(UCollator *coll, UErrorCode *status) {
         free(rulesCopy);
     }
     ucol_close(UCA);
+    uprv_delete_collIterate(c);
 }
-#endif
 
 #if 0
 /* these locales are now picked from index RB */
@@ -1355,8 +1356,6 @@ static void TestCollations(void) {
     ucol_close(UCA);
 }
 
-#if 0
-/* TODO(markus): Move to intltest with testCEs(). */
 static void RamsRulesTest(void) {
     UErrorCode status = U_ZERO_ERROR;
     int32_t i = 0;
@@ -1414,7 +1413,6 @@ static void RamsRulesTest(void) {
     }
 
 }
-#endif
 
 static void IsTailoredTest(void) {
     UErrorCode status = U_ZERO_ERROR;
@@ -2918,8 +2916,6 @@ static void TestBocsuCoverage(void) {
   }
 }
 
-#if 0
-/* TODO(markus): Move to intltest. collIterate requires C++. */
 static void TestVariableTopSetting(void) {
   UErrorCode status = U_ZERO_ERROR;
   const UChar *current = NULL;
@@ -3000,10 +2996,11 @@ static void TestVariableTopSetting(void) {
             uint32_t CE = UCOL_NO_MORE_CES;
 
             /* before we start screaming, let's see if there is a problem with the rules */
-            collIterate s;
-            uprv_init_collIterate(coll, rulesCopy+oldChOffset, oldChLen, &s);
+            UErrorCode collIterateStatus = U_ZERO_ERROR;
+            collIterate *s = uprv_new_collIterate(&collIterateStatus);
+            uprv_init_collIterate(coll, rulesCopy+oldChOffset, oldChLen, s, &collIterateStatus);
 
-            CE = ucol_getNextCE(coll, &s, &status);
+            CE = ucol_getNextCE(coll, s, &status);
 
             for(i = 0; i < oldChLen; i++) {
               j = sprintf(buf, "%04X ", *(rulesCopy+oldChOffset+i));
@@ -3012,7 +3009,7 @@ static void TestVariableTopSetting(void) {
             if(status == U_PRIMARY_TOO_LONG_ERROR) {
               log_verbose("= Expected failure for %s =", buffer);
             } else {
-              if(s.pos == s.endp) {
+              if(uprv_collIterateAtEnd(s)) {
                 log_err("Unexpected failure setting variable top at offset %d. Error %s. Codepoints: %s\n",
                   oldChOffset, u_errorName(status), buffer);
               } else {
@@ -3020,6 +3017,7 @@ static void TestVariableTopSetting(void) {
                   buffer);
               }
             }
+            uprv_delete_collIterate(s);
           }
           varTop2 = ucol_getVariableTop(coll, &status);
           if((varTop1 & 0xFFFF0000) != (varTop2 & 0xFFFF0000)) {
@@ -3133,7 +3131,6 @@ static void TestVariableTopSetting(void) {
   }
 
 }
-#endif
 
 static void TestNonChars(void) {
   static const char *test[] = {
@@ -5451,7 +5448,7 @@ void addMiscCollTest(TestNode** root)
     TEST(TestNonChars);
     TEST(TestExtremeCompression);
     TEST(TestSurrogates);
-    /* TODO(markus): move to intltest: TEST(TestVariableTopSetting); */
+    TEST(TestVariableTopSetting);
     TEST(TestBocsuCoverage);
     TEST(TestCyrillicTailoring);
     TEST(TestCase);
@@ -5459,7 +5456,7 @@ void addMiscCollTest(TestNode** root)
     TEST(BlackBirdTest);
     TEST(FunkyATest);
     TEST(BillFairmanTest);
-    /* TODO(markus): move to intltest: TEST(RamsRulesTest); */
+    TEST(RamsRulesTest);
     TEST(IsTailoredTest);
     TEST(TestCollations);
     TEST(TestChMove);

@@ -127,6 +127,29 @@ uprv_init_collIterate(const UCollator *collator, const UChar *sourceString,
     IInit_collIterate(collator, sourceString, sourceLen, s, status);
 }
 
+U_CAPI collIterate * U_EXPORT2 
+uprv_new_collIterate(UErrorCode *status) {
+    if(U_FAILURE(*status)) {
+        return NULL;
+    }
+    collIterate *s = new collIterate;
+    if(s == NULL) {
+        *status = U_MEMORY_ALLOCATION_ERROR;
+        return NULL;
+    }
+    return s;
+}
+
+U_CAPI void U_EXPORT2 
+uprv_delete_collIterate(collIterate *s) {
+    delete s;
+}
+
+U_CAPI UBool U_EXPORT2
+uprv_collIterateAtEnd(collIterate *s) {
+    return s == NULL || s->pos == s->endp;
+}
+
 /**
 * Backup the state of the collIterate struct data
 * @param data collIterate to backup
