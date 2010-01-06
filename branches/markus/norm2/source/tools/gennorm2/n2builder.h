@@ -34,6 +34,7 @@ extern UBool beVerbose, haveCopyright;
 struct Norm;
 
 class BuilderReorderingBuffer;
+class ExtraDataWriter;
 
 class Normalizer2DataBuilder {
 public:

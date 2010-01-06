@@ -942,7 +942,7 @@ void Normalizer2DataBuilder::setHangulData() {
 U_CDECL_BEGIN
 
 static UBool U_CALLCONV
-enumRangeMaxValue(const void *context, UChar32 start, UChar32 end, uint32_t value) {
+enumRangeMaxValue(const void *context, UChar32 /*start*/, UChar32 /*end*/, uint32_t value) {
     uint32_t *pMaxValue=(uint32_t *)context;
     if(value>*pMaxValue) {
         *pMaxValue=value;
