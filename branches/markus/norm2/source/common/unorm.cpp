@@ -2767,130 +2767,77 @@ unorm_normalize(const UChar *src, int32_t srcLength,
 
 /* iteration functions ------------------------------------------------------ */
 
-/*
- * These iteration functions are the core implementations of the
- * Normalizer class iteration API.
- * They read from a UCharIterator into their own buffer
- * and normalize into the Normalizer iteration buffer.
- * Normalizer itself then iterates over its buffer until that needs to be
- * filled again.
- */
-
-/*
- * ### TODO:
- * Now that UCharIterator.next/previous return (int32_t)-1 not (UChar)0xffff
- * if iteration bounds are reached,
- * try to not call hasNext/hasPrevious and instead check for >=0.
- */
-
-/* backward iteration ------------------------------------------------------- */
-
-/*
- * read backwards and get norm32
- * return 0 if the character is <minC
- * if c2!=0 then (c2, c) is a surrogate pair (reversed - c2 is first surrogate but read second!)
- */
-static inline uint32_t
-_getPrevNorm32(UCharIterator &src, uint32_t minC, UChar &c, UChar &c2) {
-    /* need src.hasPrevious() */
-    c=(UChar)src.previous(&src);
-    c2=0;
-
-    /* check for a surrogate before getting norm32 to see if we need to predecrement further */
-    if(c<minC) {
-        return 0;
-    } else if(!UTF_IS_SURROGATE(c)) {
-        return _getNorm32(c);
-    } else if(UTF_IS_SURROGATE_FIRST(c) || !src.hasPrevious(&src)) {
-        /* unpaired surrogate */
-        return 0;
-    } else if(UTF_IS_FIRST_SURROGATE(c2=(UChar)src.previous(&src))) {
-        return _getNorm32FromSurrogatePair(c2, c);
-    } else {
-        /* unpaired second surrogate, undo the c2=src.previous() movement */
-        src.move(&src, 1, UITER_CURRENT);
-        c2=0;
-        return 0;
-    }
-}
-
-/*
- * read backwards and check if the character is a previous-iteration boundary
- * if c2!=0 then (c2, c) is a surrogate pair (reversed - c2 is first surrogate but read second!)
- */
-typedef UBool
-IsPrevBoundaryFn(UCharIterator &src, uint32_t minC, uint32_t mask, UChar &c, UChar &c2);
-
-/*
- * for NF*D:
- * read backwards and check if the lead combining class is 0
- * if c2!=0 then (c2, c) is a surrogate pair (reversed - c2 is first surrogate but read second!)
- */
-static UBool
-_isPrevNFDSafe(UCharIterator &src, uint32_t minC, uint32_t ccOrQCMask, UChar &c, UChar &c2) {
-    return _isNFDSafe(_getPrevNorm32(src, minC, c, c2), ccOrQCMask, ccOrQCMask&_NORM_QC_MASK);
-}
-
-/*
- * read backwards and check if the character is (or its decomposition begins with)
- * a "true starter" (cc==0 and NF*C_YES)
- * if c2!=0 then (c2, c) is a surrogate pair (reversed - c2 is first surrogate but read second!)
- */
-static UBool
-_isPrevTrueStarter(UCharIterator &src, uint32_t minC, uint32_t ccOrQCMask, UChar &c, UChar &c2) {
-    uint32_t norm32, decompQCMask;
-    
-    decompQCMask=(ccOrQCMask<<2)&0xf; /* decomposition quick check mask */
-    norm32=_getPrevNorm32(src, minC, c, c2);
-    return _isTrueStarter(norm32, ccOrQCMask, decompQCMask);
-}
-
 static int32_t
-_findPreviousIterationBoundary(UCharIterator &src,
-                               IsPrevBoundaryFn *isPrevBoundary, uint32_t minC, uint32_t mask,
-                               UChar *&buffer, int32_t &bufferCapacity,
-                               int32_t &startIndex,
-                               UErrorCode *pErrorCode) {
-    UChar *stackBuffer;
-    UChar c, c2;
-    UBool isBoundary;
+unorm_iterate(UCharIterator *src, UBool forward,
+              UChar *dest, int32_t destCapacity,
+              UNormalizationMode mode, int32_t options,
+              UBool doNormalize, UBool *pNeededToNormalize,
+              UErrorCode *pErrorCode) {
+    const Normalizer2 *n2=Normalizer2Factory::getInstance(mode, *pErrorCode);
+    const UnicodeSet *uni32;
+    if(options&UNORM_UNICODE_3_2) {
+        uni32=uniset_getUnicode32Instance(*pErrorCode);
+    } else {
+        uni32=NULL;  // unused
+    }
+    FilteredNormalizer2 fn2(*n2, *uni32);
+    if(options&UNORM_UNICODE_3_2) {
+        n2=&fn2;
+    }
+    if(U_FAILURE(*pErrorCode)) {
+        return 0;
+    }
+    if( destCapacity<0 || (dest==NULL && destCapacity>0) ||
+        src==NULL
+    ) {
+        *pErrorCode=U_ILLEGAL_ARGUMENT_ERROR;
+        return 0;
+    }
 
-    /* initialize */
-    stackBuffer=buffer;
-    startIndex=bufferCapacity; /* fill the buffer from the end backwards */
+    if(pNeededToNormalize!=NULL) {
+        *pNeededToNormalize=FALSE;
+    }
+    if(!(forward ? src->hasNext(src) : src->hasPrevious(src))) {
+        return u_terminateUChars(dest, destCapacity, 0, pErrorCode);
+    }
 
-    while(src.hasPrevious(&src)) {
-        isBoundary=isPrevBoundary(src, minC, mask, c, c2);
-
-        /* always write this character to the front of the buffer */
-        /* make sure there is enough space in the buffer */
-        if(startIndex < (c2==0 ? 1 : 2)) {
-            int32_t bufferLength=bufferCapacity;
-
-            if(!u_growBufferFromStatic(stackBuffer, &buffer, &bufferCapacity, 2*bufferCapacity, bufferLength)) {
-                *pErrorCode=U_MEMORY_ALLOCATION_ERROR;
-                src.move(&src, 0, UITER_START);
-                return 0;
+    UnicodeString buffer;
+    UChar32 c;
+    if(forward) {
+        /* get one character and ignore its properties */
+        buffer.append(uiter_next32(src));
+        /* get all following characters until we see a boundary */
+        while((c=uiter_next32(src))>=0) {
+            if(n2->hasBoundaryBefore(c)) {
+                /* back out the latest movement to stop at the boundary */
+                src->move(src, -U16_LENGTH(c), UITER_CURRENT);
+                break;
+            } else {
+                buffer.append(c);
             }
-
-            /* move the current buffer contents up */
-            uprv_memmove(buffer+(bufferCapacity-bufferLength), buffer, bufferLength*U_SIZEOF_UCHAR);
-            startIndex+=bufferCapacity-bufferLength;
         }
-
-        buffer[--startIndex]=c;
-        if(c2!=0) {
-            buffer[--startIndex]=c2;
-        }
-
-        /* stop if this just-copied character is a boundary */
-        if(isBoundary) {
-            break;
+    } else {
+        while((c=uiter_previous32(src))>=0) {
+            /* always write this character to the front of the buffer */
+            buffer.insert(0, c);
+            /* stop if this just-copied character is a boundary */
+            if(n2->hasBoundaryBefore(c)) {
+                break;
+            }
         }
     }
 
-    /* return the length of the buffer contents */
-    return bufferCapacity-startIndex;
+    UnicodeString destString(dest, 0, destCapacity);
+    if(buffer.length()>0 && doNormalize) {
+        n2->normalize(buffer, destString, *pErrorCode).extract(dest, destCapacity, *pErrorCode);
+        if(pNeededToNormalize!=NULL && U_SUCCESS(*pErrorCode)) {
+            *pNeededToNormalize= destString!=buffer;
+        }
+        return destString.length();
+    } else {
+        /* just copy the source characters */
+        return buffer.extract(dest, destCapacity, *pErrorCode);
+    }
 }
 
 U_CAPI int32_t U_EXPORT2
@@ -2899,251 +2846,11 @@ unorm_previous(UCharIterator *src,
                UNormalizationMode mode, int32_t options,
                UBool doNormalize, UBool *pNeededToNormalize,
                UErrorCode *pErrorCode) {
-    UChar stackBuffer[100];
-    UChar *buffer=NULL;
-    IsPrevBoundaryFn *isPreviousBoundary=NULL;
-    uint32_t mask=0;
-    int32_t startIndex=0, bufferLength=0, bufferCapacity=0, destLength=0;
-    int32_t c=0, c2=0;
-    UChar minC=0;
-
-    /* check argument values */
-    if(pErrorCode==NULL || U_FAILURE(*pErrorCode)) {
-        return 0;
-    }
-
-    if( destCapacity<0 || (dest==NULL && destCapacity>0) ||
-        src==NULL
-    ) {
-        *pErrorCode=U_ILLEGAL_ARGUMENT_ERROR;
-        return 0;
-    }
-
-    if(!_haveData(*pErrorCode)) {
-        return 0;
-    }
-
-    if(pNeededToNormalize!=NULL) {
-        *pNeededToNormalize=FALSE;
-    }
-
-    switch(mode) {
-    case UNORM_FCD:
-        if(fcdTrie.index==NULL) {
-            *pErrorCode=U_UNSUPPORTED_ERROR;
-            return 0;
-        }
-        /* fall through to NFD */
-    case UNORM_NFD:
-        isPreviousBoundary=_isPrevNFDSafe;
-        minC=_NORM_MIN_WITH_LEAD_CC;
-        mask=_NORM_CC_MASK|_NORM_QC_NFD;
-        break;
-    case UNORM_NFKD:
-        isPreviousBoundary=_isPrevNFDSafe;
-        minC=_NORM_MIN_WITH_LEAD_CC;
-        mask=_NORM_CC_MASK|_NORM_QC_NFKD;
-        break;
-    case UNORM_NFC:
-        isPreviousBoundary=_isPrevTrueStarter;
-        minC=(UChar)indexes[_NORM_INDEX_MIN_NFC_NO_MAYBE];
-        mask=_NORM_CC_MASK|_NORM_QC_NFC;
-        break;
-    case UNORM_NFKC:
-        isPreviousBoundary=_isPrevTrueStarter;
-        minC=(UChar)indexes[_NORM_INDEX_MIN_NFKC_NO_MAYBE];
-        mask=_NORM_CC_MASK|_NORM_QC_NFKC;
-        break;
-    case UNORM_NONE:
-        destLength=0;
-        if((c=src->previous(src))>=0) {
-            destLength=1;
-            if(UTF_IS_TRAIL(c) && (c2=src->previous(src))>=0) {
-                if(UTF_IS_LEAD(c2)) {
-                    if(destCapacity>=2) {
-                        dest[1]=(UChar)c; /* trail surrogate */
-                        destLength=2;
-                    }
-                    c=c2; /* lead surrogate to be written below */
-                } else {
-                    src->move(src, 1, UITER_CURRENT);
-                }
-            }
-
-            if(destCapacity>0) {
-                dest[0]=(UChar)c;
-            }
-        }
-        return u_terminateUChars(dest, destCapacity, destLength, pErrorCode);
-    default:
-        *pErrorCode=U_ILLEGAL_ARGUMENT_ERROR;
-        return 0;
-    }
-
-    buffer=stackBuffer;
-    bufferCapacity=(int32_t)(sizeof(stackBuffer)/U_SIZEOF_UCHAR);
-    bufferLength=_findPreviousIterationBoundary(*src,
-                                                isPreviousBoundary, minC, mask,
-                                                buffer, bufferCapacity,
-                                                startIndex,
-                                                pErrorCode);
-    if(bufferLength>0) {
-        if(doNormalize) {
-            destLength=unorm_internalNormalize(dest, destCapacity,
-                                               buffer+startIndex, bufferLength,
-                                               mode, options,
-                                               pErrorCode);
-            if(pNeededToNormalize!=0 && U_SUCCESS(*pErrorCode)) {
-                *pNeededToNormalize=
-                    (UBool)(destLength!=bufferLength ||
-                            0!=uprv_memcmp(dest, buffer+startIndex, destLength*U_SIZEOF_UCHAR));
-            }
-        } else {
-            /* just copy the source characters */
-            if(destCapacity>0) {
-                uprv_memcpy(dest, buffer+startIndex, uprv_min(bufferLength, destCapacity)*U_SIZEOF_UCHAR);
-            }
-            destLength=u_terminateUChars(dest, destCapacity, bufferLength, pErrorCode);
-        }
-    } else {
-        destLength=u_terminateUChars(dest, destCapacity, 0, pErrorCode);
-    }
-
-    /* cleanup */
-    if(buffer!=stackBuffer) {
-        uprv_free(buffer);
-    }
-
-    return destLength;
-}
-
-/* forward iteration -------------------------------------------------------- */
-
-/*
- * read forward and get norm32
- * return 0 if the character is <minC
- * if c2!=0 then (c2, c) is a surrogate pair
- * always reads complete characters
- */
-static inline uint32_t
-_getNextNorm32(UCharIterator &src, uint32_t minC, uint32_t mask, UChar &c, UChar &c2) {
-    uint32_t norm32;
-
-    /* need src.hasNext() to be true */
-    c=(UChar)src.next(&src);
-    c2=0;
-
-    if(c<minC) {
-        return 0;
-    }
-
-    norm32=_getNorm32(c);
-    if(UTF_IS_FIRST_SURROGATE(c)) {
-        if(src.hasNext(&src) && UTF_IS_SECOND_SURROGATE(c2=(UChar)src.current(&src))) {
-            src.move(&src, 1, UITER_CURRENT); /* skip the c2 surrogate */
-            if((norm32&mask)==0) {
-                /* irrelevant data */
-                return 0;
-            } else {
-                /* norm32 must be a surrogate special */
-                return _getNorm32FromSurrogatePair(c, c2);
-            }
-        } else {
-            /* unmatched surrogate */
-            c2=0;
-            return 0;
-        }
-    }
-    return norm32;
-}
-
-/*
- * read forward and check if the character is a next-iteration boundary
- * if c2!=0 then (c, c2) is a surrogate pair
- */
-typedef UBool
-IsNextBoundaryFn(UCharIterator &src, uint32_t minC, uint32_t mask, UChar &c, UChar &c2);
-
-/*
- * for NF*D:
- * read forward and check if the lead combining class is 0
- * if c2!=0 then (c, c2) is a surrogate pair
- */
-static UBool
-_isNextNFDSafe(UCharIterator &src, uint32_t minC, uint32_t ccOrQCMask, UChar &c, UChar &c2) {
-    return _isNFDSafe(_getNextNorm32(src, minC, ccOrQCMask, c, c2), ccOrQCMask, ccOrQCMask&_NORM_QC_MASK);
-}
-
-/*
- * for NF*C:
- * read forward and check if the character is (or its decomposition begins with)
- * a "true starter" (cc==0 and NF*C_YES)
- * if c2!=0 then (c, c2) is a surrogate pair
- */
-static UBool
-_isNextTrueStarter(UCharIterator &src, uint32_t minC, uint32_t ccOrQCMask, UChar &c, UChar &c2) {
-    uint32_t norm32, decompQCMask;
-    
-    decompQCMask=(ccOrQCMask<<2)&0xf; /* decomposition quick check mask */
-    norm32=_getNextNorm32(src, minC, ccOrQCMask|decompQCMask, c, c2);
-    return _isTrueStarter(norm32, ccOrQCMask, decompQCMask);
-}
-
-static int32_t
-_findNextIterationBoundary(UCharIterator &src,
-                           IsNextBoundaryFn *isNextBoundary, uint32_t minC, uint32_t mask,
-                           UChar *&buffer, int32_t &bufferCapacity,
-                           UErrorCode *pErrorCode) {
-    UChar *stackBuffer;
-    int32_t bufferIndex;
-    UChar c, c2;
-
-    if(!src.hasNext(&src)) {
-        return 0;
-    }
-
-    /* initialize */
-    stackBuffer=buffer;
-
-    /* get one character and ignore its properties */
-    buffer[0]=c=(UChar)src.next(&src);
-    bufferIndex=1;
-    if(UTF_IS_FIRST_SURROGATE(c) && src.hasNext(&src)) {
-        if(UTF_IS_SECOND_SURROGATE(c2=(UChar)src.next(&src))) {
-            buffer[bufferIndex++]=c2;
-        } else {
-            src.move(&src, -1, UITER_CURRENT); /* back out the non-trail-surrogate */
-        }
-    }
-
-    /* get all following characters until we see a boundary */
-    /* checking hasNext() instead of c!=DONE on the off-chance that U+ffff is part of the string */
-    while(src.hasNext(&src)) {
-        if(isNextBoundary(src, minC, mask, c, c2)) {
-            /* back out the latest movement to stop at the boundary */
-            src.move(&src, c2==0 ? -1 : -2, UITER_CURRENT);
-            break;
-        } else {
-            if(bufferIndex+(c2==0 ? 1 : 2)<=bufferCapacity ||
-                /* attempt to grow the buffer */
-                u_growBufferFromStatic(stackBuffer, &buffer, &bufferCapacity,
-                                       2*bufferCapacity,
-                                       bufferIndex)
-            ) {
-                buffer[bufferIndex++]=c;
-                if(c2!=0) {
-                    buffer[bufferIndex++]=c2;
-                }
-            } else {
-                *pErrorCode=U_MEMORY_ALLOCATION_ERROR;
-                src.move(&src, 0, UITER_LIMIT);
-                return 0;
-            }
-        }
-    }
-
-    /* return the length of the buffer contents */
-    return bufferIndex;
+    return unorm_iterate(src, FALSE,
+                         dest, destCapacity,
+                         mode, options,
+                         doNormalize, pNeededToNormalize,
+                         pErrorCode);
 }
 
 U_CAPI int32_t U_EXPORT2
@@ -3152,128 +2859,12 @@ unorm_next(UCharIterator *src,
            UNormalizationMode mode, int32_t options,
            UBool doNormalize, UBool *pNeededToNormalize,
            UErrorCode *pErrorCode) {
-    UChar stackBuffer[100];
-    UChar *buffer;
-    IsNextBoundaryFn *isNextBoundary;
-    uint32_t mask;
-    int32_t bufferLength, bufferCapacity, destLength;
-    int32_t c, c2;
-    UChar minC;
-
-    /* check argument values */
-    if(pErrorCode==NULL || U_FAILURE(*pErrorCode)) {
-        return 0;
-    }
-
-    if( destCapacity<0 || (dest==NULL && destCapacity>0) ||
-        src==NULL
-    ) {
-        *pErrorCode=U_ILLEGAL_ARGUMENT_ERROR;
-        return 0;
-    }
-
-    if(!_haveData(*pErrorCode)) {
-        return 0;
-    }
-
-    if(pNeededToNormalize!=NULL) {
-        *pNeededToNormalize=FALSE;
-    }
-
-    switch(mode) {
-    case UNORM_FCD:
-        if(fcdTrie.index==NULL) {
-            *pErrorCode=U_UNSUPPORTED_ERROR;
-            return 0;
-        }
-        /* fall through to NFD */
-    case UNORM_NFD:
-        isNextBoundary=_isNextNFDSafe;
-        minC=_NORM_MIN_WITH_LEAD_CC;
-        mask=_NORM_CC_MASK|_NORM_QC_NFD;
-        break;
-    case UNORM_NFKD:
-        isNextBoundary=_isNextNFDSafe;
-        minC=_NORM_MIN_WITH_LEAD_CC;
-        mask=_NORM_CC_MASK|_NORM_QC_NFKD;
-        break;
-    case UNORM_NFC:
-        isNextBoundary=_isNextTrueStarter;
-        minC=(UChar)indexes[_NORM_INDEX_MIN_NFC_NO_MAYBE];
-        mask=_NORM_CC_MASK|_NORM_QC_NFC;
-        break;
-    case UNORM_NFKC:
-        isNextBoundary=_isNextTrueStarter;
-        minC=(UChar)indexes[_NORM_INDEX_MIN_NFKC_NO_MAYBE];
-        mask=_NORM_CC_MASK|_NORM_QC_NFKC;
-        break;
-    case UNORM_NONE:
-        destLength=0;
-        if((c=src->next(src))>=0) {
-            destLength=1;
-            if(UTF_IS_LEAD(c) && (c2=src->next(src))>=0) {
-                if(UTF_IS_TRAIL(c2)) {
-                    if(destCapacity>=2) {
-                        dest[1]=(UChar)c2; /* trail surrogate */
-                        destLength=2;
-                    }
-                    /* lead surrogate to be written below */
-                } else {
-                    src->move(src, -1, UITER_CURRENT);
-                }
-            }
-
-            if(destCapacity>0) {
-                dest[0]=(UChar)c;
-            }
-        }
-        return u_terminateUChars(dest, destCapacity, destLength, pErrorCode);
-    default:
-        *pErrorCode=U_ILLEGAL_ARGUMENT_ERROR;
-        return 0;
-    }
-
-    buffer=stackBuffer;
-    bufferCapacity=(int32_t)(sizeof(stackBuffer)/U_SIZEOF_UCHAR);
-    bufferLength=_findNextIterationBoundary(*src,
-                                            isNextBoundary, minC, mask,
-                                            buffer, bufferCapacity,
-                                            pErrorCode);
-    if(bufferLength>0) {
-        if(doNormalize) {
-            destLength=unorm_internalNormalize(dest, destCapacity,
-                                               buffer, bufferLength,
-                                               mode, options,
-                                               pErrorCode);
-            if(pNeededToNormalize!=0 && U_SUCCESS(*pErrorCode)) {
-                *pNeededToNormalize=
-                    (UBool)(destLength!=bufferLength ||
-                            0!=uprv_memcmp(dest, buffer, destLength*U_SIZEOF_UCHAR));
-            }
-        } else {
-            /* just copy the source characters */
-            if(destCapacity>0) {
-                uprv_memcpy(dest, buffer, uprv_min(bufferLength, destCapacity)*U_SIZEOF_UCHAR);
-            }
-            destLength=u_terminateUChars(dest, destCapacity, bufferLength, pErrorCode);
-        }
-    } else {
-        destLength=u_terminateUChars(dest, destCapacity, 0, pErrorCode);
-    }
-
-    /* cleanup */
-    if(buffer!=stackBuffer) {
-        uprv_free(buffer);
-    }
-
-    return destLength;
+    return unorm_iterate(src, TRUE,
+                         dest, destCapacity,
+                         mode, options,
+                         doNormalize, pNeededToNormalize,
+                         pErrorCode);
 }
-
-/*
- * ### TODO: check if NF*D and FCD iteration finds optimal boundaries
- * and if not, how hard it would be to improve it.
- * For example, see _findSafeFCD().
- */
 
 /* Concatenation of normalized strings -------------------------------------- */
 
