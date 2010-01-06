@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 2009, International Business Machines
+*   Copyright (C) 2009-2010, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
@@ -31,26 +31,59 @@
 
 U_NAMESPACE_BEGIN
 
-/* Korean Hangul and Jamo constants */
-enum {
-    JAMO_L_BASE=0x1100,     /* "lead" jamo */
-    JAMO_V_BASE=0x1161,     /* "vowel" jamo */
-    JAMO_T_BASE=0x11a7,     /* "trail" jamo */
+class Hangul {
+public:
+    /* Korean Hangul and Jamo constants */
+    enum {
+        JAMO_L_BASE=0x1100,     /* "lead" jamo */
+        JAMO_V_BASE=0x1161,     /* "vowel" jamo */
+        JAMO_T_BASE=0x11a7,     /* "trail" jamo */
 
-    HANGUL_BASE=0xac00,
+        HANGUL_BASE=0xac00,
 
-    JAMO_L_COUNT=19,
-    JAMO_V_COUNT=21,
-    JAMO_T_COUNT=28,
+        JAMO_L_COUNT=19,
+        JAMO_V_COUNT=21,
+        JAMO_T_COUNT=28,
 
-    HANGUL_COUNT=JAMO_L_COUNT*JAMO_V_COUNT*JAMO_T_COUNT
+        HANGUL_COUNT=JAMO_L_COUNT*JAMO_V_COUNT*JAMO_T_COUNT,
+        HANGUL_LIMIT=HANGUL_BASE+HANGUL_COUNT
+    };
+
+    static inline UBool isHangul(UChar32 c) {
+        return HANGUL_BASE<=c && c<HANGUL_LIMIT;
+    }
+    static inline UBool
+    isHangulWithoutJamoT(UChar c) {
+        c-=HANGUL_BASE;
+        return c<HANGUL_COUNT && c%JAMO_T_COUNT==0;
+    }
+    static inline UBool isJamoL(UChar32 c) {
+        return (uint32_t)(c-JAMO_L_BASE)<JAMO_L_COUNT;
+    }
+    static inline UBool isJamoV(UChar32 c) {
+        return (uint32_t)(c-JAMO_V_BASE)<JAMO_V_COUNT;
+    }
+
+    /**
+     * Decomposes c, which must be a Hangul syllable, into buffer
+     * and returns the length of the decomposition (2 or 3).
+     */
+    static inline int32_t decompose(UChar32 c, UChar buffer[3]) {
+        c-=HANGUL_BASE;
+        UChar32 c2=c%JAMO_T_COUNT;
+        c/=JAMO_T_COUNT;
+        buffer[0]=(UChar)(JAMO_L_BASE+c/JAMO_V_COUNT);
+        buffer[1]=(UChar)(JAMO_V_BASE+c%JAMO_V_COUNT);
+        if(c2==0) {
+            return 2;
+        } else {
+            buffer[2]=(UChar)(JAMO_T_BASE+c2);
+            return 3;
+        }
+    }
+private:
+    Hangul();  // no instantiation
 };
-
-static inline UBool
-isHangulWithoutJamoT(UChar c) {
-    c-=HANGUL_BASE;
-    return c<HANGUL_COUNT && c%JAMO_T_COUNT==0;
-}
 
 class Normalizer2Impl;
 

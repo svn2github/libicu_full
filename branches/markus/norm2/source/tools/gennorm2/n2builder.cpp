@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 2009, International Business Machines
+*   Copyright (C) 2009-2010, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
@@ -81,19 +81,12 @@ private:
 };
 
 const HangulIterator::Range HangulIterator::ranges[4]={
-    { JAMO_L_BASE, JAMO_L_BASE+JAMO_L_COUNT, 1 },
-    { JAMO_V_BASE, JAMO_V_BASE+JAMO_V_COUNT, Normalizer2Impl::JAMO_VT },
-    { JAMO_T_BASE+1, JAMO_T_BASE+JAMO_T_COUNT, Normalizer2Impl::JAMO_VT },  // +1: not U+11A7
-    { HANGUL_BASE, HANGUL_BASE+HANGUL_COUNT, 0 },  // will become minYesNo
+    { Hangul::JAMO_L_BASE, Hangul::JAMO_L_BASE+Hangul::JAMO_L_COUNT, 1 },
+    { Hangul::JAMO_V_BASE, Hangul::JAMO_V_BASE+Hangul::JAMO_V_COUNT, Normalizer2Impl::JAMO_VT },
+    // JAMO_T_BASE+1: not U+11A7
+    { Hangul::JAMO_T_BASE+1, Hangul::JAMO_T_BASE+Hangul::JAMO_T_COUNT, Normalizer2Impl::JAMO_VT },
+    { Hangul::HANGUL_BASE, Hangul::HANGUL_BASE+Hangul::HANGUL_COUNT, 0 },  // will become minYesNo
 };
-
-static inline UBool isJamoL(UChar32 c) {
-    return (uint32_t)(c-JAMO_L_BASE)<JAMO_L_COUNT;
-}
-
-static inline UBool isJamoV(UChar32 c) {
-    return (uint32_t)(c-JAMO_V_BASE)<JAMO_V_COUNT;
-}
 
 struct CompositionPair {
     CompositionPair(UChar32 t, UChar32 c) : trail(t), composite(c) {}
@@ -412,36 +405,9 @@ public:
     UBool didDecompose;
 };
 
-static inline UBool isHangul(UChar32 c) {
-    return HANGUL_BASE<=c && c<(HANGUL_BASE+HANGUL_COUNT);
-}
-
-static int32_t
-getHangulDecomposition(UChar32 c, UChar hangulBuffer[3]) {
-    // Hangul syllable: decompose algorithmically
-    c-=HANGUL_BASE;
-    if((uint32_t)c>=HANGUL_COUNT) {
-        return 0;  // not a Hangul syllable
-    }
-
-    UChar32 c2;
-    c2=c%JAMO_T_COUNT;
-    c/=JAMO_T_COUNT;
-    hangulBuffer[0]=JAMO_L_BASE+c/JAMO_V_COUNT;
-    hangulBuffer[1]=JAMO_V_BASE+c%JAMO_V_COUNT;
-    if(c2==0) {
-        return 2;
-    } else {
-        hangulBuffer[2]=JAMO_T_BASE+c2;
-        return 3;
-    }
-}
-
 UBool
 Normalizer2DataBuilder::decompose(UChar32 start, UChar32 end, uint32_t value) {
     if(norms[value].hasMapping()) {
-        UChar hangulBuffer[3];
-        int32_t hangulLength;
         const UnicodeString &m=*norms[value].mapping;
         UnicodeString *decomposed=NULL;
         const UChar *s=m.getBuffer();
@@ -498,7 +464,9 @@ Normalizer2DataBuilder::decompose(UChar32 start, UChar32 end, uint32_t value) {
                     decomposed=new UnicodeString(m, 0, prev);
                 }
                 decomposed->append(*cNorm.mapping);
-            } else if(0!=(hangulLength=getHangulDecomposition(c, hangulBuffer))) {
+            } else if(Hangul::isHangul(c)) {
+                UChar buffer[3];
+                int32_t hangulLength=Hangul::decompose(c, buffer);
                 if(norms[value].mappingType==Norm::ROUND_TRIP && prev!=0) {
                     fprintf(stderr,
                             "gennorm2 error: "
@@ -511,7 +479,7 @@ Normalizer2DataBuilder::decompose(UChar32 start, UChar32 end, uint32_t value) {
                 if(decomposed==NULL) {
                     decomposed=new UnicodeString(m, 0, prev);
                 }
-                decomposed->append(hangulBuffer, hangulLength);
+                decomposed->append(buffer, hangulLength);
             } else if(decomposed!=NULL) {
                 decomposed->append(m, prev, i-prev);
             }
@@ -613,8 +581,9 @@ UBool Normalizer2DataBuilder::hasNoCompBoundaryAfter(BuilderReorderingBuffer &bu
         return TRUE;  // no starter
     }
     UChar32 starter=buffer.charAt(lastStarterIndex);
-    if( isJamoL(starter) ||
-        (isJamoV(starter) && 0<lastStarterIndex && isJamoL(buffer.charAt(lastStarterIndex-1)))
+    if( Hangul::isJamoL(starter) ||
+        (Hangul::isJamoV(starter) &&
+         0<lastStarterIndex && Hangul::isJamoL(buffer.charAt(lastStarterIndex-1)))
     ) {
         // A Jamo leading consonant or an LV pair combines-forward if it is at the end,
         // otherwise it is blocked.
@@ -809,9 +778,7 @@ void Normalizer2DataBuilder::writeExtraData(UChar32 c, uint32_t value, ExtraData
         if(p->cc==0) {
             // Try a compact, algorithmic encoding.
             // Only for ccc=0.
-            // Not when mapping to a Hangul syllable, or else the runtime decomposition and
-            // data access functions would have to deal with Hangul-Jamo decomposition.
-            if(p->mappingCP>=0 && !isHangul(p->mappingCP)) {
+            if(p->mappingCP>=0) {
                 int32_t delta=p->mappingCP-c;
                 if(-Normalizer2Impl::MAX_DELTA<=delta && delta<=Normalizer2Impl::MAX_DELTA) {
                     p->offset=(delta<<Norm::OFFSET_SHIFT)|Norm::OFFSET_DELTA;

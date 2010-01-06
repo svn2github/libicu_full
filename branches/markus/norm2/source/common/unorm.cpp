@@ -445,11 +445,11 @@ unorm_addPropertyStarts(const USetAdder *sa, UErrorCode *pErrorCode) {
     }
 
     /* add Hangul LV syllables and LV+1 because of skippables */
-    for(c=HANGUL_BASE; c<HANGUL_BASE+HANGUL_COUNT; c+=JAMO_T_COUNT) {
+    for(c=Hangul::HANGUL_BASE; c<Hangul::HANGUL_LIMIT; c+=Hangul::JAMO_T_COUNT) {
         sa->add(sa->set, c);
         sa->add(sa->set, c+1);
     }
-    sa->add(sa->set, HANGUL_BASE+HANGUL_COUNT); /* add Hangul+1 to continue with other properties */
+    sa->add(sa->set, Hangul::HANGUL_LIMIT); /* add Hangul+1 to continue with other properties */
 }
 
 /* quick check functions ---------------------------------------------------- */

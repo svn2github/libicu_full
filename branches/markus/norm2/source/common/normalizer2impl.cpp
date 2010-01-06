@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 2009, International Business Machines
+*   Copyright (C) 2009-2010, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
@@ -330,11 +330,11 @@ Normalizer2Impl::addPropertyStarts(const USetAdder *sa, UErrorCode &errorCode) c
     utrie2_enum(normTrie, NULL, enumPropertyStartsRange, sa);
 
     /* add Hangul LV syllables and LV+1 because of skippables */
-    for(UChar c=HANGUL_BASE; c<HANGUL_BASE+HANGUL_COUNT; c+=JAMO_T_COUNT) {
+    for(UChar c=Hangul::HANGUL_BASE; c<Hangul::HANGUL_LIMIT; c+=Hangul::JAMO_T_COUNT) {
         sa->add(sa->set, c);
         sa->add(sa->set, c+1);
     }
-    sa->add(sa->set, HANGUL_BASE+HANGUL_COUNT); /* add Hangul+1 to continue with other properties */
+    sa->add(sa->set, Hangul::HANGUL_LIMIT); /* add Hangul+1 to continue with other properties */
 }
 
 const UChar *
@@ -479,16 +479,7 @@ UBool Normalizer2Impl::decompose(UChar32 c, uint16_t norm16,
         } else if(isHangul(norm16)) {
             // Hangul syllable: decompose algorithmically
             UChar jamos[3];
-            UChar c2;
-            c-=HANGUL_BASE;
-            c2=(UChar)(c%JAMO_T_COUNT);
-            c/=JAMO_T_COUNT;
-            jamos[0]=(UChar)(JAMO_L_BASE+c/JAMO_V_COUNT);
-            jamos[1]=(UChar)(JAMO_V_BASE+c%JAMO_V_COUNT);
-            if(c2!=0) {
-                jamos[2]=(UChar)(JAMO_T_BASE+c2);
-            }
-            return buffer.appendZeroCC(jamos, jamos+(c2==0 ? 2 : 3), errorCode);
+            return buffer.appendZeroCC(jamos, jamos+Hangul::decompose(c, jamos), errorCode);
         } else if(isDecompNoAlgorithmic(norm16)) {
             c=mapAlgorithmic(c, norm16);
             norm16=getNorm16(c);
@@ -521,18 +512,7 @@ Normalizer2Impl::getDecomposition(UChar32 c, UChar buffer[4], int32_t &length) c
             return decomp;
         } else if(isHangul(norm16)) {
             // Hangul syllable: decompose algorithmically
-            UChar c2;
-            c-=HANGUL_BASE;
-            c2=(UChar)(c%JAMO_T_COUNT);
-            c/=JAMO_T_COUNT;
-            buffer[0]=(UChar)(JAMO_L_BASE+c/JAMO_V_COUNT);
-            buffer[1]=(UChar)(JAMO_V_BASE+c%JAMO_V_COUNT);
-            if(c2==0) {
-                length=2;
-            } else {
-                buffer[2]=(UChar)(JAMO_T_BASE+c2);
-                length=3;
-            }
+            length=Hangul::decompose(c, buffer);
             return buffer;
         } else if(isDecompNoAlgorithmic(norm16)) {
             c=mapAlgorithmic(c, norm16);
@@ -724,15 +704,17 @@ void Normalizer2Impl::recompose(ReorderingBuffer &buffer, int32_t recomposeStart
         ) {
             if(isJamoVT(norm16)) {
                 // c is a Jamo V/T, see if we can compose it with the previous character.
-                if(c<JAMO_T_BASE) {
+                if(c<Hangul::JAMO_T_BASE) {
                     // c is a Jamo Vowel, compose with previous Jamo L and following Jamo T.
-                    UChar prev=(UChar)(*starter-JAMO_L_BASE);
-                    if(prev<JAMO_L_COUNT) {
+                    UChar prev=(UChar)(*starter-Hangul::JAMO_L_BASE);
+                    if(prev<Hangul::JAMO_L_COUNT) {
                         pRemove=p-1;
                         UChar syllable=(UChar)
-                            (HANGUL_BASE+(prev*JAMO_V_COUNT+(c-JAMO_V_BASE))*JAMO_T_COUNT);
+                            (Hangul::HANGUL_BASE+
+                             (prev*Hangul::JAMO_V_COUNT+(c-Hangul::JAMO_V_BASE))*
+                             Hangul::JAMO_T_COUNT);
                         UChar t;
-                        if(p!=limit && (t=(UChar)(*p-JAMO_T_BASE))<JAMO_T_COUNT) {
+                        if(p!=limit && (t=(UChar)(*p-Hangul::JAMO_T_BASE))<Hangul::JAMO_T_COUNT) {
                             ++p;
                             syllable+=t;  // The next character was a Jamo T.
                         }
@@ -959,17 +941,19 @@ Normalizer2Impl::compose(const UChar *src, const UChar *limit,
         if(isJamoVT(norm16) && prevBoundary!=prevSrc) {
             UChar prev=*(prevSrc-1);
             UBool needToDecompose=FALSE;
-            if(c<JAMO_T_BASE) {
+            if(c<Hangul::JAMO_T_BASE) {
                 // c is a Jamo Vowel, compose with previous Jamo L and following Jamo T.
-                prev=(UChar)(prev-JAMO_L_BASE);
-                if(prev<JAMO_L_COUNT) {
+                prev=(UChar)(prev-Hangul::JAMO_L_BASE);
+                if(prev<Hangul::JAMO_L_COUNT) {
                     if(!doCompose) {
                         return FALSE;
                     }
                     UChar syllable=(UChar)
-                        (HANGUL_BASE+(prev*JAMO_V_COUNT+(c-JAMO_V_BASE))*JAMO_T_COUNT);
+                        (Hangul::HANGUL_BASE+
+                         (prev*Hangul::JAMO_V_COUNT+(c-Hangul::JAMO_V_BASE))*
+                         Hangul::JAMO_T_COUNT);
                     UChar t;
-                    if(src!=limit && (t=(UChar)(*src-JAMO_T_BASE))<JAMO_T_COUNT) {
+                    if(src!=limit && (t=(UChar)(*src-Hangul::JAMO_T_BASE))<Hangul::JAMO_T_COUNT) {
                         ++src;
                         syllable+=t;  // The next character was a Jamo T.
                         prevBoundary=src;
@@ -987,13 +971,13 @@ Normalizer2Impl::compose(const UChar *src, const UChar *limit,
                     // length as what we appended to the buffer since prevBoundary.
                     needToDecompose=TRUE;
                 }
-            } else if(isHangulWithoutJamoT(prev)) {
+            } else if(Hangul::isHangulWithoutJamoT(prev)) {
                 // c is a Jamo Trailing consonant,
                 // compose with previous Hangul LV that does not contain a Jamo T.
                 if(!doCompose) {
                     return FALSE;
                 }
-                *(buffer.getLimit()-1)=(UChar)(prev+c-JAMO_T_BASE);
+                *(buffer.getLimit()-1)=(UChar)(prev+c-Hangul::JAMO_T_BASE);
                 prevBoundary=src;
                 continue;
             }
@@ -1295,7 +1279,7 @@ UBool Normalizer2Impl::hasCompBoundaryAfter(UChar32 c, UBool onlyContiguous, UBo
         } else if(norm16<=minYesNo) {
             // Hangul LVT (==minYesNo) has a boundary after it.
             // Hangul LV and non-inert yesYes characters combine forward.
-            return isHangul(norm16) && !isHangulWithoutJamoT((UChar)c);
+            return isHangul(norm16) && !Hangul::isHangulWithoutJamoT((UChar)c);
         } else if(norm16>= (testInert ? minNoNo : minMaybeYes)) {
             return FALSE;
         } else if(isDecompNoAlgorithmic(norm16)) {
@@ -1419,7 +1403,6 @@ void Normalizer2Impl::setFCD16FromNorm16(UChar32 start, UChar32 end, uint16_t no
             if(start==end) {
                 start+=delta;
                 norm16=getNorm16(start);
-                continue;
             } else {
                 // the same delta leads from different original characters to different mappings
                 do {
