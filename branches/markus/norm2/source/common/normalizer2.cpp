@@ -587,7 +587,7 @@ unorm2_normalize(const UNormalizer2 *norm2,
             n2wi->normalize(src, length>=0 ? src+length : NULL, buffer, *pErrorCode);
         }
     } else {
-        UnicodeString srcString(FALSE, src, length);
+        UnicodeString srcString(length<0, src, length);
         n2->normalize(srcString, destString, *pErrorCode);
     }
     return destString.extract(dest, capacity, *pErrorCode);
@@ -620,7 +620,7 @@ normalizeSecondAndAppend(const UNormalizer2 *norm2,
                                      doNormalize, buffer, *pErrorCode);
         }
     } else {
-        UnicodeString secondString(FALSE, second, secondLength);
+        UnicodeString secondString(secondLength<0, second, secondLength);
         if(doNormalize) {
             n2->normalizeSecondAndAppend(firstString, secondString, *pErrorCode);
         } else {
@@ -663,7 +663,7 @@ unorm2_isNormalized(const UNormalizer2 *norm2,
         *pErrorCode=U_ILLEGAL_ARGUMENT_ERROR;
         return 0;
     }
-    UnicodeString sString(FALSE, s, length);
+    UnicodeString sString(length<0, s, length);
     return ((const Normalizer2 *)norm2)->isNormalized(sString, *pErrorCode);
 }
 
@@ -678,7 +678,7 @@ unorm2_quickCheck(const UNormalizer2 *norm2,
         *pErrorCode=U_ILLEGAL_ARGUMENT_ERROR;
         return UNORM_NO;
     }
-    UnicodeString sString(FALSE, s, length);
+    UnicodeString sString(length<0, s, length);
     return ((const Normalizer2 *)norm2)->quickCheck(sString, *pErrorCode);
 }
 
@@ -693,7 +693,7 @@ unorm2_spanQuickCheckYes(const UNormalizer2 *norm2,
         *pErrorCode=U_ILLEGAL_ARGUMENT_ERROR;
         return 0;
     }
-    UnicodeString sString(FALSE, s, length);
+    UnicodeString sString(length<0, s, length);
     return ((const Normalizer2 *)norm2)->spanQuickCheckYes(sString, *pErrorCode);
 }
 

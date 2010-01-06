@@ -37,6 +37,7 @@
 #include "ucln_cmn.h"
 #include "unormimp.h"
 #include "ucase.h"
+#include "uprops.h"
 #include "cmemory.h"
 #include "umutex.h"
 #include "utrie2.h"
@@ -2892,38 +2893,42 @@ unorm_quickCheck(const UChar *src,
                  int32_t srcLength, 
                  UNormalizationMode mode,
                  UErrorCode *pErrorCode) {
-    return _quickCheck(src, srcLength, mode, TRUE, NULL, pErrorCode);
+    const Normalizer2 *n2=Normalizer2Factory::getInstance(mode, *pErrorCode);
+    return unorm2_quickCheck((const UNormalizer2 *)n2, src, srcLength, pErrorCode);
 }
 
 U_CAPI UNormalizationCheckResult U_EXPORT2
 unorm_quickCheckWithOptions(const UChar *src, int32_t srcLength, 
                             UNormalizationMode mode, int32_t options,
                             UErrorCode *pErrorCode) {
-    return _quickCheck(src, srcLength, mode, TRUE, getNX(options, *pErrorCode), pErrorCode);
-}
-
-U_CFUNC UNormalizationCheckResult
-unorm_internalQuickCheck(const UChar *src,
-                         int32_t srcLength,
-                         UNormalizationMode mode,
-                         UBool allowMaybe,
-                         const UnicodeSet *nx,
-                         UErrorCode *pErrorCode) {
-    return _quickCheck(src, srcLength, mode, allowMaybe, nx, pErrorCode);
+    const Normalizer2 *n2=Normalizer2Factory::getInstance(mode, *pErrorCode);
+    if(options&UNORM_UNICODE_3_2) {
+        FilteredNormalizer2 fn2(*n2, *uniset_getUnicode32Instance(*pErrorCode));
+        return unorm2_quickCheck((const UNormalizer2 *)&fn2, src, srcLength, pErrorCode);
+    } else {
+        return unorm2_quickCheck((const UNormalizer2 *)n2, src, srcLength, pErrorCode);
+    }
 }
 
 U_CAPI UBool U_EXPORT2
 unorm_isNormalized(const UChar *src, int32_t srcLength,
                    UNormalizationMode mode,
                    UErrorCode *pErrorCode) {
-    return (UBool)(UNORM_YES==_quickCheck(src, srcLength, mode, FALSE, NULL, pErrorCode));
+    const Normalizer2 *n2=Normalizer2Factory::getInstance(mode, *pErrorCode);
+    return unorm2_isNormalized((const UNormalizer2 *)n2, src, srcLength, pErrorCode);
 }
 
 U_CAPI UBool U_EXPORT2
 unorm_isNormalizedWithOptions(const UChar *src, int32_t srcLength,
                               UNormalizationMode mode, int32_t options,
                               UErrorCode *pErrorCode) {
-    return (UBool)(UNORM_YES==_quickCheck(src, srcLength, mode, FALSE, getNX(options, *pErrorCode), pErrorCode));
+    const Normalizer2 *n2=Normalizer2Factory::getInstance(mode, *pErrorCode);
+    if(options&UNORM_UNICODE_3_2) {
+        FilteredNormalizer2 fn2(*n2, *uniset_getUnicode32Instance(*pErrorCode));
+        return unorm2_isNormalized((const UNormalizer2 *)&fn2, src, srcLength, pErrorCode);
+    } else {
+        return unorm2_isNormalized((const UNormalizer2 *)n2, src, srcLength, pErrorCode);
+    }
 }
 
 /* normalize() API ---------------------------------------------------------- */

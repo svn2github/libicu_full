@@ -211,45 +211,9 @@ unorm_internalNormalizeWithNX(UChar *dest, int32_t destCapacity,
                               UNormalizationMode mode, int32_t options, const U_NAMESPACE_QUALIFIER UnicodeSet *nx,
                               UErrorCode *pErrorCode);
 
-/**
- * internal API, used by unormcmp.cpp
- * @internal
- */
-U_CFUNC UNormalizationCheckResult
-unorm_internalQuickCheck(const UChar *src,
-                         int32_t srcLength,
-                         UNormalizationMode mode,
-                         UBool allowMaybe,
-                         const U_NAMESPACE_QUALIFIER UnicodeSet *nx,
-                         UErrorCode *pErrorCode);
-
 #endif
 
 #endif /* #if !UCONFIG_NO_NORMALIZATION */
-
-/**
- * Internal option for unorm_cmpEquivFold() for decomposing.
- * If not set, just do strcasecmp().
- * @internal
- */
-#define _COMPARE_EQUIV 0x80000
-
-#ifndef U_COMPARE_IGNORE_CASE
-/* see also unorm.h */
-/**
- * Option bit for unorm_compare:
- * Perform case-insensitive comparison.
- * @draft ICU 2.2
- */
-#define U_COMPARE_IGNORE_CASE       0x10000
-#endif
-
-/**
- * Internal option for unorm_cmpEquivFold() for strncmp style.
- * If set, checks for both string length and terminating NUL.
- * @internal
- */
-#define _STRNCMP_STYLE 0x1000
 
 #if !UCONFIG_NO_NORMALIZATION
 

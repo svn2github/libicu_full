@@ -25,7 +25,6 @@
 #include "unicode/ubrk.h"
 #include "cmemory.h"
 #include "ucase.h"
-#include "unormimp.h"
 #include "ustr_imp.h"
 
 /* string casing ------------------------------------------------------------ */
