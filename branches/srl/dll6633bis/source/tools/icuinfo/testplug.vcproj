@@ -147,7 +147,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				WholeProgramOptimization="true"
-				AdditionalIncludeDirectories="..\..\..\include;..\..\common;..\toolutil"
+				AdditionalIncludeDirectories="..\..\..\include;..\..\common;..\toolutil;..\ctestfw"
 				PreprocessorDefinitions="WIN64;WIN32;NDEBUG;_CRT_SECURE_NO_DEPRECATE;T_CTEST_IMPLEMENTATION"
 				StringPooling="true"
 				RuntimeLibrary="2"
