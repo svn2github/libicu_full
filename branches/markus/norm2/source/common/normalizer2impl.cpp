@@ -958,6 +958,7 @@ Normalizer2Impl::compose(const UChar *src, const UChar *limit,
          */
         if(isJamoVT(norm16) && prevBoundary!=prevSrc) {
             UChar prev=*(prevSrc-1);
+            UBool needToDecompose=FALSE;
             if(c<JAMO_T_BASE) {
                 // c is a Jamo Vowel, compose with previous Jamo L and following Jamo T.
                 prev=(UChar)(prev-JAMO_L_BASE);
@@ -972,9 +973,19 @@ Normalizer2Impl::compose(const UChar *src, const UChar *limit,
                         ++src;
                         syllable+=t;  // The next character was a Jamo T.
                         prevBoundary=src;
+                        *(buffer.getLimit()-1)=syllable;
+                        continue;
                     }
-                    *(buffer.getLimit()-1)=syllable;
-                    continue;
+                    // If we see L+V+x where x!=T then we drop to the slow path,
+                    // decompose and recompose.
+                    // This is to deal with NFKC finding normal L and V but a
+                    // compatibility variant of a T. We need to either fully compose that
+                    // combination here (which would complicate the code and may not work
+                    // with strange custom data) or use the slow path -- or else our replacing
+                    // two input characters (L+V) with one output character (LV syllable)
+                    // would violate the invariant that [prevBoundary..prevSrc[ has the same
+                    // length as what we appended to the buffer since prevBoundary.
+                    needToDecompose=TRUE;
                 }
             } else if(isHangulWithoutJamoT(prev)) {
                 // c is a Jamo Trailing consonant,
@@ -986,15 +997,17 @@ Normalizer2Impl::compose(const UChar *src, const UChar *limit,
                 prevBoundary=src;
                 continue;
             }
-            // The Jamo V/T did not compose into a Hangul syllable.
-            if(doCompose) {
-                if(!buffer.appendBMP((UChar)c, 0, errorCode)) {
-                    break;
+            if(!needToDecompose) {
+                // The Jamo V/T did not compose into a Hangul syllable.
+                if(doCompose) {
+                    if(!buffer.appendBMP((UChar)c, 0, errorCode)) {
+                        break;
+                    }
+                } else {
+                    prevCC=0;
                 }
-            } else {
-                prevCC=0;
+                continue;
             }
-            continue;
         }
         /*
          * Source buffer pointers:
