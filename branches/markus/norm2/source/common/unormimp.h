@@ -187,37 +187,6 @@ U_CAPI UBool U_EXPORT2
 unorm_haveData(UErrorCode *pErrorCode);
 
 /**
- * Internal API for normalizing.
- * Does not check for bad input.
- * @internal
- */
-U_CAPI int32_t U_EXPORT2
-unorm_internalNormalize(UChar *dest, int32_t destCapacity,
-                        const UChar *src, int32_t srcLength,
-                        UNormalizationMode mode, int32_t options,
-                        UErrorCode *pErrorCode);
-
-#ifdef XP_CPLUSPLUS
-
-/**
- * Internal API for normalizing.
- * Does not check for bad input.
- * Requires _haveData() to be true.
- * @internal
- */
-U_CFUNC int32_t
-unorm_internalNormalizeWithNX(UChar *dest, int32_t destCapacity,
-                              const UChar *src, int32_t srcLength,
-                              UNormalizationMode mode, int32_t options, const U_NAMESPACE_QUALIFIER UnicodeSet *nx,
-                              UErrorCode *pErrorCode);
-
-#endif
-
-#endif /* #if !UCONFIG_NO_NORMALIZATION */
-
-#if !UCONFIG_NO_NORMALIZATION
-
-/**
  * internal API, used by StringPrep
  * @internal
  */
