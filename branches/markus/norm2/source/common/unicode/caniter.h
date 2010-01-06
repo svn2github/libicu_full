@@ -31,6 +31,7 @@
 U_NAMESPACE_BEGIN
 
 class Hashtable;
+class Normalizer2;
 
 /**
  * This class allows one to iterate through all the strings that are canonically equivalent to a given
