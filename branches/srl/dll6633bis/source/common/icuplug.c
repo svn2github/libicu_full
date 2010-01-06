@@ -20,7 +20,10 @@
 #include "putilimp.h"
 #include "ucln.h"
 
-#define UPLUG_TRACE 1
+#ifndef UPLUG_TRACE
+#define UPLUG_TRACE 0
+#endif
+
 #if UPLUG_TRACE
 #include <stdio.h>
 #define DBG(x) printf("%s:%d: ",__FILE__,__LINE__); printf x; 
@@ -367,7 +370,15 @@ static void uplug_deallocatePlug(UPlugData *plug, UErrorCode *status) {
         *status = subStatus;
     }
     /* shift plugins up and decrement count. */
-    pluginCount = uplug_removeEntryAt(pluginList, pluginCount, sizeof(plug[0]), uplug_pluginNumber(plug));
+	if(U_SUCCESS(*status)) {
+		/* all ok- remove. */
+	    pluginCount = uplug_removeEntryAt(pluginList, pluginCount, sizeof(plug[0]), uplug_pluginNumber(plug));
+	} else {
+		/* not ok- leave as a message. */
+		plug->awaitingLoad=FALSE;
+		plug->entrypoint=0;
+		plug->dontUnload=TRUE;
+	}
 }
 
 static void uplug_doUnloadPlug(UPlugData *plugToRemove, UErrorCode *status) {
@@ -532,6 +543,8 @@ uplug_initErrorPlug(const char *libName, const char *sym, const char *config, co
 	if(config!=NULL) {
 		strncpy(plug->config, config, UPLUG_NAME_MAX);
 	}
+
+	return plug;
 }
 
 /**
@@ -549,7 +562,7 @@ uplug_initPlugFromLibrary(const char *libName, const char *sym, const char *conf
         entrypoint = uprv_dl_sym(lib, sym, status);
         
         if(entrypoint!=NULL&&U_SUCCESS(*status)) {
-            /* TODO: warning on next line needs to be corrected by line-noise C syntax. */
+            /* TODO: warning on next line needs to be corrected by complex C syntax. */
             plug = uplug_initPlugFromEntrypointAndLibrary((UPlugEntrypoint*)entrypoint, config, lib, sym, status);
             if(plug!=NULL&&U_SUCCESS(*status)) {
                 plug->lib = lib; /* plug takes ownership of library */
@@ -709,9 +722,13 @@ uplug_init(UErrorCode *status) {
         if(f != NULL) {
             char linebuf[1024];
             char *p, *libName=NULL, *symName=NULL, *config=NULL;
+			int32_t line = 0;
             
             
             while(fgets(linebuf,1023,f)) {
+				line++;
+				DBG(("#%d: %s",line,linebuf))
+
                 if(!*linebuf || *linebuf=='#') {
                     continue;
                 } else {
@@ -764,6 +781,8 @@ uplug_init(UErrorCode *status) {
                     }
                 }
             }
+		} else {
+			DBG(("Can't open plugin file %s\n", plugin_file))
         }
     }
     uplug_loadWaitingPlugs(status);

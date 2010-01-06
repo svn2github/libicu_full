@@ -13,6 +13,17 @@
 ******************************************************************************
 */
 
+/**
+ * \file
+ * \brief C API: ICU Plugin API 
+ *
+ * <h2>C API: ICU Plugin API</h2>
+ *
+ * C API allowing run-time loadable modules that extend or modify ICU functionality.
+ *
+ * @internal ICU 4.4 Technology Preview
+ */
+
 
 #ifndef ICUPLUG_H
 #define ICUPLUG_H

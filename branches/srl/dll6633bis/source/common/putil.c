@@ -2085,7 +2085,7 @@ uprv_dl_sym(void *lib, const char* sym, UErrorCode *status) {
 		}
 	}
 
-    return NULL;
+    return addr;
 }
 
 

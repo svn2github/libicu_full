@@ -1,22 +1,47 @@
+/*
+******************************************************************************
+*
+*   Copyright (C) 2009, International Business Machines
+*   Corporation and others.  All Rights Reserved.
+*
+******************************************************************************
+*
+*  FILE NAME : testplug.c
+*
+*   Date         Name        Description
+*   10/29/2009   srl          New.
+******************************************************************************
+*
+*
+* This file implements a number of example ICU plugins. 
+*
+*/
+
 #include "unicode/icuplug.h"
-#include <stdio.h>
+#include <stdio.h> /* for fprintf */
+#include <stdlib.h> /* for malloc */
 #include "unicode/udbgutil.h"
 #include "unicode/uclean.h"
 #include "cmemory.h"
+
+/**
+ * A simple, trivial plugin.
+ */
 
 U_CAPI
 UPlugTokenReturn U_EXPORT2 myPlugin (
                   UPlugData *data,
                   UPlugReason reason,
                   UErrorCode *status) {
+	/* Just print this for debugging */
     fprintf(stderr,"MyPlugin: data=%p, reason=%s, status=%s\n", (void*)data, udbg_enumName(UDBG_UPlugReason,(int32_t)reason), u_errorName(*status));
 
     if(reason==UPLUG_REASON_QUERY) {
-        uplug_setPlugName(data, "Just a Test High-Level Plugin");
-        uplug_setPlugLevel(data, UPLUG_LEVEL_HIGH);
+        uplug_setPlugName(data, "Just a Test High-Level Plugin"); /* This call is optional in response to UPLUG_REASON_QUERY, but is a good idea. */
+        uplug_setPlugLevel(data, UPLUG_LEVEL_HIGH); /* This call is Mandatory in response to UPLUG_REASON_QUERY */
     }
 
-    return UPLUG_TOKEN;
+    return UPLUG_TOKEN; /* This must always be returned, to indicate that the entrypoint was actually a plugin. */
 }
 
 
@@ -34,6 +59,41 @@ UPlugTokenReturn U_EXPORT2 myPluginLow (
 
     return UPLUG_TOKEN;
 }
+
+/**
+ * Doesn't respond to QUERY properly.
+ */
+U_CAPI
+UPlugTokenReturn U_EXPORT2 myPluginFailQuery (
+                  UPlugData *data,
+                  UPlugReason reason,
+                  UErrorCode *status) {
+    fprintf(stderr,"MyPluginFailQuery: data=%p, reason=%s, status=%s\n", (void*)data, udbg_enumName(UDBG_UPlugReason,(int32_t)reason), u_errorName(*status));
+
+	/* Should respond to UPLUG_REASON_QUERY here. */
+
+    return UPLUG_TOKEN;
+}
+
+/**
+ * Doesn't return the proper token.
+ */
+U_CAPI
+UPlugTokenReturn U_EXPORT2 myPluginFailToken (
+                  UPlugData *data,
+                  UPlugReason reason,
+                  UErrorCode *status) {
+    fprintf(stderr,"MyPluginFailToken: data=%p, reason=%s, status=%s\n", (void*)data, udbg_enumName(UDBG_UPlugReason,(int32_t)reason), u_errorName(*status));
+
+    if(reason==UPLUG_REASON_QUERY) {
+        uplug_setPlugName(data, "myPluginFailToken Plugin");
+        uplug_setPlugLevel(data, UPLUG_LEVEL_LOW);
+    }
+
+    return 0; /* Wrong. */
+}
+
+
 
 /**
  * Says it's low, but isn't.

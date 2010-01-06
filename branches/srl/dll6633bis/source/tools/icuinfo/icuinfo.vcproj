@@ -385,6 +385,10 @@
 			RelativePath=".\icuinfo.cpp"
 			>
 		</File>
+		<File
+			RelativePath=".\icuplugins_windows_sample.txt"
+			>
+		</File>
 	</Files>
 	<Globals>
 	</Globals>
