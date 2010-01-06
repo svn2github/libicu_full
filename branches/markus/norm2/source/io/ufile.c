@@ -210,6 +210,9 @@ u_frewind(UFILE *file)
 U_CAPI void U_EXPORT2 /* U_CAPI ... U_EXPORT2 added by Peter Kirk 17 Nov 2001 */
 u_fclose(UFILE *file)
 {
+    if(file == NULL) {
+        return;
+    }
     u_fflush(file);
     ufile_close_translit(file);
 
