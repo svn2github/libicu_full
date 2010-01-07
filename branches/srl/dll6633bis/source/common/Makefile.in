@@ -65,6 +65,9 @@ CPPFLAGS += -I$(srcdir) -I$(top_srcdir)/i18n $(LIBCPPFLAGS) $(CPPFLAGSICUUC)
 DEFS += -DU_COMMON_IMPLEMENTATION @DEFS@ 
 LDFLAGS += $(LDFLAGSICUUC)
 
+# for plugin configuration
+CPPFLAGS += "-DDEFAULT_ICU_PLUGINS=\"$(libdir)/icu\" "
+
 # $(LIBICUDT) is either stub data or the real DLL common data.
 LIBS = $(LIBICUDT) $(DEFAULT_LIBS)
 
