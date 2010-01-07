@@ -73,14 +73,15 @@ $(TARGET) : $(OBJECTS)
 	$(LINK.cc) $(OUTOPT)$@ $^ $(LIBS) 
 	$(POST_BUILD_STEP)
 
-PLUGIN=libplugin.$(SO)    
+PLUGIN=$(LIBPREFIX)plugin.$(SO)    
+SO_TARGET=$(PLUGIN)
 
 PLUGINDIR=$(shell pwd)
 
 PLUGINFILE=$(PLUGINDIR)/icuplugins$(SO_TARGET_VERSION_MAJOR).txt
 
 $(PLUGINFILE): Makefile
-	echo "$(shell pwd)/$(PLUGIN)	myPlugin	x=4" > $@
+	echo "$(CURR_FULL_DIR)/$(PLUGIN)	myPlugin	x=4" > $@
 
 CFLAGS+=$(SHAREDLIBCFLAGS)
 
@@ -90,7 +91,7 @@ $(PLUGIN): $(PLUGIN_OBJECTS)
 plugin: $(PLUGIN)
 
 plugin-check: $(PLUGIN) $(PLUGINFILE)
-	$(INVOKE) ICU_PLUGINS=$(shell pwd) ./$(TARGET) -v -L
+	$(INVOKE) ICU_PLUGINS="$(CURR_FULL_DIR)" ./$(TARGET) -v -L
 
 
 ifeq (,$(MAKECMDGOALS))
