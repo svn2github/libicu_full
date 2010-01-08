@@ -32,6 +32,11 @@ PLUGIN_OBJECTS = testplug.o
 
 DEPS = $(OBJECTS:.o=.d)
 
+# pass some information
+
+CPPFLAGS+=  -DU_PLATFORM=\"@platform@\"  -DU_BUILD=\"@build@\" -DU_HOST=\"@host@\" -DU_CC=\"@CC@\" -DU_CXX=\"@CXX@\"
+# -DENABLE_RELEASE=@ENABLE_RELEASE@ -DENABLE_DEBUG=@ENABLE_DEBUG@ "
+
 
 ## List of phony targets
 .PHONY : all all-local install install-local clean clean-local		\
