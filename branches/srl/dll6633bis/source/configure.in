@@ -330,17 +330,22 @@ AC_MSG_RESULT($enabled)
 AC_SUBST(U_ENABLE_TRACING)
 
 
-U_ENABLE_DYLOAD=0
+U_ENABLE_DYLOAD=1
 AC_MSG_CHECKING([whether to enable dynamic loading of plugins])
 enabled=check
 AC_ARG_ENABLE(dyload,
     [  --disable-dyload        disable dynamic loading [default=no]],
     [ case "${enableval}" in
-	     yes|"") enabled=disabled ;;
-	     no) enabled=check ;;
+	     yes|"") 
+		     U_ENABLE_DYLOAD=1
+		     enabled=check ;;
+	     no) 
+	     	 U_ENABLE_DYLOAD=0;
+	     	 enabled=disabled ;;
 	     *) ;;
     esac],
 )
+AC_SUBST(U_ENABLE_DYLOAD)
 
 # goes into icucfg.h
 AC_CHECK_HEADERS([dlfcn.h])

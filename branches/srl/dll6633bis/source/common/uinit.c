@@ -26,6 +26,8 @@
 #include "cmemory.h"
 #include "uassert.h"
 #include "unicode/icuplug.h"
+#include "icuplugimp.h"
+
 
 static UBool gICUInitialized = FALSE;
 static UMTX  gICUInitMutex   = NULL;

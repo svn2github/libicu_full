@@ -240,8 +240,12 @@ void cmd_version(UBool noLoad)
     fprintf(stderr, "ICUDATA is %s\n", U_ICUDATA_NAME);
     u_init(&status);
     fprintf(stderr, "u_init returned %s\n", u_errorName(status));
-	const char *pluginFile = uplug_getPluginFile();
-	fprintf(stderr, "plugin file is: %s\n", (pluginFile&&*pluginFile)?pluginFile:"(not set. try setting ICU_PLUGINS to a directory.)");
+#if U_ENABLE_DYLOAD
+    const char *pluginFile = uplug_getPluginFile();
+    fprintf(stderr, "plugin file is: %s\n", (pluginFile&&*pluginFile)?pluginFile:"(not set. try setting ICU_PLUGINS to a directory.)");
+#else
+    fprintf(stderr, "Dynamic Loading is disabled. No plugins will be loaded at start-up.\n");
+#endif
 }
 
 void cmd_cleanup(UBool noLoad)

@@ -1964,6 +1964,8 @@ u_getVersion(UVersionInfo versionArray) {
 /**
  * icucfg.h dependent code 
  */
+
+#if U_ENABLE_DYLOAD
  
 #if defined(HAVE_CONFIG_H)
 #include "icucfg.h"
@@ -2118,6 +2120,7 @@ uprv_dl_sym(void *lib, const char* sym, UErrorCode *status) {
 
 #endif
 
+#endif /* U_ENABLE_DYLOAD */
 
 /*
  * Hey, Emacs, please set the following:

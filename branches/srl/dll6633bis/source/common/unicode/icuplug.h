@@ -1,7 +1,7 @@
 /*
 ******************************************************************************
 *
-*   Copyright (C) 2009, International Business Machines
+*   Copyright (C) 2009-2010, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 ******************************************************************************
@@ -19,9 +19,86 @@
  *
  * <h2>C API: ICU Plugin API</h2>
  *
- * C API allowing run-time loadable modules that extend or modify ICU functionality.
+ * <p>C API allowing run-time loadable modules that extend or modify ICU functionality.</p>
  *
- * @internal ICU 4.4 Technology Preview
+ * <h3>Loading and Configuration</h3>
+ *
+ * <p>At ICU startup time, the environment variable "ICU_PLUGINS" will be 
+ * queried for a directory name.  If it is not set, the preprocessor symbol 
+ * "DEFAULT_ICU_PLUGINS" will be checked for a default value.</p>
+ *
+ * <p>Within the above-named directory, the file  "icuplugins##.txt" will be 
+ * opened, if present, where ## is the major+minor number of the currently 
+ * running ICU (such as, 44 for ICU 4.4, thus icuplugins44.txt)</p>
+ *
+ * <p>The configuration file has this format:</p>
+ *
+ * <ul>
+ * <li>Hash (#) begins a comment line</li>
+ * 
+ * <li>Non-comment lines have two or three components:
+ * LIBRARYNAME     ENTRYPOINT     [ CONFIGURATION .. ]</li>
+ *
+ * <li>Tabs or spaces separate the three items.</li>
+ *
+ * <li>LIBRARYNAME is the name of a shared library, either a short name if 
+ * it is on the loader path,  or a full pathname.</li>
+ *
+ * <li>ENTRYPOINT is the short (undecorated) symbol name of the plugin's 
+ * entrypoint, as above.</li>
+ *
+ * <li>CONFIGURATION is the entire rest of the line . It's passed as-is to 
+ * the plugin.</li>
+ * </ul>
+ *
+ * <p>An example configuration file is, in its entirety:</p>
+ *
+ * \code
+ * # this is icuplugins44.txt
+ * testplug.dll    myPlugin        hello=world
+ * \endcode
+ * <p>Plugins are categorized as "high" or "low" level.  Low level are those 
+ * which must be run BEFORE high level plugins, and before any operations 
+ * which cause ICU to be 'initialized'.  If a plugin is low level but 
+ * causes ICU to allocate memory or become initialized, that plugin is said 
+ * to cause a 'level change'. </p>
+ *
+ * <p>At load time, ICU first queries all plugins to determine their level, 
+ * then loads all 'low' plugins first, and then loads all 'high' plugins.  
+ * Plugins are otherwise loaded in the order listed in the configuration file.</p>
+ * 
+ * <h3>Implementing a Plugin</h3>
+ * \code
+ * U_CAPI UPlugTokenReturn U_EXPORT2 
+ * myPlugin (UPlugData *data, UPlugReason reason, UErrorCode *status) {
+ *   if(reason==UPLUG_REASON_QUERY) {
+ *      uplug_setPlugName(data, "Simple Plugin");
+ *      uplug_setPlugLevel(data, UPLUG_LEVEL_HIGH);
+ *    } else if(reason==UPLUG_REASON_LOAD) {
+ *       ... Set up some ICU things here.... 
+ *    } else if(reason==UPLUG_REASON_UNLOAD) {
+ *       ... unload, clean up ...
+ *    }
+ *   return UPLUG_TOKEN;
+ *  }
+ * \endcode
+ *
+ * <p>The UPlugData*  is an opaque pointer to the plugin-specific data, and is 
+ * used in all other API calls.</p>
+ *
+ * <p>The API contract is:</p>
+ * <ol><li>The plugin MUST always return UPLUG_TOKEN as a return value- to 
+ * indicate that it is a valid plugin.</li>
+ *
+ * <li>When the 'reason' parameter is set to UPLUG_REASON_QUERY,  the 
+ * plugin MUST call uplug_setPlugLevel() to indicate whether it is a high 
+ * level or low level plugin.</li>
+ *
+ * <li>When the 'reason' parameter is UPLUG_REASON_QUERY, the plugin 
+ * SHOULD call uplug_setPlugName to indicate a human readable plugin name.</li></ol>
+ * 
+ *
+ * \internal ICU 4.4 Technology Preview
  */
 
 
@@ -36,6 +113,7 @@
 /**
  * Opaque structure passed to/from a plugin. 
  * use the APIs to access it.
+ * @internal ICU 4.4 Technology Preview
  */
 
 struct UPlugData;
@@ -44,19 +122,28 @@ typedef struct UPlugData UPlugData;
 /**
  * Random Token to identify a valid ICU plugin. Plugins must return this 
  * from the entrypoint.
+ * @internal ICU 4.4 Technology Preview
  */
 #define UPLUG_TOKEN 0x54762486
 
 /**
  * Max width of names, symbols, and configuration strings
+ * @internal ICU 4.4 Technology Preview
  */
 #define UPLUG_NAME_MAX              100
 
 
+/**
+ * Return value from a plugin entrypoint. 
+ * Must always be set to UPLUG_TOKEN
+ * @see UPLUG_TOKEN
+ * @internal ICU 4.4 Technology Preview
+ */
 typedef uint32_t UPlugTokenReturn;
 
 /**
  * Reason code for the entrypoint's call
+ * @internal ICU 4.4 Technology Preview
  */
 typedef enum {
     UPLUG_REASON_QUERY = 0,     /**< The plugin is being queried for info. **/
@@ -71,6 +158,7 @@ typedef enum {
  *     INITIAL:  UNKNOWN
  *       QUERY:   INVALID ->  { LOW | HIGH }
  *     ERR -> INVALID
+ * @internal ICU 4.4 Technology Preview
  */
 typedef enum {
     UPLUG_LEVEL_INVALID = 0,     /**< The plugin is invalid, hasn't called uplug_setLevel, or can't load. **/
@@ -80,14 +168,12 @@ typedef enum {
     UPLUG_LEVEL_COUNT         /**< count of known reasons **/
 } UPlugLevel;
 
-/*U_CDECL_BEGIN*/
-
-
 /**
  * Entrypoint for an ICU plugin.
  * @param data the UPlugData handle. 
  * @param status the plugin's extended status code.
  * @return A valid plugin must return UPLUG_TOKEN
+ * @internal ICU 4.4 Technology Preview
  */
 typedef UPlugTokenReturn (U_EXPORT2 UPlugEntrypoint) (
                   UPlugData *data,
@@ -96,6 +182,12 @@ typedef UPlugTokenReturn (U_EXPORT2 UPlugEntrypoint) (
 
 /* === Needed for Implementing === */
 
+/**
+ * Request that this plugin not be unloaded at cleanup time.
+ * This is appropriate for plugins which cannot be cleaned up.
+ * @see u_cleanup()
+ * @internal ICU 4.4 Technology Preview
+ */
 U_CAPI void U_EXPORT2 
 uplug_setPlugNoUnload(UPlugData *data, UBool dontUnload);
 
@@ -103,6 +195,7 @@ uplug_setPlugNoUnload(UPlugData *data, UBool dontUnload);
  * Set the level of this plugin.
  * @param data plugin data handle
  * @param level the level of this plugin
+ * @internal ICU 4.4 Technology Preview
  */
 U_CAPI void U_EXPORT2
 uplug_setPlugLevel(UPlugData *data, UPlugLevel level);
@@ -111,6 +204,7 @@ uplug_setPlugLevel(UPlugData *data, UPlugLevel level);
  * Get the level of this plugin.
  * @param data plugin data handle
  * @return the level of this plugin
+ * @internal ICU 4.4 Technology Preview
  */
 U_CAPI UPlugLevel U_EXPORT2
 uplug_getPlugLevel(UPlugData *data);
@@ -120,28 +214,33 @@ uplug_getPlugLevel(UPlugData *data);
  * For example, if UPLUG_LEVEL_LOW is returned, then low level plugins may load
  * if UPLUG_LEVEL_HIGH is returned, then only high level plugins may load.
  * @return the lowest level of plug which can currently load
+ * @internal ICU 4.4 Technology Preview
  */
 U_CAPI UPlugLevel U_EXPORT2 uplug_getCurrentLevel();
 
 
 /**
  * Get plug load status
+ * @return The error code of this plugin's load attempt.
+ * @internal ICU 4.4 Technology Preview
  */
 U_CAPI UErrorCode U_EXPORT2
 uplug_getPlugLoadStatus(UPlugData *plug); 
 
 /**
- * Set the user-readable name of this plugin.
+ * Set the human-readable name of this plugin.
  * @param data plugin data handle
  * @param name the name of this plugin. The first UPLUG_NAME_MAX characters willi be copied into a new buffer.
+ * @internal ICU 4.4 Technology Preview
  */
 U_CAPI void U_EXPORT2
 uplug_setPlugName(UPlugData *data, const char *name);
 
 /**
- * Get the name of this plugin.
+ * Get the human-readable name of this plugin.
  * @param data plugin data handle
  * @return the name of this plugin
+ * @internal ICU 4.4 Technology Preview
  */
 U_CAPI const char * U_EXPORT2
 uplug_getPlugName(UPlugData *data);
@@ -150,6 +249,7 @@ uplug_getPlugName(UPlugData *data);
  * Return the symbol name for this plugin, if known.
  * @param data plugin data handle
  * @return the symbol name, or NULL
+ * @internal ICU 4.4 Technology Preview
  */
 U_CAPI const char * U_EXPORT2
 uplug_getSymbolName(UPlugData *data);
@@ -158,6 +258,7 @@ uplug_getSymbolName(UPlugData *data);
  * Return the library name for this plugin, if known.
  * @param data plugin data handle
  * @return the library name, or NULL
+ * @internal ICU 4.4 Technology Preview
  */
 U_CAPI const char * U_EXPORT2
 uplug_getLibraryName(UPlugData *data, UErrorCode *status);
@@ -167,6 +268,7 @@ uplug_getLibraryName(UPlugData *data, UErrorCode *status);
  * Plugins could use this to load data out of their 
  * @param data plugin data handle
  * @return the library, or NULL
+ * @internal ICU 4.4 Technology Preview
  */
 U_CAPI void * U_EXPORT2
 uplug_getLibrary(UPlugData *data);
@@ -175,6 +277,7 @@ uplug_getLibrary(UPlugData *data);
  * Return the plugin-specific context data.
  * @param data plugin data handle
  * @return the context, or NULL if not set
+ * @internal ICU 4.4 Technology Preview
  */
 U_CAPI void * U_EXPORT2
 uplug_getContext(UPlugData *data);
@@ -183,6 +286,7 @@ uplug_getContext(UPlugData *data);
  * Set the plugin-specific context data.
  * @param data plugin data handle
  * @param context new context to set
+ * @internal ICU 4.4 Technology Preview
  */
 U_CAPI void U_EXPORT2
 uplug_setContext(UPlugData *data, void *context);
@@ -193,11 +297,10 @@ uplug_setContext(UPlugData *data, void *context);
  * The string is in the platform default codepage.
  * @param data plugin data handle
  * @return configuration string, or else null.
+ * @internal ICU 4.4 Technology Preview
  */
 U_CAPI const char * U_EXPORT2
 uplug_getConfiguration(UPlugData *data);
-
-/* === Iteration and manipulation === */
 
 /**
  * Return all currently installed plugins, from newest to oldest
@@ -212,6 +315,7 @@ uplug_getConfiguration(UPlugData *data);
  * @param prior pass in 'NULL' to get the first (most recent) plug, 
  *  otherwise pass the value returned on a prior call to uplug_nextPlug
  * @param return the next oldest plugin, or NULL if no more.
+ * @internal ICU 4.4 Technology Preview
  */
 U_CAPI UPlugData* U_EXPORT2
 uplug_nextPlug(UPlugData *prior);
@@ -226,6 +330,7 @@ uplug_nextPlug(UPlugData *prior);
  * @param config user specified configuration string, if available, or NULL.
  * @param status error result
  * @return the new UPlugData associated with this plugin, or NULL if error.
+ * @internal ICU 4.4 Technology Preview
  */
 U_CAPI UPlugData* U_EXPORT2
 uplug_loadPlugFromEntrypoint(UPlugEntrypoint *entrypoint, const char *config, UErrorCode *status);
@@ -239,6 +344,7 @@ uplug_loadPlugFromEntrypoint(UPlugEntrypoint *entrypoint, const char *config, UE
  * @param config configuration string, or NULL
  * @param status error result
  * @return the new UPlugData associated with this plugin, or NULL if error.
+ * @internal ICU 4.4 Technology Preview
  */
 U_CAPI UPlugData* U_EXPORT2
 uplug_loadPlugFromLibrary(const char *libName, const char *sym, const char *config, UErrorCode *status);
@@ -248,35 +354,10 @@ uplug_loadPlugFromLibrary(const char *libName, const char *sym, const char *conf
  * Will request the plugin to be unloaded, and close the library if needed
  * @param data plugin handle to close
  * @param status error result
+ * @internal ICU 4.4 Technology Preview
  */
 U_CAPI void U_EXPORT2
 uplug_removePlug(UPlugData *plug, UErrorCode *status);
 
-/* === SPI === */
-
-/**
- * Initialize the plugins 
- * @param status error result
- * @internal - Internal use only.
- */
-U_INTERNAL void U_EXPORT2
-uplug_init(UErrorCode *status);
-
-/**
- * Get raw plug N
- * @internal - Internal use only
- */ 
-U_INTERNAL UPlugData* U_EXPORT2
-uplug_getPlugInternal(int32_t n);
-
-/**
- * Get the name of the plugin file. 
- * @internal - Internal use only.
- */
-U_INTERNAL const char* U_EXPORT2
-uplug_getPluginFile();
-
-
-/*U_CDECL_END*/
 
 #endif

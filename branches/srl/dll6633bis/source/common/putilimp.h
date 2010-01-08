@@ -274,6 +274,7 @@ U_INTERNAL void * U_EXPORT2 uprv_maximumPtr(void *base);
 #  endif
 #endif
 
+#if U_ENABLE_DYLOAD
 /*  Dynamic Library Functions */
 
 /**
@@ -294,6 +295,6 @@ U_INTERNAL void U_EXPORT2 uprv_dl_close( void *lib, UErrorCode *status);
  */
 U_INTERNAL void * U_EXPORT2 uprv_dl_sym( void *lib, const char *symbolName, UErrorCode *status);
 
-
+#endif
 
 #endif

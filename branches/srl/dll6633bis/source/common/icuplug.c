@@ -1,7 +1,7 @@
 /*
 ******************************************************************************
 *
-*   Copyright (C) 2009, International Business Machines
+*   Copyright (C) 2009-2010, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 ******************************************************************************
@@ -19,6 +19,7 @@
 #include "cmemory.h"
 #include "putilimp.h"
 #include "ucln.h"
+#include <stdio.h>
 
 #ifndef UPLUG_TRACE
 #define UPLUG_TRACE 0
@@ -30,6 +31,26 @@
 #else
 #define DBG(x)
 #endif
+
+/**
+ * Internal structure of an ICU plugin. 
+ */
+
+struct UPlugData {
+    UPlugEntrypoint  *entrypoint; /**< plugin entrypoint */
+    uint32_t structSize;    /**< initialized to the size of this structure */
+    uint32_t token;         /**< must be U_PLUG_TOKEN */
+    void *lib;              /**< plugin library, or NULL */
+	char libName[UPLUG_NAME_MAX];   /**< library name */
+    char sym[UPLUG_NAME_MAX];        /**< plugin symbol, or NULL */
+    char config[UPLUG_NAME_MAX];     /**< configuration data */
+    void *context;          /**< user context data */
+    char name[UPLUG_NAME_MAX];   /**< name of plugin */
+    UPlugLevel  level; /**< level of plugin */
+    UBool   awaitingLoad; /**< TRUE if the plugin is awaiting a load call */
+    UBool   dontUnload; /**< TRUE if plugin must stay resident (leak plugin and lib) */
+    UErrorCode pluginStatus; /**< status code of plugin */
+};
 
 
 
@@ -74,7 +95,7 @@ static int32_t uplug_removeEntryAt(void *list, int32_t listSize, int32_t memberS
 
 
 
-
+#if U_ENABLE_DYLOAD
 /**
  * Library management. Internal. 
  * @internal
@@ -205,7 +226,7 @@ uplug_closeLibrary(void *lib, UErrorCode *status) {
     *status = U_INTERNAL_PROGRAM_ERROR; /* could not find the entry! */
 }
 
-
+#endif
 
 UPlugData pluginList[UPLUG_PLUGIN_INITIAL_COUNT];
 int32_t pluginCount = 0;
@@ -363,7 +384,9 @@ static UPlugData *uplug_allocatePlug(UPlugEntrypoint *entrypoint, const char *co
 static void uplug_deallocatePlug(UPlugData *plug, UErrorCode *status) {
     UErrorCode subStatus = U_ZERO_ERROR;
     if(!plug->dontUnload) {
+#if U_ENABLE_DYLOAD
         uplug_closeLibrary(plug->lib, &subStatus);
+#endif
     }
     plug->lib = NULL;
     if(U_SUCCESS(*status) && U_FAILURE(subStatus)) {
@@ -450,7 +473,11 @@ uplug_getLibraryName(UPlugData *data, UErrorCode *status) {
 	if(data->libName[0]) {
 		return data->libName;
 	} else {
+#if U_ENABLE_DYLOAD
 	    return uplug_findLibrary(data->lib, status);
+#else
+	    return NULL;
+#endif
 	}
 }
 
@@ -550,7 +577,9 @@ uplug_initErrorPlug(const char *libName, const char *sym, const char *config, co
 /**
  * Fetch a plugin from DLL, and then initialize it from a library- but don't load it.
  */
- 
+
+#if U_ENABLE_DYLOAD
+
 static UPlugData* 
 uplug_initPlugFromLibrary(const char *libName, const char *sym, const char *config, UErrorCode *status) {
     void *lib = NULL;
@@ -593,12 +622,12 @@ uplug_loadPlugFromLibrary(const char *libName, const char *sym, const char *conf
     return plug;
 }
 
+#endif
 
 
 
-#include <stdio.h>
 
-U_CAPI UPlugLevel uplug_getCurrentLevel() {
+U_CAPI UPlugLevel U_EXPORT2 uplug_getCurrentLevel() {
     if(cmemory_inUse()) {
         return UPLUG_LEVEL_HIGH;
     } else {
@@ -685,23 +714,32 @@ static void uplug_loadWaitingPlugs(UErrorCode *status) {
     DBG(( " Done Loading Plugs. Level:  Level: %d\n", (int32_t)uplug_getCurrentLevel()));
 }
 
+#if U_ENABLE_DYLOAD
 static char plugin_file[2048] = "";
+#endif
 
-U_CAPI const char* U_EXPORT2
+U_INTERNAL const char* U_EXPORT2
 uplug_getPluginFile() {
+#if U_ENABLE_DYLOAD
     return plugin_file;
+#else
+    return NULL;
+#endif
 }
 
 
 U_CAPI void U_EXPORT2
 uplug_init(UErrorCode *status) {
+#if U_ENABLE_DYLOAD
     const char *plugin_dir;
     
     plugin_dir = getenv("ICU_PLUGINS");
-    
+    DBG((">> ICU_PLUGINS=%s\n", plugin_dir))
+
 #if defined(DEFAULT_ICU_PLUGINS) 
-    if(plugin_dir == NULL || !*plugin_file) {
+    if(plugin_dir == NULL || !*plugin_dir) {
         plugin_dir = DEFAULT_ICU_PLUGINS;
+	DBG(("  (using DEFAULT_ICU_PLUGINS)\n"))
     }
 #endif
 
@@ -786,6 +824,7 @@ uplug_init(UErrorCode *status) {
         }
     }
     uplug_loadWaitingPlugs(status);
+#endif /* U_ENABLE_DYLOAD */
     ucln_registerCleanup(UCLN_UPLUG, uplug_cleanup);
 }
 

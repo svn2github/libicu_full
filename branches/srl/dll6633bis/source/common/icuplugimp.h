@@ -1,12 +1,14 @@
 /*
 ******************************************************************************
 *
-*   Copyright (C) 2009, International Business Machines
+*   Copyright (C) 2009-2010, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 ******************************************************************************
 *
 *  FILE NAME : icuplugimp.h
+* 
+*  Internal functions for the ICU plugin system
 *
 *   Date         Name        Description
 *   10/29/2009   sl          New.
@@ -19,28 +21,16 @@
 
 #include "unicode/icuplug.h"
 
-struct UPlugData {
-    UPlugEntrypoint  *entrypoint; /**< plugin entrypoint */
-    uint32_t structSize;    /**< initialized to the size of this structure */
-    uint32_t token;         /**< must be U_PLUG_TOKEN */
-    void *lib;              /**< plugin library, or NULL */
-	char libName[UPLUG_NAME_MAX];   /**< library name */
-    char sym[UPLUG_NAME_MAX];        /**< plugin symbol, or NULL */
-    char config[UPLUG_NAME_MAX];     /**< configuration data */
-    void *context;          /**< user context data */
-    char name[UPLUG_NAME_MAX];   /**< name of plugin */
-    UPlugLevel  level; /**< level of plugin */
-    UBool   awaitingLoad; /**< TRUE if the plugin is awaiting a load call */
-    UBool   dontUnload; /**< TRUE if plugin must stay resident (leak plugin and lib) */
-    UErrorCode pluginStatus; /**< status code of plugin */
-};
-
+/*========================*/
+/** @{ Library Manipulation  
+ */
 
 /**
  * Open a library, adding a reference count if needed.
  * @param libName library name to load
  * @param status error code
  * @return the library pointer, or NULL
+ * @internal internal use only
  */
 U_INTERNAL void * U_EXPORT2
 uplug_openLibrary(const char *libName, UErrorCode *status);
@@ -49,6 +39,7 @@ uplug_openLibrary(const char *libName, UErrorCode *status);
  * Close a library, if its reference count is 0
  * @param lib the library to close
  * @param status error code
+ * @internal internal use only
  */
 U_INTERNAL void U_EXPORT2
 uplug_closeLibrary(void *lib, UErrorCode *status);
@@ -58,8 +49,39 @@ uplug_closeLibrary(void *lib, UErrorCode *status);
  * @param lib the library's name
  * @param status error code
  * @return the library name, or NULL if not found.
+ * @internal internal use only
  */
 U_INTERNAL  char * U_EXPORT2
 uplug_findLibrary(void *lib, UErrorCode *status);
+
+/** @} */
+
+/*========================*/
+/** {@ ICU Plugin internal interfaces
+ */
+
+/**
+ * Initialize the plugins 
+ * @param status error result
+ * @internal - Internal use only.
+ */
+U_INTERNAL void U_EXPORT2
+uplug_init(UErrorCode *status);
+
+/**
+ * Get raw plug N
+ * @internal - Internal use only
+ */ 
+U_INTERNAL UPlugData* U_EXPORT2
+uplug_getPlugInternal(int32_t n);
+
+/**
+ * Get the name of the plugin file. 
+ * @internal - Internal use only.
+ */
+U_INTERNAL const char* U_EXPORT2
+uplug_getPluginFile();
+
+/** @} */
 
 #endif

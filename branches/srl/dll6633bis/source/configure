@@ -695,6 +695,7 @@ ENABLE_RPATH
 U_CHECK_DYLOAD
 EGREP
 GREP
+U_ENABLE_DYLOAD
 U_ENABLE_TRACING
 U_DISABLE_RENAMING
 AR
@@ -1454,7 +1455,7 @@ Optional Features:
   --enable-debug          build debug libraries default=no
   --enable-release        build release libraries default=yes
   --enable-auto-cleanup   enable auto cleanup of libraries default=no
-  --enable-draft          enable draft APIs (and internal APIs) default=yes
+  --enable-draft          enable draft APIs default=yes
   --enable-renaming       add a version suffix to symbols default=yes
   --enable-tracing        enable function and data tracing default=no
   --disable-dyload        disable dynamic loading default=no
@@ -5487,18 +5488,23 @@ $as_echo "$enabled" >&6; }
 
 
 
-U_ENABLE_DYLOAD=0
+U_ENABLE_DYLOAD=1
 { $as_echo "$as_me:$LINENO: checking whether to enable dynamic loading of plugins" >&5
 $as_echo_n "checking whether to enable dynamic loading of plugins... " >&6; }
 enabled=check
 # Check whether --enable-dyload was given.
 if test "${enable_dyload+set}" = set; then
   enableval=$enable_dyload;  case "${enableval}" in
-	     yes|"") enabled=disabled ;;
-	     no) enabled=check ;;
+	     yes|"")
+		     U_ENABLE_DYLOAD=1
+		     enabled=check ;;
+	     no)
+	     	 U_ENABLE_DYLOAD=0;
+	     	 enabled=disabled ;;
 	     *) ;;
     esac
 fi
+
 
 
 # goes into icucfg.h
