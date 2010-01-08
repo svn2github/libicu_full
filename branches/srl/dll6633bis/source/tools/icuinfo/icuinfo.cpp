@@ -1,17 +1,17 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 1999-2009, International Business Machines
+*   Copyright (C) 1999-2010, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
-*   file name:  gentest.c
+*   file name:  icuinfo.cpp
 *   encoding:   US-ASCII
 *   tab size:   8 (not used)
 *   indentation:4
 *
-*   created on: 2000mar03
-*   created by: Madhu Katragadda
+*   created on: 2009-2010
+*   created by: Steven R. Loomis
 *
 *   This program shows some basic info about the current ICU.
 */
@@ -33,7 +33,6 @@
 #include <unicode/ucnv.h>
 #include "putilimp.h"
 
-
 static UOption options[]={
   /*0*/ UOPTION_HELP_H,
   /*1*/ UOPTION_HELP_QUESTION_MARK,
@@ -42,7 +41,30 @@ static UOption options[]={
   /*4*/ UOPTION_DEF("list-plugins", 'L', UOPT_NO_ARG),
 };
 
+
+/** 
+ * Print the current platform 
+ */
+static const char *getPlatform()
+{
+#if defined(U_PLATFORM)
+	return U_PLATFORM;
+#elif defined(U_WINDOWS)
+	return "Windows";
+#elif defined(U_PALMOS)
+	return "PalmOS";
+#elif defined(_PLATFORM_H)
+	return "Other (POSIX-like)";
+#else
+	return "unknown"
+#endif
+}
+
+
+
+
 void *theLib = NULL;
+
 
 void printVersion(const uint8_t  *v)
 {
@@ -237,6 +259,7 @@ void cmd_version(UBool noLoad)
     u_getVersion(icu);
     u_versionToString(icu, str);
     fprintf(stderr, "\nCompiled against ICU " U_ICU_VERSION ", currently running ICU %s\n", str);
+	fprintf(stderr, "Platform: %s\n", getPlatform());
     fprintf(stderr, "ICUDATA is %s\n", U_ICUDATA_NAME);
     u_init(&status);
     fprintf(stderr, "u_init returned %s\n", u_errorName(status));
@@ -441,7 +464,7 @@ UDataMemory *cmd_load(char *buf, UDataMemory *old)
     return data;
 }
 
-void cmd_info(const char */*buf*/, UDataMemory *data)
+void cmd_info(const char * /*buf*/, UDataMemory *data)
 {
     UDataInfo info;
 
