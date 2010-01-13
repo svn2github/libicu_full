@@ -103,6 +103,20 @@ public:
 #endif
 
     /**
+     * Creates a Formattable object of type Decimal Number from a
+     * char string pointer.
+     *
+     * @param numberString the unformatted (not localized) string representation
+     *                     of the Decimal number.
+     * @param length  the length of the number string, or -1 if the string
+     *                is nul-terminated.
+     * @param status  the error code.  Possible errors include U_INVALID_FORMAT_ERROR
+     *                if the format of the string does not conform to that of a
+     *                decimal number.
+     */
+    Formattable(const char *numberString, int32_t length, UErrorCode &status);
+
+    /**
      * Creates a Formattable object with a UnicodeString object to copy from.
      * @param strToCopy the UnicodeString string.
      * @stable ICU 2.0
@@ -234,7 +248,13 @@ public:
          * retrieve the value.
          * @stable ICU 3.0
          */
-        kObject
+        kObject,
+
+        /**
+         * Selector indicating a Decimal Number value.
+         * @draft ICU 4.4
+         */
+        kDecimalNumber
    };
 
     /**
@@ -246,7 +266,7 @@ public:
     
     /**
      * Returns TRUE if the data type of this Formattable object
-     * is kDouble, kLong, or kInt64.
+     * is kDouble, kLong, kInt64 or kDecimalNumber.
      * @return TRUE if this is a pure numeric object
      * @stable ICU 3.0
      */
@@ -255,6 +275,9 @@ public:
     /**
      * Gets the double value of this object. If this object is not of type
      * kDouble then the result is undefined.
+     * TODO:  How to handle decimal numbers?  int64_t?  Maybe make this function not be
+     *        an inline, and have it handle all numeric types.
+     *        Same for all of the other in-line getters.
      * @return    the double value of this object.
      * @stable ICU 2.0
      */ 
@@ -262,7 +285,7 @@ public:
 
     /**
      * Gets the double value of this object. If this object is of type
-     * long or int64 then a casting conversion is peformed, with
+     * long, int64 or Decimal Number then a conversion is peformed, with
      * possible loss of precision.  If the type is kObject and the
      * object is a Measure, then the result of
      * getNumber().getDouble(status) is returned.  If this object is
@@ -288,7 +311,7 @@ public:
      * as appropriate, is returned and the status is set to
      * U_INVALID_FORMAT_ERROR.  If this object is of type kInt64 and
      * it fits within a long, then no precision is lost.  If it is of
-     * type kDouble, then a casting conversion is peformed, with
+     * type kDouble or kDecimalNumber, then a conversion is peformed, with
      * truncation of any fractional part.  If the type is kObject and
      * the object is a Measure, then the result of
      * getNumber().getLong(status) is returned.  If this object is
@@ -309,8 +332,8 @@ public:
     int64_t         getInt64(void) const { return fValue.fInt64; }
 
     /**
-     * Gets the int64 value of this object. If this object is of type
-     * kDouble and the magnitude is too large to fit in an int64, then
+     * Gets the int64 value of this object. If this object is of a numeric
+     * type and the magnitude is too large to fit in an int64, then
      * the maximum or minimum int64 value, as appropriate, is returned
      * and the status is set to U_INVALID_FORMAT_ERROR.  If the
      * magnitude fits in an int64, then a casting conversion is
@@ -441,6 +464,15 @@ public:
     const UObject*  getObject() const;
 
     /**
+     * Returns a pointer to the decimal number string contained within this
+     * formattable, or NULL if this object does not contain numeric type.
+     * @return a  const char *pointer to the unformatted string representation 
+     * of a number, or NULL
+     * @draft ICU 4.4
+     */
+    const UObject*  getDecimalNumber() const;
+
+     /**
      * Sets the double value of this object and changes the type to
      * kDouble.
      * @param d    the new double value to be set.
@@ -512,6 +544,24 @@ public:
      * @stable ICU 3.0
      */
     void            adoptObject(UObject* objectToAdopt);
+
+    /**
+     * Sets the unformatted decimal number string for this Formattable, and changes
+     * the type to kDecimalNumber.  
+     * The syntax of the unformatted number is a "numeric string"
+     * as defined in the Decimal Arithmetic Specification, available at
+     * http://speleotrove.com/decimal
+     *
+     * @param numberString  a string representation of the unformatted decimal number.
+     * @param length        the length of the number string, or -1 if the string
+     *                      is nul-terminated.
+     * @param status        the error code.  Set to U_INVALID_FORMAT_ERROR if the
+     *                      incoming string is not a valid decimal number.
+     * @draft ICU 4.4
+     */
+    void             setDecimalNumber(const char *numberString,
+                                      int32_t  length,
+                                      UErrorCode &status);
 
     /**
      * ICU "poor man's RTTI", returns a UClassID for the actual class.

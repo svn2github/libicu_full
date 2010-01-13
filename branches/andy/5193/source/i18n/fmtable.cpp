@@ -228,6 +228,9 @@ Formattable::operator=(const Formattable& source)
         case kObject:
             fValue.fObject = objectClone(source.fValue.fObject);
             break;
+        case kDecimalNumber:
+            // TODO:
+            break;
         }
     }
     return *this;
