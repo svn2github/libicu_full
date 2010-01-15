@@ -547,6 +547,8 @@ public:
      * The syntax of the number is a "numeric string"
      * as defined in the Decimal Arithmetic Specification, available at
      * http://speleotrove.com/decimal
+     * The full precision and range of the input number will be retained,
+     * even when it exceeds what can be represented by a double or an int64.
      *
      * @param numberString  a string representation of the unformatted decimal number.
      * @param status        the error code.  Set to U_INVALID_FORMAT_ERROR if the
