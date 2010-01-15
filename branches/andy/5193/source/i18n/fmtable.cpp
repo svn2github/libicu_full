@@ -228,9 +228,6 @@ Formattable::operator=(const Formattable& source)
         case kObject:
             fValue.fObject = objectClone(source.fValue.fObject);
             break;
-        case kDecimalNumber:
-            // TODO:
-            break;
         }
     }
     return *this;
@@ -283,9 +280,6 @@ Formattable::operator==(const Formattable& that) const
         } else {
             equal = objectEquals(fValue.fObject, that.fValue.fObject);
         }
-        break;
-    case kDecimalNumber:
-        // TODO: implement this.
         break;
     }
 

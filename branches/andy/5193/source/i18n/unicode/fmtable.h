@@ -105,8 +105,10 @@ public:
 #endif
 
     /**
-     * Creates a Formattable object of type Decimal Number from a
-     * char string pointer.
+     * Creates a Formattable object of an appropriate numeric type from a
+     * a decimal number in string form.  The Formattable will retain the
+     * full precision of the input in decimal format, even when it exceeds
+     * what can be represented by a double of int64_t.
      *
      * @param number  the unformatted (not localized) string representation
      *                     of the Decimal number.
@@ -248,13 +250,7 @@ public:
          * retrieve the value.
          * @stable ICU 3.0
          */
-        kObject,
-
-        /**
-         * Selector indicating a Decimal Number value.
-         * @draft ICU 4.4
-         */
-        kDecimalNumber
+        kObject
    };
 
     /**
@@ -275,9 +271,6 @@ public:
     /**
      * Gets the double value of this object. If this object is not of type
      * kDouble then the result is undefined.
-     * TODO:  How to handle decimal numbers?  int64_t?  Maybe make this function not be
-     *        an inline, and have it handle all numeric types.
-     *        Same for all of the other in-line getters.
      * @return    the double value of this object.
      * @stable ICU 2.0
      */ 
@@ -464,8 +457,12 @@ public:
     const UObject*  getObject() const;
 
     /**
-     * Returns A string representation of the number contained within this
+     * Returns a numeric string representation of the number contained within this
      * formattable, or NULL if this object does not contain numeric type.
+     * For values obtained by parsing, the returned decimal number retains
+     * the full precision and range of the original input, unconstrained by
+     * the limits of a double floating point or a 64 bit int.
+     * 
      * @return the unformatted string representation of a number.
      * @draft ICU 4.4
      */
@@ -545,9 +542,9 @@ public:
     void            adoptObject(UObject* objectToAdopt);
 
     /**
-     * Sets the unformatted decimal number string for this Formattable, and changes
-     * the type to kDecimalNumber.  
-     * The syntax of the unformatted number is a "numeric string"
+     * Sets the the numeric value from a decimal number string, and changes
+     * the type to to a numeric type appropriate for the number.  
+     * The syntax of the number is a "numeric string"
      * as defined in the Decimal Arithmetic Specification, available at
      * http://speleotrove.com/decimal
      *
