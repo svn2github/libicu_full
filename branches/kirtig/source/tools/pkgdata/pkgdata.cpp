@@ -1,5 +1,5 @@
 /******************************************************************************
- *   Copyright (C) 2000-2009, International Business Machines
+ *   Copyright (C) 2000-2010, International Business Machines
  *   Corporation and others.  All Rights Reserved.
  *******************************************************************************
  *   file name:  pkgdata.c
@@ -692,9 +692,9 @@ static void createFileNames(const char mode, const char *version_major, const ch
                     version_major,
                     pkgDataFlags[SO_EXT]);
 
-            sprintf(pkgDataFlags[SO_EXT], "%s.%s",
-                    pkgDataFlags[SO_EXT],
-                    pkgDataFlags[A_EXT]);
+            uprv_strcat(pkgDataFlags[SO_EXT], ".");
+            uprv_strcat(pkgDataFlags[SO_EXT], pkgDataFlags[A_EXT]);
+
 #elif defined(OS400) || defined(_AIX)
             sprintf(libFileNames[LIB_FILE_VERSION_TMP], "%s.%s",
                     libFileNames[LIB_FILE],
@@ -1018,20 +1018,31 @@ static int32_t pkg_createWithAssemblyCode(const char *targetDir, const char mode
 /*
  * Generation of the data library without assembly code needs to compile each data file
  * individually and then link it all together.
+ * Note: Any update to the directory structure of the data needs to be reflected here.
  */
 enum {
     DATA_PREFIX_BRKITR,
     DATA_PREFIX_COLL,
+    DATA_PREFIX_CURR,
+    DATA_PREFIX_LANG,
     DATA_PREFIX_RBNF,
+    DATA_PREFIX_REGION,
     DATA_PREFIX_TRANSLIT,
+    DATA_PREFIX_ZONE,
     DATA_PREFIX_LENGTH
 };
+
 const static char DATA_PREFIX[DATA_PREFIX_LENGTH][10] = {
         "brkitr",
         "coll",
+        "curr",
+        "lang",
         "rbnf",
-        "translit"
+        "region",
+        "translit",
+        "zone"
 };
+
 static int32_t pkg_createWithoutAssemblyCode(UPKGOptions *o, const char *targetDir, const char mode) {
     int32_t result = 0;
     CharList *list = o->filePaths;
@@ -1103,17 +1114,20 @@ static int32_t pkg_createWithoutAssemblyCode(UPKGOptions *o, const char *targetD
         } else {
             char newName[SMALL_BUFFER_MAX_SIZE];
             char dataName[SMALL_BUFFER_MAX_SIZE];
+            char dataDirName[SMALL_BUFFER_MAX_SIZE];
             const char *pSubstring;
             file = list->str;
             name = listNames->str;
 
             newName[0] = dataName[0] = 0;
             for (int32_t n = 0; n < DATA_PREFIX_LENGTH; n++) {
-                /* If the name contains a prefix, alter the new name accordingly. */
-                pSubstring = uprv_strstr(name, DATA_PREFIX[n]);
+                dataDirName[0] = 0;
+                sprintf(dataDirName, "%s%s", DATA_PREFIX[n], PKGDATA_FILE_SEP_STRING);
+                /* If the name contains a prefix (indicating directory), alter the new name accordingly. */
+                pSubstring = uprv_strstr(name, dataDirName);
                 if (pSubstring != NULL) {
                     char newNameTmp[SMALL_BUFFER_MAX_SIZE] = "";
-                    const char *p = name + uprv_strlen(DATA_PREFIX[n]) + 1;
+                    const char *p = name + uprv_strlen(dataDirName);
                     for (int32_t i = 0;;i++) {
                         if (p[i] == '.') {
                             newNameTmp[i] = '_';
@@ -1171,9 +1185,9 @@ static int32_t pkg_createWithoutAssemblyCode(UPKGOptions *o, const char *targetD
             break;
         }
 
-        sprintf(buffer, "%s %s",
-                buffer,
-                tempObjectFile);
+        uprv_strcat(buffer, " ");
+        uprv_strcat(buffer, tempObjectFile);
+
 #endif
         
         if (i > 0) {
@@ -1197,9 +1211,8 @@ static int32_t pkg_createWithoutAssemblyCode(UPKGOptions *o, const char *targetD
     
     result = runCommand(cmd);
     if (result == 0) {
-        sprintf(buffer, "%s %s",
-            buffer,
-            tempObjectFile);
+        uprv_strcat(buffer, " ");
+        uprv_strcat(buffer, tempObjectFile);
     }
 #endif
 
@@ -1252,7 +1265,8 @@ static int32_t pkg_createWindowsDLL(const char mode, const char *gencFilePath, U
         uprv_strcpy(libFilePath, dllFilePath);
 
 #ifdef CYGWINMSVC
-        sprintf(libFilePath, "%s%s.lib", libFilePath, o->libName);
+        uprv_strcat(libFilePath, o->libName);
+        uprv_strcat(libFilePath, ".lib");
         
         uprv_strcat(dllFilePath, o->libName);
         uprv_strcat(dllFilePath, o->version);

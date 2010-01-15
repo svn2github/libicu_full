@@ -1,11 +1,11 @@
 /*
  *
- * (C) Copyright IBM Corp. 1998-2004 - All Rights Reserved
+ * (C) Copyright IBM Corp. 1998-2010 - All Rights Reserved
  *
  */
 
-#ifndef __FEATURES_H
-#define __FEATURES_H
+#ifndef __ICUFEATURES_H
+#define __ICUFEATURES_H
 
 /**
  * \file

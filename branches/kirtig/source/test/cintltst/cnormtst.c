@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT: 
- * Copyright (c) 1997-2007, International Business Machines Corporation and
+ * Copyright (c) 1997-2010, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 /********************************************************************************
@@ -122,21 +122,21 @@ void addNormTest(TestNode** root);
 
 void addNormTest(TestNode** root)
 {
-    addTest(root, &TestAPI, "tscoll/cnormtst/TestAPI");
-    addTest(root, &TestDecomp, "tscoll/cnormtst/TestDecomp");
-    addTest(root, &TestCompatDecomp, "tscoll/cnormtst/TestCompatDecomp");
-    addTest(root, &TestCanonDecompCompose, "tscoll/cnormtst/TestCanonDecompCompose");
-    addTest(root, &TestCompatDecompCompose, "tscoll/cnormtst/CompatDecompCompose");
-    addTest(root, &TestNull, "tscoll/cnormtst/TestNull");
-    addTest(root, &TestQuickCheck, "tscoll/cnormtst/TestQuickCheck");
-    addTest(root, &TestQuickCheckPerCP, "tscoll/cnormtst/TestQuickCheckPerCP");
-    addTest(root, &TestIsNormalized, "tscoll/cnormtst/TestIsNormalized");
-    addTest(root, &TestCheckFCD, "tscoll/cnormtst/TestCheckFCD");
-    addTest(root, &TestNormCoverage, "tscoll/cnormtst/TestNormCoverage");
-    addTest(root, &TestConcatenate, "tscoll/cnormtst/TestConcatenate");
-    addTest(root, &TestNextPrevious, "tscoll/cnormtst/TestNextPrevious");
-    addTest(root, &TestFCNFKCClosure, "tscoll/cnormtst/TestFCNFKCClosure");
-    addTest(root, &TestComposition, "tscoll/cnormtst/TestComposition");
+    addTest(root, &TestAPI, "tsnorm/cnormtst/TestAPI");
+    addTest(root, &TestDecomp, "tsnorm/cnormtst/TestDecomp");
+    addTest(root, &TestCompatDecomp, "tsnorm/cnormtst/TestCompatDecomp");
+    addTest(root, &TestCanonDecompCompose, "tsnorm/cnormtst/TestCanonDecompCompose");
+    addTest(root, &TestCompatDecompCompose, "tsnorm/cnormtst/CompatDecompCompose");
+    addTest(root, &TestNull, "tsnorm/cnormtst/TestNull");
+    addTest(root, &TestQuickCheck, "tsnorm/cnormtst/TestQuickCheck");
+    addTest(root, &TestQuickCheckPerCP, "tsnorm/cnormtst/TestQuickCheckPerCP");
+    addTest(root, &TestIsNormalized, "tsnorm/cnormtst/TestIsNormalized");
+    addTest(root, &TestCheckFCD, "tsnorm/cnormtst/TestCheckFCD");
+    addTest(root, &TestNormCoverage, "tsnorm/cnormtst/TestNormCoverage");
+    addTest(root, &TestConcatenate, "tsnorm/cnormtst/TestConcatenate");
+    addTest(root, &TestNextPrevious, "tsnorm/cnormtst/TestNextPrevious");
+    addTest(root, &TestFCNFKCClosure, "tsnorm/cnormtst/TestFCNFKCClosure");
+    addTest(root, &TestComposition, "tsnorm/cnormtst/TestComposition");
 }
 
 void TestDecomp() 
@@ -1334,17 +1334,6 @@ TestNextPrevious() {
         log_err("error unorm_next(U_MISPLACED_QUANTIFIER) %s\n", u_errorName(errorCode));
         return;
     }
-
-    /* missing pErrorCode */
-    buffer[0]=5;
-    iter.index=1;
-    length=unorm_next(&iter, buffer, sizeof(buffer)/U_SIZEOF_UCHAR,
-                      UNORM_NFD, 0, TRUE, NULL,
-                      NULL);
-    if(iter.index!=1 || buffer[0]!=5) {
-        log_err("error unorm_next(pErrorCode==NULL) %s\n", u_errorName(errorCode));
-        return;
-    }
 }
 
 static void
@@ -1478,18 +1467,14 @@ TestComposition(void) {
     } cases[]={
         /*
          * special cases for UAX #15 bug
-         * see Unicode Public Review Issue #29
-         * at http://www.unicode.org/review/resolved-pri.html#pri29
+         * see Unicode Corrigendum #5: Normalization Idempotency
+         * at http://unicode.org/versions/corrigendum5.html
+         * (was Public Review Issue #29)
          */
         { UNORM_NFC, 0, { 0x1100, 0x0300, 0x1161, 0x0327 },         { 0x1100, 0x0300, 0x1161, 0x0327 } },
         { UNORM_NFC, 0, { 0x1100, 0x0300, 0x1161, 0x0327, 0x11a8 }, { 0x1100, 0x0300, 0x1161, 0x0327, 0x11a8 } },
         { UNORM_NFC, 0, { 0xac00, 0x0300, 0x0327, 0x11a8 },         { 0xac00, 0x0327, 0x0300, 0x11a8 } },
         { UNORM_NFC, 0, { 0x0b47, 0x0300, 0x0b3e },                 { 0x0b47, 0x0300, 0x0b3e } },
-
-        { UNORM_NFC, UNORM_BEFORE_PRI_29, { 0x1100, 0x0300, 0x1161, 0x0327 },           { 0xac00, 0x0300, 0x0327 } },
-        { UNORM_NFC, UNORM_BEFORE_PRI_29, { 0x1100, 0x0300, 0x1161, 0x0327, 0x11a8 },   { 0xac01, 0x0300, 0x0327 } },
-        { UNORM_NFC, UNORM_BEFORE_PRI_29, { 0xac00, 0x0300, 0x0327, 0x11a8 },           { 0xac01, 0x0327, 0x0300 } },
-        { UNORM_NFC, UNORM_BEFORE_PRI_29, { 0x0b47, 0x0300, 0x0b3e },                   { 0x0b4b, 0x0300 } }
 
         /* TODO: add test cases for UNORM_FCC here (j2151) */
     };

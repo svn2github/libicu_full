@@ -105,7 +105,7 @@ class Hashtable;
   * <p>The sentence pattern for French, where the gender of the person affects
   * the form of the participle, uses a select format based on argument 1:</p>
   *
-  * <pre>{0} est {1, select, female {all&#u00E9;e} other {all&#u00E9;}} &#u00E9; {2}.</pre>
+  * <pre>{0} est {1, select, female {all&#u00E9;e} other {all&#u00E9;}} &#u00E0; {2}.</pre>
   *
   * <p>Patterns can be nested, so that it's possible to handle  interactions of
   * number and gender where necessary. For example, if the above  sentence should
@@ -117,7 +117,7 @@ class Hashtable;
   * <pre>{0} {1, plural, 
   *                 one {est {2, select, female {all&#u00E9;e} other  {all&#u00E9;}}}
   *                 other {sont {2, select, female {all&#u00E9;es} other {all&#u00E9;s}}}
-  *          }&#u00E9; {3}.</pre>
+  *          }&#u00E0; {3}.</pre>
   *
   * <h4>Patterns and Their Interpretation</h4>
   *
@@ -275,7 +275,7 @@ public:
     virtual Format* clone(void) const;
 
     /**
-     * "Format an object to produce a string. 
+     * Format an object to produce a string. 
      * This method handles keyword strings. 
      * If the Formattable object is not a <code>UnicodeString</ code>, 
      * then it returns a failing UErrorCode.

@@ -1815,7 +1815,7 @@ void RBBITest::TestThaiBreaks() {
     UChar c[]= { 
             0x0E01, 0x0E39, 0x0020, 0x0E01, 0x0E34, 0x0E19, 0x0E01, 0x0E38, 0x0E49, 0x0E07, 0x0020, 0x0E1B, 
             0x0E34, 0x0E49, 0x0E48, 0x0E07, 0x0E2D, 0x0E22, 0x0E39, 0x0E48, 0x0E43, 0x0E19, 
-            0x0E16, 0x0E49, 0x0E33
+            0x0E16, 0x0E49, 0x0E33, 0x0000
     };
     int32_t expectedWordResult[] = {
             2, 3, 6, 10, 11, 15, 17, 20, 22
@@ -1823,7 +1823,8 @@ void RBBITest::TestThaiBreaks() {
     int32_t expectedLineResult[] = {
             3, 6, 11, 15, 17, 20, 22
     };
-    int32_t size = sizeof(c)/sizeof(UChar);
+
+    int32_t size = u_strlen(c);
     UnicodeString text=UnicodeString(c);
     
     b = BreakIterator::createWordInstance(locale, status);
@@ -2012,18 +2013,21 @@ void RBBITest::TestDictRules() {
     UParseError parseError;
 
     RuleBasedBreakIterator bi(rules, parseError, status);
-    TEST_ASSERT_SUCCESS(status);
-    UnicodeString utext = text;
-    bi.setText(utext);
-    int32_t position;
-    int32_t loops;
-    for (loops = 0; loops<10; loops++) {
-        position = bi.next();
-        if (position == RuleBasedBreakIterator::DONE) {
-            break;
+    if (U_SUCCESS(status)) {
+        UnicodeString utext = text;
+        bi.setText(utext);
+        int32_t position;
+        int32_t loops;
+        for (loops = 0; loops<10; loops++) {
+            position = bi.next();
+            if (position == RuleBasedBreakIterator::DONE) {
+                break;
+            }
         }
+        TEST_ASSERT(loops == 1);
+    } else {
+        dataerrln("Error creating RuleBasedBreakIterator: %s", u_errorName(status));
     }
-    TEST_ASSERT(loops == 1);
 }
 
 
@@ -3312,8 +3316,7 @@ RBBILineMonkey::RBBILineMonkey()
     fHY    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=HY}]"), status);
     fH2    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=H2}]"), status);
     fH3    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=H3}]"), status);
-    fCL    = new UnicodeSet(UNICODE_STRING_SIMPLE("[[\\p{Line_break=CL}]-[\\u0029\\u005d]]"), status); // TODO: fix when props are updated.
-    fCP    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\u0029\\u005d]"), status);
+    fCL    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=CL}]"), status);
     fCP    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=CP}]"), status);
     fEX    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=EX}]"), status);
     fIN    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=IN}]"), status);
