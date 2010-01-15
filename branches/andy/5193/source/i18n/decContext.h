@@ -27,6 +27,7 @@
  *
  *    Remove a few compiler warnings.
  */
+#include "unicode/utypes.h"
 
 /*                                                                    */
 /* Context variables must always have valid values:                   */
@@ -54,7 +55,7 @@
   #define DECCAUTHOR   "Mike Cowlishaw"               /* Who to blame */
 
   #if !defined(int32_t)
-    #include <stdint.h>            /* C99 standard integers           */
+/* #include <stdint.h>   */         /* C99 standard integers           */
   #endif
   #include <stdio.h>               /* for printf, etc.                */
   #include <signal.h>              /* for traps                       */
