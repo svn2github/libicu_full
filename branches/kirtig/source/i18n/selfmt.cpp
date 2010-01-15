@@ -259,22 +259,21 @@ SelectFormat::format(const Formattable& obj,
 }
 
 UnicodeString&
-SelectFormat::format(UnicodeString sInput,
+SelectFormat::format(const UnicodeString& sInput,
                      UnicodeString& appendTo, 
                      FieldPosition& pos,
-                     UErrorCode& success) const {
+                     UErrorCode& status) const {
 
-    if (U_FAILURE(success)) return appendTo;
+    if (U_FAILURE(status)) return appendTo;
 
     //Check for the validity of the keyword
-    UnicodeString& addrKeyword = sInput;
-    if ( !checkValidKeyword(addrKeyword) ){
-        success = U_ILLEGAL_ARGUMENT_ERROR;
+    if ( !checkValidKeyword(sInput) ){
+        status = U_ILLEGAL_ARGUMENT_ERROR;
         return appendTo;
     }
 
     if (parsedValuesHash == NULL) {
-        success = U_INVALID_FORMAT_ERROR;
+        status = U_INVALID_FORMAT_ERROR;
         return appendTo;
     }
 
@@ -339,7 +338,7 @@ SelectFormat::checkSufficientDefinition() {
 }
 
 UBool
-SelectFormat::checkValidKeyword(UnicodeString argKeyword ) const{
+SelectFormat::checkValidKeyword(const UnicodeString& argKeyword ) const{
     UnicodeString keyword = UnicodeString();
     enum State{ startState, keywordState, pastKeywordState };
 
