@@ -50,7 +50,7 @@
 #include "tzfmttst.h"       // TimeZoneFormatTest
 #include "plurults.h"       // PluralRulesTest
 #include "plurfmts.h"       // PluralFormatTest
-#include "selfmts.h"     // SelectFormatTest
+#include "selfmts.h"        // SelectFormatTest
 #include "dtifmtts.h"       // DateIntervalFormatTest
 #include "tufmtts.h"        // TimeUnitTest
 
