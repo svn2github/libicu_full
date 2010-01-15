@@ -55,16 +55,16 @@ class Hashtable;
   * The gender only affects pronouns: "he", "she", "it", "they".
   *
   * <li>German differs from English in that the gender of nouns is  rather
-  * arbitrary, even for nouns referring to people ("Mädchen", girl, is  neutral).
+  * arbitrary, even for nouns referring to people ("M&#u00E4;dchen", girl, is  neutral).
   * The gender affects pronouns ("er", "sie", "es"), articles ("der",  "die",
-  * "das"), and adjective forms ("guter Mann", "gute Frau", "gutes  Mädchen").
+  * "das"), and adjective forms ("guter Mann", "gute Frau", "gutes  M&#u00E4;dchen").
   *
   * <li>French has only two genders; as in German the gender of nouns
   * is rather arbitrary – for sun and moon, the genders
   * are the opposite of those in German. The gender affects
   * pronouns ("il", "elle"), articles ("le", "la"),
   * adjective forms ("bon", "bonne"), and sometimes
-  * verb forms ("allé", "allée").
+  * verb forms ("all&#u00E9;", "all&#u00E9;e").
   *
   * <li>Polish distinguishes five genders (or noun classes),
   * human masculine, animate non-human masculine, inanimate masculine,
@@ -105,7 +105,7 @@ class Hashtable;
   * <p>The sentence pattern for French, where the gender of the person affects
   * the form of the participle, uses a select format based on argument 1:</p>
   *
-  * <pre>{0} est {1, select, female {allée} other {allé}} à {2}.</pre>
+  * <pre>{0} est {1, select, female {all&#u00E9;e} other {all&#u00E9;}} &#u00E9; {2}.</pre>
   *
   * <p>Patterns can be nested, so that it's possible to handle  interactions of
   * number and gender where necessary. For example, if the above  sentence should
@@ -115,9 +115,9 @@ class Hashtable;
   * argument 3 the city name):</p>
   *
   * <pre>{0} {1, plural, 
-  *                 one {est {2, select, female {allée} other  {allé}}}
-  *                 other {sont {2, select, female {allées} other {allés}}}
-  *          }à {3}.</pre>
+  *                 one {est {2, select, female {all&#u00E9;e} other  {all&#u00E9;}}}
+  *                 other {sont {2, select, female {all&#u00E9;es} other {all&#u00E9;s}}}
+  *          }&#u00E9; {3}.</pre>
   *
   * <h4>Patterns and Their Interpretation</h4>
   *
@@ -157,7 +157,7 @@ class Hashtable;
   * <pre>
   *
   * UErrorCode status = U_ZERO_ERROR;
-  * MessageFormat *msgFmt = new MessageFormat(UnicodeString("{0} est  {1, select, female {allée} other {allé}} à Paris."), Locale("fr"),  status);
+  * MessageFormat *msgFmt = new MessageFormat(UnicodeString("{0} est  {1, select, female {all&#u00E9;e} other {all&#u00E9;}} &#u00E0; Paris."), Locale("fr"),  status);
   * if (U_FAILURE(status)) {
   *       return;
   * }
@@ -172,7 +172,7 @@ class Hashtable;
   *
   * </pre>
   * Produces the output:<br/>
-  * <code>Input is Kirti,female and result is: Kirti est allée à  Paris.</code>
+  * <code>Input is Kirti,female and result is: Kirti est all&#u00E9;e &#u00E0; Paris.</code>
   *
   * @draft ICU 4.4
   */
@@ -226,35 +226,20 @@ public:
     /**
      * Selects the phrase for  the given keyword
      *
-     * @param keyword   a string (UnicodeString) The keyword for which to  
-     *                 select a phrase . 
-     * @param appendTo output parameter to receive result.
-     *                 result is appended to existing contents.
-     * @param success  output param set to success/failure code on exit, which
-     *                 must not indicate a failure before the function call.
-     * @return         Reference to 'appendTo' parameter. 
-     * @draft ICU 4.4
-     */
-    UnicodeString& format(UnicodeString keyword, UnicodeString& appendTo,UErrorCode& success) const;
-
-    /**
-     * Selects the phrase for  the given keyword
-     *
-     * @param keyword   a string (UnicodeString) The keyword for which to  
-     *                 select a phrase. 
+     * @param keyword  The keyword that is used to select an alternative. 
      * @param appendTo output parameter to receive result.
      *                 result is appended to existing contents.
      * @param pos      On input: an alignment field, if desired.
      *                 On output: the offsets of the alignment field.
-     * @param success  output param set to success/failure code on exit, which
+     * @param status  output param set to success/failure code on exit, which
      *                 must not indicate a failure before the function call.
      * @return         Reference to 'appendTo' parameter. 
      * @draft ICU 4.4
      */
-    UnicodeString& format(UnicodeString keyword,
+    UnicodeString& format(const UnicodeString& keyword,
                             UnicodeString& appendTo,
                             FieldPosition& pos,
-                            UErrorCode& success) const;
+                            UErrorCode& status) const;
 
     /**
      * Assignment operator
@@ -290,9 +275,12 @@ public:
     virtual Format* clone(void) const;
 
     /**
-     * Redeclared Format method.
+     * "Format an object to produce a string. 
+     * This method handles keyword strings. 
+     * If the Formattable object is not a <code>UnicodeString</ code>, 
+     * then it returns a failing UErrorCode.
      *
-     * @param obj       The object to be formatted into a string.
+     * @param obj       A keyword string that is used to select an alternative. 
      * @param appendTo  output parameter to receive result.
      *                  Result is appended to existing contents.
      * @param pos       On input: an alignment field, if desired.
@@ -301,44 +289,44 @@ public:
      * @return          Reference to 'appendTo' parameter.
      * @draft ICU 4.4
      */
-   UnicodeString& format(const Formattable& obj,
+    UnicodeString& format(const Formattable& obj,
                          UnicodeString& appendTo,
                          FieldPosition& pos,
                          UErrorCode& status) const;
 
-   /**
-    * Returns the pattern from applyPattern() or constructor.
-    *
-    * @param  appendTo  output parameter to receive result.
-    *                  Result is appended to existing contents.
-    * @return the UnicodeString with inserted pattern.
-    * @draft ICU 4.4
-    */
-   UnicodeString& toPattern(UnicodeString& appendTo);
+    /**
+     * Returns the pattern from applyPattern() or constructor.
+     *
+     * @param  appendTo  output parameter to receive result.
+     *                  Result is appended to existing contents.
+     * @return the UnicodeString with inserted pattern.
+     * @draft ICU 4.4
+     */
+    UnicodeString& toPattern(UnicodeString& appendTo);
 
-   /**
-    * This method is not yet supported by <code>SelectFormat</code>.
-    * <P>
-    * Before calling, set parse_pos.index to the offset you want to start
-    * parsing at in the source. After calling, parse_pos.index is the end of
-    * the text you parsed. If error occurs, index is unchanged.
-    * <P>
-    * When parsing, leading whitespace is discarded (with a successful parse),
-    * while trailing whitespace is left as is.
-    * <P>
-    * See Format::parseObject() for more.
-    *
-    * @param source    The string to be parsed into an object.
-    * @param result    Formattable to be set to the parse result.
-    *                  If parse fails, return contents are undefined.
-    * @param parse_pos The position to start parsing at. Upon return
-    *                  this param is set to the position after the
-    *                  last character successfully parsed. If the
-    *                  source is not parsed successfully, this param
-    *                  will remain unchanged.
-    * @draft ICU 4.4
-    */
-   virtual void parseObject(const UnicodeString& source,
+    /**
+     * This method is not yet supported by <code>SelectFormat</code>.
+     * <P>
+     * Before calling, set parse_pos.index to the offset you want to start
+     * parsing at in the source. After calling, parse_pos.index is the end of
+     * the text you parsed. If error occurs, index is unchanged.
+     * <P>
+     * When parsing, leading whitespace is discarded (with a successful parse),
+     * while trailing whitespace is left as is.
+     * <P>
+     * See Format::parseObject() for more.
+     *
+     * @param source     The string to be parsed into an object.
+     * @param result     Formattable to be set to the parse result.
+     *     If parse fails, return contents are undefined.
+     * @param parse_pos The position to start parsing at. Upon return
+     *     this param is set to the position after the
+     *     last character successfully parsed. If the
+     *     source is not parsed successfully, this param
+     *     will remain unchanged.
+     * @draft ICU 4.4
+     */
+    virtual void parseObject(const UnicodeString& source,
                             Formattable& result,
                             ParsePosition& parse_pos) const;
 
@@ -351,7 +339,7 @@ public:
      * ICU "poor man's RTTI", returns a UClassID for the actual class.
      * @draft ICU 4.4
      */
-     virtual UClassID getDynamicClassID() const;
+    virtual UClassID getDynamicClassID() const;
 
 private:
     typedef enum characterClass{
@@ -374,7 +362,7 @@ private:
     //Checks if the "other" keyword is present in pattern
     UBool checkSufficientDefinition();
     //Checks if the keyword passed is valid            
-    UBool checkValidKeyword(UnicodeString argKeyword) const;
+    UBool checkValidKeyword(const UnicodeString& argKeyword) const;
     void parsingFailure();
     void copyHashtable(Hashtable *other, UErrorCode& status);
 };
