@@ -16,6 +16,18 @@
 /*   Mike Cowlishaw, IBM Fellow                                       */
 /*   IBM UK, PO Box 31, Birmingham Road, Warwick CV34 5JL, UK         */
 /* ------------------------------------------------------------------ */
+
+/* Modified version, for use from within ICU.
+ *    Renamed public functions, to avoid an unwanted export of the 
+ *    standard names from the ICU library.
+ *
+ *    Use ICU's uprv_malloc() and uprv_free()
+ *
+ *    Revert comment syntax to plain C
+ *
+ *    Remove a few compiler warnings.
+ */
+
 /*                                                                    */
 /* Context variables must always have valid values:                   */
 /*                                                                    */
@@ -234,21 +246,21 @@
   #define DEC_INIT_DECQUAD    DEC_INIT_DECIMAL128
 
   /* decContext routines                                              */
-  extern decContext  * decContextClearStatus(decContext *, uint32_t);
-  extern decContext  * decContextDefault(decContext *, int32_t);
-  extern enum rounding decContextGetRounding(decContext *);
-  extern uint32_t      decContextGetStatus(decContext *);
-  extern decContext  * decContextRestoreStatus(decContext *, uint32_t, uint32_t);
-  extern uint32_t      decContextSaveStatus(decContext *, uint32_t);
-  extern decContext  * decContextSetRounding(decContext *, enum rounding);
-  extern decContext  * decContextSetStatus(decContext *, uint32_t);
-  extern decContext  * decContextSetStatusFromString(decContext *, const char *);
-  extern decContext  * decContextSetStatusFromStringQuiet(decContext *, const char *);
-  extern decContext  * decContextSetStatusQuiet(decContext *, uint32_t);
-  extern const char  * decContextStatusToString(const decContext *);
-  extern int32_t       decContextTestEndian(uint8_t);
-  extern uint32_t      decContextTestSavedStatus(uint32_t, uint32_t);
-  extern uint32_t      decContextTestStatus(decContext *, uint32_t);
-  extern decContext  * decContextZeroStatus(decContext *);
+  extern decContext  * uprv_decContextClearStatus(decContext *, uint32_t);
+  extern decContext  * uprv_decContextDefault(decContext *, int32_t);
+  extern enum rounding uprv_decContextGetRounding(decContext *);
+  extern uint32_t      uprv_decContextGetStatus(decContext *);
+  extern decContext  * uprv_decContextRestoreStatus(decContext *, uint32_t, uint32_t);
+  extern uint32_t      uprv_decContextSaveStatus(decContext *, uint32_t);
+  extern decContext  * uprv_decContextSetRounding(decContext *, enum rounding);
+  extern decContext  * uprv_decContextSetStatus(decContext *, uint32_t);
+  extern decContext  * uprv_decContextSetStatusFromString(decContext *, const char *);
+  extern decContext  * uprv_decContextSetStatusFromStringQuiet(decContext *, const char *);
+  extern decContext  * uprv_decContextSetStatusQuiet(decContext *, uint32_t);
+  extern const char  * uprv_decContextStatusToString(const decContext *);
+  extern int32_t       uprv_decContextTestEndian(uint8_t);
+  extern uint32_t      uprv_decContextTestSavedStatus(uint32_t, uint32_t);
+  extern uint32_t      uprv_decContextTestStatus(decContext *, uint32_t);
+  extern decContext  * uprv_decContextZeroStatus(decContext *);
 
 #endif

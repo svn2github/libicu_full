@@ -51,7 +51,7 @@ const uInt DECPOWERS[10]={1, 10, 100, 1000, 10000, 100000, 1000000,
 /*                                                                    */
 /* No error is possible.                                              */
 /* ------------------------------------------------------------------ */
-decContext *decContextClearStatus(decContext *context, uInt mask) {
+decContext *uprv_decContextClearStatus(decContext *context, uInt mask) {
   context->status&=~mask;
   return context;
   } /* decContextClearStatus  */
@@ -69,7 +69,7 @@ decContext *decContextClearStatus(decContext *context, uInt mask) {
 /*      Invalid_operation set in the status field.                    */
 /*  returns a context structure with the appropriate initial values.  */
 /* ------------------------------------------------------------------ */
-decContext * decContextDefault(decContext *context, Int kind) {
+decContext * uprv_decContextDefault(decContext *context, Int kind) {
   /* set defaults...  */
   context->digits=9;                         /* 9 digits  */
   context->emax=DEC_MAX_EMAX;                /* 9-digit exponents  */
@@ -121,7 +121,7 @@ decContext * decContextDefault(decContext *context, Int kind) {
 
     default:                                 /* invalid Kind  */
       /* use defaults, and ..  */
-      decContextSetStatus(context, DEC_Invalid_operation); /* trap  */
+      uprv_decContextSetStatus(context, DEC_Invalid_operation); /* trap  */
     }
 
   return context;} /* decContextDefault  */
@@ -134,7 +134,7 @@ decContext * decContextDefault(decContext *context, Int kind) {
 /*                                                                    */
 /* No error is possible.                                              */
 /* ------------------------------------------------------------------ */
-enum rounding decContextGetRounding(decContext *context) {
+enum rounding uprv_decContextGetRounding(decContext *context) {
   return context->round;
   } /* decContextGetRounding  */
 
@@ -146,7 +146,7 @@ enum rounding decContextGetRounding(decContext *context) {
 /*                                                                    */
 /* No error is possible.                                              */
 /* ------------------------------------------------------------------ */
-uInt decContextGetStatus(decContext *context) {
+uInt uprv_decContextGetStatus(decContext *context) {
   return context->status;
   } /* decContextGetStatus  */
 
@@ -162,7 +162,7 @@ uInt decContextGetStatus(decContext *context) {
 /*                                                                    */
 /* No error is possible.                                              */
 /* ------------------------------------------------------------------ */
-decContext *decContextRestoreStatus(decContext *context,
+decContext *uprv_decContextRestoreStatus(decContext *context,
                                     uInt newstatus, uInt mask) {
   context->status&=~mask;               /* clear the selected bits  */
   context->status|=(mask&newstatus);    /* or in the new bits  */
@@ -179,7 +179,7 @@ decContext *decContextRestoreStatus(decContext *context,
 /*                                                                    */
 /* No error is possible.                                              */
 /* ------------------------------------------------------------------ */
-uInt decContextSaveStatus(decContext *context, uInt mask) {
+uInt uprv_decContextSaveStatus(decContext *context, uInt mask) {
   return context->status&mask;
   } /* decContextSaveStatus  */
 
@@ -192,7 +192,7 @@ uInt decContextSaveStatus(decContext *context, uInt mask) {
 /*                                                                    */
 /* No error is possible.                                              */
 /* ------------------------------------------------------------------ */
-decContext *decContextSetRounding(decContext *context,
+decContext *uprv_decContextSetRounding(decContext *context,
                                   enum rounding newround) {
   context->round=newround;
   return context;
@@ -208,7 +208,7 @@ decContext *decContextSetRounding(decContext *context,
 /* Control may never return from this routine, if there is a signal   */
 /* handler and it takes a long jump.                                  */
 /* ------------------------------------------------------------------ */
-decContext * decContextSetStatus(decContext *context, uInt status) {
+decContext * uprv_decContextSetStatus(decContext *context, uInt status) {
   context->status|=status;
   if (status & context->traps) raise(SIGFPE);
   return context;} /* decContextSetStatus  */
@@ -227,38 +227,38 @@ decContext * decContextSetStatus(decContext *context, uInt status) {
 /*    DEC_Condition_MU or is not recognized.  In these cases NULL is  */
 /*    returned.                                                       */
 /* ------------------------------------------------------------------ */
-decContext * decContextSetStatusFromString(decContext *context,
+decContext * uprv_decContextSetStatusFromString(decContext *context,
                                            const char *string) {
   if (strcmp(string, DEC_Condition_CS)==0)
-    return decContextSetStatus(context, DEC_Conversion_syntax);
+    return uprv_decContextSetStatus(context, DEC_Conversion_syntax);
   if (strcmp(string, DEC_Condition_DZ)==0)
-    return decContextSetStatus(context, DEC_Division_by_zero);
+    return uprv_decContextSetStatus(context, DEC_Division_by_zero);
   if (strcmp(string, DEC_Condition_DI)==0)
-    return decContextSetStatus(context, DEC_Division_impossible);
+    return uprv_decContextSetStatus(context, DEC_Division_impossible);
   if (strcmp(string, DEC_Condition_DU)==0)
-    return decContextSetStatus(context, DEC_Division_undefined);
+    return uprv_decContextSetStatus(context, DEC_Division_undefined);
   if (strcmp(string, DEC_Condition_IE)==0)
-    return decContextSetStatus(context, DEC_Inexact);
+    return uprv_decContextSetStatus(context, DEC_Inexact);
   if (strcmp(string, DEC_Condition_IS)==0)
-    return decContextSetStatus(context, DEC_Insufficient_storage);
+    return uprv_decContextSetStatus(context, DEC_Insufficient_storage);
   if (strcmp(string, DEC_Condition_IC)==0)
-    return decContextSetStatus(context, DEC_Invalid_context);
+    return uprv_decContextSetStatus(context, DEC_Invalid_context);
   if (strcmp(string, DEC_Condition_IO)==0)
-    return decContextSetStatus(context, DEC_Invalid_operation);
+    return uprv_decContextSetStatus(context, DEC_Invalid_operation);
   #if DECSUBSET
   if (strcmp(string, DEC_Condition_LD)==0)
-    return decContextSetStatus(context, DEC_Lost_digits);
+    return uprv_decContextSetStatus(context, DEC_Lost_digits);
   #endif
   if (strcmp(string, DEC_Condition_OV)==0)
-    return decContextSetStatus(context, DEC_Overflow);
+    return uprv_decContextSetStatus(context, DEC_Overflow);
   if (strcmp(string, DEC_Condition_PA)==0)
-    return decContextSetStatus(context, DEC_Clamped);
+    return uprv_decContextSetStatus(context, DEC_Clamped);
   if (strcmp(string, DEC_Condition_RO)==0)
-    return decContextSetStatus(context, DEC_Rounded);
+    return uprv_decContextSetStatus(context, DEC_Rounded);
   if (strcmp(string, DEC_Condition_SU)==0)
-    return decContextSetStatus(context, DEC_Subnormal);
+    return uprv_decContextSetStatus(context, DEC_Subnormal);
   if (strcmp(string, DEC_Condition_UN)==0)
-    return decContextSetStatus(context, DEC_Underflow);
+    return uprv_decContextSetStatus(context, DEC_Underflow);
   if (strcmp(string, DEC_Condition_ZE)==0)
     return context;
   return NULL;  /* Multiple status, or unknown  */
@@ -278,38 +278,38 @@ decContext * decContextSetStatusFromString(decContext *context,
 /*    DEC_Condition_MU or is not recognized.  In these cases NULL is  */
 /*    returned.                                                       */
 /* ------------------------------------------------------------------ */
-decContext * decContextSetStatusFromStringQuiet(decContext *context,
+decContext * uprv_decContextSetStatusFromStringQuiet(decContext *context,
                                                 const char *string) {
   if (strcmp(string, DEC_Condition_CS)==0)
-    return decContextSetStatusQuiet(context, DEC_Conversion_syntax);
+    return uprv_decContextSetStatusQuiet(context, DEC_Conversion_syntax);
   if (strcmp(string, DEC_Condition_DZ)==0)
-    return decContextSetStatusQuiet(context, DEC_Division_by_zero);
+    return uprv_decContextSetStatusQuiet(context, DEC_Division_by_zero);
   if (strcmp(string, DEC_Condition_DI)==0)
-    return decContextSetStatusQuiet(context, DEC_Division_impossible);
+    return uprv_decContextSetStatusQuiet(context, DEC_Division_impossible);
   if (strcmp(string, DEC_Condition_DU)==0)
-    return decContextSetStatusQuiet(context, DEC_Division_undefined);
+    return uprv_decContextSetStatusQuiet(context, DEC_Division_undefined);
   if (strcmp(string, DEC_Condition_IE)==0)
-    return decContextSetStatusQuiet(context, DEC_Inexact);
+    return uprv_decContextSetStatusQuiet(context, DEC_Inexact);
   if (strcmp(string, DEC_Condition_IS)==0)
-    return decContextSetStatusQuiet(context, DEC_Insufficient_storage);
+    return uprv_decContextSetStatusQuiet(context, DEC_Insufficient_storage);
   if (strcmp(string, DEC_Condition_IC)==0)
-    return decContextSetStatusQuiet(context, DEC_Invalid_context);
+    return uprv_decContextSetStatusQuiet(context, DEC_Invalid_context);
   if (strcmp(string, DEC_Condition_IO)==0)
-    return decContextSetStatusQuiet(context, DEC_Invalid_operation);
+    return uprv_decContextSetStatusQuiet(context, DEC_Invalid_operation);
   #if DECSUBSET
   if (strcmp(string, DEC_Condition_LD)==0)
-    return decContextSetStatusQuiet(context, DEC_Lost_digits);
+    return uprv_decContextSetStatusQuiet(context, DEC_Lost_digits);
   #endif
   if (strcmp(string, DEC_Condition_OV)==0)
-    return decContextSetStatusQuiet(context, DEC_Overflow);
+    return uprv_decContextSetStatusQuiet(context, DEC_Overflow);
   if (strcmp(string, DEC_Condition_PA)==0)
-    return decContextSetStatusQuiet(context, DEC_Clamped);
+    return uprv_decContextSetStatusQuiet(context, DEC_Clamped);
   if (strcmp(string, DEC_Condition_RO)==0)
-    return decContextSetStatusQuiet(context, DEC_Rounded);
+    return uprv_decContextSetStatusQuiet(context, DEC_Rounded);
   if (strcmp(string, DEC_Condition_SU)==0)
-    return decContextSetStatusQuiet(context, DEC_Subnormal);
+    return uprv_decContextSetStatusQuiet(context, DEC_Subnormal);
   if (strcmp(string, DEC_Condition_UN)==0)
-    return decContextSetStatusQuiet(context, DEC_Underflow);
+    return uprv_decContextSetStatusQuiet(context, DEC_Underflow);
   if (strcmp(string, DEC_Condition_ZE)==0)
     return context;
   return NULL;  /* Multiple status, or unknown  */
@@ -324,7 +324,7 @@ decContext * decContextSetStatusFromStringQuiet(decContext *context,
 /*                                                                    */
 /* No error is possible.                                              */
 /* ------------------------------------------------------------------ */
-decContext * decContextSetStatusQuiet(decContext *context, uInt status) {
+decContext * uprv_decContextSetStatusQuiet(decContext *context, uInt status) {
   context->status|=status;
   return context;} /* decContextSetStatusQuiet  */
 
@@ -336,7 +336,7 @@ decContext * decContextSetStatusQuiet(decContext *context, uInt status) {
 /*  returns a constant string describing the condition.  If multiple  */
 /*    (or no) flags are set, a generic constant message is returned.  */
 /* ------------------------------------------------------------------ */
-const char *decContextStatusToString(const decContext *context) {
+const char *uprv_decContextStatusToString(const decContext *context) {
   Int status=context->status;
 
   /* test the five IEEE first, as some of the others are ambiguous when  */
@@ -374,7 +374,7 @@ const char *decContextStatusToString(const decContext *context) {
 /*                                                                    */
 /* No error is possible.                                              */
 /* ------------------------------------------------------------------ */
-Int decContextTestEndian(Flag quiet) {
+Int uprv_decContextTestEndian(Flag quiet) {
   Int res=0;                  /* optimist  */
   uInt dle=(uInt)DECLITEND;   /* unsign  */
   if (dle>1) dle=1;           /* ensure 0 or 1  */
@@ -402,7 +402,7 @@ Int decContextTestEndian(Flag quiet) {
 /*                                                                    */
 /* No error is possible.                                              */
 /* ------------------------------------------------------------------ */
-uInt decContextTestSavedStatus(uInt oldstatus, uInt mask) {
+uInt uprv_decContextTestSavedStatus(uInt oldstatus, uInt mask) {
   return (oldstatus&mask)!=0;
   } /* decContextTestSavedStatus  */
 
@@ -416,7 +416,7 @@ uInt decContextTestSavedStatus(uInt oldstatus, uInt mask) {
 /*                                                                    */
 /* No error is possible.                                              */
 /* ------------------------------------------------------------------ */
-uInt decContextTestStatus(decContext *context, uInt mask) {
+uInt uprv_decContextTestStatus(decContext *context, uInt mask) {
   return (context->status&mask)!=0;
   } /* decContextTestStatus  */
 
@@ -428,7 +428,7 @@ uInt decContextTestStatus(decContext *context, uInt mask) {
 /*                                                                    */
 /* No error is possible.                                              */
 /* ------------------------------------------------------------------ */
-decContext *decContextZeroStatus(decContext *context) {
+decContext *uprv_decContextZeroStatus(decContext *context) {
   context->status=0;
   return context;
   } /* decContextZeroStatus  */

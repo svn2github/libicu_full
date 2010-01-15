@@ -35,6 +35,7 @@
 #include "unicode/format.h"
 #include "unicode/unum.h" // UNumberFormatStyle
 #include "unicode/locid.h"
+#include "unicode/stringpiece.h"
 
 U_NAMESPACE_BEGIN
 
@@ -450,8 +451,6 @@ public:
      * http://speleotrove.com/decimal
      *
      * @param number    The unformatted number, as a string, to be formatted.
-     * @param length    The length of the unformatted number string, or -1 for
-     *                  a nul-terminated string.
      * @param appendTo  Output parameter to receive result.
      *                  Result is appended to existing contents.
      * @param posIter   On return, can be used to iterate over positions
@@ -460,8 +459,7 @@ public:
      * @return          Reference to 'appendTo' parameter.
      * @draft 4.4
      */
-    virtual UnicodeString& format(const char *number,
-                                  int32_t length,
+    virtual UnicodeString& format(const StringPiece &number,
                                   UnicodeString& appendTo,
                                   FieldPositionIterator& posIter,
                                   UErrorCode& status) const;

@@ -17,6 +17,8 @@
 
 #include "unicode/utypes.h"
 #include "unicode/unistr.h"
+#include "unicode/stringpiece.h"
+
 /**
  * \file 
  * \brief C++ API: Formattable is a thin wrapper for primitive numeric types.
@@ -106,15 +108,13 @@ public:
      * Creates a Formattable object of type Decimal Number from a
      * char string pointer.
      *
-     * @param numberString the unformatted (not localized) string representation
+     * @param number  the unformatted (not localized) string representation
      *                     of the Decimal number.
-     * @param length  the length of the number string, or -1 if the string
-     *                is nul-terminated.
      * @param status  the error code.  Possible errors include U_INVALID_FORMAT_ERROR
      *                if the format of the string does not conform to that of a
      *                decimal number.
      */
-    Formattable(const char *numberString, int32_t length, UErrorCode &status);
+    Formattable(const StringPiece &number, UErrorCode &status);
 
     /**
      * Creates a Formattable object with a UnicodeString object to copy from.
@@ -464,13 +464,12 @@ public:
     const UObject*  getObject() const;
 
     /**
-     * Returns a pointer to the decimal number string contained within this
+     * Returns A string representation of the number contained within this
      * formattable, or NULL if this object does not contain numeric type.
-     * @return a  const char *pointer to the unformatted string representation 
-     * of a number, or NULL
+     * @return the unformatted string representation of a number.
      * @draft ICU 4.4
      */
-    const UObject*  getDecimalNumber() const;
+    const StringPiece &getDecimalNumber() const;
 
      /**
      * Sets the double value of this object and changes the type to
@@ -553,14 +552,11 @@ public:
      * http://speleotrove.com/decimal
      *
      * @param numberString  a string representation of the unformatted decimal number.
-     * @param length        the length of the number string, or -1 if the string
-     *                      is nul-terminated.
      * @param status        the error code.  Set to U_INVALID_FORMAT_ERROR if the
      *                      incoming string is not a valid decimal number.
      * @draft ICU 4.4
      */
-    void             setDecimalNumber(const char *numberString,
-                                      int32_t  length,
+    void             setDecimalNumber(const StringPiece &numberString,
                                       UErrorCode &status);
 
     /**

@@ -284,6 +284,9 @@ Formattable::operator==(const Formattable& that) const
             equal = objectEquals(fValue.fObject, that.fValue.fObject);
         }
         break;
+    case kDecimalNumber:
+        // TODO: implement this.
+        break;
     }
 
     return equal;

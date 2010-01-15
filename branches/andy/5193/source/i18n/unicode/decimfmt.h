@@ -36,6 +36,7 @@
 #include "unicode/numfmt.h"
 #include "unicode/locid.h"
 #include "unicode/fpositer.h"
+#include "unicode/stringpiece.h"
 
 union UHashTok;
 
@@ -933,14 +934,12 @@ public:
                                   UErrorCode& status) const;
 
     /**
-     * Format an decimal number.
+     * Format a decimal number.
      * The syntax of the unformatted number is a "numeric string"
      * as defined in the Decimal Arithmetic Specification, available at
      * http://speleotrove.com/decimal
      *
      * @param number    The unformatted number, as a string.
-     * @param length    The length of the unformatted number, or -1
-     *                  if the input is nul-terminated.
      * @param appendTo  Output parameter to receive result.
      *                  Result is appended to existing contents.
      * @param posIter   On return, can be used to iterate over positions
@@ -949,8 +948,7 @@ public:
      * @return          Reference to 'appendTo' parameter.
      * @draft 4.4
      */
-    virtual UnicodeString& format(const char *number,
-                                  int32_t length,
+    virtual UnicodeString& format(const StringPiece &number,
                                   UnicodeString& appendTo,
                                   FieldPositionIterator& posIter,
                                   UErrorCode& status) const;

@@ -321,7 +321,23 @@ NumberFormat::format(int64_t /* unused number */,
     return toAppendTo;
 }
 
-// -------------------------------------x
+// -------------------------------------
+// Default implementation sets unsupported error; subclasses should
+// override.
+
+UnicodeString&
+NumberFormat::format(const StringPiece & /* unused decimal number */,
+                     UnicodeString& toAppendTo,
+                     FieldPositionIterator& /* unused posIter */,
+                     UErrorCode& status) const
+{
+    if (!U_FAILURE(status)) {
+        status = U_UNSUPPORTED_ERROR;
+    }
+    return toAppendTo;
+}
+
+// -------------------------------------
 // Formats the number object and save the format
 // result in the toAppendTo string buffer.
 

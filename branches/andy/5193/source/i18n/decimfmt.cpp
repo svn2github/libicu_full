@@ -1183,6 +1183,17 @@ double DecimalFormat::round(double a, ERoundingMode mode, UBool isNegative) {
 }
 
 UnicodeString&
+DecimalFormat::format(const StringPiece &number,
+                      UnicodeString& toAppendTo,
+                      FieldPositionIterator &fieldPositions,
+                      UErrorCode &status) const
+{
+    // TODO:  implement it.
+    return toAppendTo;
+}
+
+
+UnicodeString&
 DecimalFormat::format(  const Formattable& obj,
                         UnicodeString& appendTo,
                         FieldPosition& fieldPosition,

@@ -17,6 +17,17 @@
 /*   IBM UK, PO Box 31, Birmingham Road, Warwick CV34 5JL, UK         */
 /* ------------------------------------------------------------------ */
 
+/* Modified version, for use from within ICU.
+ *    Renamed public functions, to avoid an unwanted export of the 
+ *    standard names from the ICU library.
+ *
+ *    Use ICU's uprv_malloc() and uprv_free()
+ *
+ *    Revert comment syntax to plain C
+ *
+ *    Remove a few compiler warnings.
+ */
+
 #if !defined(DECNUMBER)
   #define DECNUMBER
   #define DECNAME     "decNumber"                       /* Short name */
@@ -96,74 +107,74 @@
   /* decNumber public functions and macros                            */
   /* ---------------------------------------------------------------- */
   /* Conversions                                                      */
-  decNumber * decNumberFromInt32(decNumber *, int32_t);
-  decNumber * decNumberFromUInt32(decNumber *, uint32_t);
-  decNumber * decNumberFromString(decNumber *, const char *, decContext *);
-  char      * decNumberToString(const decNumber *, char *);
-  char      * decNumberToEngString(const decNumber *, char *);
-  uint32_t    decNumberToUInt32(const decNumber *, decContext *);
-  int32_t     decNumberToInt32(const decNumber *, decContext *);
-  uint8_t   * decNumberGetBCD(const decNumber *, uint8_t *);
-  decNumber * decNumberSetBCD(decNumber *, const uint8_t *, uint32_t);
+  decNumber * uprv_decNumberFromInt32(decNumber *, int32_t);
+  decNumber * uprv_decNumberFromUInt32(decNumber *, uint32_t);
+  decNumber * uprv_decNumberFromString(decNumber *, const char *, decContext *);
+  char      * uprv_decNumberToString(const decNumber *, char *);
+  char      * uprv_decNumberToEngString(const decNumber *, char *);
+  uint32_t    uprv_decNumberToUInt32(const decNumber *, decContext *);
+  int32_t     uprv_decNumberToInt32(const decNumber *, decContext *);
+  uint8_t   * uprv_decNumberGetBCD(const decNumber *, uint8_t *);
+  decNumber * uprv_decNumberSetBCD(decNumber *, const uint8_t *, uint32_t);
 
   /* Operators and elementary functions                               */
-  decNumber * decNumberAbs(decNumber *, const decNumber *, decContext *);
-  decNumber * decNumberAdd(decNumber *, const decNumber *, const decNumber *, decContext *);
-  decNumber * decNumberAnd(decNumber *, const decNumber *, const decNumber *, decContext *);
-  decNumber * decNumberCompare(decNumber *, const decNumber *, const decNumber *, decContext *);
-  decNumber * decNumberCompareSignal(decNumber *, const decNumber *, const decNumber *, decContext *);
-  decNumber * decNumberCompareTotal(decNumber *, const decNumber *, const decNumber *, decContext *);
-  decNumber * decNumberCompareTotalMag(decNumber *, const decNumber *, const decNumber *, decContext *);
-  decNumber * decNumberDivide(decNumber *, const decNumber *, const decNumber *, decContext *);
-  decNumber * decNumberDivideInteger(decNumber *, const decNumber *, const decNumber *, decContext *);
-  decNumber * decNumberExp(decNumber *, const decNumber *, decContext *);
-  decNumber * decNumberFMA(decNumber *, const decNumber *, const decNumber *, const decNumber *, decContext *);
-  decNumber * decNumberInvert(decNumber *, const decNumber *, decContext *);
-  decNumber * decNumberLn(decNumber *, const decNumber *, decContext *);
-  decNumber * decNumberLogB(decNumber *, const decNumber *, decContext *);
-  decNumber * decNumberLog10(decNumber *, const decNumber *, decContext *);
-  decNumber * decNumberMax(decNumber *, const decNumber *, const decNumber *, decContext *);
-  decNumber * decNumberMaxMag(decNumber *, const decNumber *, const decNumber *, decContext *);
-  decNumber * decNumberMin(decNumber *, const decNumber *, const decNumber *, decContext *);
-  decNumber * decNumberMinMag(decNumber *, const decNumber *, const decNumber *, decContext *);
-  decNumber * decNumberMinus(decNumber *, const decNumber *, decContext *);
-  decNumber * decNumberMultiply(decNumber *, const decNumber *, const decNumber *, decContext *);
-  decNumber * decNumberNormalize(decNumber *, const decNumber *, decContext *);
-  decNumber * decNumberOr(decNumber *, const decNumber *, const decNumber *, decContext *);
-  decNumber * decNumberPlus(decNumber *, const decNumber *, decContext *);
-  decNumber * decNumberPower(decNumber *, const decNumber *, const decNumber *, decContext *);
-  decNumber * decNumberQuantize(decNumber *, const decNumber *, const decNumber *, decContext *);
-  decNumber * decNumberReduce(decNumber *, const decNumber *, decContext *);
-  decNumber * decNumberRemainder(decNumber *, const decNumber *, const decNumber *, decContext *);
-  decNumber * decNumberRemainderNear(decNumber *, const decNumber *, const decNumber *, decContext *);
-  decNumber * decNumberRescale(decNumber *, const decNumber *, const decNumber *, decContext *);
-  decNumber * decNumberRotate(decNumber *, const decNumber *, const decNumber *, decContext *);
-  decNumber * decNumberSameQuantum(decNumber *, const decNumber *, const decNumber *);
-  decNumber * decNumberScaleB(decNumber *, const decNumber *, const decNumber *, decContext *);
-  decNumber * decNumberShift(decNumber *, const decNumber *, const decNumber *, decContext *);
-  decNumber * decNumberSquareRoot(decNumber *, const decNumber *, decContext *);
-  decNumber * decNumberSubtract(decNumber *, const decNumber *, const decNumber *, decContext *);
-  decNumber * decNumberToIntegralExact(decNumber *, const decNumber *, decContext *);
-  decNumber * decNumberToIntegralValue(decNumber *, const decNumber *, decContext *);
-  decNumber * decNumberXor(decNumber *, const decNumber *, const decNumber *, decContext *);
+  decNumber * uprv_decNumberAbs(decNumber *, const decNumber *, decContext *);
+  decNumber * uprv_decNumberAdd(decNumber *, const decNumber *, const decNumber *, decContext *);
+  decNumber * uprv_decNumberAnd(decNumber *, const decNumber *, const decNumber *, decContext *);
+  decNumber * uprv_decNumberCompare(decNumber *, const decNumber *, const decNumber *, decContext *);
+  decNumber * uprv_decNumberCompareSignal(decNumber *, const decNumber *, const decNumber *, decContext *);
+  decNumber * uprv_decNumberCompareTotal(decNumber *, const decNumber *, const decNumber *, decContext *);
+  decNumber * uprv_decNumberCompareTotalMag(decNumber *, const decNumber *, const decNumber *, decContext *);
+  decNumber * uprv_decNumberDivide(decNumber *, const decNumber *, const decNumber *, decContext *);
+  decNumber * uprv_decNumberDivideInteger(decNumber *, const decNumber *, const decNumber *, decContext *);
+  decNumber * uprv_decNumberExp(decNumber *, const decNumber *, decContext *);
+  decNumber * uprv_decNumberFMA(decNumber *, const decNumber *, const decNumber *, const decNumber *, decContext *);
+  decNumber * uprv_decNumberInvert(decNumber *, const decNumber *, decContext *);
+  decNumber * uprv_decNumberLn(decNumber *, const decNumber *, decContext *);
+  decNumber * uprv_decNumberLogB(decNumber *, const decNumber *, decContext *);
+  decNumber * uprv_decNumberLog10(decNumber *, const decNumber *, decContext *);
+  decNumber * uprv_decNumberMax(decNumber *, const decNumber *, const decNumber *, decContext *);
+  decNumber * uprv_decNumberMaxMag(decNumber *, const decNumber *, const decNumber *, decContext *);
+  decNumber * uprv_decNumberMin(decNumber *, const decNumber *, const decNumber *, decContext *);
+  decNumber * uprv_decNumberMinMag(decNumber *, const decNumber *, const decNumber *, decContext *);
+  decNumber * uprv_decNumberMinus(decNumber *, const decNumber *, decContext *);
+  decNumber * uprv_decNumberMultiply(decNumber *, const decNumber *, const decNumber *, decContext *);
+  decNumber * uprv_decNumberNormalize(decNumber *, const decNumber *, decContext *);
+  decNumber * uprv_decNumberOr(decNumber *, const decNumber *, const decNumber *, decContext *);
+  decNumber * uprv_decNumberPlus(decNumber *, const decNumber *, decContext *);
+  decNumber * uprv_decNumberPower(decNumber *, const decNumber *, const decNumber *, decContext *);
+  decNumber * uprv_decNumberQuantize(decNumber *, const decNumber *, const decNumber *, decContext *);
+  decNumber * uprv_decNumberReduce(decNumber *, const decNumber *, decContext *);
+  decNumber * uprv_decNumberRemainder(decNumber *, const decNumber *, const decNumber *, decContext *);
+  decNumber * uprv_decNumberRemainderNear(decNumber *, const decNumber *, const decNumber *, decContext *);
+  decNumber * uprv_decNumberRescale(decNumber *, const decNumber *, const decNumber *, decContext *);
+  decNumber * uprv_decNumberRotate(decNumber *, const decNumber *, const decNumber *, decContext *);
+  decNumber * uprv_decNumberSameQuantum(decNumber *, const decNumber *, const decNumber *);
+  decNumber * uprv_decNumberScaleB(decNumber *, const decNumber *, const decNumber *, decContext *);
+  decNumber * uprv_decNumberShift(decNumber *, const decNumber *, const decNumber *, decContext *);
+  decNumber * uprv_decNumberSquareRoot(decNumber *, const decNumber *, decContext *);
+  decNumber * uprv_decNumberSubtract(decNumber *, const decNumber *, const decNumber *, decContext *);
+  decNumber * uprv_decNumberToIntegralExact(decNumber *, const decNumber *, decContext *);
+  decNumber * uprv_decNumberToIntegralValue(decNumber *, const decNumber *, decContext *);
+  decNumber * uprv_decNumberXor(decNumber *, const decNumber *, const decNumber *, decContext *);
 
   /* Utilities                                                        */
-  enum decClass decNumberClass(const decNumber *, decContext *);
-  const char * decNumberClassToString(enum decClass);
-  decNumber  * decNumberCopy(decNumber *, const decNumber *);
-  decNumber  * decNumberCopyAbs(decNumber *, const decNumber *);
-  decNumber  * decNumberCopyNegate(decNumber *, const decNumber *);
-  decNumber  * decNumberCopySign(decNumber *, const decNumber *, const decNumber *);
-  decNumber  * decNumberNextMinus(decNumber *, const decNumber *, decContext *);
-  decNumber  * decNumberNextPlus(decNumber *, const decNumber *, decContext *);
-  decNumber  * decNumberNextToward(decNumber *, const decNumber *, const decNumber *, decContext *);
-  decNumber  * decNumberTrim(decNumber *);
-  const char * decNumberVersion(void);
-  decNumber  * decNumberZero(decNumber *);
+  enum decClass uprv_decNumberClass(const decNumber *, decContext *);
+  const char * uprv_decNumberClassToString(enum decClass);
+  decNumber  * uprv_decNumberCopy(decNumber *, const decNumber *);
+  decNumber  * uprv_decNumberCopyAbs(decNumber *, const decNumber *);
+  decNumber  * uprv_decNumberCopyNegate(decNumber *, const decNumber *);
+  decNumber  * uprv_decNumberCopySign(decNumber *, const decNumber *, const decNumber *);
+  decNumber  * uprv_decNumberNextMinus(decNumber *, const decNumber *, decContext *);
+  decNumber  * uprv_decNumberNextPlus(decNumber *, const decNumber *, decContext *);
+  decNumber  * uprv_decNumberNextToward(decNumber *, const decNumber *, const decNumber *, decContext *);
+  decNumber  * uprv_decNumberTrim(decNumber *);
+  const char * uprv_decNumberVersion(void);
+  decNumber  * uprv_decNumberZero(decNumber *);
 
   /* Functions for testing decNumbers (normality depends on context)  */
-  int32_t decNumberIsNormal(const decNumber *, decContext *);
-  int32_t decNumberIsSubnormal(const decNumber *, decContext *);
+  int32_t uprv_decNumberIsNormal(const decNumber *, decContext *);
+  int32_t uprv_decNumberIsSubnormal(const decNumber *, decContext *);
 
   /* Macros for testing decNumber *dn                                 */
   #define decNumberIsCanonical(dn) (1)  /* All decNumbers are saintly */
