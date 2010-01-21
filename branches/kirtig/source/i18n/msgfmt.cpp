@@ -1,24 +1,23 @@
-/*
-*******************************************************************************
-* Copyright (C) 2007-2008, International Business Machines Corporation and         *
-* others. All Rights Reserved.                                                *
-*******************************************************************************
-*
-* File MSGFMT.CPP
-*
-* Modification History:
-*
-*   Date        Name        Description
-*   02/19/97    aliu        Converted from java.
-*   03/20/97    helena      Finished first cut of implementation.
-*   04/10/97    aliu        Made to work on AIX.  Added stoi to replace wtoi.
-*   06/11/97    helena      Fixed addPattern to take the pattern correctly.
-*   06/17/97    helena      Fixed the getPattern to return the correct pattern.
-*   07/09/97    helena      Made ParsePosition into a class.
-*   02/22/99    stephen     Removed character literals for EBCDIC safety
-*   11/01/09    kirtig      Added SelectFormat  
-********************************************************************************
-*/
+/********************************************************************
+ * COPYRIGHT: 
+ * Copyright (c) 1997-2010, International Business Machines Corporation and
+ * others. All Rights Reserved.
+ ********************************************************************
+ *
+ * File MSGFMT.CPP
+ *
+ * Modification History:
+ *
+ *   Date        Name        Description
+ *   02/19/97    aliu        Converted from java.
+ *   03/20/97    helena      Finished first cut of implementation.
+ *   04/10/97    aliu        Made to work on AIX.  Added stoi to replace wtoi.
+ *   06/11/97    helena      Fixed addPattern to take the pattern correctly.
+ *   06/17/97    helena      Fixed the getPattern to return the correct pattern.
+ *   07/09/97    helena      Made ParsePosition into a class.
+ *   02/22/99    stephen     Removed character literals for EBCDIC safety
+ *   11/01/09    kirtig      Added SelectFormat  
+ ********************************************************************/
 
 #include "unicode/utypes.h"
 

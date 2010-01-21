@@ -1,19 +1,17 @@
-/*
-*******************************************************************************
-* Copyright (C) 2009-2010, Yahoo! Inc.
-* All Rights Reserved.
-* Copyright (C) 2009, Yahoo! Inc.
-*******************************************************************************
-*
-
-* File SELFMT.H
-*
-* Modification History:
-*
-*   Date        Name        Description
-*   11/11/09    kirtig      Finished first cut of implementation.
-********************************************************************************
-*/
+/********************************************************************
+ * COPYRIGHT: 
+ * Copyright (c) 1997-2010, International Business Machines Corporation and
+ * others. All Rights Reserved.
+ * Copyright (C) 2010 , Yahoo! Inc. 
+ ********************************************************************
+ *
+ * File SELFMT.H
+ *
+ * Modification History:
+ *
+ *   Date        Name        Description
+ *   11/11/09    kirtig      Finished first cut of implementation.
+ ********************************************************************/
 
 #ifndef SELFMT
 #define SELFMT
@@ -47,7 +45,7 @@ class Hashtable;
   * verb forms, articles, and adjectives. Special care needs to be
   * taken for the case where the gender cannot be determined.
   * The impact varies between languages:</p>
-  *
+  * \htmlonly
   * <ul>
   * <li>English has three genders, and unknown gender is handled as a  special
   * case. Names use the gender of the named person (if known), nouns  referring
@@ -55,22 +53,22 @@ class Hashtable;
   * The gender only affects pronouns: "he", "she", "it", "they".
   *
   * <li>German differs from English in that the gender of nouns is  rather
-  * arbitrary, even for nouns referring to people ("M&#u00E4;dchen", girl, is  neutral).
+  * arbitrary, even for nouns referring to people ("M&#x00E4;dchen", girl, is  neutral).
   * The gender affects pronouns ("er", "sie", "es"), articles ("der",  "die",
-  * "das"), and adjective forms ("guter Mann", "gute Frau", "gutes  M&#u00E4;dchen").
+  * "das"), and adjective forms ("guter Mann", "gute Frau", "gutes  M&#x00E4;dchen").
   *
   * <li>French has only two genders; as in German the gender of nouns
-  * is rather arbitrary – for sun and moon, the genders
+  * is rather arbitrary - for sun and moon, the genders
   * are the opposite of those in German. The gender affects
   * pronouns ("il", "elle"), articles ("le", "la"),
   * adjective forms ("bon", "bonne"), and sometimes
-  * verb forms ("all&#u00E9;", "all&#u00E9;e").
+  * verb forms ("all&#x00E9;", "all&#x00E9;e").
   *
   * <li>Polish distinguishes five genders (or noun classes),
   * human masculine, animate non-human masculine, inanimate masculine,
   * feminine, and neuter.
   * </ul>
-  *
+  * \endhtmlonly
   * <p>Some other languages have noun classes that are not related to  gender,
   * but similar in grammatical use.
   * Some African languages have around 20 noun classes.</p>
@@ -105,7 +103,7 @@ class Hashtable;
   * <p>The sentence pattern for French, where the gender of the person affects
   * the form of the participle, uses a select format based on argument 1:</p>
   *
-  * <pre>{0} est {1, select, female {all&#u00E9;e} other {all&#u00E9;}} &#u00E0; {2}.</pre>
+  * \htmlonly<pre>{0} est {1, select, female {all&#x00E9;e} other {all&#x00E9;}} &#x00E0; {2}.</pre>\endhtmlonly
   *
   * <p>Patterns can be nested, so that it's possible to handle  interactions of
   * number and gender where necessary. For example, if the above  sentence should
@@ -114,10 +112,12 @@ class Hashtable;
   * argument 1 the number of people, argument 2 their combined gender, and  
   * argument 3 the city name):</p>
   *
+  * \htmlonly
   * <pre>{0} {1, plural, 
-  *                 one {est {2, select, female {all&#u00E9;e} other  {all&#u00E9;}}}
-  *                 other {sont {2, select, female {all&#u00E9;es} other {all&#u00E9;s}}}
-  *          }&#u00E0; {3}.</pre>
+  *                 one {est {2, select, female {all&#x00E9;e} other  {all&#x00E9;}}}
+  *                 other {sont {2, select, female {all&#x00E9;es} other {all&#x00E9;s}}}
+  *          }&#x00E0; {3}.</pre>
+  * \endhtmlonly
   *
   * <h4>Patterns and Their Interpretation</h4>
   *
@@ -154,10 +154,11 @@ class Hashtable;
   * in phrases to define a nested format pattern.</p>
   *
   * <p>Example:
+  * \htmlonly
   * <pre>
   *
   * UErrorCode status = U_ZERO_ERROR;
-  * MessageFormat *msgFmt = new MessageFormat(UnicodeString("{0} est  {1, select, female {all&#u00E9;e} other {all&#u00E9;}} &#u00E0; Paris."), Locale("fr"),  status);
+  * MessageFormat *msgFmt = new MessageFormat(UnicodeString("{0} est  {1, select, female {all&#x00E9;e} other {all&#x00E9;}} &#x00E0; Paris."), Locale("fr"),  status);
   * if (U_FAILURE(status)) {
   *       return;
   * }
@@ -171,8 +172,12 @@ class Hashtable;
   * delete msgFmt;
   *
   * </pre>
+  * \endhtmlonly
+  *
   * Produces the output:<br/>
-  * <code>Input is Kirti,female and result is: Kirti est all&#u00E9;e &#u00E0; Paris.</code>
+  * \htmlonly
+  * <code>Input is Kirti,female and result is: Kirti est all&#x00E9;e &#x00E0; Paris.</code>
+  * \endhtmlonly
   *
   * @draft ICU 4.4
   */
@@ -184,7 +189,7 @@ public:
      * Creates a new <code>SelectFormat</code> .
      * @param status  output param set to success/failure code on exit, which
      *                must not indicate a failure before the function call.
-     * @draft ICU 4.4
+     * @internal This function will be removed and will not be API.
      */
     SelectFormat(UErrorCode& status);
 
@@ -277,7 +282,7 @@ public:
     /**
      * Format an object to produce a string. 
      * This method handles keyword strings. 
-     * If the Formattable object is not a <code>UnicodeString</ code>, 
+     * If the Formattable object is not a <code>UnicodeString</code>, 
      * then it returns a failing UErrorCode.
      *
      * @param obj       A keyword string that is used to select an alternative. 
@@ -332,6 +337,7 @@ public:
 
     /**
      * ICU "poor man's RTTI", returns a UClassID for this class.
+     * @draft ICU 4.4
      */
     static UClassID U_EXPORT2 getStaticClassID(void);
 

@@ -1,20 +1,20 @@
-/*
-*******************************************************************************
-* Copyright (C) 1996-2009, International Business Machines Corporation
-* and others. All Rights Reserved.
-*******************************************************************************
-*
-*   file name:  umsg.h
-*   encoding:   US-ASCII
-*   tab size:   8 (not used)
-*   indentation:4
-*
-*   Change history:
-*
-*   08/5/2001  Ram         Added C wrappers for C++ API.
-*                          
-*
-*/
+/********************************************************************
+ * COPYRIGHT: 
+ * Copyright (c) 1997-2010, International Business Machines Corporation and
+ * others. All Rights Reserved.
+ * Copyright (C) 2010 , Yahoo! Inc. 
+ ********************************************************************
+ *
+ *   file name:  umsg.h
+ *   encoding:   US-ASCII
+ *   tab size:   8 (not used)
+ *   indentation:4
+ *
+ *   Change history:
+ *
+ *   08/5/2001  Ram         Added C wrappers for C++ API.
+ *                          
+ ********************************************************************/
 
 #ifndef UMSG_H
 #define UMSG_H

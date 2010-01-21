@@ -1,17 +1,15 @@
 /********************************************************************
  * COPYRIGHT: 
- * Copyright (c) 1997-2009, International Business Machines Corporation and
+ * Copyright (c) 1997-2010, International Business Machines Corporation and
  * others. All Rights Reserved.
+ ********************************************************************
+ *
+ * File CMSGTST.C
+ *
+ * Modification History:
+ *        Name                     Description
+ *     Madhu Katragadda              Creation
  ********************************************************************/
-/********************************************************************************
-*
-* File CMSGTST.C
-*
-* Modification History:
-*        Name                     Description
-*     Madhu Katragadda              Creation
-*********************************************************************************
-*/
 /* C API TEST FOR MESSAGE FORMAT */
 
 #include "unicode/utypes.h"

@@ -1,19 +1,18 @@
-/*
-*******************************************************************************
-* Copyright (C) 2008, International Business Machines Corporation and
-* others. All Rights Reserved.
-* Copyright (C) 2009, Yahoo! Inc.
-*******************************************************************************
-*
-* File SELFMT.CPP
-*
-* Modification History:
-*
-*   Date        Name        Description
-*   11/11/09    kirtig      Finished first cut of implementation.
-*   11/16/09    kirtig      Improved version 
-*******************************************************************************
-*/
+/********************************************************************
+ * COPYRIGHT: 
+ * Copyright (c) 1997-2010, International Business Machines Corporation and
+ * others. All Rights Reserved.
+ * Copyright (C) 2010 , Yahoo! Inc. 
+ ********************************************************************
+ *
+ * File SELFMT.CPP
+ *
+ * Modification History:
+ *
+ *   Date        Name        Description
+ *   11/11/09    kirtig      Finished first cut of implementation.
+ *   11/16/09    kirtig      Improved version 
+ ********************************************************************/
 
 #include "unicode/utypes.h"
 #include "unicode/ustring.h"

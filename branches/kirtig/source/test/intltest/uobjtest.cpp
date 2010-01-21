@@ -1,7 +1,8 @@
 /********************************************************************
  * COPYRIGHT: 
- * Copyright (c) 2002-2009, International Business Machines Corporation and
+ * Copyright (c) 1997-2010, International Business Machines Corporation and
  * others. All Rights Reserved.
+ * Copyright (C) 2010 , Yahoo! Inc. 
  ********************************************************************/
 
 #include "uobjtest.h"

@@ -1,17 +1,15 @@
 /********************************************************************
  * COPYRIGHT: 
- * Copyright (c) 1997-2001, International Business Machines Corporation and
+ * Copyright (c) 1997-2010, International Business Machines Corporation and
  * others. All Rights Reserved.
+ ********************************************************************
+ *
+ * File CMSGTST.H
+ *
+ * Modification History:
+ *        Name                     Description            
+ *     Madhu Katragadda              Creation
  ********************************************************************/
-/********************************************************************************
-*
-* File CMSGTST.H
-*
-* Modification History:
-*        Name                     Description            
-*     Madhu Katragadda              Creation
-*********************************************************************************
-*/
 /* C API TEST FOR MESSAGE FORMAT */
 #ifndef _CMSGFRMTST
 #define _CMSGFRMTST

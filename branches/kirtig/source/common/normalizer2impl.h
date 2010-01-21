@@ -196,16 +196,6 @@ public:
     const UTrie2 *getFCDTrie(UErrorCode &errorCode) const ;
 
     uint16_t getNorm16(UChar32 c) const { return UTRIE2_GET16(normTrie, c); }
-    uint16_t getNorm16FromBMP(UChar c) const { return UTRIE2_GET16(normTrie, c); }
-    uint16_t getNorm16FromSingleLead(UChar c) const {
-        return UTRIE2_GET16_FROM_U16_SINGLE_LEAD(normTrie, c);
-    }
-    uint16_t getNorm16FromSupplementary(UChar32 c) const {
-        return UTRIE2_GET16_FROM_SUPP(normTrie, c);
-    }
-    uint16_t getNorm16FromSurrogatePair(UChar c, UChar c2) const {
-        return getNorm16FromSupplementary(U16_GET_SUPPLEMENTARY(c, c2));
-    }
 
     UNormalizationCheckResult getCompQuickCheck(uint16_t norm16) const {
         if(norm16<minNoNo || MIN_YES_YES_WITH_CC<=norm16) {
@@ -233,7 +223,6 @@ public:
     }
 
     uint16_t getFCD16(UChar32 c) const { return UTRIE2_GET16(fcdTrie(), c); }
-    uint16_t getFCD16FromBMP(UChar c) const { return UTRIE2_GET16(fcdTrie(), c); }
     uint16_t getFCD16FromSingleLead(UChar c) const {
         return UTRIE2_GET16_FROM_U16_SINGLE_LEAD(fcdTrie(), c);
     }
@@ -495,6 +484,8 @@ private:
     Normalizer2Factory();  // No instantiation.
 };
 
+U_NAMESPACE_END
+
 U_CAPI int32_t U_EXPORT2
 unorm2_swap(const UDataSwapper *ds,
             const void *inData, int32_t length, void *outData,
@@ -596,8 +587,6 @@ unorm_prevFCD16(const uint16_t *fcdTrieIndex, UChar32 fcdHighStart,
     }
     return fcd;
 }
-
-U_NAMESPACE_END
 
 #endif  /* !UCONFIG_NO_NORMALIZATION */
 #endif  /* __NORMALIZER2IMPL_H__ */

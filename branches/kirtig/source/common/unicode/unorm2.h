@@ -117,7 +117,6 @@ typedef struct UNormalizer2 UNormalizer2;  /**< C typedef for struct UNormalizer
 
 #if !UCONFIG_NO_NORMALIZATION
 
-U_NAMESPACE_BEGIN
 /**
  * Returns a UNormalizer2 instance which uses the specified data file
  * (packageName/name similar to ucnv_openPackage() and ures_open()/ResourceBundle)
@@ -171,6 +170,25 @@ unorm2_openFiltered(const UNormalizer2 *norm2, const USet *filterSet, UErrorCode
  */
 U_DRAFT void U_EXPORT2
 unorm2_close(UNormalizer2 *norm2);
+
+#if U_SHOW_CPLUSPLUS_API
+
+U_NAMESPACE_BEGIN
+
+/**
+ * \class LocalUNormalizer2Pointer
+ * "Smart pointer" class, closes a UNormalizer2 via unorm2_close().
+ * For most methods see the LocalPointerBase base class.
+ *
+ * @see LocalPointerBase
+ * @see LocalPointer
+ * @draft ICU 4.4
+ */
+U_DEFINE_LOCAL_OPEN_POINTER(LocalUNormalizer2Pointer, UNormalizer2, unorm2_close);
+
+U_NAMESPACE_END
+
+#endif
 
 /**
  * Writes the normalized form of the source string to the destination string
@@ -346,8 +364,6 @@ unorm2_hasBoundaryAfter(const UNormalizer2 *norm2, UChar32 c);
  */
 U_DRAFT UBool U_EXPORT2
 unorm2_isInert(const UNormalizer2 *norm2, UChar32 c);
-
-U_NAMESPACE_END
 
 #endif  /* !UCONFIG_NO_NORMALIZATION */
 #endif  /* __UNORM2_H__ */

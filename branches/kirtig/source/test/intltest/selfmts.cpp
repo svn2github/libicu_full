@@ -1,8 +1,8 @@
 /********************************************************************
  * COPYRIGHT: 
- * Copyright (c) 2007-2008, International Business Machines Corporation and
+ * Copyright (c) 1997-2010, International Business Machines Corporation and
  * others. All Rights Reserved.
- * Copyright (C) 2009, Yahoo! Inc.
+ * Copyright (C) 2010 , Yahoo! Inc. 
  ********************************************************************/
 
 #include "unicode/utypes.h"
@@ -49,7 +49,7 @@ void SelectFormatTest::selectFormatUnitTest(/*char *par*/)
         UNICODE_STRING_SIMPLE("odd")
     };
 
-    UnicodeString expFormatResult[EXP_FORMAT_RESULT_DATA][NUM_OF_FORMAT_ARGS] = {
+    UnicodeString expFormatResult[][NUM_OF_FORMAT_ARGS] = {
         {
             UNICODE_STRING_SIMPLE("femValue"),
             UNICODE_STRING_SIMPLE("even"),

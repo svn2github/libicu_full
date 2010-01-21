@@ -12,8 +12,7 @@
 *   03/20/97    helena      Finished first cut of implementation.
 *   07/22/98    stephen     Removed operator!= (defined in Format)
 *   08/19/2002  srl         Removing Javaisms
-********************************************************************************
-*/
+*******************************************************************************/
 
 #ifndef MSGFMT_H
 #define MSGFMT_H

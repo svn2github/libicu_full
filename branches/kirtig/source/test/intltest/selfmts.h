@@ -1,8 +1,8 @@
 /********************************************************************
  * COPYRIGHT: 
- * Copyright (c) 1997-2001, International Business Machines Corporation and
+ * Copyright (c) 1997-2010, International Business Machines Corporation and
  * others. All Rights Reserved.
- * Copyright (C) 2009, Yahoo! Inc.
+ * Copyright (C) 2010 , Yahoo! Inc. 
  ********************************************************************/
 
 #ifndef _SELECTFORMATTEST
