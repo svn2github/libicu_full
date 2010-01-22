@@ -491,8 +491,10 @@ CalendarTest::TestGenericAPI()
     }else {
         ((Calendar *)cal)->roll(UCAL_HOUR, (int32_t)100, status);
         ((Calendar *)cal)->clear(UCAL_HOUR);
+#if !UCONFIG_NO_SERVICE
         URegistryKey key = cal->registerFactory(NULL, status);
         cal->unregister(key, status);
+#endif
     }
     delete cal;
 
