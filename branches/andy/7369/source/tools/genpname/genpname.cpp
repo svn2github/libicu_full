@@ -37,6 +37,7 @@ U_NAMESPACE_USE
 #include "unicode/uchar.h"
 #include "unicode/uscript.h"
 #include "unicode/unorm.h"
+#include "unicode/unorm2.h"
 
 class AliasName {
 public:
