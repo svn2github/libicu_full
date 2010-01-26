@@ -1,15 +1,20 @@
 /*
 ******************************************************************************
-* Copyright (C) 2009, International Business Machines Corporation and        *
-* others. All Rights Reserved.                                               *
+* Copyright (C) 2009-2010, International Business Machines Corporation and
+* others. All Rights Reserved.
 ******************************************************************************
 *   Date        Name        Description
 *   12/14/09    doug        Creation.
 ******************************************************************************
 */
 
+#include "unicode/utypes.h"
+
+#if !UCONFIG_NO_FORMATTING
+
 #include "unicode/fpositer.h"
 #include "cmemory.h"
+#include "uvectr32.h"
 
 U_NAMESPACE_BEGIN
 
@@ -41,7 +46,7 @@ FieldPositionIterator::FieldPositionIterator(const FieldPositionIterator &rhs)
 }
 
 UBool FieldPositionIterator::operator==(const FieldPositionIterator &rhs) const {
-  if (rhs == *this) {
+  if (&rhs == this) {
     return TRUE;
   }
   if (pos != rhs.pos) {
@@ -82,4 +87,23 @@ void FieldPositionIterator::setData(UVector32 *adopt, UErrorCode& status) {
   pos = adopt == NULL ? -1 : 0;
 }
 
+UBool FieldPositionIterator::next(FieldPosition& fp) {
+  if (pos == -1) {
+    return FALSE;
+  }
+
+  fp.setField(data->elementAti(pos++));
+  fp.setBeginIndex(data->elementAti(pos++));
+  fp.setEndIndex(data->elementAti(pos++));
+
+  if (pos == data->size()) {
+    pos = -1;
+  }
+
+  return TRUE;
+}
+
 U_NAMESPACE_END
+
+#endif /* #if !UCONFIG_NO_FORMATTING */
+

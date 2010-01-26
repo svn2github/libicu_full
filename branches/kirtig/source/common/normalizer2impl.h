@@ -133,11 +133,11 @@ public:
     }
     UBool appendZeroCC(UChar32 c, UErrorCode &errorCode);
     UBool appendZeroCC(const UChar *s, const UChar *sLimit, UErrorCode &errorCode);
-    void removeZeroCCSuffix(int32_t length);
-    void setReorderingLimitAndLastCC(UChar *newLimit, uint8_t newLastCC) {
+    void removeSuffix(int32_t length);
+    void setReorderingLimit(UChar *newLimit) {
         remainingCapacity+=(int32_t)(limit-newLimit);
         reorderStart=limit=newLimit;
-        lastCC=newLastCC;
+        lastCC=0;
     }
 private:
     /*
@@ -359,9 +359,9 @@ private:
     // UBool isCompYesOrMaybe(uint16_t norm16) const {
     //     return norm16<minNoNo || minMaybeYes<=norm16;
     // }
-    UBool hasZeroCCFromDecompYes(uint16_t norm16) {
-        return norm16<=MIN_NORMAL_MAYBE_YES || norm16==JAMO_VT;
-    }
+    // UBool hasZeroCCFromDecompYes(uint16_t norm16) const {
+    //     return norm16<=MIN_NORMAL_MAYBE_YES || norm16==JAMO_VT;
+    // }
     UBool isDecompYesAndZeroCC(uint16_t norm16) const {
         return norm16<minYesNo ||
                norm16==JAMO_VT ||

@@ -1,6 +1,6 @@
 /*  
 ********************************************************************************
-*   Copyright (C) 1997-2008, International Business Machines
+*   Copyright (C) 1997-2010, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 ********************************************************************************
 *
@@ -218,7 +218,7 @@ public:
      *
      * @param count    Filled in with length of the array.
      * @return         the narrow era strings.
-     * @draft ICU 4.2
+     * @stable ICU 4.4
      */
     const UnicodeString* getNarrowEras(int32_t& count) const;
 
@@ -226,7 +226,7 @@ public:
      * Sets narrow era strings. For example: "A" and "B".
      * @param narrowEras  Array of narrow era strings (DateFormatSymbols retains ownership.)
      * @param count Filled in with length of the array.
-     * @draft ICU 4.2
+     * @stable ICU 4.4
      */
     void setNarrowEras(const UnicodeString* narrowEras, int32_t count);
 
@@ -591,6 +591,23 @@ private:
 
     /**
      * The format data of all the timezones in this locale.
+     *
+     * The data is a 2-dimensional array which specifies or overrides 
+     * various formatted time zone names based on location for used in 
+     * a given locale.  This is in essence an array of arrays.
+     *
+     * The second dimensional array specifies time zone names for each location.  
+     * This array is defined over 8 elements.  Any data specified beyond the 8th 
+     * element is not processed.  The contents of this array specify the following:
+     *
+     * [0] – location – example: America/Los_Angeles
+     * [1] – long standard name – example: Pacific Standard Time
+     * [2] – short standard name – example: PST
+     * [3] – long daylight saving time name – example: Pacific Daylight Time
+     * [4] – short daylight saving time name – example: PDT
+     * [5] – generic location – example: United States (Los Angeles)
+     * [6] – long generic name – example: Pacific Time
+     * [7] – short generic name – example: PT
      */
     UnicodeString   **fZoneStrings;         // Zone string array set by setZoneStrings
     UnicodeString   **fLocaleZoneStrings;   // Zone string array created by the locale

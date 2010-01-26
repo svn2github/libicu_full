@@ -1,5 +1,5 @@
 /*************************************************************************
-* Copyright (c) 1997-2009, International Business Machines Corporation
+* Copyright (c) 1997-2010, International Business Machines Corporation
 * and others. All Rights Reserved.
 **************************************************************************
 *
@@ -596,7 +596,7 @@ public:
      * @param style
      * @param result the human-readable name of this time zone in the default locale.
      * @return       A reference to 'result'.
-     * @draft ICU 4.4
+     * @stable ICU 2.0
      */
     UnicodeString& getDisplayName(UBool daylight, EDisplayType style, UnicodeString& result) const;
 
@@ -612,24 +612,10 @@ public:
      * @param result the human-readable name of this time zone in the given locale
      *               or in the default locale if the given locale is not recognized.
      * @return       A refence to 'result'.
-     * @draft ICU 4.4
+     * @stable ICU 2.0
      */
     UnicodeString& getDisplayName(UBool daylight, EDisplayType style, const Locale& locale, UnicodeString& result) const;
     
-    /**
-     * Sets default time zone name style.
-     * @param sytle EDisplayType to set as default
-     * @draft ICU 4.4
-     */
-    void setDefaultTimeZoneNameStyle(EDisplayType style);
-    
-    /**
-     * Get default time zone name style.
-     * @return      Default name style for the time zone.  
-     * @draft ICU 4.4
-     */
-    EDisplayType getDefaultTimeZoneNameStyle();
-
     /**
      * Queries if this time zone uses daylight savings time.
      * @return true if this time zone uses daylight savings time,
