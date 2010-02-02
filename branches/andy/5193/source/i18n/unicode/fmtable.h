@@ -601,6 +601,9 @@ private:
         }               fArrayAndCount;
     } fValue;
 
+    class               DecimalValueString;
+    DecimalValueString  *fDecimalValue;
+
     Type                fType;
     UnicodeString       fBogus; // Bogus string when it's needed.
 };

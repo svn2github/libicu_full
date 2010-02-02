@@ -625,6 +625,30 @@ Formattable::getBogus() const
     return (UnicodeString*)&fBogus; /* cast away const :-( */
 }
 
+
+// --------------------------------------
+const StringPiece &Formattable::getDecimalNumber() const {
+   static StringPiece foo;
+   return foo;
+}
+
+
+
+//
+//   DecimalValueString
+//
+//      A helper class for maintaining the char * strings for decimal values
+//
+class DecimalValueString: public UMemory {
+  private:
+     const char *s;
+  public:
+      DecimalValueString();
+      ~DecimalValueString();
+};
+
+
+
 #if 0
 //----------------------------------------------------
 // console I/O

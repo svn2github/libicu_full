@@ -18,7 +18,9 @@
 #include "unicode/ustring.h"
 #include "unicode/unistr.h"
 #include "unicode/dcfmtsym.h"
+#include "unicode/decimfmt.h"
 #include "unicode/locid.h"
+#include "cmemory.h"
 #include "dcfmtest.h"
 #include "util.h"
 #include "cstring.h"
@@ -87,12 +89,49 @@ if (status!=errcode) {dataerrln("DecimalFormatTest failure at line %d.  Expected
     errln("DecimalFormatTest failure at line %d, from %d.", __LINE__, (line)); return;}}
 
 
+
+class InvariantStringPiece: public StringPiece {
+  public:
+    InvariantStringPiece(const UnicodeString &s);
+    ~InvariantStringPiece() {};
+  private:
+    MaybeStackArray<char, 20>  buf;
+};
+
+InvariantStringPiece::InvariantStringPiece(const UnicodeString &s) {
+    int32_t  len = s.length();
+    if (len+1 > buf.getCapacity()) {
+        buf.resize(len+1);
+    }
+    // Buffer size is len+1 so that s.extract() will nul-terminate the string.
+    s.extract(0, len, buf.getAlias(), len+1, US_INV);
+    this->set(buf, len);
+}
+
+
+
 //---------------------------------------------------------------------------
 //
 //      DataDrivenTests  
 //             The test cases are in a separate data file,
 //
 //---------------------------------------------------------------------------
+
+// Translate a Formattable::type enum value to a string, for error message formatting.
+static const char *FormattableType(Formattable::Type typ) {
+    static const char *types[] = {"kDate",
+                                  "kDouble",
+                                  "kLong",
+                                  "kString",
+                                  "kArray",
+                                  "kInt64",
+                                  "kObject"
+                                  };
+    if (typ<0 || typ>Formattable::kObject) {
+        return "Unknown";
+    }
+    return types[typ];
+}
 
 const char *
 DecimalFormatTest::getPath(char *buffer, const char *filename) {
@@ -163,13 +202,13 @@ void DecimalFormatTest::DataDrivenTests() {
     while (lineMat.find()) {
         lineNum++;
         if (U_FAILURE(status)) {
-            errln("line %d: ICU Error \"%s\"", lineNum, u_errorName(status));
+            errln("File dcfmtest.txt, line %d: ICU Error \"%s\"", lineNum, u_errorName(status));
         }
 
         status = U_ZERO_ERROR;
         UnicodeString testLine = lineMat.group(1, status);
-        std::string s;
-        std::cout << lineNum << ": " << testLine.toUTF8String(s) << std::endl;
+        // std::string s;
+        // std::cout << lineNum << ": " << testLine.toUTF8String(s) << std::endl;
         if (testLine.length() == 0) {
             continue;
         }
@@ -191,7 +230,8 @@ void DecimalFormatTest::DataDrivenTests() {
         //
         parseLineMat.reset(testLine);
         if (parseLineMat.lookingAt(status)) {
-            execParseTest(parseLineMat.group(1, status),    // locale
+            execParseTest(lineNum,
+                          parseLineMat.group(1, status),    // locale
                           parseLineMat.group(2, status),    // input
                           parseLineMat.group(3, status),    // Expected Decimal String
                           parseLineMat.group(4, status),    // Expected Type
@@ -221,24 +261,69 @@ void DecimalFormatTest::DataDrivenTests() {
 
 
 
-// Return:  a meaningless int.  There for the test macros, which
-//          return a 0 when they bail out.
-//
-int DecimalFormatTest::execParseTest(const UnicodeString &locale,
-                                      const UnicodeString &inputText,
-                                      const UnicodeString &expectedDecimal,
-                                      const UnicodeString &expectedType,
-                                      UErrorCode &status) {
+void DecimalFormatTest::execParseTest(int32_t lineNum,
+                                     const UnicodeString &locale,
+                                     const UnicodeString &inputText,
+                                     const UnicodeString &expectedDecimal,
+                                     const UnicodeString &expectedType,
+                                     UErrorCode &status) {
     
-    DF_CHECK_STATUS;    // Returns on failure.
+    if (U_FAILURE(status)) {
+        return;
+    }
     char  localeName[100];
     locale.extract(0, locale.length(), localeName, sizeof(localeName), US_INV);
     localeName[sizeof(localeName)-1] = 0;    // In case name was too long.
     Locale loc = Locale::createCanonical(localeName);
 
-    DecimalFormatSymbols *formatSymbols = new DecimalFormatSymbols(loc, status);
+    DecimalFormatSymbols symbols(loc, status);
+    UnicodeString pattern = UNICODE_STRING_SIMPLE("####");
+    DecimalFormat format(pattern, symbols, status);
+    Formattable   result;
+    if (U_FAILURE(status)) {
+        errln("file dcfmtest.txt, line %d: %s error creating the formatter.",
+            lineNum, u_errorName(status));
+        return;
+    }
 
-    return 0;
+    ParsePosition pos;
+    int32_t expectedParseEndPosition = inputText.length();
+
+    format.parse(inputText, result, pos);
+
+    if (expectedParseEndPosition != pos.getIndex()) {
+        errln("file dcfmtest.txt, line %d: Expected parse position afeter parsing: %d.  "
+              "Actual parse position: %d", expectedParseEndPosition, pos.getIndex());
+        return;
+    }
+
+    char   expectedTypeC[2];
+    expectedType.extract(0, 1, expectedTypeC, 2, US_INV);
+    Formattable::Type expectType = Formattable::kDate;
+    switch (expectedTypeC[0]) {
+      case 'd': expectType = Formattable::kDouble; break;
+      case 'i': expectType = Formattable::kLong;   break;
+      case 'l': expectType = Formattable::kInt64;  break;
+      default:
+          errln("file dcfmtest.tx, line %d: unrecongized expected type \"%s\"",
+              lineNum, InvariantStringPiece(expectedType).data());
+          return;
+    }
+    if (result.getType() != expectType) {
+        errln("file dcfmtest.txt, line %d: expectedParseType(%s) != actual parseType(%s)",
+             FormattableType(expectType), FormattableType(result.getType()));
+        return;
+    }
+
+    StringPiece decimalResult = result.getDecimalNumber();
+    InvariantStringPiece expectedResults(expectedDecimal);
+    if (!(decimalResult.length() == expectedResults.length()) &&
+          strncmp(decimalResult.data(), expectedResults.data(), decimalResult.length()) == 0) {
+        errln("file dcfmtest.txt, line %d: expected \"%s\", got \"%s\"",
+            expectedResults.data(), decimalResult.data());
+    }
+    
+    return;
 }
 
 

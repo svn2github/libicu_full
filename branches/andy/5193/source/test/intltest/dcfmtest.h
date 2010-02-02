@@ -35,7 +35,8 @@ public:
     // The following functions are internal to the decimal format tests.
     virtual UChar *ReadAndConvertFile(const char *fileName, int32_t &len, UErrorCode &status);
     virtual const char *getPath(char buffer[2048], const char *filename);
-    virtual int execParseTest(const UnicodeString &locale,
+    virtual void execParseTest(int32_t lineNum,
+                              const UnicodeString &locale,
                               const UnicodeString &inputText,
                               const UnicodeString &expectedDecimal,
                               const UnicodeString &expectedType,
