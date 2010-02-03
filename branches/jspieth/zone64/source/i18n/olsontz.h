@@ -292,6 +292,7 @@ private:
     int32_t zoneOffset(int16_t index) const;
     int32_t rawOffset(int16_t index) const;
     int32_t dstOffset(int16_t index) const;
+    int32_t getTransitionTime(int16_t index) const;
 
     /**
      * Number of transitions, 0..~370
@@ -308,6 +309,17 @@ private:
      * Length is transitionCount int32_t's.
      */
     const int32_t *transitionTimes; // alias into res; do not delete
+
+    /**
+     * Transitions outside of the 32bit range
+     */
+    const uint8_t * pre32TransTimes;
+    const uint8_t * post32TransTimes;
+
+    int32_t pre32TransTimesCount;
+    int32_t post32TransTimesCount;
+
+    const int32_t *numTrans;
 
     /**
      * Offset from GMT in seconds for each type.

@@ -1,6 +1,6 @@
 /*
 **********************************************************************
-* Copyright (c) 2003-2009, International Business Machines
+* Copyright (c) 2003-2010, International Business Machines
 * Corporation and others.  All Rights Reserved.
 **********************************************************************
 * Author: Alan Liu
@@ -66,10 +66,10 @@ UOBJECT_DEFINE_RTTI_IMPLEMENTATION(OlsonTimeZone)
  * constructor fails so the resultant object is well-behaved.
  */
 void OlsonTimeZone::constructEmpty() {
-    transitionCount = 0;
+    transitionCount = pre32TransTimesCount = post32TransTimesCount = 0;
     typeCount = 1;
-    transitionTimes = typeOffsets = ZEROS;
-    typeData = (const uint8_t*) ZEROS;
+    transitionTimes = numTrans = typeOffsets = ZEROS;
+    typeData = pre32TransTimes = post32TransTimes = (const uint8_t*)ZEROS;
 }
 
 /**
@@ -101,21 +101,131 @@ OlsonTimeZone::OlsonTimeZone(const UResourceBundle* top,
         // Size 5 is a hybrid zone, with historical and final elements
         // Size 6 is like size 5, but with an alias list at the end
         int32_t size = ures_getSize(res);
-        if (size < 3 || size > 6) {
+        if (size < 3 || size > 9) {
             ec = U_INVALID_FORMAT_ERROR;
         }
 
-        // Transitions list may be empty
+        int32_t skip = 0;
+
         int32_t i;
         UResourceBundle* r = ures_getByIndex(res, 0, NULL, &ec);
+        /* */
+        numTrans = ures_getIntVector(r, &i, &ec);
+        if ((i<0 || i>0x7FFF) && U_SUCCESS(ec)) {
+            ec = U_INVALID_FORMAT_ERROR;
+        }
+        skip = *numTrans;
+
+        r = ures_getByIndex(res, 1, NULL, &ec);
+        /* */
         transitionTimes = ures_getIntVector(r, &i, &ec);
         if ((i<0 || i>0x7FFF) && U_SUCCESS(ec)) {
             ec = U_INVALID_FORMAT_ERROR;
         }
         transitionCount = (int16_t) i;
-        
+        pre32TransTimesCount = 0;
+        post32TransTimesCount = 0;
+
+        /*
+        // read the first element to get the number of transition vectors
+        numTrans = ures_getIntVector(r, &i, &ec);
+        if ((i<0 || i>0x7FFF) && U_SUCCESS(ec)) {
+            ec = U_INVALID_FORMAT_ERROR;
+        }
+        */
+
+        /*
+        // get the transition vectors
+        switch (*numTrans) {
+        case 1:
+            // 32 bit only transitions
+            r = ures_getByIndex(res, 1, r, &ec);
+            transitionTimes = ures_getIntVector(r, &i, &ec);
+            if ((i<0 || i>0x7FFF) && U_SUCCESS(ec)) {
+                ec = U_INVALID_FORMAT_ERROR;
+            }
+            transitionCount = i;
+
+            pre32TransTimes = post32TransTimes = NULL;
+            pre32TransTimesCount = post32TransTimesCount = 0;
+            break;
+        case 2:
+            r = ures_getByIndex(res, 1, r, &ec);
+            if (ures_getType(r) == URES_BINARY) {
+                // pre 32 bit transitions
+                pre32TransTimes = ures_getBinary(r, &i, &ec);
+                if ((i<0 || i>0x7FFF) && U_SUCCESS(ec)) {
+                    ec = U_INVALID_FORMAT_ERROR;
+                }
+                pre32TransTimesCount = i;
+
+                // 32 bit transitions
+                r = ures_getByIndex(res, 2, r, &ec);
+                transitionTimes = ures_getIntVector(r, &i, &ec);
+                if ((i<0 || i>0x7FFF) && U_SUCCESS(ec)) {
+                    ec = U_INVALID_FORMAT_ERROR;
+                }
+                transitionCount = i;
+
+                // post 32 bit transitions
+                post32TransTimes = NULL;
+                post32TransTimesCount = 0;
+            }
+            else {
+                // pre 32 bit transitions
+                pre32TransTimes = NULL;
+                pre32TransTimesCount = 0;
+
+                // 32 bit transitions
+                transitionTimes = ures_getIntVector(r, &i, &ec);
+                if ((i<0 || i>0x7FFF) && U_SUCCESS(ec)) {
+                    ec = U_INVALID_FORMAT_ERROR;
+                }
+                transitionCount = i;
+
+                // post 32 bit transitions
+                r = ures_getByIndex(res, 2, r, &ec);
+                post32TransTimes = ures_getBinary(r, &i, &ec);
+                if ((i<0 || i>0x7FFF) && U_SUCCESS(ec)) {
+                    ec = U_INVALID_FORMAT_ERROR;
+                }
+                post32TransTimesCount = i;
+            }
+            break;
+        case 3:
+            // pre 32 bit transitions
+            r = ures_getByIndex(res, 1, r, &ec);
+            pre32TransTimes = ures_getBinary(r, &i, &ec);
+            if ((i<0 || i>0x7FFF) && U_SUCCESS(ec)) {
+                ec = U_INVALID_FORMAT_ERROR;
+            }
+            pre32TransTimesCount = i;
+
+            // 32 bit transitions
+            r = ures_getByIndex(res, 2, r, &ec);
+            transitionTimes = ures_getIntVector(r, &i, &ec);
+            if ((i<0 || i>0x7FFF) && U_SUCCESS(ec)) {
+                ec = U_INVALID_FORMAT_ERROR;
+            }
+            transitionCount = i;
+
+            // post 32 bit transitions
+            r = ures_getByIndex(res, 3, r, &ec);
+            post32TransTimes = ures_getBinary(r, &i, &ec);
+            if ((i<0 || i>0x7FFF) && U_SUCCESS(ec)) {
+                ec = U_INVALID_FORMAT_ERROR;
+            }
+            post32TransTimesCount = i;
+
+            break;
+        default:
+            ec = U_INVALID_FORMAT_ERROR;
+            break;
+        }
+        */
+
         // Type offsets list must be of even size, with size >= 2
-        r = ures_getByIndex(res, 1, r, &ec);
+        r = ures_getByIndex(res, 1+skip, r, &ec);
         typeOffsets = ures_getIntVector(r, &i, &ec);
         if ((i<2 || i>0x7FFE || ((i&1)!=0)) && U_SUCCESS(ec)) {
             ec = U_INVALID_FORMAT_ERROR;
@@ -123,11 +233,11 @@ OlsonTimeZone::OlsonTimeZone(const UResourceBundle* top,
         typeCount = (int16_t) i >> 1;
 
         // Type data must be of the same size as the transitions list        
-        r = ures_getByIndex(res, 2, r, &ec);
+        r = ures_getByIndex(res, 2+skip, r, &ec);
         int32_t len;
         typeData = ures_getBinary(r, &len, &ec);
         ures_close(r);
-        if (len != transitionCount && U_SUCCESS(ec)) {
+        if (len != (pre32TransTimesCount+transitionCount+post32TransTimesCount) && U_SUCCESS(ec)) {
             ec = U_INVALID_FORMAT_ERROR;
         }
 
@@ -153,11 +263,11 @@ OlsonTimeZone::OlsonTimeZone(const UResourceBundle* top,
 #endif
 
         // Process final rule and data, if any
-        if (size >= 5) {
+        if (size >= 5+skip) {
             int32_t ruleidLen = 0;
-            const UChar* idUStr = ures_getStringByIndex(res, 3, &ruleidLen, &ec);
+            const UChar* idUStr = ures_getStringByIndex(res, 3+skip, &ruleidLen, &ec);
             UnicodeString ruleid(TRUE, idUStr, ruleidLen);
-            r = ures_getByIndex(res, 4, NULL, &ec);
+            r = ures_getByIndex(res, 4+skip, NULL, &ec);
             const int32_t* data = ures_getIntVector(r, &len, &ec);
 #if defined U_DEBUG_TZ
             const char *rKey = ures_getKey(r);
@@ -229,8 +339,13 @@ OlsonTimeZone::OlsonTimeZone(const OlsonTimeZone& other) :
  */
 OlsonTimeZone& OlsonTimeZone::operator=(const OlsonTimeZone& other) {
     transitionCount = other.transitionCount;
+    pre32TransTimesCount = other.pre32TransTimesCount;
+    post32TransTimesCount = other.post32TransTimesCount;
+    numTrans = other.numTrans;
     typeCount = other.typeCount;
     transitionTimes = other.transitionTimes;
+    pre32TransTimes = other.pre32TransTimes;
+    post32TransTimes = other.post32TransTimes;
     typeOffsets = other.typeOffsets;
     typeData = other.typeData;
     finalYear = other.finalYear;
@@ -402,6 +517,7 @@ OlsonTimeZone::getHistoricalOffset(UDate date, UBool local,
 #if defined U_DEBUG_TZ
         printTime(date*1000.0);
 #endif
+    int transCounts = transitionCount + pre32TransTimesCount + post32TransTimesCount;
     if (transitionCount != 0) {
         double sec = uprv_floor(date / U_MILLIS_PER_SECOND);
         // Linear search from the end is the fastest approach, since
@@ -1008,6 +1124,34 @@ OlsonTimeZone::getTimeZoneRules(const InitialTimeZoneRule*& initial,
     }
     // Set the result length
     trscount = cnt;
+}
+
+int32_t 
+OlsonTimeZone::getTransitionTime(int16_t index) const {
+
+    //int64_t transition = 0;
+    int32_t foo = transitionTimes[index];
+    return foo;
+    /*
+    if ((post32TransTimesCount != 0) && (index >= pre32TransTimesCount+transitionCount)){
+        transition = (int64_t)post32TransTimes[index-pre32TransTimesCount-transitionCount];
+    }
+    else {
+        if (pre32TransTimesCount == 0) {
+            transition = (int64_t)transitionTimes[index];
+        }
+        else {
+            if (index >= pre32TransTimesCount) {
+                transition = (int64_t)transitionTimes[index-pre32TransTimesCount];
+            }
+            else {
+                transition = (int64_t)pre32TransTimes[index];
+            }
+        }
+    }
+
+    return transition;
+    */
 }
 
 U_NAMESPACE_END
