@@ -90,6 +90,12 @@ if (status!=errcode) {dataerrln("DecimalFormatTest failure at line %d.  Expected
 
 
 
+//
+//  InvariantStringPiece
+//    Wrap a StringPiece around the extracted invariant data of a UnicodeString.
+//    The data is guaranteed to be nul terminated.  (This is not true of StringPiece
+//    in general, but is true of InvariantStringPiece)
+//
 class InvariantStringPiece: public StringPiece {
   public:
     InvariantStringPiece(const UnicodeString &s);
@@ -109,6 +115,32 @@ InvariantStringPiece::InvariantStringPiece(const UnicodeString &s) {
 }
 
 
+//  UnicodeStringPiece
+//    Wrap a StringPiece around the extracted (to the default charset) data of
+//    a UnicodeString.  The extracted data is guaranteed to be nul terminated.
+//    (This is not true of StringPiece in general, but is true of UnicodeStringPiece)
+//
+class UnicodeStringPiece: public StringPiece {
+  public:
+    UnicodeStringPiece(const UnicodeString &s);
+    ~UnicodeStringPiece() {};
+  private:
+    MaybeStackArray<char, 20>  buf;
+};
+
+UnicodeStringPiece::UnicodeStringPiece(const UnicodeString &s) {
+    int32_t  len = s.length();
+    int32_t  capacity = buf.getCapacity();
+    int32_t requiredCapacity = s.extract(0, len, buf.getAlias(), capacity) + 1;
+    if (capacity < requiredCapacity) {
+        buf.resize(requiredCapacity);
+        capacity = requiredCapacity;
+        s.extract(0, len, buf.getAlias(), capacity);
+    }
+    this->set(buf, requiredCapacity - 1);
+}
+
+
 
 //---------------------------------------------------------------------------
 //
@@ -118,7 +150,7 @@ InvariantStringPiece::InvariantStringPiece(const UnicodeString &s) {
 //---------------------------------------------------------------------------
 
 // Translate a Formattable::type enum value to a string, for error message formatting.
-static const char *FormattableType(Formattable::Type typ) {
+static const char *formattableType(Formattable::Type typ) {
     static const char *types[] = {"kDate",
                                   "kDouble",
                                   "kLong",
@@ -188,7 +220,7 @@ void DecimalFormatTest::DataDrivenTests() {
          0, status);
 
     RegexMatcher    commentMat    (UNICODE_STRING_SIMPLE("\\s*(#.*)?$"), 0, status);
-    RegexMatcher    lineMat(UNICODE_STRING_SIMPLE("(.*?)\\r?\\n"), testString, 0, status);
+    RegexMatcher    lineMat(UNICODE_STRING_SIMPLE("(?m)^(.*?)$"), testString, 0, status);
 
     if (U_FAILURE(status)){
         dataerrln("Construct RegexMatcher() error.");
@@ -209,6 +241,7 @@ void DecimalFormatTest::DataDrivenTests() {
         UnicodeString testLine = lineMat.group(1, status);
         // std::string s;
         // std::cout << lineNum << ": " << testLine.toUTF8String(s) << std::endl;
+        printf("%s\n", UnicodeStringPiece(testLine).data());
         if (testLine.length() == 0) {
             continue;
         }
@@ -271,10 +304,7 @@ void DecimalFormatTest::execParseTest(int32_t lineNum,
     if (U_FAILURE(status)) {
         return;
     }
-    char  localeName[100];
-    locale.extract(0, locale.length(), localeName, sizeof(localeName), US_INV);
-    localeName[sizeof(localeName)-1] = 0;    // In case name was too long.
-    Locale loc = Locale::createCanonical(localeName);
+    Locale loc = Locale::createCanonical(InvariantStringPiece(locale).data());
 
     DecimalFormatSymbols symbols(loc, status);
     UnicodeString pattern = UNICODE_STRING_SIMPLE("####");
@@ -311,16 +341,15 @@ void DecimalFormatTest::execParseTest(int32_t lineNum,
     }
     if (result.getType() != expectType) {
         errln("file dcfmtest.txt, line %d: expectedParseType(%s) != actual parseType(%s)",
-             FormattableType(expectType), FormattableType(result.getType()));
+             lineNum, formattableType(expectType), formattableType(result.getType()));
         return;
     }
 
     StringPiece decimalResult = result.getDecimalNumber();
     InvariantStringPiece expectedResults(expectedDecimal);
-    if (!(decimalResult.length() == expectedResults.length()) &&
-          strncmp(decimalResult.data(), expectedResults.data(), decimalResult.length()) == 0) {
+    if (decimalResult != expectedResults) {
         errln("file dcfmtest.txt, line %d: expected \"%s\", got \"%s\"",
-            expectedResults.data(), decimalResult.data());
+            lineNum, expectedResults.data(), decimalResult.data());
     }
     
     return;
@@ -401,7 +430,7 @@ UChar *DecimalFormatTest::ReadAndConvertFile(const char *fileName, int32_t &ulen
         // Buffer Overflow is expected from the preflight operation.
         status = U_ZERO_ERROR;
         retPtr = new UChar[ulen+1];
-        u_strFromUTF8(retPtr, ulen+1, NULL, fileBufNoBOM, amtRead-3, &status);
+        u_strFromUTF8(retPtr, ulen+1, NULL, fileBufNoBOM, amtReadNoBOM, &status);
     }
 
 cleanUpAndReturn:

@@ -627,9 +627,8 @@ Formattable::getBogus() const
 
 
 // --------------------------------------
-const StringPiece &Formattable::getDecimalNumber() const {
-   static StringPiece foo;
-   return foo;
+const StringPiece Formattable::getDecimalNumber() const {
+   return StringPiece(str, len);
 }
 
 
@@ -641,11 +640,52 @@ const StringPiece &Formattable::getDecimalNumber() const {
 //
 class DecimalValueString: public UMemory {
   private:
-     const char *s;
+     const char *str;
+     int32_t     len;
+     UBool       ownStorage;
   public:
       DecimalValueString();
       ~DecimalValueString();
+      setLiteral(char * literal);
+      setStr(char*, len);
+   private:
+      freeStr();
 };
+
+DecimalValueString::DecimalValueString():
+   str("0"), len(1), ownStorage(FALSE) {
+}
+
+DecimalValueString::~DecimalValueString() {
+    freeStr();
+}
+
+DecimalValueString::freeStr() {
+    if (ownStorage) {
+        uprv_free(str);
+    }
+    str = NULL;
+    len = 0;
+}
+
+DecimalValueString::setLiteral() {
+    freeStr();
+    str = literal;
+    len = uprv_strlen(literal);
+}
+
+DecimalValueString::setStr(const char *str, int32_t slen) {
+    freeStr();
+    char *t = uprv_malloc(slen+1);
+    if (t == NULL) {
+        setLiteral("Error");
+    } else {
+        uprv_memcpy(t, str, slen);
+        t[slen] = 0;
+        str = t;
+        len = slen;
+    }
+}
 
 
 

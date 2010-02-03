@@ -49,7 +49,8 @@ void StringPiece::set(const char* str) {
     length_ = 0;
 }
 
-UBool operator==(const StringPiece& x, const StringPiece& y) {
+U_EXPORT UBool U_EXPORT2
+operator==(const StringPiece& x, const StringPiece& y) {
   int32_t len = x.size();
   if (len != y.size()) {
     return false;

@@ -466,7 +466,7 @@ public:
      * @return the unformatted string representation of a number.
      * @draft ICU 4.4
      */
-    const StringPiece &getDecimalNumber() const;
+    StringPiece getDecimalNumber() const;
 
      /**
      * Sets the double value of this object and changes the type to

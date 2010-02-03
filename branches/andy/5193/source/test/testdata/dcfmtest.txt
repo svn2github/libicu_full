@@ -22,7 +22,6 @@
 #            d     double
 #            i     int32
 #            l     int64
-#     
 
-parse   en_US  "123.45"    "123.45"    i
+parse   en_US  "123.45"    "123.45"    d
 

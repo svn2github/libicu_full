@@ -185,7 +185,16 @@ class U_COMMON_API StringPiece : public UMemory {
   }
 };
 
-UBool operator==(const StringPiece& x, const StringPiece& y);
+/**
+ * Global operator == for StringPiece
+ * @param x The first StringPiece to compare.
+ * @param y The second StringPiece to compare.
+ * @return TRUE if the string data is equal
+ * @draft ICU 4.4
+ */
+// TODO:  how to declare this?  Global C++ only function.
+U_EXPORT UBool U_EXPORT2 
+operator==(const StringPiece& x, const StringPiece& y);
 
 inline UBool operator!=(const StringPiece& x, const StringPiece& y) {
   return !(x == y);
