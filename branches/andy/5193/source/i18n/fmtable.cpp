@@ -22,6 +22,8 @@
 #include "unicode/measure.h"
 #include "unicode/curramt.h"
 #include "cmemory.h"
+#include "cstring.h"
+#include "decNumber.h"
 
 // *****************************************************************************
 // class Formattable
@@ -68,7 +70,7 @@ static inline UBool instanceOfMeasure(const UObject* a) {
  * @param count the original array count
  * @return the new Formattable array.
  */
-static inline Formattable* createArrayCopy(const Formattable* array, int32_t count) {
+static Formattable* createArrayCopy(const Formattable* array, int32_t count) {
     Formattable *result = new Formattable[count];
     if (result != NULL) {
         for (int32_t i=0; i<count; ++i)
@@ -82,10 +84,20 @@ static inline Formattable* createArrayCopy(const Formattable* array, int32_t cou
 /**
  * Set 'ec' to 'err' only if 'ec' is not already set to a failing UErrorCode.
  */
-static inline void setError(UErrorCode& ec, UErrorCode err) {
+static void setError(UErrorCode& ec, UErrorCode err) {
     if (U_SUCCESS(ec)) {
         ec = err;
     }
+}
+
+//
+//  Common initialization code, shared by constructors.
+//  Put everything into a known state.
+//
+void  Formattable::init() {
+    fValue.fInt64 = 0;
+    fDecimalValue = NULL;
+    fBogus.setToBogus(); 
 }
 
 // -------------------------------------
@@ -95,7 +107,7 @@ static inline void setError(UErrorCode& ec, UErrorCode err) {
 Formattable::Formattable()
     :   UObject(), fType(kLong)
 {
-    fBogus.setToBogus();
+    init();
     fValue.fInt64 = 0;
 }
 
@@ -105,7 +117,7 @@ Formattable::Formattable()
 Formattable::Formattable(UDate date, ISDATE /*isDate*/)
     :   UObject(), fType(kDate)
 {
-    fBogus.setToBogus();
+    init();
     fValue.fDate = date;
 }
 
@@ -115,27 +127,27 @@ Formattable::Formattable(UDate date, ISDATE /*isDate*/)
 Formattable::Formattable(double value)
     :   UObject(), fType(kDouble)
 {
-    fBogus.setToBogus();
+    init();
     fValue.fDouble = value;
 }
 
 // -------------------------------------
-// Creates a formattable object with a long value.
+// Creates a formattable object with an int32_t value.
 
 Formattable::Formattable(int32_t value)
     :   UObject(), fType(kLong)
 {
-    fBogus.setToBogus();
+    init();
     fValue.fInt64 = value;
 }
 
 // -------------------------------------
-// Creates a formattable object with a long value.
+// Creates a formattable object with an int64_t value.
 
 Formattable::Formattable(int64_t value)
     :   UObject(), fType(kInt64)
 {
-    fBogus.setToBogus();
+    init();
     fValue.fInt64 = value;
 }
 
@@ -145,7 +157,7 @@ Formattable::Formattable(int64_t value)
 Formattable::Formattable(const UnicodeString& stringToCopy)
     :   UObject(), fType(kString)
 {
-    fBogus.setToBogus();
+    init();
     fValue.fString = new UnicodeString(stringToCopy);
 }
 
@@ -156,14 +168,14 @@ Formattable::Formattable(const UnicodeString& stringToCopy)
 Formattable::Formattable(UnicodeString* stringToAdopt)
     :   UObject(), fType(kString)
 {
-    fBogus.setToBogus();
+    init();
     fValue.fString = stringToAdopt;
 }
 
 Formattable::Formattable(UObject* objectToAdopt)
     :   UObject(), fType(kObject)
 {
-    fBogus.setToBogus();
+    init();
     fValue.fObject = objectToAdopt;
 }
 
@@ -172,7 +184,7 @@ Formattable::Formattable(UObject* objectToAdopt)
 Formattable::Formattable(const Formattable* arrayToCopy, int32_t count)
     :   UObject(), fType(kArray)
 {
-    fBogus.setToBogus();
+    init();
     fValue.fArrayAndCount.fArray = createArrayCopy(arrayToCopy, count);
     fValue.fArrayAndCount.fCount = count;
 }
@@ -183,7 +195,6 @@ Formattable::Formattable(const Formattable* arrayToCopy, int32_t count)
 Formattable::Formattable(const Formattable &source)
     :   UObject(source), fType(kLong)
 {
-    fBogus.setToBogus();
     *this = source;
 }
 
@@ -229,6 +240,9 @@ Formattable::operator=(const Formattable& source)
             fValue.fObject = objectClone(source.fValue.fObject);
             break;
         }
+
+        // TODO: For all types, set the decimal value if the source has one.
+
     }
     return *this;
 }
@@ -626,68 +640,117 @@ Formattable::getBogus() const
 }
 
 
-// --------------------------------------
-const StringPiece Formattable::getDecimalNumber() const {
-   return StringPiece(str, len);
-}
-
-
 
 //
 //   DecimalValueString
 //
 //      A helper class for maintaining the char * strings for decimal values
 //
-class DecimalValueString: public UMemory {
+class Formattable::DecimalValueString: public UMemory {
   private:
-     const char *str;
-     int32_t     len;
-     UBool       ownStorage;
+     const char *fStr;
+     int32_t     fLen;
+     UBool       fOwnStorage;
+     void        freeStr();
   public:
-      DecimalValueString();
-      ~DecimalValueString();
-      setLiteral(char * literal);
-      setStr(char*, len);
-   private:
-      freeStr();
+      DecimalValueString(): fStr("0"), fLen(1), fOwnStorage(FALSE) {};
+      ~DecimalValueString() {freeStr();};
+      void setLiteral(const char * literal);
+      void setStr(const char* str, int32_t len);
+      StringPiece getStringPiece() {return StringPiece(fStr, fLen);};
 };
 
-DecimalValueString::DecimalValueString():
-   str("0"), len(1), ownStorage(FALSE) {
-}
 
-DecimalValueString::~DecimalValueString() {
-    freeStr();
-}
-
-DecimalValueString::freeStr() {
-    if (ownStorage) {
-        uprv_free(str);
+void Formattable::DecimalValueString::freeStr() {
+    if (fOwnStorage) {
+        uprv_free(const_cast<char *>(fStr));
     }
-    str = NULL;
-    len = 0;
+    fStr = NULL;
+    fLen = 0;
 }
 
-DecimalValueString::setLiteral() {
+void Formattable::DecimalValueString::setLiteral(const char *literal) {
     freeStr();
-    str = literal;
-    len = uprv_strlen(literal);
+    fStr = literal;
+    fLen = uprv_strlen(literal);
+    fOwnStorage = FALSE;
 }
 
-DecimalValueString::setStr(const char *str, int32_t slen) {
+void Formattable::DecimalValueString::setStr(const char *str, int32_t len) {
     freeStr();
-    char *t = uprv_malloc(slen+1);
+    char *t = static_cast<char *>(uprv_malloc(len+1));
     if (t == NULL) {
         setLiteral("Error");
     } else {
-        uprv_memcpy(t, str, slen);
-        t[slen] = 0;
-        str = t;
-        len = slen;
+        uprv_memcpy(t, str, len);
+        t[len] = 0;
+        fStr = t;
+        fLen = len;
+        fOwnStorage = TRUE;
     }
 }
 
 
+// --------------------------------------
+StringPiece Formattable::getDecimalNumber() const {
+    if (fDecimalValue != NULL) {
+        return fDecimalValue->getStringPiece();
+    } else {
+        return StringPiece("NaN");
+    }
+}
+
+
+//  TODO:  move somewhere more related to decNum.
+//
+static decNumber *allocDecNum(decContext *dctx) {
+    int32_t    size   = sizeof(decNumber) + dctx->digits / DECDPUN;
+       // note that struct decNumber includes one built-in unit of digit storage,
+       //      so we don't need to round our answer up.
+    decNumber *retNum = static_cast<decNumber *>(uprv_malloc(size));
+    return retNum;
+}
+
+decNumber *decNumberClone(decNumber *num, decContext *dctx) {
+    decNumber  *result = allocDecNum(dctx);
+    uprv_decNumberCopy(result, num);
+}
+
+
+// ---------------------------------------
+void
+Formattable::setDecimalNumber(const StringPiece &numberString, UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return;
+    }
+
+// TODO
+#if 0
+    // Parse the string into a decimal number.
+    // Set the number of decimal digits in the decNum to be the length of the string.
+    // It can't be more; it might be less (because of characters used for sign and/or exponent).
+    decContext  dctx;
+    if (fDecContext == NULL) {
+        fDecContext = static_cast<decContext *>(uprv_malloc(sizeof(decContext)));
+        if (fDecContext == NULL) {
+            status = U_MEMORY_ALLOCATION_ERROR;
+            return;
+        }
+    }
+    uprv_decContextDefault(&dctx, DEC_INIT_BASE);
+    dctx->digits = numberString.size();
+    dctx->traps = 0;      // No signals on decimal arithmetic errors.
+    dctx->extended = 1;   // Allow NaNs, Infinities, etc.
+
+    decNumber  *number = allocDecNum(&dctx);
+    uprv_decNumberFromString(number, numberString.data(), dctx);
+
+    uint32_t flags = dctx->status;
+    if (flags & DEC_Conversion_syntax) {
+        status = U_DECIMAL_NUMBER_SYNTAX_ERROR;     // TODO:  add string form.
+#endif
+
+}
 
 #if 0
 //----------------------------------------------------

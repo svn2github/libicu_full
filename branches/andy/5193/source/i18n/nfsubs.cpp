@@ -1044,22 +1044,25 @@ FractionalPartSubstitution::doSubstitution(double number, UnicodeString& toInser
     dl.set(number, 20, TRUE);
     
     UBool pad = FALSE;
-    while (dl.fCount > (dl.fDecimalAt <= 0 ? 0 : dl.fDecimalAt)) {
+    while (dl.getCount() > (dl.getDecimalAt() <= 0 ? 0 : dl.getDecimalAt())) {
       if (pad && useSpaces) {
         toInsertInto.insert(_pos + getPos(), gSpace);
       } else {
         pad = TRUE;
       }
-      getRuleSet()->format((int64_t)(dl.fDigits[--dl.fCount] - '0'), toInsertInto, _pos + getPos());
+      int32_t dlCount = dl.getCount();
+      --dlCount;
+      dl.setCount(dlCount);
+      getRuleSet()->format((int64_t)(dl.getDigit(dlCount) - '0'), toInsertInto, _pos + getPos());
     }
-    while (dl.fDecimalAt < 0) {
+    while (dl.getDecimalAt() < 0) {
       if (pad && useSpaces) {
         toInsertInto.insert(_pos + getPos(), gSpace);
       } else {
         pad = TRUE;
       }
       getRuleSet()->format((int64_t)0, toInsertInto, _pos + getPos());
-      ++dl.fDecimalAt;
+      dl.setDecimalAt(dl.getDecimalAt()+1);
     }
 
     if (!pad) {
@@ -1156,7 +1159,7 @@ FractionalPartSubstitution::doParse(const UnicodeString& text,
         }
         delete fmt;
 
-        result = dl.fCount == 0 ? 0 : dl.getDouble();
+        result = dl.getCount() == 0 ? 0 : dl.getDouble();
         result = composeRuleValue(result, baseValue);
         resVal.setDouble(result);
         return TRUE;

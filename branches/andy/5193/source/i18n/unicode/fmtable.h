@@ -586,6 +586,11 @@ private:
      * string or array objects.
      */
     void            dispose(void);
+    
+    /**
+     * Common initialization, for use by constructors.
+     */
+    void            init();
 
     UnicodeString* getBogus() const;
 
