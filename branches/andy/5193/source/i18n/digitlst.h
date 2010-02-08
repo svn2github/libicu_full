@@ -138,6 +138,12 @@ public:
     void clear(void);
 
     /**
+     *  Remove, by rounding, any fractional part of the decimal number,
+     *  leaving an integer value.
+     */
+    void toIntegralValue();
+    
+    /**
      * Appends digits to the list. Ignores all digits beyond the first DBL_DIG,
      * since they are not significant for either longs or doubles.
      * @param digit The digit to be appended.

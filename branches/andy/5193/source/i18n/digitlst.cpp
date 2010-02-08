@@ -328,44 +328,61 @@ int32_t DigitList::getLong() /*const*/
 }
 
 
-// Range of in64_t -9223372036854775808 to 9223372036854775807  (19 digits)
-//
 /**
- * Make sure that fitsIntoInt64() is called before calling this function.
+ *  convert this number to an int64_t.   Round if there is a fractional part.
+ *  Return zero if the number cannot be represented.
  */
-int64_t DigitList::getInt64() /*const*/
-{
-    // Truncate if non-integer.   (Truncate or round?)
-    // Abort if out of range.
+int64_t DigitList::getInt64() /*const*/ {
+    // Round if non-integer.   (Truncate or round?)
+    // Return 0 if out of range.
+    // Range of in64_t is -9223372036854775808 to 9223372036854775807  (19 digits)
     //
-    if (fCount == fDecimalAt) {
-        uint64_t value = 0;
-
-        // emulate a platform independent atoi64()
-        int32_t numDigits = fDecNumber->digits;
-        for (int i = numDigits-1; i>=0 ; --i) {
-            int v = fDecNumber->lsu[i];
-            value = value * (uint64_t)10 + (uint64_t)v;
+    if (fDecNumber->exponent != 0) {
+        DigitList intNum(*this);
+        intNum.toIntegralValue();
+        if (intNum.fDecNumber->exponent != 0) {
+            // Number is too large to represent exactly as a decimal int, and _way_
+            // to large to go in an int64.
+            return 0;
+        } else {
+            // Recursive call; this time we know we have an int.
+            return intNum.getInt64();
         }
-        if (!fIsPositive) {
-            value = ~value;
-            value += 1;
-        }
-        int64_t svalue = (int64_t)value;
-        // Check for overflow (wrong sign of result)
-        return svalue;
     }
-    else {
-        // TODO: figure out best approach
-        //     (Ditch this.   Handles cases with fractional parts only.)
 
-        return (int64_t)getDouble();
+    int32_t numDigits = fDecNumber->digits;
+    if (numDigits > 19) {
+        // Overflow
+        return 0;
     }
+
+    uint64_t value = 0;
+    for (int i = numDigits-1; i>=0 ; --i) {
+        int v = fDecNumber->lsu[i];
+        value = value * (uint64_t)10 + (uint64_t)v;
+    }
+    if (decNumberIsNegative(fDecNumber)) {
+        value = ~value;
+        value += 1;
+    }
+    int64_t svalue = (int64_t)value;
+
+    // Check overflow.  It's convenient that the MSD is 9 only on overflow, the amount of
+    //                  overflow can't wrap too far.  The test will also fail -0, but
+    //                  that does no harm; the right answer is 0.
+    if (numDigits == 15) {
+        if (( decNumberIsNegative(fDecNumber) && svalue>0) ||
+            (!decNumberIsNegative(fDecNumber) && svalue<0)) {
+            value = 0;
+        }
+    }
+        
+    return svalue;
 }
 
 /**
- * Return true if the number represented by this object can fit into
- * a long.
+ * Return true if this is an integer value that can be held
+ * by an int32_t type.
  */
 UBool
 DigitList::fitsIntoLong(UBool ignoreNegativeZero) /*const*/
@@ -505,8 +522,7 @@ DigitList::set(int64_t source, int32_t maximumDigits)
 /**
  * Set the digit list to a representation of the given double value.
  * This method supports both fixed-point and exponential notation.
- * @param source Value to be converted; must not be Inf, -Inf, Nan,
- * or a value <= 0.
+ * @param source Value to be converted.
  * @param maximumDigits The most fractional or total digits which should
  * be converted.  If total digits, and the value is zero, then
  * there is no maximum -- generate all digits.
@@ -518,70 +534,33 @@ DigitList::set(double source, int32_t maximumDigits, UBool fixedPoint)
 {
     // for now, simple implementation; later, do proper IEEE stuff
     char rep[MAX_DIGITS + 8]; // Extra space for '+', '.', e+NNN, and '\0' (actually +8 is enough)
-    char *digitPtr      = fDigits;
-    char *repPtr        = rep + 2;  // +2 to skip the sign and decimal
-    int32_t exponent    = 0;
 
     fIsPositive = !uprv_isNegative(source);    // Allow +0 and -0
 
     // Generate a representation of the form /[+-][0-9]+e[+-][0-9]+/
     sprintf(rep, "%+1.*e", MAX_DBL_DIGITS - 1, source);
-    fDecimalAt  = 0;
-    rep[2]      = rep[1];    // remove decimal
 
-    while (*repPtr == kZero) {
-        repPtr++;
-        fDecimalAt--;   // account for leading zeros
-    }
+    // Create a decNumber from the string.
+    decNumberFromString(fDecNumber, rep, &fContext);
 
-    while (*repPtr != 'e') {
-        *(digitPtr++) = *(repPtr++);
-    }
-    fCount = MAX_DBL_DIGITS + fDecimalAt;
-
-    // Parse an exponent of the form /[eE][+-][0-9]+/
-    UBool negExp = (*(++repPtr) == '-');
-    while (*(++repPtr) != 0) {
-        exponent = 10*exponent + *repPtr - kZero;
-    }
-    if (negExp) {
-        exponent = -exponent;
-    }
-    fDecimalAt += exponent + 1; // +1 for decimal removal
-
-    // The negative of the exponent represents the number of leading
-    // zeros between the decimal and the first non-zero digit, for
-    // a value < 0.1 (e.g., for 0.00123, -decimalAt == 2).  If this
-    // is more than the maximum fraction digits, then we have an underflow
-    // for the printed representation.
-    if (fixedPoint && -fDecimalAt >= maximumDigits)
-    {
-        // If we round 0.0009 to 3 fractional digits, then we have to
-        // create a new one digit in the least significant location.
-        if (-fDecimalAt == maximumDigits && shouldRoundUp(0)) {
-            fCount = 1;
-            ++fDecimalAt;
-            fDigits[0] = (char)'1';
-        } else {
-            // Handle an underflow to zero when we round something like
-            // 0.0009 to 2 fractional digits.
-            fCount = 0;
+    if (maximumDigits > 0 && maximumDigits < fDecNumber.digits) {
+        // Rounding may be needed.
+        int32_t requestedDigits = maximumDigits;  // For floating point case.
+        if (fixedPoint) {
+            // Requested maximumDigits is the digits to the right of
+            // the decimal.  Total digits in the rounded number may be greater.
+            fractionDigits = -fDecNumber.exponent;
+            requestedDigits = fDecNumber.digits;
+            if (fractionDigits > 0) {
+                requestedDigits = fDecNumber.digits - fractionDigits + requestedDigits;
+            }
         }
-        return;
+        if (requestedDigits < fDecNumber.digits) {
+            fDecNumber.round(requestedDigits);
+        }
     }
 
-
-    // Eliminate digits beyond maximum digits to be displayed.
-    // Round up if appropriate.  Do NOT round in the special
-    // case where maximumDigits == 0 and fixedPoint is FALSE.
-    if (fixedPoint || (0 < maximumDigits && maximumDigits < fCount)) {
-        round(fixedPoint ? (maximumDigits + fDecimalAt) : maximumDigits);
-    }
-    else {
-        // Eliminate trailing zeros.
-        while (fCount > 1 && fDigits[fCount - 1] == kZero)
-            --fCount;
-    }
+    // TODO:  test the behavior of -0
 }
 
 // -------------------------------------
@@ -594,158 +573,26 @@ DigitList::set(double source, int32_t maximumDigits, UBool fixedPoint)
 void
 DigitList::round(int32_t maximumDigits)
 {
-    // Eliminate digits beyond maximum digits to be displayed.
-    // Round up if appropriate.
-    if (maximumDigits >= 0 && maximumDigits < fCount)
-    {
-        if (shouldRoundUp(maximumDigits)) {
-            // Rounding up involved incrementing digits from LSD to MSD.
-            // In most cases this is simple, but in a worst case situation
-            // (9999..99) we have to adjust the decimalAt value.
-            while (--maximumDigits >= 0 && ++fDigits[maximumDigits] > '9')
-                ;
-
-            if (maximumDigits < 0)
-            {
-                // We have all 9's, so we increment to a single digit
-                // of one and adjust the exponent.
-                fDigits[0] = (char) '1';
-                ++fDecimalAt;
-                maximumDigits = 1; // Adjust the count
-            }
-            else
-            {
-                ++maximumDigits; // Increment for use as count
-            }
-        }
-        fCount = maximumDigits;
-    }
-
-    // Eliminate trailing zeros.
-    while (fCount > 1 && fDigits[fCount-1] == kZero) {
-        --fCount;
-    }
+    int32_t savedDigits fContext.digits;
+    fContext.digits = maximumDigits;
+    uprv_decNumberPlus(fDecNumber, fDecNumber, &fContext);
+    fContext.digits = savedDigits;
 }
 
-/**
- * Return true if truncating the representation to the given number
- * of digits will result in an increment to the last digit.  This
- * method implements the requested rounding mode.
- * [bnf]
- * @param maximumDigits the number of digits to keep, from 0 to
- * <code>count-1</code>.  If 0, then all digits are rounded away, and
- * this method returns true if a one should be generated (e.g., formatting
- * 0.09 with "#.#").
- * @return true if digit <code>maximumDigits-1</code> should be
- * incremented
- */
-UBool DigitList::shouldRoundUp(int32_t maximumDigits) const {
-    int i = 0;
-    if (fRoundingMode == DecimalFormat::kRoundDown ||
-        fRoundingMode == DecimalFormat::kRoundFloor   &&  fIsPositive ||
-        fRoundingMode == DecimalFormat::kRoundCeiling && !fIsPositive) {
-        return FALSE;
-    }
-
-    if (fRoundingMode == DecimalFormat::kRoundHalfEven ||
-        fRoundingMode == DecimalFormat::kRoundHalfDown ||
-        fRoundingMode == DecimalFormat::kRoundHalfUp) {
-        if (fDigits[maximumDigits] == '5' ) {
-            for (i=maximumDigits+1; i<fCount; ++i) {
-                if (fDigits[i] != kZero) {
-                    return TRUE;
-                }
-            }
-            switch (fRoundingMode) {
-            case DecimalFormat::kRoundHalfEven:
-            default:
-                // Implement IEEE half-even rounding
-                return maximumDigits > 0 && (fDigits[maximumDigits-1] % 2 != 0);
-            case DecimalFormat::kRoundHalfDown:
-                return FALSE;
-            case DecimalFormat::kRoundHalfUp:
-                return TRUE;
-            }
-        }
-        return (fDigits[maximumDigits] > '5');
-    }
-
-    U_ASSERT(fRoundingMode == DecimalFormat::kRoundUp ||
-             fRoundingMode == DecimalFormat::kRoundFloor   && !fIsPositive ||
-             fRoundingMode == DecimalFormat::kRoundCeiling &&  fIsPositive);
-
-     for (i=maximumDigits; i<fCount; ++i) {
-         if (fDigits[i] != kZero) {
-             return TRUE;
-         }
-     }
-     return false;
-}
 
 // -------------------------------------
 
-// In the Java implementation, we need a separate set(long) because 64-bit longs
-// have too much precision to fit into a 64-bit double.  In C++, longs can just
-// be passed to set(double) as long as they are 32 bits in size.  We currently
-// don't implement 64-bit longs in C++, although the code below would work for
-// that with slight modifications. [LIU]
-/*
 void
-DigitList::set(long source)
-{
-    // handle the special case of zero using a standard exponent of 0.
-    // mathematically, the exponent can be any value.
-    if (source == 0)
-    {
-        fcount = 0;
-        fDecimalAt = 0;
-        return;
-    }
-
-    // we don't accept negative numbers, with the exception of long_min.
-    // long_min is treated specially by being represented as long_max+1,
-    // which is actually an impossible signed long value, so there is no
-    // ambiguity.  we do this for convenience, so digitlist can easily
-    // represent the digits of a long.
-    bool islongmin = (source == long_min);
-    if (islongmin)
-    {
-        source = -(source + 1); // that is, long_max
-        islongmin = true;
-    }
-    sprintf(fdigits, "%d", source);
-
-    // now we need to compute the exponent.  it's easy in this case; it's
-    // just the same as the count.  e.g., 0.123 * 10^3 = 123.
-    fcount = strlen(fdigits);
-    fDecimalAt = fcount;
-
-    // here's how we represent long_max + 1.  note that we always know
-    // that the last digit of long_max will not be 9, because long_max
-    // is of the form (2^n)-1.
-    if (islongmin)
-        ++fdigits[fcount-1];
-
-    // finally, we trim off trailing zeros.  we don't alter fDecimalAt,
-    // so this has no effect on the represented value.  we know the first
-    // digit is non-zero (see code above), so we only have to check down
-    // to fdigits[1].
-    while (fcount > 1 && fdigits[fcount-1] == kzero)
-        --fcount;
+DigitList::toIntegralValue() {
+    uprv_decNumberToIntegralValue(fDecNumber, fDecNumber, &fContext);
 }
-*/
 
-/**
- * Return true if this object represents the value zero.  Anything with
- * no digits, or all zero digits, is zero, regardless of fDecimalAt.
- */
+
+// -------------------------------------
 UBool
 DigitList::isZero() const
 {
-    for (int32_t i=0; i<fCount; ++i)
-        if (fDigits[i] != kZero)
-            return FALSE;
-    return TRUE;
+    return uprv_decNumberIsZero(fDecNumber);
 }
 
 U_NAMESPACE_END
