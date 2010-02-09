@@ -188,49 +188,41 @@ DigitList::clear()
 
 
 /**
- * Formats a number into a base 10 string representation, and NULL terminates it.
+ * Formats a int64_t number into a base 10 string representation, and NULL terminates it.
  * @param number The number to format
- * @param outputStr The string to output to
- * @param outputLen The maximum number of characters to put into outputStr
- *                  (including NULL).
+ * @param outputStr The string to output to.  Must be at least MAX_DIGITS+2 in length (21),
+ *                  to hold the longest int64_t value.
  * @return the number of digits written, not including the sign.
  */
 static int32_t
-formatBase10(int64_t number, char *outputStr, int32_t outputLen)
-{
-    char buffer[MAX_DIGITS + 1];
-    int32_t bufferLen;
-    int32_t result;
+formatBase10(int64_t number, char *outputStr) {
+    // The number is output backwards, starting with the LSD.
+    // Fill the buffer from the far end.  After the number is complete,
+    // slide the string contents to the front.
 
-    if (outputLen > MAX_DIGITS) {
-        outputLen = MAX_DIGITS;     // Ignore NULL
-    }
-    else if (outputLen < 3) {
-        return 0;                   // Not enough room
-    }
+    int32_t destIdx = MAX_DIGITS;
+    outputStr[--destIdx] = 0; 
 
-    bufferLen = outputLen;
-
+    int64_t  n = number;
     if (number < 0) {   // Negative numbers are slightly larger than a postive
-        buffer[bufferLen--] = (char)(-(number % 10) + kZero);
-        number /= -10;
-        *(outputStr++) = '-';
+        outputStr[--destIdx] = (char)(-(n % 10) + kZero);
+        n /= -10;
     }
-    else {
-        *(outputStr++) = '+';    // allow +0
-    }
-    while (bufferLen >= 0 && number) {      // Output the number
-        buffer[bufferLen--] = (char)(number % 10 + kZero);
-        number /= 10;
+    do { 
+        outputStr[--destIdx] = (char)(n % 10 + kZero);
+        n /= 10;
+    } while (n > 0);
+    
+    if (number < 0) {
+        outputStr[--destIdx] = '-';
     }
 
-    result = outputLen - bufferLen++;
+    // Slide the number to the start of the output str
+    U_ASSERT(destIdx >= 0);
+    int32_t length = MAX_DIGITS - destIdx;
+    uprv_memmove(outputStr, outputStr+MAX_DIGITS-length, length);
 
-    while (bufferLen <= outputLen) {     // Copy the number to output
-        *(outputStr++) = buffer[bufferLen++];
-    }
-    *outputStr = 0;   // NULL terminate.
-    return result;
+    return length;
 }
 
 
@@ -303,6 +295,7 @@ DigitList::setCount(int32_t c)  {
         // decNumber keeps one digit (with that digit being a zero)
         c = 1;
     }
+    uprv_decNumberTrim(fDecNumber);
     fDecNumber->digits = c;
 }
 
@@ -311,6 +304,7 @@ DigitList::getCount() {
     if (decNumberIsZero(fDecNumber)) {
        return 0;
     } else {
+       uprv_decNumberTrim(fDecNumber);
        return fDecNumber->digits;
     }
 }
@@ -427,26 +421,18 @@ int64_t DigitList::getInt64() /*const*/ {
     // Return 0 if out of range.
     // Range of in64_t is -9223372036854775808 to 9223372036854775807  (19 digits)
     //
-    if (fDecNumber->exponent != 0) {
-        DigitList intNum(*this);
-        intNum.toIntegralValue();
-        if (intNum.fDecNumber->exponent != 0) {
-            // Number is too large to represent exactly as a decimal int, and _way_
-            // to large to go in an int64.
-            return 0;
-        } else {
-            // Recursive call; this time we know we have an int.
-            return intNum.getInt64();
-        }
-    }
-
-    int32_t numDigits = fDecNumber->digits;
-    if (numDigits > 19) {
-        // Overflow
+    if (fDecNumber->digits + fDecNumber->exponent > 19) {
+        // Overflow, absolute value too big.
         return 0;
+    }
+    if (fDecNumber->exponent != 0) {
+        // Force to an integer, with zero exponent, rounding if necessary.
+        DigitList zero;
+        uprv_decNumberQuantize(fDecNumber, fDecNumber, zero.fDecNumber, &fContext);
     }
 
     uint64_t value = 0;
+    int32_t numDigits =fDecNumber->digits;
     for (int i = numDigits-1; i>=0 ; --i) {
         int v = fDecNumber->lsu[i];
         value = value * (uint64_t)10 + (uint64_t)v;
@@ -460,7 +446,7 @@ int64_t DigitList::getInt64() /*const*/ {
     // Check overflow.  It's convenient that the MSD is 9 only on overflow, the amount of
     //                  overflow can't wrap too far.  The test will also fail -0, but
     //                  that does no harm; the right answer is 0.
-    if (numDigits == 15) {
+    if (numDigits == 19) {
         if (( decNumberIsNegative(fDecNumber) && svalue>0) ||
             (!decNumberIsNegative(fDecNumber) && svalue<0)) {
             value = 0;
@@ -572,7 +558,7 @@ void
 DigitList::set(int64_t source, int32_t maximumDigits)
 {
     char str[MAX_DIGITS+2];   // Leave room for sign and trailing nul.
-    formatBase10(source, str, MAX_DIGITS+2);
+    formatBase10(source, str);
 
     if (maximumDigits == 0) {
         maximumDigits = MAX_DIGITS;
@@ -608,6 +594,7 @@ DigitList::set(double source, int32_t maximumDigits, UBool fixedPoint)
 
     // Create a decNumber from the string.
     uprv_decNumberFromString(fDecNumber, rep, &fContext);
+    uprv_decNumberTrim(fDecNumber);
 
     if (maximumDigits > 0 && maximumDigits < fDecNumber->digits) {
         // Rounding may be needed.
