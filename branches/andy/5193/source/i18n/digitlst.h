@@ -112,6 +112,8 @@ public:
      */
     DigitList(const DigitList&); // copy constructor
 
+    DigitList(const char *s);    // construct from a decimal number.
+
     /* assignment operator
      * @param DigitList The object to be copied.
      * @return the newly created object.
@@ -125,6 +127,9 @@ public:
      * return false otherwise.
      */
     UBool operator==(const DigitList& other) const;
+
+    int32_t  compare(const DigitList& other);
+
 
     inline UBool operator!=(const DigitList& other) const { return !operator==(other); };
 

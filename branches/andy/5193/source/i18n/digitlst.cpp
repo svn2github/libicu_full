@@ -96,6 +96,24 @@ DigitList::DigitList(const DigitList &other)
     *this = other;
 }
 
+
+// -------------------------------------
+// construct from a decimal number in a char * string.
+
+DigitList::DigitList(const char *s) {
+    uprv_decContextDefault(&fContext, DEC_INIT_BASE);
+    fContext.traps  = 0;
+    uprv_decContextSetRounding(&fContext, DEC_ROUND_HALF_EVEN);
+    fContext.digits = DEFAULT_DIGITS;
+
+    int32_t numSize = sizeof(decNumber) + DEFAULT_DIGITS;
+    fDecNumber = static_cast<decNumber *>(uprv_malloc(numSize));
+    // TODO:  do something with allocation failures.
+
+    uprv_decNumberFromString(fDecNumber, s, &fContext);
+}
+
+
 // -------------------------------------
 // assignment operator
 
@@ -135,6 +153,30 @@ DigitList::operator==(const DigitList& that) const
 }
 
 // -------------------------------------
+//      comparison function.   Returns 
+//         Not Comparable :  -2
+//                      < :  -1
+//                     == :   0
+//                      > :  +1
+int32_t DigitList::compare(const DigitList &other) {
+    decNumber   result;
+    int32_t     savedDigits = fContext.digits;
+    fContext.digits = 1;
+    uprv_decNumberCompare(&result, this->fDecNumber, other.fDecNumber, &fContext);
+    fContext.digits = savedDigits;
+    if (decNumberIsZero(&result)) {
+        return 0;
+    } else if (decNumberIsSpecial(&result)) {
+        return -2;
+    } else if (result.bits & DECNEG) {
+        return -1;
+    } else {
+        return 1;
+    }
+}
+
+
+// -------------------------------------
 // Resets the digit list; sets all the digits to zero.
 
 void
@@ -143,6 +185,54 @@ DigitList::clear()
     uprv_decNumberZero(fDecNumber);
     uprv_decContextSetRounding(&fContext, DEC_ROUND_HALF_EVEN);
 }
+
+
+/**
+ * Formats a number into a base 10 string representation, and NULL terminates it.
+ * @param number The number to format
+ * @param outputStr The string to output to
+ * @param outputLen The maximum number of characters to put into outputStr
+ *                  (including NULL).
+ * @return the number of digits written, not including the sign.
+ */
+static int32_t
+formatBase10(int64_t number, char *outputStr, int32_t outputLen)
+{
+    char buffer[MAX_DIGITS + 1];
+    int32_t bufferLen;
+    int32_t result;
+
+    if (outputLen > MAX_DIGITS) {
+        outputLen = MAX_DIGITS;     // Ignore NULL
+    }
+    else if (outputLen < 3) {
+        return 0;                   // Not enough room
+    }
+
+    bufferLen = outputLen;
+
+    if (number < 0) {   // Negative numbers are slightly larger than a postive
+        buffer[bufferLen--] = (char)(-(number % 10) + kZero);
+        number /= -10;
+        *(outputStr++) = '-';
+    }
+    else {
+        *(outputStr++) = '+';    // allow +0
+    }
+    while (bufferLen >= 0 && number) {      // Output the number
+        buffer[bufferLen--] = (char)(number % 10 + kZero);
+        number /= 10;
+    }
+
+    result = outputLen - bufferLen++;
+
+    while (bufferLen <= outputLen) {     // Copy the number to output
+        *(outputStr++) = buffer[bufferLen++];
+    }
+    *outputStr = 0;   // NULL terminate.
+    return result;
+}
+
 
 // -------------------------------------
 
@@ -387,53 +477,41 @@ int64_t DigitList::getInt64() /*const*/ {
 UBool
 DigitList::fitsIntoLong(UBool ignoreNegativeZero) /*const*/
 {
-    // Figure out if the result will fit in a long.  We have to
-    // first look for nonzero digits after the decimal point;
-    // then check the size.
-
-    // Trim trailing zeros after the decimal point. This does not change
-    // the represented value.
-    while (fCount > fDecimalAt && fCount > 0 && fDigits[fCount - 1] == kZero)
-        --fCount;
-
-    if (fCount == 0) {
-        // Positive zero fits into a long, but negative zero can only
-        // be represented as a double. - bug 4162852
-        return fIsPositive || ignoreNegativeZero;
-    }
-
-    // If the digit list represents a double or this number is too
-    // big for a long.
-    if (fDecimalAt < fCount || fDecimalAt > LONG_MIN_REP_LENGTH)
+    if (decNumberIsSpecial(this->fDecNumber)) {
+        // NaN or Infinity.  Does not fit in int32.
         return FALSE;
-
-    // If number is small enough to fit in a long
-    if (fDecimalAt < LONG_MIN_REP_LENGTH)
+    }
+    uprv_decNumberTrim(this->fDecNumber);
+    if (fDecNumber->exponent < 0) {
+        // Number contains fraction digits.
+        return FALSE;
+    }
+    if (decNumberIsZero(this->fDecNumber) && !ignoreNegativeZero &&
+        (fDecNumber->bits & DECNEG) != 0) {
+        // Negative Zero, not ingored.  Cannot represent as a long.
+        return FALSE;
+    }
+    if (fDecNumber->digits + fDecNumber->exponent < 10) {
+        // The number is 9 or fewer digits.
+        // The max and min int32 are 10 digts, so this number fits.
+        // This is the common case.
         return TRUE;
-
-    // At this point we have fDecimalAt == fCount, and fCount == LONG_MIN_REP_LENGTH.
-    // The number will overflow if it is larger than LONG_MAX
-    // or smaller than LONG_MIN.
-    for (int32_t i=0; i<fCount; ++i)
-    {
-        char dig = fDigits[i],
-             max = LONG_MIN_REP[i];
-        if (dig > max)
-            return FALSE;
-        if (dig < max)
-            return TRUE;
     }
 
-    // At this point the first count digits match.  If fDecimalAt is less
-    // than count, then the remaining digits are zero, and we return true.
-    if (fCount < fDecimalAt)
-        return TRUE;
-
-    // Now we have a representation of Long.MIN_VALUE, without the leading
-    // negative sign.  If this represents a positive value, then it does
-    // not fit; otherwise it fits.
-    return !fIsPositive;
+    // TODO:  Need to cache these constants; construction is relatively costly.
+    //        But not of huge consequence; they're only needed for 10 digit ints.
+    DigitList min32("-2147483648");
+    if (this->compare(min32) < 0) {
+        return FALSE;
+    }
+    DigitList max32("2147483647");
+    if (this->compare(max32) > 0) {
+        return FALSE;
+    }
+    return true;
 }
+
+
 
 /**
  * Return true if the number represented by this object can fit into
@@ -442,52 +520,38 @@ DigitList::fitsIntoLong(UBool ignoreNegativeZero) /*const*/
 UBool
 DigitList::fitsIntoInt64(UBool ignoreNegativeZero) /*const*/
 {
-    // Figure out if the result will fit in a long.  We have to
-    // first look for nonzero digits after the decimal point;
-    // then check the size.
-
-    // Trim trailing zeros after the decimal point. This does not change
-    // the represented value.
-    while (fCount > fDecimalAt && fCount > 0 && fDigits[fCount - 1] == kZero)
-        --fCount;
-
-    if (fCount == 0) {
-        // Positive zero fits into a long, but negative zero can only
-        // be represented as a double. - bug 4162852
-        return fIsPositive || ignoreNegativeZero;
-    }
-
-    // If the digit list represents a double or this number is too
-    // big for a long.
-    if (fDecimalAt < fCount || fDecimalAt > I64_MIN_REP_LENGTH)
+    if (decNumberIsSpecial(this->fDecNumber)) {
+        // NaN or Infinity.  Does not fit in int32.
         return FALSE;
-
-    // If number is small enough to fit in an int64
-    if (fDecimalAt < I64_MIN_REP_LENGTH)
+    }
+    uprv_decNumberTrim(this->fDecNumber);
+    if (fDecNumber->exponent < 0) {
+        // Number contains fraction digits.
+        return FALSE;
+    }
+    if (decNumberIsZero(this->fDecNumber) && !ignoreNegativeZero &&
+        (fDecNumber->bits & DECNEG) != 0) {
+        // Negative Zero, not ingored.  Cannot represent as a long.
+        return FALSE;
+    }
+    if (fDecNumber->digits + fDecNumber->exponent < 19) {
+        // The number is 18 or fewer digits.
+        // The max and min int64 are 19 digts, so this number fits.
+        // This is the common case.
         return TRUE;
-
-    // At this point we have fDecimalAt == fCount, and fCount == INT64_MIN_REP_LENGTH.
-    // The number will overflow if it is larger than U_INT64_MAX
-    // or smaller than U_INT64_MIN.
-    for (int32_t i=0; i<fCount; ++i)
-    {
-        char dig = fDigits[i],
-             max = I64_MIN_REP[i];
-        if (dig > max)
-            return FALSE;
-        if (dig < max)
-            return TRUE;
     }
 
-    // At this point the first count digits match.  If fDecimalAt is less
-    // than count, then the remaining digits are zero, and we return true.
-    if (fCount < fDecimalAt)
-        return TRUE;
-
-    // Now we have a representation of INT64_MIN_VALUE, without the leading
-    // negative sign.  If this represents a positive value, then it does
-    // not fit; otherwise it fits.
-    return !fIsPositive;
+    // TODO:  Need to cache these constants; construction is relatively costly.
+    //        But not of huge consequence; they're only needed for 19 digit ints.
+    DigitList min64("-9223372036854775808");
+    if (this->compare(min64) < 0) {
+        return FALSE;
+    }
+    DigitList max64("9223372036854775807");
+    if (this->compare(max64) > 0) {
+        return FALSE;
+    }
+    return true;
 }
 
 
@@ -507,16 +571,18 @@ DigitList::set(int32_t source, int32_t maximumDigits)
 void
 DigitList::set(int64_t source, int32_t maximumDigits)
 {
-    fCount = fDecimalAt = formatBase10(source, fDecimalDigits, MAX_DIGITS);
+    char str[MAX_DIGITS+2];   // Leave room for sign and trailing nul.
+    formatBase10(source, str, MAX_DIGITS+2);
 
-    fIsPositive = (*fDecimalDigits == '+');
+    if (maximumDigits == 0) {
+        maximumDigits = MAX_DIGITS;
+        // MAX_DIGITS is 19, big enough for a complete int64_t
+    }
 
-    // Don't copy trailing zeros
-    while (fCount > 1 && fDigits[fCount - 1] == kZero)
-        --fCount;
+    int32_t savedDigits = fContext.digits;
 
-    if(maximumDigits > 0)
-        round(maximumDigits);
+    uprv_decNumberFromString(fDecNumber, str, &fContext);
+    fContext.digits = savedDigits;
 }
 
 /**
@@ -535,28 +601,28 @@ DigitList::set(double source, int32_t maximumDigits, UBool fixedPoint)
     // for now, simple implementation; later, do proper IEEE stuff
     char rep[MAX_DIGITS + 8]; // Extra space for '+', '.', e+NNN, and '\0' (actually +8 is enough)
 
-    fIsPositive = !uprv_isNegative(source);    // Allow +0 and -0
+    // fIsPositive = !uprv_isNegative(source);    // Allow +0 and -0
 
     // Generate a representation of the form /[+-][0-9]+e[+-][0-9]+/
     sprintf(rep, "%+1.*e", MAX_DBL_DIGITS - 1, source);
 
     // Create a decNumber from the string.
-    decNumberFromString(fDecNumber, rep, &fContext);
+    uprv_decNumberFromString(fDecNumber, rep, &fContext);
 
-    if (maximumDigits > 0 && maximumDigits < fDecNumber.digits) {
+    if (maximumDigits > 0 && maximumDigits < fDecNumber->digits) {
         // Rounding may be needed.
         int32_t requestedDigits = maximumDigits;  // For floating point case.
         if (fixedPoint) {
             // Requested maximumDigits is the digits to the right of
             // the decimal.  Total digits in the rounded number may be greater.
-            fractionDigits = -fDecNumber.exponent;
-            requestedDigits = fDecNumber.digits;
+            int32_t fractionDigits = -fDecNumber->exponent;
+            requestedDigits = fDecNumber->digits;
             if (fractionDigits > 0) {
-                requestedDigits = fDecNumber.digits - fractionDigits + requestedDigits;
+                requestedDigits = fDecNumber->digits - fractionDigits + requestedDigits;
             }
         }
-        if (requestedDigits < fDecNumber.digits) {
-            fDecNumber.round(requestedDigits);
+        if (requestedDigits < fDecNumber->digits) {
+            round(requestedDigits);
         }
     }
 
@@ -573,7 +639,7 @@ DigitList::set(double source, int32_t maximumDigits, UBool fixedPoint)
 void
 DigitList::round(int32_t maximumDigits)
 {
-    int32_t savedDigits fContext.digits;
+    int32_t savedDigits  = fContext.digits;
     fContext.digits = maximumDigits;
     uprv_decNumberPlus(fDecNumber, fDecNumber, &fContext);
     fContext.digits = savedDigits;
@@ -592,7 +658,7 @@ DigitList::toIntegralValue() {
 UBool
 DigitList::isZero() const
 {
-    return uprv_decNumberIsZero(fDecNumber);
+    return decNumberIsZero(fDecNumber);
 }
 
 U_NAMESPACE_END
