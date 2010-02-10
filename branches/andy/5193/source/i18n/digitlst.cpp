@@ -275,7 +275,12 @@ DigitList::setDecimalAt(int32_t d) {
     U_ASSERT((fDecNumber->bits & DECSPECIAL) == 0);  // Not Infinity or NaN
     U_ASSERT(d-1>-999999999);
     U_ASSERT(d-1< 999999999);
-    fDecNumber->exponent = d - fDecNumber->digits;
+    int32_t adjustedDigits = fDecNumber->digits;
+    if (decNumberIsZero(fDecNumber)) {
+        // Account for difference in how zero is represented between DigitList & decNumber.
+        adjustedDigits = 0;
+    }
+    fDecNumber->exponent = d - adjustedDigits;
 }
 
 int32_t  
@@ -294,8 +299,8 @@ DigitList::setCount(int32_t c)  {
         // For a value of zero, DigitList sets all fields to zero, while
         // decNumber keeps one digit (with that digit being a zero)
         c = 1;
+        fDecNumber->lsu[0] = 0;
     }
-    uprv_decNumberTrim(fDecNumber);
     fDecNumber->digits = c;
 }
 
@@ -304,7 +309,6 @@ DigitList::getCount() {
     if (decNumberIsZero(fDecNumber)) {
        return 0;
     } else {
-       uprv_decNumberTrim(fDecNumber);
        return fDecNumber->digits;
     }
 }
@@ -329,7 +333,7 @@ DigitList::getDigit(int32_t i) {
 // Appends the digit to the digit list if it's not out of scope.
 // Ignores the digit, otherwise.
 // 
-// This function is horribly inefficient to do with decNumber because
+// This function is horribly inefficient to implement with decNumber because
 // the digits are stored least significant first, which requires moving all
 // existing digits down one to make space for the new one to be appended.
 //
@@ -341,14 +345,27 @@ DigitList::append(char digit)
     U_ASSERT(digit>='0' && digit<='9');
     // Ignore digits which exceed the precision we can represent
     //    And don't fix for larger precision.  Fix callers instead.
-    int32_t nDigits = fDecNumber->digits;
-    if (nDigits < fContext.digits) {
-        int i;
-        for (i=nDigits; i>0; i--) {
-            fDecNumber->lsu[i] = fDecNumber->lsu[i-1];
-        }
+    if (decNumberIsZero(fDecNumber)) {
+        // Zero needs to be special cased because of the difference in the way
+        // that the old DigitList and decNumber represent it.
+        // digit cout was zero for digitList, is one for decNumber
         fDecNumber->lsu[0] = digit & 0x0f;
+        fDecNumber->digits = 1;
+    } else {
+        int32_t nDigits = fDecNumber->digits;
+        if (nDigits < fContext.digits) {
+            int i;
+            for (i=nDigits; i>0; i--) {
+                fDecNumber->lsu[i] = fDecNumber->lsu[i-1];
+            }
+            fDecNumber->lsu[0] = digit & 0x0f;
+            fDecNumber->digits++;
+        }
     }
+    // DigitList emulation - appending doesn't change the magnitude of existing
+    //                       digits.  With decNumber's decimal being after the
+    //                       least signficant digit, we need to adjust the exponent.
+    fDecNumber->exponent--;
 }
 
 // -------------------------------------
@@ -403,10 +420,21 @@ DigitList::getDouble() /*const*/
 // -------------------------------------
 
 /**
- * Make sure that fitsIntoLong() is called before calling this function.
+ *  convert this number to an int32_t.   Round if there is a fractional part.
+ *  Return zero if the number cannot be represented.
  */
 int32_t DigitList::getLong() /*const*/
 {
+    if (fDecNumber->digits + fDecNumber->exponent > 10) {
+        // Overflow, absolute value too big.
+        return 0;
+    }
+    if (fDecNumber->exponent != 0) {
+        // Force to an integer, with zero exponent, rounding if necessary.
+        DigitList zero;
+        uprv_decNumberQuantize(fDecNumber, fDecNumber, zero.fDecNumber, &fContext);
+    }
+
     int32_t n = uprv_decNumberToInt32(fDecNumber, &fContext);
     return n;
 }
@@ -596,21 +624,17 @@ DigitList::set(double source, int32_t maximumDigits, UBool fixedPoint)
     uprv_decNumberFromString(fDecNumber, rep, &fContext);
     uprv_decNumberTrim(fDecNumber);
 
-    if (maximumDigits > 0 && maximumDigits < fDecNumber->digits) {
-        // Rounding may be needed.
-        int32_t requestedDigits = maximumDigits;  // For floating point case.
-        if (fixedPoint) {
-            // Requested maximumDigits is the digits to the right of
-            // the decimal.  Total digits in the rounded number may be greater.
-            int32_t fractionDigits = -fDecNumber->exponent;
-            requestedDigits = fDecNumber->digits;
-            if (fractionDigits > 0) {
-                requestedDigits = fDecNumber->digits - fractionDigits + requestedDigits;
-            }
-        }
-        if (requestedDigits < fDecNumber->digits) {
-            round(requestedDigits);
-        }
+    if (fixedPoint && (fDecNumber->exponent < -maximumDigits)) {
+        // Fixed point rounding needed.
+        decNumber  t;     // Temporary 1 digit decimal number w/ right no. of fraction digits.
+        uprv_decNumberZero(&t);
+        t.exponent = -maximumDigits;
+        t.lsu[0] = 1;
+        uprv_decNumberQuantize(fDecNumber, fDecNumber, &t, &fContext);   // Do the rounding.
+    }
+
+    if (!fixedPoint && maximumDigits > 0 && maximumDigits < fDecNumber->digits) {
+        round(maximumDigits);
     }
 
     // TODO:  test the behavior of -0
