@@ -279,7 +279,7 @@ enum {
 //  Match Engine State Stack Frame Layout.
 //
 struct REStackFrame {
-    int64_t            fInputIdx;        // Position of next character in the input string
+    int32_t            fInputIdx;        // Position of next character in the input string
     int32_t            fPatIdx;          // Position of next Op in the compiled pattern
     int32_t            fExtra[2];        // Extra state, for capture group start/ends
                                          //   atomic parentheses, repeat counts, etc.
