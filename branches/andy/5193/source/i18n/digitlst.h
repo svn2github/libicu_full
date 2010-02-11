@@ -231,6 +231,9 @@ public:
 
     UBool isZero(void) const;
 
+    /**  Reduce, or normalize.  Removes trailing zeroes, adjusts exponent appropriately. */
+    void     reduce();
+
     /** Set to zero, but preserve sign */
     void     setToZero();
 

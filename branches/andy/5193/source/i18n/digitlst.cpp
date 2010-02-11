@@ -177,6 +177,14 @@ int32_t DigitList::compare(const DigitList &other) {
 
 
 // -------------------------------------
+//  Reduce - remove trailing zero digits.
+void
+DigitList::reduce() {
+    uprv_decNumberReduce(fDecNumber, fDecNumber, &fContext);
+}
+
+
+// -------------------------------------
 // Resets the digit list; sets all the digits to zero.
 
 void
@@ -200,7 +208,8 @@ formatBase10(int64_t number, char *outputStr) {
     // Fill the buffer from the far end.  After the number is complete,
     // slide the string contents to the front.
 
-    int32_t destIdx = MAX_DIGITS;
+    const int32_t MAX_IDX = MAX_DIGITS+2;
+    int32_t destIdx = MAX_IDX;
     outputStr[--destIdx] = 0; 
 
     int64_t  n = number;
@@ -219,8 +228,8 @@ formatBase10(int64_t number, char *outputStr) {
 
     // Slide the number to the start of the output str
     U_ASSERT(destIdx >= 0);
-    int32_t length = MAX_DIGITS - destIdx;
-    uprv_memmove(outputStr, outputStr+MAX_DIGITS-length, length);
+    int32_t length = MAX_IDX - destIdx;
+    uprv_memmove(outputStr, outputStr+MAX_IDX-length, length);
 
     return length;
 }
@@ -306,7 +315,9 @@ DigitList::setCount(int32_t c)  {
 
 int32_t  
 DigitList::getCount() {
-    if (decNumberIsZero(fDecNumber)) {
+    if (decNumberIsZero(fDecNumber) && fDecNumber->exponent==0) {
+       // The extra test for exponent==0 is needed because parsing sometimes appends
+       // zero digits.  It's bogus, decimalFormatter parsing needs to be cleaned up.
        return 0;
     } else {
        return fDecNumber->digits;
@@ -351,6 +362,7 @@ DigitList::append(char digit)
         // digit cout was zero for digitList, is one for decNumber
         fDecNumber->lsu[0] = digit & 0x0f;
         fDecNumber->digits = 1;
+        fDecNumber->exponent--;     // To match the old digit list implementation.
     } else {
         int32_t nDigits = fDecNumber->digits;
         if (nDigits < fContext.digits) {
@@ -360,12 +372,12 @@ DigitList::append(char digit)
             }
             fDecNumber->lsu[0] = digit & 0x0f;
             fDecNumber->digits++;
+            // DigitList emulation - appending doesn't change the magnitude of existing
+            //                       digits.  With decNumber's decimal being after the
+            //                       least signficant digit, we need to adjust the exponent.
+            fDecNumber->exponent--;
         }
     }
-    // DigitList emulation - appending doesn't change the magnitude of existing
-    //                       digits.  With decNumber's decimal being after the
-    //                       least signficant digit, we need to adjust the exponent.
-    fDecNumber->exponent--;
 }
 
 // -------------------------------------
@@ -392,8 +404,10 @@ DigitList::getDouble() /*const*/
     }
 
     if (decNumberIsZero(fDecNumber)) {
-        // TODO:  worry about sign?
         value = 0.0;
+        if (decNumberIsNegative(fDecNumber)) {
+            value /= -1;
+        }
     }
     else {
         MaybeStackArray<char, MAX_DIGITS+15> s;
@@ -594,7 +608,7 @@ DigitList::set(int64_t source, int32_t maximumDigits)
     }
 
     int32_t savedDigits = fContext.digits;
-
+    fContext.digits = maximumDigits;
     uprv_decNumberFromString(fDecNumber, str, &fContext);
     fContext.digits = savedDigits;
 }
@@ -631,13 +645,12 @@ DigitList::set(double source, int32_t maximumDigits, UBool fixedPoint)
         t.exponent = -maximumDigits;
         t.lsu[0] = 1;
         uprv_decNumberQuantize(fDecNumber, fDecNumber, &t, &fContext);   // Do the rounding.
+        uprv_decNumberTrim(fDecNumber);
     }
 
     if (!fixedPoint && maximumDigits > 0 && maximumDigits < fDecNumber->digits) {
         round(maximumDigits);
     }
-
-    // TODO:  test the behavior of -0
 }
 
 // -------------------------------------
@@ -654,6 +667,7 @@ DigitList::round(int32_t maximumDigits)
     fContext.digits = maximumDigits;
     uprv_decNumberPlus(fDecNumber, fDecNumber, &fContext);
     fContext.digits = savedDigits;
+    uprv_decNumberTrim(fDecNumber);
 }
 
 

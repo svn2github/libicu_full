@@ -1306,6 +1306,7 @@ DecimalFormat::subformat(UnicodeString& appendTo,
         // If maximum integer digits are defined and are larger than
         // minimum integer digits, then minimum integer digits are
         // ignored.
+        digits.reduce();   // Removes trailing zero digits.
         int32_t exponent = digits.getDecimalAt();
         if (maxIntDig > 1 && maxIntDig != minIntDig) {
             // A exponent increment is defined; adjust to it.
