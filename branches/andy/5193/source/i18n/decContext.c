@@ -402,7 +402,7 @@ U_CAPI Int  U_EXPORT2 uprv_decContextTestEndian(Flag quiet) {
 /*                                                                    */
 /* No error is possible.                                              */
 /* ------------------------------------------------------------------ */
-U_CAPI  U_EXPORT2 uInt uprv_decContextTestSavedStatus(uInt oldstatus, uInt mask) {
+U_CAPI  uInt U_EXPORT2 uprv_decContextTestSavedStatus(uInt oldstatus, uInt mask) {
   return (oldstatus&mask)!=0;
   } /* decContextTestSavedStatus  */
 

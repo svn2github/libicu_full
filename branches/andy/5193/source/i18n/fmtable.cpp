@@ -714,6 +714,7 @@ static decNumber *allocDecNum(decContext *dctx) {
 decNumber *decNumberClone(decNumber *num, decContext *dctx) {
     decNumber  *result = allocDecNum(dctx);
     uprv_decNumberCopy(result, num);
+    return result;
 }
 
 

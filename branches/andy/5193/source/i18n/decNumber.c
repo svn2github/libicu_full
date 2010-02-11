@@ -5224,7 +5224,7 @@ static decNumber * decMultiplyOp(decNumber *res, const decNumber *lhs,
 /* 4. The working precisions for the static buffers are twice the     */
 /*    obvious size to allow for calls from decNumberPower.            */
 /* ------------------------------------------------------------------ */
-U_CAPI decNumber * decExpOp(decNumber *res, const decNumber *rhs,
+decNumber * decExpOp(decNumber *res, const decNumber *rhs,
                          decContext *set, uInt *status) {
   uInt ignore=0;                   /* working status  */
   Int h;                           /* adjusted exponent for 0.xxxx  */
@@ -5268,7 +5268,7 @@ U_CAPI decNumber * decExpOp(decNumber *res, const decNumber *rhs,
     if (SPECIALARG) {                   /* handle infinities and NaNs  */
       if (decNumberIsInfinite(rhs)) {   /* an infinity  */
         if (decNumberIsNegative(rhs))   /* -Infinity -> +0  */
-          U_EXPORT2 uprv_decNumberZero(res);
+          uprv_decNumberZero(res);
          else uprv_decNumberCopy(res, rhs);  /* +Infinity -> self  */
         }
        else decNaNs(res, rhs, NULL, set, status); /* a NaN  */
@@ -5584,7 +5584,7 @@ const uShort LNnn[90]={9016,  8652,  8316,  8008,  7724,  7456,  7208,
 /* 5. The static buffers are larger than might be expected to allow   */
 /*    for calls from decNumberPower.                                  */
 /* ------------------------------------------------------------------ */
-U_CAPI decNumber * decLnOp(decNumber *res, const decNumber *rhs,
+decNumber * decLnOp(decNumber *res, const decNumber *rhs,
                     decContext *set, uInt *status) {
   uInt ignore=0;                   /* working status accumulator  */
   uInt needbytes;                  /* for space calculations  */
@@ -5617,7 +5617,7 @@ U_CAPI decNumber * decLnOp(decNumber *res, const decNumber *rhs,
       if (decNumberIsInfinite(rhs)) {   /* an infinity  */
         if (decNumberIsNegative(rhs))   /* -Infinity -> error  */
           *status|=DEC_Invalid_operation;
-         else U_EXPORT2 uprv_decNumberCopy(res, rhs);  /* +Infinity -> self  */
+         else uprv_decNumberCopy(res, rhs);  /* +Infinity -> self  */
         }
        else decNaNs(res, rhs, NULL, set, status); /* a NaN  */
       break;}
@@ -6001,7 +6001,7 @@ static decNumber * decQuantizeOp(decNumber *res, const decNumber *lhs,
 /* The emphasis here is on speed for common cases, and avoiding       */
 /* coefficient comparison if possible.                                */
 /* ------------------------------------------------------------------ */
-U_CAPI decNumber * decCompareOp(decNumber *res, const decNumber *lhs,
+static decNumber * decCompareOp(decNumber *res, const decNumber *lhs,
                          const decNumber *rhs, decContext *set,
                          Flag op, uInt *status) {
   #if DECSUBSET
@@ -6102,7 +6102,7 @@ U_CAPI decNumber * decCompareOp(decNumber *res, const decNumber *lhs,
           if (decNumberIsNegative(lhs)) result=-result;
           } /* lexp!=rexp  */
         } /* total-order by exponent  */
-      U_EXPORT2 uprv_decNumberZero(res);               /* [always a valid result]  */
+      uprv_decNumberZero(res);               /* [always a valid result]  */
       if (result!=0) {                  /* must be -1 or +1  */
         *res->lsu=1;
         if (result<0) res->bits=DECNEG;
