@@ -1045,6 +1045,8 @@ FractionalPartSubstitution::doSubstitution(double number, UnicodeString& toInser
     
     UBool pad = FALSE;
     while (dl.getCount() > (dl.getDecimalAt() <= 0 ? 0 : dl.getDecimalAt())) {
+      // Loop iterates over fraction digits, starting with the LSD.
+      TODO:  rewrite this code so it works with decNumber based DigitList!
       if (pad && useSpaces) {
         toInsertInto.insert(_pos + getPos(), gSpace);
       } else {
@@ -1056,6 +1058,8 @@ FractionalPartSubstitution::doSubstitution(double number, UnicodeString& toInser
       getRuleSet()->format((int64_t)(dl.getDigit(dlCount) - '0'), toInsertInto, _pos + getPos());
     }
     while (dl.getDecimalAt() < 0) {
+      // Loop runs once for each zero to the right of the decimal, but to the left of the 
+      // significant digits of the number.
       if (pad && useSpaces) {
         toInsertInto.insert(_pos + getPos(), gSpace);
       } else {
