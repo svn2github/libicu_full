@@ -1042,31 +1042,20 @@ FractionalPartSubstitution::doSubstitution(double number, UnicodeString& toInser
 
     DigitList dl;
     dl.set(number, 20, TRUE);
+    dl.reduce();     // Removes any trailing zeros.
     
     UBool pad = FALSE;
-    while (dl.getCount() > (dl.getDecimalAt() <= 0 ? 0 : dl.getDecimalAt())) {
+    for (int32_t didx = dl.getCount()-1; didx>=dl.getDecimalAt(); didx--) {
       // Loop iterates over fraction digits, starting with the LSD.
-      TODO:  rewrite this code so it works with decNumber based DigitList!
+      //   include both real digits from the number, and zeros
+      //   to the left of the MSD but to the right of the decimal point.
       if (pad && useSpaces) {
         toInsertInto.insert(_pos + getPos(), gSpace);
       } else {
         pad = TRUE;
       }
-      int32_t dlCount = dl.getCount();
-      --dlCount;
-      dl.setCount(dlCount);
-      getRuleSet()->format((int64_t)(dl.getDigit(dlCount) - '0'), toInsertInto, _pos + getPos());
-    }
-    while (dl.getDecimalAt() < 0) {
-      // Loop runs once for each zero to the right of the decimal, but to the left of the 
-      // significant digits of the number.
-      if (pad && useSpaces) {
-        toInsertInto.insert(_pos + getPos(), gSpace);
-      } else {
-        pad = TRUE;
-      }
-      getRuleSet()->format((int64_t)0, toInsertInto, _pos + getPos());
-      dl.setDecimalAt(dl.getDecimalAt()+1);
+      int64_t digit = didx>=0 ? dl.getDigit(didx) - '0' : 0;
+      getRuleSet()->format(digit, toInsertInto, _pos + getPos());
     }
 
     if (!pad) {

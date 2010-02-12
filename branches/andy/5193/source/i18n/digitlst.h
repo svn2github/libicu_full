@@ -31,6 +31,7 @@
 #include <float.h>
 #include "decContext.h"
 #include "decNumber.h"
+#include "cmemory.h"
 
 // Decimal digits in a 64-bit int
 #define INT64_DIGITS 19
@@ -111,8 +112,6 @@ public:
      * @return the newly created object. 
      */
     DigitList(const DigitList&); // copy constructor
-
-    DigitList(const char *s);    // construct from a decimal number.
 
     /* assignment operator
      * @param DigitList The object to be copied.
@@ -224,6 +223,16 @@ public:
      */
     void set(int64_t source, int32_t maximumDigits = 0);
 
+   /**
+     * Utility routine to set the value of the digit list from a decimal number
+     * string.
+     * If a non-zero maximumDigits is specified, no more than that number of
+     * significant digits will be produced.
+     * @param source The value to be set
+     * @param maximunDigits The maximum number of digits to be shown
+     */
+    void set(StringPiece source, int32_t maximumDigits = 0);
+
     //  The following functions replace direct access to the original DigitList implmentation
     //  data structures.
 
@@ -281,8 +290,13 @@ private:
 
 private:
 
+    enum {
+        DEFAULT_DIGITS = 40
+    };
+
     decContext    fContext;
     decNumber     *fDecNumber;
+    MaybeStackArray<char, sizeof(decNumber) + DEFAULT_DIGITS>  fStorage;
 
 
     /**

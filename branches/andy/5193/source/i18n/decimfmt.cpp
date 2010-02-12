@@ -53,15 +53,16 @@
 #include "unicode/currpinf.h"
 #include "unicode/plurrule.h"
 #include "ucurrimp.h"
+#include "cmemory.h"
 #include "util.h"
 #include "digitlst.h"
-#include "cmemory.h"
 #include "cstring.h"
 #include "umutex.h"
 #include "uassert.h"
 #include "putilimp.h"
 #include <math.h>
 #include "hash.h"
+#include "decnumstr.h"
 
 
 U_NAMESPACE_BEGIN
@@ -1264,6 +1265,7 @@ DecimalFormat::subformat(UnicodeString& appendTo,
     if (digits.isZero())
     {
         // Normalize, preserve sign.
+        //   TODO:  is this necessary?  Rename function on digits if it is.
         digits.setToZero();
     }
 
@@ -1858,14 +1860,6 @@ DecimalFormat::parseForCurrency(const UnicodeString& text,
 }
 
 
-/*
-This is an old implimentation that was preparing for 64-bit numbers in ICU.
-It is very slow, and 64-bit numbers are not ANSI-C compatible. This code
-is here if we change our minds.
-
-^^^ what is this referring to? remove? ^^^ [alan]
-*/
-
 /**
  * Parse the given text into a number.  The text is parsed beginning at
  * parsePosition, until an unparseable character is seen.
@@ -1897,6 +1891,12 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
                               DigitList& digits, UBool* status,
                               UChar* currency) const
 {
+    //  The parsing process builds up the number as char string, in the neutral format that
+    //  will be acceptable to the decNumber library, then at the end passes that string
+    //  off for conversion to a decNumber.
+    DecimalNumberString  parsedNum;
+    digits.setToZero();
+
     int32_t position = parsePosition.getIndex();
     int32_t oldStart = position;
 
@@ -1917,8 +1917,10 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
     }
     if (posMatch >= 0) {
         position += posMatch;
+        parsedNum.append('+');
     } else if (negMatch >= 0) {
         position += negMatch;
+        parsedNum.append('-');
     } else {
         parsePosition.setErrorIndex(position);
         return FALSE;
@@ -1935,8 +1937,9 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
         ? 0 : inf->length());
     position += infLen; // infLen is non-zero when it does equal to infinity
     status[fgStatusInfinite] = (UBool)infLen;
-    if (!infLen)
-    {
+    if (infLen) {
+        parsedNum.append("Infinity");
+    } else {
         // We now have a string of digits, possibly with grouping symbols,
         // and decimal points.  We want to process these into a DigitList.
         // We don't want to put a bunch of leading zeros into the DigitList
@@ -1944,7 +1947,6 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
         // put only significant digits into the DigitList, and adjust the
         // exponent as needed.
 
-        digits.setToZero();
         UChar32 zero = getConstSymbol(DecimalFormatSymbols::kZeroDigitSymbol).char32At(0);
 
         const UnicodeString *decimal;
@@ -1987,7 +1989,7 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
                 digit = u_charDigitValue(ch);
             }
 
-            if (digit > 0 && digit <= 9)
+            if (digit >= 0 && digit <= 9)
             {
                 // Cancel out backup setting (see grouping handler below)
                 backup = -1;
@@ -1995,30 +1997,7 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
                 sawDigit = TRUE;
                 // output a regular non-zero digit.
                 ++digitCount;
-                digits.append((char)(digit + '0'));
-                position += U16_LENGTH(ch);
-            }
-            else if (digit == 0)
-            {
-                // Cancel out backup setting (see grouping handler below)
-                backup = -1;
-                sawDigit = TRUE;
-
-                // Check for leading zeros
-                if (digits.getCount() != 0)
-                {
-                    // output a regular zero digit.
-                    ++digitCount;
-                    digits.append((char)(digit + '0'));
-                }
-                else if (sawDecimal)
-                {
-                    // If we have seen the decimal, but no significant digits yet,
-                    // then we account for leading zeros by decrementing the
-                    // digits.fDecimalAt into negative values.
-                    digits.setDecimalAt(digits.getDecimalAt()-1);
-                }
-                // else ignore leading zeros in integer part of number.
+                parsedNum.append(digit + '0');
                 position += U16_LENGTH(ch);
             }
             else if (!text.compare(position, groupingLen, *grouping) && isGroupingUsed())
@@ -2034,7 +2013,7 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
                 // If we're only parsing integers, or if we ALREADY saw the
                 // decimal, then don't parse this one.
 
-                digits.setDecimalAt(digitCount); // Not digits.fCount!
+                parsedNum.append('.');
                 sawDecimal = TRUE;
                 position += decimalLen;
             }
@@ -2045,7 +2024,7 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
                 {
                     // Parse sign, if present
                     int32_t pos = position + tmp->length();
-                    DigitList exponentDigits;
+                    char exponentSign = '+';
 
                     if (pos < textLength)
                     {
@@ -2058,12 +2037,13 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
                             tmp = &getConstSymbol(DecimalFormatSymbols::kMinusSignSymbol);
                             if (!text.compare(pos, tmp->length(), *tmp))
                             {
+                                exponentSign = '-';
                                 pos += tmp->length();
-                                exponentDigits.setPositive(FALSE);
                             }
                         }
                     }
 
+                    UBool sawExponentDigit = FALSE;
                     while (pos < textLength) {
                         ch = text[(int32_t)pos];
                         digit = ch - zero;
@@ -2072,16 +2052,19 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
                             digit = u_charDigitValue(ch);
                         }
                         if (0 <= digit && digit <= 9) {
+                            if (!sawExponentDigit) {
+                                parsedNum.append('E');
+                                parsedNum.append(exponentSign);
+                                sawExponentDigit = TRUE;
+                            }
                             ++pos;
-                            exponentDigits.append((char)(digit + '0'));
+                            parsedNum.append((char)(digit + '0'));
                         } else {
                             break;
                         }
                     }
 
-                    if (exponentDigits.getCount() > 0) {
-                        exponentDigits.setDecimalAt(exponentDigits.getCount());
-                        digits.setDecimalAt(digits.getDecimalAt() + exponentDigits.getLong());
+                    if (sawExponentDigit) {
                         position = pos; // Advance past the exponent
                     }
 
@@ -2099,10 +2082,6 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
         }
 
         // If there was no decimal point we have an integer
-        if (!sawDecimal)
-        {
-            digits.setDecimalAt(digits.getDecimalAt() + digitCount); // Not digits.fCount!
-        }
 
         // If none of the text string was recognized.  For example, parse
         // "x" with pattern "#0.00" (return index and error index both 0)
@@ -2150,13 +2129,15 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
 
     parsePosition.setIndex(position);
 
-    digits.setPositive(posMatch >= 0);
+    parsedNum[0] = (posMatch >= 0) ? '+' : '-';
 
     if(parsePosition.getIndex() == oldStart)
     {
         parsePosition.setErrorIndex(position);
         return FALSE;
     }
+    digits.set(parsedNum);
+
     return TRUE;
 }
 

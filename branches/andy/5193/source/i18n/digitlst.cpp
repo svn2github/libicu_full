@@ -54,11 +54,6 @@ static char gDecimal = 0;
 static const char LONG_MIN_REP[] = "2147483648";
 static const char I64_MIN_REP[] = "9223372036854775808";
 
-enum {
-    LONG_MIN_REP_LENGTH = sizeof(LONG_MIN_REP) - 1, //Ignore the NULL at the end
-    I64_MIN_REP_LENGTH = sizeof(I64_MIN_REP) - 1,   //Ignore the NULL at the end
-    DEFAULT_DIGITS = 40                             // Will grow as needed.
-};
 
 U_NAMESPACE_BEGIN
 
@@ -70,12 +65,9 @@ DigitList::DigitList()
     uprv_decContextDefault(&fContext, DEC_INIT_BASE);
     fContext.traps  = 0;
     uprv_decContextSetRounding(&fContext, DEC_ROUND_HALF_EVEN);
-    fContext.digits = DEFAULT_DIGITS;
+    fContext.digits = fStorage.getCapacity() - sizeof(decNumber);
 
-    int32_t numSize = sizeof(decNumber) + DEFAULT_DIGITS;
-    fDecNumber = static_cast<decNumber *>(uprv_malloc(numSize));
-    // TODO:  do something with allocation failures.
-    
+    fDecNumber = (decNumber *)(fStorage.getAlias());
     uprv_decNumberZero(fDecNumber);
 }
 
@@ -83,8 +75,6 @@ DigitList::DigitList()
 
 DigitList::~DigitList()
 {
-    uprv_free(fDecNumber);
-    fDecNumber = NULL;
 }
 
 // -------------------------------------
@@ -98,23 +88,6 @@ DigitList::DigitList(const DigitList &other)
 
 
 // -------------------------------------
-// construct from a decimal number in a char * string.
-
-DigitList::DigitList(const char *s) {
-    uprv_decContextDefault(&fContext, DEC_INIT_BASE);
-    fContext.traps  = 0;
-    uprv_decContextSetRounding(&fContext, DEC_ROUND_HALF_EVEN);
-    fContext.digits = DEFAULT_DIGITS;
-
-    int32_t numSize = sizeof(decNumber) + DEFAULT_DIGITS;
-    fDecNumber = static_cast<decNumber *>(uprv_malloc(numSize));
-    // TODO:  do something with allocation failures.
-
-    uprv_decNumberFromString(fDecNumber, s, &fContext);
-}
-
-
-// -------------------------------------
 // assignment operator
 
 DigitList&
@@ -124,9 +97,8 @@ DigitList::operator=(const DigitList& other)
     {
         uprv_memcpy(&fContext, &other.fContext, sizeof(decContext));
 
-        uprv_free(fDecNumber);
-        int32_t numSize = sizeof(decNumber) + DEFAULT_DIGITS;
-        fDecNumber = static_cast<decNumber *>(uprv_malloc(numSize));
+        fStorage.resize(other.fStorage.getCapacity());
+        fDecNumber = (decNumber *)fStorage.getAlias();
         uprv_decNumberCopy(fDecNumber, other.fDecNumber);
     }
     return *this;
@@ -528,11 +500,11 @@ DigitList::fitsIntoLong(UBool ignoreNegativeZero) /*const*/
 
     // TODO:  Need to cache these constants; construction is relatively costly.
     //        But not of huge consequence; they're only needed for 10 digit ints.
-    DigitList min32("-2147483648");
+    DigitList min32; min32.set("-2147483648");
     if (this->compare(min32) < 0) {
         return FALSE;
     }
-    DigitList max32("2147483647");
+    DigitList max32; max32.set("2147483647");
     if (this->compare(max32) > 0) {
         return FALSE;
     }
@@ -571,11 +543,11 @@ DigitList::fitsIntoInt64(UBool ignoreNegativeZero) /*const*/
 
     // TODO:  Need to cache these constants; construction is relatively costly.
     //        But not of huge consequence; they're only needed for 19 digit ints.
-    DigitList min64("-9223372036854775808");
+    DigitList min64; min64.set("-9223372036854775808");
     if (this->compare(min64) < 0) {
         return FALSE;
     }
-    DigitList max64("9223372036854775807");
+    DigitList max64; max64.set("9223372036854775807");
     if (this->compare(max64) > 0) {
         return FALSE;
     }
@@ -612,6 +584,30 @@ DigitList::set(int64_t source, int32_t maximumDigits)
     uprv_decNumberFromString(fDecNumber, str, &fContext);
     fContext.digits = savedDigits;
 }
+
+
+// -------------------------------------
+/**
+ * Set the DigitList from a decimal number string.
+ * @param maximumDigits The maximum digits to be retained.  If zero,
+ * there is no maximum -- generate all digits.  If the number of
+ * digits in the input number is larger, the number will be rounded
+ * in accordance with the current rounding mode.
+ * TODO:  sort out terminated vs non-terminated strings.
+ *        decNumber wants terminated, is not easily changed.
+ *        StringPiece doesn't know about terminated.
+ */
+void
+DigitList::set(StringPiece source, int32_t maximumDigits) {
+    if (maximumDigits == 0) {
+        maximumDigits = MAX_DIGITS;   // TODO: eliminate this limit.
+    }
+
+    int32_t savedDigits = fContext.digits;
+    fContext.digits = maximumDigits;
+    uprv_decNumberFromString(fDecNumber, source.data(), &fContext);
+    fContext.digits = savedDigits;
+}   
 
 /**
  * Set the digit list to a representation of the given double value.
