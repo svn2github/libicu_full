@@ -32,18 +32,20 @@ public:
     DecimalNumberString();
     ~DecimalNumberString();
 
-    DecimalNumberString(const StringPiece &);
+    DecimalNumberString(const StringPiece &, UErrorCode &status);
 
-    DecimalNumberString &append(char);
-    DecimalNumberString &append(const StringPiece &);
+    DecimalNumberString &append(char, UErrorCode &status);
+    DecimalNumberString &append(const StringPiece &s, UErrorCode &status);
     char &operator[] (int32_t index);
     const char &operator[] (int32_t index) const;
     int32_t  length() const;
-    void     setLength(int32_t length);
+    void     setLength(int32_t length, UErrorCode &status);
     operator StringPiece() const;
   private:
     int32_t  fLength;
     MaybeStackArray<char, 40> fText;
+
+    UBool ensureCapacity(int32_t neededSize, UErrorCode &status);
 };
 
 U_NAMESPACE_END

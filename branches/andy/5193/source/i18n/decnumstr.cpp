@@ -25,24 +25,25 @@ DecimalNumberString::DecimalNumberString() {
 DecimalNumberString::~DecimalNumberString() {
 }
 
-DecimalNumberString::DecimalNumberString(const StringPiece &source) {
+DecimalNumberString::DecimalNumberString(const StringPiece &source, UErrorCode &status) {
     fLength = 0;
-    append(source);
+    fText[0] = 0;
+    append(source, status);
 }
 
-DecimalNumberString & DecimalNumberString::append(char c) {
-    if (fText.getCapacity() < fLength+2) {
-        fText.resize(fText.getCapacity() * 2, fLength);
+DecimalNumberString & DecimalNumberString::append(char c, UErrorCode &status) {
+    if (ensureCapacity(fLength + 2, status) == FALSE) {
+        return *this;
     }
     fText[fLength++] = c;
     fText[fLength] = 0;
     return *this;
 }
 
-DecimalNumberString &DecimalNumberString::append(const StringPiece &str) {
+DecimalNumberString &DecimalNumberString::append(const StringPiece &str, UErrorCode &status) {
     int32_t sLength = str.length();
-    if (fText.getCapacity() < fLength + sLength + 1) {
-        fText.resize(fLength + sLength +1, fLength);
+    if (ensureCapacity(fLength + sLength + 1, status) == FALSE) {
+        return *this;
     }
     uprv_memcpy(&fText[fLength], str.data(), sLength);
     fLength += sLength;
@@ -64,9 +65,9 @@ int32_t DecimalNumberString::length() const {
     return fLength;
 }
 
-void DecimalNumberString::setLength(int32_t length) {
-    if (fText.getCapacity() < length+1) {
-        fText.resize(length+1, fLength);
+void DecimalNumberString::setLength(int32_t length, UErrorCode &status) {
+    if (ensureCapacity(length+1, status) == FALSE) {
+        return;
     }
     if (length > fLength) {
         uprv_memset(&fText[fLength], length - fLength, 0);
@@ -77,6 +78,20 @@ void DecimalNumberString::setLength(int32_t length) {
 
 DecimalNumberString::operator StringPiece() const {
     return StringPiece(fText, fLength);
+}
+
+UBool DecimalNumberString::ensureCapacity(int32_t neededSize, UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return FALSE;
+    }
+    if (fText.getCapacity() < neededSize) {
+        char *newBuf = fText.resize(neededSize);
+        if (newBuf == NULL) {
+            status = U_MEMORY_ALLOCATION_ERROR;
+            return FALSE;
+        }
+    }
+    return TRUE;
 }
 
 U_NAMESPACE_END

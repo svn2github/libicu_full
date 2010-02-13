@@ -24,6 +24,8 @@
 #include "cmemory.h"
 #include "cstring.h"
 #include "decNumber.h"
+#include "decnumstr.h"
+#include "digitlst.h"
 
 // *****************************************************************************
 // class Formattable
@@ -96,7 +98,9 @@ static void setError(UErrorCode& ec, UErrorCode err) {
 //
 void  Formattable::init() {
     fValue.fInt64 = 0;
-    fDecimalValue = NULL;
+    fType = kLong;
+    fDecimalStr = NULL;
+    fDecimalNum = NULL;
     fBogus.setToBogus(); 
 }
 
@@ -104,20 +108,17 @@ void  Formattable::init() {
 // default constructor.
 // Creates a formattable object with a long value 0.
 
-Formattable::Formattable()
-    :   UObject(), fType(kLong)
-{
+Formattable::Formattable() {
     init();
-    fValue.fInt64 = 0;
 }
 
 // -------------------------------------
 // Creates a formattable object with a Date instance.
 
 Formattable::Formattable(UDate date, ISDATE /*isDate*/)
-    :   UObject(), fType(kDate)
 {
     init();
+    fType = kDate;
     fValue.fDate = date;
 }
 
@@ -125,9 +126,9 @@ Formattable::Formattable(UDate date, ISDATE /*isDate*/)
 // Creates a formattable object with a double value.
 
 Formattable::Formattable(double value)
-    :   UObject(), fType(kDouble)
 {
     init();
+    fType = kDouble;
     fValue.fDouble = value;
 }
 
@@ -135,7 +136,6 @@ Formattable::Formattable(double value)
 // Creates a formattable object with an int32_t value.
 
 Formattable::Formattable(int32_t value)
-    :   UObject(), fType(kLong)
 {
     init();
     fValue.fInt64 = value;
@@ -145,9 +145,9 @@ Formattable::Formattable(int32_t value)
 // Creates a formattable object with an int64_t value.
 
 Formattable::Formattable(int64_t value)
-    :   UObject(), fType(kInt64)
 {
     init();
+    fType = kInt64;
     fValue.fInt64 = value;
 }
 
@@ -155,9 +155,9 @@ Formattable::Formattable(int64_t value)
 // Creates a formattable object with a UnicodeString instance.
 
 Formattable::Formattable(const UnicodeString& stringToCopy)
-    :   UObject(), fType(kString)
 {
     init();
+    fType = kString;
     fValue.fString = new UnicodeString(stringToCopy);
 }
 
@@ -166,16 +166,16 @@ Formattable::Formattable(const UnicodeString& stringToCopy)
 // (adopting symantics)
 
 Formattable::Formattable(UnicodeString* stringToAdopt)
-    :   UObject(), fType(kString)
 {
     init();
+    fType = kString;
     fValue.fString = stringToAdopt;
 }
 
 Formattable::Formattable(UObject* objectToAdopt)
-    :   UObject(), fType(kObject)
 {
     init();
+    fType = kObject;
     fValue.fObject = objectToAdopt;
 }
 
@@ -185,6 +185,7 @@ Formattable::Formattable(const Formattable* arrayToCopy, int32_t count)
     :   UObject(), fType(kArray)
 {
     init();
+    fType = kArray;
     fValue.fArrayAndCount.fArray = createArrayCopy(arrayToCopy, count);
     fValue.fArrayAndCount.fCount = count;
 }
@@ -192,9 +193,11 @@ Formattable::Formattable(const Formattable* arrayToCopy, int32_t count)
 // -------------------------------------
 // copy constructor
 
+
 Formattable::Formattable(const Formattable &source)
-    :   UObject(source), fType(kLong)
+     :  UObject(*this)
 {
+    init();
     *this = source;
 }
 
@@ -241,8 +244,16 @@ Formattable::operator=(const Formattable& source)
             break;
         }
 
-        // TODO: For all types, set the decimal value if the source has one.
-
+        UErrorCode status = U_ZERO_ERROR;
+        if (source.fDecimalNum != NULL) {
+            fDecimalNum = new DigitList(*source.fDecimalNum);
+        }
+        if (source.fDecimalStr != NULL) {
+            fDecimalStr = new DecimalNumberString(*source.fDecimalStr, status);
+            if (U_FAILURE(status)) {
+                fDecimalStr = NULL;
+            }
+        }
     }
     return *this;
 }
@@ -325,6 +336,13 @@ void Formattable::dispose()
     default:
         break;
     }
+
+    fType = kLong;
+    fValue.fInt64 = 0;
+    delete fDecimalStr;
+    fDecimalStr = NULL;
+    delete fDecimalNum;
+    fDecimalNum = NULL;
 }
 
 Formattable *
@@ -640,117 +658,89 @@ Formattable::getBogus() const
 }
 
 
-
-//
-//   DecimalValueString
-//
-//      A helper class for maintaining the char * strings for decimal values
-//
-class Formattable::DecimalValueString: public UMemory {
-  private:
-     const char *fStr;
-     int32_t     fLen;
-     UBool       fOwnStorage;
-     void        freeStr();
-  public:
-      DecimalValueString(): fStr("0"), fLen(1), fOwnStorage(FALSE) {};
-      ~DecimalValueString() {freeStr();};
-      void setLiteral(const char * literal);
-      void setStr(const char* str, int32_t len);
-      StringPiece getStringPiece() {return StringPiece(fStr, fLen);};
-};
-
-
-void Formattable::DecimalValueString::freeStr() {
-    if (fOwnStorage) {
-        uprv_free(const_cast<char *>(fStr));
-    }
-    fStr = NULL;
-    fLen = 0;
-}
-
-void Formattable::DecimalValueString::setLiteral(const char *literal) {
-    freeStr();
-    fStr = literal;
-    fLen = uprv_strlen(literal);
-    fOwnStorage = FALSE;
-}
-
-void Formattable::DecimalValueString::setStr(const char *str, int32_t len) {
-    freeStr();
-    char *t = static_cast<char *>(uprv_malloc(len+1));
-    if (t == NULL) {
-        setLiteral("Error");
-    } else {
-        uprv_memcpy(t, str, len);
-        t[len] = 0;
-        fStr = t;
-        fLen = len;
-        fOwnStorage = TRUE;
-    }
-}
-
-
 // --------------------------------------
-StringPiece Formattable::getDecimalNumber() const {
-    if (fDecimalValue != NULL) {
-        return fDecimalValue->getStringPiece();
-    } else {
-        return StringPiece("NaN");
+StringPiece Formattable::getDecimalNumber(UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return "";
     }
+    if (fDecimalStr != NULL) {
+        return *fDecimalStr;
+    }
+
+    if (fDecimalNum == NULL) {
+        // No decimal number for the formattable yet.  Which means the value was
+        // set directly by the user as an int, int64 or double.  If the value came
+        // from parsing, or from the user setting a decimal number, fDecimalNum
+        // would already be set.
+        //
+        fDecimalNum = new DigitList;
+        if (fDecimalNum == NULL) {
+            status = U_MEMORY_ALLOCATION_ERROR;
+            return "";
+        }
+
+        switch (fType) {
+        case kDouble:
+            fDecimalNum->set(this->getDouble(), 0, FALSE);
+            break;
+        case kLong:
+            fDecimalNum->set(this->getLong());
+        case kInt64:
+            fDecimalNum->set(this->getInt64());
+            break;
+        default:
+            // The formattable's value is not a numeric type.
+            status = U_INVALID_STATE_ERROR;
+            return "";
+        }
+    }
+
+    fDecimalStr = fDecimalNum->getDecimal(status);
+    if (U_FAILURE(status)) {
+        return "";
+    }
+
+    return *fDecimalStr;
 }
 
-
-//  TODO:  move somewhere more related to decNum.
-//
-static decNumber *allocDecNum(decContext *dctx) {
-    int32_t    size   = sizeof(decNumber) + dctx->digits / DECDPUN;
-       // note that struct decNumber includes one built-in unit of digit storage,
-       //      so we don't need to round our answer up.
-    decNumber *retNum = static_cast<decNumber *>(uprv_malloc(size));
-    return retNum;
-}
-
-decNumber *decNumberClone(decNumber *num, decContext *dctx) {
-    decNumber  *result = allocDecNum(dctx);
-    uprv_decNumberCopy(result, num);
-    return result;
-}
 
 
 // ---------------------------------------
 void
 Formattable::setDecimalNumber(const StringPiece &numberString, UErrorCode &status) {
+
+    // Copy the input string and nul-terminate it.
+    //    The decNumber library requires nul-terminated input.  StringPiece input
+    //    is not guaranteed nul-terminated.  Too bad.
+    //    DecimalNumberStrings automatically adds the nul.
+    DecimalNumberString  s(numberString, status);
     if (U_FAILURE(status)) {
         return;
     }
-
-// TODO
-#if 0
-    // Parse the string into a decimal number.
-    // Set the number of decimal digits in the decNum to be the length of the string.
-    // It can't be more; it might be less (because of characters used for sign and/or exponent).
-    decContext  dctx;
-    if (fDecContext == NULL) {
-        fDecContext = static_cast<decContext *>(uprv_malloc(sizeof(decContext)));
-        if (fDecContext == NULL) {
-            status = U_MEMORY_ALLOCATION_ERROR;
-            return;
-        }
+    
+    fDecimalNum = new DigitList();
+    if (fDecimalNum == NULL) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return;
     }
-    uprv_decContextDefault(&dctx, DEC_INIT_BASE);
-    dctx->digits = numberString.size();
-    dctx->traps = 0;      // No signals on decimal arithmetic errors.
-    dctx->extended = 1;   // Allow NaNs, Infinities, etc.
+    fDecimalNum->set(s, 0, status);
 
-    decNumber  *number = allocDecNum(&dctx);
-    uprv_decNumberFromString(number, numberString.data(), dctx);
+    // Set the value into the Union of simple type values.
+    // Cannot use the set() functions because they would delete the fDecimalNum value,
 
-    uint32_t flags = dctx->status;
-    if (flags & DEC_Conversion_syntax) {
-        status = U_DECIMAL_NUMBER_SYNTAX_ERROR;     // TODO:  add string form.
-#endif
+    if (fDecimalNum->fitsIntoLong(FALSE)) {
+        fType = kLong;
+        fValue.fInt64 = fDecimalNum->getLong();
+    } else if (fDecimalNum->fitsIntoInt64(FALSE)) {
+        fType = kInt64;
+        fValue.fInt64 = fDecimalNum->getInt64();
+    } else {
+        fType = kDouble;
+        fValue.fDouble = fDecimalNum->getDouble();
+    }
 
+    // Note that we do not hang on to the caller's input string.
+    // If we are asked for the string, we will regenerate one from fDecimalNum.
 }
 
 #if 0

@@ -178,6 +178,11 @@ public:
     int64_t getInt64(void) /*const*/;
 
     /**
+     *  Utility routine to get the value of the digit list as a decimal string.
+     */  
+    DecimalNumberString *getDecimal(UErrorCode &status);
+
+    /**
      * Return true if the number represented by this object can fit into
      * a long.
      * @param ignoreNegativeZero True if negative zero is ignored.
@@ -228,10 +233,10 @@ public:
      * string.
      * If a non-zero maximumDigits is specified, no more than that number of
      * significant digits will be produced.
-     * @param source The value to be set
+     * @param source The value to be set.  The string must be nul-terminated.
      * @param maximunDigits The maximum number of digits to be shown
      */
-    void set(StringPiece source, int32_t maximumDigits = 0);
+    void set(StringPiece source, int32_t maximumDigits, UErrorCode &status);
 
     //  The following functions replace direct access to the original DigitList implmentation
     //  data structures.

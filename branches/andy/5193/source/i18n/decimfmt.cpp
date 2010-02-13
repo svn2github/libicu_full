@@ -1704,9 +1704,10 @@ void DecimalFormat::parse(const UnicodeString& text,
         // parsimonious type that will accommodate all of the result's
         // precision.  We therefore only return a long if the result fits
         // entirely within a long (taking into account the multiplier) --
-        // otherwise we fall through and return a double.  When more
-        // numeric types are supported by Formattable (e.g., 64-bit
-        // integers, bignums) we will extend this logic to include them.
+        // otherwise we fall through and return a double.  
+        //
+        // BigDecimals are not returned as a separate type, but are
+        // available separately for any parsed numeric value.
         if (digits.fitsIntoLong(isParseIntegerOnly())) {
             int32_t n = digits.getLong();
             if (n % mult == 0) {
@@ -1894,6 +1895,7 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
     //  The parsing process builds up the number as char string, in the neutral format that
     //  will be acceptable to the decNumber library, then at the end passes that string
     //  off for conversion to a decNumber.
+    UErrorCode err = U_ZERO_ERROR;
     DecimalNumberString  parsedNum;
     digits.setToZero();
 
@@ -1917,10 +1919,10 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
     }
     if (posMatch >= 0) {
         position += posMatch;
-        parsedNum.append('+');
+        parsedNum.append('+', err);
     } else if (negMatch >= 0) {
         position += negMatch;
-        parsedNum.append('-');
+        parsedNum.append('-', err);
     } else {
         parsePosition.setErrorIndex(position);
         return FALSE;
@@ -1938,7 +1940,7 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
     position += infLen; // infLen is non-zero when it does equal to infinity
     status[fgStatusInfinite] = (UBool)infLen;
     if (infLen) {
-        parsedNum.append("Infinity");
+        parsedNum.append("Infinity", err);
     } else {
         // We now have a string of digits, possibly with grouping symbols,
         // and decimal points.  We want to process these into a DigitList.
@@ -1997,7 +1999,7 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
                 sawDigit = TRUE;
                 // output a regular non-zero digit.
                 ++digitCount;
-                parsedNum.append(digit + '0');
+                parsedNum.append(digit + '0', err);
                 position += U16_LENGTH(ch);
             }
             else if (!text.compare(position, groupingLen, *grouping) && isGroupingUsed())
@@ -2013,7 +2015,7 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
                 // If we're only parsing integers, or if we ALREADY saw the
                 // decimal, then don't parse this one.
 
-                parsedNum.append('.');
+                parsedNum.append('.', err);
                 sawDecimal = TRUE;
                 position += decimalLen;
             }
@@ -2053,12 +2055,12 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
                         }
                         if (0 <= digit && digit <= 9) {
                             if (!sawExponentDigit) {
-                                parsedNum.append('E');
-                                parsedNum.append(exponentSign);
+                                parsedNum.append('E', err);
+                                parsedNum.append(exponentSign, err);
                                 sawExponentDigit = TRUE;
                             }
                             ++pos;
-                            parsedNum.append((char)(digit + '0'));
+                            parsedNum.append((char)(digit + '0'), err);
                         } else {
                             break;
                         }
@@ -2136,8 +2138,12 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
         parsePosition.setErrorIndex(position);
         return FALSE;
     }
-    digits.set(parsedNum);
+    digits.set(parsedNum, 0, err);
 
+    if (U_FAILURE(err)) {
+        parsePosition.setErrorIndex(position);
+        return FALSE;
+    }
     return TRUE;
 }
 

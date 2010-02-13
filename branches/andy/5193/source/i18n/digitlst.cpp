@@ -500,12 +500,16 @@ DigitList::fitsIntoLong(UBool ignoreNegativeZero) /*const*/
 
     // TODO:  Need to cache these constants; construction is relatively costly.
     //        But not of huge consequence; they're only needed for 10 digit ints.
-    DigitList min32; min32.set("-2147483648");
+    UErrorCode status = U_ZERO_ERROR;
+    DigitList min32; min32.set("-2147483648", 0, status);
     if (this->compare(min32) < 0) {
         return FALSE;
     }
-    DigitList max32; max32.set("2147483647");
+    DigitList max32; max32.set("2147483647", 0, status);
     if (this->compare(max32) > 0) {
+        return FALSE;
+    }
+    if (U_FAILURE(status)) {
         return FALSE;
     }
     return true;
@@ -543,12 +547,16 @@ DigitList::fitsIntoInt64(UBool ignoreNegativeZero) /*const*/
 
     // TODO:  Need to cache these constants; construction is relatively costly.
     //        But not of huge consequence; they're only needed for 19 digit ints.
-    DigitList min64; min64.set("-9223372036854775808");
+    UErrorCode status = U_ZERO_ERROR;
+    DigitList min64; min64.set("-9223372036854775808", 0, status);
     if (this->compare(min64) < 0) {
         return FALSE;
     }
-    DigitList max64; max64.set("9223372036854775807");
+    DigitList max64; max64.set("9223372036854775807", 0, status);
     if (this->compare(max64) > 0) {
+        return FALSE;
+    }
+    if (U_FAILURE(status)) {
         return FALSE;
     }
     return true;
@@ -598,7 +606,7 @@ DigitList::set(int64_t source, int32_t maximumDigits)
  *        StringPiece doesn't know about terminated.
  */
 void
-DigitList::set(StringPiece source, int32_t maximumDigits) {
+DigitList::set(StringPiece source, int32_t maximumDigits, UErrorCode &status) {
     if (maximumDigits == 0) {
         maximumDigits = MAX_DIGITS;   // TODO: eliminate this limit.
     }
@@ -606,6 +614,7 @@ DigitList::set(StringPiece source, int32_t maximumDigits) {
     int32_t savedDigits = fContext.digits;
     fContext.digits = maximumDigits;
     uprv_decNumberFromString(fDecNumber, source.data(), &fContext);
+    // TODO:  check for conversion errors, set status.
     fContext.digits = savedDigits;
 }   
 
