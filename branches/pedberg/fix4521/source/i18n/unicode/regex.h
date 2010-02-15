@@ -62,6 +62,7 @@ class RegexMatcher;
 class RegexPattern;
 class UVector;
 class UVector32;
+class UVector64;
 class UnicodeSet;
 struct REStackFrame;
 struct Regex8BitSet;
@@ -575,7 +576,7 @@ private:
     UnicodeString  *fPatternString; // The original pattern UncodeString if relevant
     uint32_t        fFlags;        // The flags used when compiling the pattern.
                                    //
-    UVector32       *fCompiledPat; // The compiled pattern p-code.
+    UVector64       *fCompiledPat; // The compiled pattern p-code.
     UnicodeString   fLiteralText;  // Any literal string data from the pattern,
                                    //   after un-escaping, for use during the match.
 
@@ -1648,7 +1649,7 @@ private:
     UBool                fRequireEnd;      // True if the last match required end-of-input
                                            //    (matched $ or Z)
 
-    UVector32           *fStack;
+    UVector64           *fStack;
     REStackFrame        *fFrame;           // After finding a match, the last active stack frame,
                                            //   which will contain the capture group results.
                                            //   NOT valid while match engine is running.
