@@ -133,6 +133,8 @@ class U_COMMON_API StringPiece : public UMemory {
    * @stable ICU 4.2
    */
   void clear() { ptr_ = NULL; length_ = 0; }
+  void set(const char* data, int32_t len) { ptr_ = data; length_ = len; }
+  void set(const char* str);
 
   /**
    * Removes the first n string units.
@@ -182,6 +184,21 @@ class U_COMMON_API StringPiece : public UMemory {
     return StringPiece(*this, pos, len);
   }
 };
+
+/**
+ * Global operator == for StringPiece
+ * @param x The first StringPiece to compare.
+ * @param y The second StringPiece to compare.
+ * @return TRUE if the string data is equal
+ * @draft ICU 4.4
+ */
+// TODO:  how to declare this?  Global C++ only function.
+U_EXPORT UBool U_EXPORT2 
+operator==(const StringPiece& x, const StringPiece& y);
+
+inline UBool operator!=(const StringPiece& x, const StringPiece& y) {
+  return !(x == y);
+}
 
 U_NAMESPACE_END
 

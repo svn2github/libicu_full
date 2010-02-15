@@ -1,0 +1,27 @@
+
+#   Copyright (c) 2010, International Business Machines Corporation and
+#   others. All Rights Reserved.
+#
+
+#   File:  dcfmtest.txt
+#
+#       Decimal formatter test cases.
+#       File Encoding:  UTF-8
+#
+#   The syntax for this file is this:
+#   One test case per line.  No continuations.  No multiple cases per line.
+#
+#   Parsing Test case line:
+#     parse locale-id  "input text"  "expected decimal text"  type
+#     format locale-id  "decimal number" round-mode round-increment pattern "expected result"
+#
+#     Fields are separated by spaces or tabs.
+#     input text and expected decimal text are "quoted"
+#     "type" is a single letter,  representing the type that the ICU formattable produces
+#     for the input.
+#            d     double
+#            i     int32
+#            l     int64
+
+parse   en_US  "123.45"    "123.45"    d
+

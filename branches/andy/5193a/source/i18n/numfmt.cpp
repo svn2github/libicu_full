@@ -331,6 +331,8 @@ NumberFormat::format(const StringPiece & /* unused decimal number */,
                      FieldPositionIterator* /* unused posIter */,
                      UErrorCode& status) const
 {
+    // TODO:  add a default implementation that spins up a DigitList
+    //        and delegates to that format function.
     if (!U_FAILURE(status)) {
         status = U_UNSUPPORTED_ERROR;
     }
@@ -399,19 +401,24 @@ NumberFormat::format(const Formattable& obj,
     ArgExtractor arg(*this, obj, status);
     const Formattable *n = arg.number();
 
-    switch (n->getType()) {
-    case Formattable::kDouble:
-        format(n->getDouble(), appendTo, pos);
-        break;
-    case Formattable::kLong:
-        format(n->getLong(), appendTo, pos);
-        break;
-    case Formattable::kInt64:
-        format(n->getInt64(), appendTo, pos);
-        break;
-    default:
-        status = U_INVALID_FORMAT_ERROR;
-        break;
+    if (n->isNumeric && n->getDigitList != NULL) {
+        // Decimal Number
+        format(n->getDigitList(), appendTo, Pos);
+    } else {
+        switch (n->getType()) {
+        case Formattable::kDouble:
+            format(n->getDouble(), appendTo, pos);
+            break;
+        case Formattable::kLong:
+            format(n->getLong(), appendTo, pos);
+            break;
+        case Formattable::kInt64:
+            format(n->getInt64(), appendTo, pos);
+            break;
+        default:
+            status = U_INVALID_FORMAT_ERROR;
+            break;
+        }
     }
 
     return appendTo;

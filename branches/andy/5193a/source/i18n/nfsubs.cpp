@@ -1042,24 +1042,20 @@ FractionalPartSubstitution::doSubstitution(double number, UnicodeString& toInser
 
     DigitList dl;
     dl.set(number, 20, TRUE);
+    dl.reduce();     // Removes any trailing zeros.
     
     UBool pad = FALSE;
-    while (dl.fCount > (dl.fDecimalAt <= 0 ? 0 : dl.fDecimalAt)) {
+    for (int32_t didx = dl.getCount()-1; didx>=dl.getDecimalAt(); didx--) {
+      // Loop iterates over fraction digits, starting with the LSD.
+      //   include both real digits from the number, and zeros
+      //   to the left of the MSD but to the right of the decimal point.
       if (pad && useSpaces) {
         toInsertInto.insert(_pos + getPos(), gSpace);
       } else {
         pad = TRUE;
       }
-      getRuleSet()->format((int64_t)(dl.fDigits[--dl.fCount] - '0'), toInsertInto, _pos + getPos());
-    }
-    while (dl.fDecimalAt < 0) {
-      if (pad && useSpaces) {
-        toInsertInto.insert(_pos + getPos(), gSpace);
-      } else {
-        pad = TRUE;
-      }
-      getRuleSet()->format((int64_t)0, toInsertInto, _pos + getPos());
-      ++dl.fDecimalAt;
+      int64_t digit = didx>=0 ? dl.getDigit(didx) - '0' : 0;
+      getRuleSet()->format(digit, toInsertInto, _pos + getPos());
     }
 
     if (!pad) {
@@ -1156,7 +1152,7 @@ FractionalPartSubstitution::doParse(const UnicodeString& text,
         }
         delete fmt;
 
-        result = dl.fCount == 0 ? 0 : dl.getDouble();
+        result = dl.getCount() == 0 ? 0 : dl.getDouble();
         result = composeRuleValue(result, baseValue);
         resVal.setDouble(result);
         return TRUE;
