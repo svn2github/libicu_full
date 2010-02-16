@@ -39,5 +39,6 @@ typedef unsigned char ICUZoneinfoVersion;
  * file ICU_TZ_RESOURCE ".txt" and the resource within it will be
  * ICU_TZ_RESOURCE. */
 #define ICU_TZ_RESOURCE "zoneinfo"
+#define ICU_TZ_RESOURCE_64 "zoneinfo64"
 
 #endif

@@ -58,8 +58,15 @@ using namespace std;
 
 const int64_t SECS_PER_YEAR      = 31536000; // 365 days
 const int64_t SECS_PER_LEAP_YEAR = 31622400; // 366 days
-const int64_t LOWEST_TIME32    = (int64_t)((int32_t)0x80000000);
-const int64_t HIGHEST_TIME32    = (int64_t)((int32_t)0x7fffffff);
+const int64_t LOWEST_TIME32      = (int64_t)((int32_t)0x80000000);
+const int64_t HIGHEST_TIME32     = (int64_t)((int32_t)0x7fffffff);
+const int64_t LOWEST_TIME64      = U_INT64_MIN;
+
+enum ZONE_FORMATS {
+    ALL,
+    ZONEINFO32,
+    ZONEINFO64
+};
 
 bool isLeap(int32_t y) {
     return (y%4 == 0) && ((y%100 != 0) || (y%400 == 0)); // Gregorian
@@ -201,7 +208,7 @@ struct ZoneInfo {
         return aliases;
     }
 
-    void print(ostream& os, const string& id) const;
+    void print(ostream& os, const string& id, int zoneInfo) const;
 };
 
 void ZoneInfo::clearAliases() {
@@ -287,7 +294,7 @@ bool readbool(ifstream& file) {
  * Read the zoneinfo file structure (see tzfile.h) into a ZoneInfo
  * @param file an already-open file stream
  */
-void readzoneinfo(ifstream& file, ZoneInfo& info, bool is64bitData=false) {
+void readzoneinfo(ifstream& file, ZoneInfo& info, bool is64bitData=false, int zoneFormat=ZONEINFO32) {
     int32_t i;
 
     // Check for TZ_ICU_MAGIC signature at file start.  If we get a
@@ -358,9 +365,12 @@ void readzoneinfo(ifstream& file, ZoneInfo& info, bool is64bitData=false) {
         transitionTypes[i] = t;
     }
 
+    // @JJS
+
     // Build transitions vector out of corresponding times and types.
     bool insertInitial = false;
-    if (is64bitData) {
+
+    if (zoneFormat == ZONEINFO64) {
         if (timecnt > 0) {
             int32_t minidx = -1;
             for (i=0; i<timecnt; ++i) {
@@ -369,29 +379,45 @@ void readzoneinfo(ifstream& file, ZoneInfo& info, bool is64bitData=false) {
                         // Preserve the latest transition before the 32bit minimum time
                         minidx = i;
                     }
-                } else if (transitionTimes[i] > HIGHEST_TIME32) {
-                    // Skipping the rest of the transition data.  We cannot put such
-                    // transitions into zoneinfo.res, because data is limited to singed
-                    // 32bit int by the ICU resource bundle.
-                    break;
-                } else {
-                    info.transitions.push_back(Transition(transitionTimes[i], transitionTypes[i]));
-                }
-            }
-    
-            if (minidx != -1) {
-                // If there are any transitions before the 32bit minimum time,
-                // put the type information with the 32bit minimum time
-                vector<Transition>::iterator itr = info.transitions.begin();
-                info.transitions.insert(itr, Transition(LOWEST_TIME32, transitionTypes[minidx]));
-            } else {
-                // Otherwise, we need insert the initial type later
-                insertInitial = true;
+                } 
+                info.transitions.push_back(Transition(transitionTimes[i], transitionTypes[i]));
             }
         }
-    } else {
-        for (i=0; i<timecnt; ++i) {
-            info.transitions.push_back(Transition(transitionTimes[i], transitionTypes[i]));
+    }
+    else {
+        if (is64bitData) {
+            if (timecnt > 0) {
+                int32_t minidx = -1;
+                for (i=0; i<timecnt; ++i) {
+                    if (transitionTimes[i] < LOWEST_TIME32) {
+                        if (minidx == -1 || transitionTimes[i] > transitionTimes[minidx]) {
+                            // Preserve the latest transition before the 32bit minimum time
+                            minidx = i;
+                        }
+                    } else if (transitionTimes[i] > HIGHEST_TIME32) {
+                        // Skipping the rest of the transition data.  We cannot put such
+                        // transitions into zoneinfo.res, because data is limited to singed
+                        // 32bit int by the ICU resource bundle.
+                        break;
+                    } else {
+                        info.transitions.push_back(Transition(transitionTimes[i], transitionTypes[i]));
+                    }
+                }
+        
+                if (minidx != -1) {
+                    // If there are any transitions before the 32bit minimum time,
+                    // put the type information with the 32bit minimum time
+                    vector<Transition>::iterator itr = info.transitions.begin();
+                    info.transitions.insert(itr, Transition(LOWEST_TIME32, transitionTypes[minidx]));
+                } else {
+                    // Otherwise, we need insert the initial type later
+                    insertInitial = true;
+                }
+            }
+        } else {
+            for (i=0; i<timecnt; ++i) {
+                info.transitions.push_back(Transition(transitionTimes[i], transitionTypes[i]));
+            }
         }
     }
 
@@ -416,10 +442,8 @@ void readzoneinfo(ifstream& file, ZoneInfo& info, bool is64bitData=false) {
 
     assert(info.types.size() == (unsigned) typecnt);
 
-    if (insertInitial) {
-        assert(timecnt > 0);
-        assert(typecnt > 0);
-
+    // process offset/dst pair to define time before first transition
+    if (zoneFormat == ZONEINFO64) {
         int32_t initialTypeIdx = -1;
 
         // Check if the first type is not dst
@@ -439,11 +463,40 @@ void readzoneinfo(ifstream& file, ZoneInfo& info, bool is64bitData=false) {
         	initialTypeIdx = 0;
         }
         assert(initialTypeIdx >= 0);
+
         // Add the initial type associated with the lowest int32 time
         vector<Transition>::iterator itr = info.transitions.begin();
-        info.transitions.insert(itr, Transition(LOWEST_TIME32, initialTypeIdx));
+        info.transitions.insert(itr, Transition(LOWEST_TIME64, initialTypeIdx));
     }
+    else {
+        if (insertInitial) {
+            assert(timecnt > 0);
+            assert(typecnt > 0);
 
+            int32_t initialTypeIdx = -1;
+
+            // Check if the first type is not dst
+            if (info.types.at(0).dstoffset != 0) {
+                // Initial type's rawoffset is same with the rawoffset after the
+                // first transition, but no DST is observed.
+                int64_t rawoffset0 = (info.types.at(info.transitions.at(0).type)).rawoffset;    
+                // Look for matching type
+                for (i=0; i<(int32_t)info.types.size(); ++i) {
+                    if (info.types.at(i).rawoffset == rawoffset0
+                            && info.types.at(i).dstoffset == 0) {
+                        initialTypeIdx = i;
+                        break;
+                    }
+                }
+            } else {
+        	    initialTypeIdx = 0;
+            }
+            assert(initialTypeIdx >= 0);
+            // Add the initial type associated with the lowest int32 time
+            vector<Transition>::iterator itr = info.transitions.begin();
+            info.transitions.insert(itr, Transition(LOWEST_TIME32, initialTypeIdx));
+        }
+    }
 
     // Read the abbreviation string
     if (charcnt) {
@@ -532,7 +585,7 @@ void readzoneinfo(ifstream& file, ZoneInfo& info, bool is64bitData=false) {
  * @param path the full path to the file, e.g., ".\zoneinfo\America\Los_Angeles"
  * @param id the zone ID, e.g., "America/Los_Angeles"
  */
-void handleFile(string path, string id) {
+void handleFile(string path, string id, int zoneFormat) {
     // Check for duplicate id
     if (ZONEINFO.find(id) != ZONEINFO.end()) {
         ostringstream os;
@@ -546,7 +599,7 @@ void handleFile(string path, string id) {
     }
 
     ZoneInfo info;
-    readzoneinfo(file, info);
+    readzoneinfo(file, info, false, zoneFormat);
 
     // Check for errors
     if (!file) {
@@ -555,7 +608,7 @@ void handleFile(string path, string id) {
 
 #ifdef USE64BITDATA
     ZoneInfo info64;
-    readzoneinfo(file, info64, true);
+    readzoneinfo(file, info64, true, zoneFormat);
 
     bool alldone = false;
     int64_t eofPos = (int64_t) file.tellg();
@@ -621,7 +674,7 @@ void handleFile(string path, string id) {
  */
 #ifdef WIN32
 
-void scandir(string dirname, string prefix="") {
+void scandir(string dirname, string prefix="", int zoneFormat) {
     HANDLE          hList;
     WIN32_FIND_DATA FileData;
     
@@ -636,12 +689,12 @@ void scandir(string dirname, string prefix="") {
         string path(dirname + "\\" + name);
         if (FileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
             if (name != "." && name != "..") {
-                scandir(path, prefix + name + "/");
+                scandir(path, prefix + name + "/", zoneFormat);
             }
         } else {
             try {
                 string id = prefix + name;
-                handleFile(path, id);
+                handleFile(path, id, zoneFormat);
             } catch (const exception& e) {
                 cerr << "Error: While processing \"" << path << "\", "
                      << e.what() << endl;
@@ -660,7 +713,7 @@ void scandir(string dirname, string prefix="") {
 
 #else
 
-void scandir(string dir, string prefix="") {
+void scandir(string dir, string prefix="", int zoneFormat=ZONEINFO32) {
     DIR *dp;
     struct dirent *dir_entry;
     struct stat stat_info;
@@ -705,7 +758,7 @@ void scandir(string dir, string prefix="") {
 
     for(int32_t i=0;i<(int32_t)subfiles.size();i+=2) {
         try {
-            handleFile(subfiles[i], subfiles[i+1]);
+            handleFile(subfiles[i], subfiles[i+1], zoneFormat);
         } catch (const exception& e) {
             cerr << "Error: While processing \"" << subfiles[i] << "\", "
                  << e.what() << endl;
@@ -713,7 +766,7 @@ void scandir(string dir, string prefix="") {
         }
     }
     for(int32_t i=0;i<(int32_t)subdirs.size();i+=2) {
-        scandir(subdirs[i], subdirs[i+1]);
+        scandir(subdirs[i], subdirs[i+1], zoneFormat);
     }
 }
 
@@ -1032,10 +1085,10 @@ void readFinalZonesAndRules(istream& in) {
 
 // SEE olsontz.h FOR RESOURCE BUNDLE DATA LAYOUT
 
-void ZoneInfo::print(ostream& os, const string& id) const {
-    // Implement compressed format #2:
+void ZoneInfo::print(ostream& os, const string& id, int zoneFormat=ZONEINFO32) const {
 
-  os << "  /* " << id << " */ ";
+    bool first;
+    os << "  /* " << id << " */ ";
 
     if (aliasTo >= 0) {
         assert(aliases.size() == 0);
@@ -1048,15 +1101,76 @@ void ZoneInfo::print(ostream& os, const string& id) const {
     vector<Transition>::const_iterator trn;
     vector<ZoneType>::const_iterator typ;
 
-    bool first=true;
-    os << "    :intvector { ";
-    for (trn = transitions.begin(); trn != transitions.end(); ++trn) {
-        if (!first) os << ", ";
-        first = false;
-        os << trn->time;
-    }
-    os << " }" << endl;
+    // @JJS
+    // write out zoneinfo with 64 bit transitions
+    if (zoneFormat == ZONEINFO64) {
 
+        // determine number of transition vectors
+        int trans = 1;
+        if (transitions.begin()->time < LOWEST_TIME32)
+            trans++;
+ 
+        trn = transitions.end();
+        trn--;
+        if (trn->time > HIGHEST_TIME32)
+            trans++;
+        os << "    :intvector { " << trans << " }" << endl;
+
+        // begin to write out vectors
+        trn = transitions.begin();
+        trn++;
+
+        // transtion vector 1: 64 bit time before 32 bit range
+        first=true;
+        for (trn; ((trn != transitions.end()) && (trn->time < LOWEST_TIME32)); trn++) {
+            
+            if (first) {
+                os << "    :bin { \"" << hex << setfill('0');
+                first = false;
+            }
+            os << setw(16) << trn->time;
+        }
+        if (!first) {
+            os << dec << "\" }" << endl;
+        }
+
+        // transtion vector 2: 32 bit range
+        first=true;
+        os << "    :intvector { ";
+        for (trn; ((trn != transitions.end()) && (trn->time < HIGHEST_TIME32)); trn++) {
+            if (!first) os << ", ";
+            first = false;
+            os << trn->time;
+        }
+        os << " }" << endl;
+
+        // transtion vector 3: 64 bit time after 32 bit range
+        first=true;
+        for (trn; trn != transitions.end(); trn++) {
+            if (first) {
+                os << "    :bin { \"" << hex << setfill('0');
+                first = false;
+            }
+            os << setw(16) << trn->time;
+        }
+        if (!first) {
+            os << dec << "\" }" << endl;
+        }
+
+    }
+    // write out zoneinf with 32 bit transitions
+    else {
+        first=true;
+        os << "    :intvector { ";
+        for (trn = transitions.begin(); trn != transitions.end(); ++trn) {
+            if (!first) os << ", ";
+            first = false;
+            os << trn->time;
+        }
+        os << " }" << endl;
+    }
+
+    // write out offset/dst pairs
     first=true;
     os << "    :intvector { ";
     for (typ = types.begin(); typ != types.end(); ++typ) {
@@ -1066,11 +1180,26 @@ void ZoneInfo::print(ostream& os, const string& id) const {
     }
     os << " }" << endl;
 
-    os << "    :bin { \"" << hex << setfill('0');
-    for (trn = transitions.begin(); trn != transitions.end(); ++trn) {
-        os << setw(2) << trn->type;
+    /*
+    // write out mapping vector
+    if (zoneFormat == ZONEINFO64) {
+        first=true;
+        os << "    :intvector { ";
+        for (trn = transitions.begin(); trn != transitions.end(); ++trn) {
+            if (!first) os << ", ";
+            first = false;
+            os << trn->type                 << endl;
+        }
+        os << " }" << endl;
     }
-    os << dec << "\" }" << endl;
+    else {
+    */
+        os << "    :bin { \"" << hex << setfill('0');
+        for (trn = transitions.begin(); trn != transitions.end(); ++trn) {
+            os << setw(2) << trn->type;
+        }
+        os << dec << "\" }" << endl;
+    // }
 
     // Final zone info, if any
     if (finalYear != -1) {
@@ -1101,7 +1230,19 @@ operator<<(ostream& os, const ZoneMap& zoneinfo) {
          it != zoneinfo.end();
          ++it) {
         if(c)  os << ",";
-        it->second.print(os, it->first);
+        //it->second.print(os, it->first);
+        os << "//Z#" << c++ << endl;
+    }
+    return os;
+}
+
+ostream& printZoneMap(ostream& os, const ZoneMap& zoneinfo, int zoneFormat=ZONEINFO32) {
+    int32_t c = 0;
+    for (ZoneMapIter it = zoneinfo.begin();
+         it != zoneinfo.end();
+         ++it) {
+        if(c)  os << ",";
+        it->second.print(os, it->first, zoneFormat);
         os << "//Z#" << c++ << endl;
     }
     return os;
@@ -1290,22 +1431,7 @@ void FinalRule::print(ostream& os) const {
     os << part[whichpart].offset << endl;
 }
 
-int main(int argc, char *argv[]) {
-    string rootpath, zonetab, version;
-
-    if (argc != 4) {
-        cout << "Usage: tz2icu <dir> <cmap> <vers>" << endl
-             << " <dir>   path to zoneinfo file tree generated by" << endl
-             << "         ICU-patched version of zic" << endl
-             << " <cmap>  country map, from tzdata archive," << endl
-             << "         typically named \"zone.tab\"" << endl
-             << " <vers>  version string, such as \"2003e\"" << endl;
-        exit(1);
-    } else {
-        rootpath = argv[1];
-        zonetab = argv[2];
-        version = argv[3];
-    }
+int processMain(string rootpath, string zonetab, string version, int zoneFormat) {
 
     cout << "Olson data version: " << version << endl;
 
@@ -1394,7 +1520,7 @@ int main(int argc, char *argv[]) {
         // Recursively scan all files below the given path, accumulating
         // their data into ZONEINFO.  All files must be TZif files.  Any
         // failure along the way will result in a call to exit(1).
-        scandir(rootpath);
+        scandir(rootpath, "", zoneFormat);
     } catch (const exception& error) {
         cerr << "Error: While scanning " << rootpath << ": " << error.what() << endl;
         return 1;
@@ -1570,9 +1696,15 @@ int main(int argc, char *argv[]) {
     struct tm* now = localtime(&sec);
     int32_t thisYear = now->tm_year + 1900;
 
-    // Write out a resource-bundle source file containing data for
-    // all zones.
-    ofstream file(ICU_TZ_RESOURCE ".txt");
+    // Write out a resource-bundle source file containing data for all zones.
+    ofstream file;
+    if (zoneFormat == ZONEINFO64) {
+        file.open(ICU_TZ_RESOURCE_64 ".txt");
+    }
+    else {
+        file.open(ICU_TZ_RESOURCE ".txt");
+    }
+
     if (file) {
         file << "//---------------------------------------------------------" << endl
              << "// Copyright (C) 2003";
@@ -1591,12 +1723,27 @@ int main(int argc, char *argv[]) {
              << "// >> !!! >>   THIS IS A MACHINE-GENERATED FILE   << !!! <<" << endl
              << "// >> !!! >>>            DO NOT EDIT             <<< !!! <<" << endl
              << "//---------------------------------------------------------" << endl
-             << endl
-             << ICU_TZ_RESOURCE ":table(nofallback) {" << endl
-             << " TZVersion { \"" << version << "\" }" << endl
-             << " Zones:array { " << endl
-             << ZONEINFO // Zones (the actual data)
-             << " }" << endl;
+             << endl;
+
+        if (zoneFormat == ZONEINFO64) {
+            file << ICU_TZ_RESOURCE_64 ":table(nofallback) {" << endl;
+        }
+        else {
+            file << ICU_TZ_RESOURCE ":table(nofallback) {" << endl;
+        }
+
+        file << " TZVersion { \"" << version << "\" }" << endl
+             << " Zones:array { " << endl;
+
+         printZoneMap(file, ZONEINFO, zoneFormat);
+         file << " }" << endl;
+
+//             << ICU_TZ_RESOURCE ":table(nofallback) {" << endl
+//             << " TZVersion { \"" << version << "\" }" << endl
+//             << " Zones:array { " << endl;
+//             << ZONEINFO // Zones (the actual data)
+//             << " }" << endl;
+// @JJS
 
         // Names correspond to the Zones list, used for binary searching.
         printStringList ( file, ZONEINFO ); // print the Names list
@@ -1651,9 +1798,19 @@ int main(int argc, char *argv[]) {
     file.close();
      
     if (file) { // recheck error bit
-        cout << "Finished writing " ICU_TZ_RESOURCE ".txt" << endl;
+        if (zoneFormat == ZONEINFO64) {
+            cout << "Finished writing " ICU_TZ_RESOURCE_64 ".txt" << endl;
+        }
+        else {
+            cout << "Finished writing " ICU_TZ_RESOURCE ".txt" << endl;
+        }
     } else {
-        cerr << "Error: Unable to open/write to " ICU_TZ_RESOURCE ".txt" << endl;
+        if (zoneFormat == ZONEINFO64) {
+            cerr << "Error: Unable to open/write to " ICU_TZ_RESOURCE_64 ".txt" << endl;
+        }
+        else {
+            cerr << "Error: Unable to open/write to " ICU_TZ_RESOURCE ".txt" << endl;
+        }
         return 1;
     }
 
@@ -1742,6 +1899,42 @@ int main(int argc, char *argv[]) {
     } else {
         cerr << "Error: Unable to open/write to " ICU4J_TZ_CLASS ".java" << endl;
         return 1;
+    }
+
+    return 0;
+}
+
+int main(int argc, char *argv[]) {
+    string rootpath, zonetab, version, zFormat;
+    //@JJS
+    int zoneFormat=ZONEINFO64;
+    
+    if ((argc != 4) && (argc != 4)) {
+        cout << "Usage: tz2icu <dir> <cmap> <vers>" << endl
+             << " <dir>   path to zoneinfo file tree generated by" << endl
+             << "         ICU-patched version of zic" << endl
+             << " <cmap>  country map, from tzdata archive," << endl
+             << "         typically named \"zone.tab\"" << endl
+             << " <vers>  version string, such as \"2003e\"" << endl;
+        exit(1);
+    } else if (argc == 4) {
+        rootpath = argv[1];
+        zonetab = argv[2];
+        version = argv[3];
+    }
+    else if (argc == 5) {
+        rootpath = argv[1];
+        zonetab = argv[2];
+        version = argv[3];
+        zFormat = argv[4];
+    }
+
+    if (zoneFormat == ALL) {
+         processMain(rootpath, zonetab, version, ZONEINFO32);
+         processMain(rootpath, zonetab, version, ZONEINFO64);
+    }
+    else {
+        return processMain(rootpath, zonetab, version, zoneFormat);
     }
 
     return 0;

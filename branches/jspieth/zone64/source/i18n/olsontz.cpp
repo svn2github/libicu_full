@@ -217,7 +217,7 @@ OlsonTimeZone::OlsonTimeZone(const UResourceBundle* top,
         int32_t len;
         typeData = ures_getBinary(r, &len, &ec);
         ures_close(r);
-        if (len != (transitionCount) && U_SUCCESS(ec)) {
+        if (len != (transitionCount+1) && U_SUCCESS(ec)) {
             ec = U_INVALID_FORMAT_ERROR;
         }
 
@@ -507,11 +507,11 @@ OlsonTimeZone::getHistoricalOffset(UDate date, UBool local,
             int32_t transition = getTransitionTime(i);
 
             if (local) {
-                int32_t offsetBefore = zoneOffset(typeData[i-1]);
-                UBool dstBefore = dstOffset(typeData[i-1]) != 0;
+                int32_t offsetBefore = zoneOffset(typeData[i]);
+                UBool dstBefore = dstOffset(typeData[i]) != 0;
 
-                int32_t offsetAfter = zoneOffset(typeData[i]);
-                UBool dstAfter = dstOffset(typeData[i]) != 0;
+                int32_t offsetAfter = zoneOffset(typeData[i+1]);
+                UBool dstAfter = dstOffset(typeData[i+1]) != 0;
 
                 UBool dstToStd = dstBefore && !dstAfter;
                 UBool stdToDst = !dstBefore && dstAfter;
@@ -550,7 +550,7 @@ OlsonTimeZone::getHistoricalOffset(UDate date, UBool local,
             }
             if (sec >= transition) {
                 U_DEBUG_TZ_MSG(("Found@%d: time=%.1f, localtransition=%d (orig %d) dz %d\n", i, sec, transition, getTransitionTime(i),
-                    zoneOffset(typeData[i-1])));
+                    zoneOffset(typeData[i])));
 #if defined U_DEBUG_TZ
                 printTime(transition*1000.0);
                 printTime(getTransitionTime(i)*1000.0);
@@ -558,7 +558,7 @@ OlsonTimeZone::getHistoricalOffset(UDate date, UBool local,
                 break;
             } else {
                 U_DEBUG_TZ_MSG(("miss@%d: time=%.1f, localtransition=%d (orig %d) dz %d\n", i, sec, transition, getTransitionTime(i),
-                    zoneOffset(typeData[i-1])));
+                    zoneOffset(typeData[i])));
 #if defined U_DEBUG_TZ
                 printTime(transition*1000.0);
                 printTime(getTransitionTime(i)*1000.0);
@@ -580,7 +580,7 @@ OlsonTimeZone::getHistoricalOffset(UDate date, UBool local,
         // Since ICU tzdata 2007c, the first transition data is actually not a
         // transition, but used for representing the initial offset.  So the code
         // below works even if i == 0.
-        int16_t index = typeData[i];
+        int16_t index = typeData[i+1];
         rawoff = rawOffset(index) * U_MILLIS_PER_SECOND;
         dstoff = dstOffset(index) * U_MILLIS_PER_SECOND;
     } else {
@@ -623,8 +623,8 @@ UBool OlsonTimeZone::useDaylightTime() const {
         if (getTransitionTime(i) >= limit) {
             break;
         }
-        if ((getTransitionTime(i) >= start && dstOffset(typeData[i]) != 0)
-                || (getTransitionTime(i) > start && i > 0 && dstOffset(typeData[i - 1]) != 0)) {
+        if ((getTransitionTime(i) >= start && dstOffset(typeData[i+1]) != 0)
+                || (getTransitionTime(i) > start && i > 0 && dstOffset(typeData[i]) != 0)) {
             return TRUE;
         }
     }
@@ -756,7 +756,7 @@ OlsonTimeZone::initTransitionRules(UErrorCode& status) {
         firstTZTransitionIdx = 0;
         for (transitionIdx = 1; transitionIdx < transitionCount; transitionIdx++) {
             firstTZTransitionIdx++;
-            if (typeIdx != (int16_t)typeData[transitionIdx]) {
+            if (typeIdx != (int16_t)typeData[transitionIdx+1]) {
                 break;
             }
         }
@@ -770,11 +770,11 @@ OlsonTimeZone::initTransitionRules(UErrorCode& status) {
                 deleteTransitionRules();
                 return;
             }
-            for (typeIdx = 0; typeIdx < typeCount; typeIdx++) {
+            for (typeIdx = 1; typeIdx < typeCount; typeIdx++) {
                 // Gather all start times for each pair of offsets
                 int32_t nTimes = 0;
                 for (transitionIdx = firstTZTransitionIdx; transitionIdx < transitionCount; transitionIdx++) {
-                    if (typeIdx == (int16_t)typeData[transitionIdx]) {
+                    if (typeIdx == (int16_t)typeData[transitionIdx+1]) {
                         UDate tt = ((UDate)getTransitionTime(transitionIdx)) * U_MILLIS_PER_SECOND;
                         if (tt < finalMillis) {
                             // Exclude transitions after finalMillis
@@ -890,7 +890,7 @@ OlsonTimeZone::initTransitionRules(UErrorCode& status) {
         }
         TimeZoneRule *prevRule = NULL;
         if (transitionCount > 0) {
-            prevRule = historicRules[typeData[transitionCount - 1]];
+            prevRule = historicRules[typeData[transitionCount]];
         }
         if (prevRule == NULL) {
             // No historic transitions, but only finalZone available
@@ -953,9 +953,9 @@ OlsonTimeZone::getNextTransition(UDate base, UBool inclusive, TimeZoneTransition
             return TRUE;
         } else {
             // Create a TimeZoneTransition
-            TimeZoneRule *to = historicRules[typeData[ttidx + 1]];
-            TimeZoneRule *from = historicRules[typeData[ttidx]];
-            UDate startTime = ((UDate)getTransitionTime(ttidx+1)) * U_MILLIS_PER_SECOND;
+            TimeZoneRule *to = historicRules[typeData[ttidx+2]];
+            TimeZoneRule *from = historicRules[typeData[ttidx+1]];
+            UDate startTime = ((UDate)getTransitionTime(ttidx+2)) * U_MILLIS_PER_SECOND;
 
             // The transitions loaded from zoneinfo.res may contain non-transition data
             UnicodeString fromName, toName;
@@ -1014,8 +1014,8 @@ OlsonTimeZone::getPreviousTransition(UDate base, UBool inclusive, TimeZoneTransi
             return TRUE;
         } else {
             // Create a TimeZoneTransition
-            TimeZoneRule *to = historicRules[typeData[ttidx]];
-            TimeZoneRule *from = historicRules[typeData[ttidx-1]];
+            TimeZoneRule *to = historicRules[typeData[ttidx+1]];
+            TimeZoneRule *from = historicRules[typeData[ttidx]];
             UDate startTime = ((UDate)getTransitionTime(ttidx)) * U_MILLIS_PER_SECOND;
 
             // The transitions loaded from zoneinfo.res may contain non-transition data
