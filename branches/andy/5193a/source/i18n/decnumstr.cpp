@@ -85,11 +85,13 @@ UBool DecimalNumberString::ensureCapacity(int32_t neededSize, UErrorCode &status
         return FALSE;
     }
     if (fText.getCapacity() < neededSize) {
-        char *newBuf = fText.resize(neededSize);
+        char *newBuf = fText.resize(neededSize, fText.getCapacity());
         if (newBuf == NULL) {
             status = U_MEMORY_ALLOCATION_ERROR;
             return FALSE;
         }
+        U_ASSERT(fText.getCapacity() >= neededSize);
+        U_ASSERT(&(*this)[0] == newBuf);
     }
     return TRUE;
 }

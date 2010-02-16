@@ -599,7 +599,7 @@ public:
      *        needs to get at the DigitList, if it exists, for
      *        big decimal formatting.
      */
-    DigitList *getDigitList() const { return fDigitList;};
+    DigitList *getDigitList() const { return fDecimalNum;};
 
 private:
     /**

@@ -251,6 +251,7 @@ Formattable::operator=(const Formattable& source)
         if (source.fDecimalStr != NULL) {
             fDecimalStr = new DecimalNumberString(*source.fDecimalStr, status);
             if (U_FAILURE(status)) {
+                delete fDecimalStr;
                 fDecimalStr = NULL;
             }
         }
@@ -308,6 +309,7 @@ Formattable::operator==(const Formattable& that) const
         break;
     }
 
+    // TODO:  compare digit lists if numeric.
     return equal;
 }
 
@@ -695,10 +697,12 @@ StringPiece Formattable::getDecimalNumber(UErrorCode &status) {
         }
     }
 
-    fDecimalStr = fDecimalNum->getDecimal(status);
-    if (U_FAILURE(status)) {
+    fDecimalStr = new DecimalNumberString;
+    if (fDecimalStr == NULL) {
+        status = U_MEMORY_ALLOCATION_ERROR;
         return "";
     }
+    fDecimalNum->getDecimal(*fDecimalStr, status);
 
     return *fDecimalStr;
 }
@@ -708,6 +712,10 @@ StringPiece Formattable::getDecimalNumber(UErrorCode &status) {
 // ---------------------------------------
 void
 Formattable::setDecimalNumber(const StringPiece &numberString, UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return;
+    }
+    dispose();
 
     // Copy the input string and nul-terminate it.
     //    The decNumber library requires nul-terminated input.  StringPiece input
@@ -718,12 +726,17 @@ Formattable::setDecimalNumber(const StringPiece &numberString, UErrorCode &statu
         return;
     }
     
-    fDecimalNum = new DigitList();
-    if (fDecimalNum == NULL) {
+    DigitList *dnum = new DigitList();
+    if (dnum == NULL) {
         status = U_MEMORY_ALLOCATION_ERROR;
         return;
     }
-    fDecimalNum->set(s, 0, status);
+    dnum->set(s, status);
+    if (U_FAILURE(status)) {
+        delete dnum;
+        return;   // String didn't contain a decimal number.
+    }
+    fDecimalNum = dnum;
 
     // Set the value into the Union of simple type values.
     // Cannot use the set() functions because they would delete the fDecimalNum value,

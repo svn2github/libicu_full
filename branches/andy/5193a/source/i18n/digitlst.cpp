@@ -69,6 +69,9 @@ DigitList::DigitList()
 
     fDecNumber = (decNumber *)(fStorage.getAlias());
     uprv_decNumberZero(fDecNumber);
+
+    fDouble = 0.0;
+    fHaveDouble = TRUE;
 }
 
 // -------------------------------------
@@ -100,6 +103,9 @@ DigitList::operator=(const DigitList& other)
         fStorage.resize(other.fStorage.getCapacity());
         fDecNumber = (decNumber *)fStorage.getAlias();
         uprv_decNumberCopy(fDecNumber, other.fDecNumber);
+
+        fDouble = other.fDouble;
+        fHaveDouble = other.fHaveDouble;
     }
     return *this;
 }
@@ -164,6 +170,8 @@ DigitList::clear()
 {
     uprv_decNumberZero(fDecNumber);
     uprv_decContextSetRounding(&fContext, DEC_ROUND_HALF_EVEN);
+    fDouble = 0.0;
+    fHaveDouble = TRUE;
 }
 
 
@@ -234,9 +242,14 @@ DigitList::setRoundingMode(DecimalFormat::ERoundingMode m) {
 //  Set to zero, but preserve sign 
 void  
 DigitList::setToZero() {
-   uint8_t signbit = fDecNumber->bits & DECNEG;
-   uprv_decNumberZero(fDecNumber);
-   fDecNumber->bits |= signbit; 
+    uint8_t signbit = fDecNumber->bits & DECNEG;
+    uprv_decNumberZero(fDecNumber);
+    fDecNumber->bits |= signbit; 
+    fDouble = 0.0;
+    fHaveDouble = TRUE;
+    if (signbit != 0) {
+       fDouble /= -1;
+    }
 }
 
 // -------------------------------------
@@ -248,6 +261,7 @@ DigitList::setPositive(UBool s) {
     } else {
         fDecNumber->bits |= DECNEG;
     }
+    fHaveDouble = FALSE;
 }
 // -------------------------------------
 
@@ -262,6 +276,7 @@ DigitList::setDecimalAt(int32_t d) {
         adjustedDigits = 0;
     }
     fDecNumber->exponent = d - adjustedDigits;
+    fHaveDouble = FALSE;
 }
 
 int32_t  
@@ -283,6 +298,7 @@ DigitList::setCount(int32_t c)  {
         fDecNumber->lsu[0] = 0;
     }
     fDecNumber->digits = c;
+    fHaveDouble = FALSE;
 }
 
 int32_t  
@@ -303,6 +319,7 @@ DigitList::setDigit(int32_t i, char v) {
     U_ASSERT(v>='0' && v<='9');
     v &= 0x0f;
     fDecNumber->lsu[count-i-1] = v;
+    fHaveDouble = FALSE;
 }
 
 char     
@@ -320,8 +337,6 @@ DigitList::getDigit(int32_t i) {
 // the digits are stored least significant first, which requires moving all
 // existing digits down one to make space for the new one to be appended.
 //
-// TODO:  redo parsing functions to not use this.
-//        Do not enable big decimal parsing until then.
 void
 DigitList::append(char digit)
 {
@@ -350,6 +365,7 @@ DigitList::append(char digit)
             fDecNumber->exponent--;
         }
     }
+    fHaveDouble = FALSE;
 }
 
 // -------------------------------------
@@ -364,7 +380,9 @@ DigitList::append(char digit)
 double
 DigitList::getDouble() /*const*/
 {
-    double value;
+    if (fHaveDouble) {
+        return fDouble;
+    }
 
     if (gDecimal == 0) {
         char rep[MAX_DIGITS];
@@ -376,20 +394,29 @@ DigitList::getDouble() /*const*/
     }
 
     if (decNumberIsZero(fDecNumber)) {
-        value = 0.0;
+        fDouble = 0.0;
         if (decNumberIsNegative(fDecNumber)) {
-            value /= -1;
+            fDouble /= -1;
         }
     }
     else {
-        MaybeStackArray<char, MAX_DIGITS+15> s;
+        MaybeStackArray<char, MAX_DBL_DIGITS+18> s;
            // Note:  14 is a  magic constant from the decNumber library documentation,
            //        the max number of extra characters beyond the number of digits 
-           //        needed to represent the number in string form.
-        if (fDecNumber->digits > MAX_DIGITS) {
-            s.resize(fDecNumber->digits+15);
+           //        needed to represent the number in string form.  Add a few more
+           //        for the additional digits we retain.
+
+        // Round down to appx. double precision, if the number is longer than that.
+        // Copy the number first, so that we don't trash the original.
+        reduce();    // Removes any trailing zeros, so that digit count is good.
+        if (getCount() > MAX_DBL_DIGITS) {
+            DigitList numToConvert(*this);
+            numToConvert.round(MAX_DBL_DIGITS+3);
+            uprv_decNumberToString(numToConvert.fDecNumber, s);
+            // TODO:  how many extra digits should be included for an accurate conversion?
+        } else {
+            uprv_decNumberToString(this->fDecNumber, s);
         }
-        uprv_decNumberToString(fDecNumber, s);
         
         if (gDecimal != '.') {
             char *decimalPt = strchr(s, '.');
@@ -398,9 +425,10 @@ DigitList::getDouble() /*const*/
             }
         }
         char *end = NULL;
-        value = uprv_strtod(s, &end);
+        fDouble = uprv_strtod(s, &end);
     }
-    return value;
+    fHaveDouble = TRUE;
+    return fDouble;
 }
 
 // -------------------------------------
@@ -415,6 +443,7 @@ int32_t DigitList::getLong() /*const*/
         // Overflow, absolute value too big.
         return 0;
     }
+    // TODO:  copy the number; do not trash the original.
     if (fDecNumber->exponent != 0) {
         // Force to an integer, with zero exponent, rounding if necessary.
         DigitList zero;
@@ -470,6 +499,30 @@ int64_t DigitList::getInt64() /*const*/ {
     return svalue;
 }
 
+
+/**
+ *  Return a string form of this number.
+ *     Format is as defined by the decNumber library, for interchange of
+ *     decimal numbers.
+ */
+void DigitList::getDecimal(DecimalNumberString &str, UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return;
+    }
+    
+    // A decimal number in string form can, worst case, be 14 characters longer
+    //  than the number of digits.  So says the decNumber library doc.
+    int32_t maxLength = fDecNumber->digits + 15;
+    str.setLength(maxLength, status);
+    if (U_FAILURE(status)) {
+        return;    // Memory allocation error on growing the string.
+    }
+    uprv_decNumberToString(this->fDecNumber, &str[0]);
+    int32_t len = uprv_strlen(&str[0]);
+    U_ASSERT(len <= maxLength);
+    str.setLength(len, status);
+}
+
 /**
  * Return true if this is an integer value that can be held
  * by an int32_t type.
@@ -501,11 +554,11 @@ DigitList::fitsIntoLong(UBool ignoreNegativeZero) /*const*/
     // TODO:  Need to cache these constants; construction is relatively costly.
     //        But not of huge consequence; they're only needed for 10 digit ints.
     UErrorCode status = U_ZERO_ERROR;
-    DigitList min32; min32.set("-2147483648", 0, status);
+    DigitList min32; min32.set("-2147483648", status);
     if (this->compare(min32) < 0) {
         return FALSE;
     }
-    DigitList max32; max32.set("2147483647", 0, status);
+    DigitList max32; max32.set("2147483647", status);
     if (this->compare(max32) > 0) {
         return FALSE;
     }
@@ -548,11 +601,11 @@ DigitList::fitsIntoInt64(UBool ignoreNegativeZero) /*const*/
     // TODO:  Need to cache these constants; construction is relatively costly.
     //        But not of huge consequence; they're only needed for 19 digit ints.
     UErrorCode status = U_ZERO_ERROR;
-    DigitList min64; min64.set("-9223372036854775808", 0, status);
+    DigitList min64; min64.set("-9223372036854775808", status);
     if (this->compare(min64) < 0) {
         return FALSE;
     }
-    DigitList max64; max64.set("9223372036854775807", 0, status);
+    DigitList max64; max64.set("9223372036854775807", status);
     if (this->compare(max64) > 0) {
         return FALSE;
     }
@@ -569,6 +622,11 @@ void
 DigitList::set(int32_t source, int32_t maximumDigits)
 {
     set((int64_t)source, maximumDigits);
+
+    if (maximumDigits == 0) {
+        fDouble = source;
+        fHaveDouble = TRUE;
+    }
 }
 
 // -------------------------------------
@@ -591,31 +649,39 @@ DigitList::set(int64_t source, int32_t maximumDigits)
     fContext.digits = maximumDigits;
     uprv_decNumberFromString(fDecNumber, str, &fContext);
     fContext.digits = savedDigits;
+    fHaveDouble = FALSE;
 }
 
 
 // -------------------------------------
 /**
  * Set the DigitList from a decimal number string.
- * @param maximumDigits The maximum digits to be retained.  If zero,
- * there is no maximum -- generate all digits.  If the number of
- * digits in the input number is larger, the number will be rounded
- * in accordance with the current rounding mode.
  * TODO:  sort out terminated vs non-terminated strings.
  *        decNumber wants terminated, is not easily changed.
  *        StringPiece doesn't know about terminated.
  */
 void
-DigitList::set(StringPiece source, int32_t maximumDigits, UErrorCode &status) {
-    if (maximumDigits == 0) {
-        maximumDigits = MAX_DIGITS;   // TODO: eliminate this limit.
+DigitList::set(StringPiece source, UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return;
     }
 
-    int32_t savedDigits = fContext.digits;
-    fContext.digits = maximumDigits;
+    // Figure out a max number of digits to use during the conversion, and
+    // resize the number up if necessary.
+    int32_t numDigits = source.length();
+    if (numDigits > fContext.digits) {
+        fContext.digits = numDigits;
+        char *t = fStorage.resize(sizeof(decNumber) + numDigits, fStorage.getCapacity());
+        if (t == NULL) {
+            status = U_MEMORY_ALLOCATION_ERROR;
+            return;
+        }
+        fDecNumber = (decNumber *)fStorage.getAlias();
+    }
+        
     uprv_decNumberFromString(fDecNumber, source.data(), &fContext);
     // TODO:  check for conversion errors, set status.
-    fContext.digits = savedDigits;
+    fHaveDouble = FALSE;
 }   
 
 /**
@@ -643,6 +709,9 @@ DigitList::set(double source, int32_t maximumDigits, UBool fixedPoint)
     uprv_decNumberFromString(fDecNumber, rep, &fContext);
     uprv_decNumberTrim(fDecNumber);
 
+    fDouble = source;
+    fHaveDouble = TRUE;
+
     if (fixedPoint && (fDecNumber->exponent < -maximumDigits)) {
         // Fixed point rounding needed.
         decNumber  t;     // Temporary 1 digit decimal number w/ right no. of fraction digits.
@@ -651,10 +720,12 @@ DigitList::set(double source, int32_t maximumDigits, UBool fixedPoint)
         t.lsu[0] = 1;
         uprv_decNumberQuantize(fDecNumber, fDecNumber, &t, &fContext);   // Do the rounding.
         uprv_decNumberTrim(fDecNumber);
+        fHaveDouble = FALSE;
     }
 
     if (!fixedPoint && maximumDigits > 0 && maximumDigits < fDecNumber->digits) {
         round(maximumDigits);
+        fHaveDouble = FALSE;
     }
 }
 
@@ -673,6 +744,7 @@ DigitList::round(int32_t maximumDigits)
     uprv_decNumberPlus(fDecNumber, fDecNumber, &fContext);
     fContext.digits = savedDigits;
     uprv_decNumberTrim(fDecNumber);
+    fHaveDouble = FALSE;
 }
 
 

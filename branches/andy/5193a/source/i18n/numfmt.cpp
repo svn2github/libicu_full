@@ -44,6 +44,7 @@
 #include "cstring.h"
 #include "putilimp.h"
 #include "umutex.h"
+#include "digitlst.h"
 #include <float.h>
 
 //#define FMT_DEBUG
@@ -322,20 +323,18 @@ NumberFormat::format(int64_t /* unused number */,
 }
 
 // -------------------------------------
-// Default implementation sets unsupported error; subclasses should
-// override.
+// Decimal Number default implementation converts to DigitList, and formats that.
+// Subclasses could override, but there is not much point to doing so.
 
 UnicodeString&
-NumberFormat::format(const StringPiece & /* unused decimal number */,
+NumberFormat::format(const StringPiece &decimalNum,
                      UnicodeString& toAppendTo,
-                     FieldPositionIterator* /* unused posIter */,
+                     FieldPositionIterator* fpi,
                      UErrorCode& status) const
 {
-    // TODO:  add a default implementation that spins up a DigitList
-    //        and delegates to that format function.
-    if (!U_FAILURE(status)) {
-        status = U_UNSUPPORTED_ERROR;
-    }
+    Formattable f;
+    f.setDecimalNumber(decimalNum, status);
+    this->format(f, toAppendTo, fpi, status);
     return toAppendTo;
 }
 
@@ -390,6 +389,39 @@ ArgExtractor::~ArgExtractor() {
     }
 }
 
+UnicodeString& NumberFormat::format(DigitList &number,
+                      UnicodeString& appendTo,
+                      FieldPositionIterator* posIter,
+                      UErrorCode& status) const {
+    // DecimalFormat overrides this function, and handles DigitList based big decimals.
+    // Other subclasses (ChoiceFormat, RuleBasedNumberFormat) do not (yet) handle DigitLists,
+    // so this default implementation falls back to formatting decimal numbers as doubles.
+    if (U_FAILURE(status)) {
+        return appendTo;
+    }
+    double dnum = number.getDouble();
+    format(dnum, appendTo, posIter, status);
+    return appendTo;
+}
+
+
+
+UnicodeString&
+NumberFormat::format(DigitList &number,
+                     UnicodeString& appendTo,
+                     FieldPosition& pos,
+                     UErrorCode &status) const { 
+    // DecimalFormat overrides this function, and handles DigitList based big decimals.
+    // Other subclasses (ChoiceFormat, RuleBasedNumberFormat) do not (yet) handle DigitLists,
+    // so this default implementation falls back to formatting decimal numbers as doubles.
+    if (U_FAILURE(status)) {
+        return appendTo;
+    }
+    double dnum = number.getDouble();
+    format(dnum, appendTo, pos, status);
+    return appendTo;
+}
+
 UnicodeString&
 NumberFormat::format(const Formattable& obj,
                         UnicodeString& appendTo,
@@ -401,9 +433,9 @@ NumberFormat::format(const Formattable& obj,
     ArgExtractor arg(*this, obj, status);
     const Formattable *n = arg.number();
 
-    if (n->isNumeric && n->getDigitList != NULL) {
+    if (n->isNumeric() && n->getDigitList() != NULL) {
         // Decimal Number
-        format(n->getDigitList(), appendTo, Pos);
+        format(*n->getDigitList(), appendTo, pos, status);
     } else {
         switch (n->getType()) {
         case Formattable::kDouble:

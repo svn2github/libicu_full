@@ -32,6 +32,7 @@
 #include "decContext.h"
 #include "decNumber.h"
 #include "cmemory.h"
+#include "decnumstr.h"
 
 // Decimal digits in a 64-bit int
 #define INT64_DIGITS 19
@@ -148,8 +149,14 @@ public:
     void toIntegralValue();
     
     /**
-     * Appends digits to the list. Ignores all digits beyond the first DBL_DIG,
-     * since they are not significant for either longs or doubles.
+     * Appends digits to the list. 
+     *    CAUTION:  this function is not recommended for new code.
+     *              In the original DigitList implementation, decimal numbers were
+     *              parsed by appending them to a digit list as they were encountered.
+     *              With the revamped DigitList based on decNumber, append is very
+     *              inefficient, and the interaction with the exponent value is confusing.
+     *              Best avoided.
+     *              TODO:  remove this function once all use has been replaced.
      * @param digit The digit to be appended.
      */
     void append(char digit);
@@ -180,7 +187,7 @@ public:
     /**
      *  Utility routine to get the value of the digit list as a decimal string.
      */  
-    DecimalNumberString *getDecimal(UErrorCode &status);
+    void getDecimal(DecimalNumberString &str, UErrorCode &status);
 
     /**
      * Return true if the number represented by this object can fit into
@@ -236,7 +243,7 @@ public:
      * @param source The value to be set.  The string must be nul-terminated.
      * @param maximunDigits The maximum number of digits to be shown
      */
-    void set(StringPiece source, int32_t maximumDigits, UErrorCode &status);
+    void set(StringPiece source, UErrorCode &status);
 
     //  The following functions replace direct access to the original DigitList implmentation
     //  data structures.
@@ -302,6 +309,13 @@ private:
     decContext    fContext;
     decNumber     *fDecNumber;
     MaybeStackArray<char, sizeof(decNumber) + DEFAULT_DIGITS>  fStorage;
+    
+    /* Cached double value corresponding to this decimal number.
+     * This is an optimization for the formatting implementation, which may
+     * ask for the double value multiple times.
+     */
+    double        fDouble;
+    UBool         fHaveDouble;
 
 
     /**

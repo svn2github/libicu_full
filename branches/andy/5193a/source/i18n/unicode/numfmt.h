@@ -468,7 +468,7 @@ public:
                                   UnicodeString& appendTo,
                                   FieldPositionIterator* posIter,
                                   UErrorCode& status) const;
-proteced:
+public:
     /**
      * Format a decimal number. Subclasses must implement
      * this method.  The number is a DigitList wrapper onto
@@ -486,6 +486,25 @@ proteced:
     virtual UnicodeString& format(DigitList &number,
                                   UnicodeString& appendTo,
                                   FieldPositionIterator* posIter,
+                                  UErrorCode& status) const;
+
+    /**
+     * Format a decimal number. Subclasses must implement
+     * this method.  The number is a DigitList wrapper onto
+     * a floating point decimal number.
+     *
+     * @param number    The number, a DigitList format Decimal Floating Point.
+     * @param appendTo  Output parameter to receive result.
+     *                  Result is appended to existing contents.
+     * @param pos       On input: an alignment field, if desired.
+     *                  On output: the offsets of the alignment field.
+     * @param status    Output param filled with success/failure status.
+     * @return          Reference to 'appendTo' parameter.
+     * @internal
+     */
+    virtual UnicodeString& format(DigitList &number,
+                                  UnicodeString& appendTo,
+                                  FieldPosition& pos,
                                   UErrorCode& status) const;
 
     // TODO:  do we also want a format of a decimal number that takes a

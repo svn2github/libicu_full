@@ -2196,7 +2196,7 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
         parsePosition.setErrorIndex(position);
         return FALSE;
     }
-    digits.set(parsedNum, 0, err);
+    digits.set(parsedNum, err);
 
     if (U_FAILURE(err)) {
         parsePosition.setErrorIndex(position);
