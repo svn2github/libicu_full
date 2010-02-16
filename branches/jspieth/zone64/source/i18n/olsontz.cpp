@@ -66,7 +66,7 @@ UOBJECT_DEFINE_RTTI_IMPLEMENTATION(OlsonTimeZone)
  * constructor fails so the resultant object is well-behaved.
  */
 void OlsonTimeZone::constructEmpty() {
-    transitionCount = pre32TransTimesCount = post32TransTimesCount = 0;
+    transitionCount = pre32TransTimesCount = TransTimesCount32 = post32TransTimesCount = 0;
     typeCount = 1;
     transitionTimes = numTrans = typeOffsets = ZEROS;
     typeData = pre32TransTimes = post32TransTimes = (const uint8_t*)ZEROS;
@@ -105,36 +105,16 @@ OlsonTimeZone::OlsonTimeZone(const UResourceBundle* top,
             ec = U_INVALID_FORMAT_ERROR;
         }
 
-        int32_t skip = 0;
-
         int32_t i;
         UResourceBundle* r = ures_getByIndex(res, 0, NULL, &ec);
-        /* */
-        numTrans = ures_getIntVector(r, &i, &ec);
-        if ((i<0 || i>0x7FFF) && U_SUCCESS(ec)) {
-            ec = U_INVALID_FORMAT_ERROR;
-        }
-        skip = *numTrans;
-
-        r = ures_getByIndex(res, 1, NULL, &ec);
-        /* */
-        transitionTimes = ures_getIntVector(r, &i, &ec);
-        if ((i<0 || i>0x7FFF) && U_SUCCESS(ec)) {
-            ec = U_INVALID_FORMAT_ERROR;
-        }
-        transitionCount = (int16_t) i;
-        pre32TransTimesCount = 0;
-        post32TransTimesCount = 0;
-
-        /*
+        
         // read the first element to get the number of transition vectors
         numTrans = ures_getIntVector(r, &i, &ec);
         if ((i<0 || i>0x7FFF) && U_SUCCESS(ec)) {
             ec = U_INVALID_FORMAT_ERROR;
         }
-        */
+        int32_t skip = *numTrans;
 
-        /*
         // get the transition vectors
         switch (*numTrans) {
         case 1:
@@ -144,7 +124,7 @@ OlsonTimeZone::OlsonTimeZone(const UResourceBundle* top,
             if ((i<0 || i>0x7FFF) && U_SUCCESS(ec)) {
                 ec = U_INVALID_FORMAT_ERROR;
             }
-            transitionCount = i;
+            TransTimesCount32 = i;
 
             pre32TransTimes = post32TransTimes = NULL;
             pre32TransTimesCount = post32TransTimesCount = 0;
@@ -157,7 +137,7 @@ OlsonTimeZone::OlsonTimeZone(const UResourceBundle* top,
                 if ((i<0 || i>0x7FFF) && U_SUCCESS(ec)) {
                     ec = U_INVALID_FORMAT_ERROR;
                 }
-                pre32TransTimesCount = i;
+                pre32TransTimesCount = i/8;
 
                 // 32 bit transitions
                 r = ures_getByIndex(res, 2, r, &ec);
@@ -165,7 +145,7 @@ OlsonTimeZone::OlsonTimeZone(const UResourceBundle* top,
                 if ((i<0 || i>0x7FFF) && U_SUCCESS(ec)) {
                     ec = U_INVALID_FORMAT_ERROR;
                 }
-                transitionCount = i;
+                TransTimesCount32 = i;
 
                 // post 32 bit transitions
                 post32TransTimes = NULL;
@@ -181,7 +161,7 @@ OlsonTimeZone::OlsonTimeZone(const UResourceBundle* top,
                 if ((i<0 || i>0x7FFF) && U_SUCCESS(ec)) {
                     ec = U_INVALID_FORMAT_ERROR;
                 }
-                transitionCount = i;
+                TransTimesCount32 = i;
 
                 // post 32 bit transitions
                 r = ures_getByIndex(res, 2, r, &ec);
@@ -189,7 +169,7 @@ OlsonTimeZone::OlsonTimeZone(const UResourceBundle* top,
                 if ((i<0 || i>0x7FFF) && U_SUCCESS(ec)) {
                     ec = U_INVALID_FORMAT_ERROR;
                 }
-                post32TransTimesCount = i;
+                post32TransTimesCount = i/8;
             }
             break;
         case 3:
@@ -199,7 +179,7 @@ OlsonTimeZone::OlsonTimeZone(const UResourceBundle* top,
             if ((i<0 || i>0x7FFF) && U_SUCCESS(ec)) {
                 ec = U_INVALID_FORMAT_ERROR;
             }
-            pre32TransTimesCount = i;
+            pre32TransTimesCount = i/8;
 
             // 32 bit transitions
             r = ures_getByIndex(res, 2, r, &ec);
@@ -207,7 +187,7 @@ OlsonTimeZone::OlsonTimeZone(const UResourceBundle* top,
             if ((i<0 || i>0x7FFF) && U_SUCCESS(ec)) {
                 ec = U_INVALID_FORMAT_ERROR;
             }
-            transitionCount = i;
+            TransTimesCount32 = i;
 
             // post 32 bit transitions
             r = ures_getByIndex(res, 3, r, &ec);
@@ -215,14 +195,14 @@ OlsonTimeZone::OlsonTimeZone(const UResourceBundle* top,
             if ((i<0 || i>0x7FFF) && U_SUCCESS(ec)) {
                 ec = U_INVALID_FORMAT_ERROR;
             }
-            post32TransTimesCount = i;
+            post32TransTimesCount = i/8;
 
             break;
         default:
             ec = U_INVALID_FORMAT_ERROR;
             break;
         }
-        */
+        transitionCount = pre32TransTimesCount+TransTimesCount32+post32TransTimesCount;
 
         // Type offsets list must be of even size, with size >= 2
         r = ures_getByIndex(res, 1+skip, r, &ec);
@@ -237,7 +217,7 @@ OlsonTimeZone::OlsonTimeZone(const UResourceBundle* top,
         int32_t len;
         typeData = ures_getBinary(r, &len, &ec);
         ures_close(r);
-        if (len != (pre32TransTimesCount+transitionCount+post32TransTimesCount) && U_SUCCESS(ec)) {
+        if (len != (transitionCount) && U_SUCCESS(ec)) {
             ec = U_INVALID_FORMAT_ERROR;
         }
 
@@ -248,10 +228,10 @@ OlsonTimeZone::OlsonTimeZone(const UResourceBundle* top,
           for(jj=0;jj<transitionCount;jj++) {
             int32_t year, month, dom, dow;
             double millis=0;
-            double days = ClockMath::floorDivide(((double)transitionTimes[jj])*1000.0, (double)U_MILLIS_PER_DAY, millis);
+            double days = ClockMath::floorDivide(((double)getTransitionTime(jj))*1000.0, (double)U_MILLIS_PER_DAY, millis);
             
             Grego::dayToFields(days, year, month, dom, dow);
-            U_DEBUG_TZ_MSG(("   Transition %d:  time %d (%04d.%02d.%02d+%.1fh), typedata%d\n", jj, transitionTimes[jj],
+            U_DEBUG_TZ_MSG(("   Transition %d:  time %d (%04d.%02d.%02d+%.1fh), typedata%d\n", jj, getTransitionTime(jj),
                             year, month+1, dom, (millis/kOneHour), typeData[jj]));
 //            U_DEBUG_TZ_MSG(("     offset%d\n", typeOffsets[jj]));
             int16_t f = jj;
@@ -341,6 +321,7 @@ OlsonTimeZone& OlsonTimeZone::operator=(const OlsonTimeZone& other) {
     transitionCount = other.transitionCount;
     pre32TransTimesCount = other.pre32TransTimesCount;
     post32TransTimesCount = other.post32TransTimesCount;
+    TransTimesCount32 = other.TransTimesCount32;
     numTrans = other.numTrans;
     typeCount = other.typeCount;
     transitionTimes = other.transitionTimes;
@@ -517,14 +498,13 @@ OlsonTimeZone::getHistoricalOffset(UDate date, UBool local,
 #if defined U_DEBUG_TZ
         printTime(date*1000.0);
 #endif
-    int transCounts = transitionCount + pre32TransTimesCount + post32TransTimesCount;
     if (transitionCount != 0) {
         double sec = uprv_floor(date / U_MILLIS_PER_SECOND);
         // Linear search from the end is the fastest approach, since
         // most lookups will happen at/near the end.
         int16_t i;
         for (i = transitionCount - 1; i > 0; --i) {
-            int32_t transition = transitionTimes[i];
+            int32_t transition = getTransitionTime(i);
 
             if (local) {
                 int32_t offsetBefore = zoneOffset(typeData[i-1]);
@@ -569,19 +549,19 @@ OlsonTimeZone::getHistoricalOffset(UDate date, UBool local,
                 }
             }
             if (sec >= transition) {
-                U_DEBUG_TZ_MSG(("Found@%d: time=%.1f, localtransition=%d (orig %d) dz %d\n", i, sec, transition, transitionTimes[i],
+                U_DEBUG_TZ_MSG(("Found@%d: time=%.1f, localtransition=%d (orig %d) dz %d\n", i, sec, transition, getTransitionTime(i),
                     zoneOffset(typeData[i-1])));
 #if defined U_DEBUG_TZ
                 printTime(transition*1000.0);
-                printTime(transitionTimes[i]*1000.0);
+                printTime(getTransitionTime(i)*1000.0);
 #endif
                 break;
             } else {
-                U_DEBUG_TZ_MSG(("miss@%d: time=%.1f, localtransition=%d (orig %d) dz %d\n", i, sec, transition, transitionTimes[i],
+                U_DEBUG_TZ_MSG(("miss@%d: time=%.1f, localtransition=%d (orig %d) dz %d\n", i, sec, transition, getTransitionTime(i),
                     zoneOffset(typeData[i-1])));
 #if defined U_DEBUG_TZ
                 printTime(transition*1000.0);
-                printTime(transitionTimes[i]*1000.0);
+                printTime(getTransitionTime(i)*1000.0);
 #endif
             }
         }
@@ -590,8 +570,9 @@ OlsonTimeZone::getHistoricalOffset(UDate date, UBool local,
 
         // Check invariants for GMT times; if these pass for GMT times
         // the local logic should be working too.
-        U_ASSERT(local || sec < transitionTimes[0] || sec >= transitionTimes[i]);
-        U_ASSERT(local || i == transitionCount-1 || sec < transitionTimes[i+1]);
+        // @JJS
+        //U_ASSERT(local || sec < getTransitionTime(0) || sec >= getTransitionTime(i));
+        //U_ASSERT(local || i == transitionCount-1 || sec < getTransitionTime(i+1));
 
         U_DEBUG_TZ_MSG(("getHistoricalOffset(%.1f, %s, %d, %d, raw, dst) - trans %d\n",
             date, local?"T":"F", NonExistingTimeOpt, DuplicatedTimeOpt, i));
@@ -639,11 +620,11 @@ UBool OlsonTimeZone::useDaylightTime() const {
     // Return TRUE if DST is observed at any time during the current
     // year.
     for (int16_t i=0; i<transitionCount; ++i) {
-        if (transitionTimes[i] >= limit) {
+        if (getTransitionTime(i) >= limit) {
             break;
         }
-        if ((transitionTimes[i] >= start && dstOffset(typeData[i]) != 0)
-                || (transitionTimes[i] > start && i > 0 && dstOffset(typeData[i - 1]) != 0)) {
+        if ((getTransitionTime(i) >= start && dstOffset(typeData[i]) != 0)
+                || (getTransitionTime(i) > start && i > 0 && dstOffset(typeData[i - 1]) != 0)) {
             return TRUE;
         }
     }
@@ -692,6 +673,7 @@ OlsonTimeZone::hasSameRules(const TimeZone &other) const {
           
           transitionCount == z->transitionCount &&
           typeCount == z->typeCount &&
+          /* need change here @JJS */
           uprv_memcmp(transitionTimes, z->transitionTimes,
                       sizeof(transitionTimes[0]) * transitionCount) == 0 &&
           uprv_memcmp(typeOffsets, z->typeOffsets,
@@ -793,7 +775,7 @@ OlsonTimeZone::initTransitionRules(UErrorCode& status) {
                 int32_t nTimes = 0;
                 for (transitionIdx = firstTZTransitionIdx; transitionIdx < transitionCount; transitionIdx++) {
                     if (typeIdx == (int16_t)typeData[transitionIdx]) {
-                        UDate tt = ((UDate)transitionTimes[transitionIdx]) * U_MILLIS_PER_SECOND;
+                        UDate tt = ((UDate)getTransitionTime(transitionIdx)) * U_MILLIS_PER_SECOND;
                         if (tt < finalMillis) {
                             // Exclude transitions after finalMillis
                             times[nTimes++] = tt;
@@ -832,7 +814,7 @@ OlsonTimeZone::initTransitionRules(UErrorCode& status) {
 
             // Create initial transition
             typeIdx = (int16_t)typeData[firstTZTransitionIdx];
-            firstTZTransition = new TimeZoneTransition(((UDate)transitionTimes[firstTZTransitionIdx]) * U_MILLIS_PER_SECOND,
+            firstTZTransition = new TimeZoneTransition(((UDate)getTransitionTime(firstTZTransitionIdx)) * U_MILLIS_PER_SECOND,
                     *initialRule, *historicRules[typeIdx]);
             // Check to make sure firstTZTransition was created.
             if (firstTZTransition == NULL) {
@@ -954,7 +936,7 @@ OlsonTimeZone::getNextTransition(UDate base, UBool inclusive, TimeZoneTransition
         // Find a historical transition
         int16_t ttidx = transitionCount - 1;
         for (; ttidx >= firstTZTransitionIdx; ttidx--) {
-            UDate t = ((UDate)transitionTimes[ttidx]) * U_MILLIS_PER_SECOND;
+            UDate t = ((UDate)getTransitionTime(ttidx)) * U_MILLIS_PER_SECOND;
             if (base > t || (!inclusive && base == t)) {
                 break;
             }
@@ -973,7 +955,7 @@ OlsonTimeZone::getNextTransition(UDate base, UBool inclusive, TimeZoneTransition
             // Create a TimeZoneTransition
             TimeZoneRule *to = historicRules[typeData[ttidx + 1]];
             TimeZoneRule *from = historicRules[typeData[ttidx]];
-            UDate startTime = ((UDate)transitionTimes[ttidx+1]) * U_MILLIS_PER_SECOND;
+            UDate startTime = ((UDate)getTransitionTime(ttidx+1)) * U_MILLIS_PER_SECOND;
 
             // The transitions loaded from zoneinfo.res may contain non-transition data
             UnicodeString fromName, toName;
@@ -1019,7 +1001,7 @@ OlsonTimeZone::getPreviousTransition(UDate base, UBool inclusive, TimeZoneTransi
         // Find a historical transition
         int16_t ttidx = transitionCount - 1;
         for (; ttidx >= firstTZTransitionIdx; ttidx--) {
-            UDate t = ((UDate)transitionTimes[ttidx]) * U_MILLIS_PER_SECOND;
+            UDate t = ((UDate)getTransitionTime(ttidx)) * U_MILLIS_PER_SECOND;
             if (base > t || (inclusive && base == t)) {
                 break;
             }
@@ -1034,7 +1016,7 @@ OlsonTimeZone::getPreviousTransition(UDate base, UBool inclusive, TimeZoneTransi
             // Create a TimeZoneTransition
             TimeZoneRule *to = historicRules[typeData[ttidx]];
             TimeZoneRule *from = historicRules[typeData[ttidx-1]];
-            UDate startTime = ((UDate)transitionTimes[ttidx]) * U_MILLIS_PER_SECOND;
+            UDate startTime = ((UDate)getTransitionTime(ttidx)) * U_MILLIS_PER_SECOND;
 
             // The transitions loaded from zoneinfo.res may contain non-transition data
             UnicodeString fromName, toName;
@@ -1126,32 +1108,31 @@ OlsonTimeZone::getTimeZoneRules(const InitialTimeZoneRule*& initial,
     trscount = cnt;
 }
 
-int32_t 
+int64_t 
 OlsonTimeZone::getTransitionTime(int16_t index) const {
 
-    //int64_t transition = 0;
-    int32_t foo = transitionTimes[index];
-    return foo;
-    /*
-    if ((post32TransTimesCount != 0) && (index >= pre32TransTimesCount+transitionCount)){
-        transition = (int64_t)post32TransTimes[index-pre32TransTimesCount-transitionCount];
+    int64_t temp;
+    int64_t transition = 0;
+
+    if ((post32TransTimesCount != 0) && (index >= pre32TransTimesCount+TransTimesCount32)){
+        // transition time is beyond range of 32bit transitions
+        transition = (int64_t)post32TransTimes[index-pre32TransTimesCount-TransTimesCount32];
+    }
+    else if ((pre32TransTimesCount != 0) && (index < pre32TransTimesCount)){
+        // transition time is before range of 32bit transitions
+        for(int i=0; i < 8; i++)
+        {
+            temp = (int64_t)pre32TransTimes[(index*8) + i];
+            temp <<= (8*(7-i));
+            transition += temp;
+        }
     }
     else {
-        if (pre32TransTimesCount == 0) {
-            transition = (int64_t)transitionTimes[index];
-        }
-        else {
-            if (index >= pre32TransTimesCount) {
-                transition = (int64_t)transitionTimes[index-pre32TransTimesCount];
-            }
-            else {
-                transition = (int64_t)pre32TransTimes[index];
-            }
-        }
+        // in 32bit range
+        transition = (int64_t)transitionTimes[index-pre32TransTimesCount];
     }
-
+ 
     return transition;
-    */
 }
 
 U_NAMESPACE_END

@@ -1,6 +1,6 @@
 /*
 **********************************************************************
-* Copyright (c) 2003-2007, International Business Machines
+* Copyright (c) 2003-2010, International Business Machines
 * Corporation and others.  All Rights Reserved.
 **********************************************************************
 * Author: Alan Liu
@@ -292,7 +292,7 @@ private:
     int32_t zoneOffset(int16_t index) const;
     int32_t rawOffset(int16_t index) const;
     int32_t dstOffset(int16_t index) const;
-    int32_t getTransitionTime(int16_t index) const;
+    int64_t getTransitionTime(int16_t index) const;
 
     /**
      * Number of transitions, 0..~370
@@ -318,6 +318,7 @@ private:
 
     int32_t pre32TransTimesCount;
     int32_t post32TransTimesCount;
+    int32_t TransTimesCount32;
 
     const int32_t *numTrans;
 
