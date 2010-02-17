@@ -346,7 +346,13 @@ void DecimalFormatTest::execParseTest(int32_t lineNum,
         return;
     }
 
-    StringPiece decimalResult = result.getDecimalNumber();
+    StringPiece decimalResult = result.getDecimalNumber(status);
+    if (U_FAILURE(status)) {
+        errln("File %s, line %d: error %s.  Line in file dcfmtest.txt:  %d:",
+            __FILE__, __LINE__, u_errorName(status), lineNum);
+        return;
+    }
+
     InvariantStringPiece expectedResults(expectedDecimal);
     if (decimalResult != expectedResults) {
         errln("file dcfmtest.txt, line %d: expected \"%s\", got \"%s\"",

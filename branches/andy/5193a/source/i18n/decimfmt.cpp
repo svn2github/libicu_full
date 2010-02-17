@@ -1097,9 +1097,15 @@ DecimalFormat::_format(int64_t number,
         || (fMultiplier < 0 && (number == U_INT64_MIN || -number > U_INT64_MAX / -fMultiplier || -number < U_INT64_MIN / -fMultiplier))
         )
     {
-        digits.set(((double) number) * fMultiplier,
-                   precision(FALSE),
-                   !fUseExponentialNotation && !areSignificantDigitsUsed());
+        UErrorCode status = U_ZERO_ERROR;
+        DigitList multiplier;
+        multiplier.set(fMultiplier);   
+        digits.set(number);
+        digits.mult(multiplier, status);
+
+        //digits.set(((double) number) * fMultiplier,
+        //           precision(FALSE),
+        //           !fUseExponentialNotation && !areSignificantDigitsUsed());
     }
     else
     {

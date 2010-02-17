@@ -687,6 +687,7 @@ StringPiece Formattable::getDecimalNumber(UErrorCode &status) {
             break;
         case kLong:
             fDecimalNum->set(this->getLong());
+            break;
         case kInt64:
             fDecimalNum->set(this->getInt64());
             break;

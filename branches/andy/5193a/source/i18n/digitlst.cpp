@@ -417,6 +417,7 @@ DigitList::getDouble() /*const*/
         } else {
             uprv_decNumberToString(this->fDecNumber, s);
         }
+        U_ASSERT(uprv_strlen(&s[0]) < MAX_DBL_DIGITS+18);
         
         if (gDecimal != '.') {
             char *decimalPt = strchr(s, '.');
@@ -726,6 +727,58 @@ DigitList::set(double source, int32_t maximumDigits, UBool fixedPoint)
     if (!fixedPoint && maximumDigits > 0 && maximumDigits < fDecNumber->digits) {
         round(maximumDigits);
         fHaveDouble = FALSE;
+    }
+}
+
+// -------------------------------------
+
+/*
+ * Multiply
+ *      The number will be expanded if need be to retain full precision.
+ *      In practice, for formatting, multiply is by 10, 100 or 1000, so more digits
+ *      will not be required for this use.
+ */
+void
+DigitList::mult(const DigitList &other, UErrorCode &status) {
+    fContext.status = 0;
+    int32_t requiredDigits = this->digits() + other.digits();
+    if (requiredDigits > fContext.digits) {
+        reduce();    // Remove any trailing zeros
+        int32_t requiredDigits = this->digits() + other.digits();
+        ensureCapacity(requiredDigits, status);
+    }
+    uprv_decNumberMultiply(fDecNumber, fDecNumber, other.fDecNumber, &fContext);
+}
+
+// -------------------------------------
+
+/*
+ * ensureCapacity.   Grow the digit storage for the number if it's less than the requested
+ *         amount.  Never reduce it.  Available size is kept in fContext.digits.
+ */
+void
+DigitList::ensureCapacity(int32_t requestedCapacity, UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return;
+    }
+    if (requestedCapacity <= 0) {
+        status = U_ILLEGAL_ARGUMENT_ERROR;
+        return;
+    }
+    if (requestedCapacity > DEC_MAX_DIGITS) {
+        // Don't report an error for requesting too much.
+        // Arithemetic Results will be rounded to what can be supported.
+        //   At 999,999,999 max digits, exceeding the limit is not too likely!
+        requestedCapacity = DEC_MAX_DIGITS;
+    }
+    if (requestedCapacity > fContext.digits) {
+        char *newBuffer = fStorage.resize(sizeof(decNumber) + requestedCapacity, fStorage.getCapacity());
+        if (newBuffer == NULL) {
+            status = U_MEMORY_ALLOCATION_ERROR;
+            return;
+        }
+        fContext.digits = requestedCapacity;
+        fDecNumber = (decNumber *)fStorage.getAlias();
     }
 }
 

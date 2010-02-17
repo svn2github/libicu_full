@@ -245,11 +245,21 @@ public:
      */
     void set(StringPiece source, UErrorCode &status);
 
+    /**
+     * Multiply    this = this * arg
+     *    This digitlist will be expanded if necessary to accomodate the result.
+     *  @param arg  the number to multiply by.
+     */
+    void mult(const DigitList &arg, UErrorCode &status);
+
     //  The following functions replace direct access to the original DigitList implmentation
     //  data structures.
 
     void setRoundingMode(DecimalFormat::ERoundingMode m); 
 
+    /** Test a number for zero.
+     * @return  TRUE if the number is zero
+     */
     UBool isZero(void) const;
 
     /**  Reduce, or normalize.  Removes trailing zeroes, adjusts exponent appropriately. */
@@ -257,6 +267,16 @@ public:
 
     /** Set to zero, but preserve sign */
     void     setToZero();
+
+    /** get the number of digits in the decimal number */
+    int32_t  digits() const {return fDecNumber->digits;};
+
+
+    /** Ensure capacity for digits.  Grow the storage if it is currently less than
+     *      the requested size.   Capacity is not reduced if it is already greater
+     *      than requested.
+     */
+    void  ensureCapacity(int32_t  requestedSize, UErrorCode &status); 
 
     UBool    isPositive(void) const { return decNumberIsNegative(fDecNumber) == 0;};
     void     setPositive(UBool s); 
