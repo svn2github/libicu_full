@@ -36,6 +36,7 @@
 #include <limits.h>
 #include <string.h>
 #include <stdio.h>
+#include <limits>
 
 // ***************************************************************************
 // class DigitList
@@ -161,6 +162,13 @@ DigitList::reduce() {
     uprv_decNumberReduce(fDecNumber, fDecNumber, &fContext);
 }
 
+
+// -------------------------------------
+//  trim - remove trailing fraction zero digits.
+void
+DigitList::trim() {
+    uprv_decNumberTrim(fDecNumber);
+}
 
 // -------------------------------------
 // Resets the digit list; sets all the digits to zero.
@@ -393,13 +401,21 @@ DigitList::getDouble() /*const*/
         gDecimal = rep[2];
     }
 
-    if (decNumberIsZero(fDecNumber)) {
+    if (isZero()) {
         fDouble = 0.0;
         if (decNumberIsNegative(fDecNumber)) {
             fDouble /= -1;
         }
-    }
-    else {
+    } else if (isInfinite()) {
+        if (std::numeric_limits<double>::has_infinity) {
+            fDouble = std::numeric_limits<double>::infinity();
+        } else {
+            fDouble = std::numeric_limits<double>::max();
+        }
+        if (!isPositive()) {
+            fDouble = -fDouble;
+        } 
+    } else {
         MaybeStackArray<char, MAX_DBL_DIGITS+18> s;
            // Note:  14 is a  magic constant from the decNumber library documentation,
            //        the max number of extra characters beyond the number of digits 
@@ -409,7 +425,7 @@ DigitList::getDouble() /*const*/
         // Round down to appx. double precision, if the number is longer than that.
         // Copy the number first, so that we don't trash the original.
         reduce();    // Removes any trailing zeros, so that digit count is good.
-        if (getCount() > MAX_DBL_DIGITS) {
+        if (getCount() > MAX_DBL_DIGITS + 3) {
             DigitList numToConvert(*this);
             numToConvert.round(MAX_DBL_DIGITS+3);
             uprv_decNumberToString(numToConvert.fDecNumber, s);
@@ -748,6 +764,24 @@ DigitList::mult(const DigitList &other, UErrorCode &status) {
         ensureCapacity(requiredDigits, status);
     }
     uprv_decNumberMultiply(fDecNumber, fDecNumber, other.fDecNumber, &fContext);
+    fHaveDouble = FALSE;
+}
+
+// -------------------------------------
+
+/*
+ * Divide
+ *      The number will _not_ be expanded for inexact results.
+ *      TODO:  probably should expand some, for rounding increments that
+ *             could add a few digits, e.g. .25, but not expand arbitrarily.
+ */
+void
+DigitList::div(const DigitList &other, UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return;
+    }
+    uprv_decNumberDivide(fDecNumber, fDecNumber, other.fDecNumber, &fContext);
+    fHaveDouble = FALSE;
 }
 
 // -------------------------------------
@@ -800,6 +834,22 @@ DigitList::round(int32_t maximumDigits)
     fHaveDouble = FALSE;
 }
 
+
+void
+DigitList::roundFixedPoint(int32_t maximumFractionDigits) {
+    trim();        // Remove trailing zeros.
+    if (fDecNumber->exponent >= -maximumFractionDigits) {
+        return;
+    }
+    decNumber scale;   // Dummy decimal number, but with the desired number of
+    uprv_decNumberZero(&scale);    //    fraction digits.
+    scale.exponent = -maximumFractionDigits;
+    scale.lsu[0] = 1;
+    
+    uprv_decNumberQuantize(fDecNumber, fDecNumber, &scale, &fContext);
+    trim();
+    fHaveDouble = FALSE;
+}
 
 // -------------------------------------
 

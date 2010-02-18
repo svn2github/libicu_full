@@ -209,8 +209,9 @@ public:
 
     /**
      * Utility routine to set the value of the digit list from a double
-     * Input must be non-negative, and must not be Inf, -Inf, or NaN.
      * The maximum fraction digits helps us round properly.
+     *     TODO:  remove maximumDigits, make all rounding use rounding functions.
+     * For all digits choose set(number, 0, FALSE);
      * @param source The value to be set
      * @param maximunDigits The maximum number of digits to be shown
      * @param fixedPoint True if the point is fixed
@@ -252,6 +253,11 @@ public:
      */
     void mult(const DigitList &arg, UErrorCode &status);
 
+    /**
+     *   Divide    this = this / arg
+     */
+    void div(const DigitList &arg, UErrorCode &status);
+
     //  The following functions replace direct access to the original DigitList implmentation
     //  data structures.
 
@@ -262,8 +268,18 @@ public:
      */
     UBool isZero(void) const;
 
+    /** Test for a Nan
+     * @return  TRUE if the number is a NaN
+     */
+    UBool isNaN(void) const {return decNumberIsNaN(fDecNumber);};
+
+    UBool isInfinite() const {return decNumberIsInfinite(fDecNumber);};
+
     /**  Reduce, or normalize.  Removes trailing zeroes, adjusts exponent appropriately. */
     void     reduce();
+
+    /**  Remove trailing fraction zeros, adjust exponent accordingly. */
+    void     trim();
 
     /** Set to zero, but preserve sign */
     void     setToZero();
@@ -271,6 +287,14 @@ public:
     /** get the number of digits in the decimal number */
     int32_t  digits() const {return fDecNumber->digits;};
 
+    /**
+     * Round the number to the given number of digits.
+     * @param maximumDigits The maximum number of digits to be shown.
+     * Upon return, count will be less than or equal to maximumDigits.
+     */
+    void round(int32_t maximumDigits);
+
+    void roundFixedPoint(int32_t maximumFractionDigits);
 
     /** Ensure capacity for digits.  Grow the storage if it is currently less than
      *      the requested size.   Capacity is not reduced if it is already greater
@@ -338,12 +362,6 @@ private:
     UBool         fHaveDouble;
 
 
-    /**
-     * Round the representation to the given number of digits.
-     * @param maximumDigits The maximum number of digits to be shown.
-     * Upon return, count will be less than or equal to maximumDigits.
-     */
-    void round(int32_t maximumDigits);
 
     UBool shouldRoundUp(int32_t maximumDigits) const;
 };

@@ -1212,6 +1212,79 @@ DecimalFormat::_format( double number,
     return subformat(appendTo, handler, digits, FALSE);
 }
 
+UnicodeString&
+DecimalFormat::_format(const DigitList &number,
+                        UnicodeString& appendTo,
+                        FieldPositionHandler& handler,
+                        UErrorCode &status) const
+{
+    // Special case for NaN, sets the begin and end index to be the
+    // the string length of localized name of NaN.
+    if (number.isNaN())
+    {
+        int begin = appendTo.length();
+        appendTo += getConstSymbol(DecimalFormatSymbols::kNaNSymbol);
+
+        handler.addAttribute(kIntegerField, begin, appendTo.length());
+
+        addPadding(appendTo, handler, 0, 0);
+        return appendTo;
+    }
+
+    // Do this BEFORE checking to see if value is infinite or negative! Sets the
+    // begin and end index to be length of the string composed of
+    // localized name of Infinite and the positive/negative localized
+    // signs.
+
+    DigitList adjustedNum(number);  // Copy, so we do not alter the original. 
+    adjustedNum.setRoundingMode(fRoundingMode);
+    DigitList multiplier;
+    multiplier.set(fMultiplier, 0, FALSE);   // TODO:  precompute the Multiplier as a DigitList.
+    adjustedNum.mult(multiplier, status);
+
+    /* 
+     * Note: sign is important for zero as well as non-zero numbers.
+     * Proper detection of -0.0 is needed to deal with the
+     * issues raised by bugs 4106658, 4106667, and 4147706.  Liu 7/6/98.
+     */
+    UBool isNegative = !adjustedNum.isPositive();
+
+    // Apply rounding after multiplier
+    if (fRoundingIncrement != NULL) {
+        adjustedNum.div(*fRoundingIncrement, status);
+        adjustedNum.toIntegralValue();
+        adjustedNum.mult(*fRoundingIncrement, status);
+    }
+
+    // Special case for INFINITE,
+    if (adjustedNum.isInfinite()) {
+        int32_t prefixLen = appendAffix(appendTo, adjustedNum.getDouble(), handler, isNegative, TRUE);
+
+        int begin = appendTo.length();
+        appendTo += getConstSymbol(DecimalFormatSymbols::kInfinitySymbol);
+
+        handler.addAttribute(kIntegerField, begin, appendTo.length());
+
+        int32_t suffixLen = appendAffix(appendTo, adjustedNum.getDouble(), handler, isNegative, FALSE);
+
+        addPadding(appendTo, handler, prefixLen, suffixLen);
+        return appendTo;
+    }
+
+    if (fRoundingIncrement == NULL) {
+        if (!fUseExponentialNotation && !areSignificantDigitsUsed()) {
+            // Fixed point format.  Round to a set number of fraction digits.
+            int32_t numFractionDigits = precision(FALSE);
+            adjustedNum.roundFixedPoint(numFractionDigits);
+        } else {
+            // Floating format.  Round to a requested total number of digits.
+            adjustedNum.round(precision(FALSE));
+        }
+    }
+
+    return subformat(appendTo, handler, adjustedNum, FALSE);
+}
+
 /**
  * Round a double value to the nearest integer according to the
  * given mode.
@@ -1253,7 +1326,13 @@ DecimalFormat::format(const StringPiece &number,
                       FieldPositionIterator *posIter,
                       UErrorCode &status) const
 {
-    // TODO:  implement it.
+    DigitList   dnum;
+    dnum.set(number, status);
+    if (U_FAILURE(status)) {
+        return toAppendTo;
+    }
+    FieldPositionIteratorHandler handler(posIter, status);
+    _format(dnum, toAppendTo, handler, status);
     return toAppendTo;
 }
 

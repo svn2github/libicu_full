@@ -2023,6 +2023,10 @@ private:
     UnicodeString& _format(double number,
                            UnicodeString& appendTo,
                            FieldPositionHandler& handler) const;
+    UnicodeString& _format(const DigitList &number,
+                           UnicodeString& appendTo,
+                           FieldPositionHandler& handler,
+                           UErrorCode &status) const;
 
     // currency sign count
     enum {
