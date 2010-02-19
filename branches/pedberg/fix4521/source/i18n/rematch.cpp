@@ -232,7 +232,7 @@ void RegexMatcher::init2(UText *input, UErrorCode &status) {
     }
 
     if (fPattern->fDataSize > (int32_t)(sizeof(fSmallData)/sizeof(int32_t))) {
-        fData = (int32_t *)uprv_malloc(fPattern->fDataSize * sizeof(int32_t)); 
+        fData = (int64_t *)uprv_malloc(fPattern->fDataSize * sizeof(int64_t)); 
         if (fData == NULL) {
             status = fDeferredStatus = U_MEMORY_ALLOCATION_ERROR;
             return;
@@ -527,7 +527,7 @@ int32_t RegexMatcher::end(int32_t group, UErrorCode &err) const {
     }
     
     if (e == -1 || UTEXT_USES_U16(fInputText)) {
-        return e;
+        return (int32_t)e;
     } else {
         // !!!: Would like a better way to do this!
         UErrorCode status = U_ZERO_ERROR;
@@ -1144,7 +1144,7 @@ UText *RegexMatcher::group(int32_t groupNum, UText *dest, UErrorCode &status) co
     } else {
         int32_t len16;
         if (UTEXT_USES_U16(fInputText)) {
-            len16 = e-s;
+            len16 = (int32_t)(e-s);
         } else {
             UErrorCode lengthStatus = U_ZERO_ERROR;
             len16 = utext_extract(fInputText, s, e, NULL, 0, &lengthStatus);
@@ -2167,7 +2167,7 @@ int32_t RegexMatcher::start(int32_t group, UErrorCode &status) const {
     }
     
     if (s == -1 || UTEXT_USES_U16(fInputText)) {
-        return s;
+        return (int32_t)s;
     } else {
         // !!!: Would like a better way to do this!
         UErrorCode status = U_ZERO_ERROR;
@@ -2523,7 +2523,7 @@ void RegexMatcher::IncrementTime(UErrorCode &status) {
 //                    The new frame pointer.
 //
 //--------------------------------------------------------------------------------
-inline REStackFrame *RegexMatcher::StateSave(REStackFrame *fp, int32_t savePatIdx, UErrorCode &status) {
+inline REStackFrame *RegexMatcher::StateSave(REStackFrame *fp, int64_t savePatIdx, UErrorCode &status) {
     // push storage for a new frame. 
     int64_t *newFP = fStack->reserveBlock(fFrameSize, status);
     if (newFP == NULL) {
@@ -2646,7 +2646,7 @@ void RegexMatcher::MatchAt(int64_t startIdx, UBool toEnd, UErrorCode &status) {
         if (fTraceDebug) {
             UTEXT_SETNATIVEINDEX(fInputText, fp->fInputIdx);
             printf("inputIdx=%d   inputChar=%x   sp=%3d   activeLimit=%d  ", fp->fInputIdx,
-                UTEXT_CURRENT32(fInputText), (int32_t *)fp-fStack->getBuffer(), fActiveLimit);
+                UTEXT_CURRENT32(fInputText), (int64_t *)fp-fStack->getBuffer(), fActiveLimit);
             fPattern->dumpOp(fp->fPatIdx);
         }
         #endif
@@ -3602,13 +3602,13 @@ GC_Done:
                 U_ASSERT(opValue >= 0 && opValue < fPattern->fDataSize);
                 int32_t newStackSize = fData[opValue];
                 U_ASSERT(newStackSize <= fStack->size());
-                int32_t *newFP = fStack->getBuffer() + newStackSize - fFrameSize;
-                if (newFP == (int32_t *)fp) {
+                int64_t *newFP = fStack->getBuffer() + newStackSize - fFrameSize;
+                if (newFP == (int64_t *)fp) {
                     break;
                 }
                 int32_t i;
                 for (i=0; i<fFrameSize; i++) {
-                    newFP[i] = ((int32_t *)fp)[i];
+                    newFP[i] = ((int64_t *)fp)[i];
                 }
                 fp = (REStackFrame *)newFP;
                 fStack->setSize(newStackSize);
@@ -3701,10 +3701,10 @@ GC_Done:
                     // Copy the current top frame back to the new (cut back) top frame.
                     //   This makes the capture groups from within the look-ahead
                     //   expression available.
-                    int32_t *newFP = fStack->getBuffer() + newStackSize - fFrameSize;
+                    int64_t *newFP = fStack->getBuffer() + newStackSize - fFrameSize;
                     int32_t i;
                     for (i=0; i<fFrameSize; i++) {
-                        newFP[i] = ((int32_t *)fp)[i];
+                        newFP[i] = ((int64_t *)fp)[i];
                     }
                     fp = (REStackFrame *)newFP;
                     fStack->setSize(newStackSize);
@@ -4355,7 +4355,7 @@ void RegexMatcher::MatchChunkAt(int32_t startIdx, UBool toEnd, UErrorCode &statu
         if (fTraceDebug) {
             UTEXT_SETNATIVEINDEX(fInputText, fp->fInputIdx);
             printf("inputIdx=%d   inputChar=%x   sp=%3d   activeLimit=%d  ", fp->fInputIdx,
-                   UTEXT_CURRENT32(fInputText), (int32_t *)fp-fStack->getBuffer(), fActiveLimit);
+                   UTEXT_CURRENT32(fInputText), (int64_t *)fp-fStack->getBuffer(), fActiveLimit);
             fPattern->dumpOp(fp->fPatIdx);
         }
 #endif
@@ -4391,7 +4391,7 @@ void RegexMatcher::MatchChunkAt(int32_t startIdx, UBool toEnd, UErrorCode &statu
             if (fp->fInputIdx > backSearchIndex && fStack->size() > fFrameSize) {
                 REStackFrame *prevFrame = (REStackFrame *)fStack->peekFrame(fFrameSize);
                 if (URX_LOOP_C == URX_TYPE(pat[prevFrame->fPatIdx]) && fp->fInputIdx <= prevFrame->fInputIdx) {
-                    int32_t reverseIndex = fp->fInputIdx;
+                    int64_t reverseIndex = fp->fInputIdx;
                     UChar32 c;
                     do {
                         U16_PREV(inputBuf, backSearchIndex, reverseIndex, c);
@@ -4466,7 +4466,7 @@ void RegexMatcher::MatchChunkAt(int32_t startIdx, UBool toEnd, UErrorCode &statu
                         REStackFrame *prevFrame = (REStackFrame *)fStack->peekFrame(fFrameSize);
                         if (URX_LOOP_C == URX_TYPE(pat[prevFrame->fPatIdx]) && fp->fInputIdx <= prevFrame->fInputIdx) {
                             // Reset to last start point
-                            int32_t reverseIndex = fp->fInputIdx;
+                            int64_t reverseIndex = fp->fInputIdx;
                             UChar32 c;
                             pPat = litText+stringStartIdx;
                             
@@ -4867,7 +4867,7 @@ GC_Done:
                         REStackFrame *prevFrame = (REStackFrame *)fStack->peekFrame(fFrameSize);
                         if (URX_LOOP_C == URX_TYPE(pat[prevFrame->fPatIdx]) && fp->fInputIdx <= prevFrame->fInputIdx) {
                             // Try to find it, backwards
-                            int32_t reverseIndex = fp->fInputIdx;
+                            int64_t reverseIndex = fp->fInputIdx;
                             U16_BACK_1(inputBuf, backSearchIndex, reverseIndex); // skip the first character we tried
                             success = ((opValue & URX_NEG_SET) == URX_NEG_SET); // reset
                             do {
@@ -4934,7 +4934,7 @@ GC_Done:
                     REStackFrame *prevFrame = (REStackFrame *)fStack->peekFrame(fFrameSize);
                     if (URX_LOOP_C == URX_TYPE(pat[prevFrame->fPatIdx]) && fp->fInputIdx <= prevFrame->fInputIdx) {
                         // Try to find it, backwards
-                        int32_t reverseIndex = fp->fInputIdx;
+                        int64_t reverseIndex = fp->fInputIdx;
                         U16_BACK_1(inputBuf, backSearchIndex, reverseIndex); // skip the first character we tried
                         UBool success = FALSE;
                         do {
@@ -5004,7 +5004,7 @@ GC_Done:
                     REStackFrame *prevFrame = (REStackFrame *)fStack->peekFrame(fFrameSize);
                     if (URX_LOOP_C == URX_TYPE(pat[prevFrame->fPatIdx]) && fp->fInputIdx <= prevFrame->fInputIdx) {
                         // Try to find it, backwards
-                        int32_t reverseIndex = fp->fInputIdx;
+                        int64_t reverseIndex = fp->fInputIdx;
                         U16_BACK_1(inputBuf, backSearchIndex, reverseIndex); // skip the first character we tried
                         UBool success = FALSE;
                         do {
@@ -5274,13 +5274,13 @@ GC_Done:
                 U_ASSERT(opValue >= 0 && opValue < fPattern->fDataSize);
                 int32_t newStackSize = fData[opValue];
                 U_ASSERT(newStackSize <= fStack->size());
-                int32_t *newFP = fStack->getBuffer() + newStackSize - fFrameSize;
-                if (newFP == (int32_t *)fp) {
+                int64_t *newFP = fStack->getBuffer() + newStackSize - fFrameSize;
+                if (newFP == (int64_t *)fp) {
                     break;
                 }
                 int32_t i;
                 for (i=0; i<fFrameSize; i++) {
-                    newFP[i] = ((int32_t *)fp)[i];
+                    newFP[i] = ((int64_t *)fp)[i];
                 }
                 fp = (REStackFrame *)newFP;
                 fStack->setSize(newStackSize);
@@ -5379,10 +5379,10 @@ GC_Done:
                     // Copy the current top frame back to the new (cut back) top frame.
                     //   This makes the capture groups from within the look-ahead
                     //   expression available.
-                    int32_t *newFP = fStack->getBuffer() + newStackSize - fFrameSize;
+                    int64_t *newFP = fStack->getBuffer() + newStackSize - fFrameSize;
                     int32_t i;
                     for (i=0; i<fFrameSize; i++) {
-                        newFP[i] = ((int32_t *)fp)[i];
+                        newFP[i] = ((int64_t *)fp)[i];
                     }
                     fp = (REStackFrame *)newFP;
                     fStack->setSize(newStackSize);
@@ -5412,7 +5412,7 @@ GC_Done:
                 REStackFrame *prevFrame = (REStackFrame *)fStack->peekFrame(fFrameSize);
                 if (URX_LOOP_C == URX_TYPE(pat[prevFrame->fPatIdx]) && fp->fInputIdx <= prevFrame->fInputIdx) {
                     UBool success = FALSE;
-                    int32_t reverseIndex = fp->fInputIdx;
+                    int64_t reverseIndex = fp->fInputIdx;
                     UChar32 c;
                     while (reverseIndex > backSearchIndex) {
                         U16_PREV(inputBuf, backSearchIndex, reverseIndex, c);
@@ -5508,7 +5508,7 @@ GC_Done:
                             REStackFrame *prevFrame = (REStackFrame *)fStack->peekFrame(fFrameSize);
                             if (URX_LOOP_C == URX_TYPE(pat[prevFrame->fPatIdx]) && fp->fInputIdx <= prevFrame->fInputIdx) {
                                 // Reset to last start point
-                                int32_t reverseIndex = originalInputIdx;
+                                int64_t reverseIndex = originalInputIdx;
                                 patternChars = litText+stringStartIdx;
                                 
                                 // Search backwards for a possible start

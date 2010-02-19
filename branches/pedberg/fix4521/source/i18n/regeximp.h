@@ -282,6 +282,7 @@ struct REStackFrame {
     // Header
     int64_t            fInputIdx;        // Position of next character in the input string
     int64_t            fPatIdx;          // Position of next Op in the compiled pattern
+                                         // (int64_t for UVector64, values fit in an int32_t)
     // Remainder
     int64_t            fExtra[1];        // Extra state, for capture group start/ends
                                          //   atomic parentheses, repeat counts, etc.

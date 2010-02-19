@@ -1596,7 +1596,7 @@ private:
     UBool                isWordBoundary(int64_t pos);         // perform Perl-like  \b test
     UBool                isUWordBoundary(int64_t pos);        // perform RBBI based \b test
     REStackFrame        *resetStack();
-    inline REStackFrame *StateSave(REStackFrame *fp, int32_t savePatIdx, UErrorCode &status);
+    inline REStackFrame *StateSave(REStackFrame *fp, int64_t savePatIdx, UErrorCode &status);
     void                 IncrementTime(UErrorCode &status);
     
     int64_t              appendGroup(int32_t groupNum, UText *dest, UErrorCode &status) const;
@@ -1654,8 +1654,8 @@ private:
                                            //   which will contain the capture group results.
                                            //   NOT valid while match engine is running.
 
-    int32_t             *fData;            // Data area for use by the compiled pattern.
-    int32_t             fSmallData[8];     //   Use this for data if it's enough.
+    int64_t             *fData;            // Data area for use by the compiled pattern.
+    int64_t             fSmallData[8];     //   Use this for data if it's enough.
 
     int32_t             fTimeLimit;        // Max time (in arbitrary steps) to let the
                                            //   match engine run.  Zero for unlimited.

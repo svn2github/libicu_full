@@ -1941,7 +1941,7 @@ void    RegexCompile::fixLiterals(UBool split) {
 //
 //------------------------------------------------------------------------------
 void   RegexCompile::insertOp(int32_t where) {
-    UVector32 *code = fRXPat->fCompiledPat;
+    UVector64 *code = fRXPat->fCompiledPat;
     U_ASSERT(where>0 && where < code->size());
 
     int32_t  nop = URX_BUILD(URX_NOP, 0);
