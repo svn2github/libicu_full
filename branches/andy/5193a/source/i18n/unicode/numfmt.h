@@ -470,9 +470,12 @@ public:
                                   UErrorCode& status) const;
 public:
     /**
-     * Format a decimal number. Subclasses must implement
-     * this method.  The number is a DigitList wrapper onto
-     * a floating point decimal number.
+     * Format a decimal number. 
+     * The number is a DigitList wrapper onto a floating point decimal number.
+     * The default implementation in NumberFormat converts the decimal number
+     * to a double and formats that.  Subclasses of NumberFormat that want
+     * to specifically handle big decimal numbers must override this method.
+     * class DecimalFormat does so.
      *
      * @param number    The number, a DigitList format Decimal Floating Point.
      * @param appendTo  Output parameter to receive result.

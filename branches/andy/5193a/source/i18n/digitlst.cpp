@@ -678,7 +678,7 @@ DigitList::set(int64_t source, int32_t maximumDigits)
  *        StringPiece doesn't know about terminated.
  */
 void
-DigitList::set(StringPiece source, UErrorCode &status) {
+DigitList::set(const StringPiece &source, UErrorCode &status) {
     if (U_FAILURE(status)) {
         return;
     }
@@ -696,8 +696,12 @@ DigitList::set(StringPiece source, UErrorCode &status) {
         fDecNumber = (decNumber *)fStorage.getAlias();
     }
         
+    fContext.status = 0;
     uprv_decNumberFromString(fDecNumber, source.data(), &fContext);
-    // TODO:  check for conversion errors, set status.
+    if ((fContext.status & DEC_Conversion_syntax) != 0) {
+        status = U_DECIMAL_NUMBER_SYNTAX_ERROR;
+    }
+    // TODO:  What to do with other errors?
     fHaveDouble = FALSE;
 }   
 

@@ -103,7 +103,7 @@ U_NAMESPACE_BEGIN
  *       (decNumber library is configurable in how digits are stored, ICU has configured
  *        it this way for convenience in replacing the old DigitList implementation.)
  */
-class DigitList : public UMemory { // Declare external to make compiler happy
+class U_I18N_API DigitList : public UMemory { // Declare external to make compiler happy
 public:
     DigitList();
     ~DigitList();
@@ -244,7 +244,7 @@ public:
      * @param source The value to be set.  The string must be nul-terminated.
      * @param maximunDigits The maximum number of digits to be shown
      */
-    void set(StringPiece source, UErrorCode &status);
+    void set(const StringPiece &source, UErrorCode &status);
 
     /**
      * Multiply    this = this * arg

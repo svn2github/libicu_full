@@ -152,6 +152,15 @@ Formattable::Formattable(int64_t value)
 }
 
 // -------------------------------------
+// Creates a formattable object with a decimal number value from a string.
+
+Formattable::Formattable(const StringPiece &number, UErrorCode &status) {
+    init();
+    setDecimalNumber(number, status);
+}
+
+
+// -------------------------------------
 // Creates a formattable object with a UnicodeString instance.
 
 Formattable::Formattable(const UnicodeString& stringToCopy)
