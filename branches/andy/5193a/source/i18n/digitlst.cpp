@@ -310,7 +310,7 @@ DigitList::setCount(int32_t c)  {
 }
 
 int32_t  
-DigitList::getCount() {
+DigitList::getCount() const {
     if (decNumberIsZero(fDecNumber) && fDecNumber->exponent==0) {
        // The extra test for exponent==0 is needed because parsing sometimes appends
        // zero digits.  It's bogus, decimalFormatter parsing needs to be cleaned up.
@@ -386,11 +386,16 @@ DigitList::append(char digit)
  * can be linked to this function.
  */
 double
-DigitList::getDouble() /*const*/
+DigitList::getDouble() const
 {
+    // TODO:  fix thread safety.  Can probably be finessed some by analyzing
+    //        what public const functions can see which DigitLists.
+    //        Like precompute fDouble for DigitLists coming in from a parse
+    //        or from a Formattable::set(), but not for any others.
     if (fHaveDouble) {
         return fDouble;
     }
+    DigitList *nonConstThis = const_cast<DigitList *>(this);
 
     if (gDecimal == 0) {
         char rep[MAX_DIGITS];
@@ -402,18 +407,18 @@ DigitList::getDouble() /*const*/
     }
 
     if (isZero()) {
-        fDouble = 0.0;
+        nonConstThis->fDouble = 0.0;
         if (decNumberIsNegative(fDecNumber)) {
-            fDouble /= -1;
+            nonConstThis->fDouble /= -1;
         }
     } else if (isInfinite()) {
         if (std::numeric_limits<double>::has_infinity) {
-            fDouble = std::numeric_limits<double>::infinity();
+            nonConstThis->fDouble = std::numeric_limits<double>::infinity();
         } else {
-            fDouble = std::numeric_limits<double>::max();
+            nonConstThis->fDouble = std::numeric_limits<double>::max();
         }
         if (!isPositive()) {
-            fDouble = -fDouble;
+            nonConstThis->fDouble = -fDouble;
         } 
     } else {
         MaybeStackArray<char, MAX_DBL_DIGITS+18> s;
@@ -423,10 +428,10 @@ DigitList::getDouble() /*const*/
            //        for the additional digits we retain.
 
         // Round down to appx. double precision, if the number is longer than that.
-        // Copy the number first, so that we don't trash the original.
-        reduce();    // Removes any trailing zeros, so that digit count is good.
+        // Copy the number first, so that we don't modify the original.
         if (getCount() > MAX_DBL_DIGITS + 3) {
             DigitList numToConvert(*this);
+            numToConvert.reduce();    // Removes any trailing zeros, so that digit count is good.
             numToConvert.round(MAX_DBL_DIGITS+3);
             uprv_decNumberToString(numToConvert.fDecNumber, s);
             // TODO:  how many extra digits should be included for an accurate conversion?
@@ -442,9 +447,9 @@ DigitList::getDouble() /*const*/
             }
         }
         char *end = NULL;
-        fDouble = uprv_strtod(s, &end);
+        nonConstThis->fDouble = uprv_strtod(s, &end);
     }
-    fHaveDouble = TRUE;
+    nonConstThis->fHaveDouble = TRUE;
     return fDouble;
 }
 

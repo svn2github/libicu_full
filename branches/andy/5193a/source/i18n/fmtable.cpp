@@ -721,6 +721,29 @@ StringPiece Formattable::getDecimalNumber(UErrorCode &status) {
 
 // ---------------------------------------
 void
+Formattable::adoptDigitList(DigitList *dl) {
+    dispose();
+
+    fDecimalNum = dl;
+
+    // Set the value into the Union of simple type values.
+    // Cannot use the set() functions because they would delete the fDecimalNum value,
+
+    if (fDecimalNum->fitsIntoLong(FALSE)) {
+        fType = kLong;
+        fValue.fInt64 = fDecimalNum->getLong();
+    } else if (fDecimalNum->fitsIntoInt64(FALSE)) {
+        fType = kInt64;
+        fValue.fInt64 = fDecimalNum->getInt64();
+    } else {
+        fType = kDouble;
+        fValue.fDouble = fDecimalNum->getDouble();
+    }
+}
+
+
+// ---------------------------------------
+void
 Formattable::setDecimalNumber(const StringPiece &numberString, UErrorCode &status) {
     if (U_FAILURE(status)) {
         return;
@@ -746,21 +769,7 @@ Formattable::setDecimalNumber(const StringPiece &numberString, UErrorCode &statu
         delete dnum;
         return;   // String didn't contain a decimal number.
     }
-    fDecimalNum = dnum;
-
-    // Set the value into the Union of simple type values.
-    // Cannot use the set() functions because they would delete the fDecimalNum value,
-
-    if (fDecimalNum->fitsIntoLong(FALSE)) {
-        fType = kLong;
-        fValue.fInt64 = fDecimalNum->getLong();
-    } else if (fDecimalNum->fitsIntoInt64(FALSE)) {
-        fType = kInt64;
-        fValue.fInt64 = fDecimalNum->getInt64();
-    } else {
-        fType = kDouble;
-        fValue.fDouble = fDecimalNum->getDouble();
-    }
+    adoptDigitList(dnum);
 
     // Note that we do not hang on to the caller's input string.
     // If we are asked for the string, we will regenerate one from fDecimalNum.

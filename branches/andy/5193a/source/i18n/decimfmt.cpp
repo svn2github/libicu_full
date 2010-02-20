@@ -1212,6 +1212,50 @@ DecimalFormat::_format( double number,
     return subformat(appendTo, handler, digits, FALSE);
 }
 
+//------------------------------------------------------------------------------
+
+
+UnicodeString&
+DecimalFormat::format(const StringPiece &number,
+                      UnicodeString &toAppendTo,
+                      FieldPositionIterator *posIter,
+                      UErrorCode &status) const
+{
+    DigitList   dnum;
+    dnum.set(number, status);
+    if (U_FAILURE(status)) {
+        return toAppendTo;
+    }
+    FieldPositionIteratorHandler handler(posIter, status);
+    _format(dnum, toAppendTo, handler, status);
+    return toAppendTo;
+}
+
+
+UnicodeString&
+DecimalFormat::format(const DigitList &number,
+                      UnicodeString &appendTo,
+                      FieldPositionIterator *posIter,
+                      UErrorCode &status) const {
+    FieldPositionIteratorHandler handler(posIter, status);
+    _format(number, appendTo, handler, status);
+    return appendTo;
+}
+
+
+
+UnicodeString&
+DecimalFormat::format(const DigitList &number,
+                     UnicodeString& appendTo,
+                     FieldPosition& pos,
+                     UErrorCode &status) const {
+    FieldPositionOnlyHandler handler(pos);
+    _format(number, appendTo, handler, status);
+    return appendTo;
+}
+
+
+
 UnicodeString&
 DecimalFormat::_format(const DigitList &number,
                         UnicodeString& appendTo,
@@ -1319,23 +1363,6 @@ double DecimalFormat::round(double a, ERoundingMode mode, UBool isNegative) {
     }
     return 1.0;
 }
-
-UnicodeString&
-DecimalFormat::format(const StringPiece &number,
-                      UnicodeString &toAppendTo,
-                      FieldPositionIterator *posIter,
-                      UErrorCode &status) const
-{
-    DigitList   dnum;
-    dnum.set(number, status);
-    if (U_FAILURE(status)) {
-        return toAppendTo;
-    }
-    FieldPositionIteratorHandler handler(posIter, status);
-    _format(dnum, toAppendTo, handler, status);
-    return toAppendTo;
-}
-
 
 UnicodeString&
 DecimalFormat::format(  const Formattable& obj,
@@ -1781,6 +1808,10 @@ void DecimalFormat::parse(const UnicodeString& text,
     int32_t backup;
     int32_t i = backup = parsePosition.getIndex();
 
+    // clear any old contents in the result.  In particular, clears any DigitList
+    //   that it may be holding.
+    result.setLong(0);
+
     // Handle NaN as a special case:
 
     // Skip padding characters, if around prefix
@@ -1810,11 +1841,15 @@ void DecimalFormat::parse(const UnicodeString& text,
     UBool status[fgStatusLength];
     UChar curbuf[4];
     UChar* currency = parseCurrency ? curbuf : NULL;
-    DigitList digits;
+    DigitList *digits = new DigitList;
+    if (digits == NULL) {
+        return;    // no way to report error from here.
+    }
 
     if (fCurrencySignCount > fgCurrencySignCountZero) {
-        if (!parseForCurrency(text, parsePosition, digits,
+        if (!parseForCurrency(text, parsePosition, *digits,
                               status, currency)) {
+            delete digits;
             return;
         }
     } else {
@@ -1822,8 +1857,9 @@ void DecimalFormat::parse(const UnicodeString& text,
                       fNegPrefixPattern, fNegSuffixPattern,
                       fPosPrefixPattern, fPosSuffixPattern,
                       FALSE, UCURR_SYMBOL_NAME,
-                      parsePosition, digits, status, currency)) {
+                      parsePosition, *digits, status, currency)) {
             parsePosition.setIndex(backup);
+            delete digits;
             return;
         }
     }
@@ -1831,49 +1867,20 @@ void DecimalFormat::parse(const UnicodeString& text,
     // Handle infinity
     if (status[fgStatusInfinite]) {
         double inf = uprv_getInfinity();
-        result.setDouble(digits.isPositive() ? inf : -inf);
+        result.setDouble(digits->isPositive() ? inf : -inf);
+        delete digits;    // TODO:  set the dl to infinity, and let it fall into the code below.
     }
 
     else {
-        // Do as much of the multiplier conversion as possible without
-        // losing accuracy.
-        int32_t mult = fMultiplier; // Don't modify this.multiplier
-        while (mult % 10 == 0) {
-            mult /= 10;
-            digits.setDecimalAt(digits.getDecimalAt()-1);
-        }
 
-        // Handle integral values.  We want to return the most
-        // parsimonious type that will accommodate all of the result's
-        // precision.  We therefore only return a long if the result fits
-        // entirely within a long (taking into account the multiplier) --
-        // otherwise we fall through and return a double.  
-        //
-        // BigDecimals are not returned as a separate type, but are
-        // available separately for any parsed numeric value.
-        if (digits.fitsIntoLong(isParseIntegerOnly())) {
-            int32_t n = digits.getLong();
-            if (n % mult == 0) {
-                result.setLong(n / mult);
-            }
-            else {  // else handle the remainder
-                result.setDouble(((double)n) / mult);
-            }
+        // TODO:  cache dlmultiplier.
+        if (fMultiplier != 1) {
+            UErrorCode ec = U_ZERO_ERROR;
+            DigitList dlmultiplier;
+            dlmultiplier.set(fMultiplier);
+            digits->mult(dlmultiplier, ec);
         }
-        else if (digits.fitsIntoInt64(isParseIntegerOnly())) {
-            int64_t n = digits.getInt64();
-            if (n % mult == 0) {
-                result.setInt64(n / mult);
-            }
-            else {  // else handle the remainder
-                result.setDouble(((double)n) / mult);
-            }
-        }
-        else {
-            // Handle non-integral or very large values
-            // Dividing by one is okay and not that costly.
-            result.setDouble(digits.getDouble() / mult);
-        }
+        result.adoptDigitList(digits);
     }
 
     if (parseCurrency) {

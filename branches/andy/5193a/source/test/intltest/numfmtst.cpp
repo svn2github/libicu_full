@@ -6050,15 +6050,40 @@ void NumberFormatTest::TestDecimal() {
         ASSERT_SUCCESS(status);
         UnicodeString formattedResult;
         DigitList dl;
-        StringPiece num("123.4566666666666666666666666666666666621E+400");
+        StringPiece num("123.4566666666666666666666666666666666621E+40");
         dl.set(num, status);
         ASSERT_SUCCESS(status);
         fmtr->format(dl, formattedResult, NULL, status);
         ASSERT_SUCCESS(status);
-        std::string ss; std::cout << formattedResult.toUTF8String(ss);
+        ASSERT_EQUALS("1,234,566,666,666,666,666,666,666,666,666,666,666,621,000", formattedResult);
+
+        status = U_ZERO_ERROR;
+        num.set("666.666");
+        dl.set(num, status);
+        FieldPosition pos(NumberFormat::FRACTION_FIELD);
+        ASSERT_SUCCESS(status);
+        formattedResult.remove();
+        fmtr->format(dl, formattedResult, pos, status);
+        ASSERT_SUCCESS(status);
+        ASSERT_EQUALS("666.666", formattedResult);
+        ASSERT_EQUALS(4, pos.getBeginIndex());
+        ASSERT_EQUALS(7, pos.getEndIndex());
+        delete fmtr;
     }
 
-
+    {
+        // Check that a parse returns a digit list with full accuracy
+        UErrorCode status = U_ZERO_ERROR;
+        NumberFormat *fmtr = NumberFormat::createInstance(
+                Locale::getUS(), NumberFormat::kNumberStyle, status);
+        ASSERT_SUCCESS(status);
+        UnicodeString input = "12300000000111111000000000000.662";
+        Formattable result;
+        fmtr->parse(input, result, status);
+        ASSERT_SUCCESS(status);
+        std::cout << result.getDecimalNumber(status).data();
+        delete fmtr;
+    }
 }
 
 #endif /* #if !UCONFIG_NO_FORMATTING */

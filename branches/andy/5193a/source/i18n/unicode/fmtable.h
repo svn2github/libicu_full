@@ -598,8 +598,18 @@ public:
      *        NumberFormat::format(Formattable, ...
      *        needs to get at the DigitList, if it exists, for
      *        big decimal formatting.
+     *  @internal
      */
     DigitList *getDigitList() const { return fDecimalNum;};
+
+    /**
+     *  Adopt, and set value from, a DigitList
+     *     Internal Function, do not use.
+     *  @param dl the Digit List to be adopted
+     *  @param status reports errors
+     *  @internal
+     */
+    void adoptDigitList(DigitList *dl);
 
 private:
     /**

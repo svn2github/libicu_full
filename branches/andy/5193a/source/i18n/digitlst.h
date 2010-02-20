@@ -166,7 +166,7 @@ public:
      * Returns 0.0 if zero length.
      * @return the value of the digit list.
      */
-    double getDouble(void) /*const*/;
+    double getDouble(void) const;
 
     /**
      * Utility routine to get the value of the digit list
@@ -309,7 +309,7 @@ public:
     int32_t  getDecimalAt();
 
     void     setCount(int32_t c);
-    int32_t  getCount();
+    int32_t  getCount() const;
     
     void     setDigit(int32_t i, char v);
     char     getDigit(int32_t i);

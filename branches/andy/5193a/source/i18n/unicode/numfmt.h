@@ -486,15 +486,18 @@ public:
      * @return          Reference to 'appendTo' parameter.
      * @internal
      */
-    virtual UnicodeString& format(DigitList &number,
+    virtual UnicodeString& format(const DigitList &number,
                                   UnicodeString& appendTo,
                                   FieldPositionIterator* posIter,
                                   UErrorCode& status) const;
 
     /**
-     * Format a decimal number. Subclasses must implement
-     * this method.  The number is a DigitList wrapper onto
-     * a floating point decimal number.
+     * Format a decimal number. 
+     * The number is a DigitList wrapper onto a floating point decimal number.
+     * The default implementation in NumberFormat converts the decimal number
+     * to a double and formats that.  Subclasses of NumberFormat that want
+     * to specifically handle big decimal numbers must override this method.
+     * class DecimalFormat does so.
      *
      * @param number    The number, a DigitList format Decimal Floating Point.
      * @param appendTo  Output parameter to receive result.
@@ -505,13 +508,11 @@ public:
      * @return          Reference to 'appendTo' parameter.
      * @internal
      */
-    virtual UnicodeString& format(DigitList &number,
+    virtual UnicodeString& format(const DigitList &number,
                                   UnicodeString& appendTo,
                                   FieldPosition& pos,
                                   UErrorCode& status) const;
 
-    // TODO:  do we also want a format of a decimal number that takes a
-    //        FieldPosition parameter?
 public:
 
     /**
