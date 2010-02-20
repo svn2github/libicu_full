@@ -285,18 +285,58 @@ private:
 
     void constructEmpty();
 
+    UBool useFinalZone(int32_t year, int32_t month, int32_t dom) const;
+
     void getHistoricalOffset(UDate date, UBool local,
         int32_t NonExistingTimeOpt, int32_t DuplicatedTimeOpt,
         int32_t& rawoff, int32_t& dstoff) const;
 
-    int32_t zoneOffset(int16_t index) const;
-    int32_t rawOffset(int16_t index) const;
-    int32_t dstOffset(int16_t index) const;
+    int16_t transitionCount() const;
+
+    int64_t transitionTimeInSeconds(int16_t transIdx) const;
+    double transitionTime(int16_t transIdx) const;
+
+    /*
+     * Follwong 3 methods return an offset at the given transition time index.
+     * When the index is negative, return the initial offset.
+     */
+    int32_t zoneOffsetAt(int16_t transIdx) const;
+    int32_t rawOffsetAt(int16_t transIdx) const;
+    int32_t dstOffsetAt(int16_t transIdx) const;
+
+    /*
+     * Following 3 methods return the initial offset.
+     */
+    int32_t initialZoneOffset() const;
+    int32_t initialRawOffset() const;
+    int32_t initialDstOffset() const;
 
     /**
-     * Number of transitions, 0..~370
+     * Number of transitions in each time range
      */
-    int16_t transitionCount;
+    int16_t transitionCountPre32;
+    int16_t transitionCount32;
+    int16_t transitionCountPost32;
+
+    /**
+     * Time of each transition in seconds from 1970 epoch before 32bit second range (<= 1900).
+     * Each transtion in this range is represented by a pair of int32_t.
+     * Length is transitionCount int32_t's.  NULL if no transitions in this range.
+     */
+    const int32_t *transitionTimesPre32; // alias into res; do not delete
+
+    /**
+     * Time of each transition in seconds from 1970 epoch in 32bit second range.
+     * Length is transitionCount int32_t's.  NULL if no transitions in this range.
+     */
+    const int32_t *transitionTimes32; // alias into res; do not delete
+
+    /**
+     * Time of each transition in seconds from 1970 epoch after 32bit second range (>= 2038).
+     * Each transtion in this range is represented by a pair of int32_t.
+     * Length is transitionCount int32_t's.  NULL if no transitions in this range.
+     */
+    const int32_t *transitionTimesPost32; // alias into res; do not delete
 
     /**
      * Number of types, 1..255
@@ -304,44 +344,38 @@ private:
     int16_t typeCount;
 
     /**
-     * Time of each transition in seconds from 1970 epoch.
-     * Length is transitionCount int32_t's.
-     */
-    const int32_t *transitionTimes; // alias into res; do not delete
-
-    /**
      * Offset from GMT in seconds for each type.
-     * Length is typeCount int32_t's.
+     * Length is typeCount int32_t's.  At least one type (a pair of int32_t)
+     * is required.
      */
     const int32_t *typeOffsets; // alias into res; do not delete
 
     /**
      * Type description data, consisting of transitionCount uint8_t
      * type indices (from 0..typeCount-1).
-     * Length is transitionCount int8_t's.
+     * Length is transitionCount int16_t's.  NULL if no transitions.
      */
-    const uint8_t *typeData; // alias into res; do not delete
+    const uint8_t *typeMapData; // alias into res; do not delete
 
     /**
-     * The last year for which the transitions data are to be used
-     * rather than the finalZone.  If there is no finalZone, then this
-     * is set to INT32_MAX.  NOTE: This corresponds to the year _before_
-     * the one indicated by finalMillis.
-     */
-    int32_t finalYear;
-
-    /**
-     * The millis for the start of the first year for which finalZone
-     * is to be used, or DBL_MAX if finalZone is 0.  NOTE: This is
-     * 0:00 GMT Jan 1, <finalYear + 1> (not <finalMillis>).
-     */
-    double finalMillis;
-
-    /**
-     * A SimpleTimeZone that governs the behavior for years > finalYear.
-     * If and only if finalYear == INT32_MAX then finalZone == 0.
+     * A SimpleTimeZone that governs the behavior for date > finalMillis.
      */
     SimpleTimeZone *finalZone; // owned, may be NULL
+
+    /**
+     * For date > finalMillis, the finalZone will be used.
+     */
+    double finalStartMillis;
+
+    /**
+     * For date after the date specified by finalDate, the finalZone
+     * will be used.
+     *
+     *   finalStartDate[0] - year
+     *   finalStartDate[1] - month (0-based)
+     *   finalStartDate[2] - day of month
+     */
+    int32_t finalStartDate[3];
 
     /* BasicTimeZone support */
     void clearTransitionRules(void);
@@ -354,24 +388,50 @@ private:
     TimeZoneTransition  *firstFinalTZTransition;
     TimeArrayTimeZoneRule   **historicRules;
     int16_t             historicRuleCount;
-    SimpleTimeZone      *finalZoneWithStartYear; // hack
     UBool               transitionRulesInitialized;
 };
 
-inline int32_t
-OlsonTimeZone::zoneOffset(int16_t index) const {
-    index <<= 1;
-    return typeOffsets[index] + typeOffsets[index+1];
+inline int16_t
+OlsonTimeZone::transitionCount() const {
+    return transitionCountPre32 + transitionCount32 + transitionCountPost32;
+}
+
+inline double
+OlsonTimeZone::transitionTime(int16_t transIdx) const {
+    return (double)transitionTimeInSeconds(transIdx) * U_MILLIS_PER_SECOND;
 }
 
 inline int32_t
-OlsonTimeZone::rawOffset(int16_t index) const {
-    return typeOffsets[(uint32_t)(index << 1)];
+OlsonTimeZone::zoneOffsetAt(int16_t transIdx) const {
+    int16_t typeIdx = (transIdx >= 0 ? typeMapData[transIdx] : 0) << 1;
+    return typeOffsets[typeIdx] + typeOffsets[typeIdx + 1];
 }
 
 inline int32_t
-OlsonTimeZone::dstOffset(int16_t index) const {
-    return typeOffsets[(uint32_t)((index << 1) + 1)];
+OlsonTimeZone::rawOffsetAt(int16_t transIdx) const {
+    int16_t typeIdx = (transIdx >= 0 ? typeMapData[transIdx] : 0) << 1;
+    return typeOffsets[typeIdx];
+}
+
+inline int32_t
+OlsonTimeZone::dstOffsetAt(int16_t transIdx) const {
+    int16_t typeIdx = (transIdx >= 0 ? typeMapData[transIdx] : 0) << 1;
+    return typeOffsets[typeIdx + 1];
+}
+
+inline int32_t
+OlsonTimeZone::initialZoneOffset() const {
+    return typeOffsets[0] + typeOffsets[1];
+}
+
+inline int32_t
+OlsonTimeZone::initialRawOffset() const {
+    return typeOffsets[0];
+}
+
+inline int32_t
+OlsonTimeZone::initialDstOffset() const {
+    return typeOffsets[1];
 }
 
 U_NAMESPACE_END

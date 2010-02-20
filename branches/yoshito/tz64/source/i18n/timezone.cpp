@@ -81,12 +81,14 @@ static char gStrBuf[256];
 #include "uassert.h"
 #include "zonemeta.h"
 
-#define kZONEINFO "zoneinfo"
+#define kZONEINFO "zoneinfo64"
 #define kREGIONS  "Regions"
 #define kZONES    "Zones"
 #define kRULES    "Rules"
 #define kNAMES    "Names"
 #define kDEFAULT  "Default"
+#define kTZVERSION  "TZVersion"
+#define kLINKS    "links"
 #define kMAX_CUSTOM_HOUR    23
 #define kMAX_CUSTOM_MIN     59
 #define kMAX_CUSTOM_SEC     59
@@ -305,7 +307,7 @@ static UResourceBundle* openOlsonResource(const UnicodeString& id,
     // Dereference if this is an alias.  Docs say result should be 1
     // but it is 0 in 2.8 (?).
     U_DEBUG_TZ_MSG(("Loading zone '%s' (%s, size %d) - %s\n", buf, ures_getKey((UResourceBundle*)&res), ures_getSize(&res), u_errorName(ec)));
-    if (ures_getSize(&res) <= 1 && getOlsonMeta(top)) {
+    if (ures_getType(&res) == URES_INT && getOlsonMeta(top)) {
         int32_t deref = ures_getInt(&res, &ec) + 0;
         U_DEBUG_TZ_MSG(("getInt: %s - type is %d\n", u_errorName(ec), ures_getType(&res)));
         UResourceBundle *ares = ures_getByKey(top, kZONES, NULL, &ec); // dereference Zones section
@@ -1023,19 +1025,11 @@ TimeZone::countEquivalentIDs(const UnicodeString& id) {
     U_DEBUG_TZ_MSG(("countEquivalentIDs..\n"));
     UResourceBundle *top = openOlsonResource(id, res, ec);
     if (U_SUCCESS(ec)) {
-        int32_t size = ures_getSize(&res);
-        U_DEBUG_TZ_MSG(("cEI: success (size %d, key %s)..\n", size, ures_getKey(&res)));
-        if (size == 4 || size == 6) {
-            UResourceBundle r;
-            ures_initStackObject(&r);
-            ures_getByIndex(&res, size-1, &r, &ec);
-            //result = ures_getSize(&r); // doesn't work
-            ures_getIntVector(&r, &result, &ec);
-            U_DEBUG_TZ_MSG(("ceI: result %d, err %s\n", result, u_errorName(ec)));
-            ures_close(&r);
-        }
-    } else {
-      U_DEBUG_TZ_MSG(("cEI: fail, %s\n", u_errorName(ec)));
+        UResourceBundle r;
+        ures_initStackObject(&r);
+        ures_getByKey(&res, kLINKS, &r, &ec);
+        ures_getIntVector(&r, &result, &ec);
+        ures_close(&r);
     }
     ures_close(&res);
     ures_close(top);
@@ -1054,17 +1048,17 @@ TimeZone::getEquivalentID(const UnicodeString& id, int32_t index) {
     UResourceBundle *top = openOlsonResource(id, res, ec);
     int32_t zone = -1;
     if (U_SUCCESS(ec)) {
-        int32_t size = ures_getSize(&res);
-        if (size == 4 || size == 6) {
-            UResourceBundle r;
-            ures_initStackObject(&r);
-            ures_getByIndex(&res, size-1, &r, &ec);
-            const int32_t* v = ures_getIntVector(&r, &size, &ec);
+        UResourceBundle r;
+        ures_initStackObject(&r);
+        int32_t size;
+        ures_getByKey(&res, kLINKS, &r, &ec);
+        const int32_t* v = ures_getIntVector(&r, &size, &ec);
+        if (U_SUCCESS(ec)) {
             if (index >= 0 && index < size && getOlsonMeta()) {
                 zone = v[index];
             }
-            ures_close(&r);
         }
+        ures_close(&r);
     }
     ures_close(&res);
     if (zone >= 0) {
@@ -1106,7 +1100,7 @@ TimeZone::dereferOlsonLink(const UnicodeString& id) {
     ures_getByIndex(rb, idx, rb, &ec); 
 
     if (U_SUCCESS(ec)) {
-        if (ures_getSize(rb) == 1) {
+        if (ures_getType(rb) == URES_INT) {
             // this is a link - dereference the link
             int32_t deref = ures_getInt(rb, &ec);
             const UChar* tmp = ures_getStringByIndex(names, deref, NULL, &ec);
@@ -1491,8 +1485,8 @@ TimeZone::getTZDataVersion(UErrorCode& status)
     UMTX_CHECK(&LOCK, !TZDataVersionInitialized, needsInit);
     if (needsInit) {
         int32_t len = 0;
-        UResourceBundle *bundle = ures_openDirect(NULL, "zoneinfo", &status);
-        const UChar *tzver = ures_getStringByKey(bundle, "TZVersion",
+        UResourceBundle *bundle = ures_openDirect(NULL, kZONEINFO, &status);
+        const UChar *tzver = ures_getStringByKey(bundle, kTZVERSION,
             &len, &status);
 
         if (U_SUCCESS(status)) {
