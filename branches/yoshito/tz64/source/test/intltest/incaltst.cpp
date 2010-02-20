@@ -531,7 +531,7 @@ void IntlCalendarTest::TestJapaneseFormat() {
 
     // Test parse with incomplete information
     fmt = new SimpleDateFormat(UnicodeString("G y"), Locale("en_US@calendar=japanese"), status);
-    aDate = -3197117222000;
+    aDate = -3197117222000.0;
     CHECK(status, "creating date format instance");
     if(!fmt) { 
         errln("Coudln't create en_US instance");
