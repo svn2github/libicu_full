@@ -91,7 +91,7 @@ UBool DecimalNumberString::ensureCapacity(int32_t neededSize, UErrorCode &status
             return FALSE;
         }
         U_ASSERT(fText.getCapacity() >= neededSize);
-        U_ASSERT(&(*this)[0] == newBuf);
+        U_ASSERT(fText.getAlias() == newBuf);
     }
     return TRUE;
 }

@@ -5968,7 +5968,7 @@ const char* attrString(int32_t attrId) {
 //      API test, not a comprehensive test. 
 //      See DecimalFormatTest/DataDrivenTests
 //
-#define ASSERT_SUCCESS(status) {if (U_FAILURE(status)) errln("file %s, line %d: status: %s" \
+#define ASSERT_SUCCESS(status) {if (U_FAILURE(status)) errln("file %s, line %d: status: %s", \
                                                 __FILE__, __LINE__, u_errorName(status));}
 #define ASSERT_EQUALS(expected, actual) {if ((expected) != (actual)) \
                   errln("file %s, line %d: %s != %s", __FILE__, __LINE__, #expected, #actual);}
@@ -6075,9 +6075,9 @@ void NumberFormatTest::TestDecimal() {
         // Check that a parse returns a digit list with full accuracy
         UErrorCode status = U_ZERO_ERROR;
         NumberFormat *fmtr = NumberFormat::createInstance(
-                Locale::getUS(), NumberFormat::kNumberStyle, status);
+                Locale::getUS(), NumberFormat::kPercentStyle, status);
         ASSERT_SUCCESS(status);
-        UnicodeString input = "12300000000111111000000000000.662";
+        UnicodeString input = "1.84%";
         Formattable result;
         fmtr->parse(input, result, status);
         ASSERT_SUCCESS(status);

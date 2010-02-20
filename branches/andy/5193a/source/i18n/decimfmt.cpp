@@ -1878,7 +1878,14 @@ void DecimalFormat::parse(const UnicodeString& text,
             UErrorCode ec = U_ZERO_ERROR;
             DigitList dlmultiplier;
             dlmultiplier.set(fMultiplier);
-            digits->mult(dlmultiplier, ec);
+            digits->div(dlmultiplier, ec);
+        }
+
+        // Negative zero special case:
+        //    if parsing integerOnly, change to +0, which goes into an int32 in a Formattable.
+        //    if not parsing integerOnly, leave as -0, which a double can represent.
+        if (digits->isZero() && !digits->isPositive() && isParseIntegerOnly()) {
+            digits->setPositive(TRUE);
         }
         result.adoptDigitList(digits);
     }
