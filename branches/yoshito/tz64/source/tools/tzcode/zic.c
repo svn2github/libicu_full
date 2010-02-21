@@ -2205,18 +2205,15 @@ wp = ecpyalloc(_("no POSIX environment variable for zone"));
 		if (i == (zonecount - 1)) { /* !useuntil */
 			/* Look for exactly 2 rules that end at 'max' and
 			 * note them. Determine max(r_loyear) for the 2 of
-			 * them. */
+			 * them.
+			 */
 			for (j=0; j<zp->z_nrules; ++j) {
 				rp = &zp->z_rules[j];
 				if (rp->r_hiyear == INT_MAX) {
 					if (finalRule1 == NULL) {
 						finalRule1 = rp;
-						finalRuleYear = rp->r_loyear;
 			    	} else if (finalRule2 == NULL) {
 						finalRule2 = rp;
-						if (rp->r_loyear > finalRuleYear) {
-							finalRuleYear = rp->r_loyear;
-						}
 					} else {
 						error("more than two max rules found (ICU)");
 						exit(EXIT_FAILURE);
@@ -2244,6 +2241,40 @@ wp = ecpyalloc(_("no POSIX environment variable for zone"));
 					}
 					/* Add final rule to our list */
 					finalRuleIndex = add_icu_final_rules(finalRule1, finalRule2);
+
+					/* Note: ICU uses an instance of SimpleTimeZone
+					 * created from the pair of final rules after
+					 * the beginning of the final rule start year.
+					 *
+					 * The final rule start year is decided by the
+					 * logic described below:
+					 *
+					 * 1. When the start year of finalRule1 is later
+					 * than the start year of finalRule2, then use the
+					 * start year of finalRule1 as the finalRuleYear.
+					 *
+					 * 2. When the start year of finalRule1 is equal
+					 * or earlier than the start year of finalRule2, then
+					 * use the start year of finalRule2 + 1 as the
+					 * finalRuleYear.
+					 *
+					 * We need to push the finalRuleYear one year later
+					 * for the case 2 above because dates before the
+					 * first time transition may not match finalRule2
+					 * in the start year of finalRule2.
+					 *
+					 * Pushing the final year to the next year may
+					 * result the final 'resolved' transition beyond
+					 * 32-bit second range (> 2038-01-19T03:14:07Z),
+					 * and it may not work well with ICU releases
+					 * before 4.4.
+					 */
+
+					if (finalRule1->r_loyear > finalRule2->r_loyear) {
+						finalRuleYear = finalRule1->r_loyear;
+					} else {
+						finalRuleYear = finalRule2->r_loyear + 1;
+					}
 				}
 			}
 		}
@@ -2357,36 +2388,9 @@ wp = ecpyalloc(_("no POSIX environment variable for zone"));
 				}
 #ifdef ICU
 				if (year >= finalRuleYear && rp == finalRule1) {
-					/* We want to shift final year 1 year after
-					 * the actual final rule takes effect (year + 1),
-					 * because the previous type is valid until the first
-					 * transition defined by the final rule.  Otherwise
-					 * we may see unexpected offset shift at the
-					 * begining of the year when the final rule takes
-					 * effect. */
-
-					/* ICU currently can support signed int32 transition
-					 * times.  Thus, the transitions in year 2038 may be
-					 * truncated.  At this moment (tzdata2008g), only
-					 * Rule Brazil is impacted by this limitation, because
-					 * the final set of rules are starting in 2038.  Although
-					 * this code put the first couple of transitions populated
-					 * by the final rules, they will be dropped off when
-					 * collecting transition times.  So, we need to keep
-					 * the start year of the final rule in 2038, not 2039.
-					 * Fortunately, the Brazil rules in 2038 and beyond use
-					 * the same base offset/dst saving amount.  Thus, even
-					 * we skip the first couple of transitions, the final
-					 * rule set for 2038 works properly.  So for now,
-					 * we do not increment the final rule start year only when
-					 * it falls into year 2038. We need to revisit this code
-					 * in future to fix the root cause of this problem (ICU
-					 * resource type limitation - signed int32).
-					 * Oct 7, 2008 - Yoshito */
-					int finalStartYear = (year == 2038) ? year : year + 1;
 					emit_icu_zone(icuFile,
 							zpfirst->z_name, zp->z_gmtoff,
-							rp, finalRuleIndex, finalStartYear);
+							rp, finalRuleIndex, finalRuleYear);
 					/* only emit this for the first year */
 					finalRule1 = NULL;
 				}
