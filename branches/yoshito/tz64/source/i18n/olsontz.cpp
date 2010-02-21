@@ -213,7 +213,15 @@ OlsonTimeZone::OlsonTimeZone(const UResourceBundle* top,
                 } else {
                     // set the start year of finalZone (this will be used by BasicTimeZone rule APIs only)
                     finalStartYear = ruleYear;
-                    finalZone->setStartYear(finalStartYear);
+
+                    // Note: Setting finalStartYear to the finalZone is problematic.  When a date is around
+                    // year boundary, SimpleTimeZone may return false result when DST is observed at the 
+                    // beginning of year.  We could apply safe mergin (day or two), but when one of recurrent
+                    // rules falls around year boundary, it could return false result.  Without setting the
+                    // start year, finalZone works fine around the year boundary of the start year.
+
+                    // finalZone->setStartYear(finalStartYear);
+
 
                     // Compute the millis for Jan 1, 0:00 GMT of the finalYear
 
@@ -629,6 +637,7 @@ OlsonTimeZone::clearTransitionRules(void) {
     firstFinalTZTransition = NULL;
     historicRules = NULL;
     historicRuleCount = 0;
+    finalZoneWithStartYear = NULL;
     firstTZTransitionIdx = 0;
     transitionRulesInitialized = FALSE;
 }
@@ -643,6 +652,9 @@ OlsonTimeZone::deleteTransitionRules(void) {
     }
     if (firstFinalTZTransition != NULL) {
         delete firstFinalTZTransition;
+    }
+    if (finalZoneWithStartYear != NULL) {
+        delete finalZoneWithStartYear;
     }
     if (historicRules != NULL) {
         for (int i = 0; i < historicRuleCount; i++) {
@@ -767,8 +779,24 @@ OlsonTimeZone::initTransitionRules(UErrorCode& status) {
         TimeZoneRule *firstFinalRule = NULL;
 
         if (finalZone->useDaylightTime()) {
+            /*
+             * Note: When an OlsonTimeZone is constructed, we should set the final year
+             * as the start year of finalZone.  However, the bounday condition used for
+             * getting offset from finalZone has some problems.
+             * For now, we do not set the valid start year when the construction time
+             * and create a clone and set the start year when extracting rules.
+             */
+            finalZoneWithStartYear = (SimpleTimeZone*)finalZone->clone();
+            // Check to make sure finalZone was actually cloned.
+            if (finalZoneWithStartYear == NULL) {
+                status = U_MEMORY_ALLOCATION_ERROR;
+                deleteTransitionRules();
+                return;
+            }
+            finalZoneWithStartYear->setStartYear(finalStartYear);
+
             TimeZoneTransition tzt;
-            finalZone->getNextTransition(startTime, false, tzt);
+            finalZoneWithStartYear->getNextTransition(startTime, false, tzt);
             firstFinalRule  = tzt.getTo()->clone();
             // Check to make sure firstFinalRule received proper clone.
             if (firstFinalRule == NULL) {
@@ -779,6 +807,13 @@ OlsonTimeZone::initTransitionRules(UErrorCode& status) {
             startTime = tzt.getTime();
         } else {
             // final rule with no transitions
+            finalZoneWithStartYear = (SimpleTimeZone*)finalZone->clone();
+            // Check to make sure finalZone was actually cloned.
+            if (finalZoneWithStartYear == NULL) {
+                status = U_MEMORY_ALLOCATION_ERROR;
+                deleteTransitionRules();
+                return;
+            }
             finalZone->getID(tzid);
             firstFinalRule = new TimeArrayTimeZoneRule(tzid,
                 finalZone->getRawOffset(), 0, &startTime, 1, DateTimeRule::UTC_TIME);
@@ -826,7 +861,7 @@ OlsonTimeZone::getNextTransition(UDate base, UBool inclusive, TimeZoneTransition
         } else if (base >= firstFinalTZTransition->getTime()) {
             if (finalZone->useDaylightTime()) {
                 //return finalZone->getNextTransition(base, inclusive, result);
-                return finalZone->getNextTransition(base, inclusive, result);
+                return finalZoneWithStartYear->getNextTransition(base, inclusive, result);
             } else {
                 // No more transitions
                 return FALSE;
@@ -890,7 +925,8 @@ OlsonTimeZone::getPreviousTransition(UDate base, UBool inclusive, TimeZoneTransi
             return TRUE;
         } else if (base > firstFinalTZTransition->getTime()) {
             if (finalZone->useDaylightTime()) {
-                return finalZone->getPreviousTransition(base, inclusive, result);
+                //return finalZone->getPreviousTransition(base, inclusive, result);
+                return finalZoneWithStartYear->getPreviousTransition(base, inclusive, result);
             } else {
                 result = *firstFinalTZTransition;
                 return TRUE;
@@ -996,10 +1032,10 @@ OlsonTimeZone::getTimeZoneRules(const InitialTimeZoneRule*& initial,
             }
         }
     }
-    if (finalZone != NULL && trscount > cnt) {
+    if (finalZoneWithStartYear != NULL && trscount > cnt) {
         const InitialTimeZoneRule *tmpini;
         int32_t tmpcnt = trscount - cnt;
-        finalZone->getTimeZoneRules(tmpini, &trsrules[cnt], tmpcnt, status);
+        finalZoneWithStartYear->getTimeZoneRules(tmpini, &trsrules[cnt], tmpcnt, status);
         if (U_FAILURE(status)) {
             return;
         }

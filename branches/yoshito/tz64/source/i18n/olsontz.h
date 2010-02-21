@@ -383,6 +383,7 @@ private:
     TimeZoneTransition  *firstFinalTZTransition;
     TimeArrayTimeZoneRule   **historicRules;
     int16_t             historicRuleCount;
+    SimpleTimeZone      *finalZoneWithStartYear; // hack
     UBool               transitionRulesInitialized;
 };
 
