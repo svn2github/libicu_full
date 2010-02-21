@@ -86,7 +86,6 @@ static char gStrBuf[256];
 #define kZONES    "Zones"
 #define kRULES    "Rules"
 #define kNAMES    "Names"
-#define kDEFAULT  "Default"
 #define kTZVERSION  "TZVersion"
 #define kLINKS    "links"
 #define kMAX_CUSTOM_HOUR    23
@@ -98,6 +97,8 @@ static char gStrBuf[256];
 #define COLON 0x003A
 
 // Static data and constants
+
+static const UChar         WORLD[] = {0x30, 0x30, 0x31, 0x00}; /* "001" */
 
 static const UChar         GMT_ID[] = {0x47, 0x4D, 0x54, 0x00}; /* "GMT" */
 static const UChar         Z_STR[] = {0x7A, 0x00}; /* "z" */
@@ -118,18 +119,9 @@ static U_NAMESPACE_QUALIFIER TimeZone*  _GMT = NULL; // cf. TimeZone::GMT
 static char TZDATA_VERSION[16];
 static UBool TZDataVersionInitialized = FALSE;
 
-#ifdef U_USE_TIMEZONE_OBSOLETE_2_8
-static U_NAMESPACE_QUALIFIER UnicodeString* OLSON_IDS = 0;
-#endif
-
 U_CDECL_BEGIN
 static UBool U_CALLCONV timeZone_cleanup(void)
 {
-#ifdef U_USE_TIMEZONE_OBSOLETE_2_8
-    delete []OLSON_IDS;
-    OLSON_IDS = 0;
-#endif
-
     delete DEFAULT_ZONE;
     DEFAULT_ZONE = NULL;
 
@@ -320,68 +312,6 @@ static UResourceBundle* openOlsonResource(const UnicodeString& id,
     U_DEBUG_TZ_MSG(("%s - final status is %s\n", buf, u_errorName(ec)));
     return top;
 }
-
-#ifdef U_USE_TIMEZONE_OBSOLETE_2_8
-
-/**
- * Load all the ids from the "zoneinfo" resource bundle into a static
- * array that we hang onto.  This is _only_ used to implement the
- * deprecated createAvailableIDs() API.
- */
-static UBool loadOlsonIDs() {
-    if (OLSON_IDS != 0) {
-        return TRUE;
-    }
-
-    UErrorCode ec = U_ZERO_ERROR;
-    UnicodeString* ids = 0;
-    int32_t count = 0;
-    UResourceBundle *top = ures_openDirect(0, kZONEINFO, &ec);
-    UResourceBundle *nres = ures_getByKey(top, kNAMES, NULL, &ec); // dereference Names section
-    if (U_SUCCESS(ec)) {
-        getOlsonMeta(top);
-        int32_t start = 0;
-        count = ures_getSize(nres);
-        ids = new UnicodeString[(count > 0) ? count : 1];
-        // Null pointer check
-        if (ids != NULL) {
-            for (int32_t i=0; i<count; ++i) {
-                int32_t idLen = 0;
-                const UChar* id = ures_getStringByIndex(nres, i, &idLen, &ec);
-                ids[i].fastCopyFrom(UnicodeString(TRUE, id, idLen));
-                if (U_FAILURE(ec)) {
-                    break;
-                }
-            }
-        } else {
-            ec = U_MEMORY_ALLOCATION_ERROR;
-        }
-    }
-    ures_close(nres);
-    ures_close(top);
-
-    if (U_FAILURE(ec)) {
-        delete[] ids;
-        return FALSE;
-    }
-
-    // Keep mutexed operations as short as possible by doing all
-    // computations first, then doing pointer copies within the mutex.
-    umtx_lock(&LOCK);
-    if (OLSON_IDS == 0) {
-        OLSON_IDS = ids;
-        ids = 0;
-        ucln_i18n_registerCleanup(UCLN_I18N_TIMEZONE, timeZone_cleanup);
-    }
-    umtx_unlock(&LOCK);
-
-    // If another thread initialized the statics first, then delete
-    // our unused data.
-    delete[] ids;
-    return TRUE;
-}
-
-#endif
 
 // -------------------------------------
 
@@ -791,38 +721,56 @@ public:
             return;
         }
 
-        char key[] = {0, 0, 0, 0,0, 0, 0,0, 0, 0,0}; // e.g., "US", or "Default" for no country
-        if (country)  {
-          uprv_strncat(key, country, 2);
-        } else {
-          uprv_strcpy(key, kDEFAULT);
-        }
-
         UErrorCode ec = U_ZERO_ERROR;
-        UResourceBundle *top = ures_openDirect(0, kZONEINFO, &ec);
-        top = ures_getByKey(top, kREGIONS, top, &ec); // dereference 'Regions' section
-        if (U_SUCCESS(ec)) {
-            UResourceBundle res;
-            ures_initStackObject(&res);
-            ures_getByKey(top, key, &res, &ec);
-            // The list of zones is a list of integers, from 0..n-1,
-            // where n is the total number of system zones.
-            const int32_t* v = ures_getIntVector(&res, &len, &ec);
-            if (U_SUCCESS(ec)) {
-                U_ASSERT(len > 0);
-                map = (int32_t*)uprv_malloc(sizeof(int32_t) * len);
-                if (map != 0) {
-                    for (uint16_t i=0; i<len; ++i) {
-                        U_ASSERT(v[i] >= 0 && v[i] < OLSON_ZONE_COUNT);
-                        map[i] = v[i];
-                    }
-                }
+        UResourceBundle *res = ures_openDirect(0, kZONEINFO, &ec);
+        ures_getByKey(res, kREGIONS, res, &ec);
+        if (U_SUCCESS(ec) && ures_getType(res) == URES_ARRAY) {
+            UChar uCountry[] = {0, 0, 0, 0};
+            if (country) {
+                u_charsToUChars(country, uCountry, 2);
             } else {
-              U_DEBUG_TZ_MSG(("Failed to load tz for region %s: %s\n", country, u_errorName(ec)));
+                u_strcpy(uCountry, WORLD);
             }
-            ures_close(&res);
+
+            // count matches
+            int32_t count = 0;
+            int32_t i;
+            const UChar *region;
+            for (i = 0; i < ures_getSize(res); i++) {
+                region = ures_getStringByIndex(res, i, NULL, &ec);
+                if (U_FAILURE(ec)) {
+                    break;
+                }
+                if (u_strcmp(uCountry, region) == 0) {
+                    count++;
+                }
+            }
+
+            if (count > 0) {
+                map = (int32_t*)uprv_malloc(sizeof(int32_t) * count);
+                if (map != NULL) {
+                    int32_t idx = 0;
+                    for (i = 0; i < ures_getSize(res); i++) {
+                        region = ures_getStringByIndex(res, i, NULL, &ec);
+                        if (U_FAILURE(ec)) {
+                            break;
+                        }
+                        if (u_strcmp(uCountry, region) == 0) {
+                            map[idx++] = i;
+                        }
+                    }
+                    if (U_SUCCESS(ec)) {
+                        len = count;
+                    } else {
+                        uprv_free(map);
+                        map = NULL;
+                    }
+                } else {
+                    U_DEBUG_TZ_MSG(("Failed to load tz for region %s: %s\n", country, u_errorName(ec)));
+                }
+            }
         }
-        ures_close(top);
+        ures_close(res);
     }
 
   TZEnumeration(const TZEnumeration &other) : StringEnumeration(), map(NULL), len(0), pos(0) {
@@ -887,132 +835,6 @@ StringEnumeration* U_EXPORT2
 TimeZone::createEnumeration(const char* country) {
     return new TZEnumeration(country);
 }
-
-// -------------------------------------
-
-#ifdef U_USE_TIMEZONE_OBSOLETE_2_8
-
-const UnicodeString** 
-TimeZone::createAvailableIDs(int32_t rawOffset, int32_t& numIDs)
-{
-    // We are creating a new array to existing UnicodeString pointers.
-    // The caller will delete the array when done, but not the pointers
-    // in the array.
-
-    numIDs = 0;
-    if (!loadOlsonIDs()) {
-        return 0;
-    }
-
-    // Allocate more space than we'll need.  The end of the array will
-    // be blank.
-    const UnicodeString** ids =
-        (const UnicodeString** )uprv_malloc(OLSON_ZONE_COUNT * sizeof(UnicodeString *));
-    if (ids == 0) {
-        return 0;
-    }
-
-    uprv_memset(ids, 0, sizeof(UnicodeString*) * OLSON_ZONE_COUNT);
-
-    UnicodeString s;
-    for (int32_t i=0; i<OLSON_ZONE_COUNT; ++i) {
-        // This is VERY inefficient.
-        TimeZone* z = TimeZone::createTimeZone(OLSON_IDS[i]);
-        // Make sure we get back the ID we wanted (if the ID is
-        // invalid we get back GMT).
-        if (z != 0 && z->getID(s) == OLSON_IDS[i] &&
-            z->getRawOffset() == rawOffset) {
-            ids[numIDs++] = &OLSON_IDS[i]; // [sic]
-        }
-        delete z;
-    }
-
-    return ids;
-}
-
-// -------------------------------------
-
-const UnicodeString** 
-TimeZone::createAvailableIDs(const char* country, int32_t& numIDs) {
-
-    // We are creating a new array to existing UnicodeString pointers.
-    // The caller will delete the array when done, but not the pointers
-    // in the array.
-
-    numIDs = 0;
-    if (!loadOlsonIDs()) {
-        return 0;
-    }
-    
-    char key[] = { 0, 0, 0,0, 0, 0,0, 0, 0 }; // e.g., "US", or "Default" for non-country zones
-    if (country) { 
-      uprv_strncat(key, country, 2);
-    } else {
-      uprv_strcpy(key, kDEFAULT);
-    }
-
-    const UnicodeString** ids = 0;
-
-    UErrorCode ec = U_ZERO_ERROR;
-    UResourceBundle *top = ures_openDirect(0, kZONEINFO, &ec);
-    UResourceBundle *ares = ures_getByKey(top, kREGIONS, NULL, &ec); // dereference Regions section
-    if (U_SUCCESS(ec)) {
-        getOlsonMeta(top);
-        UResourceBundle res;
-        ures_initStackObject(&res);
-        ures_getByKey(ares, key, &res, &ec);
-        U_DEBUG_TZ_MSG(("caI: on %s, err %s\n", country, u_errorName(ec)));
-        if (U_SUCCESS(ec)) {
-            /* The list of zones is a list of integers, from 0..n-1,
-             * where n is the total number of system zones.  The
-             * numbering corresponds exactly to the ordering of
-             * OLSON_IDS.
-             */
-            const int32_t* v = ures_getIntVector(&res, &numIDs, &ec);
-            ids = (const UnicodeString**)
-                uprv_malloc(numIDs * sizeof(UnicodeString*));
-            if (ids == 0) {
-                numIDs = 0;
-            } else {
-                for (int32_t i=0; i<numIDs; ++i) {
-                    ids[i] = &OLSON_IDS[v[i]]; // [sic]
-                }
-            }
-        }
-        ures_close(&res);
-    }
-    ures_close(ares);
-    ures_close(top);
-
-    return ids;
-}
-
-// -------------------------------------
-
-const UnicodeString** 
-TimeZone::createAvailableIDs(int32_t& numIDs)
-{
-    // We are creating a new array to existing UnicodeString pointers.
-    // The caller will delete the array when done, but not the pointers
-    // in the array.
-    numIDs = 0;
-    if (!loadOlsonIDs()) {
-        return 0;
-    }
-    
-    const UnicodeString** ids =
-        (const UnicodeString** )uprv_malloc(OLSON_ZONE_COUNT * sizeof(UnicodeString *));
-    if (ids != 0) {
-        numIDs = OLSON_ZONE_COUNT;
-        for (int32_t i=0; i<numIDs; ++i) {
-            ids[i] = &OLSON_IDS[i];
-        }
-    }
-
-    return ids;
-}
-
-#endif
 
 // ---------------------------------------
 

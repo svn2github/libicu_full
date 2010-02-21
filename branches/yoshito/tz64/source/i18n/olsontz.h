@@ -368,14 +368,9 @@ private:
     double finalStartMillis;
 
     /**
-     * For date after the date specified by finalDate, the finalZone
-     * will be used.
-     *
-     *   finalStartDate[0] - year
-     *   finalStartDate[1] - month (0-based)
-     *   finalStartDate[2] - day of month
+     * For year >= finalYear, the finalZone will be used.
      */
-    int32_t finalStartDate[3];
+    int32_t finalStartYear;
 
     /* BasicTimeZone support */
     void clearTransitionRules(void);

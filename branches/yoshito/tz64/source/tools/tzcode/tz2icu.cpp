@@ -1,7 +1,7 @@
 
 /*
 **********************************************************************
-* Copyright (c) 2003-2008, International Business Machines
+* Copyright (c) 2003-2010, International Business Machines
 * Corporation and others.  All Rights Reserved.
 **********************************************************************
 * Author: Alan Liu
@@ -1088,7 +1088,7 @@ void ZoneInfo::print(ostream& os, const string& id) const {
 
     first=true;
     if (ICU44PLUS) {
-        os << "    types:intvector { ";
+        os << "    typeOffsets:intvector { ";
     } else {
         os << "    :intvector { ";
     }
@@ -1120,6 +1120,7 @@ void ZoneInfo::print(ostream& os, const string& id) const {
         if (ICU44PLUS) {
             os << "    finalRule { \"" << finalRuleID << "\" }" << endl;
             os << "    finalRaw:int { " << finalOffset << " }" << endl;
+            os << "    finalYear:int { " << finalYear << " }" << endl;
         } else {
             os << "    \"" << finalRuleID << "\"" << endl;
             os << "    :intvector { " << finalOffset << ", "
@@ -1242,7 +1243,7 @@ void ZoneInfo::optimizeTypeList() {
     if (aliasTo >= 0) return; // Nothing to do for aliases
 
     if (!ICU44PLUS) {
-        // This is the old logic which has a bug, which occationally removes
+        // This is the old logic which has a bug, which occasionally removes
         // the type before the first transition.  The problem was fixed
         // by inserting the dummy transition indirectly.
 
@@ -1345,6 +1346,17 @@ void ZoneInfo::optimizeTypeList() {
 void ZoneInfo::mergeFinalData(const FinalZone& fz) {
     int32_t year = fz.year;
     int64_t seconds = yearToSeconds(year);
+
+    if (!ICU44PLUS) {
+        if (seconds > HIGHEST_TIME32) {
+            // Avoid transitions beyond signed 32bit max second.
+            // This may result incorrect offset computation around
+            // HIGHEST_TIME32.  This is a limitation of ICU
+            // before 4.4.
+            seconds = HIGHEST_TIME32;
+        }
+    }
+
     vector<Transition>::iterator it =
         find_if(transitions.begin(), transitions.end(),
                 bind2nd(ptr_fun(isAfter), seconds));
@@ -1451,70 +1463,6 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-//############################################################################
-//# Note: We no longer use tz.alias to define alias for legacy ICU time zones.
-//# The contents of tz.alias were migrated into zic source format and
-//# processed by zic as 'Link'.
-//############################################################################
-#if 0
-    // Read the legacy alias list and process it.  Treat the legacy mappings
-    // like links, but also record them in the "legacy" hash.
-    try {
-        ifstream aliases(ICU_TZ_ALIAS);
-        if (!aliases) {
-            cerr << "Error: Unable to open " ICU_TZ_ALIAS << endl;
-            return 1;
-        }
-        int32_t n = 0;
-        string line;
-        while (getline(aliases, line)) {
-            string::size_type lb = line.find('#');
-            if (lb != string::npos) {
-                line.resize(lb); // trim comments
-            }
-            vector<string> a;
-            istringstream is(line);
-            copy(istream_iterator<string>(is),istream_iterator<string>(),
-                 back_inserter(a));
-            if (a.size() == 0) continue; // blank line
-            if (a.size() != 2) {
-                cerr << "Error: Can't parse \"" << line << "\" in "
-                    ICU_TZ_ALIAS << endl;
-                exit(1);
-            }
-            ++n;
-            
-            string alias(a[0]), olson(a[1]);
-            if (links.find(alias) != links.end()) {
-                cerr << "Error: Alias \"" << alias
-                     << "\" is an Olson zone in "
-                     ICU_TZ_ALIAS << endl;
-                return 1;
-            }
-            if (reverseLinks.find(alias) != reverseLinks.end()) {
-                cerr << "Error: Alias \"" << alias
-                     << "\" is an Olson link to \"" << reverseLinks[olson]
-                     << "\" in " << ICU_TZ_ALIAS << endl;
-                return 1;
-            }
-
-            // Record source for error reporting
-            if (linkSource.find(olson) == linkSource.end()) {
-                linkSource[olson] = "ICU alias";
-            }
-            assert(linkSource.find(alias) == linkSource.end());
-            linkSource[alias] = "ICU alias";
-            
-            links[olson].insert(alias);
-            reverseLinks[alias] = olson;
-        }
-        cout << "Finished reading " << n
-             << " aliases from " ICU_TZ_ALIAS << endl;
-    } catch (const exception& error) {
-        cerr << "Error: While reading " ICU_TZ_ALIAS ": " << error.what() << endl;
-        return 1;
-    }
-#endif
     try {
         // Recursively scan all files below the given path, accumulating
         // their data into ZONEINFO.  All files must be TZif files.  Any
@@ -1741,35 +1689,47 @@ int main(int argc, char *argv[]) {
         }
         file << " }" << endl;
 
-        // Emit country (region) map.  Emitting the string zone IDs results
-        // in a 188 kb binary resource; emitting the zone index numbers
-        // trims this to 171 kb.  More work for the runtime code, but
-        // a smaller data footprint.
-        file << " Regions { " << endl;
-        int32_t  rc = 0;
-        for (map<string, set<string> >::const_iterator i=countryMap.begin();
-             i != countryMap.end(); ++i) {
-            string country = i->first;
-            const set<string>& zones(i->second);
-            file << "  ";
-            if(country[0]==0) {
-              file << "Default";
-            }
-            file << country << ":intvector { ";
-            bool first = true;
-            for (set<string>::const_iterator j=zones.begin();
-                 j != zones.end(); ++j) {
-                if (!first) file << ", ";
-                first = false;
-                if (zoneIDs.find(*j) == zoneIDs.end()) {
-                    cerr << "Error: Nonexistent zone in country map: " << *j << endl;
-                    return 1;
+        // Emit country (region) map.
+        if (ICU44PLUS) {
+            file << " Regions:array {" << endl;
+            int32_t zn = 0;
+            for (ZoneMap::iterator i=ZONEINFO.begin(); i!=ZONEINFO.end(); ++i) {
+                map<string, string>::iterator cit = reverseCountryMap.find(i->first);
+                if (cit == reverseCountryMap.end()) {
+                    file << "  \"001\",";
+                } else {
+                    file << "  \"" << cit->second << "\", ";
                 }
-                file << zoneIDs[*j]; // emit the zone's index number
+                file << "//Z#" << zn++ << " " << i->first << endl;
             }
-            file << " } //R#" << rc++ << endl;
+            file << " }" << endl;
+        } else {
+            file << " Regions { " << endl;
+            int32_t  rc = 0;
+            for (map<string, set<string> >::const_iterator i=countryMap.begin();
+                 i != countryMap.end(); ++i) {
+                string country = i->first;
+                const set<string>& zones(i->second);
+                file << "  ";
+                if(country[0]==0) {
+                  file << "Default";
+                }
+                file << country << ":intvector { ";
+                bool first = true;
+                for (set<string>::const_iterator j=zones.begin();
+                     j != zones.end(); ++j) {
+                    if (!first) file << ", ";
+                    first = false;
+                    if (zoneIDs.find(*j) == zoneIDs.end()) {
+                        cerr << "Error: Nonexistent zone in country map: " << *j << endl;
+                        return 1;
+                    }
+                    file << zoneIDs[*j]; // emit the zone's index number
+                }
+                file << " } //R#" << rc++ << endl;
+            }
+            file << " }" << endl;
         }
-        file << " }" << endl;
 
         file << "}" << endl;
     }
@@ -1782,95 +1742,5 @@ int main(int argc, char *argv[]) {
         cerr << "Error: Unable to open/write to " << TZ_RESOURCE_NAME << ".txt" << endl;
         return 1;
     }
-
-#define ICU4J_TZ_CLASS "ZoneMetaData"
-
-    // Write out a Java source file containing only a few pieces of
-    // meta-data missing from the core JDK: the equivalency lists and
-    // the country map.
-    ofstream java(ICU4J_TZ_CLASS ".java");
-    if (java) {
-        java << "//---------------------------------------------------------" << endl
-             << "// Copyright (C) 2003";
-        if (thisYear > 2003) {
-            java << "-" << thisYear;
-        }
-        java << ", International Business Machines" << endl
-             << "// Corporation and others.  All Rights Reserved." << endl
-             << "//---------------------------------------------------------" << endl
-             << "// Build tool: tz2icu" << endl
-             << "// Build date: " << asctime(now) /* << endl -- asctime emits CR */
-             << "// Olson source: ftp://elsie.nci.nih.gov/pub/" << endl
-             << "// Olson version: " << version << endl
-             << "// ICU version: " << U_ICU_VERSION << endl
-             << "//---------------------------------------------------------" << endl
-             << "// >> !!! >>   THIS IS A MACHINE-GENERATED FILE   << !!! <<" << endl
-             << "// >> !!! >>>            DO NOT EDIT             <<< !!! <<" << endl
-             << "//---------------------------------------------------------" << endl
-             << endl
-             << "package com.ibm.icu.impl;" << endl
-             << endl
-             << "public final class " ICU4J_TZ_CLASS " {" << endl;
-
-        // Emit equivalency lists
-        bool first1 = true;
-        java << "  public static final String VERSION = \"" + version + "\";" << endl;
-        java << "  public static final String[][] EQUIV = {" << endl;
-        for (ZoneMap::const_iterator i=ZONEINFO.begin(); i!=ZONEINFO.end(); ++i) {
-            if (i->second.isAlias() || i->second.getAliases().size() == 0) {
-                continue;
-            }
-            if (!first1) java << "," << endl;
-            first1 = false;
-            // The ID of this zone (the canonical zone, to which the
-            // aliases point) will be sorted into the list, so it
-            // won't be at position 0.  If we want to know which is
-            // the canonical zone, we should move it to position 0.
-            java << "    { ";
-            bool first2 = true;
-            const set<int32_t>& s = i->second.getAliases();
-            for (set<int32_t>::const_iterator j=s.begin(); j!=s.end(); ++j) {
-                if (!first2) java << ", ";
-                java << '"' << zoneIDlist[*j] << '"';
-                first2 = false;
-            }
-            java << " }";
-        }
-        java << endl
-             << "  };" << endl;
-
-        // Emit country map.
-        first1 = true;
-        java << "  public static final String[][] COUNTRY = {" << endl;
-        for (map<string, set<string> >::const_iterator i=countryMap.begin();
-             i != countryMap.end(); ++i) {
-            if (!first1) java << "," << endl;
-            first1 = false;
-            string country = i->first;
-            const set<string>& zones(i->second);
-            java << "    { \"" << country << '"';
-            for (set<string>::const_iterator j=zones.begin();
-                 j != zones.end(); ++j) {
-                java << ", \"" << *j << '"';
-            }
-            java << " }";
-        }
-        java << endl
-             << "  };" << endl;
-
-        java << "}" << endl;
-    }
-
-    java.close();
-
-    if (java) { // recheck error bit
-        cout << "Finished writing " ICU4J_TZ_CLASS ".java" << endl;
-    } else {
-        cerr << "Error: Unable to open/write to " ICU4J_TZ_CLASS ".java" << endl;
-        return 1;
-    }
-
-    return 0;
 }
-
 //eof

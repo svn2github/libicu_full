@@ -64,11 +64,12 @@ U_NAMESPACE_BEGIN
 #define kTRANS          "trans"
 #define kTRANSPRE32     "transPre32"
 #define kTRANSPOST32    "transPost32"
-#define kTYPES          "types"
+#define kTYPEOFFSETS    "typeOffsets"
 #define kTYPEMAP        "typeMap"
 #define kLINKS          "links"
 #define kFINALRULE      "finalRule"
 #define kFINALRAW       "finalRaw"
+#define kFINALYEAR      "finalYear"
 
 #define SECONDS_PER_DAY (24*60*60)
 
@@ -167,7 +168,7 @@ OlsonTimeZone::OlsonTimeZone(const UResourceBundle* top,
         }
 
         // Type offsets list must be of even size, with size >= 2
-        ures_getByKey(res, kTYPES, &r, &ec);
+        ures_getByKey(res, kTYPEOFFSETS, &r, &ec);
         typeOffsets = ures_getIntVector(&r, &len, &ec);
         if (U_SUCCESS(ec) && (len < 2 || len > 0x7FFE || (len & 1) != 0)) {
             ec = U_INVALID_FORMAT_ERROR;
@@ -189,6 +190,8 @@ OlsonTimeZone::OlsonTimeZone(const UResourceBundle* top,
         const UChar *ruleIdUStr = ures_getStringByKey(res, kFINALRULE, &len, &ec);
         ures_getByKey(res, kFINALRAW, &r, &ec);
         int32_t ruleRaw = ures_getInt(&r, &ec);
+        ures_getByKey(res, kFINALYEAR, &r, &ec);
+        int32_t ruleYear = ures_getInt(&r, &ec);
         if (U_SUCCESS(ec)) {
             UnicodeString ruleID(TRUE, ruleIdUStr, len);
             UResourceBundle *rule = TimeZone::loadRule(top, ruleID, NULL, ec);
@@ -208,19 +211,19 @@ OlsonTimeZone::OlsonTimeZone(const UResourceBundle* top,
                 if (finalZone == NULL) {
                     ec = U_MEMORY_ALLOCATION_ERROR;
                 } else {
-                    // set finalStartXXX using the last transition data
-                    int16_t lastTransIdx = transitionCount() - 1;
-                    finalStartMillis = transitionTime(lastTransIdx);
-
-                    // compute finalStartDate
-                    int32_t year, month, dom, dow, doy, mid;
-                    Grego::timeToFields(finalStartMillis + zoneOffsetAt(lastTransIdx), year, month, dom, dow, doy, mid);
-                    finalStartDate[0] = year;
-                    finalStartDate[1] = month;
-                    finalStartDate[2] = dom;
-
                     // set the start year of finalZone (this will be used by BasicTimeZone rule APIs only)
-                    finalZone->setStartYear(year);
+                    finalStartYear = ruleYear;
+                    finalZone->setStartYear(finalStartYear);
+
+                    // Compute the millis for Jan 1, 0:00 GMT of the finalYear
+
+                    // Note: finalStartMillis is used for detecting either if
+                    // historic transition data or finalZone to be used.  In an
+                    // extreme edge case - for example, two transitions fall into
+                    // small windows of time around the year boundary, this may
+                    // result incorrect offset computation.  But I think it will
+                    // never happen practically.  Yoshito - Feb 20, 2010
+                    finalStartMillis = Grego::fieldsToDay(ruleYear, 0, 1) * U_MILLIS_PER_DAY;
                 }
             } else {
                 ec = U_INVALID_FORMAT_ERROR;
@@ -266,10 +269,8 @@ OlsonTimeZone& OlsonTimeZone::operator=(const OlsonTimeZone& other) {
     finalZone = (other.finalZone != 0) ?
         (SimpleTimeZone*) other.finalZone->clone() : 0;
 
+    finalStartYear = other.finalStartYear;
     finalStartMillis = other.finalStartMillis;
-    for (int32_t i = 0; i < sizeof(finalStartDate)/sizeof(finalStartDate[0]); i++) {
-        finalStartDate[i] = other.finalStartDate[i];
-    }
 
     clearTransitionRules();
 
@@ -349,18 +350,7 @@ int32_t OlsonTimeZone::getOffset(uint8_t era, int32_t year, int32_t month,
         year = -year;
     }
 
-    UBool useFinalZone = FALSE;
-    if (year > finalStartDate[0]) {
-        useFinalZone = TRUE;
-    } else if (year == finalStartDate[0]) {
-        if (month > finalStartDate[1]) {
-            useFinalZone = TRUE;
-        } else if (month == finalStartDate[1] && dom >= finalStartDate[2]) {
-            useFinalZone = TRUE;
-        }
-    }
-
-    if (useFinalZone) {
+    if (finalZone != NULL && year >= finalStartYear) {
         return finalZone->getOffset(era, year, month, dom, dow,
                                     millis, monthLength, ec);
     }
@@ -613,10 +603,7 @@ OlsonTimeZone::hasSameRules(const TimeZone &other) const {
     }
 
     if (finalZone != NULL) {
-        if (finalStartMillis != z->finalStartMillis) {
-            return FALSE;
-        }
-        if (!arrayEqual(finalStartDate, z->finalStartDate, sizeof(finalStartDate) / sizeof(finalStartDate[0]))) {
+        if (finalStartYear != z->finalStartYear || finalStartMillis != z->finalStartMillis) {
             return FALSE;
         }
     }
