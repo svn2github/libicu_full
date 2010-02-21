@@ -1,7 +1,7 @@
 
 /*
 **********************************************************************
-* Copyright (c) 2003-2010, International Business Machines
+* Copyright (c) 2003-2008, International Business Machines
 * Corporation and others.  All Rights Reserved.
 **********************************************************************
 * Author: Alan Liu
@@ -1285,26 +1285,37 @@ void ZoneInfo::optimizeTypeList() {
         copy(simpleset.begin(), simpleset.end(), back_inserter(types));
 
     } else {
-        // the very first type must be always preserved
         if (types.size() > 1) {
-            ZoneType type0 = types[0];
+            // Note: localtime uses the very first non-dst type as initial offsets.
+            // If all types are DSTs, the very first type is treated as the initial offsets.
 
-            // create a set of unique types, but ignoring fields which we're not interested in,
-            // excluding type0
+            // Decide a type used as the initial offsets.  ICU put the type at index 0.
+            ZoneType initialType = types[0];
+            for (vector<ZoneType>::const_iterator i=types.begin(); i!=types.end(); ++i) {
+                if (i->dstoffset == 0) {
+                    initialType = *i;
+                    break;
+                }
+            }
+
+            SimplifiedZoneType initialSimplifiedType(initialType);
+
+            // create a set of unique types, but ignoring fields which we're not interested in
             set<SimplifiedZoneType> simpleset;
+            simpleset.insert(initialSimplifiedType);
             for (vector<Transition>::const_iterator i=transitions.begin(); i!=transitions.end(); ++i) {
                 assert(i->type < (int32_t)types.size());
-                if (i->type != 0) {
-                    simpleset.insert(types[i->type]);
-                }
+                simpleset.insert(types[i->type]);
             }
 
             // Map types to integer indices, however, keeping the first type at offset 0
             map<SimplifiedZoneType,int32_t> simplemap;
-            simplemap[type0] = 0;
+            simplemap[initialSimplifiedType] = 0;
             int32_t n = 1;
             for (set<SimplifiedZoneType>::const_iterator i=simpleset.begin(); i!=simpleset.end(); ++i) {
-                simplemap[*i] = n++;
+                if (*i < initialSimplifiedType || initialSimplifiedType < *i) {
+                    simplemap[*i] = n++;
+                }
             }
 
             // Remap transitions
@@ -1319,8 +1330,12 @@ void ZoneInfo::optimizeTypeList() {
 
             // Replace type list
             types.clear();
-            copy(simpleset.begin(), simpleset.end(), back_inserter(types));
-            types.insert(types.begin(), type0);
+            types.push_back(initialSimplifiedType);
+            for (set<SimplifiedZoneType>::const_iterator i=simpleset.begin(); i!=simpleset.end(); ++i) {
+                if (*i < initialSimplifiedType || initialSimplifiedType < *i) {
+                    types.push_back(*i);
+                }
+            }
 
             // Reiterating transitions to remove any transitions which
             // do not actually change the raw/dst offsets
