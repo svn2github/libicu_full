@@ -21,11 +21,18 @@
 #include "gregoimp.h"
 #include "cstring.h"
 #include "ucln_in.h"
+#include "uassert.h"
 
-// Metazone mapping tables
 static UMTX gZoneMetaLock = NULL;
+
+// Metazone mapping table
 static UHashtable *gOlsonToMeta = NULL;
 static UBool gOlsonToMetaInitialized = FALSE;
+
+// Country info vectors
+static UVector *gSingleZoneCountries = NULL;
+static UVector *gMultiZonesCountries = NULL;
+static UBool gCountryInfoVectorsInitialized = FALSE;
 
 U_CDECL_BEGIN
 
@@ -42,6 +49,10 @@ static UBool U_CALLCONV zoneMeta_cleanup(void)
         gOlsonToMeta = NULL;
     }
     gOlsonToMetaInitialized = FALSE;
+
+    delete gSingleZoneCountries;
+    delete gMultiZonesCountries;
+    gCountryInfoVectorsInitialized = FALSE;
 
     return TRUE;
 }
@@ -224,14 +235,69 @@ ZoneMeta::getCanonicalCountry(const UnicodeString &tzid, UnicodeString &canonica
 
 UnicodeString& U_EXPORT2
 ZoneMeta::getSingleCountry(const UnicodeString &tzid, UnicodeString &country) {
-
     // Get canonical country for the zone
-    getCanonicalCountry(tzid, country);
+    const UChar *region = TimeZone::getRegion(tzid);
+    if (u_strcmp(gWorld, region) == 0) {
+        // special case - "001"
+        country.remove();
+        return country;
+    }
 
-    if (!country.isEmpty() && country.length() == 2) {
-        UErrorCode status = U_ZERO_ERROR;
+    // Checking the cached results
+    UErrorCode status = U_ZERO_ERROR;
+    UBool initialized;
+    UMTX_CHECK(&gZoneMetaLock, gCountryInfoVectorsInitialized, initialized);
+    if (!initialized) {
+        // Create empty vectors
+        umtx_lock(&gZoneMetaLock);
+        {
+            if (!gCountryInfoVectorsInitialized) {
+                // No deleters for these UVectors, it's a reference to a resource bundle string.
+                gSingleZoneCountries = new UVector(NULL, uhash_compareUChars, status);
+                if (gSingleZoneCountries == NULL) {
+                    status = U_MEMORY_ALLOCATION_ERROR;
+                }
+                gMultiZonesCountries = new UVector(NULL, uhash_compareUChars, status);
+                if (gMultiZonesCountries == NULL) {
+                    status = U_MEMORY_ALLOCATION_ERROR;
+                }
+
+                if (U_SUCCESS(status)) {
+                    gCountryInfoVectorsInitialized = TRUE;
+                } else {
+                    delete gSingleZoneCountries;
+                    delete gMultiZonesCountries;
+                }
+            }
+        }
+        umtx_unlock(&gZoneMetaLock);
+
+        if (U_FAILURE(status)) {
+            country.remove();
+            return country;
+        }
+    }
+
+    // Check if it was already cached
+    UBool cached = FALSE;
+    UBool multiZones = FALSE;
+    umtx_lock(&gZoneMetaLock);
+    {
+        multiZones = cached = gMultiZonesCountries->contains((void*)region);
+        if (!multiZones) {
+            cached = gSingleZoneCountries->contains((void*)region);
+        }
+    }
+    umtx_unlock(&gZoneMetaLock);
+
+    if (!cached) {
+        // We need to go through all zones associated with the region.
+        // This is relatively heavy operation.
+
+        U_ASSERT(u_strlen(region) == 2);
+
         char buf[] = {0, 0, 0};
-        country.extract(0, 2, buf, 2, US_INV);
+        u_UCharsToChars(region, buf, 2);
 
         StringEnumeration *ids = TimeZone::createEnumeration(buf);
         int32_t idsLen = ids->count(status);
@@ -249,7 +315,7 @@ ZoneMeta::getSingleCountry(const UnicodeString &tzid, UnicodeString &country) {
                     }
                     if (canonical != tmp) {
                         // another canonical zone was found
-                        country.remove();
+                        multiZones = TRUE;
                         break;
                     }
                 }
@@ -257,11 +323,32 @@ ZoneMeta::getSingleCountry(const UnicodeString &tzid, UnicodeString &country) {
         }
         if (U_FAILURE(status)) {
             // no single country by default for any error cases
-            country.remove();
+            multiZones = TRUE;
         }
         delete ids;
+
+        // Cache the result
+        umtx_lock(&gZoneMetaLock);
+        {
+            UErrorCode ec = U_ZERO_ERROR;
+            if (multiZones) {
+                if (!gMultiZonesCountries->contains((void*)region)) {
+                    gMultiZonesCountries->addElement((void*)region, ec);
+                }
+            } else {
+                if (!gSingleZoneCountries->contains((void*)region)) {
+                    gSingleZoneCountries->addElement((void*)region, ec);
+                }
+            }
+        }
+        umtx_unlock(&gZoneMetaLock);
     }
 
+    if (multiZones) {
+        country.remove();
+    } else {
+        country.setTo(region, -1);
+    }
     return country;
 }
 
