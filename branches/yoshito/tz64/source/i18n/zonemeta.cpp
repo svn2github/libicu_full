@@ -77,11 +77,6 @@ U_CDECL_END
 U_NAMESPACE_BEGIN
 
 #define ZID_KEY_MAX 128
-static const char gSupplementalData[]   = "supplementalData";
-static const char gZoneFormattingTag[]  = "zoneFormatting";
-static const char gTerritoryTag[]       = "territory";
-static const char gMultizoneTag[]       = "multizone";
-static const UChar gWorld[] = {0x30, 0x30, 0x31, 0x00}; // "001"
 
 static const char gMetaZones[]          = "metaZones";
 static const char gMetazoneInfo[]       = "metazoneInfo";
@@ -90,6 +85,8 @@ static const char gMapTimezonesTag[]    = "mapTimezones";
 static const char gKeyTypeData[]        = "keyTypeData";
 static const char gTypeAliasTag[]       = "typeAlias";
 static const char gTimezoneTag[]        = "timezone";
+
+static const UChar gWorld[] = {0x30, 0x30, 0x31, 0x00}; // "001"
 
 static const UChar gDefaultFrom[] = {0x31, 0x39, 0x37, 0x30, 0x2D, 0x30, 0x31, 0x2D, 0x30, 0x31,
                                      0x20, 0x30, 0x30, 0x3A, 0x30, 0x30, 0x00}; // "1970-01-01 00:00"
@@ -216,70 +213,53 @@ ZoneMeta::getCanonicalSystemID(const UnicodeString &tzid, UnicodeString &systemI
 
 UnicodeString& U_EXPORT2
 ZoneMeta::getCanonicalCountry(const UnicodeString &tzid, UnicodeString &canonicalCountry) {
-    const UChar *territory = NULL;
-    UErrorCode status = U_ZERO_ERROR;
-    UnicodeString canonicalID;
-
-    getCanonicalSystemID(tzid, canonicalID, status);
-    if (U_SUCCESS(status) && canonicalID.length() < ZID_KEY_MAX) {
-        char tzkey[ZID_KEY_MAX];
-        canonicalID.extract(0, canonicalID.length(), tzkey, sizeof(tzkey), US_INV);
-        // replace '/' with ':'
-        char *p = tzkey;
-        while (*p) {
-            if (*p == '/') {
-                *p = ':';
-            }
-            p++;
-        }
-
-        UResourceBundle *rb = ures_openDirect(NULL, gSupplementalData, &status);
-        ures_getByKey(rb, gZoneFormattingTag, rb, &status);
-        ures_getByKey(rb, tzkey, rb, &status);
-        territory = ures_getStringByKey(rb, gTerritoryTag, NULL, &status);
-        if (U_SUCCESS(status)) {
-            if (u_strcmp(territory, gWorld) == 0) {
-                territory = NULL;
-            }
-        }
-        ures_close(rb);
-    }
-
-    if (territory == NULL) {
-        canonicalCountry.remove();
+    const UChar *region = TimeZone::getRegion(tzid);
+    if (u_strcmp(gWorld, region) != 0) {
+        canonicalCountry.setTo(region, -1);
     } else {
-        canonicalCountry.setTo(territory, -1);
+        canonicalCountry.remove();
     }
     return canonicalCountry;
 }
 
 UnicodeString& U_EXPORT2
 ZoneMeta::getSingleCountry(const UnicodeString &tzid, UnicodeString &country) {
-    UErrorCode status = U_ZERO_ERROR;
 
     // Get canonical country for the zone
     getCanonicalCountry(tzid, country);
 
-    if (!country.isEmpty()) { 
-        UResourceBundle *supplementalDataBundle = ures_openDirect(NULL, gSupplementalData, &status);
-        UResourceBundle *zoneFormatting = ures_getByKey(supplementalDataBundle, gZoneFormattingTag, NULL, &status);
-        UResourceBundle *multizone = ures_getByKey(zoneFormatting, gMultizoneTag, NULL, &status);
+    if (!country.isEmpty() && country.length() == 2) {
+        UErrorCode status = U_ZERO_ERROR;
+        char buf[] = {0, 0, 0};
+        country.extract(0, 2, buf, 2, US_INV);
 
-        if (U_SUCCESS(status)) {
-            while (ures_hasNext(multizone)) {
-                int32_t len;
-                const UChar* multizoneCountry = ures_getNextString(multizone, &len, NULL, &status);
-                if (country.compare(multizoneCountry, len) == 0) {
-                    // Included in the multizone country list
-                    country.remove();
-                    break;
+        StringEnumeration *ids = TimeZone::createEnumeration(buf);
+        int32_t idsLen = ids->count(status);
+        if (U_SUCCESS(status) && idsLen > 1) {
+            // multiple zones are available for the region
+            UnicodeString canonical, tmp;
+            const UnicodeString *id = ids->snext(status);
+            getCanonicalSystemID(*id, canonical, status);
+            if (U_SUCCESS(status)) {
+                // check if there are any other canonical zone in the group
+                while (id = ids->snext(status)) {
+                    getCanonicalSystemID(*id, tmp, status);
+                    if (U_FAILURE(status)) {
+                        break;
+                    }
+                    if (canonical != tmp) {
+                        // another canonical zone was found
+                        country.remove();
+                        break;
+                    }
                 }
             }
         }
-
-        ures_close(multizone);
-        ures_close(zoneFormatting);
-        ures_close(supplementalDataBundle);
+        if (U_FAILURE(status)) {
+            // no single country by default for any error cases
+            country.remove();
+        }
+        delete ids;
     }
 
     return country;

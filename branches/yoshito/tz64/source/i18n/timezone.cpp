@@ -938,11 +938,27 @@ TimeZone::dereferOlsonLink(const UnicodeString& id) {
     return result;
 }
 
-UResourceBundle*
-TimeZone::getIDArray(UErrorCode& status) {
-    UResourceBundle *rb = ures_openDirect(NULL, kZONEINFO, &status);
-    ures_getByKey(rb, kNAMES, rb, &status);
-    return rb;
+const UChar*
+TimeZone::getRegion(const UnicodeString& id) {
+    const UChar *result = WORLD;
+    UErrorCode ec = U_ZERO_ERROR;
+    UResourceBundle *rb = ures_openDirect(NULL, kZONEINFO, &ec);
+
+    // resolve zone index by name
+    UResourceBundle *res = ures_getByKey(rb, kNAMES, NULL, &ec);
+    int32_t idx = findInStringArray(res, id, ec);
+
+    // get region mapping
+    ures_getByKey(rb, kREGIONS, res, &ec);
+    const UChar *tmp = ures_getStringByIndex(res, idx, NULL, &ec);
+    if (U_SUCCESS(ec)) {
+        result = tmp;
+    }
+
+    ures_close(res);
+    ures_close(rb);
+
+    return result;
 }
 
 // ---------------------------------------
