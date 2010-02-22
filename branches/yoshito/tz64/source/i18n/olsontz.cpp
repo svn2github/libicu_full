@@ -91,8 +91,8 @@ UOBJECT_DEFINE_RTTI_IMPLEMENTATION(OlsonTimeZone)
  * constructor fails so the resultant object is well-behaved.
  */
 void OlsonTimeZone::constructEmpty() {
-    transitionCountPre32 = transitionCount32 = transitionCountPost32 = NULL;
-    transitionTimesPre32 = transitionTimes32 = transitionTimesPost32 = ZEROS;
+    transitionCountPre32 = transitionCount32 = transitionCountPost32 = 0;
+    transitionTimesPre32 = transitionTimes32 = transitionTimesPost32 = NULL;
 
     typeMapData = NULL;
 
@@ -176,14 +176,16 @@ OlsonTimeZone::OlsonTimeZone(const UResourceBundle* top,
         typeCount = (int16_t) len >> 1;
 
         // Type map data must be of the same size as the transition count
-        ures_getByKey(res, kTYPEMAP, &r, &ec);
-        typeMapData = ures_getBinary(&r, &len, &ec);
-        if (ec == U_MISSING_RESOURCE_ERROR) {
-            // no type mapping data
-            typeMapData = NULL;
-            ec = U_ZERO_ERROR;
-        } else if (U_SUCCESS(ec) && len != transitionCountPre32 + transitionCount32 + transitionCountPost32) {
-            ec = U_INVALID_FORMAT_ERROR;
+        typeMapData =  NULL;
+        if (transitionCount() > 0) {
+            ures_getByKey(res, kTYPEMAP, &r, &ec);
+            typeMapData = ures_getBinary(&r, &len, &ec);
+            if (ec == U_MISSING_RESOURCE_ERROR) {
+                // no type mapping data
+                ec = U_INVALID_FORMAT_ERROR;
+            } else if (U_SUCCESS(ec) && len != transitionCount()) {
+                ec = U_INVALID_FORMAT_ERROR;
+            }
         }
 
         // Process final rule and data, if any
@@ -211,12 +213,11 @@ OlsonTimeZone::OlsonTimeZone(const UResourceBundle* top,
                 if (finalZone == NULL) {
                     ec = U_MEMORY_ALLOCATION_ERROR;
                 } else {
-                    // set the start year of finalZone (this will be used by BasicTimeZone rule APIs only)
                     finalStartYear = ruleYear;
 
                     // Note: Setting finalStartYear to the finalZone is problematic.  When a date is around
                     // year boundary, SimpleTimeZone may return false result when DST is observed at the 
-                    // beginning of year.  We could apply safe mergin (day or two), but when one of recurrent
+                    // beginning of year.  We could apply safe margin (day or two), but when one of recurrent
                     // rules falls around year boundary, it could return false result.  Without setting the
                     // start year, finalZone works fine around the year boundary of the start year.
 
@@ -231,7 +232,7 @@ OlsonTimeZone::OlsonTimeZone(const UResourceBundle* top,
                     // small windows of time around the year boundary, this may
                     // result incorrect offset computation.  But I think it will
                     // never happen practically.  Yoshito - Feb 20, 2010
-                    finalStartMillis = Grego::fieldsToDay(ruleYear, 0, 1) * U_MILLIS_PER_DAY;
+                    finalStartMillis = Grego::fieldsToDay(finalStartYear, 0, 1) * U_MILLIS_PER_DAY;
                 }
             } else {
                 ec = U_INVALID_FORMAT_ERROR;
@@ -544,7 +545,7 @@ UBool OlsonTimeZone::useDaylightTime() const {
     // and returns TRUE if so.
 
     UDate current = uprv_getUTCtime();
-    if (finalZone != NULL && current > finalStartMillis) {
+    if (finalZone != NULL && current >= finalStartMillis) {
         return finalZone->useDaylightTime();
     }
 
