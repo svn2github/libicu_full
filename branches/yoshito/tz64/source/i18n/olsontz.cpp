@@ -437,8 +437,8 @@ OlsonTimeZone::transitionTimeInSeconds(int16_t transIdx) const {
     U_ASSERT(transIdx >= 0 && transIdx < transitionCount()); 
 
     if (transIdx < transitionCountPre32) {
-        return (((int64_t)transitionTimesPre32[transIdx << 1]) << 32)
-            | ((int64_t)transitionTimesPre32[(transIdx << 1) + 1]);
+        return (((int64_t)((uint32_t)transitionTimesPre32[transIdx << 1])) << 32)
+            | ((int64_t)((uint32_t)transitionTimesPre32[(transIdx << 1) + 1]));
     }
 
     transIdx -= transitionCountPre32;
@@ -446,9 +446,9 @@ OlsonTimeZone::transitionTimeInSeconds(int16_t transIdx) const {
         return (int64_t)transitionTimes32[transIdx];
     }
 
-    transIdx -= transitionCountPost32;
-    return (((int64_t)transitionTimesPost32[transIdx << 1]) << 32)
-        | ((int64_t)transitionTimesPost32[(transIdx << 1) + 1]);
+    transIdx -= transitionCount32;
+    return (((int64_t)((uint32_t)transitionTimesPost32[transIdx << 1])) << 32)
+        | ((int64_t)((uint32_t)transitionTimesPost32[(transIdx << 1) + 1]));
 }
 
 void
