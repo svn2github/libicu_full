@@ -465,7 +465,7 @@ OlsonTimeZone::getHistoricalOffset(UDate date, UBool local,
 
     if (transCount > 0) {
         double sec = uprv_floor(date / U_MILLIS_PER_SECOND);
-        if (sec < transitionTimeInSeconds(0)) {
+        if (!local && sec < transitionTimeInSeconds(0)) {
             // Before the first transition time
             rawoff = initialRawOffset() * U_MILLIS_PER_SECOND;
             dstoff = initialDstOffset() * U_MILLIS_PER_SECOND;
@@ -522,6 +522,7 @@ OlsonTimeZone::getHistoricalOffset(UDate date, UBool local,
                     break;
                 }
             }
+            // transIdx could be -1 when local=true
             rawoff = rawOffsetAt(transIdx) * U_MILLIS_PER_SECOND;
             dstoff = dstOffsetAt(transIdx) * U_MILLIS_PER_SECOND;
         }
