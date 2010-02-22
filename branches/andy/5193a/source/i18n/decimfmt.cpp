@@ -235,31 +235,8 @@ inline int32_t _max(int32_t a, int32_t b) { return (a<b) ? b : a; }
 //------------------------------------------------------------------------------
 // Constructs a DecimalFormat instance in the default locale.
 
-DecimalFormat::DecimalFormat(UErrorCode& status)
-: NumberFormat(),
-  fPosPrefixPattern(0),
-  fPosSuffixPattern(0),
-  fNegPrefixPattern(0),
-  fNegSuffixPattern(0),
-  fCurrencyChoice(0),
-  fMultiplier(0),
-  fGroupingSize(0),
-  fGroupingSize2(0),
-  fSymbols(0),
-  fUseSignificantDigits(FALSE),
-  fMinSignificantDigits(1),
-  fMaxSignificantDigits(6),
-  fMinExponentDigits(0),
-  fRoundingIncrement(0),
-  fPad(0),
-  fFormatWidth(0),
-  fStyle(NumberFormat::kNumberStyle),
-  fCurrencySignCount(0),
-  fAffixPatternsForCurrency(NULL),
-  fAffixesForCurrency(NULL),
-  fPluralAffixesForCurrency(NULL),
-  fCurrencyPluralInfo(NULL)
-{
+DecimalFormat::DecimalFormat(UErrorCode& status) {
+    init();
     UParseError parseError;
     construct(status, parseError);
 }
@@ -269,31 +246,8 @@ DecimalFormat::DecimalFormat(UErrorCode& status)
 // pattern in the default locale.
 
 DecimalFormat::DecimalFormat(const UnicodeString& pattern,
-                             UErrorCode& status)
-: NumberFormat(),
-  fPosPrefixPattern(0),
-  fPosSuffixPattern(0),
-  fNegPrefixPattern(0),
-  fNegSuffixPattern(0),
-  fCurrencyChoice(0),
-  fMultiplier(0),
-  fGroupingSize(0),
-  fGroupingSize2(0),
-  fSymbols(0),
-  fUseSignificantDigits(FALSE),
-  fMinSignificantDigits(1),
-  fMaxSignificantDigits(6),
-  fMinExponentDigits(0),
-  fRoundingIncrement(0),
-  fPad(0),
-  fFormatWidth(0),
-  fStyle(NumberFormat::kNumberStyle),
-  fCurrencySignCount(0),
-  fAffixPatternsForCurrency(NULL),
-  fAffixesForCurrency(NULL),
-  fPluralAffixesForCurrency(NULL),
-  fCurrencyPluralInfo(NULL)
-{
+                             UErrorCode& status) {
+    init();
     UParseError parseError;
     construct(status, parseError, &pattern);
 }
@@ -305,31 +259,8 @@ DecimalFormat::DecimalFormat(const UnicodeString& pattern,
 
 DecimalFormat::DecimalFormat(const UnicodeString& pattern,
                              DecimalFormatSymbols* symbolsToAdopt,
-                             UErrorCode& status)
-: NumberFormat(),
-  fPosPrefixPattern(0),
-  fPosSuffixPattern(0),
-  fNegPrefixPattern(0),
-  fNegSuffixPattern(0),
-  fCurrencyChoice(0),
-  fMultiplier(0),
-  fGroupingSize(0),
-  fGroupingSize2(0),
-  fSymbols(0),
-  fUseSignificantDigits(FALSE),
-  fMinSignificantDigits(1),
-  fMaxSignificantDigits(6),
-  fMinExponentDigits(0),
-  fRoundingIncrement(0),
-  fPad(0),
-  fFormatWidth(0),
-  fStyle(NumberFormat::kNumberStyle),
-  fCurrencySignCount(0),
-  fAffixPatternsForCurrency(NULL),
-  fAffixesForCurrency(NULL),
-  fPluralAffixesForCurrency(NULL),
-  fCurrencyPluralInfo(NULL)
-{
+                             UErrorCode& status) {
+    init();
     UParseError parseError;
     if (symbolsToAdopt == NULL)
         status = U_ILLEGAL_ARGUMENT_ERROR;
@@ -339,35 +270,13 @@ DecimalFormat::DecimalFormat(const UnicodeString& pattern,
 DecimalFormat::DecimalFormat(  const UnicodeString& pattern,
                     DecimalFormatSymbols* symbolsToAdopt,
                     UParseError& parseErr,
-                    UErrorCode& status)
-: NumberFormat(),
-  fPosPrefixPattern(0),
-  fPosSuffixPattern(0),
-  fNegPrefixPattern(0),
-  fNegSuffixPattern(0),
-  fCurrencyChoice(0),
-  fMultiplier(0),
-  fGroupingSize(0),
-  fGroupingSize2(0),
-  fSymbols(0),
-  fUseSignificantDigits(FALSE),
-  fMinSignificantDigits(1),
-  fMaxSignificantDigits(6),
-  fMinExponentDigits(0),
-  fRoundingIncrement(0),
-  fPad(0),
-  fFormatWidth(0),
-  fStyle(NumberFormat::kNumberStyle),
-  fCurrencySignCount(0),
-  fAffixPatternsForCurrency(NULL),
-  fAffixesForCurrency(NULL),
-  fPluralAffixesForCurrency(NULL),
-  fCurrencyPluralInfo(NULL)
-{
+                    UErrorCode& status) {
+    init();
     if (symbolsToAdopt == NULL)
         status = U_ILLEGAL_ARGUMENT_ERROR;
     construct(status,parseErr, &pattern, symbolsToAdopt);
 }
+
 //------------------------------------------------------------------------------
 // Constructs a DecimalFormat instance with the specified number format
 // pattern and the number format symbols in the default locale.  The
@@ -375,31 +284,8 @@ DecimalFormat::DecimalFormat(  const UnicodeString& pattern,
 
 DecimalFormat::DecimalFormat(const UnicodeString& pattern,
                              const DecimalFormatSymbols& symbols,
-                             UErrorCode& status)
-: NumberFormat(),
-  fPosPrefixPattern(0),
-  fPosSuffixPattern(0),
-  fNegPrefixPattern(0),
-  fNegSuffixPattern(0),
-  fCurrencyChoice(0),
-  fMultiplier(0),
-  fGroupingSize(0),
-  fGroupingSize2(0),
-  fSymbols(0),
-  fUseSignificantDigits(FALSE),
-  fMinSignificantDigits(1),
-  fMaxSignificantDigits(6),
-  fMinExponentDigits(0),
-  fRoundingIncrement(0),
-  fPad(0),
-  fFormatWidth(0),
-  fStyle(NumberFormat::kNumberStyle),
-  fCurrencySignCount(0),
-  fAffixPatternsForCurrency(NULL),
-  fAffixesForCurrency(NULL),
-  fPluralAffixesForCurrency(NULL),
-  fCurrencyPluralInfo(NULL)
-{
+                             UErrorCode& status) {
+    init();
     UParseError parseError;
     construct(status, parseError, &pattern, new DecimalFormatSymbols(symbols));
 }
@@ -412,33 +298,46 @@ DecimalFormat::DecimalFormat(const UnicodeString& pattern,
 DecimalFormat::DecimalFormat(const UnicodeString& pattern,
                              DecimalFormatSymbols* symbolsToAdopt,
                              NumberFormat::EStyles style,
-                             UErrorCode& status)
-: NumberFormat(),
-  fPosPrefixPattern(0),
-  fPosSuffixPattern(0),
-  fNegPrefixPattern(0),
-  fNegSuffixPattern(0),
-  fCurrencyChoice(0),
-  fMultiplier(0),
-  fGroupingSize(0),
-  fGroupingSize2(0),
-  fSymbols(0),
-  fUseSignificantDigits(FALSE),
-  fMinSignificantDigits(1),
-  fMaxSignificantDigits(6),
-  fMinExponentDigits(0),
-  fRoundingIncrement(0),
-  fPad(0),
-  fFormatWidth(0),
-  fStyle(style),
-  fCurrencySignCount(0),
-  fAffixPatternsForCurrency(NULL),
-  fAffixesForCurrency(NULL),
-  fPluralAffixesForCurrency(NULL),
-  fCurrencyPluralInfo(NULL)
-{
+                             UErrorCode& status) {
+    init();
+    fStyle = style;
     UParseError parseError;
     construct(status, parseError, &pattern, symbolsToAdopt);
+}
+
+//-----------------------------------------------------------------------------
+// Common DecimalFormat initialization.
+//    Put all fields of an uninitialized object into a known state.
+//    Common code, shared by all constructors.
+void
+DecimalFormat::init() {
+    fPosPrefixPattern = 0;
+    fPosSuffixPattern = 0;
+    fNegPrefixPattern = 0;
+    fNegSuffixPattern = 0;
+    fCurrencyChoice = 0;
+    fMultiplier = NULL;
+    fGroupingSize = 0;
+    fGroupingSize2 = 0;
+    fDecimalSeparatorAlwaysShown = FALSE;
+    fSymbols = NULL;
+    fUseSignificantDigits = FALSE;
+    fMinSignificantDigits = 1;
+    fMaxSignificantDigits = 6;
+    fUseExponentialNotation = FALSE;
+    fMinExponentDigits = 0;
+    fExponentSignAlwaysShown = FALSE;
+    fRoundingIncrement = 0;
+    fRoundingMode = kRoundHalfEven;
+    fPad = 0;
+    fFormatWidth = 0;
+    fPadPosition = kPadBeforePrefix;
+    fStyle = NumberFormat::kNumberStyle;
+    fCurrencySignCount = 0;
+    fAffixPatternsForCurrency = NULL;
+    fAffixesForCurrency = NULL;
+    fPluralAffixesForCurrency = NULL;
+    fCurrencyPluralInfo = NULL;
 }
 
 //------------------------------------------------------------------------------
@@ -453,9 +352,7 @@ DecimalFormat::construct(UErrorCode&             status,
                          DecimalFormatSymbols*  symbolsToAdopt)
 {
     fSymbols = symbolsToAdopt; // Do this BEFORE aborting on status failure!!!
-//    fDigitList = new DigitList(); // Do this BEFORE aborting on status failure!!!
     fRoundingIncrement = NULL;
-    fRoundingDouble = 0.0;
     fRoundingMode = kRoundHalfEven;
     fPad = kPatternPadEscape;
     fPadPosition = kPadBeforePrefix;
@@ -464,7 +361,7 @@ DecimalFormat::construct(UErrorCode&             status,
 
     fPosPrefixPattern = fPosSuffixPattern = NULL;
     fNegPrefixPattern = fNegSuffixPattern = NULL;
-    fMultiplier = 1;
+    setMultiplier(1);
     fGroupingSize = 3;
     fGroupingSize2 = 0;
     fDecimalSeparatorAlwaysShown = FALSE;
@@ -696,7 +593,6 @@ DecimalFormat::setupCurrencyAffixes(const UnicodeString& pattern,
 
 DecimalFormat::~DecimalFormat()
 {
-//    delete fDigitList;
     delete fPosPrefixPattern;
     delete fPosSuffixPattern;
     delete fNegPrefixPattern;
@@ -713,30 +609,14 @@ DecimalFormat::~DecimalFormat()
 //------------------------------------------------------------------------------
 // copy constructor
 
-DecimalFormat::DecimalFormat(const DecimalFormat &source)
-:   NumberFormat(source),
-//    fDigitList(NULL),
-    fPosPrefixPattern(NULL),
-    fPosSuffixPattern(NULL),
-    fNegPrefixPattern(NULL),
-    fNegSuffixPattern(NULL),
-    fCurrencyChoice(NULL),
-    fSymbols(NULL),
-    fRoundingIncrement(NULL),
-    fStyle(0),
-    fCurrencySignCount(0),
-    fAffixPatternsForCurrency(NULL),
-    fAffixesForCurrency(NULL),
-    fPluralAffixesForCurrency(NULL),
-    fCurrencyPluralInfo(NULL)
-{
+DecimalFormat::DecimalFormat(const DecimalFormat &source) :
+    NumberFormat(*this) {
+    init();
     *this = source;
 }
 
 //------------------------------------------------------------------------------
 // assignment operator
-// Note that fDigitList is not considered a significant part of the
-// DecimalFormat because it's used as a buffer to process the numbers.
 
 static void _copy_us_ptr(UnicodeString** pdest, const UnicodeString* source) {
     if (source == NULL) {
@@ -768,19 +648,9 @@ DecimalFormat::operator=(const DecimalFormat& rhs)
         } else {
             fCurrencyChoice = (ChoiceFormat*) rhs.fCurrencyChoice->clone();
         }
-        if(rhs.fRoundingIncrement == NULL) {
-            delete fRoundingIncrement;
-            fRoundingIncrement = NULL;
-        }
-        else if(fRoundingIncrement == NULL) {
-            fRoundingIncrement = new DigitList(*rhs.fRoundingIncrement);
-        }
-        else {
-            *fRoundingIncrement = *rhs.fRoundingIncrement;
-        }
-        fRoundingDouble = rhs.fRoundingDouble;
+        setRoundingIncrement(rhs.getRoundingIncrement());
         fRoundingMode = rhs.fRoundingMode;
-        fMultiplier = rhs.fMultiplier;
+        setMultiplier(rhs.getMultiplier());
         fGroupingSize = rhs.fGroupingSize;
         fGroupingSize2 = rhs.fGroupingSize2;
         fDecimalSeparatorAlwaysShown = rhs.fDecimalSeparatorAlwaysShown;
@@ -795,8 +665,6 @@ DecimalFormat::operator=(const DecimalFormat& rhs)
         fCurrencySignCount = rhs.fCurrencySignCount;
         /*end of Update*/
         fMinExponentDigits = rhs.fMinExponentDigits;
-        //    if (fDigitList == NULL)
-        //        fDigitList = new DigitList();
 
         /* sfb 990629 */
         fFormatWidth = rhs.fFormatWidth;
@@ -920,9 +788,9 @@ DecimalFormat::operator==(const Format& that) const
         if (first) { printf("[ "); first = FALSE; } else { printf(", "); }
         debug("Rounding Increment !=");
               }
-    if (fMultiplier != other->fMultiplier) {
+    if (getMultiplier() != other->getMultiplier()) {
         if (first) { printf("[ "); first = FALSE; }
-        printf("Multiplier %ld != %ld", fMultiplier, other->fMultiplier);
+        printf("Multiplier %ld != %ld", getMultiplier(), other->getMultiplier());
     }
     if (fGroupingSize != other->fGroupingSize) {
         if (first) { printf("[ "); first = FALSE; } else { printf(", "); }
@@ -1009,7 +877,7 @@ DecimalFormat::operator==(const Format& that) const
              || (fRoundingIncrement != NULL &&
                  other->fRoundingIncrement != NULL &&
                  *fRoundingIncrement == *other->fRoundingIncrement)) &&
-        fMultiplier == other->fMultiplier &&
+        getMultiplier() == other->getMultiplier() &&
         fGroupingSize == other->fGroupingSize &&
         fGroupingSize2 == other->fGroupingSize2 &&
         fDecimalSeparatorAlwaysShown == other->fDecimalSeparatorAlwaysShown &&
@@ -1081,38 +949,10 @@ DecimalFormat::_format(int64_t number,
                        UnicodeString& appendTo,
                        FieldPositionHandler& handler) const
 {
+    UErrorCode status = U_ZERO_ERROR;
     DigitList digits;
-
-    // If we are to do rounding, we need to move into the BigDecimal
-    // domain in order to do divide/multiply correctly.
-    // ||
-    // In general, long values always represent real finite numbers, so
-    // we don't have to check for +/- Infinity or NaN.  However, there
-    // is one case we have to be careful of:  The multiplier can push
-    // a number near MIN_VALUE or MAX_VALUE outside the legal range.  We
-    // check for this before multiplying, and if it happens we use doubles
-    // instead, trading off accuracy for range.
-    if (fRoundingIncrement != NULL
-        || (fMultiplier > 0 && (number > U_INT64_MAX / fMultiplier || number < U_INT64_MIN / fMultiplier))
-        || (fMultiplier < 0 && (number == U_INT64_MIN || -number > U_INT64_MAX / -fMultiplier || -number < U_INT64_MIN / -fMultiplier))
-        )
-    {
-        UErrorCode status = U_ZERO_ERROR;
-        DigitList multiplier;
-        multiplier.set(fMultiplier);   
-        digits.set(number);
-        digits.mult(multiplier, status);
-
-        //digits.set(((double) number) * fMultiplier,
-        //           precision(FALSE),
-        //           !fUseExponentialNotation && !areSignificantDigitsUsed());
-    }
-    else
-    {
-        digits.set(number * fMultiplier, precision(TRUE));
-    }
-
-    return subformat(appendTo, handler, digits, TRUE);
+    digits.set(number);
+    return _format(digits, appendTo, handler, status);
 }
 
 //------------------------------------------------------------------------------
@@ -1143,6 +983,7 @@ DecimalFormat::_format( double number,
 {
     // Special case for NaN, sets the begin and end index to be the
     // the string length of localized name of NaN.
+    // TODO:  let NaNs go through DigitList.
     if (uprv_isNaN(number))
     {
         int begin = appendTo.length();
@@ -1154,62 +995,12 @@ DecimalFormat::_format( double number,
         return appendTo;
     }
 
-    // Do this BEFORE checking to see if value is infinite or negative! Sets the
-    // begin and end index to be length of the string composed of
-    // localized name of Infinite and the positive/negative localized
-    // signs.
-
-    number *= fMultiplier;
-
-    /* Detecting whether a double is negative is easy with the exception of
-     * the value -0.0.  This is a double which has a zero mantissa (and
-     * exponent), but a negative sign bit.  It is semantically distinct from
-     * a zero with a positive sign bit, and this distinction is important
-     * to certain kinds of computations.  However, it's a little tricky to
-     * detect, since (-0.0 == 0.0) and !(-0.0 < 0.0).  How then, you may
-     * ask, does it behave distinctly from +0.0?  Well, 1/(-0.0) ==
-     * -Infinity.  Proper detection of -0.0 is needed to deal with the
-     * issues raised by bugs 4106658, 4106667, and 4147706.  Liu 7/6/98.
-     */
-    UBool isNegative = uprv_isNegative(number);
-
-    // Apply rounding after multiplier
-    if (fRoundingIncrement != NULL) {
-        if (isNegative)     // For rounding in the correct direction
-            number = -number;
-        number = fRoundingDouble
-            * round(number / fRoundingDouble, fRoundingMode, isNegative);
-        if (isNegative)
-            number = -number;
-    }
-
-    // Special case for INFINITE,
-    if (uprv_isInfinite(number))
-    {
-        int32_t prefixLen = appendAffix(appendTo, number, handler, isNegative, TRUE);
-
-        int begin = appendTo.length();
-        appendTo += getConstSymbol(DecimalFormatSymbols::kInfinitySymbol);
-
-        handler.addAttribute(kIntegerField, begin, appendTo.length());
-
-        int32_t suffixLen = appendAffix(appendTo, number, handler, isNegative, FALSE);
-
-        addPadding(appendTo, handler, prefixLen, suffixLen);
-        return appendTo;
-    }
-
+    UErrorCode status = U_ZERO_ERROR;
     DigitList digits;
-
-    // This detects negativity too.
-    if (fRoundingIncrement == NULL) {
-        // If we did not round in binary space, round in decimal space
-        digits.setRoundingMode(fRoundingMode);
-    }
-    digits.set(number, precision(FALSE),
-               !fUseExponentialNotation && !areSignificantDigitsUsed());
-
-    return subformat(appendTo, handler, digits, FALSE);
+    digits.set(number);
+    _format(digits, appendTo, handler, status);
+    // No way to return status from here.
+    return appendTo;
 }
 
 //------------------------------------------------------------------------------
@@ -1282,9 +1073,9 @@ DecimalFormat::_format(const DigitList &number,
 
     DigitList adjustedNum(number);  // Copy, so we do not alter the original. 
     adjustedNum.setRoundingMode(fRoundingMode);
-    DigitList multiplier;
-    multiplier.set(fMultiplier, 0, FALSE);   // TODO:  precompute the Multiplier as a DigitList.
-    adjustedNum.mult(multiplier, status);
+    if (fMultiplier != NULL) {
+        adjustedNum.mult(*fMultiplier, status);
+    }
 
     /* 
      * Note: sign is important for zero as well as non-zero numbers.
@@ -1298,6 +1089,7 @@ DecimalFormat::_format(const DigitList &number,
         adjustedNum.div(*fRoundingIncrement, status);
         adjustedNum.toIntegralValue();
         adjustedNum.mult(*fRoundingIncrement, status);
+        adjustedNum.trim();
     }
 
     // Special case for INFINITE,
@@ -1316,53 +1108,21 @@ DecimalFormat::_format(const DigitList &number,
     }
 
     if (fRoundingIncrement == NULL) {
-        if (!fUseExponentialNotation && !areSignificantDigitsUsed()) {
-            // Fixed point format.  Round to a set number of fraction digits.
-            int32_t numFractionDigits = precision(FALSE);
-            adjustedNum.roundFixedPoint(numFractionDigits);
+        if (fUseExponentialNotation || areSignificantDigitsUsed()) {
+            int32_t sigDigits = precision();
+            if (sigDigits > 0) {
+                adjustedNum.round(sigDigits);
+            }
         } else {
-            // Floating format.  Round to a requested total number of digits.
-            adjustedNum.round(precision(FALSE));
+            // Fixed point format.  Round to a set number of fraction digits.
+            int32_t numFractionDigits = precision();
+            adjustedNum.roundFixedPoint(numFractionDigits);
         }
     }
 
     return subformat(appendTo, handler, adjustedNum, FALSE);
 }
 
-/**
- * Round a double value to the nearest integer according to the
- * given mode.
- * @param a the absolute value of the number to be rounded
- * @param mode a BigDecimal rounding mode
- * @param isNegative true if the number to be rounded is negative
- * @return the absolute value of the rounded result
- */
-double DecimalFormat::round(double a, ERoundingMode mode, UBool isNegative) {
-    switch (mode) {
-    case kRoundCeiling:
-        return isNegative ? uprv_floor(a) : uprv_ceil(a);
-    case kRoundFloor:
-        return isNegative ? uprv_ceil(a) : uprv_floor(a);
-    case kRoundDown:
-        return uprv_floor(a);
-    case kRoundUp:
-        return uprv_ceil(a);
-    case kRoundHalfEven:
-        {
-            double f = uprv_floor(a);
-            if ((a - f) != 0.5) {
-                return uprv_floor(a + 0.5);
-            }
-            double g = f / 2.0;
-            return (g == uprv_floor(g)) ? f : (f + 1.0);
-        }
-    case kRoundHalfDown:
-        return ((a - uprv_floor(a)) <= 0.5) ? uprv_floor(a) : uprv_ceil(a);
-    case kRoundHalfUp:
-        return ((a - uprv_floor(a)) < 0.5) ? uprv_floor(a) : uprv_ceil(a);
-    }
-    return 1.0;
-}
 
 UnicodeString&
 DecimalFormat::format(  const Formattable& obj,
@@ -1398,7 +1158,7 @@ UBool DecimalFormat::isGroupingPosition(int32_t pos) const {
 //------------------------------------------------------------------------------
 
 /**
- * Complete the formatting of a finite number.  On entry, the fDigitList must
+ * Complete the formatting of a finite number.  On entry, the DigitList must
  * be filled in with the correct digits.
  */
 UnicodeString&
@@ -1425,19 +1185,6 @@ DecimalFormat::subformat(UnicodeString& appendTo,
     UBool useSigDig = areSignificantDigitsUsed();
     int32_t maxIntDig = getMaximumIntegerDigits();
     int32_t minIntDig = getMinimumIntegerDigits();
-
-    /* Per bug 4147706, DecimalFormat must respect the sign of numbers which
-     * format as zero.  This allows sensible computations and preserves
-     * relations such as signum(1/x) = signum(x), where x is +Infinity or
-     * -Infinity.  Prior to this fix, we always formatted zero values as if
-     * they were positive.  Liu 7/6/98.
-     */
-    if (digits.isZero())
-    {
-        // Normalize, preserve sign.
-        //   TODO:  is this necessary?  Rename function on digits if it is.
-        digits.setToZero();
-    }
 
     // Appends the prefix.
     double doubleValue = digits.getDouble();
@@ -1873,12 +1620,9 @@ void DecimalFormat::parse(const UnicodeString& text,
 
     else {
 
-        // TODO:  cache dlmultiplier.
-        if (fMultiplier != 1) {
+        if (fMultiplier != NULL) {
             UErrorCode ec = U_ZERO_ERROR;
-            DigitList dlmultiplier;
-            dlmultiplier.set(fMultiplier);
-            digits->div(dlmultiplier, ec);
+            digits->div(*fMultiplier, ec);
         }
 
         // Negative zero special case:
@@ -2822,10 +2566,18 @@ DecimalFormat::setNegativeSuffix(const UnicodeString& newValue)
 
 //------------------------------------------------------------------------------
 // Gets the multiplier of the number pattern.
+//   Multipliers are stored as decimal numbers (DigitLists) because that
+//      is the most convenient for muliplying or dividing the numbers to be formatted.
+//   A NULL multiplier implies one, and the scaling operations are skipped.
 
-int32_t DecimalFormat::getMultiplier() const
+int32_t 
+DecimalFormat::getMultiplier() const
 {
-    return fMultiplier;
+    if (fMultiplier == NULL) {
+        return 1;
+    } else {
+        return fMultiplier->getLong();
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -2836,10 +2588,20 @@ DecimalFormat::setMultiplier(int32_t newValue)
 //  if (newValue == 0) {
 //      throw new IllegalArgumentException("Bad multiplier: " + newValue);
 //  }
-    if (newValue != 0) {
-        fMultiplier = newValue;
+    if (newValue == 0) {
+        newValue = 1;     // one being the benign default value for a multiplier.
     }
-    // else No way to return an error.
+    if (newValue == 1) {
+        delete fMultiplier;
+        fMultiplier = NULL;
+    } else {
+        if (fMultiplier == NULL) {
+            fMultiplier = new DigitList;
+        }
+        if (fMultiplier != NULL) {
+            fMultiplier->set(newValue);
+        }
+    }
 }
 
 /**
@@ -2851,7 +2613,11 @@ DecimalFormat::setMultiplier(int32_t newValue)
  * @see #setRoundingMode
  */
 double DecimalFormat::getRoundingIncrement() const {
-    return fRoundingDouble;
+    if (fRoundingIncrement == NULL) {
+        return 0.0;
+    } else {
+        return fRoundingIncrement->getDouble();
+    }
 }
 
 /**
@@ -2869,8 +2635,8 @@ void DecimalFormat::setRoundingIncrement(double newValue) {
             fRoundingIncrement = new DigitList();
         }
         if (fRoundingIncrement != NULL) {
-            fRoundingIncrement->set((int32_t)newValue);
-            fRoundingDouble = newValue;
+            // TODO:  why was this rounding to int before?
+            fRoundingIncrement->set(newValue);
             return;
         }
     }
@@ -2878,7 +2644,6 @@ void DecimalFormat::setRoundingIncrement(double newValue) {
     // or fRoundingIncrement could not be created.
     delete fRoundingIncrement;
     fRoundingIncrement = NULL;
-    fRoundingDouble = 0.0;
 }
 
 /**
@@ -2904,6 +2669,8 @@ void DecimalFormat::setRoundingMode(ERoundingMode roundingMode) {
     fRoundingMode = roundingMode;
     if (fRoundingIncrement == NULL) {
         /* cast to double to avoid ambiguous pow() overloads */
+        // TODO: get rid of this.
+        //       Note: this enables fixed point rounding.
         setRoundingIncrement(pow(10.0, (double)-getMaximumFractionDigits()));
     }
 }
@@ -4348,7 +4115,7 @@ DecimalFormat::applyPatternWithoutExpandAffix(const UnicodeString& pattern,
             fGroupingSize = (groupingCount > 0) ? groupingCount : 0;
             fGroupingSize2 = (groupingCount2 > 0 && groupingCount2 != groupingCount)
                 ? groupingCount2 : 0;
-            fMultiplier = multiplier;
+            setMultiplier(multiplier);
             setDecimalSeparatorAlwaysShown(decimalPos == 0
                     || decimalPos == digitTotalCount);
             if (padPos >= 0) {
@@ -4370,14 +4137,15 @@ DecimalFormat::applyPatternWithoutExpandAffix(const UnicodeString& pattern,
                 } else {
                     fRoundingIncrement = new DigitList(roundingInc);
                     /* test for NULL */
-                    if (fRoundingIncrement == 0) {
+                    if (fRoundingIncrement == NULL) {
                         status = U_MEMORY_ALLOCATION_ERROR;
                         delete fPosPrefixPattern;
                         delete fPosSuffixPattern;
                         return;
                     }
                 }
-                fRoundingDouble = fRoundingIncrement->getDouble();
+                fRoundingIncrement->getDouble();   // forces caching of double in the DigitList,
+                                                   //    makes getting it thread safe.
                 fRoundingMode = kRoundHalfEven;
             } else {
                 setRoundingIncrement(0.0);
@@ -4436,7 +4204,7 @@ DecimalFormat::applyPatternWithoutExpandAffix(const UnicodeString& pattern,
         setGroupingUsed(FALSE);
         fGroupingSize = 0;
         fGroupingSize2 = 0;
-        fMultiplier = 1;
+        setMultiplier(1);
         setDecimalSeparatorAlwaysShown(FALSE);
         fFormatWidth = 0;
         setRoundingIncrement(0.0);
@@ -4670,13 +4438,13 @@ void DecimalFormat::getEffectiveCurrency(UChar* result, UErrorCode& ec) const {
  * formats.
  */
 int32_t
-DecimalFormat::precision(UBool isIntegral) const {
+DecimalFormat::precision() const {
     if (areSignificantDigitsUsed()) {
         return getMaximumSignificantDigits();
     } else if (fUseExponentialNotation) {
         return getMinimumIntegerDigits() + getMaximumFractionDigits();
     } else {
-        return isIntegral ? 0 : getMaximumFractionDigits();
+        return getMaximumFractionDigits();
     }
 }
 

@@ -203,19 +203,18 @@ void DecimalFormatTest::DataDrivenTests() {
 
     RegexMatcher    parseLineMat(UNICODE_STRING_SIMPLE(
             "(?i)\\s*parse\\s+"
-            "([a-z_]+)\\s+"              // Capture group 1: Locale
-            "\"([^\"]*)\"\\s+"              // Capture group 2: input
-            "\"([^\"]*)\"\\s+"          // Capture group 3: expected parsed decimal
-            "([ild])"                    // Capture group 4: expected parsed type
+            "\"([^\"]*)\"\\s+"           // Capture group 1: input text
+            "([ild])\\s+"                // Capture group 2: expected parsed type
+            "\"([^\"]*)\"\\s+"           // Capture group 3: expected parsed decimal
             "\\s*(?:#.*)?"),             // Trailing comment
          0, status);
 
     RegexMatcher    formatLineMat(UNICODE_STRING_SIMPLE(
             "(?i)\\s*format\\s+"
-            "([a-z_]+)\\s+"              // Capture group 1: Locale
-            "\"([^\"]*)\"\\s+"           // Capture group 2: input
-            "\"([^\"]*)\"\\s+"           // Capture group 3: pattern
-            "\"([^\"]*)\"\\s+"           // Capture group 4: expected output
+            "(\\S+)\\s+"                 // Capture group 1: pattern
+            "(ceiling|floor|down|up|halfeven|halfdown|halfup)\\s+"  // Capture group 2: Rounding Mode
+            "\"([^\"]*)\"\\s+"           // Capture group 3: input
+            "\"([^\"]*)\""           // Capture group 4: expected output
             "\\s*(?:#.*)?"),             // Trailing comment
          0, status);
 
@@ -239,9 +238,7 @@ void DecimalFormatTest::DataDrivenTests() {
 
         status = U_ZERO_ERROR;
         UnicodeString testLine = lineMat.group(1, status);
-        // std::string s;
-        // std::cout << lineNum << ": " << testLine.toUTF8String(s) << std::endl;
-        printf("%s\n", UnicodeStringPiece(testLine).data());
+        // printf("%s\n", UnicodeStringPiece(testLine).data());
         if (testLine.length() == 0) {
             continue;
         }
@@ -264,10 +261,9 @@ void DecimalFormatTest::DataDrivenTests() {
         parseLineMat.reset(testLine);
         if (parseLineMat.lookingAt(status)) {
             execParseTest(lineNum,
-                          parseLineMat.group(1, status),    // locale
-                          parseLineMat.group(2, status),    // input
+                          parseLineMat.group(1, status),    // input
+                          parseLineMat.group(2, status),    // Expected Type
                           parseLineMat.group(3, status),    // Expected Decimal String
-                          parseLineMat.group(4, status),    // Expected Type
                           status
                           );
             continue;
@@ -278,14 +274,20 @@ void DecimalFormatTest::DataDrivenTests() {
         //
         formatLineMat.reset(testLine);
         if (formatLineMat.lookingAt(status)) {
-            // TODO:
+            execFormatTest(lineNum,
+                           formatLineMat.group(1, status),    // Pattern
+                           formatLineMat.group(2, status),    // rounding mode
+                           formatLineMat.group(3, status),    // input decimal number
+                           formatLineMat.group(4, status),    // expected formatted result
+                           status);
             continue;
         }
 
         //
         //  Line is not a recognizable test case.
         //
-        errln("Badly formed test case at line %d.", lineNum);
+        errln("Badly formed test case at line %d.\n%s\n", 
+             lineNum, UnicodeStringPiece(testLine).data());
 
     }
 
@@ -295,18 +297,16 @@ void DecimalFormatTest::DataDrivenTests() {
 
 
 void DecimalFormatTest::execParseTest(int32_t lineNum,
-                                     const UnicodeString &locale,
                                      const UnicodeString &inputText,
-                                     const UnicodeString &expectedDecimal,
                                      const UnicodeString &expectedType,
+                                     const UnicodeString &expectedDecimal,
                                      UErrorCode &status) {
     
     if (U_FAILURE(status)) {
         return;
     }
-    Locale loc = Locale::createCanonical(InvariantStringPiece(locale).data());
 
-    DecimalFormatSymbols symbols(loc, status);
+    DecimalFormatSymbols symbols(Locale::getUS(), status);
     UnicodeString pattern = UNICODE_STRING_SIMPLE("####");
     DecimalFormat format(pattern, symbols, status);
     Formattable   result;
@@ -319,7 +319,6 @@ void DecimalFormatTest::execParseTest(int32_t lineNum,
     ParsePosition pos;
     int32_t expectedParseEndPosition = inputText.length();
 
-    return;   // TODO remove
     format.parse(inputText, result, pos);
 
     if (expectedParseEndPosition != pos.getIndex()) {
@@ -360,6 +359,59 @@ void DecimalFormatTest::execParseTest(int32_t lineNum,
     }
     
     return;
+}
+
+
+void DecimalFormatTest::execFormatTest(int32_t lineNum,
+                           const UnicodeString &pattern,     // Pattern
+                           const UnicodeString &round,       // rounding mode
+                           const UnicodeString &input,       // input decimal number
+                           const UnicodeString &expected,    // expected formatted result
+                           UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return;
+    }
+
+    DecimalFormatSymbols symbols(Locale::getUS(), status);
+    DecimalFormat fmtr(pattern, symbols, status);
+    if (U_FAILURE(status)) {
+        errln("file dcfmtest.txt, line %d: %s error creating the formatter.",
+            lineNum, u_errorName(status));
+        return;
+    }
+    if (round=="ceiling") {
+        fmtr.setRoundingMode(DecimalFormat::kRoundCeiling);
+    } else if (round=="floor") {
+        fmtr.setRoundingMode(DecimalFormat::kRoundFloor);
+    } else if (round=="down") {
+        fmtr.setRoundingMode(DecimalFormat::kRoundDown);
+    } else if (round=="up") {
+        fmtr.setRoundingMode(DecimalFormat::kRoundUp);
+    } else if (round=="halfeven") {
+        fmtr.setRoundingMode(DecimalFormat::kRoundHalfEven);
+    } else if (round=="halfdown") {
+        fmtr.setRoundingMode(DecimalFormat::kRoundHalfDown);
+    } else if (round=="halfup") {
+        fmtr.setRoundingMode(DecimalFormat::kRoundHalfUp);
+    } else {
+        fmtr.setRoundingMode(DecimalFormat::kRoundFloor);
+        errln("file dcfmtest.txt, line %d: Bad rounding mode \"%s\"",
+                lineNum, UnicodeStringPiece(round).data());
+    }
+    
+    UnicodeString result;
+    UnicodeStringPiece spInput(input);
+    fmtr.format(spInput, result, NULL, status);
+    if (U_FAILURE(status)) {
+        errln("file dcfmtest.txt, line %d: format() returned %s.",
+            lineNum, u_errorName(status));
+        return;
+    }
+    
+    if (result != expected) {
+        errln("file dcfmtest.txt, line %d: expected \"%s\", got \"%s\"",
+            lineNum, UnicodeStringPiece(expected).data(), UnicodeStringPiece(result).data());
+    }
 }
 
 
@@ -419,7 +471,8 @@ UChar *DecimalFormatTest::ReadAndConvertFile(const char *fileName, int32_t &ulen
     fileBufNoBOM = fileBuf + 3;
     amtReadNoBOM = amtRead - 3;
     if (fileSize<3 || uprv_strncmp(fileBuf, "\xEF\xBB\xBF", 3) != 0) {
-        errln("Test data file %s is missing its BOM", fileName);
+        // TODO:  restore this check.
+        // errln("Test data file %s is missing its BOM", fileName);
         fileBufNoBOM = fileBuf;
         amtReadNoBOM = amtRead;
     }

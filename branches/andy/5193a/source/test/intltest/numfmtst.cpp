@@ -6008,6 +6008,11 @@ void NumberFormatTest::TestDecimal() {
         ASSERT_EQUALS("123.45", f.getDecimalNumber(status));
         ASSERT_SUCCESS(status);
 
+        f.setDecimalNumber("4.5678E7", status);
+        int32_t n;
+        n = f.getLong();
+        ASSERT_EQUALS(45678000, n);
+
         status = U_ZERO_ERROR;
         f.setDecimalNumber("-123", status);
         ASSERT_SUCCESS(status);
@@ -6081,9 +6086,11 @@ void NumberFormatTest::TestDecimal() {
         Formattable result;
         fmtr->parse(input, result, status);
         ASSERT_SUCCESS(status);
-        std::cout << result.getDecimalNumber(status).data();
+        ASSERT_EQUALS(0, strcmp("0.0184", result.getDecimalNumber(status).data()));
+        //std::cout << result.getDecimalNumber(status).data();
         delete fmtr;
     }
+
 }
 
 #endif /* #if !UCONFIG_NO_FORMATTING */

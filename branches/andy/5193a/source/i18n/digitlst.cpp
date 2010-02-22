@@ -246,19 +246,6 @@ DigitList::setRoundingMode(DecimalFormat::ERoundingMode m) {
   
 }
 
-// -------------------------------------
-//  Set to zero, but preserve sign 
-void  
-DigitList::setToZero() {
-    uint8_t signbit = fDecNumber->bits & DECNEG;
-    uprv_decNumberZero(fDecNumber);
-    fDecNumber->bits |= signbit; 
-    fDouble = 0.0;
-    fHaveDouble = TRUE;
-    if (signbit != 0) {
-       fDouble /= -1;
-    }
-}
 
 // -------------------------------------
 
@@ -461,19 +448,22 @@ DigitList::getDouble() const
  */
 int32_t DigitList::getLong() /*const*/
 {
+    int32_t result = 0;
     if (fDecNumber->digits + fDecNumber->exponent > 10) {
         // Overflow, absolute value too big.
-        return 0;
+        return result;
     }
-    // TODO:  copy the number; do not trash the original.
     if (fDecNumber->exponent != 0) {
         // Force to an integer, with zero exponent, rounding if necessary.
+        //   (decNumberToInt32 will only work if the exponent is exactly zero.)
+        DigitList copy(*this);
         DigitList zero;
-        uprv_decNumberQuantize(fDecNumber, fDecNumber, zero.fDecNumber, &fContext);
+        uprv_decNumberQuantize(copy.fDecNumber, copy.fDecNumber, zero.fDecNumber, &fContext);
+        result = uprv_decNumberToInt32(copy.fDecNumber, &fContext);
+    } else {
+        result = uprv_decNumberToInt32(fDecNumber, &fContext);
     }
-
-    int32_t n = uprv_decNumberToInt32(fDecNumber, &fContext);
-    return n;
+    return result;
 }
 
 
@@ -490,19 +480,23 @@ int64_t DigitList::getInt64() /*const*/ {
         // Overflow, absolute value too big.
         return 0;
     }
+    decNumber *workingNum = fDecNumber;
+
     if (fDecNumber->exponent != 0) {
         // Force to an integer, with zero exponent, rounding if necessary.
+        DigitList copy(*this);
         DigitList zero;
-        uprv_decNumberQuantize(fDecNumber, fDecNumber, zero.fDecNumber, &fContext);
+        uprv_decNumberQuantize(copy.fDecNumber, copy.fDecNumber, zero.fDecNumber, &fContext);
+        workingNum = copy.fDecNumber;
     }
 
     uint64_t value = 0;
-    int32_t numDigits =fDecNumber->digits;
+    int32_t numDigits = workingNum->digits;
     for (int i = numDigits-1; i>=0 ; --i) {
-        int v = fDecNumber->lsu[i];
+        int v = workingNum->lsu[i];
         value = value * (uint64_t)10 + (uint64_t)v;
     }
-    if (decNumberIsNegative(fDecNumber)) {
+    if (decNumberIsNegative(workingNum)) {
         value = ~value;
         value += 1;
     }
@@ -514,7 +508,7 @@ int64_t DigitList::getInt64() /*const*/ {
     if (numDigits == 19) {
         if (( decNumberIsNegative(fDecNumber) && svalue>0) ||
             (!decNumberIsNegative(fDecNumber) && svalue<0)) {
-            value = 0;
+            svalue = 0;
         }
     }
         
@@ -573,7 +567,7 @@ DigitList::fitsIntoLong(UBool ignoreNegativeZero) /*const*/
         return TRUE;
     }
 
-    // TODO:  Need to cache these constants; construction is relatively costly.
+    // TODO:  Should cache these constants; construction is relatively costly.
     //        But not of huge consequence; they're only needed for 10 digit ints.
     UErrorCode status = U_ZERO_ERROR;
     DigitList min32; min32.set("-2147483648", status);
@@ -620,7 +614,7 @@ DigitList::fitsIntoInt64(UBool ignoreNegativeZero) /*const*/
         return TRUE;
     }
 
-    // TODO:  Need to cache these constants; construction is relatively costly.
+    // TODO:  Should cache these constants; construction is relatively costly.
     //        But not of huge consequence; they're only needed for 19 digit ints.
     UErrorCode status = U_ZERO_ERROR;
     DigitList min64; min64.set("-9223372036854775808", status);
@@ -641,14 +635,11 @@ DigitList::fitsIntoInt64(UBool ignoreNegativeZero) /*const*/
 // -------------------------------------
 
 void
-DigitList::set(int32_t source, int32_t maximumDigits)
+DigitList::set(int32_t source)
 {
-    set((int64_t)source, maximumDigits);
-
-    if (maximumDigits == 0) {
-        fDouble = source;
-        fHaveDouble = TRUE;
-    }
+    set((int64_t)source);
+    fDouble = source;
+    fHaveDouble = TRUE;
 }
 
 // -------------------------------------
@@ -657,30 +648,26 @@ DigitList::set(int32_t source, int32_t maximumDigits)
  * there is no maximum -- generate all digits.
  */
 void
-DigitList::set(int64_t source, int32_t maximumDigits)
+DigitList::set(int64_t source)
 {
     char str[MAX_DIGITS+2];   // Leave room for sign and trailing nul.
     formatBase10(source, str);
+    U_ASSERT(uprv_strlen(str) < sizeof(str));
 
-    if (maximumDigits == 0) {
-        maximumDigits = MAX_DIGITS;
-        // MAX_DIGITS is 19, big enough for a complete int64_t
-    }
-
-    int32_t savedDigits = fContext.digits;
-    fContext.digits = maximumDigits;
     uprv_decNumberFromString(fDecNumber, str, &fContext);
-    fContext.digits = savedDigits;
-    fHaveDouble = FALSE;
+    fDouble = (double)source;
+    fHaveDouble = TRUE;
 }
 
 
 // -------------------------------------
 /**
  * Set the DigitList from a decimal number string.
- * TODO:  sort out terminated vs non-terminated strings.
- *        decNumber wants terminated, is not easily changed.
- *        StringPiece doesn't know about terminated.
+ *
+ * The incoming string _must_ be nul terminated, even thought it is arriving
+ * as a StringPiece because that is what the decNumber library wants.
+ * We can get away with this for an internal function; it would not
+ * be acceptable for a public API.
  */
 void
 DigitList::set(const StringPiece &source, UErrorCode &status) {
@@ -706,7 +693,6 @@ DigitList::set(const StringPiece &source, UErrorCode &status) {
     if ((fContext.status & DEC_Conversion_syntax) != 0) {
         status = U_DECIMAL_NUMBER_SYNTAX_ERROR;
     }
-    // TODO:  What to do with other errors?
     fHaveDouble = FALSE;
 }   
 
@@ -714,45 +700,22 @@ DigitList::set(const StringPiece &source, UErrorCode &status) {
  * Set the digit list to a representation of the given double value.
  * This method supports both fixed-point and exponential notation.
  * @param source Value to be converted.
- * @param maximumDigits The most fractional or total digits which should
- * be converted.  If total digits, and the value is zero, then
- * there is no maximum -- generate all digits.
- * @param fixedPoint If true, then maximumDigits is the maximum
- * fractional digits to be converted.  If false, total digits.
  */
 void
-DigitList::set(double source, int32_t maximumDigits, UBool fixedPoint)
+DigitList::set(double source)
 {
     // for now, simple implementation; later, do proper IEEE stuff
     char rep[MAX_DIGITS + 8]; // Extra space for '+', '.', e+NNN, and '\0' (actually +8 is enough)
 
-    // fIsPositive = !uprv_isNegative(source);    // Allow +0 and -0
-
     // Generate a representation of the form /[+-][0-9]+e[+-][0-9]+/
     sprintf(rep, "%+1.*e", MAX_DBL_DIGITS - 1, source);
+    U_ASSERT(uprv_strlen(rep) < sizeof(rep));
 
     // Create a decNumber from the string.
     uprv_decNumberFromString(fDecNumber, rep, &fContext);
     uprv_decNumberTrim(fDecNumber);
-
     fDouble = source;
     fHaveDouble = TRUE;
-
-    if (fixedPoint && (fDecNumber->exponent < -maximumDigits)) {
-        // Fixed point rounding needed.
-        decNumber  t;     // Temporary 1 digit decimal number w/ right no. of fraction digits.
-        uprv_decNumberZero(&t);
-        t.exponent = -maximumDigits;
-        t.lsu[0] = 1;
-        uprv_decNumberQuantize(fDecNumber, fDecNumber, &t, &fContext);   // Do the rounding.
-        uprv_decNumberTrim(fDecNumber);
-        fHaveDouble = FALSE;
-    }
-
-    if (!fixedPoint && maximumDigits > 0 && maximumDigits < fDecNumber->digits) {
-        round(maximumDigits);
-        fHaveDouble = FALSE;
-    }
 }
 
 // -------------------------------------

@@ -208,33 +208,26 @@ public:
     UBool fitsIntoInt64(UBool ignoreNegativeZero) /*const*/;
 
     /**
-     * Utility routine to set the value of the digit list from a double
-     * The maximum fraction digits helps us round properly.
-     *     TODO:  remove maximumDigits, make all rounding use rounding functions.
-     * For all digits choose set(number, 0, FALSE);
+     * Utility routine to set the value of the digit list from a double.
      * @param source The value to be set
-     * @param maximunDigits The maximum number of digits to be shown
-     * @param fixedPoint True if the point is fixed
      */
-    void set(double source, int32_t maximumDigits, UBool fixedPoint = TRUE);
+    void set(double source);
 
     /**
      * Utility routine to set the value of the digit list from a long.
      * If a non-zero maximumDigits is specified, no more than that number of
      * significant digits will be produced.
      * @param source The value to be set
-     * @param maximunDigits The maximum number of digits to be shown
      */
-    void set(int32_t source, int32_t maximumDigits = 0);
+    void set(int32_t source);
 
     /**
      * Utility routine to set the value of the digit list from an int64.
      * If a non-zero maximumDigits is specified, no more than that number of
      * significant digits will be produced.
      * @param source The value to be set
-     * @param maximunDigits The maximum number of digits to be shown
      */
-    void set(int64_t source, int32_t maximumDigits = 0);
+    void set(int64_t source);
 
    /**
      * Utility routine to set the value of the digit list from a decimal number
@@ -281,8 +274,8 @@ public:
     /**  Remove trailing fraction zeros, adjust exponent accordingly. */
     void     trim();
 
-    /** Set to zero, but preserve sign */
-    void     setToZero();
+    /** Set to zero */
+    void     setToZero() {uprv_decNumberZero(fDecNumber);};
 
     /** get the number of digits in the decimal number */
     int32_t  digits() const {return fDecNumber->digits;};

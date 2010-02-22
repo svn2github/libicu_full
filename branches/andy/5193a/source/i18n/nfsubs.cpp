@@ -1041,8 +1041,9 @@ FractionalPartSubstitution::doSubstitution(double number, UnicodeString& toInser
     //          }
 
     DigitList dl;
-    dl.set(number, 20, TRUE);
-    dl.reduce();     // Removes any trailing zeros.
+    dl.set(number);
+    dl.roundFixedPoint(20);     // round to 20 fraction digits.
+    dl.reduce();                // Removes any trailing zeros.
     
     UBool pad = FALSE;
     for (int32_t didx = dl.getCount()-1; didx>=dl.getDecimalAt(); didx--) {

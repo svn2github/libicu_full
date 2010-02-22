@@ -1845,7 +1845,13 @@ private:
 
     DecimalFormat(); // default constructor not implemented
 
-    int32_t precision(UBool isIntegral) const;
+    int32_t precision() const;
+
+    /**
+     *   Initialize all fields of a new DecimalFormatter.
+     *      Common code for use by constructors.
+     */
+    void init();
 
     /**
      * Do real work of constructing a new DecimalFormat.
@@ -2016,8 +2022,6 @@ private:
 
     void expandAffixes(const UnicodeString* pluralCount);
 
-    static double round(double a, ERoundingMode mode, UBool isNegative);
-
     void addPadding(UnicodeString& appendTo,
                     FieldPositionHandler& handler,
                     int32_t prefixLen, int32_t suffixLen) const;
@@ -2098,7 +2102,7 @@ private:
      */
     ChoiceFormat*           fCurrencyChoice;
 
-    int32_t                 fMultiplier;
+    DigitList *             fMultiplier;   // NULL for multiplier of one
     int32_t                 fGroupingSize;
     int32_t                 fGroupingSize2;
     UBool                   fDecimalSeparatorAlwaysShown;
@@ -2113,11 +2117,8 @@ private:
     UBool                   fExponentSignAlwaysShown;
 
     /* If fRoundingIncrement is NULL, there is no rounding.  Otherwise, round to
-     * fRoundingIncrement.getDouble().  Since this operation may be expensive,
-     * we cache the result in fRoundingDouble.  All methods that update
-     * fRoundingIncrement also update fRoundingDouble. */
+     * fRoundingIncrement.getDouble().  */
     DigitList*              fRoundingIncrement;
-    /*transient*/ double    fRoundingDouble;
     ERoundingMode           fRoundingMode;
 
     UChar32                 fPad;

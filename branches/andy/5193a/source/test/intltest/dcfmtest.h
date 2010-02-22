@@ -36,12 +36,17 @@ public:
     virtual UChar *ReadAndConvertFile(const char *fileName, int32_t &len, UErrorCode &status);
     virtual const char *getPath(char buffer[2048], const char *filename);
     virtual void execParseTest(int32_t lineNum,
-                              const UnicodeString &locale,
                               const UnicodeString &inputText,
-                              const UnicodeString &expectedDecimal,
                               const UnicodeString &expectedType,
+                              const UnicodeString &expectedDecimal,
                               UErrorCode &status);
 
+    virtual void execFormatTest(int32_t lineNum,
+                               const UnicodeString &pattern,
+                               const UnicodeString &round, 
+                               const UnicodeString &input,
+                               const UnicodeString &expected,
+                               UErrorCode &status);
 };
 
 #endif   // !UCONFIG_NO_REGULAR_EXPRESSIONS
