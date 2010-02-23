@@ -58,13 +58,6 @@ static const char I64_MIN_REP[] = "9223372036854775808";
 
 U_NAMESPACE_BEGIN
 
-
-// Export the specific MaybeStackArray instantiation that DigitList uses.
-// Doesn't actually do anything, since all methods are inline, but stops
-//   a compiler warning on Visual Studio.
-template class U_I18N_API MaybeStackArray<char, sizeof(decNumber) + DigitList::DEFAULT_DIGITS>;
- 
-
 // -------------------------------------
 // default constructor
 

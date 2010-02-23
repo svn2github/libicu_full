@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT:
- * Copyright (c) 2002-2009, International Business Machines Corporation and
+ * Copyright (c) 2002-2010, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 
@@ -201,7 +201,7 @@ void DecimalFormatTest::DataDrivenTests() {
     //
     UnicodeString testString(FALSE, testData, len);
 
-    RegexMatcher    parseLineMat(UNICODE_STRING_SIMPLE(
+    RegexMatcher    parseLineMat(UnicodeString(
             "(?i)\\s*parse\\s+"
             "\"([^\"]*)\"\\s+"           // Capture group 1: input text
             "([ild])\\s+"                // Capture group 2: expected parsed type
@@ -209,7 +209,7 @@ void DecimalFormatTest::DataDrivenTests() {
             "\\s*(?:#.*)?"),             // Trailing comment
          0, status);
 
-    RegexMatcher    formatLineMat(UNICODE_STRING_SIMPLE(
+    RegexMatcher    formatLineMat(UnicodeString(
             "(?i)\\s*format\\s+"
             "(\\S+)\\s+"                 // Capture group 1: pattern
             "(ceiling|floor|down|up|halfeven|halfdown|halfup)\\s+"  // Capture group 2: Rounding Mode

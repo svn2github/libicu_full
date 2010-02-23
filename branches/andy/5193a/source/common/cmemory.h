@@ -164,7 +164,7 @@ public:
  * (takes ownership of) another array.
  */
 template<typename T, int32_t stackCapacity>
-class U_COMMON_API MaybeStackArray {
+class MaybeStackArray {
 public:
     /**
      * Default constructor initializes with internal T[stackCapacity] buffer.
@@ -250,16 +250,16 @@ private:
         }
     }
     /* No comparison operators with other MaybeStackArray's. */
-    bool operator==(const MaybeStackArray &other);
-    bool operator!=(const MaybeStackArray &other);
+    bool operator==(const MaybeStackArray &other) {return FALSE;};
+    bool operator!=(const MaybeStackArray &other) {return TRUE;};
     /* No ownership transfer: No copy constructor, no assignment operator. */
-    MaybeStackArray(const MaybeStackArray &other);
-    void operator=(const MaybeStackArray &other);
+    MaybeStackArray(const MaybeStackArray &other) {};
+    void operator=(const MaybeStackArray &other) {};
     /* No heap allocation. Use only on the stack. */
-    static void * U_EXPORT2 operator new(size_t size);
-    static void * U_EXPORT2 operator new[](size_t size);
+    static void * U_EXPORT2 operator new(size_t size) {return NULL;};
+    static void * U_EXPORT2 operator new[](size_t size) {return NULL;};
 #if U_HAVE_PLACEMENT_NEW
-    static void * U_EXPORT2 operator new(size_t, void *ptr);
+    static void * U_EXPORT2 operator new(size_t, void *ptr) {return NULL;};
 #endif
 };
 

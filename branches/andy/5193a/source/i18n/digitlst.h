@@ -43,12 +43,21 @@ typedef enum EDigitListValues {
     MAX_DIGITS = MAX_I64_DIGITS,
     MAX_EXPONENT = DBL_DIG,
     DIGIT_PADDING = 3,
+    DEFAULT_DIGITS = 40,   // Initial storage size, will grow as needed.
 
      // "+." + fDigits + "e" + fDecimalAt
     MAX_DEC_DIGITS = MAX_DIGITS + DIGIT_PADDING + MAX_EXPONENT
 } EDigitListValues;
 
 U_NAMESPACE_BEGIN
+
+// Export an explicit template instantiation of the MaybeStackArray that
+//    is used as a data member of DigitList.
+//
+//    MSVC requires this, even though it should not be necessary. 
+//    No direct access to the MaybeStackArray leaks out of the i18n library.
+template class U_I18N_API MaybeStackArray<char, sizeof(decNumber) + DEFAULT_DIGITS>;
+
 
 /**
  * Digit List is actually a Decimal Floating Point number.
@@ -105,14 +114,6 @@ U_NAMESPACE_BEGIN
  */
 class U_I18N_API DigitList : public UMemory { // Declare external to make compiler happy
 public:
-
-    enum {
-        /**
-         *  The number of digits allocated by default.
-         *  The storage for the number will grow if needed.
-         */
-        DEFAULT_DIGITS = 40
-    };
 
     DigitList();
     ~DigitList();
@@ -363,6 +364,7 @@ private:
 
     UBool shouldRoundUp(int32_t maximumDigits) const;
 };
+
 
 U_NAMESPACE_END
 
