@@ -58,6 +58,13 @@ static const char I64_MIN_REP[] = "9223372036854775808";
 
 U_NAMESPACE_BEGIN
 
+
+// Export the specific MaybeStackArray instantiation that DigitList uses.
+// Doesn't actually do anything, since all methods are inline, but stops
+//   a compiler warning on Visual Studio.
+template class U_I18N_API MaybeStackArray<char, sizeof(decNumber) + DigitList::DEFAULT_DIGITS>;
+ 
+
 // -------------------------------------
 // default constructor
 
@@ -277,7 +284,7 @@ DigitList::setDecimalAt(int32_t d) {
 int32_t  
 DigitList::getDecimalAt() {
     U_ASSERT((fDecNumber->bits & DECSPECIAL) == 0);  // Not Infinity or NaN
-    if (decNumberIsZero(fDecNumber) || (fDecNumber->bits & DECSPECIAL != 0)) {
+    if (decNumberIsZero(fDecNumber) || ((fDecNumber->bits & DECSPECIAL) != 0)) {
         return fDecNumber->exponent;  // Exponent should be zero for these cases.
     }
     return fDecNumber->exponent + fDecNumber->digits;
@@ -837,6 +844,7 @@ DigitList::isZero() const
 {
     return decNumberIsZero(fDecNumber);
 }
+
 
 U_NAMESPACE_END
 #endif // #if !UCONFIG_NO_FORMATTING

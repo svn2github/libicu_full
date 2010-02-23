@@ -105,6 +105,15 @@ U_NAMESPACE_BEGIN
  */
 class U_I18N_API DigitList : public UMemory { // Declare external to make compiler happy
 public:
+
+    enum {
+        /**
+         *  The number of digits allocated by default.
+         *  The storage for the number will grow if needed.
+         */
+        DEFAULT_DIGITS = 40
+    };
+
     DigitList();
     ~DigitList();
 
@@ -339,10 +348,6 @@ private:
 
 private:
 
-    enum {
-        DEFAULT_DIGITS = 40
-    };
-
     decContext    fContext;
     decNumber     *fDecNumber;
     MaybeStackArray<char, sizeof(decNumber) + DEFAULT_DIGITS>  fStorage;
@@ -358,7 +363,7 @@ private:
 
     UBool shouldRoundUp(int32_t maximumDigits) const;
 };
- 
+
 U_NAMESPACE_END
 
 #endif // #if !UCONFIG_NO_FORMATTING

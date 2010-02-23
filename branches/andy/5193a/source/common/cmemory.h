@@ -1,7 +1,7 @@
 /*
 ******************************************************************************
 *
-*   Copyright (C) 1997-2009, International Business Machines
+*   Copyright (C) 1997-2010, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 ******************************************************************************
@@ -164,7 +164,7 @@ public:
  * (takes ownership of) another array.
  */
 template<typename T, int32_t stackCapacity>
-class MaybeStackArray {
+class U_COMMON_API MaybeStackArray {
 public:
     /**
      * Default constructor initializes with internal T[stackCapacity] buffer.
