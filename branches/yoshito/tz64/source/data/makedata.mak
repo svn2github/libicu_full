@@ -288,7 +288,7 @@ CURR_SOURCE=$(CURR_SOURCE) $(CURR_SOURCE_LOCAL)
 CURR_FILES = curr\root.txt supplementalData.txt $(CURR_ALIAS_SOURCE) $(CURR_SOURCE)
 CURR_RES_FILES = $(CURR_FILES:.txt =.res curr\)
 CURR_RES_FILES = $(CURR_RES_FILES:.txt=.res)
-CURR_RES_FILES = $(CURR_RES_FILES:curr\ =curr\)
+CURR_RES_FILES = curr\pool.res $(CURR_RES_FILES:curr\ =curr\)
 ALL_RES = $(ALL_RES) curr\res_index.res
 !ENDIF
 
@@ -309,7 +309,7 @@ LANG_SOURCE=$(LANG_SOURCE) $(LANG_SOURCE_LOCAL)
 LANG_FILES = lang\root.txt $(LANG_ALIAS_SOURCE) $(LANG_SOURCE)
 LANG_RES_FILES = $(LANG_FILES:.txt =.res lang\)
 LANG_RES_FILES = $(LANG_RES_FILES:.txt=.res)
-LANG_RES_FILES = $(LANG_RES_FILES:lang\ =lang\)
+LANG_RES_FILES = lang\pool.res $(LANG_RES_FILES:lang\ =lang\)
 ALL_RES = $(ALL_RES) lang\res_index.res
 !ENDIF
 
@@ -330,7 +330,7 @@ REGION_SOURCE=$(REGION_SOURCE) $(REGION_SOURCE_LOCAL)
 REGION_FILES = region\root.txt $(REGION_ALIAS_SOURCE) $(REGION_SOURCE)
 REGION_RES_FILES = $(REGION_FILES:.txt =.res region\)
 REGION_RES_FILES = $(REGION_RES_FILES:.txt=.res)
-REGION_RES_FILES = $(REGION_RES_FILES:region\ =region\)
+REGION_RES_FILES = region\pool.res $(REGION_RES_FILES:region\ =region\)
 ALL_RES = $(ALL_RES) region\res_index.res
 !ENDIF
 
@@ -351,7 +351,7 @@ ZONE_SOURCE=$(ZONE_SOURCE) $(ZONE_SOURCE_LOCAL)
 ZONE_FILES = zone\root.txt $(ZONE_ALIAS_SOURCE) $(ZONE_SOURCE)
 ZONE_RES_FILES = $(ZONE_FILES:.txt =.res zone\)
 ZONE_RES_FILES = $(ZONE_RES_FILES:.txt=.res)
-ZONE_RES_FILES = $(ZONE_RES_FILES:zone\ =zone\)
+ZONE_RES_FILES = zone\pool.res $(ZONE_RES_FILES:zone\ =zone\)
 ALL_RES = $(ALL_RES) zone\res_index.res
 !ENDIF
 
@@ -475,7 +475,7 @@ ALL : GODATA "$(ICU_LIB_TARGET)" "$(TESTDATAOUT)\testdata.dat"
 # Changed in makedata.mak revision 1.117. See Jitterbug 4497.
 # Command line:
 #   C:\svn\icuproj\icu\trunk\source\data>nmake -f makedata.mak ICUMAKE=C:\svn\icuproj\icu\trunk\source\data\ CFG=x86\Debug uni-core-data
-uni-core-data: GODATA "$(ICUBLD_PKG)\uprops.icu" "$(ICUBLD_PKG)\ucase.icu" "$(ICUBLD_PKG)\ubidi.icu" "$(ICUTMP)\unorm_props_data.c"
+uni-core-data: GODATA "$(ICUBLD_PKG)\uprops.icu" "$(ICUBLD_PKG)\ucase.icu" "$(ICUBLD_PKG)\ubidi.icu"
 	@echo Unicode .icu files built to "$(ICUBLD_PKG)"
 	@echo Unicode .c source files built to "$(ICUTMP)"
 
@@ -726,9 +726,9 @@ CLEAN : GODATA
 # Inference rule for creating resource bundle files
 {$(ICUSRCDATA_RELATIVE_PATH)\$(ICULOC)}.txt.res::
 	@echo Making Locale Resource Bundle files
-	@"$(ICUTOOLS)\genrb\$(CFG)\genrb" --usePoolBundle -k -d"$(ICUBLD_PKG)" $<
+	@"$(ICUTOOLS)\genrb\$(CFG)\genrb" --usePoolBundle $(ICUSRCDATA_RELATIVE_PATH)\$(ICULOC) -k -d"$(ICUBLD_PKG)" $<
 
-# copy the pool.res file from the source folder to the build output folder
+# copy the locales/pool.res file from the source folder to the build output folder
 # and swap it to native endianness
 pool.res: $(ICUSRCDATA_RELATIVE_PATH)\$(ICULOC)\pool.res
 	"$(ICUPBIN)\icupkg" -tl "$(ICUSRCDATA_RELATIVE_PATH)\$(ICULOC)\pool.res" pool.res
@@ -748,7 +748,12 @@ res_index:table(nofallback) {
 
 {$(ICUSRCDATA_RELATIVE_PATH)\curr}.txt{curr}.res::
 	@echo Making currency display name files
-	@"$(ICUTOOLS)\genrb\$(CFG)\genrb" -k -i "$(ICUBLD_PKG)" -d"$(ICUBLD_PKG)\curr" $<
+	@"$(ICUTOOLS)\genrb\$(CFG)\genrb" --usePoolBundle $(ICUSRCDATA_RELATIVE_PATH)\curr -k -i "$(ICUBLD_PKG)" -d"$(ICUBLD_PKG)\curr" $<
+
+# copy the curr/pool.res file from the source folder to the build output folder
+# and swap it to native endianness
+curr\pool.res: $(ICUSRCDATA_RELATIVE_PATH)\curr\pool.res
+	"$(ICUPBIN)\icupkg" -tl "$(ICUSRCDATA_RELATIVE_PATH)\curr\pool.res" curr\pool.res
 
 curr\res_index.res:
 	@echo Generating <<curr\res_index.txt
@@ -765,7 +770,12 @@ res_index:table(nofallback) {
 
 {$(ICUSRCDATA_RELATIVE_PATH)\lang}.txt{lang}.res::
 	@echo Making language/script display name files
-	@"$(ICUTOOLS)\genrb\$(CFG)\genrb" -k -i "$(ICUBLD_PKG)" -d"$(ICUBLD_PKG)\lang" $<
+	@"$(ICUTOOLS)\genrb\$(CFG)\genrb" --usePoolBundle $(ICUSRCDATA_RELATIVE_PATH)\lang -k -i "$(ICUBLD_PKG)" -d"$(ICUBLD_PKG)\lang" $<
+
+# copy the lang/pool.res file from the source folder to the build output folder
+# and swap it to native endianness
+lang\pool.res: $(ICUSRCDATA_RELATIVE_PATH)\lang\pool.res
+	"$(ICUPBIN)\icupkg" -tl "$(ICUSRCDATA_RELATIVE_PATH)\lang\pool.res" lang\pool.res
 
 lang\res_index.res:
 	@echo Generating <<lang\res_index.txt
@@ -782,7 +792,12 @@ res_index:table(nofallback) {
 
 {$(ICUSRCDATA_RELATIVE_PATH)\region}.txt{region}.res::
 	@echo Making region display name files
-	@"$(ICUTOOLS)\genrb\$(CFG)\genrb" -k -i "$(ICUBLD_PKG)" -d"$(ICUBLD_PKG)\region" $<
+	@"$(ICUTOOLS)\genrb\$(CFG)\genrb" --usePoolBundle $(ICUSRCDATA_RELATIVE_PATH)\region -k -i "$(ICUBLD_PKG)" -d"$(ICUBLD_PKG)\region" $<
+
+# copy the region/pool.res file from the source folder to the build output folder
+# and swap it to native endianness
+region\pool.res: $(ICUSRCDATA_RELATIVE_PATH)\region\pool.res
+	"$(ICUPBIN)\icupkg" -tl "$(ICUSRCDATA_RELATIVE_PATH)\region\pool.res" region\pool.res
 
 region\res_index.res:
 	@echo Generating <<region\res_index.txt
@@ -799,7 +814,12 @@ res_index:table(nofallback) {
 
 {$(ICUSRCDATA_RELATIVE_PATH)\zone}.txt{zone}.res::
 	@echo Making time zone display name files
-	@"$(ICUTOOLS)\genrb\$(CFG)\genrb" -k -i "$(ICUBLD_PKG)" -d"$(ICUBLD_PKG)\zone" $<
+	@"$(ICUTOOLS)\genrb\$(CFG)\genrb" --usePoolBundle $(ICUSRCDATA_RELATIVE_PATH)\zone -k -i "$(ICUBLD_PKG)" -d"$(ICUBLD_PKG)\zone" $<
+
+# copy the zone/pool.res file from the source folder to the build output folder
+# and swap it to native endianness
+zone\pool.res: $(ICUSRCDATA_RELATIVE_PATH)\zone\pool.res
+	"$(ICUPBIN)\icupkg" -tl "$(ICUSRCDATA_RELATIVE_PATH)\zone\pool.res" zone\pool.res
 
 zone\res_index.res:
 	@echo Generating <<zone\res_index.txt
@@ -901,11 +921,6 @@ res_index:table(nofallback) {
 	@echo Creating data file for Unicode Case Mapping Properties
 	@"$(ICUTOOLS)\gencase\$(CFG)\gencase" -u $(UNICODE_VERSION) -i "$(ICUBLD_PKG)" -s "$(ICUUNIDATA)" -d "$(ICUBLD_PKG)"
 	@"$(ICUTOOLS)\gencase\$(CFG)\gencase" --csource -u $(UNICODE_VERSION) -i "$(ICUBLD_PKG)" -s "$(ICUUNIDATA)" -d "$(ICUTMP)"
-
-# Targets for normalization
-"$(ICUTMP)\unorm_props_data.c": "$(ICUUNIDATA)\*.txt" "$(ICUTOOLS)\gennorm\$(CFG)\gennorm.exe" "$(ICUBLD_PKG)\pnames.icu" "$(ICUBLD_PKG)\uprops.icu" "$(ICUBLD_PKG)\ucase.icu"
-	@echo Creating data file for Unicode Normalization
-	@"$(ICUTOOLS)\gennorm\$(CFG)\gennorm" --csource -u $(UNICODE_VERSION) -i "$(ICUBLD_PKG)" -s "$(ICUUNIDATA)" -d "$(ICUTMP)"
 
 # Targets for converters
 "$(ICUBLD_PKG)\cnvalias.icu" : {"$(ICUSRCDATA)\$(ICUUCM)"}\convrtrs.txt "$(ICUTOOLS)\gencnval\$(CFG)\gencnval.exe"
