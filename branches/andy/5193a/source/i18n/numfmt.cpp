@@ -211,6 +211,7 @@ NumberFormat::operator=(const NumberFormat& rhs)
 {
     if (this != &rhs)
     {
+        Format::operator=(rhs);
         fGroupingUsed = rhs.fGroupingUsed;
         fMaxIntegerDigits = rhs.fMaxIntegerDigits;
         fMinIntegerDigits = rhs.fMinIntegerDigits;

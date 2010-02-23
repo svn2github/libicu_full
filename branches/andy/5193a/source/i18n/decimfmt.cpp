@@ -598,6 +598,7 @@ DecimalFormat::~DecimalFormat()
     delete fNegPrefixPattern;
     delete fNegSuffixPattern;
     delete fCurrencyChoice;
+    delete fMultiplier;
     delete fSymbols;
     delete fRoundingIncrement;
     deleteHashForAffixPattern();
@@ -610,7 +611,7 @@ DecimalFormat::~DecimalFormat()
 // copy constructor
 
 DecimalFormat::DecimalFormat(const DecimalFormat &source) :
-    NumberFormat(*this) {
+    NumberFormat(source) {
     init();
     *this = source;
 }
