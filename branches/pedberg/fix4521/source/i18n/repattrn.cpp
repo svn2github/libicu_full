@@ -17,6 +17,7 @@
 #include "uassert.h"
 #include "uvector.h"
 #include "uvectr32.h"
+#include "uvectr64.h"
 #include "regexcmp.h"
 #include "regeximp.h"
 #include "regexst.h"

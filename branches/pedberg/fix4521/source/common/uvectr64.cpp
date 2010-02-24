@@ -124,7 +124,7 @@ UBool UVector64::expandCapacity(int32_t minimumCapacity, UErrorCode &status) {
     if (maxCapacity > 0 && newCap > maxCapacity) {
         newCap = maxCapacity;
     }
-    int32_t* newElems = (int64_t *)uprv_realloc(elements, sizeof(int64_t)*newCap);
+    int64_t* newElems = (int64_t *)uprv_realloc(elements, sizeof(int64_t)*newCap);
     if (newElems == NULL) {
         // We keep the original contents on the memory failure on realloc.
         status = U_MEMORY_ALLOCATION_ERROR;

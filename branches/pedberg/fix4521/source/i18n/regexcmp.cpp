@@ -26,6 +26,7 @@
 #include "cmemory.h"
 #include "cstring.h"
 #include "uvectr32.h"
+#include "uvectr64.h"
 #include "uassert.h"
 #include "ucln_in.h"
 #include "uinvchar.h"

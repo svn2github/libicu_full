@@ -23,6 +23,7 @@
 #include "cmemory.h"
 #include "uvector.h"
 #include "uvectr32.h"
+#include "uvectr64.h"
 #include "regeximp.h"
 #include "regexst.h"
 #include "regextxt.h"
@@ -3506,7 +3507,7 @@ GC_Done:
                 U_ASSERT(opValue>0 && opValue < fp->fPatIdx-2);
                 int32_t initOp = pat[opValue];
                 U_ASSERT(URX_TYPE(initOp) == URX_CTR_INIT);
-                int32_t *pCounter = &fp->fExtra[URX_VAL(initOp)];
+                int64_t *pCounter = &fp->fExtra[URX_VAL(initOp)];
                 int32_t minCount  = pat[opValue+2];
                 int32_t maxCount = pat[opValue+3];
                 // Increment the counter.  Note: we DIDN'T worry about counter
@@ -3516,7 +3517,7 @@ GC_Done:
                 //   in UChar32s is still an int32_t.
                 (*pCounter)++;
                 U_ASSERT(*pCounter > 0);
-                if ((uint32_t)*pCounter >= (uint32_t)maxCount) {
+                if ((uint64_t)*pCounter >= (uint32_t)maxCount) {
                     U_ASSERT(*pCounter == maxCount || maxCount == -1);
                     break;
                 }
@@ -3559,7 +3560,7 @@ GC_Done:
                 U_ASSERT(opValue>0 && opValue < fp->fPatIdx-2);
                 int32_t initOp = pat[opValue];
                 U_ASSERT(URX_TYPE(initOp) == URX_CTR_INIT_NG);
-                int32_t *pCounter = &fp->fExtra[URX_VAL(initOp)];
+                int64_t *pCounter = &fp->fExtra[URX_VAL(initOp)];
                 int32_t minCount  = pat[opValue+2];
                 int32_t maxCount = pat[opValue+3];
                 // Increment the counter.  Note: we DIDN'T worry about counter
@@ -3570,7 +3571,7 @@ GC_Done:
                 (*pCounter)++;
                 U_ASSERT(*pCounter > 0);
 
-                if ((uint32_t)*pCounter >= (uint32_t)maxCount) {
+                if ((uint64_t)*pCounter >= (uint32_t)maxCount) {
                     // The loop has matched the maximum permitted number of times.
                     //   Break out of here with no action.  Matching will
                     //   continue with the following pattern.
@@ -4318,7 +4319,7 @@ void RegexMatcher::MatchChunkAt(int32_t startIdx, UBool toEnd, UErrorCode &statu
     
     //  Cache frequently referenced items from the compiled pattern
     //
-    int32_t             *pat           = fPattern->fCompiledPat->getBuffer();
+    int64_t             *pat           = fPattern->fCompiledPat->getBuffer();
     
     const UChar         *litText       = fPattern->fLiteralText.getBuffer();
     UVector             *sets          = fPattern->fSets;
@@ -5178,7 +5179,7 @@ GC_Done:
                 U_ASSERT(opValue>0 && opValue < fp->fPatIdx-2);
                 int32_t initOp = pat[opValue];
                 U_ASSERT(URX_TYPE(initOp) == URX_CTR_INIT);
-                int32_t *pCounter = &fp->fExtra[URX_VAL(initOp)];
+                int64_t *pCounter = &fp->fExtra[URX_VAL(initOp)];
                 int32_t minCount  = pat[opValue+2];
                 int32_t maxCount = pat[opValue+3];
                 // Increment the counter.  Note: we DIDN'T worry about counter
@@ -5188,7 +5189,7 @@ GC_Done:
                 //   in UChar32s is still an int32_t.
                 (*pCounter)++;
                 U_ASSERT(*pCounter > 0);
-                if ((uint32_t)*pCounter >= (uint32_t)maxCount) {
+                if ((uint64_t)*pCounter >= (uint32_t)maxCount) {
                     U_ASSERT(*pCounter == maxCount || maxCount == -1);
                     break;
                 }
@@ -5231,7 +5232,7 @@ GC_Done:
                 U_ASSERT(opValue>0 && opValue < fp->fPatIdx-2);
                 int32_t initOp = pat[opValue];
                 U_ASSERT(URX_TYPE(initOp) == URX_CTR_INIT_NG);
-                int32_t *pCounter = &fp->fExtra[URX_VAL(initOp)];
+                int64_t *pCounter = &fp->fExtra[URX_VAL(initOp)];
                 int32_t minCount  = pat[opValue+2];
                 int32_t maxCount = pat[opValue+3];
                 // Increment the counter.  Note: we DIDN'T worry about counter
@@ -5242,7 +5243,7 @@ GC_Done:
                 (*pCounter)++;
                 U_ASSERT(*pCounter > 0);
                 
-                if ((uint32_t)*pCounter >= (uint32_t)maxCount) {
+                if ((uint64_t)*pCounter >= (uint32_t)maxCount) {
                     // The loop has matched the maximum permitted number of times.
                     //   Break out of here with no action.  Matching will
                     //   continue with the following pattern.
@@ -5583,7 +5584,7 @@ GC_Done:
                 
                 // Fetch (from data) the last input index where a match was attempted.
                 U_ASSERT(opValue>=0 && opValue+1<fPattern->fDataSize);
-                int32_t  *lbStartIdx = &fData[opValue+2];
+                int64_t  *lbStartIdx = &fData[opValue+2];
                 if (*lbStartIdx < 0) {
                     // First time through loop.
                     *lbStartIdx = fp->fInputIdx - minML;
@@ -5602,7 +5603,7 @@ GC_Done:
                     //  getting a match.  Backtrack out, and out of the
                     //   Look Behind altogether.
                     fp = (REStackFrame *)fStack->popFrame(fFrameSize);
-                    int32_t restoreInputLen = fData[opValue+3];
+                    int64_t restoreInputLen = fData[opValue+3];
                     U_ASSERT(restoreInputLen >= fActiveLimit);
                     U_ASSERT(restoreInputLen <= fInputLength);
                     fActiveLimit = restoreInputLen;
@@ -5633,7 +5634,7 @@ GC_Done:
                 // Look-behind match is good.  Restore the orignal input string length,
                 //   which had been truncated to pin the end of the lookbehind match to the 
                 //   position being looked-behind.
-                int32_t originalInputLen = fData[opValue+3];
+                int64_t originalInputLen = fData[opValue+3];
                 U_ASSERT(originalInputLen >= fActiveLimit);
                 U_ASSERT(originalInputLen <= fInputLength);
                 fActiveLimit = originalInputLen;
@@ -5657,7 +5658,7 @@ GC_Done:
                 
                 // Fetch (from data) the last input index where a match was attempted.
                 U_ASSERT(opValue>=0 && opValue+1<fPattern->fDataSize);
-                int32_t  *lbStartIdx = &fData[opValue+2];
+                int64_t  *lbStartIdx = &fData[opValue+2];
                 if (*lbStartIdx < 0) {
                     // First time through loop.
                     *lbStartIdx = fp->fInputIdx - minML;
@@ -5675,7 +5676,7 @@ GC_Done:
                     // We have tried all potential match starting points without
                     //  getting a match, which means that the negative lookbehind as
                     //  a whole has succeeded.  Jump forward to the continue location
-                    int32_t restoreInputLen = fData[opValue+3];
+                    int64_t restoreInputLen = fData[opValue+3];
                     U_ASSERT(restoreInputLen >= fActiveLimit);
                     U_ASSERT(restoreInputLen <= fInputLength);
                     fActiveLimit = restoreInputLen;
@@ -5710,7 +5711,7 @@ GC_Done:
                 //   Restore the orignal input string length, which had been truncated 
                 //   inorder to pin the end of the lookbehind match  
                 //   to the position being looked-behind.
-                int32_t originalInputLen = fData[opValue+3];
+                int64_t originalInputLen = fData[opValue+3];
                 U_ASSERT(originalInputLen >= fActiveLimit);
                 U_ASSERT(originalInputLen <= fInputLength);
                 fActiveLimit = originalInputLen;
