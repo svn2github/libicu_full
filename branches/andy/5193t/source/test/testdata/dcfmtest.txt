@@ -1,0 +1,45 @@
+
+#   Copyright (c) 2010, International Business Machines Corporation and
+#   others. All Rights Reserved.
+#
+
+#   File:  dcfmtest.txt
+#
+#       Decimal formatter test cases.
+#       File Encoding:  UTF-8
+#
+#   The syntax for this file is this:
+#   One test case per line.  No continuations.  No multiple cases per line.
+#
+#   Parsing Test case line:
+#     parse "input text"  type "expected_decimal_text" 
+#
+#   Format Test Case Line:
+#     format  pattern round-mode "decimal number" "expected formatted result"
+#
+#     Fields are separated by spaces or tabs.
+#     input text to be parsed, decimal numbers and  formatted output are "quoted".  Other fields are not.
+#
+#     "type" is a single letter,  representing the type that the ICU formattable produces
+#     for the input.
+#            d     double
+#            i     int32
+#            l     int64
+#
+#      RoundingMode is one of
+#          ceiling
+#          floor
+#          down
+#          up
+#          halfeven
+#          halfdown
+#          halfup
+#
+
+parse  "123.45"   d "123.45"  
+
+#format  #.###E0 halfeven  "123.4567"  "1.235E2" 
+#format  #.000E0 halfeven  "1234567"  "1.235E6" 
+format  #.###   halfeven  "123.4567"  "123.457" 
+format  #.###   down      "123.4567"  "123.456" 
+
