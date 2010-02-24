@@ -373,7 +373,7 @@ void DecimalFormatTest::execFormatTest(int32_t lineNum,
     }
 
     DecimalFormatSymbols symbols(Locale::getUS(), status);
-    printf("Pattern = %s\n", UnicodeStringPiece(pattern).data());
+    // printf("Pattern = %s\n", UnicodeStringPiece(pattern).data());
     DecimalFormat fmtr(pattern, symbols, status);
     if (U_FAILURE(status)) {
         errln("file dcfmtest.txt, line %d: %s error creating the formatter.",
