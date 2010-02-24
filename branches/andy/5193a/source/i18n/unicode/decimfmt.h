@@ -638,6 +638,8 @@ class FieldPositionHandler;
  */
 class U_I18N_API DecimalFormat: public NumberFormat {
 public:
+    using NumberFormat::format;
+
     /**
      * Rounding mode.
      * @stable ICU 2.4

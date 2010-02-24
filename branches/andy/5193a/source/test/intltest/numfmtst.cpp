@@ -6044,6 +6044,7 @@ void NumberFormatTest::TestDecimal() {
         ASSERT_SUCCESS(status);
         ASSERT_EQUALS("244,444,444,444,444,444,444,444,444,444,444,444,446.4", formattedResult);
         //std::string ss; std::cout << formattedResult.toUTF8String(ss);
+        delete fmtr;
     }
 
     {
@@ -6077,7 +6078,7 @@ void NumberFormatTest::TestDecimal() {
     }
 
     {
-        // Check that a parse returns a digit list with full accuracy
+        // Check that a parse with a formatter with a multiplier.
         UErrorCode status = U_ZERO_ERROR;
         NumberFormat *fmtr = NumberFormat::createInstance(
                 Locale::getUS(), NumberFormat::kPercentStyle, status);
@@ -6087,6 +6088,22 @@ void NumberFormatTest::TestDecimal() {
         fmtr->parse(input, result, status);
         ASSERT_SUCCESS(status);
         ASSERT_EQUALS(0, strcmp("0.0184", result.getDecimalNumber(status).data()));
+        //std::cout << result.getDecimalNumber(status).data();
+        delete fmtr;
+    }
+    
+    {
+        // Check that a parse returns a decimal number with full accuracy
+        UErrorCode status = U_ZERO_ERROR;
+        NumberFormat *fmtr = NumberFormat::createInstance(
+                Locale::getUS(), NumberFormat::kNumberStyle, status);
+        ASSERT_SUCCESS(status);
+        UnicodeString input = "1.002200044400088880000070000";
+        Formattable result;
+        fmtr->parse(input, result, status);
+        ASSERT_SUCCESS(status);
+        ASSERT_EQUALS(0, strcmp("1.00220004440008888000007", result.getDecimalNumber(status).data()));
+        ASSERT_EQUALS(1.00220004440008888,   result.getDouble());
         //std::cout << result.getDecimalNumber(status).data();
         delete fmtr;
     }

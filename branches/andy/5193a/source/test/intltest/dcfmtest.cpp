@@ -212,7 +212,7 @@ void DecimalFormatTest::DataDrivenTests() {
     RegexMatcher    formatLineMat(UnicodeString(
             "(?i)\\s*format\\s+"
             "(\\S+)\\s+"                 // Capture group 1: pattern
-            "(ceiling|floor|down|up|halfeven|halfdown|halfup)\\s+"  // Capture group 2: Rounding Mode
+            "(ceiling|floor|down|up|halfeven|halfdown|halfup|default)\\s+"  // Capture group 2: Rounding Mode
             "\"([^\"]*)\"\\s+"           // Capture group 3: input
             "\"([^\"]*)\""           // Capture group 4: expected output
             "\\s*(?:#.*)?"),             // Trailing comment
@@ -373,6 +373,7 @@ void DecimalFormatTest::execFormatTest(int32_t lineNum,
     }
 
     DecimalFormatSymbols symbols(Locale::getUS(), status);
+    printf("Pattern = %s\n", UnicodeStringPiece(pattern).data());
     DecimalFormat fmtr(pattern, symbols, status);
     if (U_FAILURE(status)) {
         errln("file dcfmtest.txt, line %d: %s error creating the formatter.",
@@ -393,6 +394,8 @@ void DecimalFormatTest::execFormatTest(int32_t lineNum,
         fmtr.setRoundingMode(DecimalFormat::kRoundHalfDown);
     } else if (round=="halfup") {
         fmtr.setRoundingMode(DecimalFormat::kRoundHalfUp);
+    } else if (round=="default") {
+        // don't set any value.
     } else {
         fmtr.setRoundingMode(DecimalFormat::kRoundFloor);
         errln("file dcfmtest.txt, line %d: Bad rounding mode \"%s\"",
@@ -401,7 +404,13 @@ void DecimalFormatTest::execFormatTest(int32_t lineNum,
     
     UnicodeString result;
     UnicodeStringPiece spInput(input);
-    fmtr.format(spInput, result, NULL, status);
+    //fmtr.format(spInput, result, NULL, status);
+
+    Formattable fmtbl;
+    fmtbl.setDecimalNumber(spInput, status);
+    NumberFormat &nfmtr = fmtr;
+    fmtr.format(fmtbl, result, NULL, status);
+
     if (U_FAILURE(status)) {
         errln("file dcfmtest.txt, line %d: format() returned %s.",
             lineNum, u_errorName(status));
