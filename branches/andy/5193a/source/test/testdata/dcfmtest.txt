@@ -43,5 +43,3 @@ parse  "123.45"   d "123.45"
 format  #.###   halfeven  "123.4567"  "123.457" 
 format  #.###   down      "123.4567"  "123.456" 
 
-format ##.#E0 default "1234.01" "1E3"
-
