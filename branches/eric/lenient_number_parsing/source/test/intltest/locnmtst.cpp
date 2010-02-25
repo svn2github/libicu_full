@@ -5,6 +5,7 @@
  *********************************************************************/
 
 #include "locnmtst.h"
+#include "cstring.h"
 
 /*
  Usage:
@@ -46,7 +47,7 @@
   { \
     if (UnicodeString(target)!=(value)) { \
       logln("unexpected value '" + (value) + "'"); \
-      errln("FAIL: " #target " == " #value " was not true. In " __FILE__ " on line %d", __LINE__); \
+      dataerrln("FAIL: " #target " == " #value " was not true. In " __FILE__ " on line %d", __LINE__); \
     } else { \
 	logln("PASS: asserted " #target " == " #value); \
     } \
@@ -118,6 +119,15 @@ void LocaleDisplayNamesTest::TestUldnOpen() {
 
   UnicodeString str(result, len, kMaxResultSize);
   test_assert_equal("Deutsch (Deutschland)", str);
+
+  // make sure that NULL gives us the default locale as usual
+  ldn = uldn_open(NULL, ULDN_STANDARD_NAMES, &status);
+  const char *locale = uldn_getLocale(ldn);
+  if(0 != uprv_strcmp(uloc_getDefault(), locale)) {
+    errln("uldn_getLocale(uldn_open(NULL))=%s != default locale %s\n", locale, uloc_getDefault());
+  }
+  uldn_close(ldn);
+  test_assert(U_SUCCESS(status));
 }
 
 void LocaleDisplayNamesTest::TestUldnOpenDialect() {

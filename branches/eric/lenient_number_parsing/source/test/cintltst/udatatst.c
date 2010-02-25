@@ -51,10 +51,14 @@
 #include "ucol_imp.h"
 #include "ucol_swp.h"
 #include "ucnv_bld.h"
-#include "unormimp.h"
 #include "sprpimpl.h"
 #include "propname.h"
 #include "rbbidata.h"
+
+U_CAPI int32_t U_EXPORT2
+unorm2_swap(const UDataSwapper *ds,
+            const void *inData, int32_t length, void *outData,
+            UErrorCode *pErrorCode);
 
 /* other definitions and prototypes */
 
@@ -136,7 +140,7 @@ static void TestUDataOpen(){
     const char* testPath=loadTestData(&status);
     if(U_FAILURE(status)) {
         log_data_err("Could not load testdata.dat, status = %s\n", u_errorName(status));
-		free(path);
+        free(path);
         return;
     }
 
@@ -1317,13 +1321,15 @@ static const struct {
      * we need not jump through hoops (like adding snapshots of these files
      * to testdata) for code coverage in tests.
      * See Jitterbug 4497.
+     *
+     * ICU4C 4.4 adds normalization data files again, e.g., nfc.nrm.
      */
-#if !UCONFIG_NO_NORMALIZATION
-    {"unorm",                    "icu", unorm_swap},
-#endif
     {"uprops",                   "icu", uprops_swap},
     {"ucase",                    "icu", ucase_swap},
     {"ubidi",                    "icu", ubidi_swap},
+#endif
+#if !UCONFIG_NO_NORMALIZATION
+    {"nfc",                      "nrm", unorm2_swap},
 #endif
     {"unames",                   "icu", uchar_swapNames}
 };

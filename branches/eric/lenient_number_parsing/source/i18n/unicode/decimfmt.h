@@ -824,6 +824,9 @@ public:
      */
     virtual UBool operator==(const Format& other) const;
 
+
+    using NumberFormat::format;
+
     /**
      * Format a double or long number using base-10 representation.
      *
@@ -834,7 +837,7 @@ public:
      *                  On output: the offsets of the alignment field.
      * @return          Reference to 'appendTo' parameter.
      * @stable ICU 2.0
-    */
+     */
     virtual UnicodeString& format(double number,
                                   UnicodeString& appendTo,
                                   FieldPosition& pos) const;
