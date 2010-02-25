@@ -1,22 +1,16 @@
 ﻿// ***************************************************************************
 // *
-// * Copyright (C) 2009 International Business Machines
+// * Copyright (C) 2010 International Business Machines
 // * Corporation and others.  All Rights Reserved.
 // * Tool: com.ibm.icu.dev.tool.cldr.LDML2ICUConverter.java
 // * Source File:<path>/common/main/gv.xml
 // *
 // ***************************************************************************
 /**
- *  ICU <specials > source: <path>/xml/main/gv.xml
+ *  ICU <specials> source: <path>/xml/main/gv.xml
  */
 gv{
-    Countries{
-        GB{"Rywvaneth Unys"}
-    }
-    ExemplarCharacters{"[a-c ç d-z]"}
-    Languages{
-        gv{"Gaelg"}
-    }
+    ExemplarCharacters{"[a b c ç d e f g h i j k l m n o p q r s t u v w x y z]"}
     LocaleScript{
         "Latn",
     }
@@ -26,7 +20,7 @@ gv{
         "#,##0%",
         "#E0",
     }
-    Version{"2.0.42.82"}
+    Version{"2.0.45.99"}
     calendar{
         gregorian{
             AmPmMarkers{

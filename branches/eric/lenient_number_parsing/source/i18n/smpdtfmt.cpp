@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 1997-2009, International Business Machines Corporation and    *
+* Copyright (C) 1997-2010, International Business Machines Corporation and    *
 * others. All Rights Reserved.                                                *
 *******************************************************************************
 *
@@ -47,6 +47,7 @@
 #include "unicode/vtzone.h"
 #include "olsontz.h"
 #include "util.h"
+#include "fphdlimp.h"
 #include "gregoimp.h"
 #include "hebrwcal.h"
 #include "cstring.h"
@@ -744,10 +745,27 @@ void SimpleDateFormat::parseAmbiguousDatesAsAfter(UDate startDate, UErrorCode& s
 UnicodeString&
 SimpleDateFormat::format(Calendar& cal, UnicodeString& appendTo, FieldPosition& pos) const
 {
-    UErrorCode status = U_ZERO_ERROR;
-    pos.setBeginIndex(0);
-    pos.setEndIndex(0);
+  UErrorCode status = U_ZERO_ERROR;
+  FieldPositionOnlyHandler handler(pos);
+  return _format(cal, appendTo, handler, status);
+}
 
+//----------------------------------------------------------------------
+
+UnicodeString&
+SimpleDateFormat::format(Calendar& cal, UnicodeString& appendTo,
+                         FieldPositionIterator* posIter, UErrorCode& status) const
+{
+  FieldPositionIteratorHandler handler(posIter, status);
+  return _format(cal, appendTo, handler, status);
+}
+
+//----------------------------------------------------------------------
+
+UnicodeString&
+SimpleDateFormat::_format(Calendar& cal, UnicodeString& appendTo, FieldPositionHandler& handler,
+                          UErrorCode& status) const
+{
     Calendar *workCal = &cal;
     TimeZone *backupTZ = NULL;
     if (&cal != fCalendar && uprv_strcmp(cal.getType(), fCalendar->getType()) != 0) {
@@ -772,7 +790,7 @@ SimpleDateFormat::format(Calendar& cal, UnicodeString& appendTo, FieldPosition& 
         // Use subFormat() to format a repeated pattern character
         // when a different pattern or non-pattern character is seen
         if (ch != prevCh && count > 0) {
-            subFormat(appendTo, prevCh, count, pos, *workCal, status);
+            subFormat(appendTo, prevCh, count, handler, *workCal, status);
             count = 0;
         }
         if (ch == QUOTE) {
@@ -800,7 +818,7 @@ SimpleDateFormat::format(Calendar& cal, UnicodeString& appendTo, FieldPosition& 
 
     // Format the last item in the pattern, if any
     if (count > 0) {
-        subFormat(appendTo, prevCh, count, pos, *workCal, status);
+        subFormat(appendTo, prevCh, count, handler, *workCal, status);
     }
 
     if (backupTZ != NULL) {
@@ -808,28 +826,7 @@ SimpleDateFormat::format(Calendar& cal, UnicodeString& appendTo, FieldPosition& 
         fCalendar->adoptTimeZone(backupTZ);
     }
 
-    // and if something failed (e.g., an invalid format character), reset our FieldPosition
-    // to (0, 0) to show that
-    // {sfb} look at this later- are these being set correctly?
-    if (U_FAILURE(status)) {
-        pos.setBeginIndex(0);
-        pos.setEndIndex(0);
-    }
-
     return appendTo;
-}
-
-UnicodeString&
-SimpleDateFormat::format(const Formattable& obj,
-                         UnicodeString& appendTo,
-                         FieldPosition& pos,
-                         UErrorCode& status) const
-{
-    // this is just here to get around the hiding problem
-    // (the previous format() override would hide the version of
-    // format() on DateFormat that this function correspond to, so we
-    // have to redefine it here)
-    return DateFormat::format(obj, appendTo, pos, status);
 }
 
 //----------------------------------------------------------------------
@@ -1438,7 +1435,7 @@ void
 SimpleDateFormat::subFormat(UnicodeString &appendTo,
                             UChar ch,
                             int32_t count,
-                            FieldPosition& pos,
+                            FieldPositionHandler& handler,
                             Calendar& cal,
                             UErrorCode& status) const
 {
@@ -1496,9 +1493,9 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
     case UDAT_YEAR_FIELD:
     case UDAT_YEAR_WOY_FIELD:
         if(count == 2)
-            zeroPaddingNumber(currentNumberFormat,appendTo, value, 2, 2);
+            zeroPaddingNumber(currentNumberFormat, appendTo, value, 2, 2);
         else
-            zeroPaddingNumber(currentNumberFormat,appendTo, value, count, maxIntCount);
+            zeroPaddingNumber(currentNumberFormat, appendTo, value, count, maxIntCount);
         break;
 
     // for "MMMM", write out the whole month name, for "MMM", write out the month
@@ -1509,11 +1506,11 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
         if ( isHebrewCalendar ) {
            HebrewCalendar *hc = (HebrewCalendar*)&cal;
            if (hc->isLeapYear(hc->get(UCAL_YEAR,status)) && value == 6 && count >= 3 )
-               value = 13; // Show alternate form for Adar II in leap years in Hebrew calendar. 
+               value = 13; // Show alternate form for Adar II in leap years in Hebrew calendar.
            if (!hc->isLeapYear(hc->get(UCAL_YEAR,status)) && value >= 6 && count < 3 )
                value--; // Adjust the month number down 1 in Hebrew non-leap years, i.e. Adar is 6, not 7.
         }
-        if (count == 5) 
+        if (count == 5)
             _appendSymbol(appendTo, value, fSymbols->fNarrowMonths,
                           fSymbols->fNarrowMonthsCount);
         else if (count == 4)
@@ -1730,14 +1727,9 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
         break;
     }
 
-    // if the field we're formatting is the one the FieldPosition says it's interested
-    // in, fill in the FieldPosition with this field's positions
-    if (pos.getBeginIndex() == pos.getEndIndex() &&
-        pos.getField() == fgPatternIndexToDateFormatField[patternCharIndex]) {
-        pos.setBeginIndex(beginOffset);
-        pos.setEndIndex(appendTo.length());
-    }
+    handler.addAttribute(fgPatternIndexToDateFormatField[patternCharIndex], beginOffset, appendTo.length());
 }
+
 //----------------------------------------------------------------------
 
 NumberFormat *
@@ -1751,7 +1743,8 @@ SimpleDateFormat::getNumberFormat(UDateFormatField index) const {
 
 //----------------------------------------------------------------------
 void
-SimpleDateFormat::zeroPaddingNumber(NumberFormat *currentNumberFormat,UnicodeString &appendTo, int32_t value, int32_t minDigits, int32_t maxDigits) const
+SimpleDateFormat::zeroPaddingNumber(NumberFormat *currentNumberFormat,UnicodeString &appendTo,
+                                    int32_t value, int32_t minDigits, int32_t maxDigits) const
 {
     if (currentNumberFormat!=NULL) {
         FieldPosition pos(0);
@@ -2481,7 +2474,7 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
         }
         cal.set(UCAL_YEAR, value);
 
-        // Delayed checking for adjustment of Hebrew month numbers in non-leap years.  
+        // Delayed checking for adjustment of Hebrew month numbers in non-leap years.
         if (saveHebrewMonth >= 0) {
             HebrewCalendar *hc = (HebrewCalendar*)&cal;
             if (!hc->isLeapYear(value) && saveHebrewMonth >= 6) {
@@ -2525,7 +2518,7 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
                    }
                 } else {
                     saveHebrewMonth = value;
-                } 
+                }
             } else {
                 // Don't want to parse the month if it is a string
                 // while pattern uses numeric style: M or MM.

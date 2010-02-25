@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (C) 2008-2009, International Business Machines Corporation and
+* Copyright (C) 2008-2010, International Business Machines Corporation and
 * others. All Rights Reserved.
 *******************************************************************************
 *
@@ -221,7 +221,7 @@ DateIntervalInfo::initializeData(const Locale& locale, UErrorCode& err)
   int32_t locNameLen;
   uprv_strcpy(parentLocale, locName);
   UErrorCode status = U_ZERO_ERROR;
-  Hashtable skeletonSet(TRUE, status);
+  Hashtable skeletonSet(FALSE, status);
   if ( U_FAILURE(status) ) {
       return;
   }
@@ -298,7 +298,7 @@ DateIntervalInfo::initializeData(const Locale& locale, UErrorCode& err)
                         calendarField = UCAL_DATE;
                     } else if ( !uprv_strcmp(key, "a") ) {
                         calendarField = UCAL_AM_PM;
-                    } else if ( !uprv_strcmp(key, "h") ) {
+                    } else if ( !uprv_strcmp(key, "h") || !uprv_strcmp(key, "H") ) {
                         calendarField = UCAL_HOUR;
                     } else if ( !uprv_strcmp(key, "m") ) {
                         calendarField = UCAL_MINUTE;
@@ -575,22 +575,21 @@ U_CDECL_BEGIN
  * @param val2  the other value in comparison
  * @return      TRUE if 2 values are the same, FALSE otherwise
  */
-UBool U_CALLCONV dtitvinfHashTableValueComparator(UHashTok val1, UHashTok val2);
+static UBool U_CALLCONV dtitvinfHashTableValueComparator(UHashTok val1, UHashTok val2);
 
-U_CDECL_END
-
-UBool 
+static UBool 
 U_CALLCONV dtitvinfHashTableValueComparator(UHashTok val1, UHashTok val2) {
     const UnicodeString* pattern1 = (UnicodeString*)val1.pointer;
     const UnicodeString* pattern2 = (UnicodeString*)val2.pointer;
     UBool ret = TRUE;
     int8_t i;
-    for ( i = 0; i < DateIntervalInfo::kIPI_MAX_INDEX && ret == TRUE; ++i ) {
+    for ( i = 0; i < DateIntervalInfo::kMaxIntervalPatternIndex && ret == TRUE; ++i ) {
         ret = (pattern1[i] == pattern2[i]);
     }
     return ret;
 }
 
+U_CDECL_END
 
 
 Hashtable*
@@ -599,11 +598,11 @@ DateIntervalInfo::initHash(UErrorCode& status) {
         return NULL;
     }
     Hashtable* hTable;
-    if ( (hTable = new Hashtable(TRUE, status)) == NULL ) {
+    if ( (hTable = new Hashtable(FALSE, status)) == NULL ) {
         status = U_MEMORY_ALLOCATION_ERROR;
         return NULL;
     }
-    hTable->setValueCompartor(dtitvinfHashTableValueComparator);
+    hTable->setValueComparator(dtitvinfHashTableValueComparator);
     return hTable;
 }
 

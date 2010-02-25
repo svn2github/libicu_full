@@ -25,6 +25,7 @@
 
 #include "unicode/utypes.h"
 #include "unicode/uloc.h"
+#include "unicode/localpointer.h"
 
 /**
  * \file
@@ -237,6 +238,25 @@ ures_countArrayItems(const UResourceBundle* resourceBundle,
  */
 U_STABLE void U_EXPORT2 
 ures_close(UResourceBundle* resourceBundle);
+
+#if U_SHOW_CPLUSPLUS_API
+
+U_NAMESPACE_BEGIN
+
+/**
+ * \class LocalUResourceBundlePointer
+ * "Smart pointer" class, closes a UResourceBundle via ures_close().
+ * For most methods see the LocalPointerBase base class.
+ *
+ * @see LocalPointerBase
+ * @see LocalPointer
+ * @draft ICU 4.4
+ */
+U_DEFINE_LOCAL_OPEN_POINTER(LocalUResourceBundlePointer, UResourceBundle, ures_close);
+
+U_NAMESPACE_END
+
+#endif
 
 /**
  * Return the version number associated with this ResourceBundle as a string. Please
@@ -756,7 +776,7 @@ ures_getUTF8StringByKey(const UResourceBundle *resB,
                         UBool forceCopy,
                         UErrorCode *status);
 
-#ifdef XP_CPLUSPLUS
+#if U_SHOW_CPLUSPLUS_API
 #include "unicode/unistr.h"
 
 U_NAMESPACE_BEGIN

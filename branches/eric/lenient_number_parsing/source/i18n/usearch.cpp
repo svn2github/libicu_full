@@ -1,6 +1,6 @@
 /*
 **********************************************************************
-*   Copyright (C) 2001-2009 IBM and others. All rights reserved.
+*   Copyright (C) 2001-2010 IBM and others. All rights reserved.
 **********************************************************************
 *   Date        Name        Description
 *  07/02/2001   synwee      Creation.
@@ -14,12 +14,14 @@
 #include "unicode/usearch.h"
 #include "unicode/ustring.h"
 #include "unicode/uchar.h"
+#include "normalizer2impl.h"
 #include "unormimp.h"
 #include "ucol_imp.h"
 #include "usrchimp.h"
 #include "cmemory.h"
 #include "ucln_in.h"
 #include "uassert.h"
+#include "ustr_imp.h"
 
 U_NAMESPACE_USE
 
@@ -311,7 +313,11 @@ inline uint16_t initializePatternCETable(UStringSearch *strsrch,
     else {
         uprv_init_collIterate(strsrch->collator, pattern->text,
                          pattern->textLength,
-                         &coleiter->iteratordata_);
+                         &coleiter->iteratordata_,
+                         status);
+    }
+    if(U_FAILURE(*status)) {
+        return 0;
     }
 
     if (pattern->CE != cetable && pattern->CE) {
@@ -381,7 +387,11 @@ inline uint16_t initializePatternPCETable(UStringSearch *strsrch,
     } else {
         uprv_init_collIterate(strsrch->collator, pattern->text,
                               pattern->textLength,
-                              &coleiter->iteratordata_);
+                              &coleiter->iteratordata_,
+                              status);
+    }
+    if(U_FAILURE(*status)) {
+        return 0;
     }
 
     if (pattern->PCE != pcetable && pattern->PCE != NULL) {
@@ -1074,54 +1084,20 @@ static
 inline UBool checkIdentical(const UStringSearch *strsrch, int32_t start,
                                   int32_t    end)
 {
-    UChar t2[32], p2[32];
-    int32_t length = end - start;
     if (strsrch->strength != UCOL_IDENTICAL) {
         return TRUE;
     }
 
-    UErrorCode status = U_ZERO_ERROR, status2 = U_ZERO_ERROR;
-    int32_t decomplength = unorm_decompose(t2, LENGTHOF(t2),
-                                       strsrch->search->text + start, length,
-                                       FALSE, 0, &status);
-    // use separate status2 in case of buffer overflow
-    if (decomplength != unorm_decompose(p2, LENGTHOF(p2),
-                                        strsrch->pattern.text,
-                                        strsrch->pattern.textLength,
-                                        FALSE, 0, &status2)) {
-        return FALSE; // lengths are different
-    }
-
-    // compare contents
-    UChar *text, *pattern;
-    if(U_SUCCESS(status)) {
-        text = t2;
-        pattern = p2;
-    } else if(status==U_BUFFER_OVERFLOW_ERROR) {
-        status = U_ZERO_ERROR;
-        // allocate one buffer for both decompositions
-        text = (UChar *)uprv_malloc(decomplength * 2 * U_SIZEOF_UCHAR);
-        // Check for allocation failure.
-        if (text == NULL) {
-        	return FALSE;
-        }
-        pattern = text + decomplength;
-        unorm_decompose(text, decomplength, strsrch->search->text + start,
-                        length, FALSE, 0, &status);
-        unorm_decompose(pattern, decomplength, strsrch->pattern.text,
-                        strsrch->pattern.textLength, FALSE, 0, &status);
-    } else {
-        // NFD failed, make sure that u_memcmp() does not overrun t2 & p2
-        // and that we don't uprv_free() an undefined text pointer
-        text = pattern = t2;
-        decomplength = 0;
-    }
-    UBool result = (UBool)(u_memcmp(pattern, text, decomplength) == 0);
-    if(text != t2) {
-        uprv_free(text);
-    }
+    // Note: We could use Normalizer::compare() or similar, but for short strings
+    // which may not be in FCD it might be faster to just NFD them.
+    UErrorCode status = U_ZERO_ERROR;
+    UnicodeString t2, p2;
+    strsrch->nfd->normalize(
+        UnicodeString(FALSE, strsrch->search->text + start, end - start), t2, status);
+    strsrch->nfd->normalize(
+        UnicodeString(FALSE, strsrch->pattern.text, strsrch->pattern.textLength), p2, status);
     // return FALSE if NFD failed
-    return U_SUCCESS(status) && result;
+    return U_SUCCESS(status) && t2 == p2;
 }
 
 #if BOYER_MOORE
@@ -2724,6 +2700,8 @@ U_CAPI UStringSearch * U_EXPORT2 usearch_openFromCollator(
                                                             UCOL_SHIFTED;
         result->variableTop = ucol_getVariableTop(collator, status);
 
+        result->nfd         = Normalizer2Factory::getNFDInstance(*status);
+
         if (U_FAILURE(*status)) {
             uprv_free(result);
             return NULL;
@@ -2765,6 +2743,7 @@ U_CAPI UStringSearch * U_EXPORT2 usearch_openFromCollator(
 
         result->search->isOverlap          = FALSE;
         result->search->isCanonicalMatch   = FALSE;
+        result->search->elementComparisonType = 0;
         result->search->isForwardSearching = TRUE;
         result->search->reset              = TRUE;
 
@@ -2857,6 +2836,13 @@ U_CAPI void U_EXPORT2 usearch_setAttribute(UStringSearch *strsrch,
             strsrch->search->isCanonicalMatch = (value == USEARCH_ON ? TRUE :
                                                                       FALSE);
             break;
+        case USEARCH_ELEMENT_COMPARISON :
+            if (value == USEARCH_PATTERN_BASE_WEIGHT_IS_WILDCARD || value == USEARCH_ANY_BASE_WEIGHT_IS_WILDCARD) {
+                strsrch->search->elementComparisonType = (int16_t)value;
+            } else {
+                strsrch->search->elementComparisonType = 0;
+            }
+            break;
         case USEARCH_ATTRIBUTE_COUNT :
         default:
             *status = U_ILLEGAL_ARGUMENT_ERROR;
@@ -2879,6 +2865,15 @@ U_CAPI USearchAttributeValue U_EXPORT2 usearch_getAttribute(
         case USEARCH_CANONICAL_MATCH :
             return (strsrch->search->isCanonicalMatch == TRUE ? USEARCH_ON :
                                                                USEARCH_OFF);
+        case USEARCH_ELEMENT_COMPARISON :
+            {
+                int16_t value = strsrch->search->elementComparisonType;
+                if (value == USEARCH_PATTERN_BASE_WEIGHT_IS_WILDCARD || value == USEARCH_ANY_BASE_WEIGHT_IS_WILDCARD) {
+                    return (USearchAttributeValue)value;
+                } else {
+                    return USEARCH_STANDARD_ELEMENT_COMPARISON;
+                }
+            }
         case USEARCH_ATTRIBUTE_COUNT :
             return USEARCH_DEFAULT;
         }
@@ -3040,7 +3035,8 @@ U_CAPI void U_EXPORT2 usearch_setCollator(      UStringSearch *strsrch,
                     ucol_freeOffsetBuffer(&(strsrch->textIter->iteratordata_));
                     uprv_init_collIterate(collator, strsrch->search->text,
                                           strsrch->search->textLength,
-                                          &(strsrch->textIter->iteratordata_));
+                                          &(strsrch->textIter->iteratordata_),
+                                          status);
                     strsrch->utilIter->iteratordata_.coll = collator;
                 }
             }
@@ -3432,11 +3428,13 @@ U_CAPI void U_EXPORT2 usearch_reset(UStringSearch *strsrch)
         ucol_freeOffsetBuffer(&(strsrch->textIter->iteratordata_));
         uprv_init_collIterate(strsrch->collator, strsrch->search->text,
                               strsrch->search->textLength,
-                              &(strsrch->textIter->iteratordata_));
+                              &(strsrch->textIter->iteratordata_),
+                              &status);
         strsrch->search->matchedLength      = 0;
         strsrch->search->matchedIndex       = USEARCH_DONE;
         strsrch->search->isOverlap          = FALSE;
         strsrch->search->isCanonicalMatch   = FALSE;
+        strsrch->search->elementComparisonType = 0;
         strsrch->search->isForwardSearching = TRUE;
         strsrch->search->reset              = TRUE;
     }

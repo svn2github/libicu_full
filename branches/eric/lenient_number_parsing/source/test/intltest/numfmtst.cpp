@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT:
- * Copyright (c) 1997-2009, International Business Machines Corporation and
+ * Copyright (c) 1997-2010, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 /* Modification History:
@@ -33,13 +33,10 @@
 
 //#define NUMFMTST_CACHE_DEBUG 1
 #ifdef NUMFMTST_CACHE_DEBUG
-#include "stdio.h"
+#include "stdio.h" /* for sprintf */
 #endif
 
 //#define NUMFMTST_DEBUG 1
-#ifdef NUMFMTST_DEBUG
-#include "stdio.h"
-#endif
 
 
 static const UChar EUR[] = {69,85,82,0}; // "EUR"
@@ -110,6 +107,8 @@ void NumberFormatTest::runIndexedTest( int32_t index, UBool exec, const char* &n
         CASE(43,TestCurrencyParsing);
         CASE(44,TestParseCurrencyInUCurr);
         CASE(45,TestLenientParse);
+        CASE(46,TestFormatAttributes);
+        CASE(47,TestFieldPositionIterator);
         default: name = ""; break;
     }
 }
@@ -156,7 +155,7 @@ NumberFormatTest::TestAPI(void)
         errln("Problems accessing the parseCurrency function for NumberFormat");
     }
 
-    delete test;  
+    delete test;
   }
 }
 
@@ -1766,7 +1765,7 @@ void NumberFormatTest::TestCurrencyNames(void) {
     int32_t len;
     const UBool possibleDataError = TRUE;
     // Warning: HARD-CODED LOCALE DATA in this test.  If it fails, CHECK
-    // THE LOCALE DATA before diving into the code.                                            
+    // THE LOCALE DATA before diving into the code.
     assertEquals("USD.getName(SYMBOL_NAME)",
                  UnicodeString("$"),
                  UnicodeString(ucurr_getName(USD, "en",
@@ -1816,28 +1815,28 @@ void NumberFormatTest::TestCurrencyNames(void) {
     // Test that a default or fallback warning is being returned. JB 4239.
     ucurr_getName(CAD, "es_ES", UCURR_LONG_NAME, &isChoiceFormat,
                             &len, &ec);
-    assertTrue("ucurr_getName (fallback)",
+    assertTrue("ucurr_getName (es_ES fallback)",
                     U_USING_FALLBACK_WARNING == ec, TRUE, possibleDataError);
 
     ucurr_getName(CAD, "zh_TW", UCURR_LONG_NAME, &isChoiceFormat,
                             &len, &ec);
-    assertTrue("ucurr_getName (fallback)",
+    assertTrue("ucurr_getName (zh_TW fallback)",
                     U_USING_FALLBACK_WARNING == ec, TRUE, possibleDataError);
 
     ucurr_getName(CAD, "en_US", UCURR_LONG_NAME, &isChoiceFormat,
                             &len, &ec);
-    assertTrue("ucurr_getName (default)",
-                    U_USING_DEFAULT_WARNING == ec, TRUE);
+    assertTrue("ucurr_getName (en_US default)",
+                    U_USING_DEFAULT_WARNING == ec || U_USING_FALLBACK_WARNING == ec, TRUE);
 
     ucurr_getName(CAD, "vi", UCURR_LONG_NAME, &isChoiceFormat,
                             &len, &ec);
-    assertTrue("ucurr_getName (default)",
+    assertTrue("ucurr_getName (vi default)",
                     U_USING_DEFAULT_WARNING == ec, TRUE);
 
     // Test that a default warning is being returned when falling back to root. JB 4536.
     ucurr_getName(ITL, "cy", UCURR_LONG_NAME, &isChoiceFormat,
                             &len, &ec);
-    assertTrue("ucurr_getName (default to root)",
+    assertTrue("ucurr_getName (cy default to root)",
                     U_USING_DEFAULT_WARNING == ec, TRUE);
 
     // TODO add more tests later
@@ -2911,7 +2910,7 @@ void NumberFormatTest::TestNumberingSystems() {
     if (U_FAILURE(ec)) {
         dataerrln("FAIL: getInstance(en_US@numbers=arabext) - %s", u_errorName(ec));
     }
-    
+
     if (U_SUCCESS(ec) && fmt1 != NULL && fmt2 != NULL && fmt3 != NULL) {
         expect2(*fmt1, 1234.567, CharsToUnicodeString("\\u0E51,\\u0E52\\u0E53\\u0E54.\\u0E55\\u0E56\\u0E57"));
         expect3(*fmt2, 5678.0, CharsToUnicodeString("\\u05D4\\u05F3\\u05EA\\u05E8\\u05E2\\u05F4\\u05D7"));
@@ -3058,9 +3057,8 @@ NumberFormatTest::TestCurrencyFormatForMixParsing() {
         UErrorCode status = U_ZERO_ERROR;
         curFmt->parseObject(stringToBeParsed, result, status);
         if (U_FAILURE(status)) {
-            errln("FAIL: measure format parsing");
-        }
-        if (result.getType() != Formattable::kObject ||
+          errln("FAIL: measure format parsing: '%s' ec: %s", formats[i], u_errorName(status));
+        } else if (result.getType() != Formattable::kObject ||
             result.getObject()->getDynamicClassID() != CurrencyAmount::getStaticClassID() ||
             ((CurrencyAmount*)result.getObject())->getNumber().getDouble() != 1234.56 ||
             UnicodeString(((CurrencyAmount*)result.getObject())->getISOCurrency()).compare(ISO_CURRENCY_USD)) {
@@ -3134,6 +3132,7 @@ NumberFormatTest::TestCurrencyIsoPluralFormat() {
         // format result using CURRENCYSTYLE,
         // format result using ISOCURRENCYSTYLE,
         // format result using PLURALCURRENCYSTYLE,
+
         {"en_US", "1", "USD", "$1.00", "USD1.00", "1.00 US dollar"},
         {"en_US", "1234.56", "USD", "$1,234.56", "USD1,234.56", "1,234.56 US dollars"},
         {"en_US", "-1234.56", "USD", "($1,234.56)", "(USD1,234.56)", "-1,234.56 US dollars"},
@@ -3147,7 +3146,7 @@ NumberFormatTest::TestCurrencyIsoPluralFormat() {
         {"ru_RU", "2", "RUB", "2,00\\u00A0\\u0440\\u0443\\u0431.", "2,00\\u00A0RUB", "2,00 \\u0420\\u043E\\u0441\\u0441\\u0438\\u0439\\u0441\\u043A\\u0438\\u0445 \\u0440\\u0443\\u0431\\u043B\\u044F"},
         {"ru_RU", "5", "RUB", "5,00\\u00A0\\u0440\\u0443\\u0431.", "5,00\\u00A0RUB", "5,00 \\u0420\\u043E\\u0441\\u0441\\u0438\\u0439\\u0441\\u043A\\u0438\\u0445 \\u0440\\u0443\\u0431\\u043B\\u0435\\u0439"},
         // test locale without currency information
-        {"ti_ET", "-1.23", "USD", "-US$1.23", "-USD1.23", "-1.23 USD"},
+        {"root", "-1.23", "USD", "-US$\\u00A01.23", "-USD\\u00A01.23", "-1.23 USD"},
         // test choice format
         {"es_AR", "1", "INR", "Rs\\u00A01,00", "INR\\u00A01,00", "1,00 rupia india"},
     };
@@ -3562,7 +3561,7 @@ NumberFormatTest::TestParseCurrencyInUCurr() {
         "Brazilian reals1.00",
         "British Pound Sterling1.00",
         "British pound sterling1.00",
-        "British pound sterlings1.00",
+        "British pounds sterling1.00",
         "Brunei Dollar1.00",
         "Brunei dollar1.00",
         "Brunei dollars1.00",
@@ -4793,7 +4792,7 @@ NumberFormatTest::TestParseCurrencyInUCurr() {
         "1.00 Brazilian reals random",
         "1.00 British Pound Sterling random",
         "1.00 British pound sterling random",
-        "1.00 British pound sterlings random",
+        "1.00 British pounds sterling random",
         "1.00 Brunei Dollar random",
         "1.00 Brunei dollar random",
         "1.00 Brunei dollars random",
@@ -5983,7 +5982,7 @@ NumberFormatTest::TestParseCurrencyInUCurr() {
               (parseResult.getType() == Formattable::kDouble &&
                parseResult.getDouble() != 1.0)) {
               errln("wrong parsing, " + formatted);
-              errln("data: " + formatted); 
+              errln("data: " + formatted);
           }
       } else {
           dataerrln("Unable to create NumberFormat. - %s", u_errorName(status));
@@ -5999,11 +5998,11 @@ NumberFormatTest::TestParseCurrencyInUCurr() {
       NumberFormat* numFmt = NumberFormat::createInstance(locale, NumberFormat::kCurrencyStyle, status);
       Formattable parseResult;
       if (numFmt != NULL && U_SUCCESS(status)) {
-          numFmt->parse(formatted, parseResult, status);  
+          numFmt->parse(formatted, parseResult, status);
           if (!U_FAILURE(status) ||
               (parseResult.getType() == Formattable::kDouble &&
                parseResult.getDouble() == 1.0)) {
-              errln("parsed but should not be: " + formatted); 
+              errln("parsed but should not be: " + formatted);
               errln("data: " + formatted);
           }
       } else {
@@ -6013,6 +6012,190 @@ NumberFormatTest::TestParseCurrencyInUCurr() {
       }
       delete numFmt;
     }
+}
+
+const char* attrString(int32_t);
+
+// UnicodeString s;
+//  std::string ss;
+//  std::cout << s.toUTF8String(ss)
+void NumberFormatTest::expectPositions(FieldPositionIterator& iter, int32_t *values, int32_t tupleCount,
+                                       const UnicodeString& str)  {
+  UBool found[10];
+  FieldPosition fp;
+
+  if (tupleCount > 10) {
+    assertTrue("internal error, tupleCount too large", FALSE);
+  } else {
+    for (int i = 0; i < tupleCount; ++i) {
+      found[i] = FALSE;
+    }
+  }
+
+  logln(str);
+  while (iter.next(fp)) {
+    UBool ok = FALSE;
+    int32_t id = fp.getField();
+    int32_t start = fp.getBeginIndex();
+    int32_t limit = fp.getEndIndex();
+
+    // is there a logln using printf?
+    char buf[128];
+    sprintf(buf, "%24s %3d %3d %3d", attrString(id), id, start, limit);
+    logln(buf);
+
+    for (int i = 0; i < tupleCount; ++i) {
+      if (found[i]) {
+        continue;
+      }
+      if (values[i*3] == id &&
+          values[i*3+1] == start &&
+          values[i*3+2] == limit) {
+        found[i] = ok = TRUE;
+        break;
+      }
+    }
+
+    assertTrue((UnicodeString)"found [" + id + "," + start + "," + limit + "]", ok);
+  }
+
+  // check that all were found
+  UBool ok = TRUE;
+  for (int i = 0; i < tupleCount; ++i) {
+    if (!found[i]) {
+      ok = FALSE;
+      assertTrue((UnicodeString) "missing [" + values[i*3] + "," + values[i*3+1] + "," + values[i*3+2] + "]", found[i]);
+    }
+  }
+  assertTrue("no expected values were missing", ok);
+}
+
+void NumberFormatTest::expectPosition(FieldPosition& pos, int32_t id, int32_t start, int32_t limit,
+                                       const UnicodeString& str)  {
+  logln(str);
+  assertTrue((UnicodeString)"id " + id + " == " + pos.getField(), id == pos.getField());
+  assertTrue((UnicodeString)"begin " + start + " == " + pos.getBeginIndex(), start == pos.getBeginIndex());
+  assertTrue((UnicodeString)"end " + limit + " == " + pos.getEndIndex(), limit == pos.getEndIndex());
+}
+
+void NumberFormatTest::TestFieldPositionIterator() {
+  // bug 7372
+  UErrorCode status = U_ZERO_ERROR;
+  FieldPositionIterator iter1;
+  FieldPositionIterator iter2;
+  FieldPosition pos;
+
+  DecimalFormat *decFmt = (DecimalFormat *) NumberFormat::createInstance(status);
+  double num = 1234.56;
+  UnicodeString str1;
+  UnicodeString str2;
+
+  assertTrue((UnicodeString)"self==", iter1 == iter1);
+  assertTrue((UnicodeString)"iter1==iter2", iter1 == iter2);
+
+  decFmt->format(num, str1, &iter1, status);
+  assertTrue((UnicodeString)"iter1 != iter2", iter1 != iter2);
+  decFmt->format(num, str2, &iter2, status);
+  assertTrue((UnicodeString)"iter1 == iter2 (2)", iter1 == iter2);
+  iter1.next(pos);
+  assertTrue((UnicodeString)"iter1 != iter2 (2)", iter1 != iter2);
+  iter2.next(pos);
+  assertTrue((UnicodeString)"iter1 == iter2 (3)", iter1 == iter2);
+
+  // should format ok with no iterator
+  str2.remove();
+  decFmt->format(num, str2, NULL, status);
+  assertEquals("null fpiter", str1, str2);
+
+  delete decFmt;
+}
+
+void NumberFormatTest::TestFormatAttributes() {
+  Locale locale("en_US");
+  UErrorCode status = U_ZERO_ERROR;
+  DecimalFormat *decFmt = (DecimalFormat *) NumberFormat::createInstance(locale, NumberFormat::kCurrencyStyle, status);
+  double val = 12345.67;
+
+  {
+    int32_t expected[] = {
+      NumberFormat::kCurrencyField, 0, 1,
+      NumberFormat::kGroupingSeparatorField, 3, 4,
+      NumberFormat::kIntegerField, 1, 7,
+      NumberFormat::kDecimalSeparatorField, 7, 8,
+      NumberFormat::kFractionField, 8, 10,
+    };
+    int32_t tupleCount = sizeof(expected)/(3 * sizeof(*expected));
+
+    FieldPositionIterator posIter;
+    UnicodeString result;
+    decFmt->format(val, result, &posIter, status);
+    expectPositions(posIter, expected, tupleCount, result);
+  }
+  {
+    FieldPosition fp(NumberFormat::kIntegerField);
+    UnicodeString result;
+    decFmt->format(val, result, fp);
+    expectPosition(fp, NumberFormat::kIntegerField, 1, 7, result);
+  }
+  {
+    FieldPosition fp(NumberFormat::kFractionField);
+    UnicodeString result;
+    decFmt->format(val, result, fp);
+    expectPosition(fp, NumberFormat::kFractionField, 8, 10, result);
+  }
+  delete decFmt;
+
+  decFmt = (DecimalFormat *) NumberFormat::createInstance(locale, NumberFormat::kScientificStyle, status);
+  val = -0.0000123;
+  {
+    int32_t expected[] = {
+      NumberFormat::kSignField, 0, 1,
+      NumberFormat::kIntegerField, 1, 2,
+      NumberFormat::kDecimalSeparatorField, 2, 3,
+      NumberFormat::kFractionField, 3, 5,
+      NumberFormat::kExponentSymbolField, 5, 6,
+      NumberFormat::kExponentSignField, 6, 7,
+      NumberFormat::kExponentField, 7, 8
+    };
+    int32_t tupleCount = sizeof(expected)/(3 * sizeof(*expected));
+
+    FieldPositionIterator posIter;
+    UnicodeString result;
+    decFmt->format(val, result, &posIter, status);
+    expectPositions(posIter, expected, tupleCount, result);
+  }
+  {
+    FieldPosition fp(NumberFormat::kIntegerField);
+    UnicodeString result;
+    decFmt->format(val, result, fp);
+    expectPosition(fp, NumberFormat::kIntegerField, 1, 2, result);
+  }
+  {
+    FieldPosition fp(NumberFormat::kFractionField);
+    UnicodeString result;
+    decFmt->format(val, result, fp);
+    expectPosition(fp, NumberFormat::kFractionField, 3, 5, result);
+  }
+  delete decFmt;
+
+  fflush(stderr);
+}
+
+const char* attrString(int32_t attrId) {
+  switch (attrId) {
+    case NumberFormat::kIntegerField: return "integer";
+    case NumberFormat::kFractionField: return "fraction";
+    case NumberFormat::kDecimalSeparatorField: return "decimal separator";
+    case NumberFormat::kExponentSymbolField: return "exponent symbol";
+    case NumberFormat::kExponentSignField: return "exponent sign";
+    case NumberFormat::kExponentField: return "exponent";
+    case NumberFormat::kGroupingSeparatorField: return "grouping separator";
+    case NumberFormat::kCurrencyField: return "currency";
+    case NumberFormat::kPercentField: return "percent";
+    case NumberFormat::kPermillField: return "permille";
+    case NumberFormat::kSignField: return "sign";
+    default: return "";
+  }
 }
 
 #endif /* #if !UCONFIG_NO_FORMATTING */
