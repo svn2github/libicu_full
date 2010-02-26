@@ -56,7 +56,13 @@ U_NAMESPACE_BEGIN
 //
 //    MSVC requires this, even though it should not be necessary. 
 //    No direct access to the MaybeStackArray leaks out of the i18n library.
+//
+//    Macintosh produces duplicate definition linker errors with the explicit template
+//    instantiation.
+//
+#if !defined(U_DARWIN)
 template class U_I18N_API MaybeStackArray<char, sizeof(decNumber) + DEFAULT_DIGITS>;
+#endif
 
 
 /**

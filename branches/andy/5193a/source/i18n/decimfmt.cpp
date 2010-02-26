@@ -2636,7 +2636,6 @@ void DecimalFormat::setRoundingIncrement(double newValue) {
             fRoundingIncrement = new DigitList();
         }
         if (fRoundingIncrement != NULL) {
-            // TODO:  why was this rounding to int before?
             fRoundingIncrement->set(newValue);
             return;
         }
@@ -2668,12 +2667,6 @@ DecimalFormat::ERoundingMode DecimalFormat::getRoundingMode() const {
  */
 void DecimalFormat::setRoundingMode(ERoundingMode roundingMode) {
     fRoundingMode = roundingMode;
-    if (fRoundingIncrement == NULL) {
-        /* cast to double to avoid ambiguous pow() overloads */
-        // TODO: get rid of this.
-        //       Note: this enables fixed point rounding.
-        setRoundingIncrement(pow(10.0, (double)-getMaximumFractionDigits()));
-    }
 }
 
 /**
