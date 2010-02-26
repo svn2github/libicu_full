@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT:
- * Copyright (c) 1997-2009, International Business Machines Corporation and
+ * Copyright (c) 1997-2010, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 /*****************************************************************************
@@ -54,7 +54,7 @@ static const char* const rawData2[LOCALE_INFO_SIZE][LOCALE_SIZE] = {
     /* language code */
     {   "en",   "fr",   "ca",   "el",   "no",   "zh",   "de",   "es",  "ja"    },
     /* script code */
-    {   "",     "",     "",     "",     "",     "Hans", "", "", ""  },
+    {   "",     "",     "",     "",     "",     "", "", "", ""  },
     /* country code */
     {   "US",   "FR",   "ES",   "GR",   "NO",   "CN", "DE", "", "JP"    },
     /* variant code */
@@ -2324,7 +2324,7 @@ static void TestGetLocale(void) {
         const char *req = "es_AR_BUENOSAIRES", *valid, *actual;
         obj = ucol_open(req, &ec);
         if (U_FAILURE(ec)) {
-            log_err("ucol_open failed\n");
+            log_err("ucol_open failed - %s\n", u_errorName(ec));
             return;
         }
         valid = ucol_getLocaleByType(obj, ULOC_VALID_LOCALE, &ec);
@@ -5388,7 +5388,7 @@ const char* const locale_to_langtag[][3] = {
     {"iw_IL",       "he-IL",        "he-IL"},
     {"sr_Latn_SR",  "sr-Latn-SR",   "sr-Latn-SR"},
     {"en__POSIX",   "en-posix",     "en-posix"},
-    {"en_POSIX",    "en",           NULL},
+    {"en_POSIX",    "en",           "en"},
     {"und_555",     "und-555",      "und-555"},
     {"123",         "und",          NULL},
     {"%$#&",        "und",          NULL},
@@ -5410,6 +5410,7 @@ const char* const locale_to_langtag[][3] = {
     {"de@collation=phonebook;calendar=gregorian",   "de-u-ca-gregory-co-phonebk",   "de-u-ca-gregory-co-phonebk"},
     {"th@numbers=thai;z=extz;x=priv-use;a=exta",   "th-a-exta-u-nu-thai-z-extz-x-priv-use", "th-a-exta-u-nu-thai-z-extz-x-priv-use"},
     {"en@timezone=America/New_York;calendar=japanese",    "en-u-ca-japanese-tz-usnyc",    "en-u-ca-japanese-tz-usnyc"},
+    {"en@timezone=US/Eastern",  "en-u-tz-usnyc",    "en-u-tz-usnyc"},
     {"en@x=x-y-z;a=a-b-c",  "en-x-x-y-z",   NULL},
     {"it@collation=badcollationtype;colStrength=identical;cu=usd-eur", "it-u-ks-identic",  NULL},
     {NULL,          NULL,           NULL}
@@ -5504,7 +5505,7 @@ static const struct {
     {"fr-u-nu-latn-cu-eur", "fr@currency=eur;numbers=latn", 19},
     {"de-k-kext-u-co-phonebk-nu-latn",  "de@collation=phonebook;k=kext;numbers=latn",   30},
     {"ja-u-cu-jpy-ca-jp",   "ja@currency=jpy",      11},
-    {"en-us-u-tz-usnyc",    "en_US@timezone=america/new_york",      16},
+    {"en-us-u-tz-usnyc",    "en_US@timezone=America/New_York",      16},
     {"und-a-abc-def",       "und@a=abc-def",        13},
     {"zh-u-ca-chinese-x-u-ca-chinese",  "zh@calendar=chinese;x=u-ca-chinese",   30},
     {NULL,          NULL,           0}

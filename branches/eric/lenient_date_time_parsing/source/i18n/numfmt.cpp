@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 1997-2009, International Business Machines Corporation and    *
+* Copyright (C) 1997-2010, International Business Machines Corporation and    *
 * others. All Rights Reserved.                                                *
 *******************************************************************************
 *
@@ -103,8 +103,8 @@ static const UChar * const gLastResortNumberPatterns[] =
     gLastResortPluralCurrencyPat,
 };
 
-// Static hashtable cache of NumberingSystem objects used by NumberFormat 
-static UHashtable * NumberingSystem_cache = NULL; 
+// Static hashtable cache of NumberingSystem objects used by NumberFormat
+static UHashtable * NumberingSystem_cache = NULL;
 
 static UMTX nscacheMutex = NULL;
 
@@ -112,10 +112,10 @@ static UMTX nscacheMutex = NULL;
 static U_NAMESPACE_QUALIFIER ICULocaleService* gService = NULL;
 #endif
 
-/** 
- * Release all static memory held by Number Format.   
- */  
-U_CDECL_BEGIN 
+/**
+ * Release all static memory held by Number Format.
+ */
+U_CDECL_BEGIN
 static void U_CALLCONV
 deleteNumberingSystem(void *obj) {
     delete (U_NAMESPACE_QUALIFIER NumberingSystem *)obj;
@@ -128,14 +128,14 @@ static UBool U_CALLCONV numfmt_cleanup(void) {
         gService = NULL;
     }
 #endif
-    if (NumberingSystem_cache) { 
-        // delete NumberingSystem_cache; 
-        uhash_close(NumberingSystem_cache); 
-        NumberingSystem_cache = NULL; 
+    if (NumberingSystem_cache) {
+        // delete NumberingSystem_cache;
+        uhash_close(NumberingSystem_cache);
+        NumberingSystem_cache = NULL;
     }
 
-    return TRUE; 
-} 
+    return TRUE;
+}
 U_CDECL_END
 
 // *****************************************************************************
@@ -163,7 +163,7 @@ UBool SimpleNumberFormatFactory::visible(void) const {
 }
 
 const UnicodeString *
-SimpleNumberFormatFactory::getSupportedIDs(int32_t &count, UErrorCode& status) const 
+SimpleNumberFormatFactory::getSupportedIDs(int32_t &count, UErrorCode& status) const
 {
     if (U_SUCCESS(status)) {
         count = 1;
@@ -259,7 +259,7 @@ NumberFormat::operator==(const Format& that) const
         if (first) { printf("[ "); first = FALSE; } else { printf(", "); }
         debug("fCurrency !=");
     }
-    if (!first) { printf(" ]"); }    
+    if (!first) { printf(" ]"); }
 #endif
 
     return ((this == &that) ||
@@ -273,9 +273,120 @@ NumberFormat::operator==(const Format& that) const
               u_strcmp(fCurrency, other->fCurrency) == 0)));
 }
 
-// -------------------------------------x
+// -------------------------------------
+// Default implementation sets unsupported error; subclasses should
+// override.
+
+UnicodeString&
+NumberFormat::format(double /* unused number */,
+                     UnicodeString& toAppendTo,
+                     FieldPositionIterator* /* unused posIter */,
+                     UErrorCode& status) const
+{
+    if (!U_FAILURE(status)) {
+        status = U_UNSUPPORTED_ERROR;
+    }
+    return toAppendTo;
+}
+
+// -------------------------------------
+// Default implementation sets unsupported error; subclasses should
+// override.
+
+UnicodeString&
+NumberFormat::format(int32_t /* unused number */,
+                     UnicodeString& toAppendTo,
+                     FieldPositionIterator* /* unused posIter */,
+                     UErrorCode& status) const
+{
+    if (!U_FAILURE(status)) {
+        status = U_UNSUPPORTED_ERROR;
+    }
+    return toAppendTo;
+}
+
+// -------------------------------------
+// Default implementation sets unsupported error; subclasses should
+// override.
+
+UnicodeString&
+NumberFormat::format(int64_t /* unused number */,
+                     UnicodeString& toAppendTo,
+                     FieldPositionIterator* /* unused posIter */,
+                     UErrorCode& status) const
+{
+    if (!U_FAILURE(status)) {
+        status = U_UNSUPPORTED_ERROR;
+    }
+    return toAppendTo;
+}
+
+// -------------------------------------
+// Default implementation sets unsupported error; subclasses should
+// override.
+
+UnicodeString&
+NumberFormat::format(const StringPiece & /* unused decimal number */,
+                     UnicodeString& toAppendTo,
+                     FieldPositionIterator* /* unused posIter */,
+                     UErrorCode& status) const
+{
+    if (!U_FAILURE(status)) {
+        status = U_UNSUPPORTED_ERROR;
+    }
+    return toAppendTo;
+}
+
+// -------------------------------------
 // Formats the number object and save the format
 // result in the toAppendTo string buffer.
+
+// utility to save/restore state, used in two overloads
+// of format(const Formattable&...) below.
+
+class ArgExtractor {
+  NumberFormat *ncnf;
+  const Formattable* num;
+  UBool setCurr;
+  UChar save[4];
+
+ public:
+  ArgExtractor(const NumberFormat& nf, const Formattable& obj, UErrorCode& status);
+  ~ArgExtractor();
+
+  const Formattable* number(void) const;
+};
+
+inline const Formattable*
+ArgExtractor::number(void) const {
+  return num;
+}
+
+ArgExtractor::ArgExtractor(const NumberFormat& nf, const Formattable& obj, UErrorCode& status)
+    : ncnf((NumberFormat*) &nf), num(&obj), setCurr(FALSE) {
+
+    const UObject* o = obj.getObject(); // most commonly o==NULL
+    if (o != NULL &&
+        o->getDynamicClassID() == CurrencyAmount::getStaticClassID()) {
+        // getISOCurrency() returns a pointer to internal storage, so we
+        // copy it to retain it across the call to setCurrency().
+        const CurrencyAmount* amt = (const CurrencyAmount*) o;
+        const UChar* curr = amt->getISOCurrency();
+        u_strcpy(save, nf.getCurrency());
+        setCurr = (u_strcmp(curr, save) != 0);
+        if (setCurr) {
+            ncnf->setCurrency(curr, status);
+        }
+        num = &amt->getNumber();
+    }
+}
+
+ArgExtractor::~ArgExtractor() {
+    if (setCurr) {
+        UErrorCode ok = U_ZERO_ERROR;
+        ncnf->setCurrency(save, ok); // always restore currency
+    }
+}
 
 UnicodeString&
 NumberFormat::format(const Formattable& obj,
@@ -285,25 +396,8 @@ NumberFormat::format(const Formattable& obj,
 {
     if (U_FAILURE(status)) return appendTo;
 
-    NumberFormat* nonconst = (NumberFormat*) this;
-    const Formattable* n = &obj;
-
-    UChar save[4];
-    UBool setCurr = FALSE;
-    const UObject* o = obj.getObject(); // most commonly o==NULL
-    if (o != NULL &&
-        o->getDynamicClassID() == CurrencyAmount::getStaticClassID()) {
-        // getISOCurrency() returns a pointer to internal storage, so we
-        // copy it to retain it across the call to setCurrency().
-        const CurrencyAmount* amt = (const CurrencyAmount*) o;
-        const UChar* curr = amt->getISOCurrency();
-        u_strcpy(save, getCurrency());
-        setCurr = (u_strcmp(curr, save) != 0);
-        if (setCurr) {
-            nonconst->setCurrency(curr, status);
-        }
-        n = &amt->getNumber();
-    }
+    ArgExtractor arg(*this, obj, status);
+    const Formattable *n = arg.number();
 
     switch (n->getType()) {
     case Formattable::kDouble:
@@ -320,16 +414,45 @@ NumberFormat::format(const Formattable& obj,
         break;
     }
 
-    if (setCurr) {
-        UErrorCode ok = U_ZERO_ERROR;
-        nonconst->setCurrency(save, ok); // always restore currency
+    return appendTo;
+}
+
+// -------------------------------------x
+// Formats the number object and save the format
+// result in the toAppendTo string buffer.
+
+UnicodeString&
+NumberFormat::format(const Formattable& obj,
+                        UnicodeString& appendTo,
+                        FieldPositionIterator* posIter,
+                        UErrorCode& status) const
+{
+    if (U_FAILURE(status)) return appendTo;
+
+    ArgExtractor arg(*this, obj, status);
+    const Formattable *n = arg.number();
+
+    switch (n->getType()) {
+    case Formattable::kDouble:
+        format(n->getDouble(), appendTo, posIter, status);
+        break;
+    case Formattable::kLong:
+        format(n->getLong(), appendTo, posIter, status);
+        break;
+    case Formattable::kInt64:
+        format(n->getInt64(), appendTo, posIter, status);
+        break;
+    default:
+        status = U_INVALID_FORMAT_ERROR;
+        break;
     }
+
     return appendTo;
 }
 
 // -------------------------------------
 
-UnicodeString& 
+UnicodeString&
 NumberFormat::format(int64_t number,
                      UnicodeString& appendTo,
                      FieldPosition& pos) const
@@ -464,7 +587,7 @@ NumberFormat::createCurrencyInstance(UErrorCode& status)
 
 NumberFormat* U_EXPORT2
 NumberFormat::createCurrencyInstance(const Locale& inLocale, UErrorCode& status)
-{  
+{
     return createInstance(inLocale, kCurrencyStyle, status);
 }
 
@@ -538,7 +661,7 @@ private:
     Hashtable* _ids;
 
 public:
-    NFFactory(NumberFormatFactory* delegate) 
+    NFFactory(NumberFormatFactory* delegate)
         : LocaleKeyFactory(delegate->visible() ? VISIBLE : INVISIBLE)
         , _delegate(delegate)
         , _ids(NULL)
@@ -570,7 +693,7 @@ public:
 
 protected:
     /**
-     * Return the set of ids that this factory supports (visible or 
+     * Return the set of ids that this factory supports (visible or
      * otherwise).  This can be called often and might need to be
      * cached if it is expensive to create.
      */
@@ -621,7 +744,7 @@ public:
 
 // -------------------------------------
 
-static ICULocaleService* 
+static ICULocaleService*
 getNumberFormatService(void)
 {
     UBool needInit;
@@ -879,7 +1002,7 @@ NumberFormat::makeInstance(const Locale& desiredLocale,
 
         case kCurrencyStyle:
         case kIsoCurrencyStyle: // do not support plural formatting here
-        case kPluralCurrencyStyle: 
+        case kPluralCurrencyStyle:
             f = new Win32NumberFormat(desiredLocale, curr, status);
 
             if (U_SUCCESS(status)) {
@@ -888,7 +1011,7 @@ NumberFormat::makeInstance(const Locale& desiredLocale,
 
             delete f;
             break;
-            
+
         default:
             break;
         }
@@ -902,8 +1025,8 @@ NumberFormat::makeInstance(const Locale& desiredLocale,
     UResourceBundle *numberPatterns = ures_getByKey(resource, DecimalFormat::fgNumberPatterns, NULL, &status);
     NumberingSystem *ns = NULL;
     UBool deleteSymbols = TRUE;
-    UHashtable * cache = NULL; 
-    int32_t hashKey; 
+    UHashtable * cache = NULL;
+    int32_t hashKey;
     UBool getCache = FALSE;
     UBool deleteNS = FALSE;
 
@@ -919,7 +1042,7 @@ NumberFormat::makeInstance(const Locale& desiredLocale,
     else {
         // If not all the styled patterns exists for the NumberFormat in this locale,
         // sets the status code to failure and returns nil.
-        if (ures_getSize(numberPatterns) < (int32_t)(sizeof(gLastResortNumberPatterns)/sizeof(gLastResortNumberPatterns[0])) -2 ) { //minus 2: ISO and plural 
+        if (ures_getSize(numberPatterns) < (int32_t)(sizeof(gLastResortNumberPatterns)/sizeof(gLastResortNumberPatterns[0])) -2 ) { //minus 2: ISO and plural
             status = U_INVALID_FORMAT_ERROR;
             goto cleanup;
         }
@@ -928,18 +1051,18 @@ NumberFormat::makeInstance(const Locale& desiredLocale,
         symbolsToAdopt = new DecimalFormatSymbols(desiredLocale, status);
 
         int32_t patLen = 0;
-        
+
         /* for ISOCURRENCYSTYLE and PLURALCURRENCYSTYLE,
          * the pattern is the same as the pattern of CURRENCYSTYLE
          * but by replacing the single currency sign with
          * double currency sign or triple currency sign.
          */
-        int styleInNumberPattern = ((style == kIsoCurrencyStyle || 
+        int styleInNumberPattern = ((style == kIsoCurrencyStyle ||
                                      style == kPluralCurrencyStyle) ?
                                     kCurrencyStyle : style);
 
         const UChar *patResStr = ures_getStringByIndex(numberPatterns, (int32_t)styleInNumberPattern, &patLen, &status);
-       
+
         // Creates the specified decimal format style of the desired locale.
         pattern.setTo(TRUE, patResStr, patLen);
     }
@@ -952,74 +1075,74 @@ NumberFormat::makeInstance(const Locale& desiredLocale,
             pattern.setTo(currPattern, u_strlen(currPattern));
         }
     }
-    
-    // Use numbering system cache hashtable 
+
+    // Use numbering system cache hashtable
     UMTX_CHECK(&nscacheMutex, (UBool)(cache != NumberingSystem_cache), getCache);
     if (getCache) {
-        umtx_lock(&nscacheMutex); 
-        cache = NumberingSystem_cache; 
-        umtx_unlock(&nscacheMutex); 
+        umtx_lock(&nscacheMutex);
+        cache = NumberingSystem_cache;
+        umtx_unlock(&nscacheMutex);
     }
 
-    // Check cache we got, create if non-existant 
-    status = U_ZERO_ERROR; 
-    if (cache == NULL) { 
-        cache = uhash_open(uhash_hashLong,  
-                           uhash_compareLong,  
-                           NULL,  
-                           &status); 
-     
-        if (cache == NULL || U_FAILURE(status)) { 
-            // cache not created - out of memory 
-            cache = NULL;  
-        } 
-        else { 
-            // cache created 
+    // Check cache we got, create if non-existant
+    status = U_ZERO_ERROR;
+    if (cache == NULL) {
+        cache = uhash_open(uhash_hashLong,
+                           uhash_compareLong,
+                           NULL,
+                           &status);
+
+        if (cache == NULL || U_FAILURE(status)) {
+            // cache not created - out of memory
+            cache = NULL;
+        }
+        else {
+            // cache created
             uhash_setValueDeleter(cache, deleteNumberingSystem);
-         
-            // set final NumberingSystem_cache value 
-            UHashtable* h = NULL; 
+
+            // set final NumberingSystem_cache value
+            UHashtable* h = NULL;
 
             UMTX_CHECK(&nscacheMutex, (UBool)(h != NumberingSystem_cache), getCache);
             if (getCache) {
-                umtx_lock(&nscacheMutex); 
-                h = NumberingSystem_cache; 
+                umtx_lock(&nscacheMutex);
+                h = NumberingSystem_cache;
                 umtx_unlock(&nscacheMutex);
             }
-            if (h == NULL) { 
+            if (h == NULL) {
                 umtx_lock(&nscacheMutex);
-                NumberingSystem_cache = h = cache; 
-                cache = NULL; 
+                NumberingSystem_cache = h = cache;
+                cache = NULL;
                 ucln_i18n_registerCleanup(UCLN_I18N_NUMFMT, numfmt_cleanup);
                 umtx_unlock(&nscacheMutex);
             }
 
-            if(cache != NULL) { 
-              uhash_close(cache); 
-            } 
-            cache = h; 
-        } 
-    } 
-     
-    // Get cached numbering system 
-    if (cache != NULL) { 
-        hashKey = desiredLocale.hashCode(); 
-        
-        umtx_lock(&nscacheMutex); 
-        ns = (NumberingSystem *)uhash_iget(cache, hashKey); 
-        if (ns == NULL) { 
-            ns = NumberingSystem::createInstance(desiredLocale,status); 
-            uhash_iput(cache, hashKey, (void*)ns, &status); 
-        } 
+            if(cache != NULL) {
+              uhash_close(cache);
+            }
+            cache = h;
+        }
+    }
+
+    // Get cached numbering system
+    if (cache != NULL) {
+        hashKey = desiredLocale.hashCode();
+
+        umtx_lock(&nscacheMutex);
+        ns = (NumberingSystem *)uhash_iget(cache, hashKey);
+        if (ns == NULL) {
+            ns = NumberingSystem::createInstance(desiredLocale,status);
+            uhash_iput(cache, hashKey, (void*)ns, &status);
+        }
         umtx_unlock(&nscacheMutex);
-    } 
-    else { 
+    }
+    else {
         ns = NumberingSystem::createInstance(desiredLocale,status);
         deleteNS = TRUE;
-    } 
-    
-    // check results of getting a numbering system 
-    if ((ns == NULL) || (U_FAILURE(status))) { 
+    }
+
+    // check results of getting a numbering system
+    if ((ns == NULL) || (U_FAILURE(status))) {
         goto cleanup;
     }
 
@@ -1029,7 +1152,7 @@ NumberFormat::makeInstance(const Locale& desiredLocale,
         UnicodeString nsRuleSetName;
         Locale nsLoc;
         URBNFRuleSetTag desiredRulesType = URBNF_NUMBERING_SYSTEM;
-        
+
         nsDesc.setTo(ns->getDescription());
         int32_t firstSlash = nsDesc.indexOf(gSlash);
         int32_t lastSlash = nsDesc.lastIndexOf(gSlash);
@@ -1039,7 +1162,7 @@ NumberFormat::makeInstance(const Locale& desiredLocale,
             nsDesc.extract(0,firstSlash,nsLocID,ULOC_FULLNAME_CAPACITY,US_INV);
             nsRuleSetGroup.setTo(nsDesc,firstSlash+1,lastSlash-firstSlash-1);
             nsRuleSetName.setTo(nsDesc,lastSlash+1);
-                      
+
             nsLoc = Locale::createFromName(nsLocID);
 
             UnicodeString SpelloutRules = UNICODE_STRING_SIMPLE("SpelloutRules");
@@ -1083,7 +1206,7 @@ cleanup:
     if (deleteNS && ns) {
         delete ns;
     }
-    
+
     if (U_FAILURE(status)) {
         /* If f exists, then it will delete the symbols */
         if (f==NULL) {

@@ -1,91 +1,21 @@
 ﻿// ***************************************************************************
 // *
-// * Copyright (C) 2009 International Business Machines
+// * Copyright (C) 2010 International Business Machines
 // * Corporation and others.  All Rights Reserved.
 // * Tool: com.ibm.icu.dev.tool.cldr.LDML2ICUConverter.java
 // * Source File:<path>/common/main/uz_Latn.xml
 // *
 // ***************************************************************************
 /**
- *  ICU <specials > source: <path>/xml/main/uz_Latn.xml
+ *  ICU <specials> source: <path>/xml/main/uz_Latn.xml
  */
 uz_Latn{
     %%ParentIsRoot:int{1}
-    Countries{
-        AF{"Afgʿoniston"}
-        BR{"Braziliya"}
-        CN{"Xitoy"}
-        DE{"Olmoniya"}
-        FR{"Fransiya"}
-        GB{"Birlashgan Qirollik"}
-        IN{"Hindiston"}
-        IT{"Italiya"}
-        JP{"Yaponiya"}
-        RU{"Rossiya"}
-        US{"Qo'shma Shtatlar"}
-        UZ{"Oʿzbekiston"}
-    }
-    Currencies{
-        BRL{
-            "R$",
-            "Brazil reali",
-        }
-        CNY{
-            "CN¥",
-            "Xitoy yuani",
-        }
-        EUR{
-            "€",
-            "Evro",
-        }
-        GBP{
-            "£",
-            "Ingliz funt sterlingi",
-        }
-        INR{
-            "Rs",
-            "Hind rupiyasi",
-        }
-        JPY{
-            "JP¥",
-            "Yapon yenasi",
-        }
-        RUB{
-            "RUB",
-            "Rus rubli",
-        }
-        USD{
-            "US$",
-            "AQSH dollari",
-        }
-        UZS{
-            "soʿm",
-            "Oʿzbekiston soʿm",
-        }
-    }
-    ExemplarCharacters{"[a-v x-z ʿ]"}
-    Languages{
-        ar{"arabcha"}
-        de{"olmoncha"}
-        en{"inglizcha"}
-        es{"ispancha"}
-        fr{"fransuzcha"}
-        hi{"hindcha"}
-        it{"italyancha"}
-        ja{"yaponcha"}
-        pt{"portugalcha"}
-        ru{"ruscha"}
-        uz{"o'zbekcha"}
-        zh{"xitoycha"}
-    }
+    ExemplarCharacters{"[a b c d e f g h i j k l m n o p q r s t u v x y z ʿ]"}
     LocaleScript{
         "Latn",
     }
-    Scripts{
-        Cyrl{"Kiril"}
-        Latn{"Lotin"}
-    }
-    Version{"2.0.42.82"}
+    Version{"2.0.45.99"}
     calendar{
         gregorian{
             dayNames{

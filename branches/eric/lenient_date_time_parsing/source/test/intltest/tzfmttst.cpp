@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2007-2009, International Business Machines Corporation and    *
+* Copyright (C) 2007-2010, International Business Machines Corporation and    *
 * others. All Rights Reserved.                                                *
 *******************************************************************************
 */
@@ -55,7 +55,7 @@ TimeZoneFormatTest::TestTimeZoneRoundTrip(void) {
 
     Calendar *cal = Calendar::createInstance(TimeZone::createTimeZone((UnicodeString)"UTC"), status);
     if (U_FAILURE(status)) {
-        errln("Calendar::createInstance failed");
+        dataerrln("Calendar::createInstance failed: %s", u_errorName(status));
         return;
     }
 
@@ -448,7 +448,7 @@ TimeZoneFormatTest::TestTimeRoundTrip(void) {
     UErrorCode status = U_ZERO_ERROR;
     Calendar *cal = Calendar::createInstance(TimeZone::createTimeZone((UnicodeString) "UTC"), status);
     if (U_FAILURE(status)) {
-        errln("Calendar::createInstance failed");
+        dataerrln("Calendar::createInstance failed: %s", u_errorName(status));
         return;
     }
 
@@ -535,6 +535,12 @@ TimeZoneFormatTest::TestTimeRoundTrip(void) {
             break;
         SimpleThread::sleep(1000);
     }
+
+    for (i = 0; i < nThreads; i++) {
+        delete threads[i];
+    }
+    delete [] threads;
+
 #endif
     UDate total = 0;
     logln("### Elapsed time by patterns ###");
@@ -544,11 +550,6 @@ TimeZoneFormatTest::TestTimeRoundTrip(void) {
     }
     logln((UnicodeString) "Total: " + total + "ms");
     logln((UnicodeString) "Iteration: " + data.testCounts);
-
-    for (i = 0; i < nThreads; i++) {
-        delete threads[i];
-    }
-    delete [] threads;
 
     delete cal;
 }

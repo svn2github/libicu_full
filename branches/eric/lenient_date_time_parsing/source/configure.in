@@ -1,5 +1,5 @@
-	# -*-autoconf-*-
-AC_COPYRIGHT([ Copyright (c) 1999-2009, International Business Machines Corporation and others. All Rights Reserved. ])
+# -*-autoconf-*-
+AC_COPYRIGHT([ Copyright (c) 1999-2010, International Business Machines Corporation and others. All Rights Reserved. ])
 # configure.in for ICU
 # Stephen F. Booth, heavily modified by Yves and others
 
@@ -11,7 +11,7 @@ AC_PREREQ(2.63)
 AC_INIT
 AC_CONFIG_SRCDIR([common/unicode/utypes.h])
 
-AC_CONFIG_HEADER(common/icucfg.h)
+AC_CONFIG_HEADERS(common/icucfg.h)
 PACKAGE="icu"
 AC_SUBST(PACKAGE)
 
@@ -21,11 +21,22 @@ AC_MSG_CHECKING(for ICU version numbers)
 geticuversion() {
     [sed -n 's/^[ 	]*#[ 	]*define[ 	]*U_ICU_VERSION[ 	]*"\([^"]*\)".*/\1/p' "$@"]
 }
-VERSION=`geticuversion $srcdir/common/unicode/uversion.h`
+getuversion() {
+    [sed -n 's/^[ 	]*#[ 	]*define[ 	]*U_UNICODE_VERSION[ 	]*"\([^"]*\)".*/\1/p' "$@"]
+}
+VERSION=`geticuversion $srcdir/common/unicode/uvernum.h`
 if test x"$VERSION" = x; then
     VERSION=`geticuversion $srcdir/common/unicode/*.h`
     if test x"$VERSION" = x; then
-        AC_MSG_ERROR([Cannot determine ICU version number from header files])
+        AC_MSG_ERROR([Cannot determine ICU version number from uvernum.h header file])
+    fi
+fi
+
+UNICODE_VERSION=`getuversion $srcdir/common/unicode/uchar.h`
+if test x"$UNICODE_VERSION" = x; then
+    UNICODE_VERSION=`getuversion $srcdir/common/unicode/*.h`
+    if test x"$UNICODE_VERSION" = x; then
+        AC_MSG_ERROR([Cannot determine Unicode version number from uchar.h header file])
     fi
 fi
 # Compute a reasonable library version from the release version. This is
@@ -36,9 +47,8 @@ LIB_VERSION_MAJOR=`echo $LIB_VERSION | sed 's/\..*//'`
 AC_SUBST(VERSION)
 AC_SUBST(LIB_VERSION)
 AC_SUBST(LIB_VERSION_MAJOR)
-AC_MSG_RESULT([release $VERSION, library $LIB_VERSION])
+AC_MSG_RESULT([release $VERSION, library $LIB_VERSION, unicode version $UNICODE_VERSION])
 
-UNICODE_VERSION="5.1"
 AC_SUBST(UNICODE_VERSION)
 
 # Determine the host system
@@ -53,6 +63,7 @@ export _CXX_CXXSUFFIX
 AC_PROG_CC
 AC_PROG_CXX
 AC_PROG_CPP
+
 AC_PROG_INSTALL
 
 AC_SUBST(cross_compiling)
@@ -81,6 +92,7 @@ AC_ARG_WITH(cross-build,
 if test "X$cross_buildroot" = "X"; then
     if test "$cross_compiling" = "yes"; then
         AC_MSG_ERROR([Error! Cross compiling but no --with-cross-build option specified - please supply the path to an executable ICU's build root])
+	dnl '
     fi
 else
     if test -f "${cross_buildroot}/config/icucross.mk"; then
@@ -229,7 +241,7 @@ AC_MSG_CHECKING([whether to enable draft APIs])
 enabled=yes
 U_DEFAULT_SHOW_DRAFT=1
 AC_ARG_ENABLE(draft,
-    [  --enable-draft          enable draft APIs [default=yes]],
+    [  --enable-draft          enable draft APIs (and internal APIs) [default=yes]],
     [ case "${enableval}" in
          no) enabled=no; U_DEFAULT_SHOW_DRAFT=0 ;;
          *) ;;
@@ -329,6 +341,42 @@ AC_ARG_ENABLE(tracing,
 AC_MSG_RESULT($enabled)
 AC_SUBST(U_ENABLE_TRACING)
 
+
+U_ENABLE_DYLOAD=1
+AC_MSG_CHECKING([whether to enable dynamic loading of plugins])
+enabled=check
+AC_ARG_ENABLE(dyload,
+    [  --disable-dyload        disable dynamic loading [default=no]],
+    [ case "${enableval}" in
+	     yes|"") 
+		     U_ENABLE_DYLOAD=1
+		     enabled=check ;;
+	     no) 
+	     	 U_ENABLE_DYLOAD=0;
+	     	 enabled=disabled ;;
+	     *) ;;
+    esac],
+)
+AC_SUBST(U_ENABLE_DYLOAD)
+
+# goes into icucfg.h
+AC_CHECK_HEADERS([dlfcn.h])
+U_CHECK_DYLOAD=0
+#AC_MSG_RESULT($enabled)
+if test "$enabled" = "check"; then
+    AC_SEARCH_LIBS([dlopen], [dl])
+    AC_CHECK_FUNCS([dlopen])
+    U_CHECK_DYLOAD=1
+fi
+AC_SUBST(U_CHECK_DYLOAD)
+
+# Check for miscellanous functions.
+# These only go into common/icucfg.h and are NOT exported with ICU builds.
+# So, use for putil / tools only.
+# Note that this will generate HAVE_GETTIMEOFDAY, not U_HAVE_GETTIMEOFDAY
+# rerun 'autoheader' to regenerate icucfg.h.in
+AC_CHECK_FUNCS([gettimeofday])
+
 # Check whether to use the evil rpath or not
 AC_ARG_ENABLE(rpath,
     [  --enable-rpath          use rpath when linking [default is only if necessary]],
@@ -363,6 +411,16 @@ AC_SUBST(U_INLINE)
 #
 U_HAVE_STD_STRING=0
 AC_LANG_PUSH([C++])
+AC_MSG_CHECKING([[if we have a C++ compiler]])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]],[[]])],[cxx_okay=yes],[cxx_okay=no])
+if test $cxx_okay = yes
+then
+	AC_MSG_RESULT([[congratulations]])
+else
+	AC_MSG_RESULT([[no]])
+	AC_MSG_ERROR([[C++ compiler $CXX does not work or no compiler found]])
+fi
+
 AC_MSG_CHECKING([[if #include <string> works]])
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <string>]], [[]])], [ac_cv_header_stdstring=yes], [ac_cv_header_stdstring=no])
 AC_MSG_RESULT($ac_cv_header_stdstring)
@@ -874,7 +932,7 @@ then
     U_HAVE_WCHAR_H=0
     U_HAVE_WCSCPY=0
 else
-    AC_DEFINE(HAVE_WCHAR_H)
+    AC_DEFINE([HAVE_WCHAR_H], [1], [wchar.h was found.])
     U_HAVE_WCHAR_H=1
     # Some broken systems have wchar.h but not some of its functions...
     AC_SEARCH_LIBS(wcscpy, wcs w)
@@ -1222,13 +1280,14 @@ AC_CONFIG_FILES([icudefs.mk \
 		tools/genctd/Makefile \
 		tools/gennames/Makefile \
 		tools/gentest/Makefile \
-		tools/gennorm/Makefile \
+		tools/gennorm2/Makefile \
 		tools/genprops/Makefile \
 		tools/gencase/Makefile \
 		tools/genbidi/Makefile \
 		tools/genpname/Makefile \
 		tools/genbrk/Makefile \
 		tools/gensprep/Makefile \
+		tools/icuinfo/Makefile \
 		tools/icupkg/Makefile \
 		tools/icuswap/Makefile \
 		tools/pkgdata/Makefile \

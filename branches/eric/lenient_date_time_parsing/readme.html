@@ -4,9 +4,9 @@
 <html lang="en-US" xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
   <head>
 
-    <title>ReadMe for ICU</title>
+    <title>ReadMe for ICU 4.4 (DRAFT!)</title>
     <meta name="COPYRIGHT" content=
-    "Copyright (c) 1997-2009 IBM Corporation and others. All Rights Reserved." />
+    "Copyright (c) 1997-2010 IBM Corporation and others. All Rights Reserved." />
     <meta name="KEYWORDS" content=
     "ICU; International Components for Unicode; ICU4C; what's new; readme; read me; introduction; downloads; downloading; building; installation;" />
     <meta name="DESCRIPTION" content=
@@ -15,12 +15,12 @@
 	<link type="text/css" href="./icu4c.css" rel="stylesheet"/>
   </head>
 
-  <body class="readme">
+  <body class="draft">
     <h1>International Components for Unicode<br />
-     <abbr title="International Components for Unicode">ICU</abbr> 4.4 ReadMe</h1>
+     <abbr title="International Components for Unicode">ICU</abbr> 4.4 (DRAFT!) ReadMe</h1>
 
-    <p>Version: 2009 July 24th<br />
-     Copyright &copy; 1997-2009 International Business Machines Corporation and
+    <p>Version: 2010 Feb 17th<br />
+     Copyright &copy; 1997-2010 International Business Machines Corporation and
     others. All Rights Reserved.</p>
     <!-- Remember that there is a copyright at the end too -->
     <hr />
@@ -201,6 +201,8 @@
 
     <h2><a name="News" href="#News" id="News">What is new in this
     release?</a></h2>
+    
+    <p><strong>DLL Plug-ins</strong> are new in version 4.4. For more information, see the ICU Userguide chapter on <a href="http://userguide.icu-project.org/packaging/plug-ins">Plug-ins</a>. This is a technology preview, and may be changed or removed in future releases.</p>
 
     <p>To see which APIs are new or changed in this release, view the <a href="APIChangeReport.html">ICU4C API Change Report</a>. </p>
 
@@ -1117,7 +1119,11 @@
     "HowToWindowsConfigureICU"><strong>Configuring ICU on Windows
     NOTE:</strong></a> </p>
     <p>
-    You may need to run <tt>"dos2unix.exe"</tt> on all of the scripts (e.g. configure)
+    Ensure that the order of the PATH is MSVC, Cygwin, and then other PATHs. The configure 
+    script needs certain tools in Cygwin (e.g. grep).
+    </p>
+    <p>
+    Also, you may need to run <tt>"dos2unix.exe"</tt> on all of the scripts (e.g. configure)
     in the top source directory of ICU. To avoid this issue, you can download
     the ICU source for Unix platforms (icu-xxx.tgz).
     </p>
@@ -1918,7 +1924,7 @@ gnumake</pre>
     </ul>
     <hr />
 
-    <p>Copyright &copy; 1997-2009 International Business Machines Corporation and
+    <p>Copyright &copy; 1997-2010 International Business Machines Corporation and
     others. All Rights Reserved.<br />
      IBM Globalization Center of Competency - San Jos&eacute;<br />
      4400 North First Street<br />

@@ -1,7 +1,7 @@
 
 /********************************************************************
  * COPYRIGHT: 
- * Copyright (c) 1997-2009, International Business Machines Corporation and
+ * Copyright (c) 1997-2010, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 
@@ -722,7 +722,7 @@ void DateIntervalFormatTest::testFormat() {
         
         "zh", "2007 11 10 10:10:10", "2007 11 20 10:10:10", "M", "11", 
         
-        "zh", "2007 11 10 10:10:10", "2007 11 20 10:10:10", "MMM", "11\\u6708", // (fixed expected result per ticket:6626:)
+        "zh", "2007 11 10 10:10:10", "2007 11 20 10:10:10", "MMM", "\\u5341\\u4E00\\u6708", // (fixed expected result per ticket:6626: and others)
         
         
         "zh", "2007 11 10 10:10:10", "2007 11 20 10:10:10", "hmz", "2007\\u5e7411\\u670810\\u65e5 \\u4e0a\\u534810:10 \\u683c\\u6797\\u5c3c\\u6cbb\\u6807\\u51c6\\u65f6\\u95f4-0800\\u20132007\\u5e7411\\u670820\\u65e5 \\u4e0a\\u534810:10 \\u683c\\u6797\\u5c3c\\u6cbb\\u6807\\u51c6\\u65f6\\u95f4-0800", 
@@ -834,14 +834,14 @@ void DateIntervalFormatTest::testFormat() {
         "de", "2007 01 10 10:00:10", "2007 01 10 14:10:10", "EEEEdMMM", "Mittwoch 10. Jan", 
         
         
-        "de", "2007 01 10 10:00:10", "2007 01 10 14:10:10", "h", "10-14", 
+        "de", "2007 01 10 10:00:10", "2007 01 10 14:10:10", "h", "10 vorm. - 2 nachm.", 
         
         "de", "2007 01 10 10:00:10", "2007 01 10 10:20:10", "EEEEdMMM", "Mittwoch 10. Jan", 
         
         
-        "de", "2007 01 10 10:00:10", "2007 01 10 10:20:10", "hmv", "10:00-10:20 Vereinigte Staaten (Los Angeles)", 
+        "de", "2007 01 10 10:00:10", "2007 01 10 10:20:10", "hmv", "10:00-10:20 vorm. Vereinigte Staaten (Los Angeles)", 
         
-        "de", "2007 01 10 10:00:10", "2007 01 10 10:20:10", "hmz", "10:00-10:20 GMT-08:00", 
+        "de", "2007 01 10 10:00:10", "2007 01 10 10:20:10", "hmz", "10:00-10:20 vorm. GMT-08:00", 
         
         "de", "2007 01 10 10:00:10", "2007 01 10 10:20:10", "h", "10", 
         
@@ -882,7 +882,10 @@ void DateIntervalFormatTest::expect(const char** data, int32_t data_length) {
         const char* locName = data[i++];
         Locale loc(locName);
         SimpleDateFormat ref(pattern, loc, ec);
-        if (!assertSuccess("construct SimpleDateFormat in expect", ec)) return;
+        if (U_FAILURE(ec)) {
+            dataerrln("contruct SimpleDateFormat in expect failed: %s", u_errorName(ec));
+            return;
+        }
         // 'f'
         const char* datestr = data[i++];
         const char* datestr_2 = data[i++];
@@ -993,7 +996,10 @@ void DateIntervalFormatTest::expectUserDII(const char** data,
         const char* locName = data[i++];
         Locale loc(locName);
         SimpleDateFormat ref(pattern, loc, ec);
-        if (!assertSuccess("construct SimpleDateFormat in expectUserDII", ec)) return;
+        if (U_FAILURE(ec)) {
+            dataerrln("contruct SimpleDateFormat in expectUserDII failed: %s", u_errorName(ec));
+            return;
+        }
         const char* datestr = data[i++];
         const char* datestr_2 = data[i++];
         UDate date = ref.parse(ctou(datestr), ec);

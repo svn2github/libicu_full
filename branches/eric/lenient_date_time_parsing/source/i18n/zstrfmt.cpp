@@ -28,6 +28,7 @@
 #include "umutex.h"
 #include "ucln_in.h"
 #include "uassert.h"
+#include "ureslocs.h"
 
 /**
  * global ZoneStringFormatCache stuffs
@@ -329,7 +330,7 @@ TextTrieMap::addChildNode(CharacterNode *parent, UChar c, UErrorCode &status) {
 
     // Ensure capacity. Grow fNodes[] if needed.
     if (fNodesCount == fNodesCapacity) {
-        int32_t parentIndex = (parent - fNodes);
+        int32_t parentIndex = (int32_t)(parent - fNodes);
         if (!growNodes()) {
             status = U_MEMORY_ALLOCATION_ERROR;
             return NULL;
@@ -646,7 +647,7 @@ ZoneStringFormat::ZoneStringFormat(const Locale &locale, UErrorCode &status)
     uhash_setValueDeleter(fTzidToStrings, deleteZoneStrings);
     uhash_setValueDeleter(fMzidToStrings, deleteZoneStrings);
 
-    fZoneStringsArray = ures_open(NULL, locale.getName(), &status);
+    fZoneStringsArray = ures_open(U_ICUDATA_ZONE, locale.getName(), &status);
     fZoneStringsArray = ures_getByKeyWithFallback(fZoneStringsArray, gZoneStringsTag, fZoneStringsArray, &status);
     if (U_FAILURE(status)) {
         // If no locale bundles are available, zoneStrings will be null.
@@ -1543,7 +1544,7 @@ ZoneStringFormat::getFallbackFormat(const Locale &locale, UErrorCode &status) {
         return NULL;
     }
     UnicodeString pattern(TRUE, gDefFallbackPattern, -1);
-    UResourceBundle *zoneStringsArray = ures_open(NULL, locale.getName(), &status);
+    UResourceBundle *zoneStringsArray = ures_open(U_ICUDATA_ZONE, locale.getName(), &status);
     zoneStringsArray = ures_getByKeyWithFallback(zoneStringsArray, gZoneStringsTag, zoneStringsArray, &status);
     int32_t len;
     const UChar *flbkfmt = ures_getStringByKeyWithFallback(zoneStringsArray, gFallbackFormatTag, &len, &status);
@@ -1564,7 +1565,7 @@ ZoneStringFormat::getRegionFormat(const Locale& locale, UErrorCode &status) {
         return NULL;
     }
     UnicodeString pattern(TRUE, gDefRegionPattern, -1);
-    UResourceBundle *zoneStringsArray = ures_open(NULL, locale.getName(), &status);
+    UResourceBundle *zoneStringsArray = ures_open(U_ICUDATA_ZONE, locale.getName(), &status);
     zoneStringsArray = ures_getByKeyWithFallback(zoneStringsArray, gZoneStringsTag, zoneStringsArray, &status);
     int32_t len;
     const UChar *regionfmt = ures_getStringByKeyWithFallback(zoneStringsArray, gRegionFormatTag, &len, &status);
@@ -2042,4 +2043,3 @@ void ZSFStringPool::freeze() {
 U_NAMESPACE_END
 
 #endif /* #if !UCONFIG_NO_FORMATTING */
-
