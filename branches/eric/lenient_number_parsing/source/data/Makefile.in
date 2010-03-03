@@ -115,6 +115,8 @@ distclean : distclean-local
 dist: 
 check: all
 
+-include Makefile.local
+
 
 distclean-local: clean
 	$(RMV) Makefile
@@ -163,7 +165,7 @@ endif
 packagedata: icupkg.inc $(PKGDATA_LIST) build-local
 ifneq ($(ENABLE_STATIC),)
 ifeq ($(PKGDATA_MODE),dll)
-	$(PKGDATA_INVOKE) $(PKGDATA) -e $(ICUDATA_ENTRY_POINT) -T $(OUTTMPDIR) -p $(ICUDATA_NAME) $(PKGDATA_LIBSTATICNAME) -m static $(PKGDATA_LIST)
+	$(PKGDATA_INVOKE) $(PKGDATA) -e $(ICUDATA_ENTRY_POINT) -T $(OUTTMPDIR) -p $(ICUDATA_NAME) $(PKGDATA_LIBSTATICNAME) -m static $(PKGDATA_VERSIONING) $(PKGDATA_LIST)
 endif
 endif
 ifneq ($(ICUDATA_SOURCE_IS_NATIVE_TARGET),YES)
@@ -258,6 +260,10 @@ ALL_UCM_SOURCE=ibm-37_P100-1995.ucm ibm-1047_P100-1995.ucm $(UCM_SOURCE_CORE) $(
 UCM_FILES = $(ALL_UCM_SOURCE:%=$(SRCDATADIR)/%)
 CNV_FILES = $(ALL_UCM_SOURCE:%.ucm=$(BUILDDIR)/%.cnv)
 CNV_FILES_SHORT = $(ALL_UCM_SOURCE:%.ucm=%.cnv)
+UCM_SOURCE_SPECIAL=$(UCM_SOURCE_EBCDIC_IGNORE_SISO) $(UCM_SOURCE_EBCDIC_IGNORE_SISO_LOCAL)
+UCM_FILES_SPECIAL=$(UCM_SOURCE_SPECIAL:%=$(UCMSRCDIR)/%) 
+CNV_FILES_SPECIAL=$(UCM_SOURCE_SPECIAL:%.ucm=$(BUILDDIR)/%.cnv) 
+CNV_FILES_SHORT_SPECIAL=$(UCM_SOURCE_SPECIAL:%.ucm=%.cnv) 
 
 ## RES files
 -include $(LOCSRCDIR)/resfiles.mk
@@ -396,13 +402,13 @@ SPREP_FILES = $(ALL_SPREP_SOURCE:%.txt=$(BUILDDIR)/%.spp)
 SPREP_FILES_SHORT = $(ALL_SPREP_SOURCE:%.txt=%.spp)
 
 ## All generated files
-ALL_FILES = $(DAT_FILES) $(CNV_FILES) $(BRK_FILES) $(CTD_FILES) $(RES_FILES) $(CURR_FILES) $(LANG_FILES) $(REGION_FILES) $(ZONE_FILES) $(COLLATION_FILES) $(BRK_RES_FILES) $(RBNF_FILES) $(TRANSLIT_FILES) $(SPREP_FILES) $(CFU_FILES)
+ALL_FILES = $(DAT_FILES) $(CNV_FILES) $(CNV_FILES_SPECIAL) $(BRK_FILES) $(CTD_FILES) $(RES_FILES) $(INDEX_RES_FILE) $(CURR_FILES) $(LANG_FILES) $(REGION_FILES) $(ZONE_FILES) $(COLLATION_FILES) $(BRK_RES_FILES) $(RBNF_FILES) $(TRANSLIT_FILES) $(SPREP_FILES) $(CFU_FILES)
 ALL_INDEX_SRC_FILES = $(PKGDATA_LIST) $(INDEX_FILE) $(CURR_INDEX_FILE) $(LANG_INDEX_FILE) $(REGION_INDEX_FILE) $(ZONE_INDEX_FILE) $(COLLATION_INDEX_FILE) $(BRK_RES_INDEX_FILE) $(RBNF_INDEX_FILE)
 # a list to use in the .lst files (package-relative)
 COLL_FILES_LIST=$(COLLATION_FILES_SHORT) $(COLLATION_INDEX_RES_SHORT)
 BRK_FILES_LIST=$(BRK_FILES_SHORT) $(CTD_FILES_SHORT) $(BRK_RES_FILES_SHORT) $(BRK_RES_INDEX_RES_SHORT) 
 LOCALE_FILES_LIST= $(RES_FILES_SHORT) $(LANG_FILES_SHORT) $(REGION_FILES_SHORT) $(ZONE_FILES_SHORT)
-MISC_FILES_LIST=$(DAT_FILES_SHORT) $(CNV_FILES_SHORT) $(CURR_FILES_SHORT) $(RBNF_FILES_SHORT) $(RBNF_INDEX_RES_SHORT) $(TRANSLIT_FILES_SHORT) $(SPREP_FILES_SHORT) $(CFU_FILES_SHORT)
+MISC_FILES_LIST=$(DAT_FILES_SHORT) $(CNV_FILES_SHORT) $(CNV_FILES_SHORT_SPECIAL) $(CURR_FILES_SHORT) $(RBNF_FILES_SHORT) $(RBNF_INDEX_RES_SHORT) $(TRANSLIT_FILES_SHORT) $(SPREP_FILES_SHORT) $(CFU_FILES_SHORT)
 UNI_CORE_DATA=uprops.icu ucase.icu ubidi.icu
 UNI_CORE_TARGET_DATA=$(UNI_CORE_DATA:%=$(BUILDDIR)/%)
 
@@ -543,6 +549,8 @@ $(CFU_FILES): $(ALL_CFU_SOURCE) $(TOOLBINDIR)/gencfu$(EXEEXT) $(DAT_FILES)
 
 ####################################################    CNV
 # CNV FILES
+$(CNV_FILES_SPECIAL) : $(UCM_FILES_SPECIAL) $(TOOLBINDIR)/makeconv$(TOOLEXEEXT) 
+	$(INVOKE) $(TOOLBINDIR)/makeconv --ignore-siso-check -c -d $(BUILDDIR) $(UCMSRCDIR)/$(@F:%.cnv=%.ucm) 
 $(BUILDDIR)/%.cnv: $(UCMSRCDIR)/%.ucm $(TOOLBINDIR)/makeconv$(TOOLEXEEXT)
 	$(INVOKE) $(TOOLBINDIR)/makeconv -c -d $(BUILDDIR) $(UCMSRCDIR)/$(<F)
 
@@ -717,7 +725,7 @@ $(BUILDDIR)/%.res: $(LOCSRCDIR)/%.txt $(TOOLBINDIR)/genrb$(TOOLEXEEXT) $(DAT_FIL
 $(BUILDDIR)/pool.res: $(LOCSRCDIR)/pool.res
 	$(INVOKE) $(TOOLBINDIR)/icupkg -t$(ICUDATA_CHAR) $(LOCSRCDIR)/pool.res $(BUILDDIR)/pool.res
 
-# if the tzcode directory contains a new tzdata*.tar.gz file, use it for zoneinfo.txt
+# if the tzcode directory contains a new tzdata*.tar.gz file, use it for zoneinfo
 ifeq ($(TZDATA),)
 TZDATA = $(firstword $(wildcard $(top_builddir)/tools/tzcode/tzdata*.tar.gz) $(wildcard $(top_srcdir)/tools/tzcode/tzdata*.tar.gz))
 endif
@@ -725,20 +733,20 @@ endif
 ifneq ($(TZDATA),)
 
 TZCODE_DIR=$(top_builddir)/tools/tzcode
-ZONEINFO=$(TZCODE_DIR)/zoneinfo.txt
+ZONEINFO=$(TZCODE_DIR)/zoneinfo64.txt
 
-# Override the normal genrb for zoneinfo.txt to always pull from
-# icu/source/tools/tzcode/zoneinfo.txt
-$(BUILDDIR)/zoneinfo.res: $(ZONEINFO) $(TOOLBINDIR)/genrb$(TOOLEXEEXT)
+# Override the normal genrb for zoneinfo to always pull from
+# icu/source/tools/tzcode/zoneinfo64.txt
+$(BUILDDIR)/zoneinfo64.res: $(ZONEINFO) $(TOOLBINDIR)/genrb$(TOOLEXEEXT)
 	@echo Note: $(MISCSRCDIR)/zoneinfo.txt is IGNORED because $(TZDATA) is present.
 	$(INVOKE) $(TOOLBINDIR)/genrb $(GENRBOPTS) -q -i $(BUILDDIR) -d $(BUILDDIR) $(ZONEINFO)
 
-# Create the tzcode tool and zoneinfo.txt as needed.
+# Create the tzcode tool and zoneinfo as needed.
 $(ZONEINFO): $(TZDATA)
 	@echo "$(MAKE)[$(MAKELEVEL)]: Making \`$(ZONEINFO)' in \`$(TZCODE_DIR)'"; \
 	(cd $(TZCODE_DIR) && $(MAKE)) || exit; \
 
-# end of zoneinfo.txt-generation
+# end of zoneinfo-generation
 endif
 
 # zoneinfo has some issues. Ignore some warnings with -q
