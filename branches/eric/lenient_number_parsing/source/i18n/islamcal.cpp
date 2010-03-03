@@ -149,7 +149,7 @@ static const int32_t LIMITS[UCAL_FIELD_COUNT][4] = {
     {        0,        0,       11,       11}, // MONTH
     {        1,        1,       50,       51}, // WEEK_OF_YEAR
     {/*N/A*/-1,/*N/A*/-1,/*N/A*/-1,/*N/A*/-1}, // WEEK_OF_MONTH
-    {        1,        1,       29,       30}, // DAY_OF_MONTH
+    {        1,        1,       29,       31}, // DAY_OF_MONTH (**** SB 30 ****)
     {        1,        1,      354,      355}, // DAY_OF_YEAR
     {/*N/A*/-1,/*N/A*/-1,/*N/A*/-1,/*N/A*/-1}, // DAY_OF_WEEK
     {       -1,       -1,        5,        5}, // DAY_OF_WEEK_IN_MONTH

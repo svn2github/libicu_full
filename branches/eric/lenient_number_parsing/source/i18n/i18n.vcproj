@@ -2627,6 +2627,14 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\smpdtfst.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\smpdtfst.h"
+				>
+			</File>
+			<File
 				RelativePath=".\taiwncal.cpp"
 				>
 			</File>
