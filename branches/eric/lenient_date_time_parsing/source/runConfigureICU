@@ -267,8 +267,6 @@ case $platform in
     MacOSX)
         THE_OS="MacOS X (Darwin)"
         THE_COMP="the GNU C++"
-        CC=gcc-4.2; export CC
-        CXX=g++-4.2; export CXX
         RELEASE_CFLAGS='-O2'
         RELEASE_CXXFLAGS='-O2'
         ;;

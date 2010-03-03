@@ -205,6 +205,12 @@ UCM_SOURCE=$(UCM_SOURCE) $(UCM_SOURCE_FILES)
 !IF EXISTS("$(ICUSRCDATA)\$(ICUUCM)\ucmebcdic.mk")
 !INCLUDE "$(ICUSRCDATA)\$(ICUUCM)\ucmebcdic.mk"
 UCM_SOURCE=$(UCM_SOURCE) $(UCM_SOURCE_EBCDIC)
+!IFDEF UCM_SOURCE_EBCDIC_IGNORE_SISO
+BUILD_SPECIAL_CNV_FILES=YES
+UCM_SOURCE_SPECIAL=$(UCM_SOURCE_EBCDIC_IGNORE_SISO)
+!ELSE
+!UNDEF BUILD_SPECIAL_CNV_FILES
+!ENDIF
 !ELSE
 !MESSAGE Warning: cannot find "ucmebcdic.mk". Not building EBCDIC converter files.
 !ENDIF
@@ -212,11 +218,18 @@ UCM_SOURCE=$(UCM_SOURCE) $(UCM_SOURCE_EBCDIC)
 !IF EXISTS("$(ICUSRCDATA)\$(ICUUCM)\ucmlocal.mk")
 !INCLUDE "$(ICUSRCDATA)\$(ICUUCM)\ucmlocal.mk"
 UCM_SOURCE=$(UCM_SOURCE) $(UCM_SOURCE_LOCAL)
+!IFDEF UCM_SOURCE_EBCDIC_IGNORE_SISO_LOCAL
+UCM_SOURCE_SPECIAL=$(UCM_SOURCE_SPECIAL) $(UCM_SOURCE_EBCDIC_IGNORE_SISO_LOCAL)
+BUILD_SPECIAL_CNV_FILES=YES
+!ENDIF
 !ELSE
 !MESSAGE Information: cannot find "ucmlocal.mk". Not building user-additional converter files.
 !ENDIF
 
 CNV_FILES=$(UCM_SOURCE:.ucm=.cnv)
+!IFDEF BUILD_SPECIAL_CNV_FILES
+CNV_FILES_SPECIAL=$(UCM_SOURCE_SPECIAL:.ucm=.cnv)
+!ENDIF
 
 !IF EXISTS("$(ICUSRCDATA)\$(ICUBRK)\brkfiles.mk")
 !INCLUDE "$(ICUSRCDATA)\$(ICUBRK)\brkfiles.mk"
@@ -574,7 +587,7 @@ icu4j-data-install :
 	copy "$(ICUTMP)\$(ICUPKG).dat" "$(ICUOUT)\$(U_ICUDATA_NAME)$(U_ICUDATA_ENDIAN_SUFFIX).dat"
 	-@erase "$(ICUTMP)\$(ICUPKG).dat"
 !ELSE
-"$(ICU_LIB_TARGET)" : $(COMMON_ICUDATA_DEPENDENCIES) $(CNV_FILES) "$(ICUBLD_PKG)\unames.icu" "$(ICUBLD_PKG)\pnames.icu" "$(ICUBLD_PKG)\cnvalias.icu" "$(ICUBLD_PKG)\nfc.nrm" "$(ICUBLD_PKG)\nfkc.nrm" "$(ICUBLD_PKG)\nfkc_cf.nrm" "$(ICUBLD_PKG)\$(ICUCOL)\ucadata.icu" "$(ICUBLD_PKG)\$(ICUCOL)\invuca.icu" $(CURR_RES_FILES) $(LANG_RES_FILES) $(REGION_RES_FILES) $(ZONE_RES_FILES) $(BRK_FILES) $(BRK_CTD_FILES) $(BRK_RES_FILES) $(COL_COL_FILES) $(RBNF_RES_FILES) $(TRANSLIT_RES_FILES) $(ALL_RES) $(SPREP_FILES) "$(ICUBLD_PKG)\confusables.cfu"
+"$(ICU_LIB_TARGET)" : $(COMMON_ICUDATA_DEPENDENCIES) $(CNV_FILES) $(CNV_FILES_SPECIAL) "$(ICUBLD_PKG)\unames.icu" "$(ICUBLD_PKG)\pnames.icu" "$(ICUBLD_PKG)\cnvalias.icu" "$(ICUBLD_PKG)\nfc.nrm" "$(ICUBLD_PKG)\nfkc.nrm" "$(ICUBLD_PKG)\nfkc_cf.nrm" "$(ICUBLD_PKG)\$(ICUCOL)\ucadata.icu" "$(ICUBLD_PKG)\$(ICUCOL)\invuca.icu" $(CURR_RES_FILES) $(LANG_RES_FILES) $(REGION_RES_FILES) $(ZONE_RES_FILES) $(BRK_FILES) $(BRK_CTD_FILES) $(BRK_RES_FILES) $(COL_COL_FILES) $(RBNF_RES_FILES) $(TRANSLIT_RES_FILES) $(ALL_RES) $(SPREP_FILES) "$(ICUBLD_PKG)\confusables.cfu"
 	@echo Building icu data
 	cd "$(ICUBLD_PKG)"
 	"$(ICUPBIN)\pkgdata" $(COMMON_ICUDATA_ARGUMENTS) <<"$(ICUTMP)\icudata.lst"
@@ -588,6 +601,8 @@ nfc.nrm
 nfkc.nrm
 nfkc_cf.nrm
 $(CNV_FILES:.cnv =.cnv
+)
+$(CNV_FILES_SPECIAL:.cnv =.cnv
 )
 $(ALL_RES:.res =.res
 )
@@ -709,10 +724,16 @@ CLEAN : GODATA
 	@echo Creating $@
 	@"$(ICUTOOLS)\genctd\$(CFG)\genctd" -c -o $@ -d"$(ICUBLD_PKG)" -i "$(ICUBLD_PKG)" $<
 
-# Batch inference rule for creating converters
-{$(ICUSRCDATA_RELATIVE_PATH)\$(ICUUCM)}.ucm.cnv::
+# Rule for creating converters
+$(CNV_FILES): $(UCM_SOURCE)
 	@echo Making Charset Conversion tables
-	@"$(ICUTOOLS)\makeconv\$(CFG)\makeconv" -c -d"$(ICUBLD_PKG)" $<
+	@"$(ICUTOOLS)\makeconv\$(CFG)\makeconv" -c -d"$(ICUBLD_PKG)" $(ICUSRCDATA_RELATIVE_PATH)\$(ICUUCM)\$(@B).ucm
+
+!IFDEF BUILD_SPECIAL_CNV_FILES
+$(CNV_FILES_SPECIAL): $(UCM_SOURCE_SPECIAL)
+	@echo Making Special Charset Conversion tables
+	@"$(ICUTOOLS)\makeconv\$(CFG)\makeconv" -c --ignore-siso-check -d"$(ICUBLD_PKG)" $(ICUSRCDATA_RELATIVE_PATH)\$(ICUUCM)\$(@B).ucm
+!ENDIF
 
 # Batch inference rule for creating miscellaneous resource files
 # TODO: -q option is specified to squelch the 120+ warnings about
@@ -964,6 +985,10 @@ res_index:table(nofallback) {
 
 !IFNDEF ICUDATA_SOURCE_ARCHIVE
 $(UCM_SOURCE) : {"$(ICUTOOLS)\makeconv\$(CFG)"}makeconv.exe
+
+!IFDEF BUILD_SPECIAL_CNV_FILES
+$(UCM_SOURCE_SPECIAL): {"$(ICUTOOLS)\makeconv\$(CFG)"}makeconv.exe
+!ENDIF
 
 # This used to depend on "$(ICUBLD_PKG)\uprops.icu" "$(ICUBLD_PKG)\ucase.icu" "$(ICUBLD_PKG)\ubidi.icu"
 # This data is now hard coded as a part of the library.
