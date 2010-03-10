@@ -2783,6 +2783,10 @@
 					/>
 				</FileConfiguration>
 			</File>
+			<File
+				RelativePath=".\uts46.cpp"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="locales &amp; resources"

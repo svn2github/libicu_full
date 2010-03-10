@@ -27,14 +27,84 @@
 #include "unicode/uidna.h"
 #include "unicode/unistr.h"
 
+/**
+ * IDNA error bit set values.
+ * When a domain name or label fails a processing step or does not meet the
+ * validity criteria, then one or more of these error bits are set.
+ * @draft ICU 4.6
+ */
 enum UIDNAErrors {
+    /**
+     * A non-final domain name label is empty.
+     * @draft ICU 4.6
+     */
+    UIDNA_ERROR_EMPTY_LABEL,
+    /**
+     * A label contains hyphen-minus ('-') in the third and fourth positions.
+     * @draft ICU 4.6
+     */
+    UIDNA_ERROR_HYPHEN_3_4,
+    /**
+     * A label starts with a hyphen-minus ('-').
+     * @draft ICU 4.6
+     */
+    UIDNA_ERROR_LEADING_HYPHEN,
+    /**
+     * A label ends with a hyphen-minus ('-').
+     * @draft ICU 4.6
+     */
+    UIDNA_ERROR_TRAILING_HYPHEN,
+    /**
+     * A label starts with a combining mark.
+     * @draft ICU 4.6
+     */
+    UIDNA_ERROR_LEADING_COMBINING_MARK,
+    /**
+     * A label or domain name contains disallowed characters.
+     * @draft ICU 4.6
+     */
     UIDNA_ERROR_DISALLOWED=1,
+    /**
+     * ???
+     * @draft ICU 4.6
+     */
     UIDNA_ERROR_STD3=2,
+    /**
+     * A label starts with "xn--" but does not contain valid Punycode.
+     * @draft ICU 4.6
+     */
     UIDNA_ERROR_PUNYCODE=4,
+    /**
+     * An ACE label contains a dot=full stop.
+     * @draft ICU 4.6
+     */
+    UIDNA_ERROR_ACE_LABEL_HAS_DOT=4,
+    /**
+     * An ACE label is not valid.
+     * It might contain characters that are not allowed in ACE labels,
+     * or it might not be normalized, or both.
+     * @draft ICU 4.6
+     */
+    UIDNA_ERROR_INVALID_ACE_LABEL=4,
+    /**
+     * A label does not meet the IDNA BiDi requirements (for right-to-left characters).
+     * @draft ICU 4.6
+     */
     UIDNA_ERROR_BIDI=8,
+    /**
+     * A label does not meet the IDNA CONTEXTJ requirements.
+     * @draft ICU 4.6
+     */
+    UIDNA_ERROR_CONTEXTJ=8,
+    /**
+     * ???
+     * @draft ICU 4.6
+     */
     UIDNA_ERROR_ACE_PREFIX=0x10
     // TODO: More errors see utypes.h U_IDNA_..._ERROR values and processing spec.
 };
+
+typedef enum UIDNAErrors UIDNAErrors;
 
 U_NAMESPACE_BEGIN
 
