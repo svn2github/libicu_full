@@ -337,11 +337,13 @@ _getStringOrCopyKey(const char *path, const char *locale,
     return u_terminateUChars(dest, destCapacity, length, pErrorCode);
 }
 
+typedef  int32_t U_CALLCONV UDisplayNameGetter(const char *, char *, int32_t, UErrorCode *);
+
 static int32_t
 _getDisplayNameForComponent(const char *locale,
                             const char *displayLocale,
                             UChar *dest, int32_t destCapacity,
-                            int32_t (*getter)(const char *, char *, int32_t, UErrorCode *),
+                            UDisplayNameGetter *getter,
                             const char *tag,
                             UErrorCode *pErrorCode) {
     char localeBuffer[ULOC_FULLNAME_CAPACITY*4];
@@ -660,7 +662,7 @@ uloc_getDisplayName(const char *locale,
            if ( p0 != NULL && p1 != NULL ) { /* The pattern is well formed */
               if ( dest ) {
                   int32_t destLen = 0;
-                  UChar *result = (UChar *)uprv_malloc((length+1)*sizeof(UChar)); 
+                  UChar *result = (UChar *)uprv_malloc((length+1)*sizeof(UChar));
                   UChar *upos = (UChar *)dispLocPattern;
                   u_strcpy(result,dest);
                   dest[0] = 0;
@@ -682,7 +684,8 @@ uloc_getDisplayName(const char *locale,
                          destLen++;
                          dest[destLen] = 0; /* Null terminate */
                      }
-                  } 
+                  }
+                  length = destLen;
                   uprv_free(result);
               }
            }
