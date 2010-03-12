@@ -61,9 +61,15 @@ private:
     // returns delta for how much the label length changes
     int32_t
     processLabel(UnicodeString &dest,
-                 int32_t labelStart, int32_t labelLimit,
+                 int32_t labelStart, int32_t labelLength,
                  const Normalizer2 &norm2, UBool toASCII,
                  uint32_t &errors, UErrorCode &errorCode) const;
+
+    UBool
+    isLabelOkBiDi(const UChar *label, int32_t labelLength) const;
+
+    UBool
+    isLabelOkContextJ(const UChar *label, int32_t labelLength) const;
 
     UnicodeSet *notDeviationSet;
     const Normalizer2 &transNorm2;  // maps deviation characters
@@ -145,6 +151,9 @@ UnicodeString &
 UTS46::nameToASCII(const UnicodeString &name, UnicodeString &dest,
                    uint32_t &errors, UErrorCode &errorCode) const {
     process(name, nontransNorm2, FALSE, TRUE, dest, errors, errorCode);
+    if((options&UIDNA_USE_STD3_RULES)!=0 && dest.length()>255) {
+        errors|=UIDNA_ERROR_DOMAIN_NAME_TOO_LONG;
+    }
     if(errors!=0) {
         dest.setToBogus();
     }
@@ -162,6 +171,7 @@ UTS46::process(const UnicodeString &src,
                const Normalizer2 &norm2, UBool isLabel, UBool toASCII,
                UnicodeString &dest,
                uint32_t &errors, UErrorCode &errorCode) const {
+    errors=0;
     norm2.normalize(src, dest, errorCode);
     if(U_FAILURE(errorCode)) {
         return dest;
@@ -174,7 +184,8 @@ UTS46::process(const UnicodeString &src,
         int32_t labelStart=0, labelLimit=0, delta;
         while(labelLimit<destLength) {
             if(destArray[labelLimit]==0x2e) {
-                delta=processLabel(dest, labelStart, labelLimit, norm2, toASCII, errors, errorCode);
+                delta=processLabel(dest, labelStart, labelLimit-labelStart,
+                                   norm2, toASCII, errors, errorCode);
                 if(U_FAILURE(errorCode)) {
                     return dest;
                 }
@@ -183,9 +194,10 @@ UTS46::process(const UnicodeString &src,
                 labelStart=labelLimit+=delta+1;
             }
         }
-        // permit an empty label at the end
+        // permit an empty label at the end (0<labelStart==labelLimit is ok)
         if(0<labelStart && labelStart<labelLimit) {
-            processLabel(dest, labelStart, labelLimit, norm2, toASCII, errors, errorCode);
+            processLabel(dest, labelStart, labelLimit-labelStart,
+                         norm2, toASCII, errors, errorCode);
         }
     }
     return dest;
@@ -193,12 +205,12 @@ UTS46::process(const UnicodeString &src,
 
 int32_t
 UTS46::processLabel(UnicodeString &dest,
-                    int32_t labelStart, int32_t labelLimit,
+                    int32_t labelStart, int32_t labelLength,
                     const Normalizer2 &norm2, UBool toASCII,
                     uint32_t &errors, UErrorCode &errorCode) const {
     const UChar *label=dest.getBuffer()+labelStart;
-    int32_t labelLength=labelLimit-labelStart;
     int32_t delta=0;
+    // TODO: Copy UTS #46 snippets into code comments for processing and validation.
     // TODO: Fastpath for ASCII label
     // TODO: Remember whether the input was Punycode, and don't double-replace for toASCII,
     //       unless there were errors
@@ -225,7 +237,7 @@ UTS46::processLabel(UnicodeString &dest,
             // Failure, prepend and append U+FFFD.
             errors|=UIDNA_ERROR_PUNYCODE;
             dest.insert(labelStart, (UChar)0xfffd);
-            dest.insert(labelLimit+1, (UChar)0xfffd);
+            dest.insert(labelStart+labelLength+1, (UChar)0xfffd);
             return 2;
         }
         // Check for NFC, and for characters that are not
@@ -236,30 +248,14 @@ UTS46::processLabel(UnicodeString &dest,
         if(U_FAILURE(errorCode)) {
             return 0;
         }
-        const UnicodeString *final;
-        if(unicode==mapped) {
-            final=&unicode;
-        } else {
+        if(unicode!=mapped) {
             errors|=UIDNA_ERROR_INVALID_ACE_LABEL;
-            final=&mapped;
         }
-        // Check for dots.
-        // Ok to cast away const because we own the UnicodeString.
-        UChar *s=(UChar *)final->getBuffer();
-        const UChar *limit=s+final->length();
-        do {
-            if(*s==0x2e) {
-                errors|=UIDNA_ERROR_ACE_LABEL_HAS_DOT;
-                *s=0xfffd;
-            }
-        } while(++s<limit);
         // Replace the Punycode label with its Unicode form.
-        dest.replace(labelStart, labelLength, *final);
-        delta=final->length()-labelLength;
+        dest.replace(labelStart, labelLength, mapped);
+        delta=mapped.length()-labelLength;
         label=dest.getBuffer()+labelStart;
-        labelLength=final->length();
-        labelLimit+=delta;
-        // TODO: is labelLimit still needed? need to track it?
+        labelLength=mapped.length();
     }
     // Validity check
     if(labelLength==0) {
@@ -296,7 +292,10 @@ UTS46::processLabel(UnicodeString &dest,
     // and checked its validity.
     // All we need to look for now is U+FFFD which indicates disallowed characters
     // in a non-Punycode label or U+FFFD itself in a Punycode label.
-    const UChar *s=label;
+    // We also check for dots which can come from a Punycode label
+    // or from the input to a single-label function.
+    // Ok to cast away const because we own the UnicodeString.
+    UChar *s=(UChar *)label;
     const UChar *limit=label+labelLength;
     UChar oredChars=0;
     do {
@@ -304,10 +303,17 @@ UTS46::processLabel(UnicodeString &dest,
         oredChars|=c;
         if(c==0xfffd) {
             errors|=UIDNA_ERROR_DISALLOWED;
+        } else if(c==0x2e) {
+            errors|=UIDNA_ERROR_LABEL_HAS_DOT;
+            *s=0xfffd;
         }
     } while(++s<limit);
-    // TODO: Optional BiDi check
-    // TODO: Optional CONTEXTJ check
+    if(UIDNA_CHECK_BIDI && !isLabelOkBiDi(label, labelLength)) {
+        errors|=UIDNA_ERROR_BIDI;
+    }
+    if(UIDNA_CHECK_CONTEXTJ && !isLabelOkContextJ(label, labelLength)) {
+        errors|=UIDNA_ERROR_CONTEXTJ;
+    }
     if(toASCII) {
         if(oredChars>=0x80) {
             UnicodeString punycode=UNICODE_STRING("xn--", 4);
@@ -335,11 +341,103 @@ UTS46::processLabel(UnicodeString &dest,
             delta+=newDelta;
             label=dest.getBuffer()+labelStart;
             labelLength=punycode.length();
-            labelLimit+=newDelta;
         }
         // TODO: Optional STD3 & STD13 checks
+        if(options&UIDNA_USE_STD3_RULES && labelLength>63) {
+            errors|=UIDNA_ERROR_LABEL_TOO_LONG;
+        }
     }
     return delta;
+}
+
+#define L_MASK U_MASK(U_LEFT_TO_RIGHT)
+#define R_AL_MASK U_MASK(U_RIGHT_TO_LEFT)|U_MASK(U_RIGHT_TO_LEFT_ARABIC)
+#define L_R_AL_MASK L_MASK|R_AL_MASK
+
+#define EN_AN_MASK U_MASK(U_EUROPEAN_NUMBER)|U_MASK(U_ARABIC_NUMBER)
+#define R_AL_EN_AN_MASK R_AL_MASK|EN_AN_MASK
+#define L_EN_MASK L_MASK|U_MASK(U_EUROPEAN_NUMBER)
+
+#define ES_CS_ET_ON_BN_NSM_MASK \
+    U_MASK(U_EUROPEAN_NUMBER_SEPARATOR)| \
+    U_MASK(U_COMMON_NUMBER_SEPARATOR)| \
+    U_MASK(U_EUROPEAN_NUMBER_TERMINATOR)| \
+    U_MASK(U_OTHER_NEUTRAL)| \
+    U_MASK(U_BOUNDARY_NEUTRAL)| \
+    U_MASK(U_DIR_NON_SPACING_MARK)
+#define L_EN_ES_CS_ET_ON_BN_NSM_MASK L_EN_MASK|ES_CS_ET_ON_BN_NSM_MASK
+#define R_AL_AN_EN_ES_CS_ET_ON_BN_NSM_MASK R_AL_MASK|EN_AN_MASK|ES_CS_ET_ON_BN_NSM_MASK
+
+UBool
+UTS46::isLabelOkBiDi(const UChar *label, int32_t labelLength) const {
+    // IDNA2008 BiDi rule
+    // Get the directionality of the first character.
+    UChar32 c;
+    int32_t i=0;
+    U16_NEXT_UNSAFE(label, i, c);
+    uint32_t firstMask=U_MASK(u_charDirection(c));
+    // 1. The first character must be a character with BIDI property L, R
+    // or AL.  If it has the R or AL property, it is an RTL label; if it
+    // has the L property, it is an LTR label.
+    if((firstMask&~L_R_AL_MASK)!=0) {
+        return FALSE;
+    }
+    // Get the directionality of the last non-NSM character.
+    uint32_t lastMask;
+    for(;;) {
+        if(i>=labelLength) {
+            lastMask=firstMask;
+            break;
+        }
+        U16_PREV_UNSAFE(label, labelLength, c);
+        UCharDirection dir=u_charDirection(c);
+        if(dir!=U_DIR_NON_SPACING_MARK) {
+            lastMask=U_MASK(dir);
+            break;
+        }
+    }
+    // 3. In an RTL label, the end of the label must be a character with
+    // BIDI property R, AL, EN or AN, followed by zero or more
+    // characters with BIDI property NSM.
+    // 6. In an LTR label, the end of the label must be a character with
+    // BIDI property L or EN, followed by zero or more characters with
+    // BIDI property NSM.
+    if( (firstMask&L_MASK)!=0 ?
+            (lastMask&~L_EN_MASK)!=0 :
+            (lastMask&~R_AL_EN_AN_MASK)!=0
+    ) {
+        return FALSE;
+    }
+    // Get the directionalities of the intervening characters.
+    uint32_t mask=0;
+    while(i<labelLength) {
+        U16_NEXT_UNSAFE(label, i, c);
+        mask|=U_MASK(u_charDirection(c));
+    }
+    if(firstMask&L_MASK) {
+        // 5. In an LTR label, only characters with the BIDI properties L, EN,
+        // ES, CS.  ET, ON, BN and NSM are allowed.
+        if((mask&~L_EN_ES_CS_ET_ON_BN_NSM_MASK)!=0) {
+            return FALSE;
+        }
+    } else {
+        // 2. In an RTL label, only characters with the BIDI properties R, AL,
+        // AN, EN, ES, CS, ET, ON, BN and NSM are allowed.
+        if((mask&~R_AL_AN_EN_ES_CS_ET_ON_BN_NSM_MASK)!=0) {
+            return FALSE;
+        }
+        // 4. In an RTL label, if an EN is present, no AN may be present, and
+        // vice versa.
+        if((mask&EN_AN_MASK)==EN_AN_MASK) {
+            return FALSE;
+        }
+    }
+    return TRUE;  // TODO
+}
+
+UBool
+UTS46::isLabelOkContextJ(const UChar *label, int32_t labelLength) const {
+    return TRUE;  // TODO
 }
 
 U_NAMESPACE_END
