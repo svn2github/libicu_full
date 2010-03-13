@@ -1,16 +1,14 @@
 /*
 *******************************************************************************
-*
-*   Copyright (C) 2009-2010, International Business Machines
+*   Copyright (C) 2010, International Business Machines
 *   Corporation and others.  All Rights Reserved.
-*
 *******************************************************************************
-*   file name:  normalizer2.cpp
+*   file name:  uts46.cpp
 *   encoding:   US-ASCII
 *   tab size:   8 (not used)
 *   indentation:4
 *
-*   created on: 2009nov22
+*   created on: 2010mar09
 *   created by: Markus W. Scherer
 */
 
@@ -71,9 +69,12 @@ private:
     UBool
     isLabelOkContextJ(const UChar *label, int32_t labelLength) const;
 
-    UnicodeSet *notDeviationSet;
-    const Normalizer2 &transNorm2;  // maps deviation characters
+    UnicodeSet *transSet;  // NULL, or ASCII without LDH+dot
+    UnicodeSet *nontransSet;  // transSet & notDeviationSet
+    const Normalizer2 &norm2;  // uts46.nrm
+    FilteredNormalizer2 transNorm2;  // maps deviation characters, with transSet
     FilteredNormalizer2 nontransNorm2;  // passes deviation characters through
+    const Normalizer2 &toASCIINorm2;
     uint32_t options;
 };
 
@@ -93,25 +94,43 @@ UOBJECT_DEFINE_ABSTRACT_RTTI_IMPLEMENTATION(IDNA)
 // UTS46 implementation ---------------------------------------------------- ***
 
 UTS46::UTS46(uint32_t opt, UErrorCode &errorCode)
-        : notDeviationSet(new UnicodeSet(0, 0x10ffff)),
-          transNorm2(*Normalizer2::getInstance(NULL, "uts46", UNORM2_COMPOSE, errorCode)),
-          nontransNorm2(transNorm2, *notDeviationSet),
+        : transSet(opt&UIDNA_USE_STD3_RULES ? NULL : new UnicodeSet(0, 0x10ffff)),
+          nontransSet(new UnicodeSet(0, 0x10ffff)),
+          norm2(*Normalizer2::getInstance(NULL, "uts46", UNORM2_COMPOSE, errorCode)),
+          transNorm2(norm2, *transSet),
+          nontransNorm2(norm2, *nontransSet),
+          toASCIINorm2(
+              opt&UIDNA_NONTRANSITIONAL_TO_ASCII ? nontransNorm2 :
+              opt&UIDNA_USE_STD3_RULES ? norm2 : transNorm2),
           options(opt) {
     if(U_SUCCESS(errorCode)) {
-        if(notDeviationSet==NULL) {
+        if(((opt&UIDNA_USE_STD3_RULES)==0 && transSet==NULL) || nontransSet==NULL) {
             errorCode=U_MEMORY_ALLOCATION_ERROR;
         } else {
-            notDeviationSet->remove(0xdf).remove(0x3c2).remove(0x200c, 0x200d).freeze();
+            if((opt&UIDNA_USE_STD3_RULES)==0) {
+                // If we do not enforce STD3 rules, then we pass through
+                // all ASCII except LDH and the dot.
+                // The uts46.nrm table maps all such characters to U+FFFD,
+                // so we use a FilteredNormalizer and normalize all characters
+                // except the ASCII non-LDH+dot set.
+                transSet->remove(0, 0x2c).remove(0x2f).remove(0x3a, 0x40).
+                          remove(0x5b, 0x60).remove(0x7b, 0x7f).freeze();
+                nontransSet->retainAll(*transSet);
+            }
+            // In nontransitional processing, we pass through deviation characters,
+            // rather than mapping them.
+            nontransSet->remove(0xdf).remove(0x3c2).remove(0x200c, 0x200d).freeze();
         }
     }
 }
 
 UTS46::~UTS46() {
-    delete notDeviationSet;
+    delete transSet;
+    delete nontransSet;
 }
 
 #if 0
-// TODO: May need such argument checking in ASCII fastpath.
+// TODO: May need such argument checking in ASCII fastpath, when we add that optimization.
 static const UChar *checkArgs(const UnicodeString &src, UnicodeString &dest,
                               uint32_t &errors, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) {
@@ -134,7 +153,7 @@ static const UChar *checkArgs(const UnicodeString &src, UnicodeString &dest,
 UnicodeString &
 UTS46::labelToASCII(const UnicodeString &label, UnicodeString &dest,
                     uint32_t &errors, UErrorCode &errorCode) const {
-    process(label, nontransNorm2, TRUE, TRUE, dest, errors, errorCode);
+    process(label, toASCIINorm2, TRUE, TRUE, dest, errors, errorCode);
     if(errors!=0) {
         dest.setToBogus();
     }
@@ -150,8 +169,8 @@ UTS46::labelToUnicode(const UnicodeString &label, UnicodeString &dest,
 UnicodeString &
 UTS46::nameToASCII(const UnicodeString &name, UnicodeString &dest,
                    uint32_t &errors, UErrorCode &errorCode) const {
-    process(name, nontransNorm2, FALSE, TRUE, dest, errors, errorCode);
-    if((options&UIDNA_USE_STD3_RULES)!=0 && dest.length()>255) {
+    process(name, toASCIINorm2, FALSE, TRUE, dest, errors, errorCode);
+    if(dest.length()>=254 && (dest.length()>254 || dest[253]!=0x2e)) {
         errors|=UIDNA_ERROR_DOMAIN_NAME_TOO_LONG;
     }
     if(errors!=0) {
@@ -194,8 +213,10 @@ UTS46::process(const UnicodeString &src,
                 labelStart=labelLimit+=delta+1;
             }
         }
-        // permit an empty label at the end (0<labelStart==labelLimit is ok)
-        if(0<labelStart && labelStart<labelLimit) {
+        // Permit an empty label at the end (0<labelStart==labelLimit is ok)
+        // but not an empty label elsewhere nor a completely empty domain name.
+        // processLabel() sets UIDNA_ERROR_EMPTY_LABEL when labelLength==0.
+        if(0==labelStart || labelStart<labelLimit) {
             processLabel(dest, labelStart, labelLimit-labelStart,
                          norm2, toASCII, errors, errorCode);
         }
@@ -217,8 +238,12 @@ UTS46::processLabel(UnicodeString &dest,
     if(labelLength>=4 && label[0]==0x78 && label[1]==0x6e && label[2]==0x2d && label[3]==0x2d) {
         // Label starts with "xn--", try to un-Punycode it.
         UnicodeString unicode;
-        UChar *unicodeBuffer=unicode.getBuffer(-1);
-        // TODO: buffer==NULL?
+        UChar *unicodeBuffer=unicode.getBuffer(-1);  // capacity==-1: most labels should fit
+        if(unicodeBuffer==NULL) {
+            // Should never occur if we used capacity==-1 which uses the internal buffer.
+            errorCode=U_MEMORY_ALLOCATION_ERROR;
+            return 0;
+        }
         UErrorCode punycodeErrorCode=U_ZERO_ERROR;
         int32_t unicodeLength=u_strFromPunycode(label+4, labelLength-4,
                                                 unicodeBuffer, unicode.getCapacity(),
@@ -226,7 +251,10 @@ UTS46::processLabel(UnicodeString &dest,
         if(punycodeErrorCode==U_BUFFER_OVERFLOW_ERROR) {
             unicode.releaseBuffer(0);
             unicodeBuffer=unicode.getBuffer(unicodeLength);
-            // TODO: buffer==NULL?
+            if(unicodeBuffer==NULL) {
+                errorCode=U_MEMORY_ALLOCATION_ERROR;
+                return 0;
+            }
             punycodeErrorCode=U_ZERO_ERROR;
             unicodeLength=u_strFromPunycode(label+4, labelLength-4,
                                             unicodeBuffer, unicode.getCapacity(),
@@ -259,8 +287,10 @@ UTS46::processLabel(UnicodeString &dest,
     }
     // Validity check
     if(labelLength==0) {
-        errors|=UIDNA_ERROR_EMPTY_LABEL;
-        // TODO: insert U+FFFD? (I think not)
+        if(toASCII) {
+            errors|=UIDNA_ERROR_EMPTY_LABEL;
+            // TODO: insert U+FFFD? (I think not)
+        }
         return delta;
     }
     // labelLength>0
@@ -290,6 +320,8 @@ UTS46::processLabel(UnicodeString &dest,
     // mapping, normalization and label segmentation.
     // If the label was in Punycode, then we mapped it again above
     // and checked its validity.
+    // The optional STD3 restriction to LDH characters was handled by the
+    // construction and selection of the normalizer.
     // All we need to look for now is U+FFFD which indicates disallowed characters
     // in a non-Punycode label or U+FFFD itself in a Punycode label.
     // We also check for dots which can come from a Punycode label
@@ -308,32 +340,34 @@ UTS46::processLabel(UnicodeString &dest,
             *s=0xfffd;
         }
     } while(++s<limit);
-    if(UIDNA_CHECK_BIDI && !isLabelOkBiDi(label, labelLength)) {
+    if(UIDNA_CHECK_BIDI && oredChars>=0x590 && !isLabelOkBiDi(label, labelLength)) {
         errors|=UIDNA_ERROR_BIDI;
     }
-    if(UIDNA_CHECK_CONTEXTJ && !isLabelOkContextJ(label, labelLength)) {
+    if( UIDNA_CHECK_CONTEXTJ && (oredChars&0x200c)==0x200c &&
+        !isLabelOkContextJ(label, labelLength)
+    ) {
         errors|=UIDNA_ERROR_CONTEXTJ;
     }
     if(toASCII) {
         if(oredChars>=0x80) {
             UnicodeString punycode=UNICODE_STRING("xn--", 4);
-            UChar *buffer=punycode.getBuffer(63);  // TODO: magic number
-            // TODO: buffer==NULL?
+            UChar *buffer=punycode.getBuffer(63);  // 63==maximum DNS label length
+            if(buffer==NULL) {
+                errorCode=U_MEMORY_ALLOCATION_ERROR;
+                return delta;
+            }
             int32_t punycodeLength=u_strToPunycode(label, labelLength,
                                                    buffer+4, punycode.getCapacity()-4,
                                                    NULL, &errorCode);
             if(errorCode==U_BUFFER_OVERFLOW_ERROR) {
-                punycode.releaseBuffer(4);
-                buffer=punycode.getBuffer(4+punycodeLength);
-                // TODO: buffer==NULL?
                 errorCode=U_ZERO_ERROR;
-                punycodeLength=u_strToPunycode(label, labelLength,
-                                               buffer+4, punycode.getCapacity()-4,
-                                               NULL, &errorCode);
+                punycode.releaseBuffer(4);
+                errors|=UIDNA_ERROR_LABEL_TOO_LONG;
+                return delta;
             }
             punycode.releaseBuffer(4+punycodeLength);
             if(U_FAILURE(errorCode)) {
-                return 0;
+                return delta;
             }
             // Replace the Unicode label with its Punycode form.
             dest.replace(labelStart, labelLength, punycode);
@@ -342,8 +376,7 @@ UTS46::processLabel(UnicodeString &dest,
             label=dest.getBuffer()+labelStart;
             labelLength=punycode.length();
         }
-        // TODO: Optional STD3 & STD13 checks
-        if(options&UIDNA_USE_STD3_RULES && labelLength>63) {
+        if(labelLength>63) {
             errors|=UIDNA_ERROR_LABEL_TOO_LONG;
         }
     }
@@ -432,12 +465,76 @@ UTS46::isLabelOkBiDi(const UChar *label, int32_t labelLength) const {
             return FALSE;
         }
     }
-    return TRUE;  // TODO
+    return TRUE;
 }
 
 UBool
 UTS46::isLabelOkContextJ(const UChar *label, int32_t labelLength) const {
-    return TRUE;  // TODO
+    // [IDNA2008-Tables]
+    // 200C..200D  ; CONTEXTJ    # ZERO WIDTH NON-JOINER..ZERO WIDTH JOINER
+    for(int32_t i=0; i<labelLength; ++i) {
+        if(label[i]==0x200c) {
+            // Appendix A.1. ZERO WIDTH NON-JOINER
+            // Rule Set:
+            //  False;
+            //  If Canonical_Combining_Class(Before(cp)) .eq.  Virama Then True;
+            //  If RegExpMatch((Joining_Type:{L,D})(Joining_Type:T)*\u200C
+            //     (Joining_Type:T)*(Joining_Type:{R,D})) Then True;
+            if(i==0) {
+                return FALSE;
+            }
+            UChar32 c;
+            int32_t j=i;
+            U16_PREV_UNSAFE(label, j, c);
+            if(u_getCombiningClass(c)==9) {
+                continue;
+            }
+            // check precontext (Joining_Type:{L,D})(Joining_Type:T)*
+            for(;;) {
+                UJoiningType type=(UJoiningType)u_getIntPropertyValue(c, UCHAR_JOINING_TYPE);
+                if(type==U_JT_TRANSPARENT) {
+                    if(j==0) {
+                        return FALSE;
+                    }
+                    U16_PREV_UNSAFE(label, j, c);
+                } else if(type==U_JT_LEFT_JOINING || type==U_JT_DUAL_JOINING) {
+                    break;  // precontext fulfilled
+                } else {
+                    return FALSE;
+                }
+            }
+            // check postcontext (Joining_Type:T)*(Joining_Type:{R,D})
+            for(j=i+1;;) {
+                if(j==labelLength) {
+                    return FALSE;
+                }
+                U16_NEXT_UNSAFE(label, i, c);
+                UJoiningType type=(UJoiningType)u_getIntPropertyValue(c, UCHAR_JOINING_TYPE);
+                if(type==U_JT_TRANSPARENT) {
+                    // just skip this character
+                } else if(type==U_JT_RIGHT_JOINING || type==U_JT_DUAL_JOINING) {
+                    break;  // postcontext fulfilled
+                } else {
+                    return FALSE;
+                }
+            }
+        } else if(label[i]==0x200d) {
+            // Appendix A.2. ZERO WIDTH JOINER (U+200D)
+            // Rule Set:
+            //  False;
+            //  If Canonical_Combining_Class(Before(cp)) .eq.  Virama Then True;
+            if(i==0) {
+                return FALSE;
+            }
+            UChar32 c;
+            int32_t j=i;
+            U16_PREV_UNSAFE(label, j, c);
+            if(u_getCombiningClass(c)!=9) {
+                return FALSE;
+            }
+        }
+    }
+    return TRUE;
 }
 
 U_NAMESPACE_END

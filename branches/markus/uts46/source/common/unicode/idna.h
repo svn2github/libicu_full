@@ -32,15 +32,21 @@
  */
 enum {
     /**
-    * IDNA option to check for whether the input conforms to the BiDi rules.
-    * @draft ICU 4.6
-    */
+     * IDNA option to check for whether the input conforms to the BiDi rules.
+     * @draft ICU 4.6
+     */
     UIDNA_CHECK_BIDI=4,
     /**
-    * IDNA option to check for whether the input conforms to the CONTEXTJ rules.
-    * @draft ICU 4.6
-    */
-    UIDNA_CHECK_CONTEXTJ=8
+     * IDNA option to check for whether the input conforms to the CONTEXTJ rules.
+     * @draft ICU 4.6
+     */
+    UIDNA_CHECK_CONTEXTJ=8,
+    /**
+     * IDNA option for nontransitional processing in ToASCII().
+     * By default, ToASCII() uses transitional processing.
+     * @draft ICU 4.6
+     */
+    UIDNA_NONTRANSITIONAL_TO_ASCII=0x10
 };
 
 /*
@@ -49,23 +55,27 @@ enum {
  * validity criteria, then one or more of these error bits are set.
  */
 enum {
+    // TODO: Should we combine the length errors into one single UIDNA_ERROR_LABEL_OR_NAME_LENGTH?
     /**
-     * A non-final domain name label is empty.
+     * A non-final domain name label (or the whole domain name) is empty.
      * @draft ICU 4.6
      */
     UIDNA_ERROR_EMPTY_LABEL=1,
     /**
-     * A domain name label is longer than 63 bytes. (See STD3/RFC1123 2. GENERAL ISSUES.)
+     * A domain name label is longer than 63 bytes.
+     * (See STD13/RFC1034 3.1. Name space specifications and terminology.)
      * This is only checked in ToASCII operations, and only if the UIDNA_USE_STD3_RULES is set.
      * @draft ICU 4.6
      */
     UIDNA_ERROR_LABEL_TOO_LONG=2,
     /**
-     * A domain name is longer than 255 bytes. (See STD3/RFC1123 2. GENERAL ISSUES.)
+     * A domain name is longer than 255 bytes in its storage form.
+     * (See STD13/RFC1034 3.1. Name space specifications and terminology.)
      * This is only checked in ToASCII operations, and only if the UIDNA_USE_STD3_RULES is set.
      * @draft ICU 4.6
      */
     UIDNA_ERROR_DOMAIN_NAME_TOO_LONG=4,
+    // TODO: Should we combine the hyphen errors into one single UIDNA_ERROR_BAD_HYPHEN?
     /**
      * A label starts with a hyphen-minus ('-').
      * @draft ICU 4.6
@@ -80,7 +90,7 @@ enum {
      * A label contains hyphen-minus ('-') in the third and fourth positions.
      * @draft ICU 4.6
      */
-    UIDNA_ERROR_HYPHEN_3_4=0x20,
+    UIDNA_ERROR_HYPHEN_3_4=0x20,  // TODO: Is this a reasonable name?
     /**
      * A label starts with a combining mark.
      * @draft ICU 4.6
@@ -129,7 +139,7 @@ U_NAMESPACE_BEGIN
  * and http://www.ietf.org/rfc/rfc3490.txt
  *
  * This newer API currently only implements UTS #46.
- * The uidna.h C API only implements IDNA2003.
+ * The older uidna.h C API only implements IDNA2003.
  * @draft ICU 4.6
  */
 class U_COMMON_API IDNA : public UObject {
@@ -143,19 +153,21 @@ public:
      * updated to the latest version of Unicode and compatible with both
      * IDNA2003 and IDNA2008.
      *
-     * ToASCII operations use transitional processing, including deviation mappings.
-     * ToUnicode operations use non-transitional processing,
+     * ToASCII operations use transitional processing, including deviation mappings,
+     * unless the UIDNA_NONTRANSITIONAL_TO_ASCII is used.
+     * ToUnicode operations always use nontransitional processing,
      * passing deviation characters through without change.
      *
      * Disallowed characters are mapped to U+FFFD.
      *
-     * For available options see the uidna.h header.
+     * For available options see the uidna.h header as well as this header.
      * Operations with the UTS #46 instance do not support the
      * UIDNA_ALLOW_UNASSIGNED option.
      *
-     * Note that UTS #46 disallows all ASCII characters other than
-     * letters, digits, hyphen (LDH) and dot/full stop, regardless of
-     * whether the UIDNA_USE_STD3_RULES is set.
+     * By default, UTS #46 disallows all ASCII characters other than
+     * letters, digits, hyphen (LDH) and dot/full stop.
+     * When the UIDNA_USE_STD3_RULES option is used, all ASCII characters are treated as
+     * valid or mapped.
      *
      * TODO: Do we need separate toASCIIOptions and toUnicodeOptions?
      *       That is, would users commonly want different options for the
