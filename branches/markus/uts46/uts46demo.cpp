@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string>
 #include "unicode/utypes.h"
+#include "unicode/errorcode.h"
 #include "unicode/idna.h"
 #include "unicode/localpointer.h"
 #include "unicode/unistr.h"
@@ -27,13 +28,19 @@ escapeControls(icu::UnicodeString &s) {
     return s;
 }
 
+static void
+printUsage() {
+    fprintf(stderr, "uts46demo [-3bjn] input-string-can-have-\\uhhhh\n");
+}
+
 extern int
 main(int argc, const char *argv[]) {
-    if(argc<=1) { return 1; }
     uint32_t options=0;
-    const char *optionsString=argv[1];
-    if(argc>=3 && *optionsString++=='-') {
+    const char *optionsString;
+    while(argc>=2 && *(optionsString=argv[1])=='-') {
         ++argv;
+        --argc;
+        ++optionsString;
         char c;
         while((c=*optionsString++)!=0) {
             switch(c) {
@@ -41,25 +48,31 @@ main(int argc, const char *argv[]) {
             case 'b': options|=UIDNA_CHECK_BIDI; break;
             case 'j': options|=UIDNA_CHECK_CONTEXTJ; break;
             case 'n': options|=UIDNA_NONTRANSITIONAL_TO_ASCII; break;
-            default: return 2;
+            default:
+                printUsage();
+                return 2;
             }
         }
     }
-    puts("have options");
+    if(argc<=1) {
+        printUsage();
+        return 1;
+    }
     icu::UnicodeString input=icu::UnicodeString::fromUTF8(argv[1]).unescape();
     icu::UnicodeString ascii, unicode;
     uint32_t toASCIIErrors=0, toUnicodeErrors=0;
-    UErrorCode errorCode=U_ZERO_ERROR;
+    icu::ErrorCode errorCode;
     icu::LocalPointer<icu::IDNA> idna(icu::IDNA::createUTS46Instance(options, errorCode));
     idna->nameToASCII(input, ascii, toASCIIErrors, errorCode);
     idna->nameToUnicode(input, unicode, toUnicodeErrors, errorCode);
-    if(U_FAILURE(errorCode)) {
+    if(errorCode.isFailure()) {
+        fprintf(stderr, "UErrorCode: %s\n", errorCode.errorName());
         return 3;
     }
-    puts("did IDNA");
     std::string utf8;
     printf("toASCII:   \"%s\"  errors 0x%04lX\n",
            escapeControls(ascii).toUTF8String(utf8).c_str(), (long)toASCIIErrors);
+    utf8.clear();
     printf("toUnicode: \"%s\"  errors 0x%04lX\n",
            escapeControls(unicode).toUTF8String(utf8).c_str(), (long)toUnicodeErrors);
     return 0;

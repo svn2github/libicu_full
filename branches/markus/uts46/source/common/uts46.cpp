@@ -211,6 +211,8 @@ UTS46::process(const UnicodeString &src,
                 destArray=dest.getBuffer();
                 destLength+=delta;
                 labelStart=labelLimit+=delta+1;
+            } else {
+                ++labelLimit;
             }
         }
         // Permit an empty label at the end (0<labelStart==labelLimit is ok)
@@ -340,10 +342,12 @@ UTS46::processLabel(UnicodeString &dest,
             *s=0xfffd;
         }
     } while(++s<limit);
-    if(UIDNA_CHECK_BIDI && oredChars>=0x590 && !isLabelOkBiDi(label, labelLength)) {
+    if( (options&UIDNA_CHECK_BIDI)!=0 && oredChars>=0x590 &&
+        !isLabelOkBiDi(label, labelLength)
+    ) {
         errors|=UIDNA_ERROR_BIDI;
     }
-    if( UIDNA_CHECK_CONTEXTJ && (oredChars&0x200c)==0x200c &&
+    if( (options&UIDNA_CHECK_CONTEXTJ)!=0 && (oredChars&0x200c)==0x200c &&
         !isLabelOkContextJ(label, labelLength)
     ) {
         errors|=UIDNA_ERROR_CONTEXTJ;
