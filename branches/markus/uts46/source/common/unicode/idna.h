@@ -31,6 +31,28 @@
  * IDNA option bit set values.
  */
 enum {
+    // TODO: Options from old API are mostly usable with the new API as well.
+    // All options should be moved to a C header.
+    // They are actually still defined in uidna.h right now and thus commented out here.
+    // TODO: It should be safe to replace the old #defines with enum constants, right?
+    /**
+     * Default options value: None of the other options are set.
+     * @stable ICU 2.6
+     */
+    // UIDNA_DEFAULT=0,
+    /**
+     * Option to allow unassigned code points in domain names and labels.
+     * This option is ignored by the UTS46 implementation.
+     * @stable ICU 2.6
+     */
+    // UIDNA_ALLOW_UNASSIGNED=1,
+    /**
+     * Option to check whether the input conforms to the STD3 ASCII rules,
+     * for example the restriction of labels to LDH characters
+     * (ASCII Letters, Digits and Hyphen-Minus).
+     * @stable ICU 2.6
+     */
+    // UIDNA_USE_STD3_RULES=2,
     /**
      * IDNA option to check for whether the input conforms to the BiDi rules.
      * @draft ICU 4.6
@@ -133,6 +155,8 @@ enum {
 
 U_NAMESPACE_BEGIN
 
+class U_COMMON_API IDNAErrors;
+
 /**
  * Abstract base class for IDNA processing.
  * See http://www.unicode.org/reports/tr46/
@@ -187,15 +211,14 @@ public:
     /**
      * Converts a single domain name label into its ASCII form for DNS lookup.
      * ToASCII can fail if the input label cannot be converted into an ASCII form.
-     * In this case, the destination string will be bogus and the errors
-     * parameter will be nonzero.
+     * In this case, the destination string will be bogus and errors.hasErrors() will be TRUE.
      *
      * The UErrorCode indicates an error only in exceptional cases,
      * such as a U_MEMORY_ALLOCATION_ERROR.
      *
      * @param label Input domain name label
      * @param dest Destination string object
-     * @param errors Output bit set of IDNA processing errors.
+     * @param errors Output container of IDNA processing errors.
      * @param errorCode Standard ICU error code. Its input value must
      *                  pass the U_SUCCESS() test, or else the function returns
      *                  immediately. Check for U_FAILURE() on output or use with
@@ -205,19 +228,19 @@ public:
      */
     virtual UnicodeString &
     labelToASCII(const UnicodeString &label, UnicodeString &dest,
-                 uint32_t &errors, UErrorCode &errorCode) const = 0;
+                 IDNAErrors &errors, UErrorCode &errorCode) const = 0;
 
     /**
      * Converts a single domain name label into its Unicode form for human-readable display.
      * ToUnicode never fails. If any processing step fails, then the input label
      * is returned, possibly with modifications according to the types of errors,
-     * and the errors output value will be nonzero.
+     * and errors.hasErrors() will be TRUE.
      *
      * For available options see the uidna.h header.
      *
      * @param label Input domain name label
      * @param dest Destination string object
-     * @param errors Output bit set of IDNA processing errors.
+     * @param errors Output container of IDNA processing errors.
      * @param errorCode Standard ICU error code. Its input value must
      *                  pass the U_SUCCESS() test, or else the function returns
      *                  immediately. Check for U_FAILURE() on output or use with
@@ -227,20 +250,19 @@ public:
      */
     virtual UnicodeString &
     labelToUnicode(const UnicodeString &label, UnicodeString &dest,
-                   uint32_t &errors, UErrorCode &errorCode) const = 0;
+                   IDNAErrors &errors, UErrorCode &errorCode) const = 0;
 
     /**
      * Converts a whole domain name into its ASCII form for DNS lookup.
      * ToASCII can fail if the input label cannot be converted into an ASCII form.
-     * In this case, the destination string will be bogus and the errors
-     * parameter will be nonzero.
+     * In this case, the destination string will be bogus and errors.hasErrors() will be TRUE.
      *
      * The UErrorCode indicates an error only in exceptional cases,
      * such as a U_MEMORY_ALLOCATION_ERROR.
      *
      * @param label Input domain name label
      * @param dest Destination string object
-     * @param errors Output bit set of IDNA processing errors.
+     * @param errors Output container of IDNA processing errors.
      * @param errorCode Standard ICU error code. Its input value must
      *                  pass the U_SUCCESS() test, or else the function returns
      *                  immediately. Check for U_FAILURE() on output or use with
@@ -250,17 +272,17 @@ public:
      */
     virtual UnicodeString &
     nameToASCII(const UnicodeString &name, UnicodeString &dest,
-                uint32_t &errors, UErrorCode &errorCode) const = 0;
+                IDNAErrors &errors, UErrorCode &errorCode) const = 0;
 
     /**
      * Converts a whole domain name into its Unicode form for human-readable display.
      * ToUnicode never fails. If any processing step fails, then the input domain name
      * is returned, possibly with modifications according to the types of errors,
-     * and the errors output value will be nonzero.
+     * and errors.hasErrors() will be TRUE.
      *
      * @param label Input domain name label
      * @param dest Destination string object
-     * @param errors Output bit set of IDNA processing errors.
+     * @param errors Output container of IDNA processing errors.
      * @param errorCode Standard ICU error code. Its input value must
      *                  pass the U_SUCCESS() test, or else the function returns
      *                  immediately. Check for U_FAILURE() on output or use with
@@ -270,7 +292,7 @@ public:
      */
     virtual UnicodeString &
     nameToUnicode(const UnicodeString &name, UnicodeString &dest,
-                  uint32_t &errors, UErrorCode &errorCode) const = 0;
+                  IDNAErrors &errors, UErrorCode &errorCode) const = 0;
 
     /**
      * ICU "poor man's RTTI", returns a UClassID for this class.
@@ -285,6 +307,58 @@ public:
      * @draft ICU 4.6
      */
     virtual UClassID getDynamicClassID() const = 0;
+};
+
+class UTS46;
+
+/**
+ * Output container for IDNA processing errors.
+ * @draft ICU 4.6
+ */
+class U_COMMON_API IDNAErrors : public UObject {
+public:
+    /**
+     * Constructor for stack allocation.
+     * @draft ICU 4.6
+     */
+    IDNAErrors() : errors(0) {}
+    /**
+     * Were there IDNA processing errors?
+     * @return TRUE if there were processing errors
+     * @draft ICU 4.6
+     */
+    UBool hasErrors() const { return errors!=0; }
+    /**
+     * Returns a bit set indicating IDNA processing errors.
+     * See UIDNA_ERROR_... constants.
+     * @return bit set of processing errors
+     * @draft ICU 4.6
+     */
+    uint32_t getErrors() const { return errors; }
+
+    /**
+     * ICU "poor man's RTTI", returns a UClassID for this class.
+     * @returns a UClassID for this class.
+     * @draft ICU 4.6
+     */
+    static UClassID U_EXPORT2 getStaticClassID();
+
+    /**
+     * ICU "poor man's RTTI", returns a UClassID for the actual class.
+     * @return a UClassID for the actual class.
+     * @draft ICU 4.6
+     */
+    virtual UClassID getDynamicClassID() const;
+
+private:
+    friend class UTS46;
+
+    IDNAErrors(const IDNAErrors &other);  // no copying
+    IDNAErrors &operator=(const IDNAErrors &other);  // no copying
+
+    void reset() { errors=0; }
+
+    uint32_t errors;
 };
 
 U_NAMESPACE_END

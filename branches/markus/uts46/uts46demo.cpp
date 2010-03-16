@@ -60,9 +60,9 @@ main(int argc, const char *argv[]) {
     }
     icu::UnicodeString input=icu::UnicodeString::fromUTF8(argv[1]).unescape();
     icu::UnicodeString ascii, unicode;
-    uint32_t toASCIIErrors=0, toUnicodeErrors=0;
     icu::ErrorCode errorCode;
     icu::LocalPointer<icu::IDNA> idna(icu::IDNA::createUTS46Instance(options, errorCode));
+    icu::IDNAErrors toASCIIErrors, toUnicodeErrors;
     idna->nameToASCII(input, ascii, toASCIIErrors, errorCode);
     idna->nameToUnicode(input, unicode, toUnicodeErrors, errorCode);
     if(errorCode.isFailure()) {
@@ -71,9 +71,9 @@ main(int argc, const char *argv[]) {
     }
     std::string utf8;
     printf("toASCII:   \"%s\"  errors 0x%04lX\n",
-           escapeControls(ascii).toUTF8String(utf8).c_str(), (long)toASCIIErrors);
+           escapeControls(ascii).toUTF8String(utf8).c_str(), (long)toASCIIErrors.getErrors());
     utf8.clear();
     printf("toUnicode: \"%s\"  errors 0x%04lX\n",
-           escapeControls(unicode).toUTF8String(utf8).c_str(), (long)toUnicodeErrors);
+           escapeControls(unicode).toUTF8String(utf8).c_str(), (long)toUnicodeErrors.getErrors());
     return 0;
 }

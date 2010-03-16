@@ -32,19 +32,19 @@ public:
 
     virtual UnicodeString &
     labelToASCII(const UnicodeString &label, UnicodeString &dest,
-                 uint32_t &errors, UErrorCode &errorCode) const;
+                 IDNAErrors &errors, UErrorCode &errorCode) const;
 
     virtual UnicodeString &
     labelToUnicode(const UnicodeString &label, UnicodeString &dest,
-                   uint32_t &errors, UErrorCode &errorCode) const;
+                   IDNAErrors &errors, UErrorCode &errorCode) const;
 
     virtual UnicodeString &
     nameToASCII(const UnicodeString &name, UnicodeString &dest,
-                uint32_t &errors, UErrorCode &errorCode) const;
+                IDNAErrors &errors, UErrorCode &errorCode) const;
 
     virtual UnicodeString &
     nameToUnicode(const UnicodeString &name, UnicodeString &dest,
-                  uint32_t &errors, UErrorCode &errorCode) const;
+                  IDNAErrors &errors, UErrorCode &errorCode) const;
 
     static UClassID U_EXPORT2 getStaticClassID();
     virtual UClassID getDynamicClassID() const;
@@ -54,14 +54,14 @@ private:
     process(const UnicodeString &src,
             const Normalizer2 &norm2, UBool isLabel, UBool toASCII,
             UnicodeString &dest,
-            uint32_t &errors, UErrorCode &errorCode) const;
+            IDNAErrors &errors, UErrorCode &errorCode) const;
 
     // returns delta for how much the label length changes
     int32_t
     processLabel(UnicodeString &dest,
                  int32_t labelStart, int32_t labelLength,
                  const Normalizer2 &norm2, UBool toASCII,
-                 uint32_t &errors, UErrorCode &errorCode) const;
+                 IDNAErrors &errors, UErrorCode &errorCode) const;
 
     UBool
     isLabelOkBiDi(const UChar *label, int32_t labelLength) const;
@@ -90,6 +90,8 @@ IDNA::createUTS46Instance(uint32_t options, UErrorCode &errorCode) {
 }
 
 UOBJECT_DEFINE_ABSTRACT_RTTI_IMPLEMENTATION(IDNA)
+
+UOBJECT_DEFINE_RTTI_IMPLEMENTATION(IDNAErrors)
 
 // UTS46 implementation ---------------------------------------------------- ***
 
@@ -132,7 +134,7 @@ UTS46::~UTS46() {
 #if 0
 // TODO: May need such argument checking in ASCII fastpath, when we add that optimization.
 static const UChar *checkArgs(const UnicodeString &src, UnicodeString &dest,
-                              uint32_t &errors, UErrorCode &errorCode) {
+                              IDNAErrors &errors, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) {
         dest.setToBogus();
         return NULL;
@@ -145,16 +147,16 @@ static const UChar *checkArgs(const UnicodeString &src, UnicodeString &dest,
     }
     // Arguments are fine, reset output values.
     dest.remove();
-    errors=0;
+    errors.reset();
     return srcArray;
 }
 #endif
 
 UnicodeString &
 UTS46::labelToASCII(const UnicodeString &label, UnicodeString &dest,
-                    uint32_t &errors, UErrorCode &errorCode) const {
+                    IDNAErrors &errors, UErrorCode &errorCode) const {
     process(label, toASCIINorm2, TRUE, TRUE, dest, errors, errorCode);
-    if(errors!=0) {
+    if(errors.hasErrors()) {
         dest.setToBogus();
     }
     return dest;
@@ -162,18 +164,18 @@ UTS46::labelToASCII(const UnicodeString &label, UnicodeString &dest,
 
 UnicodeString &
 UTS46::labelToUnicode(const UnicodeString &label, UnicodeString &dest,
-                      uint32_t &errors, UErrorCode &errorCode) const {
+                      IDNAErrors &errors, UErrorCode &errorCode) const {
     return process(label, nontransNorm2, TRUE, FALSE, dest, errors, errorCode);
 }
 
 UnicodeString &
 UTS46::nameToASCII(const UnicodeString &name, UnicodeString &dest,
-                   uint32_t &errors, UErrorCode &errorCode) const {
+                   IDNAErrors &errors, UErrorCode &errorCode) const {
     process(name, toASCIINorm2, FALSE, TRUE, dest, errors, errorCode);
     if(dest.length()>=254 && (dest.length()>254 || dest[253]!=0x2e)) {
-        errors|=UIDNA_ERROR_DOMAIN_NAME_TOO_LONG;
+        errors.errors|=UIDNA_ERROR_DOMAIN_NAME_TOO_LONG;
     }
-    if(errors!=0) {
+    if(errors.hasErrors()) {
         dest.setToBogus();
     }
     return dest;
@@ -181,7 +183,7 @@ UTS46::nameToASCII(const UnicodeString &name, UnicodeString &dest,
 
 UnicodeString &
 UTS46::nameToUnicode(const UnicodeString &name, UnicodeString &dest,
-                     uint32_t &errors, UErrorCode &errorCode) const {
+                     IDNAErrors &errors, UErrorCode &errorCode) const {
     return process(name, nontransNorm2, FALSE, FALSE, dest, errors, errorCode);
 }
 
@@ -189,8 +191,8 @@ UnicodeString &
 UTS46::process(const UnicodeString &src,
                const Normalizer2 &norm2, UBool isLabel, UBool toASCII,
                UnicodeString &dest,
-               uint32_t &errors, UErrorCode &errorCode) const {
-    errors=0;
+               IDNAErrors &errors, UErrorCode &errorCode) const {
+    errors.reset();
     norm2.normalize(src, dest, errorCode);
     if(U_FAILURE(errorCode)) {
         return dest;
@@ -230,7 +232,7 @@ int32_t
 UTS46::processLabel(UnicodeString &dest,
                     int32_t labelStart, int32_t labelLength,
                     const Normalizer2 &norm2, UBool toASCII,
-                    uint32_t &errors, UErrorCode &errorCode) const {
+                    IDNAErrors &errors, UErrorCode &errorCode) const {
     const UChar *label=dest.getBuffer()+labelStart;
     int32_t delta=0;
     // TODO: Copy UTS #46 snippets into code comments for processing and validation.
@@ -265,7 +267,7 @@ UTS46::processLabel(UnicodeString &dest,
         unicode.releaseBuffer(unicodeLength);
         if(U_FAILURE(punycodeErrorCode)) {
             // Failure, prepend and append U+FFFD.
-            errors|=UIDNA_ERROR_PUNYCODE;
+            errors.errors|=UIDNA_ERROR_PUNYCODE;
             dest.insert(labelStart, (UChar)0xfffd);
             dest.insert(labelStart+labelLength+1, (UChar)0xfffd);
             return 2;
@@ -279,7 +281,7 @@ UTS46::processLabel(UnicodeString &dest,
             return 0;
         }
         if(unicode!=mapped) {
-            errors|=UIDNA_ERROR_INVALID_ACE_LABEL;
+            errors.errors|=UIDNA_ERROR_INVALID_ACE_LABEL;
         }
         // Replace the Punycode label with its Unicode form.
         dest.replace(labelStart, labelLength, mapped);
@@ -290,33 +292,33 @@ UTS46::processLabel(UnicodeString &dest,
     // Validity check
     if(labelLength==0) {
         if(toASCII) {
-            errors|=UIDNA_ERROR_EMPTY_LABEL;
-            // TODO: insert U+FFFD? (I think not)
+            errors.errors|=UIDNA_ERROR_EMPTY_LABEL;
         }
         return delta;
     }
     // labelLength>0
     if(labelLength>=4 && label[2]==0x2d && label[3]==0x2d) {
         // label starts with "??--"
-        errors|=UIDNA_ERROR_HYPHEN_3_4;
-        // TODO: replace each hyphen with U+FFFD? (I think not)
+        errors.errors|=UIDNA_ERROR_HYPHEN_3_4;
     }
     if(label[0]==0x2d) {
         // label starts with "-"
-        errors|=UIDNA_ERROR_LEADING_HYPHEN;
-        // TODO: replace hyphen with U+FFFD? (I think not)
+        errors.errors|=UIDNA_ERROR_LEADING_HYPHEN;
     }
     if(label[labelLength-1]==0x2d) {
         // label ends with "-"
-        errors|=UIDNA_ERROR_TRAILING_HYPHEN;
-        // TODO: replace hyphen with U+FFFD? (I think not)
+        errors.errors|=UIDNA_ERROR_TRAILING_HYPHEN;
     }
     UChar32 c;
     int32_t cpLength=0;
     // "Unsafe" is ok because unpaired surrogates were mapped to U+FFFD.
     U16_NEXT_UNSAFE(label, cpLength, c);
     if((U_GET_GC_MASK(c)&U_GC_M_MASK)!=0) {
-        errors|=UIDNA_ERROR_LEADING_COMBINING_MARK;
+        errors.errors|=UIDNA_ERROR_LEADING_COMBINING_MARK;
+        dest.replace(labelStart, cpLength, (UChar)0xfffd);
+        label=dest.getBuffer()+labelStart;
+        labelLength+=1-cpLength;
+        delta+=1-cpLength;
     }
     // If the label was not a Punycode label, then it was the result of
     // mapping, normalization and label segmentation.
@@ -336,21 +338,21 @@ UTS46::processLabel(UnicodeString &dest,
         UChar c=*s;
         oredChars|=c;
         if(c==0xfffd) {
-            errors|=UIDNA_ERROR_DISALLOWED;
+            errors.errors|=UIDNA_ERROR_DISALLOWED;
         } else if(c==0x2e) {
-            errors|=UIDNA_ERROR_LABEL_HAS_DOT;
+            errors.errors|=UIDNA_ERROR_LABEL_HAS_DOT;
             *s=0xfffd;
         }
     } while(++s<limit);
     if( (options&UIDNA_CHECK_BIDI)!=0 && oredChars>=0x590 &&
         !isLabelOkBiDi(label, labelLength)
     ) {
-        errors|=UIDNA_ERROR_BIDI;
+        errors.errors|=UIDNA_ERROR_BIDI;
     }
     if( (options&UIDNA_CHECK_CONTEXTJ)!=0 && (oredChars&0x200c)==0x200c &&
         !isLabelOkContextJ(label, labelLength)
     ) {
-        errors|=UIDNA_ERROR_CONTEXTJ;
+        errors.errors|=UIDNA_ERROR_CONTEXTJ;
     }
     if(toASCII) {
         if(oredChars>=0x80) {
@@ -366,7 +368,7 @@ UTS46::processLabel(UnicodeString &dest,
             if(errorCode==U_BUFFER_OVERFLOW_ERROR) {
                 errorCode=U_ZERO_ERROR;
                 punycode.releaseBuffer(4);
-                errors|=UIDNA_ERROR_LABEL_TOO_LONG;
+                errors.errors|=UIDNA_ERROR_LABEL_TOO_LONG;
                 return delta;
             }
             punycode.releaseBuffer(4+punycodeLength);
@@ -381,7 +383,7 @@ UTS46::processLabel(UnicodeString &dest,
             labelLength=punycode.length();
         }
         if(labelLength>63) {
-            errors|=UIDNA_ERROR_LABEL_TOO_LONG;
+            errors.errors|=UIDNA_ERROR_LABEL_TOO_LONG;
         }
     }
     return delta;
