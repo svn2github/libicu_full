@@ -51,6 +51,7 @@ void addNumForTest(TestNode** root)
     TESTCASE(TestTextAttributeCrash);
     TESTCASE(TestRBNFFormat);
     TESTCASE(TestNBSPInPattern);
+    TESTCASE(TestParseZero);
 }
 
 /** copy src to dst with unicode-escapes for values < 0x20 and > 0x7e, null terminate if possible */
@@ -783,6 +784,27 @@ free(result);
     unum_close(cur_frpattern);
     unum_close(myclone);
 
+}
+
+static void TestParseZero(void)
+{
+    UErrorCode errorCode = U_ZERO_ERROR;
+    UChar input[] = {'0', 0};   /*  Input text is decimal '0' */
+    UChar pat[] = {'#', ';', '#', 0};
+    double  dbl;
+    
+#if 0
+    UNumberFormat* unum = unum_open( UNUM_DECIMAL /*or UNUM_DEFAULT*/, NULL, -1, NULL, NULL, &errorCode);
+#else
+    UNumberFormat* unum = unum_open( UNUM_PATTERN_DECIMAL /*needs pattern*/, pat, -1, NULL, NULL, &errorCode);
+#endif
+    
+    dbl = unum_parseDouble( unum, input, -1 /*u_strlen(input)*/, 0 /* 0 = start */, &errorCode );
+    if (U_FAILURE(errorCode)) {
+        log_err("Result: %s\n", u_errorName(errorCode));
+    } else {    
+        log_verbose("Double: %f\n", dbl);
+    }
 }
 
 typedef struct {

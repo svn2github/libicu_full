@@ -2127,7 +2127,13 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
 #if CHECK_FOR_LEADING_ZERO
         // check for strict parse errors
         if (strictParse && strictLeadingZero) {
-            if ((leadingZeroCount + integerDigitCount) > getMinimumIntegerDigits()) {
+            int32_t minIntegerDigits = getMinimumIntegerDigits();
+            
+            if (minIntegerDigits == 0 && integerDigitCount == 0) {
+                minIntegerDigits = 1;
+            }
+            
+            if ((leadingZeroCount + integerDigitCount) > minIntegerDigits) {
                 parsePosition.setIndex(oldStart);
                 parsePosition.setErrorIndex(leadingZeroPos);
                 return FALSE;

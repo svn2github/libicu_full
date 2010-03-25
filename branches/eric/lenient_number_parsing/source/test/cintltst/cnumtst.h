@@ -60,6 +60,10 @@ static void TestRBNFFormat(void);
  **/
 static void TestCurrencyRegression(void);
 
+/**
+ * Test strict parsing of "0"
+ **/
+static void TestParseZero(void);
 
 #endif /* #if !UCONFIG_NO_FORMATTING */
 
