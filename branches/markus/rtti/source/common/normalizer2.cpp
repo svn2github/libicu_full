@@ -678,9 +678,9 @@ normalizeSecondAndAppend(const UNormalizer2 *norm2,
     }
     UnicodeString firstString(first, firstLength, firstCapacity);
     const Normalizer2 *n2=(const Normalizer2 *)norm2;
-    if(n2->getDynamicClassID()==Normalizer2WithImpl::getStaticClassID()) {
+    const Normalizer2WithImpl *n2wi=dynamic_cast<const Normalizer2WithImpl *>(n2);
+    if(n2wi!=NULL) {
         // Avoid duplicate argument checking and support NUL-terminated src.
-        const Normalizer2WithImpl *n2wi=(const Normalizer2WithImpl *)n2;
         ReorderingBuffer buffer(n2wi->impl, firstString);
         if(buffer.init(firstLength+secondLength+1, *pErrorCode)) {  // destCapacity>=-1
             n2wi->normalizeAndAppend(second, secondLength>=0 ? second+secondLength : NULL,
