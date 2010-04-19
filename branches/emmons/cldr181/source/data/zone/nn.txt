@@ -10,7 +10,7 @@
  *  ICU <specials> source: <path>/xml/main/nn.xml
  */
 nn{
-    Version{"2.0.47.86"}
+    Version{"2.0.48.46"}
     zoneStrings{
         "America:Belem"{
             ec{"Belém"}
@@ -99,6 +99,7 @@ nn{
         }
         "meta:China"{
             sd{"CDT (Kina)"}
+            sg{"CT (Kina)"}
             ss{"CST (Kina)"}
         }
         "meta:Europe_Central"{
