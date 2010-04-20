@@ -728,7 +728,7 @@ root{
         gmtFormat{"GMT{0}"}
         gmtZeroFormat{"GMT"}
         hourFormat{"+HH:mm;-HH:mm"}
-        regionFormat{"{0}"}
+        regionFormat{"({0})"}
         singleCountries{
             "Europe/Kiev",
             "Pacific/Majuro",

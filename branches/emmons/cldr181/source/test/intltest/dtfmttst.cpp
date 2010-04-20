@@ -2877,8 +2877,8 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "si", "America/Havana", "2004-07-15T00:00:00Z", "ZZZZ", "GMT-04:00", "-4:00" },
         { "si", "America/Havana", "2004-07-15T00:00:00Z", "z", "GMT-04:00", "-4:00" },
         { "si", "America/Havana", "2004-07-15T00:00:00Z", "zzzz", "GMT-04:00", "-4:00" },
-        { "si", "America/Havana", "2004-07-15T00:00:00Z", "v", "CU", "America/Havana" },
-        { "si", "America/Havana", "2004-07-15T00:00:00Z", "vvvv", "CU", "America/Havana" },
+        { "si", "America/Havana", "2004-07-15T00:00:00Z", "v", "(CU)", "America/Havana" },
+        { "si", "America/Havana", "2004-07-15T00:00:00Z", "vvvv", "(CU)", "America/Havana" },
 
         { "si", "Australia/ACT", "2004-01-15T00:00:00Z", "Z", "+1100", "+11:00" },
         { "si", "Australia/ACT", "2004-01-15T00:00:00Z", "ZZZZ", "GMT+11:00", "+11:00" },
@@ -2910,8 +2910,8 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "si", "Europe/London", "2004-07-15T00:00:00Z", "ZZZZ", "GMT+01:00", "+1:00" },
         { "si", "Europe/London", "2004-07-15T00:00:00Z", "z", "GMT+01:00", "+1:00" },
         { "si", "Europe/London", "2004-07-15T00:00:00Z", "zzzz", "GMT+01:00", "+1:00" },
-        { "si", "Europe/London", "2004-07-15T00:00:00Z", "v", "GB", "Europe/London" },
-        { "si", "Europe/London", "2004-07-15T00:00:00Z", "vvvv", "GB", "Europe/London" },
+        { "si", "Europe/London", "2004-07-15T00:00:00Z", "v", "(GB)", "Europe/London" },
+        { "si", "Europe/London", "2004-07-15T00:00:00Z", "vvvv", "(GB)", "Europe/London" },
 
         { "si", "Etc/GMT+3", "2004-01-15T00:00:00Z", "Z", "-0300", "-3:00" },
         { "si", "Etc/GMT+3", "2004-01-15T00:00:00Z", "ZZZZ", "GMT-03:00", "-3:00" },
@@ -2933,8 +2933,8 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "si", "Asia/Calcutta", "2004-07-15T00:00:00Z", "ZZZZ", "GMT+05:30", "+5:30" },
         { "si", "Asia/Calcutta", "2004-07-15T00:00:00Z", "z", "GMT+05:30", "+05:30" },
         { "si", "Asia/Calcutta", "2004-07-15T00:00:00Z", "zzzz", "GMT+05:30", "+5:30" },
-        { "si", "Asia/Calcutta", "2004-07-15T00:00:00Z", "v", "IN", "Asia/Calcutta" },
-        { "si", "Asia/Calcutta", "2004-07-15T00:00:00Z", "vvvv", "IN", "Asia/Calcutta" },
+        { "si", "Asia/Calcutta", "2004-07-15T00:00:00Z", "v", "(IN)", "Asia/Calcutta" },
+        { "si", "Asia/Calcutta", "2004-07-15T00:00:00Z", "vvvv", "(IN)", "Asia/Calcutta" },
         { NULL, NULL, NULL, NULL, NULL, NULL },
     };
 
