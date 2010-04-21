@@ -10,7 +10,7 @@
  *  ICU <specials> source: <path>/xml/main/da.xml
  */
 da{
-    Version{"2.0.48.46"}
+    Version{"2.0.48.64"}
     zoneStrings{
         "Africa:Algiers"{
             ec{"Algier"}
@@ -773,6 +773,5 @@ da{
         fallbackFormat{"{1} ({0})"}
         gmtFormat{"GMT{0}"}
         hourFormat{"+HH.mm;-HH.mm"}
-        regionFormat{"{0}"}
     }
 }

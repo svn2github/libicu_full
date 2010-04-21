@@ -10,7 +10,7 @@
  *  ICU <specials> source: <path>/xml/main/lt.xml
  */
 lt{
-    Version{"2.0.48.46"}
+    Version{"2.0.48.64"}
     zoneStrings{
         "Africa:Abidjan"{
             ec{"Abidžanas"}
@@ -1404,6 +1404,5 @@ lt{
         fallbackFormat{"{0} ({1})"}
         gmtFormat{"GMT{0}"}
         hourFormat{"+HH:mm;−HH:mm"}
-        regionFormat{"{0}"}
     }
 }

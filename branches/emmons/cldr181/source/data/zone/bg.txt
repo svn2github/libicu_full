@@ -10,7 +10,7 @@
  *  ICU <specials> source: <path>/xml/main/bg.xml
  */
 bg{
-    Version{"2.0.48.46"}
+    Version{"2.0.48.64"}
     zoneStrings{
         "Africa:Bamako"{
             ec{"Бамако"}
@@ -686,6 +686,5 @@ bg{
         gmtFormat{"Гриинуич{0}"}
         gmtZeroFormat{"Гриинуич"}
         hourFormat{"+HHmm;-HHmm"}
-        regionFormat{"{0}"}
     }
 }
