@@ -30,7 +30,7 @@ escapeControls(icu::UnicodeString &s) {
 
 static void
 printUsage() {
-    fprintf(stderr, "uts46demo [-3bjn] input-string-can-have-\\uhhhh\n");
+    fprintf(stderr, "uts46demo [-3bjau] input-string-can-have-\\uhhhh\n");
 }
 
 extern int
@@ -47,7 +47,8 @@ main(int argc, const char *argv[]) {
             case '3': options|=UIDNA_USE_STD3_RULES; break;
             case 'b': options|=UIDNA_CHECK_BIDI; break;
             case 'j': options|=UIDNA_CHECK_CONTEXTJ; break;
-            case 'n': options|=UIDNA_NONTRANSITIONAL_TO_ASCII; break;
+            case 'a': options|=UIDNA_NONTRANSITIONAL_TO_ASCII; break;
+            case 'u': options|=UIDNA_NONTRANSITIONAL_TO_UNICODE; break;
             default:
                 printUsage();
                 return 2;
@@ -62,18 +63,18 @@ main(int argc, const char *argv[]) {
     icu::UnicodeString ascii, unicode;
     icu::ErrorCode errorCode;
     icu::LocalPointer<icu::IDNA> idna(icu::IDNA::createUTS46Instance(options, errorCode));
-    icu::IDNAErrors toASCIIErrors, toUnicodeErrors;
-    idna->nameToASCII(input, ascii, toASCIIErrors, errorCode);
-    idna->nameToUnicode(input, unicode, toUnicodeErrors, errorCode);
+    icu::IDNAInfo toASCIIInfo, toUnicodeInfo;
+    idna->nameToASCII(input, ascii, toASCIIInfo, errorCode);
+    idna->nameToUnicode(input, unicode, toUnicodeInfo, errorCode);
     if(errorCode.isFailure()) {
         fprintf(stderr, "UErrorCode: %s\n", errorCode.errorName());
         return 3;
     }
     std::string utf8;
     printf("toASCII:   \"%s\"  errors 0x%04lX\n",
-           escapeControls(ascii).toUTF8String(utf8).c_str(), (long)toASCIIErrors.getErrors());
+           escapeControls(ascii).toUTF8String(utf8).c_str(), (long)toASCIIInfo.getErrors());
     utf8.clear();
     printf("toUnicode: \"%s\"  errors 0x%04lX\n",
-           escapeControls(unicode).toUTF8String(utf8).c_str(), (long)toUnicodeErrors.getErrors());
+           escapeControls(unicode).toUTF8String(utf8).c_str(), (long)toUnicodeInfo.getErrors());
     return 0;
 }

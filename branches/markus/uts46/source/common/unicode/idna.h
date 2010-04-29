@@ -68,7 +68,13 @@ enum {
      * By default, ToASCII() uses transitional processing.
      * @draft ICU 4.6
      */
-    UIDNA_NONTRANSITIONAL_TO_ASCII=0x10
+    UIDNA_NONTRANSITIONAL_TO_ASCII=0x10,
+    /**
+     * IDNA option for nontransitional processing in ToUnicode().
+     * By default, ToUnicode() uses transitional processing.
+     * @draft ICU 4.6
+     */
+    UIDNA_NONTRANSITIONAL_TO_UNICODE=0x20
 };
 
 /*
@@ -155,7 +161,7 @@ enum {
 
 U_NAMESPACE_BEGIN
 
-class U_COMMON_API IDNAErrors;
+class U_COMMON_API IDNAInfo;
 
 /**
  * Abstract base class for IDNA processing.
@@ -177,10 +183,9 @@ public:
      * updated to the latest version of Unicode and compatible with both
      * IDNA2003 and IDNA2008.
      *
-     * ToASCII operations use transitional processing, including deviation mappings,
-     * unless the UIDNA_NONTRANSITIONAL_TO_ASCII is used.
-     * ToUnicode operations always use nontransitional processing,
-     * passing deviation characters through without change.
+     * The worker functions use transitional processing, including deviation mappings,
+     * unless UIDNA_NONTRANSITIONAL_TO_ASCII or UIDNA_NONTRANSITIONAL_TO_UNICODE
+     * is used in which case the deviation characters are passed through without change.
      *
      * Disallowed characters are mapped to U+FFFD.
      *
@@ -228,7 +233,7 @@ public:
      */
     virtual UnicodeString &
     labelToASCII(const UnicodeString &label, UnicodeString &dest,
-                 IDNAErrors &errors, UErrorCode &errorCode) const = 0;
+                 IDNAInfo &info, UErrorCode &errorCode) const = 0;
 
     /**
      * Converts a single domain name label into its Unicode form for human-readable display.
@@ -250,7 +255,7 @@ public:
      */
     virtual UnicodeString &
     labelToUnicode(const UnicodeString &label, UnicodeString &dest,
-                   IDNAErrors &errors, UErrorCode &errorCode) const = 0;
+                   IDNAInfo &info, UErrorCode &errorCode) const = 0;
 
     /**
      * Converts a whole domain name into its ASCII form for DNS lookup.
@@ -272,7 +277,7 @@ public:
      */
     virtual UnicodeString &
     nameToASCII(const UnicodeString &name, UnicodeString &dest,
-                IDNAErrors &errors, UErrorCode &errorCode) const = 0;
+                IDNAInfo &info, UErrorCode &errorCode) const = 0;
 
     /**
      * Converts a whole domain name into its Unicode form for human-readable display.
@@ -292,7 +297,7 @@ public:
      */
     virtual UnicodeString &
     nameToUnicode(const UnicodeString &name, UnicodeString &dest,
-                  IDNAErrors &errors, UErrorCode &errorCode) const = 0;
+                  IDNAInfo &info, UErrorCode &errorCode) const = 0;
 
     /**
      * ICU "poor man's RTTI", returns a UClassID for this class.
@@ -315,13 +320,13 @@ class UTS46;
  * Output container for IDNA processing errors.
  * @draft ICU 4.6
  */
-class U_COMMON_API IDNAErrors : public UObject {
+class U_COMMON_API IDNAInfo : public UObject {
 public:
     /**
      * Constructor for stack allocation.
      * @draft ICU 4.6
      */
-    IDNAErrors() : errors(0) {}
+    IDNAInfo() : errors(0), hasDevChars(FALSE) {}
     /**
      * Were there IDNA processing errors?
      * @return TRUE if there were processing errors
@@ -335,6 +340,21 @@ public:
      * @draft ICU 4.6
      */
     uint32_t getErrors() const { return errors; }
+    /**
+     * Returns TRUE if the Unicode form of the input label or domain name
+     * contains one or more deviation characters (see UTS #46).
+     * <ul>
+     * <li>With nontransitional processing, such characters are
+     * copied to the destination string.
+     * <li>With transitional processing, such characters are
+     * mapped (sharp s/sigma) or removed (joiner/nonjoiner).
+     * </ul>
+     * In other words, this method returns TRUE iff
+     * transitional and nontransitional processing produce different results.
+     * @return TRUE if the input contains one or more deviation characters
+     * @draft ICU 4.6
+     */
+    UBool hasDeviationCharacters() const { return hasDevChars; }
 
     /**
      * ICU "poor man's RTTI", returns a UClassID for this class.
@@ -353,12 +373,16 @@ public:
 private:
     friend class UTS46;
 
-    IDNAErrors(const IDNAErrors &other);  // no copying
-    IDNAErrors &operator=(const IDNAErrors &other);  // no copying
+    IDNAInfo(const IDNAInfo &other);  // no copying
+    IDNAInfo &operator=(const IDNAInfo &other);  // no copying
 
-    void reset() { errors=0; }
+    void reset() {
+        errors=0;
+        hasDevChars=FALSE;
+    }
 
     uint32_t errors;
+    UBool hasDevChars;
 };
 
 U_NAMESPACE_END

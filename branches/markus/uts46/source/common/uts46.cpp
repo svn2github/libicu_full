@@ -18,7 +18,6 @@
 
 #include "unicode/idna.h"
 #include "unicode/normalizer2.h"
-#include "unicode/uniset.h"
 #include "punycode.h"
 
 U_NAMESPACE_BEGIN
@@ -32,19 +31,19 @@ public:
 
     virtual UnicodeString &
     labelToASCII(const UnicodeString &label, UnicodeString &dest,
-                 IDNAErrors &errors, UErrorCode &errorCode) const;
+                 IDNAInfo &info, UErrorCode &errorCode) const;
 
     virtual UnicodeString &
     labelToUnicode(const UnicodeString &label, UnicodeString &dest,
-                   IDNAErrors &errors, UErrorCode &errorCode) const;
+                   IDNAInfo &info, UErrorCode &errorCode) const;
 
     virtual UnicodeString &
     nameToASCII(const UnicodeString &name, UnicodeString &dest,
-                IDNAErrors &errors, UErrorCode &errorCode) const;
+                IDNAInfo &info, UErrorCode &errorCode) const;
 
     virtual UnicodeString &
     nameToUnicode(const UnicodeString &name, UnicodeString &dest,
-                  IDNAErrors &errors, UErrorCode &errorCode) const;
+                  IDNAInfo &info, UErrorCode &errorCode) const;
 
     static UClassID U_EXPORT2 getStaticClassID();
     virtual UClassID getDynamicClassID() const;
@@ -52,16 +51,16 @@ public:
 private:
     UnicodeString &
     process(const UnicodeString &src,
-            const Normalizer2 &norm2, UBool isLabel, UBool toASCII,
+            UBool isLabel, UBool toASCII, UBool transitional,
             UnicodeString &dest,
-            IDNAErrors &errors, UErrorCode &errorCode) const;
+            IDNAInfo &info, UErrorCode &errorCode) const;
 
     // returns delta for how much the label length changes
     int32_t
     processLabel(UnicodeString &dest,
                  int32_t labelStart, int32_t labelLength,
-                 const Normalizer2 &norm2, UBool toASCII,
-                 IDNAErrors &errors, UErrorCode &errorCode) const;
+                 UBool toASCII, UBool transitional,
+                 IDNAInfo &info, UErrorCode &errorCode) const;
 
     UBool
     isLabelOkBiDi(const UChar *label, int32_t labelLength) const;
@@ -69,12 +68,7 @@ private:
     UBool
     isLabelOkContextJ(const UChar *label, int32_t labelLength) const;
 
-    UnicodeSet *transSet;  // NULL, or ASCII without LDH+dot
-    UnicodeSet *nontransSet;  // transSet & notDeviationSet
     const Normalizer2 &norm2;  // uts46.nrm
-    FilteredNormalizer2 transNorm2;  // maps deviation characters, with transSet
-    FilteredNormalizer2 nontransNorm2;  // passes deviation characters through
-    const Normalizer2 &toASCIINorm2;
     uint32_t options;
 };
 
@@ -91,50 +85,20 @@ IDNA::createUTS46Instance(uint32_t options, UErrorCode &errorCode) {
 
 UOBJECT_DEFINE_ABSTRACT_RTTI_IMPLEMENTATION(IDNA)
 
-UOBJECT_DEFINE_RTTI_IMPLEMENTATION(IDNAErrors)
+UOBJECT_DEFINE_RTTI_IMPLEMENTATION(IDNAInfo)
 
 // UTS46 implementation ---------------------------------------------------- ***
 
 UTS46::UTS46(uint32_t opt, UErrorCode &errorCode)
-        : transSet(opt&UIDNA_USE_STD3_RULES ? NULL : new UnicodeSet(0, 0x10ffff)),
-          nontransSet(new UnicodeSet(0, 0x10ffff)),
-          norm2(*Normalizer2::getInstance(NULL, "uts46", UNORM2_COMPOSE, errorCode)),
-          transNorm2(norm2, *transSet),
-          nontransNorm2(norm2, *nontransSet),
-          toASCIINorm2(
-              opt&UIDNA_NONTRANSITIONAL_TO_ASCII ? nontransNorm2 :
-              opt&UIDNA_USE_STD3_RULES ? norm2 : transNorm2),
-          options(opt) {
-    if(U_SUCCESS(errorCode)) {
-        if(((opt&UIDNA_USE_STD3_RULES)==0 && transSet==NULL) || nontransSet==NULL) {
-            errorCode=U_MEMORY_ALLOCATION_ERROR;
-        } else {
-            if((opt&UIDNA_USE_STD3_RULES)==0) {
-                // If we do not enforce STD3 rules, then we pass through
-                // all ASCII except LDH and the dot.
-                // The uts46.nrm table maps all such characters to U+FFFD,
-                // so we use a FilteredNormalizer and normalize all characters
-                // except the ASCII non-LDH+dot set.
-                transSet->remove(0, 0x2c).remove(0x2f).remove(0x3a, 0x40).
-                          remove(0x5b, 0x60).remove(0x7b, 0x7f).freeze();
-                nontransSet->retainAll(*transSet);
-            }
-            // In nontransitional processing, we pass through deviation characters,
-            // rather than mapping them.
-            nontransSet->remove(0xdf).remove(0x3c2).remove(0x200c, 0x200d).freeze();
-        }
-    }
-}
+        : norm2(*Normalizer2::getInstance(NULL, "uts46", UNORM2_COMPOSE, errorCode)),
+          options(opt) {}
 
-UTS46::~UTS46() {
-    delete transSet;
-    delete nontransSet;
-}
+UTS46::~UTS46() {}
 
 #if 0
 // TODO: May need such argument checking in ASCII fastpath, when we add that optimization.
 static const UChar *checkArgs(const UnicodeString &src, UnicodeString &dest,
-                              IDNAErrors &errors, UErrorCode &errorCode) {
+                              IDNAInfo &info, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) {
         dest.setToBogus();
         return NULL;
@@ -147,16 +111,18 @@ static const UChar *checkArgs(const UnicodeString &src, UnicodeString &dest,
     }
     // Arguments are fine, reset output values.
     dest.remove();
-    errors.reset();
+    info.reset();
     return srcArray;
 }
 #endif
 
 UnicodeString &
 UTS46::labelToASCII(const UnicodeString &label, UnicodeString &dest,
-                    IDNAErrors &errors, UErrorCode &errorCode) const {
-    process(label, toASCIINorm2, TRUE, TRUE, dest, errors, errorCode);
-    if(errors.hasErrors()) {
+                    IDNAInfo &info, UErrorCode &errorCode) const {
+    process(label, TRUE, TRUE,
+            (options&UIDNA_NONTRANSITIONAL_TO_ASCII)==0,
+            dest, info, errorCode);
+    if(info.hasErrors()) {
         dest.setToBogus();
     }
     return dest;
@@ -164,18 +130,22 @@ UTS46::labelToASCII(const UnicodeString &label, UnicodeString &dest,
 
 UnicodeString &
 UTS46::labelToUnicode(const UnicodeString &label, UnicodeString &dest,
-                      IDNAErrors &errors, UErrorCode &errorCode) const {
-    return process(label, nontransNorm2, TRUE, FALSE, dest, errors, errorCode);
+                      IDNAInfo &info, UErrorCode &errorCode) const {
+    return process(label, TRUE, FALSE,
+                   (options&UIDNA_NONTRANSITIONAL_TO_UNICODE)==0,
+                   dest, info, errorCode);
 }
 
 UnicodeString &
 UTS46::nameToASCII(const UnicodeString &name, UnicodeString &dest,
-                   IDNAErrors &errors, UErrorCode &errorCode) const {
-    process(name, toASCIINorm2, FALSE, TRUE, dest, errors, errorCode);
+                   IDNAInfo &info, UErrorCode &errorCode) const {
+    process(name, FALSE, TRUE,
+            (options&UIDNA_NONTRANSITIONAL_TO_ASCII)==0,
+            dest, info, errorCode);
     if(dest.length()>=254 && (dest.length()>254 || dest[253]!=0x2e)) {
-        errors.errors|=UIDNA_ERROR_DOMAIN_NAME_TOO_LONG;
+        info.errors|=UIDNA_ERROR_DOMAIN_NAME_TOO_LONG;
     }
-    if(errors.hasErrors()) {
+    if(info.hasErrors()) {
         dest.setToBogus();
     }
     return dest;
@@ -183,22 +153,46 @@ UTS46::nameToASCII(const UnicodeString &name, UnicodeString &dest,
 
 UnicodeString &
 UTS46::nameToUnicode(const UnicodeString &name, UnicodeString &dest,
-                     IDNAErrors &errors, UErrorCode &errorCode) const {
-    return process(name, nontransNorm2, FALSE, FALSE, dest, errors, errorCode);
+                     IDNAInfo &info, UErrorCode &errorCode) const {
+    return process(name, FALSE, FALSE,
+                   (options&UIDNA_NONTRANSITIONAL_TO_UNICODE)==0,
+                   dest, info, errorCode);
 }
+
+// UTS #46 data for ASCII characters.
+// The normalizer (using uts46.nrm) maps uppercase ASCII letters to lowercase
+// and passes through all other ASCII characters.
+// If UIDNA_USE_STD3_RULES is set, then non-LDH characters are disallowed
+// using this data.
+// The ASCII fastpath also uses this data.
+// Values: -1=disallowed  0==valid  1==mapped (lowercase)
+static const int8_t asciiData[128]={
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    // 002D..002E; valid  #  HYPHEN-MINUS..FULL STOP
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  0,  0, -1,
+    // 0030..0039; valid  #  DIGIT ZERO..DIGIT NINE
+     0,  0,  0,  0,  0,  0,  0,  0,  0,  0, -1, -1, -1, -1, -1, -1,
+    // 0041..005A; mapped  #  LATIN CAPITAL LETTER A..LATIN CAPITAL LETTER Z
+    -1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+     1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, -1, -1, -1, -1, -1,
+    // 0061..007A; valid  #  LATIN SMALL LETTER A..LATIN SMALL LETTER Z
+    -1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, -1, -1, -1, -1, -1
+};
 
 UnicodeString &
 UTS46::process(const UnicodeString &src,
-               const Normalizer2 &norm2, UBool isLabel, UBool toASCII,
+               UBool isLabel, UBool toASCII, UBool transitional,
                UnicodeString &dest,
-               IDNAErrors &errors, UErrorCode &errorCode) const {
-    errors.reset();
+               IDNAInfo &info, UErrorCode &errorCode) const {
+    info.reset();
     norm2.normalize(src, dest, errorCode);
     if(U_FAILURE(errorCode)) {
         return dest;
     }
     if(isLabel) {
-        processLabel(dest, 0, dest.length(), norm2, toASCII, errors, errorCode);
+        processLabel(dest, 0, dest.length(), toASCII, transitional, info, errorCode);
     } else {
         const UChar *destArray=dest.getBuffer();
         int32_t destLength=dest.length();
@@ -206,7 +200,7 @@ UTS46::process(const UnicodeString &src,
         while(labelLimit<destLength) {
             if(destArray[labelLimit]==0x2e) {
                 delta=processLabel(dest, labelStart, labelLimit-labelStart,
-                                   norm2, toASCII, errors, errorCode);
+                                   toASCII, transitional, info, errorCode);
                 if(U_FAILURE(errorCode)) {
                     return dest;
                 }
@@ -222,7 +216,7 @@ UTS46::process(const UnicodeString &src,
         // processLabel() sets UIDNA_ERROR_EMPTY_LABEL when labelLength==0.
         if(0==labelStart || labelStart<labelLimit) {
             processLabel(dest, labelStart, labelLimit-labelStart,
-                         norm2, toASCII, errors, errorCode);
+                         toASCII, transitional, info, errorCode);
         }
     }
     return dest;
@@ -231,8 +225,8 @@ UTS46::process(const UnicodeString &src,
 int32_t
 UTS46::processLabel(UnicodeString &dest,
                     int32_t labelStart, int32_t labelLength,
-                    const Normalizer2 &norm2, UBool toASCII,
-                    IDNAErrors &errors, UErrorCode &errorCode) const {
+                    UBool toASCII, UBool transitional,
+                    IDNAInfo &info, UErrorCode &errorCode) const {
     const UChar *label=dest.getBuffer()+labelStart;
     int32_t delta=0;
     // TODO: Copy UTS #46 snippets into code comments for processing and validation.
@@ -267,7 +261,7 @@ UTS46::processLabel(UnicodeString &dest,
         unicode.releaseBuffer(unicodeLength);
         if(U_FAILURE(punycodeErrorCode)) {
             // Failure, prepend and append U+FFFD.
-            errors.errors|=UIDNA_ERROR_PUNYCODE;
+            info.errors|=UIDNA_ERROR_PUNYCODE;
             dest.insert(labelStart, (UChar)0xfffd);
             dest.insert(labelStart+labelLength+1, (UChar)0xfffd);
             return 2;
@@ -281,7 +275,7 @@ UTS46::processLabel(UnicodeString &dest,
             return 0;
         }
         if(unicode!=mapped) {
-            errors.errors|=UIDNA_ERROR_INVALID_ACE_LABEL;
+            info.errors|=UIDNA_ERROR_INVALID_ACE_LABEL;
         }
         // Replace the Punycode label with its Unicode form.
         dest.replace(labelStart, labelLength, mapped);
@@ -292,29 +286,29 @@ UTS46::processLabel(UnicodeString &dest,
     // Validity check
     if(labelLength==0) {
         if(toASCII) {
-            errors.errors|=UIDNA_ERROR_EMPTY_LABEL;
+            info.errors|=UIDNA_ERROR_EMPTY_LABEL;
         }
         return delta;
     }
     // labelLength>0
     if(labelLength>=4 && label[2]==0x2d && label[3]==0x2d) {
         // label starts with "??--"
-        errors.errors|=UIDNA_ERROR_HYPHEN_3_4;
+        info.errors|=UIDNA_ERROR_HYPHEN_3_4;
     }
     if(label[0]==0x2d) {
         // label starts with "-"
-        errors.errors|=UIDNA_ERROR_LEADING_HYPHEN;
+        info.errors|=UIDNA_ERROR_LEADING_HYPHEN;
     }
     if(label[labelLength-1]==0x2d) {
         // label ends with "-"
-        errors.errors|=UIDNA_ERROR_TRAILING_HYPHEN;
+        info.errors|=UIDNA_ERROR_TRAILING_HYPHEN;
     }
     UChar32 c;
     int32_t cpLength=0;
     // "Unsafe" is ok because unpaired surrogates were mapped to U+FFFD.
     U16_NEXT_UNSAFE(label, cpLength, c);
     if((U_GET_GC_MASK(c)&U_GC_M_MASK)!=0) {
-        errors.errors|=UIDNA_ERROR_LEADING_COMBINING_MARK;
+        info.errors|=UIDNA_ERROR_LEADING_COMBINING_MARK;
         dest.replace(labelStart, cpLength, (UChar)0xfffd);
         label=dest.getBuffer()+labelStart;
         labelLength+=1-cpLength;
@@ -324,9 +318,9 @@ UTS46::processLabel(UnicodeString &dest,
     // mapping, normalization and label segmentation.
     // If the label was in Punycode, then we mapped it again above
     // and checked its validity.
-    // The optional STD3 restriction to LDH characters was handled by the
-    // construction and selection of the normalizer.
-    // All we need to look for now is U+FFFD which indicates disallowed characters
+    // Now we handle the STD3 restriction to LDH characters (if set)
+    // and the deviation characters (transitional vs. nontransitional),
+    // and we look for U+FFFD which indicates disallowed characters
     // in a non-Punycode label or U+FFFD itself in a Punycode label.
     // We also check for dots which can come from a Punycode label
     // or from the input to a single-label function.
@@ -334,25 +328,75 @@ UTS46::processLabel(UnicodeString &dest,
     UChar *s=(UChar *)label;
     const UChar *limit=label+labelLength;
     UChar oredChars=0;
+    // If we enforce STD3 rules, then ASCII characters other than LDH and dot are disallowed.
+    UBool disallowNonLDHDot=(options&UIDNA_USE_STD3_RULES)!=0;
     do {
         UChar c=*s;
-        oredChars|=c;
-        if(c==0xfffd) {
-            errors.errors|=UIDNA_ERROR_DISALLOWED;
-        } else if(c==0x2e) {
-            errors.errors|=UIDNA_ERROR_LABEL_HAS_DOT;
-            *s=0xfffd;
+        if(c<=0x7f) {
+            if(c==0x2e) {
+                info.errors|=UIDNA_ERROR_LABEL_HAS_DOT;
+                *s=0xfffd;
+            } else if(disallowNonLDHDot && asciiData[c]<0) {
+                info.errors|=UIDNA_ERROR_DISALLOWED;
+                *s=0xfffd;
+            }
+        } else {
+            oredChars|=c;
+            switch(c) {
+            case 0xdf:
+                info.hasDevChars=TRUE;
+                if(transitional) {  // Map sharp s to ss.
+                    *s++=0x73;  // Replace sharp s with first s.
+                    // Insert second s and account for possible buffer reallocation.
+                    int32_t destIndex=(int32_t)(s-dest.getBuffer());
+                    dest.insert(destIndex, (UChar)0x73);
+                    ++delta;
+                    ++labelLength;
+                    label=dest.getBuffer();
+                    s=(UChar *)label+destIndex;
+                    label+=labelStart;
+                    limit=label+labelLength;
+                }
+                break;
+            case 0x3c2:  // Map final sigma to nonfinal sigma.
+                info.hasDevChars=TRUE;
+                if(transitional) {
+                    *s=0x3c3;
+                }
+                break;
+            case 0x200c:  // Ignore/remove ZWNJ.
+            case 0x200d:  // Ignore/remove ZWJ.
+                info.hasDevChars=TRUE;
+                if(transitional) {
+                    // Removing a character should not cause the UnicodeString
+                    // buffer to be reallocated, but we don't want to assume that.
+                    int32_t destIndex=(int32_t)(s-dest.getBuffer());
+                    dest.remove(destIndex, 1);
+                    --delta;
+                    --labelLength;
+                    label=dest.getBuffer();
+                    s=(UChar *)label+destIndex;
+                    label+=labelStart;
+                    limit=label+labelLength;
+                    continue;  // Skip the ++s at the end of the loop.
+                }
+                break;
+            case 0xfffd:
+                info.errors|=UIDNA_ERROR_DISALLOWED;
+                break;
+            }
         }
-    } while(++s<limit);
+        ++s;
+    } while(s<limit);
     if( (options&UIDNA_CHECK_BIDI)!=0 && oredChars>=0x590 &&
         !isLabelOkBiDi(label, labelLength)
     ) {
-        errors.errors|=UIDNA_ERROR_BIDI;
+        info.errors|=UIDNA_ERROR_BIDI;
     }
     if( (options&UIDNA_CHECK_CONTEXTJ)!=0 && (oredChars&0x200c)==0x200c &&
         !isLabelOkContextJ(label, labelLength)
     ) {
-        errors.errors|=UIDNA_ERROR_CONTEXTJ;
+        info.errors|=UIDNA_ERROR_CONTEXTJ;
     }
     if(toASCII) {
         if(oredChars>=0x80) {
@@ -368,7 +412,7 @@ UTS46::processLabel(UnicodeString &dest,
             if(errorCode==U_BUFFER_OVERFLOW_ERROR) {
                 errorCode=U_ZERO_ERROR;
                 punycode.releaseBuffer(4);
-                errors.errors|=UIDNA_ERROR_LABEL_TOO_LONG;
+                info.errors|=UIDNA_ERROR_LABEL_TOO_LONG;
                 return delta;
             }
             punycode.releaseBuffer(4+punycodeLength);
@@ -383,7 +427,7 @@ UTS46::processLabel(UnicodeString &dest,
             labelLength=punycode.length();
         }
         if(labelLength>63) {
-            errors.errors|=UIDNA_ERROR_LABEL_TOO_LONG;
+            info.errors|=UIDNA_ERROR_LABEL_TOO_LONG;
         }
     }
     return delta;

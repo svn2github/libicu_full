@@ -15,8 +15,12 @@
 #   s/; ignored      />/
 #   s/^([^;]+)  ; valid/# \1valid/
 #   s/; mapped     ; />/
-#   s/; deviation  ; />/
+#   s/^([^;]+)  ; deviation/# \1deviation/
 #   s/   +(\#  [^\#]+)$/  \1/
+#
+# Except: Disallowed ASCII characters are passed through;
+# they are handled in code.
+# Deviation characters are also handled in code.
 #
 # A circular mapping FFFD>FFFD is avoided by rewriting the line that contains
 # ..FFFD to contain ..FFFC instead.
@@ -24,11 +28,11 @@
 # Use this file as the second gennorm2 input file after nfc.txt.
 # ================================================
 
-0000..002C    >FFFD  #  <control-0000>..COMMA
+# 0000..002C (allow ASCII)  #  <control-0000>..COMMA
 # 002D..002E  valid  #  HYPHEN-MINUS..FULL STOP
-002F          >FFFD  #  SOLIDUS
+# 002F       (allow ASCII)  #  SOLIDUS
 # 0030..0039  valid  #  DIGIT ZERO..DIGIT NINE
-003A..0040    >FFFD  #  COLON..COMMERCIAL AT
+# 003A..0040 (allow ASCII)  #  COLON..COMMERCIAL AT
 0041          >0061  #  LATIN CAPITAL LETTER A
 0042          >0062  #  LATIN CAPITAL LETTER B
 0043          >0063  #  LATIN CAPITAL LETTER C
@@ -55,9 +59,9 @@
 0058          >0078  #  LATIN CAPITAL LETTER X
 0059          >0079  #  LATIN CAPITAL LETTER Y
 005A          >007A  #  LATIN CAPITAL LETTER Z
-005B..0060    >FFFD  #  LEFT SQUARE BRACKET..GRAVE ACCENT
+# 005B..0060 (allow ASCII)  #  LEFT SQUARE BRACKET..GRAVE ACCENT
 # 0061..007A  valid  #  LATIN SMALL LETTER A..LATIN SMALL LETTER Z
-007B..00A0    >FFFD  #  LEFT CURLY BRACKET..NO-BREAK SPACE
+0080..00A0    >FFFD  # (allow ASCII)  LEFT CURLY BRACKET..NO-BREAK SPACE
 # 00A1..00A7  valid  #  INVERTED EXCLAMATION MARK..SECTION SIGN
 00A8          >FFFD  #  DIAERESIS
 # 00A9        valid  #  COPYRIGHT SIGN
@@ -111,7 +115,7 @@
 00DC          >00FC  #  LATIN CAPITAL LETTER U WITH DIAERESIS
 00DD          >00FD  #  LATIN CAPITAL LETTER Y WITH ACUTE
 00DE          >00FE  #  LATIN CAPITAL LETTER THORN
-00DF          >0073 0073  #  LATIN SMALL LETTER SHARP S
+# 00DF        deviation  ; 0073 0073  #  LATIN SMALL LETTER SHARP S
 # 00E0..00FF  valid  #  LATIN SMALL LETTER A WITH GRAVE..LATIN SMALL LETTER Y WITH DIAERESIS
 0100          >0101  #  LATIN CAPITAL LETTER A WITH MACRON
 # 0101        valid  #  LATIN SMALL LETTER A WITH MACRON
@@ -497,7 +501,7 @@
 03AA          >03CA  #  GREEK CAPITAL LETTER IOTA WITH DIALYTIKA
 03AB          >03CB  #  GREEK CAPITAL LETTER UPSILON WITH DIALYTIKA
 # 03AC..03C1  valid  #  GREEK SMALL LETTER ALPHA WITH TONOS..GREEK SMALL LETTER RHO
-03C2          >03C3  #  GREEK SMALL LETTER FINAL SIGMA
+# 03C2        deviation  ; 03C3  #  GREEK SMALL LETTER FINAL SIGMA
 # 03C3..03CE  valid  #  GREEK SMALL LETTER SIGMA..GREEK SMALL LETTER OMEGA WITH TONOS
 03CF          >03D7  #  GREEK CAPITAL KAI SYMBOL
 03D0          >03B2  #  GREEK BETA SYMBOL
@@ -1916,7 +1920,7 @@
 1FFF          >FFFD  #  <reserved-1FFF>
 2000..200A    >FFFD  #  EN QUAD..HAIR SPACE
 200B          >  #  ZERO WIDTH SPACE
-200C..200D    >  #  ZERO WIDTH NON-JOINER..ZERO WIDTH JOINER
+# 200C..200D  deviation  ;  #  ZERO WIDTH NON-JOINER..ZERO WIDTH JOINER
 200E..200F    >FFFD  #  LEFT-TO-RIGHT MARK..RIGHT-TO-LEFT MARK
 # 2010        valid  #  HYPHEN
 2011          >2010  #  NON-BREAKING HYPHEN
