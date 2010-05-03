@@ -54,6 +54,12 @@ private:
             UBool isLabel, UBool toASCII,
             UnicodeString &dest,
             IDNAInfo &info, UErrorCode &errorCode) const;
+    UnicodeString &
+    processUnicode(const UnicodeString &src,
+                   int32_t labelStart, int32_t mappingStart,
+                   UBool isLabel, UBool toASCII,
+                   UnicodeString &dest,
+                   IDNAInfo &info, UErrorCode &errorCode) const;
 
     // returns delta for how much the label length changes
     int32_t
@@ -96,27 +102,6 @@ UTS46::UTS46(uint32_t opt, UErrorCode &errorCode)
           options(opt) {}
 
 UTS46::~UTS46() {}
-
-#if 0
-// TODO: May need such argument checking in ASCII fastpath, when we add that optimization.
-static const UChar *checkArgs(const UnicodeString &src, UnicodeString &dest,
-                              IDNAInfo &info, UErrorCode &errorCode) {
-    if(U_FAILURE(errorCode)) {
-        dest.setToBogus();
-        return NULL;
-    }
-    const UChar *srcArray=src.getBuffer();
-    if(&dest==&src || srcArray==NULL) {
-        errorCode=U_ILLEGAL_ARGUMENT_ERROR;
-        dest.setToBogus();
-        return NULL;
-    }
-    // Arguments are fine, reset output values.
-    dest.remove();
-    info.reset();
-    return srcArray;
-}
-#endif
 
 UnicodeString &
 UTS46::labelToASCII(const UnicodeString &label, UnicodeString &dest,
@@ -180,8 +165,97 @@ UTS46::process(const UnicodeString &src,
                UBool isLabel, UBool toASCII,
                UnicodeString &dest,
                IDNAInfo &info, UErrorCode &errorCode) const {
+    // uts46Norm2.normalize() would do all of this error checking and setup,
+    // but with the ASCII fastpath we do not always call it, and do not
+    // call it first.
+    if(U_FAILURE(errorCode)) {
+        dest.setToBogus();
+        return dest;
+    }
+    const UChar *srcArray=src.getBuffer();
+    if(&dest==&src || srcArray==NULL) {
+        errorCode=U_ILLEGAL_ARGUMENT_ERROR;
+        dest.setToBogus();
+        return dest;
+    }
+    // Arguments are fine, reset output values.
+    dest.remove();
     info.reset();
-    uts46Norm2.normalize(src, dest, errorCode);
+    int32_t srcLength=src.length();
+    if(srcLength==0) {
+        info.errors|=UIDNA_ERROR_EMPTY_LABEL;
+        return dest;
+    }
+    UChar *destArray=dest.getBuffer(srcLength);
+    if(destArray==NULL) {
+        errorCode=U_MEMORY_ALLOCATION_ERROR;
+        return dest;
+    }
+    // ASCII fastpath
+    UBool disallowNonLDHDot=(options&UIDNA_USE_STD3_RULES)!=0;
+    int32_t labelStart=0;
+    int32_t i;
+    for(i=0;; ++i) {
+        if(i==srcLength) {
+            if(toASCII && (i-labelStart)>63) {
+                info.errors|=UIDNA_ERROR_LABEL_TOO_LONG;
+            }
+            dest.releaseBuffer(i);
+            return dest;
+        }
+        UChar c=srcArray[i];
+        if(c>0x7f) {
+            break;
+        }
+        int cData=asciiData[c];
+        if(cData>0) {
+            destArray[i]=c+0x20;  // Lowercase an uppercase ASCII letter.
+        } else if(cData<0 && disallowNonLDHDot) {
+            break;  // Replacing with U+FFFD can be complicated for toASCII.
+        } else {
+            destArray[i]=c;
+            if(c==0x2d) {  // hyphen
+                if(i==(labelStart+3) && srcArray[i-1]==0x2d) {
+                    // "??--..." is Punycode or forbidden.
+                    break;
+                }
+                if(i==labelStart) {
+                    // label starts with "-"
+                    info.errors|=UIDNA_ERROR_LEADING_HYPHEN;
+                }
+                if((i+1)==srcLength || srcArray[i+1]==0x2e) {
+                    // label ends with "-"
+                    info.errors|=UIDNA_ERROR_TRAILING_HYPHEN;
+                }
+            } else if(c==0x2e) {  // dot
+                if(isLabel) {
+                    break;  // Replacing with U+FFFD can be complicated for toASCII.
+                }
+                // Permit an empty label at the end but not elsewhere.
+                if(i==labelStart && i<(srcLength-1)) {
+                    info.errors|=UIDNA_ERROR_EMPTY_LABEL;
+                } else if(toASCII && (i-labelStart)>63) {
+                    info.errors|=UIDNA_ERROR_LABEL_TOO_LONG;
+                }
+                labelStart=i+1;
+            }
+        }
+    }
+    dest.releaseBuffer(i);
+    return processUnicode(src, labelStart, i, isLabel, toASCII, dest, info, errorCode);
+}
+
+UnicodeString &
+UTS46::processUnicode(const UnicodeString &src,
+                      int32_t labelStart, int32_t mappingStart,
+                      UBool isLabel, UBool toASCII,
+                      UnicodeString &dest,
+                      IDNAInfo &info, UErrorCode &errorCode) const {
+    if(mappingStart==0) {
+        uts46Norm2.normalize(src, dest, errorCode);
+    } else {
+        uts46Norm2.normalizeSecondAndAppend(dest, src.tempSubString(mappingStart), errorCode);
+    }
     if(U_FAILURE(errorCode)) {
         return dest;
     }
@@ -190,7 +264,7 @@ UTS46::process(const UnicodeString &src,
     } else {
         const UChar *destArray=dest.getBuffer();
         int32_t destLength=dest.length();
-        int32_t labelStart=0, labelLimit=0, delta;
+        int32_t labelLimit=labelStart, delta;
         while(labelLimit<destLength) {
             if(destArray[labelLimit]==0x2e) {
                 delta=processLabel(dest, labelStart, labelLimit-labelStart,
@@ -205,7 +279,7 @@ UTS46::process(const UnicodeString &src,
                 ++labelLimit;
             }
         }
-        // Permit an empty label at the end (0<labelStart==labelLimit is ok)
+        // Permit an empty label at the end (0<labelStart==labelLimit==destLength is ok)
         // but not an empty label elsewhere nor a completely empty domain name.
         // processLabel() sets UIDNA_ERROR_EMPTY_LABEL when labelLength==0.
         if(0==labelStart || labelStart<labelLimit) {
@@ -241,8 +315,6 @@ UTS46::processLabel(UnicodeString &dest,
     int32_t destLabelStart=labelStart;
     int32_t destLabelLength=labelLength;
     UBool wasPunycode;
-    // TODO: Copy UTS #46 snippets into code comments for processing and validation.
-    // TODO: Fastpath for ASCII label
     if(labelLength>=4 && label[0]==0x78 && label[1]==0x6e && label[2]==0x2d && label[3]==0x2d) {
         // Label starts with "xn--", try to un-Punycode it.
         wasPunycode=TRUE;
