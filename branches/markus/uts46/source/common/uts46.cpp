@@ -20,7 +20,55 @@
 #include "unicode/normalizer2.h"
 #include "punycode.h"
 
+#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
+
 U_NAMESPACE_BEGIN
+
+// IDNA class default implementations -------------------------------------- ***
+
+void
+IDNA::labelToASCII_UTF8(const StringPiece &label, ByteSink &dest,
+                        IDNAInfo &info, UErrorCode &errorCode) const {
+    if(U_SUCCESS(errorCode)) {
+        UnicodeString destString;
+        labelToASCII(UnicodeString::fromUTF8(label), destString,
+                     info, errorCode).toUTF8(dest);
+    }
+}
+
+void
+IDNA::labelToUnicodeUTF8(const StringPiece &label, ByteSink &dest,
+                         IDNAInfo &info, UErrorCode &errorCode) const {
+    if(U_SUCCESS(errorCode)) {
+        UnicodeString destString;
+        labelToUnicode(UnicodeString::fromUTF8(label), destString,
+                       info, errorCode).toUTF8(dest);
+    }
+}
+
+void
+IDNA::nameToASCII_UTF8(const StringPiece &name, ByteSink &dest,
+                       IDNAInfo &info, UErrorCode &errorCode) const {
+    if(U_SUCCESS(errorCode)) {
+        UnicodeString destString;
+        nameToASCII(UnicodeString::fromUTF8(name), destString,
+                    info, errorCode).toUTF8(dest);
+    }
+}
+
+void
+IDNA::nameToUnicodeUTF8(const StringPiece &name, ByteSink &dest,
+                        IDNAInfo &info, UErrorCode &errorCode) const {
+    if(U_SUCCESS(errorCode)) {
+        UnicodeString destString;
+        nameToUnicode(UnicodeString::fromUTF8(name), destString,
+                      info, errorCode).toUTF8(dest);
+    }
+}
+
+UOBJECT_DEFINE_ABSTRACT_RTTI_IMPLEMENTATION(IDNA)
+
+UOBJECT_DEFINE_RTTI_IMPLEMENTATION(IDNAInfo)
 
 // UTS46 class declaration ------------------------------------------------- ***
 
@@ -48,12 +96,35 @@ public:
     static UClassID U_EXPORT2 getStaticClassID();
     virtual UClassID getDynamicClassID() const;
 
+    virtual void
+    labelToASCII_UTF8(const StringPiece &label, ByteSink &dest,
+                      IDNAInfo &info, UErrorCode &errorCode) const;
+
+    virtual void
+    labelToUnicodeUTF8(const StringPiece &label, ByteSink &dest,
+                       IDNAInfo &info, UErrorCode &errorCode) const;
+
+    virtual void
+    nameToASCII_UTF8(const StringPiece &name, ByteSink &dest,
+                     IDNAInfo &info, UErrorCode &errorCode) const;
+
+    virtual void
+    nameToUnicodeUTF8(const StringPiece &name, ByteSink &dest,
+                      IDNAInfo &info, UErrorCode &errorCode) const;
+
 private:
     UnicodeString &
     process(const UnicodeString &src,
             UBool isLabel, UBool toASCII,
             UnicodeString &dest,
             IDNAInfo &info, UErrorCode &errorCode) const;
+
+    void
+    processUTF8(const StringPiece &src,
+                UBool isLabel, UBool toASCII,
+                ByteSink &dest,
+                IDNAInfo &info, UErrorCode &errorCode) const;
+
     UnicodeString &
     processUnicode(const UnicodeString &src,
                    int32_t labelStart, int32_t mappingStart,
@@ -89,10 +160,6 @@ IDNA::createUTS46Instance(uint32_t options, UErrorCode &errorCode) {
         return NULL;
     }
 }
-
-UOBJECT_DEFINE_ABSTRACT_RTTI_IMPLEMENTATION(IDNA)
-
-UOBJECT_DEFINE_RTTI_IMPLEMENTATION(IDNAInfo)
 
 // UTS46 implementation ---------------------------------------------------- ***
 
@@ -133,6 +200,30 @@ UnicodeString &
 UTS46::nameToUnicode(const UnicodeString &name, UnicodeString &dest,
                      IDNAInfo &info, UErrorCode &errorCode) const {
     return process(name, FALSE, FALSE, dest, info, errorCode);
+}
+
+void
+UTS46::labelToASCII_UTF8(const StringPiece &label, ByteSink &dest,
+                         IDNAInfo &info, UErrorCode &errorCode) const {
+    processUTF8(label, TRUE, TRUE, dest, info, errorCode);
+}
+
+void
+UTS46::labelToUnicodeUTF8(const StringPiece &label, ByteSink &dest,
+                          IDNAInfo &info, UErrorCode &errorCode) const {
+    processUTF8(label, TRUE, FALSE, dest, info, errorCode);
+}
+
+void
+UTS46::nameToASCII_UTF8(const StringPiece &name, ByteSink &dest,
+                        IDNAInfo &info, UErrorCode &errorCode) const {
+    processUTF8(name, FALSE, TRUE, dest, info, errorCode);
+}
+
+void
+UTS46::nameToUnicodeUTF8(const StringPiece &name, ByteSink &dest,
+                         IDNAInfo &info, UErrorCode &errorCode) const {
+    processUTF8(name, FALSE, FALSE, dest, info, errorCode);
 }
 
 // UTS #46 data for ASCII characters.
@@ -248,6 +339,132 @@ UTS46::process(const UnicodeString &src,
     info.errors|=info.labelErrors;
     dest.releaseBuffer(i);
     return processUnicode(src, labelStart, i, isLabel, toASCII, dest, info, errorCode);
+}
+
+void
+UTS46::processUTF8(const StringPiece &src,
+                   UBool isLabel, UBool toASCII,
+                   ByteSink &dest,
+                   IDNAInfo &info, UErrorCode &errorCode) const {
+    if(U_FAILURE(errorCode)) {
+        return;
+    }
+    const char *srcArray=src.data();
+    int32_t srcLength=src.length();
+    if(srcArray==NULL && srcLength!=0) {
+        errorCode=U_ILLEGAL_ARGUMENT_ERROR;
+        return;
+    }
+    // Arguments are fine, reset output values.
+    info.reset();
+    if(srcLength==0) {
+        if(toASCII) {
+            info.errors|=UIDNA_ERROR_EMPTY_LABEL;
+        }
+        return;
+    }
+    if(srcLength>256) {  // length of stackArray[] below
+        // Too long for the following ASCII fastpath implementation.
+        UnicodeString destString;
+        processUnicode(UnicodeString::fromUTF8(src), 0, 0,
+                       isLabel, toASCII,
+                       destString, info, errorCode).toUTF8(dest);
+        return;
+    }
+    char stackArray[256];
+    int32_t destCapacity;
+    char *destArray=dest.GetAppendBuffer(srcLength, srcLength+20,
+                                         stackArray, LENGTHOF(stackArray), &destCapacity);
+    // ASCII fastpath
+    UBool disallowNonLDHDot=(options&UIDNA_USE_STD3_RULES)!=0;
+    int32_t labelStart=0;
+    int32_t i;
+    for(i=0;; ++i) {
+        if(i==srcLength) {
+            if(toASCII && info.labelErrors==0 && (i-labelStart)>63) {
+                info.labelErrors|=UIDNA_ERROR_LABEL_TOO_LONG;
+            }
+            info.errors|=info.labelErrors;
+            dest.Append(destArray, i);
+            if(toASCII && !isLabel && info.errors==0) {
+                // The domain name length limit is 255 octets in an internal representation
+                // where the last ("root") label is the empty label
+                // represented by length byte 0 alone.
+                // In a conventional string, this translates to 253 characters, or 254
+                // if there is a trailing dot for the root label.
+                // There is a trailing dot if labelStart==i.
+                if(i>=254 && (i>254 || labelStart<i)) {
+                    info.errors|=UIDNA_ERROR_DOMAIN_NAME_TOO_LONG;
+                }
+            }
+            return;
+        }
+        char c=srcArray[i];
+        if((int8_t)c<0) {  // (uint8_t)c>0x7f
+            break;
+        }
+        int cData=asciiData[(int)c];  // Cast: gcc warns about indexing with a char.
+        if(cData>0) {
+            destArray[i]=c+0x20;  // Lowercase an uppercase ASCII letter.
+        } else if(cData<0 && disallowNonLDHDot) {
+            break;  // Replacing with U+FFFD can be complicated for toASCII.
+        } else {
+            destArray[i]=c;
+            if(c==0x2d) {  // hyphen
+                if(i==(labelStart+3) && srcArray[i-1]==0x2d) {
+                    // "??--..." is Punycode or forbidden.
+                    break;
+                }
+                if(i==labelStart) {
+                    // label starts with "-"
+                    info.labelErrors|=UIDNA_ERROR_LEADING_HYPHEN;
+                }
+                if((i+1)==srcLength || srcArray[i+1]==0x2e) {
+                    // label ends with "-"
+                    info.labelErrors|=UIDNA_ERROR_TRAILING_HYPHEN;
+                }
+            } else if(c==0x2e) {  // dot
+                if(isLabel) {
+                    break;  // Replacing with U+FFFD can be complicated for toASCII.
+                }
+                if(toASCII) {
+                    // Permit an empty label at the end but not elsewhere.
+                    if(i==labelStart && i<(srcLength-1)) {
+                        info.labelErrors|=UIDNA_ERROR_EMPTY_LABEL;
+                    } else if(info.labelErrors==0 && (i-labelStart)>63) {
+                        info.labelErrors|=UIDNA_ERROR_LABEL_TOO_LONG;
+                    }
+                }
+                info.errors|=info.labelErrors;
+                info.labelErrors=0;
+                labelStart=i+1;
+            }
+        }
+    }
+    info.errors|=info.labelErrors;
+    // Convert the processed ASCII prefix of the current label to UTF-16.
+    int32_t mappingStart=i-labelStart;
+    UnicodeString destString=
+        UnicodeString::fromUTF8(StringPiece(destArray+labelStart, mappingStart));
+    // Output the previous ASCII labels and process the rest of src in UTF-16.
+    dest.Append(destArray, labelStart);
+    processUnicode(UnicodeString::fromUTF8(StringPiece(src, labelStart)), 0, mappingStart,
+                   isLabel, toASCII,
+                   destString, info, errorCode).toUTF8(dest);
+    if(toASCII && !isLabel && info.errors==0) {
+        // The domain name length limit is 255 octets in an internal representation
+        // where the last ("root") label is the empty label represented by length byte 0 alone.
+        // In a conventional string, this translates to 253 characters, or 254
+        // if there is a trailing dot for the root label.
+        // length==labelStart==254 means that there is a trailing dot (ok) and
+        // destString is empty (do not index at 253-labelStart).
+        int32_t length=labelStart+destString.length();
+        if( length>=254 && (length>254 ||
+                            (labelStart<254 && destString[253-labelStart]!=0x2e))
+        ) {
+            info.errors|=UIDNA_ERROR_DOMAIN_NAME_TOO_LONG;
+        }
+    }
 }
 
 UnicodeString &
@@ -551,8 +768,13 @@ UTS46::processLabel(UnicodeString &dest,
     }
     // Re-Punycode the label only if it had no processing errors.
     if(toASCII && info.labelErrors==0) {
-        if(!wasPunycode && oredChars>=0x80) {
-            // Was not Punycode or contains non-ASCII characters.
+        if(wasPunycode) {
+            if(destLabelLength>63) {
+                info.labelErrors|=UIDNA_ERROR_LABEL_TOO_LONG;
+            }
+            return 0;
+        } else if(oredChars>=0x80) {
+            // Contains non-ASCII characters.
             UnicodeString punycode;
             UChar *buffer=punycode.getBuffer(63);  // 63==maximum DNS label length
             if(buffer==NULL) {
@@ -587,9 +809,11 @@ UTS46::processLabel(UnicodeString &dest,
                                         punycode, punycodeLength);
                 }
             }
-        } else if(labelLength>63) {
-            // wasPunycode or is all-ASCII
-            info.labelErrors|=UIDNA_ERROR_LABEL_TOO_LONG;
+        } else {
+            // all-ASCII label
+            if(labelLength>63) {
+                info.labelErrors|=UIDNA_ERROR_LABEL_TOO_LONG;
+            }
         }
     }
     return replaceLabel(dest, destLabelStart, destLabelLength, *labelString, labelLength);

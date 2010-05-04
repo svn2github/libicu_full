@@ -24,6 +24,8 @@
 
 #if !UCONFIG_NO_IDNA
 
+#include "unicode/bytestream.h"
+#include "unicode/stringpiece.h"
 #include "unicode/uidna.h"
 #include "unicode/unistr.h"
 
@@ -225,7 +227,7 @@ public:
      *
      * @param label Input domain name label
      * @param dest Destination string object
-     * @param errors Output container of IDNA processing errors.
+     * @param info Output container of IDNA processing details.
      * @param errorCode Standard ICU error code. Its input value must
      *                  pass the U_SUCCESS() test, or else the function returns
      *                  immediately. Check for U_FAILURE() on output or use with
@@ -247,7 +249,7 @@ public:
      *
      * @param label Input domain name label
      * @param dest Destination string object
-     * @param errors Output container of IDNA processing errors.
+     * @param info Output container of IDNA processing details.
      * @param errorCode Standard ICU error code. Its input value must
      *                  pass the U_SUCCESS() test, or else the function returns
      *                  immediately. Check for U_FAILURE() on output or use with
@@ -271,7 +273,7 @@ public:
      *
      * @param label Input domain name label
      * @param dest Destination string object
-     * @param errors Output container of IDNA processing errors.
+     * @param info Output container of IDNA processing details.
      * @param errorCode Standard ICU error code. Its input value must
      *                  pass the U_SUCCESS() test, or else the function returns
      *                  immediately. Check for U_FAILURE() on output or use with
@@ -293,7 +295,7 @@ public:
      *
      * @param label Input domain name label
      * @param dest Destination string object
-     * @param errors Output container of IDNA processing errors.
+     * @param info Output container of IDNA processing details.
      * @param errorCode Standard ICU error code. Its input value must
      *                  pass the U_SUCCESS() test, or else the function returns
      *                  immediately. Check for U_FAILURE() on output or use with
@@ -304,6 +306,80 @@ public:
     virtual UnicodeString &
     nameToUnicode(const UnicodeString &name, UnicodeString &dest,
                   IDNAInfo &info, UErrorCode &errorCode) const = 0;
+
+    // UTF-8 versions of the processing methods ---------------------------- ***
+
+    /**
+     * Converts a single domain name label into its ASCII form for DNS lookup.
+     * UTF-8 version of labelToASCII(), same behavior.
+     *
+     * @param label Input domain name label
+     * @param dest Destination byte sink
+     * @param info Output container of IDNA processing details.
+     * @param errorCode Standard ICU error code. Its input value must
+     *                  pass the U_SUCCESS() test, or else the function returns
+     *                  immediately. Check for U_FAILURE() on output or use with
+     *                  function chaining. (See User Guide for details.)
+     * @return dest
+     * @draft ICU 4.6
+     */
+    virtual void
+    labelToASCII_UTF8(const StringPiece &label, ByteSink &dest,
+                      IDNAInfo &info, UErrorCode &errorCode) const;
+
+    /**
+     * Converts a single domain name label into its Unicode form for human-readable display.
+     * UTF-8 version of labelToUnicode(), same behavior.
+     *
+     * @param label Input domain name label
+     * @param dest Destination byte sink
+     * @param info Output container of IDNA processing details.
+     * @param errorCode Standard ICU error code. Its input value must
+     *                  pass the U_SUCCESS() test, or else the function returns
+     *                  immediately. Check for U_FAILURE() on output or use with
+     *                  function chaining. (See User Guide for details.)
+     * @return dest
+     * @draft ICU 4.6
+     */
+    virtual void
+    labelToUnicodeUTF8(const StringPiece &label, ByteSink &dest,
+                       IDNAInfo &info, UErrorCode &errorCode) const;
+
+    /**
+     * Converts a whole domain name into its ASCII form for DNS lookup.
+     * UTF-8 version of nameToASCII(), same behavior.
+     *
+     * @param label Input domain name label
+     * @param dest Destination byte sink
+     * @param info Output container of IDNA processing details.
+     * @param errorCode Standard ICU error code. Its input value must
+     *                  pass the U_SUCCESS() test, or else the function returns
+     *                  immediately. Check for U_FAILURE() on output or use with
+     *                  function chaining. (See User Guide for details.)
+     * @return dest
+     * @draft ICU 4.6
+     */
+    virtual void
+    nameToASCII_UTF8(const StringPiece &name, ByteSink &dest,
+                     IDNAInfo &info, UErrorCode &errorCode) const;
+
+    /**
+     * Converts a whole domain name into its Unicode form for human-readable display.
+     * UTF-8 version of nameToUnicode(), same behavior.
+     *
+     * @param label Input domain name label
+     * @param dest Destination byte sink
+     * @param info Output container of IDNA processing details.
+     * @param errorCode Standard ICU error code. Its input value must
+     *                  pass the U_SUCCESS() test, or else the function returns
+     *                  immediately. Check for U_FAILURE() on output or use with
+     *                  function chaining. (See User Guide for details.)
+     * @return dest
+     * @draft ICU 4.6
+     */
+    virtual void
+    nameToUnicodeUTF8(const StringPiece &name, ByteSink &dest,
+                      IDNAInfo &info, UErrorCode &errorCode) const;
 
     /**
      * ICU "poor man's RTTI", returns a UClassID for this class.
