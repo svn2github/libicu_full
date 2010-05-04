@@ -215,8 +215,10 @@ public:
 
     /**
      * Converts a single domain name label into its ASCII form for DNS lookup.
-     * ToASCII can fail if the input label cannot be converted into an ASCII form.
-     * In this case, the destination string will be bogus and errors.hasErrors() will be TRUE.
+     * If any processing step fails, then info.hasErrors() will be TRUE and
+     * the result might not be an ASCII string.
+     * The label might be modified according to the types of errors.
+     * Labels with errors will be left in (or turned into) their Unicode form.
      *
      * The UErrorCode indicates an error only in exceptional cases,
      * such as a U_MEMORY_ALLOCATION_ERROR.
@@ -237,11 +239,11 @@ public:
 
     /**
      * Converts a single domain name label into its Unicode form for human-readable display.
-     * ToUnicode never fails. If any processing step fails, then the input label
-     * is returned, possibly with modifications according to the types of errors,
-     * and errors.hasErrors() will be TRUE.
+     * If any processing step fails, then info.hasErrors() will be TRUE.
+     * The domain name might be modified according to the types of errors.
      *
-     * For available options see the uidna.h header.
+     * The UErrorCode indicates an error only in exceptional cases,
+     * such as a U_MEMORY_ALLOCATION_ERROR.
      *
      * @param label Input domain name label
      * @param dest Destination string object
@@ -259,8 +261,10 @@ public:
 
     /**
      * Converts a whole domain name into its ASCII form for DNS lookup.
-     * ToASCII can fail if the input label cannot be converted into an ASCII form.
-     * In this case, the destination string will be bogus and errors.hasErrors() will be TRUE.
+     * If any processing step fails, then info.hasErrors() will be TRUE and
+     * the result might not be an ASCII string.
+     * The domain name might be modified according to the types of errors.
+     * Labels with errors will be left in (or turned into) their Unicode form.
      *
      * The UErrorCode indicates an error only in exceptional cases,
      * such as a U_MEMORY_ALLOCATION_ERROR.
@@ -281,9 +285,11 @@ public:
 
     /**
      * Converts a whole domain name into its Unicode form for human-readable display.
-     * ToUnicode never fails. If any processing step fails, then the input domain name
-     * is returned, possibly with modifications according to the types of errors,
-     * and errors.hasErrors() will be TRUE.
+     * If any processing step fails, then info.hasErrors() will be TRUE.
+     * The domain name might be modified according to the types of errors.
+     *
+     * The UErrorCode indicates an error only in exceptional cases,
+     * such as a U_MEMORY_ALLOCATION_ERROR.
      *
      * @param label Input domain name label
      * @param dest Destination string object
@@ -326,7 +332,7 @@ public:
      * Constructor for stack allocation.
      * @draft ICU 4.6
      */
-    IDNAInfo() : errors(0), hasDevChars(FALSE) {}
+    IDNAInfo() : errors(0), labelErrors(0), hasDevChars(FALSE) {}
     /**
      * Were there IDNA processing errors?
      * @return TRUE if there were processing errors
@@ -377,11 +383,11 @@ private:
     IDNAInfo &operator=(const IDNAInfo &other);  // no copying
 
     void reset() {
-        errors=0;
+        errors=labelErrors=0;
         hasDevChars=FALSE;
     }
 
-    uint32_t errors;
+    uint32_t errors, labelErrors;
     UBool hasDevChars;
 };
 

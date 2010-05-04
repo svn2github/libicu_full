@@ -106,11 +106,7 @@ UTS46::~UTS46() {}
 UnicodeString &
 UTS46::labelToASCII(const UnicodeString &label, UnicodeString &dest,
                     IDNAInfo &info, UErrorCode &errorCode) const {
-    process(label, TRUE, TRUE, dest, info, errorCode);
-    if(info.hasErrors()) {
-        dest.setToBogus();
-    }
-    return dest;
+    return process(label, TRUE, TRUE, dest, info, errorCode);
 }
 
 UnicodeString &
@@ -123,11 +119,12 @@ UnicodeString &
 UTS46::nameToASCII(const UnicodeString &name, UnicodeString &dest,
                    IDNAInfo &info, UErrorCode &errorCode) const {
     process(name, FALSE, TRUE, dest, info, errorCode);
-    if(dest.length()>=254 && (dest.length()>254 || dest[253]!=0x2e)) {
+    // The domain name length limit is 255 octets in an internal representation
+    // where the last ("root") label is the empty label represented by length byte 0 alone.
+    // In a conventional string, this translates to 253 characters, or 254
+    // if there is a trailing dot for the root label.
+    if(info.errors==0 && dest.length()>=254 && (dest.length()>254 || dest[253]!=0x2e)) {
         info.errors|=UIDNA_ERROR_DOMAIN_NAME_TOO_LONG;
-    }
-    if(info.hasErrors()) {
-        dest.setToBogus();
     }
     return dest;
 }
@@ -261,6 +258,7 @@ UTS46::processUnicode(const UnicodeString &src,
     }
     if(isLabel) {
         processLabel(dest, 0, dest.length(), toASCII, info, errorCode);
+        info.errors|=info.labelErrors;
     } else {
         const UChar *destArray=dest.getBuffer();
         int32_t destLength=dest.length();
@@ -269,6 +267,7 @@ UTS46::processUnicode(const UnicodeString &src,
             if(destArray[labelLimit]==0x2e) {
                 delta=processLabel(dest, labelStart, labelLimit-labelStart,
                                    toASCII, info, errorCode);
+                info.errors|=info.labelErrors;
                 if(U_FAILURE(errorCode)) {
                     return dest;
                 }
@@ -285,6 +284,7 @@ UTS46::processUnicode(const UnicodeString &src,
         if(0==labelStart || labelStart<labelLimit) {
             processLabel(dest, labelStart, labelLimit-labelStart,
                          toASCII, info, errorCode);
+            info.errors|=info.labelErrors;
         }
     }
     return dest;
@@ -315,6 +315,7 @@ UTS46::processLabel(UnicodeString &dest,
     int32_t destLabelStart=labelStart;
     int32_t destLabelLength=labelLength;
     UBool wasPunycode;
+    info.labelErrors=0;
     if(labelLength>=4 && label[0]==0x78 && label[1]==0x6e && label[2]==0x2d && label[3]==0x2d) {
         // Label starts with "xn--", try to un-Punycode it.
         wasPunycode=TRUE;
@@ -343,7 +344,7 @@ UTS46::processLabel(UnicodeString &dest,
         }
         unicode.releaseBuffer(unicodeLength);
         if(U_FAILURE(punycodeErrorCode)) {
-            info.errors|=UIDNA_ERROR_PUNYCODE;
+            info.labelErrors|=UIDNA_ERROR_PUNYCODE;
             // Append U+FFFD if the label has only LDH characters.
             // If UIDNA_USE_STD3_RULES, also replace disallowed ASCII characters with U+FFFD.
             UBool disallowNonLDHDot=(options&UIDNA_USE_STD3_RULES)!=0;
@@ -355,7 +356,7 @@ UTS46::processLabel(UnicodeString &dest,
                 UChar c=*s;
                 if(c<=0x7f) {
                     if(c==0x2e) {
-                        info.errors|=UIDNA_ERROR_LABEL_HAS_DOT;
+                        info.labelErrors|=UIDNA_ERROR_LABEL_HAS_DOT;
                         onlyLDH=FALSE;
                         *s=0xfffd;
                     } else if(asciiData[c]<0) {
@@ -387,7 +388,7 @@ UTS46::processLabel(UnicodeString &dest,
             return 0;
         }
         if(unicode!=fromPunycode) {
-            info.errors|=UIDNA_ERROR_INVALID_ACE_LABEL;
+            info.labelErrors|=UIDNA_ERROR_INVALID_ACE_LABEL;
         }
         labelString=&fromPunycode;
         label=fromPunycode.getBuffer();
@@ -400,29 +401,29 @@ UTS46::processLabel(UnicodeString &dest,
     // Validity check
     if(labelLength==0) {
         if(toASCII) {
-            info.errors|=UIDNA_ERROR_EMPTY_LABEL;
+            info.labelErrors|=UIDNA_ERROR_EMPTY_LABEL;
         }
         return replaceLabel(dest, destLabelStart, destLabelLength, *labelString, labelLength);
     }
     // labelLength>0
     if(labelLength>=4 && label[2]==0x2d && label[3]==0x2d) {
         // label starts with "??--"
-        info.errors|=UIDNA_ERROR_HYPHEN_3_4;
+        info.labelErrors|=UIDNA_ERROR_HYPHEN_3_4;
     }
     if(label[0]==0x2d) {
         // label starts with "-"
-        info.errors|=UIDNA_ERROR_LEADING_HYPHEN;
+        info.labelErrors|=UIDNA_ERROR_LEADING_HYPHEN;
     }
     if(label[labelLength-1]==0x2d) {
         // label ends with "-"
-        info.errors|=UIDNA_ERROR_TRAILING_HYPHEN;
+        info.labelErrors|=UIDNA_ERROR_TRAILING_HYPHEN;
     }
     UChar32 c;
     int32_t cpLength=0;
     // "Unsafe" is ok because unpaired surrogates were mapped to U+FFFD.
     U16_NEXT_UNSAFE(label, cpLength, c);
     if((U_GET_GC_MASK(c)&U_GC_M_MASK)!=0) {
-        info.errors|=UIDNA_ERROR_LEADING_COMBINING_MARK;
+        info.labelErrors|=UIDNA_ERROR_LEADING_COMBINING_MARK;
         labelString->replace(labelStart, cpLength, (UChar)0xfffd);
         label=labelString->getBuffer()+labelStart;
         labelLength+=1-cpLength;
@@ -452,23 +453,22 @@ UTS46::processLabel(UnicodeString &dest,
         UChar c=*s;
         if(c<=0x7f) {
             if(c==0x2e) {
-                info.errors|=UIDNA_ERROR_LABEL_HAS_DOT;
+                info.labelErrors|=UIDNA_ERROR_LABEL_HAS_DOT;
                 *s=0xfffd;
             } else if(disallowNonLDHDot && asciiData[c]<0) {
-                info.errors|=UIDNA_ERROR_DISALLOWED;
+                info.labelErrors|=UIDNA_ERROR_DISALLOWED;
                 if(wasPunycode) {
-                    info.errors|=UIDNA_ERROR_INVALID_ACE_LABEL;
+                    info.labelErrors|=UIDNA_ERROR_INVALID_ACE_LABEL;
                 }
                 *s=0xfffd;
             }
         } else {
-            oredChars|=c;
             switch(c) {
             case 0xdf:
                 info.hasDevChars=TRUE;
                 if(doMapDevChars) {  // Map sharp s to ss.
                     didMapDevChars=TRUE;
-                    *s++=0x73;  // Replace sharp s with first s.
+                    *s++=c=0x73;  // Replace sharp s with first s.
                     // Insert second s and account for possible buffer reallocation.
                     int32_t labelStringIndex=(int32_t)(s-labelString->getBuffer());
                     labelString->insert(labelStringIndex, (UChar)0x73);
@@ -500,13 +500,14 @@ UTS46::processLabel(UnicodeString &dest,
                     s=(UChar *)label+labelStringIndex;
                     label+=labelStart;
                     limit=label+labelLength;
-                    continue;  // Skip the ++s at the end of the loop.
+                    continue;  // Skip the oredChars|=c and ++s at the end of the loop.
                 }
                 break;
             case 0xfffd:
-                info.errors|=UIDNA_ERROR_DISALLOWED;
+                info.labelErrors|=UIDNA_ERROR_DISALLOWED;
                 break;
             }
+            oredChars|=c;
         }
         ++s;
     } while(s<limit);
@@ -525,61 +526,62 @@ UTS46::processLabel(UnicodeString &dest,
         label=normalized.getBuffer();
         labelStart=0;
         labelLength=normalized.length();
+        // No need to re-compute oredChars:
+        // We might have new composite characters, but none of the NFC changes
+        // affect whether or not there are any non-ASCII characters,
+        // nor whether the BiDi or CONTEXTJ checks pass.
     }
     if( (options&UIDNA_CHECK_BIDI)!=0 && oredChars>=0x590 &&
         !isLabelOkBiDi(label, labelLength)
     ) {
-        info.errors|=UIDNA_ERROR_BIDI;
+        info.labelErrors|=UIDNA_ERROR_BIDI;
     }
     if( (options&UIDNA_CHECK_CONTEXTJ)!=0 && (oredChars&0x200c)==0x200c &&
         !isLabelOkContextJ(label, labelLength)
     ) {
-        info.errors|=UIDNA_ERROR_CONTEXTJ;
+        info.labelErrors|=UIDNA_ERROR_CONTEXTJ;
     }
-    if( toASCII && 
-        (wasPunycode ?
-            // If wasPunycode, we want to re-Punycode the label only if it was
-            // modified. Checking info.errors is simpler and safer than tracking
-            // "was modified" precisely, although suboptimal for domain names with
-            // errors in other labels or errors that did not modify the label
-            // (e.g., leading/trailing hyphen).
-            (didMapDevChars || info.errors!=0):
-            // If the label was not originally Punycode, then check for non-ASCII characters.
-            oredChars>=0x80)
-    ) {
-        UnicodeString punycode;
-        UChar *buffer=punycode.getBuffer(63);  // 63==maximum DNS label length
-        if(buffer==NULL) {
-            errorCode=U_MEMORY_ALLOCATION_ERROR;
-        } else {
-            buffer[0]=0x78;  // Write "xn--".
-            buffer[1]=0x6e;
-            buffer[2]=0x2d;
-            buffer[3]=0x2d;
-            int32_t punycodeLength=u_strToPunycode(label, labelLength,
-                                                  buffer+4, punycode.getCapacity()-4,
-                                                  NULL, &errorCode);
-            if(errorCode==U_BUFFER_OVERFLOW_ERROR) {
-                errorCode=U_ZERO_ERROR;
-                punycode.releaseBuffer(4);
-                buffer=punycode.getBuffer(punycodeLength);
-                if(buffer==NULL) {
-                    errorCode=U_MEMORY_ALLOCATION_ERROR;
-                } else {
-                    punycodeLength=u_strToPunycode(label, labelLength,
-                                                   buffer+4, punycode.getCapacity()-4,
-                                                   NULL, &errorCode);
+    // Re-Punycode the label only if it had no processing errors.
+    if(toASCII && info.labelErrors==0) {
+        if(!wasPunycode && oredChars>=0x80) {
+            // Was not Punycode or contains non-ASCII characters.
+            UnicodeString punycode;
+            UChar *buffer=punycode.getBuffer(63);  // 63==maximum DNS label length
+            if(buffer==NULL) {
+                errorCode=U_MEMORY_ALLOCATION_ERROR;
+            } else {
+                buffer[0]=0x78;  // Write "xn--".
+                buffer[1]=0x6e;
+                buffer[2]=0x2d;
+                buffer[3]=0x2d;
+                int32_t punycodeLength=u_strToPunycode(label, labelLength,
+                                                      buffer+4, punycode.getCapacity()-4,
+                                                      NULL, &errorCode);
+                if(errorCode==U_BUFFER_OVERFLOW_ERROR) {
+                    errorCode=U_ZERO_ERROR;
+                    punycode.releaseBuffer(4);
+                    buffer=punycode.getBuffer(punycodeLength);
+                    if(buffer==NULL) {
+                        errorCode=U_MEMORY_ALLOCATION_ERROR;
+                    } else {
+                        punycodeLength=u_strToPunycode(label, labelLength,
+                                                      buffer+4, punycode.getCapacity()-4,
+                                                      NULL, &errorCode);
+                    }
+                }
+                punycodeLength+=4;
+                punycode.releaseBuffer(punycodeLength);
+                if(U_SUCCESS(errorCode)) {
+                    if(punycodeLength>63) {
+                        info.labelErrors|=UIDNA_ERROR_LABEL_TOO_LONG;
+                    }
+                    return replaceLabel(dest, destLabelStart, destLabelLength,
+                                        punycode, punycodeLength);
                 }
             }
-            punycodeLength+=4;
-            punycode.releaseBuffer(punycodeLength);
-            if(U_SUCCESS(errorCode)) {
-                if(punycodeLength>63) {
-                    info.errors|=UIDNA_ERROR_LABEL_TOO_LONG;
-                }
-                return replaceLabel(dest, destLabelStart, destLabelLength,
-                                    punycode, punycodeLength);
-            }
+        } else if(labelLength>63) {
+            // wasPunycode or is all-ASCII
+            info.labelErrors|=UIDNA_ERROR_LABEL_TOO_LONG;
         }
     }
     return replaceLabel(dest, destLabelStart, destLabelLength, *labelString, labelLength);
