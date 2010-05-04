@@ -180,7 +180,9 @@ UTS46::process(const UnicodeString &src,
     info.reset();
     int32_t srcLength=src.length();
     if(srcLength==0) {
-        info.errors|=UIDNA_ERROR_EMPTY_LABEL;
+        if(toASCII) {
+            info.errors|=UIDNA_ERROR_EMPTY_LABEL;
+        }
         return dest;
     }
     UChar *destArray=dest.getBuffer(srcLength);
@@ -194,9 +196,10 @@ UTS46::process(const UnicodeString &src,
     int32_t i;
     for(i=0;; ++i) {
         if(i==srcLength) {
-            if(toASCII && (i-labelStart)>63) {
-                info.errors|=UIDNA_ERROR_LABEL_TOO_LONG;
+            if(toASCII && info.labelErrors==0 && (i-labelStart)>63) {
+                info.labelErrors|=UIDNA_ERROR_LABEL_TOO_LONG;
             }
+            info.errors|=info.labelErrors;
             dest.releaseBuffer(i);
             return dest;
         }
@@ -218,26 +221,31 @@ UTS46::process(const UnicodeString &src,
                 }
                 if(i==labelStart) {
                     // label starts with "-"
-                    info.errors|=UIDNA_ERROR_LEADING_HYPHEN;
+                    info.labelErrors|=UIDNA_ERROR_LEADING_HYPHEN;
                 }
                 if((i+1)==srcLength || srcArray[i+1]==0x2e) {
                     // label ends with "-"
-                    info.errors|=UIDNA_ERROR_TRAILING_HYPHEN;
+                    info.labelErrors|=UIDNA_ERROR_TRAILING_HYPHEN;
                 }
             } else if(c==0x2e) {  // dot
                 if(isLabel) {
                     break;  // Replacing with U+FFFD can be complicated for toASCII.
                 }
-                // Permit an empty label at the end but not elsewhere.
-                if(i==labelStart && i<(srcLength-1)) {
-                    info.errors|=UIDNA_ERROR_EMPTY_LABEL;
-                } else if(toASCII && (i-labelStart)>63) {
-                    info.errors|=UIDNA_ERROR_LABEL_TOO_LONG;
+                if(toASCII) {
+                    // Permit an empty label at the end but not elsewhere.
+                    if(i==labelStart && i<(srcLength-1)) {
+                        info.labelErrors|=UIDNA_ERROR_EMPTY_LABEL;
+                    } else if(info.labelErrors==0 && (i-labelStart)>63) {
+                        info.labelErrors|=UIDNA_ERROR_LABEL_TOO_LONG;
+                    }
                 }
+                info.errors|=info.labelErrors;
+                info.labelErrors=0;
                 labelStart=i+1;
             }
         }
     }
+    info.errors|=info.labelErrors;
     dest.releaseBuffer(i);
     return processUnicode(src, labelStart, i, isLabel, toASCII, dest, info, errorCode);
 }
