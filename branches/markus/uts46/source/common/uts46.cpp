@@ -688,49 +688,57 @@ UTS46::processLabel(UnicodeString &dest,
                 *s=0xfffd;
             }
         } else {
-            switch(c) {
-            case 0xdf:
-                info.hasDevChars=TRUE;
-                if(doMapDevChars) {  // Map sharp s to ss.
-                    didMapDevChars=TRUE;
-                    *s++=c=0x73;  // Replace sharp s with first s.
-                    // Insert second s and account for possible buffer reallocation.
-                    int32_t labelStringIndex=(int32_t)(s-labelString->getBuffer());
-                    labelString->insert(labelStringIndex, (UChar)0x73);
-                    ++labelLength;
-                    label=labelString->getBuffer();
-                    s=(UChar *)label+labelStringIndex;
-                    label+=labelStart;
-                    limit=label+labelLength;
+            if(wasPunycode) {
+                // Deviation characters are passed through. Do not map them, do not set isTransDiff.
+                if(c==0xfffd) {
+                    info.labelErrors|=UIDNA_ERROR_DISALLOWED;
                 }
-                break;
-            case 0x3c2:  // Map final sigma to nonfinal sigma.
-                info.hasDevChars=TRUE;
-                if(doMapDevChars) {
-                    didMapDevChars=TRUE;
-                    *s=0x3c3;
+            } else {
+                // Note deviation characters in isTransDiff and map them in transitional processing.
+                switch(c) {
+                case 0xdf:
+                    info.isTransDiff=TRUE;
+                    if(doMapDevChars) {  // Map sharp s to ss.
+                        didMapDevChars=TRUE;
+                        *s++=c=0x73;  // Replace sharp s with first s.
+                        // Insert second s and account for possible buffer reallocation.
+                        int32_t labelStringIndex=(int32_t)(s-labelString->getBuffer());
+                        labelString->insert(labelStringIndex, (UChar)0x73);
+                        ++labelLength;
+                        label=labelString->getBuffer();
+                        s=(UChar *)label+labelStringIndex;
+                        label+=labelStart;
+                        limit=label+labelLength;
+                    }
+                    break;
+                case 0x3c2:  // Map final sigma to nonfinal sigma.
+                    info.isTransDiff=TRUE;
+                    if(doMapDevChars) {
+                        didMapDevChars=TRUE;
+                        *s=0x3c3;
+                    }
+                    break;
+                case 0x200c:  // Ignore/remove ZWNJ.
+                case 0x200d:  // Ignore/remove ZWJ.
+                    info.isTransDiff=TRUE;
+                    if(doMapDevChars) {
+                        didMapDevChars=TRUE;
+                        // Removing a character should not cause the UnicodeString
+                        // buffer to be reallocated, but we don't want to assume that.
+                        int32_t labelStringIndex=(int32_t)(s-labelString->getBuffer());
+                        labelString->remove(labelStringIndex, 1);
+                        --labelLength;
+                        label=labelString->getBuffer();
+                        s=(UChar *)label+labelStringIndex;
+                        label+=labelStart;
+                        limit=label+labelLength;
+                        continue;  // Skip the oredChars|=c and ++s at the end of the loop.
+                    }
+                    break;
+                case 0xfffd:
+                    info.labelErrors|=UIDNA_ERROR_DISALLOWED;
+                    break;
                 }
-                break;
-            case 0x200c:  // Ignore/remove ZWNJ.
-            case 0x200d:  // Ignore/remove ZWJ.
-                info.hasDevChars=TRUE;
-                if(doMapDevChars) {
-                    didMapDevChars=TRUE;
-                    // Removing a character should not cause the UnicodeString
-                    // buffer to be reallocated, but we don't want to assume that.
-                    int32_t labelStringIndex=(int32_t)(s-labelString->getBuffer());
-                    labelString->remove(labelStringIndex, 1);
-                    --labelLength;
-                    label=labelString->getBuffer();
-                    s=(UChar *)label+labelStringIndex;
-                    label+=labelStart;
-                    limit=label+labelLength;
-                    continue;  // Skip the oredChars|=c and ++s at the end of the loop.
-                }
-                break;
-            case 0xfffd:
-                info.labelErrors|=UIDNA_ERROR_DISALLOWED;
-                break;
             }
             oredChars|=c;
         }

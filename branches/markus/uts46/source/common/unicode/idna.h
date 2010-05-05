@@ -408,7 +408,7 @@ public:
      * Constructor for stack allocation.
      * @draft ICU 4.6
      */
-    IDNAInfo() : errors(0), labelErrors(0), hasDevChars(FALSE) {}
+    IDNAInfo() : errors(0), labelErrors(0), isTransDiff(FALSE) {}
     /**
      * Were there IDNA processing errors?
      * @return TRUE if there were processing errors
@@ -423,20 +423,19 @@ public:
      */
     uint32_t getErrors() const { return errors; }
     /**
-     * Returns TRUE if the Unicode form of the input label or domain name
-     * contains one or more deviation characters (see UTS #46).
+     * Returns TRUE if transitional and nontransitional processing produce different results.
+     * This is the case when the input label or domain name contains
+     * one or more deviation characters outside a Punycode label (see UTS #46).
      * <ul>
      * <li>With nontransitional processing, such characters are
      * copied to the destination string.
      * <li>With transitional processing, such characters are
      * mapped (sharp s/sigma) or removed (joiner/nonjoiner).
      * </ul>
-     * In other words, this method returns TRUE iff
-     * transitional and nontransitional processing produce different results.
-     * @return TRUE if the input contains one or more deviation characters
+     * @return TRUE if transitional and nontransitional processing produce different results
      * @draft ICU 4.6
      */
-    UBool hasDeviationCharacters() const { return hasDevChars; }
+    UBool isTransitionalDifferent() const { return isTransDiff; }
 
     /**
      * ICU "poor man's RTTI", returns a UClassID for this class.
@@ -460,11 +459,11 @@ private:
 
     void reset() {
         errors=labelErrors=0;
-        hasDevChars=FALSE;
+        isTransDiff=FALSE;
     }
 
     uint32_t errors, labelErrors;
-    UBool hasDevChars;
+    UBool isTransDiff;
 };
 
 U_NAMESPACE_END
