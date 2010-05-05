@@ -1729,6 +1729,8 @@ static void TestCEValidity()
             }
         }
 
+        uprv_memset(&src, 0, sizeof(UColTokenParser));
+
         log_verbose("Testing CEs for %s\n", loc);
 
         coll      = ucol_open(loc, &status);
@@ -1738,6 +1740,8 @@ static void TestCEValidity()
         }
 
         src.opts = &opts;
+        /* src.isStarred = FALSE; */
+        /* src.inRange = FALSE; */
         rules = ucol_getRules(coll, &ruleLen);
 
         if (ruleLen > 0) {
