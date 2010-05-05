@@ -29,138 +29,6 @@
 #include "unicode/uidna.h"
 #include "unicode/unistr.h"
 
-/*
- * IDNA option bit set values.
- */
-enum {
-    // TODO: Options from old API are mostly usable with the new API as well.
-    // All options should be moved to a C header.
-    // They are actually still defined in uidna.h right now and thus commented out here.
-    // TODO: It should be safe to replace the old #defines with enum constants, right?
-    /**
-     * Default options value: None of the other options are set.
-     * @stable ICU 2.6
-     */
-    // UIDNA_DEFAULT=0,
-    /**
-     * Option to allow unassigned code points in domain names and labels.
-     * This option is ignored by the UTS46 implementation.
-     * @stable ICU 2.6
-     */
-    // UIDNA_ALLOW_UNASSIGNED=1,
-    /**
-     * Option to check whether the input conforms to the STD3 ASCII rules,
-     * for example the restriction of labels to LDH characters
-     * (ASCII Letters, Digits and Hyphen-Minus).
-     * @stable ICU 2.6
-     */
-    // UIDNA_USE_STD3_RULES=2,
-    /**
-     * IDNA option to check for whether the input conforms to the BiDi rules.
-     * @draft ICU 4.6
-     */
-    UIDNA_CHECK_BIDI=4,
-    /**
-     * IDNA option to check for whether the input conforms to the CONTEXTJ rules.
-     * @draft ICU 4.6
-     */
-    UIDNA_CHECK_CONTEXTJ=8,
-    /**
-     * IDNA option for nontransitional processing in ToASCII().
-     * By default, ToASCII() uses transitional processing.
-     * @draft ICU 4.6
-     */
-    UIDNA_NONTRANSITIONAL_TO_ASCII=0x10,
-    /**
-     * IDNA option for nontransitional processing in ToUnicode().
-     * By default, ToUnicode() uses transitional processing.
-     * @draft ICU 4.6
-     */
-    UIDNA_NONTRANSITIONAL_TO_UNICODE=0x20
-};
-
-/*
- * IDNA error bit set values.
- * When a domain name or label fails a processing step or does not meet the
- * validity criteria, then one or more of these error bits are set.
- */
-enum {
-    // TODO: Should we combine the length errors into one single UIDNA_ERROR_LABEL_OR_NAME_LENGTH?
-    /**
-     * A non-final domain name label (or the whole domain name) is empty.
-     * @draft ICU 4.6
-     */
-    UIDNA_ERROR_EMPTY_LABEL=1,
-    /**
-     * A domain name label is longer than 63 bytes.
-     * (See STD13/RFC1034 3.1. Name space specifications and terminology.)
-     * This is only checked in ToASCII operations, and only if the UIDNA_USE_STD3_RULES is set.
-     * @draft ICU 4.6
-     */
-    UIDNA_ERROR_LABEL_TOO_LONG=2,
-    /**
-     * A domain name is longer than 255 bytes in its storage form.
-     * (See STD13/RFC1034 3.1. Name space specifications and terminology.)
-     * This is only checked in ToASCII operations, and only if the UIDNA_USE_STD3_RULES is set.
-     * @draft ICU 4.6
-     */
-    UIDNA_ERROR_DOMAIN_NAME_TOO_LONG=4,
-    // TODO: Should we combine the hyphen errors into one single UIDNA_ERROR_BAD_HYPHEN?
-    /**
-     * A label starts with a hyphen-minus ('-').
-     * @draft ICU 4.6
-     */
-    UIDNA_ERROR_LEADING_HYPHEN=8,
-    /**
-     * A label ends with a hyphen-minus ('-').
-     * @draft ICU 4.6
-     */
-    UIDNA_ERROR_TRAILING_HYPHEN=0x10,
-    /**
-     * A label contains hyphen-minus ('-') in the third and fourth positions.
-     * @draft ICU 4.6
-     */
-    UIDNA_ERROR_HYPHEN_3_4=0x20,  // TODO: Is this a reasonable name?
-    /**
-     * A label starts with a combining mark.
-     * @draft ICU 4.6
-     */
-    UIDNA_ERROR_LEADING_COMBINING_MARK=0x40,
-    /**
-     * A label or domain name contains disallowed characters.
-     * @draft ICU 4.6
-     */
-    UIDNA_ERROR_DISALLOWED=0x80,
-    /**
-     * A label starts with "xn--" but does not contain valid Punycode.
-     * @draft ICU 4.6
-     */
-    UIDNA_ERROR_PUNYCODE=0x100,
-    /**
-     * A label contains a dot=full stop.
-     * This can occur in an ACE label, and in an input string for a single-label function.
-     * @draft ICU 4.6
-     */
-    UIDNA_ERROR_LABEL_HAS_DOT=0x200,
-    /**
-     * An ACE label is not valid.
-     * It might contain characters that are not allowed in ACE labels,
-     * or it might not be normalized, or both.
-     * @draft ICU 4.6
-     */
-    UIDNA_ERROR_INVALID_ACE_LABEL=0x400,
-    /**
-     * A label does not meet the IDNA BiDi requirements (for right-to-left characters).
-     * @draft ICU 4.6
-     */
-    UIDNA_ERROR_BIDI=0x800,
-    /**
-     * A label does not meet the IDNA CONTEXTJ requirements.
-     * @draft ICU 4.6
-     */
-    UIDNA_ERROR_CONTEXTJ=0x1000
-};
-
 U_NAMESPACE_BEGIN
 
 class U_COMMON_API IDNAInfo;
@@ -191,20 +59,16 @@ public:
      *
      * Disallowed characters are mapped to U+FFFD.
      *
-     * For available options see the uidna.h header as well as this header.
+     * For available options see the uidna.h header.
      * Operations with the UTS #46 instance do not support the
      * UIDNA_ALLOW_UNASSIGNED option.
      *
-     * By default, UTS #46 disallows all ASCII characters other than
-     * letters, digits, hyphen (LDH) and dot/full stop.
-     * When the UIDNA_USE_STD3_RULES option is used, all ASCII characters are treated as
-     * valid or mapped.
-     *
-     * TODO: Do we need separate toASCIIOptions and toUnicodeOptions?
-     *       That is, would users commonly want different options for the
-     *       toASCII and toUnicode operations?
+     * By default, the UTS #46 implementation allows all ASCII characters (as valid or mapped).
+     * When the UIDNA_USE_STD3_RULES option is used, ASCII characters other than
+     * letters, digits, hyphen (LDH) and dot/full stop are disallowed and mapped to U+FFFD.
      *
      * @param options Bit set to modify the processing and error checking.
+     *                See option bit set values in uidna.h.
      * @param errorCode Standard ICU error code. Its input value must
      *                  pass the U_SUCCESS() test, or else the function returns
      *                  immediately. Check for U_FAILURE() on output or use with
@@ -467,6 +331,86 @@ private:
 };
 
 U_NAMESPACE_END
+
+/*
+ * IDNA error bit set values.
+ * When a domain name or label fails a processing step or does not meet the
+ * validity criteria, then one or more of these error bits are set.
+ */
+enum {
+    /**
+     * A non-final domain name label (or the whole domain name) is empty.
+     * @draft ICU 4.6
+     */
+    UIDNA_ERROR_EMPTY_LABEL=1,
+    /**
+     * A domain name label is longer than 63 bytes.
+     * (See STD13/RFC1034 3.1. Name space specifications and terminology.)
+     * This is only checked in ToASCII operations, and only if the UIDNA_USE_STD3_RULES is set.
+     * @draft ICU 4.6
+     */
+    UIDNA_ERROR_LABEL_TOO_LONG=2,
+    /**
+     * A domain name is longer than 255 bytes in its storage form.
+     * (See STD13/RFC1034 3.1. Name space specifications and terminology.)
+     * This is only checked in ToASCII operations, and only if the UIDNA_USE_STD3_RULES is set.
+     * @draft ICU 4.6
+     */
+    UIDNA_ERROR_DOMAIN_NAME_TOO_LONG=4,
+    /**
+     * A label starts with a hyphen-minus ('-').
+     * @draft ICU 4.6
+     */
+    UIDNA_ERROR_LEADING_HYPHEN=8,
+    /**
+     * A label ends with a hyphen-minus ('-').
+     * @draft ICU 4.6
+     */
+    UIDNA_ERROR_TRAILING_HYPHEN=0x10,
+    /**
+     * A label contains hyphen-minus ('-') in the third and fourth positions.
+     * @draft ICU 4.6
+     */
+    UIDNA_ERROR_HYPHEN_3_4=0x20,
+    /**
+     * A label starts with a combining mark.
+     * @draft ICU 4.6
+     */
+    UIDNA_ERROR_LEADING_COMBINING_MARK=0x40,
+    /**
+     * A label or domain name contains disallowed characters.
+     * @draft ICU 4.6
+     */
+    UIDNA_ERROR_DISALLOWED=0x80,
+    /**
+     * A label starts with "xn--" but does not contain valid Punycode.
+     * @draft ICU 4.6
+     */
+    UIDNA_ERROR_PUNYCODE=0x100,
+    /**
+     * A label contains a dot=full stop.
+     * This can occur in an ACE label, and in an input string for a single-label function.
+     * @draft ICU 4.6
+     */
+    UIDNA_ERROR_LABEL_HAS_DOT=0x200,
+    /**
+     * An ACE label is not valid.
+     * It might contain characters that are not allowed in ACE labels,
+     * or it might not be normalized, or both.
+     * @draft ICU 4.6
+     */
+    UIDNA_ERROR_INVALID_ACE_LABEL=0x400,
+    /**
+     * A label does not meet the IDNA BiDi requirements (for right-to-left characters).
+     * @draft ICU 4.6
+     */
+    UIDNA_ERROR_BIDI=0x800,
+    /**
+     * A label does not meet the IDNA CONTEXTJ requirements.
+     * @draft ICU 4.6
+     */
+    UIDNA_ERROR_CONTEXTJ=0x1000
+};
 
 #endif  // UCONFIG_NO_IDNA
 #endif  // __IDNA_H__
