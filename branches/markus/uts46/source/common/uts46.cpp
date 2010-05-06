@@ -146,7 +146,6 @@ private:
     isLabelOkContextJ(const UChar *label, int32_t labelLength) const;
 
     const Normalizer2 &uts46Norm2;  // uts46.nrm
-    const Normalizer2 &nfcNorm2;
     uint32_t options;
 };
 
@@ -165,7 +164,6 @@ IDNA::createUTS46Instance(uint32_t options, UErrorCode &errorCode) {
 
 UTS46::UTS46(uint32_t opt, UErrorCode &errorCode)
         : uts46Norm2(*Normalizer2::getInstance(NULL, "uts46", UNORM2_COMPOSE, errorCode)),
-          nfcNorm2(*Normalizer2::getInstance(NULL, "nfc", UNORM2_COMPOSE, errorCode)),
           options(opt) {}
 
 UTS46::~UTS46() {}
@@ -747,7 +745,9 @@ UTS46::processLabel(UnicodeString &dest,
     UnicodeString normalized;
     if(didMapDevChars) {
         // Mapping deviation characters might have resulted in an un-NFC string.
-        nfcNorm2.normalize(
+        // We could use either the NFC or the UTS #46 normalizer.
+        // By using the UTS #46 normalizer again, we avoid having to load a second .nrm data file.
+        uts46Norm2.normalize(
             labelString==&dest ?
                 dest.tempSubString(labelStart, labelLength) :
                 *labelString,
