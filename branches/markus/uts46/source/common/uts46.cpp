@@ -650,6 +650,9 @@ UTS46::processLabel(UnicodeString &dest,
         labelString->replace(labelStart, cpLength, (UChar)0xfffd);
         label=labelString->getBuffer()+labelStart;
         labelLength+=1-cpLength;
+        if(labelString==&dest) {
+            destLabelLength=labelLength;
+        }
     }
     // If the label was not a Punycode label, then it was the result of
     // mapping, normalization and label segmentation.
@@ -690,6 +693,8 @@ UTS46::processLabel(UnicodeString &dest,
                 // Deviation characters are passed through. Do not map them, do not set isTransDiff.
                 if(c==0xfffd) {
                     info.labelErrors|=UIDNA_ERROR_DISALLOWED;
+                    ++s;
+                    continue;  // Skip the oredChars|=c at the end of the loop.
                 }
             } else {
                 // Note deviation characters in isTransDiff and map them in transitional processing.
@@ -735,7 +740,8 @@ UTS46::processLabel(UnicodeString &dest,
                     break;
                 case 0xfffd:
                     info.labelErrors|=UIDNA_ERROR_DISALLOWED;
-                    break;
+                    ++s;
+                    continue;  // Skip the oredChars|=c at the end of the loop.
                 }
             }
             oredChars|=c;
@@ -744,6 +750,9 @@ UTS46::processLabel(UnicodeString &dest,
     } while(s<limit);
     UnicodeString normalized;
     if(didMapDevChars) {
+        if(labelString==&dest) {
+            destLabelLength=labelLength;
+        }
         // Mapping deviation characters might have resulted in an un-NFC string.
         // We could use either the NFC or the UTS #46 normalizer.
         // By using the UTS #46 normalizer again, we avoid having to load a second .nrm data file.
@@ -764,15 +773,19 @@ UTS46::processLabel(UnicodeString &dest,
         // affect whether or not there are any non-ASCII characters,
         // nor whether the BiDi or CONTEXTJ checks pass.
     }
-    if( (options&UIDNA_CHECK_BIDI)!=0 && oredChars>=0x590 &&
-        !isLabelOkBiDi(label, labelLength)
-    ) {
-        info.labelErrors|=UIDNA_ERROR_BIDI;
-    }
-    if( (options&UIDNA_CHECK_CONTEXTJ)!=0 && (oredChars&0x200c)==0x200c &&
-        !isLabelOkContextJ(label, labelLength)
-    ) {
-        info.labelErrors|=UIDNA_ERROR_CONTEXTJ;
+    if((info.labelErrors&UIDNA_ERROR_DISALLOWED)==0) {
+        // Do contextual checks only if we do not have U+FFFD from a disallowed character
+        // because U+FFFD can make these checks fail.
+        if( (options&UIDNA_CHECK_BIDI)!=0 && oredChars>=0x590 &&
+            !isLabelOkBiDi(label, labelLength)
+        ) {
+            info.labelErrors|=UIDNA_ERROR_BIDI;
+        }
+        if( (options&UIDNA_CHECK_CONTEXTJ)!=0 && (oredChars&0x200c)==0x200c &&
+            !isLabelOkContextJ(label, labelLength)
+        ) {
+            info.labelErrors|=UIDNA_ERROR_CONTEXTJ;
+        }
     }
     // Re-Punycode the label only if it had no processing errors.
     if(toASCII && info.labelErrors==0) {
@@ -828,22 +841,22 @@ UTS46::processLabel(UnicodeString &dest,
 }
 
 #define L_MASK U_MASK(U_LEFT_TO_RIGHT)
-#define R_AL_MASK U_MASK(U_RIGHT_TO_LEFT)|U_MASK(U_RIGHT_TO_LEFT_ARABIC)
-#define L_R_AL_MASK L_MASK|R_AL_MASK
+#define R_AL_MASK (U_MASK(U_RIGHT_TO_LEFT)|U_MASK(U_RIGHT_TO_LEFT_ARABIC))
+#define L_R_AL_MASK (L_MASK|R_AL_MASK)
 
-#define EN_AN_MASK U_MASK(U_EUROPEAN_NUMBER)|U_MASK(U_ARABIC_NUMBER)
-#define R_AL_EN_AN_MASK R_AL_MASK|EN_AN_MASK
-#define L_EN_MASK L_MASK|U_MASK(U_EUROPEAN_NUMBER)
+#define EN_AN_MASK (U_MASK(U_EUROPEAN_NUMBER)|U_MASK(U_ARABIC_NUMBER))
+#define R_AL_EN_AN_MASK (R_AL_MASK|EN_AN_MASK)
+#define L_EN_MASK (L_MASK|U_MASK(U_EUROPEAN_NUMBER))
 
 #define ES_CS_ET_ON_BN_NSM_MASK \
-    U_MASK(U_EUROPEAN_NUMBER_SEPARATOR)| \
+    (U_MASK(U_EUROPEAN_NUMBER_SEPARATOR)| \
     U_MASK(U_COMMON_NUMBER_SEPARATOR)| \
     U_MASK(U_EUROPEAN_NUMBER_TERMINATOR)| \
     U_MASK(U_OTHER_NEUTRAL)| \
     U_MASK(U_BOUNDARY_NEUTRAL)| \
-    U_MASK(U_DIR_NON_SPACING_MARK)
-#define L_EN_ES_CS_ET_ON_BN_NSM_MASK L_EN_MASK|ES_CS_ET_ON_BN_NSM_MASK
-#define R_AL_AN_EN_ES_CS_ET_ON_BN_NSM_MASK R_AL_MASK|EN_AN_MASK|ES_CS_ET_ON_BN_NSM_MASK
+    U_MASK(U_DIR_NON_SPACING_MARK))
+#define L_EN_ES_CS_ET_ON_BN_NSM_MASK (L_EN_MASK|ES_CS_ET_ON_BN_NSM_MASK)
+#define R_AL_AN_EN_ES_CS_ET_ON_BN_NSM_MASK (R_AL_MASK|EN_AN_MASK|ES_CS_ET_ON_BN_NSM_MASK)
 
 UBool
 UTS46::isLabelOkBiDi(const UChar *label, int32_t labelLength) const {
@@ -952,7 +965,7 @@ UTS46::isLabelOkContextJ(const UChar *label, int32_t labelLength) const {
                 if(j==labelLength) {
                     return FALSE;
                 }
-                U16_NEXT_UNSAFE(label, i, c);
+                U16_NEXT_UNSAFE(label, j, c);
                 UJoiningType type=(UJoiningType)u_getIntPropertyValue(c, UCHAR_JOINING_TYPE);
                 if(type==U_JT_TRANSPARENT) {
                     // just skip this character
