@@ -18,6 +18,7 @@
 
 #include "unicode/idna.h"
 #include "unicode/normalizer2.h"
+#include "unicode/ustring.h"
 #include "punycode.h"
 
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
@@ -131,6 +132,11 @@ private:
                    UBool isLabel, UBool toASCII,
                    UnicodeString &dest,
                    IDNAInfo &info, UErrorCode &errorCode) const;
+
+    // returns the new dest.length()
+    int32_t
+    mapDevChars(UnicodeString &dest, int32_t labelStart, int32_t mappingStart,
+                IDNAInfo &info, UErrorCode &errorCode) const;
 
     // returns delta for how much the label length changes
     int32_t
@@ -479,15 +485,26 @@ UTS46::processUnicode(const UnicodeString &src,
     if(U_FAILURE(errorCode)) {
         return dest;
     }
+    UBool doMapDevChars=
+        toASCII ? (options&UIDNA_NONTRANSITIONAL_TO_ASCII)==0 :
+                  (options&UIDNA_NONTRANSITIONAL_TO_UNICODE)==0;
     if(isLabel) {
-        processLabel(dest, 0, dest.length(), toASCII, info, errorCode);
+        int32_t length=dest.length();
+        if(doMapDevChars && length>0) {
+            length=mapDevChars(dest, 0, 0, info, errorCode);
+            if(U_FAILURE(errorCode)) {
+                return dest;
+            }
+        }
+        processLabel(dest, 0, length, toASCII, info, errorCode);
         info.errors|=info.labelErrors;
     } else {
         const UChar *destArray=dest.getBuffer();
         int32_t destLength=dest.length();
         int32_t labelLimit=labelStart, delta;
         while(labelLimit<destLength) {
-            if(destArray[labelLimit]==0x2e) {
+            UChar c=destArray[labelLimit];
+            if(c==0x2e) {
                 delta=processLabel(dest, labelStart, labelLimit-labelStart,
                                    toASCII, info, errorCode);
                 info.errors|=info.labelErrors;
@@ -497,6 +514,15 @@ UTS46::processUnicode(const UnicodeString &src,
                 destArray=dest.getBuffer();
                 destLength+=delta;
                 labelStart=labelLimit+=delta+1;
+            } else if(doMapDevChars && 0xdf<=c && c<=0x200d && (c==0xdf || c==0x3c2 || c>=0x200c)) {
+                destLength=mapDevChars(dest, labelStart, labelLimit, info, errorCode);
+                if(U_FAILURE(errorCode)) {
+                    return dest;
+                }
+                destArray=dest.getBuffer();
+                // Do not increment labelLimit in case c was removed.
+                // All deviation characters have been mapped, no need to check for them again.
+                doMapDevChars=FALSE;
             } else {
                 ++labelLimit;
             }
@@ -511,6 +537,73 @@ UTS46::processUnicode(const UnicodeString &src,
         }
     }
     return dest;
+}
+
+int32_t
+UTS46::mapDevChars(UnicodeString &dest, int32_t labelStart, int32_t mappingStart,
+                   IDNAInfo &info, UErrorCode &errorCode) const {
+    int32_t length=dest.length();
+    UChar *s=dest.getBuffer(dest[mappingStart]==0xdf ? length+1 : length);
+    if(s==NULL) {
+        errorCode=U_MEMORY_ALLOCATION_ERROR;
+        return length;
+    }
+    int32_t capacity=dest.getCapacity();
+    UBool didMapDevChars=FALSE;
+    int32_t readIndex=mappingStart, writeIndex=mappingStart;
+    do {
+        UChar c=s[readIndex++];
+        switch(c) {
+        case 0xdf:
+            // Map sharp s to ss.
+            didMapDevChars=TRUE;
+            s[writeIndex++]=0x73;  // Replace sharp s with first s.
+            // Insert second s and account for possible buffer reallocation.
+            if(writeIndex==readIndex) {
+                if(length==capacity) {
+                    dest.releaseBuffer(length);
+                    s=dest.getBuffer(length+1);
+                    if(s==NULL) {
+                        errorCode=U_MEMORY_ALLOCATION_ERROR;
+                        return length;
+                    }
+                    capacity=dest.getCapacity();
+                }
+                u_memmove(s+writeIndex+1, s+writeIndex, length-writeIndex);
+                ++readIndex;
+            }
+            s[writeIndex++]=0x73;
+            ++length;
+            break;
+        case 0x3c2:  // Map final sigma to nonfinal sigma.
+            didMapDevChars=TRUE;
+            s[writeIndex++]=0x3c3;
+            break;
+        case 0x200c:  // Ignore/remove ZWNJ.
+        case 0x200d:  // Ignore/remove ZWJ.
+            didMapDevChars=TRUE;
+            --length;
+            break;
+        default:
+            // Only really necessary if writeIndex was different from readIndex.
+            s[writeIndex++]=c;
+            break;
+        }
+    } while(writeIndex<length);
+    dest.releaseBuffer(length);
+    if(didMapDevChars) {
+        info.isTransDiff=TRUE;
+        // Mapping deviation characters might have resulted in an un-NFC string.
+        // We could use either the NFC or the UTS #46 normalizer.
+        // By using the UTS #46 normalizer again, we avoid having to load a second .nrm data file.
+        UnicodeString normalized;
+        uts46Norm2.normalize(dest.tempSubString(labelStart), normalized, errorCode);
+        if(U_SUCCESS(errorCode)) {
+            dest.replace(labelStart, 0x7fffffff, normalized);
+            return dest.length();
+        }
+    }
+    return length;
 }
 
 // Replace the label in dest with the label string, if the label was modified.
@@ -659,22 +752,15 @@ UTS46::processLabel(UnicodeString &dest,
     // If the label was in Punycode, then we mapped it again above
     // and checked its validity.
     // Now we handle the STD3 restriction to LDH characters (if set)
-    // and the deviation characters (transitional vs. nontransitional),
     // and we look for U+FFFD which indicates disallowed characters
     // in a non-Punycode label or U+FFFD itself in a Punycode label.
-    // We also check for dots which can come from a Punycode label
-    // or from the input to a single-label function.
+    // We also check for dots which can come from the input to a single-label function.
     // Ok to cast away const because we own the UnicodeString.
     UChar *s=(UChar *)label;
     const UChar *limit=label+labelLength;
     UChar oredChars=0;
     // If we enforce STD3 rules, then ASCII characters other than LDH and dot are disallowed.
     UBool disallowNonLDHDot=(options&UIDNA_USE_STD3_RULES)!=0;
-    UBool doMapDevChars=
-        !wasPunycode &&  // Always pass through deviation characters from Punycode.
-        (toASCII ? (options&UIDNA_NONTRANSITIONAL_TO_ASCII)==0 :
-                   (options&UIDNA_NONTRANSITIONAL_TO_UNICODE)==0);
-    UBool didMapDevChars=FALSE;
     do {
         UChar c=*s;
         if(c<=0x7f) {
@@ -689,90 +775,14 @@ UTS46::processLabel(UnicodeString &dest,
                 *s=0xfffd;
             }
         } else {
-            if(wasPunycode) {
-                // Deviation characters are passed through. Do not map them, do not set isTransDiff.
-                if(c==0xfffd) {
-                    info.labelErrors|=UIDNA_ERROR_DISALLOWED;
-                    ++s;
-                    continue;  // Skip the oredChars|=c at the end of the loop.
-                }
-            } else {
-                // Note deviation characters in isTransDiff and map them in transitional processing.
-                switch(c) {
-                case 0xdf:
-                    info.isTransDiff=TRUE;
-                    if(doMapDevChars) {  // Map sharp s to ss.
-                        didMapDevChars=TRUE;
-                        *s++=c=0x73;  // Replace sharp s with first s.
-                        // Insert second s and account for possible buffer reallocation.
-                        int32_t labelStringIndex=(int32_t)(s-labelString->getBuffer());
-                        labelString->insert(labelStringIndex, (UChar)0x73);
-                        ++labelLength;
-                        label=labelString->getBuffer();
-                        s=(UChar *)label+labelStringIndex;
-                        label+=labelStart;
-                        limit=label+labelLength;
-                    }
-                    break;
-                case 0x3c2:  // Map final sigma to nonfinal sigma.
-                    info.isTransDiff=TRUE;
-                    if(doMapDevChars) {
-                        didMapDevChars=TRUE;
-                        *s=0x3c3;
-                    }
-                    break;
-                case 0x200c:  // Ignore/remove ZWNJ.
-                case 0x200d:  // Ignore/remove ZWJ.
-                    info.isTransDiff=TRUE;
-                    if(doMapDevChars) {
-                        didMapDevChars=TRUE;
-                        // Removing a character should not cause the UnicodeString
-                        // buffer to be reallocated, but we don't want to assume that.
-                        int32_t labelStringIndex=(int32_t)(s-labelString->getBuffer());
-                        labelString->remove(labelStringIndex, 1);
-                        --labelLength;
-                        label=labelString->getBuffer();
-                        s=(UChar *)label+labelStringIndex;
-                        label+=labelStart;
-                        limit=label+labelLength;
-                        continue;  // Skip the oredChars|=c and ++s at the end of the loop.
-                    }
-                    break;
-                case 0xfffd:
-                    info.labelErrors|=UIDNA_ERROR_DISALLOWED;
-                    ++s;
-                    continue;  // Skip the oredChars|=c at the end of the loop.
-                }
-            }
             oredChars|=c;
+            if(c==0xfffd) {
+                info.labelErrors|=UIDNA_ERROR_DISALLOWED;
+                ++s;
+            }
         }
         ++s;
     } while(s<limit);
-    UnicodeString normalized;
-    if(didMapDevChars) {
-        if(labelString==&dest) {
-            destLabelLength=labelLength;
-        }
-        // Mapping deviation characters might have resulted in an un-NFC string.
-        // We could use either the NFC or the UTS #46 normalizer.
-        // By using the UTS #46 normalizer again, we avoid having to load a second .nrm data file.
-        uts46Norm2.normalize(
-            labelString==&dest ?
-                dest.tempSubString(labelStart, labelLength) :
-                *labelString,
-            normalized, errorCode);
-        if(U_FAILURE(errorCode)) {
-            return replaceLabel(dest, destLabelStart, destLabelLength, *labelString, labelLength);
-        }
-        labelString=&normalized;
-        label=normalized.getBuffer();
-        labelStart=0;
-        labelLength=normalized.length();
-        // No need to re-compute oredChars:
-        // We might have new composite characters, but none of the NFC changes
-        // affect whether or not there are any non-ASCII characters,
-        // nor whether the BiDi or CONTEXTJ checks pass.
-    }
     if((info.labelErrors&UIDNA_ERROR_DISALLOWED)==0) {
         // Do contextual checks only if we do not have U+FFFD from a disallowed character
         // because U+FFFD can make these checks fail.

@@ -93,51 +93,91 @@ void UTS46Test::TestAPI() {
 // TODO: TestToASCII with a few examples, because the following tests it indirectly.
 
 struct TestCase {
-    // Input string, expected nontransitional/transitional Unicode result string.
-    // t can be NULL if it is the same as n.
-    const char *s, *n, *t;
+    // Input string and options string (Nontransitional/Transitional/Both).
+    const char *s, *o;
+    // Expected Unicode result string.
+    const char *u;
     uint32_t errors;
 };
 
 static const TestCase testCases[]={
-    { "www.eXample.cOm", "www.example.com", NULL, 0 },  // all ASCII
-    { "B\\u00FCcher.de", "b\\u00FCcher.de", NULL, 0 },  // u-umlaut
-    { "\\u00D6BB", "\\u00F6bb", NULL, 0 },  // O-umlaut
-    { "fa\\u00DF.de", "fa\\u00DF.de", "fass.de", 0 },  // sharp s
-    { "XN--fA-hia.dE", "fa\\u00DF.de", NULL, 0 },  // sharp s in Punycode
-    { "\\u03B2\\u03CC\\u03BB\\u03BF\\u03C2.com",  // Greek with final sigma
-      "\\u03B2\\u03CC\\u03BB\\u03BF\\u03C2.com",
+    { "www.eXample.cOm", "B",  // all ASCII
+      "www.example.com", 0 },
+    { "B\\u00FCcher.de", "B",  // u-umlaut
+      "b\\u00FCcher.de", 0 },
+    { "\\u00D6BB", "B",  // O-umlaut
+      "\\u00F6bb", 0 },
+    { "fa\\u00DF.de", "N",  // sharp s
+      "fa\\u00DF.de", 0 },
+    { "fa\\u00DF.de", "T",  // sharp s
+      "fass.de", 0 },
+    { "XN--fA-hia.dE", "B",  // sharp s in Punycode
+      "fa\\u00DF.de", 0 },
+    { "\\u03B2\\u03CC\\u03BB\\u03BF\\u03C2.com", "N",  // Greek with final sigma
+      "\\u03B2\\u03CC\\u03BB\\u03BF\\u03C2.com", 0 },
+    { "\\u03B2\\u03CC\\u03BB\\u03BF\\u03C2.com", "T",  // Greek with final sigma
       "\\u03B2\\u03CC\\u03BB\\u03BF\\u03C3.com", 0 },
-    { "xn--nxasmm1c",  // Greek with final sigma in Punycode
-      "\\u03B2\\u03CC\\u03BB\\u03BF\\u03C2", NULL, 0 },
-    { "www.\\u0DC1\\u0DCA\\u200D\\u0DBB\\u0DD3.com",  // "Sri" in "Sri Lanka" has a ZWJ
-      "www.\\u0DC1\\u0DCA\\u200D\\u0DBB\\u0DD3.com",
+    { "xn--nxasmm1c", "B",  // Greek with final sigma in Punycode
+      "\\u03B2\\u03CC\\u03BB\\u03BF\\u03C2", 0 },
+    { "www.\\u0DC1\\u0DCA\\u200D\\u0DBB\\u0DD3.com", "N",  // "Sri" in "Sri Lanka" has a ZWJ
+      "www.\\u0DC1\\u0DCA\\u200D\\u0DBB\\u0DD3.com", 0 },
+    { "www.\\u0DC1\\u0DCA\\u200D\\u0DBB\\u0DD3.com", "T",  // "Sri" in "Sri Lanka" has a ZWJ
       "www.\\u0DC1\\u0DCA\\u0DBB\\u0DD3.com", 0 },
-    { "www.xn--10cl1a0b660p.com",  // "Sri" in Punycode
-      "www.\\u0DC1\\u0DCA\\u200D\\u0DBB\\u0DD3.com", NULL, 0 },
-    { "\\u0646\\u0627\\u0645\\u0647\\u200C\\u0627\\u06CC",  // ZWNJ
-      "\\u0646\\u0627\\u0645\\u0647\\u200C\\u0627\\u06CC",
+    { "www.xn--10cl1a0b660p.com", "B",  // "Sri" in Punycode
+      "www.\\u0DC1\\u0DCA\\u200D\\u0DBB\\u0DD3.com", 0 },
+    { "\\u0646\\u0627\\u0645\\u0647\\u200C\\u0627\\u06CC", "N",  // ZWNJ
+      "\\u0646\\u0627\\u0645\\u0647\\u200C\\u0627\\u06CC", 0 },
+    { "\\u0646\\u0627\\u0645\\u0647\\u200C\\u0627\\u06CC", "T",  // ZWNJ
       "\\u0646\\u0627\\u0645\\u0647\\u0627\\u06CC", 0 },
-    { "xn--mgba3gch31f060k.com",  // ZWNJ in Punycode
-      "\\u0646\\u0627\\u0645\\u0647\\u200C\\u0627\\u06CC.com", NULL, 0 },
-    { "a.b\\uFF0Ec\\u3002d\\uFF61", "a.b.c.d.", NULL, 0 },
-    { "U\\u0308.xn--tda", "\\u00FC.\\u00FC", NULL, 0 },  // U+umlaut.u-umlaut
-    { "xn--u-ccb",  // u+umlaut in Punycode
-      "\\u00FC", NULL, UIDNA_ERROR_INVALID_ACE_LABEL },
-    { "a\\u2488com",  // contains 1-dot
-      "a\\uFFFDcom", NULL, UIDNA_ERROR_DISALLOWED },
-    { "xn--a-ecp.ru",  // contains 1-dot in Punycode
-      "a\\uFFFD.ru", NULL, UIDNA_ERROR_INVALID_ACE_LABEL|UIDNA_ERROR_DISALLOWED },
-    { "xn--0.pt", "xn--0\\uFFFD.pt", NULL, UIDNA_ERROR_PUNYCODE },  // invalid Punycode
-    { "xn--a.pt",  // U+0080
-      "\\uFFFD.pt", NULL, UIDNA_ERROR_INVALID_ACE_LABEL|UIDNA_ERROR_DISALLOWED },
-    { "xn--a-\\u00C4.pt", "xn--a-\\u00E4.pt", NULL, UIDNA_ERROR_PUNYCODE },  // invalid Punycode
-    { "\\u65E5\\u672C\\u8A9E\\u3002\\uFF2A\\uFF30",  // Japanese with fullwidth ".jp"
-      "\\u65E5\\u672C\\u8A9E.jp", NULL, 0 },
-    { "\\u2615", "\\u2615", NULL, UIDNA_ERROR_BIDI },  // Unicode 4.0 HOT BEVERAGE
-    // { "", "", NULL, 0 },
-    // { "",
-    //   "",
+    { "xn--mgba3gch31f060k.com", "B",  // ZWNJ in Punycode
+      "\\u0646\\u0627\\u0645\\u0647\\u200C\\u0627\\u06CC.com", 0 },
+    { "a.b\\uFF0Ec\\u3002d\\uFF61", "B",
+      "a.b.c.d.", 0 },
+    { "U\\u0308.xn--tda", "B",  // U+umlaut.u-umlaut
+      "\\u00FC.\\u00FC", 0 },
+    { "xn--u-ccb", "B",  // u+umlaut in Punycode
+      "\\u00FC", UIDNA_ERROR_INVALID_ACE_LABEL },
+    { "a\\u2488com", "B",  // contains 1-dot
+      "a\\uFFFDcom", UIDNA_ERROR_DISALLOWED },
+    { "xn--a-ecp.ru", "B",  // contains 1-dot in Punycode
+      "a\\uFFFD.ru", UIDNA_ERROR_INVALID_ACE_LABEL|UIDNA_ERROR_DISALLOWED },
+    { "xn--0.pt", "B",  // invalid Punycode
+      "xn--0\\uFFFD.pt", UIDNA_ERROR_PUNYCODE },
+    { "xn--a.pt", "B",  // U+0080
+      "\\uFFFD.pt", UIDNA_ERROR_INVALID_ACE_LABEL|UIDNA_ERROR_DISALLOWED },
+    { "xn--a-\\u00C4.pt", "B",  // invalid Punycode
+      "xn--a-\\u00E4.pt", UIDNA_ERROR_PUNYCODE },
+    { "\\u65E5\\u672C\\u8A9E\\u3002\\uFF2A\\uFF30", "B",  // Japanese with fullwidth ".jp"
+      "\\u65E5\\u672C\\u8A9E.jp", 0 },
+    { "\\u2615", "B", "\\u2615", UIDNA_ERROR_BIDI },  // Unicode 4.0 HOT BEVERAGE
+    // many deviation characters, test the special mapping code
+    { "1.a\\u00DF\\u200C\\u200Db\\u200C\\u200Dc\\u00DF\\u00DF\\u00DF\\u00DFd"
+      "\\u03C2\\u03C3\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DFe"
+      "\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DFx"
+      "\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DFy"
+      "\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u0302\\u00DFz", "N",
+      "1.a\\u00DF\\u200C\\u200Db\\u200C\\u200Dc\\u00DF\\u00DF\\u00DF\\u00DFd"
+      "\\u03C2\\u03C3\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DFe"
+      "\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DFx"
+      "\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DFy"
+      "\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u0302\\u00DFz",
+      UIDNA_ERROR_CONTEXTJ },
+    { "1.a\\u00DF\\u200C\\u200Db\\u200C\\u200Dc\\u00DF\\u00DF\\u00DF\\u00DFd"
+      "\\u03C2\\u03C3\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DFe"
+      "\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DFx"
+      "\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DFy"
+      "\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u0302\\u00DFz", "T",
+      "1.assbcssssssssd"
+      "\\u03C3\\u03C3sssssssssssssssse"
+      "ssssssssssssssssssssx"
+      "ssssssssssssssssssssy"
+      "sssssssssssssss\\u015Dssz", 0 },
+    // "xn--bss" with deviation characters
+    { "\\u200Cx\\u200Dn\\u200C-\\u200D-b\\u00DF", "N",
+      "\\u200Cx\\u200Dn\\u200C-\\u200D-b\\u00DF", UIDNA_ERROR_BIDI|UIDNA_ERROR_CONTEXTJ },
+    { "\\u200Cx\\u200Dn\\u200C-\\u200D-b\\u00DF", "T",
+      "\\u5919", 0 },
+    // { "", "B",
     //   "", 0 },
 };
 
@@ -147,21 +187,15 @@ void UTS46Test::TestSomeCases() {
     for(i=0; i<LENGTHOF(testCases); ++i) {
         const TestCase &testCase=testCases[i];
         UnicodeString input(ctou(testCase.s));
-        UnicodeString expectedN(ctou(testCase.n));
-        UnicodeString expectedT;
-        if(testCase.t==NULL) {
-            expectedT=expectedN;
-        } else {
-            expectedT=UnicodeString(testCase.t, -1, US_INV).unescape();
-        }
+        UnicodeString expected(ctou(testCase.u));
         // ToASCII/ToUnicode, transitional/nontransitional
         UnicodeString aT, uT, aN, uN;
         IDNAInfo aTInfo, uTInfo, aNInfo, uNInfo;
-        trans->nameToASCII(input, aT, aTInfo, errorCode);
+        //trans->nameToASCII(input, aT, aTInfo, errorCode);
         trans->nameToUnicode(input, uT, uTInfo, errorCode);
-        nontrans->nameToASCII(input, aN, aNInfo, errorCode);
+        //nontrans->nameToASCII(input, aN, aNInfo, errorCode);
         nontrans->nameToUnicode(input, uN, uNInfo, errorCode);
-        if(errorCode.logIfFailureAndReset("first-level processing")) {
+        if(errorCode.logIfFailureAndReset("first-level processing [%d] %s", (int)i, testCase.s)) {
             continue;
         }
         // ToUnicode does not set length errors.
@@ -169,18 +203,19 @@ void UTS46Test::TestSomeCases() {
             (UIDNA_ERROR_EMPTY_LABEL|
              UIDNA_ERROR_LABEL_TOO_LONG|
              UIDNA_ERROR_DOMAIN_NAME_TOO_LONG);
-        if(uN!=expectedN || uNInfo.getErrors()!=uniErrors) {
+        char mode=testCase.o[0];
+        if((mode=='B' || mode=='N') && (uN!=expected || uNInfo.getErrors()!=uniErrors)) {
             char buffer[300];
             prettify(uN).extract(0, 0x7fffffff, buffer, 300);
             errln("N.nameToUnicode([%d] %s) unexpected errors %04lx or string %s",
                   (int)i, testCase.s, (long)uNInfo.getErrors(), buffer);
             continue;
         }
-        if(uT!=expectedT || uTInfo.getErrors()!=uniErrors) {
+        if((mode=='B' || mode=='T') && (uT!=expected || uTInfo.getErrors()!=uniErrors)) {
             char buffer[300];
             prettify(uT).extract(0, 0x7fffffff, buffer, 300);
             errln("T.nameToUnicode([%d] %s) unexpected errors %04lx or string %s",
-                  (int)i, testCase.s, (long)uNInfo.getErrors(), buffer);
+                  (int)i, testCase.s, (long)uTInfo.getErrors(), buffer);
             continue;
         }
         // labelToUnicode
