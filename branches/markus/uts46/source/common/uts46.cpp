@@ -23,7 +23,35 @@
 
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 
+// Note about tests for UIDNA_ERROR_DOMAIN_NAME_TOO_LONG:
+//
+// The domain name length limit is 255 octets in an internal DNS representation
+// where the last ("root") label is the empty label
+// represented by length byte 0 alone.
+// In a conventional string, this translates to 253 characters, or 254
+// if there is a trailing dot for the root label.
+
 U_NAMESPACE_BEGIN
+
+// Severe errors which usually result in a U+FFFD replacement character in the result string.
+const uint32_t severeErrors=
+    UIDNA_ERROR_LEADING_COMBINING_MARK|
+    UIDNA_ERROR_DISALLOWED|
+    UIDNA_ERROR_PUNYCODE|
+    UIDNA_ERROR_LABEL_HAS_DOT|
+    UIDNA_ERROR_INVALID_ACE_LABEL;
+
+static inline UBool
+isASCIIString(const UnicodeString &dest) {
+    const UChar *s=dest.getBuffer();
+    const UChar *limit=s+dest.length();
+    while(s<limit) {
+        if(*s++>0x7f) {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
 
 // IDNA class default implementations -------------------------------------- ***
 
@@ -138,12 +166,16 @@ private:
     mapDevChars(UnicodeString &dest, int32_t labelStart, int32_t mappingStart,
                 IDNAInfo &info, UErrorCode &errorCode) const;
 
-    // returns delta for how much the label length changes
+    // returns the new label length
     int32_t
     processLabel(UnicodeString &dest,
                  int32_t labelStart, int32_t labelLength,
                  UBool toASCII,
                  IDNAInfo &info, UErrorCode &errorCode) const;
+    int32_t
+    markBadACELabel(UnicodeString &dest,
+                    int32_t labelStart, int32_t labelLength,
+                    UBool toASCII, IDNAInfo &info) const;
 
     UBool
     isLabelOkBiDi(const UChar *label, int32_t labelLength) const;
@@ -190,11 +222,10 @@ UnicodeString &
 UTS46::nameToASCII(const UnicodeString &name, UnicodeString &dest,
                    IDNAInfo &info, UErrorCode &errorCode) const {
     process(name, FALSE, TRUE, dest, info, errorCode);
-    // The domain name length limit is 255 octets in an internal representation
-    // where the last ("root") label is the empty label represented by length byte 0 alone.
-    // In a conventional string, this translates to 253 characters, or 254
-    // if there is a trailing dot for the root label.
-    if(info.errors==0 && dest.length()>=254 && (dest.length()>254 || dest[253]!=0x2e)) {
+    if( dest.length()>=254 && (info.errors&UIDNA_ERROR_DOMAIN_NAME_TOO_LONG)==0 &&
+        isASCIIString(dest) &&
+        (dest.length()>254 || dest[253]!=0x2e)
+    ) {
         info.errors|=UIDNA_ERROR_DOMAIN_NAME_TOO_LONG;
     }
     return dest;
@@ -291,8 +322,14 @@ UTS46::process(const UnicodeString &src,
     int32_t i;
     for(i=0;; ++i) {
         if(i==srcLength) {
-            if(toASCII && info.labelErrors==0 && (i-labelStart)>63) {
-                info.labelErrors|=UIDNA_ERROR_LABEL_TOO_LONG;
+            if(toASCII) {
+                if((i-labelStart)>63) {
+                    info.labelErrors|=UIDNA_ERROR_LABEL_TOO_LONG;
+                }
+                // There is a trailing dot if labelStart==i.
+                if(!isLabel && i>=254 && (i>254 || labelStart<i)) {
+                    info.errors|=UIDNA_ERROR_DOMAIN_NAME_TOO_LONG;
+                }
             }
             info.errors|=info.labelErrors;
             dest.releaseBuffer(i);
@@ -330,7 +367,7 @@ UTS46::process(const UnicodeString &src,
                     // Permit an empty label at the end but not elsewhere.
                     if(i==labelStart && i<(srcLength-1)) {
                         info.labelErrors|=UIDNA_ERROR_EMPTY_LABEL;
-                    } else if(info.labelErrors==0 && (i-labelStart)>63) {
+                    } else if((i-labelStart)>63) {
                         info.labelErrors|=UIDNA_ERROR_LABEL_TOO_LONG;
                     }
                 }
@@ -385,22 +422,17 @@ UTS46::processUTF8(const StringPiece &src,
     int32_t i;
     for(i=0;; ++i) {
         if(i==srcLength) {
-            if(toASCII && info.labelErrors==0 && (i-labelStart)>63) {
-                info.labelErrors|=UIDNA_ERROR_LABEL_TOO_LONG;
-            }
-            info.errors|=info.labelErrors;
-            dest.Append(destArray, i);
-            if(toASCII && !isLabel && info.errors==0) {
-                // The domain name length limit is 255 octets in an internal representation
-                // where the last ("root") label is the empty label
-                // represented by length byte 0 alone.
-                // In a conventional string, this translates to 253 characters, or 254
-                // if there is a trailing dot for the root label.
+            if(toASCII) {
+                if((i-labelStart)>63) {
+                    info.labelErrors|=UIDNA_ERROR_LABEL_TOO_LONG;
+                }
                 // There is a trailing dot if labelStart==i.
-                if(i>=254 && (i>254 || labelStart<i)) {
+                if(!isLabel && i>=254 && (i>254 || labelStart<i)) {
                     info.errors|=UIDNA_ERROR_DOMAIN_NAME_TOO_LONG;
                 }
             }
+            info.errors|=info.labelErrors;
+            dest.Append(destArray, i);
             return;
         }
         char c=srcArray[i];
@@ -435,7 +467,7 @@ UTS46::processUTF8(const StringPiece &src,
                     // Permit an empty label at the end but not elsewhere.
                     if(i==labelStart && i<(srcLength-1)) {
                         info.labelErrors|=UIDNA_ERROR_EMPTY_LABEL;
-                    } else if(info.labelErrors==0 && (i-labelStart)>63) {
+                    } else if((i-labelStart)>63) {
                         info.labelErrors|=UIDNA_ERROR_LABEL_TOO_LONG;
                     }
                 }
@@ -455,16 +487,13 @@ UTS46::processUTF8(const StringPiece &src,
     processUnicode(UnicodeString::fromUTF8(StringPiece(src, labelStart)), 0, mappingStart,
                    isLabel, toASCII,
                    destString, info, errorCode).toUTF8(dest);
-    if(toASCII && !isLabel && info.errors==0) {
-        // The domain name length limit is 255 octets in an internal representation
-        // where the last ("root") label is the empty label represented by length byte 0 alone.
-        // In a conventional string, this translates to 253 characters, or 254
-        // if there is a trailing dot for the root label.
+    if(toASCII && !isLabel) {
         // length==labelStart==254 means that there is a trailing dot (ok) and
         // destString is empty (do not index at 253-labelStart).
         int32_t length=labelStart+destString.length();
-        if( length>=254 && (length>254 ||
-                            (labelStart<254 && destString[253-labelStart]!=0x2e))
+        if( length>=254 && isASCIIString(destString) &&
+            (length>254 ||
+             (labelStart<254 && destString[253-labelStart]!=0x2e))
         ) {
             info.errors|=UIDNA_ERROR_DOMAIN_NAME_TOO_LONG;
         }
@@ -501,19 +530,21 @@ UTS46::processUnicode(const UnicodeString &src,
     } else {
         const UChar *destArray=dest.getBuffer();
         int32_t destLength=dest.length();
-        int32_t labelLimit=labelStart, delta;
+        int32_t labelLimit=labelStart;
         while(labelLimit<destLength) {
             UChar c=destArray[labelLimit];
             if(c==0x2e) {
-                delta=processLabel(dest, labelStart, labelLimit-labelStart,
-                                   toASCII, info, errorCode);
+                int32_t labelLength=labelLimit-labelStart;
+                int32_t newLength=processLabel(dest, labelStart, labelLength,
+                                               toASCII, info, errorCode);
                 info.errors|=info.labelErrors;
+                info.labelErrors=0;
                 if(U_FAILURE(errorCode)) {
                     return dest;
                 }
                 destArray=dest.getBuffer();
-                destLength+=delta;
-                labelStart=labelLimit+=delta+1;
+                destLength+=newLength-labelLength;
+                labelLimit=labelStart+=newLength+1;
             } else if(doMapDevChars && 0xdf<=c && c<=0x200d && (c==0xdf || c==0x3c2 || c>=0x200c)) {
                 destLength=mapDevChars(dest, labelStart, labelLimit, info, errorCode);
                 if(U_FAILURE(errorCode)) {
@@ -617,7 +648,7 @@ replaceLabel(UnicodeString &dest, int32_t destLabelStart, int32_t destLabelLengt
     if(&label!=&dest) {
         dest.replace(destLabelStart, destLabelLength, label);
     }
-    return labelLength-destLabelLength;
+    return labelLength;
 }
 
 int32_t
@@ -640,7 +671,7 @@ UTS46::processLabel(UnicodeString &dest,
         if(unicodeBuffer==NULL) {
             // Should never occur if we used capacity==-1 which uses the internal buffer.
             errorCode=U_MEMORY_ALLOCATION_ERROR;
-            return 0;
+            return labelLength;
         }
         UErrorCode punycodeErrorCode=U_ZERO_ERROR;
         int32_t unicodeLength=u_strFromPunycode(label+4, labelLength-4,
@@ -651,7 +682,7 @@ UTS46::processLabel(UnicodeString &dest,
             unicodeBuffer=unicode.getBuffer(unicodeLength);
             if(unicodeBuffer==NULL) {
                 errorCode=U_MEMORY_ALLOCATION_ERROR;
-                return 0;
+                return labelLength;
             }
             punycodeErrorCode=U_ZERO_ERROR;
             unicodeLength=u_strFromPunycode(label+4, labelLength-4,
@@ -661,36 +692,7 @@ UTS46::processLabel(UnicodeString &dest,
         unicode.releaseBuffer(unicodeLength);
         if(U_FAILURE(punycodeErrorCode)) {
             info.labelErrors|=UIDNA_ERROR_PUNYCODE;
-            // Append U+FFFD if the label has only LDH characters.
-            // If UIDNA_USE_STD3_RULES, also replace disallowed ASCII characters with U+FFFD.
-            UBool disallowNonLDHDot=(options&UIDNA_USE_STD3_RULES)!=0;
-            UBool onlyLDH=TRUE;
-            // Ok to cast away const because we own the UnicodeString.
-            UChar *s=(UChar *)label+4;  // After the initial "xn--".
-            const UChar *limit=label+labelLength;
-            do {
-                UChar c=*s;
-                if(c<=0x7f) {
-                    if(c==0x2e) {
-                        info.labelErrors|=UIDNA_ERROR_LABEL_HAS_DOT;
-                        onlyLDH=FALSE;
-                        *s=0xfffd;
-                    } else if(asciiData[c]<0) {
-                        onlyLDH=FALSE;
-                        if(disallowNonLDHDot) {
-                            *s=0xfffd;
-                        }
-                    }
-                } else {
-                    onlyLDH=FALSE;
-                }
-            } while(++s<limit);
-            if(onlyLDH) {
-                dest.insert(labelStart+labelLength, (UChar)0xfffd);
-                return 1;
-            } else {
-                return 0;
-            }
+            return markBadACELabel(dest, labelStart, labelLength, toASCII, info);
         }
         // Check for NFC, and for characters that are not
         // valid or deviation characters according to the normalizer.
@@ -701,10 +703,11 @@ UTS46::processLabel(UnicodeString &dest,
         // then we will set UIDNA_ERROR_INVALID_ACE_LABEL there too.
         uts46Norm2.normalize(unicode, fromPunycode, errorCode);
         if(U_FAILURE(errorCode)) {
-            return 0;
+            return labelLength;
         }
         if(unicode!=fromPunycode) {
             info.labelErrors|=UIDNA_ERROR_INVALID_ACE_LABEL;
+            return markBadACELabel(dest, labelStart, labelLength, toASCII, info);
         }
         labelString=&fromPunycode;
         label=fromPunycode.getBuffer();
@@ -797,49 +800,54 @@ UTS46::processLabel(UnicodeString &dest,
             info.labelErrors|=UIDNA_ERROR_CONTEXTJ;
         }
     }
-    // Re-Punycode the label only if it had no processing errors.
-    if(toASCII && info.labelErrors==0) {
+    // If a Punycode label has severe errors, then leave it but make sure it does not look valid.
+    if(wasPunycode && (info.labelErrors&severeErrors)!=0) {
+        return markBadACELabel(dest, destLabelStart, destLabelLength, toASCII, info);
+    }
+    if(toASCII) {
         if(wasPunycode) {
+            // Leave a Punycode label unchanged if it has no severe errors.
             if(destLabelLength>63) {
                 info.labelErrors|=UIDNA_ERROR_LABEL_TOO_LONG;
             }
-            return 0;
+            return destLabelLength;
         } else if(oredChars>=0x80) {
             // Contains non-ASCII characters.
             UnicodeString punycode;
             UChar *buffer=punycode.getBuffer(63);  // 63==maximum DNS label length
             if(buffer==NULL) {
                 errorCode=U_MEMORY_ALLOCATION_ERROR;
-            } else {
-                buffer[0]=0x78;  // Write "xn--".
-                buffer[1]=0x6e;
-                buffer[2]=0x2d;
-                buffer[3]=0x2d;
-                int32_t punycodeLength=u_strToPunycode(label, labelLength,
-                                                      buffer+4, punycode.getCapacity()-4,
-                                                      NULL, &errorCode);
-                if(errorCode==U_BUFFER_OVERFLOW_ERROR) {
-                    errorCode=U_ZERO_ERROR;
-                    punycode.releaseBuffer(4);
-                    buffer=punycode.getBuffer(punycodeLength);
-                    if(buffer==NULL) {
-                        errorCode=U_MEMORY_ALLOCATION_ERROR;
-                    } else {
-                        punycodeLength=u_strToPunycode(label, labelLength,
-                                                      buffer+4, punycode.getCapacity()-4,
-                                                      NULL, &errorCode);
-                    }
-                }
-                punycodeLength+=4;
-                punycode.releaseBuffer(punycodeLength);
-                if(U_SUCCESS(errorCode)) {
-                    if(punycodeLength>63) {
-                        info.labelErrors|=UIDNA_ERROR_LABEL_TOO_LONG;
-                    }
-                    return replaceLabel(dest, destLabelStart, destLabelLength,
-                                        punycode, punycodeLength);
-                }
+                return destLabelLength;
             }
+            buffer[0]=0x78;  // Write "xn--".
+            buffer[1]=0x6e;
+            buffer[2]=0x2d;
+            buffer[3]=0x2d;
+            int32_t punycodeLength=u_strToPunycode(label, labelLength,
+                                                  buffer+4, punycode.getCapacity()-4,
+                                                  NULL, &errorCode);
+            if(errorCode==U_BUFFER_OVERFLOW_ERROR) {
+                errorCode=U_ZERO_ERROR;
+                punycode.releaseBuffer(4);
+                buffer=punycode.getBuffer(punycodeLength);
+                if(buffer==NULL) {
+                    errorCode=U_MEMORY_ALLOCATION_ERROR;
+                    return destLabelLength;
+                }
+                punycodeLength=u_strToPunycode(label, labelLength,
+                                              buffer+4, punycode.getCapacity()-4,
+                                              NULL, &errorCode);
+            }
+            punycodeLength+=4;
+            punycode.releaseBuffer(punycodeLength);
+            if(U_FAILURE(errorCode)) {
+                return destLabelLength;
+            }
+            if(punycodeLength>63) {
+                info.labelErrors|=UIDNA_ERROR_LABEL_TOO_LONG;
+            }
+            return replaceLabel(dest, destLabelStart, destLabelLength,
+                                punycode, punycodeLength);
         } else {
             // all-ASCII label
             if(labelLength>63) {
@@ -848,6 +856,49 @@ UTS46::processLabel(UnicodeString &dest,
         }
     }
     return replaceLabel(dest, destLabelStart, destLabelLength, *labelString, labelLength);
+}
+
+// Make sure an ACE label does not look valid.
+// Append U+FFFD if the label has only LDH characters.
+// If UIDNA_USE_STD3_RULES, also replace disallowed ASCII characters with U+FFFD.
+int32_t
+UTS46::markBadACELabel(UnicodeString &dest,
+                       int32_t labelStart, int32_t labelLength,
+                       UBool toASCII, IDNAInfo &info) const {
+    UBool disallowNonLDHDot=(options&UIDNA_USE_STD3_RULES)!=0;
+    UBool isASCII=TRUE;
+    UBool onlyLDH=TRUE;
+    const UChar *label=dest.getBuffer()+labelStart;
+    // Ok to cast away const because we own the UnicodeString.
+    UChar *s=(UChar *)label+4;  // After the initial "xn--".
+    const UChar *limit=label+labelLength;
+    do {
+        UChar c=*s;
+        if(c<=0x7f) {
+            if(c==0x2e) {
+                info.labelErrors|=UIDNA_ERROR_LABEL_HAS_DOT;
+                *s=0xfffd;
+                isASCII=onlyLDH=FALSE;
+            } else if(asciiData[c]<0) {
+                onlyLDH=FALSE;
+                if(disallowNonLDHDot) {
+                    *s=0xfffd;
+                    isASCII=FALSE;
+                }
+            }
+        } else {
+            isASCII=onlyLDH=FALSE;
+        }
+    } while(++s<limit);
+    if(onlyLDH) {
+        dest.insert(labelStart+labelLength, (UChar)0xfffd);
+        ++labelLength;
+    } else {
+        if(toASCII && isASCII && labelLength>63) {
+            info.labelErrors|=UIDNA_ERROR_LABEL_TOO_LONG;
+        }
+    }
+    return labelLength;
 }
 
 #define L_MASK U_MASK(U_LEFT_TO_RIGHT)
