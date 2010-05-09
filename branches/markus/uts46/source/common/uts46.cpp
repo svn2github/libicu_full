@@ -666,8 +666,7 @@ UTS46::processLabel(UnicodeString &dest,
     if(labelLength>=4 && label[0]==0x78 && label[1]==0x6e && label[2]==0x2d && label[3]==0x2d) {
         // Label starts with "xn--", try to un-Punycode it.
         wasPunycode=TRUE;
-        UnicodeString unicode;
-        UChar *unicodeBuffer=unicode.getBuffer(-1);  // capacity==-1: most labels should fit
+        UChar *unicodeBuffer=fromPunycode.getBuffer(-1);  // capacity==-1: most labels should fit
         if(unicodeBuffer==NULL) {
             // Should never occur if we used capacity==-1 which uses the internal buffer.
             errorCode=U_MEMORY_ALLOCATION_ERROR;
@@ -675,21 +674,21 @@ UTS46::processLabel(UnicodeString &dest,
         }
         UErrorCode punycodeErrorCode=U_ZERO_ERROR;
         int32_t unicodeLength=u_strFromPunycode(label+4, labelLength-4,
-                                                unicodeBuffer, unicode.getCapacity(),
+                                                unicodeBuffer, fromPunycode.getCapacity(),
                                                 NULL, &punycodeErrorCode);
         if(punycodeErrorCode==U_BUFFER_OVERFLOW_ERROR) {
-            unicode.releaseBuffer(0);
-            unicodeBuffer=unicode.getBuffer(unicodeLength);
+            fromPunycode.releaseBuffer(0);
+            unicodeBuffer=fromPunycode.getBuffer(unicodeLength);
             if(unicodeBuffer==NULL) {
                 errorCode=U_MEMORY_ALLOCATION_ERROR;
                 return labelLength;
             }
             punycodeErrorCode=U_ZERO_ERROR;
             unicodeLength=u_strFromPunycode(label+4, labelLength-4,
-                                            unicodeBuffer, unicode.getCapacity(),
+                                            unicodeBuffer, fromPunycode.getCapacity(),
                                             NULL, &punycodeErrorCode);
         }
-        unicode.releaseBuffer(unicodeLength);
+        fromPunycode.releaseBuffer(unicodeLength);
         if(U_FAILURE(punycodeErrorCode)) {
             info.labelErrors|=UIDNA_ERROR_PUNYCODE;
             return markBadACELabel(dest, labelStart, labelLength, toASCII, info);
@@ -701,11 +700,11 @@ UTS46::processLabel(UnicodeString &dest,
         // Deviation characters are ok in Punycode even in transitional processing.
         // In the code further below, if we find non-LDH ASCII and we have UIDNA_USE_STD3_RULES
         // then we will set UIDNA_ERROR_INVALID_ACE_LABEL there too.
-        uts46Norm2.normalize(unicode, fromPunycode, errorCode);
+        UBool isValid=uts46Norm2.isNormalized(fromPunycode, errorCode);
         if(U_FAILURE(errorCode)) {
             return labelLength;
         }
-        if(unicode!=fromPunycode) {
+        if(!isValid) {
             info.labelErrors|=UIDNA_ERROR_INVALID_ACE_LABEL;
             return markBadACELabel(dest, labelStart, labelLength, toASCII, info);
         }
@@ -824,19 +823,19 @@ UTS46::processLabel(UnicodeString &dest,
             buffer[2]=0x2d;
             buffer[3]=0x2d;
             int32_t punycodeLength=u_strToPunycode(label, labelLength,
-                                                  buffer+4, punycode.getCapacity()-4,
-                                                  NULL, &errorCode);
+                                                   buffer+4, punycode.getCapacity()-4,
+                                                   NULL, &errorCode);
             if(errorCode==U_BUFFER_OVERFLOW_ERROR) {
                 errorCode=U_ZERO_ERROR;
                 punycode.releaseBuffer(4);
-                buffer=punycode.getBuffer(punycodeLength);
+                buffer=punycode.getBuffer(4+punycodeLength);
                 if(buffer==NULL) {
                     errorCode=U_MEMORY_ALLOCATION_ERROR;
                     return destLabelLength;
                 }
                 punycodeLength=u_strToPunycode(label, labelLength,
-                                              buffer+4, punycode.getCapacity()-4,
-                                              NULL, &errorCode);
+                                               buffer+4, punycode.getCapacity()-4,
+                                               NULL, &errorCode);
             }
             punycodeLength+=4;
             punycode.releaseBuffer(punycodeLength);

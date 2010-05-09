@@ -136,15 +136,15 @@ static const TestCase testCases[]={
     { "U\\u0308.xn--tda", "B",  // U+umlaut.u-umlaut
       "\\u00FC.\\u00FC", 0 },
     { "xn--u-ccb", "B",  // u+umlaut in Punycode
-      "\\u00FC", UIDNA_ERROR_INVALID_ACE_LABEL },
+      "xn--u-ccb\\uFFFD", UIDNA_ERROR_INVALID_ACE_LABEL },
     { "a\\u2488com", "B",  // contains 1-dot
       "a\\uFFFDcom", UIDNA_ERROR_DISALLOWED },
     { "xn--a-ecp.ru", "B",  // contains 1-dot in Punycode
-      "a\\uFFFD.ru", UIDNA_ERROR_INVALID_ACE_LABEL|UIDNA_ERROR_DISALLOWED },
+      "xn--a-ecp\\uFFFD.ru", UIDNA_ERROR_INVALID_ACE_LABEL },
     { "xn--0.pt", "B",  // invalid Punycode
       "xn--0\\uFFFD.pt", UIDNA_ERROR_PUNYCODE },
     { "xn--a.pt", "B",  // U+0080
-      "\\uFFFD.pt", UIDNA_ERROR_INVALID_ACE_LABEL|UIDNA_ERROR_DISALLOWED },
+      "xn--a\\uFFFD.pt", UIDNA_ERROR_INVALID_ACE_LABEL },
     { "xn--a-\\u00C4.pt", "B",  // invalid Punycode
       "xn--a-\\u00E4.pt", UIDNA_ERROR_PUNYCODE },
     { "\\u65E5\\u672C\\u8A9E\\u3002\\uFF2A\\uFF30", "B",  // Japanese with fullwidth ".jp"
@@ -191,11 +191,13 @@ void UTS46Test::TestSomeCases() {
         // ToASCII/ToUnicode, transitional/nontransitional
         UnicodeString aT, uT, aN, uN;
         IDNAInfo aTInfo, uTInfo, aNInfo, uNInfo;
-        //trans->nameToASCII(input, aT, aTInfo, errorCode);
+        trans->nameToASCII(input, aT, aTInfo, errorCode);
         trans->nameToUnicode(input, uT, uTInfo, errorCode);
-        //nontrans->nameToASCII(input, aN, aNInfo, errorCode);
+        nontrans->nameToASCII(input, aN, aNInfo, errorCode);
         nontrans->nameToUnicode(input, uN, uNInfo, errorCode);
-        if(errorCode.logIfFailureAndReset("first-level processing [%d] %s", (int)i, testCase.s)) {
+        if(errorCode.logIfFailureAndReset("first-level processing [%d/%s] %s",
+                                          (int)i, testCase.o, testCase.s)
+        ) {
             continue;
         }
         // ToUnicode does not set length errors.
