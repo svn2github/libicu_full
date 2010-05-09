@@ -389,7 +389,7 @@ enum {
     UIDNA_ERROR_PUNYCODE=0x100,
     /**
      * A label contains a dot=full stop.
-     * This can occur in an ACE label, and in an input string for a single-label function.
+     * This can occur in an input string for a single-label function.
      * @draft ICU 4.6
      */
     UIDNA_ERROR_LABEL_HAS_DOT=0x200,

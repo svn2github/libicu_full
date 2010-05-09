@@ -662,7 +662,6 @@ UTS46::processLabel(UnicodeString &dest,
     int32_t destLabelStart=labelStart;
     int32_t destLabelLength=labelLength;
     UBool wasPunycode;
-    info.labelErrors=0;
     if(labelLength>=4 && label[0]==0x78 && label[1]==0x6e && label[2]==0x2d && label[3]==0x2d) {
         // Label starts with "xn--", try to un-Punycode it.
         wasPunycode=TRUE;
