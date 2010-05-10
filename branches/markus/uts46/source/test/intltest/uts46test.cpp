@@ -253,7 +253,119 @@ static const TestCase testCases[]={
       "\\u00E41234567890123456789012345678901234567890123456789012345", 0 },
     { "1234567890\\u00E41234567890123456789012345678901234567890123456", "B",
       "1234567890\\u00E41234567890123456789012345678901234567890123456", UIDNA_ERROR_LABEL_TOO_LONG },
-    // TODO: not-all-ASCII domain names with lengths 253, 253+dot, 254
+    { "123456789012345678901234567890123456789012345678901234567890123."
+      "1234567890\\u00E4123456789012345678901234567890123456789012345."
+      "123456789012345678901234567890123456789012345678901234567890123."
+      "1234567890123456789012345678901234567890123456789012345678901", "B",
+      "123456789012345678901234567890123456789012345678901234567890123."
+      "1234567890\\u00E4123456789012345678901234567890123456789012345."
+      "123456789012345678901234567890123456789012345678901234567890123."
+      "1234567890123456789012345678901234567890123456789012345678901", 0 },
+    { "123456789012345678901234567890123456789012345678901234567890123."
+      "1234567890\\u00E4123456789012345678901234567890123456789012345."
+      "123456789012345678901234567890123456789012345678901234567890123."
+      "1234567890123456789012345678901234567890123456789012345678901.", "B",
+      "123456789012345678901234567890123456789012345678901234567890123."
+      "1234567890\\u00E4123456789012345678901234567890123456789012345."
+      "123456789012345678901234567890123456789012345678901234567890123."
+      "1234567890123456789012345678901234567890123456789012345678901.", 0 },
+    { "123456789012345678901234567890123456789012345678901234567890123."
+      "1234567890\\u00E4123456789012345678901234567890123456789012345."
+      "123456789012345678901234567890123456789012345678901234567890123."
+      "12345678901234567890123456789012345678901234567890123456789012", "B",
+      "123456789012345678901234567890123456789012345678901234567890123."
+      "1234567890\\u00E4123456789012345678901234567890123456789012345."
+      "123456789012345678901234567890123456789012345678901234567890123."
+      "12345678901234567890123456789012345678901234567890123456789012",
+      UIDNA_ERROR_DOMAIN_NAME_TOO_LONG },
+    { "123456789012345678901234567890123456789012345678901234567890123."
+      "1234567890\\u00E41234567890123456789012345678901234567890123456."
+      "123456789012345678901234567890123456789012345678901234567890123."
+      "123456789012345678901234567890123456789012345678901234567890", "B",
+      "123456789012345678901234567890123456789012345678901234567890123."
+      "1234567890\\u00E41234567890123456789012345678901234567890123456."
+      "123456789012345678901234567890123456789012345678901234567890123."
+      "123456789012345678901234567890123456789012345678901234567890",
+      UIDNA_ERROR_LABEL_TOO_LONG },
+    { "123456789012345678901234567890123456789012345678901234567890123."
+      "1234567890\\u00E41234567890123456789012345678901234567890123456."
+      "123456789012345678901234567890123456789012345678901234567890123."
+      "123456789012345678901234567890123456789012345678901234567890.", "B",
+      "123456789012345678901234567890123456789012345678901234567890123."
+      "1234567890\\u00E41234567890123456789012345678901234567890123456."
+      "123456789012345678901234567890123456789012345678901234567890123."
+      "123456789012345678901234567890123456789012345678901234567890.",
+      UIDNA_ERROR_LABEL_TOO_LONG },
+    { "123456789012345678901234567890123456789012345678901234567890123."
+      "1234567890\\u00E41234567890123456789012345678901234567890123456."
+      "123456789012345678901234567890123456789012345678901234567890123."
+      "1234567890123456789012345678901234567890123456789012345678901", "B",
+      "123456789012345678901234567890123456789012345678901234567890123."
+      "1234567890\\u00E41234567890123456789012345678901234567890123456."
+      "123456789012345678901234567890123456789012345678901234567890123."
+      "1234567890123456789012345678901234567890123456789012345678901",
+      UIDNA_ERROR_LABEL_TOO_LONG|UIDNA_ERROR_DOMAIN_NAME_TOO_LONG },
+    // hyphen errors and empty-label errors
+    // "xn---q----jra"=="-q--a-umlaut-"
+    { "a.b..-q--a-.e", "B", "a.b..-q--a-.e",
+      UIDNA_ERROR_EMPTY_LABEL|UIDNA_ERROR_LEADING_HYPHEN|UIDNA_ERROR_TRAILING_HYPHEN|
+      UIDNA_ERROR_HYPHEN_3_4 },
+    { "a.b..-q--\\u00E4-.e", "B", "a.b..-q--\\u00E4-.e",
+      UIDNA_ERROR_EMPTY_LABEL|UIDNA_ERROR_LEADING_HYPHEN|UIDNA_ERROR_TRAILING_HYPHEN|
+      UIDNA_ERROR_HYPHEN_3_4 },
+    { "a.b..xn---q----jra.e", "B", "a.b..-q--\\u00E4-.e",
+      UIDNA_ERROR_EMPTY_LABEL|UIDNA_ERROR_LEADING_HYPHEN|UIDNA_ERROR_TRAILING_HYPHEN|
+      UIDNA_ERROR_HYPHEN_3_4 },
+    { "a..c", "B", "a..c", UIDNA_ERROR_EMPTY_LABEL },
+    { "a.-b.", "B", "a.-b.", UIDNA_ERROR_LEADING_HYPHEN },
+    { "a.b-.c", "B", "a.b-.c", UIDNA_ERROR_TRAILING_HYPHEN },
+    { "a.-.c", "B", "a.-.c", UIDNA_ERROR_LEADING_HYPHEN|UIDNA_ERROR_TRAILING_HYPHEN },
+    { "a.bc--de.f", "B", "a.bc--de.f", UIDNA_ERROR_HYPHEN_3_4 },
+    { "\\u00E4.\\u00AD.c", "B", "\\u00E4..c", UIDNA_ERROR_EMPTY_LABEL },
+    { "\\u00E4.-b.", "B", "\\u00E4.-b.", UIDNA_ERROR_LEADING_HYPHEN },
+    { "\\u00E4.b-.c", "B", "\\u00E4.b-.c", UIDNA_ERROR_TRAILING_HYPHEN },
+    { "\\u00E4.-.c", "B", "\\u00E4.-.c", UIDNA_ERROR_LEADING_HYPHEN|UIDNA_ERROR_TRAILING_HYPHEN },
+    { "\\u00E4.bc--de.f", "B", "\\u00E4.bc--de.f", UIDNA_ERROR_HYPHEN_3_4 },
+    { "a.b.\\u0308c.d", "B", "a.b.\\uFFFDc.d", UIDNA_ERROR_LEADING_COMBINING_MARK },
+    { "a.b.xn--c-bcb.d", "B", "a.b.xn--c-bcb\\uFFFD.d", UIDNA_ERROR_LEADING_COMBINING_MARK },
+    // BiDi
+    { "A0", "B", "a0", 0 },
+    // TODO: revisit BIDI Rule { "0A", "B", "0a", UIDNA_ERROR_BIDI },  // does not start with L/R/AL
+    { "a\\u05D0", "B", "a\\u05D0", UIDNA_ERROR_BIDI },  // first dir != last dir
+    { "\\u05D0\\u05C7", "B", "\\u05D0\\u05C7", 0 },
+    { "\\u05D09\\u05C7", "B", "\\u05D09\\u05C7", 0 },
+    { "\\u05D0a\\u05C7", "B", "\\u05D0a\\u05C7", UIDNA_ERROR_BIDI },  // first dir != last dir
+    { "\\u05D0\\u05EA", "B", "\\u05D0\\u05EA", 0 },
+    { "\\u05D0\\u05F3\\u05EA", "B", "\\u05D0\\u05F3\\u05EA", 0 },
+    { "a\\u05D0Tz", "B", "a\\u05D0tz", UIDNA_ERROR_BIDI },  // mixed dir
+    { "\\u05D0T\\u05EA", "B", "\\u05D0t\\u05EA", UIDNA_ERROR_BIDI },  // mixed dir
+    { "\\u05D07\\u05EA", "B", "\\u05D07\\u05EA", 0 },
+    { "\\u05D0\\u0667\\u05EA", "B", "\\u05D0\\u0667\\u05EA", 0 },  // Arabic 7 in the middle
+    { "a7\\u0667z", "B", "a7\\u0667z", UIDNA_ERROR_BIDI },  // AN digit in LTR
+    { "\\u05D07\\u0667\\u05EA", "B",  // mixed EN/AN digits in RTL
+      "\\u05D07\\u0667\\u05EA", UIDNA_ERROR_BIDI },
+    // ZWJ
+    { "\\u0BB9\\u0BCD\\u200D", "N", "\\u0BB9\\u0BCD\\u200D", UIDNA_ERROR_BIDI },  // Virama+ZWJ
+    { "\\u0BB9\\u200D", "N", "\\u0BB9\\u200D", UIDNA_ERROR_BIDI|UIDNA_ERROR_CONTEXTJ },  // no Virama
+    { "\\u200D", "N", "\\u200D", UIDNA_ERROR_BIDI|UIDNA_ERROR_CONTEXTJ },  // no Virama
+    // ZWNJ
+    { "\\u0BB9\\u0BCD\\u200C", "N", "\\u0BB9\\u0BCD\\u200C", UIDNA_ERROR_BIDI },  // Virama+ZWNJ
+    { "\\u0BB9\\u200C", "N", "\\u0BB9\\u200C", UIDNA_ERROR_BIDI|UIDNA_ERROR_CONTEXTJ },  // no Virama
+    { "\\u200C", "N", "\\u200C", UIDNA_ERROR_BIDI|UIDNA_ERROR_CONTEXTJ },  // no Virama
+    { "\\u0644\\u0670\\u200C\\u06ED\\u06EF", "N",  // Joining types D T ZWNJ T R
+      "\\u0644\\u0670\\u200C\\u06ED\\u06EF", 0 },
+    { "\\u0644\\u0670\\u200C\\u06EF", "N",  // D T ZWNJ R
+      "\\u0644\\u0670\\u200C\\u06EF", 0 },
+    { "\\u0644\\u200C\\u06ED\\u06EF", "N",  // D ZWNJ T R
+      "\\u0644\\u200C\\u06ED\\u06EF", 0 },
+    { "\\u0644\\u200C\\u06EF", "N",  // D ZWNJ R
+      "\\u0644\\u200C\\u06EF", 0 },
+    { "\\u0644\\u0670\\u200C\\u06ED", "N",  // D T ZWNJ T
+      "\\u0644\\u0670\\u200C\\u06ED", UIDNA_ERROR_BIDI|UIDNA_ERROR_CONTEXTJ },
+    { "\\u06EF\\u200C\\u06EF", "N",  // R ZWNJ R
+      "\\u06EF\\u200C\\u06EF", UIDNA_ERROR_CONTEXTJ },
+    { "\\u0644\\u200C", "N",  // D ZWNJ
+      "\\u0644\\u200C", UIDNA_ERROR_BIDI|UIDNA_ERROR_CONTEXTJ },
     // { "", "B",
     //   "", 0 },
 };
@@ -283,19 +395,33 @@ void UTS46Test::TestSomeCases() {
              UIDNA_ERROR_LABEL_TOO_LONG|
              UIDNA_ERROR_DOMAIN_NAME_TOO_LONG);
         char mode=testCase.o[0];
-        if((mode=='B' || mode=='N') && (uN!=expected || uNInfo.getErrors()!=uniErrors)) {
-            char buffer[300];
-            prettify(uN).extract(0, 0x7fffffff, buffer, 300);
-            errln("N.nameToUnicode([%d] %s) unexpected errors %04lx or string %s",
-                  (int)i, testCase.s, (long)uNInfo.getErrors(), buffer);
-            continue;
+        if(mode=='B' || mode=='N') {
+            if(uNInfo.getErrors()!=uniErrors) {
+                errln("N.nameToUnicode([%d] %s) unexpected errors %04lx",
+                      (int)i, testCase.s, (long)uNInfo.getErrors());
+                continue;
+            }
+            if(uN!=expected) {
+                char buffer[300];
+                prettify(uN).extract(0, 0x7fffffff, buffer, 300);
+                errln("N.nameToUnicode([%d] %s) unexpected string %s",
+                      (int)i, testCase.s, buffer);
+                continue;
+            }
         }
-        if((mode=='B' || mode=='T') && (uT!=expected || uTInfo.getErrors()!=uniErrors)) {
-            char buffer[300];
-            prettify(uT).extract(0, 0x7fffffff, buffer, 300);
-            errln("T.nameToUnicode([%d] %s) unexpected errors %04lx or string %s",
-                  (int)i, testCase.s, (long)uTInfo.getErrors(), buffer);
-            continue;
+        if(mode=='B' || mode=='T') {
+            if(uTInfo.getErrors()!=uniErrors) {
+                errln("T.nameToUnicode([%d] %s) unexpected errors %04lx",
+                      (int)i, testCase.s, (long)uTInfo.getErrors());
+                continue;
+            }
+            if(uT!=expected) {
+                char buffer[300];
+                prettify(uT).extract(0, 0x7fffffff, buffer, 300);
+                errln("T.nameToUnicode([%d] %s) unexpected string %s",
+                      (int)i, testCase.s, buffer);
+                continue;
+            }
         }
         // labelToUnicode
         // second-level processing

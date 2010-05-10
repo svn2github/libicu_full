@@ -735,19 +735,6 @@ UTS46::processLabel(UnicodeString &dest,
         // label ends with "-"
         info.labelErrors|=UIDNA_ERROR_TRAILING_HYPHEN;
     }
-    UChar32 c;
-    int32_t cpLength=0;
-    // "Unsafe" is ok because unpaired surrogates were mapped to U+FFFD.
-    U16_NEXT_UNSAFE(label, cpLength, c);
-    if((U_GET_GC_MASK(c)&U_GC_M_MASK)!=0) {
-        info.labelErrors|=UIDNA_ERROR_LEADING_COMBINING_MARK;
-        labelString->replace(labelStart, cpLength, (UChar)0xfffd);
-        label=labelString->getBuffer()+labelStart;
-        labelLength+=1-cpLength;
-        if(labelString==&dest) {
-            destLabelLength=labelLength;
-        }
-    }
     // If the label was not a Punycode label, then it was the result of
     // mapping, normalization and label segmentation.
     // If the label was in Punycode, then we mapped it again above
@@ -784,8 +771,23 @@ UTS46::processLabel(UnicodeString &dest,
         }
         ++s;
     } while(s<limit);
-    if((info.labelErrors&UIDNA_ERROR_DISALLOWED)==0) {
-        // Do contextual checks only if we do not have U+FFFD from a disallowed character
+    // Check for a leading combining mark after other validity checks
+    // so that we don't report UIDNA_ERROR_DISALLOWED for the U+FFFD from here.
+    UChar32 c;
+    int32_t cpLength=0;
+    // "Unsafe" is ok because unpaired surrogates were mapped to U+FFFD.
+    U16_NEXT_UNSAFE(label, cpLength, c);
+    if((U_GET_GC_MASK(c)&U_GC_M_MASK)!=0) {
+        info.labelErrors|=UIDNA_ERROR_LEADING_COMBINING_MARK;
+        labelString->replace(labelStart, cpLength, (UChar)0xfffd);
+        label=labelString->getBuffer()+labelStart;
+        labelLength+=1-cpLength;
+        if(labelString==&dest) {
+            destLabelLength=labelLength;
+        }
+    }
+    if((info.labelErrors&severeErrors)==0) {
+        // Do contextual checks only if we do not have U+FFFD from a severe error
         // because U+FFFD can make these checks fail.
         if( (options&UIDNA_CHECK_BIDI)!=0 && oredChars>=0x590 &&
             !isLabelOkBiDi(label, labelLength)
@@ -965,7 +967,7 @@ UTS46::isLabelOkBiDi(const UChar *label, int32_t labelLength) const {
     }
     if(firstMask&L_MASK) {
         // 5. In an LTR label, only characters with the BIDI properties L, EN,
-        // ES, CS.  ET, ON, BN and NSM are allowed.
+        // ES, CS, ET, ON, BN and NSM are allowed.
         if((mask&~L_EN_ES_CS_ET_ON_BN_NSM_MASK)!=0) {
             return FALSE;
         }
