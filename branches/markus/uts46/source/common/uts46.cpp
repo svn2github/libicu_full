@@ -53,6 +53,12 @@ isASCIIString(const UnicodeString &dest) {
     return TRUE;
 }
 
+static UBool
+isASCIIOkBiDi(const UChar *s, int32_t length);
+
+static UBool
+isASCIIOkBiDi(const char *s, int32_t length);
+
 // IDNA class default implementations -------------------------------------- ***
 
 void
@@ -177,8 +183,8 @@ private:
                     int32_t labelStart, int32_t labelLength,
                     UBool toASCII, IDNAInfo &info) const;
 
-    UBool
-    isLabelOkBiDi(const UChar *label, int32_t labelLength) const;
+    void
+    checkLabelBiDi(const UChar *label, int32_t labelLength, IDNAInfo &info) const;
 
     UBool
     isLabelOkContextJ(const UChar *label, int32_t labelLength) const;
@@ -379,7 +385,13 @@ UTS46::process(const UnicodeString &src,
     }
     info.errors|=info.labelErrors;
     dest.releaseBuffer(i);
-    return processUnicode(src, labelStart, i, isLabel, toASCII, dest, info, errorCode);
+    processUnicode(src, labelStart, i, isLabel, toASCII, dest, info, errorCode);
+    if( info.isBiDi && U_SUCCESS(errorCode) && (info.errors&severeErrors)==0 &&
+        (!info.isOkBiDi || (labelStart>0 && !isASCIIOkBiDi(dest.getBuffer(), labelStart)))
+    ) {
+        info.errors|=UIDNA_ERROR_BIDI;
+    }
+    return dest;
 }
 
 void
@@ -497,6 +509,11 @@ UTS46::processUTF8(const StringPiece &src,
         ) {
             info.errors|=UIDNA_ERROR_DOMAIN_NAME_TOO_LONG;
         }
+    }
+    if( info.isBiDi && U_SUCCESS(errorCode) && (info.errors&severeErrors)==0 &&
+        (!info.isOkBiDi || (labelStart>0 && !isASCIIOkBiDi(srcArray, labelStart)))
+    ) {
+        info.errors|=UIDNA_ERROR_BIDI;
     }
 }
 
@@ -789,10 +806,8 @@ UTS46::processLabel(UnicodeString &dest,
     if((info.labelErrors&severeErrors)==0) {
         // Do contextual checks only if we do not have U+FFFD from a severe error
         // because U+FFFD can make these checks fail.
-        if( (options&UIDNA_CHECK_BIDI)!=0 && oredChars>=0x590 &&
-            !isLabelOkBiDi(label, labelLength)
-        ) {
-            info.labelErrors|=UIDNA_ERROR_BIDI;
+        if((options&UIDNA_CHECK_BIDI)!=0 && (!info.isBiDi || info.isOkBiDi)) {
+            checkLabelBiDi(label, labelLength, info);
         }
         if( (options&UIDNA_CHECK_CONTEXTJ)!=0 && (oredChars&0x200c)==0x200c &&
             !isLabelOkContextJ(label, labelLength)
@@ -905,6 +920,8 @@ UTS46::markBadACELabel(UnicodeString &dest,
 #define R_AL_MASK (U_MASK(U_RIGHT_TO_LEFT)|U_MASK(U_RIGHT_TO_LEFT_ARABIC))
 #define L_R_AL_MASK (L_MASK|R_AL_MASK)
 
+#define R_AL_AN_MASK (R_AL_MASK|U_MASK(U_ARABIC_NUMBER))
+
 #define EN_AN_MASK (U_MASK(U_EUROPEAN_NUMBER)|U_MASK(U_ARABIC_NUMBER))
 #define R_AL_EN_AN_MASK (R_AL_MASK|EN_AN_MASK)
 #define L_EN_MASK (L_MASK|U_MASK(U_EUROPEAN_NUMBER))
@@ -919,8 +936,13 @@ UTS46::markBadACELabel(UnicodeString &dest,
 #define L_EN_ES_CS_ET_ON_BN_NSM_MASK (L_EN_MASK|ES_CS_ET_ON_BN_NSM_MASK)
 #define R_AL_AN_EN_ES_CS_ET_ON_BN_NSM_MASK (R_AL_MASK|EN_AN_MASK|ES_CS_ET_ON_BN_NSM_MASK)
 
-UBool
-UTS46::isLabelOkBiDi(const UChar *label, int32_t labelLength) const {
+// We scan the whole label and check both for whether it contains RTL characters
+// and whether it passes the BiDi Rule.
+// In a BiDi domain name, all labels must pass the BiDi Rule, but we might find
+// that a domain name is a BiDi domain name (has an RTL label) only after
+// processing several earlier labels.
+void
+UTS46::checkLabelBiDi(const UChar *label, int32_t labelLength, IDNAInfo &info) const {
     // IDNA2008 BiDi rule
     // Get the directionality of the first character.
     UChar32 c;
@@ -931,7 +953,7 @@ UTS46::isLabelOkBiDi(const UChar *label, int32_t labelLength) const {
     // or AL.  If it has the R or AL property, it is an RTL label; if it
     // has the L property, it is an LTR label.
     if((firstMask&~L_R_AL_MASK)!=0) {
-        return FALSE;
+        info.isOkBiDi=FALSE;
     }
     // Get the directionality of the last non-NSM character.
     uint32_t lastMask;
@@ -957,7 +979,7 @@ UTS46::isLabelOkBiDi(const UChar *label, int32_t labelLength) const {
             (lastMask&~L_EN_MASK)!=0 :
             (lastMask&~R_AL_EN_AN_MASK)!=0
     ) {
-        return FALSE;
+        info.isOkBiDi=FALSE;
     }
     // Get the directionalities of the intervening characters.
     uint32_t mask=0;
@@ -969,18 +991,100 @@ UTS46::isLabelOkBiDi(const UChar *label, int32_t labelLength) const {
         // 5. In an LTR label, only characters with the BIDI properties L, EN,
         // ES, CS, ET, ON, BN and NSM are allowed.
         if((mask&~L_EN_ES_CS_ET_ON_BN_NSM_MASK)!=0) {
-            return FALSE;
+            info.isOkBiDi=FALSE;
         }
     } else {
         // 2. In an RTL label, only characters with the BIDI properties R, AL,
         // AN, EN, ES, CS, ET, ON, BN and NSM are allowed.
         if((mask&~R_AL_AN_EN_ES_CS_ET_ON_BN_NSM_MASK)!=0) {
-            return FALSE;
+            info.isOkBiDi=FALSE;
         }
         // 4. In an RTL label, if an EN is present, no AN may be present, and
         // vice versa.
         if((mask&EN_AN_MASK)==EN_AN_MASK) {
-            return FALSE;
+            info.isOkBiDi=FALSE;
+        }
+    }
+    // An RTL label is a label that contains at least one character of type
+    // R, AL or AN. [...]
+    // A "BIDI domain name" is a domain name that contains at least one RTL
+    // label. [...]
+    // The following rule, consisting of six conditions, applies to labels
+    // in BIDI domain names.
+    if(((firstMask|mask|lastMask)&R_AL_AN_MASK)!=0) {
+        info.isBiDi=TRUE;
+    }
+}
+
+// Special code for the ASCII prefix of a BiDi domain name.
+// The ASCII prefix is all-LTR.
+
+// IDNA2008 BiDi rule, parts relevant to ASCII labels:
+// 1. The first character must be a character with BIDI property L [...]
+// 5. In an LTR label, only characters with the BIDI properties L, EN,
+// ES, CS, ET, ON, BN and NSM are allowed.
+// 6. In an LTR label, the end of the label must be a character with
+// BIDI property L or EN [...]
+
+// UTF-16 version, called for mapped ASCII prefix.
+// Cannot contain uppercase A-Z.
+// s[length-1] must be the trailing dot.
+static UBool
+isASCIIOkBiDi(const UChar *s, int32_t length) {
+    int32_t labelStart=0;
+    for(int32_t i=0; i<length; ++i) {
+        UChar c=s[i];
+        if(c==0x2e) {  // dot
+            if(i>labelStart) {
+                c=s[i-1];
+                if(!(0x61<=c && c<=0x7a) && !(0x30<=c && c<=0x39)) {
+                    // Last character in the label is not an L or EN.
+                    return FALSE;
+                }
+            }
+            labelStart=i+1;
+        } else if(i==labelStart) {
+            if(!(0x61<=c && c<=0x7a)) {
+                // First character in the label is not an L.
+                return FALSE;
+            }
+        } else {
+            if(c<=0x20 && (c>=0x1c || (9<=c && c<=0xd))) {
+                // Intermediate character in the label is a B, S or WS.
+                return FALSE;
+            }
+        }
+    }
+    return TRUE;
+}
+
+// UTF-8 version, called for source ASCII prefix.
+// Can contain uppercase A-Z.
+// s[length-1] must be the trailing dot.
+static UBool
+isASCIIOkBiDi(const char *s, int32_t length) {
+    int32_t labelStart=0;
+    for(int32_t i=0; i<length; ++i) {
+        char c=s[i];
+        if(c==0x2e) {  // dot
+            if(i>labelStart) {
+                c=s[i-1];
+                if(!(0x61<=c && c<=0x7a) && !(0x41<=c && c<=0x5a) && !(0x30<=c && c<=0x39)) {
+                    // Last character in the label is not an L or EN.
+                    return FALSE;
+                }
+            }
+            labelStart=i+1;
+        } else if(i==labelStart) {
+            if(!(0x61<=c && c<=0x7a) && !(0x41<=c && c<=0x5a)) {
+                // First character in the label is not an L.
+                return FALSE;
+            }
+        } else {
+            if(c<=0x20 && (c>=0x1c || (9<=c && c<=0xd))) {
+                // Intermediate character in the label is a B, S or WS.
+                return FALSE;
+            }
         }
     }
     return TRUE;

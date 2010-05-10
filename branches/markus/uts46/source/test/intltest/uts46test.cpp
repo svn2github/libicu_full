@@ -91,6 +91,7 @@ void UTS46Test::TestAPI() {
 
 // TODO: Test various options combinations, e.g., not STD3 passing through non-LDH ASCII.
 // TODO: TestToASCII with a few examples, because the following tests it indirectly.
+// TODO: Not STD3: Test BiDi with space inside ASCII prefix.
 
 struct TestCase {
     // Input string and options string (Nontransitional/Transitional/Both).
@@ -149,7 +150,7 @@ static const TestCase testCases[]={
       "xn--a-\\u00E4.pt", UIDNA_ERROR_PUNYCODE },
     { "\\u65E5\\u672C\\u8A9E\\u3002\\uFF2A\\uFF30", "B",  // Japanese with fullwidth ".jp"
       "\\u65E5\\u672C\\u8A9E.jp", 0 },
-    { "\\u2615", "B", "\\u2615", UIDNA_ERROR_BIDI },  // Unicode 4.0 HOT BEVERAGE
+    { "\\u2615", "B", "\\u2615", 0 },  // Unicode 4.0 HOT BEVERAGE
     // many deviation characters, test the special mapping code
     { "1.a\\u00DF\\u200C\\u200Db\\u200C\\u200Dc\\u00DF\\u00DF\\u00DF\\u00DFd"
       "\\u03C2\\u03C3\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DF\\u00DFe"
@@ -174,7 +175,7 @@ static const TestCase testCases[]={
       "sssssssssssssss\\u015Dssz", 0 },
     // "xn--bss" with deviation characters
     { "\\u200Cx\\u200Dn\\u200C-\\u200D-b\\u00DF", "N",
-      "\\u200Cx\\u200Dn\\u200C-\\u200D-b\\u00DF", UIDNA_ERROR_BIDI|UIDNA_ERROR_CONTEXTJ },
+      "\\u200Cx\\u200Dn\\u200C-\\u200D-b\\u00DF", UIDNA_ERROR_CONTEXTJ },
     { "\\u200Cx\\u200Dn\\u200C-\\u200D-b\\u00DF", "T",
       "\\u5919", 0 },
     // "xn--bssffl" written as:
@@ -330,7 +331,15 @@ static const TestCase testCases[]={
     { "a.b.xn--c-bcb.d", "B", "a.b.xn--c-bcb\\uFFFD.d", UIDNA_ERROR_LEADING_COMBINING_MARK },
     // BiDi
     { "A0", "B", "a0", 0 },
-    // TODO: revisit BIDI Rule { "0A", "B", "0a", UIDNA_ERROR_BIDI },  // does not start with L/R/AL
+    { "0A", "B", "0a", 0 },  // all-LTR is ok to start with a digit (EN)
+    { "0A.\\u05D0", "B",  // ASCII label does not start with L/R/AL
+      "0a.\\u05D0", UIDNA_ERROR_BIDI },
+    { "c.xn--0-eha.xn--4db", "B",  // 2nd label does not start with L/R/AL
+      "c.0\\u00FC.\\u05D0", UIDNA_ERROR_BIDI },
+    { "b-.\\u05D0", "B",  // label does not end with L/EN
+      "b-.\\u05D0", UIDNA_ERROR_TRAILING_HYPHEN|UIDNA_ERROR_BIDI },
+    { "d.xn----dha.xn--4db", "B",  // 2nd label does not end with L/EN
+      "d.\\u00FC-.\\u05D0", UIDNA_ERROR_TRAILING_HYPHEN|UIDNA_ERROR_BIDI },
     { "a\\u05D0", "B", "a\\u05D0", UIDNA_ERROR_BIDI },  // first dir != last dir
     { "\\u05D0\\u05C7", "B", "\\u05D0\\u05C7", 0 },
     { "\\u05D09\\u05C7", "B", "\\u05D09\\u05C7", 0 },
@@ -345,13 +354,13 @@ static const TestCase testCases[]={
     { "\\u05D07\\u0667\\u05EA", "B",  // mixed EN/AN digits in RTL
       "\\u05D07\\u0667\\u05EA", UIDNA_ERROR_BIDI },
     // ZWJ
-    { "\\u0BB9\\u0BCD\\u200D", "N", "\\u0BB9\\u0BCD\\u200D", UIDNA_ERROR_BIDI },  // Virama+ZWJ
-    { "\\u0BB9\\u200D", "N", "\\u0BB9\\u200D", UIDNA_ERROR_BIDI|UIDNA_ERROR_CONTEXTJ },  // no Virama
-    { "\\u200D", "N", "\\u200D", UIDNA_ERROR_BIDI|UIDNA_ERROR_CONTEXTJ },  // no Virama
+    { "\\u0BB9\\u0BCD\\u200D", "N", "\\u0BB9\\u0BCD\\u200D", 0 },  // Virama+ZWJ
+    { "\\u0BB9\\u200D", "N", "\\u0BB9\\u200D", UIDNA_ERROR_CONTEXTJ },  // no Virama
+    { "\\u200D", "N", "\\u200D", UIDNA_ERROR_CONTEXTJ },  // no Virama
     // ZWNJ
-    { "\\u0BB9\\u0BCD\\u200C", "N", "\\u0BB9\\u0BCD\\u200C", UIDNA_ERROR_BIDI },  // Virama+ZWNJ
-    { "\\u0BB9\\u200C", "N", "\\u0BB9\\u200C", UIDNA_ERROR_BIDI|UIDNA_ERROR_CONTEXTJ },  // no Virama
-    { "\\u200C", "N", "\\u200C", UIDNA_ERROR_BIDI|UIDNA_ERROR_CONTEXTJ },  // no Virama
+    { "\\u0BB9\\u0BCD\\u200C", "N", "\\u0BB9\\u0BCD\\u200C", 0 },  // Virama+ZWNJ
+    { "\\u0BB9\\u200C", "N", "\\u0BB9\\u200C", UIDNA_ERROR_CONTEXTJ },  // no Virama
+    { "\\u200C", "N", "\\u200C", UIDNA_ERROR_CONTEXTJ },  // no Virama
     { "\\u0644\\u0670\\u200C\\u06ED\\u06EF", "N",  // Joining types D T ZWNJ T R
       "\\u0644\\u0670\\u200C\\u06ED\\u06EF", 0 },
     { "\\u0644\\u0670\\u200C\\u06EF", "N",  // D T ZWNJ R

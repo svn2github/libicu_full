@@ -264,6 +264,7 @@ class UTS46;
 
 /**
  * Output container for IDNA processing errors.
+ * The IDNAInfo class is not suitable for subclassing.
  * @draft ICU 4.6
  */
 class U_COMMON_API IDNAInfo : public UObject {
@@ -272,7 +273,7 @@ public:
      * Constructor for stack allocation.
      * @draft ICU 4.6
      */
-    IDNAInfo() : errors(0), labelErrors(0), isTransDiff(FALSE) {}
+    IDNAInfo() : errors(0), labelErrors(0), isTransDiff(FALSE), isBiDi(FALSE), isOkBiDi(TRUE) {}
     /**
      * Were there IDNA processing errors?
      * @return TRUE if there were processing errors
@@ -324,10 +325,14 @@ private:
     void reset() {
         errors=labelErrors=0;
         isTransDiff=FALSE;
+        isBiDi=FALSE;
+        isOkBiDi=TRUE;
     }
 
     uint32_t errors, labelErrors;
     UBool isTransDiff;
+    UBool isBiDi;
+    UBool isOkBiDi;
 };
 
 U_NAMESPACE_END
