@@ -170,7 +170,7 @@ private:
     // returns the new dest.length()
     int32_t
     mapDevChars(UnicodeString &dest, int32_t labelStart, int32_t mappingStart,
-                IDNAInfo &info, UErrorCode &errorCode) const;
+                UErrorCode &errorCode) const;
 
     // returns the new label length
     int32_t
@@ -534,36 +534,27 @@ UTS46::processUnicode(const UnicodeString &src,
     UBool doMapDevChars=
         toASCII ? (options&UIDNA_NONTRANSITIONAL_TO_ASCII)==0 :
                   (options&UIDNA_NONTRANSITIONAL_TO_UNICODE)==0;
-    if(isLabel) {
-        int32_t length=dest.length();
-        if(doMapDevChars && length>0) {
-            length=mapDevChars(dest, 0, 0, info, errorCode);
+    const UChar *destArray=dest.getBuffer();
+    int32_t destLength=dest.length();
+    int32_t labelLimit=labelStart;
+    while(labelLimit<destLength) {
+        UChar c=destArray[labelLimit];
+        if(c==0x2e && !isLabel) {
+            int32_t labelLength=labelLimit-labelStart;
+            int32_t newLength=processLabel(dest, labelStart, labelLength,
+                                            toASCII, info, errorCode);
+            info.errors|=info.labelErrors;
+            info.labelErrors=0;
             if(U_FAILURE(errorCode)) {
                 return dest;
             }
-        }
-        processLabel(dest, 0, length, toASCII, info, errorCode);
-        info.errors|=info.labelErrors;
-    } else {
-        const UChar *destArray=dest.getBuffer();
-        int32_t destLength=dest.length();
-        int32_t labelLimit=labelStart;
-        while(labelLimit<destLength) {
-            UChar c=destArray[labelLimit];
-            if(c==0x2e) {
-                int32_t labelLength=labelLimit-labelStart;
-                int32_t newLength=processLabel(dest, labelStart, labelLength,
-                                               toASCII, info, errorCode);
-                info.errors|=info.labelErrors;
-                info.labelErrors=0;
-                if(U_FAILURE(errorCode)) {
-                    return dest;
-                }
-                destArray=dest.getBuffer();
-                destLength+=newLength-labelLength;
-                labelLimit=labelStart+=newLength+1;
-            } else if(doMapDevChars && 0xdf<=c && c<=0x200d && (c==0xdf || c==0x3c2 || c>=0x200c)) {
-                destLength=mapDevChars(dest, labelStart, labelLimit, info, errorCode);
+            destArray=dest.getBuffer();
+            destLength+=newLength-labelLength;
+            labelLimit=labelStart+=newLength+1;
+        } else if(0xdf<=c && c<=0x200d && (c==0xdf || c==0x3c2 || c>=0x200c)) {
+            info.isTransDiff=TRUE;
+            if(doMapDevChars) {
+                destLength=mapDevChars(dest, labelStart, labelLimit, errorCode);
                 if(U_FAILURE(errorCode)) {
                     return dest;
                 }
@@ -574,22 +565,24 @@ UTS46::processUnicode(const UnicodeString &src,
             } else {
                 ++labelLimit;
             }
+        } else {
+            ++labelLimit;
         }
-        // Permit an empty label at the end (0<labelStart==labelLimit==destLength is ok)
-        // but not an empty label elsewhere nor a completely empty domain name.
-        // processLabel() sets UIDNA_ERROR_EMPTY_LABEL when labelLength==0.
-        if(0==labelStart || labelStart<labelLimit) {
-            processLabel(dest, labelStart, labelLimit-labelStart,
-                         toASCII, info, errorCode);
-            info.errors|=info.labelErrors;
-        }
+    }
+    // Permit an empty label at the end (0<labelStart==labelLimit==destLength is ok)
+    // but not an empty label elsewhere nor a completely empty domain name.
+    // processLabel() sets UIDNA_ERROR_EMPTY_LABEL when labelLength==0.
+    if(0==labelStart || labelStart<labelLimit) {
+        processLabel(dest, labelStart, labelLimit-labelStart,
+                      toASCII, info, errorCode);
+        info.errors|=info.labelErrors;
     }
     return dest;
 }
 
 int32_t
 UTS46::mapDevChars(UnicodeString &dest, int32_t labelStart, int32_t mappingStart,
-                   IDNAInfo &info, UErrorCode &errorCode) const {
+                   UErrorCode &errorCode) const {
     int32_t length=dest.length();
     UChar *s=dest.getBuffer(dest[mappingStart]==0xdf ? length+1 : length);
     if(s==NULL) {
@@ -640,7 +633,6 @@ UTS46::mapDevChars(UnicodeString &dest, int32_t labelStart, int32_t mappingStart
     } while(writeIndex<length);
     dest.releaseBuffer(length);
     if(didMapDevChars) {
-        info.isTransDiff=TRUE;
         // Mapping deviation characters might have resulted in an un-NFC string.
         // We could use either the NFC or the UTS #46 normalizer.
         // By using the UTS #46 normalizer again, we avoid having to load a second .nrm data file.
@@ -814,60 +806,62 @@ UTS46::processLabel(UnicodeString &dest,
         ) {
             info.labelErrors|=UIDNA_ERROR_CONTEXTJ;
         }
-    }
-    // If a Punycode label has severe errors, then leave it but make sure it does not look valid.
-    if(wasPunycode && (info.labelErrors&severeErrors)!=0) {
-        return markBadACELabel(dest, destLabelStart, destLabelLength, toASCII, info);
-    }
-    if(toASCII) {
-        if(wasPunycode) {
-            // Leave a Punycode label unchanged if it has no severe errors.
-            if(destLabelLength>63) {
-                info.labelErrors|=UIDNA_ERROR_LABEL_TOO_LONG;
-            }
-            return destLabelLength;
-        } else if(oredChars>=0x80) {
-            // Contains non-ASCII characters.
-            UnicodeString punycode;
-            UChar *buffer=punycode.getBuffer(63);  // 63==maximum DNS label length
-            if(buffer==NULL) {
-                errorCode=U_MEMORY_ALLOCATION_ERROR;
+        if(toASCII) {
+            if(wasPunycode) {
+                // Leave a Punycode label unchanged if it has no severe errors.
+                if(destLabelLength>63) {
+                    info.labelErrors|=UIDNA_ERROR_LABEL_TOO_LONG;
+                }
                 return destLabelLength;
-            }
-            buffer[0]=0x78;  // Write "xn--".
-            buffer[1]=0x6e;
-            buffer[2]=0x2d;
-            buffer[3]=0x2d;
-            int32_t punycodeLength=u_strToPunycode(label, labelLength,
-                                                   buffer+4, punycode.getCapacity()-4,
-                                                   NULL, &errorCode);
-            if(errorCode==U_BUFFER_OVERFLOW_ERROR) {
-                errorCode=U_ZERO_ERROR;
-                punycode.releaseBuffer(4);
-                buffer=punycode.getBuffer(4+punycodeLength);
+            } else if(oredChars>=0x80) {
+                // Contains non-ASCII characters.
+                UnicodeString punycode;
+                UChar *buffer=punycode.getBuffer(63);  // 63==maximum DNS label length
                 if(buffer==NULL) {
                     errorCode=U_MEMORY_ALLOCATION_ERROR;
                     return destLabelLength;
                 }
-                punycodeLength=u_strToPunycode(label, labelLength,
-                                               buffer+4, punycode.getCapacity()-4,
-                                               NULL, &errorCode);
+                buffer[0]=0x78;  // Write "xn--".
+                buffer[1]=0x6e;
+                buffer[2]=0x2d;
+                buffer[3]=0x2d;
+                int32_t punycodeLength=u_strToPunycode(label, labelLength,
+                                                      buffer+4, punycode.getCapacity()-4,
+                                                      NULL, &errorCode);
+                if(errorCode==U_BUFFER_OVERFLOW_ERROR) {
+                    errorCode=U_ZERO_ERROR;
+                    punycode.releaseBuffer(4);
+                    buffer=punycode.getBuffer(4+punycodeLength);
+                    if(buffer==NULL) {
+                        errorCode=U_MEMORY_ALLOCATION_ERROR;
+                        return destLabelLength;
+                    }
+                    punycodeLength=u_strToPunycode(label, labelLength,
+                                                  buffer+4, punycode.getCapacity()-4,
+                                                  NULL, &errorCode);
+                }
+                punycodeLength+=4;
+                punycode.releaseBuffer(punycodeLength);
+                if(U_FAILURE(errorCode)) {
+                    return destLabelLength;
+                }
+                if(punycodeLength>63) {
+                    info.labelErrors|=UIDNA_ERROR_LABEL_TOO_LONG;
+                }
+                return replaceLabel(dest, destLabelStart, destLabelLength,
+                                    punycode, punycodeLength);
+            } else {
+                // all-ASCII label
+                if(labelLength>63) {
+                    info.labelErrors|=UIDNA_ERROR_LABEL_TOO_LONG;
+                }
             }
-            punycodeLength+=4;
-            punycode.releaseBuffer(punycodeLength);
-            if(U_FAILURE(errorCode)) {
-                return destLabelLength;
-            }
-            if(punycodeLength>63) {
-                info.labelErrors|=UIDNA_ERROR_LABEL_TOO_LONG;
-            }
-            return replaceLabel(dest, destLabelStart, destLabelLength,
-                                punycode, punycodeLength);
-        } else {
-            // all-ASCII label
-            if(labelLength>63) {
-                info.labelErrors|=UIDNA_ERROR_LABEL_TOO_LONG;
-            }
+        }
+    } else {
+        // If a Punycode label has severe errors,
+        // then leave it but make sure it does not look valid.
+        if(wasPunycode) {
+            return markBadACELabel(dest, destLabelStart, destLabelLength, toASCII, info);
         }
     }
     return replaceLabel(dest, destLabelStart, destLabelLength, *labelString, labelLength);

@@ -84,7 +84,7 @@ public:
      * If any processing step fails, then info.hasErrors() will be TRUE and
      * the result might not be an ASCII string.
      * The label might be modified according to the types of errors.
-     * Labels with errors will be left in (or turned into) their Unicode form.
+     * Labels with severe errors will be left in (or turned into) their Unicode form.
      *
      * The UErrorCode indicates an error only in exceptional cases,
      * such as a U_MEMORY_ALLOCATION_ERROR.
@@ -130,7 +130,7 @@ public:
      * If any processing step fails, then info.hasErrors() will be TRUE and
      * the result might not be an ASCII string.
      * The domain name might be modified according to the types of errors.
-     * Labels with errors will be left in (or turned into) their Unicode form.
+     * Labels with severe errors will be left in (or turned into) their Unicode form.
      *
      * The UErrorCode indicates an error only in exceptional cases,
      * such as a U_MEMORY_ALLOCATION_ERROR.
