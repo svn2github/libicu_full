@@ -18,6 +18,7 @@
 
 #include "unicode/bytestream.h"
 #include "unicode/idna.h"
+#include "unicode/localpointer.h"
 #include "unicode/std_string.h"
 #include "unicode/stringpiece.h"
 #include "unicode/uidna.h"
@@ -33,6 +34,7 @@ public:
 
     void runIndexedTest(int32_t index, UBool exec, const char *&name, char *par=NULL);
     void TestAPI();
+    void TestNotSTD3();
     void TestSomeCases();
 private:
     IDNA *trans, *nontrans;
@@ -65,13 +67,11 @@ void UTS46Test::runIndexedTest(int32_t index, UBool exec, const char *&name, cha
             }
         }
     }
-    switch (index) {
-        TESTCASE(0, TestAPI);
-        TESTCASE(1, TestSomeCases);
-        default:
-            name="";
-            break;  // needed to end the loop
-    }
+    TESTCASE_AUTO_BEGIN;
+    TESTCASE_AUTO(TestAPI);
+    TESTCASE_AUTO(TestNotSTD3);
+    TESTCASE_AUTO(TestSomeCases);
+    TESTCASE_AUTO_END;
 }
 
 const uint32_t severeErrors=
@@ -93,23 +93,104 @@ static UBool isASCII(const UnicodeString &str) {
 }
 
 void UTS46Test::TestAPI() {
-    IcuTestErrorCode errorCode(*this, "TestAPI");
+    UErrorCode errorCode=U_ZERO_ERROR;
     UnicodeString result;
     IDNAInfo info;
     UnicodeString input=UNICODE_STRING_SIMPLE("www.eXample.cOm");
     UnicodeString expected=UNICODE_STRING_SIMPLE("www.example.com");
     trans->nameToASCII(input, result, info, errorCode);
-    if( !errorCode.logIfFailureAndReset("trans->nameToASCII(www.example.com)") &&
-        (info.hasErrors() || result!=expected)
-    ) {
-        errln("trans->nameToASCII(www.example.com) info.errors=%04lx result matches=%d",
-              (long)info.getErrors(), result==expected);
+    if(U_FAILURE(errorCode) || info.hasErrors() || result!=expected) {
+        errln("T.nameToASCII(www.example.com) info.errors=%04lx result matches=%d %s",
+              (long)info.getErrors(), result==expected, u_errorName(errorCode));
+    }
+    errorCode=U_USELESS_COLLATOR_ERROR;
+    trans->nameToUnicode(input, result, info, errorCode);
+    if(errorCode!=U_USELESS_COLLATOR_ERROR || !result.isBogus()) {
+        errln("T.nameToUnicode(U_FAILURE) did not preserve the errorCode "
+              "or not result.setToBogus() - %s",
+              u_errorName(errorCode));
+    }
+    errorCode=U_ZERO_ERROR;
+    input.setToBogus();
+    result=UNICODE_STRING_SIMPLE("quatsch");
+    nontrans->labelToASCII(input, result, info, errorCode);
+    if(errorCode!=U_ILLEGAL_ARGUMENT_ERROR || !result.isBogus()) {
+        errln("N.labelToASCII(bogus) did not set illegal-argument-error "
+              "or not result.setToBogus() - %s",
+              u_errorName(errorCode));
+    }
+    // UTF-8
+    char buffer[100];
+    {
+        // TODO: Reuse the sink once ticket #7684 is implemented.
+        CheckedArrayByteSink sink(buffer, LENGTHOF(buffer));
+        errorCode=U_ZERO_ERROR;
+        nontrans->labelToUnicodeUTF8(StringPiece(NULL, 5), sink, info, errorCode);
+        if(errorCode!=U_ILLEGAL_ARGUMENT_ERROR || sink.NumberOfBytesWritten()!=0) {
+            errln("N.labelToUnicodeUTF8(StringPiece(NULL, 5)) did not set illegal-argument-error ",
+                  "or did output something - %s",
+                  u_errorName(errorCode));
+        }
+    }
+    {
+        CheckedArrayByteSink sink(buffer, LENGTHOF(buffer));
+        errorCode=U_ZERO_ERROR;
+        nontrans->nameToASCII_UTF8(StringPiece(), sink, info, errorCode);
+        if(U_FAILURE(errorCode) || sink.NumberOfBytesWritten()!=0) {
+            errln("N.nameToASCII_UTF8(empty) failed - %s",
+                  u_errorName(errorCode));
+        }
+    }
+    {
+        char s[]={ 0x61, (char)0xc3, (char)0x9f };
+        CheckedArrayByteSink sink(buffer, LENGTHOF(buffer));
+        errorCode=U_USELESS_COLLATOR_ERROR;
+        nontrans->nameToUnicodeUTF8(StringPiece(s, 3), sink, info, errorCode);
+        if(errorCode!=U_USELESS_COLLATOR_ERROR || sink.NumberOfBytesWritten()!=0) {
+            errln("N.nameToUnicode_UTF8(U_FAILURE) did not preserve the errorCode "
+                  "or did output something - %s",
+                  u_errorName(errorCode));
+        }
+    }
+    {
+        char s[]={ 0x61, (char)0xc3, (char)0x9f };
+        CheckedArrayByteSink sink(buffer, LENGTHOF(buffer));
+        errorCode=U_ZERO_ERROR;
+        trans->labelToUnicodeUTF8(StringPiece(s, 3), sink, info, errorCode);
+        if( U_FAILURE(errorCode) || sink.NumberOfBytesWritten()!=3 ||
+            buffer[0]!=0x61 || buffer[1]!=0x73 || buffer[2]!=0x73
+        ) {
+            errln("T.labelToUnicode_UTF8(a sharp-s) failed - %s",
+                  u_errorName(errorCode));
+        }
     }
 }
 
-// TODO: Test various options combinations, e.g., not STD3 passing through non-LDH ASCII.
-// TODO: TestToASCII with a few examples, because the following tests it indirectly.
-// TODO: Not STD3: Test BiDi with space inside ASCII prefix.
+void UTS46Test::TestNotSTD3() {
+    IcuTestErrorCode errorCode(*this, "TestNotSTD3()");
+    char buffer[400];
+    LocalPointer<IDNA> not3(IDNA::createUTS46Instance(UIDNA_CHECK_BIDI, errorCode));
+    if(errorCode.isFailure()) {
+        return;
+    }
+    UnicodeString input=UNICODE_STRING_SIMPLE("\\u0000A_2+2=4\\u000A.e\\u00DFen.net").unescape();
+    UnicodeString result;
+    IDNAInfo info;
+    if( not3->nameToUnicode(input, result, info, errorCode)!=
+            UNICODE_STRING_SIMPLE("\\u0000a_2+2=4\\u000A.essen.net").unescape() ||
+        info.hasErrors()
+    ) {
+        prettify(result).extract(0, 0x7fffffff, buffer, LENGTHOF(buffer));
+        errln("notSTD3.nameToUnicode(non-LDH ASCII) unexpected errors %04lx string %s",
+              (long)info.getErrors(), buffer);
+    }
+    // A space (BiDi class WS) is not allowed in a BiDi domain name.
+    input=UNICODE_STRING_SIMPLE("a z.xn--4db.edu");
+    not3->nameToASCII(input, result, info, errorCode);
+    if(result!=input || info.getErrors()!=UIDNA_ERROR_BIDI) {
+        errln("notSTD3.nameToASCII(ASCII-with-space.alef.edu) failed");
+    }
+}
 
 struct TestCase {
     // Input string and options string (Nontransitional/Transitional/Both).
@@ -473,12 +554,15 @@ void UTS46Test::TestSomeCases() {
             continue;
         }
         if(verbose) {
+            char m= mode=='B' ? mode : 'N';
             prettify(aN).extract(0, 0x7fffffff, buffer, LENGTHOF(buffer));
-            logln("N.nameToASCII([%d] %s) (errors %04lx) result string: %s",
-                  (int)i, testCase.s, aNInfo.getErrors(), buffer);
-            prettify(aT).extract(0, 0x7fffffff, buffer, LENGTHOF(buffer));
-            logln("T.nameToASCII([%d] %s) (errors %04lx) result string: %s",
-                  (int)i, testCase.s, aTInfo.getErrors(), buffer);
+            logln("%c.nameToASCII([%d] %s) (errors %04lx) result string: %s",
+                  m, (int)i, testCase.s, aNInfo.getErrors(), buffer);
+            if(mode!='B') {
+                prettify(aT).extract(0, 0x7fffffff, buffer, LENGTHOF(buffer));
+                logln("T.nameToASCII([%d] %s) (errors %04lx) result string: %s",
+                      (int)i, testCase.s, aTInfo.getErrors(), buffer);
+            }
         }
         // second-level processing
         UnicodeString aTuN, uTaN, aNuN, uNaN;
