@@ -119,6 +119,17 @@ void UTS46Test::TestAPI() {
               "or not result.setToBogus() - %s",
               u_errorName(errorCode));
     }
+    errorCode=U_ZERO_ERROR;
+    input=UNICODE_STRING_SIMPLE("xn--bcher.de-65a");
+    expected=UNICODE_STRING_SIMPLE("xn--bcher\\uFFFDde-65a").unescape();
+    nontrans->labelToASCII(input, result, info, errorCode);
+    if( U_FAILURE(errorCode) ||
+        info.getErrors()!=(UIDNA_ERROR_LABEL_HAS_DOT|UIDNA_ERROR_INVALID_ACE_LABEL) ||
+        result!=expected
+    ) {
+        errln("N.labelToASCII(label-with-dot) failed with errors %04lx - %s",
+              info.getErrors(), u_errorName(errorCode));
+    }
     // UTF-8
     char buffer[100];
     {
@@ -312,15 +323,29 @@ static const TestCase testCases[]={
       "123456789012345678901234567890123456789012345678901234567890123."
       "123456789012345678901234567890123456789012345678901234567890123."
       "1234567890123456789012345678901234567890123456789012345678901.", 0 },
+    // Domain name >256 characters, forces slow path in UTF-8 processing.
     { "123456789012345678901234567890123456789012345678901234567890123."
+      "123456789012345678901234567890123456789012345678901234567890123."
       "123456789012345678901234567890123456789012345678901234567890123."
       "123456789012345678901234567890123456789012345678901234567890123."
       "12345678901234567890123456789012345678901234567890123456789012", "B",
       "123456789012345678901234567890123456789012345678901234567890123."
       "123456789012345678901234567890123456789012345678901234567890123."
       "123456789012345678901234567890123456789012345678901234567890123."
+      "123456789012345678901234567890123456789012345678901234567890123."
       "12345678901234567890123456789012345678901234567890123456789012",
       UIDNA_ERROR_DOMAIN_NAME_TOO_LONG },
+    { "123456789012345678901234567890123456789012345678901234567890123."
+      "123456789012345678901234567890123456789012345678901234567890123."
+      "123456789012345678901234567890123456789012345678901234567890123."
+      "123456789012345678901234567890123456789012345678901234567890123."
+      "1234567890123456789012345678901234567890123456789\\u05D0", "B",
+      "123456789012345678901234567890123456789012345678901234567890123."
+      "123456789012345678901234567890123456789012345678901234567890123."
+      "123456789012345678901234567890123456789012345678901234567890123."
+      "123456789012345678901234567890123456789012345678901234567890123."
+      "1234567890123456789012345678901234567890123456789\\u05D0",
+      UIDNA_ERROR_DOMAIN_NAME_TOO_LONG|UIDNA_ERROR_BIDI },
     { "123456789012345678901234567890123456789012345678901234567890123."
       "1234567890123456789012345678901234567890123456789012345678901234."
       "123456789012345678901234567890123456789012345678901234567890123."
@@ -427,7 +452,8 @@ static const TestCase testCases[]={
     { "\\u00E4.-.c", "B", "\\u00E4.-.c", UIDNA_ERROR_LEADING_HYPHEN|UIDNA_ERROR_TRAILING_HYPHEN },
     { "\\u00E4.bc--de.f", "B", "\\u00E4.bc--de.f", UIDNA_ERROR_HYPHEN_3_4 },
     { "a.b.\\u0308c.d", "B", "a.b.\\uFFFDc.d", UIDNA_ERROR_LEADING_COMBINING_MARK },
-    { "a.b.xn--c-bcb.d", "B", "a.b.xn--c-bcb\\uFFFD.d", UIDNA_ERROR_LEADING_COMBINING_MARK },
+    { "a.b.xn--c-bcb.d", "B",
+      "a.b.xn--c-bcb\\uFFFD.d", UIDNA_ERROR_LEADING_COMBINING_MARK|UIDNA_ERROR_INVALID_ACE_LABEL },
     // BiDi
     { "A0", "B", "a0", 0 },
     { "0A", "B", "0a", 0 },  // all-LTR is ok to start with a digit (EN)
@@ -728,8 +754,8 @@ void UTS46Test::TestSomeCases() {
         }
         // UTF-8 if we have std::string
 #if U_HAVE_STD_STRING
-        std::string input8, aT8, uT8, aN8, uN8;
-        StringByteSink<std::string> aT8Sink(&aT8), uT8Sink(&uT8), aN8Sink(&aN8), uN8Sink(&uN8);
+        U_STD_NSQ string input8, aT8, uT8, aN8, uN8;
+        StringByteSink<U_STD_NSQ string> aT8Sink(&aT8), uT8Sink(&uT8), aN8Sink(&aN8), uN8Sink(&uN8);
         IDNAInfo aT8Info, uT8Info, aN8Info, uN8Info;
         input.toUTF8String(input8);
         trans->nameToASCII_UTF8(input8, aT8Sink, aT8Info, errorCode);
@@ -745,13 +771,20 @@ void UTS46Test::TestSomeCases() {
         UnicodeString uT16(UnicodeString::fromUTF8(uT8));
         UnicodeString aN16(UnicodeString::fromUTF8(aN8));
         UnicodeString uN16(UnicodeString::fromUTF8(uN8));
-        if( aT8Info.getErrors()!=aTInfo.getErrors() ||
-            uT8Info.getErrors()!=uTInfo.getErrors() ||
-            aN8Info.getErrors()!=aNInfo.getErrors() ||
+        if( aN8Info.getErrors()!=aNInfo.getErrors() ||
             uN8Info.getErrors()!=uNInfo.getErrors()
         ) {
-            errln("%s.xyzUTF8([%d] %s) vs. UTF-16 processing different errors",
-                  testCase.o, (int)i, testCase.s, (long)aTInfo.getErrors());
+            errln("N.xyzUTF8([%d] %s) vs. UTF-16 processing different errors %04lx vs. %04lx",
+                  (int)i, testCase.s,
+                  (long)aN8Info.getErrors(), (long)aNInfo.getErrors());
+            continue;
+        }
+        if( aT8Info.getErrors()!=aTInfo.getErrors() ||
+            uT8Info.getErrors()!=uTInfo.getErrors()
+        ) {
+            errln("T.xyzUTF8([%d] %s) vs. UTF-16 processing different errors %04lx vs. %04lx",
+                  (int)i, testCase.s,
+                  (long)aT8Info.getErrors(), (long)aTInfo.getErrors());
             continue;
         }
         if(aT16!=aT || uT16!=uT || aN16!=aN || uN16!=uN) {
@@ -765,7 +798,7 @@ void UTS46Test::TestSomeCases() {
             uN8Info.isTransitionalDifferent()!=uNInfo.isTransitionalDifferent()
         ) {
             errln("%s.xyzUTF8([%d] %s) vs. UTF-16 processing different isTransitionalDifferent()",
-                  testCase.o, (int)i, testCase.s, (long)aTInfo.getErrors());
+                  testCase.o, (int)i, testCase.s);
             continue;
         }
 #endif

@@ -389,6 +389,7 @@ enum {
     UIDNA_ERROR_DISALLOWED=0x80,
     /**
      * A label starts with "xn--" but does not contain valid Punycode.
+     * That is, an xn-- label failed Punycode decoding.
      * @draft ICU 4.6
      */
     UIDNA_ERROR_PUNYCODE=0x100,
@@ -399,9 +400,11 @@ enum {
      */
     UIDNA_ERROR_LABEL_HAS_DOT=0x200,
     /**
-     * An ACE label is not valid.
-     * It might contain characters that are not allowed in ACE labels,
-     * or it might not be normalized, or both.
+     * An ACE label does not contain a valid label string.
+     * The label was successfully ACE (Punycode) decoded but the resulting
+     * string had severe validation errors. For example,
+     * it might contain characters that are not allowed in ACE labels,
+     * or it might not be normalized.
      * @draft ICU 4.6
      */
     UIDNA_ERROR_INVALID_ACE_LABEL=0x400,

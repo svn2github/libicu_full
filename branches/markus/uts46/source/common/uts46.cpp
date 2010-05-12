@@ -416,89 +416,89 @@ UTS46::processUTF8(const StringPiece &src,
         }
         return;
     }
-    if(srcLength>256) {  // length of stackArray[] below
-        // Too long for the following ASCII fastpath implementation.
-        UnicodeString destString;
-        processUnicode(UnicodeString::fromUTF8(src), 0, 0,
-                       isLabel, toASCII,
-                       destString, info, errorCode).toUTF8(dest);
-        return;
-    }
-    char stackArray[256];
-    int32_t destCapacity;
-    char *destArray=dest.GetAppendBuffer(srcLength, srcLength+20,
-                                         stackArray, LENGTHOF(stackArray), &destCapacity);
-    // ASCII fastpath
-    UBool disallowNonLDHDot=(options&UIDNA_USE_STD3_RULES)!=0;
+    UnicodeString destString;
     int32_t labelStart=0;
-    int32_t i;
-    for(i=0;; ++i) {
-        if(i==srcLength) {
-            if(toASCII) {
-                if((i-labelStart)>63) {
-                    info.labelErrors|=UIDNA_ERROR_LABEL_TOO_LONG;
-                }
-                // There is a trailing dot if labelStart==i.
-                if(!isLabel && i>=254 && (i>254 || labelStart<i)) {
-                    info.errors|=UIDNA_ERROR_DOMAIN_NAME_TOO_LONG;
-                }
-            }
-            info.errors|=info.labelErrors;
-            dest.Append(destArray, i);
-            return;
-        }
-        char c=srcArray[i];
-        if((int8_t)c<0) {  // (uint8_t)c>0x7f
-            break;
-        }
-        int cData=asciiData[(int)c];  // Cast: gcc warns about indexing with a char.
-        if(cData>0) {
-            destArray[i]=c+0x20;  // Lowercase an uppercase ASCII letter.
-        } else if(cData<0 && disallowNonLDHDot) {
-            break;  // Replacing with U+FFFD can be complicated for toASCII.
-        } else {
-            destArray[i]=c;
-            if(c==0x2d) {  // hyphen
-                if(i==(labelStart+3) && srcArray[i-1]==0x2d) {
-                    // "??--..." is Punycode or forbidden.
-                    break;
-                }
-                if(i==labelStart) {
-                    // label starts with "-"
-                    info.labelErrors|=UIDNA_ERROR_LEADING_HYPHEN;
-                }
-                if((i+1)==srcLength || srcArray[i+1]==0x2e) {
-                    // label ends with "-"
-                    info.labelErrors|=UIDNA_ERROR_TRAILING_HYPHEN;
-                }
-            } else if(c==0x2e) {  // dot
-                if(isLabel) {
-                    break;  // Replacing with U+FFFD can be complicated for toASCII.
-                }
+    if(srcLength<=256) {  // length of stackArray[]
+        // ASCII fastpath
+        char stackArray[256];
+        int32_t destCapacity;
+        char *destArray=dest.GetAppendBuffer(srcLength, srcLength+20,
+                                             stackArray, LENGTHOF(stackArray), &destCapacity);
+        UBool disallowNonLDHDot=(options&UIDNA_USE_STD3_RULES)!=0;
+        int32_t i;
+        for(i=0;; ++i) {
+            if(i==srcLength) {
                 if(toASCII) {
-                    // Permit an empty label at the end but not elsewhere.
-                    if(i==labelStart && i<(srcLength-1)) {
-                        info.labelErrors|=UIDNA_ERROR_EMPTY_LABEL;
-                    } else if((i-labelStart)>63) {
+                    if((i-labelStart)>63) {
                         info.labelErrors|=UIDNA_ERROR_LABEL_TOO_LONG;
+                    }
+                    // There is a trailing dot if labelStart==i.
+                    if(!isLabel && i>=254 && (i>254 || labelStart<i)) {
+                        info.errors|=UIDNA_ERROR_DOMAIN_NAME_TOO_LONG;
                     }
                 }
                 info.errors|=info.labelErrors;
-                info.labelErrors=0;
-                labelStart=i+1;
+                dest.Append(destArray, i);
+                return;
+            }
+            char c=srcArray[i];
+            if((int8_t)c<0) {  // (uint8_t)c>0x7f
+                break;
+            }
+            int cData=asciiData[(int)c];  // Cast: gcc warns about indexing with a char.
+            if(cData>0) {
+                destArray[i]=c+0x20;  // Lowercase an uppercase ASCII letter.
+            } else if(cData<0 && disallowNonLDHDot) {
+                break;  // Replacing with U+FFFD can be complicated for toASCII.
+            } else {
+                destArray[i]=c;
+                if(c==0x2d) {  // hyphen
+                    if(i==(labelStart+3) && srcArray[i-1]==0x2d) {
+                        // "??--..." is Punycode or forbidden.
+                        break;
+                    }
+                    if(i==labelStart) {
+                        // label starts with "-"
+                        info.labelErrors|=UIDNA_ERROR_LEADING_HYPHEN;
+                    }
+                    if((i+1)==srcLength || srcArray[i+1]==0x2e) {
+                        // label ends with "-"
+                        info.labelErrors|=UIDNA_ERROR_TRAILING_HYPHEN;
+                    }
+                } else if(c==0x2e) {  // dot
+                    if(isLabel) {
+                        break;  // Replacing with U+FFFD can be complicated for toASCII.
+                    }
+                    if(toASCII) {
+                        // Permit an empty label at the end but not elsewhere.
+                        if(i==labelStart && i<(srcLength-1)) {
+                            info.labelErrors|=UIDNA_ERROR_EMPTY_LABEL;
+                        } else if((i-labelStart)>63) {
+                            info.labelErrors|=UIDNA_ERROR_LABEL_TOO_LONG;
+                        }
+                    }
+                    info.errors|=info.labelErrors;
+                    info.labelErrors=0;
+                    labelStart=i+1;
+                }
             }
         }
+        info.errors|=info.labelErrors;
+        // Convert the processed ASCII prefix of the current label to UTF-16.
+        int32_t mappingStart=i-labelStart;
+        destString=UnicodeString::fromUTF8(StringPiece(destArray+labelStart, mappingStart));
+        // Output the previous ASCII labels and process the rest of src in UTF-16.
+        dest.Append(destArray, labelStart);
+        processUnicode(UnicodeString::fromUTF8(StringPiece(src, labelStart)), 0, mappingStart,
+                       isLabel, toASCII,
+                       destString, info, errorCode);
+    } else {
+        // src is too long for the ASCII fastpath implementation.
+        processUnicode(UnicodeString::fromUTF8(src), 0, 0,
+                       isLabel, toASCII,
+                       destString, info, errorCode);
     }
-    info.errors|=info.labelErrors;
-    // Convert the processed ASCII prefix of the current label to UTF-16.
-    int32_t mappingStart=i-labelStart;
-    UnicodeString destString=
-        UnicodeString::fromUTF8(StringPiece(destArray+labelStart, mappingStart));
-    // Output the previous ASCII labels and process the rest of src in UTF-16.
-    dest.Append(destArray, labelStart);
-    processUnicode(UnicodeString::fromUTF8(StringPiece(src, labelStart)), 0, mappingStart,
-                   isLabel, toASCII,
-                   destString, info, errorCode).toUTF8(dest);
+    destString.toUTF8(dest);
     if(toASCII && !isLabel) {
         // length==labelStart==254 means that there is a trailing dot (ok) and
         // destString is empty (do not index at 253-labelStart).
@@ -766,9 +766,6 @@ UTS46::processLabel(UnicodeString &dest,
                 *s=0xfffd;
             } else if(disallowNonLDHDot && asciiData[c]<0) {
                 info.labelErrors|=UIDNA_ERROR_DISALLOWED;
-                if(wasPunycode) {
-                    info.labelErrors|=UIDNA_ERROR_INVALID_ACE_LABEL;
-                }
                 *s=0xfffd;
             }
         } else {
@@ -861,6 +858,7 @@ UTS46::processLabel(UnicodeString &dest,
         // If a Punycode label has severe errors,
         // then leave it but make sure it does not look valid.
         if(wasPunycode) {
+            info.labelErrors|=UIDNA_ERROR_INVALID_ACE_LABEL;
             return markBadACELabel(dest, destLabelStart, destLabelLength, toASCII, info);
         }
     }
