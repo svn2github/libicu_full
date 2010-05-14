@@ -1,6 +1,6 @@
 /*  
 **********************************************************************
-*   Copyright (C) 2002-2009, International Business Machines
+*   Copyright (C) 2002-2010, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 **********************************************************************
 *   file name:  uconfig.h
@@ -174,6 +174,13 @@
  */
 #ifndef UCONFIG_NO_IDNA
 #   define UCONFIG_NO_IDNA 0
+#endif
+
+/**
+ * @internal
+ */
+#ifndef UCONFIG_NO_USET
+# define UCONFIG_NO_USET 0
 #endif
 
 /* i18n library switches ---------------------------------------------------- */
