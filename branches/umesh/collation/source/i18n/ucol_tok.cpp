@@ -780,8 +780,8 @@ ucol_tok_processNextTokenInStarredList(UColTokenParser *src)
 {
   // Extract the characters corresponding to the next code point.
   uint32_t cp;
-  U16_NEXT(src->source, src->currentStarredCharIndex, (uint32_t)(src->end - src->source), cp);
   src->parsedToken.charsOffset = src->currentStarredCharIndex;
+  U16_NEXT(src->source, src->currentStarredCharIndex, (uint32_t)(src->end - src->source), cp);
   src->parsedToken.charsLen = (U16_IS_SURROGATE(src->currentRangeCp) ? 2 : 1);
 
   // When we are done parsing the starred string, turn the flag off so that

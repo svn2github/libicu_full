@@ -5563,10 +5563,10 @@ static void TestSameStrengthList(void)
 {
   const char* strRules[] = {
     /* Normal */
-    /* "&a<b<c<d &b<<k<<l<<m &k<<<x<<<y<<<z  &y<f<g<h<e &a=1=2=3", */
+    "&a<b<c<d &b<<k<<l<<m &k<<<x<<<y<<<z  &y<f<g<h<e &a=1=2=3", 
 
     /* Lists */
-    "&a<*bcd &b<<*klm &k<<<*xyz  &y<*fghe &a=*123", 
+    "&a<*bcd &b<<*klm &k<<<*xyz &y<*fghe &a=*123", 
 
   };
   doTestOneTestCase(rangeTestcases, nRangeTestcases, strRules, LEN(strRules));
