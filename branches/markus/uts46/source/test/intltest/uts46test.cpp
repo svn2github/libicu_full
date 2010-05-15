@@ -132,48 +132,41 @@ void UTS46Test::TestAPI() {
     }
     // UTF-8
     char buffer[100];
-    {
-        // TODO: Reuse the sink once ticket #7684 is implemented.
-        CheckedArrayByteSink sink(buffer, LENGTHOF(buffer));
-        errorCode=U_ZERO_ERROR;
-        nontrans->labelToUnicodeUTF8(StringPiece(NULL, 5), sink, info, errorCode);
-        if(errorCode!=U_ILLEGAL_ARGUMENT_ERROR || sink.NumberOfBytesWritten()!=0) {
-            errln("N.labelToUnicodeUTF8(StringPiece(NULL, 5)) did not set illegal-argument-error ",
-                  "or did output something - %s",
-                  u_errorName(errorCode));
-        }
+    CheckedArrayByteSink sink(buffer, LENGTHOF(buffer));
+    errorCode=U_ZERO_ERROR;
+    nontrans->labelToUnicodeUTF8(StringPiece(NULL, 5), sink, info, errorCode);
+    if(errorCode!=U_ILLEGAL_ARGUMENT_ERROR || sink.NumberOfBytesWritten()!=0) {
+        errln("N.labelToUnicodeUTF8(StringPiece(NULL, 5)) did not set illegal-argument-error ",
+              "or did output something - %s",
+              u_errorName(errorCode));
     }
-    {
-        CheckedArrayByteSink sink(buffer, LENGTHOF(buffer));
-        errorCode=U_ZERO_ERROR;
-        nontrans->nameToASCII_UTF8(StringPiece(), sink, info, errorCode);
-        if(U_FAILURE(errorCode) || sink.NumberOfBytesWritten()!=0) {
-            errln("N.nameToASCII_UTF8(empty) failed - %s",
-                  u_errorName(errorCode));
-        }
+
+    sink.Reset();
+    errorCode=U_ZERO_ERROR;
+    nontrans->nameToASCII_UTF8(StringPiece(), sink, info, errorCode);
+    if(U_FAILURE(errorCode) || sink.NumberOfBytesWritten()!=0) {
+        errln("N.nameToASCII_UTF8(empty) failed - %s",
+              u_errorName(errorCode));
     }
-    {
-        char s[]={ 0x61, (char)0xc3, (char)0x9f };
-        CheckedArrayByteSink sink(buffer, LENGTHOF(buffer));
-        errorCode=U_USELESS_COLLATOR_ERROR;
-        nontrans->nameToUnicodeUTF8(StringPiece(s, 3), sink, info, errorCode);
-        if(errorCode!=U_USELESS_COLLATOR_ERROR || sink.NumberOfBytesWritten()!=0) {
-            errln("N.nameToUnicode_UTF8(U_FAILURE) did not preserve the errorCode "
-                  "or did output something - %s",
-                  u_errorName(errorCode));
-        }
+
+    char s[]={ 0x61, (char)0xc3, (char)0x9f };
+    sink.Reset();
+    errorCode=U_USELESS_COLLATOR_ERROR;
+    nontrans->nameToUnicodeUTF8(StringPiece(s, 3), sink, info, errorCode);
+    if(errorCode!=U_USELESS_COLLATOR_ERROR || sink.NumberOfBytesWritten()!=0) {
+        errln("N.nameToUnicode_UTF8(U_FAILURE) did not preserve the errorCode "
+              "or did output something - %s",
+              u_errorName(errorCode));
     }
-    {
-        char s[]={ 0x61, (char)0xc3, (char)0x9f };
-        CheckedArrayByteSink sink(buffer, LENGTHOF(buffer));
-        errorCode=U_ZERO_ERROR;
-        trans->labelToUnicodeUTF8(StringPiece(s, 3), sink, info, errorCode);
-        if( U_FAILURE(errorCode) || sink.NumberOfBytesWritten()!=3 ||
-            buffer[0]!=0x61 || buffer[1]!=0x73 || buffer[2]!=0x73
-        ) {
-            errln("T.labelToUnicode_UTF8(a sharp-s) failed - %s",
-                  u_errorName(errorCode));
-        }
+
+    sink.Reset();
+    errorCode=U_ZERO_ERROR;
+    trans->labelToUnicodeUTF8(StringPiece(s, 3), sink, info, errorCode);
+    if( U_FAILURE(errorCode) || sink.NumberOfBytesWritten()!=3 ||
+        buffer[0]!=0x61 || buffer[1]!=0x73 || buffer[2]!=0x73
+    ) {
+        errln("T.labelToUnicode_UTF8(a sharp-s) failed - %s",
+              u_errorName(errorCode));
     }
 }
 
