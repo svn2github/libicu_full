@@ -7348,7 +7348,6 @@ cleanup_and_do_compare:
     }
 }
 
-
 static UCollationResult
 ucol_strcollRegular(collIterate *sColl, collIterate *tColl, UErrorCode *status)
 {
@@ -8468,6 +8467,257 @@ ucol_getUCAVersion(const UCollator* coll, UVersionInfo info) {
     if(coll && coll->UCA) {
         uprv_memcpy(info, coll->UCA->image->UCAVersion, sizeof(UVersionInfo));
     }
+}
+
+/*YOSHI*/
+/*
+ * Stolen from ucol_getOffset !!
+ */
+static int32_t getOffset(const collIterate *ci)
+{
+    if (ci->offsetRepeatCount > 0 && ci->offsetRepeatValue != 0) {
+        return ci->offsetRepeatValue;
+    }
+
+    if (ci->offsetReturn != NULL) {
+        return *ci->offsetReturn;
+    }
+
+    // while processing characters in normalization buffer getOffset will 
+    // return the next non-normalized character. 
+    // should be inline with the old implementation since the old codes uses
+    // nextDecomp in normalizer which also decomposes the string till the 
+    // first base character is found.
+    if (ci->flags & UCOL_ITER_INNORMBUF) {
+        if (ci->fcdPosition == NULL) {
+            return 0;
+        }
+        return (int32_t)(ci->fcdPosition - ci->string);
+    }
+    else {
+        return (int32_t)(ci->pos - ci->string);
+    }
+}
+
+/*YOSHI*/
+static inline UBool
+ucol_strcollPrefix(collIterate *sColl, collIterate *tColl, UBool matchWholeSource, UErrorCode *status)
+{
+    uint32_t strengthMask, sOrder, tOrder, noMoreCES;
+    int32_t matchCount = 0;
+
+    switch (sColl->coll->strength)
+    {
+    case UCOL_PRIMARY:
+        strengthMask = UCOL_PRIMARYMASK;
+        break;
+
+    case UCOL_SECONDARY:
+        strengthMask = UCOL_PRIMARYMASK | UCOL_SECONDARYMASK;
+        break;
+
+    default:
+        strengthMask = UCOL_PRIMARYMASK | UCOL_SECONDARYMASK| UCOL_TERTIARYMASK;
+    }
+
+    noMoreCES = UCOL_NO_MORE_CES & strengthMask;
+
+    for(;;) {
+        int32_t lowOffset, highOffset;
+
+        do {
+            sOrder = ucol_IGetNextCE(sColl->coll, sColl, status);
+            sOrder &= strengthMask;
+        } while (sOrder == 0);
+
+        do {
+            lowOffset  = getOffset(tColl);
+            tOrder     = ucol_IGetNextCE(tColl->coll, tColl, status);
+            highOffset = getOffset(tColl);
+
+            tOrder &= strengthMask;
+        } while (tOrder == 0);
+
+        if (sOrder == tOrder) {
+            if (sOrder == noMoreCES) {
+                // source is equal to target!
+                return TRUE;
+            }
+
+            matchCount += 1;
+        } else {
+            /*
+             * We found a difference. We have a prefix match if:
+             *  * we've exhausted the source or
+             *  * we only need to match a prefix of the source and
+             *    there's at least one match
+             */ 
+            if ((!matchWholeSource && matchCount > 0) || sOrder == noMoreCES) {
+                // only accept the match if we're on a grapheme boundary and
+                // not in the middle of an expansion.
+                return (tOrder & UCOL_PRIMARYMASK) != 0 && (tOrder == noMoreCES || lowOffset != highOffset);
+            }
+
+            return FALSE;
+        }
+    }
+
+    // shouldn't get here...
+    return FALSE;
+}
+
+/*YOSHI*/
+/*                                                              */
+/* Check if source string is a prefix of target string          */
+/*                                                              */
+U_CAPI int32_t U_EXPORT2
+ucol_startsWith(const UCollator    *coll,
+                const UChar        *source, int32_t  sourceLength,
+                const UChar        *target, int32_t  targetLength,
+                      UBool         matchWholeSource)
+{
+    U_ALIGN_CODE(16);
+
+    UTRACE_ENTRY(UTRACE_UCOL_STRCOLL);
+    if (UTRACE_LEVEL(UTRACE_VERBOSE)) {
+        UTRACE_DATA3(UTRACE_VERBOSE, "coll=%p, source=%p, target=%p", coll, source, target);
+        UTRACE_DATA2(UTRACE_VERBOSE, "source string = %vh ", source, sourceLength);
+        UTRACE_DATA2(UTRACE_VERBOSE, "target string = %vh ", target, targetLength);
+    }
+
+    if(source == NULL || target == NULL) {
+        // do not crash, but return. Should have
+        // status argument to return error.
+        UTRACE_EXIT_VALUE(0);
+        return 0;
+    }
+
+    /* Quick check if source and target are same strings. */
+    /* They should either both be NULL terminated or the explicit length should be set on both. */
+    if (source==target && sourceLength==targetLength) {
+        UTRACE_EXIT_VALUE(sourceLength);
+        return sourceLength;
+    }
+
+    /* Scan the strings.  Find:                                                             */
+    /*    The length of any leading portion that is equal                                   */
+    /*    Whether they are exactly equal.  (in which case we just return)                   */
+    const UChar    *pSrc    = source;
+    const UChar    *pTarg   = target;
+    int32_t        equalLength;
+
+    if (sourceLength == -1 && targetLength == -1) {
+        // Both strings are null terminated.
+        //    Scan through any leading equal portion.
+        while (*pSrc == *pTarg && *pSrc != 0) {
+            pSrc += 1;
+            pTarg += 1;
+        }
+
+        equalLength = pSrc - source;
+
+        if (*pSrc == 0) {
+            UTRACE_EXIT_VALUE(equalLength);
+            return equalLength;
+        }
+    } else {
+        // One or both strings has an explicit length.
+        const UChar    *pSrcEnd  = source + sourceLength;
+        const UChar    *pTargEnd = target + targetLength;
+
+        // Scan while the strings are bitwise ==, or until one is exhausted.
+        for (;;) {
+            if (pSrc == pSrcEnd || pTarg == pTargEnd) {
+                break;
+            }
+
+            if ((*pSrc == 0 && sourceLength == -1) || (*pTarg == 0 && targetLength == -1)) {
+                break;
+            }
+
+            if (*pSrc != *pTarg) {
+                break;
+            }
+
+            pSrc += 1;
+            pTarg += 1;
+        }
+
+        equalLength = pSrc - source;
+
+        // If we made it all the way through the source string, we are done.
+        if ((pSrc  == pSrcEnd  || (pSrcEnd  < pSrc  && *pSrc  == 0)))   /* At end of src string, however it was specified. */
+        {
+            UTRACE_EXIT_VALUE(equalLength);
+            return equalLength;
+        }
+    }
+
+    if (equalLength > 0) {
+        // **** Should really still call ucol_strcollRegular ****
+        // **** to see if a longer prefix matches.           ****
+        if (! matchWholeSource) {
+            return equalLength;
+        }
+
+        /* There is an identical portion at the beginning of the two strings.        */
+        /*   If the identical portion ends within a contraction or a comibining      */
+        /*   character sequence, back up to the start of that sequence.              */
+        
+        // These values should already be set by the code above.
+        //pSrc  = source + equalLength;        /* point to the first differing chars   */
+        //pTarg = target + equalLength;
+        if (pSrc  != source+sourceLength && ucol_unsafeCP(*pSrc, coll) ||
+            pTarg != target+targetLength && ucol_unsafeCP(*pTarg, coll))
+        {
+            // We are stopped in the middle of a contraction.
+            // Scan backwards through the == part of the string looking for the start of the contraction.
+            //   It doesn't matter which string we scan, since they are the same in this region.
+            do {
+                equalLength -= 1;
+                pSrc -= 1;
+            } while (equalLength > 0 && ucol_unsafeCP(*pSrc, coll));
+        }
+
+        source += equalLength;
+        target += equalLength;
+
+        if (sourceLength > 0) {
+            sourceLength -= equalLength;
+        }
+
+        if (targetLength > 0) {
+            targetLength -= equalLength;
+        }
+    }
+
+    UErrorCode status = U_ZERO_ERROR;
+    UCollationResult returnVal;
+    UBool prefixMatch;
+
+    // **** HACK: ignore Latin1 check ****
+    if(TRUE || !coll->latinOneUse || (sourceLength > 0 && *source&0xff00) || (targetLength > 0 && *target&0xff00)) {
+        collIterate sColl, tColl;
+
+        // Preparing the context objects for iterating over strings
+        IInit_collIterate(coll, source, sourceLength, &sColl, &status);
+        IInit_collIterate(coll, target, targetLength, &tColl, &status);
+
+        prefixMatch = ucol_strcollPrefix(&sColl, &tColl, matchWholeSource, &status);
+
+        // **** need to adjust / validate boundary ****
+        if (prefixMatch) {
+            int32_t length = equalLength + getOffset(&tColl) - 1;
+
+            UTRACE_EXIT_VALUE(length);
+            return length;
+        }
+    } else {
+        returnVal = ucol_strcollUseLatin1(coll, source, sourceLength, target, targetLength, &status);
+    }
+
+    UTRACE_EXIT_VALUE(-1);
+    return -1;
 }
 
 #endif /* #if !UCONFIG_NO_COLLATION */

@@ -325,6 +325,33 @@ ucol_secondaryOrder (int32_t order);
 U_STABLE int32_t U_EXPORT2
 ucol_tertiaryOrder (int32_t order); 
 
+/*YOSHI*/
+/**
+ * Scan the UCollationElements over a "Tailored Grapheme Cluster" according to UTS #18.
+ * (http://www.unicode.org/reports/tr18/#Tailored_Graphemes_Clusters)
+ *
+ * @param elems The UCollationElements containing the text.
+ * @param status A pointer to a UErrorCode to receive any errors.
+ * @return The number of characters in the Tailored Grapheme Cluster.
+ * 
+ * @internal
+ */
+U_INTERNAL int32_t U_EXPORT2
+ucol_nextGraphemeCluster(UCollationElements *elems, UErrorCode *status);
+
+/*YOSHI*/
+/**
+ * Scan the UCollationElements backwards over a "Tailored Grapheme Cluster" according to UTS #18.
+ * (http://www.unicode.org/reports/tr18/#Tailored_Graphemes_Clusters)
+ *
+ * @param elems The UCollationElements containing the text.
+ * @param status A pointer to a UErrorCode to receive any errors.
+ * @return The number of characters in the Tailored Grapheme Cluster.
+ * 
+ * @internal
+ */
+U_INTERNAL int32_t U_EXPORT2
+ucol_prevGraphemeCluster(UCollationElements *elems, UErrorCode *status);
 #endif /* #if !UCONFIG_NO_COLLATION */
 
 #endif

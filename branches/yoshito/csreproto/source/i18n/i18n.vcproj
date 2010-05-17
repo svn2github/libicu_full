@@ -3547,6 +3547,14 @@
 			Name="regex"
 			>
 			<File
+				RelativePath=".\crematch.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\unicode\crematch.h"
+				>
+			</File>
+			<File
 				RelativePath=".\unicode\regex.h"
 				>
 				<FileConfiguration

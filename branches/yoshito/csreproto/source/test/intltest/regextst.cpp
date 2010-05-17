@@ -14,12 +14,15 @@
 #if !UCONFIG_NO_REGULAR_EXPRESSIONS
 
 #include "unicode/regex.h"
+#include "unicode/crematch.h"
+#include "unicode/ucol.h"
 #include "unicode/uchar.h"
 #include "unicode/ucnv.h"
 #include "unicode/ustring.h"
 #include "regextst.h"
 #include "uvector.h"
 #include "util.h"
+#include "csre.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -100,6 +103,9 @@ void RegexTest::runIndexedTest( int32_t index, UBool exec, const char* &name, ch
           break;
         case 15: name = "Bug 7651";
           if (exec) Bug7651();
+          break;
+        case 16: name = "CSRETest";
+          if (exec) CSRETest();
           break;
 
         default: name = "";
@@ -4647,5 +4653,169 @@ void RegexTest::Bug7651() {
     status = U_ZERO_ERROR;
  }
 
+void RegexTest::CSRETest()
+{
+    UErrorCode status = U_ZERO_ERROR;
+    const UnicodeString pattern("Aa.*m", -1, US_INV);
+    const UnicodeString target1("Aangstrom", -1, US_INV);
+    const UnicodeString escaped("\\u00C5ngstrom", -1, US_INV); // \u00C5 == A-RING
+    const UnicodeString target2 = escaped.unescape();
+    UCollator *coll = ucol_open("da_DK", &status);
+
+    ucol_setStrength(coll, UCOL_SECONDARY);
+
+    CSREMatcher matcher(coll, pattern, target1, 0, status);
+
+    if (!/*matcher.matches(status)*/ matcher.find(0, status)) {
+        errln("CSRE: \"Aa.*m\" does not match \"Aangstrom\"");
+    }
+
+    matcher.reset(target2);
+
+    if (!matcher.matches(status)) {
+        errln("CSRE: \"Aa.*m\" does not match \"\\u00C5ngstrom\"");
+    }
+
+    const UnicodeString pattern2("\\u00C5.*m", -1, US_INV);
+
+    CSREMatcher matcher2(coll, pattern2, target1, 0, status);
+
+    if (!matcher2.matches(status)) {
+        errln("CSRE: \"\\u00C5.*m\" does not match \"Aangstrom\"");
+    }
+
+    matcher2.reset(target2);
+
+    if (!matcher2.matches(status)) {
+        errln("CSRE: \"\\u00C5.*m\" does not match \"\\u00C5ngstrom\"");
+    }
+
+    const UnicodeString cpattern("b.d", -1, US_INV);
+    const UnicodeString ctarget1("bad", -1, US_INV);
+    const UnicodeString cescaped("bad Bad b\\u00E4d B\\u00E4d", -1, US_INV);
+    const UnicodeString ctarget2 = cescaped.unescape();
+    CSRE *csre = csre_open(coll, cpattern.getBuffer(), cpattern.length(), ctarget1.getBuffer(), ctarget1.length(), &status);
+
+    if (! csre_find(csre)) {
+        errln("CSRE: could not find \"b.d\" in \"bad\"");
+    }
+
+    csre_close(csre);
+
+    csre = csre_open(coll, cpattern.getBuffer(), cpattern.length(), ctarget2.getBuffer(), ctarget2.length(), &status);
+
+    int32_t found = 0;
+    while (csre_find(csre)) {
+        found += 1;
+    }
+
+    if (found != 4) {
+        errln("CSRE: could not find \"b.d\" in \"bad Bad b\\u00E4d B\\u00E4d\"");
+    }
+
+    csre_close(csre);
+
+    const UnicodeString cescaped3("Aangstrom\r\n\\u00C5ngstrom", -1, US_INV);
+    const UnicodeString ctarget3 = cescaped3.unescape();
+
+    csre = csre_open(coll, pattern.getBuffer(), pattern.length(), ctarget3.getBuffer(), ctarget3.length(), &status);
+
+    found = 0;
+    while(csre_find(csre)) {
+        found += 1;
+    }
+
+    if (found != 2) {
+        errln("CSRE: could not find \"Aa.*m\" in \"Aangstrom\\r\\n\\u00C5ngstrom\"");
+    }
+
+    csre_close(csre);
+
+    const UnicodeString cpattern4("cote", -1, US_INV);
+    const UnicodeString cescaped4("cote cot\\u00E9", -1, US_INV);
+    const UnicodeString ctarget4 = cescaped4.unescape();
+
+    csre = csre_open(coll, cpattern4.getBuffer(), cpattern4.length(), ctarget4.getBuffer(), ctarget4.length(), &status);
+
+    found = 0;
+    while(csre_find(csre)) {
+        found += 1;
+    }
+
+    if (found > 1) {
+        errln("CSRE: found \"cote\" more than once in \"cote cot\\u00E9\"");
+    }
+
+    csre_close(csre);
+
+    const UnicodeString cpattern5("fuss", -1, US_INV);
+    const UnicodeString cescaped5("fuss fu\\u00DF", -1, US_INV);
+    const UnicodeString ctarget5 = cescaped5.unescape();
+
+    ucol_setStrength(coll, UCOL_PRIMARY);
+
+    csre = csre_open(coll, cpattern5.getBuffer(), cpattern5.length(), ctarget5.getBuffer(), ctarget5.length(), &status);
+
+    found = 0;
+    while(csre_find(csre)) {
+        found += 1;
+    }
+
+    if (found != 2) {
+        errln("CSRE: didn't find \"fuss\" twice in \"fuss \\u00DF\"");
+    }
+
+    csre_close(csre);
+    ucol_close(coll);
+
+    const UnicodeString esPattern("ma.o", -1, US_INV);
+    const UnicodeString esTarget("macho\r\nmallo", -1, US_INV);
+
+    coll = ucol_open("es_ES@collation=traditional", &status);
+    csre = csre_open(coll, esPattern.getBuffer(), esPattern.length(), esTarget.getBuffer(), esTarget.length(), &status);
+
+    found = 0;
+    while(csre_find(csre)) {
+        found += 1;
+    }
+
+    if (found != 2) {
+        errln("CSRE: cound not find \"ma.o\" in \"macho\\r\\nmallo\"");
+    }
+
+    csre_close(csre);
+
+    const UnicodeString esPattern2("hurro", -1, US_INV);
+    const UnicodeString esTarget2("churro\r\nhurro", -1, US_INV);
+
+    csre = csre_open(coll, esPattern2.getBuffer(), esPattern2.length(), esTarget2.getBuffer(), esTarget2.length(), &status);
+
+    found = 0;
+    while(csre_find(csre)) {
+        found += 1;
+    }
+
+    if (found > 1) {
+        errln("CSRE: found \"hurro\" more than once in \"churro\\r\\nhurro\"");
+    }
+
+    csre_close(csre);
+
+    const UnicodeString esPattern3(".*hurro", -1, US_INV);
+
+    csre = csre_open(coll, esPattern3.getBuffer(), esPattern3.length(), esTarget2.getBuffer(), esTarget2.length(), &status);
+
+    found = 0;
+    while(csre_find(csre)) {
+        found += 1;
+    }
+
+    if (found > 1) {
+        errln("CSRE: found \".*hurro\" more than once in \"churro\\r\\nhurro\"");
+    }
+
+    csre_close(csre);
+    ucol_close(coll);    
+}
 #endif  /* !UCONFIG_NO_REGULAR_EXPRESSIONS  */
 
