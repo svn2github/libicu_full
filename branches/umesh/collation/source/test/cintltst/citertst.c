@@ -1740,8 +1740,6 @@ static void TestCEValidity()
         }
 
         src.opts = &opts;
-        /* src.isStarred = FALSE; */
-        /* src.inRange = FALSE; */
         rules = ucol_getRules(coll, &ruleLen);
 
         if (ruleLen > 0) {
