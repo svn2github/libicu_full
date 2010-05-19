@@ -552,6 +552,8 @@ static void testCollator(UCollator *coll, UErrorCode *status) {
   UChar *rulesCopy = NULL;
   UParseError parseError;
 
+  uprv_memset(&src, 0, sizeof(UColTokenParser));
+
   src.opts = &opts;
 
   rules = ucol_getRules(coll, &ruleLen);
@@ -930,6 +932,7 @@ static void testAgainstUCA(UCollator *coll, UCollator *UCA, const char *refName,
   uint32_t Windiff = 1;
   UParseError parseError;
 
+  uprv_memset(&src, 0, sizeof(UColTokenParser));
   src.opts = &opts;
 
   rules = ucol_getRules(coll, &ruleLen);
@@ -5458,12 +5461,25 @@ const static UCollationResult sameStrengthResults[] = {
     UCOL_LESS
 };
 
+/* 1 if u_unescape() is used, 0 if u_charsToUChars() is used. */
+#ifndef USE_UNESCAPE_FOR_COLL_TESTING
+# define USE_UNESCAPE_FOR_COLL_TESTING 1
+#endif
+
+/* Convenient struct for running collation tests */
 typedef struct {
-  const UChar source[MAX_TOKEN_LEN];
-  const UChar target[MAX_TOKEN_LEN];
-  UCollationResult result;
+  const UChar source[MAX_TOKEN_LEN];  /* String on left */
+  const UChar target[MAX_TOKEN_LEN];  /* String on right */
+  UCollationResult result;            /* -1, 0 or +1, depending on collation */
 } OneTestCase;
 
+/*
+ * Utility function to test one collation test case.
+ * @param testcases Array of test cases.
+ * @param n_testcases Size of the array testcases.
+ * @param str_rules Array of rules.  These rules should be specifying the same rule in different formats.
+ * @param n_rules Size of the array str_rules.
+ */
 static void doTestOneTestCase(const OneTestCase testcases[],
                               int n_testcases,
                               const char* str_rules[],
@@ -5477,9 +5493,14 @@ static void doTestOneTestCase(const OneTestCase testcases[],
   UCollator  *myCollation;
 
   for (rule_no = 0; rule_no < n_rules; ++rule_no) {
+
+#if USE_UNESCAPE_FOR_COLL_TESTING
     length = u_unescape(str_rules[rule_no], rule, 500);
-    /* length = LEN(str_rules[rule_no]); */
-    /* u_charsToUChars(str_rules[rule_no], rule, length + 1); */
+#else
+    length = LEN(str_rules[rule_no]); 
+    u_charsToUChars(str_rules[rule_no], rule, length + 1);
+#endif
+
     if (length == 0) {
         log_err("ERROR: The rule cannot be unescaped: %s\n");
         return;
@@ -5577,11 +5598,8 @@ static void TestSameStrengthListQuoted(void)
   const char* strRules[] = {
     /* Lists with quoted characters */
     "&'\\u0061'<*bcd &b<<*klm &k<<<*xyz &y<*f'\\u0067\\u0068'e &a=*123",
-
     "&'\\u0061'<*b'\\u0063'd &b<<*klm &k<<<*xyz &'\\u0079'<*fgh'\\u0065' &a=*'\\u0031\\u0032\\u0033'",
-
-    /* "&'\\u0061'<*'\\u0062'c'\\u0064' &b<<*klm &k<<<*xyz  &y<*fghe " */
-    /* "&a=*'\\u0031\\u0032\\u0033'", */
+    "&'\\u0061'<*'\\u0062'c'\\u0064' &b<<*klm &k<<<*xyz  &y<*fghe &a=*'\\u0031\\u0032\\u0033'", 
   };
   doTestOneTestCase(rangeTestcases, nRangeTestcases, strRules, LEN(strRules));
 }
@@ -5593,7 +5611,6 @@ static void TestSameStrengthListSupplemental(void)
     "&\\ufffe<\\uffff<\\ud800\\udc00<\\ud800\\udc01<\\ud800\\udc02",
     "&\\ufffe<*\\uffff\\U00010000\\U00010001\\U00010002",
     "&\\ufffe<*\\uffff\\ud800\\udc00\\ud800\\udc01\\ud800\\udc02",
-    /* "&\\ufffe<\\uffff-\\U00010002", */
   };
   doTestOneTestCase(rangeTestcasesSupplemental, nRangeTestcasesSupplemental, strRules, LEN(strRules));
 }
@@ -5605,6 +5622,71 @@ static void TestSameStrengthListQwerty(void)
     "&q<*wer &w<<*tyu &t<<<*iop &o=*asd",             /* Lists  */
   };
   doTestOneTestCase(rangeTestcasesQwerty, nRangeTestcasesQwerty, strRules, LEN(strRules));
+}
+
+static void TestSameStrengthListRanges(void)
+{
+  const char* strRules[] = {
+    "&a<*b-d &b<<*k-m &k<<<*x-z &y<*f-he &a=*1-3",
+  };
+  doTestOneTestCase(rangeTestcases, nRangeTestcases, strRules, LEN(strRules));
+}
+
+static void TestSameStrengthListSupplementalRanges(void)
+{
+  const char* strRules[] = {
+    "&\\ufffe<*\\uffff-\\U00010002",
+  };
+  doTestOneTestCase(rangeTestcasesSupplemental, nRangeTestcasesSupplemental, strRules, LEN(strRules));
+}
+
+static void TestInvalidListsAndRanges(void)
+{
+  const char* invalidRules[] = {
+    /* Range not in starred expression */
+    "&\\ufffe<\\uffff-\\U00010002",
+
+    /* Range without start */
+    "&a<*-c",
+
+    /* Range without end */
+    "&a<*b-",
+
+    /* More than one hyphen */
+    "&a<*b-g-l",
+
+    /* Range in the wrong order */
+    "&a<*k-b",
+
+  };
+
+  UChar rule[500];
+  UErrorCode status = U_ZERO_ERROR;
+  UParseError parse_error;
+  int n_rules = LEN(invalidRules);
+  int rule_no;
+  int length;
+  UCollator  *myCollation;
+
+  for (rule_no = 0; rule_no < n_rules; ++rule_no) {
+
+#if USE_UNESCAPE_FOR_COLL_TESTING
+    length = u_unescape(invalidRules[rule_no], rule, 500);
+#else
+    length = LEN(invalidRules[rule_no]);
+    u_charsToUChars(invalidRules[rule_no], rule, length + 1);
+#endif
+
+    if (length == 0) {
+        log_err("ERROR: The rule cannot be unescaped: %s\n");
+        return;
+    }
+    myCollation = ucol_openRules(rule, length, UCOL_ON, UCOL_TERTIARY, &parse_error, &status);
+    if(!U_FAILURE(status)){
+      log_err("ERROR: Could not cause a failure as expected: \n");
+    }
+    status = U_ZERO_ERROR;
+  }
 }
 
 #define TEST(x) addTest(root, &x, "tscoll/cmsccoll/" # x)
@@ -5686,6 +5768,9 @@ void addMiscCollTest(TestNode** root)
     TEST(TestSameStrengthListQuoted);
     TEST(TestSameStrengthListSupplemental);
     TEST(TestSameStrengthListQwerty);
+    TEST(TestSameStrengthListRanges);
+    TEST(TestSameStrengthListSupplementalRanges);
+    TEST(TestInvalidListsAndRanges);
 }
 
 #endif /* #if !UCONFIG_NO_COLLATION */

@@ -127,6 +127,7 @@ typedef struct {
   uint32_t previousCp;               /* Previous code point. */
   /* For processing starred lists. */
   UBool isStarred;                   /* Are we processing a starred token? */
+  UBool savedIsStarred;
   uint32_t currentStarredCharIndex;  /* Index of the current charrecter in the starred expression. */
   uint32_t lastStarredCharIndex;    /* Index to the last character in the starred expression. */
 
