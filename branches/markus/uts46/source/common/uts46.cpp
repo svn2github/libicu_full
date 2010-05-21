@@ -101,9 +101,8 @@ IDNA::nameToUnicodeUTF8(const StringPiece &name, ByteSink &dest,
     }
 }
 
-UOBJECT_DEFINE_ABSTRACT_RTTI_IMPLEMENTATION(IDNA)
-
-UOBJECT_DEFINE_RTTI_IMPLEMENTATION(IDNAInfo)
+// TODO: UOBJECT_DEFINE_NO_RTTI_IMPLEMENTATION(IDNA)
+UClassID IDNA::getDynamicClassID() const { return NULL; }
 
 // UTS46 class declaration ------------------------------------------------- ***
 
@@ -127,9 +126,6 @@ public:
     virtual UnicodeString &
     nameToUnicode(const UnicodeString &name, UnicodeString &dest,
                   IDNAInfo &info, UErrorCode &errorCode) const;
-
-    static UClassID U_EXPORT2 getStaticClassID();
-    virtual UClassID getDynamicClassID() const;
 
     virtual void
     labelToASCII_UTF8(const StringPiece &label, ByteSink &dest,
@@ -192,8 +188,6 @@ private:
     const Normalizer2 &uts46Norm2;  // uts46.nrm
     uint32_t options;
 };
-
-UOBJECT_DEFINE_RTTI_IMPLEMENTATION(UTS46)
 
 IDNA *
 IDNA::createUTS46Instance(uint32_t options, UErrorCode &errorCode) {

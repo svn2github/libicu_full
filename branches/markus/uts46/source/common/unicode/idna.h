@@ -245,19 +245,9 @@ public:
     nameToUnicodeUTF8(const StringPiece &name, ByteSink &dest,
                       IDNAInfo &info, UErrorCode &errorCode) const;
 
-    /**
-     * ICU "poor man's RTTI", returns a UClassID for this class.
-     * @returns a UClassID for this class.
-     * @draft ICU 4.6
-     */
-    static UClassID U_EXPORT2 getStaticClassID();
-
-    /**
-     * ICU "poor man's RTTI", returns a UClassID for the actual class.
-     * @return a UClassID for the actual class.
-     * @draft ICU 4.6
-     */
-    virtual UClassID getDynamicClassID() const = 0;
+private:
+    // No ICU "poor man's RTTI" for this class nor its subclasses.
+    virtual UClassID getDynamicClassID() const;
 };
 
 class UTS46;
@@ -267,7 +257,7 @@ class UTS46;
  * The IDNAInfo class is not suitable for subclassing.
  * @draft ICU 4.6
  */
-class U_COMMON_API IDNAInfo : public UObject {
+class U_COMMON_API IDNAInfo : public UMemory {
 public:
     /**
      * Constructor for stack allocation.
@@ -301,20 +291,6 @@ public:
      * @draft ICU 4.6
      */
     UBool isTransitionalDifferent() const { return isTransDiff; }
-
-    /**
-     * ICU "poor man's RTTI", returns a UClassID for this class.
-     * @returns a UClassID for this class.
-     * @draft ICU 4.6
-     */
-    static UClassID U_EXPORT2 getStaticClassID();
-
-    /**
-     * ICU "poor man's RTTI", returns a UClassID for the actual class.
-     * @return a UClassID for the actual class.
-     * @draft ICU 4.6
-     */
-    virtual UClassID getDynamicClassID() const;
 
 private:
     friend class UTS46;
