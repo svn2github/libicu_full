@@ -35,28 +35,6 @@
  * implement IDNA2003.
  * The new C API functions below which do take a UIDNA * service object pointer
  * implement UTS #46 and IDNA2008.
- *
- * IDNA2003 API Overview:
- *
- * UIDNA API implements the IDNA protocol as defined in the IDNA RFC 
- * (http://www.ietf.org/rfc/rfc3490.txt).
- * The RFC defines 2 operations: ToASCII and ToUnicode. Domain labels 
- * containing non-ASCII code points are required to be processed by
- * ToASCII operation before passing it to resolver libraries. Domain names
- * that are obtained from resolver libraries are required to be processed by
- * ToUnicode operation before displaying the domain name to the user.
- * IDNA requires that implementations process input strings with Nameprep
- * (http://www.ietf.org/rfc/rfc3491.txt), 
- * which is a profile of Stringprep (http://www.ietf.org/rfc/rfc3454.txt), 
- * and then with Punycode (http://www.ietf.org/rfc/rfc3492.txt). 
- * Implementations of IDNA MUST fully implement Nameprep and Punycode; 
- * neither Nameprep nor Punycode are optional.
- * The input and output of ToASCII and ToUnicode operations are Unicode 
- * and are designed to be chainable, i.e., applying ToASCII or ToUnicode operations
- * multiple times to an input string will yield the same result as applying the operation
- * once.
- * ToUnicode(ToUnicode(ToUnicode...(ToUnicode(string)))) == ToUnicode(string) 
- * ToASCII(ToASCII(ToASCII...(ToASCII(string))) == ToASCII(string).
  */
 
 /*
@@ -503,6 +481,28 @@ enum {
  * This operation is done on <b>single labels</b> before sending it to something that expects
  * ASCII names. A label is an individual part of a domain name. Labels are usually
  * separated by dots; e.g. "www.example.com" is composed of 3 labels "www","example", and "com".
+ *
+ * IDNA2003 API Overview:
+ *
+ * The uidna_ API implements the IDNA protocol as defined in the IDNA RFC
+ * (http://www.ietf.org/rfc/rfc3490.txt).
+ * The RFC defines 2 operations: ToASCII and ToUnicode. Domain name labels
+ * containing non-ASCII code points are processed by the
+ * ToASCII operation before passing it to resolver libraries. Domain names
+ * that are obtained from resolver libraries are processed by the
+ * ToUnicode operation before displaying the domain name to the user.
+ * IDNA requires that implementations process input strings with Nameprep
+ * (http://www.ietf.org/rfc/rfc3491.txt),
+ * which is a profile of Stringprep (http://www.ietf.org/rfc/rfc3454.txt),
+ * and then with Punycode (http://www.ietf.org/rfc/rfc3492.txt).
+ * Implementations of IDNA MUST fully implement Nameprep and Punycode;
+ * neither Nameprep nor Punycode are optional.
+ * The input and output of ToASCII and ToUnicode operations are Unicode
+ * and are designed to be chainable, i.e., applying ToASCII or ToUnicode operations
+ * multiple times to an input string will yield the same result as applying the operation
+ * once.
+ * ToUnicode(ToUnicode(ToUnicode...(ToUnicode(string)))) == ToUnicode(string) 
+ * ToASCII(ToASCII(ToASCII...(ToASCII(string))) == ToASCII(string).
  *
  * @param src               Input UChar array containing label in Unicode.
  * @param srcLength         Number of UChars in src, or -1 if NUL-terminated.
