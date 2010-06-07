@@ -135,7 +135,7 @@ public:
      * The UErrorCode indicates an error only in exceptional cases,
      * such as a U_MEMORY_ALLOCATION_ERROR.
      *
-     * @param label Input domain name label
+     * @param name Input domain name
      * @param dest Destination string object
      * @param info Output container of IDNA processing details.
      * @param errorCode Standard ICU error code. Its input value must
@@ -157,7 +157,7 @@ public:
      * The UErrorCode indicates an error only in exceptional cases,
      * such as a U_MEMORY_ALLOCATION_ERROR.
      *
-     * @param label Input domain name label
+     * @param name Input domain name
      * @param dest Destination string object
      * @param info Output container of IDNA processing details.
      * @param errorCode Standard ICU error code. Its input value must
@@ -213,7 +213,7 @@ public:
      * Converts a whole domain name into its ASCII form for DNS lookup.
      * UTF-8 version of nameToASCII(), same behavior.
      *
-     * @param label Input domain name label
+     * @param name Input domain name
      * @param dest Destination byte sink
      * @param info Output container of IDNA processing details.
      * @param errorCode Standard ICU error code. Its input value must
@@ -231,7 +231,7 @@ public:
      * Converts a whole domain name into its Unicode form for human-readable display.
      * UTF-8 version of nameToUnicode(), same behavior.
      *
-     * @param label Input domain name label
+     * @param name Input domain name
      * @param dest Destination byte sink
      * @param info Output container of IDNA processing details.
      * @param errorCode Standard ICU error code. Its input value must
@@ -272,7 +272,7 @@ public:
     UBool hasErrors() const { return errors!=0; }
     /**
      * Returns a bit set indicating IDNA processing errors.
-     * See UIDNA_ERROR_... constants.
+     * See UIDNA_ERROR_... constants in uidna.h.
      * @return bit set of processing errors
      * @draft ICU 4.6
      */
@@ -312,89 +312,6 @@ private:
 };
 
 U_NAMESPACE_END
-
-/*
- * IDNA error bit set values.
- * When a domain name or label fails a processing step or does not meet the
- * validity criteria, then one or more of these error bits are set.
- */
-enum {
-    /**
-     * A non-final domain name label (or the whole domain name) is empty.
-     * @draft ICU 4.6
-     */
-    UIDNA_ERROR_EMPTY_LABEL=1,
-    /**
-     * A domain name label is longer than 63 bytes.
-     * (See STD13/RFC1034 3.1. Name space specifications and terminology.)
-     * This is only checked in ToASCII operations, and only if the UIDNA_USE_STD3_RULES is set.
-     * @draft ICU 4.6
-     */
-    UIDNA_ERROR_LABEL_TOO_LONG=2,
-    /**
-     * A domain name is longer than 255 bytes in its storage form.
-     * (See STD13/RFC1034 3.1. Name space specifications and terminology.)
-     * This is only checked in ToASCII operations, and only if the UIDNA_USE_STD3_RULES is set.
-     * @draft ICU 4.6
-     */
-    UIDNA_ERROR_DOMAIN_NAME_TOO_LONG=4,
-    /**
-     * A label starts with a hyphen-minus ('-').
-     * @draft ICU 4.6
-     */
-    UIDNA_ERROR_LEADING_HYPHEN=8,
-    /**
-     * A label ends with a hyphen-minus ('-').
-     * @draft ICU 4.6
-     */
-    UIDNA_ERROR_TRAILING_HYPHEN=0x10,
-    /**
-     * A label contains hyphen-minus ('-') in the third and fourth positions.
-     * @draft ICU 4.6
-     */
-    UIDNA_ERROR_HYPHEN_3_4=0x20,
-    /**
-     * A label starts with a combining mark.
-     * @draft ICU 4.6
-     */
-    UIDNA_ERROR_LEADING_COMBINING_MARK=0x40,
-    /**
-     * A label or domain name contains disallowed characters.
-     * @draft ICU 4.6
-     */
-    UIDNA_ERROR_DISALLOWED=0x80,
-    /**
-     * A label starts with "xn--" but does not contain valid Punycode.
-     * That is, an xn-- label failed Punycode decoding.
-     * @draft ICU 4.6
-     */
-    UIDNA_ERROR_PUNYCODE=0x100,
-    /**
-     * A label contains a dot=full stop.
-     * This can occur in an input string for a single-label function.
-     * @draft ICU 4.6
-     */
-    UIDNA_ERROR_LABEL_HAS_DOT=0x200,
-    /**
-     * An ACE label does not contain a valid label string.
-     * The label was successfully ACE (Punycode) decoded but the resulting
-     * string had severe validation errors. For example,
-     * it might contain characters that are not allowed in ACE labels,
-     * or it might not be normalized.
-     * @draft ICU 4.6
-     */
-    UIDNA_ERROR_INVALID_ACE_LABEL=0x400,
-    /**
-     * A label does not meet the IDNA BiDi requirements (for right-to-left characters).
-     * @draft ICU 4.6
-     */
-    UIDNA_ERROR_BIDI=0x800,
-    /**
-     * A label does not meet the IDNA CONTEXTJ requirements.
-     * @draft ICU 4.6
-     */
-    UIDNA_ERROR_CONTEXTJ=0x1000
-};
 
 #endif  // UCONFIG_NO_IDNA
 #endif  // __IDNA_H__

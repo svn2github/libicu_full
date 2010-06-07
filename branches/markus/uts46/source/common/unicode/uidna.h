@@ -21,6 +21,7 @@
 
 #if !UCONFIG_NO_IDNA
 
+#include "unicode/localpointer.h"
 #include "unicode/parseerr.h"
 
 /**
@@ -28,9 +29,12 @@
  * \brief C API: Internationalized Domain Names in Applications Tranformation
  *
  * IDNA2008 is implemented according to UTS #46, see the IDNA C++ class in idna.h.
+ *
  * The old and new APIs share some of the option bit set values.
  * The old C API functions below which do not take a service object pointer
  * implement IDNA2003.
+ * The new C API functions below which do take a UIDNA * service object pointer
+ * implement UTS #46 and IDNA2008.
  *
  * IDNA2003 API Overview:
  *
@@ -109,6 +113,390 @@ enum {
      */
     UIDNA_NONTRANSITIONAL_TO_UNICODE=0x20
 };
+
+/**
+ * Opaque C service object type for the new IDNA API.
+ * @draft ICU 4.6
+ */
+struct UIDNA;
+typedef struct UIDNA UIDNA;  /**< C typedef for struct UIDNA. @draft ICU 4.6 */
+
+/**
+ * Returns a UIDNA instance which implements UTS #46.
+ * Returns an unmodifiable instance, owned by the caller.
+ * Cache it for multiple operations, and uidna_close() it when done.
+ *
+ * For details about the UTS #46 implementation see the IDNA C++ class in idna.h.
+ *
+ * @param options Bit set to modify the processing and error checking.
+ *                See option bit set values in uidna.h.
+ * @param pErrorCode Standard ICU error code. Its input value must
+ *                  pass the U_SUCCESS() test, or else the function returns
+ *                  immediately. Check for U_FAILURE() on output or use with
+ *                  function chaining. (See User Guide for details.)
+ * @return the UTS #46 UIDNA instance, if successful
+ * @draft ICU 4.6
+ */
+U_DRAFT UIDNA * U_EXPORT2
+uidna_openUTS46(uint32_t options, UErrorCode *pErrorCode);
+
+/**
+ * Closes a UIDNA instance.
+ * @param idna UIDNA instance to be closed
+ * @draft ICU 4.6
+ */
+U_DRAFT void U_EXPORT2
+uidna_close(UIDNA *idna);
+
+#if U_SHOW_CPLUSPLUS_API
+
+U_NAMESPACE_BEGIN
+
+/**
+ * \class LocalUIDNAPointer
+ * "Smart pointer" class, closes a UIDNA via uidna_close().
+ * For most methods see the LocalPointerBase base class.
+ *
+ * @see LocalPointerBase
+ * @see LocalPointer
+ * @draft ICU 4.6
+ */
+U_DEFINE_LOCAL_OPEN_POINTER(LocalUIDNAPointer, UIDNA, uidna_close);
+
+U_NAMESPACE_END
+
+#endif
+
+/**
+ * Output container for IDNA processing errors.
+ * Initialize with UIDNA_INFO_INITIALIZER:
+ * \code
+ * UIDNAInfo info = UIDNA_INFO_INITIALIZER;
+ * int32_t length = uidna_nameToASCII(..., &info, &errorCode);
+ * if(U_SUCCESS(errorCode) && info.errors!=0) { ... }
+ * \endcode
+ * @draft ICU 4.6
+ */
+struct UIDNAInfo {
+    /** sizeof(UIDNAInfo) @draft ICU 4.6 */
+    int16_t size;
+    /**
+     * Set to TRUE if transitional and nontransitional processing produce different results.
+     * For details see C++ IDNAInfo::isTransitionalDifferent().
+     * @draft ICU 4.6
+     */
+    UBool isTransitionalDifferent;
+    UBool reservedB3;  /**< Reserved field, do not use. @internal */
+    /**
+     * Bit set indicating IDNA processing errors. 0 if no errors.
+     * See UIDNA_ERROR_... constants.
+     * @draft ICU 4.6
+     */
+    uint32_t errors;
+    int32_t reservedI2;  /**< Reserved field, do not use. @internal */
+    int32_t reservedI3;  /**< Reserved field, do not use. @internal */
+};
+typedef struct UIDNAInfo UIDNAInfo;
+
+/**
+ * Static initializer for a UIDNAInfo struct.
+ * @draft ICU 4.6
+ */
+#define UIDNA_INFO_INITIALIZER { \
+    (int16_t)sizeof(UIDNAInfo), \
+    FALSE, FALSE, \
+    0, 0, 0 }
+
+/**
+ * Converts a single domain name label into its ASCII form for DNS lookup.
+ * If any processing step fails, then pInfo->errors will be non-zero and
+ * the result might not be an ASCII string.
+ * The label might be modified according to the types of errors.
+ * Labels with severe errors will be left in (or turned into) their Unicode form.
+ *
+ * The UErrorCode indicates an error only in exceptional cases,
+ * such as a U_MEMORY_ALLOCATION_ERROR.
+ *
+ * @param idna UIDNA instance
+ * @param label Input domain name label
+ * @param length Label length, or -1 if NUL-terminated
+ * @param dest Destination string buffer
+ * @param capacity Destination buffer capacity
+ * @param pInfo Output container of IDNA processing details.
+ * @param pErrorCode Standard ICU error code. Its input value must
+ *                  pass the U_SUCCESS() test, or else the function returns
+ *                  immediately. Check for U_FAILURE() on output or use with
+ *                  function chaining. (See User Guide for details.)
+ * @return destination string length
+ * @draft ICU 4.6
+ */
+U_DRAFT int32_t U_EXPORT2
+uidna_labelToASCII(const UIDNA *idna,
+                   const UChar *label, int32_t length,
+                   UChar *dest, int32_t capacity,
+                   UIDNAInfo *pInfo, UErrorCode *pErrorCode);
+
+/**
+ * Converts a single domain name label into its Unicode form for human-readable display.
+ * If any processing step fails, then pInfo->errors will be non-zero.
+ * The domain name might be modified according to the types of errors.
+ *
+ * The UErrorCode indicates an error only in exceptional cases,
+ * such as a U_MEMORY_ALLOCATION_ERROR.
+ *
+ * @param idna UIDNA instance
+ * @param label Input domain name label
+ * @param length Label length, or -1 if NUL-terminated
+ * @param dest Destination string buffer
+ * @param capacity Destination buffer capacity
+ * @param pInfo Output container of IDNA processing details.
+ * @param pErrorCode Standard ICU error code. Its input value must
+ *                  pass the U_SUCCESS() test, or else the function returns
+ *                  immediately. Check for U_FAILURE() on output or use with
+ *                  function chaining. (See User Guide for details.)
+ * @return destination string length
+ * @draft ICU 4.6
+ */
+U_DRAFT int32_t U_EXPORT2
+uidna_labelToUnicode(const UIDNA *idna,
+                     const UChar *label, int32_t length,
+                     UChar *dest, int32_t capacity,
+                     UIDNAInfo *pInfo, UErrorCode *pErrorCode);
+
+/**
+ * Converts a whole domain name into its ASCII form for DNS lookup.
+ * If any processing step fails, then pInfo->errors will be non-zero and
+ * the result might not be an ASCII string.
+ * The domain name might be modified according to the types of errors.
+ * Labels with severe errors will be left in (or turned into) their Unicode form.
+ *
+ * The UErrorCode indicates an error only in exceptional cases,
+ * such as a U_MEMORY_ALLOCATION_ERROR.
+ *
+ * @param idna UIDNA instance
+ * @param name Input domain name
+ * @param length Domain name length, or -1 if NUL-terminated
+ * @param dest Destination string buffer
+ * @param capacity Destination buffer capacity
+ * @param pInfo Output container of IDNA processing details.
+ * @param pErrorCode Standard ICU error code. Its input value must
+ *                  pass the U_SUCCESS() test, or else the function returns
+ *                  immediately. Check for U_FAILURE() on output or use with
+ *                  function chaining. (See User Guide for details.)
+ * @return destination string length
+ * @draft ICU 4.6
+ */
+U_DRAFT int32_t U_EXPORT2
+uidna_nameToASCII(const UIDNA *idna,
+                  const UChar *name, int32_t length,
+                  UChar *dest, int32_t capacity,
+                  UIDNAInfo *pInfo, UErrorCode *pErrorCode);
+
+/**
+ * Converts a whole domain name into its Unicode form for human-readable display.
+ * If any processing step fails, then pInfo->errors will be non-zero.
+ * The domain name might be modified according to the types of errors.
+ *
+ * The UErrorCode indicates an error only in exceptional cases,
+ * such as a U_MEMORY_ALLOCATION_ERROR.
+ *
+ * @param idna UIDNA instance
+ * @param name Input domain name
+ * @param length Domain name length, or -1 if NUL-terminated
+ * @param dest Destination string buffer
+ * @param capacity Destination buffer capacity
+ * @param pInfo Output container of IDNA processing details.
+ * @param pErrorCode Standard ICU error code. Its input value must
+ *                  pass the U_SUCCESS() test, or else the function returns
+ *                  immediately. Check for U_FAILURE() on output or use with
+ *                  function chaining. (See User Guide for details.)
+ * @return destination string length
+ * @draft ICU 4.6
+ */
+U_DRAFT int32_t U_EXPORT2
+uidna_nameToUnicode(const UIDNA *idna,
+                    const UChar *name, int32_t length,
+                    UChar *dest, int32_t capacity,
+                    UIDNAInfo *pInfo, UErrorCode *pErrorCode);
+
+/* UTF-8 versions of the processing methods --------------------------------- */
+
+/**
+ * Converts a single domain name label into its ASCII form for DNS lookup.
+ * UTF-8 version of uidna_labelToASCII(), same behavior.
+ *
+ * @param idna UIDNA instance
+ * @param label Input domain name label
+ * @param length Label length, or -1 if NUL-terminated
+ * @param dest Destination string buffer
+ * @param capacity Destination buffer capacity
+ * @param pInfo Output container of IDNA processing details.
+ * @param pErrorCode Standard ICU error code. Its input value must
+ *                  pass the U_SUCCESS() test, or else the function returns
+ *                  immediately. Check for U_FAILURE() on output or use with
+ *                  function chaining. (See User Guide for details.)
+ * @return destination string length
+ * @draft ICU 4.6
+ */
+U_DRAFT int32_t U_EXPORT2
+uidna_labelToASCII_UTF8(const UIDNA *idna,
+                        const char *label, int32_t length,
+                        char *dest, int32_t capacity,
+                        UIDNAInfo *pInfo, UErrorCode *pErrorCode);
+
+/**
+ * Converts a single domain name label into its Unicode form for human-readable display.
+ * UTF-8 version of uidna_labelToUnicode(), same behavior.
+ *
+ * @param idna UIDNA instance
+ * @param label Input domain name label
+ * @param length Label length, or -1 if NUL-terminated
+ * @param dest Destination string buffer
+ * @param capacity Destination buffer capacity
+ * @param pInfo Output container of IDNA processing details.
+ * @param pErrorCode Standard ICU error code. Its input value must
+ *                  pass the U_SUCCESS() test, or else the function returns
+ *                  immediately. Check for U_FAILURE() on output or use with
+ *                  function chaining. (See User Guide for details.)
+ * @return destination string length
+ * @draft ICU 4.6
+ */
+U_DRAFT int32_t U_EXPORT2
+uidna_labelToUnicodeUTF8(const UIDNA *idna,
+                         const char *label, int32_t length,
+                         char *dest, int32_t capacity,
+                         UIDNAInfo *pInfo, UErrorCode *pErrorCode);
+
+/**
+ * Converts a whole domain name into its ASCII form for DNS lookup.
+ * UTF-8 version of uidna_nameToASCII(), same behavior.
+ *
+ * @param idna UIDNA instance
+ * @param name Input domain name
+ * @param length Domain name length, or -1 if NUL-terminated
+ * @param dest Destination string buffer
+ * @param capacity Destination buffer capacity
+ * @param pInfo Output container of IDNA processing details.
+ * @param pErrorCode Standard ICU error code. Its input value must
+ *                  pass the U_SUCCESS() test, or else the function returns
+ *                  immediately. Check for U_FAILURE() on output or use with
+ *                  function chaining. (See User Guide for details.)
+ * @return destination string length
+ * @draft ICU 4.6
+ */
+U_DRAFT int32_t U_EXPORT2
+uidna_nameToASCII_UTF8(const UIDNA *idna,
+                       const char *name, int32_t length,
+                       char *dest, int32_t capacity,
+                       UIDNAInfo *pInfo, UErrorCode *pErrorCode);
+
+/**
+ * Converts a whole domain name into its Unicode form for human-readable display.
+ * UTF-8 version of uidna_nameToUnicode(), same behavior.
+ *
+ * @param idna UIDNA instance
+ * @param name Input domain name
+ * @param length Domain name length, or -1 if NUL-terminated
+ * @param dest Destination string buffer
+ * @param capacity Destination buffer capacity
+ * @param pInfo Output container of IDNA processing details.
+ * @param pErrorCode Standard ICU error code. Its input value must
+ *                  pass the U_SUCCESS() test, or else the function returns
+ *                  immediately. Check for U_FAILURE() on output or use with
+ *                  function chaining. (See User Guide for details.)
+ * @return destination string length
+ * @draft ICU 4.6
+ */
+U_DRAFT int32_t U_EXPORT2
+uidna_nameToUnicodeUTF8(const UIDNA *idna,
+                        const char *name, int32_t length,
+                        char *dest, int32_t capacity,
+                        UIDNAInfo *pInfo, UErrorCode *pErrorCode);
+
+/*
+ * IDNA error bit set values.
+ * When a domain name or label fails a processing step or does not meet the
+ * validity criteria, then one or more of these error bits are set.
+ */
+enum {
+    /**
+     * A non-final domain name label (or the whole domain name) is empty.
+     * @draft ICU 4.6
+     */
+    UIDNA_ERROR_EMPTY_LABEL=1,
+    /**
+     * A domain name label is longer than 63 bytes.
+     * (See STD13/RFC1034 3.1. Name space specifications and terminology.)
+     * This is only checked in ToASCII operations, and only if the UIDNA_USE_STD3_RULES is set.
+     * @draft ICU 4.6
+     */
+    UIDNA_ERROR_LABEL_TOO_LONG=2,
+    /**
+     * A domain name is longer than 255 bytes in its storage form.
+     * (See STD13/RFC1034 3.1. Name space specifications and terminology.)
+     * This is only checked in ToASCII operations, and only if the UIDNA_USE_STD3_RULES is set.
+     * @draft ICU 4.6
+     */
+    UIDNA_ERROR_DOMAIN_NAME_TOO_LONG=4,
+    /**
+     * A label starts with a hyphen-minus ('-').
+     * @draft ICU 4.6
+     */
+    UIDNA_ERROR_LEADING_HYPHEN=8,
+    /**
+     * A label ends with a hyphen-minus ('-').
+     * @draft ICU 4.6
+     */
+    UIDNA_ERROR_TRAILING_HYPHEN=0x10,
+    /**
+     * A label contains hyphen-minus ('-') in the third and fourth positions.
+     * @draft ICU 4.6
+     */
+    UIDNA_ERROR_HYPHEN_3_4=0x20,
+    /**
+     * A label starts with a combining mark.
+     * @draft ICU 4.6
+     */
+    UIDNA_ERROR_LEADING_COMBINING_MARK=0x40,
+    /**
+     * A label or domain name contains disallowed characters.
+     * @draft ICU 4.6
+     */
+    UIDNA_ERROR_DISALLOWED=0x80,
+    /**
+     * A label starts with "xn--" but does not contain valid Punycode.
+     * That is, an xn-- label failed Punycode decoding.
+     * @draft ICU 4.6
+     */
+    UIDNA_ERROR_PUNYCODE=0x100,
+    /**
+     * A label contains a dot=full stop.
+     * This can occur in an input string for a single-label function.
+     * @draft ICU 4.6
+     */
+    UIDNA_ERROR_LABEL_HAS_DOT=0x200,
+    /**
+     * An ACE label does not contain a valid label string.
+     * The label was successfully ACE (Punycode) decoded but the resulting
+     * string had severe validation errors. For example,
+     * it might contain characters that are not allowed in ACE labels,
+     * or it might not be normalized.
+     * @draft ICU 4.6
+     */
+    UIDNA_ERROR_INVALID_ACE_LABEL=0x400,
+    /**
+     * A label does not meet the IDNA BiDi requirements (for right-to-left characters).
+     * @draft ICU 4.6
+     */
+    UIDNA_ERROR_BIDI=0x800,
+    /**
+     * A label does not meet the IDNA CONTEXTJ requirements.
+     * @draft ICU 4.6
+     */
+    UIDNA_ERROR_CONTEXTJ=0x1000
+};
+
+/* IDNA2003 API ------------------------------------------------------------- */
 
 /**
  * IDNA2003: This function implements the ToASCII operation as defined in the IDNA RFC.

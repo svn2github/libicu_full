@@ -19,7 +19,10 @@
 #include "unicode/idna.h"
 #include "unicode/normalizer2.h"
 #include "unicode/ustring.h"
+#include "cmemory.h"
+#include "cstring.h"
 #include "punycode.h"
+#include "ustr_imp.h"
 
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 
@@ -1146,5 +1149,178 @@ UTS46::isLabelOkContextJ(const UChar *label, int32_t labelLength) const {
 }
 
 U_NAMESPACE_END
+
+// C API ------------------------------------------------------------------- ***
+
+U_NAMESPACE_USE
+
+U_DRAFT UIDNA * U_EXPORT2
+uidna_openUTS46(uint32_t options, UErrorCode *pErrorCode) {
+    return reinterpret_cast<UIDNA *>(IDNA::createUTS46Instance(options, *pErrorCode));
+}
+
+U_DRAFT void U_EXPORT2
+uidna_close(UIDNA *idna) {
+    delete reinterpret_cast<IDNA *>(idna);
+}
+
+static UBool
+checkArgs(const UIDNA *idna,
+          const void *label, int32_t length,
+          void *dest, int32_t capacity,
+          UIDNAInfo *pInfo, UErrorCode *pErrorCode) {
+    if(U_FAILURE(*pErrorCode)) {
+        return FALSE;
+    }
+    // sizeof(UIDNAInfo)=16 in the first API version.
+    if(idna==NULL || pInfo==NULL || pInfo->size<16) {
+        *pErrorCode=U_ILLEGAL_ARGUMENT_ERROR;
+        return FALSE;
+    }
+    if( (label==NULL ? length!=0 : length<-1) ||
+        (dest==NULL ? capacity!=0 : capacity<0) ||
+        (dest==label && label!=NULL)
+    ) {
+        *pErrorCode=U_ILLEGAL_ARGUMENT_ERROR;
+        return FALSE;
+    }
+    // Set all *pInfo bytes to 0 except for the size field itself.
+    uprv_memset(&pInfo->size+1, 0, pInfo->size-sizeof(pInfo->size));
+    return TRUE;
+}
+
+static void
+idnaInfoToStruct(IDNAInfo &info, UIDNAInfo *pInfo) {
+    pInfo->isTransitionalDifferent=info.isTransitionalDifferent();
+    pInfo->errors=info.getErrors();
+}
+
+U_DRAFT int32_t U_EXPORT2
+uidna_labelToASCII(const UIDNA *idna,
+                   const UChar *label, int32_t length,
+                   UChar *dest, int32_t capacity,
+                   UIDNAInfo *pInfo, UErrorCode *pErrorCode) {
+    if(!checkArgs(idna, label, length, dest, capacity, pInfo, pErrorCode)) {
+        return 0;
+    }
+    UnicodeString src((UBool)(length<0), label, length);
+    UnicodeString destString(dest, 0, capacity);
+    IDNAInfo info;
+    reinterpret_cast<const IDNA *>(idna)->labelToASCII(src, destString, info, *pErrorCode);
+    idnaInfoToStruct(info, pInfo);
+    return destString.extract(dest, capacity, *pErrorCode);
+}
+
+U_DRAFT int32_t U_EXPORT2
+uidna_labelToUnicode(const UIDNA *idna,
+                     const UChar *label, int32_t length,
+                     UChar *dest, int32_t capacity,
+                     UIDNAInfo *pInfo, UErrorCode *pErrorCode) {
+    if(!checkArgs(idna, label, length, dest, capacity, pInfo, pErrorCode)) {
+        return 0;
+    }
+    UnicodeString src((UBool)(length<0), label, length);
+    UnicodeString destString(dest, 0, capacity);
+    IDNAInfo info;
+    reinterpret_cast<const IDNA *>(idna)->labelToUnicode(src, destString, info, *pErrorCode);
+    idnaInfoToStruct(info, pInfo);
+    return destString.extract(dest, capacity, *pErrorCode);
+}
+
+U_DRAFT int32_t U_EXPORT2
+uidna_nameToASCII(const UIDNA *idna,
+                  const UChar *name, int32_t length,
+                  UChar *dest, int32_t capacity,
+                  UIDNAInfo *pInfo, UErrorCode *pErrorCode) {
+    if(!checkArgs(idna, name, length, dest, capacity, pInfo, pErrorCode)) {
+        return 0;
+    }
+    UnicodeString src((UBool)(length<0), name, length);
+    UnicodeString destString(dest, 0, capacity);
+    IDNAInfo info;
+    reinterpret_cast<const IDNA *>(idna)->nameToASCII(src, destString, info, *pErrorCode);
+    idnaInfoToStruct(info, pInfo);
+    return destString.extract(dest, capacity, *pErrorCode);
+}
+
+U_DRAFT int32_t U_EXPORT2
+uidna_nameToUnicode(const UIDNA *idna,
+                    const UChar *name, int32_t length,
+                    UChar *dest, int32_t capacity,
+                    UIDNAInfo *pInfo, UErrorCode *pErrorCode) {
+    if(!checkArgs(idna, name, length, dest, capacity, pInfo, pErrorCode)) {
+        return 0;
+    }
+    UnicodeString src((UBool)(length<0), name, length);
+    UnicodeString destString(dest, 0, capacity);
+    IDNAInfo info;
+    reinterpret_cast<const IDNA *>(idna)->nameToUnicode(src, destString, info, *pErrorCode);
+    idnaInfoToStruct(info, pInfo);
+    return destString.extract(dest, capacity, *pErrorCode);
+}
+
+U_DRAFT int32_t U_EXPORT2
+uidna_labelToASCII_UTF8(const UIDNA *idna,
+                        const char *label, int32_t length,
+                        char *dest, int32_t capacity,
+                        UIDNAInfo *pInfo, UErrorCode *pErrorCode) {
+    if(!checkArgs(idna, label, length, dest, capacity, pInfo, pErrorCode)) {
+        return 0;
+    }
+    StringPiece src(label, length<0 ? uprv_strlen(label) : length);
+    CheckedArrayByteSink sink(dest, capacity);
+    IDNAInfo info;
+    reinterpret_cast<const IDNA *>(idna)->labelToASCII_UTF8(src, sink, info, *pErrorCode);
+    idnaInfoToStruct(info, pInfo);
+    return u_terminateChars(dest, capacity, sink.NumberOfBytesAppended(), pErrorCode);
+}
+
+U_DRAFT int32_t U_EXPORT2
+uidna_labelToUnicodeUTF8(const UIDNA *idna,
+                         const char *label, int32_t length,
+                         char *dest, int32_t capacity,
+                         UIDNAInfo *pInfo, UErrorCode *pErrorCode) {
+    if(!checkArgs(idna, label, length, dest, capacity, pInfo, pErrorCode)) {
+        return 0;
+    }
+    StringPiece src(label, length<0 ? uprv_strlen(label) : length);
+    CheckedArrayByteSink sink(dest, capacity);
+    IDNAInfo info;
+    reinterpret_cast<const IDNA *>(idna)->labelToASCII_UTF8(src, sink, info, *pErrorCode);
+    idnaInfoToStruct(info, pInfo);
+    return u_terminateChars(dest, capacity, sink.NumberOfBytesAppended(), pErrorCode);
+}
+
+U_DRAFT int32_t U_EXPORT2
+uidna_nameToASCII_UTF8(const UIDNA *idna,
+                       const char *name, int32_t length,
+                       char *dest, int32_t capacity,
+                       UIDNAInfo *pInfo, UErrorCode *pErrorCode) {
+    if(!checkArgs(idna, name, length, dest, capacity, pInfo, pErrorCode)) {
+        return 0;
+    }
+    StringPiece src(name, length<0 ? uprv_strlen(name) : length);
+    CheckedArrayByteSink sink(dest, capacity);
+    IDNAInfo info;
+    reinterpret_cast<const IDNA *>(idna)->labelToASCII_UTF8(src, sink, info, *pErrorCode);
+    idnaInfoToStruct(info, pInfo);
+    return u_terminateChars(dest, capacity, sink.NumberOfBytesAppended(), pErrorCode);
+}
+
+U_DRAFT int32_t U_EXPORT2
+uidna_nameToUnicodeUTF8(const UIDNA *idna,
+                        const char *name, int32_t length,
+                        char *dest, int32_t capacity,
+                        UIDNAInfo *pInfo, UErrorCode *pErrorCode) {
+    if(!checkArgs(idna, name, length, dest, capacity, pInfo, pErrorCode)) {
+        return 0;
+    }
+    StringPiece src(name, length<0 ? uprv_strlen(name) : length);
+    CheckedArrayByteSink sink(dest, capacity);
+    IDNAInfo info;
+    reinterpret_cast<const IDNA *>(idna)->labelToASCII_UTF8(src, sink, info, *pErrorCode);
+    idnaInfoToStruct(info, pInfo);
+    return u_terminateChars(dest, capacity, sink.NumberOfBytesAppended(), pErrorCode);
+}
 
 #endif  // UCONFIG_NO_IDNA
