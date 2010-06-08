@@ -1165,15 +1165,14 @@ uidna_close(UIDNA *idna) {
 }
 
 static UBool
-checkArgs(const UIDNA *idna,
-          const void *label, int32_t length,
+checkArgs(const void *label, int32_t length,
           void *dest, int32_t capacity,
           UIDNAInfo *pInfo, UErrorCode *pErrorCode) {
     if(U_FAILURE(*pErrorCode)) {
         return FALSE;
     }
     // sizeof(UIDNAInfo)=16 in the first API version.
-    if(idna==NULL || pInfo==NULL || pInfo->size<16) {
+    if(pInfo==NULL || pInfo->size<16) {
         *pErrorCode=U_ILLEGAL_ARGUMENT_ERROR;
         return FALSE;
     }
@@ -1200,7 +1199,7 @@ uidna_labelToASCII(const UIDNA *idna,
                    const UChar *label, int32_t length,
                    UChar *dest, int32_t capacity,
                    UIDNAInfo *pInfo, UErrorCode *pErrorCode) {
-    if(!checkArgs(idna, label, length, dest, capacity, pInfo, pErrorCode)) {
+    if(!checkArgs(label, length, dest, capacity, pInfo, pErrorCode)) {
         return 0;
     }
     UnicodeString src((UBool)(length<0), label, length);
@@ -1216,7 +1215,7 @@ uidna_labelToUnicode(const UIDNA *idna,
                      const UChar *label, int32_t length,
                      UChar *dest, int32_t capacity,
                      UIDNAInfo *pInfo, UErrorCode *pErrorCode) {
-    if(!checkArgs(idna, label, length, dest, capacity, pInfo, pErrorCode)) {
+    if(!checkArgs(label, length, dest, capacity, pInfo, pErrorCode)) {
         return 0;
     }
     UnicodeString src((UBool)(length<0), label, length);
@@ -1232,7 +1231,7 @@ uidna_nameToASCII(const UIDNA *idna,
                   const UChar *name, int32_t length,
                   UChar *dest, int32_t capacity,
                   UIDNAInfo *pInfo, UErrorCode *pErrorCode) {
-    if(!checkArgs(idna, name, length, dest, capacity, pInfo, pErrorCode)) {
+    if(!checkArgs(name, length, dest, capacity, pInfo, pErrorCode)) {
         return 0;
     }
     UnicodeString src((UBool)(length<0), name, length);
@@ -1248,7 +1247,7 @@ uidna_nameToUnicode(const UIDNA *idna,
                     const UChar *name, int32_t length,
                     UChar *dest, int32_t capacity,
                     UIDNAInfo *pInfo, UErrorCode *pErrorCode) {
-    if(!checkArgs(idna, name, length, dest, capacity, pInfo, pErrorCode)) {
+    if(!checkArgs(name, length, dest, capacity, pInfo, pErrorCode)) {
         return 0;
     }
     UnicodeString src((UBool)(length<0), name, length);
@@ -1264,7 +1263,7 @@ uidna_labelToASCII_UTF8(const UIDNA *idna,
                         const char *label, int32_t length,
                         char *dest, int32_t capacity,
                         UIDNAInfo *pInfo, UErrorCode *pErrorCode) {
-    if(!checkArgs(idna, label, length, dest, capacity, pInfo, pErrorCode)) {
+    if(!checkArgs(label, length, dest, capacity, pInfo, pErrorCode)) {
         return 0;
     }
     StringPiece src(label, length<0 ? uprv_strlen(label) : length);
@@ -1280,7 +1279,7 @@ uidna_labelToUnicodeUTF8(const UIDNA *idna,
                          const char *label, int32_t length,
                          char *dest, int32_t capacity,
                          UIDNAInfo *pInfo, UErrorCode *pErrorCode) {
-    if(!checkArgs(idna, label, length, dest, capacity, pInfo, pErrorCode)) {
+    if(!checkArgs(label, length, dest, capacity, pInfo, pErrorCode)) {
         return 0;
     }
     StringPiece src(label, length<0 ? uprv_strlen(label) : length);
@@ -1296,7 +1295,7 @@ uidna_nameToASCII_UTF8(const UIDNA *idna,
                        const char *name, int32_t length,
                        char *dest, int32_t capacity,
                        UIDNAInfo *pInfo, UErrorCode *pErrorCode) {
-    if(!checkArgs(idna, name, length, dest, capacity, pInfo, pErrorCode)) {
+    if(!checkArgs(name, length, dest, capacity, pInfo, pErrorCode)) {
         return 0;
     }
     StringPiece src(name, length<0 ? uprv_strlen(name) : length);
@@ -1312,7 +1311,7 @@ uidna_nameToUnicodeUTF8(const UIDNA *idna,
                         const char *name, int32_t length,
                         char *dest, int32_t capacity,
                         UIDNAInfo *pInfo, UErrorCode *pErrorCode) {
-    if(!checkArgs(idna, name, length, dest, capacity, pInfo, pErrorCode)) {
+    if(!checkArgs(name, length, dest, capacity, pInfo, pErrorCode)) {
         return 0;
     }
     StringPiece src(name, length<0 ? uprv_strlen(name) : length);

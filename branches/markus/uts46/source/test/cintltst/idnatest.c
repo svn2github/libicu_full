@@ -1018,13 +1018,6 @@ static void TestUTS46() {
         log_err("uidna_nameToUnicodeUTF8() overflow failed: %s\n", u_errorName(errorCode));
     }
 
-    errorCode = U_ZERO_ERROR;
-    length = uidna_nameToASCII(NULL, NULL, 0,
-                               dest16, 0, &info, &errorCode);
-    if(errorCode != U_ILLEGAL_ARGUMENT_ERROR) {
-        log_err("uidna_nameToASCII(idna=NULL) failed: %s\n", u_errorName(errorCode));
-    }
-
     uidna_close(uts46);
 }
 
