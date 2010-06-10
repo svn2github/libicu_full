@@ -38,6 +38,8 @@ class U_COMMON_API IDNAInfo;
  * See http://www.unicode.org/reports/tr46/
  * and http://www.ietf.org/rfc/rfc3490.txt
  *
+ * The IDNA class is not intended for public subclassing.
+ *
  * This C++ API currently only implements UTS #46.
  * The uidna.h C API implements both UTS #46 (functions using UIDNA service object)
  * and IDNA2003 (functions that do not use a service object).
