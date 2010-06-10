@@ -411,6 +411,7 @@ UTS46::processUTF8(const StringPiece &src,
         if(toASCII) {
             info.errors|=UIDNA_ERROR_EMPTY_LABEL;
         }
+        dest.Flush();
         return;
     }
     UnicodeString destString;
@@ -436,6 +437,7 @@ UTS46::processUTF8(const StringPiece &src,
                 }
                 info.errors|=info.labelErrors;
                 dest.Append(destArray, i);
+                dest.Flush();
                 return;
             }
             char c=srcArray[i];
@@ -495,7 +497,7 @@ UTS46::processUTF8(const StringPiece &src,
                        isLabel, toASCII,
                        destString, info, errorCode);
     }
-    destString.toUTF8(dest);
+    destString.toUTF8(dest);  // calls dest.Flush()
     if(toASCII && !isLabel) {
         // length==labelStart==254 means that there is a trailing dot (ok) and
         // destString is empty (do not index at 253-labelStart).

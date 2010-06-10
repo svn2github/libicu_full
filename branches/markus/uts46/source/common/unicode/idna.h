@@ -178,7 +178,7 @@ public:
      * UTF-8 version of labelToASCII(), same behavior.
      *
      * @param label Input domain name label
-     * @param dest Destination byte sink
+     * @param dest Destination byte sink; Flush()ed if successful
      * @param info Output container of IDNA processing details.
      * @param errorCode Standard ICU error code. Its input value must
      *                  pass the U_SUCCESS() test, or else the function returns
@@ -196,7 +196,7 @@ public:
      * UTF-8 version of labelToUnicode(), same behavior.
      *
      * @param label Input domain name label
-     * @param dest Destination byte sink
+     * @param dest Destination byte sink; Flush()ed if successful
      * @param info Output container of IDNA processing details.
      * @param errorCode Standard ICU error code. Its input value must
      *                  pass the U_SUCCESS() test, or else the function returns
@@ -214,7 +214,7 @@ public:
      * UTF-8 version of nameToASCII(), same behavior.
      *
      * @param name Input domain name
-     * @param dest Destination byte sink
+     * @param dest Destination byte sink; Flush()ed if successful
      * @param info Output container of IDNA processing details.
      * @param errorCode Standard ICU error code. Its input value must
      *                  pass the U_SUCCESS() test, or else the function returns
@@ -232,7 +232,7 @@ public:
      * UTF-8 version of nameToUnicode(), same behavior.
      *
      * @param name Input domain name
-     * @param dest Destination byte sink
+     * @param dest Destination byte sink; Flush()ed if successful
      * @param info Output container of IDNA processing details.
      * @param errorCode Standard ICU error code. Its input value must
      *                  pass the U_SUCCESS() test, or else the function returns
