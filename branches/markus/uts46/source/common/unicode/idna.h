@@ -17,7 +17,7 @@
 
 /**
  * \file
- * \brief C++ API: New API for IDNA (Internationalizing Domain Names In Applications).
+ * \brief C++ API: Internationalizing Domain Names in Applications (IDNA)
  */
 
 #include "unicode/utypes.h"
@@ -38,8 +38,9 @@ class U_COMMON_API IDNAInfo;
  * See http://www.unicode.org/reports/tr46/
  * and http://www.ietf.org/rfc/rfc3490.txt
  *
- * This newer API currently only implements UTS #46.
- * The older uidna.h C API only implements IDNA2003.
+ * This C++ API currently only implements UTS #46.
+ * The uidna.h C API implements both UTS #46 (functions using UIDNA service object)
+ * and IDNA2003 (functions that do not use a service object).
  * @draft ICU 4.6
  */
 class U_COMMON_API IDNA : public UObject {

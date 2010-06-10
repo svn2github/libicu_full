@@ -195,7 +195,14 @@ private:
 IDNA *
 IDNA::createUTS46Instance(uint32_t options, UErrorCode &errorCode) {
     if(U_SUCCESS(errorCode)) {
-        return new UTS46(options, errorCode);
+        IDNA *idna=new UTS46(options, errorCode);
+        if(idna==NULL) {
+            errorCode=U_MEMORY_ALLOCATION_ERROR;
+        } else if(U_FAILURE(errorCode)) {
+            delete idna;
+            idna=NULL;
+        }
+        return idna;
     } else {
         return NULL;
     }
@@ -647,9 +654,9 @@ UTS46::mapDevChars(UnicodeString &dest, int32_t labelStart, int32_t mappingStart
 
 // Replace the label in dest with the label string, if the label was modified.
 // If &label==&dest then the label was modified in-place and labelLength
-// is the new length, different from label.length().
+// is the new label length, different from label.length().
 // If &label!=&dest then labelLength==label.length().
-// Returns the delta of the new vs. old label length.
+// Returns labelLength (= the new label length).
 static int32_t
 replaceLabel(UnicodeString &dest, int32_t destLabelStart, int32_t destLabelLength,
              const UnicodeString &label, int32_t labelLength) {
@@ -907,25 +914,25 @@ UTS46::markBadACELabel(UnicodeString &dest,
     return labelLength;
 }
 
-#define L_MASK U_MASK(U_LEFT_TO_RIGHT)
-#define R_AL_MASK (U_MASK(U_RIGHT_TO_LEFT)|U_MASK(U_RIGHT_TO_LEFT_ARABIC))
-#define L_R_AL_MASK (L_MASK|R_AL_MASK)
+const uint32_t L_MASK=U_MASK(U_LEFT_TO_RIGHT);
+const uint32_t R_AL_MASK=U_MASK(U_RIGHT_TO_LEFT)|U_MASK(U_RIGHT_TO_LEFT_ARABIC);
+const uint32_t L_R_AL_MASK=L_MASK|R_AL_MASK;
 
-#define R_AL_AN_MASK (R_AL_MASK|U_MASK(U_ARABIC_NUMBER))
+const uint32_t R_AL_AN_MASK=R_AL_MASK|U_MASK(U_ARABIC_NUMBER);
 
-#define EN_AN_MASK (U_MASK(U_EUROPEAN_NUMBER)|U_MASK(U_ARABIC_NUMBER))
-#define R_AL_EN_AN_MASK (R_AL_MASK|EN_AN_MASK)
-#define L_EN_MASK (L_MASK|U_MASK(U_EUROPEAN_NUMBER))
+const uint32_t EN_AN_MASK=U_MASK(U_EUROPEAN_NUMBER)|U_MASK(U_ARABIC_NUMBER);
+const uint32_t R_AL_EN_AN_MASK=R_AL_MASK|EN_AN_MASK;
+const uint32_t L_EN_MASK=L_MASK|U_MASK(U_EUROPEAN_NUMBER);
 
-#define ES_CS_ET_ON_BN_NSM_MASK \
-    (U_MASK(U_EUROPEAN_NUMBER_SEPARATOR)| \
-    U_MASK(U_COMMON_NUMBER_SEPARATOR)| \
-    U_MASK(U_EUROPEAN_NUMBER_TERMINATOR)| \
-    U_MASK(U_OTHER_NEUTRAL)| \
-    U_MASK(U_BOUNDARY_NEUTRAL)| \
-    U_MASK(U_DIR_NON_SPACING_MARK))
-#define L_EN_ES_CS_ET_ON_BN_NSM_MASK (L_EN_MASK|ES_CS_ET_ON_BN_NSM_MASK)
-#define R_AL_AN_EN_ES_CS_ET_ON_BN_NSM_MASK (R_AL_MASK|EN_AN_MASK|ES_CS_ET_ON_BN_NSM_MASK)
+const uint32_t ES_CS_ET_ON_BN_NSM_MASK=
+    U_MASK(U_EUROPEAN_NUMBER_SEPARATOR)|
+    U_MASK(U_COMMON_NUMBER_SEPARATOR)|
+    U_MASK(U_EUROPEAN_NUMBER_TERMINATOR)|
+    U_MASK(U_OTHER_NEUTRAL)|
+    U_MASK(U_BOUNDARY_NEUTRAL)|
+    U_MASK(U_DIR_NON_SPACING_MARK);
+const uint32_t L_EN_ES_CS_ET_ON_BN_NSM_MASK=L_EN_MASK|ES_CS_ET_ON_BN_NSM_MASK;
+const uint32_t R_AL_AN_EN_ES_CS_ET_ON_BN_NSM_MASK=R_AL_MASK|EN_AN_MASK|ES_CS_ET_ON_BN_NSM_MASK;
 
 // We scan the whole label and check both for whether it contains RTL characters
 // and whether it passes the BiDi Rule.

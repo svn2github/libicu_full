@@ -26,15 +26,14 @@
 
 /**
  * \file
- * \brief C API: Internationalized Domain Names in Applications Tranformation
+ * \brief C API: Internationalizing Domain Names in Applications (IDNA)
  *
  * IDNA2008 is implemented according to UTS #46, see the IDNA C++ class in idna.h.
  *
- * The old and new APIs share some of the option bit set values.
- * The old C API functions below which do not take a service object pointer
- * implement IDNA2003.
- * The new C API functions below which do take a UIDNA * service object pointer
+ * The C API functions which do take a UIDNA * service object pointer
  * implement UTS #46 and IDNA2008.
+ * The C API functions which do not take a service object pointer
+ * implement IDNA2003.
  */
 
 /*
