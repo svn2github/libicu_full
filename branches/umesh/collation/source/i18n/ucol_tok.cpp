@@ -773,9 +773,7 @@ ucol_tok_processNextCodePointInRange(UColTokenParser *src,
   if (src->currentRangeCp > src->lastRangeCp) {
     src->inRange = FALSE;
 
-    if (src->currentStarredCharIndex <= src->lastStarredCharIndex) {
-      // TODO: needed? src->isStarred = TRUE;
-    } else {
+    if (src->currentStarredCharIndex > src->lastStarredCharIndex) {
       src->isStarred = FALSE;
     }
   } else {
@@ -1581,7 +1579,6 @@ uint32_t ucol_tok_assembleTokenList(UColTokenParser *src, UParseError *parseErro
     UBool top = FALSE;
     uint16_t specs = 0;
     UColTokListHeader *ListList = NULL;
-    int cnt = 0;
 
     src->parsedToken.strength = UCOL_TOK_UNSET;
 
