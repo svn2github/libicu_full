@@ -679,14 +679,17 @@ uint8_t ucol_uprv_tok_readAndSetOption(UColTokenParser *src, UErrorCode *status)
 
 
 inline void ucol_tok_addToExtraCurrent(UColTokenParser *src, const UChar *stuff, int32_t len, UErrorCode *status) {
-    UChar *tempStuff = (UChar *)stuff;
+    UnicodeString tempStuff(FALSE, stuff, len);
     if(src->extraCurrent+len >= src->extraEnd) {
         /* reallocate */
         if (stuff >= src->source && stuff <= src->end) {
-          // Copy stuff to a new buffer if stuff points to an address within
-          // src->source buffer.
-          tempStuff = (UChar*)uprv_malloc(len*sizeof(UChar));
-          uprv_memcpy(tempStuff, stuff, len*sizeof(UChar));
+            // Copy the "stuff" contents into tempStuff's own buffer.
+            // UnicodeString is copy-on-write.
+            if (len > 0) {
+                tempStuff.setCharAt(0, tempStuff[0]);
+            } else {
+                tempStuff.remove();
+            }
         }
         UChar *newSrc = (UChar *)uprv_realloc(src->source, (src->extraEnd-src->source)*2*sizeof(UChar));
         if(newSrc != NULL) {
@@ -701,13 +704,10 @@ inline void ucol_tok_addToExtraCurrent(UColTokenParser *src, const UChar *stuff,
         }
     }
     if(len == 1) {
-        *src->extraCurrent++ = *tempStuff;
+        *src->extraCurrent++ = tempStuff[0];
     } else {
-        uprv_memcpy(src->extraCurrent, tempStuff, len*sizeof(UChar));
+        u_memcpy(src->extraCurrent, tempStuff.getBuffer(), len);
         src->extraCurrent += len;
-    }
-    if (tempStuff != stuff) {
-        uprv_free(tempStuff);
     }
 }
 
@@ -759,15 +759,14 @@ ucol_tok_processNextCodePointInRange(UColTokenParser *src,
                                      UErrorCode *status)
 {
   // Append current code point to source
-  UChar buff[3];
-  UBool isError = FALSE;
+  UChar buff[U16_MAX_LENGTH];
   uint32_t i = 0;
 
-  uint32_t nChars = (U16_IS_SURROGATE(src->currentRangeCp) ? 2 : 1);
+  uint32_t nChars = U16_LENGTH(src->currentRangeCp);
   src->parsedToken.charsOffset = (uint32_t)(src->extraCurrent - src->source);
   src->parsedToken.charsLen = nChars;
 
-  U16_APPEND(buff, i,  3, src->currentRangeCp, isError);
+  U16_APPEND_UNSAFE(buff, i, src->currentRangeCp);
   ucol_tok_addToExtraCurrent(src, buff, nChars, status);
 
   ++src->currentRangeCp;
@@ -775,7 +774,7 @@ ucol_tok_processNextCodePointInRange(UColTokenParser *src,
     src->inRange = FALSE;
 
     if (src->currentStarredCharIndex <= src->lastStarredCharIndex) {
-      src->isStarred = TRUE;
+      // TODO: needed? src->isStarred = TRUE;
     } else {
       src->isStarred = FALSE;
     }
@@ -799,8 +798,9 @@ ucol_tok_processNextTokenInStarredList(UColTokenParser *src)
   // Extract the characters corresponding to the next code point.
   uint32_t cp;
   src->parsedToken.charsOffset = src->currentStarredCharIndex;
+  int32_t prev = src->currentStarredCharIndex;
   U16_NEXT(src->source, src->currentStarredCharIndex, (uint32_t)(src->end - src->source), cp);
-  src->parsedToken.charsLen = (U16_IS_SURROGATE(cp) ? 2 : 1);
+  src->parsedToken.charsLen = src->currentStarredCharIndex - prev;
 
   // When we are done parsing the starred string, turn the flag off so that
   // the normal processing is restored.
@@ -1142,7 +1142,7 @@ ucol_tok_parseNextTokenInternal(UColTokenParser *src,
                     if (newStrength != UCOL_TOK_UNSET) {
                       // While processing the pending token, the isStarred field
                       // is reset, so it needs to be saved for the next
-                      // invocatioon.
+                      // invocation.
                       src->savedIsStarred = src->isStarred;
                       goto EndOfLoop;
                    }
@@ -1269,23 +1269,23 @@ ucol_tok_parseNextToken(UColTokenParser *src,
 
   if (src->inRange) {
     // A new range has started.
-    // printf("1: lastRangeCp = %x, previousCp = %x\n", src->lastRangeCp, src->previousCp);
-
     // Check whether it is a chain of ranges with more than one hyphen.
     if (src->lastRangeCp > 0 && src->lastRangeCp == src->previousCp) {
         *status = U_INVALID_FORMAT_ERROR;
-        syntaxError(src->source,src->parsedToken.charsOffset-1,src->parsedToken.charsOffset+src->parsedToken.charsLen,parseError);
+        syntaxError(src->source,src->parsedToken.charsOffset-1,
+                    src->parsedToken.charsOffset+src->parsedToken.charsLen, parseError);
         return NULL;
     }
 
-    // The current token is the first character of the second code point of the range.
+    // The current token indicates the second code point of the range.
     // Process just that, and then proceed with the star.
     src->currentStarredCharIndex = src->parsedToken.charsOffset;
-    U16_NEXT(src->source, src->currentStarredCharIndex, (uint32_t)(src->end - src->source), src->lastRangeCp);
-    // printf("2: lastRangeCp = %x, previousCp = %x\n", src->lastRangeCp, src->previousCp);
+    U16_NEXT(src->source, src->currentStarredCharIndex, 
+             (uint32_t)(src->end - src->source), src->lastRangeCp);
     if (src->lastRangeCp <= src->previousCp) {
         *status = U_INVALID_FORMAT_ERROR;
-        syntaxError(src->source,src->parsedToken.charsOffset-1,src->parsedToken.charsOffset+src->parsedToken.charsLen,parseError);
+        syntaxError(src->source,src->parsedToken.charsOffset-1,
+                    src->parsedToken.charsOffset+src->parsedToken.charsLen,parseError);
         return NULL;
     }
 
@@ -1306,7 +1306,6 @@ ucol_tok_parseNextToken(UColTokenParser *src,
   } else {
     // Set previous codepoint
     U16_GET(src->source, 0, src->parsedToken.charsOffset, (uint32_t)(src->end - src->source), src->previousCp);
-    // printf("%d: previousCp = %x\n", __LINE__, src->previousCp);
   }
   return nextToken;
 }
@@ -1600,7 +1599,6 @@ uint32_t ucol_tok_assembleTokenList(UColTokenParser *src, UParseError *parseErro
             parseError,
             status);
 
-        ++cnt;
         specs = src->parsedToken.flags;
 
 
