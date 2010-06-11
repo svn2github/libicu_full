@@ -135,6 +135,19 @@
 #endif
 
 /**
+ * @internal
+ */
+#ifndef UCONFIG_NO_USET
+# define UCONFIG_NO_USET 0
+#elif UCONFIG_NO_USET
+# ifndef UCONFIG_NO_NORMALIZATION
+#  define UCONFIG_NO_NORMALIZATION 1
+# elif !UCONFIG_NO_NORMALIZATION
+#  error UCONFIG_NO_USET=1 implies UCONFIG_NO_NORMALIZATION=1
+# endif
+#endif
+
+/**
  * \def UCONFIG_NO_NORMALIZATION
  * This switch turns off normalization.
  * It implies turning off several other services as well, for example
@@ -174,13 +187,6 @@
  */
 #ifndef UCONFIG_NO_IDNA
 #   define UCONFIG_NO_IDNA 0
-#endif
-
-/**
- * @internal
- */
-#ifndef UCONFIG_NO_USET
-# define UCONFIG_NO_USET 0
 #endif
 
 /* i18n library switches ---------------------------------------------------- */
