@@ -240,12 +240,14 @@ CurrencyPluralInfo::setupCurrencyPluralPattern(const Locale& loc, UErrorCode& st
     }
 
     UErrorCode ec = U_ZERO_ERROR;
-    UResourceBundle *rb = ures_open(NULL, loc.getName(), &ec);
-    rb = ures_getByKey(rb, gNumberElementsTag, rb, &ec);
-    rb = ures_getByKey(rb, gLatnTag, rb, &ec);
-    rb = ures_getByKey(rb, gPatternsTag, rb, &ec);
+    UResourceBundle rb;
+    ures_initStackObject(&rb);
+    ures_openFillIn(&rb,NULL, loc.getName(), &ec);
+    ures_getByKey(&rb, gNumberElementsTag, &rb, &ec);
+    ures_getByKey(&rb, gLatnTag, &rb, &ec);
+    ures_getByKey(&rb, gPatternsTag, &rb, &ec);
     int32_t ptnLen;
-    const UChar* numberStylePattern = ures_getStringByKeyWithFallback(rb, gDecimalFormatTag, &ptnLen, &ec);
+    const UChar* numberStylePattern = ures_getStringByKeyWithFallback(&rb, gDecimalFormatTag, &ptnLen, &ec);
     int32_t numberStylePatternLen = ptnLen;
     const UChar* negNumberStylePattern = NULL;
     int32_t negNumberStylePatternLen = 0;
@@ -262,15 +264,14 @@ CurrencyPluralInfo::setupCurrencyPluralPattern(const Locale& loc, UErrorCode& st
                 numberStylePatternLen = styleCharIndex;
             }
         }
-    }
-    ures_close(rb);
-
-    if (U_FAILURE(ec)) {
+    } else {
         return;
     }
 
-    UResourceBundle *currRb = ures_open(U_ICUDATA_CURR, loc.getName(), &ec);
-    UResourceBundle *currencyRes = ures_getByKeyWithFallback(currRb, gCurrUnitPtnTag, NULL, &ec);
+    UResourceBundle currencyRes;
+    ures_initStackObject(&currencyRes);
+    ures_openFillIn(&currencyRes,U_ICUDATA_CURR, loc.getName(), &ec);
+    ures_getByKeyWithFallback(&currencyRes, gCurrUnitPtnTag, &currencyRes, &ec);
     
 #ifdef CURRENCY_PLURAL_INFO_DEBUG
     std::cout << "in set up\n";
@@ -283,7 +284,7 @@ CurrencyPluralInfo::setupCurrencyPluralPattern(const Locale& loc, UErrorCode& st
                 int32_t ptnLen;
                 UErrorCode err = U_ZERO_ERROR;
                 const UChar* patternChars = ures_getStringByKeyWithFallback(
-                    currencyRes, pluralCount, &ptnLen, &err);
+                    &currencyRes, pluralCount, &ptnLen, &err);
                 if (U_SUCCESS(err) && ptnLen > 0) {
                     UnicodeString* pattern = new UnicodeString(patternChars, ptnLen);
 #ifdef CURRENCY_PLURAL_INFO_DEBUG
@@ -314,8 +315,6 @@ CurrencyPluralInfo::setupCurrencyPluralPattern(const Locale& loc, UErrorCode& st
         }
     }
     delete keywords;
-    ures_close(currencyRes);
-    ures_close(currRb);
 }
 
 

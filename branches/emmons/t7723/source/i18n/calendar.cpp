@@ -253,17 +253,23 @@ static ECalType getCalendarTypeForLocale(const char *locid) {
     // Read preferred calendar values from supplementalData calendarPreference
     UResourceBundle *rb = ures_openDirect(NULL, "supplementalData", &status);
     ures_getByKey(rb, "calendarPreferenceData", rb, &status);
-    UResourceBundle *order = ures_getByKey(rb, region, NULL, &status);
-    if (status == U_MISSING_RESOURCE_ERROR && rb != NULL) {
+    if (U_FAILURE(status)) {
+        return CALTYPE_GREGORIAN;
+    }
+
+    UResourceBundle order;
+    ures_initStackObject(&order);
+    ures_getByKey(rb, region, &order, &status);
+    if (status == U_MISSING_RESOURCE_ERROR) {
         status = U_ZERO_ERROR;
-        order = ures_getByKey(rb, "001", NULL, &status);
+        ures_getByKey(rb, "001", &order, &status);
     }
 
     calTypeBuf[0] = 0;
-    if (U_SUCCESS(status) && order != NULL) {
+    if (U_SUCCESS(status))  {
         // the first calender type is the default for the region
         int32_t len = 0;
-        const UChar *uCalType = ures_getStringByIndex(order, 0, &len, &status);
+        const UChar *uCalType = ures_getStringByIndex(&order, 0, &len, &status);
         if (len < (int32_t)sizeof(calTypeBuf)) {
             u_UCharsToChars(uCalType, calTypeBuf, len);
             *(calTypeBuf + len) = 0; // terminate;
@@ -271,7 +277,6 @@ static ECalType getCalendarTypeForLocale(const char *locid) {
         }
     }
 
-    ures_close(order);
     ures_close(rb);
 
     if (calType == CALTYPE_UNKNOWN) {

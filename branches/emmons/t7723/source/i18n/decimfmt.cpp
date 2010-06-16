@@ -389,20 +389,20 @@ DecimalFormat::construct(UErrorCode&             status,
     if (pattern == NULL)
     {
         int32_t len = 0;
-        UResourceBundle *resource = ures_open(NULL, Locale::getDefault().getName(), &status);
+        UResourceBundle resource;
+        ures_initStackObject(&resource);
+        ures_openFillIn(&resource, NULL, Locale::getDefault().getName(), &status);
 
-        resource = ures_getByKey(resource, fgNumberElements, resource, &status);
+        ures_getByKey(&resource, fgNumberElements, &resource, &status);
         // TODO : Get the pattern based on the active numbering system for the locale. Right now assumes "latn".
-        resource = ures_getByKey(resource, fgLatn, resource, &status);
-        resource = ures_getByKey(resource, fgPatterns, resource, &status);
-        const UChar *resStr = ures_getStringByKey(resource, fgDecimalFormat, &len, &status);
+        ures_getByKey(&resource, fgLatn, &resource, &status);
+        ures_getByKey(&resource, fgPatterns, &resource, &status);
+        const UChar *resStr = ures_getStringByKey(&resource, fgDecimalFormat, &len, &status);
         str.setTo(TRUE, resStr, len);
         pattern = &str;
-        ures_close(resource);
     }
 
-    if (U_FAILURE(status))
-    {
+    if (U_FAILURE(status)) {
         return;
     }
 

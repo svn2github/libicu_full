@@ -174,8 +174,10 @@ DecimalFormatSymbols::initialize(const Locale& loc, UErrorCode& status)
         return;
 
     const char* locStr = loc.getName();
-    UResourceBundle *resource = ures_open((char *)0, locStr, &status);
-    UResourceBundle *numberElementsRes = ures_getByKeyWithFallback(resource, gNumberElements, NULL, &status);
+    UResourceBundle numberElementsRes;
+    ures_initStackObject(&numberElementsRes);
+    ures_openFillIn(&numberElementsRes, NULL, locStr, &status);
+    ures_getByKeyWithFallback(&numberElementsRes, gNumberElements, &numberElementsRes, &status);
 
     if (U_FAILURE(status)) {
         status = U_USING_FALLBACK_WARNING;
@@ -200,18 +202,22 @@ DecimalFormatSymbols::initialize(const Locale& loc, UErrorCode& status)
         } else {
             nsName = gLatn;
         }
+
+
+        UResourceBundle latnSymbols;
+        ures_initStackObject(&latnSymbols);
+        ures_getByKeyWithFallback(&numberElementsRes, gLatn, &latnSymbols, &status);
+        ures_getByKeyWithFallback(&latnSymbols, gSymbols, &latnSymbols, &status);
        
         UBool isLatn = !uprv_strcmp(nsName,gLatn);
 
         UErrorCode nlStatus = U_ZERO_ERROR;
         UResourceBundle *nonLatnSymbols = NULL;
         if ( !isLatn ) {
-            nonLatnSymbols = ures_getByKeyWithFallback(numberElementsRes, nsName, NULL, &nlStatus);
-            nonLatnSymbols = ures_getByKeyWithFallback(nonLatnSymbols, gSymbols, nonLatnSymbols, &nlStatus);
+            nonLatnSymbols = ures_getByKeyWithFallback(&numberElementsRes, nsName, NULL, &nlStatus);
+            ures_getByKeyWithFallback(nonLatnSymbols, gSymbols, nonLatnSymbols, &nlStatus);
         }
 
-        UResourceBundle *latnSymbols = ures_getByKeyWithFallback(numberElementsRes, gLatn, NULL, &status);
-        latnSymbols = ures_getByKeyWithFallback(latnSymbols, gSymbols, latnSymbols, &status);
 
         UBool kMonetaryDecimalSet = FALSE;
         UBool kMonetaryGroupingSet = FALSE;
@@ -224,10 +230,10 @@ DecimalFormatSymbols::initialize(const Locale& loc, UErrorCode& status)
                     // use the "latn" numbering system as the fallback.
                     if ( U_FAILURE(localStatus) ) {
                         localStatus = U_ZERO_ERROR;
-                        sym = ures_getStringByKeyWithFallback(latnSymbols,gNumberElementKeys[i],&len,&localStatus);
+                        sym = ures_getStringByKeyWithFallback(&latnSymbols,gNumberElementKeys[i],&len,&localStatus);
                     }
                 } else {
-                        sym = ures_getStringByKeyWithFallback(latnSymbols,gNumberElementKeys[i],&len,&localStatus);
+                        sym = ures_getStringByKeyWithFallback(&latnSymbols,gNumberElementKeys[i],&len,&localStatus);
                 }
 
                 if ( U_SUCCESS(localStatus) ) {
@@ -241,7 +247,6 @@ DecimalFormatSymbols::initialize(const Locale& loc, UErrorCode& status)
             }
         }
 
-        ures_close(latnSymbols);
         if ( !isLatn ) {
             ures_close(nonLatnSymbols);
         }
@@ -277,9 +282,9 @@ DecimalFormatSymbols::initialize(const Locale& loc, UErrorCode& status)
         /* else use the default values. */
 
         U_LOCALE_BASED(locBased, *this);
-        locBased.setLocaleIDs(ures_getLocaleByType(numberElementsRes,
+        locBased.setLocaleIDs(ures_getLocaleByType(&numberElementsRes,
                               ULOC_VALID_LOCALE, &status),
-                              ures_getLocaleByType(numberElementsRes,
+                              ures_getLocaleByType(&numberElementsRes,
                               ULOC_ACTUAL_LOCALE, &status));
         
         //load the currency data
@@ -293,15 +298,17 @@ DecimalFormatSymbols::initialize(const Locale& loc, UErrorCode& status)
             char cc[4]={0};
             u_UCharsToChars(ucc, cc, uccLen);
             /* An explicit currency was requested */
-            UResourceBundle *currencyResource = ures_open(U_ICUDATA_CURR, locStr, &localStatus);
-            UResourceBundle *currency = ures_getByKeyWithFallback(currencyResource, "Currencies", NULL, &localStatus);
-            currency = ures_getByKeyWithFallback(currency, cc, currency, &localStatus);
-            if(U_SUCCESS(localStatus) && ures_getSize(currency)>2) { // the length is 3 if more data is present
-                currency = ures_getByIndex(currency, 2, currency, &localStatus);
+            UResourceBundle currency;
+            ures_initStackObject(&currency);
+            ures_openFillIn(&currency, U_ICUDATA_CURR, locStr, &localStatus);
+            ures_getByKeyWithFallback(&currency, "Currencies", &currency, &localStatus);
+            ures_getByKeyWithFallback(&currency, cc, &currency, &localStatus);
+            if(U_SUCCESS(localStatus) && ures_getSize(&currency)>2) { // the length is 3 if more data is present
+                ures_getByIndex(&currency, 2, &currency, &localStatus);
                 int32_t currPatternLen = 0;
-                currPattern = ures_getStringByIndex(currency, (int32_t)0, &currPatternLen, &localStatus);
-                UnicodeString decimalSep = ures_getStringByIndex(currency, (int32_t)1, NULL, &localStatus);
-                UnicodeString groupingSep = ures_getStringByIndex(currency, (int32_t)2, NULL, &localStatus);
+                currPattern = ures_getStringByIndex(&currency, (int32_t)0, &currPatternLen, &localStatus);
+                UnicodeString decimalSep = ures_getStringByIndex(&currency, (int32_t)1, NULL, &localStatus);
+                UnicodeString groupingSep = ures_getStringByIndex(&currency, (int32_t)2, NULL, &localStatus);
                 if(U_SUCCESS(localStatus)){
                     fSymbols[kMonetaryGroupingSeparatorSymbol] = groupingSep;
                     fSymbols[kMonetarySeparatorSymbol] = decimalSep;
@@ -309,8 +316,6 @@ DecimalFormatSymbols::initialize(const Locale& loc, UErrorCode& status)
                     status = localStatus;
                 }
             }
-            ures_close(currency);
-            ures_close(currencyResource);
             /* else An explicit currency was requested and is unknown or locale data is malformed. */
             /* ucurr_* API will get the correct value later on. */
         }
@@ -318,42 +323,37 @@ DecimalFormatSymbols::initialize(const Locale& loc, UErrorCode& status)
 
         // Currency Spacing.
         localStatus = U_ZERO_ERROR;
-        UResourceBundle *currencyResource = ures_open(U_ICUDATA_CURR, locStr, &localStatus);
-        UResourceBundle *currencySpcRes = ures_getByKeyWithFallback(currencyResource,
-                                           gCurrencySpacingTag, NULL, &localStatus);
+        UResourceBundle currencySpcRes;
+        ures_initStackObject(&currencySpcRes);
+        ures_openFillIn(&currencySpcRes, U_ICUDATA_CURR, locStr, &localStatus);
+        ures_getByKeyWithFallback(&currencySpcRes, gCurrencySpacingTag, &currencySpcRes, &localStatus);
 
-        if (localStatus == U_USING_FALLBACK_WARNING || U_SUCCESS(localStatus)) {
+        if (U_SUCCESS(localStatus)) {
             const char* keywords[kCurrencySpacingCount] = {
                 gCurrencyMatchTag, gCurrencySudMatchTag, gCurrencyInsertBtnTag
             };
             localStatus = U_ZERO_ERROR;
-            UResourceBundle *dataRes = ures_getByKeyWithFallback(currencySpcRes,
-                                       gBeforeCurrencyTag, NULL, &localStatus);
-            if (localStatus == U_USING_FALLBACK_WARNING || U_SUCCESS(localStatus)) {
+            UResourceBundle dataRes;
+            ures_initStackObject(&dataRes);
+            ures_getByKeyWithFallback(&currencySpcRes, gBeforeCurrencyTag, &dataRes, &localStatus);
+            if (U_SUCCESS(localStatus)) {
                 localStatus = U_ZERO_ERROR;
                 for (int32_t i = 0; i < kCurrencySpacingCount; i++) {
-                  currencySpcBeforeSym[i] = ures_getStringByKey(dataRes, keywords[i],
+                  currencySpcBeforeSym[i] = ures_getStringByKey(&dataRes, keywords[i],
                                                             NULL, &localStatus);
                 }
-                ures_close(dataRes);
             }
-            dataRes = ures_getByKeyWithFallback(currencySpcRes,
-                                      gAfterCurrencyTag, NULL, &localStatus);
-            if (localStatus == U_USING_FALLBACK_WARNING || U_SUCCESS(localStatus)) {
+            
+            ures_getByKeyWithFallback(&currencySpcRes, gAfterCurrencyTag, &dataRes, &localStatus);
+            if (U_SUCCESS(localStatus)) {
                 localStatus = U_ZERO_ERROR;
                 for (int32_t i = 0; i < kCurrencySpacingCount; i++) {
-                  currencySpcAfterSym[i] = ures_getStringByKey(dataRes, keywords[i],
+                  currencySpcAfterSym[i] = ures_getStringByKey(&dataRes, keywords[i],
                                                                 NULL, &localStatus);
                 }
-                ures_close(dataRes);
             }
-            ures_close(currencySpcRes);
-            ures_close(currencyResource);
         }
     }
-    ures_close(resource);
-    ures_close(numberElementsRes);
-
 }
 
 void
