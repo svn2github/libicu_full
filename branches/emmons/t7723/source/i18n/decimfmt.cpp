@@ -61,6 +61,7 @@
 #include "umutex.h"
 #include "uassert.h"
 #include "putilimp.h"
+#include "uresimp.h"
 #include <math.h>
 #include "hash.h"
 
