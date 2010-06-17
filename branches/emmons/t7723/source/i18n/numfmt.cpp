@@ -1091,7 +1091,7 @@ NumberFormat::makeInstance(const Locale& desiredLocale,
     NumberFormat* f = NULL;
     DecimalFormatSymbols* symbolsToAdopt = NULL;
     UnicodeString pattern;
-    UResourceBundle resource;
+    UResourceBundle *resource = ures_open(NULL, desiredLocale.getName(), &status);
     NumberingSystem *ns = NULL;
     UBool deleteSymbols = TRUE;
     UHashtable * cache = NULL;
@@ -1122,14 +1122,13 @@ NumberFormat::makeInstance(const Locale& desiredLocale,
         int styleInNumberPattern = ((style == kIsoCurrencyStyle ||
                                      style == kPluralCurrencyStyle) ?
                                     kCurrencyStyle : style);
-        ures_initStackObject(&resource);
-        ures_openFillIn(&resource, NULL, desiredLocale.getName(), &status);
-        ures_getByKeyWithFallback(&resource, gNumberElements, &resource, &status);
-        // TODO : Get patterns on a per numbering system basis, for right now assumes "latn" for patterns
-        ures_getByKeyWithFallback(&resource, gLatn, &resource, &status);
-        ures_getByKeyWithFallback(&resource, gPatterns, &resource, &status);
 
-        const UChar *patResStr = ures_getStringByKeyWithFallback(&resource, gFormatKeys[styleInNumberPattern], &patLen, &status);
+        resource = ures_getByKeyWithFallback(resource, gNumberElements, resource, &status);
+        // TODO : Get patterns on a per numbering system basis, for right now assumes "latn" for patterns
+        resource = ures_getByKeyWithFallback(resource, gLatn, resource, &status);
+        resource = ures_getByKeyWithFallback(resource, gPatterns, resource, &status);
+
+        const UChar *patResStr = ures_getStringByKeyWithFallback(resource, gFormatKeys[styleInNumberPattern], &patLen, &status);
 
         // Creates the specified decimal format style of the desired locale.
         pattern.setTo(TRUE, patResStr, patLen);
@@ -1264,10 +1263,12 @@ NumberFormat::makeInstance(const Locale& desiredLocale,
         deleteSymbols = FALSE;
     }
 
-    f->setLocaleIDs(ures_getLocaleByType(&resource, ULOC_VALID_LOCALE, &status),
-                    ures_getLocaleByType(&resource, ULOC_ACTUAL_LOCALE, &status));
+    f->setLocaleIDs(ures_getLocaleByType(resource, ULOC_VALID_LOCALE, &status),
+                    ures_getLocaleByType(resource, ULOC_ACTUAL_LOCALE, &status));
 
 cleanup:
+    ures_close(resource);
+
     if (deleteNS && ns) {
         delete ns;
     }
