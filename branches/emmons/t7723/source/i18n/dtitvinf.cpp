@@ -245,18 +245,18 @@ DateIntervalInfo::initializeData(const Locale& locale, UErrorCode& err)
   status = U_ZERO_ERROR;
   
   do {
-    UResourceBundle *rb, *calBundle, *calTypeBundle, *itvDtPtnResource;
-    rb = ures_open(NULL, parentLocale, &status);
-    calBundle = ures_getByKey(rb, gCalendarTag, NULL, &status); 
-    calTypeBundle = ures_getByKey(calBundle, calendarTypeToUse, NULL, &status);
-    itvDtPtnResource = ures_getByKeyWithFallback(calTypeBundle, 
-                         gIntervalDateTimePatternTag, NULL, &status);
+    UResourceBundle itvDtPtnResource;
+    ures_initStackObject(&itvDtPtnResource);
+    ures_openFillIn(&itvDtPtnResource, NULL, parentLocale, &status);
+    ures_getByKey(&itvDtPtnResource, gCalendarTag, &itvDtPtnResource, &status); 
+    ures_getByKey(&itvDtPtnResource, calendarTypeToUse, &itvDtPtnResource, &status);
+    ures_getByKeyWithFallback(&itvDtPtnResource, gIntervalDateTimePatternTag, &itvDtPtnResource, &status);
 
     if ( U_SUCCESS(status) ) {
         // look for fallback first, since it establishes the default order
         const UChar* resStr;
         int32_t resStrLen = 0;
-        resStr = ures_getStringByKeyWithFallback(itvDtPtnResource, 
+        resStr = ures_getStringByKeyWithFallback(&itvDtPtnResource, 
                                              gFallbackPatternTag, 
                                              &resStrLen, &status);
         if ( U_SUCCESS(status) ) {
@@ -264,35 +264,32 @@ DateIntervalInfo::initializeData(const Locale& locale, UErrorCode& err)
             setFallbackIntervalPattern(pattern, status);
         }
 
-        int32_t size = ures_getSize(itvDtPtnResource);
+        int32_t size = ures_getSize(&itvDtPtnResource);
         int32_t index;
+        UResourceBundle oneRes;
+        ures_initStackObject(&oneRes);
         for ( index = 0; index < size; ++index ) {
-            UResourceBundle* oneRes = ures_getByIndex(itvDtPtnResource, index, 
-                                                     NULL, &status);
+            ures_getByIndex(&itvDtPtnResource, index, &oneRes, &status);
             if ( U_SUCCESS(status) ) {
-                const char* skeleton = ures_getKey(oneRes);
+                const char* skeleton = ures_getKey(&oneRes);
                 if ( skeleton == NULL || 
                      skeletonSet.geti(UnicodeString(skeleton)) == 1 ) {
-                    ures_close(oneRes);
                     continue;
                 }
                 skeletonSet.puti(UnicodeString(skeleton), 1, status);
                 if ( uprv_strcmp(skeleton, gFallbackPatternTag) == 0 ) {
-                    ures_close(oneRes);
                     continue;  // fallback
                 }
     
                 UResourceBundle* intervalPatterns = ures_getByKey(
-                                     itvDtPtnResource, skeleton, NULL, &status);
+                                     &itvDtPtnResource, skeleton, NULL, &status);
     
                 if ( U_FAILURE(status) ) {
                     ures_close(intervalPatterns);
-                    ures_close(oneRes);
                     break;
                 }
                 if ( intervalPatterns == NULL ) {
                     ures_close(intervalPatterns);
-                    ures_close(oneRes);
                     continue;
                 }
     
@@ -328,13 +325,8 @@ DateIntervalInfo::initializeData(const Locale& locale, UErrorCode& err)
                 }
                 ures_close(intervalPatterns);
             }
-            ures_close(oneRes);
         }
     }
-    ures_close(itvDtPtnResource);
-    ures_close(calTypeBundle);
-    ures_close(calBundle);
-    ures_close(rb);
     status = U_ZERO_ERROR;
     locNameLen = uloc_getParent(parentLocale, parentLocale,
                                 ULOC_FULLNAME_CAPACITY,&status);

@@ -177,10 +177,15 @@ DecimalFormatSymbols::initialize(const Locale& loc, UErrorCode& status)
     UResourceBundle numberElementsRes;
     ures_initStackObject(&numberElementsRes);
     ures_openFillIn(&numberElementsRes, NULL, locStr, &status);
+    if (U_FAILURE(status)) {
+        status = U_USING_DEFAULT_WARNING;
+        initialize();
+        return;
+    }
     ures_getByKeyWithFallback(&numberElementsRes, gNumberElements, &numberElementsRes, &status);
 
     if (U_FAILURE(status)) {
-        status = U_USING_FALLBACK_WARNING;
+        status = U_USING_DEFAULT_WARNING;
         initialize();
         return;
     } else {
