@@ -303,17 +303,16 @@ DecimalFormatSymbols::initialize(const Locale& loc, UErrorCode& status)
             char cc[4]={0};
             u_UCharsToChars(ucc, cc, uccLen);
             /* An explicit currency was requested */
-            UResourceBundle currency;
-            ures_initStackObject(&currency);
-            ures_openFillIn(&currency, U_ICUDATA_CURR, locStr, &localStatus);
-            ures_getByKeyWithFallback(&currency, "Currencies", &currency, &localStatus);
-            ures_getByKeyWithFallback(&currency, cc, &currency, &localStatus);
-            if(U_SUCCESS(localStatus) && ures_getSize(&currency)>2) { // the length is 3 if more data is present
-                ures_getByIndex(&currency, 2, &currency, &localStatus);
+            UResourceBundle *currency;
+            currency = ures_open(U_ICUDATA_CURR, locStr, &localStatus);
+            ures_getByKeyWithFallback(currency, "Currencies", currency, &localStatus);
+            ures_getByKeyWithFallback(currency, cc, currency, &localStatus);
+            if(U_SUCCESS(localStatus) && ures_getSize(currency)>2) { // the length is 3 if more data is present
+                ures_getByIndex(currency, 2, currency, &localStatus);
                 int32_t currPatternLen = 0;
-                currPattern = ures_getStringByIndex(&currency, (int32_t)0, &currPatternLen, &localStatus);
-                UnicodeString decimalSep = ures_getStringByIndex(&currency, (int32_t)1, NULL, &localStatus);
-                UnicodeString groupingSep = ures_getStringByIndex(&currency, (int32_t)2, NULL, &localStatus);
+                currPattern = ures_getStringByIndex(currency, (int32_t)0, &currPatternLen, &localStatus);
+                UnicodeString decimalSep = ures_getStringByIndex(currency, (int32_t)1, NULL, &localStatus);
+                UnicodeString groupingSep = ures_getStringByIndex(currency, (int32_t)2, NULL, &localStatus);
                 if(U_SUCCESS(localStatus)){
                     fSymbols[kMonetaryGroupingSeparatorSymbol] = groupingSep;
                     fSymbols[kMonetarySeparatorSymbol] = decimalSep;
@@ -321,6 +320,7 @@ DecimalFormatSymbols::initialize(const Locale& loc, UErrorCode& status)
                     status = localStatus;
                 }
             }
+            ures_close(currency);
             /* else An explicit currency was requested and is unknown or locale data is malformed. */
             /* ucurr_* API will get the correct value later on. */
         }

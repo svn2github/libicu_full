@@ -1258,27 +1258,24 @@ DateFormatSymbols::initializeData(const Locale& locale, const char *type, UError
     /**
      * Use the localeBundle for getting zone GMT formatting patterns
      */
-    UResourceBundle zoneBundle,zoneStringsArray,eras,eraNames,narrowEras;
-    ures_initStackObject(&zoneBundle);
-    ures_initStackObject(&zoneStringsArray);
-    ures_initStackObject(&eras);
-    ures_initStackObject(&eraNames);
-    ures_initStackObject(&narrowEras);
-    ures_openFillIn(&zoneBundle,U_ICUDATA_ZONE, locale.getName(), &status);
-    ures_getByKeyWithFallback(&zoneBundle, gZoneStringsTag, &zoneStringsArray, &status);
+    UResourceBundle *zoneBundle = ures_open(U_ICUDATA_ZONE, locale.getName(), &status);
+    UResourceBundle *zoneStringsArray = ures_getByKeyWithFallback(zoneBundle, gZoneStringsTag, NULL, &status);
 
     // load the first data item
     UResourceBundle *erasMain = calData.getByKey(gErasTag, status);
-    ures_getByKeyWithFallback(erasMain, gNamesAbbrTag, &eras, &status);
+    UResourceBundle *eras = ures_getByKeyWithFallback(erasMain, gNamesAbbrTag, NULL, &status);
     UErrorCode oldStatus = status;
-    ures_getByKeyWithFallback(erasMain, gNamesWideTag, &eraNames, &status);
-
-    // current ICU4J falls back to abbreviated if narrow eras are missing, so we will too
+    UResourceBundle *eraNames = ures_getByKeyWithFallback(erasMain, gNamesWideTag, NULL, &status);
+    if ( status == U_MISSING_RESOURCE_ERROR ) { // Workaround because eras/wide was omitted from CLDR 1.3
+       status = oldStatus;
+       eraNames = ures_getByKeyWithFallback(erasMain, gNamesAbbrTag, NULL, &status);
+    }
+	// current ICU4J falls back to abbreviated if narrow eras are missing, so we will too
     oldStatus = status;
-    ures_getByKeyWithFallback(erasMain, gNamesNarrowTag, &narrowEras, &status);
+    UResourceBundle *narrowEras = ures_getByKeyWithFallback(erasMain, gNamesNarrowTag, NULL, &status);
     if ( status == U_MISSING_RESOURCE_ERROR ) {
        status = oldStatus;
-       ures_getByKeyWithFallback(erasMain, gNamesAbbrTag, &narrowEras, &status);
+       narrowEras = ures_getByKeyWithFallback(erasMain, gNamesAbbrTag, NULL, &status);
     }
 
     UResourceBundle *lsweekdaysData = NULL; // Data closed by calData
@@ -1324,18 +1321,18 @@ DateFormatSymbols::initializeData(const Locale& locale, const char *type, UError
             fGmtFormat.setTo(TRUE, gLastResortGmtFormat, -1);
             fLocalPatternChars.setTo(TRUE, gPatternChars, PATTERN_CHARS_LEN);
         }
-        return;
+        goto cleanup;
     }
 
     // if we make it to here, the resource data is cool, and we can get everything out
     // of it that we need except for the time-zone and localized-pattern data, which
     // are stored in a separate file
-    locBased.setLocaleIDs(ures_getLocaleByType(&eras, ULOC_VALID_LOCALE, &status),
-                          ures_getLocaleByType(&eras, ULOC_ACTUAL_LOCALE, &status));
+    locBased.setLocaleIDs(ures_getLocaleByType(eras, ULOC_VALID_LOCALE, &status),
+                          ures_getLocaleByType(eras, ULOC_ACTUAL_LOCALE, &status));
 
-    initField(&fEras, fErasCount, &eras, status);
-    initField(&fEraNames, fEraNamesCount, &eraNames, status);
-    initField(&fNarrowEras, fNarrowErasCount, &narrowEras, status);
+    initField(&fEras, fErasCount, eras, status);
+    initField(&fEraNames, fEraNamesCount, eraNames, status);
+    initField(&fNarrowEras, fNarrowErasCount, narrowEras, status);
 
     initField(&fMonths, fMonthsCount, calData.getByKey2(gMonthNamesTag, gNamesWideTag, status), status);
     initField(&fShortMonths, fShortMonthsCount, calData.getByKey2(gMonthNamesTag, gNamesAbbrTag, status), status);
@@ -1387,12 +1384,12 @@ DateFormatSymbols::initializeData(const Locale& locale, const char *type, UError
     }
 
     // GMT format patterns
-    resStr = ures_getStringByKeyWithFallback(&zoneStringsArray, gGmtFormatTag, &len, &status);
+    resStr = ures_getStringByKeyWithFallback(zoneStringsArray, gGmtFormatTag, &len, &status);
     if (len > 0) {
         fGmtFormat.setTo(TRUE, resStr, len);
     }
 
-    resStr = ures_getStringByKeyWithFallback(&zoneStringsArray, gHourFormatTag, &len, &status);
+    resStr = ures_getStringByKeyWithFallback(zoneStringsArray, gHourFormatTag, &len, &status);
     if (len > 0) {
         UChar *sep = u_strchr(resStr, (UChar)0x003B /* ';' */);
         if (sep != NULL) {
@@ -1444,7 +1441,7 @@ DateFormatSymbols::initializeData(const Locale& locale, const char *type, UError
     /* pin the blame on system. If we cannot get a chunk of memory .. the system is dying!*/
     if (fWeekdays == NULL) {
         status = U_MEMORY_ALLOCATION_ERROR;
-        return;
+        goto cleanup;
     }
     // leave fWeekdays[0] empty
     for(i = 0; i<fWeekdaysCount; i++) {
@@ -1460,7 +1457,7 @@ DateFormatSymbols::initializeData(const Locale& locale, const char *type, UError
     /* test for NULL */
     if (fShortWeekdays == 0) {
         status = U_MEMORY_ALLOCATION_ERROR;
-        return;
+        goto cleanup;
     }
     // leave fShortWeekdays[0] empty
     for(i = 0; i<fShortWeekdaysCount; i++) {
@@ -1484,7 +1481,7 @@ DateFormatSymbols::initializeData(const Locale& locale, const char *type, UError
     /* test for NULL */
     if (fNarrowWeekdays == 0) {
         status = U_MEMORY_ALLOCATION_ERROR;
-        return;
+        goto cleanup;
     }
     // leave fNarrowWeekdays[0] empty
     for(i = 0; i<fNarrowWeekdaysCount; i++) {
@@ -1504,7 +1501,7 @@ DateFormatSymbols::initializeData(const Locale& locale, const char *type, UError
     /* test for NULL */
     if (fStandaloneWeekdays == 0) {
         status = U_MEMORY_ALLOCATION_ERROR;
-        return;
+        goto cleanup;
     }
     // leave fStandaloneWeekdays[0] empty
     for(i = 0; i<fStandaloneWeekdaysCount; i++) {
@@ -1524,7 +1521,7 @@ DateFormatSymbols::initializeData(const Locale& locale, const char *type, UError
     /* test for NULL */
     if (fStandaloneShortWeekdays == 0) {
         status = U_MEMORY_ALLOCATION_ERROR;
-        return;
+        goto cleanup;
     }
     // leave fStandaloneShortWeekdays[0] empty
     for(i = 0; i<fStandaloneShortWeekdaysCount; i++) {
@@ -1548,7 +1545,7 @@ DateFormatSymbols::initializeData(const Locale& locale, const char *type, UError
     /* test for NULL */
     if (fStandaloneNarrowWeekdays == 0) {
         status = U_MEMORY_ALLOCATION_ERROR;
-        return;
+        goto cleanup;
     }
     // leave fStandaloneNarrowWeekdays[0] empty
     for(i = 0; i<fStandaloneNarrowWeekdaysCount; i++) {
@@ -1558,6 +1555,12 @@ DateFormatSymbols::initializeData(const Locale& locale, const char *type, UError
     }
     fStandaloneNarrowWeekdaysCount++;
 
+cleanup:
+    ures_close(eras);
+    ures_close(eraNames);
+    ures_close(narrowEras);
+    ures_close(zoneStringsArray);
+    ures_close(zoneBundle);
 }
 
 Locale 
