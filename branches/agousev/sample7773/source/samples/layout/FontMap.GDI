@@ -5,7 +5,7 @@
 # Fonts are specified by font name, as shown
 # in the "Fonts" folder.
 
- DEVANAGARI: Raghindi
-       THAI: AngsanaDSE
-    DEFAULT: Code2000
+  DEVANAGARI: Raghindi
+  THAI: Courier MonoThai
+  DEFAULT: Code2000
 

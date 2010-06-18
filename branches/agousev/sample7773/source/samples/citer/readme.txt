@@ -2,7 +2,7 @@ Copyright (c) 2003-2005, International Business Machines Corporation and others.
 citer: Character Iteration
 
 This sample demonstrates
-         Using ICU to determine the linguistic boundaries within text
+         Demonstrating ICU's CharacterIterator
 
          
 Files:
@@ -23,6 +23,7 @@ To Run on Windows
         (Use the path to where ever ICU is on your system.)
     3.  cd into the citer directory, e.g.
             cd c:\icu\source\samples\citer\debug
+            (note that it may be in a different relative directory than most of the other samples).
     4.  Run it
             citer
 

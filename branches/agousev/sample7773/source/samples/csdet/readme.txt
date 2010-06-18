@@ -3,20 +3,12 @@ Corporation and others. All Rights Reserved.
 uresb: Resource Bundle
 
 This sample demonstrates
-         Building a resource bundle
-         Using ICU to print data from a resource bundle
+        Using ICU's CharSet Detection API
 
          
 Files:
-    uresb.c        Main source file in C
-    uresb.sln      Windows MSVC workspace.  Double-click this to get started.
-    uresb.vcproj   Windows MSVC project file
-    resources.dsp  Windows project file for resources
-    resources.mak  Windows makefile for resources
-
-    root.txt       Root resource bundle
-    en.txt         English translation
-    sr.txt         Serbian translation (cp1251)
+    csdet.c        Main source file
+    *.txt          Various sample .txt files
 
 To Build uresb on Windows
     1.  Install and build ICU
@@ -32,7 +24,7 @@ To Run on Windows
     3.  cd into the uresb directory, e.g.
             cd c:\icu\source\samples\uresb\debug
     4.  Run it  (with a locale name, ex. english)
-            uresb  en
+            csdet eucJP.txt
     WARNING: The .txt files must be in the same directory as the executable, which is not the case by default on some systems.
 
 To Build on Unixes
@@ -58,7 +50,7 @@ To Build on Unixes
                -or- 
 
            export LD_LIBRARY_PATH=<icu install directory>/lib:.:$LD_LIBRARY_PATH
-           uresb
+           csdet eucJP.txt
            
            
  Note:  The name of the LD_LIBRARY_PATH variable is different on some systems.
