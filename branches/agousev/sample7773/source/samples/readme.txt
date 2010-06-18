@@ -61,6 +61,12 @@ ustring  - demonstrates ICU string manipulation functions
 
  To build all samples at once:
 
+    Windows MSVC:   
+            - build ICU
+	    - open 'all' project file in 'all' subdirectory
+            - build project
+            - sample executables will be located in /x86/Debug folders of each sample subdirectory
+
     Unix:   - build and install (make install) ICU
             - be sure 'icu-config' is accessible from the PATH
             - type 'make all-samples' from this directory 
