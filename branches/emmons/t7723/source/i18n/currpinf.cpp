@@ -248,6 +248,7 @@ CurrencyPluralInfo::setupCurrencyPluralPattern(const Locale& loc, UErrorCode& st
     ures_getByKey(&rb, gPatternsTag, &rb, &ec);
     int32_t ptnLen;
     const UChar* numberStylePattern = ures_getStringByKeyWithFallback(&rb, gDecimalFormatTag, &ptnLen, &ec);
+    ures_close(&rb);
     int32_t numberStylePatternLen = ptnLen;
     const UChar* negNumberStylePattern = NULL;
     int32_t negNumberStylePatternLen = 0;
@@ -314,6 +315,7 @@ CurrencyPluralInfo::setupCurrencyPluralPattern(const Locale& loc, UErrorCode& st
             }
         }
     }
+    ures_close(&currencyRes);
     delete keywords;
 }
 

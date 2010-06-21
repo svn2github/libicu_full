@@ -252,6 +252,7 @@ DecimalFormatSymbols::initialize(const Locale& loc, UErrorCode& status)
             }
         }
 
+        ures_close(&latnSymbols);
         if ( !isLatn ) {
             ures_close(nonLatnSymbols);
         }
@@ -357,8 +358,11 @@ DecimalFormatSymbols::initialize(const Locale& loc, UErrorCode& status)
                                                                 NULL, &localStatus);
                 }
             }
+            ures_close(&dataRes);
         }
+        ures_close(&currencySpcRes);
     }
+    ures_close(&numberElementsRes);
 }
 
 void

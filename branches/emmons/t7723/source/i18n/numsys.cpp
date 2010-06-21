@@ -110,10 +110,11 @@ NumberingSystem::createInstance(const Locale & inLocale, UErrorCode& status) {
         const UChar *defaultNSName =
             ures_getStringByKeyWithFallback(&resource, gDefault, &count, &status);
 
+        ures_close(&resource);
+
         if (U_FAILURE(status)) {
             status = U_USING_FALLBACK_WARNING;
-            NumberingSystem *ns = new NumberingSystem();
-            return ns;
+            return new NumberingSystem();
         } 
 
         if ( count > 0 && count < ULOC_KEYWORDS_CAPACITY ) { // Default numbering system found
@@ -122,10 +123,8 @@ NumberingSystem::createInstance(const Locale & inLocale, UErrorCode& status) {
            return NumberingSystem::createInstanceByName(buffer,status);
         } else {
             status = U_USING_FALLBACK_WARNING;
-            NumberingSystem *ns = new NumberingSystem();
-            return ns;
-        }
-        
+            return new NumberingSystem();
+        }        
     }
 }
 

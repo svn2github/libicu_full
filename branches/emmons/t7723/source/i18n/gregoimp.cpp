@@ -202,6 +202,8 @@ void CalendarData::initData(const char *locale, const char *type, UErrorCode& st
             this, locale, type, u_errorName(status), fBundle, U_GREGORIAN_KEY, fBundle?ures_getLocale(fBundle, &status):"" );
 #endif
   }
+  ures_close(&fFillin);
+  ures_close(&fOtherFillin);
 }
 
 CalendarData::~CalendarData() {

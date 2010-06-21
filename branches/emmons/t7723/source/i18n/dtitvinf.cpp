@@ -326,7 +326,9 @@ DateIntervalInfo::initializeData(const Locale& locale, UErrorCode& err)
                 ures_close(intervalPatterns);
             }
         }
+        ures_close(&oneRes);
     }
+    ures_close(&itvDtPtnResource);
     status = U_ZERO_ERROR;
     locNameLen = uloc_getParent(parentLocale, parentLocale,
                                 ULOC_FULLNAME_CAPACITY,&status);

@@ -277,6 +277,7 @@ static ECalType getCalendarTypeForLocale(const char *locid) {
         }
     }
 
+    ures_close(&order);
     ures_close(rb);
 
     if (calType == CALTYPE_UNKNOWN) {

@@ -505,6 +505,7 @@ void SimpleDateFormat::construct(EStyle timeStyle,
         ures_getByIndex(dateTimePatterns, (int32_t)timeStyle, &currentBundle, &status);
         if (U_FAILURE(status)) {
            status = U_INVALID_FORMAT_ERROR;
+           ures_close(&currentBundle);
            return;
         }
         switch (ures_getType(&currentBundle)) {
@@ -520,6 +521,7 @@ void SimpleDateFormat::construct(EStyle timeStyle,
             }
             default: {
                status = U_INVALID_FORMAT_ERROR;
+               ures_close(&currentBundle);
                return;
             }
         }
@@ -535,6 +537,7 @@ void SimpleDateFormat::construct(EStyle timeStyle,
         ures_getByIndex(dateTimePatterns, (int32_t)dateStyle, &currentBundle, &status);
         if (U_FAILURE(status)) {
            status = U_INVALID_FORMAT_ERROR;
+           ures_close(&currentBundle);
            return;
         }
         switch (ures_getType(&currentBundle)) {
@@ -550,6 +553,7 @@ void SimpleDateFormat::construct(EStyle timeStyle,
             }
             default: {
                status = U_INVALID_FORMAT_ERROR;
+               ures_close(&currentBundle);
                return;
             }
         }
@@ -558,6 +562,7 @@ void SimpleDateFormat::construct(EStyle timeStyle,
         // Null pointer check
         if (tempus2 == NULL) {
             status = U_MEMORY_ALLOCATION_ERROR;
+            ures_close(&currentBundle);
             return;
         }
         timeDateArray[1].adoptString(tempus2);
@@ -579,6 +584,7 @@ void SimpleDateFormat::construct(EStyle timeStyle,
         ures_getByIndex(dateTimePatterns, (int32_t)timeStyle, &currentBundle, &status);
         if (U_FAILURE(status)) {
            status = U_INVALID_FORMAT_ERROR;
+           ures_close(&currentBundle);
            return;
         }
         switch (ures_getType(&currentBundle)) {
@@ -594,6 +600,7 @@ void SimpleDateFormat::construct(EStyle timeStyle,
             }
             default: {
                status = U_INVALID_FORMAT_ERROR;
+               ures_close(&currentBundle);
                return;
             }
         }
@@ -603,6 +610,7 @@ void SimpleDateFormat::construct(EStyle timeStyle,
         ures_getByIndex(dateTimePatterns, (int32_t)dateStyle, &currentBundle, &status);
         if (U_FAILURE(status)) {
            status = U_INVALID_FORMAT_ERROR;
+           ures_close(&currentBundle);
            return;
         }
         switch (ures_getType(&currentBundle)) {
@@ -618,6 +626,7 @@ void SimpleDateFormat::construct(EStyle timeStyle,
             }
             default: {
                status = U_INVALID_FORMAT_ERROR;
+               ures_close(&currentBundle);
                return;
             }
         }
@@ -628,6 +637,7 @@ void SimpleDateFormat::construct(EStyle timeStyle,
     else
         status = U_INVALID_FORMAT_ERROR;
 
+    ures_close(&currentBundle);
     // finally, finish initializing by creating a Calendar and a NumberFormat
     initialize(locale, status);
 }
