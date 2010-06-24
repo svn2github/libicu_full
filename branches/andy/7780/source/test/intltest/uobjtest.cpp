@@ -482,10 +482,10 @@ void UObjectTest::testUMemory() {
     // additional tests for code coverage
 #if U_OVERRIDE_CXX_ALLOCATION && U_HAVE_PLACEMENT_NEW
     union {
-        UAlignedMemory   _align;
-        char             _bytes[sizeof(UnicodeString)];
+        UAlignedMemory   align_;
+        char             bytes_[sizeof(UnicodeString)];
     } stackMemory;
-    char *bytes = stackMemory._bytes;
+    char *bytes = stackMemory.bytes_;
     UnicodeString *p;
     enum { len=20 };
 
