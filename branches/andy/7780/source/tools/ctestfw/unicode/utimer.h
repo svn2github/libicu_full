@@ -271,7 +271,7 @@ utimer_loopUntilDone(double thresholdTimeVal,
     for(;currentVal<thresholdTimeVal;){
         fn(param);
         currentVal = utimer_getElapsedSeconds(&timer);
-        *loopCount++;
+        (*loopCount)++;
     }
     return currentVal;
 }

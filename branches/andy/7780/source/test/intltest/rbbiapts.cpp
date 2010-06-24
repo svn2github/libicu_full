@@ -723,7 +723,7 @@ void RBBIAPITest::TestRuleStatus() {
          }
          if (UBRK_LINE_SOFT >= UBRK_LINE_SOFT_LIMIT ||
              UBRK_LINE_HARD >= UBRK_LINE_HARD_LIMIT ||
-             UBRK_LINE_HARD > UBRK_LINE_SOFT && UBRK_LINE_HARD < UBRK_LINE_SOFT_LIMIT ) {
+             (UBRK_LINE_HARD > UBRK_LINE_SOFT && UBRK_LINE_HARD < UBRK_LINE_SOFT_LIMIT)) {
              errln("UBRK_LINE_* constants from header are inconsistent.");
          }
      }

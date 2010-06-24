@@ -203,7 +203,7 @@
                 (c)=U16_GET_SUPPLEMENTARY((c), __c2); \
             } \
         } else { \
-            if((i)-1>=(start) && U16_IS_LEAD(__c2=(s)[(i)-1])) { \
+            if((i)>(start) && U16_IS_LEAD(__c2=(s)[(i)-1])) { \
                 (c)=U16_GET_SUPPLEMENTARY(__c2, (c)); \
             } \
         } \

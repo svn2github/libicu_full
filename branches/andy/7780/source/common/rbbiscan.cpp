@@ -802,7 +802,7 @@ UChar32  RBBIRuleScanner::nextCharLL() {
     if (ch == chCR ||
         ch == chNEL ||
         ch == chLS   ||
-        ch == chLF && fLastChar != chCR) {
+        (ch == chLF && fLastChar != chCR)) {
         // Character is starting a new line.  Bump up the line number, and
         //  reset the column to 0.
         fLineNum++;
