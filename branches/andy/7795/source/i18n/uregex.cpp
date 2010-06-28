@@ -485,6 +485,23 @@ uregex_getUText(URegularExpression *regexp2,
 
 //------------------------------------------------------------------------------
 //
+//    uregex_refreshUText
+//
+//------------------------------------------------------------------------------
+U_CAPI void U_EXPORT2 
+uregex_refreshUText(URegularExpression *regexp2,
+                    UText              *text,
+                    UErrorCode         *status) {
+    RegularExpression *regexp = (RegularExpression*)regexp2;
+    if (validateRE(regexp, status, FALSE) == FALSE) {
+        return;
+    }
+    regexp->fMatcher->refreshInputText(text, *status);
+}
+
+
+//------------------------------------------------------------------------------
+//
 //    uregex_matches
 //
 //------------------------------------------------------------------------------
