@@ -17,6 +17,7 @@
 #include "unicode/timezone.h"
 #include "unicode/gregocal.h"
 #include "unicode/simpletz.h"
+#include "unicode/vtzone.h"
 #include "unicode/ustring.h"
 #include "unicode/strenum.h"
 #include "cmemory.h"
@@ -682,6 +683,269 @@ ucal_getKeywordValuesForLocale(const char * /* key */, const char* locale, UBool
     memcpy(en, &defaultKeywordValues, sizeof(UEnumeration));
     en->context = values;
     return en;
+}
+
+
+U_CAPI UTimeZone* U_EXPORT2 
+ucal_createTimeZoneFromID(const UChar*  zoneID,
+                          int32_t       len,
+                          UErrorCode*   status) 
+{  
+    UTimeZone * zone = NULL;
+    if (status!=NULL && U_SUCCESS(*status))
+    {
+        // error code is okay so far, create a time zone
+        // any errors on the time zone creation will be
+        // relayed through the status parameter.
+        zone = (UTimeZone*)(_createTimeZone(zoneID, len, status));
+    }
+    return zone;
+}
+
+
+U_CAPI UTimeZone* U_EXPORT2 
+ucal_createTimeZoneFromData(const UChar*  data,
+                            int32_t       len,
+                            UErrorCode*   status) 
+{  
+    UTimeZone * zone = NULL;
+    if (status!=NULL && U_SUCCESS(*status))
+    {
+        // read-only alias for data
+        UnicodeString dataStr;
+        dataStr.setTo((UBool)(len < 0), data, len);
+
+        // error code is okay so far, create a time zone
+        // any errors on the time zone creation will be
+        // relayed through the status parameter.
+        zone = (UTimeZone*)(VTimeZone::createVTimeZone(dataStr,*status));
+    }
+    return zone;
+}
+
+
+U_CAPI void U_EXPORT2 
+utimezone_close(UTimeZone* zone) 
+{  
+    delete (TimeZone*)zone;
+} 
+
+
+U_CAPI void U_EXPORT2 
+ucal_getTimeZoneOffset(const UTimeZone*  zone,
+                       UDate date, 
+                       UBool local, 
+                       int32_t* rawOffset, 
+                       int32_t* dstOffset, 
+                       UErrorCode* status) 
+{  
+    if (status!=NULL && U_SUCCESS(*status))
+    {
+        if (zone == NULL)
+        {
+            *status = U_MEMORY_ALLOCATION_ERROR;
+            return;
+        }
+        ((TimeZone*)zone)->getOffset(date,local,*rawOffset,*dstOffset,*status);
+    }
+    return;
+} 
+
+
+U_CAPI void U_EXPORT2 
+ucal_getTimeZoneOffsetByID(const UChar*  zoneID,
+                       int32_t       len,
+                       UDate date, 
+                       UBool local, 
+                       int32_t* rawOffset, 
+                       int32_t* dstOffset, 
+                       UErrorCode* status) 
+{  
+    if (status!=NULL && U_SUCCESS(*status))
+    {
+        UTimeZone* zone = ucal_createTimeZoneFromID(zoneID, len, status);
+        ucal_getTimeZoneOffset(zone, date, local,rawOffset,dstOffset,status);
+    }
+    return;
+} 
+
+
+U_CAPI UBool U_EXPORT2
+ucal_getNextTimeZoneTransition(const UTimeZone*  zone,
+                               UDate base, 
+                               UBool inclusive, 
+                               UTimeZoneTransition* result,
+                               UErrorCode* status) 
+{  
+    UBool b = false;
+    TimeZoneTransition *t = new TimeZoneTransition();
+    if (status!=NULL && U_SUCCESS(*status))
+    {
+        if (zone == NULL)
+        {
+            *status = U_MEMORY_ALLOCATION_ERROR;
+            return b;
+        }
+        //b = ((BasicTimeZone*)zone)->getNextTransition(base, inclusive, *t);
+        result = (UTimeZoneTransition*)t;
+    }
+    return b;
+} 
+
+
+U_CAPI UBool U_EXPORT2
+ucal_getNextTimeZoneTransitionByID(const UChar*  zoneID,
+                               int32_t       len,
+                               UDate base, 
+                               UBool inclusive, 
+                               UTimeZoneTransition* result,
+                               UErrorCode* status) 
+{  
+    UBool b = false;
+    if (status!=NULL && U_SUCCESS(*status))
+    {
+        UTimeZone* zone = ucal_createTimeZoneFromID(zoneID, len, status);
+        b = ucal_getNextTimeZoneTransition(zone, base, inclusive, result, status);
+    }
+    return b;
+} 
+
+
+U_CAPI UBool U_EXPORT2
+ucal_getPreviousTimeZoneTransition(const UTimeZone*  zone,
+                                   UDate base, 
+                                   UBool inclusive, 
+                                   UTimeZoneTransition* result,
+                                   UErrorCode* status) 
+{  
+    UBool b = false;
+    TimeZoneTransition *t  = new TimeZoneTransition();
+    if (status!=NULL && U_SUCCESS(*status))
+    {
+        if (zone == NULL)
+        {
+            *status = U_MEMORY_ALLOCATION_ERROR;
+            return b;
+        }
+        b = ((BasicTimeZone*)zone)->getPreviousTransition(base, inclusive,*t);
+        result = (UTimeZoneTransition*)t;
+    }
+    return b;
+} 
+
+
+U_CAPI UBool U_EXPORT2
+ucal_getPreviousTimeZoneTransitionByID(const UChar*  zoneID,
+                                   int32_t       len,
+                                   UDate base, 
+                                   UBool inclusive, 
+                                   UTimeZoneTransition* result,
+                                   UErrorCode* status) 
+{  
+    UBool b = false;
+    if (status!=NULL && U_SUCCESS(*status))
+    {
+        UTimeZone* zone = ucal_createTimeZoneFromID(zoneID, len, status);
+        b = ucal_getPreviousTimeZoneTransition(zone, base, inclusive, result, status);
+    }
+    return b;
+} 
+
+
+U_CAPI int32_t U_EXPORT2
+ucal_countTimeZoneTransitionRules(const UTimeZone*  zone,
+                                  UErrorCode* status) 
+{  
+    int32_t count = 0;
+    if (status!=NULL && U_SUCCESS(*status))
+    {
+        if (zone == NULL)
+        {
+            *status = U_MEMORY_ALLOCATION_ERROR;
+            return count;
+        }
+        count = ((BasicTimeZone*)zone)->countTransitionRules(*status);
+    }
+    return count;
+}
+
+
+
+U_CAPI int32_t U_EXPORT2
+ucal_countTimeZoneTransitionRulesByID(const UChar*  zoneID,
+                                  int32_t       len,
+                                  UErrorCode* status) 
+{  
+    int32_t count = 0;
+    if (status!=NULL && U_SUCCESS(*status))
+    {
+        UTimeZone* zone = ucal_createTimeZoneFromID(zoneID, len, status);
+        count = ucal_countTimeZoneTransitionRules(zone,status);
+    }
+    return count;
+}
+
+
+U_CAPI int32_t U_EXPORT2
+ucal_writeTimeZone(const UTimeZone*  zone,
+                   UChar* result, 
+                   int32_t resultCapacity,
+                   UErrorCode* status) 
+{  
+    int32_t reslen = 0;
+    if (status!=NULL && U_SUCCESS(*status))
+    {
+        if (zone == NULL)
+        {
+            *status = U_MEMORY_ALLOCATION_ERROR;
+            return reslen;
+        }
+
+        // get the data from the VTimeZone
+        UnicodeString dataStr;
+        ((VTimeZone*)zone)->write(dataStr,*status);
+
+        if (U_SUCCESS(*status)) 
+        {
+            reslen = dataStr.extract(result, resultCapacity, *status);
+        }
+    }
+    return reslen;
+} 
+
+
+U_CAPI int32_t U_EXPORT2
+ucal_writeTimeZoneByID(const UChar*  zoneID,
+                   int32_t       len,
+                   UChar* result, 
+                   int32_t resultCapacity,
+                   UErrorCode* status) 
+{  
+    int32_t reslen = 0;
+    if (status!=NULL && U_SUCCESS(*status))
+    {
+        UTimeZone* zone = ucal_createTimeZoneFromID(zoneID, len, status);
+        reslen = ucal_writeTimeZone(zone,result,resultCapacity,status);
+    }
+    return reslen;
+} 
+
+
+U_CAPI UDate U_EXPORT2
+ucal_getTimeZoneTransitionTime(UTimeZoneTransition* trans,
+                               UErrorCode* status) 
+{  
+    UDate d(0);
+    if (status!=NULL && U_SUCCESS(*status))
+    {
+        if (trans == NULL)
+        {
+            *status = U_MEMORY_ALLOCATION_ERROR;
+            return d;
+        }
+        d = ((TimeZoneTransition*)trans)->getTime();
+    }
+    return d;
 }
 
 #endif /* #if !UCONFIG_NO_FORMATTING */

@@ -95,6 +95,12 @@ static void TestCalendar()
     UChar canonicalID[64];
     UBool isSystemID = FALSE;
     const UCalGetTypeTest * ucalGetTypeTestPtr;
+    
+    UTimeZone *zone;
+    UDate d;
+    int32_t rawOffset, dstOffset;
+    UBool b;
+    UTimeZoneTransition *trans = NULL;
 
 #ifdef U_USE_UCAL_OBSOLETE_2_8
     /*Testing countAvailableTimeZones*/
@@ -233,6 +239,58 @@ static void TestCalendar()
                 PST, isSystemID);
         }
     }
+
+    /* Testing ucal_createTimeZoneFromID */
+    status = U_ZERO_ERROR;
+    zone = ucal_createTimeZoneFromID(PST, -1, &status);
+    if (U_FAILURE(status)) {
+        log_err("FAIL: error in ucal_createTimeZoneFromID : %s\n", u_errorName(status));
+    }
+    
+    /* Test ucal_getTimeZoneOffset */
+    d = 1262304000;  /* Jan 1, 2010 */
+
+    status = U_ZERO_ERROR;
+    ucal_getTimeZoneOffset(zone, d, TRUE, &rawOffset, &dstOffset, &status); 
+    if (U_FAILURE(status)) {
+        log_err("FAIL: error in ucal_getTimeZoneOffset : %s\n", u_errorName(status));
+    }
+    if ((rawOffset != -28800000) || (dstOffset != 0)) {
+        log_err("FAIL: error in ucal_getTimeZoneOffset expected -2880000, 0 returned %i, %i\n", rawOffset, dstOffset);
+    }
+
+    status = U_ZERO_ERROR;
+    ucal_getTimeZoneOffsetByID(PST, -1, d, TRUE, &rawOffset, &dstOffset, &status); 
+    if (U_FAILURE(status)) {
+        log_err("FAIL: error in ucal_getTimeZoneOffsetByID : %s\n", u_errorName(status));
+    }
+    if ((rawOffset != -28800000) || (dstOffset != 0)) {
+        log_err("FAIL: error in ucal_getTimeZoneOffsetByID expected -2880000, 0 returned %i, %i\n", rawOffset, dstOffset);
+    }
+
+    /* Test ucal_getNextTimeZoneTransition */
+    status = U_ZERO_ERROR;
+    b = ucal_getNextTimeZoneTransition(zone, d, TRUE, trans, &status); 
+    if (U_FAILURE(status)) {
+        log_err("FAIL: error in ucal_getNextTimeZoneTransition : %s\n", u_errorName(status));
+    }
+
+    status = U_ZERO_ERROR;
+    b = ucal_getNextTimeZoneTransitionByID(PST, -1, d, TRUE, trans, &status); 
+    if (U_FAILURE(status)) {
+        log_err("FAIL: error in ucal_getNextTimeZoneTransitionByID : %s\n", u_errorName(status));
+    }
+
+
+
+
+
+
+
+
+    /* Testing utimezone_close*/
+    status = U_ZERO_ERROR;
+    utimezone_close(zone);
 
     /*Testing the  ucal_open() function*/
     status = U_ZERO_ERROR;

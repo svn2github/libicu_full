@@ -515,6 +515,20 @@ enum UCalendarAMPMs {
 /** @stable ICU 2.0 */
 typedef enum UCalendarAMPMs UCalendarAMPMs;
 
+struct UTimeZone; 
+/** 
+ * Type to act as a reference to a time zone object
+ * @draft ICU 4.6 
+ */ 
+typedef struct UTimeZone UTimeZone; 
+
+struct UTimeZoneTransition;
+/** 
+ * Type to act as a reference to a time zone transition object
+ * @draft ICU 4.6 
+ */ 
+typedef struct UTimeZoneTransition UTimeZoneTransition; 
+
 /**
  * Create an enumeration over all time zones.
  *
@@ -1275,6 +1289,299 @@ ucal_getWeekendTransition(const UCalendar *cal, UCalendarDaysOfWeek dayOfWeek, U
 U_DRAFT UBool U_EXPORT2
 ucal_isWeekend(const UCalendar *cal, UDate date, UErrorCode *status);
 
+
+/**
+ * Creates a time zone from the given id.  If the given time zone id
+ * is invalid an error code will be returned.
+ *
+ * @param zoneID: The desired TimeZone ID.
+ * @param len:    The length of zoneID, or -1 if null-terminated.
+ * @param status: A pointer to an UErrorCode to receive any errors.
+ *
+ * @return A pointer to a time zone or null if an error was encountered.
+ *
+ * @draft ICU 4.6
+ */
+U_DRAFT UTimeZone* U_EXPORT2 
+ucal_createTimeZoneFromID(const UChar*  zoneID,
+                          int32_t       len,
+                          UErrorCode*   status);
+
+
+/**
+ * Creates a time zone from an instance of RFC2445 VTIMEZONE data.
+ * If the time zone can not be created, an error code will be returned.
+ *
+ * @param data:   The VTIMEZONE data block
+ * @param len:    The length of data
+ * @param status: A pointer to an UErrorCode to receive any errors.
+ *
+ * @return A pointer to a time zone initialized by the VTIMEZONE data or
+ *         NULL if failed to load the rule from the VTIMEZONE data.
+ *
+ * @draft ICU 4.6
+ */
+U_DRAFT UTimeZone* U_EXPORT2 
+ucal_createTimeZoneFromData(const UChar*  data,
+                            int32_t       len,
+                            UErrorCode*   status);
+
+
+/** 
+ * Disposes of the storage used by a UTimeZone object.  This function 
+ * should be called exactly once for each UTimeZone object. 
+ *
+ * @param zone: the object to dispose of 
+ *
+ * @draft ICU 4.6 
+ */ 
+U_DRAFT void U_EXPORT2 
+utimezone_close(UTimeZone* zone); 
+
+/** 
+ * Returns the time zone raw and GMT offset for the given moment 
+ * in time.  Upon return, local-millis = GMT-millis + rawOffset + 
+ * dstOffset.  All computations are performed in the proleptic 
+ * Gregorian calendar.  The default implementation in the TimeZone 
+ * class delegates to the 8-argument getOffset(). 
+ * 
+ * @param zone:       reference to the time zone object we wish to use
+ *                    to retreive data from
+ * @param date:       moment in time for which to return offsets, in 
+ *                    units of milliseconds from January 1, 1970 0:00 GMT, 
+ *                    either GMT time or local wall time, depending on `local'. 
+ * @param local:      if true, `date' is local wall time; otherwise it 
+ *                    is in GMT time. 
+ * @param rawOffset:  output parameter to receive the raw offset, that 
+ *                    is, the offset not including DST adjustments 
+ * @param dstOffset:  output parameter to receive the DST offset, 
+ *                    that is, the offset to be added to `rawOffset' to obtain the 
+ *                    total offset between local and GMT time. If DST is not in 
+ *                    effect, this value is zero; otherwise it is a positive value, 
+ *                    typically one hour. 
+ * @param status:     A pointer to an UErrorCode to receive any errors.
+ * 
+ * @draft ICU 4.6 
+ */ 
+U_DRAFT void U_EXPORT2 
+ucal_getTimeZoneOffset(const UTimeZone*  zone,
+                       UDate date, 
+                       UBool local, 
+                       int32_t* rawOffset, 
+                       int32_t* dstOffset, 
+                       UErrorCode* status); 
+
+
+/** 
+ * Returns the time zone raw and GMT offset for the given moment 
+ * in time.  Upon return, local-millis = GMT-millis + rawOffset + 
+ * dstOffset.  All computations are performed in the proleptic 
+ * Gregorian calendar.  The default implementation in the TimeZone 
+ * class delegates to the 8-argument getOffset(). 
+ * 
+ * @param zoneID:     The desired TimeZone ID.
+ * @param len:        The length of zoneID, or -1 if null-terminated.
+ * @param date:       moment in time for which to return offsets, in 
+ *                    units of milliseconds from January 1, 1970 0:00 GMT, 
+ *                    either GMT time or local wall time, depending on `local'. 
+ * @param local:      if true, `date' is local wall time; otherwise it 
+ *                    is in GMT time. 
+ * @param rawOffset:  output parameter to receive the raw offset, that 
+ *                    is, the offset not including DST adjustments 
+ * @param dstOffset:  output parameter to receive the DST offset, 
+ *                    that is, the offset to be added to `rawOffset' to obtain the 
+ *                    total offset between local and GMT time. If DST is not in 
+ *                    effect, this value is zero; otherwise it is a positive value, 
+ *                    typically one hour. 
+ * @param status:     A pointer to an UErrorCode to receive any errors.
+ * 
+ * @draft ICU 4.6 
+ */ 
+U_DRAFT void U_EXPORT2 
+ucal_getTimeZoneOffsetByID(const UChar*  zoneID,
+                       int32_t       len,
+                       UDate date, 
+                       UBool local, 
+                       int32_t* rawOffset, 
+                       int32_t* dstOffset, 
+                       UErrorCode* status); 
+
+/**
+ * Gets the first time zone transition after the base time.
+ *
+ * @param zone:      reference to the time zone object we wish to use
+ *                   to retreive data from
+ * @param base:      The base time.
+ * @param inclusive: Whether the base time is inclusive or not.
+ * @param result:    Receives the first transition after the base time.
+ * @param status:    A pointer to an UErrorCode to receive any errors.
+ *
+ * @return  TRUE if the transition is found.
+ *
+ * @draft ICU 4.6
+ */
+U_DRAFT UBool U_EXPORT2
+ucal_getNextTimeZoneTransition(const UTimeZone*  zone,
+                               UDate base, 
+                               UBool inclusive, 
+                               UTimeZoneTransition* result,
+                               UErrorCode* status); 
+
+/**
+ * Gets the first time zone transition after the base time.
+ *
+ * @param zoneID:    The desired TimeZone ID.
+ * @param len:       The length of zoneID, or -1 if null-terminated.
+ * @param base:      The base time.
+ * @param inclusive: Whether the base time is inclusive or not.
+ * @param result:    Receives the first transition after the base time.
+ * @param status:    A pointer to an UErrorCode to receive any errors.
+ *
+ * @return  TRUE if the transition is found.
+ *
+ * @draft ICU 4.6
+ */
+U_DRAFT UBool U_EXPORT2
+ucal_getNextTimeZoneTransitionByID(const UChar*  zoneID,
+                               int32_t       len,
+                               UDate base, 
+                               UBool inclusive, 
+                               UTimeZoneTransition* result,
+                               UErrorCode* status); 
+
+/**
+ * Gets the most recent time zone transition before the base time.
+ *
+ * @param zone:      reference to the time zone object we wish to use
+ *                   to retreive data from
+ * @param base:      The base time.
+ * @param inclusive: Whether the base time is inclusive or not.
+ * @param result:    Receives the most recent transition before the base time.
+ * @param status:    A pointer to an UErrorCode to receive any errors.
+ *
+ * @return  TRUE if the transition is found.
+ *
+ * @draft ICU 4.6
+ */
+U_DRAFT UBool U_EXPORT2
+ucal_getPreviousTimeZoneTransition(const UTimeZone*  zone,
+                                   UDate base, 
+                                   UBool inclusive, 
+                                   UTimeZoneTransition* result,
+                                   UErrorCode* status); 
+
+/**
+ * Gets the most recent time zone transition before the base time.
+ *
+ * @param zoneID:    The desired TimeZone ID.
+ * @param len:       The length of zoneID, or -1 if null-terminated.
+ * @param base:      The base time.
+ * @param inclusive: Whether the base time is inclusive or not.
+ * @param result:    Receives the most recent transition before the base time.
+ * @param status:    A pointer to an UErrorCode to receive any errors.
+ *
+ * @return  TRUE if the transition is found.
+ *
+ * @draft ICU 4.6
+ */
+U_DRAFT UBool U_EXPORT2
+ucal_getPreviousTimeZoneTransitionByID(const UChar*  zoneID,
+                                   int32_t       len,
+                                   UDate base, 
+                                   UBool inclusive, 
+                                   UTimeZoneTransition* result,
+                                   UErrorCode* status); 
+
+/**
+ * Returns the number of rules which represents time transitions,
+ * for this time zone, that is, all the rules for this time zone except
+ * the intial rule.  The return value range is 0 or any positive value.
+ *
+ * @param zone:     reference to the time zone object we wish to use
+ *                  to retreive data from
+ * @param status:   A pointer to an UErrorCode to receive any errors.
+ *
+ * @return The number of rules representing time transitions.
+ *
+ * @draft ICU 4.6
+ */
+U_DRAFT int32_t U_EXPORT2
+ucal_countTimeZoneTransitionRules(const UTimeZone*  zone,
+                                  UErrorCode* status);
+
+
+/**
+ * Returns the number of rules which represents time transitions,
+ * for this time zone, that is, all the rules for this time zone except
+ * the intial rule.  The return value range is 0 or any positive value.
+ *
+ * @param zoneID:   The desired TimeZone ID.
+ * @param len:      The length of zoneID, or -1 if null-terminated.
+ * @param status:   A pointer to an UErrorCode to receive any errors.
+ *
+ * @return The number of rules representing time transitions.
+ *
+ * @draft ICU 4.6
+ */
+U_DRAFT int32_t U_EXPORT2
+ucal_countTimeZoneTransitionRulesByID(const UChar*  zoneID,
+                                  int32_t       len,
+                                  UErrorCode* status);
+
+/**
+ * Writes RFC2445 VTIMEZONE data for this time zone
+ *
+ * @param zone:           reference to the time zone object we wish to use
+ *                        to write data from
+ * @param result:         Output param to be filled in with
+ *                        the VTIMEZONE data.
+ * @param resultCapacity: The capacity of the result buffer.
+ * @param status:         A pointer to an UErrorCode to receive any errors.
+ *
+ * @return  The result string length
+ *
+ * @draft ICU 4.6
+ */
+U_DRAFT int32_t U_EXPORT2
+ucal_writeTimeZone(const UTimeZone*  zone,
+                   UChar* result, 
+                   int32_t resultCapacity,
+                   UErrorCode* status); 
+
+/**
+ * Writes RFC2445 VTIMEZONE data for this time zone
+ *
+ * @param zoneID:         The desired TimeZone ID.
+ * @param len:            The length of zoneID, or -1 if null-terminated.
+ * @param result:         Output param to be filled in with
+ *                        the VTIMEZONE data.
+ * @param resultCapacity: The capacity of the result buffer.
+ * @param status:         A pointer to an UErrorCode to receive any errors.
+ *
+ * @return  The result string length
+ *
+ * @draft ICU 4.6
+ */
+U_DRAFT int32_t U_EXPORT2
+ucal_writeTimeZoneByID(const UChar*  zoneID,
+                   int32_t       len,
+                   UChar* result, 
+                   int32_t resultCapacity,
+                   UErrorCode* status); 
+
+/**
+ * Returns the time of transition in milliseconds.
+ *
+ * @param trans:   the transition object to retreive data from
+ * @param status:  A pointer to an UErrorCode to receive any errors.
+ *
+ * @return The time of the transition in milliseconds since the 1970 Jan 1 epoch time.
+ *
+ * @draft ICU 4.6
+ */
+U_DRAFT UDate U_EXPORT2
+ucal_getTimeZoneTransitionTime(UTimeZoneTransition* trans,
+                               UErrorCode* status);
 
 #endif /* #if !UCONFIG_NO_FORMATTING */
 
