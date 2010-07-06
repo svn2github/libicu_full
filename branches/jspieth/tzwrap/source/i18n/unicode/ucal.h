@@ -1307,6 +1307,23 @@ ucal_createTimeZoneFromID(const UChar*  zoneID,
                           int32_t       len,
                           UErrorCode*   status);
 
+/**
+ * Creates a vtimezone from the given id.  If the given time zone id
+ * is invalid an error code will be returned.
+ *
+ * @param zoneID: The desired TimeZone ID.
+ * @param len:    The length of zoneID, or -1 if null-terminated.
+ * @param status: A pointer to an UErrorCode to receive any errors.
+ *
+ * @return A pointer to a time zone or null if an error was encountered.
+ *
+ * @draft ICU 4.6
+ */
+U_DRAFT UTimeZone* U_EXPORT2 
+ucal_createVTimeZoneFromID(const UChar*  zoneID,
+                           int32_t       len,
+                           UErrorCode*   status);
+
 
 /**
  * Creates a time zone from an instance of RFC2445 VTIMEZONE data.
@@ -1322,9 +1339,9 @@ ucal_createTimeZoneFromID(const UChar*  zoneID,
  * @draft ICU 4.6
  */
 U_DRAFT UTimeZone* U_EXPORT2 
-ucal_createTimeZoneFromData(const UChar*  data,
-                            int32_t       len,
-                            UErrorCode*   status);
+ucal_createVTimeZoneFromData(const UChar*  data,
+                             int32_t       len,
+                             UErrorCode*   status);
 
 
 /** 
@@ -1336,7 +1353,8 @@ ucal_createTimeZoneFromData(const UChar*  data,
  * @draft ICU 4.6 
  */ 
 U_DRAFT void U_EXPORT2 
-utimezone_close(UTimeZone* zone); 
+ucal_closeTimeZone(UTimeZone* zone); 
+
 
 /** 
  * Returns the time zone raw and GMT offset for the given moment 
@@ -1568,6 +1586,32 @@ ucal_writeTimeZoneByID(const UChar*  zoneID,
                    UChar* result, 
                    int32_t resultCapacity,
                    UErrorCode* status); 
+
+
+/**
+ * Constructs an empty <code>TimeZoneTransition</code>
+ *
+ * @param status: A pointer to an UErrorCode to receive any errors.
+ *
+ * @return A pointer to a time zone or null if an error was encountered.
+ *
+ * @draft ICU 4.6
+ */
+U_DRAFT UTimeZoneTransition* U_EXPORT2 
+ucal_createTimeZoneTransition(UErrorCode*   status);
+
+
+/** 
+ * Disposes of the storage used by a UTimeZoneTransition object.  This function 
+ * should be called exactly once for each UTimeZoneTransition object. 
+ *
+ * @param trans: the object to dispose of 
+ *
+ * @draft ICU 4.6 
+ */ 
+U_DRAFT void U_EXPORT2 
+ucal_closeTimeZoneTransition(UTimeZoneTransition* trans); 
+
 
 /**
  * Returns the time of transition in milliseconds.

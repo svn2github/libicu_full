@@ -22,9 +22,6 @@
 #include "unicode/tztrans.h"
 #include "unicode/vtzone.h"
 #include "tzrulets.h"
-#include "zrule.h"
-#include "ztrans.h"
-#include "vzone.h"
 #include "cmemory.h"
 
 #define CASE(id,test) case id: name = #test; if (exec) { logln(#test "---"); logln((UnicodeString)""); test(); } break

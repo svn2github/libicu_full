@@ -46,6 +46,23 @@ _createTimeZone(const UChar* zoneID, int32_t len, UErrorCode* ec) {
     return zone;
 }
 
+static TimeZoneTransition*
+_createTimeZoneTransition(UErrorCode* ec) {
+    TimeZoneTransition* trans = NULL;
+    if (ec!=NULL && U_SUCCESS(*ec)) {
+        trans = new TimeZoneTransition();
+        if (trans == NULL) {
+            *ec = U_MEMORY_ALLOCATION_ERROR;
+        }
+    }
+    return trans;
+}
+
+static UTimeZoneTransition*
+_cloneTimeZoneTransition(UTimeZoneTransition *trans) {
+    return (UTimeZoneTransition*) (((TimeZoneTransition*)trans)->TimeZoneTransition::clone());
+}
+
 U_CAPI UEnumeration* U_EXPORT2
 ucal_openTimeZones(UErrorCode* ec) {
     return uenum_openFromStringEnumeration(TimeZone::createEnumeration(), ec);
@@ -702,9 +719,28 @@ ucal_createTimeZoneFromID(const UChar*  zoneID,
     return zone;
 }
 
+U_CAPI UTimeZone* U_EXPORT2 
+ucal_createVTimeZoneFromID(const UChar*  zoneID,
+                           int32_t       len,
+                           UErrorCode*   status) 
+{  
+    UTimeZone * zone = NULL;
+    if (status!=NULL && U_SUCCESS(*status))
+    {
+        // read-only alias for data
+        UnicodeString dataStr;
+        dataStr.setTo((UBool)(len < 0), zoneID, len);
+
+        // error code is okay so far, create a time zone
+        // any errors on the time zone creation will be
+        // relayed through the status parameter.
+        zone = (UTimeZone*)(VTimeZone::createVTimeZoneByID(dataStr));
+    }
+    return zone;
+}
 
 U_CAPI UTimeZone* U_EXPORT2 
-ucal_createTimeZoneFromData(const UChar*  data,
+ucal_createVTimeZoneFromData(const UChar*  data,
                             int32_t       len,
                             UErrorCode*   status) 
 {  
@@ -723,11 +759,29 @@ ucal_createTimeZoneFromData(const UChar*  data,
     return zone;
 }
 
-
 U_CAPI void U_EXPORT2 
-utimezone_close(UTimeZone* zone) 
+ucal_closeTimeZone(UTimeZone* zone) 
 {  
     delete (TimeZone*)zone;
+} 
+
+
+U_CAPI UTimeZoneTransition* U_EXPORT2 
+ucal_createTimeZoneTransition(UErrorCode*   status) 
+{  
+    UTimeZoneTransition *trans = NULL;
+    if (status!=NULL && U_SUCCESS(*status))
+    {
+        trans = (UTimeZoneTransition*)(_createTimeZoneTransition(status));
+    }
+    return trans;
+}
+
+
+U_CAPI void U_EXPORT2 
+ucal_closeTimeZoneTransition(UTimeZoneTransition* trans) 
+{  
+    delete (TimeZoneTransition*)trans;
 } 
 
 
@@ -778,7 +832,8 @@ ucal_getNextTimeZoneTransition(const UTimeZone*  zone,
                                UErrorCode* status) 
 {  
     UBool b = false;
-    TimeZoneTransition *t = new TimeZoneTransition();
+    TimeZoneTransition t;
+
     if (status!=NULL && U_SUCCESS(*status))
     {
         if (zone == NULL)
@@ -786,9 +841,13 @@ ucal_getNextTimeZoneTransition(const UTimeZone*  zone,
             *status = U_MEMORY_ALLOCATION_ERROR;
             return b;
         }
-        //b = ((BasicTimeZone*)zone)->getNextTransition(base, inclusive, *t);
-        result = (UTimeZoneTransition*)t;
+
+        b = ((BasicTimeZone*)zone)->getNextTransition(base, inclusive, t);
+        ((TimeZoneTransition*)result)->setFrom(*(t.getFrom()));
+        ((TimeZoneTransition*)result)->setTo(*(t.getTo()));
+        ((TimeZoneTransition*)result)->setTime(t.getTime());
     }
+
     return b;
 } 
 
@@ -819,7 +878,8 @@ ucal_getPreviousTimeZoneTransition(const UTimeZone*  zone,
                                    UErrorCode* status) 
 {  
     UBool b = false;
-    TimeZoneTransition *t  = new TimeZoneTransition();
+    TimeZoneTransition t;
+
     if (status!=NULL && U_SUCCESS(*status))
     {
         if (zone == NULL)
@@ -827,9 +887,13 @@ ucal_getPreviousTimeZoneTransition(const UTimeZone*  zone,
             *status = U_MEMORY_ALLOCATION_ERROR;
             return b;
         }
-        b = ((BasicTimeZone*)zone)->getPreviousTransition(base, inclusive,*t);
-        result = (UTimeZoneTransition*)t;
+
+        b = ((BasicTimeZone*)zone)->getPreviousTransition(base, inclusive, t);
+        ((TimeZoneTransition*)result)->setFrom(*(t.getFrom()));
+        ((TimeZoneTransition*)result)->setTo(*(t.getTo()));
+        ((TimeZoneTransition*)result)->setTime(t.getTime());
     }
+
     return b;
 } 
 
@@ -893,23 +957,24 @@ ucal_writeTimeZone(const UTimeZone*  zone,
                    UErrorCode* status) 
 {  
     int32_t reslen = 0;
+
     if (status!=NULL && U_SUCCESS(*status))
     {
-        if (zone == NULL)
+        if (zone == 0 || result == 0 || resultCapacity <= 0)
         {
-            *status = U_MEMORY_ALLOCATION_ERROR;
+            *status = U_ILLEGAL_ARGUMENT_ERROR;
             return reslen;
         }
 
         // get the data from the VTimeZone
         UnicodeString dataStr;
         ((VTimeZone*)zone)->write(dataStr,*status);
-
         if (U_SUCCESS(*status)) 
         {
             reslen = dataStr.extract(result, resultCapacity, *status);
         }
     }
+
     return reslen;
 } 
 

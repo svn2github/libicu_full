@@ -96,11 +96,13 @@ static void TestCalendar()
     UBool isSystemID = FALSE;
     const UCalGetTypeTest * ucalGetTypeTestPtr;
     
-    UTimeZone *zone;
-    UDate d;
-    int32_t rawOffset, dstOffset;
+    UTimeZone *zone, *vzone, *vzone2;
+    UDate d, d1, d2;
+    int32_t rawOffset, dstOffset, ct, vBufferLength, resLen;
     UBool b;
     UTimeZoneTransition *trans = NULL;
+    UChar vB;
+    UChar * vBuffer;
 
 #ifdef U_USE_UCAL_OBSOLETE_2_8
     /*Testing countAvailableTimeZones*/
@@ -247,6 +249,13 @@ static void TestCalendar()
         log_err("FAIL: error in ucal_createTimeZoneFromID : %s\n", u_errorName(status));
     }
     
+    /* Testing ucal_createTimeZoneTransition */
+    status = U_ZERO_ERROR;
+    trans = ucal_createTimeZoneTransition(&status);
+    if (U_FAILURE(status)) {
+        log_err("FAIL: error in ucal_createTimeZoneTransition : %s\n", u_errorName(status));
+    }
+
     /* Test ucal_getTimeZoneOffset */
     d = 1262304000;  /* Jan 1, 2010 */
 
@@ -268,29 +277,125 @@ static void TestCalendar()
         log_err("FAIL: error in ucal_getTimeZoneOffsetByID expected -2880000, 0 returned %i, %i\n", rawOffset, dstOffset);
     }
 
+    /* Test ucal_countTimeZoneTransitionRules */
+    status = U_ZERO_ERROR;
+    ct = ucal_countTimeZoneTransitionRules(zone, &status);
+    if (U_FAILURE(status)) {
+        log_err("FAIL: error in ucal_countTimeZoneTransitionRules : %s\n", u_errorName(status));
+    }
+    if (ct != 4) {
+        log_err("FAIL: error in ucal_countTimeZoneTransitionRules expected 4 returned %i\n", ct);
+    }
+
+    status = U_ZERO_ERROR;
+    ct = ucal_countTimeZoneTransitionRulesByID(PST, -1, &status);
+    if (U_FAILURE(status)) {
+        log_err("FAIL: error in ucal_countTimeZoneTransitionRulesByID : %s\n", u_errorName(status));
+    }
+    if (ct != 4) {
+        log_err("FAIL: error in ucal_countTimeZoneTransitionRulesByID expected 4 returned %i\n", ct);
+    }
+
     /* Test ucal_getNextTimeZoneTransition */
     status = U_ZERO_ERROR;
+    d = 1262304000;  /* Jan 1, 2010 */
     b = ucal_getNextTimeZoneTransition(zone, d, TRUE, trans, &status); 
     if (U_FAILURE(status)) {
         log_err("FAIL: error in ucal_getNextTimeZoneTransition : %s\n", u_errorName(status));
     }
 
     status = U_ZERO_ERROR;
+    d = ucal_getTimeZoneTransitionTime(trans, &status);
+    if (U_FAILURE(status)) {
+        log_err("FAIL: error in ucal_getTimeZoneTransitionTime : %s\n", u_errorName(status));
+    }
+    if (d != 9972000000) {
+        log_err("FAIL: error in ucal_getTimeZoneTransitionTime : expected 9972000000 returned:  %d\n", d);
+    }
+
+    status = U_ZERO_ERROR;
+    d = 1262304000;  /* Jan 1, 2010 */
     b = ucal_getNextTimeZoneTransitionByID(PST, -1, d, TRUE, trans, &status); 
     if (U_FAILURE(status)) {
         log_err("FAIL: error in ucal_getNextTimeZoneTransitionByID : %s\n", u_errorName(status));
     }
 
-
-
-
-
-
-
-
-    /* Testing utimezone_close*/
     status = U_ZERO_ERROR;
-    utimezone_close(zone);
+    d = ucal_getTimeZoneTransitionTime(trans, &status);
+    if (U_FAILURE(status)) {
+        log_err("FAIL: error in ucal_getTimeZoneTransitionTime : %s\n", u_errorName(status));
+    }
+    if (d != 9972000000) {
+        log_err("FAIL: error in ucal_getTimeZoneTransitionTime : expected 9972000000 returned:  %d\n", d);
+    }
+
+    /* Test ucal_getPreviousTimeZoneTransition */
+    status = U_ZERO_ERROR;
+    d = 1262304000;  /* Jan 1, 2010 */
+    b = ucal_getPreviousTimeZoneTransition(zone, d, TRUE, trans, &status); 
+    if (U_FAILURE(status)) {
+        log_err("FAIL: error in ucal_getPreviousTimeZoneTransition : %s\n", u_errorName(status));
+    }
+
+    status = U_ZERO_ERROR;
+    d = ucal_getTimeZoneTransitionTime(trans, &status);
+    if (U_FAILURE(status)) {
+        log_err("FAIL: error in ucal_getTimeZoneTransitionTime : %s\n", u_errorName(status));
+    }
+    if (d != -5756400000) {
+        log_err("FAIL: error in ucal_getTimeZoneTransitionTime : expected -5756400000 returned:  %d\n", d);
+    }
+
+    status = U_ZERO_ERROR;
+    d = 1262304000;  /* Jan 1, 2010 */
+    b = ucal_getPreviousTimeZoneTransitionByID(PST, -1, d, TRUE, trans, &status); 
+    if (U_FAILURE(status)) {
+        log_err("FAIL: error in ucal_getPreviousTimeZoneTransitionByID : %s\n", u_errorName(status));
+    }
+
+    status = U_ZERO_ERROR;
+    d = ucal_getTimeZoneTransitionTime(trans, &status);
+    if (U_FAILURE(status)) {
+        log_err("FAIL: error in ucal_getTimeZoneTransitionTime : %s\n", u_errorName(status));
+    }
+    if (d != -5756400000) {
+        log_err("FAIL: error in ucal_getTimeZoneTransitionTime : expected -5756400000 returned:  %d\n", d);
+    }
+
+    /* test ucal_writeTimeZone */
+    status = U_ZERO_ERROR;
+    vzone = ucal_createVTimeZoneFromID(PST, -1, &status);
+    if (U_FAILURE(status)) {
+        log_err("FAIL: error in ucal_createVTimeZoneFromID : %s\n", u_errorName(status));
+    }
+
+    status = U_ZERO_ERROR;
+    vBufferLength = ucal_writeTimeZone(vzone, &vB, 1, &status);  // get size needed for data
+    if (U_FAILURE(status)) {
+        log_err("FAIL: error in ucal_writeTimeZone : %s\n", u_errorName(status));
+    }
+
+    status = U_ZERO_ERROR;
+    vBuffer=(UChar*)malloc(sizeof(UChar) * vBufferLength);
+    resLen = ucal_writeTimeZone(vzone, vBuffer, vBufferLength, &status);
+    if (U_FAILURE(status)) {
+        log_err("FAIL: error in ucal_writeTimeZone : %s\n", u_errorName(status));
+    }
+
+    /* test ucal_createVTimeZoneFromData */
+    status = U_ZERO_ERROR;
+    vzone2 = ucal_createVTimeZoneFromData(vBuffer, resLen, &status);
+    if (U_FAILURE(status)) {
+        log_err("FAIL: error in ucal_createVTimeZoneFromData : %s\n", u_errorName(status));
+    }
+
+    /* Testing close */
+    status = U_ZERO_ERROR;
+    ucal_closeTimeZone(zone);
+    ucal_closeTimeZoneTransition(trans);
+    ucal_closeTimeZone(vzone);
+    ucal_closeTimeZone(vzone2);
+    free(vBuffer);
 
     /*Testing the  ucal_open() function*/
     status = U_ZERO_ERROR;
