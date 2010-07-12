@@ -541,7 +541,9 @@ UBool IntlTest::callTest( IntlTest& testToBeCalled, char* par )
     execCount--; // correct a previously assumed test-exec, as this only calls a subtest
     testToBeCalled.setCaller( this );
     strcpy(testToBeCalled.basePath, this->basePath );
-    return testToBeCalled.runTest( testPath, par, testToBeCalled.basePath );
+    UBool result = testToBeCalled.runTest( testPath, par, testToBeCalled.basePath );
+    strcpy(testToBeCalled.basePath, this->basePath ); // reset it.
+    return result;
 }
 
 void IntlTest::setPath( char* pathVal )
@@ -744,6 +746,8 @@ UBool IntlTest::runTestLoop( char* testname, char* par, char *baseName )
         }
         index++;
     }while(name);
+
+    *saveBaseLoc = 0;
 
     gTest = saveTest;
     return rval;

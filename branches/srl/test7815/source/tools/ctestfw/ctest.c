@@ -124,6 +124,8 @@ size_t MAXIMUM_MEMORY_SIZE_FAILURE = (size_t)-1; /* Maximum library memory alloc
 int32_t ALLOCATION_COUNT = 0;
 static const char *ARGV_0 = "[ALL]";
 static const char *XML_FILE_NAME=NULL;
+static char XML_PREFIX[256];
+
 FILE *XML_FILE = NULL;
 /*-------------------------------------------*/
 
@@ -1209,8 +1211,18 @@ ctest_xml_init(const char *rootName) {
     fprintf(stderr," Error: couldn't open XML output file %s\n", XML_FILE_NAME);
     return 1;
   }
+  while(*rootName&&!isalnum(*rootName)) {
+    rootName++;
+  }
+  strcpy(XML_PREFIX,rootName);
+  {
+    char *p = XML_PREFIX+strlen(XML_PREFIX);
+    for(p--;*p&&p>XML_PREFIX&&!isalnum(*p);p--) {
+      *p=0;
+    }
+  }
   /* write prefix */
-  fprintf(XML_FILE, "<testsuite name=\"%s\">\n", rootName);
+  fprintf(XML_FILE, "<testsuite name=\"%s\">\n", XML_PREFIX);
 
   return 0;
 }
@@ -1233,7 +1245,7 @@ T_CTEST_EXPORT2
 ctest_xml_testcase(const char *classname, const char *name, const char *time, const char *failMsg) {
   if(!XML_FILE) return 0;
 
-  fprintf(XML_FILE, "\t<testcase classname=\"%s\" name=\"%s\" time=\"%s\"", classname, name, time);
+  fprintf(XML_FILE, "\t<testcase classname=\"%s:%s\" name=\"%s:%s\" time=\"%s\"", XML_PREFIX, classname, XML_PREFIX, name, time);
   if(failMsg) {
     fprintf(XML_FILE, ">\n\t\t<failure type=\"err\" message=\"%s\"/>\n\t</testcase>\n", failMsg);
   } else {
