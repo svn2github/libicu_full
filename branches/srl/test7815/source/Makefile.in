@@ -188,7 +188,6 @@ xcheck-local: $(top_builddir)/config/icu-config $(top_builddir)/config/Makefile.
 	@echo verifying that $(MAKE) -f Makefile.inc selfcheck can operate
 	@test "passed" = "$(shell $(MAKE) --no-print-directory -f $(top_builddir)/config/Makefile.inc SELFCHECK=1 selfcheck)" || (echo "FAIL: Makefile.inc could not run properly." ; exit 1 )
 	@echo "PASS: config selfcheck OK"
-	>test-local.xml
 
 #$(srcdir)/configure : $(srcdir)/configure.in $(top_srcdir)/aclocal.m4
 #	cd $(srcdir) && $(AUTOCONF)
