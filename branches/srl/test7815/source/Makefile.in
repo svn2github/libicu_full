@@ -170,7 +170,7 @@ tests: all
 
 clean-local:
 	test -z "$(CLEANFILES)" || $(RMV) $(CLEANFILES)
-	test -z "test-*.xml" || $(RMV) "test-*.xml"
+	-$(RMV) "test-*.xml"
 	$(RMV) Doxyfile doc $(DOCZIP)
 
 distclean-local: clean-local
