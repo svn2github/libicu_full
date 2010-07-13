@@ -24,6 +24,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "utrie2perf", "utrie2perf\ut
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ucnvavailperf", "ucnvavailperf\ucnvavailperf.vcproj", "{EE2259BF-280D-4E0E-8A08-D77A26AE4191}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "dtfmtrtperf", "dtfmtrtperf\dtfmtrtperf.vcproj", "{449EB9B0-0E38-48B7-9AF5-B22C6DF66476}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -124,6 +126,12 @@ Global
 		{EE2259BF-280D-4E0E-8A08-D77A26AE4191}.Release|Win32.ActiveCfg = Release|Win32
 		{EE2259BF-280D-4E0E-8A08-D77A26AE4191}.Release|Win32.Build.0 = Release|Win32
 		{EE2259BF-280D-4E0E-8A08-D77A26AE4191}.Release|x64.ActiveCfg = Release|Win32
+		{449EB9B0-0E38-48B7-9AF5-B22C6DF66476}.Debug|Win32.ActiveCfg = Debug|Win32
+		{449EB9B0-0E38-48B7-9AF5-B22C6DF66476}.Debug|Win32.Build.0 = Debug|Win32
+		{449EB9B0-0E38-48B7-9AF5-B22C6DF66476}.Debug|x64.ActiveCfg = Debug|Win32
+		{449EB9B0-0E38-48B7-9AF5-B22C6DF66476}.Release|Win32.ActiveCfg = Release|Win32
+		{449EB9B0-0E38-48B7-9AF5-B22C6DF66476}.Release|Win32.Build.0 = Release|Win32
+		{449EB9B0-0E38-48B7-9AF5-B22C6DF66476}.Release|x64.ActiveCfg = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
