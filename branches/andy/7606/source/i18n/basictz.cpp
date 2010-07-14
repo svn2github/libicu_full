@@ -360,7 +360,15 @@ BasicTimeZone::getTimeZoneRulesAfter(UDate start, InitialTimeZoneRule*& initial,
         if (!avail) {
             break;
         }
-        time = tzt.getTime();
+        UDate updatedTime = tzt.getTime();
+        if (updatedTime == time) {
+            // Can get here if rules for start & end of daylight time have exactly
+            // the same time.  
+            // TODO:  fix getNextTransition() to prevent it?
+            status = U_INVALID_STATE_ERROR;
+            goto error;
+        }
+        time = updatedTime;
  
         const TimeZoneRule *toRule = tzt.getTo();
         for (i = 0; i < ruleCount; i++) {
@@ -510,6 +518,14 @@ error:
         }
         delete orgRules;
     }
+    if (filteredRules != NULL) {
+        while (!filteredRules->isEmpty()) {
+            r = (TimeZoneRule*)filteredRules->orphanElementAt(0);
+            delete r;
+        }
+        delete filteredRules;
+    }
+    delete res_initial;
     if (done != NULL) {
         uprv_free(done);
     }
