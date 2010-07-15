@@ -1150,6 +1150,7 @@
 #define upname_swap U_ICU_ENTRY_POINT_RENAME(upname_swap)
 #define uprops_getSource U_ICU_ENTRY_POINT_RENAME(uprops_getSource)
 #define upropsvec_addPropertyStarts U_ICU_ENTRY_POINT_RENAME(upropsvec_addPropertyStarts)
+#define uprv_aestrncpy U_ICU_ENTRY_POINT_RENAME(uprv_aestrncpy)
 #define uprv_asciiFromEbcdic U_ICU_ENTRY_POINT_RENAME(uprv_asciiFromEbcdic)
 #define uprv_asciitolower U_ICU_ENTRY_POINT_RENAME(uprv_asciitolower)
 #define uprv_ceil U_ICU_ENTRY_POINT_RENAME(uprv_ceil)
