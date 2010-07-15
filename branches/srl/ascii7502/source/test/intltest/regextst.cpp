@@ -115,8 +115,15 @@ void RegexTest::runIndexedTest( int32_t index, UBool exec, const char* &name, ch
     }
 }
 
-UText* U_EXPORT2
-RegexTest::utext_openUTF8FromInvariant(UText *ut, const char *inv, int64_t length, UErrorCode *status) {
+
+/**
+ * Calls utext_openUTF8 after, potentially, converting invariant text from the compilation codepage
+ * into ASCII. 
+ * @see utext_openUTF8
+ */
+static UText* regextst_openUTF8FromInvariant(UText* ut, const char *inv, int64_t length, UErrorCode *status);
+
+static UText* regextst_openUTF8FromInvariant(UText *ut, const char *inv, int64_t length, UErrorCode *status) {
 #if U_CHARSET_FAMILY==U_ASCII_FAMILY
   return utext_openUTF8(ut, inv, length, status);
 #else
@@ -199,7 +206,7 @@ void RegexTest::assertUText(const char *expected, UText *actual, const char *fil
 void RegexTest::assertUTextInvariant(const char *expected, UText *actual, const char *file, int line) {
     UErrorCode status = U_ZERO_ERROR;
     UText expectedText = UTEXT_INITIALIZER;
-    utext_openUTF8FromInvariant(&expectedText, expected, -1, &status);
+    regextst_openUTF8FromInvariant(&expectedText, expected, -1, &status);
     utext_setNativeIndex(actual, 0);
     if (utext_compare(&expectedText, -1, actual, -1) != 0) {
         char buf[201 /*21*/];
@@ -313,7 +320,7 @@ UBool RegexTest::doRegexLMTestUTF8(const char *pat, const char *text, UBool look
     RegexMatcher        *REMatcher = NULL;
     UBool               retVal     = TRUE;
 
-    utext_openUTF8FromInvariant(&pattern, pat, -1, &status);
+    regextst_openUTF8FromInvariant(&pattern, pat, -1, &status);
     REPattern = RegexPattern::compile(&pattern, 0, pe, status);
     if (U_FAILURE(status)) {
         dataerrln("RegexTest failure in RegexPattern::compile() at line %d (UTF8).  Status = %s\n",
@@ -423,7 +430,7 @@ void RegexTest::regex_err(const char *pat, int32_t errLine, int32_t errCol,
     //  Compile again, using a UTF-8-based UText
     //
     UText patternText = UTEXT_INITIALIZER;
-    utext_openUTF8FromInvariant(&patternText, pat, -1, &status);
+    regextst_openUTF8FromInvariant(&patternText, pat, -1, &status);
     callerPattern = RegexPattern::compile(&patternText, 0, pe, status);
     if (status != expectedStatus) {
         dataerrln("Line %d: unexpected error %s compiling pattern.", line, u_errorName(status));
@@ -2776,7 +2783,7 @@ void RegexTest::API_Pattern_UTF8() {
     delete pat1;
 
     //  split, with a pattern with (capture)
-    utext_openUTF8FromInvariant(&re1, "<(\\w*)>", -1, &status);
+    regextst_openUTF8FromInvariant(&re1, "<(\\w*)>", -1, &status);
     pat1 = RegexPattern::compile(&re1,  pe, status);
     REGEX_CHECK_STATUS;
 
@@ -2852,7 +2859,7 @@ void RegexTest::API_Pattern_UTF8() {
     status = U_ZERO_ERROR;
     delete pat1;
 
-    utext_openUTF8FromInvariant(&re1, "([-,])", -1, &status);
+    regextst_openUTF8FromInvariant(&re1, "([-,])", -1, &status);
     pat1 = RegexPattern::compile(&re1, pe, status);
     REGEX_CHECK_STATUS;
     n = pat1->split("1-10,20", fields, 10, status);
@@ -2874,7 +2881,7 @@ void RegexTest::API_Pattern_UTF8() {
     REGEX_ASSERT_UTEXT("", pat1->patternText());
     delete pat1;
 
-    utext_openUTF8FromInvariant(&re1, "(Hello, world)*", -1, &status);
+    regextst_openUTF8FromInvariant(&re1, "(Hello, world)*", -1, &status);
     pat1 = RegexPattern::compile(&re1, pe, status);
     REGEX_CHECK_STATUS;
     REGEX_ASSERT(pat1->pattern() == "(Hello, world)*");
@@ -4671,12 +4678,12 @@ void RegexTest::PreAllocatedUTextCAPI () {
         UText  *resultText;
 
         status = U_ZERO_ERROR;
-        utext_openUTF8FromInvariant(&text1, "abcccd", -1, &status);
-        utext_openUTF8FromInvariant(&text2, "abcccxd", -1, &status);
+        regextst_openUTF8FromInvariant(&text1, "abcccd", -1, &status);
+        regextst_openUTF8FromInvariant(&text2, "abcccxd", -1, &status);
         u_uastrncpy(text2Chars, "abcccxd", sizeof(text2)/2);
         utext_openUChars(&text2, text2Chars, -1, &status);
         
-        utext_openUTF8FromInvariant(&patternText, "abc*d", -1, &status);
+        regextst_openUTF8FromInvariant(&patternText, "abc*d", -1, &status);
         re = uregex_openUText(&patternText, 0, NULL, &status);
 
         /* First set a UText */
@@ -4762,7 +4769,7 @@ void RegexTest::PreAllocatedUTextCAPI () {
         status = U_ZERO_ERROR;
         u_uastrncpy(text1, "Replace xaax x1x x...x.",  sizeof(text1)/2);
         u_uastrncpy(text2, "No match here.",  sizeof(text2)/2);
-        utext_openUTF8FromInvariant(&replText, "<$1>", -1, &status);
+        regextst_openUTF8FromInvariant(&replText, "<$1>", -1, &status);
 
         re = uregex_openC("x(.*?)x", 0, NULL, &status);
         REGEX_CHECK_STATUS;
@@ -4785,7 +4792,7 @@ void RegexTest::PreAllocatedUTextCAPI () {
         
         /* Unicode escapes */
         uregex_setText(re, text1, -1, &status);
-        utext_openUTF8FromInvariant(&replText, "\\\\\\u0041$1\\U00000042$\\a", -1, &status);
+        regextst_openUTF8FromInvariant(&replText, "\\\\\\u0041$1\\U00000042$\\a", -1, &status);
         utext_replace(&bufferText, 0, utext_nativeLength(&bufferText), NULL, 0, &status);
         result = uregex_replaceFirstUText(re, &replText, &bufferText, &status);
         REGEX_CHECK_STATUS;
@@ -4809,7 +4816,7 @@ void RegexTest::PreAllocatedUTextCAPI () {
         status = U_ZERO_ERROR;
         u_uastrncpy(text1, "Replace xaax x1x x...x.",  sizeof(text1)/2);
         u_uastrncpy(text2, "No match here.",  sizeof(text2)/2);
-        utext_openUTF8FromInvariant(&replText, "<$1>", -1, &status);
+        regextst_openUTF8FromInvariant(&replText, "<$1>", -1, &status);
 
         re = uregex_openC("x(.*?)x", 0, NULL, &status);
         REGEX_CHECK_STATUS;

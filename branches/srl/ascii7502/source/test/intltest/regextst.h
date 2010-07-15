@@ -56,13 +56,6 @@ public:
     virtual UChar *ReadAndConvertFile(const char *fileName, int32_t &len, const char *charset, UErrorCode &status);
     virtual const char *getPath(char buffer[2048], const char *filename);
 
-    /**
-     * Calls utext_openUTF8 after, potentially, converting invariant text from the compilation codepage
-     * into ASCII. 
-     * @see utext_openUTF8
-     */
-    UText* utext_openUTF8FromInvariant(UText* ut, const char *inv, int64_t length, UErrorCode *status);
-
 };
 
 #endif   // !UCONFIG_NO_REGULAR_EXPRESSIONS
