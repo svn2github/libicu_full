@@ -411,6 +411,9 @@ uregex_getUText(URegularExpression *regexp,
   *    @param  regexp      The compiled regular expression.
   *    @param  startIndex  The input string index at which to begin matching, or -1
   *                        to match the input Region.
+  *                        The position is a native index, corresponding to
+  *                        code units for the underlying encoding type, for example,
+  *                        a byte index for UTF8.
   *    @param  status      Receives errors detected by this function.
   *    @return             TRUE if there is a match
   *    @stable ICU 3.0
@@ -419,6 +422,15 @@ U_STABLE UBool U_EXPORT2
 uregex_matches(URegularExpression *regexp,
                 int32_t            startIndex,
                 UErrorCode        *status);
+
+/**
+  *   64bit version of uregex_matches.
+  *   @internal ICU 4.6 technology preview
+  */
+U_INTERNAL UBool U_EXPORT2 
+uregex_matches64(URegularExpression *regexp,
+                 int64_t            startIndex,
+                 UErrorCode        *status);
 
 /**
   *   Attempts to match the input string, starting from the specified index, against the pattern.
@@ -439,6 +451,9 @@ uregex_matches(URegularExpression *regexp,
   *    @param   regexp      The compiled regular expression.
   *    @param   startIndex  The input string index at which to begin matching, or
   *                         -1 to match the Input Region
+  *                         The position is a native index, corresponding to
+  *                         code units for the underlying encoding type, for example,
+  *                         a byte index for UTF8.
   *    @param   status      A reference to a UErrorCode to receive any errors.
   *    @return  TRUE if there is a match.
   *    @stable ICU 3.0
@@ -447,6 +462,15 @@ U_STABLE UBool U_EXPORT2
 uregex_lookingAt(URegularExpression *regexp,
                  int32_t             startIndex,
                  UErrorCode         *status);
+
+/**
+  *   64bit version of uregex_lookingAt.
+  *   @internal ICU 4.6 technology preview
+  */
+U_INTERNAL UBool U_EXPORT2 
+uregex_lookingAt64(URegularExpression *regexp,
+                   int64_t             startIndex,
+                   UErrorCode         *status);
 
 /**
   *   Find the first matching substring of the input string that matches the pattern.
@@ -463,6 +487,9 @@ uregex_lookingAt(URegularExpression *regexp,
   *   @param   regexp      The compiled regular expression.
   *   @param   startIndex  The position in the input string to begin the search, or
   *                        -1 to search within the Input Region.
+  *                        The position is a native index, corresponding to
+  *                        code units for the underlying encoding type, for example,
+  *                        a byte index for UTF8.
   *   @param   status      A reference to a UErrorCode to receive any errors.
   *   @return              TRUE if a match is found.
   *   @stable ICU 3.0
@@ -471,6 +498,15 @@ U_STABLE UBool U_EXPORT2
 uregex_find(URegularExpression *regexp,
             int32_t             startIndex, 
             UErrorCode         *status);
+
+/**
+  *   64bit version of uregex_find.
+  *   @internal ICU 4.6 technology preview
+  */
+U_INTERNAL UBool U_EXPORT2 
+uregex_find64(URegularExpression *regexp,
+              int64_t             startIndex, 
+              UErrorCode         *status);
 
 /**
   *  Find the next pattern match in the input string.  Begin searching 
@@ -559,12 +595,24 @@ uregex_groupUText(URegularExpression *regexp,
   *    @param   status      A reference to a UErrorCode to receive any errors.
   *    @return              the starting position in the input of the text matched 
   *                         by the specified group.
+  *                         The position is a native index, corresponding to
+  *                         code units for the underlying encoding type, for example,
+  *                         a byte index for UTF8.
   *    @stable ICU 3.0
   */
 U_STABLE int32_t U_EXPORT2 
 uregex_start(URegularExpression *regexp,
              int32_t             groupNum,
              UErrorCode          *status);
+
+/**
+  *   64bit version of uregex_start.
+  *   @internal ICU 4.6 technology preview
+  */
+U_INTERNAL int64_t U_EXPORT2 
+uregex_start64(URegularExpression *regexp,
+               int32_t             groupNum,
+               UErrorCode          *status);
 
 /**
   *   Returns the index in the input string of the position following the end
@@ -577,12 +625,24 @@ uregex_start(URegularExpression *regexp,
   *    @param   groupNum    The capture group number
   *    @param   status      A reference to a UErrorCode to receive any errors.
   *    @return              the index of the position following the last matched character.
+  *                         The position is a native index, corresponding to
+  *                         code units for the underlying encoding type, for example,
+  *                         a byte index for UTF8.
   *    @stable ICU 3.0
   */
 U_STABLE int32_t U_EXPORT2 
 uregex_end(URegularExpression   *regexp,
            int32_t               groupNum,
            UErrorCode           *status);
+
+/**
+  *   64bit version of uregex_end.
+  *   @internal ICU 4.6 technology preview
+  */
+U_INTERNAL int64_t U_EXPORT2 
+uregex_end64(URegularExpression *regexp,
+             int32_t               groupNum,
+             UErrorCode           *status);
 
 /**
   *  Reset any saved state from the previous match.  Has the effect of
@@ -594,6 +654,9 @@ uregex_end(URegularExpression   *regexp,
   *    @param   regexp      The compiled regular expression.
   *    @param   index       The position in the text at which a
   *                         uregex_findNext() should begin searching.
+  *                         The position is a native index, corresponding to
+  *                         code units for the underlying encoding type, for example,
+  *                         a byte index for UTF8.
   *    @param   status      A reference to a UErrorCode to receive any errors.
   *    @stable ICU 3.0
   */
@@ -603,6 +666,15 @@ uregex_reset(URegularExpression    *regexp,
              UErrorCode            *status);
              
              
+/**
+  *   64bit version of uregex_reset.
+  *   @internal ICU 4.6 technology preview
+  */
+U_INTERNAL void U_EXPORT2 
+uregex_reset64(URegularExpression  *regexp,
+               int64_t               index,
+               UErrorCode            *status);
+
 /** Sets the limits of the matching region for this URegularExpression.
   * The region is the part of the input string that will be considered when matching.
   * Invoking this method resets any saved state from the previous match, 
@@ -618,6 +690,9 @@ uregex_reset(URegularExpression    *regexp,
   *
   * @param regexp The compiled regular expression.
   * @param regionStart  The index to begin searches at.
+  *                     The position is a native index, corresponding to
+  *                     code units for the underlying encoding type, for example,
+  *                     a byte index for UTF8.
   * @param regionLimit  The index to end searches at (exclusive).
   * @param status A pointer to a UErrorCode to receive any errors.
   * @stable ICU 4.0
@@ -629,12 +704,25 @@ uregex_setRegion(URegularExpression   *regexp,
                  UErrorCode           *status);
 
 /**
+  *   64bit version of uregex_setRegion.
+  *   @internal ICU 4.6 technology preview
+  */
+U_INTERNAL void U_EXPORT2 
+uregex_setRegion64(URegularExpression *regexp,
+                 int64_t               regionStart,
+                 int64_t               regionLimit,
+                 UErrorCode           *status);
+
+/**
   * Reports the start index of the matching region. Any matches found are limited to
   * to the region bounded by regionStart (inclusive) and regionEnd (exclusive).
   *
   * @param regexp The compiled regular expression.
   * @param status A pointer to a UErrorCode to receive any errors.
   * @return The starting index of this matcher's region.
+  *             The position is a native index, corresponding to
+  *             code units for the underlying encoding type, for example,
+  *             a byte index for UTF8.
   * @stable ICU 4.0
   */
 U_STABLE int32_t U_EXPORT2
@@ -642,6 +730,13 @@ uregex_regionStart(const  URegularExpression   *regexp,
                           UErrorCode           *status);
 
 
+/**
+  *   64bit version of uregex_regionStart.
+  *   @internal ICU 4.6 technology preview
+  */
+U_INTERNAL int64_t U_EXPORT2 
+uregex_regionStart64(const  URegularExpression   *regexp,
+                            UErrorCode           *status);
 
 /**
   * Reports the end index (exclusive) of the matching region for this URegularExpression.
@@ -651,11 +746,22 @@ uregex_regionStart(const  URegularExpression   *regexp,
   * @param regexp The compiled regular expression.
   * @param status A pointer to a UErrorCode to receive any errors.
   * @return The ending point of this matcher's region.
+  *             The position is a native index, corresponding to
+  *             code units for the underlying encoding type, for example,
+  *             a byte index for UTF8.
   * @stable ICU 4.0
   */
 U_STABLE int32_t U_EXPORT2
 uregex_regionEnd(const  URegularExpression   *regexp,
                         UErrorCode           *status);
+
+/**
+  *   64bit version of uregex_regionEnd.
+  *   @internal ICU 4.6 technology preview
+  */
+U_INTERNAL int64_t U_EXPORT2 
+uregex_regionEnd64(const  URegularExpression   *regexp,
+                          UErrorCode           *status);
 
 /**
   * Queries the transparency of region bounds for this URegularExpression.

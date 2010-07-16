@@ -522,9 +522,14 @@ int32_t RegexMatcher::end(UErrorCode &err) const {
     return end(0, err);
 }
 
+#if REGEX_USE_64BIT_INDICES
+int64_t RegexMatcher::end64(UErrorCode &err) const {
+    return end64(0, err);
+}
+#endif
 
 
-int32_t RegexMatcher::end(int32_t group, UErrorCode &err) const {
+int64_t RegexMatcher::end_internal(int32_t group, UErrorCode &err) const {
     if (U_FAILURE(err)) {
         return -1;
     }
@@ -548,6 +553,9 @@ int32_t RegexMatcher::end(int32_t group, UErrorCode &err) const {
         e = fFrame->fExtra[groupOffset + 1];
     }
     
+#if REGEX_USE_NATIVE_INDICES
+        return (int32_t)e;
+#else
     if (e == -1 || UTEXT_USES_U16(fInputText)) {
         return (int32_t)e;
     } else {
@@ -555,7 +563,19 @@ int32_t RegexMatcher::end(int32_t group, UErrorCode &err) const {
         UErrorCode status = U_ZERO_ERROR;
         return utext_extract(fInputText, 0, e, NULL, 0, &status);
     }
+#endif
 }
+
+int32_t RegexMatcher::end(int32_t group, UErrorCode &err) const {
+    return (int32_t)end_internal(group, err);
+}
+
+#if REGEX_USE_64BIT_INDICES
+int64_t RegexMatcher::end64(int32_t group, UErrorCode &err) const {
+    return end_internal(group, err);
+}
+#endif
+
 
 
 //--------------------------------------------------------------------------------
@@ -825,7 +845,11 @@ UBool RegexMatcher::find() {
 
 
 
+#if REGEX_USE_64BIT_INDICES
+UBool RegexMatcher::find(int64_t start, UErrorCode &status) {
+#else
 UBool RegexMatcher::find(int32_t start, UErrorCode &status) {
+#endif
     if (U_FAILURE(status)) {
         return FALSE;
     }
@@ -840,8 +864,15 @@ UBool RegexMatcher::find(int32_t start, UErrorCode &status) {
         return FALSE;
     }
     
-    UBool couldFindStart = TRUE;
     int64_t nativeStart;
+#if REGEX_USE_NATIVE_INDICES
+    nativeStart = start;
+    if (nativeStart < fActiveStart || nativeStart > fActiveLimit) {
+        status = U_INDEX_OUTOFBOUNDS_ERROR;
+        return FALSE;
+    }
+#else
+    UBool couldFindStart = TRUE;
     if (UTEXT_USES_U16(fInputText)) {
         nativeStart = start;
     } else {
@@ -862,6 +893,7 @@ UBool RegexMatcher::find(int32_t start, UErrorCode &status) {
         status = U_INDEX_OUTOFBOUNDS_ERROR;
         return FALSE;
     }
+#endif
     fMatchEnd = nativeStart;  
     return find();
 }
@@ -1462,7 +1494,11 @@ UBool RegexMatcher::lookingAt(UErrorCode &status) {
 }
 
 
+#if REGEX_USE_64BIT_INDICES
+UBool RegexMatcher::lookingAt(int64_t start, UErrorCode &status) {
+#else
 UBool RegexMatcher::lookingAt(int32_t start, UErrorCode &status) {
+#endif
     if (U_FAILURE(status)) {
         return FALSE;
     }
@@ -1485,6 +1521,13 @@ UBool RegexMatcher::lookingAt(int32_t start, UErrorCode &status) {
     }
 
     int64_t nativeStart;
+#if REGEX_USE_NATIVE_INDICES
+    nativeStart = start;
+    if (nativeStart < fActiveStart || nativeStart > fActiveLimit) {
+        status = U_INDEX_OUTOFBOUNDS_ERROR;
+        return FALSE;
+    }
+#else
     UBool couldFindStart = TRUE;
     if (UTEXT_USES_U16(fInputText)) {
         nativeStart = start;
@@ -1506,6 +1549,7 @@ UBool RegexMatcher::lookingAt(int32_t start, UErrorCode &status) {
         status = U_INDEX_OUTOFBOUNDS_ERROR;
         return FALSE;
     }
+#endif
     
     if (UTEXT_FULL_TEXT_IN_CHUNK(fInputText, fInputLength)) {
         MatchChunkAt((int32_t)nativeStart, FALSE, status);
@@ -1550,7 +1594,11 @@ UBool RegexMatcher::matches(UErrorCode &status) {
 }
 
 
+#if REGEX_USE_64BIT_INDICES
+UBool RegexMatcher::matches(int64_t start, UErrorCode &status) {
+#else
 UBool RegexMatcher::matches(int32_t start, UErrorCode &status) {
+#endif
     if (U_FAILURE(status)) {
         return FALSE;
     }
@@ -1573,6 +1621,13 @@ UBool RegexMatcher::matches(int32_t start, UErrorCode &status) {
     }
 
     int64_t nativeStart;
+#if REGEX_USE_NATIVE_INDICES
+    nativeStart = start;
+    if (nativeStart < fActiveStart || nativeStart > fActiveLimit) {
+        status = U_INDEX_OUTOFBOUNDS_ERROR;
+        return FALSE;
+    }
+#else
     UBool couldFindStart = TRUE;
     if (UTEXT_USES_U16(fInputText)) {
         nativeStart = start;
@@ -1594,6 +1649,7 @@ UBool RegexMatcher::matches(int32_t start, UErrorCode &status) {
         status = U_INDEX_OUTOFBOUNDS_ERROR;
         return FALSE;
     }
+#endif
 
     if (UTEXT_FULL_TEXT_IN_CHUNK(fInputText, fInputLength)) {
         MatchChunkAt((int32_t)nativeStart, TRUE, status);
@@ -1621,7 +1677,11 @@ const RegexPattern &RegexMatcher::pattern() const {
 //    region
 //
 //--------------------------------------------------------------------------------
+#if REGEX_USE_64BIT_INDICES
+RegexMatcher &RegexMatcher::region(int64_t start, int64_t limit, UErrorCode &status) {
+#else
 RegexMatcher &RegexMatcher::region(int32_t start, int32_t limit, UErrorCode &status) {
+#endif
     if (U_FAILURE(status)) {
         return *this;
     }
@@ -1631,6 +1691,14 @@ RegexMatcher &RegexMatcher::region(int32_t start, int32_t limit, UErrorCode &sta
     }
         
     int64_t nativeStart;
+    int64_t nativeLimit;
+#if REGEX_USE_NATIVE_INDICES
+        nativeStart = start;
+        nativeLimit = limit;
+        if (nativeStart > fInputLength || nativeLimit > fInputLength) {
+          status = U_ILLEGAL_ARGUMENT_ERROR;
+        }
+#else
     int32_t i = 0;
     UBool couldFindStart = TRUE;
     if (UTEXT_USES_U16(fInputText)) {
@@ -1649,7 +1717,7 @@ RegexMatcher &RegexMatcher::region(int32_t start, int32_t limit, UErrorCode &sta
         }
         nativeStart = UTEXT_GETNATIVEINDEX(fInputText);
     }
-    int64_t nativeLimit = nativeStart;
+    nativeLimit = nativeStart;
     
     if (!couldFindStart) {
         status = U_ILLEGAL_ARGUMENT_ERROR;
@@ -1674,6 +1742,7 @@ RegexMatcher &RegexMatcher::region(int32_t start, int32_t limit, UErrorCode &sta
             status = U_ILLEGAL_ARGUMENT_ERROR;
         }
     }
+#endif
 
     this->reset();
     fRegionStart = nativeStart;
@@ -1698,7 +1767,10 @@ RegexMatcher &RegexMatcher::region(int32_t start, int32_t limit, UErrorCode &sta
 //    regionEnd
 //
 //--------------------------------------------------------------------------------
-int32_t RegexMatcher::regionEnd() const {
+int64_t RegexMatcher::regionEnd_internal() const {
+#if REGEX_USE_NATIVE_INDICES
+    return fRegionLimit;
+#else
     if (UTEXT_USES_U16(fInputText)) {
         return (int32_t)fRegionLimit;
     } else {
@@ -1706,15 +1778,29 @@ int32_t RegexMatcher::regionEnd() const {
         UErrorCode status = U_ZERO_ERROR;
         return utext_extract(fInputText, 0, fRegionLimit, NULL, 0, &status);
     }
+#endif
 }
 
+
+int32_t RegexMatcher::regionEnd() const {
+    return (int32_t)regionEnd_internal();
+}
+
+#if REGEX_USE_64BIT_INDICES
+int64_t RegexMatcher::regionEnd64() const {
+    return regionEnd_internal();
+}
+#endif
 
 //--------------------------------------------------------------------------------
 //
 //    regionStart
 //
 //--------------------------------------------------------------------------------
-int32_t RegexMatcher::regionStart() const {
+int64_t RegexMatcher::regionStart_internal() const {
+#if REGEX_USE_NATIVE_INDICES
+    return fRegionStart;
+#else
     if (UTEXT_USES_U16(fInputText)) {
         return (int32_t)fRegionStart;
     } else {
@@ -1722,7 +1808,19 @@ int32_t RegexMatcher::regionStart() const {
         UErrorCode status = U_ZERO_ERROR;
         return utext_extract(fInputText, 0, fRegionStart, NULL, 0, &status);
     }
+#endif
 }
+
+
+int32_t RegexMatcher::regionStart() const {
+    return (int32_t)regionStart_internal();
+}
+
+#if REGEX_USE_64BIT_INDICES
+int64_t RegexMatcher::regionStart64() const {
+    return regionStart_internal();
+}
+#endif
 
 
 //--------------------------------------------------------------------------------
@@ -1936,7 +2034,11 @@ RegexMatcher &RegexMatcher::reset(UText *input) {
     return *this;
 }*/
 
+#if REGEX_USE_64BIT_INDICES
+RegexMatcher &RegexMatcher::reset(int64_t position, UErrorCode &status) {
+#else
 RegexMatcher &RegexMatcher::reset(int32_t position, UErrorCode &status) {
+#endif
     if (U_FAILURE(status)) {
         return *this;
     }
@@ -1948,6 +2050,13 @@ RegexMatcher &RegexMatcher::reset(int32_t position, UErrorCode &status) {
     }
 
     int64_t nativePos;
+#if REGEX_USE_NATIVE_INDICES
+    nativePos = position;
+    if (nativePos < fActiveStart || nativePos >= fActiveLimit) {
+        status = U_INDEX_OUTOFBOUNDS_ERROR;
+        return *this;
+    }
+#else
     UBool couldFindStart = TRUE;
     if (UTEXT_USES_U16(fInputText)) {
         nativePos = position;
@@ -1969,6 +2078,7 @@ RegexMatcher &RegexMatcher::reset(int32_t position, UErrorCode &status) {
         status = U_INDEX_OUTOFBOUNDS_ERROR;
         return *this;
     }
+#endif
     fMatchEnd = nativePos;
     return *this;
 }
@@ -2224,7 +2334,11 @@ int32_t RegexMatcher::start(UErrorCode &status) const {
     return start(0, status);
 }
 
-
+#if REGEX_USE_64BIT_INDICES
+int64_t RegexMatcher::start64(UErrorCode &status) const {
+    return start64(0, status);
+}
+#endif
 
 
 //--------------------------------------------------------------------------------
@@ -2232,7 +2346,8 @@ int32_t RegexMatcher::start(UErrorCode &status) const {
 //     start(int32_t group, UErrorCode &status)
 //
 //--------------------------------------------------------------------------------
-int32_t RegexMatcher::start(int32_t group, UErrorCode &status) const {
+
+int64_t RegexMatcher::start_internal(int32_t group, UErrorCode &status) const {
     if (U_FAILURE(status)) {
         return -1;
     }
@@ -2258,6 +2373,9 @@ int32_t RegexMatcher::start(int32_t group, UErrorCode &status) const {
         s = fFrame->fExtra[groupOffset];
     }
     
+#if REGEX_USE_NATIVE_INDICES
+        return /*(int32_t)*/s;
+#else
     if (s == -1 || UTEXT_USES_U16(fInputText)) {
         return (int32_t)s;
     } else {
@@ -2265,9 +2383,20 @@ int32_t RegexMatcher::start(int32_t group, UErrorCode &status) const {
         UErrorCode status = U_ZERO_ERROR;
         return utext_extract(fInputText, 0, s, NULL, 0, &status);
     }
+#endif
 }
 
 
+
+int32_t RegexMatcher::start(int32_t group, UErrorCode &status) const {
+    return (int32_t)start_internal(group, status);
+}
+
+#if REGEX_USE_64BIT_INDICES
+int64_t RegexMatcher::start64(int32_t group, UErrorCode &status) const {
+    return start_internal(group, status);
+}
+#endif
 
 //--------------------------------------------------------------------------------
 //

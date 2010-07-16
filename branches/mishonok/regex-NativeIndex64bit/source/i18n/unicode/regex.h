@@ -53,6 +53,9 @@
 
 #include "unicode/uregex.h"
 
+#define REGEX_USE_NATIVE_INDICES    1
+#define REGEX_USE_64BIT_INDICES    1
+
 U_NAMESPACE_BEGIN
 
 
@@ -771,11 +774,14 @@ public:
     *   The input region is reset to include the entire input string.
     *   A successful match must extend to the end of the input.
     *    @param   startIndex The input string index at which to begin matching.
+    *                        The position is a native index, corresponding to
+    *                        code units for the underlying encoding type, for example,
+    *                        a byte index for UTF8.
     *    @param   status     A reference to a UErrorCode to receive any errors.
     *    @return TRUE if there is a match
     *    @stable ICU 2.8
     */
-    virtual UBool matches(int32_t startIndex, UErrorCode &status);
+    virtual UBool matches(int64_t startIndex, UErrorCode &status);
 
 
    /**
@@ -803,11 +809,14 @@ public:
     *     <code>end()</code>, and <code>group()</code> functions.</p>
     *
     *    @param   startIndex The input string index at which to begin matching.
+    *                        The position is a native index, corresponding to
+    *                        code units for the underlying encoding type, for example,
+    *                        a byte index for UTF8.
     *    @param   status     A reference to a UErrorCode to receive any errors.
     *    @return  TRUE if there is a match.
     *    @stable ICU 2.8
     */
-    virtual UBool lookingAt(int32_t startIndex, UErrorCode &status);
+    virtual UBool lookingAt(int64_t startIndex, UErrorCode &status);
 
 
    /**
@@ -830,11 +839,15 @@ public:
     *   input string that matches the pattern, starting at the specified index.
     *
     *   @param   start     the position in the input string to begin the search
+    *   @param   start     The position in the input string to begin the search.
+    *                      The position is a native index, corresponding to
+    *                      code units for the underlying encoding type, for example,
+    *                      a byte index for UTF8.
     *   @param   status    A reference to a UErrorCode to receive any errors.
     *   @return  TRUE if a match is found.
     *   @stable ICU 2.4
     */
-    virtual UBool find(int32_t start, UErrorCode &status);
+    virtual UBool find(int64_t start, UErrorCode &status);
 
 
    /**
@@ -919,9 +932,17 @@ public:
     *   during the previous match operation.
     *    @param   status      a reference to a UErrorCode to receive any errors.
     *    @return              The position in the input string of the start of the last match.
+    *                         The position is a native index, corresponding to
+    *                         code units for the underlying encoding type, for example,
+    *                         a byte index for UTF8.
     *    @stable ICU 2.4
     */
     virtual int32_t start(UErrorCode &status) const;
+
+   /**
+    *   @internal ICU 4.6 technology preview
+    */
+    virtual int64_t start64(UErrorCode &status) const;
 
 
    /**
@@ -935,9 +956,17 @@ public:
     *                        attempted or the last match failed, and
     *                        U_INDEX_OUTOFBOUNDS_ERROR for a bad capture group number
     *    @return the start position of substring matched by the specified group.
+    *                        The position is a native index, corresponding to
+    *                        code units for the underlying encoding type, for example,
+    *                        a byte index for UTF8.
     *    @stable ICU 2.4
     */
     virtual int32_t start(int32_t group, UErrorCode &status) const;
+
+   /**
+    *   @internal ICU 4.6 technology preview
+    */
+    virtual int64_t start64(int32_t group, UErrorCode &status) const;
 
 
    /**
@@ -947,9 +976,17 @@ public:
     *                        errors are  U_REGEX_INVALID_STATE if no match has been
     *                        attempted or the last match failed.
     *    @return the index of the last character matched, plus one.
+    *                        The index value returned is a native index, corresponding to
+    *                        code units for the underlying encoding type, for example,
+    *                        a byte index for UTF8.
     *   @stable ICU 2.4
     */
     virtual int32_t end(UErrorCode &status) const;
+
+   /**
+    *   @internal ICU 4.6 technology preview
+    */
+    virtual int64_t end64(UErrorCode &status) const;
 
 
    /**
@@ -963,9 +1000,17 @@ public:
     *    @return  the index of the first character following the text
     *              captured by the specifed group during the previous match operation.
     *              Return -1 if the capture group exists in the pattern but was not part of the match.
+    *              The index value returned is a native index, corresponding to
+    *              code units for the underlying encoding type, for example,
+    *              a byte index for UTF8.
     *    @stable ICU 2.4
     */
     virtual int32_t end(int32_t group, UErrorCode &status) const;
+
+   /**
+    *   @internal ICU 4.6 technology preview
+    */
+    virtual int64_t end64(int32_t group, UErrorCode &status) const;
 
 
    /**
@@ -984,6 +1029,10 @@ public:
     *   The effect is to remove any memory of previous matches,
     *       and to cause subsequent find() operations to begin at
     *       the specified position in the input string.
+    *
+    *       The position is a native index, corresponding to
+    *       code units for the underlying encoding type, for example,
+    *       a byte index for UTF8.
     * <p>
     *   The matcher's region is reset to its default, which is the entire
     *   input string.
@@ -994,7 +1043,7 @@ public:
     *   @return this RegexMatcher.
     *   @stable ICU 2.8
     */
-    virtual RegexMatcher &reset(int32_t index, UErrorCode &status);
+    virtual RegexMatcher &reset(int64_t index, UErrorCode &status);
 
 
    /**
@@ -1094,11 +1143,14 @@ public:
      *  is less than zero or greater than the length of the string being matched.
      *
      * @param start  The index to begin searches at.
+    *                The position is a native index, corresponding to
+    *                code units for the underlying encoding type, for example,
+    *                a byte index for UTF8.
      * @param limit  The index to end searches at (exclusive).
      * @param status A reference to a UErrorCode to receive any errors.
      * @stable ICU 4.0
      */
-     virtual RegexMatcher &region(int32_t start, int32_t limit, UErrorCode &status);
+     virtual RegexMatcher &region(int64_t start, int64_t limit, UErrorCode &status);
 
 
    /**
@@ -1107,9 +1159,17 @@ public:
      * regionEnd (exclusive).
      *
      * @return The starting index of this matcher's region.
+      *        The position is a native index, corresponding to
+      *        code units for the underlying encoding type, for example,
+      *        a byte index for UTF8.
      * @stable ICU 4.0
      */
      virtual int32_t regionStart() const;
+
+   /**
+    *   @internal ICU 4.6 technology preview
+    */
+     virtual int64_t regionStart64() const;
 
 
     /**
@@ -1118,9 +1178,17 @@ public:
       * (inclusive) and regionEnd (exclusive).
       *
       * @return The ending point of this matcher's region.
+      *         The position is a native index, corresponding to
+      *         code units for the underlying encoding type, for example,
+      *         a byte index for UTF8.
       * @stable ICU 4.0
       */
       virtual int32_t regionEnd() const;
+
+   /**
+    *   @internal ICU 4.6 technology preview
+    */
+      virtual int64_t regionEnd64() const;
 
     /**
       * Queries the transparency of region bounds for this matcher.
@@ -1639,6 +1707,11 @@ private:
     UBool                findUsingChunk();
     void                 MatchChunkAt(int32_t startIdx, UBool toEnd, UErrorCode &status);
     UBool                isChunkWordBoundary(int32_t pos);
+
+    int64_t              start_internal(int32_t group, UErrorCode &status) const;
+    int64_t              end_internal(int32_t group, UErrorCode &err) const;
+    int64_t              regionStart_internal() const;
+    int64_t              regionEnd_internal() const;
 
     const RegexPattern  *fPattern;
     RegexPattern        *fPatternOwned;    // Non-NULL if this matcher owns the pattern, and
