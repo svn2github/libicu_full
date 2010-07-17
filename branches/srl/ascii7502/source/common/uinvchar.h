@@ -92,5 +92,14 @@ U_INTERNAL uint8_t* U_EXPORT2
 uprv_aestrncpy(uint8_t *dst, const uint8_t *src, int32_t n);
 
 
+/**
+ * Copy ASCII to EBCDIC
+ * @internal
+ * @see uprv_strncpy
+ */
+U_INTERNAL uint8_t* U_EXPORT2
+uprv_eastrncpy(uint8_t *dst, const uint8_t *src, int32_t n);
+
+
 
 #endif

@@ -180,25 +180,57 @@ void RegexTest::assertUText(const char *expected, UText *actual, const char *fil
     UErrorCode status = U_ZERO_ERROR;
     UText expectedText = UTEXT_INITIALIZER;
     utext_openUTF8(&expectedText, expected, -1, &status);
+    if(U_FAILURE(status)) {
+      errln("%s:%d: assertUText: error %s calling utext_openUTF8(expected: %d chars)\n", file, line, u_errorName(status), strlen(expected));
+      return;
+    }
+    if(utext_nativeLength(&expectedText)==0 && (strlen(expected)!=0)) {
+      errln("%s:%d: assertUText:  expected is %d utf-8 bytes, but utext_nativeLength(expectedText) returned 0.", file, line, strlen(expected));
+      return;
+    }
     utext_setNativeIndex(actual, 0);
     if (utext_compare(&expectedText, -1, actual, -1) != 0) {
-#if U_CHARSET_FAMILY==U_ASCII_FAMILY       
         char buf[201 /*21*/];
-        char *bufPtr = buf;
-        UChar32 c = utext_next32From(actual, 0);
-        while (c != U_SENTINEL && bufPtr < buf+200/*20*/) {
+        {
+          char *bufPtr = buf;
+          UChar32 c = utext_next32From(actual, 0);
+          while (c != U_SENTINEL && bufPtr < buf+200/*20*/) {
             if (0x20<c && c<0x7e) {
-                *bufPtr = c;
+              *bufPtr = c;
             } else {
-                *bufPtr = '.';
+              *bufPtr = '.';
             }
             bufPtr++;
             c = UTEXT_NEXT32(actual);
+          }
+          *bufPtr = 0;
         }
-        *bufPtr = 0;
-        errln("%s:%d: Failure: expected \"%s\" (%d chars), got \"%s\" (%d chars)", file, line, expected, utext_nativeLength(&expectedText), buf, utext_nativeLength(actual));
+#if U_CHARSET_FAMILY==U_ASCII_FAMILY       
+        errln("%s:%d: assertUText: Failure: expected \"%s\" (%d chars), got \"%s\" (%d chars)", file, line, expected, (int)utext_nativeLength(&expectedText), buf, (int)utext_nativeLength(actual));
 #else
-        errln("%s:%d: Failure: expected %d chars, got %d chars\n", file, line, utext_nativeLength(&expectedText), utext_nativeLength(actual));
+        char expectedBuf[201];
+        {
+          char *bufPtr = expectedBuf;
+          UChar32 c = utext_next32From(&expectedText, 0);
+          while (c != U_SENTINEL && bufPtr < expectedBuf+200/*20*/) {
+            if (0x20<c && c<0x7e) {
+              *bufPtr = c;
+            } else {
+              *bufPtr = '.';
+            }
+            bufPtr++;
+            c = UTEXT_NEXT32(&expectedText);
+          }
+          *bufPtr = 0;
+        }
+        
+        unsigned char expectedBuf2[201];
+        unsigned char buf2[201];
+        uprv_eastrncpy(buf2, (const unsigned char*)buf, 201);
+        uprv_eastrncpy(expectedBuf2, (const unsigned char*)expectedBuf, 201);
+
+        errln("%s:%d: assertUText: Failure: expected \"%s\" (%d chars), got \"%s\" (%d chars)", file, line, expectedBuf2, (int)utext_nativeLength(&expectedText), buf2, (int)utext_nativeLength(actual));
+        
 #endif
     }
     utext_close(&expectedText);
@@ -207,6 +239,10 @@ void RegexTest::assertUTextInvariant(const char *expected, UText *actual, const 
     UErrorCode status = U_ZERO_ERROR;
     UText expectedText = UTEXT_INITIALIZER;
     regextst_openUTF8FromInvariant(&expectedText, expected, -1, &status);
+    if(U_FAILURE(status)) {
+      errln("%s:%d: assertUTextInvariant: error %s calling regextst_openUTF8FromInvariant(expected: %d chars)\n", file, line, u_errorName(status), strlen(expected));
+      return;
+    }
     utext_setNativeIndex(actual, 0);
     if (utext_compare(&expectedText, -1, actual, -1) != 0) {
         char buf[201 /*21*/];
@@ -223,7 +259,7 @@ void RegexTest::assertUTextInvariant(const char *expected, UText *actual, const 
         }
         *bufPtr = 0;
        
-        errln("%s:%d: Failure: expected \"%s\" (%d chars), got \"%s\" (%d chars)", file, line, expected, utext_nativeLength(&expectedText), buf, utext_nativeLength(actual));
+        errln("%s:%d: Failure with Invariant text: expected \"%s\" (%d chars), got \"%s\" (%d chars)", file, line, expected, (int)utext_nativeLength(&expectedText), buf, (int)utext_nativeLength(actual));
     }
     utext_close(&expectedText);
 }
