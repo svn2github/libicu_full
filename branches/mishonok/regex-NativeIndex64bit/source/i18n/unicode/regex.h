@@ -773,10 +773,7 @@ public:
     *   at the specified startIndex, and extending to the end of the input.
     *   The input region is reset to include the entire input string.
     *   A successful match must extend to the end of the input.
-    *    @param   startIndex The input string index at which to begin matching.
-    *                        The position is a native index, corresponding to
-    *                        code units for the underlying encoding type, for example,
-    *                        a byte index for UTF8.
+    *    @param   startIndex The input string (native) index at which to begin matching.
     *    @param   status     A reference to a UErrorCode to receive any errors.
     *    @return TRUE if there is a match
     *    @stable ICU 2.8
@@ -808,10 +805,7 @@ public:
     *   <p>If the match succeeds then more information can be obtained via the <code>start()</code>,
     *     <code>end()</code>, and <code>group()</code> functions.</p>
     *
-    *    @param   startIndex The input string index at which to begin matching.
-    *                        The position is a native index, corresponding to
-    *                        code units for the underlying encoding type, for example,
-    *                        a byte index for UTF8.
+    *    @param   startIndex The input string (native) index at which to begin matching.
     *    @param   status     A reference to a UErrorCode to receive any errors.
     *    @return  TRUE if there is a match.
     *    @stable ICU 2.8
@@ -838,11 +832,7 @@ public:
     *   Resets this RegexMatcher and then attempts to find the next substring of the
     *   input string that matches the pattern, starting at the specified index.
     *
-    *   @param   start     the position in the input string to begin the search
-    *   @param   start     The position in the input string to begin the search.
-    *                      The position is a native index, corresponding to
-    *                      code units for the underlying encoding type, for example,
-    *                      a byte index for UTF8.
+    *   @param   start     The (native) index in the input string to begin the search.
     *   @param   status    A reference to a UErrorCode to receive any errors.
     *   @return  TRUE if a match is found.
     *   @stable ICU 2.4
@@ -931,10 +921,7 @@ public:
     *   Returns the index in the input string of the start of the text matched
     *   during the previous match operation.
     *    @param   status      a reference to a UErrorCode to receive any errors.
-    *    @return              The position in the input string of the start of the last match.
-    *                         The position is a native index, corresponding to
-    *                         code units for the underlying encoding type, for example,
-    *                         a byte index for UTF8.
+    *    @return              The (native) position in the input string of the start of the last match.
     *    @stable ICU 2.4
     */
     virtual int32_t start(UErrorCode &status) const;
@@ -955,10 +942,7 @@ public:
     *                        errors are  U_REGEX_INVALID_STATE if no match has been
     *                        attempted or the last match failed, and
     *                        U_INDEX_OUTOFBOUNDS_ERROR for a bad capture group number
-    *    @return the start position of substring matched by the specified group.
-    *                        The position is a native index, corresponding to
-    *                        code units for the underlying encoding type, for example,
-    *                        a byte index for UTF8.
+    *    @return the (native) start position of substring matched by the specified group.
     *    @stable ICU 2.4
     */
     virtual int32_t start(int32_t group, UErrorCode &status) const;
@@ -1028,11 +1012,7 @@ public:
     *   Resets this matcher, and set the current input position.
     *   The effect is to remove any memory of previous matches,
     *       and to cause subsequent find() operations to begin at
-    *       the specified position in the input string.
-    *
-    *       The position is a native index, corresponding to
-    *       code units for the underlying encoding type, for example,
-    *       a byte index for UTF8.
+    *       the specified (native) position in the input string.
     * <p>
     *   The matcher's region is reset to its default, which is the entire
     *   input string.
@@ -1142,10 +1122,7 @@ public:
      * The function will fail if start is greater than limit, or if either index
      *  is less than zero or greater than the length of the string being matched.
      *
-     * @param start  The index to begin searches at.
-    *                The position is a native index, corresponding to
-    *                code units for the underlying encoding type, for example,
-    *                a byte index for UTF8.
+     * @param start  The (native) index to begin searches at.
      * @param limit  The index to end searches at (exclusive).
      * @param status A reference to a UErrorCode to receive any errors.
      * @stable ICU 4.0
@@ -1158,10 +1135,7 @@ public:
      * conducts are limited to finding matches within regionStart (inclusive) and
      * regionEnd (exclusive).
      *
-     * @return The starting index of this matcher's region.
-      *        The position is a native index, corresponding to
-      *        code units for the underlying encoding type, for example,
-      *        a byte index for UTF8.
+     * @return The starting (native) index of this matcher's region.
      * @stable ICU 4.0
      */
      virtual int32_t regionStart() const;
@@ -1177,10 +1151,7 @@ public:
       * this matcher conducts are limited to finding matches within regionStart
       * (inclusive) and regionEnd (exclusive).
       *
-      * @return The ending point of this matcher's region.
-      *         The position is a native index, corresponding to
-      *         code units for the underlying encoding type, for example,
-      *         a byte index for UTF8.
+      * @return The ending point (native) of this matcher's region.
       * @stable ICU 4.0
       */
       virtual int32_t regionEnd() const;

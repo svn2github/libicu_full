@@ -409,11 +409,8 @@ uregex_getUText(URegularExpression *regexp,
   *   Matcher.matches() in Java
   *
   *    @param  regexp      The compiled regular expression.
-  *    @param  startIndex  The input string index at which to begin matching, or -1
+  *    @param  startIndex  The input string (native) index at which to begin matching, or -1
   *                        to match the input Region.
-  *                        The position is a native index, corresponding to
-  *                        code units for the underlying encoding type, for example,
-  *                        a byte index for UTF8.
   *    @param  status      Receives errors detected by this function.
   *    @return             TRUE if there is a match
   *    @stable ICU 3.0
@@ -449,11 +446,8 @@ uregex_matches64(URegularExpression *regexp,
   *    and <code>uregexp_group()</code> functions.</p>
   *
   *    @param   regexp      The compiled regular expression.
-  *    @param   startIndex  The input string index at which to begin matching, or
+  *    @param   startIndex  The input string (native) index at which to begin matching, or
   *                         -1 to match the Input Region
-  *                         The position is a native index, corresponding to
-  *                         code units for the underlying encoding type, for example,
-  *                         a byte index for UTF8.
   *    @param   status      A reference to a UErrorCode to receive any errors.
   *    @return  TRUE if there is a match.
   *    @stable ICU 3.0
@@ -485,11 +479,8 @@ uregex_lookingAt64(URegularExpression *regexp,
   *   <code>uregex_group()</code> will provide more information regarding the match.
   *
   *   @param   regexp      The compiled regular expression.
-  *   @param   startIndex  The position in the input string to begin the search, or
+  *   @param   startIndex  The position (native) in the input string to begin the search, or
   *                        -1 to search within the Input Region.
-  *                        The position is a native index, corresponding to
-  *                        code units for the underlying encoding type, for example,
-  *                        a byte index for UTF8.
   *   @param   status      A reference to a UErrorCode to receive any errors.
   *   @return              TRUE if a match is found.
   *   @stable ICU 3.0
@@ -593,11 +584,8 @@ uregex_groupUText(URegularExpression *regexp,
   *    @param   regexp      The compiled regular expression.
   *    @param   groupNum    The capture group number
   *    @param   status      A reference to a UErrorCode to receive any errors.
-  *    @return              the starting position in the input of the text matched 
+  *    @return              the starting (native) position in the input of the text matched 
   *                         by the specified group.
-  *                         The position is a native index, corresponding to
-  *                         code units for the underlying encoding type, for example,
-  *                         a byte index for UTF8.
   *    @stable ICU 3.0
   */
 U_STABLE int32_t U_EXPORT2 
@@ -624,10 +612,7 @@ uregex_start64(URegularExpression *regexp,
   *    @param   regexp      The compiled regular expression.
   *    @param   groupNum    The capture group number
   *    @param   status      A reference to a UErrorCode to receive any errors.
-  *    @return              the index of the position following the last matched character.
-  *                         The position is a native index, corresponding to
-  *                         code units for the underlying encoding type, for example,
-  *                         a byte index for UTF8.
+  *    @return              the (native) index of the position following the last matched character.
   *    @stable ICU 3.0
   */
 U_STABLE int32_t U_EXPORT2 
@@ -652,11 +637,8 @@ uregex_end64(URegularExpression *regexp,
   *  match region that may have been set.
   *
   *    @param   regexp      The compiled regular expression.
-  *    @param   index       The position in the text at which a
+  *    @param   index       The position (native) in the text at which a
   *                         uregex_findNext() should begin searching.
-  *                         The position is a native index, corresponding to
-  *                         code units for the underlying encoding type, for example,
-  *                         a byte index for UTF8.
   *    @param   status      A reference to a UErrorCode to receive any errors.
   *    @stable ICU 3.0
   */
@@ -689,11 +671,8 @@ uregex_reset64(URegularExpression  *regexp,
   *  is less than zero or greater than the length of the string being matched.
   *
   * @param regexp The compiled regular expression.
-  * @param regionStart  The index to begin searches at.
-  *                     The position is a native index, corresponding to
-  *                     code units for the underlying encoding type, for example,
-  *                     a byte index for UTF8.
-  * @param regionLimit  The index to end searches at (exclusive).
+  * @param regionStart  The (native) index to begin searches at.
+  * @param regionLimit  The (native) index to end searches at (exclusive).
   * @param status A pointer to a UErrorCode to receive any errors.
   * @stable ICU 4.0
   */
@@ -719,10 +698,7 @@ uregex_setRegion64(URegularExpression *regexp,
   *
   * @param regexp The compiled regular expression.
   * @param status A pointer to a UErrorCode to receive any errors.
-  * @return The starting index of this matcher's region.
-  *             The position is a native index, corresponding to
-  *             code units for the underlying encoding type, for example,
-  *             a byte index for UTF8.
+  * @return The starting (native) index of this matcher's region.
   * @stable ICU 4.0
   */
 U_STABLE int32_t U_EXPORT2
@@ -745,10 +721,7 @@ uregex_regionStart64(const  URegularExpression   *regexp,
   *
   * @param regexp The compiled regular expression.
   * @param status A pointer to a UErrorCode to receive any errors.
-  * @return The ending point of this matcher's region.
-  *             The position is a native index, corresponding to
-  *             code units for the underlying encoding type, for example,
-  *             a byte index for UTF8.
+  * @return The ending point (native) of this matcher's region.
   * @stable ICU 4.0
   */
 U_STABLE int32_t U_EXPORT2
