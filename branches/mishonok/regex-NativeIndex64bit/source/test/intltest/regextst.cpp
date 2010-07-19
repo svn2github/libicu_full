@@ -26,7 +26,6 @@
 
 #define SUPPORT_MUTATING_INPUT_STRING   0
 
-
 //---------------------------------------------------------------------------
 //
 //  Test class boilerplate
@@ -1969,22 +1968,14 @@ void RegexTest::API_Match_UTF8() {
         unsigned char aboveBMP[] = {0xF0, 0x90, 0x80, 0x81, 0xF0, 0x90, 0x80, 0x82, 0xF0, 0x90, 0x80, 0x83, 0xF0, 0x90, 0x80, 0x84, 0x00};
         utext_openUTF8(&s, (char *)aboveBMP, -1, &status);
         m.reset(&s);
-#if REGEX_USE_NATIVE_INDICES
         for (i=0; ; i+=4) {
-#else
-        for (i=0; ; i+=2) {
-#endif
             if (m.find() == FALSE) {
                 break;
             }
             REGEX_ASSERT(m.start(status) == i);
             REGEX_ASSERT(m.end(status) == i);
         }
-#if REGEX_USE_NATIVE_INDICES
         REGEX_ASSERT(i==20);
-#else
-        REGEX_ASSERT(i==10);
-#endif
         
         utext_close(&s);
     }
@@ -2951,7 +2942,6 @@ static void set(UVector &vec, int32_t val, UnicodeString index) {
     vec.setElementAt(val, idx);
 }
 
-#if REGEX_USE_NATIVE_INDICES
 static void setInt(UVector &vec, int32_t val, int32_t idx) {
     UErrorCode  status=U_ZERO_ERROR;
     while (vec.size()<idx+1) {vec.addElement(-1, status);}
@@ -2975,7 +2965,6 @@ static UBool utextOffsetToNative(UText *utext, int32_t unistrOffset, int32_t& na
     nativeIndex = UTEXT_GETNATIVEINDEX(utext);
     return couldFind;
 }
-#endif
 
 
 void RegexTest::regex_find(const UnicodeString &pattern,
@@ -3170,7 +3159,6 @@ void RegexTest::regex_find(const UnicodeString &pattern,
       goto cleanupAndReturn;
     }
 
-
     //
     //  Configure the matcher according to the flags specified with this test.
     //
@@ -3199,7 +3187,6 @@ void RegexTest::regex_find(const UnicodeString &pattern,
         }
     }
 
-#if REGEX_USE_NATIVE_INDICES
     //
     //  Generate native indices for UTF8 versions of region and capture group info
     //
@@ -3235,17 +3222,12 @@ void RegexTest::regex_find(const UnicodeString &pattern,
             }
         }
     }
-#endif
 
     if (regionStart>=0) {
        matcher->region(regionStart, regionEnd, status);
        REGEX_CHECK_STATUS_L(line);
        if (UTF8Matcher != NULL) {
-#if REGEX_USE_NATIVE_INDICES
            UTF8Matcher->region(regionStartUTF8, regionEndUTF8, status);
-#else
-           UTF8Matcher->region(regionStart, regionEnd, status);
-#endif
            REGEX_CHECK_STATUS_L(line);
        }
     }
@@ -3322,41 +3304,27 @@ void RegexTest::regex_find(const UnicodeString &pattern,
     REGEX_CHECK_STATUS_L(line);
     for (i=0; i<=matcher->groupCount(); i++) {
         int32_t  expectedStart = (i >= groupStarts.size()? -1 : groupStarts.elementAti(i));
-#if REGEX_USE_NATIVE_INDICES
         int32_t  expectedStartUTF8 = (i >= groupStartsUTF8.size()? -1 : groupStartsUTF8.elementAti(i));
-#endif
         if (matcher->start(i, status) != expectedStart) {
             errln("Error at line %d: incorrect start position for group %d.  Expected %d, got %d",
                 line, i, expectedStart, matcher->start(i, status));
             failed = TRUE;
             goto cleanupAndReturn;  // Good chance of subsequent bogus errors.  Stop now.
-#if REGEX_USE_NATIVE_INDICES
         } else if (UTF8Matcher != NULL && UTF8Matcher->start(i, status) != expectedStartUTF8) {
             errln("Error at line %d: incorrect start position for group %d.  Expected %d, got %d (UTF8)",
                   line, i, expectedStartUTF8, UTF8Matcher->start(i, status));
             failed = TRUE;
             goto cleanupAndReturn;  // Good chance of subsequent bogus errors.  Stop now.
         }
-#else
-        } else if (UTF8Matcher != NULL && UTF8Matcher->start(i, status) != expectedStart) {
-            errln("Error at line %d: incorrect start position for group %d.  Expected %d, got %d (UTF8)",
-                  line, i, expectedStart, UTF8Matcher->start(i, status));
-            failed = TRUE;
-            goto cleanupAndReturn;  // Good chance of subsequent bogus errors.  Stop now.
-        }
-#endif
         
         int32_t  expectedEnd = (i >= groupEnds.size()? -1 : groupEnds.elementAti(i));
-#if REGEX_USE_NATIVE_INDICES
         int32_t  expectedEndUTF8 = (i >= groupEndsUTF8.size()? -1 : groupEndsUTF8.elementAti(i));
-#endif
         if (matcher->end(i, status) != expectedEnd) {
             errln("Error at line %d: incorrect end position for group %d.  Expected %d, got %d",
                 line, i, expectedEnd, matcher->end(i, status));
             failed = TRUE;
             // Error on end position;  keep going; real error is probably yet to come as group
             //   end positions work from end of the input data towards the front.
-#if REGEX_USE_NATIVE_INDICES
         } else if (UTF8Matcher != NULL && UTF8Matcher->end(i, status) != expectedEndUTF8) {
             errln("Error at line %d: incorrect end position for group %d.  Expected %d, got %d (UTF8)",
                   line, i, expectedEndUTF8, UTF8Matcher->end(i, status));
@@ -3364,15 +3332,6 @@ void RegexTest::regex_find(const UnicodeString &pattern,
             // Error on end position;  keep going; real error is probably yet to come as group
             //   end positions work from end of the input data towards the front.
         }
-#else
-        } else if (UTF8Matcher != NULL && UTF8Matcher->end(i, status) != expectedEnd) {
-            errln("Error at line %d: incorrect end position for group %d.  Expected %d, got %d (UTF8)",
-                  line, i, expectedEnd, UTF8Matcher->end(i, status));
-            failed = TRUE;
-            // Error on end position;  keep going; real error is probably yet to come as group
-            //   end positions work from end of the input data towards the front.
-        }
-#endif
     }
     if ( matcher->groupCount()+1 < groupStarts.size()) {
         errln("Error at line %d: Expected %d capture groups, found %d.",

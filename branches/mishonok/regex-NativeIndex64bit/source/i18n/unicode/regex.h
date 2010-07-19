@@ -53,9 +53,6 @@
 
 #include "unicode/uregex.h"
 
-#define REGEX_USE_NATIVE_INDICES    1
-#define REGEX_USE_64BIT_INDICES    1
-
 U_NAMESPACE_BEGIN
 
 
@@ -1678,11 +1675,6 @@ private:
     UBool                findUsingChunk();
     void                 MatchChunkAt(int32_t startIdx, UBool toEnd, UErrorCode &status);
     UBool                isChunkWordBoundary(int32_t pos);
-
-    int64_t              start_internal(int32_t group, UErrorCode &status) const;
-    int64_t              end_internal(int32_t group, UErrorCode &err) const;
-    int64_t              regionStart_internal() const;
-    int64_t              regionEnd_internal() const;
 
     const RegexPattern  *fPattern;
     RegexPattern        *fPatternOwned;    // Non-NULL if this matcher owns the pattern, and
