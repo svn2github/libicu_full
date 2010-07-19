@@ -2440,7 +2440,7 @@ void RegexTest::API_Replace_UTF8() {
         REGEX_CHECK_STATUS;
         REGEX_ASSERT_UTEXT("The matches start with ss and end with ee ooh", &resultText);
 
-        m.appendTail(&resultText);
+        m.appendTail(&resultText, status);
         REGEX_ASSERT_UTEXT("The matches start with ss and end with ee ooh fin", &resultText);
         
         utext_close(&resultText);
@@ -2752,14 +2752,14 @@ void RegexTest::API_Pattern_UTF8() {
     //
     pat1 = new RegexPattern();
     REGEX_ASSERT(pat1->pattern() == "");
-    REGEX_ASSERT_UTEXT("", pat1->patternText());
+    REGEX_ASSERT_UTEXT("", pat1->patternText(status));
     delete pat1;
 
     utext_openUTF8(&re1, "(Hello, world)*", -1, &status);
     pat1 = RegexPattern::compile(&re1, pe, status);
     REGEX_CHECK_STATUS;
     REGEX_ASSERT(pat1->pattern() == "(Hello, world)*");
-    REGEX_ASSERT_UTEXT("(Hello, world)*", pat1->patternText());
+    REGEX_ASSERT_UTEXT("(Hello, world)*", pat1->patternText(status));
     delete pat1;
 
     utext_close(&re1);

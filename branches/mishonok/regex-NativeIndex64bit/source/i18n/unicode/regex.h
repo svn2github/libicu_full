@@ -487,9 +487,9 @@ public:
     * UText, and that UText was modified, the returned UText may no longer reflect the RegexPattern
     * object.
     *
-    * @internal ICU 4.4 technology preview
+    * @internal ICU 4.6 technology preview
     */
-    virtual UText *patternText() const;
+    virtual UText *patternText(UErrorCode      &status) const;
 
 
     /**
@@ -1101,9 +1101,9 @@ public:
     *   @param dest The UText into which the input should be copied, or NULL to create a new UText
     *   @return dest if non-NULL, a shallow copy of the input text otherwise
     *
-    *   @internal ICU 4.4 technology preview
+    *   @internal ICU 4.6 technology preview
     */
-    virtual UText *getInput(UText *dest) const;
+    virtual UText *getInput(UText *dest, UErrorCode &status) const;
     
 
    /** Sets the limits of this matcher's region.
@@ -1425,9 +1425,9 @@ public:
     *               Must not be NULL.
     *  @return  the destination string.
     *
-    *  @internal ICU 4.4 technology preview
+    *  @internal ICU 4.6 technology preview
     */
-    virtual UText *appendTail(UText *dest);
+    virtual UText *appendTail(UText *dest, UErrorCode &status);
 
 
     /**

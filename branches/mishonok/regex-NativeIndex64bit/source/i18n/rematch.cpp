@@ -471,7 +471,7 @@ UnicodeString &RegexMatcher::appendTail(UnicodeString &dest) {
     utext_openUnicodeString(&resultText, &dest, &status);
     
     if (U_SUCCESS(status)) {
-        appendTail(&resultText);
+        appendTail(&resultText, status);
         utext_close(&resultText);
     }
     
@@ -481,9 +481,25 @@ UnicodeString &RegexMatcher::appendTail(UnicodeString &dest) {
 //
 //   appendTail, UText mode
 //
-UText *RegexMatcher::appendTail(UText *dest) {
+UText *RegexMatcher::appendTail(UText *dest, UErrorCode &status) {
+    UBool bailOut = FALSE;
+    if (U_FAILURE(status)) {
+        bailOut = TRUE;
+    }
+    if (U_FAILURE(fDeferredStatus)) {
+        status = fDeferredStatus;
+        bailOut = TRUE;
+    }
+    
+    if (bailOut) {
+        //  dest must not be NULL
+        if (dest) {
+            utext_replace(dest, utext_nativeLength(dest), utext_nativeLength(dest), NULL, 0, &status);
+            return dest;
+        }
+    }
+    
     if (fInputLength > fAppendPosition) {
-        UErrorCode status = U_ZERO_ERROR;
         if (UTEXT_FULL_TEXT_IN_CHUNK(fInputText, fInputLength)) {
             int64_t destLen = utext_nativeLength(dest);
             utext_replace(dest, destLen, destLen, fInputText->chunkContents+fAppendPosition, 
@@ -1356,8 +1372,25 @@ UText *RegexMatcher::inputText() const {
 //  getInput() -- like inputText(), but makes a clone or copies into another UText
 //
 //--------------------------------------------------------------------------------
-UText *RegexMatcher::getInput (UText *dest) const {
-    UErrorCode status = U_ZERO_ERROR; // ignored
+UText *RegexMatcher::getInput (UText *dest, UErrorCode &status) const {
+    UBool bailOut = FALSE;
+    if (U_FAILURE(status)) {
+        bailOut = TRUE;
+    }
+    if (U_FAILURE(fDeferredStatus)) {
+        status = fDeferredStatus;
+        bailOut = TRUE;
+    }
+    
+    if (bailOut) {
+        if (dest) {
+            utext_replace(dest, 0, utext_nativeLength(dest), NULL, 0, &status);
+            return dest;
+        } else {
+            return utext_clone(NULL, fInputText, FALSE, TRUE, &status);
+        }
+    }
+    
     if (dest) {
         if (UTEXT_FULL_TEXT_IN_CHUNK(fInputText, fInputLength)) {
             utext_replace(dest, 0, utext_nativeLength(dest), fInputText->chunkContents, (int32_t)fInputLength, &status);
@@ -1689,7 +1722,7 @@ UText *RegexMatcher::replaceAll(UText *replacement, UText *dest, UErrorCode &sta
                 break;
             }
         }
-        appendTail(dest);
+        appendTail(dest, status);
     }
     
     return dest;
@@ -1731,7 +1764,7 @@ UText *RegexMatcher::replaceFirst(UText *replacement, UText *dest, UErrorCode &s
 
     reset();
     if (!find()) {
-        return getInput(dest);
+        return getInput(dest, status);
     }
     
     if (dest == NULL) {
@@ -1744,7 +1777,7 @@ UText *RegexMatcher::replaceFirst(UText *replacement, UText *dest, UErrorCode &s
     }
     
     appendReplacement(dest, replacement, status);
-    appendTail(dest);
+    appendTail(dest, status);
     
     return dest;
 }

@@ -341,8 +341,7 @@ U_CAPI UText * U_EXPORT2
 uregex_patternUText(const URegularExpression *regexp2,
                           UErrorCode         *status)  {
     RegularExpression *regexp = (RegularExpression*)regexp2;
-    (void)status;
-    return regexp->fPat->patternText();
+    return regexp->fPat->patternText(*status);
 }
 
 
@@ -479,7 +478,7 @@ uregex_getUText(URegularExpression *regexp2,
     if (validateRE(regexp, status, FALSE) == FALSE) {
         return dest;
     }
-    return regexp->fMatcher->getInput(dest);
+    return regexp->fMatcher->getInput(dest, *status);
 }
 
 
@@ -1724,9 +1723,10 @@ uregex_appendTail(URegularExpression    *regexp2,
 //
 U_CAPI UText * U_EXPORT2 
 uregex_appendTailUText(URegularExpression    *regexp2,
-                       UText                 *dest)  {
+                       UText                 *dest,
+                       UErrorCode            *status)  {
     RegularExpression *regexp = (RegularExpression*)regexp2;
-    return regexp->fMatcher->appendTail(dest);
+    return regexp->fMatcher->appendTail(dest, *status);
 }
 
 

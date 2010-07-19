@@ -1088,11 +1088,12 @@ uregex_appendTail(URegularExpression    *regexp,
   *   @param   dest        A mutable UText that will receive the result. Must not be NULL.
   *   @return              The destination UText.
   *
-  *   @internal ICU 4.4 technology preview
+  *   @internal ICU 4.6 technology preview
   */
 U_INTERNAL UText * U_EXPORT2 
 uregex_appendTailUText(URegularExpression    *regexp,
-                       UText                 *dest);
+                       UText                 *dest,
+                       UErrorCode            *status);
 
 
 
