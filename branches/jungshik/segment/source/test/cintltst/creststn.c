@@ -2186,21 +2186,21 @@ static void TestResourceLevelAliasing(void) {
       
 
       {
-            UResourceBundle* ja = ures_open(U_ICUDATA_BRKITR,"ja", &status);
+            UResourceBundle* th = ures_open(U_ICUDATA_BRKITR,"th", &status);
             const UChar *got = NULL, *exp=NULL;
             int32_t gotLen = 0, expLen=0;
-            ja = ures_getByKey(ja, "boundaries", ja, &status);
-            exp = tres_getString(ja, -1, "word", &expLen, &status);
+            th = ures_getByKey(th, "boundaries", th, &status);
+            exp = tres_getString(th, -1, "grapheme", &expLen, &status);
               
             tb = ures_getByKey(aliasB, "boundaries", tb, &status);
-            got = tres_getString(tb, -1, "word", &gotLen, &status);
+            got = tres_getString(tb, -1, "grapheme", &gotLen, &status);
                 
             if(U_FAILURE(status)) {
                 log_err("%s trying to read str boundaries\n", u_errorName(status));
             } else if(gotLen != expLen || u_strncmp(exp, got, gotLen) != 0) {
                 log_err("Referencing alias didn't get the right data\n");
             }
-            ures_close(ja);
+            ures_close(th);
             status = U_ZERO_ERROR;
       }
       /* simple alias */

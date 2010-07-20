@@ -1,6 +1,6 @@
 /*
 **********************************************************************
-*   Copyright (C) 2002-2009, International Business Machines
+*   Copyright (C) 2002-2010, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 **********************************************************************
 *
@@ -34,12 +34,15 @@
 #include "unicode/udata.h"
 #include "unicode/putil.h"
 
+//#include "unicode/ustdio.h"
+
 #include "uoptions.h"
 #include "unewdata.h"
 #include "ucmndata.h"
 #include "rbbidata.h"
 #include "triedict.h"
 #include "cmemory.h"
+#include "uassert.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -199,146 +202,190 @@ int  main(int argc, char **argv) {
     long        wordFileSize;
     FILE        *file;
     char        *wordBufferC;
-
+    MutableTrieDictionary *mtd = NULL;
+    
     file = fopen(wordFileName, "rb");
-    if( file == 0 ) {
-        fprintf(stderr, "Could not open file \"%s\"\n", wordFileName);
-        exit(-1);
-    }
-    fseek(file, 0, SEEK_END);
-    wordFileSize = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    wordBufferC = new char[wordFileSize+10];
+    if( file == 0 ) { //cannot find file
+        //create 1-line dummy file: ie 1 char, 1 value
+        UNewDataMemory *pData;
+        char msg[1024];
 
-    result = (long)fread(wordBufferC, 1, wordFileSize, file);
-    if (result != wordFileSize)  {
-        fprintf(stderr, "Error reading file \"%s\"\n", wordFileName);
-        exit (-1);
-    }
-    wordBufferC[wordFileSize]=0;
-    fclose(file);
+        /* write message with just the name */
+        sprintf(msg, "%s not found, genctd writes dummy %s", wordFileName, outFileName);
+        fprintf(stderr, "%s\n", msg);
 
-    //
-    // Look for a Unicode Signature (BOM) on the word file
-    //
-    int32_t        signatureLength;
-    const char *   wordSourceC = wordBufferC;
-    const char*    encoding = ucnv_detectUnicodeSignature(
-                           wordSourceC, wordFileSize, &signatureLength, &status);
-    if (U_FAILURE(status)) {
-        exit(status);
-    }
-    if(encoding!=NULL ){
-        wordSourceC  += signatureLength;
-        wordFileSize -= signatureLength;
-    }
+        UChar c = 0x0020;
+        mtd = new MutableTrieDictionary(c, status, TRUE);
+        mtd->addWord(&c, 1, status, 1);
 
-    //
-    // Open a converter to take the rule file to UTF-16
-    //
-    UConverter* conv;
-    conv = ucnv_open(encoding, &status);
-    if (U_FAILURE(status)) {
-        fprintf(stderr, "ucnv_open: ICU Error \"%s\"\n", u_errorName(status));
-        exit(status);
-    }
-
-    //
-    // Convert the words to UChar.
-    //  Preflight first to determine required buffer size.
-    //
-    uint32_t destCap = ucnv_toUChars(conv,
-                       NULL,           //  dest,
-                       0,              //  destCapacity,
-                       wordSourceC,
-                       wordFileSize,
-                       &status);
-    if (status != U_BUFFER_OVERFLOW_ERROR) {
-        fprintf(stderr, "ucnv_toUChars: ICU Error \"%s\"\n", u_errorName(status));
-        exit(status);
-    };
-
-    status = U_ZERO_ERROR;
-    UChar *wordSourceU = new UChar[destCap+1];
-    ucnv_toUChars(conv,
-                  wordSourceU,     //  dest,
-                  destCap+1,
-                  wordSourceC,
-                  wordFileSize,
-                  &status);
-    if (U_FAILURE(status)) {
-        fprintf(stderr, "ucnv_toUChars: ICU Error \"%s\"\n", u_errorName(status));
-        exit(status);
-    };
-    ucnv_close(conv);
-
-    // Get rid of the original file buffer
-    delete[] wordBufferC;
-
-    // Create a MutableTrieDictionary, and loop through all the lines, inserting
-    // words.
-
-    // First, pick a median character.
-    UChar *current = wordSourceU + (destCap/2);
-    UChar uc = *current++;
-    UnicodeSet breaks;
-    breaks.add(0x000A);     // Line Feed
-    breaks.add(0x000D);     // Carriage Return
-    breaks.add(0x2028);     // Line Separator
-    breaks.add(0x2029);     // Paragraph Separator
-
-    do { 
-        // Look for line break
-        while (uc && !breaks.contains(uc)) {
-            uc = *current++;
-        }
-        // Now skip to first non-line-break
-        while (uc && breaks.contains(uc)) {
-            uc = *current++;
-        }
-    }
-    while (uc && (breaks.contains(uc) || u_isspace(uc)));
-
-    MutableTrieDictionary *mtd = new MutableTrieDictionary(uc, status);
+    } else { //read words in from input file
+        fseek(file, 0, SEEK_END);
+        wordFileSize = ftell(file);
+        fseek(file, 0, SEEK_SET);
+        wordBufferC = new char[wordFileSize+10];
     
-    if (U_FAILURE(status)) {
-        fprintf(stderr, "new MutableTrieDictionary: ICU Error \"%s\"\n", u_errorName(status));
-        exit(status);
-    }
-    
-    // Now add the words. Words are non-space characters at the beginning of
-    // lines, and must be at least one UChar.
-    current = wordSourceU;
-    UChar *candidate = current;
-    uc = *current++;
-    int32_t length = 0;
-
-    while (uc) {
-        while (uc && !u_isspace(uc)) {
-            ++length;
-            uc = *current++;
+        result = (long)fread(wordBufferC, 1, wordFileSize, file);
+        if (result != wordFileSize)  {
+            fprintf(stderr, "Error reading file \"%s\"\n", wordFileName);
+            exit (-1);
         }
-        if (length > 0) {
-            mtd->addWord(candidate, length, status);
-            if (U_FAILURE(status)) {
-                fprintf(stderr, "MutableTrieDictionary::addWord: ICU Error \"%s\"\n",
-                        u_errorName(status));
-                exit(status);
+        wordBufferC[wordFileSize]=0;
+        fclose(file);
+    
+        //
+        // Look for a Unicode Signature (BOM) on the word file
+        //
+        int32_t        signatureLength;
+        const char *   wordSourceC = wordBufferC;
+        const char*    encoding = ucnv_detectUnicodeSignature(
+                               wordSourceC, wordFileSize, &signatureLength, &status);
+        if (U_FAILURE(status)) {
+            exit(status);
+        }
+        if(encoding!=NULL ){
+            wordSourceC  += signatureLength;
+            wordFileSize -= signatureLength;
+        }
+    
+        //
+        // Open a converter to take the rule file to UTF-16
+        //
+        UConverter* conv;
+        conv = ucnv_open(encoding, &status);
+        if (U_FAILURE(status)) {
+            fprintf(stderr, "ucnv_open: ICU Error \"%s\"\n", u_errorName(status));
+            exit(status);
+        }
+    
+        //
+        // Convert the words to UChar.
+        //  Preflight first to determine required buffer size.
+        //
+        uint32_t destCap = ucnv_toUChars(conv,
+                           NULL,           //  dest,
+                           0,              //  destCapacity,
+                           wordSourceC,
+                           wordFileSize,
+                           &status);
+        if (status != U_BUFFER_OVERFLOW_ERROR) {
+            fprintf(stderr, "ucnv_toUChars: ICU Error \"%s\"\n", u_errorName(status));
+            exit(status);
+        };
+    
+        status = U_ZERO_ERROR;
+        UChar *wordSourceU = new UChar[destCap+1];
+        ucnv_toUChars(conv,
+                      wordSourceU,     //  dest,
+                      destCap+1,
+                      wordSourceC,
+                      wordFileSize,
+                      &status);
+        if (U_FAILURE(status)) {
+            fprintf(stderr, "ucnv_toUChars: ICU Error \"%s\"\n", u_errorName(status));
+            exit(status);
+        };
+        ucnv_close(conv);
+    
+        // Get rid of the original file buffer
+        delete[] wordBufferC;
+    
+        // Create a MutableTrieDictionary, and loop through all the lines, inserting
+        // words.
+    
+        // First, pick a median character.
+        UChar *current = wordSourceU + (destCap/2);
+        UChar uc = *current++;
+        UnicodeSet breaks;
+        breaks.add(0x000A);     // Line Feed
+        breaks.add(0x000D);     // Carriage Return
+        breaks.add(0x2028);     // Line Separator
+        breaks.add(0x2029);     // Paragraph Separator
+    
+        do { 
+            // Look for line break
+            while (uc && !breaks.contains(uc)) {
+                uc = *current++;
+            }
+            // Now skip to first non-line-break
+            while (uc && breaks.contains(uc)) {
+                uc = *current++;
             }
         }
-        // Find beginning of next line
-        while (uc && !breaks.contains(uc)) {
-            uc = *current++;
+        while (uc && (breaks.contains(uc) || u_isspace(uc)));
+    
+        mtd = new MutableTrieDictionary(uc, status);
+        
+        if (U_FAILURE(status)) {
+            fprintf(stderr, "new MutableTrieDictionary: ICU Error \"%s\"\n", u_errorName(status));
+            exit(status);
         }
-        while (uc && breaks.contains(uc)) {
-            uc = *current++;
+        
+        // Now add the words. Words are non-space characters at the beginning of
+        // lines, and must be at least one UChar. If a word has an associated value,
+        // the value should follow the word on the same line after a tab character.
+        current = wordSourceU;
+        UChar *candidate = current;
+        uc = *current++;
+        int32_t length = 0;
+        int count = 0;
+                
+        while (uc) {
+            while (uc && !u_isspace(uc)) {
+                ++length;
+                uc = *current++;
+            }
+            
+            UnicodeString valueString;
+            UChar candidateValue;
+            if(uc == 0x0009){ //separator is a tab char, read in number after space
+            	while (uc && u_isspace(uc)) {
+            		uc = *current++;
+            	}
+                while (uc && !u_isspace(uc)) {
+                    valueString.append(uc);
+                    uc = *current++;
+                }
+            }
+            
+            if (length > 0) {
+                count++;
+                if(valueString.length() > 0){
+                    mtd->setValued(TRUE);
+    
+                    uint32_t value = 0;
+                    char* s = new char[valueString.length()];
+                    valueString.extract(0,valueString.length(), s, valueString.length());
+                    int n = sscanf(s, "%ud", &value);
+                    U_ASSERT(n == 1);
+                    U_ASSERT(value >= 0); 
+                    mtd->addWord(candidate, length, status, (uint16_t)value);
+                    delete[] s;
+                } else {
+                    mtd->addWord(candidate, length, status);
+                }
+    
+                if (U_FAILURE(status)) {
+                    fprintf(stderr, "MutableTrieDictionary::addWord: ICU Error \"%s\" at line %d in input file\n",
+                            u_errorName(status), count);
+                    exit(status);
+                }
+            }
+    
+            // Find beginning of next line
+            while (uc && !breaks.contains(uc)) {
+                uc = *current++;
+            }
+            // Find next non-line-breaking character
+            while (uc && breaks.contains(uc)) {
+                uc = *current++;
+            }
+            candidate = current-1;
+            length = 0;
         }
-        candidate = current-1;
-        length = 0;
+    
+        // Get rid of the Unicode text buffer
+        delete[] wordSourceU;
     }
-
-    // Get rid of the Unicode text buffer
-    delete[] wordSourceU;
 
     // Now, create a CompactTrieDictionary from the mutable dictionary
     CompactTrieDictionary *ctd = new CompactTrieDictionary(*mtd, status);
@@ -393,4 +440,3 @@ int  main(int argc, char **argv) {
 
 #endif /* #if !UCONFIG_NO_BREAK_ITERATION */
 }
-

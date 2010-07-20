@@ -47,7 +47,6 @@ triedict_swap(const UDataSwapper *ds,
 U_NAMESPACE_BEGIN
 
 class StringEnumeration;
-struct CompactTrieHeader;
 
 /*******************************************************************
  * TrieWordDictionary
@@ -72,23 +71,29 @@ class U_COMMON_API TrieWordDictionary : public UMemory {
    */
   virtual ~TrieWordDictionary();
 
+  /**
+   * <p>Returns true if the dictionary contains values associated with each word.</p>
+   */
+  virtual UBool getValued() const = 0;
+
  /**
   * <p>Find dictionary words that match the text.</p>
   *
   * @param text A UText representing the text. The
   * iterator is left after the longest prefix match in the dictionary.
-  * @param start The current position in text.
   * @param maxLength The maximum number of code units to match.
   * @param lengths An array that is filled with the lengths of words that matched.
   * @param count Filled with the number of elements output in lengths.
   * @param limit The size of the lengths array; this limits the number of words output.
+  * @param values An array that is filled with the values associated with the matched words.
   * @return The number of characters in text that were matched.
   */
   virtual int32_t matches( UText *text,
                               int32_t maxLength,
                               int32_t *lengths,
                               int &count,
-                              int limit ) const = 0;
+                              int limit,
+                              uint16_t *values = NULL) const = 0;
 
   /**
    * <p>Return a StringEnumeration for iterating all the words in the dictionary.</p>
@@ -128,6 +133,12 @@ class U_COMMON_API MutableTrieDictionary : public TrieWordDictionary {
 
   UText    *fIter;
 
+    /**
+     * A UText for internal use
+     * @internal
+     */
+  UBool fValued;
+
   friend class CompactTrieDictionary;   // For fast conversion
 
  public:
@@ -138,13 +149,28 @@ class U_COMMON_API MutableTrieDictionary : public TrieWordDictionary {
   * @param median A UChar around which to balance the trie. Ideally, it should
   * begin at least one word that is near the median of the set in the dictionary
   * @param status A status code recording the success of the call.
+  * @param containsValue True if the dictionary stores values associated with each word.
   */
-  MutableTrieDictionary( UChar median, UErrorCode &status );
+  MutableTrieDictionary( UChar median, UErrorCode &status, UBool containsValue = FALSE );
 
   /**
    * <p>Virtual destructor.</p>
    */
   virtual ~MutableTrieDictionary();
+
+  /**
+   * Indicate whether the MutableTrieDictionary stores values associated with each word
+   */
+  void setValued(UBool valued){
+      fValued = valued;
+  }
+
+  /**
+   * <p>Returns true if the dictionary contains values associated with each word.</p>
+   */
+  virtual UBool getValued() const {
+      return fValued;
+  }
 
  /**
   * <p>Find dictionary words that match the text.</p>
@@ -155,13 +181,15 @@ class U_COMMON_API MutableTrieDictionary : public TrieWordDictionary {
   * @param lengths An array that is filled with the lengths of words that matched.
   * @param count Filled with the number of elements output in lengths.
   * @param limit The size of the lengths array; this limits the number of words output.
+  * @param values An array that is filled with the values associated with the matched words.
   * @return The number of characters in text that were matched.
   */
   virtual int32_t matches( UText *text,
                               int32_t maxLength,
                               int32_t *lengths,
                               int &count,
-                              int limit ) const;
+                              int limit,
+                              uint16_t *values = NULL) const;
 
   /**
    * <p>Return a StringEnumeration for iterating all the words in the dictionary.</p>
@@ -173,15 +201,17 @@ class U_COMMON_API MutableTrieDictionary : public TrieWordDictionary {
   virtual StringEnumeration *openWords( UErrorCode &status ) const;
 
  /**
-  * <p>Add one word to the dictionary.</p>
+  * <p>Add one word to the dictionary with an optional associated value.</p>
   *
   * @param word A UChar buffer containing the word.
   * @param length The length of the word.
-  * @param status The resultant status
+  * @param status The resultant status.
+  * @param value The nonzero value associated with this word.
   */
   virtual void addWord( const UChar *word,
                         int32_t length,
-                        UErrorCode &status);
+                        UErrorCode &status,
+                        uint16_t value = 0);
 
 #if 0
  /**
@@ -203,8 +233,9 @@ protected:
   * @param lengths An array that is filled with the lengths of words that matched.
   * @param count Filled with the number of elements output in lengths.
   * @param limit The size of the lengths array; this limits the number of words output.
-  * @param parent The parent of the current node
-  * @param pMatched The returned parent node matched the input
+  * @param parent The parent of the current node.
+  * @param pMatched The returned parent node matched the input/
+  * @param values An array that is filled with the values associated with the matched words.
   * @return The number of characters in text that were matched.
   */
   virtual int32_t search( UText *text,
@@ -213,20 +244,27 @@ protected:
                               int &count,
                               int limit,
                               TernaryNode *&parent,
-                              UBool &pMatched ) const;
+                              UBool &pMatched,
+                              uint16_t *values = NULL) const;
 
 private:
  /**
   * <p>Private constructor. The root node it not allocated.</p>
   *
   * @param status A status code recording the success of the call.
+  * @param containsValues True if the dictionary will store a value associated 
+  * with each word added.
   */
-  MutableTrieDictionary( UErrorCode &status );
+  MutableTrieDictionary( UErrorCode &status, UBool containsValues = false );
 };
 
 /*******************************************************************
  * CompactTrieDictionary
  */
+
+//forward declarations
+struct CompactTrieHeader;
+struct CompactTrieInfo;
 
 /**
  * <p>CompactTrieDictionary is a TrieWordDictionary that has been compacted
@@ -234,19 +272,18 @@ private:
  */
 class U_COMMON_API CompactTrieDictionary : public TrieWordDictionary {
  private:
-    /**
-     * The root node of the trie
-     */
+  /**
+   * The header of the CompactTrieDictionary which contains all info
+   */
 
-  const CompactTrieHeader   *fData;
+  CompactTrieInfo                 *fInfo; 
 
-    /**
-     * A UBool indicating whether or not we own the fData.
-     */
-
+  /**
+   * A UBool indicating whether or not we own the fData.
+   */
   UBool                     fOwnData;
 
-    UDataMemory              *fUData;
+  UDataMemory              *fUData;
  public:
   /**
    * <p>Construct a dictionary from a UDataMemory.</p>
@@ -277,6 +314,11 @@ class U_COMMON_API CompactTrieDictionary : public TrieWordDictionary {
    */
   virtual ~CompactTrieDictionary();
 
+  /**
+   * <p>Returns true if the dictionary contains values associated with each word.</p>
+   */
+  virtual UBool getValued() const;
+
  /**
   * <p>Find dictionary words that match the text.</p>
   *
@@ -286,13 +328,15 @@ class U_COMMON_API CompactTrieDictionary : public TrieWordDictionary {
   * @param lengths An array that is filled with the lengths of words that matched.
   * @param count Filled with the number of elements output in lengths.
   * @param limit The size of the lengths array; this limits the number of words output.
+  * @param values An array that is filled with the values associated with the matched words.
   * @return The number of characters in text that were matched.
   */
   virtual int32_t matches( UText *text,
-                              int32_t rangeEnd,
+                              int32_t maxLength,
                               int32_t *lengths,
                               int &count,
-                              int limit ) const;
+                              int limit,
+                              uint16_t *values = NULL) const;
 
   /**
    * <p>Return a StringEnumeration for iterating all the words in the dictionary.</p>
@@ -311,7 +355,7 @@ class U_COMMON_API CompactTrieDictionary : public TrieWordDictionary {
   virtual uint32_t dataSize() const;
   
  /**
-  * <p>Return a void * pointer to the compact data, platform-endian.</p>
+  * <p>Return a void * pointer to the (unmanaged) compact data, platform-endian.</p>
   *
   * @return The data for the compact dictionary, suitable for passing to the
   * constructor.
@@ -342,5 +386,5 @@ class U_COMMON_API CompactTrieDictionary : public TrieWordDictionary {
 
 U_NAMESPACE_END
 
-    /* TRIEDICT_H */
+/* TRIEDICT_H */
 #endif

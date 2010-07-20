@@ -23,13 +23,13 @@ MAN_FILES = $(TARGET_STUB_NAME).$(SECTION)
 ## Extra files to remove for 'make clean'
 CLEANFILES = *~ $(DEPS) $(MAN_FILES)
 
-## Target information
+## Target informationcd 
 TARGET = $(BINDIR)/$(TARGET_STUB_NAME)$(EXEEXT)
 
 ifneq ($(top_builddir),$(top_srcdir))
 CPPFLAGS += -I$(top_builddir)/common
 endif
-CPPFLAGS += -I$(top_srcdir)/common -I$(srcdir)/../toolutil
+CPPFLAGS += -I$(top_srcdir)/common -I$(srcdir)/../toolutil -I$(top_srcdir)/i18n
 LIBS = $(LIBICUTOOLUTIL) $(LIBICUI18N) $(LIBICUUC) $(DEFAULT_LIBS) $(LIB_M)
 
 OBJECTS = genctd.o

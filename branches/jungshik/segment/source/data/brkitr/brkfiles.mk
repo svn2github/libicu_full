@@ -34,14 +34,12 @@ BRK_RES_ALIAS_SOURCE = $(BRK_RES_SYNTHETIC_ALIAS)
 
 
 # List of compact trie dictionary files (ctd).
-BRK_CTD_SOURCE =  thaidict.txt 
+BRK_CTD_SOURCE = thaidict.txt cjdict.txt
 
 
 # List of break iterator files (brk).
-BRK_SOURCE =  sent_el.txt word_POSIX.txt word_ja.txt char.txt word.txt line.txt sent.txt title.txt char_th.txt
+BRK_SOURCE = word_POSIX.txt sent_el.txt char_th.txt char.txt word.txt line.txt sent.txt title.txt
 
 
 # Ordinary resources
-BRK_RES_SOURCE = el.txt en.txt en_US.txt en_US_POSIX.txt\
- ja.txt th.txt
-
+BRK_RES_SOURCE = el.txt en.txt en_US.txt en_US_POSIX.txt th.txt

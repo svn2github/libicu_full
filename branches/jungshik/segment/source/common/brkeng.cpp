@@ -24,6 +24,7 @@
 #include "umutex.h"
 #include "uresimp.h"
 #include "ubrkimpl.h"
+#include <stdio.h>
 
 U_NAMESPACE_BEGIN
 
@@ -226,6 +227,30 @@ ICULanguageBreakFactory::loadEngineFor(UChar32 c, int32_t breakType) {
             case USCRIPT_THAI:
                 engine = new ThaiBreakEngine(dict, status);
                 break;
+                
+            case USCRIPT_HANGUL:
+                engine = new CjkBreakEngine(dict, kKorean, status);
+                break;
+
+            // use same BreakEngine and dictionary for both Chinese and Japanese
+            case USCRIPT_HIRAGANA:
+            case USCRIPT_KATAKANA:
+            case USCRIPT_HAN:
+                engine = new CjkBreakEngine(dict, kChineseJapanese, status);
+                break;
+#if 0
+            // TODO: Have to get some characters with script=common handled
+            // by CjkBreakEngine (e.g. U+309B). Simply subjecting
+            // them to CjkBreakEngine does not work. The engine has to
+            // special-case them.
+            case USCRIPT_COMMON:
+            {
+                UBlockCode block = ublock_getCode(code);
+                if (block == UBLOCK_HIRAGANA || block == UBLOCK_KATAKANA)
+                   engine = new CjkBreakEngine(dict, kChineseJapanese, status);
+                break;
+            }
+#endif
             default:
                 break;
             }
@@ -281,6 +306,13 @@ ICULanguageBreakFactory::loadDictionaryFor(UScriptCode script, int32_t /*breakTy
             dict = NULL;
         }
         return dict;
+    } else if (dictfname != NULL){
+        //create dummy dict if dictionary filename not valid
+        UChar c = 0x0020;
+        status = U_ZERO_ERROR;
+        MutableTrieDictionary *mtd = new MutableTrieDictionary(c, status, TRUE);
+        mtd->addWord(&c, 1, status, 1);
+        return new CompactTrieDictionary(*mtd, status);  
     }
     return NULL;
 }

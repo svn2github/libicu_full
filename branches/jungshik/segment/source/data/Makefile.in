@@ -509,8 +509,9 @@ $(BRKBLDDIR)/%.brk: $(BRKSRCDIR)/%.txt $(TOOLBINDIR)/genbrk$(TOOLEXEEXT) $(DAT_F
 ####################################################    CTD
 # CTD FILES
 
-$(BRKBLDDIR)/%.ctd: $(BRKSRCDIR)/%.txt $(TOOLBINDIR)/genctd$(TOOLEXEEXT) $(DAT_FILES)
-	$(INVOKE) $(TOOLBINDIR)/genctd -c -i $(BUILDDIR) -o $@ $<
+# .ctd file now generated regardless of whether dictionary file exists
+$(BRKBLDDIR)/%.ctd: $(TOOLBINDIR)/genctd$(TOOLEXEEXT) $(DAT_FILES)
+	$(INVOKE) $(TOOLBINDIR)/genctd -c -i $(BUILDDIR) -o $@ $(BRKSRCDIR)/$(*F).txt
 
 ####################################################    CFU
 # CFU FILES
