@@ -567,7 +567,11 @@ uprv_eastrncpy(uint8_t *dst, const uint8_t *src, int32_t n)
   }
   /* copy non-null */
   while(*src && n>0) {
-    *(dst++) = ebcdicFromAscii[*(src++)];
+    char ch = ebcdicFromAscii[*(src++)];
+    if(ch == 0) {
+      ch = ebcdicFromAscii[0x3f]; /* questionmark (subchar) */
+    }
+    *(dst++) = ch;
     n--;
   }
   /* pad */
