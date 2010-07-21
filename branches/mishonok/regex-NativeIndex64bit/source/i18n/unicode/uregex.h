@@ -158,9 +158,9 @@ uregex_open( const  UChar          *pattern,
   *                       information is not wanted, pass NULL for this parameter.
   * @param status         Receives error detected by this function.
   *
-  * @internal ICU 4.4 technology preview
+  * @draft ICU 4.4
   */
-U_INTERNAL URegularExpression *  U_EXPORT2
+U_DRAFT URegularExpression *  U_EXPORT2
 uregex_openUText(UText          *pattern,
                  uint32_t        flags,
                  UParseError    *pe,
@@ -280,9 +280,9 @@ uregex_pattern(const URegularExpression *regexp,
  * @return the pattern text.  The storage for the text is owned by the regular expression
  *                   object, and must not be altered or deleted.
  *
- * @internal ICU 4.4 technology preview
+ * @draft ICU 4.4
  */
-U_INTERNAL UText * U_EXPORT2 
+U_DRAFT UText * U_EXPORT2 
 uregex_patternUText(const URegularExpression *regexp,
                           UErrorCode         *status);
 
@@ -341,9 +341,9 @@ uregex_setText(URegularExpression *regexp,
   * @param text       The subject text string.
   * @param status     Receives errors detected by this function.
   *
-  * @internal ICU 4.4 technology preview
+  * @draft ICU 4.4
   */
-U_INTERNAL void U_EXPORT2 
+U_DRAFT void U_EXPORT2 
 uregex_setUText(URegularExpression *regexp,
                 UText              *text,
                 UErrorCode         *status);
@@ -388,9 +388,9 @@ uregex_getText(URegularExpression *regexp,
   * @return            The subject text currently associated with this regular expression.
   *                    If a pre-allocated UText was provided, it will always be used and returned.
   *
-  * @internal ICU 4.4 technology preview
+  * @draft ICU 4.4
   */
-U_INTERNAL UText * U_EXPORT2 
+U_DRAFT UText * U_EXPORT2 
 uregex_getUText(URegularExpression *regexp,
                 UText              *dest,
                 UErrorCode         *status);
@@ -422,9 +422,9 @@ uregex_matches(URegularExpression *regexp,
 
 /**
   *   64bit version of uregex_matches.
-  *   @internal ICU 4.6 technology preview
+  *   @draft ICU 4.6
   */
-U_INTERNAL UBool U_EXPORT2 
+U_DRAFT UBool U_EXPORT2 
 uregex_matches64(URegularExpression *regexp,
                  int64_t            startIndex,
                  UErrorCode        *status);
@@ -459,9 +459,9 @@ uregex_lookingAt(URegularExpression *regexp,
 
 /**
   *   64bit version of uregex_lookingAt.
-  *   @internal ICU 4.6 technology preview
+  *   @draft ICU 4.6
   */
-U_INTERNAL UBool U_EXPORT2 
+U_DRAFT UBool U_EXPORT2 
 uregex_lookingAt64(URegularExpression *regexp,
                    int64_t             startIndex,
                    UErrorCode         *status);
@@ -492,9 +492,9 @@ uregex_find(URegularExpression *regexp,
 
 /**
   *   64bit version of uregex_find.
-  *   @internal ICU 4.6 technology preview
+  *   @draft ICU 4.6
   */
-U_INTERNAL UBool U_EXPORT2 
+U_DRAFT UBool U_EXPORT2 
 uregex_find64(URegularExpression *regexp,
               int64_t             startIndex, 
               UErrorCode         *status);
@@ -565,9 +565,9 @@ uregex_group(URegularExpression *regexp,
   *   @return               The matching string data. If a pre-allocated UText was provided,
   *                          it will always be used and returned.
   *
-  *   @internal ICU 4.4 technology preview
+  *   @draft ICU 4.4
   */
-U_INTERNAL UText * U_EXPORT2 
+U_DRAFT UText * U_EXPORT2 
 uregex_groupUText(URegularExpression *regexp,
                   int32_t             groupNum,
                   UText              *dest,
@@ -595,9 +595,9 @@ uregex_start(URegularExpression *regexp,
 
 /**
   *   64bit version of uregex_start.
-  *   @internal ICU 4.6 technology preview
+  *   @draft ICU 4.6
   */
-U_INTERNAL int64_t U_EXPORT2 
+U_DRAFT int64_t U_EXPORT2 
 uregex_start64(URegularExpression *regexp,
                int32_t             groupNum,
                UErrorCode          *status);
@@ -622,9 +622,9 @@ uregex_end(URegularExpression   *regexp,
 
 /**
   *   64bit version of uregex_end.
-  *   @internal ICU 4.6 technology preview
+  *   @draft ICU 4.6
   */
-U_INTERNAL int64_t U_EXPORT2 
+U_DRAFT int64_t U_EXPORT2 
 uregex_end64(URegularExpression *regexp,
              int32_t               groupNum,
              UErrorCode           *status);
@@ -650,9 +650,9 @@ uregex_reset(URegularExpression    *regexp,
              
 /**
   *   64bit version of uregex_reset.
-  *   @internal ICU 4.6 technology preview
+  *   @draft ICU 4.6
   */
-U_INTERNAL void U_EXPORT2 
+U_DRAFT void U_EXPORT2 
 uregex_reset64(URegularExpression  *regexp,
                int64_t               index,
                UErrorCode            *status);
@@ -684,9 +684,9 @@ uregex_setRegion(URegularExpression   *regexp,
 
 /**
   *   64bit version of uregex_setRegion.
-  *   @internal ICU 4.6 technology preview
+  *   @draft ICU 4.6
   */
-U_INTERNAL void U_EXPORT2 
+U_DRAFT void U_EXPORT2 
 uregex_setRegion64(URegularExpression *regexp,
                  int64_t               regionStart,
                  int64_t               regionLimit,
@@ -708,9 +708,9 @@ uregex_regionStart(const  URegularExpression   *regexp,
 
 /**
   *   64bit version of uregex_regionStart.
-  *   @internal ICU 4.6 technology preview
+  *   @draft ICU 4.6
   */
-U_INTERNAL int64_t U_EXPORT2 
+U_DRAFT int64_t U_EXPORT2 
 uregex_regionStart64(const  URegularExpression   *regexp,
                             UErrorCode           *status);
 
@@ -730,9 +730,9 @@ uregex_regionEnd(const  URegularExpression   *regexp,
 
 /**
   *   64bit version of uregex_regionEnd.
-  *   @internal ICU 4.6 technology preview
+  *   @draft ICU 4.6
   */
-U_INTERNAL int64_t U_EXPORT2 
+U_DRAFT int64_t U_EXPORT2 
 uregex_regionEnd64(const  URegularExpression   *regexp,
                           UErrorCode           *status);
 
@@ -892,9 +892,9 @@ uregex_replaceAll(URegularExpression    *regexp,
   *    @return                 A UText containing the results of the find and replace.
   *                             If a pre-allocated UText was provided, it will always be used and returned.
   *
-  *    @internal ICU 4.4 technology preview
+  *    @draft ICU 4.4
   */
-U_INTERNAL UText * U_EXPORT2 
+U_DRAFT UText * U_EXPORT2 
 uregex_replaceAllUText(URegularExpression *regexp,
                        UText              *replacement,
                        UText              *dest,
@@ -951,9 +951,9 @@ uregex_replaceFirst(URegularExpression  *regexp,
   *    @return                 A UText containing the results of the find and replace.
   *                             If a pre-allocated UText was provided, it will always be used and returned.
   *
-  *    @internal ICU 4.4 technology preview
+  *    @draft ICU 4.4
   */
-U_INTERNAL UText * U_EXPORT2 
+U_DRAFT UText * U_EXPORT2 
 uregex_replaceFirstUText(URegularExpression *regexp,
                          UText              *replacement,
                          UText              *dest,
@@ -1035,9 +1035,9 @@ uregex_appendReplacement(URegularExpression    *regexp,
   *   @param   dest        A mutable UText that will receive the result. Must not be NULL.
   *   @param   status      A reference to a UErrorCode to receive any errors. 
   *
-  *   @internal ICU 4.4 technology preview
+  *   @draft ICU 4.4
   */
-U_INTERNAL void U_EXPORT2 
+U_DRAFT void U_EXPORT2 
 uregex_appendReplacementUText(URegularExpression    *regexp,
                               UText                 *replacementText,
                               UText                 *dest,
@@ -1088,9 +1088,9 @@ uregex_appendTail(URegularExpression    *regexp,
   *   @param   dest        A mutable UText that will receive the result. Must not be NULL.
   *   @return              The destination UText.
   *
-  *   @internal ICU 4.6 technology preview
+  *   @draft ICU 4.6
   */
-U_INTERNAL UText * U_EXPORT2 
+U_DRAFT UText * U_EXPORT2 
 uregex_appendTailUText(URegularExpression    *regexp,
                        UText                 *dest,
                        UErrorCode            *status);
@@ -1185,9 +1185,9 @@ uregex_split(   URegularExpression      *regexp,
    * @param status  A reference to a UErrorCode to receive any errors.
    * @return        The number of fields into which the input string was split.
    *
-   * @internal ICU 4.4 technology preview
+   * @draft ICU 4.4
    */
-U_INTERNAL int32_t U_EXPORT2 
+U_DRAFT int32_t U_EXPORT2 
 uregex_splitUText(URegularExpression    *regexp,
                   UText                 *destFields[],
                   int32_t                destFieldsCapacity,

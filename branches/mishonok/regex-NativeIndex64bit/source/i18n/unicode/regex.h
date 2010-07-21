@@ -214,7 +214,7 @@ public:
     * @param status A reference to a UErrorCode to receive any errors.
     * @return      A regexPattern object for the compiled pattern.
     *
-    * @internal ICU 4.4 technology preview
+    * @draft ICU 4.4
     */
     static RegexPattern * U_EXPORT2 compile( UText *regex,
         UParseError          &pe,
@@ -274,7 +274,7 @@ public:
     * @param status   A reference to a UErrorCode to receive any errors.
     * @return      A regexPattern object for the compiled pattern.
     *
-    * @internal ICU 4.4 technology preview
+    * @draft ICU 4.4
     */
     static RegexPattern * U_EXPORT2 compile( UText *regex,
         uint32_t             flags,
@@ -331,7 +331,7 @@ public:
     * @param status   A reference to a UErrorCode to receive any errors.
     * @return      A regexPattern object for the compiled pattern.
     *
-    * @internal ICU 4.4 technology preview
+    * @draft ICU 4.4
     */
     static RegexPattern * U_EXPORT2 compile( UText *regex,
         uint32_t             flags,
@@ -368,7 +368,7 @@ public:
         
    /**
     * Flag to disambiguate RegexPattern::matcher signature
-    * @internal ICU 4.4 technology preview
+    * @draft ICU 4.4
     */
     enum PatternIsUTextFlag { PATTERN_IS_UTEXT };
 
@@ -389,7 +389,7 @@ public:
     * @param status   A reference to a UErrorCode to receive any errors.
     * @return         A RegexMatcher object for this pattern and input.
     *
-    * @internal ICU 4.4 technology preview
+    * @draft ICU 4.4
     */
     virtual RegexMatcher *matcher(UText *input,
         PatternIsUTextFlag	flag, 
@@ -460,7 +460,7 @@ public:
     * @param status A reference to a UErrorCode to receive any errors.
     * @return True if the regular expression exactly matches the full input string.
     *
-    * @internal ICU 4.4 technology preview
+    * @draft ICU 4.4
     */
     static UBool U_EXPORT2 matches(UText *regex,
         UText           *input,
@@ -487,7 +487,7 @@ public:
     * UText, and that UText was modified, the returned UText may no longer reflect the RegexPattern
     * object.
     *
-    * @internal ICU 4.6 technology preview
+    * @draft ICU 4.6
     */
     virtual UText *patternText(UErrorCode      &status) const;
 
@@ -546,7 +546,7 @@ public:
      * @param status  A reference to a UErrorCode to receive any errors.
      * @return        The number of fields into which the input string was split.
      *
-     * @internal ICU 4.4 technology preview
+     * @draft ICU 4.4
      */
     virtual int32_t  split(UText *input,
         UText            *dest[],
@@ -677,7 +677,7 @@ public:
       *                @see UREGEX_CASE_INSENSITIVE
       *  @param status Any errors are reported by setting this UErrorCode variable.
       *
-      *  @internal ICU 4.4 technology preview
+      *  @draft ICU 4.4
       */
     RegexMatcher(UText *regexp, uint32_t flags, UErrorCode &status);
     
@@ -724,7 +724,7 @@ public:
       *                @see UREGEX_CASE_INSENSITIVE
       *  @param status Any errors are reported by setting this UErrorCode variable.
       *
-      *  @internal ICU 4.4 technology preview
+      *  @draft ICU 4.4
       */
     RegexMatcher(UText *regexp, UText *input,
         uint32_t flags, UErrorCode &status);
@@ -851,7 +851,7 @@ public:
 
    /**
     * Flag to disambiguate RegexMatcher::group signature
-    * @internal ICU 4.4 technology preview
+    * @draft ICU 4.4
     */
     enum MatcherDestIsUTextFlag { MATCHER_DEST_IS_UTEXT };
 
@@ -868,7 +868,7 @@ public:
     *   @return  A string containing the matched input text. If a pre-allocated UText
     *            was provided, it will always be used and returned.
     *
-    *   @internal ICU 4.4 technology preview
+    *   @draft ICU 4.4
     */
     virtual UText *group(UText *dest, MatcherDestIsUTextFlag flag, UErrorCode &status) const;
 
@@ -901,7 +901,7 @@ public:
     *   @return  A string containing the matched input text. If a pre-allocated UText
     *            was provided, it will always be used and returned.
     *
-    *   @internal ICU 4.4 technology preview
+    *   @draft ICU 4.4
     */
     virtual UText *group(int32_t groupNum, UText *dest, UErrorCode &status) const;
 
@@ -924,7 +924,7 @@ public:
     virtual int32_t start(UErrorCode &status) const;
 
    /**
-    *   @internal ICU 4.6 technology preview
+    *   @draft ICU 4.6
     */
     virtual int64_t start64(UErrorCode &status) const;
 
@@ -945,7 +945,7 @@ public:
     virtual int32_t start(int32_t group, UErrorCode &status) const;
 
    /**
-    *   @internal ICU 4.6 technology preview
+    *   @draft ICU 4.6
     */
     virtual int64_t start64(int32_t group, UErrorCode &status) const;
 
@@ -965,7 +965,7 @@ public:
     virtual int32_t end(UErrorCode &status) const;
 
    /**
-    *   @internal ICU 4.6 technology preview
+    *   @draft ICU 4.6
     */
     virtual int64_t end64(UErrorCode &status) const;
 
@@ -989,7 +989,7 @@ public:
     virtual int32_t end(int32_t group, UErrorCode &status) const;
 
    /**
-    *   @internal ICU 4.6 technology preview
+    *   @draft ICU 4.6
     */
     virtual int64_t end64(int32_t group, UErrorCode &status) const;
 
@@ -1054,7 +1054,7 @@ public:
     *                until after regexp operations on it are done.
     *   @return this RegexMatcher.
     *
-    *   @internal ICU 4.4 technology preview
+    *   @draft ICU 4.4
     */
     virtual RegexMatcher &reset(UText *input);
 
@@ -1090,7 +1090,7 @@ public:
     *   a UnicodeString.
     *   @return the input text
     *
-    *   @internal ICU 4.4 technology preview
+    *   @draft ICU 4.4
     */
     virtual UText *inputText() const;
     
@@ -1101,7 +1101,7 @@ public:
     *   @param dest The UText into which the input should be copied, or NULL to create a new UText
     *   @return dest if non-NULL, a shallow copy of the input text otherwise
     *
-    *   @internal ICU 4.6 technology preview
+    *   @draft ICU 4.6
     */
     virtual UText *getInput(UText *dest, UErrorCode &status) const;
     
@@ -1138,7 +1138,7 @@ public:
      virtual int32_t regionStart() const;
 
    /**
-    *   @internal ICU 4.6 technology preview
+    *   @draft ICU 4.6
     */
      virtual int64_t regionStart64() const;
 
@@ -1154,7 +1154,7 @@ public:
       virtual int32_t regionEnd() const;
 
    /**
-    *   @internal ICU 4.6 technology preview
+    *   @draft ICU 4.6
     */
       virtual int64_t regionEnd64() const;
 
@@ -1285,7 +1285,7 @@ public:
     *    @return              a string containing the results of the find and replace.
     *                          If a pre-allocated UText was provided, it will always be used and returned.
     *
-    *    @internal ICU 4.4 technology preview
+    *    @draft ICU 4.4
     */
     virtual UText *replaceAll(UText *replacement, UText *dest, UErrorCode &status);
     
@@ -1335,7 +1335,7 @@ public:
     *    @return              a string containing the results of the find and replace.
     *                          If a pre-allocated UText was provided, it will always be used and returned.
     *
-    *    @internal ICU 4.4 technology preview
+    *    @draft ICU 4.4
     */
     virtual UText *replaceFirst(UText *replacement, UText *dest, UErrorCode &status);
     
@@ -1396,7 +1396,7 @@ public:
     *
     *   @return  this  RegexMatcher
     *
-    *   @internal ICU 4.4 technology preview
+    *   @draft ICU 4.4
     */
     virtual RegexMatcher &appendReplacement(UText *dest,
         UText *replacement, UErrorCode &status);
@@ -1425,7 +1425,7 @@ public:
     *               Must not be NULL.
     *  @return  the destination string.
     *
-    *  @internal ICU 4.6 technology preview
+    *  @draft ICU 4.6
     */
     virtual UText *appendTail(UText *dest, UErrorCode &status);
 
@@ -1480,7 +1480,7 @@ public:
      * @param status  A reference to a UErrorCode to receive any errors.
      * @return        The number of fields into which the input string was split.
      *
-     * @internal ICU 4.4 technology preview
+     * @draft ICU 4.4
      */
     virtual int32_t  split(UText *input,
         UText           *dest[],
