@@ -1,6 +1,6 @@
 /*
  **********************************************************************
- *   Copyright (C) 1997-2009, International Business Machines
+ *   Copyright (C) 1997-2010, International Business Machines
  *   Corporation and others.  All Rights Reserved.
  **********************************************************************
  *
@@ -107,7 +107,7 @@ typedef enum UScriptCode {
 
       /** New script code in Unicode 4.0.1 @stable ICU 3.0 */
       USCRIPT_KATAKANA_OR_HIRAGANA = 54,/*Hrkt */
-      
+
       /* New scripts in Unicode 4.1 @stable ICU 3.4 */
       USCRIPT_BUGINESE      = 55, /* Bugi */
       USCRIPT_GLAGOLITIC    = 56, /* Glag */
@@ -140,9 +140,15 @@ typedef enum UScriptCode {
       USCRIPT_LATIN_GAELIC                  = 81, /* Latg */
       USCRIPT_LEPCHA                        = 82, /* Lepc */
       USCRIPT_LINEAR_A                      = 83, /* Lina */
-      USCRIPT_MANDAEAN                      = 84, /* Mand */
+      /** @draft ICU 4.6 */
+      USCRIPT_MANDAIC                       = 84, /* Mand */
+      /** @stable ICU 3.6 */
+      USCRIPT_MANDAEAN                      = USCRIPT_MANDAIC, /* Mand */
       USCRIPT_MAYAN_HIEROGLYPHS             = 85, /* Maya */
-      USCRIPT_MEROITIC                      = 86, /* Mero */
+      /** @draft ICU 4.6 */
+      USCRIPT_MEROITIC_HIEROGLYPHS          = 86, /* Mero */
+      /** @stable ICU 3.6 */
+      USCRIPT_MEROITIC                      = USCRIPT_MEROITIC_HIEROGLYPHS, /* Mero */
       USCRIPT_NKO                           = 87, /* Nkoo */
       USCRIPT_ORKHON                        = 88, /* Orkh */
       USCRIPT_OLD_PERMIC                    = 89, /* Perm */
@@ -197,8 +203,23 @@ typedef enum UScriptCode {
       USCRIPT_NAKHI_GEBA                    = 132,/* Nkgb */
       USCRIPT_OLD_SOUTH_ARABIAN             = 133,/* Sarb */
 
-      /* Private use codes from Qaaa - Qabx are not supported*/
-      USCRIPT_CODE_LIMIT    = 134
+      /* New script codes from ISO 15924 @draft ICU 4.6 */
+      USCRIPT_BASSA_VAH                     = 134,/* Bass */
+      USCRIPT_DUPLOYAN_SHORTAND             = 135,/* Dupl */
+      USCRIPT_ELBASAN                       = 136,/* Elba */
+      USCRIPT_GRANTHA                       = 137,/* Gran */
+      USCRIPT_KPELLE                        = 138,/* Kpel */
+      USCRIPT_LOMA                          = 139,/* Loma */
+      USCRIPT_MENDE                         = 140,/* Mend */
+      USCRIPT_MEROITIC_CURSIVE              = 141,/* Merc */
+      USCRIPT_OLD_NORTH_ARABIAN             = 142,/* Narb */
+      USCRIPT_NABATAEAN                     = 143,/* Nbat */
+      USCRIPT_PALMYRENE                     = 144,/* Palm */
+      USCRIPT_SINDHI                        = 145,/* Sind */
+      USCRIPT_WARANG_CITI                   = 146,/* Wara */
+
+      /* Private use codes from Qaaa - Qabx are not supported */
+      USCRIPT_CODE_LIMIT    = 147
 } UScriptCode;
 
 /**

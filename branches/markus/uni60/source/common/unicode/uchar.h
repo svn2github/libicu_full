@@ -39,7 +39,7 @@ U_CDECL_BEGIN
  * @see u_getUnicodeVersion
  * @stable ICU 2.0
  */
-#define U_UNICODE_VERSION "5.2"
+#define U_UNICODE_VERSION "6.0"
 
 /**
  * \file
@@ -559,6 +559,19 @@ typedef enum UProperty {
     UCHAR_UPPERCASE_MAPPING=0x400C,
     /** One more than the last constant for string Unicode properties. @stable ICU 2.4 */
     UCHAR_STRING_LIMIT=0x400D,
+
+    /** Provisional property Script_Extensions.
+        As a provisional property, it may be modified or removed
+        in future versions of the Unicode Standard, and thus in ICU.
+        Some characters are commonly used in multiple scripts.
+        Corresponds to TODO(markus).
+        @draft ICU 4.6 */
+    UCHAR_SCRIPT_EXTENSIONS=0x7000,
+    /** First constant for Unicode properties with unusual value types. @draft ICU 4.6 */
+    UCHAR_OTHER_PROPERTY_START=UCHAR_SCRIPT_EXTENSIONS,
+    /** One more than the last constant for Unicode properties with unusual value types.
+     * @draft ICU 4.6 */
+    UCHAR_OTHER_PROPERTY_LIMIT=0x7001,
 
     /** Represents a nonexistent or invalid property or property value. @stable ICU 2.4 */
     UCHAR_INVALID_CODE = -1
@@ -1340,8 +1353,35 @@ enum UBlockCode {
     /** @draft ICU 4.4 */
     UBLOCK_CJK_UNIFIED_IDEOGRAPHS_EXTENSION_C = 197, /*[2A700]*/
 
+    /* New blocks in Unicode 6.0 */
+
+    /** @draft ICU 4.6 */
+    UBLOCK_MANDAIC = 198, /*[0840]*/
+    /** @draft ICU 4.6 */
+    UBLOCK_BATAK = 199, /*[1BC0]*/
+    /** @draft ICU 4.6 */
+    UBLOCK_ETHIOPIC_EXTENDED_A = 200, /*[AB00]*/
+    /** @draft ICU 4.6 */
+    UBLOCK_BRAHMI = 201, /*[11000]*/
+    /** @draft ICU 4.6 */
+    UBLOCK_BAMUM_SUPPLEMENT = 202, /*[16800]*/
+    /** @draft ICU 4.6 */
+    UBLOCK_KANA_SUPPLEMENT = 203, /*[1B000]*/
+    /** @draft ICU 4.6 */
+    UBLOCK_PLAYING_CARDS = 204, /*[1F0A0]*/
+    /** @draft ICU 4.6 */
+    UBLOCK_MISCELLANEOUS_SYMBOLS_AND_PICTOGRAPHS = 205, /*[1F300]*/
+    /** @draft ICU 4.6 */
+    UBLOCK_EMOTICONS = 206, /*[1F600]*/
+    /** @draft ICU 4.6 */
+    UBLOCK_TRANSPORT_AND_MAP_SYMBOLS = 207, /*[1F680]*/
+    /** @draft ICU 4.6 */
+    UBLOCK_ALCHEMICAL_SYMBOLS = 208, /*[1F700]*/
+    /** @draft ICU 4.6 */
+    UBLOCK_CJK_UNIFIED_IDEOGRAPHS_EXTENSION_D = 209, /*[2B740]*/
+
     /** @stable ICU 2.0 */
-    UBLOCK_COUNT = 198,
+    UBLOCK_COUNT = 210,
 
     /** @stable ICU 2.0 */
     UBLOCK_INVALID_CODE=-1
@@ -1517,6 +1557,7 @@ typedef enum UJoiningGroup {
     U_JG_BURUSHASKI_YEH_BARREE, /**< @stable ICU 4.0 */
     U_JG_FARSI_YEH, /**< @draft ICU 4.4 */
     U_JG_NYA,       /**< @draft ICU 4.4 */
+    U_JG_TEH_MARBUTA_GOAL,  /**< @draft ICU 4.6 */
     U_JG_COUNT
 } UJoiningGroup;
 

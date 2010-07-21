@@ -13,6 +13,90 @@
 
 ---------------------------------------------------------------------------- ***
 
+Unicode 6.0 update
+
+*** related ICU Trac tickets
+
+7264 Unicode 6.0 Update
+
+*** Unicode version numbers
+- makedata.mak
+- uchar.h
+  (configure.in & configure: have been modified to extract the version from uchar.h)
+- com.ibm.icu.util.VersionInfo
+
+*** data files & enums & parser code
+
+* file preparation
+
+~/svn.icu/tools/trunk/src/unicode/c/genprops/misc$ ./ucdcopy.py ~/uni60/20100720/ucd ~/uni60/unidata
+
+* notes on changes
+- PropertyAliases.txt
+  + new Script_Extensions property defined in the new ScriptExtensions.txt file
+    but not listed in PropertyAliases.txt; reported to unicode.org;
+    -> added to tools/trunk/src/unicode/c/genpname/SyntheticPropertyAliases.txt
+      scx; Script_Extensions
+    -> uchar.h with new UProperty section
+    -> com.ibm.icu.lang.UProperty, parallel with uchar.h
+- PropertyValueAliases.txt
+  + 12 new block names:
+    Alchemical_Symbols
+    Bamum_Supplement
+    Batak
+    Brahmi
+    CJK_Unified_Ideographs_Extension_D
+    Emoticons
+    Ethiopic_Extended_A
+    Kana_Supplement
+    Mandaic
+    Miscellaneous_Symbols_And_Pictographs
+    Playing_Cards
+    Transport_And_Map_Symbols
+    -> add to uchar.h
+    -> add to UCharacter.UnicodeBlock
+      Eclipse find     UBLOCK_([^ ]+) = [0-9]+, (/.+)
+              replace  public static final UnicodeBlock \1 = new UnicodeBlock("\1", \1_ID); \2
+  + new Joining_Group (jg) value: Teh_Marbuta_Goal
+    -> uchar.h & UCharacter.JoiningGroup
+  + 3 new scripts:
+    sc ; Batk      ; Batak
+    sc ; Brah      ; Brahmi
+    sc ; Mand      ; Mandaic
+    -> remove these from SyntheticPropertyValueAliases.txt
+    -> add alias USCRIPT_MANDAIC to USCRIPT_MANDAEAN
+  + 13 new script codes from ISO 15924 http://www.unicode.org/iso15924/codechanges.html
+    (added 2009-11-11..2010-07-18)
+    Bass        259     Bassa Vah
+    Dupl        755     Duployan shortand
+    Elba        226     Elbasan
+    Gran        343     Grantha
+    Kpel        436     Kpelle
+    Loma        437     Loma
+    Mend        438     Mende
+    Merc        101     Meroitic Cursive
+    Narb        106     Old North Arabian
+    Nbat        159     Nabataean
+    Palm        126     Palmyrene
+    Sind        318     Sindhi
+    Wara        262     Warang Citi
+    -> uscript.h
+    -> com.ibm.icu.lang.UScript
+      find     USCRIPT_([^ ]+) *= ([0-9]+),(.+)
+      replace  public static final int \1 = \2;\3
+    -> SyntheticPropertyValueAliases.txt
+  + ISO 15924 name change
+    Mero        100     Meroitic Hieroglyphs (was Meroitic)
+    -> add new alias USCRIPT_MEROITIC_HIEROGLYPHS to USCRIPT_MEROITIC
+  + property value alias added for Cham, was already moved out of SyntheticPropertyValueAliases.txt
+- UnicodeData.txt
+  + new CJK block:
+    2B740;<CJK Ideograph Extension D, First>;Lo;0;L;;;;;N;;;;;
+    2B81D;<CJK Ideograph Extension D, Last>;Lo;0;L;;;;;N;;;;;
+    -> add to tools/trunk/src/unicode/c/gennames/gennames.c, with new ucdVersion
+
+---------------------------------------------------------------------------- ***
+
 Unicode 5.2 update
 
 *** related ICU Trac tickets
