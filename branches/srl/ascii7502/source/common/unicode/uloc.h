@@ -282,20 +282,34 @@
 
 /**
  * Character separating keywords from the locale string
- * different for EBCDIC - TODO
  * @stable ICU 2.8
  */
 #define ULOC_KEYWORD_SEPARATOR '@'
+/**
+ * UChar separating keywords from the locale string
+ * @internal
+ */
+#define ULOC_KEYWORD_SEPARATOR_UCHAR ((UChar)0x0040)
 /**
  * Character for assigning value to a keyword
  * @stable ICU 2.8
  */
 #define ULOC_KEYWORD_ASSIGN '='
 /**
+ * UChar for assigning value to a keyword
+ * @internal
+ */
+#define ULOC_KEYWORD_ASSIGN_UCHAR ((UChar)0x003d)
+/**
  * Character separating keywords
  * @stable ICU 2.8
  */
 #define ULOC_KEYWORD_ITEM_SEPARATOR ';'
+/**
+ * Character separating keywords
+ * @internal
+ */
+#define ULOC_KEYWORD_ITEM_SEPARATOR_UCHAR ((UChar)0x003b)
 
 /**
  * Constants for *_getLocale()
