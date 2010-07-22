@@ -140,12 +140,12 @@ typedef enum UScriptCode {
       USCRIPT_LATIN_GAELIC                  = 81, /* Latg */
       USCRIPT_LEPCHA                        = 82, /* Lepc */
       USCRIPT_LINEAR_A                      = 83, /* Lina */
-      /** @draft ICU 4.6 */
+      /** @stable ICU 4.6 */
       USCRIPT_MANDAIC                       = 84, /* Mand */
       /** @stable ICU 3.6 */
       USCRIPT_MANDAEAN                      = USCRIPT_MANDAIC, /* Mand */
       USCRIPT_MAYAN_HIEROGLYPHS             = 85, /* Maya */
-      /** @draft ICU 4.6 */
+      /** @stable ICU 4.6 */
       USCRIPT_MEROITIC_HIEROGLYPHS          = 86, /* Mero */
       /** @stable ICU 3.6 */
       USCRIPT_MEROITIC                      = USCRIPT_MEROITIC_HIEROGLYPHS, /* Mero */
@@ -197,13 +197,13 @@ typedef enum UScriptCode {
       USCRIPT_MATHEMATICAL_NOTATION         = 128,/* Zmth */
       USCRIPT_SYMBOLS                       = 129,/* Zsym */
 
-      /* New script codes from ISO 15924 @draft ICU 4.4 */
+      /* New script codes from ISO 15924 @stable ICU 4.4 */
       USCRIPT_BAMUM                         = 130,/* Bamu */
       USCRIPT_LISU                          = 131,/* Lisu */
       USCRIPT_NAKHI_GEBA                    = 132,/* Nkgb */
       USCRIPT_OLD_SOUTH_ARABIAN             = 133,/* Sarb */
 
-      /* New script codes from ISO 15924 @draft ICU 4.6 */
+      /* New script codes from ISO 15924 @stable ICU 4.6 */
       USCRIPT_BASSA_VAH                     = 134,/* Bass */
       USCRIPT_DUPLOYAN_SHORTAND             = 135,/* Dupl */
       USCRIPT_ELBASAN                       = 136,/* Elba */

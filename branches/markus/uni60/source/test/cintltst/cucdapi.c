@@ -1,5 +1,5 @@
 /********************************************************************
- * Copyright (c) 1997-2009, International Business Machines
+ * Copyright (c) 1997-2010, International Business Machines
  * Corporation and others. All Rights Reserved.
  ********************************************************************/
 
@@ -293,7 +293,7 @@ void TestUScriptCodeAPI(){
             }
         }
     }
-                
+
     {
         /*
          * These script codes were originally added to ICU pre-3.6, so that ICU would
@@ -304,9 +304,9 @@ void TestUScriptCodeAPI(){
          * Whenever this happens, the long script names here need to be updated.
          */
         static const char* expectedLong[] = {
-            "Balinese", "Batk", "Blis", "Brah", "Cham", "Cirt", "Cyrs", "Egyd", "Egyh", "Egyptian_Hieroglyphs", 
+            "Balinese", "Batak", "Blis", "Brahmi", "Cham", "Cirt", "Cyrs", "Egyd", "Egyh", "Egyptian_Hieroglyphs", 
             "Geok", "Hans", "Hant", "Hmng", "Hung", "Inds", "Javanese", "Kayah_Li", "Latf", "Latg", 
-            "Lepcha", "Lina", "Mand", "Maya", "Mero", "Nko", "Old_Turkic", "Perm", "Phags_Pa", "Phoenician", 
+            "Lepcha", "Lina", "Mandaic", "Maya", "Mero", "Nko", "Old_Turkic", "Perm", "Phags_Pa", "Phoenician", 
             "Plrd", "Roro", "Sara", "Syre", "Syrj", "Syrn", "Teng", "Vai", "Visp", "Cuneiform", 
             "Zxxx", "Unknown",
             "Carian", "Jpan", "Tai_Tham", "Lycian", "Lydian", "Ol_Chiki", "Rejang", "Saurashtra", "Sgnw", "Sundanese",
@@ -317,6 +317,9 @@ void TestUScriptCodeAPI(){
             "Zmth", "Zsym",
             /* new in ICU 4.4 */
             "Bamum", "Lisu", "Nkgb", "Old_South_Arabian",
+            /* new in ICU 4.6 */
+            "Bass", "Dupl", "Elba", "Gran", "Kpel", "Loma", "Mend", "Merc",
+            "Narb", "Nbat", "Palm", "Sind", "Wara",
         };
         static const char* expectedShort[] = {
             "Bali", "Batk", "Blis", "Brah", "Cham", "Cirt", "Cyrs", "Egyd", "Egyh", "Egyp", 
@@ -332,6 +335,9 @@ void TestUScriptCodeAPI(){
             "Zmth", "Zsym",
             /* new in ICU 4.4 */
             "Bamu", "Lisu", "Nkgb", "Sarb",
+            /* new in ICU 4.6 */
+            "Bass", "Dupl", "Elba", "Gran", "Kpel", "Loma", "Mend", "Merc",
+            "Narb", "Nbat", "Palm", "Sind", "Wara",
         };
         int32_t j = 0;
         if(LENGTHOF(expectedLong)!=(USCRIPT_CODE_LIMIT-USCRIPT_BALINESE)) {
