@@ -143,12 +143,12 @@ typedef enum UScriptCode {
       /** @stable ICU 4.6 */
       USCRIPT_MANDAIC                       = 84, /* Mand */
       /** @stable ICU 3.6 */
-      USCRIPT_MANDAEAN                      = USCRIPT_MANDAIC, /* Mand */
+      USCRIPT_MANDAEAN                      = USCRIPT_MANDAIC,
       USCRIPT_MAYAN_HIEROGLYPHS             = 85, /* Maya */
       /** @stable ICU 4.6 */
       USCRIPT_MEROITIC_HIEROGLYPHS          = 86, /* Mero */
       /** @stable ICU 3.6 */
-      USCRIPT_MEROITIC                      = USCRIPT_MEROITIC_HIEROGLYPHS, /* Mero */
+      USCRIPT_MEROITIC                      = USCRIPT_MEROITIC_HIEROGLYPHS,
       USCRIPT_NKO                           = 87, /* Nkoo */
       USCRIPT_ORKHON                        = 88, /* Orkh */
       USCRIPT_OLD_PERMIC                    = 89, /* Perm */
@@ -265,7 +265,7 @@ uscript_getName(UScriptCode scriptCode);
 U_STABLE const char*  U_EXPORT2 
 uscript_getShortName(UScriptCode scriptCode);
 
-/** 
+/**
  * Gets the script code associated with the given codepoint.
  * Returns USCRIPT_MALAYALAM given 0x0D02 
  * @param codepoint UChar32 codepoint
@@ -276,6 +276,49 @@ uscript_getShortName(UScriptCode scriptCode);
 U_STABLE UScriptCode  U_EXPORT2 
 uscript_getScript(UChar32 codepoint, UErrorCode *err);
 
+/**
+ * Do code point c's Script_Extensions include script code sc?
+ *
+ * Some characters are commonly used in multiple scripts.
+ * For more information, see UAX #24: http://www.unicode.org/reports/tr24/.
+ *
+ * The Script_Extensions property is provisional. It may be modified or removed
+ * in future versions of the Unicode Standard, and thus in ICU.
+ * @param c code point
+ * @param sc script code
+ * @return TRUE if sc is in c's Script_Extensions
+ * @draft ICU 4.6
+ */
+U_DRAFT UBool U_EXPORT2
+uscript_hasExtendedScript(UChar32 c, UScriptCode sc);
+
+/**
+ * Writes code point c's Script_Extensions as a list of UScriptCode values
+ * to the output scripts array.
+ *
+ * Some characters are commonly used in multiple scripts.
+ * For more information, see UAX #24: http://www.unicode.org/reports/tr24/.
+ *
+ * If there are more than capacity script codes to be written, then
+ * U_BUFFER_OVERFLOW_ERROR is set and the number of Script_Extensions is returned.
+ * (Usual ICU buffer handling behavior.)
+ *
+ * The Script_Extensions property is provisional. It may be modified or removed
+ * in future versions of the Unicode Standard, and thus in ICU.
+ * @param c code point
+ * @param scripts output script code array
+ * @param capacity capacity of the scripts array
+ * @param errorCode Standard ICU error code. Its input value must
+ *                  pass the U_SUCCESS() test, or else the function returns
+ *                  immediately. Check for U_FAILURE() on output or use with
+ *                  function chaining. (See User Guide for details.)
+ * @return number of script codes in c's Script_Extensions,
+ *         written to scripts unless U_BUFFER_OVERFLOW_ERROR indicates insufficient capacity
+ * @draft ICU 4.6
+ */
+U_DRAFT int32_t U_EXPORT2
+uscript_getScriptExtensions(UChar32 c,
+                            UScriptCode *scripts, int32_t capacity,
+                            UErrorCode *pErrorCode);
+
 #endif
-
-
