@@ -100,6 +100,19 @@ Unicode 6.0 update
   2B81D;<CJK Ideograph Extension D, Last>;Lo;0;L;;;;;N;;;;;
   -> add to tools/trunk/src/unicode/c/gennames/gennames.c, with new ucdVersion
 
+* build Unicode tools using CMake+make
+
+* run genpname/preparse.pl (on Linux)
+  + cd ~/svn.icu/tools/trunk/src/unicode/c/genpname
+  + make sure that data.h is writable
+  + perl preparse.pl ~/svn.icu/trunk/src > out.txt
+  + preparse.pl shows no errors, out.txt Info and Warning lines look ok
+
+* rebuild Unicode tools (at least genpname) using make
+
+TODO
+- refresh Java test .txt files
+
 ---------------------------------------------------------------------------- ***
 
 Unicode 5.2 update
