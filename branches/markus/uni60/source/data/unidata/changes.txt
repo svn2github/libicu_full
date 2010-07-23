@@ -109,6 +109,28 @@ Unicode 6.0 update
   + preparse.pl shows no errors, out.txt Info and Warning lines look ok
 
 * rebuild Unicode tools (at least genpname) using make
+- You might first need to "make install" ICU so that the tools build can pick
+  up the new definitions from the installed header files.
+
+* run genpname
+- ~/svn.icu/tools/trunk/bld/unicode$ c/genpname/genpname -v -d ~/svn.icu/trunk/src/source/data/in
+- rebuild ICU & tools
+
+* update source/data/unidata/norm2/nfkc_cf.txt
+- follow the instructions in nfkc_cf.txt for updating it from DerivedNormalizationProps.txt
+
+* update source/data/unidata/norm2/uts46.txt
+- download http://www.unicode.org/Public/idna/6.0.0/IdnaMappingTable.txt
+  to ~/svn.icu/tools/trunk/src/unicode/py
+- ~/svn.icu/tools/trunk/src/unicode/py$ ./idna2nrm.py
+- ~/svn.icu/tools/trunk/src/unicode/py$ cp uts46.txt ~/svn.icu/trunk/src/source/data/unidata/norm2
+
+* generate core properties data files
+- ~/svn.icu/tools/trunk/src/unicode$ ./makeprops.sh ~/svn.icu/trunk/src ~/svn.icu/trunk/bld
+- rebuild ICU & tools
+- run makeuca.sh so that genuca picks up the new nfc.nrm:
+  ~/svn.icu/tools/trunk/src/unicode$ ./makeuca.sh ~/svn.icu/trunk/src ~/svn.icu/trunk/bld
+- rebuild ICU & tools
 
 TODO
 - refresh Java test .txt files
