@@ -3414,7 +3414,7 @@ DecimalFormat::toPattern(UnicodeString& result, UBool localized) const
     }
     if (fRoundingIncrement != NULL) {
         for(i=0; i<fRoundingIncrement->getCount(); ++i) {
-          roundingDigits.append(kPatternZeroDigit+(fRoundingIncrement->getDigit(i)-'0')); // Convert to Unicode digit
+          roundingDigits.append(zero+(fRoundingIncrement->getDigitValue(i))); // Convert to Unicode digit
         }
         roundingDecimalPos = fRoundingIncrement->getDecimalAt();
     }
