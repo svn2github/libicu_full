@@ -63,15 +63,6 @@ getBiDiProps() {
     UErrorCode errorCode=U_ZERO_ERROR;
 
     bdp=ubidi_getSingleton(&errorCode);
-#if !UBIDI_HARDCODE_DATA
-    if(U_FAILURE(errorCode)) {
-        errorCode=U_ZERO_ERROR;
-        bdp=ubidi_getDummy(&errorCode);
-        if(U_FAILURE(errorCode)) {
-            return NULL;
-        }
-    }
-#endif
 
     umtx_lock(NULL);
     if(gBdp==NULL) {
@@ -582,7 +573,12 @@ uprops_getSource(UProperty which) {
             return UPROPS_SRC_NONE;
         }
     } else {
-        return UPROPS_SRC_NONE; /* undefined */
+        switch(which) {
+        case UCHAR_SCRIPT_EXTENSIONS:
+            return UPROPS_SRC_PROPSVEC;
+        default:
+            return UPROPS_SRC_NONE; /* undefined */
+        }
     }
 }
 

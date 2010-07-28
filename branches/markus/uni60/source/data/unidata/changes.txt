@@ -132,6 +132,12 @@ Unicode 6.0 update
   ~/svn.icu/tools/trunk/src/unicode$ ./makeuca.sh ~/svn.icu/trunk/src ~/svn.icu/trunk/bld
 - rebuild ICU & tools
 
+* implement new Script_Extensions property (provisional)
+- parser & generator: genprops & uprops.icu
+- uscript.h, uprops.h, uchar.c, uniset_props.cpp and others
+- TODO: Java
+- tests
+
 TODO
 - refresh Java test .txt files
 

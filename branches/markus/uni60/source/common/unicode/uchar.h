@@ -560,12 +560,12 @@ typedef enum UProperty {
     /** One more than the last constant for string Unicode properties. @stable ICU 2.4 */
     UCHAR_STRING_LIMIT=0x400D,
 
-    /** Provisional property Script_Extensions.
+    /** Provisional property Script_Extensions (new in Unicode 6.0).
         As a provisional property, it may be modified or removed
         in future versions of the Unicode Standard, and thus in ICU.
         Some characters are commonly used in multiple scripts.
         For more information, see UAX #24: http://www.unicode.org/reports/tr24/.
-        Corresponds to TODO(markus).
+        Corresponds to uscript_hasScript and uscript_getScriptExtensions in uscript.h.
         @draft ICU 4.6 */
     UCHAR_SCRIPT_EXTENSIONS=0x7000,
     /** First constant for Unicode properties with unusual value types. @draft ICU 4.6 */

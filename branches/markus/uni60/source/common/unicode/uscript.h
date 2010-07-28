@@ -45,7 +45,7 @@
  */
 typedef enum UScriptCode {
       USCRIPT_INVALID_CODE = -1,
-      USCRIPT_COMMON       =  0 , /* Zyyy */
+      USCRIPT_COMMON       =  0,  /* Zyyy */
       USCRIPT_INHERITED    =  1,  /* Zinh */ /* "Code for inherited script", for non-spacing combining marks; also Qaai */
       USCRIPT_ARABIC       =  2,  /* Arab */
       USCRIPT_ARMENIAN     =  3,  /* Armn */
@@ -277,7 +277,9 @@ U_STABLE UScriptCode  U_EXPORT2
 uscript_getScript(UChar32 codepoint, UErrorCode *err);
 
 /**
- * Do code point c's Script_Extensions include script code sc?
+ * Is code point c used in script sc?
+ * That is, does code point c have the Script property value sc,
+ * or do code point c's Script_Extensions include script code sc?
  *
  * Some characters are commonly used in multiple scripts.
  * For more information, see UAX #24: http://www.unicode.org/reports/tr24/.
@@ -286,11 +288,11 @@ uscript_getScript(UChar32 codepoint, UErrorCode *err);
  * in future versions of the Unicode Standard, and thus in ICU.
  * @param c code point
  * @param sc script code
- * @return TRUE if sc is in c's Script_Extensions
+ * @return TRUE if Script(c)==sc or sc is in Script_Extensions(c)
  * @draft ICU 4.6
  */
 U_DRAFT UBool U_EXPORT2
-uscript_hasExtendedScript(UChar32 c, UScriptCode sc);
+uscript_hasScript(UChar32 c, UScriptCode sc);
 
 /**
  * Writes code point c's Script_Extensions as a list of UScriptCode values

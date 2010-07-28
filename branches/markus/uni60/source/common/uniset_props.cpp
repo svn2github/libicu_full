@@ -929,9 +929,10 @@ static UBool generalCategoryMaskFilter(UChar32 ch, void* context) {
 }
 
 static UBool versionFilter(UChar32 ch, void* context) {
-    UVersionInfo v, none = { 0, 0, 0, 0};
-    UVersionInfo* version = (UVersionInfo*)context;
+    static const UVersionInfo none = { 0, 0, 0, 0 };
+    UVersionInfo v;
     u_charAge(ch, v);
+    UVersionInfo* version = (UVersionInfo*)context;
     return uprv_memcmp(&v, &none, sizeof(v)) > 0 && uprv_memcmp(&v, version, sizeof(v)) <= 0;
 }
 
@@ -945,6 +946,9 @@ static UBool intPropertyFilter(UChar32 ch, void* context) {
     return u_getIntPropertyValue((UChar32) ch, c->prop) == c->value;
 }
 
+static UBool scriptExtensionsFilter(UChar32 ch, void* context) {
+    return uscript_hasScript(ch, *(UScriptCode*)context);
+}
 
 /**
  * Generic filter-based scanning code for UCD property UnicodeSets.
@@ -1034,6 +1038,9 @@ UnicodeSet::applyIntPropertyValue(UProperty prop, int32_t value, UErrorCode& ec)
 
     if (prop == UCHAR_GENERAL_CATEGORY_MASK) {
         applyFilter(generalCategoryMaskFilter, &value, UPROPS_SRC_CHAR, ec);
+    } else if (prop == UCHAR_SCRIPT_EXTENSIONS) {
+        UScriptCode script = (UScriptCode)value;
+        applyFilter(scriptExtensionsFilter, &script, UPROPS_SRC_PROPSVEC, ec);
     } else {
         IntPropertyContext c = {prop, value};
         applyFilter(intPropertyFilter, &c, uprops_getSource(prop), ec);
@@ -1146,6 +1153,13 @@ UnicodeSet::applyPropertyAlias(const UnicodeString& prop,
                     return *this;
                 }
                 break;
+            case UCHAR_SCRIPT_EXTENSIONS:
+                v = u_getPropertyValueEnum(UCHAR_SCRIPT, vname.data());
+                if (v == UCHAR_INVALID_CODE) {
+                    FAIL(ec);
+                }
+                // fall through to calling applyIntPropertyValue()
+                break;
             default:
                 // p is a non-binary, non-enumerated property that we
                 // don't support (yet).
@@ -1183,7 +1197,7 @@ UnicodeSet::applyPropertyAlias(const UnicodeString& prop,
             }
         }
     }
-    
+
     applyIntPropertyValue(p, v, ec);
     if(invert) {
         complement();

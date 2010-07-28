@@ -92,7 +92,7 @@ uprops_swap(const UDataSwapper *ds,
         pInfo->dataFormat[1]==0x50 &&
         pInfo->dataFormat[2]==0x72 &&
         pInfo->dataFormat[3]==0x6f &&
-        (3<=pInfo->formatVersion[0] && pInfo->formatVersion[0]<=6) &&
+        (3<=pInfo->formatVersion[0] && pInfo->formatVersion[0]<=7) &&
         pInfo->formatVersion[2]==UTRIE_SHIFT &&
         pInfo->formatVersion[3]==UTRIE_INDEX_SHIFT
     )) {
@@ -122,10 +122,18 @@ uprops_swap(const UDataSwapper *ds,
      * comments are copied from the data format description in genprops/store.c
      * indexes[] constants are in uprops.h
      */
+    int32_t dataTop;
     if(length>=0) {
         int32_t *outData32;
 
-        if((length-headerSize)<(4*dataIndexes[UPROPS_RESERVED_INDEX])) {
+        /*
+         * In formatVersion 7, UPROPS_DATA_TOP_INDEX has the post-header data size.
+         * In earlier formatVersions, it is 0 and a lower dataIndexes entry
+         * has the top of the last item.
+         */
+        for(i=UPROPS_DATA_TOP_INDEX; i>0 && (dataTop=dataIndexes[i])==0; --i) {}
+
+        if((length-headerSize)<(4*dataTop)) {
             udata_printError(ds, "uprops_swap(): too few bytes (%d after header) for a Unicode properties file\n",
                              length-headerSize);
             *pErrorCode=U_INDEX_OUTOFBOUNDS_ERROR;
@@ -136,7 +144,7 @@ uprops_swap(const UDataSwapper *ds,
 
         /* copy everything for inaccessible data (padding) */
         if(inData32!=outData32) {
-            uprv_memcpy(outData32, inData32, 4*dataIndexes[UPROPS_RESERVED_INDEX]);
+            uprv_memcpy(outData32, inData32, 4*dataTop);
         }
 
         /* swap the indexes[16] */
@@ -189,13 +197,21 @@ uprops_swap(const UDataSwapper *ds,
          */
         ds->swapArray32(ds,
             inData32+dataIndexes[UPROPS_ADDITIONAL_VECTORS_INDEX],
-            4*(dataIndexes[UPROPS_RESERVED_INDEX]-dataIndexes[UPROPS_ADDITIONAL_VECTORS_INDEX]),
+            4*(dataIndexes[UPROPS_SCRIPT_EXTENSIONS_INDEX]-dataIndexes[UPROPS_ADDITIONAL_VECTORS_INDEX]),
             outData32+dataIndexes[UPROPS_ADDITIONAL_VECTORS_INDEX],
+            pErrorCode);
+
+        // swap the Script_Extensions data
+        // SCX const uint16_t scriptExtensions[2*(i7-i6)];
+        ds->swapArray16(ds,
+            inData32+dataIndexes[UPROPS_SCRIPT_EXTENSIONS_INDEX],
+            4*(dataIndexes[UPROPS_RESERVED_INDEX_7]-dataIndexes[UPROPS_SCRIPT_EXTENSIONS_INDEX]),
+            outData32+dataIndexes[UPROPS_SCRIPT_EXTENSIONS_INDEX],
             pErrorCode);
     }
 
-    /* i6 reservedItemIndex; -- 32-bit unit index to the top of the properties vectors table */
-    return headerSize+4*dataIndexes[UPROPS_RESERVED_INDEX];
+    /* i7 reservedIndex7; -- 32-bit unit index to the top of the Script_Extensions data */
+    return headerSize+4*dataIndexes[UPROPS_RESERVED_INDEX_7];
 }
 
 /* Unicode case mapping data swapping --------------------------------------- */
