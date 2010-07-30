@@ -26,6 +26,7 @@
 #define DCFMTSYM_H
 
 #include "unicode/utypes.h"
+#include "unicode/uchar.h"
 
 #if !UCONFIG_NO_FORMATTING
 
@@ -96,6 +97,24 @@ public:
         kPercentSymbol,
         /** Zero*/
         kZeroDigitSymbol,
+        /** One*/
+        kOneDigitSymbol,
+        /** Two*/
+        kTwoDigitSymbol,
+        /** Three*/
+        kThreeDigitSymbol,
+        /** Four*/
+        kFourDigitSymbol,
+        /** Five*/
+        kFiveDigitSymbol,
+        /** Six*/
+        kSixDigitSymbol,
+        /** Seven*/
+        kSevenDigitSymbol,
+        /** Eight*/
+        kEightDigitSymbol,
+        /** Nine*/
+        kNineDigitSymbol,
         /** Character representing a digit in the pattern */
         kDigitSymbol,
         /** The minus sign */
@@ -386,6 +405,18 @@ inline void
 DecimalFormatSymbols::setSymbol(ENumberFormatSymbol symbol, const UnicodeString &value) {
     if(symbol<kFormatSymbolCount) {
         fSymbols[symbol]=value;
+    }
+
+    // If the zero digit is being set to a known zero digit according to Unicode,
+    // then we automatically set the corresponding 1-9 digits
+    if ( symbol == kZeroDigitSymbol && value.countChar32() == 1 ) {
+        UChar32 sym = value.char32At(0);
+        if ( u_charDigitValue(sym) == 0 ) {
+            for ( int8_t i = 1 ; i<= 9 ; i++ ) {
+                sym++;
+                fSymbols[symbol+i] = UnicodeString(sym);
+            }
+        }
     }
 }
 
