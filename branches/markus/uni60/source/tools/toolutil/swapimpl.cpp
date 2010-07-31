@@ -93,8 +93,9 @@ uprops_swap(const UDataSwapper *ds,
         pInfo->dataFormat[2]==0x72 &&
         pInfo->dataFormat[3]==0x6f &&
         (3<=pInfo->formatVersion[0] && pInfo->formatVersion[0]<=7) &&
-        pInfo->formatVersion[2]==UTRIE_SHIFT &&
-        pInfo->formatVersion[3]==UTRIE_INDEX_SHIFT
+        (pInfo->formatVersion[0]>=7 ||
+            (pInfo->formatVersion[2]==UTRIE_SHIFT &&
+             pInfo->formatVersion[3]==UTRIE_INDEX_SHIFT))
     )) {
         udata_printError(ds, "uprops_swap(): data format %02x.%02x.%02x.%02x (format version %02x) is not a Unicode properties file\n",
                          pInfo->dataFormat[0], pInfo->dataFormat[1],
@@ -244,9 +245,10 @@ ucase_swap(const UDataSwapper *ds,
         pInfo->dataFormat[1]==UCASE_FMT_1 &&
         pInfo->dataFormat[2]==UCASE_FMT_2 &&
         pInfo->dataFormat[3]==UCASE_FMT_3 &&
-        pInfo->formatVersion[0]==1 &&
-        pInfo->formatVersion[2]==UTRIE_SHIFT &&
-        pInfo->formatVersion[3]==UTRIE_INDEX_SHIFT
+        ((pInfo->formatVersion[0]==1 &&
+          pInfo->formatVersion[2]==UTRIE_SHIFT &&
+          pInfo->formatVersion[3]==UTRIE_INDEX_SHIFT) ||
+         pInfo->formatVersion[0]==2)
     )) {
         udata_printError(ds, "ucase_swap(): data format %02x.%02x.%02x.%02x (format version %02x) is not recognized as case mapping data\n",
                          pInfo->dataFormat[0], pInfo->dataFormat[1],
@@ -345,9 +347,10 @@ ubidi_swap(const UDataSwapper *ds,
         pInfo->dataFormat[1]==UBIDI_FMT_1 &&
         pInfo->dataFormat[2]==UBIDI_FMT_2 &&
         pInfo->dataFormat[3]==UBIDI_FMT_3 &&
-        pInfo->formatVersion[0]==1 &&
-        pInfo->formatVersion[2]==UTRIE_SHIFT &&
-        pInfo->formatVersion[3]==UTRIE_INDEX_SHIFT
+        ((pInfo->formatVersion[0]==1 &&
+          pInfo->formatVersion[2]==UTRIE_SHIFT &&
+          pInfo->formatVersion[3]==UTRIE_INDEX_SHIFT) ||
+         pInfo->formatVersion[0]==2)
     )) {
         udata_printError(ds, "ubidi_swap(): data format %02x.%02x.%02x.%02x (format version %02x) is not recognized as bidi/shaping data\n",
                          pInfo->dataFormat[0], pInfo->dataFormat[1],

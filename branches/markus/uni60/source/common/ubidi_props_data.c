@@ -4,12 +4,12 @@
  *
  * file name: ubidi_props_data.c
  *
- * machine-generated on: 2010-07-23
+ * machine-generated on: 2010-07-31
  */
 
 static const UVersionInfo ubidi_props_dataVersion={6,0,0,0};
 
-static const int32_t ubidi_props_indexes[UBIDI_IX_TOP]={0x10,0x49f8,0x47f0,0x1a,0x620,0x780,0,0,0,0,0,0,0,0,0,0x3900b2};
+static const int32_t ubidi_props_indexes[UBIDI_IX_TOP]={0x10,0x4fa0,0x4d98,0x1a,0x620,0x780,0,0,0,0,0,0,0,0,0,0x3900b2};
 
 static const uint16_t ubidi_props_trieIndex[9924]={
 0x311,0x319,0x321,0x329,0x341,0x349,0x351,0x359,0x331,0x339,0x331,0x339,0x331,0x339,0x331,0x339,
