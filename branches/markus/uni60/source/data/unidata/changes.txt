@@ -138,8 +138,40 @@ Unicode 6.0 update
 - TODO: Java
 - tests
 
-TODO
-- refresh Java test .txt files
+* switch ubidi.icu, ucase.icu and uprops.icu from UTrie to UTrie2
+- (one-time change)
+- genbidi/gencase/genprops tools changes
+- re-run makeprops.sh (see above)
+- UCharacterProperty.java, UCharacterTypeIterator.java,
+  UBiDiProps.java, UCaseProps.java, and several others with minor changes;
+  UCharacterPropertyReader.java deleted and its code folded into UCharacterProperty.java
+
+* update Java data files
+- refresh just the UCD-related files, just to be safe
+- see (ICU4C)/source/data/icu4j-readme.txt
+- mkdir /tmp/icu4j
+- ~/svn.icu/trunk/bld$ make ICU4J_ROOT=/tmp/icu4j icu4j-data-install
+  output:
+    ...
+    Unicode .icu files built to ./out/build/icudt45l
+    mkdir -p ./out/icu4j/com/ibm/icu/impl/data/icudt45b
+    echo ubidi.icu ucase.icu uprops.icu > ./out/icu4j/add.txt
+    LD_LIBRARY_PATH=../lib:../stubdata:../tools/ctestfw:$LD_LIBRARY_PATH  ../bin/icupkg ./out/tmp/icudt45l.dat ./out/icu4j/icudt45b.dat -a ./out/icu4j/add.txt -s ./out/build/icudt45l -x '*' -tb -d ./out/icu4j/com/ibm/icu/impl/data/icudt45b
+    jar cf ./out/icu4j/icudata.jar -C ./out/icu4j com/ibm/icu/impl/data/icudt45b
+    mkdir -p /tmp/icu4j/main/shared/data
+    cp ./out/icu4j/icudata.jar /tmp/icu4j/main/shared/data
+- copy the big-endian Unicode data files to another location,
+  separate from the other data files
+    mkdir -p /tmp/icu4j/com/ibm/icu/impl/data/icudt45b/coll
+    ~/svn.icu/trunk/bld/data/out/icu4j$ cp com/ibm/icu/impl/data/icudt45b/*.icu /tmp/icu4j/com/ibm/icu/impl/data/icudt45b
+    ~/svn.icu/trunk/bld/data/out/icu4j$ rm /tmp/icu4j/com/ibm/icu/impl/data/icudt45b/cnvalias.icu
+    ~/svn.icu/trunk/bld/data/out/icu4j$ cp com/ibm/icu/impl/data/icudt45b/*.nrm /tmp/icu4j/com/ibm/icu/impl/data/icudt45b
+    ~/svn.icu/trunk/bld/data/out/icu4j$ cp com/ibm/icu/impl/data/icudt45b/coll/*.icu /tmp/icu4j/com/ibm/icu/impl/data/icudt45b/coll
+- refresh ICU4J
+    ~/svn.icu/trunk/bld/data/out/icu4j$ jar uf ~/svn.icu4j/trunk/src/main/shared/data/icudata.jar -C /tmp/icu4j com/ibm/icu/impl/data/icudt45b
+
+* refresh Java test .txt files
+- copy new .txt files into ICU4J's main/tests/core/src/com/ibm/icu/dev/data/unicode
 
 ---------------------------------------------------------------------------- ***
 
