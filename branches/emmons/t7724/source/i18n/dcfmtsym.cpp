@@ -206,23 +206,16 @@ DecimalFormatSymbols::initialize(const Locale& loc, UErrorCode& status, UBool us
         if (U_SUCCESS(status) && ns->getRadix() == 10 && !ns->isAlgorithmic()) {
             nsName = ns->getName();
             UnicodeString *DigitString = new UnicodeString(ns->getDescription());
-            setSymbol(kZeroDigitSymbol,DigitString->charAt(0));
-            // Normally we don't need to explicitly set digits 1-9 because they will
-            // be automatically set if the zero digit is a Unicode known zero digit
-            // ( i.e. the digits are consecutive Unicode codepoints ).
-            // If the digits of the numbering system are not contiguous, then we
-            // must set each digit explicitly.
-            if ( u_charDigitValue(DigitString->char32At(0)) != 0 ) {
-                setSymbol(kOneDigitSymbol,DigitString->charAt(1));
-                setSymbol(kTwoDigitSymbol,DigitString->charAt(2));
-                setSymbol(kThreeDigitSymbol,DigitString->charAt(3));
-                setSymbol(kFourDigitSymbol,DigitString->charAt(4));
-                setSymbol(kFiveDigitSymbol,DigitString->charAt(5));
-                setSymbol(kSixDigitSymbol,DigitString->charAt(6));
-                setSymbol(kSevenDigitSymbol,DigitString->charAt(7));
-                setSymbol(kEightDigitSymbol,DigitString->charAt(8));
-                setSymbol(kNineDigitSymbol,DigitString->charAt(9));
-            }
+                setSymbol(kZeroDigitSymbol,DigitString->charAt(0),FALSE);
+                setSymbol(kOneDigitSymbol,DigitString->charAt(1),FALSE);
+                setSymbol(kTwoDigitSymbol,DigitString->charAt(2),FALSE);
+                setSymbol(kThreeDigitSymbol,DigitString->charAt(3),FALSE);
+                setSymbol(kFourDigitSymbol,DigitString->charAt(4),FALSE);
+                setSymbol(kFiveDigitSymbol,DigitString->charAt(5),FALSE);
+                setSymbol(kSixDigitSymbol,DigitString->charAt(6),FALSE);
+                setSymbol(kSevenDigitSymbol,DigitString->charAt(7),FALSE);
+                setSymbol(kEightDigitSymbol,DigitString->charAt(8),FALSE);
+                setSymbol(kNineDigitSymbol,DigitString->charAt(9),FALSE);
             delete DigitString;
         } else {
             nsName = gLatn;
