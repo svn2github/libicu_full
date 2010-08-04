@@ -134,9 +134,8 @@ Unicode 6.0 update
 
 * implement new Script_Extensions property (provisional)
 - parser & generator: genprops & uprops.icu
-- uscript.h, uprops.h, uchar.c, uniset_props.cpp and others
-- TODO: Java
-- tests
+- uscript.h, uprops.h, uchar.c, uniset_props.cpp and others, plus cintltst/cucdapi.c
+- UScript.java & TestUScript.java
 
 * switch ubidi.icu, ucase.icu and uprops.icu from UTrie to UTrie2
 - (one-time change)
