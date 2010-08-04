@@ -172,6 +172,9 @@ Unicode 6.0 update
 * refresh Java test .txt files
 - copy new .txt files into ICU4J's main/tests/core/src/com/ibm/icu/dev/data/unicode
 
+* un-hardcode normalization skippable (NF*_Inert) test data
+- removes one manual step from the Unicode upgrade, and removes dependency on one of Mark's tools
+
 ---------------------------------------------------------------------------- ***
 
 Unicode 5.2 update
