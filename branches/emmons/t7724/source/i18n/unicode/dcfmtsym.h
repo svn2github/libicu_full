@@ -97,24 +97,6 @@ public:
         kPercentSymbol,
         /** Zero*/
         kZeroDigitSymbol,
-        /** One*/
-        kOneDigitSymbol,
-        /** Two*/
-        kTwoDigitSymbol,
-        /** Three*/
-        kThreeDigitSymbol,
-        /** Four*/
-        kFourDigitSymbol,
-        /** Five*/
-        kFiveDigitSymbol,
-        /** Six*/
-        kSixDigitSymbol,
-        /** Seven*/
-        kSevenDigitSymbol,
-        /** Eight*/
-        kEightDigitSymbol,
-        /** Nine*/
-        kNineDigitSymbol,
         /** Character representing a digit in the pattern */
         kDigitSymbol,
         /** The minus sign */
@@ -144,6 +126,42 @@ public:
          * @stable ICU 3.6
          */
         kMonetaryGroupingSeparatorSymbol,
+        /** One
+         * @draft ICU 4.6
+         */
+        kOneDigitSymbol,
+        /** Two
+         * @draft ICU 4.6
+         */
+        kTwoDigitSymbol,
+        /** Three
+         * @draft ICU 4.6
+         */
+        kThreeDigitSymbol,
+        /** Four
+         * @draft ICU 4.6
+         */
+        kFourDigitSymbol,
+        /** Five
+         * @draft ICU 4.6
+         */
+        kFiveDigitSymbol,
+        /** Six
+         * @draft ICU 4.6
+         */
+        kSixDigitSymbol,
+        /** Seven
+         * @draft ICU 4.6
+         */
+        kSevenDigitSymbol,
+        /** Eight
+         * @draft ICU 4.6
+         */
+        kEightDigitSymbol,
+        /** Nine
+         * @draft ICU 4.6
+         */
+        kNineDigitSymbol,
         /** count symbol constants */
         kFormatSymbolCount
     };
@@ -417,7 +435,7 @@ DecimalFormatSymbols::setSymbol(ENumberFormatSymbol symbol, const UnicodeString 
         if ( u_charDigitValue(sym) == 0 ) {
             for ( int8_t i = 1 ; i<= 9 ; i++ ) {
                 sym++;
-                fSymbols[symbol+i] = UnicodeString(sym);
+                fSymbols[kOneDigitSymbol+i-1] = UnicodeString(sym);
             }
         }
     }

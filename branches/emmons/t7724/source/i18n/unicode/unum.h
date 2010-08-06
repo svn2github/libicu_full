@@ -867,53 +867,71 @@ typedef enum UNumberFormatSymbol {
   UNUM_PERCENT_SYMBOL = 3,
   /** Zero*/
   UNUM_ZERO_DIGIT_SYMBOL = 4,
-  /** One*/
-  UNUM_ONE_DIGIT_SYMBOL = 5,
-  /** Two*/
-  UNUM_TWO_DIGIT_SYMBOL = 6,
-  /** Three*/
-  UNUM_THREE_DIGIT_SYMBOL = 7,
-  /** Four*/
-  UNUM_FOUR_DIGIT_SYMBOL = 8,
-  /** Five*/
-  UNUM_FIVE_DIGIT_SYMBOL = 9,
-  /** Six*/
-  UNUM_SIX_DIGIT_SYMBOL = 10,
-  /** Seven*/
-  UNUM_SEVEN_DIGIT_SYMBOL = 11,
-  /** Eight*/
-  UNUM_EIGHT_DIGIT_SYMBOL = 12,
-  /** Nine*/
-  UNUM_NINE_DIGIT_SYMBOL = 13,
   /** Character representing a digit in the pattern */
-  UNUM_DIGIT_SYMBOL = 14,
+  UNUM_DIGIT_SYMBOL = 5,
   /** The minus sign */
-  UNUM_MINUS_SIGN_SYMBOL = 15,
+  UNUM_MINUS_SIGN_SYMBOL = 6,
   /** The plus sign */
-  UNUM_PLUS_SIGN_SYMBOL = 16,
+  UNUM_PLUS_SIGN_SYMBOL = 7,
   /** The currency symbol */
-  UNUM_CURRENCY_SYMBOL = 17,
+  UNUM_CURRENCY_SYMBOL = 8,
   /** The international currency symbol */
-  UNUM_INTL_CURRENCY_SYMBOL = 18,
+  UNUM_INTL_CURRENCY_SYMBOL = 9,
   /** The monetary separator */
-  UNUM_MONETARY_SEPARATOR_SYMBOL = 19,
+  UNUM_MONETARY_SEPARATOR_SYMBOL = 10,
   /** The exponential symbol */
-  UNUM_EXPONENTIAL_SYMBOL = 20,
+  UNUM_EXPONENTIAL_SYMBOL = 11,
   /** Per mill symbol */
-  UNUM_PERMILL_SYMBOL = 21,
+  UNUM_PERMILL_SYMBOL = 12,
   /** Escape padding character */
-  UNUM_PAD_ESCAPE_SYMBOL = 22,
+  UNUM_PAD_ESCAPE_SYMBOL = 13,
   /** Infinity symbol */
-  UNUM_INFINITY_SYMBOL = 23,
+  UNUM_INFINITY_SYMBOL = 14,
   /** Nan symbol */
   UNUM_NAN_SYMBOL = 24,
   /** Significant digit symbol
    * @stable ICU 3.0 */
-  UNUM_SIGNIFICANT_DIGIT_SYMBOL = 25,
+  UNUM_SIGNIFICANT_DIGIT_SYMBOL = 16,
   /** The monetary grouping separator 
    * @stable ICU 3.6
    */
-  UNUM_MONETARY_GROUPING_SEPARATOR_SYMBOL = 26,  
+  UNUM_MONETARY_GROUPING_SEPARATOR_SYMBOL = 17,  
+  /** One
+   * @draft ICU 4.6
+   */
+  UNUM_ONE_DIGIT_SYMBOL = 18,
+  /** Two
+   * @draft ICU 4.6
+   */
+  UNUM_TWO_DIGIT_SYMBOL = 19,
+  /** Three
+   * @draft ICU 4.6
+   */
+  UNUM_THREE_DIGIT_SYMBOL = 20,
+  /** Four
+   * @draft ICU 4.6
+   */
+  UNUM_FOUR_DIGIT_SYMBOL = 21,
+  /** Five
+   * @draft ICU 4.6
+   */
+  UNUM_FIVE_DIGIT_SYMBOL = 22,
+  /** Six
+   * @draft ICU 4.6
+   */
+  UNUM_SIX_DIGIT_SYMBOL = 23,
+  /** Seven
+    * @draft ICU 4.6
+   */
+  UNUM_SEVEN_DIGIT_SYMBOL = 24,
+  /** Eight
+   * @draft ICU 4.6
+   */
+  UNUM_EIGHT_DIGIT_SYMBOL = 25,
+  /** Nine
+   * @draft ICU 4.6
+   */
+  UNUM_NINE_DIGIT_SYMBOL = 26,
   /** count symbol constants */
   UNUM_FORMAT_SYMBOL_COUNT = 27
 } UNumberFormatSymbol;

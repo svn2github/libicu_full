@@ -147,15 +147,6 @@ DecimalFormatSymbols::initialize(const Locale& loc, UErrorCode& status, UBool us
         "list",
         "percentSign",
         NULL, /* Native zero digit is deprecated from CLDR - get it from the numbering system */
-        NULL, /* Native zero digit is deprecated from CLDR - get it from the numbering system */
-        NULL, /* Native zero digit is deprecated from CLDR - get it from the numbering system */
-        NULL, /* Native zero digit is deprecated from CLDR - get it from the numbering system */
-        NULL, /* Native zero digit is deprecated from CLDR - get it from the numbering system */
-        NULL, /* Native zero digit is deprecated from CLDR - get it from the numbering system */
-        NULL, /* Native zero digit is deprecated from CLDR - get it from the numbering system */
-        NULL, /* Native zero digit is deprecated from CLDR - get it from the numbering system */
-        NULL, /* Native zero digit is deprecated from CLDR - get it from the numbering system */
-        NULL, /* Native zero digit is deprecated from CLDR - get it from the numbering system */
         NULL, /* Pattern digit character is deprecated from CLDR - use # by default always */
         "minusSign",
         "plusSign",
@@ -169,6 +160,15 @@ DecimalFormatSymbols::initialize(const Locale& loc, UErrorCode& status, UBool us
         "nan",
         NULL, /* Significant digit symbol - not in CLDR */
         "currencyGroup",
+        NULL, /* one digit - get it from the numbering system */
+        NULL, /* two digit - get it from the numbering system */
+        NULL, /* three digit - get it from the numbering system */
+        NULL, /* four digit - get it from the numbering system */
+        NULL, /* five digit - get it from the numbering system */
+        NULL, /* six digit - get it from the numbering system */
+        NULL, /* seven digit - get it from the numbering system */
+        NULL, /* eight digit - get it from the numbering system */
+        NULL, /* nine digit - get it from the numbering system */
     };
 
     static const char *gLatn =  "latn";

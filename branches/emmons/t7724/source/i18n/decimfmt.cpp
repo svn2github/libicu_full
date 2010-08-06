@@ -1919,10 +1919,13 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
             // As a last resort, look through the localized digits if the zero digit
             // is not a "standard" Unicode digit.
             if ( (digit < 0 || digit > 9) && u_charDigitValue(zero) != 0) {
-                for (digit = 0 ; digit < 10 ; digit++ ) {
-                    if ( getConstSymbol((DecimalFormatSymbols::ENumberFormatSymbol)(DecimalFormatSymbols::kZeroDigitSymbol+digit)).char32At(0) == ch ) {
+                digit = 0;
+                if ( getConstSymbol((DecimalFormatSymbols::ENumberFormatSymbol)(DecimalFormatSymbols::kZeroDigitSymbol)).char32At(0) == ch ) {
+                    break;
+                }
+                for (digit = 1 ; digit < 10 ; digit++ ) {
+                    if ( getConstSymbol((DecimalFormatSymbols::ENumberFormatSymbol)(DecimalFormatSymbols::kOneDigitSymbol+digit-1)).char32At(0) == ch ) {
                         break;
-
                     }
                 }
             }
