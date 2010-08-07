@@ -162,10 +162,12 @@ Unicode 6.0 update
 - copy the big-endian Unicode data files to another location,
   separate from the other data files
     mkdir -p /tmp/icu4j/com/ibm/icu/impl/data/icudt45b/coll
+    mkdir -p /tmp/icu4j/com/ibm/icu/impl/data/icudt45b/brkitr
     ~/svn.icu/trunk/bld/data/out/icu4j$ cp com/ibm/icu/impl/data/icudt45b/*.icu /tmp/icu4j/com/ibm/icu/impl/data/icudt45b
     ~/svn.icu/trunk/bld/data/out/icu4j$ rm /tmp/icu4j/com/ibm/icu/impl/data/icudt45b/cnvalias.icu
     ~/svn.icu/trunk/bld/data/out/icu4j$ cp com/ibm/icu/impl/data/icudt45b/*.nrm /tmp/icu4j/com/ibm/icu/impl/data/icudt45b
     ~/svn.icu/trunk/bld/data/out/icu4j$ cp com/ibm/icu/impl/data/icudt45b/coll/*.icu /tmp/icu4j/com/ibm/icu/impl/data/icudt45b/coll
+    ~/svn.icu/trunk/bld/data/out/icu4j$ cp com/ibm/icu/impl/data/icudt45b/brkitr/* /tmp/icu4j/com/ibm/icu/impl/data/icudt45b/brkitr
 - refresh ICU4J
     ~/svn.icu/trunk/bld/data/out/icu4j$ jar uf ~/svn.icu4j/trunk/src/main/shared/data/icudata.jar -C /tmp/icu4j com/ibm/icu/impl/data/icudt45b
 
@@ -178,6 +180,7 @@ Unicode 6.0 update
 * copy updated break iterator test files
 - from (Unicode 6.0)/ucd/auxiliary/*BreakTest-6....txt
 - to ~/svn.icu/trunk/src/source/test/testdata
+  (they are not used in ICU4J)
 
 ---------------------------------------------------------------------------- ***
 

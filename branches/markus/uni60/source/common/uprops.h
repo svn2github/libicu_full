@@ -180,7 +180,6 @@ enum {
  */
 #define UPROPS_LB_MASK          0x03f00000
 #define UPROPS_LB_SHIFT         20
-#define UPROPS_LB_VWORD         2
 
 #define UPROPS_SB_MASK          0x000f8000
 #define UPROPS_SB_SHIFT         15
