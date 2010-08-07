@@ -41,7 +41,8 @@ typedef struct ULocaleData ULocaleData;
 typedef enum ULocaleDataExemplarSetType  {
      ULOCDATA_ES_STANDARD=0,      /* Basic set */
      ULOCDATA_ES_AUXILIARY=1,     /* Auxiliary set */
-     ULOCDATA_ES_COUNT=2
+     ULOCDATA_ES_INDEX=2,         /* Index Character set */
+     ULOCDATA_ES_COUNT=3
 } ULocaleDataExemplarSetType;
 
 /** The possible types of delimiters.
