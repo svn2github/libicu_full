@@ -210,7 +210,7 @@ const UnicodeSet* UnicodeSet::getInclusions(int32_t src, UErrorCode &status) {
                 if(U_SUCCESS(status)) {
                     impl->addPropertyStarts(&sa, status);
                 }
-                ucase_addPropertyStarts(ucase_getSingleton(&status), &sa, &status);
+                ucase_addPropertyStarts(ucase_getSingleton(), &sa, &status);
                 break;
             }
             case UPROPS_SRC_NFC: {
@@ -243,10 +243,10 @@ const UnicodeSet* UnicodeSet::getInclusions(int32_t src, UErrorCode &status) {
             }
 #endif
             case UPROPS_SRC_CASE:
-                ucase_addPropertyStarts(ucase_getSingleton(&status), &sa, &status);
+                ucase_addPropertyStarts(ucase_getSingleton(), &sa, &status);
                 break;
             case UPROPS_SRC_BIDI:
-                ubidi_addPropertyStarts(ubidi_getSingleton(&status), &sa, &status);
+                ubidi_addPropertyStarts(ubidi_getSingleton(), &sa, &status);
                 break;
             default:
                 status = U_INTERNAL_PROGRAM_ERROR;
@@ -957,20 +957,17 @@ void UnicodeSet::applyFilter(UnicodeSet::Filter filter,
                              void* context,
                              int32_t src,
                              UErrorCode &status) {
-    // Walk through all Unicode characters, noting the start
+    if (U_FAILURE(status)) return;
+
+    // Logically, walk through all Unicode characters, noting the start
     // and end of each range for which filter.contain(c) is
     // true.  Add each range to a set.
     //
-    // To improve performance, use the INCLUSIONS set, which
+    // To improve performance, use an inclusions set which
     // encodes information about character ranges that are known
-    // to have identical properties. INCLUSIONS contains
-    // only the first characters of such ranges.
-    //
-    // TODO Where possible, instead of scanning over code points,
-    // use internal property data to initialize UnicodeSets for
-    // those properties.  Scanning code points is slow.
-    if (U_FAILURE(status)) return;
-
+    // to have identical properties.
+    // getInclusions(src) contains exactly the first characters of
+    // same-value ranges for the given properties "source".
     const UnicodeSet* inclusions = getInclusions(src, status);
     if (U_FAILURE(status)) {
         return;
@@ -1409,9 +1406,8 @@ UnicodeSet& UnicodeSet::closeOver(int32_t attribute) {
         return *this;
     }
     if (attribute & (USET_CASE_INSENSITIVE | USET_ADD_CASE_MAPPINGS)) {
-        UErrorCode status = U_ZERO_ERROR;
-        const UCaseProps *csp = ucase_getSingleton(&status);
-        if (U_SUCCESS(status)) {
+        const UCaseProps *csp = ucase_getSingleton();
+        {
             UnicodeSet foldSet(*this);
             UnicodeString str;
             USetAdder sa = {
@@ -1474,6 +1470,7 @@ UnicodeSet& UnicodeSet::closeOver(int32_t attribute) {
                 } else {
                     Locale root("");
 #if !UCONFIG_NO_BREAK_ITERATION
+                    UErrorCode status = U_ZERO_ERROR;
                     BreakIterator *bi = BreakIterator::createWordInstance(root, status);
 #endif
                     if (U_SUCCESS(status)) {
