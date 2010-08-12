@@ -24,6 +24,8 @@ U_NAMESPACE_BEGIN
 
 class Collator;
 class StringEnumeration;
+class UnicodeSet;
+class UVector;
 
 /**
  * A set of characters for use as a UI "index", that is, a
@@ -76,7 +78,7 @@ class U_I18N_API IndexCharacters: public UObject {
      *               of the IndexCharacters object fails.
      * @draft ICU 4.6
      */
-     IndexCharacters(Locale locale, UErrorCode &status);
+     IndexCharacters(const Locale &locale, UErrorCode &status);
 
 
     /**
@@ -94,7 +96,25 @@ class U_I18N_API IndexCharacters: public UObject {
      * @draft ICU 4.6
      * @provisional This API might change or be removed in a future release.
      */
-     IndexCharacters(Locale locale, const UnicodeSet &additions, UErrorCode &status);
+     IndexCharacters(const Locale &locale, const UnicodeSet &additions, UErrorCode &status);
+
+
+#if 0
+    TODO:  Late addtion to Java.  How best to do this here?
+
+     /**
+     * Create the index object.
+     * 
+     * @param locale
+     *            The locale to be passed.
+     * @param additions
+     *            Additional characters to be added, eg A-Z for non-Latin locales.
+     * @draft ICU 4.4
+     * @provisional This API might change or be removed in a future release.
+     */
+    public IndexCharacters(ULocale locale, ULocale... additionalLocales) {
+#endif
+
 
      /**
       * Copy constructor
@@ -133,7 +153,8 @@ class U_I18N_API IndexCharacters: public UObject {
      virtual StringEnumeration *getIndexCharacters() const;
 
    /**
-     * Get the locale
+     * Get the locale.
+     * TODO: The one specified?  The one actually used?  For collation or exepmplars?
      * @return The locale.
      * @draft ICU 4.6
      */
@@ -181,17 +202,80 @@ class U_I18N_API IndexCharacters: public UObject {
      */
     virtual UnicodeString getUnderflowLabel(UErrorCode &status) const;
 
-    class Bucket: public UObject {
+
+    /**
+     * Get the Unicode character (or tailored string) that defines an overflow bucket; that is anything greater than or
+     * equal to that string should go in that bucket, instead of with the last character. Normally that is the first
+     * character of the script after lowerLimit. Thus in X Y Z ... <i>Devanagari-ka</i>, the overflow character for Z
+     * would be the <i>Greek-alpha</i>.
+     * 
+     * @param lowerLimit   The character below the overflow (or inflow) bucket
+     * @return string that defines top of the overflow buck for lowerLimit, or null if there is none
+     * @draft ICU 4.6
+     */
+    virtual UnicodeString getOverflowComparisonString(UnicodeString lowerLimit);
+    
+
+    /**
+     *   Convenience class for building and enumerating an Index.  Bundles together a set of 
+     *   index characters and, for each index character, a set of value strings that sort to 
+     *   (should be displayed under) that index character.
+     *   @draft ICU 4.6
+     */
+    class Index: public UObject {
       public:
-        Bucket(UnicodeString label);
-        virtual ~Bucket();
+        /**
+         * Constructor.  
+         * @param indexChars  An IndexCharacters defining the set of labels under which
+         *                      entries of this index will be placed.
+         * @param status      Error code, will be set with the reason if the operation fails.
+         * @draft ICU 4.6
+         */
+        Index(const IndexCharacters &indexChars, UErrorCode &status);
+        virtual ~Index();
 
-        UnicodeString  getLabel();
-        virtual void add(UnicodeString value, UErrorCode &status);
-        StringEnumeration *getValues();
-    }
+        /**
+         * Add a value string to the index.  It will be bucketed to the appropriate
+         * index character.
+         *
+         * @param value      a value (string) to be place into the index.
+         * @param status      Error code, will be set with the reason if the operation fails.
+         * @draft ICU 4.6
+         */
+        virtual void addValue(UnicodeString value, UErrorCode &status);
 
-    virtual 
+        /**
+         * Get an enumeration over all of the index labels that have at least
+         * one value string associated with them.  The index characters will be returned
+         * in their sorted order, except for overflow, underflow or inflow labels, if
+         * present.
+         *
+         * @return  A string enumeration over the labels for this index.
+         * @draft ICU 4.6
+         */
+        virtual StringEnumeration *getLabels() const;
+
+        /**
+         * Get an enumeration over the set of value strings associated with the label
+         * most recently returned by the supplied labelEnum.
+         * The value strings will be produced in sorted order.
+         *
+         * @param labelEnum  A stringEnumeration produced by getLabels().  The value strings
+         *                   produced will be those for the label most recently returned by
+         *                   the labelEnum.
+         *
+         * @param status     Error code, will be set if the operation fails.
+         *                   Set to U_ILLEGAL_ARGUEMENT_ERROR if the labelEnum is not
+         *                   associated with this Index, or if it is positioned before the
+         *                   first label or after the last label (having returned NULL).
+         *
+         * @return           A StringEnumeration over the values associated with the label
+         *                   most recently produced by the labelEnum.
+         *
+         * @draft ICU 4.6
+         */
+        virtual StringEnumeration *getValues(const StringEnumeration &labelEnum, UErrorCode &status);
+    };
 
         
 
@@ -200,6 +284,38 @@ class U_I18N_API IndexCharacters: public UObject {
       *   No assignment.  IndexCharacters objects are const after creation/
       */
      IndexCharacters &operator =(const IndexCharacters & /*other*/) { return *this;};
+
+     // Common initialization, for use from all constructors.
+     void init(UErrorCode &status);
+
+     void firstStringsInScript(UVector *dest, Collator *coll, UErrorCode &status);
+
+     UChar32 OVERFLOW_MARKER;
+     UChar32 INFLOW_MARKER;
+     UChar32 CGJ;
+     UnicodeSet *ALPHABETIC;
+     UnicodeSet *HANGUL;
+     UnicodeSet *ETHIOPIC;
+     UnicodeSet *CORE_LATIN;
+     UnicodeSet *IGNORE_SCRIPTS;
+     UnicodeSet *TO_TRY;
+     UVector    *FIRST_CHARS_IN_SCRIPTS;
+
+     // LinkedHashMap<String, Set<String>> alreadyIn = new LinkedHashMap<String, Set<String>>();
+     UVector *indexCharacters_;   // Contents are (UnicodeString *)
+     UVector *noDistinctSorting_;
+     UVector *notAlphabetic_;
+     UVector *firstScriptCharacters_;
+
+     Locale    locale_;
+     Collator  *comparator_;
+
+     UnicodeString  inflowLabel_;
+     UnicodeString  overflowLabel_;
+     UnicodeString  underflowLabel_;
+     UnicodeString  overflowComparisonString_;
+
+
 };
 
 U_NAMESPACE_END
