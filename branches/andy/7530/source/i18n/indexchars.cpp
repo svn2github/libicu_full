@@ -14,7 +14,9 @@
 
 #include "unicode/coll.h"
 #include "unicode/indexchars.h"
+#include "unicode/normalizer2.h"
 #include "unicode/strenum.h"
+#include "unicode/tblcoll.h"
 #include "unicode/uniset.h"
 #include "unicode/uobject.h"
 #include "unicode/uscript.h"
@@ -25,6 +27,10 @@
 #include "uvector.h"
 
 U_NAMESPACE_BEGIN
+
+// Forward Declarations
+static int32_t U_CALLCONV
+PreferenceComparator(const void *context, const void *left, const void *right);
 
 
 IndexCharacters::IndexCharacters(const Locale &locale, UErrorCode &status) {
@@ -38,6 +44,54 @@ IndexCharacters::IndexCharacters(const IndexCharacters &other, UErrorCode &statu
 }
 
 
+IndexCharacters::IndexCharacters(const Locale &locale, RuleBasedCollator *collator, 
+                   const UnicodeSet *exemplarChars, const UnicodeSet *additions, UErrorCode &status) {
+    init(status);
+    if (U_FAILURE(status)) {
+        return;
+    }
+    comparator_ = collator;
+    comparator_->setStrength(Collator::PRIMARY);
+
+    UBool explicitIndexChars = TRUE;
+    UnicodeSet *exemplars = new UnicodeSet(*exemplarChars);
+    if (exemplars == NULL) {
+        exemplars = getIndexExemplars(locale, explicitIndexChars);
+        // Note: explicitIndexChars is set if the locale data includes IndexChars.  Out parameter.
+    }
+
+    if (additions != NULL) {
+        exemplars->addAll(*additions);
+    }
+
+    // first sort them, with an "best" ordering among items that are the same according
+    // to the collator
+    UVector preferenceSorting(status);   // Vector of UnicodeStrings; owned by the vector.
+    preferenceSorting.setDeleter(uhash_deleteUnicodeString);
+
+    UnicodeSetIterator exemplarIter(*exemplars);
+    while (exemplarIter.next()) {
+        const UnicodeString &exemplarStr = exemplarIter.getString();
+        preferenceSorting.addElement(exemplarStr.clone(), status);
+    }   
+    preferenceSorting.sortWithUComparator(PreferenceComparator, &status, status);
+
+
+    UVector indexCharacterSet(status);
+    indexCharacterSet.setDeleter(uhash_deleteUnicodeString);
+
+    // TreeSet<String> indexCharacterSet = new TreeSet<String>(comparator);
+
+    // We nw make a sorted array of elements, uppercased
+    // Some of the input may, however, be redundant.
+    // That is, we might have c, ch, d, where "ch" sorts just like "c", "h"
+    // So we make a pass through, filtering out those cases.
+
+
+}
+
+
+
 IndexCharacters::~IndexCharacters() {
 }
 
@@ -49,6 +103,11 @@ UBool IndexCharacters::operator==(const IndexCharacters& other) const {
 
 UBool IndexCharacters::operator!=(const IndexCharacters& other) const {
     return FALSE;
+}
+
+
+UnicodeSet *getIndexExemplars(const Locale locale, UBool &explicitIndexChars) {
+    return NULL;
 }
 
 StringEnumeration *IndexCharacters::getIndexCharacters() const {
@@ -124,9 +183,8 @@ void IndexCharacters::init(UErrorCode &status) {
     UnicodeString nfcqcStr = UNICODE_STRING_SIMPLE("[:^nfcqc=no:]");
     TO_TRY = new UnicodeSet(nfcqcStr, status);
 
-    FIRST_CHARS_IN_SCRIPTS = new UVector(status);
     Collator *rootCollator = Collator::createInstance(Locale::getRoot(), status);
-    firstStringsInScript(FIRST_CHARS_IN_SCRIPTS, rootCollator, status);
+    FIRST_CHARS_IN_SCRIPTS = firstStringsInScript(rootCollator, status);
 
 
     // private final LinkedHashMap<String, Set<String>> alreadyIn = new LinkedHashMap<String, Set<String>>();
@@ -138,68 +196,133 @@ void IndexCharacters::init(UErrorCode &status) {
 }
 
 
-void IndexCharacters::firstStringsInScript(UVector *dest, Collator *ruleBasedCollator, UErrorCode &status) {
+//
+//  Comparison function for UVector for sorting with a collator.
+//
+static int32_t U_CALLCONV
+sortCollateComparator(const void *context, const void *left, const void *right) {
+    const UHashTok *leftTok = static_cast<const UHashTok *>(left);
+    const UHashTok *rightTok = static_cast<const UHashTok *>(right);
+    const UnicodeString *leftString  = static_cast<const UnicodeString *>(leftTok->pointer);
+    const UnicodeString *rightString = static_cast<const UnicodeString *>(rightTok->pointer);
+    const Collator *col = static_cast<const Collator *>(context);
+    
+    if (leftString == rightString) {
+        // Catches case where both are NULL
+        return 0;
+    }
+    if (leftString == NULL) {
+        return 1;
+    };
+    if (rightString == NULL) {
+        return -1;
+    }
+    Collator::EComparisonResult r = col->compare(*leftString, *rightString);
+    return (int32_t) r;
+}
+
+
+
+UVector *IndexCharacters::firstStringsInScript(Collator *ruleBasedCollator, UErrorCode &status) {
 
     if (U_FAILURE(status)) {
-        return;
+        return NULL;
     }
 
     UnicodeString results[USCRIPT_CODE_LIMIT];
+    UnicodeString LOWER_A = UNICODE_STRING_SIMPLE("a");
 
-    UnicodeSetIterator siter(TO_TRY);
+    UnicodeSetIterator siter(*TO_TRY);
     while (siter.next()) {
         const UnicodeString &current = siter.getString();
-        EComparisonResult r = ruleBasedCollator.compare(current, UNICODE_STRING_SIMPLE("a"));
+        Collator::EComparisonResult r = ruleBasedCollator->compare(current, LOWER_A);
         if (r < 0) {  // TODO fix; we only want "real" script characters, not
                       // symbols.
             continue;
         }
 
-        int script = uscript_getScript(current.char32At(0));
+        int script = uscript_getScript(current.char32At(0), &status);
         if (results[script].length() == 0) {
             results[script] = current;
         }
-        else if (ruleBasedCollator.compare(current, results[script]) < 0) {
+        else if (ruleBasedCollator->compare(current, results[script]) < 0) {
             results[script] = current;
         }
     }
 
     UnicodeSet extras;
     UnicodeSet expansions;
-    UCollator *uRuleBasedCollator = ruleBasedCollator->getUCollator();
-    uRuleBasedCollator.getContractionsAndExpansions(extras.toUSet(), expansions.toUSet(), true, status);
-    extras.addAll(expansions).removeAll(TO_TRY);
+    RuleBasedCollator *rbc = dynamic_cast<RuleBasedCollator *>(ruleBasedCollator);
+    const UCollator *uRuleBasedCollator = rbc->getUCollator();
+    ucol_getContractionsAndExpansions(uRuleBasedCollator, extras.toUSet(), expansions.toUSet(), true, &status);
+    extras.addAll(expansions).removeAll(*TO_TRY);
     if (extras.size() != 0) {
-        #if 0
-        Normalizer2 normalizer = Normalizer2.getInstance(null, "nfkc", Mode.COMPOSE);
-        for (String current : extras) {
-            if (!TO_TRY.containsAll(current))
+        const Normalizer2 *normalizer = Normalizer2::getInstance(NULL, "nfkc", UNORM2_COMPOSE, status);
+        UnicodeSetIterator extrasIter(extras);
+        while (extrasIter.next()) {
+            const UnicodeString &current = extrasIter.next();
+            if (!TO_TRY->containsAll(current))
                 continue;
-            if (!normalizer.isNormalized(current) || ruleBasedCollator.compare(current, "a") < 0) {
+            if (!normalizer->isNormalized(current, status) || 
+                ruleBasedCollator->compare(current, LOWER_A) < 0) {
                 continue;
             }
-            int script = UScript.getScript(current.codePointAt(0));
-            if (results[script] == null) {
+            int script = uscript_getScript(current.char32At(0), &status);
+            if (results[script].length() == 0) {
                 results[script] = current;
-            } else if (ruleBasedCollator.compare(current, results[script]) < 0) {
+            } else if (ruleBasedCollator->compare(current, results[script]) < 0) {
                 results[script] = current;
             }
         }
-        #endif
     }
 
-        #if 0
-        TreeSet<String> sorted = new TreeSet<String>(ruleBasedCollator);
-        for (int i = 0; i < results.length; ++i) {
-            if (results[i] != null) {
-                sorted.add(results[i]);
-            }
+    UVector *dest = new UVector(status);
+    dest->setDeleter(uhash_deleteUnicodeString);
+    for (uint32_t i = 0; i < sizeof(results) / sizeof(results[0]); ++i) {
+        if (results[i].length() > 0) {
+            dest->addElement(results[i].clone(), status);
         }
-        return Collections.unmodifiableList(new ArrayList<String>(sorted));
-        #endif
-
     }
+    dest->sortWithUComparator(sortCollateComparator, ruleBasedCollator, status);
+    return dest;
 }
+
+
+/**
+ * Comparator that returns "better" items first, where shorter NFKD is better, and otherwise NFKD binary order is
+ * better, and otherwise binary order is better.
+ *
+ * For use with array sort or UVector.
+ * @param context  A UErrorCode pointer.
+ * @param left     A UHashTok pointer, which must refer to a UnicodeString *
+ * @param right    A UHashTok pointer, which must refer to a UnicodeString *
+ */
+static int32_t U_CALLCONV
+PreferenceComparator(const void *context, const void *left, const void *right) {
+    const UHashTok *leftTok  = static_cast<const UHashTok *>(left);
+    const UHashTok *rightTok = static_cast<const UHashTok *>(right);
+    const UnicodeString *s1  = static_cast<const UnicodeString *>(leftTok->pointer);
+    const UnicodeString *s2  = static_cast<const UnicodeString *>(rightTok->pointer);
+    UErrorCode &status       = *(UErrorCode *)(context);   // static and const cast.
+    if (s1 == s2) {
+        return 0;
+    }
+
+    const Normalizer2 *normalizer = Normalizer2::getInstance(NULL, "nfkc", UNORM2_DECOMPOSE, status);
+    UnicodeString n1 = normalizer->normalize(*s1, status);
+    UnicodeString n2 = normalizer->normalize(*s2, status);
+    int32_t result = n1.length() - n2.length();
+    if (result != 0) {
+        return result;
+    }
+
+    result = n1.compareCodePointOrder(n2);
+    if (result != 0) {
+        return result;
+    }
+    return s1->compareCodePointOrder(*s2);
+}
+
 
 
 

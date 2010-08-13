@@ -23,6 +23,7 @@ U_NAMESPACE_BEGIN
 // Forward Declarations
 
 class Collator;
+class RuleBasedCollator;
 class StringEnumeration;
 class UnicodeSet;
 class UVector;
@@ -114,6 +115,16 @@ class U_I18N_API IndexCharacters: public UObject {
      */
     public IndexCharacters(ULocale locale, ULocale... additionalLocales) {
 #endif
+
+    /**
+     * Internal constructor.  Has much implementation for others.
+     * @internal
+     * @param exemplarChars
+     *            TODO
+     */
+    IndexCharacters(const Locale &locale, RuleBasedCollator *collator, 
+                    const UnicodeSet *exemplarChars, const UnicodeSet *additions, 
+                    UErrorCode &status);
 
 
      /**
@@ -288,7 +299,9 @@ class U_I18N_API IndexCharacters: public UObject {
      // Common initialization, for use from all constructors.
      void init(UErrorCode &status);
 
-     void firstStringsInScript(UVector *dest, Collator *coll, UErrorCode &status);
+     UnicodeSet *getIndexExemplars(const Locale locale, UBool &explicitIndexChars);
+
+     UVector *firstStringsInScript(Collator *coll, UErrorCode &status);
 
      UChar32 OVERFLOW_MARKER;
      UChar32 INFLOW_MARKER;
@@ -300,6 +313,10 @@ class U_I18N_API IndexCharacters: public UObject {
      UnicodeSet *IGNORE_SCRIPTS;
      UnicodeSet *TO_TRY;
      UVector    *FIRST_CHARS_IN_SCRIPTS;
+
+     const Collator *collatorForVectorComparator;   // The collator for the function
+                                                    //   collationComparator(), which is used when collation
+                                                    //   sorting UVectors.  
 
      // LinkedHashMap<String, Set<String>> alreadyIn = new LinkedHashMap<String, Set<String>>();
      UVector *indexCharacters_;   // Contents are (UnicodeString *)
