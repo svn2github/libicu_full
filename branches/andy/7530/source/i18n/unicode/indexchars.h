@@ -18,6 +18,8 @@
  * \brief C++ API: Index Characters
  */
  
+struct UHashtable;
+
 U_NAMESPACE_BEGIN
 
 // Forward Declarations
@@ -303,6 +305,8 @@ class U_I18N_API IndexCharacters: public UObject {
 
      UVector *firstStringsInScript(Collator *coll, UErrorCode &status);
 
+     UnicodeString separated(const UnicodeString &item);
+
      UChar32 OVERFLOW_MARKER;
      UChar32 INFLOW_MARKER;
      UChar32 CGJ;
@@ -314,15 +318,13 @@ class U_I18N_API IndexCharacters: public UObject {
      UnicodeSet *TO_TRY;
      UVector    *FIRST_CHARS_IN_SCRIPTS;
 
-     const Collator *collatorForVectorComparator;   // The collator for the function
-                                                    //   collationComparator(), which is used when collation
-                                                    //   sorting UVectors.  
-
      // LinkedHashMap<String, Set<String>> alreadyIn = new LinkedHashMap<String, Set<String>>();
-     UVector *indexCharacters_;   // Contents are (UnicodeString *)
-     UVector *noDistinctSorting_;
-     UVector *notAlphabetic_;
-     UVector *firstScriptCharacters_;
+     UHashtable *alreadyIn_;   // Key=UnicodeString, value=UnicodeSet
+
+     UVector    *indexCharacters_;   // Contents are (UnicodeString *)
+     UnicodeSet *noDistinctSorting_;
+     UnicodeSet *notAlphabetic_;
+     UVector    *firstScriptCharacters_;
 
      Locale    locale_;
      Collator  *comparator_;

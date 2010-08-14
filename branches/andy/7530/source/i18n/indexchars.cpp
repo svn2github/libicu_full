@@ -32,6 +32,20 @@ U_NAMESPACE_BEGIN
 static int32_t U_CALLCONV
 PreferenceComparator(const void *context, const void *left, const void *right);
 
+static void appendUnicodeSetToUVector(UVector *dest, const UnicodeSet &source, UErrorCode &status);
+
+static int32_t U_CALLCONV
+sortCollateComparator(const void *context, const void *left, const void *right);
+
+//
+//  UHash support function, delete a UnicodeSet
+//     TODO:  move this function into uhash.
+//
+static void U_CALLCONV
+uhash_deleteUnicodeSet(void *obj) {
+    delete static_cast<UnicodeSet *>(obj);
+}
+
 
 IndexCharacters::IndexCharacters(const Locale &locale, UErrorCode &status) {
 }
@@ -43,6 +57,8 @@ IndexCharacters::IndexCharacters(const Locale &locale, const UnicodeSet &additio
 IndexCharacters::IndexCharacters(const IndexCharacters &other, UErrorCode &status) {
 }
 
+
+static int32_t maxCount = 99;    // Max number of index chars.
 
 IndexCharacters::IndexCharacters(const Locale &locale, RuleBasedCollator *collator, 
                    const UnicodeSet *exemplarChars, const UnicodeSet *additions, UErrorCode &status) {
@@ -76,20 +92,78 @@ IndexCharacters::IndexCharacters(const Locale &locale, RuleBasedCollator *collat
     }   
     preferenceSorting.sortWithUComparator(PreferenceComparator, &status, status);
 
+    UnicodeSet indexCharacterSet;
 
-    UVector indexCharacterSet(status);
-    indexCharacterSet.setDeleter(uhash_deleteUnicodeString);
-
-    // TreeSet<String> indexCharacterSet = new TreeSet<String>(comparator);
-
-    // We nw make a sorted array of elements, uppercased
+    // We now make a set of elements, uppercased
     // Some of the input may, however, be redundant.
     // That is, we might have c, ch, d, where "ch" sorts just like "c", "h"
     // So we make a pass through, filtering out those cases.
 
+    for (int32_t psIndex=0; psIndex<preferenceSorting.size(); psIndex++) {
+        UnicodeString item = *static_cast<const UnicodeString *>(preferenceSorting.elementAt(psIndex));
+        if (!explicitIndexChars) {
+            item.toUpper(locale);
+        }
+        if (indexCharacterSet.contains(item)) {
+            UnicodeSetIterator itemAlreadyInIter(indexCharacterSet);
+            while (itemAlreadyInIter.next()) {
+                const UnicodeString &itemAlreadyIn = itemAlreadyInIter.getString();
+                if (comparator_->compare(item, itemAlreadyIn) == 0) {
+                    UnicodeSet *targets = static_cast<UnicodeSet *>(uhash_get(alreadyIn_, &itemAlreadyIn));
+                    if (targets == NULL) {
+                        // alreadyIn.put(itemAlreadyIn, targets = new LinkedHashSet<String>());
+                        targets = new UnicodeSet();
+                        uhash_put(alreadyIn_, itemAlreadyIn.clone(), targets, &status); 
+                    }
+                    targets->add(item);
+                    break;
+                }
+            }
+        } else if (item.moveIndex32(0, 1) < item.length() &&  // item contains more than one code point.
+                   comparator_->compare(item, separated(item)) == 0) {
+            noDistinctSorting_->add(item);
+        } else if (!ALPHABETIC->containsSome(item)) {
+            notAlphabetic_->add(item);
+        } else {
+            indexCharacterSet.add(item);
+        }
+    }
 
+    // Move the set of index characters from the set into a vector, and sort
+    // according to the collator.
+    
+    appendUnicodeSetToUVector(indexCharacters_, indexCharacterSet, status);
+    indexCharacters_->sortWithUComparator(sortCollateComparator, comparator_, status);
+    
+    // if the result is still too large, cut down to maxCount elements, by removing every nth element
+    //    Implemented by copying the elements to be retained to a new UVector.
+
+    const int32_t size = indexCharacterSet.size() - 1;
+    if (size > maxCount) {
+        UVector *newIndexChars = new UVector(status);
+        newIndexChars->setDeleter(uhash_deleteUnicodeString);
+        int32_t count = 0;
+        int32_t old = -1;
+        for (int32_t srcIndex=0; srcIndex<indexCharacters_->size(); srcIndex++) {
+            const UnicodeString *str = static_cast<const UnicodeString *>(indexCharacters_->elementAt(srcIndex));
+            ++count;
+            const int32_t bump = count * maxCount / size;
+            if (bump == old) {
+                // it.remove();
+            } else {
+                newIndexChars->addElement(str->clone(), status);
+                old = bump;
+            }
+        }
+        delete indexCharacters_;
+        indexCharacters_ = newIndexChars;
+        firstScriptCharacters_ = FIRST_CHARS_IN_SCRIPTS;  // TODO, use collation method when fast enough.
+                                                          //   Caution, will need to delete object in
+                                                          //   destructor when making this change.
+        // firstStringsInScript(comparator);
+    }
+ 
 }
-
 
 
 IndexCharacters::~IndexCharacters() {
@@ -188,14 +262,48 @@ void IndexCharacters::init(UErrorCode &status) {
 
 
     // private final LinkedHashMap<String, Set<String>> alreadyIn = new LinkedHashMap<String, Set<String>>();
-    
-    indexCharacters_       = new UVector(status);
-    noDistinctSorting_     = new UVector(status);
-    notAlphabetic_         = new UVector(status);
+    alreadyIn_             = uhash_open(uhash_hashUnicodeString,    // Key Hash,
+                                        uhash_compareUnicodeString, // key Comparator, 
+                                        NULL,                       // value Comparator
+                                        &status);
+    uhash_setKeyDeleter(alreadyIn_, uhash_deleteUnicodeString);
+    uhash_setValueDeleter(alreadyIn_, uhash_deleteUnicodeSet);
+
+    indexCharacters_ = new UVector(status);
+    indexCharacters_->setDeleter(uhash_deleteUnicodeString);
+    indexCharacters_->setComparer(uhash_compareUnicodeString);
+
+
+
+
+    noDistinctSorting_     = new UnicodeSet();
+    notAlphabetic_         = new UnicodeSet();
     firstScriptCharacters_ = new UVector(status);
+    
 }
 
 
+UnicodeString IndexCharacters::separated(const UnicodeString &item) {
+#if 0
+    StringBuilder result = new StringBuilder();
+    // add a CGJ except within surrogates
+    char last = item.charAt(0);
+    result.append(last);
+    for (int i = 1; i < item.length(); ++i) {
+        char ch = item.charAt(i);
+        if (!UCharacter.isHighSurrogate(last) || !UCharacter.isLowSurrogate(ch)) {
+            result.append(CGJ);
+        }
+        result.append(ch);
+        last = ch;
+    }
+    return result.toString();
+#endif
+    return item;
+}
+
+
+   
 //
 //  Comparison function for UVector for sorting with a collator.
 //
