@@ -226,71 +226,32 @@ class U_I18N_API IndexCharacters: public UObject {
      * @return string that defines top of the overflow buck for lowerLimit, or null if there is none
      * @draft ICU 4.6
      */
-    virtual UnicodeString getOverflowComparisonString(UnicodeString lowerLimit);
+    virtual UnicodeString getOverflowComparisonString(const UnicodeString &lowerLimit);
     
 
     /**
-     *   Convenience class for building and enumerating an Index.  Bundles together a set of 
-     *   index characters and, for each index character, a set of value strings that sort to 
-     *   (should be displayed under) that index character.
-     *   @draft ICU 4.6
+     * Add an item to an index.
+     *
+     * @param name The display name for the item.  The item will be placed under
+     *             an index label based on this name.
+     * @param context An optional pointer to user data associated with this
+     *                item.  When interating the contents of an index, the
+     *                context pointer will be returned along with the name for
+     *                each item.
+     * @param status  Error code, will be set with the reason if the operation fails.
+     * @draft ICU 4.6
      */
-    class Index: public UObject {
-      public:
-        /**
-         * Constructor.  
-         * @param indexChars  An IndexCharacters defining the set of labels under which
-         *                      entries of this index will be placed.
-         * @param status      Error code, will be set with the reason if the operation fails.
-         * @draft ICU 4.6
-         */
-        Index(const IndexCharacters &indexChars, UErrorCode &status);
-        virtual ~Index();
+    virtual void addItem(const UnicodeString &name, void *context, UErrorCode &status);
 
-        /**
-         * Add a value string to the index.  It will be bucketed to the appropriate
-         * index character.
-         *
-         * @param value      a value (string) to be place into the index.
-         * @param status      Error code, will be set with the reason if the operation fails.
-         * @draft ICU 4.6
-         */
-        virtual void addValue(UnicodeString value, UErrorCode &status);
+    virtual UBool nextLabel();
+    virtual const UnicodeString &getLabel();
+    virtual void resetLabelIterator();
 
-        /**
-         * Get an enumeration over all of the index labels that have at least
-         * one value string associated with them.  The index characters will be returned
-         * in their sorted order, except for overflow, underflow or inflow labels, if
-         * present.
-         *
-         * @return  A string enumeration over the labels for this index.
-         * @draft ICU 4.6
-         */
-        virtual StringEnumeration *getLabels() const;
-
-        /**
-         * Get an enumeration over the set of value strings associated with the label
-         * most recently returned by the supplied labelEnum.
-         * The value strings will be produced in sorted order.
-         *
-         * @param labelEnum  A stringEnumeration produced by getLabels().  The value strings
-         *                   produced will be those for the label most recently returned by
-         *                   the labelEnum.
-         *
-         * @param status     Error code, will be set if the operation fails.
-         *                   Set to U_ILLEGAL_ARGUEMENT_ERROR if the labelEnum is not
-         *                   associated with this Index, or if it is positioned before the
-         *                   first label or after the last label (having returned NULL).
-         *
-         * @return           A StringEnumeration over the values associated with the label
-         *                   most recently produced by the labelEnum.
-         *
-         * @draft ICU 4.6
-         */
-        virtual StringEnumeration *getValues(const StringEnumeration &labelEnum, UErrorCode &status);
-    };
-
-        
+    // and for each label, iterate over its items
+    virtual UBool nextItem();
+    virtual const UnicodeString &getItemName();
+    virtual const void *getItemContext();
+    virtual void resetItemIterator();
 
   private:
      /**
@@ -301,15 +262,59 @@ class U_I18N_API IndexCharacters: public UObject {
      // Common initialization, for use from all constructors.
      void init(UErrorCode &status);
 
-     UnicodeSet *getIndexExemplars(const Locale locale, UBool &explicitIndexChars);
+     UnicodeSet *getIndexExemplars(const Locale &locale, UBool &explicitIndexChars,
+                                          UErrorCode &status);
+         // TODO:  change getIndexExemplars() to static once the constant UnicodeSets
+         //         are factored out into a singleton.
 
      UVector *firstStringsInScript(Collator *coll, UErrorCode &status);
 
      UnicodeString separated(const UnicodeString &item);
 
+     static UnicodeSet *getScriptSet(const UnicodeString &codePoint);
+
+     void buildIndex();
+
+
+     // TODO:  coordinate with Java. 
+     //        Names anticipate an eventual plain C API.
+     enum LabelType {
+         ALPHABETIC_INDEX_NORMAL   = 0,
+         ALPHABETIC_INDEX_UNDERFLOW = 1,
+         ALPHABETIC_INDEX_INFLOW    = 2,
+         ALPHABETIC_INDEX_OVERFLOW  = 3
+     };
+
+
+     /*
+     * A record to be sorted into buckets with getIndexBucketCharacters.
+     */
+     struct Record: public UMemory {
+         const UnicodeString  *name_;
+         void                 *context_;
+         ~Record() {delete name_;};
+     };
+
+     // Holds all user items before they are distributed into buckets.
+     UVector  *inputRecords_;
+
+     struct Bucket: public UMemory {
+         UnicodeString     label_;
+         UnicodeString     lowerBoundary_;
+         LabelType         labelType_;
+         UVector           *records_;
+     };
+
+     // Holds the contents of this index, buckets of user items.
+     // UVector elements are of type (Bucket *)
+     UVector *buckets_;
+     int32_t  labelsIterIndex_;    // Index of next item to return.
+
+     
+// Constants.  TODO:  move into a singleton and init constants only once.
+//
      UChar32 OVERFLOW_MARKER;
      UChar32 INFLOW_MARKER;
-     UChar32 CGJ;
      UnicodeSet *ALPHABETIC;
      UnicodeSet *HANGUL;
      UnicodeSet *ETHIOPIC;

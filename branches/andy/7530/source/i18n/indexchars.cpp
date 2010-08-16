@@ -17,6 +17,7 @@
 #include "unicode/normalizer2.h"
 #include "unicode/strenum.h"
 #include "unicode/tblcoll.h"
+#include "unicode/ulocdata.h"
 #include "unicode/uniset.h"
 #include "unicode/uobject.h"
 #include "unicode/uscript.h"
@@ -32,8 +33,6 @@ U_NAMESPACE_BEGIN
 static int32_t U_CALLCONV
 PreferenceComparator(const void *context, const void *left, const void *right);
 
-static void appendUnicodeSetToUVector(UVector *dest, const UnicodeSet &source, UErrorCode &status);
-
 static int32_t U_CALLCONV
 sortCollateComparator(const void *context, const void *left, const void *right);
 
@@ -44,6 +43,21 @@ sortCollateComparator(const void *context, const void *left, const void *right);
 static void U_CALLCONV
 uhash_deleteUnicodeSet(void *obj) {
     delete static_cast<UnicodeSet *>(obj);
+}
+
+static const Normalizer2 *nfkdNormalizer;
+
+//
+//  Append the contents of a UnicodeSet to a UVector of UnicodeStrings.
+//  Append everything - individual characters are handled as strings of length 1.
+//  The destination vector owns the appended strings.
+
+static void appendUnicodeSetToUVector(UVector &dest, const UnicodeSet &source, UErrorCode &status) {
+    UnicodeSetIterator setIter(source);
+    while (setIter.next()) {
+        const UnicodeString &str = setIter.getString();
+        dest.addElement(str.clone(), status);
+    }   
 }
 
 
@@ -70,26 +84,24 @@ IndexCharacters::IndexCharacters(const Locale &locale, RuleBasedCollator *collat
     comparator_->setStrength(Collator::PRIMARY);
 
     UBool explicitIndexChars = TRUE;
-    UnicodeSet *exemplars = new UnicodeSet(*exemplarChars);
-    if (exemplars == NULL) {
-        exemplars = getIndexExemplars(locale, explicitIndexChars);
+    UnicodeSet *exemplars = NULL;
+    if (exemplarChars == NULL) {
+        exemplars = getIndexExemplars(locale, explicitIndexChars, status);
         // Note: explicitIndexChars is set if the locale data includes IndexChars.  Out parameter.
+    } else {
+        exemplars = static_cast<UnicodeSet *>(exemplarChars->cloneAsThawed());
     }
 
     if (additions != NULL) {
         exemplars->addAll(*additions);
     }
 
-    // first sort them, with an "best" ordering among items that are the same according
+    // first sort them, with a "best" ordering among items that are the same according
     // to the collator
     UVector preferenceSorting(status);   // Vector of UnicodeStrings; owned by the vector.
     preferenceSorting.setDeleter(uhash_deleteUnicodeString);
 
-    UnicodeSetIterator exemplarIter(*exemplars);
-    while (exemplarIter.next()) {
-        const UnicodeString &exemplarStr = exemplarIter.getString();
-        preferenceSorting.addElement(exemplarStr.clone(), status);
-    }   
+    appendUnicodeSetToUVector(preferenceSorting, *exemplars, status);
     preferenceSorting.sortWithUComparator(PreferenceComparator, &status, status);
 
     UnicodeSet indexCharacterSet;
@@ -132,7 +144,7 @@ IndexCharacters::IndexCharacters(const Locale &locale, RuleBasedCollator *collat
     // Move the set of index characters from the set into a vector, and sort
     // according to the collator.
     
-    appendUnicodeSetToUVector(indexCharacters_, indexCharacterSet, status);
+    appendUnicodeSetToUVector(*indexCharacters_, indexCharacterSet, status);
     indexCharacters_->sortWithUComparator(sortCollateComparator, comparator_, status);
     
     // if the result is still too large, cut down to maxCount elements, by removing every nth element
@@ -165,6 +177,70 @@ IndexCharacters::IndexCharacters(const Locale &locale, RuleBasedCollator *collat
  
 }
 
+UnicodeSet *IndexCharacters::getIndexExemplars(
+        const Locale &locale, UBool &explicitIndexChars, UErrorCode &status) {
+
+    LocalULocaleDataPointer uld(ulocdata_open(locale.getName(), &status));
+    UnicodeSet *exemplars = UnicodeSet::fromUSet(
+            ulocdata_getExemplarSet(uld.getAlias(), NULL, 0, ULOCDATA_ES_INDEX, &status));
+    if (exemplars != NULL) {
+        explicitIndexChars = TRUE;
+        return exemplars;
+    }
+    explicitIndexChars = false;
+
+    exemplars = UnicodeSet::fromUSet(
+            ulocdata_getExemplarSet(uld.getAlias(), NULL, 0, ULOCDATA_ES_STANDARD, &status));
+
+    // get the exemplars, and handle special cases
+
+    // question: should we add auxiliary exemplars?
+    if (exemplars->containsSome(*CORE_LATIN)) {
+        exemplars->addAll(*CORE_LATIN);
+    }
+    if (exemplars->containsSome(*HANGUL)) {
+        // cut down to small list
+        UnicodeSet BLOCK_HANGUL_SYLLABLES(UNICODE_STRING_SIMPLE("[:block=hangul_syllables:]"), status);
+        exemplars->removeAll(BLOCK_HANGUL_SYLLABLES);
+        exemplars->addAll(*HANGUL);
+    }
+    if (exemplars->containsSome(*ETHIOPIC)) {
+        // cut down to small list
+        // make use of the fact that Ethiopic is allocated in 8's, where
+        // the base is 0 mod 8.
+        UnicodeSetIterator  it(*ETHIOPIC);
+        while (it.next() && !it.isString()) {
+            if ((it.getCodepoint() & 0x7) != 0) {
+                exemplars->remove(it.getCodepoint());
+            }
+        }
+    }
+    return exemplars;
+}
+
+
+/*
+ * Return the string with interspersed CGJs. Input must have more than 2 codepoints.
+ */
+static const UChar32 CGJ = (UChar)0x034F;
+UnicodeString separated(const UnicodeString &item) {
+    UnicodeString result;
+    if (item.length() == 0) {
+        return result;
+    }
+    int32_t i = 0;
+    for (;;) {
+        UChar32  cp = item.char32At(i);
+        result.append(cp);
+        i = item.moveIndex32(i, 1);
+        if (i >= item.length()) {
+            break;
+        }
+        result.append(CGJ);
+    }
+    return result;
+}
+
 
 IndexCharacters::~IndexCharacters() {
 }
@@ -179,10 +255,6 @@ UBool IndexCharacters::operator!=(const IndexCharacters& other) const {
     return FALSE;
 }
 
-
-UnicodeSet *getIndexExemplars(const Locale locale, UBool &explicitIndexChars) {
-    return NULL;
-}
 
 StringEnumeration *IndexCharacters::getIndexCharacters() const {
     return NULL;
@@ -210,18 +282,31 @@ UnicodeString IndexCharacters::getUnderflowLabel(UErrorCode &status) const {
     return underflowLabel_;
 }
 
-UnicodeString IndexCharacters::getOverflowComparisonString(UnicodeString lowerLimit) {
+UnicodeString IndexCharacters::getOverflowComparisonString(const UnicodeString &lowerLimit) {
+    for (int32_t i=0; i<firstScriptCharacters_->size(); i++) {
+        const UnicodeString *s = 
+                static_cast<const UnicodeString *>(firstScriptCharacters_->elementAt(i));
+        if (comparator_->compare(*s, lowerLimit) > 0) {
+            return *s;   // returning string by value
+        }
+    }
     return UnicodeString();
 }
 
 
+UnicodeSet *getScriptSet(const UnicodeString &codePoint, UErrorCode &status) {
+    UChar32 cp = codePoint.char32At(0);
+    UScriptCode scriptCode = uscript_getScript(cp, &status);
+    UnicodeSet *set = new UnicodeSet();
+    set->applyIntPropertyValue(UCHAR_SCRIPT, scriptCode, status);
+    return set;
+}
 
 void IndexCharacters::init(UErrorCode &status) {
     // TODO:  pull the constant stuff into a singleton.
 
     OVERFLOW_MARKER = (UChar)0xFFFF;
     INFLOW_MARKER = (UChar)0xFFFD;
-    CGJ = (UChar)0x034F;
 
     // "[[:alphabetic:]-[:mark:]]");
     ALPHABETIC = new UnicodeSet();
@@ -279,27 +364,9 @@ void IndexCharacters::init(UErrorCode &status) {
     noDistinctSorting_     = new UnicodeSet();
     notAlphabetic_         = new UnicodeSet();
     firstScriptCharacters_ = new UVector(status);
-    
-}
 
-
-UnicodeString IndexCharacters::separated(const UnicodeString &item) {
-#if 0
-    StringBuilder result = new StringBuilder();
-    // add a CGJ except within surrogates
-    char last = item.charAt(0);
-    result.append(last);
-    for (int i = 1; i < item.length(); ++i) {
-        char ch = item.charAt(i);
-        if (!UCharacter.isHighSurrogate(last) || !UCharacter.isLowSurrogate(ch)) {
-            result.append(CGJ);
-        }
-        result.append(ch);
-        last = ch;
-    }
-    return result.toString();
-#endif
-    return item;
+    // TODO: move to all constant stuff to a singleton, init it once.
+    nfkdNormalizer         = Normalizer2::getInstance(NULL, "nfkc", UNORM2_DECOMPOSE, status);
 }
 
 
@@ -405,6 +472,7 @@ UVector *IndexCharacters::firstStringsInScript(Collator *ruleBasedCollator, UErr
  * @param left     A UHashTok pointer, which must refer to a UnicodeString *
  * @param right    A UHashTok pointer, which must refer to a UnicodeString *
  */
+
 static int32_t U_CALLCONV
 PreferenceComparator(const void *context, const void *left, const void *right) {
     const UHashTok *leftTok  = static_cast<const UHashTok *>(left);
@@ -416,9 +484,8 @@ PreferenceComparator(const void *context, const void *left, const void *right) {
         return 0;
     }
 
-    const Normalizer2 *normalizer = Normalizer2::getInstance(NULL, "nfkc", UNORM2_DECOMPOSE, status);
-    UnicodeString n1 = normalizer->normalize(*s1, status);
-    UnicodeString n2 = normalizer->normalize(*s2, status);
+    UnicodeString n1 = nfkdNormalizer->normalize(*s1, status);
+    UnicodeString n2 = nfkdNormalizer->normalize(*s2, status);
     int32_t result = n1.length() - n2.length();
     if (result != 0) {
         return result;
@@ -430,6 +497,52 @@ PreferenceComparator(const void *context, const void *left, const void *right) {
     }
     return s1->compareCodePointOrder(*s2);
 }
+
+
+void IndexCharacters::addItem(const icu_45::UnicodeString &name, void *context, UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return;
+    }
+    if (buckets_ != NULL) {
+        // This index is already built (being iterated.)
+        // Refuse to modify it.  TODO:  review this.  
+        status = U_INVALID_STATE_ERROR;
+        return;
+    }
+    Record *r = new Record;
+    // Note on ownership of the name string:  It stays with the Record.
+    r->name_ = static_cast<UnicodeString *>(name.clone());
+    r->context_ = context;
+    inputRecords_->addElement(r, status);
+}
+
+
+UBool IndexCharacters::nextLabel() {
+    if (buckets_ == NULL) {
+        buildIndex();
+        labelsIterIndex_ = 0;
+    } else {
+        ++labelsIterIndex_;
+    } 
+    if (labelsIterIndex_ >= buckets_->size()) {
+        labelsIterIndex_ = buckets_->size();
+        return FALSE;
+    }
+    return TRUE;
+}
+
+const UnicodeString &IndexCharacters::getLabel() {
+    if (buckets_ == NULL) {
+        buildIndex();
+    }
+    if (labelsIterIndex >= buckets_->size()) {
+        return EMPTY_STRING;
+    } else {
+        Bucket *b = static_cast<Bucket>(buckets_->elementAt(labelsiterIndex));
+        return b->label_;
+    }
+}
+
 
 
 
