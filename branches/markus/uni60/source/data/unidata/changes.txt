@@ -182,6 +182,38 @@ Unicode 6.0 update
 - to ~/svn.icu/trunk/src/source/test/testdata
   (they are not used in ICU4J)
 
+* UCA
+
+- get output from Mark's tools; look in
+    http://www.unicode.org/~book/incoming/mark/uca6.0.0/
+    http://www.macchiato.com/unicode/utc/additional-uca-files
+    http://www.unicode.org/Public/UCA/6.0.0/
+    http://www.unicode.org/~mdavis/uca/
+- update source/data/unidata/FractionalUCA.txt with FractionalUCA_SHORT.txt
+- update source/data/unidata/UCARules.txt with UCA_Rules_SHORT.txt
+- run makeuca.sh:
+  ~/svn.icu/tools/trunk/src/unicode$ ./makeuca.sh ~/svn.icu/trunk/src ~/svn.icu/trunk/bld
+- rebuild ICU4C
+- refresh ICU4J collation data:
+  (subset of instructions above for properties data refresh, except copies all coll/*)
+    ~/svn.icu/trunk/bld$ make ICU4J_ROOT=/tmp/icu4j icu4j-data-install
+    mkdir -p /tmp/icu4j/com/ibm/icu/impl/data/icudt45b/coll
+    ~/svn.icu/trunk/bld/data/out/icu4j$ cp com/ibm/icu/impl/data/icudt45b/coll/* /tmp/icu4j/com/ibm/icu/impl/data/icudt45b/coll
+    ~/svn.icu/trunk/bld/data/out/icu4j$ jar uf ~/svn.icu4j/trunk/src/main/shared/data/icudata.jar -C /tmp/icu4j com/ibm/icu/impl/data/icudt45b
+- update (ICU)/source/test/testdata/CollationTest_*.txt
+  and (ICU4J)/main/tests/collate/src/com/ibm/icu/dev/data/CollationTest_*.txt
+  with output from Mark's Unicode tools
+- run all tests with the *_SHORT.txt or the full files (the full ones have comments)
+- note on intltest: if collate/UCAConformanceTest fails, then
+  utility/MultithreadTest/TestCollators will fail as well;
+  fix the conformance test before looking into the multi-thread test
+
+* When refreshing all of ICU4J data from ICU4C
+- ~/svn.icu/trunk/bld$ make ICU4J_ROOT=/tmp/icu4j icu4j-data-install
+- cp /tmp/icu4j/main/shared/data/icudata.jar ~/svn.icu4j/trunk/src/main/shared/data
+or
+- ~/svn.icu/trunk/bld$ make ICU4J_ROOT=~/svn.icu4j/trunk/src/main/shared/data icu4j-data-install
+
 ---------------------------------------------------------------------------- ***
 
 Unicode 5.2 update
