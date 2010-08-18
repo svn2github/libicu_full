@@ -74,7 +74,9 @@ class U_I18N_API IndexCharacters: public UObject {
     /**
      * Construct an IndexCharacters object for the specified locale.  If the locale's
      * data does not include index characters, a set of them will be
-     * synthesized based on the locale's exemplar characters.
+     * synthesized based on the locale's exemplar characters.  The locale
+     * determines the sorting order for both the index characters and the
+     * user item names appearing under each Index character.
      *
      * @param locale the desired locale.
      * @param status Error code, will be set with the reason if the construction
@@ -84,39 +86,24 @@ class U_I18N_API IndexCharacters: public UObject {
      IndexCharacters(const Locale &locale, UErrorCode &status);
 
 
+
     /**
-     * Construct an IndexCharacters object for the specified locale, and
-     * add an additional set of index characters.  If the locale's
-     * data does not include index characters, a set of them will be
-     * synthesized based on the locale's exemplar characters.
-     * 
-     * @param locale
-     *            The locale to be passed.
-     * @param additions
-     *            Additional characters to be added, eg A-Z for non-Latin locales.
-     * @param status Error code, will be set with the reason if the construction
-     *               of the IndexCharacters object fails.
-     * @draft ICU 4.6
-     * @provisional This API might change or be removed in a future release.
+     * Add index characters to this Index.  The characters are added to those
+     * that are already in the index; they do not replace the existing 
+     * index characters.
      */
-     IndexCharacters(const Locale &locale, const UnicodeSet &additions, UErrorCode &status);
-
-
-#if 0
-    TODO:  Late addtion to Java.  How best to do this here?
+     void setAdditionalIndexChars(const UnicodeSet &additions, UErrorCode &status);
 
      /**
-     * Create the index object.
-     * 
-     * @param locale
-     *            The locale to be passed.
-     * @param additions
-     *            Additional characters to be added, eg A-Z for non-Latin locales.
-     * @draft ICU 4.4
-     * @provisional This API might change or be removed in a future release.
-     */
-    public IndexCharacters(ULocale locale, ULocale... additionalLocales) {
-#endif
+      * Add the index characters from a Locale to the index.  The new characters
+      * are added to those that are already in the index; they do not replace the
+      * existing index characters.  The collation order for this index is not
+      * changed; it remains that of the locale that was originally specified
+      * when creating this Index.
+      */
+     void setAdditionalLocale(const Locale &locale, UErrorCode &status);
+
+
 
     /**
      * Internal constructor.  Has much implementation for others.
@@ -243,14 +230,61 @@ class U_I18N_API IndexCharacters: public UObject {
      */
     virtual void addItem(const UnicodeString &name, void *context, UErrorCode &status);
 
-    virtual UBool nextLabel();
-    virtual const UnicodeString &getLabel();
-    virtual void resetLabelIterator();
+    /**
+     *   Advance the iteration over the labels of this index.  Return FALSE if
+     *   there are no more labels.
+     *
+     *   @param status  Error code, will be set with the reason if the operation fails.
+     *   U_ENUM_OUT_OF_SYNC_ERROR will be reported if the index is modified while
+     *   an enumeration of its contents are in process.
+     *   @draft ICU 4.6
+     */
+    virtual UBool nextLabel(UErrorCode &status);
 
-    // and for each label, iterate over its items
-    virtual UBool nextItem();
-    virtual const UnicodeString &getItemName();
-    virtual const void *getItemContext();
+    /**
+     *   Return the current index label as determined by the iteration over the labels.
+     *   If the iteration is before the first label (nextLabel() has not been called),
+     *   or after the last label, return an empty string.
+     */
+    virtual const UnicodeString &getLabel() const;
+
+    /**
+     *
+     */
+    virtual void resetLabelIterator(UErrorCode &status);
+
+    /**
+     * Advance to the next item under the current Label in the index.
+     * When nextLabel() is called, item iteration is reset to just before the
+     * first item that appearing under the new label.
+     *
+     *   @param status  Error code, will be set with the reason if the operation fails.
+     *   U_ENUM_OUT_OF_SYNC_ERROR will be reported if the index is modified while
+     *   an enumeration of its contents are in process.
+     *   @return FALSE when the iteration advances past the last item.
+     */
+    virtual UBool nextItem(UErrorCode &status);
+
+    /**
+     * Return the name of the index item currently being iterated over.
+     * Return an empty string if the position is before first item under this label,
+     * or after the last.
+     */
+    virtual const UnicodeString &getItemName() const;
+
+
+    /**
+     * Return the context pointer of the index item currently being iterated over.
+     * Return NULL if before the first item under this label,
+     * or after the last.
+     */
+    virtual const void *getItemContext() const;
+
+
+    /**
+     * Reset the item iterator position to before the first index item 
+     * under the current label.
+     */
     virtual void resetItemIterator();
 
   private:
@@ -273,18 +307,22 @@ class U_I18N_API IndexCharacters: public UObject {
 
      static UnicodeSet *getScriptSet(const UnicodeString &codePoint);
 
-     void buildIndex();
+     void buildIndex(UErrorCode &status);
 
 
      // TODO:  coordinate with Java. 
      //        Names anticipate an eventual plain C API.
      enum LabelType {
-         ALPHABETIC_INDEX_NORMAL   = 0,
+         ALPHABETIC_INDEX_NORMAL   =  0,
          ALPHABETIC_INDEX_UNDERFLOW = 1,
          ALPHABETIC_INDEX_INFLOW    = 2,
          ALPHABETIC_INDEX_OVERFLOW  = 3
      };
 
+
+    UnicodeSet *additions_;         // Set of additional index characters.  Union
+                                    //   of those explicitly set by the user, plus
+                                    //   those from additional locales.
 
      /*
      * A record to be sorted into buckets with getIndexBucketCharacters.
@@ -309,7 +347,14 @@ class U_I18N_API IndexCharacters: public UObject {
      // UVector elements are of type (Bucket *)
      UVector *buckets_;
      int32_t  labelsIterIndex_;    // Index of next item to return.
+     int32_t  itemsIterIndex_;
+     Bucket   *currentBucket_;       // While an iteration of the index in underway,
+                                     //   point the the bucket for the current label.
+                                     // NULL when no iteration underway.
 
+     UBool    indexBuildRequired_;   //  Caller has made changes to the index that
+                                     //  require rebuilding & bucketing before the
+                                     //  contents can be iterated.
      
 // Constants.  TODO:  move into a singleton and init constants only once.
 //
@@ -322,6 +367,7 @@ class U_I18N_API IndexCharacters: public UObject {
      UnicodeSet *IGNORE_SCRIPTS;
      UnicodeSet *TO_TRY;
      UVector    *FIRST_CHARS_IN_SCRIPTS;
+     UnicodeString *EMPTY_STRING;
 
      // LinkedHashMap<String, Set<String>> alreadyIn = new LinkedHashMap<String, Set<String>>();
      UHashtable *alreadyIn_;   // Key=UnicodeString, value=UnicodeSet

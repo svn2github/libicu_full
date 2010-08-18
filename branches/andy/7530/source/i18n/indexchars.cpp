@@ -62,17 +62,25 @@ static void appendUnicodeSetToUVector(UVector &dest, const UnicodeSet &source, U
 
 
 IndexCharacters::IndexCharacters(const Locale &locale, UErrorCode &status) {
+    init(status);
+    if (U_FAILURE(status)) {
+        return;
+    }
+    comparator_ = Collator::createInstance(locale, status);
+
+    // TODO:  Grab the exemplars for this locale, stick them whereever.
+
 }
 
 
-IndexCharacters::IndexCharacters(const Locale &locale, const UnicodeSet &additions, UErrorCode &status) {
+void IndexCharacters::setAdditionalIndexCharacters(const UnicodeSet &additions, UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return;
+    }
+    additions_->addAll(additions);
 }
 
-IndexCharacters::IndexCharacters(const IndexCharacters &other, UErrorCode &status) {
-}
-
-
-static int32_t maxCount = 99;    // Max number of index chars.
+static int32_t maxLabelCount_ = 99;    // Max number of index chars.
 
 IndexCharacters::IndexCharacters(const Locale &locale, RuleBasedCollator *collator, 
                    const UnicodeSet *exemplarChars, const UnicodeSet *additions, UErrorCode &status) {
@@ -147,11 +155,11 @@ IndexCharacters::IndexCharacters(const Locale &locale, RuleBasedCollator *collat
     appendUnicodeSetToUVector(*indexCharacters_, indexCharacterSet, status);
     indexCharacters_->sortWithUComparator(sortCollateComparator, comparator_, status);
     
-    // if the result is still too large, cut down to maxCount elements, by removing every nth element
+    // if the result is still too large, cut down to maxLabelCount_ elements, by removing every nth element
     //    Implemented by copying the elements to be retained to a new UVector.
 
     const int32_t size = indexCharacterSet.size() - 1;
-    if (size > maxCount) {
+    if (size > maxLabelCount_) {
         UVector *newIndexChars = new UVector(status);
         newIndexChars->setDeleter(uhash_deleteUnicodeString);
         int32_t count = 0;
@@ -159,7 +167,7 @@ IndexCharacters::IndexCharacters(const Locale &locale, RuleBasedCollator *collat
         for (int32_t srcIndex=0; srcIndex<indexCharacters_->size(); srcIndex++) {
             const UnicodeString *str = static_cast<const UnicodeString *>(indexCharacters_->elementAt(srcIndex));
             ++count;
-            const int32_t bump = count * maxCount / size;
+            const int32_t bump = count * maxLabelCount_ / size;
             if (bump == old) {
                 // it.remove();
             } else {
@@ -293,7 +301,6 @@ UnicodeString IndexCharacters::getOverflowComparisonString(const UnicodeString &
     return UnicodeString();
 }
 
-
 UnicodeSet *getScriptSet(const UnicodeString &codePoint, UErrorCode &status) {
     UChar32 cp = codePoint.char32At(0);
     UScriptCode scriptCode = uscript_getScript(cp, &status);
@@ -303,6 +310,13 @@ UnicodeSet *getScriptSet(const UnicodeString &codePoint, UErrorCode &status) {
 }
 
 void IndexCharacters::init(UErrorCode &status) {
+    // First put the object into a known state so that the destructor will function.
+    // No operations that may fail at this stage.
+
+    additions_     = NULL;
+    buckets_       = NULL;
+    currentBucket_ = NULL;
+
     // TODO:  pull the constant stuff into a singleton.
 
     OVERFLOW_MARKER = (UChar)0xFFFF;
@@ -320,23 +334,14 @@ void IndexCharacters::init(UErrorCode &status) {
             add(0xC544).add(0xC790).add(0xCC28).add(0xCE74).add(0xD0C0).add(0xD30C).add(0xD558);
 
 
-    // ETHIOPIC = new UnicodeSet("[[:Block=Ethiopic:]&[:Script=Ethiopic:]]");
-    ETHIOPIC = new UnicodeSet();
-    ETHIOPIC->applyIntPropertyValue(UCHAR_SCRIPT, USCRIPT_ETHIOPIC, status);
-    tempSet.applyIntPropertyValue(UCHAR_BLOCK, UBLOCK_ETHIOPIC, status);
-    ETHIOPIC->retainAll(tempSet);
+    UnicodeString EthiopicStr = UNICODE_STRING_SIMPLE("[[:Block=Ethiopic:]&[:Script=Ethiopic:]]");
+    ETHIOPIC = new UnicodeSet(EthiopicStr, status);
    
     CORE_LATIN = new UnicodeSet((UChar32)0x61, (UChar32)0x7a);  // ('a', 'z');
 
-    IGNORE_SCRIPTS = new UnicodeSet();
-    tempSet.applyIntPropertyValue(UCHAR_SCRIPT, USCRIPT_COMMON, status);
-    IGNORE_SCRIPTS->addAll(tempSet);
-    tempSet.applyIntPropertyValue(UCHAR_SCRIPT, USCRIPT_INHERITED, status);
-    IGNORE_SCRIPTS->addAll(tempSet);
-    tempSet.applyIntPropertyValue(UCHAR_SCRIPT, USCRIPT_UNKNOWN, status);
-    IGNORE_SCRIPTS->addAll(tempSet);
-    tempSet.applyIntPropertyValue(UCHAR_SCRIPT, USCRIPT_BRAILLE, status);
-    IGNORE_SCRIPTS->addAll(tempSet);
+    UnicodeString IgnoreString = UNICODE_STRING_SIMPLE(
+            "[[:sc=Common:][:sc=inherited:][:script=Unknown:][:script=braille:]]");
+    IGNORE_SCRIPTS = new UnicodeSet(IgnoreString, satus);
     IGNORE_SCRIPTS->freeze();
 
     UnicodeString nfcqcStr = UNICODE_STRING_SIMPLE("[:^nfcqc=no:]");
@@ -368,7 +373,6 @@ void IndexCharacters::init(UErrorCode &status) {
     // TODO: move to all constant stuff to a singleton, init it once.
     nfkdNormalizer         = Normalizer2::getInstance(NULL, "nfkc", UNORM2_DECOMPOSE, status);
 }
-
 
    
 //
@@ -503,49 +507,76 @@ void IndexCharacters::addItem(const icu_45::UnicodeString &name, void *context, 
     if (U_FAILURE(status)) {
         return;
     }
-    if (buckets_ != NULL) {
-        // This index is already built (being iterated.)
-        // Refuse to modify it.  TODO:  review this.  
-        status = U_INVALID_STATE_ERROR;
-        return;
-    }
     Record *r = new Record;
     // Note on ownership of the name string:  It stays with the Record.
     r->name_ = static_cast<UnicodeString *>(name.clone());
     r->context_ = context;
     inputRecords_->addElement(r, status);
+    indexBuildRequired_ = TRUE;
 }
 
 
-UBool IndexCharacters::nextLabel() {
-    if (buckets_ == NULL) {
-        buildIndex();
-        labelsIterIndex_ = 0;
-    } else {
-        ++labelsIterIndex_;
-    } 
+UBool IndexCharacters::nextLabel(UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return FALSE;
+    }
+    if (indexBuildRequired_ && currentBucket_ != NULL) {
+        status = U_ENUM_OUT_OF_SYNC_ERROR;
+        return FALSE;
+    }
+    buildIndex(status);  
+    if (U_FAILURE(status)) {
+        return FALSE;
+    }
+    ++labelsIterIndex_;
     if (labelsIterIndex_ >= buckets_->size()) {
         labelsIterIndex_ = buckets_->size();
+        return FALSE;
+    }
+    currentBucket_ = static_cast<Bucket *>(buckets_->elementAt(labelsIterIndex_));
+    resetItemIterator();
+    return TRUE;
+}
+
+const UnicodeString &IndexCharacters::getLabel() const {
+    if (currentBucket_ != NULL) {
+        return currentBucket_->label_;
+    } else {    
+        return *EMPTY_STRING;
+    }
+}
+
+
+void IndexCharacters::resetLabelIterator(UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return;
+    }
+    buildIndex(status);
+    labelsIterIndex_ = -1;
+    currentBucket_ = NULL;
+}
+
+
+UBool IndexCharacters::nextItem(UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return FALSE;
+    }
+    if (currentBucket_ == NULL) {
+        // We are trying to iterate over the items in a bucket, but there is no
+        // current bucket from the enumeration of buckets.
+        status = U_INVALID_STATE_ERROR;
+        return FALSE;
+    }
+    if (indexBuildRequired_) {
+        status = U_ENUM_OUT_OF_SYNC_ERROR;
+        return FALSE;
+    }
+    ++itemsIterIndex_;
+    if (itemsIterIndex_ >= currentBucket_->records_->size()) {
+        itemsIterIndex_  = currentBucket_->records_->size();
         return FALSE;
     }
     return TRUE;
 }
 
-const UnicodeString &IndexCharacters::getLabel() {
-    if (buckets_ == NULL) {
-        buildIndex();
-    }
-    if (labelsIterIndex >= buckets_->size()) {
-        return EMPTY_STRING;
-    } else {
-        Bucket *b = static_cast<Bucket>(buckets_->elementAt(labelsiterIndex));
-        return b->label_;
-    }
-}
-
-
-
-
-
 U_NAMESPACE_END
-
