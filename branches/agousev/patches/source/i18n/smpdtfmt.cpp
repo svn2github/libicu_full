@@ -1056,7 +1056,7 @@ SimpleDateFormat::formatGMTDefault(NumberFormat *currentNumberFormat,UnicodeStri
 int32_t
 SimpleDateFormat::parseGMTDefault(const UnicodeString &text, ParsePosition &pos) const {
     int32_t start = pos.getIndex();
-    NumberFormat *currentNumberFormat = getNumberFormat(UDAT_TIMEZONE_RFC_FIELD);
+    NumberFormat *currentNumberFormat = getNumberFormatByIndex(UDAT_TIMEZONE_RFC_FIELD);
 
     if (start + kUtLen + 1 >= text.length()) {
         pos.setErrorIndex(start);
@@ -1469,7 +1469,7 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
         return;
     }
 
-    currentNumberFormat = getNumberFormat(patternCharIndex);
+    currentNumberFormat = getNumberFormatByIndex(patternCharIndex);
     switch (patternCharIndex) {
 
     // for any "G" symbol, write out the appropriate era string
@@ -1734,7 +1734,7 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
 //----------------------------------------------------------------------
 
 NumberFormat *
-SimpleDateFormat::getNumberFormat(UDateFormatField index) const {
+SimpleDateFormat::getNumberFormatByIndex(UDateFormatField index) const {
     if (fNumberFormatters != NULL) {
         return fNumberFormatters[index];
     } else {
@@ -2388,7 +2388,7 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
     }
 
     patternCharIndex = (UDateFormatField)(patternCharPtr - DateFormatSymbols::getPatternUChars());
-    currentNumberFormat = getNumberFormat(patternCharIndex);
+    currentNumberFormat = getNumberFormatByIndex(patternCharIndex);
     UCalendarDateFields field = fgPatternIndexToCalendarField[patternCharIndex];
 
     // If there are any spaces here, skip over them.  If we hit the end

@@ -27,8 +27,13 @@
  */
 
 #if U_IOSTREAM_SOURCE >= 199711
+
+#if (__GNUC__ == 2)
+#include <iostream>
+#else
 #include <istream>
 #include <ostream>
+#endif
 
 U_NAMESPACE_BEGIN
 
