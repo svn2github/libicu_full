@@ -24,6 +24,7 @@
 #include "unicode/usetiter.h"
 #include "unicode/ustring.h"
 
+#include "ucln_in.h"
 #include "uhash.h"
 #include "uvector.h"
 
@@ -66,10 +67,11 @@ IndexCharacters::IndexCharacters(const Locale &locale, UErrorCode &status) {
     if (U_FAILURE(status)) {
         return;
     }
+    locale_ = locale;
     comparator_ = Collator::createInstance(locale, status);
-
-    // TODO:  Grab the exemplars for this locale, stick them whereever.
-
+    comparator_->setStrength(Collator::PRIMARY);
+    getIndexExemplars(*additions_, locale, status);
+    indexBuildRequired = TRUE;
 }
 
 
@@ -80,22 +82,31 @@ void IndexCharacters::setAdditionalIndexCharacters(const UnicodeSet &additions, 
     additions_->addAll(additions);
 }
 
-static int32_t maxLabelCount_ = 99;    // Max number of index chars.
 
-IndexCharacters::IndexCharacters(const Locale &locale, RuleBasedCollator *collator, 
-                   const UnicodeSet *exemplarChars, const UnicodeSet *additions, UErrorCode &status) {
-    init(status);
+void IndexCharacters::setAdditionalLocale(const Locale &locale, UErrorCode &status) {
     if (U_FAILURE(status)) {
         return;
     }
-    comparator_ = collator;
-    comparator_->setStrength(Collator::PRIMARY);
+    UnicodeSet additions;
+    getIndexExemplars(additions, locale, status);
+    additions_->addAll(additions);
+}
 
-    UBool explicitIndexChars = TRUE;
-    UnicodeSet *exemplars = NULL;
+
+static int32_t maxLabelCount_ = 99;    // Max number of index chars.
+
+IndexCharacters::buildIndex(UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return;
+    }
+    if (!indexBuildRequired) {
+        return;
+    }
+
+
+    UnicodeSet exemplars;
     if (exemplarChars == NULL) {
-        exemplars = getIndexExemplars(locale, explicitIndexChars, status);
-        // Note: explicitIndexChars is set if the locale data includes IndexChars.  Out parameter.
+        getIndexExemplars(locale, status);
     } else {
         exemplars = static_cast<UnicodeSet *>(exemplarChars->cloneAsThawed());
     }
@@ -186,19 +197,45 @@ IndexCharacters::IndexCharacters(const Locale &locale, RuleBasedCollator *collat
 }
 
 UnicodeSet *IndexCharacters::getIndexExemplars(
-        const Locale &locale, UBool &explicitIndexChars, UErrorCode &status) {
+        const Locale &locale, UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return NULL;
+    }
 
     LocalULocaleDataPointer uld(ulocdata_open(locale.getName(), &status));
     UnicodeSet *exemplars = UnicodeSet::fromUSet(
             ulocdata_getExemplarSet(uld.getAlias(), NULL, 0, ULOCDATA_ES_INDEX, &status));
     if (exemplars != NULL) {
-        explicitIndexChars = TRUE;
         return exemplars;
     }
-    explicitIndexChars = false;
+
+    // Locale data did not include explicit Index characters.
+    // Synthesize a set of them from the locale's standard exemplar characters.
 
     exemplars = UnicodeSet::fromUSet(
             ulocdata_getExemplarSet(uld.getAlias(), NULL, 0, ULOCDATA_ES_STANDARD, &status));
+    if (U_FAILURE(status)) {
+        delete exemplars;
+        return NULL;
+    }
+
+    // Upper-case any that aren't already so.
+    //   (We only do this for synthesized index characters.)
+    UnicodeSetIterator it(*exemplars);
+    UnicodeString upperC;
+    UnicodeSet  lowersToRemove;
+    UnicodeSet  uppersToAdd;
+    while (it.next()) {
+        const UnicodeString &exemplarC = it.getString();
+        upperC = exemplarC;
+        upperC.toUpper(locale);
+        if (exemplarC != upperC) {
+            lowersToRemove.add(exemplarC);
+            uppersToAdd.add(upperC);
+        }
+    }
+    exemplars->removeAll(lowersToRemove);
+    exemplars->addAll(uppersToAdd);
 
     // get the exemplars, and handle special cases
 
@@ -309,49 +346,28 @@ UnicodeSet *getScriptSet(const UnicodeString &codePoint, UErrorCode &status) {
     return set;
 }
 
+//
+//  init() - Common code for constructors.
+//
+
 void IndexCharacters::init(UErrorCode &status) {
-    // First put the object into a known state so that the destructor will function.
-    // No operations that may fail at this stage.
+    // Initialize statics if needed.
+    IndexCharacters::staticInit();
 
-    additions_     = NULL;
-    buckets_       = NULL;
-    currentBucket_ = NULL;
+    // Put the object into a known state so that the destructor will function.
 
-    // TODO:  pull the constant stuff into a singleton.
+    additions_             = NULL;
+    alreadyIn_             = NULL;
+    buckets_               = NULL;
+    currentBucket_         = NULL;
+    firstScriptCharacters_ = NULL;
+    indexCharacters_       = NULL;
+    noDistinctSorting_     = NULL;
+    notAlphabetic_         = NULL;
 
-    OVERFLOW_MARKER = (UChar)0xFFFF;
-    INFLOW_MARKER = (UChar)0xFFFD;
-
-    // "[[:alphabetic:]-[:mark:]]");
-    ALPHABETIC = new UnicodeSet();
-    ALPHABETIC->applyIntPropertyValue(UCHAR_ALPHABETIC, 1, status);
-    UnicodeSet tempSet;
-    tempSet.applyIntPropertyValue(UCHAR_GENERAL_CATEGORY_MASK, U_GC_M_MASK, status);
-    ALPHABETIC->removeAll(tempSet);
-    
-    HANGUL = new UnicodeSet();
-    HANGUL->add(0xAC00).add(0xB098).add(0xB2E4).add(0xB77C).add(0xB9C8).add(0xBC14).add(0xC0AC).
-            add(0xC544).add(0xC790).add(0xCC28).add(0xCE74).add(0xD0C0).add(0xD30C).add(0xD558);
-
-
-    UnicodeString EthiopicStr = UNICODE_STRING_SIMPLE("[[:Block=Ethiopic:]&[:Script=Ethiopic:]]");
-    ETHIOPIC = new UnicodeSet(EthiopicStr, status);
-   
-    CORE_LATIN = new UnicodeSet((UChar32)0x61, (UChar32)0x7a);  // ('a', 'z');
-
-    UnicodeString IgnoreString = UNICODE_STRING_SIMPLE(
-            "[[:sc=Common:][:sc=inherited:][:script=Unknown:][:script=braille:]]");
-    IGNORE_SCRIPTS = new UnicodeSet(IgnoreString, satus);
-    IGNORE_SCRIPTS->freeze();
-
-    UnicodeString nfcqcStr = UNICODE_STRING_SIMPLE("[:^nfcqc=no:]");
-    TO_TRY = new UnicodeSet(nfcqcStr, status);
-
-    Collator *rootCollator = Collator::createInstance(Locale::getRoot(), status);
-    FIRST_CHARS_IN_SCRIPTS = firstStringsInScript(rootCollator, status);
-
-
-    // private final LinkedHashMap<String, Set<String>> alreadyIn = new LinkedHashMap<String, Set<String>>();
+    if (U_FAILURE(status)) {
+        return;
+    }
     alreadyIn_             = uhash_open(uhash_hashUnicodeString,    // Key Hash,
                                         uhash_compareUnicodeString, // key Comparator, 
                                         NULL,                       // value Comparator
@@ -363,18 +379,121 @@ void IndexCharacters::init(UErrorCode &status) {
     indexCharacters_->setDeleter(uhash_deleteUnicodeString);
     indexCharacters_->setComparer(uhash_compareUnicodeString);
 
-
-
-
     noDistinctSorting_     = new UnicodeSet();
     notAlphabetic_         = new UnicodeSet();
     firstScriptCharacters_ = new UVector(status);
 
-    // TODO: move to all constant stuff to a singleton, init it once.
-    nfkdNormalizer         = Normalizer2::getInstance(NULL, "nfkc", UNORM2_DECOMPOSE, status);
-}
+    }
 
    
+static  UBool  indexCharactersAreInitialized = FALSE;
+
+//  Index Characters Clean up function.  Delete statically allocated constant stuff.
+U_CDECL_BEGIN
+static UBool UCALLCONV indexCharacters_cleanup(void) {
+    delete ALPHABETIC;
+    ALPHABETIC = NULL;
+    delete HANGUL;
+    HANGUL = NULL;
+    delete ETHIOPIC;
+    ETHIOPIC = NULL;
+    delete CORE_LATIN;
+    CORE_LATIN = NULL;
+    delete IGNORE_SCRIPTS;
+    IGNORE_SCRIPTS = NULL;
+    delete TO_TRY;
+    TO_TRY = NULL;
+    delete FIRST_CHARS_IN_SCRIPTS;
+    FIRST_CHARS_IN_SCRIPTS = NULL;
+    delete nfkdNormalizer;
+    nfkdNormalizer = NULL;
+    indexCharactersAreInitialized = FALSE;
+}
+U_CDECL_END
+
+
+//
+//  staticInit()    One-time initialization of constants.
+//                  Done inside a mutex.  Called from constructors.
+//                  Mutex overhead is not a concern.  Constructors are sufficiently heavy
+//                  that the cost of the mutex check is not significant.
+
+void IndexCharacters::staticInit(UErrorCode &status) {
+    static IndexCharsInitMutex;
+
+    Mutex mutex(&IndexCharsInitMutex);
+    if (isInitialized || U_FAILURE(status)) {
+        return;
+    }
+    UBool finishedInit = FALSE;
+
+    OVERFLOW_MARKER = (UChar)0xFFFF;
+    INFLOW_MARKER = (UChar)0xFFFD;
+
+    UnicodeString alphaString = UNICODE_STRING_SIMPLE("[[:alphabetic:]-[:mark:]]");
+    ALPHABETIC = new UnicodeSet(alphaString, status);
+    if (ALPHABETIC == NULL) {
+        goto err;
+    }
+    
+    HANGUL = new UnicodeSet();
+    HANGUL->add(0xAC00).add(0xB098).add(0xB2E4).add(0xB77C).add(0xB9C8).add(0xBC14).add(0xC0AC).
+            add(0xC544).add(0xC790).add(0xCC28).add(0xCE74).add(0xD0C0).add(0xD30C).add(0xD558);
+    if (ALPHABETIC == NULL) {
+        goto err;
+    }
+
+
+    UnicodeString EthiopicStr = UNICODE_STRING_SIMPLE("[[:Block=Ethiopic:]&[:Script=Ethiopic:]]");
+    ETHIOPIC = new UnicodeSet(EthiopicStr, status);
+    if (ALPHABETIC == NULL) {
+        goto err;
+    }
+   
+    CORE_LATIN = new UnicodeSet((UChar32)0x61, (UChar32)0x7a);  // ('a', 'z');
+    if (ALPHABETIC == NULL) {
+        goto err;
+    }
+
+    UnicodeString IgnoreStr= UNICODE_STRING_SIMPLE(
+            "[[:sc=Common:][:sc=inherited:][:script=Unknown:][:script=braille:]]");
+    IGNORE_SCRIPTS = new UnicodeSet(IgnoreStr, satus);
+    IGNORE_SCRIPTS->freeze();
+    if (ALPHABETIC == NULL) {
+        goto err;
+    }
+
+    UnicodeString nfcqcStr = UNICODE_STRING_SIMPLE("[:^nfcqc=no:]");
+    TO_TRY = new UnicodeSet(nfcqcStr, status);
+    if (ALPHABETIC == NULL) {
+        goto err;
+    }
+
+    Collator *rootCollator = Collator::createInstance(Locale::getRoot(), status);
+    FIRST_CHARS_IN_SCRIPTS = firstStringsInScript(rootCollator, status);
+    if (ALPHABETIC == NULL) {
+        goto err;
+    }
+
+    nfkdNormalizer         = Normalizer2::getInstance(NULL, "nfkc", UNORM2_DECOMPOSE, status);
+    if (ALPHABETIC == NULL) {
+        goto err;
+    }
+    finishedInit = TRUE;
+
+  err:
+    if (!finishedInit && U_SUCCESS(status)) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+    }
+    if (U_FAILURE(status)) {
+        indexCharacters_cleanup();
+        return;
+    }
+    ucln_i18n_registerCleanup(CLN_I18N_INDEX_CHARACTERS, indexCharacters_cleanup);
+    indexCharactersAreInitialized = TRUE;
+}
+
+
 //
 //  Comparison function for UVector for sorting with a collator.
 //

@@ -296,8 +296,7 @@ class U_I18N_API IndexCharacters: public UObject {
      // Common initialization, for use from all constructors.
      void init(UErrorCode &status);
 
-     UnicodeSet *getIndexExemplars(const Locale &locale, UBool &explicitIndexChars,
-                                          UErrorCode &status);
+     void getIndexExemplars(UnicodeSet &fillIn, const Locale &locale, UErrorCode &status);
          // TODO:  change getIndexExemplars() to static once the constant UnicodeSets
          //         are factored out into a singleton.
 
@@ -324,7 +323,7 @@ class U_I18N_API IndexCharacters: public UObject {
                                     //   of those explicitly set by the user, plus
                                     //   those from additional locales.
 
-     /*
+    /*
      * A record to be sorted into buckets with getIndexBucketCharacters.
      */
      struct Record: public UMemory {
@@ -346,7 +345,8 @@ class U_I18N_API IndexCharacters: public UObject {
      // Holds the contents of this index, buckets of user items.
      // UVector elements are of type (Bucket *)
      UVector *buckets_;
-     int32_t  labelsIterIndex_;    // Index of next item to return.
+
+     int32_t  labelsIterIndex_;      // Index of next item to return.
      int32_t  itemsIterIndex_;
      Bucket   *currentBucket_;       // While an iteration of the index in underway,
                                      //   point the the bucket for the current label.
@@ -356,20 +356,6 @@ class U_I18N_API IndexCharacters: public UObject {
                                      //  require rebuilding & bucketing before the
                                      //  contents can be iterated.
      
-// Constants.  TODO:  move into a singleton and init constants only once.
-//
-     UChar32 OVERFLOW_MARKER;
-     UChar32 INFLOW_MARKER;
-     UnicodeSet *ALPHABETIC;
-     UnicodeSet *HANGUL;
-     UnicodeSet *ETHIOPIC;
-     UnicodeSet *CORE_LATIN;
-     UnicodeSet *IGNORE_SCRIPTS;
-     UnicodeSet *TO_TRY;
-     UVector    *FIRST_CHARS_IN_SCRIPTS;
-     UnicodeString *EMPTY_STRING;
-
-     // LinkedHashMap<String, Set<String>> alreadyIn = new LinkedHashMap<String, Set<String>>();
      UHashtable *alreadyIn_;   // Key=UnicodeString, value=UnicodeSet
 
      UVector    *indexCharacters_;   // Contents are (UnicodeString *)
@@ -384,6 +370,19 @@ class U_I18N_API IndexCharacters: public UObject {
      UnicodeString  overflowLabel_;
      UnicodeString  underflowLabel_;
      UnicodeString  overflowComparisonString_;
+
+// Constants.  TODO:  move into a singleton and init constants only once.
+//
+     UChar32 OVERFLOW_MARKER;
+     UChar32 INFLOW_MARKER;
+     UnicodeSet *ALPHABETIC;
+     UnicodeSet *HANGUL;
+     UnicodeSet *ETHIOPIC;
+     UnicodeSet *CORE_LATIN;
+     UnicodeSet *IGNORE_SCRIPTS;
+     UnicodeSet *TO_TRY;
+     UVector    *FIRST_CHARS_IN_SCRIPTS;
+     UnicodeString *EMPTY_STRING;
 
 
 };
