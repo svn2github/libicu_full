@@ -29,6 +29,9 @@ class RuleBasedCollator;
 class StringEnumeration;
 class UnicodeSet;
 class UVector;
+U_CDECL_BEGIN
+static UBool U_CALLCONV indexCharacters_cleanup(void);
+U_CDECL_END
 
 /**
  * A set of characters for use as a UI "index", that is, a
@@ -92,7 +95,7 @@ class U_I18N_API IndexCharacters: public UObject {
      * that are already in the index; they do not replace the existing 
      * index characters.
      */
-     void setAdditionalIndexChars(const UnicodeSet &additions, UErrorCode &status);
+     void addIndexCharacters(const UnicodeSet &additions, UErrorCode &status);
 
      /**
       * Add the index characters from a Locale to the index.  The new characters
@@ -101,19 +104,8 @@ class U_I18N_API IndexCharacters: public UObject {
       * changed; it remains that of the locale that was originally specified
       * when creating this Index.
       */
-     void setAdditionalLocale(const Locale &locale, UErrorCode &status);
+     void addLocale(const Locale &locale, UErrorCode &status);
 
-
-
-    /**
-     * Internal constructor.  Has much implementation for others.
-     * @internal
-     * @param exemplarChars
-     *            TODO
-     */
-    IndexCharacters(const Locale &locale, RuleBasedCollator *collator, 
-                    const UnicodeSet *exemplarChars, const UnicodeSet *additions, 
-                    UErrorCode &status);
 
 
      /**
@@ -142,23 +134,6 @@ class U_I18N_API IndexCharacters: public UObject {
      * @draft ICU 4.6
      */
      virtual UBool operator!=(const IndexCharacters& other) const;
-
-
-
-    /**
-     * Get a String Enumeration that will produce the index characters.
-     * @return A String Enumeration over the index characters.
-     * @draft ICU 4.6
-     */
-     virtual StringEnumeration *getIndexCharacters() const;
-
-   /**
-     * Get the locale.
-     * TODO: The one specified?  The one actually used?  For collation or exepmplars?
-     * @return The locale.
-     * @draft ICU 4.6
-     */
-    virtual Locale getLocale() const;
 
 
     /**
@@ -231,6 +206,19 @@ class U_I18N_API IndexCharacters: public UObject {
     virtual void addItem(const UnicodeString &name, void *context, UErrorCode &status);
 
     /**
+     * Remove all items from the Index.  The set of labels, or headings, under
+     * which items are classified is not altered.
+     */
+    virtual void removeAllItems(UErrorCode &status);
+
+
+    /**  Get the number of labels in this index.
+     *      Note: may trigger lazy index construction.
+     */
+    virtual int32_t  countLabels(UErrorCode &status);
+
+
+    /**
      *   Advance the iteration over the labels of this index.  Return FALSE if
      *   there are no more labels.
      *
@@ -296,13 +284,19 @@ class U_I18N_API IndexCharacters: public UObject {
      // Common initialization, for use from all constructors.
      void init(UErrorCode &status);
 
-     void getIndexExemplars(UnicodeSet &fillIn, const Locale &locale, UErrorCode &status);
+     // Initialize & destruct static constants used by this class.
+     static void staticInit(UErrorCode &status);
+     friend UBool indexCharacters_cleanup(void);
+
+     // Add index characters from the specified locale to the dest set.
+     // Does not remove any previous contents from dest.
+     void getIndexExemplars(UnicodeSet &dest, const Locale &locale, UErrorCode &status);
          // TODO:  change getIndexExemplars() to static once the constant UnicodeSets
          //         are factored out into a singleton.
 
-     UVector *firstStringsInScript(Collator *coll, UErrorCode &status);
+     static UVector *firstStringsInScript(Collator *coll, UErrorCode &status);
 
-     UnicodeString separated(const UnicodeString &item);
+     static UnicodeString separated(const UnicodeString &item);
 
      static UnicodeSet *getScriptSet(const UnicodeString &codePoint);
 
@@ -318,10 +312,6 @@ class U_I18N_API IndexCharacters: public UObject {
          ALPHABETIC_INDEX_OVERFLOW  = 3
      };
 
-
-    UnicodeSet *additions_;         // Set of additional index characters.  Union
-                                    //   of those explicitly set by the user, plus
-                                    //   those from additional locales.
 
     /*
      * A record to be sorted into buckets with getIndexBucketCharacters.
@@ -339,7 +329,7 @@ class U_I18N_API IndexCharacters: public UObject {
          UnicodeString     label_;
          UnicodeString     lowerBoundary_;
          LabelType         labelType_;
-         UVector           *records_;
+         UVector           *records_;  // Records are owned by inputRecords_ vector.
      };
 
      // Holds the contents of this index, buckets of user items.
@@ -356,9 +346,15 @@ class U_I18N_API IndexCharacters: public UObject {
                                      //  require rebuilding & bucketing before the
                                      //  contents can be iterated.
      
-     UHashtable *alreadyIn_;   // Key=UnicodeString, value=UnicodeSet
+     UHashtable *alreadyIn_;         // Key=UnicodeString, value=UnicodeSet
 
-     UVector    *indexCharacters_;   // Contents are (UnicodeString *)
+     UnicodeSet *rawIndexChars_;     // Set of index characters.  Union
+                                     //   of those explicitly set by the user plus
+                                     //   those from locales.  Raw values, before
+                                     //   crunching into bucket labels.
+
+     UVector    *indexCharacters_;   // Set of index characters, after processing, sorting.
+
      UnicodeSet *noDistinctSorting_;
      UnicodeSet *notAlphabetic_;
      UVector    *firstScriptCharacters_;
@@ -371,19 +367,16 @@ class U_I18N_API IndexCharacters: public UObject {
      UnicodeString  underflowLabel_;
      UnicodeString  overflowComparisonString_;
 
-// Constants.  TODO:  move into a singleton and init constants only once.
-//
-     UChar32 OVERFLOW_MARKER;
-     UChar32 INFLOW_MARKER;
-     UnicodeSet *ALPHABETIC;
-     UnicodeSet *HANGUL;
-     UnicodeSet *ETHIOPIC;
-     UnicodeSet *CORE_LATIN;
-     UnicodeSet *IGNORE_SCRIPTS;
-     UnicodeSet *TO_TRY;
-     UVector    *FIRST_CHARS_IN_SCRIPTS;
-     UnicodeString *EMPTY_STRING;
+// Constants.  Lazily initialized the first time an IndexCharacters object is created.
 
+     static UnicodeSet *ALPHABETIC;
+     static UnicodeSet *CORE_LATIN;
+     static UnicodeSet *ETHIOPIC;
+     static UnicodeSet *HANGUL;
+     static UnicodeSet *IGNORE_SCRIPTS;
+     static UnicodeSet *TO_TRY;
+     static UVector    *FIRST_CHARS_IN_SCRIPTS;
+     static const UnicodeString *EMPTY_STRING;
 
 };
 
