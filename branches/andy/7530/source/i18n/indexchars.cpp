@@ -31,6 +31,9 @@
 
 U_NAMESPACE_BEGIN
 
+UOBJECT_DEFINE_RTTI_IMPLEMENTATION(IndexCharacters)
+
+
 // Forward Declarations
 static int32_t U_CALLCONV
 PreferenceComparator(const void *context, const void *left, const void *right);
@@ -88,7 +91,9 @@ IndexCharacters::~IndexCharacters() {
     delete indexCharacters_;
     delete noDistinctSorting_;
     delete notAlphabetic_;
-    delete firstScriptCharacters_;
+    // TODO:  firstScriptCharacters_ is temporarily a pointer to the global FIRST_CHARS_IN_SCRIPTS.
+    //        Delete it here if/when we get instance data rather than shared global data.
+    // delete firstScriptCharacters_;
     delete comparator_;
 }
 
@@ -119,7 +124,7 @@ int32_t IndexCharacters::countLabels(UErrorCode &status) {
     if (U_FAILURE(status)) {
         return 0;
     }
-    return buckets_->size();
+    return bucketList_->size();
 }
 
 
@@ -204,12 +209,48 @@ void IndexCharacters::buildIndex(UErrorCode &status) {
         }
         delete indexCharacters_;
         indexCharacters_ = newIndexChars;
-        firstScriptCharacters_ = FIRST_CHARS_IN_SCRIPTS;  // TODO, use collation method when fast enough.
-                                                          //   Caution, will need to delete object in
-                                                          //   destructor when making this change.
-        // firstStringsInScript(comparator);
     }
- 
+    // firstStringsInScript(comparator);  // TODO: use collation method when fast enough
+    firstScriptCharacters_ = FIRST_CHARS_IN_SCRIPTS;
+    buildBucketList();    // Corresponds to Java BucketList constructor.
+
+}
+
+
+void IndexCharacters::buildBucketList(UErrorCode &status) {
+                bucketList.add(new Bucket<V>(getUnderflowLabel(), "", Bucket.LabelType.UNDERFLOW));
+
+    // Build up the list, adding underflow, additions, overflow
+    // insert infix labels as needed, using \uFFFF.
+    const UnicodeString *last = static_cast<UnicodeString *>(indexChars_->elementAt(0));
+    Bucket *b = new Bucket(last, last, ALPHABETIC_INDEX_NORMAL, status);
+    bucketList_->addElement(b, status);
+
+    UnicodeSet lastSet; 
+    UnicodeSet set;
+    getScriptSet(lastSet, last, status);
+    lastSet.removeAll(*IGNORE_SCRIPTS);
+
+    for (int i = 1; i < indexCharacters_.size(); ++i) {
+        UnicodeString *current = static_cast<UnicodeString *>indexCharacters_->elementAt(i);
+        getScriptSet(set, current, status);
+        set.removeAll(*IGNORE_SCRIPTS);
+        if (lastSet.containsNone(set)) {
+            // check for adjacent
+            const UnicodeString *overflowComparisonString = getOverflowComparisonString(last);
+            if (comparator.compare(overflowComparisonString, current) < 0) {
+                bucketList.add(new Bucket<V>(getInflowLabel(), overflowComparisonString, Bucket.LabelType.INFLOW));
+                i++;
+                lastSet = set;
+            }
+        }
+        bucketList.add(new Bucket<V>(current, current, Bucket.LabelType.NORMAL));
+        last = current;
+        lastSet = set;
+    }
+    String limitString = getOverflowComparisonString(last);
+    bucketList.add(new Bucket<V>(getOverflowLabel(), limitString, Bucket.LabelType.OVERFLOW)); // final, overflow bucket
+
 }
 
 void IndexCharacters::getIndexExemplars(UnicodeSet  &dest, const Locale &locale, UErrorCode &status) {
@@ -336,18 +377,20 @@ UnicodeString IndexCharacters::getOverflowComparisonString(const UnicodeString &
         const UnicodeString *s = 
                 static_cast<const UnicodeString *>(firstScriptCharacters_->elementAt(i));
         if (comparator_->compare(*s, lowerLimit) > 0) {
-            return *s;   // returning string by value
+            return *s;
         }
     }
-    return UnicodeString();
+    return *EMPTY_STRING;
 }
 
-UnicodeSet *getScriptSet(const UnicodeString &codePoint, UErrorCode &status) {
+UnicodeSet *getScriptSet(UnicodeSet &dest, const UnicodeString &codePoint, UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return &dest;
+    }
     UChar32 cp = codePoint.char32At(0);
     UScriptCode scriptCode = uscript_getScript(cp, &status);
-    UnicodeSet *set = new UnicodeSet();
-    set->applyIntPropertyValue(UCHAR_SCRIPT, scriptCode, status);
-    return set;
+    dest.applyIntPropertyValue(UCHAR_SCRIPT, scriptCode, status);
+    return &dest;
 }
 
 //
@@ -360,14 +403,15 @@ void IndexCharacters::init(UErrorCode &status) {
 
     // Put the object into a known state so that the destructor will function.
 
-    rawIndexChars_         = NULL;
     alreadyIn_             = NULL;
-    buckets_               = NULL;
+    bucketList_            = NULL;
     currentBucket_         = NULL;
     firstScriptCharacters_ = NULL;
     indexCharacters_       = NULL;
+    inputRecords_          = NULL;
     noDistinctSorting_     = NULL;
     notAlphabetic_         = NULL;
+    rawIndexChars_         = NULL;
 
     if (U_FAILURE(status)) {
         return;
@@ -383,11 +427,14 @@ void IndexCharacters::init(UErrorCode &status) {
     indexCharacters_->setDeleter(uhash_deleteUnicodeString);
     indexCharacters_->setComparer(uhash_compareUnicodeString);
 
+    inputRecords_          = new UVector(status);
     noDistinctSorting_     = new UnicodeSet();
     notAlphabetic_         = new UnicodeSet();
     firstScriptCharacters_ = new UVector(status);
+    rawIndexChars_         = new UnicodeSet();
 
-    }
+    // TODO:  check for memory allocation failures.
+}
 
    
 static  UBool  indexCharactersAreInitialized = FALSE;
@@ -395,26 +442,29 @@ static  UBool  indexCharactersAreInitialized = FALSE;
 //  Index Characters Clean up function.  Delete statically allocated constant stuff.
 U_CDECL_BEGIN
 static UBool U_CALLCONV indexCharacters_cleanup(void) {
-    delete IndexCharacters::ALPHABETIC;
-    IndexCharacters::ALPHABETIC = NULL;
-    delete IndexCharacters::HANGUL;
-    IndexCharacters::HANGUL = NULL;
-    delete IndexCharacters::ETHIOPIC;
-    IndexCharacters::ETHIOPIC = NULL;
-    delete IndexCharacters::CORE_LATIN;
-    IndexCharacters::CORE_LATIN = NULL;
-    delete IndexCharacters::IGNORE_SCRIPTS;
-    IndexCharacters::IGNORE_SCRIPTS = NULL;
-    delete IndexCharacters::TO_TRY;
-    IndexCharacters::TO_TRY = NULL;
-    delete IndexCharacters::FIRST_CHARS_IN_SCRIPTS;
-    IndexCharacters::FIRST_CHARS_IN_SCRIPTS = NULL;
-    nfkdNormalizer = NULL;  // ref to a singleton.  Do not delete.
-
-    indexCharactersAreInitialized = FALSE;
+    IndexCharacters::staticCleanup();
     return TRUE;
 }
 U_CDECL_END
+
+void IndexCharacters::staticCleanup() {
+    delete ALPHABETIC;
+    ALPHABETIC = NULL;
+    delete HANGUL;
+    HANGUL = NULL;
+    delete ETHIOPIC;
+    ETHIOPIC = NULL;
+    delete CORE_LATIN;
+    CORE_LATIN = NULL;
+    delete IGNORE_SCRIPTS;
+    IGNORE_SCRIPTS = NULL;
+    delete TO_TRY;
+    TO_TRY = NULL;
+    delete FIRST_CHARS_IN_SCRIPTS;
+    FIRST_CHARS_IN_SCRIPTS = NULL;
+    nfkdNormalizer = NULL;  // ref to a singleton.  Do not delete.
+    indexCharactersAreInitialized = FALSE;
+}
 
 
 UnicodeSet *IndexCharacters::ALPHABETIC;
@@ -673,11 +723,11 @@ UBool IndexCharacters::nextLabel(UErrorCode &status) {
         return FALSE;
     }
     ++labelsIterIndex_;
-    if (labelsIterIndex_ >= buckets_->size()) {
-        labelsIterIndex_ = buckets_->size();
+    if (labelsIterIndex_ >= bucketList_->size()) {
+        labelsIterIndex_ = bucketList_->size();
         return FALSE;
     }
-    currentBucket_ = static_cast<Bucket *>(buckets_->elementAt(labelsIterIndex_));
+    currentBucket_ = static_cast<Bucket *>(bucketList_->elementAt(labelsIterIndex_));
     resetItemIterator();
     return TRUE;
 }

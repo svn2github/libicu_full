@@ -29,9 +29,6 @@ class RuleBasedCollator;
 class StringEnumeration;
 class UnicodeSet;
 class UVector;
-U_CDECL_BEGIN
-static UBool U_CALLCONV indexCharacters_cleanup(void);
-U_CDECL_END
 
 /**
  * A set of characters for use as a UI "index", that is, a
@@ -275,6 +272,33 @@ class U_I18N_API IndexCharacters: public UObject {
      */
     virtual void resetItemIterator();
 
+   /**
+     * Returns a unique class ID POLYMORPHICALLY.  Pure virtual override.
+     * This method is to implement a simple version of RTTI, since not all
+     * C++ compilers support genuine RTTI.  Polymorphic operator==() and
+     * clone() methods call this method.
+     *
+     * @return          The class ID for this object. All objects of a
+     *                  given class have the same class ID.  Objects of
+     *                  other classes have different class IDs.
+     * @draft ICU 4.6
+     */
+    virtual UClassID getDynamicClassID(void) const;
+
+    /**
+     * Returns the class ID for this class.  This is useful only for
+     * comparing to a return value from getDynamicClassID().  For example:
+     *
+     *      Base* polymorphic_pointer = createPolymorphicObject();
+     *      if (polymorphic_pointer->getDynamicClassID() ==
+     *          Derived::getStaticClassID()) ...
+     *
+     * @return          The class ID for all objects of this class.
+     * @sdraft ICU 4.6
+     */
+    static UClassID U_EXPORT2 getStaticClassID(void);
+
+
   private:
      /**
       *   No assignment.  IndexCharacters objects are const after creation/
@@ -286,7 +310,15 @@ class U_I18N_API IndexCharacters: public UObject {
 
      // Initialize & destruct static constants used by this class.
      static void staticInit(UErrorCode &status);
-     friend UBool indexCharacters_cleanup(void);
+
+     /**
+      *   Delete all shared (static) data associated with IndexCharacters.
+      *   Internal function, not intended for direct use. 
+      *   @internal.
+      */
+   public:
+     static void staticCleanup();
+   private:
 
      // Add index characters from the specified locale to the dest set.
      // Does not remove any previous contents from dest.
@@ -298,9 +330,10 @@ class U_I18N_API IndexCharacters: public UObject {
 
      static UnicodeString separated(const UnicodeString &item);
 
-     static UnicodeSet *getScriptSet(const UnicodeString &codePoint);
+     static UnicodeSet *getScriptSet(UnicodeSet &dest, const UnicodeString &codePoint);
 
      void buildIndex(UErrorCode &status);
+     void buildBucketList(UErrorCode &status);
 
 
      // TODO:  coordinate with Java. 
@@ -330,11 +363,13 @@ class U_I18N_API IndexCharacters: public UObject {
          UnicodeString     lowerBoundary_;
          LabelType         labelType_;
          UVector           *records_;  // Records are owned by inputRecords_ vector.
+         Bucket(const UnicodeString *label, const UnicodeString *lowerBoundary, LabelType type);
+         ~Bucket();
      };
 
      // Holds the contents of this index, buckets of user items.
      // UVector elements are of type (Bucket *)
-     UVector *buckets_;
+     UVector *bucketList_;
 
      int32_t  labelsIterIndex_;      // Index of next item to return.
      int32_t  itemsIterIndex_;
@@ -357,7 +392,8 @@ class U_I18N_API IndexCharacters: public UObject {
 
      UnicodeSet *noDistinctSorting_;
      UnicodeSet *notAlphabetic_;
-     UVector    *firstScriptCharacters_;
+     UVector    *firstScriptCharacters_;  // The first character from each script,
+                                          //   in collation order.
 
      Locale    locale_;
      Collator  *comparator_;
