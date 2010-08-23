@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2009-2010, International Business Machines Corporation and         *
+* Copyright (C) 2009-2010, International Business Machines Corporation and    *
 * others. All Rights Reserved.                                                *
 *******************************************************************************
 */
@@ -212,45 +212,53 @@ void IndexCharacters::buildIndex(UErrorCode &status) {
     }
     // firstStringsInScript(comparator);  // TODO: use collation method when fast enough
     firstScriptCharacters_ = FIRST_CHARS_IN_SCRIPTS;
-    buildBucketList();    // Corresponds to Java BucketList constructor.
+    buildBucketList(status);    // Corresponds to Java BucketList constructor.
 
 }
 
+//
+//  buildBucketList()    Corresponds to the BucketList constructor in the Java version.
 
 void IndexCharacters::buildBucketList(UErrorCode &status) {
-                bucketList.add(new Bucket<V>(getUnderflowLabel(), "", Bucket.LabelType.UNDERFLOW));
+    UnicodeString labelStr = getUnderflowLabel(status);
+    Bucket *b = new Bucket(labelStr, *EMPTY_STRING, ALPHABETIC_INDEX_UNDERFLOW, status);
+    bucketList_->addElement(b, status);
 
     // Build up the list, adding underflow, additions, overflow
     // insert infix labels as needed, using \uFFFF.
-    const UnicodeString *last = static_cast<UnicodeString *>(indexChars_->elementAt(0));
-    Bucket *b = new Bucket(last, last, ALPHABETIC_INDEX_NORMAL, status);
+    const UnicodeString *last = static_cast<UnicodeString *>(indexCharacters_->elementAt(0));
+    b = new Bucket(*last, *last, ALPHABETIC_INDEX_NORMAL, status);
     bucketList_->addElement(b, status);
 
     UnicodeSet lastSet; 
     UnicodeSet set;
-    getScriptSet(lastSet, last, status);
+    IndexCharacters::getScriptSet(lastSet, *last, status);
     lastSet.removeAll(*IGNORE_SCRIPTS);
 
-    for (int i = 1; i < indexCharacters_.size(); ++i) {
-        UnicodeString *current = static_cast<UnicodeString *>indexCharacters_->elementAt(i);
-        getScriptSet(set, current, status);
+    for (int i = 1; i < indexCharacters_->size(); ++i) {
+        UnicodeString *current = static_cast<UnicodeString *>(indexCharacters_->elementAt(i));
+        getScriptSet(set, *current, status);
         set.removeAll(*IGNORE_SCRIPTS);
         if (lastSet.containsNone(set)) {
             // check for adjacent
-            const UnicodeString *overflowComparisonString = getOverflowComparisonString(last);
-            if (comparator.compare(overflowComparisonString, current) < 0) {
-                bucketList.add(new Bucket<V>(getInflowLabel(), overflowComparisonString, Bucket.LabelType.INFLOW));
+            UnicodeString overflowComparisonString = getOverflowComparisonString(*last, status);
+            if (comparator_->compare(overflowComparisonString, *current) < 0) {
+                labelStr = getInflowLabel(status);
+                b = new Bucket(labelStr, overflowComparisonString, ALPHABETIC_INDEX_INFLOW, status);
+                bucketList_->addElement(b, status);
                 i++;
                 lastSet = set;
             }
         }
-        bucketList.add(new Bucket<V>(current, current, Bucket.LabelType.NORMAL));
+        b = new Bucket(*current, *current, ALPHABETIC_INDEX_NORMAL, status);
+        bucketList_->addElement(b, status);
         last = current;
         lastSet = set;
     }
-    String limitString = getOverflowComparisonString(last);
-    bucketList.add(new Bucket<V>(getOverflowLabel(), limitString, Bucket.LabelType.OVERFLOW)); // final, overflow bucket
-
+    UnicodeString limitString = getOverflowComparisonString(*last, status);
+    b = new Bucket(getOverflowLabel(status), limitString, ALPHABETIC_INDEX_OVERFLOW, status);
+    bucketList_->addElement(b, status);
+    // final overflow bucket
 }
 
 void IndexCharacters::getIndexExemplars(UnicodeSet  &dest, const Locale &locale, UErrorCode &status) {
@@ -372,7 +380,7 @@ UnicodeString IndexCharacters::getUnderflowLabel(UErrorCode &status) const {
     return underflowLabel_;
 }
 
-UnicodeString IndexCharacters::getOverflowComparisonString(const UnicodeString &lowerLimit) {
+UnicodeString IndexCharacters::getOverflowComparisonString(const UnicodeString &lowerLimit, UErrorCode &status) {
     for (int32_t i=0; i<firstScriptCharacters_->size(); i++) {
         const UnicodeString *s = 
                 static_cast<const UnicodeString *>(firstScriptCharacters_->elementAt(i));

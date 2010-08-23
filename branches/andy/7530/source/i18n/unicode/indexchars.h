@@ -185,7 +185,7 @@ class U_I18N_API IndexCharacters: public UObject {
      * @return string that defines top of the overflow buck for lowerLimit, or null if there is none
      * @draft ICU 4.6
      */
-    virtual UnicodeString getOverflowComparisonString(const UnicodeString &lowerLimit);
+    virtual UnicodeString getOverflowComparisonString(const UnicodeString &lowerLimit, UErrorCode &status);
     
 
     /**
@@ -330,7 +330,7 @@ class U_I18N_API IndexCharacters: public UObject {
 
      static UnicodeString separated(const UnicodeString &item);
 
-     static UnicodeSet *getScriptSet(UnicodeSet &dest, const UnicodeString &codePoint);
+     static UnicodeSet *getScriptSet(UnicodeSet &dest, const UnicodeString &codePoint, UErrorCode &status);
 
      void buildIndex(UErrorCode &status);
      void buildBucketList(UErrorCode &status);
@@ -363,7 +363,10 @@ class U_I18N_API IndexCharacters: public UObject {
          UnicodeString     lowerBoundary_;
          LabelType         labelType_;
          UVector           *records_;  // Records are owned by inputRecords_ vector.
-         Bucket(const UnicodeString *label, const UnicodeString *lowerBoundary, LabelType type);
+         
+         Bucket(const UnicodeString &label,         // Parameter strings are copied.
+                const UnicodeString &lowerBoundary, 
+                LabelType type, UErrorCode &status);
          ~Bucket();
      };
 
