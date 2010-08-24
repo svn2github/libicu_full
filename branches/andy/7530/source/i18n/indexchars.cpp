@@ -50,6 +50,13 @@ uhash_deleteUnicodeSet(void *obj) {
     delete static_cast<UnicodeSet *>(obj);
 }
 
+//  UVector<Bucket *> support function, delete a Bucket.
+static void U_CALLCONV
+indexChars_deleteBucket(void *obj) {
+    delete static_cast<IndexCharacters::Bucket *>(obj);
+}
+
+
 static const Normalizer2 *nfkdNormalizer;
 
 //
@@ -85,16 +92,18 @@ IndexCharacters::IndexCharacters(const Locale &locale, UErrorCode &status) {
 
 
 IndexCharacters::~IndexCharacters() {
-    delete rawIndexChars_;
-    delete inputRecords_;
     uhash_close(alreadyIn_);
+    delete bucketList_;
     delete indexCharacters_;
+    delete inputRecords_;
     delete noDistinctSorting_;
     delete notAlphabetic_;
+    delete rawIndexChars_;
+    delete comparator_;
+    
     // TODO:  firstScriptCharacters_ is temporarily a pointer to the global FIRST_CHARS_IN_SCRIPTS.
     //        Delete it here if/when we get instance data rather than shared global data.
     // delete firstScriptCharacters_;
-    delete comparator_;
 }
 
 
@@ -214,6 +223,8 @@ void IndexCharacters::buildIndex(UErrorCode &status) {
     firstScriptCharacters_ = FIRST_CHARS_IN_SCRIPTS;
     buildBucketList(status);    // Corresponds to Java BucketList constructor.
 
+    indexBuildRequired_ = FALSE;
+    resetLabelIterator(status);
 }
 
 //
@@ -391,7 +402,7 @@ UnicodeString IndexCharacters::getOverflowComparisonString(const UnicodeString &
     return *EMPTY_STRING;
 }
 
-UnicodeSet *getScriptSet(UnicodeSet &dest, const UnicodeString &codePoint, UErrorCode &status) {
+UnicodeSet *IndexCharacters::getScriptSet(UnicodeSet &dest, const UnicodeString &codePoint, UErrorCode &status) {
     if (U_FAILURE(status)) {
         return &dest;
     }
@@ -413,10 +424,14 @@ void IndexCharacters::init(UErrorCode &status) {
 
     alreadyIn_             = NULL;
     bucketList_            = NULL;
+    comparator_            = NULL;
     currentBucket_         = NULL;
     firstScriptCharacters_ = NULL;
+    indexBuildRequired_    = TRUE;
     indexCharacters_       = NULL;
     inputRecords_          = NULL;
+    itemsIterIndex_        = 0;
+    labelsIterIndex_       = 0;
     noDistinctSorting_     = NULL;
     notAlphabetic_         = NULL;
     rawIndexChars_         = NULL;
@@ -431,14 +446,16 @@ void IndexCharacters::init(UErrorCode &status) {
     uhash_setKeyDeleter(alreadyIn_, uhash_deleteUnicodeString);
     uhash_setValueDeleter(alreadyIn_, uhash_deleteUnicodeSet);
 
-    indexCharacters_ = new UVector(status);
+    bucketList_            = new UVector(status);
+    bucketList_->setDeleter(indexChars_deleteBucket);
+    indexCharacters_       = new UVector(status);
     indexCharacters_->setDeleter(uhash_deleteUnicodeString);
     indexCharacters_->setComparer(uhash_compareUnicodeString);
 
     inputRecords_          = new UVector(status);
     noDistinctSorting_     = new UnicodeSet();
     notAlphabetic_         = new UnicodeSet();
-    firstScriptCharacters_ = new UVector(status);
+    // firstScriptCharacters_ = new UVector(status);
     rawIndexChars_         = new UnicodeSet();
 
     // TODO:  check for memory allocation failures.
@@ -590,7 +607,6 @@ sortCollateComparator(const void *context, const void *left, const void *right) 
     Collator::EComparisonResult r = col->compare(*leftString, *rightString);
     return (int32_t) r;
 }
-
 
 
 UVector *IndexCharacters::firstStringsInScript(Collator *ruleBasedCollator, UErrorCode &status) {
@@ -809,5 +825,25 @@ void IndexCharacters::resetItemIterator() {
     itemsIterIndex_ = -1;
 }
 
+
+
+IndexCharacters::Bucket::Bucket(const UnicodeString &label,
+                                const UnicodeString &lowerBoundary,
+                                UAlphabeticIndexLabelType type,
+                                UErrorCode &status):
+         label_(label), lowerBoundary_(lowerBoundary), labelType_(type), records_(NULL) {
+    if (U_FAILURE(status)) {
+        return;
+    }
+    records_ = new UVector(status);
+    if (records_ == NULL && U_SUCCESS(status)) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+    }
+}
+
+
+IndexCharacters::Bucket::~Bucket() {
+    delete records_;
+}
 
 U_NAMESPACE_END

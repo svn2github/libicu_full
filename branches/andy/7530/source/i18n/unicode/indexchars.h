@@ -30,6 +30,21 @@ class StringEnumeration;
 class UnicodeSet;
 class UVector;
 
+
+
+     // TODO:  coordinate values with Java. 
+     //        Names and form anticipate an eventual plain C API.
+U_CDECL_BEGIN
+typedef enum UAlphabeticIndexLabelType {
+         ALPHABETIC_INDEX_NORMAL   =  0,
+         ALPHABETIC_INDEX_UNDERFLOW = 1,
+         ALPHABETIC_INDEX_INFLOW    = 2,
+         ALPHABETIC_INDEX_OVERFLOW  = 3
+     } UAlphabeticIndexLabelType;
+
+U_CDECL_END
+
+
 /**
  * A set of characters for use as a UI "index", that is, a
  * list of clickable characters (or character sequences) that allow the user to
@@ -336,16 +351,7 @@ class U_I18N_API IndexCharacters: public UObject {
      void buildBucketList(UErrorCode &status);
 
 
-     // TODO:  coordinate with Java. 
-     //        Names anticipate an eventual plain C API.
-     enum LabelType {
-         ALPHABETIC_INDEX_NORMAL   =  0,
-         ALPHABETIC_INDEX_UNDERFLOW = 1,
-         ALPHABETIC_INDEX_INFLOW    = 2,
-         ALPHABETIC_INDEX_OVERFLOW  = 3
-     };
-
-
+  private:
     /*
      * A record to be sorted into buckets with getIndexBucketCharacters.
      */
@@ -358,15 +364,21 @@ class U_I18N_API IndexCharacters: public UObject {
      // Holds all user items before they are distributed into buckets.
      UVector  *inputRecords_;
 
+  public:
+     /**
+      *   A Bucket holds an index label and references to everything belonging to that label.
+      *   For implementation use only.  Declared public because pure C implementation code needs access.
+      *   @internal
+      */
      struct Bucket: public UMemory {
          UnicodeString     label_;
          UnicodeString     lowerBoundary_;
-         LabelType         labelType_;
+         UAlphabeticIndexLabelType labelType_;
          UVector           *records_;  // Records are owned by inputRecords_ vector.
          
          Bucket(const UnicodeString &label,         // Parameter strings are copied.
                 const UnicodeString &lowerBoundary, 
-                LabelType type, UErrorCode &status);
+                UAlphabeticIndexLabelType type, UErrorCode &status);
          ~Bucket();
      };
 
