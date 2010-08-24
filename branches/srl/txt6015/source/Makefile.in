@@ -295,5 +295,5 @@ update-windows-makefiles: config.status
 	@echo Please check over the changes carefully before checking them in.
 
 # For building a source distribution.
-distcheck dist-local:
+distcheck dist-local: all $(DOCZIP)
 	$(MAKE) -C . -f config/dist.mk srcdir="$(srcdir)" top_srcdir="$(top_srcdir)" $@

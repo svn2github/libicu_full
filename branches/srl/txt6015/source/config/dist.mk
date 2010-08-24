@@ -12,12 +12,14 @@ top_builddir = .
 include $(top_builddir)/icudefs.mk
 
 
-DISTY_TMP=dist/tmp
+DISTY_DIR=dist
+DISTY_TMP=$(DISTY_DIR)/tmp
 DISTY_ICU=$(DISTY_TMP)/icu
 DISTY_DATA=$(DISTY_ICU)/source/data
 DISTY_RMV=brkitr coll curr lang locales mappings rbnf region translit xml zone
 DISTY_RMDIR=$(DISTY_RMV:%=$(DISTY_DATA)/%)
 DISTY_IN=$(DISTY_DATA)/in
+DOCZIP = icu-docs.zip
 
 SVNTOP=$(top_srcdir)/..
 SVNDOT=$(SVNTOP)/.svn
@@ -47,7 +49,8 @@ $(DISTY_TMP):
 $(DISTY_DOC_ZIP): $(SVNDOT) $(DOCZIP) $(DISTY_FILE_DIR)
 	cp $(DOCZIP) $(DISTY_DOC_ZIP)
 
-$(DISTY_DAT): all-recursive
+$(DISTY_DAT):
+	@echo Error could not create $(DISTY_DAT) - try running \"$(MAKE) all\"
 
 $(DISTY_FILE_TGZ) $(DISTY_FILE_ZIP): $(SVNDOT) $(DISTY_DAT) $(DISTY_TMP)
 	@echo "svnversion of $(SVNTOP) is as follows (if this fails, make sure svn is installed..)"
@@ -58,6 +61,7 @@ $(DISTY_FILE_TGZ) $(DISTY_FILE_ZIP): $(SVNDOT) $(DISTY_DAT) $(DISTY_TMP)
 	$(RMV) $(DISTY_RMDIR)
 	$(MKINSTALLDIRS) $(DISTY_IN)
 	cp $(DISTY_DAT) $(DISTY_IN)
+	( cd $(DISTY_ICU) ; ls -d ./source/data/in/*.dat ) >> $(DISTY_ICU)/as_is/binfiles.txt
 	( cd $(DISTY_TMP) ; tar cfpz $(DISTY_FILE_TGZ) icu )
 	( cd $(DISTY_TMP) ; zip -rlq $(DISTY_FILE_ZIP) icu )
 	ls -l $(DISTY_FILE)
