@@ -349,22 +349,27 @@ class U_I18N_API IndexCharacters: public UObject {
 
      void buildIndex(UErrorCode &status);
      void buildBucketList(UErrorCode &status);
+     void bucketItems(UErrorCode &status);
 
 
-  private:
-    /*
+  public:
+    /**
      * A record to be sorted into buckets with getIndexBucketCharacters.
+     * For ICU implementation use only.  Declared public only to allow access from
+     * implementation code written in plain C.
+     *
+     * @internal
      */
      struct Record: public UMemory {
          const UnicodeString  *name_;
          void                 *context_;
+         int32_t              serialNumber_;
          ~Record() {delete name_;};
      };
 
      // Holds all user items before they are distributed into buckets.
      UVector  *inputRecords_;
 
-  public:
      /**
       *   A Bucket holds an index label and references to everything belonging to that label.
       *   For implementation use only.  Declared public because pure C implementation code needs access.
@@ -381,6 +386,7 @@ class U_I18N_API IndexCharacters: public UObject {
                 UAlphabeticIndexLabelType type, UErrorCode &status);
          ~Bucket();
      };
+   private:
 
      // Holds the contents of this index, buckets of user items.
      // UVector elements are of type (Bucket *)
@@ -417,6 +423,8 @@ class U_I18N_API IndexCharacters: public UObject {
      UnicodeString  overflowLabel_;
      UnicodeString  underflowLabel_;
      UnicodeString  overflowComparisonString_;
+
+     int32_t    recordCounter_;         // Counts Records created.  For minting record serial numbers.
 
 // Constants.  Lazily initialized the first time an IndexCharacters object is created.
 

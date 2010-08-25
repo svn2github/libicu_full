@@ -21,6 +21,7 @@ public:
     virtual void runIndexedTest(int32_t index, UBool exec, const char* &name, char* par = NULL );
 
     virtual void APITest();
+    virtual void ManyLocalesTest();
 };
 
 #endif

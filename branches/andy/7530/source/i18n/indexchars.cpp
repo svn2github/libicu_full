@@ -27,6 +27,7 @@
 #include "mutex.h"
 #include "ucln_in.h"
 #include "uhash.h"
+#include "uassert.h"
 #include "uvector.h"
 
 U_NAMESPACE_BEGIN
@@ -40,6 +41,9 @@ PreferenceComparator(const void *context, const void *left, const void *right);
 
 static int32_t U_CALLCONV
 sortCollateComparator(const void *context, const void *left, const void *right);
+
+static int32_t U_CALLCONV
+recordCompareFn(const void *context, const void *left, const void *right); 
 
 //
 //  UHash support function, delete a UnicodeSet
@@ -145,6 +149,16 @@ void IndexCharacters::buildIndex(UErrorCode &status) {
         return;
     }
 
+    // Discard any already-built data.
+    // This is important when the user builds and uses an index, then subsequently modifies it,
+    // necessitating a rebuild.
+
+    bucketList_->removeAllElements();
+    indexCharacters_->removeAllElements();
+    uhash_removeAll(alreadyIn_);
+    noDistinctSorting_->clear();
+    notAlphabetic_->clear();
+
     // first sort the incoming index chars, with a "best" ordering among items 
     // that are the same according to the collator
 
@@ -223,6 +237,9 @@ void IndexCharacters::buildIndex(UErrorCode &status) {
     firstScriptCharacters_ = FIRST_CHARS_IN_SCRIPTS;
     buildBucketList(status);    // Corresponds to Java BucketList constructor.
 
+    // Bin the items into the buckets.
+    bucketItems(status);
+
     indexBuildRequired_ = FALSE;
     resetLabelIterator(status);
 }
@@ -271,6 +288,57 @@ void IndexCharacters::buildBucketList(UErrorCode &status) {
     bucketList_->addElement(b, status);
     // final overflow bucket
 }
+
+
+//
+//   Place all of the raw input records into the correct bucket.
+//
+//       Begin by sorting the input records; this lets us bin them in a single pass.
+//
+//       Note on storage management:  The input records are owned by the 
+//       inputRecords_ vector, and will (eventually) be auto-deleted by it.
+//       The Bucket objects have pointers to the Record objects, but do not own them.
+//
+void IndexCharacters::bucketItems(UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return;
+    }
+
+    comparator_->setStrength(Collator::TERTIARY);
+    inputRecords_->sortWithUComparator(recordCompareFn, comparator_, status);
+    U_ASSERT(bucketList_->size() > 0);   // Should always have at least an overflow
+                                         //   bucket, even if no user labels.
+    int32_t bucketIndex = 0;
+    Bucket *destBucket = static_cast<Bucket *>(bucketList_->elementAt(bucketIndex));
+    Bucket *nextBucket = NULL;
+    if (bucketIndex+1 < bucketList_->size()) {
+        nextBucket = static_cast<Bucket *>(bucketList_->elementAt(bucketIndex+1));
+    }
+    int32_t itemIndex = 0;
+    Record *r = static_cast<Record *>(inputRecords_->elementAt(itemIndex));
+    while (itemIndex < inputRecords_->size()) {
+        if (nextBucket == NULL ||
+            comparator_->compare(*r->name_, nextBucket->lowerBoundary_) < 0) {
+                // Record goes in current bucket.  Advance to next record,
+                // stay on current bucket.
+                destBucket->records_->addElement(r, status);
+                ++itemIndex;
+                r = static_cast<Record *>(inputRecords_->elementAt(itemIndex));
+        } else {
+            // Advance to the next bucket, stay on current record.
+            bucketIndex++;
+            destBucket = nextBucket;
+            if (bucketIndex+1 < bucketList_->size()) {
+                nextBucket = static_cast<Bucket *>(bucketList_->elementAt(bucketIndex+1));
+            } else {
+                nextBucket = NULL;
+            }
+            U_ASSERT(destBucket != NULL);
+        }
+    }
+                
+}
+
 
 void IndexCharacters::getIndexExemplars(UnicodeSet  &dest, const Locale &locale, UErrorCode &status) {
     if (U_FAILURE(status)) {
@@ -487,6 +555,8 @@ void IndexCharacters::staticCleanup() {
     TO_TRY = NULL;
     delete FIRST_CHARS_IN_SCRIPTS;
     FIRST_CHARS_IN_SCRIPTS = NULL;
+    delete EMPTY_STRING;
+    EMPTY_STRING = NULL;
     nfkdNormalizer = NULL;  // ref to a singleton.  Do not delete.
     indexCharactersAreInitialized = FALSE;
 }
@@ -556,6 +626,8 @@ void IndexCharacters::staticInit(UErrorCode &status) {
             goto err;
         }
 
+        EMPTY_STRING = new UnicodeString();
+
         Collator *rootCollator = Collator::createInstance(Locale::getRoot(), status);
         FIRST_CHARS_IN_SCRIPTS = firstStringsInScript(rootCollator, status);
         delete rootCollator;
@@ -584,7 +656,7 @@ void IndexCharacters::staticInit(UErrorCode &status) {
 
 
 //
-//  Comparison function for UVector for sorting with a collator.
+//  Comparison function for UVector<UnicodeString *> sorting with a collator.
 //
 static int32_t U_CALLCONV
 sortCollateComparator(const void *context, const void *left, const void *right) {
@@ -605,6 +677,24 @@ sortCollateComparator(const void *context, const void *left, const void *right) 
         return -1;
     }
     Collator::EComparisonResult r = col->compare(*leftString, *rightString);
+    return (int32_t) r;
+}
+
+//
+//  Comparison function for UVector<Record *> sorting with a collator.
+//
+static int32_t U_CALLCONV
+recordCompareFn(const void *context, const void *left, const void *right) {
+    const UHashTok *leftTok = static_cast<const UHashTok *>(left);
+    const UHashTok *rightTok = static_cast<const UHashTok *>(right);
+    const IndexCharacters::Record *leftRec  = static_cast<const IndexCharacters::Record *>(leftTok->pointer);
+    const IndexCharacters::Record *rightRec = static_cast<const IndexCharacters::Record *>(rightTok->pointer);
+    const Collator *col = static_cast<const Collator *>(context);
+    
+    Collator::EComparisonResult r = col->compare(*leftRec->name_, *rightRec->name_);
+    if (r == 0) {
+        r = (leftRec->serialNumber_ < rightRec->serialNumber_) ? Collator::LESS : Collator::GREATER;
+    }
     return (int32_t) r;
 }
 
@@ -718,6 +808,7 @@ void IndexCharacters::addItem(const icu_45::UnicodeString &name, void *context, 
     // Note on ownership of the name string:  It stays with the Record.
     r->name_ = static_cast<UnicodeString *>(name.clone());
     r->context_ = context;
+    r->serialNumber_ = ++recordCounter_;
     inputRecords_->addElement(r, status);
     indexBuildRequired_ = TRUE;
 }
@@ -730,7 +821,6 @@ void IndexCharacters::removeAllItems(UErrorCode &status) {
     // TODO:  get an object deleter function on inputRecords
     inputRecords_->removeAllElements();
     indexBuildRequired_ = TRUE;
-    // TODO:  probably want to clear bucket contents also.
 }
 
 
