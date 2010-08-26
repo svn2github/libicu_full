@@ -8,9 +8,10 @@
 //          Alphabetic Index Tests.
 //
 #include "intltest.h"
-
-#include "unicode/indexchars.h"
 #include "alphaindextst.h"
+
+#include "unicode/alphaindex.h"
+#include "unicode/uniset.h"
 
 #include <string>
 #include <iostream>
@@ -44,18 +45,49 @@ void AlphabeticIndexTest::runIndexedTest( int32_t index, UBool exec, const char*
 
 #define TEST_ASSERT(expr) {if ((expr)==FALSE) {errln("%s:%d: Test failure \n", __FILE__, __LINE__);};}
 
+//
+//  APITest.   Invoke every function at least once, and check that it does something.
+//             Does not attempt to check complete functionality.
+//
 void AlphabeticIndexTest::APITest() {
+
+    //
+    //  Simple constructor and destructor
+    //
     UErrorCode status = U_ZERO_ERROR;
     int32_t lc = 0;
-    IndexCharacters *index = new IndexCharacters(Locale::getEnglish(), status);
+    AlphabeticIndex *index = new AlphabeticIndex(Locale::getEnglish(), status);
     TEST_CHECK_STATUS;
     lc = index->countLabels(status);
     TEST_CHECK_STATUS;
     TEST_ASSERT(28 == lc);    // 26 letters plus two under/overflow labels.
     //printf("countLabels() == %d\n", lc);
+    delete index;
+    
+    // addIndexCharacters()
+
+    index = new AlphabeticIndex(Locale::getEnglish(), status);
+    TEST_CHECK_STATUS;
+    status = U_ZERO_ERROR;
+    UnicodeSet additions;
+    additions.add((UChar32)0x410).add((UChar32)0x415);   // A couple of Cyrillic letters
+    index->addIndexCharacters(additions, status);
+    TEST_CHECK_STATUS;
+    lc = index->countLabels(status);
+    TEST_CHECK_STATUS;
+    TEST_ASSERT(31 == lc);    // 26 Latin letters plus
+                              //  2 Cyrillic letters plus
+                              //  1 inflow label plus
+                              //  two under/overflow labels.
+    std::cout << lc << std::endl;
+    delete index;
+
 
     // Add an item, verify that it comes back out.
     //
+    status = U_ZERO_ERROR;
+    index = new AlphabeticIndex(Locale::getEnglish(), status);
+    TEST_CHECK_STATUS;
     const UnicodeString adam = UNICODE_STRING_SIMPLE("Adam");
     index->addItem(UnicodeString("Adam"), this, status);
     UBool   b;
@@ -95,7 +127,7 @@ static const char * KEY_LOCALES[] = {
 void AlphabeticIndexTest::ManyLocalesTest() {
     UErrorCode status = U_ZERO_ERROR;
     int32_t  lc = 0;
-    IndexCharacters *index = NULL;
+    AlphabeticIndex *index = NULL;
 
     for (int i=0; ; ++i) {
         status = U_ZERO_ERROR;
@@ -105,7 +137,7 @@ void AlphabeticIndexTest::ManyLocalesTest() {
         }
         // std::cout <<  localeName << "  ";
         Locale loc = Locale::createFromName(localeName);
-        index = new IndexCharacters(loc, status);
+        index = new AlphabeticIndex(loc, status);
         TEST_CHECK_STATUS;
         lc = index->countLabels(status);
         TEST_CHECK_STATUS;

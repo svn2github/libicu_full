@@ -82,12 +82,12 @@ U_CDECL_END
  * @draft ICU 4.6
  * @provisional This API might change or be removed in a future release.
  */
-class U_I18N_API IndexCharacters: public UObject {
+class U_I18N_API AlphabeticIndex: public UObject {
 
   public:
 
     /**
-     * Construct an IndexCharacters object for the specified locale.  If the locale's
+     * Construct an AlphabeticIndex object for the specified locale.  If the locale's
      * data does not include index characters, a set of them will be
      * synthesized based on the locale's exemplar characters.  The locale
      * determines the sorting order for both the index characters and the
@@ -95,10 +95,10 @@ class U_I18N_API IndexCharacters: public UObject {
      *
      * @param locale the desired locale.
      * @param status Error code, will be set with the reason if the construction
-     *               of the IndexCharacters object fails.
+     *               of the AlphabeticIndex object fails.
      * @draft ICU 4.6
      */
-     IndexCharacters(const Locale &locale, UErrorCode &status);
+     AlphabeticIndex(const Locale &locale, UErrorCode &status);
 
 
 
@@ -123,34 +123,34 @@ class U_I18N_API IndexCharacters: public UObject {
      /**
       * Copy constructor
       *
-      * @param other  The source IndexCharacters object.
+      * @param other  The source AlphabeticIndex object.
       * @param status Error code, will be set with the reason if the construction fails.
       * @draft ICU 4.6
       */
-     IndexCharacters(const IndexCharacters &other, UErrorCode &status);
+     AlphabeticIndex(const AlphabeticIndex &other, UErrorCode &status);
 
      /**
       * Destructor
       */
-     virtual ~IndexCharacters();
+     virtual ~AlphabeticIndex();
 
 
     /**
      * Equality operator.
      * @draft ICU 4.6
      */
-     virtual UBool operator==(const IndexCharacters& other) const;
+     virtual UBool operator==(const AlphabeticIndex& other) const;
 
     /**
      * Inequality operator.
      * @draft ICU 4.6
      */
-     virtual UBool operator!=(const IndexCharacters& other) const;
+     virtual UBool operator!=(const AlphabeticIndex& other) const;
 
 
     /**
      * Get the Collator that establishes the ordering of the index characters.
-     * Ownership of the collator remains with the IndexCharacters instance.
+     * Ownership of the collator remains with the AlphabeticIndex instance.
      * @return The collator
      * @draft ICU 4.6
      */
@@ -169,7 +169,7 @@ class U_I18N_API IndexCharacters: public UObject {
 
 
    /**
-     * Get the default label used in the IndexCharacters' locale for overflow, eg the first item in:
+     * Get the default label used in the AlphabeticIndex' locale for overflow, eg the first item in:
      *     ... A B C
      * 
      * @param status Error code, will be set with the reason if the operation fails.
@@ -180,7 +180,7 @@ class U_I18N_API IndexCharacters: public UObject {
 
 
    /**
-     * Get the default label used in the IndexCharacters' locale for underflow, eg the last item in:
+     * Get the default label used in the AlphabeticIndex' locale for underflow, eg the last item in:
      *    X Y Z ...
      * 
      * @param status Error code, will be set with the reason if the operation fails.
@@ -316,9 +316,9 @@ class U_I18N_API IndexCharacters: public UObject {
 
   private:
      /**
-      *   No assignment.  IndexCharacters objects are const after creation/
+      *   No assignment.  
       */
-     IndexCharacters &operator =(const IndexCharacters & /*other*/) { return *this;};
+     AlphabeticIndex &operator =(const AlphabeticIndex & /*other*/) { return *this;};
 
      // Common initialization, for use from all constructors.
      void init(UErrorCode &status);
@@ -327,7 +327,7 @@ class U_I18N_API IndexCharacters: public UObject {
      static void staticInit(UErrorCode &status);
 
      /**
-      *   Delete all shared (static) data associated with IndexCharacters.
+      *   Delete all shared (static) data associated with an AlphabeticIndex. 
       *   Internal function, not intended for direct use. 
       *   @internal.
       */
@@ -426,7 +426,7 @@ class U_I18N_API IndexCharacters: public UObject {
 
      int32_t    recordCounter_;         // Counts Records created.  For minting record serial numbers.
 
-// Constants.  Lazily initialized the first time an IndexCharacters object is created.
+// Constants.  Lazily initialized the first time an AlphabeticIndex object is created.
 
      static UnicodeSet *ALPHABETIC;
      static UnicodeSet *CORE_LATIN;

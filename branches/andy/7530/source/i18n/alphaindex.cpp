@@ -7,13 +7,13 @@
 
 /**
  * \file 
- * \brief C API: IndexCharacters class
+ * \brief C API: AlphabeticIndex class
  */
 
 #include "unicode/utypes.h"
 
+#include "unicode/alphaindex.h"
 #include "unicode/coll.h"
-#include "unicode/indexchars.h"
 #include "unicode/normalizer2.h"
 #include "unicode/strenum.h"
 #include "unicode/tblcoll.h"
@@ -32,7 +32,7 @@
 
 U_NAMESPACE_BEGIN
 
-UOBJECT_DEFINE_RTTI_IMPLEMENTATION(IndexCharacters)
+UOBJECT_DEFINE_RTTI_IMPLEMENTATION(AlphabeticIndex)
 
 
 // Forward Declarations
@@ -57,7 +57,7 @@ uhash_deleteUnicodeSet(void *obj) {
 //  UVector<Bucket *> support function, delete a Bucket.
 static void U_CALLCONV
 indexChars_deleteBucket(void *obj) {
-    delete static_cast<IndexCharacters::Bucket *>(obj);
+    delete static_cast<AlphabeticIndex::Bucket *>(obj);
 }
 
 
@@ -77,7 +77,7 @@ static void appendUnicodeSetToUVector(UVector &dest, const UnicodeSet &source, U
 }
 
 
-IndexCharacters::IndexCharacters(const Locale &locale, UErrorCode &status) {
+AlphabeticIndex::AlphabeticIndex(const Locale &locale, UErrorCode &status) {
     init(status);
     if (U_FAILURE(status)) {
         return;
@@ -95,7 +95,7 @@ IndexCharacters::IndexCharacters(const Locale &locale, UErrorCode &status) {
 }
 
 
-IndexCharacters::~IndexCharacters() {
+AlphabeticIndex::~AlphabeticIndex() {
     uhash_close(alreadyIn_);
     delete bucketList_;
     delete indexCharacters_;
@@ -111,7 +111,7 @@ IndexCharacters::~IndexCharacters() {
 }
 
 
-void IndexCharacters::addIndexCharacters(const UnicodeSet &additions, UErrorCode &status) {
+void AlphabeticIndex::addIndexCharacters(const UnicodeSet &additions, UErrorCode &status) {
     if (U_FAILURE(status)) {
         return;
     }
@@ -119,7 +119,7 @@ void IndexCharacters::addIndexCharacters(const UnicodeSet &additions, UErrorCode
 }
 
 
-void IndexCharacters::addLocale(const Locale &locale, UErrorCode &status) {
+void AlphabeticIndex::addLocale(const Locale &locale, UErrorCode &status) {
     if (U_FAILURE(status)) {
         return;
     }
@@ -132,7 +132,7 @@ void IndexCharacters::addLocale(const Locale &locale, UErrorCode &status) {
 static int32_t maxLabelCount_ = 99;    // Max number of index chars.
 
 
-int32_t IndexCharacters::countLabels(UErrorCode &status) {
+int32_t AlphabeticIndex::countLabels(UErrorCode &status) {
     buildIndex(status);
     if (U_FAILURE(status)) {
         return 0;
@@ -141,7 +141,7 @@ int32_t IndexCharacters::countLabels(UErrorCode &status) {
 }
 
 
-void IndexCharacters::buildIndex(UErrorCode &status) {
+void AlphabeticIndex::buildIndex(UErrorCode &status) {
     if (U_FAILURE(status)) {
         return;
     }
@@ -247,7 +247,7 @@ void IndexCharacters::buildIndex(UErrorCode &status) {
 //
 //  buildBucketList()    Corresponds to the BucketList constructor in the Java version.
 
-void IndexCharacters::buildBucketList(UErrorCode &status) {
+void AlphabeticIndex::buildBucketList(UErrorCode &status) {
     UnicodeString labelStr = getUnderflowLabel(status);
     Bucket *b = new Bucket(labelStr, *EMPTY_STRING, ALPHABETIC_INDEX_UNDERFLOW, status);
     bucketList_->addElement(b, status);
@@ -260,7 +260,7 @@ void IndexCharacters::buildBucketList(UErrorCode &status) {
 
     UnicodeSet lastSet; 
     UnicodeSet set;
-    IndexCharacters::getScriptSet(lastSet, *last, status);
+    AlphabeticIndex::getScriptSet(lastSet, *last, status);
     lastSet.removeAll(*IGNORE_SCRIPTS);
 
     for (int i = 1; i < indexCharacters_->size(); ++i) {
@@ -299,7 +299,7 @@ void IndexCharacters::buildBucketList(UErrorCode &status) {
 //       inputRecords_ vector, and will (eventually) be auto-deleted by it.
 //       The Bucket objects have pointers to the Record objects, but do not own them.
 //
-void IndexCharacters::bucketItems(UErrorCode &status) {
+void AlphabeticIndex::bucketItems(UErrorCode &status) {
     if (U_FAILURE(status)) {
         return;
     }
@@ -340,7 +340,7 @@ void IndexCharacters::bucketItems(UErrorCode &status) {
 }
 
 
-void IndexCharacters::getIndexExemplars(UnicodeSet  &dest, const Locale &locale, UErrorCode &status) {
+void AlphabeticIndex::getIndexExemplars(UnicodeSet  &dest, const Locale &locale, UErrorCode &status) {
     if (U_FAILURE(status)) {
         return;
     }
@@ -412,7 +412,7 @@ void IndexCharacters::getIndexExemplars(UnicodeSet  &dest, const Locale &locale,
  * Return the string with interspersed CGJs. Input must have more than 2 codepoints.
  */
 static const UChar32 CGJ = (UChar)0x034F;
-UnicodeString IndexCharacters::separated(const UnicodeString &item) {
+UnicodeString AlphabeticIndex::separated(const UnicodeString &item) {
     UnicodeString result;
     if (item.length() == 0) {
         return result;
@@ -431,35 +431,35 @@ UnicodeString IndexCharacters::separated(const UnicodeString &item) {
 }
 
 
-UBool IndexCharacters::operator==(const IndexCharacters& other) const {
+UBool AlphabeticIndex::operator==(const AlphabeticIndex& other) const {
     return FALSE;
 }
 
 
-UBool IndexCharacters::operator!=(const IndexCharacters& other) const {
+UBool AlphabeticIndex::operator!=(const AlphabeticIndex& other) const {
     return FALSE;
 }
 
 
-const Collator &IndexCharacters::getCollator() const {
+const Collator &AlphabeticIndex::getCollator() const {
     return *comparator_;
 }
 
 
-UnicodeString IndexCharacters::getInflowLabel(UErrorCode &status) const {
+UnicodeString AlphabeticIndex::getInflowLabel(UErrorCode &status) const {
     return inflowLabel_;
 }
 
-UnicodeString IndexCharacters::getOverflowLabel(UErrorCode &status) const {
+UnicodeString AlphabeticIndex::getOverflowLabel(UErrorCode &status) const {
     return overflowLabel_;
 }
 
 
-UnicodeString IndexCharacters::getUnderflowLabel(UErrorCode &status) const {
+UnicodeString AlphabeticIndex::getUnderflowLabel(UErrorCode &status) const {
     return underflowLabel_;
 }
 
-UnicodeString IndexCharacters::getOverflowComparisonString(const UnicodeString &lowerLimit, UErrorCode &status) {
+UnicodeString AlphabeticIndex::getOverflowComparisonString(const UnicodeString &lowerLimit, UErrorCode &status) {
     for (int32_t i=0; i<firstScriptCharacters_->size(); i++) {
         const UnicodeString *s = 
                 static_cast<const UnicodeString *>(firstScriptCharacters_->elementAt(i));
@@ -470,7 +470,7 @@ UnicodeString IndexCharacters::getOverflowComparisonString(const UnicodeString &
     return *EMPTY_STRING;
 }
 
-UnicodeSet *IndexCharacters::getScriptSet(UnicodeSet &dest, const UnicodeString &codePoint, UErrorCode &status) {
+UnicodeSet *AlphabeticIndex::getScriptSet(UnicodeSet &dest, const UnicodeString &codePoint, UErrorCode &status) {
     if (U_FAILURE(status)) {
         return &dest;
     }
@@ -484,9 +484,9 @@ UnicodeSet *IndexCharacters::getScriptSet(UnicodeSet &dest, const UnicodeString 
 //  init() - Common code for constructors.
 //
 
-void IndexCharacters::init(UErrorCode &status) {
+void AlphabeticIndex::init(UErrorCode &status) {
     // Initialize statics if needed.
-    IndexCharacters::staticInit(status);
+    AlphabeticIndex::staticInit(status);
 
     // Put the object into a known state so that the destructor will function.
 
@@ -535,12 +535,12 @@ static  UBool  indexCharactersAreInitialized = FALSE;
 //  Index Characters Clean up function.  Delete statically allocated constant stuff.
 U_CDECL_BEGIN
 static UBool U_CALLCONV indexCharacters_cleanup(void) {
-    IndexCharacters::staticCleanup();
+    AlphabeticIndex::staticCleanup();
     return TRUE;
 }
 U_CDECL_END
 
-void IndexCharacters::staticCleanup() {
+void AlphabeticIndex::staticCleanup() {
     delete ALPHABETIC;
     ALPHABETIC = NULL;
     delete HANGUL;
@@ -562,22 +562,22 @@ void IndexCharacters::staticCleanup() {
 }
 
 
-UnicodeSet *IndexCharacters::ALPHABETIC;
-UnicodeSet *IndexCharacters::HANGUL;
-UnicodeSet *IndexCharacters::ETHIOPIC;
-UnicodeSet *IndexCharacters::CORE_LATIN;
-UnicodeSet *IndexCharacters::IGNORE_SCRIPTS;
-UnicodeSet *IndexCharacters::TO_TRY;
-UVector    *IndexCharacters::FIRST_CHARS_IN_SCRIPTS;
-const UnicodeString *IndexCharacters::EMPTY_STRING;
+UnicodeSet *AlphabeticIndex::ALPHABETIC;
+UnicodeSet *AlphabeticIndex::HANGUL;
+UnicodeSet *AlphabeticIndex::ETHIOPIC;
+UnicodeSet *AlphabeticIndex::CORE_LATIN;
+UnicodeSet *AlphabeticIndex::IGNORE_SCRIPTS;
+UnicodeSet *AlphabeticIndex::TO_TRY;
+UVector    *AlphabeticIndex::FIRST_CHARS_IN_SCRIPTS;
+const UnicodeString *AlphabeticIndex::EMPTY_STRING;
 
 //
 //  staticInit()    One-time initialization of constants.
 //                  Thread safe.  Called from constructors.
-//                  Mutex overhead is not a concern.  IndexCharacters constructors are 
+//                  Mutex overhead is not a concern.  AlphabeticIndex constructors are 
 //                  sufficiently heavy that the cost of the mutex check is not significant.
 
-void IndexCharacters::staticInit(UErrorCode &status) {
+void AlphabeticIndex::staticInit(UErrorCode &status) {
     static UMTX IndexCharsInitMutex;
 
     Mutex mutex(&IndexCharsInitMutex);
@@ -687,8 +687,8 @@ static int32_t U_CALLCONV
 recordCompareFn(const void *context, const void *left, const void *right) {
     const UHashTok *leftTok = static_cast<const UHashTok *>(left);
     const UHashTok *rightTok = static_cast<const UHashTok *>(right);
-    const IndexCharacters::Record *leftRec  = static_cast<const IndexCharacters::Record *>(leftTok->pointer);
-    const IndexCharacters::Record *rightRec = static_cast<const IndexCharacters::Record *>(rightTok->pointer);
+    const AlphabeticIndex::Record *leftRec  = static_cast<const AlphabeticIndex::Record *>(leftTok->pointer);
+    const AlphabeticIndex::Record *rightRec = static_cast<const AlphabeticIndex::Record *>(rightTok->pointer);
     const Collator *col = static_cast<const Collator *>(context);
     
     Collator::EComparisonResult r = col->compare(*leftRec->name_, *rightRec->name_);
@@ -699,7 +699,7 @@ recordCompareFn(const void *context, const void *left, const void *right) {
 }
 
 
-UVector *IndexCharacters::firstStringsInScript(Collator *ruleBasedCollator, UErrorCode &status) {
+UVector *AlphabeticIndex::firstStringsInScript(Collator *ruleBasedCollator, UErrorCode &status) {
 
     if (U_FAILURE(status)) {
         return NULL;
@@ -800,7 +800,7 @@ PreferenceComparator(const void *context, const void *left, const void *right) {
 }
 
 
-void IndexCharacters::addItem(const icu_45::UnicodeString &name, void *context, UErrorCode &status) {
+void AlphabeticIndex::addItem(const icu_45::UnicodeString &name, void *context, UErrorCode &status) {
     if (U_FAILURE(status)) {
         return;
     }
@@ -814,7 +814,7 @@ void IndexCharacters::addItem(const icu_45::UnicodeString &name, void *context, 
 }
 
 
-void IndexCharacters::removeAllItems(UErrorCode &status) {
+void AlphabeticIndex::removeAllItems(UErrorCode &status) {
     if (U_FAILURE(status)) {
         return;
     }
@@ -824,7 +824,7 @@ void IndexCharacters::removeAllItems(UErrorCode &status) {
 }
 
 
-UBool IndexCharacters::nextLabel(UErrorCode &status) {
+UBool AlphabeticIndex::nextLabel(UErrorCode &status) {
     if (U_FAILURE(status)) {
         return FALSE;
     }
@@ -846,7 +846,7 @@ UBool IndexCharacters::nextLabel(UErrorCode &status) {
     return TRUE;
 }
 
-const UnicodeString &IndexCharacters::getLabel() const {
+const UnicodeString &AlphabeticIndex::getLabel() const {
     if (currentBucket_ != NULL) {
         return currentBucket_->label_;
     } else {    
@@ -855,7 +855,7 @@ const UnicodeString &IndexCharacters::getLabel() const {
 }
 
 
-void IndexCharacters::resetLabelIterator(UErrorCode &status) {
+void AlphabeticIndex::resetLabelIterator(UErrorCode &status) {
     if (U_FAILURE(status)) {
         return;
     }
@@ -865,7 +865,7 @@ void IndexCharacters::resetLabelIterator(UErrorCode &status) {
 }
 
 
-UBool IndexCharacters::nextItem(UErrorCode &status) {
+UBool AlphabeticIndex::nextItem(UErrorCode &status) {
     if (U_FAILURE(status)) {
         return FALSE;
     }
@@ -888,7 +888,7 @@ UBool IndexCharacters::nextItem(UErrorCode &status) {
 }
 
 
-const UnicodeString &IndexCharacters::getItemName() const {
+const UnicodeString &AlphabeticIndex::getItemName() const {
     const UnicodeString *retStr = EMPTY_STRING;
     if (currentBucket_ != NULL &&
         itemsIterIndex_ >= 0 &&
@@ -899,7 +899,7 @@ const UnicodeString &IndexCharacters::getItemName() const {
     return *retStr;
 }
 
-const void *IndexCharacters::getItemContext() const {
+const void *AlphabeticIndex::getItemContext() const {
     const void *retPtr = NULL;
     if (currentBucket_ != NULL &&
         itemsIterIndex_ >= 0 &&
@@ -911,13 +911,13 @@ const void *IndexCharacters::getItemContext() const {
 }
 
 
-void IndexCharacters::resetItemIterator() {
+void AlphabeticIndex::resetItemIterator() {
     itemsIterIndex_ = -1;
 }
 
 
 
-IndexCharacters::Bucket::Bucket(const UnicodeString &label,
+AlphabeticIndex::Bucket::Bucket(const UnicodeString &label,
                                 const UnicodeString &lowerBoundary,
                                 UAlphabeticIndexLabelType type,
                                 UErrorCode &status):
@@ -932,7 +932,7 @@ IndexCharacters::Bucket::Bucket(const UnicodeString &label,
 }
 
 
-IndexCharacters::Bucket::~Bucket() {
+AlphabeticIndex::Bucket::~Bucket() {
     delete records_;
 }
 
