@@ -248,7 +248,7 @@ void AlphabeticIndex::buildIndex(UErrorCode &status) {
 //  buildBucketList()    Corresponds to the BucketList constructor in the Java version.
 
 void AlphabeticIndex::buildBucketList(UErrorCode &status) {
-    UnicodeString labelStr = getUnderflowLabel(status);
+    UnicodeString labelStr = getUnderflowLabel();
     Bucket *b = new Bucket(labelStr, *EMPTY_STRING, ALPHABETIC_INDEX_UNDERFLOW, status);
     bucketList_->addElement(b, status);
 
@@ -271,7 +271,7 @@ void AlphabeticIndex::buildBucketList(UErrorCode &status) {
             // check for adjacent
             UnicodeString overflowComparisonString = getOverflowComparisonString(*last, status);
             if (comparator_->compare(overflowComparisonString, *current) < 0) {
-                labelStr = getInflowLabel(status);
+                labelStr = getInflowLabel();
                 b = new Bucket(labelStr, overflowComparisonString, ALPHABETIC_INDEX_INFLOW, status);
                 bucketList_->addElement(b, status);
                 i++;
@@ -284,7 +284,7 @@ void AlphabeticIndex::buildBucketList(UErrorCode &status) {
         lastSet = set;
     }
     UnicodeString limitString = getOverflowComparisonString(*last, status);
-    b = new Bucket(getOverflowLabel(status), limitString, ALPHABETIC_INDEX_OVERFLOW, status);
+    b = new Bucket(getOverflowLabel(), limitString, ALPHABETIC_INDEX_OVERFLOW, status);
     bucketList_->addElement(b, status);
     // final overflow bucket
 }
@@ -431,12 +431,12 @@ UnicodeString AlphabeticIndex::separated(const UnicodeString &item) {
 }
 
 
-UBool AlphabeticIndex::operator==(const AlphabeticIndex& other) const {
+UBool AlphabeticIndex::operator==(const AlphabeticIndex& /* other */) const {
     return FALSE;
 }
 
 
-UBool AlphabeticIndex::operator!=(const AlphabeticIndex& other) const {
+UBool AlphabeticIndex::operator!=(const AlphabeticIndex& /* other */) const {
     return FALSE;
 }
 
@@ -446,18 +446,37 @@ const Collator &AlphabeticIndex::getCollator() const {
 }
 
 
-UnicodeString AlphabeticIndex::getInflowLabel(UErrorCode &status) const {
+const UnicodeString &AlphabeticIndex::getInflowLabel() const {
     return inflowLabel_;
 }
 
-UnicodeString AlphabeticIndex::getOverflowLabel(UErrorCode &status) const {
+const UnicodeString &AlphabeticIndex::getOverflowLabel() const {
     return overflowLabel_;
 }
 
 
-UnicodeString AlphabeticIndex::getUnderflowLabel(UErrorCode &status) const {
+const UnicodeString &AlphabeticIndex::getUnderflowLabel() const {
     return underflowLabel_;
 }
+
+
+AlphabeticIndex &AlphabeticIndex::setInflowLabel(const UnicodeString &label, UErrorCode &/*status*/) {
+    inflowLabel_ = label;
+    return *this;
+}
+
+
+AlphabeticIndex &AlphabeticIndex::setOverflowLabel(const UnicodeString &label, UErrorCode &/*status*/) {
+    overflowLabel_ = label;
+    return *this;
+}
+
+
+AlphabeticIndex &AlphabeticIndex::setUnderflowLabel(const UnicodeString &label, UErrorCode &/*status*/) {
+    underflowLabel_ = label;
+    return *this;
+}
+
 
 UnicodeString AlphabeticIndex::getOverflowComparisonString(const UnicodeString &lowerLimit, UErrorCode &status) {
     for (int32_t i=0; i<firstScriptCharacters_->size(); i++) {
@@ -525,6 +544,11 @@ void AlphabeticIndex::init(UErrorCode &status) {
     notAlphabetic_         = new UnicodeSet();
     // firstScriptCharacters_ = new UVector(status);
     rawIndexChars_         = new UnicodeSet();
+
+    inflowLabel_.remove();
+    inflowLabel_.append((UChar)0x2026);    // Ellipsis
+    overflowLabel_ = inflowLabel_;
+    underflowLabel_ = inflowLabel_;
 
     // TODO:  check for memory allocation failures.
 }
@@ -851,6 +875,15 @@ const UnicodeString &AlphabeticIndex::getLabel() const {
         return currentBucket_->label_;
     } else {    
         return *EMPTY_STRING;
+    }
+}
+
+
+UAlphabeticIndexLabelType AlphabeticIndex::getLabelType() const {
+    if (currentBucket_ != NULL) {
+        return currentBucket_->labelType_;
+    } else {
+        return ALPHABETIC_INDEX_NONE;
     }
 }
 

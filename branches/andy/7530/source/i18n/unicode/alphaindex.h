@@ -36,7 +36,8 @@ class UVector;
      //        Names and form anticipate an eventual plain C API.
 U_CDECL_BEGIN
 typedef enum UAlphabeticIndexLabelType {
-         ALPHABETIC_INDEX_NORMAL   =  0,
+         ALPHABETIC_INDEX_NONE      = -1,
+         ALPHABETIC_INDEX_NORMAL    = 0,
          ALPHABETIC_INDEX_UNDERFLOW = 1,
          ALPHABETIC_INDEX_INFLOW    = 2,
          ALPHABETIC_INDEX_OVERFLOW  = 3
@@ -119,15 +120,14 @@ class U_I18N_API AlphabeticIndex: public UObject {
      void addLocale(const Locale &locale, UErrorCode &status);
 
 
+  private:
 
      /**
-      * Copy constructor
-      *
-      * @param other  The source AlphabeticIndex object.
-      * @param status Error code, will be set with the reason if the construction fails.
-      * @draft ICU 4.6
+      * No Copy constructor.
+      * @internal
       */
-     AlphabeticIndex(const AlphabeticIndex &other, UErrorCode &status);
+     AlphabeticIndex(const AlphabeticIndex &other);
+  public:
 
      /**
       * Destructor
@@ -135,65 +135,105 @@ class U_I18N_API AlphabeticIndex: public UObject {
      virtual ~AlphabeticIndex();
 
 
+  private:
     /**
-     * Equality operator.
-     * @draft ICU 4.6
+     * No Equality operators.
+     * @internal
      */
      virtual UBool operator==(const AlphabeticIndex& other) const;
 
     /**
      * Inequality operator.
-     * @draft ICU 4.6
+     * @internal
      */
      virtual UBool operator!=(const AlphabeticIndex& other) const;
 
+  public:
 
     /**
      * Get the Collator that establishes the ordering of the index characters.
      * Ownership of the collator remains with the AlphabeticIndex instance.
+     * TODO:  should this really be public API?  Some operations on an
+     *        index modify the collator settings.  No settings are documented.
      * @return The collator
      * @draft ICU 4.6
      */
     virtual const Collator &getCollator() const;
+
 
    /**
      * Get the default label used for abbreviated buckets <i>between</i> other index characters. 
      * For example, consider the index characters for Latin and Greek are used: 
      *     X Y Z ... &#x0391; &#x0392; &#x0393;.
      * 
-     * @param status Error code, will be set with the reason if the operation fails.
      * @return inflow label
      * @draft ICU 4.6
      */
-    virtual UnicodeString getInflowLabel(UErrorCode &status) const;
+    virtual const UnicodeString &getInflowLabel() const;
+
+   /**
+     * Set the default label used for abbreviated buckets <i>between</i> other index characters. 
+     * An inflow label will be automatically inserted if two otherwise-adjacent label characters
+     * are from different scripts, e.g. Latin and Cyrillic, and a third script, e.g. Greek,
+     * sorts between the two.  The default inflow character is an ellipsis (...)
+     * 
+     * @param inflowLabel the new Inflow label.
+     * @param status Error code, will be set with the reason if the operation fails.
+     * @return this
+     * @draft ICU 4.6
+     */
+    virtual AlphabeticIndex &setInflowLabel(const UnicodeString &inflowLabel, UErrorCode &status);
+
 
 
    /**
-     * Get the default label used in the AlphabeticIndex' locale for overflow, eg the first item in:
-     *     ... A B C
+     * Get the label used for items that sort after the last normal index character,
+     * and that would not otherwise have an appropriate label.
      * 
-     * @param status Error code, will be set with the reason if the operation fails.
      * @return overflow label
      * @draft ICU 4.6
      */
-    virtual UnicodeString getOverflowLabel(UErrorCode &status) const;
+    virtual const UnicodeString &getOverflowLabel() const;
 
 
    /**
-     * Get the default label used in the AlphabeticIndex' locale for underflow, eg the last item in:
-     *    X Y Z ...
+     * Set the label used for items that sort after the last normal index character,
+     * and that would not otherwise have an appropriate label.
      * 
+     * @param overflowLabel the new overflow label.
      * @param status Error code, will be set with the reason if the operation fails.
+     * @return this
+     * @draft ICU 4.6
+     */
+    virtual AlphabeticIndex &setOverflowLabel(const UnicodeString &overflowLabel, UErrorCode &status);
+
+   /**
+     * Get the label used for items that sort before the first normal index character,
+     * and that would not otherwise have an appropriate label.
+     * 
      * @return underflow label
      * @draft ICU 4.6
      */
-    virtual UnicodeString getUnderflowLabel(UErrorCode &status) const;
+    virtual const UnicodeString &getUnderflowLabel() const;
+
+   /**
+     * Set the label used for items that sort before the first normal index character,
+     * and that would not otherwise have an appropriate label.
+     * 
+     * @param underflowLabel the new underflow label.
+     * @param status Error code, will be set with the reason if the operation fails.
+     * @return this
+     * @draft ICU 4.6
+     */
+    virtual AlphabeticIndex &setUnderflowLabel(const UnicodeString &underflowLabel, UErrorCode &status);
+
 
 
     /**
-     * Get the Unicode character (or tailored string) that defines an overflow bucket; that is anything greater than or
-     * equal to that string should go in that bucket, instead of with the last character. Normally that is the first
-     * character of the script after lowerLimit. Thus in X Y Z ... <i>Devanagari-ka</i>, the overflow character for Z
+     * Get the Unicode character (or tailored string) that defines an overflow bucket; 
+     * that is anything greater than or equal to that string should go in that bucket, 
+     * instead of with the last character. Normally that is the first character of the script 
+     * after lowerLimit. Thus in X Y Z ... <i>Devanagari-ka</i>, the overflow character for Z
      * would be the <i>Greek-alpha</i>.
      * 
      * @param lowerLimit   The character below the overflow (or inflow) bucket
@@ -247,6 +287,16 @@ class U_I18N_API AlphabeticIndex: public UObject {
      *   or after the last label, return an empty string.
      */
     virtual const UnicodeString &getLabel() const;
+
+    /**
+     *  Return the type of the index label as determined by the iteration over the labels.
+     *  If the iteration is before the first label (nextlabel() has not been called),
+     *  or after the last label, return ALPHABETIC_INDEX_NONE.
+     *
+     * @return the label type.
+     * @draft ICU 4.6
+     */
+    virtual UAlphabeticIndexLabelType getLabelType() const;
 
     /**
      *
