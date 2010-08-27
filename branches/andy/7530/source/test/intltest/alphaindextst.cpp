@@ -53,10 +53,11 @@ void AlphabeticIndexTest::runIndexedTest( int32_t index, UBool exec, const char*
 void AlphabeticIndexTest::APITest() {
 
     //
-    //  Simple constructor and destructor
+    //  Simple constructor and destructor,  countLabels()
     //
     UErrorCode status = U_ZERO_ERROR;
     int32_t lc = 0;
+    int32_t i  = 0;
     AlphabeticIndex *index = new AlphabeticIndex(Locale::getEnglish(), status);
     TEST_CHECK_STATUS;
     lc = index->countLabels(status);
@@ -133,12 +134,16 @@ void AlphabeticIndexTest::APITest() {
 
 
 
-    // Add an item, verify that it comes back out.
+    const UnicodeString adam = UNICODE_STRING_SIMPLE("Adam");
+    const UnicodeString baker = UNICODE_STRING_SIMPLE("Baker");
+    const UnicodeString charlie = UNICODE_STRING_SIMPLE("Charlie");
+    const UnicodeString chad = UNICODE_STRING_SIMPLE("Chad");
+
+    // addItem(), verify that it comes back out.
     //
     status = U_ZERO_ERROR;
     index = new AlphabeticIndex(Locale::getEnglish(), status);
     TEST_CHECK_STATUS;
-    const UnicodeString adam = UNICODE_STRING_SIMPLE("Adam");
     index->addItem(UnicodeString("Adam"), this, status);
     UBool   b;
     TEST_CHECK_STATUS;
@@ -160,8 +165,90 @@ void AlphabeticIndexTest::APITest() {
     const void *itemContext = index->getItemContext();
     TEST_ASSERT(itemContext == this);
 
-    
     delete index;
+
+    // removeAllItems, addItem(), Iteration
+
+    status = U_ZERO_ERROR;
+    index = new AlphabeticIndex(Locale::getEnglish(), status);
+    TEST_CHECK_STATUS;
+    while (index->nextLabel(status)) {
+        TEST_CHECK_STATUS;
+        while (index->nextItem(status)) {
+            TEST_CHECK_STATUS;
+            TEST_ASSERT(FALSE);   // No items have been added.
+        }
+        TEST_CHECK_STATUS;
+    }
+
+    index->addItem(adam, NULL, status);
+    index->addItem(baker, NULL, status);
+    index->addItem(charlie, NULL, status);
+    index->addItem(chad, NULL, status);
+    TEST_CHECK_STATUS;
+    int itemCount = 0;
+    index->resetLabelIterator(status);
+    while (index->nextLabel(status)) {
+        TEST_CHECK_STATUS;
+        while (index->nextItem(status)) {
+            TEST_CHECK_STATUS;
+            ++itemCount;
+        }
+    }
+    TEST_CHECK_STATUS;
+    TEST_ASSERT(itemCount == 4);
+    
+    TEST_ASSERT(index->nextLabel(status) == FALSE);
+    index->resetLabelIterator(status);
+    TEST_CHECK_STATUS;
+    TEST_ASSERT(index->nextLabel(status) == TRUE);
+
+    index->removeAllItems(status);
+    TEST_CHECK_STATUS;
+    index->resetLabelIterator(status);
+    while (index->nextLabel(status)) {
+        TEST_CHECK_STATUS;
+        while (index->nextItem(status)) {
+            TEST_ASSERT(FALSE);   // No items have been added.
+        }
+    }
+    TEST_CHECK_STATUS;
+    delete index;
+
+    // getLabel(), getLabelType()
+
+    status = U_ZERO_ERROR;
+    index = new AlphabeticIndex(Locale::getEnglish(), status);
+    TEST_CHECK_STATUS;
+    index->setUnderflowLabel(adam, status).setOverflowLabel(charlie, status);
+    TEST_CHECK_STATUS;
+    for (i=0; index->nextLabel(status); i++) {
+        TEST_CHECK_STATUS;
+        UnicodeString label = index->getLabel();
+        UAlphabeticIndexLabelType type = index->getLabelType();
+        if (i == 0) {
+            TEST_ASSERT(type == ALPHABETIC_INDEX_UNDERFLOW);
+            TEST_ASSERT(label == adam);
+        } else if (i <= 26) {
+            // Labels A - Z for English locale
+            TEST_ASSERT(type == ALPHABETIC_INDEX_NORMAL);
+            UnicodeString expectedLabel((UChar)(0x40 + i));
+            TEST_ASSERT(expectedLabel == label);
+        } else if (i == 27) {
+            TEST_ASSERT(type == ALPHABETIC_INDEX_OVERFLOW);
+            TEST_ASSERT(label == charlie);
+        } else {
+            TEST_ASSERT(FALSE);
+        }
+    }
+    TEST_ASSERT(i==28);
+
+
+
+ 
+
+
+    
 }
 
 
