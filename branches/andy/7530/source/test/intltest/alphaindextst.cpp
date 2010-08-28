@@ -106,7 +106,6 @@ void AlphabeticIndexTest::APITest() {
     TEST_CHECK_STATUS;
     Collator *germanCol = Collator::createInstance(Locale::getGerman(), status);
     TEST_CHECK_STATUS;
-    germanCol->setStrength(Collator::PRIMARY);
     const Collator &indexCol = index->getCollator();
     TEST_ASSERT(*germanCol == indexCol);
     delete germanCol;
@@ -242,13 +241,8 @@ void AlphabeticIndexTest::APITest() {
         }
     }
     TEST_ASSERT(i==28);
+    delete index;
 
-
-
- 
-
-
-    
 }
 
 

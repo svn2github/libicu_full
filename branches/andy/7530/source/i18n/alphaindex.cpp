@@ -60,6 +60,13 @@ indexChars_deleteBucket(void *obj) {
     delete static_cast<AlphabeticIndex::Bucket *>(obj);
 }
 
+//  UVector<Record *> support function, delete a Record.
+static void U_CALLCONV
+indexChars_deleteRecord(void *obj) {
+    delete static_cast<AlphabeticIndex::Record *>(obj);
+}
+
+
 
 static const Normalizer2 *nfkdNormalizer;
 
@@ -85,29 +92,31 @@ AlphabeticIndex::AlphabeticIndex(const Locale &locale, UErrorCode &status) {
     locale_ = locale;
     comparator_ = Collator::createInstance(locale, status);
     if (comparator_ != NULL) {
-        comparator_->setStrength(Collator::PRIMARY);
+        comparatorPrimary_ = comparator_->clone();
+    }
+    if (comparatorPrimary_ != NULL) {
+        comparatorPrimary_->setStrength(Collator::PRIMARY);
     }
     getIndexExemplars(*rawIndexChars_, locale, status);
     indexBuildRequired_ = TRUE;
-    if (comparator_ == NULL && U_SUCCESS(status)) {
+    if ((comparator_ == NULL || comparatorPrimary_ == NULL) && U_SUCCESS(status)) {
         status = U_MEMORY_ALLOCATION_ERROR;
     }
+    firstScriptCharacters_ = hackFirstStringsInScript(comparator_, status);
 }
 
 
 AlphabeticIndex::~AlphabeticIndex() {
     uhash_close(alreadyIn_);
     delete bucketList_;
+    delete comparator_;
+    delete comparatorPrimary_;
+    delete firstScriptCharacters_;
     delete indexCharacters_;
     delete inputRecords_;
     delete noDistinctSorting_;
     delete notAlphabetic_;
     delete rawIndexChars_;
-    delete comparator_;
-    
-    // TODO:  firstScriptCharacters_ is temporarily a pointer to the global FIRST_CHARS_IN_SCRIPTS.
-    //        Delete it here if/when we get instance data rather than shared global data.
-    // delete firstScriptCharacters_;
 }
 
 
@@ -159,7 +168,7 @@ void AlphabeticIndex::buildIndex(UErrorCode &status) {
     noDistinctSorting_->clear();
     notAlphabetic_->clear();
 
-    // first sort the incoming index chars, with a "best" ordering among items 
+    // first sort the incoming Labels, with a "best" ordering among items 
     // that are the same according to the collator
 
     UVector preferenceSorting(status);   // Vector of UnicodeStrings; owned by the vector.
@@ -177,13 +186,13 @@ void AlphabeticIndex::buildIndex(UErrorCode &status) {
     UnicodeSet indexCharacterSet;
     for (int32_t psIndex=0; psIndex<preferenceSorting.size(); psIndex++) {
         UnicodeString item = *static_cast<const UnicodeString *>(preferenceSorting.elementAt(psIndex));
-        // TODO:  Since preferenceSorting was originally populated from the contents of UnicodeSet,
+        // TODO:  Since preferenceSorting was originally populated from the contents of a UnicodeSet,
         //        is it even possible for duplicates to show up in this check?
         if (indexCharacterSet.contains(item)) {
             UnicodeSetIterator itemAlreadyInIter(indexCharacterSet);
             while (itemAlreadyInIter.next()) {
                 const UnicodeString &itemAlreadyIn = itemAlreadyInIter.getString();
-                if (comparator_->compare(item, itemAlreadyIn) == 0) {
+                if (comparatorPrimary_->compare(item, itemAlreadyIn) == 0) {
                     UnicodeSet *targets = static_cast<UnicodeSet *>(uhash_get(alreadyIn_, &itemAlreadyIn));
                     if (targets == NULL) {
                         // alreadyIn.put(itemAlreadyIn, targets = new LinkedHashSet<String>());
@@ -194,8 +203,8 @@ void AlphabeticIndex::buildIndex(UErrorCode &status) {
                     break;
                 }
             }
-        } else if (item.moveIndex32(0, 1) < item.length() &&  // item contains more than one code point.
-                   comparator_->compare(item, separated(item)) == 0) {
+        } else if (item.moveIndex32(0, 1) < item.length() &&  // Label contains more than one code point.
+                   comparatorPrimary_->compare(item, separated(item)) == 0) {
             noDistinctSorting_->add(item);
         } else if (!ALPHABETIC->containsSome(item)) {
             notAlphabetic_->add(item);
@@ -208,7 +217,7 @@ void AlphabeticIndex::buildIndex(UErrorCode &status) {
     // according to the collator.
     
     appendUnicodeSetToUVector(*indexCharacters_, indexCharacterSet, status);
-    indexCharacters_->sortWithUComparator(sortCollateComparator, comparator_, status);
+    indexCharacters_->sortWithUComparator(sortCollateComparator, comparatorPrimary_, status);
     
     // if the result is still too large, cut down to maxLabelCount_ elements, by removing every nth element
     //    Implemented by copying the elements to be retained to a new UVector.
@@ -233,8 +242,6 @@ void AlphabeticIndex::buildIndex(UErrorCode &status) {
         delete indexCharacters_;
         indexCharacters_ = newIndexChars;
     }
-    // firstStringsInScript(comparator);  // TODO: use collation method when fast enough
-    firstScriptCharacters_ = FIRST_CHARS_IN_SCRIPTS;
     buildBucketList(status);    // Corresponds to Java BucketList constructor.
 
     // Bin the items into the buckets.
@@ -270,7 +277,7 @@ void AlphabeticIndex::buildBucketList(UErrorCode &status) {
         if (lastSet.containsNone(set)) {
             // check for adjacent
             UnicodeString overflowComparisonString = getOverflowComparisonString(*last, status);
-            if (comparator_->compare(overflowComparisonString, *current) < 0) {
+            if (comparatorPrimary_->compare(overflowComparisonString, *current) < 0) {
                 labelStr = getInflowLabel();
                 b = new Bucket(labelStr, overflowComparisonString, ALPHABETIC_INDEX_INFLOW, status);
                 bucketList_->addElement(b, status);
@@ -304,7 +311,6 @@ void AlphabeticIndex::bucketItems(UErrorCode &status) {
         return;
     }
 
-    comparator_->setStrength(Collator::TERTIARY);
     inputRecords_->sortWithUComparator(recordCompareFn, comparator_, status);
     U_ASSERT(bucketList_->size() > 0);   // Should always have at least an overflow
                                          //   bucket, even if no user labels.
@@ -318,7 +324,7 @@ void AlphabeticIndex::bucketItems(UErrorCode &status) {
     Record *r = static_cast<Record *>(inputRecords_->elementAt(itemIndex));
     while (itemIndex < inputRecords_->size()) {
         if (nextBucket == NULL ||
-            comparator_->compare(*r->name_, nextBucket->lowerBoundary_) < 0) {
+            comparatorPrimary_->compare(*r->name_, nextBucket->lowerBoundary_) < 0) {
                 // Record goes in current bucket.  Advance to next record,
                 // stay on current bucket.
                 destBucket->records_->addElement(r, status);
@@ -512,6 +518,7 @@ void AlphabeticIndex::init(UErrorCode &status) {
     alreadyIn_             = NULL;
     bucketList_            = NULL;
     comparator_            = NULL;
+    comparatorPrimary_     = NULL;
     currentBucket_         = NULL;
     firstScriptCharacters_ = NULL;
     indexBuildRequired_    = TRUE;
@@ -538,11 +545,11 @@ void AlphabeticIndex::init(UErrorCode &status) {
     indexCharacters_       = new UVector(status);
     indexCharacters_->setDeleter(uhash_deleteUnicodeString);
     indexCharacters_->setComparer(uhash_compareUnicodeString);
-
     inputRecords_          = new UVector(status);
+    inputRecords_->setDeleter(indexChars_deleteRecord);
+
     noDistinctSorting_     = new UnicodeSet();
     notAlphabetic_         = new UnicodeSet();
-    // firstScriptCharacters_ = new UVector(status);
     rawIndexChars_         = new UnicodeSet();
 
     inflowLabel_.remove();
@@ -577,8 +584,6 @@ void AlphabeticIndex::staticCleanup() {
     IGNORE_SCRIPTS = NULL;
     delete TO_TRY;
     TO_TRY = NULL;
-    delete FIRST_CHARS_IN_SCRIPTS;
-    FIRST_CHARS_IN_SCRIPTS = NULL;
     delete EMPTY_STRING;
     EMPTY_STRING = NULL;
     nfkdNormalizer = NULL;  // ref to a singleton.  Do not delete.
@@ -592,7 +597,6 @@ UnicodeSet *AlphabeticIndex::ETHIOPIC;
 UnicodeSet *AlphabeticIndex::CORE_LATIN;
 UnicodeSet *AlphabeticIndex::IGNORE_SCRIPTS;
 UnicodeSet *AlphabeticIndex::TO_TRY;
-UVector    *AlphabeticIndex::FIRST_CHARS_IN_SCRIPTS;
 const UnicodeString *AlphabeticIndex::EMPTY_STRING;
 
 //
@@ -651,13 +655,6 @@ void AlphabeticIndex::staticInit(UErrorCode &status) {
         }
 
         EMPTY_STRING = new UnicodeString();
-
-        Collator *rootCollator = Collator::createInstance(Locale::getRoot(), status);
-        FIRST_CHARS_IN_SCRIPTS = firstStringsInScript(rootCollator, status);
-        delete rootCollator;
-        if (FIRST_CHARS_IN_SCRIPTS == NULL) {
-            goto err;
-        }
 
         nfkdNormalizer = Normalizer2::getInstance(NULL, "nfkc", UNORM2_DECOMPOSE, status);
         if (nfkdNormalizer == NULL) {
@@ -787,6 +784,48 @@ UVector *AlphabeticIndex::firstStringsInScript(Collator *ruleBasedCollator, UErr
     return dest;
 }
 
+//
+//  First characters in scripts.
+//  It takes too much time to compute this from character properties, so hard code it for now.
+//
+static UChar HACK_FIRST_CHARS_IN_SCRIPTS[] =  { 0x61, 0, 0x03B1, 0,
+            0x2C81, 0, 0x0430, 0, 0x2C30, 0, 0x10D0, 0, 0x0561, 0, 0x05D0, 0, 0xD802, 0xDD00, 0, 0x0800, 0, 0x0621, 0, 0x0710, 0,
+            0x0780, 0, 0x07CA, 0, 0x2D30, 0, 0x1200, 0, 0x0950, 0, 0x0985, 0, 0x0A74, 0, 0x0AD0, 0, 0x0B05, 0, 0x0BD0, 0,
+            0x0C05, 0, 0x0C85, 0, 0x0D05, 0, 0x0D85, 0, 0xABC0, 0, 0xA800, 0, 0xA882, 0, 0xD804, 0xDC83, 0, 0x1B83, 0,
+            0xD802, 0xDE00, 0, 0x0E01, 0, 0x0E81, 0, 0xAA80, 0, 0x0F40, 0, 0x1C00, 0, 0xA840, 0, 0x1900, 0, 0x1700, 0, 0x1720, 0,
+            0x1740, 0, 0x1760, 0, 0x1A00, 0, 0xA930, 0, 0xA90A, 0, 0x1000, 0, 0x1780, 0, 0x1950, 0, 0x1980, 0, 0x1A20, 0,
+            0xAA00, 0, 0x1B05, 0, 0xA984, 0, 0x1880, 0, 0x1C5A, 0, 0x13A0, 0, 0x1401, 0, 0x1681, 0, 0x16A0, 0, 0xD803, 0xDC00, 0,
+            0xA500, 0, 0xA6A0, 0, 0x1100, 0, 0x3041, 0, 0x30A1, 0, 0x3105, 0, 0xA000, 0, 0xA4F8, 0, 0xD800, 0xDE80, 0,
+            0xD800, 0xDEA0, 0, 0xD802, 0xDD20, 0, 0xD800, 0xDF00, 0, 0xD800, 0xDF30, 0, 0xD801, 0xDC28, 0, 0xD801, 0xDC50, 0,
+            0xD801, 0xDC80, 0, 0xD800, 0xDC00, 0, 0xD802, 0xDC00, 0, 0xD802, 0xDE60, 0, 0xD802, 0xDF00, 0, 0xD802, 0xDC40, 0,
+            0xD802, 0xDF40, 0, 0xD802, 0xDF60, 0, 0xD800, 0xDF80, 0, 0xD800, 0xDFA0, 0, 0xD808, 0xDC00, 0, 0xD80C, 0xDC00, 0, 0x4E00, 0 };
+
+UVector *AlphabeticIndex::hackFirstStringsInScript(Collator *ruleBasedCollator, UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return NULL;
+    }
+    UVector *dest = new UVector(status);
+    dest->setDeleter(uhash_deleteUnicodeString);
+    if (dest == NULL && U_SUCCESS(status)) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+    }
+    const UChar *src  = HACK_FIRST_CHARS_IN_SCRIPTS;
+    const UChar *limit = src + sizeof(HACK_FIRST_CHARS_IN_SCRIPTS) / sizeof(HACK_FIRST_CHARS_IN_SCRIPTS[0]);
+    do {
+        if (U_FAILURE(status)) {
+            return dest;
+        }
+        UnicodeString *str = new UnicodeString(src, -1);
+        if (str == NULL) {
+            status = U_MEMORY_ALLOCATION_ERROR;
+        }
+        dest->addElement(str, status);
+        src += str->length() + 1;
+    } while (src < limit);
+    dest->sortWithUComparator(sortCollateComparator, ruleBasedCollator, status);
+    return dest;
+}
+
 
 /**
  * Comparator that returns "better" items first, where shorter NFKD is better, and otherwise NFKD binary order is
@@ -842,9 +881,18 @@ void AlphabeticIndex::removeAllItems(UErrorCode &status) {
     if (U_FAILURE(status)) {
         return;
     }
-    // TODO:  get an object deleter function on inputRecords
     inputRecords_->removeAllElements();
     indexBuildRequired_ = TRUE;
+}
+
+
+int32_t AlphabeticIndex::getLabelNumber(const UnicodeString &itemName, UErrorCode &status) {
+    return 0;   // TODO: implement this.
+}
+
+
+int32_t AlphabeticIndex::getLabelNumber() const {
+    return labelsIterIndex_;
 }
 
 

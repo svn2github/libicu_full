@@ -151,10 +151,14 @@ class U_I18N_API AlphabeticIndex: public UObject {
   public:
 
     /**
-     * Get the Collator that establishes the ordering of the index characters.
+     * Get the Collator that establishes the ordering of the items in this index.
      * Ownership of the collator remains with the AlphabeticIndex instance.
-     * TODO:  should this really be public API?  Some operations on an
-     *        index modify the collator settings.  No settings are documented.
+     *
+     * The returned collator is a reference to the internal collator used by this
+     * index.  It may be safely used to compare the names of items or to get 
+     * sort keys for names.  However if any setttings need to be changed,
+     * or other non-const methods called, a cloned copy must be made first.
+     *
      * @return The collator
      * @draft ICU 4.6
      */
@@ -268,6 +272,30 @@ class U_I18N_API AlphabeticIndex: public UObject {
      *      Note: may trigger lazy index construction.
      */
     virtual int32_t  countLabels(UErrorCode &status);
+
+
+    /**
+     *   Given the name of an item, return the number (zero-based index) of the Label
+     *   under which the item would appear.  The name need not be in the index.
+     *   The label will not be added to the index by this function.
+     *   Label numbers are zero-based, in Label iteration order. 
+     *
+     * @param itemName  The name of an item whose postion (label) in the index
+     *                  is to be determined.
+     * @param status  Error code, will be set with the reason if the operation fails.
+     * @return The index of the Label for this name.
+     *
+     */
+    virtual int32_t  getLabelNumber(const UnicodeString &itemName, UErrorCode &status);
+
+
+    /**
+     *   Get the number (zero based index) of the current label from an iteration
+     *   over the labels of this index.  Return -1 if no iteration is in process.
+     *   @return  the index of the current label
+     *   @draft ICU 4.6
+     */
+    virtual int32_t  getLabelNumber() const;
 
 
     /**
@@ -392,6 +420,7 @@ class U_I18N_API AlphabeticIndex: public UObject {
          //         are factored out into a singleton.
 
      static UVector *firstStringsInScript(Collator *coll, UErrorCode &status);
+     static UVector *hackFirstStringsInScript(Collator *coll, UErrorCode &status);
 
      static UnicodeString separated(const UnicodeString &item);
 
@@ -436,6 +465,7 @@ class U_I18N_API AlphabeticIndex: public UObject {
                 UAlphabeticIndexLabelType type, UErrorCode &status);
          ~Bucket();
      };
+
    private:
 
      // Holds the contents of this index, buckets of user items.
@@ -468,6 +498,7 @@ class U_I18N_API AlphabeticIndex: public UObject {
 
      Locale    locale_;
      Collator  *comparator_;
+     Collator  *comparatorPrimary_;
 
      UnicodeString  inflowLabel_;
      UnicodeString  overflowLabel_;
@@ -484,7 +515,6 @@ class U_I18N_API AlphabeticIndex: public UObject {
      static UnicodeSet *HANGUL;
      static UnicodeSet *IGNORE_SCRIPTS;
      static UnicodeSet *TO_TRY;
-     static UVector    *FIRST_CHARS_IN_SCRIPTS;
      static const UnicodeString *EMPTY_STRING;
 
 };
