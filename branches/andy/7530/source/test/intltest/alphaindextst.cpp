@@ -25,7 +25,7 @@ AlphabeticIndexTest::~AlphabeticIndexTest() {
 
 void AlphabeticIndexTest::runIndexedTest( int32_t index, UBool exec, const char* &name, char* /*par*/ )
 {
-    if (exec) logln("TestSuite RegexTest: ");
+    if (exec) logln("TestSuite AlphabeticIndex: ");
     switch (index) {
 
         case 0: name = "APITest";
@@ -66,14 +66,14 @@ void AlphabeticIndexTest::APITest() {
     //printf("countLabels() == %d\n", lc);
     delete index;
     
-    // addIndexCharacters()
+    // addLabels()
 
     status = U_ZERO_ERROR;
     index = new AlphabeticIndex(Locale::getEnglish(), status);
     TEST_CHECK_STATUS;
     UnicodeSet additions;
     additions.add((UChar32)0x410).add((UChar32)0x415);   // A couple of Cyrillic letters
-    index->addIndexCharacters(additions, status);
+    index->addLabels(additions, status);
     TEST_CHECK_STATUS;
     lc = index->countLabels(status);
     TEST_CHECK_STATUS;
@@ -87,12 +87,13 @@ void AlphabeticIndexTest::APITest() {
     delete index;
 
 
-    // addLocale()
+    // addLabels(Locale)
 
     status = U_ZERO_ERROR;
     index = new AlphabeticIndex(Locale::getEnglish(), status);
     TEST_CHECK_STATUS;
-    index->addLocale(Locale::getJapanese(), status);
+    AlphabeticIndex &aip = index->addLabels(Locale::getJapanese(), status);
+    TEST_ASSERT(&aip == index);
     TEST_CHECK_STATUS;
     lc = index->countLabels(status);
     TEST_CHECK_STATUS;
@@ -137,6 +138,8 @@ void AlphabeticIndexTest::APITest() {
     const UnicodeString baker = UNICODE_STRING_SIMPLE("Baker");
     const UnicodeString charlie = UNICODE_STRING_SIMPLE("Charlie");
     const UnicodeString chad = UNICODE_STRING_SIMPLE("Chad");
+    const UnicodeString zed  = UNICODE_STRING_SIMPLE("Zed");
+    const UnicodeString Cyrillic = UNICODE_STRING_SIMPLE("\\u0410\\u0443\\u0435").unescape();
 
     // addItem(), verify that it comes back out.
     //
@@ -151,7 +154,7 @@ void AlphabeticIndexTest::APITest() {
     index->nextLabel(status);  // Move to underflow label
     index->nextLabel(status);  // Move to "A"
     TEST_CHECK_STATUS;
-    const UnicodeString &label2 = index->getLabel();
+    const UnicodeString &label2 = index->getLabelName();
     UnicodeString A_STR = UNICODE_STRING_SIMPLE("A");
     TEST_ASSERT(A_STR == label2);
 
@@ -166,7 +169,7 @@ void AlphabeticIndexTest::APITest() {
 
     delete index;
 
-    // removeAllItems, addItem(), Iteration
+    // clearItems, addItem(), Iteration
 
     status = U_ZERO_ERROR;
     index = new AlphabeticIndex(Locale::getEnglish(), status);
@@ -202,7 +205,7 @@ void AlphabeticIndexTest::APITest() {
     TEST_CHECK_STATUS;
     TEST_ASSERT(index->nextLabel(status) == TRUE);
 
-    index->removeAllItems(status);
+    index->clearItems(status);
     TEST_CHECK_STATUS;
     index->resetLabelIterator(status);
     while (index->nextLabel(status)) {
@@ -214,7 +217,7 @@ void AlphabeticIndexTest::APITest() {
     TEST_CHECK_STATUS;
     delete index;
 
-    // getLabel(), getLabelType()
+    // getLabelName(), getLabelType()
 
     status = U_ZERO_ERROR;
     index = new AlphabeticIndex(Locale::getEnglish(), status);
@@ -223,7 +226,7 @@ void AlphabeticIndexTest::APITest() {
     TEST_CHECK_STATUS;
     for (i=0; index->nextLabel(status); i++) {
         TEST_CHECK_STATUS;
-        UnicodeString label = index->getLabel();
+        UnicodeString label = index->getLabelName();
         UAlphabeticIndexLabelType type = index->getLabelType();
         if (i == 0) {
             TEST_ASSERT(type == ALPHABETIC_INDEX_UNDERFLOW);
@@ -241,6 +244,45 @@ void AlphabeticIndexTest::APITest() {
         }
     }
     TEST_ASSERT(i==28);
+    delete index;
+
+    // getLabelIndex()
+
+    status = U_ZERO_ERROR;
+    index = new AlphabeticIndex(Locale::getEnglish(), status);
+    TEST_CHECK_STATUS;
+    int32_t n = index->getLabelIndex(adam, status);
+    TEST_CHECK_STATUS;
+    TEST_ASSERT(n == 1);    /*  Label #0 is underflow, 1 is A, etc. */
+    n = index->getLabelIndex(baker, status);
+    TEST_ASSERT(n == 2);
+    n = index->getLabelIndex(Cyrillic, status);
+    TEST_ASSERT(n == 27);   // Overflow label
+    n = index->getLabelIndex(zed, status);
+    TEST_ASSERT(n == 26);
+
+    for (i=0; index->nextLabel(status); i++) {
+        n = index->getLabelIndex();
+        TEST_ASSERT(n == i);
+        UnicodeString label = index->getLabelName();
+        TEST_ASSERT(n == i);
+    }
+    TEST_ASSERT(i == 28);
+
+    delete index;
+    index = new AlphabeticIndex(Locale::createFromName("ru"), status);
+        //Locale loc = Locale::createFromName(localeName);
+    TEST_CHECK_STATUS;
+    n = index->getLabelIndex(adam, status);
+    TEST_CHECK_STATUS;
+    TEST_ASSERT(n == 0);    //  Label #0 is underflow 
+    n = index->getLabelIndex(baker, status);
+    TEST_ASSERT(n == 0);
+    n = index->getLabelIndex(Cyrillic, status);
+    TEST_ASSERT(n == 1);   // Overflow label
+    n = index->getLabelIndex(zed, status);
+    TEST_ASSERT(n == 0);
+
     delete index;
 
 }
@@ -276,7 +318,7 @@ void AlphabeticIndexTest::ManyLocalesTest() {
 
         while (index->nextLabel(status)) {
             TEST_CHECK_STATUS;
-            const UnicodeString &label = index->getLabel();
+            const UnicodeString &label = index->getLabelName();
             // std::string ss;
             // std::cout << ":" << label.toUTF8String(ss);
         }

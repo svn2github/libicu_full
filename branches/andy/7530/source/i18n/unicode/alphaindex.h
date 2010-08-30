@@ -47,38 +47,80 @@ U_CDECL_END
 
 
 /**
- * A set of characters for use as a UI "index", that is, a
- * list of clickable characters (or character sequences) that allow the user to
- * see a segment of a larger "target" list. That is, each character corresponds
- * to a bucket in the target list, where everything in the bucket is greater
- * than or equal to the character (according to the locale's collation). The
- * intention is to have two main functions; one that produces an index list that
- * is relatively static, and the other is a list that produces roughly
- * equally-sized buckets. Only the first is currently provided.
- * <p>
- * The static list would be presented as something like
+  * A class that supports the creation of a UI index appropriate for a given language, such as:
  * 
  * <pre>
- *  A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
+ *  <b>… A B C D E F G H I J K L M N O P Q R S T U V W X Y Z Æ Ø Å …</b>
+ *  
+ *  <b>A</b>
+ *     Addison
+ *     Albertson
+ *     Azensky
+ *  <b>B</b>
+ *     Bäcker
+ *  ...
  * </pre>
  * 
- * In the UI, an index character could be omitted if its bucket is empty. For
- * example, if there is nothing in the bucket for Q, then Q could be omitted.
+ * The class can generate a list of labels for use as a UI "index", that is, a list of 
+ * clickable characters (or character sequences) that allow the user to see a segment 
+ * (bucket) of a larger "target" list. That is, each label corresponds to a bucket in 
+ * the target list, where everything in the bucket is greater than or equal to the character
+ * (according to the locale's collation). Strings can be added to the index; 
+ * they will be in sorted order in the right bucket.
  * <p>
- * <b>Important Notes:</b>
+ * The class also supports having buckets for strings before the first (underflow), 
+ * after the last (overflow), and between scripts (inflow). For example, if the index 
+ * is constructed with labels for Russian and English, Greek characters would fall 
+ * into an inflow bucket between the other two scripts.
+ * <p>
+ * <i>Example</i>
+ * <p>
+ * The "show..." methods below are just to illustrate usage.
+ * 
+ * <pre>
+ * // Create a simple index.  "Item" is assumed to be an appication
+ * // defined type that the application's UI knows about, and that
+ * // has a name.
+ * 
+ * UErrorCode status = U_ZERO_ERROR;
+ * AlphabeticIndex index = new AlphabeticIndex(desiredLocale, status);
+ * index->addLabels(additionalLocale, status);
+ * for ( iteration over a source of items ) {
+ *     index->addItem(item.name(), item, status); 
+ * }
+ * ...
+ * // Show index at top. We could skip or gray out empty buckets
+ * 
+ * while (index->nextLabel(status)) {
+ *     if (showAll || index->getLabelItemCount() != 0) {
+ *         showLabelAtTop(UI, index->getLabelName());
+ *     }
+ * }
+ *  ...
+ * // Show the buckets with their contents, skipping empty buckets
+ * 
+ * index->resetLabelIterator(status);
+ * while (index->nextLabel(status)) {
+ *    if (index->getLabelItemCount() != 0) {
+ *        showLabelInList(UI, index->getLabelName());
+ *        while (index->nextItem(status)) {
+ *            showIndexedItem(UI, static_cast<Item *>(index->getItemContext()))
+ * </pre>
+ * 
+ * The caller can build different UIs using this class. 
+ * For example, an index character could be omitted or grayed-out
+ * if its bucket is empty. Small buckets could also be combined based on size, such as:
+ * 
+ * <pre>
+ * <b>… A-F G-N O-Z …</b>
+ * </pre>
+ * 
+ * <p>
+ * <b>Notes:</b>
  * <ul>
- * <li>Although we say "character" above, the index character could be a
- * sequence, like "CH".</li>
- * <li>There could be items in a target list that are less than the first or
- * (much) greater than the last; examples include words from other scripts. The
- * UI could bucket them with the first or last respectively, or have some symbol
- * for those categories.</li>
- * <li>The use of the list requires that the target list be sorted according to
- * the locale that is used to create that list.</li>
- * <li>For languages without widely accepted sorting methods (eg Chinese/Japanese)
- * the results may appear arbitrary, and it may be best not to use these methods.</li>
- * <li>In the initial version, an arbitrary limit of 100 is placed on these lists.</li>
- * </ul>
+ * <li>Additional collation parameters can be passed in as part of the locale name. 
+ *     For example, German plus numeric
+ *     sorting would be "de@kn-true".
  * 
  * @draft ICU 4.6
  * @provisional This API might change or be removed in a future release.
@@ -104,20 +146,29 @@ class U_I18N_API AlphabeticIndex: public UObject {
 
 
     /**
-     * Add index characters to this Index.  The characters are added to those
+     * Add Labels to this Index.  The labels are additions those
      * that are already in the index; they do not replace the existing 
-     * index characters.
+     * ones.
+     * @param additions The additional characters to add to the index, such as A-Z.
+     * @return this, for chaining
+     * @draft ICU 4.6
      */
-     void addIndexCharacters(const UnicodeSet &additions, UErrorCode &status);
+     AlphabeticIndex &addLabels(const UnicodeSet &additions, UErrorCode &status);
 
-     /**
-      * Add the index characters from a Locale to the index.  The new characters
-      * are added to those that are already in the index; they do not replace the
-      * existing index characters.  The collation order for this index is not
-      * changed; it remains that of the locale that was originally specified
-      * when creating this Index.
-      */
-     void addLocale(const Locale &locale, UErrorCode &status);
+    /**
+     * Add the index characters from a Locale to the index.  The labels
+     * are added to those that are already in the index; they do not replace the
+     * existing index characters.  The collation order for this index is not
+     * changed; it remains that of the locale that was originally specified
+     * when creating this Index.
+     *
+     * @param locale The locale whose index characters are to be added.
+     * @param status Error code, will be set with the reason if the construction
+     *               of the AlphabeticIndex object fails.
+     * @return this, for chaining
+     * @draft ICU 4.6
+     */
+     AlphabeticIndex &addLabels(const Locale &locale, UErrorCode &status);
 
 
   private:
@@ -158,6 +209,7 @@ class U_I18N_API AlphabeticIndex: public UObject {
      * index.  It may be safely used to compare the names of items or to get 
      * sort keys for names.  However if any setttings need to be changed,
      * or other non-const methods called, a cloned copy must be made first.
+     * TODO: clone internally?  Keep it simple for the caller.
      *
      * @return The collator
      * @draft ICU 4.6
@@ -232,6 +284,28 @@ class U_I18N_API AlphabeticIndex: public UObject {
     virtual AlphabeticIndex &setUnderflowLabel(const UnicodeString &underflowLabel, UErrorCode &status);
 
 
+    /**
+     * Get the limit on the number of labels permitted in the index. 
+     * The number does not include over, under and inflow labels.
+     * 
+     * @return maxLabelCount maximum number of labels.
+     * @draft ICU 4.6
+     */
+    virtual int32_t getMaxLabelCount() const;
+
+    /**
+     * Set a limit on the number of labels permitted in the index. 
+     * The number does not include over, under and inflow labels.  
+     * Currently, if the number is exceeded, then every
+     * nth item is removed to bring the count down. 
+     * A more sophisticated mechanism may be available in the future.
+     * 
+     * @param maxLabelCount the maximum number of labels.
+     * @return This, for chaining
+     * @draft ICU 4.6
+     */
+    virtual AlphabeticIndex &setMaxLabelCount(int32_t maxLabelCount, UErrorCode &status);
+
 
     /**
      * Get the Unicode character (or tailored string) that defines an overflow bucket; 
@@ -242,60 +316,89 @@ class U_I18N_API AlphabeticIndex: public UObject {
      * 
      * @param lowerLimit   The character below the overflow (or inflow) bucket
      * @return string that defines top of the overflow buck for lowerLimit, or null if there is none
-     * @draft ICU 4.6
+     * @internal
      */
-    virtual UnicodeString getOverflowComparisonString(const UnicodeString &lowerLimit, UErrorCode &status);
+    virtual const UnicodeString &getOverflowComparisonString(const UnicodeString &lowerLimit, 
+                                                             UErrorCode &status);
     
 
     /**
-     * Add an item to an index.
+     * Add an item to the index.  Each item will be associated with an index Label
+     *  based on the item's name.  The list of items for each label will be sorted 
+     *  based on the collation ordering of the names in the index's locale.
+     *  Items with duplicate names are permitted; they will be kept in the order 
+     *  that they were added.
      *
      * @param name The display name for the item.  The item will be placed under
      *             an index label based on this name.
      * @param context An optional pointer to user data associated with this
-     *                item.  When interating the contents of an index, the
-     *                context pointer will be returned along with the name for
-     *                each item.
+     *                item.  When iterating the contents of an index, both the
+     *                context pointer the name will be available for each item.
      * @param status  Error code, will be set with the reason if the operation fails.
+     * @return        This, for chaining.
      * @draft ICU 4.6
      */
-    virtual void addItem(const UnicodeString &name, void *context, UErrorCode &status);
+    virtual AlphabeticIndex &addItem(const UnicodeString &name, void *context, UErrorCode &status);
 
     /**
      * Remove all items from the Index.  The set of labels, or headings, under
      * which items are classified is not altered.
+     *
+     * @param status  Error code, will be set with the reason if the operation fails.
+     * @return        This, for chaining.
+     * @draft ICU 4.6
      */
-    virtual void removeAllItems(UErrorCode &status);
+    virtual AlphabeticIndex &clearItems(UErrorCode &status);
 
 
     /**  Get the number of labels in this index.
      *      Note: may trigger lazy index construction.
+     *
+     * @param status  Error code, will be set with the reason if the operation fails.
+     * @return        The number of labels in this index, including any under, over or
+     *                in-flow labels.
+     * @draft ICU 4.6
+     *  TODO:  Naming.  is getBucketCount() in Java.
      */
     virtual int32_t  countLabels(UErrorCode &status);
 
 
+    /**  Get the number of items in this index, that is, the total number
+     *   of <name, context> pairs added with addItem().
+     *
+     * @param status  Error code, will be set with the reason if the operation fails.
+     * @return        The number of items in this index, including any under, over or
+     *                in-flow labels.
+     * @draft ICU 4.6
+     *  TODO:  Naming.  is getRecordCount() in Java.
+     */
+    virtual int32_t  countItems(UErrorCode &status);
+
+
+
     /**
-     *   Given the name of an item, return the number (zero-based index) of the Label
+     *   Given the name of an item, return the zero-based index of the Label
      *   under which the item would appear.  The name need not be in the index.
-     *   The label will not be added to the index by this function.
+     *   The named item will not be added to the index by this function.
      *   Label numbers are zero-based, in Label iteration order. 
      *
      * @param itemName  The name of an item whose postion (label) in the index
      *                  is to be determined.
      * @param status  Error code, will be set with the reason if the operation fails.
      * @return The index of the Label for this name.
+     * @draft ICU 4.6
      *
      */
-    virtual int32_t  getLabelNumber(const UnicodeString &itemName, UErrorCode &status);
+    virtual int32_t  getLabelIndex(const UnicodeString &itemName, UErrorCode &status);
 
 
     /**
-     *   Get the number (zero based index) of the current label from an iteration
+     *   Get the zero based index of the current label from an iteration
      *   over the labels of this index.  Return -1 if no iteration is in process.
      *   @return  the index of the current label
      *   @draft ICU 4.6
      */
-    virtual int32_t  getLabelNumber() const;
+    virtual int32_t  getLabelIndex() const;
 
 
     /**
@@ -310,11 +413,11 @@ class U_I18N_API AlphabeticIndex: public UObject {
     virtual UBool nextLabel(UErrorCode &status);
 
     /**
-     *   Return the current index label as determined by the iteration over the labels.
+     *   Return the name of the current label as determined by the iteration over the labels.
      *   If the iteration is before the first label (nextLabel() has not been called),
      *   or after the last label, return an empty string.
      */
-    virtual const UnicodeString &getLabel() const;
+    virtual const UnicodeString &getLabelName() const;
 
     /**
      *  Return the type of the index label as determined by the iteration over the labels.
@@ -327,9 +430,25 @@ class U_I18N_API AlphabeticIndex: public UObject {
     virtual UAlphabeticIndexLabelType getLabelType() const;
 
     /**
+      * Get the number of <name, context> items associated with the current index label.
+      * If the current label iteration position is before the first label or after the
+      * last, return 0.
+      *
+      *  @return the number of items.
+      *  @draft ICU 4.6
+      */
+    virtual int32_t getLabelItemCount() const;
+
+
+    /**
+     *  Reset the label iteration for this index.  The next call to nextLabel()
+     *  will restart at the first label.
      *
+     * @param status  Error code, will be set with the reason if the operation fails.
+     * @return        this, for chaining.
+     * @draft ICU 4.6
      */
-    virtual void resetLabelIterator(UErrorCode &status);
+    virtual AlphabeticIndex &resetLabelIterator(UErrorCode &status);
 
     /**
      * Advance to the next item under the current Label in the index.
@@ -339,14 +458,18 @@ class U_I18N_API AlphabeticIndex: public UObject {
      *   @param status  Error code, will be set with the reason if the operation fails.
      *   U_ENUM_OUT_OF_SYNC_ERROR will be reported if the index is modified while
      *   an enumeration of its contents are in process.
-     *   @return FALSE when the iteration advances past the last item.
+     *   @return TRUE if successful, FALSE when the iteration advances past the last item.
+     *   @draft ICU 4.6
      */
     virtual UBool nextItem(UErrorCode &status);
 
     /**
-     * Return the name of the index item currently being iterated over.
+     * Get the name of the index item currently being iterated over.
      * Return an empty string if the position is before first item under this label,
      * or after the last.
+     *
+     *  @return The name of the current index item.
+     *  @draft ICU 4.6
      */
     virtual const UnicodeString &getItemName() const;
 
@@ -355,15 +478,21 @@ class U_I18N_API AlphabeticIndex: public UObject {
      * Return the context pointer of the index item currently being iterated over.
      * Return NULL if before the first item under this label,
      * or after the last.
+     *
+     *  @return The current item's context pointer.
+     *  @draft ICU 4.6
      */
     virtual const void *getItemContext() const;
 
 
     /**
      * Reset the item iterator position to before the first index item 
-     * under the current label.
+     * belonging to the current label.
+     *
+     *  @return This, for chaining.
+     *  @draft ICU 4.6
      */
-    virtual void resetItemIterator();
+    virtual AlphabeticIndex & resetItemIterator();
 
    /**
      * Returns a unique class ID POLYMORPHICALLY.  Pure virtual override.
@@ -404,12 +533,12 @@ class U_I18N_API AlphabeticIndex: public UObject {
      // Initialize & destruct static constants used by this class.
      static void staticInit(UErrorCode &status);
 
+   public:
      /**
       *   Delete all shared (static) data associated with an AlphabeticIndex. 
       *   Internal function, not intended for direct use. 
       *   @internal.
       */
-   public:
      static void staticCleanup();
    private:
 
@@ -432,11 +561,13 @@ class U_I18N_API AlphabeticIndex: public UObject {
 
 
   public:
+
+    //  The following internal items are declared public only to allow access from 
+    //  implementation code written in plain C.  They are not intended for
+    //  public use.
+
     /**
-     * A record to be sorted into buckets with getIndexBucketCharacters.
-     * For ICU implementation use only.  Declared public only to allow access from
-     * implementation code written in plain C.
-     *
+     * A record, or item, in the index. 
      * @internal
      */
      struct Record: public UMemory {
@@ -446,7 +577,11 @@ class U_I18N_API AlphabeticIndex: public UObject {
          ~Record() {delete name_;};
      };
 
-     // Holds all user items before they are distributed into buckets.
+     /**
+       * Holds all user items before they are distributed into buckets.
+       * Type of contents is (Record *)
+       * @internal
+       */
      UVector  *inputRecords_;
 
      /**
@@ -482,6 +617,8 @@ class U_I18N_API AlphabeticIndex: public UObject {
                                      //  require rebuilding & bucketing before the
                                      //  contents can be iterated.
      
+     int32_t    maxLabelCount_;      // Limit on # of labels permitted in the index.
+
      UHashtable *alreadyIn_;         // Key=UnicodeString, value=UnicodeSet
 
      UnicodeSet *rawIndexChars_;     // Set of index characters.  Union
