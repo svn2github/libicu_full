@@ -229,15 +229,15 @@ void AlphabeticIndexTest::APITest() {
         UnicodeString label = index->getLabelName();
         UAlphabeticIndexLabelType type = index->getLabelType();
         if (i == 0) {
-            TEST_ASSERT(type == ALPHABETIC_INDEX_UNDERFLOW);
+            TEST_ASSERT(type == U_ALPHAINDEX_UNDERFLOW);
             TEST_ASSERT(label == adam);
         } else if (i <= 26) {
             // Labels A - Z for English locale
-            TEST_ASSERT(type == ALPHABETIC_INDEX_NORMAL);
+            TEST_ASSERT(type == U_ALPHAINDEX_NORMAL);
             UnicodeString expectedLabel((UChar)(0x40 + i));
             TEST_ASSERT(expectedLabel == label);
         } else if (i == 27) {
-            TEST_ASSERT(type == ALPHABETIC_INDEX_OVERFLOW);
+            TEST_ASSERT(type == U_ALPHAINDEX_OVERFLOW);
             TEST_ASSERT(label == charlie);
         } else {
             TEST_ASSERT(FALSE);

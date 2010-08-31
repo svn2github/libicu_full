@@ -32,8 +32,7 @@
 
 U_NAMESPACE_BEGIN
 
-UOBJECT_DEFINE_RTTI_IMPLEMENTATION(AlphabeticIndex)
-
+UOBJECT_DEFINE_NO_RTTI_IMPLEMENTATION(AlphabeticIndex)
 
 // Forward Declarations
 static int32_t U_CALLCONV
@@ -140,7 +139,7 @@ AlphabeticIndex &AlphabeticIndex::addLabels(const Locale &locale, UErrorCode &st
 }
 
 
-int32_t AlphabeticIndex::countLabels(UErrorCode &status) {
+int32_t AlphabeticIndex::getBucketCount(UErrorCode &status) {
     buildIndex(status);
     if (U_FAILURE(status)) {
         return 0;
@@ -149,7 +148,7 @@ int32_t AlphabeticIndex::countLabels(UErrorCode &status) {
 }
 
 
-int32_t AlphabeticIndex::countItems(UErrorCode &status) {
+int32_t AlphabeticIndex::getRecordCount(UErrorCode &status) {
     if (U_FAILURE(status)) {
         return 0;
     }
@@ -255,7 +254,7 @@ void AlphabeticIndex::buildIndex(UErrorCode &status) {
     bucketItems(status);
 
     indexBuildRequired_ = FALSE;
-    resetLabelIterator(status);
+    resetRecordIterator();
 }
 
 //
@@ -263,13 +262,13 @@ void AlphabeticIndex::buildIndex(UErrorCode &status) {
 
 void AlphabeticIndex::buildBucketList(UErrorCode &status) {
     UnicodeString labelStr = getUnderflowLabel();
-    Bucket *b = new Bucket(labelStr, *EMPTY_STRING, ALPHABETIC_INDEX_UNDERFLOW, status);
+    Bucket *b = new Bucket(labelStr, *EMPTY_STRING, U_ALPHAINDEX_UNDERFLOW, status);
     bucketList_->addElement(b, status);
 
     // Build up the list, adding underflow, additions, overflow
     // insert infix labels as needed, using \uFFFF.
     const UnicodeString *last = static_cast<UnicodeString *>(indexCharacters_->elementAt(0));
-    b = new Bucket(*last, *last, ALPHABETIC_INDEX_NORMAL, status);
+    b = new Bucket(*last, *last, U_ALPHAINDEX_NORMAL, status);
     bucketList_->addElement(b, status);
 
     UnicodeSet lastSet; 
@@ -286,19 +285,19 @@ void AlphabeticIndex::buildBucketList(UErrorCode &status) {
             const UnicodeString &overflowComparisonString = getOverflowComparisonString(*last, status);
             if (comparatorPrimary_->compare(overflowComparisonString, *current) < 0) {
                 labelStr = getInflowLabel();
-                b = new Bucket(labelStr, overflowComparisonString, ALPHABETIC_INDEX_INFLOW, status);
+                b = new Bucket(labelStr, overflowComparisonString, U_ALPHAINDEX_INFLOW, status);
                 bucketList_->addElement(b, status);
                 i++;
                 lastSet = set;
             }
         }
-        b = new Bucket(*current, *current, ALPHABETIC_INDEX_NORMAL, status);
+        b = new Bucket(*current, *current, U_ALPHAINDEX_NORMAL, status);
         bucketList_->addElement(b, status);
         last = current;
         lastSet = set;
     }
     const UnicodeString &limitString = getOverflowComparisonString(*last, status);
-    b = new Bucket(getOverflowLabel(), limitString, ALPHABETIC_INDEX_OVERFLOW, status);
+    b = new Bucket(getOverflowLabel(), limitString, U_ALPHAINDEX_OVERFLOW, status);
     bucketList_->addElement(b, status);
     // final overflow bucket
 }
@@ -454,8 +453,10 @@ UBool AlphabeticIndex::operator!=(const AlphabeticIndex& /* other */) const {
 }
 
 
-const Collator &AlphabeticIndex::getCollator() const {
-    return *comparator_;
+const RuleBasedCollator &AlphabeticIndex::getCollator() const {
+    // There are no known non-RuleBasedCollator collators, and none ever expected.
+    // But, in case that changes, better a null pointer than a wrong type.
+    return *dynamic_cast<RuleBasedCollator *>(comparator_);
 }
 
 
@@ -895,14 +896,14 @@ PreferenceComparator(const void *context, const void *left, const void *right) {
 }
 
 
-AlphabeticIndex & AlphabeticIndex::addItem(const icu_45::UnicodeString &name, void *context, UErrorCode &status) {
+AlphabeticIndex & AlphabeticIndex::addRecord(const icu_45::UnicodeString &name, void *data, UErrorCode &status) {
     if (U_FAILURE(status)) {
         return *this;
     }
     Record *r = new Record;
     // Note on ownership of the name string:  It stays with the Record.
     r->name_ = static_cast<UnicodeString *>(name.clone());
-    r->context_ = context;
+    r->data_ = data;
     r->serialNumber_ = ++recordCounter_;
     inputRecords_->addElement(r, status);
     indexBuildRequired_ = TRUE;
@@ -910,7 +911,7 @@ AlphabeticIndex & AlphabeticIndex::addItem(const icu_45::UnicodeString &name, vo
 }
 
 
-AlphabeticIndex &AlphabeticIndex::clearItems(UErrorCode &status) {
+AlphabeticIndex &AlphabeticIndex::clearRecords(UErrorCode &status) {
     if (U_FAILURE(status)) {
         return *this;
     }
@@ -920,7 +921,7 @@ AlphabeticIndex &AlphabeticIndex::clearItems(UErrorCode &status) {
 }
 
 
-int32_t AlphabeticIndex::getLabelIndex(const UnicodeString &itemName, UErrorCode &status) {
+int32_t AlphabeticIndex::getBucketIndex(const UnicodeString &name, UErrorCode &status) {
     buildIndex(status);
     if (U_FAILURE(status)) {
         return 0;
@@ -931,12 +932,12 @@ int32_t AlphabeticIndex::getLabelIndex(const UnicodeString &itemName, UErrorCode
     // TODO:  use a binary search.
     for (int32_t i = 0; i < bucketList_->size(); ++i) {
         Bucket *bucket = static_cast<Bucket *>(bucketList_->elementAt(i));
-        Collator::EComparisonResult comp = comparatorPrimary_->compare(itemName, bucket->lowerBoundary_);
+        Collator::EComparisonResult comp = comparatorPrimary_->compare(name, bucket->lowerBoundary_);
         if (comp < 0) { 
             return i - 1;
         }
     }
-    // Loop runs until we find the bucket following the one that would hold itemName.
+    // Loop runs until we find the bucket following the one that would hold name.
     // If the name belongs in the last bucket the loop will drop out the bottom rather
     //  than returning from the middle.
 
@@ -944,12 +945,12 @@ int32_t AlphabeticIndex::getLabelIndex(const UnicodeString &itemName, UErrorCode
 }
 
 
-int32_t AlphabeticIndex::getLabelIndex() const {
+int32_t AlphabeticIndex::getBucketIndex() const {
     return labelsIterIndex_;
 }
 
 
-UBool AlphabeticIndex::nextLabel(UErrorCode &status) {
+UBool AlphabeticIndex::nextBucket(UErrorCode &status) {
     if (U_FAILURE(status)) {
         return FALSE;
     }
@@ -967,11 +968,11 @@ UBool AlphabeticIndex::nextLabel(UErrorCode &status) {
         return FALSE;
     }
     currentBucket_ = static_cast<Bucket *>(bucketList_->elementAt(labelsIterIndex_));
-    resetItemIterator();
+    resetRecordIterator();
     return TRUE;
 }
 
-const UnicodeString &AlphabeticIndex::getLabelName() const {
+const UnicodeString &AlphabeticIndex::getBucketLabel() const {
     if (currentBucket_ != NULL) {
         return currentBucket_->label_;
     } else {    
@@ -980,16 +981,16 @@ const UnicodeString &AlphabeticIndex::getLabelName() const {
 }
 
 
-UAlphabeticIndexLabelType AlphabeticIndex::getLabelType() const {
+UAlphabeticIndexLabelType AlphabeticIndex::getBucketLabelType() const {
     if (currentBucket_ != NULL) {
         return currentBucket_->labelType_;
     } else {
-        return ALPHABETIC_INDEX_NONE;
+        return U_ALPHAINDEX_NORMAL;
     }
 }
 
 
-int32_t AlphabeticIndex::getLabelItemCount() const {
+int32_t AlphabeticIndex::getBucketRecordCount() const {
     if (currentBucket_ != NULL) {
         return currentBucket_->records_->size();
     } else {
@@ -998,7 +999,7 @@ int32_t AlphabeticIndex::getLabelItemCount() const {
 }
 
 
-AlphabeticIndex &AlphabeticIndex::resetLabelIterator(UErrorCode &status) {
+AlphabeticIndex &AlphabeticIndex::resetBucketIterator(UErrorCode &status) {
     if (U_FAILURE(status)) {
         return *this;
     }
@@ -1009,7 +1010,7 @@ AlphabeticIndex &AlphabeticIndex::resetLabelIterator(UErrorCode &status) {
 }
 
 
-UBool AlphabeticIndex::nextItem(UErrorCode &status) {
+UBool AlphabeticIndex::nextRecord(UErrorCode &status) {
     if (U_FAILURE(status)) {
         return FALSE;
     }
@@ -1032,7 +1033,7 @@ UBool AlphabeticIndex::nextItem(UErrorCode &status) {
 }
 
 
-const UnicodeString &AlphabeticIndex::getItemName() const {
+const UnicodeString &AlphabeticIndex::getRecordName() const {
     const UnicodeString *retStr = EMPTY_STRING;
     if (currentBucket_ != NULL &&
         itemsIterIndex_ >= 0 &&
@@ -1043,19 +1044,19 @@ const UnicodeString &AlphabeticIndex::getItemName() const {
     return *retStr;
 }
 
-const void *AlphabeticIndex::getItemContext() const {
+const void *AlphabeticIndex::getRecordData() const {
     const void *retPtr = NULL;
     if (currentBucket_ != NULL &&
         itemsIterIndex_ >= 0 &&
         itemsIterIndex_ < currentBucket_->records_->size()) {
             Record *item = static_cast<Record *>(currentBucket_->records_->elementAt(itemsIterIndex_));
-            retPtr = item->context_;
+            retPtr = item->data_;
     }
     return retPtr;
 }
 
 
-AlphabeticIndex & AlphabeticIndex::resetItemIterator() {
+AlphabeticIndex & AlphabeticIndex::resetRecordIterator() {
     itemsIterIndex_ = -1;
     return *this;
 }

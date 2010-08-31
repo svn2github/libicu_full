@@ -32,20 +32,6 @@ class UVector;
 
 
 
-     // TODO:  coordinate values with Java. 
-     //        Names and form anticipate an eventual plain C API.
-U_CDECL_BEGIN
-typedef enum UAlphabeticIndexLabelType {
-         ALPHABETIC_INDEX_NONE      = -1,
-         ALPHABETIC_INDEX_NORMAL    = 0,
-         ALPHABETIC_INDEX_UNDERFLOW = 1,
-         ALPHABETIC_INDEX_INFLOW    = 2,
-         ALPHABETIC_INDEX_OVERFLOW  = 3
-     } UAlphabeticIndexLabelType;
-
-U_CDECL_END
-
-
 /**
   * A class that supports the creation of a UI index appropriate for a given language, such as:
  * 
@@ -73,27 +59,29 @@ U_CDECL_END
  * is constructed with labels for Russian and English, Greek characters would fall 
  * into an inflow bucket between the other two scripts.
  * <p>
+ * The AlphabeticIndex class is not intended for public subclassing.
+ * <p>
  * <i>Example</i>
  * <p>
  * The "show..." methods below are just to illustrate usage.
  * 
  * <pre>
  * // Create a simple index.  "Item" is assumed to be an appication
- * // defined type that the application's UI knows about, and that
- * // has a name.
+ * // defined type that the application's UI and other processing knows about, 
+ * //  and that has a name.
  * 
  * UErrorCode status = U_ZERO_ERROR;
  * AlphabeticIndex index = new AlphabeticIndex(desiredLocale, status);
  * index->addLabels(additionalLocale, status);
- * for ( iteration over a source of items ) {
- *     index->addItem(item.name(), item, status); 
+ * for (Item *item in some source of Items ) {
+ *     index->addRecord(item->name(), item, status); 
  * }
  * ...
  * // Show index at top. We could skip or gray out empty buckets
  * 
  * while (index->nextLabel(status)) {
  *     if (showAll || index->getLabelItemCount() != 0) {
- *         showLabelAtTop(UI, index->getLabelName());
+ *         showLabelAtTop(UI, index->getLabel());
  *     }
  * }
  *  ...
@@ -102,9 +90,9 @@ U_CDECL_END
  * index->resetLabelIterator(status);
  * while (index->nextLabel(status)) {
  *    if (index->getLabelItemCount() != 0) {
- *        showLabelInList(UI, index->getLabelName());
+ *        showLabelInList(UI, index->getLabel());
  *        while (index->nextItem(status)) {
- *            showIndexedItem(UI, static_cast<Item *>(index->getItemContext()))
+ *            showIndexedItem(UI, static_cast<Item *>(index->getBucketData()))
  * </pre>
  * 
  * The caller can build different UIs using this class. 
@@ -125,6 +113,19 @@ U_CDECL_END
  * @draft ICU 4.6
  * @provisional This API might change or be removed in a future release.
  */
+
+
+
+U_CDECL_BEGIN
+typedef enum UAlphabeticIndexLabelType {
+         U_ALPHAINDEX_NORMAL    = 0,
+         U_ALPHAINDEX_UNDERFLOW = 1,
+         U_ALPHAINDEX_INFLOW    = 2,
+         U_ALPHAINDEX_OVERFLOW  = 3
+     } UAlphabeticIndexLabelType;
+
+U_CDECL_END
+
 class U_I18N_API AlphabeticIndex: public UObject {
 
   public:
@@ -214,7 +215,7 @@ class U_I18N_API AlphabeticIndex: public UObject {
      * @return The collator
      * @draft ICU 4.6
      */
-    virtual const Collator &getCollator() const;
+    virtual const RuleBasedCollator &getCollator() const;
 
 
    /**
@@ -323,32 +324,32 @@ class U_I18N_API AlphabeticIndex: public UObject {
     
 
     /**
-     * Add an item to the index.  Each item will be associated with an index Label
-     *  based on the item's name.  The list of items for each label will be sorted 
+     * Add an record to the index.  Each record will be associated with an index Bucket
+     *  based on the record's name.  The list of records for each bucket will be sorted 
      *  based on the collation ordering of the names in the index's locale.
-     *  Items with duplicate names are permitted; they will be kept in the order 
+     *  Records with duplicate names are permitted; they will be kept in the order 
      *  that they were added.
      *
-     * @param name The display name for the item.  The item will be placed under
-     *             an index label based on this name.
-     * @param context An optional pointer to user data associated with this
-     *                item.  When iterating the contents of an index, both the
-     *                context pointer the name will be available for each item.
+     * @param name The display name for the Record.  The Record will be placed in
+     *             a bucket based on this name.
+     * @param data An optional pointer to user data associated with this
+     *             item.  When iterating the contents of a bucket, both the
+     *             data pointer the name will be available for each Record.
      * @param status  Error code, will be set with the reason if the operation fails.
      * @return        This, for chaining.
      * @draft ICU 4.6
      */
-    virtual AlphabeticIndex &addItem(const UnicodeString &name, void *context, UErrorCode &status);
+    virtual AlphabeticIndex &addRecord(const UnicodeString &name, void *data, UErrorCode &status);
 
     /**
-     * Remove all items from the Index.  The set of labels, or headings, under
-     * which items are classified is not altered.
+     * Remove all Records from the Index.  The set of Buckets, which define the headings under
+     * which records are classified, is not altered.
      *
      * @param status  Error code, will be set with the reason if the operation fails.
      * @return        This, for chaining.
      * @draft ICU 4.6
      */
-    virtual AlphabeticIndex &clearItems(UErrorCode &status);
+    virtual AlphabeticIndex &clearRecords(UErrorCode &status);
 
 
     /**  Get the number of labels in this index.
@@ -358,102 +359,98 @@ class U_I18N_API AlphabeticIndex: public UObject {
      * @return        The number of labels in this index, including any under, over or
      *                in-flow labels.
      * @draft ICU 4.6
-     *  TODO:  Naming.  is getBucketCount() in Java.
      */
-    virtual int32_t  countLabels(UErrorCode &status);
+    virtual int32_t  getBucketCount(UErrorCode &status);
 
 
-    /**  Get the number of items in this index, that is, the total number
-     *   of <name, context> pairs added with addItem().
+    /**  Get the total number of Records in this index, that is, the number
+     *   of <name, data> pairs added.
      *
      * @param status  Error code, will be set with the reason if the operation fails.
      * @return        The number of items in this index, including any under, over or
      *                in-flow labels.
      * @draft ICU 4.6
-     *  TODO:  Naming.  is getRecordCount() in Java.
      */
-    virtual int32_t  countItems(UErrorCode &status);
+    virtual int32_t  getRecordCount(UErrorCode &status);
 
 
 
     /**
-     *   Given the name of an item, return the zero-based index of the Label
-     *   under which the item would appear.  The name need not be in the index.
-     *   The named item will not be added to the index by this function.
-     *   Label numbers are zero-based, in Label iteration order. 
+     *   Given the name of a record, return the zero-based index of the Bucket
+     *   in which the item should appear.  The name need not be in the index.
+     *   A Record will not be added to the index by this function.
+     *   Bucket numbers are zero-based, in Bucket iteration order. 
      *
-     * @param itemName  The name of an item whose postion (label) in the index
-     *                  is to be determined.
+     * @param name  The name whose bucket postion in the index is to be determined.
      * @param status  Error code, will be set with the reason if the operation fails.
-     * @return The index of the Label for this name.
+     * @return The bucket number for this name.
      * @draft ICU 4.6
      *
      */
-    virtual int32_t  getLabelIndex(const UnicodeString &itemName, UErrorCode &status);
+    virtual int32_t  getBucketIndex(const UnicodeString &itemName, UErrorCode &status);
 
 
     /**
-     *   Get the zero based index of the current label from an iteration
-     *   over the labels of this index.  Return -1 if no iteration is in process.
-     *   @return  the index of the current label
+     *   Get the zero based index of the current Bucket from an iteration
+     *   over the Buckets of this index.  Return -1 if no iteration is in process.
+     *   @return  the index of the current Bucket
      *   @draft ICU 4.6
      */
-    virtual int32_t  getLabelIndex() const;
+    virtual int32_t  getBucketIndex() const;
 
 
     /**
-     *   Advance the iteration over the labels of this index.  Return FALSE if
-     *   there are no more labels.
+     *   Advance the iteration over the Buckets of this index.  Return FALSE if
+     *   there are no more Buckets.
      *
      *   @param status  Error code, will be set with the reason if the operation fails.
      *   U_ENUM_OUT_OF_SYNC_ERROR will be reported if the index is modified while
      *   an enumeration of its contents are in process.
      *   @draft ICU 4.6
      */
-    virtual UBool nextLabel(UErrorCode &status);
+    virtual UBool nextBucket(UErrorCode &status);
 
     /**
-     *   Return the name of the current label as determined by the iteration over the labels.
-     *   If the iteration is before the first label (nextLabel() has not been called),
-     *   or after the last label, return an empty string.
+     *   Return the name of the Label of the current bucket.
+     *   If the iteration is before the first Bucket (nextBucket() has not been called),
+     *   or after the last, return an empty string.
      */
-    virtual const UnicodeString &getLabelName() const;
+    virtual const UnicodeString &getBucketLabel() const;
 
     /**
-     *  Return the type of the index label as determined by the iteration over the labels.
-     *  If the iteration is before the first label (nextlabel() has not been called),
-     *  or after the last label, return ALPHABETIC_INDEX_NONE.
+     *  Return the type of the label for the current Bucket (selected by the
+     *  iteration over Buckets.)
      *
      * @return the label type.
      * @draft ICU 4.6
      */
-    virtual UAlphabeticIndexLabelType getLabelType() const;
+    virtual UAlphabeticIndexLabelType getBucketLabelType() const;
 
     /**
-      * Get the number of <name, context> items associated with the current index label.
-      * If the current label iteration position is before the first label or after the
+      * Get the number of <name, data> Records in the current Bucket.
+      * If the current bucket iteration position is before the first label or after the
       * last, return 0.
       *
-      *  @return the number of items.
+      *  @return the number of Records.
       *  @draft ICU 4.6
       */
-    virtual int32_t getLabelItemCount() const;
+    virtual int32_t getBucketRecordCount() const;
 
 
     /**
-     *  Reset the label iteration for this index.  The next call to nextLabel()
-     *  will restart at the first label.
+     *  Reset the Bucket iteration for this index.  The next call to nextBucket()
+     *  will restart the iteration at the first label.
      *
      * @param status  Error code, will be set with the reason if the operation fails.
      * @return        this, for chaining.
      * @draft ICU 4.6
      */
-    virtual AlphabeticIndex &resetLabelIterator(UErrorCode &status);
+    virtual AlphabeticIndex &resetBucketIterator(UErrorCode &status);
 
     /**
-     * Advance to the next item under the current Label in the index.
-     * When nextLabel() is called, item iteration is reset to just before the
-     * first item that appearing under the new label.
+     * Advance to the next record in the current Bucket.
+     * When nextBucket() is called, Record iteration is reset to just before the
+     * first Record in the new Bucket.
      *
      *   @param status  Error code, will be set with the reason if the operation fails.
      *   U_ENUM_OUT_OF_SYNC_ERROR will be reported if the index is modified while
@@ -461,67 +458,43 @@ class U_I18N_API AlphabeticIndex: public UObject {
      *   @return TRUE if successful, FALSE when the iteration advances past the last item.
      *   @draft ICU 4.6
      */
-    virtual UBool nextItem(UErrorCode &status);
+    virtual UBool nextRecord(UErrorCode &status);
 
     /**
-     * Get the name of the index item currently being iterated over.
-     * Return an empty string if the position is before first item under this label,
+     * Get the name of the current Record.
+     * Return an empty string if the Record iteration position is before first 
      * or after the last.
      *
      *  @return The name of the current index item.
      *  @draft ICU 4.6
      */
-    virtual const UnicodeString &getItemName() const;
+    virtual const UnicodeString &getRecordName() const;
 
 
     /**
-     * Return the context pointer of the index item currently being iterated over.
-     * Return NULL if before the first item under this label,
+     * Return the data pointer of the Record currently being iterated over.
+     * Return NULL if the current iteration position before the first item in this Bucket,
      * or after the last.
      *
-     *  @return The current item's context pointer.
+     *  @return The current Record's data pointer.
      *  @draft ICU 4.6
      */
-    virtual const void *getItemContext() const;
+    virtual const void *getRecordData() const;
 
 
     /**
-     * Reset the item iterator position to before the first index item 
-     * belonging to the current label.
+     * Reset the Record iterator position to before the first Record in the current Bucket.
      *
      *  @return This, for chaining.
      *  @draft ICU 4.6
      */
-    virtual AlphabeticIndex & resetItemIterator();
+    virtual AlphabeticIndex & resetRecordIterator();
 
-   /**
-     * Returns a unique class ID POLYMORPHICALLY.  Pure virtual override.
-     * This method is to implement a simple version of RTTI, since not all
-     * C++ compilers support genuine RTTI.  Polymorphic operator==() and
-     * clone() methods call this method.
-     *
-     * @return          The class ID for this object. All objects of a
-     *                  given class have the same class ID.  Objects of
-     *                  other classes have different class IDs.
-     * @draft ICU 4.6
-     */
-    virtual UClassID getDynamicClassID(void) const;
+private:
+    // No ICU "poor man's RTTI" for this class nor its subclasses.
+    virtual UClassID getDynamicClassID() const;
 
-    /**
-     * Returns the class ID for this class.  This is useful only for
-     * comparing to a return value from getDynamicClassID().  For example:
-     *
-     *      Base* polymorphic_pointer = createPolymorphicObject();
-     *      if (polymorphic_pointer->getDynamicClassID() ==
-     *          Derived::getStaticClassID()) ...
-     *
-     * @return          The class ID for all objects of this class.
-     * @sdraft ICU 4.6
-     */
-    static UClassID U_EXPORT2 getStaticClassID(void);
-
-
-  private:
+private:
      /**
       *   No assignment.  
       */
@@ -544,9 +517,7 @@ class U_I18N_API AlphabeticIndex: public UObject {
 
      // Add index characters from the specified locale to the dest set.
      // Does not remove any previous contents from dest.
-     void getIndexExemplars(UnicodeSet &dest, const Locale &locale, UErrorCode &status);
-         // TODO:  change getIndexExemplars() to static once the constant UnicodeSets
-         //         are factored out into a singleton.
+     static void getIndexExemplars(UnicodeSet &dest, const Locale &locale, UErrorCode &status);
 
      static UVector *firstStringsInScript(Collator *coll, UErrorCode &status);
      static UVector *hackFirstStringsInScript(Collator *coll, UErrorCode &status);
@@ -572,7 +543,7 @@ class U_I18N_API AlphabeticIndex: public UObject {
      */
      struct Record: public UMemory {
          const UnicodeString  *name_;
-         void                 *context_;
+         void                 *data_;
          int32_t              serialNumber_;
          ~Record() {delete name_;};
      };
