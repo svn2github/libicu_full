@@ -896,7 +896,7 @@ PreferenceComparator(const void *context, const void *left, const void *right) {
 }
 
 
-AlphabeticIndex & AlphabeticIndex::addRecord(const icu_45::UnicodeString &name, void *data, UErrorCode &status) {
+AlphabeticIndex & AlphabeticIndex::addRecord(const UnicodeString &name, void *data, UErrorCode &status) {
     if (U_FAILURE(status)) {
         return *this;
     }
