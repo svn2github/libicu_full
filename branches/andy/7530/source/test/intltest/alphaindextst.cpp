@@ -12,6 +12,7 @@
 
 #include "unicode/alphaindex.h"
 #include "unicode/coll.h"
+#include "unicode/tblcoll.h"
 #include "unicode/uniset.h"
 
 #include <string>
@@ -53,17 +54,17 @@ void AlphabeticIndexTest::runIndexedTest( int32_t index, UBool exec, const char*
 void AlphabeticIndexTest::APITest() {
 
     //
-    //  Simple constructor and destructor,  countLabels()
+    //  Simple constructor and destructor,  getBucketCount()
     //
     UErrorCode status = U_ZERO_ERROR;
     int32_t lc = 0;
     int32_t i  = 0;
     AlphabeticIndex *index = new AlphabeticIndex(Locale::getEnglish(), status);
     TEST_CHECK_STATUS;
-    lc = index->countLabels(status);
+    lc = index->getBucketCount(status);
     TEST_CHECK_STATUS;
     TEST_ASSERT(28 == lc);    // 26 letters plus two under/overflow labels.
-    //printf("countLabels() == %d\n", lc);
+    //printf("getBucketCount() == %d\n", lc);
     delete index;
     
     // addLabels()
@@ -75,7 +76,7 @@ void AlphabeticIndexTest::APITest() {
     additions.add((UChar32)0x410).add((UChar32)0x415);   // A couple of Cyrillic letters
     index->addLabels(additions, status);
     TEST_CHECK_STATUS;
-    lc = index->countLabels(status);
+    lc = index->getBucketCount(status);
     TEST_CHECK_STATUS;
     // TODO:  should get 31.  Java also gives 30.  Needs fixing
     TEST_ASSERT(30 == lc);    // 26 Latin letters plus
@@ -95,7 +96,7 @@ void AlphabeticIndexTest::APITest() {
     AlphabeticIndex &aip = index->addLabels(Locale::getJapanese(), status);
     TEST_ASSERT(&aip == index);
     TEST_CHECK_STATUS;
-    lc = index->countLabels(status);
+    lc = index->getBucketCount(status);
     TEST_CHECK_STATUS;
     TEST_ASSERT(35 < lc);  // Japanese should add a bunch.  Don't rely on the exact value.
     delete index;
@@ -107,7 +108,7 @@ void AlphabeticIndexTest::APITest() {
     TEST_CHECK_STATUS;
     Collator *germanCol = Collator::createInstance(Locale::getGerman(), status);
     TEST_CHECK_STATUS;
-    const Collator &indexCol = index->getCollator();
+    const RuleBasedCollator &indexCol = index->getCollator();
     TEST_ASSERT(*germanCol == indexCol);
     delete germanCol;
 
@@ -141,58 +142,58 @@ void AlphabeticIndexTest::APITest() {
     const UnicodeString zed  = UNICODE_STRING_SIMPLE("Zed");
     const UnicodeString Cyrillic = UNICODE_STRING_SIMPLE("\\u0410\\u0443\\u0435").unescape();
 
-    // addItem(), verify that it comes back out.
+    // addRecord(), verify that it comes back out.
     //
     status = U_ZERO_ERROR;
     index = new AlphabeticIndex(Locale::getEnglish(), status);
     TEST_CHECK_STATUS;
-    index->addItem(UnicodeString("Adam"), this, status);
+    index->addRecord(UnicodeString("Adam"), this, status);
     UBool   b;
     TEST_CHECK_STATUS;
-    index->resetLabelIterator(status);
+    index->resetBucketIterator(status);
     TEST_CHECK_STATUS;
-    index->nextLabel(status);  // Move to underflow label
-    index->nextLabel(status);  // Move to "A"
+    index->nextBucket(status);  // Move to underflow label
+    index->nextBucket(status);  // Move to "A"
     TEST_CHECK_STATUS;
-    const UnicodeString &label2 = index->getLabelName();
+    const UnicodeString &label2 = index->getBucketLabel();
     UnicodeString A_STR = UNICODE_STRING_SIMPLE("A");
     TEST_ASSERT(A_STR == label2);
 
-    b = index->nextItem(status);
+    b = index->nextRecord(status);
     TEST_CHECK_STATUS;
     TEST_ASSERT(b);
-    const UnicodeString &itemName = index->getItemName();
+    const UnicodeString &itemName = index->getRecordName();
     TEST_ASSERT(adam == itemName);
 
-    const void *itemContext = index->getItemContext();
+    const void *itemContext = index->getRecordData();
     TEST_ASSERT(itemContext == this);
 
     delete index;
 
-    // clearItems, addItem(), Iteration
+    // clearRecords, addRecord(), Iteration
 
     status = U_ZERO_ERROR;
     index = new AlphabeticIndex(Locale::getEnglish(), status);
     TEST_CHECK_STATUS;
-    while (index->nextLabel(status)) {
+    while (index->nextBucket(status)) {
         TEST_CHECK_STATUS;
-        while (index->nextItem(status)) {
+        while (index->nextRecord(status)) {
             TEST_CHECK_STATUS;
             TEST_ASSERT(FALSE);   // No items have been added.
         }
         TEST_CHECK_STATUS;
     }
 
-    index->addItem(adam, NULL, status);
-    index->addItem(baker, NULL, status);
-    index->addItem(charlie, NULL, status);
-    index->addItem(chad, NULL, status);
+    index->addRecord(adam, NULL, status);
+    index->addRecord(baker, NULL, status);
+    index->addRecord(charlie, NULL, status);
+    index->addRecord(chad, NULL, status);
     TEST_CHECK_STATUS;
     int itemCount = 0;
-    index->resetLabelIterator(status);
-    while (index->nextLabel(status)) {
+    index->resetBucketIterator(status);
+    while (index->nextBucket(status)) {
         TEST_CHECK_STATUS;
-        while (index->nextItem(status)) {
+        while (index->nextRecord(status)) {
             TEST_CHECK_STATUS;
             ++itemCount;
         }
@@ -200,34 +201,34 @@ void AlphabeticIndexTest::APITest() {
     TEST_CHECK_STATUS;
     TEST_ASSERT(itemCount == 4);
     
-    TEST_ASSERT(index->nextLabel(status) == FALSE);
-    index->resetLabelIterator(status);
+    TEST_ASSERT(index->nextBucket(status) == FALSE);
+    index->resetBucketIterator(status);
     TEST_CHECK_STATUS;
-    TEST_ASSERT(index->nextLabel(status) == TRUE);
+    TEST_ASSERT(index->nextBucket(status) == TRUE);
 
-    index->clearItems(status);
+    index->clearRecords(status);
     TEST_CHECK_STATUS;
-    index->resetLabelIterator(status);
-    while (index->nextLabel(status)) {
+    index->resetBucketIterator(status);
+    while (index->nextBucket(status)) {
         TEST_CHECK_STATUS;
-        while (index->nextItem(status)) {
+        while (index->nextRecord(status)) {
             TEST_ASSERT(FALSE);   // No items have been added.
         }
     }
     TEST_CHECK_STATUS;
     delete index;
 
-    // getLabelName(), getLabelType()
+    // getBucketLabel(), getBucketType()
 
     status = U_ZERO_ERROR;
     index = new AlphabeticIndex(Locale::getEnglish(), status);
     TEST_CHECK_STATUS;
     index->setUnderflowLabel(adam, status).setOverflowLabel(charlie, status);
     TEST_CHECK_STATUS;
-    for (i=0; index->nextLabel(status); i++) {
+    for (i=0; index->nextBucket(status); i++) {
         TEST_CHECK_STATUS;
-        UnicodeString label = index->getLabelName();
-        UAlphabeticIndexLabelType type = index->getLabelType();
+        UnicodeString label = index->getBucketLabel();
+        UAlphabeticIndexLabelType type = index->getBucketLabelType();
         if (i == 0) {
             TEST_ASSERT(type == U_ALPHAINDEX_UNDERFLOW);
             TEST_ASSERT(label == adam);
@@ -246,25 +247,25 @@ void AlphabeticIndexTest::APITest() {
     TEST_ASSERT(i==28);
     delete index;
 
-    // getLabelIndex()
+    // getBucketIndex()
 
     status = U_ZERO_ERROR;
     index = new AlphabeticIndex(Locale::getEnglish(), status);
     TEST_CHECK_STATUS;
-    int32_t n = index->getLabelIndex(adam, status);
+    int32_t n = index->getBucketIndex(adam, status);
     TEST_CHECK_STATUS;
     TEST_ASSERT(n == 1);    /*  Label #0 is underflow, 1 is A, etc. */
-    n = index->getLabelIndex(baker, status);
+    n = index->getBucketIndex(baker, status);
     TEST_ASSERT(n == 2);
-    n = index->getLabelIndex(Cyrillic, status);
+    n = index->getBucketIndex(Cyrillic, status);
     TEST_ASSERT(n == 27);   // Overflow label
-    n = index->getLabelIndex(zed, status);
+    n = index->getBucketIndex(zed, status);
     TEST_ASSERT(n == 26);
 
-    for (i=0; index->nextLabel(status); i++) {
-        n = index->getLabelIndex();
+    for (i=0; index->nextBucket(status); i++) {
+        n = index->getBucketIndex();
         TEST_ASSERT(n == i);
-        UnicodeString label = index->getLabelName();
+        UnicodeString label = index->getBucketLabel();
         TEST_ASSERT(n == i);
     }
     TEST_ASSERT(i == 28);
@@ -273,14 +274,14 @@ void AlphabeticIndexTest::APITest() {
     index = new AlphabeticIndex(Locale::createFromName("ru"), status);
         //Locale loc = Locale::createFromName(localeName);
     TEST_CHECK_STATUS;
-    n = index->getLabelIndex(adam, status);
+    n = index->getBucketIndex(adam, status);
     TEST_CHECK_STATUS;
     TEST_ASSERT(n == 0);    //  Label #0 is underflow 
-    n = index->getLabelIndex(baker, status);
+    n = index->getBucketIndex(baker, status);
     TEST_ASSERT(n == 0);
-    n = index->getLabelIndex(Cyrillic, status);
+    n = index->getBucketIndex(Cyrillic, status);
     TEST_ASSERT(n == 1);   // Overflow label
-    n = index->getLabelIndex(zed, status);
+    n = index->getBucketIndex(zed, status);
     TEST_ASSERT(n == 0);
 
     delete index;
@@ -312,13 +313,13 @@ void AlphabeticIndexTest::ManyLocalesTest() {
         Locale loc = Locale::createFromName(localeName);
         index = new AlphabeticIndex(loc, status);
         TEST_CHECK_STATUS;
-        lc = index->countLabels(status);
+        lc = index->getBucketCount(status);
         TEST_CHECK_STATUS;
-        // std::cout << "countLabels() == " << lc << std::endl;
+        // std::cout << "getBucketCount() == " << lc << std::endl;
 
-        while (index->nextLabel(status)) {
+        while (index->nextBucket(status)) {
             TEST_CHECK_STATUS;
-            const UnicodeString &label = index->getLabelName();
+            const UnicodeString &label = index->getBucketLabel();
             // std::string ss;
             // std::cout << ":" << label.toUTF8String(ss);
         }

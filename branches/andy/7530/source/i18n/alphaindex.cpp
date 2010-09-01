@@ -254,7 +254,7 @@ void AlphabeticIndex::buildIndex(UErrorCode &status) {
     bucketItems(status);
 
     indexBuildRequired_ = FALSE;
-    resetRecordIterator();
+    resetBucketIterator(status);
 }
 
 //

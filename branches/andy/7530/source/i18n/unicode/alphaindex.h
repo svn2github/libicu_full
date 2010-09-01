@@ -488,7 +488,7 @@ class U_I18N_API AlphabeticIndex: public UObject {
      *  @return This, for chaining.
      *  @draft ICU 4.6
      */
-    virtual AlphabeticIndex & resetRecordIterator();
+    virtual AlphabeticIndex &resetRecordIterator();
 
 private:
     // No ICU "poor man's RTTI" for this class nor its subclasses.
