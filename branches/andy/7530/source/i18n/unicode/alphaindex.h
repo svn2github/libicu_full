@@ -10,15 +10,60 @@
 #ifndef INDEXCHARS_H
 #define INDEXCHARS_H
 
+#include "unicode/utypes.h"
 #include "unicode/uobject.h"
 #include "unicode/locid.h"
 
 /**
- * \file 
+ * \file
  * \brief C++ API: Index Characters
  */
- 
+
+
+U_CDECL_BEGIN
+
+/**
+ * Constants for Alphabetic Index Label Types.
+ * The form of these enum constants anticipates having a plain C API
+ * for Alphabetic Indexes that will also use them.
+ * @draft ICU 4.6
+ */
+typedef enum UAlphabeticIndexLabelType {
+         /**
+          *  Normal Label, typically the starting letter of the names
+          *  in the bucket with this label.
+          * @draft ICU 4.6
+          */
+         U_ALPHAINDEX_NORMAL    = 0,
+
+         /**
+          * Undeflow Label.  The bucket with this label contains names
+          * in scripts that sort before any of the bucket labels in this index.
+          * @draft ICU 4.6
+          */
+         U_ALPHAINDEX_UNDERFLOW = 1,
+
+         /**
+          * Inflow Label.  The bucket with this label contains names
+          * in scripts that sort between two of the bucket labels in this index.
+          * Inflow labels are created when an index contains normal labels for
+          * multiple scripts, and skips other scripts that sort between some of the
+          * included scripts.
+          * @draft ICU 4.6
+          */
+         U_ALPHAINDEX_INFLOW    = 2,
+
+         /**
+          * Overflow Label. Te bucket with this label contains names in scripts
+          * that sort after all of the bucket labels in this index.
+          * @draft ICU 4.6
+          */
+         U_ALPHAINDEX_OVERFLOW  = 3
+     } UAlphabeticIndexLabelType;
+
+
 struct UHashtable;
+U_CDECL_END
 
 U_NAMESPACE_BEGIN
 
@@ -34,10 +79,10 @@ class UVector;
 
 /**
   * A class that supports the creation of a UI index appropriate for a given language, such as:
- * 
+ *
  * <pre>
  *  <b>… A B C D E F G H I J K L M N O P Q R S T U V W X Y Z Æ Ø Å …</b>
- *  
+ *
  *  <b>A</b>
  *     Addison
  *     Albertson
@@ -46,17 +91,17 @@ class UVector;
  *     Bäcker
  *  ...
  * </pre>
- * 
- * The class can generate a list of labels for use as a UI "index", that is, a list of 
- * clickable characters (or character sequences) that allow the user to see a segment 
- * (bucket) of a larger "target" list. That is, each label corresponds to a bucket in 
+ *
+ * The class can generate a list of labels for use as a UI "index", that is, a list of
+ * clickable characters (or character sequences) that allow the user to see a segment
+ * (bucket) of a larger "target" list. That is, each label corresponds to a bucket in
  * the target list, where everything in the bucket is greater than or equal to the character
- * (according to the locale's collation). Strings can be added to the index; 
+ * (according to the locale's collation). Strings can be added to the index;
  * they will be in sorted order in the right bucket.
  * <p>
- * The class also supports having buckets for strings before the first (underflow), 
- * after the last (overflow), and between scripts (inflow). For example, if the index 
- * is constructed with labels for Russian and English, Greek characters would fall 
+ * The class also supports having buckets for strings before the first (underflow),
+ * after the last (overflow), and between scripts (inflow). For example, if the index
+ * is constructed with labels for Russian and English, Greek characters would fall
  * into an inflow bucket between the other two scripts.
  * <p>
  * The AlphabeticIndex class is not intended for public subclassing.
@@ -64,67 +109,56 @@ class UVector;
  * <i>Example</i>
  * <p>
  * The "show..." methods below are just to illustrate usage.
- * 
+ *
  * <pre>
- * // Create a simple index.  "Item" is assumed to be an appication
- * // defined type that the application's UI and other processing knows about, 
+ * // Create a simple index.  "Item" is assumed to be an application
+ * // defined type that the application's UI and other processing knows about,
  * //  and that has a name.
- * 
+ *
  * UErrorCode status = U_ZERO_ERROR;
  * AlphabeticIndex index = new AlphabeticIndex(desiredLocale, status);
  * index->addLabels(additionalLocale, status);
  * for (Item *item in some source of Items ) {
- *     index->addRecord(item->name(), item, status); 
+ *     index->addRecord(item->name(), item, status);
  * }
  * ...
  * // Show index at top. We could skip or gray out empty buckets
- * 
- * while (index->nextLabel(status)) {
- *     if (showAll || index->getLabelItemCount() != 0) {
- *         showLabelAtTop(UI, index->getLabel());
+ *
+ * while (index->nextBucket(status)) {
+ *     if (showAll || index->getBucketRecordCount() != 0) {
+ *         showLabelAtTop(UI, index->getBucketLabel());
  *     }
  * }
  *  ...
  * // Show the buckets with their contents, skipping empty buckets
- * 
- * index->resetLabelIterator(status);
- * while (index->nextLabel(status)) {
- *    if (index->getLabelItemCount() != 0) {
- *        showLabelInList(UI, index->getLabel());
- *        while (index->nextItem(status)) {
- *            showIndexedItem(UI, static_cast<Item *>(index->getBucketData()))
+ *
+ * index->resetBucketIterator(status);
+ * while (index->nextBucket(status)) {
+ *    if (index->getBucketRecordCount() != 0) {
+ *        showLabelInList(UI, index->getBucketLabel());
+ *        while (index->nextRecord(status)) {
+ *            showIndexedItem(UI, static_cast<Item *>(index->getRecordData()))
  * </pre>
- * 
- * The caller can build different UIs using this class. 
+ *
+ * The caller can build different UIs using this class.
  * For example, an index character could be omitted or grayed-out
  * if its bucket is empty. Small buckets could also be combined based on size, such as:
- * 
+ *
  * <pre>
  * <b>… A-F G-N O-Z …</b>
  * </pre>
- * 
+ *
  * <p>
  * <b>Notes:</b>
  * <ul>
- * <li>Additional collation parameters can be passed in as part of the locale name. 
+ * <li>Additional collation parameters can be passed in as part of the locale name.
  *     For example, German plus numeric
  *     sorting would be "de@kn-true".
- * 
+ *
  * @draft ICU 4.6
  * @provisional This API might change or be removed in a future release.
  */
 
-
-
-U_CDECL_BEGIN
-typedef enum UAlphabeticIndexLabelType {
-         U_ALPHAINDEX_NORMAL    = 0,
-         U_ALPHAINDEX_UNDERFLOW = 1,
-         U_ALPHAINDEX_INFLOW    = 2,
-         U_ALPHAINDEX_OVERFLOW  = 3
-     } UAlphabeticIndexLabelType;
-
-U_CDECL_END
 
 class U_I18N_API AlphabeticIndex: public UObject {
 
@@ -148,7 +182,7 @@ class U_I18N_API AlphabeticIndex: public UObject {
 
     /**
      * Add Labels to this Index.  The labels are additions those
-     * that are already in the index; they do not replace the existing 
+     * that are already in the index; they do not replace the existing
      * ones.
      * @param additions The additional characters to add to the index, such as A-Z.
      * @return this, for chaining
@@ -171,46 +205,20 @@ class U_I18N_API AlphabeticIndex: public UObject {
      */
      AlphabeticIndex &addLabels(const Locale &locale, UErrorCode &status);
 
-
-  private:
-
-     /**
-      * No Copy constructor.
-      * @internal
-      */
-     AlphabeticIndex(const AlphabeticIndex &other);
-  public:
-
      /**
       * Destructor
       */
      virtual ~AlphabeticIndex();
 
 
-  private:
-    /**
-     * No Equality operators.
-     * @internal
-     */
-     virtual UBool operator==(const AlphabeticIndex& other) const;
-
-    /**
-     * Inequality operator.
-     * @internal
-     */
-     virtual UBool operator!=(const AlphabeticIndex& other) const;
-
-  public:
-
     /**
      * Get the Collator that establishes the ordering of the items in this index.
      * Ownership of the collator remains with the AlphabeticIndex instance.
      *
      * The returned collator is a reference to the internal collator used by this
-     * index.  It may be safely used to compare the names of items or to get 
-     * sort keys for names.  However if any setttings need to be changed,
+     * index.  It may be safely used to compare the names of items or to get
+     * sort keys for names.  However if any settings need to be changed,
      * or other non-const methods called, a cloned copy must be made first.
-     * TODO: clone internally?  Keep it simple for the caller.
      *
      * @return The collator
      * @draft ICU 4.6
@@ -219,21 +227,21 @@ class U_I18N_API AlphabeticIndex: public UObject {
 
 
    /**
-     * Get the default label used for abbreviated buckets <i>between</i> other index characters. 
-     * For example, consider the index characters for Latin and Greek are used: 
+     * Get the default label used for abbreviated buckets <i>between</i> other index characters.
+     * For example, consider the index characters for Latin and Greek are used:
      *     X Y Z ... &#x0391; &#x0392; &#x0393;.
-     * 
+     *
      * @return inflow label
      * @draft ICU 4.6
      */
     virtual const UnicodeString &getInflowLabel() const;
 
    /**
-     * Set the default label used for abbreviated buckets <i>between</i> other index characters. 
+     * Set the default label used for abbreviated buckets <i>between</i> other index characters.
      * An inflow label will be automatically inserted if two otherwise-adjacent label characters
      * are from different scripts, e.g. Latin and Cyrillic, and a third script, e.g. Greek,
      * sorts between the two.  The default inflow character is an ellipsis (...)
-     * 
+     *
      * @param inflowLabel the new Inflow label.
      * @param status Error code, will be set with the reason if the operation fails.
      * @return this
@@ -246,7 +254,7 @@ class U_I18N_API AlphabeticIndex: public UObject {
    /**
      * Get the label used for items that sort after the last normal index character,
      * and that would not otherwise have an appropriate label.
-     * 
+     *
      * @return overflow label
      * @draft ICU 4.6
      */
@@ -256,7 +264,7 @@ class U_I18N_API AlphabeticIndex: public UObject {
    /**
      * Set the label used for items that sort after the last normal index character,
      * and that would not otherwise have an appropriate label.
-     * 
+     *
      * @param overflowLabel the new overflow label.
      * @param status Error code, will be set with the reason if the operation fails.
      * @return this
@@ -267,7 +275,7 @@ class U_I18N_API AlphabeticIndex: public UObject {
    /**
      * Get the label used for items that sort before the first normal index character,
      * and that would not otherwise have an appropriate label.
-     * 
+     *
      * @return underflow label
      * @draft ICU 4.6
      */
@@ -276,7 +284,7 @@ class U_I18N_API AlphabeticIndex: public UObject {
    /**
      * Set the label used for items that sort before the first normal index character,
      * and that would not otherwise have an appropriate label.
-     * 
+     *
      * @param underflowLabel the new underflow label.
      * @param status Error code, will be set with the reason if the operation fails.
      * @return this
@@ -286,21 +294,21 @@ class U_I18N_API AlphabeticIndex: public UObject {
 
 
     /**
-     * Get the limit on the number of labels permitted in the index. 
+     * Get the limit on the number of labels permitted in the index.
      * The number does not include over, under and inflow labels.
-     * 
+     *
      * @return maxLabelCount maximum number of labels.
      * @draft ICU 4.6
      */
     virtual int32_t getMaxLabelCount() const;
 
     /**
-     * Set a limit on the number of labels permitted in the index. 
-     * The number does not include over, under and inflow labels.  
+     * Set a limit on the number of labels permitted in the index.
+     * The number does not include over, under and inflow labels.
      * Currently, if the number is exceeded, then every
-     * nth item is removed to bring the count down. 
+     * nth item is removed to bring the count down.
      * A more sophisticated mechanism may be available in the future.
-     * 
+     *
      * @param maxLabelCount the maximum number of labels.
      * @return This, for chaining
      * @draft ICU 4.6
@@ -309,25 +317,25 @@ class U_I18N_API AlphabeticIndex: public UObject {
 
 
     /**
-     * Get the Unicode character (or tailored string) that defines an overflow bucket; 
-     * that is anything greater than or equal to that string should go in that bucket, 
-     * instead of with the last character. Normally that is the first character of the script 
+     * Get the Unicode character (or tailored string) that defines an overflow bucket;
+     * that is anything greater than or equal to that string should go in that bucket,
+     * instead of with the last character. Normally that is the first character of the script
      * after lowerLimit. Thus in X Y Z ... <i>Devanagari-ka</i>, the overflow character for Z
      * would be the <i>Greek-alpha</i>.
-     * 
+     *
      * @param lowerLimit   The character below the overflow (or inflow) bucket
      * @return string that defines top of the overflow buck for lowerLimit, or null if there is none
      * @internal
      */
-    virtual const UnicodeString &getOverflowComparisonString(const UnicodeString &lowerLimit, 
+    virtual const UnicodeString &getOverflowComparisonString(const UnicodeString &lowerLimit,
                                                              UErrorCode &status);
-    
+
 
     /**
      * Add an record to the index.  Each record will be associated with an index Bucket
-     *  based on the record's name.  The list of records for each bucket will be sorted 
+     *  based on the record's name.  The list of records for each bucket will be sorted
      *  based on the collation ordering of the names in the index's locale.
-     *  Records with duplicate names are permitted; they will be kept in the order 
+     *  Records with duplicate names are permitted; they will be kept in the order
      *  that they were added.
      *
      * @param name The display name for the Record.  The Record will be placed in
@@ -339,7 +347,7 @@ class U_I18N_API AlphabeticIndex: public UObject {
      * @return        This, for chaining.
      * @draft ICU 4.6
      */
-    virtual AlphabeticIndex &addRecord(const UnicodeString &name, void *data, UErrorCode &status);
+    virtual AlphabeticIndex &addRecord(const UnicodeString &name, const void *data, UErrorCode &status);
 
     /**
      * Remove all Records from the Index.  The set of Buckets, which define the headings under
@@ -379,9 +387,9 @@ class U_I18N_API AlphabeticIndex: public UObject {
      *   Given the name of a record, return the zero-based index of the Bucket
      *   in which the item should appear.  The name need not be in the index.
      *   A Record will not be added to the index by this function.
-     *   Bucket numbers are zero-based, in Bucket iteration order. 
+     *   Bucket numbers are zero-based, in Bucket iteration order.
      *
-     * @param name  The name whose bucket postion in the index is to be determined.
+     * @param name  The name whose bucket position in the index is to be determined.
      * @param status  Error code, will be set with the reason if the operation fails.
      * @return The bucket number for this name.
      * @draft ICU 4.6
@@ -462,7 +470,7 @@ class U_I18N_API AlphabeticIndex: public UObject {
 
     /**
      * Get the name of the current Record.
-     * Return an empty string if the Record iteration position is before first 
+     * Return an empty string if the Record iteration position is before first
      * or after the last.
      *
      *  @return The name of the current index item.
@@ -494,11 +502,28 @@ private:
     // No ICU "poor man's RTTI" for this class nor its subclasses.
     virtual UClassID getDynamicClassID() const;
 
-private:
      /**
-      *   No assignment.  
+      * No Copy constructor.
+      * @internal
+      */
+     AlphabeticIndex(const AlphabeticIndex &other);
+
+     /**
+      *   No assignment.
       */
      AlphabeticIndex &operator =(const AlphabeticIndex & /*other*/) { return *this;};
+
+    /**
+     * No Equality operators.
+     * @internal
+     */
+     virtual UBool operator==(const AlphabeticIndex& other) const;
+
+    /**
+     * Inequality operator.
+     * @internal
+     */
+     virtual UBool operator!=(const AlphabeticIndex& other) const;
 
      // Common initialization, for use from all constructors.
      void init(UErrorCode &status);
@@ -508,8 +533,8 @@ private:
 
    public:
      /**
-      *   Delete all shared (static) data associated with an AlphabeticIndex. 
-      *   Internal function, not intended for direct use. 
+      *   Delete all shared (static) data associated with an AlphabeticIndex.
+      *   Internal function, not intended for direct use.
       *   @internal.
       */
      static void staticCleanup();
@@ -533,23 +558,23 @@ private:
 
   public:
 
-    //  The following internal items are declared public only to allow access from 
+    //  The following internal items are declared public only to allow access from
     //  implementation code written in plain C.  They are not intended for
     //  public use.
 
     /**
-     * A record, or item, in the index. 
+     * A record, or item, in the index.
      * @internal
      */
      struct Record: public UMemory {
          const UnicodeString  *name_;
-         void                 *data_;
+         const void           *data_;
          int32_t              serialNumber_;
          ~Record() {delete name_;};
      };
 
      /**
-       * Holds all user items before they are distributed into buckets.
+       * Holds all user records before they are distributed into buckets.
        * Type of contents is (Record *)
        * @internal
        */
@@ -565,9 +590,9 @@ private:
          UnicodeString     lowerBoundary_;
          UAlphabeticIndexLabelType labelType_;
          UVector           *records_;  // Records are owned by inputRecords_ vector.
-         
+
          Bucket(const UnicodeString &label,         // Parameter strings are copied.
-                const UnicodeString &lowerBoundary, 
+                const UnicodeString &lowerBoundary,
                 UAlphabeticIndexLabelType type, UErrorCode &status);
          ~Bucket();
      };
@@ -581,13 +606,13 @@ private:
      int32_t  labelsIterIndex_;      // Index of next item to return.
      int32_t  itemsIterIndex_;
      Bucket   *currentBucket_;       // While an iteration of the index in underway,
-                                     //   point the the bucket for the current label.
+                                     //   point to the bucket for the current label.
                                      // NULL when no iteration underway.
 
      UBool    indexBuildRequired_;   //  Caller has made changes to the index that
                                      //  require rebuilding & bucketing before the
                                      //  contents can be iterated.
-     
+
      int32_t    maxLabelCount_;      // Limit on # of labels permitted in the index.
 
      UHashtable *alreadyIn_;         // Key=UnicodeString, value=UnicodeSet

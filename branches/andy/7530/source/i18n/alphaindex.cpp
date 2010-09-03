@@ -6,7 +6,7 @@
 */
 
 /**
- * \file 
+ * \file
  * \brief C API: AlphabeticIndex class
  */
 
@@ -42,7 +42,7 @@ static int32_t U_CALLCONV
 sortCollateComparator(const void *context, const void *left, const void *right);
 
 static int32_t U_CALLCONV
-recordCompareFn(const void *context, const void *left, const void *right); 
+recordCompareFn(const void *context, const void *left, const void *right);
 
 //
 //  UHash support function, delete a UnicodeSet
@@ -79,7 +79,7 @@ static void appendUnicodeSetToUVector(UVector &dest, const UnicodeSet &source, U
     while (setIter.next()) {
         const UnicodeString &str = setIter.getString();
         dest.addElement(str.clone(), status);
-    }   
+    }
 }
 
 
@@ -174,7 +174,7 @@ void AlphabeticIndex::buildIndex(UErrorCode &status) {
     noDistinctSorting_->clear();
     notAlphabetic_->clear();
 
-    // first sort the incoming Labels, with a "best" ordering among items 
+    // first sort the incoming Labels, with a "best" ordering among items
     // that are the same according to the collator
 
     UVector preferenceSorting(status);   // Vector of UnicodeStrings; owned by the vector.
@@ -203,7 +203,7 @@ void AlphabeticIndex::buildIndex(UErrorCode &status) {
                     if (targets == NULL) {
                         // alreadyIn.put(itemAlreadyIn, targets = new LinkedHashSet<String>());
                         targets = new UnicodeSet();
-                        uhash_put(alreadyIn_, itemAlreadyIn.clone(), targets, &status); 
+                        uhash_put(alreadyIn_, itemAlreadyIn.clone(), targets, &status);
                     }
                     targets->add(item);
                     break;
@@ -221,10 +221,10 @@ void AlphabeticIndex::buildIndex(UErrorCode &status) {
 
     // Move the set of index characters from the set into a vector, and sort
     // according to the collator.
-    
+
     appendUnicodeSetToUVector(*indexCharacters_, indexCharacterSet, status);
     indexCharacters_->sortWithUComparator(sortCollateComparator, comparatorPrimary_, status);
-    
+
     // if the result is still too large, cut down to maxLabelCount_ elements, by removing every nth element
     //    Implemented by copying the elements to be retained to a new UVector.
 
@@ -271,7 +271,7 @@ void AlphabeticIndex::buildBucketList(UErrorCode &status) {
     b = new Bucket(*last, *last, U_ALPHAINDEX_NORMAL, status);
     bucketList_->addElement(b, status);
 
-    UnicodeSet lastSet; 
+    UnicodeSet lastSet;
     UnicodeSet set;
     AlphabeticIndex::getScriptSet(lastSet, *last, status);
     lastSet.removeAll(*IGNORE_SCRIPTS);
@@ -308,7 +308,7 @@ void AlphabeticIndex::buildBucketList(UErrorCode &status) {
 //
 //       Begin by sorting the input records; this lets us bin them in a single pass.
 //
-//       Note on storage management:  The input records are owned by the 
+//       Note on storage management:  The input records are owned by the
 //       inputRecords_ vector, and will (eventually) be auto-deleted by it.
 //       The Bucket objects have pointers to the Record objects, but do not own them.
 //
@@ -348,7 +348,7 @@ void AlphabeticIndex::bucketItems(UErrorCode &status) {
             U_ASSERT(destBucket != NULL);
         }
     }
-                
+
 }
 
 
@@ -518,7 +518,7 @@ AlphabeticIndex &AlphabeticIndex::setMaxLabelCount(int32_t maxLabelCount, UError
 
 const UnicodeString &AlphabeticIndex::getOverflowComparisonString(const UnicodeString &lowerLimit, UErrorCode &/*status*/) {
     for (int32_t i=0; i<firstScriptCharacters_->size(); i++) {
-        const UnicodeString *s = 
+        const UnicodeString *s =
                 static_cast<const UnicodeString *>(firstScriptCharacters_->elementAt(i));
         if (comparator_->compare(*s, lowerLimit) > 0) {
             return *s;
@@ -567,7 +567,7 @@ void AlphabeticIndex::init(UErrorCode &status) {
         return;
     }
     alreadyIn_             = uhash_open(uhash_hashUnicodeString,    // Key Hash,
-                                        uhash_compareUnicodeString, // key Comparator, 
+                                        uhash_compareUnicodeString, // key Comparator,
                                         NULL,                       // value Comparator
                                         &status);
     uhash_setKeyDeleter(alreadyIn_, uhash_deleteUnicodeString);
@@ -593,7 +593,7 @@ void AlphabeticIndex::init(UErrorCode &status) {
     // TODO:  check for memory allocation failures.
 }
 
-   
+
 static  UBool  indexCharactersAreInitialized = FALSE;
 
 //  Index Characters Clean up function.  Delete statically allocated constant stuff.
@@ -635,7 +635,7 @@ const UnicodeString *AlphabeticIndex::EMPTY_STRING;
 //
 //  staticInit()    One-time initialization of constants.
 //                  Thread safe.  Called from constructors.
-//                  Mutex overhead is not a concern.  AlphabeticIndex constructors are 
+//                  Mutex overhead is not a concern.  AlphabeticIndex constructors are
 //                  sufficiently heavy that the cost of the mutex check is not significant.
 
 void AlphabeticIndex::staticInit(UErrorCode &status) {
@@ -653,7 +653,7 @@ void AlphabeticIndex::staticInit(UErrorCode &status) {
         if (ALPHABETIC == NULL) {
             goto err;
         }
-        
+
         HANGUL = new UnicodeSet();
         HANGUL->add(0xAC00).add(0xB098).add(0xB2E4).add(0xB77C).add(0xB9C8).add(0xBC14).add(0xC0AC).
                 add(0xC544).add(0xC790).add(0xCC28).add(0xCE74).add(0xD0C0).add(0xD30C).add(0xD558);
@@ -667,7 +667,7 @@ void AlphabeticIndex::staticInit(UErrorCode &status) {
         if (ETHIOPIC == NULL) {
             goto err;
         }
-       
+
         CORE_LATIN = new UnicodeSet((UChar32)0x61, (UChar32)0x7a);  // ('a', 'z');
         if (CORE_LATIN == NULL) {
             goto err;
@@ -719,7 +719,7 @@ sortCollateComparator(const void *context, const void *left, const void *right) 
     const UnicodeString *leftString  = static_cast<const UnicodeString *>(leftTok->pointer);
     const UnicodeString *rightString = static_cast<const UnicodeString *>(rightTok->pointer);
     const Collator *col = static_cast<const Collator *>(context);
-    
+
     if (leftString == rightString) {
         // Catches case where both are NULL
         return 0;
@@ -744,7 +744,7 @@ recordCompareFn(const void *context, const void *left, const void *right) {
     const AlphabeticIndex::Record *leftRec  = static_cast<const AlphabeticIndex::Record *>(leftTok->pointer);
     const AlphabeticIndex::Record *rightRec = static_cast<const AlphabeticIndex::Record *>(rightTok->pointer);
     const Collator *col = static_cast<const Collator *>(context);
-    
+
     Collator::EComparisonResult r = col->compare(*leftRec->name_, *rightRec->name_);
     if (r == 0) {
         r = (leftRec->serialNumber_ < rightRec->serialNumber_) ? Collator::LESS : Collator::GREATER;
@@ -793,7 +793,7 @@ UVector *AlphabeticIndex::firstStringsInScript(Collator *ruleBasedCollator, UErr
             const UnicodeString &current = extrasIter.next();
             if (!TO_TRY->containsAll(current))
                 continue;
-            if (!normalizer->isNormalized(current, status) || 
+            if (!normalizer->isNormalized(current, status) ||
                 ruleBasedCollator->compare(current, LOWER_A) < 0) {
                 continue;
             }
@@ -896,7 +896,7 @@ PreferenceComparator(const void *context, const void *left, const void *right) {
 }
 
 
-AlphabeticIndex & AlphabeticIndex::addRecord(const UnicodeString &name, void *data, UErrorCode &status) {
+AlphabeticIndex & AlphabeticIndex::addRecord(const UnicodeString &name, const void *data, UErrorCode &status) {
     if (U_FAILURE(status)) {
         return *this;
     }
@@ -933,7 +933,7 @@ int32_t AlphabeticIndex::getBucketIndex(const UnicodeString &name, UErrorCode &s
     for (int32_t i = 0; i < bucketList_->size(); ++i) {
         Bucket *bucket = static_cast<Bucket *>(bucketList_->elementAt(i));
         Collator::EComparisonResult comp = comparatorPrimary_->compare(name, bucket->lowerBoundary_);
-        if (comp < 0) { 
+        if (comp < 0) {
             return i - 1;
         }
     }
@@ -958,7 +958,7 @@ UBool AlphabeticIndex::nextBucket(UErrorCode &status) {
         status = U_ENUM_OUT_OF_SYNC_ERROR;
         return FALSE;
     }
-    buildIndex(status);  
+    buildIndex(status);
     if (U_FAILURE(status)) {
         return FALSE;
     }
@@ -975,7 +975,7 @@ UBool AlphabeticIndex::nextBucket(UErrorCode &status) {
 const UnicodeString &AlphabeticIndex::getBucketLabel() const {
     if (currentBucket_ != NULL) {
         return currentBucket_->label_;
-    } else {    
+    } else {
         return *EMPTY_STRING;
     }
 }

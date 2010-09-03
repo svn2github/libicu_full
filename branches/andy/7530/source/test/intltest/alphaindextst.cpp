@@ -36,7 +36,7 @@ void AlphabeticIndexTest::runIndexedTest( int32_t index, UBool exec, const char*
         case 1: name = "ManyLocales";
             if (exec) ManyLocalesTest();
             break;
-             
+
         default: name = "";
             break; //needed to end loop
     }
@@ -66,7 +66,7 @@ void AlphabeticIndexTest::APITest() {
     TEST_ASSERT(28 == lc);    // 26 letters plus two under/overflow labels.
     //printf("getBucketCount() == %d\n", lc);
     delete index;
-    
+
     // addLabels()
 
     status = U_ZERO_ERROR;
@@ -127,9 +127,9 @@ void AlphabeticIndexTest::APITest() {
     TEST_ASSERT(UNICODE_STRING_SIMPLE("O") == s);
     s = index->getInflowLabel();
     TEST_ASSERT(UNICODE_STRING_SIMPLE("I") == s);
-     
 
-    
+
+
 
     delete index;
 
@@ -200,7 +200,7 @@ void AlphabeticIndexTest::APITest() {
     }
     TEST_CHECK_STATUS;
     TEST_ASSERT(itemCount == 4);
-    
+
     TEST_ASSERT(index->nextBucket(status) == FALSE);
     index->resetBucketIterator(status);
     TEST_CHECK_STATUS;
@@ -276,7 +276,7 @@ void AlphabeticIndexTest::APITest() {
     TEST_CHECK_STATUS;
     n = index->getBucketIndex(adam, status);
     TEST_CHECK_STATUS;
-    TEST_ASSERT(n == 0);    //  Label #0 is underflow 
+    TEST_ASSERT(n == 0);    //  Label #0 is underflow
     n = index->getBucketIndex(baker, status);
     TEST_ASSERT(n == 0);
     n = index->getBucketIndex(Cyrillic, status);
@@ -290,11 +290,11 @@ void AlphabeticIndexTest::APITest() {
 
 
 static const char * KEY_LOCALES[] = {
-            "en", "es", "de", "fr", "ja", "it", "tr", "pt", "zh", "nl", 
-            "pl", "ar", "ru", "zh_Hant", "ko", "th", "sv", "fi", "da", 
-            "he", "nb", "el", "hr", "bg", "sk", "lt", "vi", "lv", "sr", 
-            "pt_PT", "ro", "hu", "cs", "id", "sl", "fil", "fa", "uk", 
-            "ca", "hi", "et", "eu", "is", "sw", "ms", "bn", "am", "ta", 
+            "en", "es", "de", "fr", "ja", "it", "tr", "pt", "zh", "nl",
+            "pl", "ar", "ru", "zh_Hant", "ko", "th", "sv", "fi", "da",
+            "he", "nb", "el", "hr", "bg", "sk", "lt", "vi", "lv", "sr",
+            "pt_PT", "ro", "hu", "cs", "id", "sl", "fil", "fa", "uk",
+            "ca", "hi", "et", "eu", "is", "sw", "ms", "bn", "am", "ta",
             "te", "mr", "ur", "ml", "kn", "gu", "or", ""};
 
 
