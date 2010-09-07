@@ -103,16 +103,13 @@ void RBBITest::runIndexedTest( int32_t index, UBool exec, const char* &name, cha
              break;
 #endif
 
-        case 16:
-             if(exec) {
- #if !UCONFIG_NO_REGULAR_EXPRESSIONS && !UCONFIG_NO_FILE_IO
-               name = "TestMonkey";
-               TestMonkey(params);
- #else
-               name = "skip";
- #endif
-             }
-                                                               break;
+#if !UCONFIG_NO_REGULAR_EXPRESSIONS && !UCONFIG_NO_FILE_IO
+        case 16: name = "TestMonkey";
+             if(exec) TestMonkey(params);                      break;
+#else
+        case 16: 
+           name = "skip";                                      break;
+#endif
 
 #if !UCONFIG_NO_FILE_IO
         case 17: name = "TestBug3818";
@@ -1634,6 +1631,7 @@ void RBBITest::TestExtended() {
 
                 // RUN THE TEST!
                 executeTest(&tp);
+                goto end_test;    // TODO:  debug.  Remove.
                 break;
             }
 

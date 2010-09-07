@@ -25,7 +25,8 @@
 
 #   Temp debugging tests 
 <line>
-<data>•\ufffc•\u30e3\u000c<100>\u1b39\u300a\u002f\u203a\u200b•\ufffc•\uaf64•\udcfb•</data>
+#<data>\u061f\ua974\u0020\u002d\u200b\u0020•\u003f\u0bec\u1b57\u2024\ufffc\</data>
+<data>•\u200b\u0020•\u003f•</data>
 
 ########################################################################################
 #

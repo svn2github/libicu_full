@@ -941,7 +941,7 @@ int32_t RuleBasedBreakIterator::handleNext(const RBBIStateTable *statetable) {
 
     #ifdef RBBI_DEBUG
         if (fTrace) {
-            RBBIDebugPuts("Handle Next   pos   char  state category");
+            RBBIDebugPuts("Handle Next       pos       char  state category");
         }
     #endif
 
@@ -1022,13 +1022,13 @@ int32_t RuleBasedBreakIterator::handleNext(const RBBIStateTable *statetable) {
 
         #ifdef RBBI_DEBUG
             if (fTrace) {
-                RBBIDebugPrintf("             %4ld   ", utext_getNativeIndex(fText));
+                RBBIDebugPrintf("                 %4ld   ", utext_getNativeIndex(fText));
                 if (0x20<=c && c<0x7f) {
-                    RBBIDebugPrintf("\"%c\"  ", c);
+                    RBBIDebugPrintf("     \"%c\"  ", c);
                 } else {
-                    RBBIDebugPrintf("%5x  ", c);
+                    RBBIDebugPrintf("%8x  ", c);
                 }
-                RBBIDebugPrintf("%3d  %3d\n", state, category);
+                RBBIDebugPrintf("  %3d      %3d\n", state, category);
             }
         #endif
 
@@ -1149,7 +1149,7 @@ int32_t RuleBasedBreakIterator::handlePrevious(const RBBIStateTable *statetable)
 
     #ifdef RBBI_DEBUG
         if (fTrace) {
-            RBBIDebugPuts("Handle Previous   pos   char  state category");
+            RBBIDebugPuts("Handle Previous   pos       char  state category");
         }
     #endif
 
@@ -1239,13 +1239,13 @@ int32_t RuleBasedBreakIterator::handlePrevious(const RBBIStateTable *statetable)
 
         #ifdef RBBI_DEBUG
             if (fTrace) {
-                RBBIDebugPrintf("             %4d   ", (int32_t)utext_getNativeIndex(fText));
+                RBBIDebugPrintf("                 %4d   ", (int32_t)utext_getNativeIndex(fText));
                 if (0x20<=c && c<0x7f) {
-                    RBBIDebugPrintf("\"%c\"  ", c);
+                    RBBIDebugPrintf("     \"%c\"  ", c);
                 } else {
-                    RBBIDebugPrintf("%5x  ", c);
+                    RBBIDebugPrintf("%8x  ", c);
                 }
-                RBBIDebugPrintf("%3d  %3d\n", state, category);
+                RBBIDebugPrintf("  %3d      %3d\n", state, category);
             }
         #endif
 
