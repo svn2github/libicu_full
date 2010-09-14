@@ -2051,8 +2051,16 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
                 }
 
                 if (strictParse) {
-                    if ((!sawDigit || backup != -1)) {
-                        // leading group, or two group separators in a row
+                    if ( (!sawDigit && groupingSet!=NULL && u_isWhitespace(ch)) || backup != -1 ) {
+                    	// We differ from the ICU4J code by allowing a leading group sep in strict mode (for
+                    	// backward compatibility) as long as it is not one of the breaking whitespace characters
+                    	// that is only treated as a group separator because of the equivalence set. If we get
+                    	// here it is because the leading sep was such a breaking space, or there were multiple
+                    	// group separators in a row. Note that the DecimalFormat documentation says
+                    	// "During parsing, grouping separators are ignored" and that was for strict parsing,
+                    	// so we may need to further revisit this strictParse restriction to ensure compatibility.
+                    	// Also note: u_isWhitespace is true for all Zs/Zl/Zp except the no-break ones: 00A0,2007,202F.
+                    	// In CLDR, all locales that have space as a group separator use 00A0 (NBSP).
                         strictFail = TRUE;
                         break;
                     }
