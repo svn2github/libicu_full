@@ -37,6 +37,7 @@ U_NAMESPACE_BEGIN
  * for using custom mapping tables.
  * All instances of this class are unmodifiable/immutable.
  * Instances returned by getInstance() are singletons that must not be deleted by the caller.
+ * The Normalizer2 class is not intended for public subclassing.
  *
  * The primary functions are to produce a normalized string and to detect whether
  * a string is already normalized.
@@ -174,6 +175,19 @@ public:
            UErrorCode &errorCode) const = 0;
 
     /**
+     * Gets the decomposition mapping of c. Equivalent to normalize(UnicodeString(c))
+     * on a UNORM2_DECOMPOSE Normalizer2 instance, but much faster.
+     * This function is independent of the mode of the Normalizer2.
+     * @param c code point
+     * @param decomposition String object which will be set to c's
+     *                      decomposition mapping, if there is one.
+     * @return TRUE if c has a decomposition, otherwise FALSE
+     * @draft ICU 4.6
+     */
+    virtual UBool
+    getDecomposition(UChar32 c, UnicodeString &decomposition) const = 0;
+
+    /**
      * Tests if the string is normalized.
      * Internally, in cases where the quickCheck() method would return "maybe"
      * (which is only possible for the two COMPOSE modes) this method
@@ -279,19 +293,9 @@ public:
      */
     virtual UBool isInert(UChar32 c) const = 0;
 
-    /**
-     * ICU "poor man's RTTI", returns a UClassID for this class.
-     * @returns a UClassID for this class.
-     * @draft ICU 4.4
-     */
-    static UClassID U_EXPORT2 getStaticClassID();
-
-    /**
-     * ICU "poor man's RTTI", returns a UClassID for the actual class.
-     * @return a UClassID for the actual class.
-     * @draft ICU 4.4
-     */
-    virtual UClassID getDynamicClassID() const = 0;
+private:
+    // No ICU "poor man's RTTI" for this class nor its subclasses.
+    virtual UClassID getDynamicClassID() const;
 };
 
 /**
@@ -375,6 +379,19 @@ public:
            UErrorCode &errorCode) const;
 
     /**
+     * Gets the decomposition mapping of c. Equivalent to normalize(UnicodeString(c))
+     * on a UNORM2_DECOMPOSE Normalizer2 instance, but much faster.
+     * This function is independent of the mode of the Normalizer2.
+     * @param c code point
+     * @param decomposition String object which will be set to c's
+     *                      decomposition mapping, if there is one.
+     * @return TRUE if c has a decomposition, otherwise FALSE
+     * @draft ICU 4.6
+     */
+    virtual UBool
+    getDecomposition(UChar32 c, UnicodeString &decomposition) const;
+
+    /**
      * Tests if the string is normalized.
      * For details see the Normalizer2 base class documentation.
      * @param s input string
@@ -442,20 +459,6 @@ public:
      * @draft ICU 4.4
      */
     virtual UBool isInert(UChar32 c) const;
-
-    /**
-     * ICU "poor man's RTTI", returns a UClassID for this class.
-     * @returns a UClassID for this class.
-     * @draft ICU 4.4
-     */
-    static UClassID U_EXPORT2 getStaticClassID();
-
-    /**
-     * ICU "poor man's RTTI", returns a UClassID for the actual class.
-     * @return a UClassID for the actual class.
-     * @draft ICU 4.4
-     */
-    virtual UClassID getDynamicClassID() const;
 private:
     UnicodeString &
     normalize(const UnicodeString &src,

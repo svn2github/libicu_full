@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT: 
- * Copyright (c) 1997-2009, International Business Machines Corporation and
+ * Copyright (c) 1997-2010, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 /*   file name:  strtest.cpp
@@ -12,14 +12,17 @@
 *   created by: Markus W. Scherer
 */
 
+#include <string.h>
+
 #include "unicode/utypes.h"
 #include "unicode/putil.h"
-#include "intltest.h"
-#include "strtest.h"
-#include "unicode/ustring.h"
 #include "unicode/std_string.h"
 #include "unicode/stringpiece.h"
-#include <string.h>
+#include "unicode/unistr.h"
+#include "unicode/ustring.h"
+#include "charstr.h"
+#include "intltest.h"
+#include "strtest.h"
 
 StringTest::~StringTest() {}
 
@@ -79,8 +82,8 @@ void StringTest::TestSizeofTypes(void) {
 
 void StringTest::TestCharsetFamily(void) {
     unsigned char c='A';
-    if( U_CHARSET_FAMILY==U_ASCII_FAMILY && c!=0x41 ||
-        U_CHARSET_FAMILY==U_EBCDIC_FAMILY && c!=0xc1
+    if( (U_CHARSET_FAMILY==U_ASCII_FAMILY && c!=0x41) ||
+        (U_CHARSET_FAMILY==U_EBCDIC_FAMILY && c!=0xc1)
     ) {
         errln("TestCharsetFamily: U_CHARSET_FAMILY needs to be fixed in platform.h");
     }
@@ -213,6 +216,12 @@ void StringTest::runIndexedTest(int32_t index, UBool exec, const char *&name, ch
         name="TestStringByteSink";
         if(exec) {
             TestStringByteSink();
+        }
+        break;
+    case 14:
+        name="TestCharString";
+        if(exec) {
+            TestCharString();
         }
         break;
     default:
@@ -442,7 +451,10 @@ StringTest::TestCheckedArrayByteSink() {
     buffer[3] = '!';
     CheckedArrayByteSink sink(buffer, (int32_t)sizeof(buffer));
     sink.Append("abc", 3);
-    if(!(sink.NumberOfBytesWritten() == 3 && 0 == memcmp("abc", buffer, 3) && buffer[3] == '!')) {
+    if(!(sink.NumberOfBytesAppended() == 3 && sink.NumberOfBytesWritten() == 3 &&
+         0 == memcmp("abc", buffer, 3) && buffer[3] == '!') &&
+         !sink.Overflowed()
+    ) {
         errln("CheckedArrayByteSink did not Append() as expected");
         return;
     }
@@ -465,7 +477,7 @@ StringTest::TestCheckedArrayByteSink() {
     }
     memcpy(dest, "defghijklm", 10);
     sink.Append(dest, 10);
-    if(!(sink.NumberOfBytesWritten() == 13 &&
+    if(!(sink.NumberOfBytesAppended() == 13 && sink.NumberOfBytesWritten() == 13 &&
          0 == memcmp("abcdefghijklm", buffer, 13) &&
          !sink.Overflowed())
     ) {
@@ -478,11 +490,20 @@ StringTest::TestCheckedArrayByteSink() {
     }
     memcpy(dest, "nopqrstuvw", 10);
     sink.Append(dest, 10);
-    if(!(sink.NumberOfBytesWritten() == (int32_t)sizeof(buffer) &&
+    if(!(sink.NumberOfBytesAppended() == 23 &&
+         sink.NumberOfBytesWritten() == (int32_t)sizeof(buffer) &&
          0 == memcmp("abcdefghijklmnopqrstuvwxyz", buffer, (int32_t)sizeof(buffer)) &&
          sink.Overflowed())
     ) {
         errln("CheckedArrayByteSink did not Append(scratch buffer) as expected");
+        return;
+    }
+    sink.Reset().Append("123", 3);
+    if(!(sink.NumberOfBytesAppended() == 3 && sink.NumberOfBytesWritten() == 3 &&
+         0 == memcmp("123defghijklmnopqrstuvwxyz", buffer, (int32_t)sizeof(buffer)) &&
+         !sink.Overflowed())
+    ) {
+        errln("CheckedArrayByteSink did not Reset().Append() as expected");
         return;
     }
 }
@@ -512,4 +533,50 @@ StringTest::TestSTLCompatibility() {
     std::vector<UnicodeString> myvect;
     myvect.push_back(UnicodeString("blah"));
 #endif
+}
+
+void
+StringTest::TestCharString() {
+    IcuTestErrorCode errorCode(*this, "TestCharString()");
+    char expected[400];
+    static const char longStr[] =
+        "This is a long string that is meant to cause reallocation of the internal buffer of CharString.";
+    CharString chStr(longStr, errorCode);
+    if (0 != strcmp(longStr, chStr.data()) || (int32_t)strlen(longStr) != chStr.length()) {
+        errln("CharString(longStr) failed.");
+    }
+    StringPiece sp(chStr.toStringPiece());
+    sp.remove_prefix(4);
+    chStr.append(sp, errorCode).append(chStr, errorCode);
+    strcpy(expected, longStr);
+    strcat(expected, longStr+4);
+    strcat(expected, longStr);
+    strcat(expected, longStr+4);
+    if (0 != strcmp(expected, chStr.data()) || (int32_t)strlen(expected) != chStr.length()) {
+        errln("CharString(longStr).append(substring of self).append(self) failed.");
+    }
+    chStr.clear().append("abc", errorCode).append("defghij", 3, errorCode);
+    if (0 != strcmp("abcdef", chStr.data()) || 6 != chStr.length()) {
+        errln("CharString.clear().append(abc).append(defghij, 3) failed.");
+    }
+    chStr.appendInvariantChars(UNICODE_STRING_SIMPLE(
+        "This is a long string that is meant to cause reallocation of the internal buffer of CharString."),
+        errorCode);
+    strcpy(expected, "abcdef");
+    strcat(expected, longStr);
+    if (0 != strcmp(expected, chStr.data()) || (int32_t)strlen(expected) != chStr.length()) {
+        errln("CharString.appendInvariantChars(longStr) failed.");
+    }
+    int32_t appendCapacity = 0;
+    char *buffer = chStr.getAppendBuffer(5, 10, appendCapacity, errorCode);
+    if (errorCode.isFailure()) {
+        return;
+    }
+    memcpy(buffer, "*****", 5);
+    chStr.append(buffer, 5, errorCode);
+    chStr.truncate(chStr.length()-3);
+    strcat(expected, "**");
+    if (0 != strcmp(expected, chStr.data()) || (int32_t)strlen(expected) != chStr.length()) {
+        errln("CharString.getAppendBuffer().append(**) failed.");
+    }
 }

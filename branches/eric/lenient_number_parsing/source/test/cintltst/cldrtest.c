@@ -982,7 +982,7 @@ static void VerifyTranslation(void) {
         if (U_FAILURE(errorCode)) {
             log_err("error ures_getStringByKey returned %s\n", u_errorName(errorCode));
         }
-        else if (QUICK && exemplarLen > 2048) {
+        else if (getTestOption(QUICK_OPTION) && exemplarLen > 2048) {
             log_verbose("skipping test for %s\n", currLoc);
         }
         else if (uprv_strncmp(currLoc,"bem",3) == 0) {
@@ -1024,7 +1024,7 @@ static void VerifyTranslation(void) {
                 if (U_FAILURE(errorCode)) {
                     log_err("error ures_getByKey returned %s\n", u_errorName(errorCode));
                 }
-                if (QUICK) {
+                if (getTestOption(QUICK_OPTION)) {
                     end = 1;
                 }
                 else {
@@ -1054,7 +1054,7 @@ static void VerifyTranslation(void) {
                 if (U_FAILURE(errorCode)) {
                     log_err("error ures_getByKey returned %s\n", u_errorName(errorCode));
                 }
-                if (QUICK) {
+                if (getTestOption(QUICK_OPTION)) {
                     end = 1;
                 }
                 else {
@@ -1257,7 +1257,7 @@ static void TestLocaleDisplayPattern(void){
     ULocaleData *uld = ulocdata_open(uloc_getDefault(), &status);
 
     if(U_FAILURE(status)){
-        log_err("ulocdata_open error");
+        log_data_err("ulocdata_open error");
         return;
     }
     ulocdata_getLocaleDisplayPattern(uld, pattern, 32, &status);
@@ -1286,7 +1286,7 @@ static void TestCoverage(void){
     ULocaleData *uld = ulocdata_open(uloc_getDefault(), &status);
 
     if(U_FAILURE(status)){
-        log_err("ulocdata_open error");
+        log_data_err("ulocdata_open error");
         return;
     }
 

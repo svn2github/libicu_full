@@ -114,9 +114,14 @@ void DateIntervalFormatTest::testAPI() {
         return;
     } 
     // not deleted, test clone 
+    
+    // check default value of lenient
+    if ( !dtitvfmt->isLenient() ) {
+        errln("ERROR: isLenient() not TRUE by default for DateIntervalFormat");
+    }
 
 
-    // ====== Test clone()
+    // ====== Test clone() and setLenient() (latter from Format superclass)
     status = U_ZERO_ERROR;
     logln("Testing DateIntervalFormat clone");
 
@@ -125,6 +130,10 @@ void DateIntervalFormatTest::testAPI() {
         dataerrln("ERROR: clone failed");
     }
 
+    another->setLenient(!dtitvfmt->isLenient());
+    if( another->isLenient() == dtitvfmt->isLenient()) {
+        errln("ERROR: isLenient() after setLenient(!isLenient()) failed");
+    } // don't check that == fails, not relevant for subclass that does not check lenient
  
     // ====== Test getDateIntervalInfo, setDateIntervalInfo, adoptDateIntervalInfo
     status = U_ZERO_ERROR;
@@ -738,14 +747,14 @@ void DateIntervalFormatTest::testFormat() {
         
         "zh", "2007 11 10 10:10:10", "2007 11 20 10:10:10", "y", "2007\\u5E74", // (fixed expected result per ticket:6626:)
         
-        "zh", "2007 11 10 10:10:10", "2007 11 20 10:10:10", "M", "11", 
+        "zh", "2007 11 10 10:10:10", "2007 11 20 10:10:10", "M", "11\\u6708", 
         
         "zh", "2007 11 10 10:10:10", "2007 11 20 10:10:10", "MMM", "\\u5341\\u4E00\\u6708", // (fixed expected result per ticket:6626: and others)
         
         
         "zh", "2007 11 10 10:10:10", "2007 11 20 10:10:10", "hmz", "2007\\u5e7411\\u670810\\u65e5 \\u4e0a\\u534810:10 \\u683c\\u6797\\u5c3c\\u6cbb\\u6807\\u51c6\\u65f6\\u95f4-0800\\u20132007\\u5e7411\\u670820\\u65e5 \\u4e0a\\u534810:10 \\u683c\\u6797\\u5c3c\\u6cbb\\u6807\\u51c6\\u65f6\\u95f4-0800", 
         
-        "zh", "2007 11 10 10:10:10", "2007 11 20 10:10:10", "h", "2007\\u5e7411\\u670810\\u65e5 \\u4e0a\\u534810\\u20132007\\u5e7411\\u670820\\u65e5 \\u4e0a\\u534810", 
+        "zh", "2007 11 10 10:10:10", "2007 11 20 10:10:10", "h", "2007\\u5e7411\\u670810\\u65e5 \\u4e0a\\u534810\\u65f6\\u20132007\\u5e7411\\u670820\\u65e5 \\u4e0a\\u534810\\u65f6", 
         
         "zh", "2007 01 10 10:00:10", "2007 01 10 14:10:10", "EEEEdMMMMy", "2007\\u5e741\\u670810\\u65e5\\u661f\\u671f\\u4e09", // (fixed expected result per ticket:6626:)
         
@@ -762,11 +771,11 @@ void DateIntervalFormatTest::testFormat() {
         
         "zh", "2007 01 10 10:00:10", "2007 01 10 10:20:10", "hmv", "\\u7f8e\\u56fd (\\u6d1b\\u6749\\u77f6)\\u4e0a\\u534810:00\\u81f310:20",
         
-        "zh", "2007 01 10 10:00:10", "2007 01 10 10:20:10", "hz", "\\u4e0a\\u534810 \\u683c\\u6797\\u5c3c\\u6cbb\\u6807\\u51c6\\u65f6\\u95f4-0800", 
+        "zh", "2007 01 10 10:00:10", "2007 01 10 10:20:10", "hz", "\\u4e0a\\u534810\\u65f6 \\u683c\\u6797\\u5c3c\\u6cbb\\u6807\\u51c6\\u65f6\\u95f4-0800", 
         
         "zh", "2007 01 10 10:10:10", "2007 01 10 10:10:20", "hm", "\\u4e0a\\u534810:10", 
         
-        "zh", "2007 01 10 10:10:10", "2007 01 10 10:10:20", "h", "\\u4e0a\\u534810", 
+        "zh", "2007 01 10 10:10:10", "2007 01 10 10:10:20", "h", "\\u4e0a\\u534810\\u65f6", 
         
         "de", "2007 10 10 10:10:10", "2008 10 10 10:10:10", "EEEEdMMMy", "Mittwoch, 10. Okt 2007 - Freitag, 10. Okt 2008", 
         
@@ -851,13 +860,13 @@ void DateIntervalFormatTest::testFormat() {
         
         "de", "2007 01 10 10:00:10", "2007 01 10 14:10:10", "MMMy", "Jan 2007", 
         
-        "de", "2007 01 10 10:00:10", "2007 01 10 14:10:10", "EEEEdMMM", "Mittwoch 10. Jan", 
+        "de", "2007 01 10 10:00:10", "2007 01 10 14:10:10", "EEEEdMMM", "Mittwoch, 10. Jan", 
         
         
         "de", "2007 01 10 10:00:10", "2007 01 10 14:10:10", "h", "10 vorm. - 2 nachm.", 
         "de", "2007 01 10 10:00:10", "2007 01 10 14:10:10", "H", "10-14", 
         
-        "de", "2007 01 10 10:00:10", "2007 01 10 10:20:10", "EEEEdMMM", "Mittwoch 10. Jan", 
+        "de", "2007 01 10 10:00:10", "2007 01 10 10:20:10", "EEEEdMMM", "Mittwoch, 10. Jan", 
         
         
         "de", "2007 01 10 10:00:10", "2007 01 10 10:20:10", "hmv", "10:00-10:20 vorm. Vereinigte Staaten (Los Angeles)", 
@@ -881,6 +890,51 @@ void DateIntervalFormatTest::testFormat() {
         "de", "2007 01 10 10:10:10", "2007 01 10 10:10:20", "hv", "10 vorm. Vereinigte Staaten (Los Angeles)", 
         
         "de", "2007 01 10 10:10:10", "2007 01 10 10:10:20", "hz", "10 vorm. GMT-08:00", 
+        
+        // Thai (default calendar buddhist)
+
+        "th", "2550 10 10 10:10:10", "2551 10 10 10:10:10", "EEEEdMMMy", "\\u0E27\\u0E31\\u0E19\\u0E1E\\u0E38\\u0E18 10 \\u0E15.\\u0E04. 2550 \\u2013 \\u0E27\\u0E31\\u0E19\\u0E28\\u0E38\\u0E01\\u0E23\\u0E4C 10 \\u0E15.\\u0E04. 2551", 
+        
+        
+        "th", "2550 10 10 10:10:10", "2551 10 10 10:10:10", "dMMM", "10 \\u0E15.\\u0E04. 2550 \\u2013 10 \\u0E15.\\u0E04. 2551", 
+        
+        "th", "2550 10 10 10:10:10", "2551 10 10 10:10:10", "MMMy", "\\u0E15.\\u0E04. 2550 - \\u0E15.\\u0E04. 2551", 
+        
+        
+        "th", "2550 10 10 10:10:10", "2551 10 10 10:10:10", "EdMy", "\\u0E1E. 10/10/50 \\u2013 \\u0E28. 10/10/51", 
+        
+        "th", "2550 10 10 10:10:10", "2551 10 10 10:10:10", "dMy", "10/10/50 \\u2013 10/10/51", 
+        
+        
+        "th", "2550 10 10 10:10:10", "2551 10 10 10:10:10", "My", "10/50 \\u2013 10/51", 
+        
+        "th", "2550 10 10 10:10:10", "2551 10 10 10:10:10", "EdM", "\\u0E1E. 10/10/50 \\u2013 \\u0E28. 10/10/51", 
+        
+        
+        "th", "2550 10 10 10:10:10", "2551 10 10 10:10:10", "y", "2550-2551", 
+        
+        "th", "2550 10 10 10:10:10", "2551 10 10 10:10:10", "M", "10/50 \\u2013 10/51", 
+        
+        
+        "th", "2550 10 10 10:10:10", "2550 11 10 10:10:10", "EEEEdMMMy", "\\u0E27\\u0E31\\u0E19\\u0E1E\\u0E38\\u0E18 10 \\u0E15.\\u0E04. \\u2013 \\u0E27\\u0E31\\u0E19\\u0E40\\u0E2A\\u0E32\\u0E23\\u0E4C 10 \\u0E1E.\\u0E22. 2550", 
+        
+        
+        "th", "2550 10 10 10:10:10", "2550 11 10 10:10:10", "dMMM", "10 \\u0E15.\\u0E04. \\u2013 10 \\u0E1E.\\u0E22.", 
+        
+        "th", "2550 10 10 10:10:10", "2550 11 10 10:10:10", "MMMy", "\\u0E15.\\u0E04.-\\u0E1E.\\u0E22. 2550", 
+        
+       "th", "2550 10 10 10:10:10", "2550 11 10 10:10:10", "dM", "10/10 - 10/11", 
+        
+        "th", "2550 10 10 10:10:10", "2550 11 10 10:10:10", "My", "10/50 \\u2013 11/50", 
+        
+        
+        "th", "2550 10 10 10:10:10", "2550 11 10 10:10:10", "d", "10/10 - 10/11", 
+        
+        "th", "2550 10 10 10:10:10", "2550 11 10 10:10:10", "y", "2550", 
+        
+        
+        "th", "2550 10 10 10:10:10", "2550 11 10 10:10:10", "MMM", "\\u0E15.\\u0E04.-\\u0E1E.\\u0E22.", 
+
     };
     expect(DATA, ARRAY_SIZE(DATA));
 }

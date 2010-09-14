@@ -4,7 +4,7 @@
 <html lang="en-US" xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
   <head>
 
-    <title>ReadMe for ICU 4.4</title>
+    <title>ReadMe for ICU 4.5.1 (4.6 M1)</title>
     <meta name="COPYRIGHT" content=
     "Copyright (c) 1997-2010 IBM Corporation and others. All Rights Reserved." />
     <meta name="KEYWORDS" content=
@@ -17,9 +17,9 @@
 
   <body>
     <h1>International Components for Unicode<br />
-     <abbr title="International Components for Unicode">ICU</abbr> 4.4 ReadMe</h1>
+     <abbr title="International Components for Unicode">ICU</abbr> 4.5.1 (4.6M1) ReadMe</h1>
 
-    <p>Last updated: 2010 Mar 15th<br />
+    <p>Last updated: 2010 Jun 22nd<br />
      Copyright &copy; 1997-2010 International Business Machines Corporation and
     others. All Rights Reserved.</p>
     <!-- Remember that there is a copyright at the end too -->
@@ -204,10 +204,30 @@
 
     <p>To see which APIs are new or changed in this release, view the <a href="APIChangeReport.html">ICU4C API Change Report</a>. </p>
 
-    <p><!-- The following list concentrates on <em>changes that affect existing
-    applications migrating from previous ICU releases</em>. --> For more news about
+    <p>The following list concentrates on <em>changes that affect existing
+    applications migrating from previous ICU releases</em>.
+    For more news about
     this release, see the <a href="http://site.icu-project.org/download">ICU
     download page</a>.</p>
+
+    <ul>
+      <li><strong>Compiler RTTI</strong><br />
+        ICU 4.6 requires compiler RTTI to be turned on.
+        It is used with many of ICU's polymorphic classes
+        (classes with virtual functions; they are subclasses of UObject).<br />
+        Existing "poor man's RTTI" functions continue to be available, but
+        the ICU code does not use them any more and users are encouraged
+        to use real C++ RTTI as well where necessary.
+        (<code>dynamic_cast&lt;pointer&gt;</code> for casting and testing whether
+        an object is an instance of a class <em>or subclass</em>,
+        and <code>typeid(object or type)</code> for testing for type equality.)<br />
+        New ICU class hierarchies (new immediate subclasses of UObject) will not
+        add "poor man's RTTI" functions.<br />
+        On AIX with the Visual Age compiler, RTTI must be turned on explicitly
+        via the the <code>-qrtti</code> option.
+        When using ICU's own makefiles, this is done automatically via the
+        <code><a href="source/config/mh-aix-va">mh-aix-va</a></code> file.</li>
+    </ul>
 
     <h2><a name="Download" href="#Download" id="Download">How To Download the
     Source Code</a></h2>
@@ -875,9 +895,10 @@
     <ul>
       <li><b>Data path:</b> For a system-level library, it is best to load
         ICU data from the .dat package file because the file system path
-        to the .dat package file can be hardcoded.
-        Set <code>-DICU_DATA_DIR=/path/to/icu/data</code> when building
-        the ICU code. (Used by source/common/putil.c.)<br>
+        to the .dat package file can be hardcoded. ICU will automatically set
+        the path to the final install location using U_ICU_DATA_DEFAULT_DIR.
+        Alternatively, you can set <code>-DICU_DATA_DIR=/path/to/icu/data</code>
+        when building the ICU code. (Used by source/common/putil.c.)<br>
         Consider also setting <code>-DICU_NO_USER_DATA_OVERRIDE</code>
         if you do not want the "ICU_DATA" environment variable to be used.
         (An application can still override the data path via
@@ -909,9 +930,9 @@
     <p>Building International Components for Unicode requires:</p>
 
     <ul>
-      <li>Microsoft Windows 2000 or above</li>
+      <li>Microsoft Windows (<a href="#HowToBuildSupported">See currently tested versions)</a></li>
 
-      <li>Microsoft Visual C++ 2008</li>
+      <li>Microsoft Visual C++ (<a href="#HowToBuildSupported">See currently tested versions)</a></li>
 
       <li><a href="#HowToBuildCygwin">Cygwin</a> is required when other versions
       of Microsoft Visual C++ and other compilers are used to build ICU.</li>
@@ -929,7 +950,7 @@
       not work without the location of the ICU DLL files in the path.</li>
 
       <li>Open the "<i>&lt;ICU&gt;</i>\source\allinone\allinone.sln" workspace
-      file in Microsoft Visual Studio 2003. (This solution includes all the
+      file in Microsoft Visual Studio. (This solution includes all the
       International Components for Unicode libraries, necessary ICU building
       tools, and the test suite projects). Please see the <a href=
       "#HowToBuildWindowsCommandLine">command line note below</a> if you want to
@@ -1014,9 +1035,9 @@
     requires:</p>
 
     <ul>
-      <li>Microsoft 2000 or above</li>
+      <li>Microsoft Windows (<a href="#HowToBuildSupported">See currently tested versions)</a></li>
 
-      <li>Microsoft Visual C++ 2003 or above (when gcc isn't used).</li>
+      <li>Microsoft Visual C++ (when gcc isn't used)  (<a href="#HowToBuildSupported">See currently tested versions)</a>.</li>
 
       <li>
         Cygwin with the following installed: 

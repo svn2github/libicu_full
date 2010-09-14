@@ -128,7 +128,7 @@ utrie2_openFromSerialized(UTrie2ValueBits valueBits,
     const uint16_t *p16;
     int32_t actualLength;
 
-    UTrie2 tempTrie={ NULL };
+    UTrie2 tempTrie;
     UTrie2 *trie;
 
     if(U_FAILURE(*pErrorCode)) {
@@ -143,7 +143,7 @@ utrie2_openFromSerialized(UTrie2ValueBits valueBits,
     }
 
     /* enough data for a trie header? */
-    if(length<sizeof(UTrie2Header)) {
+    if(length<(int32_t)sizeof(UTrie2Header)) {
         *pErrorCode=U_INVALID_FORMAT_ERROR;
         return 0;
     }
@@ -162,6 +162,7 @@ utrie2_openFromSerialized(UTrie2ValueBits valueBits,
     }
 
     /* get the length values and offsets */
+    uprv_memset(&tempTrie, 0, sizeof(tempTrie));
     tempTrie.indexLength=header->indexLength;
     tempTrie.dataLength=header->shiftedDataLength<<UTRIE2_INDEX_SHIFT;
     tempTrie.index2NullOffset=header->index2NullOffset;
@@ -412,7 +413,7 @@ utrie2_swap(const UDataSwapper *ds,
     }
 
     /* setup and swapping */
-    if(length>=0 && length<sizeof(UTrie2Header)) {
+    if(length>=0 && length<(int32_t)sizeof(UTrie2Header)) {
         *pErrorCode=U_INDEX_OUTOFBOUNDS_ERROR;
         return 0;
     }
@@ -487,7 +488,7 @@ utrie2_swap(const UDataSwapper *ds,
 
 /* default UTrie2EnumValue() returns the input value itself */
 static uint32_t U_CALLCONV
-enumSameValue(const void *context, uint32_t value) {
+enumSameValue(const void * /*context*/, uint32_t value) {
     return value;
 }
 

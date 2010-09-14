@@ -5,6 +5,7 @@
  *******************************************************************************
  */
 
+#include <typeinfo>  // for 'typeid' to work
 
 #include "unicode/tmutfmt.h"
 
@@ -172,16 +173,14 @@ TimeUnitFormat::operator=(const TimeUnitFormat& other) {
 
 UBool 
 TimeUnitFormat::operator==(const Format& other) const {
-    if (other.getDynamicClassID() == TimeUnitFormat::getStaticClassID()) {
+    if (typeid(*this) == typeid(other)) {
         TimeUnitFormat* fmt = (TimeUnitFormat*)&other;
-        UBool ret =  ( (fNumberFormat && fmt->fNumberFormat && 
-                        *fNumberFormat == *fmt->fNumberFormat ||
-                        fNumberFormat == fmt->fNumberFormat ) &&
-                       fLocale == fmt->fLocale &&
-                       (fPluralRules && fmt->fPluralRules &&
-                        *fPluralRules == *fmt->fPluralRules ||
-                        fPluralRules == fmt->fPluralRules) &&
-                      fStyle == fmt->fStyle); 
+        UBool ret =  ( ((fNumberFormat && fmt->fNumberFormat && *fNumberFormat == *fmt->fNumberFormat)
+                            || fNumberFormat == fmt->fNumberFormat ) 
+                        && fLocale == fmt->fLocale 
+                        && ((fPluralRules && fmt->fPluralRules && *fPluralRules == *fmt->fPluralRules) 
+                            || fPluralRules == fmt->fPluralRules) 
+                        && fStyle == fmt->fStyle); 
         if (ret) {
             for (TimeUnit::UTimeUnitFields i = TimeUnit::UTIMEUNIT_YEAR;
                  i < TimeUnit::UTIMEUNIT_FIELD_COUNT && ret;
@@ -203,8 +202,8 @@ TimeUnitFormat::format(const Formattable& obj, UnicodeString& toAppendTo,
     }
     if (obj.getType() == Formattable::kObject) {
         const UObject* formatObj = obj.getObject();
-        if (formatObj->getDynamicClassID() == TimeUnitAmount::getStaticClassID()){
-            TimeUnitAmount* amount = (TimeUnitAmount*)formatObj;
+        const TimeUnitAmount* amount = dynamic_cast<const TimeUnitAmount*>(formatObj);
+        if (amount != NULL){
             Hashtable* countToPattern = fTimeUnitToCountToPatterns[amount->getTimeUnitField()];
             double number;
             const Formattable& amtNumber = amount->getNumber();
@@ -723,7 +722,7 @@ TimeUnitFormat::setLocale(const Locale& locale, UErrorCode& status) {
 
 void 
 TimeUnitFormat::setNumberFormat(const NumberFormat& format, UErrorCode& status){
-    if (U_FAILURE(status) || fNumberFormat && format == *fNumberFormat) {
+    if (U_FAILURE(status) || (fNumberFormat && format == *fNumberFormat)) {
         return;
     }
     delete fNumberFormat;

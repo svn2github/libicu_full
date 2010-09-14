@@ -79,12 +79,13 @@ void DateFormatTest::runIndexedTest( int32_t index, UBool exec, const char* &nam
         TESTCASE(39,Test6726);
         TESTCASE(40,TestGMTParsing);
         TESTCASE(41,Test6880);
-        /*
-        TESTCASE(42,TestRelativeError);
-        TESTCASE(43,TestRelativeOther);
+        TESTCASE(42,TestISOEra);
+        TESTCASE(43,TestFormalChineseDate);
         TESTCASE(44,TestNumberAsStringParsing);
+        /*
+        TESTCASE(45,TestRelativeError);
+        TESTCASE(46,TestRelativeOther);
         */
-        TESTCASE(42,TestNumberAsStringParsing);
         default: name = ""; break;
     }
 }
@@ -402,8 +403,9 @@ void DateFormatTest::TestFieldPosition() {
         //  String str;
         DateFormat* df = dateFormats[j];
         df->setTimeZone(*PT);
-        if (df->getDynamicClassID() == SimpleDateFormat::getStaticClassID()) {
-            logln(" Pattern = " + ((SimpleDateFormat*) df)->toPattern(buf.remove()));
+        SimpleDateFormat* sdtfmt = dynamic_cast<SimpleDateFormat*>(df);
+        if (sdtfmt != NULL) {
+            logln(" Pattern = " + sdtfmt->toPattern(buf.remove()));
         } else {
             logln(" Pattern = ? (not a SimpleDateFormat)");
         }
@@ -463,8 +465,8 @@ void DateFormatTest::TestGeneral() {
         "yyyy MM dd HH:mm:ss.SSS",
 
         // Milliseconds are left-justified, since they format as fractions of a second
-        "y/M/d H:mm:ss.S", "fp", "2004 03 10 16:36:31.567", "2004/3/10 16:36:31.6", "2004 03 10 16:36:31.600",
-        "y/M/d H:mm:ss.SS", "fp", "2004 03 10 16:36:31.567", "2004/3/10 16:36:31.57", "2004 03 10 16:36:31.570",
+        "y/M/d H:mm:ss.S", "fp", "2004 03 10 16:36:31.567", "2004/3/10 16:36:31.5", "2004 03 10 16:36:31.500",
+        "y/M/d H:mm:ss.SS", "fp", "2004 03 10 16:36:31.567", "2004/3/10 16:36:31.56", "2004 03 10 16:36:31.560",
         "y/M/d H:mm:ss.SSS", "F", "2004 03 10 16:36:31.567", "2004/3/10 16:36:31.567",
         "y/M/d H:mm:ss.SSSS", "pf", "2004/3/10 16:36:31.5679", "2004 03 10 16:36:31.568", "2004/3/10 16:36:31.5680",
     };
@@ -2393,11 +2395,11 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "de", "America/Havana", "2004-07-15T00:00:00Z", "ZZZZ", "GMT-04:00", "-4:00" },
         { "de", "America/Havana", "2004-07-15T00:00:00Z", "z", "GMT-04:00", "-4:00" },
         { "de", "America/Havana", "2004-07-15T00:00:00Z", "zzzz", "GMT-04:00", "-4:00" },
-        { "de", "America/Havana", "2004-07-15T00:00:00Z", "v", "Kuba", "America/Havana" },
-        { "de", "America/Havana", "2004-07-15T00:00:00Z", "vvvv", "Kuba", "America/Havana" },
+        { "de", "America/Havana", "2004-07-15T00:00:00Z", "v", "(Kuba)", "America/Havana" },
+        { "de", "America/Havana", "2004-07-15T00:00:00Z", "vvvv", "(Kuba)", "America/Havana" },
         // added to test proper fallback of country name
-        { "de_CH", "America/Havana", "2004-07-15T00:00:00Z", "v", "Kuba", "America/Havana" },
-        { "de_CH", "America/Havana", "2004-07-15T00:00:00Z", "vvvv", "Kuba", "America/Havana" },
+        { "de_CH", "America/Havana", "2004-07-15T00:00:00Z", "v", "(Kuba)", "America/Havana" },
+        { "de_CH", "America/Havana", "2004-07-15T00:00:00Z", "vvvv", "(Kuba)", "America/Havana" },
 
         { "de", "Australia/ACT", "2004-01-15T00:00:00Z", "Z", "+1100", "+11:00" },
         { "de", "Australia/ACT", "2004-01-15T00:00:00Z", "ZZZZ", "GMT+11:00", "+11:00" },
@@ -2429,8 +2431,8 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "de", "Europe/London", "2004-07-15T00:00:00Z", "ZZZZ", "GMT+01:00", "+1:00" },
         { "de", "Europe/London", "2004-07-15T00:00:00Z", "z", "GMT+01:00", "+1:00" },
         { "de", "Europe/London", "2004-07-15T00:00:00Z", "zzzz", "GMT+01:00", "+1:00" },
-        { "de", "Europe/London", "2004-07-15T00:00:00Z", "v", "Vereinigtes K\\u00f6nigreich", "Europe/London" },
-        { "de", "Europe/London", "2004-07-15T00:00:00Z", "vvvv", "Vereinigtes K\\u00f6nigreich", "Europe/London" },
+        { "de", "Europe/London", "2004-07-15T00:00:00Z", "v", "(Vereinigtes K\\u00f6nigreich)", "Europe/London" },
+        { "de", "Europe/London", "2004-07-15T00:00:00Z", "vvvv", "(Vereinigtes K\\u00f6nigreich)", "Europe/London" },
 
         { "de", "Etc/GMT+3", "2004-01-15T00:00:00Z", "Z", "-0300", "-3:00" },
         { "de", "Etc/GMT+3", "2004-01-15T00:00:00Z", "ZZZZ", "GMT-03:00", "-3:00" },
@@ -2452,8 +2454,8 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "de", "Asia/Calcutta", "2004-07-15T00:00:00Z", "ZZZZ", "GMT+05:30", "+5:30" },
         { "de", "Asia/Calcutta", "2004-07-15T00:00:00Z", "z", "GMT+05:30", "+05:30" },
         { "de", "Asia/Calcutta", "2004-07-15T00:00:00Z", "zzzz", "GMT+05:30", "+5:30" },
-        { "de", "Asia/Calcutta", "2004-07-15T00:00:00Z", "v", "Indien", "Asia/Calcutta" },
-        { "de", "Asia/Calcutta", "2004-07-15T00:00:00Z", "vvvv", "Indien", "Asia/Calcutta" },
+        { "de", "Asia/Calcutta", "2004-07-15T00:00:00Z", "v", "(Indien)", "Asia/Calcutta" },
+        { "de", "Asia/Calcutta", "2004-07-15T00:00:00Z", "vvvv", "(Indien)", "Asia/Calcutta" },
 
         // ==========
 
@@ -2605,8 +2607,8 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "hi", "America/Havana", "2004-07-15T00:00:00Z", "ZZZZ", "GMT-\\u0966\\u096a:\\u0966\\u0966", "-4:00" },
         { "hi", "America/Havana", "2004-07-15T00:00:00Z", "z", "GMT-\\u0966\\u096a:\\u0966\\u0966", "-4:00" },
         { "hi", "America/Havana", "2004-07-15T00:00:00Z", "zzzz", "GMT-\\u0966\\u096a:\\u0966\\u0966", "-4:00" },
-        { "hi", "America/Havana", "2004-07-15T00:00:00Z", "v", "\\u0915\\u094d\\u092f\\u0942\\u092c\\u093e", "America/Havana" },
-        { "hi", "America/Havana", "2004-07-15T00:00:00Z", "vvvv", "\\u0915\\u094d\\u092f\\u0942\\u092c\\u093e", "America/Havana" },
+        { "hi", "America/Havana", "2004-07-15T00:00:00Z", "v", "(\\u0915\\u094d\\u092f\\u0942\\u092c\\u093e)", "America/Havana" },
+        { "hi", "America/Havana", "2004-07-15T00:00:00Z", "vvvv", "(\\u0915\\u094d\\u092f\\u0942\\u092c\\u093e)", "America/Havana" },
 
         { "hi", "Australia/ACT", "2004-01-15T00:00:00Z", "Z", "+1100", "+11:00" },
         { "hi", "Australia/ACT", "2004-01-15T00:00:00Z", "ZZZZ", "GMT+\\u0967\\u0967:\\u0966\\u0966", "+11:00" },
@@ -2638,8 +2640,8 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "hi", "Europe/London", "2004-07-15T00:00:00Z", "ZZZZ", "GMT+\\u0966\\u0967:\\u0966\\u0966", "+1:00" },
         { "hi", "Europe/London", "2004-07-15T00:00:00Z", "z", "GMT+\\u0966\\u0967:\\u0966\\u0966", "+1:00" },
         { "hi", "Europe/London", "2004-07-15T00:00:00Z", "zzzz", "GMT+\\u0966\\u0967:\\u0966\\u0966", "+1:00" },
-        { "hi", "Europe/London", "2004-07-15T00:00:00Z", "v", "\\u092C\\u094D\\u0930\\u093F\\u0924\\u0928", "Europe/London" },
-        { "hi", "Europe/London", "2004-07-15T00:00:00Z", "vvvv", "\\u092C\\u094D\\u0930\\u093F\\u0924\\u0928", "Europe/London" },
+        { "hi", "Europe/London", "2004-07-15T00:00:00Z", "v", "(\\u092C\\u094D\\u0930\\u093F\\u0924\\u0928)", "Europe/London" },
+        { "hi", "Europe/London", "2004-07-15T00:00:00Z", "vvvv", "(\\u092C\\u094D\\u0930\\u093F\\u0924\\u0928)", "Europe/London" },
 
         { "hi", "Etc/GMT+3", "2004-01-15T00:00:00Z", "Z", "-0300", "-3:00" },
         { "hi", "Etc/GMT+3", "2004-01-15T00:00:00Z", "ZZZZ", "GMT-\\u0966\\u0969:\\u0966\\u0966", "-3:00" },
@@ -2711,8 +2713,8 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "bg", "America/Havana", "2004-07-15T00:00:00Z", "ZZZZ", "\\u0413\\u0440\\u0438\\u0438\\u043D\\u0443\\u0438\\u0447-0400", "-4:00" },
         { "bg", "America/Havana", "2004-07-15T00:00:00Z", "z", "\\u0413\\u0440\\u0438\\u0438\\u043D\\u0443\\u0438\\u0447-0400", "-4:00" },
         { "bg", "America/Havana", "2004-07-15T00:00:00Z", "zzzz", "\\u0413\\u0440\\u0438\\u0438\\u043D\\u0443\\u0438\\u0447-0400", "-4:00" },
-        { "bg", "America/Havana", "2004-07-15T00:00:00Z", "v", "\\u041a\\u0443\\u0431\\u0430", "America/Havana" },
-        { "bg", "America/Havana", "2004-07-15T00:00:00Z", "vvvv", "\\u041a\\u0443\\u0431\\u0430", "America/Havana" },
+        { "bg", "America/Havana", "2004-07-15T00:00:00Z", "v", "(\\u041a\\u0443\\u0431\\u0430)", "America/Havana" },
+        { "bg", "America/Havana", "2004-07-15T00:00:00Z", "vvvv", "(\\u041a\\u0443\\u0431\\u0430)", "America/Havana" },
 
         { "bg", "Australia/ACT", "2004-01-15T00:00:00Z", "Z", "+1100", "+11:00" },
         { "bg", "Australia/ACT", "2004-01-15T00:00:00Z", "ZZZZ", "\\u0413\\u0440\\u0438\\u0438\\u043D\\u0443\\u0438\\u0447+1100", "+11:00" },
@@ -2744,8 +2746,8 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "bg", "Europe/London", "2004-07-15T00:00:00Z", "ZZZZ", "\\u0413\\u0440\\u0438\\u0438\\u043D\\u0443\\u0438\\u0447+0100", "+1:00" },
         { "bg", "Europe/London", "2004-07-15T00:00:00Z", "z", "\\u0413\\u0440\\u0438\\u0438\\u043D\\u0443\\u0438\\u0447+0100", "+1:00" },
         { "bg", "Europe/London", "2004-07-15T00:00:00Z", "zzzz", "\\u0413\\u0440\\u0438\\u0438\\u043D\\u0443\\u0438\\u0447+0100", "+1:00" },
-        { "bg", "Europe/London", "2004-07-15T00:00:00Z", "v", "\\u041e\\u0431\\u0435\\u0434\\u0438\\u043d\\u0435\\u043d\\u043e \\u043a\\u0440\\u0430\\u043b\\u0441\\u0442\\u0432\\u043e", "Europe/London" },
-        { "bg", "Europe/London", "2004-07-15T00:00:00Z", "vvvv", "\\u041e\\u0431\\u0435\\u0434\\u0438\\u043d\\u0435\\u043d\\u043e \\u043a\\u0440\\u0430\\u043b\\u0441\\u0442\\u0432\\u043e", "Europe/London" },
+        { "bg", "Europe/London", "2004-07-15T00:00:00Z", "v", "(\\u041e\\u0431\\u0435\\u0434\\u0438\\u043d\\u0435\\u043d\\u043e \\u043a\\u0440\\u0430\\u043b\\u0441\\u0442\\u0432\\u043e)", "Europe/London" },
+        { "bg", "Europe/London", "2004-07-15T00:00:00Z", "vvvv", "(\\u041e\\u0431\\u0435\\u0434\\u0438\\u043d\\u0435\\u043d\\u043e \\u043a\\u0440\\u0430\\u043b\\u0441\\u0442\\u0432\\u043e)", "Europe/London" },
 
         { "bg", "Etc/GMT+3", "2004-01-15T00:00:00Z", "Z", "-0300", "-3:00" },
         { "bg", "Etc/GMT+3", "2004-01-15T00:00:00Z", "ZZZZ", "\\u0413\\u0440\\u0438\\u0438\\u043D\\u0443\\u0438\\u0447-0300", "-3:00" },
@@ -2767,8 +2769,8 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "bg", "Asia/Calcutta", "2004-07-15T00:00:00Z", "ZZZZ", "\\u0413\\u0440\\u0438\\u0438\\u043D\\u0443\\u0438\\u0447+0530", "+5:30" },
         { "bg", "Asia/Calcutta", "2004-07-15T00:00:00Z", "z", "\\u0413\\u0440\\u0438\\u0438\\u043D\\u0443\\u0438\\u0447+0530", "+05:30" },
         { "bg", "Asia/Calcutta", "2004-07-15T00:00:00Z", "zzzz", "\\u0413\\u0440\\u0438\\u0438\\u043D\\u0443\\u0438\\u0447+0530", "+5:30" },
-        { "bg", "Asia/Calcutta", "2004-07-15T00:00:00Z", "v", "\\u0418\\u043D\\u0434\\u0438\\u044F", "Asia/Calcutta" },
-        { "bg", "Asia/Calcutta", "2004-07-15T00:00:00Z", "vvvv", "\\u0418\\u043D\\u0434\\u0438\\u044F", "Asia/Calcutta" },
+        { "bg", "Asia/Calcutta", "2004-07-15T00:00:00Z", "v", "(\\u0418\\u043D\\u0434\\u0438\\u044F)", "Asia/Calcutta" },
+        { "bg", "Asia/Calcutta", "2004-07-15T00:00:00Z", "vvvv", "(\\u0418\\u043D\\u0434\\u0438\\u044F)", "Asia/Calcutta" },
     // ==========
 
         { "ja", "America/Los_Angeles", "2004-01-15T00:00:00Z", "Z", "-0800", "-8:00" },
@@ -2923,8 +2925,8 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "si", "America/Havana", "2004-07-15T00:00:00Z", "ZZZZ", "GMT-04:00", "-4:00" },
         { "si", "America/Havana", "2004-07-15T00:00:00Z", "z", "GMT-04:00", "-4:00" },
         { "si", "America/Havana", "2004-07-15T00:00:00Z", "zzzz", "GMT-04:00", "-4:00" },
-        { "si", "America/Havana", "2004-07-15T00:00:00Z", "v", "CU", "America/Havana" },
-        { "si", "America/Havana", "2004-07-15T00:00:00Z", "vvvv", "CU", "America/Havana" },
+        { "si", "America/Havana", "2004-07-15T00:00:00Z", "v", "(CU)", "America/Havana" },
+        { "si", "America/Havana", "2004-07-15T00:00:00Z", "vvvv", "(CU)", "America/Havana" },
 
         { "si", "Australia/ACT", "2004-01-15T00:00:00Z", "Z", "+1100", "+11:00" },
         { "si", "Australia/ACT", "2004-01-15T00:00:00Z", "ZZZZ", "GMT+11:00", "+11:00" },
@@ -2956,8 +2958,8 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "si", "Europe/London", "2004-07-15T00:00:00Z", "ZZZZ", "GMT+01:00", "+1:00" },
         { "si", "Europe/London", "2004-07-15T00:00:00Z", "z", "GMT+01:00", "+1:00" },
         { "si", "Europe/London", "2004-07-15T00:00:00Z", "zzzz", "GMT+01:00", "+1:00" },
-        { "si", "Europe/London", "2004-07-15T00:00:00Z", "v", "GB", "Europe/London" },
-        { "si", "Europe/London", "2004-07-15T00:00:00Z", "vvvv", "GB", "Europe/London" },
+        { "si", "Europe/London", "2004-07-15T00:00:00Z", "v", "(GB)", "Europe/London" },
+        { "si", "Europe/London", "2004-07-15T00:00:00Z", "vvvv", "(GB)", "Europe/London" },
 
         { "si", "Etc/GMT+3", "2004-01-15T00:00:00Z", "Z", "-0300", "-3:00" },
         { "si", "Etc/GMT+3", "2004-01-15T00:00:00Z", "ZZZZ", "GMT-03:00", "-3:00" },
@@ -2979,8 +2981,8 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "si", "Asia/Calcutta", "2004-07-15T00:00:00Z", "ZZZZ", "GMT+05:30", "+5:30" },
         { "si", "Asia/Calcutta", "2004-07-15T00:00:00Z", "z", "GMT+05:30", "+05:30" },
         { "si", "Asia/Calcutta", "2004-07-15T00:00:00Z", "zzzz", "GMT+05:30", "+5:30" },
-        { "si", "Asia/Calcutta", "2004-07-15T00:00:00Z", "v", "IN", "Asia/Calcutta" },
-        { "si", "Asia/Calcutta", "2004-07-15T00:00:00Z", "vvvv", "IN", "Asia/Calcutta" },
+        { "si", "Asia/Calcutta", "2004-07-15T00:00:00Z", "v", "(IN)", "Asia/Calcutta" },
+        { "si", "Asia/Calcutta", "2004-07-15T00:00:00Z", "vvvv", "(IN)", "Asia/Calcutta" },
         { NULL, NULL, NULL, NULL, NULL, NULL },
     };
 
@@ -3289,19 +3291,22 @@ void DateFormatTest::Test6726(void)
     strm = fmtm->format(dt, strm);
     strs = fmts->format(dt, strs);
 
+
 /* Locale data is not yet updated
-    if (strf.charAt(13) == UChar(' ')) {
-        errln((UnicodeString)"FAIL: Improper formated date: " + strf);
+    if (strf.charAt(13) == UChar(0x20)) {
+        errln((UnicodeString)"FAIL: Improper formatted date: " + strf);
     }
-    if (strl.charAt(10) == UChar(' ')) {
-        errln((UnicodeString)"FAIL: Improper formated date: " + strl);
+    if (strl.charAt(10) == UChar(0x20)) {
+        errln((UnicodeString)"FAIL: Improper formatted date: " + strl);
     }
 */
-    if (strm.charAt(10) != UChar(' ')) {
-        errln((UnicodeString)"FAIL: Improper formated date: " + strm);
+    logln("strm.charAt(10)=%04X wanted 0x20\n", strm.charAt(10));
+    if (strm.charAt(10) != UChar(0x0020)) {
+      errln((UnicodeString)"FAIL: Improper formatted date: " + strm );
     }
-    if (strs.charAt(8)  != UChar(' ')) {
-        errln((UnicodeString)"FAIL: Improper formated date: " + strs);
+    logln("strs.charAt(10)=%04X wanted 0x20\n", strs.charAt(8));
+    if (strs.charAt(8)  != UChar(0x0020)) {
+        errln((UnicodeString)"FAIL: Improper formatted date: " + strs);
     }
 
     delete fmtf;
@@ -3414,6 +3419,81 @@ void DateFormatTest::TestNumberAsStringParsing()
         
     delete formatter;
 }
+
+void DateFormatTest::TestISOEra() { 
+   
+    const char* data[] = { 
+    // input, output 
+    "BC 4004-10-23T07:00:00Z", "BC 4004-10-23T07:00:00Z", 
+    "AD 4004-10-23T07:00:00Z", "AD 4004-10-23T07:00:00Z", 
+    "-4004-10-23T07:00:00Z"  , "BC 4005-10-23T07:00:00Z", 
+    "4004-10-23T07:00:00Z"   , "AD 4004-10-23T07:00:00Z", 
+    }; 
+ 
+    int32_t numData = 8; 
+ 
+    UErrorCode status = U_ZERO_ERROR; 
+ 
+    // create formatter 
+    SimpleDateFormat *fmt1 = new SimpleDateFormat(UnicodeString("GGG yyyy-MM-dd'T'HH:mm:ss'Z"), status); 
+    failure(status, "new SimpleDateFormat", TRUE); 
+
+    for(int i=0; i < numData; i+=2) { 
+        // create input string 
+        UnicodeString in = data[i]; 
+ 
+        // parse string to date 
+        UDate dt1 = fmt1->parse(in, status); 
+        failure(status, "fmt->parse", TRUE); 
+ 
+        // format date back to string 
+        UnicodeString out; 
+        out = fmt1->format(dt1, out); 
+        logln(out); 
+ 
+        // check that roundtrip worked as expected 
+        UnicodeString expected = data[i+1]; 
+        if (out != expected) { 
+            dataerrln((UnicodeString)"FAIL: " + in + " -> " + out + " expected -> " + expected); 
+        } 
+    } 
+ 
+    delete fmt1; 	 
+} 
+void DateFormatTest::TestFormalChineseDate() { 
+   
+    UErrorCode status = U_ZERO_ERROR; 
+    UnicodeString pattern ("y\\u5e74M\\u6708d\\u65e5", -1, US_INV );
+    pattern = pattern.unescape();
+    UnicodeString override ("y=hanidec;M=hans;d=hans", -1, US_INV );
+    
+    // create formatter 
+    SimpleDateFormat *sdf = new SimpleDateFormat(pattern,override,Locale::getChina(),status);
+    failure(status, "new SimpleDateFormat with override", TRUE); 
+
+    UDate thedate = date(2009-1900, UCAL_JULY, 28);
+    FieldPosition pos(0);
+    UnicodeString result;
+    sdf->format(thedate,result,pos);
+ 
+    UnicodeString expected = "\\u4e8c\\u3007\\u3007\\u4e5d\\u5e74\\u4e03\\u6708\\u4e8c\\u5341\\u516b\\u65e5"; 
+    expected = expected.unescape();
+    if (result != expected) { 
+        dataerrln((UnicodeString)"FAIL: -> " + result + " expected -> " + expected); 
+    } 
+ 
+    UDate parsedate = sdf->parse(expected,status);
+    if ( parsedate != thedate ) {
+        UnicodeString pat1 ("yyyy-MM-dd'T'HH:mm:ss'Z'", -1, US_INV );
+        SimpleDateFormat *usf = new SimpleDateFormat(pat1,Locale::getEnglish(),status);
+        UnicodeString parsedres,expres;
+        usf->format(parsedate,parsedres,pos);
+        usf->format(thedate,expres,pos);
+        errln((UnicodeString)"FAIL: parsed -> " + parsedres + " expected -> " + expres); 
+        delete usf;
+    }
+    delete sdf; 	 
+} 
 
 #endif /* #if !UCONFIG_NO_FORMATTING */
 

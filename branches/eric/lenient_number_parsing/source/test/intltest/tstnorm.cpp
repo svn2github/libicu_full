@@ -15,7 +15,7 @@
 #include "unicode/usetiter.h"
 #include "unicode/schriter.h"
 #include "cstring.h"
-#include "unormimp.h"
+#include "normalizer2impl.h"
 #include "tstnorm.h"
 
 #define LENGTHOF(array) ((int32_t)(sizeof(array)/sizeof((array)[0])))
@@ -52,8 +52,10 @@ void BasicNormalizerTest::runIndexedTest(int32_t index, UBool exec,
         CASE(14,FindFoldFCDExceptions);
         CASE(15,TestCompare);
         CASE(16,TestSkippable);
+#if !UCONFIG_NO_FILE_IO && !UCONFIG_NO_LEGACY_CONVERSION
         CASE(17,TestCustomComp);
         CASE(18,TestCustomFCC);
+#endif
         default: name = ""; break;
     }
 }
@@ -1101,63 +1103,75 @@ BasicNormalizerTest::TestCompare() {
 
     // test cases with i and I to make sure Turkic works
     static const UChar iI[]={ 0x49, 0x69, 0x130, 0x131 };
-    USerializedSet sset;
-    UnicodeSet set;
+    UnicodeSet iSet, set;
 
     UnicodeString s1, s2;
-    UChar32 start, end;
+
+    const Normalizer2Impl *nfcImpl=Normalizer2Factory::getNFCImpl(errorCode);
+    if(U_FAILURE(errorCode) || !nfcImpl->ensureCanonIterData(errorCode)) {
+        dataerrln("Normalizer2Factory::getNFCImpl().ensureCanonIterData() failed: %s",
+              u_errorName(errorCode));
+        return;
+    }
 
     // collect all sets into one for contiguous output
     for(i=0; i<LENGTHOF(iI); ++i) {
-        if(unorm_getCanonStartSet(iI[i], &sset)) {
-            count=uset_getSerializedRangeCount(&sset);
-            for(j=0; j<count; ++j) {
-                uset_getSerializedRange(&sset, j, &start, &end);
-                set.add(start, end);
-            }
+        if(nfcImpl->getCanonStartSet(iI[i], iSet)) {
+            set.addAll(iSet);
         }
     }
 
     // test all of these precomposed characters
+    const Normalizer2 *nfcNorm2=Normalizer2Factory::getNFCInstance(errorCode);
     UnicodeSetIterator it(set);
-    while(it.nextRange() && !it.isString()) {
-        start=it.getCodepoint();
-        end=it.getCodepointEnd();
-        while(start<=end) {
-            s1.setTo(start);
+    while(it.next() && !it.isString()) {
+        UChar32 c=it.getCodepoint();
+        if(!nfcNorm2->getDecomposition(c, s2)) {
+            dataerrln("NFC.getDecomposition(i-composite U+%04lx) failed", (long)c);
+            return;
+        }
+
+        s1.setTo(c);
+        for(k=0; k<LENGTHOF(opt); ++k) {
+            // test Normalizer::compare
             errorCode=U_ZERO_ERROR;
-            Normalizer::decompose(s1, FALSE, 0, s2, errorCode);
-            if(U_FAILURE(errorCode)) {
-                dataerrln("Normalizer::decompose(U+%04x) failed: %s", start, u_errorName(errorCode));
-                return;
+            result=_norm_compare(s1, s2, opt[k].options, errorCode);
+            refResult=ref_norm_compare(s1, s2, opt[k].options, errorCode);
+            if(_sign(result)!=_sign(refResult)) {
+                errln("Normalizer::compare(U+%04x with its NFD, %s)%s should be %s %s",
+                    c, opt[k].name, _signString(result), _signString(refResult),
+                    U_SUCCESS(errorCode) ? "" : u_errorName(errorCode));
             }
 
-            for(k=0; k<LENGTHOF(opt); ++k) {
-                // test Normalizer::compare
+            // test UnicodeString::caseCompare - same internal implementation function
+            if(opt[k].options&U_COMPARE_IGNORE_CASE) {
                 errorCode=U_ZERO_ERROR;
-                result=_norm_compare(s1, s2, opt[k].options, errorCode);
-                refResult=ref_norm_compare(s1, s2, opt[k].options, errorCode);
+                result=s1.caseCompare(s2, opt[k].options);
+                refResult=ref_case_compare(s1, s2, opt[k].options);
                 if(_sign(result)!=_sign(refResult)) {
-                    errln("Normalizer::compare(U+%04x with its NFD, %s)%s should be %s %s",
-                        start, opt[k].name, _signString(result), _signString(refResult),
+                    errln("UniStr::caseCompare(U+%04x with its NFD, %s)%s should be %s %s",
+                        c, opt[k].name, _signString(result), _signString(refResult),
                         U_SUCCESS(errorCode) ? "" : u_errorName(errorCode));
                 }
-
-                // test UnicodeString::caseCompare - same internal implementation function
-                if(opt[k].options&U_COMPARE_IGNORE_CASE) {
-                    errorCode=U_ZERO_ERROR;
-                    result=s1.caseCompare(s2, opt[k].options);
-                    refResult=ref_case_compare(s1, s2, opt[k].options);
-                    if(_sign(result)!=_sign(refResult)) {
-                        errln("UniStr::caseCompare(U+%04x with its NFD, %s)%s should be %s %s",
-                            start, opt[k].name, _signString(result), _signString(refResult),
-                            U_SUCCESS(errorCode) ? "" : u_errorName(errorCode));
-                    }
-                }
             }
-
-            ++start;
         }
+    }
+
+    // test getDecomposition() for some characters that do not decompose
+    if( nfcNorm2->getDecomposition(0x20, s2) ||
+        nfcNorm2->getDecomposition(0x4e00, s2) ||
+        nfcNorm2->getDecomposition(0x20002, s2)
+    ) {
+        errln("NFC.getDecomposition() returns TRUE for characters which do not have decompositions");
+    }
+
+    // test FilteredNormalizer2::getDecomposition()
+    UnicodeSet filter(UNICODE_STRING_SIMPLE("[^\\u00a0-\\u00ff]"), errorCode);
+    FilteredNormalizer2 fn2(*nfcNorm2, filter);
+    if( fn2.getDecomposition(0xe4, s1) || !fn2.getDecomposition(0x100, s2) ||
+        s2.length()!=2 || s2[0]!=0x41 || s2[1]!=0x304
+    ) {
+        errln("FilteredNormalizer2(NFC, ^A0-FF).getDecomposition() failed");
     }
 }
 
@@ -1703,27 +1717,6 @@ initExpectedSkippables(UnicodeSet skipSets[UNORM_MODE_COUNT]) {
         , ""), errorCode);
 }
 
-U_CDECL_BEGIN
-
-// USetAdder implementation
-// Does not use uset.h to reduce code dependencies
-static void U_CALLCONV
-_set_add(USet *set, UChar32 c) {
-    uset_add(set, c);
-}
-
-static void U_CALLCONV
-_set_addRange(USet *set, UChar32 start, UChar32 end) {
-    uset_addRange(set, start, end);
-}
-
-static void U_CALLCONV
-_set_addString(USet *set, const UChar *str, int32_t length) {
-    uset_addString(set, str, length);
-}
-
-U_CDECL_END
-
 void
 BasicNormalizerTest::TestSkippable() {
     UnicodeSet diff, skipSets[UNORM_MODE_COUNT], expectSets[UNORM_MODE_COUNT];
@@ -1783,7 +1776,7 @@ BasicNormalizerTest::TestCustomComp() {
     const Normalizer2 *customNorm2=
         Normalizer2::getInstance(loadTestData(errorCode), "testnorm",
                                  UNORM2_COMPOSE, errorCode);
-    if(errorCode.logIfFailureAndReset("unable to load testdata/testnorm.nrm")) {
+    if(errorCode.logDataIfFailureAndReset("unable to load testdata/testnorm.nrm")) {
         return;
     }
     for(int32_t i=0; i<LENGTHOF(pairs); ++i) {
@@ -1815,7 +1808,7 @@ BasicNormalizerTest::TestCustomFCC() {
     const Normalizer2 *customNorm2=
         Normalizer2::getInstance(loadTestData(errorCode), "testnorm",
                                  UNORM2_COMPOSE_CONTIGUOUS, errorCode);
-    if(errorCode.logIfFailureAndReset("unable to load testdata/testnorm.nrm")) {
+    if(errorCode.logDataIfFailureAndReset("unable to load testdata/testnorm.nrm")) {
         return;
     }
     for(int32_t i=0; i<LENGTHOF(pairs); ++i) {

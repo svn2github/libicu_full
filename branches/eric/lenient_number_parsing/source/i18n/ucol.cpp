@@ -82,6 +82,19 @@ _getFoldingOffset(uint32_t data) {
 
 U_CDECL_END
 
+// init FCD data
+static inline
+UBool initializeFCD(UErrorCode *status) {
+    if (fcdTrieIndex != NULL) {
+        return TRUE;
+    } else {
+        // The result is constant, until the library is reloaded.
+        fcdTrieIndex = unorm_getFCDTrieIndex(fcdHighStart, status);
+        ucln_i18n_registerCleanup(UCLN_I18N_UCOL, ucol_cleanup);
+        return U_SUCCESS(*status);
+    }
+}
+
 static
 inline void IInit_collIterate(const UCollator *collator, const UChar *sourceString,
                               int32_t sourceLen, collIterate *s,
@@ -721,6 +734,9 @@ void ucol_setOptionsFromHeader(UCollator* result, UColOptionSet * opts, UErrorCo
     result->caseLevel = (UColAttributeValue)opts->caseLevel;
     result->frenchCollation = (UColAttributeValue)opts->frenchCollation;
     result->normalizationMode = (UColAttributeValue)opts->normalizationMode;
+    if(result->normalizationMode == UCOL_ON && !initializeFCD(status)) {
+        return;
+    }
     result->strength = (UColAttributeValue)opts->strength;
     result->variableTopValue = opts->variableTopValue;
     result->alternateHandling = (UColAttributeValue)opts->alternateHandling;
@@ -733,6 +749,7 @@ void ucol_setOptionsFromHeader(UCollator* result, UColOptionSet * opts, UErrorCo
     result->normalizationModeisDefault = TRUE;
     result->strengthisDefault = TRUE;
     result->variableTopValueisDefault = TRUE;
+    result->alternateHandlingisDefault = TRUE;
     result->hiraganaQisDefault = TRUE;
     result->numericCollationisDefault = TRUE;
 
@@ -802,13 +819,6 @@ UCollator* ucol_initCollator(const UCATableHeader *image, UCollator *fillIn, con
         result->freeOnClose = FALSE;
     }
 
-    // init FCD data
-    if (fcdTrieIndex == NULL) {
-        // The result is constant, until the library is reloaded.
-        fcdTrieIndex = unorm_getFCDTrieIndex(fcdHighStart, status);
-        ucln_i18n_registerCleanup(UCLN_I18N_UCOL, ucol_cleanup);
-    }
-
     result->image = image;
     result->mapping.getFoldingOffset = _getFoldingOffset;
     const uint8_t *mapping = (uint8_t*)result->image+result->image->mappingPosition;
@@ -821,37 +831,10 @@ UCollator* ucol_initCollator(const UCATableHeader *image, UCollator *fillIn, con
         return result;
     }
 
-    /*result->latinOneMapping = (uint32_t*)((uint8_t*)result->image+result->image->latinOneMapping);*/
     result->latinOneMapping = UTRIE_GET32_LATIN1(&result->mapping);
     result->contractionCEs = (uint32_t*)((uint8_t*)result->image+result->image->contractionCEs);
     result->contractionIndex = (UChar*)((uint8_t*)result->image+result->image->contractionIndex);
     result->expansion = (uint32_t*)((uint8_t*)result->image+result->image->expansion);
-
-    result->options = (UColOptionSet*)((uint8_t*)result->image+result->image->options);
-    result->freeOptionsOnClose = FALSE;
-
-    /* set attributes */
-    result->caseFirst = (UColAttributeValue)result->options->caseFirst;
-    result->caseLevel = (UColAttributeValue)result->options->caseLevel;
-    result->frenchCollation = (UColAttributeValue)result->options->frenchCollation;
-    result->normalizationMode = (UColAttributeValue)result->options->normalizationMode;
-    result->strength = (UColAttributeValue)result->options->strength;
-    result->variableTopValue = result->options->variableTopValue;
-    result->alternateHandling = (UColAttributeValue)result->options->alternateHandling;
-    result->hiraganaQ = (UColAttributeValue)result->options->hiraganaQ;
-    result->numericCollation = (UColAttributeValue)result->options->numericCollation;
-
-    result->caseFirstisDefault = TRUE;
-    result->caseLevelisDefault = TRUE;
-    result->frenchCollationisDefault = TRUE;
-    result->normalizationModeisDefault = TRUE;
-    result->strengthisDefault = TRUE;
-    result->variableTopValueisDefault = TRUE;
-    result->alternateHandlingisDefault = TRUE;
-    result->hiraganaQisDefault = TRUE;
-    result->numericCollationisDefault = TRUE;
-
-    /*result->scriptOrder = NULL;*/
 
     result->rules = NULL;
     result->rulesLength = 0;
@@ -894,7 +877,12 @@ UCollator* ucol_initCollator(const UCATableHeader *image, UCollator *fillIn, con
     result->latinOneFailed = FALSE;
     result->UCA = UCA;
 
-    ucol_updateInternalState(result, status);
+    /* set attributes */
+    ucol_setOptionsFromHeader(
+        result,
+        (UColOptionSet*)((uint8_t*)result->image+result->image->options),
+        status);
+    result->freeOptionsOnClose = FALSE;
 
     /* Normally these will be set correctly later. This is the default if you use UCA or the default. */
     result->ucaRules = NULL;
@@ -4320,8 +4308,8 @@ int32_t ucol_getSortKeySize(const UCollator *coll, collIterate *s, int32_t curre
         primary1 = (uint8_t)(order >> 8);
 
 
-        if(shifted && ((notIsContinuation && order <= variableTopValue && primary1 > 0)
-            || (!notIsContinuation && wasShifted))
+        if((shifted && ((notIsContinuation && order <= variableTopValue && primary1 > 0)
+                      || (!notIsContinuation && wasShifted)))
             || (wasShifted && primary1 == 0)) { /* amendment to the UCA says that primary ignorables */
                 /* and other ignorables should be removed if following a shifted code point */
                 if(primary1 == 0) { /* if we were shifted and we got an ignorable code point */
@@ -4762,8 +4750,8 @@ ucol_calcSortKey(const    UCollator    *coll,
             primary1 = scriptOrder[primary1];
             }*/
 
-            if(shifted && ((notIsContinuation && order <= variableTopValue && primary1 > 0)
-                || (!notIsContinuation && wasShifted))
+            if((shifted && ((notIsContinuation && order <= variableTopValue && primary1 > 0)
+                           || (!notIsContinuation && wasShifted)))
                 || (wasShifted && primary1 == 0)) /* amendment to the UCA says that primary ignorables */
             {
                 /* and other ignorables should be removed if following a shifted code point */
@@ -5568,7 +5556,7 @@ ucol_calcSortKeySimpleTertiary(const    UCollator    *coll,
                     goto cleanup;
                 }
             } else {
-                *status = U_MEMORY_ALLOCATION_ERROR;
+                *status = U_BUFFER_OVERFLOW_ERROR;
             }
         }
 
@@ -5608,8 +5596,8 @@ static inline
 UBool isShiftedCE(uint32_t CE, uint32_t LVT, UBool *wasShifted) {
     UBool notIsContinuation = !isContinuation(CE);
     uint8_t primary1 = (uint8_t)((CE >> 24) & 0xFF);
-    if(LVT && ((notIsContinuation && (CE & 0xFFFF0000)<= LVT && primary1 > 0)
-        || (!notIsContinuation && *wasShifted))
+    if((LVT && ((notIsContinuation && (CE & 0xFFFF0000)<= LVT && primary1 > 0)
+               || (!notIsContinuation && *wasShifted)))
         || (*wasShifted && primary1 == 0)) /* amendment to the UCA says that primary ignorables */
     {
         // The stuff below should probably be in the sortkey code... maybe not...
@@ -7000,12 +6988,16 @@ ucol_setAttribute(UCollator *coll, UColAttribute attr, UColAttributeValue value,
         if(value == UCOL_ON) {
             coll->normalizationMode = UCOL_ON;
             coll->normalizationModeisDefault = FALSE;
+            initializeFCD(status);
         } else if (value == UCOL_OFF) {
             coll->normalizationMode = UCOL_OFF;
             coll->normalizationModeisDefault = FALSE;
         } else if (value == UCOL_DEFAULT) {
             coll->normalizationModeisDefault = TRUE;
             coll->normalizationMode = (UColAttributeValue)coll->options->normalizationMode;
+            if(coll->normalizationMode == UCOL_ON) {
+                initializeFCD(status);
+            }
         } else {
             *status = U_ILLEGAL_ARGUMENT_ERROR  ;
         }
@@ -7751,7 +7743,7 @@ ucol_strcollRegular(collIterate *sColl, collIterate *tColl, UErrorCode *status)
         sCE = sCEs.buf;
         tCE = tCEs.buf;
         for(;;) {
-            while(secS == 0 && secS != UCOL_NO_MORE_CES || (isContinuation(secS) && !sInShifted)) {
+            while((secS == 0 && secS != UCOL_NO_MORE_CES) || (isContinuation(secS) && !sInShifted)) {
                 secS = *(sCE++);
                 if(isContinuation(secS)) {
                     if(!sInShifted) {
@@ -7767,7 +7759,7 @@ ucol_strcollRegular(collIterate *sColl, collIterate *tColl, UErrorCode *status)
             secS &= UCOL_PRIMARYMASK;
 
 
-            while(secT == 0 && secT != UCOL_NO_MORE_CES || (isContinuation(secT) && !tInShifted)) {
+            while((secT == 0 && secT != UCOL_NO_MORE_CES) || (isContinuation(secT) && !tInShifted)) {
                 secT = *(tCE++);
                 if(isContinuation(secT)) {
                     if(!tInShifted) {
@@ -8392,8 +8384,8 @@ ucol_strcoll( const UCollator    *coll,
         // These values should already be set by the code above.
         //pSrc  = source + equalLength;        /* point to the first differing chars   */
         //pTarg = target + equalLength;
-        if (pSrc  != source+sourceLength && ucol_unsafeCP(*pSrc, coll) ||
-            pTarg != target+targetLength && ucol_unsafeCP(*pTarg, coll))
+        if ((pSrc  != source+sourceLength && ucol_unsafeCP(*pSrc, coll)) ||
+            (pTarg != target+targetLength && ucol_unsafeCP(*pTarg, coll)))
         {
             // We are stopped in the middle of a contraction.
             // Scan backwards through the == part of the string looking for the start of the contraction.

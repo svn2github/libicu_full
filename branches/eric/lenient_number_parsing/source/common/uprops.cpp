@@ -29,10 +29,10 @@
 #include "normalizer2impl.h"
 #include "ucln_cmn.h"
 #include "umutex.h"
-#include "unormimp.h"
 #include "ubidi_props.h"
 #include "uprops.h"
 #include "ucase.h"
+#include "ustr_imp.h"
 
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 
@@ -141,7 +141,7 @@ static const struct {
     { UPROPS_SRC_NFKC,  0 },                                    /* UCHAR_NFKD_INERT */
     { UPROPS_SRC_NFC,   0 },                                    /* UCHAR_NFC_INERT */
     { UPROPS_SRC_NFKC,  0 },                                    /* UCHAR_NFKC_INERT */
-    { UPROPS_SRC_NORM,  0 },                                    /* UCHAR_SEGMENT_STARTER */
+    { UPROPS_SRC_NFC_CANON_ITER, 0 },                           /* UCHAR_SEGMENT_STARTER */
     {  1,               U_MASK(UPROPS_PATTERN_SYNTAX) },
     {  1,               U_MASK(UPROPS_PATTERN_WHITE_SPACE) },
     { UPROPS_SRC_CHAR_AND_PROPSVEC,  0 },                       /* UCHAR_POSIX_ALNUM */
@@ -173,16 +173,6 @@ u_hasBinaryProperty(UChar32 c, UProperty which) {
         } else {
             if(column==UPROPS_SRC_CASE) {
                 return ucase_hasBinaryProperty(c, which);
-            } else if(column==UPROPS_SRC_NORM) {
-#if !UCONFIG_NO_NORMALIZATION
-                /* normalization properties from unorm.icu */
-                switch(which) {
-                case UCHAR_SEGMENT_STARTER:
-                    return unorm_isCanonSafeStart(c);
-                default:
-                    break;
-                }
-#endif
             } else if(column==UPROPS_SRC_NFC) {
 #if !UCONFIG_NO_NORMALIZATION
                 UErrorCode errorCode=U_ZERO_ERROR;
@@ -231,6 +221,16 @@ u_hasBinaryProperty(UChar32 c, UProperty which) {
                     return U_SUCCESS(errorCode) && dest!=src;
                 }
 #endif
+            } else if(column==UPROPS_SRC_NFC_CANON_ITER) {
+                /* normalization properties from nfc.nrm canonical iterator data */
+                // UCHAR_SEGMENT_STARTER
+#if !UCONFIG_NO_NORMALIZATION
+                UErrorCode errorCode=U_ZERO_ERROR;
+                const Normalizer2Impl *impl=Normalizer2Factory::getNFCImpl(errorCode);
+                return
+                    U_SUCCESS(errorCode) && impl->ensureCanonIterData(errorCode) &&
+                    impl->isCanonSegmentStarter(c);
+#endif
             } else if(column==UPROPS_SRC_BIDI) {
                 /* bidi/shaping properties */
                 const UBiDiProps *bdp=GET_BIDI_PROPS();
@@ -269,29 +269,22 @@ u_hasBinaryProperty(UChar32 c, UProperty which) {
                 }
             } else if(column==UPROPS_SRC_CASE_AND_NORM) {
 #if !UCONFIG_NO_NORMALIZATION
-                UChar nfdBuffer[4];
-                const UChar *nfd;
-                int32_t nfdLength;
+                UnicodeString nfd;
                 UErrorCode errorCode=U_ZERO_ERROR;
-                const Normalizer2Impl *nfcImpl=Normalizer2Factory::getNFCImpl(errorCode);
+                const Normalizer2 *nfcNorm2=Normalizer2Factory::getNFCInstance(errorCode);
                 if(U_FAILURE(errorCode)) {
                     return FALSE;
                 }
                 switch(which) {
                 case UCHAR_CHANGES_WHEN_CASEFOLDED:
-                    nfd=nfcImpl->getDecomposition(c, nfdBuffer, nfdLength);
-                    if(nfd!=NULL) {
+                    if(nfcNorm2->getDecomposition(c, nfd)) {
                         /* c has a decomposition */
-                        if(nfdLength==1) {
+                        if(nfd.length()==1) {
                             c=nfd[0];  /* single BMP code point */
-                        } else if(nfdLength<=U16_MAX_LENGTH) {
-                            int32_t i=0;
-                            U16_NEXT(nfd, i, nfdLength, c);
-                            if(i==nfdLength) {
-                                /* single supplementary code point */
-                            } else {
-                                c=U_SENTINEL;
-                            }
+                        } else if(nfd.length()<=U16_MAX_LENGTH &&
+                                  nfd.length()==U16_LENGTH(c=nfd.char32At(0))
+                        ) {
+                            /* single supplementary code point */
                         } else {
                             c=U_SENTINEL;
                         }
@@ -308,8 +301,12 @@ u_hasBinaryProperty(UChar32 c, UProperty which) {
                         /* guess some large but stack-friendly capacity */
                         UChar dest[2*UCASE_MAX_STRING_LENGTH];
                         int32_t destLength;
-                        destLength=u_strFoldCase(dest, LENGTHOF(dest), nfd, nfdLength, U_FOLD_CASE_DEFAULT, &errorCode);
-                        return (UBool)(U_SUCCESS(errorCode) && 0!=u_strCompare(nfd, nfdLength, dest, destLength, FALSE));
+                        destLength=u_strFoldCase(dest, LENGTHOF(dest),
+                                                 nfd.getBuffer(), nfd.length(),
+                                                 U_FOLD_CASE_DEFAULT, &errorCode);
+                        return (UBool)(U_SUCCESS(errorCode) &&
+                                       0!=u_strCompare(nfd.getBuffer(), nfd.length(),
+                                                       dest, destLength, FALSE));
                     }
                 default:
                     break;
@@ -444,7 +441,7 @@ u_getIntPropertyValue(UChar32 c, UProperty which) {
 }
 
 U_CAPI int32_t U_EXPORT2
-u_getIntPropertyMinValue(UProperty which) {
+u_getIntPropertyMinValue(UProperty /*which*/) {
     return 0; /* all binary/enum/int properties have a minimum value of 0 */
 }
 

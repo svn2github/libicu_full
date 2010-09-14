@@ -30,7 +30,7 @@
 #define CASE(id,test) case id: name = #test; if (exec) { logln(#test "---"); logln((UnicodeString)""); test(); } break
 #define HOUR (60*60*1000)
 
-static const UVersionInfo ICU_45 = {4,5,0,0};
+static const UVersionInfo ICU_452 = {4,5,2,0};
 
 static const char *const TESTZIDS[] = {
         "AGT",
@@ -786,7 +786,7 @@ TimeZoneRuleTest::TestVTimeZoneRoundTrip(void) {
             errln("FAIL: error returned while enumerating timezone IDs.");
             break;
         }
-        if (!isICUVersionAtLeast(ICU_45)) {
+        if (!isICUVersionAtLeast(ICU_452)) {
             // See ticket#7008
             if (*tzid == UnicodeString("Asia/Amman")) {
                 continue;
@@ -885,7 +885,7 @@ TimeZoneRuleTest::TestVTimeZoneRoundTripPartial(void) {
             errln("FAIL: error returned while enumerating timezone IDs.");
             break;
         }
-        if (!isICUVersionAtLeast(ICU_45)) {
+        if (!isICUVersionAtLeast(ICU_452)) {
             // See ticket#7008
             if (*tzid == UnicodeString("Asia/Amman")) {
                 continue;
@@ -1130,7 +1130,7 @@ TimeZoneRuleTest::TestGetSimpleRules(void) {
             if (initial == NULL) {
                 errln("FAIL: initial rule must not be NULL");
                 break;
-            } else if (!(std == NULL && dst == NULL || std != NULL && dst != NULL)) {
+            } else if (!((std == NULL && dst == NULL) || (std != NULL && dst != NULL))) {
                 errln("FAIL: invalid std/dst pair.");
                 break;
             }
@@ -1761,6 +1761,52 @@ TimeZoneRuleTest::TestVTimeZoneCoverage(void) {
     if (*vtz1 != *vtz || !(*vtz1 == *vtz)) {
         errln("FAIL: VTimeZone vtz1 is equal to vtz, but got wrong result");
     }
+
+    // Creation from BasicTimeZone
+    //
+    status = U_ZERO_ERROR;
+    VTimeZone *vtzFromBasic = NULL;
+    SimpleTimeZone *simpleTZ = new SimpleTimeZone(28800000, "Asia/Singapore");
+    simpleTZ->setStartYear(1970);
+    simpleTZ->setStartRule(0,  // month
+                          1,  // day of week
+                          0,  // time
+                          status);
+    simpleTZ->setEndRule(1, 1, 0, status);
+    if (U_FAILURE(status)) {
+        errln("File %s, line %d, failed with status = %s", __FILE__, __LINE__, u_errorName(status));
+        goto end_basic_tz_test;
+    }
+    vtzFromBasic = VTimeZone::createVTimeZoneFromBasicTimeZone(*simpleTZ, status);
+    if (U_FAILURE(status) || vtzFromBasic == NULL) {
+        dataerrln("File %s, line %d, failed with status = %s", __FILE__, __LINE__, u_errorName(status));
+        goto end_basic_tz_test;
+    }
+
+    // delete the source time zone, to make sure there are no dependencies on it.
+    delete simpleTZ;
+
+    // Create another simple time zone w the same rules, and check that it is the
+    // same as the test VTimeZone created above.
+    {
+        SimpleTimeZone simpleTZ2(28800000, "Asia/Singapore");
+        simpleTZ2.setStartYear(1970);
+        simpleTZ2.setStartRule(0,  // month
+                              1,  // day of week
+                              0,  // time
+                              status);
+        simpleTZ2.setEndRule(1, 1, 0, status);
+        if (U_FAILURE(status)) {
+            errln("File %s, line %d, failed with status = %s", __FILE__, __LINE__, u_errorName(status));
+            goto end_basic_tz_test;
+        }
+        if (vtzFromBasic->hasSameRules(simpleTZ2) == FALSE) {
+            errln("File %s, line %d, failed hasSameRules() ", __FILE__, __LINE__);
+            goto end_basic_tz_test;
+        }
+    }
+end_basic_tz_test:
+    delete vtzFromBasic;
 
     delete otz;
     delete vtz;

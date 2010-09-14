@@ -76,6 +76,9 @@ U_CDECL_END
 #if defined(WINDOWS_WITH_MSVC) || defined(U_LINUX)
 #define CAN_WRITE_OBJ_CODE
 #endif
+#if defined(U_CYGWIN) || defined(CYGWINMSVC)
+#define USING_CYGWIN
+#endif
 
 /*
  * When building the data library without assembly,
@@ -88,13 +91,14 @@ U_CDECL_END
 #endif
 
 /* Need to fix the file seperator character when using MinGW. */
-#ifdef WINDOWS_WITH_GNUC
+#if defined(WINDOWS_WITH_GNUC) || defined(USING_CYGWIN)
 #define PKGDATA_FILE_SEP_STRING "/"
 #else
 #define PKGDATA_FILE_SEP_STRING U_FILE_SEP_STRING
 #endif
 
 #define LARGE_BUFFER_MAX_SIZE 2048
+#define MEDIUM_BUFFER_MAX_SIZE 1024
 #define SMALL_BUFFER_MAX_SIZE 512
 
 static void loadLists(UPKGOptions *o, UErrorCode *status);
@@ -104,9 +108,10 @@ static int32_t pkg_executeOptions(UPKGOptions *o);
 #ifdef WINDOWS_WITH_MSVC
 static int32_t pkg_createWindowsDLL(const char mode, const char *gencFilePath, UPKGOptions *o);
 #endif
-static int32_t pkg_createSymLinks(const char *targetDir);
+static int32_t pkg_createSymLinks(const char *targetDir, UBool specialHandling=FALSE);
 static int32_t pkg_installLibrary(const char *installDir, const char *dir);
 static int32_t pkg_installFileMode(const char *installDir, const char *srcDir, const char *fileListName);
+static int32_t pkg_installCommonMode(const char *installDir, const char *fileName);
 
 #ifdef BUILD_DATA_WITHOUT_ASSEMBLY
 static int32_t pkg_createWithoutAssemblyCode(UPKGOptions *o, const char *targetDir, const char mode);
@@ -116,9 +121,10 @@ static int32_t pkg_createWithAssemblyCode(const char *targetDir, const char mode
 static int32_t pkg_generateLibraryFile(const char *targetDir, const char mode, const char *objectFile, char *command = NULL);
 static int32_t pkg_archiveLibrary(const char *targetDir, const char *version, UBool reverseExt);
 static void createFileNames(UPKGOptions *o, const char mode, const char *version_major, const char *version, const char *libName, const UBool reverseExt);
+static int32_t initializePkgDataFlags(UPKGOptions *o);
 
 static int32_t pkg_getOptionsFromICUConfig(UBool verbose, UOption *option);
-static int runCommand(const char* command);
+static int runCommand(const char* command, UBool specialHandling=FALSE);
 
 enum {
     NAME,
@@ -210,6 +216,7 @@ enum {
     LIB_FILE_VERSION_TMP,
 #ifdef U_CYGWIN
     LIB_FILE_CYGWIN,
+	LIB_FILE_CYGWIN_VERSION,
 #endif
     LIB_FILENAMES_SIZE
 };
@@ -283,7 +290,7 @@ main(int argc, char* argv[]) {
         }
 
 
-#ifndef WINDOWS_WITH_MSVC
+#if !defined(WINDOWS_WITH_MSVC) || defined(USING_CYGWIN)
         if(!options[BLDOPT].doesOccur && uprv_strcmp(options[MODE].value, "common") != 0) {
           if (pkg_getOptionsFromICUConfig(options[VERBOSE].doesOccur, &options[BLDOPT]) != 0) {
                 fprintf(stderr, " required parameter is missing: -O is required for static and shared builds.\n");
@@ -382,7 +389,7 @@ main(int argc, char* argv[]) {
     o.verbose   = options[VERBOSE].doesOccur;
 
 
-#ifndef WINDOWS_WITH_MSVC /* on UNIX, we'll just include the file... */
+#if !defined(WINDOWS_WITH_MSVC) || defined(USING_CYGWIN) /* on UNIX, we'll just include the file... */
     if (options[BLDOPT].doesOccur) {
         o.options   = options[BLDOPT].value;
     } else {
@@ -467,14 +474,49 @@ main(int argc, char* argv[]) {
     return result;
 }
 
-static int runCommand(const char* command) { 
-    printf("pkgdata: %s\n", command); 
-    int result = system(command); 
-    if (result != 0) { 
-        printf("-- return status = %d\n", result); 
+static int runCommand(const char* command, UBool specialHandling) {
+    char *cmd = NULL;
+    char cmdBuffer[SMALL_BUFFER_MAX_SIZE];
+    int32_t len = strlen(command);
+
+    if (len == 0) {
+        return 0;
     }
-    return result; 
-} 
+
+    if (!specialHandling) {
+#if defined(USING_CYGWIN) || defined(OS400)
+#define CMD_PADDING_SIZE 20
+        if ((len + CMD_PADDING_SIZE) >= SMALL_BUFFER_MAX_SIZE) {
+            cmd = (char *)uprv_malloc(len + CMD_PADDING_SIZE);
+        } else {
+            cmd = cmdBuffer;
+        }
+#ifdef USING_CYGWIN
+        sprintf(cmd, "bash -c \"%s\"", command);
+
+#elif defined(OS400)
+        sprintf(cmd, "QSH CMD('%s')", command);
+#endif
+#else
+        goto normal_command_mode;
+#endif
+    } else {
+normal_command_mode:
+        cmd = (char *)command;
+    }
+
+    printf("pkgdata: %s\n", cmd);
+    int result = system(cmd);
+    if (result != 0) {
+        printf("-- return status = %d\n", result);
+    }
+
+    if (cmd != cmdBuffer && cmd != command) {
+        uprv_free(cmd);
+    }
+
+    return result;
+}
 
 #define LN_CMD "ln -s"
 #define RM_CMD "rm -f"
@@ -485,9 +527,8 @@ static int runCommand(const char* command) {
 #define MODE_FILES  'f'
 
 static int32_t pkg_executeOptions(UPKGOptions *o) {
-    UErrorCode status = U_ZERO_ERROR;
     int32_t result = 0;
-//    char cmd[SMALL_BUFFER_MAX_SIZE] = "";
+
     const char mode = o->mode[0];
     char targetDir[SMALL_BUFFER_MAX_SIZE] = "";
     char tmpDir[SMALL_BUFFER_MAX_SIZE] = "";
@@ -533,6 +574,8 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
             return result;
         }
 
+        initializePkgDataFlags(o);
+
         if (mode == MODE_COMMON) {
             char targetFileNamePath[LARGE_BUFFER_MAX_SIZE] = "";
 
@@ -556,48 +599,17 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                 fprintf(stderr, "Unable to move dat file (%s) to target location (%s).\n", datFileNamePath, targetFileNamePath);
             }
 
+            if (o->install != NULL) {
+                result = pkg_installCommonMode(o->install, targetFileNamePath);
+            }
+
             return result;
         } else /* if (mode[0] == MODE_STATIC || mode[0] == MODE_DLL) */ {
             char gencFilePath[SMALL_BUFFER_MAX_SIZE] = "";
             char version_major[10] = "";
             UBool reverseExt = FALSE;
 
-            /* Initialize pkgdataFlags */
-            pkgDataFlags = (char**)uprv_malloc(sizeof(char*) * PKGDATA_FLAGS_SIZE);
-            if (pkgDataFlags != NULL) {
-                for (int32_t i = 0; i < PKGDATA_FLAGS_SIZE; i++) {
-                    pkgDataFlags[i] = (char*)uprv_malloc(sizeof(char) * SMALL_BUFFER_MAX_SIZE);
-                    if (pkgDataFlags[i] != NULL) {
-                        pkgDataFlags[i][0] = 0;
-                    } else {
-                        fprintf(stderr,"Error allocating memory for pkgDataFlags.\n");
-                        return -1;
-                    }
-                }
-            } else {
-                fprintf(stderr,"Error allocating memory for pkgDataFlags.\n");
-                return -1;
-            }
-
-            if(o->verbose) {
-              fprintf(stdout, "# pkgDataFlags=");
-              for(int32_t i=0;i<PKGDATA_FLAGS_SIZE && pkgDataFlags[i][0];i++) {
-                fprintf(stdout, "%c \"%s\"", (i>0)?',':' ',pkgDataFlags[i]);
-              }
-              fprintf(stdout, "\n");
-            }
-
-#ifndef WINDOWS_WITH_MSVC
-            /* Read in options file. */
-            if(o->verbose) {
-              fprintf(stdout, "# Reading options file %s\n", o->options);
-            }
-            parseFlagsFile(o->options, pkgDataFlags, SMALL_BUFFER_MAX_SIZE, (int32_t)PKGDATA_FLAGS_SIZE, &status);
-            if (U_FAILURE(status)) {
-                fprintf(stderr,"Unable to open or read \"%s\" option file. status = %s\n", o->options, u_errorName(status));
-                return -1;
-            }
-
+#if !defined(WINDOWS_WITH_MSVC) || defined(USING_CYGWIN)
             /* Get the version major number. */
             if (o->version != NULL) {
                 for (uint32_t i = 0;i < sizeof(version_major);i++) {
@@ -686,7 +698,7 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
 #ifdef U_LINUX
                 result = pkg_generateLibraryFile(targetDir, mode, gencFilePath);
 #elif defined(WINDOWS_WITH_MSVC)
-                return pkg_createWindowsDLL(mode, gencFilePath, o);
+                result = pkg_createWindowsDLL(mode, gencFilePath, o);
 #endif
 #elif defined(BUILD_DATA_WITHOUT_ASSEMBLY)
                 result = pkg_createWithoutAssemblyCode(o, targetDir, mode);
@@ -716,6 +728,9 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                 }
 #endif
             } /* !MODE_STATIC */
+#endif
+
+#if !defined(U_WINDOWS) || defined(USING_CYGWIN)
             /* Install the libraries if option was set. */
             if (o->install != NULL) {
                 if(o->verbose) {
@@ -732,6 +747,56 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
     }
     return result;
 }
+
+/* Initialize the pkgDataFlags with the option file given. */
+static int32_t initializePkgDataFlags(UPKGOptions *o) {
+    UErrorCode status = U_ZERO_ERROR;
+    int32_t result = 0;
+    /* Initialize pkgdataFlags */
+    pkgDataFlags = (char**)uprv_malloc(sizeof(char*) * PKGDATA_FLAGS_SIZE);
+    if (pkgDataFlags != NULL) {
+        for (int32_t i = 0; i < PKGDATA_FLAGS_SIZE; i++) {
+            pkgDataFlags[i] = (char*)uprv_malloc(sizeof(char) * MEDIUM_BUFFER_MAX_SIZE);
+            if (pkgDataFlags[i] != NULL) {
+                pkgDataFlags[i][0] = 0;
+            } else {
+                fprintf(stderr,"Error allocating memory for pkgDataFlags.\n");
+                return -1;
+            }
+        }
+    } else {
+        fprintf(stderr,"Error allocating memory for pkgDataFlags.\n");
+        return -1;
+    }
+
+    if (o->options == NULL) {
+        return result;
+    }
+
+#if !defined(WINDOWS_WITH_MSVC) || defined(USING_CYGWIN)
+    /* Read in options file. */
+    if(o->verbose) {
+      fprintf(stdout, "# Reading options file %s\n", o->options);
+    }
+    parseFlagsFile(o->options, pkgDataFlags, SMALL_BUFFER_MAX_SIZE, (int32_t)PKGDATA_FLAGS_SIZE, &status);
+    if (U_FAILURE(status)) {
+        fprintf(stderr,"Unable to open or read \"%s\" option file. status = %s\n", o->options, u_errorName(status));
+        return -1;
+    }
+#endif
+
+    if(o->verbose) {
+        fprintf(stdout, "# pkgDataFlags=");
+        for(int32_t i=0;i<PKGDATA_FLAGS_SIZE && pkgDataFlags[i][0];i++) {
+            fprintf(stdout, "%c \"%s\"", (i>0)?',':' ',pkgDataFlags[i]);
+        }
+        fprintf(stdout, "\n");
+    }
+
+    return result;
+}
+
+
 /*
  * Given the base libName and version numbers, generate the libary file names and store it in libFileNames.
  * Depending on the configuration, the library name may either end with version number or shared object suffix.
@@ -747,7 +812,10 @@ static void createFileNames(UPKGOptions *o, const char mode, const char *version
 
         if (version != NULL) {
 #ifdef U_CYGWIN
-            sprintf(libFileNames[LIB_FILE_CYGWIN], "cyg%s%s.%s",
+            sprintf(libFileNames[LIB_FILE_CYGWIN], "cyg%s.%s",
+                    libName,
+                    pkgDataFlags[SO_EXT]);
+            sprintf(libFileNames[LIB_FILE_CYGWIN_VERSION], "cyg%s%s.%s",
                     libName,
                     version_major,
                     pkgDataFlags[SO_EXT]);
@@ -797,13 +865,16 @@ static void createFileNames(UPKGOptions *o, const char mode, const char *version
 }
 
 /* Create the symbolic links for the final library file. */
-static int32_t pkg_createSymLinks(const char *targetDir) {
+static int32_t pkg_createSymLinks(const char *targetDir, UBool specialHandling) {
     int32_t result = 0;
     char cmd[LARGE_BUFFER_MAX_SIZE];
+	char name1[SMALL_BUFFER_MAX_SIZE]; /* symlink file name */
+	char name2[SMALL_BUFFER_MAX_SIZE]; /* file name to symlink */
 
-#ifndef U_CYGWIN
+#ifndef USING_CYGWIN
     /* No symbolic link to make. */
-    if (uprv_strlen(libFileNames[LIB_FILE_VERSION]) == 0 || uprv_strlen(libFileNames[LIB_FILE_VERSION_MAJOR]) == 0) {
+    if (uprv_strlen(libFileNames[LIB_FILE_VERSION]) == 0 || uprv_strlen(libFileNames[LIB_FILE_VERSION_MAJOR]) == 0 ||
+        uprv_strcmp(libFileNames[LIB_FILE_VERSION], libFileNames[LIB_FILE_VERSION_MAJOR]) == 0) {
         return result;
     }
     
@@ -819,13 +890,27 @@ static int32_t pkg_createSymLinks(const char *targetDir) {
         return result;
     }
 #endif
-    sprintf(cmd, "cd %s && %s %s.%s && %s %s %s.%s",
+
+    if (specialHandling) {
+#ifdef U_CYGWIN
+        sprintf(name1, "%s", libFileNames[LIB_FILE_CYGWIN]);
+        sprintf(name2, "%s", libFileNames[LIB_FILE_CYGWIN_VERSION]);
+#else
+        goto normal_symlink_mode;
+#endif
+    } else {
+normal_symlink_mode:
+        sprintf(name1, "%s.%s", libFileNames[LIB_FILE], pkgDataFlags[SO_EXT]);
+        sprintf(name2, "%s", libFileNames[LIB_FILE_VERSION]);
+    }
+
+    sprintf(cmd, "cd %s && %s %s && %s %s %s",
             targetDir,
             RM_CMD,
-            libFileNames[LIB_FILE], pkgDataFlags[SO_EXT],
+            name1,
             LN_CMD,
-            libFileNames[LIB_FILE_VERSION],
-            libFileNames[LIB_FILE], pkgDataFlags[SO_EXT]);
+            name2,
+            name1);
 
      result = runCommand(cmd);
 
@@ -849,7 +934,60 @@ static int32_t pkg_installLibrary(const char *installDir, const char *targetDir)
         return result;
     }
 
-    return pkg_createSymLinks(installDir);
+#ifdef CYGWINMSVC
+    sprintf(cmd, "cd %s && %s %s.lib %s",
+            targetDir,
+            pkgDataFlags[INSTALL_CMD],
+            libFileNames[LIB_FILE],
+            installDir
+            );
+    result = runCommand(cmd);
+
+    if (result != 0) {
+        return result;
+    }
+#elif defined (U_CYGWIN)
+    sprintf(cmd, "cd %s && %s %s %s",
+            targetDir,
+            pkgDataFlags[INSTALL_CMD],
+            libFileNames[LIB_FILE_CYGWIN_VERSION],
+            installDir
+            );
+    result = runCommand(cmd);
+
+    if (result != 0) {
+        return result;
+    }
+#endif
+
+    return pkg_createSymLinks(installDir, TRUE);
+}
+
+static int32_t pkg_installCommonMode(const char *installDir, const char *fileName) {
+    int32_t result = 0;
+    char cmd[SMALL_BUFFER_MAX_SIZE] = "";
+
+    if (!T_FileStream_file_exists(installDir)) {
+        UErrorCode status = U_ZERO_ERROR;
+
+        uprv_mkdir(installDir, &status);
+        if (U_FAILURE(status)) {
+            fprintf(stderr, "Error creating installation directory: %s\n", installDir);
+            return -1;
+        }
+    }
+#ifndef U_WINDOWS_WITH_MSVC
+    sprintf(cmd, "%s %s %s", pkgDataFlags[INSTALL_CMD], fileName, installDir);
+#else
+    sprintf(cmd, "%s %s %s %s", WIN_INSTALL_CMD, fileName, installDir, WIN_INSTALL_CMD_FLAGS);
+#endif
+
+    result = runCommand(cmd);
+    if (result != 0) {
+        fprintf(stderr, "Failed to install data file with command: %s\n", cmd);
+    }
+
+    return result;
 }
 
 #ifdef U_WINDOWS_MSVC
@@ -996,29 +1134,21 @@ static int32_t pkg_generateLibraryFile(const char *targetDir, const char mode, c
     }
 
     if (mode == MODE_STATIC) {
-#ifdef OS400
-        sprintf(cmd, "QSH CMD('%s %s %s%s %s')",
-#else
         sprintf(cmd, "%s %s %s%s %s",
-#endif
                 pkgDataFlags[AR],
                 pkgDataFlags[ARFLAGS],
                 targetDir,
                 libFileNames[LIB_FILE_VERSION],
                 objectFile);
 
-        result = runCommand(cmd); 
+        result = runCommand(cmd);
         if (result == 0) {
-#ifdef OS400 
-            sprintf(cmd, "QSH CMD('%s %s%s')", 
-#else 
             sprintf(cmd, "%s %s%s", 
-#endif 
                     pkgDataFlags[RANLIB], 
                     targetDir, 
                     libFileNames[LIB_FILE_VERSION]); 
         
-            result = runCommand(cmd); 
+            result = runCommand(cmd);
         }
     } else /* if (mode == MODE_DLL) */ {
 #ifdef U_CYGWIN
@@ -1027,13 +1157,9 @@ static int32_t pkg_generateLibraryFile(const char *targetDir, const char mode, c
                 targetDir,
                 libFileNames[LIB_FILE_VERSION_TMP],
                 pkgDataFlags[LDICUDTFLAGS],
-                targetDir, libFileNames[LIB_FILE_CYGWIN],
-#else
-#ifdef OS400
-        sprintf(cmd, "QSH CMD('%s %s -o %s%s %s %s%s %s %s')",
+                targetDir, libFileNames[LIB_FILE_CYGWIN_VERSION],
 #else
         sprintf(cmd, "%s %s -o %s%s %s %s%s %s %s",
-#endif
                 pkgDataFlags[GENLIB],
                 pkgDataFlags[LDICUDTFLAGS],
                 targetDir,
@@ -1160,11 +1286,7 @@ static int32_t pkg_createWithoutAssemblyCode(UPKGOptions *o, const char *targetD
             uprv_strcpy(tempObjectFile, gencmnFile);
             tempObjectFile[uprv_strlen(tempObjectFile) - 1] = 'o';
             
-#ifdef OS400
-            sprintf(cmd, "QSH CMD('%s %s -o %s %s')",
-#else
             sprintf(cmd, "%s %s -o %s %s"
-#endif
                         pkgDataFlags[COMPILER],
                         pkgDataFlags[LIBFLAGS],
                         tempObjectFile,
@@ -1218,11 +1340,7 @@ static int32_t pkg_createWithoutAssemblyCode(UPKGOptions *o, const char *targetD
 
             writeCCode(file, o->tmpDir, dataName[0] != 0 ? dataName : o->shortName, newName[0] != 0 ? newName : NULL, gencmnFile);
 #ifdef USE_SINGLE_CCODE_FILE
-#ifdef OS400
-            sprintf(cmd, "QSH CMD('cat %s >> %s')", gencmnFile, icudtAll);
-#else
             sprintf(cmd, "cat %s >> %s", gencmnFile, icudtAll);
-#endif
             
             result = runCommand(cmd);
             if (result != 0) {
@@ -1265,11 +1383,8 @@ static int32_t pkg_createWithoutAssemblyCode(UPKGOptions *o, const char *targetD
 #ifdef USE_SINGLE_CCODE_FILE
     uprv_strcpy(tempObjectFile, icudtAll);
     tempObjectFile[uprv_strlen(tempObjectFile) - 1] = 'o';
-#ifdef OS400
-    sprintf(cmd, "QSH CMD('%s %s -o %s %s')",
-#else
+
     sprintf(cmd, "%s %s -o %s %s",
-#endif
         pkgDataFlags[COMPILER],
         pkgDataFlags[LIBFLAGS],
         tempObjectFile,
@@ -1321,6 +1436,7 @@ static int32_t pkg_createWindowsDLL(const char mode, const char *gencFilePath, U
         char dllFilePath[SMALL_BUFFER_MAX_SIZE] = "";
         char libFilePath[SMALL_BUFFER_MAX_SIZE] = "";
         char resFilePath[SMALL_BUFFER_MAX_SIZE] = "";
+        char tmpResFilePath[SMALL_BUFFER_MAX_SIZE] = "";
 
 #ifdef CYGWINMSVC
         uprv_strcpy(dllFilePath, o->targetDir);
@@ -1337,18 +1453,22 @@ static int32_t pkg_createWindowsDLL(const char mode, const char *gencFilePath, U
         uprv_strcat(dllFilePath, o->libName);
         uprv_strcat(dllFilePath, o->version);
 #else
+        if (strstr(o->libName, "icudt")) {
+            uprv_strcat(libFilePath, LIB_FILE);
+        } else {
+            uprv_strcat(libFilePath, o->libName);
+            uprv_strcat(libFilePath, ".lib");
+        }
         uprv_strcat(dllFilePath, o->entryName);
-        
-        uprv_strcat(libFilePath, LIB_FILE);
 #endif
         uprv_strcat(dllFilePath, DLL_EXT);
         
-        uprv_strcpy(resFilePath, o->tmpDir);
-        uprv_strcat(resFilePath, PKGDATA_FILE_SEP_STRING);
-        uprv_strcat(resFilePath, ICUDATA_RES_FILE);
+        uprv_strcpy(tmpResFilePath, o->tmpDir);
+        uprv_strcat(tmpResFilePath, PKGDATA_FILE_SEP_STRING);
+        uprv_strcat(tmpResFilePath, ICUDATA_RES_FILE);
 
-        if (!T_FileStream_file_exists(resFilePath)) {
-            uprv_memset(resFilePath, 0, sizeof(resFilePath));
+        if (T_FileStream_file_exists(tmpResFilePath)) {
+            sprintf(resFilePath, "\"%s\"", tmpResFilePath);
         }
 
         /* Check if dll file and lib file exists and that it is not newer than genc file. */
@@ -1360,7 +1480,7 @@ static int32_t pkg_createWindowsDLL(const char mode, const char *gencFilePath, U
           return 0;
         }
 
-        sprintf(cmd, "%s\"%s\" %s\"%s\" \"%s\" \"%s\"",
+        sprintf(cmd, "%s\"%s\" %s\"%s\" \"%s\" %s",
                 LINK_CMD,
                 dllFilePath,
                 LINK_FLAGS,
@@ -1370,7 +1490,7 @@ static int32_t pkg_createWindowsDLL(const char mode, const char *gencFilePath, U
                 );
     }
 
-    return runCommand(cmd);
+    return runCommand(cmd, TRUE);
 }
 #endif
 

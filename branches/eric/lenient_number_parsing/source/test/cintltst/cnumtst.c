@@ -44,6 +44,7 @@ void addNumForTest(TestNode** root)
     TESTCASE(TestNumberFormat);
     TESTCASE(TestSpelloutNumberParse);
     TESTCASE(TestSignificantDigits);
+    TESTCASE(TestSigDigRounding);
     TESTCASE(TestNumberFormatPadding);
     TESTCASE(TestInt64Format);
     TESTCASE(TestNonExistentCurrency);
@@ -908,6 +909,43 @@ static void TestSignificantDigits()
     unum_close(fmt);
 }
 
+static void TestSigDigRounding()
+{
+    UErrorCode status = U_ZERO_ERROR;
+    UChar expected[128];
+    UChar result[128];
+    char		temp1[128];
+    char		temp2[128];
+    UNumberFormat* fmt;
+    double d = 123.4;
+
+    fmt=unum_open(UNUM_DECIMAL, NULL, 0, NULL /* "en_US"*/, NULL, &status);
+    if (U_FAILURE(status)) {
+        log_data_err("got unexpected error for unum_open: '%s'\n", u_errorName(status));
+        return;
+    }
+    unum_setAttribute(fmt, UNUM_LENIENT_PARSE, FALSE);
+    unum_setAttribute(fmt, UNUM_SIGNIFICANT_DIGITS_USED, TRUE);
+    unum_setAttribute(fmt, UNUM_MAX_SIGNIFICANT_DIGITS, 2);
+    /* unum_setAttribute(fmt, UNUM_MAX_FRACTION_DIGITS, 0); */
+
+    unum_setAttribute(fmt, UNUM_ROUNDING_MODE, UNUM_ROUND_UP);
+    unum_setDoubleAttribute(fmt, UNUM_ROUNDING_INCREMENT, 20.0);
+
+    (void)unum_formatDouble(fmt, d, result, sizeof(result) / sizeof(result[0]), NULL, &status);
+    if(U_FAILURE(status))
+    {
+        log_err("Error in formatting using unum_formatDouble(.....): %s\n", myErrorName(status));
+        return;
+    }
+
+    u_uastrcpy(expected, "140");
+    if(u_strcmp(result, expected)!=0)
+        log_err("FAIL: Error in unum_formatDouble result %s instead of %s\n", u_austrcpy(temp1, result), u_austrcpy(temp2, expected) );
+    
+    unum_close(fmt);
+}
+
 static void TestNumberFormatPadding()
 {
     UChar *result=NULL;
@@ -991,7 +1029,7 @@ free(result);
             if(u_strcmp(result, temp1)==0)
                 log_verbose("Pass: Number Formatting using unum_formatDouble() padding Successful\n");
             else
-                log_err("FAIL: Error in number formatting using unum_formatDouble() with padding\n");
+                log_data_err("FAIL: Error in number formatting using unum_formatDouble() with padding\n");
             if(pos1.beginIndex == 13 && pos1.endIndex == 15)
                 log_verbose("Pass: Complete number formatting using unum_formatDouble() successful\n");
             else
@@ -1331,24 +1369,28 @@ static void TestRBNFFormat() {
     formats[0] = unum_open(UNUM_PATTERN_DECIMAL, pat, -1, "en_US", &perr, &status);
     if (U_FAILURE(status)) {
         log_err_status(status, "unable to open decimal pattern -> %s\n", u_errorName(status));
+        return;
     }
 
     status = U_ZERO_ERROR;
     formats[1] = unum_open(UNUM_SPELLOUT, NULL, 0, "en_US", &perr, &status);
     if (U_FAILURE(status)) {
         log_err_status(status, "unable to open spellout -> %s\n", u_errorName(status));
+        return;
     }
 
     status = U_ZERO_ERROR;
     formats[2] = unum_open(UNUM_ORDINAL, NULL, 0, "en_US", &perr, &status);
     if (U_FAILURE(status)) {
         log_err_status(status, "unable to open ordinal -> %s\n", u_errorName(status));
+        return;
     }
 
     status = U_ZERO_ERROR;
     formats[3] = unum_open(UNUM_DURATION, NULL, 0, "en_US", &perr, &status);
     if (U_FAILURE(status)) {
         log_err_status(status, "unable to open duration %s\n", u_errorName(status));
+        return;
     }
 
     status = U_ZERO_ERROR;

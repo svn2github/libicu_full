@@ -8,24 +8,15 @@
 // ***************************************************************************
 ms_BN{
     NumberElements{
-        ",",
-        ".",
-        ";",
-        "%",
-        "0",
-        "#",
-        "-",
-        "E",
-        "‰",
-        "∞",
-        "NaN",
-        "+",
-    }
-    NumberPatterns{
-        "#,##0.###",
-        "¤ #,##0.00",
-        "#,##0%",
-        "#E0",
+        latn{
+            patterns{
+                currencyFormat{"¤ #,##0.00"}
+            }
+            symbols{
+                decimal{","}
+                group{"."}
+            }
+        }
     }
     Version{"2.0.45.82"}
     calendar{
@@ -36,9 +27,9 @@ ms_BN{
                 "H:mm:ss",
                 "H:mm",
                 "dd MMMM y",
-                "y MMMM d",
+                "d MMMM y",
                 "dd/MM/yyyy",
-                "yyyy-MM-dd",
+                "d/MM/yy",
                 "{1} {0}",
                 "{1} {0}",
                 "{1} {0}",
