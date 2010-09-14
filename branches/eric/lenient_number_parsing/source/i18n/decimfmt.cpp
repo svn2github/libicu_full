@@ -187,9 +187,10 @@ static void debugout(UnicodeString s) {
 #define debug(x)
 #endif
 
-// Set to 1 to make leading zeroes be an error
-// when doing a strict parse.
-#define CHECK_FOR_LEADING_ZERO 1
+// Set to 1 to make leading zeroes be an error when doing a strict parse.
+// Decided in ICU mtg 2010-04-21 that an error for leading zeros is wrong for
+// strict parsing in both ICU4C & ICU4J, so this goes off (and ICU4J will be fixed).
+#define CHECK_FOR_LEADING_ZERO 0
 
 // *****************************************************************************
 // class DecimalFormat
