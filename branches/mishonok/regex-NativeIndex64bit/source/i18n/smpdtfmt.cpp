@@ -124,7 +124,7 @@ static const int8_t kDateFieldsCount = 13;
 
 static const UDateFormatField kTimeFields[] = {
     UDAT_HOUR_OF_DAY1_FIELD,
-    UDAT_HOUR_OF_DAY1_FIELD,
+    UDAT_HOUR_OF_DAY0_FIELD,
     UDAT_MINUTE_FIELD,
     UDAT_SECOND_FIELD,
     UDAT_FRACTIONAL_SECOND_FIELD,
@@ -1056,7 +1056,7 @@ SimpleDateFormat::formatGMTDefault(NumberFormat *currentNumberFormat,UnicodeStri
 int32_t
 SimpleDateFormat::parseGMTDefault(const UnicodeString &text, ParsePosition &pos) const {
     int32_t start = pos.getIndex();
-    NumberFormat *currentNumberFormat = getNumberFormat(UDAT_TIMEZONE_RFC_FIELD);
+    NumberFormat *currentNumberFormat = getNumberFormatByIndex(UDAT_TIMEZONE_RFC_FIELD);
 
     if (start + kUtLen + 1 >= text.length()) {
         pos.setErrorIndex(start);
@@ -1319,7 +1319,7 @@ SimpleDateFormat::processOverrideString(const Locale &locale, const UnicodeStrin
     UBool moreToProcess = TRUE;
 
     while (moreToProcess) {
-        int32_t delimiterPosition = str.indexOf((UChar)ULOC_KEYWORD_ITEM_SEPARATOR,start);
+        int32_t delimiterPosition = str.indexOf(ULOC_KEYWORD_ITEM_SEPARATOR_UNICODE,start);
         if (delimiterPosition == -1) {
             moreToProcess = FALSE;
             len = str.length() - start;
@@ -1327,7 +1327,7 @@ SimpleDateFormat::processOverrideString(const Locale &locale, const UnicodeStrin
             len = delimiterPosition - start;
         }
         UnicodeString currentString(str,start,len);
-        int32_t equalSignPosition = currentString.indexOf((UChar)ULOC_KEYWORD_ASSIGN,0);
+        int32_t equalSignPosition = currentString.indexOf(ULOC_KEYWORD_ASSIGN_UNICODE,0);
         if (equalSignPosition == -1) { // Simple override string such as "hebrew"
             nsName.setTo(currentString);
             ovrField.setToBogus();
@@ -1469,7 +1469,7 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
         return;
     }
 
-    currentNumberFormat = getNumberFormat(patternCharIndex);
+    currentNumberFormat = getNumberFormatByIndex(patternCharIndex);
     switch (patternCharIndex) {
 
     // for any "G" symbol, write out the appropriate era string
@@ -1734,7 +1734,7 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
 //----------------------------------------------------------------------
 
 NumberFormat *
-SimpleDateFormat::getNumberFormat(UDateFormatField index) const {
+SimpleDateFormat::getNumberFormatByIndex(UDateFormatField index) const {
     if (fNumberFormatters != NULL) {
         return fNumberFormatters[index];
     } else {
@@ -1910,7 +1910,7 @@ SimpleDateFormat::parse(const UnicodeString& text, Calendar& cal, ParsePosition&
                     if (i+1 < fPattern.length()) {
                         // move to next pattern character
                         UChar ch = fPattern.charAt(i+1);
-                      
+
                         // check for whitespace
                         if (uprv_isRuleWhiteSpace(ch)) {
                             i++;
@@ -1967,7 +1967,7 @@ SimpleDateFormat::parse(const UnicodeString& text, Calendar& cal, ParsePosition&
                        ( u_isUWhiteSpace(text.charAt(pos)) || uprv_isRuleWhiteSpace(text.charAt(pos)))) {
                     ++pos;
                 }
-                
+
                 // Must see at least one white space char in input
                 if (pos > s) {
                     continue;
@@ -2388,7 +2388,7 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
     }
 
     patternCharIndex = (UDateFormatField)(patternCharPtr - DateFormatSymbols::getPatternUChars());
-    currentNumberFormat = getNumberFormat(patternCharIndex);
+    currentNumberFormat = getNumberFormatByIndex(patternCharIndex);
     UCalendarDateFields field = fgPatternIndexToCalendarField[patternCharIndex];
 
     // If there are any spaces here, skip over them.  If we hit the end
@@ -2471,7 +2471,7 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
         }
 
         // check return position, if it equals -start, then matchString error
-        // special case the return code so we don't necessarily fail out until we 
+        // special case the return code so we don't necessarily fail out until we
         // verify no year information also
         if (ps == -start)
             ps--;

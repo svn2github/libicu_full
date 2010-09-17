@@ -694,7 +694,9 @@ static const char* testCases[][2]= {
     {"gl_ES_PREEURO", "1.150\\u00A0\\u20A7" },
     {"it_IT_PREEURO", "IT\\u20A4\\u00A01.150" },
     {"pt_PT_PREEURO", "1,150$50\\u00A0Esc."},
-    {"en_US@currency=JPY", "\\u00A51,150"}
+    {"en_US@currency=JPY", "\\u00A51,150"},
+    {"en_US@currency=jpy", "\\u00A51,150"},
+    {"en-US-u-cu-jpy", "\\u00A51,150"}
 };
 /**
  * Test localized currency patterns.
@@ -1391,7 +1393,13 @@ void NumberFormatTest::TestSurrogateSupport(void) {
            1.0/3, "0decimal33333 g-m/s^2", status);
 
     UnicodeString zero((UChar32)0x10000);
+    UnicodeString one((UChar32)0x10001);
+    UnicodeString two((UChar32)0x10002);
+    UnicodeString five((UChar32)0x10005);
     custom.setSymbol(DecimalFormatSymbols::kZeroDigitSymbol, zero);
+    custom.setSymbol(DecimalFormatSymbols::kOneDigitSymbol, one);
+    custom.setSymbol(DecimalFormatSymbols::kTwoDigitSymbol, two);
+    custom.setSymbol(DecimalFormatSymbols::kFiveDigitSymbol, five);
     expStr = UnicodeString("\\U00010001decimal\\U00010002\\U00010005\\U00010000", "");
     expStr = expStr.unescape();
     status = U_ZERO_ERROR;
@@ -2668,6 +2676,7 @@ void NumberFormatTest::TestNumberingSystems() {
     Locale loc4("en", "US", "", "numbers=foobar");
     Locale loc5("ar", "EG", "", ""); // ar_EG uses arab numbering system
     Locale loc6("ar", "MA", "", ""); // ar_MA uses latn numbering system
+    Locale loc7("en", "US", "", "numbers=hanidec");
 
     NumberFormat* fmt1= NumberFormat::createInstance(loc1, ec);
     if (U_FAILURE(ec)) {
@@ -2690,12 +2699,19 @@ void NumberFormatTest::TestNumberingSystems() {
         dataerrln("FAIL: getInstance(ar_MA) - %s", u_errorName(ec));
     }
 
-    if (U_SUCCESS(ec) && fmt1 != NULL && fmt2 != NULL && fmt3 != NULL && fmt5 != NULL && fmt6 != NULL) {
+    NumberFormat* fmt7= NumberFormat::createInstance(loc7, ec);
+    if (U_FAILURE(ec)) {
+        dataerrln("FAIL: getInstance(en_US@numbers=hanidec) - %s", u_errorName(ec));
+    }
+
+    if (U_SUCCESS(ec) && fmt1 != NULL && fmt2 != NULL && fmt3 != NULL && 
+                         fmt5 != NULL && fmt6 != NULL && fmt7 != NULL) {
         expect2(*fmt1, 1234.567, CharsToUnicodeString("\\u0E51,\\u0E52\\u0E53\\u0E54.\\u0E55\\u0E56\\u0E57"));
         expect3(*fmt2, 5678.0, CharsToUnicodeString("\\u05D4\\u05F3\\u05EA\\u05E8\\u05E2\\u05F4\\u05D7"));
         expect2(*fmt3, 1234.567, CharsToUnicodeString("\\u06F1,\\u06F2\\u06F3\\u06F4.\\u06F5\\u06F6\\u06F7"));
         expect2(*fmt5, 1234.567, CharsToUnicodeString("\\u0661\\u066c\\u0662\\u0663\\u0664\\u066b\\u0665\\u0666\\u0667"));
         expect2(*fmt6, 1234.567, CharsToUnicodeString("1.234,567"));
+        expect2(*fmt7, 1234.567, CharsToUnicodeString("\\u4e00,\\u4e8c\\u4e09\\u56db.\\u4e94\\u516d\\u4e03"));
     }
 
     // Test bogus keyword value
@@ -2841,6 +2857,7 @@ NumberFormatTest::TestCurrencyFormatForMixParsing() {
     const CurrencyAmount* curramt = NULL;
     for (uint32_t i = 0; i < sizeof(formats)/sizeof(formats[0]); ++i) {
         UnicodeString stringToBeParsed = ctou(formats[i]);
+        logln(UnicodeString("stringToBeParsed: ") + stringToBeParsed);
         Formattable result;
         UErrorCode status = U_ZERO_ERROR;
         curFmt->parseObject(stringToBeParsed, result, status);
@@ -2961,12 +2978,8 @@ NumberFormatTest::TestCurrencyIsoPluralFormat() {
             dataerrln((UnicodeString)"can not create instance, locale:" + localeString + ", style: " + k + " - " + u_errorName(status));
             continue;
         }
-        // TODO: need to be UChar*
         UChar currencyCode[4];
-        currencyCode[0] = currencyISOCode[0];
-        currencyCode[1] = currencyISOCode[1];
-        currencyCode[2] = currencyISOCode[2];
-        currencyCode[3] = currencyISOCode[3];
+        u_charsToUChars(currencyISOCode, currencyCode, 4);
         numFmt->setCurrency(currencyCode, status);
         if (U_FAILURE(status)) {
             delete numFmt;
@@ -6065,13 +6078,17 @@ void NumberFormatTest::TestDecimal() {
         UErrorCode status = U_ZERO_ERROR;
         NumberFormat *fmtr = NumberFormat::createInstance(
                 Locale::getUS(), NumberFormat::kNumberStyle, status);
-        UnicodeString formattedResult;
-        StringPiece num("244444444444444444444444444444444444446.4");
-        fmtr->format(num, formattedResult, NULL, status);
-        ASSERT_SUCCESS(status);
-        ASSERT_EQUALS("244,444,444,444,444,444,444,444,444,444,444,444,446.4", formattedResult);
-        //std::string ss; std::cout << formattedResult.toUTF8String(ss);
-        delete fmtr;
+        if (U_FAILURE(status) || fmtr == NULL) {
+            dataerrln("Unable to create NumberFormat");
+        } else {
+            UnicodeString formattedResult;
+            StringPiece num("244444444444444444444444444444444444446.4");
+            fmtr->format(num, formattedResult, NULL, status);
+            ASSERT_SUCCESS(status);
+            ASSERT_EQUALS("244,444,444,444,444,444,444,444,444,444,444,444,446.4", formattedResult);
+            //std::string ss; std::cout << formattedResult.toUTF8String(ss);
+            delete fmtr;
+        }
     }
 
     {
@@ -6080,28 +6097,31 @@ void NumberFormatTest::TestDecimal() {
         UErrorCode status = U_ZERO_ERROR;
         NumberFormat *fmtr = NumberFormat::createInstance(
                 Locale::getUS(), NumberFormat::kNumberStyle, status);
-        ASSERT_SUCCESS(status);
-        UnicodeString formattedResult;
-        DigitList dl;
-        StringPiece num("123.4566666666666666666666666666666666621E+40");
-        dl.set(num, status);
-        ASSERT_SUCCESS(status);
-        fmtr->format(dl, formattedResult, NULL, status);
-        ASSERT_SUCCESS(status);
-        ASSERT_EQUALS("1,234,566,666,666,666,666,666,666,666,666,666,666,621,000", formattedResult);
+        if (U_FAILURE(status) || fmtr == NULL) {
+            dataerrln("Unable to create NumberFormat");
+        } else {
+            UnicodeString formattedResult;
+            DigitList dl;
+            StringPiece num("123.4566666666666666666666666666666666621E+40");
+            dl.set(num, status);
+            ASSERT_SUCCESS(status);
+            fmtr->format(dl, formattedResult, NULL, status);
+            ASSERT_SUCCESS(status);
+            ASSERT_EQUALS("1,234,566,666,666,666,666,666,666,666,666,666,666,621,000", formattedResult);
 
-        status = U_ZERO_ERROR;
-        num.set("666.666");
-        dl.set(num, status);
-        FieldPosition pos(NumberFormat::FRACTION_FIELD);
-        ASSERT_SUCCESS(status);
-        formattedResult.remove();
-        fmtr->format(dl, formattedResult, pos, status);
-        ASSERT_SUCCESS(status);
-        ASSERT_EQUALS("666.666", formattedResult);
-        ASSERT_EQUALS(4, pos.getBeginIndex());
-        ASSERT_EQUALS(7, pos.getEndIndex());
-        delete fmtr;
+            status = U_ZERO_ERROR;
+            num.set("666.666");
+            dl.set(num, status);
+            FieldPosition pos(NumberFormat::FRACTION_FIELD);
+            ASSERT_SUCCESS(status);
+            formattedResult.remove();
+            fmtr->format(dl, formattedResult, pos, status);
+            ASSERT_SUCCESS(status);
+            ASSERT_EQUALS("666.666", formattedResult);
+            ASSERT_EQUALS(4, pos.getBeginIndex());
+            ASSERT_EQUALS(7, pos.getEndIndex());
+            delete fmtr;
+        }
     }
 
     {
@@ -6109,14 +6129,17 @@ void NumberFormatTest::TestDecimal() {
         UErrorCode status = U_ZERO_ERROR;
         NumberFormat *fmtr = NumberFormat::createInstance(
                 Locale::getUS(), NumberFormat::kPercentStyle, status);
-        ASSERT_SUCCESS(status);
-        UnicodeString input = "1.84%";
-        Formattable result;
-        fmtr->parse(input, result, status);
-        ASSERT_SUCCESS(status);
-        ASSERT_EQUALS(0, strcmp("0.0184", result.getDecimalNumber(status).data()));
-        //std::cout << result.getDecimalNumber(status).data();
-        delete fmtr;
+        if (U_FAILURE(status) || fmtr == NULL) {
+            dataerrln("Unable to create NumberFormat");
+        } else {
+            UnicodeString input = "1.84%";
+            Formattable result;
+            fmtr->parse(input, result, status);
+            ASSERT_SUCCESS(status);
+            ASSERT_EQUALS(0, strcmp("0.0184", result.getDecimalNumber(status).data()));
+            //std::cout << result.getDecimalNumber(status).data();
+            delete fmtr;
+        }
     }
     
     {
@@ -6124,15 +6147,18 @@ void NumberFormatTest::TestDecimal() {
         UErrorCode status = U_ZERO_ERROR;
         NumberFormat *fmtr = NumberFormat::createInstance(
                 Locale::getUS(), NumberFormat::kNumberStyle, status);
-        ASSERT_SUCCESS(status);
-        UnicodeString input = "1.002200044400088880000070000";
-        Formattable result;
-        fmtr->parse(input, result, status);
-        ASSERT_SUCCESS(status);
-        ASSERT_EQUALS(0, strcmp("1.00220004440008888000007", result.getDecimalNumber(status).data()));
-        ASSERT_EQUALS(1.00220004440008888,   result.getDouble());
-        //std::cout << result.getDecimalNumber(status).data();
-        delete fmtr;
+        if (U_FAILURE(status) || fmtr == NULL) {
+            dataerrln("Unable to create NumberFormat");
+        } else {
+            UnicodeString input = "1.002200044400088880000070000";
+            Formattable result;
+            fmtr->parse(input, result, status);
+            ASSERT_SUCCESS(status);
+            ASSERT_EQUALS(0, strcmp("1.00220004440008888000007", result.getDecimalNumber(status).data()));
+            ASSERT_EQUALS(1.00220004440008888,   result.getDouble());
+            //std::cout << result.getDecimalNumber(status).data();
+            delete fmtr;
+        }
     }
 
 }
@@ -6144,19 +6170,22 @@ void NumberFormatTest::TestCurrencyFractionDigits() {
 
     // Create currenct instance
     NumberFormat* fmt = NumberFormat::createCurrencyInstance("ja_JP", status);
-    ASSERT_SUCCESS(status);
-    fmt->format(value, text1);
+    if (U_FAILURE(status) || fmt == NULL) {
+        dataerrln("Unable to create NumberFormat");
+    } else {
+        fmt->format(value, text1);
 
-    // Reset the same currency and format the test value again
-    fmt->setCurrency(fmt->getCurrency(), status);
-    ASSERT_SUCCESS(status);
-    fmt->format(value, text2);
+        // Reset the same currency and format the test value again
+        fmt->setCurrency(fmt->getCurrency(), status);
+        ASSERT_SUCCESS(status);
+        fmt->format(value, text2);
 
-    if (text1 != text2) {
-        errln((UnicodeString)"NumberFormat::format() should return the same result - text1="
-            + text1 + " text2=" + text2);
+        if (text1 != text2) {
+            errln((UnicodeString)"NumberFormat::format() should return the same result - text1="
+                + text1 + " text2=" + text2);
+        }
+        delete fmt;
     }
-    delete fmt;
 }
 
 void NumberFormatTest::TestExponentParse() { 
@@ -6169,7 +6198,7 @@ void NumberFormatTest::TestExponentParse() {
     status = U_ZERO_ERROR; 
     DecimalFormatSymbols *symbols = new DecimalFormatSymbols(Locale::getDefault(), status); 
     if(U_FAILURE(status)) { 
-        errln((UnicodeString)"ERROR: Could not create DecimalFormatSymbols (Default)"); 
+        dataerrln((UnicodeString)"ERROR: Could not create DecimalFormatSymbols (Default)"); 
         return; 
     } 
     symbols->setSymbol(DecimalFormatSymbols::kExponentialSymbol,"e"); 
