@@ -1,5 +1,5 @@
 # WordBreakProperty-6.0.0.txt
-# Date: 2010-06-22, 00:56:54 GMT [MD]
+# Date: 2010-08-19, 00:48:48 GMT [MD]
 #
 # Unicode Character Database
 # Copyright (c) 1991-2010 Unicode, Inc.
@@ -50,7 +50,6 @@
 064B..065F    ; Extend
 0670          ; Extend
 06D6..06DC    ; Extend
-06DE          ; Extend
 06DF..06E4    ; Extend
 06E7..06E8    ; Extend
 06EA..06ED    ; Extend
@@ -362,7 +361,7 @@ FF9E..FF9F    ; Extend
 1D242..1D244  ; Extend
 E0100..E01EF  ; Extend
 
-# Total code points: 1503
+# Total code points: 1502
 
 # ================================================
 
@@ -895,7 +894,7 @@ FF0E          ; MidNumLet
 17E0..17E9    ; Numeric
 1810..1819    ; Numeric
 1946..194F    ; Numeric
-19D0..19DA    ; Numeric
+19D0..19D9    ; Numeric
 1A80..1A89    ; Numeric
 1A90..1A99    ; Numeric
 1B50..1B59    ; Numeric
@@ -912,7 +911,7 @@ ABF0..ABF9    ; Numeric
 11066..1106F  ; Numeric
 1D7CE..1D7FF  ; Numeric
 
-# Total code points: 412
+# Total code points: 411
 
 # ================================================
 

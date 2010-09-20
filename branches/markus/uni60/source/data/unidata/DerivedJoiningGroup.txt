@@ -1,5 +1,5 @@
 # DerivedJoiningGroup-6.0.0.txt
-# Date: 2010-05-18, 00:49:13 GMT [MD]
+# Date: 2010-07-17, 22:46:14 GMT [MD]
 #
 # Unicode Character Database
 # Copyright (c) 1991-2010 Unicode, Inc.
@@ -123,6 +123,12 @@
 077C          ; Hah # Lo       ARABIC LETTER HAH WITH EXTENDED ARABIC-INDIC DIGIT FOUR BELOW
 
 # Total code points: 17
+
+# ================================================
+
+06C3          ; Teh_Marbuta_Goal # Lo       ARABIC LETTER TEH MARBUTA GOAL
+
+# Total code points: 1
 
 # ================================================
 
@@ -412,12 +418,6 @@
 # ================================================
 
 06BD          ; Nya # Lo       ARABIC LETTER NOON WITH THREE DOTS ABOVE
-
-# Total code points: 1
-
-# ================================================
-
-06C3          ; Teh_Marbuta_Goal # Lo       ARABIC LETTER TEH MARBUTA GOAL
 
 # Total code points: 1
 

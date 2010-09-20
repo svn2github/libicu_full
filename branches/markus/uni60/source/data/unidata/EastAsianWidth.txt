@@ -1,5 +1,5 @@
 # EastAsianWidth-6.0.0.txt
-# Date: 2010-04-29, 16:21:00 PDT [KW]
+# Date: 2010-08-17, 12:17:00 PDT [KW]
 #
 # East Asian Width Properties
 #
@@ -453,7 +453,7 @@
 20A9;H
 20AA..20AB;N
 20AC;A
-20AD..20B8;N
+20AD..20B9;N
 20D0..20F0;N
 2100..2102;N
 2103;A

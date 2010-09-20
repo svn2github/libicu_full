@@ -1,5 +1,5 @@
 # GraphemeBreakProperty-6.0.0.txt
-# Date: 2010-05-20, 15:14:17 GMT [MD]
+# Date: 2010-09-01, 18:48:17 GMT [MD]
 #
 # Unicode Character Database
 # Copyright (c) 1991-2010 Unicode, Inc.
@@ -68,7 +68,6 @@ E0020..E007F  ; Control
 064B..065F    ; Extend
 0670          ; Extend
 06D6..06DC    ; Extend
-06DE          ; Extend
 06DF..06E4    ; Extend
 06E7..06E8    ; Extend
 06EA..06ED    ; Extend
@@ -145,15 +144,10 @@ E0020..E007F  ; Control
 0DD2..0DD4    ; Extend
 0DD6          ; Extend
 0DDF          ; Extend
-0E30          ; Extend
 0E31          ; Extend
-0E32..0E33    ; Extend
 0E34..0E3A    ; Extend
-0E45          ; Extend
 0E47..0E4E    ; Extend
-0EB0          ; Extend
 0EB1          ; Extend
-0EB2..0EB3    ; Extend
 0EB4..0EB9    ; Extend
 0EBB..0EBC    ; Extend
 0EC8..0ECD    ; Extend
@@ -286,7 +280,7 @@ FF9E..FF9F    ; Extend
 1D242..1D244  ; Extend
 E0100..E01EF  ; Extend
 
-# Total code points: 1242
+# Total code points: 1234
 
 # ================================================
 
@@ -339,6 +333,11 @@ AABB..AABC    ; Prepend
 0DD0..0DD1    ; SpacingMark
 0DD8..0DDE    ; SpacingMark
 0DF2..0DF3    ; SpacingMark
+0E30          ; SpacingMark
+0E32..0E33    ; SpacingMark
+0E45          ; SpacingMark
+0EB0          ; SpacingMark
+0EB2..0EB3    ; SpacingMark
 0F3E..0F3F    ; SpacingMark
 0F7F          ; SpacingMark
 102B..102C    ; SpacingMark
@@ -409,7 +408,7 @@ ABEC          ; SpacingMark
 1D166         ; SpacingMark
 1D16D         ; SpacingMark
 
-# Total code points: 268
+# Total code points: 275
 
 # ================================================
 

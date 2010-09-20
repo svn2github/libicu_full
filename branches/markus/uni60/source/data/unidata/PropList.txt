@@ -1,5 +1,5 @@
 # PropList-6.0.0.txt
-# Date: 2010-05-18, 20:16:03 GMT [MD]
+# Date: 2010-08-19, 00:48:28 GMT [MD]
 #
 # Unicode Character Database
 # Copyright (c) 1991-2010 Unicode, Inc.
@@ -199,6 +199,7 @@ FF64          ; Terminal_Punctuation
 20E5..20E6    ; Other_Math
 20EB..20EF    ; Other_Math
 2102          ; Other_Math
+2107          ; Other_Math
 210A..2113    ; Other_Math
 2115          ; Other_Math
 2119..211D    ; Other_Math
@@ -320,7 +321,7 @@ FF3E          ; Other_Math
 1D7C4..1D7CB  ; Other_Math
 1D7CE..1D7FF  ; Other_Math
 
-# Total code points: 1216
+# Total code points: 1217
 
 # ================================================
 
@@ -970,8 +971,9 @@ AABB..AABC    ; Logical_Order_Exception
 00B7          ; Other_ID_Continue
 0387          ; Other_ID_Continue
 1369..1371    ; Other_ID_Continue
+19DA          ; Other_ID_Continue
 
-# Total code points: 11
+# Total code points: 12
 
 # ================================================
 

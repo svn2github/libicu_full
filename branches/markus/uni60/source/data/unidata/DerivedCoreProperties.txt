@@ -1,5 +1,5 @@
 # DerivedCoreProperties-6.0.0.txt
-# Date: 2010-06-04, 14:40:19 GMT [MD]
+# Date: 2010-08-19, 00:48:05 GMT [MD]
 #
 # Unicode Character Database
 # Copyright (c) 1991-2010 Unicode, Inc.
@@ -43,8 +43,10 @@
 20E5..20E6    ; Math
 20EB..20EF    ; Math
 2102          ; Math
+2107          ; Math
 210A..2113    ; Math
 2115          ; Math
+2118          ; Math
 2119..211D    ; Math
 2124          ; Math
 2128          ; Math
@@ -215,7 +217,7 @@ FFE9..FFEC    ; Math
 1D7C4..1D7CB  ; Math
 1D7CE..1D7FF  ; Math
 
-# Total code points: 2163
+# Total code points: 2165
 
 # ================================================
 
@@ -2382,7 +2384,6 @@ FF41..FF5A    ; Cased
 0670          ; Case_Ignorable
 06D6..06DC    ; Case_Ignorable
 06DD          ; Case_Ignorable
-06DE          ; Case_Ignorable
 06DF..06E4    ; Case_Ignorable
 06E5..06E6    ; Case_Ignorable
 06E7..06E8    ; Case_Ignorable
@@ -2655,7 +2656,7 @@ E0001         ; Case_Ignorable
 E0020..E007F  ; Case_Ignorable
 E0100..E01EF  ; Case_Ignorable
 
-# Total code points: 1693
+# Total code points: 1692
 
 # ================================================
 
@@ -6070,7 +6071,8 @@ FFDA..FFDC    ; ID_Start
 19B0..19C0    ; ID_Continue
 19C1..19C7    ; ID_Continue
 19C8..19C9    ; ID_Continue
-19D0..19DA    ; ID_Continue
+19D0..19D9    ; ID_Continue
+19DA          ; ID_Continue
 1A00..1A16    ; ID_Continue
 1A17..1A18    ; ID_Continue
 1A19..1A1B    ; ID_Continue
@@ -7452,7 +7454,8 @@ FFDA..FFDC    ; XID_Start
 19B0..19C0    ; XID_Continue
 19C1..19C7    ; XID_Continue
 19C8..19C9    ; XID_Continue
-19D0..19DA    ; XID_Continue
+19D0..19D9    ; XID_Continue
+19DA          ; XID_Continue
 1A00..1A16    ; XID_Continue
 1A17..1A18    ; XID_Continue
 1A19..1A1B    ; XID_Continue
@@ -7941,7 +7944,6 @@ E01F0..E0FFF  ; Default_Ignorable_Code_Point
 064B..065F    ; Grapheme_Extend
 0670          ; Grapheme_Extend
 06D6..06DC    ; Grapheme_Extend
-06DE          ; Grapheme_Extend
 06DF..06E4    ; Grapheme_Extend
 06E7..06E8    ; Grapheme_Extend
 06EA..06ED    ; Grapheme_Extend
@@ -8154,7 +8156,7 @@ FF9E..FF9F    ; Grapheme_Extend
 1D242..1D244  ; Grapheme_Extend
 E0100..E01EF  ; Grapheme_Extend
 
-# Total code points: 1235
+# Total code points: 1234
 
 # ================================================
 
@@ -8282,6 +8284,7 @@ E0100..E01EF  ; Grapheme_Extend
 0671..06D3    ; Grapheme_Base
 06D4          ; Grapheme_Base
 06D5          ; Grapheme_Base
+06DE          ; Grapheme_Base
 06E5..06E6    ; Grapheme_Base
 06E9          ; Grapheme_Base
 06EE..06EF    ; Grapheme_Base
@@ -8616,9 +8619,9 @@ E0100..E01EF  ; Grapheme_Extend
 19B0..19C0    ; Grapheme_Base
 19C1..19C7    ; Grapheme_Base
 19C8..19C9    ; Grapheme_Base
-19D0..19DA    ; Grapheme_Base
-19DE..19DF    ; Grapheme_Base
-19E0..19FF    ; Grapheme_Base
+19D0..19D9    ; Grapheme_Base
+19DA          ; Grapheme_Base
+19DE..19FF    ; Grapheme_Base
 1A00..1A16    ; Grapheme_Base
 1A19..1A1B    ; Grapheme_Base
 1A1E..1A1F    ; Grapheme_Base
@@ -8742,7 +8745,7 @@ E0100..E01EF  ; Grapheme_Extend
 208D          ; Grapheme_Base
 208E          ; Grapheme_Base
 2090..209C    ; Grapheme_Base
-20A0..20B8    ; Grapheme_Base
+20A0..20B9    ; Grapheme_Base
 2100..2101    ; Grapheme_Base
 2102          ; Grapheme_Base
 2103..2106    ; Grapheme_Base
@@ -8751,7 +8754,8 @@ E0100..E01EF  ; Grapheme_Extend
 210A..2113    ; Grapheme_Base
 2114          ; Grapheme_Base
 2115          ; Grapheme_Base
-2116..2118    ; Grapheme_Base
+2116..2117    ; Grapheme_Base
+2118          ; Grapheme_Base
 2119..211D    ; Grapheme_Base
 211E..2123    ; Grapheme_Base
 2124          ; Grapheme_Base
@@ -9435,7 +9439,7 @@ FFFC..FFFD    ; Grapheme_Base
 2B740..2B81D  ; Grapheme_Base
 2F800..2FA1D  ; Grapheme_Base
 
-# Total code points: 108008
+# Total code points: 108010
 
 # ================================================
 

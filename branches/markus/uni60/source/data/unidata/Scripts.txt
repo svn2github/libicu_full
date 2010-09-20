@@ -1,5 +1,5 @@
 # Scripts-6.0.0.txt
-# Date: 2010-06-21, 22:40:33 GMT [MD]
+# Date: 2010-08-19, 00:48:47 GMT [MD]
 #
 # Unicode Character Database
 # Copyright (c) 1991-2010 Unicode, Inc.
@@ -146,7 +146,7 @@
 208A..208C    ; Common
 208D          ; Common
 208E          ; Common
-20A0..20B8    ; Common
+20A0..20B9    ; Common
 2100..2101    ; Common
 2102          ; Common
 2103..2106    ; Common
@@ -155,7 +155,8 @@
 210A..2113    ; Common
 2114          ; Common
 2115          ; Common
-2116..2118    ; Common
+2116..2117    ; Common
+2118          ; Common
 2119..211D    ; Common
 211E..2123    ; Common
 2124          ; Common
@@ -585,7 +586,7 @@ FFFC..FFFD    ; Common
 E0001         ; Common
 E0020..E007F  ; Common
 
-# Total code points: 6378
+# Total code points: 6379
 
 # ================================================
 
@@ -1598,7 +1599,8 @@ E0100..E01EF  ; Inherited
 19B0..19C0    ; New_Tai_Lue
 19C1..19C7    ; New_Tai_Lue
 19C8..19C9    ; New_Tai_Lue
-19D0..19DA    ; New_Tai_Lue
+19D0..19D9    ; New_Tai_Lue
+19DA          ; New_Tai_Lue
 19DE..19DF    ; New_Tai_Lue
 
 # Total code points: 83

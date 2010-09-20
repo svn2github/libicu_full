@@ -29,7 +29,8 @@ Unicode 6.0 update
 
 * file preparation
 
-~/svn.icu/tools/trunk/src/unicode/c/genprops/misc$ ./ucdcopy.py ~/uni60/20100720/ucd ~/uni60/unidata
+~/svn.icu/tools/trunk/src/unicode/c/genprops/misc$ ./ucdcopy.py ~/uni60/20100720/ucd ~/uni60/processed
+- This now prepares both unidata and testdata files in respective output subfolders.
 
 * PropertyAliases.txt changes
 - new Script_Extensions property defined in the new ScriptExtensions.txt file
@@ -57,7 +58,8 @@ Unicode 6.0 update
   -> add to UCharacter.UnicodeBlock
     Eclipse find     UBLOCK_([^ ]+) = [0-9]+, (/.+)
             replace  public static final UnicodeBlock \1 = new UnicodeBlock("\1", \1_ID); \2
-- new Joining_Group (jg) value: Teh_Marbuta_Goal
+- Joining_Group (jg) values:
+  Teh_Marbuta_Goal becomes the new canonical value for the old Hamza_On_Heh_Goal which becomes an alias
   -> uchar.h & UCharacter.JoiningGroup
 - 3 new scripts:
   sc ; Batk      ; Batak
@@ -122,6 +124,7 @@ Unicode 6.0 update
 * update source/data/unidata/norm2/uts46.txt
 - download http://www.unicode.org/Public/idna/6.0.0/IdnaMappingTable.txt
   to ~/svn.icu/tools/trunk/src/unicode/py
+- adjust idna2nrm.py to handle new disallowed_STD3_valid and disallowed_STD3_mapped values
 - ~/svn.icu/tools/trunk/src/unicode/py$ ./idna2nrm.py
 - ~/svn.icu/tools/trunk/src/unicode/py$ cp uts46.txt ~/svn.icu/trunk/src/source/data/unidata/norm2
 
@@ -178,9 +181,12 @@ Unicode 6.0 update
 - removes one manual step from the Unicode upgrade, and removes dependency on one of Mark's tools
 
 * copy updated break iterator test files
-- from (Unicode 6.0)/ucd/auxiliary/*BreakTest-6....txt
-- to ~/svn.icu/trunk/src/source/test/testdata
-  (they are not used in ICU4J)
+- now handled by early ucdcopy.py and
+  copying the uni60/processed/testdata files to ~/svn.icu/trunk/src/source/test/testdata
+  (old instructions:
+   copy from (Unicode 6.0)/ucd/auxiliary/*BreakTest-6....txt
+   to ~/svn.icu/trunk/src/source/test/testdata)
+- they are not used in ICU4J
 
 * UCA
 
@@ -212,7 +218,7 @@ Unicode 6.0 update
 - ~/svn.icu/trunk/bld$ make ICU4J_ROOT=/tmp/icu4j icu4j-data-install
 - cp /tmp/icu4j/main/shared/data/icudata.jar ~/svn.icu4j/trunk/src/main/shared/data
 or
-- ~/svn.icu/trunk/bld$ make ICU4J_ROOT=~/svn.icu4j/trunk/src/main/shared/data icu4j-data-install
+- ~/svn.icu/trunk/bld$ make ICU4J_ROOT=~/svn.icu4j/trunk/src icu4j-data-install
 
 ---------------------------------------------------------------------------- ***
 

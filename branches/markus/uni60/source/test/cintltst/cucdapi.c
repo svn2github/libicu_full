@@ -483,7 +483,7 @@ void TestGetScriptExtensions() {
               (int)length, u_errorName(errorCode));
     }
     length=uscript_getScriptExtensions(0xff65, scripts, LENGTHOF(scripts), &errorCode);
-    if(U_FAILURE(errorCode) || length!=8 || scripts[0]!=USCRIPT_BOPOMOFO || scripts[7]!=USCRIPT_PHAGS_PA) {
+    if(U_FAILURE(errorCode) || length!=6 || scripts[0]!=USCRIPT_BOPOMOFO || scripts[5]!=USCRIPT_YI) {
         log_err("uscript_getScriptExtensions(U+FF65)=%d failed - %s\n",
               (int)length, u_errorName(errorCode));
     }

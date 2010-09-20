@@ -1515,7 +1515,8 @@ typedef enum UJoiningGroup {
     U_JG_GAF,
     U_JG_GAMAL,
     U_JG_HAH,
-    U_JG_HAMZA_ON_HEH_GOAL,
+    U_JG_TEH_MARBUTA_GOAL,  /**< @stable ICU 4.6 */
+    U_JG_HAMZA_ON_HEH_GOAL=U_JG_TEH_MARBUTA_GOAL,
     U_JG_HE,
     U_JG_HEH,
     U_JG_HEH_GOAL,
@@ -1558,7 +1559,6 @@ typedef enum UJoiningGroup {
     U_JG_BURUSHASKI_YEH_BARREE, /**< @stable ICU 4.0 */
     U_JG_FARSI_YEH, /**< @stable ICU 4.4 */
     U_JG_NYA,       /**< @stable ICU 4.4 */
-    U_JG_TEH_MARBUTA_GOAL,  /**< @stable ICU 4.6 */
     U_JG_COUNT
 } UJoiningGroup;
 

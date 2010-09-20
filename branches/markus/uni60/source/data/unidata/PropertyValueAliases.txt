@@ -1,5 +1,5 @@
 # PropertyValueAliases-6.0.0.txt
-# Date: 2010-06-05, 00:09:26 GMT [MD]
+# Date: 2010-07-17, 22:44:06 GMT [MD]
 #
 # Unicode Character Database
 # Copyright (c) 1991-2010 Unicode, Inc.
@@ -688,7 +688,6 @@ jg ; n/a       ; Final_Semkath
 jg ; n/a       ; Gaf
 jg ; n/a       ; Gamal
 jg ; n/a       ; Hah
-jg ; n/a       ; Hamza_On_Heh_Goal
 jg ; n/a       ; He
 jg ; n/a       ; Heh
 jg ; n/a       ; Heh_Goal
@@ -720,7 +719,7 @@ jg ; n/a       ; Syriac_Waw
 jg ; n/a       ; Tah
 jg ; n/a       ; Taw
 jg ; n/a       ; Teh_Marbuta
-jg ; n/a       ; Teh_Marbuta_Goal
+jg ; n/a       ; Teh_Marbuta_Goal                 ; Hamza_On_Heh_Goal
 jg ; n/a       ; Teth
 jg ; n/a       ; Waw
 jg ; n/a       ; Yeh

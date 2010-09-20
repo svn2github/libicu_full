@@ -1,5 +1,5 @@
 # DerivedNumericValues-6.0.0.txt
-# Date: 2010-05-20, 15:14:17 GMT [MD]
+# Date: 2010-08-19, 00:48:14 GMT [MD]
 #
 # Unicode Character Database
 # Copyright (c) 1991-2010 Unicode, Inc.
@@ -273,7 +273,7 @@ A832          ; 0.75 ; ; 3/4 # No       NORTH INDIC FRACTION THREE QUARTERS
 1811          ; 1.0 ; ; 1 # Nd       MONGOLIAN DIGIT ONE
 1947          ; 1.0 ; ; 1 # Nd       LIMBU DIGIT ONE
 19D1          ; 1.0 ; ; 1 # Nd       NEW TAI LUE DIGIT ONE
-19DA          ; 1.0 ; ; 1 # Nd       NEW TAI LUE THAM DIGIT ONE
+19DA          ; 1.0 ; ; 1 # No       NEW TAI LUE THAM DIGIT ONE
 1A81          ; 1.0 ; ; 1 # Nd       TAI THAM HORA DIGIT ONE
 1A91          ; 1.0 ; ; 1 # Nd       TAI THAM THAM DIGIT ONE
 1B51          ; 1.0 ; ; 1 # Nd       BALINESE DIGIT ONE
