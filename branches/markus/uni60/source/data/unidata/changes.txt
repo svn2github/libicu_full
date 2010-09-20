@@ -128,6 +128,11 @@ Unicode 6.0 update
 - ~/svn.icu/tools/trunk/src/unicode/py$ ./idna2nrm.py
 - ~/svn.icu/tools/trunk/src/unicode/py$ cp uts46.txt ~/svn.icu/trunk/src/source/data/unidata/norm2
 
+* update uts46test.cpp and UTS46Test.java if there are new characters that are equivalent to
+  sequences with non-LDH ASCII (that is, their decompositions contain '=' or similar)
+- grep IdnaMappingTable.txt or uts46.txt for "disallowed_STD3_valid" on non-ASCII characters
+- Unicode 6.0: U+2260, U+226E, U+226F
+
 * generate core properties data files
 - ~/svn.icu/tools/trunk/src/unicode$ ./makeprops.sh ~/svn.icu/trunk/src ~/svn.icu/trunk/bld
 - rebuild ICU & tools
