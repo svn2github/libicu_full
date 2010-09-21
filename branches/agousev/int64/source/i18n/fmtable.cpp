@@ -439,7 +439,13 @@ Formattable::getInt64(UErrorCode& status) const
     case Formattable::kInt64: 
         return fValue.fInt64;
     case Formattable::kDouble:
-        if (fValue.fDouble > U_INT64_MAX) {
+		{
+			int64_t a = U_INT64_MAX;
+			double b = fValue.fDouble;
+			double c = (double)U_INT64_MAX;
+			int64_t d = (int64_t) fValue.fDouble;
+
+        if (fValue.fDouble >= U_INT64_MAX) {
             status = U_INVALID_FORMAT_ERROR;
             return U_INT64_MAX;
         } else if (fValue.fDouble < U_INT64_MIN) {
@@ -448,6 +454,7 @@ Formattable::getInt64(UErrorCode& status) const
         } else {
             return (int64_t)fValue.fDouble;
         }
+		}
     case Formattable::kObject:
         if (fValue.fObject == NULL) {
             status = U_MEMORY_ALLOCATION_ERROR;
