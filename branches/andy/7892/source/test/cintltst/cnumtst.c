@@ -31,6 +31,7 @@
 #include "cmemory.h"
 #include "putilimp.h"
 
+#include "stdio.h"
 #define LENGTH(arr) (sizeof(arr)/sizeof(arr[0]))
 
 void addNumForTest(TestNode** root);
@@ -98,9 +99,8 @@ static void TestInt64Parse()
     UErrorCode st = U_ZERO_ERROR;
     UErrorCode* status = &st;
     
-    char* st1 = "009223372036854775808";
+    const char* st1 = "009223372036854775808";
     const int size = 21;
-    const int textLength = size;
     UChar text[21];
     
 	
@@ -407,7 +407,8 @@ free(result);
     }
 
     /*
-     * Note: "for strict standard conformance all operations and constants are now supposed to be evaluated in precision of long double".  So,  we assign a1 before comparing to a double. Bug #7932.
+     * Note: "for strict standard conformance all operations and constants are now supposed to be 
+              evaluated in precision of long double".  So,  we assign a1 before comparing to a double. Bug #7932.
      */
     a1 = 462.12345;
 
@@ -823,6 +824,80 @@ free(result);
         }
         unum_close(dec_en);
     }
+    
+    {   /* Test parse & format of big decimals.  Use a number with too many digits to fit in a double,
+                                         to verify that it is taking the pure decimal path. */
+        UNumberFormat *fmt;
+        const char *bdpattern = "#,##0.#########";   
+        const char *numIn     = "12345678900987654321.1234567896";  
+        const char *expected  = "12,345,678,900,987,654,321.12345679";
+        const char *parseExpected = "12345678900987654321.12345679";
+        int32_t resultSize    = 0;
+        int32_t parsePos      = 0;     /* Output parameter for Parse operations. */
+        #define DESTCAPACITY 100
+        UChar dest[DESTCAPACITY];
+        char  desta[DESTCAPACITY];
+
+        /* Format */
+
+        status = U_ZERO_ERROR;
+        u_uastrcpy(dest, bdpattern);
+        fmt = unum_open(UNUM_PATTERN_DECIMAL, dest, -1, "en", NULL /*parseError*/, &status);
+        if (U_FAILURE(status)) log_err("File %s, Line %d, status = %s\n", __FILE__, __LINE__, u_errorName(status));
+
+        resultSize = unum_formatDecimal(fmt, numIn, -1, dest, DESTCAPACITY, NULL, &status); 
+        if (U_FAILURE(status)) {
+            log_err("File %s, Line %d, status = %s\n", __FILE__, __LINE__, u_errorName(status));
+        }
+        u_austrncpy(desta, dest, DESTCAPACITY);
+        if (strcmp(expected, desta) != 0) {
+            log_err("File %s, Line %d, (expected, acutal) =  (\"%s\", \"%s\")\n",
+                    __FILE__, __LINE__, expected, desta);
+        }
+        if (strlen(expected) != resultSize) {
+            log_err("File %s, Line %d, (expected, actual) = (%d, %d)\n", 
+                     __FILE__, __LINE__, strlen(expected), resultSize);
+        }
+
+        /* Parse */
+
+        status = U_ZERO_ERROR;
+        u_uastrcpy(dest, expected);   /* Parse the expected output of the formatting test */
+        resultSize = unum_parseDecimal(fmt, dest, -1, NULL, desta, DESTCAPACITY, &status);
+        if (U_FAILURE(status)) {
+            log_err("File %s, Line %d, status = %s\n", __FILE__, __LINE__, u_errorName(status));
+        }
+        if (strcmp(parseExpected, desta) != 0) {
+            log_err("File %s, Line %d, (expected, actual) = (\"%s\", \"%s\")\n",
+                    __FILE__, __LINE__, parseExpected, desta);
+        }
+        if (strlen(parseExpected) != resultSize) {
+            log_err("File %s, Line %d, (expected, actual) = (%d, %d)\n",
+                    __FILE__, __LINE__, strlen(parseExpected), resultSize);
+        }
+
+        /* Parse with a parsePos parameter */
+        
+        status = U_ZERO_ERROR;
+        u_uastrcpy(dest, expected);   /* Parse the expected output of the formatting test */
+        parsePos = 3;                 /*      12,345,678,900,987,654,321.12345679         */
+                                      /* start parsing at the the third char              */
+        resultSize = unum_parseDecimal(fmt, dest, -1, &parsePos, desta, DESTCAPACITY, &status);
+        if (U_FAILURE(status)) {
+            log_err("File %s, Line %d, status = %s\n", __FILE__, __LINE__, u_errorName(status));
+        }
+        if (strcmp(parseExpected+2, desta) != 0) {   /*  "345678900987654321.12345679" */
+            log_err("File %s, Line %d, (expected, actual) = (\"%s\", \"%s\")\n",
+                    __FILE__, __LINE__, parseExpected+2, desta);
+        }
+        if (strlen(parseExpected) != parsePos) {
+            log_err("File %s, Line %d, parsePos (expected, actual) = (\"%d\", \"%d\")\n",
+                    __FILE__, __LINE__, strlen(parseExpected), parsePos);
+        }
+
+        unum_close(fmt);
+    }
+
 
     /*closing the NumberFormat() using unum_close(UNumberFormat*)")*/
     unum_close(def);
