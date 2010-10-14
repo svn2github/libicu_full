@@ -16,6 +16,7 @@
 #include "unicode/localpointer.h"
 #include "unicode/parseerr.h"
 #include "unicode/uloc.h"
+#include "unicode/uscript.h"
 #include "unicode/uset.h"
 
 /**
@@ -520,6 +521,35 @@ ucol_getStrength(const UCollator *coll);
 U_STABLE void U_EXPORT2 
 ucol_setStrength(UCollator *coll,
                  UCollationStrength strength);
+
+/**
+ * Get the current reordering of scripts (if one has been set).
+ * @param coll The UCollator to query.
+ * @param dest The array to fill with the script ordering.
+ * @param destCapacity The length of dest. If it is 0, then dest may be NULL and the function will only return the length of the result without writing any of the result string (pre-flighting).
+ * @param pErrorCode Must be a valid pointer to an error code value, which must not indicate a failure before the function call.
+ * @return The length of the array of the script ordering.
+ * @see ucol_setScriptOrder
+ * @stable 
+ */
+U_STABLE int32_t U_EXPORT2 
+ucol_getScriptOrder(const UCollator *coll,
+                    UScriptCode *dest,
+                    const int32_t destCapacity,
+                    UErrorCode *pErrorCode);
+
+/**
+ * Set the ordering of scripts for this collator.
+ * @param coll The UCollator to set.
+ * @param scriptOrder An array of script codes in the new order.
+ * @param scriptOrderLength The length of scriptOrder.
+ * @see ucol_getStrength
+ * @stable 
+ */
+U_STABLE void U_EXPORT2 
+ucol_setScriptOrder(UCollator *coll,
+                    const UScriptCode *scriptOrder,
+                    const int32_t scriptOrderLength);
 
 /**
  * Get the display name for a UCollator.
@@ -1175,4 +1205,3 @@ ucol_openBinary(const uint8_t *bin, int32_t length,
 #endif /* #if !UCONFIG_NO_COLLATION */
 
 #endif
-

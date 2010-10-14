@@ -162,6 +162,223 @@ tryOpeningFromRules(UResourceBundle *collElem, UErrorCode *status) {
     return ucol_openRules(rules, rulesLen, UCOL_DEFAULT, UCOL_DEFAULT, NULL, status);
 }
 
+int ucol_getLeadBytesForReorderCode(UCollator *coll, int reorderCode, uint16_t* returnLeadBytes, int returnLength) {
+    uint16_t reorderCodeIndexLength = *((uint16_t*) ((uint8_t *)coll->UCA->image + coll->UCA->image->scriptToLeadByte));
+    uint16_t* reorderCodeIndex = (uint16_t*) ((uint8_t *)coll->UCA->image + coll->UCA->image->scriptToLeadByte + 2 *sizeof(uint16_t));
+    
+    // TODO - replace with a binary search
+    // reorder code index is 2 uint16_t's - reorder code + offset
+    for (int i = 0; i < reorderCodeIndexLength; i++) {
+        if (reorderCode == reorderCodeIndex[i*2]) {
+            uint16_t dataOffset = reorderCodeIndex[(i*2) + 1];
+            if ((dataOffset & 0x8000) == 0x8000) {
+                // offset isn't offset but instead is a single data element
+                if (returnLength >= 1) {
+                    returnLeadBytes[0] = dataOffset & ~0x8000;
+                    return 1;
+                }
+                return 0;
+            }
+            uint16_t* dataOffsetBase = reorderCodeIndex + reorderCodeIndexLength * (2 * sizeof(uint16_t));
+            uint16_t leadByteCount = *(dataOffsetBase + dataOffset);
+            leadByteCount = leadByteCount > returnLength ? returnLength : leadByteCount;
+            uprv_memcpy(returnLeadBytes, dataOffsetBase + dataOffset + 1, leadByteCount * sizeof(uint16_t));
+            return leadByteCount;
+        }
+    }
+    return 0;
+}
+
+int ucol_getReorderCodesForLeadByte(UCollator *coll, int leadByte, int16_t* returnReorderCodes, int returnLength) {
+    int leadByteIndexLength = *((uint16_t*) ((uint8_t *)coll->UCA->image + coll->UCA->image->leadByteToScript));
+    uint16_t* leadByteIndex = (uint16_t*) ((uint8_t *)coll->UCA->image + coll->UCA->image->leadByteToScript + 2 *sizeof(uint16_t));
+
+    if (leadByte >= leadByteIndexLength) {
+        return 0;
+    }
+    
+    if ((leadByteIndex[leadByte] & 0x8000) == 0x8000) {
+        // offset isn't offset but instead is a single data element
+        if (returnLength >= 1) {
+            returnReorderCodes[0] = leadByteIndex[leadByte] & ~0x8000;
+            return 1;
+        }
+        return 0;
+    }
+    uint16_t* dataOffsetBase = leadByteIndex + leadByteIndexLength * (2 * sizeof(uint16_t));
+    uint16_t reorderCodeCount = *(dataOffsetBase + leadByteIndex[leadByte]);
+    reorderCodeCount = reorderCodeCount > returnLength ? returnLength : reorderCodeCount;
+    uprv_memcpy(returnReorderCodes, dataOffsetBase + leadByteIndex[leadByte] + 1, reorderCodeCount * sizeof(uint16_t));
+    return reorderCodeCount;
+}
+
+void ucol_buildScriptReorderTable(UCollator *coll) {
+
+    if (true) {
+        const UCATableHeader* const header = coll->UCA->image;
+        UCAConstants* consts = (UCAConstants*) ((uint8_t*)header + header->UCAConsts);
+        fprintf(stdout, "\n****** UCATableHeader\n");
+        fprintf(stdout, "mappingPosition = 0x%x\n", header->mappingPosition);
+        fprintf(stdout, "expansion = 0x%x\n", header->expansion);
+        fprintf(stdout, "contractionIndex = 0x%x\n", header->contractionIndex);
+        fprintf(stdout, "contractionCEs = 0x%x\n", header->contractionCEs);
+        fprintf(stdout, "contractionSize = 0x%x\n", header->contractionSize);
+        fprintf(stdout, "endExpansionCE = 0x%x\n", header->endExpansionCE);
+        fprintf(stdout, "expansionCESize = 0x%x\n", header->expansionCESize);
+        fprintf(stdout, "endExpansionCECount = 0x%x\n", header->endExpansionCECount);
+        fprintf(stdout, "unsafeCP = 0x%x\n", header->unsafeCP);
+        fprintf(stdout, "contrEndCP = 0x%x\n", header->contrEndCP);
+        fprintf(stdout, "contractionUCACombosSize = 0x%x\n", header->contractionUCACombosSize);
+        fprintf(stdout, "contractionUCACombosWidth = 0x%x\n", header->contractionUCACombosWidth);
+        fprintf(stdout, "UCAVersion = 0x%x\n", header->UCAVersion);
+        fprintf(stdout, "UCDVersion = 0x%x\n", header->UCDVersion);
+        fprintf(stdout, "formatVersion = 0x%x\n", header->formatVersion);
+        fprintf(stdout, "scriptToLeadByte = 0x%x\n", header->scriptToLeadByte);
+        fprintf(stdout, "leadByteToScript = 0x%x\n", header->leadByteToScript);
+        fprintf(stdout, "****** UCAConstants\n");
+        fprintf(stdout, "UCA_FIRST_TERTIARY_IGNORABLE = [0x%x, 0x%x]\n", consts->UCA_FIRST_TERTIARY_IGNORABLE[0], consts->UCA_FIRST_TERTIARY_IGNORABLE[1]);
+        fprintf(stdout, "UCA_LAST_TRAILING = [0x%x, 0x%x]\n", consts->UCA_LAST_TRAILING[0], consts->UCA_LAST_TRAILING[1]);
+        fprintf(stdout, "UCA_PRIMARY_SPECIAL_MAX = 0x%x\n", consts->UCA_PRIMARY_SPECIAL_MAX);
+        exit(0);
+    }
+    
+    if (false) {
+        int leadByteIndexLength = *((uint16_t*) ((uint8_t *)coll->UCA->image + coll->UCA->image->leadByteToScript));
+        uint16_t* leadByteIndex = (uint16_t*) ((uint8_t *)coll->UCA->image + coll->UCA->image->leadByteToScript + 2 * sizeof(uint16_t));
+        
+        fprintf(stdout, "\nLead Byte Index Table, length = %d\n", leadByteIndexLength);
+        for (int i = 0; i < leadByteIndexLength; i++) {
+            fprintf(stdout, "%d = %02x\n", i, leadByteIndex[i]);
+        }
+    }
+    
+    if (false) {
+        uint16_t reorderCodeIndexLength = *((uint16_t*) ((uint8_t *)coll->UCA->image + coll->UCA->image->scriptToLeadByte));
+        uint16_t* reorderCodeIndex = (uint16_t*) ((uint8_t *)coll->UCA->image + coll->UCA->image->scriptToLeadByte + 2 *sizeof(uint16_t));
+        
+        fprintf(stdout, "\nReorder Code Index Table, length = %d\n", reorderCodeIndexLength);
+        for (int i = 0; i < reorderCodeIndexLength; i++) {
+            fprintf(stdout, "%d = %02x, %02x\n", i, reorderCodeIndex[i*2], reorderCodeIndex[i*2+1]);
+        }
+    }
+    
+    UScriptCode *next;
+    uint16_t leadBytesSize = 256;
+    uint16_t leadBytes[256];
+    uint16_t reorderCodesSize = 256;
+    int16_t reorderCodes[256];
+    
+    // The lowest byte that hasn't been assigned a mapping
+    int toBottom = 0;
+    // The highest byte that hasn't been assigned a mapping
+    int toTop = 255;
+
+    // are we filling from the bottom?
+    bool fromTheBottom = true;
+    
+    // lead bytes that have alread been assigned to the permutation table
+    bool used[256];
+    // permutation table slots that have already been filled
+    bool filled[256];
+    for (int i = 0; i < 256; i++) {
+        filled[i] = false;
+        used[i] = false;
+    }
+
+    if (coll->scriptOrderLength != 0) {
+        if (coll->scriptReorderTable == NULL) {
+            coll->scriptReorderTable = (uint8_t*)uprv_malloc(256*sizeof(uint8_t));
+        }
+        /* Start from the front of the list and place each script we encounter at the
+           earliest possible locatation in the permutation table. If we encounter
+           UNKNOWN, start processing from the back, and place each script in the last
+           possible location. At each step, we also need to make sure that any scripts
+           that need to not be moved are copied to their same location in the final table.*/
+        next = coll->scriptOrder;
+        while (next < coll->scriptOrder + coll->scriptOrderLength) {
+            if (*next == USCRIPT_UNKNOWN) {
+                if (fromTheBottom == false) {
+			        //TODO - error condition - bad script order
+                }
+			    fromTheBottom = false;
+				next++;
+                continue;
+            }
+            uint16_t leadByteCount = ucol_getLeadBytesForReorderCode(coll, *next, leadBytes, leadBytesSize);
+
+            if (fromTheBottom) {
+                for (int leadByteIndex = 0; leadByteIndex < leadByteCount; leadByteIndex++) {
+                    // don't place a lead byte twice in the permutation table
+                    if (used[leadBytes[leadByteIndex]]) {
+                        // TODO - or should this be an error condition?
+                        continue;
+                    }
+                    
+                    while (toBottom <= toTop) {                    
+                        // is the next slot an immovable item?
+                        uint16_t reorderCodeCount = ucol_getReorderCodesForLeadByte(coll, toBottom, reorderCodes, reorderCodesSize);
+                        if (reorderCodeCount == 0 || reorderCodes[0] != USCRIPT_INVALID_CODE) {
+                            break;
+                        }
+                        filled[toBottom] = true;
+                        coll->scriptReorderTable[toBottom] = toBottom;
+                        toBottom++;
+                    }
+                    
+                    fprintf(stdout, "toBottom = %d, leadBytes[leadByteIndex] = %d\n", toBottom, leadBytes[leadByteIndex]);
+                    coll->scriptReorderTable[toBottom] = leadBytes[leadByteIndex];
+                    used[leadBytes[leadByteIndex]] = true;
+                    filled[toBottom] = true;
+                    toBottom++;
+                }
+            } else {
+                for (int leadByteIndex = leadByteCount - 1; leadByteIndex >= 0; leadByteIndex--) {
+                    // don't place a lead byte twice in the permutation table
+                    if (used[leadBytes[leadByteIndex]]) {
+                        // TODO - or should this be an error condition?
+                        continue;
+                    }
+
+                    while (toTop >= toBottom) {
+                        // is the next slot an immovable item?
+                        uint16_t reorderCodeCount = ucol_getReorderCodesForLeadByte(coll, toTop, reorderCodes, reorderCodesSize);
+                        if (reorderCodeCount == 0 || reorderCodes[0] != USCRIPT_INVALID_CODE) {
+                            break;
+                        }
+                        filled[toTop] = true;
+                        coll->scriptReorderTable[toTop] = toTop;
+                        toTop--;                        
+                    }
+                    
+                    fprintf(stdout, "toTop = %d, leadBytes[leadByteIndex] = %d\n", toTop, leadBytes[leadByteIndex]);
+                    coll->scriptReorderTable[toTop] = leadBytes[leadByteIndex];
+                    used[leadBytes[leadByteIndex]] = true;
+                    filled[toTop] = true;
+                    toTop--;
+                }
+            }            
+        }
+
+        /* Copy everything that's left over */
+        for (int i = 0; i < 256; i++) {
+            if (!filled[i]) {
+                coll->scriptReorderTable[i] = toBottom++;
+            }
+        }
+        
+        if (true) {
+            fprintf(stdout, "Script Reorder Table\n");
+            for (int i = 0; i < 256; i++) {
+                fprintf(stdout, "%02x = %02x\n", i, coll->scriptReorderTable[i]);
+            }
+        }
+    } else {
+        if (coll->scriptReorderTable != NULL) {
+            uprv_free(coll->scriptReorderTable);
+            coll->scriptReorderTable = NULL;
+        }
+    }
+}
 
 // API in ucol_imp.h
 
@@ -468,6 +685,7 @@ ucol_openRules( const UChar        *rules,
         result->requestedLocale = NULL;
         ucol_setAttribute(result, UCOL_STRENGTH, strength, status);
         ucol_setAttribute(result, UCOL_NORMALIZATION_MODE, norm, status);
+        ucol_buildScriptReorderTable(result);
     } else {
 cleanup:
         if(result != NULL) {
@@ -550,6 +768,14 @@ ucol_equals(const UCollator *source, const UCollator *target) {
     // if any of attributes are different, collators are not equal
     for(i = 0; i < UCOL_ATTRIBUTE_COUNT; i++) {
         if(ucol_getAttribute(source, (UColAttribute)i, &status) != ucol_getAttribute(target, (UColAttribute)i, &status) || U_FAILURE(status)) {
+            return FALSE;
+        }
+    }
+    if(source->scriptOrderLength != target->scriptOrderLength){
+        return FALSE;
+    }
+    for(int i = 0; i < source->scriptOrderLength; i++){
+        if(source->scriptOrder[i] != target->scriptOrder[i]){
             return FALSE;
         }
     }
