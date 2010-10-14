@@ -1390,13 +1390,17 @@ static void RamsRulesTest(void) {
                 log_verbose("Don't know how to test Phonebook because the reset is on an expanding character\n");
                 continue;
             }
-            if (uprv_strcmp("km", locName)==0 ||
+            if (uprv_strcmp("bn", locName)==0 ||
+                uprv_strcmp("km", locName)==0 ||
                 uprv_strcmp("km_KH", locName)==0 ||
                 uprv_strcmp("si", locName)==0 ||
                 uprv_strcmp("si_LK", locName)==0 ||
                 uprv_strcmp("zh", locName)==0 ||
-                uprv_strcmp("zh_Hant", locName)==0 ) {
-                    continue;  /* TODO: enable these locale tests after trac#6040 is fixed. */
+                uprv_strcmp("zh_Hant", locName)==0
+            ) {
+                log_verbose("Don't know how to test %s. "
+                            "TODO: Fix ticket #6040 and reenable RamsRulesTest for this locale.\n");
+                continue;
             }
             log_verbose("Testing locale %s\n", locName);
             coll = ucol_open(locName, &status);
