@@ -191,6 +191,9 @@ void UCAConformanceTest::testConformance(UCollator *coll)
         buflen = offset;
         buffer[offset++] = 0;
 
+if(line==55858) {  // TODO: remove after debugging
+  offset=0;
+}
         resLen = ucol_getSortKey(coll, buffer, buflen, newSk, 1024);
 
         int32_t res = 0, cmpres = 0, cmpres2 = 0;
@@ -223,11 +226,16 @@ void UCAConformanceTest::testConformance(UCollator *coll)
                 if (res == 0) {
                     errln("Probable error in test file on line %i (comparing identical strings)", line);
                     errln("  Data line %s", lineB);
-                } else if (res > 0) {
-                    errln("Sortkeys are identical, but code point comapare gives >0 on line %i", line);
+                }
+                /*
+                 * UCA 6.0 test files can have lines that compare == if they are
+                 * different strings but canonically equivalent.
+                else if (res > 0) {
+                    errln("Sortkeys are identical, but code point compare gives >0 on line %i", line);
                     errln("  Previous data line %s", oldLineB);
                     errln("  Current data line  %s", lineB);
                 }
+                 */
             }
         }
 

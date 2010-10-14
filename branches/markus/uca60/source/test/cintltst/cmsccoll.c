@@ -3096,8 +3096,15 @@ static void TestVariableTopSetting(void) {
         varTop1 = ucol_setVariableTop(coll, conts, 3, &status);
       }
       if(U_FAILURE(status)) {
-        log_err("Couldn't set variable top to a contraction %04X %04X %04X\n",
-          *conts, *(conts+1), *(conts+2));
+        if(status == U_PRIMARY_TOO_LONG_ERROR) {
+          /* ucol_setVariableTop() is documented to not accept 3-byte primaries,
+           * therefore it is not an error when it complains about them. */
+          log_verbose("Couldn't set variable top to a contraction %04X %04X %04X - U_PRIMARY_TOO_LONG_ERROR\n",
+                      *conts, *(conts+1), *(conts+2));
+        } else {
+          log_err("Couldn't set variable top to a contraction %04X %04X %04X - %s\n",
+                  *conts, *(conts+1), *(conts+2), u_errorName(status));
+        }
         status = U_ZERO_ERROR;
       }
       conts+=3;
@@ -3147,10 +3154,11 @@ static void TestVariableTopSetting(void) {
 
 static void TestNonChars(void) {
   static const char *test[] = {
-    "\\u0000",
-    "\\uFFFE", "\\uFFFF",
-      "\\U0001FFFE", "\\U0001FFFF",
-      "\\U0002FFFE", "\\U0002FFFF",
+      "\\u0000",  /* ignorable */
+      "\\uFFFE",  /* special merge-sort character with minimum non-ignorable weights */
+      "\\uFDD0", "\\uFDEF",
+      "\\U0001FFFE", "\\U0001FFFF",  /* UCA 6.0: noncharacters are treated like unassigned, */
+      "\\U0002FFFE", "\\U0002FFFF",  /* not like ignorable. */
       "\\U0003FFFE", "\\U0003FFFF",
       "\\U0004FFFE", "\\U0004FFFF",
       "\\U0005FFFE", "\\U0005FFFF",
@@ -3164,7 +3172,8 @@ static void TestNonChars(void) {
       "\\U000DFFFE", "\\U000DFFFF",
       "\\U000EFFFE", "\\U000EFFFF",
       "\\U000FFFFE", "\\U000FFFFF",
-      "\\U0010FFFE", "\\U0010FFFF"
+      "\\U0010FFFE", "\\U0010FFFF",
+      "\\uFFFF"  /* special character with maximum primary weight */
   };
   UErrorCode status = U_ZERO_ERROR;
   UCollator *coll = ucol_open("en_US", &status);
@@ -3172,7 +3181,7 @@ static void TestNonChars(void) {
   log_verbose("Test non characters\n");
 
   if(U_SUCCESS(status)) {
-    genericOrderingTestWithResult(coll, test, 35, UCOL_EQUAL);
+    genericOrderingTestWithResult(coll, test, 35, UCOL_LESS);
   } else {
     log_err_status(status, "Unable to open collator\n");
   }
