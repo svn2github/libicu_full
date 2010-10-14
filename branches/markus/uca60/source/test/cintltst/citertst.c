@@ -46,17 +46,17 @@ void addCollIterTest(TestNode** root)
     addTest(root, &TestSetText, "tscoll/citertst/TestSetText");
     addTest(root, &TestMaxExpansion, "tscoll/citertst/TestMaxExpansion");
     addTest(root, &TestUnicodeChar, "tscoll/citertst/TestUnicodeChar");
-    /* TODO: re-enable addTest(root, &TestNormalizedUnicodeChar,
+    /* TODO: re-enable (overwrites a memory buffer) addTest(root, &TestNormalizedUnicodeChar,
                                 "tscoll/citertst/TestNormalizedUnicodeChar"); */
     addTest(root, &TestNormalization, "tscoll/citertst/TestNormalization");
     addTest(root, &TestBug672, "tscoll/citertst/TestBug672");
     addTest(root, &TestBug672Normalize, "tscoll/citertst/TestBug672Normalize");
     addTest(root, &TestSmallBuffer, "tscoll/citertst/TestSmallBuffer");
-    /* TODO: re-enable addTest(root, &TestCEs, "tscoll/citertst/TestCEs"); */
+    /* TODO: re-enable (Segmentation fault) addTest(root, &TestCEs, "tscoll/citertst/TestCEs"); */
     addTest(root, &TestDiscontiguos, "tscoll/citertst/TestDiscontiguos");
     addTest(root, &TestCEBufferOverflow, "tscoll/citertst/TestCEBufferOverflow");
-    /* TODO: re-enable addTest(root, &TestCEValidity, "tscoll/citertst/TestCEValidity"); */
-    /* TODO: re-enable addTest(root, &TestSortKeyValidity, "tscoll/citertst/TestSortKeyValidity"); */
+    /* TODO: re-enable (Segmentation fault) addTest(root, &TestCEValidity, "tscoll/citertst/TestCEValidity"); */
+    /* TODO: re-enable (Segmentation fault) addTest(root, &TestSortKeyValidity, "tscoll/citertst/TestSortKeyValidity"); */
 }
 
 /* The locales we support */
