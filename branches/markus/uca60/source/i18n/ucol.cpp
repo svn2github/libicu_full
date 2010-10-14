@@ -7658,7 +7658,7 @@ ucol_strcollRegular(collIterate *sColl, collIterate *tColl, UErrorCode *status)
             tCE = tCEs.pos-2;
             for(;;) {
                 while (secS == 0 && sCE >= sCEs.buf) {
-                    if(sCESave == 0) {
+                    if(sCESave == NULL) {
                         secS = *(sCE--);
                         if(isContinuation(secS)) {
                             while(isContinuation(secS = *(sCE--)))
@@ -7672,7 +7672,8 @@ ucol_strcollRegular(collIterate *sColl, collIterate *tColl, UErrorCode *status)
                         secS = *(sCE++);
                         if(!isContinuation(secS)) { /* This means we have finished with this cont */
                             sCE = sCESave;            /* reset the pointer to before continuation */
-                            sCESave = 0;
+                            sCESave = NULL;
+                            secS = 0;  /* Fetch a fresh CE before the continuation sequence. */
                             continue;
                         }
                     }
@@ -7680,7 +7681,7 @@ ucol_strcollRegular(collIterate *sColl, collIterate *tColl, UErrorCode *status)
                 }
 
                 while(secT == 0 && tCE >= tCEs.buf) {
-                    if(tCESave == 0) {
+                    if(tCESave == NULL) {
                         secT = *(tCE--);
                         if(isContinuation(secT)) {
                             while(isContinuation(secT = *(tCE--)))
@@ -7694,7 +7695,8 @@ ucol_strcollRegular(collIterate *sColl, collIterate *tColl, UErrorCode *status)
                         secT = *(tCE++);
                         if(!isContinuation(secT)) { /* This means we have finished with this cont */
                             tCE = tCESave;          /* reset the pointer to before continuation */
-                            tCESave = 0;
+                            tCESave = NULL;
+                            secT = 0;  /* Fetch a fresh CE before the continuation sequence. */
                             continue;
                         }
                     }
