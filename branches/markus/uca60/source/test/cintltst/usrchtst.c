@@ -2585,8 +2585,8 @@ void addSearchTest(TestNode** root)
                                     "tscoll/usrchtst/TestStrengthCanonical");
     addTest(root, &TestBreakIteratorCanonical, 
                                "tscoll/usrchtst/TestBreakIteratorCanonical");
-    /* TODO: re-enable addTest(root, &TestVariableCanonical, 
-                                    "tscoll/usrchtst/TestVariableCanonical"); */
+    addTest(root, &TestVariableCanonical, 
+                                    "tscoll/usrchtst/TestVariableCanonical");
     addTest(root, &TestOverlapCanonical, 
                                      "tscoll/usrchtst/TestOverlapCanonical");
     addTest(root, &TestCollatorCanonical, 
@@ -2598,8 +2598,8 @@ void addSearchTest(TestNode** root)
                          "tscoll/usrchtst/TestCompositeBoundariesCanonical");
     addTest(root, &TestGetSetOffsetCanonical, 
                                 "tscoll/usrchtst/TestGetSetOffsetCanonical");
-    /* TODO: re-enable addTest(root, &TestSupplementaryCanonical, 
-                               "tscoll/usrchtst/TestSupplementaryCanonical"); */
+    addTest(root, &TestSupplementaryCanonical, 
+                               "tscoll/usrchtst/TestSupplementaryCanonical");
     addTest(root, &TestContractionCanonical, 
                                  "tscoll/usrchtst/TestContractionCanonical");
     addTest(root, &TestEnd, "tscoll/usrchtst/TestEnd");

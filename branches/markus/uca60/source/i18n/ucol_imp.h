@@ -300,6 +300,10 @@ typedef struct collIterate : public U_NAMESPACE_QUALIFIER UMemory {
 
   UCharIterator *iterator;
   /*int32_t iteratorIndex;*/
+
+  // The offsetBuffer should probably be a UVector32, but helper functions
+  // are an improvement over duplicated code.
+  void appendOffset(int32_t offset, UErrorCode &errorCode);
 } collIterate;
 
 #else

@@ -295,6 +295,29 @@ ensureCEsCapacity(collIterate *data, int32_t minCapacity) {
     return reallocCEs(data, minCapacity > oldCapacity ? minCapacity : oldCapacity);
 }
 
+void collIterate::appendOffset(int32_t offset, UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) {
+        return;
+    }
+    int32_t length = offsetStore == NULL ? 0 : (int32_t)(offsetStore - offsetBuffer);
+    if(length >= offsetBufferSize) {
+        int32_t newCapacity = 2 * offsetBufferSize + UCOL_EXPAND_CE_BUFFER_SIZE;
+        int32_t *newBuffer = reinterpret_cast<int32_t *>(uprv_malloc(newCapacity * 4));
+        if(newBuffer == NULL) {
+            errorCode = U_MEMORY_ALLOCATION_ERROR;
+            return;
+        }
+        if(length > 0) {
+            uprv_memcpy(newBuffer, offsetBuffer, length * 4);
+        }
+        uprv_free(offsetBuffer);
+        offsetBuffer = newBuffer;
+        offsetStore = offsetBuffer + length;
+        offsetBufferSize = newCapacity;
+    }
+    *offsetStore++ = offset;
+}
+
 /*
 * collIter_eos()
 *     Checks for a collIterate being positioned at the end of
@@ -1627,23 +1650,6 @@ void collPrevIterNormalize(collIterate *data)
     */
     data->writableBuffer.insert(0, (UChar)0);
 
-    if (data->offsetBuffer == NULL) {
-        int32_t len = normLen >= UCOL_EXPAND_CE_BUFFER_SIZE ? normLen + 1 : UCOL_EXPAND_CE_BUFFER_SIZE;
-
-        data->offsetBufferSize = len;
-        data->offsetBuffer = (int32_t *) uprv_malloc(sizeof(int32_t) * len);
-        data->offsetStore = data->offsetBuffer;
-    } else if(data->offsetBufferSize < normLen) {
-        int32_t storeIX = (int32_t)(data->offsetStore - data->offsetBuffer);
-        int32_t *tob    = (int32_t *) uprv_realloc(data->offsetBuffer, sizeof(int32_t) * (normLen + 1));
-
-        if (tob != NULL) {
-            data->offsetBuffer = tob;
-            data->offsetStore = &data->offsetBuffer[storeIX];
-            data->offsetBufferSize = normLen + 1;
-        }
-    }
-
     /*
      * The usual case at this point is that we've got a base
      * character followed by marks that were normalized. If
@@ -1688,13 +1694,13 @@ void collPrevIterNormalize(collIterate *data)
             }
         }
 
-        *(data->offsetStore++) = baseOffset;
+        data->appendOffset(baseOffset, status);
     }
 
-    *(data->offsetStore++) = firstMarkOffset;
+    data->appendOffset(firstMarkOffset, status);
 
     for (int32_t i = 0; i < trailCount; i += 1) {
-        *(data->offsetStore++) = trailOffset;
+        data->appendOffset(trailOffset, status);
     }
 
     data->offsetRepeatValue = trailOffset;
@@ -1924,7 +1930,7 @@ inline uint32_t ucol_IGetPrevCE(const UCollator *coll, collIterate *data,
         } else {
             if (data->offsetReturn == data->offsetBuffer) {
                 data->offsetReturn = NULL;
-				data->offsetStore  = data->offsetBuffer;
+                data->offsetStore  = data->offsetBuffer;
             } else {
                 data->offsetReturn -= 1;
             }
@@ -3276,20 +3282,15 @@ inline uint32_t getPrevImplicit(UChar32 cp, collIterate *collationSource) {
     *(collationSource->CEpos++) = (r & UCOL_PRIMARYMASK) | 0x00000505;
     collationSource->toReturn = collationSource->CEpos;
 
-    if (collationSource->offsetBuffer == NULL) {
-        collationSource->offsetBufferSize = UCOL_EXPAND_CE_BUFFER_SIZE;
-        collationSource->offsetBuffer = (int32_t *) uprv_malloc(sizeof(int32_t) * UCOL_EXPAND_CE_BUFFER_SIZE);
-        collationSource->offsetStore = collationSource->offsetBuffer;
-    }
-
     // **** doesn't work if using iterator ****
     if (collationSource->flags & UCOL_ITER_INNORMBUF) {
         collationSource->offsetRepeatCount = 1;
     } else {
         int32_t firstOffset = (int32_t)(collationSource->pos - collationSource->string);
 
-        *(collationSource->offsetStore++) = firstOffset;
-        *(collationSource->offsetStore++) = firstOffset + 1;
+        UErrorCode errorCode = U_ZERO_ERROR;
+        collationSource->appendOffset(firstOffset, errorCode);
+        collationSource->appendOffset(firstOffset + 1, errorCode);
 
         collationSource->offsetReturn = collationSource->offsetStore - 1;
         *(collationSource->offsetBuffer) = firstOffset;
@@ -3519,17 +3520,11 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
                 CECount = (int32_t)((source->CEpos - source->CEs)/sizeof(uint32_t));
             }
 
-            if (source->offsetBuffer == NULL) {
-                source->offsetBufferSize = UCOL_EXPAND_CE_BUFFER_SIZE;
-                source->offsetBuffer = (int32_t *) uprv_malloc(sizeof(int32_t) * UCOL_EXPAND_CE_BUFFER_SIZE);
-                source->offsetStore = source->offsetBuffer;
-            }
-
             while (CE != UCOL_NO_MORE_CES) {
                 *(source->CEpos ++) = CE;
 
                 if (offsetBias >= 0) {
-                    *(source->offsetStore ++) = rawOffset + offsetBias;
+                    source->appendOffset(rawOffset + offsetBias, *status);
                 }
 
                 CECount++;
@@ -3540,36 +3535,10 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
                     this bail*/
                     if (!increaseCEsCapacity(source)) {
                         *status = U_MEMORY_ALLOCATION_ERROR;
-                        if (strbuffer != buffer) {
-                            uprv_free(strbuffer);
-                        }
-
-                        return (uint32_t)UCOL_NULLORDER;
+                        break;
                     }
 
                     endCEBuffer = source->extendCEs + source->extendCEsSize;
-                }
-
-                if (offsetBias >= 0 && source->offsetStore >= &source->offsetBuffer[source->offsetBufferSize]) {
-                    int32_t  storeIX = (int32_t)(source->offsetStore - source->offsetBuffer);
-                    int32_t *tob = (int32_t *) uprv_realloc(source->offsetBuffer,
-                        sizeof(int32_t) * (source->offsetBufferSize + UCOL_EXPAND_CE_BUFFER_EXTEND_SIZE));
-
-                    if (tob != NULL) {
-                        source->offsetBuffer = tob;
-                        source->offsetStore = &source->offsetBuffer[storeIX];
-                        source->offsetBufferSize += UCOL_EXPAND_CE_BUFFER_EXTEND_SIZE;
-                    } else {
-                        // memory error...
-                        *status = U_MEMORY_ALLOCATION_ERROR;
-                        source->CEpos = source->CEs;
-
-                        if (strbuffer != buffer) {
-                            uprv_free(strbuffer);
-                        }
-
-                        return (uint32_t) UCOL_NULLORDER;
-                    }
                 }
 
                 if ((temp.flags & UCOL_ITER_INNORMBUF) != 0) {
@@ -3581,6 +3550,13 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
                 CE = ucol_IGetNextCE(coll, &temp, status);
             }
 
+            if (strbuffer != buffer) {
+                uprv_free(strbuffer);
+            }
+            if (U_FAILURE(*status)) {
+                return (uint32_t)UCOL_NULLORDER;
+            }
+
 			if (source->offsetRepeatValue != 0) {
                 if (CECount > noChars) {
 				    source->offsetRepeatCount += temp.offsetRepeatCount;
@@ -3589,10 +3565,6 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
                     source->offsetReturn -= (noChars - CECount);
                 }
 			}
-
-            if (strbuffer != buffer) {
-                uprv_free(strbuffer);
-            }
 
             if (offsetBias >= 0) {
                 source->offsetReturn = source->offsetStore - 1;
@@ -3614,26 +3586,20 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
                 *(source->CEpos++) = ((CE & 0xFF)<<24)|UCOL_CONTINUATION_MARKER;
                 source->toReturn = source->CEpos - 1;
 
-				if (source->offsetBuffer == NULL) {
-					source->offsetBufferSize = UCOL_EXPAND_CE_BUFFER_SIZE;
-					source->offsetBuffer = (int32_t *) uprv_malloc(sizeof(int32_t) * UCOL_EXPAND_CE_BUFFER_SIZE);
-					source->offsetStore = source->offsetBuffer;
-				}
-
-				if (source->flags & UCOL_ITER_INNORMBUF) {
+                if (source->flags & UCOL_ITER_INNORMBUF) {
                     source->offsetRepeatCount = 1;
-				} else {
-				  int32_t firstOffset = (int32_t)(source->pos - source->string);
+                } else {
+                    int32_t firstOffset = (int32_t)(source->pos - source->string);
 
-				  *(source->offsetStore++) = firstOffset;
-				  *(source->offsetStore++) = firstOffset + 1;
+                    source->appendOffset(firstOffset, *status);
+                    source->appendOffset(firstOffset + 1, *status);
 
-					source->offsetReturn = source->offsetStore - 1;
-					*(source->offsetBuffer) = firstOffset;
-					if (source->offsetReturn == source->offsetBuffer) {
-						source->offsetStore = source->offsetBuffer;
-					}
-				}
+                    source->offsetReturn = source->offsetStore - 1;
+                    *(source->offsetBuffer) = firstOffset;
+                    if (source->offsetReturn == source->offsetBuffer) {
+                        source->offsetStore = source->offsetBuffer;
+                    }
+                }
 
 
                 return *(source->toReturn);
@@ -3657,12 +3623,6 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
                 }
             }
 
-            if (source->offsetBuffer == NULL) {
-                source->offsetBufferSize = UCOL_EXPAND_CE_BUFFER_SIZE;
-                source->offsetBuffer = (int32_t *) uprv_malloc(sizeof(int32_t) * UCOL_EXPAND_CE_BUFFER_SIZE);
-                source->offsetStore = source->offsetBuffer;
-            }
-
             /* find the offset to expansion table */
             CEOffset = (uint32_t *)coll->image + getExpansionOffset(CE);
             size     = getExpansionCount(CE);
@@ -3676,7 +3636,7 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
                     *(source->CEpos ++) = *CEOffset++;
 
                     if (firstOffset >= 0) {
-                        *(source->offsetStore ++) = firstOffset + 1;
+                        source->appendOffset(firstOffset + 1, *status);
                     }
                 }
             } else {
@@ -3685,7 +3645,7 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
                     *(source->CEpos ++) = *CEOffset ++;
 
                     if (firstOffset >= 0) {
-                        *(source->offsetStore ++) = firstOffset + 1;
+                        source->appendOffset(firstOffset + 1, *status);
                     }
                 }
             }
@@ -3969,15 +3929,8 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
                 V += VBase;
                 T += TBase;
 
-				if (source->offsetBuffer == NULL) {
-					source->offsetBufferSize = UCOL_EXPAND_CE_BUFFER_SIZE;
-					source->offsetBuffer = (int32_t *) uprv_malloc(sizeof(int32_t) * UCOL_EXPAND_CE_BUFFER_SIZE);
-					source->offsetStore = source->offsetBuffer;
-				}
-
-			  int32_t firstOffset = (int32_t)(source->pos - source->string);
-
-			  *(source->offsetStore++) = firstOffset;
+                int32_t firstOffset = (int32_t)(source->pos - source->string);
+                source->appendOffset(firstOffset, *status);
 
                 /*
                  * return the first CE, but first put the rest into the expansion buffer
@@ -3985,21 +3938,21 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
                 if (!source->coll->image->jamoSpecial) {
                     *(source->CEpos++) = UTRIE_GET32_FROM_LEAD(&coll->mapping, L);
                     *(source->CEpos++) = UTRIE_GET32_FROM_LEAD(&coll->mapping, V);
-					*(source->offsetStore++) = firstOffset + 1;
+                    source->appendOffset(firstOffset + 1, *status);
 
-					if (T != TBase) {
+                    if (T != TBase) {
                         *(source->CEpos++) = UTRIE_GET32_FROM_LEAD(&coll->mapping, T);
-					    *(source->offsetStore++) = firstOffset + 1;
-					}
+                        source->appendOffset(firstOffset + 1, *status);
+                    }
 
                     source->toReturn = source->CEpos - 1;
 
-					source->offsetReturn = source->offsetStore - 1;
-					if (source->offsetReturn == source->offsetBuffer) {
-						source->offsetStore = source->offsetBuffer;
-					}
-					
-					return *(source->toReturn);
+                    source->offsetReturn = source->offsetStore - 1;
+                    if (source->offsetReturn == source->offsetBuffer) {
+                        source->offsetStore = source->offsetBuffer;
+                    }
+
+                    return *(source->toReturn);
                 } else {
                     // Since Hanguls pass the FCD check, it is
                     // guaranteed that we won't be in

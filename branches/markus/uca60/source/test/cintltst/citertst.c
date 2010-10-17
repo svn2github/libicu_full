@@ -47,8 +47,8 @@ void addCollIterTest(TestNode** root)
     addTest(root, &TestSetText, "tscoll/citertst/TestSetText");
     addTest(root, &TestMaxExpansion, "tscoll/citertst/TestMaxExpansion");
     addTest(root, &TestUnicodeChar, "tscoll/citertst/TestUnicodeChar");
-    /* TODO: re-enable (overwrites a memory buffer) addTest(root, &TestNormalizedUnicodeChar,
-                                "tscoll/citertst/TestNormalizedUnicodeChar"); */
+    addTest(root, &TestNormalizedUnicodeChar,
+                                "tscoll/citertst/TestNormalizedUnicodeChar");
     addTest(root, &TestNormalization, "tscoll/citertst/TestNormalization");
     addTest(root, &TestBug672, "tscoll/citertst/TestBug672");
     addTest(root, &TestBug672Normalize, "tscoll/citertst/TestBug672Normalize");
