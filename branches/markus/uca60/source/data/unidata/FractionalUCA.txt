@@ -1,5 +1,5 @@
 # Fractional UCA Table, generated from standard UCA
-# 2010-10-13, 01:02:43 GMT [MD]
+# 2010-10-17, 20:15:43 GMT [MD]
 # VERSION: UCA=6.0.0, UCD=6.0.0
 # For a description of the format and usage, see CollationAuxiliary.html
 
@@ -39847,125 +39847,125 @@ FFFFF; [E4 C2 7B 90, 05, 05]
 
 # SPECIAL MAX/MIN COLLATION ELEMENTS
 
-FFFE; [02, 02, 02]     # Special LOWEST primary, for merge/interleaving
-FFFF; [EF FE, 05, 05]  # Special HIGHEST primary, for ranges
+FFFE;	[02, 02, 02]	# Special LOWEST primary, for merge/interleaving
+FFFF;	[EF FE, 05, 05]	# Special HIGHEST primary, for ranges
 
 # SPECIAL FINAL VALUES for Script Reordering
 
-FDD0 0042; [05 FE, 05, 05]     # Special final value for reordering token
-FDD0 0043; [0C FE, 05, 05]     # Special final value for reordering token
-FDD0 0044; [0D FE, 05, 05]     # Special final value for reordering token
-FDD0 0045; [0E FE, 05, 05]     # Special final value for reordering token
-FDD0 0046; [0F FE, 05, 05]     # Special final value for reordering token
-FDD0 0047; [25 FE, 05, 05]     # Special final value for reordering token
-FDD0 0048; [5A FE, 05, 05]     # Special final value for reordering token
-FDD0 0049; [5B FE, 05, 05]     # Special final value for reordering token
-FDD0 004A; [5D FE, 05, 05]     # Special final value for reordering token
-FDD0 004B; [5E FE, 05, 05]     # Special final value for reordering token
-FDD0 004C; [5F FE, 05, 05]     # Special final value for reordering token
-FDD0 004D; [60 FE, 05, 05]     # Special final value for reordering token
-FDD0 004E; [62 FE, 05, 05]     # Special final value for reordering token
-FDD0 004F; [63 FE, 05, 05]     # Special final value for reordering token
-FDD0 0050; [67 FE, 05, 05]     # Special final value for reordering token
-FDD0 0051; [68 FE, 05, 05]     # Special final value for reordering token
-FDD0 0052; [69 FE, 05, 05]     # Special final value for reordering token
-FDD0 0053; [6A FE, 05, 05]     # Special final value for reordering token
-FDD0 0054; [6B FE, 05, 05]     # Special final value for reordering token
-FDD0 0055; [6C FE, 05, 05]     # Special final value for reordering token
-FDD0 0056; [6D FE, 05, 05]     # Special final value for reordering token
-FDD0 0057; [6E FE, 05, 05]     # Special final value for reordering token
-FDD0 0058; [6F FE, 05, 05]     # Special final value for reordering token
-FDD0 0059; [70 FE, 05, 05]     # Special final value for reordering token
-FDD0 005A; [71 FE, 05, 05]     # Special final value for reordering token
-FDD0 005B; [72 FE, 05, 05]     # Special final value for reordering token
-FDD0 005C; [73 FE, 05, 05]     # Special final value for reordering token
-FDD0 005D; [74 FE, 05, 05]     # Special final value for reordering token
-FDD0 005E; [76 FE, 05, 05]     # Special final value for reordering token
-FDD0 005F; [77 FE, 05, 05]     # Special final value for reordering token
-FDD0 0060; [78 FE, 05, 05]     # Special final value for reordering token
-FDD0 0061; [79 FE, 05, 05]     # Special final value for reordering token
-FDD0 0062; [7A FE, 05, 05]     # Special final value for reordering token
+FDD0 0042;	[05 FE, 05, 05]	# Special final value for reordering token
+FDD0 0043;	[0C FE, 05, 05]	# Special final value for reordering token
+FDD0 0044;	[0D FE, 05, 05]	# Special final value for reordering token
+FDD0 0045;	[0E FE, 05, 05]	# Special final value for reordering token
+FDD0 0046;	[0F FE, 05, 05]	# Special final value for reordering token
+FDD0 0047;	[25 FE, 05, 05]	# Special final value for reordering token
+FDD0 0048;	[5A FE, 05, 05]	# Special final value for reordering token
+FDD0 0049;	[5B FE, 05, 05]	# Special final value for reordering token
+FDD0 004A;	[5D FE, 05, 05]	# Special final value for reordering token
+FDD0 004B;	[5E FE, 05, 05]	# Special final value for reordering token
+FDD0 004C;	[5F FE, 05, 05]	# Special final value for reordering token
+FDD0 004D;	[60 FE, 05, 05]	# Special final value for reordering token
+FDD0 004E;	[62 FE, 05, 05]	# Special final value for reordering token
+FDD0 004F;	[63 FE, 05, 05]	# Special final value for reordering token
+FDD0 0050;	[67 FE, 05, 05]	# Special final value for reordering token
+FDD0 0051;	[68 FE, 05, 05]	# Special final value for reordering token
+FDD0 0052;	[69 FE, 05, 05]	# Special final value for reordering token
+FDD0 0053;	[6A FE, 05, 05]	# Special final value for reordering token
+FDD0 0054;	[6B FE, 05, 05]	# Special final value for reordering token
+FDD0 0055;	[6C FE, 05, 05]	# Special final value for reordering token
+FDD0 0056;	[6D FE, 05, 05]	# Special final value for reordering token
+FDD0 0057;	[6E FE, 05, 05]	# Special final value for reordering token
+FDD0 0058;	[6F FE, 05, 05]	# Special final value for reordering token
+FDD0 0059;	[70 FE, 05, 05]	# Special final value for reordering token
+FDD0 005A;	[71 FE, 05, 05]	# Special final value for reordering token
+FDD0 005B;	[72 FE, 05, 05]	# Special final value for reordering token
+FDD0 005C;	[73 FE, 05, 05]	# Special final value for reordering token
+FDD0 005D;	[74 FE, 05, 05]	# Special final value for reordering token
+FDD0 005E;	[76 FE, 05, 05]	# Special final value for reordering token
+FDD0 005F;	[77 FE, 05, 05]	# Special final value for reordering token
+FDD0 0060;	[78 FE, 05, 05]	# Special final value for reordering token
+FDD0 0061;	[79 FE, 05, 05]	# Special final value for reordering token
+FDD0 0062;	[7A FE, 05, 05]	# Special final value for reordering token
 
 # HOMELESS COLLATION ELEMENTS
-FDD0 0063; [, 97, 3D]
-FDD0 0064; [, A7, 09]
-FDD0 0065; [, B1, 09]
-FDD0 0066; [, D2 75, 31]
-FDD0 0067; [, D3 09, 31]
-FDD0 0068; [, D3 09, 33]
-FDD0 0069; [, D3 C9, 2D]
-FDD0 006A; [, D3 C9, 31]
-FDD0 006B; [, D3 C9, 33]
-FDD0 006C; [, DA E5, 3D]
-FDD0 006D; [, DC FD, 37]
-FDD0 006E; [, DC FD, 3D]
-FDD0 006F; [, DD 11, 37]
-FDD0 0070; [, DD 11, 3D]
-FDD0 0071; [, E0 9D, 05]
-FDD0 0072; [, E0 9D, 09]
-FDD0 0073; [, E0 9D, 27]
-FDD0 0074; [, E0 9D, 3D]
-FDD0 0075; [, E0 AD, 09]
-FDD0 0076; [, E0 AD, 2B]
-FDD0 0077; [, E0 AD, 3D]
-FDD0 0078; [, E0 BD, 09]
-FDD0 0079; [, E0 CD, 09]
-FDD0 007A; [, E0 DD, 09]
-FDD0 007B; [, E0 ED, 05]
-FDD0 007C; [, E0 FD, 05]
-FDD0 007D; [, E1 11, 05]
-FDD0 007E; [, E1 21, 05]
-FDD0 007F; [, E1 31, 05]
-FDD0 0080; [, E1 41, 05]
-FDD0 0081; [, E1 51, 05]
-FDD0 0082; [, E1 61, 05]
-FDD0 0083; [, E1 71, 05]
-FDD0 0084; [, E1 81, 05]
-FDD0 0085; [, E1 91, 05]
-FDD0 0086; [, E1 A1, 05]
-FDD0 0087; [, E1 B1, 05]
-FDD0 0088; [, E1 C1, 05]
-FDD0 0089; [, E1 D1, 05]
-FDD0 008A; [, E1 E1, 05]
-FDD0 008B; [, E1 F1, 05]
-FDD0 008C; [, E2 05, 05]
-FDD0 008D; [, E2 15, 05]
-FDD0 008E; [, E2 25, 05]
-FDD0 008F; [, E2 35, 05]
-FDD0 0090; [, E2 45, 05]
-FDD0 0091; [, E2 55, 05]
-FDD0 0092; [, E2 65, 05]
-FDD0 0093; [, E2 65, 09]
-FDD0 0094; [, E2 75, 05]
-FDD0 0095; [, E2 85, 05]
-FDD0 0096; [, E2 95, 05]
-FDD0 0097; [, E2 A5, 05]
-FDD0 0098; [, E2 B5, 05]
-FDD0 0099; [, E2 C5, 05]
-FDD0 009A; [, E2 D5, 05]
-FDD0 009B; [, E2 E5, 05]
-FDD0 009C; [, E2 F5, 05]
-FDD0 009D; [, E3 09, 05]
-FDD0 009E; [, E3 19, 05]
-FDD0 009F; [, E3 29, 05]
-FDD0 00A0; [, E3 39, 05]
-FDD0 00A1; [, E3 49, 05]
-FDD0 00A2; [, E3 59, 05]
-FDD0 00A3; [, E3 69, 05]
-FDD0 00A4; [, E3 79, 05]
-FDD0 00A5; [, E3 89, 05]
-FDD0 00A6; [, E3 99, 05]
-FDD0 00A7; [, E3 A9, 05]
-FDD0 00A8; [, E3 B9, 05]
-FDD0 00A9; [, E3 C9, 05]
-FDD0 00AA; [, E3 D9, 05]
-FDD0 00AB; [, E3 E9, 05]
-FDD0 00AC; [, E3 F9, 05]
-FDD0 00AD; [, E4 0D, 05]
-FDD0 00AE; [, E4 1D, 05]
-FDD0 00AF; [, E4 2D, 05]
-FDD0 00B0; [, E4 3D, 05]
-FDD0 00B1; [,, 3F 03]	# CONSTRUCTED FAKE SECONDARY-IGNORABLE
+FDD0 0063;	[, 97, 3D]
+FDD0 0064;	[, A7, 09]
+FDD0 0065;	[, B1, 09]
+FDD0 0066;	[, D2 75, 31]
+FDD0 0067;	[, D3 09, 31]
+FDD0 0068;	[, D3 09, 33]
+FDD0 0069;	[, D3 C9, 2D]
+FDD0 006A;	[, D3 C9, 31]
+FDD0 006B;	[, D3 C9, 33]
+FDD0 006C;	[, DA E5, 3D]
+FDD0 006D;	[, DC FD, 37]
+FDD0 006E;	[, DC FD, 3D]
+FDD0 006F;	[, DD 11, 37]
+FDD0 0070;	[, DD 11, 3D]
+FDD0 0071;	[, E0 9D, 05]
+FDD0 0072;	[, E0 9D, 09]
+FDD0 0073;	[, E0 9D, 27]
+FDD0 0074;	[, E0 9D, 3D]
+FDD0 0075;	[, E0 AD, 09]
+FDD0 0076;	[, E0 AD, 2B]
+FDD0 0077;	[, E0 AD, 3D]
+FDD0 0078;	[, E0 BD, 09]
+FDD0 0079;	[, E0 CD, 09]
+FDD0 007A;	[, E0 DD, 09]
+FDD0 007B;	[, E0 ED, 05]
+FDD0 007C;	[, E0 FD, 05]
+FDD0 007D;	[, E1 11, 05]
+FDD0 007E;	[, E1 21, 05]
+FDD0 007F;	[, E1 31, 05]
+FDD0 0080;	[, E1 41, 05]
+FDD0 0081;	[, E1 51, 05]
+FDD0 0082;	[, E1 61, 05]
+FDD0 0083;	[, E1 71, 05]
+FDD0 0084;	[, E1 81, 05]
+FDD0 0085;	[, E1 91, 05]
+FDD0 0086;	[, E1 A1, 05]
+FDD0 0087;	[, E1 B1, 05]
+FDD0 0088;	[, E1 C1, 05]
+FDD0 0089;	[, E1 D1, 05]
+FDD0 008A;	[, E1 E1, 05]
+FDD0 008B;	[, E1 F1, 05]
+FDD0 008C;	[, E2 05, 05]
+FDD0 008D;	[, E2 15, 05]
+FDD0 008E;	[, E2 25, 05]
+FDD0 008F;	[, E2 35, 05]
+FDD0 0090;	[, E2 45, 05]
+FDD0 0091;	[, E2 55, 05]
+FDD0 0092;	[, E2 65, 05]
+FDD0 0093;	[, E2 65, 09]
+FDD0 0094;	[, E2 75, 05]
+FDD0 0095;	[, E2 85, 05]
+FDD0 0096;	[, E2 95, 05]
+FDD0 0097;	[, E2 A5, 05]
+FDD0 0098;	[, E2 B5, 05]
+FDD0 0099;	[, E2 C5, 05]
+FDD0 009A;	[, E2 D5, 05]
+FDD0 009B;	[, E2 E5, 05]
+FDD0 009C;	[, E2 F5, 05]
+FDD0 009D;	[, E3 09, 05]
+FDD0 009E;	[, E3 19, 05]
+FDD0 009F;	[, E3 29, 05]
+FDD0 00A0;	[, E3 39, 05]
+FDD0 00A1;	[, E3 49, 05]
+FDD0 00A2;	[, E3 59, 05]
+FDD0 00A3;	[, E3 69, 05]
+FDD0 00A4;	[, E3 79, 05]
+FDD0 00A5;	[, E3 89, 05]
+FDD0 00A6;	[, E3 99, 05]
+FDD0 00A7;	[, E3 A9, 05]
+FDD0 00A8;	[, E3 B9, 05]
+FDD0 00A9;	[, E3 C9, 05]
+FDD0 00AA;	[, E3 D9, 05]
+FDD0 00AB;	[, E3 E9, 05]
+FDD0 00AC;	[, E3 F9, 05]
+FDD0 00AD;	[, E4 0D, 05]
+FDD0 00AE;	[, E4 1D, 05]
+FDD0 00AF;	[, E4 2D, 05]
+FDD0 00B0;	[, E4 3D, 05]
+FDD0 00B1;	[, , 3F 03]	# CONSTRUCTED FAKE SECONDARY-IGNORABLE
 
 # VALUES BASED ON UCA
 [first tertiary ignorable [,,]] # CONSTRUCTED

@@ -191,9 +191,6 @@ void UCAConformanceTest::testConformance(UCollator *coll)
         buflen = offset;
         buffer[offset++] = 0;
 
-if(buflen==3 && buffer[0]==0x0FB2 && buffer[1]==0x0334 && buffer[2]==0x0F81) {  // TODO: remove after debugging
-  offset=0;
-}
         resLen = ucol_getSortKey(coll, buffer, buflen, newSk, 1024);
 
         int32_t res = 0, cmpres = 0, cmpres2 = 0;
