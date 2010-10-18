@@ -4711,9 +4711,7 @@ ucol_calcSortKey(const    UCollator    *coll,
     if(U_FAILURE(*status)) {
         return 0;
     }
-    if(source == normSource.getBuffer()) {
-        s.flags &= ~UCOL_ITER_NORM;
-    }
+    s.flags &= ~UCOL_ITER_NORM;  // source passed the FCD test or else was normalized.
 
     if(resultLength == 0 || primaries == NULL) {
         return ucol_getSortKeySize(coll, &s, sortKeySize, strength, len);
@@ -4988,9 +4986,7 @@ ucol_calcSortKey(const    UCollator    *coll,
                         finished = TRUE;
                         break;
                     }
-                    if(source == normSource.getBuffer()) {
-                        s.flags &= ~UCOL_ITER_NORM;
-                    }
+                    s.flags &= ~UCOL_ITER_NORM;
                     sortKeySize = ucol_getSortKeySize(coll, &s, sortKeySize, strength, len);
                     *status = U_BUFFER_OVERFLOW_ERROR;
                     finished = TRUE;
@@ -5314,9 +5310,7 @@ ucol_calcSortKeySimpleTertiary(const    UCollator    *coll,
     if(U_FAILURE(*status)) {
         return 0;
     }
-    if(source == normSource.getBuffer()) {
-        s.flags &= ~UCOL_ITER_NORM;
-    }
+    s.flags &= ~UCOL_ITER_NORM;  // source passed the FCD test or else was normalized.
 
     if(resultLength == 0 || primaries == NULL) {
         return ucol_getSortKeySize(coll, &s, sortKeySize, coll->strength, len);
@@ -5478,9 +5472,7 @@ ucol_calcSortKeySimpleTertiary(const    UCollator    *coll,
                         finished = TRUE;
                         break;
                     }
-                    if(source == normSource.getBuffer()) {
-                        s.flags &= ~UCOL_ITER_NORM;
-                    }
+                    s.flags &= ~UCOL_ITER_NORM;
                     sortKeySize = ucol_getSortKeySize(coll, &s, sortKeySize, coll->strength, len);
                     *status = U_BUFFER_OVERFLOW_ERROR;
                     finished = TRUE;
