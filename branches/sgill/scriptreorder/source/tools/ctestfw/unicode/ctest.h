@@ -254,6 +254,49 @@ runTestRequest(const TestNode* root,
 T_CTEST_API const char* T_CTEST_EXPORT2
 getTestName(void);
 
+/**
+ * Append a time delta to str if it is significant (>5 ms) otherwise no change
+ * @param delta a delta in millis
+ * @param str a string to append to.
+ */
+T_CTEST_API void T_CTEST_EXPORT2
+str_timeDelta(char *str, UDate delta);
 
+
+/* ======== XML (JUnit output) ========= */
+
+/**
+ * Set the filename for the XML output. 
+ * @param fileName file name. Caller must retain storage.
+ * @return 0 on success, 1 on failure.
+ */
+T_CTEST_API int32_t T_CTEST_EXPORT2
+ctest_xml_setFileName(const char *fileName);
+
+
+/**
+ * Init XML subsystem. Call ctest_xml_setFileName first
+ * @param rootName the test root name to be written
+ * @return 0 on success, 1 on failure.
+ */
+T_CTEST_API int32_t T_CTEST_EXPORT2
+ctest_xml_init(const char *rootName);
+
+
+/**
+ * Set the filename for the XML output. Caller must retain storage.
+ * @return 0 on success, 1 on failure.
+ */
+T_CTEST_API int32_t T_CTEST_EXPORT2
+ctest_xml_fini(void);
+
+
+/**
+ * report a test case
+ * @return 0 on success, 1 on failure.
+ */
+T_CTEST_API int32_t
+T_CTEST_EXPORT2
+ctest_xml_testcase(const char *classname, const char *name, const char *time, const char *failMsg);
 
 #endif

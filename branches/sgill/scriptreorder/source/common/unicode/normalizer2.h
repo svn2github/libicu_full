@@ -37,6 +37,7 @@ U_NAMESPACE_BEGIN
  * for using custom mapping tables.
  * All instances of this class are unmodifiable/immutable.
  * Instances returned by getInstance() are singletons that must not be deleted by the caller.
+ * The Normalizer2 class is not intended for public subclassing.
  *
  * The primary functions are to produce a normalized string and to detect whether
  * a string is already normalized.
@@ -172,6 +173,19 @@ public:
     append(UnicodeString &first,
            const UnicodeString &second,
            UErrorCode &errorCode) const = 0;
+
+    /**
+     * Gets the decomposition mapping of c. Equivalent to normalize(UnicodeString(c))
+     * on a UNORM2_DECOMPOSE Normalizer2 instance, but much faster.
+     * This function is independent of the mode of the Normalizer2.
+     * @param c code point
+     * @param decomposition String object which will be set to c's
+     *                      decomposition mapping, if there is one.
+     * @return TRUE if c has a decomposition, otherwise FALSE
+     * @draft ICU 4.6
+     */
+    virtual UBool
+    getDecomposition(UChar32 c, UnicodeString &decomposition) const = 0;
 
     /**
      * Tests if the string is normalized.
@@ -363,6 +377,19 @@ public:
     append(UnicodeString &first,
            const UnicodeString &second,
            UErrorCode &errorCode) const;
+
+    /**
+     * Gets the decomposition mapping of c. Equivalent to normalize(UnicodeString(c))
+     * on a UNORM2_DECOMPOSE Normalizer2 instance, but much faster.
+     * This function is independent of the mode of the Normalizer2.
+     * @param c code point
+     * @param decomposition String object which will be set to c's
+     *                      decomposition mapping, if there is one.
+     * @return TRUE if c has a decomposition, otherwise FALSE
+     * @draft ICU 4.6
+     */
+    virtual UBool
+    getDecomposition(UChar32 c, UnicodeString &decomposition) const;
 
     /**
      * Tests if the string is normalized.

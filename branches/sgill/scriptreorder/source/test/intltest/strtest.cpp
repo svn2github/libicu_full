@@ -12,14 +12,17 @@
 *   created by: Markus W. Scherer
 */
 
+#include <string.h>
+
 #include "unicode/utypes.h"
 #include "unicode/putil.h"
-#include "intltest.h"
-#include "strtest.h"
-#include "unicode/ustring.h"
 #include "unicode/std_string.h"
 #include "unicode/stringpiece.h"
-#include <string.h>
+#include "unicode/unistr.h"
+#include "unicode/ustring.h"
+#include "charstr.h"
+#include "intltest.h"
+#include "strtest.h"
 
 StringTest::~StringTest() {}
 
@@ -79,8 +82,8 @@ void StringTest::TestSizeofTypes(void) {
 
 void StringTest::TestCharsetFamily(void) {
     unsigned char c='A';
-    if( U_CHARSET_FAMILY==U_ASCII_FAMILY && c!=0x41 ||
-        U_CHARSET_FAMILY==U_EBCDIC_FAMILY && c!=0xc1
+    if( (U_CHARSET_FAMILY==U_ASCII_FAMILY && c!=0x41) ||
+        (U_CHARSET_FAMILY==U_EBCDIC_FAMILY && c!=0xc1)
     ) {
         errln("TestCharsetFamily: U_CHARSET_FAMILY needs to be fixed in platform.h");
     }
@@ -213,6 +216,12 @@ void StringTest::runIndexedTest(int32_t index, UBool exec, const char *&name, ch
         name="TestStringByteSink";
         if(exec) {
             TestStringByteSink();
+        }
+        break;
+    case 14:
+        name="TestCharString";
+        if(exec) {
+            TestCharString();
         }
         break;
     default:
@@ -524,4 +533,56 @@ StringTest::TestSTLCompatibility() {
     std::vector<UnicodeString> myvect;
     myvect.push_back(UnicodeString("blah"));
 #endif
+}
+
+void
+StringTest::TestCharString() {
+    IcuTestErrorCode errorCode(*this, "TestCharString()");
+    char expected[400];
+    static const char longStr[] =
+        "This is a long string that is meant to cause reallocation of the internal buffer of CharString.";
+    CharString chStr(longStr, errorCode);
+    if (0 != strcmp(longStr, chStr.data()) || (int32_t)strlen(longStr) != chStr.length()) {
+        errln("CharString(longStr) failed.");
+    }
+    CharString test("Test", errorCode);
+    CharString copy(test,errorCode);
+    copy.copyFrom(chStr, errorCode);
+    if (0 != strcmp(longStr, copy.data()) || (int32_t)strlen(longStr) != copy.length()) {
+        errln("CharString.copyFrom() failed.");
+    }
+    StringPiece sp(chStr.toStringPiece());
+    sp.remove_prefix(4);
+    chStr.append(sp, errorCode).append(chStr, errorCode);
+    strcpy(expected, longStr);
+    strcat(expected, longStr+4);
+    strcat(expected, longStr);
+    strcat(expected, longStr+4);
+    if (0 != strcmp(expected, chStr.data()) || (int32_t)strlen(expected) != chStr.length()) {
+        errln("CharString(longStr).append(substring of self).append(self) failed.");
+    }
+    chStr.clear().append("abc", errorCode).append("defghij", 3, errorCode);
+    if (0 != strcmp("abcdef", chStr.data()) || 6 != chStr.length()) {
+        errln("CharString.clear().append(abc).append(defghij, 3) failed.");
+    }
+    chStr.appendInvariantChars(UNICODE_STRING_SIMPLE(
+        "This is a long string that is meant to cause reallocation of the internal buffer of CharString."),
+        errorCode);
+    strcpy(expected, "abcdef");
+    strcat(expected, longStr);
+    if (0 != strcmp(expected, chStr.data()) || (int32_t)strlen(expected) != chStr.length()) {
+        errln("CharString.appendInvariantChars(longStr) failed.");
+    }
+    int32_t appendCapacity = 0;
+    char *buffer = chStr.getAppendBuffer(5, 10, appendCapacity, errorCode);
+    if (errorCode.isFailure()) {
+        return;
+    }
+    memcpy(buffer, "*****", 5);
+    chStr.append(buffer, 5, errorCode);
+    chStr.truncate(chStr.length()-3);
+    strcat(expected, "**");
+    if (0 != strcmp(expected, chStr.data()) || (int32_t)strlen(expected) != chStr.length()) {
+        errln("CharString.getAppendBuffer().append(**) failed.");
+    }
 }

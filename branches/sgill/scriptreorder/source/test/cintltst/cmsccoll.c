@@ -5481,212 +5481,82 @@ static void TestSameStrengthList(void)
     ucol_close(myCollation);
 }
 
-/*
- * This test ensures that characters placed before a character in a different script have the same lead byte
- * in their collation key before and after script reordering.
- */
-static void TestBeforeRuleWithScriptReordering(void)
-{
-    int32_t i;
-    UParseError error;
-    UErrorCode status = U_ZERO_ERROR;
-    UCollator  *myCollation;
-    char srules[500] = "&[before 1]\\u03b1 < \\u0e01";
-    UChar rules[500];
-    uint32_t rulesLength = 0;
-    UScriptCode scriptOrder[1] = {USCRIPT_GREEK};
-
-	log_verbose("Testing the &[before 1] rule with [scriptReorder grek]\n");
-
-    UChar base[] = { 0x03b1 }; /* base */
-    int32_t baseLen = sizeof(base)/sizeof(*base);
-
-    UChar before[] = { 0x0e01 }; /* ko kai */
-    int32_t beforeLen = sizeof(before)/sizeof(*before);
-
-	/*UChar *data[] = { before, base };
-	genericRulesStarter(srules, data, 2);*/
-	
-	/* build collator */
-    rulesLength = u_unescape(srules, rules, LEN(rules));
-    myCollation = ucol_openRules(rules, rulesLength, UCOL_ON, UCOL_TERTIARY, &error, &status);
-    if(U_FAILURE(status)) {
-        log_err_status(status, "ERROR: in creation of rule based collator: %s\n", myErrorName(status));
-        return;
-    }
-
-	/* check collation results - before rule applied but not script reordering */
-    UCollationResult collResult = ucol_strcoll(myCollation, base, baseLen, before, beforeLen);
-	if (collResult != UCOL_GREATER) {
-		log_err("Collation result not correct before script reordering = %d\n", collResult);
-	}
-
-	/* check the lead byte of the collation keys before script reordering */
-    uint8_t baseKey[256];
-    uint32_t baseKeyLength = ucol_getSortKey(myCollation, base, baseLen, baseKey, 256);
-    uint8_t beforeKey[256];
-    uint32_t beforeKeyLength = ucol_getSortKey(myCollation, before, beforeLen, beforeKey, 256);
-    if (baseKey[0] != beforeKey[0]) {
-      log_err("Different lead byte for sort keys using before rule and before script reordering. base character lead byte = %02x, before character lead byte = %02x\n", baseKey[0], beforeKey[0]);
-   }
-
-	/* reirder the scripts */
-    ucol_setScriptOrder(myCollation, scriptOrder, 1);
-
-	/* check collation results - before rule applied and after script reordering */
-    collResult = ucol_strcoll(myCollation, base, baseLen, before, beforeLen);
-	if (collResult != UCOL_GREATER) {
-		log_err("Collation result not correct after script reordering = %d\n", collResult);
-	}
-	
-	/* check the lead byte of the collation keys after script reordering */
-    ucol_getSortKey(myCollation, base, baseLen, baseKey, 256);
-    ucol_getSortKey(myCollation, before, beforeLen, beforeKey, 256);
-    if (baseKey[0] != beforeKey[0]) {
-		log_err("Different lead byte for sort keys using before fule and after script reordering. base character lead byte = %02x, before character lead byte = %02x\n", baseKey[0], beforeKey[0]);
-    }
-
-    ucol_close(myCollation);
-}
-
-const static UChar testGreekFirstSourceCases[][MAX_TOKEN_LEN] = {
-    {0x0041},
-    {0x03B1, 0x0041},
-    {0x0061},
-    {0x0041, 0x0061},
-    {0x0391}
-};
-
-const static UChar testGreekFirstTargetCases[][MAX_TOKEN_LEN] = {
-    {0x03B1},
-    {0x0041, 0x03B1},
-    {0x0391},
-    {0x0391, 0x03B1},
-    {0x0391}
-};
-
-const static UCollationResult greekFirstResults[] = {
-    UCOL_GREATER,
-    UCOL_LESS,
-    UCOL_GREATER,
-    UCOL_GREATER,
-    UCOL_EQUAL
-};
-
-static void TestGreekFirstReorder(void)
-{
-
-    int32_t i;
-    UParseError error;
-    UErrorCode status = U_ZERO_ERROR;
-    UCollator  *myCollation;
-    char srules[500] = "[scriptReorder Grek]";
-    UChar rules[500];
-    uint32_t length = 0;
-    UScriptCode scriptOrder[1] = {USCRIPT_GREEK};
-    u_strFromUTF8(rules, 500, &length, srules, strlen(srules), &status);
-    myCollation = ucol_openRules(rules, length, UCOL_ON, UCOL_TERTIARY, &error, &status);
-    if(U_FAILURE(status)){
-        log_err_status(status, "ERROR: in creation of rule based collator: %s\n", myErrorName(status));
-        return;
-    }
-    log_verbose("Testing the [scriptReorder grek]\n");
-    /*ucol_setAttribute(myCollation, UCOL_NORMALIZATION_MODE, UCOL_ON, &status);
-      ucol_setStrength(myCollation, UCOL_TERTIARY);*/
-    for (i = 0; i < 5 ; i++)
-    {
-        doTest(myCollation, testGreekFirstSourceCases[i], testGreekFirstTargetCases[i], greekFirstResults[i]);
-    }
-    ucol_close(myCollation);
-
-    myCollation = ucol_open("en", &status);
-    if(U_FAILURE(status)){
-        log_err_status(status, "ERROR: in creation of rule based collator: %s\n", myErrorName(status));
-        return;
-    }
-    ucol_setScriptOrder(myCollation, scriptOrder, 1);
-    log_verbose("Testing the [scriptReorder grek]\n");
-    /*ucol_setAttribute(myCollation, UCOL_NORMALIZATION_MODE, UCOL_ON, &status);
-      ucol_setStrength(myCollation, UCOL_TERTIARY);*/
-    for (i = 0; i < 5 ; i++)
-    {
-        doTest(myCollation, testGreekFirstSourceCases[i], testGreekFirstTargetCases[i], greekFirstResults[i]);
-    }
-    ucol_close(myCollation);
-}
-
-const static UChar testUnknownReorderSourceCases[][MAX_TOKEN_LEN] = {
-    {0x0041},
-    {0x0041},
-    {0x0031},
-    {0x0391},
-    {0x0031}
-};
-
-const static UChar testUnknownReorderTargetCases[][MAX_TOKEN_LEN] = {
-    {0x03B1},
-    {0x0031},
-    {0x0391},
-    {0x099d},
-    {0x0032}
-};
-
-const static UCollationResult unknownReorderResults[] = {
-    UCOL_LESS,
-    UCOL_LESS,
-    UCOL_GREATER,
-    UCOL_LESS,
-    UCOL_LESS
-};
-
-static void TestUnknownReorder(void)
-{
-
-    int32_t i;
-    UParseError error;
-    UErrorCode status = U_ZERO_ERROR;
-    UCollator  *myCollation;
-    char srules[500] = "[scriptReorder Latn Zzzz Zyyy]";
-    UChar rules[500];
-    uint32_t length = 0;
-    UScriptCode scriptOrder[3] = {USCRIPT_LATIN, USCRIPT_UNKNOWN, USCRIPT_COMMON};
-
-    u_strFromUTF8(rules, 500, &length, srules, strlen(srules), &status);
-    myCollation = ucol_openRules(rules, length, UCOL_ON, UCOL_TERTIARY, &error, &status);
-    if(U_FAILURE(status)){
-        log_err_status(status, "ERROR: in creation of rule based collator: %s\n", myErrorName(status));
-        return;
-    }
-    log_verbose("Testing the [scriptReorder latn zzzz zyyy]\n");
-    /*ucol_setAttribute(myCollation, UCOL_NORMALIZATION_MODE, UCOL_ON, &status);
-      ucol_setStrength(myCollation, UCOL_TERTIARY);*/
-    for (i = 0; i < 5 ; i++)
-    {
-        doTest(myCollation, testUnknownReorderSourceCases[i], testUnknownReorderTargetCases[i], unknownReorderResults[i]);
-    }
-    ucol_close(myCollation);
-
-    myCollation = ucol_open("en", &status);
-    if(U_FAILURE(status)){
-        log_err_status(status, "ERROR: in creation of rule based collator: %s\n", myErrorName(status));
-        return;
-    }
-    ucol_setScriptOrder(myCollation, scriptOrder, 3);
-    log_verbose("Testing the script reordering setter\n");
-    /*ucol_setAttribute(myCollation, UCOL_NORMALIZATION_MODE, UCOL_ON, &status);
-      ucol_setStrength(myCollation, UCOL_TERTIARY);*/
-    for (i = 0; i < 5 ; i++)
-    {
-        doTest(myCollation, testUnknownReorderSourceCases[i], testUnknownReorderTargetCases[i], unknownReorderResults[i]);
-    }
-    ucol_close(myCollation);
-}
-
 #define TEST(x) addTest(root, &x, "tscoll/cmsccoll/" # x)
 
 void addMiscCollTest(TestNode** root)
 {
-    TEST(TestBeforeRuleWithScriptReordering);
+    TEST(TestRuleOptions);
+    TEST(TestBeforePrefixFailure);
+    TEST(TestContractionClosure);
+    TEST(TestPrefixCompose);
+    TEST(TestStrCollIdenticalPrefix);
+    TEST(TestPrefix);
+    TEST(TestNewJapanese);
+    /*TEST(TestLimitations);*/
+    TEST(TestNonChars);
+    TEST(TestExtremeCompression);
+    TEST(TestSurrogates);
+    TEST(TestVariableTopSetting);
+    TEST(TestBocsuCoverage);
+    TEST(TestCyrillicTailoring);
+    TEST(TestCase);
+    TEST(IncompleteCntTest);
+    TEST(BlackBirdTest);
+    TEST(FunkyATest);
+    TEST(BillFairmanTest);
+    TEST(RamsRulesTest);
+    TEST(IsTailoredTest);
+    TEST(TestCollations);
+    TEST(TestChMove);
+    TEST(TestImplicitTailoring);
+    TEST(TestFCDProblem);
+    TEST(TestEmptyRule);
+    /*TEST(TestJ784);*/ /* 'zh' locale has changed - now it is getting tested by TestBeforePinyin */
+    TEST(TestJ815);
+    /*TEST(TestJ831);*/ /* we changed lv locale */
+    TEST(TestBefore);
+    TEST(TestRedundantRules);
+    TEST(TestExpansionSyntax);
+    TEST(TestHangulTailoring);
+    TEST(TestUCARules);
+    TEST(TestIncrementalNormalize);
+    TEST(TestComposeDecompose);
+    TEST(TestCompressOverlap);
+    TEST(TestContraction);
+    TEST(TestExpansion);
+    /*TEST(PrintMarkDavis);*/ /* this test doesn't test - just prints sortkeys */
+    /*TEST(TestGetCaseBit);*/ /*this one requires internal things to be exported */
+    TEST(TestOptimize);
+    TEST(TestSuppressContractions);
+    TEST(Alexis2);
+    TEST(TestHebrewUCA);
+    TEST(TestPartialSortKeyTermination);
+    TEST(TestSettings);
+    TEST(TestEquals);
+    TEST(TestJ2726);
+    TEST(NullRule);
+    TEST(TestNumericCollation);
+    TEST(TestTibetanConformance);
+    TEST(TestPinyinProblem);
+    TEST(TestImplicitGeneration);
+    TEST(TestSeparateTrees);
+    TEST(TestBeforePinyin);
+    TEST(TestBeforeTightening);
+    /*TEST(TestMoreBefore);*/
+    TEST(TestTailorNULL);
+    TEST(TestUpperFirstQuaternary);
+    TEST(TestJ4960);
+    TEST(TestJ5223);
+    TEST(TestJ5232);
+    TEST(TestJ5367);
+    TEST(TestHiragana);
+    TEST(TestSortKeyConsistency);
+    TEST(TestVI5913);  /* VI, RO tailored rules */
+    TEST(TestCroatianSortKey);
+    TEST(TestTailor6179);
+    TEST(TestUCAPrecontext);
+    TEST(TestOutOfBuffer5468);
+    TEST(TestSameStrengthList);
 }
 
 #endif /* #if !UCONFIG_NO_COLLATION */

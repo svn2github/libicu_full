@@ -1241,7 +1241,7 @@ void NumberFormatRegressionTest::Test4074454(void)
         FieldPosition pos(FieldPosition::DONT_CARE);
         tempString = newFmt->format(3456.78, tempString, pos);
         if (tempString != UnicodeString("3,456.78 p'ieces"))
-            errln("Failed!  3456.78 p'ieces expected, but got : " + tempString);
+            dataerrln("Failed!  3456.78 p'ieces expected, but got : " + tempString);
     /*} catch (Exception foo) {
         errln("An exception was thrown for any inconsistent negative pattern.");
     }*/
@@ -1640,15 +1640,21 @@ void NumberFormatRegressionTest::Test4122840(void)
             NULL/*"java.text.resources.LocaleElements"*/, 
             locales[i], status);
         failure(status, "new ResourceBundle");
-        ResourceBundle numPat = rb->get("NumberPatterns", status);
-        failure(status, "new ResourceBundle(NumberPatterns)");
-        //
+        ResourceBundle numPat = rb->getWithFallback("NumberElements", status);
+        failure(status, "rb.get(NumberElements)");
+        numPat = numPat.getWithFallback("latn",status);
+        failure(status, "rb.get(latn)");
+        numPat = numPat.getWithFallback("patterns",status);
+        failure(status, "rb.get(patterns)");
+        numPat = numPat.getWithFallback("currencyFormat",status);
+        failure(status, "rb.get(currencyFormat)");
+       //
         // Get the currency pattern for this locale.  We have to fish it
         // out of the ResourceBundle directly, since DecimalFormat.toPattern
         // will return the localized symbol, not \00a4
         //
-        UnicodeString pattern = numPat.getStringEx(1, status);
-        failure(status, "rb->getStringArray");
+        UnicodeString pattern = numPat.getString(status);
+        failure(status, "rb->getString()");
 
         UChar fo[] = { 0x00A4 };
         UnicodeString foo(fo, 1, 1);
@@ -2418,6 +2424,11 @@ void NumberFormatRegressionTest::Test4212072(void) {
                 errln(UnicodeString("FAIL: ") + type[j] + avail[i].getDisplayName(l) +
                       " -> \"" + pat +
                       "\" -> \"" + f2.toPattern(p) + "\"");
+            } else {
+                UnicodeString l, p;
+                logln(UnicodeString("PASS: ") + type[j] + avail[i].getDisplayName(l) +
+                      " -> \"" + pat +
+                      "\"");
             }
 
             // Test toLocalizedPattern/applyLocalizedPattern round trip
@@ -2481,7 +2492,7 @@ void NumberFormatRegressionTest::Test4216742(void) {
             } else {
                 double d = num.getType() == Formattable::kDouble ?
                     num.getDouble() : (double) num.getLong();
-                if (d > 0 != DATA[i] > 0) {
+                if ((d > 0) != (DATA[i] > 0)) {
                     errln(UnicodeString("\"") + str + "\" parse(x " +
                           fmt->getMultiplier() +
                           ") => " + toString(num));

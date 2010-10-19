@@ -58,6 +58,7 @@ RegexCompile::RegexCompile(RegexPattern *rxp, UErrorCode &status) :
 
     fRXPat            = rxp;
     fScanIndex        = 0;
+    fLastChar         = -1;
     fPeekChar         = -1;
     fLineNum          = 1;
     fCharNum          = 0;
@@ -2338,7 +2339,7 @@ void        RegexCompile::compileInterval(int32_t InitOp,  int32_t LoopOp)
     fRXPat->fCompiledPat->addElement(op, *fStatus);
 
     if ((fIntervalLow & 0xff000000) != 0 ||
-        fIntervalUpper > 0 && (fIntervalUpper & 0xff000000) != 0) {
+        (fIntervalUpper > 0 && (fIntervalUpper & 0xff000000) != 0)) {
             error(U_REGEX_NUMBER_TOO_BIG);
         }
 
@@ -3656,7 +3657,7 @@ UChar32  RegexCompile::nextCharLL() {
     if (ch == chCR ||
         ch == chNEL ||
         ch == chLS   ||
-        ch == chLF && fLastChar != chCR) {
+        (ch == chLF && fLastChar != chCR)) {
         // Character is starting a new line.  Bump up the line number, and
         //  reset the column to 0.
         fLineNum++;

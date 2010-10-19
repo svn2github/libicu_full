@@ -172,6 +172,9 @@ UObject *UObjectTest::testClass(UObject *obj,
 
 UObject *UObjectTest::testClassNoClassID(UObject *obj, const char *className, const char *factory)
 {
+    if (!obj) {
+        return NULL;
+    }
     UnicodeString what = UnicodeString(className) + " * x= " + UnicodeString(factory?factory:" ABSTRACT ") + "; ";
     UClassID dynamicID = obj->getDynamicClassID();
 
@@ -263,6 +266,7 @@ UObject *UObjectTest::testClassNoClassID(UObject *obj, const char *className, co
 #include "unicode/fmtable.h"
 #include "unicode/format.h"
 #include "unicode/gregocal.h"
+#include "unicode/idna.h"
 #include "unicode/locdspnm.h"
 #include "unicode/locid.h"
 #include "unicode/msgfmt.h"
@@ -325,6 +329,9 @@ void UObjectTest::testIDs()
     UnicodeSet emptySet;
     TESTCLASSID_NONE_CTOR(FilteredNormalizer2, (*noNormalizer2, emptySet));
     TESTCLASSID_FACTORY(CanonicalIterator, new CanonicalIterator(UnicodeString("abc"), status));
+#endif
+#if !UCONFIG_NO_IDNA
+    TESTCLASSID_NONE_FACTORY(IDNA, IDNA::createUTS46Instance(0, status));
 #endif
     //TESTCLASSID_DEFAULT(CollationElementIterator);
 #if !UCONFIG_NO_COLLATION
@@ -477,12 +484,16 @@ void UObjectTest::testIDs()
 void UObjectTest::testUMemory() {
     // additional tests for code coverage
 #if U_OVERRIDE_CXX_ALLOCATION && U_HAVE_PLACEMENT_NEW
-    UAlignedMemory stackMemory[sizeof(UnicodeString)/sizeof(UAlignedMemory)+1];
+    union {
+        UAlignedMemory   align_;
+        char             bytes_[sizeof(UnicodeString)];
+    } stackMemory;
+    char *bytes = stackMemory.bytes_;
     UnicodeString *p;
     enum { len=20 };
 
-    p=new(stackMemory) UnicodeString(len, (UChar32)0x20ac, len);
-    if((void *)p!=(void *)stackMemory) {
+    p=new(bytes) UnicodeString(len, (UChar32)0x20ac, len);
+    if((void *)p!=(void *)bytes) {
         errln("placement new did not place the object at the expected address");
     }
     if(p->length()!=len || p->charAt(0)!=0x20ac || p->charAt(len-1)!=0x20ac) {
@@ -519,7 +530,11 @@ void UObjectTest::testUMemory() {
      */
     // destroy object and delete space manually
     p->~UnicodeString(); 
-    UnicodeString::operator delete(p, stackMemory); 
+
+    // You normally wouldn't call an operator delete for object placed on the
+    // stack with a placement new().
+    // This overload of delete is a nop, and is called here for code coverage purposes.
+    UnicodeString::operator delete(p, bytes); 
 
     // Jitterbug 4452, for coverage
     UnicodeString *pa = new UnicodeString[2];
@@ -550,7 +565,7 @@ void UObjectTest::TestCompilerRTTI() {
     UErrorCode errorCode = U_ZERO_ERROR;
     NumberFormat *nf = NumberFormat::createInstance("de", errorCode);
     if (U_FAILURE(errorCode)) {
-        errln("NumberFormat::createInstance(de) failed - %s", u_errorName(errorCode));
+        dataerrln("NumberFormat::createInstance(de) failed - %s", u_errorName(errorCode));
         return;
     }
     if (dynamic_cast<DecimalFormat *>(nf) == NULL || dynamic_cast<ChoiceFormat *>(nf) != NULL) {
@@ -563,6 +578,7 @@ void UObjectTest::TestCompilerRTTI() {
     ) {
         errln("typeid(NumberFormat) failed");
     }
+    delete nf;
 }
 
 /* --------------- */

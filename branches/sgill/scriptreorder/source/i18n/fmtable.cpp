@@ -21,10 +21,10 @@
 #include "unicode/ustring.h"
 #include "unicode/measure.h"
 #include "unicode/curramt.h"
+#include "charstr.h"
 #include "cmemory.h"
 #include "cstring.h"
 #include "decNumber.h"
-#include "decnumstr.h"
 #include "digitlst.h"
 
 // *****************************************************************************
@@ -255,7 +255,7 @@ Formattable::operator=(const Formattable& source)
             fDecimalNum = new DigitList(*source.fDecimalNum);
         }
         if (source.fDecimalStr != NULL) {
-            fDecimalStr = new DecimalNumberString(*source.fDecimalStr, status);
+            fDecimalStr = new CharString(*source.fDecimalStr, status);
             if (U_FAILURE(status)) {
                 delete fDecimalStr;
                 fDecimalStr = NULL;
@@ -439,10 +439,10 @@ Formattable::getInt64(UErrorCode& status) const
     case Formattable::kInt64: 
         return fValue.fInt64;
     case Formattable::kDouble:
-        if (fValue.fDouble > U_INT64_MAX) {
+        if (fValue.fDouble >= U_INT64_MAX) {
             status = U_INVALID_FORMAT_ERROR;
             return U_INT64_MAX;
-        } else if (fValue.fDouble < U_INT64_MIN) {
+        } else if (fValue.fDouble <= U_INT64_MIN) {
             status = U_INVALID_FORMAT_ERROR;
             return U_INT64_MIN;
         } else {
@@ -672,7 +672,7 @@ StringPiece Formattable::getDecimalNumber(UErrorCode &status) {
         return "";
     }
     if (fDecimalStr != NULL) {
-        return *fDecimalStr;
+        return fDecimalStr->toStringPiece();
     }
 
     if (fDecimalNum == NULL) {
@@ -704,14 +704,14 @@ StringPiece Formattable::getDecimalNumber(UErrorCode &status) {
         }
     }
 
-    fDecimalStr = new DecimalNumberString;
+    fDecimalStr = new CharString;
     if (fDecimalStr == NULL) {
         status = U_MEMORY_ALLOCATION_ERROR;
         return "";
     }
     fDecimalNum->getDecimal(*fDecimalStr, status);
 
-    return *fDecimalStr;
+    return fDecimalStr->toStringPiece();
 }
 
 
@@ -750,18 +750,13 @@ Formattable::setDecimalNumber(const StringPiece &numberString, UErrorCode &statu
     // Copy the input string and nul-terminate it.
     //    The decNumber library requires nul-terminated input.  StringPiece input
     //    is not guaranteed nul-terminated.  Too bad.
-    //    DecimalNumberStrings automatically adds the nul.
-    DecimalNumberString  s(numberString, status);
-    if (U_FAILURE(status)) {
-        return;
-    }
-    
+    //    CharString automatically adds the nul.
     DigitList *dnum = new DigitList();
     if (dnum == NULL) {
         status = U_MEMORY_ALLOCATION_ERROR;
         return;
     }
-    dnum->set(s, status);
+    dnum->set(CharString(numberString, status).toStringPiece(), status);
     if (U_FAILURE(status)) {
         delete dnum;
         return;   // String didn't contain a decimal number.

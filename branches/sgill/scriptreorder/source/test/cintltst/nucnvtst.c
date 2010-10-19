@@ -65,7 +65,12 @@ static void TestISO_2022_JP_2(void);
 static void TestISO_2022_KR(void);
 static void TestISO_2022_KR_1(void);
 static void TestISO_2022_CN(void);
+#if 0
+   /*
+    * ICU 4.4 (ticket #7314) removes mappings for CNS 11643 planes 3..7
+    */
 static void TestISO_2022_CN_EXT(void);
+#endif
 static void TestJIS(void);
 static void TestHZ(void);
 #endif
@@ -78,7 +83,12 @@ static void TestGB18030(void);
 static void TestLMBCS(void);
 static void TestJitterbug255(void);
 static void TestEBCDICUS4XML(void);
+#if 0
+   /*
+    * ICU 4.4 (ticket #7314) removes mappings for CNS 11643 planes 3..7
+    */
 static void TestJitterbug915(void);
+#endif
 static void TestISCII(void);
 
 static void TestCoverageMBCS(void);
@@ -2641,13 +2651,10 @@ TestICCRunout() {
 
     const char *cnvName = "ibm-1363";
     UErrorCode status = U_ZERO_ERROR;
-    const uint8_t sourceData[] = { 0xa2, 0xae, 0xa2 };
-    UChar   expectUData[] = { 0x00a1, 0x001a };
-    const uint8_t *source = sourceData;
-    const uint8_t *sourceLim = sourceData+sizeof(sourceData);
-    UChar   targetBuf[256];
-    UChar   *target = targetBuf;
-    UChar   *targetLim = target+256;
+    const char sourceData[] = { (char)0xa2, (char)0xae, (char)0xa2 };
+    /* UChar   expectUData[] = { 0x00a1, 0x001a }; */
+    const char *source = sourceData;
+    const char *sourceLim = sourceData+sizeof(sourceData);
     UChar c1, c2, c3;
     UConverter *cnv=ucnv_open(cnvName, &status);
     if(U_FAILURE(status)) {
@@ -2656,6 +2663,10 @@ TestICCRunout() {
     }
     
 #if 0
+    {
+    UChar   targetBuf[256];
+    UChar   *target = targetBuf;
+    UChar   *targetLim = target+256;
     ucnv_toUnicode(cnv, &target, targetLim, &source, sourceLim, NULL, TRUE, &status);
 
     log_info("After convert: target@%d, source@%d, status%s\n",
@@ -2665,6 +2676,7 @@ TestICCRunout() {
 	log_err("Failed to convert: %s\n", u_errorName(status));
     } else {
 	
+    }
     }
 #endif
 
@@ -4235,6 +4247,10 @@ TestJIS(){
 
 }
 
+
+#if 0
+ ICU 4.4 (ticket #7314) removes mappings for CNS 11643 planes 3..7
+
 static void TestJitterbug915(){
 /* tests for roundtripping of the below sequence
 \x1b$)G\x0E#!#"###$#%#&#'#(#)#*#+          / *plane 1 * /
@@ -4422,6 +4438,7 @@ TestISO_2022_CN_EXT() {
     free(cBuf);
     free(offsets);
 }
+#endif
 
 static void
 TestISO_2022_CN() {
@@ -5105,11 +5122,14 @@ TestLMBCS() {
          errorCode=U_ZERO_ERROR;
 
          /* negative source request should always return U_ILLEGAL_ARGUMENT_ERROR */
-         ucnv_fromUnicode(cnv, &pLOut,pLOut+1,&pUIn,pUIn-1,off,FALSE, &errorCode);
+         pUIn++;
+         ucnv_fromUnicode(cnv, &pLOut, pLOut+1, &pUIn, pUIn-1, off, FALSE, &errorCode);
          if (errorCode != U_ILLEGAL_ARGUMENT_ERROR)
          {
             log_err("Unexpected Error on negative source request to ucnv_fromUnicode: %s\n", u_errorName(errorCode));
          }
+         pUIn--;
+         
          errorCode=U_ZERO_ERROR;
          ucnv_toUnicode(cnv, &pUOut,pUOut+1,(const char **)&pLIn,(const char *)(pLIn-1),off,FALSE, &errorCode);
          if (errorCode != U_ILLEGAL_ARGUMENT_ERROR)

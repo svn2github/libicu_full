@@ -89,17 +89,17 @@ typedef enum {
  * @stable ICU 2.0
  */
 typedef enum UNormalizationCheckResult {
-  /** 
+  /**
    * The input string is not in the normalization form.
    * @stable ICU 2.0
    */
   UNORM_NO,
-  /** 
+  /**
    * The input string is in the normalization form.
    * @stable ICU 2.0
    */
   UNORM_YES,
-  /** 
+  /**
    * The input string may or may not be in the normalization form.
    * This value is only returned for composition forms like NFC and FCC,
    * when a backward-combining character is found for which the surrounding text
@@ -151,7 +151,7 @@ unorm2_getInstance(const char *packageName,
  * Both are aliased and must not be modified or deleted while this object
  * is used.
  * The filter set should be frozen; otherwise the performance will suffer greatly.
- * @param norm2 wrapped Normalizer2 instance
+ * @param norm2 wrapped UNormalizer2 instance
  * @param filterSet USet which determines the characters to be normalized
  * @param pErrorCode Standard ICU error code. Its input value must
  *                   pass the U_SUCCESS() test, or else the function returns
@@ -258,6 +258,27 @@ unorm2_append(const UNormalizer2 *norm2,
               UChar *first, int32_t firstLength, int32_t firstCapacity,
               const UChar *second, int32_t secondLength,
               UErrorCode *pErrorCode);
+
+/**
+ * Gets the decomposition mapping of c. Equivalent to unorm2_normalize(string(c))
+ * on a UNORM2_DECOMPOSE UNormalizer2 instance, but much faster.
+ * This function is independent of the mode of the UNormalizer2.
+ * @param norm2 UNormalizer2 instance
+ * @param c code point
+ * @param decomposition String buffer which will be set to c's
+ *                      decomposition mapping, if there is one.
+ * @param capacity number of UChars that can be written to decomposition
+ * @param pErrorCode Standard ICU error code. Its input value must
+ *                   pass the U_SUCCESS() test, or else the function returns
+ *                   immediately. Check for U_FAILURE() on output or use with
+ *                   function chaining. (See User Guide for details.)
+ * @return the non-negative length of c's decomposition, if there is one; otherwise a negative value
+ * @draft ICU 4.6
+ */
+U_DRAFT int32_t U_EXPORT2
+unorm2_getDecomposition(const UNormalizer2 *norm2,
+                        UChar32 c, UChar *decomposition, int32_t capacity,
+                        UErrorCode *pErrorCode);
 
 /**
  * Tests if the string is normalized.

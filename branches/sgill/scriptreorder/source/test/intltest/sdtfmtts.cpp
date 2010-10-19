@@ -1,7 +1,7 @@
 
 /********************************************************************
  * COPYRIGHT: 
- * Copyright (c) 1997-2009, International Business Machines Corporation and
+ * Copyright (c) 1997-2010, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 
@@ -58,13 +58,13 @@ void IntlTestSimpleDateFormatAPI::testAPI(/*char *par*/)
     }
 
     status = U_ZERO_ERROR;
-    const UnicodeString pattern("yyyy.MM.dd G 'at' hh:mm:ss z");
-    const UnicodeString override("y=hebr;d=thai;s=arab");
-    const UnicodeString override_bogus("y=hebr;d=thai;s=bogus");
+    const UnicodeString pattern("yyyy.MM.dd G 'at' hh:mm:ss z", "");
+    const UnicodeString override("y=hebr;d=thai;s=arab", ""); /* use invariant converter */
+    const UnicodeString override_bogus("y=hebr;d=thai;s=bogus", "");
 
     SimpleDateFormat pat(pattern, status);
     if(U_FAILURE(status)) {
-        errln("ERROR: Could not create SimpleDateFormat (pattern)");
+       errln("ERROR: Could not create SimpleDateFormat (pattern) - %s", u_errorName(status));
     }
 
     status = U_ZERO_ERROR;
@@ -93,18 +93,20 @@ void IntlTestSimpleDateFormatAPI::testAPI(/*char *par*/)
     }
 
     status = U_ZERO_ERROR;
+    logln(UnicodeString("Override with: ") + override);
     SimpleDateFormat ovr1(pattern, override, status);
     if(U_FAILURE(status)) {
-        errln("ERROR: Could not create SimpleDateFormat (pattern, override)");
+      errln("ERROR: Could not create SimpleDateFormat (pattern, override) - %s", u_errorName(status));
     }
 
     status = U_ZERO_ERROR;
     SimpleDateFormat ovr2(pattern, override, Locale::getGerman(), status);
     if(U_FAILURE(status)) {
-        errln("ERROR: Could not create SimpleDateFormat (pattern, override, locale)");
+        errln("ERROR: Could not create SimpleDateFormat (pattern, override, locale) - %s", u_errorName(status));
     }
 
     status = U_ZERO_ERROR;
+    logln(UnicodeString("Override with: ") + override_bogus);
     SimpleDateFormat ovr3(pattern, override_bogus, Locale::getGerman(), status);
     if(U_SUCCESS(status)) {
         errln("ERROR: Should not have been able to create SimpleDateFormat (pattern, override, locale) with a bogus override");
@@ -172,6 +174,25 @@ void IntlTestSimpleDateFormatAPI::testAPI(/*char *par*/)
 // ======= Test getters and setters
 
     logln("Testing getters and setters");
+
+    // check default value of lenient
+    if ( !def.isLenient() ) {
+        errln("ERROR: isLenient() not TRUE by default for SimpleDateFormat");
+    }
+    SimpleDateFormat *defMod = new SimpleDateFormat(def);
+    // check setting & comparison of lenient
+    if (defMod != NULL) {
+        if ( !(*defMod == def) ) {
+            errln("ERROR: operator == is FALSE, should be TRUE after copy");
+        }
+        defMod->setLenient(!def.isLenient());
+        if( defMod->isLenient() == def.isLenient()) {
+            errln("ERROR: isLenient() after setLenient(!isLenient()) failed");
+        } else if ( *defMod == def ) {
+            errln("ERROR: operator == is TRUE, should be FALSE if isLenient() differs");
+        }
+        delete defMod;
+    }
 
     const DateFormatSymbols *syms = pat.getDateFormatSymbols();
     if(!syms) {

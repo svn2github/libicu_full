@@ -11,10 +11,12 @@
 #include <string.h>
 #include <assert.h>
 #include <stdarg.h>
+#include <ctype.h>
 
 #include "unicode/utrace.h"
 #include "unicode/uclean.h"
 #include "umutex.h"
+#include "putilimp.h"
 
 /* NOTES:
    3/20/1999 srl - strncpy called w/o setting nulls at the end
@@ -31,7 +33,11 @@
 /**
  *   How many lines of scrollage can go by before we need to remind the user what the test is.
  */
-#define PAGE_SIZE 25
+#define PAGE_SIZE_LIMIT 25
+
+#ifndef SHOW_TIMES
+#define SHOW_TIMES 1
+#endif
 
 struct TestNode
 {
@@ -118,6 +124,10 @@ size_t MINIMUM_MEMORY_SIZE_FAILURE = (size_t)-1; /* Minimum library memory alloc
 size_t MAXIMUM_MEMORY_SIZE_FAILURE = (size_t)-1; /* Maximum library memory allocation window that will fail. */
 int32_t ALLOCATION_COUNT = 0;
 static const char *ARGV_0 = "[ALL]";
+static const char *XML_FILE_NAME=NULL;
+static char XML_PREFIX[256];
+
+FILE *XML_FILE = NULL;
 /*-------------------------------------------*/
 
 /* strncmp that also makes sure there's a \0 at s2[0] */
@@ -181,6 +191,7 @@ cleanUpTestTree(TestNode *tn)
     }
 
     free(tn);
+
 }
 
 
@@ -274,6 +285,33 @@ static TestNode *addTestNode ( TestNode *root, const char *name )
 }
 
 /**
+ * Log the time taken. May not output anything.
+ * @param deltaTime change in time
+ */
+void T_CTEST_EXPORT2 str_timeDelta(char *str, UDate deltaTime) {
+  if (deltaTime > 110000.0 ) {
+    double mins = uprv_floor(deltaTime/60000.0);
+    sprintf(str, "[(%.0fm %.1fs)]", mins, (deltaTime-(mins*60000.0))/1000.0);
+  } else if (deltaTime > 1500.0) {
+    sprintf(str, "((%.1fs))", deltaTime/1000.0);
+  } else if(deltaTime>900.0) {
+    sprintf(str, "( %.2fs )", deltaTime/1000.0);
+  } else if(deltaTime > 5.0) {
+    sprintf(str, " (%.0fms) ", deltaTime);
+  } else {
+    str[0]=0; /* at least terminate it. */
+  }
+}
+
+static void print_timeDelta(UDate deltaTime) {
+  char str[256];
+  str_timeDelta(str, deltaTime);
+  if(str[0]) {
+    printf("%s", str);
+  }
+}
+
+/**
  * Run or list tests (according to mode) in a subtree.
  *
  * @param root root of the subtree to operate on
@@ -287,10 +325,16 @@ static void iterateTestsWithLevel ( const TestNode* root,
                  TestMode mode)
 {
     int i;
-    int saveIndent;
 
     char pathToFunction[MAXTESTNAME] = "";
     char separatorString[2] = { TEST_SEPARATOR, '\0'};
+#if SHOW_TIMES
+    UDate allStartTime = -1, allStopTime = -1;
+#endif
+
+    if(depth<2) {
+      allStartTime = uprv_getRawUTCtime();
+    }
 
     if ( root == NULL )
         return;
@@ -322,42 +366,64 @@ static void iterateTestsWithLevel ( const TestNode* root,
     {
         int myERROR_COUNT = ERROR_COUNT;
         int myGLOBAL_PRINT_COUNT = GLOBAL_PRINT_COUNT;
+#if SHOW_TIMES
+        UDate startTime, stopTime;
+        char timeDelta[256];
+        char timeSeconds[256];
+#else 
+        const char timeDelta[] = "(unknown)";
+        const char timeSeconds[] = "0.000";
+#endif
         currentTest = root;
         INDENT_LEVEL = depth;  /* depth of subitems */
         ONE_ERROR=0;
         HANGING_OUTPUT=FALSE;
-        /* TODO: start counter */
-        root->test();   /* PERFORM THE TEST */
+#if SHOW_TIMES
+        startTime = uprv_getRawUTCtime();
+#endif
+        root->test();   /* PERFORM THE TEST ************************/
+#if SHOW_TIMES
+        stopTime = uprv_getRawUTCtime();
+#endif
         if(HANGING_OUTPUT) {
-        	log_testinfo("\n");
-        	HANGING_OUTPUT=FALSE;
+          log_testinfo("\n");
+          HANGING_OUTPUT=FALSE;
         }
-        /* TODO: stop counter */
         INDENT_LEVEL = depth-1;  /* depth of root */
         currentTest = NULL;
         if((ONE_ERROR>0)&&(ERROR_COUNT==0)) {
-        	ERROR_COUNT++; /* There was an error without a newline */
+          ERROR_COUNT++; /* There was an error without a newline */
         }
         ONE_ERROR=0;
 
-		if (myERROR_COUNT != ERROR_COUNT) {
-			log_testinfo_i("} ---[%d ERRORS in %s] ", ERROR_COUNT - myERROR_COUNT, pathToFunction);
-			strcpy(ERROR_LOG[ERRONEOUS_FUNCTION_COUNT++], pathToFunction);
-		} else {
-			if(!ON_LINE) { /* had some output */
-				int spaces = FLAG_INDENT-(depth-1);
-				log_testinfo_i("} %*s[OK] ", spaces, "---");
-				if((GLOBAL_PRINT_COUNT-myGLOBAL_PRINT_COUNT)>PAGE_SIZE) {
-					log_testinfo(" %s ", pathToFunction); /* in case they forgot. */
-				}
-			} else {
-				/* put -- out at 30 sp. */
-				int spaces = FLAG_INDENT-(strlen(root->name)+depth);
-				if(spaces<0) spaces=0;
-				log_testinfo(" %*s[OK] ", spaces,"---");
-			}
-		}
-        /* TODO: print counter */
+#if SHOW_TIMES
+        str_timeDelta(timeDelta, stopTime-startTime);
+        sprintf(timeSeconds, "%f", (stopTime-startTime)/1000.0);
+#endif        
+        ctest_xml_testcase(pathToFunction, pathToFunction, timeSeconds, (myERROR_COUNT!=ERROR_COUNT)?"error":NULL);
+
+        if (myERROR_COUNT != ERROR_COUNT) {
+          log_testinfo_i("} ---[%d ERRORS in %s] ", ERROR_COUNT - myERROR_COUNT, pathToFunction);
+          strcpy(ERROR_LOG[ERRONEOUS_FUNCTION_COUNT++], pathToFunction);
+        } else {
+          if(!ON_LINE) { /* had some output */
+            int spaces = FLAG_INDENT-(depth-1);
+            log_testinfo_i("} %*s[OK] ", spaces, "---");
+            if((GLOBAL_PRINT_COUNT-myGLOBAL_PRINT_COUNT)>PAGE_SIZE_LIMIT) {
+              log_testinfo(" %s ", pathToFunction); /* in case they forgot. */
+            }
+          } else {
+            /* put -- out at 30 sp. */
+            int spaces = FLAG_INDENT-(strlen(root->name)+depth);
+            if(spaces<0) spaces=0;
+            log_testinfo(" %*s[OK] ", spaces,"---");
+          }
+        }
+                           
+#if SHOW_TIMES
+        if(timeDelta[0]) printf("%s", timeDelta);
+#endif
+         
         ON_LINE = TRUE; /* we are back on-line */
     }
 
@@ -386,14 +452,25 @@ static void iterateTestsWithLevel ( const TestNode* root,
     		log_testinfo_i("} "); /* TODO:  summarize subtests */
     		if((depth>1) && (ERROR_COUNT > myERROR_COUNT)) {
     			log_testinfo("[%d %s in %s] ", ERROR_COUNT-myERROR_COUNT, (ERROR_COUNT-myERROR_COUNT)==1?"error":"errors", pathToFunction);
-    		} else if((GLOBAL_PRINT_COUNT-myGLOBAL_PRINT_COUNT)>PAGE_SIZE) {
-				log_testinfo(" %s ", pathToFunction); /* in case they forgot. */
-			}
+    		} else if((GLOBAL_PRINT_COUNT-myGLOBAL_PRINT_COUNT)>PAGE_SIZE_LIMIT || (depth<1)) {
+                  if(pathToFunction[0]) {
+                    log_testinfo(" %s ", pathToFunction); /* in case they forgot. */
+                  } else {
+                    log_testinfo(" / (%s) ", ARGV_0);
+                  }
+                }
 
     		ON_LINE=TRUE;
     	}
 	}
     depth--;
+
+#if SHOW_TIMES
+    if(depth<2) {
+      allStopTime = uprv_getRawUTCtime();
+      print_timeDelta(allStopTime-allStartTime);
+    }
+#endif
 
     if(mode!=SHOWTESTS && ON_LINE) {
     	log_testinfo("\n");
@@ -536,18 +613,18 @@ getTest(const TestNode* root, const char* name)
 /*  =========== io functions ======== */
 
 static void go_offline_with_marker(const char *mrk) {
-	UBool wasON_LINE = ON_LINE;
-
-	if(ON_LINE) {
-		log_testinfo(" {\n");
-		ON_LINE=FALSE;
-	}
-
-	if(!HANGING_OUTPUT || wasON_LINE) {
-		if(mrk != NULL) {
-			fputs(mrk, stdout);
-		}
-	}
+  UBool wasON_LINE = ON_LINE;
+  
+  if(ON_LINE) {
+    log_testinfo(" {\n");
+    ON_LINE=FALSE;
+  }
+  
+  if(!HANGING_OUTPUT || wasON_LINE) {
+    if(mrk != NULL) {
+      fputs(mrk, stdout);
+    }
+  }
 }
 
 static void go_offline() {
@@ -904,6 +981,16 @@ initArgs( int argc, const char* const argv[], ArgHandlerPtr argHandler, void *co
                 REPEAT_TESTS++;
             }
         }
+        else if (strcmp( argv[i], "-x") == 0)
+        {
+          if(++i>=argc) {
+            printf("* Error: '-x' option requires an argument. usage: '-x outfile.xml'.\n");
+            return 0;
+          }
+          if(ctest_xml_setFileName(argv[i])) { /* set the name */
+            return 0;
+          }
+        }
         else if (strcmp( argv[i], "-t_info") == 0) {
             ICU_TRACE = UTRACE_INFO;
         }
@@ -960,6 +1047,10 @@ runTestRequest(const TestNode* root,
 
     toRun = root;
 
+    if(ctest_xml_init(ARGV_0)) {
+      return 1; /* couldn't fire up XML thing */
+    }
+
     for( i=1; i<argc; i++)
     {
         if ( argv[i][0] == '/' )
@@ -1015,6 +1106,10 @@ runTestRequest(const TestNode* root,
     }
 
     REPEAT_TESTS_INIT = 1;
+    
+    if(ctest_xml_fini()) {
+      errorCount++;
+    }
 
     return errorCount; /* total error count */
 }
@@ -1033,6 +1128,7 @@ static void help ( const char *argv0 )
     printf("    -e  to do exhaustive testing\n");
     printf("    -verbose To turn ON verbosity\n");
     printf("    -v  To turn ON verbosity(same as -verbose)\n");
+    printf("    -x file.xml   Write junit format output to file.xml\n");
     printf("    -h  To print this message\n");
     printf("    -n  To turn OFF printing error messages\n");
     printf("    -w  Don't fail on data-loading errs, just warn. Useful if\n"
@@ -1092,3 +1188,72 @@ setTestOption ( int32_t testOption, int32_t value) {
             break;
     }
 }
+
+
+/*
+ * ================== JUnit support ================================
+ */
+
+int32_t
+T_CTEST_EXPORT2
+ctest_xml_setFileName(const char *name) {
+  XML_FILE_NAME=name;
+  return 0;
+}
+
+
+int32_t
+T_CTEST_EXPORT2
+ctest_xml_init(const char *rootName) {
+  if(!XML_FILE_NAME) return 0;
+  XML_FILE = fopen(XML_FILE_NAME,"w");
+  if(!XML_FILE) {
+    perror("fopen");
+    fprintf(stderr," Error: couldn't open XML output file %s\n", XML_FILE_NAME);
+    return 1;
+  }
+  while(*rootName&&!isalnum(*rootName)) {
+    rootName++;
+  }
+  strcpy(XML_PREFIX,rootName);
+  {
+    char *p = XML_PREFIX+strlen(XML_PREFIX);
+    for(p--;*p&&p>XML_PREFIX&&!isalnum(*p);p--) {
+      *p=0;
+    }
+  }
+  /* write prefix */
+  fprintf(XML_FILE, "<testsuite name=\"%s\">\n", XML_PREFIX);
+
+  return 0;
+}
+
+int32_t
+T_CTEST_EXPORT2
+ctest_xml_fini(void) {
+  if(!XML_FILE) return 0;
+
+  fprintf(XML_FILE, "</testsuite>\n");
+  fclose(XML_FILE);
+  printf(" ( test results written to %s )\n", XML_FILE_NAME);
+  XML_FILE=0;
+  return 0;
+}
+
+
+int32_t
+T_CTEST_EXPORT2
+ctest_xml_testcase(const char *classname, const char *name, const char *time, const char *failMsg) {
+  if(!XML_FILE) return 0;
+
+  fprintf(XML_FILE, "\t<testcase classname=\"%s:%s\" name=\"%s:%s\" time=\"%s\"", XML_PREFIX, classname, XML_PREFIX, name, time);
+  if(failMsg) {
+    fprintf(XML_FILE, ">\n\t\t<failure type=\"err\" message=\"%s\"/>\n\t</testcase>\n", failMsg);
+  } else {
+    fprintf(XML_FILE, "/>\n");
+  }
+
+  return 0;
+}
+
+

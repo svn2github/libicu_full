@@ -214,7 +214,7 @@ int ucol_getReorderCodesForLeadByte(UCollator *coll, int leadByte, int16_t* retu
 
 void ucol_buildScriptReorderTable(UCollator *coll) {
 
-    if (true) {
+    if (false) {
         const UCATableHeader* const header = coll->UCA->image;
         UCAConstants* consts = (UCAConstants*) ((uint8_t*)header + header->UCAConsts);
         fprintf(stdout, "\n****** UCATableHeader\n");

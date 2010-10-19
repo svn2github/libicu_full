@@ -58,11 +58,10 @@ void UnicodeStringTest::runIndexedTest( int32_t index, UBool exec, const char* &
         case 13: name = "TestUnescape"; if (exec) TestUnescape(); break;
         case 14: name = "TestCountChar32"; if (exec) TestCountChar32(); break;
         case 15: name = "TestStringEnumeration"; if (exec) TestStringEnumeration(); break;
-        case 16: name = "TestCharString"; if (exec) TestCharString(); break;
-        case 17: name = "TestNameSpace"; if (exec) TestNameSpace(); break;
-        case 18: name = "TestUTF32"; if (exec) TestUTF32(); break;
-        case 19: name = "TestUTF8"; if (exec) TestUTF8(); break;
-        case 20: name = "TestReadOnlyAlias"; if (exec) TestReadOnlyAlias(); break;
+        case 16: name = "TestNameSpace"; if (exec) TestNameSpace(); break;
+        case 17: name = "TestUTF32"; if (exec) TestUTF32(); break;
+        case 18: name = "TestUTF8"; if (exec) TestUTF8(); break;
+        case 19: name = "TestReadOnlyAlias"; if (exec) TestReadOnlyAlias(); break;
 
         default: name = ""; break; //needed to end loop
     }
@@ -1743,16 +1742,6 @@ UnicodeStringTest::TestStringEnumeration() {
     uenum_close(uten);
 }
 
-void
-UnicodeStringTest::TestCharString() {
-    static const char originalCStr[] =
-        "This is a large string that is meant to over flow the internal buffer of CharString. At the time of writing this test, the internal buffer is 128 bytes.";
-    CharString chStr(originalCStr);
-    if (strcmp(originalCStr, chStr) != 0) {
-        errln("CharString doesn't work with large strings.");
-    }
-}
-
 /*
  * Namespace test, to make sure that macros like UNICODE_STRING include the
  * namespace qualifier.
@@ -1831,6 +1820,14 @@ UnicodeStringTest::TestUTF32() {
     }
 }
 
+class TestCheckedArrayByteSink : public CheckedArrayByteSink {
+public:
+    TestCheckedArrayByteSink(char* outbuf, int32_t capacity)
+            : CheckedArrayByteSink(outbuf, capacity), calledFlush(FALSE) {}
+    virtual void Flush() { calledFlush = TRUE; }
+    UBool calledFlush;
+};
+
 void
 UnicodeStringTest::TestUTF8() {
     static const uint8_t utf8[] = {
@@ -1880,12 +1877,15 @@ UnicodeStringTest::TestUTF8() {
     UnicodeString us(FALSE, utf16, LENGTHOF(utf16));
 
     char buffer[64];
-    CheckedArrayByteSink sink(buffer, (int32_t)sizeof(buffer));
+    TestCheckedArrayByteSink sink(buffer, (int32_t)sizeof(buffer));
     us.toUTF8(sink);
     if( sink.NumberOfBytesWritten() != (int32_t)sizeof(expected_utf8) ||
         0 != uprv_memcmp(buffer, expected_utf8, sizeof(expected_utf8))
     ) {
         errln("UnicodeString::toUTF8() did not create the expected string.");
+    }
+    if(!sink.calledFlush) {
+        errln("UnicodeString::toUTF8(sink) did not sink.Flush().");
     }
 #if U_HAVE_STD_STRING
     // Initial contents for testing that toUTF8String() appends.

@@ -80,6 +80,7 @@ void DateFormatTest::runIndexedTest( int32_t index, UBool exec, const char* &nam
         TESTCASE(40,TestGMTParsing);
         TESTCASE(41,Test6880);
         TESTCASE(42,TestISOEra);
+        TESTCASE(43,TestFormalChineseDate);
         /*
         TESTCASE(43,TestRelativeError);
         TESTCASE(44,TestRelativeOther);
@@ -463,8 +464,8 @@ void DateFormatTest::TestGeneral() {
         "yyyy MM dd HH:mm:ss.SSS",
 
         // Milliseconds are left-justified, since they format as fractions of a second
-        "y/M/d H:mm:ss.S", "fp", "2004 03 10 16:36:31.567", "2004/3/10 16:36:31.6", "2004 03 10 16:36:31.600",
-        "y/M/d H:mm:ss.SS", "fp", "2004 03 10 16:36:31.567", "2004/3/10 16:36:31.57", "2004 03 10 16:36:31.570",
+        "y/M/d H:mm:ss.S", "fp", "2004 03 10 16:36:31.567", "2004/3/10 16:36:31.5", "2004 03 10 16:36:31.500",
+        "y/M/d H:mm:ss.SS", "fp", "2004 03 10 16:36:31.567", "2004/3/10 16:36:31.56", "2004 03 10 16:36:31.560",
         "y/M/d H:mm:ss.SSS", "F", "2004 03 10 16:36:31.567", "2004/3/10 16:36:31.567",
         "y/M/d H:mm:ss.SSSS", "pf", "2004/3/10 16:36:31.5679", "2004 03 10 16:36:31.568", "2004/3/10 16:36:31.5680",
     };
@@ -3244,19 +3245,22 @@ void DateFormatTest::Test6726(void)
     strm = fmtm->format(dt, strm);
     strs = fmts->format(dt, strs);
 
+
 /* Locale data is not yet updated
-    if (strf.charAt(13) == UChar(' ')) {
-        errln((UnicodeString)"FAIL: Improper formated date: " + strf);
+    if (strf.charAt(13) == UChar(0x20)) {
+        errln((UnicodeString)"FAIL: Improper formatted date: " + strf);
     }
-    if (strl.charAt(10) == UChar(' ')) {
-        errln((UnicodeString)"FAIL: Improper formated date: " + strl);
+    if (strl.charAt(10) == UChar(0x20)) {
+        errln((UnicodeString)"FAIL: Improper formatted date: " + strl);
     }
 */
-    if (strm.charAt(10) != UChar(' ')) {
-        errln((UnicodeString)"FAIL: Improper formated date: " + strm);
+    logln("strm.charAt(10)=%04X wanted 0x20\n", strm.charAt(10));
+    if (strm.charAt(10) != UChar(0x0020)) {
+      errln((UnicodeString)"FAIL: Improper formatted date: " + strm );
     }
-    if (strs.charAt(8)  != UChar(' ')) {
-        errln((UnicodeString)"FAIL: Improper formated date: " + strs);
+    logln("strs.charAt(10)=%04X wanted 0x20\n", strs.charAt(8));
+    if (strs.charAt(8)  != UChar(0x0020)) {
+        errln((UnicodeString)"FAIL: Improper formatted date: " + strs);
     }
 
     delete fmtf;
@@ -3360,7 +3364,7 @@ void DateFormatTest::TestISOEra() {
  
     // create formatter 
     SimpleDateFormat *fmt1 = new SimpleDateFormat(UnicodeString("GGG yyyy-MM-dd'T'HH:mm:ss'Z"), status); 
-    failure(status, "new SimpleDateFormat"); 
+    failure(status, "new SimpleDateFormat", TRUE); 
 
     for(int i=0; i < numData; i+=2) { 
         // create input string 
@@ -3368,7 +3372,7 @@ void DateFormatTest::TestISOEra() {
  
         // parse string to date 
         UDate dt1 = fmt1->parse(in, status); 
-        failure(status, "fmt->parse"); 
+        failure(status, "fmt->parse", TRUE); 
  
         // format date back to string 
         UnicodeString out; 
@@ -3378,11 +3382,45 @@ void DateFormatTest::TestISOEra() {
         // check that roundtrip worked as expected 
         UnicodeString expected = data[i+1]; 
         if (out != expected) { 
-            errln((UnicodeString)"FAIL: " + in + " -> " + out + " expected -> " + expected); 
+            dataerrln((UnicodeString)"FAIL: " + in + " -> " + out + " expected -> " + expected); 
         } 
     } 
  
     delete fmt1; 	 
+} 
+void DateFormatTest::TestFormalChineseDate() { 
+   
+    UErrorCode status = U_ZERO_ERROR; 
+    UnicodeString pattern ("y\\u5e74M\\u6708d\\u65e5", -1, US_INV );
+    pattern = pattern.unescape();
+    UnicodeString override ("y=hanidec;M=hans;d=hans", -1, US_INV );
+    
+    // create formatter 
+    SimpleDateFormat *sdf = new SimpleDateFormat(pattern,override,Locale::getChina(),status);
+    failure(status, "new SimpleDateFormat with override", TRUE); 
+
+    UDate thedate = date(2009-1900, UCAL_JULY, 28);
+    FieldPosition pos(0);
+    UnicodeString result;
+    sdf->format(thedate,result,pos);
+ 
+    UnicodeString expected = "\\u4e8c\\u3007\\u3007\\u4e5d\\u5e74\\u4e03\\u6708\\u4e8c\\u5341\\u516b\\u65e5"; 
+    expected = expected.unescape();
+    if (result != expected) { 
+        dataerrln((UnicodeString)"FAIL: -> " + result + " expected -> " + expected); 
+    } 
+ 
+    UDate parsedate = sdf->parse(expected,status);
+    if ( parsedate != thedate ) {
+        UnicodeString pat1 ("yyyy-MM-dd'T'HH:mm:ss'Z'", -1, US_INV );
+        SimpleDateFormat *usf = new SimpleDateFormat(pat1,Locale::getEnglish(),status);
+        UnicodeString parsedres,expres;
+        usf->format(parsedate,parsedres,pos);
+        usf->format(thedate,expres,pos);
+        errln((UnicodeString)"FAIL: parsed -> " + parsedres + " expected -> " + expres); 
+        delete usf;
+    }
+    delete sdf; 	 
 } 
 
 #endif /* #if !UCONFIG_NO_FORMATTING */
