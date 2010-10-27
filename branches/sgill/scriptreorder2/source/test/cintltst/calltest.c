@@ -16,6 +16,9 @@
 
 #include "cintltst.h"
 
+#define NEVER false
+
+
 void addUtility(TestNode** root);
 void addBreakIter(TestNode** root);
 void addStandardNamesTest(TestNode **root);
@@ -42,6 +45,7 @@ void addUSpoofTest(TestNode** root);
 
 void addAllTests(TestNode** root)
 {
+#if NEVER
     addCnvSelTest(root);
     addUDataTest(root);
     addHeapMutexTest(root);
@@ -69,9 +73,11 @@ void addAllTests(TestNode** root)
 #if !UCONFIG_NO_FORMATTING
     addFormatTest(root);
 #endif
+#endif
 #if !UCONFIG_NO_COLLATION
     addCollTest(root);
 #endif
+#if NEVER
 #if !UCONFIG_NO_TRANSLITERATION
     addUTransTest(root);
 #endif
@@ -79,5 +85,6 @@ void addAllTests(TestNode** root)
     addUSpoofTest(root);
 #endif
     addPUtilTest(root);
+#endif
 }
 

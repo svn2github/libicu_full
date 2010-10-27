@@ -41,12 +41,10 @@ uhash_hashTokens(const UHashTok k)
     //uint32_t key = (uint32_t)k.integer;
     UColToken *key = (UColToken *)k.pointer;
     if (key != 0) {
-        //int32_t len = (key & 0xFF000000)>>24;
         int32_t len = (key->source & 0xFF000000)>>24;
         int32_t inc = ((len - 32) / 32) + 1;
 
-        //const UChar *p = (key & 0x00FFFFFF) + rulesToParse;
-        const UChar *p = (key->source & 0x00FFFFFF) + key->rulesToParse;
+        const UChar *p = (key->source & 0x00FFFFFF) + *(key->rulesToParseHdl);
         const UChar *limit = p + len;
 
         while (p<limit) {
@@ -64,8 +62,8 @@ uhash_compareTokens(const UHashTok key1, const UHashTok key2)
     //uint32_t p2 = (uint32_t) key2.integer;
     UColToken *p1 = (UColToken *)key1.pointer;
     UColToken *p2 = (UColToken *)key2.pointer;
-    const UChar *s1 = (p1->source & 0x00FFFFFF) + p1->rulesToParse;
-    const UChar *s2 = (p2->source & 0x00FFFFFF) + p2->rulesToParse;
+    const UChar *s1 = (p1->source & 0x00FFFFFF) + *(p1->rulesToParseHdl);
+    const UChar *s2 = (p2->source & 0x00FFFFFF) + *(p2->rulesToParseHdl);
     uint32_t s1L = ((p1->source & 0xFF000000) >> 24);
     uint32_t s2L = ((p2->source & 0xFF000000) >> 24);
     const UChar *end = s1+s1L-1;
@@ -229,7 +227,8 @@ void ucol_uprv_tok_setOptionInImage(UColOptionSet *opts, UColAttribute attrib, U
     }
 }
 
-#define UTOK_OPTION_COUNT 20
+
+#define UTOK_OPTION_COUNT 22
 
 static UBool didInit = FALSE;
 /* we can be strict, or we can be lenient */
@@ -277,6 +276,8 @@ U_STRING_DECL(option_16,    "last",           4);
 U_STRING_DECL(option_17,    "optimize",       8);
 U_STRING_DECL(option_18,    "suppressContractions",         20);
 U_STRING_DECL(option_19,    "numericOrdering",              15);
+U_STRING_DECL(option_20,    "import",         6);
+U_STRING_DECL(option_21,    "scriptReorder",         13);
 
 
 /*
@@ -353,7 +354,9 @@ enum OptionNumber {
     OPTION_UNDEFINED,
     OPTION_SCRIPT_ORDER,
     OPTION_CHARSET_NAME,
-    OPTION_CHARSET
+    OPTION_CHARSET,
+    OPTION_IMPORT,
+    OPTION_SCRIPTREORDER
 } ;
 
 static const ucolTokOption rulesOptions[UTOK_OPTION_COUNT] = {
@@ -376,7 +379,9 @@ static const ucolTokOption rulesOptions[UTOK_OPTION_COUNT] = {
     /*16*/ {option_00,  9, NULL, 0, UCOL_ATTRIBUTE_COUNT}, /*"undefined"      */
     /*17*/ {option_09, 11, NULL, 0, UCOL_ATTRIBUTE_COUNT}, /*"scriptOrder"    */
     /*18*/ {option_10, 11, NULL, 0, UCOL_ATTRIBUTE_COUNT}, /*"charsetname"    */
-    /*19*/ {option_11,  7, NULL, 0, UCOL_ATTRIBUTE_COUNT}  /*"charset"        */
+    /*19*/ {option_11,  7, NULL, 0, UCOL_ATTRIBUTE_COUNT},  /*"charset"        */
+    /*20*/ {option_20,  6, NULL, 0, UCOL_ATTRIBUTE_COUNT},  /*"import"        */
+    /*21*/ {option_21,  13, NULL, 0, UCOL_ATTRIBUTE_COUNT}  /*"scriptReorder"        */
 };
 
 static
@@ -444,6 +449,7 @@ void ucol_uprv_tok_initData() {
         U_STRING_INIT(option_17, "optimize",       8);
         U_STRING_INIT(option_18, "suppressContractions",         20);
         U_STRING_INIT(option_19, "numericOrdering",      15);
+        U_STRING_INIT(option_21, "scriptReorder ",        13);
         didInit = TRUE;
     }
 }
@@ -572,6 +578,140 @@ int32_t ucol_uprv_tok_readOption(const UChar *start, const UChar *end, const UCh
 }
 
 
+// static
+// void ucol_tok_parseScriptReorder(UColTokenParser *src, UErrorCode *status){
+//     char scriptCodeName[5];
+//     int32_t scriptCount = 0;
+//     UScriptCode scriptCode;
+//     int i;
+//     const UChar* current = src->current;
+//     const UChar* end = u_memchr(src->current, 0x005d, src->end-src->current);
+//     while(current < end){
+//         // Ensure that the following token is 4 characters long
+//         if((end != current+4) &&
+//            (u_memchr(current, 0x0020, end-current) != current+4)){
+//             *status = U_INVALID_FORMAT_ERROR;
+//             return;
+//         }
+// 
+//         ++scriptCount;
+//         current += 4;
+// 
+//         while(u_isWhitespace(*current)) { /* eat whitespace */
+//             ++current;
+//         }
+//     }
+// 
+//     src->opts->scriptOrderLength = scriptCount;
+//     src->opts->scriptOrder = (UScriptCode*)uprv_malloc(scriptCount * sizeof(UScriptCode));
+// 
+//     i = 0;
+// 
+//     while(src->current < end){
+//         if((end != src->current+4) &&
+//            (u_memchr(src->current, 0x0020, end-src->current) != src->current+4)){
+//             *status = U_INVALID_FORMAT_ERROR;
+//             return;
+//         }
+//         u_strToUTF8(scriptCodeName, 5, NULL, src->current, 4, status);
+// 
+//         uscript_getCode(scriptCodeName, &scriptCode, 1, status);
+// 
+//         src->opts->scriptOrder[i++] = scriptCode;
+// 
+//         src->current += 4;
+// 
+//         while(u_isWhitespace(*src->current)) { /* eat whitespace */
+//             ++src->current;
+//         }
+//     }
+// }
+
+static
+void ucol_tok_parseScriptReorder(UColTokenParser *src, UErrorCode *status){
+fprintf(stdout, "\nucol_tok_parseScriptReorder()\n");
+    int32_t codeCount = 0;
+    int32_t codeIndex = 0;
+    char conversion[64];
+	int32_t tokenLength = 0;
+	const UChar* space;
+	
+    const UChar* current = src->current;
+    const UChar* end = u_memchr(src->current, 0x005d, src->end - src->current);
+
+    // eat leading whitespace
+   	while(current < end && u_isWhitespace(*current)) {
+   		current++;
+   	}
+   	
+    while(current < end) {    
+    	space = u_memchr(current, 0x0020, end - current);
+    	space = space == 0 ? end : space;
+    	tokenLength = space - current;
+    	if (tokenLength < 4) {
+            *status = U_INVALID_FORMAT_ERROR;
+            return;
+        }
+        codeCount++;
+        current += tokenLength;
+        while(current < end && u_isWhitespace(*current)) { /* eat whitespace */
+            ++current;
+        }
+    }
+
+    if (codeCount == 0) {
+    	*status = U_INVALID_FORMAT_ERROR;
+   	}
+    
+    int32_t nonScriptReorderCodes = UCOL_REORDERCODE_LIMIT - UCOL_REORDERCODE_FIRST;
+    codeCount += nonScriptReorderCodes;	// to account for the non-script codes
+fprintf(stdout, "\tnonScriptReorderCodes = %d\n", nonScriptReorderCodes);
+fprintf(stdout, "\ncodeCount = %d\n", codeCount);
+    src->opts->scriptOrderLength = codeCount;
+    src->opts->scriptOrder = (int32_t*)uprv_malloc(codeCount * sizeof(int32_t));
+	current = src->current;
+	
+	for (codeIndex = 0; codeIndex < nonScriptReorderCodes; codeIndex++) {
+		src->opts->scriptOrder[codeIndex] = UCOL_REORDERCODE_FIRST + codeIndex;
+	}
+	
+	// eat leading whitespace
+   	while(current < end && u_isWhitespace(*current)) {
+   		current++;
+   	}
+
+    while(current < end) {    
+    	space = u_memchr(current, 0x0020, end - current);
+    	space = space == 0 ? end : space;
+    	tokenLength = space - current;
+    	if (tokenLength < 4) {
+            *status = U_INVALID_FORMAT_ERROR;
+            return;
+        } else {
+            u_UCharsToChars(current, conversion, tokenLength);
+    		conversion[tokenLength] = '\0';
+fprintf(stdout, "\ncode index = %d, token = %s\n", codeIndex, conversion);
+        	src->opts->scriptOrder[codeIndex] = ucol_findReorderingEntry(conversion);
+fprintf(stdout, "\tucol_findReorderingEntry() = %x\n", src->opts->scriptOrder[codeIndex]);
+    		if (src->opts->scriptOrder[codeIndex] != USCRIPT_INVALID_CODE) {
+    			// non-script reorder code used in rule so remove it from the leading slot
+    			src->opts->scriptOrder[src->opts->scriptOrder[codeIndex] - UCOL_REORDERCODE_FIRST] = UCOL_REORDERCODE_IGNORE;
+    		} else {
+    			src->opts->scriptOrder[codeIndex] = u_getPropertyValueEnum(UCHAR_SCRIPT, conversion);
+fprintf(stdout, "\tucol_findReorderingEntry() = %x\n", src->opts->scriptOrder[codeIndex]);
+    		}
+    		if (src->opts->scriptOrder[codeIndex] == USCRIPT_INVALID_CODE) {
+    			*status = U_INVALID_FORMAT_ERROR;
+    		}
+        }
+        codeIndex++;
+        current += tokenLength;
+        while(current < end && u_isWhitespace(*current)) { /* eat whitespace */
+            ++current;
+        }
+    }	
+}
+
 // reads and conforms to various options in rules
 // end is the position of the first closing ']'
 // However, some of the options take an UnicodeSet definition
@@ -669,6 +809,9 @@ uint8_t ucol_uprv_tok_readAndSetOption(UColTokenParser *src, UErrorCode *status)
             src->current++;
         }
         result = UCOL_TOK_SUCCESS;
+        break;
+    case OPTION_SCRIPTREORDER:
+        ucol_tok_parseScriptReorder(src, status);
         break;
     default:
         *status = U_UNSUPPORTED_ERROR;
@@ -1344,7 +1487,7 @@ static UColToken *ucol_tok_initAReset(UColTokenParser *src, const UChar *expand,
         *status = U_MEMORY_ALLOCATION_ERROR;
         return NULL;
     }
-    sourceToken->rulesToParse = src->source;
+    sourceToken->rulesToParseHdl = &(src->source);
     sourceToken->source = src->parsedToken.charsLen << 24 | src->parsedToken.charsOffset;
     sourceToken->expansion = src->parsedToken.extensionLen << 24 | src->parsedToken.extensionOffset;
 
@@ -1451,7 +1594,7 @@ inline UColToken *getVirginBefore(UColTokenParser *src, UColToken *sourceToken, 
         src->parsedToken.charsLen++;
 
         key.source = (src->parsedToken.charsLen/**newCharsLen*/ << 24) | src->parsedToken.charsOffset/**charsOffset*/;
-        key.rulesToParse = src->source;
+        key.rulesToParseHdl = &(src->source);
 
         //sourceToken = (UColToken *)uhash_iget(src->tailored, (int32_t)key);
         sourceToken = (UColToken *)uhash_get(src->tailored, &key);
@@ -1530,7 +1673,7 @@ inline UColToken *getVirginBefore(UColTokenParser *src, UColToken *sourceToken, 
 
         // uint32_t key = (*newCharsLen << 24) | *charsOffset;
         key.source = (src->parsedToken.charsLen/**newCharsLen*/ << 24) | src->parsedToken.charsOffset/**charsOffset*/;
-        key.rulesToParse = src->source;
+        key.rulesToParseHdl = &(src->source);
 
         //sourceToken = (UColToken *)uhash_iget(src->tailored, (int32_t)key);
         sourceToken = (UColToken *)uhash_get(src->tailored, &key);
@@ -1620,7 +1763,7 @@ uint32_t ucol_tok_assembleTokenList(UColTokenParser *src, UParseError *parseErro
             //key = newCharsLen << 24 | charsOffset;
             UColToken key;
             key.source = src->parsedToken.charsLen << 24 | src->parsedToken.charsOffset;
-            key.rulesToParse = src->source;
+            key.rulesToParseHdl = &(src->source);
 
             /*  4 Lookup each source in the CharsToToken map, and find a sourceToken */
             sourceToken = (UColToken *)uhash_get(src->tailored, &key);
@@ -1640,7 +1783,7 @@ uint32_t ucol_tok_assembleTokenList(UColTokenParser *src, UParseError *parseErro
                         *status = U_MEMORY_ALLOCATION_ERROR;
                         return 0;
                     }
-                    sourceToken->rulesToParse = src->source;
+                    sourceToken->rulesToParseHdl = &(src->source);
                     sourceToken->source = src->parsedToken.charsLen << 24 | src->parsedToken.charsOffset;
 
                     sourceToken->debugSource = *(src->source + src->parsedToken.charsOffset);
@@ -1820,7 +1963,7 @@ uint32_t ucol_tok_assembleTokenList(UColTokenParser *src, UParseError *parseErro
                         //key = searchCharsLen << 24 | charsOffset;
                         UColToken key;
                         key.source = searchCharsLen << 24 | src->parsedToken.charsOffset;
-                        key.rulesToParse = src->source;
+                        key.rulesToParseHdl = &(src->source);
                         sourceToken = (UColToken *)uhash_get(src->tailored, &key);
                     }
                     if(sourceToken != NULL) {
@@ -2067,7 +2210,6 @@ void ucol_tok_initTokenList(UColTokenParser *src, const UChar *rules, const uint
 
     uprv_memcpy(src->opts, UCA->options, sizeof(UColOptionSet));
 
-    // rulesToParse = src->source;
     src->lh = 0;
     src->listCapacity = 1024;
     src->lh = (UColTokListHeader *)uprv_malloc(src->listCapacity*sizeof(UColTokListHeader));

@@ -948,6 +948,8 @@ static void testAgainstUCA(UCollator *coll, UCollator *UCA, const char *refName,
     src.extraEnd = src.end+UCOL_TOK_EXTRA_RULE_SPACE_SIZE;
     *first = *second = 0;
 
+	/* Note that as a result of tickets 7015 or 6912, ucol_tok_parseNextToken can cause the pointer to
+	   the rules copy in src.source to get reallocated, freeing the original pointer in rulesCopy */
     while ((current = ucol_tok_parseNextToken(&src, startOfRules, &parseError,status)) != NULL) {
       strength = src.parsedToken.strength;
       chOffset = src.parsedToken.charsOffset;
@@ -962,12 +964,12 @@ static void testAgainstUCA(UCollator *coll, UCollator *UCA, const char *refName,
       varT = (UBool)((specs & UCOL_TOK_VARIABLE_TOP) != 0);
       top_ = (UBool)((specs & UCOL_TOK_TOP) != 0);
 
-      u_strncpy(second,rulesCopy+chOffset, chLen);
+      u_strncpy(second,src.source+chOffset, chLen);
       second[chLen] = 0;
       secondLen = chLen;
 
       if(exLen > 0) {
-        u_strncat(first, rulesCopy+exOffset, exLen);
+        u_strncat(first, src.source+exOffset, exLen);
         first[firstLen+exLen] = 0;
         firstLen += exLen;
       }
@@ -993,7 +995,7 @@ static void testAgainstUCA(UCollator *coll, UCollator *UCA, const char *refName,
     if(Windiff == 0) {
       log_verbose("No immediate difference with Win32!\n");
     }
-    free(rulesCopy);
+    free(src.source);
   }
 }
 
@@ -3602,8 +3604,39 @@ static void TestPrefixCompose(void) {
 static void TestRuleOptions(void) {
   /* values here are hardcoded and are correct for the current UCA
    * when the UCA changes, one might be forced to change these
-   * values. (\\u02d0, \\U00010FFFC etc...)
+   * values.
    */
+
+  /*
+   * These strings contain the last character before [variable top]
+   * and the first and second characters (by primary weights) after it.
+   * See FractionalUCA.txt. For example:
+      [last variable [0C FE, 05, 05]] # U+10A7F OLD SOUTH ARABIAN NUMERIC INDICATOR
+      [variable top = 0C FE]
+      [first regular [0D 0A, 05, 05]] # U+0060 GRAVE ACCENT
+     and
+      00B4; [0D 0C, 05, 05]
+   *
+   * Note: Starting with UCA 6.0, the [variable top] collation element
+   * is not the weight of any character or string,
+   * which means that LAST_VARIABLE_CHAR_STRING sorts before [last variable].
+   */
+#define LAST_VARIABLE_CHAR_STRING "\\U00010A7F"
+#define FIRST_REGULAR_CHAR_STRING "\\u0060"
+#define SECOND_REGULAR_CHAR_STRING "\\u00B4"
+
+  /*
+   * This string has to match the character that has the [last regular] weight
+   * which changes with each UCA version.
+   * See the bottom of FractionalUCA.txt which says something like
+      [last regular [7A FE, 05, 05]] # U+1342E EGYPTIAN HIEROGLYPH AA032
+   *
+   * Note: Starting with UCA 6.0, the [last regular] collation element
+   * is not the weight of any character or string,
+   * which means that LAST_REGULAR_CHAR_STRING sorts before [last regular].
+   */
+#define LAST_REGULAR_CHAR_STRING "\\U0001342E"
+
   static const struct {
     const char *rules;
     const char *data[10];
@@ -3643,24 +3676,6 @@ static void TestRuleOptions(void) {
         {  "c", "b", "\\u0009", "a", "\\u000a" }, 5
     },
 
-    /*
-     * These strings contain the last character before [variable top]
-     * and the first and second characters (by primary weights) after it.
-     * See FractionalUCA.txt. For example:
-        [last variable [0C FE, 05, 05]] # U+10A7F OLD SOUTH ARABIAN NUMERIC INDICATOR
-        [variable top = 0C FE]
-        [first regular [0D 0A, 05, 05]] # U+0060 GRAVE ACCENT
-       and
-        00B4; [0D 0C, 05, 05]
-     *
-     * Note: Starting with UCA 6.0, the [variable top] collation element
-     * is not the weight of any character or string,
-     * which means that LAST_VARIABLE_CHAR_STRING sorts before [last variable].
-     */
-#define LAST_VARIABLE_CHAR_STRING "\\U00010A7F"
-#define FIRST_REGULAR_CHAR_STRING "\\u0060"
-#define SECOND_REGULAR_CHAR_STRING "\\u00B4"
-
     { "&[last variable]<a &[before 3][last variable]<<<c<<<b ",
         { LAST_VARIABLE_CHAR_STRING, "c", "b", /* [last variable] */ "a", FIRST_REGULAR_CHAR_STRING }, 5
     },
@@ -3669,19 +3684,6 @@ static void TestRuleOptions(void) {
       "&[before 1][first regular]<b",
       { "b", FIRST_REGULAR_CHAR_STRING, "a", SECOND_REGULAR_CHAR_STRING }, 4
     },
-
-    /*
-     * The character in the second ordering test string
-     * has to match the character that has the [last regular] weight
-     * which changes with each UCA version.
-     * See the bottom of FractionalUCA.txt which says something like
-        [last regular [7A FE, 05, 05]] # U+1342E EGYPTIAN HIEROGLYPH AA032
-     *
-     * Note: Starting with UCA 6.0, the [last regular] collation element
-     * is not the weight of any character or string,
-     * which means that LAST_REGULAR_CHAR_STRING sorts before [last regular].
-     */
-#define LAST_REGULAR_CHAR_STRING "\\U0001342E"
 
     { "&[before 1][last regular]<b"
       "&[last regular]<a",
@@ -3708,7 +3710,6 @@ static void TestRuleOptions(void) {
 
   };
   uint32_t i;
-
 
   for(i = 0; i<(sizeof(tests)/sizeof(tests[0])); i++) {
     genericRulesStarter(tests[i].rules, tests[i].data, tests[i].len);
@@ -5809,6 +5810,123 @@ static void TestInvalidListsAndRanges(void)
   }
 }
 
+/*
+ * This test ensures that characters placed before a character in a different script have the same lead byte
+ * in their collation key before and after script reordering.
+ */
+static void TestBeforeRuleWithScriptReordering(void)
+{
+    int32_t i;
+    UParseError error;
+    UErrorCode status = U_ZERO_ERROR;
+    UCollator  *myCollation;
+    char srules[500] = "&[before 1]\\u03b1 < \\u0e01";
+    UChar rules[500];
+    uint32_t rulesLength = 0;
+    UScriptCode scriptOrder[1] = {USCRIPT_GREEK};
+
+	log_verbose("Testing the &[before 1] rule with [scriptReorder grek]\n");
+
+    UChar base[] = { 0x03b1 }; /* base */
+    int32_t baseLen = sizeof(base)/sizeof(*base);
+
+    UChar before[] = { 0x0e01 }; /* ko kai */
+    int32_t beforeLen = sizeof(before)/sizeof(*before);
+
+	/*UChar *data[] = { before, base };
+	genericRulesStarter(srules, data, 2);*/
+	
+	/* build collator */
+    rulesLength = u_unescape(srules, rules, LEN(rules));
+    myCollation = ucol_openRules(rules, rulesLength, UCOL_ON, UCOL_TERTIARY, &error, &status);
+    if(U_FAILURE(status)) {
+        log_err_status(status, "ERROR: in creation of rule based collator: %s\n", myErrorName(status));
+        return;
+    }
+
+	/* check collation results - before rule applied but not script reordering */
+    UCollationResult collResult = ucol_strcoll(myCollation, base, baseLen, before, beforeLen);
+	if (collResult != UCOL_GREATER) {
+		log_err("Collation result not correct before script reordering = %d\n", collResult);
+	}
+
+	/* check the lead byte of the collation keys before script reordering */
+    uint8_t baseKey[256];
+    uint32_t baseKeyLength = ucol_getSortKey(myCollation, base, baseLen, baseKey, 256);
+    uint8_t beforeKey[256];
+    uint32_t beforeKeyLength = ucol_getSortKey(myCollation, before, beforeLen, beforeKey, 256);
+    if (baseKey[0] != beforeKey[0]) {
+      log_err("Different lead byte for sort keys using before rule and before script reordering. base character lead byte = %02x, before character lead byte = %02x\n", baseKey[0], beforeKey[0]);
+   }
+
+	/* reirder the scripts */
+    ucol_setScriptOrder(myCollation, scriptOrder, 1);
+
+	/* check collation results - before rule applied and after script reordering */
+    collResult = ucol_strcoll(myCollation, base, baseLen, before, beforeLen);
+	if (collResult != UCOL_GREATER) {
+		log_err("Collation result not correct after script reordering = %d\n", collResult);
+	}
+	
+	/* check the lead byte of the collation keys after script reordering */
+    ucol_getSortKey(myCollation, base, baseLen, baseKey, 256);
+    ucol_getSortKey(myCollation, before, beforeLen, beforeKey, 256);
+    if (baseKey[0] != beforeKey[0]) {
+		log_err("Different lead byte for sort keys using before fule and after script reordering. base character lead byte = %02x, before character lead byte = %02x\n", baseKey[0], beforeKey[0]);
+    }
+
+    ucol_close(myCollation);
+}
+
+static void TestGreekFirstReorder(void)
+{
+  const char* strRules[] = {
+    "[scriptReorder Grek]"
+  };
+
+  const static OneTestCase privateUseCharacterStrings[] = {
+    { {0x0391}, {0x0391}, UCOL_EQUAL },
+    { {0x0041}, {0x0391}, UCOL_GREATER },
+    { {0x03B1, 0x0041}, {0x03B1, 0x0391}, UCOL_GREATER },
+    { {0x0060}, {0x0391}, UCOL_LESS },
+    { {0x0391}, {0xe2dc}, UCOL_LESS },
+    { {0x0391}, {0x0060}, UCOL_GREATER },
+  };
+  doTestOneTestCase(privateUseCharacterStrings, LEN(privateUseCharacterStrings), strRules, LEN(strRules));
+}
+
+static void TestGreekLastReorder(void)
+{
+  const char* strRules[] = {
+    "[scriptReorder Zzzz Grek]"
+  };
+
+  const static OneTestCase privateUseCharacterStrings[] = {
+    { {0x0391}, {0x0391}, UCOL_EQUAL },
+    { {0x0041}, {0x0391}, UCOL_LESS },
+    { {0x03B1, 0x0041}, {0x03B1, 0x0391}, UCOL_LESS },
+    { {0x0060}, {0x0391}, UCOL_LESS },
+    { {0x0391}, {0xe2dc}, UCOL_GREATER },
+  };
+  doTestOneTestCase(privateUseCharacterStrings, LEN(privateUseCharacterStrings), strRules, LEN(strRules));
+}
+
+static void TestNonScriptReorder(void)
+{
+  const char* strRules[] = {
+    "[scriptReorder Grek Symbol DIGIT Latn Punct space Zzzz cURRENCy]"
+  };
+
+  const static OneTestCase privateUseCharacterStrings[] = {
+    { {0x0391}, {0x0041}, UCOL_LESS },
+    { {0x0041}, {0x0391}, UCOL_GREATER },
+    { {0x0060}, {0x0041}, UCOL_LESS },
+    { {0x0060}, {0x0391}, UCOL_GREATER },
+    { {0x0024}, {0x0041}, UCOL_GREATER },
+  };
+  doTestOneTestCase(privateUseCharacterStrings, LEN(privateUseCharacterStrings), strRules, LEN(strRules));
+}
+
 
 #define TEST(x) addTest(root, &x, "tscoll/cmsccoll/" # x)
 
@@ -5886,6 +6004,12 @@ void addMiscCollTest(TestNode** root)
     TEST(TestUCAPrecontext);
     TEST(TestOutOfBuffer5468);
     TEST(TestSameStrengthList);
+
+    TEST(TestGreekFirstReorder);
+    TEST(TestGreekLastReorder);
+    TEST(TestBeforeRuleWithScriptReordering);
+    TEST(TestNonScriptReorder);
+    
     TEST(TestSameStrengthListQuoted);
     TEST(TestSameStrengthListSupplemental);
     TEST(TestSameStrengthListQwerty);
@@ -5896,7 +6020,7 @@ void addMiscCollTest(TestNode** root)
     TEST(TestPrivateUseCharacters);
     TEST(TestPrivateUseCharactersInList);
     TEST(TestPrivateUseCharactersInRange);
-    TEST(TestInvalidListsAndRanges);
+    TEST(TestInvalidListsAndRanges);    
 }
 
 #endif /* #if !UCONFIG_NO_COLLATION */
