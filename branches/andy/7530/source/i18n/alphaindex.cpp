@@ -55,13 +55,13 @@ uhash_deleteUnicodeSet(void *obj) {
 
 //  UVector<Bucket *> support function, delete a Bucket.
 static void U_CALLCONV
-indexChars_deleteBucket(void *obj) {
+alphaIndex_deleteBucket(void *obj) {
     delete static_cast<AlphabeticIndex::Bucket *>(obj);
 }
 
 //  UVector<Record *> support function, delete a Record.
 static void U_CALLCONV
-indexChars_deleteRecord(void *obj) {
+alphaIndex_deleteRecord(void *obj) {
     delete static_cast<AlphabeticIndex::Record *>(obj);
 }
 
@@ -96,7 +96,7 @@ AlphabeticIndex::AlphabeticIndex(const Locale &locale, UErrorCode &status) {
     if (comparatorPrimary_ != NULL) {
         comparatorPrimary_->setStrength(Collator::PRIMARY);
     }
-    getIndexExemplars(*rawIndexChars_, locale, status);
+    getIndexExemplars(*initialLabels_, locale, status);
     indexBuildRequired_ = TRUE;
     if ((comparator_ == NULL || comparatorPrimary_ == NULL) && U_SUCCESS(status)) {
         status = U_MEMORY_ALLOCATION_ERROR;
@@ -111,11 +111,11 @@ AlphabeticIndex::~AlphabeticIndex() {
     delete comparator_;
     delete comparatorPrimary_;
     delete firstScriptCharacters_;
-    delete indexCharacters_;
+    delete labels_;
     delete inputRecords_;
     delete noDistinctSorting_;
     delete notAlphabetic_;
-    delete rawIndexChars_;
+    delete initialLabels_;
 }
 
 
@@ -123,7 +123,7 @@ AlphabeticIndex &AlphabeticIndex::addLabels(const UnicodeSet &additions, UErrorC
     if (U_FAILURE(status)) {
         return *this;
     }
-    rawIndexChars_->addAll(additions);
+    initialLabels_->addAll(additions);
     return *this;
 }
 
@@ -134,7 +134,7 @@ AlphabeticIndex &AlphabeticIndex::addLabels(const Locale &locale, UErrorCode &st
     }
     UnicodeSet additions;
     getIndexExemplars(additions, locale, status);
-    rawIndexChars_->addAll(additions);
+    initialLabels_->addAll(additions);
     return *this;
 }
 
@@ -169,7 +169,7 @@ void AlphabeticIndex::buildIndex(UErrorCode &status) {
     // necessitating a rebuild.
 
     bucketList_->removeAllElements();
-    indexCharacters_->removeAllElements();
+    labels_->removeAllElements();
     uhash_removeAll(alreadyIn_);
     noDistinctSorting_->clear();
     notAlphabetic_->clear();
@@ -179,23 +179,23 @@ void AlphabeticIndex::buildIndex(UErrorCode &status) {
 
     UVector preferenceSorting(status);   // Vector of UnicodeStrings; owned by the vector.
     preferenceSorting.setDeleter(uhash_deleteUnicodeString);
-    appendUnicodeSetToUVector(preferenceSorting, *rawIndexChars_, status);
+    appendUnicodeSetToUVector(preferenceSorting, *initialLabels_, status);
     preferenceSorting.sortWithUComparator(PreferenceComparator, &status, status);
 
-    // We now make a set of elements.
+    // We now make a set of Labels.
     // Some of the input may, however, be redundant.
     // That is, we might have c, ch, d, where "ch" sorts just like "c", "h"
     // So we make a pass through, filtering out those cases.
     // TODO: filtering these out would seem to be at odds with the eventual goal
     //       of being able to split buckets that contain too many items.
 
-    UnicodeSet indexCharacterSet;
+    UnicodeSet labelSet;
     for (int32_t psIndex=0; psIndex<preferenceSorting.size(); psIndex++) {
         UnicodeString item = *static_cast<const UnicodeString *>(preferenceSorting.elementAt(psIndex));
         // TODO:  Since preferenceSorting was originally populated from the contents of a UnicodeSet,
         //        is it even possible for duplicates to show up in this check?
-        if (indexCharacterSet.contains(item)) {
-            UnicodeSetIterator itemAlreadyInIter(indexCharacterSet);
+        if (labelSet.contains(item)) {
+            UnicodeSetIterator itemAlreadyInIter(labelSet);
             while (itemAlreadyInIter.next()) {
                 const UnicodeString &itemAlreadyIn = itemAlreadyInIter.getString();
                 if (comparatorPrimary_->compare(item, itemAlreadyIn) == 0) {
@@ -215,43 +215,47 @@ void AlphabeticIndex::buildIndex(UErrorCode &status) {
         } else if (!ALPHABETIC->containsSome(item)) {
             notAlphabetic_->add(item);
         } else {
-            indexCharacterSet.add(item);
+            labelSet.add(item);
         }
     }
 
-    // Move the set of index characters from the set into a vector, and sort
+    // Move the set of Labels from the set into a vector, and sort
     // according to the collator.
 
-    appendUnicodeSetToUVector(*indexCharacters_, indexCharacterSet, status);
-    indexCharacters_->sortWithUComparator(sortCollateComparator, comparatorPrimary_, status);
+    appendUnicodeSetToUVector(*labels_, labelSet, status);
+    labels_->sortWithUComparator(sortCollateComparator, comparatorPrimary_, status);
 
     // if the result is still too large, cut down to maxLabelCount_ elements, by removing every nth element
     //    Implemented by copying the elements to be retained to a new UVector.
 
-    const int32_t size = indexCharacterSet.size() - 1;
+    const int32_t size = labelSet.size() - 1;
     if (size > maxLabelCount_) {
-        UVector *newIndexChars = new UVector(status);
-        newIndexChars->setDeleter(uhash_deleteUnicodeString);
+        UVector *newLabels = new UVector(status);
+        newLabels->setDeleter(uhash_deleteUnicodeString);
         int32_t count = 0;
         int32_t old = -1;
-        for (int32_t srcIndex=0; srcIndex<indexCharacters_->size(); srcIndex++) {
-            const UnicodeString *str = static_cast<const UnicodeString *>(indexCharacters_->elementAt(srcIndex));
+        for (int32_t srcIndex=0; srcIndex<labels_->size(); srcIndex++) {
+            const UnicodeString *str = static_cast<const UnicodeString *>(labels_->elementAt(srcIndex));
             ++count;
             const int32_t bump = count * maxLabelCount_ / size;
             if (bump == old) {
                 // it.remove();
             } else {
-                newIndexChars->addElement(str->clone(), status);
+                newLabels->addElement(str->clone(), status);
                 old = bump;
             }
         }
-        delete indexCharacters_;
-        indexCharacters_ = newIndexChars;
+        delete labels_;
+        labels_ = newLabels;
     }
+
+    // We now know the list of labels.
+    // Create a corresponding list of buckets, one per label.
+    
     buildBucketList(status);    // Corresponds to Java BucketList constructor.
 
-    // Bin the items into the buckets.
-    bucketItems(status);
+    // Bin the Records into the Buckets.
+    bucketRecords(status);
 
     indexBuildRequired_ = FALSE;
     resetBucketIterator(status);
@@ -267,7 +271,7 @@ void AlphabeticIndex::buildBucketList(UErrorCode &status) {
 
     // Build up the list, adding underflow, additions, overflow
     // insert infix labels as needed, using \uFFFF.
-    const UnicodeString *last = static_cast<UnicodeString *>(indexCharacters_->elementAt(0));
+    const UnicodeString *last = static_cast<UnicodeString *>(labels_->elementAt(0));
     b = new Bucket(*last, *last, U_ALPHAINDEX_NORMAL, status);
     bucketList_->addElement(b, status);
 
@@ -276,8 +280,8 @@ void AlphabeticIndex::buildBucketList(UErrorCode &status) {
     AlphabeticIndex::getScriptSet(lastSet, *last, status);
     lastSet.removeAll(*IGNORE_SCRIPTS);
 
-    for (int i = 1; i < indexCharacters_->size(); ++i) {
-        UnicodeString *current = static_cast<UnicodeString *>(indexCharacters_->elementAt(i));
+    for (int i = 1; i < labels_->size(); ++i) {
+        UnicodeString *current = static_cast<UnicodeString *>(labels_->elementAt(i));
         getScriptSet(set, *current, status);
         set.removeAll(*IGNORE_SCRIPTS);
         if (lastSet.containsNone(set)) {
@@ -312,7 +316,7 @@ void AlphabeticIndex::buildBucketList(UErrorCode &status) {
 //       inputRecords_ vector, and will (eventually) be auto-deleted by it.
 //       The Bucket objects have pointers to the Record objects, but do not own them.
 //
-void AlphabeticIndex::bucketItems(UErrorCode &status) {
+void AlphabeticIndex::bucketRecords(UErrorCode &status) {
     if (U_FAILURE(status)) {
         return;
     }
@@ -326,16 +330,16 @@ void AlphabeticIndex::bucketItems(UErrorCode &status) {
     if (bucketIndex+1 < bucketList_->size()) {
         nextBucket = static_cast<Bucket *>(bucketList_->elementAt(bucketIndex+1));
     }
-    int32_t itemIndex = 0;
-    Record *r = static_cast<Record *>(inputRecords_->elementAt(itemIndex));
-    while (itemIndex < inputRecords_->size()) {
+    int32_t recordIndex = 0;
+    Record *r = static_cast<Record *>(inputRecords_->elementAt(recordIndex));
+    while (recordIndex < inputRecords_->size()) {
         if (nextBucket == NULL ||
             comparatorPrimary_->compare(*r->name_, nextBucket->lowerBoundary_) < 0) {
                 // Record goes in current bucket.  Advance to next record,
                 // stay on current bucket.
                 destBucket->records_->addElement(r, status);
-                ++itemIndex;
-                r = static_cast<Record *>(inputRecords_->elementAt(itemIndex));
+                ++recordIndex;
+                r = static_cast<Record *>(inputRecords_->elementAt(recordIndex));
         } else {
             // Advance to the next bucket, stay on current record.
             bucketIndex++;
@@ -554,14 +558,14 @@ void AlphabeticIndex::init(UErrorCode &status) {
     currentBucket_         = NULL;
     firstScriptCharacters_ = NULL;
     indexBuildRequired_    = TRUE;
-    indexCharacters_       = NULL;
+    labels_                = NULL;
     inputRecords_          = NULL;
     itemsIterIndex_        = 0;
     labelsIterIndex_       = 0;
     maxLabelCount_         = 99;
     noDistinctSorting_     = NULL;
     notAlphabetic_         = NULL;
-    rawIndexChars_         = NULL;
+    initialLabels_         = NULL;
 
     if (U_FAILURE(status)) {
         return;
@@ -574,16 +578,16 @@ void AlphabeticIndex::init(UErrorCode &status) {
     uhash_setValueDeleter(alreadyIn_, uhash_deleteUnicodeSet);
 
     bucketList_            = new UVector(status);
-    bucketList_->setDeleter(indexChars_deleteBucket);
-    indexCharacters_       = new UVector(status);
-    indexCharacters_->setDeleter(uhash_deleteUnicodeString);
-    indexCharacters_->setComparer(uhash_compareUnicodeString);
+    bucketList_->setDeleter(alphaIndex_deleteBucket);
+    labels_                = new UVector(status);
+    labels_->setDeleter(uhash_deleteUnicodeString);
+    labels_->setComparer(uhash_compareUnicodeString);
     inputRecords_          = new UVector(status);
-    inputRecords_->setDeleter(indexChars_deleteRecord);
+    inputRecords_->setDeleter(alphaIndex_deleteRecord);
 
     noDistinctSorting_     = new UnicodeSet();
     notAlphabetic_         = new UnicodeSet();
-    rawIndexChars_         = new UnicodeSet();
+    initialLabels_         = new UnicodeSet();
 
     inflowLabel_.remove();
     inflowLabel_.append((UChar)0x2026);    // Ellipsis
@@ -820,6 +824,7 @@ UVector *AlphabeticIndex::firstStringsInScript(Collator *ruleBasedCollator, UErr
 //
 //  First characters in scripts.
 //  It takes too much time to compute this from character properties, so hard code it for now.
+//  Character constants copied from corresponding declaration in ICU4J.
 //
 static UChar HACK_FIRST_CHARS_IN_SCRIPTS[] =  { 0x61, 0, 0x03B1, 0,
             0x2C81, 0, 0x0430, 0, 0x2C30, 0, 0x10D0, 0, 0x0561, 0, 0x05D0, 0, 0xD802, 0xDD00, 0, 0x0800, 0, 0x0621, 0, 0x0710, 0,
@@ -858,6 +863,78 @@ UVector *AlphabeticIndex::hackFirstStringsInScript(Collator *ruleBasedCollator, 
     dest->sortWithUComparator(sortCollateComparator, ruleBasedCollator, status);
     return dest;
 }
+
+
+//
+// Pinyin Hacks.  Direct port from Java.
+//
+static const UChar PINYIN_LOWER_BOUNDS_SHORT[] = {      // "\u0101bcd\u0113fghjkl\u1E3F\u0144\u014Dpqrstwxyz"
+            0x0101, 0x62, 0x63, 0x64, 0x0113, 0x66, 0x67, 0x68, 0x6A, 0x6B, /*l*/0x6C, 0x1E3F, 0x0144, 0x014D,
+            /*p*/0x70, 0x71, 0x72, 0x73, 0x74, /*w*/0x77, 0x78, 0x79, 0x7A};
+            // TODO:  Check with Mark.  Short & Long are the same.
+
+static UChar hackName(const UnicodeString &name, const Collator &comparator) {
+    return 0;
+}
+
+// Pinyin lookup tables copied, pasted (and reformatted) from the ICU4J code.
+
+static const UChar  HACK_PINYIN_LOOKUP_SHORT[][2] = {
+        {(UChar)0,      (UChar)0}, // A 
+        {(UChar)0x516B, (UChar)0}, // B 
+        {(UChar)0x5693, (UChar)0}, // C 
+        {(UChar)0x5491, (UChar)0}, // D 
+        {(UChar)0x59B8, (UChar)0}, // E 
+        {(UChar)0x53D1, (UChar)0}, // F 
+        {(UChar)0x65EE, (UChar)0}, // G 
+        {(UChar)0x54C8, (UChar)0}, // H 
+        {(UChar)0x4E0C, (UChar)0}, // J 
+        {(UChar)0x5494, (UChar)0}, // K 
+        {(UChar)0x5783, (UChar)0}, // L 
+        {(UChar)0x5452, (UChar)0}, // M 
+        {(UChar)0x5514, (UChar)0}, // N 
+        {(UChar)0x5594, (UChar)0}, // O 
+        {(UChar)0x5991, (UChar)0}, // P 
+        {(UChar)0x4E03, (UChar)0}, // Q 
+        {(UChar)0x513F, (UChar)0}, // R 
+        {(UChar)0x4EE8, (UChar)0}, // S 
+        {(UChar)0x4ED6, (UChar)0}, // T 
+        {(UChar)0x7A75, (UChar)0}, // W 
+        {(UChar)0x5915, (UChar)0}, // X 
+        {(UChar)0x4E2B, (UChar)0}, // Y 
+        {(UChar)0x5E00, (UChar)0}, // Z 
+    };
+
+static const UChar PINYIN_LOWER_BOUNDS_LONG[] = {   // "\u0101bcd\u0113fghjkl\u1E3F\u0144\u014Dpqrstwxyz";
+            0x0101, 0x62, 0x63, 0x64, 0x0113, 0x66, 0x67, 0x68, 0x6A, 0x6B, /*l*/0x6C, 0x1E3F, 0x0144, 0x014D,
+            /*p*/0x70, 0x71, 0x72, 0x73, 0x74, /*w*/0x77, 0x78, 0x79, 0x7A};
+
+static const UCHar HACK_PINYIN_LOOKUP_LONG[][3] = {
+        {(UChar)0,      (UChar)0,      (Uchar)0}, // A
+        {(UChar)0x516B, (UChar)0,      (UChar)0}, // b 
+        {(UChar)0xD863, (UChar)0xDEAD, (UChar)0}, // c 
+        {(UChar)0xD844, (UChar)0xDE51, (UChar)0}, // d 
+        {(UChar)0x59B8, (UChar)0,      (UChar)0}, // e 
+        {(UChar)0x53D1, (UChar)0,      (UChar)0}, // f 
+        {(UChar)0xD844, (UChar)0xDE45, (UChar)0}, // g 
+        {(UChar)0x54C8, (UChar)0,      (UChar)0}, // h 
+        {(UChar)0x4E0C, (UChar)0,      (UChar)0}, // j 
+        {(UChar)0x5494, (UChar)0,      (UChar)0}, // k 
+        {(UChar)0x3547, (UChar)0,      (UChar)0}, // l 
+        {(UChar)0x5452, (UChar)0,      (UChar)0}, // m 
+        {(UChar)0x5514, (UChar)0,      (UChar)0}, // n 
+        {(UChar)0x5594, (UChar)0,      (UChar)0}, // o 
+        {(UChar)0xD84F, (UChar)0xDC7A, (UChar)0}, // p 
+        {(UChar)0x4E03, (UChar)0,      (UChar)0}, // q 
+        {(UChar)0x513F, (UChar)0,      (UChar)0}, // r 
+        {(UChar)0x4EE8, (UChar)0,      (UChar)0}, // s 
+        {(UChar)0x4ED6, (UChar)0,      (UChar)0}, // t 
+        {(UChar)0x7A75, (UChar)0,      (UChar)0}, // w 
+        {(UChar)0x5915, (UChar)0,      (UChar)0}, // x 
+        {(UChar)0x4E2B, (UChar)0,      (UChar)0}, // y 
+        {(UChar)0x5E00, (UChar)0,      (UChar)0}, // z 
+    };
+
 
 
 /**

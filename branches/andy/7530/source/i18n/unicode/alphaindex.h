@@ -553,7 +553,7 @@ private:
 
      void buildIndex(UErrorCode &status);
      void buildBucketList(UErrorCode &status);
-     void bucketItems(UErrorCode &status);
+     void bucketRecords(UErrorCode &status);
 
 
   public:
@@ -617,12 +617,13 @@ private:
 
      UHashtable *alreadyIn_;         // Key=UnicodeString, value=UnicodeSet
 
-     UnicodeSet *rawIndexChars_;     // Set of index characters.  Union
+     UnicodeSet *initialLabels_;     // Initial (unprocessed) set of Labels.  Union
                                      //   of those explicitly set by the user plus
                                      //   those from locales.  Raw values, before
                                      //   crunching into bucket labels.
 
-     UVector    *indexCharacters_;   // Set of index characters, after processing, sorting.
+     UVector    *labels_;            // List of Labels, after processing, sorting.
+                                     //   Contents are (UnicodeString *)
 
      UnicodeSet *noDistinctSorting_;
      UnicodeSet *notAlphabetic_;
