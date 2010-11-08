@@ -39,7 +39,7 @@ de{
             }
         }
     }
-    Version{"2.0.50.25"}
+    Version{"2.0.51.59"}
     calendar{
         buddhist{
             DateTimePatterns{
@@ -59,7 +59,7 @@ de{
             }
             availableFormats{
                 Ed{"E d."}
-                H{"HH"}
+                H{"HH 'Uhr'"}
                 Hm{"HH:mm"}
                 Hms{"HH:mm:ss"}
                 M{"L"}
@@ -111,7 +111,7 @@ de{
             }
             availableFormats{
                 Ed{"E, d."}
-                H{"HH"}
+                H{"HH 'Uhr'"}
                 Hm{"HH:mm"}
                 Hms{"HH:mm:ss"}
                 M{"L"}
@@ -229,8 +229,8 @@ de{
             }
             intervalFormats{
                 H{
-                    H{"HH-HH"}
-                    a{"HH-HH"}
+                    H{"HH-HH 'Uhr'"}
+                    a{"HH-HH 'Uhr'"}
                 }
                 Hm{
                     H{"HH:mm-HH:mm"}
@@ -243,8 +243,8 @@ de{
                     m{"HH:mm-HH:mm v"}
                 }
                 Hv{
-                    H{"HH-HH v"}
-                    a{"HH-HH v"}
+                    H{"HH-HH 'Uhr' v"}
+                    a{"HH-HH 'Uhr' v"}
                 }
                 M{
                     M{"M.-M."}
@@ -315,8 +315,8 @@ de{
                     y{"E, d. MMM y - E, d. MMM y"}
                 }
                 yMMMM{
-                    M{"MM – MM.yyyy"}
-                    y{"MM.yyyy – MM.yyyy"}
+                    M{"MMMM-MMMM y"}
+                    y{"MMMM y - MMMM y"}
                 }
                 yMMMd{
                     M{"d. MMM - d. MMM y"}
@@ -426,7 +426,7 @@ de{
             }
             availableFormats{
                 Ed{"E d."}
-                H{"HH"}
+                H{"HH 'Uhr'"}
                 Hm{"HH:mm"}
                 Hms{"HH:mm:ss"}
                 M{"L"}
@@ -454,6 +454,66 @@ de{
                 yyyyQ{"Q y G"}
                 yyyyQQQ{"QQQ y G"}
             }
+            eras{
+                abbreviated{
+                    "AH",
+                }
+                narrow:alias{"/LOCALE/calendar/islamic/eras/abbreviated"}
+                wide:alias{"/LOCALE/calendar/islamic/eras/abbreviated"}
+            }
+            monthNames{
+                default{"format"}
+                format{
+                    abbreviated{
+                        "Muh.",
+                        "Saf.",
+                        "Rab. I",
+                        "Rab. II",
+                        "Jum. I",
+                        "Jum. II",
+                        "Raj.",
+                        "Sha.",
+                        "Ram.",
+                        "Shaw.",
+                        "Dhuʻl-Q.",
+                        "Dhuʻl-H.",
+                    }
+                    default{"wide"}
+                    narrow:alias{"/LOCALE/calendar/islamic/monthNames/stand-alone/narrow"}
+                    wide{
+                        "Muharram",
+                        "Safar",
+                        "Rabiʻ I",
+                        "Rabiʻ II",
+                        "Jumada I",
+                        "Jumada II",
+                        "Rajab",
+                        "Shaʻban",
+                        "Ramadan",
+                        "Shawwal",
+                        "Dhuʻl-Qiʻdah",
+                        "Dhuʻl-Hijjah",
+                    }
+                }
+                stand-alone{
+                    abbreviated:alias{"/LOCALE/calendar/islamic/monthNames/format/abbreviated"}
+                    narrow{
+                        "1",
+                        "2",
+                        "3",
+                        "4",
+                        "5",
+                        "6",
+                        "7",
+                        "8",
+                        "9",
+                        "10",
+                        "11",
+                        "12",
+                    }
+                    wide:alias{"/LOCALE/calendar/islamic/monthNames/format/wide"}
+                }
+            }
         }
         japanese{
             DateTimePatterns{
@@ -473,7 +533,7 @@ de{
             }
             availableFormats{
                 Ed{"E d."}
-                H{"HH"}
+                H{"HH 'Uhr'"}
                 Hm{"HH:mm"}
                 Hms{"HH:mm:ss"}
                 M{"L"}
@@ -520,7 +580,7 @@ de{
             }
             availableFormats{
                 Ed{"E d."}
-                H{"HH"}
+                H{"HH 'Uhr'"}
                 Hm{"HH:mm"}
                 Hms{"HH:mm:ss"}
                 M{"L"}

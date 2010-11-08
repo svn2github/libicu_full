@@ -194,7 +194,6 @@ NumberFormat::NumberFormat()
     fParseStrict(TRUE)  // TODO: Should this be FALSE?
 {
     fCurrency[0] = 0;
-    Format::setLenient(FALSE);
 }
 
 // -------------------------------------

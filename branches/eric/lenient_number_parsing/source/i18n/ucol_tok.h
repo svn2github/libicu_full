@@ -82,7 +82,7 @@ struct UColToken {
   UColTokListHeader *listHeader;
   UColToken* previous;
   UColToken* next;
-  UChar *rulesToParse;
+  UChar **rulesToParseHdl;
   uint16_t flags;
 };
 
@@ -124,7 +124,7 @@ typedef struct {
   USet *removeSet;
   UBool buildCCTabFlag;  /* Tailoring rule requirs building combining class table. */
 
-  uint32_t previousCp;               /* Previous code point. */
+  UChar32 previousCp;               /* Previous code point. */
   /* For processing starred lists. */
   UBool isStarred;                   /* Are we processing a starred token? */
   UBool savedIsStarred;
@@ -133,8 +133,13 @@ typedef struct {
 
   /* For processing ranges. */
   UBool inRange;                     /* Are we in a range? */
-  uint32_t currentRangeCp;           /* Current code point in the range. */
-  uint32_t lastRangeCp;              /* The last code point in the range. */
+  UChar32 currentRangeCp;           /* Current code point in the range. */
+  UChar32 lastRangeCp;              /* The last code point in the range. */
+  
+  /* reorder codes for collation reordering */
+  int32_t* reorderCodes;
+  int32_t reorderCodesLength;
+
 } UColTokenParser;
 
 typedef struct {
@@ -165,7 +170,13 @@ uint32_t ucol_tok_assembleTokenList(UColTokenParser *src,
                                     UErrorCode *status);
 
 U_CFUNC
-void ucol_tok_initTokenList(UColTokenParser *src, const UChar *rules, const uint32_t rulesLength, const UCollator *UCA, UErrorCode *status);
+void ucol_tok_initTokenList(UColTokenParser *src,
+                            const UChar *rules,
+                            const uint32_t rulesLength,
+                            const UCollator *UCA,
+                            GetCollationRulesFunction importFunc,
+                            void* context,
+                            UErrorCode *status);
 
 U_CFUNC void ucol_tok_closeTokenList(UColTokenParser *src);
 
@@ -188,6 +199,12 @@ U_CFUNC int32_t U_EXPORT2 ucol_inv_getPrevCE(const UColTokenParser *src,
                                             uint32_t *prevCE, uint32_t *prevContCE,
                                             uint32_t strength);
 
+U_CFUNC const UChar* ucol_tok_getRulesFromBundle(
+    void* context,
+    const char* locale,
+    const char* type,
+    int32_t* pLength,
+    UErrorCode* status);
 
 #endif /* #if !UCONFIG_NO_COLLATION */
 

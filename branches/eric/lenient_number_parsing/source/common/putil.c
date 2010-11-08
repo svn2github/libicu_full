@@ -693,6 +693,26 @@ static UBool isValidOlsonID(const char *id) {
         || uprv_strcmp(id, "CST6CDT") == 0
         || uprv_strcmp(id, "EST5EDT") == 0);
 }
+
+/* On some Unix-like OS, 'posix' subdirectory in
+   /usr/share/zoneinfo replicates the top-level contents. 'right'
+   subdirectory has the same set of files, but individual files
+   are different from those in the top-level directory or 'posix'
+   because 'right' has files for TAI (Int'l Atomic Time) while 'posix'
+   has files for UTC.
+   When the first match for /etc/localtime is in either of them
+   (usually in posix because 'right' has different file contents),
+   or TZ environment variable points to one of them, createTimeZone
+   fails because, say, 'posix/America/New_York' is not an Olson
+   timezone id ('America/New_York' is). So, we have to skip
+   'posix/' and 'right/' at the beginning. */
+static void skipZoneIDPrefix(const char** id) {
+    if (uprv_strncmp(*id, "posix/", 6) == 0
+        || uprv_strncmp(*id, "right/", 6) == 0)
+    {
+        *id += 6;
+    }
+}
 #endif
 
 #if defined(U_TZNAME) && !defined(U_WINDOWS)
@@ -900,11 +920,12 @@ static char* searchForTZFile(const char* path, DefaultTZInfo* tzInfo) {
 
     /* Check each entry in the directory. */
     while((dirEntry = readdir(dirp)) != NULL) {
-        if (uprv_strcmp(dirEntry->d_name, SKIP1) != 0 && uprv_strcmp(dirEntry->d_name, SKIP2) != 0) {
+        const char* dirName = dirEntry->d_name;
+        if (uprv_strcmp(dirName, SKIP1) != 0 && uprv_strcmp(dirName, SKIP2) != 0) {
             /* Create a newpath with the new entry to test each entry in the directory. */
             char newpath[MAX_PATH_SIZE];
             uprv_strcpy(newpath, curpath);
-            uprv_strcat(newpath, dirEntry->d_name);
+            uprv_strcat(newpath, dirName);
 
             if ((subDirp = opendir(newpath)) != NULL) {
                 /* If this new path is a directory, make a recursive call with the newpath. */
@@ -921,9 +942,11 @@ static char* searchForTZFile(const char* path, DefaultTZInfo* tzInfo) {
                 */
                 if (result != NULL)
                     break;
-            } else if (uprv_strcmp(TZFILE_SKIP, dirEntry->d_name) != 0 && uprv_strcmp(TZFILE_SKIP2, dirEntry->d_name) != 0) {
+            } else if (uprv_strcmp(TZFILE_SKIP, dirName) != 0 && uprv_strcmp(TZFILE_SKIP2, dirName) != 0) {
                 if(compareBinaryFiles(TZDEFAULT, newpath, tzInfo)) {
-                    uprv_strcpy(SEARCH_TZFILE_RESULT, newpath + (sizeof(TZZONEINFO) - 1));
+                    const char* zoneid = newpath + (sizeof(TZZONEINFO)) - 1;
+                    skipZoneIDPrefix(&zoneid);
+                    uprv_strcpy(SEARCH_TZFILE_RESULT, zoneid);
                     result = SEARCH_TZFILE_RESULT;
                     /* Get out after the first one found. */
                     break;
@@ -962,12 +985,7 @@ uprv_tzname(int n)
     if (tzid != NULL && isValidOlsonID(tzid))
     {
         /* This might be a good Olson ID. */
-        if (uprv_strncmp(tzid, "posix/", 6) == 0
-            || uprv_strncmp(tzid, "right/", 6) == 0)
-        {
-            /* Remove the posix/ or right/ prefix. */
-            tzid += 6;
-        }
+        skipZoneIDPrefix(&tzid);
         return tzid;
     }
     /* else U_TZNAME will give a better result. */
@@ -1155,11 +1173,18 @@ uprv_pathIsAbsolute(const char *path)
   return FALSE;
 }
 
+/* Temporary backup setting of ICU_DATA_DIR_PREFIX_ENV_VAR
+   until some client wrapper makefiles are updated */
+#if defined(U_DARWIN) && TARGET_IPHONE_SIMULATOR
+# if !defined(ICU_DATA_DIR_PREFIX_ENV_VAR)
+#  define ICU_DATA_DIR_PREFIX_ENV_VAR "IPHONE_SIMULATOR_ROOT"
+# endif
+#endif
+
 U_CAPI const char * U_EXPORT2
 u_getDataDirectory(void) {
     const char *path = NULL;
-#if defined(U_DARWIN) && TARGET_IPHONE_SIMULATOR
-    const char *simulator_root = NULL;
+#if defined(ICU_DATA_DIR_PREFIX_ENV_VAR)
     char datadir_path_buffer[PATH_MAX];
 #endif
 
@@ -1197,21 +1222,22 @@ u_getDataDirectory(void) {
      */
 #if defined(ICU_DATA_DIR) || defined(U_ICU_DATA_DEFAULT_DIR)
     if(path==NULL || *path==0) {
-#   ifdef ICU_DATA_DIR
+# if defined(ICU_DATA_DIR_PREFIX_ENV_VAR)
+        const char *prefix = getenv(ICU_DATA_DIR_PREFIX_ENV_VAR);
+# endif
+# ifdef ICU_DATA_DIR
         path=ICU_DATA_DIR;
-#   else
+# else
         path=U_ICU_DATA_DEFAULT_DIR;
-#   endif
-#if defined(U_DARWIN) && TARGET_IPHONE_SIMULATOR
-        simulator_root=getenv("IPHONE_SIMULATOR_ROOT");
-        if (simulator_root != NULL) {
-            (void) strlcpy(datadir_path_buffer, simulator_root, PATH_MAX);
-            (void) strlcat(datadir_path_buffer, path, PATH_MAX);
+# endif
+# if defined(ICU_DATA_DIR_PREFIX_ENV_VAR)
+        if (prefix != NULL) {
+            snprintf(datadir_path_buffer, PATH_MAX, "%s%s", prefix, path);
             path=datadir_path_buffer;
         }
-#endif
+# endif
     }
-#   endif
+#endif
 
     if(path==NULL) {
         /* It looks really bad, set it to something. */
@@ -2066,34 +2092,33 @@ u_getVersion(UVersionInfo versionArray) {
 
 U_INTERNAL void * U_EXPORT2
 uprv_dl_open(const char *libName, UErrorCode *status) {
-    void *ret = NULL;
-    if(U_FAILURE(*status)) return ret;
-    ret =  dlopen(libName, RTLD_NOW|RTLD_GLOBAL);
-    if(ret==NULL) {
-        perror("dlopen");
-        *status = U_MISSING_RESOURCE_ERROR;
-        /* TODO: read errno and translate. */
-    }
-    return ret;
+  void *ret = NULL;
+  if(U_FAILURE(*status)) return ret;
+  ret =  dlopen(libName, RTLD_NOW|RTLD_GLOBAL);
+  if(ret==NULL) {
+#ifndef U_TRACE_DYLOAD
+    perror("dlopen");
+#endif
+    *status = U_MISSING_RESOURCE_ERROR;
+  }
+  return ret;
 }
 
 U_INTERNAL void U_EXPORT2
 uprv_dl_close(void *lib, UErrorCode *status) {
-    if(U_FAILURE(*status)) return;
-    dlclose(lib);
-    /* TODO: translate errno? */
+  if(U_FAILURE(*status)) return;
+  dlclose(lib);
 }
 
 U_INTERNAL void* U_EXPORT2
 uprv_dl_sym(void *lib, const char* sym, UErrorCode *status) {
-    void *ret = NULL;
-    if(U_FAILURE(*status)) return ret;
-    ret = dlsym(lib, sym);
-    if(ret == NULL) {
-        *status = U_MISSING_RESOURCE_ERROR;
-        /* TODO: translate errno? */
-    }
-    return ret;
+  void *ret = NULL;
+  if(U_FAILURE(*status)) return ret;
+  ret = dlsym(lib, sym);
+  if(ret == NULL) {
+    *status = U_MISSING_RESOURCE_ERROR;
+  }
+  return ret;
 }
 
 #else
@@ -2102,24 +2127,24 @@ uprv_dl_sym(void *lib, const char* sym, UErrorCode *status) {
 
 U_INTERNAL void * U_EXPORT2
 uprv_dl_open(const char *libName, UErrorCode *status) {
-    if(U_FAILURE(*status)) return NULL;
-    *status = U_UNSUPPORTED_ERROR;
-    return NULL;
+  if(U_FAILURE(*status)) return NULL;
+  *status = U_UNSUPPORTED_ERROR;
+  return NULL;
 }
 
 U_INTERNAL void U_EXPORT2
 uprv_dl_close(void *lib, UErrorCode *status) {
-    if(U_FAILURE(*status)) return;
-    *status = U_UNSUPPORTED_ERROR;
-    return;
+  if(U_FAILURE(*status)) return;
+  *status = U_UNSUPPORTED_ERROR;
+  return;
 }
 
 
 U_INTERNAL void* U_EXPORT2
 uprv_dl_sym(void *lib, const char* sym, UErrorCode *status) {
-    if(U_FAILURE(*status)) return NULL;
-    *status = U_UNSUPPORTED_ERROR;
-    return NULL;
+  if(U_FAILURE(*status)) return NULL;
+  *status = U_UNSUPPORTED_ERROR;
+  return NULL;
 }
 
 
@@ -2130,49 +2155,49 @@ uprv_dl_sym(void *lib, const char* sym, UErrorCode *status) {
 
 U_INTERNAL void * U_EXPORT2
 uprv_dl_open(const char *libName, UErrorCode *status) {
-   	HMODULE lib = NULL;
-
-	if(U_FAILURE(*status)) return NULL;
-    
-	lib = LoadLibrary(libName);
-
-	if(lib==NULL) {
-		*status = U_MISSING_RESOURCE_ERROR;
-	}
-
-    return (void*)lib;
+  HMODULE lib = NULL;
+  
+  if(U_FAILURE(*status)) return NULL;
+  
+  lib = LoadLibrary(libName);
+  
+  if(lib==NULL) {
+    *status = U_MISSING_RESOURCE_ERROR;
+  }
+  
+  return (void*)lib;
 }
 
 U_INTERNAL void U_EXPORT2
 uprv_dl_close(void *lib, UErrorCode *status) {
-	HMODULE handle = (HMODULE)lib;
-    if(U_FAILURE(*status)) return;
-    
-	FreeLibrary(handle);
-
-    return;
+  HMODULE handle = (HMODULE)lib;
+  if(U_FAILURE(*status)) return;
+  
+  FreeLibrary(handle);
+  
+  return;
 }
 
 
 U_INTERNAL void* U_EXPORT2
 uprv_dl_sym(void *lib, const char* sym, UErrorCode *status) {
-	HMODULE handle = (HMODULE)lib;
-	void * addr = NULL;
-
-	if(U_FAILURE(*status) || lib==NULL) return NULL;
-   
-	addr = GetProcAddress(handle, sym);
-
-	if(addr==NULL) {
-		DWORD lastError = GetLastError();
-		if(lastError == ERROR_PROC_NOT_FOUND) {
-			*status = U_MISSING_RESOURCE_ERROR;
-		} else {
-			*status = U_UNSUPPORTED_ERROR; /* other unknown error. */
-		}
-	}
-
-    return addr;
+  HMODULE handle = (HMODULE)lib;
+  void * addr = NULL;
+  
+  if(U_FAILURE(*status) || lib==NULL) return NULL;
+  
+  addr = GetProcAddress(handle, sym);
+  
+  if(addr==NULL) {
+    DWORD lastError = GetLastError();
+    if(lastError == ERROR_PROC_NOT_FOUND) {
+      *status = U_MISSING_RESOURCE_ERROR;
+    } else {
+      *status = U_UNSUPPORTED_ERROR; /* other unknown error. */
+    }
+  }
+  
+  return addr;
 }
 
 

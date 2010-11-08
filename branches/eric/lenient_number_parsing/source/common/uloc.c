@@ -529,7 +529,7 @@ static const VariantMap VARIANT_MAP[] = {
 
 /* ### BCP47 Conversion *******************************************/
 /* Test if the locale id has BCP47 u extension and does not have '@' */
-#define _hasBCP47Extension(id) (id && uprv_strstr(id, "-u-") != NULL && uprv_strstr(id, "@") == NULL)
+#define _hasBCP47Extension(id) (id && uprv_strstr(id, "@") == NULL && getShortestSubtagLength(localeID) == 1)
 /* Converts the BCP47 id to Unicode id. Does nothing to id if conversion fails */
 #define _ConvertBCP47(finalID, id, buffer, length,err) \
         if (uloc_forLanguageTag(id, buffer, length, NULL, err) <= 0 || U_FAILURE(*err)) { \
@@ -537,13 +537,38 @@ static const VariantMap VARIANT_MAP[] = {
         } else { \
             finalID=buffer; \
         }
+/* Gets the size of the shortest subtag in the given localeID. */
+static int32_t getShortestSubtagLength(const char *localeID) {
+    int32_t localeIDLength = uprv_strlen(localeID);
+    int32_t length = localeIDLength;
+    int32_t tmpLength = 0;
+    int32_t i;
+    UBool reset = TRUE;
+
+    for (i = 0; i < localeIDLength; i++) {
+        if (localeID[i] != '_' && localeID[i] != '-') {
+            if (reset) {
+                tmpLength = 0;
+                reset = FALSE;
+            }
+            tmpLength++;
+        } else {
+            if (tmpLength != 0 && tmpLength < length) {
+                length = tmpLength;
+            }
+            reset = TRUE;
+        }
+    }
+
+    return length;
+}
 
 /* ### Keywords **************************************************/
 
 #define ULOC_KEYWORD_BUFFER_LEN 25
 #define ULOC_MAX_NO_KEYWORDS 25
 
-static const char * 
+U_CAPI const char * U_EXPORT2
 locale_getKeywordsStart(const char *localeID) {
     const char *result = NULL;
     if((result = uprv_strchr(localeID, '@')) != NULL) {

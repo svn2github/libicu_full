@@ -152,12 +152,6 @@ IntlTestRBNF::TestAPI() {
   }
 
   logln("RBNF API test starting");
-  
-  //  check default value of lenient
-  if ( formatter->isLenient() ) {
-     errln("ERROR: isLenient() not FALSE by default for RuleBasedNumberFormat");
-  }
-  
   // test clone
   {
     logln("Testing Clone");
@@ -165,14 +159,6 @@ IntlTestRBNF::TestAPI() {
     if(rbnfClone != NULL) {
       if(!(*rbnfClone == *formatter)) {
         errln("Clone should be semantically equivalent to the original!");
-      }
-      rbnfClone->setLenient(!formatter->isLenient());
-      if( rbnfClone->isLenient() == formatter->isLenient()) {
-        errln("ERROR: isLenient() after setLenient(!isLenient()) failed");
-#if !UCONFIG_NO_COLLATION
-      } else if (*rbnfClone == *formatter) {
-        errln("ERROR: operator == is TRUE, should be FALSE if isLenient() differs");
-#endif
       }
       delete rbnfClone;
     } else {
@@ -1554,22 +1540,22 @@ IntlTestRBNF::TestSwedishSpellout()
         static const char* testDataDefault[][2] = {
             { "101", "ett\\u00adhundra\\u00adett" },
             { "123", "ett\\u00adhundra\\u00adtjugo\\u00adtre" },
-            { "1,001", "ettusen ett" },
-            { "1,100", "ettusen ett\\u00adhundra" },
-            { "1,101", "ettusen ett\\u00adhundra\\u00adett" },
-            { "1,234", "ettusen tv\\u00e5\\u00adhundra\\u00adtrettio\\u00adfyra" },
+            { "1,001", "et\\u00adtusen ett" },
+            { "1,100", "et\\u00adtusen ett\\u00adhundra" },
+            { "1,101", "et\\u00adtusen ett\\u00adhundra\\u00adett" },
+            { "1,234", "et\\u00adtusen tv\\u00e5\\u00adhundra\\u00adtrettio\\u00adfyra" },
             { "10,001", "tio\\u00adtusen ett" },
             { "11,000", "elva\\u00adtusen" },
             { "12,000", "tolv\\u00adtusen" },
-            { "20,000", "tjugo-tusen" },
-            { "21,000", "tjugo\\u00adett-tusen" },
-            { "21,001", "tjugo\\u00adett-tusen ett" },
-            { "200,000", "tv\\u00e5\\u00adhundra-tusen" },
-            { "201,000", "tv\\u00e5\\u00adhundra\\u00adett-tusen" },
-            { "200,200", "tv\\u00e5\\u00adhundra-tusen tv\\u00e5\\u00adhundra" },
+            { "20,000", "tjugo\\u00adtusen" },
+            { "21,000", "tjugo\\u00adet\\u00adtusen" },
+            { "21,001", "tjugo\\u00adet\\u00adtusen ett" },
+            { "200,000", "tv\\u00e5\\u00adhundra\\u00adtusen" },
+            { "201,000", "tv\\u00e5\\u00adhundra\\u00adet\\u00adtusen" },
+            { "200,200", "tv\\u00e5\\u00adhundra\\u00adtusen tv\\u00e5\\u00adhundra" },
             { "2,002,000", "tv\\u00e5 miljoner tv\\u00e5\\u00adtusen" },
-            { "12,345,678", "tolv miljoner tre\\u00adhundra\\u00adfyrtio\\u00adfem-tusen sex\\u00adhundra\\u00adsjuttio\\u00ad\\u00e5tta" },
-            { "123,456.789", "ett\\u00adhundra\\u00adtjugo\\u00adtre-tusen fyra\\u00adhundra\\u00adfemtio\\u00adsex komma sju \\u00e5tta nio" },
+            { "12,345,678", "tolv miljoner tre\\u00adhundra\\u00adfyrtio\\u00adfem\\u00adtusen sex\\u00adhundra\\u00adsjuttio\\u00ad\\u00e5tta" },
+            { "123,456.789", "ett\\u00adhundra\\u00adtjugo\\u00adtre\\u00adtusen fyra\\u00adhundra\\u00adfemtio\\u00adsex komma sju \\u00e5tta nio" },
             { "-12,345.678", "minus tolv\\u00adtusen tre\\u00adhundra\\u00adfyrtio\\u00adfem komma sex sju \\u00e5tta" },
             { NULL, NULL }
         };
@@ -1596,7 +1582,7 @@ IntlTestRBNF::TestSwedishSpellout()
         static const char* testDataYear[][2] = {
             { "101", "ett\\u00adhundra\\u00adett" },
             { "900", "nio\\u00adhundra" },
-            { "1,001", "ettusen ett" },
+            { "1,001", "et\\u00adtusen ett" },
             { "1,100", "elva\\u00adhundra" },
             { "1,101", "elva\\u00adhundra\\u00adett" },
             { "1,234", "tolv\\u00adhundra\\u00adtrettio\\u00adfyra" },

@@ -114,14 +114,9 @@ void DateIntervalFormatTest::testAPI() {
         return;
     } 
     // not deleted, test clone 
-    
-    // check default value of lenient
-    if ( !dtitvfmt->isLenient() ) {
-        errln("ERROR: isLenient() not TRUE by default for DateIntervalFormat");
-    }
 
 
-    // ====== Test clone() and setLenient() (latter from Format superclass)
+    // ====== Test clone()
     status = U_ZERO_ERROR;
     logln("Testing DateIntervalFormat clone");
 
@@ -130,11 +125,7 @@ void DateIntervalFormatTest::testAPI() {
         dataerrln("ERROR: clone failed");
     }
 
-    another->setLenient(!dtitvfmt->isLenient());
-    if( another->isLenient() == dtitvfmt->isLenient()) {
-        errln("ERROR: isLenient() after setLenient(!isLenient()) failed");
-    } // don't check that == fails, not relevant for subclass that does not check lenient
- 
+
     // ====== Test getDateIntervalInfo, setDateIntervalInfo, adoptDateIntervalInfo
     status = U_ZERO_ERROR;
     logln("Testing DateIntervalFormat getDateIntervalInfo");
@@ -864,7 +855,7 @@ void DateIntervalFormatTest::testFormat() {
         
         
         "de", "2007 01 10 10:00:10", "2007 01 10 14:10:10", "h", "10 vorm. - 2 nachm.", 
-        "de", "2007 01 10 10:00:10", "2007 01 10 14:10:10", "H", "10-14", 
+        "de", "2007 01 10 10:00:10", "2007 01 10 14:10:10", "H", "10-14 Uhr", 
         
         "de", "2007 01 10 10:00:10", "2007 01 10 10:20:10", "EEEEdMMM", "Mittwoch, 10. Jan", 
         
@@ -874,7 +865,7 @@ void DateIntervalFormatTest::testFormat() {
         "de", "2007 01 10 10:00:10", "2007 01 10 10:20:10", "hmz", "10:00-10:20 vorm. GMT-08:00", 
         
         "de", "2007 01 10 10:00:10", "2007 01 10 10:20:10", "h", "10 vorm.", 
-        "de", "2007 01 10 10:00:10", "2007 01 10 10:20:10", "H", "10", 
+        "de", "2007 01 10 10:00:10", "2007 01 10 10:20:10", "H", "10 Uhr", 
         
         
         "de", "2007 01 10 10:00:10", "2007 01 10 10:20:10", "hz", "10 vorm. GMT-08:00", 

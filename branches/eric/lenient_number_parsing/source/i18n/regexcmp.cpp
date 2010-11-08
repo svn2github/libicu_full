@@ -58,6 +58,7 @@ RegexCompile::RegexCompile(RegexPattern *rxp, UErrorCode &status) :
 
     fRXPat            = rxp;
     fScanIndex        = 0;
+    fLastChar         = -1;
     fPeekChar         = -1;
     fLineNum          = 1;
     fCharNum          = 0;
@@ -4086,7 +4087,25 @@ UnicodeSet *RegexCompile::createSetForProperty(const UnicodeString &propName, UB
     
     //
     //  The property as it was didn't work.
-    //    Do emergency fixes -
+
+    //  Do [:word:]. It is not recognized as a property by UnicodeSet.  "word" not standard POSIX 
+    //     or standard Java, but many other regular expression packages do recognize it.
+    
+    if (propName.caseCompare(UNICODE_STRING_SIMPLE("word"), 0) == 0) {
+        *fStatus = U_ZERO_ERROR;
+        set = new UnicodeSet(*(fRXPat->fStaticSets[URX_ISWORD_SET]));
+        if (set == NULL) {
+            *fStatus = U_MEMORY_ALLOCATION_ERROR;
+            return set;
+        }
+        if (negated) {
+            set->complement();
+        }
+        return set;
+    }
+
+
+    //    Do Java fixes -
     //       InGreek -> InGreek or Coptic, that being the official Unicode name for that block.
     //       InCombiningMarksforSymbols -> InCombiningDiacriticalMarksforSymbols.
     //

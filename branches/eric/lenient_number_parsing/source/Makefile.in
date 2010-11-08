@@ -18,7 +18,7 @@ docdir = $(datadir)/doc
 docsubdir = $(PACKAGE)$(ICULIBDASHSUFFIX)/html
 docsubsrchdir = $(docsubdir)/search
 docfilesdir = doc/html
-docfiles = $(docfilesdir)/*.gif $(docfilesdir)/*.png $(docfilesdir)/*.html $(docfilesdir)/*.css $(docfilesdir)/*.tag $(docfilesdir)/installdox
+docfiles = $(docfilesdir)/*.png $(docfilesdir)/*.html $(docfilesdir)/*.css $(docfilesdir)/*.tag $(docfilesdir)/installdox
 docsrchdir = $(docfilesdir)/search
 docsrchfiles = $(docsrchdir)/*
 
@@ -316,7 +316,7 @@ icu4j-data-install icu4j-data: all tests
 
 # For updating Windows makefiles
 
-WINDOWS_UPDATEFILES=$(srcdir)/data/makedata.mak $(shell find $(srcdir) -name '*.vcproj')
+WINDOWS_UPDATEFILES=$(srcdir)/data/makedata.mak $(shell find $(srcdir) -name '*.vcproj' -o -name '*.vcxproj')
 
 WINDOWS_UPDATEFILES_SED=config/windows-update.sed
 

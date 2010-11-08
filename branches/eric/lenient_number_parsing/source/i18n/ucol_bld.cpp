@@ -25,6 +25,8 @@
 #include "unicode/udata.h"
 #include "unicode/uchar.h"
 #include "unicode/uniset.h"
+#include "unicode/uscript.h"
+#include "unicode/ustring.h"
 #include "normalizer2impl.h"
 #include "ucol_bld.h"
 #include "ucol_elm.h"
@@ -32,6 +34,7 @@
 #include "ucln_in.h"
 #include "umutex.h"
 #include "cmemory.h"
+#include "cstring.h"
 
 static const InverseUCATableHeader* _staticInvUCA = NULL;
 static UDataMemory* invUCA_DATA_MEM = NULL;
@@ -512,8 +515,10 @@ static uint32_t ucol_getCEGenerator(ucolCEGenerator *g, uint32_t* lows, uint32_t
         }
     }
 
-    if(low == 0) {
-        low = 0x01000000;
+    if(low < 0x02000000) {
+        // We must not use CE weight byte 02, so we set it as the minimum lower bound.
+        // See http://site.icu-project.org/design/collation/bytes
+        low = 0x02000000;
     }
 
     if(strength == UCOL_SECONDARY) { /* similar as simple */
@@ -761,7 +766,7 @@ U_CFUNC void ucol_initBuffers(UColTokenParser *src, UColTokListHeader *lh, UErro
         fprintf(stderr, "gapsLo[%i] [%08X %08X %08X]\n", j, lh->gapsLo[j*3], lh->gapsLo[j*3+1], lh->gapsLo[j*3+2]);
         fprintf(stderr, "gapsHi[%i] [%08X %08X %08X]\n", j, lh->gapsHi[j*3], lh->gapsHi[j*3+1], lh->gapsHi[j*3+2]);
     }
-    tok=lh->first[UCOL_TOK_POLARITY_POSITIVE];
+    tok=&lh->first[UCOL_TOK_POLARITY_POSITIVE];
 
     do {
         fprintf(stderr,"%i", tok->strength);
@@ -769,7 +774,7 @@ U_CFUNC void ucol_initBuffers(UColTokenParser *src, UColTokListHeader *lh, UErro
     } while(tok != NULL);
     fprintf(stderr, "\n");
 
-    tok=lh->first[UCOL_TOK_POLARITY_POSITIVE];
+    tok=&lh->first[UCOL_TOK_POLARITY_POSITIVE];
 
     do {
         fprintf(stderr,"%i", tok->toInsert);
@@ -851,7 +856,7 @@ U_CFUNC void ucol_createElements(UColTokenParser *src, tempUCATable *t, UColTokL
             //uint32_t exp = currentSequenceLen | expOffset;
             UColToken exp;
             exp.source = currentSequenceLen | expOffset;
-            exp.rulesToParse = src->source;
+            exp.rulesToParseHdl = &(src->source);
 
             while(len > 0) {
                 currentSequenceLen = len;
@@ -1296,7 +1301,7 @@ UCATableHeader *ucol_assembleTailoringTable(UColTokenParser *src, UErrorCode *st
     utrie_enum(&t->UCA->mapping, NULL, _processUCACompleteIgnorables, t);
 
     // add tailoring characters related canonical closures
-    uprv_uca_canonicalClosure(t, src, status);
+    uprv_uca_canonicalClosure(t, src, NULL, status);
 
     /* still need to produce compatibility closure */
 
@@ -1371,6 +1376,37 @@ ucol_initInverseUCA(UErrorCode *status)
         }
     }
     return _staticInvUCA;
+}
+
+/* This is the data that is used for non-script reordering codes. These _must_ be kept
+ * in order that they are to be applied as defaults and in synch with the UColReorderCode enum.
+ */
+static const char* ReorderingTokenNames[] = {
+    "SPACE",
+    "PUNCT",
+    "SYMBOL",
+    "CURRENCY",
+    "DIGIT",
+    NULL
+};
+
+static void toUpper(const char* src, char* dst, uint32_t length) {
+   for (uint32_t i = 0; *src != '\0' && i < length - 1; ++src, ++dst, ++i) {
+       *dst = toupper(*src);
+   }
+   *dst = '\0';
+}
+
+U_INTERNAL int32_t U_EXPORT2 
+ucol_findReorderingEntry(const char* name) {
+    char buffer[32];
+    toUpper(name, buffer, 32);
+    for (uint32_t entry = 0; ReorderingTokenNames[entry] != NULL; entry++) {
+        if (uprv_strcmp(buffer, ReorderingTokenNames[entry]) == 0) {
+            return entry + UCOL_REORDER_CODE_FIRST;
+        }
+    }
+    return USCRIPT_INVALID_CODE;
 }
 
 #endif /* #if !UCONFIG_NO_COLLATION */

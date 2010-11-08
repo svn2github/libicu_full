@@ -143,7 +143,10 @@
  *                               same formatVersion as in ucadata.icu's UDataInfo header
  *                               (formatVersion 2.3)
  *
- * uint8_t reserved[84];  - currently unused
+ * uint32_t offset to the reordering code to lead CE byte remapping table
+ * uint32_t offset to the lead CE byte to reordering code mapping table
+ *
+ * uint8_t reserved[76];  - currently unused
  *
  * -------------------------------------------------------------
  *
@@ -178,8 +181,8 @@
 #define UCA_DATA_FORMAT_2 ((uint8_t)0x6f)
 #define UCA_DATA_FORMAT_3 ((uint8_t)0x6c)
 
-#define UCA_FORMAT_VERSION_0 ((uint8_t)2)
-#define UCA_FORMAT_VERSION_1 ((uint8_t)3)
+#define UCA_FORMAT_VERSION_0 ((uint8_t)3)
+#define UCA_FORMAT_VERSION_1 ((uint8_t)0)
 #define UCA_FORMAT_VERSION_2 ((uint8_t)0)
 #define UCA_FORMAT_VERSION_3 ((uint8_t)0)
 
@@ -270,7 +273,9 @@ minimum number for special Jamo
 
 #ifdef XP_CPLUSPLUS
 
-typedef struct collIterate : public U_NAMESPACE_QUALIFIER UMemory {
+U_NAMESPACE_BEGIN
+
+typedef struct collIterate : public UMemory {
   const UChar *string; /* Original string */
   /* UChar *start;  Pointer to the start of the source string. Either points to string
                     or to writableBuffer */
@@ -300,7 +305,13 @@ typedef struct collIterate : public U_NAMESPACE_QUALIFIER UMemory {
 
   UCharIterator *iterator;
   /*int32_t iteratorIndex;*/
+
+  // The offsetBuffer should probably be a UVector32, but helper functions
+  // are an improvement over duplicated code.
+  void appendOffset(int32_t offset, UErrorCode &errorCode);
 } collIterate;
+
+U_NAMESPACE_END
 
 #else
 
@@ -630,7 +641,8 @@ ucol_setReqValidLocales(UCollator *coll, char *requestedLocaleToAdopt, char *val
 #define getExpansionSuffix(coleiter) ((coleiter)->iteratordata_.CEpos - (coleiter)->iteratordata_.toReturn)
 #define setExpansionSuffix(coleiter, offset) ((coleiter)->iteratordata_.toReturn = (coleiter)->iteratordata_.CEpos - leftoverces)
 
-/* This is an enum that lists magic special byte values from the fractional UCA */
+/* This is an enum that lists magic special byte values from the fractional UCA.
+ * See also http://site.icu-project.org/design/collation/bytes */
 /* TODO: all the #defines that refer to special byte values from the UCA should be changed to point here */
 
 enum {
@@ -642,9 +654,9 @@ enum {
     UCOL_BYTE_FIRST_TAILORED = 0x04,
     UCOL_BYTE_COMMON = 0x05,
     UCOL_BYTE_FIRST_UCA = UCOL_BYTE_COMMON,
-    UCOL_CODAN_PLACEHOLDER = 0x27,
-    UCOL_BYTE_LAST_LATIN_PRIMARY = 0x4C,
-    UCOL_BYTE_FIRST_NON_LATIN_PRIMARY = 0x4D,
+    /* TODO: Make the following values dynamic since they change with almost every UCA version. */
+    UCOL_CODAN_PLACEHOLDER = 0x12,
+    UCOL_BYTE_FIRST_NON_LATIN_PRIMARY = 0x5B,
     UCOL_BYTE_UNSHIFTED_MAX = 0xFF
 }; 
 
@@ -841,7 +853,9 @@ typedef struct {
       UVersionInfo UCAVersion;              /* version of the UCA, read from file */
       UVersionInfo UCDVersion;              /* UCD version, obtained by u_getUnicodeVersion */
       UVersionInfo formatVersion;           /* format version from the UDataInfo header */
-      uint8_t reserved[84];                 /* for future use */
+      uint32_t scriptToLeadByte;            /* offset to script to lead collation byte mapping data */
+      uint32_t leadByteToScript;            /* offset to lead collation byte to script mapping data */
+      uint8_t reserved[76];                 /* for future use */
 } UCATableHeader;
 
 #define U_UNKNOWN_STATE 0
@@ -952,7 +966,6 @@ struct UCollator {
     const uint32_t *expansion;
     const UChar    *contractionIndex;
     const uint32_t *contractionCEs;
-    /*const uint8_t  *scriptOrder;*/
 
     const uint32_t *endExpansionCE;    /* array of last ces in an expansion ce.
                                           corresponds to expansionCESize */
@@ -1010,6 +1023,9 @@ struct UCollator {
     uint8_t tertiaryBottomCount;
 
     UVersionInfo dataVersion;               /* Data info of UCA table */
+    int32_t* reorderCodes;
+    int32_t reorderCodesLength;
+    uint8_t* leadBytePermutationTable;
 };
 
 U_CDECL_END
@@ -1060,6 +1076,20 @@ uprv_uca_getRawFromCodePoint(UChar32 i);
 U_CAPI UChar32 U_EXPORT2
 uprv_uca_getCodePointFromRaw(UChar32 i);
 
+typedef const UChar* GetCollationRulesFunction(void* context, const char* locale, const char* type, int32_t* pLength, UErrorCode* status);
+
+U_CAPI UCollator* U_EXPORT2
+ucol_openRulesForImport( const UChar        *rules,
+                         int32_t            rulesLength,
+                         UColAttributeValue normalizationMode,
+                         UCollationStrength strength,
+                         UParseError        *parseError,
+                         GetCollationRulesFunction  importFunc,
+                         void* context,
+                         UErrorCode         *status);
+
+       
+U_CAPI void U_EXPORT2 ucol_buildPermutationTable(UCollator *coll, UErrorCode *status);
 
 
 #ifdef XP_CPLUSPLUS

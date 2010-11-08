@@ -7,9 +7,9 @@
 // *
 // ***************************************************************************
 /**
- * validSubLocale of "root"
+ * validSubLocale of "my"
  */
-st_ZA{
+my_MM{
     /**
      * so genrb doesn't issue warnings
      */
