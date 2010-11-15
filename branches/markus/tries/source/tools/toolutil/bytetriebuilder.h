@@ -269,7 +269,7 @@ ByteTrieBuilder::build(UErrorCode &errorCode) {
 
 // Requires start<limit,
 // and all strings of the [start..limit[ elements must be sorted and
-// have a common prefix of length firstByteIndex.
+// have a common prefix of length byteIndex.
 void
 ByteTrieBuilder::makeNode(int32_t start, int32_t limit, int32_t byteIndex) {
     if(byteIndex==elements[start].getStringLength(strings)) {
@@ -376,7 +376,9 @@ ByteTrieBuilder::makeListBranchNode(int32_t start, int32_t limit, int32_t byteIn
 }
 
 // start<limit && all strings longer than byteIndex &&
-// at least three different bytes at byteIndex
+// at least five different bytes at byteIndex
+// (At least five, not three, because the left and right outbound edges
+// must lead to branch nodes again, thus each side must have at least two units to branch on.)
 void
 ByteTrieBuilder::makeThreeWayBranchNode(int32_t start, int32_t limit, int32_t byteIndex, int32_t length) {
     // Three-way branch on the middle byte.
@@ -423,9 +425,9 @@ ByteTrieBuilder::makeThreeWayBranchNode(int32_t start, int32_t limit, int32_t by
         value=bytesLength-value;
     }
     writeCompactInt(value, final);  // equals
-    int32_t bytesForJump=writeFixedInt(bytesLength-leftNode);  // less-than
+    int32_t bytesForLessThan=writeFixedInt(bytesLength-leftNode);  // less-than
     write(byte);
-    write(bytesForJump-1);
+    write(bytesForLessThan-1);
 }
 
 UBool
@@ -481,7 +483,7 @@ ByteTrieBuilder::writeCompactInt(int32_t i, UBool final) {
         intBytes[1]=(char)(i>>24);
         intBytes[2]=(char)(i>>16);
         intBytes[3]=(char)(i>>8);
-        intBytes[4]=(char)(i);
+        intBytes[4]=(char)i;
         length=5;
     } else if(i<=ByteTrie::kMaxOneByteValue) {
         intBytes[0]=(char)(ByteTrie::kMinOneByteLead+i);
@@ -498,7 +500,7 @@ ByteTrieBuilder::writeCompactInt(int32_t i, UBool final) {
             }
             intBytes[length++]=(char)(i>>8);
         }
-        intBytes[length++]=(char)(i);
+        intBytes[length++]=(char)i;
     }
     intBytes[0]=(char)((intBytes[0]<<1)|final);
     write(intBytes, length);
@@ -524,7 +526,7 @@ ByteTrieBuilder::writeFixedInt(int32_t i) {
             intBytes[length++]=(char)(i>>8);
         }
     }
-    intBytes[length++]=(char)(i);
+    intBytes[length++]=(char)i;
     write(intBytes, length);
     return length;
 }

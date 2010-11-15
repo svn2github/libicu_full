@@ -98,43 +98,44 @@ private:
 
     // Node lead unit values.
 
-    // 0..0aff: Branch node with a list of 2..12 comparison UChars.
-    // Bits 11..8=0..10 for 2..12 units to match.
-    // The lower bits, and if 5..12 units then also the bits from the next unit,
+    // 0..0bff: Branch node with a list of 2..13 comparison UChars.
+    // Bits 11..8=0..11 for 2..13 units to match.
+    // The lower bits, and if 6..13 units then also the bits from the next unit,
     // indicate whether each key unit has a final value vs. a "jump" (higher bit of a pair),
     // and whether the match unit's value is 1 or 2 units long.
     // Followed by the (key, value) pairs except that the last unit's value is omitted
-    // if it would be a "jump" (just continue reading the next node from there).
+    // (just continue reading the next node from there).
+    // Thus, for the last key unit there are no (final, length) value bits.
 
-    // 0b00..0b07: Three-way-branch node with less/equal/greater outbound edges.
+    // 0c00..0c07: Three-way-branch node with less/equal/greater outbound edges.
     // The 3 lower bits indicate the length of the less-than "jump" (bit 0: 1 or 2 units),
     // the length of the equals value (bit 1: 1 or 2),
     // and whether the equals value is final (bit 2).
     // Followed by the comparison unit, the equals value and
     // continue reading the next node from there for the "greater" edge.
-    static const int32_t kMinThreeWayBranch=0xb00;
+    static const int32_t kMinThreeWayBranch=0xc00;
 
-    // 0b08..0b1f: Linear-match node, match 1..24 units and continue reading the next node.
-    static const int32_t kMinLinearMatch=0xb08;
+    // 0c08..0c1f: Linear-match node, match 1..24 units and continue reading the next node.
+    static const int32_t kMinLinearMatch=0xc08;
 
-    // 0b20..ffff: Variable-length value node.
+    // 0c20..ffff: Variable-length value node.
     // If odd, the value is final. (Otherwise, intermediate value or jump delta.)
     // Then shift-right by 1 bit.
-    // Remaining <=0x458f is a single-unit value,
-    // <=0x7a6e combines with the next unit for almost 30 bits (0..0x34deffff),
-    // and 0x7a6f indicates that the value is in the next two units.
-    static const int32_t kMinValueLead=0xb20;
+    // Remaining <=0x460f is a single-unit value (0..0x3fff),
+    // <=0x7ffe combines with the next unit for almost 30 bits (0..0x39eeffff),
+    // and 0x7fff indicates that the value is in the next two units.
+    static const int32_t kMinValueLead=0xc20;
     // It is a final value if bit 0 is set.
     static const int32_t kValueIsFinal=1;
     // Compact int: After testing bit 0, shift right by 1 and then use the following thresholds.
-    static const int32_t kMinOneUnitLead=0x590;
-    static const int32_t kMinTwoUnitLead=0x4590;
-    static const int32_t kThreeUnitLead=0x7a6f;
+    static const int32_t kMinOneUnitLead=0x610;
+    static const int32_t kMinTwoUnitLead=0x4610;
+    static const int32_t kThreeUnitLead=0x7fff;
 
     static const int32_t kMaxOneUnitValue=0x3fff;
-    static const int32_t kMaxTwoUnitValue=0x34deffff;
+    static const int32_t kMaxTwoUnitValue=0x39eeffff;
 
-    static const int32_t kMaxListBranchLength=12;
+    static const int32_t kMaxListBranchLength=13;
     static const int32_t kMaxLinearMatchLength=kMinValueLead-kMinLinearMatch;  // 24
 
     // A fixed-length integer has its length indicated by a preceding node value.
@@ -262,7 +263,7 @@ UCharTrie::next(int uchar) {
         // than jumping.
         length=(node>>8)+1;  // Actual list length minus 1.
         if(length>=5) {
-            // For 6..12 pairs, read the next unit as well.
+            // For 6..13 pairs, read the next unit as well.
             node=(node<<16)|*pos++;
         }
         // The lower node bits now contain a bit pair for each (key, value) pair:
