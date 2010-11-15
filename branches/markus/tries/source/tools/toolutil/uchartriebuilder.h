@@ -40,7 +40,7 @@ public:
     UnicodeString build(UErrorCode &errorCode);
 
     UCharTrieBuilder &clear() {
-        strings.clear();
+        strings.remove();
         elementsLength=0;
         ucharsLength=0;
         return *this;
@@ -86,7 +86,7 @@ public:
         return strings.tempSubString(stringOffset+1, length);
     }
     int32_t getStringLength(const UnicodeString &strings) const {
-        return strings[offset];
+        return strings[stringOffset];
     }
 
     UChar charAt(int32_t index, const UnicodeString &strings) const {
@@ -341,11 +341,11 @@ UCharTrieBuilder::makeListBranchNode(int32_t start, int32_t limit, int32_t unitI
         write(elements[start].charAt(unitIndex, strings));
     }
     // Write the node lead units.
-    if(length>=6) {
+    if(length>=7) {
         write(valueFlags);
         valueFlags>>=16;
     }
-    write(((length-2)<<16)|valueFlags);
+    write(((length-2)<<10)|valueFlags);
 }
 
 // start<limit && all strings longer than unitIndex &&
