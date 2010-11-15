@@ -146,9 +146,9 @@ ByteTrieIterator::next(UErrorCode &errorCode) {
         if(node>=ByteTrie::kMinValueLead) {
             // Deliver value for the byte sequence so far.
             if(trie.readCompactInt(node)) {
-                value=trie.value;
                 trie.stop();
             }
+            value=trie.value;
             sp.set(str.data(), str.length());
             return TRUE;
         } else if(node<ByteTrie::kMinLinearMatch) {

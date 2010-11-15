@@ -274,7 +274,6 @@ UCharTrie::next(int uchar) {
         // - whether the value is 1 or 2 units long
         for(;;) {
             UChar trieUnit=*pos++;
-            U_ASSERT(length==0);
             if(uchar==trieUnit) {
                 if(length>0) {
                     value=readFixedInt(node);

@@ -20,9 +20,9 @@
 #include "unicode/utypes.h"
 #include "unicode/unistr.h"
 #include "unicode/ustring.h"
-#include "uchartrie.h"
 #include "cmemory.h"
 #include "uarrsort.h"
+#include "uchartrie.h"
 
 U_NAMESPACE_BEGIN
 
@@ -187,7 +187,7 @@ UCharTrieBuilder::build(UErrorCode &errorCode) {
     }
     if(ucharsLength>0) {
         // Already built.
-        result.set(uchars+(ucharsCapacity-ucharsLength), ucharsLength);
+        result.setTo(FALSE, uchars+(ucharsCapacity-ucharsLength), ucharsLength);
         return result;
     }
     if(elementsLength==0) {
@@ -341,11 +341,11 @@ UCharTrieBuilder::makeListBranchNode(int32_t start, int32_t limit, int32_t unitI
         write(elements[start].charAt(unitIndex, strings));
     }
     // Write the node lead units.
-    if(length>kMaxListBranchSmallLength) {
+    if(length>UCharTrie::kMaxListBranchSmallLength) {
         write(valueFlags);
         valueFlags>>=16;
     }
-    write(((length-2)<<kMaxListBranchLengthShift)|valueFlags);
+    write(((length-2)<<UCharTrie::kMaxListBranchLengthShift)|valueFlags);
 }
 
 // start<limit && all strings longer than unitIndex &&
@@ -408,14 +408,14 @@ UCharTrieBuilder::ensureCapacity(int32_t length) {
         do {
             newCapacity*=2;
         } while(newCapacity<=length);
-        UChar *newUnits=reinterpret_cast<UChar *>(uprv_malloc(newCapacity));
-        if(newUnits==NULL) {
+        UChar *newUChars=reinterpret_cast<UChar *>(uprv_malloc(newCapacity));
+        if(newUChars==NULL) {
             // unable to allocate memory
             uprv_free(uchars);
             uchars=NULL;
             return FALSE;
         }
-        uprv_memcpy(newUnits+(newCapacity-ucharsLength),
+        uprv_memcpy(newUChars+(newCapacity-ucharsLength),
                     uchars+(ucharsCapacity-ucharsLength), ucharsLength);
         uprv_free(uchars);
         uchars=newUChars;
@@ -452,7 +452,7 @@ UCharTrieBuilder::writeCompactInt(int32_t i, UBool final) {
         intUnits[2]=(UChar)i;
         length=3;
     } else if(i<=UCharTrie::kMaxOneUnitValue) {
-        intUnits[0]=(char)(UCharTrie::kMinOneUnitLead+i);
+        intUnits[0]=(UChar)(UCharTrie::kMinOneUnitLead+i);
         length=1;
     } else {
         intUnits[0]=(UChar)(UCharTrie::kMinTwoUnitLead+(i>>16));
@@ -465,7 +465,7 @@ UCharTrieBuilder::writeCompactInt(int32_t i, UBool final) {
 
 int32_t
 UCharTrieBuilder::writeFixedInt(int32_t i) {
-    char intUnits[2];
+    UChar intUnits[2];
     int32_t length;
     if(i<0 || i>0xffff) {
         intUnits[0]=(UChar)(i>>16);
