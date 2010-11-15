@@ -23,6 +23,7 @@
 
 #include "unicode/utypes.h"
 #include "unicode/uobject.h"
+#include "uassert.h"
 
 U_NAMESPACE_BEGIN
 
@@ -96,41 +97,50 @@ private:
         return readCompactInt(leadByte);
     }
 
-    // pos is already after the leadByte.
-    inline void skipCompactInt(int32_t leadByte);
-    // pos is on the leadByte.
-    inline void skipCompactInt() { skipCompactInt(*pos); }
-
     // Reads a fixed-width integer and post-increments pos.
     inline int32_t readFixedInt(int32_t bytesPerValue);
 
     // Node lead byte values.
 
-    // 0..3: Branch node with one comparison byte, 1..4 bytes for less-than jump delta,
-    // and compact int for equality.
+    // 0..3: Three-way-branch node with less/equal/greater outbound edges.
+    // The 2 lower bits indicate the length of the less-than "jump" (1..4 bytes).
+    // Followed by the comparison byte, the equals value (compact int) and
+    // continue reading the next node from there for the "greater" edge.
 
-    // 04..0b: Branch node with a list of 2..9 comparison bytes, each except last one
-    // followed by compact int as final value or jump delta.
+    // 04..0b: Branch node with a list of 2..9 comparison bytes.
+    // Followed by the (key, value) pairs except that the last byte's value is omitted
+    // (just continue reading the next node from there).
+    // Values are compact ints: Final values or jump deltas.
     static const int32_t kMinListBranch=4;
-    // 0c..1f: Node with 1..20 bytes to match.
-    static const int32_t kMinLinearMatch=0xc;
-    // 20..ff: Intermediate value or jump delta, or final value, with 0..4 bytes following.
-    static const int32_t kMinValueLead=0x20;
+    static const int32_t kMaxListBranchLength=9;
+
+    // 0c..1f: Linear-match node, match 1..24 bytes and continue reading the next node.
+    static const int32_t kMinLinearMatch=kMinListBranch+kMaxListBranchLength-1;  // 0xc
+    static const int32_t kMaxLinearMatchLength=20;
+
+    // 20..ff: Variable-length value node.
+    // If odd, the value is final. (Otherwise, intermediate value or jump delta.)
+    // Then shift-right by 1 bit.
+    // The remaining lead byte value indicates the number of following bytes (0..4)
+    // and contains the value's top bits.
+    static const int32_t kMinValueLead=kMinLinearMatch+kMaxLinearMatchLength;  // 0x20
     // It is a final value if bit 0 is set.
     static const int32_t kValueIsFinal=1;
+
     // Compact int: After testing bit 0, shift right by 1 and then use the following thresholds.
-    static const int32_t kMinOneByteLead=0x10;
-    static const int32_t kMinTwoByteLead=0x51;
-    static const int32_t kMinThreeByteLead=0x6d;
-    static const int32_t kFourByteLead=0x7e;
-    static const int32_t kFiveByteLead=0x7f;
-
+    static const int32_t kMinOneByteLead=kMinValueLead/2;  // 0x10
     static const int32_t kMaxOneByteValue=0x40;  // At least 6 bits in the first byte.
-    static const int32_t kMaxTwoByteValue=0x1bff;
-    static const int32_t kMaxThreeByteValue=0x11ffff;  // A little more than Unicode code points.
 
-    static const int32_t kMaxListBranchLength=kMinLinearMatch-kMinListBranch+1;  // 9
-    static const int32_t kMaxLinearMatchLength=kMinValueLead-kMinLinearMatch;  // 20
+    static const int32_t kMinTwoByteLead=kMinOneByteLead+kMaxOneByteValue+1;  // 0x51
+    static const int32_t kMaxTwoByteValue=0x1aff;
+
+    static const int32_t kMinThreeByteLead=kMinTwoByteLead+(kMaxTwoByteValue>>8)+1;  // 0x6c
+    static const int32_t kFourByteLead=0x7e;
+
+    // A little more than Unicode code points.
+    static const int32_t kMaxThreeByteValue=((kFourByteLead-kMinThreeByteLead)<<16)-1;  // 0x11ffff;
+
+    static const int32_t kFiveByteLead=0x7f;
 
     // Map a shifted-right compact-int lead byte to its number of bytes.
     static const int8_t bytesPerLead[kFiveByteLead+1];
@@ -155,7 +165,7 @@ const int8_t ByteTrie::bytesPerLead[kFiveByteLead+1]={
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
     1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3,
+    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3,
     3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 5
 };
 
@@ -183,11 +193,6 @@ ByteTrie::readCompactInt(int32_t leadByte) {
     }
     pos+=numBytes;
     return isFinal;
-}
-
-void
-ByteTrie::skipCompactInt(int32_t leadByte) {
-    pos+=bytesPerLead[leadByte>>1];
 }
 
 int32_t
@@ -229,7 +234,7 @@ ByteTrie::next(int inByte) {
             return FALSE;
         }
     }
-    int32_t node=*pos++;
+    int32_t node=*pos;
     if(node>=kMinValueLead) {
         if(node&kValueIsFinal) {
             // No further matching bytes.
@@ -237,12 +242,13 @@ ByteTrie::next(int inByte) {
             return FALSE;
         } else {
             // Skip intermediate value.
-            skipCompactInt(node);
+            pos+=bytesPerLead[node>>1];
             // The next node must not also be a value node.
-            node=*pos++;
-            // TODO: U_ASSERT(node<kMinValueLead);
+            node=*pos;
+            U_ASSERT(node<kMinValueLead);
         }
     }
+    ++pos;
     if(node<kMinLinearMatch) {
         // Branch according to the current byte.
         while(node<kMinListBranch) {
@@ -257,8 +263,8 @@ ByteTrie::next(int inByte) {
             } else {
                 pos+=node+1;  // Skip fixed-width integer.
                 node=*pos;
+                U_ASSERT(node>=kMinValueLead);
                 if(inByte==trieByte) {
-                    // TODO: U_ASSERT(node>=KMinValueLead);
                     if(node&kValueIsFinal) {
                         // Leave the final value for contains() to read.
                     } else {
@@ -269,11 +275,11 @@ ByteTrie::next(int inByte) {
                     }
                     return TRUE;
                 } else {  // inByte>trieByte
-                    skipCompactInt(node);
+                    pos+=bytesPerLead[node>>1];
                 }
             }
             node=*pos++;
-            // TODO: U_ASSERT(node<kMinLinearMatch);
+            U_ASSERT(node<kMinLinearMatch);
         }
         // Branch node with a list of key-value pairs where
         // values are compact integers: either final values or jump deltas.
@@ -282,7 +288,7 @@ ByteTrie::next(int inByte) {
         length=node-(kMinListBranch-1);  // Actual list length minus 1.
         for(;;) {
             uint8_t trieByte=*pos++;
-            // U_ASSERT(listLength==0 || *pos>=KMinValueLead);
+            U_ASSERT(length==0 || *pos>=kMinValueLead);
             if(inByte==trieByte) {
                 if(length>0) {
                     node=*pos;
@@ -301,7 +307,7 @@ ByteTrie::next(int inByte) {
                 stop();
                 return FALSE;
             }
-            skipCompactInt();
+            pos+=bytesPerLead[*pos>>1];
         }
     } else {
         // Match the first of length+1 bytes.

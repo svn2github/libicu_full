@@ -341,11 +341,11 @@ UCharTrieBuilder::makeListBranchNode(int32_t start, int32_t limit, int32_t unitI
         write(elements[start].charAt(unitIndex, strings));
     }
     // Write the node lead units.
-    if(length>=7) {
+    if(length>kMaxListBranchSmallLength) {
         write(valueFlags);
         valueFlags>>=16;
     }
-    write(((length-2)<<10)|valueFlags);
+    write(((length-2)<<kMaxListBranchLengthShift)|valueFlags);
 }
 
 // start<limit && all strings longer than unitIndex &&

@@ -23,6 +23,7 @@
 
 #include "unicode/utypes.h"
 #include "unicode/uobject.h"
+#include "uassert.h"
 
 U_NAMESPACE_BEGIN
 
@@ -107,36 +108,42 @@ private:
     // (just continue reading the next node from there).
     // Thus, for the last key unit there are no (final, length) value bits.
 
+    // The node lead unit has kMaxListBranchSmallLength-1 bit pairs.
+    static const int32_t kMaxListBranchSmallLength=6;
+    static const int32_t kMaxListBranchLengthShift=(kMaxListBranchSmallLength-1)*2;  // 10
+    // 8 more bit pairs in the next unit, for branch length > kMaxListBranchSmallLength.
+    static const int32_t kMaxListBranchLength=kMaxListBranchSmallLength+8;  // 14
+
     // 3400..3407: Three-way-branch node with less/equal/greater outbound edges.
     // The 3 lower bits indicate the length of the less-than "jump" (bit 0: 1 or 2 units),
     // the length of the equals value (bit 1: 1 or 2),
     // and whether the equals value is final (bit 2).
     // Followed by the comparison unit, the equals value and
     // continue reading the next node from there for the "greater" edge.
-    static const int32_t kMinThreeWayBranch=0x3400;
+    static const int32_t kMinThreeWayBranch=
+        (kMaxListBranchLength-1)<<kMaxListBranchLengthShift;  // 0x3400
 
     // 3408..341f: Linear-match node, match 1..24 units and continue reading the next node.
-    static const int32_t kMinLinearMatch=0x3408;
+    static const int32_t kMinLinearMatch=kMinThreeWayBranch+8;  // 0x3408
+    static const int32_t kMaxLinearMatchLength=24;
 
     // 3420..ffff: Variable-length value node.
     // If odd, the value is final. (Otherwise, intermediate value or jump delta.)
     // Then shift-right by 1 bit.
-    // Remaining <=0x5a0f is a single-unit value (0..0x3fff),
-    // <=0x7ffe combines with the next unit for about 29 bits (0..0x25eeffff),
-    // and 0x7fff indicates that the value is in the next two units.
-    static const int32_t kMinValueLead=0x3420;
+    // The remaining lead unit value indicates the number of following units (0..2)
+    // and contains the value's top bits.
+    static const int32_t kMinValueLead=kMinLinearMatch+kMaxLinearMatchLength;  // 0x3420
     // It is a final value if bit 0 is set.
     static const int32_t kValueIsFinal=1;
+
     // Compact int: After testing bit 0, shift right by 1 and then use the following thresholds.
-    static const int32_t kMinOneUnitLead=0x1a10;
-    static const int32_t kMinTwoUnitLead=0x5a10;
+    static const int32_t kMinOneUnitLead=kMinValueLead/2;  // 0x1a10
+    static const int32_t kMaxOneUnitValue=0x3fff;
+
+    static const int32_t kMinTwoUnitLead=kMinOneUnitLead+kMaxOneUnitValue+1;  // 0x5a10
     static const int32_t kThreeUnitLead=0x7fff;
 
-    static const int32_t kMaxOneUnitValue=0x3fff;
-    static const int32_t kMaxTwoUnitValue=0x25eeffff;
-
-    static const int32_t kMaxListBranchLength=14;
-    static const int32_t kMaxLinearMatchLength=kMinValueLead-kMinLinearMatch;  // 24
+    static const int32_t kMaxTwoUnitValue=((kThreeUnitLead-kMinTwoUnitLead)<<16)-1;  // 0x25eeffff
 
     // A fixed-length integer has its length indicated by a preceding node value.
     static const int32_t kFixedInt32=1;
@@ -171,18 +178,6 @@ UCharTrie::readCompactInt(int32_t leadUnit) {
     return isFinal;
 }
 
-void
-UCharTrie::skipCompactInt(int32_t leadUnit) {
-    leadUnit>>=1;
-    if(leadUnit<kMinTwoUnitLead) {
-        // pos is already after the leadUnit.
-    } else if(leadUnit<kThreeUnitLead) {
-        ++pos;
-    } else {
-        pos+=2;
-    }
-}
-
 int32_t
 UCharTrie::readFixedInt(int32_t node) {
     int32_t fixedInt=*pos++;
@@ -211,7 +206,7 @@ UCharTrie::next(int uchar) {
             return FALSE;
         }
     }
-    int32_t node=*pos++;
+    int32_t node=*pos;
     if(node>=kMinValueLead) {
         if(node&kValueIsFinal) {
             // No further matching units.
@@ -219,12 +214,20 @@ UCharTrie::next(int uchar) {
             return FALSE;
         } else {
             // Skip intermediate value.
-            skipCompactInt(node);
+            node>>=1;
+            if(node<kMinTwoUnitLead) {
+                // pos is already after the node.
+            } else if(node<kThreeUnitLead) {
+                ++pos;
+            } else {
+                pos+=2;
+            }
             // The next node must not also be a value node.
-            node=*pos++;
-            // TODO: U_ASSERT(node<kMinValueLead);
+            node=*pos;
+            U_ASSERT(node<kMinValueLead);
         }
     }
+    ++pos;
     if(node<kMinLinearMatch) {
         // Branch according to the current unit.
         while(node>=kMinThreeWayBranch) {
@@ -255,14 +258,14 @@ UCharTrie::next(int uchar) {
                 }
             }
             node=*pos++;
-            // TODO: U_ASSERT(node<kMinLinearMatch);
+            U_ASSERT(node<kMinLinearMatch);
         }
         // Branch node with a list of key-value pairs where
         // values are either final values or jump deltas.
         // If the last key unit matches, just continue after it rather
         // than jumping.
-        length=(node>>10)+1;  // Actual list length minus 1.
-        if(length>=6) {
+        length=(node>>kMaxListBranchLengthShift)+1;  // Actual list length minus 1.
+        if(length>=kMaxListBranchSmallLength) {
             // For 7..14 pairs, read the next unit as well.
             node=(node<<16)|*pos++;
         }
@@ -271,7 +274,7 @@ UCharTrie::next(int uchar) {
         // - whether the value is 1 or 2 units long
         for(;;) {
             UChar trieUnit=*pos++;
-            // U_ASSERT(listLength==0);
+            U_ASSERT(length==0);
             if(uchar==trieUnit) {
                 if(length>0) {
                     value=readFixedInt(node);
