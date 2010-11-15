@@ -90,13 +90,15 @@ private:
     // pos is already after the leadByte.
     // Returns TRUE if the integer is a final value.
     inline UBool readCompactInt(int32_t leadByte);
+    // pos is on the leadByte.
     inline UBool readCompactInt() {
         int32_t leadByte=*pos++;
         return readCompactInt(leadByte);
     }
 
-    // pos is on the leadByte.
+    // pos is already after the leadByte.
     inline void skipCompactInt(int32_t leadByte);
+    // pos is on the leadByte.
     inline void skipCompactInt() { skipCompactInt(*pos); }
 
     // Reads a fixed-width integer and post-increments pos.
@@ -107,7 +109,7 @@ private:
     // 0..3: Branch node with one comparison byte, 1..4 bytes for less-than jump delta,
     // and compact int for equality.
 
-    // 04..0b: Branch node with a list of 2..9 bytes comparison bytes, each except last one
+    // 04..0b: Branch node with a list of 2..9 comparison bytes, each except last one
     // followed by compact int as final value or jump delta.
     static const int32_t kMinListBranch=4;
     // 0c..1f: Node with 1..20 bytes to match.
