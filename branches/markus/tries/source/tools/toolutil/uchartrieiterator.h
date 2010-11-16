@@ -53,7 +53,7 @@ public:
     /**
      * @return the value for the last successful next()
      */
-    const int32_t getValue() const { return value; }
+    int32_t getValue() const { return value; }
 
 private:
     // The stack stores pairs of integers for backtracking to another

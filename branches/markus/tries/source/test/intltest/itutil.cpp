@@ -29,6 +29,7 @@
 #include "aliastst.h"
 #include "usettest.h"
 
+extern IntlTest *createByteTrieTest();
 static IntlTest *createLocalPointerTest();
 
 #define CASE(id, test) case id:                               \
@@ -65,6 +66,14 @@ void IntlTestUtilities::runIndexedTest( int32_t index, UBool exec, const char* &
             if (exec) {
                 logln("TestSuite LocalPointerTest---"); logln();
                 LocalPointer<IntlTest> test(createLocalPointerTest());
+                callTest(*test, par);
+            }
+            break;
+        case 17:
+            name = "ByteTrieTest";
+            if (exec) {
+                logln("TestSuite ByteTrieTest---"); logln();
+                LocalPointer<IntlTest> test(createByteTrieTest());
                 callTest(*test, par);
             }
             break;
