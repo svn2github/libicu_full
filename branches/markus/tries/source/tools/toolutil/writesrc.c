@@ -216,3 +216,31 @@ usrc_writeUTrie2Struct(FILE *f,
         fputs(postfix, f);
     }
 }
+
+U_CAPI void U_EXPORT2
+usrc_writeArrayOfMostlyInvChars(FILE *f,
+                                const char *prefix,
+                                const char *p, int32_t length,
+                                const char *postfix) {
+    int32_t i, col;
+    int c;
+
+    if(prefix!=NULL) {
+        fprintf(f, prefix, (long)length);
+    }
+    for(i=col=0; i<length; ++i, ++col) {
+        if(i>0) {
+            if(col<16) {
+                fputc(',', f);
+            } else {
+                fputs(",\n", f);
+                col=0;
+            }
+        }
+        c=(uint8_t)p[i];
+        fprintf(f, c<0x20 ? "%u" : "'%c'", c);
+    }
+    if(postfix!=NULL) {
+        fputs(postfix, f);
+    }
+}
