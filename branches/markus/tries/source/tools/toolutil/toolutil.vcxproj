@@ -246,6 +246,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="bytetriebuilder.cpp" />
+    <ClCompile Include="bytetrieiterator.cpp" />
     <ClCompile Include="filestrm.c" />
     <ClCompile Include="filetools.cpp" />
     <ClCompile Include="flagparser.c" />
@@ -289,6 +291,8 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="bytetriebuilder.h" />
+    <ClInclude Include="bytetrieiterator.h" />
     <ClInclude Include="filestrm.h" />
     <ClInclude Include="filetools.h" />
     <ClInclude Include="flagparser.h" />
