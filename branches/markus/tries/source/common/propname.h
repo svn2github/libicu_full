@@ -1,11 +1,12 @@
 /*
 **********************************************************************
-* Copyright (c) 2002-2004, International Business Machines
+* Copyright (c) 2002-2010, International Business Machines
 * Corporation and others.  All Rights Reserved.
 **********************************************************************
 * Author: Alan Liu
 * Created: October 30 2002
 * Since: ICU 2.4
+* 2010nov19 Markus Scherer  Rewrite for formatVersion 2.
 **********************************************************************
 */
 #ifndef PROPNAME_H
@@ -74,6 +75,49 @@ U_CDECL_END
 #define PNAME_SIG_1 ((uint8_t)0x6E) /* n */
 #define PNAME_SIG_2 ((uint8_t)0x61) /* a */
 #define PNAME_SIG_3 ((uint8_t)0x6D) /* m */
+
+#ifdef XP_CPLUSPLUS
+// TODO: remove #ifdef XP_CPLUSPLUS after moving upname_swap() to toolutil
+
+U_NAMESPACE_BEGIN
+
+class PropNameData {
+public:
+    enum {
+        // Byte offsets from the start of the data, after the generic header.
+        IX_VALUE_MAPS_OFFSET,
+        IX_BYTE_TRIES_OFFSET,
+        IX_NAME_GROUPS_OFFSET,
+        IX_RESERVED3_OFFSET,
+        IX_RESERVED4_OFFSET,
+        IX_TOTAL_SIZE,
+
+        // Other values.
+        IX_MAX_NAME_LENGTH,
+        IX_RESERVED7,
+        IX_COUNT
+    };
+
+    static const char *getPropertyName(int32_t property, int32_t nameChoice);
+    static const char *getPropertyValueName(int32_t property, int32_t value, int32_t nameChoice);
+
+private:
+    static int32_t findProperty(int32_t property);
+    static int32_t findPropertyValueNameGroup(int32_t valueMapIndex, int32_t value);
+    static const char *getName(const char *nameGroup, int32_t nameIndex);
+
+    static const int32_t indexes[];
+    static const int32_t valueMaps[];
+    static const uint8_t byteTries[];
+    static const char nameGroups[];
+};
+
+// TODO: document formatVersion 2
+
+U_NAMESPACE_END
+
+// TODO: remove almost everything below here
+#endif
 
 #define PNAME_FORMAT_VERSION ((int8_t)1) /* formatVersion[0] */
 

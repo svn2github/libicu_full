@@ -1,11 +1,12 @@
 /*
 **********************************************************************
-* Copyright (c) 2002-2009, International Business Machines
+* Copyright (c) 2002-2010, International Business Machines
 * Corporation and others.  All Rights Reserved.
 **********************************************************************
 * Author: Alan Liu
 * Created: October 30 2002
 * Since: ICU 2.4
+* 2010nov19 Markus Scherer  Rewrite for formatVersion 2.
 **********************************************************************
 */
 #include "propname.h"
@@ -16,6 +17,9 @@
 #include "cstring.h"
 #include "ucln_cmn.h"
 #include "uarrsort.h"
+
+#define INCLUDED_FROM_PROPNAME_CPP
+#include "propname_data.h"
 
 U_CDECL_BEGIN
 
@@ -94,7 +98,7 @@ uprv_compareASCIIPropertyNames(const char *name1, const char *name2) {
         if(((r1|r2)&0xff)==0) {
             return 0;
         }
-        
+
         /* Compare the lowercased characters */
         if(r1!=r2) {
             rc=(r1&0xff)-(r2&0xff);
@@ -120,7 +124,7 @@ uprv_compareEBCDICPropertyNames(const char *name1, const char *name2) {
         if(((r1|r2)&0xff)==0) {
             return 0;
         }
-        
+
         /* Compare the lowercased characters */
         if(r1!=r2) {
             rc=(r1&0xff)-(r2&0xff);
@@ -137,6 +141,97 @@ uprv_compareEBCDICPropertyNames(const char *name1, const char *name2) {
 U_CDECL_END
 
 U_NAMESPACE_BEGIN
+
+int32_t PropNameData::findProperty(int32_t property) {
+    int32_t i=1;  // valueMaps index, initially after numRanges
+    for(int32_t numRanges=valueMaps[0]; numRanges>0; --numRanges) {
+        // Read and skip the start and end of this range.
+        int32_t start=valueMaps[i];
+        int32_t end=valueMaps[i+1];
+        i+=2;
+        if(property<start) {
+            break;
+        }
+        if(property<=end) {
+            return i+(property-start)*2;
+        }
+        i+=((end-start)+1)*2;  // Skip all entries for this range.
+    }
+    return 0;
+}
+
+int32_t PropNameData::findPropertyValueNameGroup(int32_t valueMapIndex, int32_t value) {
+    if(valueMapIndex==0) {
+        return 0;  // The property does not have named values.
+    }
+    ++valueMapIndex;  // Skip the ByteTrie offset.
+    int32_t numRanges=valueMaps[valueMapIndex++];
+    if(numRanges<0x10) {
+        // Ranges of values.
+        for(; numRanges>0; --numRanges) {
+            // Read and skip the start and end of this range.
+            int32_t start=valueMaps[valueMapIndex];
+            int32_t end=valueMaps[valueMapIndex+1];
+            valueMapIndex+=2;
+            if(value<start) {
+                break;
+            }
+            if(value<=end) {
+                return valueMaps[valueMapIndex+value-start];
+            }
+            valueMapIndex+=(end-start)+1;  // Skip all entries for this range.
+        }
+    } else {
+        // List of values.
+        int32_t valuesStart=valueMapIndex;
+        int32_t nameGroupOffsetsStart=valueMapIndex+numRanges-0x10;
+        do {
+            int32_t v=valueMaps[valueMapIndex];
+            if(value<v) {
+                break;
+            }
+            if(value==v) {
+                return valueMaps[nameGroupOffsetsStart+valueMapIndex-valuesStart];
+            }
+        } while(++valueMapIndex<nameGroupOffsetsStart);
+    }
+    return 0;
+}
+
+const char *PropNameData::getName(const char *nameGroup, int32_t nameIndex) {
+    int32_t numNames=*nameGroup++;
+    if(nameIndex<0 || numNames<=nameIndex || (nameIndex==0 && *nameGroup==0)) {
+        return NULL;
+    }
+    // Skip nameIndex names.
+    for(; nameIndex>0; --nameIndex) {
+        nameGroup=uprv_strchr(nameGroup, 0)+1;
+    }
+    return nameGroup;
+}
+
+const char *PropNameData::getPropertyName(int32_t property, int32_t nameChoice) {
+    int32_t valueMapIndex=findProperty(property);
+    if(valueMapIndex==0) {
+        return NULL;
+    }
+    return getName(nameGroups+valueMaps[valueMapIndex], nameChoice);
+}
+
+const char *PropNameData::getPropertyValueName(int32_t property, int32_t value, int32_t nameChoice) {
+    int32_t valueMapIndex=findProperty(property);
+    if(valueMapIndex==0) {
+        return NULL;
+    }
+    int32_t nameGroupOffset=findPropertyValueNameGroup(valueMaps[valueMapIndex+1], value);
+    if(nameGroupOffset==0) {
+        return NULL;
+    }
+    return getName(nameGroups+nameGroupOffset, nameChoice);
+}
+
+
+
 
 //----------------------------------------------------------------------
 // PropertyAliases implementation
@@ -293,8 +388,7 @@ static inline UBool load() {
 U_CAPI const char* U_EXPORT2
 u_getPropertyName(UProperty property,
                   UPropertyNameChoice nameChoice) {
-    return load() ? PNAME->getPropertyName(property, nameChoice)
-                  : NULL;
+    return PropNameData::getPropertyName(property, nameChoice);
 }
 
 U_CAPI UProperty U_EXPORT2
@@ -308,8 +402,7 @@ U_CAPI const char* U_EXPORT2
 u_getPropertyValueName(UProperty property,
                        int32_t value,
                        UPropertyNameChoice nameChoice) {
-    return load() ? PNAME->getPropertyValueName(property, value, nameChoice)
-                  : NULL;
+    return PropNameData::getPropertyValueName(property, value, nameChoice);
 }
 
 U_CAPI int32_t U_EXPORT2
