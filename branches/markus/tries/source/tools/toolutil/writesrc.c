@@ -232,7 +232,7 @@ usrc_writeArrayOfMostlyInvChars(FILE *f,
     for(i=col=0; i<length; ++i, ++col) {
         c=(uint8_t)p[i];
         if(i>0) {
-            /* Break long lines. Try to break at interesting places, trying to minimize revision diffs. */
+            /* Break long lines. Try to break at interesting places, to minimize revision diffs. */
             if( 
                 /* Very long line. */
                 col>=32 ||

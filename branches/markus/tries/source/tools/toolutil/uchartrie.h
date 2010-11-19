@@ -97,6 +97,31 @@ private:
     // Reads a fixed-width integer and post-increments pos.
     inline int32_t readFixedInt(int32_t node);
 
+    // UCharTrie data structure
+    //
+    // The trie consists of a series of UChar-serialized nodes for incremental
+    // Unicode string/UChar sequence matching. (UChar=16-bit unsigned integer)
+    // The root node is at the beginning of the trie data.
+    //
+    // Types of nodes are distinguished by their node lead unit ranges.
+    // After each node, except a final-value node, another node follows to
+    // encode match values or continue matching further units.
+    //
+    // Node types:
+    //  - Value node: Stores a 32-bit integer in a compact, variable-length format.
+    //    The value is for the string/UChar sequence so far.
+    //  - Linear-match node: Matches a number of units.
+    //  - Branch node: Branches to other nodes according to the current input unit.
+    //    - List-branch node: If the input unit is in the list, a "jump"
+    //        leads to another node for further matching.
+    //        Instead of a jump, a final value may be stored.
+    //        For the last unit listed there is no "jump" or value directly in
+    //        the branch node: Instead, matching continues with the next node.
+    //    - Three-way-branch node: Compares the input unit with one included unit.
+    //        If less-than, "jumps" to another node which is a branch node.
+    //        If equals, "jumps" to another node (any type) or stores a final value.
+    //        If greater-than, matching continues with the next node which is a branch node.
+
     // Node lead unit values.
 
     // 0..33ff: Branch node with a list of 2..14 comparison UChars.

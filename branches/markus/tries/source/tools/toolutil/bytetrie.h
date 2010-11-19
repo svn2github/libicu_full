@@ -100,6 +100,30 @@ private:
     // Reads a fixed-width integer and post-increments pos.
     inline int32_t readFixedInt(int32_t bytesPerValue);
 
+    // ByteTrie data structure
+    //
+    // The trie consists of a series of byte-serialized nodes for incremental
+    // string/byte sequence matching. The root node is at the beginning of the trie data.
+    //
+    // Types of nodes are distinguished by their node lead byte ranges.
+    // After each node, except a final-value node, another node follows to
+    // encode match values or continue matching further bytes.
+    //
+    // Node types:
+    //  - Value node: Stores a 32-bit integer in a compact, variable-length format.
+    //    The value is for the string/byte sequence so far.
+    //  - Linear-match node: Matches a number of bytes.
+    //  - Branch node: Branches to other nodes according to the current input byte.
+    //    - List-branch node: If the input byte is in the list, a "jump"
+    //        leads to another node for further matching.
+    //        Instead of a jump, a final value may be stored.
+    //        For the last byte listed there is no "jump" or value directly in
+    //        the branch node: Instead, matching continues with the next node.
+    //    - Three-way-branch node: Compares the input byte with one included byte.
+    //        If less-than, "jumps" to another node which is a branch node.
+    //        If equals, "jumps" to another node (any type) or stores a final value.
+    //        If greater-than, matching continues with the next node which is a branch node.
+
     // Node lead byte values.
 
     // 0..3: Three-way-branch node with less/equal/greater outbound edges.
