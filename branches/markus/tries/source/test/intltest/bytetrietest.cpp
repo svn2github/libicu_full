@@ -120,13 +120,13 @@ void ByteTrieTest::TestShortestListBranch() {
 void ByteTrieTest::TestLongestListBranch() {
     static const StringAndValue data[]={
         { "a", 0x10 },
-        { "c", 0x40 },
+        { "cc", 0x40 },
         { "e", 0x100 },
-        { "g", 0x400 },
+        { "ggg", 0x400 },
         { "i", 0x1000 },
-        { "k", 0x4000 },
+        { "kkkk", 0x4000 },
         { "n", 0x10000 },
-        { "p", 0x40000 },
+        { "ppppp", 0x40000 },
         { "r", 0x100000 }
     };
     checkData(data, LENGTHOF(data));
@@ -169,7 +169,7 @@ void ByteTrieTest::TestLongBranch() {
         { "oooooooooooooooooooooooooooooooooooooooooooooooooooooo", 0x110000 },
         { "pppppppppppppppppppppppppppppppppppppppppppppppppppppp", 0x120000 },
         { "r", 0x333333 },
-        { "s", 0x4444444 },
+        { "s2345", 0x4444444 },
         { "t234567890", 0x77777777 }
     };
     checkData(data, LENGTHOF(data));

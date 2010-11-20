@@ -280,7 +280,7 @@ void
 ByteTrieBuilder::makeListBranchNode(int32_t start, int32_t limit, int32_t byteIndex, int32_t length) {
     // List of byte-value pairs where values are either final values
     // or jumps to other parts of the trie.
-    int32_t starts[ByteTrie::kMaxListBranchLength-1];
+    int32_t starts[ByteTrie::kMaxListBranchLength];
     UBool final[ByteTrie::kMaxListBranchLength-1];
     // For each byte except the last one, find its elements array start and its value if final.
     int32_t byteNumber=0;
@@ -294,19 +294,20 @@ ByteTrieBuilder::makeListBranchNode(int32_t start, int32_t limit, int32_t byteIn
         start=i;
     } while(++byteNumber<length-1);
     // byteNumber==length-1, and the maxByte elements range is [start..limit[
+    starts[byteNumber]=start;
 
     // Write the sub-nodes in reverse order: The jump lengths are deltas from
     // after their own positions, so if we wrote the minByte sub-node first,
     // then its jump delta would be larger.
     // Instead we write the minByte sub-node last, for a shorter delta.
     int32_t jumpTargets[ByteTrie::kMaxListBranchLength-1];
-    byteNumber-=2;
     do {
+        --byteNumber;
         if(!final[byteNumber]) {
             makeNode(starts[byteNumber], starts[byteNumber+1], byteIndex+1);
             jumpTargets[byteNumber]=bytesLength;
         }
-    } while(--byteNumber>=0);
+    } while(byteNumber>0);
     // The maxByte sub-node is written as the very last one because we do
     // not jump for it at all.
     byteNumber=length-1;

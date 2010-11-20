@@ -291,7 +291,7 @@ void
 UCharTrieBuilder::makeListBranchNode(int32_t start, int32_t limit, int32_t unitIndex, int32_t length) {
     // List of unit-value pairs where values are either final values
     // or jumps to other parts of the trie.
-    int32_t starts[UCharTrie::kMaxListBranchLength-1];
+    int32_t starts[UCharTrie::kMaxListBranchLength];
     UBool final[UCharTrie::kMaxListBranchLength-1];
     // For each unit except the last one, find its elements array start and its value if final.
     int32_t unitNumber=0;
@@ -305,19 +305,20 @@ UCharTrieBuilder::makeListBranchNode(int32_t start, int32_t limit, int32_t unitI
         start=i;
     } while(++unitNumber<length-1);
     // unitNumber==length-1, and the maxUnit elements range is [start..limit[
+    starts[unitNumber]=start;
 
     // Write the sub-nodes in reverse order: The jump lengths are deltas from
     // after their own positions, so if we wrote the minUnit sub-node first,
     // then its jump delta would be larger.
     // Instead we write the minUnit sub-node last, for a shorter delta.
     int32_t jumpTargets[UCharTrie::kMaxListBranchLength-1];
-    unitNumber-=2;
     do {
+        --unitNumber;
         if(!final[unitNumber]) {
             makeNode(starts[unitNumber], starts[unitNumber+1], unitIndex+1);
             jumpTargets[unitNumber]=ucharsLength;
         }
-    } while(--unitNumber>=0);
+    } while(unitNumber>0);
     // The maxUnit sub-node is written as the very last one because we do
     // not jump for it at all.
     unitNumber=length-1;
