@@ -14,6 +14,10 @@
 
 #include "unicode/utypes.h"
 #include "unicode/uchar.h"
+#ifdef XP_CPLUSPLUS
+// TODO: remove #ifdef XP_CPLUSPLUS after moving upname_swap() to toolutil
+#include "bytetrie.h"
+#endif
 #include "udataswp.h"
 #include "uprops.h"
 
@@ -101,10 +105,16 @@ public:
     static const char *getPropertyName(int32_t property, int32_t nameChoice);
     static const char *getPropertyValueName(int32_t property, int32_t value, int32_t nameChoice);
 
+    static int32_t getPropertyEnum(const char *alias);
+    static int32_t getPropertyValueEnum(int32_t property, const char *alias);
+
 private:
     static int32_t findProperty(int32_t property);
     static int32_t findPropertyValueNameGroup(int32_t valueMapIndex, int32_t value);
     static const char *getName(const char *nameGroup, int32_t nameIndex);
+    static UBool containsName(ByteTrie &trie, const char *name);
+
+    static int32_t getPropertyOrValueEnum(int32_t byteTrieOffset, const char *alias);
 
     static const int32_t indexes[];
     static const int32_t valueMaps[];
