@@ -116,7 +116,96 @@ private:
     static const char nameGroups[];
 };
 
-// TODO: document formatVersion 2
+/*
+ * pnames.icu formatVersion 2
+ *
+ * formatVersion 2 is new in ICU 4.8.
+ * In ICU 4.8, the pnames.icu data file is used only in ICU4J.
+ * ICU4C 4.8 has the same data structures hardcoded in source/common/propname_data.h.
+ *
+ * For documentation of pnames.icu formatVersion 1 see ICU4C 4.6 (2010-dec-01)
+ * or earlier versions of this header file (source/common/propname.h).
+ *
+ * The pnames.icu begins with the standard ICU DataHeader/UDataInfo.
+ * After that:
+ *
+ * int32_t indexes[8];
+ *
+ *      (See the PropNameData::IX_... constants.)
+ *
+ *      The first 6 indexes are byte offsets from the beginning of the data
+ *      (beginning of indexes[]) to following structures.
+ *      The length of each structure is the difference between its offset
+ *      and the next one.
+ *      All offsets are filled in: Where there is no data between two offsets,
+ *      those two offsets are the same.
+ *      The last offset (indexes[PropNameData::IX_TOTAL_SIZE]) indicates the
+ *      total number of bytes in the file. (Not counting the standard headers.)
+ *
+ *      The sixth index (indexes[PropNameData::IX_MAX_NAME_LENGTH]) has the
+ *      maximum length of any Unicode property (or property value) alias.
+ *      (Without normalization, that is, including underscores etc.)
+ *
+ * int32_t valueMaps[];
+ *
+ *      The valueMaps[] begins with a map from UProperty enums to properties,
+ *      followed by the per-property value maps from property values to names,
+ *      for those properties that have named values.
+ *      (Binary & enumerated, plus General_Category_Mask.)
+ *
+ *      valueMaps[0] contains the number of UProperty enum ranges.
+ *      For each range:
+ *        int32_t start, end -- first and last UProperty enum of a dense range
+ *        Followed by (end-start)+1 pairs of
+ *          int32_t nameGroupOffset, valueMapIndex;
+ *            The nameGroupOffset is the offset into nameGroups[] for the
+ *            property's names/aliases.
+ *            The valueMapIndex is the offset of the property's value map
+ *            in the valueMaps[] array.
+ *            If the valueMapIndex is 0, then the property does not have named values.
+ *
+ *      For each property's value map:
+ *      int32_t byteTrieOffset; -- Offset into byteTries[] for name->value mapping.
+ *      int32_t numRanges;
+ *        If numRanges is in the range 1..15, then that many ranges of values follow.
+ *        Per range:
+ *          int32_t start, end -- first and last UProperty enum of a range
+ *          Followed by (end-start)+1 entries of
+ *            int32_t nameGroupOffset;
+ *            The nameGroupOffset is the offset into nameGroups[] for the
+ *            property value's names/aliases.
+ *            If the nameGroupOffset is 0, then this is not a named value for this property.
+ *            (That is, the ranges need not be dense.)
+ *        If numRanges is >=0x10, then (numRanges-0x10) sorted values
+ *        and then (numRanges-0x10) corresponding nameGroupOffsets follow.
+ *        Values are sorted as signed integers.
+ *        In this case, the set of values is dense; no nameGroupOffset will be 0.
+ *
+ *      For both properties and property values, ranges are sorted by their start/end values.
+ *
+ * uint8_t byteTries[];
+ *
+ *      This is a sequence of ByteTrie structures, byte-serialized tries for
+ *      mapping from names/aliases to values.
+ *      The first one maps from property names/aliases to UProperty enum constants.
+ *      The following ones are indexed by property value map byteTrieOffsets
+ *      for mapping each property's names/aliases to their property values.
+ *
+ * char nameGroups[];
+ *
+ *      This is a sequence of property name groups.
+ *      Each group is a list of names/aliases (invariant-character strings) for
+ *      one property or property value, in the order of UCharNameChoice.
+ *      The first byte of each group is the number of names in the group.
+ *      It is followed by that many NUL-terminated strings.
+ *      The first string is for the short name; if there is no short name,
+ *      then the first string is empty.
+ *      The second string is the long name. Further strings are additional aliases.
+ *
+ *      The first name group is for a property rather than a property value,
+ *      so that a nameGroupOffset of 0 can be used to indicate "no value"
+ *      in a property's sparse value ranges.
+ */
 
 U_NAMESPACE_END
 
