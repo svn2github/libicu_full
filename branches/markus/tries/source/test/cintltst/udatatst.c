@@ -52,7 +52,6 @@
 #include "ucol_swp.h"
 #include "ucnv_bld.h"
 #include "sprpimpl.h"
-#include "propname.h"
 #include "rbbidata.h"
 
 U_CAPI int32_t U_EXPORT2
@@ -1307,10 +1306,16 @@ static const struct {
     {"thaidict",                 "ctd", triedict_swap},
 #endif
 
-    /* the last item should not be #if'ed so that it can reliably omit the last comma */
-
+#if 0
+    /*
+     * Starting with ICU 4.8, the Unicode property (value) aliases data
+     * is hardcoded in the ICU4C common library.
+     * The swapper was moved to the toolutil library for swapping for ICU4J.
+     */
     /* Unicode properties */
     {"pnames",                   "icu", upname_swap},
+#endif
+
 #if 0
     /*
      * Starting with ICU4C 3.4, the core Unicode properties files
@@ -1332,6 +1337,7 @@ static const struct {
     {"nfc",                      "nrm", unorm2_swap},
 #endif
     {"unames",                   "icu", uchar_swapNames}
+    /* the last item should not be #if'ed so that it can reliably omit the last comma */
 };
 
 /* Large enough for the largest swappable data item. */
@@ -1669,6 +1675,7 @@ TestSwapData() {
         uprv_strcat(name, swapCases[i].type);
 
         pData=udata_open(pkg, swapCases[i].type, nm, &errorCode);
+
         if(U_SUCCESS(errorCode)) {
             TestSwapCase(pData, name, swapCases[i].swapFn, buffer, buffer+SWAP_BUFFER_SIZE);
             udata_close(pData);
