@@ -22,6 +22,7 @@ public:
 
     virtual void APITest();
     virtual void ManyLocalesTest();
+    virtual void HackPinyinTest();
 };
 
 #endif

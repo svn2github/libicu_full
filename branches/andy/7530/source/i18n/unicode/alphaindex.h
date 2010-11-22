@@ -531,6 +531,10 @@ private:
      // Initialize & destruct static constants used by this class.
      static void staticInit(UErrorCode &status);
 
+     // Pinyin stuff.  If the input name is Chinese, add the Pinyin prefix to the dest string.
+     void hackName(UnicodeString &dest, const UnicodeString &name, const Collator *coll);
+     void initPinyinBounds(const Collator *coll, UErrorCode &status);
+
    public:
      /**
       *   Delete all shared (static) data associated with an AlphabeticIndex.
@@ -544,8 +548,7 @@ private:
      // Does not remove any previous contents from dest.
      static void getIndexExemplars(UnicodeSet &dest, const Locale &locale, UErrorCode &status);
 
-     static UVector *firstStringsInScript(Collator *coll, UErrorCode &status);
-     static UVector *hackFirstStringsInScript(Collator *coll, UErrorCode &status);
+     UVector *firstStringsInScript(UErrorCode &status);
 
      static UnicodeString separated(const UnicodeString &item);
 
@@ -568,8 +571,9 @@ private:
      */
      struct Record: public UMemory {
          const UnicodeString  *name_;
+         UnicodeString        sortingName_;  // Usually the same as name_; different for Pinyin.
          const void           *data_;
-         int32_t              serialNumber_;
+         int32_t              serialNumber_;  // Defines sorting order for names that compare equal.
          ~Record() {delete name_;};
      };
 
@@ -596,6 +600,28 @@ private:
                 UAlphabeticIndexLabelType type, UErrorCode &status);
          ~Bucket();
      };
+
+  public:
+
+    /** 
+      * Language Types.  For internal ICU use only.
+      * @internal
+      */
+    enum ELangType {
+        /** @internal */
+        kNormal,
+        /** @internal */
+        kSimplified,
+        /** @internal */
+        kTraditional
+    };
+
+    /**
+      * Get the Language Type for this Index.  Based on the locale.
+      * @internal
+      */
+    static ELangType  langTypeFromLocale(const Locale &loc);
+
 
    private:
 
@@ -625,19 +651,42 @@ private:
      UVector    *labels_;            // List of Labels, after processing, sorting.
                                      //   Contents are (UnicodeString *)
 
-     UnicodeSet *noDistinctSorting_;
-     UnicodeSet *notAlphabetic_;
+     UnicodeSet *noDistinctSorting_; // As the set of labels is built, strings may 
+                                     // be discarded from the exemplars. This contains 
+                                     // some of the discards, and is
+                                     // intended for debugging.
+
+     UnicodeSet *notAlphabetic_;     // As the set of labels is built, strings may 
+                                     // be discarded from the exemplars. This contains 
+                                     // some of the discards, and is
+                                     // intended for debugging.
+
+
      UVector    *firstScriptCharacters_;  // The first character from each script,
                                           //   in collation order.
 
      Locale    locale_;
-     Collator  *comparator_;
-     Collator  *comparatorPrimary_;
+     Collator  *collator_;
+     Collator  *collatorPrimaryOnly_;
 
      UnicodeString  inflowLabel_;
      UnicodeString  overflowLabel_;
      UnicodeString  underflowLabel_;
      UnicodeString  overflowComparisonString_;
+
+     ELangType      langType_;        // The language type, simplified Chinese, Traditional Chinese,
+                                      //  or not Chinese (Normal).  Part of the Pinyin support
+
+     typedef const UChar PinyinLookup[24][3];
+     static PinyinLookup   HACK_PINYIN_LOOKUP_SHORT;
+     static PinyinLookup   HACK_PINYIN_LOOKUP_LONG;
+     
+     // These will be lazily set to the short or long tables based on which
+     //   Chinese collation has been configured into the ICU library.
+     static PinyinLookup   *HACK_PINYIN_LOOKUP;
+     static const UChar    *PINYIN_LOWER_BOUNDS;
+
+
 
      int32_t    recordCounter_;         // Counts Records created.  For minting record serial numbers.
 
@@ -649,6 +698,7 @@ private:
      static UnicodeSet *HANGUL;
      static UnicodeSet *IGNORE_SCRIPTS;
      static UnicodeSet *TO_TRY;
+     static UnicodeSet *UNIHAN;
      static const UnicodeString *EMPTY_STRING;
 
 };

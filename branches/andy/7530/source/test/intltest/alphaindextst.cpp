@@ -37,6 +37,10 @@ void AlphabeticIndexTest::runIndexedTest( int32_t index, UBool exec, const char*
             if (exec) ManyLocalesTest();
             break;
 
+        case 2: name = "HackPinyinTest";
+            if (exec) HackPinyinTest();
+            break;
+
         default: name = "";
             break; //needed to end loop
     }
@@ -320,6 +324,7 @@ void AlphabeticIndexTest::ManyLocalesTest() {
         while (index->nextBucket(status)) {
             TEST_CHECK_STATUS;
             const UnicodeString &label = index->getBucketLabel();
+            TEST_ASSERT(label.length()>0);
             // std::string ss;
             // std::cout << ":" << label.toUTF8String(ss);
         }
@@ -330,3 +335,64 @@ void AlphabeticIndexTest::ManyLocalesTest() {
     }
 }
 
+
+static const char *hackPinyin[] = { 
+        "\\u0101", "\\u5416", "\\u58ba", //
+        "b", "\\u516b", "\\u62d4", "\\u8500", //
+        "c", "\\u5693", "\\u7938", "\\u9e7e", //
+        "d", "\\u5491", "\\u8fcf", "\\u964a", //
+        "\\u0113","\\u59b8", "\\u92e8", "\\u834b", //
+        "f", "\\u53d1", "\\u9197", "\\u99a5", //
+        "g", "\\u7324", "\\u91d3", "\\u8142", //
+        "h", "\\u598e", "\\u927f", "\\u593b", //
+        "j", "\\u4e0c", "\\u6785", "\\u9d58", //
+        "k", "\\u5494", "\\u958b", "\\u7a52", //
+        "l", "\\u5783", "\\u62c9", "\\u9ba5", //
+        "m", "\\u5638", "\\u9ebb", "\\u65c0", //
+        "n", "\\u62ff", "\\u80ad", "\\u685b", //
+        "\\u014D", "\\u5662", "\\u6bee", "\\u8bb4", //
+        "p", "\\u5991", "\\u8019", "\\u8c31", //
+        "q", "\\u4e03", "\\u6053", "\\u7f56", //
+        "r", "\\u5465", "\\u72aa", "\\u6e03", //
+        "s", "\\u4ee8", "\\u9491", "\\u93c1", //
+        "t", "\\u4ed6", "\\u9248", "\\u67dd", //
+        "w", "\\u5c72", "\\u5558", "\\u5a7a", //
+        "x", "\\u5915", "\\u5438", "\\u6bbe", //
+        "y", "\\u4e2b", "\\u82bd", "\\u8574", //
+        "z", "\\u5e00", "\\u707d", "\\u5c0a",
+        NULL
+    };
+
+void AlphabeticIndexTest::HackPinyinTest() {
+    UErrorCode status = U_ZERO_ERROR;
+    std::string s;    // debug
+    AlphabeticIndex aindex(Locale::createFromName("zh"), status);
+    TEST_CHECK_STATUS; 
+
+    UnicodeString names[sizeof(hackPinyin) / sizeof(hackPinyin[0])];
+    int32_t  nameCount;
+    for (nameCount=0; hackPinyin[nameCount] != NULL; nameCount++) {
+        names[nameCount] = UnicodeString(hackPinyin[nameCount], -1, UnicodeString::kInvariant).unescape();
+        s.clear();
+        std::cout << names[nameCount].toUTF8String(s);
+        aindex.addRecord(names[nameCount], &names[nameCount], status);
+        TEST_CHECK_STATUS; 
+    }
+
+    TEST_ASSERT(nameCount == aindex.getRecordCount(status));
+    
+    std::cout << std::endl;
+    while (aindex.nextBucket(status)) {
+        UnicodeString label = aindex.getBucketLabel();
+        s.clear();
+        std::cout << label.toUTF8String(s) << ":  ";
+
+        while (aindex.nextRecord(status)) {
+            UnicodeString rec = aindex.getRecordName();
+            s.clear();
+            std::cout << rec.toUTF8String(s) << " ";
+        }
+        std::cout << std::endl;
+    }
+
+}

@@ -24,12 +24,15 @@
 #include "unicode/usetiter.h"
 #include "unicode/ustring.h"
 
+#include "cstring.h"
 #include "mutex.h"
+#include "uassert.h"
 #include "ucln_in.h"
 #include "uhash.h"
-#include "uassert.h"
 #include "uvector.h"
 
+#include <string>
+#include <iostream>
 U_NAMESPACE_BEGIN
 
 UOBJECT_DEFINE_NO_RTTI_IMPLEMENTATION(AlphabeticIndex)
@@ -89,27 +92,29 @@ AlphabeticIndex::AlphabeticIndex(const Locale &locale, UErrorCode &status) {
         return;
     }
     locale_ = locale;
-    comparator_ = Collator::createInstance(locale, status);
-    if (comparator_ != NULL) {
-        comparatorPrimary_ = comparator_->clone();
+    langType_ = langTypeFromLocale(locale_);
+
+    collator_ = Collator::createInstance(locale, status);
+    if (collator_ != NULL) {
+        collatorPrimaryOnly_ = collator_->clone();
     }
-    if (comparatorPrimary_ != NULL) {
-        comparatorPrimary_->setStrength(Collator::PRIMARY);
+    if (collatorPrimaryOnly_ != NULL) {
+        collatorPrimaryOnly_->setStrength(Collator::PRIMARY);
     }
     getIndexExemplars(*initialLabels_, locale, status);
     indexBuildRequired_ = TRUE;
-    if ((comparator_ == NULL || comparatorPrimary_ == NULL) && U_SUCCESS(status)) {
+    if ((collator_ == NULL || collatorPrimaryOnly_ == NULL) && U_SUCCESS(status)) {
         status = U_MEMORY_ALLOCATION_ERROR;
     }
-    firstScriptCharacters_ = hackFirstStringsInScript(comparator_, status);
+    firstScriptCharacters_ = firstStringsInScript(status);
 }
 
 
 AlphabeticIndex::~AlphabeticIndex() {
     uhash_close(alreadyIn_);
     delete bucketList_;
-    delete comparator_;
-    delete comparatorPrimary_;
+    delete collator_;
+    delete collatorPrimaryOnly_;
     delete firstScriptCharacters_;
     delete labels_;
     delete inputRecords_;
@@ -198,7 +203,7 @@ void AlphabeticIndex::buildIndex(UErrorCode &status) {
             UnicodeSetIterator itemAlreadyInIter(labelSet);
             while (itemAlreadyInIter.next()) {
                 const UnicodeString &itemAlreadyIn = itemAlreadyInIter.getString();
-                if (comparatorPrimary_->compare(item, itemAlreadyIn) == 0) {
+                if (collatorPrimaryOnly_->compare(item, itemAlreadyIn) == 0) {
                     UnicodeSet *targets = static_cast<UnicodeSet *>(uhash_get(alreadyIn_, &itemAlreadyIn));
                     if (targets == NULL) {
                         // alreadyIn.put(itemAlreadyIn, targets = new LinkedHashSet<String>());
@@ -210,7 +215,7 @@ void AlphabeticIndex::buildIndex(UErrorCode &status) {
                 }
             }
         } else if (item.moveIndex32(0, 1) < item.length() &&  // Label contains more than one code point.
-                   comparatorPrimary_->compare(item, separated(item)) == 0) {
+                   collatorPrimaryOnly_->compare(item, separated(item)) == 0) {
             noDistinctSorting_->add(item);
         } else if (!ALPHABETIC->containsSome(item)) {
             notAlphabetic_->add(item);
@@ -223,7 +228,7 @@ void AlphabeticIndex::buildIndex(UErrorCode &status) {
     // according to the collator.
 
     appendUnicodeSetToUVector(*labels_, labelSet, status);
-    labels_->sortWithUComparator(sortCollateComparator, comparatorPrimary_, status);
+    labels_->sortWithUComparator(sortCollateComparator, collatorPrimaryOnly_, status);
 
     // if the result is still too large, cut down to maxLabelCount_ elements, by removing every nth element
     //    Implemented by copying the elements to be retained to a new UVector.
@@ -287,7 +292,7 @@ void AlphabeticIndex::buildBucketList(UErrorCode &status) {
         if (lastSet.containsNone(set)) {
             // check for adjacent
             const UnicodeString &overflowComparisonString = getOverflowComparisonString(*last, status);
-            if (comparatorPrimary_->compare(overflowComparisonString, *current) < 0) {
+            if (collatorPrimaryOnly_->compare(overflowComparisonString, *current) < 0) {
                 labelStr = getInflowLabel();
                 b = new Bucket(labelStr, overflowComparisonString, U_ALPHAINDEX_INFLOW, status);
                 bucketList_->addElement(b, status);
@@ -321,7 +326,7 @@ void AlphabeticIndex::bucketRecords(UErrorCode &status) {
         return;
     }
 
-    inputRecords_->sortWithUComparator(recordCompareFn, comparator_, status);
+    inputRecords_->sortWithUComparator(recordCompareFn, collator_, status);
     U_ASSERT(bucketList_->size() > 0);   // Should always have at least an overflow
                                          //   bucket, even if no user labels.
     int32_t bucketIndex = 0;
@@ -334,7 +339,7 @@ void AlphabeticIndex::bucketRecords(UErrorCode &status) {
     Record *r = static_cast<Record *>(inputRecords_->elementAt(recordIndex));
     while (recordIndex < inputRecords_->size()) {
         if (nextBucket == NULL ||
-            comparatorPrimary_->compare(*r->name_, nextBucket->lowerBoundary_) < 0) {
+            collatorPrimaryOnly_->compare(r->sortingName_, nextBucket->lowerBoundary_) < 0) {
                 // Record goes in current bucket.  Advance to next record,
                 // stay on current bucket.
                 destBucket->records_->addElement(r, status);
@@ -460,7 +465,7 @@ UBool AlphabeticIndex::operator!=(const AlphabeticIndex& /* other */) const {
 const RuleBasedCollator &AlphabeticIndex::getCollator() const {
     // There are no known non-RuleBasedCollator collators, and none ever expected.
     // But, in case that changes, better a null pointer than a wrong type.
-    return *dynamic_cast<RuleBasedCollator *>(comparator_);
+    return *dynamic_cast<RuleBasedCollator *>(collator_);
 }
 
 
@@ -524,7 +529,7 @@ const UnicodeString &AlphabeticIndex::getOverflowComparisonString(const UnicodeS
     for (int32_t i=0; i<firstScriptCharacters_->size(); i++) {
         const UnicodeString *s =
                 static_cast<const UnicodeString *>(firstScriptCharacters_->elementAt(i));
-        if (comparator_->compare(*s, lowerLimit) > 0) {
+        if (collator_->compare(*s, lowerLimit) > 0) {
             return *s;
         }
     }
@@ -553,8 +558,8 @@ void AlphabeticIndex::init(UErrorCode &status) {
 
     alreadyIn_             = NULL;
     bucketList_            = NULL;
-    comparator_            = NULL;
-    comparatorPrimary_     = NULL;
+    collator_            = NULL;
+    collatorPrimaryOnly_     = NULL;
     currentBucket_         = NULL;
     firstScriptCharacters_ = NULL;
     indexBuildRequired_    = TRUE;
@@ -621,6 +626,8 @@ void AlphabeticIndex::staticCleanup() {
     IGNORE_SCRIPTS = NULL;
     delete TO_TRY;
     TO_TRY = NULL;
+    delete UNIHAN;
+    UNIHAN = NULL;
     delete EMPTY_STRING;
     EMPTY_STRING = NULL;
     nfkdNormalizer = NULL;  // ref to a singleton.  Do not delete.
@@ -634,6 +641,7 @@ UnicodeSet *AlphabeticIndex::ETHIOPIC;
 UnicodeSet *AlphabeticIndex::CORE_LATIN;
 UnicodeSet *AlphabeticIndex::IGNORE_SCRIPTS;
 UnicodeSet *AlphabeticIndex::TO_TRY;
+UnicodeSet *AlphabeticIndex::UNIHAN;
 const UnicodeString *AlphabeticIndex::EMPTY_STRING;
 
 //
@@ -688,6 +696,12 @@ void AlphabeticIndex::staticInit(UErrorCode &status) {
         UnicodeString nfcqcStr = UNICODE_STRING_SIMPLE("[:^nfcqc=no:]");
         TO_TRY = new UnicodeSet(nfcqcStr, status);
         if (TO_TRY == NULL) {
+            goto err;
+        }
+
+        UnicodeString unihanStr = UNICODE_STRING_SIMPLE("[:script=Hani:]");
+        UNIHAN = new UnicodeSet(unihanStr, status);
+        if (UNIHAN == NULL) {
             goto err;
         }
 
@@ -749,7 +763,7 @@ recordCompareFn(const void *context, const void *left, const void *right) {
     const AlphabeticIndex::Record *rightRec = static_cast<const AlphabeticIndex::Record *>(rightTok->pointer);
     const Collator *col = static_cast<const Collator *>(context);
 
-    Collator::EComparisonResult r = col->compare(*leftRec->name_, *rightRec->name_);
+    Collator::EComparisonResult r = col->compare(leftRec->sortingName_, rightRec->sortingName_);
     if (r == 0) {
         r = (leftRec->serialNumber_ < rightRec->serialNumber_) ? Collator::LESS : Collator::GREATER;
     }
@@ -757,6 +771,15 @@ recordCompareFn(const void *context, const void *left, const void *right) {
 }
 
 
+#if 0
+//
+//  First characters in scripts.
+//  Create a UVector whose contents are pointers to UnicodeStrings for the First Characters in each script.
+//  The vector is sorted according to this index's collation.
+//
+//  This code is too slow to use, so for now hard code the data.
+//    Hard coded implementation is follows.
+//
 UVector *AlphabeticIndex::firstStringsInScript(Collator *ruleBasedCollator, UErrorCode &status) {
 
     if (U_FAILURE(status)) {
@@ -820,12 +843,17 @@ UVector *AlphabeticIndex::firstStringsInScript(Collator *ruleBasedCollator, UErr
     dest->sortWithUComparator(sortCollateComparator, ruleBasedCollator, status);
     return dest;
 }
+#endif
+
 
 //
 //  First characters in scripts.
+//  Create a UVector whose contents are pointers to UnicodeStrings for the First Characters in each script.
+//  The vector is sorted according to this index's collation.
+//
 //  It takes too much time to compute this from character properties, so hard code it for now.
 //  Character constants copied from corresponding declaration in ICU4J.
-//
+
 static UChar HACK_FIRST_CHARS_IN_SCRIPTS[] =  { 0x61, 0, 0x03B1, 0,
             0x2C81, 0, 0x0430, 0, 0x2C30, 0, 0x10D0, 0, 0x0561, 0, 0x05D0, 0, 0xD802, 0xDD00, 0, 0x0800, 0, 0x0621, 0, 0x0710, 0,
             0x0780, 0, 0x07CA, 0, 0x2D30, 0, 0x1200, 0, 0x0950, 0, 0x0985, 0, 0x0A74, 0, 0x0AD0, 0, 0x0B05, 0, 0x0BD0, 0,
@@ -838,7 +866,7 @@ static UChar HACK_FIRST_CHARS_IN_SCRIPTS[] =  { 0x61, 0, 0x03B1, 0,
             0xD801, 0xDC80, 0, 0xD800, 0xDC00, 0, 0xD802, 0xDC00, 0, 0xD802, 0xDE60, 0, 0xD802, 0xDF00, 0, 0xD802, 0xDC40, 0,
             0xD802, 0xDF40, 0, 0xD802, 0xDF60, 0, 0xD800, 0xDF80, 0, 0xD800, 0xDFA0, 0, 0xD808, 0xDC00, 0, 0xD80C, 0xDC00, 0, 0x4E00, 0 };
 
-UVector *AlphabeticIndex::hackFirstStringsInScript(Collator *ruleBasedCollator, UErrorCode &status) {
+UVector *AlphabeticIndex::firstStringsInScript(UErrorCode &status) {
     if (U_FAILURE(status)) {
         return NULL;
     }
@@ -860,57 +888,75 @@ UVector *AlphabeticIndex::hackFirstStringsInScript(Collator *ruleBasedCollator, 
         dest->addElement(str, status);
         src += str->length() + 1;
     } while (src < limit);
-    dest->sortWithUComparator(sortCollateComparator, ruleBasedCollator, status);
+    dest->sortWithUComparator(sortCollateComparator, collator_, status);
     return dest;
+}
+
+
+AlphabeticIndex::ELangType AlphabeticIndex::langTypeFromLocale(const Locale &loc) {
+    const char *lang = loc.getLanguage();
+    if (uprv_strcmp(lang, "zh") != 0) {
+        return kNormal;
+    }
+    const char *script = loc.getScript();
+    if (uprv_strcmp(script, "Hant") == 0) {
+        return kTraditional;
+    }
+    const char *country = loc.getCountry();
+    if (uprv_strcmp(country, "TW") == 0) {
+        return kTraditional;
+    }
+    return kSimplified;
 }
 
 
 //
 // Pinyin Hacks.  Direct port from Java.
 //
+
+static const UChar32  probeCharInLong = 0x28EAD;
+
+
 static const UChar PINYIN_LOWER_BOUNDS_SHORT[] = {      // "\u0101bcd\u0113fghjkl\u1E3F\u0144\u014Dpqrstwxyz"
             0x0101, 0x62, 0x63, 0x64, 0x0113, 0x66, 0x67, 0x68, 0x6A, 0x6B, /*l*/0x6C, 0x1E3F, 0x0144, 0x014D,
             /*p*/0x70, 0x71, 0x72, 0x73, 0x74, /*w*/0x77, 0x78, 0x79, 0x7A};
-            // TODO:  Check with Mark.  Short & Long are the same.
 
-static UChar hackName(const UnicodeString &name, const Collator &comparator) {
-    return 0;
-}
 
 // Pinyin lookup tables copied, pasted (and reformatted) from the ICU4J code.
 
-static const UChar  HACK_PINYIN_LOOKUP_SHORT[][2] = {
-        {(UChar)0,      (UChar)0}, // A 
-        {(UChar)0x516B, (UChar)0}, // B 
-        {(UChar)0x5693, (UChar)0}, // C 
-        {(UChar)0x5491, (UChar)0}, // D 
-        {(UChar)0x59B8, (UChar)0}, // E 
-        {(UChar)0x53D1, (UChar)0}, // F 
-        {(UChar)0x65EE, (UChar)0}, // G 
-        {(UChar)0x54C8, (UChar)0}, // H 
-        {(UChar)0x4E0C, (UChar)0}, // J 
-        {(UChar)0x5494, (UChar)0}, // K 
-        {(UChar)0x5783, (UChar)0}, // L 
-        {(UChar)0x5452, (UChar)0}, // M 
-        {(UChar)0x5514, (UChar)0}, // N 
-        {(UChar)0x5594, (UChar)0}, // O 
-        {(UChar)0x5991, (UChar)0}, // P 
-        {(UChar)0x4E03, (UChar)0}, // Q 
-        {(UChar)0x513F, (UChar)0}, // R 
-        {(UChar)0x4EE8, (UChar)0}, // S 
-        {(UChar)0x4ED6, (UChar)0}, // T 
-        {(UChar)0x7A75, (UChar)0}, // W 
-        {(UChar)0x5915, (UChar)0}, // X 
-        {(UChar)0x4E2B, (UChar)0}, // Y 
-        {(UChar)0x5E00, (UChar)0}, // Z 
+AlphabeticIndex::PinyinLookup AlphabeticIndex::HACK_PINYIN_LOOKUP_SHORT = {
+        {(UChar)0,      (UChar)0, (UChar)0}, // A 
+        {(UChar)0x516B, (UChar)0, (UChar)0}, // B 
+        {(UChar)0x5693, (UChar)0, (UChar)0}, // C 
+        {(UChar)0x5491, (UChar)0, (UChar)0}, // D 
+        {(UChar)0x59B8, (UChar)0, (UChar)0}, // E 
+        {(UChar)0x53D1, (UChar)0, (UChar)0}, // F 
+        {(UChar)0x65EE, (UChar)0, (UChar)0}, // G 
+        {(UChar)0x54C8, (UChar)0, (UChar)0}, // H 
+        {(UChar)0x4E0C, (UChar)0, (UChar)0}, // J 
+        {(UChar)0x5494, (UChar)0, (UChar)0}, // K 
+        {(UChar)0x5783, (UChar)0, (UChar)0}, // L 
+        {(UChar)0x5452, (UChar)0, (UChar)0}, // M 
+        {(UChar)0x5514, (UChar)0, (UChar)0}, // N 
+        {(UChar)0x5594, (UChar)0, (UChar)0}, // O 
+        {(UChar)0x5991, (UChar)0, (UChar)0}, // P 
+        {(UChar)0x4E03, (UChar)0, (UChar)0}, // Q 
+        {(UChar)0x513F, (UChar)0, (UChar)0}, // R 
+        {(UChar)0x4EE8, (UChar)0, (UChar)0}, // S 
+        {(UChar)0x4ED6, (UChar)0, (UChar)0}, // T 
+        {(UChar)0x7A75, (UChar)0, (UChar)0}, // W 
+        {(UChar)0x5915, (UChar)0, (UChar)0}, // X 
+        {(UChar)0x4E2B, (UChar)0, (UChar)0}, // Y 
+        {(UChar)0x5E00, (UChar)0, (UChar)0}, // Z 
+        {(UChar)0xFFFF, (UChar)0, (UChar)0}, // mark end of array 
     };
 
 static const UChar PINYIN_LOWER_BOUNDS_LONG[] = {   // "\u0101bcd\u0113fghjkl\u1E3F\u0144\u014Dpqrstwxyz";
             0x0101, 0x62, 0x63, 0x64, 0x0113, 0x66, 0x67, 0x68, 0x6A, 0x6B, /*l*/0x6C, 0x1E3F, 0x0144, 0x014D,
             /*p*/0x70, 0x71, 0x72, 0x73, 0x74, /*w*/0x77, 0x78, 0x79, 0x7A};
 
-static const UCHar HACK_PINYIN_LOOKUP_LONG[][3] = {
-        {(UChar)0,      (UChar)0,      (Uchar)0}, // A
+AlphabeticIndex::PinyinLookup AlphabeticIndex::HACK_PINYIN_LOOKUP_LONG = {
+        {(UChar)0,      (UChar)0,      (UChar)0}, // A
         {(UChar)0x516B, (UChar)0,      (UChar)0}, // b 
         {(UChar)0xD863, (UChar)0xDEAD, (UChar)0}, // c 
         {(UChar)0xD844, (UChar)0xDE51, (UChar)0}, // d 
@@ -933,7 +979,91 @@ static const UCHar HACK_PINYIN_LOOKUP_LONG[][3] = {
         {(UChar)0x5915, (UChar)0,      (UChar)0}, // x 
         {(UChar)0x4E2B, (UChar)0,      (UChar)0}, // y 
         {(UChar)0x5E00, (UChar)0,      (UChar)0}, // z 
+        {(UChar)0xFFFF, (UChar)0,      (UChar)0}, // mark end of array 
     };
+
+
+//
+//  Probe the collation data, and decide which Pinyin tables should be used
+//
+//  ICU can be built with a choice between two Chinese collations.
+//  The hack Pinyin tables to use depend on which one is in use.
+//  We can assume that any given copy of ICU will have only one of the collations available,
+//  and that there is no way, in a given process, to create two alphabetic indexes using
+//  different Chinese collations.  Which means the probe can be done once
+//  and the results cached.
+//
+//  This whole arrangement is temporary.
+//
+AlphabeticIndex::PinyinLookup *AlphabeticIndex::HACK_PINYIN_LOOKUP  = NULL;
+const UChar  *AlphabeticIndex::PINYIN_LOWER_BOUNDS = NULL;
+
+void AlphabeticIndex::initPinyinBounds(const Collator *col, UErrorCode &status) {
+    {
+        Mutex m;
+        if (PINYIN_LOWER_BOUNDS != NULL) {
+            return;
+        }
+    }
+    UnicodeSet *colSet = col->getTailoredSet(status);
+    if (U_FAILURE(status) || colSet == NULL) {
+        delete colSet;
+        if (U_SUCCESS(status))  {
+            status = U_MEMORY_ALLOCATION_ERROR;
+        }
+        return;
+    }
+    UBool useLongTables = colSet->contains(probeCharInLong);
+    delete colSet;
+    {
+        Mutex m;
+        if (useLongTables) {
+            PINYIN_LOWER_BOUNDS = PINYIN_LOWER_BOUNDS_LONG;
+            HACK_PINYIN_LOOKUP  = &HACK_PINYIN_LOOKUP_LONG;
+        } else {
+            PINYIN_LOWER_BOUNDS = PINYIN_LOWER_BOUNDS_SHORT;
+            HACK_PINYIN_LOOKUP  = &HACK_PINYIN_LOOKUP_SHORT;
+        }
+    }
+}
+
+// Pinyin Hack:
+//    Modify a Chinese name by prepending a Latin letter.  The modified name is used
+//      when putting records (names) into buckets, to put the name under a Latin index heading.
+
+void AlphabeticIndex::hackName(UnicodeString &dest, const UnicodeString &name, const Collator *col) {
+
+    if (langType_ != kSimplified || !UNIHAN->contains(name.char32At(0))) {
+        dest = name;
+        return;
+    }
+
+    UErrorCode status = U_ZERO_ERROR;
+    initPinyinBounds(col, status);
+    if (U_FAILURE(status)) {
+        dest = name;
+        return;
+    }
+    // TODO:  use binary search
+    int index;
+    for (index=0; ; index++) {
+        if ((*HACK_PINYIN_LOOKUP)[index][0] == (UChar)0xffff) {
+            index--;
+            break;
+        }
+        int32_t compareResult = col->compare(name, (*HACK_PINYIN_LOOKUP)[index]); 
+        if (compareResult < 0) {
+            index--;
+        }
+        if (compareResult <= 0) {
+            break;
+        }
+    }
+    UChar c = PINYIN_LOWER_BOUNDS[index];
+    dest.setTo(c);
+    dest.append(name);
+    return;
+}
 
 
 
@@ -980,10 +1110,16 @@ AlphabeticIndex & AlphabeticIndex::addRecord(const UnicodeString &name, const vo
     Record *r = new Record;
     // Note on ownership of the name string:  It stays with the Record.
     r->name_ = static_cast<UnicodeString *>(name.clone());
+    UnicodeString prefixedName;
+    hackName(r->sortingName_, *r->name_, collatorPrimaryOnly_);
     r->data_ = data;
     r->serialNumber_ = ++recordCounter_;
     inputRecords_->addElement(r, status);
     indexBuildRequired_ = TRUE;
+    //std::string ss;
+    //std::string ss2;
+    //std::cout << "added record: name = \"" << r->name_->toUTF8String(ss) << "\"" << 
+    //             "   sortingName = \"" << r->sortingName_.toUTF8String(ss2) << "\"" << std::endl;
     return *this;
 }
 
@@ -1004,18 +1140,22 @@ int32_t AlphabeticIndex::getBucketIndex(const UnicodeString &name, UErrorCode &s
         return 0;
     }
 
-    // TODO:  name change for Siplified Chinese.
+    // For simplified Chinese prepend a prefix to the name.
+    //   For non-Chinese locales or non-Chinese names, the name is not modified.
+
+    UnicodeString prefixedName;
+    hackName(prefixedName, name, collatorPrimaryOnly_);
 
     // TODO:  use a binary search.
     for (int32_t i = 0; i < bucketList_->size(); ++i) {
         Bucket *bucket = static_cast<Bucket *>(bucketList_->elementAt(i));
-        Collator::EComparisonResult comp = comparatorPrimary_->compare(name, bucket->lowerBoundary_);
+        Collator::EComparisonResult comp = collatorPrimaryOnly_->compare(prefixedName, bucket->lowerBoundary_);
         if (comp < 0) {
             return i - 1;
         }
     }
-    // Loop runs until we find the bucket following the one that would hold name.
-    // If the name belongs in the last bucket the loop will drop out the bottom rather
+    // Loop runs until we find the bucket following the one that would hold prefixedName.
+    // If the prefixedName belongs in the last bucket the loop will drop out the bottom rather
     //  than returning from the middle.
 
     return bucketList_->size() - 1;
