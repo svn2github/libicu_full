@@ -1088,7 +1088,7 @@ PreferenceComparator(const void *context, const void *left, const void *right) {
     const UHashTok *rightTok = static_cast<const UHashTok *>(right);
     const UnicodeString *s1  = static_cast<const UnicodeString *>(leftTok->pointer);
     const UnicodeString *s2  = static_cast<const UnicodeString *>(rightTok->pointer);
-    UErrorCode &status       = *(UErrorCode *)(context);   // static and const cast.
+    UErrorCode &status       = *(UErrorCode *)(context);   // Cast off both static and const.
     if (s1 == s2) {
         return 0;
     }
@@ -1107,6 +1107,12 @@ PreferenceComparator(const void *context, const void *left, const void *right) {
     return s1->compareCodePointOrder(*s2);
 }
 
+
+//
+//  Constructor & Destructor for AlphabeticIndex::Record
+//
+//     Records are internal only, instances are not directly surfaced in the public API.
+//     This class is mostly struct-like, with all public fields.
 
 AlphabeticIndex::Record::Record(AlphabeticIndex *alphaIndex, const UnicodeString &name, const void *data):
     alphaIndex_(alphaIndex), name_(name), data_(data) 
