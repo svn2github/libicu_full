@@ -248,6 +248,7 @@
   <ItemGroup>
     <ClCompile Include="bytetriebuilder.cpp" />
     <ClCompile Include="bytetrieiterator.cpp" />
+    <ClCompile Include="denseranges.cpp" />
     <ClCompile Include="filestrm.c" />
     <ClCompile Include="filetools.cpp" />
     <ClCompile Include="flagparser.c" />
