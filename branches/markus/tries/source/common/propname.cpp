@@ -146,17 +146,17 @@ U_NAMESPACE_BEGIN
 int32_t PropNameData::findProperty(int32_t property) {
     int32_t i=1;  // valueMaps index, initially after numRanges
     for(int32_t numRanges=valueMaps[0]; numRanges>0; --numRanges) {
-        // Read and skip the start and end of this range.
+        // Read and skip the start and limit of this range.
         int32_t start=valueMaps[i];
-        int32_t end=valueMaps[i+1];
+        int32_t limit=valueMaps[i+1];
         i+=2;
         if(property<start) {
             break;
         }
-        if(property<=end) {
+        if(property<limit) {
             return i+(property-start)*2;
         }
-        i+=((end-start)+1)*2;  // Skip all entries for this range.
+        i+=(limit-start)*2;  // Skip all entries for this range.
     }
     return 0;
 }
@@ -170,17 +170,17 @@ int32_t PropNameData::findPropertyValueNameGroup(int32_t valueMapIndex, int32_t 
     if(numRanges<0x10) {
         // Ranges of values.
         for(; numRanges>0; --numRanges) {
-            // Read and skip the start and end of this range.
+            // Read and skip the start and limit of this range.
             int32_t start=valueMaps[valueMapIndex];
-            int32_t end=valueMaps[valueMapIndex+1];
+            int32_t limit=valueMaps[valueMapIndex+1];
             valueMapIndex+=2;
             if(value<start) {
                 break;
             }
-            if(value<=end) {
+            if(value<limit) {
                 return valueMaps[valueMapIndex+value-start];
             }
-            valueMapIndex+=(end-start)+1;  // Skip all entries for this range.
+            valueMapIndex+=limit-start;  // Skip all entries for this range.
         }
     } else {
         // List of values.
@@ -201,12 +201,15 @@ int32_t PropNameData::findPropertyValueNameGroup(int32_t valueMapIndex, int32_t 
 
 const char *PropNameData::getName(const char *nameGroup, int32_t nameIndex) {
     int32_t numNames=*nameGroup++;
-    if(nameIndex<0 || numNames<=nameIndex || (nameIndex==0 && *nameGroup==0)) {
+    if(nameIndex<0 || numNames<=nameIndex) {
         return NULL;
     }
     // Skip nameIndex names.
     for(; nameIndex>0; --nameIndex) {
         nameGroup=uprv_strchr(nameGroup, 0)+1;
+    }
+    if(*nameGroup==0) {
+        return NULL;  // no name (Property[Value]Aliases.txt has "n/a")
     }
     return nameGroup;
 }

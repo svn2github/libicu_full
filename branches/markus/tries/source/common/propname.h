@@ -155,13 +155,12 @@ private:
  *
  *      valueMaps[0] contains the number of UProperty enum ranges.
  *      For each range:
- *        int32_t start, end -- first and last UProperty enum of a dense range
- *        Followed by (end-start)+1 pairs of
- *          int32_t nameGroupOffset, valueMapIndex;
- *            The nameGroupOffset is the offset into nameGroups[] for the
- *            property's names/aliases.
- *            The valueMapIndex is the offset of the property's value map
- *            in the valueMaps[] array.
+ *        int32_t start, limit -- first and last+1 UProperty enum of a dense range
+ *        Followed by (limit-start) pairs of
+ *          int32_t nameGroupOffset;
+ *            Offset into nameGroups[] for the property's names/aliases.
+ *          int32_t valueMapIndex;
+ *            Offset of the property's value map in the valueMaps[] array.
  *            If the valueMapIndex is 0, then the property does not have named values.
  *
  *      For each property's value map:
@@ -169,19 +168,18 @@ private:
  *      int32_t numRanges;
  *        If numRanges is in the range 1..15, then that many ranges of values follow.
  *        Per range:
- *          int32_t start, end -- first and last UProperty enum of a range
- *          Followed by (end-start)+1 entries of
+ *          int32_t start, limit -- first and last+1 UProperty enum of a range
+ *          Followed by (limit-start) entries of
  *            int32_t nameGroupOffset;
- *            The nameGroupOffset is the offset into nameGroups[] for the
- *            property value's names/aliases.
- *            If the nameGroupOffset is 0, then this is not a named value for this property.
- *            (That is, the ranges need not be dense.)
+ *              Offset into nameGroups[] for the property value's names/aliases.
+ *              If the nameGroupOffset is 0, then this is not a named value for this property.
+ *              (That is, the ranges need not be dense.)
  *        If numRanges is >=0x10, then (numRanges-0x10) sorted values
  *        and then (numRanges-0x10) corresponding nameGroupOffsets follow.
  *        Values are sorted as signed integers.
  *        In this case, the set of values is dense; no nameGroupOffset will be 0.
  *
- *      For both properties and property values, ranges are sorted by their start/end values.
+ *      For both properties and property values, ranges are sorted by their start/limit values.
  *
  * uint8_t byteTries[];
  *
