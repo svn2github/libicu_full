@@ -100,7 +100,9 @@ U_CAPI USet* U_EXPORT2
 ulocdata_getExemplarSet(ULocaleData *uld, USet *fillIn,
                         uint32_t options, ULocaleDataExemplarSetType extype, UErrorCode *status){
 
-    static const char* const exemplarSetTypes[] = { "ExemplarCharacters", "AuxExemplarCharacters" };
+    static const char* const exemplarSetTypes[] = { "ExemplarCharacters", 
+                                                    "AuxExemplarCharacters", 
+                                                    "ExemplarCharactersIndex"};
     const UChar *exemplarChars = NULL;
     int32_t len = 0;
     UErrorCode localStatus = U_ZERO_ERROR;

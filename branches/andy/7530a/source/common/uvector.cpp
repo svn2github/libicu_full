@@ -549,5 +549,16 @@ void UVector::sort(USortComparator *compare, UErrorCode &ec) {
     }
 }
 
+
+/**
+ *  Sort with a user supplied comparator of type UComparator.
+ */
+void UVector::sortWithUComparator(UComparator *compare, const void *context, UErrorCode &ec) {
+    if (U_SUCCESS(ec)) {
+        uprv_sortArray(elements, count, sizeof(UHashTok),
+                       compare, context, TRUE, &ec);
+    }
+}
+
 U_NAMESPACE_END
 
