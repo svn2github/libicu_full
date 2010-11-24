@@ -276,6 +276,9 @@
     </ClCompile>
     <ClCompile Include="ucbuf.c" />
     <ClCompile Include="ucm.c" />
+    <ClCompile Include="uchartrie.cpp" />
+    <ClCompile Include="uchartriebuilder.cpp" />
+    <ClCompile Include="uchartrieiterator.cpp" />
     <ClCompile Include="ucmstate.c" />
     <ClCompile Include="unewdata.c" />
     <ClCompile Include="uoptions.c" />
