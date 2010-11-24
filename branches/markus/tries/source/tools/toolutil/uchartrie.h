@@ -39,12 +39,44 @@ class U_TOOLUTIL_API UCharTrie : public UMemory {
 public:
     UCharTrie(const UChar *trieUChars)
             : uchars(trieUChars),
-              pos(uchars), remainingMatchLength(-1), value(0), haveValue(FALSE) {}
+              pos(uchars), remainingMatchLength(-1), value(0), haveValue(FALSE),
+              markedPos(pos), markedRemainingMatchLength(remainingMatchLength),
+              markedValue(0), markedHaveValue(FALSE) {}
 
+    /**
+     * Resets this trie (and its marked state) to its initial state.
+     */
     UCharTrie &reset() {
-        pos=uchars;
-        remainingMatchLength=-1;
-        haveValue=FALSE;
+        pos=markedPos=uchars;
+        remainingMatchLength=markedRemainingMatchLength=-1;
+        haveValue=markedHaveValue=FALSE;
+        return *this;
+    }
+
+    /**
+     * Marks the state of this trie.
+     * @see resetToMark
+     */
+    UCharTrie &mark() {
+        markedPos=pos;
+        markedRemainingMatchLength=remainingMatchLength;
+        markedValue=value;
+        markedHaveValue=haveValue;
+        return *this;
+    }
+
+    /**
+     * Resets this trie to the state at the time mark() was last called.
+     * If mark() has not been called since the last reset()
+     * then this is equivalent to reset() itself.
+     * @see mark
+     * @see reset
+     */
+    UCharTrie &resetToMark() {
+        pos=markedPos;
+        remainingMatchLength=markedRemainingMatchLength;
+        value=markedValue;
+        haveValue=markedHaveValue;
         return *this;
     }
 
@@ -63,7 +95,7 @@ public:
      *         In this case, an immediately following call to getValue()
      *         returns the string's value.
      *         hasValue() is only defined if called from the initial state
-     *         or once immediately after next() returns TRUE.
+     *         or immediately after next() returns TRUE.
      */
     UBool hasValue();
 
@@ -188,6 +220,12 @@ private:
     // Value for a match, after hasValue() returned TRUE.
     int32_t value;
     UBool haveValue;
+
+    // mark() and resetToMark() variables
+    const UChar *markedPos;
+    int32_t markedRemainingMatchLength;
+    int32_t markedValue;
+    UBool markedHaveValue;
 };
 
 U_NAMESPACE_END

@@ -177,6 +177,7 @@ UCharTrie::hasValue() {
         if(readCompactInt(node)) {
             stop();
         }
+        haveValue=TRUE;
         return TRUE;
     }
     return FALSE;

@@ -42,10 +42,12 @@ public:
     void TestLongestListBranch();
     void TestLongSequence();
     void TestLongBranch();
+    void TestValuesForMarkAndReset();
 
     void checkData(const StringAndValue data[], int32_t dataLength);
     StringPiece buildTrie(const StringAndValue data[], int32_t dataLength, ByteTrieBuilder &builder);
-    void checkContains(const StringPiece &trieBytes, const StringAndValue data[], int32_t dataLength);
+    void checkHasValue(const StringPiece &trieBytes, const StringAndValue data[], int32_t dataLength);
+    void checkMarkAndReset(const StringPiece &trieBytes, const StringAndValue data[], int32_t dataLength);
     void checkIterator(const StringPiece &trieBytes, const StringAndValue data[], int32_t dataLength);
 };
 
@@ -69,6 +71,7 @@ void ByteTrieTest::runIndexedTest(int32_t index, UBool exec, const char *&name, 
     TESTCASE_AUTO(TestLongestListBranch);
     TESTCASE_AUTO(TestLongSequence);
     TESTCASE_AUTO(TestLongBranch);
+    TESTCASE_AUTO(TestValuesForMarkAndReset);
     TESTCASE_AUTO_END;
 }
 
@@ -175,13 +178,26 @@ void ByteTrieTest::TestLongBranch() {
     checkData(data, LENGTHOF(data));
 }
 
+void ByteTrieTest::TestValuesForMarkAndReset() {
+    static const StringAndValue data[]={
+        { "a", -1 },
+        { "ab", -2 },
+        { "abc", -3 },
+        { "abcd", -4 },
+        { "abcde", -5 },
+        { "abcdef", -6 }
+    };
+    checkData(data, LENGTHOF(data));
+}
+
 void ByteTrieTest::checkData(const StringAndValue data[], int32_t dataLength) {
     ByteTrieBuilder builder;
     StringPiece sp=buildTrie(data, dataLength, builder);
     if(sp.empty()) {
         return;  // buildTrie() reported an error
     }
-    checkContains(sp, data, dataLength);
+    checkHasValue(sp, data, dataLength);
+    checkMarkAndReset(sp, data, dataLength);
     checkIterator(sp, data, dataLength);
 }
 
@@ -218,7 +234,7 @@ StringPiece ByteTrieTest::buildTrie(const StringAndValue data[], int32_t dataLen
     return sp;
 }
 
-void ByteTrieTest::checkContains(const StringPiece &trieBytes,
+void ByteTrieTest::checkHasValue(const StringPiece &trieBytes,
                                  const StringAndValue data[], int32_t dataLength) {
     ByteTrie trie(trieBytes.data());
     for(int32_t i=0; i<dataLength; ++i) {
@@ -228,6 +244,49 @@ void ByteTrieTest::checkContains(const StringPiece &trieBytes,
         } else if(trie.getValue()!=data[i].value) {
             errln("trie value for %s is %ld=0x%lx instead of expected %ld=0x%lx",
                   data[i].s,
+                  (long)trie.getValue(), (long)trie.getValue(),
+                  (long)data[i].value, (long)data[i].value);
+        } else if(!trie.hasValue() || trie.getValue()!=data[i].value) {
+            errln("trie value for %s changes when repeating hasValue()/getValue()", data[i].s);
+        }
+        trie.reset();
+    }
+}
+
+void ByteTrieTest::checkMarkAndReset(const StringPiece &trieBytes,
+                                     const StringAndValue data[], int32_t dataLength) {
+    ByteTrie trie(trieBytes.data());
+    for(int32_t i=0; i<dataLength; ++i) {
+        if((i&1)==0) {
+            // resetToMark() from initial state or after reset()
+            // should have no effect.
+            trie.resetToMark();
+        }
+        const char *expectedString=data[i].s;
+        int32_t stringLength=strlen(expectedString);
+        int32_t partialLength=stringLength/3;
+        for(int32_t j=0; j<partialLength; ++j) {
+            if(!trie.next(expectedString[j])) {
+                errln("trie.next()=false for a prefix of %s", expectedString);
+                return;
+            }
+        }
+        trie.mark();
+        UBool hasValueAtMark=trie.hasValue();
+        int32_t valueAtMark=-99;
+        if(hasValueAtMark) {
+            valueAtMark=trie.getValue();
+        }
+        trie.next(0);  // mismatch
+        if(hasValueAtMark!=trie.resetToMark().hasValue() || (hasValueAtMark && valueAtMark!=trie.getValue())) {
+            errln("trie.next(part of %s) changes hasValue()/getValue() after mark/next(0)/resetToMark", expectedString);
+        } else if(!trie.hasValue(expectedString+partialLength, stringLength-partialLength)) {
+            errln("trie.next(part of %s) does not seem to contain %s after mark/next(0)/resetToMark", expectedString);
+        } else if(!trie.resetToMark().hasValue(expectedString+partialLength, stringLength-partialLength)) {
+            errln("trie does not seem to contain %s after mark/hasValue(rest)/resetToMark", expectedString);
+        } else if(trie.getValue()!=data[i].value) {
+            errln("trie value for %s is %ld=0x%lx instead of expected %ld=0x%lx",
+                  expectedString,
                   (long)trie.getValue(), (long)trie.getValue(),
                   (long)data[i].value, (long)data[i].value);
         }

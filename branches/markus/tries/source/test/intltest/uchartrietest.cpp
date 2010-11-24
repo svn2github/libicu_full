@@ -41,10 +41,12 @@ public:
     void TestLongestListBranch();
     void TestLongSequence();
     void TestLongBranch();
+    void TestValuesForMarkAndReset();
 
     void checkData(const StringAndValue data[], int32_t dataLength);
     UnicodeString buildTrie(const StringAndValue data[], int32_t dataLength, UCharTrieBuilder &builder);
-    void checkContains(const UnicodeString &trieUChars, const StringAndValue data[], int32_t dataLength);
+    void checkHasValue(const UnicodeString &trieUChars, const StringAndValue data[], int32_t dataLength);
+    void checkMarkAndReset(const UnicodeString &trieUChars, const StringAndValue data[], int32_t dataLength);
     void checkIterator(const UnicodeString &trieUChars, const StringAndValue data[], int32_t dataLength);
 };
 
@@ -68,6 +70,7 @@ void UCharTrieTest::runIndexedTest(int32_t index, UBool exec, const char *&name,
     TESTCASE_AUTO(TestLongestListBranch);
     TESTCASE_AUTO(TestLongSequence);
     TESTCASE_AUTO(TestLongBranch);
+    TESTCASE_AUTO(TestValuesForMarkAndReset);
     TESTCASE_AUTO_END;
 }
 
@@ -179,13 +182,26 @@ void UCharTrieTest::TestLongBranch() {
     checkData(data, LENGTHOF(data));
 }
 
+void UCharTrieTest::TestValuesForMarkAndReset() {
+    static const StringAndValue data[]={
+        { "a", -1 },
+        { "ab", -2 },
+        { "abc", -3 },
+        { "abcd", -4 },
+        { "abcde", -5 },
+        { "abcdef", -6 }
+    };
+    checkData(data, LENGTHOF(data));
+}
+
 void UCharTrieTest::checkData(const StringAndValue data[], int32_t dataLength) {
     UCharTrieBuilder builder;
     UnicodeString s=buildTrie(data, dataLength, builder);
     if(s.isEmpty()) {
         return;  // buildTrie() reported an error
     }
-    checkContains(s, data, dataLength);
+    checkHasValue(s, data, dataLength);
+    checkMarkAndReset(s, data, dataLength);
     checkIterator(s, data, dataLength);
 }
 
@@ -223,7 +239,7 @@ UnicodeString UCharTrieTest::buildTrie(const StringAndValue data[], int32_t data
     return s;
 }
 
-void UCharTrieTest::checkContains(const UnicodeString &trieUChars,
+void UCharTrieTest::checkHasValue(const UnicodeString &trieUChars,
                                   const StringAndValue data[], int32_t dataLength) {
     UCharTrie trie(trieUChars.getBuffer());
     for(int32_t i=0; i<dataLength; ++i) {
@@ -231,6 +247,50 @@ void UCharTrieTest::checkContains(const UnicodeString &trieUChars,
         int32_t stringLength= (i&1) ? -1 : expectedString.length();
         if(!trie.hasValue(expectedString.getTerminatedBuffer(), stringLength)) {
             errln("trie does not seem to contain %s", data[i].s);
+        } else if(trie.getValue()!=data[i].value) {
+            errln("trie value for %s is %ld=0x%lx instead of expected %ld=0x%lx",
+                  data[i].s,
+                  (long)trie.getValue(), (long)trie.getValue(),
+                  (long)data[i].value, (long)data[i].value);
+        } else if(!trie.hasValue() || trie.getValue()!=data[i].value) {
+            errln("trie value for %s changes when repeating hasValue()/getValue()", data[i].s);
+        }
+        trie.reset();
+    }
+}
+
+void UCharTrieTest::checkMarkAndReset(const UnicodeString &trieUChars,
+                                      const StringAndValue data[], int32_t dataLength) {
+    UCharTrie trie(trieUChars.getBuffer());
+    for(int32_t i=0; i<dataLength; ++i) {
+        if((i&1)==0) {
+            // resetToMark() from initial state or after reset()
+            // should have no effect.
+            trie.resetToMark();
+        }
+        UnicodeString expectedString=UnicodeString(data[i].s, -1, US_INV).unescape();
+        int32_t stringLength=expectedString.length();
+        int32_t partialLength=stringLength/3;
+        for(int32_t j=0; j<partialLength; ++j) {
+            if(!trie.next(expectedString[j])) {
+                errln("trie.next()=false for a prefix of %s", data[i].s);
+                return;
+            }
+        }
+        trie.mark();
+        UBool hasValueAtMark=trie.hasValue();
+        int32_t valueAtMark=-99;
+        if(hasValueAtMark) {
+            valueAtMark=trie.getValue();
+        }
+        trie.next(0);  // mismatch
+        if(hasValueAtMark!=trie.resetToMark().hasValue() || (hasValueAtMark && valueAtMark!=trie.getValue())) {
+            errln("trie.next(part of %s) changes hasValue()/getValue() after mark/next(0)/resetToMark", data[i].s);
+        } else if(!trie.hasValue(expectedString.getTerminatedBuffer()+partialLength, stringLength-partialLength)) {
+            errln("trie.next(part of %s) does not seem to contain %s after mark/next(0)/resetToMark", data[i].s);
+        } else if(!trie.resetToMark().hasValue(expectedString.getTerminatedBuffer()+partialLength,
+                                               stringLength-partialLength)) {
+            errln("trie does not seem to contain %s after mark/hasValue(rest)/resetToMark", data[i].s);
         } else if(trie.getValue()!=data[i].value) {
             errln("trie value for %s is %ld=0x%lx instead of expected %ld=0x%lx",
                   data[i].s,

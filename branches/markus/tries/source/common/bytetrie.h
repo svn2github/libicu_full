@@ -39,11 +39,44 @@ class U_COMMON_API ByteTrie : public UMemory {
 public:
     ByteTrie(const void *trieBytes)
             : bytes(reinterpret_cast<const uint8_t *>(trieBytes)),
-              pos(bytes), remainingMatchLength(-1), value(0) {}
+              pos(bytes), remainingMatchLength(-1), value(0), haveValue(FALSE),
+              markedPos(pos), markedRemainingMatchLength(remainingMatchLength),
+              markedValue(0), markedHaveValue(FALSE) {}
 
+    /**
+     * Resets this trie (and its marked state) to its initial state.
+     */
     ByteTrie &reset() {
-        pos=bytes;
-        remainingMatchLength=-1;
+        pos=markedPos=bytes;
+        remainingMatchLength=markedRemainingMatchLength=-1;
+        haveValue=markedHaveValue=FALSE;
+        return *this;
+    }
+
+    /**
+     * Marks the state of this trie.
+     * @see resetToMark
+     */
+    ByteTrie &mark() {
+        markedPos=pos;
+        markedRemainingMatchLength=remainingMatchLength;
+        markedValue=value;
+        markedHaveValue=haveValue;
+        return *this;
+    }
+
+    /**
+     * Resets this trie to the state at the time mark() was last called.
+     * If mark() has not been called since the last reset()
+     * then this is equivalent to reset() itself.
+     * @see mark
+     * @see reset
+     */
+    ByteTrie &resetToMark() {
+        pos=markedPos;
+        remainingMatchLength=markedRemainingMatchLength;
+        value=markedValue;
+        haveValue=markedHaveValue;
         return *this;
     }
 
@@ -58,7 +91,7 @@ public:
      *         In this case, an immediately following call to getValue()
      *         returns the byte sequence's value.
      *         hasValue() is only defined if called from the initial state
-     *         or once immediately after next() returns TRUE.
+     *         or immediately after next() returns TRUE.
      */
     UBool hasValue();
 
@@ -182,6 +215,13 @@ private:
     int32_t remainingMatchLength;
     // Value for a match, after hasValue() returned TRUE.
     int32_t value;
+    UBool haveValue;
+
+    // mark() and resetToMark() variables
+    const uint8_t *markedPos;
+    int32_t markedRemainingMatchLength;
+    int32_t markedValue;
+    UBool markedHaveValue;
 };
 
 U_NAMESPACE_END

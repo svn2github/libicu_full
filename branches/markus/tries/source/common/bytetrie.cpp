@@ -82,6 +82,7 @@ ByteTrie::next(int inByte) {
     if(pos==NULL) {
         return FALSE;
     }
+    haveValue=FALSE;
     int32_t length=remainingMatchLength;  // Actual remaining match length minus 1.
     if(length>=0) {
         // Remaining part of a linear-match node.
@@ -188,12 +189,15 @@ ByteTrie::next(int inByte) {
 UBool
 ByteTrie::hasValue() {
     int32_t node;
-    if(pos!=NULL && remainingMatchLength<0 && (node=*pos)>=kMinValueLead) {
+    if(haveValue) {
+        return TRUE;
+    } else if(pos!=NULL && remainingMatchLength<0 && (node=*pos)>=kMinValueLead) {
         // Deliver value for the matching bytes.
         ++pos;
         if(readCompactInt(node)) {
             stop();
         }
+        haveValue=TRUE;
         return TRUE;
     }
     return FALSE;
