@@ -223,7 +223,7 @@ void ByteTrieTest::checkContains(const StringPiece &trieBytes,
     ByteTrie trie(trieBytes.data());
     for(int32_t i=0; i<dataLength; ++i) {
         int32_t stringLength= (i&1) ? -1 : strlen(data[i].s);
-        if(!trie.containsNext(data[i].s, stringLength)) {
+        if(!trie.hasValue(data[i].s, stringLength)) {
             errln("trie does not seem to contain %s", data[i].s);
         } else if(trie.getValue()!=data[i].value) {
             errln("trie value for %s is %ld=0x%lx instead of expected %ld=0x%lx",

@@ -127,7 +127,7 @@ ByteTrie::next(int inByte) {
                 U_ASSERT(node>=kMinValueLead);
                 if(inByte==trieByte) {
                     if(node&kValueIsFinal) {
-                        // Leave the final value for contains() to read.
+                        // Leave the final value for hasValue() to read.
                     } else {
                         // Use the non-final value as the jump delta.
                         ++pos;
@@ -154,7 +154,7 @@ ByteTrie::next(int inByte) {
                 if(length>0) {
                     node=*pos;
                     if(node&kValueIsFinal) {
-                        // Leave the final value for contains() to read.
+                        // Leave the final value for hasValue() to read.
                     } else {
                         // Use the non-final value as the jump delta.
                         ++pos;
@@ -186,7 +186,7 @@ ByteTrie::next(int inByte) {
 }
 
 UBool
-ByteTrie::contains() {
+ByteTrie::hasValue() {
     int32_t node;
     if(pos!=NULL && remainingMatchLength<0 && (node=*pos)>=kMinValueLead) {
         // Deliver value for the matching bytes.
@@ -200,7 +200,7 @@ ByteTrie::contains() {
 }
 
 UBool
-ByteTrie::containsNext(const char *s, int32_t length) {
+ByteTrie::hasValue(const char *s, int32_t length) {
     if(length<0) {
         // NUL-terminated
         int b;
@@ -217,7 +217,7 @@ ByteTrie::containsNext(const char *s, int32_t length) {
             --length;
         }
     }
-    return contains();
+    return hasValue();
 }
 
 U_NAMESPACE_END

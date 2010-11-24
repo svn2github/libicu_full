@@ -167,7 +167,7 @@ UCharTrie::next(int uchar) {
 }
 
 UBool
-UCharTrie::contains() {
+UCharTrie::hasValue() {
     int32_t node;
     if(haveValue) {
         return TRUE;
@@ -183,7 +183,7 @@ UCharTrie::contains() {
 }
 
 UBool
-UCharTrie::containsNext(const UChar *s, int32_t length) {
+UCharTrie::hasValue(const UChar *s, int32_t length) {
     if(length<0) {
         // NUL-terminated
         int c;
@@ -200,7 +200,7 @@ UCharTrie::containsNext(const UChar *s, int32_t length) {
             --length;
         }
     }
-    return contains();
+    return hasValue();
 }
 
 U_NAMESPACE_END

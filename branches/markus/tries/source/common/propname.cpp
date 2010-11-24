@@ -229,7 +229,7 @@ UBool PropNameData::containsName(ByteTrie &trie, const char *name) {
             return FALSE;
         }
     }
-    return trie.contains();
+    return trie.hasValue();
 }
 
 const char *PropNameData::getPropertyName(int32_t property, int32_t nameChoice) {

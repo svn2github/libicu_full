@@ -229,7 +229,7 @@ void UCharTrieTest::checkContains(const UnicodeString &trieUChars,
     for(int32_t i=0; i<dataLength; ++i) {
         UnicodeString expectedString=UnicodeString(data[i].s, -1, US_INV).unescape();
         int32_t stringLength= (i&1) ? -1 : expectedString.length();
-        if(!trie.containsNext(expectedString.getTerminatedBuffer(), stringLength)) {
+        if(!trie.hasValue(expectedString.getTerminatedBuffer(), stringLength)) {
             errln("trie does not seem to contain %s", data[i].s);
         } else if(trie.getValue()!=data[i].value) {
             errln("trie value for %s is %ld=0x%lx instead of expected %ld=0x%lx",

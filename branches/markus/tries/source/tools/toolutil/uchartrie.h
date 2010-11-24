@@ -62,18 +62,20 @@ public:
      * @return TRUE if the trie contains the string so far.
      *         In this case, an immediately following call to getValue()
      *         returns the string's value.
+     *         hasValue() is only defined if called from the initial state
+     *         or once immediately after next() returns TRUE.
      */
-    UBool contains();
+    UBool hasValue();
 
     /**
      * Traverses the trie from the current state for this string,
      * calls next(u) for each UChar u in the sequence,
-     * and calls contains() at the end.
+     * and calls hasValue() at the end.
      */
-    UBool containsNext(const UChar *s, int32_t length);
+    UBool hasValue(const UChar *s, int32_t length);
 
     /**
-     * Returns a string's value if called immediately after contains()
+     * Returns a string's value if called immediately after hasValue()
      * returned TRUE. Otherwise undefined.
      */
     int32_t getValue() const { return value; }
@@ -183,7 +185,7 @@ private:
     const UChar *pos;
     // Remaining length of a linear-match node, minus 1. Negative if not in such a node.
     int32_t remainingMatchLength;
-    // Value for a match, after contains() returned TRUE.
+    // Value for a match, after hasValue() returned TRUE.
     int32_t value;
     UBool haveValue;
 };
