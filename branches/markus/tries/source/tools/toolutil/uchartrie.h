@@ -241,11 +241,11 @@ UCharTrie::next(int uchar) {
             // Skip intermediate value.
             node>>=1;
             if(node<kMinTwoUnitLead) {
-                // pos is already after the node.
-            } else if(node<kThreeUnitLead) {
                 ++pos;
-            } else {
+            } else if(node<kThreeUnitLead) {
                 pos+=2;
+            } else {
+                pos+=3;
             }
             // The next node must not also be a value node.
             node=*pos;

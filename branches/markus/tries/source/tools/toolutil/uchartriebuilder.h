@@ -219,7 +219,7 @@ UCharTrieBuilder::build(UErrorCode &errorCode) {
     if(ucharsCapacity<1024) {
         ucharsCapacity=1024;
     }
-    uchars=reinterpret_cast<UChar *>(uprv_malloc(ucharsCapacity));
+    uchars=reinterpret_cast<UChar *>(uprv_malloc(ucharsCapacity*2));
     if(uchars==NULL) {
         errorCode=U_MEMORY_ALLOCATION_ERROR;
         return result;
@@ -409,7 +409,7 @@ UCharTrieBuilder::ensureCapacity(int32_t length) {
         do {
             newCapacity*=2;
         } while(newCapacity<=length);
-        UChar *newUChars=reinterpret_cast<UChar *>(uprv_malloc(newCapacity));
+        UChar *newUChars=reinterpret_cast<UChar *>(uprv_malloc(newCapacity*2));
         if(newUChars==NULL) {
             // unable to allocate memory
             uprv_free(uchars);
