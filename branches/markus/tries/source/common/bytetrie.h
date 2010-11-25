@@ -108,6 +108,16 @@ public:
      */
     int32_t getValue() const { return value; }
 
+    /**
+     * @return TRUE if all byte sequences reachable from the current state
+     *         map to the same value. In this case, that value will be returned
+     *         by a subsequent call to getValue().
+     *         Other than modifying getValue() and (if there is a unique value)
+     *         changing hasValue() to return TRUE,
+     *         after this function returns the trie will be in the same state as before.
+     */
+    UBool hasUniqueValue();
+
     // TODO: For startsWith() functionality, add
     //   UBool getRemainder(ByteSink *remainingBytes, &value);
     // Returns TRUE if exactly one byte sequence can be reached from the current iterator state.
@@ -131,6 +141,35 @@ private:
         int32_t leadByte=*pos++;
         return readCompactInt(leadByte);
     }
+
+    // Helper functions for hasUniqueValue().
+    // Compare the latest value with the previous one, or save the latest one.
+    inline UBool isUniqueValue() {
+        if(markedHaveValue) {
+            if(value!=markedValue) {
+                return FALSE;
+            }
+        } else {
+            markedValue=value;
+            markedHaveValue=TRUE;
+        }
+        return TRUE;
+    }
+    // Recurse into a branch edge and return to the current position.
+    inline UBool findUniqueValueAt(int32_t delta) {
+        const uint8_t *currentPos=pos;
+        pos+=delta;
+        if(!findUniqueValue()) {
+            return FALSE;
+        }
+        pos=currentPos;
+        return TRUE;
+    }
+    // Handle a branch node entry (final value or jump delta).
+    UBool findUniqueValueFromBranchEntry();
+    // Recursively find a unique value (or whether there is not a unique one)
+    // starting from a position on a node lead unit.
+    UBool findUniqueValue();
 
     // Reads a fixed-width integer and post-increments pos.
     int32_t readFixedInt(int32_t bytesPerValue);

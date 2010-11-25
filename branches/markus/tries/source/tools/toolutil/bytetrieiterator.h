@@ -59,6 +59,10 @@ public:
      */
     int32_t getValue() const { return value; }
 
+    // TODO: We could add a constructor that takes a ByteTrie object
+    // and copies its current state, for iterating over all byte sequences and their
+    // values reachable from that state.
+
 private:
     // The stack stores pairs of integers for backtracking to another
     // outbound edge of a branch node.
