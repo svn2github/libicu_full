@@ -43,6 +43,7 @@ public:
     void TestLongSequence();
     void TestLongBranch();
     void TestValuesForMarkAndReset();
+    void TestHasUniqueValue();
 
     void checkData(const StringAndValue data[], int32_t dataLength);
     StringPiece buildTrie(const StringAndValue data[], int32_t dataLength, ByteTrieBuilder &builder);
@@ -72,6 +73,7 @@ void ByteTrieTest::runIndexedTest(int32_t index, UBool exec, const char *&name, 
     TESTCASE_AUTO(TestLongSequence);
     TESTCASE_AUTO(TestLongBranch);
     TESTCASE_AUTO(TestValuesForMarkAndReset);
+    TESTCASE_AUTO(TestHasUniqueValue);
     TESTCASE_AUTO_END;
 }
 
@@ -188,6 +190,80 @@ void ByteTrieTest::TestValuesForMarkAndReset() {
         { "abcdef", -6 }
     };
     checkData(data, LENGTHOF(data));
+}
+
+void ByteTrieTest::TestHasUniqueValue() {
+    // All types of nodes leading to the same value,
+    // for code coverage of the recursive hasUniqueValue() implementation.
+    // In particular, we need a lot of branches on some single level
+    // to exercise a three-way-branch node.
+    static const StringAndValue data[]={
+        { "august", 8 },
+        { "jan", 1 },
+        { "jan.", 1 },
+        { "jana", 1 },
+        { "janbb", 1 },
+        { "janc", 1 },
+        { "janddd", 1 },
+        { "janee", 1 },
+        { "janef", 1 },
+        { "janf", 1 },
+        { "jangg", 1 },
+        { "janh", 1 },
+        { "janiiii", 1 },
+        { "janj", 1 },
+        { "jankk", 1 },
+        { "jankl", 1 },
+        { "jankmm", 1 },
+        { "janl", 1 },
+        { "janm", 1 },
+        { "jannnnnnnnnnnnnnnnnnnnnnnnnnnnn", 1 },
+        { "jano", 1 },
+        { "janpp", 1 },
+        { "janqqq", 1 },
+        { "janr", 1 },
+        { "januar", 1 },
+        { "january", 1 },
+        { "jun", 6 },
+        { "jun.", 6 },
+        { "june", 6 },
+        { "july", 7 }
+    };
+    ByteTrieBuilder builder;
+    StringPiece sp=buildTrie(data, LENGTHOF(data), builder);
+    if(sp.empty()) {
+        return;  // buildTrie() reported an error
+    }
+    ByteTrie trie(sp.data());
+    if(trie.hasUniqueValue()) {
+        errln("unique value at root");
+    }
+    trie.next('j');
+    trie.next('a');
+    trie.next('n');
+    // hasUniqueValue() directly after next()
+    if(!trie.hasUniqueValue() || 1!=trie.getValue()) {
+        errln("not unique value 1 after \"jan\"");
+    }
+    trie.reset().next('j');
+    trie.next('u');
+    if(trie.hasUniqueValue()) {
+        errln("unique value after \"ju\"");
+    }
+    trie.next('n');
+    if(!trie.hasValue() || 6!=trie.getValue()) {
+        errln("not normal value 6 after \"jun\"");
+    }
+    // hasUniqueValue() after hasValue()
+    if(!trie.hasUniqueValue() || 6!=trie.getValue()) {
+        errln("not unique value 6 after \"jun\"");
+    }
+    // hasUniqueValue() from within a linear-match node
+    trie.reset().next('a');
+    trie.next('u');
+    if(!trie.hasUniqueValue() || 8!=trie.getValue()) {
+        errln("not unique value 8 after \"a\"");
+    }
 }
 
 void ByteTrieTest::checkData(const StringAndValue data[], int32_t dataLength) {

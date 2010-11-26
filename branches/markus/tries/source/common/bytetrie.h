@@ -109,12 +109,16 @@ public:
     int32_t getValue() const { return value; }
 
     /**
+     * Determines whether all byte sequences reachable from the current state
+     * map to the same value.
+     * Sets hasValue() to the return value of this function, and if there is
+     * a unique value, then a following getValue() will return that unique value.
+     *
+     * Aside from hasValue()/getValue(),
+     * after this function returns the trie will be in the same state as before.
+     *
      * @return TRUE if all byte sequences reachable from the current state
-     *         map to the same value. In this case, that value will be returned
-     *         by a subsequent call to getValue().
-     *         Other than modifying getValue() and (if there is a unique value)
-     *         changing hasValue() to return TRUE,
-     *         after this function returns the trie will be in the same state as before.
+     *         map to the same value.
      */
     UBool hasUniqueValue();
 
@@ -261,6 +265,11 @@ private:
     int32_t markedRemainingMatchLength;
     int32_t markedValue;
     UBool markedHaveValue;
+    // Note: If it turns out that constructor and reset() are too slow because
+    // of the extra mark() variables, then we could move them out into
+    // a separate state object which is passed into mark() and resetToMark().
+    // Usage of those functions would be a little more clunky,
+    // especially in Java where the state object would have to be heap-allocated.
 };
 
 U_NAMESPACE_END
