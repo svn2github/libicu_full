@@ -262,7 +262,7 @@ void ByteTrieTest::TestHasUniqueValue() {
     trie.reset().next('a');
     trie.next('u');
     if(!trie.hasUniqueValue() || 8!=trie.getValue()) {
-        errln("not unique value 8 after \"a\"");
+        errln("not unique value 8 after \"au\"");
     }
 }
 

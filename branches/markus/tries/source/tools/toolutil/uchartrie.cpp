@@ -204,4 +204,106 @@ UCharTrie::hasValue(const UChar *s, int32_t length) {
     return hasValue();
 }
 
+UBool
+UCharTrie::hasUniqueValue() {
+    if(pos==NULL) {
+        return FALSE;
+    }
+    // Save state variables that will be modified, for restoring
+    // before we return.
+    // We will use pos to move through the trie,
+    // markedValue/markedHaveValue for the unique value,
+    // and value/haveValue for the latest value we find.
+    const UChar *originalPos=pos;
+    int32_t originalMarkedValue=markedValue;
+    UBool originalMarkedHaveValue=markedHaveValue;
+    markedValue=value;
+    markedHaveValue=haveValue;
+
+    if(remainingMatchLength>=0) {
+        // Skip the rest of a pending linear-match node.
+        pos+=remainingMatchLength+1;
+    }
+    haveValue=findUniqueValue();
+    // If haveValue is true, then value is already set to the final value
+    // of the last-visited branch.
+    // Restore original state, except for value/haveValue.
+    pos=originalPos;
+    markedValue=originalMarkedValue;
+    markedHaveValue=originalMarkedHaveValue;
+    return haveValue;
+}
+
+UBool
+UCharTrie::findUniqueValueFromBranchEntry(int32_t node) {
+    value=readFixedInt(node);
+    if(node&kFixedIntIsFinal) {
+        // Final value directly in the branch entry.
+        if(!isUniqueValue()) {
+            return FALSE;
+        }
+    } else {
+        // Use the non-final value as the jump delta.
+        if(!findUniqueValueAt(value)) {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+UBool
+UCharTrie::findUniqueValue() {
+    for(;;) {
+        int32_t node=*pos++;
+        if(node>=kMinValueLead) {
+            UBool isFinal=readCompactInt(node);
+            if(!isUniqueValue()) {
+                return FALSE;
+            }
+            if(isFinal) {
+                return TRUE;
+            }
+            node=*pos++;
+            U_ASSERT(node<kMinValueLead);
+        }
+        if(node<kMinLinearMatch) {
+            while(node>=kMinThreeWayBranch) {
+                // three-way-branch node
+                ++pos;  // ignore the comparison unit
+                // less-than branch
+                int32_t delta=readFixedInt(node);
+                if(!findUniqueValueAt(delta)) {
+                    return FALSE;
+                }
+                node>>=1;
+                // equals branch
+                if(!findUniqueValueFromBranchEntry(node)) {
+                    return FALSE;
+                }
+                // greater-than branch
+                node=*pos++;
+                U_ASSERT(node<kMinLinearMatch);
+            }
+            // list-branch node
+            int32_t length=(node>>kMaxListBranchLengthShift)+1;  // Actual list length minus 1.
+            if(length>=kMaxListBranchSmallLength) {
+                // For 7..14 pairs, read the next unit as well.
+                node=(node<<16)|*pos++;
+            }
+            do {
+                ++pos;  // ignore a comparison unit
+                // handle its value
+                if(!findUniqueValueFromBranchEntry(node)) {
+                    return FALSE;
+                }
+                node>>=2;
+            } while(--length>0);
+            ++pos;  // ignore the last comparison unit
+        } else {
+            // linear-match node
+            pos+=node-kMinLinearMatch+1;  // Ignore the match bytes.
+        }
+    }
+}
+
 U_NAMESPACE_END

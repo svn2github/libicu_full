@@ -146,6 +146,9 @@ private:
         return readCompactInt(leadByte);
     }
 
+    // Reads a fixed-width integer and post-increments pos.
+    int32_t readFixedInt(int32_t bytesPerValue);
+
     // Helper functions for hasUniqueValue().
     // Compare the latest value with the previous one, or save the latest one.
     inline UBool isUniqueValue() {
@@ -174,9 +177,6 @@ private:
     // Recursively find a unique value (or whether there is not a unique one)
     // starting from a position on a node lead unit.
     UBool findUniqueValue();
-
-    // Reads a fixed-width integer and post-increments pos.
-    int32_t readFixedInt(int32_t bytesPerValue);
 
     // ByteTrie data structure
     //
