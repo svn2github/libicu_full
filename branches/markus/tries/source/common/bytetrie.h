@@ -81,6 +81,19 @@ public:
     }
 
     /**
+     * Tests whether some input byte can continue a matching byte sequence.
+     * In other words, this is TRUE when next(b) for some byte would return TRUE.
+     * @return TRUE if some byte can continue a matching byte sequence.
+     */
+    UBool hasNext() const {
+        int32_t node;
+        return pos!=NULL &&  // more input, and
+            (remainingMatchLength>=0 ||  // more linear-match bytes or
+                // the next node is not a final-value node
+                (node=*pos)<kMinValueLead || (node&kValueIsFinal)==0);
+    }
+
+    /**
      * Traverses the trie from the current state for this input byte.
      * @return TRUE if the byte continues a matching byte sequence.
      */

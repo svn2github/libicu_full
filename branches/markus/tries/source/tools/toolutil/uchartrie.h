@@ -81,6 +81,19 @@ public:
     }
 
     /**
+     * Tests whether some input UChar can continue a matching string.
+     * In other words, this is TRUE when next(u) for some UChar would return TRUE.
+     * @return TRUE if some UChar can continue a matching string.
+     */
+    UBool hasNext() const {
+        int32_t node;
+        return pos!=NULL &&  // more input, and
+            (remainingMatchLength>=0 ||  // more linear-match bytes or
+                // the next node is not a final-value node
+                (node=*pos)<kMinValueLead || (node&kValueIsFinal)==0);
+    }
+
+    /**
      * Traverses the trie from the current state for this input UChar.
      * @return TRUE if the UChar continues a matching string.
      */

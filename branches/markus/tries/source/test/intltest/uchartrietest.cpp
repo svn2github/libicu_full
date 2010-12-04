@@ -339,6 +339,35 @@ void UCharTrieTest::checkHasValue(const UnicodeString &trieUChars,
             errln("trie value for %s changes when repeating hasValue()/getValue()", data[i].s);
         }
         trie.reset();
+        stringLength=expectedString.length();
+        for(int32_t j=0; j<stringLength; ++j) {
+            if(!trie.hasNext() || (trie.hasValue(), !trie.hasNext())) {
+                errln("trie.hasNext()=FALSE before end of %s (at index %d)", data[i].s, j);
+                break;
+            }
+            if(!trie.next(expectedString[j])) {
+                errln("trie.next()=FALSE before end of %s (at index %d)", data[i].s, j);
+                break;
+            }
+        }
+        // Compare the final hasNext() with whether next() can actually continue.
+        UBool hasNext=trie.hasNext();
+        trie.hasValue();
+        if(hasNext!=trie.hasNext()) {
+            errln("trie.hasNext() != hasNext()+hasValue()+hasNext() after end of %s", data[i].s);
+        }
+        trie.mark();
+        UBool nextContinues=FALSE;
+        for(int32_t c=0x20; c<0x7f; ++c) {
+            if(trie.resetToMark().next(c)) {
+                nextContinues=TRUE;
+                break;
+            }
+        }
+        if(hasNext!=nextContinues) {
+            errln("trie.hasNext()=trie.next(some UChar) after end of %s", data[i].s);
+        }
+        trie.reset();
     }
 }
 
