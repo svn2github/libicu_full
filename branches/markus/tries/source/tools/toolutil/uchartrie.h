@@ -31,6 +31,41 @@ class UCharTrieBuilder;
 class UCharTrieIterator;
 
 /**
+ * Base class for objects to which Unicode characters and strings can be appended.
+ * Combines elements of Java Appendable and ICU4C ByteSink.
+ * TODO: Should live in separate files, could be public API.
+ */
+class U_TOOLUTIL_API Appendable : public UObject {
+public:
+    /**
+     * Appends a 16-bit code unit.
+     * @param c code unit
+     * @return *this
+     */
+    virtual Appendable &append(UChar c) = 0;
+    /**
+     * Appends a code point; has a default implementation.
+     * @param c code point
+     * @return *this
+     */
+    virtual Appendable &appendCodePoint(UChar32 c);
+    /**
+     * Appends a string; has a default implementation.
+     * @param s string
+     * @param length string length, or -1 if NUL-terminated
+     * @return *this
+     */
+    virtual Appendable &append(const UChar *s, int32_t length);
+
+    // TODO: getAppendBuffer(), see ByteSink
+    // TODO: flush() (?) see ByteSink
+
+private:
+    // No ICU "poor man's RTTI" for this class nor its subclasses.
+    virtual UClassID getDynamicClassID() const;
+};
+
+/**
  * Light-weight, non-const reader class for a UCharTrie.
  * Traverses a UChar-serialized data structure with minimal state,
  * for mapping strings (16-bit-unit sequences) to non-negative integer values.
@@ -139,6 +174,16 @@ public:
      */
     UBool hasUniqueValue();
 
+    /**
+     * Finds each UChar which continues the string from the current state.
+     * That is, each UChar c for which next(c) would be TRUE now.
+     * After this function returns the trie will be in the same state as before.
+     * @param out Each next UChar is appended to this object.
+     *            (Only uses the out.append(c) method.)
+     * @return the number of UChars which continue the string from here
+     */
+    int32_t getNextUChars(Appendable &out);
+
 private:
     friend class UCharTrieBuilder;
     friend class UCharTrieIterator;
@@ -152,7 +197,7 @@ private:
     // Returns TRUE if the integer is a final value.
     UBool readCompactInt(int32_t leadUnit);
 
-    // pos is already after the leadUnit.
+    // pos is on the leadUnit.
     void skipCompactInt(int32_t leadUnit);
 
     // Reads a fixed-width integer and post-increments pos.
@@ -186,6 +231,10 @@ private:
     // Recursively find a unique value (or whether there is not a unique one)
     // starting from a position on a node lead unit.
     UBool findUniqueValue();
+
+    // Helper functions for getNextUChars().
+    // getNextUChars() when pos is on a branch node.
+    int32_t getNextBranchUChars(Appendable &out);
 
     // UCharTrie data structure
     //

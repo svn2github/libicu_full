@@ -19,6 +19,35 @@
 
 U_NAMESPACE_BEGIN
 
+Appendable &
+Appendable::appendCodePoint(UChar32 c) {
+    if(c<=0xffff) {
+        return append((UChar)c);
+    } else {
+        return append(U16_LEAD(c)).append(U16_TRAIL(c));
+    }
+}
+
+Appendable &
+Appendable::append(const UChar *s, int32_t length) {
+    if(s!=NULL && length!=0) {
+        if(length<0) {
+            UChar c;
+            while((c=*s++)!=0) {
+                append(c);
+            }
+        } else {
+            const UChar *limit=s+length;
+            while(s<limit) {
+                append(*s++);
+            }
+        }
+    }
+    return *this;
+}
+
+UOBJECT_DEFINE_NO_RTTI_IMPLEMENTATION(Appendable)
+
 UBool
 UCharTrie::readCompactInt(int32_t leadUnit) {
     UBool isFinal=(UBool)(leadUnit&kValueIsFinal);
@@ -32,6 +61,18 @@ UCharTrie::readCompactInt(int32_t leadUnit) {
         pos+=2;
     }
     return isFinal;
+}
+
+void
+UCharTrie::skipCompactInt(int32_t leadUnit) {
+    leadUnit>>=1;
+    if(leadUnit<kMinTwoUnitLead) {
+        ++pos;
+    } else if(leadUnit<kThreeUnitLead) {
+        pos+=2;
+    } else {
+        pos+=3;
+    }
 }
 
 int32_t
@@ -70,14 +111,7 @@ UCharTrie::next(int uchar) {
             return FALSE;
         } else {
             // Skip intermediate value.
-            node>>=1;
-            if(node<kMinTwoUnitLead) {
-                ++pos;
-            } else if(node<kThreeUnitLead) {
-                pos+=2;
-            } else {
-                pos+=3;
-            }
+            skipCompactInt(node);
             // The next node must not also be a value node.
             node=*pos;
             U_ASSERT(node<kMinValueLead);
@@ -304,6 +338,76 @@ UCharTrie::findUniqueValue() {
             pos+=node-kMinLinearMatch+1;  // Ignore the match bytes.
         }
     }
+}
+
+int32_t
+UCharTrie::getNextUChars(Appendable &out) {
+    if(pos==NULL) {
+        return 0;
+    }
+    if(remainingMatchLength>=0) {
+        out.append(*pos);  // Next byte of a pending linear-match node.
+        return 1;
+    }
+    const UChar *originalPos=pos;
+    int32_t node=*pos;
+    if(node>=kMinValueLead) {
+        if(node&kValueIsFinal) {
+            return 0;
+        } else {
+            skipCompactInt(node);
+            node=*pos;
+            U_ASSERT(node<kMinValueLead);
+        }
+    }
+    int32_t count;
+    if(node<kMinLinearMatch) {
+        count=getNextBranchUChars(out);
+    } else {
+        // First byte of the linear-match node.
+        out.append(pos[1]);
+        count=1;
+    }
+    pos=originalPos;
+    return count;
+}
+
+int32_t
+UCharTrie::getNextBranchUChars(Appendable &out) {
+    int32_t count=0;
+    int32_t node=*pos++;
+    U_ASSERT(node<kMinLinearMatch);
+    while(node>=kMinThreeWayBranch) {
+        // three-way-branch node
+        UChar trieUnit=*pos++;
+        // less-than branch
+        int32_t delta=readFixedInt(node);
+        const UChar *currentPos=pos;
+        pos+=delta;
+        count+=getNextBranchUChars(out);
+        pos=currentPos;
+        // equals branch
+        out.append(trieUnit);
+        ++count;
+        pos+=((node>>1)&kFixedInt32)+1;
+        // greater-than branch
+        node=*pos++;
+        U_ASSERT(node<kMinLinearMatch);
+    }
+    // list-branch node
+    int32_t length=(node>>kMaxListBranchLengthShift)+1;  // Actual list length minus 1.
+    if(length>=kMaxListBranchSmallLength) {
+        // For 7..14 pairs, read the next unit as well.
+        node=(node<<16)|*pos++;
+    }
+    count+=length+1;
+    do {
+        out.append(*pos++);
+        pos+=(node&kFixedInt32)+1;
+        node>>=2;
+    } while(--length>0);
+    out.append(*pos);
+    return count;
 }
 
 U_NAMESPACE_END

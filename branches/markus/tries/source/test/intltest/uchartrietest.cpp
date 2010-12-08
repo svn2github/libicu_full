@@ -42,7 +42,10 @@ public:
     void TestLongSequence();
     void TestLongBranch();
     void TestValuesForMarkAndReset();
+
+    UnicodeString buildMonthsTrie(UCharTrieBuilder &builder);
     void TestHasUniqueValue();
+    void TestGetNextUChars();
 
     void checkData(const StringAndValue data[], int32_t dataLength);
     UnicodeString buildTrie(const StringAndValue data[], int32_t dataLength, UCharTrieBuilder &builder);
@@ -73,6 +76,7 @@ void UCharTrieTest::runIndexedTest(int32_t index, UBool exec, const char *&name,
     TESTCASE_AUTO(TestLongBranch);
     TESTCASE_AUTO(TestValuesForMarkAndReset);
     TESTCASE_AUTO(TestHasUniqueValue);
+    TESTCASE_AUTO(TestGetNextUChars);
     TESTCASE_AUTO_END;
 }
 
@@ -200,12 +204,13 @@ enum {
     u_a=0x61,
     u_j=0x6a,
     u_n=0x6e,
+    u_r=0x72,
     u_u=0x75
 };
 
-void UCharTrieTest::TestHasUniqueValue() {
+UnicodeString UCharTrieTest::buildMonthsTrie(UCharTrieBuilder &builder) {
     // All types of nodes leading to the same value,
-    // for code coverage of the recursive hasUniqueValue() implementation.
+    // for code coverage of recursive functions.
     // In particular, we need a lot of branches on some single level
     // to exercise a three-way-branch node.
     static const StringAndValue data[]={
@@ -240,8 +245,12 @@ void UCharTrieTest::TestHasUniqueValue() {
         { "june", 6 },
         { "july", 7 }
     };
+    return buildTrie(data, LENGTHOF(data), builder);
+}
+
+void UCharTrieTest::TestHasUniqueValue() {
     UCharTrieBuilder builder;
-    UnicodeString s=buildTrie(data, LENGTHOF(data), builder);
+    UnicodeString s=buildMonthsTrie(builder);
     if(s.isEmpty()) {
         return;  // buildTrie() reported an error
     }
@@ -274,6 +283,55 @@ void UCharTrieTest::TestHasUniqueValue() {
     trie.next(u_u);
     if(!trie.hasUniqueValue() || 8!=trie.getValue()) {
         errln("not unique value 8 after \"au\"");
+    }
+}
+
+class UnicodeStringAppendable : public Appendable {
+public:
+    UnicodeStringAppendable(UnicodeString &dest) : str(dest) {}
+    virtual Appendable &append(UChar c) { str.append(c); return *this; }
+    UnicodeStringAppendable &reset() { str.remove(); return *this; }
+private:
+    UnicodeString &str;
+};
+
+void UCharTrieTest::TestGetNextUChars() {
+    UCharTrieBuilder builder;
+    UnicodeString s=buildMonthsTrie(builder);
+    if(s.isEmpty()) {
+        return;  // buildTrie() reported an error
+    }
+    UCharTrie trie(s.getBuffer());
+    UnicodeString buffer;
+    UnicodeStringAppendable app(buffer);
+    int32_t count=trie.getNextUChars(app);
+    if(count!=2 || buffer.length()!=2 || buffer[0]!=u_a || buffer[1]!=u_j) {
+        errln("months getNextUChars()!=[aj] at root");
+    }
+    trie.next(u_j);
+    trie.next(u_a);
+    trie.next(u_n);
+    // getNextUChars() directly after next()
+    count=trie.getNextUChars(app.reset());
+    if(count!=20 || buffer!=UNICODE_STRING_SIMPLE(".abcdefghijklmnopqru")) {
+        errln("months getNextUChars()!=[.abcdefghijklmnopqru] after \"jan\"");
+    }
+    // getNextUChars() after hasValue()
+    trie.hasValue();
+    count=trie.getNextUChars(app.reset());
+    if(count!=20 || buffer!=UNICODE_STRING_SIMPLE(".abcdefghijklmnopqru")) {
+        errln("months getNextUChars()!=[.abcdefghijklmnopqru] after \"jan\"+hasValue()");
+    }
+    // getNextUChars() from a linear-match node
+    trie.next(u_u);
+    count=trie.getNextUChars(app.reset());
+    if(count!=1 || buffer.length()!=1 || buffer[0]!=u_a) {
+        errln("months getNextUChars()!=[a] after \"janu\"");
+    }
+    trie.next(u_a);
+    count=trie.getNextUChars(app.reset());
+    if(count!=1 || buffer.length()!=1 || buffer[0]!=u_r) {
+        errln("months getNextUChars()!=[r] after \"janua\"");
     }
 }
 

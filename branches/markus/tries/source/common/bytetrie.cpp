@@ -385,7 +385,7 @@ ByteTrie::getNextBranchBytes(ByteSink &out) {
         append(out, *pos++);
         pos+=bytesPerLead[*pos>>1];
     } while(--length>0);
-    append(out, *pos++);
+    append(out, *pos);
     return count;
 }
 
