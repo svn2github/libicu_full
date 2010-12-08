@@ -41,43 +41,62 @@ public:
     ByteTrie(const void *trieBytes)
             : bytes(reinterpret_cast<const uint8_t *>(trieBytes)),
               pos(bytes), remainingMatchLength(-1), value(0), haveValue(FALSE),
-              markedPos(pos), markedRemainingMatchLength(remainingMatchLength),
-              markedValue(0), markedHaveValue(FALSE) {}
+              uniqueValue(0), haveUniqueValue(FALSE) {}
 
     /**
-     * Resets this trie (and its marked state) to its initial state.
+     * Resets this trie to its initial state.
      */
     ByteTrie &reset() {
-        pos=markedPos=bytes;
-        remainingMatchLength=markedRemainingMatchLength=-1;
-        haveValue=markedHaveValue=FALSE;
+        pos=bytes;
+        remainingMatchLength=-1;
+        haveValue=FALSE;
         return *this;
     }
 
     /**
-     * Marks the state of this trie.
-     * @see resetToMark
+     * ByteTrie state object, for saving a trie's current state
+     * and resetting the trie back to this state later.
      */
-    ByteTrie &mark() {
-        markedPos=pos;
-        markedRemainingMatchLength=remainingMatchLength;
-        markedValue=value;
-        markedHaveValue=haveValue;
+    class State : public UMemory {
+    public:
+        State() { bytes=NULL; }
+    private:
+        friend class ByteTrie;
+
+        const uint8_t *bytes;
+        const uint8_t *pos;
+        int32_t remainingMatchLength;
+        int32_t value;
+        UBool haveValue;
+    };
+
+    /**
+     * Saves the state of this trie.
+     * @see resetToState
+     */
+    const ByteTrie &saveState(State &state) const {
+        state.bytes=bytes;
+        state.pos=pos;
+        state.remainingMatchLength=remainingMatchLength;
+        state.value=value;
+        state.haveValue=haveValue;
         return *this;
     }
 
     /**
-     * Resets this trie to the state at the time mark() was last called.
-     * If mark() has not been called since the last reset()
-     * then this is equivalent to reset() itself.
-     * @see mark
+     * Resets this trie to the saved state.
+     * If the state object contains no state, or the state of a different trie,
+     * then this trie remains unchanged.
+     * @see saveState
      * @see reset
      */
-    ByteTrie &resetToMark() {
-        pos=markedPos;
-        remainingMatchLength=markedRemainingMatchLength;
-        value=markedValue;
-        haveValue=markedHaveValue;
+    ByteTrie &resetToState(const State &state) {
+        if(bytes==state.bytes) {
+            pos=state.pos;
+            remainingMatchLength=state.remainingMatchLength;
+            value=state.value;
+            haveValue=state.haveValue;
+        }
         return *this;
     }
 
@@ -176,13 +195,13 @@ private:
     // Helper functions for hasUniqueValue().
     // Compare the latest value with the previous one, or save the latest one.
     inline UBool isUniqueValue() {
-        if(markedHaveValue) {
-            if(value!=markedValue) {
+        if(haveUniqueValue) {
+            if(value!=uniqueValue) {
                 return FALSE;
             }
         } else {
-            markedValue=value;
-            markedHaveValue=TRUE;
+            uniqueValue=value;
+            haveUniqueValue=TRUE;
         }
         return TRUE;
     }
@@ -288,17 +307,9 @@ private:
     // Value for a match, after hasValue() returned TRUE.
     int32_t value;
     UBool haveValue;
-
-    // mark() and resetToMark() variables
-    const uint8_t *markedPos;
-    int32_t markedRemainingMatchLength;
-    int32_t markedValue;
-    UBool markedHaveValue;
-    // Note: If it turns out that constructor and reset() are too slow because
-    // of the extra mark() variables, then we could move them out into
-    // a separate state object which is passed into mark() and resetToMark().
-    // Usage of those functions would be a little more clunky,
-    // especially in Java where the state object would have to be heap-allocated.
+    // Unique value, only used in hasUniqueValue().
+    int32_t uniqueValue;
+    UBool haveUniqueValue;
 };
 
 U_NAMESPACE_END
