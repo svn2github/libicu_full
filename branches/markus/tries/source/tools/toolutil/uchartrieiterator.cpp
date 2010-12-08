@@ -39,9 +39,11 @@ UCharTrieIterator::next(UErrorCode &errorCode) {
         str.truncate(state&0xfffffff);
         state=(state>>28)&0xf;
         if(state==kThreeWayBranchEquals) {
-            int32_t node=*trie.pos;  // Known to be a three-way-branch node.
+          // Known to be a three-way-branch node.
+            int32_t node=*trie.pos;
             UChar trieUnit=trie.pos[1];
-            trie.pos+=(node&1)+3;  // Skip node, trie unit and fixed-width integer.
+            // Skip node, trie unit and fixed-width integer.
+            trie.pos+=(node&1)+3;
             node>>=1;
             value=trie.readFixedInt(node);
             // Rewrite the top of the stack for the greater-than branch.

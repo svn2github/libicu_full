@@ -328,7 +328,7 @@ ByteTrieBuilder::makeListBranchNode(int32_t start, int32_t limit, int32_t byteIn
         write(elements[start].charAt(byteIndex, strings));
     }
     // Write the node lead byte.
-    write(ByteTrie::kMinListBranch+length-2);
+    write(length-2);
 }
 
 // start<limit && all strings longer than byteIndex &&
@@ -383,7 +383,7 @@ ByteTrieBuilder::makeThreeWayBranchNode(int32_t start, int32_t limit, int32_t by
     writeCompactInt(value, final);  // equals
     int32_t bytesForLessThan=writeFixedInt(bytesLength-leftNode);  // less-than
     write(byte);
-    write(bytesForLessThan-1);
+    write(ByteTrie::kMinThreeWayBranch+bytesForLessThan-1);
 }
 
 UBool

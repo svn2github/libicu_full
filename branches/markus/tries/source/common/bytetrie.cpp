@@ -114,11 +114,12 @@ ByteTrie::next(int inByte) {
     ++pos;
     if(node<kMinLinearMatch) {
         // Branch according to the current byte.
-        while(node<kMinListBranch) {
+        while(node>=kMinThreeWayBranch) {
             // Branching on a byte value,
             // with a jump delta for less-than, a compact int for equals,
             // and continuing for greater-than.
             // The less-than and greater-than branches must lead to branch nodes again.
+            node-=kMinThreeWayBranch;
             uint8_t trieByte=*pos++;
             if(inByte<trieByte) {
                 int32_t delta=readFixedInt(node);
@@ -148,7 +149,7 @@ ByteTrie::next(int inByte) {
         // values are compact integers: either final values or jump deltas.
         // If the last key byte matches, just continue after it rather
         // than jumping.
-        length=node-(kMinListBranch-1);  // Actual list length minus 1.
+        length=node+1;  // Actual list length minus 1.
         for(;;) {
             uint8_t trieByte=*pos++;
             U_ASSERT(length==0 || *pos>=kMinValueLead);
@@ -280,8 +281,9 @@ ByteTrie::findUniqueValue() {
             U_ASSERT(node<kMinValueLead);
         }
         if(node<kMinLinearMatch) {
-            while(node<kMinListBranch) {
+            while(node>=kMinThreeWayBranch) {
                 // three-way-branch node
+                node-=kMinThreeWayBranch;
                 ++pos;  // ignore the comparison byte
                 // less-than branch
                 int32_t delta=readFixedInt(node);
@@ -297,7 +299,7 @@ ByteTrie::findUniqueValue() {
                 U_ASSERT(node<kMinLinearMatch);
             }
             // list-branch node
-            int32_t length=node-(kMinListBranch-1);  // Actual list length minus 1.
+            int32_t length=node+1;  // Actual list length minus 1.
             do {
                 ++pos;  // ignore a comparison byte
                 // handle its value
@@ -350,8 +352,9 @@ ByteTrie::getNextBranchBytes(ByteSink &out) {
     int32_t count=0;
     int32_t node=*pos++;
     U_ASSERT(node<kMinLinearMatch);
-    while(node<kMinListBranch) {
+    while(node>=kMinThreeWayBranch) {
         // three-way-branch node
+        node-=kMinThreeWayBranch;
         uint8_t trieByte=*pos++;
         // less-than branch
         int32_t delta=readFixedInt(node);
@@ -370,7 +373,7 @@ ByteTrie::getNextBranchBytes(ByteSink &out) {
         U_ASSERT(node<kMinLinearMatch);
     }
     // list-branch node
-    int32_t length=node-(kMinListBranch-1);  // Actual list length minus 1.
+    int32_t length=node+1;  // Actual list length minus 1.
     count+=length+1;
     do {
         append(out, *pos++);

@@ -252,20 +252,20 @@ private:
 
     // Node lead byte values.
 
-    // 0..3: Three-way-branch node with less/equal/greater outbound edges.
-    // The 2 lower bits indicate the length of the less-than "jump" (1..4 bytes).
-    // Followed by the comparison byte, the equals value (compact int) and
-    // continue reading the next node from there for the "greater" edge.
-
-    // 04..0b: Branch node with a list of 2..9 comparison bytes.
+    // 00..07: Branch node with a list of 2..9 comparison bytes.
     // Followed by the (key, value) pairs except that the last byte's value is omitted
     // (just continue reading the next node from there).
     // Values are compact ints: Final values or jump deltas.
-    static const int32_t kMinListBranch=4;
     static const int32_t kMaxListBranchLength=9;
 
+    // 08..0b: Three-way-branch node with less/equal/greater outbound edges.
+    // The 2 lower bits indicate the length of the less-than "jump" (1..4 bytes).
+    // Followed by the comparison byte, the equals value (compact int) and
+    // continue reading the next node from there for the "greater" edge.
+    static const int32_t kMinThreeWayBranch=kMaxListBranchLength-1;  // 8
+
     // 0c..1f: Linear-match node, match 1..24 bytes and continue reading the next node.
-    static const int32_t kMinLinearMatch=kMinListBranch+kMaxListBranchLength-1;  // 0xc
+    static const int32_t kMinLinearMatch=kMinThreeWayBranch+4;  // 0xc
     static const int32_t kMaxLinearMatchLength=20;
 
     // 20..ff: Variable-length value node.
