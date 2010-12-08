@@ -243,16 +243,9 @@ UCharTrie::hasUniqueValue() {
     if(pos==NULL) {
         return FALSE;
     }
-    // Save state variables that will be modified, for restoring
-    // before we return.
-    // We will use pos to move through the trie,
-    // markedValue/markedHaveValue for the unique value,
-    // and value/haveValue for the latest value we find.
     const UChar *originalPos=pos;
-    int32_t originalMarkedValue=markedValue;
-    UBool originalMarkedHaveValue=markedHaveValue;
-    markedValue=value;
-    markedHaveValue=haveValue;
+    uniqueValue=value;
+    haveUniqueValue=haveValue;
 
     if(remainingMatchLength>=0) {
         // Skip the rest of a pending linear-match node.
@@ -263,8 +256,6 @@ UCharTrie::hasUniqueValue() {
     // of the last-visited branch.
     // Restore original state, except for value/haveValue.
     pos=originalPos;
-    markedValue=originalMarkedValue;
-    markedHaveValue=originalMarkedHaveValue;
     return haveValue;
 }
 

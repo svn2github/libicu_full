@@ -41,7 +41,7 @@ public:
     void TestLongestListBranch();
     void TestLongSequence();
     void TestLongBranch();
-    void TestValuesForMarkAndReset();
+    void TestValuesForState();
 
     UnicodeString buildMonthsTrie(UCharTrieBuilder &builder);
     void TestHasUniqueValue();
@@ -50,7 +50,7 @@ public:
     void checkData(const StringAndValue data[], int32_t dataLength);
     UnicodeString buildTrie(const StringAndValue data[], int32_t dataLength, UCharTrieBuilder &builder);
     void checkHasValue(const UnicodeString &trieUChars, const StringAndValue data[], int32_t dataLength);
-    void checkMarkAndReset(const UnicodeString &trieUChars, const StringAndValue data[], int32_t dataLength);
+    void checkHasValueWithState(const UnicodeString &trieUChars, const StringAndValue data[], int32_t dataLength);
     void checkIterator(const UnicodeString &trieUChars, const StringAndValue data[], int32_t dataLength);
 };
 
@@ -74,7 +74,7 @@ void UCharTrieTest::runIndexedTest(int32_t index, UBool exec, const char *&name,
     TESTCASE_AUTO(TestLongestListBranch);
     TESTCASE_AUTO(TestLongSequence);
     TESTCASE_AUTO(TestLongBranch);
-    TESTCASE_AUTO(TestValuesForMarkAndReset);
+    TESTCASE_AUTO(TestValuesForState);
     TESTCASE_AUTO(TestHasUniqueValue);
     TESTCASE_AUTO(TestGetNextUChars);
     TESTCASE_AUTO_END;
@@ -188,7 +188,7 @@ void UCharTrieTest::TestLongBranch() {
     checkData(data, LENGTHOF(data));
 }
 
-void UCharTrieTest::TestValuesForMarkAndReset() {
+void UCharTrieTest::TestValuesForState() {
     static const StringAndValue data[]={
         { "a", -1 },
         { "ab", -2 },
@@ -342,7 +342,7 @@ void UCharTrieTest::checkData(const StringAndValue data[], int32_t dataLength) {
         return;  // buildTrie() reported an error
     }
     checkHasValue(s, data, dataLength);
-    checkMarkAndReset(s, data, dataLength);
+    checkHasValueWithState(s, data, dataLength);
     checkIterator(s, data, dataLength);
 }
 
@@ -383,6 +383,7 @@ UnicodeString UCharTrieTest::buildTrie(const StringAndValue data[], int32_t data
 void UCharTrieTest::checkHasValue(const UnicodeString &trieUChars,
                                   const StringAndValue data[], int32_t dataLength) {
     UCharTrie trie(trieUChars.getBuffer());
+    UCharTrie::State state; 
     for(int32_t i=0; i<dataLength; ++i) {
         UnicodeString expectedString=UnicodeString(data[i].s, -1, US_INV).unescape();
         int32_t stringLength= (i&1) ? -1 : expectedString.length();
@@ -414,10 +415,10 @@ void UCharTrieTest::checkHasValue(const UnicodeString &trieUChars,
         if(hasNext!=trie.hasNext()) {
             errln("trie.hasNext() != hasNext()+hasValue()+hasNext() after end of %s", data[i].s);
         }
-        trie.mark();
+        trie.saveState(state);
         UBool nextContinues=FALSE;
         for(int32_t c=0x20; c<0x7f; ++c) {
-            if(trie.resetToMark().next(c)) {
+            if(trie.resetToState(state).next(c)) {
                 nextContinues=TRUE;
                 break;
             }
@@ -429,14 +430,14 @@ void UCharTrieTest::checkHasValue(const UnicodeString &trieUChars,
     }
 }
 
-void UCharTrieTest::checkMarkAndReset(const UnicodeString &trieUChars,
-                                      const StringAndValue data[], int32_t dataLength) {
+void UCharTrieTest::checkHasValueWithState(const UnicodeString &trieUChars,
+                                           const StringAndValue data[], int32_t dataLength) {
     UCharTrie trie(trieUChars.getBuffer());
+    UCharTrie::State noState, state; 
     for(int32_t i=0; i<dataLength; ++i) {
         if((i&1)==0) {
-            // resetToMark() from initial state or after reset()
-            // should have no effect.
-            trie.resetToMark();
+            // This should have no effect.
+            trie.resetToState(noState);
         }
         UnicodeString expectedString=UnicodeString(data[i].s, -1, US_INV).unescape();
         int32_t stringLength=expectedString.length();
@@ -447,19 +448,24 @@ void UCharTrieTest::checkMarkAndReset(const UnicodeString &trieUChars,
                 return;
             }
         }
-        trie.mark();
-        UBool hasValueAtMark=trie.hasValue();
-        int32_t valueAtMark=-99;
-        if(hasValueAtMark) {
-            valueAtMark=trie.getValue();
+        trie.saveState(state);
+        UBool hasValueAtState=trie.hasValue();
+        int32_t valueAtState=-99;
+        if(hasValueAtState) {
+            valueAtState=trie.getValue();
         }
         trie.next(0);  // mismatch
-        if(hasValueAtMark!=trie.resetToMark().hasValue() || (hasValueAtMark && valueAtMark!=trie.getValue())) {
-            errln("trie.next(part of %s) changes hasValue()/getValue() after mark/next(0)/resetToMark", data[i].s);
-        } else if(!trie.hasValue(expectedString.getTerminatedBuffer()+partialLength, stringLength-partialLength)) {
-            errln("trie.next(part of %s) does not seem to contain %s after mark/next(0)/resetToMark", data[i].s);
-        } else if(!trie.resetToMark().hasValue(expectedString.getTerminatedBuffer()+partialLength,
-                                               stringLength-partialLength)) {
+        if( hasValueAtState!=trie.resetToState(state).hasValue() ||
+            (hasValueAtState && valueAtState!=trie.getValue())
+        ) {
+            errln("trie.next(part of %s) changes hasValue()/getValue() after mark/next(0)/resetToMark",
+                  data[i].s);
+        } else if(!trie.hasValue(expectedString.getTerminatedBuffer()+partialLength,
+                                 stringLength-partialLength)) {
+            errln("trie.next(part of %s) does not seem to contain %s after mark/next(0)/resetToMark",
+                  data[i].s);
+        } else if(!trie.resetToState(state).hasValue(expectedString.getTerminatedBuffer()+partialLength,
+                                                     stringLength-partialLength)) {
             errln("trie does not seem to contain %s after mark/hasValue(rest)/resetToMark", data[i].s);
         } else if(trie.getValue()!=data[i].value) {
             errln("trie value for %s is %ld=0x%lx instead of expected %ld=0x%lx",

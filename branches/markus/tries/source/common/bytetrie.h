@@ -91,7 +91,7 @@ public:
      * @see reset
      */
     ByteTrie &resetToState(const State &state) {
-        if(bytes==state.bytes) {
+        if(bytes==state.bytes && bytes!=NULL) {
             pos=state.pos;
             remainingMatchLength=state.remainingMatchLength;
             value=state.value;

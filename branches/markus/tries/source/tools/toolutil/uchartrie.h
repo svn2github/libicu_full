@@ -75,43 +75,62 @@ public:
     UCharTrie(const UChar *trieUChars)
             : uchars(trieUChars),
               pos(uchars), remainingMatchLength(-1), value(0), haveValue(FALSE),
-              markedPos(pos), markedRemainingMatchLength(remainingMatchLength),
-              markedValue(0), markedHaveValue(FALSE) {}
+              uniqueValue(0), haveUniqueValue(FALSE) {}
 
     /**
-     * Resets this trie (and its marked state) to its initial state.
+     * Resets this trie to its initial state.
      */
     UCharTrie &reset() {
-        pos=markedPos=uchars;
-        remainingMatchLength=markedRemainingMatchLength=-1;
-        haveValue=markedHaveValue=FALSE;
+        pos=uchars;
+        remainingMatchLength=-1;
+        haveValue=FALSE;
         return *this;
     }
 
     /**
-     * Marks the state of this trie.
-     * @see resetToMark
+     * UCharTrie state object, for saving a trie's current state
+     * and resetting the trie back to this state later.
      */
-    UCharTrie &mark() {
-        markedPos=pos;
-        markedRemainingMatchLength=remainingMatchLength;
-        markedValue=value;
-        markedHaveValue=haveValue;
+    class State : public UMemory {
+    public:
+        State() { uchars=NULL; }
+    private:
+        friend class UCharTrie;
+
+        const UChar *uchars;
+        const UChar *pos;
+        int32_t remainingMatchLength;
+        int32_t value;
+        UBool haveValue;
+    };
+
+    /**
+     * Saves the state of this trie.
+     * @see resetToState
+     */
+    const UCharTrie &saveState(State &state) const {
+        state.uchars=uchars;
+        state.pos=pos;
+        state.remainingMatchLength=remainingMatchLength;
+        state.value=value;
+        state.haveValue=haveValue;
         return *this;
     }
 
     /**
-     * Resets this trie to the state at the time mark() was last called.
-     * If mark() has not been called since the last reset()
-     * then this is equivalent to reset() itself.
-     * @see mark
+     * Resets this trie to the saved state.
+     * If the state object contains no state, or the state of a different trie,
+     * then this trie remains unchanged.
+     * @see saveState
      * @see reset
      */
-    UCharTrie &resetToMark() {
-        pos=markedPos;
-        remainingMatchLength=markedRemainingMatchLength;
-        value=markedValue;
-        haveValue=markedHaveValue;
+    UCharTrie &resetToState(const State &state) {
+        if(uchars==state.uchars && uchars!=NULL) {
+            pos=state.pos;
+            remainingMatchLength=state.remainingMatchLength;
+            value=state.value;
+            haveValue=state.haveValue;
+        }
         return *this;
     }
 
@@ -206,13 +225,13 @@ private:
     // Helper functions for hasUniqueValue().
     // Compare the latest value with the previous one, or save the latest one.
     inline UBool isUniqueValue() {
-        if(markedHaveValue) {
-            if(value!=markedValue) {
+        if(haveUniqueValue) {
+            if(value!=uniqueValue) {
                 return FALSE;
             }
         } else {
-            markedValue=value;
-            markedHaveValue=TRUE;
+            uniqueValue=value;
+            haveUniqueValue=TRUE;
         }
         return TRUE;
     }
@@ -325,12 +344,9 @@ private:
     // Value for a match, after hasValue() returned TRUE.
     int32_t value;
     UBool haveValue;
-
-    // mark() and resetToMark() variables
-    const UChar *markedPos;
-    int32_t markedRemainingMatchLength;
-    int32_t markedValue;
-    UBool markedHaveValue;
+    // Unique value, only used in hasUniqueValue().
+    int32_t uniqueValue;
+    UBool haveUniqueValue;
 };
 
 U_NAMESPACE_END
