@@ -27,6 +27,7 @@
 
 U_NAMESPACE_BEGIN
 
+class ByteSink;
 class ByteTrieBuilder;
 class ByteTrieIterator;
 
@@ -135,6 +136,16 @@ public:
      */
     UBool hasUniqueValue();
 
+    /**
+     * Finds each byte which continues the byte sequence from the current state.
+     * That is, each byte b for which next(b) would be TRUE now.
+     * After this function returns the trie will be in the same state as before.
+     * @param out Each next byte is appended to this object.
+     *            (Only uses the out.Append(s, length) method.)
+     * @return the number of bytes which continue the byte sequence from here
+     */
+    int32_t getNextBytes(ByteSink &out);
+
     // TODO: For startsWith() functionality, add
     //   UBool getRemainder(ByteSink *remainingBytes, &value);
     // Returns TRUE if exactly one byte sequence can be reached from the current iterator state.
@@ -190,6 +201,11 @@ private:
     // Recursively find a unique value (or whether there is not a unique one)
     // starting from a position on a node lead unit.
     UBool findUniqueValue();
+
+    // Helper functions for getNextBytes().
+    // getNextBytes() when pos is on a branch node.
+    int32_t getNextBranchBytes(ByteSink &out);
+    void append(ByteSink &out, int c);
 
     // ByteTrie data structure
     //

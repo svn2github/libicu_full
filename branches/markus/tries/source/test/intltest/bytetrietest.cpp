@@ -43,7 +43,10 @@ public:
     void TestLongSequence();
     void TestLongBranch();
     void TestValuesForMarkAndReset();
+
+    StringPiece buildMonthsTrie(ByteTrieBuilder &builder);
     void TestHasUniqueValue();
+    void TestGetNextBytes();
 
     void checkData(const StringAndValue data[], int32_t dataLength);
     StringPiece buildTrie(const StringAndValue data[], int32_t dataLength, ByteTrieBuilder &builder);
@@ -74,6 +77,7 @@ void ByteTrieTest::runIndexedTest(int32_t index, UBool exec, const char *&name, 
     TESTCASE_AUTO(TestLongBranch);
     TESTCASE_AUTO(TestValuesForMarkAndReset);
     TESTCASE_AUTO(TestHasUniqueValue);
+    TESTCASE_AUTO(TestGetNextBytes);
     TESTCASE_AUTO_END;
 }
 
@@ -192,9 +196,9 @@ void ByteTrieTest::TestValuesForMarkAndReset() {
     checkData(data, LENGTHOF(data));
 }
 
-void ByteTrieTest::TestHasUniqueValue() {
+StringPiece ByteTrieTest::buildMonthsTrie(ByteTrieBuilder &builder) {
     // All types of nodes leading to the same value,
-    // for code coverage of the recursive hasUniqueValue() implementation.
+    // for code coverage of recursive functions.
     // In particular, we need a lot of branches on some single level
     // to exercise a three-way-branch node.
     static const StringAndValue data[]={
@@ -229,8 +233,12 @@ void ByteTrieTest::TestHasUniqueValue() {
         { "june", 6 },
         { "july", 7 }
     };
+    return buildTrie(data, LENGTHOF(data), builder);
+}
+
+void ByteTrieTest::TestHasUniqueValue() {
     ByteTrieBuilder builder;
-    StringPiece sp=buildTrie(data, LENGTHOF(data), builder);
+    StringPiece sp=buildMonthsTrie(builder);
     if(sp.empty()) {
         return;  // buildTrie() reported an error
     }
@@ -263,6 +271,50 @@ void ByteTrieTest::TestHasUniqueValue() {
     trie.next('u');
     if(!trie.hasUniqueValue() || 8!=trie.getValue()) {
         errln("not unique value 8 after \"au\"");
+    }
+}
+
+void ByteTrieTest::TestGetNextBytes() {
+    ByteTrieBuilder builder;
+    StringPiece sp=buildMonthsTrie(builder);
+    if(sp.empty()) {
+        return;  // buildTrie() reported an error
+    }
+    ByteTrie trie(sp.data());
+    char buffer[40];
+    CheckedArrayByteSink sink(buffer, LENGTHOF(buffer));
+    int32_t count=trie.getNextBytes(sink);
+    if(count!=2 || sink.NumberOfBytesAppended()!=2 || buffer[0]!='a' || buffer[1]!='j') {
+        errln("months getNextBytes()!=[aj] at root");
+    }
+    trie.next('j');
+    trie.next('a');
+    trie.next('n');
+    // getNextBytes() directly after next()
+    count=trie.getNextBytes(sink.Reset());
+    buffer[count]=0;
+    if(count!=20 || sink.NumberOfBytesAppended()!=20 || 0!=strcmp(buffer, ".abcdefghijklmnopqru")) {
+        errln("months getNextBytes()!=[.abcdefghijklmnopqru] after \"jan\"");
+    }
+    // getNextBytes() after hasValue()
+    trie.hasValue();
+    memset(buffer, 0, sizeof(buffer));
+    count=trie.getNextBytes(sink.Reset());
+    if(count!=20 || sink.NumberOfBytesAppended()!=20 || 0!=strcmp(buffer, ".abcdefghijklmnopqru")) {
+        errln("months getNextBytes()!=[.abcdefghijklmnopqru] after \"jan\"+hasValue()");
+    }
+    // getNextBytes() from a linear-match node
+    trie.next('u');
+    memset(buffer, 0, sizeof(buffer));
+    count=trie.getNextBytes(sink.Reset());
+    if(count!=1 || sink.NumberOfBytesAppended()!=1 || buffer[0]!='a') {
+        errln("months getNextBytes()!=[a] after \"janu\"");
+    }
+    trie.next('a');
+    memset(buffer, 0, sizeof(buffer));
+    count=trie.getNextBytes(sink.Reset());
+    if(count!=1 || sink.NumberOfBytesAppended()!=1 || buffer[0]!='r') {
+        errln("months getNextBytes()!=[r] after \"janua\"");
     }
 }
 

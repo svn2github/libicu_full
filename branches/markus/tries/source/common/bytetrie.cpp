@@ -13,6 +13,7 @@
 */
 
 #include "unicode/utypes.h"
+#include "unicode/bytestream.h"
 #include "unicode/uobject.h"
 #include "uassert.h"
 #include "bytetrie.h"
@@ -319,6 +320,79 @@ ByteTrie::findUniqueValue() {
             pos+=node-kMinLinearMatch+1;  // Ignore the match bytes.
         }
     }
+}
+
+int32_t
+ByteTrie::getNextBytes(ByteSink &out) {
+    if(pos==NULL) {
+        return 0;
+    }
+    if(remainingMatchLength>=0) {
+        append(out, *pos);  // Next byte of a pending linear-match node.
+        return 1;
+    }
+    const uint8_t *originalPos=pos;
+    int32_t node=*pos;
+    if(node>=kMinValueLead) {
+        if(node&kValueIsFinal) {
+            return 0;
+        } else {
+            pos+=bytesPerLead[node>>1];
+            node=*pos;
+            U_ASSERT(node<kMinValueLead);
+        }
+    }
+    int32_t count;
+    if(node<kMinLinearMatch) {
+        count=getNextBranchBytes(out);
+    } else {
+        // First byte of the linear-match node.
+        append(out, pos[1]);
+        count=1;
+    }
+    pos=originalPos;
+    return count;
+}
+
+int32_t
+ByteTrie::getNextBranchBytes(ByteSink &out) {
+    int32_t count=0;
+    int32_t node=*pos++;
+    U_ASSERT(node<kMinLinearMatch);
+    while(node<kMinListBranch) {
+        // three-way-branch node
+        uint8_t trieByte=*pos++;
+        // less-than branch
+        int32_t delta=readFixedInt(node);
+        const uint8_t *currentPos=pos;
+        pos+=delta;
+        count+=getNextBranchBytes(out);
+        pos=currentPos;
+        // equals branch
+        append(out, trieByte);
+        ++count;
+        node=*pos;
+        U_ASSERT(node>=kMinValueLead);
+        pos+=bytesPerLead[node>>1];
+        // greater-than branch
+        node=*pos++;
+        U_ASSERT(node<kMinLinearMatch);
+    }
+    // list-branch node
+    int32_t length=node-(kMinListBranch-1);  // Actual list length minus 1.
+    count+=length+1;
+    do {
+        append(out, *pos++);
+        pos+=bytesPerLead[*pos>>1];
+    } while(--length>0);
+    append(out, *pos++);
+    return count;
+}
+
+void
+ByteTrie::append(ByteSink &out, int c) {
+    char ch=(char)c;
+    out.Append(&ch, 1);
 }
 
 U_NAMESPACE_END
