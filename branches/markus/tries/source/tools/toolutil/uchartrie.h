@@ -153,6 +153,11 @@ public:
      */
     UBool next(int uchar);
 
+    /**
+     * Traverses the trie from the current state for the
+     * one or two UTF-16 code units for this input code point.
+     * @return TRUE if the code point continues a matching string.
+     */
     UBool nextForCodePoint(UChar32 cp) {
         return cp<=0xffff ? next(cp) : next(U16_LEAD(cp)) && next(U16_TRAIL(cp));
     }

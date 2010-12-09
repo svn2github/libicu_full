@@ -196,6 +196,8 @@ void ByteTrieTest::TestLongBranch() {
 }
 
 void ByteTrieTest::TestValuesForState() {
+    // Check that saveState() and resetToState() interact properly
+    // with next() and hasValue().
     static const StringAndValue data[]={
         { "a", -1 },
         { "ab", -2 },

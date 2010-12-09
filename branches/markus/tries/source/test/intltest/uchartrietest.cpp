@@ -42,6 +42,7 @@ public:
     void TestLongSequence();
     void TestLongBranch();
     void TestValuesForState();
+    void TestNextForCodePoint();
 
     UnicodeString buildMonthsTrie(UCharTrieBuilder &builder);
     void TestHasUniqueValue();
@@ -81,6 +82,7 @@ void UCharTrieTest::runIndexedTest(int32_t index, UBool exec, const char *&name,
     TESTCASE_AUTO(TestLongSequence);
     TESTCASE_AUTO(TestLongBranch);
     TESTCASE_AUTO(TestValuesForState);
+    TESTCASE_AUTO(TestNextForCodePoint);
     TESTCASE_AUTO(TestHasUniqueValue);
     TESTCASE_AUTO(TestGetNextUChars);
     TESTCASE_AUTO(TestIteratorFromBranch);
@@ -200,6 +202,8 @@ void UCharTrieTest::TestLongBranch() {
 }
 
 void UCharTrieTest::TestValuesForState() {
+    // Check that saveState() and resetToState() interact properly
+    // with next() and hasValue().
     static const StringAndValue data[]={
         { "a", -1 },
         { "ab", -2 },
@@ -209,6 +213,48 @@ void UCharTrieTest::TestValuesForState() {
         { "abcdef", -6 }
     };
     checkData(data, LENGTHOF(data));
+}
+
+void UCharTrieTest::TestNextForCodePoint() {
+    static const StringAndValue data[]={
+        { "\\u4dff\\U00010000\\u9999\\U00020000\\udfff\\U0010ffff", 2000000000 },
+        { "\\u4dff\\U00010000\\u9999\\U00020002", 44444 },
+        { "\\u4dff\\U000103ff", 99999 }
+    };
+    UCharTrieBuilder builder;
+    UnicodeString s=buildTrie(data, LENGTHOF(data), builder);
+    if(s.isEmpty()) {
+        return;  // buildTrie() reported an error
+    }
+    UCharTrie trie(s.getBuffer());
+    if( !trie.nextForCodePoint(0x4dff) || trie.hasValue() ||
+        !trie.nextForCodePoint(0x10000) || trie.hasValue() ||
+        !trie.nextForCodePoint(0x9999) || trie.hasValue() ||
+        !trie.nextForCodePoint(0x20000) || trie.hasValue() ||
+        !trie.nextForCodePoint(0xdfff) || trie.hasValue() ||
+        !trie.nextForCodePoint(0x10ffff) || !trie.hasValue() || trie.getValue()!=2000000000
+    ) {
+        errln("UCharTrie.nextForCodePoint() fails for %s", data[0].s);
+    }
+    if( !trie.reset().nextForCodePoint(0x4dff) || trie.hasValue() ||
+        !trie.nextForCodePoint(0x10000) || trie.hasValue() ||
+        !trie.nextForCodePoint(0x9999) || trie.hasValue() ||
+        !trie.nextForCodePoint(0x20002) || !trie.hasValue() || trie.getValue()!=44444
+    ) {
+        errln("UCharTrie.nextForCodePoint() fails for %s", data[1].s);
+    }
+    if( !trie.reset().nextForCodePoint(0x4dff) || trie.hasValue() ||
+        !trie.nextForCodePoint(0x10000) || trie.hasValue() ||
+        !trie.nextForCodePoint(0x9999) || trie.hasValue() ||
+        trie.nextForCodePoint(0x20222) || trie.hasValue()  // no match for trail surrogate
+    ) {
+        errln("UCharTrie.nextForCodePoint() fails for \\u4dff\\U00010000\\u9999\\U00020222");
+    }
+    if( !trie.reset().nextForCodePoint(0x4dff) || trie.hasValue() ||
+        !trie.nextForCodePoint(0x103ff) || !trie.hasValue() || trie.getValue()!=99999
+    ) {
+        errln("UCharTrie.nextForCodePoint() fails for %s", data[2].s);
+    }
 }
 
 enum {
