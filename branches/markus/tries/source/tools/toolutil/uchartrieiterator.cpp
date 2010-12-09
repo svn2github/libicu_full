@@ -20,6 +20,42 @@
 
 U_NAMESPACE_BEGIN
 
+UCharTrieIterator::UCharTrieIterator(const UChar *trieUChars, int32_t maxStringLength,
+                                     UErrorCode &errorCode)
+        : trie(trieUChars), maxLength(maxStringLength), value(0), stack(errorCode) {
+    trie.saveState(initialState);
+}
+
+UCharTrieIterator::UCharTrieIterator(const UCharTrie &otherTrie, int32_t maxStringLength,
+                                     UErrorCode &errorCode)
+        : trie(otherTrie), maxLength(maxStringLength), value(0), stack(errorCode) {
+    trie.saveState(initialState);
+    int32_t length=trie.remainingMatchLength;  // Actual remaining match length minus 1.
+    if(length>=0) {
+        // Pending linear-match node, append remaining UChars to str.
+        ++length;
+        if(maxLength>0 && length>maxLength) {
+            length=maxLength;  // This will leave remainingMatchLength>=0 as a signal.
+        }
+        str.append(trie.pos, length);
+        trie.pos+=length;
+        trie.remainingMatchLength-=length;
+    }
+}
+
+UCharTrieIterator &UCharTrieIterator::reset() {
+    trie.resetToState(initialState);
+    int32_t length=trie.remainingMatchLength+1;  // Remaining match length.
+    if(maxLength>0 && length>maxLength) {
+        length=maxLength;
+    }
+    str.truncate(length);
+    trie.pos+=length;
+    trie.remainingMatchLength-=length;
+    stack.setSize(0);
+    return *this;
+}
+
 UBool
 UCharTrieIterator::next(UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) {
@@ -96,16 +132,25 @@ UCharTrieIterator::next(UErrorCode &errorCode) {
             }
         }
     }
+    if(trie.remainingMatchLength>=0) {
+        // We only get here if we started in a pending linear-match node
+        // with more than maxLength remaining UChars.
+        return truncateAndStop();
+    }
     for(;;) {
         int32_t node=*trie.pos++;
         if(node>=UCharTrie::kMinValueLead) {
             // Deliver value for the string so far.
-            if(trie.readCompactInt(node)) {
+            if(trie.readCompactInt(node) || (maxLength>0 && str.length()==maxLength)) {
                 trie.stop();
             }
             value=trie.value;
             return TRUE;
-        } else if(node<UCharTrie::kMinLinearMatch) {
+        }
+        if(maxLength>0 && str.length()==maxLength) {
+            return truncateAndStop();
+        }
+        if(node<UCharTrie::kMinLinearMatch) {
             // Branch node, needs to take the first outbound edge and push state for the rest.
             // We will need to re-read the node lead unit.
             stack.addElement((int32_t)(trie.pos-1-trie.uchars), errorCode);
@@ -143,6 +188,10 @@ UCharTrieIterator::next(UErrorCode &errorCode) {
         } else {
             // Linear-match node, append length UChars to str.
             int32_t length=node-UCharTrie::kMinLinearMatch+1;
+            if(maxLength>0 && str.length()+length>maxLength) {
+                str.append(trie.pos, maxLength-str.length());
+                return truncateAndStop();
+            }
             str.append(trie.pos, length);
             trie.pos+=length;
         }

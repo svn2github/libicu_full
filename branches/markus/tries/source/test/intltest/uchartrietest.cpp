@@ -46,12 +46,18 @@ public:
     UnicodeString buildMonthsTrie(UCharTrieBuilder &builder);
     void TestHasUniqueValue();
     void TestGetNextUChars();
+    void TestIteratorFromBranch();
+    void TestIteratorFromLinearMatch();
+    void TestTruncatingIteratorFromRoot();
+    void TestTruncatingIteratorFromLinearMatchShort();
+    void TestTruncatingIteratorFromLinearMatchLong();
 
     void checkData(const StringAndValue data[], int32_t dataLength);
     UnicodeString buildTrie(const StringAndValue data[], int32_t dataLength, UCharTrieBuilder &builder);
     void checkHasValue(const UnicodeString &trieUChars, const StringAndValue data[], int32_t dataLength);
     void checkHasValueWithState(const UnicodeString &trieUChars, const StringAndValue data[], int32_t dataLength);
     void checkIterator(const UnicodeString &trieUChars, const StringAndValue data[], int32_t dataLength);
+    void checkIterator(UCharTrieIterator &iter, const StringAndValue data[], int32_t dataLength);
 };
 
 extern IntlTest *createUCharTrieTest() {
@@ -77,6 +83,11 @@ void UCharTrieTest::runIndexedTest(int32_t index, UBool exec, const char *&name,
     TESTCASE_AUTO(TestValuesForState);
     TESTCASE_AUTO(TestHasUniqueValue);
     TESTCASE_AUTO(TestGetNextUChars);
+    TESTCASE_AUTO(TestIteratorFromBranch);
+    TESTCASE_AUTO(TestIteratorFromLinearMatch);
+    TESTCASE_AUTO(TestTruncatingIteratorFromRoot);
+    TESTCASE_AUTO(TestTruncatingIteratorFromLinearMatchShort);
+    TESTCASE_AUTO(TestTruncatingIteratorFromLinearMatchLong);
     TESTCASE_AUTO_END;
 }
 
@@ -202,6 +213,8 @@ void UCharTrieTest::TestValuesForState() {
 
 enum {
     u_a=0x61,
+    u_b=0x62,
+    u_c=0x63,
     u_j=0x6a,
     u_n=0x6e,
     u_r=0x72,
@@ -240,10 +253,10 @@ UnicodeString UCharTrieTest::buildMonthsTrie(UCharTrieBuilder &builder) {
         { "janr", 1 },
         { "januar", 1 },
         { "january", 1 },
+        { "july", 7 },
         { "jun", 6 },
         { "jun.", 6 },
-        { "june", 6 },
-        { "july", 7 }
+        { "june", 6 }
     };
     return buildTrie(data, LENGTHOF(data), builder);
 }
@@ -333,6 +346,197 @@ void UCharTrieTest::TestGetNextUChars() {
     if(count!=1 || buffer.length()!=1 || buffer[0]!=u_r) {
         errln("months getNextUChars()!=[r] after \"janua\"");
     }
+}
+
+void UCharTrieTest::TestIteratorFromBranch() {
+    UCharTrieBuilder builder;
+    UnicodeString s=buildMonthsTrie(builder);
+    if(s.isEmpty()) {
+        return;  // buildTrie() reported an error
+    }
+    UCharTrie trie(s.getBuffer());
+    // Go to a branch node.
+    trie.next(u_j);
+    trie.next(u_a);
+    trie.next(u_n);
+    IcuTestErrorCode errorCode(*this, "TestIteratorFromBranch()");
+    UCharTrieIterator iter(trie, 0, errorCode);
+    if(errorCode.logIfFailureAndReset("UCharTrieIterator(trie) constructor")) {
+        return;
+    }
+    // Expected data: Same as in buildMonthsTrie(), except only the suffixes
+    // following "jan".
+    static const StringAndValue data[]={
+        { "", 1 },
+        { ".", 1 },
+        { "a", 1 },
+        { "bb", 1 },
+        { "c", 1 },
+        { "ddd", 1 },
+        { "ee", 1 },
+        { "ef", 1 },
+        { "f", 1 },
+        { "gg", 1 },
+        { "h", 1 },
+        { "iiii", 1 },
+        { "j", 1 },
+        { "kk", 1 },
+        { "kl", 1 },
+        { "kmm", 1 },
+        { "l", 1 },
+        { "m", 1 },
+        { "nnnnnnnnnnnnnnnnnnnnnnnnnnnn", 1 },
+        { "o", 1 },
+        { "pp", 1 },
+        { "qqq", 1 },
+        { "r", 1 },
+        { "uar", 1 },
+        { "uary", 1 }
+    };
+    checkIterator(iter, data, LENGTHOF(data));
+    // Reset, and we should get the same result.
+    logln("after iter.reset()");
+    checkIterator(iter.reset(), data, LENGTHOF(data));
+}
+
+void UCharTrieTest::TestIteratorFromLinearMatch() {
+    UCharTrieBuilder builder;
+    UnicodeString s=buildMonthsTrie(builder);
+    if(s.isEmpty()) {
+        return;  // buildTrie() reported an error
+    }
+    UCharTrie trie(s.getBuffer());
+    // Go into a linear-match node.
+    trie.next(u_j);
+    trie.next(u_a);
+    trie.next(u_n);
+    trie.next(u_u);
+    trie.next(u_a);
+    IcuTestErrorCode errorCode(*this, "TestIteratorFromLinearMatch()");
+    UCharTrieIterator iter(trie, 0, errorCode);
+    if(errorCode.logIfFailureAndReset("UCharTrieIterator(trie) constructor")) {
+        return;
+    }
+    // Expected data: Same as in buildMonthsTrie(), except only the suffixes
+    // following "janua".
+    static const StringAndValue data[]={
+        { "r", 1 },
+        { "ry", 1 }
+    };
+    checkIterator(iter, data, LENGTHOF(data));
+    // Reset, and we should get the same result.
+    logln("after iter.reset()");
+    checkIterator(iter.reset(), data, LENGTHOF(data));
+}
+
+void UCharTrieTest::TestTruncatingIteratorFromRoot() {
+    UCharTrieBuilder builder;
+    UnicodeString s=buildMonthsTrie(builder);
+    if(s.isEmpty()) {
+        return;  // buildTrie() reported an error
+    }
+    IcuTestErrorCode errorCode(*this, "TestTruncatingIteratorFromRoot()");
+    UCharTrieIterator iter(s.getBuffer(), 4, errorCode);
+    if(errorCode.logIfFailureAndReset("UCharTrieIterator(trie) constructor")) {
+        return;
+    }
+    // Expected data: Same as in buildMonthsTrie(), except only the first 4 characters
+    // of each string, and no string duplicates from the truncation.
+    static const StringAndValue data[]={
+        { "augu", -1 },
+        { "jan", 1 },
+        { "jan.", 1 },
+        { "jana", 1 },
+        { "janb", -1 },
+        { "janc", 1 },
+        { "jand", -1 },
+        { "jane", -1 },
+        { "janf", 1 },
+        { "jang", -1 },
+        { "janh", 1 },
+        { "jani", -1 },
+        { "janj", 1 },
+        { "jank", -1 },
+        { "janl", 1 },
+        { "janm", 1 },
+        { "jann", -1 },
+        { "jano", 1 },
+        { "janp", -1 },
+        { "janq", -1 },
+        { "janr", 1 },
+        { "janu", -1 },
+        { "july", 7 },
+        { "jun", 6 },
+        { "jun.", 6 },
+        { "june", 6 }
+    };
+    checkIterator(iter, data, LENGTHOF(data));
+    // Reset, and we should get the same result.
+    logln("after iter.reset()");
+    checkIterator(iter.reset(), data, LENGTHOF(data));
+}
+
+void UCharTrieTest::TestTruncatingIteratorFromLinearMatchShort() {
+    static const StringAndValue data[]={
+        { "abcdef", 10 },
+        { "abcdepq", 200 },
+        { "abcdeyz", 3000 }
+    };
+    UCharTrieBuilder builder;
+    UnicodeString s=buildTrie(data, LENGTHOF(data), builder);
+    if(s.isEmpty()) {
+        return;  // buildTrie() reported an error
+    }
+    UCharTrie trie(s.getBuffer());
+    // Go into a linear-match node.
+    trie.next(u_a);
+    trie.next(u_b);
+    IcuTestErrorCode errorCode(*this, "TestTruncatingIteratorFromLinearMatchShort()");
+    // Truncate within the linear-match node.
+    UCharTrieIterator iter(trie, 2, errorCode);
+    if(errorCode.logIfFailureAndReset("UCharTrieIterator(trie) constructor")) {
+        return;
+    }
+    static const StringAndValue expected[]={
+        { "cd", -1 }
+    };
+    checkIterator(iter, expected, LENGTHOF(expected));
+    // Reset, and we should get the same result.
+    logln("after iter.reset()");
+    checkIterator(iter.reset(), expected, LENGTHOF(expected));
+}
+
+void UCharTrieTest::TestTruncatingIteratorFromLinearMatchLong() {
+    static const StringAndValue data[]={
+        { "abcdef", 10 },
+        { "abcdepq", 200 },
+        { "abcdeyz", 3000 }
+    };
+    UCharTrieBuilder builder;
+    UnicodeString s=buildTrie(data, LENGTHOF(data), builder);
+    if(s.isEmpty()) {
+        return;  // buildTrie() reported an error
+    }
+    UCharTrie trie(s.getBuffer());
+    // Go into a linear-match node.
+    trie.next(u_a);
+    trie.next(u_b);
+    trie.next(u_c);
+    IcuTestErrorCode errorCode(*this, "TestTruncatingIteratorFromLinearMatchLong()");
+    // Truncate after the linear-match node.
+    UCharTrieIterator iter(trie, 3, errorCode);
+    if(errorCode.logIfFailureAndReset("UCharTrieIterator(trie) constructor")) {
+        return;
+    }
+    static const StringAndValue expected[]={
+        { "def", 10 },
+        { "dep", -1 },
+        { "dey", -1 }
+    };
+    checkIterator(iter, expected, LENGTHOF(expected));
+    // Reset, and we should get the same result.
+    logln("after iter.reset()");
+    checkIterator(iter.reset(), expected, LENGTHOF(expected));
 }
 
 void UCharTrieTest::checkData(const StringAndValue data[], int32_t dataLength) {
@@ -480,10 +684,16 @@ void UCharTrieTest::checkHasValueWithState(const UnicodeString &trieUChars,
 void UCharTrieTest::checkIterator(const UnicodeString &trieUChars,
                                   const StringAndValue data[], int32_t dataLength) {
     IcuTestErrorCode errorCode(*this, "checkIterator()");
-    UCharTrieIterator iter(trieUChars.getBuffer(), errorCode);
-    if(errorCode.logIfFailureAndReset("UCharTrieIterator constructor")) {
+    UCharTrieIterator iter(trieUChars.getBuffer(), 0, errorCode);
+    if(errorCode.logIfFailureAndReset("UCharTrieIterator(trieUChars) constructor")) {
         return;
     }
+    checkIterator(iter, data, dataLength);
+}
+
+void UCharTrieTest::checkIterator(UCharTrieIterator &iter,
+                                  const StringAndValue data[], int32_t dataLength) {
+    IcuTestErrorCode errorCode(*this, "checkIterator()");
     for(int32_t i=0; i<dataLength; ++i) {
         if(!iter.hasNext()) {
             errln("trie iterator hasNext()=FALSE for item %d: %s", (int)i, data[i].s);

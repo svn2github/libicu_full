@@ -165,12 +165,6 @@ public:
      */
     int32_t getNextBytes(ByteSink &out);
 
-    // TODO: For startsWith() functionality, add
-    //   UBool getRemainder(ByteSink *remainingBytes, &value);
-    // Returns TRUE if exactly one byte sequence can be reached from the current iterator state.
-    // The remainingBytes sink will receive the remaining bytes of that one sequence.
-    // It might receive some bytes even when the function returns FALSE.
-
 private:
     friend class ByteTrieBuilder;
     friend class ByteTrieIterator;

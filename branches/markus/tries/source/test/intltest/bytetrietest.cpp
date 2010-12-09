@@ -47,12 +47,18 @@ public:
     StringPiece buildMonthsTrie(ByteTrieBuilder &builder);
     void TestHasUniqueValue();
     void TestGetNextBytes();
+    void TestIteratorFromBranch();
+    void TestIteratorFromLinearMatch();
+    void TestTruncatingIteratorFromRoot();
+    void TestTruncatingIteratorFromLinearMatchShort();
+    void TestTruncatingIteratorFromLinearMatchLong();
 
     void checkData(const StringAndValue data[], int32_t dataLength);
     StringPiece buildTrie(const StringAndValue data[], int32_t dataLength, ByteTrieBuilder &builder);
     void checkHasValue(const StringPiece &trieBytes, const StringAndValue data[], int32_t dataLength);
     void checkHasValueWithState(const StringPiece &trieBytes, const StringAndValue data[], int32_t dataLength);
     void checkIterator(const StringPiece &trieBytes, const StringAndValue data[], int32_t dataLength);
+    void checkIterator(ByteTrieIterator &iter, const StringAndValue data[], int32_t dataLength);
 };
 
 extern IntlTest *createByteTrieTest() {
@@ -78,6 +84,11 @@ void ByteTrieTest::runIndexedTest(int32_t index, UBool exec, const char *&name, 
     TESTCASE_AUTO(TestValuesForState);
     TESTCASE_AUTO(TestHasUniqueValue);
     TESTCASE_AUTO(TestGetNextBytes);
+    TESTCASE_AUTO(TestIteratorFromBranch);
+    TESTCASE_AUTO(TestIteratorFromLinearMatch);
+    TESTCASE_AUTO(TestTruncatingIteratorFromRoot);
+    TESTCASE_AUTO(TestTruncatingIteratorFromLinearMatchShort);
+    TESTCASE_AUTO(TestTruncatingIteratorFromLinearMatchLong);
     TESTCASE_AUTO_END;
 }
 
@@ -228,10 +239,10 @@ StringPiece ByteTrieTest::buildMonthsTrie(ByteTrieBuilder &builder) {
         { "janr", 1 },
         { "januar", 1 },
         { "january", 1 },
+        { "july", 7 },
         { "jun", 6 },
         { "jun.", 6 },
-        { "june", 6 },
-        { "july", 7 }
+        { "june", 6 }
     };
     return buildTrie(data, LENGTHOF(data), builder);
 }
@@ -316,6 +327,197 @@ void ByteTrieTest::TestGetNextBytes() {
     if(count!=1 || sink.NumberOfBytesAppended()!=1 || buffer[0]!='r') {
         errln("months getNextBytes()!=[r] after \"janua\"");
     }
+}
+
+void ByteTrieTest::TestIteratorFromBranch() {
+    ByteTrieBuilder builder;
+    StringPiece sp=buildMonthsTrie(builder);
+    if(sp.empty()) {
+        return;  // buildTrie() reported an error
+    }
+    ByteTrie trie(sp.data());
+    // Go to a branch node.
+    trie.next('j');
+    trie.next('a');
+    trie.next('n');
+    IcuTestErrorCode errorCode(*this, "TestIteratorFromBranch()");
+    ByteTrieIterator iter(trie, 0, errorCode);
+    if(errorCode.logIfFailureAndReset("ByteTrieIterator(trie) constructor")) {
+        return;
+    }
+    // Expected data: Same as in buildMonthsTrie(), except only the suffixes
+    // following "jan".
+    static const StringAndValue data[]={
+        { "", 1 },
+        { ".", 1 },
+        { "a", 1 },
+        { "bb", 1 },
+        { "c", 1 },
+        { "ddd", 1 },
+        { "ee", 1 },
+        { "ef", 1 },
+        { "f", 1 },
+        { "gg", 1 },
+        { "h", 1 },
+        { "iiii", 1 },
+        { "j", 1 },
+        { "kk", 1 },
+        { "kl", 1 },
+        { "kmm", 1 },
+        { "l", 1 },
+        { "m", 1 },
+        { "nnnnnnnnnnnnnnnnnnnnnnnnnnnn", 1 },
+        { "o", 1 },
+        { "pp", 1 },
+        { "qqq", 1 },
+        { "r", 1 },
+        { "uar", 1 },
+        { "uary", 1 }
+    };
+    checkIterator(iter, data, LENGTHOF(data));
+    // Reset, and we should get the same result.
+    logln("after iter.reset()");
+    checkIterator(iter.reset(), data, LENGTHOF(data));
+}
+
+void ByteTrieTest::TestIteratorFromLinearMatch() {
+    ByteTrieBuilder builder;
+    StringPiece sp=buildMonthsTrie(builder);
+    if(sp.empty()) {
+        return;  // buildTrie() reported an error
+    }
+    ByteTrie trie(sp.data());
+    // Go into a linear-match node.
+    trie.next('j');
+    trie.next('a');
+    trie.next('n');
+    trie.next('u');
+    trie.next('a');
+    IcuTestErrorCode errorCode(*this, "TestIteratorFromLinearMatch()");
+    ByteTrieIterator iter(trie, 0, errorCode);
+    if(errorCode.logIfFailureAndReset("ByteTrieIterator(trie) constructor")) {
+        return;
+    }
+    // Expected data: Same as in buildMonthsTrie(), except only the suffixes
+    // following "janua".
+    static const StringAndValue data[]={
+        { "r", 1 },
+        { "ry", 1 }
+    };
+    checkIterator(iter, data, LENGTHOF(data));
+    // Reset, and we should get the same result.
+    logln("after iter.reset()");
+    checkIterator(iter.reset(), data, LENGTHOF(data));
+}
+
+void ByteTrieTest::TestTruncatingIteratorFromRoot() {
+    ByteTrieBuilder builder;
+    StringPiece sp=buildMonthsTrie(builder);
+    if(sp.empty()) {
+        return;  // buildTrie() reported an error
+    }
+    IcuTestErrorCode errorCode(*this, "TestTruncatingIteratorFromRoot()");
+    ByteTrieIterator iter(sp.data(), 4, errorCode);
+    if(errorCode.logIfFailureAndReset("ByteTrieIterator(trie) constructor")) {
+        return;
+    }
+    // Expected data: Same as in buildMonthsTrie(), except only the first 4 characters
+    // of each string, and no string duplicates from the truncation.
+    static const StringAndValue data[]={
+        { "augu", -1 },
+        { "jan", 1 },
+        { "jan.", 1 },
+        { "jana", 1 },
+        { "janb", -1 },
+        { "janc", 1 },
+        { "jand", -1 },
+        { "jane", -1 },
+        { "janf", 1 },
+        { "jang", -1 },
+        { "janh", 1 },
+        { "jani", -1 },
+        { "janj", 1 },
+        { "jank", -1 },
+        { "janl", 1 },
+        { "janm", 1 },
+        { "jann", -1 },
+        { "jano", 1 },
+        { "janp", -1 },
+        { "janq", -1 },
+        { "janr", 1 },
+        { "janu", -1 },
+        { "july", 7 },
+        { "jun", 6 },
+        { "jun.", 6 },
+        { "june", 6 }
+    };
+    checkIterator(iter, data, LENGTHOF(data));
+    // Reset, and we should get the same result.
+    logln("after iter.reset()");
+    checkIterator(iter.reset(), data, LENGTHOF(data));
+}
+
+void ByteTrieTest::TestTruncatingIteratorFromLinearMatchShort() {
+    static const StringAndValue data[]={
+        { "abcdef", 10 },
+        { "abcdepq", 200 },
+        { "abcdeyz", 3000 }
+    };
+    ByteTrieBuilder builder;
+    StringPiece sp=buildTrie(data, LENGTHOF(data), builder);
+    if(sp.empty()) {
+        return;  // buildTrie() reported an error
+    }
+    ByteTrie trie(sp.data());
+    // Go into a linear-match node.
+    trie.next('a');
+    trie.next('b');
+    IcuTestErrorCode errorCode(*this, "TestTruncatingIteratorFromLinearMatchShort()");
+    // Truncate within the linear-match node.
+    ByteTrieIterator iter(trie, 2, errorCode);
+    if(errorCode.logIfFailureAndReset("ByteTrieIterator(trie) constructor")) {
+        return;
+    }
+    static const StringAndValue expected[]={
+        { "cd", -1 }
+    };
+    checkIterator(iter, expected, LENGTHOF(expected));
+    // Reset, and we should get the same result.
+    logln("after iter.reset()");
+    checkIterator(iter.reset(), expected, LENGTHOF(expected));
+}
+
+void ByteTrieTest::TestTruncatingIteratorFromLinearMatchLong() {
+    static const StringAndValue data[]={
+        { "abcdef", 10 },
+        { "abcdepq", 200 },
+        { "abcdeyz", 3000 }
+    };
+    ByteTrieBuilder builder;
+    StringPiece sp=buildTrie(data, LENGTHOF(data), builder);
+    if(sp.empty()) {
+        return;  // buildTrie() reported an error
+    }
+    ByteTrie trie(sp.data());
+    // Go into a linear-match node.
+    trie.next('a');
+    trie.next('b');
+    trie.next('c');
+    IcuTestErrorCode errorCode(*this, "TestTruncatingIteratorFromLinearMatchLong()");
+    // Truncate after the linear-match node.
+    ByteTrieIterator iter(trie, 3, errorCode);
+    if(errorCode.logIfFailureAndReset("ByteTrieIterator(trie) constructor")) {
+        return;
+    }
+    static const StringAndValue expected[]={
+        { "def", 10 },
+        { "dep", -1 },
+        { "dey", -1 }
+    };
+    checkIterator(iter, expected, LENGTHOF(expected));
+    // Reset, and we should get the same result.
+    logln("after iter.reset()");
+    checkIterator(iter.reset(), expected, LENGTHOF(expected));
 }
 
 void ByteTrieTest::checkData(const StringAndValue data[], int32_t dataLength) {
@@ -461,10 +663,16 @@ void ByteTrieTest::checkHasValueWithState(const StringPiece &trieBytes,
 void ByteTrieTest::checkIterator(const StringPiece &trieBytes,
                                  const StringAndValue data[], int32_t dataLength) {
     IcuTestErrorCode errorCode(*this, "checkIterator()");
-    ByteTrieIterator iter(trieBytes.data(), errorCode);
-    if(errorCode.logIfFailureAndReset("ByteTrieIterator constructor")) {
+    ByteTrieIterator iter(trieBytes.data(), 0, errorCode);
+    if(errorCode.logIfFailureAndReset("ByteTrieIterator(trieBytes) constructor")) {
         return;
     }
+    checkIterator(iter, data, dataLength);
+}
+
+void ByteTrieTest::checkIterator(ByteTrieIterator &iter,
+                                 const StringAndValue data[], int32_t dataLength) {
+    IcuTestErrorCode errorCode(*this, "checkIterator()");
     for(int32_t i=0; i<dataLength; ++i) {
         if(!iter.hasNext()) {
             errln("trie iterator hasNext()=FALSE for item %d: %s", (int)i, data[i].s);

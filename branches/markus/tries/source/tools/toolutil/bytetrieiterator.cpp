@@ -21,6 +21,42 @@
 
 U_NAMESPACE_BEGIN
 
+ByteTrieIterator::ByteTrieIterator(const void *trieBytes, int32_t maxStringLength,
+                                   UErrorCode &errorCode)
+        : trie(trieBytes), maxLength(maxStringLength), value(0), stack(errorCode) {
+    trie.saveState(initialState);
+}
+
+ByteTrieIterator::ByteTrieIterator(const ByteTrie &otherTrie, int32_t maxStringLength,
+                                   UErrorCode &errorCode)
+        : trie(otherTrie), maxLength(maxStringLength), value(0), stack(errorCode) {
+    trie.saveState(initialState);
+    int32_t length=trie.remainingMatchLength;  // Actual remaining match length minus 1.
+    if(length>=0) {
+        // Pending linear-match node, append remaining bytes to str.
+        ++length;
+        if(maxLength>0 && length>maxLength) {
+            length=maxLength;  // This will leave remainingMatchLength>=0 as a signal.
+        }
+        str.append(reinterpret_cast<const char *>(trie.pos), length, errorCode);
+        trie.pos+=length;
+        trie.remainingMatchLength-=length;
+    }
+}
+
+ByteTrieIterator &ByteTrieIterator::reset() {
+    trie.resetToState(initialState);
+    int32_t length=trie.remainingMatchLength+1;  // Remaining match length.
+    if(maxLength>0 && length>maxLength) {
+        length=maxLength;
+    }
+    str.truncate(length);
+    trie.pos+=length;
+    trie.remainingMatchLength-=length;
+    stack.setSize(0);
+    return *this;
+}
+
 UBool
 ByteTrieIterator::next(UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) {
@@ -84,17 +120,26 @@ ByteTrieIterator::next(UErrorCode &errorCode) {
             }
         }
     }
+    if(trie.remainingMatchLength>=0) {
+        // We only get here if we started in a pending linear-match node
+        // with more than maxLength remaining bytes.
+        return truncateAndStop();
+    }
     for(;;) {
         int32_t node=*trie.pos++;
         if(node>=ByteTrie::kMinValueLead) {
             // Deliver value for the byte sequence so far.
-            if(trie.readCompactInt(node)) {
+            if(trie.readCompactInt(node) || (maxLength>0 && str.length()==maxLength)) {
                 trie.stop();
             }
             value=trie.value;
             sp.set(str.data(), str.length());
             return TRUE;
-        } else if(node<ByteTrie::kMinLinearMatch) {
+        }
+        if(maxLength>0 && str.length()==maxLength) {
+            return truncateAndStop();
+        }
+        if(node<ByteTrie::kMinLinearMatch) {
             // Branch node, needs to take the first outbound edge and push state for the rest.
             if(node>=ByteTrie::kMinThreeWayBranch) {
                 // Branching on a byte value,
@@ -130,6 +175,11 @@ ByteTrieIterator::next(UErrorCode &errorCode) {
         } else {
             // Linear-match node, append length bytes to str.
             int32_t length=node-ByteTrie::kMinLinearMatch+1;
+            if(maxLength>0 && str.length()+length>maxLength) {
+                str.append(reinterpret_cast<const char *>(trie.pos),
+                           maxLength-str.length(), errorCode);
+                return truncateAndStop();
+            }
             str.append(reinterpret_cast<const char *>(trie.pos), length, errorCode);
             trie.pos+=length;
         }

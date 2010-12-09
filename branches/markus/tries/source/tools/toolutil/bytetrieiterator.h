@@ -32,15 +32,46 @@
 U_NAMESPACE_BEGIN
 
 /**
- * Iterator for all of the (byte sequence, value) pairs in a a ByteTrie.
+ * Iterator for all of the (byte sequence, value) pairs in a ByteTrie.
  */
 class U_TOOLUTIL_API ByteTrieIterator : public UMemory {
 public:
-    ByteTrieIterator(const void *trieBytes, UErrorCode &errorCode)
-            : trie(trieBytes), value(0), stack(errorCode) {}
+    /**
+     * Iterates from the root of a byte-serialized ByteTrie.
+     * @param trieBytes The trie bytes.
+     * @param maxStringLength If 0, the iterator returns full strings/byte sequences.
+     *                        Otherwise, the iterator returns strings with this maximum length.
+     * @param errorCode Standard ICU error code. Its input value must
+     *                  pass the U_SUCCESS() test, or else the function returns
+     *                  immediately. Check for U_FAILURE() on output or use with
+     *                  function chaining. (See User Guide for details.)
+     */
+    ByteTrieIterator(const void *trieBytes, int32_t maxStringLength, UErrorCode &errorCode);
+
+    /**
+     * Iterates from the current state of the specified ByteTrie.
+     * @param otherTrie The trie whose state will be copied for iteration.
+     * @param maxStringLength If 0, the iterator returns full strings/byte sequences.
+     *                        Otherwise, the iterator returns strings with this maximum length.
+     * @param errorCode Standard ICU error code. Its input value must
+     *                  pass the U_SUCCESS() test, or else the function returns
+     *                  immediately. Check for U_FAILURE() on output or use with
+     *                  function chaining. (See User Guide for details.)
+     */
+    ByteTrieIterator(const ByteTrie &otherTrie, int32_t maxStringLength, UErrorCode &errorCode);
+
+    /**
+     * Resets this iterator to its initial state.
+     */
+    ByteTrieIterator &reset();
 
     /**
      * Finds the next (byte sequence, value) pair if there is one.
+     *
+     * If the byte sequence is truncated to the maximum length and does not
+     * have a real value, then the value is set to -1.
+     * In this case, this "not a real value" is indistinguishable from
+     * a real value of -1.
      * @return TRUE if there is another element.
      */
     UBool next(UErrorCode &errorCode);
@@ -59,11 +90,14 @@ public:
      */
     int32_t getValue() const { return value; }
 
-    // TODO: We could add a constructor that takes a ByteTrie object
-    // and copies its current state, for iterating over all byte sequences and their
-    // values reachable from that state.
-
 private:
+    UBool truncateAndStop() {
+        trie.stop();
+        value=-1;  // no real value for str
+        sp.set(str.data(), str.length());
+        return TRUE;
+    }
+
     // The stack stores pairs of integers for backtracking to another
     // outbound edge of a branch node.
     // The first integer is an offset from ByteTrie.bytes.
@@ -76,9 +110,11 @@ private:
     static const int32_t kThreeWayBranchGreaterThan=0xf;
 
     ByteTrie trie;
+    ByteTrie::State initialState;
 
     CharString str;
     StringPiece sp;
+    int32_t maxLength;
     int32_t value;
 
     UVector32 stack;
