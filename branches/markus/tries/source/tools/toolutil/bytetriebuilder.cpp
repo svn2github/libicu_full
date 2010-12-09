@@ -155,6 +155,7 @@ ByteTrieBuilder::add(const StringPiece &s, int32_t value, UErrorCode &errorCode)
         }
         delete[] elements;
         elements=newElements;
+        elementsCapacity=newCapacity;
     }
     elements[elementsLength++].setTo(s, value, strings, errorCode);
     return *this;

@@ -114,6 +114,7 @@ UCharTrieBuilder::add(const UnicodeString &s, int32_t value, UErrorCode &errorCo
         }
         delete[] elements;
         elements=newElements;
+        elementsCapacity=newCapacity;
     }
     elements[elementsLength++].setTo(s, value, strings, errorCode);
     if(U_SUCCESS(errorCode) && strings.isBogus()) {
