@@ -59,19 +59,18 @@ ByteTrie::readCompactInt(int32_t leadByte) {
 
 int32_t
 ByteTrie::readFixedInt(int32_t bytesPerValue) {
-    int32_t fixedInt;
+    int32_t fixedInt=*pos;
     switch(bytesPerValue) {  // Actually number of bytes minus 1.
     case 0:
-        fixedInt=*pos;
         break;
     case 1:
-        fixedInt=(pos[0]<<8)|pos[1];
+        fixedInt=(fixedInt<<8)|pos[1];
         break;
     case 2:
-        fixedInt=(pos[0]<<16)|(pos[1]<<8)|pos[2];
+        fixedInt=(fixedInt<<16)|(pos[1]<<8)|pos[2];
         break;
     case 3:
-        fixedInt=(pos[0]<<24)|(pos[1]<<16)|(pos[2]<<8)|pos[3];
+        fixedInt=(fixedInt<<24)|(pos[1]<<16)|(pos[2]<<8)|pos[3];
         break;
     }
     pos+=bytesPerValue+1;
@@ -161,46 +160,43 @@ ByteTrie::next(int32_t inByte) {
             return FALSE;
         }
     }
-    int32_t node=*pos;
-    if(node>=kMinValueLead) {
-        if(node&kValueIsFinal) {
+    for(;;) {
+        int32_t node=*pos++;
+        if(node<kMinLinearMatch) {
+            return branchNext(node, inByte);
+        } else if(node<kMinValueLead) {
+            // Match the first of length+1 bytes.
+            length=node-kMinLinearMatch;  // Actual match length minus 1.
+            if(inByte==*pos) {
+                remainingMatchLength=length-1;
+                ++pos;
+                return TRUE;
+            } else {
+                // No match.
+                stop();
+                return FALSE;
+            }
+        } else if(node&kValueIsFinal) {
             // No further matching bytes.
             stop();
             return FALSE;
         } else {
             // Skip intermediate value.
-            pos+=bytesPerLead[node>>1];
+            pos+=bytesPerLead[node>>1]-1;
             // The next node must not also be a value node.
-            node=*pos;
-            U_ASSERT(node<kMinValueLead);
-        }
-    }
-    ++pos;
-    if(node<kMinLinearMatch) {
-        return branchNext(node, inByte);
-    } else {
-        // Match the first of length+1 bytes.
-        length=node-kMinLinearMatch;  // Actual match length minus 1.
-        if(inByte==*pos) {
-            remainingMatchLength=length-1;
-            ++pos;
-            return TRUE;
-        } else {
-            // No match.
-            stop();
-            return FALSE;
+            U_ASSERT(*pos<kMinValueLead);
         }
     }
 }
 
 UBool
 ByteTrie::next(const char *s, int32_t sLength) {
+    if(sLength<0 ? *s==0 : sLength==0) {
+        // Empty input: Do nothing at all, see API doc.
+        return TRUE;
+    }
     if(pos==NULL) {
-        // Return FALSE if there are input bytes,
-        // but TRUE if not, so that next(string) is equivalent to
-        // for(each byte b)
-        //     if(!next(b)) return FALSE;
-        return sLength==0 || (sLength<0 && *s==0);
+        return FALSE;
     }
     haveValue=FALSE;
     int32_t length=remainingMatchLength;  // Actual remaining match length minus 1.
@@ -215,6 +211,7 @@ ByteTrie::next(const char *s, int32_t sLength) {
                     return TRUE;
                 }
                 if(length<0) {
+                    remainingMatchLength=length;
                     break;
                 }
                 if(inByte!=*pos) {
@@ -233,6 +230,7 @@ ByteTrie::next(const char *s, int32_t sLength) {
                 inByte=*s++;
                 --sLength;
                 if(length<0) {
+                    remainingMatchLength=length;
                     break;
                 }
                 if(inByte!=*pos) {
@@ -243,35 +241,45 @@ ByteTrie::next(const char *s, int32_t sLength) {
                 --length;
             }
         }
-        int32_t node=*pos;
-        if(node>=kMinValueLead) {
-            if(node&kValueIsFinal) {
+        for(;;) {
+            int32_t node=*pos++;
+            if(node<kMinLinearMatch) {
+                if(!branchNext(node, inByte)) {
+                    return FALSE;
+                }
+                // Fetch the next input byte, if there is one.
+                if(sLength<0) {
+                    if((inByte=*s++)==0) {
+                        return TRUE;
+                    }
+                } else {
+                    if(sLength==0) {
+                        return TRUE;
+                    }
+                    inByte=*s++;
+                    --sLength;
+                }
+            } else if(node<kMinValueLead) {
+                // Match length+1 bytes.
+                length=node-kMinLinearMatch;  // Actual match length minus 1.
+                if(inByte!=*pos) {
+                    // No match.
+                    stop();
+                    return FALSE;
+                }
+                ++pos;
+                --length;
+                break;
+            } else if(node&kValueIsFinal) {
                 // No further matching bytes.
                 stop();
                 return FALSE;
             } else {
                 // Skip intermediate value.
-                pos+=bytesPerLead[node>>1];
+                pos+=bytesPerLead[node>>1]-1;
                 // The next node must not also be a value node.
-                node=*pos;
-                U_ASSERT(node<kMinValueLead);
+                U_ASSERT(*pos<kMinValueLead);
             }
-        }
-        ++pos;
-        if(node<kMinLinearMatch) {
-            if(!branchNext(node, inByte)) {
-                return FALSE;
-            }
-        } else {
-            // Match length+1 bytes.
-            length=node-kMinLinearMatch;  // Actual match length minus 1.
-            if(inByte!=*pos) {
-                // No match.
-                stop();
-                return FALSE;
-            }
-            ++pos;
-            --length;
         }
     }
 }
@@ -286,6 +294,9 @@ ByteTrie::hasValue() {
         ++pos;
         if(readCompactInt(node)) {
             stop();
+        } else {
+            // The next node must not also be a value node.
+            U_ASSERT(*pos<kMinValueLead);
         }
         haveValue=TRUE;
         return TRUE;
@@ -336,17 +347,6 @@ UBool
 ByteTrie::findUniqueValue() {
     for(;;) {
         int32_t node=*pos++;
-        if(node>=kMinValueLead) {
-            UBool isFinal=readCompactInt(node);
-            if(!isUniqueValue()) {
-                return FALSE;
-            }
-            if(isFinal) {
-                return TRUE;
-            }
-            node=*pos++;
-            U_ASSERT(node<kMinValueLead);
-        }
         if(node<kMinLinearMatch) {
             while(node>=kMinThreeWayBranch) {
                 // three-way-branch node
@@ -375,9 +375,18 @@ ByteTrie::findUniqueValue() {
                 }
             } while(--length>0);
             ++pos;  // ignore the last comparison byte
-        } else {
+        } else if(node<kMinValueLead) {
             // linear-match node
             pos+=node-kMinLinearMatch+1;  // Ignore the match bytes.
+        } else {
+            UBool isFinal=readCompactInt(node);
+            if(!isUniqueValue()) {
+                return FALSE;
+            }
+            if(isFinal) {
+                return TRUE;
+            }
+            U_ASSERT(*pos<kMinValueLead);
         }
     }
 }

@@ -57,6 +57,7 @@ public:
     UnicodeString buildTrie(const StringAndValue data[], int32_t dataLength, UCharTrieBuilder &builder);
     void checkHasValue(const UnicodeString &trieUChars, const StringAndValue data[], int32_t dataLength);
     void checkHasValueWithState(const UnicodeString &trieUChars, const StringAndValue data[], int32_t dataLength);
+    void checkNextString(const UnicodeString &trieUChars, const StringAndValue data[], int32_t dataLength);
     void checkIterator(const UnicodeString &trieUChars, const StringAndValue data[], int32_t dataLength);
     void checkIterator(UCharTrieIterator &iter, const StringAndValue data[], int32_t dataLength);
 };
@@ -593,6 +594,7 @@ void UCharTrieTest::checkData(const StringAndValue data[], int32_t dataLength) {
     }
     checkHasValue(s, data, dataLength);
     checkHasValueWithState(s, data, dataLength);
+    checkNextString(s, data, dataLength);
     checkIterator(s, data, dataLength);
 }
 
@@ -725,6 +727,27 @@ void UCharTrieTest::checkHasValueWithState(const UnicodeString &trieUChars,
                   data[i].s,
                   (long)trie.getValue(), (long)trie.getValue(),
                   (long)data[i].value, (long)data[i].value);
+        }
+        trie.reset();
+    }
+}
+
+// next(string) is also tested in other functions,
+// but here we try to go partway through the string, and then beyond it.
+void UCharTrieTest::checkNextString(const UnicodeString &trieUChars,
+                                    const StringAndValue data[], int32_t dataLength) {
+    UCharTrie trie(trieUChars.getBuffer());
+    for(int32_t i=0; i<dataLength; ++i) {
+        UnicodeString expectedString=UnicodeString(data[i].s, -1, US_INV).unescape();
+        int32_t stringLength=expectedString.length();
+        if(!trie.next(expectedString.getTerminatedBuffer(), stringLength/2)) {
+            errln("trie.next(up to middle of string)=FALSE for %s", data[i].s);
+            continue;
+        }
+        // Test that we stop properly at the end of the string.
+        if(trie.next(expectedString.getTerminatedBuffer()+stringLength/2,
+                     stringLength+1-stringLength/2)) {
+            errln("trie.next(string+NUL)=TRUE for %s", data[i].s);
         }
         trie.reset();
     }

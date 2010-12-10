@@ -121,7 +121,12 @@ public:
 
     /**
      * Traverses the trie from the current state for this byte sequence.
-     * Equivalent to calling next(b) for each byte b in the sequence.
+     * Equivalent to
+     * \code
+     * for(each b in s)
+     *   if(!next(b)) return FALSE;
+     * return TRUE;
+     * \endcode
      * @return TRUE if the byte sequence is empty, or if it continues a matching byte sequence.
      */
     UBool next(const char *s, int32_t length);

@@ -164,7 +164,12 @@ public:
 
     /**
      * Traverses the trie from the current state for this string.
-     * Equivalent to calling next(c) for each UChar c in the string.
+     * Equivalent to
+     * \code
+     * for(each c in s)
+     *   if(!next(c)) return FALSE;
+     * return TRUE;
+     * \endcode
      * @return TRUE if the string is empty, or if it continues a matching string.
      */
     UBool next(const UChar *s, int32_t length);
@@ -221,7 +226,7 @@ private:
     // Returns TRUE if the integer is a final value.
     UBool readCompactInt(int32_t leadUnit);
 
-    // pos is on the leadUnit.
+    // pos is already after the leadUnit.
     void skipCompactInt(int32_t leadUnit);
 
     // Reads a fixed-width integer and post-increments pos.

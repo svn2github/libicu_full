@@ -57,6 +57,7 @@ public:
     StringPiece buildTrie(const StringAndValue data[], int32_t dataLength, ByteTrieBuilder &builder);
     void checkHasValue(const StringPiece &trieBytes, const StringAndValue data[], int32_t dataLength);
     void checkHasValueWithState(const StringPiece &trieBytes, const StringAndValue data[], int32_t dataLength);
+    void checkNextString(const StringPiece &trieBytes, const StringAndValue data[], int32_t dataLength);
     void checkIterator(const StringPiece &trieBytes, const StringAndValue data[], int32_t dataLength);
     void checkIterator(ByteTrieIterator &iter, const StringAndValue data[], int32_t dataLength);
 };
@@ -530,6 +531,7 @@ void ByteTrieTest::checkData(const StringAndValue data[], int32_t dataLength) {
     }
     checkHasValue(sp, data, dataLength);
     checkHasValueWithState(sp, data, dataLength);
+    checkNextString(sp, data, dataLength);
     checkIterator(sp, data, dataLength);
 }
 
@@ -659,6 +661,26 @@ void ByteTrieTest::checkHasValueWithState(const StringPiece &trieBytes,
                   expectedString,
                   (long)trie.getValue(), (long)trie.getValue(),
                   (long)data[i].value, (long)data[i].value);
+        }
+        trie.reset();
+    }
+}
+
+// next(string) is also tested in other functions,
+// but here we try to go partway through the string, and then beyond it.
+void ByteTrieTest::checkNextString(const StringPiece &trieBytes,
+                                   const StringAndValue data[], int32_t dataLength) {
+    ByteTrie trie(trieBytes.data());
+    for(int32_t i=0; i<dataLength; ++i) {
+        const char *expectedString=data[i].s;
+        int32_t stringLength=strlen(expectedString);
+        if(!trie.next(expectedString, stringLength/2)) {
+            errln("trie.next(up to middle of string)=FALSE for %s", expectedString);
+            continue;
+        }
+        // Test that we stop properly at the end of the string.
+        if(trie.next(expectedString+stringLength/2, stringLength+1-stringLength/2)) {
+            errln("trie.next(string+NUL)=TRUE for %s", expectedString);
         }
         trie.reset();
     }
