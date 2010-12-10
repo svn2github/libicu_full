@@ -117,7 +117,14 @@ public:
      * Traverses the trie from the current state for this input byte.
      * @return TRUE if the byte continues a matching byte sequence.
      */
-    UBool next(int inByte);
+    UBool next(int32_t inByte);
+
+    /**
+     * Traverses the trie from the current state for this byte sequence.
+     * Equivalent to calling next(b) for each byte b in the sequence.
+     * @return TRUE if the byte sequence is empty, or if it continues a matching byte sequence.
+     */
+    UBool next(const char *s, int32_t length);
 
     /**
      * @return TRUE if the trie contains the byte sequence so far.
@@ -127,13 +134,6 @@ public:
      *         or immediately after next() returns TRUE.
      */
     UBool hasValue();
-
-    /**
-     * Traverses the trie from the current state for this byte sequence,
-     * calls next(b) for each byte b in the sequence,
-     * and calls hasValue() at the end.
-     */
-    UBool hasValue(const char *s, int32_t length);
 
     /**
      * Returns a byte sequence's value if called immediately after hasValue()
@@ -185,6 +185,9 @@ private:
 
     // Reads a fixed-width integer and post-increments pos.
     int32_t readFixedInt(int32_t bytesPerValue);
+
+    // Handles a branch node for both next(byte) and next(string).
+    UBool branchNext(int32_t node, int32_t inByte);
 
     // Helper functions for hasUniqueValue().
     // Compare the latest value with the previous one, or save the latest one.

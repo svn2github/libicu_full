@@ -151,7 +151,7 @@ public:
      * Traverses the trie from the current state for this input UChar.
      * @return TRUE if the UChar continues a matching string.
      */
-    UBool next(int uchar);
+    UBool next(int32_t uchar);
 
     /**
      * Traverses the trie from the current state for the
@@ -163,6 +163,13 @@ public:
     }
 
     /**
+     * Traverses the trie from the current state for this string.
+     * Equivalent to calling next(c) for each UChar c in the string.
+     * @return TRUE if the string is empty, or if it continues a matching string.
+     */
+    UBool next(const UChar *s, int32_t length);
+
+    /**
      * @return TRUE if the trie contains the string so far.
      *         In this case, an immediately following call to getValue()
      *         returns the string's value.
@@ -170,13 +177,6 @@ public:
      *         or immediately after next() returns TRUE.
      */
     UBool hasValue();
-
-    /**
-     * Traverses the trie from the current state for this string,
-     * calls next(u) for each UChar u in the sequence,
-     * and calls hasValue() at the end.
-     */
-    UBool hasValue(const UChar *s, int32_t length);
 
     /**
      * Returns a string's value if called immediately after hasValue()
@@ -226,6 +226,9 @@ private:
 
     // Reads a fixed-width integer and post-increments pos.
     int32_t readFixedInt(int32_t node);
+
+    // Handles a branch node for both next(uchar) and next(string).
+    UBool branchNext(int32_t node, int32_t uchar);
 
     // Helper functions for hasUniqueValue().
     // Compare the latest value with the previous one, or save the latest one.

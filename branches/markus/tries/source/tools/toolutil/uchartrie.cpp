@@ -85,7 +85,77 @@ UCharTrie::readFixedInt(int32_t node) {
 }
 
 UBool
-UCharTrie::next(int uchar) {
+UCharTrie::branchNext(int32_t node, int32_t uchar) {
+    // Branch according to the current unit.
+    while(node>=kMinThreeWayBranch) {
+        // Branching on a unit value,
+        // with a jump delta for less-than, a compact int for equals,
+        // and continuing for greater-than.
+        // The less-than and greater-than branches must lead to branch nodes again.
+        UChar trieUnit=*pos++;
+        if(uchar<trieUnit) {
+            int32_t delta=readFixedInt(node);
+            pos+=delta;
+        } else {
+            pos+=(node&kFixedInt32)+1;  // Skip fixed-width integer.
+            node>>=1;
+            if(uchar==trieUnit) {
+                value=readFixedInt(node);
+                if(node&kFixedIntIsFinal) {
+                    haveValue=TRUE;
+                    stop();
+                } else {
+                    // Use the non-final value as the jump delta.
+                    pos+=value;
+                }
+                return TRUE;
+            } else {  // uchar>trieUnit
+                // Skip the equals value.
+                pos+=(node&kFixedInt32)+1;
+            }
+        }
+        node=*pos++;
+        U_ASSERT(node<kMinLinearMatch);
+    }
+    // Branch node with a list of key-value pairs where
+    // values are either final values or jump deltas.
+    // If the last key unit matches, just continue after it rather
+    // than jumping.
+    int32_t length=(node>>kMaxListBranchLengthShift)+1;  // Actual list length minus 1.
+    if(length>=kMaxListBranchSmallLength) {
+        // For 7..14 pairs, read the next unit as well.
+        node=(node<<16)|*pos++;
+    }
+    // The lower node bits now contain a bit pair for each (key, value) pair:
+    // - whether the value is final
+    // - whether the value is 1 or 2 units long
+    for(;;) {
+        UChar trieUnit=*pos++;
+        if(uchar==trieUnit) {
+            if(length>0) {
+                value=readFixedInt(node);
+                if(node&kFixedIntIsFinal) {
+                    haveValue=TRUE;
+                    stop();
+                } else {
+                    // Use the non-final value as the jump delta.
+                    pos+=value;
+                }
+            }
+            return TRUE;
+        }
+        if(uchar<trieUnit || length--==0) {
+            stop();
+            return FALSE;
+        }
+        // Skip the value.
+        pos+=(node&kFixedInt32)+1;
+        node>>=2;
+    }
+}
+
+UBool
+UCharTrie::next(int32_t uchar) {
     if(pos==NULL) {
         return FALSE;
     }
@@ -119,72 +189,7 @@ UCharTrie::next(int uchar) {
     }
     ++pos;
     if(node<kMinLinearMatch) {
-        // Branch according to the current unit.
-        while(node>=kMinThreeWayBranch) {
-            // Branching on a unit value,
-            // with a jump delta for less-than, a compact int for equals,
-            // and continuing for greater-than.
-            // The less-than and greater-than branches must lead to branch nodes again.
-            UChar trieUnit=*pos++;
-            if(uchar<trieUnit) {
-                int32_t delta=readFixedInt(node);
-                pos+=delta;
-            } else {
-                pos+=(node&kFixedInt32)+1;  // Skip fixed-width integer.
-                node>>=1;
-                if(uchar==trieUnit) {
-                    value=readFixedInt(node);
-                    if(node&kFixedIntIsFinal) {
-                        haveValue=TRUE;
-                        stop();
-                    } else {
-                        // Use the non-final value as the jump delta.
-                        pos+=value;
-                    }
-                    return TRUE;
-                } else {  // uchar>trieUnit
-                    // Skip the equals value.
-                    pos+=(node&kFixedInt32)+1;
-                }
-            }
-            node=*pos++;
-            U_ASSERT(node<kMinLinearMatch);
-        }
-        // Branch node with a list of key-value pairs where
-        // values are either final values or jump deltas.
-        // If the last key unit matches, just continue after it rather
-        // than jumping.
-        length=(node>>kMaxListBranchLengthShift)+1;  // Actual list length minus 1.
-        if(length>=kMaxListBranchSmallLength) {
-            // For 7..14 pairs, read the next unit as well.
-            node=(node<<16)|*pos++;
-        }
-        // The lower node bits now contain a bit pair for each (key, value) pair:
-        // - whether the value is final
-        // - whether the value is 1 or 2 units long
-        for(;;) {
-            UChar trieUnit=*pos++;
-            if(uchar==trieUnit) {
-                if(length>0) {
-                    value=readFixedInt(node);
-                    if(node&kFixedIntIsFinal) {
-                        haveValue=TRUE;
-                        stop();
-                    } else {
-                        // Use the non-final value as the jump delta.
-                        pos+=value;
-                    }
-                }
-                return TRUE;
-            }
-            if(uchar<trieUnit || length--==0) {
-                stop();
-                return FALSE;
-            }
-            // Skip the value.
-            pos+=(node&kFixedInt32)+1;
-            node>>=2;
-        }
+        return branchNext(node, uchar);
     } else {
         // Match the first of length+1 units.
         length=node-kMinLinearMatch;  // Actual match length minus 1.
@@ -196,6 +201,89 @@ UCharTrie::next(int uchar) {
             // No match.
             stop();
             return FALSE;
+        }
+    }
+}
+
+UBool
+UCharTrie::next(const UChar *s, int32_t sLength) {
+    if(pos==NULL) {
+        // Return FALSE if there are input units,
+        // but TRUE if not, so that next(string) is equivalent to
+        // for(each byte b)
+        //     if(!next(b)) return FALSE;
+        return sLength==0 || (sLength<0 && *s==0);
+    }
+    haveValue=FALSE;
+    int32_t length=remainingMatchLength;  // Actual remaining match length minus 1.
+    for(;;) {
+        // Fetch the next input unit, if there is one.
+        // Continue a linear-match node without rechecking sLength<0.
+        int32_t uchar;
+        if(sLength<0) {
+            for(;;) {
+                if((uchar=*s++)==0) {
+                    remainingMatchLength=length;
+                    return TRUE;
+                }
+                if(length<0) {
+                    break;
+                }
+                if(uchar!=*pos) {
+                    stop();
+                    return FALSE;
+                }
+                ++pos;
+                --length;
+            }
+        } else {
+            for(;;) {
+                if(sLength==0) {
+                    remainingMatchLength=length;
+                    return TRUE;
+                }
+                uchar=*s++;
+                --sLength;
+                if(length<0) {
+                    break;
+                }
+                if(uchar!=*pos) {
+                    stop();
+                    return FALSE;
+                }
+                ++pos;
+                --length;
+            }
+        }
+        int32_t node=*pos;
+        if(node>=kMinValueLead) {
+            if(node&kValueIsFinal) {
+                // No further matching units.
+                stop();
+                return FALSE;
+            } else {
+                // Skip intermediate value.
+                skipCompactInt(node);
+                // The next node must not also be a value node.
+                node=*pos;
+                U_ASSERT(node<kMinValueLead);
+            }
+        }
+        ++pos;
+        if(node<kMinLinearMatch) {
+            if(!branchNext(node, uchar)) {
+                return FALSE;
+            }
+        } else {
+            // Match length+1 units.
+            length=node-kMinLinearMatch;  // Actual match length minus 1.
+            if(uchar!=*pos) {
+                // No match.
+                stop();
+                return FALSE;
+            }
+            ++pos;
+            --length;
         }
     }
 }
@@ -215,27 +303,6 @@ UCharTrie::hasValue() {
         return TRUE;
     }
     return FALSE;
-}
-
-UBool
-UCharTrie::hasValue(const UChar *s, int32_t length) {
-    if(length<0) {
-        // NUL-terminated
-        int c;
-        while((c=*s++)!=0) {
-            if(!next(c)) {
-                return FALSE;
-            }
-        }
-    } else {
-        while(length>0) {
-            if(!next(*s++)) {
-                return FALSE;
-            }
-            --length;
-        }
-    }
-    return hasValue();
 }
 
 UBool
@@ -326,7 +393,7 @@ UCharTrie::findUniqueValue() {
             ++pos;  // ignore the last comparison unit
         } else {
             // linear-match node
-            pos+=node-kMinLinearMatch+1;  // Ignore the match bytes.
+            pos+=node-kMinLinearMatch+1;  // Ignore the match units.
         }
     }
 }

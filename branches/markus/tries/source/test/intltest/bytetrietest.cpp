@@ -572,7 +572,7 @@ void ByteTrieTest::checkHasValue(const StringPiece &trieBytes,
     ByteTrie::State state;
     for(int32_t i=0; i<dataLength; ++i) {
         int32_t stringLength= (i&1) ? -1 : strlen(data[i].s);
-        if(!trie.hasValue(data[i].s, stringLength)) {
+        if(!trie.next(data[i].s, stringLength) || !trie.hasValue()) {
             errln("trie does not seem to contain %s", data[i].s);
         } else if(trie.getValue()!=data[i].value) {
             errln("trie value for %s is %ld=0x%lx instead of expected %ld=0x%lx",
@@ -645,12 +645,14 @@ void ByteTrieTest::checkHasValueWithState(const StringPiece &trieBytes,
         ) {
             errln("trie.next(part of %s) changes hasValue()/getValue() after saveState/next(0)/resetToState",
                   expectedString);
-        } else if(!trie.hasValue(expectedString+partialLength, stringLength-partialLength)) {
+        } else if(!trie.next(expectedString+partialLength, stringLength-partialLength) ||
+                  !trie.hasValue()) {
             errln("trie.next(part of %s) does not seem to contain %s after saveState/next(0)/resetToState",
                   expectedString);
-        } else if(!trie.resetToState(state).hasValue(expectedString+partialLength,
-                                                     stringLength-partialLength)) {
-            errln("trie does not seem to contain %s after saveState/hasValue(rest)/resetToState",
+        } else if(!trie.resetToState(state).
+                        next(expectedString+partialLength, stringLength-partialLength) ||
+                  !trie.hasValue()) {
+            errln("trie does not seem to contain %s after saveState/next(rest)/resetToState",
                   expectedString);
         } else if(trie.getValue()!=data[i].value) {
             errln("trie value for %s is %ld=0x%lx instead of expected %ld=0x%lx",

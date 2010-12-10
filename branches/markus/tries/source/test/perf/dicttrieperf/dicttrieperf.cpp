@@ -233,7 +233,7 @@ public:
 
 static int32_t byteTrieLookup(const char *s, const char *nameTrieBytes) {
     ByteTrie trie(nameTrieBytes);
-    if(trie.hasValue(s, -1)) {
+    if(trie.next(s, -1) && trie.hasValue()) {
         return trie.getValue();
     } else {
         return -1;

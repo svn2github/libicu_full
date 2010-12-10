@@ -79,7 +79,71 @@ ByteTrie::readFixedInt(int32_t bytesPerValue) {
 }
 
 UBool
-ByteTrie::next(int inByte) {
+ByteTrie::branchNext(int32_t node, int32_t inByte) {
+    // Branch according to the current byte.
+    while(node>=kMinThreeWayBranch) {
+        // Branching on a byte value,
+        // with a jump delta for less-than, a compact int for equals,
+        // and continuing for greater-than.
+        // The less-than and greater-than branches must lead to branch nodes again.
+        node-=kMinThreeWayBranch;
+        uint8_t trieByte=*pos++;
+        if(inByte<trieByte) {
+            int32_t delta=readFixedInt(node);
+            pos+=delta;
+        } else {
+            pos+=node+1;  // Skip fixed-width integer.
+            node=*pos;
+            U_ASSERT(node>=kMinValueLead);
+            if(inByte==trieByte) {
+                if(node&kValueIsFinal) {
+                    // Leave the final value for hasValue() to read.
+                } else {
+                    // Use the non-final value as the jump delta.
+                    ++pos;
+                    readCompactInt(node);
+                    pos+=value;
+                }
+                return TRUE;
+            } else {  // inByte>trieByte
+                pos+=bytesPerLead[node>>1];
+            }
+        }
+        node=*pos++;
+        U_ASSERT(node<kMinLinearMatch);
+    }
+    // Branch node with a list of key-value pairs where
+    // values are compact integers: either final values or jump deltas.
+    // If the last key byte matches, just continue after it rather
+    // than jumping.
+    int32_t length=node+1;  // Actual list length minus 1.
+    for(;;) {
+        uint8_t trieByte=*pos++;
+        U_ASSERT(length==0 || *pos>=kMinValueLead);
+        if(inByte==trieByte) {
+            if(length>0) {
+                node=*pos;
+                if(node&kValueIsFinal) {
+                    // Leave the final value for hasValue() to read.
+                } else {
+                    // Use the non-final value as the jump delta.
+                    ++pos;
+                    readCompactInt(node);
+                    pos+=value;
+                }
+            }
+            return TRUE;
+        }
+        if(inByte<trieByte || length--==0) {
+            stop();
+            return FALSE;
+        }
+        pos+=bytesPerLead[*pos>>1];
+    }
+}
+
+UBool
+ByteTrie::next(int32_t inByte) {
     if(pos==NULL) {
         return FALSE;
     }
@@ -113,66 +177,7 @@ ByteTrie::next(int inByte) {
     }
     ++pos;
     if(node<kMinLinearMatch) {
-        // Branch according to the current byte.
-        while(node>=kMinThreeWayBranch) {
-            // Branching on a byte value,
-            // with a jump delta for less-than, a compact int for equals,
-            // and continuing for greater-than.
-            // The less-than and greater-than branches must lead to branch nodes again.
-            node-=kMinThreeWayBranch;
-            uint8_t trieByte=*pos++;
-            if(inByte<trieByte) {
-                int32_t delta=readFixedInt(node);
-                pos+=delta;
-            } else {
-                pos+=node+1;  // Skip fixed-width integer.
-                node=*pos;
-                U_ASSERT(node>=kMinValueLead);
-                if(inByte==trieByte) {
-                    if(node&kValueIsFinal) {
-                        // Leave the final value for hasValue() to read.
-                    } else {
-                        // Use the non-final value as the jump delta.
-                        ++pos;
-                        readCompactInt(node);
-                        pos+=value;
-                    }
-                    return TRUE;
-                } else {  // inByte>trieByte
-                    pos+=bytesPerLead[node>>1];
-                }
-            }
-            node=*pos++;
-            U_ASSERT(node<kMinLinearMatch);
-        }
-        // Branch node with a list of key-value pairs where
-        // values are compact integers: either final values or jump deltas.
-        // If the last key byte matches, just continue after it rather
-        // than jumping.
-        length=node+1;  // Actual list length minus 1.
-        for(;;) {
-            uint8_t trieByte=*pos++;
-            U_ASSERT(length==0 || *pos>=kMinValueLead);
-            if(inByte==trieByte) {
-                if(length>0) {
-                    node=*pos;
-                    if(node&kValueIsFinal) {
-                        // Leave the final value for hasValue() to read.
-                    } else {
-                        // Use the non-final value as the jump delta.
-                        ++pos;
-                        readCompactInt(node);
-                        pos+=value;
-                    }
-                }
-                return TRUE;
-            }
-            if(inByte<trieByte || length--==0) {
-                stop();
-                return FALSE;
-            }
-            pos+=bytesPerLead[*pos>>1];
-        }
+        return branchNext(node, inByte);
     } else {
         // Match the first of length+1 bytes.
         length=node-kMinLinearMatch;  // Actual match length minus 1.
@@ -184,6 +189,89 @@ ByteTrie::next(int inByte) {
             // No match.
             stop();
             return FALSE;
+        }
+    }
+}
+
+UBool
+ByteTrie::next(const char *s, int32_t sLength) {
+    if(pos==NULL) {
+        // Return FALSE if there are input bytes,
+        // but TRUE if not, so that next(string) is equivalent to
+        // for(each byte b)
+        //     if(!next(b)) return FALSE;
+        return sLength==0 || (sLength<0 && *s==0);
+    }
+    haveValue=FALSE;
+    int32_t length=remainingMatchLength;  // Actual remaining match length minus 1.
+    for(;;) {
+        // Fetch the next input byte, if there is one.
+        // Continue a linear-match node without rechecking sLength<0.
+        int32_t inByte;
+        if(sLength<0) {
+            for(;;) {
+                if((inByte=*s++)==0) {
+                    remainingMatchLength=length;
+                    return TRUE;
+                }
+                if(length<0) {
+                    break;
+                }
+                if(inByte!=*pos) {
+                    stop();
+                    return FALSE;
+                }
+                ++pos;
+                --length;
+            }
+        } else {
+            for(;;) {
+                if(sLength==0) {
+                    remainingMatchLength=length;
+                    return TRUE;
+                }
+                inByte=*s++;
+                --sLength;
+                if(length<0) {
+                    break;
+                }
+                if(inByte!=*pos) {
+                    stop();
+                    return FALSE;
+                }
+                ++pos;
+                --length;
+            }
+        }
+        int32_t node=*pos;
+        if(node>=kMinValueLead) {
+            if(node&kValueIsFinal) {
+                // No further matching bytes.
+                stop();
+                return FALSE;
+            } else {
+                // Skip intermediate value.
+                pos+=bytesPerLead[node>>1];
+                // The next node must not also be a value node.
+                node=*pos;
+                U_ASSERT(node<kMinValueLead);
+            }
+        }
+        ++pos;
+        if(node<kMinLinearMatch) {
+            if(!branchNext(node, inByte)) {
+                return FALSE;
+            }
+        } else {
+            // Match length+1 bytes.
+            length=node-kMinLinearMatch;  // Actual match length minus 1.
+            if(inByte!=*pos) {
+                // No match.
+                stop();
+                return FALSE;
+            }
+            ++pos;
+            --length;
         }
     }
 }
@@ -203,27 +291,6 @@ ByteTrie::hasValue() {
         return TRUE;
     }
     return FALSE;
-}
-
-UBool
-ByteTrie::hasValue(const char *s, int32_t length) {
-    if(length<0) {
-        // NUL-terminated
-        int b;
-        while((b=(uint8_t)*s++)!=0) {
-            if(!next(b)) {
-                return FALSE;
-            }
-        }
-    } else {
-        while(length>0) {
-            if(!next((uint8_t)*s++)) {
-                return FALSE;
-            }
-            --length;
-        }
-    }
-    return hasValue();
 }
 
 UBool

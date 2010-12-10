@@ -637,7 +637,7 @@ void UCharTrieTest::checkHasValue(const UnicodeString &trieUChars,
     for(int32_t i=0; i<dataLength; ++i) {
         UnicodeString expectedString=UnicodeString(data[i].s, -1, US_INV).unescape();
         int32_t stringLength= (i&1) ? -1 : expectedString.length();
-        if(!trie.hasValue(expectedString.getTerminatedBuffer(), stringLength)) {
+        if(!trie.next(expectedString.getTerminatedBuffer(), stringLength) || !trie.hasValue()) {
             errln("trie does not seem to contain %s", data[i].s);
         } else if(trie.getValue()!=data[i].value) {
             errln("trie value for %s is %ld=0x%lx instead of expected %ld=0x%lx",
@@ -710,12 +710,15 @@ void UCharTrieTest::checkHasValueWithState(const UnicodeString &trieUChars,
         ) {
             errln("trie.next(part of %s) changes hasValue()/getValue() after mark/next(0)/resetToMark",
                   data[i].s);
-        } else if(!trie.hasValue(expectedString.getTerminatedBuffer()+partialLength,
-                                 stringLength-partialLength)) {
+        } else if(!trie.next(expectedString.getTerminatedBuffer()+partialLength,
+                             stringLength-partialLength) ||
+                  !trie.hasValue()) {
             errln("trie.next(part of %s) does not seem to contain %s after mark/next(0)/resetToMark",
                   data[i].s);
-        } else if(!trie.resetToState(state).hasValue(expectedString.getTerminatedBuffer()+partialLength,
-                                                     stringLength-partialLength)) {
+        } else if(!trie.resetToState(state).
+                        next(expectedString.getTerminatedBuffer()+partialLength,
+                             stringLength-partialLength) ||
+                  !trie.hasValue()) {
             errln("trie does not seem to contain %s after mark/hasValue(rest)/resetToMark", data[i].s);
         } else if(trie.getValue()!=data[i].value) {
             errln("trie value for %s is %ld=0x%lx instead of expected %ld=0x%lx",
