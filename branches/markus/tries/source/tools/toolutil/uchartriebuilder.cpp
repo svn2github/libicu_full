@@ -311,7 +311,7 @@ UCharTrieBuilder::makeListBranchNode(int32_t start, int32_t limit, int32_t unitI
 // must lead to branch nodes again, thus each side must have at least two units to branch on.)
 void
 UCharTrieBuilder::makeSplitBranchNode(int32_t start, int32_t limit, int32_t unitIndex, int32_t length) {
-    // Three-way branch on the middle unit.
+    // Split-branch on the middle unit.
     // Find the middle unit.
     length/=2;  // >=1
     int32_t i=start;
