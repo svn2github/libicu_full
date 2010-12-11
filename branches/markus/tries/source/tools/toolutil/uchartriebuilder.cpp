@@ -205,8 +205,8 @@ UCharTrieBuilder::makeNode(int32_t start, int32_t limit, int32_t unitIndex) {
         return;
     }
     // Now all [start..limit[ strings are longer than unitIndex.
-    int32_t minUnit=(uint8_t)elements[start].charAt(unitIndex, strings);
-    int32_t maxUnit=(uint8_t)elements[limit-1].charAt(unitIndex, strings);
+    int32_t minUnit=elements[start].charAt(unitIndex, strings);
+    int32_t maxUnit=elements[limit-1].charAt(unitIndex, strings);
     if(minUnit==maxUnit) {
         // Linear-match node: All strings have the same character at unitIndex.
         int32_t lastUnitIndex=unitIndex;
