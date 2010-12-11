@@ -18,6 +18,8 @@
  *  make
  *  export LD_LIBRARY_PATH=../../../lib:../../../stubdata:../../../tools/ctestfw
  *  ./dicttrieperf --sourcedir <ICU build tree>/data/out/tmp --passes 3 --iterations 1000
+ * or
+ *  ./dicttrieperf -f <ICU source tree>/source/data/brkitr/thaidict.txt --passes 3 --iterations 250
  */
 
 #include <stdio.h>
@@ -28,6 +30,9 @@
 #include "charstr.h"
 #include "package.h"
 #include "toolutil.h"
+#include "ucbuf.h"  // struct ULine
+#include "uchartrie.h"
+#include "uchartriebuilder.h"
 #include "uoptions.h"
 #include "uvectr32.h"
 
@@ -37,12 +42,33 @@
 class DictionaryTriePerfTest : public UPerfTest {
 public:
     DictionaryTriePerfTest(int32_t argc, const char *argv[], UErrorCode &status)
-            : UPerfTest(argc, argv, NULL, 0, "", status) {
+            : UPerfTest(argc, argv, NULL, 0, "", status), numTextLines(0) {
+        if(hasFile()) {
+            getLines(status);
+            for(int32_t i=0; i<numLines; ++i) {
+                // Skip comment lines (start with a character below 'A').
+                if(lines[i].name[0]>=0x41) {
+                    ++numTextLines;
+                    // Remove trailing CR LF.
+                    int32_t len=lines[i].len;
+                    UChar c;
+                    while(len>0 && ((c=lines[i].name[len-1])==0xa || c==0xd)) {
+                        --len;
+                    }
+                    lines[i].len=len;
+                }
+            }
+        }
     }
 
     virtual UPerfFunction *runIndexedTest(int32_t index, UBool exec, const char *&name, char *par=NULL);
 
     const char *getSourceDir() const { return sourceDir; }
+
+    UBool hasFile() const { return ucharBuf!=NULL; }
+    const ULine *getCachedLines() const { return lines; }
+    int32_t getNumLines() const { return numLines; }
+    int32_t numTextLines;  // excluding comment lines
 };
 
 // Performance test function object.
@@ -289,30 +315,112 @@ protected:
     CharString itemNames;
 };
 
+// Performance test function object.
+// Each subclass loads a dictionary text file
+// from the -s or --sourcedir path plus -f or --file-name.
+// For example, <ICU source dir>/source/data/brkitr/thaidict.txt.
+class DictLookup : public UPerfFunction {
+public:
+    DictLookup(const DictionaryTriePerfTest &perfTest) : perf(perfTest) {}
+
+    virtual long getOperationsPerIteration() {
+        return perf.numTextLines;
+    }
+
+protected:
+    const DictionaryTriePerfTest &perf;
+};
+
+class UCharTrieDictLookup : public DictLookup {
+public:
+    UCharTrieDictLookup(const DictionaryTriePerfTest &perfTest)
+            : DictLookup(perfTest) {
+        IcuToolErrorCode errorCode("UCharTrieDictLookup()");
+        const ULine *lines=perf.getCachedLines();
+        int32_t numLines=perf.getNumLines();
+        for(int32_t i=0; i<numLines; ++i) {
+            // Skip comment lines (start with a character below 'A').
+            if(lines[i].name[0]<0x41) {
+                continue;
+            }
+            builder.add(UnicodeString(FALSE, lines[i].name, lines[i].len), 0, errorCode);
+        }
+        int32_t length=builder.build(errorCode).length();
+        printf("size of UCharTrie:      %6ld bytes\n", (long)length*2);
+    }
+
+    virtual ~UCharTrieDictLookup() {}
+
+    virtual void call(UErrorCode *pErrorCode) {
+        UnicodeString uchars(builder.build(*pErrorCode));
+        UCharTrie trie(uchars.getBuffer());
+        const ULine *lines=perf.getCachedLines();
+        int32_t numLines=perf.getNumLines();
+        for(int32_t i=0; i<numLines; ++i) {
+            // Skip comment lines (start with a character below 'A').
+            if(lines[i].name[0]<0x41) {
+                continue;
+            }
+            if(!trie.reset().next(lines[i].name, lines[i].len) || !trie.hasValue()) {
+                fprintf(stderr, "word %ld (0-based) not found\n", (long)i);
+            }
+        }
+    }
+
+protected:
+    UCharTrieBuilder builder;
+};
+
 UPerfFunction *DictionaryTriePerfTest::runIndexedTest(int32_t index, UBool exec,
                                                       const char *&name, char * /*par*/) {
-    switch(index) {
-    case 0:
-        name="simplebinarysearch";
-        if(exec) {
-            return new BinarySearchPackageLookup(*this);
+    if(hasFile()) {
+        switch(index) {
+        case 0:
+#if 0
+            name="compacttrie";
+            if(exec) {
+                return new XXX(*this);
+            }
+            break;
+        case 1:
+#endif
+            name="uchartrie";
+            if(exec) {
+                return new UCharTrieDictLookup(*this);
+            }
+            break;
+        default:
+            name="";
+            break;
         }
-        break;
-    case 1:
-        name="prefixbinarysearch";
-        if(exec) {
-            return new PrefixBinarySearchPackageLookup(*this);
+    } else {
+        if(index==0 && exec) {
+            puts("Running ByteTrie perf tests on the .dat package file from the --sourcedir.\n"
+                 "For UCharTrie perf tests on a dictionary text file, specify the -f or --file-name.\n");
         }
-        break;
-    case 2:
-        name="bytetrie";
-        if(exec) {
-            return new ByteTriePackageLookup(*this);
+        switch(index) {
+        case 0:
+            name="simplebinarysearch";
+            if(exec) {
+                return new BinarySearchPackageLookup(*this);
+            }
+            break;
+        case 1:
+            name="prefixbinarysearch";
+            if(exec) {
+                return new PrefixBinarySearchPackageLookup(*this);
+            }
+            break;
+        case 2:
+            name="bytetrie";
+            if(exec) {
+                return new ByteTriePackageLookup(*this);
+            }
+            break;
+        default:
+            name="";
+            break;
         }
-        break;
-    default:
-        name="";
-        break;
     }
     return NULL;
 }
