@@ -80,33 +80,17 @@ ByteTrie::readFixedInt(int32_t bytesPerValue) {
 UBool
 ByteTrie::branchNext(int32_t node, int32_t inByte) {
     // Branch according to the current byte.
-    while(node>=kMinThreeWayBranch) {
+    while(node>=kMinSplitBranch) {
         // Branching on a byte value,
-        // with a jump delta for less-than, a compact int for equals,
-        // and continuing for greater-than.
-        // The less-than and greater-than branches must lead to branch nodes again.
-        node-=kMinThreeWayBranch;
+        // with a jump delta for less-than, and continuing for greater-or-equal.
+        // Both edges must lead to branch nodes again.
+        node-=kMinSplitBranch;
         uint8_t trieByte=*pos++;
         if(inByte<trieByte) {
             int32_t delta=readFixedInt(node);
             pos+=delta;
         } else {
             pos+=node+1;  // Skip fixed-width integer.
-            node=*pos;
-            U_ASSERT(node>=kMinValueLead);
-            if(inByte==trieByte) {
-                if(node&kValueIsFinal) {
-                    // Leave the final value for hasValue() to read.
-                } else {
-                    // Use the non-final value as the jump delta.
-                    ++pos;
-                    readCompactInt(node);
-                    pos+=value;
-                }
-                return TRUE;
-            } else {  // inByte>trieByte
-                pos+=bytesPerLead[node>>1];
-            }
         }
         node=*pos++;
         U_ASSERT(node<kMinLinearMatch);
@@ -348,20 +332,16 @@ ByteTrie::findUniqueValue() {
     for(;;) {
         int32_t node=*pos++;
         if(node<kMinLinearMatch) {
-            while(node>=kMinThreeWayBranch) {
-                // three-way-branch node
-                node-=kMinThreeWayBranch;
+            while(node>=kMinSplitBranch) {
+                // split-branch node
+                node-=kMinSplitBranch;
                 ++pos;  // ignore the comparison byte
                 // less-than branch
                 int32_t delta=readFixedInt(node);
                 if(!findUniqueValueAt(delta)) {
                     return FALSE;
                 }
-                // equals branch
-                if(!findUniqueValueFromBranchEntry()) {
-                    return FALSE;
-                }
-                // greater-than branch
+                // greater-or-equal branch
                 node=*pos++;
                 U_ASSERT(node<kMinLinearMatch);
             }
@@ -428,23 +408,17 @@ ByteTrie::getNextBranchBytes(ByteSink &out) {
     int32_t count=0;
     int32_t node=*pos++;
     U_ASSERT(node<kMinLinearMatch);
-    while(node>=kMinThreeWayBranch) {
-        // three-way-branch node
-        node-=kMinThreeWayBranch;
-        uint8_t trieByte=*pos++;
+    while(node>=kMinSplitBranch) {
+        // split-branch node
+        node-=kMinSplitBranch;
+        ++pos;  // ignore the comparison byte
         // less-than branch
         int32_t delta=readFixedInt(node);
         const uint8_t *currentPos=pos;
         pos+=delta;
         count+=getNextBranchBytes(out);
         pos=currentPos;
-        // equals branch
-        append(out, trieByte);
-        ++count;
-        node=*pos;
-        U_ASSERT(node>=kMinValueLead);
-        pos+=bytesPerLead[node>>1];
-        // greater-than branch
+        // greater-or-equal branch
         node=*pos++;
         U_ASSERT(node<kMinLinearMatch);
     }

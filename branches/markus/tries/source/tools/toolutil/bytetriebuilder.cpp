@@ -271,7 +271,7 @@ ByteTrieBuilder::makeNode(int32_t start, int32_t limit, int32_t byteIndex) {
     if(length<=ByteTrie::kMaxListBranchLength) {
         makeListBranchNode(start, limit, byteIndex, length);
     } else {
-        makeThreeWayBranchNode(start, limit, byteIndex, length);
+        makeSplitBranchNode(start, limit, byteIndex, length);
     }
 }
 
@@ -333,58 +333,37 @@ ByteTrieBuilder::makeListBranchNode(int32_t start, int32_t limit, int32_t byteIn
 }
 
 // start<limit && all strings longer than byteIndex &&
-// at least five different bytes at byteIndex
-// (At least five, not three, because the left and right outbound edges
+// at least four different bytes at byteIndex
+// (At least four because the left and right outbound edges
 // must lead to branch nodes again, thus each side must have at least two units to branch on.)
 void
-ByteTrieBuilder::makeThreeWayBranchNode(int32_t start, int32_t limit, int32_t byteIndex, int32_t length) {
-    // Three-way branch on the middle byte.
+ByteTrieBuilder::makeSplitBranchNode(int32_t start, int32_t limit, int32_t byteIndex, int32_t length) {
+    // Split-branch on the middle byte.
     // Find the middle byte.
     length/=2;  // >=1
     int32_t i=start;
+    char byte;
     do {
-        char byte=elements[i++].charAt(byteIndex, strings);
+        byte=elements[i++].charAt(byteIndex, strings);
         while(byte==elements[i].charAt(byteIndex, strings)) {
             ++i;
         }
     } while(--length>0);
+    byte=elements[i].charAt(byteIndex, strings);  // middle byte
     // Encode the less-than branch first.
     // Unlike in the list-branch node (see comments above) where
     // all jumps are encoded in compact integers, in this node type the
     // less-than jump is more efficient
-    // (because it is only ever a jump, with a known number of bytes)
-    // than the equals jump (where a jump needs to be distinguished from a final value).
+    // (because it is only ever a jump, with a known number of bytes,
+    // and it need not be distinguished from a final value).
     makeNode(start, i, byteIndex);
     int32_t leftNode=bytesLength;
-    // Find the elements range for the middle byte.
-    start=i;
-    char byte=elements[i++].charAt(byteIndex, strings);
-    while(byte==elements[i].charAt(byteIndex, strings)) {
-        ++i;
-    }
-    // Encode the equals branch.
-    int32_t value;
-    UBool final;
-    if(start==i-1 && byteIndex+1==elements[start].getStringLength(strings)) {
-        // Store the final value for the one string ending with this byte.
-        value=elements[start].getValue();
-        final=TRUE;
-    } else {
-        // Store the start position of the sub-node.
-        makeNode(start, i, byteIndex+1);
-        value=bytesLength;
-        final=FALSE;
-    }
-    // Encode the greater-than branch last because we do not jump for it at all.
+    // Encode the greater-or-equal branch last because we do not jump for it at all.
     makeNode(i, limit, byteIndex);
     // Write this node.
-    if(!final) {
-        value=bytesLength-value;
-    }
-    writeCompactInt(value, final);  // equals
     int32_t bytesForLessThan=writeFixedInt(bytesLength-leftNode);  // less-than
     write(byte);
-    write(ByteTrie::kMinThreeWayBranch+bytesForLessThan-1);
+    write(ByteTrie::kMinSplitBranch+bytesForLessThan-1);
 }
 
 UBool

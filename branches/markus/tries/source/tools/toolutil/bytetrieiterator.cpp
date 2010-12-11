@@ -75,26 +75,7 @@ ByteTrieIterator::next(UErrorCode &errorCode) {
         trie.pos=trie.bytes+stack.elementAti(stackSize-2);
         str.truncate(state&0xfffffff);
         state=(state>>28)&0xf;
-        if(state==kThreeWayBranchEquals) {
-            // Known to be a three-way-branch node.
-            int32_t node=*trie.pos;
-            uint8_t trieByte=trie.pos[1];
-            // Skip node, trie byte and fixed-width integer.
-            trie.pos+=node-ByteTrie::kMinThreeWayBranch+3;
-            UBool isFinal=trie.readCompactInt();
-            // Rewrite the top of the stack for the greater-than branch.
-            stack.setElementAt((int32_t)(trie.pos-trie.bytes), stackSize-2);
-            stack.setElementAt((kThreeWayBranchGreaterThan<<28)|str.length(), stackSize-1);
-            str.append((char)trieByte, errorCode);
-            if(isFinal) {
-                value=trie.value;
-                trie.stop();
-                sp.set(str.data(), str.length());
-                return TRUE;
-            } else {
-                trie.pos+=trie.value;
-            }
-        } else if(state==kThreeWayBranchGreaterThan) {
+        if(state==kSplitBranchGreaterOrEqual) {
             // Pop the state.
             stack.setSize(stackSize-2);
         } else {
@@ -141,17 +122,16 @@ ByteTrieIterator::next(UErrorCode &errorCode) {
         }
         if(node<ByteTrie::kMinLinearMatch) {
             // Branch node, needs to take the first outbound edge and push state for the rest.
-            if(node>=ByteTrie::kMinThreeWayBranch) {
+            if(node>=ByteTrie::kMinSplitBranch) {
                 // Branching on a byte value,
-                // with a jump delta for less-than, a compact int for equals,
-                // and continuing for greater-than.
-                node-=ByteTrie::kMinThreeWayBranch;
-                stack.addElement((int32_t)(trie.pos-1-trie.bytes), errorCode);
-                stack.addElement((kThreeWayBranchEquals<<28)|str.length(), errorCode);
-                // For the less-than branch, ignore the trie byte.
-                ++trie.pos;
+                // with a jump delta for less-than, and continuing for greater-or-equal.
+                // Both edges must lead to branch nodes again.
+                node-=ByteTrie::kMinSplitBranch;
+                ++trie.pos;  // ignore the comparison byte
                 // Jump.
                 int32_t delta=trie.readFixedInt(node);
+                stack.addElement((int32_t)(trie.pos-trie.bytes), errorCode);
+                stack.addElement((kSplitBranchGreaterOrEqual<<28)|str.length(), errorCode);
                 trie.pos+=delta;
             } else {
                 // Branch node with a list of key-value pairs where

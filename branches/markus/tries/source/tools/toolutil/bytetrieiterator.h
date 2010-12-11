@@ -103,11 +103,10 @@ private:
     // The first integer is an offset from ByteTrie.bytes.
     // The second integer has the str.length() from before the node in bits 27..0,
     // and the state in bits 31..28.
-    // Except for the following values for a three-way-branch node,
+    // Except for the following value for a split-branch node,
     // the lower values indicate how many branches of a list-branch node
     // are left to be visited.
-    static const int32_t kThreeWayBranchEquals=0xe;
-    static const int32_t kThreeWayBranchGreaterThan=0xf;
+    static const int32_t kSplitBranchGreaterOrEqual=0xf;
 
     ByteTrie trie;
     ByteTrie::State initialState;

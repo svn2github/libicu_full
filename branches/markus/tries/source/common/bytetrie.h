@@ -247,10 +247,9 @@ private:
     //        Instead of a jump, a final value may be stored.
     //        For the last byte listed there is no "jump" or value directly in
     //        the branch node: Instead, matching continues with the next node.
-    //    - Three-way-branch node: Compares the input byte with one included byte.
+    //    - Split-branch node: Compares the input byte with one included byte.
     //        If less-than, "jumps" to another node which is a branch node.
-    //        If equals, "jumps" to another node (any type) or stores a final value.
-    //        If greater-than, matching continues with the next node which is a branch node.
+    //        Otherwise, matching continues with the next node which is a branch node.
 
     // Node lead byte values.
 
@@ -260,14 +259,14 @@ private:
     // Values are compact ints: Final values or jump deltas.
     static const int32_t kMaxListBranchLength=9;
 
-    // 08..0b: Three-way-branch node with less/equal/greater outbound edges.
+    // 08..0b: Split-branch node with less/greater-or-equal outbound edges.
     // The 2 lower bits indicate the length of the less-than "jump" (1..4 bytes).
-    // Followed by the comparison byte, the equals value (compact int) and
-    // continue reading the next node from there for the "greater" edge.
-    static const int32_t kMinThreeWayBranch=kMaxListBranchLength-1;  // 8
+    // Followed by the comparison byte, and
+    // continue reading the next node from there for the "greater-or-equal" edge.
+    static const int32_t kMinSplitBranch=kMaxListBranchLength-1;  // 8
 
     // 0c..1f: Linear-match node, match 1..24 bytes and continue reading the next node.
-    static const int32_t kMinLinearMatch=kMinThreeWayBranch+4;  // 0xc
+    static const int32_t kMinLinearMatch=kMinSplitBranch+4;  // 0xc
     static const int32_t kMaxLinearMatchLength=20;
 
     // 20..ff: Variable-length value node.
