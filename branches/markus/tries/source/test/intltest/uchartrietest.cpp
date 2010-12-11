@@ -176,7 +176,7 @@ void UCharTrieTest::TestLongSequence() {
 }
 
 void UCharTrieTest::TestLongBranch() {
-    // Three-way branch and interesting compact-integer values.
+    // Split-branch and interesting compact-integer values.
     static const StringAndValue data[]={
         { "a", -2 },
         { "b", -1 },
@@ -272,7 +272,7 @@ UnicodeString UCharTrieTest::buildMonthsTrie(UCharTrieBuilder &builder) {
     // All types of nodes leading to the same value,
     // for code coverage of recursive functions.
     // In particular, we need a lot of branches on some single level
-    // to exercise a three-way-branch node.
+    // to exercise a split-branch node.
     static const StringAndValue data[]={
         { "august", 8 },
         { "jan", 1 },

@@ -74,25 +74,7 @@ UCharTrieIterator::next(UErrorCode &errorCode) {
         trie.pos=trie.uchars+stack.elementAti(stackSize-2);
         str.truncate(state&0xfffffff);
         state=(state>>28)&0xf;
-        if(state==kThreeWayBranchEquals) {
-          // Known to be a three-way-branch node.
-            int32_t node=*trie.pos;
-            UChar trieUnit=trie.pos[1];
-            // Skip node, trie unit and fixed-width integer.
-            trie.pos+=(node&1)+3;
-            node>>=1;
-            value=trie.readFixedInt(node);
-            // Rewrite the top of the stack for the greater-than branch.
-            stack.setElementAt((int32_t)(trie.pos-trie.uchars), stackSize-2);
-            stack.setElementAt((kThreeWayBranchGreaterThan<<28)|str.length(), stackSize-1);
-            str.append(trieUnit);
-            if(node&UCharTrie::kFixedIntIsFinal) {
-                trie.stop();
-                return TRUE;
-            } else {
-                trie.pos+=value;
-            }
-        } else if(state==kThreeWayBranchGreaterThan) {
+        if(state==kSplitBranchGreaterOrEqual) {
             // Pop the state.
             stack.setSize(stackSize-2);
         } else {
@@ -152,19 +134,19 @@ UCharTrieIterator::next(UErrorCode &errorCode) {
         }
         if(node<UCharTrie::kMinLinearMatch) {
             // Branch node, needs to take the first outbound edge and push state for the rest.
-            // We will need to re-read the node lead unit.
-            stack.addElement((int32_t)(trie.pos-1-trie.uchars), errorCode);
-            if(node>=UCharTrie::kMinThreeWayBranch) {
+            if(node>=UCharTrie::kMinSplitBranch) {
                 // Branching on a unit value,
-                // with a jump delta for less-than, a fixed-width int for equals,
-                // and continuing for greater-than.
-                stack.addElement((kThreeWayBranchEquals<<28)|str.length(), errorCode);
-                // For the less-than branch, ignore the trie unit.
-                ++trie.pos;
+                // with a jump delta for less-than, and continuing for greater-or-equal.
+                // Both edges must lead to branch nodes again.
+                ++trie.pos;  // ignore the comparison unit
                 // Jump.
                 int32_t delta=trie.readFixedInt(node);
+                stack.addElement((int32_t)(trie.pos-trie.uchars), errorCode);
+                stack.addElement((kSplitBranchGreaterOrEqual<<28)|str.length(), errorCode);
                 trie.pos+=delta;
             } else {
+                // We will need to re-read the node lead unit.
+                stack.addElement((int32_t)(trie.pos-1-trie.uchars), errorCode);
                 // Branch node with a list of key-value pairs where
                 // values are fixed-width integers: either final values or jump deltas.
                 int32_t length=(node>>UCharTrie::kMaxListBranchLengthShift)+1;

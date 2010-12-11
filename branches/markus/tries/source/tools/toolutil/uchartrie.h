@@ -288,10 +288,9 @@ private:
     //        Instead of a jump, a final value may be stored.
     //        For the last unit listed there is no "jump" or value directly in
     //        the branch node: Instead, matching continues with the next node.
-    //    - Three-way-branch node: Compares the input unit with one included unit.
+    //    - Split-branch node: Compares the input unit with one included unit.
     //        If less-than, "jumps" to another node which is a branch node.
-    //        If equals, "jumps" to another node (any type) or stores a final value.
-    //        If greater-than, matching continues with the next node which is a branch node.
+    //        Otherwise, matching continues with the next node which is a branch node.
 
     // Node lead unit values.
 
@@ -310,18 +309,16 @@ private:
     // 8 more bit pairs in the next unit, for branch length > kMaxListBranchSmallLength.
     static const int32_t kMaxListBranchLength=kMaxListBranchSmallLength+8;  // 14
 
-    // 3400..3407: Three-way-branch node with less/equal/greater outbound edges.
-    // The 3 lower bits indicate the length of the less-than "jump" (bit 0: 1 or 2 units),
-    // the length of the equals value (bit 1: 1 or 2),
-    // and whether the equals value is final (bit 2).
-    // Followed by the comparison unit, the equals value and
-    // continue reading the next node from there for the "greater" edge.
-    static const int32_t kMinThreeWayBranch=
+    // 3400..3401: Split-branch node with less/greater-or-equal outbound edges.
+    // The lower bit indicates the length of the less-than "jump" (1 or 2 units).
+    // Followed by the comparison unit, and
+    // continue reading the next node from there for the "greater-or-equal" edge.
+    static const int32_t kMinSplitBranch=
         (kMaxListBranchLength-1)<<kMaxListBranchLengthShift;  // 0x3400
 
-    // 3408..341f: Linear-match node, match 1..24 units and continue reading the next node.
-    static const int32_t kMinLinearMatch=kMinThreeWayBranch+8;  // 0x3408
-    static const int32_t kMaxLinearMatchLength=24;
+    // 3402..341f: Linear-match node, match 1..30 units and continue reading the next node.
+    static const int32_t kMinLinearMatch=kMinSplitBranch+2;  // 0x3402
+    static const int32_t kMaxLinearMatchLength=30;
 
     // 3420..ffff: Variable-length value node.
     // If odd, the value is final. (Otherwise, intermediate value or jump delta.)

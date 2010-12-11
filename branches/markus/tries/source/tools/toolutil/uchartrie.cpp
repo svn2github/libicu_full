@@ -87,32 +87,16 @@ UCharTrie::readFixedInt(int32_t node) {
 UBool
 UCharTrie::branchNext(int32_t node, int32_t uchar) {
     // Branch according to the current unit.
-    while(node>=kMinThreeWayBranch) {
+    while(node>=kMinSplitBranch) {
         // Branching on a unit value,
-        // with a jump delta for less-than, a compact int for equals,
-        // and continuing for greater-than.
-        // The less-than and greater-than branches must lead to branch nodes again.
+        // with a jump delta for less-than, and continuing for greater-or-equal.
+        // Both edges must lead to branch nodes again.
         UChar trieUnit=*pos++;
         if(uchar<trieUnit) {
             int32_t delta=readFixedInt(node);
             pos+=delta;
         } else {
             pos+=(node&kFixedInt32)+1;  // Skip fixed-width integer.
-            node>>=1;
-            if(uchar==trieUnit) {
-                value=readFixedInt(node);
-                if(node&kFixedIntIsFinal) {
-                    haveValue=TRUE;
-                    stop();
-                } else {
-                    // Use the non-final value as the jump delta.
-                    pos+=value;
-                }
-                return TRUE;
-            } else {  // uchar>trieUnit
-                // Skip the equals value.
-                pos+=(node&kFixedInt32)+1;
-            }
         }
         node=*pos++;
         U_ASSERT(node<kMinLinearMatch);
@@ -370,20 +354,15 @@ UCharTrie::findUniqueValue() {
     for(;;) {
         int32_t node=*pos++;
         if(node<kMinLinearMatch) {
-            while(node>=kMinThreeWayBranch) {
-                // three-way-branch node
+            while(node>=kMinSplitBranch) {
+                // split-branch node
                 ++pos;  // ignore the comparison unit
                 // less-than branch
                 int32_t delta=readFixedInt(node);
                 if(!findUniqueValueAt(delta)) {
                     return FALSE;
                 }
-                node>>=1;
-                // equals branch
-                if(!findUniqueValueFromBranchEntry(node)) {
-                    return FALSE;
-                }
-                // greater-than branch
+                // greater-or-equal branch
                 node=*pos++;
                 U_ASSERT(node<kMinLinearMatch);
             }
@@ -456,20 +435,16 @@ UCharTrie::getNextBranchUChars(Appendable &out) {
     int32_t count=0;
     int32_t node=*pos++;
     U_ASSERT(node<kMinLinearMatch);
-    while(node>=kMinThreeWayBranch) {
-        // three-way-branch node
-        UChar trieUnit=*pos++;
+    while(node>=kMinSplitBranch) {
+        // split-branch node
+        ++pos;  // ignore the comparison unit
         // less-than branch
         int32_t delta=readFixedInt(node);
         const UChar *currentPos=pos;
         pos+=delta;
         count+=getNextBranchUChars(out);
         pos=currentPos;
-        // equals branch
-        out.append(trieUnit);
-        ++count;
-        pos+=((node>>1)&kFixedInt32)+1;
-        // greater-than branch
+        // greater-or-equal branch
         node=*pos++;
         U_ASSERT(node<kMinLinearMatch);
     }

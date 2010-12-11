@@ -237,7 +237,7 @@ UCharTrieBuilder::makeNode(int32_t start, int32_t limit, int32_t unitIndex) {
     if(length<=UCharTrie::kMaxListBranchLength) {
         makeListBranchNode(start, limit, unitIndex, length);
     } else {
-        makeThreeWayBranchNode(start, limit, unitIndex, length);
+        makeSplitBranchNode(start, limit, unitIndex, length);
     }
 }
 
@@ -306,53 +306,32 @@ UCharTrieBuilder::makeListBranchNode(int32_t start, int32_t limit, int32_t unitI
 }
 
 // start<limit && all strings longer than unitIndex &&
-// at least five different units at unitIndex
-// (At least five, not three, because the left and right outbound edges
+// at least four different units at unitIndex
+// (At least four because the left and right outbound edges
 // must lead to branch nodes again, thus each side must have at least two units to branch on.)
 void
-UCharTrieBuilder::makeThreeWayBranchNode(int32_t start, int32_t limit, int32_t unitIndex, int32_t length) {
+UCharTrieBuilder::makeSplitBranchNode(int32_t start, int32_t limit, int32_t unitIndex, int32_t length) {
     // Three-way branch on the middle unit.
     // Find the middle unit.
     length/=2;  // >=1
     int32_t i=start;
+    UChar unit;
     do {
-        UChar unit=elements[i++].charAt(unitIndex, strings);
+        unit=elements[i++].charAt(unitIndex, strings);
         while(unit==elements[i].charAt(unitIndex, strings)) {
             ++i;
         }
     } while(--length>0);
+    unit=elements[i].charAt(unitIndex, strings);  // middle unit
     // Encode the less-than branch first.
     makeNode(start, i, unitIndex);
     int32_t leftNode=ucharsLength;
-    // Find the elements range for the middle unit.
-    start=i;
-    UChar unit=elements[i++].charAt(unitIndex, strings);
-    while(unit==elements[i].charAt(unitIndex, strings)) {
-        ++i;
-    }
-    // Encode the equals branch.
-    int32_t value;
-    UBool final;
-    if(start==i-1 && unitIndex+1==elements[start].getStringLength(strings)) {
-        // Store the final value for the one string ending with this unit.
-        value=elements[start].getValue();
-        final=TRUE;
-    } else {
-        // Store the start position of the sub-node.
-        makeNode(start, i, unitIndex+1);
-        value=ucharsLength;
-        final=FALSE;
-    }
-    // Encode the greater-than branch last because we do not jump for it at all.
+    // Encode the greater-or-equal branch last because we do not jump for it at all.
     makeNode(i, limit, unitIndex);
     // Write this node.
-    if(!final) {
-        value=ucharsLength-value;
-    }
-    int32_t unitsForEquals=writeFixedInt(value);  // equals
     int32_t unitsForLessThan=writeFixedInt(ucharsLength-leftNode);  // less-than
     write(unit);
-    write(UCharTrie::kMinThreeWayBranch+(final<<2)+((unitsForEquals-1)<<1)+unitsForLessThan-1);
+    write(UCharTrie::kMinSplitBranch+unitsForLessThan-1);
 }
 
 UBool
