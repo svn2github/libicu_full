@@ -230,7 +230,25 @@ private:
     void skipCompactInt(int32_t leadUnit);
 
     // Reads a fixed-width integer and post-increments pos.
-    int32_t readFixedInt(int32_t node);
+    inline int32_t readFixedInt(int32_t node) {
+        int32_t fixedInt=*pos++;
+        if(node&kFixedInt32) {
+            fixedInt=(fixedInt<<16)|*pos++;
+        }
+        return fixedInt;
+    }
+
+    // Reads a final value from a list branch.
+    // entryLengths bits 2..1 indicate the value length (0..2 units).
+    inline void readBranchFinalValue(int32_t entryLengths) {
+        if(entryLengths<2) {
+            value=0;
+        } else if(entryLengths<4) {
+            value=*pos;
+        } else {
+            value=(pos[0]<<16)|pos[1];
+        }
+    }
 
     // Handles a branch node for both next(uchar) and next(string).
     UBool branchNext(int32_t node, int32_t uchar);
@@ -307,14 +325,21 @@ private:
     static const int32_t kMaxListBranchSmallLength=6;
     static const int32_t kMaxListBranchLengthShift=(kMaxListBranchSmallLength-1)*2;  // 10
     // 8 more bit pairs in the next unit, for branch length > kMaxListBranchSmallLength.
-    static const int32_t kMaxListBranchLength=kMaxListBranchSmallLength+8;  // 14
+    // static const int32_t kMaxListBranchLength=kMaxListBranchSmallLength+8;  // 14
+
+    // Exactly 3 bits for lengths 2..9.
+    static const int32_t kMaxListBranchLength=9;
+    // One "is final value" bit per entry except for the last one.
+    static const int32_t kListBranchLengthShift=kMaxListBranchLength-1;  // 8
+    static const int32_t kListBranchEntryLengthsShift=kListBranchLengthShift+3;  // 11
+    static const int32_t kListBranchValueLengthsShift=kListBranchEntryLengthsShift+1;  // 12
 
     // 3400..3401: Split-branch node with less/greater-or-equal outbound edges.
     // The lower bit indicates the length of the less-than "jump" (1 or 2 units).
     // Followed by the comparison unit, and
     // continue reading the next node from there for the "greater-or-equal" edge.
-    static const int32_t kMinSplitBranch=
-        (kMaxListBranchLength-1)<<kMaxListBranchLengthShift;  // 0x3400
+    static const int32_t kMinSplitBranch=0x3000;
+    //     (kMaxListBranchLength-1)<<kMaxListBranchLengthShift;  // 0x3400
 
     // 3402..341f: Linear-match node, match 1..30 units and continue reading the next node.
     static const int32_t kMinLinearMatch=kMinSplitBranch+2;  // 0x3402

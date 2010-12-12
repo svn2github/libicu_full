@@ -52,6 +52,7 @@ private:
     void write(const UChar *s, int32_t length);
     void writeCompactInt(int32_t i, UBool final);
     int32_t writeFixedInt(int32_t i);  // Returns number of units.
+    void writeInt(int32_t i, int32_t length);
 
     UnicodeString strings;
     UCharTrieElement *elements;

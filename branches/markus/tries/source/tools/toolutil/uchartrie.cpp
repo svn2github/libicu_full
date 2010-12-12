@@ -75,15 +75,6 @@ UCharTrie::skipCompactInt(int32_t leadUnit) {
     }
 }
 
-int32_t
-UCharTrie::readFixedInt(int32_t node) {
-    int32_t fixedInt=*pos++;
-    if(node&kFixedInt32) {
-        fixedInt=(fixedInt<<16)|*pos++;
-    }
-    return fixedInt;
-}
-
 UBool
 UCharTrie::branchNext(int32_t node, int32_t uchar) {
     // Branch according to the current unit.
@@ -105,25 +96,24 @@ UCharTrie::branchNext(int32_t node, int32_t uchar) {
     // values are either final values or jump deltas.
     // If the last key unit matches, just continue after it rather
     // than jumping.
-    int32_t length=(node>>kMaxListBranchLengthShift)+1;  // Actual list length minus 1.
-    if(length>=kMaxListBranchSmallLength) {
-        // For 7..14 pairs, read the next unit as well.
-        node=(node<<16)|*pos++;
-    }
-    // The lower node bits now contain a bit pair for each (key, value) pair:
-    // - whether the value is final
-    // - whether the value is 1 or 2 units long
+    int32_t length=((node>>kListBranchLengthShift)&7)+1;  // Actual list length minus 1.
+    // 2 bits for the length of a final value (0..2 units) and
+    // 1 bit for the length of a jump delta (1 or 2).
+    int32_t entryLengths=node>>kListBranchEntryLengthsShift;
+    // The lower node bits contain a bit for each (key, value) pair
+    // for whether the value is final.
     for(;;) {
         UChar trieUnit=*pos++;
         if(uchar==trieUnit) {
             if(length>0) {
-                value=readFixedInt(node);
-                if(node&kFixedIntIsFinal) {
+                if(node&1) {
                     haveValue=TRUE;
+                    readBranchFinalValue(entryLengths);
                     stop();
                 } else {
                     // Use the non-final value as the jump delta.
-                    pos+=value;
+                    int32_t delta=readFixedInt(entryLengths);
+                    pos+=delta;
                 }
             }
             return TRUE;
@@ -133,8 +123,8 @@ UCharTrie::branchNext(int32_t node, int32_t uchar) {
             return FALSE;
         }
         // Skip the value.
-        pos+=(node&kFixedInt32)+1;
-        node>>=2;
+        pos+= node&1 ? entryLengths>>1 : (entryLengths&1)+1;
+        node>>=1;
     }
 }
 

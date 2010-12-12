@@ -268,11 +268,18 @@ UCharTrieBuilder::makeListBranchNode(int32_t start, int32_t limit, int32_t unitI
     // then its jump delta would be larger.
     // Instead we write the minUnit sub-node last, for a shorter delta.
     int32_t jumpTargets[UCharTrie::kMaxListBranchLength-1];
+    int32_t oredValues=0;
+    int32_t maxJumpTarget=0;
     do {
         --unitNumber;
-        if(!final[unitNumber]) {
+        if(final[unitNumber]) {
+            oredValues|=elements[starts[unitNumber]].getValue();
+        } else {
             makeNode(starts[unitNumber], starts[unitNumber+1], unitIndex+1);
             jumpTargets[unitNumber]=ucharsLength;
+            if(maxJumpTarget==0) {
+                maxJumpTarget=ucharsLength;
+            }
         }
     } while(unitNumber>0);
     // The maxUnit sub-node is written as the very last one because we do
@@ -280,29 +287,44 @@ UCharTrieBuilder::makeListBranchNode(int32_t start, int32_t limit, int32_t unitI
     unitNumber=length-1;
     makeNode(start, limit, unitIndex+1);
     write(elements[start].charAt(unitIndex, strings));
+    // Determine the maximum lengths of values and jump deltas.
+    int32_t valueLengths= oredValues==0 ? 0 : (oredValues&0xffff0000)==0 ? 1 : 2;
+    // We will make just a single pass for writing this branch node
+    // during which we determine the jump deltas.
+    // Therefore we use a jump delta threshold slightly more pessimistic than
+    // 0x10000. Worst case, maxJumpTarget is from the first node, and between
+    // the end of its (key, value) pair and the current ucharsLength
+    // we write (kMaxListBranchLength-2) (key, value) pairs of 3 UChars each.
+    static const int32_t kDeltaThreshold=0x10000-(UCharTrie::kMaxListBranchLength-2)*3;
+    // If maxJumpTarget==0 then there are no jumps at all, only final values,
+    // and we arbitrarily set deltaLengths to 1.
+    int32_t deltaLengths=
+        maxJumpTarget==0 ||
+        (ucharsLength-maxJumpTarget)<kDeltaThreshold ? 1 : 2;
     // Write the rest of this node's unit-value pairs.
     int32_t valueFlags=0;
     while(--unitNumber>=0) {
-        valueFlags<<=2;
+        valueFlags<<=1;
         start=starts[unitNumber];
         int32_t value;
         if(final[unitNumber]) {
             // Write the final value for the one string ending with this unit.
             value=elements[start].getValue();
-            valueFlags|=UCharTrie::kFixedIntIsFinal;
+            valueFlags|=1;
+            writeInt(value, valueLengths);
         } else {
             // Write the delta to the start position of the sub-node.
             value=ucharsLength-jumpTargets[unitNumber];
+            writeInt(value, deltaLengths);
         }
-        valueFlags|=writeFixedInt(value)-1;
         write(elements[start].charAt(unitIndex, strings));
     }
-    // Write the node lead units.
-    if(length>UCharTrie::kMaxListBranchSmallLength) {
-        write(valueFlags);
-        valueFlags>>=16;
-    }
-    write(((length-2)<<UCharTrie::kMaxListBranchLengthShift)|valueFlags);
+    // Write the node lead unit.
+    write(
+        (valueLengths<<UCharTrie::kListBranchValueLengthsShift)|
+        ((deltaLengths-1)<<UCharTrie::kListBranchEntryLengthsShift)|
+        ((length-2)<<UCharTrie::kListBranchLengthShift)|
+        valueFlags);
 }
 
 // start<limit && all strings longer than unitIndex &&
@@ -412,6 +434,21 @@ UCharTrieBuilder::writeFixedInt(int32_t i) {
     intUnits[length++]=(UChar)i;
     write(intUnits, length);
     return length;
+}
+
+void
+UCharTrieBuilder::writeInt(int32_t i, int32_t length) {
+    UChar intUnits[2];
+    if(length==0) {
+        // Write nothing: All final values of the list-branch are 0.
+        return;
+    } else if(length==1) {
+        intUnits[0]=(UChar)i;
+    } else {
+        intUnits[0]=(UChar)(i>>16);
+        intUnits[1]=(UChar)i;
+    }
+    write(intUnits, length);
 }
 
 U_NAMESPACE_END

@@ -25,11 +25,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "unicode/uperf.h"
+#include "unicode/utext.h"
 #include "bytetrie.h"
 #include "bytetriebuilder.h"
 #include "charstr.h"
 #include "package.h"
 #include "toolutil.h"
+#include "triedict.h"
 #include "ucbuf.h"  // struct ULine
 #include "uchartrie.h"
 #include "uchartriebuilder.h"
@@ -331,6 +333,100 @@ protected:
     const DictionaryTriePerfTest &perf;
 };
 
+class CompactTrieDictLookup : public DictLookup {
+public:
+    CompactTrieDictLookup(const DictionaryTriePerfTest &perfTest)
+            : DictLookup(perfTest), ctd(NULL) {
+        IcuToolErrorCode errorCode("UCharTrieDictLookup()");
+        // U+0E1C is the median code unit, from
+        // the UCharTrie root node (split-branch node) for thaidict.txt.
+        MutableTrieDictionary builder(0xe1c, errorCode);
+        const ULine *lines=perf.getCachedLines();
+        int32_t numLines=perf.getNumLines();
+        for(int32_t i=0; i<numLines; ++i) {
+            // Skip comment lines (start with a character below 'A').
+            if(lines[i].name[0]<0x41) {
+                continue;
+            }
+            builder.addWord(lines[i].name, lines[i].len, errorCode);
+        }
+        ctd=new CompactTrieDictionary(builder, errorCode);
+        int32_t length=(int32_t)ctd->dataSize();
+        printf("size of CompactTrieDict:    %6ld bytes\n", (long)length*2);
+    }
+
+    virtual ~CompactTrieDictLookup() {
+        delete ctd;
+    }
+
+    virtual void call(UErrorCode *pErrorCode) {
+        UText text=UTEXT_INITIALIZER;
+        int32_t lengths[20];
+        const ULine *lines=perf.getCachedLines();
+        int32_t numLines=perf.getNumLines();
+        for(int32_t i=0; i<numLines; ++i) {
+            // Skip comment lines (start with a character below 'A').
+            if(lines[i].name[0]<0x41) {
+                continue;
+            }
+            utext_openUChars(&text, lines[i].name, lines[i].len, pErrorCode);
+            int32_t count;
+            ctd->matches(&text, lines[i].len,
+                         lengths, count, LENGTHOF(lengths));
+            if(count==0 || lengths[count-1]!=lines[i].len) {
+                fprintf(stderr, "word %ld (0-based) not found\n", (long)i);
+            }
+        }
+    }
+
+protected:
+    CompactTrieDictionary *ctd;
+};
+
+// Closely imitate CompactTrieDictionary::matches().
+static int32_t
+ucharTrieMatches(UCharTrie &trie,
+                 UText *text, int32_t textLimit,
+                 int32_t *lengths, int &count, int limit ) {
+    trie.reset();
+    int32_t numChars=0;
+    count=0;
+    for(;;) {
+        if(trie.hasValue()) {
+            if(count<limit) {
+                lengths[count++]=(int32_t)utext_getNativeIndex(text);
+            }
+        }
+        if(numChars>=textLimit) {
+            // Note: Why do we have both a text limit and a UText that knows its length?
+            break;
+        }
+        UChar32 c=utext_next32(text);
+        // Notes:
+        // a) CompactTrieDictionary::matches() does not check for U_SENTINEL.
+        // b) It also ignores non-BMP code points by casting to UChar!
+        if(c<0) {
+            break;
+        }
+        ++numChars;
+        if(!trie.nextForCodePoint(c)) {
+            break;
+        }
+    }
+#if 0
+    // Note: CompactTrieDictionary::matches() comments say that it leaves the UText
+    // after the longest prefix match and returns the number of characters
+    // that were matched.
+    if(index!=lastMatch) {
+        utext_setNativeIndex(text, lastMatch);
+    }
+    return lastMatch-start;
+    // However, it does not do either of these, so I am not trying to
+    // imitate it (or its docs) 100%.
+#endif
+    return numChars;
+}
+
 class UCharTrieDictLookup : public DictLookup {
 public:
     UCharTrieDictLookup(const DictionaryTriePerfTest &perfTest)
@@ -346,7 +442,7 @@ public:
             builder.add(UnicodeString(FALSE, lines[i].name, lines[i].len), 0, errorCode);
         }
         int32_t length=builder.build(errorCode).length();
-        printf("size of UCharTrie:      %6ld bytes\n", (long)length*2);
+        printf("size of UCharTrie:          %6ld bytes\n", (long)length*2);
     }
 
     virtual ~UCharTrieDictLookup() {}
@@ -354,6 +450,8 @@ public:
     virtual void call(UErrorCode *pErrorCode) {
         UnicodeString uchars(builder.build(*pErrorCode));
         UCharTrie trie(uchars.getBuffer());
+        UText text=UTEXT_INITIALIZER;
+        int32_t lengths[20];
         const ULine *lines=perf.getCachedLines();
         int32_t numLines=perf.getNumLines();
         for(int32_t i=0; i<numLines; ++i) {
@@ -361,9 +459,19 @@ public:
             if(lines[i].name[0]<0x41) {
                 continue;
             }
+#if 1
+            utext_openUChars(&text, lines[i].name, lines[i].len, pErrorCode);
+            int32_t count;
+            ucharTrieMatches(trie, &text, lines[i].len,
+                             lengths, count, LENGTHOF(lengths));
+            if(count==0 || lengths[count-1]!=lines[i].len) {
+                fprintf(stderr, "word %ld (0-based) not found\n", (long)i);
+            }
+#else
             if(!trie.reset().next(lines[i].name, lines[i].len) || !trie.hasValue()) {
                 fprintf(stderr, "word %ld (0-based) not found\n", (long)i);
             }
+#endif
         }
     }
 
@@ -376,14 +484,12 @@ UPerfFunction *DictionaryTriePerfTest::runIndexedTest(int32_t index, UBool exec,
     if(hasFile()) {
         switch(index) {
         case 0:
-#if 0
             name="compacttrie";
             if(exec) {
-                return new XXX(*this);
+                return new CompactTrieDictLookup(*this);
             }
             break;
         case 1:
-#endif
             name="uchartrie";
             if(exec) {
                 return new UCharTrieDictLookup(*this);
