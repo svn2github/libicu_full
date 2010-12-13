@@ -76,8 +76,72 @@ UCharTrie::skipCompactInt(int32_t leadUnit) {
 }
 
 UBool
-UCharTrie::branchNext(int32_t node, int32_t uchar) {
+UCharTrie::branchNext(int32_t length, int32_t uchar) {
     // Branch according to the current unit.
+#if 1
+    if(length==0) {
+        length=*pos++;
+    }
+    ++length;
+    // The length of the branch is the number of units to select from.
+    // The data structure encodes a binary search.
+    while(length>kMaxBranchLinearSubNodeLength) {
+        if(uchar<*pos++) {
+            length>>=1;
+            int32_t delta=readDelta();
+            pos+=delta;
+        } else {
+            length=length-(length>>1);
+            skipDelta();
+        }
+    }
+    // Drop down to linear search for the last few units.
+    do {
+        if(uchar==*pos++) {
+            int32_t node=*pos;
+            if(node&kValueIsFinal) {
+                // Leave the final value for hasValue() to read.
+            } else {
+                // Use the non-final value as the jump delta.
+                ++pos;
+                readCompactInt(node);
+                pos+=value;
+            }
+            return TRUE;
+        }
+        --length;
+        skipValueAndFinal();
+    } while(length>1);
+    if(uchar==*pos++) {
+        return TRUE;
+    } else {
+        stop();
+        return FALSE;
+    }
+#elif 1
+    if(length==0) {
+        length=*pos++;
+    }
+    ++length;
+    // node contains the length of the branch (the number of units to select from).
+    // The data structure encodes a binary search.
+    do {
+        if(uchar<*pos++) {
+            length>>=1;
+            int32_t delta=readDelta();
+            pos+=delta;
+        } else {
+            length=length-(length>>1);
+            skipDelta();
+        }
+    } while(length>1);
+    if(uchar==*pos++) {
+        return TRUE;
+    } else {
+        stop();
+        return FALSE;
+    }
+#else
     while(node>=kMinSplitBranch) {
         // Branching on a unit value,
         // with a jump delta for less-than, and continuing for greater-or-equal.
@@ -126,6 +190,7 @@ UCharTrie::branchNext(int32_t node, int32_t uchar) {
         pos+= node&1 ? entryLengths>>1 : (entryLengths&1)+1;
         node>>=1;
     }
+#endif
 }
 
 UBool
@@ -234,6 +299,7 @@ UCharTrie::next(const UChar *s, int32_t sLength) {
                 if(!branchNext(node, uchar)) {
                     return FALSE;
                 }
+#if 0
                 // In a UCharTrie (unlike a ByteTrie),
                 // branchNext() might stop() (set pos=NULL) even if it returns TRUE,
                 // because final branch values are encoded differently from
@@ -244,6 +310,7 @@ UCharTrie::next(const UChar *s, int32_t sLength) {
                     // Return TRUE if there is no more input.
                     return sLength<0 ? *s==0 : sLength==0;
                 }
+#endif
                 // Fetch the next input unit, if there is one.
                 if(sLength<0) {
                     if((uchar=*s++)==0) {

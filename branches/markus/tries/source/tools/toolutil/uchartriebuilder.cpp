@@ -234,11 +234,103 @@ UCharTrieBuilder::makeNode(int32_t start, int32_t limit, int32_t unitIndex) {
         ++length;
     } while(i<limit);
     // length>=2 because minUnit!=maxUnit.
+#if 1
+    makeBranchSubNode(start, limit, unitIndex, length);
+    write(length-1);
+    if((length-1)>=UCharTrie::kMinLinearMatch) {
+        write(0);
+    }
+#else
     if(length<=UCharTrie::kMaxListBranchLength) {
         makeListBranchNode(start, limit, unitIndex, length);
     } else {
         makeSplitBranchNode(start, limit, unitIndex, length);
     }
+#endif
+}
+
+// start<limit && all strings longer than unitIndex &&
+// length different units at unitIndex
+void
+UCharTrieBuilder::makeBranchSubNode(int32_t start, int32_t limit, int32_t unitIndex, int32_t length) {
+    if(length>UCharTrie::kMaxBranchLinearSubNodeLength) {
+        // Branch on the middle unit.
+        // First, find the middle unit.
+        int32_t count=length/2;
+        int32_t i=start;
+        UChar unit;
+        do {
+            unit=elements[i++].charAt(unitIndex, strings);
+            while(unit==elements[i].charAt(unitIndex, strings)) {
+                ++i;
+            }
+        } while(--count>0);
+        unit=elements[i].charAt(unitIndex, strings);  // middle unit
+        // Encode the less-than branch first.
+        makeBranchSubNode(start, i, unitIndex, length/2);
+        int32_t leftNode=ucharsLength;
+        // Encode the greater-or-equal branch last because we do not jump for it at all.
+        makeBranchSubNode(i, limit, unitIndex, length-length/2);
+        // Write this node.
+        writeDelta(ucharsLength-leftNode);  // less-than
+        write(unit);
+        return;
+    }
+#if 1
+    // List of unit-value pairs where values are either final values
+    // or jumps to other parts of the trie.
+    int32_t starts[UCharTrie::kMaxBranchLinearSubNodeLength];  // TODO: different constant
+    UBool final[UCharTrie::kMaxBranchLinearSubNodeLength-1];
+    // For each unit except the last one, find its elements array start and its value if final.
+    int32_t unitNumber=0;
+    do {
+        int32_t i=starts[unitNumber]=start;
+        UChar unit=elements[i++].charAt(unitIndex, strings);
+        while(unit==elements[i].charAt(unitIndex, strings)) {
+            ++i;
+        }
+        final[unitNumber]= start==i-1 && unitIndex+1==elements[start].getStringLength(strings);
+        start=i;
+    } while(++unitNumber<length-1);
+    // unitNumber==length-1, and the maxUnit elements range is [start..limit[
+    starts[unitNumber]=start;
+
+    // Write the sub-nodes in reverse order: The jump lengths are deltas from
+    // after their own positions, so if we wrote the minUnit sub-node first,
+    // then its jump delta would be larger.
+    // Instead we write the minUnit sub-node last, for a shorter delta.
+    int32_t jumpTargets[UCharTrie::kMaxBranchLinearSubNodeLength-1];
+    do {
+        --unitNumber;
+        if(!final[unitNumber]) {
+            makeNode(starts[unitNumber], starts[unitNumber+1], unitIndex+1);
+            jumpTargets[unitNumber]=ucharsLength;
+        }
+    } while(unitNumber>0);
+    // The maxUnit sub-node is written as the very last one because we do
+    // not jump for it at all.
+    unitNumber=length-1;
+    makeNode(start, limit, unitIndex+1);
+    write(elements[start].charAt(unitIndex, strings));
+    // Write the rest of this node's unit-value pairs.
+    while(--unitNumber>=0) {
+        start=starts[unitNumber];
+        int32_t value;
+        if(final[unitNumber]) {
+            // Write the final value for the one string ending with this unit.
+            value=elements[start].getValue();
+        } else {
+            // Write the delta to the start position of the sub-node.
+            value=ucharsLength-jumpTargets[unitNumber];
+        }
+        writeCompactInt(value, final[unitNumber]);
+        write(elements[start].charAt(unitIndex, strings));
+    }
+#else  // if(length==1)
+    // Nothing left to branch on. Just write the next node and then the current unit.
+    makeNode(start, limit, unitIndex+1);
+    write(elements[start].charAt(unitIndex, strings));
+#endif
 }
 
 // start<limit && all strings longer than unitIndex &&
@@ -418,6 +510,24 @@ UCharTrieBuilder::writeCompactInt(int32_t i, UBool final) {
         length=2;
     }
     intUnits[0]=(UChar)((intUnits[0]<<1)|final);
+    write(intUnits, length);
+}
+
+void
+UCharTrieBuilder::writeDelta(int32_t i) {
+    UChar intUnits[3];
+    int32_t length;
+    if(i<0 || i>UCharTrie::kMaxTwoUnitDelta) {
+        intUnits[0]=(UChar)(UCharTrie::kThreeUnitDeltaLead);
+        intUnits[1]=(UChar)(i>>16);
+        length=2;
+    } else if(i<=UCharTrie::kMaxOneUnitDelta) {
+        length=0;
+    } else {
+        intUnits[0]=(UChar)(UCharTrie::kMinTwoUnitDeltaLead+(i>>16));
+        length=1;
+    }
+    intUnits[length++]=(UChar)i;
     write(intUnits, length);
 }
 

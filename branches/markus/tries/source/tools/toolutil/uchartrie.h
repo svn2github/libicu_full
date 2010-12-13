@@ -225,9 +225,17 @@ private:
     // pos is already after the leadUnit.
     // Returns TRUE if the integer is a final value.
     UBool readCompactInt(int32_t leadUnit);
+    UBool readValueAndFinal() {
+        int32_t leadUnit=*pos++;
+        return readCompactInt(leadUnit);
+    }
 
     // pos is already after the leadUnit.
     void skipCompactInt(int32_t leadUnit);
+    void skipValueAndFinal() {
+        int32_t leadUnit=*pos++;
+        skipCompactInt(leadUnit);
+    }
 
     // Reads a fixed-width integer and post-increments pos.
     inline int32_t readFixedInt(int32_t node) {
@@ -236,6 +244,30 @@ private:
             fixedInt=(fixedInt<<16)|*pos++;
         }
         return fixedInt;
+    }
+
+    inline int32_t readDelta() {
+        int32_t delta=*pos++;
+        if(delta>=kMinTwoUnitDeltaLead) {
+            if(delta==kThreeUnitDeltaLead) {
+                delta=(pos[0]<<16)|pos[1];
+                pos+=2;
+            } else {
+                delta=((delta-kMinTwoUnitDeltaLead)<<16)|*pos++;
+            }
+        }
+        return delta;
+    }
+    inline int32_t skipDelta() {
+        int32_t delta=*pos++;
+        if(delta>=kMinTwoUnitDeltaLead) {
+            if(delta==kThreeUnitDeltaLead) {
+                pos+=2;
+            } else {
+                ++pos;
+            }
+        }
+        return delta;
     }
 
     // Reads a final value from a list branch.
@@ -334,6 +366,8 @@ private:
     static const int32_t kListBranchEntryLengthsShift=kListBranchLengthShift+3;  // 11
     static const int32_t kListBranchValueLengthsShift=kListBranchEntryLengthsShift+1;  // 12
 
+    static const int32_t kMaxBranchLinearSubNodeLength=3;
+
     // 3400..3401: Split-branch node with less/greater-or-equal outbound edges.
     // The lower bit indicates the length of the less-than "jump" (1 or 2 units).
     // Followed by the comparison unit, and
@@ -342,8 +376,10 @@ private:
     //     (kMaxListBranchLength-1)<<kMaxListBranchLengthShift;  // 0x3400
 
     // 3402..341f: Linear-match node, match 1..30 units and continue reading the next node.
-    static const int32_t kMinLinearMatch=kMinSplitBranch+2;  // 0x3402
-    static const int32_t kMaxLinearMatchLength=30;
+    // static const int32_t kMinLinearMatch=kMinSplitBranch+2;  // 0x3402
+    // static const int32_t kMaxLinearMatchLength=30;
+    static const int32_t kMinLinearMatch=0x100;
+    static const int32_t kMaxLinearMatchLength=0x100;
 
     // 3420..ffff: Variable-length value node.
     // If odd, the value is final. (Otherwise, intermediate value or jump delta.)
@@ -355,13 +391,21 @@ private:
     static const int32_t kValueIsFinal=1;
 
     // Compact int: After testing bit 0, shift right by 1 and then use the following thresholds.
+    // TODO: Make sure each one has "value" in the name.
     static const int32_t kMinOneUnitLead=kMinValueLead/2;  // 0x1a10
-    static const int32_t kMaxOneUnitValue=0x3fff;
+    static const int32_t kMaxOneUnitValue=0x5fff;
 
     static const int32_t kMinTwoUnitLead=kMinOneUnitLead+kMaxOneUnitValue+1;  // 0x5a10
     static const int32_t kThreeUnitLead=0x7fff;
 
     static const int32_t kMaxTwoUnitValue=((kThreeUnitLead-kMinTwoUnitLead)<<16)-1;  // 0x25eeffff
+
+    // Compact delta integers.
+    static const int32_t kMaxOneUnitDelta=0xfbff;
+    static const int32_t kMinTwoUnitDeltaLead=kMaxOneUnitDelta+1;  // 0xfc00
+    static const int32_t kThreeUnitDeltaLead=0xffff;
+
+    static const int32_t kMaxTwoUnitDelta=((kThreeUnitDeltaLead-kMinTwoUnitDeltaLead)<<16)-1;  // 0x3feffff
 
     // A fixed-length integer has its length indicated by a preceding node value.
     static const int32_t kFixedInt32=1;
