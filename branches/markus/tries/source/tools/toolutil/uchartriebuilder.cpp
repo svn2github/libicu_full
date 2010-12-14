@@ -201,7 +201,7 @@ UCharTrieBuilder::makeNode(int32_t start, int32_t limit, int32_t unitIndex) {
         if(!final) {
             makeNode(start, limit, unitIndex);
         }
-        writeCompactInt(value, final);
+        writeValueAndFinal(value, final);
         return;
     }
     // Now all [start..limit[ strings are longer than unitIndex.
@@ -276,10 +276,9 @@ UCharTrieBuilder::makeBranchSubNode(int32_t start, int32_t limit, int32_t unitIn
         write(unit);
         return;
     }
-#if 1
     // List of unit-value pairs where values are either final values
     // or jumps to other parts of the trie.
-    int32_t starts[UCharTrie::kMaxBranchLinearSubNodeLength];  // TODO: different constant
+    int32_t starts[UCharTrie::kMaxBranchLinearSubNodeLength];
     UBool final[UCharTrie::kMaxBranchLinearSubNodeLength-1];
     // For each unit except the last one, find its elements array start and its value if final.
     int32_t unitNumber=0;
@@ -323,129 +322,9 @@ UCharTrieBuilder::makeBranchSubNode(int32_t start, int32_t limit, int32_t unitIn
             // Write the delta to the start position of the sub-node.
             value=ucharsLength-jumpTargets[unitNumber];
         }
-        writeCompactInt(value, final[unitNumber]);
+        writeValueAndFinal(value, final[unitNumber]);
         write(elements[start].charAt(unitIndex, strings));
     }
-#else  // if(length==1)
-    // Nothing left to branch on. Just write the next node and then the current unit.
-    makeNode(start, limit, unitIndex+1);
-    write(elements[start].charAt(unitIndex, strings));
-#endif
-}
-
-// start<limit && all strings longer than unitIndex &&
-// 2..kMaxListBranchLength different units at unitIndex
-void
-UCharTrieBuilder::makeListBranchNode(int32_t start, int32_t limit, int32_t unitIndex, int32_t length) {
-    // List of unit-value pairs where values are either final values
-    // or jumps to other parts of the trie.
-    int32_t starts[UCharTrie::kMaxListBranchLength];
-    UBool final[UCharTrie::kMaxListBranchLength-1];
-    // For each unit except the last one, find its elements array start and its value if final.
-    int32_t unitNumber=0;
-    do {
-        int32_t i=starts[unitNumber]=start;
-        UChar unit=elements[i++].charAt(unitIndex, strings);
-        while(unit==elements[i].charAt(unitIndex, strings)) {
-            ++i;
-        }
-        final[unitNumber]= start==i-1 && unitIndex+1==elements[start].getStringLength(strings);
-        start=i;
-    } while(++unitNumber<length-1);
-    // unitNumber==length-1, and the maxUnit elements range is [start..limit[
-    starts[unitNumber]=start;
-
-    // Write the sub-nodes in reverse order: The jump lengths are deltas from
-    // after their own positions, so if we wrote the minUnit sub-node first,
-    // then its jump delta would be larger.
-    // Instead we write the minUnit sub-node last, for a shorter delta.
-    int32_t jumpTargets[UCharTrie::kMaxListBranchLength-1];
-    int32_t oredValues=0;
-    int32_t maxJumpTarget=0;
-    do {
-        --unitNumber;
-        if(final[unitNumber]) {
-            oredValues|=elements[starts[unitNumber]].getValue();
-        } else {
-            makeNode(starts[unitNumber], starts[unitNumber+1], unitIndex+1);
-            jumpTargets[unitNumber]=ucharsLength;
-            if(maxJumpTarget==0) {
-                maxJumpTarget=ucharsLength;
-            }
-        }
-    } while(unitNumber>0);
-    // The maxUnit sub-node is written as the very last one because we do
-    // not jump for it at all.
-    unitNumber=length-1;
-    makeNode(start, limit, unitIndex+1);
-    write(elements[start].charAt(unitIndex, strings));
-    // Determine the maximum lengths of values and jump deltas.
-    int32_t valueLengths= oredValues==0 ? 0 : (oredValues&0xffff0000)==0 ? 1 : 2;
-    // We will make just a single pass for writing this branch node
-    // during which we determine the jump deltas.
-    // Therefore we use a jump delta threshold slightly more pessimistic than
-    // 0x10000. Worst case, maxJumpTarget is from the first node, and between
-    // the end of its (key, value) pair and the current ucharsLength
-    // we write (kMaxListBranchLength-2) (key, value) pairs of 3 UChars each.
-    static const int32_t kDeltaThreshold=0x10000-(UCharTrie::kMaxListBranchLength-2)*3;
-    // If maxJumpTarget==0 then there are no jumps at all, only final values,
-    // and we arbitrarily set deltaLengths to 1.
-    int32_t deltaLengths=
-        maxJumpTarget==0 ||
-        (ucharsLength-maxJumpTarget)<kDeltaThreshold ? 1 : 2;
-    // Write the rest of this node's unit-value pairs.
-    int32_t valueFlags=0;
-    while(--unitNumber>=0) {
-        valueFlags<<=1;
-        start=starts[unitNumber];
-        int32_t value;
-        if(final[unitNumber]) {
-            // Write the final value for the one string ending with this unit.
-            value=elements[start].getValue();
-            valueFlags|=1;
-            writeInt(value, valueLengths);
-        } else {
-            // Write the delta to the start position of the sub-node.
-            value=ucharsLength-jumpTargets[unitNumber];
-            writeInt(value, deltaLengths);
-        }
-        write(elements[start].charAt(unitIndex, strings));
-    }
-    // Write the node lead unit.
-    write(
-        (valueLengths<<UCharTrie::kListBranchValueLengthsShift)|
-        ((deltaLengths-1)<<UCharTrie::kListBranchEntryLengthsShift)|
-        ((length-2)<<UCharTrie::kListBranchLengthShift)|
-        valueFlags);
-}
-
-// start<limit && all strings longer than unitIndex &&
-// at least four different units at unitIndex
-// (At least four because the left and right outbound edges
-// must lead to branch nodes again, thus each side must have at least two units to branch on.)
-void
-UCharTrieBuilder::makeSplitBranchNode(int32_t start, int32_t limit, int32_t unitIndex, int32_t length) {
-    // Split-branch on the middle unit.
-    // Find the middle unit.
-    length/=2;  // >=1
-    int32_t i=start;
-    UChar unit;
-    do {
-        unit=elements[i++].charAt(unitIndex, strings);
-        while(unit==elements[i].charAt(unitIndex, strings)) {
-            ++i;
-        }
-    } while(--length>0);
-    unit=elements[i].charAt(unitIndex, strings);  // middle unit
-    // Encode the less-than branch first.
-    makeNode(start, i, unitIndex);
-    int32_t leftNode=ucharsLength;
-    // Encode the greater-or-equal branch last because we do not jump for it at all.
-    makeNode(i, limit, unitIndex);
-    // Write this node.
-    int32_t unitsForLessThan=writeFixedInt(ucharsLength-leftNode);  // less-than
-    write(unit);
-    write(UCharTrie::kMinSplitBranch+unitsForLessThan-1);
 }
 
 UBool
@@ -493,19 +372,19 @@ UCharTrieBuilder::write(const UChar *s, int32_t length) {
 }
 
 void
-UCharTrieBuilder::writeCompactInt(int32_t i, UBool final) {
+UCharTrieBuilder::writeValueAndFinal(int32_t i, UBool final) {
     UChar intUnits[3];
     int32_t length;
     if(i<0 || i>UCharTrie::kMaxTwoUnitValue) {
-        intUnits[0]=(UChar)(UCharTrie::kThreeUnitLead);
+        intUnits[0]=(UChar)(UCharTrie::kThreeUnitValueLead);
         intUnits[1]=(UChar)(i>>16);
         intUnits[2]=(UChar)i;
         length=3;
     } else if(i<=UCharTrie::kMaxOneUnitValue) {
-        intUnits[0]=(UChar)(UCharTrie::kMinOneUnitLead+i);
+        intUnits[0]=(UChar)(UCharTrie::kMinOneUnitValueLead+i);
         length=1;
     } else {
-        intUnits[0]=(UChar)(UCharTrie::kMinTwoUnitLead+(i>>16));
+        intUnits[0]=(UChar)(UCharTrie::kMinTwoUnitValueLead+(i>>16));
         intUnits[1]=(UChar)i;
         length=2;
     }
@@ -529,36 +408,6 @@ UCharTrieBuilder::writeDelta(int32_t i) {
         length=2;
     }
     intUnits[length++]=(UChar)i;
-    write(intUnits, length);
-}
-
-int32_t
-UCharTrieBuilder::writeFixedInt(int32_t i) {
-    UChar intUnits[2];
-    int32_t length;
-    if(i<0 || i>0xffff) {
-        intUnits[0]=(UChar)(i>>16);
-        length=1;  // last unit below
-    } else {
-        length=0;
-    }
-    intUnits[length++]=(UChar)i;
-    write(intUnits, length);
-    return length;
-}
-
-void
-UCharTrieBuilder::writeInt(int32_t i, int32_t length) {
-    UChar intUnits[2];
-    if(length==0) {
-        // Write nothing: All final values of the list-branch are 0.
-        return;
-    } else if(length==1) {
-        intUnits[0]=(UChar)i;
-    } else {
-        intUnits[0]=(UChar)(i>>16);
-        intUnits[1]=(UChar)i;
-    }
     write(intUnits, length);
 }
 

@@ -20,8 +20,9 @@
 
 U_NAMESPACE_BEGIN
 
+// lead byte already shifted right by 1.
 int32_t
-ByteTrie::readValue(const uint8_t *pos, int32_t leadByte) {  // lead byte already shifted right by 1.
+ByteTrie::readValue(const uint8_t *pos, int32_t leadByte) {
     int32_t value;
     if(leadByte<kMinTwoByteValueLead) {
         value=leadByte-kMinOneByteValueLead;

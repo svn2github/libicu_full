@@ -75,7 +75,7 @@ public:
     /**
      * @return TRUE if there are more elements.
      */
-    UBool hasNext() const { return trie.pos!=NULL || !stack.isEmpty(); }
+    UBool hasNext() const { return trie.pos_!=NULL || !stack.isEmpty(); }
 
     /**
      * @return the NUL-terminated string for the last successful next()

@@ -73,17 +73,17 @@ private:
 class U_TOOLUTIL_API UCharTrie : public UMemory {
 public:
     UCharTrie(const UChar *trieUChars)
-            : uchars(trieUChars),
-              pos(uchars), remainingMatchLength(-1), value(0), haveValue(FALSE),
-              uniqueValue(0), haveUniqueValue(FALSE) {}
+            : uchars_(trieUChars),
+              pos_(uchars_), remainingMatchLength_(-1), value_(0), haveValue_(FALSE),
+              uniqueValue_(0), haveUniqueValue_(FALSE) {}
 
     /**
      * Resets this trie to its initial state.
      */
     UCharTrie &reset() {
-        pos=uchars;
-        remainingMatchLength=-1;
-        haveValue=FALSE;
+        pos_=uchars_;
+        remainingMatchLength_=-1;
+        haveValue_=FALSE;
         return *this;
     }
 
@@ -109,11 +109,11 @@ public:
      * @see resetToState
      */
     const UCharTrie &saveState(State &state) const {
-        state.uchars=uchars;
-        state.pos=pos;
-        state.remainingMatchLength=remainingMatchLength;
-        state.value=value;
-        state.haveValue=haveValue;
+        state.uchars=uchars_;
+        state.pos=pos_;
+        state.remainingMatchLength=remainingMatchLength_;
+        state.value=value_;
+        state.haveValue=haveValue_;
         return *this;
     }
 
@@ -125,11 +125,11 @@ public:
      * @see reset
      */
     UCharTrie &resetToState(const State &state) {
-        if(uchars==state.uchars && uchars!=NULL) {
-            pos=state.pos;
-            remainingMatchLength=state.remainingMatchLength;
-            value=state.value;
-            haveValue=state.haveValue;
+        if(uchars_==state.uchars && uchars_!=NULL) {
+            pos_=state.pos;
+            remainingMatchLength_=state.remainingMatchLength;
+            value_=state.value;
+            haveValue_=state.haveValue;
         }
         return *this;
     }
@@ -141,8 +141,9 @@ public:
      */
     UBool hasNext() const {
         int32_t node;
+        const UChar *pos=pos_;
         return pos!=NULL &&  // more input, and
-            (remainingMatchLength>=0 ||  // more linear-match bytes or
+            (remainingMatchLength_>=0 ||  // more linear-match bytes or
                 // the next node is not a final-value node
                 (node=*pos)<kMinValueLead || (node&kValueIsFinal)==0);
     }
@@ -187,7 +188,7 @@ public:
      * Returns a string's value if called immediately after hasValue()
      * returned TRUE. Otherwise undefined.
      */
-    int32_t getValue() const { return value; }
+    int32_t getValue() const { return value_; }
 
     /**
      * Determines whether all strings reachable from the current state
@@ -218,46 +219,53 @@ private:
     friend class UCharTrieIterator;
 
     inline void stop() {
-        pos=NULL;
+        pos_=NULL;
     }
 
-    int32_t readValue(int32_t leadUnit);
+    // lead unit already shifted right by 1.
+    inline int32_t readValue(const UChar *pos, int32_t leadUnit) {
+        int32_t value;
+        if(leadUnit<kMinTwoUnitValueLead) {
+            value=leadUnit-kMinOneUnitValueLead;
+        } else if(leadUnit<kThreeUnitValueLead) {
+            value=((leadUnit-kMinTwoUnitValueLead)<<16)|*pos++;
+        } else {
+            value=(pos[0]<<16)|pos[1];
+            pos+=2;
+        }
+        pos_=pos;
+        return value;
+    }
     // Reads a compact 32-bit integer and post-increments pos.
     // pos is already after the leadUnit.
     // Returns TRUE if the integer is a final value.
-    inline UBool readCompactInt(int32_t leadUnit) {
+    inline UBool readValueAndFinal(const UChar *pos, int32_t leadUnit) {
         UBool isFinal=(UBool)(leadUnit&kValueIsFinal);
-        value=readValue(leadUnit>>1);
+        value_=readValue(pos, leadUnit>>1);
         return isFinal;
     }
     inline UBool readValueAndFinal() {
+        const UChar *pos=pos_;
         int32_t leadUnit=*pos++;
-        return readCompactInt(leadUnit);
+        return readValueAndFinal(pos, leadUnit);
     }
-    inline void skipValueAndFinal(int32_t leadUnit) {
-        if(leadUnit<(kMinTwoUnitLead<<1)) {
-            // pos is already after the leadUnit.
-        } else if(leadUnit<(kThreeUnitLead<<1)) {
-            ++pos;
-        } else {
-            pos+=2;
+    static inline const UChar *skipValueAndFinal(const UChar *pos, int32_t leadUnit) {
+        if(leadUnit>=(kMinTwoUnitValueLead<<1)) {
+            if(leadUnit<(kThreeUnitValueLead<<1)) {
+                ++pos;
+            } else {
+                pos+=2;
+            }
         }
+        return pos;
     }
-    inline void skipValueAndFinal() {
+    static inline const UChar *skipValueAndFinal(const UChar *pos) {
         int32_t leadUnit=*pos++;
-        skipValueAndFinal(leadUnit);
+        return skipValueAndFinal(pos, leadUnit);
     }
-
-    // Reads a fixed-width integer and post-increments pos.
-    inline int32_t readFixedInt(int32_t node) {
-        int32_t fixedInt=*pos++;
-        if(node&kFixedInt32) {
-            fixedInt=(fixedInt<<16)|*pos++;
-        }
-        return fixedInt;
-    }
-
+/*
     inline int32_t readDelta() {
+        const UChar *pos=pos_;
         int32_t delta=*pos++;
         if(delta>=kMinTwoUnitDeltaLead) {
             if(delta==kThreeUnitDeltaLead) {
@@ -267,9 +275,11 @@ private:
                 delta=((delta-kMinTwoUnitDeltaLead)<<16)|*pos++;
             }
         }
+        pos_=pos;
         return delta;
     }
-    inline void skipDelta() {
+*/
+    static const UChar *skipDelta(const UChar *pos) {
         int32_t delta=*pos++;
         if(delta>=kMinTwoUnitDeltaLead) {
             if(delta==kThreeUnitDeltaLead) {
@@ -278,44 +288,33 @@ private:
                 ++pos;
             }
         }
-    }
-
-    // Reads a final value from a list branch.
-    // entryLengths bits 2..1 indicate the value length (0..2 units).
-    inline void readBranchFinalValue(int32_t entryLengths) {
-        if(entryLengths<2) {
-            value=0;
-        } else if(entryLengths<4) {
-            value=*pos;
-        } else {
-            value=(pos[0]<<16)|pos[1];
-        }
+        return pos;
     }
 
     // Handles a branch node for both next(uchar) and next(string).
-    UBool branchNext(int32_t node, int32_t uchar);
+    static const UChar *branchNext(const UChar *pos, int32_t node, int32_t uchar);
 
     // Helper functions for hasUniqueValue().
     // Compare the latest value with the previous one, or save the latest one.
     inline UBool isUniqueValue() {
-        if(haveUniqueValue) {
-            if(value!=uniqueValue) {
+        if(haveUniqueValue_) {
+            if(value_!=uniqueValue_) {
                 return FALSE;
             }
         } else {
-            uniqueValue=value;
-            haveUniqueValue=TRUE;
+            uniqueValue_=value_;
+            haveUniqueValue_=TRUE;
         }
         return TRUE;
     }
     // Recurse into a branch edge and return to the current position.
     inline UBool findUniqueValueAt(int32_t delta) {
-        const UChar *currentPos=pos;
-        pos+=delta;
+        const UChar *currentPos=pos_;
+        pos_+=delta;
         if(!findUniqueValue()) {
             return FALSE;
         }
-        pos=currentPos;
+        pos_=currentPos;
         return TRUE;
     }
     // Handle a branch node entry (final value or jump delta).
@@ -343,101 +342,61 @@ private:
     //    The value is for the string/UChar sequence so far.
     //  - Linear-match node: Matches a number of units.
     //  - Branch node: Branches to other nodes according to the current input unit.
-    //    - List-branch node: If the input unit is in the list, a "jump"
-    //        leads to another node for further matching.
-    //        Instead of a jump, a final value may be stored.
-    //        For the last unit listed there is no "jump" or value directly in
-    //        the branch node: Instead, matching continues with the next node.
-    //    - Split-branch node: Compares the input unit with one included unit.
-    //        If less-than, "jumps" to another node which is a branch node.
-    //        Otherwise, matching continues with the next node which is a branch node.
+    //    TODO
 
     // Node lead unit values.
 
-    // 0..33ff: Branch node with a list of 2..14 comparison UChars.
-    // Bits 13..10=0..12 for 2..14 units to match.
-    // The lower bits, and if 7..14 units then also the bits from the next unit,
-    // indicate whether each key unit has a final value vs. a "jump" (higher bit of a pair),
-    // and whether the match unit's value is 1 or 2 units long.
-    // Followed by the (key, value) pairs except that the last unit's value is omitted
-    // (just continue reading the next node from there).
-    // Thus, for the last key unit there are no (final, length) value bits.
-
-    // The node lead unit has kMaxListBranchSmallLength-1 bit pairs.
-    static const int32_t kMaxListBranchSmallLength=6;
-    static const int32_t kMaxListBranchLengthShift=(kMaxListBranchSmallLength-1)*2;  // 10
-    // 8 more bit pairs in the next unit, for branch length > kMaxListBranchSmallLength.
-    // static const int32_t kMaxListBranchLength=kMaxListBranchSmallLength+8;  // 14
-
-    // Exactly 3 bits for lengths 2..9.
-    static const int32_t kMaxListBranchLength=9;
-    // One "is final value" bit per entry except for the last one.
-    static const int32_t kListBranchLengthShift=kMaxListBranchLength-1;  // 8
-    static const int32_t kListBranchEntryLengthsShift=kListBranchLengthShift+3;  // 11
-    static const int32_t kListBranchValueLengthsShift=kListBranchEntryLengthsShift+1;  // 12
+    // 0000..00ff: Branch node. If node!=0 then the length is node+1, otherwise
+    // the length is one more than the next unit.
 
     // For a branch sub-node with at most this many entries, we drop down
     // to a linear search.
     static const int32_t kMaxBranchLinearSubNodeLength=4;
 
-    // 3400..3401: Split-branch node with less/greater-or-equal outbound edges.
-    // The lower bit indicates the length of the less-than "jump" (1 or 2 units).
-    // Followed by the comparison unit, and
-    // continue reading the next node from there for the "greater-or-equal" edge.
-    static const int32_t kMinSplitBranch=0x3000;
-    //     (kMaxListBranchLength-1)<<kMaxListBranchLengthShift;  // 0x3400
-
-    // 3402..341f: Linear-match node, match 1..30 units and continue reading the next node.
-    // static const int32_t kMinLinearMatch=kMinSplitBranch+2;  // 0x3402
-    // static const int32_t kMaxLinearMatchLength=30;
+    // 0100..01ff: Linear-match node, match 1..256 units and continue reading the next node.
     static const int32_t kMinLinearMatch=0x100;
     static const int32_t kMaxLinearMatchLength=0x100;
 
-    // 3420..ffff: Variable-length value node.
+    // 0200..ffff: Variable-length value node.
     // If odd, the value is final. (Otherwise, intermediate value or jump delta.)
     // Then shift-right by 1 bit.
     // The remaining lead unit value indicates the number of following units (0..2)
     // and contains the value's top bits.
-    static const int32_t kMinValueLead=kMinLinearMatch+kMaxLinearMatchLength;  // 0x3420
+    static const int32_t kMinValueLead=kMinLinearMatch+kMaxLinearMatchLength;  // 0x0200
     // It is a final value if bit 0 is set.
     static const int32_t kValueIsFinal=1;
 
-    // Compact int: After testing bit 0, shift right by 1 and then use the following thresholds.
-    // TODO: Make sure each one has "value" in the name.
-    static const int32_t kMinOneUnitLead=kMinValueLead/2;  // 0x1a10
+    // Compact value: After testing bit 0, shift right by 1 and then use the following thresholds.
+    static const int32_t kMinOneUnitValueLead=kMinValueLead/2;  // 0x0100
     static const int32_t kMaxOneUnitValue=0x5fff;
 
-    static const int32_t kMinTwoUnitLead=kMinOneUnitLead+kMaxOneUnitValue+1;  // 0x5a10
-    static const int32_t kThreeUnitLead=0x7fff;
+    static const int32_t kMinTwoUnitValueLead=kMinOneUnitValueLead+kMaxOneUnitValue+1;  // 0x6100
+    static const int32_t kThreeUnitValueLead=0x7fff;
 
-    static const int32_t kMaxTwoUnitValue=((kThreeUnitLead-kMinTwoUnitLead)<<16)-1;  // 0x25eeffff
+    static const int32_t kMaxTwoUnitValue=((kThreeUnitValueLead-kMinTwoUnitValueLead)<<16)-1;  // 0x1efeffff
 
     // Compact delta integers.
     static const int32_t kMaxOneUnitDelta=0xfbff;
     static const int32_t kMinTwoUnitDeltaLead=kMaxOneUnitDelta+1;  // 0xfc00
     static const int32_t kThreeUnitDeltaLead=0xffff;
 
-    static const int32_t kMaxTwoUnitDelta=((kThreeUnitDeltaLead-kMinTwoUnitDeltaLead)<<16)-1;  // 0x3feffff
-
-    // A fixed-length integer has its length indicated by a preceding node value.
-    static const int32_t kFixedInt32=1;
-    static const int32_t kFixedIntIsFinal=2;
+    static const int32_t kMaxTwoUnitDelta=((kThreeUnitDeltaLead-kMinTwoUnitDeltaLead)<<16)-1;  // 0x03feffff
 
     // Fixed value referencing the UCharTrie words.
-    const UChar *uchars;
+    const UChar *uchars_;
 
     // Iterator variables.
 
     // Pointer to next trie unit to read. NULL if no more matches.
-    const UChar *pos;
+    const UChar *pos_;
     // Remaining length of a linear-match node, minus 1. Negative if not in such a node.
-    int32_t remainingMatchLength;
+    int32_t remainingMatchLength_;
     // Value for a match, after hasValue() returned TRUE.
-    int32_t value;
-    UBool haveValue;
+    int32_t value_;
+    UBool haveValue_;
     // Unique value, only used in hasUniqueValue().
-    int32_t uniqueValue;
-    UBool haveUniqueValue;
+    int32_t uniqueValue_;
+    UBool haveUniqueValue_;
 };
 
 U_NAMESPACE_END

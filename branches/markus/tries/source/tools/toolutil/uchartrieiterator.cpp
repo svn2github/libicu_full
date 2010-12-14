@@ -30,28 +30,28 @@ UCharTrieIterator::UCharTrieIterator(const UCharTrie &otherTrie, int32_t maxStri
                                      UErrorCode &errorCode)
         : trie(otherTrie), maxLength(maxStringLength), value(0), stack(errorCode) {
     trie.saveState(initialState);
-    int32_t length=trie.remainingMatchLength;  // Actual remaining match length minus 1.
+    int32_t length=trie.remainingMatchLength_;  // Actual remaining match length minus 1.
     if(length>=0) {
         // Pending linear-match node, append remaining UChars to str.
         ++length;
         if(maxLength>0 && length>maxLength) {
             length=maxLength;  // This will leave remainingMatchLength>=0 as a signal.
         }
-        str.append(trie.pos, length);
-        trie.pos+=length;
-        trie.remainingMatchLength-=length;
+        str.append(trie.pos_, length);
+        trie.pos_+=length;
+        trie.remainingMatchLength_-=length;
     }
 }
 
 UCharTrieIterator &UCharTrieIterator::reset() {
     trie.resetToState(initialState);
-    int32_t length=trie.remainingMatchLength+1;  // Remaining match length.
+    int32_t length=trie.remainingMatchLength_+1;  // Remaining match length.
     if(maxLength>0 && length>maxLength) {
         length=maxLength;
     }
     str.truncate(length);
-    trie.pos+=length;
-    trie.remainingMatchLength-=length;
+    trie.pos_+=length;
+    trie.remainingMatchLength_-=length;
     stack.setSize(0);
     return *this;
 }
@@ -61,6 +61,7 @@ UCharTrieIterator::next(UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) {
         return FALSE;
     }
+#if 0
     if(trie.pos==NULL) {
         if(stack.isEmpty()) {
             return FALSE;
@@ -178,6 +179,8 @@ UCharTrieIterator::next(UErrorCode &errorCode) {
             trie.pos+=length;
         }
     }
+#endif
+    return FALSE;
 }
 
 U_NAMESPACE_END

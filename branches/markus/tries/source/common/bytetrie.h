@@ -210,6 +210,7 @@ private:
         int32_t leadByte=*pos++;
         return skipValueAndFinal(pos, leadByte);
     }
+    // TODO: See if all functions are used.
     inline void skipValueAndFinal(int32_t leadByte) {
         pos_=skipValueAndFinal(pos_, leadByte);
     }

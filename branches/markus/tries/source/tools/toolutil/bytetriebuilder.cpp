@@ -304,7 +304,7 @@ ByteTrieBuilder::makeBranchSubNode(int32_t start, int32_t limit, int32_t byteInd
     }
     // List of byte-value pairs where values are either final values
     // or jumps to other parts of the trie.
-    int32_t starts[ByteTrie::kMaxBranchLinearSubNodeLength];  // TODO: different constant
+    int32_t starts[ByteTrie::kMaxBranchLinearSubNodeLength];
     UBool final[ByteTrie::kMaxBranchLinearSubNodeLength-1];
     // For each byte except the last one, find its elements array start and its value if final.
     int32_t byteNumber=0;

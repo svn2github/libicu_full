@@ -44,17 +44,13 @@ public:
 
 private:
     void makeNode(int32_t start, int32_t limit, int32_t unitIndex);
-    void makeListBranchNode(int32_t start, int32_t limit, int32_t unitIndex, int32_t length);
-    void makeSplitBranchNode(int32_t start, int32_t limit, int32_t unitIndex, int32_t length);
     void makeBranchSubNode(int32_t start, int32_t limit, int32_t unitIndex, int32_t length);
 
     UBool ensureCapacity(int32_t length);
     void write(int32_t unit);
     void write(const UChar *s, int32_t length);
-    void writeCompactInt(int32_t i, UBool final);
+    void writeValueAndFinal(int32_t i, UBool final);
     void writeDelta(int32_t i);
-    int32_t writeFixedInt(int32_t i);  // Returns number of units.
-    void writeInt(int32_t i, int32_t length);
 
     UnicodeString strings;
     UCharTrieElement *elements;
