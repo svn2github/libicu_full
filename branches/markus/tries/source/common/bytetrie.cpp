@@ -31,30 +31,24 @@ const int8_t ByteTrie::bytesPerLead[kFiveByteLead+1]={
     3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 5
 };
 
-UBool
-ByteTrie::readCompactInt(int32_t leadByte) {
-    UBool isFinal=(UBool)(leadByte&kValueIsFinal);
-    leadByte>>=1;
-    int numBytes=bytesPerLead[leadByte]-1;  // -1: lead byte was already consumed.
-    switch(numBytes) {
-    case 0:
-        value=leadByte-kMinOneByteLead;
-        break;
-    case 1:
-        value=((leadByte-kMinTwoByteLead)<<8)|*pos;
-        break;
-    case 2:
-        value=((leadByte-kMinThreeByteLead)<<16)|(pos[0]<<8)|pos[1];
-        break;
-    case 3:
-        value=(pos[0]<<16)|(pos[1]<<8)|pos[2];
-        break;
-    case 4:
-        value=(pos[0]<<24)|(pos[1]<<16)|(pos[2]<<8)|pos[3];
-        break;
+int32_t
+ByteTrie::readValue(int32_t leadByte) {  // lead byte already shifted right by 1.
+    int32_t v;
+    if(leadByte<kMinTwoByteLead) {
+        return leadByte-kMinOneByteLead;
+    } else if(leadByte<kMinThreeByteLead) {
+        return ((leadByte-kMinTwoByteLead)<<8)|*pos++;
+    } else if(leadByte<kFourByteLead) {
+        v=((leadByte-kMinThreeByteLead)<<16)|(pos[0]<<8)|pos[1];
+        pos+=2;
+    } else if(leadByte==kFourByteLead) {
+        v=(pos[0]<<16)|(pos[1]<<8)|pos[2];
+        pos+=3;
+    } else {
+        v=(pos[0]<<24)|(pos[1]<<16)|(pos[2]<<8)|pos[3];
+        pos+=4;
     }
-    pos+=numBytes;
-    return isFinal;
+    return v;
 }
 
 int32_t
@@ -77,51 +71,111 @@ ByteTrie::readFixedInt(int32_t bytesPerValue) {
     return fixedInt;
 }
 
+const int8_t ByteTrie::bytesPerDeltaLead[0x100]={
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 5
+};
+
+int32_t
+ByteTrie::readDelta() {
+    int32_t delta=*pos++;
+    if(delta<kMinTwoByteDeltaLead) {
+        return delta;
+    } else if(delta<kMinThreeByteDeltaLead) {
+        return ((delta-kMinTwoByteDeltaLead)<<8)|*pos++;
+    } else if(delta<kFourByteDeltaLead) {
+        delta=((delta-kMinThreeByteDeltaLead)<<16)|(pos[0]<<8)|pos[1];
+        pos+=2;
+    } else if(delta==kFourByteDeltaLead) {
+        delta=(pos[0]<<16)|(pos[1]<<8)|pos[2];
+        pos+=3;
+    } else {
+        delta=(pos[0]<<24)|(pos[1]<<16)|(pos[2]<<8)|pos[3];
+        pos+=4;
+    }
+#if 0
+    int numBytes=bytesPerDeltaLead[delta]-1;  // -1: lead byte was already consumed.
+    switch(numBytes) {
+    case 0:
+        // nothing to do
+        return delta;
+    case 1:
+        delta=((delta-kMinTwoByteDeltaLead)<<8)|*pos;
+        break;
+    case 2:
+        delta=((delta-kMinThreeByteDeltaLead)<<16)|(pos[0]<<8)|pos[1];
+        break;
+    case 3:
+        delta=(pos[0]<<16)|(pos[1]<<8)|pos[2];
+        break;
+    case 4:
+        delta=(pos[0]<<24)|(pos[1]<<16)|(pos[2]<<8)|pos[3];
+        break;
+    }
+    pos+=numBytes;
+#endif
+    return delta;
+}
+
 UBool
-ByteTrie::branchNext(int32_t node, int32_t inByte) {
+ByteTrie::branchNext(int32_t length, int32_t inByte) {
     // Branch according to the current byte.
-    while(node>=kMinSplitBranch) {
-        // Branching on a byte value,
-        // with a jump delta for less-than, and continuing for greater-or-equal.
-        // Both edges must lead to branch nodes again.
-        node-=kMinSplitBranch;
-        uint8_t trieByte=*pos++;
-        if(inByte<trieByte) {
-            int32_t delta=readFixedInt(node);
+    if(length==0) {
+        length=*pos++;
+    }
+    ++length;
+    // The length of the branch is the number of bytes to select from.
+    // The data structure encodes a binary search.
+    while(length>kMaxBranchLinearSubNodeLength) {
+        if(inByte<*pos++) {
+            length>>=1;
+            int32_t delta=readDelta();
             pos+=delta;
         } else {
-            pos+=node+1;  // Skip fixed-width integer.
+            length=length-(length>>1);
+            skipDelta();
         }
-        node=*pos++;
-        U_ASSERT(node<kMinLinearMatch);
     }
-    // Branch node with a list of key-value pairs where
-    // values are compact integers: either final values or jump deltas.
-    // If the last key byte matches, just continue after it rather
-    // than jumping.
-    int32_t length=node+1;  // Actual list length minus 1.
-    for(;;) {
-        uint8_t trieByte=*pos++;
-        U_ASSERT(length==0 || *pos>=kMinValueLead);
-        if(inByte==trieByte) {
-            if(length>0) {
-                node=*pos;
-                if(node&kValueIsFinal) {
-                    // Leave the final value for hasValue() to read.
-                } else {
-                    // Use the non-final value as the jump delta.
-                    ++pos;
-                    readCompactInt(node);
-                    pos+=value;
-                }
+    // Drop down to linear search for the last few bytes.
+    // length>=2 because the loop body above sees length>kMaxBranchLinearSubNodeLength>=3
+    // and divides length by 2.
+    do {
+        if(inByte==*pos++) {
+            int32_t node=*pos;
+            U_ASSERT(node>=kMinValueLead);
+            if(node&kValueIsFinal) {
+                // Leave the final value for hasValue() to read.
+            } else {
+                // Use the non-final value as the jump delta.
+                ++pos;
+                int32_t delta=readValue(node>>1);
+                pos+=delta;
             }
             return TRUE;
         }
-        if(inByte<trieByte || length--==0) {
-            stop();
-            return FALSE;
-        }
-        pos+=bytesPerLead[*pos>>1];
+        --length;
+        skipValueAndFinal();
+    } while(length>1);
+    if(inByte==*pos++) {
+        return TRUE;
+    } else {
+        stop();
+        return FALSE;
     }
 }
 
@@ -166,7 +220,7 @@ ByteTrie::next(int32_t inByte) {
             return FALSE;
         } else {
             // Skip intermediate value.
-            pos+=bytesPerLead[node>>1]-1;
+            skipValueAndFinal(node);
             // The next node must not also be a value node.
             U_ASSERT(*pos<kMinValueLead);
         }
@@ -260,7 +314,7 @@ ByteTrie::next(const char *s, int32_t sLength) {
                 return FALSE;
             } else {
                 // Skip intermediate value.
-                pos+=bytesPerLead[node>>1]-1;
+                skipValueAndFinal(node);
                 // The next node must not also be a value node.
                 U_ASSERT(*pos<kMinValueLead);
             }

@@ -48,37 +48,22 @@ Appendable::append(const UChar *s, int32_t length) {
 
 UOBJECT_DEFINE_NO_RTTI_IMPLEMENTATION(Appendable)
 
-UBool
-UCharTrie::readCompactInt(int32_t leadUnit) {
-    UBool isFinal=(UBool)(leadUnit&kValueIsFinal);
-    leadUnit>>=1;
+int32_t
+UCharTrie::readValue(int32_t leadUnit) {
     if(leadUnit<kMinTwoUnitLead) {
-        value=leadUnit-kMinOneUnitLead;
+        return leadUnit-kMinOneUnitLead;
     } else if(leadUnit<kThreeUnitLead) {
-        value=((leadUnit-kMinTwoUnitLead)<<16)|*pos++;
+        return ((leadUnit-kMinTwoUnitLead)<<16)|*pos++;
     } else {
-        value=(pos[0]<<16)|pos[1];
+        int32_t v=(pos[0]<<16)|pos[1];
         pos+=2;
-    }
-    return isFinal;
-}
-
-void
-UCharTrie::skipCompactInt(int32_t leadUnit) {
-    leadUnit>>=1;
-    if(leadUnit<kMinTwoUnitLead) {
-        // pos is already after the leadUnit.
-    } else if(leadUnit<kThreeUnitLead) {
-        ++pos;
-    } else {
-        pos+=2;
+        return v;
     }
 }
 
 UBool
 UCharTrie::branchNext(int32_t length, int32_t uchar) {
     // Branch according to the current unit.
-#if 1
     if(length==0) {
         length=*pos++;
     }
@@ -96,16 +81,19 @@ UCharTrie::branchNext(int32_t length, int32_t uchar) {
         }
     }
     // Drop down to linear search for the last few units.
+    // length>=2 because the loop body above sees length>kMaxBranchLinearSubNodeLength>=3
+    // and divides length by 2.
     do {
         if(uchar==*pos++) {
             int32_t node=*pos;
+            U_ASSERT(node>=kMinValueLead);
             if(node&kValueIsFinal) {
                 // Leave the final value for hasValue() to read.
             } else {
                 // Use the non-final value as the jump delta.
                 ++pos;
-                readCompactInt(node);
-                pos+=value;
+                int32_t delta=readValue(node>>1);
+                pos+=delta;
             }
             return TRUE;
         }
@@ -118,79 +106,6 @@ UCharTrie::branchNext(int32_t length, int32_t uchar) {
         stop();
         return FALSE;
     }
-#elif 1
-    if(length==0) {
-        length=*pos++;
-    }
-    ++length;
-    // node contains the length of the branch (the number of units to select from).
-    // The data structure encodes a binary search.
-    do {
-        if(uchar<*pos++) {
-            length>>=1;
-            int32_t delta=readDelta();
-            pos+=delta;
-        } else {
-            length=length-(length>>1);
-            skipDelta();
-        }
-    } while(length>1);
-    if(uchar==*pos++) {
-        return TRUE;
-    } else {
-        stop();
-        return FALSE;
-    }
-#else
-    while(node>=kMinSplitBranch) {
-        // Branching on a unit value,
-        // with a jump delta for less-than, and continuing for greater-or-equal.
-        // Both edges must lead to branch nodes again.
-        UChar trieUnit=*pos++;
-        if(uchar<trieUnit) {
-            int32_t delta=readFixedInt(node);
-            pos+=delta;
-        } else {
-            pos+=(node&kFixedInt32)+1;  // Skip fixed-width integer.
-        }
-        node=*pos++;
-        U_ASSERT(node<kMinLinearMatch);
-    }
-    // Branch node with a list of key-value pairs where
-    // values are either final values or jump deltas.
-    // If the last key unit matches, just continue after it rather
-    // than jumping.
-    int32_t length=((node>>kListBranchLengthShift)&7)+1;  // Actual list length minus 1.
-    // 2 bits for the length of a final value (0..2 units) and
-    // 1 bit for the length of a jump delta (1 or 2).
-    int32_t entryLengths=node>>kListBranchEntryLengthsShift;
-    // The lower node bits contain a bit for each (key, value) pair
-    // for whether the value is final.
-    for(;;) {
-        UChar trieUnit=*pos++;
-        if(uchar==trieUnit) {
-            if(length>0) {
-                if(node&1) {
-                    haveValue=TRUE;
-                    readBranchFinalValue(entryLengths);
-                    stop();
-                } else {
-                    // Use the non-final value as the jump delta.
-                    int32_t delta=readFixedInt(entryLengths);
-                    pos+=delta;
-                }
-            }
-            return TRUE;
-        }
-        if(uchar<trieUnit || length--==0) {
-            stop();
-            return FALSE;
-        }
-        // Skip the value.
-        pos+= node&1 ? entryLengths>>1 : (entryLengths&1)+1;
-        node>>=1;
-    }
-#endif
 }
 
 UBool
@@ -234,7 +149,7 @@ UCharTrie::next(int32_t uchar) {
             return FALSE;
         } else {
             // Skip intermediate value.
-            skipCompactInt(node);
+            skipValueAndFinal(node);
             // The next node must not also be a value node.
             U_ASSERT(*pos<kMinValueLead);
         }
@@ -299,18 +214,6 @@ UCharTrie::next(const UChar *s, int32_t sLength) {
                 if(!branchNext(node, uchar)) {
                     return FALSE;
                 }
-#if 0
-                // In a UCharTrie (unlike a ByteTrie),
-                // branchNext() might stop() (set pos=NULL) even if it returns TRUE,
-                // because final branch values are encoded differently from
-                // value nodes and must be evaluated immediately.
-                // Therefore, we need to check for pos==NULL here before we
-                // continue with more input.
-                if(pos==NULL) {
-                    // Return TRUE if there is no more input.
-                    return sLength<0 ? *s==0 : sLength==0;
-                }
-#endif
                 // Fetch the next input unit, if there is one.
                 if(sLength<0) {
                     if((uchar=*s++)==0) {
@@ -340,7 +243,7 @@ UCharTrie::next(const UChar *s, int32_t sLength) {
                 return FALSE;
             } else {
                 // Skip intermediate value.
-                skipCompactInt(node);
+                skipValueAndFinal(node);
                 // The next node must not also be a value node.
                 U_ASSERT(*pos<kMinValueLead);
             }
@@ -470,7 +373,7 @@ UCharTrie::getNextUChars(Appendable &out) {
             return 0;
         } else {
             ++pos;  // Skip the lead unit.
-            skipCompactInt(node);
+            skipValueAndFinal(node);
             node=*pos;
             U_ASSERT(node<kMinValueLead);
         }

@@ -178,18 +178,52 @@ private:
         pos=NULL;
     }
 
+    int32_t readValue(int32_t leadByte);
     // Reads a compact 32-bit integer and post-increments pos.
     // pos is already after the leadByte.
     // Returns TRUE if the integer is a final value.
-    UBool readCompactInt(int32_t leadByte);
+    inline UBool readCompactInt(int32_t leadByte) {
+        UBool isFinal=(UBool)(leadByte&kValueIsFinal);
+        value=readValue(leadByte>>1);
+        return isFinal;
+    }
     // pos is on the leadByte.
     inline UBool readCompactInt() {
         int32_t leadByte=*pos++;
         return readCompactInt(leadByte);
     }
+    inline void skipValueAndFinal(int32_t leadByte) {
+        if(leadByte>=(kMinTwoByteLead<<1)) {
+            if(leadByte<(kMinThreeByteLead<<1)) {
+                ++pos;
+            } else if(leadByte<(kFourByteLead<<1)) {
+                pos+=2;
+            } else {
+                pos+=3+((leadByte>>1)&1);
+            }
+        }
+    }
+    inline void skipValueAndFinal() {
+        int32_t leadByte=*pos++;
+        skipValueAndFinal(leadByte);
+    }
 
     // Reads a fixed-width integer and post-increments pos.
     int32_t readFixedInt(int32_t bytesPerValue);
+
+    int32_t readDelta();
+    inline void skipDelta() {
+        int32_t delta=*pos++;
+        if(delta>=kMinTwoByteDeltaLead) {
+            if(delta<kMinThreeByteDeltaLead) {
+                ++pos;
+            } else if(delta<kFourByteDeltaLead) {
+                pos+=2;
+            } else {
+                pos+=3+(delta&1);
+            }
+        }
+    }
 
     // Handles a branch node for both next(byte) and next(string).
     UBool branchNext(int32_t node, int32_t inByte);
@@ -259,6 +293,10 @@ private:
     // Values are compact ints: Final values or jump deltas.
     static const int32_t kMaxListBranchLength=9;
 
+    // For a branch sub-node with at most this many entries, we drop down
+    // to a linear search.
+    static const int32_t kMaxBranchLinearSubNodeLength=4;
+
     // 08..0b: Split-branch node with less/greater-or-equal outbound edges.
     // The 2 lower bits indicate the length of the less-than "jump" (1..4 bytes).
     // Followed by the comparison byte, and
@@ -266,8 +304,11 @@ private:
     static const int32_t kMinSplitBranch=kMaxListBranchLength-1;  // 8
 
     // 0c..1f: Linear-match node, match 1..24 bytes and continue reading the next node.
-    static const int32_t kMinLinearMatch=kMinSplitBranch+4;  // 0xc
-    static const int32_t kMaxLinearMatchLength=20;
+    // static const int32_t kMinLinearMatch=kMinSplitBranch+4;  // 0xc
+    // static const int32_t kMaxLinearMatchLength=20;
+
+    static const int32_t kMinLinearMatch=0x10;
+    static const int32_t kMaxLinearMatchLength=0x10;
 
     // 20..ff: Variable-length value node.
     // If odd, the value is final. (Otherwise, intermediate value or jump delta.)
@@ -289,12 +330,26 @@ private:
     static const int32_t kFourByteLead=0x7e;
 
     // A little more than Unicode code points.
-    static const int32_t kMaxThreeByteValue=((kFourByteLead-kMinThreeByteLead)<<16)-1;  // 0x11ffff;
+    static const int32_t kMaxThreeByteValue=((kFourByteLead-kMinThreeByteLead)<<16)-1;  // 0x11ffff
 
     static const int32_t kFiveByteLead=0x7f;
 
     // Map a shifted-right compact-int lead byte to its number of bytes.
+    // TODO: bytesPerValueLead
     static const int8_t bytesPerLead[kFiveByteLead+1];
+
+    // Compact delta integers.
+    static const int32_t kMaxOneByteDelta=0xbf;
+    static const int32_t kMinTwoByteDeltaLead=kMaxOneByteDelta+1;  // 0xc0
+    static const int32_t kMinThreeByteDeltaLead=0xf0;
+    static const int32_t kFourByteDeltaLead=0xfe;
+    static const int32_t kFiveByteDeltaLead=0xff;
+
+    static const int32_t kMaxTwoByteDelta=((kMinThreeByteDeltaLead-kMinTwoByteDeltaLead)<<8)-1;  // 0x2fff
+    static const int32_t kMaxThreeByteDelta=((kFourByteDeltaLead-kMinThreeByteDeltaLead)<<16)-1;  // 0xdffff
+
+    // Map a delta-int lead byte to its number of bytes.
+    static const int8_t bytesPerDeltaLead[0x100];
 
     // Fixed value referencing the ByteTrie bytes.
     const uint8_t *bytes;

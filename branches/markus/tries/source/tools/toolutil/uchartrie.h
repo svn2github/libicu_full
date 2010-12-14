@@ -221,20 +221,31 @@ private:
         pos=NULL;
     }
 
+    int32_t readValue(int32_t leadUnit);
     // Reads a compact 32-bit integer and post-increments pos.
     // pos is already after the leadUnit.
     // Returns TRUE if the integer is a final value.
-    UBool readCompactInt(int32_t leadUnit);
-    UBool readValueAndFinal() {
+    inline UBool readCompactInt(int32_t leadUnit) {
+        UBool isFinal=(UBool)(leadUnit&kValueIsFinal);
+        value=readValue(leadUnit>>1);
+        return isFinal;
+    }
+    inline UBool readValueAndFinal() {
         int32_t leadUnit=*pos++;
         return readCompactInt(leadUnit);
     }
-
-    // pos is already after the leadUnit.
-    void skipCompactInt(int32_t leadUnit);
-    void skipValueAndFinal() {
+    inline void skipValueAndFinal(int32_t leadUnit) {
+        if(leadUnit<(kMinTwoUnitLead<<1)) {
+            // pos is already after the leadUnit.
+        } else if(leadUnit<(kThreeUnitLead<<1)) {
+            ++pos;
+        } else {
+            pos+=2;
+        }
+    }
+    inline void skipValueAndFinal() {
         int32_t leadUnit=*pos++;
-        skipCompactInt(leadUnit);
+        skipValueAndFinal(leadUnit);
     }
 
     // Reads a fixed-width integer and post-increments pos.
@@ -258,7 +269,7 @@ private:
         }
         return delta;
     }
-    inline int32_t skipDelta() {
+    inline void skipDelta() {
         int32_t delta=*pos++;
         if(delta>=kMinTwoUnitDeltaLead) {
             if(delta==kThreeUnitDeltaLead) {
@@ -267,7 +278,6 @@ private:
                 ++pos;
             }
         }
-        return delta;
     }
 
     // Reads a final value from a list branch.
@@ -366,7 +376,9 @@ private:
     static const int32_t kListBranchEntryLengthsShift=kListBranchLengthShift+3;  // 11
     static const int32_t kListBranchValueLengthsShift=kListBranchEntryLengthsShift+1;  // 12
 
-    static const int32_t kMaxBranchLinearSubNodeLength=3;
+    // For a branch sub-node with at most this many entries, we drop down
+    // to a linear search.
+    static const int32_t kMaxBranchLinearSubNodeLength=4;
 
     // 3400..3401: Split-branch node with less/greater-or-equal outbound edges.
     // The lower bit indicates the length of the less-than "jump" (1 or 2 units).

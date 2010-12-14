@@ -447,6 +447,15 @@ public:
 
     virtual ~UCharTrieDictLookup() {}
 
+protected:
+    UCharTrieBuilder builder;
+};
+
+class UCharTrieDictMatches : public UCharTrieDictLookup {
+public:
+    UCharTrieDictMatches(const DictionaryTriePerfTest &perfTest)
+            : UCharTrieDictLookup(perfTest) {}
+
     virtual void call(UErrorCode *pErrorCode) {
         UnicodeString uchars(builder.build(*pErrorCode));
         UCharTrie trie(uchars.getBuffer());
@@ -459,7 +468,6 @@ public:
             if(lines[i].name[0]<0x41) {
                 continue;
             }
-#if 1
             utext_openUChars(&text, lines[i].name, lines[i].len, pErrorCode);
             int32_t count;
             ucharTrieMatches(trie, &text, lines[i].len,
@@ -467,16 +475,178 @@ public:
             if(count==0 || lengths[count-1]!=lines[i].len) {
                 fprintf(stderr, "word %ld (0-based) not found\n", (long)i);
             }
-#else
+        }
+    }
+};
+
+class UCharTrieDictContains : public UCharTrieDictLookup {
+public:
+    UCharTrieDictContains(const DictionaryTriePerfTest &perfTest)
+            : UCharTrieDictLookup(perfTest) {}
+
+    virtual void call(UErrorCode *pErrorCode) {
+        UnicodeString uchars(builder.build(*pErrorCode));
+        UCharTrie trie(uchars.getBuffer());
+        const ULine *lines=perf.getCachedLines();
+        int32_t numLines=perf.getNumLines();
+        for(int32_t i=0; i<numLines; ++i) {
+            // Skip comment lines (start with a character below 'A').
+            if(lines[i].name[0]<0x41) {
+                continue;
+            }
             if(!trie.reset().next(lines[i].name, lines[i].len) || !trie.hasValue()) {
                 fprintf(stderr, "word %ld (0-based) not found\n", (long)i);
             }
-#endif
+        }
+    }
+};
+
+static inline int32_t thaiCharToByte(UChar32 c) {
+    if(0xe00<=c && c<=0xefe) {
+        return c&0xff;
+    } else if(c==0x2e) {
+        return 0xff;
+    } else {
+        return -1;
+    }
+}
+
+static UBool thaiWordToBytes(const UChar *s, int32_t length,
+                             CharString &str, UErrorCode &errorCode) {
+    for(int32_t i=0; i<length; ++i) {
+        UChar c=s[i];
+        int32_t b=thaiCharToByte(c);
+        if(b>=0) {
+            str.append((char)b, errorCode);
+        } else {
+            fprintf(stderr, "thaiWordToBytes(): unable to encode U+%04X as a byte\n", c);
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+class ByteTrieDictLookup : public DictLookup {
+public:
+    ByteTrieDictLookup(const DictionaryTriePerfTest &perfTest)
+            : DictLookup(perfTest), noDict(FALSE) {
+        IcuToolErrorCode errorCode("ByteTrieDictLookup()");
+        CharString str;
+        const ULine *lines=perf.getCachedLines();
+        int32_t numLines=perf.getNumLines();
+        for(int32_t i=0; i<numLines; ++i) {
+            // Skip comment lines (start with a character below 'A').
+            if(lines[i].name[0]<0x41) {
+                continue;
+            }
+            if(!thaiWordToBytes(lines[i].name, lines[i].len, str.clear(), errorCode)) {
+                fprintf(stderr, "thaiWordToBytes(): failed for word %ld (0-based)\n", (long)i);
+                noDict=TRUE;
+                break;
+            }
+            builder.add(str.toStringPiece(), 0, errorCode);
+        }
+        if(!noDict) {
+            int32_t length=builder.build(errorCode).length();
+            printf("size of ByteTrie:           %6ld bytes\n", (long)length);
         }
     }
 
+    virtual ~ByteTrieDictLookup() {}
+
 protected:
-    UCharTrieBuilder builder;
+    ByteTrieBuilder builder;
+    UBool noDict;
+};
+
+static int32_t
+byteTrieMatches(ByteTrie &trie,
+                UText *text, int32_t textLimit,
+                int32_t *lengths, int &count, int limit ) {
+    trie.reset();
+    int32_t numChars=0;
+    count=0;
+    for(;;) {
+        if(trie.hasValue()) {
+            if(count<limit) {
+                lengths[count++]=(int32_t)utext_getNativeIndex(text);
+            }
+        }
+        if(numChars>=textLimit) {
+            break;
+        }
+        UChar32 c=utext_next32(text);
+        if(c<0) {
+            break;
+        }
+        ++numChars;
+        if(!trie.next(thaiCharToByte(c))) {
+            break;
+        }
+    }
+    return numChars;
+}
+
+class ByteTrieDictMatches : public ByteTrieDictLookup {
+public:
+    ByteTrieDictMatches(const DictionaryTriePerfTest &perfTest)
+            : ByteTrieDictLookup(perfTest) {}
+
+    virtual void call(UErrorCode *pErrorCode) {
+        if(noDict) {
+            return;
+        }
+        ByteTrie trie(builder.build(*pErrorCode).data());
+        UText text=UTEXT_INITIALIZER;
+        int32_t lengths[20];
+        const ULine *lines=perf.getCachedLines();
+        int32_t numLines=perf.getNumLines();
+        for(int32_t i=0; i<numLines; ++i) {
+            // Skip comment lines (start with a character below 'A').
+            if(lines[i].name[0]<0x41) {
+                continue;
+            }
+            utext_openUChars(&text, lines[i].name, lines[i].len, pErrorCode);
+            int32_t count;
+            byteTrieMatches(trie, &text, lines[i].len,
+                            lengths, count, LENGTHOF(lengths));
+            if(count==0 || lengths[count-1]!=lines[i].len) {
+                fprintf(stderr, "word %ld (0-based) not found\n", (long)i);
+            }
+        }
+    }
+};
+
+class ByteTrieDictContains : public ByteTrieDictLookup {
+public:
+    ByteTrieDictContains(const DictionaryTriePerfTest &perfTest)
+            : ByteTrieDictLookup(perfTest) {}
+
+    virtual void call(UErrorCode *pErrorCode) {
+        if(noDict) {
+            return;
+        }
+        ByteTrie trie(builder.build(*pErrorCode).data());
+        const ULine *lines=perf.getCachedLines();
+        int32_t numLines=perf.getNumLines();
+        for(int32_t i=0; i<numLines; ++i) {
+            // Skip comment lines (start with a character below 'A').
+            if(lines[i].name[0]<0x41) {
+                continue;
+            }
+            trie.reset();
+            const UChar *line=lines[i].name;
+            int32_t lineLength=lines[i].len;
+            for(int32_t j=0; j<lineLength; ++j) {
+                if(!trie.next(thaiCharToByte(line[j]))) {
+                    fprintf(stderr, "word %ld (0-based) not found\n", (long)i);
+                }
+            }
+            if(!trie.hasValue()) {
+                fprintf(stderr, "word %ld (0-based) not found\n", (long)i);
+            }
+        }
+    }
 };
 
 UPerfFunction *DictionaryTriePerfTest::runIndexedTest(int32_t index, UBool exec,
@@ -484,15 +654,33 @@ UPerfFunction *DictionaryTriePerfTest::runIndexedTest(int32_t index, UBool exec,
     if(hasFile()) {
         switch(index) {
         case 0:
-            name="compacttrie";
+            name="compacttriematches";
             if(exec) {
                 return new CompactTrieDictLookup(*this);
             }
             break;
         case 1:
-            name="uchartrie";
+            name="uchartriematches";
             if(exec) {
-                return new UCharTrieDictLookup(*this);
+                return new UCharTrieDictMatches(*this);
+            }
+            break;
+        case 2:
+            name="uchartriecontains";
+            if(exec) {
+                return new UCharTrieDictContains(*this);
+            }
+            break;
+        case 3:
+            name="bytetriematches";
+            if(exec) {
+                return new ByteTrieDictMatches(*this);
+            }
+            break;
+        case 4:
+            name="bytetriecontains";
+            if(exec) {
+                return new ByteTrieDictContains(*this);
             }
             break;
         default:

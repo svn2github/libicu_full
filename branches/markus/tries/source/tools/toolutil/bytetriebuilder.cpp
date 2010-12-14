@@ -268,10 +268,96 @@ ByteTrieBuilder::makeNode(int32_t start, int32_t limit, int32_t byteIndex) {
         ++length;
     } while(i<limit);
     // length>=2 because minByte!=maxByte.
+#if 1
+    makeBranchSubNode(start, limit, byteIndex, length);
+    write(length-1);
+    if((length-1)>=ByteTrie::kMinLinearMatch) {
+        write(0);
+    }
+#else
     if(length<=ByteTrie::kMaxListBranchLength) {
         makeListBranchNode(start, limit, byteIndex, length);
     } else {
         makeSplitBranchNode(start, limit, byteIndex, length);
+    }
+#endif
+}
+
+// start<limit && all strings longer than byteIndex &&
+// length different bytes at byteIndex
+void
+ByteTrieBuilder::makeBranchSubNode(int32_t start, int32_t limit, int32_t byteIndex, int32_t length) {
+    if(length>ByteTrie::kMaxBranchLinearSubNodeLength) {
+        // Branch on the middle byte.
+        // First, find the middle byte.
+        int32_t count=length/2;
+        int32_t i=start;
+        char byte;
+        do {
+            byte=elements[i++].charAt(byteIndex, strings);
+            while(byte==elements[i].charAt(byteIndex, strings)) {
+                ++i;
+            }
+        } while(--count>0);
+        byte=elements[i].charAt(byteIndex, strings);  // middle byte
+        // Encode the less-than branch first.
+        makeBranchSubNode(start, i, byteIndex, length/2);
+        int32_t leftNode=bytesLength;
+        // Encode the greater-or-equal branch last because we do not jump for it at all.
+        makeBranchSubNode(i, limit, byteIndex, length-length/2);
+        // Write this node.
+        writeDelta(bytesLength-leftNode);  // less-than
+        write(byte);
+        return;
+    }
+    // List of byte-value pairs where values are either final values
+    // or jumps to other parts of the trie.
+    int32_t starts[ByteTrie::kMaxBranchLinearSubNodeLength];  // TODO: different constant
+    UBool final[ByteTrie::kMaxBranchLinearSubNodeLength-1];
+    // For each byte except the last one, find its elements array start and its value if final.
+    int32_t byteNumber=0;
+    do {
+        int32_t i=starts[byteNumber]=start;
+        char byte=elements[i++].charAt(byteIndex, strings);
+        while(byte==elements[i].charAt(byteIndex, strings)) {
+            ++i;
+        }
+        final[byteNumber]= start==i-1 && byteIndex+1==elements[start].getStringLength(strings);
+        start=i;
+    } while(++byteNumber<length-1);
+    // byteNumber==length-1, and the maxByte elements range is [start..limit[
+    starts[byteNumber]=start;
+
+    // Write the sub-nodes in reverse order: The jump lengths are deltas from
+    // after their own positions, so if we wrote the minByte sub-node first,
+    // then its jump delta would be larger.
+    // Instead we write the minByte sub-node last, for a shorter delta.
+    int32_t jumpTargets[ByteTrie::kMaxBranchLinearSubNodeLength-1];
+    do {
+        --byteNumber;
+        if(!final[byteNumber]) {
+            makeNode(starts[byteNumber], starts[byteNumber+1], byteIndex+1);
+            jumpTargets[byteNumber]=bytesLength;
+        }
+    } while(byteNumber>0);
+    // The maxByte sub-node is written as the very last one because we do
+    // not jump for it at all.
+    byteNumber=length-1;
+    makeNode(start, limit, byteIndex+1);
+    write(elements[start].charAt(byteIndex, strings));
+    // Write the rest of this node's byte-value pairs.
+    while(--byteNumber>=0) {
+        start=starts[byteNumber];
+        int32_t value;
+        if(final[byteNumber]) {
+            // Write the final value for the one string ending with this byte.
+            value=elements[start].getValue();
+        } else {
+            // Write the delta to the start position of the sub-node.
+            value=bytesLength-jumpTargets[byteNumber];
+        }
+        writeCompactInt(value, final[byteNumber]);
+        write(elements[start].charAt(byteIndex, strings));
     }
 }
 
@@ -335,7 +421,7 @@ ByteTrieBuilder::makeListBranchNode(int32_t start, int32_t limit, int32_t byteIn
 // start<limit && all strings longer than byteIndex &&
 // at least four different bytes at byteIndex
 // (At least four because the left and right outbound edges
-// must lead to branch nodes again, thus each side must have at least two units to branch on.)
+// must lead to branch nodes again, thus each side must have at least two bytes to branch on.)
 void
 ByteTrieBuilder::makeSplitBranchNode(int32_t start, int32_t limit, int32_t byteIndex, int32_t length) {
     // Split-branch on the middle byte.
@@ -415,7 +501,7 @@ ByteTrieBuilder::writeCompactInt(int32_t i, UBool final) {
     char intBytes[5];
     int32_t length=1;
     if(i<0 || i>0xffffff) {
-        intBytes[0]=(char)(ByteTrie::kFiveByteLead);
+        intBytes[0]=(char)ByteTrie::kFiveByteLead;
         intBytes[1]=(char)(i>>24);
         intBytes[2]=(char)(i>>16);
         intBytes[3]=(char)(i>>8);
@@ -430,7 +516,7 @@ ByteTrieBuilder::writeCompactInt(int32_t i, UBool final) {
             if(i<=ByteTrie::kMaxThreeByteValue) {
                 intBytes[0]=(char)(ByteTrie::kMinThreeByteLead+(i>>16));
             } else {
-                intBytes[0]=(char)(ByteTrie::kFourByteLead);
+                intBytes[0]=(char)ByteTrie::kFourByteLead;
                 intBytes[1]=(char)(i>>16);
                 length=2;
             }
@@ -439,6 +525,37 @@ ByteTrieBuilder::writeCompactInt(int32_t i, UBool final) {
         intBytes[length++]=(char)i;
     }
     intBytes[0]=(char)((intBytes[0]<<1)|final);
+    write(intBytes, length);
+}
+
+void
+ByteTrieBuilder::writeDelta(int32_t i) {
+    char intBytes[5];
+    int32_t length;
+    U_ASSERT(i>=0);
+    if(i<=ByteTrie::kMaxOneByteDelta) {
+        length=0;
+    } else if(i<=ByteTrie::kMaxTwoByteDelta) {
+        intBytes[0]=(char)(ByteTrie::kMinTwoByteDeltaLead+(i>>8));
+        length=1;
+    } else {
+        if(i<=ByteTrie::kMaxThreeByteDelta) {
+            intBytes[0]=(char)(ByteTrie::kMinThreeByteDeltaLead+(i>>16));
+            length=2;
+        } else {
+            if(i<=0xffffff) {
+                intBytes[0]=(char)ByteTrie::kFourByteDeltaLead;
+                length=3;
+            } else {
+                intBytes[0]=(char)ByteTrie::kFiveByteDeltaLead;
+                intBytes[1]=(char)(i>>24);
+                length=4;
+            }
+            intBytes[1]=(char)(i>>16);
+        }
+        intBytes[1]=(char)(i>>8);
+    }
+    intBytes[length++]=(char)i;
     write(intBytes, length);
 }
 

@@ -517,15 +517,16 @@ void
 UCharTrieBuilder::writeDelta(int32_t i) {
     UChar intUnits[3];
     int32_t length;
-    if(i<0 || i>UCharTrie::kMaxTwoUnitDelta) {
+    U_ASSERT(i>=0);
+    if(i<=UCharTrie::kMaxOneUnitDelta) {
+        length=0;
+    } else if(i<=UCharTrie::kMaxTwoUnitDelta) {
+        intUnits[0]=(UChar)(UCharTrie::kMinTwoUnitDeltaLead+(i>>16));
+        length=1;
+    } else {
         intUnits[0]=(UChar)(UCharTrie::kThreeUnitDeltaLead);
         intUnits[1]=(UChar)(i>>16);
         length=2;
-    } else if(i<=UCharTrie::kMaxOneUnitDelta) {
-        length=0;
-    } else {
-        intUnits[0]=(UChar)(UCharTrie::kMinTwoUnitDeltaLead+(i>>16));
-        length=1;
     }
     intUnits[length++]=(UChar)i;
     write(intUnits, length);

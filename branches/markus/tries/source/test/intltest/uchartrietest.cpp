@@ -37,8 +37,8 @@ public:
     void TestEmpty();
     void Test_a();
     void Test_a_ab();
-    void TestShortestListBranch();
-    void TestLongestListBranch();
+    void TestShortestBranch();
+    void TestBranches();
     void TestLongSequence();
     void TestLongBranch();
     void TestValuesForState();
@@ -78,8 +78,8 @@ void UCharTrieTest::runIndexedTest(int32_t index, UBool exec, const char *&name,
     TESTCASE_AUTO(TestEmpty);
     TESTCASE_AUTO(Test_a);
     TESTCASE_AUTO(Test_a_ab);
-    TESTCASE_AUTO(TestShortestListBranch);
-    TESTCASE_AUTO(TestLongestListBranch);
+    TESTCASE_AUTO(TestShortestBranch);
+    TESTCASE_AUTO(TestBranches);
     TESTCASE_AUTO(TestLongSequence);
     TESTCASE_AUTO(TestLongBranch);
     TESTCASE_AUTO(TestValuesForState);
@@ -131,7 +131,7 @@ void UCharTrieTest::Test_a_ab() {
     checkData(data, LENGTHOF(data));
 }
 
-void UCharTrieTest::TestShortestListBranch() {
+void UCharTrieTest::TestShortestBranch() {
     static const StringAndValue data[]={
         { "a", 1000 },
         { "b", 2000 }
@@ -139,7 +139,7 @@ void UCharTrieTest::TestShortestListBranch() {
     checkData(data, LENGTHOF(data));
 }
 
-void UCharTrieTest::TestLongestListBranch() {
+void UCharTrieTest::TestBranches() {
     static const StringAndValue data[]={
         { "a", 0x10 },
         { "cc", 0x40 },
@@ -149,14 +149,17 @@ void UCharTrieTest::TestLongestListBranch() {
         { "kkkk", 0x4000 },
         { "n", 0x10000 },
         { "ppppp", 0x40000 },
-        { "r", 0x100000 }/*,
+        { "r", 0x100000 },
         { "sss", 0x200000 },
         { "t", 0x400000 },
         { "uu", 0x800000 },
         { "vv", 0x7fffffff },
-        { "zz", 0x80000000 }*/
+        { "zz", 0x80000000 }
     };
-    checkData(data, LENGTHOF(data));
+    for(int32_t length=2; length<=LENGTHOF(data); ++length) {
+        infoln("TestBranches length=%d", (int)length);
+        checkData(data, length);
+    }
 }
 
 void UCharTrieTest::TestLongSequence() {
