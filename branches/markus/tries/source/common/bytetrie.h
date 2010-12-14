@@ -194,7 +194,7 @@ private:
         int32_t leadByte=*pos++;
         return readValueAndFinal(pos, leadByte);
     }
-    inline const uint8_t *skipValueAndFinal(const uint8_t *pos, int32_t leadByte) {
+    static inline const uint8_t *skipValueAndFinal(const uint8_t *pos, int32_t leadByte) {
         if(leadByte>=(kMinTwoByteLead<<1)) {
             if(leadByte<(kMinThreeByteLead<<1)) {
                 ++pos;
@@ -206,7 +206,7 @@ private:
         }
         return pos;
     }
-    inline const uint8_t *skipValueAndFinal(const uint8_t *pos) {
+    static inline const uint8_t *skipValueAndFinal(const uint8_t *pos) {
         int32_t leadByte=*pos++;
         return skipValueAndFinal(pos, leadByte);
     }
@@ -221,7 +221,7 @@ private:
     int32_t readFixedInt(int32_t bytesPerValue);
 
     int32_t readDelta();
-    inline const uint8_t *skipDelta(const uint8_t *pos) {
+    static inline const uint8_t *skipDelta(const uint8_t *pos) {
         int32_t delta=*pos++;
         if(delta>=kMinTwoByteDeltaLead) {
             if(delta<kMinThreeByteDeltaLead) {
@@ -237,7 +237,7 @@ private:
     inline void skipDelta() { pos_=skipDelta(pos_); }
 
     // Handles a branch node for both next(byte) and next(string).
-    const uint8_t *branchNext(const uint8_t *p, int32_t node, int32_t inByte);
+    static const uint8_t *branchNext(const uint8_t *pos, int32_t node, int32_t inByte);
 
     // Helper functions for hasUniqueValue().
     // Compare the latest value with the previous one, or save the latest one.
