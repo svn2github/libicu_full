@@ -46,15 +46,12 @@ public:
 private:
     void makeNode(int32_t start, int32_t limit, int32_t byteIndex);
     void makeBranchSubNode(int32_t start, int32_t limit, int32_t byteIndex, int32_t length);
-    void makeListBranchNode(int32_t start, int32_t limit, int32_t byteIndex, int32_t length);
-    void makeSplitBranchNode(int32_t start, int32_t limit, int32_t byteIndex, int32_t length);
 
     UBool ensureCapacity(int32_t length);
     void write(int32_t byte);
     void write(const char *b, int32_t length);
-    void writeCompactInt(int32_t i, UBool final);
+    void writeValueAndFinal(int32_t i, UBool final);
     void writeDelta(int32_t i);
-    int32_t writeFixedInt(int32_t i);  // Returns number of bytes.
 
     CharString strings;
     ByteTrieElement *elements;

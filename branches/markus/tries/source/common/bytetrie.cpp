@@ -22,23 +22,23 @@ U_NAMESPACE_BEGIN
 
 int32_t
 ByteTrie::readValue(const uint8_t *pos, int32_t leadByte) {  // lead byte already shifted right by 1.
-    int32_t v;
-    if(leadByte<kMinTwoByteLead) {
-        v=leadByte-kMinOneByteLead;
-    } else if(leadByte<kMinThreeByteLead) {
-        v=((leadByte-kMinTwoByteLead)<<8)|*pos++;
-    } else if(leadByte<kFourByteLead) {
-        v=((leadByte-kMinThreeByteLead)<<16)|(pos[0]<<8)|pos[1];
+    int32_t value;
+    if(leadByte<kMinTwoByteValueLead) {
+        value=leadByte-kMinOneByteValueLead;
+    } else if(leadByte<kMinThreeByteValueLead) {
+        value=((leadByte-kMinTwoByteValueLead)<<8)|*pos++;
+    } else if(leadByte<kFourByteValueLead) {
+        value=((leadByte-kMinThreeByteValueLead)<<16)|(pos[0]<<8)|pos[1];
         pos+=2;
-    } else if(leadByte==kFourByteLead) {
-        v=(pos[0]<<16)|(pos[1]<<8)|pos[2];
+    } else if(leadByte==kFourByteValueLead) {
+        value=(pos[0]<<16)|(pos[1]<<8)|pos[2];
         pos+=3;
     } else {
-        v=(pos[0]<<24)|(pos[1]<<16)|(pos[2]<<8)|pos[3];
+        value=(pos[0]<<24)|(pos[1]<<16)|(pos[2]<<8)|pos[3];
         pos+=4;
     }
     pos_=pos;
-    return v;
+    return value;
 }
 
 /* int32_t
@@ -73,7 +73,7 @@ ByteTrie::branchNext(const uint8_t *pos, int32_t length, int32_t inByte) {
     while(length>kMaxBranchLinearSubNodeLength) {
         if(inByte<*pos++) {
             length>>=1;
-            // int32_t delta=readDelta();
+            // int32_t delta=readDelta(pos);
             int32_t delta=*pos++;
             if(delta<kMinTwoByteDeltaLead) {
                 // nothing to do
@@ -108,17 +108,17 @@ ByteTrie::branchNext(const uint8_t *pos, int32_t length, int32_t inByte) {
             } else {
                 // Use the non-final value as the jump delta.
                 ++pos;
-                // int32_t delta=readValue(node>>1);
+                // int32_t delta=readValue(pos, node>>1);
                 node>>=1;
                 int32_t delta;
-                if(node<kMinTwoByteLead) {
-                    delta=node-kMinOneByteLead;
-                } else if(node<kMinThreeByteLead) {
-                    delta=((node-kMinTwoByteLead)<<8)|*pos++;
-                } else if(node<kFourByteLead) {
-                    delta=((node-kMinThreeByteLead)<<16)|(pos[0]<<8)|pos[1];
+                if(node<kMinTwoByteValueLead) {
+                    delta=node-kMinOneByteValueLead;
+                } else if(node<kMinThreeByteValueLead) {
+                    delta=((node-kMinTwoByteValueLead)<<8)|*pos++;
+                } else if(node<kFourByteValueLead) {
+                    delta=((node-kMinThreeByteValueLead)<<16)|(pos[0]<<8)|pos[1];
                     pos+=2;
-                } else if(node==kFourByteLead) {
+                } else if(node==kFourByteValueLead) {
                     delta=(pos[0]<<16)|(pos[1]<<8)|pos[2];
                     pos+=3;
                 } else {
@@ -146,12 +146,12 @@ ByteTrie::next(int32_t inByte) {
     if(pos==NULL) {
         return FALSE;
     }
-    haveValue=FALSE;
-    int32_t length=remainingMatchLength;  // Actual remaining match length minus 1.
+    haveValue_=FALSE;
+    int32_t length=remainingMatchLength_;  // Actual remaining match length minus 1.
     if(length>=0) {
         // Remaining part of a linear-match node.
         if(inByte==*pos) {
-            remainingMatchLength=length-1;
+            remainingMatchLength_=length-1;
             pos_=pos+1;
             return TRUE;
         } else {
@@ -169,7 +169,7 @@ ByteTrie::next(int32_t inByte) {
             // Match the first of length+1 bytes.
             length=node-kMinLinearMatch;  // Actual match length minus 1.
             if(inByte==*pos) {
-                remainingMatchLength=length-1;
+                remainingMatchLength_=length-1;
                 pos_=pos+1;
                 return TRUE;
             } else {
@@ -200,8 +200,8 @@ ByteTrie::next(const char *s, int32_t sLength) {
     if(pos==NULL) {
         return FALSE;
     }
-    haveValue=FALSE;
-    int32_t length=remainingMatchLength;  // Actual remaining match length minus 1.
+    haveValue_=FALSE;
+    int32_t length=remainingMatchLength_;  // Actual remaining match length minus 1.
     for(;;) {
         // Fetch the next input byte, if there is one.
         // Continue a linear-match node without rechecking sLength<0.
@@ -209,12 +209,12 @@ ByteTrie::next(const char *s, int32_t sLength) {
         if(sLength<0) {
             for(;;) {
                 if((inByte=*s++)==0) {
-                    remainingMatchLength=length;
+                    remainingMatchLength_=length;
                     pos_=pos;
                     return TRUE;
                 }
                 if(length<0) {
-                    remainingMatchLength=length;
+                    remainingMatchLength_=length;
                     break;
                 }
                 if(inByte!=*pos) {
@@ -227,14 +227,14 @@ ByteTrie::next(const char *s, int32_t sLength) {
         } else {
             for(;;) {
                 if(sLength==0) {
-                    remainingMatchLength=length;
+                    remainingMatchLength_=length;
                     pos_=pos;
                     return TRUE;
                 }
                 inByte=*s++;
                 --sLength;
                 if(length<0) {
-                    remainingMatchLength=length;
+                    remainingMatchLength_=length;
                     break;
                 }
                 if(inByte!=*pos) {
@@ -295,11 +295,11 @@ ByteTrie::next(const char *s, int32_t sLength) {
 UBool
 ByteTrie::hasValue() {
     int32_t node;
-    if(haveValue) {
+    if(haveValue_) {
         return TRUE;
     }
     const uint8_t *pos=pos_;
-    if(pos!=NULL && remainingMatchLength<0 && (node=*pos)>=kMinValueLead) {
+    if(pos!=NULL && remainingMatchLength_<0 && (node=*pos)>=kMinValueLead) {
         // Deliver value for the matching bytes.
         if(readValueAndFinal(pos+1, node)) {
             stop();
@@ -307,7 +307,7 @@ ByteTrie::hasValue() {
             // The next node must not also be a value node.
             U_ASSERT(*pos_<kMinValueLead);
         }
-        haveValue=TRUE;
+        haveValue_=TRUE;
         return TRUE;
     }
     return FALSE;

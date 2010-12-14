@@ -39,17 +39,17 @@ class ByteTrieIterator;
 class U_COMMON_API ByteTrie : public UMemory {
 public:
     ByteTrie(const void *trieBytes)
-            : bytes(reinterpret_cast<const uint8_t *>(trieBytes)),
-              pos_(bytes), remainingMatchLength(-1), value(0), haveValue(FALSE),
-              uniqueValue(0), haveUniqueValue(FALSE) {}
+            : bytes_(reinterpret_cast<const uint8_t *>(trieBytes)),
+              pos_(bytes_), remainingMatchLength_(-1), value_(0), haveValue_(FALSE),
+              uniqueValue_(0), haveUniqueValue_(FALSE) {}
 
     /**
      * Resets this trie to its initial state.
      */
     ByteTrie &reset() {
-        pos_=bytes;
-        remainingMatchLength=-1;
-        haveValue=FALSE;
+        pos_=bytes_;
+        remainingMatchLength_=-1;
+        haveValue_=FALSE;
         return *this;
     }
 
@@ -75,11 +75,11 @@ public:
      * @see resetToState
      */
     const ByteTrie &saveState(State &state) const {
-        state.bytes=bytes;
+        state.bytes=bytes_;
         state.pos=pos_;
-        state.remainingMatchLength=remainingMatchLength;
-        state.value=value;
-        state.haveValue=haveValue;
+        state.remainingMatchLength=remainingMatchLength_;
+        state.value=value_;
+        state.haveValue=haveValue_;
         return *this;
     }
 
@@ -91,11 +91,11 @@ public:
      * @see reset
      */
     ByteTrie &resetToState(const State &state) {
-        if(bytes==state.bytes && bytes!=NULL) {
+        if(bytes_==state.bytes && bytes_!=NULL) {
             pos_=state.pos;
-            remainingMatchLength=state.remainingMatchLength;
-            value=state.value;
-            haveValue=state.haveValue;
+            remainingMatchLength_=state.remainingMatchLength;
+            value_=state.value;
+            haveValue_=state.haveValue;
         }
         return *this;
     }
@@ -109,7 +109,7 @@ public:
         int32_t node;
         const uint8_t *pos=pos_;
         return pos!=NULL &&  // more input, and
-            (remainingMatchLength>=0 ||  // more linear-match bytes or
+            (remainingMatchLength_>=0 ||  // more linear-match bytes or
                 // the next node is not a final-value node
                 (node=*pos)<kMinValueLead || (node&kValueIsFinal)==0);
     }
@@ -145,7 +145,7 @@ public:
      * Returns a byte sequence's value if called immediately after hasValue()
      * returned TRUE. Otherwise undefined.
      */
-    int32_t getValue() const { return value; }
+    int32_t getValue() const { return value_; }
 
     /**
      * Determines whether all byte sequences reachable from the current state
@@ -185,7 +185,7 @@ private:
     // Returns TRUE if the integer is a final value.
     inline UBool readValueAndFinal(const uint8_t *pos, int32_t leadByte) {
         UBool isFinal=(UBool)(leadByte&kValueIsFinal);
-        value=readValue(pos, leadByte>>1);
+        value_=readValue(pos, leadByte>>1);
         return isFinal;
     }
     // pos is on the leadByte.
@@ -195,10 +195,10 @@ private:
         return readValueAndFinal(pos, leadByte);
     }
     static inline const uint8_t *skipValueAndFinal(const uint8_t *pos, int32_t leadByte) {
-        if(leadByte>=(kMinTwoByteLead<<1)) {
-            if(leadByte<(kMinThreeByteLead<<1)) {
+        if(leadByte>=(kMinTwoByteValueLead<<1)) {
+            if(leadByte<(kMinThreeByteValueLead<<1)) {
                 ++pos;
-            } else if(leadByte<(kFourByteLead<<1)) {
+            } else if(leadByte<(kFourByteValueLead<<1)) {
                 pos+=2;
             } else {
                 pos+=3+((leadByte>>1)&1);
@@ -217,10 +217,9 @@ private:
         pos_=skipValueAndFinal(pos_);
     }
 
-    // Reads a fixed-width integer and post-increments pos.
-    int32_t readFixedInt(int32_t bytesPerValue);
-
+    // Reads a jump delta and post-increments pos.
     int32_t readDelta();
+
     static inline const uint8_t *skipDelta(const uint8_t *pos) {
         int32_t delta=*pos++;
         if(delta>=kMinTwoByteDeltaLead) {
@@ -242,13 +241,13 @@ private:
     // Helper functions for hasUniqueValue().
     // Compare the latest value with the previous one, or save the latest one.
     inline UBool isUniqueValue() {
-        if(haveUniqueValue) {
-            if(value!=uniqueValue) {
+        if(haveUniqueValue_) {
+            if(value_!=uniqueValue_) {
                 return FALSE;
             }
         } else {
-            uniqueValue=value;
-            haveUniqueValue=TRUE;
+            uniqueValue_=value_;
+            haveUniqueValue_=TRUE;
         }
         return TRUE;
     }
@@ -285,39 +284,36 @@ private:
     // Node types:
     //  - Value node: Stores a 32-bit integer in a compact, variable-length format.
     //    The value is for the string/byte sequence so far.
+    //    One node bit indicates whether the value is final or whether
+    //    matching continues with the next node.
     //  - Linear-match node: Matches a number of bytes.
     //  - Branch node: Branches to other nodes according to the current input byte.
-    //    - List-branch node: If the input byte is in the list, a "jump"
-    //        leads to another node for further matching.
-    //        Instead of a jump, a final value may be stored.
-    //        For the last byte listed there is no "jump" or value directly in
-    //        the branch node: Instead, matching continues with the next node.
-    //    - Split-branch node: Compares the input byte with one included byte.
-    //        If less-than, "jumps" to another node which is a branch node.
-    //        Otherwise, matching continues with the next node which is a branch node.
+    //    The node byte is the length of the branch (number of bytes to select from)
+    //    minus 1. It is followed by a sub-node:
+    //    - If the length is at most kMaxBranchLinearSubNodeLength, then
+    //      there are length-1 (key, value) pairs and then one more comparison byte.
+    //      If one of the key bytes matches, then the value is either a final value for
+    //      the string/byte sequence so far, or a "jump" delta to the next node.
+    //      If the last byte matches, then matching continues with the next node.
+    //      (Values have the same encoding as value nodes.)
+    //    - If the length is greater than kMaxBranchLinearSubNodeLength, then
+    //      there is one byte and one "jump" delta.
+    //      If the input byte is less than the sub-node byte, then "jump" by delta to
+    //      the next sub-node which will have a length of length/2.
+    //      (The delta has its own compact encoding.)
+    //      Otherwise, skip the "jump" delta to the next sub-node
+    //      which will have a length of length-length/2.
 
     // Node lead byte values.
 
-    // 00..07: Branch node with a list of 2..9 comparison bytes.
-    // Followed by the (key, value) pairs except that the last byte's value is omitted
-    // (just continue reading the next node from there).
-    // Values are compact ints: Final values or jump deltas.
-    static const int32_t kMaxListBranchLength=9;
+    // 00..0f: Branch node. If node!=0 then the length is node+1, otherwise
+    // the length is one more than the next byte.
 
     // For a branch sub-node with at most this many entries, we drop down
     // to a linear search.
     static const int32_t kMaxBranchLinearSubNodeLength=4;
 
-    // 08..0b: Split-branch node with less/greater-or-equal outbound edges.
-    // The 2 lower bits indicate the length of the less-than "jump" (1..4 bytes).
-    // Followed by the comparison byte, and
-    // continue reading the next node from there for the "greater-or-equal" edge.
-    static const int32_t kMinSplitBranch=kMaxListBranchLength-1;  // 8
-
-    // 0c..1f: Linear-match node, match 1..24 bytes and continue reading the next node.
-    // static const int32_t kMinLinearMatch=kMinSplitBranch+4;  // 0xc
-    // static const int32_t kMaxLinearMatchLength=20;
-
+    // 10..1f: Linear-match node, match 1..16 bytes and continue reading the next node.
     static const int32_t kMinLinearMatch=0x10;
     static const int32_t kMaxLinearMatchLength=0x10;
 
@@ -330,24 +326,20 @@ private:
     // It is a final value if bit 0 is set.
     static const int32_t kValueIsFinal=1;
 
-    // Compact int: After testing bit 0, shift right by 1 and then use the following thresholds.
-    static const int32_t kMinOneByteLead=kMinValueLead/2;  // 0x10
+    // Compact value: After testing bit 0, shift right by 1 and then use the following thresholds.
+    static const int32_t kMinOneByteValueLead=kMinValueLead/2;  // 0x10
     static const int32_t kMaxOneByteValue=0x40;  // At least 6 bits in the first byte.
 
-    static const int32_t kMinTwoByteLead=kMinOneByteLead+kMaxOneByteValue+1;  // 0x51
+    static const int32_t kMinTwoByteValueLead=kMinOneByteValueLead+kMaxOneByteValue+1;  // 0x51
     static const int32_t kMaxTwoByteValue=0x1aff;
 
-    static const int32_t kMinThreeByteLead=kMinTwoByteLead+(kMaxTwoByteValue>>8)+1;  // 0x6c
-    static const int32_t kFourByteLead=0x7e;
+    static const int32_t kMinThreeByteValueLead=kMinTwoByteValueLead+(kMaxTwoByteValue>>8)+1;  // 0x6c
+    static const int32_t kFourByteValueLead=0x7e;
 
-    // A little more than Unicode code points.
-    static const int32_t kMaxThreeByteValue=((kFourByteLead-kMinThreeByteLead)<<16)-1;  // 0x11ffff
+    // A little more than Unicode code points. (0x11ffff)
+    static const int32_t kMaxThreeByteValue=((kFourByteValueLead-kMinThreeByteValueLead)<<16)-1;
 
-    static const int32_t kFiveByteLead=0x7f;
-
-    // Map a shifted-right compact-int lead byte to its number of bytes.
-    // TODO: bytesPerValueLead
-    static const int8_t bytesPerLead[kFiveByteLead+1];
+    static const int32_t kFiveByteValueLead=0x7f;
 
     // Compact delta integers.
     static const int32_t kMaxOneByteDelta=0xbf;
@@ -359,24 +351,21 @@ private:
     static const int32_t kMaxTwoByteDelta=((kMinThreeByteDeltaLead-kMinTwoByteDeltaLead)<<8)-1;  // 0x2fff
     static const int32_t kMaxThreeByteDelta=((kFourByteDeltaLead-kMinThreeByteDeltaLead)<<16)-1;  // 0xdffff
 
-    // Map a delta-int lead byte to its number of bytes.
-    static const int8_t bytesPerDeltaLead[0x100];
-
     // Fixed value referencing the ByteTrie bytes.
-    const uint8_t *bytes;
+    const uint8_t *bytes_;
 
     // Iterator variables.
 
     // Pointer to next trie byte to read. NULL if no more matches.
     const uint8_t *pos_;
     // Remaining length of a linear-match node, minus 1. Negative if not in such a node.
-    int32_t remainingMatchLength;
+    int32_t remainingMatchLength_;
     // Value for a match, after hasValue() returned TRUE.
-    int32_t value;
-    UBool haveValue;
+    int32_t value_;
+    UBool haveValue_;
     // Unique value, only used in hasUniqueValue().
-    int32_t uniqueValue;
-    UBool haveUniqueValue;
+    int32_t uniqueValue_;
+    UBool haveUniqueValue_;
 };
 
 U_NAMESPACE_END

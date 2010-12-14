@@ -31,7 +31,7 @@ ByteTrieIterator::ByteTrieIterator(const ByteTrie &otherTrie, int32_t maxStringL
                                    UErrorCode &errorCode)
         : trie(otherTrie), maxLength(maxStringLength), value(0), stack(errorCode) {
     trie.saveState(initialState);
-    int32_t length=trie.remainingMatchLength;  // Actual remaining match length minus 1.
+    int32_t length=trie.remainingMatchLength_;  // Actual remaining match length minus 1.
     if(length>=0) {
         // Pending linear-match node, append remaining bytes to str.
         ++length;
@@ -40,19 +40,19 @@ ByteTrieIterator::ByteTrieIterator(const ByteTrie &otherTrie, int32_t maxStringL
         }
         str.append(reinterpret_cast<const char *>(trie.pos_), length, errorCode);
         trie.pos_+=length;
-        trie.remainingMatchLength-=length;
+        trie.remainingMatchLength_-=length;
     }
 }
 
 ByteTrieIterator &ByteTrieIterator::reset() {
     trie.resetToState(initialState);
-    int32_t length=trie.remainingMatchLength+1;  // Remaining match length.
+    int32_t length=trie.remainingMatchLength_+1;  // Remaining match length.
     if(maxLength>0 && length>maxLength) {
         length=maxLength;
     }
     str.truncate(length);
     trie.pos_+=length;
-    trie.remainingMatchLength-=length;
+    trie.remainingMatchLength_-=length;
     stack.setSize(0);
     return *this;
 }
