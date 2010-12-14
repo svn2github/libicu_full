@@ -40,14 +40,14 @@ class U_COMMON_API ByteTrie : public UMemory {
 public:
     ByteTrie(const void *trieBytes)
             : bytes(reinterpret_cast<const uint8_t *>(trieBytes)),
-              pos(bytes), remainingMatchLength(-1), value(0), haveValue(FALSE),
+              pos_(bytes), remainingMatchLength(-1), value(0), haveValue(FALSE),
               uniqueValue(0), haveUniqueValue(FALSE) {}
 
     /**
      * Resets this trie to its initial state.
      */
     ByteTrie &reset() {
-        pos=bytes;
+        pos_=bytes;
         remainingMatchLength=-1;
         haveValue=FALSE;
         return *this;
@@ -76,7 +76,7 @@ public:
      */
     const ByteTrie &saveState(State &state) const {
         state.bytes=bytes;
-        state.pos=pos;
+        state.pos=pos_;
         state.remainingMatchLength=remainingMatchLength;
         state.value=value;
         state.haveValue=haveValue;
@@ -92,7 +92,7 @@ public:
      */
     ByteTrie &resetToState(const State &state) {
         if(bytes==state.bytes && bytes!=NULL) {
-            pos=state.pos;
+            pos_=state.pos;
             remainingMatchLength=state.remainingMatchLength;
             value=state.value;
             haveValue=state.haveValue;
@@ -107,6 +107,7 @@ public:
      */
     UBool hasNext() const {
         int32_t node;
+        const uint8_t *pos=pos_;
         return pos!=NULL &&  // more input, and
             (remainingMatchLength>=0 ||  // more linear-match bytes or
                 // the next node is not a final-value node
@@ -175,24 +176,25 @@ private:
     friend class ByteTrieIterator;
 
     inline void stop() {
-        pos=NULL;
+        pos_=NULL;
     }
 
-    int32_t readValue(int32_t leadByte);
+    int32_t readValue(const uint8_t *pos, int32_t leadByte);
     // Reads a compact 32-bit integer and post-increments pos.
     // pos is already after the leadByte.
     // Returns TRUE if the integer is a final value.
-    inline UBool readCompactInt(int32_t leadByte) {
+    inline UBool readValueAndFinal(const uint8_t *pos, int32_t leadByte) {
         UBool isFinal=(UBool)(leadByte&kValueIsFinal);
-        value=readValue(leadByte>>1);
+        value=readValue(pos, leadByte>>1);
         return isFinal;
     }
     // pos is on the leadByte.
-    inline UBool readCompactInt() {
+    inline UBool readValueAndFinal() {
+        const uint8_t *pos=pos_;
         int32_t leadByte=*pos++;
-        return readCompactInt(leadByte);
+        return readValueAndFinal(pos, leadByte);
     }
-    inline void skipValueAndFinal(int32_t leadByte) {
+    inline const uint8_t *skipValueAndFinal(const uint8_t *pos, int32_t leadByte) {
         if(leadByte>=(kMinTwoByteLead<<1)) {
             if(leadByte<(kMinThreeByteLead<<1)) {
                 ++pos;
@@ -202,17 +204,24 @@ private:
                 pos+=3+((leadByte>>1)&1);
             }
         }
+        return pos;
+    }
+    inline const uint8_t *skipValueAndFinal(const uint8_t *pos) {
+        int32_t leadByte=*pos++;
+        return skipValueAndFinal(pos, leadByte);
+    }
+    inline void skipValueAndFinal(int32_t leadByte) {
+        pos_=skipValueAndFinal(pos_, leadByte);
     }
     inline void skipValueAndFinal() {
-        int32_t leadByte=*pos++;
-        skipValueAndFinal(leadByte);
+        pos_=skipValueAndFinal(pos_);
     }
 
     // Reads a fixed-width integer and post-increments pos.
     int32_t readFixedInt(int32_t bytesPerValue);
 
     int32_t readDelta();
-    inline void skipDelta() {
+    inline const uint8_t *skipDelta(const uint8_t *pos) {
         int32_t delta=*pos++;
         if(delta>=kMinTwoByteDeltaLead) {
             if(delta<kMinThreeByteDeltaLead) {
@@ -223,10 +232,12 @@ private:
                 pos+=3+(delta&1);
             }
         }
+        return pos;
     }
+    inline void skipDelta() { pos_=skipDelta(pos_); }
 
     // Handles a branch node for both next(byte) and next(string).
-    UBool branchNext(int32_t node, int32_t inByte);
+    const uint8_t *branchNext(const uint8_t *p, int32_t node, int32_t inByte);
 
     // Helper functions for hasUniqueValue().
     // Compare the latest value with the previous one, or save the latest one.
@@ -243,12 +254,12 @@ private:
     }
     // Recurse into a branch edge and return to the current position.
     inline UBool findUniqueValueAt(int32_t delta) {
-        const uint8_t *currentPos=pos;
-        pos+=delta;
+        const uint8_t *currentPos=pos_;
+        pos_+=delta;
         if(!findUniqueValue()) {
             return FALSE;
         }
-        pos=currentPos;
+        pos_=currentPos;
         return TRUE;
     }
     // Handle a branch node entry (final value or jump delta).
@@ -357,7 +368,7 @@ private:
     // Iterator variables.
 
     // Pointer to next trie byte to read. NULL if no more matches.
-    const uint8_t *pos;
+    const uint8_t *pos_;
     // Remaining length of a linear-match node, minus 1. Negative if not in such a node.
     int32_t remainingMatchLength;
     // Value for a match, after hasValue() returned TRUE.

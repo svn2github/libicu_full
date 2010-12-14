@@ -200,7 +200,8 @@ void UCharTrieTest::TestLongBranch() {
         { "pppppppppppppppppppppppppppppppppppppppppppppppppppppp", 0x120000 },
         { "r", 0x333333 },
         { "s2345", 0x4444444 },
-        { "t234567890", 0x77777777 }
+        { "t234567890", 0x77777777 },
+        { "z", 0x80000001 }
     };
     checkData(data, LENGTHOF(data));
 }

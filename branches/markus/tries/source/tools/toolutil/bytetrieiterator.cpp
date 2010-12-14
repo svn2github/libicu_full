@@ -38,8 +38,8 @@ ByteTrieIterator::ByteTrieIterator(const ByteTrie &otherTrie, int32_t maxStringL
         if(maxLength>0 && length>maxLength) {
             length=maxLength;  // This will leave remainingMatchLength>=0 as a signal.
         }
-        str.append(reinterpret_cast<const char *>(trie.pos), length, errorCode);
-        trie.pos+=length;
+        str.append(reinterpret_cast<const char *>(trie.pos_), length, errorCode);
+        trie.pos_+=length;
         trie.remainingMatchLength-=length;
     }
 }
@@ -51,7 +51,7 @@ ByteTrieIterator &ByteTrieIterator::reset() {
         length=maxLength;
     }
     str.truncate(length);
-    trie.pos+=length;
+    trie.pos_+=length;
     trie.remainingMatchLength-=length;
     stack.setSize(0);
     return *this;
@@ -62,6 +62,7 @@ ByteTrieIterator::next(UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) {
         return FALSE;
     }
+#if 0
     if(trie.pos==NULL) {
         if(stack.isEmpty()) {
             return FALSE;
@@ -164,6 +165,8 @@ ByteTrieIterator::next(UErrorCode &errorCode) {
             trie.pos+=length;
         }
     }
+#endif
+    return FALSE;
 }
 
 U_NAMESPACE_END
