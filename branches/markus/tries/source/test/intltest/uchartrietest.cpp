@@ -15,6 +15,7 @@
 #include <string.h>
 
 #include "unicode/utypes.h"
+#include "unicode/uniset.h"
 #include "uchartrie.h"
 #include "uchartriebuilder.h"
 #include "uchartrieiterator.h"
@@ -43,6 +44,9 @@ public:
     void TestLongBranch();
     void TestValuesForState();
     void TestNextForCodePoint();
+
+    UnicodeString buildLargeTrie(UCharTrieBuilder &builder, int32_t numUniqueFirst);
+    void TestLargeTrie();
 
     UnicodeString buildMonthsTrie(UCharTrieBuilder &builder);
     void TestHasUniqueValue();
@@ -84,6 +88,7 @@ void UCharTrieTest::runIndexedTest(int32_t index, UBool exec, const char *&name,
     TESTCASE_AUTO(TestLongBranch);
     TESTCASE_AUTO(TestValuesForState);
     TESTCASE_AUTO(TestNextForCodePoint);
+    TESTCASE_AUTO(TestLargeTrie);
 /*    TESTCASE_AUTO(TestHasUniqueValue);
     TESTCASE_AUTO(TestGetNextUChars);
     TESTCASE_AUTO(TestIteratorFromBranch);
@@ -259,6 +264,81 @@ void UCharTrieTest::TestNextForCodePoint() {
         !trie.nextForCodePoint(0x103ff) || !trie.hasValue() || trie.getValue()!=99999
     ) {
         errln("UCharTrie.nextForCodePoint() fails for %s", data[2].s);
+    }
+}
+
+// Definitions in the anonymous namespace are invisible outside this file.
+namespace {
+
+// Generate (string, value) pairs.
+// The first string (before next()) will be empty.
+class Generator {
+public:
+    Generator() : value(4711), num(0) {}
+    void next() {
+        UChar c;
+        s.truncate(0);
+        s.append(c=(UChar)(value>>16));
+        s.append((UChar)(value>>4));
+        if(value&1) {
+            s.append((UChar)value);
+        }
+        set.add(c);
+        value+=((value>>5)&0x7ff)*3+1;
+        ++num;
+    }
+    const UnicodeString &getString() const { return s; }
+    int32_t getValue() const { return value; }
+    int32_t countUniqueFirstChars() const { return set.size(); }
+    int32_t getIndex() const { return num; }
+
+private:
+    UnicodeString s;
+    UnicodeSet set;
+    int32_t value;
+    int32_t num;
+};
+
+}  // end namespace
+
+UnicodeString UCharTrieTest::buildLargeTrie(UCharTrieBuilder &builder, int32_t numUniqueFirst) {
+    IcuTestErrorCode errorCode(*this, "buildLargeTrie()");
+    Generator gen;
+    builder.clear();
+    while(gen.countUniqueFirstChars()<numUniqueFirst) {
+        builder.add(gen.getString(), gen.getValue(), errorCode);
+        gen.next();
+    }
+    infoln("buildLargeTrie(%ld) added %ld strings", (long)numUniqueFirst, (long)gen.getIndex());
+    return builder.build(errorCode);
+}
+
+// Exercise binary branch sub-nodes.
+void UCharTrieTest::TestLargeTrie() {
+    UCharTrieBuilder builder;
+    UnicodeString s=buildLargeTrie(builder, 1111);
+    if(s.isEmpty()) {
+        return;  // buildTrie() reported an error
+    }
+    UCharTrie trie(s.getBuffer());
+    Generator gen;
+    while(gen.countUniqueFirstChars()<1111) {
+        UnicodeString x(gen.getString());
+        int32_t value=gen.getValue();
+        if(!x.isEmpty()) {
+            if(!trie.next(x[0])) {
+                errln("next(first char U+%04X)=FALSE for string %ld\n", x[0], (long)gen.getIndex());
+                break;
+            }
+            x.remove(0, 1);
+        }
+        if(!trie.next(x.getBuffer(), x.length()) || !trie.hasValue() || value!=trie.getValue()) {
+            errln("next(%d chars U+%04X U+%04X)=FALSE or hasValue()=FALSE or getValue() wrong "
+                  "for string %ld\n", (int)x.length(), x[0], x[1], (long)gen.getIndex());
+            break;
+        }
+        gen.next();
+        trie.reset();
     }
 }
 
@@ -605,7 +685,6 @@ void UCharTrieTest::checkData(const StringAndValue data[], int32_t dataLength) {
 UnicodeString UCharTrieTest::buildTrie(const StringAndValue data[], int32_t dataLength,
                                        UCharTrieBuilder &builder) {
     IcuTestErrorCode errorCode(*this, "buildTrie()");
-    builder.clear();
     // Add the items to the trie builder in an interesting (not trivial, not random) order.
     int32_t index, step;
     if(dataLength&1) {

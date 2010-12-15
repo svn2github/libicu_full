@@ -292,7 +292,7 @@ private:
     }
 
     // Handles a branch node for both next(uchar) and next(string).
-    static const UChar *branchNext(const UChar *pos, int32_t node, int32_t uchar);
+    const UChar *branchNext(const UChar *pos, int32_t node, int32_t uchar);
 
     // Helper functions for hasUniqueValue().
     // Compare the latest value with the previous one, or save the latest one.
@@ -351,7 +351,16 @@ private:
 
     // For a branch sub-node with at most this many entries, we drop down
     // to a linear search.
-    static const int32_t kMaxBranchLinearSubNodeLength=4;
+    // TODO static const int32_t kMaxBranchLinearSubNodeLength=4;
+
+    static const int32_t kMaxBranchValue=0x3fff;
+    static const int32_t kMinBranchDelta=kMaxBranchValue+1;
+
+    // The maximum length of a branch sub-node with a contiguous list of
+    // key-value pairs corresponds to the same number of reserved values
+    // for indirect "jump" deltas to the actual, 32-bit delta.
+    static const int32_t kMaxBranchContiguousLength=256;
+    static const int32_t kMinBranchIndirectDelta=0x10000-kMaxBranchContiguousLength;  // 0xff00
 
     // 0100..01ff: Linear-match node, match 1..256 units and continue reading the next node.
     static const int32_t kMinLinearMatch=0x100;

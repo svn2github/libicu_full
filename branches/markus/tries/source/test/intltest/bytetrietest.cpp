@@ -547,7 +547,6 @@ void ByteTrieTest::checkData(const StringAndValue data[], int32_t dataLength) {
 StringPiece ByteTrieTest::buildTrie(const StringAndValue data[], int32_t dataLength,
                                     ByteTrieBuilder &builder) {
     IcuTestErrorCode errorCode(*this, "buildTrie()");
-    builder.clear();
     // Add the items to the trie builder in an interesting (not trivial, not random) order.
     int32_t index, step;
     if(dataLength&1) {

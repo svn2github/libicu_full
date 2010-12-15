@@ -253,6 +253,32 @@ UCharTrieBuilder::makeNode(int32_t start, int32_t limit, int32_t unitIndex) {
 // length different units at unitIndex
 void
 UCharTrieBuilder::makeBranchSubNode(int32_t start, int32_t limit, int32_t unitIndex, int32_t length) {
+#if 1
+    if(length>UCharTrie::kMaxBranchContiguousLength) {
+        // Branch on the middle unit.
+        // First, find the middle unit.
+        int32_t count=length/2;
+        int32_t i=start;
+        UChar unit;
+        do {
+            unit=elements[i++].charAt(unitIndex, strings);
+            while(unit==elements[i].charAt(unitIndex, strings)) {
+                ++i;
+            }
+        } while(--count>0);
+        unit=elements[i].charAt(unitIndex, strings);  // middle unit
+        // Encode the less-than branch first.
+        makeBranchSubNode(start, i, unitIndex, length/2);
+        int32_t leftNode=ucharsLength;
+        // Encode the greater-or-equal branch last because we do not jump for it at all.
+        makeBranchSubNode(i, limit, unitIndex, length-length/2);
+        // Write this node.
+        writeInt32(ucharsLength-leftNode);  // less-than
+        write(unit);
+    } else {
+        makeContiguousBranchSubNode(start, limit, unitIndex, length);
+    }
+#else
     if(length>UCharTrie::kMaxBranchLinearSubNodeLength) {
         // Branch on the middle unit.
         // First, find the middle unit.
@@ -325,6 +351,89 @@ UCharTrieBuilder::makeBranchSubNode(int32_t start, int32_t limit, int32_t unitIn
         writeValueAndFinal(value, final[unitNumber]);
         write(elements[start].charAt(unitIndex, strings));
     }
+#endif
+}
+
+// start<limit && all strings longer than unitIndex &&
+// length<=UCharTrie::kMaxBranchContiguousLength &&
+// length different units at unitIndex
+void
+UCharTrieBuilder::makeContiguousBranchSubNode(int32_t start, int32_t limit,
+                                              int32_t unitIndex, int32_t length) {
+    // List of unit-value pairs where values are either final values
+    // or jumps to other parts of the trie.
+    int32_t starts[UCharTrie::kMaxBranchContiguousLength+1];
+    UBool final[UCharTrie::kMaxBranchContiguousLength];
+    // For each unit, find its elements array start and its value if final.
+    int32_t unitNumber=0;
+    int32_t value;
+    do {
+        int32_t i=starts[unitNumber]=start;
+        UChar unit=elements[i++].charAt(unitIndex, strings);
+        while(unit==elements[i].charAt(unitIndex, strings)) {
+            ++i;
+        }
+        final[unitNumber]=
+            start==i-1 &&
+            unitIndex+1==elements[start].getStringLength(strings) &&
+            0<=(value=elements[start].getValue()) && value<=UCharTrie::kMaxBranchValue;
+        start=i;
+    } while(++unitNumber<length-1);
+    // unitNumber==length-1, and the maxUnit elements range is [start..limit[
+    starts[unitNumber]=start;
+    final[unitNumber]=
+        start==limit-1 &&
+        unitIndex+1==elements[start].getStringLength(strings) &&
+        0<=(value=elements[start].getValue()) && value<=UCharTrie::kMaxBranchValue;
+    starts[length]=limit;
+
+    // Write the sub-nodes in reverse order: The jump lengths are deltas from
+    // after their own positions, so if we wrote the minUnit sub-node first,
+    // then its jump delta would be larger.
+    // Instead we write the minUnit sub-node last, for a shorter delta.
+    int32_t jumpTargets[UCharTrie::kMaxBranchContiguousLength];
+    unitNumber=length;
+    do {
+        if(!final[--unitNumber]) {
+            makeNode(starts[unitNumber], starts[unitNumber+1], unitIndex+1);
+            jumpTargets[unitNumber]=ucharsLength;
+        }
+    } while(unitNumber>0);
+    // If a jump target is too far away to fit into the binary-search result value,
+    // then we need to insert an indirection.
+    unitNumber=length;
+    do {
+        if(!final[--unitNumber] && jumpTargets[unitNumber]>0) {
+            int32_t delta=ucharsLength-jumpTargets[unitNumber];
+            if(delta>=(UCharTrie::kMinBranchIndirectDelta-UCharTrie::kMinBranchDelta)) {
+                writeInt32(delta);
+                jumpTargets[unitNumber]=-ucharsLength;  // negative indicates indirection
+                // Re-check all jump targets.
+                unitNumber=length;
+            }
+        }
+    } while(unitNumber>0);
+    // Reference point for the jump deltas.
+    int32_t nodeLimit=ucharsLength;
+    // Write the result values.
+    unitNumber=length;
+    do {
+        if(final[--unitNumber]) {
+            // Write the final value for the one string ending with this unit.
+            value=elements[starts[unitNumber]].getValue();
+        } else if(jumpTargets[unitNumber]>0) {
+            // Write the delta to the start position of the sub-node.
+            value=UCharTrie::kMinBranchDelta+nodeLimit-jumpTargets[unitNumber];
+        } else {
+            value=UCharTrie::kMinBranchIndirectDelta+(nodeLimit+jumpTargets[unitNumber])/2;
+        }
+        write(value);
+    } while(unitNumber>0);
+    // Write the keys.
+    unitNumber=length;
+    do {
+        write(elements[starts[--unitNumber]].charAt(unitIndex, strings));
+    } while(unitNumber>0);
 }
 
 UBool
@@ -344,8 +453,8 @@ UCharTrieBuilder::ensureCapacity(int32_t length) {
             uchars=NULL;
             return FALSE;
         }
-        uprv_memcpy(newUChars+(newCapacity-ucharsLength),
-                    uchars+(ucharsCapacity-ucharsLength), ucharsLength);
+        u_memcpy(newUChars+(newCapacity-ucharsLength),
+                 uchars+(ucharsCapacity-ucharsLength), ucharsLength);
         uprv_free(uchars);
         uchars=newUChars;
         ucharsCapacity=newCapacity;
@@ -369,6 +478,12 @@ UCharTrieBuilder::write(const UChar *s, int32_t length) {
         ucharsLength=newLength;
         u_memcpy(uchars+(ucharsCapacity-ucharsLength), s, length);
     }
+}
+
+void
+UCharTrieBuilder::writeInt32(int32_t i) {
+    UChar intUnits[2]={ (UChar)(i>>16), (UChar)i };
+    write(intUnits, 2);
 }
 
 void
