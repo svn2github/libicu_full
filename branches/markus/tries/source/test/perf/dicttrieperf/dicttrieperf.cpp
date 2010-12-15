@@ -394,7 +394,8 @@ ucharTrieMatches(UCharTrie &trie,
     for(;;) {
         if(trie.hasValue()) {
             if(count<limit) {
-                lengths[count++]=(int32_t)utext_getNativeIndex(text);
+                // lengths[count++]=(int32_t)utext_getNativeIndex(text);
+                lengths[count++]=numChars;  // CompactTrieDictionary just counts chars too.
             }
         }
         if(numChars>=textLimit) {
@@ -569,7 +570,8 @@ byteTrieMatches(ByteTrie &trie,
     for(;;) {
         if(trie.hasValue()) {
             if(count<limit) {
-                lengths[count++]=(int32_t)utext_getNativeIndex(text);
+                // lengths[count++]=(int32_t)utext_getNativeIndex(text);
+                lengths[count++]=numChars;  // CompactTrieDictionary just counts chars too.
             }
         }
         if(numChars>=textLimit) {
