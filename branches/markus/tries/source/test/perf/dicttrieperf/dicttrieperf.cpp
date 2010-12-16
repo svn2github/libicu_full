@@ -384,12 +384,28 @@ protected:
 };
 
 // Closely imitate CompactTrieDictionary::matches().
+// Note: CompactTrieDictionary::matches() is part of its trie implementation,
+// and while it loops over the text, it knows the current state.
+// By contrast, this implementation uses UCharTrie API functions that have to
+// check the trie state each time and load/store state in the object.
+// (Whether it hasNext() and whether it is in the middle of a linear-match node.)
 static int32_t
 ucharTrieMatches(UCharTrie &trie,
                  UText *text, int32_t textLimit,
                  int32_t *lengths, int &count, int limit ) {
-    trie.reset();
-    int32_t numChars=0;
+    UChar32 c=utext_next32(text);
+    // Notes:
+    // a) CompactTrieDictionary::matches() does not check for U_SENTINEL.
+    // b) It also ignores non-BMP code points by casting to UChar!
+    if(c<0) {
+        return 0;
+    }
+    // Should be firstForCodePoint() but CompactTrieDictionary
+    // handles only code units.
+    if(!trie.first(c)) {
+        return 1;
+    }
+    int32_t numChars=1;
     count=0;
     for(;;) {
         if(trie.hasValue()) {
@@ -410,7 +426,9 @@ ucharTrieMatches(UCharTrie &trie,
             break;
         }
         ++numChars;
-        if(!trie.nextForCodePoint(c)) {
+        // Should be nextForCodePoint() but CompactTrieDictionary
+        // handles only code units.
+        if(!trie.next(c)) {
             break;
         }
     }
@@ -470,7 +488,7 @@ public:
                 continue;
             }
             utext_openUChars(&text, lines[i].name, lines[i].len, pErrorCode);
-            int32_t count;
+            int32_t count=0;
             ucharTrieMatches(trie, &text, lines[i].len,
                              lengths, count, LENGTHOF(lengths));
             if(count==0 || lengths[count-1]!=lines[i].len) {
@@ -564,8 +582,14 @@ static int32_t
 byteTrieMatches(ByteTrie &trie,
                 UText *text, int32_t textLimit,
                 int32_t *lengths, int &count, int limit ) {
-    trie.reset();
-    int32_t numChars=0;
+    UChar32 c=utext_next32(text);
+    if(c<0) {
+        return 0;
+    }
+    if(!trie.first(thaiCharToByte(c))) {
+        return 1;
+    }
+    int32_t numChars=1;
     count=0;
     for(;;) {
         if(trie.hasValue()) {
@@ -609,7 +633,7 @@ public:
                 continue;
             }
             utext_openUChars(&text, lines[i].name, lines[i].len, pErrorCode);
-            int32_t count;
+            int32_t count=0;
             byteTrieMatches(trie, &text, lines[i].len,
                             lengths, count, LENGTHOF(lengths));
             if(count==0 || lengths[count-1]!=lines[i].len) {

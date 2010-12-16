@@ -141,6 +141,34 @@ ByteTrie::branchNext(const uint8_t *pos, int32_t length, int32_t inByte) {
     }
 }
 
+const uint8_t *
+ByteTrie::nextImpl(const uint8_t *pos, int32_t inByte) {
+    for(;;) {
+        int32_t node=*pos++;
+        if(node<kMinLinearMatch) {
+            return branchNext(pos, node, inByte);
+        } else if(node<kMinValueLead) {
+            // Match the first of length+1 bytes.
+            int32_t length=node-kMinLinearMatch;  // Actual match length minus 1.
+            if(inByte==*pos) {
+                remainingMatchLength_=length-1;
+                return pos+1;
+            } else {
+                // No match.
+                return NULL;
+            }
+        } else if(node&kValueIsFinal) {
+            // No further matching bytes.
+            return NULL;
+        } else {
+            // Skip intermediate value.
+            pos=skipValueAndFinal(pos, node);
+            // The next node must not also be a value node.
+            U_ASSERT(*pos<kMinValueLead);
+        }
+    }
+}
+
 UBool
 ByteTrie::next(int32_t inByte) {
     const uint8_t *pos=pos_;
@@ -161,34 +189,8 @@ ByteTrie::next(int32_t inByte) {
             return FALSE;
         }
     }
-    for(;;) {
-        int32_t node=*pos++;
-        if(node<kMinLinearMatch) {
-            pos_=pos=branchNext(pos, node, inByte);
-            return pos!=NULL;
-        } else if(node<kMinValueLead) {
-            // Match the first of length+1 bytes.
-            length=node-kMinLinearMatch;  // Actual match length minus 1.
-            if(inByte==*pos) {
-                remainingMatchLength_=length-1;
-                pos_=pos+1;
-                return TRUE;
-            } else {
-                // No match.
-                stop();
-                return FALSE;
-            }
-        } else if(node&kValueIsFinal) {
-            // No further matching bytes.
-            stop();
-            return FALSE;
-        } else {
-            // Skip intermediate value.
-            pos=skipValueAndFinal(pos, node);
-            // The next node must not also be a value node.
-            U_ASSERT(*pos<kMinValueLead);
-        }
-    }
+    pos_=pos=nextImpl(pos, inByte);
+    return pos!=NULL;
 }
 
 UBool

@@ -55,6 +55,7 @@ public:
 
     void checkData(const StringAndValue data[], int32_t dataLength);
     StringPiece buildTrie(const StringAndValue data[], int32_t dataLength, ByteTrieBuilder &builder);
+    void checkFirst(const StringPiece &trieBytes, const StringAndValue data[], int32_t dataLength);
     void checkHasValue(const StringPiece &trieBytes, const StringAndValue data[], int32_t dataLength);
     void checkHasValueWithState(const StringPiece &trieBytes, const StringAndValue data[], int32_t dataLength);
     void checkNextString(const StringPiece &trieBytes, const StringAndValue data[], int32_t dataLength);
@@ -538,6 +539,7 @@ void ByteTrieTest::checkData(const StringAndValue data[], int32_t dataLength) {
     if(sp.empty()) {
         return;  // buildTrie() reported an error
     }
+    checkFirst(sp, data, dataLength);
     checkHasValue(sp, data, dataLength);
     checkHasValueWithState(sp, data, dataLength);
     checkNextString(sp, data, dataLength);
@@ -574,6 +576,29 @@ StringPiece ByteTrieTest::buildTrie(const StringAndValue data[], int32_t dataLen
         }
     }
     return sp;
+}
+
+void ByteTrieTest::checkFirst(const StringPiece &trieBytes,
+                              const StringAndValue data[], int32_t dataLength) {
+    ByteTrie trie(trieBytes.data());
+    for(int32_t i=0; i<dataLength; ++i) {
+        int c=(uint8_t)*data[i].s;
+        if(c==0) {
+            continue;  // skip empty string
+        }
+        UBool firstOk=trie.first(c);
+        UBool firstHasValue=firstOk && trie.hasValue();
+        int32_t firstValue=firstHasValue ? trie.getValue() : -1;
+        UBool nextOk=trie.next((uint8_t)data[i].s[1]);
+        if(firstOk!=trie.reset().next(c) ||
+           firstHasValue!=(firstOk && trie.hasValue()) ||
+           firstValue!=(firstHasValue ? trie.getValue() : -1) ||
+           nextOk!=trie.next((uint8_t)data[i].s[1])
+        ) {
+            errln("trie.first(%c)!=trie.reset().next(same) for %s",
+                  c, data[i].s);
+        }
+    }
 }
 
 void ByteTrieTest::checkHasValue(const StringPiece &trieBytes,

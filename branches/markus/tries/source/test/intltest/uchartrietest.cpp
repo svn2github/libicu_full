@@ -44,6 +44,7 @@ public:
     void TestLongBranch();
     void TestValuesForState();
     void TestNextForCodePoint();
+    void TestFirstForCodePoint();
 
     UnicodeString buildLargeTrie(UCharTrieBuilder &builder, int32_t numUniqueFirst);
     void TestLargeTrie();
@@ -59,6 +60,7 @@ public:
 
     void checkData(const StringAndValue data[], int32_t dataLength);
     UnicodeString buildTrie(const StringAndValue data[], int32_t dataLength, UCharTrieBuilder &builder);
+    void checkFirst(const UnicodeString &trieUChars, const StringAndValue data[], int32_t dataLength);
     void checkHasValue(const UnicodeString &trieUChars, const StringAndValue data[], int32_t dataLength);
     void checkHasValueWithState(const UnicodeString &trieUChars, const StringAndValue data[], int32_t dataLength);
     void checkNextString(const UnicodeString &trieUChars, const StringAndValue data[], int32_t dataLength);
@@ -88,6 +90,7 @@ void UCharTrieTest::runIndexedTest(int32_t index, UBool exec, const char *&name,
     TESTCASE_AUTO(TestLongBranch);
     TESTCASE_AUTO(TestValuesForState);
     TESTCASE_AUTO(TestNextForCodePoint);
+    TESTCASE_AUTO(TestFirstForCodePoint);
     TESTCASE_AUTO(TestLargeTrie);
 /*    TESTCASE_AUTO(TestHasUniqueValue);
     TESTCASE_AUTO(TestGetNextUChars);
@@ -225,6 +228,21 @@ void UCharTrieTest::TestValuesForState() {
     checkData(data, LENGTHOF(data));
 }
 
+void UCharTrieTest::TestFirstForCodePoint() {
+    static const StringAndValue data[]={
+        { "a", 1 },
+        { "a\\uD800", 2 },
+        { "a\\U00010000", 3 },
+        { "\\uD840", 4 },
+        { "\\U00020000\\udbff", 5 },
+        { "\\U00020000\\U0010ffff", 6 },
+        { "\\U00020000\\U0010ffffz", 7 },
+        { "\\U00050000xy", 8 },
+        { "\\U00050000xyz", 9 }
+    };
+    checkData(data, LENGTHOF(data));
+}
+
 void UCharTrieTest::TestNextForCodePoint() {
     static const StringAndValue data[]={
         { "\\u4dff\\U00010000\\u9999\\U00020000\\udfff\\U0010ffff", 2000000000 },
@@ -313,7 +331,7 @@ UnicodeString UCharTrieTest::buildLargeTrie(UCharTrieBuilder &builder, int32_t n
     return builder.build(errorCode);
 }
 
-// Exercise binary branch sub-nodes.
+// Exercise a large branch node.
 void UCharTrieTest::TestLargeTrie() {
     UCharTrieBuilder builder;
     UnicodeString s=buildLargeTrie(builder, 1111);
@@ -676,6 +694,7 @@ void UCharTrieTest::checkData(const StringAndValue data[], int32_t dataLength) {
     if(s.isEmpty()) {
         return;  // buildTrie() reported an error
     }
+    checkFirst(s, data, dataLength);
     checkHasValue(s, data, dataLength);
     checkHasValueWithState(s, data, dataLength);
     checkNextString(s, data, dataLength);
@@ -715,6 +734,46 @@ UnicodeString UCharTrieTest::buildTrie(const StringAndValue data[], int32_t data
     return s;
 }
 
+void UCharTrieTest::checkFirst(const UnicodeString &trieUChars,
+                               const StringAndValue data[], int32_t dataLength) {
+    UCharTrie trie(trieUChars.getBuffer());
+    for(int32_t i=0; i<dataLength; ++i) {
+        if(*data[i].s==0) {
+            continue;  // skip empty string
+        }
+        UnicodeString expectedString=UnicodeString(data[i].s, -1, US_INV).unescape();
+        UChar32 c=expectedString[0];
+        UChar32 nextCp=expectedString.length()>1 ? expectedString[1] : 0;
+        UBool firstOk=trie.first(c);
+        UBool firstHasValue=firstOk && trie.hasValue();
+        int32_t firstValue=firstHasValue ? trie.getValue() : -1;
+        UBool nextOk=trie.next(nextCp);
+        if(firstOk!=trie.reset().next(c) ||
+           firstHasValue!=(firstOk && trie.hasValue()) ||
+           firstValue!=(firstHasValue ? trie.getValue() : -1) ||
+           nextOk!=trie.next(nextCp)
+        ) {
+            errln("trie.first(U+%04X)!=trie.reset().next(same) for %s",
+                  c, data[i].s);
+        }
+        c=expectedString.char32At(0);
+        int32_t cLength=U16_LENGTH(c);
+        nextCp=expectedString.length()>cLength ? expectedString.char32At(cLength) : 0;
+        firstOk=trie.firstForCodePoint(c);
+        firstHasValue=firstOk && trie.hasValue();
+        firstValue=firstHasValue ? trie.getValue() : -1;
+        nextOk=trie.nextForCodePoint(nextCp);
+        if(firstOk!=trie.reset().nextForCodePoint(c) ||
+           firstHasValue!=(firstOk && trie.hasValue()) ||
+           firstValue!=(firstHasValue ? trie.getValue() : -1) ||
+           nextOk!=trie.nextForCodePoint(nextCp)
+        ) {
+            errln("trie.firstForCodePoint(U+%04X)!=trie.reset().nextForCodePoint(same) for %s",
+                  c, data[i].s);
+        }
+    }
+}
+
 void UCharTrieTest::checkHasValue(const UnicodeString &trieUChars,
                                   const StringAndValue data[], int32_t dataLength) {
     UCharTrie trie(trieUChars.getBuffer());
@@ -752,7 +811,10 @@ void UCharTrieTest::checkHasValue(const UnicodeString &trieUChars,
         }
         trie.saveState(state);
         UBool nextContinues=FALSE;
-        for(int32_t c=0x20; c<0x7f; ++c) {
+        for(int32_t c=0x20; c<0xe000; ++c) {
+            if(c==0x80) {
+                c=0xd800;  // Check for ASCII and surrogates but not all of the BMP.
+            }
             if(trie.resetToState(state).next(c)) {
                 nextContinues=TRUE;
                 break;

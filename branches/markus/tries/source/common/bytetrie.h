@@ -101,6 +101,19 @@ public:
     }
 
     /**
+     * Traverses the trie from the initial state for this input byte.
+     * Equivalent to reset().next(inByte).
+     * @return TRUE if the byte starts a matching byte sequence.
+     */
+    UBool first(int32_t inByte) {
+        remainingMatchLength_=-1;
+        haveValue_=FALSE;
+        const uint8_t *pos=nextImpl(bytes_, inByte);
+        pos_=pos;
+        return pos!=NULL;
+    }
+
+    /**
      * Tests whether some input byte can continue a matching byte sequence.
      * In other words, this is TRUE when next(b) for some byte would return TRUE.
      * @return TRUE if some byte can continue a matching byte sequence.
@@ -238,6 +251,9 @@ private:
 
     // Handles a branch node for both next(byte) and next(string).
     static const uint8_t *branchNext(const uint8_t *pos, int32_t node, int32_t inByte);
+
+    // Requires remainingLength_<0.
+    const uint8_t *nextImpl(const uint8_t *pos, int32_t uchar);
 
     // Helper functions for hasUniqueValue().
     // Compare the latest value with the previous one, or save the latest one.

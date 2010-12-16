@@ -135,6 +135,29 @@ public:
     }
 
     /**
+     * Traverses the trie from the initial state for this input UChar.
+     * Equivalent to reset().next(uchar).
+     * @return TRUE if the UChar starts a matching string.
+     */
+    UBool first(int32_t uchar) {
+        remainingMatchLength_=-1;
+        haveValue_=FALSE;
+        const UChar *pos=nextImpl(uchars_, uchar);
+        pos_=pos;
+        return pos!=NULL;
+    }
+
+    /**
+     * Traverses the trie from the initial state for the
+     * one or two UTF-16 code units for this input code point.
+     * Equivalent to reset().nextForCodePoint(cp).
+     * @return TRUE if the code point starts a matching string.
+     */
+    UBool firstForCodePoint(UChar32 cp) {
+        return cp<=0xffff ? first(cp) : first(U16_LEAD(cp)) && next(U16_TRAIL(cp));
+    }
+
+    /**
      * Tests whether some input UChar can continue a matching string.
      * In other words, this is TRUE when next(u) for some UChar would return TRUE.
      * @return TRUE if some UChar can continue a matching string.
@@ -292,7 +315,10 @@ private:
     }
 
     // Handles a branch node for both next(uchar) and next(string).
-    const UChar *branchNext(const UChar *pos, int32_t node, int32_t uchar);
+    static const UChar *branchNext(const UChar *pos, int32_t node, int32_t uchar);
+
+    // Requires remainingLength_<0.
+    const UChar *nextImpl(const UChar *pos, int32_t uchar);
 
     // Helper functions for hasUniqueValue().
     // Compare the latest value with the previous one, or save the latest one.
@@ -342,7 +368,21 @@ private:
     //    The value is for the string/UChar sequence so far.
     //  - Linear-match node: Matches a number of units.
     //  - Branch node: Branches to other nodes according to the current input unit.
-    //    TODO
+    //    The node unit is the length of the branch (number of units to select from)
+    //    minus 1. It is followed by a sub-node:
+    //    - If the length is at most kMaxBranchLinearSubNodeLength, then
+    //      there are length-1 (key, value) pairs and then one more comparison unit.
+    //      If one of the key units matches, then the value is either a final value for
+    //      the string so far, or a "jump" delta to the next node.
+    //      If the last unit matches, then matching continues with the next node.
+    //      (Values have the same encoding as value nodes.)
+    //    - If the length is greater than kMaxBranchLinearSubNodeLength, then
+    //      there is one unit and one "jump" delta.
+    //      If the input unit is less than the sub-node unit, then "jump" by delta to
+    //      the next sub-node which will have a length of length/2.
+    //      (The delta has its own compact encoding.)
+    //      Otherwise, skip the "jump" delta to the next sub-node
+    //      which will have a length of length-length/2.
 
     // Node lead unit values.
 
@@ -351,16 +391,7 @@ private:
 
     // For a branch sub-node with at most this many entries, we drop down
     // to a linear search.
-    // TODO static const int32_t kMaxBranchLinearSubNodeLength=4;
-
-    static const int32_t kMaxBranchValue=0x3fff;
-    static const int32_t kMinBranchDelta=kMaxBranchValue+1;
-
-    // The maximum length of a branch sub-node with a contiguous list of
-    // key-value pairs corresponds to the same number of reserved values
-    // for indirect "jump" deltas to the actual, 32-bit delta.
-    static const int32_t kMaxBranchContiguousLength=256;
-    static const int32_t kMinBranchIndirectDelta=0x10000-kMaxBranchContiguousLength;  // 0xff00
+    static const int32_t kMaxBranchLinearSubNodeLength=4;
 
     // 0100..01ff: Linear-match node, match 1..256 units and continue reading the next node.
     static const int32_t kMinLinearMatch=0x100;

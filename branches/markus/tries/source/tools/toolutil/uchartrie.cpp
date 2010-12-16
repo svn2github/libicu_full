@@ -57,57 +57,6 @@ UCharTrie::branchNext(const UChar *pos, int32_t length, int32_t uchar) {
     ++length;
     // The length of the branch is the number of units to select from.
     // The data structure encodes a binary search.
-#if 1
-    while(length>kMaxBranchContiguousLength) {
-        if(uchar<*pos++) {
-            length>>=1;
-            int32_t delta=(pos[0]<<16)|pos[1];
-            pos+=2+delta;
-        } else {
-            length=length-(length>>1);
-            pos+=2;
-        }
-    }
-    // Drop down to a simple binary search on 2..kMaxBranchContiguous
-    // fixed-width key-value pairs.
-    int32_t start=0;
-    int32_t limit=length;
-    int32_t i;
-    for(;;) {
-        i=(start+limit)/2;
-        UChar trieUnit=pos[i];
-        if(uchar==trieUnit) {
-            break;
-        } else if(uchar<trieUnit) {
-            limit=i;
-        } else /* uchar>trieUnit */ {
-            start=i+1;
-        }
-        if(start>=limit) {
-            return NULL;  // no match
-        }
-    }
-    // The uchar matches key i, read value i.
-    pos+=length;
-    int32_t value=pos[i];
-    if(value<=kMaxBranchValue) {
-        value_=value;  // final value
-        haveValue_=TRUE;
-        return NULL;
-    }
-    // Jump relative to the end of this branch node.
-    pos+=length;
-    if(value<kMinBranchIndirectDelta) {
-        pos+=value-kMinBranchDelta;
-    } else {
-        // Indirect delta: Only jumps to the actual delta which did not fit
-        // into the 16-bit binary-search result value.
-        pos+=(value-kMinBranchIndirectDelta)*2;
-        value=(pos[0]<<16)|pos[1];
-        pos+=2+value;
-    }
-    return pos;
-#else
     while(length>kMaxBranchLinearSubNodeLength) {
         if(uchar<*pos++) {
             length>>=1;
@@ -164,7 +113,34 @@ UCharTrie::branchNext(const UChar *pos, int32_t length, int32_t uchar) {
     } else {
         return NULL;
     }
-#endif
+}
+
+const UChar *
+UCharTrie::nextImpl(const UChar *pos, int32_t uchar) {
+    for(;;) {
+        int32_t node=*pos++;
+        if(node<kMinLinearMatch) {
+            return branchNext(pos, node, uchar);
+        } else if(node<kMinValueLead) {
+            // Match the first of length+1 units.
+            int32_t length=node-kMinLinearMatch;  // Actual match length minus 1.
+            if(uchar==*pos) {
+                remainingMatchLength_=length-1;
+                return pos+1;
+            } else {
+                // No match.
+                return NULL;
+            }
+        } else if(node&kValueIsFinal) {
+            // No further matching units.
+            return NULL;
+        } else {
+            // Skip intermediate value.
+            pos=skipValueAndFinal(pos, node);
+            // The next node must not also be a value node.
+            U_ASSERT(*pos<kMinValueLead);
+        }
+    }
 }
 
 UBool
@@ -187,34 +163,8 @@ UCharTrie::next(int32_t uchar) {
             return FALSE;
         }
     }
-    for(;;) {
-        int32_t node=*pos++;
-        if(node<kMinLinearMatch) {
-            pos_=pos=branchNext(pos, node, uchar);
-            return pos!=NULL || haveValue_;
-        } else if(node<kMinValueLead) {
-            // Match the first of length+1 units.
-            length=node-kMinLinearMatch;  // Actual match length minus 1.
-            if(uchar==*pos) {
-                remainingMatchLength_=length-1;
-                pos_=pos+1;
-                return TRUE;
-            } else {
-                // No match.
-                stop();
-                return FALSE;
-            }
-        } else if(node&kValueIsFinal) {
-            // No further matching units.
-            stop();
-            return FALSE;
-        } else {
-            // Skip intermediate value.
-            pos=skipValueAndFinal(pos, node);
-            // The next node must not also be a value node.
-            U_ASSERT(*pos<kMinValueLead);
-        }
-    }
+    pos_=pos=nextImpl(pos, uchar);
+    return pos!=NULL;
 }
 
 UBool
@@ -278,7 +228,7 @@ UCharTrie::next(const UChar *s, int32_t sLength) {
                 pos=branchNext(pos, node, uchar);
                 if(pos==NULL) {
                     stop();
-                    return haveValue_ && (sLength<0 ? *s==0 : sLength==0);
+                    return FALSE;
                 }
                 // Fetch the next input unit, if there is one.
                 if(sLength<0) {
