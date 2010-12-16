@@ -64,6 +64,7 @@ public:
     void checkHasValue(const UnicodeString &trieUChars, const StringAndValue data[], int32_t dataLength);
     void checkHasValueWithState(const UnicodeString &trieUChars, const StringAndValue data[], int32_t dataLength);
     void checkNextString(const UnicodeString &trieUChars, const StringAndValue data[], int32_t dataLength);
+    void checkNextCheckValue(const UnicodeString &trieUChars, const StringAndValue data[], int32_t dataLength);
     void checkIterator(const UnicodeString &trieUChars, const StringAndValue data[], int32_t dataLength);
     void checkIterator(UCharTrieIterator &iter, const StringAndValue data[], int32_t dataLength);
 };
@@ -698,6 +699,7 @@ void UCharTrieTest::checkData(const StringAndValue data[], int32_t dataLength) {
     checkHasValue(s, data, dataLength);
     checkHasValueWithState(s, data, dataLength);
     checkNextString(s, data, dataLength);
+    checkNextCheckValue(s, data, dataLength);
     // checkIterator(s, data, dataLength);
 }
 
@@ -895,6 +897,62 @@ void UCharTrieTest::checkNextString(const UnicodeString &trieUChars,
             errln("trie.next(string+NUL)=TRUE for %s", data[i].s);
         }
         trie.reset();
+    }
+}
+
+void UCharTrieTest::checkNextCheckValue(const UnicodeString &trieUChars,
+                                        const StringAndValue data[], int32_t dataLength) {
+    UCharTrie trie1(trieUChars.getBuffer());
+    UCharTrie trie2(trieUChars.getBuffer());
+    for(int32_t i=0; i<dataLength; ++i) {
+        UnicodeString expectedString=UnicodeString(data[i].s, -1, US_INV).unescape();
+        UCharTrie::Result result1, result2;
+        int32_t j=0, length=expectedString.length();
+        UChar c;
+        do {
+            if(j<length) {
+                c=expectedString[j];
+            } else /* j==length */ {
+                c=0;  // expect NO_MATCH
+            }
+            if(j==0) {
+                result1=trie1.first(c, TRUE);
+                result2=trie2.first(c, FALSE);
+            } else {
+                c=expectedString[j];
+                result1=trie1.next(c, TRUE);
+                result2=trie2.next(c, FALSE);
+            }
+            if(result1==UCharTrie::MAYBE_VALUE) {
+                errln("trie.next(s[%d], checkValue)=MAYBE_VALUE for %s", j, data[i].s);
+                return;
+            }
+            if(result2==UCharTrie::MAYBE_VALUE) {
+                result2=trie2.hasValue() ? UCharTrie::HAS_VALUE : UCharTrie::NO_VALUE;
+            } else if(result2==UCharTrie::HAS_VALUE) {
+                errln("trie.next(s[%d], not checkValue)=HAS_VALUE for %s", j, data[i].s);
+                return;
+            }
+            if(j<length) {
+                if(result1==UCharTrie::NO_MATCH) {
+                    errln("trie.next(s[%d], checkValue)=NO_MATCH for %s", j, data[i].s);
+                    return;
+                }
+            } else {
+                if(result1!=UCharTrie::NO_MATCH) {
+                    errln("trie.next(past end of s, checkValue)!=NO_MATCH for %s[%d]", data[i].s);
+                    return;
+                }
+            }
+            if(result1!=result2) {
+                errln("trie.next(s[%d], checkValue)!=next(not checkValue)+hasValue() for %s", j, data[i].s);
+                return;
+            }
+            if(result1==UCharTrie::HAS_VALUE && trie1.getValue()!=trie2.getValue()) {
+                errln("trie.next(s[%d], checkValue).getValue()!=next(not checkValue)+hasValue().getValue() for %s", j, data[i].s);
+                return;
+            }
+        } while(++j<=length);
     }
 }
 

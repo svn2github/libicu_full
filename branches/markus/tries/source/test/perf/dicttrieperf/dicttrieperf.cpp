@@ -402,13 +402,14 @@ ucharTrieMatches(UCharTrie &trie,
     }
     // Should be firstForCodePoint() but CompactTrieDictionary
     // handles only code units.
-    if(!trie.first(c)) {
+    UCharTrie::Result result=trie.first(c, TRUE);
+    if(result==UCharTrie::NO_MATCH) {
         return 1;
     }
     int32_t numChars=1;
     count=0;
     for(;;) {
-        if(trie.hasValue()) {
+        if(result==UCharTrie::HAS_VALUE) {
             if(count<limit) {
                 // lengths[count++]=(int32_t)utext_getNativeIndex(text);
                 lengths[count++]=numChars;  // CompactTrieDictionary just counts chars too.
@@ -428,7 +429,8 @@ ucharTrieMatches(UCharTrie &trie,
         ++numChars;
         // Should be nextForCodePoint() but CompactTrieDictionary
         // handles only code units.
-        if(!trie.next(c)) {
+        result=trie.next(c, TRUE);
+        if(result==UCharTrie::NO_MATCH) {
             break;
         }
     }
