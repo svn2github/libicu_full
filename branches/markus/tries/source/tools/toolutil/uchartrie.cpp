@@ -49,7 +49,7 @@ Appendable::append(const UChar *s, int32_t length) {
 UOBJECT_DEFINE_NO_RTTI_IMPLEMENTATION(Appendable)
 
 UCharTrie::Result
-UCharTrie::branchNext(const UChar *pos, int32_t length, int32_t uchar, UBool checkValue) {
+UCharTrie::branchNext(const UChar *pos, int32_t length, int32_t uchar) {
     // Branch according to the current unit.
     if(length==0) {
         length=*pos++;
@@ -85,42 +85,36 @@ UCharTrie::branchNext(const UChar *pos, int32_t length, int32_t uchar, UBool che
             Result result;
             int32_t node=*pos;
             U_ASSERT(node>=kMinValueLead);
-            UBool isFinal=(UBool)(node&kValueIsFinal);
-            if(isFinal && !checkValue) {
-                // Leave the final value for hasValue() to read.
-                result=MAYBE_VALUE;
+            if(node&kValueIsFinal) {
+                // Leave the final value for getValue() to read.
+                result=HAS_VALUE;
             } else {
+                // Use the non-final value as the jump delta.
                 ++pos;
                 // int32_t delta=readValue(pos, node>>1);
                 node>>=1;
-                int32_t value;
+                int32_t delta;
                 if(node<kMinTwoUnitValueLead) {
-                    value=node-kMinOneUnitValueLead;
+                    delta=node-kMinOneUnitValueLead;
                 } else if(node<kThreeUnitValueLead) {
-                    value=((node-kMinTwoUnitValueLead)<<16)|*pos++;
+                    delta=((node-kMinTwoUnitValueLead)<<16)|*pos++;
                 } else {
-                    value=(pos[0]<<16)|pos[1];
+                    delta=(pos[0]<<16)|pos[1];
                     pos+=2;
                 }
                 // end readValue()
-                if(isFinal) {
-                    pos=NULL;
-                    value_=value;
-                    haveValue_=TRUE;
-                    result=HAS_VALUE;
-                } else {
-                    // Use the non-final value as the jump delta.
-                    return matchResult(pos+value, checkValue);
-                }
+                pos+=delta;
+                result= *pos>=kMinValueLead ? HAS_VALUE : NO_VALUE;
             }
             pos_=pos;
             return result;
         }
         --length;
-        pos=skipValueAndFinal(pos);
+        pos=skipValue(pos);
     } while(length>1);
     if(uchar==*pos++) {
-        return matchResult(pos, checkValue);
+        pos_=pos;
+        return *pos>=kMinValueLead ? HAS_VALUE : NO_VALUE;
     } else {
         stop();
         return NO_MATCH;
@@ -128,16 +122,18 @@ UCharTrie::branchNext(const UChar *pos, int32_t length, int32_t uchar, UBool che
 }
 
 UCharTrie::Result
-UCharTrie::nextImpl(const UChar *pos, int32_t uchar, UBool checkValue) {
+UCharTrie::nextImpl(const UChar *pos, int32_t uchar) {
     for(;;) {
         int32_t node=*pos++;
         if(node<kMinLinearMatch) {
-            return branchNext(pos, node, uchar, checkValue);
+            return branchNext(pos, node, uchar);
         } else if(node<kMinValueLead) {
             // Match the first of length+1 units.
             int32_t length=node-kMinLinearMatch;  // Actual match length minus 1.
             if(uchar==*pos++) {
-                return linearMatchResult(pos, length-1, checkValue);
+                remainingMatchLength_=--length;
+                pos_=pos;
+                return (length<0 && *pos>=kMinValueLead) ? HAS_VALUE : NO_VALUE;
             } else {
                 // No match.
                 break;
@@ -147,7 +143,7 @@ UCharTrie::nextImpl(const UChar *pos, int32_t uchar, UBool checkValue) {
             break;
         } else {
             // Skip intermediate value.
-            pos=skipValueAndFinal(pos, node);
+            pos=skipValue(pos, node);
             // The next node must not also be a value node.
             U_ASSERT(*pos<kMinValueLead);
         }
@@ -157,7 +153,7 @@ UCharTrie::nextImpl(const UChar *pos, int32_t uchar, UBool checkValue) {
 }
 
 UCharTrie::Result
-UCharTrie::next(int32_t uchar, UBool checkValue) {
+UCharTrie::next(int32_t uchar) {
     const UChar *pos=pos_;
     if(pos==NULL) {
         return NO_MATCH;
@@ -167,27 +163,29 @@ UCharTrie::next(int32_t uchar, UBool checkValue) {
     if(length>=0) {
         // Remaining part of a linear-match node.
         if(uchar==*pos++) {
-            return linearMatchResult(pos, length-1, checkValue);
+            remainingMatchLength_=--length;
+            pos_=pos;
+            return (length<0 && *pos>=kMinValueLead) ? HAS_VALUE : NO_VALUE;
         } else {
             stop();
             return NO_MATCH;
         }
     }
-    return nextImpl(pos, uchar, checkValue);
+    return nextImpl(pos, uchar);
 }
 
 UCharTrie::Result
 UCharTrie::next(const UChar *s, int32_t sLength) {
-    if(sLength<0 ? *s==0 : sLength==0) {
-        // Empty input: Do nothing at all, see API doc.
-        return MAYBE_VALUE;
-    }
     const UChar *pos=pos_;
+    int32_t length=remainingMatchLength_;  // Actual remaining match length minus 1.
+    if(sLength<0 ? *s==0 : sLength==0) {
+        // Empty input, just check hasValue().
+        return (haveValue_ || (pos!=NULL && length<0 && *pos>=kMinValueLead)) ? HAS_VALUE : NO_VALUE;
+    }
     if(pos==NULL) {
         return NO_MATCH;
     }
     haveValue_=FALSE;
-    int32_t length=remainingMatchLength_;  // Actual remaining match length minus 1.
     for(;;) {
         // Fetch the next input unit, if there is one.
         // Continue a linear-match node without rechecking sLength<0.
@@ -197,7 +195,7 @@ UCharTrie::next(const UChar *s, int32_t sLength) {
                 if((uchar=*s++)==0) {
                     remainingMatchLength_=length;
                     pos_=pos;
-                    return length>=0 ? NO_VALUE : MAYBE_VALUE;
+                    return (length<0 && *pos>=kMinValueLead) ? HAS_VALUE : NO_VALUE;
                 }
                 if(length<0) {
                     remainingMatchLength_=length;
@@ -215,7 +213,7 @@ UCharTrie::next(const UChar *s, int32_t sLength) {
                 if(sLength==0) {
                     remainingMatchLength_=length;
                     pos_=pos;
-                    return length>=0 ? NO_VALUE : MAYBE_VALUE;
+                    return (length<0 && *pos>=kMinValueLead) ? HAS_VALUE : NO_VALUE;
                 }
                 uchar=*s++;
                 --sLength;
@@ -234,22 +232,22 @@ UCharTrie::next(const UChar *s, int32_t sLength) {
         for(;;) {
             int32_t node=*pos++;
             if(node<kMinLinearMatch) {
-                if(NO_MATCH==branchNext(pos, node, uchar, FALSE)) {
+                if(NO_MATCH==branchNext(pos, node, uchar)) {
                     return NO_MATCH;
                 }
+                pos=pos_;  // branchNext() advanced pos and wrote it to pos_ .
                 // Fetch the next input unit, if there is one.
                 if(sLength<0) {
                     if((uchar=*s++)==0) {
-                        return MAYBE_VALUE;
+                        return (length<0 && *pos>=kMinValueLead) ? HAS_VALUE : NO_VALUE;
                     }
                 } else {
                     if(sLength==0) {
-                        return MAYBE_VALUE;
+                        return (length<0 && *pos>=kMinValueLead) ? HAS_VALUE : NO_VALUE;
                     }
                     uchar=*s++;
                     --sLength;
                 }
-                pos=pos_;  // branchNext() advanced pos and wrote it to pos_ .
             } else if(node<kMinValueLead) {
                 // Match length+1 units.
                 length=node-kMinLinearMatch;  // Actual match length minus 1.
@@ -266,27 +264,12 @@ UCharTrie::next(const UChar *s, int32_t sLength) {
                 return NO_MATCH;
             } else {
                 // Skip intermediate value.
-                pos=skipValueAndFinal(pos, node);
+                pos=skipValue(pos, node);
                 // The next node must not also be a value node.
                 U_ASSERT(*pos<kMinValueLead);
             }
         }
     }
-}
-
-UBool
-UCharTrie::hasValue() {
-    int32_t node;
-    if(haveValue_) {
-        return TRUE;
-    }
-    const UChar *pos=pos_;
-    if(pos!=NULL && remainingMatchLength_<0 && (node=*pos)>=kMinValueLead) {
-        // Deliver value for the matching units.
-        readValueAndFinal(pos+1, node);
-        return TRUE;
-    }
-    return FALSE;
 }
 
 UBool
@@ -401,7 +384,7 @@ UCharTrie::getNextUChars(Appendable &out) {
             return 0;
         } else {
             ++pos;  // Skip the lead unit.
-            skipValueAndFinal(node);
+            skipValue(node);
             node=*pos;
             U_ASSERT(node<kMinValueLead);
         }

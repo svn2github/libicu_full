@@ -402,7 +402,7 @@ ucharTrieMatches(UCharTrie &trie,
     }
     // Should be firstForCodePoint() but CompactTrieDictionary
     // handles only code units.
-    UCharTrie::Result result=trie.first(c, TRUE);
+    UCharTrie::Result result=trie.first(c);
     if(result==UCharTrie::NO_MATCH) {
         return 1;
     }
@@ -429,7 +429,7 @@ ucharTrieMatches(UCharTrie &trie,
         ++numChars;
         // Should be nextForCodePoint() but CompactTrieDictionary
         // handles only code units.
-        result=trie.next(c, TRUE);
+        result=trie.next(c);
         if(result==UCharTrie::NO_MATCH) {
             break;
         }
@@ -515,7 +515,7 @@ public:
             if(lines[i].name[0]<0x41) {
                 continue;
             }
-            if(!trie.reset().next(lines[i].name, lines[i].len) || !trie.hasValue()) {
+            if(UCharTrie::HAS_VALUE!=trie.reset().next(lines[i].name, lines[i].len)) {
                 fprintf(stderr, "word %ld (0-based) not found\n", (long)i);
             }
         }

@@ -134,41 +134,60 @@ public:
         return *this;
     }
 
+    /**
+     * Return values for next() and similar methods.
+     *
+     * The NO_MATCH constant's numeric value is 0, so in C++,
+     * if checking for HAS_VALUE is not needed,
+     * a Result can be treated like a boolean "matches", as in "if(!trie.next(c)) ..."
+     */
     enum Result {
+        /**
+         * The input unit(s) did not continue a matching string.
+         */
         NO_MATCH,
+        /**
+         * The input unit(s) continued a matching string
+         * but there is no value for the string so far.
+         * (It is a prefix of a longer string.)
+         */
         NO_VALUE,
-        MAYBE_VALUE,
+        /**
+         * The input unit(s) continued a matching string
+         * and there is a value for the string so far.
+         * This value will be returned by getValue().
+         */
         HAS_VALUE
     };
 
     /**
      * Traverses the trie from the initial state for this input UChar.
      * Equivalent to reset().next(uchar).
-     * @return TRUE if the UChar starts a matching string.
+     * @return The match/value Result.
      */
-    inline Result first(int32_t uchar, UBool checkValue) {
+    inline Result first(int32_t uchar) {
         remainingMatchLength_=-1;
         haveValue_=FALSE;
-        return nextImpl(uchars_, uchar, checkValue);
+        return nextImpl(uchars_, uchar);
     }
 
     /**
      * Traverses the trie from the initial state for the
      * one or two UTF-16 code units for this input code point.
      * Equivalent to reset().nextForCodePoint(cp).
-     * @return TRUE if the code point starts a matching string.
+     * @return The match/value Result.
      */
-    inline Result firstForCodePoint(UChar32 cp, UBool checkValue) {
+    inline Result firstForCodePoint(UChar32 cp) {
         return cp<=0xffff ?
-            first(cp, checkValue) :
-            (first(U16_LEAD(cp), FALSE)!=NO_MATCH ?
-                next(U16_TRAIL(cp), checkValue) :
+            first(cp) :
+            (first(U16_LEAD(cp))!=NO_MATCH ?
+                next(U16_TRAIL(cp)) :
                 NO_MATCH);
     }
 
     /**
      * Tests whether some input UChar can continue a matching string.
-     * In other words, this is TRUE when next(u) for some UChar would return TRUE.
+     * In other words, this is TRUE when next(u)!=NO_MATCH for some UChar u.
      * @return TRUE if some UChar can continue a matching string.
      */
     inline UBool hasNext() const {
@@ -182,35 +201,21 @@ public:
 
     /**
      * Traverses the trie from the current state for this input UChar.
-     * @return TRUE if the UChar continues a matching string.
+     * @return The match/value Result.
      */
-    Result next(int32_t uchar, UBool checkValue);
+    Result next(int32_t uchar);
 
     /**
      * Traverses the trie from the current state for the
      * one or two UTF-16 code units for this input code point.
-     * @return TRUE if the code point continues a matching string.
+     * @return The match/value Result.
      */
-    inline Result nextForCodePoint(UChar32 cp, UBool checkValue) {
+    inline Result nextForCodePoint(UChar32 cp) {
         return cp<=0xffff ?
-            next(cp, checkValue) :
-            (next(U16_LEAD(cp), FALSE)!=NO_MATCH ?
-                next(U16_TRAIL(cp), checkValue) :
+            next(cp) :
+            (next(U16_LEAD(cp))!=NO_MATCH ?
+                next(U16_TRAIL(cp)) :
                 NO_MATCH);
-    }
-
-    // TODO: remove
-    inline UBool first(int32_t uchar) {
-        return first(uchar, FALSE)!=NO_MATCH;
-    }
-    inline UBool firstForCodePoint(UChar32 cp) {
-        return firstForCodePoint(cp, FALSE)!=NO_MATCH;
-    }
-    inline UBool next(int32_t uchar) {
-        return next(uchar, FALSE)!=NO_MATCH;
-    }
-    inline UBool nextForCodePoint(UChar32 cp) {
-        return nextForCodePoint(cp, FALSE)!=NO_MATCH;
     }
 
     /**
@@ -218,28 +223,40 @@ public:
      * Equivalent to
      * \code
      * Result result;
-     * for(each c in s)
-     *   if((result=next(c))==NO_MATCH) return NO_MATCH;
+     * if(length==0)
+     *   result=hasValue() ? HAS_VALUE : NO_VALUE;
+     * else
+     *   for(each c in s)
+     *     if((result=next(c))==NO_MATCH) return NO_MATCH;
      * return result;
      * \endcode
-     * @return TRUE if the string is empty, or if it continues a matching string.
+     * @return The match/value Result.
      */
     Result next(const UChar *s, int32_t length);
 
     /**
+     * Tests whether the trie contains the string so far.
+     * If next() has been called with some input, then hasValue() is TRUE
+     * if next() returned HAS_VALUE.
+     * If the trie is in the initial state, then hasValue() returns HAS_VALUE or NO_VALUE
+     * depending on whether the trie contains the empty string.
      * @return TRUE if the trie contains the string so far.
-     *         In this case, an immediately following call to getValue()
-     *         returns the string's value.
-     *         hasValue() is only defined if called from the initial state
-     *         or immediately after next() returns TRUE.
      */
-    UBool hasValue();
+    inline UBool hasValue() const {
+        return haveValue_ || (pos_!=NULL && remainingMatchLength_<0 && *pos_>=kMinValueLead);
+    }
 
     /**
-     * Returns a string's value if called immediately after hasValue()
-     * returned TRUE. Otherwise undefined.
+     * Returns a matching string's value if called immediately after
+     * next() returned HAS_VALUE or hasValue() returned TRUE.
+     * Must not be called otherwise!
      */
-    int32_t getValue() const { return value_; }
+    int32_t getValue() {
+        if(!haveValue_) {
+            readValueAndFinal();
+        }
+        return value_;
+    }
 
     /**
      * Determines whether all strings reachable from the current state
@@ -273,7 +290,8 @@ private:
         pos_=NULL;
     }
 
-    // lead unit already shifted right by 1.
+    // Reads a compact 32-bit integer and post-increments pos.
+    // pos is already after the leadUnit, and the lead unit is already shifted right by 1.
     inline const UChar *readValue(const UChar *pos, int32_t leadUnit) {
         int32_t value;
         if(leadUnit<kMinTwoUnitValueLead) {
@@ -289,8 +307,8 @@ private:
     }
     // Reads a compact 32-bit integer and post-increments pos.
     // pos is already after the leadUnit.
-    // Returns TRUE if the integer is a final value.
     inline void readValueAndFinal(const UChar *pos, int32_t leadUnit) {
+        U_ASSERT(leadUnit>=kMinValueLead);
         UBool isFinal=(UBool)(leadUnit&kValueIsFinal);
         pos=readValue(pos, leadUnit>>1);
         if(isFinal) {
@@ -307,7 +325,8 @@ private:
         int32_t leadUnit=*pos++;
         readValueAndFinal(pos, leadUnit);
     }
-    static inline const UChar *skipValueAndFinal(const UChar *pos, int32_t leadUnit) {
+    static inline const UChar *skipValue(const UChar *pos, int32_t leadUnit) {
+        U_ASSERT(leadUnit>=kMinValueLead);
         if(leadUnit>=(kMinTwoUnitValueLead<<1)) {
             if(leadUnit<(kThreeUnitValueLead<<1)) {
                 ++pos;
@@ -317,37 +336,9 @@ private:
         }
         return pos;
     }
-    static inline const UChar *skipValueAndFinal(const UChar *pos) {
+    static inline const UChar *skipValue(const UChar *pos) {
         int32_t leadUnit=*pos++;
-        return skipValueAndFinal(pos, leadUnit);
-    }
-
-    // With pos on a node lead unit, return the result and maybe get the value.
-    inline Result matchResult(const UChar *pos, UBool checkValue) {
-        if(checkValue) {
-            int32_t node=*pos;
-            if(node>=kMinValueLead) {
-                readValueAndFinal(pos+1, node);
-                return HAS_VALUE;
-            } else {
-                pos_=pos;
-                return NO_VALUE;
-            }
-        } else {
-            pos_=pos;
-            return MAYBE_VALUE;
-        }
-    }
-
-    // With pos after a linear-matching unit, return the result and maybe get the value.
-    inline Result linearMatchResult(const UChar *pos, int32_t length, UBool checkValue) {
-        remainingMatchLength_=length;
-        if(length>=0) {
-            pos_=pos;
-            return NO_VALUE;
-        } else {
-            return matchResult(pos, checkValue);
-        }
+        return skipValue(pos, leadUnit);
     }
 
 /*
@@ -379,13 +370,13 @@ private:
     }
 
     // Handles a branch node for both next(uchar) and next(string).
-    Result branchNext(const UChar *pos, int32_t node, int32_t uchar, UBool checkValue);
+    Result branchNext(const UChar *pos, int32_t length, int32_t uchar);
 
     // Requires remainingLength_<0.
-    Result nextImpl(const UChar *pos, int32_t uchar, UBool checkValue);
+    Result nextImpl(const UChar *pos, int32_t uchar);
 
     // Helper functions for hasUniqueValue().
-    // Compare the latest value with the previous one, or save the latest one.
+    // Compares the latest value with the previous one, or saves the latest one.
     inline UBool isUniqueValue() {
         if(haveUniqueValue_) {
             if(value_!=uniqueValue_) {
@@ -397,7 +388,7 @@ private:
         }
         return TRUE;
     }
-    // Recurse into a branch edge and return to the current position.
+    // Recurses into a branch edge and returns to the current position.
     inline UBool findUniqueValueAt(int32_t delta) {
         const UChar *currentPos=pos_;
         pos_+=delta;
@@ -407,9 +398,9 @@ private:
         pos_=currentPos;
         return TRUE;
     }
-    // Handle a branch node entry (final value or jump delta).
+    // Handles a branch node entry (final value or jump delta).
     UBool findUniqueValueFromBranchEntry(int32_t node);
-    // Recursively find a unique value (or whether there is not a unique one)
+    // Recursively finds a unique value (or whether there is not a unique one)
     // starting from a position on a node lead unit.
     UBool findUniqueValue();
 
