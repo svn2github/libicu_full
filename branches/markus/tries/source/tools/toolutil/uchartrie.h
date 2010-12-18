@@ -24,6 +24,7 @@
 #include "unicode/utypes.h"
 #include "unicode/uobject.h"
 #include "uassert.h"
+#include "udicttrie.h"
 
 U_NAMESPACE_BEGIN
 
@@ -135,37 +136,11 @@ public:
     }
 
     /**
-     * Return values for next() and similar methods.
-     *
-     * The NO_MATCH constant's numeric value is 0, so in C++,
-     * if checking for HAS_VALUE is not needed,
-     * a Result can be treated like a boolean "matches", as in "if(!trie.next(c)) ..."
-     */
-    enum Result {
-        /**
-         * The input unit(s) did not continue a matching string.
-         */
-        NO_MATCH,
-        /**
-         * The input unit(s) continued a matching string
-         * but there is no value for the string so far.
-         * (It is a prefix of a longer string.)
-         */
-        NO_VALUE,
-        /**
-         * The input unit(s) continued a matching string
-         * and there is a value for the string so far.
-         * This value will be returned by getValue().
-         */
-        HAS_VALUE
-    };
-
-    /**
      * Traverses the trie from the initial state for this input UChar.
      * Equivalent to reset().next(uchar).
      * @return The match/value Result.
      */
-    inline Result first(int32_t uchar) {
+    inline UDictTrieResult first(int32_t uchar) {
         remainingMatchLength_=-1;
         haveValue_=FALSE;
         return nextImpl(uchars_, uchar);
@@ -177,17 +152,17 @@ public:
      * Equivalent to reset().nextForCodePoint(cp).
      * @return The match/value Result.
      */
-    inline Result firstForCodePoint(UChar32 cp) {
+    inline UDictTrieResult firstForCodePoint(UChar32 cp) {
         return cp<=0xffff ?
             first(cp) :
-            (first(U16_LEAD(cp))!=NO_MATCH ?
+            (first(U16_LEAD(cp))!=UDICTTRIE_NO_MATCH ?
                 next(U16_TRAIL(cp)) :
-                NO_MATCH);
+                UDICTTRIE_NO_MATCH);
     }
 
     /**
      * Tests whether some input UChar can continue a matching string.
-     * In other words, this is TRUE when next(u)!=NO_MATCH for some UChar u.
+     * In other words, this is TRUE when next(u)!=UDICTTRIE_NO_MATCH for some UChar u.
      * @return TRUE if some UChar can continue a matching string.
      */
     inline UBool hasNext() const {
@@ -203,19 +178,19 @@ public:
      * Traverses the trie from the current state for this input UChar.
      * @return The match/value Result.
      */
-    Result next(int32_t uchar);
+    UDictTrieResult next(int32_t uchar);
 
     /**
      * Traverses the trie from the current state for the
      * one or two UTF-16 code units for this input code point.
      * @return The match/value Result.
      */
-    inline Result nextForCodePoint(UChar32 cp) {
+    inline UDictTrieResult nextForCodePoint(UChar32 cp) {
         return cp<=0xffff ?
             next(cp) :
-            (next(U16_LEAD(cp))!=NO_MATCH ?
+            (next(U16_LEAD(cp))!=UDICTTRIE_NO_MATCH ?
                 next(U16_TRAIL(cp)) :
-                NO_MATCH);
+                UDICTTRIE_NO_MATCH);
     }
 
     /**
@@ -224,21 +199,21 @@ public:
      * \code
      * Result result;
      * if(length==0)
-     *   result=hasValue() ? HAS_VALUE : NO_VALUE;
+     *   result=hasValue() ? UDICTTRIE_HAS_VALUE : UDICTTRIE_NO_VALUE;
      * else
      *   for(each c in s)
-     *     if((result=next(c))==NO_MATCH) return NO_MATCH;
+     *     if((result=next(c))==UDICTTRIE_NO_MATCH) return UDICTTRIE_NO_MATCH;
      * return result;
      * \endcode
      * @return The match/value Result.
      */
-    Result next(const UChar *s, int32_t length);
+    UDictTrieResult next(const UChar *s, int32_t length);
 
     /**
      * Tests whether the trie contains the string so far.
      * If next() has been called with some input, then hasValue() is TRUE
-     * if next() returned HAS_VALUE.
-     * If the trie is in the initial state, then hasValue() returns HAS_VALUE or NO_VALUE
+     * if next() returned UDICTTRIE_HAS_VALUE.
+     * If the trie is in the initial state, then hasValue() returns UDICTTRIE_HAS_VALUE or UDICTTRIE_NO_VALUE
      * depending on whether the trie contains the empty string.
      * @return TRUE if the trie contains the string so far.
      */
@@ -248,7 +223,7 @@ public:
 
     /**
      * Returns a matching string's value if called immediately after
-     * next() returned HAS_VALUE or hasValue() returned TRUE.
+     * next() returned UDICTTRIE_HAS_VALUE or hasValue() returned TRUE.
      * Must not be called otherwise!
      */
     int32_t getValue() {
@@ -370,10 +345,10 @@ private:
     }
 
     // Handles a branch node for both next(uchar) and next(string).
-    Result branchNext(const UChar *pos, int32_t length, int32_t uchar);
+    UDictTrieResult branchNext(const UChar *pos, int32_t length, int32_t uchar);
 
     // Requires remainingLength_<0.
-    Result nextImpl(const UChar *pos, int32_t uchar);
+    UDictTrieResult nextImpl(const UChar *pos, int32_t uchar);
 
     // Helper functions for hasUniqueValue().
     // Compares the latest value with the previous one, or saves the latest one.
