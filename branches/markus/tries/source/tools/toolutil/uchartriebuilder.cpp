@@ -135,9 +135,8 @@ compareElementStrings(const void *context, const void *left, const void *right) 
 
 U_CDECL_END
 
-UnicodeString
-UCharTrieBuilder::build(UErrorCode &errorCode) {
-    UnicodeString result;
+UnicodeString &
+UCharTrieBuilder::build(UnicodeString &result, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) {
         return result;
     }

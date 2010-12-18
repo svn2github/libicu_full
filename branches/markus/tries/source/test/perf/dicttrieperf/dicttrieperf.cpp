@@ -462,7 +462,8 @@ public:
             }
             builder.add(UnicodeString(FALSE, lines[i].name, lines[i].len), 0, errorCode);
         }
-        int32_t length=builder.build(errorCode).length();
+        UnicodeString trieUChars;
+        int32_t length=builder.build(trieUChars, errorCode).length();
         printf("size of UCharTrie:          %6ld bytes\n", (long)length*2);
     }
 
@@ -478,8 +479,8 @@ public:
             : UCharTrieDictLookup(perfTest) {}
 
     virtual void call(UErrorCode *pErrorCode) {
-        UnicodeString uchars(builder.build(*pErrorCode));
-        UCharTrie trie(uchars.getBuffer());
+        UnicodeString uchars;
+        UCharTrie trie(builder.build(uchars, *pErrorCode).getBuffer());
         UText text=UTEXT_INITIALIZER;
         int32_t lengths[20];
         const ULine *lines=perf.getCachedLines();
@@ -506,8 +507,8 @@ public:
             : UCharTrieDictLookup(perfTest) {}
 
     virtual void call(UErrorCode *pErrorCode) {
-        UnicodeString uchars(builder.build(*pErrorCode));
-        UCharTrie trie(uchars.getBuffer());
+        UnicodeString uchars;
+        UCharTrie trie(builder.build(uchars, *pErrorCode).getBuffer());
         const ULine *lines=perf.getCachedLines();
         int32_t numLines=perf.getNumLines();
         for(int32_t i=0; i<numLines; ++i) {
