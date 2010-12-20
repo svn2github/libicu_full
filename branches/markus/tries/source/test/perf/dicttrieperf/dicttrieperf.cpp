@@ -409,10 +409,13 @@ ucharTrieMatches(UCharTrie &trie,
     int32_t numChars=1;
     count=0;
     for(;;) {
-        if(result==UDICTTRIE_HAS_VALUE) {
+        if(result>=UDICTTRIE_HAS_VALUE) {
             if(count<limit) {
                 // lengths[count++]=(int32_t)utext_getNativeIndex(text);
                 lengths[count++]=numChars;  // CompactTrieDictionary just counts chars too.
+            }
+            if(result==UDICTTRIE_HAS_FINAL_VALUE) {
+                break;
             }
         }
         if(numChars>=textLimit) {
@@ -516,7 +519,7 @@ public:
             if(lines[i].name[0]<0x41) {
                 continue;
             }
-            if(UDICTTRIE_HAS_VALUE!=trie.reset().next(lines[i].name, lines[i].len)) {
+            if(trie.reset().next(lines[i].name, lines[i].len)<UDICTTRIE_HAS_VALUE) {
                 fprintf(stderr, "word %ld (0-based) not found\n", (long)i);
             }
         }

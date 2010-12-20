@@ -136,6 +136,13 @@ public:
     }
 
     /**
+     * Determines whether the string so far matches, whether it has a value,
+     * and whether another input UChar can continue a matching string.
+     * @return The match/value Result.
+     */
+    UDictTrieResult current() const;
+
+    /**
      * Traverses the trie from the initial state for this input UChar.
      * Equivalent to reset().next(uchar).
      * @return The match/value Result.
@@ -161,20 +168,6 @@ public:
     }
 
     /**
-     * Tests whether some input UChar can continue a matching string.
-     * In other words, this is TRUE when next(u)!=UDICTTRIE_NO_MATCH for some UChar u.
-     * @return TRUE if some UChar can continue a matching string.
-     */
-    inline UBool hasNext() const {
-        int32_t node;
-        const UChar *pos=pos_;
-        return pos!=NULL &&  // more input, and
-            (remainingMatchLength_>=0 ||  // more linear-match bytes or
-                // the next node is not a final-value node
-                (node=*pos)<kMinValueLead || (node&kValueIsFinal)==0);
-    }
-
-    /**
      * Traverses the trie from the current state for this input UChar.
      * @return The match/value Result.
      */
@@ -197,12 +190,9 @@ public:
      * Traverses the trie from the current state for this string.
      * Equivalent to
      * \code
-     * Result result;
-     * if(length==0)
-     *   result=hasValue() ? UDICTTRIE_HAS_VALUE : UDICTTRIE_NO_VALUE;
-     * else
-     *   for(each c in s)
-     *     if((result=next(c))==UDICTTRIE_NO_MATCH) return UDICTTRIE_NO_MATCH;
+     * Result result=current();
+     * for(each c in s)
+     *   if((result=next(c))==UDICTTRIE_NO_MATCH) return UDICTTRIE_NO_MATCH;
      * return result;
      * \endcode
      * @return The match/value Result.
@@ -210,21 +200,13 @@ public:
     UDictTrieResult next(const UChar *s, int32_t length);
 
     /**
-     * Tests whether the trie contains the string so far.
-     * If next() has been called with some input, then hasValue() is TRUE
-     * if next() returned UDICTTRIE_HAS_VALUE.
-     * If the trie is in the initial state, then hasValue() returns UDICTTRIE_HAS_VALUE or UDICTTRIE_NO_VALUE
-     * depending on whether the trie contains the empty string.
-     * @return TRUE if the trie contains the string so far.
-     */
-    inline UBool hasValue() const {
-        return haveValue_ || (pos_!=NULL && remainingMatchLength_<0 && *pos_>=kMinValueLead);
-    }
-
-    /**
      * Returns a matching string's value if called immediately after
-     * next() returned UDICTTRIE_HAS_VALUE or hasValue() returned TRUE.
-     * Must not be called otherwise!
+     * current()/first()/next() returned UDICTTRIE_HAS_VALUE or UDICTTRIE_HAS_FINAL_VALUE,
+     * or after hasUniqueValue() returned TRUE.
+     * getValue() can be called multiple times.
+     *
+     * Do not call getValue() after UDICTTRIE_NO_MATCH or UDICTTRIE_NO_VALUE,
+     * or after hasUniqueValue() returned FALSE!
      */
     int32_t getValue() {
         if(!haveValue_) {
@@ -236,10 +218,10 @@ public:
     /**
      * Determines whether all strings reachable from the current state
      * map to the same value.
-     * Sets hasValue() to the return value of this function, and if there is
-     * a unique value, then a following getValue() will return that unique value.
+     * Sets current() according to whether there is a unique value,
+     * and if there is one, then a following getValue() will return that unique value.
      *
-     * Aside from hasValue()/getValue(),
+     * Aside from current()/getValue(),
      * after this function returns the trie will be in the same state as before.
      *
      * @return TRUE if all strings reachable from the current state
@@ -461,7 +443,7 @@ private:
     const UChar *pos_;
     // Remaining length of a linear-match node, minus 1. Negative if not in such a node.
     int32_t remainingMatchLength_;
-    // Value for a match, after hasValue() returned TRUE.
+    // Value for a match.
     int32_t value_;
     UBool haveValue_;
     // Unique value, only used in hasUniqueValue().

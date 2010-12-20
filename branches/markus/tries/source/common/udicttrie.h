@@ -23,30 +23,41 @@
 #include "unicode/utypes.h"
 
 /**
-  * Return values for ByteTrie::next(), UCharTrie::next() and similar methods.
-  *
-  * The UDICTTRIE_NO_MATCH constant's numeric value is 0, so in C/C++,
-  * if checking for UDICTTRIE_HAS_VALUE is not needed,
-  * a UDictTrieResult can be treated like a boolean "matches",
-  * as in "if(!trie.next(c)) ..."
-  */
+ * Return values for ByteTrie::next(), UCharTrie::next() and similar methods.
+ *
+ * The UDICTTRIE_NO_MATCH constant's numeric value is 0, so in C/C++,
+ * if checking for UDICTTRIE_HAS_VALUE is not needed,
+ * a UDictTrieResult can be treated like a boolean "matches",
+ * as in "if(!trie.next(c)) ..."
+ *
+ * "Has value" can be tested with "result>=UDICTTRIE_HAS_VALUE".
+ * "Has next" can be tested with "result!=UDICTTRIE_NO_MATCH && result!=UDICTTRIE_HAS_FINAL_VALUE".
+ */
 enum UDictTrieResult {
     /**
-      * The input unit(s) did not continue a matching string.
-      */
+     * The input unit(s) did not continue a matching string.
+     */
     UDICTTRIE_NO_MATCH,
     /**
-      * The input unit(s) continued a matching string
-      * but there is no value for the string so far.
-      * (It is a prefix of a longer string.)
-      */
+     * The input unit(s) continued a matching string
+     * but there is no value for the string so far.
+     * (It is a prefix of a longer string.)
+     */
     UDICTTRIE_NO_VALUE,
     /**
-      * The input unit(s) continued a matching string
-      * and there is a value for the string so far.
-      * This value will be returned by getValue().
-      */
-    UDICTTRIE_HAS_VALUE
+     * The input unit(s) continued a matching string
+     * and there is a value for the string so far.
+     * This value will be returned by getValue().
+     * Another input byte/unit can continue a matching string.
+     */
+    UDICTTRIE_HAS_VALUE,
+    /**
+     * The input unit(s) continued a matching string
+     * and there is a value for the string so far.
+     * This value will be returned by getValue().
+     * No further input byte/unit can continue a matching string.
+     */
+    UDICTTRIE_HAS_FINAL_VALUE
 };
 
 #endif  /* __UDICTTRIE_H__ */
