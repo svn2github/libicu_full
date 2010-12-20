@@ -352,7 +352,7 @@ public:
         }
         ctd=new CompactTrieDictionary(builder, errorCode);
         int32_t length=(int32_t)ctd->dataSize();
-        printf("size of CompactTrieDict:    %6ld bytes\n", (long)length*2);
+        printf("size of CompactTrieDict:    %6ld bytes\n", (long)length);
     }
 
     virtual ~CompactTrieDictLookup() {

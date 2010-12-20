@@ -48,7 +48,6 @@ Appendable::append(const UChar *s, int32_t length) {
 
 UOBJECT_DEFINE_NO_RTTI_IMPLEMENTATION(Appendable)
 
-
 UDictTrieResult
 UCharTrie::current() const {
     const UChar *pos=pos_;
@@ -174,11 +173,11 @@ UCharTrie::nextImpl(const UChar *pos, int32_t uchar) {
 
 UDictTrieResult
 UCharTrie::next(int32_t uchar) {
+    haveValue_=FALSE;
     const UChar *pos=pos_;
     if(pos==NULL) {
         return UDICTTRIE_NO_MATCH;
     }
-    haveValue_=FALSE;
     int32_t length=remainingMatchLength_;  // Actual remaining match length minus 1.
     if(length>=0) {
         // Remaining part of a linear-match node.
@@ -202,11 +201,11 @@ UCharTrie::next(const UChar *s, int32_t sLength) {
         // Empty input.
         return current();
     }
+    haveValue_=FALSE;
     const UChar *pos=pos_;
     if(pos==NULL) {
         return UDICTTRIE_NO_MATCH;
     }
-    haveValue_=FALSE;
     int32_t length=remainingMatchLength_;  // Actual remaining match length minus 1.
     for(;;) {
         // Fetch the next input unit, if there is one.

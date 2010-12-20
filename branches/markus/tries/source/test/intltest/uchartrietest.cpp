@@ -881,7 +881,10 @@ void UCharTrieTest::checkNextWithState(const UnicodeString &trieUChars,
         if(resultAtState>=UDICTTRIE_HAS_VALUE) {
             valueAtState=trie.getValue();
         }
-        trie.next(0);  // mismatch
+        result=trie.next(0);  // mismatch
+        if(result!=UDICTTRIE_NO_MATCH || result!=trie.current()) {
+            errln("trie.next(0) matched after part of %s", data[i].s);
+        }
         if( resultAtState!=trie.resetToState(state).current() ||
             (resultAtState>=UDICTTRIE_HAS_VALUE && valueAtState!=trie.getValue())
         ) {
