@@ -261,7 +261,6 @@ UCharTrie::next(const UChar *s, int32_t sLength) {
                 if(result==UDICTTRIE_NO_MATCH) {
                     return UDICTTRIE_NO_MATCH;
                 }
-                pos=pos_;  // branchNext() advanced pos and wrote it to pos_ .
                 // Fetch the next input unit, if there is one.
                 if(sLength<0) {
                     if((uchar=*s++)==0) {
@@ -279,6 +278,7 @@ UCharTrie::next(const UChar *s, int32_t sLength) {
                     stop();
                     return UDICTTRIE_NO_MATCH;
                 }
+                pos=pos_;  // branchNext() advanced pos and wrote it to pos_ .
             } else if(node<kMinValueLead) {
                 // Match length+1 units.
                 length=node-kMinLinearMatch;  // Actual match length minus 1.
