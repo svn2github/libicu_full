@@ -41,8 +41,7 @@ class U_COMMON_API ByteTrie : public UMemory {
 public:
     ByteTrie(const void *trieBytes)
             : bytes_(reinterpret_cast<const uint8_t *>(trieBytes)),
-              pos_(bytes_), remainingMatchLength_(-1), value_(0), haveValue_(FALSE),
-              uniqueValue_(0), haveUniqueValue_(FALSE) {}
+              pos_(bytes_), remainingMatchLength_(-1) {}
 
     /**
      * Resets this trie to its initial state.
@@ -50,7 +49,6 @@ public:
     ByteTrie &reset() {
         pos_=bytes_;
         remainingMatchLength_=-1;
-        haveValue_=FALSE;
         return *this;
     }
 
@@ -67,8 +65,6 @@ public:
         const uint8_t *bytes;
         const uint8_t *pos;
         int32_t remainingMatchLength;
-        int32_t value;
-        UBool haveValue;
     };
 
     /**
@@ -79,8 +75,6 @@ public:
         state.bytes=bytes_;
         state.pos=pos_;
         state.remainingMatchLength=remainingMatchLength_;
-        state.value=value_;
-        state.haveValue=haveValue_;
         return *this;
     }
 
@@ -95,8 +89,6 @@ public:
         if(bytes_==state.bytes && bytes_!=NULL) {
             pos_=state.pos;
             remainingMatchLength_=state.remainingMatchLength;
-            value_=state.value;
-            haveValue_=state.haveValue;
         }
         return *this;
     }
@@ -115,7 +107,6 @@ public:
      */
     inline UDictTrieResult first(int32_t inByte) {
         remainingMatchLength_=-1;
-        haveValue_=FALSE;
         return nextImpl(bytes_, inByte);
     }
 
@@ -140,33 +131,31 @@ public:
 
     /**
      * Returns a matching byte sequence's value if called immediately after
-     * current()/first()/next() returned UDICTTRIE_HAS_VALUE or UDICTTRIE_HAS_FINAL_VALUE,
-     * or after hasUniqueValue() returned TRUE.
+     * current()/first()/next() returned UDICTTRIE_HAS_VALUE or UDICTTRIE_HAS_FINAL_VALUE.
      * getValue() can be called multiple times.
      *
-     * Do not call getValue() after UDICTTRIE_NO_MATCH or UDICTTRIE_NO_VALUE,
-     * or after hasUniqueValue() returned FALSE!
+     * Do not call getValue() after UDICTTRIE_NO_MATCH or UDICTTRIE_NO_VALUE!
      */
-    inline int32_t getValue() {
-        if(!haveValue_) {
-            readValueAndFinal();
-        }
-        return value_;
+    inline int32_t getValue() const {
+        const uint8_t *pos=pos_;
+        int32_t leadByte=*pos++;
+        U_ASSERT(leadByte>=kMinValueLead);
+        return readValue(pos, leadByte>>1);
     }
 
     /**
      * Determines whether all byte sequences reachable from the current state
      * map to the same value.
-     * Sets current() according to whether there is a unique value,
-     * and if there is one, then a following getValue() will return that unique value.
-     *
-     * Aside from current()/getValue(),
-     * after this function returns the trie will be in the same state as before.
-     *
+     * @param uniqueValue Receives the unique value, if this function returns TRUE.
+     *                    (output-only)
      * @return TRUE if all byte sequences reachable from the current state
      *         map to the same value.
      */
-    UBool hasUniqueValue();
+    inline UBool hasUniqueValue(int32_t &uniqueValue) const {
+        const uint8_t *pos=pos_;
+        // Skip the rest of a pending linear-match node.
+        return pos!=NULL && findUniqueValue(pos+remainingMatchLength_+1, FALSE, uniqueValue);
+    }
 
     /**
      * Finds each byte which continues the byte sequence from the current state.
@@ -186,29 +175,9 @@ private:
         pos_=NULL;
     }
 
-    // Reads a compact 32-bit integer and post-increments pos.
+    // Reads a compact 32-bit integer.
     // pos is already after the leadByte, and the lead byte is already shifted right by 1.
-    const uint8_t *readValue(const uint8_t *pos, int32_t leadByte);
-    // Reads a compact 32-bit integer and post-increments pos.
-    // pos is already after the leadByte.
-    inline void readValueAndFinal(const uint8_t *pos, int32_t leadByte) {
-        U_ASSERT(leadByte>=kMinValueLead);
-        UBool isFinal=(UBool)(leadByte&kValueIsFinal);
-        pos=readValue(pos, leadByte>>1);
-        if(isFinal) {
-            stop();
-        } else {
-            // The next node must not also be a value node.
-            U_ASSERT(*pos<kMinValueLead);
-            pos_=pos;
-        }
-        haveValue_=TRUE;
-    }
-    inline void readValueAndFinal() {
-        const uint8_t *pos=pos_;
-        int32_t leadByte=*pos++;
-        readValueAndFinal(pos, leadByte);
-    }
+    static int32_t readValue(const uint8_t *pos, int32_t leadByte);
     static inline const uint8_t *skipValue(const uint8_t *pos, int32_t leadByte) {
         U_ASSERT(leadByte>=kMinValueLead);
         if(leadByte>=(kMinTwoByteValueLead<<1)) {
@@ -226,16 +195,9 @@ private:
         int32_t leadByte=*pos++;
         return skipValue(pos, leadByte);
     }
-    // TODO: See if all functions are used.
-    inline void skipValue(int32_t leadByte) {
-        pos_=skipValue(pos_, leadByte);
-    }
-    inline void skipValue() {
-        pos_=skipValue(pos_);
-    }
 
-    // Reads a jump delta and post-increments pos.
-    int32_t readDelta();
+    // Reads a jump delta and jumps.
+    static const uint8_t *jumpByDelta(const uint8_t *pos);
 
     static inline const uint8_t *skipDelta(const uint8_t *pos) {
         int32_t delta=*pos++;
@@ -259,33 +221,13 @@ private:
     UDictTrieResult nextImpl(const uint8_t *pos, int32_t inByte);
 
     // Helper functions for hasUniqueValue().
-    // Compares the latest value with the previous one, or saves the latest one.
-    inline UBool isUniqueValue() {
-        if(haveUniqueValue_) {
-            if(value_!=uniqueValue_) {
-                return FALSE;
-            }
-        } else {
-            uniqueValue_=value_;
-            haveUniqueValue_=TRUE;
-        }
-        return TRUE;
-    }
-    // Recurses into a branch edge and returns to the current position.
-    inline UBool findUniqueValueAt(int32_t delta) {
-        const uint8_t *currentPos=pos_;
-        pos_+=delta;
-        if(!findUniqueValue()) {
-            return FALSE;
-        }
-        pos_=currentPos;
-        return TRUE;
-    }
-    // Handles a branch node entry (final value or jump delta).
-    UBool findUniqueValueFromBranchEntry();
     // Recursively finds a unique value (or whether there is not a unique one)
-    // starting from a position on a node lead unit.
-    UBool findUniqueValue();
+    // from a branch.
+    static const uint8_t *findUniqueValueFromBranch(const uint8_t *pos, int32_t length,
+                                                    UBool haveUniqueValue, int32_t &uniqueValue);
+    // Recursively finds a unique value (or whether there is not a unique one)
+    // starting from a position on a node lead byte.
+    static UBool findUniqueValue(const uint8_t *pos, UBool haveUniqueValue, int32_t &uniqueValue);
 
     // Helper functions for getNextBytes().
     // getNextBytes() when pos is on a branch node.
@@ -380,12 +322,6 @@ private:
     const uint8_t *pos_;
     // Remaining length of a linear-match node, minus 1. Negative if not in such a node.
     int32_t remainingMatchLength_;
-    // Value for a match.
-    int32_t value_;
-    UBool haveValue_;
-    // Unique value, only used in hasUniqueValue().
-    int32_t uniqueValue_;
-    UBool haveUniqueValue_;
 };
 
 U_NAMESPACE_END

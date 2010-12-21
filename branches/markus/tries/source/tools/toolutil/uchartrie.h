@@ -75,8 +75,7 @@ class U_TOOLUTIL_API UCharTrie : public UMemory {
 public:
     UCharTrie(const UChar *trieUChars)
             : uchars_(trieUChars),
-              pos_(uchars_), remainingMatchLength_(-1), value_(0), haveValue_(FALSE),
-              uniqueValue_(0), haveUniqueValue_(FALSE) {}
+              pos_(uchars_), remainingMatchLength_(-1) {}
 
     /**
      * Resets this trie to its initial state.
@@ -84,7 +83,6 @@ public:
     UCharTrie &reset() {
         pos_=uchars_;
         remainingMatchLength_=-1;
-        haveValue_=FALSE;
         return *this;
     }
 
@@ -101,8 +99,6 @@ public:
         const UChar *uchars;
         const UChar *pos;
         int32_t remainingMatchLength;
-        int32_t value;
-        UBool haveValue;
     };
 
     /**
@@ -113,8 +109,6 @@ public:
         state.uchars=uchars_;
         state.pos=pos_;
         state.remainingMatchLength=remainingMatchLength_;
-        state.value=value_;
-        state.haveValue=haveValue_;
         return *this;
     }
 
@@ -129,8 +123,6 @@ public:
         if(uchars_==state.uchars && uchars_!=NULL) {
             pos_=state.pos;
             remainingMatchLength_=state.remainingMatchLength;
-            value_=state.value;
-            haveValue_=state.haveValue;
         }
         return *this;
     }
@@ -149,7 +141,6 @@ public:
      */
     inline UDictTrieResult first(int32_t uchar) {
         remainingMatchLength_=-1;
-        haveValue_=FALSE;
         return nextImpl(uchars_, uchar);
     }
 
@@ -201,33 +192,32 @@ public:
 
     /**
      * Returns a matching string's value if called immediately after
-     * current()/first()/next() returned UDICTTRIE_HAS_VALUE or UDICTTRIE_HAS_FINAL_VALUE,
-     * or after hasUniqueValue() returned TRUE.
+     * current()/first()/next() returned UDICTTRIE_HAS_VALUE or UDICTTRIE_HAS_FINAL_VALUE.
      * getValue() can be called multiple times.
      *
-     * Do not call getValue() after UDICTTRIE_NO_MATCH or UDICTTRIE_NO_VALUE,
-     * or after hasUniqueValue() returned FALSE!
+     * Do not call getValue() after UDICTTRIE_NO_MATCH or UDICTTRIE_NO_VALUE!
      */
     inline int32_t getValue() {
-        if(!haveValue_) {
-            readValueAndFinal();
-        }
-        return value_;
+        const UChar *pos=pos_;
+        int32_t leadUnit=*pos++;
+        U_ASSERT(leadUnit>=kMinValueLead);
+        return readValue(pos, leadUnit>>1);
     }
 
     /**
      * Determines whether all strings reachable from the current state
      * map to the same value.
-     * Sets current() according to whether there is a unique value,
-     * and if there is one, then a following getValue() will return that unique value.
-     *
-     * Aside from current()/getValue(),
-     * after this function returns the trie will be in the same state as before.
-     *
+     * @param uniqueValue Receives the unique value, if this function returns TRUE.
+     *                    (output-only)
      * @return TRUE if all strings reachable from the current state
      *         map to the same value.
      */
-    UBool hasUniqueValue();
+    inline UBool hasUniqueValue(int32_t &uniqueValue) const {
+        const UChar *pos=pos_;
+        // Skip the rest of a pending linear-match node.
+        uniqueValue=-1;  // TODO: remove this line
+        return pos!=NULL /* TODO && findUniqueValue(pos+remainingMatchLength_+1, FALSE, uniqueValue)*/;
+    }
 
     /**
      * Finds each UChar which continues the string from the current state.
@@ -247,40 +237,18 @@ private:
         pos_=NULL;
     }
 
-    // Reads a compact 32-bit integer and post-increments pos.
+    // Reads a compact 32-bit integer.
     // pos is already after the leadUnit, and the lead unit is already shifted right by 1.
-    inline const UChar *readValue(const UChar *pos, int32_t leadUnit) {
+    static inline int32_t readValue(const UChar *pos, int32_t leadUnit) {
         int32_t value;
         if(leadUnit<kMinTwoUnitValueLead) {
             value=leadUnit-kMinOneUnitValueLead;
         } else if(leadUnit<kThreeUnitValueLead) {
-            value=((leadUnit-kMinTwoUnitValueLead)<<16)|*pos++;
+            value=((leadUnit-kMinTwoUnitValueLead)<<16)|*pos;
         } else {
             value=(pos[0]<<16)|pos[1];
-            pos+=2;
         }
-        value_=value;
-        return pos;
-    }
-    // Reads a compact 32-bit integer and post-increments pos.
-    // pos is already after the leadUnit.
-    inline void readValueAndFinal(const UChar *pos, int32_t leadUnit) {
-        U_ASSERT(leadUnit>=kMinValueLead);
-        UBool isFinal=(UBool)(leadUnit&kValueIsFinal);
-        pos=readValue(pos, leadUnit>>1);
-        if(isFinal) {
-            stop();
-        } else {
-            // The next node must not also be a value node.
-            U_ASSERT(*pos<kMinValueLead);
-            pos_=pos;
-        }
-        haveValue_=TRUE;
-    }
-    inline void readValueAndFinal() {
-        const UChar *pos=pos_;
-        int32_t leadUnit=*pos++;
-        readValueAndFinal(pos, leadUnit);
+        return value;
     }
     static inline const UChar *skipValue(const UChar *pos, int32_t leadUnit) {
         U_ASSERT(leadUnit>=kMinValueLead);
@@ -298,9 +266,7 @@ private:
         return skipValue(pos, leadUnit);
     }
 
-/*
-    inline int32_t readDelta() {
-        const UChar *pos=pos_;
+    static inline const UChar *jumpByDelta(const UChar *pos) {
         int32_t delta=*pos++;
         if(delta>=kMinTwoUnitDeltaLead) {
             if(delta==kThreeUnitDeltaLead) {
@@ -310,10 +276,9 @@ private:
                 delta=((delta-kMinTwoUnitDeltaLead)<<16)|*pos++;
             }
         }
-        pos_=pos;
-        return delta;
+        return pos+delta;
     }
-*/
+
     static const UChar *skipDelta(const UChar *pos) {
         int32_t delta=*pos++;
         if(delta>=kMinTwoUnitDeltaLead) {
@@ -333,33 +298,13 @@ private:
     UDictTrieResult nextImpl(const UChar *pos, int32_t uchar);
 
     // Helper functions for hasUniqueValue().
-    // Compares the latest value with the previous one, or saves the latest one.
-    inline UBool isUniqueValue() {
-        if(haveUniqueValue_) {
-            if(value_!=uniqueValue_) {
-                return FALSE;
-            }
-        } else {
-            uniqueValue_=value_;
-            haveUniqueValue_=TRUE;
-        }
-        return TRUE;
-    }
-    // Recurses into a branch edge and returns to the current position.
-    inline UBool findUniqueValueAt(int32_t delta) {
-        const UChar *currentPos=pos_;
-        pos_+=delta;
-        if(!findUniqueValue()) {
-            return FALSE;
-        }
-        pos_=currentPos;
-        return TRUE;
-    }
-    // Handles a branch node entry (final value or jump delta).
-    UBool findUniqueValueFromBranchEntry(int32_t node);
+    // Recursively finds a unique value (or whether there is not a unique one)
+    // from a branch.
+    static const UChar *findUniqueValueFromBranch(const UChar *pos, int32_t length,
+                                                  UBool haveUniqueValue, int32_t &uniqueValue);
     // Recursively finds a unique value (or whether there is not a unique one)
     // starting from a position on a node lead unit.
-    UBool findUniqueValue();
+    static UBool findUniqueValue(const UChar *pos, UBool haveUniqueValue, int32_t &uniqueValue);
 
     // Helper functions for getNextUChars().
     // getNextUChars() when pos is on a branch node.
@@ -443,12 +388,6 @@ private:
     const UChar *pos_;
     // Remaining length of a linear-match node, minus 1. Negative if not in such a node.
     int32_t remainingMatchLength_;
-    // Value for a match.
-    int32_t value_;
-    UBool haveValue_;
-    // Unique value, only used in hasUniqueValue().
-    int32_t uniqueValue_;
-    UBool haveUniqueValue_;
 };
 
 U_NAMESPACE_END

@@ -51,9 +51,7 @@ UOBJECT_DEFINE_NO_RTTI_IMPLEMENTATION(Appendable)
 UDictTrieResult
 UCharTrie::current() const {
     const UChar *pos=pos_;
-    if(haveValue_) {
-        return pos==NULL ? UDICTTRIE_HAS_FINAL_VALUE : UDICTTRIE_HAS_VALUE;
-    } else if(pos==NULL) {
+    if(pos==NULL) {
         return UDICTTRIE_NO_MATCH;
     } else {
         int32_t node;
@@ -74,18 +72,7 @@ UCharTrie::branchNext(const UChar *pos, int32_t length, int32_t uchar) {
     while(length>kMaxBranchLinearSubNodeLength) {
         if(uchar<*pos++) {
             length>>=1;
-            // int32_t delta=readDelta(pos);
-            int32_t delta=*pos++;
-            if(delta>=kMinTwoUnitDeltaLead) {
-                if(delta==kThreeUnitDeltaLead) {
-                    delta=(pos[0]<<16)|pos[1];
-                    pos+=2;
-                } else {
-                    delta=((delta-kMinTwoUnitDeltaLead)<<16)|*pos++;
-                }
-            }
-            // end readDelta()
-            pos+=delta;
+            pos=jumpByDelta(pos);
         } else {
             length=length-(length>>1);
             pos=skipDelta(pos);
@@ -173,7 +160,6 @@ UCharTrie::nextImpl(const UChar *pos, int32_t uchar) {
 
 UDictTrieResult
 UCharTrie::next(int32_t uchar) {
-    haveValue_=FALSE;
     const UChar *pos=pos_;
     if(pos==NULL) {
         return UDICTTRIE_NO_MATCH;
@@ -201,7 +187,6 @@ UCharTrie::next(const UChar *s, int32_t sLength) {
         // Empty input.
         return current();
     }
-    haveValue_=FALSE;
     const UChar *pos=pos_;
     if(pos==NULL) {
         return UDICTTRIE_NO_MATCH;
@@ -303,9 +288,9 @@ UCharTrie::next(const UChar *s, int32_t sLength) {
     }
 }
 
+#if 0
 UBool
 UCharTrie::hasUniqueValue() {
-#if 0
     if(pos==NULL) {
         return FALSE;
     }
@@ -323,13 +308,10 @@ UCharTrie::hasUniqueValue() {
     // Restore original state, except for value/haveValue.
     pos=originalPos;
     return haveValue;
-#endif
-    return FALSE;
 }
 
 UBool
 UCharTrie::findUniqueValueFromBranchEntry(int32_t node) {
-#if 0
     value=readFixedInt(node);
     if(node&kFixedIntIsFinal) {
         // Final value directly in the branch entry.
@@ -343,13 +325,10 @@ UCharTrie::findUniqueValueFromBranchEntry(int32_t node) {
         }
     }
     return TRUE;
-#endif
-    return FALSE;
 }
 
 UBool
 UCharTrie::findUniqueValue() {
-#if 0
     for(;;) {
         int32_t node=*pos++;
         if(node<kMinLinearMatch) {
@@ -394,9 +373,8 @@ UCharTrie::findUniqueValue() {
             U_ASSERT(*pos<kMinValueLead);
         }
     }
-#endif
-    return FALSE;
 }
+#endif
 
 int32_t
 UCharTrie::getNextUChars(Appendable &out) {

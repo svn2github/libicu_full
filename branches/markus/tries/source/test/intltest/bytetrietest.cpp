@@ -84,7 +84,8 @@ void ByteTrieTest::runIndexedTest(int32_t index, UBool exec, const char *&name, 
     TESTCASE_AUTO(TestLongSequence);
     TESTCASE_AUTO(TestLongBranch);
     TESTCASE_AUTO(TestValuesForState);
-/*    TESTCASE_AUTO(TestHasUniqueValue);
+    TESTCASE_AUTO(TestHasUniqueValue);
+/*
     TESTCASE_AUTO(TestGetNextBytes);
     TESTCASE_AUTO(TestIteratorFromBranch);
     TESTCASE_AUTO(TestIteratorFromLinearMatch);
@@ -267,32 +268,33 @@ void ByteTrieTest::TestHasUniqueValue() {
         return;  // buildTrie() reported an error
     }
     ByteTrie trie(sp.data());
-    if(trie.hasUniqueValue()) {
+    int32_t uniqueValue;
+    if(trie.hasUniqueValue(uniqueValue)) {
         errln("unique value at root");
     }
     trie.next('j');
     trie.next('a');
     trie.next('n');
     // hasUniqueValue() directly after next()
-    if(!trie.hasUniqueValue() || 1!=trie.getValue()) {
+    if(!trie.hasUniqueValue(uniqueValue) || uniqueValue!=1) {
         errln("not unique value 1 after \"jan\"");
     }
     trie.first('j');
     trie.next('u');
-    if(trie.hasUniqueValue()) {
+    if(trie.hasUniqueValue(uniqueValue)) {
         errln("unique value after \"ju\"");
     }
     if(trie.next('n')!=UDICTTRIE_HAS_VALUE || 6!=trie.getValue()) {
         errln("not normal value 6 after \"jun\"");
     }
     // hasUniqueValue() after getValue()
-    if(!trie.hasUniqueValue() || 6!=trie.getValue()) {
+    if(!trie.hasUniqueValue(uniqueValue) || uniqueValue!=6) {
         errln("not unique value 6 after \"jun\"");
     }
     // hasUniqueValue() from within a linear-match node
     trie.first('a');
     trie.next('u');
-    if(!trie.hasUniqueValue() || 8!=trie.getValue()) {
+    if(!trie.hasUniqueValue(uniqueValue) || uniqueValue!=8) {
         errln("not unique value 8 after \"au\"");
     }
 }

@@ -21,34 +21,30 @@
 U_NAMESPACE_BEGIN
 
 // lead byte already shifted right by 1.
-const uint8_t *
+int32_t
 ByteTrie::readValue(const uint8_t *pos, int32_t leadByte) {
     int32_t value;
     if(leadByte<kMinTwoByteValueLead) {
         value=leadByte-kMinOneByteValueLead;
     } else if(leadByte<kMinThreeByteValueLead) {
-        value=((leadByte-kMinTwoByteValueLead)<<8)|*pos++;
+        value=((leadByte-kMinTwoByteValueLead)<<8)|*pos;
     } else if(leadByte<kFourByteValueLead) {
         value=((leadByte-kMinThreeByteValueLead)<<16)|(pos[0]<<8)|pos[1];
-        pos+=2;
     } else if(leadByte==kFourByteValueLead) {
         value=(pos[0]<<16)|(pos[1]<<8)|pos[2];
-        pos+=3;
     } else {
         value=(pos[0]<<24)|(pos[1]<<16)|(pos[2]<<8)|pos[3];
-        pos+=4;
     }
-    value_=value;
-    return pos;
+    return value;
 }
 
-/* int32_t
-ByteTrie::readDelta() {
+const uint8_t *
+ByteTrie::jumpByDelta(const uint8_t *pos) {
     int32_t delta=*pos++;
     if(delta<kMinTwoByteDeltaLead) {
-        return delta;
+        // nothing to do
     } else if(delta<kMinThreeByteDeltaLead) {
-        return ((delta-kMinTwoByteDeltaLead)<<8)|*pos++;
+        delta=((delta-kMinTwoByteDeltaLead)<<8)|*pos++;
     } else if(delta<kFourByteDeltaLead) {
         delta=((delta-kMinThreeByteDeltaLead)<<16)|(pos[0]<<8)|pos[1];
         pos+=2;
@@ -59,15 +55,13 @@ ByteTrie::readDelta() {
         delta=(pos[0]<<24)|(pos[1]<<16)|(pos[2]<<8)|pos[3];
         pos+=4;
     }
-    return delta;
-} */
+    return pos+delta;
+}
 
 UDictTrieResult
 ByteTrie::current() const {
     const uint8_t *pos=pos_;
-    if(haveValue_) {
-        return pos==NULL ? UDICTTRIE_HAS_FINAL_VALUE : UDICTTRIE_HAS_VALUE;
-    } else if(pos==NULL) {
+    if(pos==NULL) {
         return UDICTTRIE_NO_MATCH;
     } else {
         int32_t node;
@@ -88,24 +82,7 @@ ByteTrie::branchNext(const uint8_t *pos, int32_t length, int32_t inByte) {
     while(length>kMaxBranchLinearSubNodeLength) {
         if(inByte<*pos++) {
             length>>=1;
-            // int32_t delta=readDelta(pos);
-            int32_t delta=*pos++;
-            if(delta<kMinTwoByteDeltaLead) {
-                // nothing to do
-            } else if(delta<kMinThreeByteDeltaLead) {
-                delta=((delta-kMinTwoByteDeltaLead)<<8)|*pos++;
-            } else if(delta<kFourByteDeltaLead) {
-                delta=((delta-kMinThreeByteDeltaLead)<<16)|(pos[0]<<8)|pos[1];
-                pos+=2;
-            } else if(delta==kFourByteDeltaLead) {
-                delta=(pos[0]<<16)|(pos[1]<<8)|pos[2];
-                pos+=3;
-            } else {
-                delta=(pos[0]<<24)|(pos[1]<<16)|(pos[2]<<8)|pos[3];
-                pos+=4;
-            }
-            // end readDelta()
-            pos+=delta;
+            pos=jumpByDelta(pos);
         } else {
             length=length-(length>>1);
             pos=skipDelta(pos);
@@ -199,7 +176,6 @@ ByteTrie::nextImpl(const uint8_t *pos, int32_t inByte) {
 
 UDictTrieResult
 ByteTrie::next(int32_t inByte) {
-    haveValue_=FALSE;
     const uint8_t *pos=pos_;
     if(pos==NULL) {
         return UDICTTRIE_NO_MATCH;
@@ -227,7 +203,6 @@ ByteTrie::next(const char *s, int32_t sLength) {
         // Empty input.
         return current();
     }
-    haveValue_=FALSE;
     const uint8_t *pos=pos_;
     if(pos==NULL) {
         return UDICTTRIE_NO_MATCH;
@@ -329,96 +304,76 @@ ByteTrie::next(const char *s, int32_t sLength) {
     }
 }
 
-UBool
-ByteTrie::hasUniqueValue() {
-#if 0
-    if(pos==NULL) {
-        return FALSE;
+const uint8_t *
+ByteTrie::findUniqueValueFromBranch(const uint8_t *pos, int32_t length,
+                                    UBool haveUniqueValue, int32_t &uniqueValue) {
+    while(length>kMaxBranchLinearSubNodeLength) {
+        ++pos;  // ignore a comparison byte
+        if(NULL==findUniqueValueFromBranch(jumpByDelta(pos), length>>1, haveUniqueValue, uniqueValue)) {
+            return NULL;
+        }
+        length=length-(length>>1);
+        pos=skipDelta(pos);
     }
-    const uint8_t *originalPos=pos;
-    uniqueValue=value;
-    haveUniqueValue=haveValue;
-
-    if(remainingMatchLength>=0) {
-        // Skip the rest of a pending linear-match node.
-        pos+=remainingMatchLength+1;
-    }
-    haveValue=findUniqueValue();
-    // If haveValue is true, then value is already set to the final value
-    // of the last-visited branch.
-    // Restore original state, except for value/haveValue.
-    pos=originalPos;
-    return haveValue;
-#endif
-    return FALSE;
+    do {
+        ++pos;  // ignore a comparison byte
+        // handle its value
+        int32_t node=*pos++;
+        UBool isFinal=(UBool)(node&kValueIsFinal);
+        int32_t value=readValue(pos, node>>1);
+        pos=skipValue(pos, node);
+        if(isFinal) {
+            if(haveUniqueValue) {
+                if(value!=uniqueValue) {
+                    return NULL;
+                }
+            } else {
+                uniqueValue=value;
+                haveUniqueValue=TRUE;
+            }
+        } else {
+            if(!findUniqueValue(pos+value, haveUniqueValue, uniqueValue)) {
+                return NULL;
+            }
+            haveUniqueValue=TRUE;
+        }
+    } while(--length>1);
+    return pos+1;  // ignore the last comparison byte
 }
 
 UBool
-ByteTrie::findUniqueValueFromBranchEntry() {
-#if 0
-    int32_t node=*pos++;
-    U_ASSERT(node>=kMinValueLead);
-    if(readValueAndFinal(node)) {
-        // Final value directly in the branch entry.
-        if(!isUniqueValue()) {
-            return FALSE;
-        }
-    } else {
-        // Use the non-final value as the jump delta.
-        if(!findUniqueValueAt(value)) {
-            return FALSE;
-        }
-    }
-    return TRUE;
-#endif
-    return FALSE;
-}
-
-UBool
-ByteTrie::findUniqueValue() {
-#if 0
+ByteTrie::findUniqueValue(const uint8_t *pos, UBool haveUniqueValue, int32_t &uniqueValue) {
     for(;;) {
         int32_t node=*pos++;
         if(node<kMinLinearMatch) {
-            while(node>=kMinSplitBranch) {
-                // split-branch node
-                node-=kMinSplitBranch;
-                ++pos;  // ignore the comparison byte
-                // less-than branch
-                int32_t delta=readFixedInt(node);
-                if(!findUniqueValueAt(delta)) {
-                    return FALSE;
-                }
-                // greater-or-equal branch
+            if(node==0) {
                 node=*pos++;
-                U_ASSERT(node<kMinLinearMatch);
             }
-            // list-branch node
-            int32_t length=node+1;  // Actual list length minus 1.
-            do {
-                ++pos;  // ignore a comparison byte
-                // handle its value
-                if(!findUniqueValueFromBranchEntry()) {
-                    return FALSE;
-                }
-            } while(--length>0);
-            ++pos;  // ignore the last comparison byte
+            pos=findUniqueValueFromBranch(pos, node+1, haveUniqueValue, uniqueValue);
+            if(pos==NULL) {
+                return FALSE;
+            }
+            haveUniqueValue=TRUE;
         } else if(node<kMinValueLead) {
             // linear-match node
             pos+=node-kMinLinearMatch+1;  // Ignore the match bytes.
         } else {
-            UBool isFinal=readValueAndFinal(node);
-            if(!isUniqueValue()) {
-                return FALSE;
+            UBool isFinal=(UBool)(node&kValueIsFinal);
+            int32_t value=readValue(pos, node>>1);
+            if(haveUniqueValue) {
+                if(value!=uniqueValue) {
+                    return FALSE;
+                }
+            } else {
+                uniqueValue=value;
+                haveUniqueValue=TRUE;
             }
             if(isFinal) {
                 return TRUE;
             }
-            U_ASSERT(*pos<kMinValueLead);
+            pos=skipValue(pos, node);
         }
     }
-#endif
-    return FALSE;
 }
 
 int32_t

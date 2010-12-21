@@ -427,32 +427,33 @@ void UCharTrieTest::TestHasUniqueValue() {
         return;  // buildTrie() reported an error
     }
     UCharTrie trie(trieUChars.getBuffer());
-    if(trie.hasUniqueValue()) {
+    int32_t uniqueValue;
+    if(trie.hasUniqueValue(uniqueValue)) {
         errln("unique value at root");
     }
     trie.next(u_j);
     trie.next(u_a);
     trie.next(u_n);
     // hasUniqueValue() directly after next()
-    if(!trie.hasUniqueValue() || 1!=trie.getValue()) {
+    if(!trie.hasUniqueValue(uniqueValue) || uniqueValue!=1) {
         errln("not unique value 1 after \"jan\"");
     }
     trie.first(u_j);
     trie.next(u_u);
-    if(trie.hasUniqueValue()) {
+    if(trie.hasUniqueValue(uniqueValue)) {
         errln("unique value after \"ju\"");
     }
     if(trie.next(u_n)!=UDICTTRIE_HAS_VALUE || 6!=trie.getValue()) {
         errln("not normal value 6 after \"jun\"");
     }
     // hasUniqueValue() after getValue()
-    if(!trie.hasUniqueValue() || 6!=trie.getValue()) {
+    if(!trie.hasUniqueValue(uniqueValue) || uniqueValue!=6) {
         errln("not unique value 6 after \"jun\"");
     }
     // hasUniqueValue() from within a linear-match node
     trie.first(u_a);
     trie.next(u_u);
-    if(!trie.hasUniqueValue() || 8!=trie.getValue()) {
+    if(!trie.hasUniqueValue(uniqueValue) || uniqueValue!=8) {
         errln("not unique value 8 after \"au\"");
     }
 }
