@@ -218,18 +218,20 @@ UBool PropNameData::containsName(ByteTrie &trie, const char *name) {
     if(name==NULL) {
         return FALSE;
     }
+    UDictTrieResult result=UDICTTRIE_NO_VALUE;
     char c;
     while((c=*name++)!=0) {
+        if(result==UDICTTRIE_NO_MATCH || result==UDICTTRIE_HAS_FINAL_VALUE) {
+            return FALSE;
+        }
         c=uprv_invCharToLowercaseAscii(c);
         // Ignore delimiters '-', '_', and ASCII White_Space.
         if(c==0x2d || c==0x5f || c==0x20 || (0x09<=c && c<=0x0d)) {
             continue;
         }
-        if(!trie.next((uint8_t)c)) {
-            return FALSE;
-        }
+        result=trie.next((uint8_t)c);
     }
-    return trie.hasValue();
+    return result>=UDICTTRIE_HAS_VALUE;
 }
 
 const char *PropNameData::getPropertyName(int32_t property, int32_t nameChoice) {

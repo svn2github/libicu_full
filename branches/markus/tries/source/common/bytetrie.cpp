@@ -21,7 +21,7 @@
 U_NAMESPACE_BEGIN
 
 // lead byte already shifted right by 1.
-int32_t
+const uint8_t *
 ByteTrie::readValue(const uint8_t *pos, int32_t leadByte) {
     int32_t value;
     if(leadByte<kMinTwoByteValueLead) {
@@ -38,8 +38,8 @@ ByteTrie::readValue(const uint8_t *pos, int32_t leadByte) {
         value=(pos[0]<<24)|(pos[1]<<16)|(pos[2]<<8)|pos[3];
         pos+=4;
     }
-    pos_=pos;
-    return value;
+    value_=value;
+    return pos;
 }
 
 /* int32_t
@@ -62,7 +62,21 @@ ByteTrie::readDelta() {
     return delta;
 } */
 
-const uint8_t *
+UDictTrieResult
+ByteTrie::current() const {
+    const uint8_t *pos=pos_;
+    if(haveValue_) {
+        return pos==NULL ? UDICTTRIE_HAS_FINAL_VALUE : UDICTTRIE_HAS_VALUE;
+    } else if(pos==NULL) {
+        return UDICTTRIE_NO_MATCH;
+    } else {
+        int32_t node;
+        return (remainingMatchLength_<0 && (node=*pos)>=kMinValueLead) ?
+            (UDictTrieResult)(UDICTTRIE_HAS_VALUE+(node&kValueIsFinal)) : UDICTTRIE_NO_VALUE;
+    }
+}
+
+UDictTrieResult
 ByteTrie::branchNext(const uint8_t *pos, int32_t length, int32_t inByte) {
     // Branch according to the current byte.
     if(length==0) {
@@ -102,10 +116,12 @@ ByteTrie::branchNext(const uint8_t *pos, int32_t length, int32_t inByte) {
     // and divides length by 2.
     do {
         if(inByte==*pos++) {
+            UDictTrieResult result;
             int32_t node=*pos;
             U_ASSERT(node>=kMinValueLead);
             if(node&kValueIsFinal) {
-                // Leave the final value for hasValue() to read.
+                // Leave the final value for getValue() to read.
+                result=UDICTTRIE_HAS_FINAL_VALUE;
             } else {
                 // Use the non-final value as the jump delta.
                 ++pos;
@@ -128,20 +144,28 @@ ByteTrie::branchNext(const uint8_t *pos, int32_t length, int32_t inByte) {
                 }
                 // end readValue()
                 pos+=delta;
+                node=*pos;
+                result= node>=kMinValueLead ?
+                    (UDictTrieResult)(UDICTTRIE_HAS_VALUE+(node&kValueIsFinal)) : UDICTTRIE_NO_VALUE;
             }
-            return pos;
+            pos_=pos;
+            return result;
         }
         --length;
-        pos=skipValueAndFinal(pos);
+        pos=skipValue(pos);
     } while(length>1);
     if(inByte==*pos++) {
-        return pos;
+        pos_=pos;
+        int32_t node=*pos;
+        return node>=kMinValueLead ?
+            (UDictTrieResult)(UDICTTRIE_HAS_VALUE+(node&kValueIsFinal)) : UDICTTRIE_NO_VALUE;
     } else {
-        return NULL;
+        stop();
+        return UDICTTRIE_NO_MATCH;
     }
 }
 
-const uint8_t *
+UDictTrieResult
 ByteTrie::nextImpl(const uint8_t *pos, int32_t inByte) {
     for(;;) {
         int32_t node=*pos++;
@@ -150,60 +174,64 @@ ByteTrie::nextImpl(const uint8_t *pos, int32_t inByte) {
         } else if(node<kMinValueLead) {
             // Match the first of length+1 bytes.
             int32_t length=node-kMinLinearMatch;  // Actual match length minus 1.
-            if(inByte==*pos) {
-                remainingMatchLength_=length-1;
-                return pos+1;
+            if(inByte==*pos++) {
+                remainingMatchLength_=--length;
+                pos_=pos;
+                return (length<0 && (node=*pos)>=kMinValueLead) ?
+                    (UDictTrieResult)(UDICTTRIE_HAS_VALUE+(node&kValueIsFinal)) : UDICTTRIE_NO_VALUE;
             } else {
                 // No match.
-                return NULL;
+                break;
             }
         } else if(node&kValueIsFinal) {
             // No further matching bytes.
-            return NULL;
+            break;
         } else {
             // Skip intermediate value.
-            pos=skipValueAndFinal(pos, node);
+            pos=skipValue(pos, node);
             // The next node must not also be a value node.
             U_ASSERT(*pos<kMinValueLead);
         }
     }
+    stop();
+    return UDICTTRIE_NO_MATCH;
 }
 
-UBool
+UDictTrieResult
 ByteTrie::next(int32_t inByte) {
+    haveValue_=FALSE;
     const uint8_t *pos=pos_;
     if(pos==NULL) {
-        return FALSE;
+        return UDICTTRIE_NO_MATCH;
     }
-    haveValue_=FALSE;
     int32_t length=remainingMatchLength_;  // Actual remaining match length minus 1.
     if(length>=0) {
         // Remaining part of a linear-match node.
-        if(inByte==*pos) {
-            remainingMatchLength_=length-1;
-            pos_=pos+1;
-            return TRUE;
+        if(inByte==*pos++) {
+            remainingMatchLength_=--length;
+            pos_=pos;
+            int32_t node;
+            return (length<0 && (node=*pos)>=kMinValueLead) ?
+                (UDictTrieResult)(UDICTTRIE_HAS_VALUE+(node&kValueIsFinal)) : UDICTTRIE_NO_VALUE;
         } else {
-            // No match.
             stop();
-            return FALSE;
+            return UDICTTRIE_NO_MATCH;
         }
     }
-    pos_=pos=nextImpl(pos, inByte);
-    return pos!=NULL;
+    return nextImpl(pos, inByte);
 }
 
-UBool
+UDictTrieResult
 ByteTrie::next(const char *s, int32_t sLength) {
     if(sLength<0 ? *s==0 : sLength==0) {
-        // Empty input: Do nothing at all, see API doc.
-        return TRUE;
-    }
-    const uint8_t *pos=pos_;
-    if(pos==NULL) {
-        return FALSE;
+        // Empty input.
+        return current();
     }
     haveValue_=FALSE;
+    const uint8_t *pos=pos_;
+    if(pos==NULL) {
+        return UDICTTRIE_NO_MATCH;
+    }
     int32_t length=remainingMatchLength_;  // Actual remaining match length minus 1.
     for(;;) {
         // Fetch the next input byte, if there is one.
@@ -214,7 +242,9 @@ ByteTrie::next(const char *s, int32_t sLength) {
                 if((inByte=*s++)==0) {
                     remainingMatchLength_=length;
                     pos_=pos;
-                    return TRUE;
+                    int32_t node;
+                    return (length<0 && (node=*pos)>=kMinValueLead) ?
+                        (UDictTrieResult)(UDICTTRIE_HAS_VALUE+(node&kValueIsFinal)) : UDICTTRIE_NO_VALUE;
                 }
                 if(length<0) {
                     remainingMatchLength_=length;
@@ -222,7 +252,7 @@ ByteTrie::next(const char *s, int32_t sLength) {
                 }
                 if(inByte!=*pos) {
                     stop();
-                    return FALSE;
+                    return UDICTTRIE_NO_MATCH;
                 }
                 ++pos;
                 --length;
@@ -232,7 +262,9 @@ ByteTrie::next(const char *s, int32_t sLength) {
                 if(sLength==0) {
                     remainingMatchLength_=length;
                     pos_=pos;
-                    return TRUE;
+                    int32_t node;
+                    return (length<0 && (node=*pos)>=kMinValueLead) ?
+                        (UDictTrieResult)(UDICTTRIE_HAS_VALUE+(node&kValueIsFinal)) : UDICTTRIE_NO_VALUE;
                 }
                 inByte=*s++;
                 --sLength;
@@ -242,7 +274,7 @@ ByteTrie::next(const char *s, int32_t sLength) {
                 }
                 if(inByte!=*pos) {
                     stop();
-                    return FALSE;
+                    return UDICTTRIE_NO_MATCH;
                 }
                 ++pos;
                 --length;
@@ -251,32 +283,34 @@ ByteTrie::next(const char *s, int32_t sLength) {
         for(;;) {
             int32_t node=*pos++;
             if(node<kMinLinearMatch) {
-                pos=branchNext(pos, node, inByte);
-                if(pos==NULL) {
-                    stop();
-                    return FALSE;
+                UDictTrieResult result=branchNext(pos, node, inByte);
+                if(result==UDICTTRIE_NO_MATCH) {
+                    return UDICTTRIE_NO_MATCH;
                 }
                 // Fetch the next input byte, if there is one.
                 if(sLength<0) {
                     if((inByte=*s++)==0) {
-                        pos_=pos;
-                        return TRUE;
+                        return result;
                     }
                 } else {
                     if(sLength==0) {
-                        pos_=pos;
-                        return TRUE;
+                        return result;
                     }
                     inByte=*s++;
                     --sLength;
                 }
+                if(result==UDICTTRIE_HAS_FINAL_VALUE) {
+                    // No further matching bytes.
+                    stop();
+                    return UDICTTRIE_NO_MATCH;
+                }
+                pos=pos_;  // branchNext() advanced pos and wrote it to pos_ .
             } else if(node<kMinValueLead) {
                 // Match length+1 bytes.
                 length=node-kMinLinearMatch;  // Actual match length minus 1.
                 if(inByte!=*pos) {
-                    // No match.
                     stop();
-                    return FALSE;
+                    return UDICTTRIE_NO_MATCH;
                 }
                 ++pos;
                 --length;
@@ -284,36 +318,15 @@ ByteTrie::next(const char *s, int32_t sLength) {
             } else if(node&kValueIsFinal) {
                 // No further matching bytes.
                 stop();
-                return FALSE;
+                return UDICTTRIE_NO_MATCH;
             } else {
                 // Skip intermediate value.
-                pos=skipValueAndFinal(pos, node);
+                pos=skipValue(pos, node);
                 // The next node must not also be a value node.
                 U_ASSERT(*pos<kMinValueLead);
             }
         }
     }
-}
-
-UBool
-ByteTrie::hasValue() {
-    int32_t node;
-    if(haveValue_) {
-        return TRUE;
-    }
-    const uint8_t *pos=pos_;
-    if(pos!=NULL && remainingMatchLength_<0 && (node=*pos)>=kMinValueLead) {
-        // Deliver value for the matching bytes.
-        if(readValueAndFinal(pos+1, node)) {
-            stop();
-        } else {
-            // The next node must not also be a value node.
-            U_ASSERT(*pos_<kMinValueLead);
-        }
-        haveValue_=TRUE;
-        return TRUE;
-    }
-    return FALSE;
 }
 
 UBool

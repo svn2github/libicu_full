@@ -56,8 +56,8 @@ public:
     void checkData(const StringAndValue data[], int32_t dataLength);
     StringPiece buildTrie(const StringAndValue data[], int32_t dataLength, ByteTrieBuilder &builder);
     void checkFirst(const StringPiece &trieBytes, const StringAndValue data[], int32_t dataLength);
-    void checkHasValue(const StringPiece &trieBytes, const StringAndValue data[], int32_t dataLength);
-    void checkHasValueWithState(const StringPiece &trieBytes, const StringAndValue data[], int32_t dataLength);
+    void checkNext(const StringPiece &trieBytes, const StringAndValue data[], int32_t dataLength);
+    void checkNextWithState(const StringPiece &trieBytes, const StringAndValue data[], int32_t dataLength);
     void checkNextString(const StringPiece &trieBytes, const StringAndValue data[], int32_t dataLength);
     void checkIterator(const StringPiece &trieBytes, const StringAndValue data[], int32_t dataLength);
     void checkIterator(ByteTrieIterator &iter, const StringAndValue data[], int32_t dataLength);
@@ -208,7 +208,7 @@ void ByteTrieTest::TestLongBranch() {
 
 void ByteTrieTest::TestValuesForState() {
     // Check that saveState() and resetToState() interact properly
-    // with next() and hasValue().
+    // with next() and current().
     static const StringAndValue data[]={
         { "a", -1 },
         { "ab", -2 },
@@ -277,21 +277,20 @@ void ByteTrieTest::TestHasUniqueValue() {
     if(!trie.hasUniqueValue() || 1!=trie.getValue()) {
         errln("not unique value 1 after \"jan\"");
     }
-    trie.reset().next('j');
+    trie.first('j');
     trie.next('u');
     if(trie.hasUniqueValue()) {
         errln("unique value after \"ju\"");
     }
-    trie.next('n');
-    if(!trie.hasValue() || 6!=trie.getValue()) {
+    if(trie.next('n')!=UDICTTRIE_HAS_VALUE || 6!=trie.getValue()) {
         errln("not normal value 6 after \"jun\"");
     }
-    // hasUniqueValue() after hasValue()
+    // hasUniqueValue() after getValue()
     if(!trie.hasUniqueValue() || 6!=trie.getValue()) {
         errln("not unique value 6 after \"jun\"");
     }
     // hasUniqueValue() from within a linear-match node
-    trie.reset().next('a');
+    trie.first('a');
     trie.next('u');
     if(!trie.hasUniqueValue() || 8!=trie.getValue()) {
         errln("not unique value 8 after \"au\"");
@@ -320,12 +319,12 @@ void ByteTrieTest::TestGetNextBytes() {
     if(count!=20 || sink.NumberOfBytesAppended()!=20 || 0!=strcmp(buffer, ".abcdefghijklmnopqru")) {
         errln("months getNextBytes()!=[.abcdefghijklmnopqru] after \"jan\"");
     }
-    // getNextBytes() after hasValue()
-    trie.hasValue();
+    // getNextBytes() after getValue()
+    trie.getValue();  // next() had returned UDICTTRIE_HAS_VALUE.
     memset(buffer, 0, sizeof(buffer));
     count=trie.getNextBytes(sink.Reset());
     if(count!=20 || sink.NumberOfBytesAppended()!=20 || 0!=strcmp(buffer, ".abcdefghijklmnopqru")) {
-        errln("months getNextBytes()!=[.abcdefghijklmnopqru] after \"jan\"+hasValue()");
+        errln("months getNextBytes()!=[.abcdefghijklmnopqru] after \"jan\"+getValue()");
     }
     // getNextBytes() from a linear-match node
     trie.next('u');
@@ -540,8 +539,8 @@ void ByteTrieTest::checkData(const StringAndValue data[], int32_t dataLength) {
         return;  // buildTrie() reported an error
     }
     checkFirst(sp, data, dataLength);
-    checkHasValue(sp, data, dataLength);
-    checkHasValueWithState(sp, data, dataLength);
+    checkNext(sp, data, dataLength);
+    checkNextWithState(sp, data, dataLength);
     checkNextString(sp, data, dataLength);
     // checkIterator(sp, data, dataLength);
 }
@@ -586,14 +585,13 @@ void ByteTrieTest::checkFirst(const StringPiece &trieBytes,
         if(c==0) {
             continue;  // skip empty string
         }
-        UBool firstOk=trie.first(c);
-        UBool firstHasValue=firstOk && trie.hasValue();
-        int32_t firstValue=firstHasValue ? trie.getValue() : -1;
-        UBool nextOk=trie.next((uint8_t)data[i].s[1]);
-        if(firstOk!=trie.reset().next(c) ||
-           firstHasValue!=(firstOk && trie.hasValue()) ||
-           firstValue!=(firstHasValue ? trie.getValue() : -1) ||
-           nextOk!=trie.next((uint8_t)data[i].s[1])
+        UDictTrieResult firstResult=trie.first(c);
+        int32_t firstValue=firstResult>=UDICTTRIE_HAS_VALUE ? trie.getValue() : -1;
+        UDictTrieResult nextResult=trie.next((uint8_t)data[i].s[1]);
+        if(firstResult!=trie.reset().next(c) ||
+           firstResult!=trie.current() ||
+           firstValue!=(firstResult>=UDICTTRIE_HAS_VALUE ? trie.getValue() : -1) ||
+           nextResult!=trie.next((uint8_t)data[i].s[1])
         ) {
             errln("trie.first(%c)!=trie.reset().next(same) for %s",
                   c, data[i].s);
@@ -601,40 +599,60 @@ void ByteTrieTest::checkFirst(const StringPiece &trieBytes,
     }
 }
 
-void ByteTrieTest::checkHasValue(const StringPiece &trieBytes,
-                                 const StringAndValue data[], int32_t dataLength) {
+void ByteTrieTest::checkNext(const StringPiece &trieBytes,
+                             const StringAndValue data[], int32_t dataLength) {
     ByteTrie trie(trieBytes.data());
     ByteTrie::State state;
     for(int32_t i=0; i<dataLength; ++i) {
         int32_t stringLength= (i&1) ? -1 : strlen(data[i].s);
-        if(!trie.next(data[i].s, stringLength) || !trie.hasValue()) {
+        UDictTrieResult result;
+        if( (result=trie.next(data[i].s, stringLength))<UDICTTRIE_HAS_VALUE ||
+            result!=trie.current()
+        ) {
             errln("trie does not seem to contain %s", data[i].s);
         } else if(trie.getValue()!=data[i].value) {
             errln("trie value for %s is %ld=0x%lx instead of expected %ld=0x%lx",
                   data[i].s,
                   (long)trie.getValue(), (long)trie.getValue(),
                   (long)data[i].value, (long)data[i].value);
-        } else if(!trie.hasValue() || trie.getValue()!=data[i].value) {
-            errln("trie value for %s changes when repeating hasValue()/getValue()", data[i].s);
+        } else if(result!=trie.current() || trie.getValue()!=data[i].value) {
+            errln("trie value for %s changes when repeating current()/getValue()", data[i].s);
         }
         trie.reset();
         stringLength=strlen(data[i].s);
+        result=trie.current();
         for(int32_t j=0; j<stringLength; ++j) {
-            if(!trie.hasNext() || (trie.hasValue(), !trie.hasNext())) {
-                errln("trie.hasNext()=FALSE before end of %s (at index %d)", data[i].s, j);
+            if(result==UDICTTRIE_NO_MATCH || result==UDICTTRIE_HAS_FINAL_VALUE) {
+                errln("trie.current()!=hasNext before end of %s (at index %d)", data[i].s, j);
                 break;
             }
-            if(!trie.next(data[i].s[j])) {
-                errln("trie.next()=FALSE before end of %s (at index %d)", data[i].s, j);
+            if(result==UDICTTRIE_HAS_VALUE) {
+                trie.getValue();
+                if(trie.current()!=UDICTTRIE_HAS_VALUE) {
+                    errln("trie.getValue().current()!=UDICTTRIE_HAS_VALUE before end of %s (at index %d)", data[i].s, j);
+                    break;
+                }
+            }
+            result=trie.next(data[i].s[j]);
+            if(!result) {
+                errln("trie.next()=UDICTTRIE_NO_MATCH before end of %s (at index %d)", data[i].s, j);
+                break;
+            }
+            if(result!=trie.current()) {
+                errln("trie.next()!=following current() before end of %s (at index %d)", data[i].s, j);
                 break;
             }
         }
-        // Compare the final hasNext() with whether next() can actually continue.
-        UBool hasNext=trie.hasNext();
-        trie.hasValue();
-        if(hasNext!=trie.hasNext()) {
-            errln("trie.hasNext() != hasNext()+hasValue()+hasNext() after end of %s", data[i].s);
+        if(result<UDICTTRIE_HAS_VALUE) {
+            errln("trie.next()<UDICTTRIE_HAS_VALUE at the end of %s", data[i].s);
+            continue;
         }
+        trie.getValue();
+        if(result!=trie.current()) {
+            errln("trie.current() != current()+getValue()+current() after end of %s",
+                  data[i].s);
+        }
+        // Compare the final current() with whether next() can actually continue.
         trie.saveState(state);
         UBool nextContinues=FALSE;
         for(int32_t c=0x20; c<0x7f; ++c) {
@@ -643,15 +661,16 @@ void ByteTrieTest::checkHasValue(const StringPiece &trieBytes,
                 break;
             }
         }
-        if(hasNext!=nextContinues) {
-            errln("trie.hasNext()=trie.next(some byte) after end of %s", data[i].s);
+        if((result==UDICTTRIE_HAS_VALUE)!=nextContinues) {
+            errln("(trie.current()==UDICTTRIE_HAS_VALUE) contradicts "
+                  "(trie.next(some UChar)!=UDICTTRIE_NO_MATCH) after end of %s", data[i].s);
         }
         trie.reset();
     }
 }
 
-void ByteTrieTest::checkHasValueWithState(const StringPiece &trieBytes,
-                                          const StringAndValue data[], int32_t dataLength) {
+void ByteTrieTest::checkNextWithState(const StringPiece &trieBytes,
+                                      const StringAndValue data[], int32_t dataLength) {
     ByteTrie trie(trieBytes.data());
     ByteTrie::State noState, state;
     for(int32_t i=0; i<dataLength; ++i) {
@@ -664,34 +683,42 @@ void ByteTrieTest::checkHasValueWithState(const StringPiece &trieBytes,
         int32_t partialLength=stringLength/3;
         for(int32_t j=0; j<partialLength; ++j) {
             if(!trie.next(expectedString[j])) {
-                errln("trie.next()=false for a prefix of %s", expectedString);
+                errln("trie.next()=UDICTTRIE_NO_MATCH for a prefix of %s", data[i].s);
                 return;
             }
         }
         trie.saveState(state);
-        UBool hasValueAtState=trie.hasValue();
+        UDictTrieResult resultAtState=trie.current();
+        UDictTrieResult result;
         int32_t valueAtState=-99;
-        if(hasValueAtState) {
+        if(resultAtState>=UDICTTRIE_HAS_VALUE) {
             valueAtState=trie.getValue();
         }
-        trie.next(0);  // mismatch
-        if( hasValueAtState!=trie.resetToState(state).hasValue() ||
-            (hasValueAtState && valueAtState!=trie.getValue())
+        result=trie.next(0);  // mismatch
+        if(result!=UDICTTRIE_NO_MATCH || result!=trie.current()) {
+            errln("trie.next(0) matched after part of %s", data[i].s);
+        }
+        if( resultAtState!=trie.resetToState(state).current() ||
+            (resultAtState>=UDICTTRIE_HAS_VALUE && valueAtState!=trie.getValue())
         ) {
-            errln("trie.next(part of %s) changes hasValue()/getValue() after saveState/next(0)/resetToState",
-                  expectedString);
-        } else if(!trie.next(expectedString+partialLength, stringLength-partialLength) ||
-                  !trie.hasValue()) {
-            errln("trie.next(part of %s) does not seem to contain %s after saveState/next(0)/resetToState",
-                  expectedString);
-        } else if(!trie.resetToState(state).
-                        next(expectedString+partialLength, stringLength-partialLength) ||
-                  !trie.hasValue()) {
+            errln("trie.next(part of %s) changes current()/getValue() after "
+                  "saveState/next(0)/resetToState",
+                  data[i].s);
+        } else if((result=trie.next(expectedString+partialLength,
+                                    stringLength-partialLength))<UDICTTRIE_HAS_VALUE ||
+                  result!=trie.current()) {
+            errln("trie.next(rest of %s) does not seem to contain %s after "
+                  "saveState/next(0)/resetToState",
+                  data[i].s);
+        } else if((result=trie.resetToState(state).
+                               next(expectedString+partialLength,
+                                    stringLength-partialLength))<UDICTTRIE_HAS_VALUE ||
+                  result!=trie.current()) {
             errln("trie does not seem to contain %s after saveState/next(rest)/resetToState",
-                  expectedString);
+                  data[i].s);
         } else if(trie.getValue()!=data[i].value) {
             errln("trie value for %s is %ld=0x%lx instead of expected %ld=0x%lx",
-                  expectedString,
+                  data[i].s,
                   (long)trie.getValue(), (long)trie.getValue(),
                   (long)data[i].value, (long)data[i].value);
         }
@@ -708,12 +735,12 @@ void ByteTrieTest::checkNextString(const StringPiece &trieBytes,
         const char *expectedString=data[i].s;
         int32_t stringLength=strlen(expectedString);
         if(!trie.next(expectedString, stringLength/2)) {
-            errln("trie.next(up to middle of string)=FALSE for %s", expectedString);
+            errln("trie.next(up to middle of string)=UDICTTRIE_NO_MATCH for %s", data[i].s);
             continue;
         }
         // Test that we stop properly at the end of the string.
         if(trie.next(expectedString+stringLength/2, stringLength+1-stringLength/2)) {
-            errln("trie.next(string+NUL)=TRUE for %s", expectedString);
+            errln("trie.next(string+NUL)!=UDICTTRIE_NO_MATCH for %s", data[i].s);
         }
         trie.reset();
     }

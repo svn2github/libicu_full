@@ -208,7 +208,7 @@ public:
      * Do not call getValue() after UDICTTRIE_NO_MATCH or UDICTTRIE_NO_VALUE,
      * or after hasUniqueValue() returned FALSE!
      */
-    int32_t getValue() {
+    inline int32_t getValue() {
         if(!haveValue_) {
             readValueAndFinal();
         }

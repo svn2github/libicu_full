@@ -261,7 +261,7 @@ public:
 
 static int32_t byteTrieLookup(const char *s, const char *nameTrieBytes) {
     ByteTrie trie(nameTrieBytes);
-    if(trie.next(s, -1) && trie.hasValue()) {
+    if(trie.next(s, -1)>=UDICTTRIE_HAS_VALUE) {
         return trie.getValue();
     } else {
         return -1;
@@ -403,12 +403,12 @@ ucharTrieMatches(UCharTrie &trie,
     // Should be firstForCodePoint() but CompactTrieDictionary
     // handles only code units.
     UDictTrieResult result=trie.first(c);
-    if(result==UDICTTRIE_NO_MATCH) {
-        return 1;
-    }
     int32_t numChars=1;
     count=0;
     for(;;) {
+        if(result==UDICTTRIE_NO_MATCH) {
+            break;
+        }
         if(result>=UDICTTRIE_HAS_VALUE) {
             if(count<limit) {
                 // lengths[count++]=(int32_t)utext_getNativeIndex(text);
@@ -433,9 +433,6 @@ ucharTrieMatches(UCharTrie &trie,
         // Should be nextForCodePoint() but CompactTrieDictionary
         // handles only code units.
         result=trie.next(c);
-        if(result==UDICTTRIE_NO_MATCH) {
-            break;
-        }
     }
 #if 0
     // Note: CompactTrieDictionary::matches() comments say that it leaves the UText
@@ -592,16 +589,20 @@ byteTrieMatches(ByteTrie &trie,
     if(c<0) {
         return 0;
     }
-    if(!trie.first(thaiCharToByte(c))) {
-        return 1;
-    }
+    UDictTrieResult result=trie.first(thaiCharToByte(c));
     int32_t numChars=1;
     count=0;
     for(;;) {
-        if(trie.hasValue()) {
+        if(result==UDICTTRIE_NO_MATCH) {
+            break;
+        }
+        if(result>=UDICTTRIE_HAS_VALUE) {
             if(count<limit) {
                 // lengths[count++]=(int32_t)utext_getNativeIndex(text);
                 lengths[count++]=numChars;  // CompactTrieDictionary just counts chars too.
+            }
+            if(result==UDICTTRIE_HAS_FINAL_VALUE) {
+                break;
             }
         }
         if(numChars>=textLimit) {
@@ -612,9 +613,7 @@ byteTrieMatches(ByteTrie &trie,
             break;
         }
         ++numChars;
-        if(!trie.next(thaiCharToByte(c))) {
-            break;
-        }
+        result=trie.next(thaiCharToByte(c));
     }
     return numChars;
 }
@@ -662,19 +661,20 @@ public:
         const ULine *lines=perf.getCachedLines();
         int32_t numLines=perf.getNumLines();
         for(int32_t i=0; i<numLines; ++i) {
+            const UChar *line=lines[i].name;
             // Skip comment lines (start with a character below 'A').
-            if(lines[i].name[0]<0x41) {
+            if(line[0]<0x41) {
                 continue;
             }
-            trie.reset();
-            const UChar *line=lines[i].name;
+            UDictTrieResult result=trie.first(thaiCharToByte(line[0]));
             int32_t lineLength=lines[i].len;
-            for(int32_t j=0; j<lineLength; ++j) {
-                if(!trie.next(thaiCharToByte(line[j]))) {
+            for(int32_t j=1; j<lineLength; ++j) {
+                if(result==UDICTTRIE_NO_MATCH) {
                     fprintf(stderr, "word %ld (0-based) not found\n", (long)i);
                 }
+                result=trie.next(thaiCharToByte(line[j]));
             }
-            if(!trie.hasValue()) {
+            if(result<UDICTTRIE_HAS_VALUE) {
                 fprintf(stderr, "word %ld (0-based) not found\n", (long)i);
             }
         }
