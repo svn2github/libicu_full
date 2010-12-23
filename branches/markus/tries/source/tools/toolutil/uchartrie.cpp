@@ -285,93 +285,86 @@ UCharTrie::next(const UChar *s, int32_t sLength) {
     }
 }
 
-#if 0
-UBool
-UCharTrie::hasUniqueValue() {
-    if(pos==NULL) {
-        return FALSE;
-    }
-    const UChar *originalPos=pos;
-    uniqueValue=value;
-    haveUniqueValue=haveValue;
-
-    if(remainingMatchLength>=0) {
-        // Skip the rest of a pending linear-match node.
-        pos+=remainingMatchLength+1;
-    }
-    haveValue=findUniqueValue();
-    // If haveValue is true, then value is already set to the final value
-    // of the last-visited branch.
-    // Restore original state, except for value/haveValue.
-    pos=originalPos;
-    return haveValue;
-}
-
-UBool
-UCharTrie::findUniqueValueFromBranchEntry(int32_t node) {
-    value=readFixedInt(node);
-    if(node&kFixedIntIsFinal) {
-        // Final value directly in the branch entry.
-        if(!isUniqueValue()) {
-            return FALSE;
+const UChar *
+UCharTrie::findUniqueValueFromBranch(const UChar *pos, int32_t length,
+                                    UBool haveUniqueValue, int32_t &uniqueValue) {
+    while(length>kMaxBranchLinearSubNodeLength) {
+        ++pos;  // ignore a comparison byte
+        if(NULL==findUniqueValueFromBranch(jumpByDelta(pos), length>>1, haveUniqueValue, uniqueValue)) {
+            return NULL;
         }
-    } else {
-        // Use the non-final value as the jump delta.
-        if(!findUniqueValueAt(value)) {
-            return FALSE;
-        }
+        length=length-(length>>1);
+        pos=skipDelta(pos);
     }
-    return TRUE;
-}
-
-UBool
-UCharTrie::findUniqueValue() {
-    for(;;) {
+    do {
+        ++pos;  // ignore a comparison unit
+        // handle its value
         int32_t node=*pos++;
+        UBool isFinal=(UBool)(node>>15);
+        node&=0x7fff;
+        int32_t value=readValue(pos, node);
+        pos=skipValue(pos, node);
+        if(isFinal) {
+            if(haveUniqueValue) {
+                if(value!=uniqueValue) {
+                    return NULL;
+                }
+            } else {
+                uniqueValue=value;
+                haveUniqueValue=TRUE;
+            }
+        } else {
+            if(!findUniqueValue(pos+value, haveUniqueValue, uniqueValue)) {
+                return NULL;
+            }
+            haveUniqueValue=TRUE;
+        }
+    } while(--length>1);
+    return pos+1;  // ignore the last comparison unit
+}
+
+UBool
+UCharTrie::findUniqueValue(const UChar *pos, UBool haveUniqueValue, int32_t &uniqueValue) {
+    int32_t node=*pos++;
+    for(;;) {
         if(node<kMinLinearMatch) {
-            while(node>=kMinSplitBranch) {
-                // split-branch node
-                ++pos;  // ignore the comparison unit
-                // less-than branch
-                int32_t delta=readFixedInt(node);
-                if(!findUniqueValueAt(delta)) {
-                    return FALSE;
-                }
-                // greater-or-equal branch
+            if(node==0) {
                 node=*pos++;
-                U_ASSERT(node<kMinLinearMatch);
             }
-            // list-branch node
-            int32_t length=(node>>kMaxListBranchLengthShift)+1;  // Actual list length minus 1.
-            if(length>=kMaxListBranchSmallLength) {
-                // For 7..14 pairs, read the next unit as well.
-                node=(node<<16)|*pos++;
+            pos=findUniqueValueFromBranch(pos, node+1, haveUniqueValue, uniqueValue);
+            if(pos==NULL) {
+                return FALSE;
             }
-            do {
-                ++pos;  // ignore a comparison unit
-                // handle its value
-                if(!findUniqueValueFromBranchEntry(node)) {
-                    return FALSE;
-                }
-                node>>=2;
-            } while(--length>0);
-            ++pos;  // ignore the last comparison unit
+            haveUniqueValue=TRUE;
+            node=*pos++;
         } else if(node<kMinValueLead) {
             // linear-match node
             pos+=node-kMinLinearMatch+1;  // Ignore the match units.
+            node=*pos++;
         } else {
-            UBool isFinal=readCompactInt(node);
-            if(!isUniqueValue()) {
-                return FALSE;
+            UBool isFinal=(UBool)(node>>15);
+            int32_t value;
+            if(isFinal) {
+                value=readValue(pos, node&0x7fff);
+            } else {
+                value=readNodeValue(pos, node);
+            }
+            if(haveUniqueValue) {
+                if(value!=uniqueValue) {
+                    return FALSE;
+                }
+            } else {
+                uniqueValue=value;
+                haveUniqueValue=TRUE;
             }
             if(isFinal) {
                 return TRUE;
             }
-            U_ASSERT(*pos<kMinValueLead);
+            pos=skipNodeValue(pos, node);
+            node&=kNodeTypeMask;
         }
     }
 }
-#endif
 
 int32_t
 UCharTrie::getNextUChars(Appendable &out) {

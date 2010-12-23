@@ -93,7 +93,8 @@ void UCharTrieTest::runIndexedTest(int32_t index, UBool exec, const char *&name,
     TESTCASE_AUTO(TestNextForCodePoint);
     TESTCASE_AUTO(TestFirstForCodePoint);
     TESTCASE_AUTO(TestLargeTrie);
-/*    TESTCASE_AUTO(TestHasUniqueValue);
+    TESTCASE_AUTO(TestHasUniqueValue);
+/*
     TESTCASE_AUTO(TestGetNextUChars);
     TESTCASE_AUTO(TestIteratorFromBranch);
     TESTCASE_AUTO(TestIteratorFromLinearMatch);

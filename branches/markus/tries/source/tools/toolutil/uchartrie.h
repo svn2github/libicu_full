@@ -216,8 +216,7 @@ public:
     inline UBool hasUniqueValue(int32_t &uniqueValue) const {
         const UChar *pos=pos_;
         // Skip the rest of a pending linear-match node.
-        uniqueValue=-1;  // TODO: remove this line
-        return pos!=NULL /* TODO && findUniqueValue(pos+remainingMatchLength_+1, FALSE, uniqueValue)*/;
+        return pos!=NULL && findUniqueValue(pos+remainingMatchLength_+1, FALSE, uniqueValue);
     }
 
     /**
