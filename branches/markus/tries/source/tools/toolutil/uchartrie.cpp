@@ -367,78 +367,50 @@ UCharTrie::findUniqueValue(const UChar *pos, UBool haveUniqueValue, int32_t &uni
 }
 
 int32_t
-UCharTrie::getNextUChars(Appendable &out) {
-#if 0
+UCharTrie::getNextUChars(Appendable &out) const {
+    const UChar *pos=pos_;
     if(pos==NULL) {
         return 0;
     }
-    if(remainingMatchLength>=0) {
-        out.append(*pos);  // Next byte of a pending linear-match node.
+    if(remainingMatchLength_>=0) {
+        out.append(*pos);  // Next unit of a pending linear-match node.
         return 1;
     }
-    const UChar *originalPos=pos;
-    int32_t node=*pos;
+    int32_t node=*pos++;
     if(node>=kMinValueLead) {
         if(node&kValueIsFinal) {
             return 0;
         } else {
-            ++pos;  // Skip the lead unit.
-            skipValue(node);
-            node=*pos;
-            U_ASSERT(node<kMinValueLead);
+            pos=skipNodeValue(pos, node);
+            node&=kNodeTypeMask;
         }
     }
-    int32_t count;
     if(node<kMinLinearMatch) {
-        count=getNextBranchUChars(out);
+        if(node==0) {
+            node=*pos++;
+        }
+        getNextBranchUChars(pos, ++node, out);
+        return node;
     } else {
-        // First byte of the linear-match node.
-        out.append(pos[1]);
-        count=1;
+        // First unit of the linear-match node.
+        out.append(*pos);
+        return 1;
     }
-    pos=originalPos;
-    return count;
-#endif
-    out.append(0);
-    return 0;
 }
 
-int32_t
-UCharTrie::getNextBranchUChars(Appendable &out) {
-#if 0
-    int32_t count=0;
-    int32_t node=*pos++;
-    U_ASSERT(node<kMinLinearMatch);
-    while(node>=kMinSplitBranch) {
-        // split-branch node
-        ++pos;  // ignore the comparison unit
-        // less-than branch
-        int32_t delta=readFixedInt(node);
-        const UChar *currentPos=pos;
-        pos+=delta;
-        count+=getNextBranchUChars(out);
-        pos=currentPos;
-        // greater-or-equal branch
-        node=*pos++;
-        U_ASSERT(node<kMinLinearMatch);
+void
+UCharTrie::getNextBranchUChars(const UChar *pos, int32_t length, Appendable &out) {
+    while(length>kMaxBranchLinearSubNodeLength) {
+        ++pos;  // ignore a comparison unit
+        getNextBranchUChars(jumpByDelta(pos), length>>1, out);
+        length=length-(length>>1);
+        pos=skipDelta(pos);
     }
-    // list-branch node
-    int32_t length=(node>>kMaxListBranchLengthShift)+1;  // Actual list length minus 1.
-    if(length>=kMaxListBranchSmallLength) {
-        // For 7..14 pairs, read the next unit as well.
-        node=(node<<16)|*pos++;
-    }
-    count+=length+1;
     do {
         out.append(*pos++);
-        pos+=(node&kFixedInt32)+1;
-        node>>=2;
-    } while(--length>0);
+        pos=skipValue(pos);
+    } while(--length>1);
     out.append(*pos);
-    return count;
-#endif
-    out.append(0);
-    return 0;
 }
 
 U_NAMESPACE_END

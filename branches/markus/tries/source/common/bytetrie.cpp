@@ -377,73 +377,51 @@ ByteTrie::findUniqueValue(const uint8_t *pos, UBool haveUniqueValue, int32_t &un
 }
 
 int32_t
-ByteTrie::getNextBytes(ByteSink &out) {
-#if 0
+ByteTrie::getNextBytes(ByteSink &out) const {
+    const uint8_t *pos=pos_;
     if(pos==NULL) {
         return 0;
     }
-    if(remainingMatchLength>=0) {
+    if(remainingMatchLength_>=0) {
         append(out, *pos);  // Next byte of a pending linear-match node.
         return 1;
     }
-    const uint8_t *originalPos=pos;
-    int32_t node=*pos;
+    int32_t node=*pos++;
     if(node>=kMinValueLead) {
         if(node&kValueIsFinal) {
             return 0;
         } else {
-            pos+=bytesPerLead[node>>1];
-            node=*pos;
+            pos=skipValue(pos, node);
+            node=*pos++;
             U_ASSERT(node<kMinValueLead);
         }
     }
-    int32_t count;
     if(node<kMinLinearMatch) {
-        count=getNextBranchBytes(out);
+        if(node==0) {
+            node=*pos++;
+        }
+        getNextBranchBytes(pos, ++node, out);
+        return node;
     } else {
         // First byte of the linear-match node.
-        append(out, pos[1]);
-        count=1;
+        append(out, *pos);
+        return 1;
     }
-    pos=originalPos;
-    return count;
-#endif
-    append(out, 0);
-    return 0;
 }
 
-int32_t
-ByteTrie::getNextBranchBytes(ByteSink &out) {
-#if 0
-    int32_t count=0;
-    int32_t node=*pos++;
-    U_ASSERT(node<kMinLinearMatch);
-    while(node>=kMinSplitBranch) {
-        // split-branch node
-        node-=kMinSplitBranch;
-        ++pos;  // ignore the comparison byte
-        // less-than branch
-        int32_t delta=readFixedInt(node);
-        const uint8_t *currentPos=pos;
-        pos+=delta;
-        count+=getNextBranchBytes(out);
-        pos=currentPos;
-        // greater-or-equal branch
-        node=*pos++;
-        U_ASSERT(node<kMinLinearMatch);
+void
+ByteTrie::getNextBranchBytes(const uint8_t *pos, int32_t length, ByteSink &out) {
+    while(length>kMaxBranchLinearSubNodeLength) {
+        ++pos;  // ignore a comparison byte
+        getNextBranchBytes(jumpByDelta(pos), length>>1, out);
+        length=length-(length>>1);
+        pos=skipDelta(pos);
     }
-    // list-branch node
-    int32_t length=node+1;  // Actual list length minus 1.
-    count+=length+1;
     do {
         append(out, *pos++);
-        pos+=bytesPerLead[*pos>>1];
-    } while(--length>0);
+        pos=skipValue(pos);
+    } while(--length>1);
     append(out, *pos);
-    return count;
-#endif
-    append(out, 0);
-    return 0;
 }
 
 void

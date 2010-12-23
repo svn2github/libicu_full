@@ -159,13 +159,12 @@ public:
 
     /**
      * Finds each byte which continues the byte sequence from the current state.
-     * That is, each byte b for which next(b) would be TRUE now.
-     * After this function returns the trie will be in the same state as before.
+     * That is, each byte b for which it would be next(b)!=UDICTTRIE_NO_MATCH now.
      * @param out Each next byte is appended to this object.
      *            (Only uses the out.Append(s, length) method.)
      * @return the number of bytes which continue the byte sequence from here
      */
-    int32_t getNextBytes(ByteSink &out);
+    int32_t getNextBytes(ByteSink &out) const;
 
 private:
     friend class ByteTrieBuilder;
@@ -231,8 +230,8 @@ private:
 
     // Helper functions for getNextBytes().
     // getNextBytes() when pos is on a branch node.
-    int32_t getNextBranchBytes(ByteSink &out);
-    void append(ByteSink &out, int c);
+    static void getNextBranchBytes(const uint8_t *pos, int32_t length, ByteSink &out);
+    static void append(ByteSink &out, int c);
 
     // ByteTrie data structure
     //

@@ -221,13 +221,12 @@ public:
 
     /**
      * Finds each UChar which continues the string from the current state.
-     * That is, each UChar c for which next(c) would be TRUE now.
-     * After this function returns the trie will be in the same state as before.
+     * That is, each UChar c for which it would be next(c)!=UDICTTRIE_NO_MATCH now.
      * @param out Each next UChar is appended to this object.
      *            (Only uses the out.append(c) method.)
      * @return the number of UChars which continue the string from here
      */
-    int32_t getNextUChars(Appendable &out);
+    int32_t getNextUChars(Appendable &out) const;
 
 private:
     friend class UCharTrieBuilder;
@@ -331,7 +330,7 @@ private:
 
     // Helper functions for getNextUChars().
     // getNextUChars() when pos is on a branch node.
-    int32_t getNextBranchUChars(Appendable &out);
+    static void getNextBranchUChars(const UChar *pos, int32_t length, Appendable &out);
 
     // UCharTrie data structure
     //

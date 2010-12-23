@@ -85,8 +85,8 @@ void ByteTrieTest::runIndexedTest(int32_t index, UBool exec, const char *&name, 
     TESTCASE_AUTO(TestLongBranch);
     TESTCASE_AUTO(TestValuesForState);
     TESTCASE_AUTO(TestHasUniqueValue);
-/*
     TESTCASE_AUTO(TestGetNextBytes);
+/*
     TESTCASE_AUTO(TestIteratorFromBranch);
     TESTCASE_AUTO(TestIteratorFromLinearMatch);
     TESTCASE_AUTO(TestTruncatingIteratorFromRoot);
@@ -340,6 +340,13 @@ void ByteTrieTest::TestGetNextBytes() {
     count=trie.getNextBytes(sink.Reset());
     if(count!=1 || sink.NumberOfBytesAppended()!=1 || buffer[0]!='r') {
         errln("months getNextBytes()!=[r] after \"janua\"");
+    }
+    trie.next('r');
+    trie.next('y');
+    // getNextBytes() after a final match
+    count=trie.getNextBytes(sink.Reset());
+    if(count!=0 || sink.NumberOfBytesAppended()!=0) {
+        errln("months getNextBytes()!=[] after \"january\"");
     }
 }
 

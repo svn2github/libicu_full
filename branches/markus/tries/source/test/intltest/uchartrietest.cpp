@@ -94,8 +94,8 @@ void UCharTrieTest::runIndexedTest(int32_t index, UBool exec, const char *&name,
     TESTCASE_AUTO(TestFirstForCodePoint);
     TESTCASE_AUTO(TestLargeTrie);
     TESTCASE_AUTO(TestHasUniqueValue);
-/*
     TESTCASE_AUTO(TestGetNextUChars);
+/*
     TESTCASE_AUTO(TestIteratorFromBranch);
     TESTCASE_AUTO(TestIteratorFromLinearMatch);
     TESTCASE_AUTO(TestTruncatingIteratorFromRoot);
@@ -378,7 +378,8 @@ enum {
     u_j=0x6a,
     u_n=0x6e,
     u_r=0x72,
-    u_u=0x75
+    u_u=0x75,
+    u_y=0x79
 };
 
 UBool UCharTrieTest::buildMonthsTrie(UCharTrieBuilder &builder, UnicodeString &result) {
@@ -505,6 +506,13 @@ void UCharTrieTest::TestGetNextUChars() {
     count=trie.getNextUChars(app.reset());
     if(count!=1 || buffer.length()!=1 || buffer[0]!=u_r) {
         errln("months getNextUChars()!=[r] after \"janua\"");
+    }
+    trie.next(u_r);
+    trie.next(u_y);
+    // getNextUChars() after a final match
+    count=trie.getNextUChars(app.reset());
+    if(count!=0 || buffer.length()!=0) {
+        errln("months getNextUChars()!=[] after \"january\"");
     }
 }
 
