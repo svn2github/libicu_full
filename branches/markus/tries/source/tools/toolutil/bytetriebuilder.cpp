@@ -306,7 +306,7 @@ ByteTrieBuilder::makeBranchSubNode(int32_t start, int32_t limit, int32_t byteInd
     // or jumps to other parts of the trie.
     int32_t starts[ByteTrie::kMaxBranchLinearSubNodeLength];
     UBool final[ByteTrie::kMaxBranchLinearSubNodeLength-1];
-    // For each byte except the last one, find its elements array start and its value if final.
+    // For each byte except the last one, find its elements array start and whether it has a final value.
     int32_t byteNumber=0;
     do {
         int32_t i=starts[byteNumber]=start;

@@ -197,11 +197,12 @@ public:
      *
      * Do not call getValue() after UDICTTRIE_NO_MATCH or UDICTTRIE_NO_VALUE!
      */
-    inline int32_t getValue() {
+    inline int32_t getValue() const {
         const UChar *pos=pos_;
         int32_t leadUnit=*pos++;
         U_ASSERT(leadUnit>=kMinValueLead);
-        return readValue(pos, leadUnit>>1);
+        return leadUnit&kValueIsFinal ?
+            readValue(pos, leadUnit&0x7fff) : readNodeValue(pos, leadUnit);
     }
 
     /**
@@ -238,11 +239,11 @@ private:
     }
 
     // Reads a compact 32-bit integer.
-    // pos is already after the leadUnit, and the lead unit is already shifted right by 1.
+    // pos is already after the leadUnit, and the lead unit has bit 15 reset.
     static inline int32_t readValue(const UChar *pos, int32_t leadUnit) {
         int32_t value;
         if(leadUnit<kMinTwoUnitValueLead) {
-            value=leadUnit-kMinOneUnitValueLead;
+            value=leadUnit;
         } else if(leadUnit<kThreeUnitValueLead) {
             value=((leadUnit-kMinTwoUnitValueLead)<<16)|*pos;
         } else {
@@ -251,9 +252,8 @@ private:
         return value;
     }
     static inline const UChar *skipValue(const UChar *pos, int32_t leadUnit) {
-        U_ASSERT(leadUnit>=kMinValueLead);
-        if(leadUnit>=(kMinTwoUnitValueLead<<1)) {
-            if(leadUnit<(kThreeUnitValueLead<<1)) {
+        if(leadUnit>=kMinTwoUnitValueLead) {
+            if(leadUnit<kThreeUnitValueLead) {
                 ++pos;
             } else {
                 pos+=2;
@@ -263,7 +263,31 @@ private:
     }
     static inline const UChar *skipValue(const UChar *pos) {
         int32_t leadUnit=*pos++;
-        return skipValue(pos, leadUnit);
+        return skipValue(pos, leadUnit&0x7fff);
+    }
+
+    static inline int32_t readNodeValue(const UChar *pos, int32_t leadUnit) {
+        U_ASSERT(kMinValueLead<=leadUnit && leadUnit<kValueIsFinal);
+        int32_t value;
+        if(leadUnit<kMinTwoUnitNodeValueLead) {
+            value=(leadUnit>>6)-1;
+        } else if(leadUnit<kThreeUnitNodeValueLead) {
+            value=(((leadUnit&0x7fc0)-kMinTwoUnitNodeValueLead)<<10)|*pos;
+        } else {
+            value=(pos[0]<<16)|pos[1];
+        }
+        return value;
+    }
+    static inline const UChar *skipNodeValue(const UChar *pos, int32_t leadUnit) {
+        U_ASSERT(kMinValueLead<=leadUnit && leadUnit<kValueIsFinal);
+        if(leadUnit>=kMinTwoUnitNodeValueLead) {
+            if(leadUnit<kThreeUnitNodeValueLead) {
+                ++pos;
+            } else {
+                pos+=2;
+            }
+        }
+        return pos;
     }
 
     static inline const UChar *jumpByDelta(const UChar *pos) {
@@ -321,8 +345,13 @@ private:
     // encode match values or continue matching further units.
     //
     // Node types:
-    //  - Value node: Stores a 32-bit integer in a compact, variable-length format.
+    //  - Final-value node: Stores a 32-bit integer in a compact, variable-length format.
     //    The value is for the string/UChar sequence so far.
+    //  - Match node, optionally with an intermediate value in a different compact format.
+    //    The value, if present, is for the string/UChar sequence so far.
+    //
+    //  Aside from the value, which uses the node lead unit's high bits:
+    //
     //  - Linear-match node: Matches a number of units.
     //  - Branch node: Branches to other nodes according to the current input unit.
     //    The node unit is the length of the branch (number of units to select from)
@@ -332,7 +361,7 @@ private:
     //      If one of the key units matches, then the value is either a final value for
     //      the string so far, or a "jump" delta to the next node.
     //      If the last unit matches, then matching continues with the next node.
-    //      (Values have the same encoding as value nodes.)
+    //      (Values have the same encoding as final-value nodes.)
     //    - If the length is greater than kMaxBranchLinearSubNodeLength, then
     //      there is one unit and one "jump" delta.
     //      If the input unit is less than the sub-node unit, then "jump" by delta to
@@ -341,36 +370,43 @@ private:
     //      Otherwise, skip the "jump" delta to the next sub-node
     //      which will have a length of length-length/2.
 
-    // Node lead unit values.
+    // Match-node lead unit values, after masking off intermediate-value bits:
 
-    // 0000..00ff: Branch node. If node!=0 then the length is node+1, otherwise
+    // 0000..002f: Branch node. If node!=0 then the length is node+1, otherwise
     // the length is one more than the next unit.
 
     // For a branch sub-node with at most this many entries, we drop down
     // to a linear search.
     static const int32_t kMaxBranchLinearSubNodeLength=4;
 
-    // 0100..01ff: Linear-match node, match 1..256 units and continue reading the next node.
-    static const int32_t kMinLinearMatch=0x100;
-    static const int32_t kMaxLinearMatchLength=0x100;
+    // 0030..003f: Linear-match node, match 1..16 units and continue reading the next node.
+    static const int32_t kMinLinearMatch=0x30;
+    static const int32_t kMaxLinearMatchLength=0x10;
 
-    // 0200..ffff: Variable-length value node.
-    // If odd, the value is final. (Otherwise, intermediate value or jump delta.)
-    // Then shift-right by 1 bit.
-    // The remaining lead unit value indicates the number of following units (0..2)
-    // and contains the value's top bits.
-    static const int32_t kMinValueLead=kMinLinearMatch+kMaxLinearMatchLength;  // 0x0200
-    // It is a final value if bit 0 is set.
-    static const int32_t kValueIsFinal=1;
+    // Match-node lead unit bits 14..6 for the optional intermediate value.
+    // If these bits are 0, then there is no intermediate value.
+    // Otherwise, see the *NodeValue* constants below.
+    static const int32_t kMinValueLead=kMinLinearMatch+kMaxLinearMatchLength;  // 0x0040
+    static const int32_t kNodeTypeMask=kMinValueLead-1;  // 0x003f
 
-    // Compact value: After testing bit 0, shift right by 1 and then use the following thresholds.
-    static const int32_t kMinOneUnitValueLead=kMinValueLead/2;  // 0x0100
-    static const int32_t kMaxOneUnitValue=0x5fff;
+    // A final-value node has bit 15 set.
+    static const int32_t kValueIsFinal=0x8000;
 
-    static const int32_t kMinTwoUnitValueLead=kMinOneUnitValueLead+kMaxOneUnitValue+1;  // 0x6100
+    // Compact value: After testing and masking off bit 15, use the following thresholds.
+    static const int32_t kMaxOneUnitValue=0x3fff;
+
+    static const int32_t kMinTwoUnitValueLead=kMaxOneUnitValue+1;  // 0x4000
     static const int32_t kThreeUnitValueLead=0x7fff;
 
-    static const int32_t kMaxTwoUnitValue=((kThreeUnitValueLead-kMinTwoUnitValueLead)<<16)-1;  // 0x1efeffff
+    static const int32_t kMaxTwoUnitValue=((kThreeUnitValueLead-kMinTwoUnitValueLead)<<16)-1;  // 0x3ffeffff
+
+    // Compact intermediate-value integer, lead unit shared with a branch or linear-match node.
+    static const int32_t kMaxOneUnitNodeValue=0xff;
+    static const int32_t kMinTwoUnitNodeValueLead=kMinValueLead+((kMaxOneUnitNodeValue+1)<<6);  // 0x4040
+    static const int32_t kThreeUnitNodeValueLead=0x7fc0;
+
+    static const int32_t kMaxTwoUnitNodeValue=
+        ((kThreeUnitNodeValueLead-kMinTwoUnitNodeValueLead)<<10)-1;  // 0xfdffff
 
     // Compact delta integers.
     static const int32_t kMaxOneUnitDelta=0xfbff;

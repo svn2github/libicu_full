@@ -50,6 +50,7 @@ private:
     void write(int32_t unit);
     void write(const UChar *s, int32_t length);
     void writeValueAndFinal(int32_t i, UBool final);
+    void writeNode(int32_t node, UBool hasValue, int32_t value);
     void writeDelta(int32_t i);
 
     UnicodeString strings;

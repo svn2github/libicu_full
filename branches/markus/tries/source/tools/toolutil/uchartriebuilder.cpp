@@ -193,15 +193,16 @@ UCharTrieBuilder::build(UnicodeString &result, UErrorCode &errorCode) {
 // have a common prefix of length unitIndex.
 void
 UCharTrieBuilder::makeNode(int32_t start, int32_t limit, int32_t unitIndex) {
+    UBool hasValue=FALSE;
+    int32_t value=0;
     if(unitIndex==elements[start].getStringLength(strings)) {
         // An intermediate or final value.
-        int32_t value=elements[start++].getValue();
-        UBool final= start==limit;
-        if(!final) {
-            makeNode(start, limit, unitIndex);
+        value=elements[start++].getValue();
+        if(start==limit) {
+            writeValueAndFinal(value, TRUE);  // final-value node
+            return;
         }
-        writeValueAndFinal(value, final);
-        return;
+        hasValue=TRUE;
     }
     // Now all [start..limit[ strings are longer than unitIndex.
     int32_t minUnit=elements[start].charAt(unitIndex, strings);
@@ -219,7 +220,7 @@ UCharTrieBuilder::makeNode(int32_t start, int32_t limit, int32_t unitIndex) {
                     elements[limit-1].charAt(lastUnitIndex, strings));
         makeNode(start, limit, lastUnitIndex);
         write(elements[start].getString(strings).getBuffer()+unitIndex, length);
-        write(UCharTrie::kMinLinearMatch+length-1);
+        writeNode(UCharTrie::kMinLinearMatch+length-1, hasValue, value);
         return;
     }
     // Branch node.
@@ -233,19 +234,13 @@ UCharTrieBuilder::makeNode(int32_t start, int32_t limit, int32_t unitIndex) {
         ++length;
     } while(i<limit);
     // length>=2 because minUnit!=maxUnit.
-#if 1
     makeBranchSubNode(start, limit, unitIndex, length);
-    write(length-1);
-    if((length-1)>=UCharTrie::kMinLinearMatch) {
-        write(0);
-    }
-#else
-    if(length<=UCharTrie::kMaxListBranchLength) {
-        makeListBranchNode(start, limit, unitIndex, length);
+    if(--length<UCharTrie::kMinLinearMatch) {
+        writeNode(length, hasValue, value);
     } else {
-        makeSplitBranchNode(start, limit, unitIndex, length);
+        write(length);
+        writeNode(0, hasValue, value);
     }
-#endif
 }
 
 // start<limit && all strings longer than unitIndex &&
@@ -279,7 +274,7 @@ UCharTrieBuilder::makeBranchSubNode(int32_t start, int32_t limit, int32_t unitIn
     // or jumps to other parts of the trie.
     int32_t starts[UCharTrie::kMaxBranchLinearSubNodeLength];
     UBool final[UCharTrie::kMaxBranchLinearSubNodeLength-1];
-    // For each unit except the last one, find its elements array start and its value if final.
+    // For each unit except the last one, find its elements array start and whether it has a final value.
     int32_t unitNumber=0;
     do {
         int32_t i=starts[unitNumber]=start;
@@ -380,14 +375,39 @@ UCharTrieBuilder::writeValueAndFinal(int32_t i, UBool final) {
         intUnits[2]=(UChar)i;
         length=3;
     } else if(i<=UCharTrie::kMaxOneUnitValue) {
-        intUnits[0]=(UChar)(UCharTrie::kMinOneUnitValueLead+i);
+        intUnits[0]=(UChar)(i);
         length=1;
     } else {
         intUnits[0]=(UChar)(UCharTrie::kMinTwoUnitValueLead+(i>>16));
         intUnits[1]=(UChar)i;
         length=2;
     }
-    intUnits[0]=(UChar)((intUnits[0]<<1)|final);
+    intUnits[0]=(UChar)(intUnits[0]|(final<<15));
+    write(intUnits, length);
+}
+
+void
+UCharTrieBuilder::writeNode(int32_t node, UBool hasValue, int32_t value) {
+    if(!hasValue) {
+        write(node);
+        return;
+    }
+    UChar intUnits[3];
+    int32_t length;
+    if(value<0 || value>UCharTrie::kMaxTwoUnitNodeValue) {
+        intUnits[0]=(UChar)(UCharTrie::kThreeUnitNodeValueLead);
+        intUnits[1]=(UChar)(value>>16);
+        intUnits[2]=(UChar)value;
+        length=3;
+    } else if(value<=UCharTrie::kMaxOneUnitNodeValue) {
+        intUnits[0]=(UChar)((value+1)<<6);
+        length=1;
+    } else {
+        intUnits[0]=(UChar)(UCharTrie::kMinTwoUnitNodeValueLead+((value>>10)&0x7fc0));
+        intUnits[1]=(UChar)value;
+        length=2;
+    }
+    intUnits[0]|=(UChar)node;
     write(intUnits, length);
 }
 
