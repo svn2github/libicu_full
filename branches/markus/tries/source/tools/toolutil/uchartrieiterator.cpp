@@ -22,37 +22,44 @@ U_NAMESPACE_BEGIN
 
 UCharTrieIterator::UCharTrieIterator(const UChar *trieUChars, int32_t maxStringLength,
                                      UErrorCode &errorCode)
-        : trie(trieUChars), maxLength(maxStringLength), value(0), stack(errorCode) {
-    trie.saveState(initialState);
-}
+        : uchars_(trieUChars),
+          pos_(uchars_), initialPos_(uchars_),
+          remainingMatchLength_(-1), initialRemainingMatchLength_(-1),
+          skipValue_(FALSE),
+          maxLength_(maxStringLength), value_(0), stack_(errorCode) {}
 
-UCharTrieIterator::UCharTrieIterator(const UCharTrie &otherTrie, int32_t maxStringLength,
+UCharTrieIterator::UCharTrieIterator(const UCharTrie &trie, int32_t maxStringLength,
                                      UErrorCode &errorCode)
-        : trie(otherTrie), maxLength(maxStringLength), value(0), stack(errorCode) {
-    trie.saveState(initialState);
-    int32_t length=trie.remainingMatchLength_;  // Actual remaining match length minus 1.
+        : uchars_(trie.uchars_), pos_(trie.pos_), initialPos_(trie.pos_),
+          remainingMatchLength_(trie.remainingMatchLength_),
+          initialRemainingMatchLength_(trie.remainingMatchLength_),
+          skipValue_(FALSE),
+          maxLength_(maxStringLength), value_(0), stack_(errorCode) {
+    int32_t length=remainingMatchLength_;  // Actual remaining match length minus 1.
     if(length>=0) {
         // Pending linear-match node, append remaining UChars to str.
         ++length;
-        if(maxLength>0 && length>maxLength) {
-            length=maxLength;  // This will leave remainingMatchLength>=0 as a signal.
+        if(maxLength_>0 && length>maxLength_) {
+            length=maxLength_;  // This will leave remainingMatchLength>=0 as a signal.
         }
-        str.append(trie.pos_, length);
-        trie.pos_+=length;
-        trie.remainingMatchLength_-=length;
+        str_.append(pos_, length);
+        pos_+=length;
+        remainingMatchLength_-=length;
     }
 }
 
 UCharTrieIterator &UCharTrieIterator::reset() {
-    trie.resetToState(initialState);
-    int32_t length=trie.remainingMatchLength_+1;  // Remaining match length.
-    if(maxLength>0 && length>maxLength) {
-        length=maxLength;
+    pos_=initialPos_;
+    remainingMatchLength_=initialRemainingMatchLength_;
+    skipValue_=FALSE;
+    int32_t length=remainingMatchLength_+1;  // Remaining match length.
+    if(maxLength_>0 && length>maxLength_) {
+        length=maxLength_;
     }
-    str.truncate(length);
-    trie.pos_+=length;
-    trie.remainingMatchLength_-=length;
-    stack.setSize(0);
+    str_.truncate(length);
+    pos_+=length;
+    remainingMatchLength_-=length;
+    stack_.setSize(0);
     return *this;
 }
 
@@ -61,126 +68,114 @@ UCharTrieIterator::next(UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) {
         return FALSE;
     }
-#if 0
-    if(trie.pos==NULL) {
-        if(stack.isEmpty()) {
+    const UChar *pos=pos_;
+    if(pos==NULL) {
+        if(stack_.isEmpty()) {
             return FALSE;
         }
-        // Read the top of the stack and continue with the next outbound edge of
+        // Pop the state off the stack and continue with the next outbound edge of
         // the branch node.
-        // The last outbound edge causes the branch node to be popped off the stack
-        // and the iteration to continue from the trie.pos there.
-        int32_t stackSize=stack.size();
-        int32_t state=stack.elementAti(stackSize-1);
-        trie.pos=trie.uchars+stack.elementAti(stackSize-2);
-        str.truncate(state&0xfffffff);
-        state=(state>>28)&0xf;
-        if(state==kSplitBranchGreaterOrEqual) {
-            // Pop the state.
-            stack.setSize(stackSize-2);
+        int32_t stackSize=stack_.size();
+        int32_t length=stack_.elementAti(stackSize-1);
+        pos=uchars_+stack_.elementAti(stackSize-2);
+        stack_.setSize(stackSize-2);
+        str_.truncate(length&0xffff);
+        length=(int32_t)((uint32_t)length>>16);
+        if(length>1) {
+            pos=branchNext(pos, length, errorCode);
+            if(pos==NULL) {
+                return TRUE;  // Reached a final value.
+            }
         } else {
-            // Remainder of a list-branch node.
-            // Until we are done, we keep our state on the node lead unit
-            // and loop forward to the next key unit.
-            // This is because we do not have enough state bits for the
-            // bit pairs for the (key, value) pairs.
-            int32_t node=*trie.pos++;  // Known to be a list-branch node.
-            int32_t length=(node>>UCharTrie::kMaxListBranchLengthShift)+1;
-            // Actual list length minus 1.
-            if(length>=UCharTrie::kMaxListBranchSmallLength) {
-                // For 7..14 pairs, read the next unit as well.
-                node=(node<<16)|*trie.pos++;
-            }
-            // Skip (key, value) pairs already visited.
-            int32_t i=state;
-            do {
-                trie.pos+=(node&UCharTrie::kFixedInt32)+2;
-                node>>=2;
-            } while(i--!=0);
-            // Read the next key unit.
-            str.append(*trie.pos++);
-            if(++state!=length) {
-                value=trie.readFixedInt(node);
-                // Rewrite the top of the stack for the next branch.
-                stack.setElementAt((state<<28)|(str.length()-1), stackSize-1);
-                if(node&UCharTrie::kFixedIntIsFinal) {
-                    trie.stop();
-                    return TRUE;
-                } else {
-                    trie.pos+=value;
-                }
-            } else {
-                // Pop the state.
-                stack.setSize(stackSize-2);
-            }
+            str_.append(*pos++);
         }
     }
-    if(trie.remainingMatchLength>=0) {
+    if(remainingMatchLength_>=0) {
         // We only get here if we started in a pending linear-match node
-        // with more than maxLength remaining UChars.
+        // with more than maxLength remaining units.
         return truncateAndStop();
     }
     for(;;) {
-        int32_t node=*trie.pos++;
+        int32_t node=*pos++;
         if(node>=UCharTrie::kMinValueLead) {
-            // Deliver value for the string so far.
-            if(trie.readCompactInt(node) || (maxLength>0 && str.length()==maxLength)) {
-                trie.stop();
+            if(skipValue_) {
+                pos=UCharTrie::skipValue(pos, node);
+                node&=UCharTrie::kNodeTypeMask;
+                skipValue_=FALSE;
+            } else {
+                // Deliver value for the string so far.
+                UBool isFinal=(UBool)(node>>15);
+                if(isFinal) {
+                    value_=UCharTrie::readValue(pos, node&0x7fff);
+                } else {
+                    value_=UCharTrie::readNodeValue(pos, node);
+                }
+                if(isFinal || (maxLength_>0 && str_.length()==maxLength_)) {
+                    pos_=NULL;
+                } else {
+                    // We cannot skip the value right here because it shares its
+                    // lead unit with a match node which we have to evaluate
+                    // next time.
+                    // Instead, keep pos_ on the node lead unit itself.
+                    pos_=pos-1;
+                    skipValue_=TRUE;
+                }
+                return TRUE;
             }
-            value=trie.value;
-            return TRUE;
         }
-        if(maxLength>0 && str.length()==maxLength) {
+        if(maxLength_>0 && str_.length()==maxLength_) {
             return truncateAndStop();
         }
         if(node<UCharTrie::kMinLinearMatch) {
-            // Branch node, needs to take the first outbound edge and push state for the rest.
-            if(node>=UCharTrie::kMinSplitBranch) {
-                // Branching on a unit value,
-                // with a jump delta for less-than, and continuing for greater-or-equal.
-                // Both edges must lead to branch nodes again.
-                ++trie.pos;  // ignore the comparison unit
-                // Jump.
-                int32_t delta=trie.readFixedInt(node);
-                stack.addElement((int32_t)(trie.pos-trie.uchars), errorCode);
-                stack.addElement((kSplitBranchGreaterOrEqual<<28)|str.length(), errorCode);
-                trie.pos+=delta;
-            } else {
-                // We will need to re-read the node lead unit.
-                stack.addElement((int32_t)(trie.pos-1-trie.uchars), errorCode);
-                // Branch node with a list of key-value pairs where
-                // values are fixed-width integers: either final values or jump deltas.
-                int32_t length=(node>>UCharTrie::kMaxListBranchLengthShift)+1;
-                // Actual list length minus 1.
-                if(length>=UCharTrie::kMaxListBranchSmallLength) {
-                    // For 7..14 pairs, read the next unit as well.
-                    node=(node<<16)|*trie.pos++;
-                }
-                // Read the first (key, value) pair.
-                UChar trieUnit=*trie.pos++;
-                value=trie.readFixedInt(node);
-                stack.addElement(str.length(), errorCode);  // state=0
-                str.append(trieUnit);
-                if(node&UCharTrie::kFixedIntIsFinal) {
-                    trie.stop();
-                    return TRUE;
-                } else {
-                    trie.pos+=value;
-                }
+            if(node==0) {
+                node=*pos++;
+            }
+            pos=branchNext(pos, node+1, errorCode);
+            if(pos==NULL) {
+                return TRUE;  // Reached a final value.
             }
         } else {
-            // Linear-match node, append length UChars to str.
+            // Linear-match node, append length units to str_.
             int32_t length=node-UCharTrie::kMinLinearMatch+1;
-            if(maxLength>0 && str.length()+length>maxLength) {
-                str.append(trie.pos, maxLength-str.length());
+            if(maxLength_>0 && str_.length()+length>maxLength_) {
+                str_.append(pos, maxLength_-str_.length());
                 return truncateAndStop();
             }
-            str.append(trie.pos, length);
-            trie.pos+=length;
+            str_.append(pos, length);
+            pos+=length;
         }
     }
-#endif
-    return FALSE;
+}
+
+// Branch node, needs to take the first outbound edge and push state for the rest.
+const UChar *
+UCharTrieIterator::branchNext(const UChar *pos, int32_t length, UErrorCode &errorCode) {
+    while(length>UCharTrie::kMaxBranchLinearSubNodeLength) {
+        ++pos;  // ignore the comparison unit
+        // Push state for the greater-or-equal edge.
+        stack_.addElement((int32_t)(UCharTrie::skipDelta(pos)-uchars_), errorCode);
+        stack_.addElement(((length-(length>>1))<<16)|str_.length(), errorCode);
+        // Follow the less-than edge.
+        length>>=1;
+        pos=UCharTrie::jumpByDelta(pos);
+    }
+    // List of key-value pairs where values are either final values or jump deltas.
+    // Read the first (key, value) pair.
+    UChar trieUnit=*pos++;
+    int32_t node=*pos++;
+    UBool isFinal=(UBool)(node>>15);
+    int32_t value=UCharTrie::readValue(pos, node&=0x7fff);
+    pos=UCharTrie::skipValue(pos, node);
+    stack_.addElement((int32_t)(pos-uchars_), errorCode);
+    stack_.addElement(((length-1)<<16)|str_.length(), errorCode);
+    str_.append(trieUnit);
+    if(isFinal) {
+        pos_=NULL;
+        value_=value;
+        return NULL;
+    } else {
+        return pos+value;
+    }
 }
 
 U_NAMESPACE_END

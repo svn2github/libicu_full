@@ -46,7 +46,7 @@ public:
 
     /**
      * Iterates from the current state of the specified UCharTrie.
-     * @param otherTrie The trie whose state will be copied for iteration.
+     * @param trie The trie whose state will be copied for iteration.
      * @param maxStringLength If 0, the iterator returns full strings.
      *                        Otherwise, the iterator returns strings with this maximum length.
      * @param errorCode Standard ICU error code. Its input value must
@@ -54,7 +54,7 @@ public:
      *                  immediately. Check for U_FAILURE() on output or use with
      *                  function chaining. (See User Guide for details.)
      */
-    UCharTrieIterator(const UCharTrie &otherTrie, int32_t maxStringLength, UErrorCode &errorCode);
+    UCharTrieIterator(const UCharTrie &trie, int32_t maxStringLength, UErrorCode &errorCode);
 
     /**
      * Resets this iterator to its initial state.
@@ -75,42 +75,45 @@ public:
     /**
      * @return TRUE if there are more elements.
      */
-    UBool hasNext() const { return trie.pos_!=NULL || !stack.isEmpty(); }
+    UBool hasNext() const { return pos_!=NULL || !stack_.isEmpty(); }
 
     /**
      * @return the NUL-terminated string for the last successful next()
      */
-    const UnicodeString &getString() const { return str; }
+    const UnicodeString &getString() const { return str_; }
     /**
      * @return the value for the last successful next()
      */
-    int32_t getValue() const { return value; }
+    int32_t getValue() const { return value_; }
 
 private:
     UBool truncateAndStop() {
-        trie.stop();
-        value=-1;  // no real value for str
+        pos_=NULL;
+        value_=-1;  // no real value for str
         return TRUE;
     }
 
+    const UChar *branchNext(const UChar *pos, int32_t length, UErrorCode &errorCode);
+
+    const UChar *uchars_;
+    const UChar *pos_;
+    const UChar *initialPos_;
+    int32_t remainingMatchLength_;
+    int32_t initialRemainingMatchLength_;
+    UBool skipValue_;  // Skip intermediate value which was already delivered.
+
+    UnicodeString str_;
+    int32_t maxLength_;
+    int32_t value_;
+
     // The stack stores pairs of integers for backtracking to another
     // outbound edge of a branch node.
-    // The first integer is an offset from UCharTrie.uchars.
-    // The second integer has the str.length() from before the node in bits 27..0,
-    // and the state in bits 31..28.
-    // Except for the following value for a split-branch node,
-    // the lower values indicate how many branches of a list-branch node
-    // have been visited so far.
-    static const int32_t kSplitBranchGreaterOrEqual=0xf;
-
-    UCharTrie trie;
-    UCharTrie::State initialState;
-
-    UnicodeString str;
-    int32_t maxLength;
-    int32_t value;
-
-    UVector32 stack;
+    // The first integer is an offset from ByteTrie.bytes.
+    // The second integer has the str.length() from before the node in bits 15..0,
+    // and the remaining branch length in bits 31..16.
+    // (We could store the remaining branch length minus 1 in bits 30..16 and not use the sign bit,
+    // but the code looks more confusing that way.)
+    UVector32 stack_;
 };
 
 U_NAMESPACE_END

@@ -289,7 +289,7 @@ const UChar *
 UCharTrie::findUniqueValueFromBranch(const UChar *pos, int32_t length,
                                     UBool haveUniqueValue, int32_t &uniqueValue) {
     while(length>kMaxBranchLinearSubNodeLength) {
-        ++pos;  // ignore a comparison byte
+        ++pos;  // ignore the comparison byte
         if(NULL==findUniqueValueFromBranch(jumpByDelta(pos), length>>1, haveUniqueValue, uniqueValue)) {
             return NULL;
         }
@@ -401,7 +401,7 @@ UCharTrie::getNextUChars(Appendable &out) const {
 void
 UCharTrie::getNextBranchUChars(const UChar *pos, int32_t length, Appendable &out) {
     while(length>kMaxBranchLinearSubNodeLength) {
-        ++pos;  // ignore a comparison unit
+        ++pos;  // ignore the comparison unit
         getNextBranchUChars(jumpByDelta(pos), length>>1, out);
         length=length-(length>>1);
         pos=skipDelta(pos);

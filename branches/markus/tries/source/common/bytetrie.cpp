@@ -308,7 +308,7 @@ const uint8_t *
 ByteTrie::findUniqueValueFromBranch(const uint8_t *pos, int32_t length,
                                     UBool haveUniqueValue, int32_t &uniqueValue) {
     while(length>kMaxBranchLinearSubNodeLength) {
-        ++pos;  // ignore a comparison byte
+        ++pos;  // ignore the comparison byte
         if(NULL==findUniqueValueFromBranch(jumpByDelta(pos), length>>1, haveUniqueValue, uniqueValue)) {
             return NULL;
         }
@@ -412,7 +412,7 @@ ByteTrie::getNextBytes(ByteSink &out) const {
 void
 ByteTrie::getNextBranchBytes(const uint8_t *pos, int32_t length, ByteSink &out) {
     while(length>kMaxBranchLinearSubNodeLength) {
-        ++pos;  // ignore a comparison byte
+        ++pos;  // ignore the comparison byte
         getNextBranchBytes(jumpByDelta(pos), length>>1, out);
         length=length-(length>>1);
         pos=skipDelta(pos);

@@ -86,12 +86,11 @@ void ByteTrieTest::runIndexedTest(int32_t index, UBool exec, const char *&name, 
     TESTCASE_AUTO(TestValuesForState);
     TESTCASE_AUTO(TestHasUniqueValue);
     TESTCASE_AUTO(TestGetNextBytes);
-/*
     TESTCASE_AUTO(TestIteratorFromBranch);
     TESTCASE_AUTO(TestIteratorFromLinearMatch);
     TESTCASE_AUTO(TestTruncatingIteratorFromRoot);
     TESTCASE_AUTO(TestTruncatingIteratorFromLinearMatchShort);
-    TESTCASE_AUTO(TestTruncatingIteratorFromLinearMatchLong);*/
+    TESTCASE_AUTO(TestTruncatingIteratorFromLinearMatchLong);
     TESTCASE_AUTO_END;
 }
 
