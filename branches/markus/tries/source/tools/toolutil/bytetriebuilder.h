@@ -20,12 +20,13 @@
 #include "unicode/utypes.h"
 #include "unicode/stringpiece.h"
 #include "charstr.h"
+#include "dicttriebuilder.h"
 
 U_NAMESPACE_BEGIN
 
 class ByteTrieElement;
 
-class U_TOOLUTIL_API ByteTrieBuilder : public UMemory {
+class U_TOOLUTIL_API ByteTrieBuilder : public DictTrieBuilder {
 public:
     ByteTrieBuilder()
             : elements(NULL), elementsCapacity(0), elementsLength(0),
@@ -44,14 +45,65 @@ public:
     }
 
 private:
-    void makeNode(int32_t start, int32_t limit, int32_t byteIndex);
-    void makeBranchSubNode(int32_t start, int32_t limit, int32_t byteIndex, int32_t length);
+    void writeNode(int32_t start, int32_t limit, int32_t byteIndex);
+    void writeBranchSubNode(int32_t start, int32_t limit, int32_t byteIndex, int32_t length);
+
+    Node *makeNode(int32_t start, int32_t limit, int32_t byteIndex, UErrorCode &errorCode);
+    Node *makeBranchSubNode(int32_t start, int32_t limit, int32_t byteIndex,
+                            int32_t length, UErrorCode &errorCode);
 
     UBool ensureCapacity(int32_t length);
-    void write(int32_t byte);
-    void write(const char *b, int32_t length);
-    void writeValueAndFinal(int32_t i, UBool final);
-    void writeDelta(int32_t i);
+    int32_t write(int32_t byte);
+    int32_t write(const char *b, int32_t length);
+    int32_t writeValueAndFinal(int32_t i, UBool final);
+    int32_t writeDelta(int32_t i);
+
+    // Compacting builder.
+    class BTFinalValueNode : public FinalValueNode {
+    public:
+        BTFinalValueNode(int32_t v) : FinalValueNode(v) {}
+        virtual void write(DictTrieBuilder &builder);
+    };
+
+    class BTValueNode : public ValueNode {
+    public:
+        BTValueNode(int32_t v, Node *nextNode)
+                : ValueNode(0x222222*37+hashCode(nextNode)), next(nextNode) { setValue(v); }
+        virtual void write(DictTrieBuilder &builder);
+    private:
+        Node *next;
+    };
+
+    class BTLinearMatchNode : public LinearMatchNode {
+    public:
+        BTLinearMatchNode(const uint8_t *units, int32_t len, Node *nextNode);
+                // TODO : LinearMatchNode(len, nextNode), s(units) {}
+        virtual UBool operator==(const Node &other) const;
+        virtual void write(DictTrieBuilder &builder);
+    private:
+        const uint8_t *s;
+    };
+
+    class BTListBranchNode : public ListBranchNode {
+    public:
+        BTListBranchNode() : ListBranchNode() {}
+        virtual void write(DictTrieBuilder &builder);
+    };
+
+    class BTSplitBranchNode : public SplitBranchNode {
+    public:
+        BTSplitBranchNode(UChar middleUnit, Node *lessThanNode, Node *greaterOrEqualNode)
+                : SplitBranchNode(middleUnit, lessThanNode, greaterOrEqualNode) {}
+        virtual void write(DictTrieBuilder &builder);
+    };
+
+    class BTBranchNode : public BranchNode {
+    public:
+        BTBranchNode(int32_t len, Node *subNode) : BranchNode(len, subNode) {}
+        virtual void write(DictTrieBuilder &builder);
+    };
+
+    virtual Node *createFinalValueNode(int32_t value) const { return new BTFinalValueNode(value); }
 
     CharString strings;
     ByteTrieElement *elements;

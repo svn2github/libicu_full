@@ -214,7 +214,7 @@ ByteTrieBuilder::build(UErrorCode &errorCode) {
         errorCode=U_MEMORY_ALLOCATION_ERROR;
         return result;
     }
-    makeNode(0, elementsLength, 0);
+    writeNode(0, elementsLength, 0);
     if(bytes==NULL) {
         errorCode=U_MEMORY_ALLOCATION_ERROR;
     } else {
@@ -227,13 +227,13 @@ ByteTrieBuilder::build(UErrorCode &errorCode) {
 // and all strings of the [start..limit[ elements must be sorted and
 // have a common prefix of length byteIndex.
 void
-ByteTrieBuilder::makeNode(int32_t start, int32_t limit, int32_t byteIndex) {
+ByteTrieBuilder::writeNode(int32_t start, int32_t limit, int32_t byteIndex) {
     if(byteIndex==elements[start].getStringLength(strings)) {
         // An intermediate or final value.
         int32_t value=elements[start++].getValue();
         UBool final= start==limit;
         if(!final) {
-            makeNode(start, limit, byteIndex);
+            writeNode(start, limit, byteIndex);
         }
         writeValueAndFinal(value, final);
         return;
@@ -252,7 +252,7 @@ ByteTrieBuilder::makeNode(int32_t start, int32_t limit, int32_t byteIndex) {
                 elements[start].getStringLength(strings)>lastByteIndex &&
                 elements[start].charAt(lastByteIndex, strings)==
                     elements[limit-1].charAt(lastByteIndex, strings));
-        makeNode(start, limit, lastByteIndex);
+        writeNode(start, limit, lastByteIndex);
         write(elements[start].getString(strings).data()+byteIndex, length);
         write(ByteTrie::kMinLinearMatch+length-1);
         return;
@@ -268,7 +268,7 @@ ByteTrieBuilder::makeNode(int32_t start, int32_t limit, int32_t byteIndex) {
         ++length;
     } while(i<limit);
     // length>=2 because minByte!=maxByte.
-    makeBranchSubNode(start, limit, byteIndex, length);
+    writeBranchSubNode(start, limit, byteIndex, length);
     write(length-1);
     if((length-1)>=ByteTrie::kMinLinearMatch) {
         write(0);
@@ -278,7 +278,7 @@ ByteTrieBuilder::makeNode(int32_t start, int32_t limit, int32_t byteIndex) {
 // start<limit && all strings longer than byteIndex &&
 // length different bytes at byteIndex
 void
-ByteTrieBuilder::makeBranchSubNode(int32_t start, int32_t limit, int32_t byteIndex, int32_t length) {
+ByteTrieBuilder::writeBranchSubNode(int32_t start, int32_t limit, int32_t byteIndex, int32_t length) {
     if(length>ByteTrie::kMaxBranchLinearSubNodeLength) {
         // Branch on the middle byte.
         // First, find the middle byte.
@@ -293,10 +293,10 @@ ByteTrieBuilder::makeBranchSubNode(int32_t start, int32_t limit, int32_t byteInd
         } while(--count>0);
         byte=elements[i].charAt(byteIndex, strings);  // middle byte
         // Encode the less-than branch first.
-        makeBranchSubNode(start, i, byteIndex, length/2);
+        writeBranchSubNode(start, i, byteIndex, length/2);
         int32_t leftNode=bytesLength;
         // Encode the greater-or-equal branch last because we do not jump for it at all.
-        makeBranchSubNode(i, limit, byteIndex, length-length/2);
+        writeBranchSubNode(i, limit, byteIndex, length-length/2);
         // Write this node.
         writeDelta(bytesLength-leftNode);  // less-than
         write(byte);
@@ -328,14 +328,14 @@ ByteTrieBuilder::makeBranchSubNode(int32_t start, int32_t limit, int32_t byteInd
     do {
         --byteNumber;
         if(!final[byteNumber]) {
-            makeNode(starts[byteNumber], starts[byteNumber+1], byteIndex+1);
+            writeNode(starts[byteNumber], starts[byteNumber+1], byteIndex+1);
             jumpTargets[byteNumber]=bytesLength;
         }
     } while(byteNumber>0);
     // The maxByte sub-node is written as the very last one because we do
     // not jump for it at all.
     byteNumber=length-1;
-    makeNode(start, limit, byteIndex+1);
+    writeNode(start, limit, byteIndex+1);
     write(elements[start].charAt(byteIndex, strings));
     // Write the rest of this node's byte-value pairs.
     while(--byteNumber>=0) {
@@ -351,6 +351,12 @@ ByteTrieBuilder::makeBranchSubNode(int32_t start, int32_t limit, int32_t byteInd
         writeValueAndFinal(value, final[byteNumber]);
         write(elements[start].charAt(byteIndex, strings));
     }
+}
+
+void
+ByteTrieBuilder::BTFinalValueNode::write(DictTrieBuilder &builder) {
+    ByteTrieBuilder &b=(ByteTrieBuilder &)builder;
+    offset=b.writeValueAndFinal(value, TRUE);
 }
 
 UBool
@@ -379,25 +385,27 @@ ByteTrieBuilder::ensureCapacity(int32_t length) {
     return TRUE;
 }
 
-void
+int32_t
 ByteTrieBuilder::write(int32_t byte) {
     int32_t newLength=bytesLength+1;
     if(ensureCapacity(newLength)) {
         bytesLength=newLength;
         bytes[bytesCapacity-bytesLength]=(char)byte;
     }
+    return bytesLength;
 }
 
-void
+int32_t
 ByteTrieBuilder::write(const char *b, int32_t length) {
     int32_t newLength=bytesLength+length;
     if(ensureCapacity(newLength)) {
         bytesLength=newLength;
         uprv_memcpy(bytes+(bytesCapacity-bytesLength), b, length);
     }
+    return bytesLength;
 }
 
-void
+int32_t
 ByteTrieBuilder::writeValueAndFinal(int32_t i, UBool final) {
     char intBytes[5];
     int32_t length=1;
@@ -426,10 +434,10 @@ ByteTrieBuilder::writeValueAndFinal(int32_t i, UBool final) {
         intBytes[length++]=(char)i;
     }
     intBytes[0]=(char)((intBytes[0]<<1)|final);
-    write(intBytes, length);
+    return write(intBytes, length);
 }
 
-void
+int32_t
 ByteTrieBuilder::writeDelta(int32_t i) {
     char intBytes[5];
     int32_t length;
@@ -457,7 +465,7 @@ ByteTrieBuilder::writeDelta(int32_t i) {
         intBytes[1]=(char)(i>>8);
     }
     intBytes[length++]=(char)i;
-    write(intBytes, length);
+    return write(intBytes, length);
 }
 
 U_NAMESPACE_END

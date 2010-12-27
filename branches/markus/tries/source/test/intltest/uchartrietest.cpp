@@ -43,6 +43,7 @@ public:
     void TestLongSequence();
     void TestLongBranch();
     void TestValuesForState();
+    void TestCompact();
     void TestNextForCodePoint();
     void TestFirstForCodePoint();
 
@@ -90,6 +91,7 @@ void UCharTrieTest::runIndexedTest(int32_t index, UBool exec, const char *&name,
     TESTCASE_AUTO(TestLongSequence);
     TESTCASE_AUTO(TestLongBranch);
     TESTCASE_AUTO(TestValuesForState);
+    TESTCASE_AUTO(TestCompact);
     TESTCASE_AUTO(TestNextForCodePoint);
     TESTCASE_AUTO(TestFirstForCodePoint);
     TESTCASE_AUTO(TestLargeTrie);
@@ -226,6 +228,29 @@ void UCharTrieTest::TestValuesForState() {
         { "abcd", -4 },
         { "abcde", -5 },
         { "abcdef", -6 }
+    };
+    checkData(data, LENGTHOF(data));
+}
+
+void UCharTrieTest::TestCompact() {
+    // Duplicate trailing strings and values provide opportunities for compacting.
+    static const StringAndValue data[]={
+        { "+", 0 },
+        { "+august", 8 },
+        { "+july", 7 },
+        { "+june", 6 },
+        { "+december", 12 },
+        { "+november", 11 },
+        { "+october", 10 },
+        { "+september", 9 },
+        { "-", 0 },
+        { "-august", 8 },
+        { "-july", 7 },
+        { "-june", 6 },
+        { "-december", 12 },
+        { "-november", 11 },
+        { "-october", 10 },
+        { "-september", 9 },
     };
     checkData(data, LENGTHOF(data));
 }

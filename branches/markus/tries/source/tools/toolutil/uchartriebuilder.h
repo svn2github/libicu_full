@@ -19,12 +19,13 @@
 
 #include "unicode/utypes.h"
 #include "unicode/unistr.h"
+#include "dicttriebuilder.h"
 
 U_NAMESPACE_BEGIN
 
 class UCharTrieElement;
 
-class U_TOOLUTIL_API UCharTrieBuilder : public UMemory {
+class U_TOOLUTIL_API UCharTrieBuilder : public DictTrieBuilder {
 public:
     UCharTrieBuilder()
             : elements(NULL), elementsCapacity(0), elementsLength(0),
@@ -43,15 +44,56 @@ public:
     }
 
 private:
-    void makeNode(int32_t start, int32_t limit, int32_t unitIndex);
-    void makeBranchSubNode(int32_t start, int32_t limit, int32_t unitIndex, int32_t length);
+    void writeNode(int32_t start, int32_t limit, int32_t unitIndex);
+    void writeBranchSubNode(int32_t start, int32_t limit, int32_t unitIndex, int32_t length);
+
+    Node *makeNode(int32_t start, int32_t limit, int32_t unitIndex, UErrorCode &errorCode);
+    Node *makeBranchSubNode(int32_t start, int32_t limit, int32_t unitIndex,
+                            int32_t length, UErrorCode &errorCode);
 
     UBool ensureCapacity(int32_t length);
-    void write(int32_t unit);
-    void write(const UChar *s, int32_t length);
-    void writeValueAndFinal(int32_t i, UBool final);
-    void writeNode(int32_t node, UBool hasValue, int32_t value);
-    void writeDelta(int32_t i);
+    int32_t write(int32_t unit);
+    int32_t write(const UChar *s, int32_t length);
+    int32_t writeValueAndFinal(int32_t i, UBool final);
+    int32_t writeValueAndType(UBool hasValue, int32_t value, int32_t node);
+    int32_t writeDelta(int32_t i);
+
+    // Compacting builder.
+    class UCTFinalValueNode : public FinalValueNode {
+    public:
+        UCTFinalValueNode(int32_t v) : FinalValueNode(v) {}
+        virtual void write(DictTrieBuilder &builder);
+    };
+
+    class UCTLinearMatchNode : public LinearMatchNode {
+    public:
+        UCTLinearMatchNode(const UChar *units, int32_t len, Node *nextNode);
+        virtual UBool operator==(const Node &other) const;
+        virtual void write(DictTrieBuilder &builder);
+    private:
+        const UChar *s;
+    };
+
+    class UCTListBranchNode : public ListBranchNode {
+    public:
+        UCTListBranchNode() : ListBranchNode() {}
+        virtual void write(DictTrieBuilder &builder);
+    };
+
+    class UCTSplitBranchNode : public SplitBranchNode {
+    public:
+        UCTSplitBranchNode(UChar middleUnit, Node *lessThanNode, Node *greaterOrEqualNode)
+                : SplitBranchNode(middleUnit, lessThanNode, greaterOrEqualNode) {}
+        virtual void write(DictTrieBuilder &builder);
+    };
+
+    class UCTBranchNode : public BranchNode {
+    public:
+        UCTBranchNode(int32_t len, Node *subNode) : BranchNode(len, subNode) {}
+        virtual void write(DictTrieBuilder &builder);
+    };
+
+    virtual Node *createFinalValueNode(int32_t value) const { return new UCTFinalValueNode(value); }
 
     UnicodeString strings;
     UCharTrieElement *elements;
