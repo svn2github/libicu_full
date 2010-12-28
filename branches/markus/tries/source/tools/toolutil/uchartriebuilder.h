@@ -34,7 +34,7 @@ public:
 
     UCharTrieBuilder &add(const UnicodeString &s, int32_t value, UErrorCode &errorCode);
 
-    UnicodeString &build(UnicodeString &result, UErrorCode &errorCode);
+    UnicodeString &build(UDictTrieBuildOption buildOption, UnicodeString &result, UErrorCode &errorCode);
 
     UCharTrieBuilder &clear() {
         strings.remove();

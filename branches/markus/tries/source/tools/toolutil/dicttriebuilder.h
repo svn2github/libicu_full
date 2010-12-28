@@ -21,6 +21,11 @@
 #include "unicode/uobject.h"
 #include "uhash.h"
 
+enum UDictTrieBuildOption {
+    UDICTTRIE_BUILD_FAST,
+    UDICTTRIE_BUILD_SMALL
+};
+
 U_NAMESPACE_BEGIN
 
 class U_TOOLUTIL_API DictTrieBuilder : public UMemory {

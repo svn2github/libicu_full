@@ -136,7 +136,7 @@ compareElementStrings(const void *context, const void *left, const void *right) 
 U_CDECL_END
 
 UnicodeString &
-UCharTrieBuilder::build(UnicodeString &result, UErrorCode &errorCode) {
+UCharTrieBuilder::build(UDictTrieBuildOption buildOption, UnicodeString &result, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) {
         return result;
     }
@@ -179,9 +179,9 @@ UCharTrieBuilder::build(UnicodeString &result, UErrorCode &errorCode) {
         errorCode=U_MEMORY_ALLOCATION_ERROR;
         return result;
     }
-    if(FALSE) {  // TODO
+    if(buildOption==UDICTTRIE_BUILD_FAST) {
         writeNode(0, elementsLength, 0);
-    } else {
+    } else /* UDICTTRIE_BUILD_SMALL */ {
         createCompactBuilder(2*elementsLength, errorCode);
         Node *root=makeNode(0, elementsLength, 0, errorCode);
         if(U_SUCCESS(errorCode)) {
@@ -215,21 +215,28 @@ UCharTrieBuilder::writeNode(int32_t start, int32_t limit, int32_t unitIndex) {
         hasValue=TRUE;
     }
     // Now all [start..limit[ strings are longer than unitIndex.
-    int32_t minUnit=elements[start].charAt(unitIndex, strings);
-    int32_t maxUnit=elements[limit-1].charAt(unitIndex, strings);
+    const UCharTrieElement &minElement=elements[start];
+    const UCharTrieElement &maxElement=elements[limit-1];
+    int32_t minUnit=minElement.charAt(unitIndex, strings);
+    int32_t maxUnit=maxElement.charAt(unitIndex, strings);
     if(minUnit==maxUnit) {
         // Linear-match node: All strings have the same character at unitIndex.
+        int32_t minStringLength=minElement.getStringLength(strings);
         int32_t lastUnitIndex=unitIndex;
-        int32_t length=0;
-        do {
-            ++lastUnitIndex;
-            ++length;
-        } while(length<UCharTrie::kMaxLinearMatchLength &&
-                elements[start].getStringLength(strings)>lastUnitIndex &&
-                elements[start].charAt(lastUnitIndex, strings)==
-                    elements[limit-1].charAt(lastUnitIndex, strings));
+        while(++lastUnitIndex<minStringLength &&
+                minElement.charAt(lastUnitIndex, strings)==
+                maxElement.charAt(lastUnitIndex, strings)) {}
         writeNode(start, limit, lastUnitIndex);
-        write(elements[start].getString(strings).getBuffer()+unitIndex, length);
+        // Break the linear-match sequence into chunks of at most kMaxLinearMatchLength.
+        const UChar *s=minElement.getString(strings).getBuffer();
+        int32_t length=lastUnitIndex-unitIndex;
+        while(length>UCharTrie::kMaxLinearMatchLength) {
+            lastUnitIndex-=UCharTrie::kMaxLinearMatchLength;
+            length-=UCharTrie::kMaxLinearMatchLength;
+            write(s+lastUnitIndex, UCharTrie::kMaxLinearMatchLength);
+            writeValueAndType(FALSE, 0, UCharTrie::kMinLinearMatch+UCharTrie::kMaxLinearMatchLength-1);
+        }
+        write(s+unitIndex, length);
         writeValueAndType(hasValue, value, UCharTrie::kMinLinearMatch+length-1);
         return;
     }
@@ -257,7 +264,10 @@ UCharTrieBuilder::writeNode(int32_t start, int32_t limit, int32_t unitIndex) {
 // length different units at unitIndex
 void
 UCharTrieBuilder::writeBranchSubNode(int32_t start, int32_t limit, int32_t unitIndex, int32_t length) {
-    if(length>UCharTrie::kMaxBranchLinearSubNodeLength) {
+    UChar middleUnits[16];
+    int32_t lessThan[16];
+    int32_t ltLength=0;
+    while(length>UCharTrie::kMaxBranchLinearSubNodeLength) {
         // Branch on the middle unit.
         // First, find the middle unit.
         int32_t count=length/2;
@@ -269,22 +279,18 @@ UCharTrieBuilder::writeBranchSubNode(int32_t start, int32_t limit, int32_t unitI
                 ++i;
             }
         } while(--count>0);
-        unit=elements[i].charAt(unitIndex, strings);  // middle unit
         // Encode the less-than branch first.
+        unit=middleUnits[ltLength]=elements[i].charAt(unitIndex, strings);  // middle unit
         writeBranchSubNode(start, i, unitIndex, length/2);
-        int32_t leftNode=ucharsLength;
-        // Encode the greater-or-equal branch last because we do not jump for it at all.
-        writeBranchSubNode(i, limit, unitIndex, length-length/2);
-        // Write this node.
-        writeDelta(ucharsLength-leftNode);  // less-than
-        write(unit);
-        return;
+        lessThan[ltLength]=ucharsLength;
+        ++ltLength;
+        // Continue for the greater-or-equal branch.
+        start=i;
+        length=length-length/2;
     }
-    // List of unit-value pairs where values are either final values
-    // or jumps to other parts of the trie.
+    // For each unit, find its elements array start and whether it has a final value.
     int32_t starts[UCharTrie::kMaxBranchLinearSubNodeLength];
     UBool final[UCharTrie::kMaxBranchLinearSubNodeLength-1];
-    // For each unit except the last one, find its elements array start and whether it has a final value.
     int32_t unitNumber=0;
     do {
         int32_t i=starts[unitNumber]=start;
@@ -329,6 +335,12 @@ UCharTrieBuilder::writeBranchSubNode(int32_t start, int32_t limit, int32_t unitI
         writeValueAndFinal(value, final[unitNumber]);
         write(elements[start].charAt(unitIndex, strings));
     }
+    // Write the split-branch nodes.
+    while(ltLength>0) {
+        --ltLength;
+        writeDelta(ucharsLength-lessThan[ltLength]);  // less-than
+        write(middleUnits[ltLength]);
+    }
 }
 
 // Requires start<limit,
@@ -351,19 +363,20 @@ UCharTrieBuilder::makeNode(int32_t start, int32_t limit, int32_t unitIndex, UErr
     }
     ValueNode *node;
     // Now all [start..limit[ strings are longer than unitIndex.
-    int32_t minUnit=elements[start].charAt(unitIndex, strings);
-    int32_t maxUnit=elements[limit-1].charAt(unitIndex, strings);
+    const UCharTrieElement &minElement=elements[start];
+    const UCharTrieElement &maxElement=elements[limit-1];
+    int32_t minUnit=minElement.charAt(unitIndex, strings);
+    int32_t maxUnit=maxElement.charAt(unitIndex, strings);
     if(minUnit==maxUnit) {
         // Linear-match node: All strings have the same character at unitIndex.
+        int32_t minStringLength=minElement.getStringLength(strings);
         int32_t lastUnitIndex=unitIndex;
-        do {
-            ++lastUnitIndex;
-        } while(elements[start].getStringLength(strings)>lastUnitIndex &&
-                elements[start].charAt(lastUnitIndex, strings)==
-                    elements[limit-1].charAt(lastUnitIndex, strings));
+        while(++lastUnitIndex<minStringLength &&
+                minElement.charAt(lastUnitIndex, strings)==
+                maxElement.charAt(lastUnitIndex, strings)) {}
         Node *nextNode=makeNode(start, limit, lastUnitIndex, errorCode);
         // Break the linear-match sequence into chunks of at most kMaxLinearMatchLength.
-        const UChar *s=elements[start].getString(strings).getBuffer();
+        const UChar *s=minElement.getString(strings).getBuffer();
         int32_t length=lastUnitIndex-unitIndex;
         while(length>UCharTrie::kMaxLinearMatchLength) {
             lastUnitIndex-=UCharTrie::kMaxLinearMatchLength;
@@ -458,6 +471,7 @@ UCharTrieBuilder::makeBranchSubNode(int32_t start, int32_t limit, int32_t unitIn
         listNode->add(unit, makeNode(start, limit, unitIndex+1, errorCode));
     }
     Node *node=registerNode(listNode, errorCode);
+    // Write the split-branch nodes.
     while(ltLength>0) {
         --ltLength;
         node=registerNode(

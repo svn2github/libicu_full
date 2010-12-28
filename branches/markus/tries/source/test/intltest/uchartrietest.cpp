@@ -50,7 +50,8 @@ public:
     UBool buildLargeTrie(UCharTrieBuilder &builder, UnicodeString &result, int32_t numUniqueFirst);
     void TestLargeTrie();
 
-    UBool buildMonthsTrie(UCharTrieBuilder &builder, UnicodeString &result);
+    UBool buildMonthsTrie(UCharTrieBuilder &builder, UDictTrieBuildOption buildOption,
+                          UnicodeString &result);
     void TestHasUniqueValue();
     void TestGetNextUChars();
     void TestIteratorFromBranch();
@@ -60,8 +61,9 @@ public:
     void TestTruncatingIteratorFromLinearMatchLong();
 
     void checkData(const StringAndValue data[], int32_t dataLength);
+    void checkData(const StringAndValue data[], int32_t dataLength, UDictTrieBuildOption buildOption);
     UBool buildTrie(const StringAndValue data[], int32_t dataLength,
-                    UCharTrieBuilder &builder, UnicodeString &result);
+                    UCharTrieBuilder &builder, UDictTrieBuildOption buildOption, UnicodeString &result);
     void checkFirst(const UnicodeString &trieUChars, const StringAndValue data[], int32_t dataLength);
     void checkNext(const UnicodeString &trieUChars, const StringAndValue data[], int32_t dataLength);
     void checkNextWithState(const UnicodeString &trieUChars, const StringAndValue data[], int32_t dataLength);
@@ -109,12 +111,12 @@ void UCharTrieTest::TestBuilder() {
     IcuTestErrorCode errorCode(*this, "TestBuilder()");
     UCharTrieBuilder builder;
     UnicodeString trieUChars;
-    builder.build(trieUChars, errorCode);
+    builder.build(UDICTTRIE_BUILD_FAST, trieUChars, errorCode);
     if(errorCode.reset()!=U_INDEX_OUTOFBOUNDS_ERROR) {
         errln("UCharTrieBuilder().build() did not set U_INDEX_OUTOFBOUNDS_ERROR");
         return;
     }
-    builder.add("=", 0, errorCode).add("=", 1, errorCode).build(trieUChars, errorCode);
+    builder.add("=", 0, errorCode).add("=", 1, errorCode).build(UDICTTRIE_BUILD_FAST, trieUChars, errorCode);
     if(errorCode.reset()!=U_ILLEGAL_ARGUMENT_ERROR) {
         errln("UCharTrieBuilder.build() did not detect duplicates");
         return;
@@ -278,7 +280,7 @@ void UCharTrieTest::TestNextForCodePoint() {
     };
     UCharTrieBuilder builder;
     UnicodeString trieUChars;
-    if(!buildTrie(data, LENGTHOF(data), builder, trieUChars)) {
+    if(!buildTrie(data, LENGTHOF(data), builder, UDICTTRIE_BUILD_FAST, trieUChars)) {
         return;  // buildTrie() reported an error
     }
     UCharTrie trie(trieUChars.getBuffer());
@@ -360,7 +362,8 @@ UBool UCharTrieTest::buildLargeTrie(UCharTrieBuilder &builder, UnicodeString &re
         gen.next();
     }
     infoln("buildLargeTrie(%ld) added %ld strings", (long)numUniqueFirst, (long)gen.getIndex());
-    builder.build(result, errorCode);
+    builder.build(UDICTTRIE_BUILD_FAST, result, errorCode);
+    logln("serialized trie size: %ld UChars\n", (long)result.length());
     return errorCode.isSuccess();
 }
 
@@ -406,7 +409,8 @@ enum {
     u_y=0x79
 };
 
-UBool UCharTrieTest::buildMonthsTrie(UCharTrieBuilder &builder, UnicodeString &result) {
+UBool UCharTrieTest::buildMonthsTrie(UCharTrieBuilder &builder, UDictTrieBuildOption buildOption,
+                                     UnicodeString &result) {
     // All types of nodes leading to the same value,
     // for code coverage of recursive functions.
     // In particular, we need a lot of branches on some single level
@@ -443,13 +447,13 @@ UBool UCharTrieTest::buildMonthsTrie(UCharTrieBuilder &builder, UnicodeString &r
         { "jun.", 6 },
         { "june", 6 }
     };
-    return buildTrie(data, LENGTHOF(data), builder, result);
+    return buildTrie(data, LENGTHOF(data), builder, buildOption, result);
 }
 
 void UCharTrieTest::TestHasUniqueValue() {
     UCharTrieBuilder builder;
     UnicodeString trieUChars;
-    if(!buildMonthsTrie(builder, trieUChars)) {
+    if(!buildMonthsTrie(builder, UDICTTRIE_BUILD_FAST, trieUChars)) {
         return;  // buildTrie() reported an error
     }
     UCharTrie trie(trieUChars.getBuffer());
@@ -496,7 +500,7 @@ private:
 void UCharTrieTest::TestGetNextUChars() {
     UCharTrieBuilder builder;
     UnicodeString trieUChars;
-    if(!buildMonthsTrie(builder, trieUChars)) {
+    if(!buildMonthsTrie(builder, UDICTTRIE_BUILD_SMALL, trieUChars)) {
         return;  // buildTrie() reported an error
     }
     UCharTrie trie(trieUChars.getBuffer());
@@ -543,7 +547,7 @@ void UCharTrieTest::TestGetNextUChars() {
 void UCharTrieTest::TestIteratorFromBranch() {
     UCharTrieBuilder builder;
     UnicodeString trieUChars;
-    if(!buildMonthsTrie(builder, trieUChars)) {
+    if(!buildMonthsTrie(builder, UDICTTRIE_BUILD_FAST, trieUChars)) {
         return;  // buildTrie() reported an error
     }
     UCharTrie trie(trieUChars.getBuffer());
@@ -594,7 +598,7 @@ void UCharTrieTest::TestIteratorFromBranch() {
 void UCharTrieTest::TestIteratorFromLinearMatch() {
     UCharTrieBuilder builder;
     UnicodeString trieUChars;
-    if(!buildMonthsTrie(builder, trieUChars)) {
+    if(!buildMonthsTrie(builder, UDICTTRIE_BUILD_SMALL, trieUChars)) {
         return;  // buildTrie() reported an error
     }
     UCharTrie trie(trieUChars.getBuffer());
@@ -624,7 +628,7 @@ void UCharTrieTest::TestIteratorFromLinearMatch() {
 void UCharTrieTest::TestTruncatingIteratorFromRoot() {
     UCharTrieBuilder builder;
     UnicodeString trieUChars;
-    if(!buildMonthsTrie(builder, trieUChars)) {
+    if(!buildMonthsTrie(builder, UDICTTRIE_BUILD_FAST, trieUChars)) {
         return;  // buildTrie() reported an error
     }
     IcuTestErrorCode errorCode(*this, "TestTruncatingIteratorFromRoot()");
@@ -676,7 +680,7 @@ void UCharTrieTest::TestTruncatingIteratorFromLinearMatchShort() {
     };
     UCharTrieBuilder builder;
     UnicodeString trieUChars;
-    if(!buildTrie(data, LENGTHOF(data), builder, trieUChars)) {
+    if(!buildTrie(data, LENGTHOF(data), builder, UDICTTRIE_BUILD_FAST, trieUChars)) {
         return;  // buildTrie() reported an error
     }
     UCharTrie trie(trieUChars.getBuffer());
@@ -706,7 +710,7 @@ void UCharTrieTest::TestTruncatingIteratorFromLinearMatchLong() {
     };
     UCharTrieBuilder builder;
     UnicodeString trieUChars;
-    if(!buildTrie(data, LENGTHOF(data), builder, trieUChars)) {
+    if(!buildTrie(data, LENGTHOF(data), builder, UDICTTRIE_BUILD_FAST, trieUChars)) {
         return;  // buildTrie() reported an error
     }
     UCharTrie trie(trieUChars.getBuffer());
@@ -732,9 +736,16 @@ void UCharTrieTest::TestTruncatingIteratorFromLinearMatchLong() {
 }
 
 void UCharTrieTest::checkData(const StringAndValue data[], int32_t dataLength) {
+    logln("checkData(dataLength=%d, fast)", (int)dataLength);
+    checkData(data, dataLength, UDICTTRIE_BUILD_FAST);
+    logln("checkData(dataLength=%d, small)", (int)dataLength);
+    checkData(data, dataLength, UDICTTRIE_BUILD_SMALL);
+}
+
+void UCharTrieTest::checkData(const StringAndValue data[], int32_t dataLength, UDictTrieBuildOption buildOption) {
     UCharTrieBuilder builder;
     UnicodeString trieUChars;
-    if(!buildTrie(data, dataLength, builder, trieUChars)) {
+    if(!buildTrie(data, dataLength, builder, buildOption, trieUChars)) {
         return;  // buildTrie() reported an error
     }
     checkFirst(trieUChars, data, dataLength);
@@ -745,7 +756,7 @@ void UCharTrieTest::checkData(const StringAndValue data[], int32_t dataLength) {
 }
 
 UBool UCharTrieTest::buildTrie(const StringAndValue data[], int32_t dataLength,
-                               UCharTrieBuilder &builder, UnicodeString &result) {
+                               UCharTrieBuilder &builder, UDictTrieBuildOption buildOption, UnicodeString &result) {
     IcuTestErrorCode errorCode(*this, "buildTrie()");
     // Add the items to the trie builder in an interesting (not trivial, not random) order.
     int32_t index, step;
@@ -767,13 +778,14 @@ UBool UCharTrieTest::buildTrie(const StringAndValue data[], int32_t dataLength,
                     data[index].value, errorCode);
         index=(index+step)%dataLength;
     }
-    builder.build(result, errorCode);
+    builder.build(buildOption, result, errorCode);
     if(!errorCode.logIfFailureAndReset("add()/build()")) {
         builder.add("zzz", 999, errorCode);
         if(errorCode.reset()!=U_NO_WRITE_PERMISSION) {
             errln("builder.build().add(zzz) did not set U_NO_WRITE_PERMISSION");
         }
     }
+    logln("serialized trie size: %ld UChars\n", (long)result.length());
     return errorCode.isSuccess();
 }
 
