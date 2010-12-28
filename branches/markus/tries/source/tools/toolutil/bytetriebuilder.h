@@ -97,9 +97,9 @@ private:
         virtual void write(DictTrieBuilder &builder);
     };
 
-    class BTBranchNode : public BranchNode {
+    class BTBranchHeadNode : public BranchHeadNode {
     public:
-        BTBranchNode(int32_t len, Node *subNode) : BranchNode(len, subNode) {}
+        BTBranchHeadNode(int32_t len, Node *subNode) : BranchHeadNode(len, subNode) {}
         virtual void write(DictTrieBuilder &builder);
     };
 

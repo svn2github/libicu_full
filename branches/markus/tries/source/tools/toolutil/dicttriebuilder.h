@@ -90,14 +90,49 @@ protected:
         // Base class operator==() compares the actual class types.
         virtual UBool operator==(const Node &other) const;
         inline UBool operator!=(const Node &other) const { return !operator==(other); }
-        // write() must set the offset.
+        /**
+         * Traverses the Node graph and numbers branch edges, with rightmost edges first.
+         * This is to avoid writing a duplicate node twice.
+         *
+         * Branch nodes in this trie data structure are not symmetric.
+         * Most branch edges "jump" to other nodes but the rightmost branch edges
+         * just continue without a jump.
+         * Therefore, write() must write the rightmost branch edge last
+         * (trie units are written backwards), and must write it at that point even if
+         * it is a duplicate of a node previously written elsewhere.
+         *
+         * This function visits and marks right branch edges first.
+         * Edges are numbered with increasingly negative values because we share the
+         * offset field which gets positive values when nodes are written.
+         * A branch edge also remembers the first number for any of its edges.
+         *
+         * When a further-left branch edge has a number in the range of the rightmost
+         * edge's numbers, then it will be written as part of the required right edge
+         * and we can avoid writing it first.
+         *
+         * After root.markRightEdgesFirst(-1) the offsets of all nodes are negative
+         * edge numbers.
+         *
+         * @param edgeNumber The first edge number for this node and its sub-nodes.
+         * @return An edge number that is at least the maximum-negative
+         *         of the input edge number and the numbers of this node and all of its sub-nodes.
+         */
+        virtual int32_t markRightEdgesFirst(int32_t edgeNumber);
+        // write() must set the offset to a positive value.
         virtual void write(DictTrieBuilder &builder) = 0;
-        inline int32_t writeOrGetOffset(DictTrieBuilder &builder) {
-            if(offset==0) {
+        // See markRightEdgesFirst.
+        inline void writeUnlessInsideRightEdge(int32_t firstRight, int32_t lastRight,
+                                               DictTrieBuilder &builder) {
+            // Note: Edge numbers are negative, lastRight<=firstRight.
+            // If offset>0 then this node and its sub-nodes have been written already
+            // and we need not write them again.
+            // If this node is part of the unwritten right branch edge,
+            // then we wait until that is written.
+            if(offset<0 && (offset<lastRight || firstRight<offset)) {
                 write(builder);
             }
-            return offset;
         }
+        inline int32_t getOffset() const { return offset; }
     protected:
         int32_t hash;
         int32_t offset;
@@ -136,15 +171,24 @@ protected:
                 : ValueNode((0x333333*37+len)*37+hashCode(nextNode)),
                   length(len), next(nextNode) {}
         virtual UBool operator==(const Node &other) const;
+        virtual int32_t markRightEdgesFirst(int32_t edgeNumber);
     protected:
         int32_t length;
         Node *next;
     };
 
-    class ListBranchNode : public Node {
+    class BranchNode : public Node {
     public:
-        ListBranchNode() : Node(0x444444), length(0) {}
+        BranchNode(int32_t initialHash) : Node(initialHash) {}
+    protected:
+        int32_t firstEdgeNumber;
+    };
+
+    class ListBranchNode : public BranchNode {
+    public:
+        ListBranchNode() : BranchNode(0x444444), length(0) {}
         virtual UBool operator==(const Node &other) const;
+        virtual int32_t markRightEdgesFirst(int32_t edgeNumber);
         // Adds a unit with a final value.
         void add(int32_t c, int32_t value) {
             units[length]=(UChar)c;
@@ -169,13 +213,14 @@ protected:
         UChar units[10];
     };
 
-    class SplitBranchNode : public Node {
+    class SplitBranchNode : public BranchNode {
     public:
         SplitBranchNode(UChar middleUnit, Node *lessThanNode, Node *greaterOrEqualNode)
-                : Node(((0x555555*37+middleUnit)*37+
-                        hashCode(lessThanNode))*37+hashCode(greaterOrEqualNode)),
+                : BranchNode(((0x555555*37+middleUnit)*37+
+                              hashCode(lessThanNode))*37+hashCode(greaterOrEqualNode)),
                   unit(middleUnit), lessThan(lessThanNode), greaterOrEqual(greaterOrEqualNode) {}
         virtual UBool operator==(const Node &other) const;
+        virtual int32_t markRightEdgesFirst(int32_t edgeNumber);
     protected:
         UChar unit;
         Node *lessThan;
@@ -183,12 +228,13 @@ protected:
     };
 
     // Branch head node, for writing the actual node lead unit.
-    class BranchNode : public ValueNode {
+    class BranchHeadNode : public ValueNode {
     public:
-        BranchNode(int32_t len, Node *subNode)
+        BranchHeadNode(int32_t len, Node *subNode)
                 : ValueNode((0x666666*37+len)*37+hashCode(subNode)),
                   length(len), next(subNode) {}
         virtual UBool operator==(const Node &other) const;
+        virtual int32_t markRightEdgesFirst(int32_t edgeNumber);
     protected:
         int32_t length;
         Node *next;  // A branch sub-node.

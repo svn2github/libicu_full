@@ -133,6 +133,13 @@ UBool DictTrieBuilder::Node::operator==(const Node &other) const {
     return this==&other || (typeid(*this)==typeid(other) && hash==other.hash);
 }
 
+int32_t DictTrieBuilder::Node::markRightEdgesFirst(int32_t edgeNumber) {
+    if(offset==0) {
+        offset=edgeNumber;
+    }
+    return edgeNumber;
+}
+
 UOBJECT_DEFINE_NO_RTTI_IMPLEMENTATION(DictTrieBuilder::Node)
 
 UBool DictTrieBuilder::FinalValueNode::operator==(const Node &other) const {
@@ -178,6 +185,13 @@ UBool DictTrieBuilder::LinearMatchNode::operator==(const Node &other) const {
     return length==o.length && next==o.next;
 }
 
+int32_t DictTrieBuilder::LinearMatchNode::markRightEdgesFirst(int32_t edgeNumber) {
+    if(offset==0) {
+        offset=edgeNumber=next->markRightEdgesFirst(edgeNumber);
+    }
+    return edgeNumber;
+}
+
 UBool DictTrieBuilder::ListBranchNode::operator==(const Node &other) const {
     if(this==&other) {
         return TRUE;
@@ -194,6 +208,24 @@ UBool DictTrieBuilder::ListBranchNode::operator==(const Node &other) const {
     return TRUE;
 }
 
+int32_t DictTrieBuilder::ListBranchNode::markRightEdgesFirst(int32_t edgeNumber) {
+    if(offset==0) {
+        firstEdgeNumber=edgeNumber;
+        int32_t step=0;
+        int32_t i=length;
+        do {
+            Node *edge=equal[--i];
+            if(edge!=NULL) {
+                edgeNumber=edge->markRightEdgesFirst(edgeNumber-step);
+            }
+            // For all but the rightmost edge, decrement the edge number.
+            step=1;
+        } while(i>0);
+        offset=edgeNumber;
+    }
+    return edgeNumber;
+}
+
 UBool DictTrieBuilder::SplitBranchNode::operator==(const Node &other) const {
     if(this==&other) {
         return TRUE;
@@ -205,15 +237,31 @@ UBool DictTrieBuilder::SplitBranchNode::operator==(const Node &other) const {
     return unit==o.unit && lessThan==o.lessThan && greaterOrEqual==o.greaterOrEqual;
 }
 
-UBool DictTrieBuilder::BranchNode::operator==(const Node &other) const {
+int32_t DictTrieBuilder::SplitBranchNode::markRightEdgesFirst(int32_t edgeNumber) {
+    if(offset==0) {
+        firstEdgeNumber=edgeNumber;
+        edgeNumber=greaterOrEqual->markRightEdgesFirst(edgeNumber);
+        offset=edgeNumber=lessThan->markRightEdgesFirst(edgeNumber-1);
+    }
+    return edgeNumber;
+}
+
+UBool DictTrieBuilder::BranchHeadNode::operator==(const Node &other) const {
     if(this==&other) {
         return TRUE;
     }
     if(!ValueNode::operator==(other)) {
         return FALSE;
     }
-    const BranchNode &o=(const BranchNode &)other;
+    const BranchHeadNode &o=(const BranchHeadNode &)other;
     return length==o.length && next==o.next;
+}
+
+int32_t DictTrieBuilder::BranchHeadNode::markRightEdgesFirst(int32_t edgeNumber) {
+    if(offset==0) {
+        offset=edgeNumber=next->markRightEdgesFirst(edgeNumber);
+    }
+    return edgeNumber;
 }
 
 U_NAMESPACE_END

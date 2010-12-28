@@ -185,6 +185,7 @@ UCharTrieBuilder::build(UnicodeString &result, UErrorCode &errorCode) {
         createCompactBuilder(2*elementsLength, errorCode);
         Node *root=makeNode(0, elementsLength, 0, errorCode);
         if(U_SUCCESS(errorCode)) {
+            root->markRightEdgesFirst(-1);
             root->write(*this);
         }
         deleteCompactBuilder();
@@ -388,7 +389,7 @@ UCharTrieBuilder::makeNode(int32_t start, int32_t limit, int32_t unitIndex, UErr
         } while(i<limit);
         // length>=2 because minUnit!=maxUnit.
         Node *subNode=makeBranchSubNode(start, limit, unitIndex, length, errorCode);
-        node=new UCTBranchNode(length, subNode);
+        node=new UCTBranchHeadNode(length, subNode);
     }
     if(hasValue && node!=NULL) {
         node->setValue(value);
@@ -502,21 +503,22 @@ UCharTrieBuilder::UCTListBranchNode::write(DictTrieBuilder &builder) {
     // after their own positions, so if we wrote the minUnit sub-node first,
     // then its jump delta would be larger.
     // Instead we write the minUnit sub-node last, for a shorter delta.
-    int32_t jumpTargets[UCharTrie::kMaxBranchLinearSubNodeLength-1];
     int32_t unitNumber=length-1;
+    Node *rightEdge=equal[unitNumber];
+    int32_t rightEdgeNumber= rightEdge==NULL ? firstEdgeNumber : rightEdge->getOffset();
     do {
         --unitNumber;
         if(equal[unitNumber]!=NULL) {
-            jumpTargets[unitNumber]=equal[unitNumber]->writeOrGetOffset(builder);
+            equal[unitNumber]->writeUnlessInsideRightEdge(firstEdgeNumber, rightEdgeNumber, builder);
         }
     } while(unitNumber>0);
     // The maxUnit sub-node is written as the very last one because we do
     // not jump for it at all.
     unitNumber=length-1;
-    if(equal[unitNumber]==NULL) {
+    if(rightEdge==NULL) {
         b.writeValueAndFinal(values[unitNumber], TRUE);
     } else {
-        equal[unitNumber]->write(builder);
+        rightEdge->write(builder);
     }
     b.write(units[unitNumber]);
     // Write the rest of this node's unit-value pairs.
@@ -529,7 +531,8 @@ UCharTrieBuilder::UCTListBranchNode::write(DictTrieBuilder &builder) {
             isFinal=TRUE;
         } else {
             // Write the delta to the start position of the sub-node.
-            value=b.ucharsLength-jumpTargets[unitNumber];
+            U_ASSERT(equal[unitNumber]->getOffset()>0);
+            value=b.ucharsLength-equal[unitNumber]->getOffset();
             isFinal=FALSE;
         }
         b.writeValueAndFinal(value, isFinal);
@@ -541,16 +544,17 @@ void
 UCharTrieBuilder::UCTSplitBranchNode::write(DictTrieBuilder &builder) {
     UCharTrieBuilder &b=(UCharTrieBuilder &)builder;
     // Encode the less-than branch first.
-    int32_t leftNode=lessThan->writeOrGetOffset(builder);
+    lessThan->writeUnlessInsideRightEdge(firstEdgeNumber, greaterOrEqual->getOffset(), builder);
     // Encode the greater-or-equal branch last because we do not jump for it at all.
     greaterOrEqual->write(builder);
     // Write this node.
-    b.writeDelta(b.ucharsLength-leftNode);  // less-than
+    U_ASSERT(lessThan->getOffset()>0);
+    b.writeDelta(b.ucharsLength-lessThan->getOffset());  // less-than
     offset=b.write(unit);
 }
 
 void
-UCharTrieBuilder::UCTBranchNode::write(DictTrieBuilder &builder) {
+UCharTrieBuilder::UCTBranchHeadNode::write(DictTrieBuilder &builder) {
     UCharTrieBuilder &b=(UCharTrieBuilder &)builder;
     next->write(builder);
     if(length<=UCharTrie::kMinLinearMatch) {

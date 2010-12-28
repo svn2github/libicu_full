@@ -87,9 +87,9 @@ private:
         virtual void write(DictTrieBuilder &builder);
     };
 
-    class UCTBranchNode : public BranchNode {
+    class UCTBranchHeadNode : public BranchHeadNode {
     public:
-        UCTBranchNode(int32_t len, Node *subNode) : BranchNode(len, subNode) {}
+        UCTBranchHeadNode(int32_t len, Node *subNode) : BranchHeadNode(len, subNode) {}
         virtual void write(DictTrieBuilder &builder);
     };
 
