@@ -239,17 +239,17 @@ void UCharTrieTest::TestCompact() {
     static const StringAndValue data[]={
         { "+", 0 },
         { "+august", 8 },
+        { "+december", 12 },
         { "+july", 7 },
         { "+june", 6 },
-        { "+december", 12 },
         { "+november", 11 },
         { "+october", 10 },
         { "+september", 9 },
         { "-", 0 },
         { "-august", 8 },
+        { "-december", 12 },
         { "-july", 7 },
         { "-june", 6 },
-        { "-december", 12 },
         { "-november", 11 },
         { "-october", 10 },
         { "-september", 9 },
@@ -756,7 +756,7 @@ void UCharTrieTest::checkData(const StringAndValue data[], int32_t dataLength, U
     checkNext(trieUChars, data, dataLength);
     checkNextWithState(trieUChars, data, dataLength);
     checkNextString(trieUChars, data, dataLength);
-    // checkIterator(trieUChars, data, dataLength);
+    checkIterator(trieUChars, data, dataLength);
 }
 
 UBool UCharTrieTest::buildTrie(const StringAndValue data[], int32_t dataLength,
@@ -1014,9 +1014,9 @@ void UCharTrieTest::checkIterator(UCharTrieIterator &iter,
         if(iter.getString()!=expectedString) {
             char buffer[1000];
             UnicodeString invString(prettify(iter.getString()));
+            invString.extract(0, invString.length(), buffer, LENGTHOF(buffer), US_INV);
             errln("trie iterator next().getString()=%s but expected %s for item %d",
-                  invString.extract(0, invString.length(), buffer, LENGTHOF(buffer), US_INV),
-                  data[i].s, (int)i);
+                  buffer, data[i].s, (int)i);
         }
         if(iter.getValue()!=data[i].value) {
             errln("trie iterator next().getValue()=%ld=0x%lx but expected %ld=0x%lx for item %d: %s",

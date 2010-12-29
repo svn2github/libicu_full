@@ -229,17 +229,17 @@ void ByteTrieTest::TestCompact() {
     static const StringAndValue data[]={
         { "+", 0 },
         { "+august", 8 },
+        { "+december", 12 },
         { "+july", 7 },
         { "+june", 6 },
-        { "+december", 12 },
         { "+november", 11 },
         { "+october", 10 },
         { "+september", 9 },
         { "-", 0 },
         { "-august", 8 },
+        { "-december", 12 },
         { "-july", 7 },
         { "-june", 6 },
-        { "-december", 12 },
         { "-november", 11 },
         { "-october", 10 },
         { "-september", 9 },
@@ -588,7 +588,7 @@ void ByteTrieTest::checkData(const StringAndValue data[], int32_t dataLength, UD
     checkNext(sp, data, dataLength);
     checkNextWithState(sp, data, dataLength);
     checkNextString(sp, data, dataLength);
-    // checkIterator(sp, data, dataLength);
+    checkIterator(sp, data, dataLength);
 }
 
 StringPiece ByteTrieTest::buildTrie(const StringAndValue data[], int32_t dataLength,

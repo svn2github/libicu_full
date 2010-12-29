@@ -99,7 +99,7 @@ UCharTrieIterator::next(UErrorCode &errorCode) {
         int32_t node=*pos++;
         if(node>=UCharTrie::kMinValueLead) {
             if(skipValue_) {
-                pos=UCharTrie::skipValue(pos, node);
+                pos=UCharTrie::skipNodeValue(pos, node);
                 node&=UCharTrie::kNodeTypeMask;
                 skipValue_=FALSE;
             } else {
