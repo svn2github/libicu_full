@@ -35,7 +35,7 @@ public:
 
     ByteTrieBuilder &add(const StringPiece &s, int32_t value, UErrorCode &errorCode);
 
-    StringPiece build(UErrorCode &errorCode);
+    StringPiece build(UDictTrieBuildOption buildOption, UErrorCode &errorCode);
 
     ByteTrieBuilder &clear() {
         strings.clear();
@@ -69,6 +69,8 @@ private:
     public:
         BTValueNode(int32_t v, Node *nextNode)
                 : ValueNode(0x222222*37+hashCode(nextNode)), next(nextNode) { setValue(v); }
+        virtual UBool operator==(const Node &other) const;
+        virtual int32_t markRightEdgesFirst(int32_t edgeNumber);
         virtual void write(DictTrieBuilder &builder);
     private:
         Node *next;
@@ -76,12 +78,11 @@ private:
 
     class BTLinearMatchNode : public LinearMatchNode {
     public:
-        BTLinearMatchNode(const uint8_t *units, int32_t len, Node *nextNode);
-                // TODO : LinearMatchNode(len, nextNode), s(units) {}
+        BTLinearMatchNode(const char *units, int32_t len, Node *nextNode);
         virtual UBool operator==(const Node &other) const;
         virtual void write(DictTrieBuilder &builder);
     private:
-        const uint8_t *s;
+        const char *s;
     };
 
     class BTListBranchNode : public ListBranchNode {
@@ -92,8 +93,8 @@ private:
 
     class BTSplitBranchNode : public SplitBranchNode {
     public:
-        BTSplitBranchNode(UChar middleUnit, Node *lessThanNode, Node *greaterOrEqualNode)
-                : SplitBranchNode(middleUnit, lessThanNode, greaterOrEqualNode) {}
+        BTSplitBranchNode(char middleUnit, Node *lessThanNode, Node *greaterOrEqualNode)
+                : SplitBranchNode((uint8_t)middleUnit, lessThanNode, greaterOrEqualNode) {}
         virtual void write(DictTrieBuilder &builder);
     };
 

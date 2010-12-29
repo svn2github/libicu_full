@@ -205,6 +205,7 @@ void
 UCharTrieBuilder::writeNode(int32_t start, int32_t limit, int32_t unitIndex) {
     UBool hasValue=FALSE;
     int32_t value=0;
+    int32_t type;
     if(unitIndex==elements[start].getStringLength(strings)) {
         // An intermediate or final value.
         value=elements[start++].getValue();
@@ -234,30 +235,31 @@ UCharTrieBuilder::writeNode(int32_t start, int32_t limit, int32_t unitIndex) {
             lastUnitIndex-=UCharTrie::kMaxLinearMatchLength;
             length-=UCharTrie::kMaxLinearMatchLength;
             write(s+lastUnitIndex, UCharTrie::kMaxLinearMatchLength);
-            writeValueAndType(FALSE, 0, UCharTrie::kMinLinearMatch+UCharTrie::kMaxLinearMatchLength-1);
+            write(UCharTrie::kMinLinearMatch+UCharTrie::kMaxLinearMatchLength-1);
         }
         write(s+unitIndex, length);
-        writeValueAndType(hasValue, value, UCharTrie::kMinLinearMatch+length-1);
-        return;
-    }
-    // Branch node.
-    int32_t length=0;  // Number of different units at unitIndex.
-    int32_t i=start;
-    do {
-        UChar unit=elements[i++].charAt(unitIndex, strings);
-        while(i<limit && unit==elements[i].charAt(unitIndex, strings)) {
-            ++i;
-        }
-        ++length;
-    } while(i<limit);
-    // length>=2 because minUnit!=maxUnit.
-    writeBranchSubNode(start, limit, unitIndex, length);
-    if(--length<UCharTrie::kMinLinearMatch) {
-        writeValueAndType(hasValue, value, length);
+        type=UCharTrie::kMinLinearMatch+length-1;
     } else {
-        write(length);
-        writeValueAndType(hasValue, value, 0);
+        // Branch node.
+        int32_t length=0;  // Number of different units at unitIndex.
+        int32_t i=start;
+        do {
+            UChar unit=elements[i++].charAt(unitIndex, strings);
+            while(i<limit && unit==elements[i].charAt(unitIndex, strings)) {
+                ++i;
+            }
+            ++length;
+        } while(i<limit);
+        // length>=2 because minUnit!=maxUnit.
+        writeBranchSubNode(start, limit, unitIndex, length);
+        if(--length<UCharTrie::kMinLinearMatch) {
+            type=length;
+        } else {
+            write(length);
+            type=0;
+        }
     }
+    writeValueAndType(hasValue, value, type);
 }
 
 // start<limit && all strings longer than unitIndex &&
@@ -413,7 +415,8 @@ UCharTrieBuilder::makeNode(int32_t start, int32_t limit, int32_t unitIndex, UErr
 // start<limit && all strings longer than unitIndex &&
 // length different units at unitIndex
 DictTrieBuilder::Node *
-UCharTrieBuilder::makeBranchSubNode(int32_t start, int32_t limit, int32_t unitIndex, int32_t length, UErrorCode &errorCode) {
+UCharTrieBuilder::makeBranchSubNode(int32_t start, int32_t limit, int32_t unitIndex,
+                                    int32_t length, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) {
         return NULL;
     }
@@ -471,7 +474,7 @@ UCharTrieBuilder::makeBranchSubNode(int32_t start, int32_t limit, int32_t unitIn
         listNode->add(unit, makeNode(start, limit, unitIndex+1, errorCode));
     }
     Node *node=registerNode(listNode, errorCode);
-    // Write the split-branch nodes.
+    // Create the split-branch nodes.
     while(ltLength>0) {
         --ltLength;
         node=registerNode(
@@ -491,7 +494,8 @@ UCharTrieBuilder::UCTLinearMatchNode::UCTLinearMatchNode(const UChar *units, int
     hash=hash*37+uhash_hashUCharsN(units, len);
 }
 
-UBool UCharTrieBuilder::UCTLinearMatchNode::operator==(const Node &other) const {
+UBool
+UCharTrieBuilder::UCTLinearMatchNode::operator==(const Node &other) const {
     if(this==&other) {
         return TRUE;
     }

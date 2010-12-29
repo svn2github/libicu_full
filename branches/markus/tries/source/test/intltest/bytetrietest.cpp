@@ -43,8 +43,9 @@ public:
     void TestLongSequence();
     void TestLongBranch();
     void TestValuesForState();
+    void TestCompact();
 
-    StringPiece buildMonthsTrie(ByteTrieBuilder &builder);
+    StringPiece buildMonthsTrie(ByteTrieBuilder &builder, UDictTrieBuildOption buildOption);
     void TestHasUniqueValue();
     void TestGetNextBytes();
     void TestIteratorFromBranch();
@@ -54,7 +55,9 @@ public:
     void TestTruncatingIteratorFromLinearMatchLong();
 
     void checkData(const StringAndValue data[], int32_t dataLength);
-    StringPiece buildTrie(const StringAndValue data[], int32_t dataLength, ByteTrieBuilder &builder);
+    void checkData(const StringAndValue data[], int32_t dataLength, UDictTrieBuildOption buildOption);
+    StringPiece buildTrie(const StringAndValue data[], int32_t dataLength,
+                          ByteTrieBuilder &builder, UDictTrieBuildOption buildOption);
     void checkFirst(const StringPiece &trieBytes, const StringAndValue data[], int32_t dataLength);
     void checkNext(const StringPiece &trieBytes, const StringAndValue data[], int32_t dataLength);
     void checkNextWithState(const StringPiece &trieBytes, const StringAndValue data[], int32_t dataLength);
@@ -84,6 +87,7 @@ void ByteTrieTest::runIndexedTest(int32_t index, UBool exec, const char *&name, 
     TESTCASE_AUTO(TestLongSequence);
     TESTCASE_AUTO(TestLongBranch);
     TESTCASE_AUTO(TestValuesForState);
+    TESTCASE_AUTO(TestCompact);
     TESTCASE_AUTO(TestHasUniqueValue);
     TESTCASE_AUTO(TestGetNextBytes);
     TESTCASE_AUTO(TestIteratorFromBranch);
@@ -97,12 +101,12 @@ void ByteTrieTest::runIndexedTest(int32_t index, UBool exec, const char *&name, 
 void ByteTrieTest::TestBuilder() {
     IcuTestErrorCode errorCode(*this, "TestBuilder()");
     ByteTrieBuilder builder;
-    builder.build(errorCode);
+    builder.build(UDICTTRIE_BUILD_FAST, errorCode);
     if(errorCode.reset()!=U_INDEX_OUTOFBOUNDS_ERROR) {
         errln("ByteTrieBuilder().build() did not set U_INDEX_OUTOFBOUNDS_ERROR");
         return;
     }
-    builder.add("=", 0, errorCode).add("=", 1, errorCode).build(errorCode);
+    builder.add("=", 0, errorCode).add("=", 1, errorCode).build(UDICTTRIE_BUILD_FAST, errorCode);
     if(errorCode.reset()!=U_ILLEGAL_ARGUMENT_ERROR) {
         errln("ByteTrieBuilder.build() did not detect duplicates");
         return;
@@ -220,7 +224,34 @@ void ByteTrieTest::TestValuesForState() {
     checkData(data, LENGTHOF(data));
 }
 
-StringPiece ByteTrieTest::buildMonthsTrie(ByteTrieBuilder &builder) {
+void ByteTrieTest::TestCompact() {
+    // Duplicate trailing strings and values provide opportunities for compacting.
+    static const StringAndValue data[]={
+        { "+", 0 },
+        { "+august", 8 },
+        { "+july", 7 },
+        { "+june", 6 },
+        { "+december", 12 },
+        { "+november", 11 },
+        { "+october", 10 },
+        { "+september", 9 },
+        { "-", 0 },
+        { "-august", 8 },
+        { "-july", 7 },
+        { "-june", 6 },
+        { "-december", 12 },
+        { "-november", 11 },
+        { "-october", 10 },
+        { "-september", 9 },
+        // The l+n branch (with its sub-nodes) is a duplicate but will be written
+        // both times because each time it follows a different linear-match node.
+        { "xjuly", 7 },
+        { "xjune", 6 }
+    };
+    checkData(data, LENGTHOF(data));
+}
+
+StringPiece ByteTrieTest::buildMonthsTrie(ByteTrieBuilder &builder, UDictTrieBuildOption buildOption) {
     // All types of nodes leading to the same value,
     // for code coverage of recursive functions.
     // In particular, we need a lot of branches on some single level
@@ -257,12 +288,12 @@ StringPiece ByteTrieTest::buildMonthsTrie(ByteTrieBuilder &builder) {
         { "jun.", 6 },
         { "june", 6 }
     };
-    return buildTrie(data, LENGTHOF(data), builder);
+    return buildTrie(data, LENGTHOF(data), builder, buildOption);
 }
 
 void ByteTrieTest::TestHasUniqueValue() {
     ByteTrieBuilder builder;
-    StringPiece sp=buildMonthsTrie(builder);
+    StringPiece sp=buildMonthsTrie(builder, UDICTTRIE_BUILD_FAST);
     if(sp.empty()) {
         return;  // buildTrie() reported an error
     }
@@ -300,7 +331,7 @@ void ByteTrieTest::TestHasUniqueValue() {
 
 void ByteTrieTest::TestGetNextBytes() {
     ByteTrieBuilder builder;
-    StringPiece sp=buildMonthsTrie(builder);
+    StringPiece sp=buildMonthsTrie(builder, UDICTTRIE_BUILD_SMALL);
     if(sp.empty()) {
         return;  // buildTrie() reported an error
     }
@@ -351,7 +382,7 @@ void ByteTrieTest::TestGetNextBytes() {
 
 void ByteTrieTest::TestIteratorFromBranch() {
     ByteTrieBuilder builder;
-    StringPiece sp=buildMonthsTrie(builder);
+    StringPiece sp=buildMonthsTrie(builder, UDICTTRIE_BUILD_FAST);
     if(sp.empty()) {
         return;  // buildTrie() reported an error
     }
@@ -402,7 +433,7 @@ void ByteTrieTest::TestIteratorFromBranch() {
 
 void ByteTrieTest::TestIteratorFromLinearMatch() {
     ByteTrieBuilder builder;
-    StringPiece sp=buildMonthsTrie(builder);
+    StringPiece sp=buildMonthsTrie(builder, UDICTTRIE_BUILD_SMALL);
     if(sp.empty()) {
         return;  // buildTrie() reported an error
     }
@@ -432,7 +463,7 @@ void ByteTrieTest::TestIteratorFromLinearMatch() {
 
 void ByteTrieTest::TestTruncatingIteratorFromRoot() {
     ByteTrieBuilder builder;
-    StringPiece sp=buildMonthsTrie(builder);
+    StringPiece sp=buildMonthsTrie(builder, UDICTTRIE_BUILD_FAST);
     if(sp.empty()) {
         return;  // buildTrie() reported an error
     }
@@ -484,7 +515,7 @@ void ByteTrieTest::TestTruncatingIteratorFromLinearMatchShort() {
         { "abcdeyz", 3000 }
     };
     ByteTrieBuilder builder;
-    StringPiece sp=buildTrie(data, LENGTHOF(data), builder);
+    StringPiece sp=buildTrie(data, LENGTHOF(data), builder, UDICTTRIE_BUILD_FAST);
     if(sp.empty()) {
         return;  // buildTrie() reported an error
     }
@@ -514,7 +545,7 @@ void ByteTrieTest::TestTruncatingIteratorFromLinearMatchLong() {
         { "abcdeyz", 3000 }
     };
     ByteTrieBuilder builder;
-    StringPiece sp=buildTrie(data, LENGTHOF(data), builder);
+    StringPiece sp=buildTrie(data, LENGTHOF(data), builder, UDICTTRIE_BUILD_FAST);
     if(sp.empty()) {
         return;  // buildTrie() reported an error
     }
@@ -541,8 +572,15 @@ void ByteTrieTest::TestTruncatingIteratorFromLinearMatchLong() {
 }
 
 void ByteTrieTest::checkData(const StringAndValue data[], int32_t dataLength) {
+    logln("checkData(dataLength=%d, fast)", (int)dataLength);
+    checkData(data, dataLength, UDICTTRIE_BUILD_FAST);
+    logln("checkData(dataLength=%d, small)", (int)dataLength);
+    checkData(data, dataLength, UDICTTRIE_BUILD_SMALL);
+}
+
+void ByteTrieTest::checkData(const StringAndValue data[], int32_t dataLength, UDictTrieBuildOption buildOption) {
     ByteTrieBuilder builder;
-    StringPiece sp=buildTrie(data, dataLength, builder);
+    StringPiece sp=buildTrie(data, dataLength, builder, buildOption);
     if(sp.empty()) {
         return;  // buildTrie() reported an error
     }
@@ -554,7 +592,7 @@ void ByteTrieTest::checkData(const StringAndValue data[], int32_t dataLength) {
 }
 
 StringPiece ByteTrieTest::buildTrie(const StringAndValue data[], int32_t dataLength,
-                                    ByteTrieBuilder &builder) {
+                                    ByteTrieBuilder &builder, UDictTrieBuildOption buildOption) {
     IcuTestErrorCode errorCode(*this, "buildTrie()");
     // Add the items to the trie builder in an interesting (not trivial, not random) order.
     int32_t index, step;
@@ -575,13 +613,14 @@ StringPiece ByteTrieTest::buildTrie(const StringAndValue data[], int32_t dataLen
         builder.add(data[index].s, data[index].value, errorCode);
         index=(index+step)%dataLength;
     }
-    StringPiece sp(builder.build(errorCode));
+    StringPiece sp(builder.build(buildOption, errorCode));
     if(!errorCode.logIfFailureAndReset("add()/build()")) {
         builder.add("zzz", 999, errorCode);
         if(errorCode.reset()!=U_NO_WRITE_PERMISSION) {
             errln("builder.build().add(zzz) did not set U_NO_WRITE_PERMISSION");
         }
     }
+    logln("serialized trie size: %ld bytes\n", (long)sp.length());
     return sp;
 }
 

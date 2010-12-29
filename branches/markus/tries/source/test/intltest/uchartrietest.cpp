@@ -253,6 +253,10 @@ void UCharTrieTest::TestCompact() {
         { "-november", 11 },
         { "-october", 10 },
         { "-september", 9 },
+        // The l+n branch (with its sub-nodes) is a duplicate but will be written
+        // both times because each time it follows a different linear-match node.
+        { "xjuly", 7 },
+        { "xjune", 6 }
     };
     checkData(data, LENGTHOF(data));
 }

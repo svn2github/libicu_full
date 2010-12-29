@@ -292,7 +292,7 @@ public:
             // NUL-terminate the name for call() to find the next one.
             itemNames.append(0, errorCode);
         }
-        int32_t length=builder.build(errorCode).length();
+        int32_t length=builder.build(UDICTTRIE_BUILD_SMALL, errorCode).length();
         printf("size of ByteTrie:   %6ld\n", (long)length);
         // count+1: +1 for the last-item limit offset which we should have always had
         printf("size of dataOffsets:%6ld\n", (long)((count+1)*4));
@@ -302,7 +302,7 @@ public:
 
     virtual void call(UErrorCode *pErrorCode) {
         int32_t count=pkg.getItemCount();
-        const char *nameTrieBytes=builder.build(*pErrorCode).data();
+        const char *nameTrieBytes=builder.build(UDICTTRIE_BUILD_SMALL, *pErrorCode).data();
         const char *name=itemNames.data();
         for(int32_t i=0; i<count; ++i) {
             if(byteTrieLookup(name, nameTrieBytes)<0) {
@@ -463,7 +463,7 @@ public:
             builder.add(UnicodeString(FALSE, lines[i].name, lines[i].len), 0, errorCode);
         }
         UnicodeString trieUChars;
-        int32_t length=builder.build(trieUChars, errorCode).length();
+        int32_t length=builder.build(UDICTTRIE_BUILD_SMALL, trieUChars, errorCode).length();
         printf("size of UCharTrie:          %6ld bytes\n", (long)length*2);
     }
 
@@ -480,7 +480,7 @@ public:
 
     virtual void call(UErrorCode *pErrorCode) {
         UnicodeString uchars;
-        UCharTrie trie(builder.build(uchars, *pErrorCode).getBuffer());
+        UCharTrie trie(builder.build(UDICTTRIE_BUILD_SMALL, uchars, *pErrorCode).getBuffer());
         UText text=UTEXT_INITIALIZER;
         int32_t lengths[20];
         const ULine *lines=perf.getCachedLines();
@@ -508,7 +508,7 @@ public:
 
     virtual void call(UErrorCode *pErrorCode) {
         UnicodeString uchars;
-        UCharTrie trie(builder.build(uchars, *pErrorCode).getBuffer());
+        UCharTrie trie(builder.build(UDICTTRIE_BUILD_SMALL, uchars, *pErrorCode).getBuffer());
         const ULine *lines=perf.getCachedLines();
         int32_t numLines=perf.getNumLines();
         for(int32_t i=0; i<numLines; ++i) {
@@ -569,7 +569,7 @@ public:
             builder.add(str.toStringPiece(), 0, errorCode);
         }
         if(!noDict) {
-            int32_t length=builder.build(errorCode).length();
+            int32_t length=builder.build(UDICTTRIE_BUILD_SMALL, errorCode).length();
             printf("size of ByteTrie:           %6ld bytes\n", (long)length);
         }
     }
@@ -627,7 +627,7 @@ public:
         if(noDict) {
             return;
         }
-        ByteTrie trie(builder.build(*pErrorCode).data());
+        ByteTrie trie(builder.build(UDICTTRIE_BUILD_SMALL, *pErrorCode).data());
         UText text=UTEXT_INITIALIZER;
         int32_t lengths[20];
         const ULine *lines=perf.getCachedLines();
@@ -657,7 +657,7 @@ public:
         if(noDict) {
             return;
         }
-        ByteTrie trie(builder.build(*pErrorCode).data());
+        ByteTrie trie(builder.build(UDICTTRIE_BUILD_SMALL, *pErrorCode).data());
         const ULine *lines=perf.getCachedLines();
         int32_t numLines=perf.getNumLines();
         for(int32_t i=0; i<numLines; ++i) {
