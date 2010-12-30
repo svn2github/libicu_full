@@ -272,7 +272,7 @@ private:
 
     // For a branch sub-node with at most this many entries, we drop down
     // to a linear search.
-    static const int32_t kMaxBranchLinearSubNodeLength=4;
+    static const int32_t kMaxBranchLinearSubNodeLength=5;
 
     // 10..1f: Linear-match node, match 1..16 bytes and continue reading the next node.
     static const int32_t kMinLinearMatch=0x10;
