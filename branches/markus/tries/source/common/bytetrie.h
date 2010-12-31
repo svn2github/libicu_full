@@ -211,7 +211,10 @@ private:
         }
         return pos;
     }
-    inline void skipDelta() { pos_=skipDelta(pos_); }
+
+    static inline UDictTrieResult valueResult(int32_t node) {
+        return (UDictTrieResult)(UDICTTRIE_HAS_VALUE-(node&kValueIsFinal));
+    }
 
     // Handles a branch node for both next(byte) and next(string).
     UDictTrieResult branchNext(const uint8_t *pos, int32_t length, int32_t inByte);

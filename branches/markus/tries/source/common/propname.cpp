@@ -221,7 +221,7 @@ UBool PropNameData::containsName(ByteTrie &trie, const char *name) {
     UDictTrieResult result=UDICTTRIE_NO_VALUE;
     char c;
     while((c=*name++)!=0) {
-        if(result==UDICTTRIE_NO_MATCH || result==UDICTTRIE_HAS_FINAL_VALUE) {
+        if(!UDICTTRIE_RESULT_HAS_NEXT(result)) {
             return FALSE;
         }
         c=uprv_invCharToLowercaseAscii(c);
@@ -231,7 +231,7 @@ UBool PropNameData::containsName(ByteTrie &trie, const char *name) {
         }
         result=trie.next((uint8_t)c);
     }
-    return result>=UDICTTRIE_HAS_VALUE;
+    return UDICTTRIE_RESULT_HAS_VALUE(result);
 }
 
 const char *PropNameData::getPropertyName(int32_t property, int32_t nameChoice) {

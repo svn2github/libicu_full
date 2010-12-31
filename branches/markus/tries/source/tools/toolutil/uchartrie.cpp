@@ -56,7 +56,7 @@ UCharTrie::current() const {
     } else {
         int32_t node;
         return (remainingMatchLength_<0 && (node=*pos)>=kMinValueLead) ?
-            (UDictTrieResult)(UDICTTRIE_HAS_VALUE+(node>>15)) : UDICTTRIE_NO_VALUE;
+                valueResult(node) : UDICTTRIE_NO_VALUE;
     }
 }
 
@@ -104,8 +104,7 @@ UCharTrie::branchNext(const UChar *pos, int32_t length, int32_t uchar) {
                 // end readValue()
                 pos+=delta;
                 node=*pos;
-                result= node>=kMinValueLead ?
-                    (UDictTrieResult)(UDICTTRIE_HAS_VALUE+(node>>15)) : UDICTTRIE_NO_VALUE;
+                result= node>=kMinValueLead ? valueResult(node) : UDICTTRIE_NO_VALUE;
             }
             pos_=pos;
             return result;
@@ -116,8 +115,7 @@ UCharTrie::branchNext(const UChar *pos, int32_t length, int32_t uchar) {
     if(uchar==*pos++) {
         pos_=pos;
         int32_t node=*pos;
-        return node>=kMinValueLead ?
-            (UDictTrieResult)(UDICTTRIE_HAS_VALUE+(node>>15)) : UDICTTRIE_NO_VALUE;
+        return node>=kMinValueLead ? valueResult(node) : UDICTTRIE_NO_VALUE;
     } else {
         stop();
         return UDICTTRIE_NO_MATCH;
@@ -137,7 +135,7 @@ UCharTrie::nextImpl(const UChar *pos, int32_t uchar) {
                 remainingMatchLength_=--length;
                 pos_=pos;
                 return (length<0 && (node=*pos)>=kMinValueLead) ?
-                    (UDictTrieResult)(UDICTTRIE_HAS_VALUE+(node>>15)) : UDICTTRIE_NO_VALUE;
+                        valueResult(node) : UDICTTRIE_NO_VALUE;
             } else {
                 // No match.
                 break;
@@ -169,7 +167,7 @@ UCharTrie::next(int32_t uchar) {
             pos_=pos;
             int32_t node;
             return (length<0 && (node=*pos)>=kMinValueLead) ?
-                (UDictTrieResult)(UDICTTRIE_HAS_VALUE+(node>>15)) : UDICTTRIE_NO_VALUE;
+                    valueResult(node) : UDICTTRIE_NO_VALUE;
         } else {
             stop();
             return UDICTTRIE_NO_MATCH;
@@ -200,7 +198,7 @@ UCharTrie::next(const UChar *s, int32_t sLength) {
                     pos_=pos;
                     int32_t node;
                     return (length<0 && (node=*pos)>=kMinValueLead) ?
-                        (UDictTrieResult)(UDICTTRIE_HAS_VALUE+(node>>15)) : UDICTTRIE_NO_VALUE;
+                            valueResult(node) : UDICTTRIE_NO_VALUE;
                 }
                 if(length<0) {
                     remainingMatchLength_=length;
@@ -220,7 +218,7 @@ UCharTrie::next(const UChar *s, int32_t sLength) {
                     pos_=pos;
                     int32_t node;
                     return (length<0 && (node=*pos)>=kMinValueLead) ?
-                        (UDictTrieResult)(UDICTTRIE_HAS_VALUE+(node>>15)) : UDICTTRIE_NO_VALUE;
+                            valueResult(node) : UDICTTRIE_NO_VALUE;
                 }
                 uchar=*s++;
                 --sLength;

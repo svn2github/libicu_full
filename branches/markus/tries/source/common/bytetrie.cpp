@@ -66,7 +66,7 @@ ByteTrie::current() const {
     } else {
         int32_t node;
         return (remainingMatchLength_<0 && (node=*pos)>=kMinValueLead) ?
-            (UDictTrieResult)(UDICTTRIE_HAS_VALUE+(node&kValueIsFinal)) : UDICTTRIE_NO_VALUE;
+                valueResult(node) : UDICTTRIE_NO_VALUE;
     }
 }
 
@@ -122,8 +122,7 @@ ByteTrie::branchNext(const uint8_t *pos, int32_t length, int32_t inByte) {
                 // end readValue()
                 pos+=delta;
                 node=*pos;
-                result= node>=kMinValueLead ?
-                    (UDictTrieResult)(UDICTTRIE_HAS_VALUE+(node&kValueIsFinal)) : UDICTTRIE_NO_VALUE;
+                result= node>=kMinValueLead ? valueResult(node) : UDICTTRIE_NO_VALUE;
             }
             pos_=pos;
             return result;
@@ -134,8 +133,7 @@ ByteTrie::branchNext(const uint8_t *pos, int32_t length, int32_t inByte) {
     if(inByte==*pos++) {
         pos_=pos;
         int32_t node=*pos;
-        return node>=kMinValueLead ?
-            (UDictTrieResult)(UDICTTRIE_HAS_VALUE+(node&kValueIsFinal)) : UDICTTRIE_NO_VALUE;
+        return node>=kMinValueLead ? valueResult(node) : UDICTTRIE_NO_VALUE;
     } else {
         stop();
         return UDICTTRIE_NO_MATCH;
@@ -155,7 +153,7 @@ ByteTrie::nextImpl(const uint8_t *pos, int32_t inByte) {
                 remainingMatchLength_=--length;
                 pos_=pos;
                 return (length<0 && (node=*pos)>=kMinValueLead) ?
-                    (UDictTrieResult)(UDICTTRIE_HAS_VALUE+(node&kValueIsFinal)) : UDICTTRIE_NO_VALUE;
+                        valueResult(node) : UDICTTRIE_NO_VALUE;
             } else {
                 // No match.
                 break;
@@ -188,7 +186,7 @@ ByteTrie::next(int32_t inByte) {
             pos_=pos;
             int32_t node;
             return (length<0 && (node=*pos)>=kMinValueLead) ?
-                (UDictTrieResult)(UDICTTRIE_HAS_VALUE+(node&kValueIsFinal)) : UDICTTRIE_NO_VALUE;
+                    valueResult(node) : UDICTTRIE_NO_VALUE;
         } else {
             stop();
             return UDICTTRIE_NO_MATCH;
@@ -219,7 +217,7 @@ ByteTrie::next(const char *s, int32_t sLength) {
                     pos_=pos;
                     int32_t node;
                     return (length<0 && (node=*pos)>=kMinValueLead) ?
-                        (UDictTrieResult)(UDICTTRIE_HAS_VALUE+(node&kValueIsFinal)) : UDICTTRIE_NO_VALUE;
+                            valueResult(node) : UDICTTRIE_NO_VALUE;
                 }
                 if(length<0) {
                     remainingMatchLength_=length;
@@ -239,7 +237,7 @@ ByteTrie::next(const char *s, int32_t sLength) {
                     pos_=pos;
                     int32_t node;
                     return (length<0 && (node=*pos)>=kMinValueLead) ?
-                        (UDictTrieResult)(UDICTTRIE_HAS_VALUE+(node&kValueIsFinal)) : UDICTTRIE_NO_VALUE;
+                            valueResult(node) : UDICTTRIE_NO_VALUE;
                 }
                 inByte=*s++;
                 --sLength;

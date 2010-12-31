@@ -313,6 +313,10 @@ private:
         return pos;
     }
 
+    static inline UDictTrieResult valueResult(int32_t node) {
+        return (UDictTrieResult)(UDICTTRIE_HAS_VALUE-(node>>15));
+    }
+
     // Handles a branch node for both next(uchar) and next(string).
     UDictTrieResult branchNext(const UChar *pos, int32_t length, int32_t uchar);
 

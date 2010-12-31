@@ -24,14 +24,9 @@
 
 /**
  * Return values for ByteTrie::next(), UCharTrie::next() and similar methods.
- *
- * The UDICTTRIE_NO_MATCH constant's numeric value is 0, so in C/C++,
- * if checking for UDICTTRIE_HAS_VALUE is not needed,
- * a UDictTrieResult can be treated like a boolean "matches",
- * as in "if(!trie.next(c)) ..."
- *
- * "Has value" can be tested with "result>=UDICTTRIE_HAS_VALUE".
- * "Has next" can be tested with "result!=UDICTTRIE_NO_MATCH && result!=UDICTTRIE_HAS_FINAL_VALUE".
+ * @see UDICTTRIE_RESULT_MATCHES
+ * @see UDICTTRIE_RESULT_HAS_VALUE
+ * @see UDICTTRIE_RESULT_HAS_NEXT
  */
 enum UDictTrieResult {
     /**
@@ -48,16 +43,41 @@ enum UDictTrieResult {
      * The input unit(s) continued a matching string
      * and there is a value for the string so far.
      * This value will be returned by getValue().
-     * Another input byte/unit can continue a matching string.
+     * No further input byte/unit can continue a matching string.
      */
-    UDICTTRIE_HAS_VALUE,
+    UDICTTRIE_HAS_FINAL_VALUE,
     /**
      * The input unit(s) continued a matching string
      * and there is a value for the string so far.
      * This value will be returned by getValue().
-     * No further input byte/unit can continue a matching string.
+     * Another input byte/unit can continue a matching string.
      */
-    UDICTTRIE_HAS_FINAL_VALUE
+    UDICTTRIE_HAS_VALUE
 };
+
+/**
+ * Same as (result!=UDICTTRIE_NO_MATCH).
+ * @param result A result from ByteTrie::first(), UCharTrie::next() etc.
+ * @return true if the input bytes/units so far are part of a matching string/byte sequence.
+ */
+#define UDICTTRIE_RESULT_MATCHES(result) ((result)!=UDICTTRIE_NO_MATCH)
+
+/**
+ * Equivalent to (result==UDICTTRIE_HAS_VALUE || result==UDICTTRIE_HAS_FINAL_VALUE) but
+ * this macro evaluates result exactly once.
+ * @param result A result from ByteTrie::first(), UCharTrie::next() etc.
+ * @return true if there is a value for the input bytes/units so far.
+ * @see ByteTrie::getValue
+ * @see UCharTrie::getValue
+ */
+#define UDICTTRIE_RESULT_HAS_VALUE(result) ((result)>=UDICTTRIE_HAS_FINAL_VALUE)
+
+/**
+ * Equivalent to (result==UDICTTRIE_NO_VALUE || result==UDICTTRIE_HAS_VALUE) but
+ * this macro evaluates result exactly once.
+ * @param result A result from ByteTrie::first(), UCharTrie::next() etc.
+ * @return true if another input byte/unit can continue a matching string.
+ */
+#define UDICTTRIE_RESULT_HAS_NEXT(result) ((result)&1)
 
 #endif  /* __UDICTTRIE_H__ */

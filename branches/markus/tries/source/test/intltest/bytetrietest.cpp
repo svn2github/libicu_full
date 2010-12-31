@@ -633,11 +633,11 @@ void ByteTrieTest::checkFirst(const StringPiece &trieBytes,
             continue;  // skip empty string
         }
         UDictTrieResult firstResult=trie.first(c);
-        int32_t firstValue=firstResult>=UDICTTRIE_HAS_VALUE ? trie.getValue() : -1;
+        int32_t firstValue=UDICTTRIE_RESULT_HAS_VALUE(firstResult) ? trie.getValue() : -1;
         UDictTrieResult nextResult=trie.next((uint8_t)data[i].s[1]);
         if(firstResult!=trie.reset().next(c) ||
            firstResult!=trie.current() ||
-           firstValue!=(firstResult>=UDICTTRIE_HAS_VALUE ? trie.getValue() : -1) ||
+           firstValue!=(UDICTTRIE_RESULT_HAS_VALUE(firstResult) ? trie.getValue() : -1) ||
            nextResult!=trie.next((uint8_t)data[i].s[1])
         ) {
             errln("trie.first(%c)!=trie.reset().next(same) for %s",
@@ -653,7 +653,7 @@ void ByteTrieTest::checkNext(const StringPiece &trieBytes,
     for(int32_t i=0; i<dataLength; ++i) {
         int32_t stringLength= (i&1) ? -1 : strlen(data[i].s);
         UDictTrieResult result;
-        if( (result=trie.next(data[i].s, stringLength))<UDICTTRIE_HAS_VALUE ||
+        if( !UDICTTRIE_RESULT_HAS_VALUE(result=trie.next(data[i].s, stringLength)) ||
             result!=trie.current()
         ) {
             errln("trie does not seem to contain %s", data[i].s);
@@ -669,7 +669,7 @@ void ByteTrieTest::checkNext(const StringPiece &trieBytes,
         stringLength=strlen(data[i].s);
         result=trie.current();
         for(int32_t j=0; j<stringLength; ++j) {
-            if(result==UDICTTRIE_NO_MATCH || result==UDICTTRIE_HAS_FINAL_VALUE) {
+            if(!UDICTTRIE_RESULT_HAS_NEXT(result)) {
                 errln("trie.current()!=hasNext before end of %s (at index %d)", data[i].s, j);
                 break;
             }
@@ -681,7 +681,7 @@ void ByteTrieTest::checkNext(const StringPiece &trieBytes,
                 }
             }
             result=trie.next(data[i].s[j]);
-            if(!result) {
+            if(!UDICTTRIE_RESULT_MATCHES(result)) {
                 errln("trie.next()=UDICTTRIE_NO_MATCH before end of %s (at index %d)", data[i].s, j);
                 break;
             }
@@ -690,8 +690,8 @@ void ByteTrieTest::checkNext(const StringPiece &trieBytes,
                 break;
             }
         }
-        if(result<UDICTTRIE_HAS_VALUE) {
-            errln("trie.next()<UDICTTRIE_HAS_VALUE at the end of %s", data[i].s);
+        if(!UDICTTRIE_RESULT_HAS_VALUE(result)) {
+            errln("trie.next()!=hasValue at the end of %s", data[i].s);
             continue;
         }
         trie.getValue();
@@ -729,7 +729,7 @@ void ByteTrieTest::checkNextWithState(const StringPiece &trieBytes,
         int32_t stringLength=strlen(expectedString);
         int32_t partialLength=stringLength/3;
         for(int32_t j=0; j<partialLength; ++j) {
-            if(!trie.next(expectedString[j])) {
+            if(!UDICTTRIE_RESULT_MATCHES(trie.next(expectedString[j]))) {
                 errln("trie.next()=UDICTTRIE_NO_MATCH for a prefix of %s", data[i].s);
                 return;
             }
@@ -738,7 +738,7 @@ void ByteTrieTest::checkNextWithState(const StringPiece &trieBytes,
         UDictTrieResult resultAtState=trie.current();
         UDictTrieResult result;
         int32_t valueAtState=-99;
-        if(resultAtState>=UDICTTRIE_HAS_VALUE) {
+        if(UDICTTRIE_RESULT_HAS_VALUE(resultAtState)) {
             valueAtState=trie.getValue();
         }
         result=trie.next(0);  // mismatch
@@ -746,20 +746,22 @@ void ByteTrieTest::checkNextWithState(const StringPiece &trieBytes,
             errln("trie.next(0) matched after part of %s", data[i].s);
         }
         if( resultAtState!=trie.resetToState(state).current() ||
-            (resultAtState>=UDICTTRIE_HAS_VALUE && valueAtState!=trie.getValue())
+            (UDICTTRIE_RESULT_HAS_VALUE(resultAtState) && valueAtState!=trie.getValue())
         ) {
             errln("trie.next(part of %s) changes current()/getValue() after "
                   "saveState/next(0)/resetToState",
                   data[i].s);
-        } else if((result=trie.next(expectedString+partialLength,
-                                    stringLength-partialLength))<UDICTTRIE_HAS_VALUE ||
+        } else if(!UDICTTRIE_RESULT_HAS_VALUE(
+                      result=trie.next(expectedString+partialLength,
+                                       stringLength-partialLength)) ||
                   result!=trie.current()) {
             errln("trie.next(rest of %s) does not seem to contain %s after "
                   "saveState/next(0)/resetToState",
                   data[i].s);
-        } else if((result=trie.resetToState(state).
-                               next(expectedString+partialLength,
-                                    stringLength-partialLength))<UDICTTRIE_HAS_VALUE ||
+        } else if(!UDICTTRIE_RESULT_HAS_VALUE(
+                      result=trie.resetToState(state).
+                                  next(expectedString+partialLength,
+                                       stringLength-partialLength)) ||
                   result!=trie.current()) {
             errln("trie does not seem to contain %s after saveState/next(rest)/resetToState",
                   data[i].s);

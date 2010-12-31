@@ -261,7 +261,7 @@ public:
 
 static int32_t byteTrieLookup(const char *s, const char *nameTrieBytes) {
     ByteTrie trie(nameTrieBytes);
-    if(trie.next(s, -1)>=UDICTTRIE_HAS_VALUE) {
+    if(UDICTTRIE_RESULT_HAS_VALUE(trie.next(s, -1))) {
         return trie.getValue();
     } else {
         return -1;
@@ -406,10 +406,7 @@ ucharTrieMatches(UCharTrie &trie,
     int32_t numChars=1;
     count=0;
     for(;;) {
-        if(result==UDICTTRIE_NO_MATCH) {
-            break;
-        }
-        if(result>=UDICTTRIE_HAS_VALUE) {
+        if(UDICTTRIE_RESULT_HAS_VALUE(result)) {
             if(count<limit) {
                 // lengths[count++]=(int32_t)utext_getNativeIndex(text);
                 lengths[count++]=numChars;  // CompactTrieDictionary just counts chars too.
@@ -417,6 +414,8 @@ ucharTrieMatches(UCharTrie &trie,
             if(result==UDICTTRIE_HAS_FINAL_VALUE) {
                 break;
             }
+        } else if(result==UDICTTRIE_NO_MATCH) {
+            break;
         }
         if(numChars>=textLimit) {
             // Note: Why do we have both a text limit and a UText that knows its length?
@@ -516,7 +515,7 @@ public:
             if(lines[i].name[0]<0x41) {
                 continue;
             }
-            if(trie.reset().next(lines[i].name, lines[i].len)<UDICTTRIE_HAS_VALUE) {
+            if(!UDICTTRIE_RESULT_HAS_VALUE(trie.reset().next(lines[i].name, lines[i].len))) {
                 fprintf(stderr, "word %ld (0-based) not found\n", (long)i);
             }
         }
@@ -593,10 +592,7 @@ byteTrieMatches(ByteTrie &trie,
     int32_t numChars=1;
     count=0;
     for(;;) {
-        if(result==UDICTTRIE_NO_MATCH) {
-            break;
-        }
-        if(result>=UDICTTRIE_HAS_VALUE) {
+        if(UDICTTRIE_RESULT_HAS_VALUE(result)) {
             if(count<limit) {
                 // lengths[count++]=(int32_t)utext_getNativeIndex(text);
                 lengths[count++]=numChars;  // CompactTrieDictionary just counts chars too.
@@ -604,6 +600,8 @@ byteTrieMatches(ByteTrie &trie,
             if(result==UDICTTRIE_HAS_FINAL_VALUE) {
                 break;
             }
+        } else if(result==UDICTTRIE_NO_MATCH) {
+            break;
         }
         if(numChars>=textLimit) {
             break;
@@ -669,12 +667,13 @@ public:
             UDictTrieResult result=trie.first(thaiCharToByte(line[0]));
             int32_t lineLength=lines[i].len;
             for(int32_t j=1; j<lineLength; ++j) {
-                if(result==UDICTTRIE_NO_MATCH) {
+                if(!UDICTTRIE_RESULT_HAS_NEXT(result)) {
                     fprintf(stderr, "word %ld (0-based) not found\n", (long)i);
+                    break;
                 }
                 result=trie.next(thaiCharToByte(line[j]));
             }
-            if(result<UDICTTRIE_HAS_VALUE) {
+            if(!UDICTTRIE_RESULT_HAS_VALUE(result)) {
                 fprintf(stderr, "word %ld (0-based) not found\n", (long)i);
             }
         }
