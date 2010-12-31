@@ -221,13 +221,13 @@ UBool PropNameData::containsName(ByteTrie &trie, const char *name) {
     UDictTrieResult result=UDICTTRIE_NO_VALUE;
     char c;
     while((c=*name++)!=0) {
-        if(!UDICTTRIE_RESULT_HAS_NEXT(result)) {
-            return FALSE;
-        }
         c=uprv_invCharToLowercaseAscii(c);
         // Ignore delimiters '-', '_', and ASCII White_Space.
         if(c==0x2d || c==0x5f || c==0x20 || (0x09<=c && c<=0x0d)) {
             continue;
+        }
+        if(!UDICTTRIE_RESULT_HAS_NEXT(result)) {
+            return FALSE;
         }
         result=trie.next((uint8_t)c);
     }
