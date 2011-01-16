@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 1998-2010, International Business Machines
+*   Copyright (C) 1998-2011, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
@@ -48,6 +48,11 @@
 #include "unicode/ucol.h"
 #include "utrie.h"
 #include "cmemory.h"
+#if defined(XP_CPLUSPLUS) && !defined (UCOL_NO_DELEGATE)
+#include "unicode/coll.h" // for class Collator
+#else
+typedef void Collator;
+#endif
 
 /* This is the internal header file which contains important declarations for 
  * the collation framework. 
@@ -1028,6 +1033,9 @@ struct UCollator {
     int32_t* reorderCodes;
     int32_t reorderCodesLength;
     uint8_t* leadBytePermutationTable;
+#ifndef UCOL_NO_DELEGATE
+    Collator  *delegate;  /* if non-null: C++ object to delegate all API calls to. */
+#endif
 };
 
 U_CDECL_END

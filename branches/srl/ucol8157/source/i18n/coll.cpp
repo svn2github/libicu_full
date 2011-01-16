@@ -1,6 +1,6 @@
 /*
  ******************************************************************************
- * Copyright (C) 1996-2010, International Business Machines Corporation and
+ * Copyright (C) 1996-2011, International Business Machines Corporation and
  * others. All Rights Reserved.
  ******************************************************************************
  */
@@ -243,6 +243,19 @@ Collator::createUCollator(const char *loc,
                 result = rbc->ucollator;
                 rbc->ucollator = NULL; // to prevent free on delete
             }
+        } else {
+#ifndef UCOL_NO_DELEGATE
+          // should go in a function- ucol_initDelegate(delegate)
+          result = (UCollator *)uprv_malloc(sizeof(UCollator));
+          if(result == NULL) {
+            *status = U_MEMORY_ALLOCATION_ERROR;
+          } else {
+            uprv_memset(result, 0, sizeof(UCollator));
+            result->delegate = col;
+            result->freeOnClose = TRUE; // do free on close.
+            col = NULL; // to prevent free on delete.
+          }
+#endif
         }
         delete col;
     }
@@ -319,6 +332,7 @@ Collator* U_EXPORT2 Collator::createInstance(const Locale& desiredLocale,
         Locale actualLoc;
         Collator *result =
             (Collator*)gService->get(desiredLocale, &actualLoc, status);
+
         // Ugly Hack Alert! If the returned locale is empty (not root,
         // but empty -- getName() == "") then that means the service
         // returned a default object, not a "real" service object.  In

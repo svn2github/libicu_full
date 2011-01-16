@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-*   Copyright (C) 1996-2010, International Business Machines
+*   Copyright (C) 1996-2011, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *******************************************************************************
 *   file name:  ucol.cpp
@@ -680,6 +680,12 @@ ucol_close(UCollator *coll)
             uprv_free(coll->reorderCodes);
         }
 
+#ifndef UCOL_NO_DELEGATE
+        if(coll->delegate != NULL) {
+          delete coll->delegate;
+        }
+#endif
+
         /* Here, it would be advisable to close: */
         /* - UData for UCA (unless we stuff it in the root resb */
         /* Again, do we need additional housekeeping... HMMM! */
@@ -846,6 +852,10 @@ UCollator* ucol_initCollator(const UCATableHeader *image, UCollator *fillIn, con
     } else {
         result->freeOnClose = FALSE;
     }
+
+#ifndef UCOL_NO_DELEGATE
+    result->delegate = NULL;
+#endif
 
     result->image = image;
     result->mapping.getFoldingOffset = _getFoldingOffset;
@@ -4240,6 +4250,12 @@ ucol_getSortKey(const    UCollator    *coll,
         UTRACE_DATA3(UTRACE_VERBOSE, "coll=%p, source string = %vh ", coll, source,
             ((sourceLength==-1 && source!=NULL) ? u_strlen(source) : sourceLength));
     }
+
+#ifndef UCOL_NO_DELEGATE
+    if(coll->delegate != NULL) {
+      return coll->delegate->getSortKey(source, sourceLength, result, resultLength);
+    }
+#endif
 
     UErrorCode status = U_ZERO_ERROR;
     int32_t keySize   = 0;
