@@ -680,11 +680,9 @@ ucol_close(UCollator *coll)
             uprv_free(coll->reorderCodes);
         }
 
-#ifndef UCOL_NO_DELEGATE
         if(coll->delegate != NULL) {
           delete coll->delegate;
         }
-#endif
 
         /* Here, it would be advisable to close: */
         /* - UData for UCA (unless we stuff it in the root resb */
@@ -853,9 +851,7 @@ UCollator* ucol_initCollator(const UCATableHeader *image, UCollator *fillIn, con
         result->freeOnClose = FALSE;
     }
 
-#ifndef UCOL_NO_DELEGATE
     result->delegate = NULL;
-#endif
 
     result->image = image;
     result->mapping.getFoldingOffset = _getFoldingOffset;
@@ -4251,11 +4247,9 @@ ucol_getSortKey(const    UCollator    *coll,
             ((sourceLength==-1 && source!=NULL) ? u_strlen(source) : sourceLength));
     }
 
-#ifndef UCOL_NO_DELEGATE
     if(coll->delegate != NULL) {
       return coll->delegate->getSortKey(source, sourceLength, result, resultLength);
     }
-#endif
 
     UErrorCode status = U_ZERO_ERROR;
     int32_t keySize   = 0;

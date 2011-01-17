@@ -244,7 +244,6 @@ Collator::createUCollator(const char *loc,
                 rbc->ucollator = NULL; // to prevent free on delete
             }
         } else {
-#ifndef UCOL_NO_DELEGATE
           // should go in a function- ucol_initDelegate(delegate)
           result = (UCollator *)uprv_malloc(sizeof(UCollator));
           if(result == NULL) {
@@ -255,7 +254,6 @@ Collator::createUCollator(const char *loc,
             result->freeOnClose = TRUE; // do free on close.
             col = NULL; // to prevent free on delete.
           }
-#endif
         }
         delete col;
     }
