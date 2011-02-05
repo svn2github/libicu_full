@@ -388,23 +388,26 @@ PluralFormat::format(double number,
         }
     }
 
+    UnicodeString *selectedPattern = NULL;
     if (explicitValuesLen > 0) {
         for (int i = 0; i < explicitValuesLen; ++i) {
             if (number == explicitValues[i].key) {
-                insertFormattedNumber(number, explicitValues[i].value, appendTo, pos);
-                return appendTo;
-        }
+                selectedPattern = &explicitValues[i].value;
+                break;
+            }
         }
     }
 
+    // Apply offset only after explicit test.
     number -= offset;
 
-    UnicodeString selectedRule = pluralRules->select(number);
-    UnicodeString *selectedPattern = (UnicodeString *)parsedValues->get(selectedRule);
     if (selectedPattern==NULL) {
-        selectedPattern = (UnicodeString *)parsedValues->get(pluralRules->getKeywordOther());
+        UnicodeString selectedRule = pluralRules->select(number);
+        selectedPattern = (UnicodeString *)parsedValues->get(selectedRule);
+        if (selectedPattern==NULL) {
+            selectedPattern = (UnicodeString *)parsedValues->get(pluralRules->getKeywordOther());
+        }
     }
-    
     insertFormattedNumber(number, *selectedPattern, appendTo, pos);
     return appendTo;
 }

@@ -502,7 +502,7 @@ PluralFormatTest::pluralFormatExtendedTest(void) {
     "There is a bling widget and one other widget.",
     "There is a bling widget and 2 other widgets.",
     "There is a bling widget and 3 other widgets.",
-    "Widgets, five there be.",
+    "Widgets, five (5-1=4) there be.",
     "There is a bling widget and 5 other widgets.",
     "There is a bling widget and 6 other widgets.",
   };
@@ -511,7 +511,7 @@ PluralFormatTest::pluralFormatExtendedTest(void) {
       "offset:1.0 "
       "=0 {There are no widgets.} "
       "=1.0 {There is one widget.} "
-      "=5 {Widgets, five there be.} "
+      "=5 {Widgets, five (5-1=#) there be.} "
       "one {There is a bling widget and one other widget.} "
       "other {There is a bling widget and # other widgets.}";
 
