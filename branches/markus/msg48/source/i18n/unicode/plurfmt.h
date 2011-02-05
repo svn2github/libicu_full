@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2007-2010, International Business Machines Corporation and
+* Copyright (C) 2007-2011, International Business Machines Corporation and
 * others. All Rights Reserved.
 *******************************************************************************
 *
@@ -522,23 +522,36 @@ private:
         tRightBrace
     }fmtToken;
 
+    struct ExplicitPair : public UMemory {
+      double key;
+      UnicodeString value;
+    };
+
     Locale  locale;
     PluralRules* pluralRules;
     UnicodeString pattern;
-    Hashtable  *fParsedValuesHash;
+    Hashtable *parsedValues;
     NumberFormat*  numberFormat;
-    NumberFormat*  replacedNumberFormat;
+    NumberFormat* replacedNumberFormat; // alias, not owned
+    ExplicitPair *explicitValues;
+    int explicitValuesLen;
+    double offset;
+    NumberFormat* asciiNumberFormat; // built on demand
 
     PluralFormat();   // default constructor not implemented
     void init(const PluralRules* rules, const Locale& curlocale, UErrorCode& status);
-    UBool inRange(UChar ch, fmtToken& type);
     UBool checkSufficientDefinition();
     void parsingFailure();
     UnicodeString insertFormattedNumber(double number,
                                         UnicodeString& message,
                                         UnicodeString& appendTo,
                                         FieldPosition& pos) const;
-    void copyHashtable(Hashtable *other, UErrorCode& status);
+    Hashtable *copyHashtable(Hashtable *other, UErrorCode& status);
+    PluralRules *copyPluralRules(const PluralRules *rules, UErrorCode& status);
+    ExplicitPair *copyExplicitValues(ExplicitPair *values, uint32_t len, UErrorCode& status);
+    void destructHelper(void);
+    void zeroAllocs(void);
+    NumberFormat *getAsciiNumberFormat(UErrorCode& status);
 };
 
 U_NAMESPACE_END

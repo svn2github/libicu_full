@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2009, International Business Machines Corporation and
+* Copyright (C) 2009-2011, International Business Machines Corporation and
 * others. All Rights Reserved.
 *******************************************************************************
 *
@@ -17,17 +17,16 @@
 #include "unicode/plurfmt.h"
 #include "unicode/plurrule.h"
 #include "plurrule_impl.h"
+#include "cmemory.h"
+#include "uhash.h"
 
 #if !UCONFIG_NO_FORMATTING
 
 U_NAMESPACE_BEGIN
 
-U_CDECL_BEGIN
-static void U_CALLCONV
-deleteHashStrings(void *obj) {
-    delete (UnicodeString *)obj;
-}
-U_CDECL_END
+#define EQUALS_SIGN       ((UChar)0x003d)
+
+static UChar OFFSET_CHARS[] = {0x006f, 0x0066, 0x0066, 0x0073, 0x0065, 0x0074};
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(PluralFormat)
 
@@ -70,57 +69,59 @@ PluralFormat::PluralFormat(const Locale& loc, const PluralRules& rules, const Un
 }
 
 PluralFormat::PluralFormat(const PluralFormat& other) : Format(other) {
-    UErrorCode status = U_ZERO_ERROR;
-    locale = other.locale;
-    pluralRules = other.pluralRules->clone();
-    pattern = other.pattern;
-    copyHashtable(other.fParsedValuesHash, status);
-    if (U_FAILURE(status)) {
-        delete pluralRules;
-        pluralRules = NULL; 
-        return;
-    }
-    numberFormat=NumberFormat::createInstance(locale, status);
-    if (U_FAILURE(status)) {
-        delete pluralRules;
-        pluralRules = NULL; 
-        delete fParsedValuesHash;
-        fParsedValuesHash = NULL;
-        return;
-    }
-    replacedNumberFormat=other.replacedNumberFormat;
+    zeroAllocs();
+    operator=(other);
 }
 
+
 PluralFormat::~PluralFormat() {
+    destructHelper();
+}
+
+void
+PluralFormat::destructHelper() {
     delete pluralRules;   
-    delete fParsedValuesHash;
+    delete parsedValues;
     delete numberFormat;
+    delete asciiNumberFormat;
+    delete [] explicitValues;
+
+    zeroAllocs();
+}
+
+void
+PluralFormat::zeroAllocs() {
+    pluralRules = NULL;
+    parsedValues = NULL;
+    numberFormat = NULL;
+    asciiNumberFormat = NULL;
+    explicitValues = NULL;
 }
 
 void
 PluralFormat::init(const PluralRules* rules, const Locale& curLocale, UErrorCode& status) {
+    zeroAllocs();
+
     if (U_FAILURE(status)) {
         return;
     }
+
+    pattern.remove();
     locale = curLocale;
+    replacedNumberFormat = NULL;
+    explicitValuesLen = 0;
+    offset = 0;
+
     if ( rules==NULL) {
         pluralRules = PluralRules::forLocale(locale, status);
-        if (U_FAILURE(status)) {
-            return;
-        }
+    } else {
+        pluralRules = copyPluralRules(rules, status);
     }
-    else {
-        pluralRules = rules->clone();
-    }
-    fParsedValuesHash=NULL;
-    pattern.remove();
     numberFormat= NumberFormat::createInstance(curLocale, status);
+
     if (U_FAILURE(status)) {
-        delete pluralRules;
-        pluralRules = NULL; 
-        return;
+        destructHelper();
     }
-    replacedNumberFormat=NULL;
 }
 
 void
@@ -129,120 +130,190 @@ PluralFormat::applyPattern(const UnicodeString& newPattern, UErrorCode& status) 
         return;
     }
     this->pattern = newPattern;
-    UnicodeString token;
-    int32_t braceCount=0;
-    fmtToken type;
-    UBool spaceIncluded=FALSE;
     
-    if (fParsedValuesHash==NULL) {
-        fParsedValuesHash = new Hashtable(TRUE, status);
+    if (parsedValues != NULL) {
+        parsedValues->removeAll();
+    } else {
+        parsedValues = new Hashtable(TRUE, status);
         if (U_FAILURE(status)) {
             return;
         }
-        fParsedValuesHash->setValueDeleter(deleteHashStrings);
+        parsedValues->setValueDeleter(uhash_deleteUnicodeString);
     }
+    explicitValuesLen = 0;
     
-    UBool getKeyword=TRUE;
-    UnicodeString hashKeyword;
-    UnicodeString *hashPattern;
+    int state = 0;
+    int32_t braceCount = 0;
+    UnicodeString token;
+    UnicodeString currentKeyword;
+    double explicitValue = 0;
+    bool useExplicit = FALSE;
+    bool readSpaceAfterKeyword = FALSE;
     
     for (int32_t i=0; i<pattern.length(); ++i) {
         UChar ch=pattern.charAt(i);
-
-        if ( !inRange(ch, type) ) {
-            if (getKeyword) {
-                status = U_ILLEGAL_CHARACTER;
-                return;
+        switch (state) {
+        case 0: // Reading keyword.
+            if (ch == SPACE) {
+                // Skip leading and trailing whitespace.
+                if (token.length() > 0) {
+                    readSpaceAfterKeyword = TRUE;
             }
-            else {
-                token += ch;
-                continue;
-            }
+                break;
         }
-        switch (type) {
-            case tSpace:
-                if (token.length()==0) {
-                    continue;
-                }
-                if (getKeyword) {
-                    // space after keyword
-                    spaceIncluded = TRUE;
-                }
-                else {
-                    token += ch;
-                }
-                break;
-            case tLeftBrace:
-                if ( getKeyword ) {
-                    if (fParsedValuesHash->get(token)!= NULL) {
-                        status = U_DUPLICATE_KEYWORD;
-                        return; 
-                    }
-                    if (token.length()==0) {
-                        status = U_PATTERN_SYNTAX_ERROR;
-                        return;
-                    }
-                    if (!pluralRules->isKeyword(token)) {
-                        status = U_UNDEFINED_KEYWORD;
-                        return;
-                    }
-                    hashKeyword = token;
-                    getKeyword = FALSE;
-                    token.remove();
-                }
-                else  {
-                    if (braceCount==0) {
-                        status = U_UNEXPECTED_TOKEN;
-                        return;
-                    }
-                    else {
-                        token += ch;
-                    }
-                }
-                braceCount++;
-                spaceIncluded = FALSE;
-                break;
-            case tRightBrace:
-                if ( getKeyword ) {
+            if (ch == EQUALS_SIGN) {
+                if (useExplicit) {
                     status = U_UNEXPECTED_TOKEN;
                     return;
                 }
-                else  {
-                    hashPattern = new UnicodeString(token);
-                    fParsedValuesHash->put(hashKeyword, hashPattern, status);
-                    if (U_FAILURE(status)) {
-                        return;
-                    }
-                    braceCount--;
-                    if ( braceCount==0 ) {
-                        getKeyword=TRUE;
-                        hashKeyword.remove();
-                        hashPattern=NULL;
-                        token.remove();
-                    }
-                    else {
-                        token += ch;
-                    }
-                }
-                spaceIncluded = FALSE;
+                useExplicit = TRUE;
                 break;
-            case tLetter:
-            case tNumberSign:
-                if (spaceIncluded) {
-                    status = U_PATTERN_SYNTAX_ERROR;
+                }
+            if (!readSpaceAfterKeyword && ch == COLON) { // Check for offset.
+                if (token.length() != 6 ||
+                    token.toLower(Locale::getUS()).compare(0, 6, OFFSET_CHARS) != 0) {
+                    status = U_UNEXPECTED_TOKEN;
                     return;
                 }
-            default:
-                token+=ch;
+                token.truncate(0);
+                state = 2;
+                break;
+                    }
+            if (ch == LEFTBRACE) { // End of keyword definition reached.
+                    if (token.length()==0) {
+                    status = U_UNEXPECTED_TOKEN;
+                        return;
+                    }
+
+                currentKeyword = token.toLower(Locale::getUS());
+                if (useExplicit) {
+                    Formattable result;
+                    NumberFormat* fmt = getAsciiNumberFormat(status);
+                    if (fmt == NULL) {
+                        return;
+                    }
+                    fmt->parse(currentKeyword, result, status);
+                    explicitValue = result.getDouble(status);
+
+                    if (explicitValues != NULL) {
+                        for (int i = 0; i < explicitValuesLen; ++i) {
+                            if (explicitValues[i].key == explicitValue) {
+                                status = U_DUPLICATE_KEYWORD;
+                                return;
+                }
+                        }
+                    }
+                } else {
+                    if (!pluralRules->isKeyword(currentKeyword)) {
+                        status = U_UNDEFINED_KEYWORD;
+                        return;
+                    }
+
+                    if (parsedValues->get(currentKeyword)!= NULL) {
+                        status = U_DUPLICATE_KEYWORD;
+                        return;
+                    }
+                }
+
+                token.truncate(0);
+                braceCount++;
+                state = 1;
+                break;
+            }
+            if (readSpaceAfterKeyword) {
+                    status = U_UNEXPECTED_TOKEN;
+                    return;
+                }
+            token.append(ch);
+            break;
+
+        case 1: // Reading value
+            if (ch == RIGHTBRACE) {
+                --braceCount;
+                if (braceCount < 0) {
+                    state = U_UNEXPECTED_TOKEN;
+                        return;
+                    }
+                    if ( braceCount==0 ) {
+                    if (useExplicit) {
+                        if ((explicitValuesLen & 0x3) == 0) {
+                            ExplicitPair* nv = new ExplicitPair[explicitValuesLen + 4];
+                            if (nv == NULL) {
+                                status = U_MEMORY_ALLOCATION_ERROR;
+                                return;
+                    }
+                            if (explicitValues != NULL) {
+                                for (int i = 0; i < explicitValuesLen; ++i) {
+                                    nv[i] = explicitValues[i];
+                    }
+                                delete[] explicitValues;
+                }
+                            explicitValues = nv;
+                        }
+                        explicitValues[explicitValuesLen].key = explicitValue;
+                        explicitValues[explicitValuesLen].value = token;
+                        explicitValuesLen++;
+                        useExplicit = false;
+                    } else {
+                        UnicodeString *value = new UnicodeString(token);
+                        if (value == NULL) {
+                            status = U_MEMORY_ALLOCATION_ERROR;
+                    return;
+                }
+                        parsedValues->put(currentKeyword, value, status);
+                        if (U_FAILURE(status)) {
+                            delete value;
+                            return;
+                        }
+                    }
+                    token.truncate(0);
+                    readSpaceAfterKeyword = FALSE;
+                    state = 0;
                 break;
         }
+
+                // else braceCount > 0, we'll append the brace
+            } else if (ch == LEFTBRACE) {
+                braceCount++;
+            }
+            token.append(ch);
+            break;
+
+        case 2: // Reading value of offset
+            if (ch == SPACE) {
+                if (token.length() == 0) {
+                    break; // ignore leading spaces
     }
-    if ( checkSufficientDefinition() ) {
+                // trigger parse on first whitespace after non-whitespace
+                Formattable result;
+                NumberFormat* fmt = getAsciiNumberFormat(status);
+                if (fmt == NULL) {
         return;
     }
-    else {
+                fmt->parse(token, result, status);
+                offset = result.getDouble(status);
+                if (U_FAILURE(status)) {
+        return;
+    }
+                token.truncate(0);
+                readSpaceAfterKeyword = FALSE;
+                state = 0; // back to looking for keywords
+                break;
+            }
+            // Not whitespace, assume it's part of the offset value.
+            // If it's '=', too bad, you have to explicitly
+            // delimit offset:xxx by a space.  This also means it
+            // can't be '{', but this is an error already since there's no
+            // keyword.
+            token.append(ch);
+            break;
+        } // switch state
+    } // for loop
+
+    if (braceCount != 0) {
+        status = U_UNMATCHED_BRACES;
+    } else if (!checkSufficientDefinition()) {
         status = U_DEFAULT_KEYWORD_MISSING;
-        return;
     }
 }
 
@@ -309,21 +380,32 @@ PluralFormat::format(double number,
                      FieldPosition& pos,
                      UErrorCode& /*status*/) const {
 
-    if (fParsedValuesHash==NULL) {
+    if (parsedValues == NULL) {
         if ( replacedNumberFormat== NULL ) {
             return numberFormat->format(number, appendTo, pos);
-        }
-        else {
-            replacedNumberFormat->format(number, appendTo, pos);
+        } else {
+            return replacedNumberFormat->format(number, appendTo, pos);
         }
     }
+
+    if (explicitValuesLen > 0) {
+        for (int i = 0; i < explicitValuesLen; ++i) {
+            if (number == explicitValues[i].key) {
+                insertFormattedNumber(number, explicitValues[i].value, appendTo, pos);
+                return appendTo;
+        }
+        }
+    }
+
+    number -= offset;
+
     UnicodeString selectedRule = pluralRules->select(number);
-    UnicodeString *selectedPattern = (UnicodeString *)fParsedValuesHash->get(selectedRule);
+    UnicodeString *selectedPattern = (UnicodeString *)parsedValues->get(selectedRule);
     if (selectedPattern==NULL) {
-        selectedPattern = (UnicodeString *)fParsedValuesHash->get(pluralRules->getKeywordOther());
+        selectedPattern = (UnicodeString *)parsedValues->get(pluralRules->getKeywordOther());
     }
-    appendTo = insertFormattedNumber(number, *selectedPattern, appendTo, pos);
     
+    insertFormattedNumber(number, *selectedPattern, appendTo, pos);
     return appendTo;
 }
 
@@ -334,44 +416,10 @@ PluralFormat::toPattern(UnicodeString& appendTo) {
 }
 
 UBool
-PluralFormat::inRange(UChar ch, fmtToken& type) {
-    if ((ch>=CAP_A) && (ch<=CAP_Z)) {
-        // we assume all characters are in lower case already.
-        return FALSE;
-    }
-    if ((ch>=LOW_A) && (ch<=LOW_Z)) {
-        type = tLetter;
-        return TRUE;
-    }
-    switch (ch) {
-        case LEFTBRACE: 
-            type = tLeftBrace;
-            return TRUE;
-        case SPACE:
-            type = tSpace;
-            return TRUE;
-        case RIGHTBRACE:
-            type = tRightBrace;
-            return TRUE;
-        case NUMBER_SIGN:
-            type = tNumberSign;
-            return TRUE;
-        default :
-            type = none;
-            return FALSE;
-    }
-}
-
-UBool
 PluralFormat::checkSufficientDefinition() {
     // Check that at least the default rule is defined.
-    if (fParsedValuesHash==NULL)  return FALSE;
-    if (fParsedValuesHash->get(pluralRules->getKeywordOther()) == NULL) {
-        return FALSE;
-    }
-    else {
-        return TRUE;
-    }
+    return parsedValues != NULL &&
+        parsedValues->get(pluralRules->getKeywordOther()) != NULL;
 }
 
 void
@@ -379,19 +427,8 @@ PluralFormat::setLocale(const Locale& loc, UErrorCode& status) {
     if (U_FAILURE(status)) {
         return;
     }
-    if (pluralRules!=NULL) {
-        delete pluralRules;
-        pluralRules=NULL;
-    }
-    if (fParsedValuesHash!= NULL) {
-        delete fParsedValuesHash;
-        fParsedValuesHash = NULL;
-    }
-    if (numberFormat!=NULL) {
-        delete numberFormat;
-        numberFormat = NULL;
         replacedNumberFormat=NULL;
-    }
+    destructHelper();
     init(NULL, loc, status);
 }
 
@@ -408,34 +445,28 @@ PluralFormat::clone() const
     return new PluralFormat(*this);
 }
 
+
 PluralFormat&
 PluralFormat::operator=(const PluralFormat& other) {
     if (this != &other) {
         UErrorCode status = U_ZERO_ERROR;
-        delete pluralRules;   
-        delete fParsedValuesHash;
-        delete numberFormat;
+        destructHelper();
+
         locale = other.locale;
-        pluralRules = other.pluralRules->clone();
         pattern = other.pattern;
-        copyHashtable(other.fParsedValuesHash, status);
+        replacedNumberFormat = other.replacedNumberFormat;
+        explicitValuesLen = other.explicitValuesLen;
+        offset = other.offset;
+
+        parsedValues = copyHashtable(other.parsedValues, status);
+        pluralRules = copyPluralRules(other.pluralRules, status);
+        explicitValues = copyExplicitValues(other.explicitValues, other.explicitValuesLen, status);
+
+        numberFormat = NumberFormat::createInstance(locale, status); // can't clone?
+
         if (U_FAILURE(status)) {
-            delete pluralRules;  
-            pluralRules = NULL;
-            fParsedValuesHash = NULL;
-            numberFormat = NULL;
-            return *this;
+            destructHelper();
         }
-        numberFormat=NumberFormat::createInstance(locale, status);
-        if (U_FAILURE(status)) {
-            delete pluralRules;   
-            delete fParsedValuesHash; 
-            pluralRules = NULL;
-            fParsedValuesHash = NULL;
-            numberFormat = NULL;
-            return *this;
-        }
-        replacedNumberFormat=other.replacedNumberFormat;
     }
 
     return *this;
@@ -502,17 +533,24 @@ PluralFormat::insertFormattedNumber(double number,
     return result;
 }
 
-void
+NumberFormat *
+PluralFormat::getAsciiNumberFormat(UErrorCode& status) {
+    if (asciiNumberFormat == NULL) {
+        asciiNumberFormat = NumberFormat::createInstance(Locale::getUS(), status);
+    }
+    return asciiNumberFormat;
+}
+
+Hashtable*
 PluralFormat::copyHashtable(Hashtable *other, UErrorCode& status) {
     if (other == NULL || U_FAILURE(status)) {
-        fParsedValuesHash = NULL;
-        return;
+        return NULL;
     }
-    fParsedValuesHash = new Hashtable(TRUE, status);
+    Hashtable *result = new Hashtable(TRUE, status);
     if(U_FAILURE(status)){
-        return;
+        return NULL;
     }
-    fParsedValuesHash->setValueDeleter(deleteHashStrings);
+    result->setValueDeleter(uhash_deleteUnicodeString);
     int32_t pos = -1;
     const UHashElement* elem = NULL;
     // walk through the hash table and create a deep clone
@@ -521,13 +559,44 @@ PluralFormat::copyHashtable(Hashtable *other, UErrorCode& status) {
         UnicodeString* otherKey = (UnicodeString*)otherKeyTok.pointer;
         const UHashTok otherKeyToVal = elem->value;
         UnicodeString* otherValue = (UnicodeString*)otherKeyToVal.pointer;
-        fParsedValuesHash->put(*otherKey, new UnicodeString(*otherValue), status);
+        result->put(*otherKey, new UnicodeString(*otherValue), status);
         if(U_FAILURE(status)){
-            return;
+            delete result;
+            return NULL;
         }
     }
+    return result;
 }
 
+PluralRules*
+PluralFormat::copyPluralRules(const PluralRules *rules, UErrorCode& status) {
+    if (U_FAILURE(status)) {
+        return NULL;
+    }
+    PluralRules *copy = rules->clone();
+    if (copy == NULL) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+    }
+    return copy;
+}
+
+PluralFormat::ExplicitPair *
+PluralFormat::copyExplicitValues(PluralFormat::ExplicitPair *explicitValues, uint32_t len, UErrorCode& status) {
+    if (U_FAILURE(status)) {
+        return NULL;
+    }
+    ExplicitPair* nv = new ExplicitPair[(len + 3) & ~0x3];
+    if (nv == NULL) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return NULL;
+    }
+    if (explicitValues != NULL) {
+        for (int i = 0; i < explicitValuesLen; ++i) {
+            nv[i] = explicitValues[i];
+        }
+    }
+    return nv;
+}
 
 U_NAMESPACE_END
 
