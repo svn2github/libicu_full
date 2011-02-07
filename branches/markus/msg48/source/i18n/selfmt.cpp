@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT:
- * Copyright (c) 1997-2010, International Business Machines Corporation and
+ * Copyright (c) 1997-2011, International Business Machines Corporation and
  * others. All Rights Reserved.
  * Copyright (C) 2010 , Yahoo! Inc.
  ********************************************************************
@@ -190,6 +190,20 @@ SelectFormat::applyPattern(const UnicodeString& newPattern, UErrorCode& status) 
             //Handle the phrase state
             case phraseState:
                 switch (type) {
+                    case tApostrophe: {
+                        // Apostrophe starts and ends quoting of literal text.
+                        // Skip the quoted text and preserve the apostrophes for
+                        // subsequent use in MessageFormat.
+                        int endAposIndex = pattern.indexOf(SINGLE_QUOTE, i + 1);
+                        if (endAposIndex < 0) {
+                            // parsingFailure("Pattern syntax error. Unterminated quote.");
+                            status = U_PATTERN_SYNTAX_ERROR;
+                            return;
+                        }
+                        phrase.append(pattern, i, endAposIndex + 1 - i);
+                        i = endAposIndex;
+                        break;
+                    }
                     case tLeftBrace:
                         braceCount++;
                         phrase += ch;
@@ -326,6 +340,8 @@ SelectFormat::classifyCharacter(UChar ch) const{
         case HYPHEN:
         case LOWLINE:
             return tContinueKeyword;
+        case SINGLE_QUOTE:
+            return tApostrophe;
         default :
             return tOther;
     }

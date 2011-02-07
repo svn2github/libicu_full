@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT: 
- * Copyright (c) 1997-2010, International Business Machines Corporation and
+ * Copyright (c) 1997-2011, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************
  * File TMSGFMT.CPP
@@ -29,39 +29,36 @@
 #include "unicode/gregocal.h"
 #include <stdio.h>
 
-#define E_WITH_ACUTE ((char)0x00E9)
-static const char E_ACCENTED[]={E_WITH_ACUTE,0};
-
 void
 TestMessageFormat::runIndexedTest(int32_t index, UBool exec,
                                   const char* &name, char* /*par*/) {
-    switch (index) {
-        TESTCASE(0,testBug1);
-        TESTCASE(1,testBug2);
-        TESTCASE(2,sample);
-        TESTCASE(3,PatternTest);
-        TESTCASE(4,testStaticFormat);
-        TESTCASE(5,testSimpleFormat);
-        TESTCASE(6,testMsgFormatChoice);
-        TESTCASE(7,testCopyConstructor);
-        TESTCASE(8,testAssignment);
-        TESTCASE(9,testClone);
-        TESTCASE(10,testEquals);
-        TESTCASE(11,testNotEquals);
-        TESTCASE(12,testSetLocale);
-        TESTCASE(13,testFormat);
-        TESTCASE(14,testParse);
-        TESTCASE(15,testAdopt);
-        TESTCASE(16,testCopyConstructor2);
-        TESTCASE(17,TestUnlimitedArgsAndSubformats);
-        TESTCASE(18,TestRBNF);
-        TESTCASE(19,TestTurkishCasing);
-        TESTCASE(20,testAutoQuoteApostrophe);
-        TESTCASE(21,testMsgFormatPlural);
-        TESTCASE(22,testCoverage);
-        TESTCASE(23,testMsgFormatSelect);
-        default: name = ""; break;
-    }
+    TESTCASE_AUTO_BEGIN;
+    TESTCASE_AUTO(testBug1);
+    TESTCASE_AUTO(testBug2);
+    TESTCASE_AUTO(sample);
+    TESTCASE_AUTO(PatternTest);
+    TESTCASE_AUTO(testStaticFormat);
+    TESTCASE_AUTO(testSimpleFormat);
+    TESTCASE_AUTO(testMsgFormatChoice);
+    TESTCASE_AUTO(testCopyConstructor);
+    TESTCASE_AUTO(testAssignment);
+    TESTCASE_AUTO(testClone);
+    TESTCASE_AUTO(testEquals);
+    TESTCASE_AUTO(testNotEquals);
+    TESTCASE_AUTO(testSetLocale);
+    TESTCASE_AUTO(testFormat);
+    TESTCASE_AUTO(testParse);
+    TESTCASE_AUTO(testAdopt);
+    TESTCASE_AUTO(testCopyConstructor2);
+    TESTCASE_AUTO(TestUnlimitedArgsAndSubformats);
+    TESTCASE_AUTO(TestRBNF);
+    TESTCASE_AUTO(TestTurkishCasing);
+    TESTCASE_AUTO(testAutoQuoteApostrophe);
+    TESTCASE_AUTO(testMsgFormatPlural);
+    TESTCASE_AUTO(testMsgFormatSelect);
+    TESTCASE_AUTO(testApostropheInPluralAndSelect);
+    TESTCASE_AUTO(testCoverage);
+    TESTCASE_AUTO_END;
 }
 
 void TestMessageFormat::testBug3()
@@ -534,7 +531,7 @@ void TestMessageFormat::testMsgFormatPlural(/* char* par */)
     UnicodeString t2("{argument, plural, one{C''est # fichier} other {Ce sont # fichiers}} dans la liste.");
     UnicodeString t3("There {0, plural, one{is # zavod}few{are {0, number,###.0} zavoda} other{are # zavodov}} in the directory.");
     UnicodeString t4("There {argument, plural, one{is # zavod}few{are {argument, number,###.0} zavoda} other{are #zavodov}} in the directory.");
-    UnicodeString t5("{0, plural, one {{0, number,C''''est #,##0.0# fichier}} other {Ce sont # fichiers}} dans la liste.");
+    UnicodeString t5("{0, plural, one {{0, number,C''est #,##0.0# fichier}} other {Ce sont # fichiers}} dans la liste.");
     MessageFormat* mfNum = new MessageFormat(t1, Locale("fr"), err);
     if (U_FAILURE(err)) {
         dataerrln("TestMessageFormat::testMsgFormatPlural #1 - argumentIndex - %s", u_errorName(err));
@@ -611,15 +608,32 @@ void TestMessageFormat::testMsgFormatPlural(/* char* par */)
         errln("TestMessageFormat::test nested PluralFormat with argumentName");
     }
     if ( argNameResult!= UnicodeString("C'est 0,0 fichier dans la liste.")) {
-        errln(UnicodeString("TestMessageFormat::test nested named PluralFormat."));
+        errln(UnicodeString("TestMessageFormat::test nested named PluralFormat: ") + argNameResult);
         logln(UnicodeString("The unexpected nested named PluralFormat."));
     }
     delete msgFmt;
 }
 
+void TestMessageFormat::testApostropheInPluralAndSelect() {
+    UErrorCode errorCode = U_ZERO_ERROR;
+    MessageFormat msgFmt(UNICODE_STRING_SIMPLE(
+        "abc_{0,plural,other{#'#'#'{'#''}}_def_{1,select,other{sel'}'ect''}}_xyz"),
+        Locale::getEnglish(),
+        errorCode);
+    if (U_FAILURE(errorCode)) {
+        errln("MessageFormat constructor failed - %s\n", u_errorName(errorCode));
+        return;
+    }
+    UnicodeString expected = UNICODE_STRING_SIMPLE("abc_3#3{3'_def_sel}ect'_xyz");
+    Formattable args[] = { 3, UNICODE_STRING_SIMPLE("x") };
+    internalFormat(
+        &msgFmt, args, 2, expected,
+        "MessageFormat with apostrophes in plural/select arguments failed:\n");
+}
+
 void TestMessageFormat::internalFormat(MessageFormat* msgFmt , 
         Formattable* args , int32_t numOfArgs , 
-        UnicodeString expected ,char* errMsg)
+        UnicodeString expected, const char* errMsg)
 {
         UnicodeString result;
         FieldPosition ignore(FieldPosition::DONT_CARE);

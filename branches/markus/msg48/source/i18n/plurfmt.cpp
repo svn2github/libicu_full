@@ -12,7 +12,6 @@
 *******************************************************************************
 */
 
-
 #include "unicode/utypes.h"
 #include "unicode/plurfmt.h"
 #include "unicode/plurrule.h"
@@ -228,13 +227,21 @@ PluralFormat::applyPattern(const UnicodeString& newPattern, UErrorCode& status) 
             break;
 
         case 1: // Reading value
-            if (ch == RIGHTBRACE) {
-                --braceCount;
-                if (braceCount < 0) {
-                    state = U_UNEXPECTED_TOKEN;
-                        return;
-                    }
-                    if ( braceCount==0 ) {
+            if (ch == SINGLE_QUOTE) {
+                // Apostrophe starts and ends quoting of literal text.
+                // Skip the quoted text and preserve the apostrophes for
+                // subsequent use in MessageFormat.
+                int32_t endAposIndex = pattern.indexOf(SINGLE_QUOTE, i + 1);
+                if (endAposIndex < 0) {
+                    // parsingFailure("Malformed formatting expression. Braces do not match.");
+                    status = U_PATTERN_SYNTAX_ERROR;
+                    return;
+                }
+                token.append(pattern, i, endAposIndex + 1 - i);
+                i = endAposIndex;
+                break;
+            } else if (ch == RIGHTBRACE) {
+                if (--braceCount == 0) {
                     if (useExplicit) {
                         if ((explicitValuesLen & 0x3) == 0) {
                             ExplicitPair* nv = new ExplicitPair[explicitValuesLen + 4];
@@ -408,8 +415,7 @@ PluralFormat::format(double number,
             selectedPattern = (UnicodeString *)parsedValues->get(pluralRules->getKeywordOther());
         }
     }
-    insertFormattedNumber(number, *selectedPattern, appendTo, pos);
-    return appendTo;
+    return insertFormattedNumber(number, *selectedPattern, appendTo, pos);
 }
 
 UnicodeString&
@@ -499,21 +505,26 @@ PluralFormat::parseObject(const UnicodeString& /*source*/,
     // TODO: not yet supported in icu4j and icu4c
 }
 
-UnicodeString
-PluralFormat::insertFormattedNumber(double number, 
+UnicodeString&
+PluralFormat::insertFormattedNumber(double number,
                                     UnicodeString& message,
                                     UnicodeString& appendTo,
                                     FieldPosition& pos) const {
-    UnicodeString result;
     int32_t braceStack=0;
     int32_t startIndex=0;
-    
+
     if (message.length()==0) {
-        return result;
+        return appendTo;
     }
-    appendTo = numberFormat->format(number, appendTo, pos);
+    UnicodeString formattedNumber;
+    numberFormat->format(number, formattedNumber, pos);
     for(int32_t i=0; i<message.length(); ++i) {
         switch(message.charAt(i)) {
+        case SINGLE_QUOTE:
+            // Skip/copy quoted literal text.
+            i = message.indexOf(SINGLE_QUOTE, i + 1);
+            // assert i >= 0 : "unterminated quote should have failed applyPattern()";
+            break;
         case LEFTBRACE:
             ++braceStack;
             break;
@@ -522,18 +533,17 @@ PluralFormat::insertFormattedNumber(double number,
             break;
         case NUMBER_SIGN:
             if (braceStack==0) {
-                result += UnicodeString(message, startIndex, i);
-                result += appendTo;
+                appendTo.append(message, startIndex, i - startIndex);
+                appendTo += formattedNumber;
                 startIndex = i + 1;
             }
             break;
         }
     }
     if ( startIndex < message.length() ) {
-        result += UnicodeString(message, startIndex, message.length()-startIndex);
+        appendTo.append(message, startIndex, message.length()-startIndex);
     }
-    appendTo = result;
-    return result;
+    return appendTo;
 }
 
 NumberFormat *

@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT:
- * Copyright (c) 1997-2010, International Business Machines Corporation and
+ * Copyright (c) 1997-2011, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************
  *
@@ -1246,11 +1246,12 @@ MessageFormat::format(const Formattable* arguments,
 
             // Needs to reprocess the ChoiceFormat and PluralFormat and SelectFormat option by using the
             // MessageFormat pattern application.
-            if ((dynamic_cast<ChoiceFormat*>(fmt) != NULL ||
+            UBool isChoice = dynamic_cast<ChoiceFormat*>(fmt) != NULL;
+            if ((isChoice ||
                  dynamic_cast<PluralFormat*>(fmt) != NULL ||
                  dynamic_cast<SelectFormat*>(fmt) != NULL) &&
-                argNum.indexOf(LEFT_CURLY_BRACE) >= 0
-            ) {
+                (argNum.indexOf(LEFT_CURLY_BRACE) >= 0 ||
+                 (!isChoice && argNum.indexOf(SINGLE_QUOTE) >= 0))) {
                 MessageFormat temp(argNum, fLocale, success);
                 // TODO: Implement recursion protection
                 if ( isArgNumeric ) {
@@ -1535,8 +1536,6 @@ MessageFormat::makeFormat(int32_t formatNumber,
     Format *fmt = NULL;
     int32_t typeID, styleID;
     DateFormat::EStyle style;
-    UnicodeString unquotedPattern, quotedPattern;
-    UBool inQuote = FALSE;
 
     switch (typeID = findKeyword(segments[2], TYPE_IDS)) {
 
@@ -1612,31 +1611,12 @@ MessageFormat::makeFormat(int32_t formatNumber,
         fmt = makeRBNF(URBNF_DURATION, fLocale, segments[3], ec);
         break;
     case 8: // plural
-    case 9: // Select
-        if(typeID == 8)
-            argType = Formattable::kDouble;
-        else
-            argType = Formattable::kString;
-        quotedPattern = segments[3];
-        for (int32_t i = 0; i < quotedPattern.length(); ++i) {
-            UChar ch = quotedPattern.charAt(i);
-            if (ch == SINGLE_QUOTE) {
-                if (i+1 < quotedPattern.length() && quotedPattern.charAt(i+1)==SINGLE_QUOTE) {
-                    unquotedPattern+=ch;
-                    ++i;
-                }
-                else {
-                    inQuote = !inQuote;
-                }
-            }
-            else {
-                unquotedPattern += ch;
-            }
-        }
-        if(typeID == 8)
-            fmt = new PluralFormat(fLocale, unquotedPattern, ec);
-        else
-            fmt = new SelectFormat(unquotedPattern, ec);
+        argType = Formattable::kDouble;
+        fmt = new PluralFormat(fLocale, segments[3], ec);
+        break;
+    case 9: // select
+        argType = Formattable::kString;
+        fmt = new SelectFormat(segments[3], ec);
         break;
     default:
         argType = Formattable::kString;

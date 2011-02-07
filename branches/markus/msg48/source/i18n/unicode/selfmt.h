@@ -348,6 +348,7 @@ private:
         tLeftBrace,
         tRightBrace,
         tSpace,
+        tApostrophe,
         tOther
     }CharacterClass;
 

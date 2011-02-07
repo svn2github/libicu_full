@@ -65,12 +65,14 @@ public:
      **/
     void testMsgFormatSelect(/* char* par */);
 
+    void testApostropheInPluralAndSelect();
+
     /** 
      * Internal method to format a MessageFormat object with passed args 
      **/
     void internalFormat(MessageFormat* msgFmt ,
         Formattable* args , int32_t numOfArgs ,
-        UnicodeString expected ,char* errMsg);
+        UnicodeString expected, const char* errMsg);
 
     /** 
      * Internal method to create a MessageFormat object with passed args 

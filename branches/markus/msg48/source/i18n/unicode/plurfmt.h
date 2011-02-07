@@ -542,7 +542,7 @@ private:
     void init(const PluralRules* rules, const Locale& curlocale, UErrorCode& status);
     UBool checkSufficientDefinition();
     void parsingFailure();
-    UnicodeString insertFormattedNumber(double number,
+    UnicodeString& insertFormattedNumber(double number,
                                         UnicodeString& message,
                                         UnicodeString& appendTo,
                                         FieldPosition& pos) const;
