@@ -10,7 +10,7 @@
  *  ICU <specials> source: <path>/xml/main/pa_Arab.xml
  */
 pa_Arab{
-    %%ParentIsRoot:int{1}
+    %%Parent{"root"}
     Languages{
         pa{"پنجاب"}
     }

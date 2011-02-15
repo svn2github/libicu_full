@@ -10,7 +10,7 @@
  *  ICU <specials> source: <path>/xml/rbnf/zh_Hant.xml
  */
 zh_Hant{
-    %%ParentIsRoot:int{1}
+    %%Parent{"root"}
     RBNFRules{
         OrdinalRules{
             "%digits-ordinal:",

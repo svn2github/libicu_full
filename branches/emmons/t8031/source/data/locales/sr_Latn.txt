@@ -10,7 +10,7 @@
  *  ICU <specials> source: <path>/xml/main/sr_Latn.xml
  */
 sr_Latn{
-    %%ParentIsRoot:int{1}
+    %%Parent{"root"}
     AuxExemplarCharacters{"[q w x y]"}
     ExemplarCharacters{"[a b c č ć d đ {dž} e f g h i j k l {lj} m n {nj} o p r s š t u v z ž]"}
     LocaleScript{

@@ -10,7 +10,7 @@
  *  ICU <specials> source: <path>/xml/main/shi_Tfng.xml
  */
 shi_Tfng{
-    %%ParentIsRoot:int{1}
+    %%Parent{"root"}
     Languages{
         ak{"ⵜⴰⴽⴰⵏⵜ"}
         am{"ⵜⴰⵎⵀⴰⵔⵉⵜ"}

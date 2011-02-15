@@ -10,7 +10,7 @@
  *  ICU <specials> source: <path>/xml/main/zh_Hant.xml
  */
 zh_Hant{
-    %%ParentIsRoot:int{1}
+    %%Parent{"root"}
     Currencies{
         ADP{
             "ADP" /** ===  */,

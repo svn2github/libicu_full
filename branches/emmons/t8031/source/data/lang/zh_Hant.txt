@@ -10,7 +10,7 @@
  *  ICU <specials> source: <path>/xml/main/zh_Hant.xml
  */
 zh_Hant{
-    %%ParentIsRoot:int{1}
+    %%Parent{"root"}
     Keys{
         calendar{"日曆"}
         collation{"校對"}

@@ -583,29 +583,31 @@ static UResourceDataEntry *entryOpen(const char* path, const char* localeID, UEr
                     goto finishUnlock;
                 }
                 
-                if ( res_getResource(&t1->fData,"%%ParentIsRoot") == RES_BOGUS) {
-                    if ( usingUSRData && u2->fBogus == U_ZERO_ERROR ) {
-                        t1->fParent = u2;
-                        u2->fParent = t2;
-                    } else {
-                        t1->fParent = t2;
-                        if(usingUSRData) {
-                            /* the USR override data wasn't found, set it to be deleted */
-                            u2->fCountExisting = 0;
-                        }
-                    }
-                    t1 = t2;
+                if ( usingUSRData && u2->fBogus == U_ZERO_ERROR ) {
+                    t1->fParent = u2;
+                    u2->fParent = t2;
                 } else {
-                    if (usingUSRData) {
+                    t1->fParent = t2;
+                    if(usingUSRData) {
                         /* the USR override data wasn't found, set it to be deleted */
                         u2->fCountExisting = 0;
                     }
-                    /* t2->fCountExisting have to be decremented since the call to init_entry increments
-                     * it and if we hit this code, that means it is not set as the parent.
-                     */
-                    t2->fCountExisting--;
                 }
-                hasChopped = chopLocale(name);
+                t1 = t2;
+
+                Resource parentLocale = res_getResource(&t1->fData,"%%Parent");
+                if ( parentLocale != RES_BOGUS) { /* An explicit parent was found */
+                    int32_t parentLocaleLen = 0;
+                    const UChar *parentLocaleName = res_getString(&(t1->fData), parentLocale, &parentLocaleLen);
+                    if(parentLocaleName != NULL && parentLocaleLen > 0) {
+                        u_UCharsToChars(parentLocaleName, name, parentLocaleLen+1);
+                        if ( !uprv_strcmp(name,"root") ) { /* If parent is root, we just terminate the loop */
+                            hasChopped = FALSE;
+                        }
+                    }
+                } else {
+                    hasChopped = chopLocale(name);
+                }
             }
         }
 

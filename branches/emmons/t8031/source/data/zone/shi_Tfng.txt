@@ -10,6 +10,6 @@
  *  ICU <specials> source: <path>/xml/main/shi_Tfng.xml
  */
 shi_Tfng{
-    %%ParentIsRoot:int{1}
+    %%Parent{"root"}
     Version{"2.0.46.25"}
 }

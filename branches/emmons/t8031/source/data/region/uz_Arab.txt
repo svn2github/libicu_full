@@ -10,7 +10,7 @@
  *  ICU <specials> source: <path>/xml/main/uz_Arab.xml
  */
 uz_Arab{
-    %%ParentIsRoot:int{1}
+    %%Parent{"root"}
     Countries{
         AF{"افغانستان"}
     }

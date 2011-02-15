@@ -10,7 +10,7 @@
  *  ICU <specials> source: <path>/xml/main/zh_Hant.xml
  */
 zh_Hant{
-    %%ParentIsRoot:int{1}
+    %%Parent{"root"}
     Countries{
         014{"東非"}
         018{"非洲南部"}
