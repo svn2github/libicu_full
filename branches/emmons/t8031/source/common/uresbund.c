@@ -571,6 +571,17 @@ static UResourceDataEntry *entryOpen(const char* path, const char* localeID, UEr
                }
             }
             while (hasChopped && !isRoot && t1->fParent == NULL && !t1->fData.noFallback) {
+                if ( res_getResource(&t1->fData,"%%Parent") != RES_BOGUS) { /* An explicit parent was found */
+                    int32_t parentLocaleLen = 0;
+                    const UChar *parentLocaleName = res_getString(&(t1->fData), res_getResource(&t1->fData,"%%Parent") , &parentLocaleLen);
+                    if(parentLocaleName != NULL && parentLocaleLen > 0) {
+                        u_UCharsToChars(parentLocaleName, name, parentLocaleLen+1);
+                        if ( !uprv_strcmp(name,"root") ) { /* If parent is root, we just terminate the loop */
+                            hasChopped = FALSE;
+                            continue;
+                        }
+                    }
+                }
                 /* insert regular parents */
                 t2 = init_entry(name, t1->fPath, &parentStatus);
                 if ( usingUSRData ) {  /* This code inserts user override data into the inheritance chain */
@@ -594,20 +605,7 @@ static UResourceDataEntry *entryOpen(const char* path, const char* localeID, UEr
                     }
                 }
                 t1 = t2;
-
-                Resource parentLocale = res_getResource(&t1->fData,"%%Parent");
-                if ( parentLocale != RES_BOGUS) { /* An explicit parent was found */
-                    int32_t parentLocaleLen = 0;
-                    const UChar *parentLocaleName = res_getString(&(t1->fData), parentLocale, &parentLocaleLen);
-                    if(parentLocaleName != NULL && parentLocaleLen > 0) {
-                        u_UCharsToChars(parentLocaleName, name, parentLocaleLen+1);
-                        if ( !uprv_strcmp(name,"root") ) { /* If parent is root, we just terminate the loop */
-                            hasChopped = FALSE;
-                        }
-                    }
-                } else {
-                    hasChopped = chopLocale(name);
-                }
+                hasChopped = chopLocale(name);
             }
         }
 
@@ -623,6 +621,17 @@ static UResourceDataEntry *entryOpen(const char* path, const char* localeID, UEr
                 hasRealData = TRUE;
                 isDefault = TRUE;
                 while (hasChopped && t1->fParent == NULL) {
+                    if ( res_getResource(&t1->fData,"%%Parent") != RES_BOGUS) { /* An explicit parent was found */
+                        int32_t parentLocaleLen = 0;
+                        const UChar *parentLocaleName = res_getString(&(t1->fData), res_getResource(&t1->fData,"%%Parent") , &parentLocaleLen);
+                        if(parentLocaleName != NULL && parentLocaleLen > 0) {
+                            u_UCharsToChars(parentLocaleName, name, parentLocaleLen+1);
+                            if ( !uprv_strcmp(name,"root") ) { /* If parent is root, we just terminate the loop */
+                                hasChopped = FALSE;
+                                continue;
+                            }
+                        }
+                    }
                     /* insert chopped defaults */
                     t2 = init_entry(name, t1->fPath, &parentStatus);
                     /* Check for null pointer. */
