@@ -7,7 +7,14 @@
 // *
 // ***************************************************************************
 es_PE{
-    %%Parent{"es_419"}
+    NumberElements{
+        latn{
+            symbols{
+                decimal{"."}
+                group{","}
+            }
+        }
+    }
     Version{"2.0.47.43"}
     calendar{
         gregorian{

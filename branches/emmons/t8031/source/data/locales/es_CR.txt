@@ -7,15 +7,6 @@
 // *
 // ***************************************************************************
 es_CR{
-    %%Parent{"es_419"}
-    NumberElements{
-        latn{
-            symbols{
-                decimal{","}
-                group{"."}
-            }
-        }
-    }
     PaperSize:intvector{
         279,
         216,

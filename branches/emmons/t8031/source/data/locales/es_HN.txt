@@ -7,7 +7,14 @@
 // *
 // ***************************************************************************
 es_HN{
-    %%Parent{"es_419"}
+    NumberElements{
+        latn{
+            symbols{
+                decimal{"."}
+                group{","}
+            }
+        }
+    }
     Version{"2.0.45.82"}
     calendar{
         gregorian{

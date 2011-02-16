@@ -7,7 +7,14 @@
 // *
 // ***************************************************************************
 es_GT{
-    %%Parent{"es_419"}
+    NumberElements{
+        latn{
+            symbols{
+                decimal{"."}
+                group{","}
+            }
+        }
+    }
     PaperSize:intvector{
         279,
         216,
