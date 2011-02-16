@@ -7,10 +7,15 @@
 // *
 // ***************************************************************************
 es_PY{
+    %%Parent{"es_419"}
     NumberElements{
         latn{
             patterns{
                 currencyFormat{"¤ #,##0.00;¤ -#,##0.00"}
+            }
+            symbols{
+                decimal{","}
+                group{"."}
             }
         }
     }

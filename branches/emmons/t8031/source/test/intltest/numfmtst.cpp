@@ -6227,13 +6227,16 @@ void NumberFormatTest::TestExponentParse() {
 void NumberFormatTest::TestExplicitParents() {
 
     /* Test that number formats are properly inherited from es_419 */
+    /* These could be subject to change if the CLDR data changes */
     static const char* parentLocaleTests[][2]= {
     /* locale ID */  /* expected */
     {"es_CO", "1.250,75" },
     {"es_CR", "1.250,75" },
     {"es_ES", "1.250,75" },
+    {"es_GQ", "1.250,75" },
     {"es_MX", "1,250.75" },
     {"es_US", "1,250.75" },
+    {"es_VE", "1.250,75" },
     };
 
     UnicodeString s;
