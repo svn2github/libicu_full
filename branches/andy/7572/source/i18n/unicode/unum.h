@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 1997-2010, International Business Machines Corporation and others.
+* Copyright (C) 1997-2011, International Business Machines Corporation and others.
 * All Rights Reserved.
 * Modification History:
 *
@@ -189,6 +189,11 @@ typedef enum UNumberFormatRoundingMode {
     UNUM_FOUND_HALFEVEN,
     UNUM_ROUND_HALFDOWN,
     UNUM_ROUND_HALFUP,
+    /** 
+      * ROUND_UNNECESSARY reports an error if formatted result is not exact.
+      * @draft ICU 4.8
+      */
+    UNUM_ROUND_UNNECESSARY,
     /**
      * Half-even rounding
      * @stable, ICU 3.8
