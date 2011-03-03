@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT:
- * Copyright (c) 1997-2010, International Business Machines Corporation and
+ * Copyright (c) 1997-2011, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 
@@ -611,77 +611,9 @@ compareConsistentCountryInfo(const char *fromLocale, const char *toLocale) {
     }
     fromCalendar = ures_getByKey(fromLocaleBund, "calendar", NULL, &errorCode);
     fromGregorian = ures_getByKeyWithFallback(fromCalendar, "gregorian", NULL, &errorCode);
-    fromDateTimeElements = ures_getByKeyWithFallback(fromGregorian, "DateTimeElements", NULL, &errorCode);
 
     toCalendar = ures_getByKey(toLocaleBund, "calendar", NULL, &errorCode);
     toGregorian = ures_getByKeyWithFallback(toCalendar, "gregorian", NULL, &errorCode);
-    toDateTimeElements = ures_getByKeyWithFallback(toGregorian, "DateTimeElements", NULL, &errorCode);
-
-    if(U_FAILURE(errorCode)){
-        log_err("Did not get DateTimeElements from the bundle %s or %s\n", fromLocale, toLocale);
-        goto cleanup;
-    }
-
-    fromWeekendData = ures_getByKeyWithFallback(fromGregorian, "weekend", NULL, &errorCode);
-    if(U_FAILURE(errorCode)){
-        log_err("Did not get weekend data from the bundle %s to compare against %s\n", fromLocale, toLocale);
-        goto cleanup;
-    }
-    toWeekendData = ures_getByKeyWithFallback(toGregorian, "weekend", NULL, &errorCode);
-    if(U_FAILURE(errorCode)){
-        log_err("Did not get weekend data from the bundle %s to compare against %s\n", toLocale, fromLocale);
-        goto cleanup;
-    }
-
-    if (strcmp(fromLocale, "ar_IN") != 0)
-    {
-        int32_t fromSize;
-        int32_t toSize;
-        int32_t idx;
-        const int32_t *fromBundleArr = ures_getIntVector(fromDateTimeElements, &fromSize, &errorCode);
-        const int32_t *toBundleArr = ures_getIntVector(toDateTimeElements, &toSize, &errorCode);
-
-        if (fromSize > toSize) {
-            fromSize = toSize;
-            log_err("Arrays are different size with key \"DateTimeElements\" from \"%s\" to \"%s\"\n",
-                    fromLocale,
-                    toLocale);
-        }
-
-        for (idx = 0; idx < fromSize; idx++) {
-            if (fromBundleArr[idx] != toBundleArr[idx]) {
-                log_err("Difference with key \"DateTimeElements\" at index %d from \"%s\" to \"%s\"\n",
-                        idx,
-                        fromLocale,
-                        toLocale);
-            }
-        }
-    }
-
-    /* test for weekend data */
-    {
-        int32_t fromSize;
-        int32_t toSize;
-        int32_t idx;
-        const int32_t *fromBundleArr = ures_getIntVector(fromWeekendData, &fromSize, &errorCode);
-        const int32_t *toBundleArr = ures_getIntVector(toWeekendData, &toSize, &errorCode);
-
-        if (fromSize > toSize) {
-            fromSize = toSize;
-            log_err("Arrays are different size with key \"weekend\" data from \"%s\" to \"%s\"\n",
-                    fromLocale,
-                    toLocale);
-        }
-
-        for (idx = 0; idx < fromSize; idx++) {
-            if (fromBundleArr[idx] != toBundleArr[idx]) {
-                log_err("Difference with key \"weekend\" data at index %d from \"%s\" to \"%s\"\n",
-                        idx,
-                        fromLocale,
-                        toLocale);
-            }
-        }
-    }
 
     fromArray = ures_getByKey(fromLocaleBund, "CurrencyElements", NULL, &errorCode);
     toArray = ures_getByKey(toLocaleBund, "CurrencyElements", NULL, &errorCode);
@@ -724,11 +656,6 @@ compareConsistentCountryInfo(const char *fromLocale, const char *toLocale) {
     ures_close(toArray);
 
 cleanup:
-    ures_close(fromDateTimeElements);
-    ures_close(toDateTimeElements);
-    ures_close(fromWeekendData);
-    ures_close(toWeekendData);
-
     ures_close(fromCalendar);
     ures_close(toCalendar);
     ures_close(fromGregorian);
@@ -938,7 +865,7 @@ findSetMatch( UScriptCode *scriptCodes, int32_t scriptsLen,
 }
 
 static void VerifyTranslation(void) {
-    static const UVersionInfo icu47 = { 4, 7, 0, 0 };
+    static const UVersionInfo icu47 = { 4, 7, 2, 0 };
     UResourceBundle *root, *currentLocale;
     int32_t locCount = uloc_countAvailable();
     int32_t locIndex;
@@ -1307,6 +1234,43 @@ static void TestCoverage(void){
     ulocdata_close(uld);
 }
 
+static void TestIndexChars(void) {
+    /* Very basic test of ULOCDATA_ES_INDEX.
+     * No comprehensive test of data, just basic check that the code path is alive.
+     */
+    UErrorCode status = U_ZERO_ERROR;
+    ULocaleData  *uld;
+    USet *exemplarChars;
+    USet *indexChars;
+
+    uld = ulocdata_open("en", &status);
+    exemplarChars = uset_openEmpty();
+    indexChars = uset_openEmpty();
+    ulocdata_getExemplarSet(uld, exemplarChars, 0, ULOCDATA_ES_STANDARD, &status);
+    ulocdata_getExemplarSet(uld, indexChars, 0, ULOCDATA_ES_INDEX, &status);
+    if (U_FAILURE(status)) {
+        log_err("File %s, line %d, Failure opening exemplar chars: %s", __FILE__, __LINE__, u_errorName(status));
+        goto close_sets;
+    }
+    /* en data, standard exemplars are [a-z], lower case. */
+    /* en data, index characters are [A-Z], upper case. */
+    if ((uset_contains(exemplarChars, (UChar32)0x41) || uset_contains(indexChars, (UChar32)0x61))) {
+        log_err("File %s, line %d, Exemplar characters incorrect.", __FILE__, __LINE__ );
+        goto close_sets;
+    }
+    if (!(uset_contains(exemplarChars, (UChar32)0x61) && uset_contains(indexChars, (UChar32)0x41) )) {
+        log_err("File %s, line %d, Exemplar characters incorrect.", __FILE__, __LINE__ );
+        goto close_sets;
+    }
+
+  close_sets:
+    uset_close(exemplarChars);
+    uset_close(indexChars);
+    ulocdata_close(uld);
+}
+
+
+
 static void TestCurrencyList(void){
 #if !UCONFIG_NO_FORMATTING
     UErrorCode errorCode = U_ZERO_ERROR;
@@ -1357,4 +1321,6 @@ void addCLDRTest(TestNode** root)
     TESTCASE(TestExemplarSet);
     TESTCASE(TestLocaleDisplayPattern);
     TESTCASE(TestCoverage);
+    TESTCASE(TestIndexChars);
 }
+

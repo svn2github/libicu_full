@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT: 
- * Copyright (c) 1997-2010, International Business Machines Corporation and
+ * Copyright (c) 1997-2011, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 /*******************************************************************************
@@ -250,7 +250,7 @@ static void checkStatus(int32_t line, UErrorCode expected, UErrorCode status) {
 }
 
 static void TestErrorCodes(void) {
-  static const UVersionInfo icu47 = { 4, 7, 0, 0 };
+  static const UVersionInfo icu47 = { 4, 7, 2, 0 };
   UErrorCode status = U_USING_DEFAULT_WARNING;
 
   UResourceBundle *r = NULL, *r2 = NULL;
@@ -2603,8 +2603,8 @@ static void TestGetFunctionalEquivalent(void) {
 
     static const char *calCases[] = {
         /*   avail   locale                       equiv   */
-        "t",    "en_US_POSIX",                   "en_US@calendar=gregorian",
-        "f",    "ja_JP_TOKYO",                   "ja_JP@calendar=gregorian",
+        "t",    "en_US_POSIX",                   "en@calendar=gregorian",
+        "f",    "ja_JP_TOKYO",                   "ja@calendar=gregorian",
         "f",    "ja_JP_TOKYO@calendar=japanese", "ja@calendar=japanese",
         "t",    "sr@calendar=gregorian", "sr@calendar=gregorian",
         "t",    "en", "en@calendar=gregorian",
