@@ -19,10 +19,11 @@ U_NAMESPACE_BEGIN
 EventListener::~EventListener() {}
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(EventListener)
 
+static UMTX notifyLock;
+
 ICUNotifier::ICUNotifier(void) 
-: notifyLock(0), listeners(NULL) 
+: listeners(NULL) 
 {
-    umtx_init(&notifyLock);
 }
 
 ICUNotifier::~ICUNotifier(void) {
@@ -31,7 +32,6 @@ ICUNotifier::~ICUNotifier(void) {
         delete listeners;
         listeners = NULL;
     }
-    umtx_destroy(&notifyLock);
 }
 
 
