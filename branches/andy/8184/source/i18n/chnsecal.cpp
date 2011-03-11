@@ -90,7 +90,6 @@ static UBool calendar_chinese_cleanup(void) {
         delete gChineseCalendarNewYearCache;
         gChineseCalendarNewYearCache = NULL;
     }
-    umtx_destroy(&astroLock);
     return TRUE;
 }
 U_CDECL_END

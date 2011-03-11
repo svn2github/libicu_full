@@ -42,8 +42,6 @@ U_CDECL_BEGIN
  */
 static UBool U_CALLCONV zoneMeta_cleanup(void)
 {
-     umtx_destroy(&gZoneMetaLock);
-
     if (gOlsonToMeta != NULL) {
         uhash_close(gOlsonToMeta);
         gOlsonToMeta = NULL;

@@ -156,15 +156,6 @@ static UBool U_CALLCONV timeZone_cleanup(void)
     uprv_free(MAP_CANONICAL_SYSTEM_LOCATION_ZONES);
     MAP_CANONICAL_SYSTEM_LOCATION_ZONES = 0;
 
-    if (LOCK) {
-        umtx_destroy(&LOCK);
-        LOCK = NULL;
-    }
-    if (TZSET_LOCK) {
-        umtx_destroy(&TZSET_LOCK);
-        TZSET_LOCK = NULL;
-    }
-
     return TRUE;
 }
 U_CDECL_END

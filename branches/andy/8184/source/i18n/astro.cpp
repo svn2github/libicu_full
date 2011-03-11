@@ -67,7 +67,6 @@ static UMTX ccLock = NULL;
 
 U_CDECL_BEGIN
 static UBool calendar_astro_cleanup(void) {
-  umtx_destroy(&ccLock);
   return TRUE;
 }
 U_CDECL_END

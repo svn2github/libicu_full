@@ -42,7 +42,6 @@ U_CDECL_BEGIN
  */
 static UBool U_CALLCONV zoneStringFormat_cleanup(void)
 {
-    umtx_destroy(&gZSFCacheLock);
     if (gZoneStringFormatCache != NULL) {
         delete gZoneStringFormatCache;
         gZoneStringFormatCache = NULL;

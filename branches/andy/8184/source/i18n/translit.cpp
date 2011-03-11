@@ -1,6 +1,6 @@
 /*
  **********************************************************************
- *   Copyright (C) 1999-2010, International Business Machines
+ *   Copyright (C) 1999-2011, International Business Machines
  *   Corporation and others.  All Rights Reserved.
  **********************************************************************
  *   Date        Name        Description
@@ -1635,7 +1635,6 @@ U_CFUNC UBool utrans_transliterator_cleanup(void) {
         delete registry;
         registry = NULL;
     }
-    umtx_destroy(&registryMutex);
     return TRUE;
 }
 

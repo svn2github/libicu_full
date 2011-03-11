@@ -293,7 +293,6 @@ struct CReg : public U_NAMESPACE_QUALIFIER UMemory {
             gCRegHead = gCRegHead->next;
             delete n;
         }
-        umtx_destroy(&gCRegLock);
     }
 };
 

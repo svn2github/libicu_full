@@ -108,10 +108,23 @@
 
 /*
  * Code within ICU that accesses shared static or global data should
- * instantiate a Mutex object while doing so.  The unnamed global mutex
- * is used throughout ICU, so keep locking short and sweet.
+ * lock a UMTX object while doing so.  
+ *
+ * All UMTX objects must be static.  No explicit initialization is required.
  *
  * For example:
+ *
+ * static UMTX lock;         // Declare a mutex.
+ * void Function(int arg1, int arg2)
+ * {
+ *   static Object* foo;     // Shared read-write object
+ *   umtx_lock(&lock);       // Lock a specific mutex
+ *   foo->Method();
+ *   umtx_unlock(&lock);
+ * }
+ *
+ * The global ICU mutex is used throughout ICU, so keep locking
+ * short and sweet.  
  *
  * void Function(int arg1, int arg2)
  * {
@@ -137,27 +150,6 @@ U_CAPI void U_EXPORT2 umtx_lock   ( UMTX* mutex );
  *              the global ICU mutex.
  */
 U_CAPI void U_EXPORT2 umtx_unlock ( UMTX* mutex );
-
-/* Initialize a mutex. Use it this way:
-   umtx_init( &aMutex ); 
- * ICU Mutexes do not need explicit initialization before use.  Use of this
- *   function is not necessary.
- * Initialization of an already initialized mutex has no effect, and is safe to do.
- * Initialization of mutexes is thread safe.  Two threads can concurrently 
- *   initialize the same mutex without causing problems.
- * @param mutex The given mutex to be initialized
- */
-U_CAPI void U_EXPORT2 umtx_init   ( UMTX* mutex );
-
-/* Destroy a mutex. This will free the resources of a mutex.
- * Use it this way:
- *   umtx_destroy( &aMutex ); 
- * Destroying an already destroyed mutex has no effect, and causes no problems.
- * This function is not thread safe.  Two threads must not attempt to concurrently
- *   destroy the same mutex.
- * @param mutex The given mutex to be destroyed.
- */
-U_CAPI void U_EXPORT2 umtx_destroy( UMTX *mutex );
 
 /*
  * Atomic Increment and Decrement of an int32_t value.

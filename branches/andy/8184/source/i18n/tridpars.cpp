@@ -1,6 +1,6 @@
 /*
 **********************************************************************
-*   Copyright (c) 2002-2009, International Business Machines Corporation
+*   Copyright (c) 2002-2011, International Business Machines Corporation
 *   and others.  All Rights Reserved.
 **********************************************************************
 *   Date        Name        Description
@@ -928,7 +928,6 @@ void TransliteratorIDParser::cleanup() {
         delete SPECIAL_INVERSES;
         SPECIAL_INVERSES = NULL;
     }
-    umtx_destroy(&LOCK);
 }
 
 U_NAMESPACE_END

@@ -1,6 +1,6 @@
 /*
 ******************************************************************************
-* Copyright (C) 2003-2010, International Business Machines Corporation
+* Copyright (C) 2003-2011, International Business Machines Corporation
 * and others. All Rights Reserved.
 ******************************************************************************
 *
@@ -65,7 +65,6 @@ static UBool calendar_islamic_cleanup(void) {
         delete gIslamicCalendarAstro;
         gIslamicCalendarAstro = NULL;
     }
-    umtx_destroy(&astroLock);
     return TRUE;
 }
 U_CDECL_END

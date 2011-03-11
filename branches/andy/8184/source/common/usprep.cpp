@@ -196,9 +196,6 @@ static UBool U_CALLCONV usprep_cleanup(void){
         }
     }
 
-    umtx_destroy(&usprepMutex);             /* Don't worry about destroying the mutex even  */
-                                            /*  if the hash table still exists.  The mutex  */
-                                            /*  will lazily re-init  itself if needed.      */
     return (SHARED_DATA_HASHTABLE == NULL);
 }
 U_CDECL_END

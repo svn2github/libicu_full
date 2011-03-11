@@ -394,11 +394,6 @@ void MultithreadTest::TestMutex()
     }
 
     // All threads made it by both mutexes.
-    // Destroy the test mutexes.
-    umtx_destroy(&gTestMutexA);
-    umtx_destroy(&gTestMutexB);
-    gTestMutexA=NULL;
-    gTestMutexB=NULL;
 
     for (i=0; i<TESTMUTEX_THREAD_COUNT; i++) {
         delete threads[i];
