@@ -29,6 +29,34 @@
 # include <libkern/OSAtomic.h>
 #endif
 
+/* Assume POSIX, and modify as necessary below */
+#define POSIX
+
+#if defined(U_WINDOWS)
+#undef POSIX
+#endif
+#if defined(macintosh)
+#undef POSIX
+#endif
+#if defined(OS2)
+#undef POSIX
+#endif
+
+#if defined(POSIX) && (ICU_USE_THREADS==1)
+# include <pthread.h> /* must be first, so that we get the multithread versions of things. */
+
+#endif /* POSIX && (ICU_USE_THREADS==1) */
+
+#ifdef U_WINDOWS
+# define WIN32_LEAN_AND_MEAN
+# define VC_EXTRALEAN
+# define NOUSER
+# define NOSERVICE
+# define NOIME
+# define NOMCX
+# include <windows.h>
+#endif
+
 /*
  * If we do not compile with dynamic_annotations.h then define
  * empty annotation macros.
@@ -137,19 +165,49 @@
  * an alternative C++ mutex API is defined in the file common/mutex.h
  */
 
+#if (ICU_USE_THREADS == 0)
+typedef void *MUTEX_TYPE;
+#elif defined(U_WINDOWS)
+typedef CRITICAL_SECTION MUTEX_TYPE;
+#elif defined(POSIX)
+typedef pthread_mutex_t MUTEX_TYPE;
+#else
+// Unknown platform.
+typedef void *MUTEX_TYPE;
+#endif
+
+
+typedef struct ICUMutex {
+    UMTX          userMutex_;
+    MUTEX_TYPE    platformMutex_;
+    UBool         initialized_;
+}
+
+#if (ICU_USE_THREADS == 0)
+#define ICU_MUTEX_INITIALIZER  {NULL, NULL, FALSE}
+#elif defined(U_WINDOWS)
+// Note: there is no initizer available for a Win32 CRITICAL_SECTION
+#define ICU_MUTEX_INITIALIZER {NULL}
+#elif defined(POSIX)
+#define ICU_MUTEX_INITIALIZER = {NULL, PTHREAD_MUTEX_INITIALIZER, FALSE}
+#else
+#define ICU_MUTEX_INITIALIZER = {NULL, NULL, FALSE}
+#endif
+
+
 /* Lock a mutex.
  * @param mutex The given mutex to be locked.  Pass NULL to specify
  *              the global ICU mutex.  Recursive locks are an error
  *              and may cause a deadlock on some platforms.
  */
-U_CAPI void U_EXPORT2 umtx_lock   ( UMTX* mutex ); 
+U_CAPI void U_EXPORT2 umtx_lock   ( ICUMutex* mutex ); 
 
 /* Unlock a mutex. Pass in NULL if you want the single global
    mutex. 
  * @param mutex The given mutex to be unlocked.  Pass NULL to specify
  *              the global ICU mutex.
  */
-U_CAPI void U_EXPORT2 umtx_unlock ( UMTX* mutex );
+U_CAPI void U_EXPORT2 umtx_unlock ( ICUMutex* mutex );
 
 /*
  * Atomic Increment and Decrement of an int32_t value.

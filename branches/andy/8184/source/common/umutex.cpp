@@ -6,7 +6,7 @@
 *
 ******************************************************************************
 *
-* File umutex.c
+* File umutex.cpp
 *
 * Modification History:
 *
@@ -77,24 +77,10 @@
 /*
  * A note on ICU Mutex Initialization and ICU startup:
  *
- *   ICU mutexes, as used through the rest of the ICU code, are self-initializing.
- *   To make this work, ICU uses the _ICU GLobal Mutex_ to synchronize the lazy init
- *   of other ICU mutexes.  For the global mutex itself, we need some other mechanism
- *   to safely initialize it on first use.  This becomes important when two or more
- *   threads are more or less simultaenously the first to use ICU in a process, and
- *   are racing into the mutex initialization code.
+ *   All ICU mutexs must be declared as static variables.  They cannot be
+ *   dynamically instantiated.
  *
- *
- *   The solution for the global mutex init is platform dependent.
- *   On POSIX systems, plain C-style initialization can be used on a mutex, with the 
- *   macro PTHREAD_MUTEX_INITIALIZER.  The mutex is then ready for use, without
- *   first calling pthread_mutex_init().
- *
- *   Windows has no equivalent statically initialized mutex or CRITICAL SECION.
- *   InitializeCriticalSection() must be called.  If the global mutex does not
- *   appear to be initialized, a thread will create and initialize a new
- *   CRITICAL_SECTION, then use a Windows InterlockedCompareAndExchange to
- *   swap it in as the global mutex while avoid problems with race conditions.
+ *   TODO:  explanation of init, 
  */ 
 
 /* On WIN32 mutexes are reentrant.  On POSIX platforms they are not, and a deadlock
