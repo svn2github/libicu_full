@@ -374,6 +374,7 @@
     <ClCompile Include="unorm_it.c" />
     <ClCompile Include="unormcmp.cpp" />
     <ClCompile Include="bmpset.cpp" />
+    <ClCompile Include="patternprops.cpp" />
     <ClCompile Include="propname.cpp" />
     <ClCompile Include="ruleiter.cpp" />
     <ClCompile Include="ucase.c" />
@@ -1189,6 +1190,7 @@
     <ClInclude Include="unorm_it.h" />
     <ClInclude Include="unormimp.h" />
     <ClInclude Include="bmpset.h" />
+    <ClInclude Include="patternprops.h" />
     <ClInclude Include="propname.h" />
     <ClInclude Include="ruleiter.h" />
     <CustomBuild Include="unicode\symtable.h">
