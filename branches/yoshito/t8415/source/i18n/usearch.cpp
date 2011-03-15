@@ -3348,14 +3348,6 @@ U_CAPI int32_t U_EXPORT2 usearch_previous(UStringSearch *strsrch,
                 }
             }
             else {
-#if !BOYER_MOORE
-                if (search->matchedIndex != USEARCH_DONE) {
-                    if (search->isOverlap) {
-                        ucol_setOffset(strsrch->textIter, search->matchedIndex + search->matchedLength - 2, status);
-                    }
-                }
-#endif
-
                 if (strsrch->search->isCanonicalMatch) {
                     // can't use exact here since extra accents are allowed.
                     usearch_handlePreviousCanonical(strsrch, status);
@@ -4606,7 +4598,34 @@ UBool usearch_handlePreviousExact(UStringSearch *strsrch, UErrorCode *status)
     setMatchNotFound(strsrch);
     return FALSE;
 #else
-    int32_t textOffset = ucol_getOffset(strsrch->textIter);
+    int32_t textOffset;
+
+    if (strsrch->search->isOverlap) {
+        if (strsrch->search->matchedIndex != USEARCH_DONE) {
+            textOffset = strsrch->search->matchedIndex + strsrch->search->matchedLength - 1;
+        } else {
+            // move the start position at the end of possible match
+            int32_t nCEs = 0;
+            while (nCEs < strsrch->pattern.CELength - 1) {
+                int32_t ce = ucol_next(strsrch->textIter, status);
+                if (U_FAILURE(*status)) {
+                    setMatchNotFound(strsrch);
+                    return FALSE;
+                }
+                if (ce == UCOL_NULLORDER) {
+                    // at the end of the text
+                    break;
+                }
+                if (ce != UCOL_IGNORABLE) {
+                    nCEs++;
+                }
+            }
+            textOffset = ucol_getOffset(strsrch->textIter);
+        }
+    } else {
+        textOffset = ucol_getOffset(strsrch->textIter);
+    }
+
     int32_t start = -1;
     int32_t end = -1;
 
@@ -4731,7 +4750,34 @@ UBool usearch_handlePreviousCanonical(UStringSearch *strsrch,
     setMatchNotFound(strsrch);
     return FALSE;
 #else
-    int32_t textOffset = ucol_getOffset(strsrch->textIter);
+    int32_t textOffset;
+
+    if (strsrch->search->isOverlap) {
+        if (strsrch->search->matchedIndex != USEARCH_DONE) {
+            textOffset = strsrch->search->matchedIndex + strsrch->search->matchedLength - 1;
+        } else {
+            // move the start position at the end of possible match
+            int32_t nCEs = 0;
+            while (nCEs < strsrch->pattern.CELength - 1) {
+                int32_t ce = ucol_next(strsrch->textIter, status);
+                if (U_FAILURE(*status)) {
+                    setMatchNotFound(strsrch);
+                    return FALSE;
+                }
+                if (ce == UCOL_NULLORDER) {
+                    // at the end of the text
+                    break;
+                }
+                if (ce != UCOL_IGNORABLE) {
+                    nCEs++;
+                }
+            }
+            textOffset = ucol_getOffset(strsrch->textIter);
+        }
+    } else {
+        textOffset = ucol_getOffset(strsrch->textIter);
+    }
+
     int32_t start = -1;
     int32_t end = -1;
 
