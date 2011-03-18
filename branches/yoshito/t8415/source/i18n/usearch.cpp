@@ -4163,7 +4163,7 @@ U_CAPI UBool U_EXPORT2 usearch_searchBackwards(UStringSearch  *strsrch,
 
         mStart   = firstCEI->lowIndex;
         minLimit = lastCEI->lowIndex;
-        maxLimit = targetIx > 0? nextCEI->lowIndex : lastCEI->highIndex;
+        maxLimit = targetIx > 0? nextCEI->lowIndex : lastCEI->highIndex + 1;
 
         // Look at the CE following the match.  If it is UCOL_NULLORDER the match
         //   extended to the end of input, and the match is good.
@@ -4199,7 +4199,7 @@ U_CAPI UBool U_EXPORT2 usearch_searchBackwards(UStringSearch  *strsrch,
         //  Advance the match end position to the first acceptable match boundary.
         //    This advances the index over any combining charcters.
         mLimit = maxLimit;
-        if (/*targetIx > 0 &&*/ minLimit < maxLimit) {
+        if (maxLimit < strsrch->search->textLength && minLimit < maxLimit) {
             int32_t nba = nextBoundaryAfter(strsrch, minLimit);
 
             if (nba >= lastCEI->highIndex) {
