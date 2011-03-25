@@ -1869,7 +1869,7 @@ ucurr_createCurrencyList(UErrorCode* status){
                     int64_t currDate64 = (int64_t)fromArray[0] << 32;
                     currDate64 |= ((int64_t)fromArray[1] & (int64_t)INT64_C(0x00000000FFFFFFFF));
                     UDate fromDate = (UDate)currDate64;
-                    UDate toDate = DBL_MAX;
+                    UDate toDate = U_DATE_MAX;
 
                     if (ures_getSize(currencyRes)> 2) {
                         int32_t toLength = 0;
