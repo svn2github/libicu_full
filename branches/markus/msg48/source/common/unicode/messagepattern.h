@@ -21,6 +21,7 @@
  */
 
 #include "unicode/utypes.h"
+#include "unicode/parseerr.h"
 #include "unicode/unistr.h"
 #include "patternprops.h"  // TODO: remove from public header
 
@@ -240,6 +241,32 @@ enum UMessagePatternArgType {
 };
 typedef enum UMessagePatternArgType UMessagePatternArgType;
 
+enum {
+    /**
+     * Return value from MessagePattern.validateArgumentName() for when
+     * the string is a valid "pattern identifier" but not a number.
+     * @draft ICU 4.8
+     */
+    UMSGPAT_ARG_NAME_NOT_NUMBER=-1,
+
+    /**
+     * Return value from MessagePattern.validateArgumentName() for when
+     * the string is invalid.
+     * It might not be a valid "pattern identifier",
+     * or it have only ASCII digits but there is a leading zero or the number is too large.
+     * @draft ICU 4.8
+     */
+    UMSGPAT_ARG_NAME_NOT_VALID=-2
+};
+
+/**
+ * Special value that is returned by getNumericValue(Part) when no
+ * numeric value is defined for a part.
+ * @see #getNumericValue
+ * @draft ICU 4.8
+ */
+#define UMSGPAT_NO_NUMERIC_VALUE -123456789
+
 U_NAMESPACE_BEGIN
 
 class MessagePatternDoubleList;
@@ -304,33 +331,44 @@ class U_COMMON_API MessagePattern : public UObject {
 public:
     /**
      * Constructs an empty MessagePattern with default UMessagePatternApostropheMode.
+     * @param errorCode Standard ICU error code. Its input value must
+     *                  pass the U_SUCCESS() test, or else the function returns
+     *                  immediately. Check for U_FAILURE() on output or use with
+     *                  function chaining. (See User Guide for details.)
      * @draft ICU 4.8
      */
     MessagePattern(UErrorCode & /*errorCode*/)
             : aposMode(UCONFIG_MSGPAT_DEFAULT_APOSTROPHE_MODE),
               partsList(NULL), parts(NULL), partsLength(0),
               numericValuesList(NULL), numericValues(NULL), numericValuesLength(0),
-              hasArgNames(FALSE), hasArgNumbers(FALSE), needsAutoQuoting(FALSE),
-              frozen(FALSE) {
+              hasArgNames(FALSE), hasArgNumbers(FALSE), needsAutoQuoting(FALSE) {
     }
 
     /**
      * Constructs an empty MessagePattern.
      * @param mode Explicit UMessagePatternApostropheMode.
+     * @param errorCode Standard ICU error code. Its input value must
+     *                  pass the U_SUCCESS() test, or else the function returns
+     *                  immediately. Check for U_FAILURE() on output or use with
+     *                  function chaining. (See User Guide for details.)
      * @draft ICU 4.8
      */
     MessagePattern(UMessagePatternApostropheMode mode, UErrorCode & /*errorCode*/)
             : aposMode(mode),
               partsList(NULL), parts(NULL), partsLength(0),
               numericValuesList(NULL), numericValues(NULL), numericValuesLength(0),
-              hasArgNames(FALSE), hasArgNumbers(FALSE), needsAutoQuoting(FALSE),
-              frozen(FALSE) {
+              hasArgNames(FALSE), hasArgNumbers(FALSE), needsAutoQuoting(FALSE) {
     }
 
     /**
      * Constructs a MessagePattern with default UMessagePatternApostropheMode and
      * parses the MessageFormat pattern string.
      * @param pattern a MessageFormat pattern string
+     * @param errorCode Standard ICU error code. Its input value must
+     *                  pass the U_SUCCESS() test, or else the function returns
+     *                  immediately. Check for U_FAILURE() on output or use with
+     *                  function chaining. (See User Guide for details.)
+     * TODO: turn @throws into UErrorCode specifics?
      * @throws IllegalArgumentException for syntax errors in the pattern string
      * @throws IndexOutOfBoundsException if certain limits are exceeded
      *         (e.g., argument number too high, argument name too long, etc.)
@@ -341,14 +379,31 @@ public:
             : aposMode(UCONFIG_MSGPAT_DEFAULT_APOSTROPHE_MODE),
               partsList(NULL), parts(NULL), partsLength(0),
               numericValuesList(NULL), numericValues(NULL), numericValuesLength(0),
-              hasArgNames(FALSE), hasArgNumbers(FALSE), needsAutoQuoting(FALSE),
-              frozen(FALSE) {
-        parse(pattern, errorCode);
+              hasArgNames(FALSE), hasArgNumbers(FALSE), needsAutoQuoting(FALSE) {
+        parse(pattern, NULL, errorCode);
     }
 
-    // TODO: copy constructor
+    /**
+     * Copy constructor.
+     * @draft ICU 4.8
+     */
+    MessagePattern(const MessagePattern &other)
+            : aposMode(other.aposMode), msg(other.msg),
+              partsList(NULL), parts(NULL), partsLength(0),
+              numericValuesList(NULL), numericValues(NULL), numericValuesLength(0),
+              hasArgNames(other.hasArgNames), hasArgNumbers(other.hasArgNumbers),
+              needsAutoQuoting(other.needsAutoQuoting) {
+        // TODO: newMsg.parts=(ArrayList<Part>)parts.clone();
+        // TODO: if(numericValues!=null) { newMsg.numericValues=(ArrayList<Double>)numericValues.clone(); }
+    }
 
-    // TODO: assignment operator
+    /**
+     * Assignment operator.
+     * @draft ICU 4.8
+     */
+    MessagePattern &operator=(const MessagePattern &other) {
+        // TODO: see copy constructor
+    }
 
     /**
      * Destructor.
@@ -359,16 +414,23 @@ public:
     /**
      * Parses a MessageFormat pattern string.
      * @param pattern a MessageFormat pattern string
-     * @return this
+     * @param parseError Struct to receive information on the position
+     *                   of an error within the pattern.
+     *                   Can be NULL.
+     * @param errorCode Standard ICU error code. Its input value must
+     *                  pass the U_SUCCESS() test, or else the function returns
+     *                  immediately. Check for U_FAILURE() on output or use with
+     *                  function chaining. (See User Guide for details.)
+     * @return *this
      * @throws IllegalArgumentException for syntax errors in the pattern string
      * @throws IndexOutOfBoundsException if certain limits are exceeded
      *         (e.g., argument number too high, argument name too long, etc.)
      * @throws NumberFormatException if a number could not be parsed
      * @draft ICU 4.8
      */
-    MessagePattern &parse(const UnicodeString &pattern, UErrorCode &errorCode) {
+    MessagePattern &parse(const UnicodeString &pattern, UParseError *parseError, UErrorCode &errorCode) {
         preParse(pattern, errorCode);
-        parseMessage(0, 0, 0, UMSGPAT_ARG_TYPE_NONE, errorCode);
+        parseMessage(0, 0, 0, UMSGPAT_ARG_TYPE_NONE, parseError, errorCode);
         postParse();
         return *this;
     }
@@ -376,16 +438,23 @@ public:
     /**
      * Parses a ChoiceFormat pattern string.
      * @param pattern a ChoiceFormat pattern string
-     * @return this
+     * @param parseError Struct to receive information on the position
+     *                   of an error within the pattern.
+     *                   Can be NULL.
+     * @param errorCode Standard ICU error code. Its input value must
+     *                  pass the U_SUCCESS() test, or else the function returns
+     *                  immediately. Check for U_FAILURE() on output or use with
+     *                  function chaining. (See User Guide for details.)
+     * @return *this
      * @throws IllegalArgumentException for syntax errors in the pattern string
      * @throws IndexOutOfBoundsException if certain limits are exceeded
      *         (e.g., argument number too high, argument name too long, etc.)
      * @throws NumberFormatException if a number could not be parsed
      * @draft ICU 4.8
      */
-    MessagePattern &parseChoiceStyle(const UnicodeString &pattern, UErrorCode &errorCode) {
+    MessagePattern &parseChoiceStyle(const UnicodeString &pattern, UParseError *parseError, UErrorCode &errorCode) {
         preParse(pattern, errorCode);
-        parseChoiceStyle(0, 0, errorCode);
+        parseChoiceStyle(0, 0, parseError, errorCode);
         postParse();
         return *this;
     }
@@ -393,16 +462,23 @@ public:
     /**
      * Parses a PluralFormat pattern string.
      * @param pattern a PluralFormat pattern string
-     * @return this
+     * @param parseError Struct to receive information on the position
+     *                   of an error within the pattern.
+     *                   Can be NULL.
+     * @param errorCode Standard ICU error code. Its input value must
+     *                  pass the U_SUCCESS() test, or else the function returns
+     *                  immediately. Check for U_FAILURE() on output or use with
+     *                  function chaining. (See User Guide for details.)
+     * @return *this
      * @throws IllegalArgumentException for syntax errors in the pattern string
      * @throws IndexOutOfBoundsException if certain limits are exceeded
      *         (e.g., argument number too high, argument name too long, etc.)
      * @throws NumberFormatException if a number could not be parsed
      * @draft ICU 4.8
      */
-    MessagePattern &parsePluralStyle(const UnicodeString &pattern, UErrorCode &errorCode) {
+    MessagePattern &parsePluralStyle(const UnicodeString &pattern, UParseError *parseError, UErrorCode &errorCode) {
         preParse(pattern, errorCode);
-        parsePluralOrSelectStyle(UMSGPAT_ARG_TYPE_PLURAL, 0, 0, errorCode);
+        parsePluralOrSelectStyle(UMSGPAT_ARG_TYPE_PLURAL, 0, 0, parseError, errorCode);
         postParse();
         return *this;
     }
@@ -410,16 +486,23 @@ public:
     /**
      * Parses a SelectFormat pattern string.
      * @param pattern a SelectFormat pattern string
-     * @return this
+     * @param parseError Struct to receive information on the position
+     *                   of an error within the pattern.
+     *                   Can be NULL.
+     * @param errorCode Standard ICU error code. Its input value must
+     *                  pass the U_SUCCESS() test, or else the function returns
+     *                  immediately. Check for U_FAILURE() on output or use with
+     *                  function chaining. (See User Guide for details.)
+     * @return *this
      * @throws IllegalArgumentException for syntax errors in the pattern string
      * @throws IndexOutOfBoundsException if certain limits are exceeded
      *         (e.g., argument number too high, argument name too long, etc.)
      * @throws NumberFormatException if a number could not be parsed
      * @draft ICU 4.8
      */
-    MessagePattern &parseSelectStyle(const UnicodeString &pattern, UErrorCode &errorCode) {
+    MessagePattern &parseSelectStyle(const UnicodeString &pattern, UParseError *parseError, UErrorCode &errorCode) {
         preParse(pattern, errorCode);
-        parsePluralOrSelectStyle(UMSGPAT_ARG_TYPE_SELECT, 0, 0, errorCode);
+        parsePluralOrSelectStyle(UMSGPAT_ARG_TYPE_SELECT, 0, 0, parseError, errorCode);
         postParse();
         return *this;
     }
@@ -430,11 +513,6 @@ public:
      */
     void clear() {
         // Mostly the same as preParse().
-        if(isFrozen()) {
-            // Java: throw new UnsupportedOperationException(
-            //          "Attempt to clear() a frozen MessagePattern instance.");
-            return;
-        }
         msg.remove();
         hasArgNames=hasArgNumbers=FALSE;
         needsAutoQuoting=FALSE;
@@ -532,26 +610,10 @@ public:
      */
     static int32_t validateArgumentName(const UnicodeString &name) {
         if(!PatternProps::isIdentifier(name.getBuffer(), name.length())) {
-            return ARG_NAME_NOT_VALID;
+            return UMSGPAT_ARG_NAME_NOT_VALID;
         }
         return 0;  // TODO: parseArgNumber(name, 0, name.length());
     }
-
-    /**
-     * Return value from {@link #validateArgumentName(String)} for when
-     * the string is a valid "pattern identifier" but not a number.
-     * @draft ICU 4.8
-     */
-    static const int32_t ARG_NAME_NOT_NUMBER=-1;
-
-    /**
-     * Return value from {@link #validateArgumentName(String)} for when
-     * the string is invalid.
-     * It might not be a valid "pattern identifier",
-     * or it have only ASCII digits but there is a leading zero or the number is too large.
-     * @draft ICU 4.8
-     */
-    static const int32_t ARG_NAME_NOT_VALID=-2;
 
     /**
      * Returns a version of the parsed pattern string where each ASCII apostrophe
@@ -671,14 +733,6 @@ public:
             return NO_NUMERIC_VALUE;
         }
     }
-
-    /**
-     * Special value that is returned by getNumericValue(Part) when no
-     * numeric value is defined for a part.
-     * @see #getNumericValue
-     * @draft ICU 4.8
-     */
-    static const double NO_NUMERIC_VALUE=-123456789;
 
     /**
      * Returns the "offset:" value of a PluralFormat argument, or 0 if none is specified.
@@ -824,6 +878,9 @@ public:
             return ((type*37+index)*37+length)*37+value;
         }
 
+    private:
+        friend class MessagePattern;
+
         static const int32_t MAX_LENGTH=0xffff;
         static const int32_t MAX_VALUE=0x7fff;
 
@@ -836,65 +893,8 @@ public:
         int32_t limitPartIndex;
     };
 
-    /**
-     * Creates and returns a copy of this object.
-     * @return a copy of this object (or itself if frozen).
-     * @draft ICU 4.8
-     */
-    MessagePattern *clone() const {
-        MessagePattern *newMsg=cloneAsThawed();
-        if(isFrozen() && newMsg!=NULL) {
-            newMsg->freeze();
-        }
-        return newMsg;
-    }
-
-    /**
-     * Creates and returns an unfrozen copy of this object.
-     * @return a copy of this object.
-     * @draft ICU 4.8
-     */
-    MessagePattern *cloneAsThawed() const {
-        UErrorCode errorCode=U_ZERO_ERROR;
-        MessagePattern *newMsg=new MessagePattern(aposMode, errorCode);
-        if(U_FAILURE(errorCode) || newMsg==NULL) {
-            delete newMsg;
-            return NULL;
-        }
-        newMsg->msg=msg;
-        // TODO: newMsg.parts=(ArrayList<Part>)parts.clone();
-        // TODO: if(numericValues!=null) { newMsg.numericValues=(ArrayList<Double>)numericValues.clone(); }
-        newMsg->hasArgNames=hasArgNames;
-        newMsg->hasArgNumbers=hasArgNumbers;
-        newMsg->needsAutoQuoting=needsAutoQuoting;
-        return newMsg;
-    }
-
-    /**
-     * Freezes this object, making it immutable and thread-safe.
-     * @return this 
-     * @draft ICU 4.8
-     */
-    inline MessagePattern *freeze() {
-        frozen=TRUE;
-        return this;
-    }
-
-    /**
-     * Determines whether this object is frozen (immutable) or not.
-     * @return true if this object is frozen.
-     * @draft ICU 4.8
-     */
-    inline UBool isFrozen() const {
-        return frozen;
-    }
-
 private:
     void preParse(const UnicodeString &pattern, UErrorCode &errorCode) {
-        if(isFrozen()) {
-            // TODO: throw new UnsupportedOperationException(
-            //    "Attempt to parse(\""+prefix(pattern)+"\") on frozen MessagePattern instance.");
-        }
         msg=pattern;
         hasArgNames=hasArgNumbers=FALSE;
         needsAutoQuoting=FALSE;
@@ -911,7 +911,8 @@ private:
     }
 
     int32_t parseMessage(int32_t index, int32_t msgStartLength,
-                         int32_t nestingLevel, UMessagePatternArgType parentType, UErrorCode &errorCode) {
+                         int32_t nestingLevel, UMessagePatternArgType parentType,
+                         UParseError *parseError, UErrorCode &errorCode) {
         return 0;
 #if 0  // TODO
         if(nestingLevel>Part.MAX_VALUE) {
@@ -1000,7 +1001,8 @@ private:
 #endif
     }
 
-    int32_t parseArg(int32_t index, int32_t argStartLength, int32_t nestingLevel, UErrorCode &errorCode) {
+    int32_t parseArg(int32_t index, int32_t argStartLength, int32_t nestingLevel,
+                     UParseError *parseError, UErrorCode &errorCode) {
         return 0;
 #if 0  // TODO
         int32_t argStart=parts.size();
@@ -1101,7 +1103,7 @@ private:
 #endif
     }
 
-    int32_t parseSimpleStyle(int32_t index, UErrorCode &errorCode) {
+    int32_t parseSimpleStyle(int32_t index, UParseError *parseError, UErrorCode &errorCode) {
         return 0;
 #if 0  // TODO
         int32_t start=index;
@@ -1140,7 +1142,8 @@ private:
 #endif
     }
 
-    int32_t parseChoiceStyle(int32_t index, int32_t nestingLevel, UErrorCode &errorCode) {
+    int32_t parseChoiceStyle(int32_t index, int32_t nestingLevel,
+                             UParseError *parseError, UErrorCode &errorCode) {
         return 0;
 #if 0  // TODO
         int32_t start=index;
@@ -1194,7 +1197,7 @@ private:
     }
 
     int32_t parsePluralOrSelectStyle(UMessagePatternArgType argType, int32_t index, int32_t nestingLevel,
-                                     UErrorCode &errorCode) {
+                                     UParseError *parseError, UErrorCode &errorCode) {
         return 0;
 #if 0  // TODO
         int32_t start=index;
@@ -1310,7 +1313,8 @@ private:
      *         ARG_NAME_NOT_VALID (-2) if it is neither.
      * @see #validateArgumentName(String)
      */
-    static int32_t parseArgNumber(CharSequence s, int32_t start, int32_t limit, UErrorCode &errorCode) {
+    static int32_t parseArgNumber(CharSequence s, int32_t start, int32_t limit,
+                                  UParseError *parseError, UErrorCode &errorCode) {
         // If the identifier contains only ASCII digits, then it is an argument _number_
         // and must not have leading zeros (except "0" itself).
         // Otherwise it is an argument _name_.
@@ -1363,7 +1367,8 @@ private:
      * @param limit limit index into the message string, must be start<limit
      * @param allowInfinity true if U+221E is allowed (for ChoiceFormat)
      */
-    void parseDouble(int32_t start, int32_t limit, UBool allowInfinity, UErrorCode &errorCode) {
+    void parseDouble(int32_t start, int32_t limit, UBool allowInfinity,
+                     UParseError *parseError, UErrorCode &errorCode) {
         assert start<limit;
         // fake loop for easy exit and single throw statement
         for(;;) {
@@ -1603,7 +1608,6 @@ private:
     UBool hasArgNames;
     UBool hasArgNumbers;
     UBool needsAutoQuoting;
-    UBool frozen;
 };
 
 U_NAMESPACE_END

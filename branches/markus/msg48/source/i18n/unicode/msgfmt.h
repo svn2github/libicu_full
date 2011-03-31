@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2007-2010, International Business Machines Corporation and
+* Copyright (C) 2007-2011, International Business Machines Corporation and
 * others. All Rights Reserved.
 ********************************************************************************
 *
@@ -331,8 +331,8 @@ public:
      * Constructs a new MessageFormat using the given pattern and locale.
      * @param pattern   Pattern used to construct object.
      * @param newLocale The locale to use for formatting dates and numbers.
-     * @param parseError Struct to recieve information on position
-     *                   of error within the pattern.
+     * @param parseError Struct to receive information on the position
+     *                   of an error within the pattern.
      * @param status    Input/output error code.  If the
      *                  pattern cannot be parsed, set to failure code.
      * @stable ICU 2.0
@@ -405,8 +405,8 @@ public:
      * Applies the given pattern string to this message format.
      *
      * @param pattern    The pattern to be applied.
-     * @param parseError Struct to recieve information on position
-     *                   of error within pattern.
+     * @param parseError Struct to receive information on the position
+     *                   of an error within the pattern.
      * @param status    Input/output error code.  If the
      *                  pattern cannot be parsed, set to failure code.
      * @stable ICU 2.0
