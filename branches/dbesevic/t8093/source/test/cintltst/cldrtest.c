@@ -1319,7 +1319,7 @@ static void TestAvailableIsoCodes(void){
     UDate date1978 = (UDate)260172000000.0; /* year 1978 */
     UDate date1981 = (UDate)346896000000.0; /* year 1981 */
     UDate date1992 = (UDate)693792000000.0; /* year 1992 */
-    UChar* isoCode = (UChar*)malloc(sizeof(usdCode));
+    UChar* isoCode = (UChar*)malloc(sizeof(usdCode) + 1);
     UDate test = U_MILLIS_PER_SECOND;
 
     /* testing available codes with no time ranges */
@@ -1402,6 +1402,8 @@ static void TestAvailableIsoCodes(void){
     } else if (errorCode != U_ILLEGAL_ARGUMENT_ERROR) {
        log_err("FAIL: Error code not reported for wrong range 1975-1970 for ISO code (%s).\n", lastCode);
     }
+
+    free(isoCode);
 }
 
 #define TESTCASE(name) addTest(root, &name, "tsutil/cldrtest/" #name)

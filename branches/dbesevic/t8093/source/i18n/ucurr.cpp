@@ -1884,6 +1884,7 @@ ucurr_createCurrencyList(UErrorCode* status){
                     } 
 
                     ures_close(fromRes);  
+                    ures_close(idRes);
                     ures_close(currencyRes);
 
                     entry->isoCode = isoCode;
@@ -1900,6 +1901,7 @@ ucurr_createCurrencyList(UErrorCode* status){
     } else {
         *status = localStatus;
     }
+
     ures_close(currencyMapArray);
 }
 

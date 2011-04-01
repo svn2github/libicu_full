@@ -249,31 +249,32 @@ typedef struct IsoCodeEntry {
     UDate to;
 } IsoCodeEntry;
 
-/** Maximum UDate value */
-#define U_DATE_MAX 1.7976931348623158e+308
-/** Maximum UDate value */
-#define U_DATE_MIN -U_DATE_MAX
-
 /** 
- * Queries if the given ISO 4217 3-letter code is available on the specified date range. 
- * 
- * Note: For checking availability of a currency on a specific date, specify the date on both 'from' and 'to' 
- * When both 'from' and 'to' are null, this method checks if the specified currency is available all time. 
- * 
- * @param code 
- *            The ISO 4217 3-letter code. 
- * @param from 
- *            The lower bound of the date range, inclusive. When 'from' is U_DATE_MIN, check the availability 
- *            of the currency any date before 'to' 
- * @param to 
- *            The upper bound of the date range, inclusive. When 'to' is U_DATE_MAX, check the availability of 
- *            the currency any date after 'from' 
- * @param eErrorCode 
- *            Error code    
- * @return TRUE if the given ISO 4217 3-letter code is supported on the specified date range. 
- * 
- * @draft ICU 4.8 
- */ 
+  * Queries if the given ISO 4217 3-letter code is available on the specified date range. 
+  * 
+  * Note: For checking availability of a currency on a specific date, specify the date on both 'from' and 'to' 
+  * 
+  * When 'from' is U_DATE_MIN and 'to' is U_DATE_MAX, this method checks if the specified currency is available any time. 
+  * If 'from' and 'to' are same UDate value, this method checks if the specified currency is available on that date.
+  * 
+  * @param code 
+  *            The ISO 4217 3-letter code. 
+  * 
+  * @param from 
+  *            The lower bound of the date range, inclusive. When 'from' is U_DATE_MIN, check the availability 
+  *            of the currency any date before 'to' 
+  * 
+  * @param to 
+  *            The upper bound of the date range, inclusive. When 'to' is U_DATE_MAX, check the availability of 
+  *            the currency any date after 'from' 
+  * 
+  * @param errorCode 
+  *            ICU error code 
+   * 
+  * @return TRUE if the given ISO 4217 3-letter code is supported on the specified date range. 
+  * 
+  * @draft ICU 4.8 
+  */ 
 U_DRAFT UBool U_EXPORT2
 ucurr_isAvailable(const UChar* isoCode, 
              UDate from, 
