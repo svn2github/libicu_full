@@ -23,7 +23,6 @@
 #include "unicode/utypes.h"
 #include "unicode/parseerr.h"
 #include "unicode/unistr.h"
-#include "patternprops.h"  // TODO: remove from public header
 
 /**
  * Mode for when an apostrophe starts quoted literal text for MessageFormat output.
@@ -262,10 +261,10 @@ enum {
 /**
  * Special value that is returned by getNumericValue(Part) when no
  * numeric value is defined for a part.
- * @see #getNumericValue
+ * @see MessagePattern.getNumericValue()
  * @draft ICU 4.8
  */
-#define UMSGPAT_NO_NUMERIC_VALUE -123456789
+#define UMSGPAT_NO_NUMERIC_VALUE ((double)(-123456789))
 
 U_NAMESPACE_BEGIN
 
@@ -292,7 +291,7 @@ class MessagePatternPartsList;
  * The data logically represents a parse tree, but is stored and accessed
  * as a list of "parts" for fast and simple parsing and to minimize object allocations.
  * Arguments and nested messages are best handled via recursion.
- * For every _START "part", {@link #getLimitPartIndex(int)} efficiently returns
+ * For every _START "part", MessagePattern.getLimitPartIndex() efficiently returns
  * the index of the corresponding _LIMIT "part".
  * <p>
  * List of "parts":
@@ -325,7 +324,6 @@ class MessagePatternPartsList;
  * This class is not intended for public subclassing.
  *
  * @draft ICU 4.8
- * @author Markus Scherer
  */
 class U_COMMON_API MessagePattern : public UObject {
 public:
@@ -337,12 +335,7 @@ public:
      *                  function chaining. (See User Guide for details.)
      * @draft ICU 4.8
      */
-    MessagePattern(UErrorCode & /*errorCode*/)
-            : aposMode(UCONFIG_MSGPAT_DEFAULT_APOSTROPHE_MODE),
-              partsList(NULL), parts(NULL), partsLength(0),
-              numericValuesList(NULL), numericValues(NULL), numericValuesLength(0),
-              hasArgNames(FALSE), hasArgNumbers(FALSE), needsAutoQuoting(FALSE) {
-    }
+    MessagePattern(UErrorCode &errorCode);
 
     /**
      * Constructs an empty MessagePattern.
@@ -353,17 +346,15 @@ public:
      *                  function chaining. (See User Guide for details.)
      * @draft ICU 4.8
      */
-    MessagePattern(UMessagePatternApostropheMode mode, UErrorCode & /*errorCode*/)
-            : aposMode(mode),
-              partsList(NULL), parts(NULL), partsLength(0),
-              numericValuesList(NULL), numericValues(NULL), numericValuesLength(0),
-              hasArgNames(FALSE), hasArgNumbers(FALSE), needsAutoQuoting(FALSE) {
-    }
+    MessagePattern(UMessagePatternApostropheMode mode, UErrorCode &errorCode);
 
     /**
      * Constructs a MessagePattern with default UMessagePatternApostropheMode and
      * parses the MessageFormat pattern string.
      * @param pattern a MessageFormat pattern string
+     * @param parseError Struct to receive information on the position
+     *                   of an error within the pattern.
+     *                   Can be NULL.
      * @param errorCode Standard ICU error code. Its input value must
      *                  pass the U_SUCCESS() test, or else the function returns
      *                  immediately. Check for U_FAILURE() on output or use with
@@ -375,35 +366,22 @@ public:
      * @throws NumberFormatException if a number could not be parsed
      * @draft ICU 4.8
      */
-    MessagePattern(const UnicodeString &pattern, UErrorCode &errorCode)
-            : aposMode(UCONFIG_MSGPAT_DEFAULT_APOSTROPHE_MODE),
-              partsList(NULL), parts(NULL), partsLength(0),
-              numericValuesList(NULL), numericValues(NULL), numericValuesLength(0),
-              hasArgNames(FALSE), hasArgNumbers(FALSE), needsAutoQuoting(FALSE) {
-        parse(pattern, NULL, errorCode);
-    }
+    MessagePattern(const UnicodeString &pattern, UParseError *parseError, UErrorCode &errorCode);
 
     /**
      * Copy constructor.
+     * @param other Object to copy.
      * @draft ICU 4.8
      */
-    MessagePattern(const MessagePattern &other)
-            : aposMode(other.aposMode), msg(other.msg),
-              partsList(NULL), parts(NULL), partsLength(0),
-              numericValuesList(NULL), numericValues(NULL), numericValuesLength(0),
-              hasArgNames(other.hasArgNames), hasArgNumbers(other.hasArgNumbers),
-              needsAutoQuoting(other.needsAutoQuoting) {
-        // TODO: newMsg.parts=(ArrayList<Part>)parts.clone();
-        // TODO: if(numericValues!=null) { newMsg.numericValues=(ArrayList<Double>)numericValues.clone(); }
-    }
+    MessagePattern(const MessagePattern &other);
 
     /**
      * Assignment operator.
+     * @param other Object to copy.
+     * @return *this=other
      * @draft ICU 4.8
      */
-    MessagePattern &operator=(const MessagePattern &other) {
-        // TODO: see copy constructor
-    }
+    MessagePattern &operator=(const MessagePattern &other);
 
     /**
      * Destructor.
@@ -428,12 +406,8 @@ public:
      * @throws NumberFormatException if a number could not be parsed
      * @draft ICU 4.8
      */
-    MessagePattern &parse(const UnicodeString &pattern, UParseError *parseError, UErrorCode &errorCode) {
-        preParse(pattern, errorCode);
-        parseMessage(0, 0, 0, UMSGPAT_ARG_TYPE_NONE, parseError, errorCode);
-        postParse();
-        return *this;
-    }
+    MessagePattern &parse(const UnicodeString &pattern,
+                          UParseError *parseError, UErrorCode &errorCode);
 
     /**
      * Parses a ChoiceFormat pattern string.
@@ -452,12 +426,8 @@ public:
      * @throws NumberFormatException if a number could not be parsed
      * @draft ICU 4.8
      */
-    MessagePattern &parseChoiceStyle(const UnicodeString &pattern, UParseError *parseError, UErrorCode &errorCode) {
-        preParse(pattern, errorCode);
-        parseChoiceStyle(0, 0, parseError, errorCode);
-        postParse();
-        return *this;
-    }
+    MessagePattern &parseChoiceStyle(const UnicodeString &pattern,
+                                     UParseError *parseError, UErrorCode &errorCode);
 
     /**
      * Parses a PluralFormat pattern string.
@@ -476,12 +446,8 @@ public:
      * @throws NumberFormatException if a number could not be parsed
      * @draft ICU 4.8
      */
-    MessagePattern &parsePluralStyle(const UnicodeString &pattern, UParseError *parseError, UErrorCode &errorCode) {
-        preParse(pattern, errorCode);
-        parsePluralOrSelectStyle(UMSGPAT_ARG_TYPE_PLURAL, 0, 0, parseError, errorCode);
-        postParse();
-        return *this;
-    }
+    MessagePattern &parsePluralStyle(const UnicodeString &pattern,
+                                     UParseError *parseError, UErrorCode &errorCode);
 
     /**
      * Parses a SelectFormat pattern string.
@@ -500,43 +466,21 @@ public:
      * @throws NumberFormatException if a number could not be parsed
      * @draft ICU 4.8
      */
-    MessagePattern &parseSelectStyle(const UnicodeString &pattern, UParseError *parseError, UErrorCode &errorCode) {
-        preParse(pattern, errorCode);
-        parsePluralOrSelectStyle(UMSGPAT_ARG_TYPE_SELECT, 0, 0, parseError, errorCode);
-        postParse();
-        return *this;
-    }
+    MessagePattern &parseSelectStyle(const UnicodeString &pattern,
+                                     UParseError *parseError, UErrorCode &errorCode);
 
     /**
      * Clears this MessagePattern, returning it to the state after the default constructor.
      * @draft ICU 4.8
      */
-    void clear() {
-        // Mostly the same as preParse().
-        msg.remove();
-        hasArgNames=hasArgNumbers=FALSE;
-        needsAutoQuoting=FALSE;
-        // TODO: parts.clear();
-        if(numericValues!=NULL) {
-            // TODO: numericValues.clear();
-        }
-    }
+    void clear();
 
     /**
      * @param other another object to compare with.
      * @return TRUE if this object is equivalent to the other one.
      * @draft ICU 4.8
      */
-    UBool operator==(const MessagePattern &other) const {
-        if(this==&other) {
-            return TRUE;
-        }
-        return
-            aposMode==other.aposMode &&
-            (msg==other.msg) &&
-            TRUE;  // TODO: parts.equals(o.parts);
-        // No need to compare numericValues if msg and parts are the same.
-    }
+    UBool operator==(const MessagePattern &other) const;
 
     /**
      * @param other another object to compare with.
@@ -548,12 +492,10 @@ public:
     }
 
     /**
-     * {@inheritDoc}
+     * @return A hash code for this object.
      * @draft ICU 4.8
      */
-    int32_t hashCode() const {
-        return (aposMode*37+msg.hashCode())*37;  // TODO: +parts.hashCode();
-    }
+    int32_t hashCode() const;
 
     /**
      * @return this instance's UMessagePatternApostropheMode.
@@ -567,7 +509,7 @@ public:
      * @return TRUE if getApostropheMode()==UMSGPAT_APOS_DOUBLE_REQUIRED
      * @internal
      */
-    UBool jdkAposMode() const {  // TODO: friends?
+    UBool jdkAposMode() const {
         return aposMode==UMSGPAT_APOS_DOUBLE_REQUIRED;
     }
 
@@ -581,7 +523,7 @@ public:
 
     /**
      * Does the parsed pattern have named arguments like {first_name}?
-     * @return true if the parsed pattern has at least one named argument.
+     * @return TRUE if the parsed pattern has at least one named argument.
      * @draft ICU 4.8
      */
     UBool hasNamedArguments() const {
@@ -590,7 +532,7 @@ public:
 
     /**
      * Does the parsed pattern have numbered arguments like {2}?
-     * @return true if the parsed pattern has at least one numbered argument.
+     * @return TRUE if the parsed pattern has at least one numbered argument.
      * @draft ICU 4.8
      */
     UBool hasNumberedArguments() const {
@@ -608,12 +550,7 @@ public:
      *         ARG_NAME_NOT_VALID (-2) if it is neither.
      * @draft ICU 4.8
      */
-    static int32_t validateArgumentName(const UnicodeString &name) {
-        if(!PatternProps::isIdentifier(name.getBuffer(), name.length())) {
-            return UMSGPAT_ARG_NAME_NOT_VALID;
-        }
-        return 0;  // TODO: parseArgNumber(name, 0, name.length());
-    }
+    static int32_t validateArgumentName(const UnicodeString &name);
 
     /**
      * Returns a version of the parsed pattern string where each ASCII apostrophe
@@ -622,29 +559,10 @@ public:
      * For example, this turns "I don't '{know}' {gender,select,female{h''er}other{h'im}}."
      * into "I don''t '{know}' {gender,select,female{h''er}other{h''im}}."
      * @return the deep-auto-quoted version of the parsed pattern string.
-     * @see MessageFormat#autoQuoteApostrophe(String)
+     * @see MessageFormat.autoQuoteApostrophe()
      * @draft ICU 4.8
      */
-    UnicodeString autoQuoteApostropheDeep() const {
-        if(!needsAutoQuoting) {
-            return msg;
-        }
-        UnicodeString modified(msg);
-#if 0  // TODO
-        // Iterate backward so that the insertion indexes do not change.
-        int32_t count=countParts();
-        for(int32_t i=count; i>0;) {
-            Part part;
-            if((part=getPart(--i)).getType()==Part.Type.INSERT_CHAR) {
-                if(modified==null) {
-                    modified=new StringBuilder(msg.length()+10).append(msg);
-                }
-                modified.insert(part.index, (char)part.value);
-            }
-        }
-#endif
-        return modified;
-    }
+    UnicodeString autoQuoteApostropheDeep() const;
 
     class Part;
 
@@ -662,11 +580,10 @@ public:
      * Gets the i-th pattern "part".
      * @param i The index of the Part data. (0..countParts()-1)
      * @return the i-th pattern "part".
-     * @throws IndexOutOfBoundsException if i is outside the (0..countParts()-1) range
      * @draft ICU 4.8
      */
     const Part &getPart(int32_t i) const {
-        return parts[i];  // TODO: range check(?)
+        return parts[i];
     }
 
     /**
@@ -674,7 +591,6 @@ public:
      * Convenience method for getPart(i).getType().
      * @param i The index of the Part data. (0..countParts()-1)
      * @return The UMessagePatternPartType of the i-th Part.
-     * @throws IndexOutOfBoundsException if i is outside the (0..countParts()-1) range
      * @draft ICU 4.8
      */
     UMessagePatternPartType getPartType(int32_t i) const {
@@ -686,7 +602,6 @@ public:
      * Convenience method for getPart(partIndex).getIndex().
      * @param partIndex The index of the Part data. (0..countParts()-1)
      * @return The pattern index of this Part.
-     * @throws IndexOutOfBoundsException if partIndex is outside the (0..countParts()-1) range
      * @draft ICU 4.8
      */
     int32_t getPatternIndex(int32_t partIndex) const {
@@ -701,54 +616,35 @@ public:
      * @draft ICU 4.8
      */
     UnicodeString getSubstring(const Part &part) const {
-        int32_t index=part.index;
-        return msg;  // TODO: .substring(index, index+part.length);
+        return msg.tempSubString(part.index, part.length);
     }
 
-#if 0  // TODO
     /**
      * Compares the part's substring with the input string s.
      * @param part a part of this MessagePattern.
      * @param s a string.
-     * @return true if getSubstring(part).equals(s).
+     * @return TRUE if getSubstring(part).equals(s).
      * @draft ICU 4.8
      */
     UBool partSubstringMatches(const Part &part, const UnicodeString &s) const {
-        return msg.regionMatches(part.index, s, 0, part.length);
+        return msg.compare(part.index, part.length, s);
     }
 
     /**
      * Returns the numeric value associated with an ARG_INT or ARG_DOUBLE.
      * @param part a part of this MessagePattern.
-     * @return the part's numeric value, or NO_NUMERIC_VALUE if this is not a numeric part.
+     * @return the part's numeric value, or UMSGPAT_NO_NUMERIC_VALUE if this is not a numeric part.
      * @draft ICU 4.8
      */
-    double getNumericValue(const Part &part) const {
-        UMessagePatternPartType type=part.type;
-        if(type==Part.Type.ARG_INT) {
-            return part.value;
-        } else if(type==Part.Type.ARG_DOUBLE) {
-            return numericValues.get(part.value);
-        } else {
-            return NO_NUMERIC_VALUE;
-        }
-    }
+    double getNumericValue(const Part &part) const;
 
     /**
      * Returns the "offset:" value of a PluralFormat argument, or 0 if none is specified.
      * @param pluralStart the index of the first PluralFormat argument style part. (0..countParts()-1)
      * @return the "offset:" value.
-     * @throws IndexOutOfBoundsException if pluralStart is outside the (0..countParts()-1) range
      * @draft ICU 4.8
      */
-    double getPluralOffset(int32_t pluralStart) const {
-        Part part=parts.get(pluralStart);
-        if(part.type.hasNumericValue()) {
-            return getNumericValue(part);
-        } else {
-            return 0;
-        }
-    }
+    double getPluralOffset(int32_t pluralStart) const;
 
     /**
      * Returns the index of the ARG|MSG_LIMIT part corresponding to the ARG|MSG_START at start.
@@ -756,17 +652,15 @@ public:
      *        this Part should be of Type ARG_START or MSG_START.
      * @return The first i>start where getPart(i).getType()==ARG|MSG_LIMIT at the same nesting level,
      *         or start itself if getPartType(msgStart)!=ARG|MSG_START.
-     * @throws IndexOutOfBoundsException if start is outside the (0..countParts()-1) range
      * @draft ICU 4.8
      */
     int32_t getLimitPartIndex(int32_t start) const {
-        int32_t limit=parts.get(start).limitPartIndex;
+        int32_t limit=getPart(start).limitPartIndex;
         if(limit<start) {
             return start;
         }
         return limit;
     }
-#endif
 
     /**
      * A message pattern "part", representing a pattern parsing event.
@@ -776,10 +670,13 @@ public:
      * @draft ICU 4.8
      */
     class Part : public UMemory {
-    private:
+    public:
+        /**
+         * Default constructor, do not use.
+         * @internal
+         */
         Part() {}
 
-    public:
         /**
          * Returns the type of this part.
          * @return the part type.
@@ -844,9 +741,10 @@ public:
         }
 
         /**
-         * Indicates whether this part has a numeric value.
-         * If so, then that numeric value can be retrieved via {@link MessagePattern#getNumericValue(Part)}.
-         * @return true if this part has a numeric value.
+         * Indicates whether the Part type has a numeric value.
+         * If so, then that numeric value can be retrieved via MessagePattern.getNumericValue().
+         * @param type The Part type to be tested.
+         * @return TRUE if the Part type has a numeric value.
          * @draft ICU 4.8
          */
         static UBool hasNumericValue(UMessagePatternPartType type) {
@@ -855,23 +753,22 @@ public:
 
         /**
          * @param other another object to compare with.
-         * @return true if this object is equivalent to the other one.
+         * @return TRUE if this object is equivalent to the other one.
          * @draft ICU 4.8
          */
-        UBool operator==(const Part &other) const {
-            if(this==&other) {
-                return TRUE;
-            }
-            return
-                type==other.type &&
-                index==other.index &&
-                length==other.length &&
-                value==other.value &&
-                limitPartIndex==other.limitPartIndex;
+        UBool operator==(const Part &other) const;
+
+        /**
+         * @param other another object to compare with.
+         * @return FALSE if this object is equivalent to the other one.
+         * @draft ICU 4.8
+         */
+        inline UBool operator!=(const Part &other) const {
+            return !operator==(other);
         }
 
         /**
-         * {@inheritDoc}
+         * @return A hash code for this object.
          * @draft ICU 4.8
          */
         int32_t hashCode() const {
@@ -894,21 +791,9 @@ public:
     };
 
 private:
-    void preParse(const UnicodeString &pattern, UErrorCode &errorCode) {
-        msg=pattern;
-        hasArgNames=hasArgNumbers=FALSE;
-        needsAutoQuoting=FALSE;
-#if 0  // TODO
-        parts.clear();
-        if(numericValues!=null) {
-            numericValues.clear();
-        }
-#endif
-    }
+    void preParse(const UnicodeString &pattern, UParseError *parseError, UErrorCode &errorCode);
 
-    void postParse() {
-        // Nothing to be done currently.
-    }
+    void postParse();
 
     int32_t parseMessage(int32_t index, int32_t msgStartLength,
                          int32_t nestingLevel, UMessagePatternArgType parentType,
@@ -919,7 +804,7 @@ private:
             throw new IndexOutOfBoundsException();
         }
         int32_t msgStart=parts.size();
-        addPart(Part.Type.MSG_START, index, msgStartLength, nestingLevel);
+        addPart(UMSGPAT_PART_TYPE_MSG_START, index, msgStartLength, nestingLevel);
         index+=msgStartLength;
         while(index<msg.length()) {
             char c=msg.charAt(index++);
@@ -927,13 +812,13 @@ private:
                 if(index==msg.length()) {
                     // The apostrophe is the last character in the pattern. 
                     // Add a Part for auto-quoting.
-                    addPart(Part.Type.INSERT_CHAR, index, 0, '\'');  // value=char to be inserted
-                    needsAutoQuoting=true;
+                    addPart(UMSGPAT_PART_TYPE_INSERT_CHAR, index, 0, '\'');  // value=char to be inserted
+                    needsAutoQuoting=TRUE;
                 } else {
                     c=msg.charAt(index);
                     if(c=='\'') {
                         // double apostrophe, skip the second one
-                        addPart(Part.Type.SKIP_SYNTAX, index++, 1, 0);
+                        addPart(UMSGPAT_PART_TYPE_SKIP_SYNTAX, index++, 1, 0);
                     } else if(
                         aposMode==ApostropheMode.DOUBLE_REQUIRED ||
                         c=='{' || c=='}' ||
@@ -941,7 +826,7 @@ private:
                         (parentType==UMSGPAT_ARG_TYPE_PLURAL && c=='#')
                     ) {
                         // skip the quote-starting apostrophe
-                        addPart(Part.Type.SKIP_SYNTAX, index-1, 1, 0);
+                        addPart(UMSGPAT_PART_TYPE_SKIP_SYNTAX, index-1, 1, 0);
                         // find the end of the quoted literal text
                         for(;;) {
                             index=msg.indexOf('\'', index+1);
@@ -949,32 +834,32 @@ private:
                                 if((index+1)<msg.length() && msg.charAt(index+1)=='\'') {
                                     // double apostrophe inside quoted literal text
                                     // still encodes a single apostrophe, skip the second one
-                                    addPart(Part.Type.SKIP_SYNTAX, ++index, 1, 0);
+                                    addPart(UMSGPAT_PART_TYPE_SKIP_SYNTAX, ++index, 1, 0);
                                 } else {
                                     // skip the quote-ending apostrophe
-                                    addPart(Part.Type.SKIP_SYNTAX, index++, 1, 0);
+                                    addPart(UMSGPAT_PART_TYPE_SKIP_SYNTAX, index++, 1, 0);
                                     break;
                                 }
                             } else {
                                 // The quoted text reaches to the end of the of the message.
                                 index=msg.length();
                                 // Add a Part for auto-quoting.
-                                addPart(Part.Type.INSERT_CHAR, index, 0, '\'');  // value=char to be inserted
-                                needsAutoQuoting=true;
+                                addPart(UMSGPAT_PART_TYPE_INSERT_CHAR, index, 0, '\'');  // value=char to be inserted
+                                needsAutoQuoting=TRUE;
                                 break;
                             }
                         }
                     } else {
                         // Interpret the apostrophe as literal text.
                         // Add a Part for auto-quoting.
-                        addPart(Part.Type.INSERT_CHAR, index, 0, '\'');  // value=char to be inserted
-                        needsAutoQuoting=true;
+                        addPart(UMSGPAT_PART_TYPE_INSERT_CHAR, index, 0, '\'');  // value=char to be inserted
+                        needsAutoQuoting=TRUE;
                     }
                 }
             } else if(parentType==UMSGPAT_ARG_TYPE_PLURAL && c=='#') {
                 // The unquoted # in a plural message fragment will be replaced
                 // with the (number-offset).
-                addPart(Part.Type.REPLACE_NUMBER, index-1, 1, 0);
+                addPart(UMSGPAT_PART_TYPE_REPLACE_NUMBER, index-1, 1, 0);
             } else if(c=='{') {
                 index=parseArg(index-1, 1, nestingLevel);
             } else if((nestingLevel>0 && c=='}') || (parentType==UMSGPAT_ARG_TYPE_CHOICE && c=='|')) {
@@ -982,7 +867,7 @@ private:
                 // In a choice style, report the "}" substring only for the following ARG_LIMIT,
                 // not for this MSG_LIMIT.
                 int32_t limitLength=(parentType==UMSGPAT_ARG_TYPE_CHOICE && c=='}') ? 0 : 1;
-                addLimitPart(msgStart, Part.Type.MSG_LIMIT, index-1, limitLength, nestingLevel);
+                addLimitPart(msgStart, UMSGPAT_PART_TYPE_MSG_LIMIT, index-1, limitLength, nestingLevel);
                 if(parentType==UMSGPAT_ARG_TYPE_CHOICE) {
                     // Let the choice style parser see the '}' or '|'.
                     return index-1;
@@ -996,7 +881,7 @@ private:
             throw new IllegalArgumentException(
                 "Unmatched '{' braces in message \""+prefix()+"\"");
         }
-        addLimitPart(msgStart, Part.Type.MSG_LIMIT, index, 0, nestingLevel);
+        addLimitPart(msgStart, UMSGPAT_PART_TYPE_MSG_LIMIT, index, 0, nestingLevel);
         return index;
 #endif
     }
@@ -1007,7 +892,7 @@ private:
 #if 0  // TODO
         int32_t argStart=parts.size();
         UMessagePatternArgType argType=UMSGPAT_ARG_TYPE_NONE;
-        addPart(Part.Type.ARG_START, index, argStartLength, argType.ordinal());
+        addPart(UMSGPAT_PART_TYPE_ARG_START, index, argStartLength, argType.ordinal());
         int32_t nameIndex=index=skipWhiteSpace(index+argStartLength);
         if(index==msg.length()) {
             throw new IllegalArgumentException(
@@ -1022,16 +907,16 @@ private:
                 throw new IndexOutOfBoundsException(
                     "Argument number too large: "+prefix(nameIndex));
             }
-            hasArgNumbers=true;
-            addPart(Part.Type.ARG_NUMBER, nameIndex, length, number);
+            hasArgNumbers=TRUE;
+            addPart(UMSGPAT_PART_TYPE_ARG_NUMBER, nameIndex, length, number);
         } else if(number==ARG_NAME_NOT_NUMBER) {
             int32_t length=index-nameIndex;
             if(length>Part.MAX_LENGTH) {
                 throw new IndexOutOfBoundsException(
                     "Argument name too long: "+prefix(nameIndex));
             }
-            hasArgNames=true;
-            addPart(Part.Type.ARG_NAME, nameIndex, length, 0);
+            hasArgNames=TRUE;
+            addPart(UMSGPAT_PART_TYPE_ARG_NAME, nameIndex, length, 0);
         } else {  // number<-1 (ARG_NAME_NOT_VALID)
             throw new IllegalArgumentException("Bad argument syntax: "+prefix(nameIndex));
         }
@@ -1078,7 +963,7 @@ private:
             // change the ARG_START type from NONE to argType
             parts.get(argStart).value=(short)argType.ordinal();
             if(argType==UMSGPAT_ARG_TYPE_SIMPLE) {
-                addPart(Part.Type.ARG_TYPE, typeIndex, length, 0);
+                addPart(UMSGPAT_PART_TYPE_ARG_TYPE, typeIndex, length, 0);
             }
             // look for an argument style (pattern)
             if(c=='}') {
@@ -1098,7 +983,7 @@ private:
             }
         }
         // Argument parsing stopped on the '}'.
-        addLimitPart(argStart, Part.Type.ARG_LIMIT, index, 1, argType.ordinal());
+        addLimitPart(argStart, UMSGPAT_PART_TYPE_ARG_LIMIT, index, 1, argType.ordinal());
         return index+1;
 #endif
     }
@@ -1132,7 +1017,7 @@ private:
                         throw new IndexOutOfBoundsException(
                             "Argument style text too long: "+prefix(start));
                     }
-                    addPart(Part.Type.ARG_STYLE, start, length, 0);
+                    addPart(UMSGPAT_PART_TYPE_ARG_STYLE, start, length, 0);
                     return index;
                 }
             }  // c is part of literal text
@@ -1165,7 +1050,7 @@ private:
                 throw new IndexOutOfBoundsException(
                     "Choice number too long: "+prefix(numberIndex));
             }
-            parseDouble(numberIndex, index, true);  // adds ARG_INT or ARG_DOUBLE
+            parseDouble(numberIndex, index, TRUE);  // adds ARG_INT or ARG_DOUBLE
             // Parse the separator.
             index=skipWhiteSpace(index);
             if(index==msg.length()) {
@@ -1177,7 +1062,7 @@ private:
                     "Expected choice separator (#<\u2264) instead of '"+c+
                     "' in choice pattern "+prefix(start));
             }
-            addPart(Part.Type.ARG_SELECTOR, index, 1, 0);
+            addPart(UMSGPAT_PART_TYPE_ARG_SELECTOR, index, 1, 0);
             // Parse the message fragment.
             index=parseMessage(++index, 0, nestingLevel+1, UMSGPAT_ARG_TYPE_CHOICE);
             // parseMessage(..., CHOICE) returns the index of the terminator, or msg.length().
@@ -1201,8 +1086,8 @@ private:
         return 0;
 #if 0  // TODO
         int32_t start=index;
-        UBool isEmpty=true;
-        UBool hasOther=false;
+        UBool isEmpty=TRUE;
+        UBool hasOther=FALSE;
         for(;;) {
             // First, collect the selector looking for a small set of terminators.
             // It would be a little faster to consider the syntax of each possible
@@ -1239,8 +1124,8 @@ private:
                     throw new IndexOutOfBoundsException(
                         "Argument selector too long: "+prefix(selectorIndex));
                 }
-                addPart(Part.Type.ARG_SELECTOR, selectorIndex, length, 0);
-                parseDouble(selectorIndex+1, index, false);  // adds ARG_INT or ARG_DOUBLE
+                addPart(UMSGPAT_PART_TYPE_ARG_SELECTOR, selectorIndex, length, 0);
+                parseDouble(selectorIndex+1, index, FALSE);  // adds ARG_INT or ARG_DOUBLE
             } else {
                 index=skipIdentifier(index);
                 int32_t length=index-selectorIndex;
@@ -1271,8 +1156,8 @@ private:
                         throw new IndexOutOfBoundsException(
                             "Plural offset value too long: "+prefix(valueIndex));
                     }
-                    parseDouble(valueIndex, index, false);  // adds ARG_INT or ARG_DOUBLE
-                    isEmpty=false;
+                    parseDouble(valueIndex, index, FALSE);  // adds ARG_INT or ARG_DOUBLE
+                    isEmpty=FALSE;
                     continue;  // no message fragment after the offset
                 } else {
                     // normal selector word
@@ -1280,9 +1165,9 @@ private:
                         throw new IndexOutOfBoundsException(
                             "Argument selector too long: "+prefix(selectorIndex));
                     }
-                    addPart(Part.Type.ARG_SELECTOR, selectorIndex, length, 0);
+                    addPart(UMSGPAT_PART_TYPE_ARG_SELECTOR, selectorIndex, length, 0);
                     if(msg.regionMatches(selectorIndex, "other", 0, length)) {
-                        hasOther=true;
+                        hasOther=TRUE;
                     }
                 }
             }
@@ -1296,25 +1181,22 @@ private:
                     " selector: "+prefix(selectorIndex));
             }
             index=parseMessage(index, 1, nestingLevel+1, argType);
-            isEmpty=false;
+            isEmpty=FALSE;
         }
 #endif
     }
 
-#if 0  // TODO
     /**
      * Validates and parses an argument name or argument number string.
      * This internal method assumes that the input substring is a "pattern identifier".
-     * @param s
-     * @param start
-     * @param limit
      * @return &gt;=0 if the name is a valid number,
      *         ARG_NAME_NOT_NUMBER (-1) if it is a "pattern identifier" but not all ASCII digits,
      *         ARG_NAME_NOT_VALID (-2) if it is neither.
      * @see #validateArgumentName(String)
      */
-    static int32_t parseArgNumber(CharSequence s, int32_t start, int32_t limit,
-                                  UParseError *parseError, UErrorCode &errorCode) {
+    static int32_t parseArgNumber(const UnicodeString &s, int32_t start, int32_t limit) {
+        return 0;
+#if 0  // TODO
         // If the identifier contains only ASCII digits, then it is an argument _number_
         // and must not have leading zeros (except "0" itself).
         // Otherwise it is an argument _name_.
@@ -1330,11 +1212,11 @@ private:
                 return 0;
             } else {
                 number=0;
-                badNumber=true;  // leading zero
+                badNumber=TRUE;  // leading zero
             }
         } else if('1'<=c && c<='9') {
             number=c-'0';
-            badNumber=false;
+            badNumber=FALSE;
         } else {
             return ARG_NAME_NOT_NUMBER;
         }
@@ -1342,7 +1224,7 @@ private:
             c=s.charAt(start++);
             if('0'<=c && c<='9') {
                 if(number>=Integer.MAX_VALUE/10) {
-                    badNumber=true;  // overflow
+                    badNumber=TRUE;  // overflow
                 }
                 number=number*10+(c-'0');
             } else {
@@ -1355,17 +1237,19 @@ private:
         } else {
             return number;
         }
+#endif
     }
 
-    int32_t parseArgNumber(int32_t start, int32_t limit, UErrorCode &errorCode) {
+    int32_t parseArgNumber(int32_t start, int32_t limit) {
         return parseArgNumber(msg, start, limit);
     }
 
+#if 0  // TODO
     /**
      * Parses a number from the specified message substring.
      * @param start start index into the message string
      * @param limit limit index into the message string, must be start<limit
-     * @param allowInfinity true if U+221E is allowed (for ChoiceFormat)
+     * @param allowInfinity TRUE if U+221E is allowed (for ChoiceFormat)
      */
     void parseDouble(int32_t start, int32_t limit, UBool allowInfinity,
                      UParseError *parseError, UErrorCode &errorCode) {
@@ -1406,7 +1290,7 @@ private:
                     break;  // not a small-enough integer
                 }
                 if(index==limit) {
-                    addPart(Part.Type.ARG_INT, start, limit-start, isNegative!=0 ? -value : value);
+                    addPart(UMSGPAT_PART_TYPE_ARG_INT, start, limit-start, isNegative!=0 ? -value : value);
                     return;
                 }
                 c=msg.charAt(index++);
@@ -1420,7 +1304,7 @@ private:
             "Bad syntax for numeric value: "+msg.substring(start, limit));
     }
 
-public:  // TODO: friends?
+public:  // TODO: friends for @internal? or move @internal elsewhere?!
     /**
      * Appends the s[start, limit[ substring to sb, but with only half of the apostrophes
      * according to JDK pattern behavior.
@@ -1448,15 +1332,13 @@ public:  // TODO: friends?
         }
     }
 private:
+#endif
 
-    int32_t skipWhiteSpace(int32_t index) {
-        return PatternProps.skipWhiteSpace(msg, index);
-    }
+    int32_t skipWhiteSpace(int32_t index);
 
-    int32_t skipIdentifier(int32_t index) {
-        return PatternProps.skipIdentifier(msg, index);
-    }
+    int32_t skipIdentifier(int32_t index);
 
+#if 0  // TODO
     /**
      * Skips a sequence of characters that could occur in a double value.
      * Does not fully parse or validate the value.
@@ -1511,22 +1393,22 @@ private:
     }
 
     /**
-     * @return true if we are inside a MessageFormat (sub-)pattern,
+     * @return TRUE if we are inside a MessageFormat (sub-)pattern,
      *         as opposed to inside a top-level choice/plural/select pattern.
      */
     UBool inMessageFormatPattern(int32_t nestingLevel) {
-        return nestingLevel>0 || parts.get(0).type==Part.Type.MSG_START;
+        return nestingLevel>0 || parts.get(0).type==UMSGPAT_PART_TYPE_MSG_START;
     }
 
     /**
-     * @return true if we are in a MessageFormat sub-pattern
+     * @return TRUE if we are in a MessageFormat sub-pattern
      *         of a top-level ChoiceFormat pattern.
      */
     UBool inTopLevelChoiceMessage(int32_t nestingLevel, UMessagePatternArgType parentType) {
         return
             nestingLevel==1 &&
             parentType==UMSGPAT_ARG_TYPE_CHOICE &&
-            parts.get(0).type!=Part.Type.MSG_START;
+            parts.get(0).type!=UMSGPAT_PART_TYPE_MSG_START;
     }
 
     void addPart(UMessagePatternPartType type, int32_t index, int32_t length,
@@ -1553,49 +1435,19 @@ private:
             }
         }
         numericValues.add(numericValue);
-        addPart(Part.Type.ARG_DOUBLE, start, length, numericIndex);
-    }
-
-    static const int32_t MAX_PREFIX_LENGTH=24;
-
-    /**
-     * Returns a prefix of s.substring(start). Used for Exception messages.
-     * @param s
-     * @param start start index in s
-     * @return s.substring(start) or a prefix of that
-     */
-    static String prefix(String s, int32_t start) {
-        int32_t substringLength=s.length()-start;
-        if(substringLength<=MAX_PREFIX_LENGTH) {
-            return start==0 ? s : s.substring(start);
-        } else {
-            StringBuilder prefix=new StringBuilder(MAX_PREFIX_LENGTH);
-            prefix.append(s, start, start+MAX_PREFIX_LENGTH-4);
-            if(Character.isHighSurrogate(prefix.charAt(MAX_PREFIX_LENGTH-5))) {
-                // remove lead surrogate from the end of the prefix
-                prefix.setLength(MAX_PREFIX_LENGTH-5);
-            }
-            return prefix.append(" ...").toString();
-        }
-    }
-
-    static String prefix(String s) {
-        return prefix(s, 0);
-    }
-
-    String prefix(int32_t start) {
-        return prefix(msg, start);
-    }
-
-    String prefix() {
-        return prefix(msg, 0);
+        addPart(UMSGPAT_PART_TYPE_ARG_DOUBLE, start, length, numericIndex);
     }
 #endif
+
+    void setParseError(UParseError *parseError, int32_t index);
 
     // No ICU "poor man's RTTI" for this class nor its subclasses.
     virtual UClassID getDynamicClassID() const;
 
-    const UMessagePatternApostropheMode aposMode;
+    UBool init(UErrorCode &errorCode);
+    void copyStorage(const MessagePattern &other, UErrorCode &errorCode);
+
+    UMessagePatternApostropheMode aposMode;
     UnicodeString msg;
     // ArrayList<Part> parts=new ArrayList<Part>();
     MessagePatternPartsList *partsList;
