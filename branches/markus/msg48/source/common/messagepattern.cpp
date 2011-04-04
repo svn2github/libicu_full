@@ -16,9 +16,45 @@
 #include "unicode/messagepattern.h"
 #include "unicode/unistr.h"
 #include "cmemory.h"
+#include "messageimpl.h"
 #include "patternprops.h"
 
 U_NAMESPACE_BEGIN
+
+// Unicode character/code point constants ---------------------------------- ***
+
+enum {
+    u_apos=0x27,
+    u_plus=0x2B,
+    u_minus=0x2D,
+    u_dot=0x2E,
+    u_A=0x41,
+    u_C=0x43,
+    u_E=0x45,
+    u_H=0x48,
+    u_I=0x49,
+    u_L=0x4C,
+    u_O=0x4F,
+    u_P=0x50,
+    u_R=0x52,
+    u_S=0x53,
+    u_T=0x54,
+    u_U=0x55,
+    u_Z=0x5A,
+    u_a=0x61,
+    u_c=0x63,
+    u_e=0x65,
+    u_h=0x68,
+    u_i=0x69,
+    u_l=0x6C,
+    u_o=0x6F,
+    u_p=0x70,
+    u_r=0x72,
+    u_s=0x73,
+    u_t=0x74,
+    u_u=0x75,
+    u_z=0x7A
+};
 
 // MessagePatternList ------------------------------------------------------ ***
 
@@ -26,16 +62,20 @@ template<typename T, int32_t stackCapacity>
 class MessagePatternList {
 public:
     MessagePatternList() {}
-    MessagePatternList(const MessagePatternList<T, stackCapacity> &other,
-                       int32_t length,
-                       UErrorCode &errorCode);
+    void copyFrom(const MessagePatternList<T, stackCapacity> &other,
+                  int32_t length,
+                  UErrorCode &errorCode);
     UBool ensureCapacityForOneMore(int32_t oldLength, UErrorCode &errorCode);
+    UBool memEquals(const MessagePatternList<T, stackCapacity> &other, int32_t length) const {
+        return 0==uprv_memcmp(a.getAlias(), other.a.getAlias(), length*sizeof(T));
+    }
 
     MaybeStackArray<T, stackCapacity> a;
 };
 
 template<typename T, int32_t stackCapacity>
-MessagePatternList<T, stackCapacity>::MessagePatternList(
+void
+MessagePatternList<T, stackCapacity>::copyFrom(
         const MessagePatternList<T, stackCapacity> &other,
         int32_t length,
         UErrorCode &errorCode) {
@@ -64,24 +104,9 @@ MessagePatternList<T, stackCapacity>::ensureCapacityForOneMore(int32_t oldLength
 // MessagePatternList specializations -------------------------------------- ***
 
 class MessagePatternDoubleList : public MessagePatternList<double, 8> {
-public:
-    MessagePatternDoubleList() {}
-    MessagePatternDoubleList(const MessagePatternDoubleList &other,
-                             int32_t length, UErrorCode &errorCode)
-        : MessagePatternList<double, 8>(other, length, errorCode) {}
 };
 
 class MessagePatternPartsList : public MessagePatternList<MessagePattern::Part, 32> {
-public:
-    MessagePatternPartsList() {}
-    MessagePatternPartsList(const MessagePatternPartsList &other,
-                            int32_t length, UErrorCode &errorCode)
-        : MessagePatternList<MessagePattern::Part, 32>(other, length, errorCode) {}
-
-    UBool memEquals(const MessagePatternPartsList &other, int32_t length) const {
-        return 0==uprv_memcmp(a.getAlias(), other.a.getAlias(),
-                              length*sizeof(MessagePattern::Part));
-    }
 };
 
 // MessagePattern constructors etc. ---------------------------------------- ***
@@ -140,14 +165,6 @@ MessagePattern &
 MessagePattern::operator=(const MessagePattern &other) {
     aposMode=other.aposMode;
     msg=other.msg;
-    delete partsList;
-    partsList=NULL;
-    parts=NULL;
-    partsLength=0;
-    delete numericValuesList;
-    numericValuesList=NULL;
-    numericValues=NULL;
-    numericValuesLength=0;
     hasArgNames=other.hasArgNames;
     hasArgNumbers=other.hasArgNumbers;
     needsAutoQuoting=other.needsAutoQuoting;
@@ -161,32 +178,42 @@ MessagePattern::copyStorage(const MessagePattern &other, UErrorCode &errorCode) 
     if(U_FAILURE(errorCode)) {
         return;
     }
-    if(other.partsLength>0) {
-        partsList=new MessagePatternPartsList(*other.partsList, other.partsLength, errorCode);
+    parts=NULL;
+    partsLength=0;
+    numericValues=NULL;
+    numericValuesLength=0;
+    if(partsList==NULL) {
+        partsList=new MessagePatternPartsList();
         if(partsList==NULL) {
             errorCode=U_MEMORY_ALLOCATION_ERROR;
             return;
         }
+        parts=partsList->a.getAlias();
+    }
+    if(other.partsLength>0) {
+        partsList->copyFrom(*other.partsList, other.partsLength, errorCode);
         if(U_FAILURE(errorCode)) {
-            delete partsList;
-            partsList=NULL;
             return;
         }
         parts=partsList->a.getAlias();
+        partsLength=other.partsLength;
     }
     if(other.numericValuesLength>0) {
-        numericValuesList=new MessagePatternDoubleList(
-            *other.numericValuesList, other.numericValuesLength, errorCode);
         if(numericValuesList==NULL) {
-            errorCode=U_MEMORY_ALLOCATION_ERROR;
-            return;
+            numericValuesList=new MessagePatternDoubleList();
+            if(numericValuesList==NULL) {
+                errorCode=U_MEMORY_ALLOCATION_ERROR;
+                return;
+            }
+            numericValues=numericValuesList->a.getAlias();
         }
+        numericValuesList->copyFrom(
+            *other.numericValuesList, other.numericValuesLength, errorCode);
         if(U_FAILURE(errorCode)) {
-            delete numericValuesList;
-            numericValuesList=NULL;
             return;
         }
         numericValues=numericValuesList->a.getAlias();
+        numericValuesLength=other.numericValuesLength;
     }
 }
 
@@ -358,6 +385,9 @@ MessagePattern::postParse() {
     if(partsList!=NULL) {
         parts=partsList->a.getAlias();
     }
+    if(numericValuesList!=NULL) {
+        numericValues=numericValuesList->a.getAlias();
+    }
 }
 
 int32_t
@@ -374,6 +404,120 @@ MessagePattern::skipIdentifier(int32_t index) {
     int32_t msgLength=msg.length();
     const UChar *t=PatternProps::skipIdentifier(s+index, msgLength-index);
     return (int32_t)(t-s);
+}
+
+int32_t
+MessagePattern::skipDouble(int32_t index) {
+    int32_t msgLength=msg.length();
+    while(index<msgLength) {
+        UChar c=msg.charAt(index);
+        // U+221E: Allow the infinity symbol, for ChoiceFormat patterns.
+        if((c<0x30 && c!=u_plus && c!=u_minus && c!=u_dot) || (c>0x39 && c!=u_e && c!=u_E && c!=0x221e)) {
+            break;
+        }
+        ++index;
+    }
+    return index;
+}
+
+UBool
+MessagePattern::isArgTypeChar(UChar32 c) {
+    return (u_a<=c && c<=u_z) || (u_A<=c && c<=u_Z);
+}
+
+UBool
+MessagePattern::isChoice(int32_t index) {
+    UChar c;
+    return
+        ((c=msg.charAt(index++))==u_c || c==u_C) &&
+        ((c=msg.charAt(index++))==u_h || c==u_H) &&
+        ((c=msg.charAt(index++))==u_o || c==u_O) &&
+        ((c=msg.charAt(index++))==u_i || c==u_I) &&
+        ((c=msg.charAt(index++))==u_c || c==u_C) &&
+        ((c=msg.charAt(index))==u_e || c==u_E);
+}
+
+UBool
+MessagePattern::isPlural(int32_t index) {
+    UChar c;
+    return
+        ((c=msg.charAt(index++))==u_p || c==u_P) &&
+        ((c=msg.charAt(index++))==u_l || c==u_L) &&
+        ((c=msg.charAt(index++))==u_u || c==u_U) &&
+        ((c=msg.charAt(index++))==u_r || c==u_R) &&
+        ((c=msg.charAt(index++))==u_a || c==u_A) &&
+        ((c=msg.charAt(index))==u_l || c==u_L);
+}
+
+UBool
+MessagePattern::isSelect(int32_t index) {
+    UChar c;
+    return
+        ((c=msg.charAt(index++))==u_s || c==u_S) &&
+        ((c=msg.charAt(index++))==u_e || c==u_E) &&
+        ((c=msg.charAt(index++))==u_l || c==u_L) &&
+        ((c=msg.charAt(index++))==u_e || c==u_E) &&
+        ((c=msg.charAt(index++))==u_c || c==u_C) &&
+        ((c=msg.charAt(index))==u_t || c==u_T);
+}
+
+UBool
+MessagePattern::inMessageFormatPattern(int32_t nestingLevel) {
+    return nestingLevel>0 || partsList->a[0].type==UMSGPAT_PART_TYPE_MSG_START;
+}
+
+UBool
+MessagePattern::inTopLevelChoiceMessage(int32_t nestingLevel, UMessagePatternArgType parentType) {
+    return
+        nestingLevel==1 &&
+        parentType==UMSGPAT_ARG_TYPE_CHOICE &&
+        partsList->a[0].type!=UMSGPAT_PART_TYPE_MSG_START;
+}
+
+void
+MessagePattern::addPart(UMessagePatternPartType type, int32_t index, int32_t length,
+                        int32_t value, UErrorCode &errorCode) {
+    if(partsList->ensureCapacityForOneMore(partsLength, errorCode)) {
+        Part &part=partsList->a[partsLength++];
+        part.type=type;
+        part.index=index;
+        part.length=(uint16_t)length;
+        part.value=(int16_t)value;
+        part.limitPartIndex=0;
+    }
+}
+
+void
+MessagePattern::addLimitPart(int32_t start,
+                             UMessagePatternPartType type, int32_t index, int32_t length,
+                             int32_t value, UErrorCode &errorCode) {
+    partsList->a[start].limitPartIndex=partsLength;
+    addPart(type, index, length, value, errorCode);
+}
+
+void
+MessagePattern::addArgDoublePart(double numericValue, int32_t start, int32_t length,
+                                 UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) {
+        return;
+    }
+    int32_t numericIndex=numericValuesLength;
+    if(numericValuesList==NULL) {
+        numericValuesList=new MessagePatternDoubleList();
+        if(numericValuesList==NULL) {
+            errorCode=U_MEMORY_ALLOCATION_ERROR;
+            return;
+        }
+    } else if(!numericValuesList->ensureCapacityForOneMore(numericValuesLength, errorCode)) {
+        return;
+    } else {
+        if(numericIndex>Part::MAX_VALUE) {
+            errorCode=U_INDEX_OUTOFBOUNDS_ERROR;
+            return;
+        }
+    }
+    numericValuesList->a[numericValuesLength++]=numericValue;
+    addPart(UMSGPAT_PART_TYPE_ARG_DOUBLE, start, length, numericIndex, errorCode);
 }
 
 void
@@ -408,5 +552,30 @@ MessagePattern::setParseError(UParseError *parseError, int32_t index) {
 }
 
 UOBJECT_DEFINE_NO_RTTI_IMPLEMENTATION(MessagePattern)
+
+// MessageImpl ------------------------------------------------------------- ***
+
+void
+MessageImpl::appendReducedApostrophes(const UnicodeString &s, int32_t start, int32_t limit,
+                                      UnicodeString &sb) {
+    int32_t doubleApos=-1;
+    for(;;) {
+        int32_t i=s.indexOf((UChar)u_apos, start);
+        if(i<0 || i>=limit) {
+            sb.append(s, start, limit-start);
+            break;
+        }
+        if(i==doubleApos) {
+            // Double apostrophe at start-1 and start==i, append one.
+            sb.append((UChar)u_apos);
+            ++start;
+            doubleApos=-1;
+        } else {
+            // Append text between apostrophes and skip this one.
+            sb.append(s, start, i-start);
+            doubleApos=start=i+1;
+        }
+    }
+}
 
 U_NAMESPACE_END

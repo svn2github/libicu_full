@@ -505,13 +505,8 @@ public:
         return aposMode;
     }
 
-    /**
-     * @return TRUE if getApostropheMode()==UMSGPAT_APOS_DOUBLE_REQUIRED
-     * @internal
-     */
-    UBool jdkAposMode() const {
-        return aposMode==UMSGPAT_APOS_DOUBLE_REQUIRED;
-    }
+    // Java has package-private jdkAposMode() here.
+    // In C++, this is declared in the MessageImpl class.
 
     /**
      * @return the parsed pattern string (null if none was parsed).
@@ -798,6 +793,9 @@ private:
     int32_t parseMessage(int32_t index, int32_t msgStartLength,
                          int32_t nestingLevel, UMessagePatternArgType parentType,
                          UParseError *parseError, UErrorCode &errorCode) {
+        if(U_SUCCESS(errorCode)) {
+            errorCode=U_UNSUPPORTED_ERROR;
+        }
         return 0;
 #if 0  // TODO
         if(nestingLevel>Part.MAX_VALUE) {
@@ -888,6 +886,9 @@ private:
 
     int32_t parseArg(int32_t index, int32_t argStartLength, int32_t nestingLevel,
                      UParseError *parseError, UErrorCode &errorCode) {
+        if(U_SUCCESS(errorCode)) {
+            errorCode=U_UNSUPPORTED_ERROR;
+        }
         return 0;
 #if 0  // TODO
         int32_t argStart=parts.size();
@@ -989,6 +990,9 @@ private:
     }
 
     int32_t parseSimpleStyle(int32_t index, UParseError *parseError, UErrorCode &errorCode) {
+        if(U_SUCCESS(errorCode)) {
+            errorCode=U_UNSUPPORTED_ERROR;
+        }
         return 0;
 #if 0  // TODO
         int32_t start=index;
@@ -1029,6 +1033,9 @@ private:
 
     int32_t parseChoiceStyle(int32_t index, int32_t nestingLevel,
                              UParseError *parseError, UErrorCode &errorCode) {
+        if(U_SUCCESS(errorCode)) {
+            errorCode=U_UNSUPPORTED_ERROR;
+        }
         return 0;
 #if 0  // TODO
         int32_t start=index;
@@ -1083,6 +1090,9 @@ private:
 
     int32_t parsePluralOrSelectStyle(UMessagePatternArgType argType, int32_t index, int32_t nestingLevel,
                                      UParseError *parseError, UErrorCode &errorCode) {
+        if(U_SUCCESS(errorCode)) {
+            errorCode=U_UNSUPPORTED_ERROR;
+        }
         return 0;
 #if 0  // TODO
         int32_t start=index;
@@ -1195,7 +1205,7 @@ private:
      * @see #validateArgumentName(String)
      */
     static int32_t parseArgNumber(const UnicodeString &s, int32_t start, int32_t limit) {
-        return 0;
+        return UMSGPAT_ARG_NAME_NOT_VALID;
 #if 0  // TODO
         // If the identifier contains only ASCII digits, then it is an argument _number_
         // and must not have leading zeros (except "0" itself).
@@ -1244,7 +1254,6 @@ private:
         return parseArgNumber(msg, start, limit);
     }
 
-#if 0  // TODO
     /**
      * Parses a number from the specified message substring.
      * @param start start index into the message string
@@ -1253,6 +1262,10 @@ private:
      */
     void parseDouble(int32_t start, int32_t limit, UBool allowInfinity,
                      UParseError *parseError, UErrorCode &errorCode) {
+        if(U_SUCCESS(errorCode)) {
+            errorCode=U_UNSUPPORTED_ERROR;
+        }
+#if 0  // TODO
         assert start<limit;
         // fake loop for easy exit and single throw statement
         for(;;) {
@@ -1302,142 +1315,50 @@ private:
         }
         throw new NumberFormatException(
             "Bad syntax for numeric value: "+msg.substring(start, limit));
+#endif
     }
 
-public:  // TODO: friends for @internal? or move @internal elsewhere?!
-    /**
-     * Appends the s[start, limit[ substring to sb, but with only half of the apostrophes
-     * according to JDK pattern behavior.
-     * @internal
-     */
-    static void appendReducedApostrophes(const UnicodeString &s, int32_t start, int32_t limit,
-                                         UnicodeString &sb) {
-        int doubleApos=-1;
-        for(;;) {
-            int i=s.indexOf('\'', start);
-            if(i<0 || i>=limit) {
-                sb.append(s, start, limit);
-                break;
-            }
-            if(i==doubleApos) {
-                // Double apostrophe at start-1 and start==i, append one.
-                sb.append('\'');
-                ++start;
-                doubleApos=-1;
-            } else {
-                // Append text between apostrophes and skip this one.
-                sb.append(s, start, i);
-                doubleApos=start=i+1;
-            }
-        }
-    }
-private:
-#endif
+    // Java has package-private appendReducedApostrophes() here.
+    // In C++, this is declared in the MessageImpl class.
 
     int32_t skipWhiteSpace(int32_t index);
 
     int32_t skipIdentifier(int32_t index);
 
-#if 0  // TODO
     /**
      * Skips a sequence of characters that could occur in a double value.
      * Does not fully parse or validate the value.
      */
-    int32_t skipDouble(int32_t index) {
-        while(index<msg.length()) {
-            char c=msg.charAt(index);
-            // U+221E: Allow the infinity symbol, for ChoiceFormat patterns.
-            if((c<'0' && "+-.".indexOf(c)<0) || (c>'9' && c!='e' && c!='E' && c!=0x221e)) {
-                break;
-            }
-            ++index;
-        }
-        return index;
-    }
+    int32_t skipDouble(int32_t index);
 
-    static UBool isArgTypeChar(UChar32 c) {
-        return ('a'<=c && c<='z') || ('A'<=c && c<='Z');
-    }
+    static UBool isArgTypeChar(UChar32 c);
 
-    UBool isChoice(int32_t index) {
-        char c;
-        return
-            ((c=msg.charAt(index++))=='c' || c=='C') &&
-            ((c=msg.charAt(index++))=='h' || c=='H') &&
-            ((c=msg.charAt(index++))=='o' || c=='O') &&
-            ((c=msg.charAt(index++))=='i' || c=='I') &&
-            ((c=msg.charAt(index++))=='c' || c=='C') &&
-            ((c=msg.charAt(index))=='e' || c=='E');
-    }
+    UBool isChoice(int32_t index);
 
-    UBool isPlural(int32_t index) {
-        char c;
-        return
-            ((c=msg.charAt(index++))=='p' || c=='P') &&
-            ((c=msg.charAt(index++))=='l' || c=='L') &&
-            ((c=msg.charAt(index++))=='u' || c=='U') &&
-            ((c=msg.charAt(index++))=='r' || c=='R') &&
-            ((c=msg.charAt(index++))=='a' || c=='A') &&
-            ((c=msg.charAt(index))=='l' || c=='L');
-    }
+    UBool isPlural(int32_t index);
 
-    UBool isSelect(int32_t index) {
-        char c;
-        return
-            ((c=msg.charAt(index++))=='s' || c=='S') &&
-            ((c=msg.charAt(index++))=='e' || c=='E') &&
-            ((c=msg.charAt(index++))=='l' || c=='L') &&
-            ((c=msg.charAt(index++))=='e' || c=='E') &&
-            ((c=msg.charAt(index++))=='c' || c=='C') &&
-            ((c=msg.charAt(index))=='t' || c=='T');
-    }
+    UBool isSelect(int32_t index);
 
     /**
      * @return TRUE if we are inside a MessageFormat (sub-)pattern,
      *         as opposed to inside a top-level choice/plural/select pattern.
      */
-    UBool inMessageFormatPattern(int32_t nestingLevel) {
-        return nestingLevel>0 || parts.get(0).type==UMSGPAT_PART_TYPE_MSG_START;
-    }
+    UBool inMessageFormatPattern(int32_t nestingLevel);
 
     /**
      * @return TRUE if we are in a MessageFormat sub-pattern
      *         of a top-level ChoiceFormat pattern.
      */
-    UBool inTopLevelChoiceMessage(int32_t nestingLevel, UMessagePatternArgType parentType) {
-        return
-            nestingLevel==1 &&
-            parentType==UMSGPAT_ARG_TYPE_CHOICE &&
-            parts.get(0).type!=UMSGPAT_PART_TYPE_MSG_START;
-    }
+    UBool inTopLevelChoiceMessage(int32_t nestingLevel, UMessagePatternArgType parentType);
 
     void addPart(UMessagePatternPartType type, int32_t index, int32_t length,
-                 int32_t value, UErrorCode &errorCode) {
-        parts.add(new Part(type, index, length, value));
-    }
+                 int32_t value, UErrorCode &errorCode);
 
     void addLimitPart(int32_t start,
                       UMessagePatternPartType type, int32_t index, int32_t length,
-                      int32_t value, UErrorCode &errorCode) {
-        parts.get(start).limitPartIndex=parts.size();
-        addPart(type, index, length, value);
-    }
+                      int32_t value, UErrorCode &errorCode);
 
-    void addArgDoublePart(double numericValue, int32_t start, int32_t length, UErrorCode &errorCode) {
-        int32_t numericIndex;
-        if(numericValues==null) {
-            numericValues=new ArrayList<Double>();
-            numericIndex=0;
-        } else {
-            numericIndex=numericValues.size();
-            if(numericIndex>Part.MAX_VALUE) {
-                throw new IndexOutOfBoundsException("Too many numeric values");
-            }
-        }
-        numericValues.add(numericValue);
-        addPart(UMSGPAT_PART_TYPE_ARG_DOUBLE, start, length, numericIndex);
-    }
-#endif
+    void addArgDoublePart(double numericValue, int32_t start, int32_t length, UErrorCode &errorCode);
 
     void setParseError(UParseError *parseError, int32_t index);
 
