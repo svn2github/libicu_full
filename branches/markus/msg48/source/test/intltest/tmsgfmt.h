@@ -91,6 +91,7 @@ public:
      */
     void TestRBNF();
 
+    void TestApostropheMode();
     //
     /** 
      * ------------ API tests ----------
@@ -115,6 +116,7 @@ public:
     void testCoverage(void);
 
 private:
+    UnicodeString GetPatternAndSkipSyntax(const MessagePattern& pattern);
 };
 
 #endif /* #if !UCONFIG_NO_FORMATTING */

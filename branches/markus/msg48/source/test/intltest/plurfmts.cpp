@@ -161,26 +161,28 @@ void PluralFormatTest::pluralFormatUnitTest(/*char *par*/)
         UNICODE_STRING_SIMPLE("odd {# is odd.} other{# is even.}"),
         UNICODE_STRING_SIMPLE("other{# is odd or even.}"),
         UNICODE_STRING_SIMPLE("odd{The number {0, number, #.#0} is odd.}other{The number {0, number, #.#0} is even.}"),
-        UNICODE_STRING_SIMPLE("odd{The number {#} is odd.}other{The number {#} is even.}"),
+        UNICODE_STRING_SIMPLE("odd{The number {1, number, #} is odd.}other{The number {2, number, #} is even.}"),
     };
     UnicodeString patternOddTestResult[PLURAL_PATTERN_DATA] = {
         UNICODE_STRING_SIMPLE(" is odd."),
         UNICODE_STRING_SIMPLE(" is odd or even."),
         UNICODE_STRING_SIMPLE("The number {0, number, #.#0} is odd."),
-        UNICODE_STRING_SIMPLE("The number {#} is odd."),
+        UNICODE_STRING_SIMPLE("The number {1, number, #} is odd."),
     };
     UnicodeString patternEvenTestResult[PLURAL_PATTERN_DATA] = {
         UNICODE_STRING_SIMPLE(" is even."),
         UNICODE_STRING_SIMPLE(" is odd or even."),
         UNICODE_STRING_SIMPLE("The number {0, number, #.#0} is even."),
-        UNICODE_STRING_SIMPLE("The number {#} is even."),
+        UNICODE_STRING_SIMPLE("The number {2, number, #} is even."),
     };
     UnicodeString checkSyntaxtData[PLURAL_SYNTAX_DATA] = {
-        UNICODE_STRING_SIMPLE("odd{foo} odd{bar} other{foobar}"),
-        UNICODE_STRING_SIMPLE("odd{foo} other{bar} other{foobar}"),
+        // ICU 4.8 does not check for duplicate keywords any more.
+        //UNICODE_STRING_SIMPLE("odd{foo} odd{bar} other{foobar}"),
+        //UNICODE_STRING_SIMPLE("odd{foo} other{bar} other{foobar}"),
         UNICODE_STRING_SIMPLE("odd{foo}"),
-        UNICODE_STRING_SIMPLE("otto{foo} other{bar}"),
-        UNICODE_STRING_SIMPLE("1odd{foo} other{bar}"),
+        // ICU 4.8 does not check for unknown keywords any more.
+        //UNICODE_STRING_SIMPLE("otto{foo} other{bar}"),
+        UNICODE_STRING_SIMPLE("*odd{foo} other{bar}"),
         UNICODE_STRING_SIMPLE("odd{foo},other{bar}"),
         UNICODE_STRING_SIMPLE("od d{foo} other{bar}"),
         UNICODE_STRING_SIMPLE("odd{foo}{foobar}other{foo}"),
@@ -266,7 +268,7 @@ void PluralFormatTest::pluralFormatUnitTest(/*char *par*/)
     }
     numberFormatTest(&pluralFmt, numFmt, 5, 5, NULL, NULL, FALSE, &message);
     pluralFmt.applyPattern(UNICODE_STRING_SIMPLE("odd__{odd} other{even}"), status);
-    if (U_SUCCESS(status)) {
+    if (pluralFmt.format(1, status) != UNICODE_STRING_SIMPLE("even")) {
         errln("SetLocale should reset rules but did not.");
     }
     status = U_ZERO_ERROR;

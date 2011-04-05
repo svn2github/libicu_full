@@ -25,9 +25,12 @@
 #include "unicode/msgfmt.h"
 #include "unicode/numfmt.h"
 #include "unicode/choicfmt.h"
+#include "unicode/messagepattern.h"
 #include "unicode/selfmt.h"
 #include "unicode/gregocal.h"
 #include <stdio.h>
+
+#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 
 void
 TestMessageFormat::runIndexedTest(int32_t index, UBool exec,
@@ -57,6 +60,7 @@ TestMessageFormat::runIndexedTest(int32_t index, UBool exec,
     TESTCASE_AUTO(testMsgFormatPlural);
     TESTCASE_AUTO(testMsgFormatSelect);
     TESTCASE_AUTO(testApostropheInPluralAndSelect);
+    TESTCASE_AUTO(TestApostropheMode);
     TESTCASE_AUTO(testCoverage);
     TESTCASE_AUTO_END;
 }
@@ -258,7 +262,9 @@ void TestMessageFormat::PatternTest()
        "'{1,number,#,##}' {1,number,#,##}",
     };
 
-    UnicodeString testResultPatterns[] = {
+    // ICU 4.8 returns the original pattern (testCases).
+    // rather than toPattern() reconstituting a new, equivalent pattern string (testResultPatterns).
+    /*UnicodeString testResultPatterns[] = {
         "Quotes '', '{', a {0} '{'0}",
         "Quotes '', '{', a {0,number} '{'0}",
         "'{'1,number,#,##} {1,number,'#'#,##}",
@@ -268,12 +274,12 @@ void TestMessageFormat::PatternTest()
         "'{'1,date,full}, {1,date,full},",
         "'{'3,date,full}, {3,date,full},",
         "'{'1,number,#,##} {1,number,#,##}"
-    };
+    };*/
 
     UnicodeString testResultStrings[] = {
-        "Quotes ', {, a 1 {0}",
-        "Quotes ', {, a 1 {0}",
-        "{1,number,#,##} #34,56",
+        "Quotes ', {, 'a' 1 {0}",
+        "Quotes ', {, 'a' 1 {0}",
+        "{1,number,'#',##} #34,56",
         "There are 3,456 files on Disk at 1/12/70 5:46 AM.",
         "On Disk, there are 3,456 files, with $1.00.",
         "{1,number,percent}, 345,600%,",
@@ -295,11 +301,18 @@ void TestMessageFormat::PatternTest()
             logln(((UnicodeString)"MessageFormat for ") + testCases[i] + " creation failed.\n");
             continue;
         }
-        if (form->toPattern(buffer) != testResultPatterns[i]) {
+        // ICU 4.8 returns the original pattern (testCases).
+
+        // rather than toPattern() reconstituting a new, equivalent pattern string (testResultPatterns).
+        if (form->toPattern(buffer) != testCases[i]) {
+            // Note: An alternative test would be to build MessagePattern objects for
+            // both the input and output patterns and compare them, taking SKIP_SYNTAX etc.
+            // into account.
+            // (Too much trouble...)
             errln(UnicodeString("TestMessageFormat::PatternTest failed test #2, i = ") + i);
             //form->toPattern(buffer);
             errln(((UnicodeString)" Orig: ") + testCases[i]);
-            errln(((UnicodeString)" Exp:  ") + testResultPatterns[i]);
+            errln(((UnicodeString)" Exp:  ") + testCases[i]);
             errln(((UnicodeString)" Got:  ") + buffer);
         }
 
@@ -319,7 +332,7 @@ void TestMessageFormat::PatternTest()
             logln(UnicodeString("    Result: ") + result );
             logln(UnicodeString("  Expected: ") + testResultStrings[i] );
         }
-        
+
 
         //it_out << "Result:  " << result);
 #if 0
@@ -1250,7 +1263,12 @@ void TestMessageFormat::testAdopt()
     }
 
     assertEquals("msgCmp.toPattern()", formatStr, msgCmp.toPattern(patCmp.remove()));
-    assertEquals("msg.toPattern()", formatStr, msg.toPattern(patAct.remove()));
+    // ICU 4.8 does not support toPattern() when there are custom formats (from setFormat() etc.).
+    // assertEquals("msg.toPattern()", formatStr, msg.toPattern(patAct.remove()));
+    msg.toPattern(patCmp.remove());
+    if (!patCmp.isEmpty()) {
+      errln("msg.setFormat().toPattern() succeeds.");
+    }
 
     for (i = 0; i < countAct; i++) {
         a = formatsAct[i];
@@ -1293,7 +1311,8 @@ void TestMessageFormat::testAdopt()
     delete[] formatsToAdopt;
 
     assertEquals("msgCmp.toPattern()", formatStr, msgCmp.toPattern(patCmp.remove()));
-    assertEquals("msg.toPattern()", formatStr, msg.toPattern(patAct.remove()));
+    // ICU 4.8 does not support toPattern() when there are custom formats (from setFormat() etc.).
+    // assertEquals("msg.toPattern()", formatStr, msg.toPattern(patAct.remove()));
 
     formatsAct = msg.getFormats(countAct);
     if (!formatsAct || (countAct <=0) || (countAct != countCmp)) {
@@ -1344,7 +1363,8 @@ void TestMessageFormat::testAdopt()
     delete[] formatsToAdopt; // array itself not needed in this case;
 
     assertEquals("msgCmp.toPattern()", formatStr, msgCmp.toPattern(patCmp.remove()));
-    assertEquals("msg.toPattern()", formatStr, msg.toPattern(patAct.remove()));
+    // ICU 4.8 does not support toPattern() when there are custom formats (from setFormat() etc.).
+    // assertEquals("msg.toPattern()", formatStr, msg.toPattern(patAct.remove()));
 
     formatsAct = msg.getFormats(countAct);
     if (!formatsAct || (countAct <=0) || (countAct != countCmp)) {
@@ -1531,6 +1551,57 @@ void TestMessageFormat::TestRBNF(void) {
         delete fmt;
     }
     delete numFmt;
+}
+
+UnicodeString TestMessageFormat::GetPatternAndSkipSyntax(const MessagePattern& pattern) {
+    UnicodeString us(pattern.getPatternString());
+    int count = pattern.countParts();
+    for (int i = count; i > 0;) {
+        const MessagePattern::Part& part = pattern.getPart(--i);
+        if (part.getType() == UMSGPAT_PART_TYPE_SKIP_SYNTAX) {
+            us.remove(part.getIndex(), part.getLimit() - part.getIndex());
+        }
+    }
+    return us;
+}
+
+void TestMessageFormat::TestApostropheMode() {
+    UErrorCode status = U_ZERO_ERROR;
+    MessagePattern *ado_mp = new MessagePattern(UMSGPAT_APOS_DOUBLE_OPTIONAL, status);
+    MessagePattern *adr_mp = new MessagePattern(UMSGPAT_APOS_DOUBLE_REQUIRED, status);
+    if (ado_mp->getApostropheMode() != UMSGPAT_APOS_DOUBLE_OPTIONAL) {
+      errln("wrong value from ado_mp->getApostropheMode().");
+    }
+    if (adr_mp->getApostropheMode() != UMSGPAT_APOS_DOUBLE_REQUIRED) {
+      errln("wrong value from adr_mp->getApostropheMode().");
+    }
+
+
+    UnicodeString tuples[] = {
+        // Desired output
+        // DOUBLE_OPTIONAL pattern
+        // DOUBLE_REQUIRED pattern (empty=same as DOUBLE_OPTIONAL)
+        "I see {many}", "I see '{many}'", "",
+        "I said {'Wow!'}", "I said '{''Wow!''}'", "",
+        "I dont know", "I dont know", "I don't know",
+        "I don't know", "I don't know", "I don''t know",
+        "I don't know", "I don''t know", "I don''t know"
+    };
+    int32_t tuples_count = LENGTHOF(tuples);
+
+    for (int i = 0; i < tuples_count; i += 3) {
+      UnicodeString& desired = tuples[i];
+      UnicodeString& ado_pattern = tuples[i + 1];
+      UErrorCode status = U_ZERO_ERROR;
+      assertEquals("DOUBLE_OPTIONAL failure",
+                   desired,
+                   GetPatternAndSkipSyntax(ado_mp->parse(ado_pattern, NULL, status)));
+      UnicodeString& adr_pattern = tuples[i + 2].isEmpty() ? ado_pattern : tuples[i + 2];
+      assertEquals("DOUBLE_REQUIRED failure", desired,
+          GetPatternAndSkipSyntax(adr_mp->parse(adr_pattern, NULL, status)));
+    }
+    delete adr_mp;
+    delete ado_mp;
 }
 
 void TestMessageFormat::testAutoQuoteApostrophe(void) {
