@@ -470,10 +470,23 @@ public:
                                      UParseError *parseError, UErrorCode &errorCode);
 
     /**
-     * Clears this MessagePattern, returning it to the state after the default constructor.
+     * Clears this MessagePattern.
+     * countParts() will return 0.
      * @draft ICU 4.8
      */
     void clear();
+
+    /**
+     * Clears this MessagePattern and sets the UMessagePatternApostropheMode.
+     * countParts() will return 0.
+     * @param mode The new UMessagePatternApostropheMode.
+     * @draft ICU 4.8
+     * @provisional This API might change or be removed in a future release.
+     */
+    void clearPatternAndSetApostropheMode(UMessagePatternApostropheMode mode) {
+        clear();
+        aposMode=mode;
+    }
 
     /**
      * @param other another object to compare with.

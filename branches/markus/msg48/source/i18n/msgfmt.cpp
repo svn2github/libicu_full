@@ -713,9 +713,8 @@ MessageFormat::applyPattern(const UnicodeString& pattern,
     }
     status = U_UNSUPPORTED_ERROR;
 #if 0  // TODO: Java code to be ported:
-    // TODO(markus): Add MessagePattern::clearPatternAndSetApostropheMode(aposMode)?
-    if (msgPattern == null || aposMode != msgPattern.getApostropheMode()) {
-        msgPattern = new MessagePattern(aposMode);
+    if (aposMode != msgPattern.getApostropheMode()) {
+        msgPattern.clearPatternAndSetApostropheMode(aposMode);
     }
     applyPattern(pattern);
 #endif
