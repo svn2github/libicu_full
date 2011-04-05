@@ -702,6 +702,25 @@ MessageFormat::applyPattern(const UnicodeString& pattern,
     }
     argTypeCount = subformatCount = 0;
 }
+
+void
+MessageFormat::applyPattern(const UnicodeString& pattern,
+                            UMessagePatternApostropheMode aposMode,
+                            UParseError* parseError,
+                            UErrorCode& status) {
+    if (U_FAILURE(status)) {
+        return;
+    }
+    status = U_UNSUPPORTED_ERROR;
+#if 0  // TODO: Java code to be ported:
+    // TODO(markus): Add MessagePattern::clearPatternAndSetApostropheMode(aposMode)?
+    if (msgPattern == null || aposMode != msgPattern.getApostropheMode()) {
+        msgPattern = new MessagePattern(aposMode);
+    }
+    applyPattern(pattern);
+#endif
+}
+
 // -------------------------------------
 // Converts this MessageFormat instance to a pattern.
 

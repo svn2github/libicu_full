@@ -28,6 +28,7 @@
 
 #include "unicode/format.h"
 #include "unicode/locid.h"
+#include "unicode/messagepattern.h"
 #include "unicode/parseerr.h"
 #include "unicode/uchar.h"
 
@@ -414,6 +415,37 @@ public:
     virtual void applyPattern(const UnicodeString& pattern,
                              UParseError& parseError,
                              UErrorCode& status);
+
+    /**
+     * Sets the UMessagePatternApostropheMode and the pattern used by this message format.
+     * Parses the pattern and caches Format objects for simple argument types.
+     * Patterns and their interpretation are specified in the
+     * <a href="#patterns">class description</a>.
+     * <p>
+     * This method is best used only once on a given object to avoid confusion about the mode,
+     * and after constructing the object with an empty pattern string to minimize overhead.
+     *
+     * @param pattern    The pattern to be applied.
+     * @param aposMode   The new apostrophe mode.
+     * @param parseError Struct to receive information on the position
+     *                   of an error within the pattern.
+     *                   Can be NULL.
+     * @param status    Input/output error code.  If the
+     *                  pattern cannot be parsed, set to failure code.
+     * @draft ICU 4.8
+     */
+    virtual void applyPattern(const UnicodeString& pattern,
+                              UMessagePatternApostropheMode aposMode,
+                              UParseError* parseError,
+                              UErrorCode& status);
+
+    /**
+     * @return this instance's UMessagePatternApostropheMode.
+     * @draft ICU 4.8
+     */
+    UMessagePatternApostropheMode getApostropheMode() const {
+        return UMSGPAT_APOS_DOUBLE_OPTIONAL;  // TODO: msgPattern.getApostropheMode();
+    }
 
     /**
      * Returns a pattern that can be used to recreate this object.
