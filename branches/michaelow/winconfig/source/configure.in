@@ -1291,7 +1291,7 @@ AC_SUBST(platform_make_fragment_name)
 AC_SUBST(platform_make_fragment)
 
 U_USING_CYGWIN_MSVC=0
-if test "${icu_cv_host_frag"} = "mh-cygwin-msvc"; then
+if test "${icu_cv_host_frag}" = "mh-cygwin-msvc"; then
 U_USING_CYGWIN_MSVC=1
 fi
 AC_SUBST(U_USING_CYGWIN_MSVC)
