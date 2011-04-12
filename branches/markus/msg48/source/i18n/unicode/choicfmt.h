@@ -1,6 +1,6 @@
 /*
 ********************************************************************************
-*   Copyright (C) 1997-2010, International Business Machines
+*   Copyright (C) 1997-2011, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 ********************************************************************************
 *
@@ -31,10 +31,11 @@
 
 #if !UCONFIG_NO_FORMATTING
 
-#include "unicode/unistr.h"
-#include "unicode/numfmt.h"
 #include "unicode/fieldpos.h"
 #include "unicode/format.h"
+#include "unicode/messagepattern.h"
+#include "unicode/numfmt.h"
+#include "unicode/unistr.h"
 
 U_NAMESPACE_BEGIN
 
@@ -362,7 +363,7 @@ public:
     /**
      * Sets the pattern.
      * @param pattern    The pattern to be applied.
-     * @param parseError Struct to recieve information on position
+     * @param parseError Struct to receive information on position
      *                   of error if an error is encountered
      * @param status     Output param set to success/failure code on
      *                   exit. If the pattern is invalid, this will be
@@ -375,7 +376,7 @@ public:
     /**
      * Gets the pattern.
      *
-     * @param pattern    Output param which will recieve the pattern
+     * @param pattern    Output param which will receive the pattern
      *                   Previous contents are deleted.
      * @return    A reference to 'pattern'
      * @stable ICU 2.0
@@ -413,30 +414,32 @@ public:
                             int32_t count);
 
     /**
-     * Get the limits passed in the constructor.
+     * Returns NULL and 0.
+     * Before ICU 4.8, this used to return the choice limits array.
      *
-     * @param count    The size of the limits arrays
-     * @return the limits.
-     * @stable ICU 2.0
+     * @param count Will be set to 0.
+     * @return NULL
+     * @deprecated ICU 4.8 Use the MessagePattern class to analyze a ChoiceFormat pattern.
      */
     virtual const double* getLimits(int32_t& count) const;
 
     /**
-     * Get the limit booleans passed in the constructor.  The caller
-     * must not delete the result.
+     * Returns NULL and 0.
+     * Before ICU 4.8, this used to return the limit booleans array.
      *
-     * @param count   The size of the arrays
-     * @return the closures
-     * @stable ICU 2.4
+     * @param count Will be set to 0.
+     * @return NULL
+     * @deprecated ICU 4.8 Use the MessagePattern class to analyze a ChoiceFormat pattern.
      */
     virtual const UBool* getClosures(int32_t& count) const;
 
     /**
-     * Get the formats passed in the constructor.
+     * Returns NULL and 0.
+     * Before ICU 4.8, this used to return the array of choice strings.
      *
-     * @param count   The size of the arrays
-     * @return the formats.
-     * @stable ICU 2.0
+     * @param count Will be set to 0.
+     * @return NULL
+     * @deprecated ICU 4.8 Use the MessagePattern class to analyze a ChoiceFormat pattern.
      */
     virtual const UnicodeString* getFormats(int32_t& count) const;
 
@@ -610,8 +613,6 @@ public:
                        Formattable& result,
                        UErrorCode& status) const;
 
-
-public:
     /**
      * Returns a unique class ID POLYMORPHICALLY.  Pure virtual override.
      * This method is to implement a simple version of RTTI, since not all
@@ -639,22 +640,9 @@ public:
     static UClassID U_EXPORT2 getStaticClassID(void);
 
 private:
-    // static cache management (thread-safe)
-  //  static NumberFormat* getNumberFormat(UErrorCode &status); // call this function to 'check out' a numberformat from the cache.
-  //  static void          releaseNumberFormat(NumberFormat *adopt); // call this function to 'return' the number format to the cache.
-
     /**
-     * Converts a string to a double value using a default NumberFormat object
-     * which is static (shared by all ChoiceFormat instances).
-     * @param string the string to be converted with.
-     * @return the converted double number.
-     */
-    static double stod(const UnicodeString& string);
-
-    /**
-     * Converts a double value to a string using a default NumberFormat object
-     * which is static (shared by all ChoiceFormat instances).
-     * @param value the double number to be converted with.
+     * Converts a double value to a string.
+     * @param value the double number to be converted.
      * @param string the result string.
      * @return the converted string.
      */
@@ -667,7 +655,7 @@ private:
      * based on the pattern.
      *
      * @param newPattern   Pattern used to construct object.
-     * @param parseError   Struct to recieve information on position
+     * @param parseError   Struct to receive information on position
      *                     of error if an error is encountered.
      * @param status       Output param to receive success code.  If the
      *                     pattern cannot be parsed, set to failure code.
@@ -678,7 +666,59 @@ private:
                  UErrorCode& status);
 
     friend class MessageFormat;
+
+    virtual void setChoices(const double* limits,
+                            const UBool* closures,
+                            const UnicodeString* formats,
+                            int32_t count,
+                            UErrorCode &errorCode);
+
     /**
+     * Finds the ChoiceFormat sub-message for the given number.
+     * @param pattern A MessagePattern.
+     * @param partIndex the index of the first ChoiceFormat argument style part.
+     * @param number a number to be mapped to one of the ChoiceFormat argument's intervals
+     * @return the sub-message start part index.
+     */
+    static int32_t findSubMessage(const MessagePattern &pattern, int32_t partIndex, double number);
+
+    static double parseArgument(
+            const MessagePattern &pattern, int32_t partIndex,
+            const UnicodeString &source, ParsePosition &pos);
+
+    /**
+     * Matches the pattern string from the end of the partIndex to
+     * the beginning of the limitPartIndex,
+     * including all syntax except SKIP_SYNTAX,
+     * against the source string starting at sourceOffset.
+     * If they match, returns the length of the source string match.
+     * Otherwise returns -1.
+     */
+    static int32_t matchStringUntilLimitPart(
+            const MessagePattern &pattern, int32_t partIndex, int32_t limitPartIndex,
+            const UnicodeString &source, int32_t sourceOffset);
+
+    /**
+     * Some of the ChoiceFormat constructors do not have a UErrorCode paramater.
+     * We need _some_ way to provide one for the MessagePattern constructor.
+     * Alternatively, the MessagePattern could be a pointer field, but that is
+     * not nice either.
+     */
+    UErrorCode constructorErrorCode;
+
+    /**
+     * The MessagePattern which contains the parsed structure of the pattern string.
+     *
+     * Starting with ICU 4.8, the MessagePattern contains a sequence of
+     * numeric/selector/message parts corresponding to the parsed pattern.
+     * For details see the MessagePattern class API docs.
+     */
+    MessagePattern msgPattern;
+
+    /**
+     * Docs & fields from before ICU 4.8, before MessagePattern was used.
+     * Commented out, and left only for explanation of semantics.
+     * --------
      * Each ChoiceFormat divides the range -Inf..+Inf into fCount
      * intervals.  The intervals are:
      *
@@ -713,12 +753,11 @@ private:
      *
      * Because of the nature of interval 0, fClosures[0] has no
      * effect.
-
      */
-    double*         fChoiceLimits;
-    UBool*          fClosures;
-    UnicodeString*  fChoiceFormats;
-    int32_t         fCount;
+    // double*         fChoiceLimits;
+    // UBool*          fClosures;
+    // UnicodeString*  fChoiceFormats;
+    // int32_t         fCount;
 };
 
 inline UnicodeString&

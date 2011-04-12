@@ -41,6 +41,14 @@ public:
     static void appendReducedApostrophes(const UnicodeString &s, int32_t start, int32_t limit,
                                          UnicodeString &sb);
 
+    /**
+     * Appends the sub-message to the result string.
+     * Omits SKIP_SYNTAX and appends whole arguments using appendReducedApostrophes().
+     */
+    static UnicodeString &appendSubMessageWithoutSkipSyntax(const MessagePattern &msgPattern,
+                                                            int32_t msgStart,
+                                                            UnicodeString &result);
+
 private:
     MessageImpl();  // no constructor: all static methods
 };

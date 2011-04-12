@@ -1,7 +1,7 @@
 
 /********************************************************************
  * COPYRIGHT: 
- * Copyright (c) 1997-2009, International Business Machines Corporation and
+ * Copyright (c) 1997-2011, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 
@@ -80,7 +80,8 @@ TestChoiceFormat::TestSimpleExample( void )
     }
     delete formequal; 
     delete formnew; 
-      
+
+#if 0  // ICU 4.8 deprecates and disables the ChoiceFormat getters.
     //Testing getLimits()
     double *gotLimits=0;
     int32_t count=0;
@@ -93,7 +94,7 @@ TestChoiceFormat::TestSimpleExample( void )
             errln((UnicodeString)"getLimits didn't get the limits correctly.  Expected " + limits[ix] + " Got " + gotLimits[ix]);
         }
     }
-    //Testing getFormat()
+    //Testing getFormats()
     count=0;
     UnicodeString *gotFormats=0;
     gotFormats=(UnicodeString*)form->getFormats(count);
@@ -105,10 +106,9 @@ TestChoiceFormat::TestSimpleExample( void )
             errln((UnicodeString)"getFormats didn't get the Formats correctly.  Expected " + monthNames[ix] + " Got " + gotFormats[ix]);
         }
     }
-    
-   
+#endif
+
     delete form;
-   
 }
 
 void
@@ -216,6 +216,7 @@ TestChoiceFormat::TestComplexExample( void )
     it_logln("------ additional testing in complex test ------");
     it_logln();
     //
+#if 0  // ICU 4.8 deprecates and disables the ChoiceFormat getters.
     int32_t retCount;
     const double* retLimits = fileform->getLimits( retCount );
     if ((retCount == 4) && (retLimits)
@@ -238,6 +239,7 @@ TestChoiceFormat::TestComplexExample( void )
     }else{
         it_errln("***  getFormats unexpected result!");
     }
+#endif
 
     UnicodeString checkstr2[] = { 
         "There is no folder on Disk_A",
@@ -486,6 +488,7 @@ void TestChoiceFormat::TestClosures(void) {
         errln("FAIL: fmt1 != fmt2");
     }
 
+#if 0  // ICU 4.8 deprecates and disables the ChoiceFormat getters.
     int32_t i;
     int32_t count2 = 0;
     const double *limits2 = fmt2.getLimits(count2);
@@ -507,6 +510,7 @@ void TestChoiceFormat::TestClosures(void) {
           }
         }
     }
+#endif
 
     // Now test both format objects
     UnicodeString exp[] = {
@@ -596,6 +600,7 @@ void TestChoiceFormat::TestPatterns(void) {
                  1.0, "b",
                  1.0 + 1e-9, "c");
 
+#if 0  // ICU 4.8 only checks the pattern syntax, not whether the ranges make sense.
     // Try an invalid pattern that isolates a single value.
     // [-Inf,1.0) [1.0,1.0) [1.0,+Inf]
     _testPattern("0.0#a|1.0#b|1.0#c", FALSE,
@@ -614,6 +619,7 @@ void TestChoiceFormat::TestPatterns(void) {
     // [-Inf,2.0) [2.0,1.0) [1.0,+Inf]
     _testPattern("0.0#a|2.0#b|1.0#c", FALSE,
                  0, 0, 0, 0, 0, 0);
+#endif
 }
 
 void TestChoiceFormat::TestChoiceFormatToPatternOverflow() 

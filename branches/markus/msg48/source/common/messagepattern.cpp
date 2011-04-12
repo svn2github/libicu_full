@@ -184,6 +184,9 @@ MessagePattern::MessagePattern(const MessagePattern &other)
 
 MessagePattern &
 MessagePattern::operator=(const MessagePattern &other) {
+    if(this==&other) {
+        return *this;
+    }
     aposMode=other.aposMode;
     msg=other.msg;
     hasArgNames=other.hasArgNames;
@@ -1166,6 +1169,33 @@ MessageImpl::appendReducedApostrophes(const UnicodeString &s, int32_t start, int
             // Append text between apostrophes and skip this one.
             sb.append(s, start, i-start);
             doubleApos=start=i+1;
+        }
+    }
+}
+
+// Ported from second half of ICU4J SelectFormat.format(String).
+UnicodeString &
+MessageImpl::appendSubMessageWithoutSkipSyntax(const MessagePattern &msgPattern,
+                                               int32_t msgStart,
+                                               UnicodeString &result) {
+    const UnicodeString &msgString=msgPattern.getPatternString();
+    int32_t prevIndex=msgPattern.getPart(msgStart).getLimit();
+    for(int32_t i=msgStart;;) {
+        const MessagePattern::Part &part=msgPattern.getPart(++i);
+        UMessagePatternPartType type=part.getType();
+        int32_t index=part.getIndex();
+        if(type==UMSGPAT_PART_TYPE_MSG_LIMIT) {
+            return result.append(msgString, prevIndex, index-prevIndex);
+        } else if(type==UMSGPAT_PART_TYPE_SKIP_SYNTAX) {
+            result.append(msgString, prevIndex, index-prevIndex);
+            prevIndex=part.getLimit();
+        } else if(type==UMSGPAT_PART_TYPE_ARG_START) {
+            result.append(msgString, prevIndex, index-prevIndex);
+            prevIndex=index;
+            i=msgPattern.getLimitPartIndex(i);
+            index=msgPattern.getPart(i).getLimit();
+            appendReducedApostrophes(msgString, prevIndex, index, result);
+            prevIndex=index;
         }
     }
 }
