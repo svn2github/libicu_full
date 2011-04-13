@@ -5566,6 +5566,9 @@ const char* const locale_to_langtag[][3] = {
     {"sr_Latn_SR",  "sr-Latn-SR",   "sr-Latn-SR"},
     {"en__POSIX",   "en-u-va-posix", "en-u-va-posix"},
     {"en_POSIX",    "en-u-va-posix", "en-u-va-posix"},
+    {"en_US_POSIX_VAR", "en-US-posix-x-lvariant-var", NULL},  /* variant POSIX_VAR is processed as regular variant */
+    {"en_US_VAR_POSIX", "en-US-x-lvariant-var-posix", NULL},  /* variant VAR_POSIX is processed as regular variant */
+    {"en_US_POSIX@va=posix2",   "en-US-u-va-posix2",  "en-US-u-va-posix2"},           /* if keyword va=xxx already exists, variant POSIX is simply dropped */
     {"en_US_POSIX@ca=japanese",  "en-US-u-ca-japanese-va-posix", "en-US-u-ca-japanese-va-posix"},
     {"und_555",     "und-555",      "und-555"},
     {"123",         "und",          NULL},
@@ -5573,15 +5576,15 @@ const char* const locale_to_langtag[][3] = {
     {"_Latn",       "und-Latn",     "und-Latn"},
     {"_DE",         "und-DE",       "und-DE"},
     {"und_FR",      "und-FR",       "und-FR"},
-    {"th_TH_TH",    "th-TH",        NULL},
+    {"th_TH_TH",    "th-TH-x-lvariant-th", NULL},
     {"bogus",       "bogus",        "bogus"},
     {"foooobarrr",  "und",          NULL},
     {"az_AZ_CYRL",  "az-Cyrl-AZ",   "az-Cyrl-AZ"},
-    {"aa_BB_CYRL",  "aa-BB",        NULL},
+    {"aa_BB_CYRL",  "aa-BB-x-lvariant-cyrl", NULL},
     {"en_US_1234",  "en-US-1234",   "en-US-1234"},
     {"en_US_VARIANTA_VARIANTB", "en-US-varianta-variantb",  "en-US-varianta-variantb"},
     {"ja__9876_5432",   "ja-9876-5432", "ja-9876-5432"},
-    {"zh_Hant__VAR",    "zh-Hant",  NULL},
+    {"zh_Hant__VAR",    "zh-Hant-x-lvariant-var", NULL},
     {"es__BADVARIANT_GOODVAR",  "es-goodvar",   NULL},
     {"en@calendar=gregorian",   "en-u-ca-gregory",  "en-u-ca-gregory"},
     {"de@collation=phonebook;calendar=gregorian",   "de-u-ca-gregory-co-phonebk",   "de-u-ca-gregory-co-phonebk"},

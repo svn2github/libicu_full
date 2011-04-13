@@ -1199,6 +1199,9 @@ _appendVariantsToLanguageTag(const char* localeID, char* appendAt, int32_t capac
                     } else if (strict) {
                         *status = U_ILLEGAL_ARGUMENT_ERROR;
                         break;
+                    } else if (_isPrivateuseValueSubtag(pVar, -1)) {
+                        /* Handle private use subtags separately */
+                        break;
                     }
                 }
                 /* reset variant starting position */
@@ -1766,6 +1769,123 @@ _appendKeywords(ULanguageTag* langtag, char* appendAt, int32_t capacity, UErrorC
     }
 
     return u_terminateChars(appendAt, capacity, reslen, status);
+}
+
+static int32_t
+_appendPrivateuseToLanguageTag(const char* localeID, char* appendAt, int32_t capacity, UBool strict, UBool hadPosix, UErrorCode* status) {
+    char buf[ULOC_FULLNAME_CAPACITY];
+    char tmpAppend[ULOC_FULLNAME_CAPACITY];
+    UErrorCode tmpStatus = U_ZERO_ERROR;
+    int32_t len, i;
+    int32_t reslen = 0;
+
+    if (U_FAILURE(*status)) {
+        return 0;
+    }
+
+    len = uloc_getVariant(localeID, buf, sizeof(buf), &tmpStatus);
+    if (U_FAILURE(tmpStatus) || tmpStatus == U_STRING_NOT_TERMINATED_WARNING) {
+        if (strict) {
+            *status = U_ILLEGAL_ARGUMENT_ERROR;
+        }
+        return 0;
+    }
+
+    if (len > 0) {
+        char *p, *pPriv;
+        UBool bNext = TRUE;
+        UBool firstValue = TRUE;
+        UBool writeValue;
+
+        pPriv = NULL;
+        p = buf;
+        while (bNext) {
+            writeValue = FALSE;
+            if (*p == SEP || *p == LOCALE_SEP || *p == 0) {
+                if (*p == 0) {
+                    bNext = FALSE;
+                } else {
+                    *p = 0; /* terminate */
+                }
+                if (pPriv != NULL) {
+                    /* Private use in the canonical format is lowercase in BCP47 */
+                    for (i = 0; *(pPriv + i) != 0; i++) {
+                        *(pPriv + i) = uprv_tolower(*(pPriv + i));
+                    }
+
+                    /* validate */
+                    if (_isPrivateuseValueSubtag(pPriv, -1)) {
+                        if (firstValue) {
+                            if (!_isVariantSubtag(pPriv, -1)) {
+                                writeValue = TRUE;
+                            }
+                        } else {
+                            writeValue = TRUE;
+                        }
+                    } else if (strict) {
+                        *status = U_ILLEGAL_ARGUMENT_ERROR;
+                        break;
+                    } else {
+                        break;
+                    }
+
+                    if (writeValue) {
+                        if (reslen < capacity) {
+                            tmpAppend[reslen++] = SEP;
+                        }
+
+                        if (firstValue) {
+                            if (reslen < capacity) {
+                                tmpAppend[reslen++] = *PRIVATEUSE_KEY;
+                            }
+
+                            if (reslen < capacity) {
+                                tmpAppend[reslen++] = SEP;
+                            }
+
+                            len = (int32_t)uprv_strlen(PRIVUSE_VARIANT_PREFIX);
+                            if (reslen < capacity) {
+                                uprv_memcpy(tmpAppend + reslen, PRIVUSE_VARIANT_PREFIX, uprv_min(len, capacity - reslen));
+                            }
+                            reslen += len;
+
+                            if (reslen < capacity) {
+                                tmpAppend[reslen++] = SEP;
+                            }
+
+                            firstValue = FALSE;
+                        }
+
+                        len = (int32_t)uprv_strlen(pPriv);
+                        if (reslen < capacity) {
+                            uprv_memcpy(tmpAppend + reslen, pPriv, uprv_min(len, capacity - reslen));
+                        }
+                        reslen += len;
+                    }
+                }
+                /* reset private use starting position */
+                pPriv = NULL;
+            } else if (pPriv == NULL) {
+                pPriv = p;
+            }
+            p++;
+        }
+
+        if (U_FAILURE(*status)) {
+            return 0;
+        }
+    }
+
+    if (U_SUCCESS(*status)) {
+        len = reslen;
+        if (reslen < capacity) {
+            uprv_memcpy(appendAt, tmpAppend, uprv_min(len, capacity - reslen));
+        }
+    }
+
+    u_terminateChars(appendAt, capacity, reslen, status);
+
+    return reslen;
 }
 
 /*
@@ -2449,6 +2569,7 @@ uloc_toLanguageTag(const char* localeID,
     reslen += _appendRegionToLanguageTag(canonical, langtag + reslen, langtagCapacity - reslen, strict, status);
     reslen += _appendVariantsToLanguageTag(canonical, langtag + reslen, langtagCapacity - reslen, strict, &hadPosix, status);
     reslen += _appendKeywordsToLanguageTag(canonical, langtag + reslen, langtagCapacity - reslen, strict, hadPosix, status);
+    reslen += _appendPrivateuseToLanguageTag(canonical, langtag + reslen, langtagCapacity - reslen, strict, hadPosix, status);
 
     return reslen;
 }
