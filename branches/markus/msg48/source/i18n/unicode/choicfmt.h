@@ -51,8 +51,8 @@ class MessageFormat;
  * and <code>select</code> arguments for simple selection among a fixed set of choices!</em></p>
  *
  * <p>A <code>ChoiceFormat</code> splits
- * the real number line <code>-\htmlonly&#x221E;\endhtmlonly</code> to
- * <code>+\htmlonly&#x221E;\endhtmlonly</code> into two
+ * the real number line \htmlonly<code>-&#x221E;</code> to
+ * <code>+&#x221E;</code>\endhtmlonly into two
  * or more contiguous ranges. Each range is mapped to a
  * string.</p>
  *

@@ -130,8 +130,9 @@ class DateFormat;
  *       and unquoted {curly braces} must occur in matched pairs.
  * </ul>
  *
- * <p>Recommendation: Use the real apostrophe (single quote) character \u2019 for
- * human-readable text, and use the ASCII apostrophe (\u0027 ' )
+ * <p>Recommendation: Use the real apostrophe (single quote) character
+ * \htmlonly&#x2019;\endhtmlonly (U+2019) for
+ * human-readable text, and use the ASCII apostrophe ' (U+0027)
  * only in program syntax, like quoting in MessageFormat.
  * See the annotations for U+0027 Apostrophe in The Unicode Standard.
  *
