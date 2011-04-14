@@ -507,9 +507,9 @@ ChoiceFormat::format(const Formattable& obj,
 void
 ChoiceFormat::parse(const UnicodeString& text, 
                     Formattable& result,
-                    ParsePosition& status) const
+                    ParsePosition& pos) const
 {
-    result.setDouble(parseArgument(msgPattern, 0, text, status));
+    result.setDouble(parseArgument(msgPattern, 0, text, pos));
 }
 
 double
