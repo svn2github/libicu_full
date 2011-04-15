@@ -584,7 +584,7 @@ static int32_t UCharsToEscapedAscii(const UChar* utext, int32_t len, char* resul
         0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37,
         0x38, 0x39, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66
     };
-    int32_t i, j, v;
+    int32_t i, j;
     int32_t resultLen = 0;
     const int32_t limit = len<0 ? buflen : len; /* buflen is long enough to hit the buffer limit */
     const int32_t escapeLimit1 = buflen-2;
@@ -717,7 +717,7 @@ static void TestDisplayNames()
     /* test that we properly preflight and return data when there's a non-default pattern,
        see ticket #8262. */
     {
-        int32_t i, j, v;
+        int32_t i;
         static const char *locale="az_Cyrl";
         static const char *displayLocale="ja";
         static const char *expectedChars =
@@ -5688,6 +5688,10 @@ static const struct {
     {"en-u-ca-gregory",     "en@calendar=gregorian",    15},
     {"en-U-cu-USD",         "en@currency=usd",      11},
     {"en-US-u-va-posix",    "en_US_POSIX",          16},
+    {"en-us-u-ca-gregory-va-posix", "en_US_POSIX@calendar=gregorian", 27},
+    {"en-us-posix-u-va-posix",   "en_US_POSIX@va=posix",  22},
+    {"en-us-u-va-posix2",        "en_US@va=posix2",       17},
+    {"en-us-vari1-u-va-posix",   "en_US_VARI1@va=posix",  22},
     {"ar-x-1-2-3",          "ar@x=1-2-3",           10},
     {"fr-u-nu-latn-cu-eur", "fr@currency=eur;numbers=latn", 19},
     {"de-k-kext-u-co-phonebk-nu-latn",  "de@collation=phonebook;k=kext;numbers=latn",   30},

@@ -152,8 +152,11 @@ ultag_getVariant(const ULanguageTag* langtag, int32_t idx);
 static int32_t
 ultag_getVariantsSize(const ULanguageTag* langtag);
 
+#if 0
+/* Currently not being used. */
 static const char*
 ultag_getAttribute(const ULanguageTag* langtag, int32_t idx);
+#endif
 
 static int32_t
 ultag_getAttributesSize(const ULanguageTag* langtag);
@@ -290,10 +293,25 @@ _isVariantSubtag(const char* s, int32_t len) {
     if (len < 0) {
         len = (int32_t)uprv_strlen(s);
     }
-    if (len >= 5 && len <= 8 && _isAlphaString(s, len)) {
+    if (len >= 5 && len <= 8 && _isAlphaNumericString(s, len)) {
         return TRUE;
     }
     if (len == 4 && ISNUMERIC(*s) && _isAlphaNumericString(s + 1, 3)) {
+        return TRUE;
+    }
+    return FALSE;
+}
+
+static UBool
+_isPrivateuseVariantSubtag(const char* s, int32_t len) {
+    /*
+     * variant       = 1*8alphanum         ; registered variants
+     *               / (DIGIT 3alphanum)
+     */
+    if (len < 0) {
+        len = (int32_t)uprv_strlen(s);
+    }
+    if (len >= 1 && len <= 8 && _isAlphaNumericString(s, len)) {
         return TRUE;
     }
     return FALSE;
@@ -1547,6 +1565,10 @@ _appendLDMLExtensionAsKeywords(const char* ldmlext, ExtensionListEntry** appendT
     ExtensionListEntry *kwdFirst = NULL;
     int32_t bufIdx = 0;
     int32_t  len;
+    UBool variantExists = *posixVariant;
+
+    /* Reset the posixVariant value */
+    *posixVariant = FALSE;
 
     pNext = ldmlext;
     pBcpKey = pBcpType = NULL;
@@ -1597,7 +1619,7 @@ _appendLDMLExtensionAsKeywords(const char* ldmlext, ExtensionListEntry** appendT
             /* Special handling for u-va-posix, since we want to treat this as a variant, not */
             /* as a keyword.                                                                  */
 
-            if ( !uprv_strcmp(pKey,POSIX_KEY) && !uprv_strcmp(pType,POSIX_VALUE) ) {
+            if (!variantExists && !uprv_strcmp(pKey,POSIX_KEY) && !uprv_strcmp(pType,POSIX_VALUE) ) {
                 *posixVariant = TRUE;
             } else {
                 /* create an ExtensionListEntry for this keyword */
@@ -1654,12 +1676,19 @@ _appendKeywords(ULanguageTag* langtag, char* appendAt, int32_t capacity, UErrorC
     int32_t len;
     ExtensionListEntry *kwdFirst = NULL;
     ExtensionListEntry *kwd;
+    AttributeListEntry *attrFirst = NULL;
+    AttributeListEntry *attr;
     const char *key, *type;
     char kwdBuf[ULOC_KEYWORDS_CAPACITY];
     UBool posixVariant = FALSE;
 
     if (U_FAILURE(*status)) {
         return 0;
+    }
+
+    /* Determine if variants already exists */
+    if (ultag_getVariantsSize(langtag)) {
+        posixVariant = TRUE;
     }
 
     n = ultag_getExtensionsSize(langtag);
@@ -1717,43 +1746,78 @@ _appendKeywords(ULanguageTag* langtag, char* appendAt, int32_t capacity, UErrorC
         reslen += len;
     }
 
-    if (U_SUCCESS(*status) && kwdFirst != NULL) {
+    attrFirst = langtag->attributes;
+    if (U_SUCCESS(*status) && (kwdFirst != NULL || attrFirst != NULL)) {
         /* write out the sorted keywords */
+        UBool firstValue = TRUE;
+        UBool firstAttr = TRUE;
         kwd = kwdFirst;
-        while (kwd != NULL) {
+        attr = attrFirst;
+        do {
             if (reslen < capacity) {
-                if (kwd == kwdFirst) {
+                if (firstValue) {
                     /* '@' */
                     *(appendAt + reslen) = LOCALE_EXT_SEP;
-                } else {
+                    firstValue = FALSE;
+                } else if (attr) {
+                    /* '-' */
+                    *(appendAt + reslen) = SEP;
+                }else {
                     /* ';' */
                     *(appendAt + reslen) = LOCALE_KEYWORD_SEP;
                 }
             }
             reslen++;
 
-            /* key */
-            len = (int32_t)uprv_strlen(kwd->key);
-            if (reslen < capacity) {
-                uprv_memcpy(appendAt + reslen, kwd->key, uprv_min(len, capacity - reslen));
-            }
-            reslen += len;
+            if (attr) {
+                if (firstAttr) {
+                    len = (int32_t)uprv_strlen(LOCALE_ATTRIBUTE_KEY);
+                    if (reslen < capacity) {
+                        uprv_memcpy(appendAt + reslen, LOCALE_ATTRIBUTE_KEY, uprv_min(len, capacity - reslen));
+                    }
+                    reslen += len;
 
-            /* '=' */
-            if (reslen < capacity) {
-                *(appendAt + reslen) = LOCALE_KEY_TYPE_SEP;
-            }
-            reslen++;
+                    /* '=' */
+                    if (reslen < capacity) {
+                        *(appendAt + reslen) = LOCALE_KEY_TYPE_SEP;
+                    }
 
-            /* type */
-            len = (int32_t)uprv_strlen(kwd->value);
-            if (reslen < capacity) {
-                uprv_memcpy(appendAt + reslen, kwd->value, uprv_min(len, capacity - reslen));
-            }
-            reslen += len;
+                    reslen++;
 
-            kwd = kwd->next;
-        }
+                    firstAttr = FALSE;
+                }
+
+                len = (int32_t)uprv_strlen(attr->attribute);
+                if (reslen < capacity) {
+                    uprv_memcpy(appendAt + reslen, attr->attribute, uprv_min(len, capacity - reslen));
+                }
+                reslen += len;
+
+                attr = attr->next;
+            } else if (kwd) {
+                /* key */
+                len = (int32_t)uprv_strlen(kwd->key);
+                if (reslen < capacity) {
+                    uprv_memcpy(appendAt + reslen, kwd->key, uprv_min(len, capacity - reslen));
+                }
+                reslen += len;
+
+                /* '=' */
+                if (reslen < capacity) {
+                    *(appendAt + reslen) = LOCALE_KEY_TYPE_SEP;
+                }
+                reslen++;
+
+                /* type */
+                len = (int32_t)uprv_strlen(kwd->value);
+                if (reslen < capacity) {
+                    uprv_memcpy(appendAt + reslen, kwd->value, uprv_min(len, capacity - reslen));
+                }
+                reslen += len;
+
+                kwd = kwd->next;
+            }
+        } while (kwd || attr);
     }
 
     /* clean up */
@@ -1920,7 +1984,7 @@ ultag_parse(const char* tag, int32_t tagLen, int32_t* parsedLen, UErrorCode* sta
     char *pExtValueSubtag, *pExtValueSubtagEnd;
     char *pAttrValue;
     int32_t i;
-    UBool isLDMLExtension, reqLDMLType;
+    UBool isLDMLExtension, reqLDMLType, privateuseVar = FALSE;
 
     if (parsedLen != NULL) {
         *parsedLen = 0;
@@ -2067,7 +2131,8 @@ ultag_parse(const char* tag, int32_t tagLen, int32_t* parsedLen, UErrorCode* sta
             }
         }
         if (next & VART) {
-            if (_isVariantSubtag(pSubtag, subtagLen)) {
+            if (_isVariantSubtag(pSubtag, subtagLen) ||
+               (privateuseVar && _isPrivateuseVariantSubtag(pSubtag, subtagLen))) {
                 VariantListEntry *var;
                 UBool isAdded;
 
@@ -2159,12 +2224,18 @@ ultag_parse(const char* tag, int32_t tagLen, int32_t* parsedLen, UErrorCode* sta
                     } else {
                         /* LDML key */
                         if (!_isLDMLKey(pSubtag, subtagLen)) {
-                            /* stop parsing here and let the valid LDML extension key/type
-                               pairs processed by the code out of this while loop */
-                            break;
+                            if (pExtValueSubtag == NULL && _isAttributeSubtag(pSubtag, subtagLen)) {
+                                /* Get attribute */
+                                next = ATTR;
+                            } else {
+                                /* stop parsing here and let the valid LDML extension key/type
+                                   pairs processed by the code out of this while loop */
+                                break;
+                            }
+                        } else {
+                            reqLDMLType = TRUE;
+                            next = EXTV;
                         }
-                        reqLDMLType = TRUE;
-                        next = EXTV;
                     }
                 } else {
                     /* Mark the end of this subtag */
@@ -2172,12 +2243,15 @@ ultag_parse(const char* tag, int32_t tagLen, int32_t* parsedLen, UErrorCode* sta
                     next = EXTS | EXTV | PRIV;
                 }
 
-                if (pExtValueSubtag == NULL) {
-                    /* if the start postion of this extension's value is not yet,
-                       this one is the first value subtag */
-                    pExtValueSubtag = pSubtag;
+                if (next != ATTR) {
+                    if (pExtValueSubtag == NULL) {
+                        /* if the start postion of this extension's value is not yet,
+                           this one is the first value subtag */
+                        pExtValueSubtag = pSubtag;
+                    }
+
+                    continue;
                 }
-                continue;
             }
         }
         if (next & PRIV) {
@@ -2235,12 +2309,22 @@ ultag_parse(const char* tag, int32_t tagLen, int32_t* parsedLen, UErrorCode* sta
                     }
                     subtagLen = (int32_t)(pSep - pSubtag);
 
-                    if (_isPrivateuseValueSubtag(pSubtag, subtagLen)) {
+                    if (uprv_strncmp(pSubtag, PRIVUSE_VARIANT_PREFIX, uprv_strlen(PRIVUSE_VARIANT_PREFIX)) == 0) {
+                        *pSep = 0;
+                        next = VART;
+                        privateuseVar = TRUE;
+                        break;
+                    } else if (_isPrivateuseValueSubtag(pSubtag, subtagLen)) {
                         pLastGoodPosition = pSep;
                     } else {
                         break;
                     }
                 }
+
+                if (next == VART) {
+                    continue;
+                }
+
                 if (pLastGoodPosition - pPrivuseVal > 0) {
                     *pLastGoodPosition = 0;
                     t->privateuse = T_CString_toLowerCase(pPrivuseVal);
@@ -2249,6 +2333,25 @@ ultag_parse(const char* tag, int32_t tagLen, int32_t* parsedLen, UErrorCode* sta
                 break;
             }
             break;
+        }
+
+        if (next & ATTR) {
+            /* create a new attribute */
+            pAttribute = uprv_malloc(sizeof(AttributeListEntry));
+            if (pAttribute == NULL) {
+                *status = U_MEMORY_ALLOCATION_ERROR;
+                goto error;
+            }
+
+            *pSep = 0;
+            pAttribute->attribute =T_CString_toLowerCase(pSubtag);
+
+            if (!_addAttributeToList(&(t->attributes), pAttribute)) {
+                uprv_free(pAttribute);
+            }
+
+            next = EXTS | EXTV | PRIV;
+            continue;
         }
         /* If we fell through here, it means this subtag is illegal - quit parsing */
         break;
@@ -2400,6 +2503,8 @@ ultag_getVariantsSize(const ULanguageTag* langtag) {
     return size;
 }
 
+#if 0
+/* Currently not being used. */
 static const char*
 ultag_getAttribute(const ULanguageTag* langtag, int32_t idx) {
     const char *attr = NULL;
@@ -2415,6 +2520,7 @@ ultag_getAttribute(const ULanguageTag* langtag, int32_t idx) {
     }
     return attr;
 }
+#endif
 
 static int32_t
 ultag_getAttributesSize(const ULanguageTag* langtag) {
