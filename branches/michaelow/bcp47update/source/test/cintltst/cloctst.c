@@ -1982,7 +1982,7 @@ static void TestCanonicalization(void)
         { "ja_JP", "ja_JP", "ja_JP" },
 
         /* test case for "i-default" */
-        { "i-default", NULL, NULL }
+        { "i-default", "en@x=i-default", "en@x=i-default" }
     };
     
     static const char* label[] = { "getName", "canonicalize" };
@@ -5672,12 +5672,12 @@ static const struct {
     {"123",                 "",                     0},
     {"en_us",               "",                     0},
     {"en-latn-x",           "en_Latn",              7},
-    {"art-lojban",          "jbo",                  10},
-    {"zh-hakka",            "hak",                  8},
+    {"art-lojban",          "jbo",                  3},
+    {"zh-hakka",            "hak",                  3},
     {"zh-cmn-CH",           "cmn_CH",               9},
     {"xxx-yy",              "xxx_YY",               6},
     {"fr-234",              "fr_234",               6},
-    {"i-default",           "",                     9},
+    {"i-default",           "en@x=i-default",      14},
     {"i-test",              "",                     0},
     {"ja-jp-jp",            "ja_JP",                5},
     {"bogus",               "bogus",                5},

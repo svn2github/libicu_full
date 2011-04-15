@@ -76,16 +76,16 @@ static const char* PRIVUSE_VARIANT_PREFIX = "lvariant";
 static const char* GRANDFATHERED[] = {
 /*  grandfathered   preferred */
     "art-lojban",   "jbo",
-    "cel-gaulish",  "",
-    "en-GB-oed",    "",
+    "cel-gaulish",  "xtg-x-cel-gaulish",
+    "en-GB-oed",    "en-GB-x-oed",
     "i-ami",        "ami",
     "i-bnn",        "bnn",
-    "i-default",    "",
-    "i-enochian",   "",
+    "i-default",    "en-x-i-default",
+    "i-enochian",   "und-x-i-enochian",
     "i-hak",        "hak",
     "i-klingon",    "tlh",
     "i-lux",        "lb",
-    "i-mingo",      "",
+    "i-mingo",      "see-x-i-mingo",
     "i-navajo",     "nv",
     "i-pwn",        "pwn",
     "i-tao",        "tao",
@@ -98,7 +98,7 @@ static const char* GRANDFATHERED[] = {
     "sgn-ch-de",    "sgg",
     "zh-guoyu",     "cmn",
     "zh-hakka",     "hak",
-    "zh-min",       "",
+    "zh-min",       "nan-x-zh-min",
     "zh-min-nan",   "nan",
     "zh-xiang",     "hsn",
     NULL,           NULL
@@ -904,9 +904,9 @@ _bcp47ToLDMLType(const char* key, int32_t keyLen,
                  UErrorCode *status) {
     UResourceBundle *rb;
     char keyBuf[MAX_LDML_KEY_LEN];
-    char bcpTypeBuf[MAX_BCP47_SUBTAG_LEN];
+    char bcpTypeBuf[ULOC_KEYWORDS_CAPACITY]; /* ensure buffter is large enough for multiple values (e.g. buddhist-greg) */
     int32_t resultLen = 0;
-    int32_t i;
+    int32_t i, typeSize;
     const char *resType = NULL;
     UResourceBundle *mapData;
     UErrorCode tmpStatus = U_ZERO_ERROR;
@@ -934,9 +934,17 @@ _bcp47ToLDMLType(const char* key, int32_t keyLen,
         bcpTypeLen = (int32_t)uprv_strlen(bcpType);
     }
 
-    if (bcpTypeLen >= sizeof(bcpTypeBuf)) {
-        *status = U_ILLEGAL_ARGUMENT_ERROR;
-        return 0;
+    typeSize = 0;
+    for (i = 0; i < bcpTypeLen; i++) {
+        if (bcpType[i] == SEP) {
+            if (typeSize >= MAX_BCP47_SUBTAG_LEN) {
+                *status = U_ILLEGAL_ARGUMENT_ERROR;
+                return 0;
+            }
+            typeSize = 0;
+        } else {
+            typeSize++;
+        }
     }
 
     uprv_memcpy(bcpTypeBuf, bcpType, bcpTypeLen);
@@ -1557,7 +1565,7 @@ _appendKeywordsToLanguageTag(const char* localeID, char* appendAt, int32_t capac
  */
 static void
 _appendLDMLExtensionAsKeywords(const char* ldmlext, ExtensionListEntry** appendTo, char* buf, int32_t bufSize, UBool *posixVariant, UErrorCode *status) {
-    const char *p, *pNext, *pSep;
+    const char *p, *pNext, *pSep, *pTmp, *pTmpStart;
     const char *pBcpKey, *pBcpType;
     const char *pKey, *pType;
     int32_t bcpKeyLen = 0, bcpTypeLen;
@@ -1566,6 +1574,7 @@ _appendLDMLExtensionAsKeywords(const char* ldmlext, ExtensionListEntry** appendT
     int32_t bufIdx = 0;
     int32_t  len;
     UBool variantExists = *posixVariant;
+    UBool searchFurther;
 
     /* Reset the posixVariant value */
     *posixVariant = FALSE;
@@ -1578,7 +1587,27 @@ _appendLDMLExtensionAsKeywords(const char* ldmlext, ExtensionListEntry** appendT
         /* locate next separator char */
         while (*pSep) {
             if (*pSep == SEP) {
-                break;
+                searchFurther = FALSE;
+                if (pBcpKey != NULL) {
+                    pTmpStart = (pSep + 1);
+                    pTmp = pTmpStart;
+                    /* Look at the next subtag and see if it is part of the previous subtag or the start of new keyword */
+                    while (*pTmp) {
+                        if (*pTmp == SEP || *(pTmp + 1) == 0) {
+                            if (!_isLDMLKey(pTmpStart, (int32_t)(pTmp - pTmpStart))) {
+                                searchFurther = TRUE;
+                            }
+                            break;
+                        }
+                        pTmp++;
+                    }
+                }
+                if (searchFurther) {
+                    pSep++;
+                    continue;
+                } else {
+                    break;
+                }
             }
             pSep++;
         }
@@ -2027,11 +2056,6 @@ ultag_parse(const char* tag, int32_t tagLen, int32_t* parsedLen, UErrorCode* sta
         if (T_CString_stricmp(GRANDFATHERED[i], tagBuf) == 0) {
             /* a grandfathered tag is always longer than its preferred mapping */
             uprv_strcpy(t->buf, GRANDFATHERED[i + 1]);
-            t->language = t->buf;
-            if (parsedLen != NULL) {
-                *parsedLen = tagLen;
-            }
-            return t;
         }
     }
 
@@ -2224,7 +2248,14 @@ ultag_parse(const char* tag, int32_t tagLen, int32_t* parsedLen, UErrorCode* sta
                     } else {
                         /* LDML key */
                         if (!_isLDMLKey(pSubtag, subtagLen)) {
-                            if (pExtValueSubtag == NULL && _isAttributeSubtag(pSubtag, subtagLen)) {
+                            /* May be part of incomplete type */
+                            if (pExtValueSubtag != NULL) {
+                                if (_isLDMLType(pSubtag, subtagLen)) {
+                                    pExtValueSubtagEnd = pSep;
+                                    reqLDMLType = FALSE;
+                                    next = EXTS | EXTV | PRIV;
+                                }
+                            } else if (pExtValueSubtag == NULL && _isAttributeSubtag(pSubtag, subtagLen)) {
                                 /* Get attribute */
                                 next = ATTR;
                             } else {
