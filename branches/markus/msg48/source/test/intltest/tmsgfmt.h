@@ -92,7 +92,9 @@ public:
     void TestRBNF();
 
     void TestApostropheMode();
-    //
+
+    void TestCompatibleApostrophe();
+
     /** 
      * ------------ API tests ----------
      * These routines test various API functionality.

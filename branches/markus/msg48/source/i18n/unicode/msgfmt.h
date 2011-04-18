@@ -30,12 +30,22 @@
 #include "unicode/locid.h"
 #include "unicode/messagepattern.h"
 #include "unicode/parseerr.h"
+#include "unicode/plurfmt.h"
+#include "unicode/plurrule.h"
 #include "unicode/uchar.h"
+
+U_CDECL_BEGIN
+// Forward declaration.
+struct UHashtable;
+typedef struct UHashtable UHashtable;
+U_CDECL_END
 
 U_NAMESPACE_BEGIN
 
 class NumberFormat;
 class DateFormat;
+
+class AppendableWrapper;
 
 /**
  * <p>MessageFormat prepares strings for display to users,
@@ -55,7 +65,7 @@ class DateFormat;
  * subformats used for inserted arguments.
  *
  * <p>Arguments can be named (using identifiers) or numbered (using small ASCII-digit integers).
- * Some of the API metho ds work only with argument numbers and throw an exception
+ * Some of the API methods work only with argument numbers and throw an exception
  * if the pattern has named arguments (see {@link #usesNamedArguments()}).
  *
  * <p>An argument might not specify any format type. In this case,
@@ -796,6 +806,19 @@ public:
     static UnicodeString autoQuoteApostrophe(const UnicodeString& pattern,
         UErrorCode& status);
 
+
+    /**
+     * Compares two Format objects. This is used for constructing the hash
+     * tables.
+     *
+     * @param left pointer to a Format object. Must not be NULL.
+     * @param right pointer to a Format object. Must not be NULL.
+     *
+     * @return whether the two objects are the same
+     * @internal
+     */
+    static UBool equalFormats(const void* left, const void* right);
+
     /**
      * Returns true if this MessageFormat uses named arguments,
      * and false otherwise.  See class description.
@@ -847,6 +870,7 @@ public:
 private:
 
     Locale              fLocale;
+    MessagePattern      msgPattern;
     UnicodeString       fPattern;
     Format**            formatAliases; // see getFormats
     int32_t             formatAliasesCapacity;
@@ -863,6 +887,27 @@ private:
      * @internal
      */
     class Subformat;
+
+     /**
+     * This provider helps defer instantiation of a PluralRules object
+     * until we actually need to select a keyword.
+     * For example, if the number matches an explicit-value selector like "=1"
+     * we do not need any PluralRules.
+     */
+    class PluralSelectorProvider : public PluralFormat::PluralSelector {
+      public:
+        PluralSelectorProvider(Locale* loc) : locale(loc) {
+        }
+        virtual ~PluralSelectorProvider() {
+            // "rules" is not owned by this.
+        }
+        virtual UnicodeString select(double number, UErrorCode& ec) const;
+
+        virtual void reset();
+      private:
+        Locale* locale;
+        PluralRules* rules;
+    };
 
     /**
      * A MessageFormat contains an array of subformats.  This array
@@ -904,6 +949,11 @@ private:
     NumberFormat* defaultNumberFormat;
     DateFormat*   defaultDateFormat;
 
+    UHashtable* cachedFormatters;
+    UHashtable* customFormatArgStarts;
+
+    PluralSelectorProvider pluralProvider;
+
     /**
      * Method to retrieve default formats (or NULL on failure).
      * These are semantically const, but may modify *this.
@@ -939,7 +989,7 @@ private:
     UnicodeString&  format( const Formattable* arguments,
                             int32_t cnt,
                             UnicodeString& appendTo,
-                            FieldPosition& status,
+                            FieldPosition& pos,
                             int32_t recursionProtection,
                             UErrorCode& success) const;
 
@@ -947,14 +997,59 @@ private:
                             const UnicodeString *argumentNames,
                             int32_t cnt,
                             UnicodeString& appendTo,
-                            FieldPosition& status,
+                            FieldPosition& pos,
                             int32_t recursionProtection,
                             UErrorCode& success) const;
 
-    void             makeFormat(int32_t offsetNumber,
-                                UnicodeString* segments,
-                                UParseError& parseError,
-                                UErrorCode& success);
+    void format(int32_t msgStart,
+                double pluralNumber,
+                const Formattable* arguments,
+                const UnicodeString *argumentNames,
+                int32_t cnt,
+                AppendableWrapper& appendTo,
+                FieldPosition* pos,
+                UErrorCode& success) const;
+
+    UnicodeString getArgName(int32_t partIndex);
+
+    void setArgStartFormat(int32_t argStart, Format* formatter, UErrorCode& status);
+
+    void setCustomArgStartFormat(int32_t argStart, Format* formatter, UErrorCode& status);
+
+    int32_t nextTopLevelArgStart(int32_t partIndex) const;
+
+    bool argNameMatches(int32_t partIndex, const UnicodeString& argName, int32_t argNumber);
+
+    void cacheExplicitFormats(UErrorCode& status);
+
+    Format* createAppropriateFormat(UnicodeString& type, UnicodeString& style, Formattable::Type& formattableType, UParseError& parseError, UErrorCode& ec);
+
+    const Formattable* getArgFromListByName(const Formattable* arguments,
+                                            const UnicodeString *argumentNames,
+                                            int32_t cnt, UnicodeString& name) const;
+
+    Formattable* parse(int32_t msgStart,
+                       const UnicodeString& source,
+                       ParsePosition& pos,
+                       int32_t& count,
+                       UErrorCode& ec) const;
+
+    FieldPosition* updateMetaData(AppendableWrapper& dest, int32_t prevLength,
+                                  FieldPosition* fp, const Formattable* argId) const;
+
+    Format* getCachedFormatter(int32_t argumentNumber) const;
+
+    UnicodeString getLiteralStringUntilNextArgument(int32_t from) const;
+
+    void CopyHashTables(const MessageFormat& that, UErrorCode& ec);
+
+    void formatComplexSubMessage(int32_t msgStart,
+                                 double pluralNumber,
+                                 const Formattable* arguments,
+                                 const UnicodeString *argumentNames,
+                                 int32_t cnt,
+                                 AppendableWrapper& appendTo,
+                                 UErrorCode& success) const;
 
     /**
      * Convenience method that ought to be in NumberFormat
@@ -992,6 +1087,27 @@ private:
      */
     UBool isLegalArgName(const UnicodeString& argName) const;
 
+    /**
+     * Resets the internal MessagePattern, and other associated caches.
+     */
+    void resetPattern();
+
+    // A DummyFormatter that we use solely to store a NULL value. UHash does
+    // not support storing NULL values.
+    class U_I18N_API DummyFormat : public Format {
+      public:
+        virtual UBool operator==(const Format&) const;
+        virtual Format* clone() const;
+        virtual UnicodeString& format(const Formattable&,
+                                      UnicodeString& appendTo,
+                                      FieldPosition&,
+                                      UErrorCode& status) const;
+        virtual void parseObject(const UnicodeString&,
+                                 Formattable&,
+                                 ParsePosition&) const;
+        virtual UClassID getDynamicClassID() const;
+    };
+
     friend class MessageFormatAdapter; // getFormatTypeList() access
 };
 
@@ -1001,6 +1117,7 @@ MessageFormat::format(const Formattable& obj,
                       UErrorCode& status) const {
     return Format::format(obj, appendTo, status);
 }
+
 
 U_NAMESPACE_END
 

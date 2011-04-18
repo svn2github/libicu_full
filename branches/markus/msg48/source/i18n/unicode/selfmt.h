@@ -16,8 +16,8 @@
 #ifndef SELFMT
 #define SELFMT
 
-#include "unicode/utypes.h"
 #include "unicode/numfmt.h"
+#include "unicode/utypes.h"
 
 /**
  * \file
@@ -29,6 +29,8 @@
 U_NAMESPACE_BEGIN
 
 class Hashtable;
+
+class MessagePattern;
 
 /**
   * <p><code>SelectFormat</code> supports the creation of  internationalized
@@ -337,6 +339,17 @@ public:
      * @stable ICU 4.4
      */
     virtual UClassID getDynamicClassID() const;
+
+    /**
+     * Finds the SelectFormat sub-message for the given keyword, or the "other" sub-message.
+     * @param pattern A MessagePattern.
+     * @param partIndex the index of the first SelectFormat argument style part.
+     * @param keyword a keyword to be matched to one of the SelectFormat argument's keywords.
+     * @param ec Error code.
+     * @return the sub-message start part index.
+     */
+    static int32_t findSubMessage(const MessagePattern& pattern, int32_t partIndex,
+                                  const UnicodeString& keyword, UErrorCode& ec);
 
 private:
     typedef enum classesForSelectFormat{

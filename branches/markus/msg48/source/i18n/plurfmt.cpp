@@ -12,11 +12,13 @@
 *******************************************************************************
 */
 
-#include "unicode/utypes.h"
+#include "unicode/messagepattern.h"
 #include "unicode/plurfmt.h"
 #include "unicode/plurrule.h"
-#include "plurrule_impl.h"
+#include "unicode/utypes.h"
 #include "cmemory.h"
+#include "plurrule_impl.h"
+#include "uassert.h"
 #include "uhash.h"
 
 #if !UCONFIG_NO_FORMATTING
@@ -141,7 +143,7 @@ PluralFormat::applyPattern(const UnicodeString& newPattern, UErrorCode& status) 
     }
     explicitValuesLen = 0;
     
-    int state = 0;
+    int32_t state = 0;
     int32_t braceCount = 0;
     UnicodeString token;
     UnicodeString currentKeyword;
@@ -195,7 +197,7 @@ PluralFormat::applyPattern(const UnicodeString& newPattern, UErrorCode& status) 
                     explicitValue = result.getDouble(status);
 
                     if (explicitValues != NULL) {
-                        for (int i = 0; i < explicitValuesLen; ++i) {
+                        for (int32_t i = 0; i < explicitValuesLen; ++i) {
                             if (explicitValues[i].key == explicitValue) {
                                 status = U_DUPLICATE_KEYWORD;
                                 return;
@@ -250,7 +252,7 @@ PluralFormat::applyPattern(const UnicodeString& newPattern, UErrorCode& status) 
                                 return;
                     }
                             if (explicitValues != NULL) {
-                                for (int i = 0; i < explicitValuesLen; ++i) {
+                                for (int32_t i = 0; i < explicitValuesLen; ++i) {
                                     nv[i] = explicitValues[i];
                     }
                                 delete[] explicitValues;
@@ -385,7 +387,7 @@ UnicodeString&
 PluralFormat::format(double number,
                      UnicodeString& appendTo, 
                      FieldPosition& pos,
-                     UErrorCode& /*status*/) const {
+                     UErrorCode& /* status */) const {
 
     if (parsedValues == NULL) {
         if ( replacedNumberFormat== NULL ) {
@@ -397,7 +399,7 @@ PluralFormat::format(double number,
 
     UnicodeString *selectedPattern = NULL;
     if (explicitValuesLen > 0) {
-        for (int i = 0; i < explicitValuesLen; ++i) {
+        for (int32_t i = 0; i < explicitValuesLen; ++i) {
             if (number == explicitValues[i].key) {
                 selectedPattern = &explicitValues[i].value;
                 break;
@@ -523,7 +525,8 @@ PluralFormat::insertFormattedNumber(double number,
         case SINGLE_QUOTE:
             // Skip/copy quoted literal text.
             i = message.indexOf(SINGLE_QUOTE, i + 1);
-            // assert i >= 0 : "unterminated quote should have failed applyPattern()";
+            // Unterminated quote should have failed applyPattern().
+            U_ASSERT(i >= 0);
             break;
         case LEFTBRACE:
             ++braceStack;
@@ -604,12 +607,102 @@ PluralFormat::copyExplicitValues(PluralFormat::ExplicitPair *explicitValues, uin
         return NULL;
     }
     if (explicitValues != NULL) {
-        for (int i = 0; i < explicitValuesLen; ++i) {
+        for (int32_t i = 0; i < explicitValuesLen; ++i) {
             nv[i] = explicitValues[i];
         }
     }
     return nv;
 }
+
+
+int32_t PluralFormat::findSubMessage(
+    const MessagePattern& pattern, int32_t partIndex,
+    const PluralSelector& selector, double number, UErrorCode& ec) {
+    if (U_FAILURE(ec)) {
+        return 0;
+    }
+    int32_t count=pattern.countParts();
+    double offset;
+    const MessagePattern::Part* part=&pattern.getPart(partIndex);
+    if (MessagePattern::Part::hasNumericValue(part->getType())) {
+        offset=pattern.getNumericValue(*part);
+        ++partIndex;
+    } else {
+        offset=0;
+    }
+    // The keyword is empty until we need to match against non-explicit, not-"other" value.
+    // Then we get the keyword from the selector.
+    // (In other words, we never call the selector if we match against an explicit value,
+    // or if the only non-explicit keyword is "other".)
+    UnicodeString keyword;
+    // When we find a match, we set msgStart>0 and also set this boolean to true
+    // to avoid matching the keyword again (duplicates are allowed)
+    // while we continue to look for an explicit-value match.
+    bool haveKeywordMatch=false;
+    // msgStart is 0 until we find any appropriate sub-message.
+    // We remember the first "other" sub-message if we have not seen any
+    // appropriate sub-message before.
+    // We remember the first matching-keyword sub-message if we have not seen
+    // one of those before.
+    // (The parser allows [does not check for] duplicate keywords.
+    // We just have to make sure to take the first one.)
+    // We avoid matching the keyword twice by also setting haveKeywordMatch=true
+    // at the first keyword match.
+    // We keep going until we find an explicit-value match or reach the end of the plural style.
+    int32_t msgStart=0;
+    // Iterate over (ARG_SELECTOR [ARG_INT|ARG_DOUBLE] message) tuples
+    // until ARG_LIMIT or end of plural-only pattern.
+    do {
+        part=&pattern.getPart(partIndex++);
+        const UMessagePatternPartType type = part->getType();
+        if(type==UMSGPAT_PART_TYPE_ARG_LIMIT) {
+            break;
+        }
+        U_ASSERT (type==UMSGPAT_PART_TYPE_ARG_SELECTOR);
+        // part is an ARG_SELECTOR followed by an optional explicit value, and then a message
+        if(MessagePattern::Part::hasNumericValue(pattern.getPartType(partIndex))) {
+            // explicit value like "=2"
+            part=&pattern.getPart(partIndex++);
+            if(number==pattern.getNumericValue(*part)) {
+                // matches explicit value
+                return partIndex;
+            }
+        } else if(!haveKeywordMatch) {
+            // plural keyword like "few" or "other"
+            // Compare "other" first and call the selector if this is not "other".
+            if(pattern.partSubstringMatches(*part, UNICODE_STRING_SIMPLE("other"))) {
+                if(msgStart==0) {
+                    msgStart=partIndex;
+                    if(keyword.isEmpty() && (0 == keyword.compare(UNICODE_STRING_SIMPLE("other")))) {
+                        // This is the first "other" sub-message,
+                        // and the selected keyword is also "other".
+                        // Do not match "other" again.
+                        haveKeywordMatch=true;
+                    }
+                }
+            } else {
+                if(keyword.isEmpty()) {
+                    keyword=selector.select(number-offset, ec);
+                    if(msgStart!=0 && (0 == keyword.compare(UNICODE_STRING_SIMPLE("other")))) {
+                        // We have already seen an "other" sub-message.
+                        // Do not match "other" again.
+                        haveKeywordMatch=true;
+                        continue;
+                    }
+                }
+                if(pattern.partSubstringMatches(*part, keyword)) {
+                    // keyword matches
+                    msgStart=partIndex;
+                    // Do not match this keyword again.
+                    haveKeywordMatch=true;
+                }
+            }
+        }
+        partIndex=pattern.getLimitPartIndex(partIndex);
+    } while(++partIndex<count);
+    return msgStart;
+}
+
 
 U_NAMESPACE_END
 

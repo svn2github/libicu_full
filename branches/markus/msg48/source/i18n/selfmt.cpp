@@ -16,20 +16,20 @@
 
 #include <typeinfo>  // for 'typeid' to work
 
-#include "unicode/utypes.h"
-#include "unicode/ustring.h"
-#include "unicode/ucnv_err.h"
-#include "unicode/uchar.h"
-#include "unicode/umsg.h"
+#include "unicode/messagepattern.h"
 #include "unicode/rbnf.h"
+#include "unicode/selfmt.h"
+#include "unicode/uchar.h"
+#include "unicode/ucnv_err.h"
+#include "unicode/umsg.h"
+#include "unicode/ustring.h"
+#include "unicode/utypes.h"
 #include "cmemory.h"
-#include "util.h"
+#include "selfmtimpl.h"
 #include "uassert.h"
 #include "ustrfmt.h"
+#include "util.h"
 #include "uvector.h"
-
-#include "unicode/selfmt.h"
-#include "selfmtimpl.h"
 
 #if !UCONFIG_NO_FORMATTING
 
@@ -194,7 +194,7 @@ SelectFormat::applyPattern(const UnicodeString& newPattern, UErrorCode& status) 
                         // Apostrophe starts and ends quoting of literal text.
                         // Skip the quoted text and preserve the apostrophes for
                         // subsequent use in MessageFormat.
-                        int endAposIndex = pattern.indexOf(SINGLE_QUOTE, i + 1);
+                        int32_t endAposIndex = pattern.indexOf(SINGLE_QUOTE, i + 1);
                         if (endAposIndex < 0) {
                             // parsingFailure("Pattern syntax error. Unterminated quote.");
                             status = U_PATTERN_SYNTAX_ERROR;
@@ -317,6 +317,34 @@ UnicodeString&
 SelectFormat::toPattern(UnicodeString& appendTo) {
     return appendTo += pattern;
 }
+
+
+int32_t SelectFormat::findSubMessage(const MessagePattern& pattern, int32_t partIndex,
+                                     const UnicodeString& keyword, UErrorCode& ec) {
+    if (U_FAILURE(ec)) {
+        return 0;
+    }
+    int32_t count = pattern.countParts();
+    int32_t msgStart=0;
+    // Iterate over (ARG_SELECTOR, message) pairs until ARG_LIMIT or end of select-only pattern.
+    do {
+        const MessagePattern::Part& part=pattern.getPart(partIndex++);
+        const UMessagePatternPartType type=part.getType();
+        if(type==UMSGPAT_PART_TYPE_ARG_LIMIT) {
+            break;
+        }
+        // part is an ARG_SELECTOR followed by a message
+        if(pattern.partSubstringMatches(part, keyword)) {
+            // keyword matches
+            return partIndex;
+        } else if(msgStart==0 && pattern.partSubstringMatches(part, UNICODE_STRING_SIMPLE("other"))) {
+            msgStart=partIndex;
+        }
+        partIndex=pattern.getLimitPartIndex(partIndex);
+    } while(++partIndex<count);
+    return msgStart;
+}
+
 
 SelectFormat::CharacterClass
 SelectFormat::classifyCharacter(UChar ch) const{

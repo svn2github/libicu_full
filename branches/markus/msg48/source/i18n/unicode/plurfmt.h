@@ -31,6 +31,7 @@
 U_NAMESPACE_BEGIN
 
 class Hashtable;
+class MessagePattern;
 
 /**
  * <p>
@@ -478,7 +479,7 @@ public:
      */
      virtual UClassID getDynamicClassID() const;
 
-private:
+  private:
     typedef enum fmtToken {
         none,
         tLetter,
@@ -494,6 +495,22 @@ private:
       UnicodeString value;
     };
 
+    class  PluralSelector {
+      public:
+        /**
+        * Given a number, returns the appropriate PluralFormat keyword.
+        *
+        * @param number The number to be plural-formatted.
+        * @param ec Error code.
+        * @return The selected PluralFormat keyword.
+        */
+        virtual UnicodeString select(double number, UErrorCode& ec) const = 0;
+        /**
+        * Resets any initialized rules.
+        */
+        virtual void reset() = 0;
+    };
+
     Locale  locale;
     PluralRules* pluralRules;
     UnicodeString pattern;
@@ -501,7 +518,7 @@ private:
     NumberFormat*  numberFormat;
     NumberFormat* replacedNumberFormat; // alias, not owned
     ExplicitPair *explicitValues;
-    int explicitValuesLen;
+    int32_t explicitValuesLen;
     double offset;
     NumberFormat* asciiNumberFormat; // built on demand
 
@@ -519,6 +536,12 @@ private:
     void destructHelper(void);
     void zeroAllocs(void);
     NumberFormat *getAsciiNumberFormat(UErrorCode& status);
+
+    static int32_t findSubMessage(
+         const MessagePattern& pattern, int32_t partIndex,
+         const PluralSelector& selector, double number, UErrorCode& ec);
+
+    friend class MessageFormat;
 };
 
 U_NAMESPACE_END

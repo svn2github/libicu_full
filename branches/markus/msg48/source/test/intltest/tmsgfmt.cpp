@@ -61,6 +61,7 @@ TestMessageFormat::runIndexedTest(int32_t index, UBool exec,
     TESTCASE_AUTO(testMsgFormatSelect);
     TESTCASE_AUTO(testApostropheInPluralAndSelect);
     TESTCASE_AUTO(TestApostropheMode);
+    TESTCASE_AUTO(TestCompatibleApostrophe);
     TESTCASE_AUTO(testCoverage);
     TESTCASE_AUTO_END;
 }
@@ -1602,6 +1603,66 @@ void TestMessageFormat::TestApostropheMode() {
     }
     delete adr_mp;
     delete ado_mp;
+}
+
+
+// Compare behavior of ICU's DOUBLE_OPTIONAL and ICU's DOUBLE_REQUIRED compatibility mode.
+void TestMessageFormat::TestCompatibleApostrophe() {
+    // Message with choice argument which does not contain another argument.
+    // The JDK performs only one apostrophe-quoting pass on this pattern.
+    UnicodeString pattern = "ab{0,choice,0#1'2''3'''4''''.}yz";
+
+    UErrorCode ec = U_ZERO_ERROR;
+    MessageFormat* compMsg = new MessageFormat("", Locale::getUS(), ec);
+    compMsg->applyPattern(pattern, UMSGPAT_APOS_DOUBLE_REQUIRED, NULL, ec);
+    if (compMsg->getApostropheMode() != UMSGPAT_APOS_DOUBLE_REQUIRED) {
+        errln("wrong value from  compMsg->getApostropheMode().");
+    }
+
+    MessageFormat* icuMsg = new MessageFormat("", Locale::getUS(), ec);
+    icuMsg->applyPattern(pattern, UMSGPAT_APOS_DOUBLE_OPTIONAL, NULL, ec);
+    if (icuMsg->getApostropheMode() != UMSGPAT_APOS_DOUBLE_OPTIONAL) {
+        errln("wrong value from  icuMsg->getApostropheMode().");
+    }
+
+    Formattable zero0[] = { 0 };
+    FieldPosition fieldpos(0);
+    UnicodeString buffer1, buffer2;
+    assertEquals("incompatible ICU MessageFormat compatibility-apostrophe behavior",
+            "ab12'3'4''.yz",
+            compMsg->format(zero0, 1, buffer1, fieldpos, ec));
+    assertEquals("unexpected ICU MessageFormat double-apostrophe-optional behavior",
+            "ab1'2'3''4''.yz",
+            icuMsg->format(zero0, 1, buffer2, fieldpos, ec));
+
+    // Message with choice argument which contains a nested simple argument.
+    // The DOUBLE_REQUIRED version performs two apostrophe-quoting passes.
+    buffer1.remove();
+    buffer2.remove();
+    pattern = "ab{0,choice,0#1'2''3'''4''''.{0,number,'#x'}}yz";
+    compMsg->applyPattern(pattern, ec);
+    icuMsg->applyPattern(pattern, ec);
+    assertEquals("incompatible ICU MessageFormat compatibility-apostrophe behavior",
+            "ab1234'.0xyz",
+            compMsg->format(zero0, 1, buffer1, fieldpos, ec));
+    assertEquals("unexpected ICU MessageFormat double-apostrophe-optional behavior",
+            "ab1'2'3''4''.#x0yz",
+            icuMsg->format(zero0, 1, buffer2, fieldpos, ec));
+
+    delete compMsg;
+    delete icuMsg;
+    // This part is copied over from Java tests, but is irrelevant here.
+    // The JDK ChoiceFormat itself always performs one apostrophe-quoting pass.
+    /*
+    ChoiceFormat choice = new ChoiceFormat("0#1'2''3'''4''''.");
+    assertEquals("unexpected JDK ChoiceFormat apostrophe behavior",
+            "12'3'4''.",
+            choice.format(0));
+    choice.applyPattern("0#1'2''3'''4''''.{0,number,'#x'}");
+    assertEquals("unexpected JDK ChoiceFormat apostrophe behavior",
+            "12'3'4''.{0,number,#x}",
+            choice.format(0));
+    */
 }
 
 void TestMessageFormat::testAutoQuoteApostrophe(void) {
