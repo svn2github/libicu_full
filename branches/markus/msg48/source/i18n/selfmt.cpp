@@ -25,6 +25,7 @@
 #include "unicode/ustring.h"
 #include "unicode/utypes.h"
 #include "cmemory.h"
+#include "messageimpl.h"
 #include "selfmtimpl.h"
 #include "uassert.h"
 #include "ustrfmt.h"
@@ -40,52 +41,21 @@ UOBJECT_DEFINE_RTTI_IMPLEMENTATION(SelectFormat)
 #define MAX_KEYWORD_SIZE 30
 static const UChar SELECT_KEYWORD_OTHER[] = {LOW_O, LOW_T, LOW_H, LOW_E, LOW_R, 0};
 
-SelectFormat::SelectFormat(const UnicodeString& pat, UErrorCode& status) : parsedValuesHash(NULL) {
+SelectFormat::SelectFormat(const UnicodeString& pat,
+                           UErrorCode& status) : msgPattern(status) {
    if (U_FAILURE(status)) {
       return;
    }
-   initHashTable(status);
    applyPattern(pat, status);
 }
 
-SelectFormat::SelectFormat(const SelectFormat& other) : Format(other), parsedValuesHash(NULL) {
+SelectFormat::SelectFormat(const SelectFormat& other) : Format(other),
+                                                        msgPattern(other.msgPattern) {
    UErrorCode status = U_ZERO_ERROR;
    pattern = other.pattern;
-   copyHashtable(other.parsedValuesHash, status);
 }
 
 SelectFormat::~SelectFormat() {
-  cleanHashTable();
-}
-
-void SelectFormat::initHashTable(UErrorCode &status) {
-  if (U_FAILURE(status)) {
-    return;
-  }
-  // has inited
-  if (parsedValuesHash != NULL) {
-    return;
-  }
-
-  parsedValuesHash = new Hashtable(TRUE, status);
-  if (U_FAILURE(status)) {
-    cleanHashTable();
-    return;
-  } else {
-    if (parsedValuesHash == NULL) {
-      status = U_MEMORY_ALLOCATION_ERROR;
-      return;
-    }
-  }
-  // to use hashtable->equals(), must set Value Compartor.
-  parsedValuesHash->setValueComparator(uhash_compareCaselessUnicodeString);
-}
-
-void SelectFormat::cleanHashTable() {
-  if (parsedValuesHash != NULL) {
-    delete parsedValuesHash;
-    parsedValuesHash = NULL;
-  }
 }
 
 void
@@ -95,177 +65,12 @@ SelectFormat::applyPattern(const UnicodeString& newPattern, UErrorCode& status) 
     }
 
     pattern = newPattern;
-    enum State{ startState, keywordState, pastKeywordState, phraseState};
-
-    //Initialization
-    UnicodeString keyword ;
-    UnicodeString phrase ;
-    UnicodeString* ptrPhrase ;
-    int32_t braceCount = 0;
-
-    if (parsedValuesHash == NULL) {
-      initHashTable(status);
-      if (U_FAILURE(status)) {
-        return;
-      }
-    }
-    parsedValuesHash->removeAll();
-    parsedValuesHash->setValueDeleter(uhash_deleteUnicodeString);
-
-    //Process the state machine
-    State state = startState;
-    for (int32_t i = 0; i < pattern.length(); ++i) {
-        //Get the character and check its type
-        UChar ch = pattern.charAt(i);
-        CharacterClass type = classifyCharacter(ch);
-
-        //Allow any character in phrase but nowhere else
-        if ( type == tOther ) {
-            if ( state == phraseState ){
-                phrase += ch;
-                continue;
-            }else {
-                status = U_PATTERN_SYNTAX_ERROR;
-                cleanHashTable();
-                return;
-            }
-        }
-
-        //Process the state machine
-        switch (state) {
-            //At the start of pattern
-            case startState:
-                switch (type) {
-                    case tSpace:
-                        break;
-                    case tStartKeyword:
-                        state = keywordState;
-                        keyword += ch;
-                        break;
-                    //If anything else is encountered, it's a syntax error
-                    default:
-                        status = U_PATTERN_SYNTAX_ERROR;
-                        cleanHashTable();
-                        return;
-                }//end of switch(type)
-                break;
-
-            //Handle the keyword state
-            case keywordState:
-                switch (type) {
-                    case tSpace:
-                        state = pastKeywordState;
-                        break;
-                    case tStartKeyword:
-                    case tContinueKeyword:
-                        keyword += ch;
-                        break;
-                    case tLeftBrace:
-                        state = phraseState;
-                        break;
-                    //If anything else is encountered, it's a syntax error
-                    default:
-                        status = U_PATTERN_SYNTAX_ERROR;
-                        cleanHashTable();
-                        return;
-                }//end of switch(type)
-                break;
-
-            //Handle the pastkeyword state
-            case pastKeywordState:
-                switch (type) {
-                    case tSpace:
-                        break;
-                    case tLeftBrace:
-                        state = phraseState;
-                        break;
-                    //If anything else is encountered, it's a syntax error
-                    default:
-                        status = U_PATTERN_SYNTAX_ERROR;
-                        cleanHashTable();
-                        return;
-                }//end of switch(type)
-                break;
-
-            //Handle the phrase state
-            case phraseState:
-                switch (type) {
-                    case tApostrophe: {
-                        // Apostrophe starts and ends quoting of literal text.
-                        // Skip the quoted text and preserve the apostrophes for
-                        // subsequent use in MessageFormat.
-                        int32_t endAposIndex = pattern.indexOf(SINGLE_QUOTE, i + 1);
-                        if (endAposIndex < 0) {
-                            // parsingFailure("Pattern syntax error. Unterminated quote.");
-                            status = U_PATTERN_SYNTAX_ERROR;
-                            return;
-                        }
-                        phrase.append(pattern, i, endAposIndex + 1 - i);
-                        i = endAposIndex;
-                        break;
-                    }
-                    case tLeftBrace:
-                        braceCount++;
-                        phrase += ch;
-                        break;
-                    case tRightBrace:
-                        //Matching keyword, phrase pair found
-                        if (braceCount == 0){
-                            //Check validity of keyword
-                            if (parsedValuesHash->get(keyword) != NULL) {
-                                status = U_DUPLICATE_KEYWORD;
-                                cleanHashTable();
-                                return;
-                            }
-                            if (keyword.length() == 0) {
-                                status = U_PATTERN_SYNTAX_ERROR;
-                                cleanHashTable();
-                                return;
-                            }
-
-                            //Store the keyword, phrase pair in hashTable
-                            ptrPhrase = new UnicodeString(phrase);
-                            parsedValuesHash->put( keyword, ptrPhrase, status);
-
-                            //Reinitialize
-                            keyword.remove();
-                            phrase.remove();
-                            ptrPhrase = NULL;
-                            state = startState;
-                        }
-
-                        if (braceCount > 0){
-                            braceCount-- ;
-                            phrase += ch;
-                        }
-                        break;
-                    default:
-                        phrase += ch;
-                }//end of switch(type)
-                break;
-
-            //Handle the  default case of switch(state)
-            default:
-                status = U_PATTERN_SYNTAX_ERROR;
-                cleanHashTable();
-                return;
-
-        }//end of switch(state)
+    msgPattern.parseSelectStyle(pattern, NULL, status);
+    if (U_FAILURE(status)) {
+        pattern.remove();
+        msgPattern.clear();
     }
 
-    //Check if the state machine is back to startState
-    if ( state != startState){
-        status = U_PATTERN_SYNTAX_ERROR;
-        cleanHashTable();
-        return;
-    }
-
-    //Check if "other" keyword is present
-    if ( !checkSufficientDefinition() ) {
-        status = U_DEFAULT_KEYWORD_MISSING;
-        cleanHashTable();
-    }
-    return;
 }
 
 UnicodeString&
@@ -291,26 +96,22 @@ SelectFormat::format(const UnicodeString& keyword,
                      UnicodeString& appendTo,
                      FieldPosition& /*pos */,
                      UErrorCode& status) const {
-
     if (U_FAILURE(status)) return appendTo;
-
-    if (parsedValuesHash == NULL) {
+    if (msgPattern.countParts() == 0) {
         status = U_INVALID_FORMAT_ERROR;
         return appendTo;
     }
-
-    //Check for the validity of the keyword
-    if ( !checkValidKeyword(keyword) ){
-        status = U_ILLEGAL_ARGUMENT_ERROR;
+    int32_t msgStart = findSubMessage(msgPattern, 0, keyword, status);
+    if (!MessageImpl::jdkAposMode(msgPattern)) {
+        int32_t patternStart = msgPattern.getPart(msgStart).getLimit();
+        int32_t msgLimit = msgPattern.getLimitPartIndex(msgStart);
+        appendTo.append(msgPattern.getPatternString(),
+                        patternStart,
+                        msgPattern.getPatternIndex(msgLimit) - patternStart);
         return appendTo;
     }
-
-    UnicodeString *selectedPattern = (UnicodeString *)parsedValuesHash->get(keyword);
-    if (selectedPattern == NULL) {
-        selectedPattern = (UnicodeString *)parsedValuesHash->get(SELECT_KEYWORD_OTHER);
-    }
-
-    return appendTo += *selectedPattern;
+    // JDK compatibility mode: Remove SKIP_SYNTAX.
+    return MessageImpl::appendSubMessageWithoutSkipSyntax(msgPattern, msgStart, appendTo);
 }
 
 UnicodeString&
@@ -345,63 +146,6 @@ int32_t SelectFormat::findSubMessage(const MessagePattern& pattern, int32_t part
     return msgStart;
 }
 
-
-SelectFormat::CharacterClass
-SelectFormat::classifyCharacter(UChar ch) const{
-    if ((ch >= CAP_A) && (ch <= CAP_Z)) {
-        return tStartKeyword;
-    }
-    if ((ch >= LOW_A) && (ch <= LOW_Z)) {
-        return tStartKeyword;
-    }
-    if ((ch >= U_ZERO) && (ch <= U_NINE)) {
-        return tContinueKeyword;
-    }
-    if ( uprv_isRuleWhiteSpace(ch) ){
-        return tSpace;
-    }
-    switch (ch) {
-        case LEFTBRACE:
-            return tLeftBrace;
-        case RIGHTBRACE:
-            return tRightBrace;
-        case HYPHEN:
-        case LOWLINE:
-            return tContinueKeyword;
-        case SINGLE_QUOTE:
-            return tApostrophe;
-        default :
-            return tOther;
-    }
-}
-
-UBool
-SelectFormat::checkSufficientDefinition() {
-    // Check that at least the default rule is defined.
-    return (parsedValuesHash != NULL &&
-           parsedValuesHash->get(SELECT_KEYWORD_OTHER) != NULL) ;
-}
-
-UBool
-SelectFormat::checkValidKeyword(const UnicodeString& argKeyword ) const{
-    int32_t len = argKeyword.length();
-    if (len < 1){
-        return FALSE;
-    }
-    CharacterClass type = classifyCharacter(argKeyword.charAt(0));
-    if( type != tStartKeyword ){
-        return FALSE;
-    }
-
-    for (int32_t i = 0; i < argKeyword.length(); ++i) {
-        type = classifyCharacter(argKeyword.charAt(i));
-        if( type != tStartKeyword && type != tContinueKeyword ){
-            return FALSE;
-        }
-    }
-    return TRUE;
-}
-
 Format* SelectFormat::clone() const
 {
     return new SelectFormat(*this);
@@ -412,7 +156,7 @@ SelectFormat::operator=(const SelectFormat& other) {
     if (this != &other) {
         UErrorCode status = U_ZERO_ERROR;
         pattern = other.pattern;
-        copyHashtable(other.parsedValuesHash, status);
+        msgPattern = other.msgPattern;
     }
     return *this;
 }
@@ -426,12 +170,7 @@ SelectFormat::operator==(const Format& other) const {
         return  FALSE;
     }
     SelectFormat* fmt = (SelectFormat*)&other;
-    Hashtable* hashOther = fmt->parsedValuesHash;
-    if ( parsedValuesHash == NULL && hashOther == NULL)
-        return TRUE;
-    if ( parsedValuesHash == NULL || hashOther == NULL)
-        return FALSE;
-    return parsedValuesHash->equals(*hashOther);
+    return true;  // ???.
 }
 
 UBool
@@ -446,42 +185,6 @@ SelectFormat::parseObject(const UnicodeString& /*source*/,
 {
     // TODO: not yet supported in icu4j and icu4c
     pos.setErrorIndex(pos.getIndex());
-}
-
-void
-SelectFormat::copyHashtable(Hashtable *other, UErrorCode& status) {
-    if (U_FAILURE(status)) {
-      return;
-    }
-    if (other == NULL) {
-      cleanHashTable();
-      return;
-    }
-    if (parsedValuesHash == NULL) {
-      initHashTable(status);
-      if (U_FAILURE(status)) {
-        return;
-      }
-    }
-
-    parsedValuesHash->removeAll();
-    parsedValuesHash->setValueDeleter(uhash_deleteUnicodeString);
-
-    int32_t pos = -1;
-    const UHashElement* elem = NULL;
-
-    // walk through the hash table and create a deep clone
-    while ((elem = other->nextElement(pos)) != NULL){
-        const UHashTok otherKeyTok = elem->key;
-        UnicodeString* otherKey = (UnicodeString*)otherKeyTok.pointer;
-        const UHashTok otherKeyToVal = elem->value;
-        UnicodeString* otherValue = (UnicodeString*)otherKeyToVal.pointer;
-        parsedValuesHash->put(*otherKey, new UnicodeString(*otherValue), status);
-        if (U_FAILURE(status)){
-            cleanHashTable();
-            return;
-        }
-    }
 }
 
 U_NAMESPACE_END

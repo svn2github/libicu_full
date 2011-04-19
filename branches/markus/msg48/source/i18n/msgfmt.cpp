@@ -164,29 +164,6 @@ UOBJECT_DEFINE_RTTI_IMPLEMENTATION(FormatNameEnumeration)
 //--------------------------------------------------------------------
 
 /**
- * Convert a string to an unsigned decimal, ignoring rule whitespace.
- * @return a non-negative number if successful, or a negative number
- *         upon failure.
- */
-static int32_t stou(const UnicodeString& string) {
-    int32_t n = 0;
-    int32_t count = 0;
-    UChar32 c;
-    for (int32_t i=0; i<string.length(); i+=U16_LENGTH(c)) {
-        c = string.char32At(i);
-        if (uprv_isRuleWhiteSpace(c)) {
-            continue;
-        }
-        int32_t d = u_digit(c, 10);
-        if (d < 0 || ++count > 10) {
-            return -1;
-        }
-        n = 10*n + d;
-    }
-    return n;
-}
-
-/**
  * Convert an integer value to a string and append the result to
  * the given UnicodeString.
  */
@@ -571,8 +548,8 @@ MessageFormat::operator==(const Format& rhs) const
     }
 
     // Compare hashtables.
-    if (customFormatArgStarts == NULL && that.customFormatArgStarts != NULL ||
-        customFormatArgStarts != NULL && that.customFormatArgStarts == NULL ) {
+    if ((customFormatArgStarts == NULL && that.customFormatArgStarts != NULL) ||
+        (customFormatArgStarts != NULL && that.customFormatArgStarts == NULL) ) {
         return FALSE;
     }
     if (customFormatArgStarts == NULL && that.customFormatArgStarts == NULL) {
@@ -1362,8 +1339,8 @@ UnicodeString MessageFormat::getLiteralStringUntilNextArgument(int32_t from) con
 }
 
 
-FieldPosition* MessageFormat::updateMetaData(AppendableWrapper& dest, int32_t prevLength,
-                             FieldPosition* fp, const Formattable* argId) const {
+FieldPosition* MessageFormat::updateMetaData(AppendableWrapper& /*dest*/, int32_t /*prevLength*/,
+                             FieldPosition* /*fp*/, const Formattable* /*argId*/) const {
     // Unlike in Java, there are no field attributes defined for MessageFormat. Do nothing.
     return NULL;
     /*

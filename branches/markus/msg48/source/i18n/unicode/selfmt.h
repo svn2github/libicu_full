@@ -16,6 +16,7 @@
 #ifndef SELFMT
 #define SELFMT
 
+#include "unicode/messagepattern.h"
 #include "unicode/numfmt.h"
 #include "unicode/utypes.h"
 
@@ -352,32 +353,11 @@ public:
                                   const UnicodeString& keyword, UErrorCode& ec);
 
 private:
-    typedef enum classesForSelectFormat{
-        tStartKeyword,
-        tContinueKeyword,
-        tLeftBrace,
-        tRightBrace,
-        tSpace,
-        tApostrophe,
-        tOther
-    }CharacterClass;
 
     UnicodeString pattern;
-    //Hash to store the keyword, phrase pairs.
-    Hashtable  *parsedValuesHash;
+    MessagePattern msgPattern;
 
     SelectFormat();   // default constructor not implemented.
-    void initHashTable(UErrorCode &status);
-    void cleanHashTable();
-
-    //For the applyPattern , classifies char.s in one of the characterClass.
-    CharacterClass classifyCharacter(UChar ch) const;
-    //Checks if the "other" keyword is present in pattern.
-    UBool checkSufficientDefinition();
-    //Checks if the keyword passed is valid.
-    UBool checkValidKeyword(const UnicodeString& argKeyword) const;
-    void parsingFailure();
-    void copyHashtable(Hashtable *other, UErrorCode& status);
 };
 
 U_NAMESPACE_END

@@ -25,13 +25,13 @@
 
 #if !UCONFIG_NO_FORMATTING
 
+#include "unicode/messagepattern.h"
 #include "unicode/numfmt.h"
 #include "unicode/plurrule.h"
 
 U_NAMESPACE_BEGIN
 
 class Hashtable;
-class MessagePattern;
 
 /**
  * <p>
@@ -480,20 +480,6 @@ public:
      virtual UClassID getDynamicClassID() const;
 
   private:
-    typedef enum fmtToken {
-        none,
-        tLetter,
-        tNumber,
-        tSpace,
-        tNumberSign,
-        tLeftBrace,
-        tRightBrace
-    }fmtToken;
-
-    struct ExplicitPair : public UMemory {
-      double key;
-      UnicodeString value;
-    };
 
     class  PluralSelector {
       public:
@@ -511,31 +497,36 @@ public:
         virtual void reset() = 0;
     };
 
+    class PluralSelectorAdapter : public PluralSelector {
+      public:
+        PluralSelectorAdapter() : pluralRules(NULL) {
+        }
+
+        virtual ~PluralSelectorAdapter();
+
+        UnicodeString select(double number, UErrorCode& /*ec*/) const;
+
+        void reset();
+
+        PluralRules* pluralRules;
+    };
+
     Locale  locale;
-    PluralRules* pluralRules;
     UnicodeString pattern;
-    Hashtable *parsedValues;
     NumberFormat*  numberFormat;
     NumberFormat* replacedNumberFormat; // alias, not owned
-    ExplicitPair *explicitValues;
     int32_t explicitValuesLen;
     double offset;
     NumberFormat* asciiNumberFormat; // built on demand
+    PluralSelectorAdapter pluralRulesWrapper;
+    MessagePattern msgPattern;
 
     PluralFormat();   // default constructor not implemented
     void init(const PluralRules* rules, const Locale& curlocale, UErrorCode& status);
-    UBool checkSufficientDefinition();
     void parsingFailure();
-    UnicodeString& insertFormattedNumber(double number,
-                                        UnicodeString& message,
-                                        UnicodeString& appendTo,
-                                        FieldPosition& pos) const;
-    Hashtable *copyHashtable(Hashtable *other, UErrorCode& status);
     PluralRules *copyPluralRules(const PluralRules *rules, UErrorCode& status);
-    ExplicitPair *copyExplicitValues(ExplicitPair *values, uint32_t len, UErrorCode& status);
     void destructHelper(void);
     void zeroAllocs(void);
-    NumberFormat *getAsciiNumberFormat(UErrorCode& status);
 
     static int32_t findSubMessage(
          const MessagePattern& pattern, int32_t partIndex,
