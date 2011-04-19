@@ -204,7 +204,7 @@ class AppendableWrapper : public UMemory {
   public:
     AppendableWrapper(Appendable& appendable) : app(appendable), len(0) {
     }
-    void append(UnicodeString& s) {
+    void append(const UnicodeString& s) {
         app.appendString(s.getBuffer(), s.length());
         len += s.length();
     }
@@ -213,8 +213,7 @@ class AppendableWrapper : public UMemory {
         len += s_len;
     }
     void append(const UnicodeString& s, int32_t start, int32_t length) {
-        UnicodeString temp = s.tempSubString(start, length);
-        append(temp);
+        append(s.tempSubString(start, length));
     }
     void formatAndAppend(const Format* formatter, const Formattable& arg, UErrorCode& ec) {
         UnicodeString s;
