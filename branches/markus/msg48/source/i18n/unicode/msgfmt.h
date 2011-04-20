@@ -42,10 +42,9 @@ U_CDECL_END
 
 U_NAMESPACE_BEGIN
 
-class NumberFormat;
-class DateFormat;
-
 class AppendableWrapper;
+class DateFormat;
+class NumberFormat;
 
 /**
  * <p>MessageFormat prepares strings for display to users,
@@ -808,18 +807,6 @@ public:
 
 
     /**
-     * Compares two Format objects. This is used for constructing the hash
-     * tables.
-     *
-     * @param left pointer to a Format object. Must not be NULL.
-     * @param right pointer to a Format object. Must not be NULL.
-     *
-     * @return whether the two objects are the same
-     * @internal
-     */
-    static UBool equalFormats(const void* left, const void* right);
-
-    /**
      * Returns true if this MessageFormat uses named arguments,
      * and false otherwise.  See class description.
      *
@@ -867,6 +854,18 @@ public:
      */
     static UClassID U_EXPORT2 getStaticClassID(void);
 
+    /**
+     * Compares two Format objects. This is used for constructing the hash
+     * tables.
+     *
+     * @param left pointer to a Format object. Must not be NULL.
+     * @param right pointer to a Format object. Must not be NULL.
+     *
+     * @return whether the two objects are the same
+     * @internal
+     */
+    static UBool equalFormats(const void* left, const void* right);
+
 private:
 
     Locale              fLocale;
@@ -889,22 +888,19 @@ private:
     class Subformat;
 
      /**
-     * This provider helps defer instantiation of a PluralRules object
-     * until we actually need to select a keyword.
-     * For example, if the number matches an explicit-value selector like "=1"
-     * we do not need any PluralRules.
-     */
+      * This provider helps defer instantiation of a PluralRules object
+      * until we actually need to select a keyword.
+      * For example, if the number matches an explicit-value selector like "=1"
+      * we do not need any PluralRules.
+      */
     class PluralSelectorProvider : public PluralFormat::PluralSelector {
-      public:
-        PluralSelectorProvider(Locale* loc) : locale(loc) {
-        }
-        virtual ~PluralSelectorProvider() {
-            // "rules" is not owned by this.
-        }
+    public:
+        PluralSelectorProvider(Locale* loc);
+        virtual ~PluralSelectorProvider();
         virtual UnicodeString select(double number, UErrorCode& ec) const;
 
         virtual void reset();
-      private:
+    private:
         Locale* locale;
         PluralRules* rules;
     };
@@ -1041,7 +1037,7 @@ private:
 
     UnicodeString getLiteralStringUntilNextArgument(int32_t from) const;
 
-    void CopyHashTables(const MessageFormat& that, UErrorCode& ec);
+    void copyHashTables(const MessageFormat& that, UErrorCode& ec);
 
     void formatComplexSubMessage(int32_t msgStart,
                                  double pluralNumber,
@@ -1095,7 +1091,7 @@ private:
     // A DummyFormatter that we use solely to store a NULL value. UHash does
     // not support storing NULL values.
     class U_I18N_API DummyFormat : public Format {
-      public:
+    public:
         virtual UBool operator==(const Format&) const;
         virtual Format* clone() const;
         virtual UnicodeString& format(const Formattable&,

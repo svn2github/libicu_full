@@ -528,6 +528,16 @@ public:
     void destructHelper(void);
     void zeroAllocs(void);
 
+    /**
+     * Finds the PluralFormat sub-message for the given number, or the "other" sub-message.
+     * @param pattern A MessagePattern.
+     * @param partIndex the index of the first PluralFormat argument style part.
+     * @param selector the PluralSelector for mapping the number (minus offset) to a keyword.
+     * @param number a number to be matched to one of the PluralFormat argument's explicit values,
+     *        or mapped via the PluralSelector.
+     * @param ec ICU error code.
+     * @return the sub-message start part index.
+     */
     static int32_t findSubMessage(
          const MessagePattern& pattern, int32_t partIndex,
          const PluralSelector& selector, double number, UErrorCode& ec);

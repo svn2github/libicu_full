@@ -30,7 +30,6 @@
 U_NAMESPACE_BEGIN
 
 class Hashtable;
-
 class MessagePattern;
 
 /**

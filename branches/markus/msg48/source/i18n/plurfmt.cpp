@@ -30,6 +30,10 @@ U_NAMESPACE_BEGIN
 
 static UChar OFFSET_CHARS[] = {0x006f, 0x0066, 0x0066, 0x0073, 0x0065, 0x0074};
 
+static const UChar OTHER_STRING[] = {
+    0x6F, 0x74, 0x68, 0x65, 0x72, 0  // "other"
+};
+
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(PluralFormat)
 
 #define MAX_KEYWORD_SIZE 30
@@ -330,9 +334,8 @@ PluralFormat::copyPluralRules(const PluralRules *rules, UErrorCode& status) {
     return copy;
 }
 
-int32_t PluralFormat::findSubMessage(
-    const MessagePattern& pattern, int32_t partIndex,
-    const PluralSelector& selector, double number, UErrorCode& ec) {
+int32_t PluralFormat::findSubMessage(const MessagePattern& pattern, int32_t partIndex,
+                                     const PluralSelector& selector, double number, UErrorCode& ec) {
     if (U_FAILURE(ec)) {
         return 0;
     }
@@ -350,10 +353,11 @@ int32_t PluralFormat::findSubMessage(
     // (In other words, we never call the selector if we match against an explicit value,
     // or if the only non-explicit keyword is "other".)
     UnicodeString keyword;
+    UnicodeString other(FALSE, OTHER_STRING, 5);
     // When we find a match, we set msgStart>0 and also set this boolean to true
     // to avoid matching the keyword again (duplicates are allowed)
     // while we continue to look for an explicit-value match.
-    bool haveKeywordMatch=false;
+    UBool haveKeywordMatch=FALSE;
     // msgStart is 0 until we find any appropriate sub-message.
     // We remember the first "other" sub-message if we have not seen any
     // appropriate sub-message before.
@@ -385,23 +389,23 @@ int32_t PluralFormat::findSubMessage(
         } else if(!haveKeywordMatch) {
             // plural keyword like "few" or "other"
             // Compare "other" first and call the selector if this is not "other".
-            if(pattern.partSubstringMatches(*part, UNICODE_STRING_SIMPLE("other"))) {
+            if(pattern.partSubstringMatches(*part, other)) {
                 if(msgStart==0) {
                     msgStart=partIndex;
-                    if(keyword.isEmpty() && (0 == keyword.compare(UNICODE_STRING_SIMPLE("other")))) {
+                    if(0 == keyword.compare(other)) {
                         // This is the first "other" sub-message,
                         // and the selected keyword is also "other".
                         // Do not match "other" again.
-                        haveKeywordMatch=true;
+                        haveKeywordMatch=TRUE;
                     }
                 }
             } else {
                 if(keyword.isEmpty()) {
                     keyword=selector.select(number-offset, ec);
-                    if(msgStart!=0 && (0 == keyword.compare(UNICODE_STRING_SIMPLE("other")))) {
+                    if(msgStart!=0 && (0 == keyword.compare(other))) {
                         // We have already seen an "other" sub-message.
                         // Do not match "other" again.
-                        haveKeywordMatch=true;
+                        haveKeywordMatch=TRUE;
                         continue;
                     }
                 }
@@ -409,7 +413,7 @@ int32_t PluralFormat::findSubMessage(
                     // keyword matches
                     msgStart=partIndex;
                     // Do not match this keyword again.
-                    haveKeywordMatch=true;
+                    haveKeywordMatch=TRUE;
                 }
             }
         }
