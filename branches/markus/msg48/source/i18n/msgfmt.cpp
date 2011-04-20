@@ -291,7 +291,7 @@ MessageFormat::MessageFormat(const UnicodeString& pattern,
   argTypes(NULL),
   argTypeCount(0),
   argTypeCapacity(0),
-  isArgNumeric(TRUE),
+  hasArgTypeConflicts(FALSE),
   defaultNumberFormat(NULL),
   defaultDateFormat(NULL),
   cachedFormatters(NULL),
@@ -322,7 +322,7 @@ MessageFormat::MessageFormat(const UnicodeString& pattern,
   argTypes(NULL),
   argTypeCount(0),
   argTypeCapacity(0),
-  isArgNumeric(TRUE),
+  hasArgTypeConflicts(FALSE),
   defaultNumberFormat(NULL),
   defaultDateFormat(NULL),
   cachedFormatters(NULL),
@@ -354,7 +354,7 @@ MessageFormat::MessageFormat(const UnicodeString& pattern,
   argTypes(NULL),
   argTypeCount(0),
   argTypeCapacity(0),
-  isArgNumeric(TRUE),
+  hasArgTypeConflicts(FALSE),
   defaultNumberFormat(NULL),
   defaultDateFormat(NULL),
   cachedFormatters(NULL),
@@ -384,7 +384,7 @@ MessageFormat::MessageFormat(const MessageFormat& that)
   argTypes(NULL),
   argTypeCount(0),
   argTypeCapacity(0),
-  isArgNumeric(TRUE),
+  hasArgTypeConflicts(FALSE),
   defaultNumberFormat(NULL),
   defaultDateFormat(NULL),
   cachedFormatters(NULL),
@@ -500,9 +500,9 @@ MessageFormat::operator=(const MessageFormat& that)
         // Calls the super class for assignment first.
         Format::operator=(that);
 
-        fPattern = that.fPattern;
+        msgPattern = that.msgPattern;
         setLocale(that.fLocale);
-        isArgNumeric = that.isArgNumeric;
+        hasArgTypeConflicts = that.hasArgTypeConflicts;
         int32_t j;
         for (j=0; j<subformatCount; ++j) {
             delete subformats[j].format;
@@ -538,9 +538,8 @@ MessageFormat::operator==(const Format& rhs) const
 
     // Check class ID before checking MessageFormat members
     if (!Format::operator==(rhs) ||
-        fPattern != that.fPattern ||
-        fLocale != that.fLocale ||
-        isArgNumeric != that.isArgNumeric) {
+        msgPattern != that.msgPattern ||
+        fLocale != that.fLocale) {
         return FALSE;
     }
 
@@ -653,6 +652,8 @@ void MessageFormat::resetPattern() {
     cachedFormatters = NULL;
     uhash_close(customFormatArgStarts);
     customFormatArgStarts = NULL;
+    argTypeCount = 0;
+    hasArgTypeConflicts = FALSE;
 }
 
 void
@@ -1558,7 +1559,7 @@ MessageFormat::parse(const UnicodeString& source,
                      int32_t& cnt,
                      UErrorCode& success) const
 {
-    if (!isArgNumeric ) {
+    if (msgPattern.hasNamedArguments()) {
         success = U_ARGUMENT_TYPE_MISMATCH;
         return NULL;
     }
@@ -1656,6 +1657,12 @@ void MessageFormat::cacheExplicitFormats(UErrorCode& status) {
         status = U_MEMORY_ALLOCATION_ERROR;
         return;
     }
+    // Set all argTypes to kObject, as a "none" value, for lack of any better value.
+    // We never use kObject for real arguments.
+    for (int32_t i = 0; i < argTypeCount; ++i) {
+        argTypes[i] = Formattable::kObject;
+    }
+    hasArgTypeConflicts = FALSE;
 
     // This loop starts at part index 1 because we do need to examine
     // ARG_START parts. (But we can ignore the MSG_START.)
@@ -1704,6 +1711,9 @@ void MessageFormat::cacheExplicitFormats(UErrorCode& status) {
             break;
         }
         if (argNumber != -1) {
+            if (argTypes[argNumber] != Formattable::kObject && argTypes[argNumber] != formattableType) {
+                hasArgTypeConflicts = TRUE;
+            }
             argTypes[argNumber] = formattableType;
         }
     }
@@ -1910,7 +1920,7 @@ const DateFormat* MessageFormat::getDefaultDateFormat(UErrorCode& ec) const {
 
 UBool
 MessageFormat::usesNamedArguments() const {
-    return !isArgNumeric;
+    return msgPattern.hasNamedArguments();
 }
 
 UBool

@@ -635,7 +635,7 @@ public:
      * @draft ICU 4.8
      */
     UBool partSubstringMatches(const Part &part, const UnicodeString &s) const {
-        return msg.compare(part.index, part.length, s);
+        return 0==msg.compare(part.index, part.length, s);
     }
 
     /**

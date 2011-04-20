@@ -926,10 +926,11 @@ private:
     int32_t            argTypeCapacity;
 
     /**
-      * Is true iff all argument names are non-negative numbers.
-      *
-      */
-    UBool isArgNumeric;
+     * TRUE if there are different argTypes for the same argument.
+     * This only matters when the MessageFormat is used in the plain C (umsg_xxx) API
+     * where the pattern argTypes determine how the va_arg list is read.
+     */
+    UBool hasArgTypeConflicts;
 
     // Variable-size array management
     UBool allocateSubformats(int32_t capacity);
