@@ -1633,32 +1633,51 @@ void MessageFormat::cacheExplicitFormats(UErrorCode& status) {
     if (customFormatArgStarts != NULL) {
         uhash_removeAll(customFormatArgStarts);
     }
+
+    // The last two "parts" can at most be ARG_LIMIT and MSG_LIMIT
+    // which we need not examine.
+    int32_t limit = msgPattern.countParts() - 2;
     argTypeCount = 0;
-    // TODO(Mohamed): Please first determine the argTypeCount,
-    // then call allocateArgTypes(argTypeCount) and check if it returns TRUE
-    // (otherwise I think set U_MEMORY_ALLOCATION_ERROR),
-    // only then go into the loop below.
-    // Otherwise  argTypes[argNumber] = formattableType;
-    // might write beyond the end of the argTypes, or argTypes might be NULL.
-    // You should be able to verify this by temporarily(!)
-    // setting DEFAULT_INITIAL_CAPACITY to 1 and see it crash in some tests.
-    int32_t limit = msgPattern.countParts() - 1;
+    // We also need not look at the first two "parts"
+    // (at most MSG_START and ARG_START) in this loop.
+    // We determine the argTypeCount first so that we can allocateArgTypes
+    // so that the next loop can set argTypes[argNumber].
+    // (This is for the C API which needs the argTypes to read its va_arg list.)
+    for (int32_t i = 2; i < limit && U_SUCCESS(status); ++i) {
+        const MessagePattern::Part& part = msgPattern.getPart(i);
+        if (part.getType() == UMSGPAT_PART_TYPE_ARG_NUMBER) {
+            const int argNumber = part.getValue();
+            if (argNumber >= argTypeCount) {
+                argTypeCount = argNumber + 1;
+            }
+        }
+    }
+    if (!allocateArgTypes(argTypeCount)) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return;
+    }
+
+    // This loop starts at part index 1 because we do need to examine
+    // ARG_START parts. (But we can ignore the MSG_START.)
     for (int32_t i = 1; i < limit && U_SUCCESS(status); ++i) {
         const MessagePattern::Part* part = &msgPattern.getPart(i);
         if (part->getType() != UMSGPAT_PART_TYPE_ARG_START) {
             continue;
         }
+        UMessagePatternArgType argType = part->getArgType();
+
         int32_t argNumber = -1;
-        if (msgPattern.getPart(i + 1).getType() == UMSGPAT_PART_TYPE_ARG_NUMBER) {
-            argNumber = msgPattern.getPart(i + 1).getValue();
-            if (argNumber + 1 > argTypeCount) {
-                argTypeCount = argNumber + 1;
-            }
+        part = &msgPattern.getPart(i + 1);
+        if (part->getType() == UMSGPAT_PART_TYPE_ARG_NUMBER) {
+            argNumber = part->getValue();
         }
         Formattable::Type formattableType;
 
-        UMessagePatternArgType argType = part->getArgType();
-        if (argType == UMSGPAT_ARG_TYPE_SIMPLE){
+        switch (argType) {
+        case UMSGPAT_ARG_TYPE_NONE:
+            formattableType = Formattable::kString;
+            break;
+        case UMSGPAT_ARG_TYPE_SIMPLE: {
             int32_t index = i;
             i += 2;
             UnicodeString explicitType = msgPattern.getSubstring(msgPattern.getPart(i++));
@@ -1670,12 +1689,19 @@ void MessageFormat::cacheExplicitFormats(UErrorCode& status) {
             UParseError parseError;
             Format* formatter = createAppropriateFormat(explicitType, style, formattableType, parseError, status);
             setArgStartFormat(index, formatter, status);
-        } else if (argType == UMSGPAT_ARG_TYPE_CHOICE || argType == UMSGPAT_ARG_TYPE_PLURAL) {
+            break;
+        }
+        case UMSGPAT_ARG_TYPE_CHOICE:
+        case UMSGPAT_ARG_TYPE_PLURAL:
             formattableType = Formattable::kDouble;
-        } else if (argType == UMSGPAT_ARG_TYPE_SELECT) {
+            break;
+        case UMSGPAT_ARG_TYPE_SELECT:
             formattableType = Formattable::kString;
-        } else {
-            status = U_INTERNAL_PROGRAM_ERROR;
+            break;
+        default:
+            status = U_INTERNAL_PROGRAM_ERROR;  // Should be unreachable.
+            formattableType = Formattable::kString;
+            break;
         }
         if (argNumber != -1) {
             argTypes[argNumber] = formattableType;
@@ -1729,7 +1755,7 @@ Format* MessageFormat::createAppropriateFormat(UnicodeString& type, UnicodeStrin
         styleID = findKeyword(style, DATE_STYLE_IDS);
         date_style = (styleID >= 0) ? DATE_STYLES[styleID] : DateFormat::kDefault;
 
-        if (typeID == 2) {
+        if (typeID == 1) {
             fmt = DateFormat::createDateInstance(date_style, fLocale);
         } else {
             fmt = DateFormat::createTimeInstance(date_style, fLocale);
