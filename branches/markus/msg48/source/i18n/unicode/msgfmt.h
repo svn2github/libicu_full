@@ -899,7 +899,7 @@ private:
         virtual ~PluralSelectorProvider();
         virtual UnicodeString select(double number, UErrorCode& ec) const;
 
-        virtual void reset();
+        void reset();
     private:
         Locale* locale;
         PluralRules* rules;

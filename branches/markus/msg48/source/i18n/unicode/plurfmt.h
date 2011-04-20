@@ -484,17 +484,13 @@ public:
     class  PluralSelector {
       public:
         /**
-        * Given a number, returns the appropriate PluralFormat keyword.
-        *
-        * @param number The number to be plural-formatted.
-        * @param ec Error code.
-        * @return The selected PluralFormat keyword.
-        */
+         * Given a number, returns the appropriate PluralFormat keyword.
+         *
+         * @param number The number to be plural-formatted.
+         * @param ec Error code.
+         * @return The selected PluralFormat keyword.
+         */
         virtual UnicodeString select(double number, UErrorCode& ec) const = 0;
-        /**
-        * Resets any initialized rules.
-        */
-        virtual void reset() = 0;
     };
 
     class PluralSelectorAdapter : public PluralSelector {
@@ -504,7 +500,7 @@ public:
 
         virtual ~PluralSelectorAdapter();
 
-        UnicodeString select(double number, UErrorCode& /*ec*/) const;
+        virtual UnicodeString select(double number, UErrorCode& /*ec*/) const;
 
         void reset();
 
@@ -512,21 +508,18 @@ public:
     };
 
     Locale  locale;
-    UnicodeString pattern;
-    NumberFormat*  numberFormat;
-    NumberFormat* replacedNumberFormat; // alias, not owned
-    int32_t explicitValuesLen;
-    double offset;
-    NumberFormat* asciiNumberFormat; // built on demand
-    PluralSelectorAdapter pluralRulesWrapper;
     MessagePattern msgPattern;
+    NumberFormat*  numberFormat;
+    double offset;
+    PluralSelectorAdapter pluralRulesWrapper;
 
     PluralFormat();   // default constructor not implemented
-    void init(const PluralRules* rules, const Locale& curlocale, UErrorCode& status);
-    void parsingFailure();
-    PluralRules *copyPluralRules(const PluralRules *rules, UErrorCode& status);
-    void destructHelper(void);
-    void zeroAllocs(void);
+    void init(const PluralRules* rules, UErrorCode& status);
+    /**
+     * Copies dynamically allocated values (pointer fields).
+     * Others are copied using their copy constructors and assignment operators.
+     */
+    void copyObjects(const PluralFormat& other);
 
     /**
      * Finds the PluralFormat sub-message for the given number, or the "other" sub-message.

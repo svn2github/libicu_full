@@ -38,21 +38,15 @@ U_NAMESPACE_BEGIN
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(SelectFormat)
 
-#define MAX_KEYWORD_SIZE 30
 static const UChar SELECT_KEYWORD_OTHER[] = {LOW_O, LOW_T, LOW_H, LOW_E, LOW_R, 0};
 
 SelectFormat::SelectFormat(const UnicodeString& pat,
                            UErrorCode& status) : msgPattern(status) {
-   if (U_FAILURE(status)) {
-      return;
-   }
    applyPattern(pat, status);
 }
 
 SelectFormat::SelectFormat(const SelectFormat& other) : Format(other),
                                                         msgPattern(other.msgPattern) {
-   UErrorCode status = U_ZERO_ERROR;
-   pattern = other.pattern;
 }
 
 SelectFormat::~SelectFormat() {
@@ -64,13 +58,10 @@ SelectFormat::applyPattern(const UnicodeString& newPattern, UErrorCode& status) 
       return;
     }
 
-    pattern = newPattern;
-    msgPattern.parseSelectStyle(pattern, NULL, status);
+    msgPattern.parseSelectStyle(newPattern, NULL, status);
     if (U_FAILURE(status)) {
-        pattern.remove();
         msgPattern.clear();
     }
-
 }
 
 UnicodeString&
@@ -79,14 +70,13 @@ SelectFormat::format(const Formattable& obj,
                    FieldPosition& pos,
                    UErrorCode& status) const
 {
-    switch (obj.getType())
-    {
-    case Formattable::kString:
+    if (U_FAILURE(status)) {
+        return appendTo;
+    }
+    if (obj.getType() == Formattable::kString) {
         return format(obj.getString(), appendTo, pos, status);
-    default:
-        if( U_SUCCESS(status) ){
-            status = U_ILLEGAL_ARGUMENT_ERROR;
-        }
+    } else {
+        status = U_ILLEGAL_ARGUMENT_ERROR;
         return appendTo;
     }
 }
@@ -96,9 +86,11 @@ SelectFormat::format(const UnicodeString& keyword,
                      UnicodeString& appendTo,
                      FieldPosition& /*pos */,
                      UErrorCode& status) const {
-    if (U_FAILURE(status)) return appendTo;
+    if (U_FAILURE(status)) {
+        return appendTo;
+    }
     if (msgPattern.countParts() == 0) {
-        status = U_INVALID_FORMAT_ERROR;
+        status = U_INVALID_STATE_ERROR;
         return appendTo;
     }
     int32_t msgStart = findSubMessage(msgPattern, 0, keyword, status);
@@ -116,7 +108,12 @@ SelectFormat::format(const UnicodeString& keyword,
 
 UnicodeString&
 SelectFormat::toPattern(UnicodeString& appendTo) {
-    return appendTo += pattern;
+    if (0 == msgPattern.countParts()) {
+        appendTo.setToBogus();
+    } else {
+        appendTo.append(msgPattern.getPatternString());
+    }
+    return appendTo;
 }
 
 
@@ -155,8 +152,6 @@ Format* SelectFormat::clone() const
 SelectFormat&
 SelectFormat::operator=(const SelectFormat& other) {
     if (this != &other) {
-        UErrorCode status = U_ZERO_ERROR;
-        pattern = other.pattern;
         msgPattern = other.msgPattern;
     }
     return *this;
@@ -164,14 +159,14 @@ SelectFormat::operator=(const SelectFormat& other) {
 
 UBool
 SelectFormat::operator==(const Format& other) const {
-    if( this == &other){
+    if (this == &other) {
         return TRUE;
     }
-    if (typeid(*this) != typeid(other)) {
-        return  FALSE;
+    if (!Format::operator==(other)) {
+        return FALSE;
     }
-    SelectFormat* fmt = (SelectFormat*)&other;
-    return true;  // ???.
+    const SelectFormat& o = (const SelectFormat&)other;
+    return msgPattern == o.msgPattern;
 }
 
 UBool
@@ -184,7 +179,7 @@ SelectFormat::parseObject(const UnicodeString& /*source*/,
                         Formattable& /*result*/,
                         ParsePosition& pos) const
 {
-    // TODO: not yet supported in icu4j and icu4c
+    // Parsing not supported.
     pos.setErrorIndex(pos.getIndex());
 }
 

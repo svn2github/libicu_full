@@ -30,6 +30,7 @@
 U_NAMESPACE_BEGIN
 
 class Hashtable;
+class MessageFormat;
 class MessagePattern;
 
 /**
@@ -340,6 +341,11 @@ public:
      */
     virtual UClassID getDynamicClassID() const;
 
+private:
+    friend class MessageFormat;
+
+    SelectFormat();   // default constructor not implemented.
+
     /**
      * Finds the SelectFormat sub-message for the given keyword, or the "other" sub-message.
      * @param pattern A MessagePattern.
@@ -351,12 +357,7 @@ public:
     static int32_t findSubMessage(const MessagePattern& pattern, int32_t partIndex,
                                   const UnicodeString& keyword, UErrorCode& ec);
 
-private:
-
-    UnicodeString pattern;
     MessagePattern msgPattern;
-
-    SelectFormat();   // default constructor not implemented.
 };
 
 U_NAMESPACE_END
