@@ -520,7 +520,7 @@ MessageFormat::operator=(const MessageFormat& that)
         }
         argTypeCount = that.argTypeCount;
 
-        UErrorCode ec;
+        UErrorCode ec = U_ZERO_ERROR;
         copyHashTables(that, ec);
         if (U_FAILURE(ec)) {
             resetPattern();
@@ -1436,8 +1436,8 @@ MessageFormat::parse(int32_t msgStart,
     int32_t sourceOffset = pos.getIndex();
     ParsePosition tempStatus(0);
 
-    int32_t argIndex = 0;
     for(int32_t i=msgStart+1; ; ++i) {
+        UBool haveArgResult = FALSE;
         const MessagePattern::Part* part=&msgPattern.getPart(i);
         const UMessagePatternPartType type=part->getType();
         int32_t index=part->getIndex();
@@ -1453,7 +1453,6 @@ MessageFormat::parse(int32_t msgStart,
         if(type==UMSGPAT_PART_TYPE_MSG_LIMIT) {
             // Things went well! Done.
             pos.setIndex(sourceOffset);
-            count = argIndex;
             return resultArray.orphan();
         }
         if(type==UMSGPAT_PART_TYPE_SKIP_SYNTAX || type==UMSGPAT_PART_TYPE_INSERT_CHAR) {
@@ -1471,7 +1470,7 @@ MessageFormat::parse(int32_t msgStart,
         UnicodeString key;
         ++i;
         const Format* formatter = NULL;
-        Formattable& argResult = resultArray[argIndex];
+        Formattable& argResult = resultArray[argNumber];
 
         if(cachedFormatters!=NULL && (formatter = getCachedFormatter(i - 2))!=NULL) {
             // Just parse using the formatter.
@@ -1482,58 +1481,63 @@ MessageFormat::parse(int32_t msgStart,
                 return NULL; // leave index as is to signal error
             }
             sourceOffset = tempStatus.getIndex();
+            haveArgResult = TRUE;
         } else if(
             argType==UMSGPAT_ARG_TYPE_NONE || (cachedFormatters && uhash_iget(cachedFormatters, i -2))) {
-              // We arrive here if getCachedFormatter returned NULL, but there was actually an element in the hash table.
-              // This can only happen if the hash table contained a DummyFormat, so the if statement above is a check
-              // for the hash table containind DummyFormat.
+            // We arrive here if getCachedFormatter returned NULL, but there was actually an element in the hash table.
+            // This can only happen if the hash table contained a DummyFormat, so the if statement above is a check
+            // for the hash table containind DummyFormat.
 
-              // Match as a string.
-              // if at end, use longest possible match
-              // otherwise uses first match to intervening string
-              // does NOT recursively try all possibilities
-              UnicodeString stringAfterArgument = getLiteralStringUntilNextArgument(argLimit);
-              int32_t next;
-              if (!stringAfterArgument.isEmpty()) {
-                  next = source.indexOf(stringAfterArgument, sourceOffset);
-              } else {
-                  next = source.length();
-              }
-              if (next < 0) {
-                  pos.setErrorIndex(sourceOffset);
-                  return NULL; // leave index as is to signal error
-              } else {
-                  UnicodeString strValue(source.tempSubString(sourceOffset, next - sourceOffset));
-                  UnicodeString compValue;
-                  compValue.append(LEFT_CURLY_BRACE);
-                  itos(argNumber, compValue);
-                  compValue.append(RIGHT_CURLY_BRACE);
-                  if (0 != strValue.compare(compValue)) {
-                      argResult.setString(strValue);
-                  }
-                  sourceOffset = next;
-              }
-          } else if(argType==UMSGPAT_ARG_TYPE_CHOICE) {
-              tempStatus.setIndex(sourceOffset);
-              double choiceResult = ChoiceFormat::parseArgument(msgPattern, i, source, tempStatus);
-              if (tempStatus.getIndex() == sourceOffset) {
-                  pos.setErrorIndex(sourceOffset);
-                  return NULL; // leave index as is to signal error
-              }
-              argResult.setDouble(choiceResult);
-              sourceOffset = tempStatus.getIndex();
-          } else if(argType==UMSGPAT_ARG_TYPE_PLURAL || argType==UMSGPAT_ARG_TYPE_SELECT) {
-              // Parsing not supported.
-              ec = U_UNSUPPORTED_ERROR;
-              return NULL;
-          } else {
-              // This should never happen.
-              ec = U_INTERNAL_PROGRAM_ERROR;
-              return NULL;
-          }
-          ++argIndex;
-          prevIndex=msgPattern.getPart(argLimit).getLimit();
-          i=argLimit;
+            // Match as a string.
+            // if at end, use longest possible match
+            // otherwise uses first match to intervening string
+            // does NOT recursively try all possibilities
+            UnicodeString stringAfterArgument = getLiteralStringUntilNextArgument(argLimit);
+            int32_t next;
+            if (!stringAfterArgument.isEmpty()) {
+                next = source.indexOf(stringAfterArgument, sourceOffset);
+            } else {
+                next = source.length();
+            }
+            if (next < 0) {
+                pos.setErrorIndex(sourceOffset);
+                return NULL; // leave index as is to signal error
+            } else {
+                UnicodeString strValue(source.tempSubString(sourceOffset, next - sourceOffset));
+                UnicodeString compValue;
+                compValue.append(LEFT_CURLY_BRACE);
+                itos(argNumber, compValue);
+                compValue.append(RIGHT_CURLY_BRACE);
+                if (0 != strValue.compare(compValue)) {
+                    argResult.setString(strValue);
+                    haveArgResult = TRUE;
+                }
+                sourceOffset = next;
+            }
+        } else if(argType==UMSGPAT_ARG_TYPE_CHOICE) {
+            tempStatus.setIndex(sourceOffset);
+            double choiceResult = ChoiceFormat::parseArgument(msgPattern, i, source, tempStatus);
+            if (tempStatus.getIndex() == sourceOffset) {
+                pos.setErrorIndex(sourceOffset);
+                return NULL; // leave index as is to signal error
+            }
+            argResult.setDouble(choiceResult);
+            haveArgResult = TRUE;
+            sourceOffset = tempStatus.getIndex();
+        } else if(argType==UMSGPAT_ARG_TYPE_PLURAL || argType==UMSGPAT_ARG_TYPE_SELECT) {
+            // Parsing not supported.
+            ec = U_UNSUPPORTED_ERROR;
+            return NULL;
+        } else {
+            // This should never happen.
+            ec = U_INTERNAL_PROGRAM_ERROR;
+            return NULL;
+        }
+        if (haveArgResult && count >= argNumber) {
+            count = argNumber + 1;
+        }
+        prevIndex=msgPattern.getPart(argLimit).getLimit();
+        i=argLimit;
     }
 }
 // -------------------------------------
@@ -1545,7 +1549,7 @@ Formattable*
 MessageFormat::parse(const UnicodeString& source,
                      ParsePosition& pos,
                      int32_t& count) const {
-    UErrorCode ec;
+    UErrorCode ec = U_ZERO_ERROR;
     return parse(0, source, pos, count, ec);
 }
 
