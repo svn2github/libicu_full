@@ -255,6 +255,7 @@
     <ClCompile Include="sortkey.cpp" />
     <ClCompile Include="stsearch.cpp" />
     <ClCompile Include="tblcoll.cpp" />
+    <ClCompile Include="tznames.cpp" />
     <ClCompile Include="ucol.cpp" />
     <ClCompile Include="ucol_bld.cpp" />
     <ClCompile Include="ucol_cnt.cpp" />
@@ -570,6 +571,7 @@
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\include\unicode\%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
+    <ClInclude Include="tznames.h" />
     <ClInclude Include="ucol_bld.h" />
     <ClInclude Include="ucol_cnt.h" />
     <ClInclude Include="ucol_elm.h" />
@@ -668,7 +670,7 @@
     </CustomBuild>
     <ClInclude Include="currfmt.h" />
     <CustomBuild Include="unicode\currpinf.h">
- <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">copy "%(FullPath)" ..\..\include\unicode
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">copy "%(FullPath)" ..\..\include\unicode
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\include\unicode\%(Filename)%(Extension);%(Outputs)</Outputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">copy "%(FullPath)" ..\..\include\unicode
