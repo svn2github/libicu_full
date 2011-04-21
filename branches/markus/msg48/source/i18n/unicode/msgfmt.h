@@ -32,7 +32,6 @@
 #include "unicode/parseerr.h"
 #include "unicode/plurfmt.h"
 #include "unicode/plurrule.h"
-#include "unicode/uchar.h"
 
 U_CDECL_BEGIN
 // Forward declaration.
@@ -870,22 +869,10 @@ private:
 
     Locale              fLocale;
     MessagePattern      msgPattern;
-    UnicodeString       fPattern;
     Format**            formatAliases; // see getFormats
     int32_t             formatAliasesCapacity;
-    UProperty           idStart;
-    UProperty           idContinue;
 
     MessageFormat(); // default constructor not implemented
-
-    /*
-     * A structure representing one subformat of this MessageFormat.
-     * Each subformat has a Format object, an offset into the plain
-     * pattern text fPattern, and an argument number.  The argument
-     * number corresponds to the array of arguments to be formatted.
-     * @internal
-     */
-    class Subformat;
 
      /**
       * This provider helps defer instantiation of a PluralRules object
@@ -904,14 +891,6 @@ private:
         Locale* locale;
         PluralRules* rules;
     };
-
-    /**
-     * A MessageFormat contains an array of subformats.  This array
-     * needs to grow dynamically if the MessageFormat is modified.
-     */
-    Subformat* subformats;
-    int32_t    subformatCount;
-    int32_t    subformatCapacity;
 
     /**
      * A MessageFormat formats an array of arguments.  Each argument
@@ -933,7 +912,6 @@ private:
     UBool hasArgTypeConflicts;
 
     // Variable-size array management
-    UBool allocateSubformats(int32_t capacity);
     UBool allocateArgTypes(int32_t capacity);
 
     /**
@@ -971,33 +949,18 @@ private:
      * Formats the array of arguments and copies the result into the
      * result buffer, updates the field position.
      *
-     * @param arguments The formattable objects array.
-     * @param cnt       The array count.
-     * @param appendTo  Output parameter to receive result.
-     *                  Result is appended to existing contents.
-     * @param status    Field position status.
-     * @param recursionProtection
-     *                  Initially zero. Bits 0..9 are used to indicate
-     *                  that a parameter has already been seen, to
-     *                  avoid recursion.  Currently unused.
-     * @param success   The error code status.
-     * @return          Reference to 'appendTo' parameter.
+     * @param msgStart      Index to msgPattern part to start formatting from.
+     * @param pluralNumber  Initially zero. Used internally for plural formatting.
+     * @param arguments     The formattable objects array.
+     * @param argumentNames Can be NULL. If not NULL, assumed to be of the same
+     *                      size as "arguments", and each entry is the name of the
+     *                      corresponding argument in "arguments".
+     * @param cnt           The array count of arguments.
+     * @param appendTo      Output parameter to receive result.
+     *                      Result is appended to existing contents.
+     * @param pos           Field position status.
+     * @param success       The error code status.
      */
-    UnicodeString&  format( const Formattable* arguments,
-                            int32_t cnt,
-                            UnicodeString& appendTo,
-                            FieldPosition& pos,
-                            int32_t recursionProtection,
-                            UErrorCode& success) const;
-
-    UnicodeString&  format( const Formattable* arguments,
-                            const UnicodeString *argumentNames,
-                            int32_t cnt,
-                            UnicodeString& appendTo,
-                            FieldPosition& pos,
-                            int32_t recursionProtection,
-                            UErrorCode& success) const;
-
     void format(int32_t msgStart,
                 double pluralNumber,
                 const Formattable* arguments,
@@ -1019,7 +982,11 @@ private:
 
     void cacheExplicitFormats(UErrorCode& status);
 
-    Format* createAppropriateFormat(UnicodeString& type, UnicodeString& style, Formattable::Type& formattableType, UParseError& parseError, UErrorCode& ec);
+    Format* createAppropriateFormat(UnicodeString& type,
+                                    UnicodeString& style,
+                                    Formattable::Type& formattableType,
+                                    UParseError& parseError,
+                                    UErrorCode& ec);
 
     const Formattable* getArgFromListByName(const Formattable* arguments,
                                             const UnicodeString *argumentNames,
@@ -1054,17 +1021,6 @@ private:
     NumberFormat* createIntegerFormat(const Locale& locale, UErrorCode& status) const;
 
     /**
-     * Checks the range of the source text to quote the special
-     * characters, { and ' and copy to target buffer.
-     * @param source
-     * @param start the text offset to start the process of in the source string
-     * @param end the text offset to end the process of in the source string
-     * @param appendTo  Output parameter to receive result.
-     *                  Result is appended to existing contents.
-     */
-    static void copyAndFixQuotes(const UnicodeString& appendTo, int32_t start, int32_t end, UnicodeString& target);
-
-    /**
      * Returns array of argument types in the parsed pattern
      * for use in C API.  Only for the use of umsg_vformat().  Not
      * for public consumption.
@@ -1076,13 +1032,6 @@ private:
         listCount = argTypeCount;
         return argTypes;
     }
-
-    /**
-     * Returns FALSE if the argument name is not legal.
-     * @param  argName   argument name.
-     * @return TRUE if the argument name is legal, otherwise return FALSE.
-     */
-    UBool isLegalArgName(const UnicodeString& argName) const;
 
     /**
      * Resets the internal MessagePattern, and other associated caches.

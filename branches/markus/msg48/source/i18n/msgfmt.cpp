@@ -33,8 +33,6 @@
 #include "unicode/rbnf.h"
 #include "unicode/selfmt.h"
 #include "unicode/smpdtfmt.h"
-#include "unicode/uchar.h"
-#include "unicode/ucnv_err.h"
 #include "unicode/umsg.h"
 #include "unicode/ustring.h"
 #include "cmemory.h"
@@ -211,68 +209,6 @@ private:
     int32_t len;
 };
 
-/*
- * A structure representing one subformat of this MessageFormat.
- * Each subformat has a Format object, an offset into the plain
- * pattern text fPattern, and an argument number.  The argument
- * number corresponds to the array of arguments to be formatted.
- * @internal
- */
-class MessageFormat::Subformat : public UMemory {
-public:
-    /**
-     * @internal
-     */
-    Format* format; // formatter
-    /**
-     * @internal
-     */
-    int32_t offset; // offset into fPattern
-    /**
-     * @internal
-     */
-    // TODO (claireho) or save the number to argName and use itos to convert to number.=> we need this number
-    int32_t argNum;    // 0-based argument number
-    /**
-     * @internal
-     */
-    UnicodeString* argName; // argument name or number
-
-    /**
-     * Clone that.format and assign it to this.format
-     * Do NOT delete this.format
-     * @internal
-     */
-    Subformat& operator=(const Subformat& that) {
-        if (this != &that) {
-            format = that.format ? that.format->clone() : NULL;
-            offset = that.offset;
-            argNum = that.argNum;
-            argName = (that.argNum==-1) ? new UnicodeString(*that.argName): NULL;
-        }
-        return *this;
-    }
-
-    /**
-     * @internal
-     */
-    UBool operator==(const Subformat& that) const {
-        // Do cheap comparisons first
-        return offset == that.offset &&
-               argNum == that.argNum &&
-               ((argName == that.argName) ||
-                (*argName == *that.argName)) &&
-               ((format == that.format) || // handles NULL
-                (*format == *that.format));
-    }
-
-    /**
-     * @internal
-     */
-    UBool operator!=(const Subformat& that) const {
-        return !operator==(that);
-    }
-};
 
 // -------------------------------------
 // Creates a MessageFormat instance based on the pattern.
@@ -283,11 +219,6 @@ MessageFormat::MessageFormat(const UnicodeString& pattern,
   msgPattern(success),
   formatAliases(NULL),
   formatAliasesCapacity(0),
-  idStart(UCHAR_ID_START),
-  idContinue(UCHAR_ID_CONTINUE),
-  subformats(NULL),
-  subformatCount(0),
-  subformatCapacity(0),
   argTypes(NULL),
   argTypeCount(0),
   argTypeCapacity(0),
@@ -298,8 +229,7 @@ MessageFormat::MessageFormat(const UnicodeString& pattern,
   customFormatArgStarts(NULL),
   pluralProvider(&fLocale)
 {
-    if (!allocateSubformats(DEFAULT_INITIAL_CAPACITY) ||
-        !allocateArgTypes(DEFAULT_INITIAL_CAPACITY)) {
+    if (!allocateArgTypes(DEFAULT_INITIAL_CAPACITY)) {
         success = U_MEMORY_ALLOCATION_ERROR;
         return;
     }
@@ -314,11 +244,6 @@ MessageFormat::MessageFormat(const UnicodeString& pattern,
   msgPattern(success),
   formatAliases(NULL),
   formatAliasesCapacity(0),
-  idStart(UCHAR_ID_START),
-  idContinue(UCHAR_ID_CONTINUE),
-  subformats(NULL),
-  subformatCount(0),
-  subformatCapacity(0),
   argTypes(NULL),
   argTypeCount(0),
   argTypeCapacity(0),
@@ -329,8 +254,7 @@ MessageFormat::MessageFormat(const UnicodeString& pattern,
   customFormatArgStarts(NULL),
   pluralProvider(&fLocale)
 {
-    if (!allocateSubformats(DEFAULT_INITIAL_CAPACITY) ||
-        !allocateArgTypes(DEFAULT_INITIAL_CAPACITY)) {
+    if (!allocateArgTypes(DEFAULT_INITIAL_CAPACITY)) {
         success = U_MEMORY_ALLOCATION_ERROR;
         return;
     }
@@ -346,11 +270,6 @@ MessageFormat::MessageFormat(const UnicodeString& pattern,
   msgPattern(success),
   formatAliases(NULL),
   formatAliasesCapacity(0),
-  idStart(UCHAR_ID_START),
-  idContinue(UCHAR_ID_CONTINUE),
-  subformats(NULL),
-  subformatCount(0),
-  subformatCapacity(0),
   argTypes(NULL),
   argTypeCount(0),
   argTypeCapacity(0),
@@ -361,8 +280,7 @@ MessageFormat::MessageFormat(const UnicodeString& pattern,
   customFormatArgStarts(NULL),
   pluralProvider(&fLocale)
 {
-    if (!allocateSubformats(DEFAULT_INITIAL_CAPACITY) ||
-        !allocateArgTypes(DEFAULT_INITIAL_CAPACITY)) {
+    if (!allocateArgTypes(DEFAULT_INITIAL_CAPACITY)) {
         success = U_MEMORY_ALLOCATION_ERROR;
         return;
     }
@@ -376,11 +294,6 @@ MessageFormat::MessageFormat(const MessageFormat& that)
   msgPattern(that.msgPattern),
   formatAliases(NULL),
   formatAliasesCapacity(0),
-  idStart(UCHAR_ID_START),
-  idContinue(UCHAR_ID_CONTINUE),
-  subformats(NULL),
-  subformatCount(0),
-  subformatCapacity(0),
   argTypes(NULL),
   argTypeCount(0),
   argTypeCapacity(0),
@@ -417,37 +330,6 @@ MessageFormat::~MessageFormat()
 
 //--------------------------------------------------------------------
 // Variable-size array management
-
-/**
- * Allocate subformats[] to at least the given capacity and return
- * TRUE if successful.  If not, leave subformats[] unchanged.
- *
- * If subformats is NULL, allocate it.  If it is not NULL, enlarge it
- * if necessary to be at least as large as specified.
- */
-UBool MessageFormat::allocateSubformats(int32_t capacity) {
-    if (subformats == NULL) {
-        subformats = (Subformat*) uprv_malloc(sizeof(*subformats) * capacity);
-        subformatCapacity = capacity;
-        subformatCount = 0;
-        if (subformats == NULL) {
-            subformatCapacity = 0;
-            return FALSE;
-        }
-    } else if (subformatCapacity < capacity) {
-        if (capacity < 2*subformatCapacity) {
-            capacity = 2*subformatCapacity;
-        }
-        Subformat* a = (Subformat*)
-            uprv_realloc(subformats, sizeof(*subformats) * capacity);
-        if (a == NULL) {
-            return FALSE; // request failed
-        }
-        subformats = a;
-        subformatCapacity = capacity;
-    }
-    return TRUE;
-}
 
 /**
  * Allocate argTypes[] to at least the given capacity and return
@@ -494,7 +376,6 @@ MessageFormat::operator=(const MessageFormat& that)
 {
     // Reallocate the arrays BEFORE changing this object
     if (this != &that &&
-        allocateSubformats(that.subformatCount) &&
         allocateArgTypes(that.argTypeCount)) {
 
         // Calls the super class for assignment first.
@@ -504,16 +385,6 @@ MessageFormat::operator=(const MessageFormat& that)
         setLocale(that.fLocale);
         hasArgTypeConflicts = that.hasArgTypeConflicts;
         int32_t j;
-        for (j=0; j<subformatCount; ++j) {
-            delete subformats[j].format;
-        }
-        subformatCount = 0;
-
-        for (j=0; j<that.subformatCount; ++j) {
-            // Subformat::operator= does NOT delete this.format
-            subformats[j] = that.subformats[j];
-        }
-        subformatCount = that.subformatCount;
 
         for (j=0; j<that.argTypeCount; ++j) {
             argTypes[j] = that.argTypes[j];
@@ -541,13 +412,6 @@ MessageFormat::operator==(const Format& rhs) const
         msgPattern != that.msgPattern ||
         fLocale != that.fLocale) {
         return FALSE;
-    }
-
-    int32_t j;
-    for (j=0; j<subformatCount; ++j) {
-        if (subformats[j] != that.subformats[j]) {
-            return FALSE;
-        }
     }
 
     // Compare hashtables.
@@ -614,9 +478,6 @@ MessageFormat::getLocale() const
 {
     return fLocale;
 }
-
-
-
 
 void
 MessageFormat::applyPattern(const UnicodeString& newPattern,
@@ -1040,7 +901,10 @@ MessageFormat::format(const Formattable* source,
     if (U_FAILURE(success))
         return appendTo;
 
-    return format(source, cnt, appendTo, ignore, 0, success);
+    UnicodeStringAppendable usapp(appendTo);
+    AppendableWrapper app(usapp);
+    format(0, 0.0, source, NULL, cnt, app, &ignore, success);
+    return appendTo;
 }
 
 // -------------------------------------
@@ -1081,8 +945,10 @@ MessageFormat::format(const Formattable& source,
         return appendTo;
     }
     const Formattable* tmpPtr = source.getArray(cnt);
-
-    return format(tmpPtr, cnt, appendTo, ignore, 0, success);
+    UnicodeStringAppendable usapp(appendTo);
+    AppendableWrapper app(usapp);
+    format(0, 0.0, tmpPtr, NULL, cnt, app, &ignore, success);
+    return appendTo;
 }
 
 UnicodeString&
@@ -1092,35 +958,9 @@ MessageFormat::format(const UnicodeString* argumentNames,
                       UnicodeString& appendTo,
                       UErrorCode& success) const {
     FieldPosition ignore(0);
-    return format(arguments, argumentNames, count, appendTo, ignore, 0, success);
-}
-
-UnicodeString&
-MessageFormat::format(const Formattable* arguments,
-                      int32_t cnt,
-                      UnicodeString& appendTo,
-                      FieldPosition& pos,
-                      int32_t recursionProtection,
-                      UErrorCode& success) const
-{
-    return format(arguments, NULL, cnt, appendTo, pos, recursionProtection, success);
-}
-
-// -------------------------------------
-// Formats the arguments Formattable array and copy into the appendTo buffer.
-// Ignore the FieldPosition result for error checking.
-
-UnicodeString&
-MessageFormat::format(const Formattable* arguments,
-                      const UnicodeString *argumentNames,
-                      int32_t cnt,
-                      UnicodeString& appendTo,
-                      FieldPosition& pos,
-                      int32_t /*recursionProtection*/,
-                      UErrorCode& success) const {
     UnicodeStringAppendable usapp(appendTo);
     AppendableWrapper app(usapp);
-    format(0, 0.0, arguments, argumentNames, cnt, app, &pos, success);
+    format(0, 0.0, arguments, argumentNames, count, app, &ignore, success);
     return appendTo;
 }
 
@@ -1533,7 +1373,7 @@ MessageFormat::parse(int32_t msgStart,
             ec = U_INTERNAL_PROGRAM_ERROR;
             return NULL;
         }
-        if (haveArgResult && count >= argNumber) {
+        if (haveArgResult && count <= argNumber) {
             count = argNumber + 1;
         }
         prevIndex=msgPattern.getPart(argLimit).getLimit();
@@ -1805,7 +1645,7 @@ Format* MessageFormat::createAppropriateFormat(UnicodeString& type, UnicodeStrin
 }
 
 
-// -------------------------------------
+//-------------------------------------
 // Finds the string, s, in the string array, list.
 int32_t MessageFormat::findKeyword(const UnicodeString& s,
                                    const UChar * const *list)
@@ -1823,48 +1663,6 @@ int32_t MessageFormat::findKeyword(const UnicodeString& s,
         }
     }
     return -1;
-}
-
-// -------------------------------------
-// Checks the range of the source text to quote the special
-// characters, { and ' and copy to target buffer.
-
-void
-MessageFormat::copyAndFixQuotes(const UnicodeString& source,
-                                int32_t start,
-                                int32_t end,
-                                UnicodeString& appendTo)
-{
-    UBool gotLB = FALSE;
-
-    for (int32_t i = start; i < end; ++i) {
-        UChar ch = source[i];
-        if (ch == LEFT_CURLY_BRACE) {
-            appendTo += SINGLE_QUOTE;
-            appendTo += LEFT_CURLY_BRACE;
-            appendTo += SINGLE_QUOTE;
-            gotLB = TRUE;
-        }
-        else if (ch == RIGHT_CURLY_BRACE) {
-            if(gotLB) {
-                appendTo += RIGHT_CURLY_BRACE;
-                gotLB = FALSE;
-            }
-            else {
-                // orig code.
-                appendTo += SINGLE_QUOTE;
-                appendTo += RIGHT_CURLY_BRACE;
-                appendTo += SINGLE_QUOTE;
-            }
-        }
-        else if (ch == SINGLE_QUOTE) {
-            appendTo += SINGLE_QUOTE;
-            appendTo += SINGLE_QUOTE;
-        }
-        else {
-            appendTo += ch;
-        }
-    }
 }
 
 /**
@@ -1925,19 +1723,6 @@ const DateFormat* MessageFormat::getDefaultDateFormat(UErrorCode& ec) const {
 UBool
 MessageFormat::usesNamedArguments() const {
     return msgPattern.hasNamedArguments();
-}
-
-UBool
-MessageFormat::isLegalArgName(const UnicodeString& argName) const {
-    if(!u_hasBinaryProperty(argName.charAt(0), idStart)) {
-        return FALSE;
-    }
-    for (int32_t i=1; i<argName.length(); ++i) {
-        if(!u_hasBinaryProperty(argName.charAt(i), idContinue)) {
-            return FALSE;
-        }
-    }
-    return TRUE;
 }
 
 int32_t
