@@ -36,6 +36,7 @@
 #include "unicode/umsg.h"
 #include "unicode/ustring.h"
 #include "cmemory.h"
+#include "patternprops.h"
 #include "messageimpl.h"
 #include "msgfmt_impl.h"
 #include "uassert.h"
@@ -1631,13 +1632,16 @@ Format* MessageFormat::createAppropriateFormat(UnicodeString& type, UnicodeStrin
 int32_t MessageFormat::findKeyword(const UnicodeString& s,
                                    const UChar * const *list)
 {
-    if (s.length() == 0)
+    if (s.isEmpty()) {
         return 0; // default
+    }
 
-    UnicodeString buffer = s;
+    int32_t length = s.length();
+    const UChar *ps = PatternProps::trimWhiteSpace(s.getBuffer(), length);
+    UnicodeString buffer(FALSE, ps, length);
     // Trims the space characters and turns all characters
     // in s to lower case.
-    buffer.trim().toLower("");
+    buffer.toLower("");
     for (int32_t i = 0; list[i]; ++i) {
         if (!buffer.compare(list[i], u_strlen(list[i]))) {
             return i;
