@@ -27,11 +27,6 @@
 #include "ustrfmt.h"
 #include "locutil.h"
 
-/*
-// TODO(claireho): remove stdio
-#include "stdio.h"
-*/
-
 #if !UCONFIG_NO_FORMATTING
 
 U_NAMESPACE_BEGIN

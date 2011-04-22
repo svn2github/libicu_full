@@ -13,6 +13,9 @@
 */
 
 #include "unicode/utypes.h"
+
+#if !UCONFIG_NO_FORMATTING
+
 #include "unicode/messagepattern.h"
 #include "unicode/unistr.h"
 #include "cmemory.h"
@@ -1201,3 +1204,5 @@ MessageImpl::appendSubMessageWithoutSkipSyntax(const MessagePattern &msgPattern,
 }
 
 U_NAMESPACE_END
+
+#endif  // !UCONFIG_NO_FORMATTING

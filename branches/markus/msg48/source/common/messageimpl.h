@@ -16,6 +16,9 @@
 #define __MESSAGEIMPL_H__
 
 #include "unicode/utypes.h"
+
+#if !UCONFIG_NO_FORMATTING
+
 #include "unicode/messagepattern.h"
 
 U_NAMESPACE_BEGIN
@@ -54,5 +57,7 @@ private:
 };
 
 U_NAMESPACE_END
+
+#endif  // !UCONFIG_NO_FORMATTING
 
 #endif  // __MESSAGEIMPL_H__

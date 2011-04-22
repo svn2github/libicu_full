@@ -457,11 +457,13 @@ umsg_vformat(   const UMessageFormat *fmt,
             break;
 
         case Formattable::kObject:
+        default:
             // This will never happen because MessageFormat doesn't
             // support kObject.  When MessageFormat is changed to
             // understand MeasureFormats, modify this code to do the
             // right thing. [alan]
             U_ASSERT(FALSE);
+            *status=U_ILLEGAL_ARGUMENT_ERROR;
             break;
         }
     }
