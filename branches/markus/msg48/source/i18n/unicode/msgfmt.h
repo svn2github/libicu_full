@@ -469,7 +469,7 @@ public:
      * @draft ICU 4.8
      */
     UMessagePatternApostropheMode getApostropheMode() const {
-        return UMSGPAT_APOS_DOUBLE_OPTIONAL;  // TODO: msgPattern.getApostropheMode();
+        return msgPattern.getApostropheMode();
     }
 
     /**
