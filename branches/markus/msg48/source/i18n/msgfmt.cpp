@@ -1052,7 +1052,7 @@ void MessageFormat::format(int32_t msgStart, double pluralNumber,
                 success = U_ILLEGAL_ARGUMENT_ERROR;
                 return;
             }
-            const double number = arg->getDouble();
+            const double number = arg->getDouble(success);
             int32_t subMsgStart = ChoiceFormat::findSubMessage(msgPattern, i, number);
             formatComplexSubMessage(subMsgStart, 0, arguments, argumentNames,
                                     cnt, appendTo, success);
@@ -1061,7 +1061,7 @@ void MessageFormat::format(int32_t msgStart, double pluralNumber,
                 success = U_ILLEGAL_ARGUMENT_ERROR;
                 return;
             }
-            double number = arg->getDouble();
+            double number = arg->getDouble(success);
             int32_t subMsgStart = PluralFormat::findSubMessage(msgPattern, i, pluralProvider, number,
                                                                success);
             double offset = msgPattern.getPluralOffset(subMsgStart);

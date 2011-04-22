@@ -74,7 +74,7 @@ SelectFormat::format(const Formattable& obj,
         return appendTo;
     }
     if (obj.getType() == Formattable::kString) {
-        return format(obj.getString(), appendTo, pos, status);
+        return format(obj.getString(status), appendTo, pos, status);
     } else {
         status = U_ILLEGAL_ARGUMENT_ERROR;
         return appendTo;
