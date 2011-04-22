@@ -882,13 +882,13 @@ private:
       */
     class PluralSelectorProvider : public PluralFormat::PluralSelector {
     public:
-        PluralSelectorProvider(Locale* loc);
+        PluralSelectorProvider(const Locale* loc);
         virtual ~PluralSelectorProvider();
         virtual UnicodeString select(double number, UErrorCode& ec) const;
 
-        void reset();
+        void reset(const Locale* loc);
     private:
-        Locale* locale;
+        const Locale* locale;
         PluralRules* rules;
     };
 
@@ -912,7 +912,7 @@ private:
     UBool hasArgTypeConflicts;
 
     // Variable-size array management
-    UBool allocateArgTypes(int32_t capacity);
+    UBool allocateArgTypes(int32_t capacity, UErrorCode& status);
 
     /**
      * Default Format objects used when no format is specified and a
@@ -946,18 +946,19 @@ private:
                                 const UChar * const *list);
 
     /**
-     * Formats the array of arguments and copies the result into the
-     * result buffer, updates the field position.
+     * Formats the arguments and writes the result into the
+     * AppendableWrapper, updates the field position.
      *
      * @param msgStart      Index to msgPattern part to start formatting from.
-     * @param pluralNumber  Initially zero. Used internally for plural formatting.
-     * @param arguments     The formattable objects array.
-     * @param argumentNames Can be NULL. If not NULL, assumed to be of the same
-     *                      size as "arguments", and each entry is the name of the
+     * @param pluralNumber  Zero except when formatting a plural argument sub-message
+     *                      where a '#' is replaced by the format string for this number.
+     * @param arguments     The formattable objects array. (Must not be NULL.)
+     * @param argumentNames NULL if numbered values are used. Otherwise the same
+     *                      length as "arguments", and each entry is the name of the
      *                      corresponding argument in "arguments".
-     * @param cnt           The array count of arguments.
-     * @param appendTo      Output parameter to receive result.
-     *                      Result is appended to existing contents.
+     * @param cnt           The length of arguments (and of argumentNames if that is not NULL).
+     * @param appendTo      Output parameter to receive the result.
+     *                      The result string is appended to existing contents.
      * @param pos           Field position status.
      * @param success       The error code status.
      */
@@ -1005,7 +1006,7 @@ private:
 
     UnicodeString getLiteralStringUntilNextArgument(int32_t from) const;
 
-    void copyHashTables(const MessageFormat& that, UErrorCode& ec);
+    void copyObjects(const MessageFormat& that, UErrorCode& ec);
 
     void formatComplexSubMessage(int32_t msgStart,
                                  double pluralNumber,

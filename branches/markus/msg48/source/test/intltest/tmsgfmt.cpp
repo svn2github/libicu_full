@@ -1740,7 +1740,10 @@ void TestMessageFormat::testCoverage(void) {
         }
     }
 
-    msgfmt->adoptFormat("adopt", &cf, status);
+    // adoptFormat() takes ownership of the input Format object.
+    // We need to clone the stack-allocated cf so that we do not attempt to delete cf.
+    Format *cfClone = cf.clone();
+    msgfmt->adoptFormat("adopt", cfClone, status);
 
     delete en;
     delete msgfmt;

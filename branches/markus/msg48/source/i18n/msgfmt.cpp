@@ -229,12 +229,8 @@ MessageFormat::MessageFormat(const UnicodeString& pattern,
   customFormatArgStarts(NULL),
   pluralProvider(&fLocale)
 {
-    if (!allocateArgTypes(DEFAULT_INITIAL_CAPACITY)) {
-        success = U_MEMORY_ALLOCATION_ERROR;
-        return;
-    }
-    applyPattern(pattern, success);
     setLocaleIDs(fLocale.getName(), fLocale.getName());
+    applyPattern(pattern, success);
 }
 
 MessageFormat::MessageFormat(const UnicodeString& pattern,
@@ -254,12 +250,8 @@ MessageFormat::MessageFormat(const UnicodeString& pattern,
   customFormatArgStarts(NULL),
   pluralProvider(&fLocale)
 {
-    if (!allocateArgTypes(DEFAULT_INITIAL_CAPACITY)) {
-        success = U_MEMORY_ALLOCATION_ERROR;
-        return;
-    }
-    applyPattern(pattern, success);
     setLocaleIDs(fLocale.getName(), fLocale.getName());
+    applyPattern(pattern, success);
 }
 
 MessageFormat::MessageFormat(const UnicodeString& pattern,
@@ -280,35 +272,30 @@ MessageFormat::MessageFormat(const UnicodeString& pattern,
   customFormatArgStarts(NULL),
   pluralProvider(&fLocale)
 {
-    if (!allocateArgTypes(DEFAULT_INITIAL_CAPACITY)) {
-        success = U_MEMORY_ALLOCATION_ERROR;
-        return;
-    }
-    applyPattern(pattern, parseError, success);
     setLocaleIDs(fLocale.getName(), fLocale.getName());
+    applyPattern(pattern, parseError, success);
 }
 
 MessageFormat::MessageFormat(const MessageFormat& that)
 :
   Format(that),
+  fLocale(that.fLocale),
   msgPattern(that.msgPattern),
   formatAliases(NULL),
   formatAliasesCapacity(0),
   argTypes(NULL),
   argTypeCount(0),
   argTypeCapacity(0),
-  hasArgTypeConflicts(FALSE),
+  hasArgTypeConflicts(that.hasArgTypeConflicts),
   defaultNumberFormat(NULL),
   defaultDateFormat(NULL),
   cachedFormatters(NULL),
   customFormatArgStarts(NULL),
   pluralProvider(&fLocale)
 {
-    *this = that;
-    UErrorCode ec = U_ZERO_ERROR;
-
     // This will take care of creating the hash tables (since they are NULL).
-    copyHashTables(that, ec);
+    UErrorCode ec = U_ZERO_ERROR;
+    copyObjects(that, ec);
     if (U_FAILURE(ec)) {
         resetPattern();
     }
@@ -320,9 +307,6 @@ MessageFormat::~MessageFormat()
     uhash_close(customFormatArgStarts);
 
     uprv_free(argTypes);
-    argTypes = NULL;
-    argTypeCount = argTypeCapacity = 0;
-
     uprv_free(formatAliases);
     delete defaultNumberFormat;
     delete defaultDateFormat;
@@ -338,33 +322,26 @@ MessageFormat::~MessageFormat()
  * If argTypes is NULL, allocate it.  If it is not NULL, enlarge it
  * if necessary to be at least as large as specified.
  */
-UBool MessageFormat::allocateArgTypes(int32_t capacity) {
-    if (argTypes == NULL) {
-        argTypes = (Formattable::Type*) uprv_malloc(sizeof(*argTypes) * capacity);
-        argTypeCount = 0;
-        argTypeCapacity = capacity;
-        if (argTypes == NULL) {
-            argTypeCapacity = 0;
-            return FALSE;
-        }
-        for (int32_t i=0; i<capacity; ++i) {
-            argTypes[i] = Formattable::kString;
-        }
-    } else if (argTypeCapacity < capacity) {
-        if (capacity < 2*argTypeCapacity) {
-            capacity = 2*argTypeCapacity;
-        }
-        Formattable::Type* a = (Formattable::Type*)
-            uprv_realloc(argTypes, sizeof(*argTypes) * capacity);
-        if (a == NULL) {
-            return FALSE; // request failed
-        }
-        for (int32_t i=argTypeCapacity; i<capacity; ++i) {
-            a[i] = Formattable::kString;
-        }
-        argTypes = a;
-        argTypeCapacity = capacity;
+UBool MessageFormat::allocateArgTypes(int32_t capacity, UErrorCode& status) {
+    if (U_FAILURE(status)) {
+        return FALSE;
     }
+    if (argTypeCapacity >= capacity) {
+        return TRUE;
+    }
+    if (capacity < DEFAULT_INITIAL_CAPACITY) {
+        capacity = DEFAULT_INITIAL_CAPACITY;
+    } else if (capacity < 2*argTypeCapacity) {
+        capacity = 2*argTypeCapacity;
+    }
+    Formattable::Type* a = (Formattable::Type*)
+            uprv_realloc(argTypes, sizeof(*argTypes) * capacity);
+    if (a == NULL) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return FALSE;
+    }
+    argTypes = a;
+    argTypeCapacity = capacity;
     return TRUE;
 }
 
@@ -374,25 +351,16 @@ UBool MessageFormat::allocateArgTypes(int32_t capacity) {
 const MessageFormat&
 MessageFormat::operator=(const MessageFormat& that)
 {
-    // Reallocate the arrays BEFORE changing this object
-    if (this != &that &&
-        allocateArgTypes(that.argTypeCount)) {
-
+    if (this != &that) {
         // Calls the super class for assignment first.
         Format::operator=(that);
 
-        msgPattern = that.msgPattern;
         setLocale(that.fLocale);
+        msgPattern = that.msgPattern;
         hasArgTypeConflicts = that.hasArgTypeConflicts;
-        int32_t j;
-
-        for (j=0; j<that.argTypeCount; ++j) {
-            argTypes[j] = that.argTypes[j];
-        }
-        argTypeCount = that.argTypeCount;
 
         UErrorCode ec = U_ZERO_ERROR;
-        copyHashTables(that, ec);
+        copyObjects(that, ec);
         if (U_FAILURE(ec)) {
             resetPattern();
         }
@@ -464,10 +432,10 @@ MessageFormat::setLocale(const Locale& theLocale)
         defaultNumberFormat = NULL;
         delete defaultDateFormat;
         defaultDateFormat = NULL;
+        fLocale = theLocale;
+        setLocaleIDs(fLocale.getName(), fLocale.getName());
+        pluralProvider.reset(&fLocale);
     }
-    fLocale = theLocale;
-    setLocaleIDs(fLocale.getName(), fLocale.getName());
-    pluralProvider.reset();
 }
 
 // -------------------------------------
@@ -1054,9 +1022,10 @@ void MessageFormat::format(int32_t msgStart, double pluralNumber,
                 // setFormat() or its siblings. Otherwise they are not cached and instead
                 // handled below according to argType.
                 UnicodeString subMsgString;
-                formatter->format(const_cast<Formattable*>(arg), subMsgString,success);
+                formatter->format(*arg, subMsgString, success);
                 if (subMsgString.indexOf(LEFT_CURLY_BRACE) >= 0 ||
-                  (subMsgString.indexOf(SINGLE_QUOTE) >= 0 && !MessageImpl::jdkAposMode(msgPattern))) {
+                    (subMsgString.indexOf(SINGLE_QUOTE) >= 0 && !MessageImpl::jdkAposMode(msgPattern))
+                ) {
                     MessageFormat subMsgFormat(subMsgString, fLocale, success);
                     subMsgFormat.format(0, 0, arguments, argumentNames, cnt, appendTo, ignore, success);
                 } else {
@@ -1204,12 +1173,18 @@ FieldPosition* MessageFormat::updateMetaData(AppendableWrapper& /*dest*/, int32_
     */
 }
 
-void MessageFormat::copyHashTables(const MessageFormat& that, UErrorCode& ec) {
-    // Deep copy the Formats.
-    int32_t pos = -1;
-    int32_t idx = 0;
-    if (U_FAILURE(ec)) {
-        return;
+void MessageFormat::copyObjects(const MessageFormat& that, UErrorCode& ec) {
+    // Deep copy pointer fields.
+    // We need not copy the formatAliases because they are re-filled
+    // in each getFormats() call.
+    // The defaultNumberFormat, defaultDateFormat and pluralProvider.rules
+    // also get created on demand.
+    argTypeCount = that.argTypeCount;
+    if (argTypeCount > 0) {
+        if (!allocateArgTypes(argTypeCount, ec)) {
+            return;
+        }
+        uprv_memcpy(argTypes, that.argTypes, argTypeCount * sizeof(argTypes[0]));
     }
     if (cachedFormatters != NULL) {
         uhash_removeAll(cachedFormatters);
@@ -1228,7 +1203,8 @@ void MessageFormat::copyHashTables(const MessageFormat& that, UErrorCode& ec) {
         }
 
         const int32_t count = uhash_count(that.cachedFormatters);
-        for (; idx < count && U_SUCCESS(ec); ++idx) {
+        int32_t pos, idx;
+        for (idx = 0, pos = -1; idx < count && U_SUCCESS(ec); ++idx) {
             const UHashElement* cur = uhash_nextElement(that.cachedFormatters, &pos);
             Format* newFormat = ((Format*)(cur->value.pointer))->clone();
             if (newFormat) {
@@ -1245,6 +1221,7 @@ void MessageFormat::copyHashTables(const MessageFormat& that, UErrorCode& ec) {
                                               NULL, &ec);
         }
         const int32_t count = uhash_count(that.customFormatArgStarts);
+        int32_t pos, idx;
         for (idx = 0, pos = -1; idx < count && U_SUCCESS(ec); ++idx) {
             const UHashElement* cur = uhash_nextElement(that.customFormatArgStarts, &pos);
             uhash_iputi(customFormatArgStarts, cur->key.integer, cur->value.integer, &ec);
@@ -1497,8 +1474,7 @@ void MessageFormat::cacheExplicitFormats(UErrorCode& status) {
             }
         }
     }
-    if (!allocateArgTypes(argTypeCount)) {
-        status = U_MEMORY_ALLOCATION_ERROR;
+    if (!allocateArgTypes(argTypeCount, status)) {
         return;
     }
     // Set all argTypes to kObject, as a "none" value, for lack of any better value.
@@ -1787,7 +1763,7 @@ FormatNameEnumeration::~FormatNameEnumeration() {
 }
 
 
-MessageFormat::PluralSelectorProvider::PluralSelectorProvider(Locale* loc)
+MessageFormat::PluralSelectorProvider::PluralSelectorProvider(const Locale* loc)
         : locale(loc), rules(NULL) {
 }
 
@@ -1810,7 +1786,8 @@ UnicodeString MessageFormat::PluralSelectorProvider::select(double number, UErro
     return rules->select(number);
 }
 
-void MessageFormat::PluralSelectorProvider::reset() {
+void MessageFormat::PluralSelectorProvider::reset(const Locale* loc) {
+    locale = loc;
     delete rules;
     rules = NULL;
 }
