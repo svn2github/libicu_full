@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2007-2008, International Business Machines Corporation and
+* Copyright (C) 2007-2011, International Business Machines Corporation and
 * others. All Rights Reserved.
 *******************************************************************************
 *
@@ -138,9 +138,6 @@ public:
                             tokenType& type, UErrorCode &status);
     void checkSyntax(tokenType prevType, tokenType curType, UErrorCode &status);
 private:
-    UnicodeSet      *idStartFilter;
-    UnicodeSet      *idContinueFilter;
-    
     void getKeyType(const UnicodeString& token, tokenType& type, UErrorCode &status);
     UBool inRange(UChar ch, tokenType& type);
     UBool isValidKeyword(const UnicodeString& token);
