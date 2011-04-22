@@ -63,6 +63,7 @@ TestMessageFormat::runIndexedTest(int32_t index, UBool exec,
     TESTCASE_AUTO(TestApostropheMode);
     TESTCASE_AUTO(TestCompatibleApostrophe);
     TESTCASE_AUTO(testCoverage);
+    TESTCASE_AUTO(TestTrimArgumentName);
     TESTCASE_AUTO_END;
 }
 
@@ -1771,6 +1772,24 @@ void TestMessageFormat::testCoverage(void) {
 
     delete en;
     delete msgfmt;
+}
+
+void TestMessageFormat::TestTrimArgumentName() {
+    // ICU 4.8 allows and ignores white space around argument names and numbers.
+    IcuTestErrorCode errorCode(*this, "TestTrimArgumentName");
+    MessageFormat m("a { 0 , number , '#,#'#.0 } z", Locale::getEnglish(), errorCode);
+    Formattable args[1] = { 2 };
+    FieldPosition ignore(0);
+    UnicodeString result;
+    assertEquals("trim-numbered-arg format() failed", "a  #,#2.0  z",
+                 m.format(args, 1, result, ignore, errorCode));
+
+    m.applyPattern("x { _oOo_ , number , integer } y", errorCode);
+    UnicodeString argName = UNICODE_STRING_SIMPLE("_oOo_");
+    args[0].setLong(3);
+    result.remove();
+    assertEquals("trim-named-arg format() failed", "x 3 y",
+                  m.format(&argName, args, 1, result, errorCode));
 }
 
 #endif /* #if !UCONFIG_NO_FORMATTING */
