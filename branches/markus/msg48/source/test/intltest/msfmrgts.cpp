@@ -913,12 +913,21 @@ void MessageFormatRegressionTest::Test4142938()
  */
 void MessageFormatRegressionTest::TestChoicePatternQuote() 
 {
+    // ICU 4.8 ChoiceFormat (like PluralFormat & SelectFormat)
+    // returns the chosen string unmodified, so that it is usable in a MessageFormat.
+    // We modified the test strings accordingly.
+    // Note: Without further formatting/trimming/etc., it is not possible
+    // to get a single apostrophe as the last character of a non-final choice sub-message
+    // because the single apostrophe before the pipe '|' would start quoted text.
+    // Normally, ChoiceFormat is used inside a MessageFormat, where a double apostrophe
+    // can be used in that case and will be formatted as a single one.
+    // (Better: Use a "real" apostrophe, U+2019.)
     UnicodeString DATA [] = {
         // Pattern                  0 value           1 value
         // {sfb} hacked - changed \u2264 to = (copied from Character Map)
-        (UnicodeString)"0#can''t|1#can",           (UnicodeString)"can't",          (UnicodeString)"can",
-        (UnicodeString)"0#'pound(#)=''#'''|1#xyz", (UnicodeString)"pound(#)='#'",   (UnicodeString)"xyz",
-        (UnicodeString)"0#'1<2 | 1=1'|1#''",  (UnicodeString)"1<2 | 1=1", (UnicodeString)"'",
+        "0#can't|1#can",            "can't",          "can",
+        "0#pound(#)='#''|1#xyz",    "pound(#)='#''",  "xyz",
+        "0#1<2 '| 1=1'|1#'",        "1<2 '| 1=1'",    "'",
     };
     for (int i=0; i<9; i+=3) {
         //try {
@@ -931,7 +940,7 @@ void MessageFormatRegressionTest::TestChoicePatternQuote()
                 out = cf->format((double)j, out, pos);
                 if (out != DATA[i+1+j])
                     errln("Fail: Pattern \"" + DATA[i] + "\" x "+j+" -> " +
-                          out + "; want \"" + DATA[i+1+j] + '"');
+                          out + "; want \"" + DATA[i+1+j] + "\"");
             }
             UnicodeString pat;
             pat = cf->toPattern(pat);
@@ -939,9 +948,9 @@ void MessageFormatRegressionTest::TestChoicePatternQuote()
             ChoiceFormat *cf2 = new ChoiceFormat(pat, status);
             pat2 = cf2->toPattern(pat2);
             if (pat != pat2)
-                errln("Fail: Pattern \"" + DATA[i] + "\" x toPattern -> \"" + pat + '"');
+                errln("Fail: Pattern \"" + DATA[i] + "\" x toPattern -> \"" + pat + "\"");
             else
-                logln("Ok: Pattern \"" + DATA[i] + "\" x toPattern -> \"" + pat + '"');
+                logln("Ok: Pattern \"" + DATA[i] + "\" x toPattern -> \"" + pat + "\"");
         /*}
         catch (IllegalArgumentException e) {
             errln("Fail: Pattern \"" + DATA[i] + "\" -> " + e);
@@ -982,12 +991,12 @@ void MessageFormatRegressionTest::TestAPI() {
     
     // Test adoptFormat
     MessageFormat *fmt = new MessageFormat("",status);
-    format->adoptFormat("",fmt,status);
+    format->adoptFormat("some_name",fmt,status);  // Must at least pass a valid identifier.
     failure(status, "adoptFormat");
 
     // Test getFormat
     format->setFormat((int32_t)0,*fmt);
-    format->getFormat("",status);
+    format->getFormat("some_other_name",status);  // Must at least pass a valid identifier.
     failure(status, "getFormat");
     delete format;
 }

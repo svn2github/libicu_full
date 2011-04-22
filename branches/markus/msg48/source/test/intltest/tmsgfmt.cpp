@@ -1757,14 +1757,16 @@ void TestMessageFormat::testCoverage(void) {
         errln("FAIL: Unable to detect usage of named arguments.");
     }
 
+    // Starting with ICU 4.8, we support setFormat(name, ...) and getFormatNames()
+    // on a MessageFormat without named arguments.
     msgfmt->setFormat("formatName", cf, status);
-    if (!U_FAILURE(status)) {
-        errln("FAIL: Should fail to setFormat instead of passing.");
+    if (U_FAILURE(status)) {
+        errln("FAIL: Should work to setFormat(name, ...) regardless of pattern.");
     }
     status = U_ZERO_ERROR;
     en = msgfmt->getFormatNames(status);
-    if (!U_FAILURE(status)) {
-        errln("FAIL: Should fail to get format names enumeration instead of passing.");
+    if (U_FAILURE(status)) {
+        errln("FAIL: Should work to get format names enumeration regardless of pattern.");
     }
 
     delete en;

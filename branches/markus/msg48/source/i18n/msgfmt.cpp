@@ -1052,6 +1052,8 @@ void MessageFormat::format(int32_t msgStart, double pluralNumber,
                 success = U_ILLEGAL_ARGUMENT_ERROR;
                 return;
             }
+            // We must use the Formattable::getDouble() variant with the UErrorCode parameter
+            // because only this one converts non-double numeric types to double.
             const double number = arg->getDouble(success);
             int32_t subMsgStart = ChoiceFormat::findSubMessage(msgPattern, i, number);
             formatComplexSubMessage(subMsgStart, 0, arguments, argumentNames,
@@ -1061,6 +1063,8 @@ void MessageFormat::format(int32_t msgStart, double pluralNumber,
                 success = U_ILLEGAL_ARGUMENT_ERROR;
                 return;
             }
+            // We must use the Formattable::getDouble() variant with the UErrorCode parameter
+            // because only this one converts non-double numeric types to double.
             double number = arg->getDouble(success);
             int32_t subMsgStart = PluralFormat::findSubMessage(msgPattern, i, pluralProvider, number,
                                                                success);
@@ -1068,7 +1072,7 @@ void MessageFormat::format(int32_t msgStart, double pluralNumber,
             formatComplexSubMessage(subMsgStart, number-offset, arguments, argumentNames,
                                     cnt, appendTo, success);
         } else if (argType == UMSGPAT_ARG_TYPE_SELECT) {
-            int32_t subMsgStart = SelectFormat::findSubMessage(msgPattern, i, arg->getString(), success);
+            int32_t subMsgStart = SelectFormat::findSubMessage(msgPattern, i, arg->getString(success), success);
             formatComplexSubMessage(subMsgStart, 0, arguments, argumentNames,
                                     cnt, appendTo, success);
         } else {

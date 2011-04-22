@@ -12,7 +12,8 @@
 #include "selfmts.h"
 #include "cmemory.h"
 #include "unicode/selfmt.h"
-#include "stdio.h"
+
+#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 
 #define SIMPLE_PATTERN_STRING                                                    "feminine {feminineVerbValue} other{otherVerbValue}"
 
@@ -118,6 +119,7 @@ void SelectFormatTest::selectFormatUnitTest(/*char *par*/)
     UnicodeString format_result;
     selFmt->format(UnicodeString("odd"), format_result, format_ignore, status);
     assertEquals("should use first occurrence of the 'odd' keyword", "foo", format_result);
+    format_result.remove();
     selFmt->applyPattern("odd{foo} other{bar} other{foobar}", status);
     selFmt->format(UnicodeString("other"), format_result, format_ignore, status);
     assertEquals("should use first occurrence of the 'other' keyword", "bar", format_result);
@@ -181,11 +183,12 @@ void SelectFormatTest::selectFormatUnitTest(/*char *par*/)
     selFmt = NULL;
 
     selFmt = new SelectFormat( SIMPLE_PATTERN , status); 
-    for (int32_t i = 0; i< 6; i++ ){
+    for (int32_t i = 0; i < LENGTHOF(keywords); i++ ){
         status = U_ZERO_ERROR;
         selFmt->format( keywords[i], result , ignore , status);
         if (!U_FAILURE(status)) {
-            errln("ERROR: SelectFormat Unit test failed in format() with keyWord and with an invalid keyword as : "+ keywords[i]);
+            errln("ERROR: SelectFormat Unit test failed in format() with keyWord and with an invalid keyword as : "+
+                  keywords[i]+" ("+u_errorName(status)+")");
         }
     }
 

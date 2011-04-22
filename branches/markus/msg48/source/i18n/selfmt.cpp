@@ -26,6 +26,7 @@
 #include "unicode/utypes.h"
 #include "cmemory.h"
 #include "messageimpl.h"
+#include "patternprops.h"
 #include "selfmtimpl.h"
 #include "uassert.h"
 #include "ustrfmt.h"
@@ -88,6 +89,10 @@ SelectFormat::format(const UnicodeString& keyword,
                      UErrorCode& status) const {
     if (U_FAILURE(status)) {
         return appendTo;
+    }
+    // Check for the validity of the keyword
+    if (!PatternProps::isIdentifier(keyword.getBuffer(), keyword.length())) {
+        status = U_ILLEGAL_ARGUMENT_ERROR;  // Invalid formatting argument.
     }
     if (msgPattern.countParts() == 0) {
         status = U_INVALID_STATE_ERROR;
