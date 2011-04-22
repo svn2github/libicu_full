@@ -946,6 +946,18 @@ private:
                                 const UChar * const *list);
 
     /**
+     * Thin wrapper around the format(... AppendableWrapper ...) variant.
+     * Wraps the destination UnicodeString into an AppendableWrapper and
+     * supplies default values for some other parameters.
+     */
+    UnicodeString& format(const Formattable* arguments,
+                          const UnicodeString *argumentNames,
+                          int32_t cnt,
+                          UnicodeString& appendTo,
+                          FieldPosition* pos,
+                          UErrorCode& status) const;
+
+    /**
      * Formats the arguments and writes the result into the
      * AppendableWrapper, updates the field position.
      *

@@ -866,13 +866,7 @@ MessageFormat::format(const Formattable* source,
                       FieldPosition& ignore,
                       UErrorCode& success) const
 {
-    if (U_FAILURE(success))
-        return appendTo;
-
-    UnicodeStringAppendable usapp(appendTo);
-    AppendableWrapper app(usapp);
-    format(0, 0.0, source, NULL, cnt, app, &ignore, success);
-    return appendTo;
+    return format(source, NULL, cnt, appendTo, &ignore, success);
 }
 
 // -------------------------------------
@@ -888,9 +882,7 @@ MessageFormat::format(  const UnicodeString& pattern,
                         UErrorCode& success)
 {
     MessageFormat temp(pattern, success);
-    FieldPosition ignore(0);
-    temp.format(arguments, cnt, appendTo, ignore, success);
-    return appendTo;
+    return temp.format(arguments, NULL, cnt, appendTo, NULL, success);
 }
 
 // -------------------------------------
@@ -904,19 +896,15 @@ MessageFormat::format(const Formattable& source,
                       FieldPosition& ignore,
                       UErrorCode& success) const
 {
-    int32_t cnt;
-
     if (U_FAILURE(success))
         return appendTo;
     if (source.getType() != Formattable::kArray) {
         success = U_ILLEGAL_ARGUMENT_ERROR;
         return appendTo;
     }
+    int32_t cnt;
     const Formattable* tmpPtr = source.getArray(cnt);
-    UnicodeStringAppendable usapp(appendTo);
-    AppendableWrapper app(usapp);
-    format(0, 0.0, tmpPtr, NULL, cnt, app, &ignore, success);
-    return appendTo;
+    return format(tmpPtr, NULL, cnt, appendTo, &ignore, success);
 }
 
 UnicodeString&
@@ -925,11 +913,7 @@ MessageFormat::format(const UnicodeString* argumentNames,
                       int32_t count,
                       UnicodeString& appendTo,
                       UErrorCode& success) const {
-    FieldPosition ignore(0);
-    UnicodeStringAppendable usapp(appendTo);
-    AppendableWrapper app(usapp);
-    format(0, 0.0, arguments, argumentNames, count, app, &ignore, success);
-    return appendTo;
+    return format(arguments, argumentNames, count, appendTo, NULL, success);
 }
 
 // Does linear search to find the match for an ArgName.
@@ -944,6 +928,23 @@ const Formattable* MessageFormat::getArgFromListByName(const Formattable* argume
     return NULL;
 }
 
+
+UnicodeString&
+MessageFormat::format(const Formattable* arguments,
+                      const UnicodeString *argumentNames,
+                      int32_t cnt,
+                      UnicodeString& appendTo,
+                      FieldPosition* pos,
+                      UErrorCode& status) const {
+    if (U_FAILURE(status)) {
+        return appendTo;
+    }
+
+    UnicodeStringAppendable usapp(appendTo);
+    AppendableWrapper app(usapp);
+    format(0, 0.0, arguments, argumentNames, cnt, app, pos, status);
+    return appendTo;
+}
 
 // if argumentNames is NULL, this means arguments is a numeric array.
 // arguments can not be NULL.
