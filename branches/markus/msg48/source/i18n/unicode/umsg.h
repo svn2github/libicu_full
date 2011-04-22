@@ -42,6 +42,8 @@
  * a C++ MessageFormat. It is constructed from a <em>pattern</em> string
  * with arguments in {curly braces} which will be replaced by formatted values.
  *
+ * <p>Currently, the C API supports only numbered arguments.
+ *
  * <p>For details about the pattern syntax and behavior,
  * especially about the ASCII apostrophe vs. the
  * real apostrophe (single quote) character \htmlonly&#x2019;\endhtmlonly (U+2019),
