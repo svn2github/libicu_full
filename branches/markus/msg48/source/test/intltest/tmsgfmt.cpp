@@ -264,7 +264,7 @@ void TestMessageFormat::PatternTest()
        "'{1,number,#,##}' {1,number,#,##}",
     };
 
-    // ICU 4.8 returns the original pattern (testCases).
+    // ICU 4.8 returns the original pattern (testCases),
     // rather than toPattern() reconstituting a new, equivalent pattern string (testResultPatterns).
     /*UnicodeString testResultPatterns[] = {
         "Quotes '', '{', a {0} '{'0}",

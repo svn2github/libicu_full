@@ -495,7 +495,6 @@ PluralFormatTest::pluralFormatLocaleTest(/*char *par*/)
     }
 }
 
-// Google Patch
 void
 PluralFormatTest::pluralFormatExtendedTest(void) {
   const char *targets[] = {

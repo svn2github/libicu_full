@@ -30,7 +30,7 @@ MessageFormatRegressionTest::runIndexedTest( int32_t index, UBool exec, const ch
 {
     TESTCASE_AUTO_BEGIN;
     TESTCASE_AUTO(Test4074764)
-    //TESTCASE_AUTO(Test4058973)
+    //TESTCASE_AUTO(Test4058973)  -- disabled/obsolete in ICU 4.8
     TESTCASE_AUTO(Test4031438)
     TESTCASE_AUTO(Test4052223)
     TESTCASE_AUTO(Test4104976)

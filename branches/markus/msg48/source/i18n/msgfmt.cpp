@@ -1716,7 +1716,7 @@ UBool MessageFormat::equalFormats(const void* left, const void* right) {
 
 
 UBool MessageFormat::DummyFormat::operator==(const Format&) const {
-    return true;
+    return TRUE;
 }
 
 Format* MessageFormat::DummyFormat::clone() const {
