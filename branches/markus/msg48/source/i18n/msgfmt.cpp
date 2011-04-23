@@ -656,19 +656,18 @@ MessageFormat::setFormats(const Format** newFormats,
 
 void
 MessageFormat::adoptFormat(int32_t n, Format *newFormat) {
+    LocalPointer<Format> p(newFormat);
     if (n >= 0) {
         int32_t formatNumber = 0;
-        UErrorCode status = U_ZERO_ERROR;
-        for (int32_t partIndex = 0;
-             U_SUCCESS(status) && (partIndex = nextTopLevelArgStart(partIndex)) >= 0;) {
+        for (int32_t partIndex = 0; (partIndex = nextTopLevelArgStart(partIndex)) >= 0;) {
             if (n == formatNumber) {
-                setCustomArgStartFormat(partIndex, newFormat, status);
+                UErrorCode status = U_ZERO_ERROR;
+                setCustomArgStartFormat(partIndex, p.orphan(), status);
                 return;
             }
             ++formatNumber;
         }
     }
-    delete newFormat;
 }
 
 // -------------------------------------
@@ -678,37 +677,33 @@ void
 MessageFormat::adoptFormat(const UnicodeString& formatName,
                            Format* formatToAdopt,
                            UErrorCode& status) {
+    LocalPointer<Format> p(formatToAdopt);
     if (U_FAILURE(status)) {
-        delete formatToAdopt;
         return;
     }
     int32_t argNumber = MessagePattern::validateArgumentName(formatName);
     if (argNumber < UMSGPAT_ARG_NAME_NOT_NUMBER) {
-        delete formatToAdopt;
         status = U_ILLEGAL_ARGUMENT_ERROR;
         return;
     }
-    bool alreadyPut = false;
     for (int32_t partIndex = 0;
         (partIndex = nextTopLevelArgStart(partIndex)) >= 0 && U_SUCCESS(status);
     ) {
         if (argNameMatches(partIndex + 1, formatName, argNumber)) {
             Format* f;
-            if (alreadyPut) {
+            if (p.isValid()) {
+                f = p.orphan();
+            } else if (formatToAdopt == NULL) {
+                f = NULL;
+            } else {
                 f = formatToAdopt->clone();
                 if (f == NULL) {
                     status = U_MEMORY_ALLOCATION_ERROR;
                     return;
                 }
-            } else {
-                f = formatToAdopt;
             }
             setCustomArgStartFormat(partIndex, f, status);
-            alreadyPut = true;
         }
-    }
-    if (!alreadyPut) {
-        delete formatToAdopt;
     }
 }
 
