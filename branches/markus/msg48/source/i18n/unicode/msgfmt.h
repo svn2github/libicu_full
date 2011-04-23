@@ -547,7 +547,7 @@ public:
     /**
      * Gets format names. This function returns formatNames in StringEnumerations
      * which can be used with getFormat() and setFormat() to export formattable
-     * array from current MessageFormat to another.  It is caller's resposibility
+     * array from current MessageFormat to another.  It is the caller's responsibility
      * to delete the returned formatNames.
      * @param status  output param set to success/failure code.
      * @stable ICU 4.0

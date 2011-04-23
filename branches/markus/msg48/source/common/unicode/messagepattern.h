@@ -29,8 +29,8 @@
 
 /**
  * Mode for when an apostrophe starts quoted literal text for MessageFormat output.
- * The default is DOUBLE_OPTIONAL unless overridden via ICUConfig
- * (/com/ibm/icu/ICUConfig.properties).
+ * The default is DOUBLE_OPTIONAL unless overridden via uconfig.h
+ * (UCONFIG_MSGPAT_DEFAULT_APOSTROPHE_MODE).
  * <p>
  * A pair of adjacent apostrophes always results in a single apostrophe in the output,
  * even when the pair is between two single, text-quoting apostrophes.
@@ -61,6 +61,7 @@
  *   </tr>
  * </table>
  * @draft ICU 4.8
+ * @see UCONFIG_MSGPAT_DEFAULT_APOSTROPHE_MODE
  */
 enum UMessagePatternApostropheMode {
     /**
