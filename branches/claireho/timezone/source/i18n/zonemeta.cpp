@@ -25,6 +25,10 @@
 
 static UMTX gZoneMetaLock = NULL;
 
+// CLDR Canonical ID mapping table
+static UHashtable *gCanonicalIDCache = NULL;
+static UBool gCanonicalIDCacheInitialized = FALSE;
+
 // Metazone mapping table
 static UHashtable *gOlsonToMeta = NULL;
 static UBool gOlsonToMetaInitialized = FALSE;
@@ -44,7 +48,13 @@ static UBool U_CALLCONV zoneMeta_cleanup(void)
 {
      umtx_destroy(&gZoneMetaLock);
 
-    if (gOlsonToMeta != NULL) {
+     if (gCanonicalIDCache != NULL) {
+         uhash_close(gCanonicalIDCache);
+         gCanonicalIDCache = NULL;
+     }
+     gCanonicalIDCacheInitialized = FALSE;
+
+     if (gOlsonToMeta != NULL) {
         uhash_close(gOlsonToMeta);
         gOlsonToMeta = NULL;
     }
@@ -186,13 +196,60 @@ parseDate (const UChar *text, UErrorCode &status) {
 
 UnicodeString& U_EXPORT2
 ZoneMeta::getCanonicalCLDRID(const UnicodeString &tzid, UnicodeString &systemID, UErrorCode& status) {
+    if (U_FAILURE(status)) {
+        systemID.remove();
+        return systemID;
+    }
+
     int32_t len = tzid.length();
-    if ( len >= ZID_KEY_MAX ) {
+    if (len >= ZID_KEY_MAX) {
         status = U_ILLEGAL_ARGUMENT_ERROR;
         systemID.remove();
         return systemID;
     }
 
+    // Checking the cached results
+    UBool initialized;
+    UMTX_CHECK(&gZoneMetaLock, gCanonicalIDCacheInitialized, initialized);
+    if (!initialized) {
+        // Create empty hashtable
+        umtx_lock(&gZoneMetaLock);
+        {
+            if (!gCanonicalIDCacheInitialized) {
+                gCanonicalIDCache = uhash_open(uhash_hashUnicodeString, uhash_compareUnicodeString, NULL, &status);
+                if (gCanonicalIDCache == NULL) {
+                    status = U_MEMORY_ALLOCATION_ERROR;
+                }
+                if (U_FAILURE(status)) {
+                    gCanonicalIDCache = NULL;
+                    systemID.remove();
+                    return systemID;
+                }
+                uhash_setKeyDeleter(gCanonicalIDCache, uhash_deleteUnicodeString);
+                uhash_setValueDeleter(gCanonicalIDCache, uhash_deleteUnicodeString);
+                gCanonicalIDCacheInitialized = TRUE;
+                ucln_i18n_registerCleanup(UCLN_I18N_ZONEMETA, zoneMeta_cleanup);
+            }
+        }
+        umtx_unlock(&gZoneMetaLock);
+    }
+
+    UnicodeString *idInCache = NULL;
+
+    // Check if it was already cached
+    umtx_lock(&gZoneMetaLock);
+    {
+        idInCache = (UnicodeString *)uhash_get(gCanonicalIDCache, &tzid);
+    }
+    umtx_unlock(&gZoneMetaLock);
+
+    if (idInCache != NULL) {
+        systemID.setTo(*idInCache);
+        return systemID;
+    }
+
+    // If not, resolve CLDR canonical ID with resource data
+    UnicodeString *cldrCanonicalID = NULL;
     char id[ZID_KEY_MAX];
     const UChar* idChars = tzid.getBuffer();
 
@@ -207,68 +264,85 @@ ZoneMeta::getCanonicalCLDRID(const UnicodeString &tzid, UnicodeString &systemID,
         }
     }
 
-
     UErrorCode tmpStatus = U_ZERO_ERROR;
     UResourceBundle *top = ures_openDirect(NULL, gTimeZoneTypes, &tmpStatus);
     UResourceBundle *rb = ures_getByKey(top, gTypeMapTag, NULL, &tmpStatus);
     ures_getByKey(rb, gTimezoneTag, rb, &tmpStatus);
     ures_getByKey(rb, id, rb, &tmpStatus);
     if (U_SUCCESS(tmpStatus)) {
-        // direct map found
-        systemID.setTo(tzid);
-        ures_close(rb);
-        ures_close(top);
-        return systemID;
+        // type entry (canonical) found
+        cldrCanonicalID = new UnicodeString(tzid);
     }
 
-    // If a map element not found, then look for an alias
-    tmpStatus = U_ZERO_ERROR;
-    ures_getByKey(top, gTypeAliasTag, rb, &tmpStatus);
-    ures_getByKey(rb, gTimezoneTag, rb, &tmpStatus);
-    const UChar *alias = ures_getStringByKey(rb,id,NULL,&tmpStatus);
-    if (U_SUCCESS(tmpStatus)) {
-        // alias found
-        ures_close(rb);
-        ures_close(top);
-        systemID.setTo(alias);
-        return systemID;
-    }
+    if (cldrCanonicalID == NULL) {
+        // If a map element not found, then look for an alias
+        tmpStatus = U_ZERO_ERROR;
+        ures_getByKey(top, gTypeAliasTag, rb, &tmpStatus);
+        ures_getByKey(rb, gTimezoneTag, rb, &tmpStatus);
+        const UChar *canonical = ures_getStringByKey(rb,id,NULL,&tmpStatus);
+        if (U_SUCCESS(tmpStatus)) {
+            // canonical map found
+            cldrCanonicalID = new UnicodeString(canonical);
+        }
 
-    // Dereference the input ID using the tz data
-    const UChar *derefer = TimeZone::dereferOlsonLink(tzid);
-    if (derefer == NULL) {
-        systemID.remove();
-        status = U_ILLEGAL_ARGUMENT_ERROR;
-    } else {
+        if (cldrCanonicalID == NULL) {
+            // Dereference the input ID using the tz data
+            const UChar *derefer = TimeZone::dereferOlsonLink(tzid);
+            if (derefer == NULL) {
+                status = U_ILLEGAL_ARGUMENT_ERROR;
+            } else {
+                len = u_strlen(derefer);
+                u_UCharsToChars(derefer,id,len);
+                id[len] = (char) 0; // Make sure it is null terminated.
 
-        len = u_strlen(derefer);
-        u_UCharsToChars(derefer,id,len);
-        id[len] = (char) 0; // Make sure it is null terminated.
+                // replace '/' with ':'
+                char *p = id;
+                while (*p++) {
+                    if (*p == '/') {
+                        *p = ':';
+                    }
+                }
 
-        // replace '/' with ':'
-        char *p = id;
-        while (*p++) {
-            if (*p == '/') {
-                *p = ':';
+                // If a dereference turned something up then look for an alias.
+                // rb still points to the alias table, so we don't have to go looking
+                // for it.
+                tmpStatus = U_ZERO_ERROR;
+                canonical = ures_getStringByKey(rb,id,NULL,&tmpStatus);
+                if (U_SUCCESS(tmpStatus)) {
+                    // canonical map for the dereferenced ID found
+                    cldrCanonicalID = new UnicodeString(canonical);
+                } else {
+                    cldrCanonicalID = new UnicodeString(derefer);
+                }
             }
         }
-
-        // If a dereference turned something up then look for an alias.
-        // rb still points to the alias table, so we don't have to go looking
-        // for it.
-        tmpStatus = U_ZERO_ERROR;
-        const UChar *alias = ures_getStringByKey(rb,id,NULL,&tmpStatus);
-        if (U_SUCCESS(tmpStatus)) {
-            // alias found
-            systemID.setTo(alias);
-        } else {
-            systemID.setTo(derefer);
-        }
+    }
+    ures_close(rb);
+    ures_close(top);
+    if (U_FAILURE(status)) {
+        systemID.remove();
+        return systemID;
     }
 
-     ures_close(rb);
-     ures_close(top);
-     return systemID;
+    U_ASSERT(cldrCanonicalID != NULL);  // cldrCanocanilD must be non-NULL here
+    systemID.setTo(*cldrCanonicalID);
+
+    // Put the resolved canonical ID to the cache
+    umtx_lock(&gZoneMetaLock);
+    {
+        idInCache = (UnicodeString *)uhash_get(gCanonicalIDCache, &tzid);
+        if (idInCache == NULL) {
+            UnicodeString *key = new UnicodeString(tzid);   // create a copy
+            idInCache = (UnicodeString *)uhash_put(gCanonicalIDCache, key, cldrCanonicalID, &status);
+            U_ASSERT(idInCache == NULL);
+        } else {
+            // another thread just put the canonical ID
+            delete cldrCanonicalID;
+        }
+    }
+    umtx_unlock(&gZoneMetaLock);
+
+    return systemID;
 }
 
 UnicodeString& U_EXPORT2

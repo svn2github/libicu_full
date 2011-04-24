@@ -417,10 +417,8 @@ TimeZone::createSystemTimeZone(const UnicodeString& id, UErrorCode& ec) {
     UResourceBundle *top = openOlsonResource(id, res, ec);
     U_DEBUG_TZ_MSG(("post-err=%s\n", u_errorName(ec)));
     if (U_SUCCESS(ec)) {
-        z = new OlsonTimeZone(top, &res, ec);
-        if (z) {
-          z->setID(id);
-        } else {
+        z = new OlsonTimeZone(top, &res, id, ec);
+        if (z == NULL) {
           U_DEBUG_TZ_MSG(("cstz: olson time zone failed to initialize - err %s\n", u_errorName(ec)));
         }
     }
@@ -1548,6 +1546,17 @@ TimeZone::getTZDataVersion(UErrorCode& status)
         return NULL;
     }
     return (const char*)TZDATA_VERSION;
+}
+
+UnicodeString&
+TimeZone::getCanonicalID(UnicodeString& ID) const
+{
+    UErrorCode status = U_ZERO_ERROR;
+    getCanonicalID(fID, ID, status);
+    if (U_FAILURE(status)) {
+        return getID(ID);
+    }
+    return ID;
 }
 
 UnicodeString&
