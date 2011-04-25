@@ -23,6 +23,7 @@
 #include "zstrfmt.h"
 #include "unicode/uobject.h"
 #include "unicode/ures.h"
+#include "uvector.h"
 
 U_NAMESPACE_BEGIN
 
@@ -81,7 +82,7 @@ private:
     Locale fLocale;
     UResourceBundle* fZoneStrings;
     UHashtable* fTzNamesMap;
-    UHashtable* fMzNamesMap;
+    StringEnumeration* fMetaZoneIds;
     TextTrieMap fNamesTrie;
     UBool fNamesTrieFullyLoaded;
 };
@@ -123,6 +124,21 @@ private:
     ~TZNames() { };
     UnicodeString fLocationName;
 
+};
+
+
+class MetaZoneIdsEnumeration : public StringEnumeration {
+public:
+    MetaZoneIdsEnumeration(UErrorCode& status);
+    virtual ~MetaZoneIdsEnumeration();
+    static UClassID U_EXPORT2 getStaticClassID(void);
+    virtual UClassID getDynamicClassID(void) const;
+    virtual const UnicodeString* snext(UErrorCode& status);
+    virtual void reset(UErrorCode& status);
+    virtual int32_t count(UErrorCode& status) const;
+private:
+    int32_t pos;
+    UVector fMetaZoneIds;
 };
 
 U_NAMESPACE_END

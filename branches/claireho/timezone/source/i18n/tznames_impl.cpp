@@ -14,6 +14,7 @@
 
 #include "tznames.h"
 #include "tznames_impl.h"
+#include "umutex.h"
 #include "uresimp.h"
 #include "ureslocs.h"
 
@@ -21,23 +22,30 @@
 
 U_NAMESPACE_BEGIN
 
+static UMTX TimeZoneNamesImplLock = NULL;
+
 static const char gMetaZones[]          = "metaZones";
+static const char gMapTimezonesTag[]    = "mapTimezones";
 static const char gZoneStrings[]        = "zoneStrings";
 static const char gCuTag[]              = "cu";
 static const char gEcTag[]              = "ec";
 
+UOBJECT_DEFINE_RTTI_IMPLEMENTATION(MetaZoneIdsEnumeration)
+
 TimeZoneNamesImpl::TimeZoneNamesImpl(const Locale& locale, UErrorCode& status) :
     fZoneStrings(NULL),
     fTzNamesMap(NULL),
-    fMzNamesMap(NULL),
+    fMetaZoneIds(NULL),
     fNamesTrie(TRUE),
     fNamesTrieFullyLoaded(FALSE) {
-  initialize(locale, status);
+    initialize(locale, status);
 }
 
 void
 TimeZoneNamesImpl::initialize(const Locale& locale, UErrorCode& status) {
-    fZoneStrings = NULL;
+    if (fZoneStrings != NULL) {
+        ures_close(fZoneStrings);
+    }
     fZoneStrings = ures_open(U_ICUDATA_ZONE, locale.getName(), &status);
     // fZoneStrings = ures_getByKeyWithFallback(fZoneStrings, gZoneStrings, fZoneStrings, &status);
     fZoneStrings = ures_getByKey(fZoneStrings, gZoneStrings, fZoneStrings, &status);
@@ -57,8 +65,18 @@ TimeZoneNamesImpl::~TimeZoneNamesImpl() {
 
 StringEnumeration*
 TimeZoneNamesImpl::getAvailableMetaZoneIDs() const {
-    //TODO
-    return NULL;
+    umtx_lock(&TimeZoneNamesImplLock);
+    if (fMetaZoneIds == NULL) {
+        UErrorCode status = U_ZERO_ERROR;
+        TimeZoneNamesImpl* self = const_cast<TimeZoneNamesImpl*>(this);
+        self->fMetaZoneIds = new MetaZoneIdsEnumeration(status);
+        if (U_FAILURE(status)) {
+            delete fMetaZoneIds;
+            self->fMetaZoneIds = NULL;
+        }
+    }
+    umtx_unlock(&TimeZoneNamesImplLock);
+    return fMetaZoneIds;
 }
 
 StringEnumeration*
@@ -245,6 +263,58 @@ TZNames::getLocationName() {
     return fLocationName;
 }
 
+MetaZoneIdsEnumeration::MetaZoneIdsEnumeration(UErrorCode& status) :
+    fMetaZoneIds(status) {
+    pos=0;
+    if (U_FAILURE(status)) {
+        return;
+    }
+    fMetaZoneIds.removeAllElements();
+
+    UErrorCode tmpStatus = U_ZERO_ERROR;
+    UResourceBundle *rb = ures_openDirect(NULL, gMetaZones, &status);
+    UResourceBundle *bundle = ures_getByKey(rb, gMapTimezonesTag, NULL, &status);
+    while (U_SUCCESS(status) && ures_hasNext(bundle)) {
+        const char *key;
+        int32_t len = 0;
+        ures_getNextString(bundle, &len, &key, &tmpStatus);
+        if (U_FAILURE(tmpStatus)) {
+            break;
+        }
+        // TODO(claireho) confirm the key is unique.
+        fMetaZoneIds.addElement(new UnicodeString(key), status);
+        if (U_FAILURE(status)) {
+            break;
+        }
+    }
+}
+
+const UnicodeString*
+MetaZoneIdsEnumeration::snext(UErrorCode& status) {
+    if (U_SUCCESS(status) && pos < fMetaZoneIds.size()) {
+        return (const UnicodeString*)fMetaZoneIds.elementAt(pos++);
+    }
+    return NULL;
+}
+
+void
+MetaZoneIdsEnumeration::reset(UErrorCode& /*status*/) {
+    pos=0;
+}
+
+int32_t
+MetaZoneIdsEnumeration::count(UErrorCode& /*status*/) const {
+       return fMetaZoneIds.size();
+}
+
+MetaZoneIdsEnumeration::~MetaZoneIdsEnumeration() {
+    UnicodeString *s;
+    for (int32_t i=0; i<fMetaZoneIds.size(); ++i) {
+        if ((s=(UnicodeString *)fMetaZoneIds.elementAt(i))!=NULL) {
+            delete s;
+        }
+    }
+}
 U_NAMESPACE_END
 
 
