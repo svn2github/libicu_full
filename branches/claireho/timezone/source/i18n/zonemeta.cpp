@@ -99,6 +99,8 @@ U_NAMESPACE_BEGIN
 
 #define ZID_KEY_MAX 128
 
+static const UChar gEmpty[]             = {0x00}; // Empty string used in CLDR canonical ID map
+
 static const char gMetaZones[]          = "metaZones";
 static const char gMetazoneInfo[]       = "metazoneInfo";
 static const char gMapTimezonesTag[]    = "mapTimezones";
@@ -226,7 +228,7 @@ ZoneMeta::getCanonicalCLDRID(const UnicodeString &tzid, UnicodeString &systemID,
                     return systemID;
                 }
                 uhash_setKeyDeleter(gCanonicalIDCache, uhash_deleteUnicodeString);
-                uhash_setValueDeleter(gCanonicalIDCache, uhash_deleteUnicodeString);
+                // No value deleter - a value is from a resource bundle or gEmpty
                 gCanonicalIDCacheInitialized = TRUE;
                 ucln_i18n_registerCleanup(UCLN_I18N_ZONEMETA, zoneMeta_cleanup);
             }
@@ -234,22 +236,27 @@ ZoneMeta::getCanonicalCLDRID(const UnicodeString &tzid, UnicodeString &systemID,
         umtx_unlock(&gZoneMetaLock);
     }
 
-    UnicodeString *idInCache = NULL;
+    const UChar *idInCache = NULL;
 
     // Check if it was already cached
     umtx_lock(&gZoneMetaLock);
     {
-        idInCache = (UnicodeString *)uhash_get(gCanonicalIDCache, &tzid);
+        idInCache = (const UChar *)uhash_get(gCanonicalIDCache, &tzid);
     }
     umtx_unlock(&gZoneMetaLock);
 
     if (idInCache != NULL) {
-        systemID.setTo(*idInCache);
+        if (idInCache == gEmpty) {
+            // gEmtpy indicate the input ID itself is the canonical ID
+            systemID.setTo(tzid);
+        } else {
+            systemID.setTo(idInCache);
+        }
         return systemID;
     }
 
     // If not, resolve CLDR canonical ID with resource data
-    UnicodeString *cldrCanonicalID = NULL;
+    const UChar *cldrCanonicalID = NULL;
     char id[ZID_KEY_MAX];
     const UChar* idChars = tzid.getBuffer();
 
@@ -270,8 +277,10 @@ ZoneMeta::getCanonicalCLDRID(const UnicodeString &tzid, UnicodeString &systemID,
     ures_getByKey(rb, gTimezoneTag, rb, &tmpStatus);
     ures_getByKey(rb, id, rb, &tmpStatus);
     if (U_SUCCESS(tmpStatus)) {
-        // type entry (canonical) found
-        cldrCanonicalID = new UnicodeString(tzid);
+        // type entry (canonical) found - use gEmpty to indicate the tzid is the canonical ID
+        // Note: We use gEmpty as a substitution for this case to avoid unnecessary UnicodeString
+        // is allocated for cache entry. We want to keep chance values to use const UChar*.
+        cldrCanonicalID = gEmpty;
     }
 
     if (cldrCanonicalID == NULL) {
@@ -282,7 +291,7 @@ ZoneMeta::getCanonicalCLDRID(const UnicodeString &tzid, UnicodeString &systemID,
         const UChar *canonical = ures_getStringByKey(rb,id,NULL,&tmpStatus);
         if (U_SUCCESS(tmpStatus)) {
             // canonical map found
-            cldrCanonicalID = new UnicodeString(canonical);
+            cldrCanonicalID = canonical;
         }
 
         if (cldrCanonicalID == NULL) {
@@ -310,9 +319,9 @@ ZoneMeta::getCanonicalCLDRID(const UnicodeString &tzid, UnicodeString &systemID,
                 canonical = ures_getStringByKey(rb,id,NULL,&tmpStatus);
                 if (U_SUCCESS(tmpStatus)) {
                     // canonical map for the dereferenced ID found
-                    cldrCanonicalID = new UnicodeString(canonical);
+                    cldrCanonicalID = canonical;
                 } else {
-                    cldrCanonicalID = new UnicodeString(derefer);
+                    cldrCanonicalID = derefer;
                 }
             }
         }
@@ -325,19 +334,21 @@ ZoneMeta::getCanonicalCLDRID(const UnicodeString &tzid, UnicodeString &systemID,
     }
 
     U_ASSERT(cldrCanonicalID != NULL);  // cldrCanocanilD must be non-NULL here
-    systemID.setTo(*cldrCanonicalID);
+    if (cldrCanonicalID == gEmpty) {
+        // the input tzid is canonical
+        systemID.setTo(tzid);
+    } else {
+        systemID.setTo(cldrCanonicalID);
+    }
 
     // Put the resolved canonical ID to the cache
     umtx_lock(&gZoneMetaLock);
     {
-        idInCache = (UnicodeString *)uhash_get(gCanonicalIDCache, &tzid);
+        idInCache = (const UChar *)uhash_get(gCanonicalIDCache, &tzid);
         if (idInCache == NULL) {
             UnicodeString *key = new UnicodeString(tzid);   // create a copy
-            idInCache = (UnicodeString *)uhash_put(gCanonicalIDCache, key, cldrCanonicalID, &status);
+            idInCache = (const UChar *)uhash_put(gCanonicalIDCache, key, (void *)cldrCanonicalID, &status);
             U_ASSERT(idInCache == NULL);
-        } else {
-            // another thread just put the canonical ID
-            delete cldrCanonicalID;
         }
     }
     umtx_unlock(&gZoneMetaLock);
