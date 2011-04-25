@@ -96,7 +96,7 @@ public:
     UnicodeString* getName(UTimeZoneNameType type);
 
 protected:
-    // TODO(claireho) Use StringEnumeration or UnicodeString[]
+    // TODO(claireho) Use StringEnumeration or UnicodeString[] ?
     ZNames(UnicodeString* names, UBool shortCommonlyUsed);
     ~ZNames();
     void loadData(UResourceBundle* rb, const char* key, UBool* shortCommonlyUsed,
@@ -115,7 +115,6 @@ private:
  */
 class TZNames : ZNames {
 public:
-    // TODO(claireho) Should be static?
     TZNames* getInstance(UResourceBundle* rb, const char* key, UErrorCode& status);
     UnicodeString& getLocationName(void);
 

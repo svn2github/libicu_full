@@ -12,12 +12,12 @@
 #include "unicode/utypes.h"
 #if !UCONFIG_NO_FORMATTING
 
+#include "tznames.h"
 #include "tznames_impl.h"
 #include "uresimp.h"
 #include "ureslocs.h"
 
 #include "unicode/urename.h"
-#include "unicode/tznames.h"
 
 U_NAMESPACE_BEGIN
 
@@ -26,20 +26,13 @@ static const char gZoneStrings[]        = "zoneStrings";
 static const char gCuTag[]              = "cu";
 static const char gEcTag[]              = "ec";
 
-TimeZoneNamesImpl::TimeZoneNamesImpl(UErrorCode& status) :
+TimeZoneNamesImpl::TimeZoneNamesImpl(const Locale& locale, UErrorCode& status) :
     fZoneStrings(NULL),
     fTzNamesMap(NULL),
     fMzNamesMap(NULL),
     fNamesTrie(TRUE),
-    fNamesTrieFullyLoaded(FALSE),
-    TimeZoneNames(status) {
-
-}
-
-TimeZoneNames*
-TimeZoneNamesImpl::createInstance(const Locale& locale, UErrorCode& status) {
-    initialize(locale, status);
-    return TimeZoneNames::createInstance(locale, status);
+    fNamesTrieFullyLoaded(FALSE) {
+  initialize(locale, status);
 }
 
 void
@@ -55,6 +48,58 @@ TimeZoneNamesImpl::initialize(const Locale& locale, UErrorCode& status) {
     }
 
     fNamesTrieFullyLoaded = FALSE;
+}
+
+TimeZoneNamesImpl::~TimeZoneNamesImpl() {
+    ures_close(fZoneStrings);
+    // TODO(claireho) Need to delete *NamesMap tables
+}
+
+StringEnumeration*
+TimeZoneNamesImpl::getAvailableMetaZoneIDs() const {
+    //TODO
+    return NULL;
+}
+
+StringEnumeration*
+TimeZoneNamesImpl::getAvailableMetaZoneIDs(const UnicodeString& tzID) const {
+    //TODO
+    return NULL;
+}
+
+UnicodeString&
+TimeZoneNamesImpl::getMetaZoneID(const UnicodeString& tzID, UDate date, UnicodeString& mzID) const {
+    //TODO
+    return mzID;
+}
+
+UnicodeString&
+TimeZoneNamesImpl::getReferenceZoneID(const UnicodeString& mzID, const char* region, UnicodeString& tzID) const {
+    //TODO
+    return tzID;
+}
+
+UnicodeString&
+TimeZoneNamesImpl::getMetaZoneDisplayName(const UnicodeString& mzID, UTimeZoneNameType type, UnicodeString& name) const {
+    //TODO
+    return name;
+}
+
+UnicodeString&
+TimeZoneNamesImpl::getTimeZoneDisplayName(const UnicodeString& tzID, UTimeZoneNameType type, UnicodeString& name) const {
+    //TODO
+    return name;
+}
+
+UnicodeString&
+TimeZoneNamesImpl::getExemplarLocationName(const UnicodeString& tzID, UnicodeString& name) const {
+    //TODO
+    return name;
+}
+
+UEnumeration*
+TimeZoneNamesImpl::find(const UnicodeString& text, int32_t start, int32_t types) const {
+    return NULL;
 }
 
 ZNames::ZNames(UnicodeString* names, UBool shortCommonlyUsed) {
@@ -78,7 +123,7 @@ ZNames::getInstance(UResourceBundle* rb, const char* key) {
 }
 
 UnicodeString*
-ZNames::getName(TimeZoneNames::UNameType type) {
+ZNames::getName(UTimeZoneNameType type) {
     // TODO(claireho) fName cannot be null. Need to add flag to indicate data is null.
     /*
     if (fNames == NULL) {
@@ -86,23 +131,23 @@ ZNames::getName(TimeZoneNames::UNameType type) {
     }
     */
     switch(type) {
-    case TimeZoneNames::UTZN_LONG_GENERIC:
-    case TimeZoneNames::UTZN_LONG_STANDARD:
-    case TimeZoneNames::UTZN_LONG_DAYLIGHT:
-    case TimeZoneNames::UTZN_SHORT_STANDARD:
-    case TimeZoneNames::UTZN_SHORT_DAYLIGHT:
+    case UTZNM_LONG_GENERIC:
+    case UTZNM_LONG_STANDARD:
+    case UTZNM_LONG_DAYLIGHT:
+    case UTZNM_SHORT_STANDARD:
+    case UTZNM_SHORT_DAYLIGHT:
         return &(fNames[static_cast<uint32_t>(type)]);
-    case TimeZoneNames::UTZN_SHORT_GENERIC:
+    case UTZNM_SHORT_GENERIC:
         if (fShortCommonlyUsed) {
             return &(fNames[static_cast<uint32_t>(type)]);
         }
-    case TimeZoneNames::UTZN_SHORT_STANDARD_COMMONLY_USED:
+    case UTZNM_SHORT_STANDARD_COMMONLY_USED:
         if (fShortCommonlyUsed) {
-            return &(fNames[static_cast<uint32_t>(TimeZoneNames::UTZN_SHORT_STANDARD)]);
+            return &(fNames[static_cast<uint32_t>(UTZNM_SHORT_STANDARD)]);
         }
-    case TimeZoneNames::UTZN_SHORT_DAYLIGHT_COMMONLY_USED:
+    case UTZNM_SHORT_DAYLIGHT_COMMONLY_USED:
         if (fShortCommonlyUsed) {
-            return &(fNames[static_cast<uint32_t>(TimeZoneNames::UTZN_SHORT_DAYLIGHT)]);
+            return &(fNames[static_cast<uint32_t>(UTZNM_SHORT_DAYLIGHT)]);
         }
         break;
     }
@@ -160,6 +205,10 @@ ZNames::loadData(UResourceBundle* rb, const char* key, UBool* shortCommonlyUsed,
         int32_t cu = ures_getInt(cuRes, &tmpStatus);
         shortCommonlyUsed[0] = (cu != 0);
     }
+}
+
+ZNames::~ZNames() {
+    // TODO(claireho) Implement the destructor.
 }
 
 TZNames*
