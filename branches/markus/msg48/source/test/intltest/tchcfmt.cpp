@@ -81,11 +81,22 @@ TestChoiceFormat::TestSimpleExample( void )
     delete formequal; 
     delete formnew; 
 
-#if 0  // ICU 4.8 deprecates and disables the ChoiceFormat getters.
     //Testing getLimits()
-    double *gotLimits=0;
     int32_t count=0;
-    gotLimits=(double*)form->getLimits(count);
+    const double *gotLimits=form->getLimits(count);
+#if 1  // ICU 4.8 deprecates and disables the ChoiceFormat getters.
+    if(count != 0 || gotLimits != NULL) {
+        errln("getLimits() returns something, should be disabled");
+    }
+    const UnicodeString *gotFormats=form->getFormats(count);
+    if(count != 0 || gotFormats != NULL) {
+        errln("getFormats() returns something, should be disabled");
+    }
+    const UBool *gotClosures=form->getClosures(count);
+    if(count != 0 || gotClosures != NULL) {
+        errln("getClosures() returns something, should be disabled");
+    }
+#else
     if(count != 7){
         errln("getLimits didn't update the count correctly\n");
     }
@@ -96,8 +107,7 @@ TestChoiceFormat::TestSimpleExample( void )
     }
     //Testing getFormats()
     count=0;
-    UnicodeString *gotFormats=0;
-    gotFormats=(UnicodeString*)form->getFormats(count);
+    const UnicodeString *gotFormats=form->getFormats(count);
     if(count != 7){
         errln("getFormats didn't update the count correctly\n");
     }
