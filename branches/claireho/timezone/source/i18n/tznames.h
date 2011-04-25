@@ -34,28 +34,25 @@ typedef enum UTimeZoneNameType {
 U_CDECL_END
 
 U_NAMESPACE_BEGIN
-class TimeZoneNames : public UMemory {
+class U_I18N_API TimeZoneNames : public UMemory {
 public:
     virtual ~TimeZoneNames();
 
-    static TimeZoneNames* createInstance(const Locale& locale, UErrorCode& status);
+    static TimeZoneNames* U_EXPORT2 createInstance(const Locale& locale, UErrorCode& status);
 
-    virtual StringEnumeration* getAvailableMetaZoneIDs() = 0;
-    virtual StringEnumeration* getAvailableMetaZoneIDs(const UnicodeString& tzID) = 0;
-    virtual UnicodeString& getMetaZoneID(const UnicodeString& tzID, UDate date, UnicodeString& mzID) = 0;
-    virtual UnicodeString& getReferenceZoneID(const UnicodeString& mzID, const char* region, UnicodeString& tzID) = 0;
+    virtual StringEnumeration* getAvailableMetaZoneIDs() const = 0;
+    virtual StringEnumeration* getAvailableMetaZoneIDs(const UnicodeString& tzID) const = 0;
+    virtual UnicodeString& getMetaZoneID(const UnicodeString& tzID, UDate date, UnicodeString& mzID) const = 0;
+    virtual UnicodeString& getReferenceZoneID(const UnicodeString& mzID, const char* region, UnicodeString& tzID) const = 0;
 
     virtual UnicodeString& getMetaZoneDisplayName(const UnicodeString& mzID, UTimeZoneNameType type, UnicodeString& name) const = 0;
     virtual UnicodeString& getTimeZoneDisplayName(const UnicodeString& tzID, UTimeZoneNameType type, UnicodeString& name) const = 0;
-    virtual UnicodeString& getExemplarLocationName(const UnicodeString& tzID, UnicodeString& name) const = 0;
 
-    UnicodeString& getZoneDisplayName(const UnicodeString& tzID, UTimeZoneNameType type, UDate date, UnicodeString& name) const;
+    virtual UnicodeString& getExemplarLocationName(const UnicodeString& tzID, UnicodeString& name) const;
+    virtual UnicodeString& getZoneDisplayName(const UnicodeString& tzID, UTimeZoneNameType type, UDate date, UnicodeString& name) const;
 
     // types - bit flags of UTimeZoneNameType
     virtual UEnumeration* find(const UnicodeString& text, int32_t start, int32_t types) const = 0;
-
-protected:
-    TimeZoneNames();
 };
 
 U_NAMESPACE_END
