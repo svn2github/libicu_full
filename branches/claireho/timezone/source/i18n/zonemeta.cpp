@@ -328,30 +328,54 @@ ZoneMeta::getCanonicalCLDRID(const UnicodeString &tzid, UnicodeString &systemID,
     }
     ures_close(rb);
     ures_close(top);
+
+    if (U_SUCCESS(status)) {
+        U_ASSERT(cldrCanonicalID != NULL);  // cldrCanocanilD must be non-NULL here
+
+        // Put the resolved canonical ID to the cache
+        umtx_lock(&gZoneMetaLock);
+        {
+            idInCache = (const UChar *)uhash_get(gCanonicalIDCache, &tzid);
+            if (idInCache == NULL) {
+                UnicodeString *key = new UnicodeString(tzid);   // create a copy
+                if (key == NULL) {
+                    status = U_MEMORY_ALLOCATION_ERROR;
+                } else {
+                    idInCache = (const UChar *)uhash_put(gCanonicalIDCache, key, (void *)cldrCanonicalID, &status);
+                    U_ASSERT(idInCache == NULL);
+                }
+            }
+            if (U_SUCCESS(status) && cldrCanonicalID != gEmpty) {
+                // Also put canonical ID itself into the cache if not exist
+                UnicodeString *canonicalKey = new UnicodeString(cldrCanonicalID);
+                if (canonicalKey == NULL) {
+                    status = U_MEMORY_ALLOCATION_ERROR;
+                } else {
+                    const UChar *canonicalInCache = (const UChar*)uhash_get(gCanonicalIDCache, canonicalKey);
+                    if (canonicalInCache == NULL) {
+                        canonicalInCache = (const UChar *)uhash_put(gCanonicalIDCache, canonicalKey, (void *)gEmpty, &status);
+                        U_ASSERT(canonicalInCache == NULL);
+                    } else {
+                        // already in
+                        delete canonicalKey;
+                    }
+                }
+            }
+        }
+        umtx_unlock(&gZoneMetaLock);
+    }
+
     if (U_FAILURE(status)) {
         systemID.remove();
         return systemID;
     }
 
-    U_ASSERT(cldrCanonicalID != NULL);  // cldrCanocanilD must be non-NULL here
     if (cldrCanonicalID == gEmpty) {
         // the input tzid is canonical
         systemID.setTo(tzid);
     } else {
         systemID.setTo(cldrCanonicalID);
     }
-
-    // Put the resolved canonical ID to the cache
-    umtx_lock(&gZoneMetaLock);
-    {
-        idInCache = (const UChar *)uhash_get(gCanonicalIDCache, &tzid);
-        if (idInCache == NULL) {
-            UnicodeString *key = new UnicodeString(tzid);   // create a copy
-            idInCache = (const UChar *)uhash_put(gCanonicalIDCache, key, (void *)cldrCanonicalID, &status);
-            U_ASSERT(idInCache == NULL);
-        }
-    }
-    umtx_unlock(&gZoneMetaLock);
 
     return systemID;
 }
