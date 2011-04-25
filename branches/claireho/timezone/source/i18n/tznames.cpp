@@ -17,11 +17,12 @@
 #include "umutex.h"
 
 #include "tznames.h"
+#include "tznames_impl.h"
 
 #if !UCONFIG_NO_FORMATTING
 
 U_NAMESPACE_BEGIN
-
+/*
 class TimeZoneNamesImpl : public TimeZoneNames {
 public:
     TimeZoneNamesImpl(const Locale& locale);
@@ -42,7 +43,7 @@ private:
     Locale fLocale;
 };
 
-TimeZoneNamesImpl::TimeZoneNamesImpl(const Locale& locale)
+TimeZoneNamesImpl::TimeZoneNamesImpl(const Locale& locale, UErrorCode& status)
 :   fLocale(locale) {
     //TODO
 }
@@ -97,7 +98,7 @@ UEnumeration*
 TimeZoneNamesImpl::find(const UnicodeString& text, int32_t start, int32_t types) const {
     return NULL;
 }
-
+*/
 
 // TimeZoneNames object cache handling
 static UMTX gTimeZoneNamesLock = NULL;
@@ -226,7 +227,7 @@ TimeZoneNamesDelegate::TimeZoneNamesDelegate(const Locale& locale, UErrorCode& s
         const char *key = locale.getName();
         cacheEntry = (TimeZoneNamesCacheEntry *)uhash_get(gTimeZoneNamesCache, key);
         if (cacheEntry == NULL) {
-            TimeZoneNames *tznames = new TimeZoneNamesImpl(locale);
+            TimeZoneNames *tznames = new TimeZoneNamesImpl(locale, status);
             if (tznames == NULL) {
                 status = U_MEMORY_ALLOCATION_ERROR;
                 return;
