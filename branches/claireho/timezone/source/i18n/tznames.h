@@ -50,7 +50,7 @@ public:
     virtual UnicodeString& getTimeZoneDisplayName(const UnicodeString& tzID, UTimeZoneNameType type, UnicodeString& name) const = 0;
 
     virtual UnicodeString& getExemplarLocationName(const UnicodeString& tzID, UnicodeString& name) const;
-    virtual UnicodeString& getZoneDisplayName(const UnicodeString& tzID, UTimeZoneNameType type, UDate date, UnicodeString& name) const;
+    virtual UnicodeString& getDisplayName(const UnicodeString& tzID, UTimeZoneNameType type, UDate date, UnicodeString& name) const;
 };
 
 U_NAMESPACE_END
