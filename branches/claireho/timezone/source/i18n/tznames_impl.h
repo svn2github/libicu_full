@@ -37,6 +37,44 @@ typedef struct UMzMapEntry {
     int32_t to;
 }UMzMapEntry;
 
+
+/**
+ * This class stores name data for a meta zone.
+ */
+class ZNames : public UMemory {
+public:
+    ZNames(UResourceBundle* rb, const char* key, UErrorCode& statu);
+    ~ZNames();
+    UnicodeString& getName(UTimeZoneNameType type);
+
+    UnicodeString EMPTY_UNICODE_STRING;
+
+protected:
+    void loadData(UResourceBundle* rb, const char* key, UBool* shortCommonlyUsed,
+                  UErrorCode& status);
+
+    // TODO(claireho) should we make fName to private?
+    UnicodeString fNames[KEYS_SIZE];
+
+private:
+    void cleanDataBuffer(void);
+    UBool  fShortCommonlyUsed;
+};
+
+/**
+ * This class stores name data for single timezone.
+ */
+class TZNames : ZNames {
+public:
+    TZNames(UResourceBundle* rb, const char* key, UErrorCode& status);
+    ~TZNames();
+    UnicodeString& getLocationName(void);
+
+private:
+    UnicodeString fLocationName;
+
+};
+
 /**
  * The default implementation of <code>TimeZoneNames</code> used by {@link TimeZoneNames#getInstance(ULocale)} when
  * the ICU4J tznamedata component is not available.
@@ -60,9 +98,8 @@ public:
     UEnumeration* find(const UnicodeString& text, int32_t start, int32_t types) const;
 
 private:
-
-
     void initialize(const Locale& locale, UErrorCode& status);
+    ZNames* loadMetaZoneNames(const UnicodeString& mzId);
 
     /*
       private void writeObject(ObjectOutputStream out);
@@ -81,51 +118,12 @@ private:
 
     Locale fLocale;
     UResourceBundle* fZoneStrings;
-    UHashtable* fTzNamesMap;
+    ZNames*  fZnames;
+    TZNames* fTznames;
     StringEnumeration* fMetaZoneIds;
     TextTrieMap fNamesTrie;
     UBool fNamesTrieFullyLoaded;
 };
-
-/**
- * This class stores name data for a meta zone.
- */
-class ZNames : public UMemory {
-public:
-    // TODO(claireho) Should be static?
-    ZNames* getInstance(UResourceBundle* rb, const char* key);
-    UnicodeString* getName(UTimeZoneNameType type);
-
-protected:
-    // TODO(claireho) Use StringEnumeration or UnicodeString[] ?
-    ZNames(UnicodeString* names, UBool shortCommonlyUsed);
-    ~ZNames();
-    void loadData(UResourceBundle* rb, const char* key, UBool* shortCommonlyUsed,
-                  UErrorCode& status);
-
-    // TODO(claireho) should we make fName to private?
-    UnicodeString fNames[KEYS_SIZE];
-
-private:
-    void cleanDataBuffer(void);
-    UBool  fShortCommonlyUsed;
-};
-
-/**
- * This class stores name data for single timezone.
- */
-class TZNames : ZNames {
-public:
-    TZNames* getInstance(UResourceBundle* rb, const char* key, UErrorCode& status);
-    UnicodeString& getLocationName(void);
-
-private:
-    TZNames(UnicodeString names[], UBool shortCommonlyUsed, const UnicodeString& locationName);
-    ~TZNames() { };
-    UnicodeString fLocationName;
-
-};
-
 
 class MetaZoneIdsEnumeration : public StringEnumeration {
 public:

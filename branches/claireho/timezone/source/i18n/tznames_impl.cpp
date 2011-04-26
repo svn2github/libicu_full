@@ -12,6 +12,8 @@
 #include "unicode/utypes.h"
 #if !UCONFIG_NO_FORMATTING
 
+#include "cmemory.h"
+#include "cstring.h"
 #include "tznames.h"
 #include "tznames_impl.h"
 #include "umutex.h"
@@ -22,20 +24,25 @@
 
 U_NAMESPACE_BEGIN
 
+#define ZID_KEY_MAX  128
+
 static UMTX TimeZoneNamesImplLock = NULL;
 
+static const char MZ_PREFIX[]           = "meta:";
 static const char gMetaZones[]          = "metaZones";
 static const char gMapTimezonesTag[]    = "mapTimezones";
 static const char gZoneStrings[]        = "zoneStrings";
 static const char gCuTag[]              = "cu";
 static const char gEcTag[]              = "ec";
 
+
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(MetaZoneIdsEnumeration)
 
 TimeZoneNamesImpl::TimeZoneNamesImpl(const Locale& locale, UErrorCode& status) :
     fZoneStrings(NULL),
-    fTzNamesMap(NULL),
     fMetaZoneIds(NULL),
+    fZnames(NULL),
+    fTznames(NULL),
     fNamesTrie(TRUE),
     fNamesTrieFullyLoaded(FALSE) {
     initialize(locale, status);
@@ -98,9 +105,15 @@ TimeZoneNamesImpl::getReferenceZoneID(const UnicodeString& mzID, const char* reg
 }
 
 UnicodeString&
-TimeZoneNamesImpl::getMetaZoneDisplayName(const UnicodeString& mzID, UTimeZoneNameType type, UnicodeString& name) const {
-    //TODO
-    return name;
+TimeZoneNamesImpl::getMetaZoneDisplayName(const UnicodeString& mzID,
+                                          UTimeZoneNameType type,
+                                          UnicodeString& name) const {
+    name.remove();
+    if (mzID.isEmpty()) {
+        return name;
+    }
+    fZnames = loadMetaZoneNames(mzID);
+    return fZnames.getName(type);
 }
 
 UnicodeString&
@@ -120,27 +133,49 @@ TimeZoneNamesImpl::find(const UnicodeString& text, int32_t start, int32_t types)
     return NULL;
 }
 
-ZNames::ZNames(UnicodeString* names, UBool shortCommonlyUsed) {
-    // TODO(claireho) Replaced by StringEnumeration?
-
-    for (int32_t i = 0; i < KEYS_SIZE; i++) {
-        fNames[i].setTo(names[i]);
+// Merge the MZ_PREFIX and mzId
+static void mergeTimeZoneKey(const UnicodeString& mzId, char* result) {
+    if (mzId.isEmpty()) {
+        result[0] = '\0';
+        return;
     }
-    fShortCommonlyUsed = shortCommonlyUsed;
+
+    char mzIdChar[ZID_KEY_MAX + 1];
+    int32_t keyLen;
+    int32_t prefixLen = uprv_strlen((const char*)MZ_PREFIX);
+    keyLen = mzId.extract(0, mzId.length(), mzIdChar, ZID_KEY_MAX, US_INV);
+    uprv_memcpy((void *)result, (void *)MZ_PREFIX, prefixLen);
+    uprv_memcpy((void *)(result + prefixLen), (void *)mzIdChar, keyLen);
+    result[keyLen + prefixLen] = '\0';
 }
 
 ZNames*
-ZNames::getInstance(UResourceBundle* rb, const char* key) {
-    UBool cu[1];
-    UErrorCode status = U_ZERO_ERROR;
-    loadData(rb, key, cu, status);
-    if (U_FAILURE(status)) {
-        return NULL;
+TimeZoneNamesImpl::loadMetaZoneNames(const UnicodeString& mzId) {
+    // TODO(claireho) : get the mzNamesMap(mzId) here.
+    // ZNames* znames = mzNamesMap.get(mzId)
+    ZNames* znames = NULL;
+    if (znames == NULL) {
+        UErrorCode status = U_ZERO_ERROR;
+        char key[ZID_KEY_MAX + 1];
+        mergeTimeZoneKey(mzId, key);
+        znames = new ZNames(fZoneStrings, key, status);
     }
-    return new ZNames(fNames, cu[0]);
+    return NULL;
 }
 
-UnicodeString*
+
+ZNames::ZNames(UResourceBundle* rb, const char* key, UErrorCode& status) :
+    EMPTY_UNICODE_STRING(UnicodeString()) {
+
+    UBool cu[1];
+    loadData(rb, key, cu, status);
+    if (U_FAILURE(status)) {
+        return;
+    }
+    fShortCommonlyUsed = cu[0];
+}
+
+UnicodeString&
 ZNames::getName(UTimeZoneNameType type) {
     // TODO(claireho) fName cannot be null. Need to add flag to indicate data is null.
     /*
@@ -154,23 +189,23 @@ ZNames::getName(UTimeZoneNameType type) {
     case UTZNM_LONG_DAYLIGHT:
     case UTZNM_SHORT_STANDARD:
     case UTZNM_SHORT_DAYLIGHT:
-        return &(fNames[static_cast<uint32_t>(type)]);
+        return fNames[static_cast<uint32_t>(type)];
     case UTZNM_SHORT_GENERIC:
         if (fShortCommonlyUsed) {
-            return &(fNames[static_cast<uint32_t>(type)]);
+            return fNames[static_cast<uint32_t>(type)];
         }
     case UTZNM_SHORT_STANDARD_COMMONLY_USED:
         if (fShortCommonlyUsed) {
-            return &(fNames[static_cast<uint32_t>(UTZNM_SHORT_STANDARD)]);
+            return fNames[static_cast<uint32_t>(UTZNM_SHORT_STANDARD)];
         }
     case UTZNM_SHORT_DAYLIGHT_COMMONLY_USED:
         if (fShortCommonlyUsed) {
-            return &(fNames[static_cast<uint32_t>(UTZNM_SHORT_DAYLIGHT)]);
+            return fNames[static_cast<uint32_t>(UTZNM_SHORT_DAYLIGHT)];
         }
         break;
     }
 
-    return NULL;
+    return EMPTY_UNICODE_STRING;
 }
 
 void
@@ -229,33 +264,14 @@ ZNames::~ZNames() {
     // TODO(claireho) Implement the destructor.
 }
 
-TZNames*
-TZNames::getInstance(UResourceBundle* rb, const char* key, UErrorCode& status) {
-    if (rb == NULL || key == NULL || key[0] == '\0') {
-      // TODO(claireho) Is this error correct?
-      status = U_INTERNAL_PROGRAM_ERROR;
-      return NULL;
-    }
-
+TZNames::TZNames(UResourceBundle* rb, const char* key, UErrorCode& status) :
+    ZNames(rb, key, status) {
     UResourceBundle* rbTable = NULL;
     UErrorCode tmpStatus = U_ZERO_ERROR;
     rbTable = ures_getByKeyWithFallback(rb, key, rbTable, &tmpStatus);
     tmpStatus = U_ZERO_ERROR;
     int32_t len = 0;
-    UnicodeString locationName = ures_getStringByKeyWithFallback(rbTable, gEcTag, &len, &tmpStatus);
-
-    UBool cu[1];
-    loadData(rb, key, cu, status);
-    if (U_FAILURE(status)) {
-        return NULL;
-    }
-    return new TZNames(fNames, cu[0], locationName);
-}
-
-TZNames::TZNames(UnicodeString names[], UBool shortCommonlyUsed,
-                 const UnicodeString& locationName) :
-    ZNames(names, shortCommonlyUsed),
-    fLocationName(locationName) {
+    fLocationName = ures_getStringByKeyWithFallback(rbTable, gEcTag, &len, &tmpStatus);
 }
 
 UnicodeString&
@@ -315,6 +331,7 @@ MetaZoneIdsEnumeration::~MetaZoneIdsEnumeration() {
         }
     }
 }
+
 U_NAMESPACE_END
 
 
