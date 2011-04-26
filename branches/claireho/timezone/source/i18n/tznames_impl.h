@@ -99,7 +99,7 @@ public:
 
 private:
     void initialize(const Locale& locale, UErrorCode& status);
-    ZNames* loadMetaZoneNames(const UnicodeString& mzId);
+    ZNames* loadMetaZoneNames(const UnicodeString& mzId) const;
 
     /*
       private void writeObject(ObjectOutputStream out);

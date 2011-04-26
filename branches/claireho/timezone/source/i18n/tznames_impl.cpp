@@ -108,12 +108,21 @@ UnicodeString&
 TimeZoneNamesImpl::getMetaZoneDisplayName(const UnicodeString& mzID,
                                           UTimeZoneNameType type,
                                           UnicodeString& name) const {
-    name.remove();
+    name.remove();  // cleanup result.
     if (mzID.isEmpty()) {
         return name;
     }
-    fZnames = loadMetaZoneNames(mzID);
-    return fZnames.getName(type);
+    umtx_lock(&TimeZoneNamesImplLock);
+    if (fZnames == NULL) {
+        UErrorCode status = U_ZERO_ERROR;
+        TimeZoneNamesImpl* self = const_cast<TimeZoneNamesImpl*>(this);
+        self->fZnames = loadMetaZoneNames(mzID);
+    }
+    umtx_unlock(&TimeZoneNamesImplLock);
+    if (fZnames != NULL) {
+        name.setTo(fZnames->getName(type));
+    }
+    return name;
 }
 
 UnicodeString&
@@ -150,7 +159,7 @@ static void mergeTimeZoneKey(const UnicodeString& mzId, char* result) {
 }
 
 ZNames*
-TimeZoneNamesImpl::loadMetaZoneNames(const UnicodeString& mzId) {
+TimeZoneNamesImpl::loadMetaZoneNames(const UnicodeString& mzId) const {
     // TODO(claireho) : get the mzNamesMap(mzId) here.
     // ZNames* znames = mzNamesMap.get(mzId)
     ZNames* znames = NULL;
@@ -160,7 +169,7 @@ TimeZoneNamesImpl::loadMetaZoneNames(const UnicodeString& mzId) {
         mergeTimeZoneKey(mzId, key);
         znames = new ZNames(fZoneStrings, key, status);
     }
-    return NULL;
+    return znames;
 }
 
 
