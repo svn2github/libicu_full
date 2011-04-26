@@ -27,15 +27,11 @@
 
 U_NAMESPACE_BEGIN
 
-static const char* KEYS[] = {"lg", "ls", "ld", "sg", "ss", "sd"};
-// static const int32_t KEYS_SIZE = 6;    // # of elements in KEYS array.
-static const int32_t KEYS_SIZE = (sizeof KEYS / sizeof KEYS[0]);
-
 typedef struct UMzMapEntry {
     UnicodeString mzID;
     int32_t from;
     int32_t to;
-}UMzMapEntry;
+} UMzMapEntry;
 
 
 /**
@@ -43,36 +39,33 @@ typedef struct UMzMapEntry {
  */
 class ZNames : public UMemory {
 public:
-    ZNames(UResourceBundle* rb, const char* key, UErrorCode& statu);
-    ~ZNames();
-    UnicodeString& getName(UTimeZoneNameType type);
+    virtual ~ZNames();
 
-    UnicodeString EMPTY_UNICODE_STRING;
+    static ZNames* createInstance(UResourceBundle* rb, const char* key);
+    const UChar* getName(UTimeZoneNameType type);
 
 protected:
-    void loadData(UResourceBundle* rb, const char* key, UBool* shortCommonlyUsed,
-                  UErrorCode& status);
-
-    // TODO(claireho) should we make fName to private?
-    UnicodeString fNames[KEYS_SIZE];
+    ZNames(const UChar** names, UBool shortCommonlyUsed);
+    static const UChar** loadData(UResourceBundle* rb, const char* key, UBool& shortCommonlyUsed);
 
 private:
-    void cleanDataBuffer(void);
-    UBool  fShortCommonlyUsed;
+    const UChar** fNames;
+    UBool fShortCommonlyUsed;
 };
 
 /**
  * This class stores name data for single timezone.
  */
-class TZNames : ZNames {
+class TZNames : public ZNames {
 public:
-    TZNames(UResourceBundle* rb, const char* key, UErrorCode& status);
-    ~TZNames();
-    UnicodeString& getLocationName(void);
+    virtual ~TZNames();
+
+    static TZNames* createInstance(UResourceBundle* rb, const char* key);
+    const UChar* getLocationName(void);
 
 private:
-    UnicodeString fLocationName;
-
+    TZNames(const UChar** names, UBool shortCommonlyUsed, const UChar* locationName);
+    const UChar* fLocationName;
 };
 
 /**
@@ -82,11 +75,12 @@ private:
 class TimeZoneNamesImpl : public TimeZoneNames {
 public:
     TimeZoneNamesImpl(const Locale& locale, UErrorCode& status);
-    // TimeZoneNames*  createInstance(const Locale& locale, UErrorCode& status);
+
     virtual ~TimeZoneNamesImpl();
 
-    StringEnumeration* getAvailableMetaZoneIDs() const;
-    StringEnumeration* getAvailableMetaZoneIDs(const UnicodeString& tzID) const;
+    StringEnumeration* getAvailableMetaZoneIDs(UErrorCode& status) const;
+    StringEnumeration* getAvailableMetaZoneIDs(const UnicodeString& tzID, UErrorCode& status) const;
+
     UnicodeString& getMetaZoneID(const UnicodeString& tzID, UDate date, UnicodeString& mzID) const;
     UnicodeString& getReferenceZoneID(const UnicodeString& mzID, const char* region, UnicodeString& tzID) const;
 
@@ -95,48 +89,36 @@ public:
 
     UnicodeString& getExemplarLocationName(const UnicodeString& tzID, UnicodeString& name) const;
 
-    UEnumeration* find(const UnicodeString& text, int32_t start, int32_t types) const;
-
 private:
     void initialize(const Locale& locale, UErrorCode& status);
+    void cleanup();
+
     ZNames* loadMetaZoneNames(const UnicodeString& mzId) const;
-
-    /*
-      private void writeObject(ObjectOutputStream out);
-      private void readObject(ObjectInputStream in);
-      private synchronized ZNames loadMetaZoneNames(String mzID);
-      private synchronized TZNames loadTimeZoneNames(String tzID)
-      private static class NameInfo ... could be a structure
-      private static class NameSearchHandle ...
-      private static class ZNames ...
-      private static class TZNames extends ZNames ...
-      private static class MZMapEntry ...
-      private static class TZ2MZsCache extends SoftCache<String, List<MZMapEntry>, String> ....
-      private static class MZ2TZsCache extends SoftCache<String, Map<String, String>, String> ...
-
-     */
+    TZNames* loadTimeZoneNames(const UnicodeString& mzId) const;
 
     Locale fLocale;
     UResourceBundle* fZoneStrings;
-    ZNames*  fZnames;
-    TZNames* fTznames;
-    StringEnumeration* fMetaZoneIds;
-    TextTrieMap fNamesTrie;
-    UBool fNamesTrieFullyLoaded;
+
+    UHashtable* fMZNamesMap;
+    UHashtable* fTZNamesMap;
 };
 
-class MetaZoneIdsEnumeration : public StringEnumeration {
+class MetaZoneIDsEnumeration : public StringEnumeration {
 public:
-    MetaZoneIdsEnumeration(UErrorCode& status);
-    virtual ~MetaZoneIdsEnumeration();
+    MetaZoneIDsEnumeration();
+    MetaZoneIDsEnumeration(const UVector& mzIDs);
+    MetaZoneIDsEnumeration(UVector* mzIDs);
+    virtual ~MetaZoneIDsEnumeration();
     static UClassID U_EXPORT2 getStaticClassID(void);
     virtual UClassID getDynamicClassID(void) const;
     virtual const UnicodeString* snext(UErrorCode& status);
     virtual void reset(UErrorCode& status);
     virtual int32_t count(UErrorCode& status) const;
 private:
-    int32_t pos;
-    UVector fMetaZoneIds;
+    int32_t fLen;
+    int32_t fPos;
+    const UVector* fMetaZoneIDs;
+    UVector *fLocalVector;
 };
 
 U_NAMESPACE_END

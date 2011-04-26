@@ -40,8 +40,9 @@ public:
 
     static TimeZoneNames* U_EXPORT2 createInstance(const Locale& locale, UErrorCode& status);
 
-    virtual StringEnumeration* getAvailableMetaZoneIDs() const = 0;
-    virtual StringEnumeration* getAvailableMetaZoneIDs(const UnicodeString& tzID) const = 0;
+    virtual StringEnumeration* getAvailableMetaZoneIDs(UErrorCode& status) const = 0;
+    virtual StringEnumeration* getAvailableMetaZoneIDs(const UnicodeString& tzID, UErrorCode& status) const = 0;
+
     virtual UnicodeString& getMetaZoneID(const UnicodeString& tzID, UDate date, UnicodeString& mzID) const = 0;
     virtual UnicodeString& getReferenceZoneID(const UnicodeString& mzID, const char* region, UnicodeString& tzID) const = 0;
 
@@ -50,9 +51,6 @@ public:
 
     virtual UnicodeString& getExemplarLocationName(const UnicodeString& tzID, UnicodeString& name) const;
     virtual UnicodeString& getZoneDisplayName(const UnicodeString& tzID, UTimeZoneNameType type, UDate date, UnicodeString& name) const;
-
-    // types - bit flags of UTimeZoneNameType
-    virtual UEnumeration* find(const UnicodeString& text, int32_t start, int32_t types) const = 0;
 };
 
 U_NAMESPACE_END

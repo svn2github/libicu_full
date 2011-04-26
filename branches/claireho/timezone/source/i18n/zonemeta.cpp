@@ -22,6 +22,9 @@
 #include "cstring.h"
 #include "ucln_in.h"
 #include "uassert.h"
+#include "uresimp.h"
+
+U_NAMESPACE_BEGIN
 
 static UMTX gZoneMetaLock = NULL;
 
@@ -33,9 +36,13 @@ static UBool gCanonicalIDCacheInitialized = FALSE;
 static UHashtable *gOlsonToMeta = NULL;
 static UBool gOlsonToMetaInitialized = FALSE;
 
+// Metazone ID vector
+static UVector *gMetaZoneIDs = NULL;
+static UBool gMetaZoneIDsInitialized = FALSE;
+
 // Country info vectors
-static U_NAMESPACE_QUALIFIER UVector *gSingleZoneCountries = NULL;
-static U_NAMESPACE_QUALIFIER UVector *gMultiZonesCountries = NULL;
+static UVector *gSingleZoneCountries = NULL;
+static UVector *gMultiZonesCountries = NULL;
 static UBool gCountryInfoVectorsInitialized = FALSE;
 
 U_CDECL_BEGIN
@@ -59,6 +66,9 @@ static UBool U_CALLCONV zoneMeta_cleanup(void)
         gOlsonToMeta = NULL;
     }
     gOlsonToMetaInitialized = FALSE;
+
+    delete gMetaZoneIDs;
+    gMetaZoneIDsInitialized = FALSE;
 
     delete gSingleZoneCountries;
     delete gMultiZonesCountries;
@@ -94,8 +104,6 @@ deleteOlsonToMetaMappingEntry(void *obj) {
 }
 
 U_CDECL_END
-
-U_NAMESPACE_BEGIN
 
 #define ZID_KEY_MAX 128
 
@@ -218,7 +226,7 @@ ZoneMeta::getCanonicalCLDRID(const UnicodeString &tzid, UnicodeString &systemID,
         umtx_lock(&gZoneMetaLock);
         {
             if (!gCanonicalIDCacheInitialized) {
-                gCanonicalIDCache = uhash_open(uhash_hashUnicodeString, uhash_compareUnicodeString, NULL, &status);
+                gCanonicalIDCache = uhash_open(uhash_hashUChars, uhash_compareUChars, NULL, &status);
                 if (gCanonicalIDCache == NULL) {
                     status = U_MEMORY_ALLOCATION_ERROR;
                 }
@@ -227,8 +235,7 @@ ZoneMeta::getCanonicalCLDRID(const UnicodeString &tzid, UnicodeString &systemID,
                     systemID.remove();
                     return systemID;
                 }
-                uhash_setKeyDeleter(gCanonicalIDCache, uhash_deleteUnicodeString);
-                // No value deleter - a value is from a resource bundle or gEmpty
+                // No key/value deleters - keys/values are from a resource bundle or gEmpty
                 gCanonicalIDCacheInitialized = TRUE;
                 ucln_i18n_registerCleanup(UCLN_I18N_ZONEMETA, zoneMeta_cleanup);
             }
@@ -238,10 +245,15 @@ ZoneMeta::getCanonicalCLDRID(const UnicodeString &tzid, UnicodeString &systemID,
 
     const UChar *idInCache = NULL;
 
+    UErrorCode tmpStatus = U_ZERO_ERROR;
+    UChar utzid[ZID_KEY_MAX];
+    tzid.extract(utzid, ZID_KEY_MAX, tmpStatus);
+    U_ASSERT(tmpStatus == U_ZERO_ERROR);    // we checked the length of tzid already
+
     // Check if it was already cached
     umtx_lock(&gZoneMetaLock);
     {
-        idInCache = (const UChar *)uhash_get(gCanonicalIDCache, &tzid);
+        idInCache = (const UChar *)uhash_get(gCanonicalIDCache, utzid);
     }
     umtx_unlock(&gZoneMetaLock);
 
@@ -271,15 +283,13 @@ ZoneMeta::getCanonicalCLDRID(const UnicodeString &tzid, UnicodeString &systemID,
         }
     }
 
-    UErrorCode tmpStatus = U_ZERO_ERROR;
     UResourceBundle *top = ures_openDirect(NULL, gTimeZoneTypes, &tmpStatus);
     UResourceBundle *rb = ures_getByKey(top, gTypeMapTag, NULL, &tmpStatus);
     ures_getByKey(rb, gTimezoneTag, rb, &tmpStatus);
     ures_getByKey(rb, id, rb, &tmpStatus);
     if (U_SUCCESS(tmpStatus)) {
         // type entry (canonical) found - use gEmpty to indicate the tzid is the canonical ID
-        // Note: We use gEmpty as a substitution for this case to avoid unnecessary UnicodeString
-        // is allocated for cache entry. We want to keep chance values to use const UChar*.
+        // Note: We use gEmpty as a substitution for this case.
         cldrCanonicalID = gEmpty;
     }
 
@@ -335,30 +345,21 @@ ZoneMeta::getCanonicalCLDRID(const UnicodeString &tzid, UnicodeString &systemID,
         // Put the resolved canonical ID to the cache
         umtx_lock(&gZoneMetaLock);
         {
-            idInCache = (const UChar *)uhash_get(gCanonicalIDCache, &tzid);
+            idInCache = (const UChar *)uhash_get(gCanonicalIDCache, utzid);
             if (idInCache == NULL) {
-                UnicodeString *key = new UnicodeString(tzid);   // create a copy
-                if (key == NULL) {
-                    status = U_MEMORY_ALLOCATION_ERROR;
-                } else {
-                    idInCache = (const UChar *)uhash_put(gCanonicalIDCache, key, (void *)cldrCanonicalID, &status);
+                const UChar* key = ZoneMeta::findTimeZoneID(tzid);
+                U_ASSERT(key != NULL);
+                if (key != NULL) {
+                    idInCache = (const UChar *)uhash_put(gCanonicalIDCache, (void *)key, (void *)cldrCanonicalID, &status);
                     U_ASSERT(idInCache == NULL);
                 }
             }
             if (U_SUCCESS(status) && cldrCanonicalID != gEmpty) {
                 // Also put canonical ID itself into the cache if not exist
-                UnicodeString *canonicalKey = new UnicodeString(cldrCanonicalID);
-                if (canonicalKey == NULL) {
-                    status = U_MEMORY_ALLOCATION_ERROR;
-                } else {
-                    const UChar *canonicalInCache = (const UChar*)uhash_get(gCanonicalIDCache, canonicalKey);
-                    if (canonicalInCache == NULL) {
-                        canonicalInCache = (const UChar *)uhash_put(gCanonicalIDCache, canonicalKey, (void *)gEmpty, &status);
-                        U_ASSERT(canonicalInCache == NULL);
-                    } else {
-                        // already in
-                        delete canonicalKey;
-                    }
+                const UChar *canonicalInCache = (const UChar*)uhash_get(gCanonicalIDCache, cldrCanonicalID);
+                if (canonicalInCache == NULL) {
+                    canonicalInCache = (const UChar *)uhash_put(gCanonicalIDCache, (void *)cldrCanonicalID, (void *)gEmpty, &status);
+                    U_ASSERT(canonicalInCache == NULL);
                 }
             }
         }
@@ -736,6 +737,66 @@ ZoneMeta::getZoneIdByMetazone(const UnicodeString &mzid, const UnicodeString &re
     }
 
     return result;
+}
+
+const UVector*
+ZoneMeta::getAvailableMetazoneIDs() {
+
+    UBool initialized;
+    UMTX_CHECK(&gZoneMetaLock, gMetaZoneIDsInitialized, initialized);
+    if (!initialized) {
+        umtx_lock(&gZoneMetaLock);
+        {
+            if (!gMetaZoneIDsInitialized) {
+                UErrorCode status = U_ZERO_ERROR;
+                UVector *metaZoneIDs = new UVector(NULL, uhash_compareUChars, status);
+                if (metaZoneIDs == NULL) {
+                    status = U_MEMORY_ALLOCATION_ERROR;
+                }
+                if (U_SUCCESS(status)) {
+                    metaZoneIDs->setDeleter(uhash_freeBlock);
+
+                    UResourceBundle *rb = ures_openDirect(NULL, gMetaZones, &status);
+                    UResourceBundle *bundle = ures_getByKey(rb, gMapTimezonesTag, NULL, &status);
+                    UResourceBundle res;
+                    ures_initStackObject(&res);
+                    while (U_SUCCESS(status) && ures_hasNext(bundle)) {
+                        ures_getNextResource(bundle, &res, &status);
+                        if (U_FAILURE(status)) {
+                            break;
+                        }
+                        const char *mzID = ures_getKey(&res);
+                        int32_t len = uprv_strlen(mzID);
+                        UChar *uMzID = (UChar*)uprv_malloc(sizeof(UChar) * (len + 1));
+                        if (uMzID == NULL) {
+                            status = U_MEMORY_ALLOCATION_ERROR;
+                            break;
+                        }
+                        u_charsToUChars(mzID, uMzID, len);
+                        uMzID[len] = 0;
+                        if (!metaZoneIDs->contains((void *)uMzID)) {
+                            metaZoneIDs->addElement((void *)uMzID, status);
+                        } else {
+                            uprv_free(uMzID);
+                        }
+                    }
+                    if (U_SUCCESS(status)) {
+                        gMetaZoneIDs = metaZoneIDs;
+                        gMetaZoneIDsInitialized = TRUE;
+                    } else {
+                        delete gMetaZoneIDs;
+                    }
+                }
+            }
+        }
+        umtx_unlock(&gZoneMetaLock);
+    }
+    return gMetaZoneIDs;
+}
+
+const UChar*
+ZoneMeta::findTimeZoneID(const UnicodeString& tzid) {
+    return TimeZone::findID(tzid);
 }
 
 U_NAMESPACE_END

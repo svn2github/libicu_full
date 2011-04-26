@@ -22,83 +22,6 @@
 #if !UCONFIG_NO_FORMATTING
 
 U_NAMESPACE_BEGIN
-/*
-class TimeZoneNamesImpl : public TimeZoneNames {
-public:
-    TimeZoneNamesImpl(const Locale& locale);
-    virtual ~TimeZoneNamesImpl();
-
-    StringEnumeration* getAvailableMetaZoneIDs() const;
-    StringEnumeration* getAvailableMetaZoneIDs(const UnicodeString& tzID) const;
-    UnicodeString& getMetaZoneID(const UnicodeString& tzID, UDate date, UnicodeString& mzID) const;
-    UnicodeString& getReferenceZoneID(const UnicodeString& mzID, const char* region, UnicodeString& tzID) const;
-
-    UnicodeString& getMetaZoneDisplayName(const UnicodeString& mzID, UTimeZoneNameType type, UnicodeString& name) const;
-    UnicodeString& getTimeZoneDisplayName(const UnicodeString& tzID, UTimeZoneNameType type, UnicodeString& name) const;
-
-    UnicodeString& getExemplarLocationName(const UnicodeString& tzID, UnicodeString& name) const;
-
-    UEnumeration* find(const UnicodeString& text, int32_t start, int32_t types) const;
-private:
-    Locale fLocale;
-};
-
-TimeZoneNamesImpl::TimeZoneNamesImpl(const Locale& locale, UErrorCode& status)
-:   fLocale(locale) {
-    //TODO
-}
-
-TimeZoneNamesImpl::~TimeZoneNamesImpl() {
-    //TODO
-}
-
-StringEnumeration*
-TimeZoneNamesImpl::getAvailableMetaZoneIDs() const {
-    //TODO
-    return NULL;
-}
-
-StringEnumeration*
-TimeZoneNamesImpl::getAvailableMetaZoneIDs(const UnicodeString& tzID) const {
-    //TODO
-    return NULL;
-}
-
-UnicodeString&
-TimeZoneNamesImpl::getMetaZoneID(const UnicodeString& tzID, UDate date, UnicodeString& mzID) const {
-    //TODO
-    return mzID;
-}
-
-UnicodeString&
-TimeZoneNamesImpl::getReferenceZoneID(const UnicodeString& mzID, const char* region, UnicodeString& tzID) const {
-    //TODO
-    return tzID;
-}
-
-UnicodeString&
-TimeZoneNamesImpl::getMetaZoneDisplayName(const UnicodeString& mzID, UTimeZoneNameType type, UnicodeString& name) const {
-    //TODO
-    return name;
-}
-
-UnicodeString&
-TimeZoneNamesImpl::getTimeZoneDisplayName(const UnicodeString& tzID, UTimeZoneNameType type, UnicodeString& name) const {
-    //TODO
-    return name;
-}
-
-UnicodeString&
-TimeZoneNamesImpl::getExemplarLocationName(const UnicodeString& tzID, UnicodeString& name) const {
-    //TODO
-    return name;
-}
-
-UEnumeration*
-TimeZoneNamesImpl::find(const UnicodeString& text, int32_t start, int32_t types) const {
-    return NULL;
-}
-*/
 
 // TimeZoneNames object cache handling
 static UMTX gTimeZoneNamesLock = NULL;
@@ -130,6 +53,8 @@ U_CDECL_BEGIN
  */
 static UBool U_CALLCONV timeZoneNames_cleanup(void)
 {
+    umtx_destroy(&gTimeZoneNamesLock);
+
     if (gTimeZoneNamesCache != NULL) {
         uhash_close(gTimeZoneNamesCache);
         gTimeZoneNamesCache = NULL;
@@ -181,8 +106,8 @@ public:
     TimeZoneNamesDelegate(const Locale& locale, UErrorCode& status);
     virtual ~TimeZoneNamesDelegate();
 
-    StringEnumeration* getAvailableMetaZoneIDs() const;
-    StringEnumeration* getAvailableMetaZoneIDs(const UnicodeString& tzID) const;
+    StringEnumeration* getAvailableMetaZoneIDs(UErrorCode& status) const;
+    StringEnumeration* getAvailableMetaZoneIDs(const UnicodeString& tzID, UErrorCode& status) const;
     UnicodeString& getMetaZoneID(const UnicodeString& tzID, UDate date, UnicodeString& mzID) const;
     UnicodeString& getReferenceZoneID(const UnicodeString& mzID, const char* region, UnicodeString& tzID) const;
 
@@ -282,13 +207,13 @@ TimeZoneNamesDelegate::~TimeZoneNamesDelegate() {
 }
 
 StringEnumeration*
-TimeZoneNamesDelegate::getAvailableMetaZoneIDs() const {
-    return tznamesCacheEntry->names->getAvailableMetaZoneIDs();
+TimeZoneNamesDelegate::getAvailableMetaZoneIDs(UErrorCode& status) const {
+    return tznamesCacheEntry->names->getAvailableMetaZoneIDs(status);
 }
 
 StringEnumeration*
-TimeZoneNamesDelegate::getAvailableMetaZoneIDs(const UnicodeString& tzID) const {
-    return tznamesCacheEntry->names->getAvailableMetaZoneIDs(tzID);
+TimeZoneNamesDelegate::getAvailableMetaZoneIDs(const UnicodeString& tzID, UErrorCode& status) const {
+    return tznamesCacheEntry->names->getAvailableMetaZoneIDs(tzID, status);
 }
 
 UnicodeString&
@@ -314,11 +239,6 @@ TimeZoneNamesDelegate::getTimeZoneDisplayName(const UnicodeString& tzID, UTimeZo
 UnicodeString&
 TimeZoneNamesDelegate::getExemplarLocationName(const UnicodeString& tzID, UnicodeString& name) const {
     return tznamesCacheEntry->names->getExemplarLocationName(tzID, name);
-}
-
-UEnumeration*
-TimeZoneNamesDelegate::find(const UnicodeString& text, int32_t start, int32_t types) const {
-    return tznamesCacheEntry->names->find(text, start, types);
 }
 
 

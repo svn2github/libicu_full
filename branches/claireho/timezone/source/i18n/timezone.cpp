@@ -1060,7 +1060,24 @@ TimeZone::getEquivalentID(const UnicodeString& id, int32_t index) {
 
 // ---------------------------------------
 
-// These two methods are used by ZoneMeta class only.
+// These methods are used by ZoneMeta class only.
+
+const UChar*
+TimeZone::findID(const UnicodeString& id) {
+    const UChar *result = NULL;
+    UErrorCode ec = U_ZERO_ERROR;
+    UResourceBundle *rb = ures_openDirect(NULL, kZONEINFO, &ec);
+
+    // resolve zone index by name
+    UResourceBundle *names = ures_getByKey(rb, kNAMES, NULL, &ec);
+    int32_t idx = findInStringArray(names, id, ec);
+    result = ures_getStringByIndex(names, idx, NULL, &ec);
+    if (U_FAILURE(ec)) {
+        return NULL;
+    }
+    return result;
+}
+
 
 const UChar*
 TimeZone::dereferOlsonLink(const UnicodeString& id) {
