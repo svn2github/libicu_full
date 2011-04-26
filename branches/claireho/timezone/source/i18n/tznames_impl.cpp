@@ -260,6 +260,8 @@ TimeZoneNamesImpl::loadMetaZoneNames(const UnicodeString& mzID) const {
         UErrorCode status = U_ZERO_ERROR;
         // TODO - cache key
         uhash_put(fMZNamesMap, (void *)&mzID, cacheVal, &status);
+    } else if (cacheVal != EMPTY) {
+        znames = (ZNames *)cacheVal;
     }
 
     return znames;
@@ -284,6 +286,8 @@ TimeZoneNamesImpl::loadTimeZoneNames(const UnicodeString& tzID) const {
         }
         // TODO - cache key
         uhash_put(fMZNamesMap, (void *)&tzID, cacheVal, &status);
+    } else if (cacheVal != EMPTY) {
+        tznames = (TZNames *)cacheVal;
     }
 
     return tznames;
@@ -320,25 +324,33 @@ ZNames::getName(UTimeZoneNameType type) {
     const UChar *name = NULL;
     switch(type) {
     case UTZNM_LONG_GENERIC:
+        name = fNames[0];
+        break;
     case UTZNM_LONG_STANDARD:
+        name = fNames[1];
+        break;
     case UTZNM_LONG_DAYLIGHT:
-    case UTZNM_SHORT_STANDARD:
-    case UTZNM_SHORT_DAYLIGHT:
-        name = fNames[static_cast<uint32_t>(type)];
+        name = fNames[2];
         break;
     case UTZNM_SHORT_GENERIC:
         if (fShortCommonlyUsed) {
-            name = fNames[static_cast<uint32_t>(type)];
+            name = fNames[3];
         }
+        break;
+    case UTZNM_SHORT_STANDARD:
+        name = fNames[4];
+        break;
+    case UTZNM_SHORT_DAYLIGHT:
+        name = fNames[5];
         break;
     case UTZNM_SHORT_STANDARD_COMMONLY_USED:
         if (fShortCommonlyUsed) {
-            name = fNames[static_cast<uint32_t>(UTZNM_SHORT_STANDARD)];
+            name = fNames[4];
         }
         break;
     case UTZNM_SHORT_DAYLIGHT_COMMONLY_USED:
         if (fShortCommonlyUsed) {
-            name = fNames[static_cast<uint32_t>(UTZNM_SHORT_DAYLIGHT)];
+            name = fNames[5];
         }
         break;
     }
