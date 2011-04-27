@@ -16,15 +16,16 @@
 #include "cstring.h"
 #include "tznames.h"
 #include "tznames_impl.h"
-#include "mutex.h"
+#include "umutex.h"
+#include "uassert.h"
 #include "uresimp.h"
 #include "ureslocs.h"
 #include "zonemeta.h"
-
-//TODO(claireho) remove this
-#include "stdio.h"
+#include "ucln_in.h"
 
 U_NAMESPACE_BEGIN
+
+static UMTX gTZNamesImplLock = NULL;
 
 #define ZID_KEY_MAX  128
 
@@ -59,14 +60,17 @@ deleteTZNames(void *obj) {
     }
 }
 
+static UBool U_CALLCONV tzNamesImpl_cleanup(void) {
+    umtx_destroy(&gTZNamesImplLock);
+    return TRUE;
+}
 U_CDECL_END
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(MetaZoneIDsEnumeration)
 
-TimeZoneNamesImpl::TimeZoneNamesImpl(const Locale& locale, UErrorCode& status) :
-    fZoneStrings(NULL),
-    fMZNamesMap(NULL),
-    fTZNamesMap(NULL) {
+TimeZoneNamesImpl::TimeZoneNamesImpl(const Locale& locale, UErrorCode& status)
+: fZoneStrings(NULL), fMZNamesMap(NULL), fTZNamesMap(NULL) {
+    ucln_i18n_registerCleanup(UCLN_I18N_TZNAMESIMPL, tzNamesImpl_cleanup);
     initialize(locale, status);
 }
 
@@ -87,8 +91,8 @@ TimeZoneNamesImpl::initialize(const Locale& locale, UErrorCode& status) {
     }
 
     // Initialize hashtables holding time zone/meta zone names
-    fMZNamesMap = uhash_open(uhash_hashUnicodeString, uhash_compareUnicodeString, NULL, &status);
-    fTZNamesMap = uhash_open(uhash_hashUnicodeString, uhash_compareUnicodeString, NULL, &status);
+    fMZNamesMap = uhash_open(uhash_hashUChars, uhash_compareUChars, NULL, &status);
+    fTZNamesMap = uhash_open(uhash_hashUChars, uhash_compareUChars, NULL, &status);
     if (U_FAILURE(status)) {
         cleanup();
         return;
@@ -96,6 +100,7 @@ TimeZoneNamesImpl::initialize(const Locale& locale, UErrorCode& status) {
 
     uhash_setValueDeleter(fMZNamesMap, deleteZNames);
     uhash_setValueDeleter(fTZNamesMap, deleteTZNames);
+    // no key deleters for name maps
 
     return;
 }
@@ -246,26 +251,50 @@ static void mergeTimeZoneKey(const UnicodeString& mzID, char* result) {
 
 ZNames*
 TimeZoneNamesImpl::loadMetaZoneNames(const UnicodeString& mzID) const {
-    Mutex m;
+    if (mzID.length() >= ZID_KEY_MAX) {
+        return NULL;
+    }
 
     ZNames *znames = NULL;
-    void *cacheVal = uhash_get(fMZNamesMap, &mzID);
-    if (cacheVal == NULL) {
-        char key[ZID_KEY_MAX];
-        mergeTimeZoneKey(mzID, key);
-        znames = ZNames::createInstance(fZoneStrings, key);
 
-        if (znames == NULL) {
-            cacheVal = (void *)EMPTY;
-        } else {
-            cacheVal = znames;
+    UErrorCode status = U_ZERO_ERROR;
+    UChar mzIDKey[ZID_KEY_MAX];
+    mzID.extract(mzIDKey, ZID_KEY_MAX, status);
+    U_ASSERT(status == U_ZERO_ERROR);   // already checked length above
+    mzIDKey[mzID.length()] = 0;
+
+    umtx_lock(&gTZNamesImplLock);
+    {
+        void *cacheVal = uhash_get(fMZNamesMap, mzIDKey);
+        if (cacheVal == NULL) {
+            char key[ZID_KEY_MAX];
+            mergeTimeZoneKey(mzID, key);
+            znames = ZNames::createInstance(fZoneStrings, key);
+
+            if (znames == NULL) {
+                cacheVal = (void *)EMPTY;
+            } else {
+                cacheVal = znames;
+            }
+            // Use the persisten ID as the resource key, so we can
+            // avoid duplications.
+            const UChar* newKey = ZoneMeta::findMetaZoneID(mzID);
+            if (newKey != NULL) {
+                uhash_put(fMZNamesMap, (void *)newKey, cacheVal, &status);
+            } else {
+                // Should never happen with a valid input
+                if (znames != NULL) {
+                    // It's not possible that we get a valid ZNames with unknown ID.
+                    // But just in case..
+                    delete znames;
+                    znames = NULL;
+                }
+            }
+        } else if (cacheVal != EMPTY) {
+            znames = (ZNames *)cacheVal;
         }
-        UErrorCode status = U_ZERO_ERROR;
-        // TODO - cache key
-        uhash_put(fMZNamesMap, (void *)&mzID, cacheVal, &status);
-    } else if (cacheVal != EMPTY) {
-        znames = (ZNames *)cacheVal;
     }
+    umtx_unlock(&gTZNamesImplLock);
 
     return znames;
 }
@@ -282,33 +311,52 @@ static void convertTzToCLDRFomat(const UnicodeString& tzID, char* result) {
 
 TZNames*
 TimeZoneNamesImpl::loadTimeZoneNames(const UnicodeString& tzID) const {
-    Mutex m;
+    if (tzID.length() >= ZID_KEY_MAX) {
+        return NULL;
+    }
 
     TZNames *tznames = NULL;
-    TZNames *testDuplicate = NULL;
-    void *cacheVal = uhash_get(fTZNamesMap, &tzID);
-    if (cacheVal == NULL) {
-        char key[ZID_KEY_MAX];
-        UErrorCode status = U_ZERO_ERROR;
-        // Replace "/" with ":".
-        convertTzToCLDRFomat(tzID, key);
-        tznames = TZNames::createInstance(fZoneStrings, key);
 
-        if (tznames == NULL) {
-            cacheVal = (void *)EMPTY;
-        } else {
-            cacheVal = tznames;
+    UErrorCode status = U_ZERO_ERROR;
+    UChar tzIDKey[ZID_KEY_MAX];
+    tzID.extract(tzIDKey, ZID_KEY_MAX, status);
+    U_ASSERT(status == U_ZERO_ERROR);   // already checked length above
+    tzIDKey[tzID.length()] = 0;
+
+    umtx_lock(&gTZNamesImplLock);
+    {
+        void *cacheVal = uhash_get(fTZNamesMap, tzIDKey);
+        if (cacheVal == NULL) {
+            char key[ZID_KEY_MAX];
+            UErrorCode status = U_ZERO_ERROR;
+            // Replace "/" with ":".
+            convertTzToCLDRFomat(tzID, key);
+            tznames = TZNames::createInstance(fZoneStrings, key);
+
+            if (tznames == NULL) {
+                cacheVal = (void *)EMPTY;
+            } else {
+                cacheVal = tznames;
+            }
+            // Use the persistent ID as the resource key, so we can
+            // avoid duplications.
+            const UChar* newKey = ZoneMeta::findTimeZoneID(tzID);
+            if (newKey != NULL) {
+                uhash_put(fTZNamesMap, (void *)newKey, cacheVal, &status);
+            } else {
+                // Should never happen with a valid input
+                if (tznames != NULL) {
+                    // It's not possible that we get a valid TZNames with unknown ID.
+                    // But just in case..
+                    delete tznames;
+                    tznames = NULL;
+                }
+            }
+        } else if (cacheVal != EMPTY) {
+            tznames = (TZNames *)cacheVal;
         }
-        // TODO - cache key
-        uhash_put(fMZNamesMap, (void *)&tzID, cacheVal, &status);
-        // TODO(claireho)  testDuplicate is always NULL!!
-        // testDuplicate = (TZNames *)uhash_get(fTZNamesMap, &tzID);
-        if (testDuplicate != NULL) {
-            printf("\n Find key:%s in the fTZNamesMap table!", key);
-        }
-    } else if (cacheVal != EMPTY) {
-        tznames = (TZNames *)cacheVal;
     }
+    umtx_unlock(&gTZNamesImplLock);
 
     return tznames;
 

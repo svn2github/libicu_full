@@ -1597,9 +1597,7 @@ DateFormatSymbols::createZoneStringsArray(int32_t &rowCount, int32_t &colCount, 
     if (U_FAILURE(status)) {
         return NULL;
     }
-    // TODO(claireho) How to avoid the duplicate Timezone id?
-    StringEnumeration *tzids = TimeZone::createEnumeration();
-    // StringEnumeration *tzids = tzNames->getAvailableMetaZoneIDs(status);
+    StringEnumeration *tzids = TimeZone::createTimeZoneIDEnumeration(UCAL_ZONE_TYPE_CANONICAL, NULL, NULL, status);
     int32_t total = tzids->count(status);
     // Allocate array
     result = (UnicodeString**)uprv_malloc(tzids->count(status) * sizeof(UnicodeString*));

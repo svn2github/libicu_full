@@ -63,13 +63,21 @@ public:
     static const UVector* U_EXPORT2 getAvailableMetazoneIDs();
 
     /**
-     * Returns the pointer to the ID resource string, or NULL if the given tzid is not in the
+     * Returns the pointer to the persistent time zone ID string, or NULL if the given tzid is not in the
      * tz database. This method is useful when you maintain persistent zone IDs without duplication.
      */
     static const UChar* U_EXPORT2 findTimeZoneID(const UnicodeString& tzid);
+
+    /**
+     * Returns the pointer to the persistent meta zone ID string, or NULL if the given mzid is not available.
+     * This method is useful when you maintain persistent meta zone IDs without duplication.
+     */
+    static const UChar* U_EXPORT2 findMetaZoneID(const UnicodeString& mzid);
+
 private:
     ZoneMeta(); // Prevent construction.
     static UVector* createMetazoneMappings(const UnicodeString &tzid);
+    static void initAvailableMetaZoneIDs();
 };
 
 U_NAMESPACE_END
