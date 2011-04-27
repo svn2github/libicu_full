@@ -407,6 +407,16 @@ public:
      */
     const UnicodeString** getZoneStrings(int32_t& rowCount, int32_t& columnCount) const;
 
+
+    /**
+     * Gets timezone strings. These strings are stored in a 2-dimensional array.
+     * @param rowCount      Output param to receive number of rows.
+     * @param columnCount   Output param to receive number of columns.
+     * @return              The timezone strings as a 2-d array. (DateFormatSymbols retains ownership.)
+     * @deprecated ICU 3.6
+     */
+    const UnicodeString** getZoneStringsNew(int32_t& rowCount, int32_t& columnCount) const;
+
     /**
      * Sets timezone strings. These strings are stored in a 2-dimensional array.
      * @param strings       The timezone strings as a 2-d array to be copied. (not adopted; caller retains ownership)
@@ -745,6 +755,10 @@ private:
      * Delete just the zone strings.
      */
     void disposeZoneStrings(void);
+
+    const UnicodeString**
+    createZoneStringsArray(int32_t &rowCount, int32_t &colCount, UErrorCode &status) const;
+
 };
 
 U_NAMESPACE_END

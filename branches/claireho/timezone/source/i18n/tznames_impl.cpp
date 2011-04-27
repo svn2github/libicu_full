@@ -21,6 +21,9 @@
 #include "ureslocs.h"
 #include "zonemeta.h"
 
+//TODO(claireho) remove this
+#include "stdio.h"
+
 U_NAMESPACE_BEGIN
 
 #define ZID_KEY_MAX  128
@@ -267,16 +270,28 @@ TimeZoneNamesImpl::loadMetaZoneNames(const UnicodeString& mzID) const {
     return znames;
 }
 
+static void convertTzToCLDRFomat(const UnicodeString& tzID, char* result) {
+    int32_t len = tzID.length();
+    for (int32_t i = 0; i < len; i++) {
+        char c = (char)tzID.charAt(i);
+        if (c == '/') c = ':';  // Reaplce '/' with ':'
+        result[i] = c;
+    }
+    result[len] = '\0';
+}
+
 TZNames*
 TimeZoneNamesImpl::loadTimeZoneNames(const UnicodeString& tzID) const {
     Mutex m;
 
     TZNames *tznames = NULL;
+    TZNames *testDuplicate = NULL;
     void *cacheVal = uhash_get(fTZNamesMap, &tzID);
     if (cacheVal == NULL) {
         char key[ZID_KEY_MAX];
         UErrorCode status = U_ZERO_ERROR;
-        tzID.extract(0, tzID.length(), key, ZID_KEY_MAX, US_INV);
+        // Replace "/" with ":".
+        convertTzToCLDRFomat(tzID, key);
         tznames = TZNames::createInstance(fZoneStrings, key);
 
         if (tznames == NULL) {
@@ -286,6 +301,11 @@ TimeZoneNamesImpl::loadTimeZoneNames(const UnicodeString& tzID) const {
         }
         // TODO - cache key
         uhash_put(fMZNamesMap, (void *)&tzID, cacheVal, &status);
+        // TODO(claireho)  testDuplicate is always NULL!!
+        // testDuplicate = (TZNames *)uhash_get(fTZNamesMap, &tzID);
+        if (testDuplicate != NULL) {
+            printf("\n Find key:%s in the fTZNamesMap table!", key);
+        }
     } else if (cacheVal != EMPTY) {
         tznames = (TZNames *)cacheVal;
     }
@@ -423,6 +443,7 @@ TZNames::createInstance(UResourceBundle* rb, const char* key) {
     }
     TZNames* tznames = NULL;
     UErrorCode status = U_ZERO_ERROR;
+    // printf("\n key:%s", key);  // check for duplicate keys ...
     UResourceBundle* rbTable = ures_getByKeyWithFallback(rb, key, NULL, &status);
     if (U_SUCCESS(status)) {
         int32_t len = 0;
