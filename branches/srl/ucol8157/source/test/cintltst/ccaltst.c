@@ -1,5 +1,5 @@
 /********************************************************************
- * Copyright (c) 1997-2010, International Business Machines
+ * Copyright (c) 1997-2011, International Business Machines
  * Corporation and others. All Rights Reserved.
  ********************************************************************
  *
@@ -123,14 +123,38 @@ static void TestCalendar()
     status=U_ZERO_ERROR;
 #endif
     
-    /*Test ucal_openTimeZones & ucal_openCountryTimeZones*/
-    for (j=0; j<2; ++j) {
-        const char* api = (j==0) ? "ucal_openTimeZones()" :
-            "ucal_openCountryTimeZones(US)";
-        uenum = (j==0) ? ucal_openTimeZones(&status) :
-            ucal_openCountryTimeZones("US", &status);
+    /*Test ucal_openTimeZones, ucal_openCountryTimeZones and ucal_openTimeZoneIDEnumeration */
+    for (j=0; j<6; ++j) {
+        const char *api;
+        const int32_t offsetMinus5 = -5*60*60*1000;
+        switch (j) {
+        case 0:
+            api = "ucal_openTimeZones()";
+            uenum = ucal_openTimeZones(&status);
+            break;
+        case 1:
+            api = "ucal_openCountryTimeZones(US)";
+            uenum = ucal_openCountryTimeZones("US", &status);
+            break;
+        case 2:
+            api = "ucal_openTimeZoneIDEnumerarion(UCAL_ZONE_TYPE_CANONICAL, NULL, NULL)";
+            uenum = ucal_openTimeZoneIDEnumeration(UCAL_ZONE_TYPE_CANONICAL, NULL, NULL, &status);
+            break;
+        case 3:
+            api = "ucal_openTimeZoneIDEnumerarion(UCAL_ZONE_TYPE_CANONICAL_LOCATION, CA, NULL)";
+            uenum = ucal_openTimeZoneIDEnumeration(UCAL_ZONE_TYPE_CANONICAL_LOCATION, "CA", NULL, &status);
+            break;
+        case 4:
+            api = "ucal_openTimeZoneIDEnumerarion(UCAL_ZONE_TYPE_ANY, NULL, -5 hour)";
+            uenum = ucal_openTimeZoneIDEnumeration(UCAL_ZONE_TYPE_ANY, NULL, &offsetMinus5, &status);
+            break;
+        case 5:
+            api = "ucal_openTimeZoneIDEnumerarion(UCAL_ZONE_TYPE_ANY, US, -5 hour)";
+            uenum = ucal_openTimeZoneIDEnumeration(UCAL_ZONE_TYPE_ANY, "US", &offsetMinus5, &status);
+            break;
+        }
         if (U_FAILURE(status)) {
-            log_err("FAIL: %s failed with %s", api,
+            log_err_status(status, "FAIL: %s failed with %s\n", api,
                     u_errorName(status));
         } else {
             const char* id;
@@ -1583,6 +1607,9 @@ static void TestWeekend() {
     UDateFormat * fmt = udat_open(UDAT_NONE, UDAT_NONE, "en", NULL, 0, NULL, 0, &fmtStatus);
     if (U_SUCCESS(fmtStatus)) {
         udat_applyPattern(fmt, FALSE, logDateFormat, -1);
+    } else {
+        log_data_err("Unable to create UDateFormat - %s\n", u_errorName(fmtStatus));
+        return;
     }
 	for (count = sizeof(testDates)/sizeof(testDates[0]); count-- > 0; ++testDatesPtr) {
         UErrorCode status = U_ZERO_ERROR;

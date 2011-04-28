@@ -23,8 +23,7 @@
 #include "unicode/utypes.h"
 #include "unicode/stringpiece.h"
 #include "unicode/uobject.h"
-#include "uassert.h"
-#include "ustringtrie.h"
+#include "unicode/ustringtrie.h"
 
 U_NAMESPACE_BEGIN
 
@@ -37,19 +36,55 @@ class UVector32;
  * Light-weight, non-const reader class for a BytesTrie.
  * Traverses a byte-serialized data structure with minimal state,
  * for mapping byte sequences to non-negative integer values.
+ *
+ * This class owns the serialized trie data only if it was constructed by
+ * the builder's build() method.
+ * The public constructor and the copy constructor only alias the data (only copy the pointer).
+ * There is no assignment operator.
+ *
+ * This class is not intended for public subclassing.
+ * @draft ICU 4.8
  */
 class U_COMMON_API BytesTrie : public UMemory {
 public:
     /**
      * Constructs a BytesTrie reader instance.
-     * @param trieBytes The trie bytes.
+     *
+     * The trieBytes must contain a copy of a byte sequence from the BytesTrieBuilder,
+     * starting with the first byte of that sequence.
+     * The BytesTrie object will not read more bytes than
+     * the BytesTrieBuilder generated in the corresponding build() call.
+     *
+     * The array is not copied/cloned and must not be modified while
+     * the BytesTrie object is in use.
+     *
+     * @param trieBytes The byte array that contains the serialized trie.
+     * @draft ICU 4.8
      */
     BytesTrie(const void *trieBytes)
-            : bytes_(reinterpret_cast<const uint8_t *>(trieBytes)),
+            : ownedArray_(NULL), bytes_(reinterpret_cast<const uint8_t *>(trieBytes)),
               pos_(bytes_), remainingMatchLength_(-1) {}
 
     /**
+     * Destructor.
+     * @draft ICU 4.8
+     */
+    ~BytesTrie();
+
+    /**
+     * Copy constructor, copies the other trie reader object and its state,
+     * but not the byte array which will be shared. (Shallow copy.)
+     * @param other Another BytesTrie object.
+     * @draft ICU 4.8
+     */
+    BytesTrie(const BytesTrie &other)
+            : ownedArray_(NULL), bytes_(other.bytes_),
+              pos_(other.pos_), remainingMatchLength_(other.remainingMatchLength_) {}
+
+    /**
      * Resets this trie to its initial state.
+     * @return *this
+     * @draft ICU 4.8
      */
     BytesTrie &reset() {
         pos_=bytes_;
@@ -60,9 +95,14 @@ public:
     /**
      * BytesTrie state object, for saving a trie's current state
      * and resetting the trie back to this state later.
+     * @draft ICU 4.8
      */
     class State : public UMemory {
     public:
+        /**
+         * Constructs an empty State.
+         * @draft ICU 4.8
+         */
         State() { bytes=NULL; }
     private:
         friend class BytesTrie;
@@ -74,7 +114,10 @@ public:
 
     /**
      * Saves the state of this trie.
+     * @param state The State object to hold the trie's state.
+     * @return *this
      * @see resetToState
+     * @draft ICU 4.8
      */
     const BytesTrie &saveState(State &state) const {
         state.bytes=bytes_;
@@ -87,8 +130,11 @@ public:
      * Resets this trie to the saved state.
      * If the state object contains no state, or the state of a different trie,
      * then this trie remains unchanged.
+     * @param state The State object which holds a saved trie state.
+     * @return *this
      * @see saveState
      * @see reset
+     * @draft ICU 4.8
      */
     BytesTrie &resetToState(const State &state) {
         if(bytes_==state.bytes && bytes_!=NULL) {
@@ -102,22 +148,32 @@ public:
      * Determines whether the byte sequence so far matches, whether it has a value,
      * and whether another input byte can continue a matching byte sequence.
      * @return The match/value Result.
+     * @draft ICU 4.8
      */
     UStringTrieResult current() const;
 
     /**
      * Traverses the trie from the initial state for this input byte.
      * Equivalent to reset().next(inByte).
+     * @param inByte Input byte value. Values -0x100..-1 are treated like 0..0xff.
+     *               Values below -0x100 and above 0xff will never match.
      * @return The match/value Result.
+     * @draft ICU 4.8
      */
     inline UStringTrieResult first(int32_t inByte) {
         remainingMatchLength_=-1;
+        if(inByte<0) {
+            inByte+=0x100;
+        }
         return nextImpl(bytes_, inByte);
     }
 
     /**
      * Traverses the trie from the current state for this input byte.
+     * @param inByte Input byte value. Values -0x100..-1 are treated like 0..0xff.
+     *               Values below -0x100 and above 0xff will never match.
      * @return The match/value Result.
+     * @draft ICU 4.8
      */
     UStringTrieResult next(int32_t inByte);
 
@@ -131,7 +187,10 @@ public:
      *   result=next(c);
      * return result;
      * \endcode
+     * @param s A string or byte sequence. Can be NULL if length is 0.
+     * @param length The length of the byte sequence. Can be -1 if NUL-terminated.
      * @return The match/value Result.
+     * @draft ICU 4.8
      */
     UStringTrieResult next(const char *s, int32_t length);
 
@@ -141,11 +200,13 @@ public:
      * getValue() can be called multiple times.
      *
      * Do not call getValue() after USTRINGTRIE_NO_MATCH or USTRINGTRIE_NO_VALUE!
+     * @return The value for the byte sequence so far.
+     * @draft ICU 4.8
      */
     inline int32_t getValue() const {
         const uint8_t *pos=pos_;
         int32_t leadByte=*pos++;
-        U_ASSERT(leadByte>=kMinValueLead);
+        // U_ASSERT(leadByte>=kMinValueLead);
         return readValue(pos, leadByte>>1);
     }
 
@@ -156,6 +217,7 @@ public:
      *                    (output-only)
      * @return TRUE if all byte sequences reachable from the current state
      *         map to the same value.
+     * @draft ICU 4.8
      */
     inline UBool hasUniqueValue(int32_t &uniqueValue) const {
         const uint8_t *pos=pos_;
@@ -169,11 +231,13 @@ public:
      * @param out Each next byte is appended to this object.
      *            (Only uses the out.Append(s, length) method.)
      * @return the number of bytes which continue the byte sequence from here
+     * @draft ICU 4.8
      */
     int32_t getNextBytes(ByteSink &out) const;
 
     /**
      * Iterator for all of the (byte sequence, value) pairs in a BytesTrie.
+     * @draft ICU 4.8
      */
     class U_COMMON_API Iterator : public UMemory {
     public:
@@ -186,6 +250,7 @@ public:
          *                  pass the U_SUCCESS() test, or else the function returns
          *                  immediately. Check for U_FAILURE() on output or use with
          *                  function chaining. (See User Guide for details.)
+         * @draft ICU 4.8
          */
         Iterator(const void *trieBytes, int32_t maxStringLength, UErrorCode &errorCode);
 
@@ -198,18 +263,26 @@ public:
          *                  pass the U_SUCCESS() test, or else the function returns
          *                  immediately. Check for U_FAILURE() on output or use with
          *                  function chaining. (See User Guide for details.)
+         * @draft ICU 4.8
          */
         Iterator(const BytesTrie &trie, int32_t maxStringLength, UErrorCode &errorCode);
 
+        /**
+         * Destructor.
+         * @draft ICU 4.8
+         */
         ~Iterator();
 
         /**
          * Resets this iterator to its initial state.
+         * @return *this
+         * @draft ICU 4.8
          */
         Iterator &reset();
 
         /**
          * @return TRUE if there are more elements.
+         * @draft ICU 4.8
          */
         UBool hasNext() const;
 
@@ -220,16 +293,23 @@ public:
          * have a real value, then the value is set to -1.
          * In this case, this "not a real value" is indistinguishable from
          * a real value of -1.
+         * @param errorCode Standard ICU error code. Its input value must
+         *                  pass the U_SUCCESS() test, or else the function returns
+         *                  immediately. Check for U_FAILURE() on output or use with
+         *                  function chaining. (See User Guide for details.)
          * @return TRUE if there is another element.
+         * @draft ICU 4.8
          */
         UBool next(UErrorCode &errorCode);
 
         /**
          * @return The NUL-terminated byte sequence for the last successful next().
+         * @draft ICU 4.8
          */
         const StringPiece &getString() const { return sp_; }
         /**
          * @return The value for the last successful next().
+         * @draft ICU 4.8
          */
         int32_t getValue() const { return value_; }
 
@@ -262,6 +342,20 @@ public:
 private:
     friend class BytesTrieBuilder;
 
+    /**
+     * Constructs a BytesTrie reader instance.
+     * Unlike the public constructor which just aliases an array,
+     * this constructor adopts the builder's array.
+     * This constructor is only called by the builder.
+     */
+    BytesTrie(void *adoptBytes, const void *trieBytes)
+            : ownedArray_(reinterpret_cast<uint8_t *>(adoptBytes)),
+              bytes_(reinterpret_cast<const uint8_t *>(trieBytes)),
+              pos_(bytes_), remainingMatchLength_(-1) {}
+
+    // No assignment operator.
+    BytesTrie &operator=(const BytesTrie &other);
+
     inline void stop() {
         pos_=NULL;
     }
@@ -270,7 +364,7 @@ private:
     // pos is already after the leadByte, and the lead byte is already shifted right by 1.
     static int32_t readValue(const uint8_t *pos, int32_t leadByte);
     static inline const uint8_t *skipValue(const uint8_t *pos, int32_t leadByte) {
-        U_ASSERT(leadByte>=kMinValueLead);
+        // U_ASSERT(leadByte>=kMinValueLead);
         if(leadByte>=(kMinTwoByteValueLead<<1)) {
             if(leadByte<(kMinThreeByteValueLead<<1)) {
                 ++pos;
@@ -406,6 +500,8 @@ private:
 
     static const int32_t kMaxTwoByteDelta=((kMinThreeByteDeltaLead-kMinTwoByteDeltaLead)<<8)-1;  // 0x2fff
     static const int32_t kMaxThreeByteDelta=((kFourByteDeltaLead-kMinThreeByteDeltaLead)<<16)-1;  // 0xdffff
+
+    uint8_t *ownedArray_;
 
     // Fixed value referencing the BytesTrie bytes.
     const uint8_t *bytes_;

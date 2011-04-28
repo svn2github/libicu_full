@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT: 
- * Copyright (c) 2004-2010, International Business Machines Corporation and
+ * Copyright (c) 2004-2011, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 /********************************************************************************
@@ -119,6 +119,8 @@ static void test_assert_utext(const char *expected, UText *actual, const char *f
 static void TestRegexCAPI(void);
 static void TestBug4315(void);
 static void TestUTextAPI(void);
+static void TestRefreshInput(void);
+static void TestBug8421(void);
 
 void addURegexTest(TestNode** root);
 
@@ -127,6 +129,8 @@ void addURegexTest(TestNode** root)
     addTest(root, &TestRegexCAPI, "regex/TestRegexCAPI");
     addTest(root, &TestBug4315,   "regex/TestBug4315");
     addTest(root, &TestUTextAPI,  "regex/TestUTextAPI");
+    addTest(root, &TestRefreshInput, "regex/TestRefreshInput");
+    addTest(root, &TestBug8421,   "regex/TestBug8421");
 }
 
 /*
@@ -1221,15 +1225,16 @@ static void TestRegexCAPI(void) {
 
             /* The TEST_ASSERT_SUCCESS call above should change too... */
             if(U_SUCCESS(status)) {
-                TEST_ASSERT(numFields == 4);
+                TEST_ASSERT(numFields == 5);
                 TEST_ASSERT_STRING("first ",  fields[0], TRUE);
                 TEST_ASSERT_STRING("tag-a",   fields[1], TRUE);
                 TEST_ASSERT_STRING(" second", fields[2], TRUE);
                 TEST_ASSERT_STRING("tag-b",   fields[3], TRUE);
-                TEST_ASSERT(fields[4] == NULL);
+                TEST_ASSERT_STRING("",        fields[4], TRUE);
+                TEST_ASSERT(fields[5] == NULL);
                 TEST_ASSERT(fields[8] == NULL);
                 TEST_ASSERT(!memcmp(&fields[9],&minus1,sizeof(UChar*)));
-                spaceNeeded = strlen("first .tag-a. second.tag-b.");  /* "." at NUL positions */
+                spaceNeeded = strlen("first .tag-a. second.tag-b..");  /* "." at NUL positions */
                 TEST_ASSERT(spaceNeeded == requiredCapacity);
             }
         }
@@ -2130,13 +2135,15 @@ static void TestUTextAPI(void) {
                 const char str_taga[] = { 0x74, 0x61, 0x67, 0x2d, 0x61, 0x00 }; /* tag-a */
                 const char str_second[] = { 0x20, 0x73, 0x65, 0x63, 0x6f, 0x6e, 0x64, 0x00 }; /*  second */
                 const char str_tagb[] = { 0x74, 0x61, 0x67, 0x2d, 0x62, 0x00 }; /* tag-b */
+                const char str_empty[] = { 0x00 };
 
-                TEST_ASSERT(numFields == 4);
+                TEST_ASSERT(numFields == 5);
                 TEST_ASSERT_UTEXT(str_first,  fields[0]);
                 TEST_ASSERT_UTEXT(str_taga,   fields[1]);
                 TEST_ASSERT_UTEXT(str_second, fields[2]);
                 TEST_ASSERT_UTEXT(str_tagb,   fields[3]);
-                TEST_ASSERT(fields[4] == NULL);
+                TEST_ASSERT_UTEXT(str_empty,  fields[4]);
+                TEST_ASSERT(fields[5] == NULL);
                 TEST_ASSERT(fields[8] == NULL);
                 TEST_ASSERT(fields[9] == &patternText);
             }
@@ -2150,4 +2157,76 @@ static void TestUTextAPI(void) {
     utext_close(&patternText);
 }
 
+
+static void TestRefreshInput(void) {
+    /*
+     *  RefreshInput changes out the input of a URegularExpression without
+     *    changing anything else in the match state.  Used with Java JNI,
+     *    when Java moves the underlying string storage.   This test
+     *    runs a find() loop, moving the text after the first match.
+     *    The right number of matches should still be found.
+     */
+    UChar testStr[]  = {0x41, 0x20, 0x42, 0x20, 0x43, 0x0};  /* = "A B C"  */
+    UChar movedStr[] = {   0,    0,    0,    0,    0,   0};
+    UErrorCode status = U_ZERO_ERROR;
+    URegularExpression *re;
+    UText ut1 = UTEXT_INITIALIZER;
+    UText ut2 = UTEXT_INITIALIZER;
+    
+    re = uregex_openC("[ABC]", 0, 0, &status);
+    TEST_ASSERT_SUCCESS(status);
+
+    utext_openUChars(&ut1, testStr, -1, &status);
+    TEST_ASSERT_SUCCESS(status);
+    uregex_setUText(re, &ut1, &status);
+    TEST_ASSERT_SUCCESS(status);
+
+    /* Find the first match "A" in the original string */
+    TEST_ASSERT(uregex_findNext(re, &status));
+    TEST_ASSERT(uregex_start(re, 0, &status) == 0);
+    
+    /* Move the string, kill the original string.  */
+    u_strcpy(movedStr, testStr);
+    u_memset(testStr, 0, u_strlen(testStr));
+    utext_openUChars(&ut2, movedStr, -1, &status);
+    TEST_ASSERT_SUCCESS(status);
+    uregex_refreshUText(re, &ut2, &status);
+    TEST_ASSERT_SUCCESS(status);
+
+    /* Find the following two matches, now working in the moved string. */
+    TEST_ASSERT(uregex_findNext(re, &status));
+    TEST_ASSERT(uregex_start(re, 0, &status) == 2);
+    TEST_ASSERT(uregex_findNext(re, &status));
+    TEST_ASSERT(uregex_start(re, 0, &status) == 4);
+    TEST_ASSERT(FALSE == uregex_findNext(re, &status));
+
+    uregex_close(re);
+}
+
+
+static void TestBug8421(void) {
+    /* Bug 8421:  setTimeLimit on a regular expresssion before setting text to be matched
+     *             was failing. 
+     */
+    URegularExpression *re;
+    UErrorCode status = U_ZERO_ERROR;
+    int32_t  limit = -1;
+
+    re = uregex_openC("abc", 0, 0, &status);
+    TEST_ASSERT_SUCCESS(status);
+
+    limit = uregex_getTimeLimit(re, &status);
+    TEST_ASSERT_SUCCESS(status);
+    TEST_ASSERT(limit == 0);
+
+    uregex_setTimeLimit(re, 100, &status);
+    TEST_ASSERT_SUCCESS(status);
+    limit = uregex_getTimeLimit(re, &status);
+    TEST_ASSERT_SUCCESS(status);
+    TEST_ASSERT(limit == 100);
+
+    uregex_close(re);
+}
+
+    
 #endif   /*  !UCONFIG_NO_REGULAR_EXPRESSIONS */

@@ -1,19 +1,15 @@
 ﻿// ***************************************************************************
 // *
-// * Copyright (C) 2010 International Business Machines
+// * Copyright (C) 2011 International Business Machines
 // * Corporation and others.  All Rights Reserved.
 // * Tool: com.ibm.icu.dev.tool.cldr.LDML2ICUConverter.java
 // * Source File:<path>/common/main/en_SG.xml
 // *
 // ***************************************************************************
 en_SG{
-    Version{"2.0.45.82"}
+    Version{"2.0.53.54"}
     calendar{
         gregorian{
-            DateTimeElements:intvector{
-                1,
-                4,
-            }
             DateTimePatterns{
                 "h:mm:ss a zzzz",
                 "h:mm:ss a z",
@@ -33,6 +29,7 @@ en_SG{
                 MEd{"E, d/M"}
                 Md{"d/M"}
                 yMEd{"EEE, d/M/yyyy"}
+                yMd{"d/M/yyyy"}
             }
             intervalFormats{
                 MEd{

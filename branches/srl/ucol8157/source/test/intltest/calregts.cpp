@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT: 
- * Copyright (c) 1997-2010, International Business Machines Corporation
+ * Copyright (c) 1997-2011, International Business Machines Corporation
  * and others. All Rights Reserved.
  ********************************************************************/
  
@@ -83,6 +83,7 @@ CalendarRegressionTest::runIndexedTest( int32_t index, UBool exec, const char* &
         CASE(44,TestDeprecates);
         CASE(45,TestT5555);
         CASE(46,TestT6745);
+        CASE(47,TestT8057);
     default: name = ""; break;
     }
 }
@@ -216,6 +217,10 @@ CalendarRegressionTest::test4031502()
     // require the host zone to be set; it can be set in Java.
     UErrorCode status = U_ZERO_ERROR;
     StringEnumeration* ids = TimeZone::createEnumeration();
+    if (ids == NULL) {
+        dataerrln("Unable to create TimeZone Enumeration.");
+        return;
+    }
     UBool bad = FALSE;
     TimeZone* tz =TimeZone::createTimeZone("Asia/Riyadh87");
     failure(status, "new TimeZone");
@@ -280,6 +285,10 @@ void CalendarRegressionTest::test4040996()
 {
     int32_t count = 0;
     StringEnumeration* ids = TimeZone::createEnumeration(-8 * 60 * 60 * 1000);
+    if (ids == NULL) {
+        dataerrln("Unable to create TimeZone enumeration.");
+        return;
+    }
     UErrorCode status = U_ZERO_ERROR;    
     count = ids->count(status);
     SimpleTimeZone *pdt = new SimpleTimeZone(-8 * 60 * 60 * 1000, *ids->snext(status));
@@ -2589,7 +2598,7 @@ void CalendarRegressionTest::TestTimeZoneTransitionAdd() {
 
     StringEnumeration *tz = TimeZone::createEnumeration();
     if (tz == NULL) {
-        errln("FAIL: TimeZone::createEnumeration");
+        dataerrln("FAIL: TimeZone::createEnumeration");
         return;
     }
 
@@ -2762,7 +2771,43 @@ void CalendarRegressionTest::TestDeprecates(void)
 
     delete c1;
     delete c2;
+
 }
 
+void CalendarRegressionTest::TestT8057(void) {
+    // Set the calendar to the last day in a leap year
+    UErrorCode status = U_ZERO_ERROR;
+    GregorianCalendar *cal = (GregorianCalendar*)Calendar::createInstance(status);
+    if(U_FAILURE(status)) {
+        errln("Error creating Calendar: %s", u_errorName(status));
+        delete cal;
+        return;
+    }
+    cal->setLenient(FALSE);
+    cal->clear();
+    cal->set(2008, UCAL_DECEMBER, 31);
+
+    // Force calculating then fields once.
+    UDate t = cal->getTime(status);
+    if(U_FAILURE(status)) {
+        errln("Error while calculating the date");
+        delete cal;
+        return;
+    }
+
+    UDate expected = 1262246400000.0; // 2009-12-31 00:00 PST
+
+    cal->add(UCAL_YEAR, 1, status);
+    t = cal->getTime(status);
+    if (U_SUCCESS(status)) {
+        if (t != expected) {
+            dataerrln((UnicodeString)"FAIL: wrong date after add: expected=" + expected + " returned=" + t);
+        }
+    } else {
+        errln("FAIL: error while adding one year");
+    }
+
+    delete cal;
+}
 
 #endif /* #if !UCONFIG_NO_FORMATTING */

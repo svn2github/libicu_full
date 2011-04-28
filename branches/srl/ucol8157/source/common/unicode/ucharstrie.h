@@ -24,66 +24,67 @@
 #include "unicode/utypes.h"
 #include "unicode/unistr.h"
 #include "unicode/uobject.h"
-#include "uassert.h"
-#include "ustringtrie.h"
+#include "unicode/ustringtrie.h"
 
 U_NAMESPACE_BEGIN
 
+class Appendable;
 class UCharsTrieBuilder;
 class UVector32;
-
-/**
- * Base class for objects to which Unicode characters and strings can be appended.
- * Combines elements of Java Appendable and ICU4C ByteSink.
- * TODO: Should live in separate files, could be public API.
- */
-class U_TOOLUTIL_API Appendable : public UObject {
-public:
-    /**
-     * Appends a 16-bit code unit.
-     * @param c code unit
-     * @return *this
-     */
-    virtual Appendable &append(UChar c) = 0;
-    /**
-     * Appends a code point; has a default implementation.
-     * @param c code point
-     * @return *this
-     */
-    virtual Appendable &appendCodePoint(UChar32 c);
-    /**
-     * Appends a string; has a default implementation.
-     * @param s string
-     * @param length string length, or -1 if NUL-terminated
-     * @return *this
-     */
-    virtual Appendable &append(const UChar *s, int32_t length);
-
-    // TODO: getAppendBuffer(), see ByteSink
-    // TODO: flush() (?) see ByteSink
-
-private:
-    // No ICU "poor man's RTTI" for this class nor its subclasses.
-    virtual UClassID getDynamicClassID() const;
-};
 
 /**
  * Light-weight, non-const reader class for a UCharsTrie.
  * Traverses a UChar-serialized data structure with minimal state,
  * for mapping strings (16-bit-unit sequences) to non-negative integer values.
+ *
+ * This class owns the serialized trie data only if it was constructed by
+ * the builder's build() method.
+ * The public constructor and the copy constructor only alias the data (only copy the pointer).
+ * There is no assignment operator.
+ *
+ * This class is not intended for public subclassing.
+ * @draft ICU 4.8
  */
-class U_TOOLUTIL_API UCharsTrie : public UMemory {
+class U_COMMON_API UCharsTrie : public UMemory {
 public:
     /**
      * Constructs a UCharsTrie reader instance.
-     * @param trieUChars The trie UChars.
+     *
+     * The trieUChars must contain a copy of a UChar sequence from the UCharsTrieBuilder,
+     * starting with the first UChar of that sequence.
+     * The UCharsTrie object will not read more UChars than
+     * the UCharsTrieBuilder generated in the corresponding build() call.
+     *
+     * The array is not copied/cloned and must not be modified while
+     * the UCharsTrie object is in use.
+     *
+     * @param trieUChars The UChar array that contains the serialized trie.
+     * @draft ICU 4.8
      */
     UCharsTrie(const UChar *trieUChars)
-            : uchars_(trieUChars),
+            : ownedArray_(NULL), uchars_(trieUChars),
               pos_(uchars_), remainingMatchLength_(-1) {}
 
     /**
+     * Destructor.
+     * @draft ICU 4.8
+     */
+    ~UCharsTrie();
+
+    /**
+     * Copy constructor, copies the other trie reader object and its state,
+     * but not the UChar array which will be shared. (Shallow copy.)
+     * @param other Another UCharsTrie object.
+     * @draft ICU 4.8
+     */
+    UCharsTrie(const UCharsTrie &other)
+            : ownedArray_(NULL), uchars_(other.uchars_),
+              pos_(other.pos_), remainingMatchLength_(other.remainingMatchLength_) {}
+
+    /**
      * Resets this trie to its initial state.
+     * @return *this
+     * @draft ICU 4.8
      */
     UCharsTrie &reset() {
         pos_=uchars_;
@@ -94,9 +95,14 @@ public:
     /**
      * UCharsTrie state object, for saving a trie's current state
      * and resetting the trie back to this state later.
+     * @draft ICU 4.8
      */
     class State : public UMemory {
     public:
+        /**
+         * Constructs an empty State.
+         * @draft ICU 4.8
+         */
         State() { uchars=NULL; }
     private:
         friend class UCharsTrie;
@@ -108,7 +114,10 @@ public:
 
     /**
      * Saves the state of this trie.
+     * @param state The State object to hold the trie's state.
+     * @return *this
      * @see resetToState
+     * @draft ICU 4.8
      */
     const UCharsTrie &saveState(State &state) const {
         state.uchars=uchars_;
@@ -121,8 +130,11 @@ public:
      * Resets this trie to the saved state.
      * If the state object contains no state, or the state of a different trie,
      * then this trie remains unchanged.
+     * @param state The State object which holds a saved trie state.
+     * @return *this
      * @see saveState
      * @see reset
+     * @draft ICU 4.8
      */
     UCharsTrie &resetToState(const State &state) {
         if(uchars_==state.uchars && uchars_!=NULL) {
@@ -136,13 +148,16 @@ public:
      * Determines whether the string so far matches, whether it has a value,
      * and whether another input UChar can continue a matching string.
      * @return The match/value Result.
+     * @draft ICU 4.8
      */
     UStringTrieResult current() const;
 
     /**
      * Traverses the trie from the initial state for this input UChar.
      * Equivalent to reset().next(uchar).
+     * @param uchar Input char value. Values below 0 and above 0xffff will never match.
      * @return The match/value Result.
+     * @draft ICU 4.8
      */
     inline UStringTrieResult first(int32_t uchar) {
         remainingMatchLength_=-1;
@@ -153,7 +168,9 @@ public:
      * Traverses the trie from the initial state for the
      * one or two UTF-16 code units for this input code point.
      * Equivalent to reset().nextForCodePoint(cp).
+     * @param cp A Unicode code point 0..0x10ffff.
      * @return The match/value Result.
+     * @draft ICU 4.8
      */
     inline UStringTrieResult firstForCodePoint(UChar32 cp) {
         return cp<=0xffff ?
@@ -165,14 +182,18 @@ public:
 
     /**
      * Traverses the trie from the current state for this input UChar.
+     * @param uchar Input char value. Values below 0 and above 0xffff will never match.
      * @return The match/value Result.
+     * @draft ICU 4.8
      */
     UStringTrieResult next(int32_t uchar);
 
     /**
      * Traverses the trie from the current state for the
      * one or two UTF-16 code units for this input code point.
+     * @param cp A Unicode code point 0..0x10ffff.
      * @return The match/value Result.
+     * @draft ICU 4.8
      */
     inline UStringTrieResult nextForCodePoint(UChar32 cp) {
         return cp<=0xffff ?
@@ -192,7 +213,10 @@ public:
      *   result=next(c);
      * return result;
      * \endcode
+     * @param s A string. Can be NULL if length is 0.
+     * @param length The length of the string. Can be -1 if NUL-terminated.
      * @return The match/value Result.
+     * @draft ICU 4.8
      */
     UStringTrieResult next(const UChar *s, int32_t length);
 
@@ -202,11 +226,13 @@ public:
      * getValue() can be called multiple times.
      *
      * Do not call getValue() after USTRINGTRIE_NO_MATCH or USTRINGTRIE_NO_VALUE!
+     * @return The value for the string so far.
+     * @draft ICU 4.8
      */
     inline int32_t getValue() const {
         const UChar *pos=pos_;
         int32_t leadUnit=*pos++;
-        U_ASSERT(leadUnit>=kMinValueLead);
+        // U_ASSERT(leadUnit>=kMinValueLead);
         return leadUnit&kValueIsFinal ?
             readValue(pos, leadUnit&0x7fff) : readNodeValue(pos, leadUnit);
     }
@@ -218,6 +244,7 @@ public:
      *                    (output-only)
      * @return TRUE if all strings reachable from the current state
      *         map to the same value.
+     * @draft ICU 4.8
      */
     inline UBool hasUniqueValue(int32_t &uniqueValue) const {
         const UChar *pos=pos_;
@@ -229,15 +256,16 @@ public:
      * Finds each UChar which continues the string from the current state.
      * That is, each UChar c for which it would be next(c)!=USTRINGTRIE_NO_MATCH now.
      * @param out Each next UChar is appended to this object.
-     *            (Only uses the out.append(c) method.)
      * @return the number of UChars which continue the string from here
+     * @draft ICU 4.8
      */
     int32_t getNextUChars(Appendable &out) const;
 
     /**
      * Iterator for all of the (string, value) pairs in a UCharsTrie.
+     * @draft ICU 4.8
      */
-    class U_TOOLUTIL_API Iterator : public UMemory {
+    class U_COMMON_API Iterator : public UMemory {
     public:
         /**
          * Iterates from the root of a UChar-serialized UCharsTrie.
@@ -248,6 +276,7 @@ public:
          *                  pass the U_SUCCESS() test, or else the function returns
          *                  immediately. Check for U_FAILURE() on output or use with
          *                  function chaining. (See User Guide for details.)
+         * @draft ICU 4.8
          */
         Iterator(const UChar *trieUChars, int32_t maxStringLength, UErrorCode &errorCode);
 
@@ -260,18 +289,26 @@ public:
          *                  pass the U_SUCCESS() test, or else the function returns
          *                  immediately. Check for U_FAILURE() on output or use with
          *                  function chaining. (See User Guide for details.)
+         * @draft ICU 4.8
          */
         Iterator(const UCharsTrie &trie, int32_t maxStringLength, UErrorCode &errorCode);
 
+        /**
+         * Destructor.
+         * @draft ICU 4.8
+         */
         ~Iterator();
 
         /**
          * Resets this iterator to its initial state.
+         * @return *this
+         * @draft ICU 4.8
          */
         Iterator &reset();
 
         /**
          * @return TRUE if there are more elements.
+         * @draft ICU 4.8
          */
         UBool hasNext() const;
 
@@ -282,16 +319,23 @@ public:
          * have a real value, then the value is set to -1.
          * In this case, this "not a real value" is indistinguishable from
          * a real value of -1.
+         * @param errorCode Standard ICU error code. Its input value must
+         *                  pass the U_SUCCESS() test, or else the function returns
+         *                  immediately. Check for U_FAILURE() on output or use with
+         *                  function chaining. (See User Guide for details.)
          * @return TRUE if there is another element.
+         * @draft ICU 4.8
          */
         UBool next(UErrorCode &errorCode);
 
         /**
          * @return The string for the last successful next().
+         * @draft ICU 4.8
          */
         const UnicodeString &getString() const { return str_; }
         /**
          * @return The value for the last successful next().
+         * @draft ICU 4.8
          */
         int32_t getValue() const { return value_; }
 
@@ -328,6 +372,19 @@ public:
 private:
     friend class UCharsTrieBuilder;
 
+    /**
+     * Constructs a UCharsTrie reader instance.
+     * Unlike the public constructor which just aliases an array,
+     * this constructor adopts the builder's array.
+     * This constructor is only called by the builder.
+     */
+    UCharsTrie(UChar *adoptUChars, const UChar *trieUChars)
+            : ownedArray_(adoptUChars), uchars_(trieUChars),
+              pos_(uchars_), remainingMatchLength_(-1) {}
+
+    // No assignment operator.
+    UCharsTrie &operator=(const UCharsTrie &other);
+
     inline void stop() {
         pos_=NULL;
     }
@@ -361,7 +418,7 @@ private:
     }
 
     static inline int32_t readNodeValue(const UChar *pos, int32_t leadUnit) {
-        U_ASSERT(kMinValueLead<=leadUnit && leadUnit<kValueIsFinal);
+        // U_ASSERT(kMinValueLead<=leadUnit && leadUnit<kValueIsFinal);
         int32_t value;
         if(leadUnit<kMinTwoUnitNodeValueLead) {
             value=(leadUnit>>6)-1;
@@ -373,7 +430,7 @@ private:
         return value;
     }
     static inline const UChar *skipNodeValue(const UChar *pos, int32_t leadUnit) {
-        U_ASSERT(kMinValueLead<=leadUnit && leadUnit<kValueIsFinal);
+        // U_ASSERT(kMinValueLead<=leadUnit && leadUnit<kValueIsFinal);
         if(leadUnit>=kMinTwoUnitNodeValueLead) {
             if(leadUnit<kThreeUnitNodeValueLead) {
                 ++pos;
@@ -512,6 +569,8 @@ private:
     static const int32_t kThreeUnitDeltaLead=0xffff;
 
     static const int32_t kMaxTwoUnitDelta=((kThreeUnitDeltaLead-kMinTwoUnitDeltaLead)<<16)-1;  // 0x03feffff
+
+    UChar *ownedArray_;
 
     // Fixed value referencing the UCharsTrie words.
     const UChar *uchars_;

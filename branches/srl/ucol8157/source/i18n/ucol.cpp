@@ -542,8 +542,13 @@ ucol_safeClone(const UCollator *coll, void *stackBuffer, int32_t * pBufferSize, 
     int32_t imageSize = 0;
     int32_t rulesSize = 0;
     int32_t rulesPadding = 0;
+    int32_t defaultReorderCodesSize = 0;
+    int32_t reorderCodesSize = 0;
     uint8_t *image;
     UChar *rules;
+    int32_t* defaultReorderCodes;
+    int32_t* reorderCodes;
+    uint8_t* leadBytePermutationTable;
     UBool colAllocated = FALSE;
     UBool imageAllocated = FALSE;
 
@@ -554,13 +559,26 @@ ucol_safeClone(const UCollator *coll, void *stackBuffer, int32_t * pBufferSize, 
        *status = U_ILLEGAL_ARGUMENT_ERROR;
         return 0;
     }
+
     if (coll->rules && coll->freeRulesOnClose) {
         rulesSize = (int32_t)(coll->rulesLength + 1)*sizeof(UChar);
         rulesPadding = (int32_t)(bufferSizeNeeded % sizeof(UChar));
         bufferSizeNeeded += rulesSize + rulesPadding;
     }
-
-    if (stackBuffer && *pBufferSize <= 0){ /* 'preflighting' request - set needed size into *pBufferSize */
+    // no padding for alignment needed from here since the next two are 4 byte quantities
+    if (coll->defaultReorderCodes) {
+        defaultReorderCodesSize = coll->defaultReorderCodesLength * sizeof(int32_t);
+        bufferSizeNeeded += defaultReorderCodesSize;
+    }
+    if (coll->reorderCodes) {
+        reorderCodesSize = coll->reorderCodesLength * sizeof(int32_t);
+        bufferSizeNeeded += reorderCodesSize;
+    }
+    if (coll->leadBytePermutationTable) {
+        bufferSizeNeeded += 256 * sizeof(uint8_t);
+    }
+    
+    if (stackBuffer && *pBufferSize <= 0) { /* 'preflighting' request - set needed size into *pBufferSize */
         *pBufferSize =  bufferSizeNeeded;
         return 0;
     }
@@ -596,6 +614,10 @@ ucol_safeClone(const UCollator *coll, void *stackBuffer, int32_t * pBufferSize, 
     }
     localCollator = (UCollator *)stackBufferChars;
     rules = (UChar *)(stackBufferChars + sizeof(UCollator) + rulesPadding);
+    defaultReorderCodes = (int32_t*)((uint8_t*)rules + rulesSize);
+    reorderCodes = (int32_t*)((uint8_t*)defaultReorderCodes + defaultReorderCodesSize);
+    leadBytePermutationTable = (uint8_t*)reorderCodes + reorderCodesSize;
+
     {
         UErrorCode tempStatus = U_ZERO_ERROR;
         imageSize = ucol_cloneBinary(coll, NULL, 0, &tempStatus);
@@ -628,6 +650,25 @@ ucol_safeClone(const UCollator *coll, void *stackBuffer, int32_t * pBufferSize, 
         }
         localCollator->freeRulesOnClose = FALSE;
         localCollator->rulesLength = coll->rulesLength;
+    }
+    
+    // collator reordering
+    if (coll->defaultReorderCodes) {
+        localCollator->defaultReorderCodes = 
+            (int32_t*) uprv_memcpy(defaultReorderCodes, coll->defaultReorderCodes, coll->defaultReorderCodesLength * sizeof(int32_t));
+        localCollator->defaultReorderCodesLength = coll->defaultReorderCodesLength;
+        localCollator->freeDefaultReorderCodesOnClose = FALSE;
+    }
+    if (coll->reorderCodes) {
+        localCollator->reorderCodes = 
+            (int32_t*)uprv_memcpy(reorderCodes, coll->reorderCodes, coll->reorderCodesLength * sizeof(int32_t));
+        localCollator->reorderCodesLength = coll->reorderCodesLength;
+        localCollator->freeReorderCodesOnClose = FALSE;
+    }
+    if (coll->leadBytePermutationTable) {
+        localCollator->leadBytePermutationTable = 
+            (uint8_t*) uprv_memcpy(leadBytePermutationTable, coll->leadBytePermutationTable, 256);
+        localCollator->freeLeadBytePermutationTableOnClose = FALSE;
     }
 
     int32_t i;
@@ -673,10 +714,14 @@ ucol_close(UCollator *coll)
         if(coll->image != NULL && coll->freeImageOnClose) {
             uprv_free((UCATableHeader *)coll->image);
         }
-        if(coll->leadBytePermutationTable != NULL) {
+
+        if(coll->leadBytePermutationTable != NULL && coll->freeLeadBytePermutationTableOnClose == TRUE) {
             uprv_free(coll->leadBytePermutationTable);
         }
-        if(coll->reorderCodes != NULL) {
+        if(coll->defaultReorderCodes != NULL && coll->freeDefaultReorderCodesOnClose == TRUE) {
+            uprv_free(coll->defaultReorderCodes);
+        }
+        if(coll->reorderCodes != NULL && coll->freeReorderCodesOnClose == TRUE) {
             uprv_free(coll->reorderCodes);
         }
 
@@ -872,9 +917,14 @@ UCollator* ucol_initCollator(const UCATableHeader *image, UCollator *fillIn, con
     result->rules = NULL;
     result->rulesLength = 0;
     result->freeRulesOnClose = FALSE;
+    result->defaultReorderCodes = NULL;
+    result->defaultReorderCodesLength = 0;
+    result->freeDefaultReorderCodesOnClose = FALSE;
     result->reorderCodes = NULL;
     result->reorderCodesLength = 0;
+    result->freeReorderCodesOnClose = FALSE;
     result->leadBytePermutationTable = NULL;
+    result->freeLeadBytePermutationTableOnClose = FALSE;
 
     /* get the version info from UCATableHeader and populate the Collator struct*/
     result->dataVersion[0] = result->image->version[0]; /* UCA Builder version*/
@@ -1450,173 +1500,176 @@ inline uint32_t ucol_IGetNextCE(const UCollator *coll, collIterate *collationSou
     UChar ch = 0;
     collationSource->offsetReturn = NULL;
 
-    for (;;)                           /* Loop handles case when incremental normalize switches   */
-    {                                  /*   to or from the side buffer / original string, and we  */
-        /*   need to start again to get the next character.        */
+    do {
+        for (;;)                           /* Loop handles case when incremental normalize switches   */
+        {                                  /*   to or from the side buffer / original string, and we  */
+            /*   need to start again to get the next character.        */
 
-        if ((collationSource->flags & (UCOL_ITER_HASLEN | UCOL_ITER_INNORMBUF | UCOL_ITER_NORM | UCOL_HIRAGANA_Q | UCOL_USE_ITERATOR)) == 0)
-        {
-            // The source string is null terminated and we're not working from the side buffer,
-            //   and we're not normalizing.  This is the fast path.
-            //   (We can be in the side buffer for Thai pre-vowel reordering even when not normalizing.)
-            ch = *collationSource->pos++;
-            if (ch != 0) {
+            if ((collationSource->flags & (UCOL_ITER_HASLEN | UCOL_ITER_INNORMBUF | UCOL_ITER_NORM | UCOL_HIRAGANA_Q | UCOL_USE_ITERATOR)) == 0)
+            {
+                // The source string is null terminated and we're not working from the side buffer,
+                //   and we're not normalizing.  This is the fast path.
+                //   (We can be in the side buffer for Thai pre-vowel reordering even when not normalizing.)
+                ch = *collationSource->pos++;
+                if (ch != 0) {
+                    break;
+                }
+                else {
+                    return UCOL_NO_MORE_CES;
+                }
+            }
+
+            if (collationSource->flags & UCOL_ITER_HASLEN) {
+                // Normal path for strings when length is specified.
+                //   (We can't be in side buffer because it is always null terminated.)
+                if (collationSource->pos >= collationSource->endp) {
+                    // Ran off of the end of the main source string.  We're done.
+                    return UCOL_NO_MORE_CES;
+                }
+                ch = *collationSource->pos++;
+            }
+            else if(collationSource->flags & UCOL_USE_ITERATOR) {
+                UChar32 iterCh = collationSource->iterator->next(collationSource->iterator);
+                if(iterCh == U_SENTINEL) {
+                    return UCOL_NO_MORE_CES;
+                }
+                ch = (UChar)iterCh;
+            }
+            else
+            {
+                // Null terminated string.
+                ch = *collationSource->pos++;
+                if (ch == 0) {
+                    // Ran off end of buffer.
+                    if ((collationSource->flags & UCOL_ITER_INNORMBUF) == 0) {
+                        // Ran off end of main string. backing up one character.
+                        collationSource->pos--;
+                        return UCOL_NO_MORE_CES;
+                    }
+                    else
+                    {
+                        // Hit null in the normalize side buffer.
+                        // Usually this means the end of the normalized data,
+                        // except for one odd case: a null followed by combining chars,
+                        //   which is the case if we are at the start of the buffer.
+                        if (collationSource->pos == collationSource->writableBuffer.getBuffer()+1) {
+                            break;
+                        }
+
+                        //  Null marked end of side buffer.
+                        //   Revert to the main string and
+                        //   loop back to top to try again to get a character.
+                        collationSource->pos   = collationSource->fcdPosition;
+                        collationSource->flags = collationSource->origFlags;
+                        continue;
+                    }
+                }
+            }
+
+            if(collationSource->flags&UCOL_HIRAGANA_Q) {
+                /* Codepoints \u3099-\u309C are both Hiragana and Katakana. Set the flag
+                 * based on whether the previous codepoint was Hiragana or Katakana.
+                 */
+                if(((ch>=0x3040 && ch<=0x3096) || (ch >= 0x309d && ch <= 0x309f)) ||
+                        ((collationSource->flags & UCOL_WAS_HIRAGANA) && (ch >= 0x3099 && ch <= 0x309C))) {
+                    collationSource->flags |= UCOL_WAS_HIRAGANA;
+                } else {
+                    collationSource->flags &= ~UCOL_WAS_HIRAGANA;
+                }
+            }
+
+            // We've got a character.  See if there's any fcd and/or normalization stuff to do.
+            //    Note that UCOL_ITER_NORM flag is always zero when we are in the side buffer.
+            if ((collationSource->flags & UCOL_ITER_NORM) == 0) {
                 break;
             }
-            else {
-                return UCOL_NO_MORE_CES;
-            }
-        }
 
-        if (collationSource->flags & UCOL_ITER_HASLEN) {
-            // Normal path for strings when length is specified.
-            //   (We can't be in side buffer because it is always null terminated.)
-            if (collationSource->pos >= collationSource->endp) {
-                // Ran off of the end of the main source string.  We're done.
-                return UCOL_NO_MORE_CES;
+            if (collationSource->fcdPosition >= collationSource->pos) {
+                // An earlier FCD check has already covered the current character.
+                // We can go ahead and process this char.
+                break;
             }
-            ch = *collationSource->pos++;
-        }
-        else if(collationSource->flags & UCOL_USE_ITERATOR) {
-            UChar32 iterCh = collationSource->iterator->next(collationSource->iterator);
-            if(iterCh == U_SENTINEL) {
-                return UCOL_NO_MORE_CES;
+
+            if (ch < ZERO_CC_LIMIT_ ) {
+                // Fast fcd safe path.  Trailing combining class == 0.  This char is OK.
+                break;
             }
-            ch = (UChar)iterCh;
+
+            if (ch < NFC_ZERO_CC_BLOCK_LIMIT_) {
+                // We need to peek at the next character in order to tell if we are FCD
+                if ((collationSource->flags & UCOL_ITER_HASLEN) && collationSource->pos >= collationSource->endp) {
+                    // We are at the last char of source string.
+                    //  It is always OK for FCD check.
+                    break;
+                }
+
+                // Not at last char of source string (or we'll check against terminating null).  Do the FCD fast test
+                if (*collationSource->pos < NFC_ZERO_CC_BLOCK_LIMIT_) {
+                    break;
+                }
+            }
+
+
+            // Need a more complete FCD check and possible normalization.
+            if (collIterFCD(collationSource)) {
+                collIterNormalize(collationSource);
+            }
+            if ((collationSource->flags & UCOL_ITER_INNORMBUF) == 0) {
+                //  No normalization was needed.  Go ahead and process the char we already had.
+                break;
+            }
+
+            // Some normalization happened.  Next loop iteration will pick up a char
+            //   from the normalization buffer.
+
+        }   // end for (;;)
+
+
+        if (ch <= 0xFF) {
+            /*  For latin-1 characters we never need to fall back to the UCA table        */
+            /*    because all of the UCA data is replicated in the latinOneMapping array  */
+            order = coll->latinOneMapping[ch];
+            if (order > UCOL_NOT_FOUND) {
+                order = ucol_prv_getSpecialCE(coll, ch, order, collationSource, status);
+            }
         }
         else
         {
-            // Null terminated string.
-            ch = *collationSource->pos++;
-            if (ch == 0) {
-                // Ran off end of buffer.
-                if ((collationSource->flags & UCOL_ITER_INNORMBUF) == 0) {
-                    // Ran off end of main string. backing up one character.
-                    collationSource->pos--;
-                    return UCOL_NO_MORE_CES;
+            // Always use UCA for Han, Hangul
+            // (Han extension A is before main Han block)
+            // **** Han compatibility chars ?? ****
+            if ((collationSource->flags & UCOL_FORCE_HAN_IMPLICIT) != 0 &&
+                (ch >= UCOL_FIRST_HAN_A && ch <= UCOL_LAST_HANGUL)) {
+                if (ch > UCOL_LAST_HAN && ch < UCOL_FIRST_HANGUL) {
+                    // between the two target ranges; do normal lookup
+                    // **** this range is YI, Modifier tone letters, ****
+                    // **** Latin-D, Syloti Nagari, Phagas-pa.       ****
+                    // **** Latin-D might be tailored, so we need to ****
+                    // **** do the normal lookup for these guys.     ****
+                    order = UTRIE_GET32_FROM_LEAD(&coll->mapping, ch);
+                } else {
+                    // in one of the target ranges; use UCA
+                    order = UCOL_NOT_FOUND;
                 }
-                else
-                {
-                    // Hit null in the normalize side buffer.
-                    // Usually this means the end of the normalized data,
-                    // except for one odd case: a null followed by combining chars,
-                    //   which is the case if we are at the start of the buffer.
-                    if (collationSource->pos == collationSource->writableBuffer.getBuffer()+1) {
-                        break;
-                    }
-
-                    //  Null marked end of side buffer.
-                    //   Revert to the main string and
-                    //   loop back to top to try again to get a character.
-                    collationSource->pos   = collationSource->fcdPosition;
-                    collationSource->flags = collationSource->origFlags;
-                    continue;
-                }
-            }
-        }
-
-        if(collationSource->flags&UCOL_HIRAGANA_Q) {
-            /* Codepoints \u3099-\u309C are both Hiragana and Katakana. Set the flag
-             * based on whether the previous codepoint was Hiragana or Katakana.
-             */
-            if(((ch>=0x3040 && ch<=0x3096) || (ch >= 0x309d && ch <= 0x309f)) ||
-                    ((collationSource->flags & UCOL_WAS_HIRAGANA) && (ch >= 0x3099 && ch <= 0x309C))) {
-                collationSource->flags |= UCOL_WAS_HIRAGANA;
             } else {
-                collationSource->flags &= ~UCOL_WAS_HIRAGANA;
-            }
-        }
-
-        // We've got a character.  See if there's any fcd and/or normalization stuff to do.
-        //    Note that UCOL_ITER_NORM flag is always zero when we are in the side buffer.
-        if ((collationSource->flags & UCOL_ITER_NORM) == 0) {
-            break;
-        }
-
-        if (collationSource->fcdPosition >= collationSource->pos) {
-            // An earlier FCD check has already covered the current character.
-            // We can go ahead and process this char.
-            break;
-        }
-
-        if (ch < ZERO_CC_LIMIT_ ) {
-            // Fast fcd safe path.  Trailing combining class == 0.  This char is OK.
-            break;
-        }
-
-        if (ch < NFC_ZERO_CC_BLOCK_LIMIT_) {
-            // We need to peek at the next character in order to tell if we are FCD
-            if ((collationSource->flags & UCOL_ITER_HASLEN) && collationSource->pos >= collationSource->endp) {
-                // We are at the last char of source string.
-                //  It is always OK for FCD check.
-                break;
-            }
-
-            // Not at last char of source string (or we'll check against terminating null).  Do the FCD fast test
-            if (*collationSource->pos < NFC_ZERO_CC_BLOCK_LIMIT_) {
-                break;
-            }
-        }
-
-
-        // Need a more complete FCD check and possible normalization.
-        if (collIterFCD(collationSource)) {
-            collIterNormalize(collationSource);
-        }
-        if ((collationSource->flags & UCOL_ITER_INNORMBUF) == 0) {
-            //  No normalization was needed.  Go ahead and process the char we already had.
-            break;
-        }
-
-        // Some normalization happened.  Next loop iteration will pick up a char
-        //   from the normalization buffer.
-
-    }   // end for (;;)
-
-
-    if (ch <= 0xFF) {
-        /*  For latin-1 characters we never need to fall back to the UCA table        */
-        /*    because all of the UCA data is replicated in the latinOneMapping array  */
-        order = coll->latinOneMapping[ch];
-        if (order > UCOL_NOT_FOUND) {
-            order = ucol_prv_getSpecialCE(coll, ch, order, collationSource, status);
-        }
-    }
-    else
-    {
-        // Always use UCA for Han, Hangul
-        // (Han extension A is before main Han block)
-        // **** Han compatibility chars ?? ****
-        if ((collationSource->flags & UCOL_FORCE_HAN_IMPLICIT) != 0 &&
-            (ch >= UCOL_FIRST_HAN_A && ch <= UCOL_LAST_HANGUL)) {
-            if (ch > UCOL_LAST_HAN && ch < UCOL_FIRST_HANGUL) {
-                // between the two target ranges; do normal lookup
-                // **** this range is YI, Modifier tone letters, ****
-                // **** Latin-D, Syloti Nagari, Phagas-pa.       ****
-                // **** Latin-D might be tailored, so we need to ****
-                // **** do the normal lookup for these guys.     ****
                 order = UTRIE_GET32_FROM_LEAD(&coll->mapping, ch);
-            } else {
-                // in one of the target ranges; use UCA
-                order = UCOL_NOT_FOUND;
             }
-        } else {
-            order = UTRIE_GET32_FROM_LEAD(&coll->mapping, ch);
-        }
 
-        if(order > UCOL_NOT_FOUND) {                                       /* if a CE is special                */
-            order = ucol_prv_getSpecialCE(coll, ch, order, collationSource, status);    /* and try to get the special CE     */
-        }
+            if(order > UCOL_NOT_FOUND) {                                       /* if a CE is special                */
+                order = ucol_prv_getSpecialCE(coll, ch, order, collationSource, status);    /* and try to get the special CE     */
+            }
 
-        if(order == UCOL_NOT_FOUND && coll->UCA) {   /* We couldn't find a good CE in the tailoring */
-            /* if we got here, the codepoint MUST be over 0xFF - so we look directly in the trie */
-            order = UTRIE_GET32_FROM_LEAD(&coll->UCA->mapping, ch);
+            if(order == UCOL_NOT_FOUND && coll->UCA) {   /* We couldn't find a good CE in the tailoring */
+                /* if we got here, the codepoint MUST be over 0xFF - so we look directly in the trie */
+                order = UTRIE_GET32_FROM_LEAD(&coll->UCA->mapping, ch);
 
-            if(order > UCOL_NOT_FOUND) { /* UCA also gives us a special CE */
-                order = ucol_prv_getSpecialCE(coll->UCA, ch, order, collationSource, status);
+                if(order > UCOL_NOT_FOUND) { /* UCA also gives us a special CE */
+                    order = ucol_prv_getSpecialCE(coll->UCA, ch, order, collationSource, status);
+                }
             }
         }
-    }
+    } while ( order == UCOL_IGNORABLE && ch >= UCOL_FIRST_HANGUL && ch <= UCOL_LAST_HANGUL );
+
     if(order == UCOL_NOT_FOUND) {
         order = getImplicit(ch, collationSource);
     }
@@ -1964,161 +2017,163 @@ inline uint32_t ucol_IGetPrevCE(const UCollator *coll, collIterate *data,
     else {
         UChar ch = 0;
 
-        /*
-        Loop handles case when incremental normalize switches to or from the
-        side buffer / original string, and we need to start again to get the
-        next character.
-        */
-        for (;;) {
-            if (data->flags & UCOL_ITER_HASLEN) {
-                /*
-                Normal path for strings when length is specified.
-                Not in side buffer because it is always null terminated.
-                */
-                if (data->pos <= data->string) {
-                    /* End of the main source string */
-                    return UCOL_NO_MORE_CES;
-                }
-                data->pos --;
-                ch = *data->pos;
-            }
-            // we are using an iterator to go back. Pray for us!
-            else if (data->flags & UCOL_USE_ITERATOR) {
-              UChar32 iterCh = data->iterator->previous(data->iterator);
-              if(iterCh == U_SENTINEL) {
-                return UCOL_NO_MORE_CES;
-              } else {
-                ch = (UChar)iterCh;
-              }
-            }
-            else {
-                data->pos --;
-                ch = *data->pos;
-                /* we are in the side buffer. */
-                if (ch == 0) {
+        do {
+            /*
+            Loop handles case when incremental normalize switches to or from the
+            side buffer / original string, and we need to start again to get the
+            next character.
+            */
+            for (;;) {
+                if (data->flags & UCOL_ITER_HASLEN) {
                     /*
-                    At the start of the normalize side buffer.
-                    Go back to string.
-                    Because pointer points to the last accessed character,
-                    hence we have to increment it by one here.
+                    Normal path for strings when length is specified.
+                    Not in side buffer because it is always null terminated.
                     */
-                    data->flags = data->origFlags;
-                    data->offsetRepeatValue = 0;
- 
-                     if (data->fcdPosition == NULL) {
-                        data->pos = data->string;
+                    if (data->pos <= data->string) {
+                        /* End of the main source string */
                         return UCOL_NO_MORE_CES;
                     }
-                    else {
-                        data->pos   = data->fcdPosition + 1;
+                    data->pos --;
+                    ch = *data->pos;
+                }
+                // we are using an iterator to go back. Pray for us!
+                else if (data->flags & UCOL_USE_ITERATOR) {
+                  UChar32 iterCh = data->iterator->previous(data->iterator);
+                  if(iterCh == U_SENTINEL) {
+                    return UCOL_NO_MORE_CES;
+                  } else {
+                    ch = (UChar)iterCh;
+                  }
+                }
+                else {
+                    data->pos --;
+                    ch = *data->pos;
+                    /* we are in the side buffer. */
+                    if (ch == 0) {
+                        /*
+                        At the start of the normalize side buffer.
+                        Go back to string.
+                        Because pointer points to the last accessed character,
+                        hence we have to increment it by one here.
+                        */
+                        data->flags = data->origFlags;
+                        data->offsetRepeatValue = 0;
+
+                         if (data->fcdPosition == NULL) {
+                            data->pos = data->string;
+                            return UCOL_NO_MORE_CES;
+                        }
+                        else {
+                            data->pos   = data->fcdPosition + 1;
+                        }
+
+                       continue;
                     }
-                    
-                   continue;
                 }
-            }
 
-            if(data->flags&UCOL_HIRAGANA_Q) {
-              if(ch>=0x3040 && ch<=0x309f) {
-                data->flags |= UCOL_WAS_HIRAGANA;
-              } else {
-                data->flags &= ~UCOL_WAS_HIRAGANA;
-              }
-            }
+                if(data->flags&UCOL_HIRAGANA_Q) {
+                  if(ch>=0x3040 && ch<=0x309f) {
+                    data->flags |= UCOL_WAS_HIRAGANA;
+                  } else {
+                    data->flags &= ~UCOL_WAS_HIRAGANA;
+                  }
+                }
 
-            /*
-            * got a character to determine if there's fcd and/or normalization
-            * stuff to do.
-            * if the current character is not fcd.
-            * if current character is at the start of the string
-            * Trailing combining class == 0.
-            * Note if pos is in the writablebuffer, norm is always 0
-            */
-            if (ch < ZERO_CC_LIMIT_ ||
-              // this should propel us out of the loop in the iterator case
-                (data->flags & UCOL_ITER_NORM) == 0 ||
-                (data->fcdPosition != NULL && data->fcdPosition <= data->pos)
-                || data->string == data->pos) {
-                break;
-            }
-
-            if (ch < NFC_ZERO_CC_BLOCK_LIMIT_) {
-                /* if next character is FCD */
-                if (data->pos == data->string) {
-                    /* First char of string is always OK for FCD check */
+                /*
+                * got a character to determine if there's fcd and/or normalization
+                * stuff to do.
+                * if the current character is not fcd.
+                * if current character is at the start of the string
+                * Trailing combining class == 0.
+                * Note if pos is in the writablebuffer, norm is always 0
+                */
+                if (ch < ZERO_CC_LIMIT_ ||
+                  // this should propel us out of the loop in the iterator case
+                    (data->flags & UCOL_ITER_NORM) == 0 ||
+                    (data->fcdPosition != NULL && data->fcdPosition <= data->pos)
+                    || data->string == data->pos) {
                     break;
                 }
 
-                /* Not first char of string, do the FCD fast test */
-                if (*(data->pos - 1) < NFC_ZERO_CC_BLOCK_LIMIT_) {
+                if (ch < NFC_ZERO_CC_BLOCK_LIMIT_) {
+                    /* if next character is FCD */
+                    if (data->pos == data->string) {
+                        /* First char of string is always OK for FCD check */
+                        break;
+                    }
+
+                    /* Not first char of string, do the FCD fast test */
+                    if (*(data->pos - 1) < NFC_ZERO_CC_BLOCK_LIMIT_) {
+                        break;
+                    }
+                }
+
+                /* Need a more complete FCD check and possible normalization. */
+                if (collPrevIterFCD(data)) {
+                    collPrevIterNormalize(data);
+                }
+
+                if ((data->flags & UCOL_ITER_INNORMBUF) == 0) {
+                    /*  No normalization. Go ahead and process the char. */
                     break;
                 }
+
+                /*
+                Some normalization happened.
+                Next loop picks up a char from the normalization buffer.
+                */
             }
 
-            /* Need a more complete FCD check and possible normalization. */
-            if (collPrevIterFCD(data)) {
-                collPrevIterNormalize(data);
-            }
-
-            if ((data->flags & UCOL_ITER_INNORMBUF) == 0) {
-                /*  No normalization. Go ahead and process the char. */
-                break;
-            }
-
-            /*
-            Some normalization happened.
-            Next loop picks up a char from the normalization buffer.
+            /* attempt to handle contractions, after removal of the backwards
+            contraction
             */
-        }
-
-        /* attempt to handle contractions, after removal of the backwards
-        contraction
-        */
-        if (ucol_contractionEndCP(ch, coll) && !isAtStartPrevIterate(data)) {
-            result = ucol_prv_getSpecialPrevCE(coll, ch, UCOL_CONTRACTION, data, status);
-        } else {
-            if (ch <= 0xFF) {
-                result = coll->latinOneMapping[ch];
-            }
-            else {
-                // Always use UCA for [3400..9FFF], [AC00..D7AF]
-                // **** [FA0E..FA2F] ?? ****
-                if ((data->flags & UCOL_FORCE_HAN_IMPLICIT) != 0 &&
-                    (ch >= 0x3400 && ch <= 0xD7AF)) {
-                    if (ch > 0x9FFF && ch < 0xAC00) {
-                        // between the two target ranges; do normal lookup
-                        // **** this range is YI, Modifier tone letters, ****
-                        // **** Latin-D, Syloti Nagari, Phagas-pa.       ****
-                        // **** Latin-D might be tailored, so we need to ****
-                        // **** do the normal lookup for these guys.     ****
-                         result = UTRIE_GET32_FROM_LEAD(&coll->mapping, ch);
+            if (ucol_contractionEndCP(ch, coll) && !isAtStartPrevIterate(data)) {
+                result = ucol_prv_getSpecialPrevCE(coll, ch, UCOL_CONTRACTION, data, status);
+            } else {
+                if (ch <= 0xFF) {
+                    result = coll->latinOneMapping[ch];
+                }
+                else {
+                    // Always use UCA for [3400..9FFF], [AC00..D7AF]
+                    // **** [FA0E..FA2F] ?? ****
+                    if ((data->flags & UCOL_FORCE_HAN_IMPLICIT) != 0 &&
+                        (ch >= 0x3400 && ch <= 0xD7AF)) {
+                        if (ch > 0x9FFF && ch < 0xAC00) {
+                            // between the two target ranges; do normal lookup
+                            // **** this range is YI, Modifier tone letters, ****
+                            // **** Latin-D, Syloti Nagari, Phagas-pa.       ****
+                            // **** Latin-D might be tailored, so we need to ****
+                            // **** do the normal lookup for these guys.     ****
+                             result = UTRIE_GET32_FROM_LEAD(&coll->mapping, ch);
+                        } else {
+                            result = UCOL_NOT_FOUND;
+                        }
                     } else {
-                        result = UCOL_NOT_FOUND;
-                    }
-                } else {
-                    result = UTRIE_GET32_FROM_LEAD(&coll->mapping, ch);
-                }
-            }
-            if (result > UCOL_NOT_FOUND) {
-                result = ucol_prv_getSpecialPrevCE(coll, ch, result, data, status);
-            }
-            if (result == UCOL_NOT_FOUND) { // Not found in master list
-                if (!isAtStartPrevIterate(data) &&
-                    ucol_contractionEndCP(ch, data->coll))
-                {
-                    result = UCOL_CONTRACTION;
-                } else {
-                    if(coll->UCA) {
-                        result = UTRIE_GET32_FROM_LEAD(&coll->UCA->mapping, ch);
+                        result = UTRIE_GET32_FROM_LEAD(&coll->mapping, ch);
                     }
                 }
-
                 if (result > UCOL_NOT_FOUND) {
-                    if(coll->UCA) {
-                        result = ucol_prv_getSpecialPrevCE(coll->UCA, ch, result, data, status);
+                    result = ucol_prv_getSpecialPrevCE(coll, ch, result, data, status);
+                }
+                if (result == UCOL_NOT_FOUND) { // Not found in master list
+                    if (!isAtStartPrevIterate(data) &&
+                        ucol_contractionEndCP(ch, data->coll))
+                    {
+                        result = UCOL_CONTRACTION;
+                    } else {
+                        if(coll->UCA) {
+                            result = UTRIE_GET32_FROM_LEAD(&coll->UCA->mapping, ch);
+                        }
+                    }
+
+                    if (result > UCOL_NOT_FOUND) {
+                        if(coll->UCA) {
+                            result = ucol_prv_getSpecialPrevCE(coll->UCA, ch, result, data, status);
+                        }
                     }
                 }
             }
-        }
+        } while ( result == UCOL_IGNORABLE && ch >= UCOL_FIRST_HANGUL && ch <= UCOL_LAST_HANGUL );
 
         if(result == UCOL_NOT_FOUND) {
             result = getPrevImplicit(ch, data);
@@ -3199,6 +3254,7 @@ uint32_t ucol_prv_getSpecialCE(const UCollator *coll, UChar ch, uint32_t CE, col
                     // Since Hanguls pass the FCD check, it is
                     // guaranteed that we won't be in
                     // the normalization buffer if something like this happens
+
                     // However, if we are using a uchar iterator and normalization
                     // is ON, the Hangul that lead us here is going to be in that
                     // normalization buffer. Here we want to restore the uchar
@@ -3207,6 +3263,7 @@ uint32_t ucol_prv_getSpecialCE(const UCollator *coll, UChar ch, uint32_t CE, col
                         source->flags = source->origFlags; // restore the iterator
                         source->pos = NULL;
                     }
+
                     // Move Jamos into normalization buffer
                     UChar *buffer = source->writableBuffer.getBuffer(4);
                     int32_t bufferLength;
@@ -3220,8 +3277,9 @@ uint32_t ucol_prv_getSpecialCE(const UCollator *coll, UChar ch, uint32_t CE, col
                     }
                     source->writableBuffer.releaseBuffer(bufferLength);
 
-                    source->fcdPosition       = source->pos;   // Indicate where to continue in main input string
-                    //   after exhausting the writableBuffer
+                    // Indicate where to continue in main input string after exhausting the writableBuffer
+                    source->fcdPosition       = source->pos;
+
                     source->pos   = source->writableBuffer.getTerminatedBuffer();
                     source->origFlags   = source->flags;
                     source->flags       |= UCOL_ITER_INNORMBUF;
@@ -3972,13 +4030,10 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
                     // Since Hanguls pass the FCD check, it is
                     // guaranteed that we won't be in
                     // the normalization buffer if something like this happens
+
                     // Move Jamos into normalization buffer
-                    /*
-                    Move the Jamos into the
-                    normalization buffer
-                    */
                     UChar *tempbuffer = source->writableBuffer.getBuffer(5);
-                    int32_t tempbufferLength;
+                    int32_t tempbufferLength, jamoOffset;
                     tempbuffer[0] = 0;
                     tempbuffer[1] = (UChar)L;
                     tempbuffer[2] = (UChar)V;
@@ -3990,14 +4045,28 @@ uint32_t ucol_prv_getSpecialPrevCE(const UCollator *coll, UChar ch, uint32_t CE,
                     }
                     source->writableBuffer.releaseBuffer(tempbufferLength);
 
-                    /*
-                    Indicate where to continue in main input string after exhausting
-                    the writableBuffer
-                    */
+                    // Indicate where to continue in main input string after exhausting the writableBuffer
                     if (source->pos  == source->string) {
+                        jamoOffset = 0;
                         source->fcdPosition = NULL;
                     } else {
+                        jamoOffset = source->pos - source->string;
                         source->fcdPosition       = source->pos-1;
+                    }
+                    
+                    // Append offsets for the additional chars
+                    // (not the 0, and not the L whose offsets match the original Hangul)
+                    int32_t jamoRemaining = tempbufferLength - 2;
+                    jamoOffset++; // appended offsets should match end of original Hangul
+                    while (jamoRemaining-- > 0) {
+                        source->appendOffset(jamoOffset, *status);
+                    }
+
+                    source->offsetRepeatValue = jamoOffset;
+
+                    source->offsetReturn = source->offsetStore - 1;
+                    if (source->offsetReturn == source->offsetBuffer) {
+                        source->offsetStore = source->offsetBuffer;
                     }
 
                     source->pos               = source->writableBuffer.getTerminatedBuffer() + tempbufferLength;
@@ -6954,6 +7023,7 @@ ucol_setAttribute(UCollator *coll, UColAttribute attr, UColAttributeValue value,
     if(U_FAILURE(*status) || coll == NULL) {
       return;
     }
+
     UColAttributeValue oldFrench = coll->frenchCollation;
     UColAttributeValue oldCaseFirst = coll->caseFirst;
     switch(attr) {
@@ -7131,22 +7201,27 @@ ucol_getStrength(const UCollator *coll)
     return ucol_getAttribute(coll, UCOL_STRENGTH, &status);
 }
 
-U_INTERNAL int32_t U_EXPORT2 
+U_CAPI int32_t U_EXPORT2 
 ucol_getReorderCodes(const UCollator *coll,
                     int32_t *dest,
                     int32_t destCapacity,
-                    UErrorCode *pErrorCode) {
-    if (U_FAILURE(*pErrorCode)) {
+                    UErrorCode *status) {
+    if (U_FAILURE(*status)) {
         return 0;
     }
-    
+
     if (destCapacity < 0 || (destCapacity > 0 && dest == NULL)) {
-        *pErrorCode = U_ILLEGAL_ARGUMENT_ERROR;
+        *status = U_ILLEGAL_ARGUMENT_ERROR;
         return 0;
     }
-    
+
+#ifdef UCOL_DEBUG
+    printf("coll->reorderCodesLength = %d\n", coll->reorderCodesLength);
+    printf("coll->defaultReorderCodesLength = %d\n", coll->defaultReorderCodesLength);
+#endif
+
     if (coll->reorderCodesLength > destCapacity) {
-        *pErrorCode = U_BUFFER_OVERFLOW_ERROR;
+        *status = U_BUFFER_OVERFLOW_ERROR;
         return coll->reorderCodesLength;
     }
     for (int32_t i = 0; i < coll->reorderCodesLength; i++) {
@@ -7155,43 +7230,105 @@ ucol_getReorderCodes(const UCollator *coll,
     return coll->reorderCodesLength;
 }
 
-U_INTERNAL void U_EXPORT2 
-ucol_setReorderCodes(UCollator *coll,
-                    const int32_t *reorderCodes,
+U_CAPI void U_EXPORT2 
+ucol_setReorderCodes(UCollator* coll,
+                    const int32_t* reorderCodes,
                     int32_t reorderCodesLength,
-                    UErrorCode *pErrorCode) {
-    if (U_FAILURE(*pErrorCode)) {
+                    UErrorCode *status) {
+    if (U_FAILURE(*status)) {
         return;
     }
 
     if (reorderCodesLength < 0 || (reorderCodesLength > 0 && reorderCodes == NULL)) {
-        *pErrorCode = U_ILLEGAL_ARGUMENT_ERROR;
+        *status = U_ILLEGAL_ARGUMENT_ERROR;
         return;
     }
     
-    uprv_free(coll->reorderCodes);
+    if (coll->reorderCodes != NULL && coll->freeReorderCodesOnClose == TRUE) {
+        uprv_free(coll->reorderCodes);
+    }
     coll->reorderCodes = NULL;
     coll->reorderCodesLength = 0;
     if (reorderCodesLength == 0) {
-        uprv_free(coll->leadBytePermutationTable);
+        if (coll->leadBytePermutationTable != NULL && coll->freeLeadBytePermutationTableOnClose == TRUE) {
+            uprv_free(coll->leadBytePermutationTable);
+        }
         coll->leadBytePermutationTable = NULL;
         return;
     }
     coll->reorderCodes = (int32_t*) uprv_malloc(reorderCodesLength * sizeof(int32_t));
     if (coll->reorderCodes == NULL) {
-        *pErrorCode = U_MEMORY_ALLOCATION_ERROR;
+        *status = U_MEMORY_ALLOCATION_ERROR;
         return;
     }
+    coll->freeReorderCodesOnClose = TRUE;
     for (int32_t i = 0; i < reorderCodesLength; i++) {
         coll->reorderCodes[i] = reorderCodes[i];
     }
     coll->reorderCodesLength = reorderCodesLength;
-    ucol_buildPermutationTable(coll, pErrorCode);
+    ucol_buildPermutationTable(coll, status);
+}
+
+U_CAPI int32_t U_EXPORT2 
+ucol_getEquivalentReorderCodes(int32_t reorderCode,
+                    int32_t* dest,
+                    int32_t destCapacity,
+                    UErrorCode *pErrorCode) {
+    bool equivalentCodesSet[USCRIPT_CODE_LIMIT];
+    uint16_t leadBytes[256];
+    int leadBytesCount;
+    int leadByteIndex;
+    int16_t reorderCodesForLeadByte[USCRIPT_CODE_LIMIT];
+    int reorderCodesForLeadByteCount;
+    int reorderCodeIndex;
+    
+    int32_t equivalentCodesCount = 0;
+    int setIndex;
+    
     if (U_FAILURE(*pErrorCode)) {
-        uprv_free(coll->reorderCodes);
-        coll->reorderCodes = NULL;
-        coll->reorderCodesLength = 0;
-    }    
+        return 0;
+    }
+
+    if (destCapacity < 0 || (destCapacity > 0 && dest == NULL)) {
+        *pErrorCode = U_ILLEGAL_ARGUMENT_ERROR;
+        return 0;
+    }
+
+    uprv_memset(equivalentCodesSet, 0, USCRIPT_CODE_LIMIT * sizeof(bool));
+
+    const UCollator* uca = ucol_initUCA(pErrorCode);
+    if (U_FAILURE(*pErrorCode)) {
+	return 0;
+    }
+    leadBytesCount = ucol_getLeadBytesForReorderCode(uca, reorderCode, leadBytes, 256);
+    for (leadByteIndex = 0; leadByteIndex < leadBytesCount; leadByteIndex++) {
+        reorderCodesForLeadByteCount = ucol_getReorderCodesForLeadByte(
+            uca, leadBytes[leadByteIndex], reorderCodesForLeadByte, USCRIPT_CODE_LIMIT);
+        for (reorderCodeIndex = 0; reorderCodeIndex < reorderCodesForLeadByteCount; reorderCodeIndex++) {
+            equivalentCodesSet[reorderCodesForLeadByte[reorderCodeIndex]] = true;
+        }
+    }
+    
+    for (setIndex = 0; setIndex < USCRIPT_CODE_LIMIT; setIndex++) {
+        if (equivalentCodesSet[setIndex] == true) {
+            equivalentCodesCount++;
+        }
+    }
+    
+    if (destCapacity == 0) {
+        return equivalentCodesCount;
+    }
+    
+    equivalentCodesCount = 0;
+    for (setIndex = 0; setIndex < USCRIPT_CODE_LIMIT; setIndex++) {
+        if (equivalentCodesSet[setIndex] == true) {
+            dest[equivalentCodesCount++] = setIndex;
+            if (equivalentCodesCount >= destCapacity) {
+                break;
+            }
+        }        
+    }
+    return equivalentCodesCount;
 }
 
 

@@ -1,6 +1,6 @@
 /*
 **************************************************************************
-*   Copyright (C) 2002-2010 International Business Machines Corporation  *
+*   Copyright (C) 2002-2011 International Business Machines Corporation  *
 *   and others. All rights reserved.                                     *
 **************************************************************************
 */
@@ -1963,6 +1963,41 @@ RegexMatcher &RegexMatcher::reset(int64_t position, UErrorCode &status) {
 }
 
 
+//--------------------------------------------------------------------------------
+//
+//    refresh
+//
+//--------------------------------------------------------------------------------
+RegexMatcher &RegexMatcher::refreshInputText(UText *input, UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return *this;
+    }
+    if (input == NULL) {
+        status = U_ILLEGAL_ARGUMENT_ERROR;
+        return *this;
+    }
+    if (utext_nativeLength(fInputText) != utext_nativeLength(input)) {
+        status = U_ILLEGAL_ARGUMENT_ERROR;
+        return *this;
+    }
+    int64_t  pos = utext_getNativeIndex(fInputText);
+    //  Shallow read-only clone of the new UText into the existing input UText
+    fInputText = utext_clone(fInputText, input, FALSE, TRUE, &status);
+    if (U_FAILURE(status)) {
+        return *this;
+    }
+    utext_setNativeIndex(fInputText, pos);
+
+    if (fAltInputText != NULL) {
+        pos = utext_getNativeIndex(fAltInputText);
+        fAltInputText = utext_clone(fAltInputText, input, FALSE, TRUE, &status);
+        if (U_FAILURE(status)) {
+            return *this;
+        }
+        utext_setNativeIndex(fAltInputText, pos);
+    }
+    return *this;
+}
 
 
 
@@ -2135,27 +2170,33 @@ int32_t  RegexMatcher::split(UText *input,
             // If the delimiter pattern has capturing parentheses, the captured
             //  text goes out into the next n destination strings.
             int32_t groupNum;
-            UBool lastGroupWasNullUText = FALSE;
             for (groupNum=1; groupNum<=numCaptureGroups; groupNum++) {
-                if (i==destCapacity-1) {
+                if (i >= destCapacity-2) {
+                    // Never fill the last available output string with capture group text.
+                    // It will filled with the last field, the remainder of the
+                    //  unsplit input text.
                     break;
                 }
                 i++;
-                lastGroupWasNullUText = (dest[i] == NULL ? TRUE : FALSE);
                 dest[i] = group(groupNum, dest[i], status);
             }
 
             if (nextOutputStringStart == fActiveLimit) {
-                // The delimiter was at the end of the string.  We're done.
-                break;
-            } else if (i == destCapacity-1) {
-                // We're out of capture groups, and the rest of the string is more important
-                if (lastGroupWasNullUText) {
-                    utext_close(dest[i]);
-                    dest[i] = NULL;
+                // The delimiter was at the end of the string.  We're done, but first
+                // we output one last empty string, for the empty field following
+                //   the delimiter at the end of input.
+                if (i+1 < destCapacity) {
+                    ++i;
+                    if (dest[i] == NULL) {
+                        dest[i] = utext_openUChars(NULL, NULL, 0, &status);
+                    } else {
+                        static UChar emptyString[] = {(UChar)0};
+                        utext_replace(dest[i], 0, utext_nativeLength(dest[i]), emptyString, 0, &status);
+                    }
                 }
-            }
-
+                break;
+            
+            } 
         }
         else
         {

@@ -1,6 +1,6 @@
 ﻿// ***************************************************************************
 // *
-// * Copyright (C) 2010 International Business Machines
+// * Copyright (C) 2011 International Business Machines
 // * Corporation and others.  All Rights Reserved.
 // * Tool: com.ibm.icu.dev.tool.cldr.LDML2ICUConverter.java
 // * Source File:<path>/common/main/sr_Latn.xml
@@ -10,7 +10,6 @@
  *  ICU <specials> source: <path>/xml/main/sr_Latn.xml
  */
 sr_Latn{
-    %%ParentIsRoot:int{1}
     Currencies{
         ADP{
             "ADP" /** ===  */,
@@ -457,7 +456,7 @@ sr_Latn{
             "Izraelski šekel",
         }
         INR{
-            "Rs",
+            "₹",
             "Indijski rupi",
         }
         IQD{
@@ -2724,5 +2723,5 @@ sr_Latn{
             other{"zimbabvejski dolari"}
         }
     }
-    Version{"2.0.50.94"}
+    Version{"2.0.53.45"}
 }
