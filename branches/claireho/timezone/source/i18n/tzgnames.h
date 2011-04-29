@@ -44,11 +44,14 @@ public:
     TimeZoneGenericNames(const Locale& locale, UErrorCode& status);
     virtual ~TimeZoneGenericNames();
 
-    UnicodeString& getDisplayName(const TimeZone& tz, UTimeZoneGenericNameType type, UDate date, UnicodeString& name) const;
+    UnicodeString& getDisplayName(const TimeZone& tz, UTimeZoneGenericNameType type,
+                        UDate date, UnicodeString& name) const;
+
     UnicodeString& getGenericLocationName(const UnicodeString& tzID, UnicodeString& name) const;
 
 private:
     Locale fLocale;
+    char fTargetRegion[ULOC_COUNTRY_CAPACITY];
     const TimeZoneNames* fTimeZoneNames;
     LocaleDisplayNames* fLocaleDisplayNames;
 
@@ -63,7 +66,13 @@ private:
 
     void initialize(const Locale& locale, UErrorCode& status);
     void cleanup();
-    UnicodeString& formatGenericNonLocationName(const TimeZone& tz, UTimeZoneGenericNameType type, UDate date, UnicodeString& name) const;
+
+    UnicodeString& formatGenericNonLocationName(const TimeZone& tz, UTimeZoneGenericNameType type,
+                        UDate date, UnicodeString& name) const;
+
+    UnicodeString& getPartialLocationName(const UnicodeString& tzCanonicalID,
+                        const UnicodeString& mzID, UBool isLong, const UnicodeString& mzDisplayName,
+                        UnicodeString& name) const;
 };
 
 U_NAMESPACE_END

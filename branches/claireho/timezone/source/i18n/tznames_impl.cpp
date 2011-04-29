@@ -178,7 +178,7 @@ TimeZoneNamesImpl::getMetaZoneID(const UnicodeString& tzID, UDate date, UnicodeS
 
 UnicodeString&
 TimeZoneNamesImpl::getReferenceZoneID(const UnicodeString& mzID, const char* region, UnicodeString& tzID) const {
-    ZoneMeta::getZoneIdByMetazone(mzID, region, tzID);
+    ZoneMeta::getZoneIdByMetazone(mzID, UnicodeString(region), tzID);
     return tzID;
 }
 
