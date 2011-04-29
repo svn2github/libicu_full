@@ -255,6 +255,7 @@
     <ClCompile Include="sortkey.cpp" />
     <ClCompile Include="stsearch.cpp" />
     <ClCompile Include="tblcoll.cpp" />
+    <ClCompile Include="tzgnames.cpp" />
     <ClCompile Include="tznames.cpp" />
     <ClCompile Include="tznames_impl.cpp" />
     <ClCompile Include="ucol.cpp" />
@@ -572,6 +573,7 @@
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\include\unicode\%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
+    <ClInclude Include="tzgnames.h" />
     <ClInclude Include="tznames.h" />
     <ClInclude Include="tznames_impl.h" />
     <ClInclude Include="ucol_bld.h" />

@@ -9,7 +9,7 @@
 
 /**
  * \file 
- * \brief C API: Time zone names classe
+ * \brief C API: Time zone names class
  */
 #include "unicode/utypes.h"
 #include "unicode/uloc.h"

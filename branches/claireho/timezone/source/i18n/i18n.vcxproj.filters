@@ -477,6 +477,9 @@
     <ClCompile Include="tznames_impl.cpp">
       <Filter>formatting</Filter>
     </ClCompile>
+    <ClCompile Include="tzgnames.cpp">
+      <Filter>formatting</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bocsu.h">
@@ -753,6 +756,9 @@
       <Filter>formatting</Filter>
     </ClInclude>
     <ClInclude Include="tznames_impl.h">
+      <Filter>formatting</Filter>
+    </ClInclude>
+    <ClInclude Include="tzgnames.h">
       <Filter>formatting</Filter>
     </ClInclude>
   </ItemGroup>

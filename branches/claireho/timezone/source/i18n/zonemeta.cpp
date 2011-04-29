@@ -219,7 +219,7 @@ ZoneMeta::getCanonicalCLDRID(const UnicodeString &tzid, UnicodeString &systemID,
     }
 
     int32_t len = tzid.length();
-    if (len >= ZID_KEY_MAX) {
+    if (len > ZID_KEY_MAX) {
         status = U_ILLEGAL_ARGUMENT_ERROR;
         systemID.remove();
         return systemID;
@@ -253,8 +253,8 @@ ZoneMeta::getCanonicalCLDRID(const UnicodeString &tzid, UnicodeString &systemID,
     const UChar *idInCache = NULL;
 
     UErrorCode tmpStatus = U_ZERO_ERROR;
-    UChar utzid[ZID_KEY_MAX];
-    tzid.extract(utzid, ZID_KEY_MAX, tmpStatus);
+    UChar utzid[ZID_KEY_MAX + 1];
+    tzid.extract(utzid, ZID_KEY_MAX + 1, tmpStatus);
     U_ASSERT(tmpStatus == U_ZERO_ERROR);    // we checked the length of tzid already
 
     // Check if it was already cached
@@ -276,7 +276,7 @@ ZoneMeta::getCanonicalCLDRID(const UnicodeString &tzid, UnicodeString &systemID,
 
     // If not, resolve CLDR canonical ID with resource data
     const UChar *cldrCanonicalID = NULL;
-    char id[ZID_KEY_MAX];
+    char id[ZID_KEY_MAX + 1];
     const UChar* idChars = tzid.getBuffer();
 
     u_UCharsToChars(idChars,id,len);
@@ -525,8 +525,8 @@ ZoneMeta::getMetazoneID(const UnicodeString &tzid, UDate date, UnicodeString &re
 const UVector* U_EXPORT2
 ZoneMeta::getMetazoneMappings(const UnicodeString &tzid) {
     UErrorCode status = U_ZERO_ERROR;
-    UChar tzidUChars[ZID_KEY_MAX];
-    tzid.extract(tzidUChars, ZID_KEY_MAX, status);
+    UChar tzidUChars[ZID_KEY_MAX + 1];
+    tzid.extract(tzidUChars, ZID_KEY_MAX + 1, status);
     if (U_FAILURE(status) || status == U_STRING_NOT_TERMINATED_WARNING) {
         return NULL;
     }
@@ -623,8 +623,9 @@ ZoneMeta::createMetazoneMappings(const UnicodeString &tzid) {
     getCanonicalCLDRID(tzid, canonicalID, status);
 
     if (U_SUCCESS(status)) {
-        char tzKey[ZID_KEY_MAX];
-        canonicalID.extract(0, canonicalID.length(), tzKey, sizeof(tzKey), US_INV);
+        char tzKey[ZID_KEY_MAX + 1];
+        int32_t tzKeyLen = canonicalID.extract(0, canonicalID.length(), tzKey, sizeof(tzKey), US_INV);
+        tzKey[tzKeyLen] = 0;
 
         // tzid keys are using ':' as separators
         char *p = tzKey;
@@ -710,12 +711,13 @@ ZoneMeta::getZoneIdByMetazone(const UnicodeString &mzid, const UnicodeString &re
     char keyBuf[ZID_KEY_MAX + 1];
     int32_t keyLen = 0;
 
-    if (mzid.length() >= ZID_KEY_MAX) {
+    if (mzid.length() > ZID_KEY_MAX) {
         result.remove();
         return result;
     }
 
-    keyLen = mzid.extract(0, mzid.length(), keyBuf, ZID_KEY_MAX, US_INV);
+    keyLen = mzid.extract(0, mzid.length(), keyBuf, ZID_KEY_MAX + 1, US_INV);
+    keyBuf[keyLen] = 0;
 
     UResourceBundle *rb = ures_openDirect(NULL, gMetaZones, &status);
     ures_getByKey(rb, gMapTimezonesTag, rb, &status);
@@ -724,7 +726,8 @@ ZoneMeta::getZoneIdByMetazone(const UnicodeString &mzid, const UnicodeString &re
     if (U_SUCCESS(status)) {
         // check region mapping
         if (region.length() == 2 || region.length() == 3) {
-            region.extract(0, region.length(), keyBuf, ZID_KEY_MAX, US_INV);
+            keyLen = region.extract(0, region.length(), keyBuf, ZID_KEY_MAX + 1, US_INV);
+            keyBuf[keyLen] = 0;
             tzid = ures_getStringByKey(rb, keyBuf, &tzidLen, &status);
             if (status == U_MISSING_RESOURCE_ERROR) {
                 status = U_ZERO_ERROR;

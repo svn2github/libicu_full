@@ -1,5 +1,5 @@
 Microsoft Visual Studio Solution File, Format Version 11.00
-# Visual Studio 2010
+# Visual C++ Express 2010
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cal", "..\samples\cal\cal.vcxproj", "{F7659D77-09CF-4FE9-ACEE-927287AA9509}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cintltst", "..\test\cintltst\cintltst.vcxproj", "{3D1246AE-1B32-479B-BECA-AEFA97BE2321}"
@@ -64,11 +64,9 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "icuinfo", "..\tools\icuinfo
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "testplug", "..\tools\icuinfo\testplug.vcxproj", "{659D0C08-D4ED-4BF3-B02B-2D8D4B5A7A7A}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tzNamesWork", "..\..\..\..\vclocal\tzNamesWork\tzNamesWork.vcxproj", "{21C6E2BC-BCDE-498D-AA0A-01CDEE8829E0}"
+EndProject
 Global
-	GlobalSection(SubversionScc) = preSolution
-		Svn-Managed = True
-		Manager = AnkhSVN - Subversion Support for Visual Studio
-	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
 		Debug|x64 = Debug|x64
@@ -332,8 +330,18 @@ Global
 		{659D0C08-D4ED-4BF3-B02B-2D8D4B5A7A7A}.Release|Win32.Build.0 = Release|Win32
 		{659D0C08-D4ED-4BF3-B02B-2D8D4B5A7A7A}.Release|x64.ActiveCfg = Release|x64
 		{659D0C08-D4ED-4BF3-B02B-2D8D4B5A7A7A}.Release|x64.Build.0 = Release|x64
+		{21C6E2BC-BCDE-498D-AA0A-01CDEE8829E0}.Debug|Win32.ActiveCfg = Debug|Win32
+		{21C6E2BC-BCDE-498D-AA0A-01CDEE8829E0}.Debug|Win32.Build.0 = Debug|Win32
+		{21C6E2BC-BCDE-498D-AA0A-01CDEE8829E0}.Debug|x64.ActiveCfg = Debug|Win32
+		{21C6E2BC-BCDE-498D-AA0A-01CDEE8829E0}.Release|Win32.ActiveCfg = Release|Win32
+		{21C6E2BC-BCDE-498D-AA0A-01CDEE8829E0}.Release|Win32.Build.0 = Release|Win32
+		{21C6E2BC-BCDE-498D-AA0A-01CDEE8829E0}.Release|x64.ActiveCfg = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(SubversionScc) = preSolution
+		Svn-Managed = True
+		Manager = AnkhSVN - Subversion Support for Visual Studio
 	EndGlobalSection
 EndGlobal

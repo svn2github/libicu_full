@@ -28,6 +28,7 @@ U_NAMESPACE_BEGIN
 static UMTX gTZNamesImplLock = NULL;
 
 #define ZID_KEY_MAX  128
+#define MZ_PREFIX_LEN 5
 
 static const char gZoneStrings[]        = "zoneStrings";
 static const char gMZPrefix[]           = "meta:";
@@ -194,7 +195,7 @@ TimeZoneNamesImpl::getMetaZoneDisplayName(const UnicodeString& mzID,
     if (znames != NULL) {
         const UChar* s = znames->getName(type);
         if (s != NULL) {
-            name.setTo(s);
+            name.setTo(TRUE, s, -1);
         }
     }
     return name;
@@ -211,7 +212,7 @@ TimeZoneNamesImpl::getTimeZoneDisplayName(const UnicodeString& tzID, UTimeZoneNa
     if (tznames != NULL) {
         const UChar *s = tznames->getName(type);
         if (s != NULL) {
-            name.setTo(s);
+            name.setTo(TRUE, s, -1);
         }
     }
     return name;
@@ -225,7 +226,7 @@ TimeZoneNamesImpl::getExemplarLocationName(const UnicodeString& tzID, UnicodeStr
         locName = tznames->getLocationName();
     }
     if (locName != NULL) {
-        name.setTo(locName);
+        name.setTo(TRUE, locName, -1);
         return name;
     }
 
@@ -243,7 +244,7 @@ static void mergeTimeZoneKey(const UnicodeString& mzID, char* result) {
     char mzIdChar[ZID_KEY_MAX + 1];
     int32_t keyLen;
     int32_t prefixLen = uprv_strlen(gMZPrefix);
-    keyLen = mzID.extract(0, mzID.length(), mzIdChar, ZID_KEY_MAX, US_INV);
+    keyLen = mzID.extract(0, mzID.length(), mzIdChar, ZID_KEY_MAX + 1, US_INV);
     uprv_memcpy((void *)result, (void *)gMZPrefix, prefixLen);
     uprv_memcpy((void *)(result + prefixLen), (void *)mzIdChar, keyLen);
     result[keyLen + prefixLen] = '\0';
@@ -251,15 +252,15 @@ static void mergeTimeZoneKey(const UnicodeString& mzID, char* result) {
 
 ZNames*
 TimeZoneNamesImpl::loadMetaZoneNames(const UnicodeString& mzID) const {
-    if (mzID.length() >= ZID_KEY_MAX) {
+    if (mzID.length() > (ZID_KEY_MAX - MZ_PREFIX_LEN)) {
         return NULL;
     }
 
     ZNames *znames = NULL;
 
     UErrorCode status = U_ZERO_ERROR;
-    UChar mzIDKey[ZID_KEY_MAX];
-    mzID.extract(mzIDKey, ZID_KEY_MAX, status);
+    UChar mzIDKey[ZID_KEY_MAX + 1];
+    mzID.extract(mzIDKey, ZID_KEY_MAX + 1, status);
     U_ASSERT(status == U_ZERO_ERROR);   // already checked length above
     mzIDKey[mzID.length()] = 0;
 
@@ -267,7 +268,7 @@ TimeZoneNamesImpl::loadMetaZoneNames(const UnicodeString& mzID) const {
     {
         void *cacheVal = uhash_get(fMZNamesMap, mzIDKey);
         if (cacheVal == NULL) {
-            char key[ZID_KEY_MAX];
+            char key[ZID_KEY_MAX + 1];
             mergeTimeZoneKey(mzID, key);
             znames = ZNames::createInstance(fZoneStrings, key);
 
@@ -311,23 +312,23 @@ static void convertTzToCLDRFomat(const UnicodeString& tzID, char* result) {
 
 TZNames*
 TimeZoneNamesImpl::loadTimeZoneNames(const UnicodeString& tzID) const {
-    if (tzID.length() >= ZID_KEY_MAX) {
+    if (tzID.length() > ZID_KEY_MAX) {
         return NULL;
     }
 
     TZNames *tznames = NULL;
 
     UErrorCode status = U_ZERO_ERROR;
-    UChar tzIDKey[ZID_KEY_MAX];
-    tzID.extract(tzIDKey, ZID_KEY_MAX, status);
+    UChar tzIDKey[ZID_KEY_MAX + 1];
+    int32_t tzIDKeyLen = tzID.extract(tzIDKey, ZID_KEY_MAX + 1, status);
     U_ASSERT(status == U_ZERO_ERROR);   // already checked length above
-    tzIDKey[tzID.length()] = 0;
+    tzIDKey[tzIDKeyLen] = 0;
 
     umtx_lock(&gTZNamesImplLock);
     {
         void *cacheVal = uhash_get(fTZNamesMap, tzIDKey);
         if (cacheVal == NULL) {
-            char key[ZID_KEY_MAX];
+            char key[ZID_KEY_MAX + 1];
             UErrorCode status = U_ZERO_ERROR;
             // Replace "/" with ":".
             convertTzToCLDRFomat(tzID, key);
