@@ -27,11 +27,11 @@
 #include "ureslocs.h"
 #include "olsontz.h"
 #include "zonemeta.h"
+#include "tznames_impl.h"
 
 U_NAMESPACE_BEGIN
 
 #define ZID_KEY_MAX  128
-
 
 static const char gZoneStrings[]                = "zoneStrings";
 
@@ -83,16 +83,6 @@ comparePartialLocationKey(const UHashTok key1, const UHashTok key2) {
 }
 
 /**
- * Deleter for location name
- */
-static void U_CALLCONV
-deleteLocationName(void *obj) {
-    if (obj != gEmpty) {
-        uprv_free(obj);
-    }
-}
-
-/**
  * Cleanup callback
  */
 static UBool U_CALLCONV tzGenericNames_cleanup(void) {
@@ -110,7 +100,10 @@ TimeZoneGenericNames::TimeZoneGenericNames(const Locale& locale, UErrorCode& sta
   fRegionFormat(NULL),
   fFallbackRegionFormat(NULL),
   fFallbackFormat(NULL),
-  fLocaleDisplayNames(NULL) {
+  fLocaleDisplayNames(NULL),
+  fStringPool(status),
+  fGNamesTrie(TRUE, NULL),
+  fGNamesTrieFullyLoaded(FALSE) {
     initialize(locale, status);
 }
 
@@ -177,13 +170,12 @@ TimeZoneGenericNames::initialize(const Locale& locale, UErrorCode& status) {
     // locale display names
     fLocaleDisplayNames = LocaleDisplayNames::createInstance(locale);
 
-    // hash table for names
+    // hash table for names - no key/value deleters
     fLocationNamesMap = uhash_open(uhash_hashUChars, uhash_compareUChars, NULL, &status);
     if (U_FAILURE(status)) {
         cleanup();
         return;
     }
-    uhash_setValueDeleter(fLocationNamesMap, deleteLocationName);
 
     fPartialLocationNamesMap = uhash_open(hashPartialLocationKey, comparePartialLocationKey, NULL, &status);
     if (U_FAILURE(status)) {
@@ -191,7 +183,7 @@ TimeZoneGenericNames::initialize(const Locale& locale, UErrorCode& status) {
         return;
     }
     uhash_setKeyDeleter(fPartialLocationNamesMap, uhash_freeBlock);
-    uhash_setValueDeleter(fPartialLocationNamesMap, uhash_freeBlock);
+    // no value deleter
 
     // target region
     const char* region = fLocale.getCountry();
@@ -336,25 +328,14 @@ TimeZoneGenericNames::getGenericLocationName(const UnicodeString& tzCanonicalID,
         {
             uname = (const UChar *)uhash_get(fLocationNamesMap, tzIDKey);
             if (uname == NULL) {
-                const UChar* newKey = ZoneMeta::findTimeZoneID(tzCanonicalID);
-                U_ASSERT(newKey != NULL);
+                const UChar* cacheID = ZoneMeta::findTimeZoneID(tzCanonicalID);
+                U_ASSERT(cacheID != NULL);
                 if (name.isEmpty()) {
                     // gEmpty to indicate - no location name available
-                    uhash_put(fLocationNamesMap, (void *)newKey, (void *)gEmpty, &status);
+                    uhash_put(fLocationNamesMap, (void *)cacheID, (void *)gEmpty, &status);
                 } else {
-                    UChar* newVal = NULL;
-                    int32_t newValLen = name.length();
-                    newVal = (UChar *)uprv_malloc(sizeof(UChar) * (newValLen + 1));
-                    if (newVal == NULL) {
-                        status = U_MEMORY_ALLOCATION_ERROR;
-                    } else {
-                        name.extract(0, newValLen, newVal);
-                        newVal[newValLen] = 0;
-                        uhash_put(fLocationNamesMap, (void *)newKey, (void *)newVal, &status);
-                        if (U_FAILURE(status)) {
-                            uprv_free((void *)newVal);
-                        }
-                    }
+                    const UChar* cacheVal = nonConstThis->fStringPool.get(name, status);
+                    uhash_put(fLocationNamesMap, (void *)cacheID, (void *)cacheVal, &status);
                 }
             }
         }
@@ -558,25 +539,15 @@ TimeZoneGenericNames::getPartialLocationName(const UnicodeString& tzCanonicalID,
     {
         plname = (const UChar*)uhash_get(fPartialLocationNamesMap, (void *)&key);
         if (plname == NULL) {
-            int32_t len = name.length();
-            UChar* newVal = (UChar *)uprv_malloc(sizeof(UChar) * (len + 1));
-            if (newVal != NULL) {
-                PartialLocationKey* newKey = (PartialLocationKey *)uprv_malloc(sizeof(PartialLocationKey));
-                if (newKey == NULL) {
-                    uprv_free(newVal);
-                } else {
-                    name.extract(0, len, newVal);
-                    newVal[len] = 0;
-
-                    newKey->tzID = key.tzID;
-                    newKey->mzID = key.mzID;
-                    newKey->isLong = key.isLong;
-
-                    uhash_put(fPartialLocationNamesMap, (void *)newKey, (void *)newVal, &status);
-                    if (U_FAILURE(status)) {
-                        uprv_free(newKey);
-                        uprv_free(newVal);
-                    }
+            PartialLocationKey* cacheKey = (PartialLocationKey *)uprv_malloc(sizeof(PartialLocationKey));
+            if (cacheKey != NULL) {
+                const UChar* cacheVal = nonConstThis->fStringPool.get(name, status);
+                cacheKey->tzID = key.tzID;
+                cacheKey->mzID = key.mzID;
+                cacheKey->isLong = key.isLong;
+                uhash_put(fPartialLocationNamesMap, (void *)cacheKey, (void *)cacheVal, &status);
+                if (U_FAILURE(status)) {
+                    uprv_free(cacheKey);
                 }
             }
         }

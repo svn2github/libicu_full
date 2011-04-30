@@ -32,7 +32,7 @@ U_NAMESPACE_BEGIN
  *                 strings within ZoneStringFormats.
  */
 struct ZSFStringPoolChunk;
-class ZSFStringPool: public UMemory {
+class U_I18N_API ZSFStringPool: public UMemory {
   public:
     ZSFStringPool(UErrorCode &status);
     ~ZSFStringPool();
@@ -125,7 +125,7 @@ public:
  * TextTrieMap is a trie implementation for supporting
  * fast prefix match for the string key.
  */
-class TextTrieMap : public UMemory {
+class U_I18N_API TextTrieMap : public UMemory {
 public:
     TextTrieMap(UBool ignoreCase, UObjectDeleter *valeDeleter);
     virtual ~TextTrieMap();
@@ -196,7 +196,7 @@ private:
     UHashtable* fMZNamesMap;
     UHashtable* fTZNamesMap;
 
-    TextTrieMap* fNamesTrie;
+    TextTrieMap fNamesTrie;
     UBool fNamesTrieFullyLoaded;
 };
 

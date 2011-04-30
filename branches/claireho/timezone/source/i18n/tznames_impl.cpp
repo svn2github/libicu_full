@@ -63,7 +63,9 @@ void CharacterNode::deleteValues(UObjectDeleter *valueDeleter) {
     if (fValues == NULL) {
         // Do nothing.
     } else if (!fHasValuesVector) {
-        valueDeleter(fValues);
+        if (valueDeleter) {
+            valueDeleter(fValues);
+        }
     } else {
         delete (UVector *)fValues;
     }
@@ -72,7 +74,9 @@ void CharacterNode::deleteValues(UObjectDeleter *valueDeleter) {
 void
 CharacterNode::addValue(void *value, UObjectDeleter *valueDeleter, UErrorCode &status) {
     if (U_FAILURE(status)) {
-        valueDeleter(value);
+        if (valueDeleter) {
+            valueDeleter(value);
+        }
         return;
     }
     if (fValues == NULL) {
@@ -84,7 +88,9 @@ CharacterNode::addValue(void *value, UObjectDeleter *valueDeleter, UErrorCode &s
             // Create a vector and add the old value.
             UVector *values = new UVector(valueDeleter, NULL, DEFAULT_CHARACTERNODE_CAPACITY, status);
             if (U_FAILURE(status)) {
-                valueDeleter(value);
+                if (valueDeleter) {
+                    valueDeleter(value);
+                }
                 return;
             }
             values->addElement(fValues, status);
@@ -118,7 +124,9 @@ TextTrieMap::~TextTrieMap() {
     uprv_free(fNodes);
     if (fLazyContents != NULL) {
         for (int32_t i=0; i<fLazyContents->size(); i+=2) {
-            fValueDeleter(fLazyContents->elementAt(i+1));
+            if (fValueDeleter) {
+                fValueDeleter(fLazyContents->elementAt(i+1));
+            }
         } 
         delete fLazyContents;
     }
@@ -834,7 +842,7 @@ TimeZoneNamesImpl::TimeZoneNamesImpl(const Locale& locale, UErrorCode& status)
 : fZoneStrings(NULL),
   fMZNamesMap(NULL),
   fTZNamesMap(NULL),
-  fNamesTrie(NULL),
+  fNamesTrie(TRUE, deleteZNameInfo),
   fNamesTrieFullyLoaded(FALSE),
   fLock(NULL) {
     initialize(locale, status);
@@ -868,14 +876,6 @@ TimeZoneNamesImpl::initialize(const Locale& locale, UErrorCode& status) {
     uhash_setValueDeleter(fTZNamesMap, deleteTZNames);
     // no key deleters for name maps
 
-    // Trie
-    fNamesTrie = new TextTrieMap(TRUE, deleteZNameInfo);
-    if (fNamesTrie == NULL) {
-        status = U_MEMORY_ALLOCATION_ERROR;
-        cleanup();
-        return;
-    }
-
     return;
 }
 
@@ -897,9 +897,6 @@ TimeZoneNamesImpl::cleanup() {
     if (fTZNamesMap != NULL) {
         uhash_close(fTZNamesMap);
         fTZNamesMap = NULL;
-    }
-    if (fNamesTrie != NULL) {
-        delete fNamesTrie;
     }
 }
 
@@ -1100,7 +1097,7 @@ TimeZoneNamesImpl::loadMetaZoneNames(const UnicodeString& mzID) {
                             nameinfo->type = ALL_NAME_TYPES[i];
                             nameinfo->tzID = NULL;
                             nameinfo->mzID = newKey;
-                            fNamesTrie->put(name, nameinfo, status);
+                            fNamesTrie.put(name, nameinfo, status);
                         }
                     }
                 }
@@ -1181,7 +1178,7 @@ TimeZoneNamesImpl::loadTimeZoneNames(const UnicodeString& tzID) {
                             nameinfo->type = ALL_NAME_TYPES[i];
                             nameinfo->tzID = newKey;
                             nameinfo->mzID = NULL;
-                            fNamesTrie->put(name, nameinfo, status);
+                            fNamesTrie.put(name, nameinfo, status);
                         }
                     }
                 }
@@ -1210,7 +1207,7 @@ TimeZoneNamesImpl::find(const UnicodeString& text, int32_t start, uint32_t types
 
     umtx_lock(&nonConstThis->fLock);
     {
-        fNamesTrie->search(text, start, (TextTrieMapSearchResultHandler *)&handler, status);
+        fNamesTrie.search(text, start, (TextTrieMapSearchResultHandler *)&handler, status);
     }
     umtx_unlock(&nonConstThis->fLock);
 
@@ -1273,7 +1270,7 @@ TimeZoneNamesImpl::find(const UnicodeString& text, int32_t start, uint32_t types
             nonConstThis->fNamesTrieFullyLoaded = TRUE;
 
             // now try it again
-            fNamesTrie->search(text, start, (TextTrieMapSearchResultHandler *)&handler, status);
+            fNamesTrie.search(text, start, (TextTrieMapSearchResultHandler *)&handler, status);
         }
     }
     umtx_unlock(&nonConstThis->fLock);

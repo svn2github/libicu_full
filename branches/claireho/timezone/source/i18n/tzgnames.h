@@ -20,12 +20,14 @@
 #include "unicode/timezone.h"
 #include "unicode/unistr.h"
 #include "tznames.h"
+#include "tznames_impl.h"
 #include "uhash.h"
 #include "umutex.h"
 
 U_CDECL_BEGIN
 
 typedef enum UTimeZoneGenericNameType {
+    UTTGNM_UNKNOWN      = 0x00,
     UTZGNM_LOCATION     = 0x01,
     UTZGNM_LONG         = 0x02,
     UTZGNM_SHORT        = 0x04,
@@ -63,6 +65,11 @@ private:
 
     UHashtable* fLocationNamesMap;
     UHashtable* fPartialLocationNamesMap;
+
+    ZSFStringPool fStringPool;
+
+    TextTrieMap fGNamesTrie;
+    UBool fGNamesTrieFullyLoaded;
 
     void initialize(const Locale& locale, UErrorCode& status);
     void cleanup();
