@@ -117,7 +117,7 @@ public:
 
     UnicodeString& getExemplarLocationName(const UnicodeString& tzID, UnicodeString& name) const;
 
-    UEnumeration* find(const UnicodeString& text, int32_t start, int32_t types) const;
+    TimeZoneNameMatchInfo* find(const UnicodeString& text, int32_t start, uint32_t types, UErrorCode& status) const;
 private:
     TimeZoneNamesCacheEntry*    fTZnamesCacheEntry;
 };
@@ -254,11 +254,12 @@ TimeZoneNamesDelegate::getExemplarLocationName(const UnicodeString& tzID, Unicod
     return fTZnamesCacheEntry->names->getExemplarLocationName(tzID, name);
 }
 
-
-
-
-TimeZoneNames::~TimeZoneNames() {
+TimeZoneNameMatchInfo*
+TimeZoneNamesDelegate::find(const UnicodeString& text, int32_t start, uint32_t types, UErrorCode& status) const {
+    return fTZnamesCacheEntry->names->find(text, start, types, status);
 }
+
+
 
 TimeZoneNames*
 TimeZoneNames::createInstance(const Locale& locale, UErrorCode& status) {

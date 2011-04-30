@@ -27,51 +27,141 @@
 
 U_NAMESPACE_BEGIN
 
-typedef struct UMzMapEntry {
-    UnicodeString mzID;
-    int32_t from;
-    int32_t to;
-} UMzMapEntry;
-
-
-/**
- * This class stores name data for a meta zone.
+/*
+ * ZSFStringPool   Pool of (UChar *) strings.  Provides for sharing of repeated
+ *                 strings within ZoneStringFormats.
  */
-class ZNames : public UMemory {
+struct ZSFStringPoolChunk;
+class ZSFStringPool: public UMemory {
+  public:
+    ZSFStringPool(UErrorCode &status);
+    ~ZSFStringPool();
+
+    /* Get the pooled string that is equal to the supplied string s.
+     * Copy the string into the pool if it is not already present.
+     *
+     * Life time of the returned string is that of the pool.
+     */
+    const UChar *get(const UChar *s, UErrorCode &status);
+
+    /* Get the pooled string that is equal to the supplied string s.
+     * Copy the string into the pool if it is not already present.
+     */
+    const UChar *get(const UnicodeString &s, UErrorCode &status);
+
+    /* Adopt a string into the pool, without copying it.
+     * Used for strings from resource bundles, which will persist without copying.
+     */
+    const UChar *adopt(const UChar *s, UErrorCode &status);
+
+    /* Freeze the string pool.  Discards the hash table that is used
+     * for looking up a string.  All pointers to pooled strings remain valid.
+     */
+    void freeze();
+
+  private:
+    ZSFStringPoolChunk   *fChunks;
+    UHashtable           *fHash;
+};
+
+/*
+ * Character node used by TextTrieMap
+ */
+struct CharacterNode {
+    // No constructor or destructor.
+    // We malloc and free an uninitalized array of CharacterNode objects
+    // and clear and delete them ourselves.
+
+    void clear();
+    void deleteValues(UObjectDeleter *valueDeleter);
+
+    void addValue(void *value, UObjectDeleter *valueDeleter, UErrorCode &status);
+    inline UBool hasValues() const;
+    inline int32_t countValues() const;
+    inline const void *getValue(int32_t index) const;
+
+    void     *fValues;      // Union of one single value vs. UVector of values.
+    UChar    fCharacter;    // UTF-16 code unit.
+    uint16_t fFirstChild;   // 0 if no children.
+    uint16_t fNextSibling;  // 0 terminates the list.
+    UBool    fHasValuesVector;
+    UBool    fPadding;
+
+    // No value:   fValues == NULL               and  fHasValuesVector == FALSE
+    // One value:  fValues == value              and  fHasValuesVector == FALSE
+    // >=2 values: fValues == UVector of values  and  fHasValuesVector == TRUE
+};
+
+inline UBool CharacterNode::hasValues() const {
+    return (UBool)(fValues != NULL);
+}
+
+inline int32_t CharacterNode::countValues() const {
+    return
+        fValues == NULL ? 0 :
+        !fHasValuesVector ? 1 :
+        ((const UVector *)fValues)->size();
+}
+
+inline const void *CharacterNode::getValue(int32_t index) const {
+    if (!fHasValuesVector) {
+        return fValues;  // Assume index == 0.
+    } else {
+        return ((const UVector *)fValues)->elementAt(index);
+    }
+}
+
+/*
+ * Search result handler callback interface used by TextTrieMap search.
+ */
+class TextTrieMapSearchResultHandler : public UMemory {
 public:
-    virtual ~ZNames();
-
-    static ZNames* createInstance(UResourceBundle* rb, const char* key);
-    const UChar* getName(UTimeZoneNameType type);
-
-protected:
-    ZNames(const UChar** names, UBool shortCommonlyUsed);
-    static const UChar** loadData(UResourceBundle* rb, const char* key, UBool& shortCommonlyUsed);
-
-private:
-    const UChar** fNames;
-    UBool fShortCommonlyUsed;
+    virtual UBool handleMatch(int32_t matchLength,
+                              const CharacterNode *node, UErrorCode& status) = 0;
+    virtual ~TextTrieMapSearchResultHandler(); //added to avoid warning
 };
 
 /**
- * This class stores name data for single timezone.
+ * TextTrieMap is a trie implementation for supporting
+ * fast prefix match for the string key.
  */
-class TZNames : public ZNames {
+class TextTrieMap : public UMemory {
 public:
-    virtual ~TZNames();
+    TextTrieMap(UBool ignoreCase, UObjectDeleter *valeDeleter);
+    virtual ~TextTrieMap();
 
-    static TZNames* createInstance(UResourceBundle* rb, const char* key);
-    const UChar* getLocationName(void);
+    void put(const UnicodeString &key, void *value, ZSFStringPool &sp, UErrorCode &status);
+    void put(const UChar*, void *value, UErrorCode &status);
+    void search(const UnicodeString &text, int32_t start,
+        TextTrieMapSearchResultHandler *handler, UErrorCode& status) const;
+    int32_t isEmpty() const;
 
 private:
-    TZNames(const UChar** names, UBool shortCommonlyUsed, const UChar* locationName);
-    const UChar* fLocationName;
+    UBool           fIgnoreCase;
+    CharacterNode   *fNodes;
+    int32_t         fNodesCapacity;
+    int32_t         fNodesCount;
+
+    UVector         *fLazyContents;
+    UBool           fIsEmpty;
+    UObjectDeleter  *fValueDeleter;
+
+    UBool growNodes();
+    CharacterNode* addChildNode(CharacterNode *parent, UChar c, UErrorCode &status);
+    CharacterNode* getChildNode(CharacterNode *parent, UChar c) const;
+
+    void putImpl(const UnicodeString &key, void *value, UErrorCode &status);
+    void buildTrie(UErrorCode &status);
+    void search(CharacterNode *node, const UnicodeString &text, int32_t start,
+        int32_t index, TextTrieMapSearchResultHandler *handler, UErrorCode &status) const;
 };
 
-/**
- * The default implementation of <code>TimeZoneNames</code> used by {@link TimeZoneNames#getInstance(ULocale)} when
- * the ICU4J tznamedata component is not available.
- */
+
+
+class ZNames;
+class TZNames;
+class TextTrieMap;
+
 class TimeZoneNamesImpl : public TimeZoneNames {
 public:
     TimeZoneNamesImpl(const Locale& locale, UErrorCode& status);
@@ -89,12 +179,14 @@ public:
 
     UnicodeString& getExemplarLocationName(const UnicodeString& tzID, UnicodeString& name) const;
 
+    TimeZoneNameMatchInfo* find(const UnicodeString& text, int32_t start, uint32_t types, UErrorCode& status) const;
+
 private:
     void initialize(const Locale& locale, UErrorCode& status);
     void cleanup();
 
-    ZNames* loadMetaZoneNames(const UnicodeString& mzId) const;
-    TZNames* loadTimeZoneNames(const UnicodeString& mzId) const;
+    ZNames* loadMetaZoneNames(const UnicodeString& mzId);
+    TZNames* loadTimeZoneNames(const UnicodeString& mzId);
 
     UMTX fLock;
 
@@ -103,25 +195,46 @@ private:
 
     UHashtable* fMZNamesMap;
     UHashtable* fTZNamesMap;
+
+    TextTrieMap* fNamesTrie;
+    UBool fNamesTrieFullyLoaded;
 };
 
-class MetaZoneIDsEnumeration : public StringEnumeration {
+typedef struct ZNameInfo {
+    uint32_t        type;   // for both UTimeZoneNameType and UTimeZoneGenericNameType
+    const UChar*    tzID;
+    const UChar*    mzID;
+} ZNameInfo;
+
+typedef struct ZMatchInfo {
+    ZNameInfo*      znameInfo;
+    int32_t         matchLength;
+} ZMatchInfo;
+
+/*
+ * TimeZoneNamesSearchResultHandler is an implementation of
+ * TextTrieMapSearchHandler.  This class is used by TimeZoneNames
+ * and TimeZoneGenericNames for collecting search results for
+ * localized zone strings.
+ */
+class TimeZoneNamesSearchResultHandler : public TextTrieMapSearchResultHandler {
 public:
-    MetaZoneIDsEnumeration();
-    MetaZoneIDsEnumeration(const UVector& mzIDs);
-    MetaZoneIDsEnumeration(UVector* mzIDs);
-    virtual ~MetaZoneIDsEnumeration();
-    static UClassID U_EXPORT2 getStaticClassID(void);
-    virtual UClassID getDynamicClassID(void) const;
-    virtual const UnicodeString* snext(UErrorCode& status);
-    virtual void reset(UErrorCode& status);
-    virtual int32_t count(UErrorCode& status) const;
+    TimeZoneNamesSearchResultHandler(uint32_t types);
+    virtual ~TimeZoneNamesSearchResultHandler();
+
+    UBool handleMatch(int32_t matchLength, const CharacterNode *node, UErrorCode &status);
+    UVector* getMatches(int32_t& maxMatchLen);
+
 private:
-    int32_t fLen;
-    int32_t fPos;
-    const UVector* fMetaZoneIDs;
-    UVector *fLocalVector;
+    uint32_t fTypes;
+    UVector* fResults;
+    int32_t fMaxMatchLen;
 };
+
+inline
+TimeZoneNamesSearchResultHandler::TimeZoneNamesSearchResultHandler(uint32_t types) 
+: fTypes(types), fResults(NULL), fMaxMatchLen(0) {
+}
 
 U_NAMESPACE_END
 
