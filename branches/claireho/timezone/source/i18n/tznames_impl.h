@@ -19,11 +19,11 @@
 #if !UCONFIG_NO_FORMATTING
 
 #include "tznames.h"
-#include "uhash.h"
-#include "zstrfmt.h"
-#include "unicode/uobject.h"
 #include "unicode/ures.h"
+#include "unicode/locid.h"
+#include "uhash.h"
 #include "uvector.h"
+#include "umutex.h"
 
 U_NAMESPACE_BEGIN
 
@@ -95,6 +95,8 @@ private:
 
     ZNames* loadMetaZoneNames(const UnicodeString& mzId) const;
     TZNames* loadTimeZoneNames(const UnicodeString& mzId) const;
+
+    UMTX fLock;
 
     Locale fLocale;
     UResourceBundle* fZoneStrings;

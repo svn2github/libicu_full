@@ -5,7 +5,11 @@
 *******************************************************************************
 */
 
+#include "unicode/utypes.h"
+
 #if !UCONFIG_NO_FORMATTING
+
+#include "tzgnames.h"
 
 #include "unicode/basictz.h"
 #include "unicode/locdspnm.h"
@@ -14,15 +18,14 @@
 #include "unicode/simpletz.h"
 #include "unicode/vtzone.h"
 
-#include "tzgnames.h"
 #include "cmemory.h"
 #include "cstring.h"
-#include "hash.h"
-#include "olsontz.h"
+#include "uhash.h"
 #include "uassert.h"
 #include "umutex.h"
 #include "uresimp.h"
 #include "ureslocs.h"
+#include "olsontz.h"
 #include "zonemeta.h"
 
 U_NAMESPACE_BEGIN
@@ -100,6 +103,7 @@ U_CDECL_END
 
 TimeZoneGenericNames::TimeZoneGenericNames(const Locale& locale, UErrorCode& status)
 : fLocale(locale),
+  fLock(NULL),
   fTimeZoneNames(NULL),
   fLocationNamesMap(NULL),
   fPartialLocationNamesMap(NULL),
@@ -112,6 +116,7 @@ TimeZoneGenericNames::TimeZoneGenericNames(const Locale& locale, UErrorCode& sta
 
 TimeZoneGenericNames::~TimeZoneGenericNames() {
     cleanup();
+    umtx_destroy(&fLock);
 }
 
 void
@@ -207,8 +212,6 @@ TimeZoneGenericNames::initialize(const Locale& locale, UErrorCode& status) {
     } else {
         fTargetRegion[0] = 0;
     }
-
-    fLock = NULL;
 }
 
 void
@@ -228,8 +231,6 @@ TimeZoneGenericNames::cleanup() {
 
     uhash_close(fLocationNamesMap);
     uhash_close(fPartialLocationNamesMap);
-
-    umtx_destroy(&fLock);
 }
 
 UnicodeString&

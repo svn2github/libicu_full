@@ -12,11 +12,11 @@
  * \brief C API: Time zone names class
  */
 #include "unicode/utypes.h"
-#include "unicode/uloc.h"
-#include "unicode/unistr.h"
 
 #if !UCONFIG_NO_FORMATTING
 
+#include "unicode/uloc.h"
+#include "unicode/unistr.h"
 
 U_CDECL_BEGIN
 

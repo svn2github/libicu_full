@@ -6,6 +6,12 @@
 */
 
 #include "unicode/utypes.h"
+
+#if !UCONFIG_NO_FORMATTING
+
+#include "tznames.h"
+#include "tznames_impl.h"
+
 #include "unicode/locid.h"
 #include "unicode/uenum.h"
 #include "cmemory.h"
@@ -16,10 +22,6 @@
 #include "uhash.h"
 #include "umutex.h"
 
-#include "tznames.h"
-#include "tznames_impl.h"
-
-#if !UCONFIG_NO_FORMATTING
 
 U_NAMESPACE_BEGIN
 
@@ -39,14 +41,14 @@ static UBool gTimeZoneNamesCacheInitialized = FALSE;
 // then reset to 0
 static int32_t gAccessCount = 0;
 
-// Interval for calling the cache sweep function
+// Interval for calling the cache sweep function - every 100 times
 #define SWEEP_INTERVAL 100
 
 // Cache expiration in millisecond. When a cached entry is no
 // longer referenced and exceeding this threshold since last
 // access time, then the cache entry will be deleted by the sweep
-// function.
-#define CACHE_EXPIRATION 600000.0
+// function. For now, 3 minutes.
+#define CACHE_EXPIRATION 180000.0
 
 typedef struct TimeZoneNamesCacheEntry {
     TimeZoneNames*  names;
@@ -68,14 +70,6 @@ static UBool U_CALLCONV timeZoneNames_cleanup(void)
     }
     gTimeZoneNamesCacheInitialized = FALSE;
     return TRUE;
-}
-
-/**
- * Deleter for locake key
- */
-static void U_CALLCONV
-deleteChars(void *obj) {
-    uprv_free(obj);
 }
 
 /**
@@ -125,7 +119,7 @@ public:
 
     UEnumeration* find(const UnicodeString& text, int32_t start, int32_t types) const;
 private:
-    TimeZoneNamesCacheEntry*    tznamesCacheEntry;
+    TimeZoneNamesCacheEntry*    fTZnamesCacheEntry;
 };
 
 TimeZoneNamesDelegate::TimeZoneNamesDelegate(const Locale& locale, UErrorCode& status) {
@@ -137,19 +131,19 @@ TimeZoneNamesDelegate::TimeZoneNamesDelegate(const Locale& locale, UErrorCode& s
         {
             if (!gTimeZoneNamesCacheInitialized) {
                 gTimeZoneNamesCache = uhash_open(uhash_hashChars, uhash_compareChars, NULL, &status);
-                if (gTimeZoneNamesLock == NULL) {
-                    status = U_MEMORY_ALLOCATION_ERROR;
+                if (U_SUCCESS(status)) {
+                    uhash_setKeyDeleter(gTimeZoneNamesCache, uhash_freeBlock);
+                    uhash_setValueDeleter(gTimeZoneNamesCache, deleteTimeZoneNamesCacheEntry);
+                    gTimeZoneNamesCacheInitialized = TRUE;
+                    ucln_i18n_registerCleanup(UCLN_I18N_TIMEZONENAMES, timeZoneNames_cleanup);
                 }
-                if (U_FAILURE(status)) {
-                    return;
-                }
-                uhash_setKeyDeleter(gTimeZoneNamesCache, deleteChars);
-                uhash_setValueDeleter(gTimeZoneNamesCache, deleteTimeZoneNamesCacheEntry);
-                gTimeZoneNamesCacheInitialized = TRUE;
-                ucln_i18n_registerCleanup(UCLN_I18N_TIMEZONENAMES, timeZoneNames_cleanup);
             }
         }
         umtx_unlock(&gTimeZoneNamesLock);
+
+        if (U_FAILURE(status)) {
+            return;
+        }
     }
 
     // Check the cache, if not available, create new one and cache
@@ -159,32 +153,44 @@ TimeZoneNamesDelegate::TimeZoneNamesDelegate(const Locale& locale, UErrorCode& s
         const char *key = locale.getName();
         cacheEntry = (TimeZoneNamesCacheEntry *)uhash_get(gTimeZoneNamesCache, key);
         if (cacheEntry == NULL) {
-            TimeZoneNames *tznames = new TimeZoneNamesImpl(locale, status);
+            TimeZoneNames *tznames = NULL;
+            char *newKey = NULL;
+
+            tznames = new TimeZoneNamesImpl(locale, status);
             if (tznames == NULL) {
                 status = U_MEMORY_ALLOCATION_ERROR;
-                return;
             }
-            char *newKey = (char *)uprv_malloc(uprv_strlen(key) + 1);
-            if (newKey == NULL) {
-                uprv_free(tznames);
-                status = U_MEMORY_ALLOCATION_ERROR;
-                return;
+            if (U_SUCCESS(status)) {
+                newKey = (char *)uprv_malloc(uprv_strlen(key) + 1);
+                if (newKey == NULL) {
+                    status = U_MEMORY_ALLOCATION_ERROR;
+                } else {
+                    uprv_strcpy(newKey, key);
+                }
             }
-            uprv_strcpy(newKey, key);
-            cacheEntry = (TimeZoneNamesCacheEntry *)uprv_malloc(sizeof(TimeZoneNamesCacheEntry));
-            if (cacheEntry == NULL) {
-                uprv_free(tznames);
-                uprv_free(newKey);
-                status = U_MEMORY_ALLOCATION_ERROR;
-                return;
-            }
-            cacheEntry->names = tznames;
-            cacheEntry->refCount = 1;
-            cacheEntry->lastAccess = (double)uprv_getUTCtime();
+            if (U_SUCCESS(status)) {
+                cacheEntry = (TimeZoneNamesCacheEntry *)uprv_malloc(sizeof(TimeZoneNamesCacheEntry));
+                if (cacheEntry == NULL) {
+                    status = U_MEMORY_ALLOCATION_ERROR;
+                } else {
+                    cacheEntry->names = tznames;
+                    cacheEntry->refCount = 1;
+                    cacheEntry->lastAccess = (double)uprv_getUTCtime();
 
-            uhash_put(gTimeZoneNamesCache, newKey, cacheEntry, &status);
+                    uhash_put(gTimeZoneNamesCache, newKey, cacheEntry, &status);
+                }
+            }
             if (U_FAILURE(status)) {
-                //TODO
+                if (tznames != NULL) {
+                    delete tznames;
+                }
+                if (newKey != NULL) {
+                    uprv_free(newKey);
+                }
+                if (cacheEntry != NULL) {
+                    uprv_free(cacheEntry);
+                }
+                return;
             }
         } else {
             // Update the reference count
@@ -200,52 +206,52 @@ TimeZoneNamesDelegate::TimeZoneNamesDelegate(const Locale& locale, UErrorCode& s
     }
     umtx_unlock(&gTimeZoneNamesLock);
 
-    tznamesCacheEntry = cacheEntry;
+    fTZnamesCacheEntry = cacheEntry;
 }
 
 TimeZoneNamesDelegate::~TimeZoneNamesDelegate() {
     umtx_lock(&gTimeZoneNamesLock);
     {
-        U_ASSERT(tznamesCacheEntry->refCount > 0);
+        U_ASSERT(fTZnamesCacheEntry->refCount > 0);
         // Just decrement the reference count
-        tznamesCacheEntry->refCount--;
+        fTZnamesCacheEntry->refCount--;
     }
     umtx_unlock(&gTimeZoneNamesLock);
 }
 
 StringEnumeration*
 TimeZoneNamesDelegate::getAvailableMetaZoneIDs(UErrorCode& status) const {
-    return tznamesCacheEntry->names->getAvailableMetaZoneIDs(status);
+    return fTZnamesCacheEntry->names->getAvailableMetaZoneIDs(status);
 }
 
 StringEnumeration*
 TimeZoneNamesDelegate::getAvailableMetaZoneIDs(const UnicodeString& tzID, UErrorCode& status) const {
-    return tznamesCacheEntry->names->getAvailableMetaZoneIDs(tzID, status);
+    return fTZnamesCacheEntry->names->getAvailableMetaZoneIDs(tzID, status);
 }
 
 UnicodeString&
 TimeZoneNamesDelegate::getMetaZoneID(const UnicodeString& tzID, UDate date, UnicodeString& mzID) const {
-    return tznamesCacheEntry->names->getMetaZoneID(tzID, date, mzID);
+    return fTZnamesCacheEntry->names->getMetaZoneID(tzID, date, mzID);
 }
 
 UnicodeString&
 TimeZoneNamesDelegate::getReferenceZoneID(const UnicodeString& mzID, const char* region, UnicodeString& tzID) const {
-    return tznamesCacheEntry->names->getReferenceZoneID(mzID, region, tzID);
+    return fTZnamesCacheEntry->names->getReferenceZoneID(mzID, region, tzID);
 }
 
 UnicodeString&
 TimeZoneNamesDelegate::getMetaZoneDisplayName(const UnicodeString& mzID, UTimeZoneNameType type, UnicodeString& name) const {
-    return tznamesCacheEntry->names->getMetaZoneDisplayName(mzID, type, name);
+    return fTZnamesCacheEntry->names->getMetaZoneDisplayName(mzID, type, name);
 }
 
 UnicodeString&
 TimeZoneNamesDelegate::getTimeZoneDisplayName(const UnicodeString& tzID, UTimeZoneNameType type, UnicodeString& name) const {
-    return tznamesCacheEntry->names->getTimeZoneDisplayName(tzID, type, name);
+    return fTZnamesCacheEntry->names->getTimeZoneDisplayName(tzID, type, name);
 }
 
 UnicodeString&
 TimeZoneNamesDelegate::getExemplarLocationName(const UnicodeString& tzID, UnicodeString& name) const {
-    return tznamesCacheEntry->names->getExemplarLocationName(tzID, name);
+    return fTZnamesCacheEntry->names->getExemplarLocationName(tzID, name);
 }
 
 

@@ -10,13 +10,12 @@
 */
 
 #include "unicode/utypes.h"
+
 #if !UCONFIG_NO_FORMATTING
 
+#include "tznames_impl.h"
 #include "cmemory.h"
 #include "cstring.h"
-#include "tznames.h"
-#include "tznames_impl.h"
-#include "umutex.h"
 #include "uassert.h"
 #include "uresimp.h"
 #include "ureslocs.h"
@@ -24,8 +23,6 @@
 #include "ucln_in.h"
 
 U_NAMESPACE_BEGIN
-
-static UMTX gTZNamesImplLock = NULL;
 
 #define ZID_KEY_MAX  128
 #define MZ_PREFIX_LEN 5
@@ -48,7 +45,7 @@ U_CDECL_BEGIN
 static void U_CALLCONV
 deleteZNames(void *obj) {
     if (obj != EMPTY) {
-        delete (U_NAMESPACE_QUALIFIER ZNames *)obj;
+        delete (ZNames *)obj;
     }
 }
 /**
@@ -57,21 +54,15 @@ deleteZNames(void *obj) {
 static void U_CALLCONV
 deleteTZNames(void *obj) {
     if (obj != EMPTY) {
-        delete (U_NAMESPACE_QUALIFIER TZNames *)obj;
+        delete (TZNames *)obj;
     }
-}
-
-static UBool U_CALLCONV tzNamesImpl_cleanup(void) {
-    umtx_destroy(&gTZNamesImplLock);
-    return TRUE;
 }
 U_CDECL_END
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(MetaZoneIDsEnumeration)
 
 TimeZoneNamesImpl::TimeZoneNamesImpl(const Locale& locale, UErrorCode& status)
-: fZoneStrings(NULL), fMZNamesMap(NULL), fTZNamesMap(NULL) {
-    ucln_i18n_registerCleanup(UCLN_I18N_TZNAMESIMPL, tzNamesImpl_cleanup);
+: fZoneStrings(NULL), fMZNamesMap(NULL), fTZNamesMap(NULL), fLock(NULL) {
     initialize(locale, status);
 }
 
@@ -108,6 +99,7 @@ TimeZoneNamesImpl::initialize(const Locale& locale, UErrorCode& status) {
 
 TimeZoneNamesImpl::~TimeZoneNamesImpl() {
     cleanup();
+    umtx_destroy(&fLock);
 }
 
 void
@@ -264,7 +256,9 @@ TimeZoneNamesImpl::loadMetaZoneNames(const UnicodeString& mzID) const {
     U_ASSERT(status == U_ZERO_ERROR);   // already checked length above
     mzIDKey[mzID.length()] = 0;
 
-    umtx_lock(&gTZNamesImplLock);
+    TimeZoneNamesImpl *nonConstThis = const_cast<TimeZoneNamesImpl *>(this);
+
+    umtx_lock(&nonConstThis->fLock);
     {
         void *cacheVal = uhash_get(fMZNamesMap, mzIDKey);
         if (cacheVal == NULL) {
@@ -295,7 +289,7 @@ TimeZoneNamesImpl::loadMetaZoneNames(const UnicodeString& mzID) const {
             znames = (ZNames *)cacheVal;
         }
     }
-    umtx_unlock(&gTZNamesImplLock);
+    umtx_unlock(&nonConstThis->fLock);
 
     return znames;
 }
@@ -324,7 +318,9 @@ TimeZoneNamesImpl::loadTimeZoneNames(const UnicodeString& tzID) const {
     U_ASSERT(status == U_ZERO_ERROR);   // already checked length above
     tzIDKey[tzIDKeyLen] = 0;
 
-    umtx_lock(&gTZNamesImplLock);
+    TimeZoneNamesImpl *nonConstThis = const_cast<TimeZoneNamesImpl *>(this);
+
+    umtx_lock(&nonConstThis->fLock);
     {
         void *cacheVal = uhash_get(fTZNamesMap, tzIDKey);
         if (cacheVal == NULL) {
@@ -357,7 +353,7 @@ TimeZoneNamesImpl::loadTimeZoneNames(const UnicodeString& tzID) const {
             tznames = (TZNames *)cacheVal;
         }
     }
-    umtx_unlock(&gTZNamesImplLock);
+    umtx_unlock(&nonConstThis->fLock);
 
     return tznames;
 
