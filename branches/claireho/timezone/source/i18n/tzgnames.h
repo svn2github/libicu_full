@@ -21,6 +21,7 @@
 #include "unicode/unistr.h"
 #include "tznames.h"
 #include "tznames_impl.h"
+#include "tzfmt.h"
 #include "uhash.h"
 #include "umutex.h"
 
@@ -65,7 +66,8 @@ public:
 
     UnicodeString& getGenericLocationName(const UnicodeString& tzCanonicalID, UnicodeString& name) const;
 
-    TimeZoneGenericNameMatchInfo* findBestMatch(const UnicodeString& text, int32_t start, uint32_t types, UErrorCode& status) const;
+    int32_t findBestMatch(const UnicodeString& text, int32_t start, uint32_t types,
+        UnicodeString& tzID, UTimeZoneTimeType& timeType, UErrorCode& status) const;
 
 private:
     Locale fLocale;

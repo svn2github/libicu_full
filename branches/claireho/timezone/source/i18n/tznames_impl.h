@@ -200,31 +200,6 @@ private:
     UBool fNamesTrieFullyLoaded;
 };
 
-/*
- * TimeZoneNamesSearchResultHandler is an implementation of
- * TextTrieMapSearchHandler.  This class is used by TimeZoneNames
- * and TimeZoneGenericNames for collecting search results for
- * localized zone strings.
- */
-class TimeZoneNamesSearchResultHandler : public TextTrieMapSearchResultHandler {
-public:
-    TimeZoneNamesSearchResultHandler(uint32_t types);
-    virtual ~TimeZoneNamesSearchResultHandler();
-
-    UBool handleMatch(int32_t matchLength, const CharacterNode *node, UErrorCode &status);
-    UVector* getMatches(int32_t& maxMatchLen);
-
-private:
-    uint32_t fTypes;
-    UVector* fResults;
-    int32_t fMaxMatchLen;
-};
-
-inline
-TimeZoneNamesSearchResultHandler::TimeZoneNamesSearchResultHandler(uint32_t types) 
-: fTypes(types), fResults(NULL), fMaxMatchLen(0) {
-}
-
 U_NAMESPACE_END
 
 #endif /* #if !UCONFIG_NO_FORMATTING */
