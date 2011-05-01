@@ -200,17 +200,6 @@ private:
     UBool fNamesTrieFullyLoaded;
 };
 
-typedef struct ZNameInfo {
-    uint32_t        type;   // for both UTimeZoneNameType and UTimeZoneGenericNameType
-    const UChar*    tzID;
-    const UChar*    mzID;
-} ZNameInfo;
-
-typedef struct ZMatchInfo {
-    ZNameInfo*      znameInfo;
-    int32_t         matchLength;
-} ZMatchInfo;
-
 /*
  * TimeZoneNamesSearchResultHandler is an implementation of
  * TextTrieMapSearchHandler.  This class is used by TimeZoneNames

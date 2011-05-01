@@ -727,6 +727,25 @@ MetaZoneIDsEnumeration::~MetaZoneIDsEnumeration() {
     }
 }
 
+U_CDECL_BEGIN
+/**
+ * ZNameInfo stores zone name information in the trie
+ */
+typedef struct ZNameInfo {
+    UTimeZoneNameType   type;
+    const UChar*        tzID;
+    const UChar*        mzID;
+} ZNameInfo;
+
+/**
+ * ZMatchInfo stores zone name match information used by find method
+ */
+typedef struct ZMatchInfo {
+    const ZNameInfo*    znameInfo;
+    int32_t             matchLength;
+} ZMatchInfo;
+U_CDECL_END
+
 // ---------------------------------------------------
 // The class stores time zone name match information
 // ---------------------------------------------------
@@ -767,7 +786,7 @@ UTimeZoneNameType
 TimeZoneNameMatchInfoImpl::getNameType(int32_t index) const {
     ZMatchInfo *minfo = (ZMatchInfo *)fMatches->elementAt(index);
     if (minfo != NULL) {
-        return static_cast<UTimeZoneNameType>(minfo->znameInfo->type);
+        return minfo->znameInfo->type;
     }
     return UTZNM_UNKNOWN;
 }
@@ -829,6 +848,7 @@ deleteTZNames(void *obj) {
         delete (TZNames *)obj;
     }
 }
+
 /**
  * Deleter for ZNameInfo
  */
@@ -836,6 +856,7 @@ static void U_CALLCONV
 deleteZNameInfo(void *obj) {
     uprv_free(obj);
 }
+
 U_CDECL_END
 
 TimeZoneNamesImpl::TimeZoneNamesImpl(const Locale& locale, UErrorCode& status)

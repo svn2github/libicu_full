@@ -27,7 +27,7 @@
 U_CDECL_BEGIN
 
 typedef enum UTimeZoneGenericNameType {
-    UTTGNM_UNKNOWN      = 0x00,
+    UTZGNM_UNKNOWN      = 0x00,
     UTZGNM_LOCATION     = 0x01,
     UTZGNM_LONG         = 0x02,
     UTZGNM_SHORT        = 0x04,
@@ -41,6 +41,20 @@ class LocaleDisplayNames;
 class MessageFormat;
 class TimeZone;
 
+class TimeZoneGenericNameMatchInfo : public UMemory {
+public:
+    TimeZoneGenericNameMatchInfo(UVector* matches);
+    ~TimeZoneGenericNameMatchInfo();
+
+    int32_t size() const;
+    UTimeZoneGenericNameType getGenericNameType(int32_t index) const;
+    int32_t getMatchLength(int32_t index) const;
+    UnicodeString& getTimeZoneID(int32_t index, UnicodeString& tzID) const;
+
+private:
+    UVector* fMatches;  // vector of MatchEntry
+};
+
 class U_I18N_API TimeZoneGenericNames : public UMemory {
 public:
     TimeZoneGenericNames(const Locale& locale, UErrorCode& status);
@@ -49,7 +63,9 @@ public:
     UnicodeString& getDisplayName(const TimeZone& tz, UTimeZoneGenericNameType type,
                         UDate date, UnicodeString& name) const;
 
-    UnicodeString& getGenericLocationName(const UnicodeString& tzID, UnicodeString& name) const;
+    UnicodeString& getGenericLocationName(const UnicodeString& tzCanonicalID, UnicodeString& name) const;
+
+    TimeZoneGenericNameMatchInfo* findBestMatch(const UnicodeString& text, int32_t start, uint32_t types, UErrorCode& status) const;
 
 private:
     Locale fLocale;
@@ -74,12 +90,21 @@ private:
     void initialize(const Locale& locale, UErrorCode& status);
     void cleanup();
 
+    const UChar* getGenericLocationName(const UnicodeString& tzCanonicalID);
+
     UnicodeString& formatGenericNonLocationName(const TimeZone& tz, UTimeZoneGenericNameType type,
                         UDate date, UnicodeString& name) const;
 
     UnicodeString& getPartialLocationName(const UnicodeString& tzCanonicalID,
                         const UnicodeString& mzID, UBool isLong, const UnicodeString& mzDisplayName,
                         UnicodeString& name) const;
+
+    const UChar* getPartialLocationName(const UnicodeString& tzCanonicalID,
+                        const UnicodeString& mzID, UBool isLong, const UnicodeString& mzDisplayName);
+
+    TimeZoneGenericNameMatchInfo* findLocal(const UnicodeString& text, int32_t start, uint32_t types, UErrorCode& status) const;
+
+    TimeZoneNameMatchInfo* findTimeZoneNames(const UnicodeString& text, int32_t start, uint32_t types, UErrorCode& status) const;
 };
 
 U_NAMESPACE_END

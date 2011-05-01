@@ -89,6 +89,31 @@ static UBool U_CALLCONV tzGenericNames_cleanup(void) {
 //    umtx_destroy(&gTZGNamesImplLock);
     return TRUE;
 }
+
+/**
+ * Deleter for GNameInfo
+ */
+static void U_CALLCONV
+deleteGNameInfo(void *obj) {
+    uprv_free(obj);
+}
+
+/**
+ * GNameInfo stores zone name information in the local trie
+ */
+typedef struct GNameInfo {
+    UTimeZoneGenericNameType    type;
+    const UChar*                tzID;
+} ZNameInfo;
+
+/**
+ * GMatchInfo stores zone name match information used by find method
+ */
+typedef struct ZMatchInfo {
+    const ZNameInfo*    znameInfo;
+    int32_t             matchLength;
+} ZMatchInfo;
+
 U_CDECL_END
 
 TimeZoneGenericNames::TimeZoneGenericNames(const Locale& locale, UErrorCode& status)
@@ -102,7 +127,7 @@ TimeZoneGenericNames::TimeZoneGenericNames(const Locale& locale, UErrorCode& sta
   fFallbackFormat(NULL),
   fLocaleDisplayNames(NULL),
   fStringPool(status),
-  fGNamesTrie(TRUE, NULL),
+  fGNamesTrie(TRUE, deleteGNameInfo),
   fGNamesTrieFullyLoaded(FALSE) {
     initialize(locale, status);
 }
@@ -251,9 +276,30 @@ TimeZoneGenericNames::getDisplayName(const TimeZone& tz, UTimeZoneGenericNameTyp
 
 UnicodeString&
 TimeZoneGenericNames::getGenericLocationName(const UnicodeString& tzCanonicalID, UnicodeString& name) const {
-    name.remove();
+    const UChar *locname = NULL;
+    TimeZoneGenericNames *nonConstThis = const_cast<TimeZoneGenericNames *>(this);
+    umtx_lock(&nonConstThis->fLock);
+    {
+        locname = nonConstThis->getGenericLocationName(tzCanonicalID);
+    }
+    umtx_unlock(&nonConstThis->fLock);
+
+    if (locname == NULL) {
+        name.remove();
+    } else {
+        name.setTo(TRUE, locname, -1);
+    }
+
+    return name;
+}
+
+/*
+ * This method updates the cache and must be called with a lock
+ */
+const UChar*
+TimeZoneGenericNames::getGenericLocationName(const UnicodeString& tzCanonicalID) {
     if (tzCanonicalID.length() > ZID_KEY_MAX) {
-        return name;
+        return NULL;
     }
 
     UErrorCode status = U_ZERO_ERROR;
@@ -262,23 +308,18 @@ TimeZoneGenericNames::getGenericLocationName(const UnicodeString& tzCanonicalID,
     U_ASSERT(status == U_ZERO_ERROR);   // already checked length above
     tzIDKey[tzIDKeyLen] = 0;
 
-    TimeZoneGenericNames *nonConstThis = const_cast<TimeZoneGenericNames *>(this);
-    const UChar *uname = NULL;
-    umtx_lock(&nonConstThis->fLock);
-    {
-        uname = (const UChar *)uhash_get(fLocationNamesMap, tzIDKey);
-    }
-    umtx_unlock(&nonConstThis->fLock);
+    const UChar *locname = (const UChar *)uhash_get(fLocationNamesMap, tzIDKey);
 
-    if (uname != NULL) {
+    if (locname != NULL) {
         // gEmpty indicate the name is not available
-        if (uname != gEmpty) {
-            name.setTo(TRUE, uname, -1);
+        if (locname == gEmpty) {
+            return NULL;
         }
-        return name;
+        return locname;
     }
 
     // Construct location name
+    UnicodeString name;
     UBool isSingleCountry = FALSE;
     UnicodeString usCountryCode;
     ZoneMeta::getSingleCountry(tzCanonicalID, usCountryCode);
@@ -318,33 +359,35 @@ TimeZoneGenericNames::getGenericLocationName(const UnicodeString& tzCanonicalID,
             fFallbackRegionFormat->format(params, 2, name, fpos, status);
         }
         if (U_FAILURE(status)) {
-            name.remove();
+            return NULL;
         }
     }
 
-    // Cache the result
+    locname = name.isEmpty() ? NULL : fStringPool.get(name, status);
     if (U_SUCCESS(status)) {
-        umtx_lock(&nonConstThis->fLock);
-        {
-            uname = (const UChar *)uhash_get(fLocationNamesMap, tzIDKey);
-            if (uname == NULL) {
-                const UChar* cacheID = ZoneMeta::findTimeZoneID(tzCanonicalID);
-                U_ASSERT(cacheID != NULL);
-                if (name.isEmpty()) {
-                    // gEmpty to indicate - no location name available
-                    uhash_put(fLocationNamesMap, (void *)cacheID, (void *)gEmpty, &status);
-                } else {
-                    const UChar* cacheVal = nonConstThis->fStringPool.get(name, status);
-                    uhash_put(fLocationNamesMap, (void *)cacheID, (void *)cacheVal, &status);
+        // Cache the result
+        const UChar* cacheID = ZoneMeta::findTimeZoneID(tzCanonicalID);
+        U_ASSERT(cacheID != NULL);
+        if (locname == NULL) {
+            // gEmpty to indicate - no location name available
+            uhash_put(fLocationNamesMap, (void *)cacheID, (void *)gEmpty, &status);
+        } else {
+            uhash_put(fLocationNamesMap, (void *)cacheID, (void *)locname, &status);
+            if (U_FAILURE(status)) {
+                locname = NULL;
+            } else {
+                // put the name info into the trie
+                GNameInfo *nameinfo = (ZNameInfo *)uprv_malloc(sizeof(GNameInfo));
+                if (nameinfo != NULL) {
+                    nameinfo->type = UTZGNM_LOCATION;
+                    nameinfo->tzID = cacheID;
+                    fGNamesTrie.put(locname, nameinfo, status);
                 }
             }
         }
-        umtx_unlock(&nonConstThis->fLock);
     }
-    if (U_FAILURE(status)) {
-        name.remove();
-    }
-    return name;
+
+    return locname;
 }
 
 UnicodeString&
@@ -482,24 +525,37 @@ UnicodeString&
 TimeZoneGenericNames::getPartialLocationName(const UnicodeString& tzCanonicalID,
                         const UnicodeString& mzID, UBool isLong, const UnicodeString& mzDisplayName,
                         UnicodeString& name) const {
-    name.remove();
+    const UChar *uplname = NULL;
+    TimeZoneGenericNames *nonConstThis = const_cast<TimeZoneGenericNames *>(this);
+    umtx_lock(&nonConstThis->fLock);
+    {
+        uplname = nonConstThis->getPartialLocationName(tzCanonicalID, mzID, isLong, mzDisplayName);
+    }
+    umtx_unlock(&nonConstThis->fLock);
 
+    if (uplname == NULL) {
+        name.remove();
+    } else {
+        name.setTo(TRUE, uplname, -1);
+    }
+    return name;
+}
+
+/*
+ * This method updates the cache and must be called with a lock
+ */
+const UChar*
+TimeZoneGenericNames::getPartialLocationName(const UnicodeString& tzCanonicalID,
+                        const UnicodeString& mzID, UBool isLong, const UnicodeString& mzDisplayName) {
     PartialLocationKey key;
     key.tzID = ZoneMeta::findTimeZoneID(tzCanonicalID);
     key.mzID = ZoneMeta::findMetaZoneID(mzID);
     key.isLong = isLong;
     U_ASSERT(key.tzID != NULL && key.mzID != NULL);
 
-    const UChar* plname = NULL;
-    TimeZoneGenericNames *nonConstThis = const_cast<TimeZoneGenericNames *>(this);
-    umtx_lock(&nonConstThis->fLock);
-    {
-        plname = (const UChar*)uhash_get(fPartialLocationNamesMap, (void *)&key);
-    }
-    umtx_unlock(&nonConstThis->fLock);
-    if (plname != NULL) {
-        name.setTo(TRUE, plname, -1);
-        return name;
+    const UChar* uplname = (const UChar*)uhash_get(fPartialLocationNamesMap, (void *)&key);
+    if (uplname != NULL) {
+        return uplname;
     }
 
     UnicodeString location;
@@ -522,6 +578,7 @@ TimeZoneGenericNames::getPartialLocationName(const UnicodeString& tzCanonicalID,
     }
 
     UErrorCode status = U_ZERO_ERROR;
+    UnicodeString name;
 
     FieldPosition fpos;
     Formattable param[] = {
@@ -530,30 +587,110 @@ TimeZoneGenericNames::getPartialLocationName(const UnicodeString& tzCanonicalID,
     };
     fFallbackFormat->format(param, 2, name, fpos, status);
     if (U_FAILURE(status)) {
-        name.remove();
-        return name;
+        return NULL;
     }
 
-    // Add the name to cache
-    umtx_lock(&nonConstThis->fLock);
-    {
-        plname = (const UChar*)uhash_get(fPartialLocationNamesMap, (void *)&key);
-        if (plname == NULL) {
-            PartialLocationKey* cacheKey = (PartialLocationKey *)uprv_malloc(sizeof(PartialLocationKey));
-            if (cacheKey != NULL) {
-                const UChar* cacheVal = nonConstThis->fStringPool.get(name, status);
-                cacheKey->tzID = key.tzID;
-                cacheKey->mzID = key.mzID;
-                cacheKey->isLong = key.isLong;
-                uhash_put(fPartialLocationNamesMap, (void *)cacheKey, (void *)cacheVal, &status);
-                if (U_FAILURE(status)) {
-                    uprv_free(cacheKey);
+    uplname = fStringPool.get(name, status);
+    if (U_SUCCESS(status)) {
+        // Add the name to cache
+        PartialLocationKey* cacheKey = (PartialLocationKey *)uprv_malloc(sizeof(PartialLocationKey));
+        if (cacheKey != NULL) {
+            cacheKey->tzID = key.tzID;
+            cacheKey->mzID = key.mzID;
+            cacheKey->isLong = key.isLong;
+            uhash_put(fPartialLocationNamesMap, (void *)cacheKey, (void *)uplname, &status);
+            if (U_FAILURE(status)) {
+                uprv_free(cacheKey);
+            } else {
+                // put the name to the local trie as well
+                GNameInfo *nameinfo = (ZNameInfo *)uprv_malloc(sizeof(GNameInfo));
+                if (nameinfo != NULL) {
+                    nameinfo->type = isLong ? UTZGNM_LONG : UTZGNM_SHORT;
+                    nameinfo->tzID = key.tzID;
+                    fGNamesTrie.put(uplname, nameinfo, status);
                 }
             }
         }
     }
-    umtx_unlock(&nonConstThis->fLock);
-    return name;
+    return uplname;
+}
+
+
+TimeZoneGenericNameMatchInfo*
+TimeZoneGenericNames::findBestMatch(const UnicodeString& text, int32_t start, uint32_t types, UErrorCode& status) const {
+    // Find matches in the TimeZoneNames first
+    TimeZoneNameMatchInfo *tznamesMatches = findTimeZoneNames(text, start, types, status);
+
+    //TODO
+
+    return NULL;
+}
+
+TimeZoneGenericNameMatchInfo*
+TimeZoneGenericNames::findLocal(const UnicodeString& text, int32_t start, uint32_t types, UErrorCode& status) const {
+
+    //TODO
+
+    return NULL;
+}
+
+TimeZoneNameMatchInfo*
+TimeZoneGenericNames::findTimeZoneNames(const UnicodeString& text, int32_t start, uint32_t types, UErrorCode& status) const {
+
+    //TODO
+
+    return NULL;
+}
+
+
+// ---------------------------------------------------
+// The class stores time zone generic name match information
+// ---------------------------------------------------
+TimeZoneGenericNameMatchInfo::TimeZoneGenericNameMatchInfo(UVector* matches)
+: fMatches(matches) {
+}
+
+TimeZoneGenericNameMatchInfo::~TimeZoneGenericNameMatchInfo() {
+    if (fMatches != NULL) {
+        delete fMatches;
+    }
+}
+
+int32_t
+TimeZoneGenericNameMatchInfo::size() const {
+    if (fMatches == NULL) {
+        return 0;
+    }
+    return fMatches->size();
+}
+
+UTimeZoneGenericNameType
+TimeZoneGenericNameMatchInfo::getGenericNameType(int32_t index) const {
+    ZMatchInfo *minfo = (ZMatchInfo *)fMatches->elementAt(index);
+    if (minfo != NULL) {
+        return static_cast<UTimeZoneGenericNameType>(minfo->znameInfo->type);
+    }
+    return UTZGNM_UNKNOWN;
+}
+
+int32_t
+TimeZoneGenericNameMatchInfo::getMatchLength(int32_t index) const {
+    ZMatchInfo *minfo = (ZMatchInfo *)fMatches->elementAt(index);
+    if (minfo != NULL) {
+        return minfo->matchLength;
+    }
+    return -1;
+}
+
+UnicodeString&
+TimeZoneGenericNameMatchInfo::getTimeZoneID(int32_t index, UnicodeString& tzID) const {
+    ZMatchInfo *minfo = (ZMatchInfo *)fMatches->elementAt(index);
+    if (minfo != NULL && minfo->znameInfo->tzID != NULL) {
+        tzID.setTo(TRUE, minfo->znameInfo->tzID, -1);
+    } else {
+        tzID.remove();
+    }
+    return tzID;
 }
 
 U_NAMESPACE_END
