@@ -36,6 +36,7 @@ public:
 
 private:
     Locale fLocale;
+    char fTargetRegion[ULOC_COUNTRY_CAPACITY];
     TimeZoneNames* fTimeZoneNames;
     TimeZoneGenericNames* fTimeZoneGenericNames;
 
@@ -47,6 +48,25 @@ private:
 
 TimeZoneFormatImpl::TimeZoneFormatImpl(const Locale& locale, UErrorCode& status)
 : fLocale(locale), fTimeZoneNames(NULL), fTimeZoneGenericNames(NULL) {
+
+    const char* region = fLocale.getCountry();
+    int32_t regionLen = uprv_strlen(region);
+    if (regionLen == 0) {
+        char loc[ULOC_FULLNAME_CAPACITY];
+        uloc_addLikelySubtags(fLocale.getName(), loc, sizeof(loc), &status);
+
+        regionLen = uloc_getCountry(loc, fTargetRegion, sizeof(fTargetRegion), &status);
+        if (U_SUCCESS(status)) {
+            fTargetRegion[regionLen] = 0;
+        } else {
+            return;
+        }
+    } else if (regionLen < sizeof(fTargetRegion)) {
+        uprv_strcpy(fTargetRegion, region);
+    } else {
+        fTargetRegion[0] = 0;
+    }
+
     fTimeZoneNames = TimeZoneNames::createInstance(locale, status);
     fTimeZoneGenericNames = new TimeZoneGenericNames(locale, status);
     if (U_SUCCESS(status) && fTimeZoneGenericNames == NULL) {
@@ -100,8 +120,91 @@ TimeZoneFormatImpl::format(UTimeZoneFormatStyle style, const TimeZone& tz, UDate
 TimeZone*
 TimeZoneFormatImpl::parse(UTimeZoneFormatStyle style, const UnicodeString& text, ParsePosition& pos,
         UTimeZoneTimeType* timeType /* = NULL */) const {
-    //TODO
-    return NULL;
+    if (timeType) {
+        *timeType = UTZFMT_TIME_TYPE_UNKNOWN;
+    }
+    int32_t startIdx = pos.getIndex();
+
+    UBool isGeneric = FALSE;
+    uint32_t types = 0;
+
+    switch (style) {
+    case UTZFMT_STYLE_LOCATION:
+        isGeneric = TRUE;
+        types = UTZGNM_LOCATION;
+        break;
+    case UTZFMT_STYLE_GENERIC_LONG:
+        isGeneric = TRUE;
+        types = UTZGNM_LOCATION | UTZGNM_LONG;
+        break;
+    case UTZFMT_STYLE_GENERIC_SHORT:
+        isGeneric = TRUE;
+        types = UTZGNM_LOCATION | UTZGNM_SHORT;
+        break;
+    case UTZFMT_STYLE_SPECIFIC_LONG:
+        types = UTZNM_LONG_STANDARD | UTZNM_LONG_DAYLIGHT;
+        break;
+    case UTZFMT_STYLE_SPECIFIC_SHORT:
+        types = UTZNM_SHORT_STANDARD | UTZNM_SHORT_DAYLIGHT;
+        break;
+    case UTZFMT_STYLE_SPECIFIC_SHORT_COMMONLY_USED:
+        types = UTZNM_SHORT_STANDARD_COMMONLY_USED | UTZNM_SHORT_DAYLIGHT_COMMONLY_USED;
+        break;
+    }
+
+    UTimeZoneTimeType parsedTimeType = UTZFMT_TIME_TYPE_UNKNOWN;
+    UnicodeString parsedTzID;
+    UErrorCode status = U_ZERO_ERROR;
+
+    if (isGeneric) {
+        int32_t len = fTimeZoneGenericNames->findBestMatch(text, startIdx, types, parsedTzID, parsedTimeType, status);
+        if (U_FAILURE(status) || len == 0) {
+            pos.setErrorIndex(startIdx);
+            return NULL;
+        }
+    } else {
+        TimeZoneNameMatchInfo *matchInfo = fTimeZoneNames->find(text, startIdx, types, status);
+        if (U_FAILURE(status) || matchInfo == NULL || matchInfo->size() == 0) {
+            pos.setErrorIndex(startIdx);
+            return NULL;
+        }
+        int32_t bestLen = 0;
+        int32_t bestIdx = -1;
+        for (int32_t i = 0; i < matchInfo->size(); i++) {
+            int32_t matchLen = matchInfo->getMatchLength(i);
+            if (matchLen > bestLen) {
+                bestLen = matchLen;
+                bestIdx = i;
+            }
+        }
+        if (bestIdx >= 0) {
+            matchInfo->getTimeZoneID(bestIdx, parsedTzID);
+            if (parsedTzID.isEmpty()) {
+                UnicodeString mzID;
+                matchInfo->getMetaZoneID(bestIdx, mzID);
+                U_ASSERT(mzID.length() > 0);
+                fTimeZoneNames->getReferenceZoneID(mzID, fTargetRegion, parsedTzID);
+            }
+            UTimeZoneNameType nameType = matchInfo->getNameType(bestIdx);
+            switch (nameType) {
+            case UTZNM_LONG_STANDARD:
+            case UTZNM_SHORT_STANDARD:
+            case UTZNM_SHORT_STANDARD_COMMONLY_USED:
+                parsedTimeType = UTZFMT_TIME_TYPE_STANDARD;
+                break;
+            case UTZNM_LONG_DAYLIGHT:
+            case UTZNM_SHORT_DAYLIGHT:
+            case UTZNM_SHORT_DAYLIGHT_COMMONLY_USED:
+                parsedTimeType = UTZFMT_TIME_TYPE_DAYLIGHT;
+                break;
+            }
+        }
+        delete matchInfo;
+    }
+    if (timeType) {
+        *timeType = parsedTimeType;
+    }
+    return TimeZone::createTimeZone(parsedTzID);
 }
 
 UnicodeString&
