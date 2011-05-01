@@ -22,16 +22,29 @@
 #include "cstring.h"
 #include "ucln_in.h"
 #include "uassert.h"
+#include "uresimp.h"
+#include "uhash.h"
+
+U_NAMESPACE_BEGIN
 
 static UMTX gZoneMetaLock = NULL;
+
+// CLDR Canonical ID mapping table
+static UHashtable *gCanonicalIDCache = NULL;
+static UBool gCanonicalIDCacheInitialized = FALSE;
 
 // Metazone mapping table
 static UHashtable *gOlsonToMeta = NULL;
 static UBool gOlsonToMetaInitialized = FALSE;
 
+// Available metazone IDs vector and table
+static UVector *gMetaZoneIDs = NULL;
+static UHashtable *gMetaZoneIDTable = NULL;
+static UBool gMetaZoneIDsInitialized = FALSE;
+
 // Country info vectors
-static U_NAMESPACE_QUALIFIER UVector *gSingleZoneCountries = NULL;
-static U_NAMESPACE_QUALIFIER UVector *gMultiZonesCountries = NULL;
+static UVector *gSingleZoneCountries = NULL;
+static UVector *gMultiZonesCountries = NULL;
 static UBool gCountryInfoVectorsInitialized = FALSE;
 
 U_CDECL_BEGIN
@@ -42,13 +55,27 @@ U_CDECL_BEGIN
  */
 static UBool U_CALLCONV zoneMeta_cleanup(void)
 {
-     umtx_destroy(&gZoneMetaLock);
+    umtx_destroy(&gZoneMetaLock);
+
+    if (gCanonicalIDCache != NULL) {
+        uhash_close(gCanonicalIDCache);
+        gCanonicalIDCache = NULL;
+    }
+    gCanonicalIDCacheInitialized = FALSE;
 
     if (gOlsonToMeta != NULL) {
         uhash_close(gOlsonToMeta);
         gOlsonToMeta = NULL;
     }
     gOlsonToMetaInitialized = FALSE;
+
+    if (gMetaZoneIDTable != NULL) {
+        uhash_close(gMetaZoneIDTable);
+    }
+    // delete after closing gMetaZoneIDTable, because it holds
+    // value objects held by the hashtable
+    delete gMetaZoneIDs;
+    gMetaZoneIDsInitialized = FALSE;
 
     delete gSingleZoneCountries;
     delete gMultiZonesCountries;
@@ -85,9 +112,9 @@ deleteOlsonToMetaMappingEntry(void *obj) {
 
 U_CDECL_END
 
-U_NAMESPACE_BEGIN
-
 #define ZID_KEY_MAX 128
+
+static const UChar gEmpty[]             = {0x00}; // Empty string used in CLDR canonical ID map
 
 static const char gMetaZones[]          = "metaZones";
 static const char gMetazoneInfo[]       = "metazoneInfo";
@@ -186,14 +213,70 @@ parseDate (const UChar *text, UErrorCode &status) {
 
 UnicodeString& U_EXPORT2
 ZoneMeta::getCanonicalCLDRID(const UnicodeString &tzid, UnicodeString &systemID, UErrorCode& status) {
+    if (U_FAILURE(status)) {
+        systemID.remove();
+        return systemID;
+    }
+
     int32_t len = tzid.length();
-    if ( len >= ZID_KEY_MAX ) {
+    if (len > ZID_KEY_MAX) {
         status = U_ILLEGAL_ARGUMENT_ERROR;
         systemID.remove();
         return systemID;
     }
 
-    char id[ZID_KEY_MAX];
+    // Checking the cached results
+    UBool initialized;
+    UMTX_CHECK(&gZoneMetaLock, gCanonicalIDCacheInitialized, initialized);
+    if (!initialized) {
+        // Create empty hashtable
+        umtx_lock(&gZoneMetaLock);
+        {
+            if (!gCanonicalIDCacheInitialized) {
+                gCanonicalIDCache = uhash_open(uhash_hashUChars, uhash_compareUChars, NULL, &status);
+                if (gCanonicalIDCache == NULL) {
+                    status = U_MEMORY_ALLOCATION_ERROR;
+                }
+                if (U_FAILURE(status)) {
+                    gCanonicalIDCache = NULL;
+                    systemID.remove();
+                    return systemID;
+                }
+                // No key/value deleters - keys/values are from a resource bundle or gEmpty
+                gCanonicalIDCacheInitialized = TRUE;
+                ucln_i18n_registerCleanup(UCLN_I18N_ZONEMETA, zoneMeta_cleanup);
+            }
+        }
+        umtx_unlock(&gZoneMetaLock);
+    }
+
+    const UChar *idInCache = NULL;
+
+    UErrorCode tmpStatus = U_ZERO_ERROR;
+    UChar utzid[ZID_KEY_MAX + 1];
+    tzid.extract(utzid, ZID_KEY_MAX + 1, tmpStatus);
+    U_ASSERT(tmpStatus == U_ZERO_ERROR);    // we checked the length of tzid already
+
+    // Check if it was already cached
+    umtx_lock(&gZoneMetaLock);
+    {
+        idInCache = (const UChar *)uhash_get(gCanonicalIDCache, utzid);
+    }
+    umtx_unlock(&gZoneMetaLock);
+
+    if (idInCache != NULL) {
+        if (idInCache == gEmpty) {
+            // gEmtpy indicate the input ID itself is the canonical ID
+            systemID.setTo(tzid);
+        } else {
+            systemID.setTo(idInCache);
+        }
+        return systemID;
+    }
+
+    // If not, resolve CLDR canonical ID with resource data
+    const UChar *cldrCanonicalID = NULL;
+    char id[ZID_KEY_MAX + 1];
     const UChar* idChars = tzid.getBuffer();
 
     u_UCharsToChars(idChars,id,len);
@@ -207,68 +290,102 @@ ZoneMeta::getCanonicalCLDRID(const UnicodeString &tzid, UnicodeString &systemID,
         }
     }
 
-
-    UErrorCode tmpStatus = U_ZERO_ERROR;
     UResourceBundle *top = ures_openDirect(NULL, gTimeZoneTypes, &tmpStatus);
     UResourceBundle *rb = ures_getByKey(top, gTypeMapTag, NULL, &tmpStatus);
     ures_getByKey(rb, gTimezoneTag, rb, &tmpStatus);
     ures_getByKey(rb, id, rb, &tmpStatus);
     if (U_SUCCESS(tmpStatus)) {
-        // direct map found
-        systemID.setTo(tzid);
-        ures_close(rb);
-        ures_close(top);
-        return systemID;
+        // type entry (canonical) found - use gEmpty to indicate the tzid is the canonical ID
+        // Note: We use gEmpty as a substitution for this case.
+        cldrCanonicalID = gEmpty;
     }
 
-    // If a map element not found, then look for an alias
-    tmpStatus = U_ZERO_ERROR;
-    ures_getByKey(top, gTypeAliasTag, rb, &tmpStatus);
-    ures_getByKey(rb, gTimezoneTag, rb, &tmpStatus);
-    const UChar *alias = ures_getStringByKey(rb,id,NULL,&tmpStatus);
-    if (U_SUCCESS(tmpStatus)) {
-        // alias found
-        ures_close(rb);
-        ures_close(top);
-        systemID.setTo(alias);
-        return systemID;
-    }
+    if (cldrCanonicalID == NULL) {
+        // If a map element not found, then look for an alias
+        tmpStatus = U_ZERO_ERROR;
+        ures_getByKey(top, gTypeAliasTag, rb, &tmpStatus);
+        ures_getByKey(rb, gTimezoneTag, rb, &tmpStatus);
+        const UChar *canonical = ures_getStringByKey(rb,id,NULL,&tmpStatus);
+        if (U_SUCCESS(tmpStatus)) {
+            // canonical map found
+            cldrCanonicalID = canonical;
+        }
 
-    // Dereference the input ID using the tz data
-    const UChar *derefer = TimeZone::dereferOlsonLink(tzid);
-    if (derefer == NULL) {
-        systemID.remove();
-        status = U_ILLEGAL_ARGUMENT_ERROR;
-    } else {
+        if (cldrCanonicalID == NULL) {
+            // Dereference the input ID using the tz data
+            const UChar *derefer = TimeZone::dereferOlsonLink(tzid);
+            if (derefer == NULL) {
+                status = U_ILLEGAL_ARGUMENT_ERROR;
+            } else {
+                len = u_strlen(derefer);
+                u_UCharsToChars(derefer,id,len);
+                id[len] = (char) 0; // Make sure it is null terminated.
 
-        len = u_strlen(derefer);
-        u_UCharsToChars(derefer,id,len);
-        id[len] = (char) 0; // Make sure it is null terminated.
+                // replace '/' with ':'
+                char *p = id;
+                while (*p++) {
+                    if (*p == '/') {
+                        *p = ':';
+                    }
+                }
 
-        // replace '/' with ':'
-        char *p = id;
-        while (*p++) {
-            if (*p == '/') {
-                *p = ':';
+                // If a dereference turned something up then look for an alias.
+                // rb still points to the alias table, so we don't have to go looking
+                // for it.
+                tmpStatus = U_ZERO_ERROR;
+                canonical = ures_getStringByKey(rb,id,NULL,&tmpStatus);
+                if (U_SUCCESS(tmpStatus)) {
+                    // canonical map for the dereferenced ID found
+                    cldrCanonicalID = canonical;
+                } else {
+                    cldrCanonicalID = derefer;
+                }
             }
         }
+    }
+    ures_close(rb);
+    ures_close(top);
 
-        // If a dereference turned something up then look for an alias.
-        // rb still points to the alias table, so we don't have to go looking
-        // for it.
-        tmpStatus = U_ZERO_ERROR;
-        const UChar *alias = ures_getStringByKey(rb,id,NULL,&tmpStatus);
-        if (U_SUCCESS(tmpStatus)) {
-            // alias found
-            systemID.setTo(alias);
-        } else {
-            systemID.setTo(derefer);
+    if (U_SUCCESS(status)) {
+        U_ASSERT(cldrCanonicalID != NULL);  // cldrCanocanilD must be non-NULL here
+
+        // Put the resolved canonical ID to the cache
+        umtx_lock(&gZoneMetaLock);
+        {
+            idInCache = (const UChar *)uhash_get(gCanonicalIDCache, utzid);
+            if (idInCache == NULL) {
+                const UChar* key = ZoneMeta::findTimeZoneID(tzid);
+                U_ASSERT(key != NULL);
+                if (key != NULL) {
+                    idInCache = (const UChar *)uhash_put(gCanonicalIDCache, (void *)key, (void *)cldrCanonicalID, &status);
+                    U_ASSERT(idInCache == NULL);
+                }
+            }
+            if (U_SUCCESS(status) && cldrCanonicalID != gEmpty) {
+                // Also put canonical ID itself into the cache if not exist
+                const UChar *canonicalInCache = (const UChar*)uhash_get(gCanonicalIDCache, cldrCanonicalID);
+                if (canonicalInCache == NULL) {
+                    canonicalInCache = (const UChar *)uhash_put(gCanonicalIDCache, (void *)cldrCanonicalID, (void *)gEmpty, &status);
+                    U_ASSERT(canonicalInCache == NULL);
+                }
+            }
         }
+        umtx_unlock(&gZoneMetaLock);
     }
 
-     ures_close(rb);
-     ures_close(top);
-     return systemID;
+    if (U_FAILURE(status)) {
+        systemID.remove();
+        return systemID;
+    }
+
+    if (cldrCanonicalID == gEmpty) {
+        // the input tzid is canonical
+        systemID.setTo(tzid);
+    } else {
+        systemID.setTo(cldrCanonicalID);
+    }
+
+    return systemID;
 }
 
 UnicodeString& U_EXPORT2
@@ -408,8 +525,8 @@ ZoneMeta::getMetazoneID(const UnicodeString &tzid, UDate date, UnicodeString &re
 const UVector* U_EXPORT2
 ZoneMeta::getMetazoneMappings(const UnicodeString &tzid) {
     UErrorCode status = U_ZERO_ERROR;
-    UChar tzidUChars[ZID_KEY_MAX];
-    tzid.extract(tzidUChars, ZID_KEY_MAX, status);
+    UChar tzidUChars[ZID_KEY_MAX + 1];
+    tzid.extract(tzidUChars, ZID_KEY_MAX + 1, status);
     if (U_FAILURE(status) || status == U_STRING_NOT_TERMINATED_WARNING) {
         return NULL;
     }
@@ -506,8 +623,9 @@ ZoneMeta::createMetazoneMappings(const UnicodeString &tzid) {
     getCanonicalCLDRID(tzid, canonicalID, status);
 
     if (U_SUCCESS(status)) {
-        char tzKey[ZID_KEY_MAX];
-        canonicalID.extract(0, canonicalID.length(), tzKey, sizeof(tzKey), US_INV);
+        char tzKey[ZID_KEY_MAX + 1];
+        int32_t tzKeyLen = canonicalID.extract(0, canonicalID.length(), tzKey, sizeof(tzKey), US_INV);
+        tzKey[tzKeyLen] = 0;
 
         // tzid keys are using ':' as separators
         char *p = tzKey;
@@ -593,12 +711,13 @@ ZoneMeta::getZoneIdByMetazone(const UnicodeString &mzid, const UnicodeString &re
     char keyBuf[ZID_KEY_MAX + 1];
     int32_t keyLen = 0;
 
-    if (mzid.length() >= ZID_KEY_MAX) {
+    if (mzid.length() > ZID_KEY_MAX) {
         result.remove();
         return result;
     }
 
-    keyLen = mzid.extract(0, mzid.length(), keyBuf, ZID_KEY_MAX, US_INV);
+    keyLen = mzid.extract(0, mzid.length(), keyBuf, ZID_KEY_MAX + 1, US_INV);
+    keyBuf[keyLen] = 0;
 
     UResourceBundle *rb = ures_openDirect(NULL, gMetaZones, &status);
     ures_getByKey(rb, gMapTimezonesTag, rb, &status);
@@ -607,7 +726,8 @@ ZoneMeta::getZoneIdByMetazone(const UnicodeString &mzid, const UnicodeString &re
     if (U_SUCCESS(status)) {
         // check region mapping
         if (region.length() == 2 || region.length() == 3) {
-            region.extract(0, region.length(), keyBuf, ZID_KEY_MAX, US_INV);
+            keyLen = region.extract(0, region.length(), keyBuf, ZID_KEY_MAX + 1, US_INV);
+            keyBuf[keyLen] = 0;
             tzid = ures_getStringByKey(rb, keyBuf, &tzidLen, &status);
             if (status == U_MISSING_RESOURCE_ERROR) {
                 status = U_ZERO_ERROR;
@@ -627,6 +747,89 @@ ZoneMeta::getZoneIdByMetazone(const UnicodeString &mzid, const UnicodeString &re
     }
 
     return result;
+}
+
+void
+ZoneMeta::initAvailableMetaZoneIDs () {
+    UBool initialized;
+    UMTX_CHECK(&gZoneMetaLock, gMetaZoneIDsInitialized, initialized);
+    if (!initialized) {
+        umtx_lock(&gZoneMetaLock);
+        {
+            if (!gMetaZoneIDsInitialized) {
+                UErrorCode status = U_ZERO_ERROR;
+                UHashtable *metaZoneIDTable = uhash_open(uhash_hashUnicodeString, uhash_compareUnicodeString, NULL, &status);
+                uhash_setKeyDeleter(metaZoneIDTable, uhash_deleteUnicodeString);
+                // No valueDeleter, because the vector maintain the value objects
+                UVector *metaZoneIDs = NULL;
+                if (U_SUCCESS(status)) {
+                    metaZoneIDs = new UVector(NULL, uhash_compareUChars, status);
+                    if (metaZoneIDs == NULL) {
+                        status = U_MEMORY_ALLOCATION_ERROR;
+                    }
+                } else {
+                    uhash_close(metaZoneIDTable);
+                }
+                if (U_SUCCESS(status)) {
+                    metaZoneIDs->setDeleter(uhash_freeBlock);
+
+                    UResourceBundle *rb = ures_openDirect(NULL, gMetaZones, &status);
+                    UResourceBundle *bundle = ures_getByKey(rb, gMapTimezonesTag, NULL, &status);
+                    UResourceBundle res;
+                    ures_initStackObject(&res);
+                    while (U_SUCCESS(status) && ures_hasNext(bundle)) {
+                        ures_getNextResource(bundle, &res, &status);
+                        if (U_FAILURE(status)) {
+                            break;
+                        }
+                        const char *mzID = ures_getKey(&res);
+                        int32_t len = uprv_strlen(mzID);
+                        UChar *uMzID = (UChar*)uprv_malloc(sizeof(UChar) * (len + 1));
+                        if (uMzID == NULL) {
+                            status = U_MEMORY_ALLOCATION_ERROR;
+                            break;
+                        }
+                        u_charsToUChars(mzID, uMzID, len);
+                        uMzID[len] = 0;
+                        UnicodeString *usMzID = new UnicodeString(uMzID);
+                        if (uhash_get(metaZoneIDTable, usMzID) == NULL) {
+                            metaZoneIDs->addElement((void *)uMzID, status);
+                            uhash_put(metaZoneIDTable, (void *)usMzID, (void *)uMzID, &status);
+                        } else {
+                            uprv_free(uMzID);
+                            delete usMzID;
+                        }
+                    }
+                    if (U_SUCCESS(status)) {
+                        gMetaZoneIDs = metaZoneIDs;
+                        gMetaZoneIDTable = metaZoneIDTable;
+                        gMetaZoneIDsInitialized = TRUE;
+                    } else {
+                        uhash_close(metaZoneIDTable);
+                        delete metaZoneIDs;
+                    }
+                }
+            }
+        }
+        umtx_unlock(&gZoneMetaLock);
+    }
+}
+
+const UVector*
+ZoneMeta::getAvailableMetazoneIDs() {
+    initAvailableMetaZoneIDs();
+    return gMetaZoneIDs;
+}
+
+const UChar*
+ZoneMeta::findMetaZoneID(const UnicodeString& mzid) {
+    initAvailableMetaZoneIDs();
+    return (const UChar*)uhash_get(gMetaZoneIDTable, &mzid);
+}
+
+const UChar*
+ZoneMeta::findTimeZoneID(const UnicodeString& tzid) {
+    return TimeZone::findID(tzid);
 }
 
 U_NAMESPACE_END

@@ -117,10 +117,13 @@ class U_I18N_API OlsonTimeZone: public BasicTimeZone {
      * @param top the top-level zoneinfo resource bundle.  This is used
      * to lookup the rule that `res' may refer to, if there is one.
      * @param res the resource bundle of the zone to be constructed
+     * @param tzid the time zone ID
      * @param ec input-output error code
      */
     OlsonTimeZone(const UResourceBundle* top,
-                  const UResourceBundle* res, UErrorCode& ec);
+                  const UResourceBundle* res,
+                  const UnicodeString& tzid,
+                  UErrorCode& ec);
 
     /**
      * Copy constructor
@@ -221,6 +224,11 @@ class U_I18N_API OlsonTimeZone: public BasicTimeZone {
      * TimeZone API.  Also comare historic transitions.
      */
     virtual UBool hasSameRules(const TimeZone& other) const;
+
+    /**
+     * TimeZone API.
+     */
+    virtual UnicodeString& getCanonicalID(UnicodeString& ID) const;
 
     /**
      * BasicTimeZone API.
@@ -366,6 +374,11 @@ private:
      */
     int32_t finalStartYear;
 
+    /*
+     * Canonical (CLDR) ID of this zone
+     */
+    UnicodeString canonicalID;
+
     /* BasicTimeZone support */
     void clearTransitionRules(void);
     void deleteTransitionRules(void);
@@ -418,6 +431,13 @@ inline int32_t
 OlsonTimeZone::initialDstOffset() const {
     return typeOffsets[1];
 }
+
+inline UnicodeString&
+OlsonTimeZone::getCanonicalID(UnicodeString& ID) const {
+    ID = canonicalID;
+    return ID;
+}
+
 
 U_NAMESPACE_END
 

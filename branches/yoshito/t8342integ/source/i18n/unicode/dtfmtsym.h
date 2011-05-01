@@ -37,8 +37,6 @@ U_NAMESPACE_BEGIN
 /* forward declaration */
 class SimpleDateFormat;
 class Hashtable;
-class ZoneStringFormat;
-class SafeZoneStringFormatPtr;
 
 /**
  * DateFormatSymbols is a public class for encapsulating localizable date-time
@@ -407,6 +405,16 @@ public:
      */
     const UnicodeString** getZoneStrings(int32_t& rowCount, int32_t& columnCount) const;
 
+
+    /**
+     * Gets timezone strings. These strings are stored in a 2-dimensional array.
+     * @param rowCount      Output param to receive number of rows.
+     * @param columnCount   Output param to receive number of columns.
+     * @return              The timezone strings as a 2-d array. (DateFormatSymbols retains ownership.)
+     * @deprecated ICU 3.6
+     */
+    const UnicodeString** getZoneStringsNew(int32_t& rowCount, int32_t& columnCount) const;
+
     /**
      * Sets timezone strings. These strings are stored in a 2-dimensional array.
      * @param strings       The timezone strings as a 2-d array to be copied. (not adopted; caller retains ownership)
@@ -631,9 +639,6 @@ private:
     int32_t         fZoneStringsRowCount;
     int32_t         fZoneStringsColCount;
 
-    const ZoneStringFormat  *fZoneStringFormat;
-    ZoneStringFormat        *fZSFLocal;         // Local ZoneStringFormat instance
-    SafeZoneStringFormatPtr *fZSFCachePtr;      // Cached ZoneStringFormat
     Locale                  fZSFLocale;         // Locale used for getting ZoneStringFormat
 
     /**
@@ -725,21 +730,15 @@ private:
      */
     void copyData(const DateFormatSymbols& other);
 
-
-    /**
-     * Returns a ZoneStringFormat, used only by SimpleDateFormat for now.
-     */
-    const ZoneStringFormat* getZoneStringFormat(void) const;
-
-    /**
-     * Create a ZoneStringFormat by locale if not yet availble
-     */
-    void initZoneStringFormat(void);
-
     /**
      * Create zone strings array by locale if not yet available
      */
     void initZoneStringsArray(void);
+
+    /**
+     * Create zone strings array by locale
+     */
+    const UnicodeString** createZoneStringsArray(int32_t &rowCount, int32_t &colCount, UErrorCode &status) const;
 
     /**
      * Delete just the zone strings.

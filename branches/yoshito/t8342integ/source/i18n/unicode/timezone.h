@@ -465,6 +465,26 @@ public:
     void setID(const UnicodeString& ID);
 
     /**
+     * Fills in "ID" with the TimeZone's canonical ID.
+     * <p>
+     * <b>Note</b>: The default implementation returns the result of
+     * <code>TimeZone::getCanonicalID()</code>, or the ID of this time zone
+     * (when this TimeZone's ID is not a known system ID or a valid custom
+     * time zone ID).
+     * <p>
+     * A subclass may overrides the method to return a different result.
+     * For example, ICU's own implementation class for system time zones
+     * overrides this method and returns the canonical ID of the system ID
+     * which was originally used for instantiation (therefore, it won't be
+     * changed even a different ID is set by <code>TimeZone::setID()</code>.
+     * 
+     * @param ID  Receives this TimeZone's canonical ID.
+     * @return    A reference to 'ID'
+     * @draft ICU 4.8
+     */
+    virtual UnicodeString& getCanonicalID(UnicodeString& ID) const;
+
+    /**
      * Enum for use with getDisplayName
      * @stable ICU 2.4
      */
@@ -729,6 +749,16 @@ private:
 
 
     static TimeZone*        createCustomTimeZone(const UnicodeString&); // Creates a time zone based on the string.
+
+    /**
+     * Finds the given ID in the Olson tzdata. If the given ID is found in the tzdata,
+     * returns the pointer to the ID resource. This method is exposed through ZoneMeta class
+     * for ICU internal implementation and useful for building hashtable using a time zone
+     * ID as a key.
+     * @param id zone id string
+     * @return the pointer of the ID resource, or NULL.
+     */
+    static const UChar* findID(const UnicodeString& id);
 
     /**
      * Resolve a link in Olson tzdata.  When the given id is known and it's not a link,

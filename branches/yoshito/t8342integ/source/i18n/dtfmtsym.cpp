@@ -35,8 +35,8 @@
 #include "gregoimp.h"
 #include "hash.h"
 #include "uresimp.h"
-#include "zstrfmt.h"
 #include "ureslocs.h"
+#include "tznames.h"
 
 // *****************************************************************************
 // class DateFormatSymbols
@@ -344,10 +344,7 @@ DateFormatSymbols::copyData(const DateFormatSymbols& other) {
     }
     fZSFLocale = other.fZSFLocale;
     // Other zone strings data is created on demand
-    fZoneStringFormat = NULL;
     fLocaleZoneStrings = NULL;
-    fZSFCachePtr = NULL;
-    fZSFLocal = NULL;
 
     // fastCopyFrom() - see assignArray comments
     fLocalPatternChars.fastCopyFrom(other.fLocalPatternChars);
@@ -410,21 +407,11 @@ void DateFormatSymbols::disposeZoneStrings()
         }
         uprv_free(fLocaleZoneStrings);
     }
-    if (fZSFLocal) {
-        delete fZSFLocal;
-    }
-    if (fZSFCachePtr) {
-        delete fZSFCachePtr;
-    }
 
     fZoneStrings = NULL;
     fLocaleZoneStrings = NULL;
     fZoneStringsRowCount = 0;
     fZoneStringsColCount = 0;
-
-    fZoneStringFormat = NULL;
-    fZSFLocal = NULL;
-    fZSFCachePtr = NULL;
 }
 
 UBool
@@ -1033,41 +1020,6 @@ DateFormatSymbols::setAmPmStrings(const UnicodeString* amPmsArray, int32_t count
     fAmPmsCount = count;
 }
 
-//------------------------------------------------------
-const ZoneStringFormat*
-DateFormatSymbols::getZoneStringFormat(void) const {
-    umtx_lock(&LOCK);
-    if (fZoneStringFormat == NULL) {
-        ((DateFormatSymbols*)this)->initZoneStringFormat();
-    }
-    umtx_unlock(&LOCK);
-    return fZoneStringFormat;
-}
-
-void
-DateFormatSymbols::initZoneStringFormat(void) {
-    if (fZoneStringFormat == NULL) {
-        UErrorCode status = U_ZERO_ERROR;
-        if (fZoneStrings) {
-            // Create an istance of ZoneStringFormat by the custom zone strings array
-            fZSFLocal = new ZoneStringFormat(fZoneStrings, fZoneStringsRowCount,
-                fZoneStringsColCount, status);
-            if (U_FAILURE(status)) {
-                delete fZSFLocal;
-            } else {
-                fZoneStringFormat = (const ZoneStringFormat*)fZSFLocal;
-            }
-        } else {
-            fZSFCachePtr = ZoneStringFormat::getZoneStringFormat(fZSFLocale, status);
-            if (U_FAILURE(status)) {
-                delete fZSFCachePtr;
-            } else {
-                fZoneStringFormat = fZSFCachePtr->get();
-            }
-        }
-    }
-}
-
 const UnicodeString**
 DateFormatSymbols::getZoneStrings(int32_t& rowCount, int32_t& columnCount) const
 {
@@ -1089,18 +1041,145 @@ DateFormatSymbols::getZoneStrings(int32_t& rowCount, int32_t& columnCount) const
     return result;
 }
 
+// For now, we include all zones
+#define ZONE_SET UCAL_ZONE_TYPE_ANY
+
+// This code must be called within a synchronized block
 void
 DateFormatSymbols::initZoneStringsArray(void) {
-    if (fZoneStrings == NULL && fLocaleZoneStrings == NULL) {
-        if (fZoneStringFormat == NULL) {
-            initZoneStringFormat();
+    if (fZoneStrings != NULL || fLocaleZoneStrings != NULL) {
+        return;
+    }
+
+    UErrorCode status = U_ZERO_ERROR;
+
+    StringEnumeration *tzids = NULL;
+    UnicodeString ** zarray = NULL;
+    TimeZoneNames *tzNames = NULL;
+    int32_t rows = 0;
+
+    do { // dummy do-while
+
+        tzids = TimeZone::createTimeZoneIDEnumeration(ZONE_SET, NULL, NULL, status);
+        rows = tzids->count(status);
+        if (U_FAILURE(status)) {
+            break;
         }
-        if (fZoneStringFormat) {
-            UErrorCode status = U_ZERO_ERROR;
-            fLocaleZoneStrings = fZoneStringFormat->createZoneStringsArray(uprv_getUTCtime() /* use current time */,
-                fZoneStringsRowCount, fZoneStringsColCount, status);
+
+        // Allocate array
+        int32_t size = rows * sizeof(UnicodeString*);
+        zarray = (UnicodeString**)uprv_malloc(size);
+        if (zarray == NULL) {
+            status = U_MEMORY_ALLOCATION_ERROR;
+            break;
+        }
+        uprv_memset(zarray, 0, size);
+
+        tzNames = TimeZoneNames::createInstance(fZSFLocale, status);
+
+        const UnicodeString *tzid;
+        int32_t i = 0;
+        int32_t emptyCount = 0;
+        UDate now = Calendar::getNow();
+        UnicodeString tzDispName;
+
+        while ((tzid = tzids->snext(status))) {
+            if (U_FAILURE(status)) {
+                break;
+            }
+
+            zarray[i] = new UnicodeString[5];
+            if (zarray[i] == NULL) {
+                status = U_MEMORY_ALLOCATION_ERROR;
+                break;
+            }
+
+            zarray[i][0].setTo(*tzid);
+            zarray[i][1].setTo(tzNames->getDisplayName(*tzid, UTZNM_LONG_STANDARD, now, tzDispName));
+            zarray[i][2].setTo(tzNames->getDisplayName(*tzid, UTZNM_SHORT_STANDARD, now, tzDispName));
+            zarray[i][3].setTo(tzNames->getDisplayName(*tzid, UTZNM_LONG_DAYLIGHT, now, tzDispName));
+            zarray[i][4].setTo(tzNames->getDisplayName(*tzid, UTZNM_SHORT_DAYLIGHT, now, tzDispName));
+            i++;
+        }
+
+    } while (FALSE);
+
+    if (U_FAILURE(status)) {
+        if (zarray) {
+            for (int32_t i = 0; i < rows; i++) {
+                if (zarray[i]) {
+                    delete[] zarray[i];
+                }
+            }
+            uprv_free(zarray);
         }
     }
+
+    if (tzNames) {
+        delete tzNames;
+    }
+    if (tzids) {
+        delete tzids;
+    }
+
+    fLocaleZoneStrings = zarray;
+    fZoneStringsRowCount = rows;
+    fZoneStringsColCount = 5;
+}
+
+const UnicodeString**
+DateFormatSymbols::createZoneStringsArray(int32_t &rowCount, int32_t &colCount, UErrorCode &status) const {
+    if (U_FAILURE(status)) {
+        return NULL;
+    }
+
+    UnicodeString **result = NULL;
+    rowCount = 0;
+    colCount = 0;
+
+    TimeZoneNames *tzNames = TimeZoneNames::createInstance(fZSFLocale, status);
+    if (U_FAILURE(status)) {
+        return NULL;
+    }
+    StringEnumeration *tzids = TimeZone::createTimeZoneIDEnumeration(UCAL_ZONE_TYPE_CANONICAL, NULL, NULL, status);
+    int32_t total = tzids->count(status);
+    // Allocate array
+    result = (UnicodeString**)uprv_malloc(tzids->count(status) * sizeof(UnicodeString*));
+    const UChar *tzid;
+    int32_t i = 0;
+    int32_t emptyCount = 0;
+    while ((tzid = tzids->unext(NULL, status))) {
+        if (U_FAILURE(status)) {
+            delete tzids;
+            return NULL;
+        }
+
+        // TOD(Claireho) 1. Discuss with Yoshito about consecutive enum value for UTimeZoneNameType.
+        //               2. Define the size somewhere
+        result[i] = new UnicodeString[5];
+        if (result == NULL) {
+            status = U_MEMORY_ALLOCATION_ERROR;
+            return NULL;
+        }
+        result[i][0].setTo(tzid);
+        UnicodeString tzDispName;
+        UDate now = Calendar::getNow();
+        tzDispName = tzNames->getDisplayName(tzid, UTZNM_LONG_STANDARD, now, tzDispName);
+        result[i][1].setTo(tzDispName);
+        tzDispName = tzNames->getDisplayName(tzid, UTZNM_SHORT_STANDARD, now, tzDispName);
+        result[i][2].setTo(tzDispName);
+        tzDispName = tzNames->getDisplayName(tzid, UTZNM_LONG_DAYLIGHT, now, tzDispName);
+        result[i][3].setTo(tzDispName);
+        tzDispName = tzNames->getDisplayName(tzid, UTZNM_SHORT_DAYLIGHT, now, tzDispName);
+        result[i][4].setTo(tzDispName);
+        i++;
+    }
+
+    delete tzids;
+
+    rowCount = i;
+    colCount = 5;
+    return const_cast<const UnicodeString**>(result);
 }
 
 void
@@ -1235,10 +1314,6 @@ DateFormatSymbols::initializeData(const Locale& locale, const char *type, UError
     fZoneStringsColCount = 0;
     fZoneStrings = NULL;
     fLocaleZoneStrings = NULL;
-
-    fZoneStringFormat = NULL;
-    fZSFLocal = NULL;
-    fZSFCachePtr = NULL;
 
     // We need to preserve the requested locale for
     // lazy ZoneStringFormat instantiation.  ZoneStringFormat

@@ -47,6 +47,8 @@ typedef enum ECleanupI18NType {
     UCLN_I18N_CSDET,
     UCLN_I18N_COLL_DATA,
     UCLN_I18N_INDEX_CHARACTERS,
+    UCLN_I18N_TIMEZONEFORMAT,
+    UCLN_I18N_TIMEZONENAMES,
     UCLN_I18N_COUNT /* This must be last */
 } ECleanupI18NType;
 
