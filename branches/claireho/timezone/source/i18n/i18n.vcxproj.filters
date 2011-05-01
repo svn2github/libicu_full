@@ -312,9 +312,6 @@
     <ClCompile Include="zrule.cpp">
       <Filter>formatting</Filter>
     </ClCompile>
-    <ClCompile Include="zstrfmt.cpp">
-      <Filter>formatting</Filter>
-    </ClCompile>
     <ClCompile Include="ztrans.cpp">
       <Filter>formatting</Filter>
     </ClCompile>
@@ -618,9 +615,6 @@
       <Filter>formatting</Filter>
     </ClInclude>
     <ClInclude Include="zrule.h">
-      <Filter>formatting</Filter>
-    </ClInclude>
-    <ClInclude Include="zstrfmt.h">
       <Filter>formatting</Filter>
     </ClInclude>
     <ClInclude Include="ztrans.h">

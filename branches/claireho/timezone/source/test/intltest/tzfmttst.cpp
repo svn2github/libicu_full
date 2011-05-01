@@ -31,10 +31,8 @@ TimeZoneFormatTest::runIndexedTest( int32_t index, UBool exec, const char* &name
         logln("TestSuite TimeZoneFormatTest");
     }
     switch (index) {
-        TESTCASE(1, TestNewGetZoneStrings);
-        TESTCASE(0, TestGetZoneStrings);
-        TESTCASE(2, TestTimeZoneRoundTrip);
-        TESTCASE(3, TestTimeRoundTrip);
+        TESTCASE(0, TestTimeZoneRoundTrip);
+        TESTCASE(1, TestTimeRoundTrip);
         default: name = ""; break;
     }
 }
@@ -555,88 +553,6 @@ TimeZoneFormatTest::TestTimeRoundTrip(void) {
     logln((UnicodeString) "Iteration: " + data.testCounts);
 
     delete cal;
-}
-
-void
-TimeZoneFormatTest::TestGetZoneStrings(void) {
-    UErrorCode status = U_ZERO_ERROR;
-
-    // Set up test locales
-    const Locale testLocales[] = {
-        Locale("en"),
-        Locale("en_CA"),
-        Locale("zh_Hant"),
-        Locale("fr")
-    };
-
-    quick = true;
-    const Locale *LOCALES;
-    int32_t nLocales;
-
-    if (quick) {
-        LOCALES = testLocales;
-        nLocales = sizeof(testLocales)/sizeof(Locale);
-    } else {
-        LOCALES = Locale::getAvailableLocales(nLocales);
-    }
-
-    const UnicodeString **timeZoneStrings;
-    for (int32_t locidx = 0; locidx < nLocales; locidx++) {
-        logln( "\n -------- New Locale :" + UnicodeString(LOCALES[locidx].getName()));
-        DateFormatSymbols dateFormatSymbol(LOCALES[locidx], status);
-        int32_t rowCount = 0, columnCount = 0;
-        timeZoneStrings = dateFormatSymbol.getZoneStrings(
-            rowCount, columnCount);
-        for(int32_t i = 0; i < rowCount; i++) {
-           logln( "    New TimeZoneId");
-           for(int32_t j = 0; j < 5; j++) {
-               UnicodeString temp = timeZoneStrings[i][j];
-               logln( "        ZoneString:" + temp);
-           }
-        }
-    }
-}
-
-void
-TimeZoneFormatTest::TestNewGetZoneStrings(void) {
-    UErrorCode status = U_ZERO_ERROR;
-
-    // Set up test locales
-    const Locale testLocales[] = {
-        Locale("en"),
-        // Locale("en"),
-        Locale("en_CA"),
-        Locale("zh_Hant"),
-        Locale("fr")
-    };
-
-    quick = true;
-    const Locale *LOCALES;
-    int32_t nLocales;
-
-    if (quick) {
-        LOCALES = testLocales;
-        nLocales = sizeof(testLocales)/sizeof(Locale);
-    } else {
-        LOCALES = Locale::getAvailableLocales(nLocales);
-    }
-
-    logln( "\n\n Test New GetZoneString");
-    const UnicodeString **timeZoneStrings;
-    for (int32_t locidx = 0; locidx < nLocales; locidx++) {
-        logln( "\n -------- New Locale :" + UnicodeString(LOCALES[locidx].getName()));
-        DateFormatSymbols dateFormatSymbol(LOCALES[locidx], status);
-        int32_t rowCount = 0, columnCount = 0;
-        timeZoneStrings = dateFormatSymbol.getZoneStringsNew(
-            rowCount, columnCount);
-        for(int32_t i = 0; i < rowCount; i++) {
-           logln( "    New TimeZoneId");
-           for(int32_t j = 0; j < columnCount; j++) {
-               UnicodeString temp = timeZoneStrings[i][j];
-               logln( "        ZoneString:" + temp);
-           }
-        }
-    }
 }
 
 #endif /* #if !UCONFIG_NO_FORMATTING */

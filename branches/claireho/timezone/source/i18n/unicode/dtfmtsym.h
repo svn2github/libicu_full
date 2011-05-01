@@ -37,8 +37,6 @@ U_NAMESPACE_BEGIN
 /* forward declaration */
 class SimpleDateFormat;
 class Hashtable;
-class ZoneStringFormat;
-class SafeZoneStringFormatPtr;
 
 /**
  * DateFormatSymbols is a public class for encapsulating localizable date-time
@@ -641,9 +639,6 @@ private:
     int32_t         fZoneStringsRowCount;
     int32_t         fZoneStringsColCount;
 
-    const ZoneStringFormat  *fZoneStringFormat;
-    ZoneStringFormat        *fZSFLocal;         // Local ZoneStringFormat instance
-    SafeZoneStringFormatPtr *fZSFCachePtr;      // Cached ZoneStringFormat
     Locale                  fZSFLocale;         // Locale used for getting ZoneStringFormat
 
     /**
@@ -735,30 +730,20 @@ private:
      */
     void copyData(const DateFormatSymbols& other);
 
-
-    /**
-     * Returns a ZoneStringFormat, used only by SimpleDateFormat for now.
-     */
-    const ZoneStringFormat* getZoneStringFormat(void) const;
-
-    /**
-     * Create a ZoneStringFormat by locale if not yet availble
-     */
-    void initZoneStringFormat(void);
-
     /**
      * Create zone strings array by locale if not yet available
      */
     void initZoneStringsArray(void);
 
     /**
+     * Create zone strings array by locale
+     */
+    const UnicodeString** createZoneStringsArray(int32_t &rowCount, int32_t &colCount, UErrorCode &status) const;
+
+    /**
      * Delete just the zone strings.
      */
     void disposeZoneStrings(void);
-
-    const UnicodeString**
-    createZoneStringsArray(int32_t &rowCount, int32_t &colCount, UErrorCode &status) const;
-
 };
 
 U_NAMESPACE_END

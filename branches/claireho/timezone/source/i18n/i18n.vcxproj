@@ -360,7 +360,6 @@
     </ClCompile>
     <ClCompile Include="zonemeta.cpp" />
     <ClCompile Include="zrule.cpp" />
-    <ClCompile Include="zstrfmt.cpp" />
     <ClCompile Include="ztrans.cpp" />
     <ClCompile Include="ucln_in.c">
       <DisableLanguageExtensions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</DisableLanguageExtensions>
@@ -1336,7 +1335,6 @@
     <ClInclude Include="wintzimpl.h" />
     <ClInclude Include="zonemeta.h" />
     <ClInclude Include="zrule.h" />
-    <ClInclude Include="zstrfmt.h" />
     <ClInclude Include="ztrans.h" />
     <ClInclude Include="ucln_in.h" />
     <CustomBuild Include="unicode\regex.h">
