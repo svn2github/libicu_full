@@ -162,6 +162,7 @@ TimeZoneFormatImpl::parse(UTimeZoneFormatStyle style, const UnicodeString& text,
             pos.setErrorIndex(startIdx);
             return NULL;
         }
+        pos.setIndex(startIdx + len);
     } else {
         TimeZoneNameMatchInfo *matchInfo = fTimeZoneNames->find(text, startIdx, types, status);
         if (U_FAILURE(status) || matchInfo == NULL || matchInfo->size() == 0) {
@@ -198,6 +199,7 @@ TimeZoneFormatImpl::parse(UTimeZoneFormatStyle style, const UnicodeString& text,
                 parsedTimeType = UTZFMT_TIME_TYPE_DAYLIGHT;
                 break;
             }
+            pos.setIndex(startIdx + bestLen);
         }
         delete matchInfo;
     }
