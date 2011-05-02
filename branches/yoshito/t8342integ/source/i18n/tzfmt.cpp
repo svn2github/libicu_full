@@ -19,6 +19,7 @@
 #include "uhash.h"
 #include "umutex.h"
 #include "zonemeta.h"
+#include <stdio.h>
 
 U_NAMESPACE_BEGIN
 
@@ -297,6 +298,7 @@ U_CDECL_BEGIN
  */
 static UBool U_CALLCONV timeZoneFormat_cleanup(void)
 {
+printf("**Entering timeZoneFormat_cleanup\n");
     umtx_destroy(&gTimeZoneFormatLock);
 
     if (gTimeZoneFormatCache != NULL) {
@@ -312,6 +314,7 @@ static UBool U_CALLCONV timeZoneFormat_cleanup(void)
  */
 static void U_CALLCONV
 deleteTimeZoneFormatCacheEntry(void *obj) {
+printf("****deleteTimeZoneFormatCacheEntry\n");
     TimeZoneNameFormatCacheEntry *entry = (TimeZoneNameFormatCacheEntry *)obj;
     delete (TimeZoneFormat *) entry->tzfmt;
     uprv_free((void *)entry);

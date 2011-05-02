@@ -316,6 +316,7 @@ TimeZoneGenericNames::initialize(const Locale& locale, UErrorCode& status) {
             fpat.setTo(fallbackPattern);
         }
     }
+    ures_close(zoneStrings);
 
     fRegionFormat = new MessageFormat(rpat, status);
     if (fRegionFormat == NULL) {
@@ -394,6 +395,9 @@ TimeZoneGenericNames::cleanup() {
     }
     if (fLocaleDisplayNames != NULL) {
         delete fLocaleDisplayNames;
+    }
+    if (fTimeZoneNames != NULL) {
+        delete fTimeZoneNames;
     }
 
     uhash_close(fLocationNamesMap);

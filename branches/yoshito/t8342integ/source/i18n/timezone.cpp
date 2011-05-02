@@ -1073,8 +1073,10 @@ TimeZone::findID(const UnicodeString& id) {
     int32_t idx = findInStringArray(names, id, ec);
     result = ures_getStringByIndex(names, idx, NULL, &ec);
     if (U_FAILURE(ec)) {
-        return NULL;
+        result = NULL;
     }
+    ures_close(names);
+    ures_close(rb);
     return result;
 }
 

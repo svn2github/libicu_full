@@ -26,8 +26,6 @@
 #include "uhash.h"
 #include "olsontz.h"
 
-U_NAMESPACE_BEGIN
-
 static UMTX gZoneMetaLock = NULL;
 
 // CLDR Canonical ID mapping table
@@ -39,17 +37,16 @@ static UHashtable *gOlsonToMeta = NULL;
 static UBool gOlsonToMetaInitialized = FALSE;
 
 // Available metazone IDs vector and table
-static UVector *gMetaZoneIDs = NULL;
+static U_NAMESPACE_QUALIFIER UVector *gMetaZoneIDs = NULL;
 static UHashtable *gMetaZoneIDTable = NULL;
 static UBool gMetaZoneIDsInitialized = FALSE;
 
 // Country info vectors
-static UVector *gSingleZoneCountries = NULL;
-static UVector *gMultiZonesCountries = NULL;
+static U_NAMESPACE_QUALIFIER UVector *gSingleZoneCountries = NULL;
+static U_NAMESPACE_QUALIFIER UVector *gMultiZonesCountries = NULL;
 static UBool gCountryInfoVectorsInitialized = FALSE;
 
 U_CDECL_BEGIN
-
 
 /**
  * Cleanup callback func
@@ -112,6 +109,8 @@ deleteOlsonToMetaMappingEntry(void *obj) {
 }
 
 U_CDECL_END
+
+U_NAMESPACE_BEGIN
 
 #define ZID_KEY_MAX 128
 
@@ -813,6 +812,8 @@ ZoneMeta::initAvailableMetaZoneIDs () {
                         uhash_close(metaZoneIDTable);
                         delete metaZoneIDs;
                     }
+                    ures_close(bundle);
+                    ures_close(rb);
                 }
             }
         }
