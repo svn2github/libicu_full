@@ -25,9 +25,9 @@
 #include "umutex.h"
 #include "uresimp.h"
 #include "ureslocs.h"
-#include "olsontz.h"
 #include "zonemeta.h"
 #include "tznames_impl.h"
+#include "olsontz.h"
 
 U_NAMESPACE_BEGIN
 
@@ -251,27 +251,6 @@ GNameSearchHandler::getMatches(int32_t& maxMatchLen) {
     return results;
 }
 
-static UnicodeString& getTZCanonicalID(const TimeZone& tz, UnicodeString& canonicalID) {
-    if (dynamic_cast<const OlsonTimeZone *>(&tz) != NULL) {
-        // short cut for OlsonTimeZone
-        const OlsonTimeZone *otz = (const OlsonTimeZone*)&tz;
-        const UChar* uID = otz->getCanonicalID();
-        if (uID != NULL) {
-            canonicalID.setTo(TRUE, uID, -1);
-        } else {
-            canonicalID.setToBogus();
-        }
-    } else {
-        UErrorCode status = U_ZERO_ERROR;
-        UnicodeString tzID;
-        ZoneMeta::getCanonicalCLDRID(tz.getID(tzID), canonicalID, status);
-        if (U_FAILURE(status)) {
-            canonicalID.setToBogus();
-        }
-    }
-    return canonicalID;
-}
-
 // ---------------------------------------------------
 // TimeZoneGenericNames
 //
@@ -392,6 +371,14 @@ TimeZoneGenericNames::initialize(const Locale& locale, UErrorCode& status) {
     } else {
         fTargetRegion[0] = 0;
     }
+
+    // preload generic names for the default zone
+    TimeZone *tz = TimeZone::createDefault();
+    const UChar *tzID = ZoneMeta::getCanonicalCLDRID(*tz);
+    if (tzID != NULL) {
+        loadStrings(UnicodeString(tzID));
+    }
+    delete tz;
 }
 
 void
@@ -419,18 +406,20 @@ TimeZoneGenericNames::getDisplayName(const TimeZone& tz, UTimeZoneGenericNameTyp
     switch (type) {
     case UTZGNM_LOCATION:
         {
-            UnicodeString tzCanonicalID;
-            getTZCanonicalID(tz, tzCanonicalID);
-            getGenericLocationName(tzCanonicalID, name);
+            const UChar* tzCanonicalID = ZoneMeta::getCanonicalCLDRID(tz);
+            if (tzCanonicalID != NULL) {
+                getGenericLocationName(UnicodeString(tzCanonicalID), name);
+            }
         }
         break;
     case UTZGNM_LONG:
     case UTZGNM_SHORT:
         formatGenericNonLocationName(tz, type, date, name);
         if (name.isEmpty()) {
-            UnicodeString tzCanonicalID;
-            getTZCanonicalID(tz, tzCanonicalID);
-            getGenericLocationName(tzCanonicalID, name);
+            const UChar* tzCanonicalID = ZoneMeta::getCanonicalCLDRID(tz);
+            if (tzCanonicalID != NULL) {
+                getGenericLocationName(UnicodeString(tzCanonicalID), name);
+            }
         }
         break;
     default:
@@ -566,11 +555,12 @@ TimeZoneGenericNames::formatGenericNonLocationName(const TimeZone& tz, UTimeZone
     U_ASSERT(type == UTZGNM_LONG || type == UTZGNM_SHORT);
     name.setToBogus();
 
-    UnicodeString tzID;
-    getTZCanonicalID(tz, tzID);
-    if (tzID.isEmpty()) {
+    const UChar* uID = ZoneMeta::getCanonicalCLDRID(tz);
+    if (uID == NULL) {
         return name;
     }
+
+    UnicodeString tzID(uID);
 
     // Try to get a name from time zone first
     UTimeZoneNameType nameType = (type == UTZGNM_LONG) ? UTZNM_LONG_GENERIC : UTZNM_SHORT_GENERIC;
@@ -801,6 +791,51 @@ TimeZoneGenericNames::getPartialLocationName(const UnicodeString& tzCanonicalID,
     return uplname;
 }
 
+/*
+ * This method updates the cache and must be called with a lock,
+ * except initializer.
+ */
+void
+TimeZoneGenericNames::loadStrings(const UnicodeString& tzCanonicalID) {
+    // load the generic location name
+    getGenericLocationName(tzCanonicalID);
+
+    // partial location names
+    UErrorCode status = U_ZERO_ERROR;
+
+    const UnicodeString *mzID;
+    UnicodeString goldenID;
+    UnicodeString mzGenName;
+    UTimeZoneNameType genNonLocTypes[] = {
+        UTZNM_LONG_GENERIC, UTZNM_SHORT_GENERIC,
+        UTZNM_UNKNOWN /*terminator*/
+    };
+
+    StringEnumeration *mzIDs = fTimeZoneNames->getAvailableMetaZoneIDs(tzCanonicalID, status);
+    while ((mzID = mzIDs->snext(status))) {
+        if (U_FAILURE(status)) {
+            break;
+        }
+        // if this time zone is not the golden zone of the meta zone,
+        // partial location name (such as "PT (Los Angeles)") might be
+        // available.
+        fTimeZoneNames->getReferenceZoneID(*mzID, fTargetRegion, goldenID);
+        if (tzCanonicalID != goldenID) {
+            for (int32_t i = 0; genNonLocTypes[i] != UTZNM_UNKNOWN; i++) {
+                fTimeZoneNames->getMetaZoneDisplayName(*mzID, genNonLocTypes[i], mzGenName);
+                if (!mzGenName.isEmpty()) {
+                    // getPartialLocationName formats a name and put it into the trie
+                    getPartialLocationName(tzCanonicalID, *mzID,
+                        (genNonLocTypes[i] == UTZNM_LONG_GENERIC), mzGenName);
+                }
+            }
+        }
+    }
+    if (mzIDs != NULL) {
+        delete mzIDs;
+    }
+}
+
 int32_t
 TimeZoneGenericNames::findBestMatch(const UnicodeString& text, int32_t start, uint32_t types,
         UnicodeString& tzID, UTimeZoneTimeType& timeType, UErrorCode& status) const {
@@ -947,44 +982,11 @@ TimeZoneGenericNames::findLocal(const UnicodeString& text, int32_t start, uint32
             StringEnumeration *tzIDs = TimeZone::createTimeZoneIDEnumeration(UCAL_ZONE_TYPE_CANONICAL, NULL, NULL, status);
             if (U_SUCCESS(status)) {
                 const UnicodeString *tzID;
-                const UnicodeString *mzID;
-                UnicodeString goldenID;
-                UnicodeString mzGenName;
-                UTimeZoneNameType genNonLocTypes[] = {
-                    UTZNM_LONG_GENERIC, UTZNM_SHORT_GENERIC,
-                    UTZNM_UNKNOWN /*terminator*/
-                };
-
                 while ((tzID = tzIDs->snext(status))) {
                     if (U_FAILURE(status)) {
                         break;
                     }
-                    // getGenericLocationName formats a name and put it into the trie
-                    nonConstThis->getGenericLocationName(*tzID);
-
-                    StringEnumeration *mzIDs = fTimeZoneNames->getAvailableMetaZoneIDs(*tzID, status);
-                    while ((mzID = mzIDs->snext(status))) {
-                        if (U_FAILURE(status)) {
-                            break;
-                        }
-                        // if this time zone is not the golden zone of the meta zone,
-                        // partial location name (such as "PT (Los Angeles)") might be
-                        // available.
-                        fTimeZoneNames->getReferenceZoneID(*mzID, fTargetRegion, goldenID);
-                        if (*tzID != goldenID) {
-                            for (int32_t i = 0; genNonLocTypes[i] != UTZNM_UNKNOWN; i++) {
-                                fTimeZoneNames->getMetaZoneDisplayName(*mzID, genNonLocTypes[i], mzGenName);
-                                if (!mzGenName.isEmpty()) {
-                                    // getPartialLocationName formats a name and put it into the trie
-                                    nonConstThis->getPartialLocationName(*tzID, *mzID,
-                                        (genNonLocTypes[i] == UTZNM_LONG_GENERIC), mzGenName);
-                                }
-                            }
-                        }
-                    }
-                    if (mzIDs != NULL) {
-                        delete mzIDs;
-                    }
+                    nonConstThis->loadStrings(*tzID);
                 }
             }
             if (tzIDs != NULL) {

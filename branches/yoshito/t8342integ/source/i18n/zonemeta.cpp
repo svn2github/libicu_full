@@ -24,6 +24,7 @@
 #include "uassert.h"
 #include "uresimp.h"
 #include "uhash.h"
+#include "olsontz.h"
 
 U_NAMESPACE_BEGIN
 
@@ -377,6 +378,20 @@ ZoneMeta::getCanonicalCLDRID(const UnicodeString &tzid, UnicodeString &systemID,
     systemID.setTo(TRUE, canonicalID, -1);
     return systemID;
 }
+
+const UChar* U_EXPORT2
+ZoneMeta::getCanonicalCLDRID(const TimeZone& tz) {
+    if (dynamic_cast<const OlsonTimeZone *>(&tz) != NULL) {
+        // short cut for OlsonTimeZone
+        const OlsonTimeZone *otz = (const OlsonTimeZone*)&tz;
+        return otz->getCanonicalID();
+    }
+    UErrorCode status = U_ZERO_ERROR;
+    UnicodeString tzID;
+    return getCanonicalCLDRID(tz.getID(tzID), status);
+}
+
+
 
 UnicodeString& U_EXPORT2
 ZoneMeta::getCanonicalCountry(const UnicodeString &tzid, UnicodeString &canonicalCountry) {

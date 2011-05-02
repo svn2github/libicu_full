@@ -25,6 +25,7 @@
 #include "zonemeta.h"
 #include "ucln_in.h"
 #include "uvector.h"
+#include "olsontz.h"
 
 
 U_NAMESPACE_BEGIN
@@ -983,7 +984,39 @@ TimeZoneNamesImpl::initialize(const Locale& locale, UErrorCode& status) {
     uhash_setValueDeleter(fTZNamesMap, deleteTZNames);
     // no key deleters for name maps
 
+    // preload zone strings for the default zone
+    TimeZone *tz = TimeZone::createDefault();
+    const UChar *tzID = ZoneMeta::getCanonicalCLDRID(*tz);
+    if (tzID != NULL) {
+        loadStrings(UnicodeString(tzID));
+    }
+    delete tz;
+
     return;
+}
+
+/*
+ * This method updates the cache and must be called with a lock,
+ * except initializer.
+ */
+void
+TimeZoneNamesImpl::loadStrings(const UnicodeString& tzCanonicalID) {
+    loadTimeZoneNames(tzCanonicalID);
+
+    UErrorCode status = U_ZERO_ERROR;
+    StringEnumeration *mzIDs = getAvailableMetaZoneIDs(tzCanonicalID, status);
+    if (U_SUCCESS(status)) {
+        const UnicodeString *mzID;
+        while ((mzID = mzIDs->snext(status))) {
+            if (U_FAILURE(status)) {
+                break;
+            }
+            loadMetaZoneNames(*mzID);
+        }
+        if (mzIDs != NULL) {
+            delete mzIDs;
+        }
+    }
 }
 
 TimeZoneNamesImpl::~TimeZoneNamesImpl() {
@@ -1345,33 +1378,20 @@ TimeZoneNamesImpl::find(const UnicodeString& text, int32_t start, uint32_t types
         if (!fNamesTrieFullyLoaded) {
             const UnicodeString *id;
 
-            // time zone names
+            // load strings for all zones
             StringEnumeration *tzIDs = TimeZone::createTimeZoneIDEnumeration(UCAL_ZONE_TYPE_CANONICAL, NULL, NULL, status);
             if (U_SUCCESS(status)) {
                 while ((id = tzIDs->snext(status))) {
                     if (U_FAILURE(status)) {
                         break;
                     }
-                    nonConstThis->loadTimeZoneNames(*id);
+                    // loadStrings also load related metazone strings
+                    nonConstThis->loadStrings(*id);
                 }
             }
             if (tzIDs != NULL) {
                 delete tzIDs;
             }
-
-            StringEnumeration *mzIDs = getAvailableMetaZoneIDs(status);
-            if (U_SUCCESS(status)) {
-                while ((id = mzIDs->snext(status))) {
-                    if (U_FAILURE(status)) {
-                        break;
-                    }
-                    nonConstThis->loadMetaZoneNames(*id);
-                }
-            }
-            if (mzIDs != NULL) {
-                delete mzIDs;
-            }
-
             if (U_SUCCESS(status)) {
                 nonConstThis->fNamesTrieFullyLoaded = TRUE;
             }
@@ -1402,6 +1422,28 @@ TimeZoneNamesImpl::find(const UnicodeString& text, int32_t start, uint32_t types
 
     return matchInfo;
 }
+
+UnicodeString& getTZCanonicalID(const TimeZone& tz, UnicodeString& canonicalID) {
+    if (dynamic_cast<const OlsonTimeZone *>(&tz) != NULL) {
+        // short cut for OlsonTimeZone
+        const OlsonTimeZone *otz = (const OlsonTimeZone*)&tz;
+        const UChar* uID = otz->getCanonicalID();
+        if (uID != NULL) {
+            canonicalID.setTo(TRUE, uID, -1);
+        } else {
+            canonicalID.setToBogus();
+        }
+    } else {
+        UErrorCode status = U_ZERO_ERROR;
+        UnicodeString tzID;
+        ZoneMeta::getCanonicalCLDRID(tz.getID(tzID), canonicalID, status);
+        if (U_FAILURE(status)) {
+            canonicalID.setToBogus();
+        }
+    }
+    return canonicalID;
+}
+
 
 U_NAMESPACE_END
 

@@ -197,6 +197,8 @@ private:
     void initialize(const Locale& locale, UErrorCode& status);
     void cleanup();
 
+    void loadStrings(const UnicodeString& tzCanonicalID);
+
     ZNames* loadMetaZoneNames(const UnicodeString& mzId);
     TZNames* loadTimeZoneNames(const UnicodeString& mzId);
 };

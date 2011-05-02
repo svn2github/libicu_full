@@ -18,7 +18,6 @@
 #include "ucln_in.h"
 #include "uhash.h"
 #include "umutex.h"
-#include "olsontz.h"
 #include "zonemeta.h"
 
 U_NAMESPACE_BEGIN
@@ -227,26 +226,13 @@ TimeZoneFormatImpl::formatGeneric(const TimeZone& tz, UTimeZoneGenericNameType g
         return name;
     }
 
-    UErrorCode status = U_ZERO_ERROR;
-    UnicodeString canonicalID;
-    if (dynamic_cast<const OlsonTimeZone *>(&tz) != NULL) {
-        const OlsonTimeZone *otz = (const OlsonTimeZone*)&tz;
-        const UChar* uID = otz->getCanonicalID();
-        if (uID != NULL) {
-            canonicalID.setTo(TRUE, uID, -1);
-        }
-    } else {
-        UnicodeString tzID;
-        ZoneMeta::getCanonicalCLDRID(tz.getID(tzID), canonicalID, status);
-    }
-
-    if (U_FAILURE(status) || canonicalID.isEmpty()) {
-        name.setToBogus();
-        return name;
-    }
-
     if (genType == UTZGNM_LOCATION) {
-        return fTimeZoneGenericNames->getGenericLocationName(canonicalID, name);
+        const UChar* canonicalID = ZoneMeta::getCanonicalCLDRID(tz);
+        if (canonicalID == NULL) {
+            name.setToBogus();
+            return name;
+        }
+        return fTimeZoneGenericNames->getGenericLocationName(UnicodeString(canonicalID), name);
     }
     return fTimeZoneGenericNames->getDisplayName(tz, genType, date, name);
 }
@@ -260,29 +246,18 @@ TimeZoneFormatImpl::formatSpecific(const TimeZone& tz, UTimeZoneNameType stdType
     }
 
     UErrorCode status = U_ZERO_ERROR;
-
-    UnicodeString canonicalID;
-    if (dynamic_cast<const OlsonTimeZone *>(&tz) != NULL) {
-        const OlsonTimeZone *otz = (const OlsonTimeZone*)&tz;
-        const UChar* uID = otz->getCanonicalID();
-        if (uID != NULL) {
-            canonicalID.setTo(TRUE, uID, -1);
-        }
-    } else {
-        UnicodeString tzID;
-        ZoneMeta::getCanonicalCLDRID(tz.getID(tzID), canonicalID, status);
-    }
-
     UBool isDaylight = tz.inDaylightTime(date, status);
-    if (U_FAILURE(status) || canonicalID.isEmpty()) {
+    const UChar* canonicalID = ZoneMeta::getCanonicalCLDRID(tz);
+
+    if (U_FAILURE(status) || canonicalID == NULL) {
         name.setToBogus();
         return name;
     }
 
     if (isDaylight) {
-        fTimeZoneNames->getDisplayName(canonicalID, dstType, date, name);
+        fTimeZoneNames->getDisplayName(UnicodeString(canonicalID), dstType, date, name);
     } else {
-        fTimeZoneNames->getDisplayName(canonicalID, stdType, date, name);
+        fTimeZoneNames->getDisplayName(UnicodeString(canonicalID), stdType, date, name);
     }
 
     if (timeType && !name.isEmpty()) {

@@ -23,6 +23,7 @@ typedef struct OlsonToMetaMappingEntry {
 } OlsonToMetaMappingEntry;
 
 class UVector;
+class TimeZone;
 
 class U_I18N_API ZoneMeta {
 public:
@@ -41,6 +42,11 @@ public:
      * (a pointer to a resource).
      */
     static const UChar* U_EXPORT2 getCanonicalCLDRID(const UnicodeString &tzid, UErrorCode& status);
+
+    /*
+     * Conveninent method returning CLDR canonical ID for the given time zone
+     */
+    static const UChar* U_EXPORT2 getCanonicalCLDRID(const TimeZone& tz);
 
     /**
      * Return the canonical country code for this tzid.  If we have none, or if the time zone

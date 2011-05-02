@@ -91,6 +91,8 @@ private:
     void initialize(const Locale& locale, UErrorCode& status);
     void cleanup();
 
+    void loadStrings(const UnicodeString& tzCanonicalID);
+
     const UChar* getGenericLocationName(const UnicodeString& tzCanonicalID);
 
     UnicodeString& formatGenericNonLocationName(const TimeZone& tz, UTimeZoneGenericNameType type,
