@@ -172,7 +172,7 @@ TimeZoneFormatImpl::parse(UTimeZoneFormatStyle style, const UnicodeString& text,
         pos.setIndex(startIdx + len);
     } else {
         TimeZoneNameMatchInfo *matchInfo = fTimeZoneNames->find(text, startIdx, types, status);
-        if (U_FAILURE(status) || matchInfo == NULL || matchInfo->size() == 0) {
+        if (U_FAILURE(status) || matchInfo == NULL) {
             pos.setErrorIndex(startIdx);
             return tzID;
         }

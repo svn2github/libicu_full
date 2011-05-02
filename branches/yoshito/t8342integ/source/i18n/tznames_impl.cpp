@@ -26,6 +26,7 @@
 #include "ucln_in.h"
 #include "uvector.h"
 #include "olsontz.h"
+#include <stdio.h>
 
 
 U_NAMESPACE_BEGIN
@@ -726,7 +727,9 @@ MetaZoneIDsEnumeration::count(UErrorCode& /*status*/) const {
 
 MetaZoneIDsEnumeration::~MetaZoneIDsEnumeration() {
     if (fLocalVector) {
+printf("~MetaZoneIDsEnumeration() - 1\n");
         delete fLocalVector;
+printf("~MetaZoneIDsEnumeration() - 2\n");
     }
 }
 
@@ -1069,6 +1072,7 @@ TimeZoneNamesImpl::getAvailableMetaZoneIDs(const UnicodeString& tzID, UErrorCode
     }
     if (U_SUCCESS(status)) {
         for (int32_t i = 0; U_SUCCESS(status) && i < mappings->size(); i++) {
+
             OlsonToMetaMappingEntry *map = (OlsonToMetaMappingEntry *)mappings->elementAt(i);
             const UChar *mzID = map->mzid;
             if (!mzIDs->contains((void *)mzID)) {

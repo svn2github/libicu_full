@@ -25,6 +25,7 @@
 #include "uresimp.h"
 #include "uhash.h"
 #include "olsontz.h"
+#include <stdio.h>
 
 static UMTX gZoneMetaLock = NULL;
 
@@ -53,6 +54,7 @@ U_CDECL_BEGIN
  */
 static UBool U_CALLCONV zoneMeta_cleanup(void)
 {
+    printf("!!! Entering zoneMeta_cleanup\n");
     umtx_destroy(&gZoneMetaLock);
 
     if (gCanonicalIDCache != NULL) {
@@ -62,6 +64,7 @@ static UBool U_CALLCONV zoneMeta_cleanup(void)
     gCanonicalIDCacheInitialized = FALSE;
 
     if (gOlsonToMeta != NULL) {
+        printf("!!! ... closing gOlsonMeta\n");
         uhash_close(gOlsonToMeta);
         gOlsonToMeta = NULL;
     }
@@ -96,6 +99,7 @@ deleteUCharString(void *obj) {
  */
 static void U_CALLCONV
 deleteUVector(void *obj) {
+    printf("!!! deleteUVector\n");
    delete (U_NAMESPACE_QUALIFIER UVector*) obj;
 }
 
@@ -104,6 +108,7 @@ deleteUVector(void *obj) {
  */
 static void U_CALLCONV
 deleteOlsonToMetaMappingEntry(void *obj) {
+    printf("!!! deleteOlsonToMetaMappingEntry\n");
     U_NAMESPACE_QUALIFIER OlsonToMetaMappingEntry *entry = (U_NAMESPACE_QUALIFIER OlsonToMetaMappingEntry*)obj;
     uprv_free(entry);
 }
