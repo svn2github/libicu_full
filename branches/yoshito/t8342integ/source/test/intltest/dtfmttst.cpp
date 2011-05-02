@@ -1821,8 +1821,9 @@ void DateFormatTest::expectFormat(const char** data, int32_t data_length,
 }
 
 void DateFormatTest::TestGenericTime() {
-  // any zone pattern should parse any zone
   const Locale en("en");
+  // Note: We no longer parse strings in different styles.
+/*
   const char* ZDATA[] = {
         "yyyy MM dd HH:mm zzz",
         // round trip
@@ -1862,12 +1863,44 @@ void DateFormatTest::TestGenericTime() {
         "y/M/d H:mm v", "pf", "2004/10/31 1:30 PDT", "2004 10 31 01:30 PDT", "2004/10/31 1:30 PT",
         "y/M/d H:mm", "pf", "2004/10/31 1:30", "2004 10 31 01:30 PST", "2004/10/31 1:30",
   };
+*/
+  const char* ZDATA[] = {
+        "yyyy MM dd HH:mm zzz",
+        // round trip
+        "y/M/d H:mm zzzz", "F", "2004 01 01 01:00 PST", "2004/1/1 1:00 Pacific Standard Time",
+        "y/M/d H:mm zzz", "F", "2004 01 01 01:00 PST", "2004/1/1 1:00 PST",
+        "y/M/d H:mm vvvv", "F", "2004 01 01 01:00 PST", "2004/1/1 1:00 Pacific Time",
+        "y/M/d H:mm v", "F", "2004 01 01 01:00 PST", "2004/1/1 1:00 PT",
+        // non-generic timezone string influences dst offset even if wrong for date/time
+        "y/M/d H:mm zzz", "pf", "2004/1/1 1:00 PDT", "2004 01 01 01:00 PDT", "2004/1/1 0:00 PST",
+        "y/M/d H:mm zzz", "pf", "2004/7/1 1:00 PST", "2004 07 01 02:00 PDT", "2004/7/1 2:00 PDT",
+        // generic timezone generates dst offset appropriate for local time
+        "y/M/d H:mm zzz", "pf", "2004/1/1 1:00 PST", "2004 01 01 01:00 PST", "2004/1/1 1:00 PST",
+        "y/M/d H:mm vvvv", "pf", "2004/1/1 1:00 Pacific Time", "2004 01 01 01:00 PST", "2004/1/1 1:00 Pacific Time",
+        "y/M/d H:mm zzz", "pf", "2004/7/1 1:00 PDT", "2004 07 01 01:00 PDT", "2004/7/1 1:00 PDT",
+        "y/M/d H:mm vvvv", "pf", "2004/7/1 1:00 Pacific Time", "2004 07 01 01:00 PDT", "2004/7/1 1:00 Pacific Time",
+        // daylight savings time transition edge cases.
+        // time to parse does not really exist, PT interpreted as earlier time
+        "y/M/d H:mm zzz", "pf", "2005/4/3 2:30 PST", "2005 04 03 03:30 PDT", "2005/4/3 3:30 PDT",
+        "y/M/d H:mm zzz", "pf", "2005/4/3 2:30 PDT", "2005 04 03 01:30 PST", "2005/4/3 1:30 PST",
+        "y/M/d H:mm v", "pf", "2005/4/3 2:30 PT", "2005 04 03 03:30 PDT", "2005/4/3 3:30 PT",
+        "y/M/d H:mm", "pf", "2005/4/3 2:30", "2005 04 03 03:30 PDT", "2005/4/3 3:30",
+        // time to parse is ambiguous, PT interpreted as later time
+        "y/M/d H:mm v", "pf", "2005/10/30 1:30 PT", "2005 10 30  01:30 PST", "2005/10/30 1:30 PT",
+        "y/M/d H:mm", "pf", "2005/10/30 1:30 PT", "2005 10 30 01:30 PST", "2005/10/30 1:30",
+
+        "y/M/d H:mm zzz", "pf", "2004/10/31 1:30 PST", "2004 10 31 01:30 PST", "2004/10/31 1:30 PST",
+        "y/M/d H:mm zzz", "pf", "2004/10/31 1:30 PDT", "2004 10 31 01:30 PDT", "2004/10/31 1:30 PDT",
+        "y/M/d H:mm v", "pf", "2004/10/31 1:30 PT", "2004 10 31 01:30 PST", "2004/10/31 1:30 PT",
+        "y/M/d H:mm", "pf", "2004/10/31 1:30", "2004 10 31 01:30 PST", "2004/10/31 1:30",
+  };
+
   const int32_t ZDATA_length = sizeof(ZDATA)/ sizeof(ZDATA[0]);
   expect(ZDATA, ZDATA_length, en);
 
   UErrorCode status = U_ZERO_ERROR;
 
-  logln("cross format/parse tests");
+  logln("cross format/parse tests");    // Note: We no longer support cross format/parse
   UnicodeString basepat("yy/MM/dd H:mm ");
   SimpleDateFormat formats[] = {
     SimpleDateFormat(basepat + "vvv", en, status),
@@ -1919,29 +1952,52 @@ void DateFormatTest::TestGenericTime() {
 
 void DateFormatTest::TestGenericTimeZoneOrder() {
   // generic times should parse the same no matter what the placement of the time zone string
-  // should work for standard and daylight times
 
+  // Note: We no longer support cross style format/parse
+
+  //const char* XDATA[] = {
+  //  "yyyy MM dd HH:mm zzz",
+  //  // standard time, explicit daylight/standard
+  //  "y/M/d H:mm zzz", "pf", "2004/1/1 1:00 PT", "2004 01 01 01:00 PST", "2004/1/1 1:00 PST",
+  //  "y/M/d zzz H:mm", "pf", "2004/1/1 PT 1:00", "2004 01 01 01:00 PST", "2004/1/1 PST 1:00",
+  //  "zzz y/M/d H:mm", "pf", "PT 2004/1/1 1:00", "2004 01 01 01:00 PST", "PST 2004/1/1 1:00",
+
+  //  // standard time, generic
+  //  "y/M/d H:mm vvvv", "pf", "2004/1/1 1:00 PT", "2004 01 01 01:00 PST", "2004/1/1 1:00 Pacific Time",
+  //  "y/M/d vvvv H:mm", "pf", "2004/1/1 PT 1:00", "2004 01 01 01:00 PST", "2004/1/1 Pacific Time 1:00",
+  //  "vvvv y/M/d H:mm", "pf", "PT 2004/1/1 1:00", "2004 01 01 01:00 PST", "Pacific Time 2004/1/1 1:00",
+
+  //  // dahylight time, explicit daylight/standard
+  //  "y/M/d H:mm zzz", "pf", "2004/7/1 1:00 PT", "2004 07 01 01:00 PDT", "2004/7/1 1:00 PDT",
+  //  "y/M/d zzz H:mm", "pf", "2004/7/1 PT 1:00", "2004 07 01 01:00 PDT", "2004/7/1 PDT 1:00",
+  //  "zzz y/M/d H:mm", "pf", "PT 2004/7/1 1:00", "2004 07 01 01:00 PDT", "PDT 2004/7/1 1:00",
+
+  //  // daylight time, generic
+  //  "y/M/d H:mm vvvv", "pf", "2004/7/1 1:00 PT", "2004 07 01 01:00 PDT", "2004/7/1 1:00 Pacific Time",
+  //  "y/M/d vvvv H:mm", "pf", "2004/7/1 PT 1:00", "2004 07 01 01:00 PDT", "2004/7/1 Pacific Time 1:00",
+  //  "vvvv y/M/d H:mm", "pf", "PT 2004/7/1 1:00", "2004 07 01 01:00 PDT", "Pacific Time 2004/7/1 1:00",
+  //};
   const char* XDATA[] = {
     "yyyy MM dd HH:mm zzz",
     // standard time, explicit daylight/standard
-    "y/M/d H:mm zzz", "pf", "2004/1/1 1:00 PT", "2004 01 01 01:00 PST", "2004/1/1 1:00 PST",
-    "y/M/d zzz H:mm", "pf", "2004/1/1 PT 1:00", "2004 01 01 01:00 PST", "2004/1/1 PST 1:00",
-    "zzz y/M/d H:mm", "pf", "PT 2004/1/1 1:00", "2004 01 01 01:00 PST", "PST 2004/1/1 1:00",
+    "y/M/d H:mm zzz", "pf", "2004/1/1 1:00 PST", "2004 01 01 01:00 PST", "2004/1/1 1:00 PST",
+    "y/M/d zzz H:mm", "pf", "2004/1/1 PST 1:00", "2004 01 01 01:00 PST", "2004/1/1 PST 1:00",
+    "zzz y/M/d H:mm", "pf", "PST 2004/1/1 1:00", "2004 01 01 01:00 PST", "PST 2004/1/1 1:00",
 
     // standard time, generic
-    "y/M/d H:mm vvvv", "pf", "2004/1/1 1:00 PT", "2004 01 01 01:00 PST", "2004/1/1 1:00 Pacific Time",
-    "y/M/d vvvv H:mm", "pf", "2004/1/1 PT 1:00", "2004 01 01 01:00 PST", "2004/1/1 Pacific Time 1:00",
-    "vvvv y/M/d H:mm", "pf", "PT 2004/1/1 1:00", "2004 01 01 01:00 PST", "Pacific Time 2004/1/1 1:00",
+    "y/M/d H:mm vvvv", "pf", "2004/1/1 1:00 Pacific Time", "2004 01 01 01:00 PST", "2004/1/1 1:00 Pacific Time",
+    "y/M/d vvvv H:mm", "pf", "2004/1/1 Pacific Time 1:00", "2004 01 01 01:00 PST", "2004/1/1 Pacific Time 1:00",
+    "vvvv y/M/d H:mm", "pf", "Pacific Time 2004/1/1 1:00", "2004 01 01 01:00 PST", "Pacific Time 2004/1/1 1:00",
 
     // dahylight time, explicit daylight/standard
-    "y/M/d H:mm zzz", "pf", "2004/7/1 1:00 PT", "2004 07 01 01:00 PDT", "2004/7/1 1:00 PDT",
-    "y/M/d zzz H:mm", "pf", "2004/7/1 PT 1:00", "2004 07 01 01:00 PDT", "2004/7/1 PDT 1:00",
-    "zzz y/M/d H:mm", "pf", "PT 2004/7/1 1:00", "2004 07 01 01:00 PDT", "PDT 2004/7/1 1:00",
+    "y/M/d H:mm zzz", "pf", "2004/7/1 1:00 PDT", "2004 07 01 01:00 PDT", "2004/7/1 1:00 PDT",
+    "y/M/d zzz H:mm", "pf", "2004/7/1 PDT 1:00", "2004 07 01 01:00 PDT", "2004/7/1 PDT 1:00",
+    "zzz y/M/d H:mm", "pf", "PDT 2004/7/1 1:00", "2004 07 01 01:00 PDT", "PDT 2004/7/1 1:00",
 
     // daylight time, generic
-    "y/M/d H:mm vvvv", "pf", "2004/7/1 1:00 PT", "2004 07 01 01:00 PDT", "2004/7/1 1:00 Pacific Time",
-    "y/M/d vvvv H:mm", "pf", "2004/7/1 PT 1:00", "2004 07 01 01:00 PDT", "2004/7/1 Pacific Time 1:00",
-    "vvvv y/M/d H:mm", "pf", "PT 2004/7/1 1:00", "2004 07 01 01:00 PDT", "Pacific Time 2004/7/1 1:00",
+    "y/M/d H:mm v", "pf", "2004/7/1 1:00 PT", "2004 07 01 01:00 PDT", "2004/7/1 1:00 PT",
+    "y/M/d v H:mm", "pf", "2004/7/1 PT 1:00", "2004 07 01 01:00 PDT", "2004/7/1 PT 1:00",
+    "v y/M/d H:mm", "pf", "PT 2004/7/1 1:00", "2004 07 01 01:00 PDT", "PT 2004/7/1 1:00",
   };
   const int32_t XDATA_length = sizeof(XDATA)/sizeof(XDATA[0]);
   Locale en("en");

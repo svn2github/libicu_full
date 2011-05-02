@@ -430,6 +430,13 @@ SimpleDateFormat& SimpleDateFormat::operator=(const SimpleDateFormat& other)
 
     fPattern = other.fPattern;
 
+    delete fTimeZoneFormat;
+    if (other.fTimeZoneFormat) {
+        UErrorCode status = U_ZERO_ERROR;
+        fTimeZoneFormat = TimeZoneFormat::createInstance(other.fLocale, status);
+        U_ASSERT(U_SUCCESS(status));
+    }
+
     return *this;
 }
 
