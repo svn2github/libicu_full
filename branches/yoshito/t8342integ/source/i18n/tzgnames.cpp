@@ -820,7 +820,7 @@ TimeZoneGenericNames::findBestMatch(const UnicodeString& text, int32_t start, ui
     int32_t bestMatchLen = 0;
     UTimeZoneTimeType bestMatchTimeType = UTZFMT_TIME_TYPE_UNKNOWN;
     UnicodeString bestMatchTzID;
-    UBool bestMatchIsLongStandard = FALSE; // workaround - see the comments below
+    UBool isLongStandard = FALSE;  // workaround - see the comments below
 
     if (tznamesMatches != NULL) {
         UnicodeString mzID;
@@ -836,10 +836,21 @@ TimeZoneGenericNames::findBestMatch(const UnicodeString& text, int32_t start, ui
                     fTimeZoneNames->getReferenceZoneID(mzID, fTargetRegion, bestMatchTzID);
                 }
                 UTimeZoneNameType nameType = tznamesMatches->getNameType(i);
-                if (nameType == UTZNM_LONG_STANDARD || nameType == UTZNM_SHORT_STANDARD_COMMONLY_USED) {
+                switch (nameType) {
+                case UTZNM_LONG_STANDARD:
+                    isLongStandard = TRUE;
+                case UTZNM_SHORT_STANDARD_COMMONLY_USED:
+                case UTZNM_SHORT_STANDARD: // this one is never used for generic, but just in case
                     bestMatchTimeType = UTZFMT_TIME_TYPE_STANDARD;
+                    break;
+                case UTZNM_LONG_DAYLIGHT:
+                case UTZNM_SHORT_DAYLIGHT_COMMONLY_USED:
+                case UTZNM_SHORT_DAYLIGHT: // this one is never used for generic, but just in case
+                    bestMatchTimeType = UTZFMT_TIME_TYPE_DAYLIGHT;
+                    break;
+                default:
+                    bestMatchTimeType = UTZFMT_TIME_TYPE_UNKNOWN;
                 }
-                bestMatchIsLongStandard = (nameType == UTZNM_LONG_STANDARD);
             }
         }
         delete tznamesMatches;
@@ -855,7 +866,7 @@ TimeZoneGenericNames::findBestMatch(const UnicodeString& text, int32_t start, ui
             // and the location name. When the match is a long standard name,
             // then we need to check if the name is same with the location name.
             // This is probably a data error or a design bug.
-            if (!bestMatchIsLongStandard) {
+            if (!isLongStandard) {
                 tzID.setTo(bestMatchTzID);
                 timeType = bestMatchTimeType;
                 return bestMatchLen;
