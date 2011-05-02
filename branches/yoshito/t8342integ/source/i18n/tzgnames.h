@@ -81,7 +81,7 @@ private:
     MessageFormat* fFallbackFormat;
 
     LocaleDisplayNames* fLocaleDisplayNames;
-    ZSFStringPool fStringPool;
+    ZNStringPool fStringPool;
 
     TextTrieMap fGNamesTrie;
     UBool fGNamesTrieFullyLoaded;

@@ -162,7 +162,7 @@ TimeZoneGenericNameMatchInfo::getTimeZoneID(int32_t index, UnicodeString& tzID) 
     if (minfo != NULL && minfo->gnameInfo->tzID != NULL) {
         tzID.setTo(TRUE, minfo->gnameInfo->tzID, -1);
     } else {
-        tzID.remove();
+        tzID.setToBogus();
     }
     return tzID;
 }
@@ -249,6 +249,27 @@ GNameSearchHandler::getMatches(int32_t& maxMatchLen) {
     fResults = NULL;
     fMaxMatchLen = 0;
     return results;
+}
+
+static UnicodeString& getTZCanonicalID(const TimeZone& tz, UnicodeString& canonicalID) {
+    if (dynamic_cast<const OlsonTimeZone *>(&tz) != NULL) {
+        // short cut for OlsonTimeZone
+        const OlsonTimeZone *otz = (const OlsonTimeZone*)&tz;
+        const UChar* uID = otz->getCanonicalID();
+        if (uID != NULL) {
+            canonicalID.setTo(TRUE, uID, -1);
+        } else {
+            canonicalID.setToBogus();
+        }
+    } else {
+        UErrorCode status = U_ZERO_ERROR;
+        UnicodeString tzID;
+        ZoneMeta::getCanonicalCLDRID(tz.getID(tzID), canonicalID, status);
+        if (U_FAILURE(status)) {
+            canonicalID.setToBogus();
+        }
+    }
+    return canonicalID;
 }
 
 // ---------------------------------------------------
@@ -394,12 +415,12 @@ TimeZoneGenericNames::cleanup() {
 
 UnicodeString&
 TimeZoneGenericNames::getDisplayName(const TimeZone& tz, UTimeZoneGenericNameType type, UDate date, UnicodeString& name) const {
-    name.remove();
+    name.setToBogus();
     switch (type) {
     case UTZGNM_LOCATION:
         {
             UnicodeString tzCanonicalID;
-            tz.getCanonicalID(tzCanonicalID);
+            getTZCanonicalID(tz, tzCanonicalID);
             getGenericLocationName(tzCanonicalID, name);
         }
         break;
@@ -408,7 +429,7 @@ TimeZoneGenericNames::getDisplayName(const TimeZone& tz, UTimeZoneGenericNameTyp
         formatGenericNonLocationName(tz, type, date, name);
         if (name.isEmpty()) {
             UnicodeString tzCanonicalID;
-            tz.getCanonicalID(tzCanonicalID);
+            getTZCanonicalID(tz, tzCanonicalID);
             getGenericLocationName(tzCanonicalID, name);
         }
         break;
@@ -420,6 +441,11 @@ TimeZoneGenericNames::getDisplayName(const TimeZone& tz, UTimeZoneGenericNameTyp
 
 UnicodeString&
 TimeZoneGenericNames::getGenericLocationName(const UnicodeString& tzCanonicalID, UnicodeString& name) const {
+    if (tzCanonicalID.isEmpty()) {
+        name.setToBogus();
+        return name;
+    }
+
     const UChar *locname = NULL;
     TimeZoneGenericNames *nonConstThis = const_cast<TimeZoneGenericNames *>(this);
     umtx_lock(&nonConstThis->fLock);
@@ -429,7 +455,7 @@ TimeZoneGenericNames::getGenericLocationName(const UnicodeString& tzCanonicalID,
     umtx_unlock(&nonConstThis->fLock);
 
     if (locname == NULL) {
-        name.remove();
+        name.setToBogus();
     } else {
         name.setTo(TRUE, locname, -1);
     }
@@ -442,6 +468,7 @@ TimeZoneGenericNames::getGenericLocationName(const UnicodeString& tzCanonicalID,
  */
 const UChar*
 TimeZoneGenericNames::getGenericLocationName(const UnicodeString& tzCanonicalID) {
+    U_ASSERT(!tzCanonicalID.isEmpty());
     if (tzCanonicalID.length() > ZID_KEY_MAX) {
         return NULL;
     }
@@ -537,9 +564,13 @@ TimeZoneGenericNames::getGenericLocationName(const UnicodeString& tzCanonicalID)
 UnicodeString&
 TimeZoneGenericNames::formatGenericNonLocationName(const TimeZone& tz, UTimeZoneGenericNameType type, UDate date, UnicodeString& name) const {
     U_ASSERT(type == UTZGNM_LONG || type == UTZGNM_SHORT);
-    name.remove();
+    name.setToBogus();
+
     UnicodeString tzID;
-    tz.getCanonicalID(tzID);
+    getTZCanonicalID(tz, tzID);
+    if (tzID.isEmpty()) {
+        return name;
+    }
 
     // Try to get a name from time zone first
     UTimeZoneNameType nameType = (type == UTZGNM_LONG) ? UTZNM_LONG_GENERIC : UTZNM_SHORT_GENERIC;
@@ -626,7 +657,7 @@ TimeZoneGenericNames::formatGenericNonLocationName(const TimeZone& tz, UTimeZone
                 UnicodeString mzGenericName;
                 fTimeZoneNames->getMetaZoneDisplayName(mzID, nameType, mzGenericName);
                 if (stdName.caseCompare(mzGenericName, 0) == 0) {
-                    name.remove();
+                    name.setToBogus();
                 }
             }
         }
@@ -671,6 +702,11 @@ UnicodeString&
 TimeZoneGenericNames::getPartialLocationName(const UnicodeString& tzCanonicalID,
                         const UnicodeString& mzID, UBool isLong, const UnicodeString& mzDisplayName,
                         UnicodeString& name) const {
+    name.setToBogus();
+    if (tzCanonicalID.isEmpty() || mzID.isEmpty() || mzDisplayName.isEmpty()) {
+        return name;
+    }
+
     const UChar *uplname = NULL;
     TimeZoneGenericNames *nonConstThis = const_cast<TimeZoneGenericNames *>(this);
     umtx_lock(&nonConstThis->fLock);
@@ -680,7 +716,7 @@ TimeZoneGenericNames::getPartialLocationName(const UnicodeString& tzCanonicalID,
     umtx_unlock(&nonConstThis->fLock);
 
     if (uplname == NULL) {
-        name.remove();
+        name.setToBogus();
     } else {
         name.setTo(TRUE, uplname, -1);
     }
@@ -693,6 +729,10 @@ TimeZoneGenericNames::getPartialLocationName(const UnicodeString& tzCanonicalID,
 const UChar*
 TimeZoneGenericNames::getPartialLocationName(const UnicodeString& tzCanonicalID,
                         const UnicodeString& mzID, UBool isLong, const UnicodeString& mzDisplayName) {
+    U_ASSERT(!tzCanonicalID.isEmpty());
+    U_ASSERT(!mzID.isEmpty());
+    U_ASSERT(!mzDisplayName.isEmpty());
+
     PartialLocationKey key;
     key.tzID = ZoneMeta::findTimeZoneID(tzCanonicalID);
     key.mzID = ZoneMeta::findMetaZoneID(mzID);
@@ -765,7 +805,7 @@ int32_t
 TimeZoneGenericNames::findBestMatch(const UnicodeString& text, int32_t start, uint32_t types,
         UnicodeString& tzID, UTimeZoneTimeType& timeType, UErrorCode& status) const {
     timeType = UTZFMT_TIME_TYPE_UNKNOWN;
-    tzID.remove();
+    tzID.setToBogus();
 
     if (U_FAILURE(status)) {
         return 0;

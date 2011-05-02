@@ -226,11 +226,6 @@ class U_I18N_API OlsonTimeZone: public BasicTimeZone {
     virtual UBool hasSameRules(const TimeZone& other) const;
 
     /**
-     * TimeZone API.
-     */
-    virtual UnicodeString& getCanonicalID(UnicodeString& ID) const;
-
-    /**
      * BasicTimeZone API.
      * Gets the first time zone transition after the base time.
      * @param base      The base time.
@@ -278,6 +273,12 @@ class U_I18N_API OlsonTimeZone: public BasicTimeZone {
      */
     virtual void getTimeZoneRules(const InitialTimeZoneRule*& initial,
         const TimeZoneRule* trsrules[], int32_t& trscount, UErrorCode& status) /*const*/;
+
+    /**
+     * Internal API returning the canonical ID of this zone.
+     * This ID won't be affected by setID().
+     */
+    const UChar *getCanonicalID() const;
 
 private:
     /**
@@ -377,7 +378,7 @@ private:
     /*
      * Canonical (CLDR) ID of this zone
      */
-    UnicodeString canonicalID;
+    const UChar *canonicalID;
 
     /* BasicTimeZone support */
     void clearTransitionRules(void);
@@ -432,10 +433,9 @@ OlsonTimeZone::initialDstOffset() const {
     return typeOffsets[1];
 }
 
-inline UnicodeString&
-OlsonTimeZone::getCanonicalID(UnicodeString& ID) const {
-    ID = canonicalID;
-    return ID;
+inline const UChar*
+OlsonTimeZone::getCanonicalID() const {
+    return canonicalID;
 }
 
 

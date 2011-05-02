@@ -18,8 +18,6 @@
 #include "unicode/timezone.h"
 #include "tznames.h"
 
-
-
 U_CDECL_BEGIN
 
 typedef enum UTimeZoneFormatStyle {

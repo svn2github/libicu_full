@@ -18,6 +18,8 @@
 #include "ucln_in.h"
 #include "uhash.h"
 #include "umutex.h"
+#include "olsontz.h"
+#include "zonemeta.h"
 
 U_NAMESPACE_BEGIN
 
@@ -126,7 +128,7 @@ TimeZoneFormatImpl::parse(UTimeZoneFormatStyle style, const UnicodeString& text,
     if (timeType) {
         *timeType = UTZFMT_TIME_TYPE_UNKNOWN;
     }
-    tzID.remove();
+    tzID.setToBogus();
 
     int32_t startIdx = pos.getIndex();
 
@@ -221,13 +223,30 @@ TimeZoneFormatImpl::parse(UTimeZoneFormatStyle style, const UnicodeString& text,
 UnicodeString&
 TimeZoneFormatImpl::formatGeneric(const TimeZone& tz, UTimeZoneGenericNameType genType, UDate date, UnicodeString& name) const {
     if (fTimeZoneGenericNames == NULL) {
-        name.remove();
+        name.setToBogus();
         return name;
     }
-    if (genType == UTZGNM_LOCATION) {
+
+    UErrorCode status = U_ZERO_ERROR;
+    UnicodeString canonicalID;
+    if (dynamic_cast<const OlsonTimeZone *>(&tz) != NULL) {
+        const OlsonTimeZone *otz = (const OlsonTimeZone*)&tz;
+        const UChar* uID = otz->getCanonicalID();
+        if (uID != NULL) {
+            canonicalID.setTo(TRUE, uID, -1);
+        }
+    } else {
         UnicodeString tzID;
-        tz.getCanonicalID(tzID);
-        return fTimeZoneGenericNames->getGenericLocationName(tzID, name);
+        ZoneMeta::getCanonicalCLDRID(tz.getID(tzID), canonicalID, status);
+    }
+
+    if (U_FAILURE(status) || canonicalID.isEmpty()) {
+        name.setToBogus();
+        return name;
+    }
+
+    if (genType == UTZGNM_LOCATION) {
+        return fTimeZoneGenericNames->getGenericLocationName(canonicalID, name);
     }
     return fTimeZoneGenericNames->getDisplayName(tz, genType, date, name);
 }
@@ -236,23 +255,34 @@ UnicodeString&
 TimeZoneFormatImpl::formatSpecific(const TimeZone& tz, UTimeZoneNameType stdType, UTimeZoneNameType dstType,
         UDate date, UnicodeString& name, UTimeZoneTimeType *timeType) const {
     if (fTimeZoneNames == NULL) {
-        name.remove();
+        name.setToBogus();
         return name;
     }
 
     UErrorCode status = U_ZERO_ERROR;
+
+    UnicodeString canonicalID;
+    if (dynamic_cast<const OlsonTimeZone *>(&tz) != NULL) {
+        const OlsonTimeZone *otz = (const OlsonTimeZone*)&tz;
+        const UChar* uID = otz->getCanonicalID();
+        if (uID != NULL) {
+            canonicalID.setTo(TRUE, uID, -1);
+        }
+    } else {
+        UnicodeString tzID;
+        ZoneMeta::getCanonicalCLDRID(tz.getID(tzID), canonicalID, status);
+    }
+
     UBool isDaylight = tz.inDaylightTime(date, status);
-    if (U_FAILURE(status)) {
-        name.remove();
+    if (U_FAILURE(status) || canonicalID.isEmpty()) {
+        name.setToBogus();
         return name;
     }
 
-    UnicodeString tzID;
-    tz.getCanonicalID(tzID);
     if (isDaylight) {
-        fTimeZoneNames->getDisplayName(tzID, dstType, date, name);
+        fTimeZoneNames->getDisplayName(canonicalID, dstType, date, name);
     } else {
-        fTimeZoneNames->getDisplayName(tzID, stdType, date, name);
+        fTimeZoneNames->getDisplayName(canonicalID, stdType, date, name);
     }
 
     if (timeType && !name.isEmpty()) {

@@ -94,7 +94,7 @@ UOBJECT_DEFINE_RTTI_IMPLEMENTATION(OlsonTimeZone)
  * constructor fails so the resultant object is well-behaved.
  */
 void OlsonTimeZone::constructEmpty() {
-    canonicalID.setTo("Etc/Unknown");
+    canonicalID = NULL;
 
     transitionCountPre32 = transitionCount32 = transitionCountPost32 = 0;
     transitionTimesPre32 = transitionTimes32 = transitionTimesPost32 = NULL;
@@ -251,7 +251,7 @@ OlsonTimeZone::OlsonTimeZone(const UResourceBundle* top,
         ures_close(&r);
 
         // initialize canonical ID
-        ZoneMeta::getCanonicalCLDRID(tzid, canonicalID, ec);
+        canonicalID = ZoneMeta::getCanonicalCLDRID(tzid, ec);
     }
 
     if (U_FAILURE(ec)) {

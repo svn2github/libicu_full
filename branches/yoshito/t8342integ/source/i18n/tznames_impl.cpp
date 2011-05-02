@@ -146,7 +146,7 @@ int32_t TextTrieMap::isEmpty() const {
 //     eventually need to build it.
 //     
 void
-TextTrieMap::put(const UnicodeString &key, void *value, ZSFStringPool &sp, UErrorCode &status) {
+TextTrieMap::put(const UnicodeString &key, void *value, ZNStringPool &sp, UErrorCode &status) {
     const UChar *s = sp.get(key, status);
     put(s, value, status);
 }
@@ -355,28 +355,28 @@ TextTrieMap::search(CharacterNode *node, const UnicodeString &text, int32_t star
 }
 
 // ---------------------------------------------------
-// ZSFStringPool class implementation
+// ZNStringPool class implementation
 // ---------------------------------------------------
 static const int32_t POOL_CHUNK_SIZE = 2000;
-struct ZSFStringPoolChunk: public UMemory {
-    ZSFStringPoolChunk    *fNext;                       // Ptr to next pool chunk
+struct ZNStringPoolChunk: public UMemory {
+    ZNStringPoolChunk    *fNext;                       // Ptr to next pool chunk
     int32_t               fLimit;                       // Index to start of unused area at end of fStrings
     UChar                 fStrings[POOL_CHUNK_SIZE];    //  Strings array
-    ZSFStringPoolChunk();
+    ZNStringPoolChunk();
 };
 
-ZSFStringPoolChunk::ZSFStringPoolChunk() {
+ZNStringPoolChunk::ZNStringPoolChunk() {
     fNext = NULL;
     fLimit = 0;
 }
 
-ZSFStringPool::ZSFStringPool(UErrorCode &status) {
+ZNStringPool::ZNStringPool(UErrorCode &status) {
     fChunks = NULL;
     fHash   = NULL;
     if (U_FAILURE(status)) {
         return;
     }
-    fChunks = new ZSFStringPoolChunk;
+    fChunks = new ZNStringPoolChunk;
     if (fChunks == NULL) {
         status = U_MEMORY_ALLOCATION_ERROR;
         return;
@@ -391,14 +391,14 @@ ZSFStringPool::ZSFStringPool(UErrorCode &status) {
     }
 }
 
-ZSFStringPool::~ZSFStringPool() {
+ZNStringPool::~ZNStringPool() {
     if (fHash != NULL) {
         uhash_close(fHash);
         fHash = NULL;
     }
 
     while (fChunks != NULL) {
-        ZSFStringPoolChunk *nextChunk = fChunks->fNext;
+        ZNStringPoolChunk *nextChunk = fChunks->fNext;
         delete fChunks;
         fChunks = nextChunk;
     }
@@ -406,7 +406,7 @@ ZSFStringPool::~ZSFStringPool() {
 
 static const UChar EmptyString = 0;
 
-const UChar *ZSFStringPool::get(const UChar *s, UErrorCode &status) {
+const UChar *ZNStringPool::get(const UChar *s, UErrorCode &status) {
     const UChar *pooledString;
     if (U_FAILURE(status)) {
         return &EmptyString;
@@ -425,8 +425,8 @@ const UChar *ZSFStringPool::get(const UChar *s, UErrorCode &status) {
             status = U_INTERNAL_PROGRAM_ERROR;
             return &EmptyString;
         }
-        ZSFStringPoolChunk *oldChunk = fChunks;
-        fChunks = new ZSFStringPoolChunk;
+        ZNStringPoolChunk *oldChunk = fChunks;
+        fChunks = new ZNStringPoolChunk;
         if (fChunks == NULL) {
             status = U_MEMORY_ALLOCATION_ERROR;
             return &EmptyString;
@@ -443,11 +443,11 @@ const UChar *ZSFStringPool::get(const UChar *s, UErrorCode &status) {
 
 
 //
-//  ZSFStringPool::adopt()   Put a string into the hash, but do not copy the string data
+//  ZNStringPool::adopt()    Put a string into the hash, but do not copy the string data
 //                           into the pool's storage.  Used for strings from resource bundles,
 //                           which will perisist for the life of the zone string formatter, and
 //                           therefore can be used directly without copying.
-const UChar *ZSFStringPool::adopt(const UChar * s, UErrorCode &status) {
+const UChar *ZNStringPool::adopt(const UChar * s, UErrorCode &status) {
     const UChar *pooledString;
     if (U_FAILURE(status)) {
         return &EmptyString;
@@ -463,7 +463,7 @@ const UChar *ZSFStringPool::adopt(const UChar * s, UErrorCode &status) {
 }
 
     
-const UChar *ZSFStringPool::get(const UnicodeString &s, UErrorCode &status) {
+const UChar *ZNStringPool::get(const UnicodeString &s, UErrorCode &status) {
     UnicodeString &nonConstStr = const_cast<UnicodeString &>(s);
     return this->get(nonConstStr.getTerminatedBuffer(), status);
 }
@@ -475,7 +475,7 @@ const UChar *ZSFStringPool::get(const UnicodeString &s, UErrorCode &status) {
  *
  *             The main purpose is to recover the storage used for the hash.
  */
-void ZSFStringPool::freeze() {
+void ZNStringPool::freeze() {
     uhash_close(fHash);
     fHash = NULL;
 }
@@ -808,7 +808,7 @@ TimeZoneNameMatchInfoImpl::getTimeZoneID(int32_t index, UnicodeString& tzID) con
     if (minfo != NULL && minfo->znameInfo->tzID != NULL) {
         tzID.setTo(TRUE, minfo->znameInfo->tzID, -1);
     } else {
-        tzID.remove();
+        tzID.setToBogus();
     }
     return tzID;
 }
@@ -819,7 +819,7 @@ TimeZoneNameMatchInfoImpl::getMetaZoneID(int32_t index, UnicodeString& mzID) con
     if (minfo != NULL && minfo->znameInfo->mzID != NULL) {
         mzID.setTo(TRUE, minfo->znameInfo->mzID, -1);
     } else {
-        mzID.remove();
+        mzID.setToBogus();
     }
     return mzID;
 }
@@ -1067,7 +1067,7 @@ UnicodeString&
 TimeZoneNamesImpl::getMetaZoneDisplayName(const UnicodeString& mzID,
                                           UTimeZoneNameType type,
                                           UnicodeString& name) const {
-    name.remove();  // cleanup result.
+    name.setToBogus();  // cleanup result.
     if (mzID.isEmpty()) {
         return name;
     }
@@ -1092,7 +1092,7 @@ TimeZoneNamesImpl::getMetaZoneDisplayName(const UnicodeString& mzID,
 
 UnicodeString&
 TimeZoneNamesImpl::getTimeZoneDisplayName(const UnicodeString& tzID, UTimeZoneNameType type, UnicodeString& name) const {
-    name.remove();  // cleanup result.
+    name.setToBogus();  // cleanup result.
     if (tzID.isEmpty()) {
         return name;
     }

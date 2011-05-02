@@ -28,14 +28,14 @@
 U_NAMESPACE_BEGIN
 
 /*
- * ZSFStringPool   Pool of (UChar *) strings.  Provides for sharing of repeated
- *                 strings within ZoneStringFormats.
+ * ZNStringPool    Pool of (UChar *) strings.  Provides for sharing of repeated
+ *                 zone strings.
  */
-struct ZSFStringPoolChunk;
-class U_I18N_API ZSFStringPool: public UMemory {
+struct ZNStringPoolChunk;
+class U_I18N_API ZNStringPool: public UMemory {
   public:
-    ZSFStringPool(UErrorCode &status);
-    ~ZSFStringPool();
+    ZNStringPool(UErrorCode &status);
+    ~ZNStringPool();
 
     /* Get the pooled string that is equal to the supplied string s.
      * Copy the string into the pool if it is not already present.
@@ -60,7 +60,7 @@ class U_I18N_API ZSFStringPool: public UMemory {
     void freeze();
 
   private:
-    ZSFStringPoolChunk   *fChunks;
+    ZNStringPoolChunk   *fChunks;
     UHashtable           *fHash;
 };
 
@@ -130,7 +130,7 @@ public:
     TextTrieMap(UBool ignoreCase, UObjectDeleter *valeDeleter);
     virtual ~TextTrieMap();
 
-    void put(const UnicodeString &key, void *value, ZSFStringPool &sp, UErrorCode &status);
+    void put(const UnicodeString &key, void *value, ZNStringPool &sp, UErrorCode &status);
     void put(const UChar*, void *value, UErrorCode &status);
     void search(const UnicodeString &text, int32_t start,
         TextTrieMapSearchResultHandler *handler, UErrorCode& status) const;

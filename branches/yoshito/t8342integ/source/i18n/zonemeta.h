@@ -36,6 +36,13 @@ public:
     static UnicodeString& U_EXPORT2 getCanonicalCLDRID(const UnicodeString &tzid, UnicodeString &systemID, UErrorCode& status);
 
     /**
+     * Return the canonical id for this tzid defined by CLDR, which might be the id itself.
+     * This overload method returns a persistent const UChar*, which is guranteed to persist
+     * (a pointer to a resource).
+     */
+    static const UChar* U_EXPORT2 getCanonicalCLDRID(const UnicodeString &tzid, UErrorCode& status);
+
+    /**
      * Return the canonical country code for this tzid.  If we have none, or if the time zone
      * is not associated with a country, return null.
      */

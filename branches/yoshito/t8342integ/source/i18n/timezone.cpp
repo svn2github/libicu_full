@@ -1566,17 +1566,6 @@ TimeZone::getTZDataVersion(UErrorCode& status)
 }
 
 UnicodeString&
-TimeZone::getCanonicalID(UnicodeString& ID) const
-{
-    UErrorCode status = U_ZERO_ERROR;
-    getCanonicalID(fID, ID, status);
-    if (U_FAILURE(status)) {
-        return getID(ID);
-    }
-    return ID;
-}
-
-UnicodeString&
 TimeZone::getCanonicalID(const UnicodeString& id, UnicodeString& canonicalID, UErrorCode& status)
 {
     UBool isSystemID = FALSE;

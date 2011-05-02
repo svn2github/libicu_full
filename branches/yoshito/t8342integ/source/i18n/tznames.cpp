@@ -270,7 +270,7 @@ UnicodeString&
 TimeZoneNames::getExemplarLocationName(const UnicodeString& tzID, UnicodeString& name) const {
     if (tzID.isEmpty() || tzID.startsWith(gEtcPrefix, gEtcPrefixLen)
         || tzID.startsWith(gSystemVPrefix, gSystemVPrefixLen) || tzID.indexOf(gRiyadh8, gRiyadh8Len, 0) > 0) {
-        name.remove();
+        name.setToBogus();
         return name;
     }
 
@@ -279,7 +279,7 @@ TimeZoneNames::getExemplarLocationName(const UnicodeString& tzID, UnicodeString&
         name.setTo(tzID, sep + 1);
         name.findAndReplace("_", " ");
     } else {
-        name.remove();
+        name.setToBogus();
     }
     return name;
 }
