@@ -134,4 +134,5 @@ format 0.##E0  unnecessary    "1230"        "1.23E3"
 format 0.##E0  unnecessary    "1231"        "Inexact"
 format @@@     unnecessary    "1230"        "1230"
 format @@@     unnecessary    "1231"        "Inexact"
-
+format @@@@@@@@@@@@@@@@@@@@@@@@@ unnecessary "1234567890123456789012345"  "1234567890123456789012345" 
+format @@@@@@@@@@@@@@@@@@@@@@@@@ unnecessary "12345678901234567890123456" "Inexact" 
