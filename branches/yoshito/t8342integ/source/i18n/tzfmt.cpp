@@ -21,6 +21,9 @@
 
 U_NAMESPACE_BEGIN
 
+// ---------------------------------------------------
+// TimeZoneFormatImpl - the TimeZoneFormat implementation
+// ---------------------------------------------------
 class TimeZoneFormatImpl : public TimeZoneFormat {
 public:
     TimeZoneFormatImpl(const Locale& locale, UErrorCode& status);
@@ -31,8 +34,8 @@ public:
     UnicodeString& format(UTimeZoneFormatStyle style, const TimeZone& tz, UDate date,
         UnicodeString& name, UTimeZoneTimeType* timeType = NULL) const;
 
-    TimeZone* parse(UTimeZoneFormatStyle style, const UnicodeString& text, ParsePosition& pos,
-        UTimeZoneTimeType* timeType = NULL) const;
+    UnicodeString& parse(UTimeZoneFormatStyle style, const UnicodeString& text, ParsePosition& pos,
+        UnicodeString& tzID, UTimeZoneTimeType* timeType = NULL) const;
 
 private:
     Locale fLocale;
@@ -117,12 +120,14 @@ TimeZoneFormatImpl::format(UTimeZoneFormatStyle style, const TimeZone& tz, UDate
     return name;
 }
 
-TimeZone*
+UnicodeString&
 TimeZoneFormatImpl::parse(UTimeZoneFormatStyle style, const UnicodeString& text, ParsePosition& pos,
-        UTimeZoneTimeType* timeType /* = NULL */) const {
+        UnicodeString& tzID, UTimeZoneTimeType* timeType /* = NULL */) const {
     if (timeType) {
         *timeType = UTZFMT_TIME_TYPE_UNKNOWN;
     }
+    tzID.remove();
+
     int32_t startIdx = pos.getIndex();
 
     UBool isGeneric = FALSE;
@@ -160,14 +165,14 @@ TimeZoneFormatImpl::parse(UTimeZoneFormatStyle style, const UnicodeString& text,
         int32_t len = fTimeZoneGenericNames->findBestMatch(text, startIdx, types, parsedTzID, parsedTimeType, status);
         if (U_FAILURE(status) || len == 0) {
             pos.setErrorIndex(startIdx);
-            return NULL;
+            return tzID;
         }
         pos.setIndex(startIdx + len);
     } else {
         TimeZoneNameMatchInfo *matchInfo = fTimeZoneNames->find(text, startIdx, types, status);
         if (U_FAILURE(status) || matchInfo == NULL || matchInfo->size() == 0) {
             pos.setErrorIndex(startIdx);
-            return NULL;
+            return tzID;
         }
         int32_t bestLen = 0;
         int32_t bestIdx = -1;
@@ -209,7 +214,8 @@ TimeZoneFormatImpl::parse(UTimeZoneFormatStyle style, const UnicodeString& text,
     if (timeType) {
         *timeType = parsedTimeType;
     }
-    return TimeZone::createTimeZone(parsedTzID);
+    tzID.setTo(parsedTzID);
+    return tzID;
 }
 
 UnicodeString&
@@ -326,6 +332,11 @@ static void sweepCache() {
     }
 }
 
+// ---------------------------------------------------
+// TimeZoneFormatDelegate
+// This class wraps a TimeZoneFormatImpl singleton
+// per locale and maintain the reference count.
+// ---------------------------------------------------
 class TimeZoneFormatDelegate : public TimeZoneFormat {
 public:
     TimeZoneFormatDelegate(const Locale& locale, UErrorCode& status);
@@ -336,8 +347,8 @@ public:
     UnicodeString& format(UTimeZoneFormatStyle style, const TimeZone& tz, UDate date,
         UnicodeString& name, UTimeZoneTimeType* timeType = NULL) const;
 
-    TimeZone* parse(UTimeZoneFormatStyle style, const UnicodeString& text, ParsePosition& pos,
-        UTimeZoneTimeType* timeType = NULL) const;
+    UnicodeString& parse(UTimeZoneFormatStyle style, const UnicodeString& text, ParsePosition& pos,
+        UnicodeString& tzID, UTimeZoneTimeType* timeType = NULL) const;
 
 private:
     TimeZoneFormatCacheEntry* fTZfmtCacheEntry;
@@ -447,15 +458,28 @@ TimeZoneFormatDelegate::format(UTimeZoneFormatStyle style, const TimeZone& tz, U
     return fTZfmtCacheEntry->tzfmt->format(style, tz, date, name, timeType);
 }
 
-TimeZone*
+UnicodeString&
 TimeZoneFormatDelegate::parse(UTimeZoneFormatStyle style, const UnicodeString& text, ParsePosition& pos,
-        UTimeZoneTimeType* timeType /* = NULL */) const {
-    return fTZfmtCacheEntry->tzfmt->parse(style, text, pos, timeType);
+        UnicodeString& tzID, UTimeZoneTimeType* timeType /* = NULL */) const {
+    return fTZfmtCacheEntry->tzfmt->parse(style, text, pos, tzID, timeType);
 }
 
 
-
+// ---------------------------------------------------
+// TimeZoneFormat base class
+// ---------------------------------------------------
 TimeZoneFormat::~TimeZoneFormat() {
+}
+
+TimeZone*
+TimeZoneFormat::parse(UTimeZoneFormatStyle style, const UnicodeString& text, ParsePosition& pos,
+        UTimeZoneTimeType* timeType /*= NULL*/) const {
+    UnicodeString tzID;
+    parse(style, text, pos, tzID, timeType);
+    if (pos.getErrorIndex() < 0) {
+        return TimeZone::createTimeZone(tzID);
+    }
+    return NULL;
 }
 
 TimeZoneFormat* U_EXPORT2

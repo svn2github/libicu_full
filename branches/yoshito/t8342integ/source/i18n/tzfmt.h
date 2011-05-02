@@ -54,8 +54,11 @@ public:
     virtual UnicodeString& format(UTimeZoneFormatStyle style, const TimeZone& tz, UDate date,
         UnicodeString& name, UTimeZoneTimeType* timeType = NULL) const = 0;
 
-    virtual TimeZone* parse(UTimeZoneFormatStyle style, const UnicodeString& text, ParsePosition& pos,
-        UTimeZoneTimeType* timeType = NULL) const = 0;
+    virtual UnicodeString& parse(UTimeZoneFormatStyle style, const UnicodeString& text, ParsePosition& pos,
+        UnicodeString& tzID, UTimeZoneTimeType* timeType = NULL) const = 0;
+
+    TimeZone* parse(UTimeZoneFormatStyle style, const UnicodeString& text, ParsePosition& pos,
+        UTimeZoneTimeType* timeType = NULL) const;
 };
 
 U_NAMESPACE_END
