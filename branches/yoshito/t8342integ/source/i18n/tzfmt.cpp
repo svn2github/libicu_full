@@ -61,7 +61,7 @@ TimeZoneFormatImpl::TimeZoneFormatImpl(const Locale& locale, UErrorCode& status)
         } else {
             return;
         }
-    } else if (regionLen < sizeof(fTargetRegion)) {
+    } else if (regionLen < (int32_t)sizeof(fTargetRegion)) {
         uprv_strcpy(fTargetRegion, region);
     } else {
         fTargetRegion[0] = 0;
@@ -198,6 +198,9 @@ TimeZoneFormatImpl::parse(UTimeZoneFormatStyle style, const UnicodeString& text,
             case UTZNM_SHORT_DAYLIGHT_COMMONLY_USED:
                 parsedTimeType = UTZFMT_TIME_TYPE_DAYLIGHT;
                 break;
+            default:
+                parsedTimeType = UTZFMT_TIME_TYPE_UNKNOWN;
+                break;
             }
             pos.setIndex(startIdx + bestLen);
         }
@@ -314,7 +317,7 @@ static void sweepCache() {
     const UHashElement* elem;
     double now = (double)uprv_getUTCtime();
 
-    while (elem = uhash_nextElement(gTimeZoneFormatCache, &pos)) {
+    while ((elem = uhash_nextElement(gTimeZoneFormatCache, &pos))) {
         TimeZoneFormatCacheEntry *entry = (TimeZoneFormatCacheEntry *)elem->value.pointer;
         if (entry->refCount <= 0 && (now - entry->lastAccess) > CACHE_EXPIRATION) {
             // delete this entry

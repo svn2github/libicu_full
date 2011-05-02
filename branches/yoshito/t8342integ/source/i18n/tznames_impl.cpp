@@ -558,6 +558,8 @@ ZNames::getName(UTimeZoneNameType type) {
             name = fNames[5];
         }
         break;
+    default:
+        name = NULL;
     }
     return name;
 }
@@ -943,12 +945,13 @@ deleteZNameInfo(void *obj) {
 U_CDECL_END
 
 TimeZoneNamesImpl::TimeZoneNamesImpl(const Locale& locale, UErrorCode& status)
-: fZoneStrings(NULL),
-  fMZNamesMap(NULL),
+: fLocale(locale),
+  fLock(NULL),
+  fZoneStrings(NULL),
   fTZNamesMap(NULL),
-  fNamesTrie(TRUE, deleteZNameInfo),
+  fMZNamesMap(NULL),
   fNamesTrieFullyLoaded(FALSE),
-  fLock(NULL) {
+  fNamesTrie(TRUE, deleteZNameInfo) {
     initialize(locale, status);
 }
 
@@ -1169,8 +1172,6 @@ TimeZoneNamesImpl::loadMetaZoneNames(const UnicodeString& mzID) {
     U_ASSERT(status == U_ZERO_ERROR);   // already checked length above
     mzIDKey[mzID.length()] = 0;
 
-    TimeZoneNamesImpl *nonConstThis = const_cast<TimeZoneNamesImpl *>(this);
-
     void *cacheVal = uhash_get(fMZNamesMap, mzIDKey);
     if (cacheVal == NULL) {
         char key[ZID_KEY_MAX + 1];
@@ -1323,7 +1324,7 @@ TimeZoneNamesImpl::find(const UnicodeString& text, int32_t start, uint32_t types
 
     int32_t maxLen = 0;
     UVector *results = handler.getMatches(maxLen);
-    if (results != NULL && maxLen == (text.length() - start) || fNamesTrieFullyLoaded) {
+    if ((results != NULL && (maxLen == (text.length() - start))) || fNamesTrieFullyLoaded) {
         // perfect match
         matchInfo = new TimeZoneNameMatchInfoImpl(results);
         if (matchInfo == NULL) {

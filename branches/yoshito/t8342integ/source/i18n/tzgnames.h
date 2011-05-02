@@ -31,7 +31,7 @@ typedef enum UTimeZoneGenericNameType {
     UTZGNM_UNKNOWN      = 0x00,
     UTZGNM_LOCATION     = 0x01,
     UTZGNM_LONG         = 0x02,
-    UTZGNM_SHORT        = 0x04,
+    UTZGNM_SHORT        = 0x04
 } UTimeZoneGenericNameType;
 
 U_CDECL_END
@@ -71,23 +71,22 @@ public:
 
 private:
     Locale fLocale;
-    char fTargetRegion[ULOC_COUNTRY_CAPACITY];
-    const TimeZoneNames* fTimeZoneNames;
-    LocaleDisplayNames* fLocaleDisplayNames;
-
     UMTX fLock;
+    const TimeZoneNames* fTimeZoneNames;
+    UHashtable* fLocationNamesMap;
+    UHashtable* fPartialLocationNamesMap;
 
     MessageFormat* fRegionFormat;
     MessageFormat* fFallbackRegionFormat;
     MessageFormat* fFallbackFormat;
 
-    UHashtable* fLocationNamesMap;
-    UHashtable* fPartialLocationNamesMap;
-
+    LocaleDisplayNames* fLocaleDisplayNames;
     ZSFStringPool fStringPool;
 
     TextTrieMap fGNamesTrie;
     UBool fGNamesTrieFullyLoaded;
+
+    char fTargetRegion[ULOC_COUNTRY_CAPACITY];
 
     void initialize(const Locale& locale, UErrorCode& status);
     void cleanup();

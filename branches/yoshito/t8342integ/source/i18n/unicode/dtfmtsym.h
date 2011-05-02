@@ -736,11 +736,6 @@ private:
     void initZoneStringsArray(void);
 
     /**
-     * Create zone strings array by locale
-     */
-    const UnicodeString** createZoneStringsArray(int32_t &rowCount, int32_t &colCount, UErrorCode &status) const;
-
-    /**
      * Delete just the zone strings.
      */
     void disposeZoneStrings(void);

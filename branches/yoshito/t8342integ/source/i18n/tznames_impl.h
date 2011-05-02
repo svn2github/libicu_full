@@ -182,22 +182,23 @@ public:
     TimeZoneNameMatchInfo* find(const UnicodeString& text, int32_t start, uint32_t types, UErrorCode& status) const;
 
 private:
+
+    Locale fLocale;
+    UMTX fLock;
+
+    UResourceBundle* fZoneStrings;
+
+    UHashtable* fTZNamesMap;
+    UHashtable* fMZNamesMap;
+
+    UBool fNamesTrieFullyLoaded;
+    TextTrieMap fNamesTrie;
+
     void initialize(const Locale& locale, UErrorCode& status);
     void cleanup();
 
     ZNames* loadMetaZoneNames(const UnicodeString& mzId);
     TZNames* loadTimeZoneNames(const UnicodeString& mzId);
-
-    UMTX fLock;
-
-    Locale fLocale;
-    UResourceBundle* fZoneStrings;
-
-    UHashtable* fMZNamesMap;
-    UHashtable* fTZNamesMap;
-
-    TextTrieMap fNamesTrie;
-    UBool fNamesTrieFullyLoaded;
 };
 
 U_NAMESPACE_END

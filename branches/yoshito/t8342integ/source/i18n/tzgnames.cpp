@@ -366,7 +366,7 @@ TimeZoneGenericNames::initialize(const Locale& locale, UErrorCode& status) {
             cleanup();
             return;
         }
-    } else if (regionLen < sizeof(fTargetRegion)) {
+    } else if (regionLen < (int32_t)sizeof(fTargetRegion)) {
         uprv_strcpy(fTargetRegion, region);
     } else {
         fTargetRegion[0] = 0;
@@ -411,6 +411,8 @@ TimeZoneGenericNames::getDisplayName(const TimeZone& tz, UTimeZoneGenericNameTyp
             tz.getCanonicalID(tzCanonicalID);
             getGenericLocationName(tzCanonicalID, name);
         }
+        break;
+    default:
         break;
     }
     return name;
@@ -871,7 +873,7 @@ TimeZoneGenericNames::findLocal(const UnicodeString& text, int32_t start, uint32
 
     int32_t maxLen = 0;
     UVector *results = handler.getMatches(maxLen);
-    if (results != NULL && maxLen == (text.length() - start) || fGNamesTrieFullyLoaded) {
+    if ((results != NULL && (maxLen == (text.length() - start))) || fGNamesTrieFullyLoaded) {
         // perfect match
         gmatchInfo = new TimeZoneGenericNameMatchInfo(results);
         if (gmatchInfo == NULL) {
@@ -919,7 +921,7 @@ TimeZoneGenericNames::findLocal(const UnicodeString& text, int32_t start, uint32
                         // available.
                         fTimeZoneNames->getReferenceZoneID(*mzID, fTargetRegion, goldenID);
                         if (*tzID != goldenID) {
-                            for (int32_t i = 0; genNonLocTypes[i] != UTZGNM_UNKNOWN; i++) {
+                            for (int32_t i = 0; genNonLocTypes[i] != UTZNM_UNKNOWN; i++) {
                                 fTimeZoneNames->getMetaZoneDisplayName(*mzID, genNonLocTypes[i], mzGenName);
                                 if (!mzGenName.isEmpty()) {
                                     // getPartialLocationName formats a name and put it into the trie

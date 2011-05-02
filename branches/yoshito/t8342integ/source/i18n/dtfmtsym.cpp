@@ -1079,7 +1079,6 @@ DateFormatSymbols::initZoneStringsArray(void) {
 
         const UnicodeString *tzid;
         int32_t i = 0;
-        int32_t emptyCount = 0;
         UDate now = Calendar::getNow();
         UnicodeString tzDispName;
 
@@ -1125,61 +1124,6 @@ DateFormatSymbols::initZoneStringsArray(void) {
     fLocaleZoneStrings = zarray;
     fZoneStringsRowCount = rows;
     fZoneStringsColCount = 5;
-}
-
-const UnicodeString**
-DateFormatSymbols::createZoneStringsArray(int32_t &rowCount, int32_t &colCount, UErrorCode &status) const {
-    if (U_FAILURE(status)) {
-        return NULL;
-    }
-
-    UnicodeString **result = NULL;
-    rowCount = 0;
-    colCount = 0;
-
-    TimeZoneNames *tzNames = TimeZoneNames::createInstance(fZSFLocale, status);
-    if (U_FAILURE(status)) {
-        return NULL;
-    }
-    StringEnumeration *tzids = TimeZone::createTimeZoneIDEnumeration(UCAL_ZONE_TYPE_CANONICAL, NULL, NULL, status);
-    int32_t total = tzids->count(status);
-    // Allocate array
-    result = (UnicodeString**)uprv_malloc(tzids->count(status) * sizeof(UnicodeString*));
-    const UChar *tzid;
-    int32_t i = 0;
-    int32_t emptyCount = 0;
-    while ((tzid = tzids->unext(NULL, status))) {
-        if (U_FAILURE(status)) {
-            delete tzids;
-            return NULL;
-        }
-
-        // TOD(Claireho) 1. Discuss with Yoshito about consecutive enum value for UTimeZoneNameType.
-        //               2. Define the size somewhere
-        result[i] = new UnicodeString[5];
-        if (result == NULL) {
-            status = U_MEMORY_ALLOCATION_ERROR;
-            return NULL;
-        }
-        result[i][0].setTo(tzid);
-        UnicodeString tzDispName;
-        UDate now = Calendar::getNow();
-        tzDispName = tzNames->getDisplayName(tzid, UTZNM_LONG_STANDARD, now, tzDispName);
-        result[i][1].setTo(tzDispName);
-        tzDispName = tzNames->getDisplayName(tzid, UTZNM_SHORT_STANDARD, now, tzDispName);
-        result[i][2].setTo(tzDispName);
-        tzDispName = tzNames->getDisplayName(tzid, UTZNM_LONG_DAYLIGHT, now, tzDispName);
-        result[i][3].setTo(tzDispName);
-        tzDispName = tzNames->getDisplayName(tzid, UTZNM_SHORT_DAYLIGHT, now, tzDispName);
-        result[i][4].setTo(tzDispName);
-        i++;
-    }
-
-    delete tzids;
-
-    rowCount = i;
-    colCount = 5;
-    return const_cast<const UnicodeString**>(result);
 }
 
 void
