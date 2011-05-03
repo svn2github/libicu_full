@@ -26,7 +26,6 @@
 #include "ucln_in.h"
 #include "uvector.h"
 #include "olsontz.h"
-#include <stdio.h>
 
 
 U_NAMESPACE_BEGIN
@@ -647,7 +646,6 @@ TZNames::createInstance(UResourceBundle* rb, const char* key) {
     }
     TZNames* tznames = NULL;
     UErrorCode status = U_ZERO_ERROR;
-    // printf("\n key:%s", key);  // check for duplicate keys ...
     UResourceBundle* rbTable = ures_getByKeyWithFallback(rb, key, NULL, &status);
     if (U_SUCCESS(status)) {
         int32_t len = 0;
@@ -727,9 +725,7 @@ MetaZoneIDsEnumeration::count(UErrorCode& /*status*/) const {
 
 MetaZoneIDsEnumeration::~MetaZoneIDsEnumeration() {
     if (fLocalVector) {
-printf("~MetaZoneIDsEnumeration() - 1\n");
         delete fLocalVector;
-printf("~MetaZoneIDsEnumeration() - 2\n");
     }
 }
 
@@ -1008,7 +1004,7 @@ TimeZoneNamesImpl::loadStrings(const UnicodeString& tzCanonicalID) {
 
     UErrorCode status = U_ZERO_ERROR;
     StringEnumeration *mzIDs = getAvailableMetaZoneIDs(tzCanonicalID, status);
-    if (U_SUCCESS(status)) {
+    if (U_SUCCESS(status) && mzIDs != NULL) {
         const UnicodeString *mzID;
         while ((mzID = mzIDs->snext(status))) {
             if (U_FAILURE(status)) {
@@ -1016,9 +1012,7 @@ TimeZoneNamesImpl::loadStrings(const UnicodeString& tzCanonicalID) {
             }
             loadMetaZoneNames(*mzID);
         }
-        if (mzIDs != NULL) {
-            delete mzIDs;
-        }
+        delete mzIDs;
     }
 }
 
@@ -1220,7 +1214,7 @@ TimeZoneNamesImpl::loadMetaZoneNames(const UnicodeString& mzID) {
         } else {
             cacheVal = znames;
         }
-        // Use the persisten ID as the resource key, so we can
+        // Use the persistent ID as the resource key, so we can
         // avoid duplications.
         const UChar* newKey = ZoneMeta::findMetaZoneID(mzID);
         if (newKey != NULL) {

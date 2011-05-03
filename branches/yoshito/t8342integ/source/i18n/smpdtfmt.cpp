@@ -430,8 +430,9 @@ SimpleDateFormat& SimpleDateFormat::operator=(const SimpleDateFormat& other)
 
     fPattern = other.fPattern;
 
-    delete fTimeZoneFormat;
-    if (other.fTimeZoneFormat) {
+    // TimeZoneFormat in ICU4C only deneds on a locale for now
+    if (fLocale != other.fLocale) {
+        delete fTimeZoneFormat;
         UErrorCode status = U_ZERO_ERROR;
         fTimeZoneFormat = TimeZoneFormat::createInstance(other.fLocale, status);
         U_ASSERT(U_SUCCESS(status));
@@ -721,6 +722,7 @@ SimpleDateFormat::initialize(const Locale& locale,
     }
 
     fTimeZoneFormat = TimeZoneFormat::createInstance(locale, status);
+    U_ASSERT(U_SUCCESS(status));
 }
 
 /* Initialize the fields we use to disambiguate ambiguous years. Separate
@@ -1672,7 +1674,8 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
             UnicodeString zoneString;
             const TimeZone& tz = cal.getTimeZone();
             UDate date = cal.getTime(status);
-            if (U_SUCCESS(status)) {
+            U_ASSERT(fTimeZoneFormat != NULL);
+            if (fTimeZoneFormat && U_SUCCESS(status)) {
                 if (patternCharIndex == UDAT_TIMEZONE_FIELD) {
                     if (count < 4) {
                         // "z", "zz", "zzz"
@@ -2834,7 +2837,8 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
             // Step 3
             // At this point, check for named time zones by looking through
             // the locale data.
-            if (patternCharIndex != UDAT_TIMEZONE_RFC_FIELD) {
+            U_ASSERT(fTimeZoneFormat != NULL)
+            if (patternCharIndex != UDAT_TIMEZONE_RFC_FIELD && fTimeZoneFormat) {
                 UTimeZoneTimeType parsedTimeType = UTZFMT_TIME_TYPE_UNKNOWN;
                 ParsePosition tmpPos(start);
                 UnicodeString parsedID;

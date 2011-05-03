@@ -21,7 +21,6 @@
 #include "ucln_in.h"
 #include "uhash.h"
 #include "umutex.h"
-#include <stdio.h>
 
 
 U_NAMESPACE_BEGIN
@@ -63,7 +62,6 @@ U_CDECL_BEGIN
  */
 static UBool U_CALLCONV timeZoneNames_cleanup(void)
 {
-    printf("**Entering timeZoneNames_cleanup\n");
     umtx_destroy(&gTimeZoneNamesLock);
 
     if (gTimeZoneNamesCache != NULL) {
@@ -79,7 +77,6 @@ static UBool U_CALLCONV timeZoneNames_cleanup(void)
  */
 static void U_CALLCONV
 deleteTimeZoneNamesCacheEntry(void *obj) {
-    printf("****deleteTimeZoneNamessCacheEntry\n");
     U_NAMESPACE_QUALIFIER TimeZoneNamesCacheEntry *entry = (U_NAMESPACE_QUALIFIER TimeZoneNamesCacheEntry*)obj;
     delete (U_NAMESPACE_QUALIFIER TimeZoneNamesImpl*) entry->names;
     uprv_free(entry);
@@ -193,7 +190,7 @@ TimeZoneNamesDelegate::TimeZoneNamesDelegate(const Locale& locale, UErrorCode& s
                 if (cacheEntry != NULL) {
                     uprv_free(cacheEntry);
                 }
-                return;
+                cacheEntry = NULL;
             }
         } else {
             // Update the reference count
