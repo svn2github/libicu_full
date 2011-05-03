@@ -433,9 +433,6 @@ SimpleDateFormat& SimpleDateFormat::operator=(const SimpleDateFormat& other)
     // TimeZoneFormat in ICU4C only deneds on a locale for now
     if (fLocale != other.fLocale) {
         delete fTimeZoneFormat;
-        UErrorCode status = U_ZERO_ERROR;
-        fTimeZoneFormat = TimeZoneFormat::createInstance(other.fLocale, status);
-        U_ASSERT(U_SUCCESS(status));
     }
 
     return *this;
@@ -720,9 +717,6 @@ SimpleDateFormat::initialize(const Locale& locale,
     {
         status = U_MISSING_RESOURCE_ERROR;
     }
-
-    fTimeZoneFormat = TimeZoneFormat::createInstance(locale, status);
-    U_ASSERT(U_SUCCESS(status));
 }
 
 /* Initialize the fields we use to disambiguate ambiguous years. Separate
@@ -1674,31 +1668,30 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
             UnicodeString zoneString;
             const TimeZone& tz = cal.getTimeZone();
             UDate date = cal.getTime(status);
-            U_ASSERT(fTimeZoneFormat != NULL);
-            if (fTimeZoneFormat && U_SUCCESS(status)) {
+            if (U_SUCCESS(status)) {
                 if (patternCharIndex == UDAT_TIMEZONE_FIELD) {
                     if (count < 4) {
                         // "z", "zz", "zzz"
-                        fTimeZoneFormat->format(UTZFMT_STYLE_SPECIFIC_SHORT_COMMONLY_USED, tz, date, zoneString);
+                        tzFormat()->format(UTZFMT_STYLE_SPECIFIC_SHORT_COMMONLY_USED, tz, date, zoneString);
                     } else {
                         // "zzzz"
-                        fTimeZoneFormat->format(UTZFMT_STYLE_SPECIFIC_LONG, tz, date, zoneString);
+                        tzFormat()->format(UTZFMT_STYLE_SPECIFIC_LONG, tz, date, zoneString);
                     }
                 } else if (patternCharIndex == UDAT_TIMEZONE_GENERIC_FIELD) {
                     if (count == 1) {
                         // "v"
-                        fTimeZoneFormat->format(UTZFMT_STYLE_GENERIC_SHORT, tz, date, zoneString);
+                        tzFormat()->format(UTZFMT_STYLE_GENERIC_SHORT, tz, date, zoneString);
                     } else if (count == 4) {
                         // "vvvv"
-                        fTimeZoneFormat->format(UTZFMT_STYLE_GENERIC_LONG, tz, date, zoneString);
+                        tzFormat()->format(UTZFMT_STYLE_GENERIC_LONG, tz, date, zoneString);
                     }
                 } else { // patternCharIndex == UDAT_TIMEZONE_SPECIAL_FIELD
                     if (count == 1) {
                         // "V"
-                        fTimeZoneFormat->format(UTZFMT_STYLE_SPECIFIC_SHORT, tz, date, zoneString);
+                        tzFormat()->format(UTZFMT_STYLE_SPECIFIC_SHORT, tz, date, zoneString);
                     } else if (count == 4) {
                         // "VVVV"
-                        fTimeZoneFormat->format(UTZFMT_STYLE_LOCATION, tz, date, zoneString);
+                        tzFormat()->format(UTZFMT_STYLE_LOCATION, tz, date, zoneString);
                     }
                 }
             }
@@ -2837,8 +2830,7 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
             // Step 3
             // At this point, check for named time zones by looking through
             // the locale data.
-            U_ASSERT(fTimeZoneFormat != NULL)
-            if (patternCharIndex != UDAT_TIMEZONE_RFC_FIELD && fTimeZoneFormat) {
+            if (patternCharIndex != UDAT_TIMEZONE_RFC_FIELD) {
                 UTimeZoneTimeType parsedTimeType = UTZFMT_TIME_TYPE_UNKNOWN;
                 ParsePosition tmpPos(start);
                 UnicodeString parsedID;
@@ -2846,23 +2838,23 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
                 switch (patternCharIndex) {
                 case UDAT_TIMEZONE_FIELD:
                     if (count < 4) {
-                        fTimeZoneFormat->parse(UTZFMT_STYLE_SPECIFIC_SHORT_COMMONLY_USED, text, tmpPos, parsedID, &parsedTimeType);
+                        tzFormat()->parse(UTZFMT_STYLE_SPECIFIC_SHORT_COMMONLY_USED, text, tmpPos, parsedID, &parsedTimeType);
                     } else {
-                        fTimeZoneFormat->parse(UTZFMT_STYLE_SPECIFIC_LONG, text, tmpPos, parsedID, &parsedTimeType);
+                        tzFormat()->parse(UTZFMT_STYLE_SPECIFIC_LONG, text, tmpPos, parsedID, &parsedTimeType);
                     }
                     break;
                 case UDAT_TIMEZONE_GENERIC_FIELD:
                     if (count < 4) {
-                        fTimeZoneFormat->parse(UTZFMT_STYLE_GENERIC_SHORT, text, tmpPos, parsedID, &parsedTimeType);
+                        tzFormat()->parse(UTZFMT_STYLE_GENERIC_SHORT, text, tmpPos, parsedID, &parsedTimeType);
                     } else {
-                        fTimeZoneFormat->parse(UTZFMT_STYLE_GENERIC_LONG, text, tmpPos, parsedID, &parsedTimeType);
+                        tzFormat()->parse(UTZFMT_STYLE_GENERIC_LONG, text, tmpPos, parsedID, &parsedTimeType);
                     }
                     break;
                 case UDAT_TIMEZONE_SPECIAL_FIELD:
                     if (count < 4) {
-                        fTimeZoneFormat->parse(UTZFMT_STYLE_SPECIFIC_SHORT, text, tmpPos, parsedID, &parsedTimeType);
+                        tzFormat()->parse(UTZFMT_STYLE_SPECIFIC_SHORT, text, tmpPos, parsedID, &parsedTimeType);
                     } else {
-                        fTimeZoneFormat->parse(UTZFMT_STYLE_LOCATION, text, tmpPos, parsedID, &parsedTimeType);
+                        tzFormat()->parse(UTZFMT_STYLE_LOCATION, text, tmpPos, parsedID, &parsedTimeType);
                     }
                     break;
                 }
@@ -3296,6 +3288,26 @@ SimpleDateFormat::skipUWhiteSpace(const UnicodeString& text, int32_t pos) const 
     return pos;
 }
 
+//----------------------------------------------------------------------
+
+// Lazy TimeZoneFormat instantiation, semantically const.
+TimeZoneFormat *
+SimpleDateFormat::tzFormat() const {
+    if (fTimeZoneFormat == NULL) {
+        umtx_lock(&LOCK);
+        {
+            if (fTimeZoneFormat == NULL) {
+                UErrorCode status = U_ZERO_ERROR;
+                TimeZoneFormat *tzfmt = TimeZoneFormat::createInstance(fLocale, status);
+                U_ASSERT(U_SUCCESS(status));
+
+                const_cast<SimpleDateFormat *>(this)->fTimeZoneFormat = tzfmt;
+            }
+        }
+        umtx_unlock(&LOCK);
+    }
+    return fTimeZoneFormat;
+}
 U_NAMESPACE_END
 
 #endif /* #if !UCONFIG_NO_FORMATTING */

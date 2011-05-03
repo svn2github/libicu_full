@@ -1040,6 +1040,11 @@ private:
     static const UDateFormatField fgPatternIndexToDateFormatField[];
 
     /**
+     * Lazy TimeZoneFormat instantiation, semantically const
+     */
+    TimeZoneFormat *tzFormat() const;
+
+    /**
      * Used to map Calendar field to field level.
      * The larger the level, the smaller the field unit.
      * For example, UCAL_ERA level is 0, UCAL_YEAR level is 10,
