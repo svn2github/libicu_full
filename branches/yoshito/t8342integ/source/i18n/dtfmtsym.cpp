@@ -120,18 +120,19 @@ static const UChar gLastResortEras[2][3] =
     {0x0041, 0x0044, 0x0000}  /* "AD" */
 };
 
+// Not used now
+//// These are the zone strings of last resort.
+//static const UChar gLastResortZoneStrings[5][4] =
+//{
+//    {0x0047, 0x004D, 0x0054, 0x0000}, /* "GMT" */
+//    {0x0047, 0x004D, 0x0054, 0x0000}, /* "GMT" */
+//    {0x0047, 0x004D, 0x0054, 0x0000}, /* "GMT" */
+//    {0x0047, 0x004D, 0x0054, 0x0000}, /* "GMT" */
+//    {0x0047, 0x004D, 0x0054, 0x0000}, /* "GMT" */
+//};
 
-// These are the zone strings of last resort.
-static const UChar gLastResortZoneStrings[7][4] =
-{
-    {0x0047, 0x004D, 0x0054, 0x0000}, /* "GMT" */
-    {0x0047, 0x004D, 0x0054, 0x0000}, /* "GMT" */
-    {0x0047, 0x004D, 0x0054, 0x0000}, /* "GMT" */
-    {0x0047, 0x004D, 0x0054, 0x0000}, /* "GMT" */
-    {0x0047, 0x004D, 0x0054, 0x0000}, /* "GMT" */
-    {0x0047, 0x004D, 0x0054, 0x0000}, /* "GMT" */
-    {0x0047, 0x004D, 0x0054, 0x0000}  /* "GMT" */
-};
+static const UChar gLastResortGmtZero[] =
+    {0x0047, 0x004D, 0x0054, 0x0000}; /* GMT */
 
 static const UChar gLastResortGmtFormat[] =
     {0x0047, 0x004D, 0x0054, 0x007B, 0x0030, 0x007D, 0x0000}; /* GMT{0} */
@@ -189,6 +190,7 @@ static const char gAmPmMarkersTag[]="AmPmMarkers";
 static const char gQuartersTag[]="quarters";
 
 static const char gZoneStringsTag[]="zoneStrings";
+static const char gGmtZeroFormatTag[] = "gmtZeroFormat";
 static const char gGmtFormatTag[]="gmtFormat";
 static const char gHourFormatTag[]="hourFormat";
 
@@ -329,6 +331,7 @@ DateFormatSymbols::copyData(const DateFormatSymbols& other) {
     assignArray(fShortQuarters, fShortQuartersCount, other.fShortQuarters, other.fShortQuartersCount);
     assignArray(fStandaloneQuarters, fStandaloneQuartersCount, other.fStandaloneQuarters, other.fStandaloneQuartersCount);
     assignArray(fStandaloneShortQuarters, fStandaloneShortQuartersCount, other.fStandaloneShortQuarters, other.fStandaloneShortQuartersCount);
+    fGmtZero = other.fGmtZero;
     fGmtFormat = other.fGmtFormat;
     assignArray(fGmtHourFormats, fGmtHourFormatsCount, other.fGmtHourFormats, other.fGmtHourFormatsCount);
  
@@ -456,6 +459,7 @@ DateFormatSymbols::operator==(const DateFormatSymbols& other) const
         fStandaloneQuartersCount == other.fStandaloneQuartersCount &&
         fStandaloneShortQuartersCount == other.fStandaloneShortQuartersCount &&
         fGmtHourFormatsCount == other.fGmtHourFormatsCount &&
+        fGmtZero == other.fGmtZero &&
         fGmtFormat == other.fGmtFormat)
     {
         // Now compare the arrays themselves
@@ -1337,6 +1341,7 @@ DateFormatSymbols::initializeData(const Locale& locale, const char *type, UError
             initField(&fStandaloneQuarters, fStandaloneQuartersCount, (const UChar *)gLastResortQuarters, kQuarterNum, kQuarterLen, status);
             initField(&fStandaloneShortQuarters, fStandaloneShortQuartersCount, (const UChar *)gLastResortQuarters, kQuarterNum, kQuarterLen, status);
             initField(&fGmtHourFormats, fGmtHourFormatsCount, (const UChar *)gLastResortGmtHourFormats, kGmtHourNum, kGmtHourLen, status);
+            fGmtZero.setTo(TRUE, gLastResortGmtZero, -1);
             fGmtFormat.setTo(TRUE, gLastResortGmtFormat, -1);
             fLocalPatternChars.setTo(TRUE, gPatternChars, PATTERN_CHARS_LEN);
         }
@@ -1400,6 +1405,12 @@ DateFormatSymbols::initializeData(const Locale& locale, const char *type, UError
     if(status == U_MISSING_RESOURCE_ERROR) {
         status = U_ZERO_ERROR;
         initField(&fStandaloneShortQuarters, fStandaloneShortQuartersCount, calData.getByKey2(gQuartersTag, gNamesAbbrTag, status), status);
+    }
+
+    // GMT zero
+    resStr = ures_getStringByKeyWithFallback(zoneStringsArray, gGmtZeroFormatTag, &len, &status);
+    if (len > 0) {
+        fGmtZero.setTo(TRUE, resStr, len);
     }
 
     // GMT format patterns

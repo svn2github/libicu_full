@@ -636,6 +636,11 @@ private:
     Locale                  fZSFLocale;         // Locale used for getting ZoneStringFormat
 
     /**
+     * String used for localized GMT. For example, "GMT"
+     */
+    UnicodeString fGmtZero;
+
+    /**
      * Pattern string used for localized time zone GMT format.  For example, "GMT{0}"
      */
     UnicodeString   fGmtFormat;

@@ -948,21 +948,26 @@ SimpleDateFormat::appendGMT(NumberFormat *currentNumberFormat,UnicodeString &app
     if (U_FAILURE(status)) {
         return;
     }
-    if (isDefaultGMTFormat()) {
-        formatGMTDefault(currentNumberFormat,appendTo, offset);
+    if (offset == 0) {
+        // use GMT zero format
+        appendTo += fSymbols->fGmtZero;
     } else {
-        ((SimpleDateFormat*)this)->initGMTFormatters(status);
-        if (U_SUCCESS(status)) {
-            int32_t type;
-            if (offset < 0) {
-                offset = -offset;
-                type = (offset % U_MILLIS_PER_MINUTE) == 0 ? kGMTNegativeHM : kGMTNegativeHMS;
-            } else {
-                type = (offset % U_MILLIS_PER_MINUTE) == 0 ? kGMTPositiveHM : kGMTPositiveHMS;
+        if (isDefaultGMTFormat()) {
+            formatGMTDefault(currentNumberFormat,appendTo, offset);
+        } else {
+            ((SimpleDateFormat*)this)->initGMTFormatters(status);
+            if (U_SUCCESS(status)) {
+                int32_t type;
+                if (offset < 0) {
+                    offset = -offset;
+                    type = (offset % U_MILLIS_PER_MINUTE) == 0 ? kGMTNegativeHM : kGMTNegativeHMS;
+                } else {
+                    type = (offset % U_MILLIS_PER_MINUTE) == 0 ? kGMTPositiveHM : kGMTPositiveHMS;
+                }
+                Formattable param(offset, Formattable::kIsDate);
+                FieldPosition fpos(0);
+                fGMTFormatters[type]->format(&param, 1, appendTo, fpos, status);
             }
-            Formattable param(offset, Formattable::kIsDate);
-            FieldPosition fpos(0);
-            fGMTFormatters[type]->format(&param, 1, appendTo, fpos, status);
         }
     }
 }
@@ -2828,6 +2833,28 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
             }
 
             // Step 3
+            // Is this standalone Localized GMT zero or GMT/UT/UTC?
+            int32_t gmtLen = 0;
+            if (text.compare(start, fSymbols->fGmtZero.length(), fSymbols->fGmtZero) == 0) {
+                gmtLen = fSymbols->fGmtZero.length();
+            } else if (text.compare(start, kGmtLen, gGmt) == 0) {
+                gmtLen = kGmtLen;
+            } else if (text.compare(start, kUtcLen, gUtc) == 0) {
+                gmtLen = kUtcLen;
+            } else if (text.compare(start, kUtLen, gUt) == 0) {
+                gmtLen = kUtLen;
+            }
+            // If we parse the string to the end, we can exit here.
+            // If any characters follow, we still need to proceed to the
+            // next step. Otherwise, all time zone names starting with GMT/UT/UTC
+            // (for example, "UTT") will fail.
+            if (gmtLen > 0 && ((text.length() - start) == gmtLen)) {
+                TimeZone *tz = TimeZone::createTimeZone(UnicodeString("Etc/GMT"));
+                cal.adoptTimeZone(tz);
+                return start + gmtLen;
+            }
+
+            // Step 4
             // At this point, check for named time zones by looking through
             // the locale data.
             if (patternCharIndex != UDAT_TIMEZONE_RFC_FIELD) {
@@ -2874,16 +2901,8 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
                     return tmpPos.getIndex();
                 }
             }
-            // Step 4
-            // Final attempt - is this standalone GMT/UT/UTC?
-            int32_t gmtLen = 0;
-            if (text.compare(start, kGmtLen, gGmt) == 0) {
-                gmtLen = kGmtLen;
-            } else if (text.compare(start, kUtcLen, gUtc) == 0) {
-                gmtLen = kUtcLen;
-            } else if (text.compare(start, kUtLen, gUt) == 0) {
-                gmtLen = kUtLen;
-            }
+            // Step 5
+            // If we saw standalone GMT zero pattern, then use GMT.
             if (gmtLen > 0) {
                 TimeZone *tz = TimeZone::createTimeZone(UnicodeString("Etc/GMT"));
                 cal.adoptTimeZone(tz);
