@@ -15,10 +15,10 @@
 #include <string.h>
 
 #include "unicode/utypes.h"
+#include "unicode/bytestrie.h"
+#include "unicode/bytestriebuilder.h"
 #include "unicode/localpointer.h"
 #include "unicode/stringpiece.h"
-#include "bytestrie.h"
-#include "bytestriebuilder.h"
 #include "intltest.h"
 
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
@@ -730,7 +730,18 @@ void BytesTrieTest::checkNext(BytesTrie &trie,
         // Compare the final current() with whether next() can actually continue.
         trie.saveState(state);
         UBool nextContinues=FALSE;
-        for(int32_t c=0x20; c<0x7f; ++c) {
+        // Try all graphic characters; we only use those in test strings in this file.
+#if U_CHARSET_FAMILY==U_ASCII_FAMILY
+        const int32_t minChar=0x20;
+        const int32_t maxChar=0x7e;
+#elif U_CHARSET_FAMILY==U_EBCDIC_FAMILY
+        const int32_t minChar=0x40;
+        const int32_t maxChar=0xfe;
+#else
+        const int32_t minChar=0;
+        const int32_t maxChar=0xff;
+#endif
+        for(int32_t c=minChar; c<=maxChar; ++c) {
             if(trie.resetToState(state).next(c)) {
                 nextContinues=TRUE;
                 break;
@@ -738,7 +749,7 @@ void BytesTrieTest::checkNext(BytesTrie &trie,
         }
         if((result==USTRINGTRIE_INTERMEDIATE_VALUE)!=nextContinues) {
             errln("(trie.current()==USTRINGTRIE_INTERMEDIATE_VALUE) contradicts "
-                  "(trie.next(some UChar)!=USTRINGTRIE_NO_MATCH) after end of %s", data[i].s);
+                  "(trie.next(some byte)!=USTRINGTRIE_NO_MATCH) after end of %s", data[i].s);
         }
         trie.reset();
     }

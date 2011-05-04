@@ -1249,7 +1249,7 @@ static void TestIndexChars(void) {
     ulocdata_getExemplarSet(uld, exemplarChars, 0, ULOCDATA_ES_STANDARD, &status);
     ulocdata_getExemplarSet(uld, indexChars, 0, ULOCDATA_ES_INDEX, &status);
     if (U_FAILURE(status)) {
-        log_err("File %s, line %d, Failure opening exemplar chars: %s", __FILE__, __LINE__, u_errorName(status));
+        log_data_err("File %s, line %d, Failure opening exemplar chars: %s", __FILE__, __LINE__, u_errorName(status));
         goto close_sets;
     }
     /* en data, standard exemplars are [a-z], lower case. */
@@ -1306,6 +1306,104 @@ static void TestCurrencyList(void){
 #endif
 }
 
+static void TestAvailableIsoCodes(void){
+    UErrorCode errorCode = U_ZERO_ERROR;
+    const char* eurCode = "EUR";
+    const char* usdCode = "USD";
+    const char* lastCode = "RHD";
+    const char* zzzCode = "ZZZ";
+    UDate date1950 = (UDate)-630720000000.0;/* year 1950 */
+    UDate date1970 = (UDate)0.0;            /* year 1970 */
+    UDate date1975 = (UDate)173448000000.0; /* year 1975 */
+    UDate date1978 = (UDate)260172000000.0; /* year 1978 */
+    UDate date1981 = (UDate)346896000000.0; /* year 1981 */
+    UDate date1992 = (UDate)693792000000.0; /* year 1992 */
+    UChar* isoCode = (UChar*)malloc(sizeof(UChar) * (uprv_strlen(usdCode) + 1));
+
+    /* testing available codes with no time ranges */
+    u_charsToUChars(eurCode, isoCode, uprv_strlen(usdCode) + 1);
+    if (ucurr_isAvailable(isoCode, U_DATE_MIN, U_DATE_MAX, &errorCode) == FALSE) {
+       log_err("FAIL: ISO code (%s) is not found.\n", eurCode);
+    }
+
+    u_charsToUChars(usdCode, isoCode, uprv_strlen(zzzCode) + 1);
+    if (ucurr_isAvailable(isoCode, U_DATE_MIN, U_DATE_MAX, &errorCode) == FALSE) {
+       log_err("FAIL: ISO code (%s) is not found.\n", usdCode);
+    }
+
+    u_charsToUChars(zzzCode, isoCode, uprv_strlen(zzzCode) + 1);
+    if (ucurr_isAvailable(isoCode, U_DATE_MIN, U_DATE_MAX, &errorCode) == TRUE) {
+       log_err("FAIL: ISO code (%s) is reported as available, but it doesn't exist.\n", zzzCode);
+    }
+
+    u_charsToUChars(lastCode, isoCode, uprv_strlen(zzzCode) + 1);
+    if (ucurr_isAvailable(isoCode, U_DATE_MIN, U_DATE_MAX, &errorCode) == FALSE) {
+       log_err("FAIL: ISO code (%s) is not found.\n", lastCode);
+    }
+
+    /* RHD was used from 1970-02-17  to 1980-04-18*/
+    
+    /* to = null */
+    if (ucurr_isAvailable(isoCode, date1970, U_DATE_MAX, &errorCode) == FALSE) {
+       log_err("FAIL: ISO code (%s) was available in time range >1970-01-01.\n", lastCode);
+    }
+
+    if (ucurr_isAvailable(isoCode, date1975, U_DATE_MAX, &errorCode) == FALSE) {
+       log_err("FAIL: ISO code (%s) was available in time range >1975.\n", lastCode);
+    }
+
+    if (ucurr_isAvailable(isoCode, date1981, U_DATE_MAX, &errorCode) == TRUE) {
+       log_err("FAIL: ISO code (%s) was not available in time range >1981.\n", lastCode);
+    }
+
+    /* from = null */
+    if (ucurr_isAvailable(isoCode, U_DATE_MIN, date1970, &errorCode) == TRUE) {
+       log_err("FAIL: ISO code (%s) was not available in time range <1970.\n", lastCode);
+    }
+
+    if (ucurr_isAvailable(isoCode, U_DATE_MIN, date1975, &errorCode) == FALSE) {
+       log_err("FAIL: ISO code (%s) was available in time range <1975.\n", lastCode);
+    }
+
+    if (ucurr_isAvailable(isoCode, U_DATE_MIN, date1981, &errorCode) == FALSE) {
+       log_err("FAIL: ISO code (%s) was available in time range <1981.\n", lastCode);
+    }
+
+    /* full ranges */
+    if (ucurr_isAvailable(isoCode, date1975, date1978, &errorCode) == FALSE) {
+       log_err("FAIL: ISO code (%s) was available in time range 1975-1978.\n", lastCode);
+    }
+
+    if (ucurr_isAvailable(isoCode, date1970, date1975, &errorCode) == FALSE) {
+       log_err("FAIL: ISO code (%s) was available in time range 1970-1975.\n", lastCode);
+    }
+
+    if (ucurr_isAvailable(isoCode, date1975, date1981, &errorCode) == FALSE) {
+       log_err("FAIL: ISO code (%s) was available in time range 1975-1981.\n", lastCode);
+    }
+
+    if (ucurr_isAvailable(isoCode, date1970,  date1981, &errorCode) == FALSE) {
+       log_err("FAIL: ISO code (%s) was available in time range 1970-1981.\n", lastCode);
+    }
+
+    if (ucurr_isAvailable(isoCode, date1981,  date1992, &errorCode) == TRUE) {
+       log_err("FAIL: ISO code (%s) was not available in time range 1981-1992.\n", lastCode);
+    }
+
+    if (ucurr_isAvailable(isoCode, date1950,  date1970, &errorCode) == TRUE) {
+       log_err("FAIL: ISO code (%s) was not available in time range 1950-1970.\n", lastCode);
+    }
+
+    /* wrong range - from > to*/
+    if (ucurr_isAvailable(isoCode, date1975,  date1970, &errorCode) == TRUE) {
+       log_err("FAIL: Wrong range 1975-1970 for ISO code (%s) was not reported.\n", lastCode);
+    } else if (errorCode != U_ILLEGAL_ARGUMENT_ERROR) {
+       log_err("FAIL: Error code not reported for wrong range 1975-1970 for ISO code (%s).\n", lastCode);
+    }
+
+    free(isoCode);
+}
+
 #define TESTCASE(name) addTest(root, &name, "tsutil/cldrtest/" #name)
 
 void addCLDRTest(TestNode** root);
@@ -1322,5 +1420,6 @@ void addCLDRTest(TestNode** root)
     TESTCASE(TestLocaleDisplayPattern);
     TESTCASE(TestCoverage);
     TESTCASE(TestIndexChars);
+    TESTCASE(TestAvailableIsoCodes);
 }
 

@@ -1,6 +1,6 @@
 /*
 **********************************************************************
-*   Copyright (C) 1996-2010, International Business Machines
+*   Copyright (C) 1996-2011, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 **********************************************************************
 *
@@ -37,6 +37,7 @@
 #include "unicode/utf.h"
 #include "unicode/uversion.h"
 #include "unicode/uconfig.h"
+#include "float.h"
 
 /*!
  * \file
@@ -314,6 +315,13 @@ typedef double UDate;
 #define U_MILLIS_PER_HOUR       (3600000)
 /** The number of milliseconds per day @stable ICU 2.0 */
 #define U_MILLIS_PER_DAY       (86400000)
+
+/** Maximum and minimum UDate value 
+ * @draft ICU 4.8 
+ */ 
+#define U_DATE_MAX DBL_MAX
+#define U_DATE_MIN -U_DATE_MAX
+
 
 
 /*===========================================================================*/
@@ -743,6 +751,7 @@ typedef enum UErrorCode {
     U_UNDEFINED_KEYWORD,              /**< Undefined Plural keyword */
     U_DEFAULT_KEYWORD_MISSING,        /**< Missing DEFAULT rule in plural rules */
     U_DECIMAL_NUMBER_SYNTAX_ERROR,    /**< Decimal number syntax error */
+    U_FORMAT_INEXACT_ERROR,           /**< Cannot format a number exactly and rounding mode is ROUND_UNNECESSARY */
     U_FMT_PARSE_ERROR_LIMIT,          /**< The limit for format library errors */
 
     /*

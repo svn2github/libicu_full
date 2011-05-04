@@ -53,11 +53,11 @@
 #include "unicode/curramt.h"
 #include "unicode/currpinf.h"
 #include "unicode/plurrule.h"
-#include "decfmtst.h"
+#include "uresimp.h"
 #include "ucurrimp.h"
 #include "charstr.h"
 #include "cmemory.h"
-#include "util.h"
+#include "patternprops.h"
 #include "digitlst.h"
 #include "cstring.h"
 #include "umutex.h"
@@ -65,6 +65,7 @@
 #include "putilimp.h"
 #include <math.h>
 #include "hash.h"
+#include "decfmtst.h"
 
 
 U_NAMESPACE_BEGIN
@@ -187,10 +188,7 @@ static void debugout(UnicodeString s) {
 #define debug(x)
 #endif
 
-// Set to 1 to make leading zeroes be an error when doing a strict parse.
-// Decided in ICU mtg 2010-04-21 that an error for leading zeros is wrong for
-// strict parsing in both ICU4C & ICU4J, so this goes off (and ICU4J will be fixed).
-#define CHECK_FOR_LEADING_ZERO 0
+
 
 // *****************************************************************************
 // class DecimalFormat
@@ -307,7 +305,7 @@ DecimalFormat::DecimalFormat(const UnicodeString& pattern,
 
 DecimalFormat::DecimalFormat(const UnicodeString& pattern,
                              DecimalFormatSymbols* symbolsToAdopt,
-                             NumberFormat::EStyles style,
+                             UNumberFormatStyle style,
                              UErrorCode& status) {
     init();
     fStyle = style;
@@ -342,7 +340,7 @@ DecimalFormat::init() {
     fPad = 0;
     fFormatWidth = 0;
     fPadPosition = kPadBeforePrefix;
-    fStyle = NumberFormat::kNumberStyle;
+    fStyle = UNUM_DECIMAL;
     fCurrencySignCount = 0;
     fAffixPatternsForCurrency = NULL;
     fAffixesForCurrency = NULL;
@@ -396,11 +394,11 @@ DecimalFormat::construct(UErrorCode&             status,
         int32_t len = 0;
         UResourceBundle *resource = ures_open(NULL, Locale::getDefault().getName(), &status);
 
-        resource = ures_getByKey(resource, fgNumberElements, resource, &status);
+        resource = ures_getByKeyWithFallback(resource, fgNumberElements, resource, &status);
         // TODO : Get the pattern based on the active numbering system for the locale. Right now assumes "latn".
-        resource = ures_getByKey(resource, fgLatn, resource, &status);
-        resource = ures_getByKey(resource, fgPatterns, resource, &status);
-        const UChar *resStr = ures_getStringByKey(resource, fgDecimalFormat, &len, &status);
+        resource = ures_getByKeyWithFallback(resource, fgLatn, resource, &status);
+        resource = ures_getByKeyWithFallback(resource, fgPatterns, resource, &status);
+        const UChar *resStr = ures_getStringByKeyWithFallback(resource, fgDecimalFormat, &len, &status);
         str.setTo(TRUE, resStr, len);
         pattern = &str;
         ures_close(resource);
@@ -422,7 +420,7 @@ DecimalFormat::construct(UErrorCode&             status,
     const UnicodeString* patternUsed;
     UnicodeString currencyPluralPatternForOther;
     // apply pattern
-    if (fStyle == NumberFormat::kPluralCurrencyStyle) {
+    if (fStyle == UNUM_CURRENCY_PLURAL) {
         fCurrencyPluralInfo = new CurrencyPluralInfo(fSymbols->getLocale(), status);
         if (U_FAILURE(status)) {
             return;
@@ -494,12 +492,12 @@ DecimalFormat::setupCurrencyAffixPatterns(UErrorCode& status) {
     UErrorCode error = U_ZERO_ERROR;   
     
     UResourceBundle *resource = ures_open(NULL, fSymbols->getLocale().getName(), &error);
-    resource = ures_getByKey(resource, fgNumberElements, resource, &error);
+    resource = ures_getByKeyWithFallback(resource, fgNumberElements, resource, &error);
     // TODO : Get the pattern based on the active numbering system for the locale. Right now assumes "latn".
-    resource = ures_getByKey(resource, fgLatn, resource, &error);
-    resource = ures_getByKey(resource, fgPatterns, resource, &error);
+    resource = ures_getByKeyWithFallback(resource, fgLatn, resource, &error);
+    resource = ures_getByKeyWithFallback(resource, fgPatterns, resource, &error);
     int32_t patLen = 0;
-    const UChar *patResStr = ures_getStringByKey(resource, fgCurrencyFormat,  &patLen, &error);
+    const UChar *patResStr = ures_getStringByKeyWithFallback(resource, fgCurrencyFormat,  &patLen, &error);
     ures_close(resource);
 
     if (U_SUCCESS(error)) {
@@ -1102,12 +1100,19 @@ DecimalFormat::_format(const DigitList &number,
     UBool isNegative = !adjustedNum.isPositive();
 
     // Apply rounding after multiplier
+    
+    adjustedNum.fContext.status &= ~DEC_Inexact;
     if (fRoundingIncrement != NULL) {
         adjustedNum.div(*fRoundingIncrement, status);
         adjustedNum.toIntegralValue();
         adjustedNum.mult(*fRoundingIncrement, status);
         adjustedNum.trim();
     }
+    if (fRoundingMode == kRoundUnnecessary && (adjustedNum.fContext.status & DEC_Inexact)) {
+        status = U_FORMAT_INEXACT_ERROR;
+        return appendTo;
+    }
+        
 
     // Special case for INFINITE,
     if (adjustedNum.isInfinite()) {
@@ -1133,6 +1138,10 @@ DecimalFormat::_format(const DigitList &number,
         // Fixed point format.  Round to a set number of fraction digits.
         int32_t numFractionDigits = precision();
         adjustedNum.roundFixedPoint(numFractionDigits);
+    }
+    if (fRoundingMode == kRoundUnnecessary && (adjustedNum.fContext.status & DEC_Inexact)) {
+        status = U_FORMAT_INEXACT_ERROR;
+        return appendTo;
     }
  
     return subformat(appendTo, handler, adjustedNum, FALSE);
@@ -1597,8 +1606,8 @@ void DecimalFormat::parse(const UnicodeString& text,
     }
 
     if (! isParseStrict()) {
-		// skip any leading whitespace
-    	i = backup = skipUWhiteSpace(text, i);
+        // skip any leading whitespace
+        i = backup = skipUWhiteSpace(text, i);
     }
 
     // If the text is composed of the representation of NaN, returns NaN.length
@@ -1697,7 +1706,7 @@ DecimalFormat::parseForCurrency(const UnicodeString& text,
     ParsePosition tmpPos(origPos);
     DigitList tmpDigitList;
     UBool found;
-    if (fStyle == NumberFormat::kPluralCurrencyStyle) {
+    if (fStyle == UNUM_CURRENCY_PLURAL) {
         found = subparse(text,
                          fNegPrefixPattern, fNegSuffixPattern,
                          fPosPrefixPattern, fPosSuffixPattern,
@@ -1872,7 +1881,7 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
     }
 
     if (! strictParse) {
-    	position = skipUWhiteSpace(text, position);
+        position = skipUWhiteSpace(text, position);
     }
 
     // process digits or Inf, find decimal position
@@ -1882,8 +1891,7 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
     position += infLen; // infLen is non-zero when it does equal to infinity
     status[fgStatusInfinite] = infLen != 0;
 
-    if (infLen != 0)
-    {
+    if (infLen != 0) {
         parsedNum.append("Infinity", err);
     } else {
         // We now have a string of digits, possibly with grouping symbols,
@@ -1900,19 +1908,11 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
         int32_t digitStart = position;
         int32_t gs2 = fGroupingSize2 == 0 ? fGroupingSize : fGroupingSize2;
 
-#if CHECK_FOR_LEADING_ZERO
-        // Strict parsing leading zeroes.  If a leading zero would
-        // be forced by the pattern, then don't fail strict parsing.
-        UBool strictLeadingZero = FALSE;
-        int32_t leadingZeroPos   = 0;
-        int32_t leadingZeroCount = 0;
-#endif
-
         const UnicodeString *decimalString;
         if (fCurrencySignCount > fgCurrencySignCountZero) {
-        	decimalString = &getConstSymbol(DecimalFormatSymbols::kMonetarySeparatorSymbol);
+            decimalString = &getConstSymbol(DecimalFormatSymbols::kMonetarySeparatorSymbol);
         } else {
-        	decimalString = &getConstSymbol(DecimalFormatSymbols::kDecimalSeparatorSymbol);
+            decimalString = &getConstSymbol(DecimalFormatSymbols::kDecimalSeparatorSymbol);
         }
         UChar32 decimalChar = decimalString->char32At(0);
 
@@ -1935,14 +1935,14 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
         UnicodeSet *groupingSet = NULL;
 
         if (decimalCharLength == decimalStringLength) {
-        	decimalSet = (UnicodeSet *) DecimalFormatStaticSets::getSimilarDecimals(decimalChar, strictParse, &decimalFallback)->cloneAsThawed();
+            decimalSet = (UnicodeSet *) DecimalFormatStaticSets::getSimilarDecimals(decimalChar, strictParse, &decimalFallback)->cloneAsThawed();
         }
 
         if (groupingCharLength == groupingStringLength) {
             if (strictParse) {
-            	groupingSet = (UnicodeSet *) DecimalFormatStaticSets::gStaticSets->fStrictDefaultGroupingSeparators->cloneAsThawed();
+                groupingSet = (UnicodeSet *) DecimalFormatStaticSets::gStaticSets->fStrictDefaultGroupingSeparators->cloneAsThawed();
             } else {
-            	groupingSet = (UnicodeSet *) DecimalFormatStaticSets::gStaticSets->fDefaultGroupingSeparators->cloneAsThawed();
+                groupingSet = (UnicodeSet *) DecimalFormatStaticSets::gStaticSets->fDefaultGroupingSeparators->cloneAsThawed();
             }
 
             groupingSet->add(groupingChar);
@@ -1978,7 +1978,6 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
              * have a value outside the range 0..9.
              */
             digit = ch - zero;
-
             if (digit < 0 || digit > 9)
             {
                 digit = u_charDigitValue(ch);
@@ -2030,16 +2029,6 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
                     if (! sawDecimal) {
                         integerDigitCount += 1;
                     }
-#if CHECK_FOR_LEADING_ZERO
-                } else if (strictParse && ! fUseExponentialNotation) {
-                    // TODO: Not sure we need to check fUseExponentialNotation
-                    if (!strictLeadingZero) {
-                        leadingZeroPos = position + U16_LENGTH(ch);
-                        strictLeadingZero = TRUE;
-                    }
-                    
-                    leadingZeroCount += 1;
-#endif
                 }
                     
                 position += U16_LENGTH(ch);
@@ -2052,15 +2041,15 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
 
                 if (strictParse) {
                     if ( (!sawDigit && groupingSet!=NULL && u_isWhitespace(ch)) || backup != -1 ) {
-                    	// We differ from the ICU4J code by allowing a leading group sep in strict mode (for
-                    	// backward compatibility) as long as it is not one of the breaking whitespace characters
-                    	// that is only treated as a group separator because of the equivalence set. If we get
-                    	// here it is because the leading sep was such a breaking space, or there were multiple
-                    	// group separators in a row. Note that the DecimalFormat documentation says
-                    	// "During parsing, grouping separators are ignored" and that was for strict parsing,
-                    	// so we may need to further revisit this strictParse restriction to ensure compatibility.
-                    	// Also note: u_isWhitespace is true for all Zs/Zl/Zp except the no-break ones: 00A0,2007,202F.
-                    	// In CLDR, all locales that have space as a group separator use 00A0 (NBSP).
+                        // We differ from the ICU4J code by allowing a leading group sep in strict mode (for
+                        // backward compatibility) as long as it is not one of the breaking whitespace characters
+                        // that is only treated as a group separator because of the equivalence set. If we get
+                        // here it is because the leading sep was such a breaking space, or there were multiple
+                        // group separators in a row. Note that the DecimalFormat documentation says
+                        // "During parsing, grouping separators are ignored" and that was for strict parsing,
+                        // so we may need to further revisit this strictParse restriction to ensure compatibility.
+                        // Also note: u_isWhitespace is true for all Zs/Zl/Zp except the no-break ones: 00A0,2007,202F.
+                        // In CLDR, all locales that have space as a group separator use 00A0 (NBSP).
                         strictFail = TRUE;
                         break;
                     }
@@ -2090,7 +2079,7 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
                 // If we're only parsing integers, or if we ALREADY saw the
                 // decimal, then don't parse this one.
                 if (isParseIntegerOnly() || sawDecimal) {
-                	break;
+                    break;
                 }
 
                 parsedNum.append('.', err);
@@ -2099,14 +2088,13 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
 
                 if (decimalSet != NULL) {
                     // Once we see a decimal character, we only accept that decimal character from then on.
-                	decimalSet->set(ch, ch);
+                    decimalSet->set(ch, ch);
                 }
             }
-            else
-            {
+            else {
                 const UnicodeString *tmp;
                 tmp = &getConstSymbol(DecimalFormatSymbols::kExponentialSymbol);
-                if (!text.compare(position, tmp->length(), *tmp))    // error code is set below if !sawDigit 
+                if (!text.caseCompare(position, tmp->length(), *tmp, U_FOLD_CASE_DEFAULT))    // error code is set below if !sawDigit 
                 {
                     // Parse sign, if present
                     int32_t pos = position + tmp->length();
@@ -2170,23 +2158,6 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
             position = backup;
         }
 
-#if CHECK_FOR_LEADING_ZERO
-        // check for strict parse errors
-        if (strictParse && strictLeadingZero) {
-            int32_t minIntegerDigits = getMinimumIntegerDigits();
-            
-            if (minIntegerDigits == 0 && integerDigitCount == 0) {
-                minIntegerDigits = 1;
-            }
-            
-            if ((leadingZeroCount + integerDigitCount) > minIntegerDigits) {
-                parsePosition.setIndex(oldStart);
-                parsePosition.setErrorIndex(leadingZeroPos);
-                return FALSE;
-            }
-        }
-#endif
-
         if (strictParse && !sawDecimal) {
             if (lastGroup != -1 && position - lastGroup != fGroupingSize + 1) {
                 strictFail = TRUE;
@@ -2226,16 +2197,16 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
 
     // Match positive and negative suffixes; prefer longest match.
     if (posMatch >= 0 || (!strictParse && negMatch < 0)) {
-    	posSuffixMatch = compareAffix(text, position, FALSE, FALSE, posSuffix, currencyParsing, type, currency);
+        posSuffixMatch = compareAffix(text, position, FALSE, FALSE, posSuffix, currencyParsing, type, currency);
     }
     if (negMatch >= 0) {
-    	negSuffixMatch = compareAffix(text, position, TRUE, FALSE, negSuffix, currencyParsing, type, currency);
+        negSuffixMatch = compareAffix(text, position, TRUE, FALSE, negSuffix, currencyParsing, type, currency);
     }
     if (posSuffixMatch >= 0 && negSuffixMatch >= 0) {
         if (posSuffixMatch > negSuffixMatch) {
-        	negSuffixMatch = -1;
+            negSuffixMatch = -1;
         } else if (negSuffixMatch > posSuffixMatch) {
-        	posSuffixMatch = -1;
+            posSuffixMatch = -1;
         }
     }
 
@@ -2362,7 +2333,7 @@ int32_t DecimalFormat::compareSimpleAffix(const UnicodeString& affix,
     UnicodeSet *affixSet;
 
     DecimalFormatStaticSets::initSets(&status);
-    
+
     if (strict) {
         affixSet = DecimalFormatStaticSets::gStaticSets->fStrictDashEquivalents;
         
@@ -2375,60 +2346,60 @@ int32_t DecimalFormat::compareSimpleAffix(const UnicodeString& affix,
             }
         }
 
-		for (int32_t i = 0; i < affixLength; ) {
-			UChar32 c = affix.char32At(i);
-			int32_t len = U16_LENGTH(c);
-			if (uprv_isRuleWhiteSpace(c)) {
-				// We may have a pattern like: \u200F \u0020
-				//        and input text like: \u200F \u0020
-				// Note that U+200F and U+0020 are RuleWhiteSpace but only
-				// U+0020 is UWhiteSpace.  So we have to first do a direct
-				// match of the run of RULE whitespace in the pattern,
-				// then match any extra characters.
-				UBool literalMatch = FALSE;
-				while (pos < inputLength &&
-					   input.char32At(pos) == c) {
-					literalMatch = TRUE;
-					i += len;
-					pos += len;
-					if (i == affixLength) {
-						break;
-					}
-					c = affix.char32At(i);
-					len = U16_LENGTH(c);
-					if (!uprv_isRuleWhiteSpace(c)) {
-						break;
-					}
-				}
+        for (int32_t i = 0; i < affixLength; ) {
+            UChar32 c = affix.char32At(i);
+            int32_t len = U16_LENGTH(c);
+            if (PatternProps::isWhiteSpace(c)) {
+                // We may have a pattern like: \u200F \u0020
+                //        and input text like: \u200F \u0020
+                // Note that U+200F and U+0020 are Pattern_White_Space but only
+                // U+0020 is UWhiteSpace.  So we have to first do a direct
+                // match of the run of Pattern_White_Space in the pattern,
+                // then match any extra characters.
+                UBool literalMatch = FALSE;
+                while (pos < inputLength &&
+                       input.char32At(pos) == c) {
+                    literalMatch = TRUE;
+                    i += len;
+                    pos += len;
+                    if (i == affixLength) {
+                        break;
+                    }
+                    c = affix.char32At(i);
+                    len = U16_LENGTH(c);
+                    if (!PatternProps::isWhiteSpace(c)) {
+                        break;
+                    }
+                }
 
-				// Advance over run in pattern
-				i = skipRuleWhiteSpace(affix, i);
+                // Advance over run in pattern
+                i = skipPatternWhiteSpace(affix, i);
 
-				// Advance over run in input text
-				// Must see at least one white space char in input,
-				// unless we've already matched some characters literally.
-				int32_t s = pos;
-				pos = skipUWhiteSpace(input, pos);
-				if (pos == s && !literalMatch) {
-					return -1;
-				}
+                // Advance over run in input text
+                // Must see at least one white space char in input,
+                // unless we've already matched some characters literally.
+                int32_t s = pos;
+                pos = skipUWhiteSpace(input, pos);
+                if (pos == s && !literalMatch) {
+                    return -1;
+                }
 
-				// If we skip UWhiteSpace in the input text, we need to skip it in the pattern.
-				// Otherwise, the previous lines may have skipped over text (such as U+00A0) that
-				// is also in the affix.
-				i = skipUWhiteSpace(affix, i);
-			} else {
-				if (pos < inputLength &&
-					input.char32At(pos) == c) {
-					i += len;
-					pos += len;
-				} else {
-					return -1;
-				}
-			}
-		}
+                // If we skip UWhiteSpace in the input text, we need to skip it in the pattern.
+                // Otherwise, the previous lines may have skipped over text (such as U+00A0) that
+                // is also in the affix.
+                i = skipUWhiteSpace(affix, i);
+            } else {
+                if (pos < inputLength &&
+                    input.char32At(pos) == c) {
+                    i += len;
+                    pos += len;
+                } else {
+                    return -1;
+                }
+            }
+        }
     } else {
-		UBool match = FALSE;
+        UBool match = FALSE;
         
         affixSet = DecimalFormatStaticSets::gStaticSets->fDashEquivalents;
 
@@ -2440,49 +2411,42 @@ int32_t DecimalFormat::compareSimpleAffix(const UnicodeString& affix,
             }
         }
 
-		for (int32_t i = 0; i < affixLength; )
-		{
-		  //i = skipRuleWhiteSpace(affix, i);
-			i = skipUWhiteSpace(affix, i);
-			pos = skipUWhiteSpace(input, pos);
+        for (int32_t i = 0; i < affixLength; )
+        {
+            //i = skipRuleWhiteSpace(affix, i);
+            i = skipUWhiteSpace(affix, i);
+            pos = skipUWhiteSpace(input, pos);
 
-			if (i >= affixLength || pos >= inputLength) {
-				break;
-			}
+            if (i >= affixLength || pos >= inputLength) {
+                break;
+            }
 
-			UChar32 c = affix.char32At(i);
-			int32_t len = U16_LENGTH(c);
+            UChar32 c = affix.char32At(i);
+            int32_t len = U16_LENGTH(c);
 
-			if (input.char32At(pos) != c) {
-				return -1;
-			}
+            if (input.char32At(pos) != c) {
+                return -1;
+            }
 
-			match = TRUE;
-			i += len;
-			pos += len;
-		}
+            match = TRUE;
+            i += len;
+            pos += len;
+        }
 
-		if (affixLength > 0 && ! match) {
-			return -1;
-		}
+        if (affixLength > 0 && ! match) {
+            return -1;
+        }
     }
-
     return pos - start;
 }
 
 /**
- * Skip over a run of zero or more isRuleWhiteSpace() characters at
+ * Skip over a run of zero or more Pattern_White_Space characters at
  * pos in text.
  */
-int32_t DecimalFormat::skipRuleWhiteSpace(const UnicodeString& text, int32_t pos) {
-    while (pos < text.length()) {
-        UChar32 c = text.char32At(pos);
-        if (!uprv_isRuleWhiteSpace(c)) {
-            break;
-        }
-        pos += U16_LENGTH(c);
-    }
-    return pos;
+int32_t DecimalFormat::skipPatternWhiteSpace(const UnicodeString& text, int32_t pos) {
+    const UChar* s = text.getBuffer();
+    return (int32_t)(PatternProps::skipWhiteSpace(s + pos, text.length() - pos) - s);
 }
 
 /**
@@ -2599,8 +2563,8 @@ int32_t DecimalFormat::compareComplexAffix(const UnicodeString& affixPat,
         }
 
         pos = match(text, pos, c);
-        if (uprv_isRuleWhiteSpace(c)) {
-            i = skipRuleWhiteSpace(affixPat, i);
+        if (PatternProps::isWhiteSpace(c)) {
+            i = skipPatternWhiteSpace(affixPat, i);
         }
     }
     return pos - start;
@@ -2609,14 +2573,14 @@ int32_t DecimalFormat::compareComplexAffix(const UnicodeString& affixPat,
 /**
  * Match a single character at text[pos] and return the index of the
  * next character upon success.  Return -1 on failure.  If
- * isRuleWhiteSpace(ch) then match a run of white space in text.
+ * ch is a Pattern_White_Space then match a run of white space in text.
  */
 int32_t DecimalFormat::match(const UnicodeString& text, int32_t pos, UChar32 ch) {
-    if (uprv_isRuleWhiteSpace(ch)) {
+    if (PatternProps::isWhiteSpace(ch)) {
         // Advance over run of white space in input text
         // Must see at least one white space char in input
         int32_t s = pos;
-        pos = skipRuleWhiteSpace(text, pos);
+        pos = skipPatternWhiteSpace(text, pos);
         if (pos == s) {
             return -1;
         }
@@ -2635,8 +2599,8 @@ int32_t DecimalFormat::match(const UnicodeString& text, int32_t pos, const Unico
     for (int32_t i=0; i<str.length() && pos >= 0; ) {
         UChar32 ch = str.char32At(i);
         i += U16_LENGTH(ch);
-        if (uprv_isRuleWhiteSpace(ch)) {
-            i = skipRuleWhiteSpace(str, i);
+        if (PatternProps::isWhiteSpace(ch)) {
+            i = skipPatternWhiteSpace(str, i);
         }
         pos = match(text, pos, ch);
     }
@@ -2646,11 +2610,11 @@ int32_t DecimalFormat::match(const UnicodeString& text, int32_t pos, const Unico
 UBool DecimalFormat::matchSymbol(const UnicodeString &text, int32_t position, int32_t length, const UnicodeString &symbol,
                          UnicodeSet *sset, UChar32 schar)
 {
-	if (sset != NULL) {
-		return sset->contains(schar);
-	}
+    if (sset != NULL) {
+        return sset->contains(schar);
+    }
 
-	return text.compare(position, length, symbol) == 0;
+    return text.compare(position, length, symbol) == 0;
 }
 
 
@@ -2699,11 +2663,13 @@ DecimalFormat::setDecimalFormatSymbols(const DecimalFormatSymbols& symbols)
     adoptDecimalFormatSymbols(new DecimalFormatSymbols(symbols));
 }
 
+
 const CurrencyPluralInfo*
 DecimalFormat::getCurrencyPluralInfo(void) const
 {
     return fCurrencyPluralInfo;
 }
+
 
 void
 DecimalFormat::adoptCurrencyPluralInfo(CurrencyPluralInfo* toAdopt)
@@ -3468,7 +3434,7 @@ int32_t DecimalFormat::appendAffix(UnicodeString& buf, double number,
     if (fCurrencySignCount == fgCurrencySignCountInPluralFormat) {
         UnicodeString pluralCount = fCurrencyPluralInfo->getPluralRules()->select(number);
         AffixesForCurrency* oneSet;
-        if (fStyle == NumberFormat::kPluralCurrencyStyle) {
+        if (fStyle == UNUM_CURRENCY_PLURAL) {
             oneSet = (AffixesForCurrency*)fPluralAffixesForCurrency->get(pluralCount);
         } else {
             oneSet = (AffixesForCurrency*)fAffixesForCurrency->get(pluralCount);
@@ -3653,7 +3619,7 @@ DecimalFormat::appendAffixPattern(UnicodeString& appendTo,
 UnicodeString&
 DecimalFormat::toPattern(UnicodeString& result, UBool localized) const
 {
-    if (fStyle == NumberFormat::kPluralCurrencyStyle) {
+    if (fStyle == UNUM_CURRENCY_PLURAL) {
         // the prefix or suffix pattern might not be defined yet,
         // so they can not be synthesized,
         // instead, get them directly.

@@ -250,6 +250,7 @@ UObject *UObjectTest::testClassNoClassID(UObject *obj, const char *className, co
 
 // External Things
 #include "unicode/appendable.h"
+#include "unicode/alphaindex.h"
 #include "unicode/brkiter.h"
 #include "unicode/calendar.h"
 #include "unicode/caniter.h"
@@ -291,6 +292,7 @@ UObject *UObjectTest::testClassNoClassID(UObject *obj, const char *className, co
 #include "unicode/timezone.h"
 #include "unicode/translit.h"
 #include "unicode/uchriter.h"
+#include "unicode/uloc.h"
 #include "unicode/unifilt.h"
 #include "unicode/unifunct.h"
 #include "unicode/uniset.h"
@@ -322,7 +324,6 @@ void UObjectTest::testIDs()
 {
     ids_count = 0;
     UErrorCode status = U_ZERO_ERROR;
-    static const UChar SMALL_STR[] = {0x51, 0x51, 0x51, 0}; // "QQQ"
 
 #if !UCONFIG_NO_TRANSLITERATION || !UCONFIG_NO_FORMATTING
     UParseError parseError;
@@ -364,6 +365,8 @@ void UObjectTest::testIDs()
     TESTCLASSID_CTOR(DecimalFormatSymbols, (status));
     TESTCLASSID_DEFAULT(FieldPosition);
     TESTCLASSID_DEFAULT(Formattable);
+
+    static const UChar SMALL_STR[] = {0x51, 0x51, 0x51, 0}; // "QQQ"
     TESTCLASSID_CTOR(CurrencyAmount, (1.0, SMALL_STR, status));
     TESTCLASSID_CTOR(CurrencyUnit, (SMALL_STR, status));
     TESTCLASSID_NONE_FACTORY(LocaleDisplayNames, LocaleDisplayNames::createInstance("de"));
@@ -477,6 +480,7 @@ void UObjectTest::testIDs()
 //    TESTCLASSID_CTOR(LocaleKeyFactory, (42));
 //#endif
 #endif
+    TESTCLASSID_NONE_CTOR(AlphabeticIndex, (Locale::getEnglish(), status));
 
 #if UOBJTEST_DUMP_IDS
     int i;
@@ -570,6 +574,7 @@ void UObjectTest::TestMFCCompatibility() {
 }
 
 void UObjectTest::TestCompilerRTTI() {
+#if !UCONFIG_NO_FORMATTING
     UErrorCode errorCode = U_ZERO_ERROR;
     NumberFormat *nf = NumberFormat::createInstance("de", errorCode);
     if (U_FAILURE(errorCode)) {
@@ -587,6 +592,7 @@ void UObjectTest::TestCompilerRTTI() {
         errln("typeid(NumberFormat) failed");
     }
     delete nf;
+#endif
 }
 
 /* --------------- */
