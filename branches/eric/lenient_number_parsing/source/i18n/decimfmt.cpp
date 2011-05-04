@@ -1605,7 +1605,7 @@ void DecimalFormat::parse(const UnicodeString& text,
         i = skipPadding(text, i);
     }
 
-    if (! isParseStrict()) {
+    if (isLenient()) {
         // skip any leading whitespace
         i = backup = skipUWhiteSpace(text, i);
     }
@@ -1847,7 +1847,7 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
 
     int32_t position = parsePosition.getIndex();
     int32_t oldStart = position;
-    UBool strictParse = isParseStrict();
+    UBool strictParse = !isLenient();
 
     // Match padding before prefix
     if (fFormatWidth > 0 && fPadPosition == kPadBeforePrefix) {
@@ -2040,16 +2040,8 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
                 }
 
                 if (strictParse) {
-                    if ( (!sawDigit && groupingSet!=NULL && u_isWhitespace(ch)) || backup != -1 ) {
-                        // We differ from the ICU4J code by allowing a leading group sep in strict mode (for
-                        // backward compatibility) as long as it is not one of the breaking whitespace characters
-                        // that is only treated as a group separator because of the equivalence set. If we get
-                        // here it is because the leading sep was such a breaking space, or there were multiple
-                        // group separators in a row. Note that the DecimalFormat documentation says
-                        // "During parsing, grouping separators are ignored" and that was for strict parsing,
-                        // so we may need to further revisit this strictParse restriction to ensure compatibility.
-                        // Also note: u_isWhitespace is true for all Zs/Zl/Zp except the no-break ones: 00A0,2007,202F.
-                        // In CLDR, all locales that have space as a group separator use 00A0 (NBSP).
+                    if ((!sawDigit || backup != -1)) {
+                        // leading group, or two group separators in a row
                         strictFail = TRUE;
                         break;
                     }
@@ -2165,10 +2157,7 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
         }
 
         if (strictFail) {
-            // only set with strictParse and a leading zero error
-            // leading zeros are an error with strict parsing except
-            // immediately before nondigit (except group separator
-            // followed by digit), or end of text.
+            // only set with strictParse and a grouping separator error
 
             parsePosition.setIndex(oldStart);
             parsePosition.setErrorIndex(position);
@@ -2307,7 +2296,7 @@ int32_t DecimalFormat::compareAffix(const UnicodeString& text,
             patternToCompare = &fPositiveSuffix;
         }
     }
-    return compareSimpleAffix(*patternToCompare, text, pos, isParseStrict());
+    return compareSimpleAffix(*patternToCompare, text, pos, isLenient());
 }
 
 /**
@@ -2323,7 +2312,7 @@ int32_t DecimalFormat::compareAffix(const UnicodeString& text,
 int32_t DecimalFormat::compareSimpleAffix(const UnicodeString& affix,
                                           const UnicodeString& input,
                                           int32_t pos,
-                                          UBool strict) {
+                                          UBool lenient) {
     UErrorCode status = U_ZERO_ERROR;
     int32_t start = pos;
     UChar32 affixChar = affix.char32At(0);
@@ -2334,7 +2323,7 @@ int32_t DecimalFormat::compareSimpleAffix(const UnicodeString& affix,
 
     DecimalFormatStaticSets::initSets(&status);
 
-    if (strict) {
+    if (!lenient) {
         affixSet = DecimalFormatStaticSets::gStaticSets->fStrictDashEquivalents;
         
         // If the affix is exactly one character long and that character
@@ -2534,7 +2523,7 @@ int32_t DecimalFormat::compareComplexAffix(const UnicodeString& affixPat,
                         u_strcpy(currency, curr);
                     }
                     pos = ppos.getIndex();
-                } else if (isParseStrict()){
+                } else if (!isLenient()){
                     pos = -1;
                 }
                 continue;

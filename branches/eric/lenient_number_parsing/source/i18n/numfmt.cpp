@@ -215,7 +215,7 @@ NumberFormat::NumberFormat()
     fMaxFractionDigits(3), // invariant, >= minFractionDigits
     fMinFractionDigits(0),
     fParseIntegerOnly(FALSE),
-    fParseStrict(TRUE)  // TODO: Should this be FALSE?
+    fLenient(FALSE)
 {
     fCurrency[0] = 0;
 }
@@ -650,12 +650,12 @@ NumberFormat::setParseIntegerOnly(UBool value)
 }
 
 // -------------------------------------
-// Sets whether or not parse is strict.
+// Sets whether lenient parse is enabled.
 
 void
-NumberFormat::setParseStrict(UBool value)
+NumberFormat::setLenient(UBool enable)
 {
-    fParseStrict = value;
+    fLenient = enable;
 }
 
 // -------------------------------------

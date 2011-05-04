@@ -754,8 +754,7 @@ SimpleDateFormat::initialize(const Locale& locale,
         fNumberFormat->setParseIntegerOnly(TRUE);
         fNumberFormat->setMinimumFractionDigits(0); // To prevent "Jan 1.00, 1997.00"
 
-        // TODO: Really, the default should be lenient...
-        fNumberFormat->setParseStrict(FALSE);
+        fNumberFormat->setLenient(TRUE); // Java uses a custom DateNumberFormat to format/parse
 
         initNumberFormatters(locale,status);
 
@@ -1325,7 +1324,7 @@ SimpleDateFormat::initGMTFormatters(UErrorCode &status) {
                 sdf->adoptCalendar(gcal);
                 sdf->applyPattern(*hourPattern);
                 
-                // This prevents a hours format pattern like "-HH:mm:ss" from matching
+                // This prevents an hours format pattern like "-HH:mm:ss" from matching
                 // in a string like "GMT-07:00 10:08:11 PM"
                 sdf->setLenient(FALSE);
                 

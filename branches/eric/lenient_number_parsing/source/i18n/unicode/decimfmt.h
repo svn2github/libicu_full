@@ -351,7 +351,8 @@ class FieldPositionHandler;
  * DecimalFormatSymbols object.  During formatting, the
  * DecimalFormatSymbols-based digits are output.
  *
- * <p>During parsing, grouping separators are ignored.
+ * <p>During parsing, grouping separators are ignored if in lenient mode;
+ * otherwise, if present, they must be in appropriate positions.
  *
  * <p>For currency parsing, the formatter is able to parse every currency
  * style formats no matter which style the formatter is constructed with.
@@ -1984,7 +1985,7 @@ private:
     static int32_t compareSimpleAffix(const UnicodeString& affix,
                                       const UnicodeString& input,
                                       int32_t pos,
-                                      UBool strict);
+                                      UBool lenient);
 
     static int32_t skipPatternWhiteSpace(const UnicodeString& text, int32_t pos);
 

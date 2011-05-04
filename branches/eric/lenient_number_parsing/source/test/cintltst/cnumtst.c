@@ -1407,13 +1407,13 @@ static void test_fmt(UNumberFormat* fmt, UBool isDecimal) {
     {
         int isLenient = unum_getAttribute(fmt, UNUM_LENIENT_PARSE);
         log_verbose("lenient: 0x%x\n", isLenient);
-        if (isDecimal ? (isLenient == TRUE) : (isLenient == TRUE)) {
+        if (isLenient != FALSE) {
             log_err("didn't expect lenient value: %d\n", isLenient);
         }
 
         unum_setAttribute(fmt, UNUM_LENIENT_PARSE, TRUE);
         isLenient = unum_getAttribute(fmt, UNUM_LENIENT_PARSE);
-        if (isDecimal ? (isLenient == FALSE) : (isLenient == FALSE)) {
+        if (isLenient != TRUE) {
             log_err("didn't expect lenient value after set: %d\n", isLenient);
         }
     }

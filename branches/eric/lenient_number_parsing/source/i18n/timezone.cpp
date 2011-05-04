@@ -1396,7 +1396,7 @@ TimeZone::parseCustomID(const UnicodeString& id, int32_t& sign,
             return FALSE;
         }
         numberFormat->setParseIntegerOnly(TRUE);
-        numberFormat->setParseStrict(FALSE); // TODO: a wild hack...
+        //numberFormat->setLenient(TRUE); // TODO: May need to set this, depends on latest timezone parsing
 
         // Look for either hh:mm, hhmm, or hh
         int32_t start = pos.getIndex();

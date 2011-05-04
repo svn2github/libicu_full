@@ -364,7 +364,7 @@ void DateFormatRegressionTest::Test4060212(void)
 
 #if 0
     // this is an odd usage of "ddd" and it doesn't
-    // work now that date values are range checked.
+    // work now that date values are range checked per #3579.
     logln("Using yyyy-ddd.hh:mm:ss");
     delete formatter;
     formatter = NULL;

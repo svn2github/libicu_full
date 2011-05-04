@@ -450,6 +450,11 @@ unum_getAttribute(const UNumberFormat*          fmt,
           UNumberFormatAttribute  attr)
 {
   const NumberFormat* nf = reinterpret_cast<const NumberFormat*>(fmt);
+  if ( attr == UNUM_LENIENT_PARSE ) {
+    // Supported for all subclasses
+    return nf->isLenient();
+  }
+  // The remaining attributea are only supported for DecimalFormat
   const DecimalFormat* df = dynamic_cast<const DecimalFormat*>(nf);
   if (df != NULL) {
     switch(attr) {
@@ -509,20 +514,9 @@ unum_getAttribute(const UNumberFormat*          fmt,
     case UNUM_SECONDARY_GROUPING_SIZE:
         return df->getSecondaryGroupingSize();
 
-    case UNUM_LENIENT_PARSE:
-    	return ! df->isParseStrict();
-
     default:
         /* enums out of sync? unsupported enum? */
         break;
-    }
-  } else {
-    const RuleBasedNumberFormat* rbnf = dynamic_cast<const RuleBasedNumberFormat*>(nf);
-    U_ASSERT(rbnf != NULL);
-    if (attr == UNUM_LENIENT_PARSE) {
-#if !UCONFIG_NO_COLLATION
-      return rbnf->isLenient();
-#endif
     }
   }
 
@@ -535,6 +529,11 @@ unum_setAttribute(    UNumberFormat*          fmt,
             int32_t                 newValue)
 {
   NumberFormat* nf = reinterpret_cast<NumberFormat*>(fmt);
+  if ( attr == UNUM_LENIENT_PARSE ) {
+    // Supported for all subclasses
+    return nf->setLenient(newValue != 0);
+  }
+  // The remaining attributea are only supported for DecimalFormat
   DecimalFormat* df = dynamic_cast<DecimalFormat*>(nf);
   if (df != NULL) {
     switch(attr) {
@@ -613,21 +612,9 @@ unum_setAttribute(    UNumberFormat*          fmt,
         df->setSecondaryGroupingSize(newValue);
         break;
 
-    case UNUM_LENIENT_PARSE:
-    	df->setParseStrict(newValue == 0);
-    	break;
-
     default:
         /* Shouldn't get here anyway */
         break;
-    }
-  } else {
-    RuleBasedNumberFormat* rbnf = dynamic_cast<RuleBasedNumberFormat*>(nf);
-    U_ASSERT(rbnf != NULL);
-    if (attr == UNUM_LENIENT_PARSE) {
-#if !UCONFIG_NO_COLLATION
-      rbnf->setLenient((UBool)newValue);
-#endif
     }
   }
 }

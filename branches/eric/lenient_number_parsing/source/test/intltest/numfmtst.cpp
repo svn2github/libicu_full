@@ -925,7 +925,7 @@ NumberFormatTest::TestLenientParse(void)
     DecimalFormat *format = new DecimalFormat("(#,##0)", status);
     Formattable n;
 
-    format->setParseStrict(FALSE);
+    format->setLenient(TRUE);
     for (int32_t t = 0; t < ARRAY_SIZE (lenientAffixTestCases); t += 1) {
     	UnicodeString testCase = ctou(lenientAffixTestCases[t]);
 
@@ -946,7 +946,7 @@ NumberFormatTest::TestLenientParse(void)
     
     NumberFormat *mFormat = NumberFormat::createInstance(sv_SE, UNUM_DECIMAL, status);
     
-    mFormat->setParseStrict(FALSE);
+    mFormat->setLenient(TRUE);
     for (int32_t t = 0; t < ARRAY_SIZE(lenientMinusTestCases); t += 1) {
         UnicodeString testCase = ctou(lenientMinusTestCases[t]);
         
@@ -963,7 +963,7 @@ NumberFormatTest::TestLenientParse(void)
     
     mFormat = NumberFormat::createInstance(en_US, UNUM_DECIMAL, status);
     
-    mFormat->setParseStrict(FALSE);
+    mFormat->setLenient(TRUE);
     for (int32_t t = 0; t < ARRAY_SIZE(lenientMinusTestCases); t += 1) {
         UnicodeString testCase = ctou(lenientMinusTestCases[t]);
         
@@ -980,7 +980,7 @@ NumberFormatTest::TestLenientParse(void)
     
     NumberFormat *cFormat = NumberFormat::createInstance(en_US, UNUM_CURRENCY, status);
 
-    cFormat->setParseStrict(FALSE);
+    cFormat->setLenient(TRUE);
     for (int32_t t = 0; t < ARRAY_SIZE (lenientCurrencyTestCases); t += 1) {
     	UnicodeString testCase = ctou(lenientCurrencyTestCases[t]);
 
@@ -1011,7 +1011,7 @@ NumberFormatTest::TestLenientParse(void)
 
     NumberFormat *pFormat = NumberFormat::createPercentInstance(en_US, status);
 
-    pFormat->setParseStrict(FALSE);
+    pFormat->setLenient(TRUE);
     for (int32_t t = 0; t < ARRAY_SIZE (lenientPercentTestCases); t += 1) {
     	UnicodeString testCase = ctou(lenientPercentTestCases[t]);
 
@@ -1059,7 +1059,7 @@ NumberFormatTest::TestLenientParse(void)
    }
 
    // then, make sure that they pass with a lenient parse
-   nFormat->setParseStrict(FALSE);
+   nFormat->setLenient(TRUE);
    for (int32_t t = 0; t < ARRAY_SIZE(strictFailureTestCases); t += 1) {
 	   UnicodeString testCase = ctou(strictFailureTestCases[t]);
 
@@ -2859,22 +2859,40 @@ void NumberFormatTest::TestNonpositiveMultiplier() {
     //expect2(df, java.math.BigDecimal.valueOf(Long.MIN_VALUE), java.math.BigDecimal.valueOf(Long.MIN_VALUE).negate().toString());
 }
 
+typedef struct {
+    const char * stringToParse;
+    int          parsedPos;
+    int          errorIndex;
+    UBool        lenient;
+} TestSpaceParsingItem;
 
 void
 NumberFormatTest::TestSpaceParsing() {
     // the data are:
     // the string to be parsed, parsed position, parsed error index
-    const char* DATA[][3] = {
-        {"$124", "4", "-1"},
-        {"$124 $124", "4", "-1"},
-        {"$124 ", "4", "-1"},
-        {"$ 124 ", "5", "-1"},
-        {"$\\u00A0124 ", "5", "-1"},
-        {" $ 124 ", "6", "-1"},
-        //{"124$", "4", "-1"}, // TODO: need to handle trailing currency correctly
-        {"124$", "3", "-1"},
-        //{"124 $", "5", "-1"},  // TODO: OK or not, need currency spacing rule
-        {"124 $", "4", "-1"},
+    const TestSpaceParsingItem DATA[] = {
+        // TOTO: Update the following TODOs, some may be handled now
+        {"$124",           4, -1, FALSE},
+        {"$124 $124",      4, -1, FALSE},
+        {"$124 ",          4, -1, FALSE},
+        //{"$ 124 ",       5, -1, FALSE}, // TODO: need to handle space correctly
+        //{"$\\u00A0124 ", 5, -1, FALSE}, // TODO: need to handle space correctly
+        {"$ 124 ",         0,  1, FALSE}, // errorIndex used to be 0, now 1 (better)
+        {"$\\u00A0124 ",   0,  1, FALSE}, // errorIndex used to be 0, now 1 (better)
+        {" $ 124 ",        0,  0, FALSE}, // TODO: need to handle space correctly
+        {"124$",           0,  3, FALSE}, // TODO: need to handle space correctly
+        // {"124 $",       5, -1, FALSE}, // TODO: OK or not, need currency spacing rule
+        {"124 $",          0,  3, FALSE},
+        {"$124",           4, -1, TRUE},
+        {"$124 $124",      4, -1, TRUE},
+        {"$124 ",          4, -1, TRUE},
+        {"$ 124 ",         5, -1, TRUE},
+        {"$\\u00A0124 ",   5, -1, TRUE},
+        {" $ 124 ",        6, -1, TRUE},
+        //{"124$",         4, -1, TRUE}, // TODO: need to handle trailing currency correctly
+        {"124$",           3, -1, TRUE},
+        //{"124 $",        5, -1, TRUE}, // TODO: OK or not, need currency spacing rule
+        {"124 $",          4, -1, TRUE},
     };
     UErrorCode status = U_ZERO_ERROR;
     Locale locale("en_US");
@@ -2884,18 +2902,17 @@ NumberFormatTest::TestSpaceParsing() {
         delete foo;
         return;
     }
-
-    foo->setParseStrict(FALSE);
     for (uint32_t i = 0; i < sizeof(DATA)/sizeof(DATA[0]); ++i) {
         ParsePosition parsePosition(0);
-        UnicodeString stringToBeParsed = ctou(DATA[i][0]);
-        int parsedPosition = atoi(DATA[i][1]);
-        int errorIndex = atoi(DATA[i][2]);
+        UnicodeString stringToBeParsed = ctou(DATA[i].stringToParse);
+        int parsedPosition = DATA[i].parsedPos;
+        int errorIndex = DATA[i].errorIndex;
+        foo->setLenient(DATA[i].lenient);
         Formattable result;
         foo->parse(stringToBeParsed, result, parsePosition);
         if (parsePosition.getIndex() != parsedPosition ||
             parsePosition.getErrorIndex() != errorIndex) {
-            errln("FAILED parse " + stringToBeParsed + "; wrong position, expected: (" + parsedPosition + ", " + errorIndex + "); got (" + parsePosition.getIndex() + ", " + parsePosition.getErrorIndex() + ")");
+            errln("FAILED parse " + stringToBeParsed + "; lenient: " + DATA[i].lenient + "; wrong position, expected: (" + parsedPosition + ", " + errorIndex + "); got (" + parsePosition.getIndex() + ", " + parsePosition.getErrorIndex() + ")");
         }
         if (parsePosition.getErrorIndex() == -1 &&
             result.getType() == Formattable::kLong &&
@@ -6430,7 +6447,7 @@ void NumberFormatTest::TestExponentParse() {
     // create format instance 
     status = U_ZERO_ERROR; 
     DecimalFormat fmt("#####", symbols, status); 
- 	if(U_FAILURE(status)) { 
+    if(U_FAILURE(status)) { 
         errln((UnicodeString)"ERROR: Could not create DecimalFormat (pattern, symbols*)"); 
     } 
     

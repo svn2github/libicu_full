@@ -600,22 +600,23 @@ public:
     virtual void setParseIntegerOnly(UBool value);
 
     /**
-     * Return whether or not strict parsing is in effect.
+     * Sets whether lenient parsing should be enabled (it is off by default).
      *
-     * @return <code>TRUE</code> if strict parsing is in effect,
-     *         <code>FALSE</code> otherwise.
-     *  @internal
+     * @param enable <code>TRUE</code> if lenient parsing should be used,
+     *               <code>FALSE</code> otherwise.
+     * @draft ICU 4.8
      */
-    UBool isParseStrict(void) const;
+    virtual void setLenient(UBool enable);
 
     /**
-     * Set whether or not strict parsing should be used.
+     * Returns whether lenient parsing is enabled (it is off by default).
      *
-     * @param value <code>TRUE</code> if strict parsing should be used,
-     *              <code>FALSE</code> otherwise.
-     *  @internal
+     * @return <code>TRUE</code> if lenient parsing is enabled,
+     *         <code>FALSE</code> otherwise.
+     * @see #setLenient
+     * @draft ICU 4.8
      */
-    virtual void setParseStrict(UBool value);
+    virtual UBool isLenient(void) const;
 
     /**
      * Returns the default number format for the current default
@@ -938,7 +939,7 @@ private:
     int32_t     fMaxFractionDigits;
     int32_t     fMinFractionDigits;
     UBool      fParseIntegerOnly;
-    UBool      fParseStrict;
+    UBool      fLenient; // TRUE => lenient parse is enabled
 
     // ISO currency code
     UChar      fCurrency[4];
@@ -1041,9 +1042,9 @@ NumberFormat::isParseIntegerOnly() const
 }
 
 inline UBool
-NumberFormat::isParseStrict() const
+NumberFormat::isLenient() const
 {
-	return fParseStrict;
+	return fLenient;
 }
 
 inline UnicodeString&
