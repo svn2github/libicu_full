@@ -140,7 +140,7 @@ Cleanly installed Solaris can use this #define.
  * Simple things (presence of functions, etc) should just go in configure.in and be added to
  * icucfg.h via autoheader.
  */
-#if defined(HAVE_CONFIG_H)
+#if defined(U_HAVE_ICUCFG)
 #include "icucfg.h"
 #endif
 
@@ -171,7 +171,7 @@ static const BitPatternConversion gInf = { (int64_t) INT64_C(0x7FF0000000000000)
   functions).
   ---------------------------------------------------------------------------*/
 
-#if defined(U_WINDOWS) || defined(XP_MAC) || defined(OS400)
+#if defined(U_WINDOWS) || defined(XP_MAC) || defined(OS400) || defined (__MINGW32__)
 #   undef U_POSIX_LOCALE
 #else
 #   define U_POSIX_LOCALE    1
@@ -1043,7 +1043,7 @@ uprv_tzname(int n)
 #endif
 
 #ifdef U_TZNAME
-#ifdef U_WINDOWS
+#if defined(U_WINDOWS) || defined(__MINGW32__)
     /* The return value is free'd in timezone.cpp on Windows because
      * the other code path returns a pointer to a heap location. */
     return uprv_strdup(U_TZNAME[n]);

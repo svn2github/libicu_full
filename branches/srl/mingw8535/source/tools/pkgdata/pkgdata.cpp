@@ -826,7 +826,7 @@ static void createFileNames(UPKGOptions *o, const char mode, const char *version
         }
 
         if (version != NULL) {
-#ifdef U_CYGWIN
+#if defined( U_CYGWIN ) && !defined( __MINGW32__ )
             sprintf(libFileNames[LIB_FILE_CYGWIN], "cyg%s.%s",
                     libName,
                     pkgDataFlags[SO_EXT]);
@@ -1185,7 +1185,7 @@ static int32_t pkg_generateLibraryFile(const char *targetDir, const char mode, c
             }
             freeCmd = TRUE;
         }
-#ifdef U_CYGWIN
+#if defined( U_CYGWIN ) && !defined(__MINGW32__)
         sprintf(cmd, "%s%s%s %s -o %s%s %s %s%s %s %s",
                 pkgDataFlags[GENLIB],
                 targetDir,
@@ -1605,7 +1605,7 @@ static UPKGOptions *pkg_checkFlag(UPKGOptions *o) {
             T_FileStream_close(f);
         }
     }
-#elif defined(U_CYGWIN)
+#elif defined(U_CYGWIN) && !defined(__MINGW32__)
     /* Cygwin needs to change flag options. */
     char *flag = NULL;
     int32_t length = 0;
