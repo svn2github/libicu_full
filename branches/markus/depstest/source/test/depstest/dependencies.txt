@@ -1,0 +1,182 @@
+# Copyright (C) 2011, International Business Machines
+# Corporation and others. All Rights Reserved.
+#
+# file name: dependencies.txt
+#
+# created on: 2011may26
+# created by: Markus W. Scherer
+
+system_symbols:
+    # Standard library symbols used by ICU.
+    dlopen dlclose dlsym  # called by putil.o only for icuplug.o
+    fopen fclose fread fseek ftell rewind
+    opendir closedir readdir
+    readlink  # putil.cpp uprv_tzname() calls this in a hack to get the time zone name
+    free malloc realloc
+    getenv
+    nl_langinfo setlocale
+    gettimeofday localtime_r tzname tzset
+    memcmp memcpy memmove memset
+    perror  # putil.cpp uprv_dl_open() calls perror("dlopen")
+    strlen strchr strrchr strcmp strncmp strcpy strncpy strcat strncat strtoul
+    pthread_mutex_init pthread_mutex_destroy pthread_mutex_lock pthread_mutex_unlock
+    floor ceil modf fmod log pow
+
+library: common
+    # Files in the common library that are not in its dependencies.
+    uvectr32.o ucnvlat1.o rbbisetb.o locavailable.o uniset_props.o
+    ushape.o rbbistbl.o servls.o ucnv_u32.o bytestrie.o rbbitblb.o
+    ucnvsel.o rbbinode.o resbund_cnv.o appendable.o
+    ucnv.o icudataver.o charstr.o unisetspan.o servrbf.o unistr_cnv.o uset.o
+    unorm_it.o ucnv_cnv.o uidna.o bytestrieiterator.o servlk.o unifunct.o
+    filterednormalizer2.o uenum.o ucnv_u16.o
+    ustack.o ucnvmbcs.o ucnv_u8.o ustr_wcs.o ubidi.o serv.o ures_cnv.o
+    chariter.o dictbe.o caniter.o brkeng.o errorcode.o
+    ucnv_u7.o icuplug.o utext.o ubrk.o uloc.o ucnv_err.o uloc_tag.o
+    ubidiwrt.o ubidiln.o usprep.o umapfile.o rbbiscan.o udatamem.o wintz.o
+    bmpset.o locutil.o triedict.o util_props.o ucnv_bld.o ustr_cnv.o
+    uresbund.o unistr_props.o uresdata.o uscript.o uiter.o propsvec.o usetiter.o
+    ucnv_lmb.o loclikely.o utrace.o unames.o stringtriebuilder.o locdispnames.o
+    uchriter.o parsepos.o ucnv_cb.o normlzr.o servslkf.o unormcmp.o schriter.o
+    util.o locmap.o patternprops.o bytestriebuilder.o ruleiter.o servlkf.o
+    ucnv_ext.o locid.o resbund.o ucnvhz.o udata.o servnotf.o unorm.o rbbirb.o
+    propname.o ucnvisci.o messagepattern.o ucmndata.o ucharstriebuilder.o
+    ustrfmt.o uvectr64.o ucharstrieiterator.o ustrenum.o ucnvbocu.o ucnvscsu.o
+    usc_impl.o ulist.o ucnv_io.o ucnv_ct.o ucnv2022.o brkiter.o
+    locbased.o rbbi.o ucasemap.o locresdata.o ucnv_set.o uset_props.o dtintrv.o
+    rbbidata.o ucnvdisp.o ucharstrie.o ucat.o
+    ustrtrns.o
+    utypes.o
+  deps
+    # Libraries and groups that the common library depends on.
+    uts46 normalizer2
+    uniset_core
+    unistr_core
+    uprops ubidi_props ucase
+    uhash uvector utrie2 utrie2_builder
+    sort
+    uinit
+    platform
+
+group: uts46
+    uts46.o
+  deps
+    normalizer2 punycode
+    ubidi_props  # for u_charDirection()
+    unistr_core
+    uprops  # for u_getCombiningClass(); TODO: move that to normalizer2.o
+    stringpiece bytestream
+
+
+group: normalizer2
+    normalizer2.o
+    normalizer2impl.o
+  deps
+    uniset_core
+    unistr_core
+    utrie2_builder  # for building CanonIterData & FCD
+    uvector  # for building CanonIterData
+
+group: punycode
+    punycode.o
+  deps
+    ustring_core
+
+group: uniset_core
+    unifilt.o
+    uniset.o
+  deps
+    unistr_core
+
+group: unistr_core
+    unistr.o
+  deps
+    uhash  # for uhash_hashUCharsN(); TODO: fix
+
+group: uprops
+    uchar.o uprops.o
+  deps
+    normalizer2
+    platform
+    ubidi_props
+    unistr_case
+    ucase
+
+group: ubidi_props
+    ubidi_props.o
+  deps
+    platform
+    utrie2
+
+group: unistr_case
+    ustrcase.o unistr_case.o
+  deps
+    ucase
+
+group: ucase
+    ucase.o
+  deps
+    platform
+    utrie2
+
+group: utrie2_builder
+    ucol_swp.o  # for utrie_swap()
+    utrie.o  # for utrie2_fromUTrie()
+    utrie2_builder.o
+  deps
+    platform
+    utrie2
+
+group: utrie2
+    utrie2.o
+  deps
+    platform
+
+group: uhash  # TODO: make it not depend on UnicodeString
+    uhash.o
+    uhash_us.o
+  deps
+    platform
+
+group: uvector
+    uvector.o
+  deps
+    platform
+    sort  # for UVector::sort()
+
+group: sort
+    uarrsort.o
+  deps
+    platform
+
+group: uinit
+    uinit.o
+  deps
+    platform
+
+group: stringpiece
+    stringpiece.o
+  deps
+    platform
+
+group: bytestream
+    bytestream.o
+  deps
+    platform
+
+group: platform
+    # Files in the "platform" group.
+    cmemory.o uobject.o
+    cstring.o cwchar.o uinvchar.o
+    ustring.o  # Other platform files really just need u_strlen
+    utf_impl.o
+    putil.o
+    ucln_cmn.o  # for putil.o which calls ucln_common_registerCleanup; TODO: make it not depend on uinit; test UCLN_TYPE in ucln_imp.h?
+    udataswp.o  # for uinvchar.o; TODO: move uinvchar.o swapper functions to udataswp.o?
+    umath.o
+    mutex.o umutex.o
+  # The "platform" group has no ICU dependencies.
+
+#library: i18n
+#  deps
+#    common
