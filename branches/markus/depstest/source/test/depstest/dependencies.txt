@@ -36,7 +36,7 @@ library: common
     ubidiwrt.o ubidiln.o usprep.o umapfile.o rbbiscan.o udatamem.o wintz.o
     bmpset.o locutil.o triedict.o util_props.o ucnv_bld.o ustr_cnv.o
     uresbund.o unistr_props.o uresdata.o uscript.o uiter.o propsvec.o usetiter.o
-    ucnv_lmb.o loclikely.o utrace.o unames.o stringtriebuilder.o locdispnames.o
+    ucnv_lmb.o loclikely.o unames.o stringtriebuilder.o locdispnames.o
     uchriter.o parsepos.o ucnv_cb.o normlzr.o servslkf.o unormcmp.o schriter.o
     util.o locmap.o patternprops.o bytestriebuilder.o ruleiter.o servlkf.o
     ucnv_ext.o locid.o resbund.o ucnvhz.o udata.o servnotf.o unorm.o rbbirb.o
@@ -175,6 +175,7 @@ group: platform
     udataswp.o  # for uinvchar.o; TODO: move uinvchar.o swapper functions to udataswp.o?
     umath.o
     mutex.o umutex.o
+    utrace.o
   # The "platform" group has no ICU dependencies.
 
 #library: i18n

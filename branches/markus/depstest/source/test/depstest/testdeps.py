@@ -12,6 +12,8 @@
 
 This probably works only on Linux.
 
+The exit code is 0 if everything is fine, 1 for errors, 2 for only warnings.
+
 Sample invocation:
   ~/svn.icu/trunk/src/source/test/depstest$ ./testdeps.py ~/svn.icu/trunk/dbg
 """
