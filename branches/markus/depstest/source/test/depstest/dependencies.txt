@@ -71,9 +71,9 @@ group: uts46
     uts46.o
   deps
     normalizer2 punycode
+    uchar  # for u_charType()
     ubidi_props  # for u_charDirection()
     unistr_core
-    uprops  # for u_getCombiningClass(); TODO: move that to normalizer2.o
     stringpiece bytestream
 
 group: normalizer2
@@ -105,13 +105,18 @@ group: unistr_core
     ustrtrns platform
 
 group: uprops
-    uchar.o uprops.o
+    uprops.o
   deps
     normalizer2
-    platform
+    uchar
     ubidi_props
     unistr_case
     ucase
+
+group: uchar
+    uchar.o
+  deps
+    utrie2
 
 group: patternprops
     patternprops.o
