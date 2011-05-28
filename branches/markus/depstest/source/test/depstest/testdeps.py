@@ -52,7 +52,7 @@ def _ReadObjFile(root_path, library_name, obj_name):
     # Ignore symbols like '__cxa_pure_virtual',
     # 'vtable for __cxxabiv1::__si_class_type_info' or
     # 'DW.ref.__gxx_personality_v0'.
-    if name.startswith("_") or "__" in name:
+    if name.startswith("__cxa") or "__cxxabi" in name or "__gxx" in name:
       _ignored_symbols.add(name)
       continue
     type = fields[2].strip()
@@ -124,10 +124,7 @@ def main():
                      files_missing_from_build)
     _return_value = 1
   if _ignored_symbols:
-    sys.stderr.write(("Warning: ignored symbols, " +
-                      "ones from ICU should be internal or be renamed:\n%s\n") %
-                     _ignored_symbols)
-    _return_value = 2
+    print "Info: ignored symbols\n%s" % _ignored_symbols
   # TODO: only check further if not _return_value
   # TODO: check all libraries
   _GetExports("uts46", [])
