@@ -72,7 +72,7 @@ group: uts46
   deps
     normalizer2 punycode
     uchar  # for u_charType()
-    ubidi_props  # for u_charDirection()
+    ubidi_props  # for u_charDirection() & ubidi_getJoiningType()
     unistr_core
     stringpiece bytestream
 
@@ -207,6 +207,11 @@ group: platform
     utrace.o
   # The "platform" group has no ICU dependencies.
 
-#library: i18n
+# TODO: messagepattern should depend on only few things
+
+# TODO: library: i18n
 #  deps
 #    common
+# with groups: collation, formatting (depends on collation via RBNF), regex, translit
+
+# TODO: library: io

@@ -93,6 +93,7 @@ def _GetExports(name, parents):
   deps = item.get("deps")
   if deps:
     for dep in deps:
+      # TODO: detect whether this item needs to depend on dep
       exports |= _GetExports(dep, parents)
   item["exports"] = exports
   imports -= exports | dependencies.system_symbols | _ignored_symbols
@@ -130,6 +131,8 @@ def main():
   _GetExports("uts46", [])
   # TODO: print ".o files:\n%s" % _obj_files
   # TODO: print "items:\n%s" % dependencies.items
+  if not _return_value:
+    print "Specified and actual dependencies match."
   return _return_value
 
 if __name__ == "__main__":
