@@ -37,25 +37,24 @@ library: common
     uvectr32.o ucnvlat1.o rbbisetb.o locavailable.o uniset_props.o
     ushape.o rbbistbl.o servls.o ucnv_u32.o bytestrie.o rbbitblb.o
     ucnvsel.o rbbinode.o resbund_cnv.o appendable.o
-    ucnv.o icudataver.o charstr.o unisetspan.o servrbf.o unistr_cnv.o uset.o
-    unorm_it.o ucnv_cnv.o uidna.o bytestrieiterator.o servlk.o unifunct.o
+    ucnv.o icudataver.o charstr.o servrbf.o unistr_cnv.o uset.o
+    unorm_it.o ucnv_cnv.o uidna.o bytestrieiterator.o servlk.o
     filterednormalizer2.o uenum.o ucnv_u16.o
     ustack.o ucnvmbcs.o ucnv_u8.o ustr_wcs.o ubidi.o serv.o ures_cnv.o
     chariter.o dictbe.o caniter.o brkeng.o errorcode.o
     ucnv_u7.o icuplug.o utext.o ubrk.o uloc.o ucnv_err.o uloc_tag.o
     ubidiwrt.o ubidiln.o usprep.o umapfile.o rbbiscan.o udatamem.o wintz.o
-    bmpset.o locutil.o triedict.o util_props.o ucnv_bld.o ustr_cnv.o
+    locutil.o triedict.o util_props.o ucnv_bld.o ustr_cnv.o
     uresbund.o unistr_props.o uresdata.o uscript.o uiter.o propsvec.o usetiter.o
     ucnv_lmb.o loclikely.o unames.o stringtriebuilder.o locdispnames.o
     uchriter.o parsepos.o ucnv_cb.o normlzr.o servslkf.o unormcmp.o schriter.o
-    util.o locmap.o patternprops.o bytestriebuilder.o ruleiter.o servlkf.o
+    util.o locmap.o bytestriebuilder.o ruleiter.o servlkf.o
     ucnv_ext.o locid.o resbund.o ucnvhz.o udata.o servnotf.o unorm.o rbbirb.o
     propname.o ucnvisci.o messagepattern.o ucmndata.o ucharstriebuilder.o
     ustrfmt.o uvectr64.o ucharstrieiterator.o ustrenum.o ucnvbocu.o ucnvscsu.o
     usc_impl.o ulist.o ucnv_io.o ucnv_ct.o ucnv2022.o brkiter.o
     locbased.o rbbi.o ucasemap.o locresdata.o ucnv_set.o uset_props.o dtintrv.o
     rbbidata.o ucnvdisp.o ucharstrie.o ucat.o
-    ustrtrns.o
     utypes.o
   deps
     # Libraries and groups that the common library depends on.
@@ -63,7 +62,7 @@ library: common
     uniset_core
     unistr_core
     uprops ubidi_props ucase
-    uhash uvector utrie2 utrie2_builder
+    hashtable uhash uvector utrie2 utrie2_builder
     sort
     uinit
     platform
@@ -77,7 +76,6 @@ group: uts46
     uprops  # for u_getCombiningClass(); TODO: move that to normalizer2.o
     stringpiece bytestream
 
-
 group: normalizer2
     normalizer2.o
     normalizer2impl.o
@@ -86,22 +84,25 @@ group: normalizer2
     unistr_core
     utrie2_builder  # for building CanonIterData & FCD
     uvector  # for building CanonIterData
+    uhash  # for the instance cache
 
 group: punycode
     punycode.o
   deps
-    ustring_core
+    platform
 
 group: uniset_core
-    unifilt.o
-    uniset.o
+    unifilt.o unifunct.o
+    uniset.o bmpset.o unisetspan.o
   deps
+    patternprops
     unistr_core
+    uvector
 
 group: unistr_core
     unistr.o
   deps
-    uhash  # for uhash_hashUCharsN(); TODO: fix
+    ustrtrns platform
 
 group: uprops
     uchar.o uprops.o
@@ -112,6 +113,9 @@ group: uprops
     unistr_case
     ucase
 
+group: patternprops
+    patternprops.o
+
 group: ubidi_props
     ubidi_props.o
   deps
@@ -121,7 +125,7 @@ group: ubidi_props
 group: unistr_case
     ustrcase.o unistr_case.o
   deps
-    ucase
+    unistr_core ucase
 
 group: ucase
     ucase.o
@@ -142,9 +146,14 @@ group: utrie2
   deps
     platform
 
-group: uhash  # TODO: make it not depend on UnicodeString
-    uhash.o
+group: hashtable  # Maps UnicodeString to value.
     uhash_us.o
+  deps
+    unistr_core
+    uhash
+
+group: uhash
+    uhash.o
   deps
     platform
 
@@ -161,6 +170,11 @@ group: sort
 
 group: uinit
     uinit.o
+  deps
+    platform
+
+group: ustrtrns
+    ustrtrns.o
   deps
     platform
 

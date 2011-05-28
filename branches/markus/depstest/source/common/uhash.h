@@ -1,6 +1,6 @@
 /*
 ******************************************************************************
-*   Copyright (C) 1997-2010, International Business Machines
+*   Copyright (C) 1997-2011, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 ******************************************************************************
 *   Date        Name        Description
@@ -581,10 +581,13 @@ uhash_hashChars(const UHashTok key);
 
 /* Used by UnicodeString to compute its hashcode - Not public API. */
 U_CAPI int32_t U_EXPORT2 
-uhash_hashUCharsN(const UChar *key, int32_t length);
+uhash_hashUCharsN(const UChar *str, int32_t length);
 
 U_CAPI int32_t U_EXPORT2 
-uhash_hashCharsN(const char *key, int32_t length);
+uhash_hashCharsN(const char *str, int32_t length);
+
+U_CAPI int32_t U_EXPORT2
+uhash_hashICharsN(const char *str, int32_t length);
 
 /**
  * Generate a case-insensitive hash code for a null-terminated char*

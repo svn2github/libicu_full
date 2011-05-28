@@ -31,6 +31,7 @@ libraries = set()
 system_symbols = set()
 
 _line_number = 0
+_groups_to_be_defined = set()
 
 def _CheckLibraryName(name):
   global _line_number
@@ -83,7 +84,7 @@ def _ReadFiles(deps_file, item, library_name):
       item_files.add(file_name)
 
 def _ReadDeps(deps_file, item, library_name):
-  global items, _line_number
+  global items, _line_number, _groups_to_be_defined
   item_deps = item.get("deps")
   while True:
     line = _ReadLine(deps_file)
@@ -100,6 +101,7 @@ def _ReadDeps(deps_file, item, library_name):
       if dep not in items:
         # Add this dependency as a new group.
         items[dep] = {"type": "group", "library": library_name}
+        _groups_to_be_defined.add(dep)
       item_deps.add(dep)
 
 def _ReadSystemSymbols(deps_file):
@@ -122,7 +124,7 @@ def _ReadSystemSymbols(deps_file):
 
 def Load():
   """Reads "dependencies.txt" and populates the module attributes."""
-  global items, libraries, _line_number
+  global items, libraries, _line_number, _groups_to_be_defined
   deps_file = open("dependencies.txt")
   try:
     line = None
@@ -149,6 +151,9 @@ def Load():
         if name not in items:
           sys.exit("Error:%d: group %s defined before mentioned as a dependency" %
                    (_line_number, name))
+        if name not in _groups_to_be_defined:
+          sys.exit("Error:%d: group definition using duplicate name %s" % (_line_number, name))
+        _groups_to_be_defined.remove(name)
         item = items[name]
         line = _ReadFiles(deps_file, item, item["library"])
       elif line == "  deps":
@@ -165,3 +170,5 @@ def Load():
         sys.exit("Syntax error:%d: %s" % (_line_number, line))
   except StopIteration:
     pass
+  if _groups_to_be_defined:
+    sys.exit("Error: some groups mentioned in dependencies are undefined: %s" % _groups_to_be_defined)
