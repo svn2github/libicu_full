@@ -4,7 +4,7 @@
 # Copyright (C) 2011, International Business Machines
 # Corporation and others. All Rights Reserved.
 #
-# file name: testdeps.py
+# file name: depstest.py
 #
 # created on: 2011may24
 
@@ -15,7 +15,7 @@ This probably works only on Linux.
 The exit code is 0 if everything is fine, 1 for errors, 2 for only warnings.
 
 Sample invocation:
-  ~/svn.icu/trunk/src/source/test/depstest$ ./testdeps.py ~/svn.icu/trunk/dbg
+  ~/svn.icu/trunk/src/source/test/depstest$ ./depstest.py ~/svn.icu/trunk/dbg
 """
 
 __author__ = "Markus W. Scherer"
@@ -90,18 +90,27 @@ def _GetExports(name, parents):
       obj_file = _obj_files[file_name]
       imports |= obj_file["imports"]
       exports |= obj_file["exports"]
+  imports -= exports | dependencies.system_symbols | _ignored_symbols
   deps = item.get("deps")
   if deps:
     for dep in deps:
-      # TODO: detect whether this item needs to depend on dep
-      exports |= _GetExports(dep, parents)
+      dep_exports = _GetExports(dep, parents)
+      # Detect whether this item needs to depend on dep,
+      # except when this item has no files, that is, when it is just
+      # a deliberate umbrella group or library.
+      if files and imports.isdisjoint(dep_exports):
+        print "Info:  %s %s  does not need to depend on  %s\n" % (item_type, name, dep)
+      # We always include the dependency's exports, even if we do not need them
+      # to satisfy local imports.
+      exports |= dep_exports
   item["exports"] = exports
-  imports -= exports | dependencies.system_symbols | _ignored_symbols
-  if imports:
-    for symbol in imports:
-      sys.stderr.write("Error:  %s %s  imports  %s  but does not depend on  %s\n" %
-                       (item_type, name, symbol, _symbols_to_files.get(symbol)))
-      _return_value = 1
+  imports -= exports
+  for symbol in imports:
+    for file_name in files:
+      if symbol in _obj_files[file_name]["imports"]:
+        sys.stderr.write("Error:  %s %s  file  %s  imports  %s  but  %s  does not depend on  %s\n" %
+                         (item_type, name, file_name, symbol, name, _symbols_to_files.get(symbol)))
+    _return_value = 1
   del parents[-1]
   return exports
 

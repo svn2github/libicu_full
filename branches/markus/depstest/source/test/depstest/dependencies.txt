@@ -24,19 +24,27 @@ system_symbols:
     __assert_fail __stack_chk_fail
     # Position-Independent Code (-fPIC) requires a Global Offset Table.
     _GLOBAL_OFFSET_TABLE_
+
     # C++
     __dynamic_cast
+    # The compiler generates references to the global operator delete
+    # even when no code actually uses it.
+    # ICU must not _use_ the global operator delete.
+    "operator delete(void*)"
+    # ICU also must not use the global operator new.
+    # "operator new[](unsigned long)"
     # _Unwind_Resume is related to exceptions:
     # "A call to this routine is inserted as the end of a landing pad that performs cleanup,
     # but does not resume normal execution. It causes unwinding to proceed further."
     # (Linux Standard Base Specification 1.3)
+    # Even though ICU does not actually use (nor handle) exceptions.
     _Unwind_Resume
 
 library: common
     # Files in the common library that are not in its dependencies.
     uvectr32.o ucnvlat1.o rbbisetb.o locavailable.o uniset_props.o
     ushape.o rbbistbl.o servls.o ucnv_u32.o bytestrie.o rbbitblb.o
-    ucnvsel.o rbbinode.o resbund_cnv.o appendable.o
+    ucnvsel.o rbbinode.o resbund_cnv.o
     ucnv.o icudataver.o charstr.o servrbf.o unistr_cnv.o uset.o
     unorm_it.o ucnv_cnv.o uidna.o bytestrieiterator.o servlk.o
     filterednormalizer2.o uenum.o ucnv_u16.o
@@ -48,7 +56,7 @@ library: common
     uresbund.o unistr_props.o uresdata.o uscript.o uiter.o propsvec.o usetiter.o
     ucnv_lmb.o loclikely.o unames.o stringtriebuilder.o locdispnames.o
     uchriter.o parsepos.o ucnv_cb.o normlzr.o servslkf.o unormcmp.o schriter.o
-    util.o locmap.o bytestriebuilder.o ruleiter.o servlkf.o
+    locmap.o bytestriebuilder.o ruleiter.o servlkf.o
     ucnv_ext.o locid.o resbund.o ucnvhz.o udata.o servnotf.o unorm.o rbbirb.o
     propname.o ucnvisci.o messagepattern.o ucmndata.o ucharstriebuilder.o
     ustrfmt.o uvectr64.o ucharstrieiterator.o ustrenum.o ucnvbocu.o ucnvscsu.o
@@ -96,13 +104,18 @@ group: uniset_core
     uniset.o bmpset.o unisetspan.o
   deps
     patternprops
-    unistr_core
+    unistr_core icu_utility
     uvector
+
+group: icu_utility
+    util.o
+  deps
+    unistr_core patternprops
 
 group: unistr_core
     unistr.o
   deps
-    ustrtrns platform
+    ustrtrns appendable
 
 group: uprops
     uprops.o
@@ -124,7 +137,6 @@ group: patternprops
 group: ubidi_props
     ubidi_props.o
   deps
-    platform
     utrie2
 
 group: unistr_case
@@ -185,11 +197,14 @@ group: ustrtrns
 
 group: stringpiece
     stringpiece.o
-  deps
-    platform
 
 group: bytestream
     bytestream.o
+  deps
+    platform
+
+group: appendable
+    appendable.o
   deps
     platform
 
