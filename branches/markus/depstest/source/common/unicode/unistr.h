@@ -3357,10 +3357,10 @@ private:
 
   // common function for case mappings
   UnicodeString &
-  caseMap(BreakIterator *titleIter,
-          const char *locale,
-          uint32_t options,
-          int32_t toWhichCase);
+  caseMap(const char *locale, uint32_t options, int32_t toWhichCase);
+
+  UnicodeString &
+  caseMap(BreakIterator *titleIter, const char *locale, uint32_t options);
 
   // ref counting
   void addRef(void);

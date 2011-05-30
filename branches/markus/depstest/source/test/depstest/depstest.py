@@ -134,10 +134,10 @@ def main():
                      files_missing_from_build)
     _return_value = 1
   if _ignored_symbols:
-    print "Info: ignored symbols\n%s" % _ignored_symbols
-  # TODO: only check further if not _return_value
-  # TODO: check all libraries
-  _GetExports("uts46", [])
+    print "Info: ignored symbols:\n%s" % _ignored_symbols
+  if not _return_value:
+    for library_name in dependencies.libraries:
+      _GetExports(library_name, [])
   # TODO: print ".o files:\n%s" % _obj_files
   # TODO: print "items:\n%s" % dependencies.items
   if not _return_value:

@@ -487,7 +487,13 @@
     <ClCompile Include="unistr_props.cpp">
       <Filter>strings</Filter>
     </ClCompile>
+    <ClCompile Include="unistr_titlecase_brkiter.cpp">
+      <Filter>strings</Filter>
+    </ClCompile>
     <ClCompile Include="ustr_cnv.c">
+      <Filter>strings</Filter>
+    </ClCompile>
+    <ClCompile Include="ustr_titlecase_brkiter.cpp">
       <Filter>strings</Filter>
     </ClCompile>
     <ClCompile Include="ustr_wcs.cpp">

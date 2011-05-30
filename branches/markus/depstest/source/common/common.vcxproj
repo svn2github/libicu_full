@@ -424,7 +424,9 @@
     <ClCompile Include="unistr_case.cpp" />
     <ClCompile Include="unistr_cnv.cpp" />
     <ClCompile Include="unistr_props.cpp" />
+    <ClCompile Include="unistr_titlecase_brkiter.cpp" />
     <ClCompile Include="ustr_cnv.c" />
+    <ClCompile Include="ustr_titlecase_brkiter.cpp" />
     <ClCompile Include="ustr_wcs.cpp" />
     <ClCompile Include="ustrcase.cpp" />
     <ClCompile Include="ustring.cpp" />

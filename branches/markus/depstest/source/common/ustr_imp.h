@@ -85,6 +85,14 @@ uprv_loadPropsData(UErrorCode *errorCode);*/
  * ustring.h/ustrcase.c and UnicodeString case mapping functions.
  */
 
+/** Appends a full case mapping result, see UCASE_MAX_STRING_LENGTH. */
+U_CFUNC int32_t
+ustrcase_appendResultU16(UChar *dest, int32_t destIndex, int32_t destCapacity,
+                         int32_t result, const UChar *s);
+
+U_CFUNC UChar32 U_CALLCONV
+utf16_caseContextIterator(void *context, int8_t dir);
+
 struct UCaseMap {
     const UCaseProps *csp;
 #if !UCONFIG_NO_BREAK_ITERATION
@@ -104,6 +112,20 @@ typedef struct UCaseMap UCaseMap;
 #else
 #   define UCASEMAP_INITIALIZER { NULL, NULL, { 0 }, 0, 0 }
 #endif
+
+U_CFUNC void
+ustrcase_setTempCaseMapLocale(UCaseMap *csm, const char *locale);
+
+/**
+ * Case-maps [srcStart..srcLimit[ but takes
+ * context [0..srcLength[ into account.
+ */
+U_CFUNC int32_t
+ustrcase_map(const UCaseMap *csm, UCaseMapFull *map,
+             UChar *dest, int32_t destCapacity,
+             const UChar *src, UCaseContext *csc,
+             int32_t srcStart, int32_t srcLimit,
+             UErrorCode *pErrorCode);
 
 enum {
     TO_LOWER,
